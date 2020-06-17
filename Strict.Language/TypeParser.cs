@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 
 namespace Strict.Language
 {
@@ -8,18 +9,25 @@ namespace Strict.Language
 	/// <summary>
 	/// Code files in strict must be in the correct namespace folder and end with .strict.
 	/// Strict code only contains optionally implement, then has*, then methods*. No empty lines.
+	/// There is no typical lexing/scoping/token splitting needed as Strict syntax is very strict.
 	/// </summary>
-	public class CodeFile
+	public class TypeParser //TODO: should just be type, CodeFile is just at parsing time, we don't really care about that anymore, we can always reconstruct the source code at any time we need it (just .ToString())
 	{
-		/*TODO
-		public CodeFile(string filePath)
-		{
-			//TODO: extract name
-			Parse(File.ReadAllLines(filePath));
-		}*/
+		public TypeParser(Context context) => Context = context;
+		public Context Context { get; }
 
-		private CodeFile Parse(string[] lines)
+		public Type ParseFile(string filePath)
 		{
+			//TODO: check context if this filePath is correct for the namespace, etc. we are in atm!
+			return ParseLines(Path.GetFileNameWithoutExtension(filePath), File.ReadAllLines(filePath));
+		}
+
+		private Type ParseLines(string name, string[] lines)
+		{
+			//TODO: shouldn't this be at class level
+			Implement? implement = null;
+			List<Member> has = new List<Member>();
+			List<Method> methods = new List<Method>();
 			for (var lineNumber = 0; lineNumber < lines.Length; lineNumber++)
 			{
 				//TODO: expected tabs, cut them off
@@ -33,18 +41,18 @@ namespace Strict.Language
 					throw new LineWithJustOneWord(line, lineNumber);
 				if (lineNumber == 0 && words[0] == nameof(Implement).ToLower())
 				{
-					Implement = new Keyword(words[1]);
+					implement = new Implement(new Trait(words[1], null));
 					continue;
 				}
-				var isHasLine = words[0] == nameof(Has).ToLower();
-				if (!isHasLine && Implement == null && has.Count == 0)
+				var isHasLine = words[0] == nameof(Type.Has).ToLower();
+				if (!isHasLine && implement == null && has.Count == 0)
 					throw new MustStartWithImplementOrHas();
 				var isMethodLine = words[0] == nameof(Method).ToLower();
 				if (isHasLine)
-					has.Add(new Keyword(words[1]));//TODO: type
+					has.Add(new Member(words[1], Context.FindType(words.Last())));
 				else if (isMethodLine)
 				{
-					methods.Add(new Method(words[1])); //TODO: actual method parser
+					methods.Add(new Method(words[1], new Parameter[0],  Context.FindType(words.Last()))); //TODO: actual method parser
 					lineNumber++;//dummy
 				}
 				else
@@ -52,7 +60,7 @@ namespace Strict.Language
 			}//TODO: method to long, split up, maybe into parser class
 			if (methods.Count == 0)
 				throw new NoMethodsFound();
-			return this;
+			return new Type(name, implement, has, methods);
 		}
 
 		public class ExtraWhitespacesFound : Exception
@@ -79,35 +87,9 @@ namespace Strict.Language
 
 		public class NoMethodsFound : Exception{}
 
-		public static CodeFile FromCode(string code)//TODO: add name
-			=>
-				new CodeFile().Parse(SplitLines(code));
+		public Type ParseCode(string name, string code) => ParseLines(name, SplitLines(code));
 
 		private static string[] SplitLines(string text)
 			=> text.Split(new[] { Environment.NewLine, "\n" }, StringSplitOptions.None);
-
-		private CodeFile() { }
-		public Keyword? Implement { get; private set; }
-		public IReadOnlyList<Keyword> Has => has;
-		public readonly List<Keyword> has = new List<Keyword>();
-		public IReadOnlyList<Keyword> Methods => methods;
-		public readonly List<Keyword> methods = new List<Keyword>();
-	}
-
-	/*TODO?
-	public class Implement : Keyword
-	{
-
-	}
-	*/
-	public class Method : Keyword
-	{
-		public Method(string name) : base(name) { }
-	}
-
-	public class Keyword
-	{
-		public Keyword(string name) => Name = name;
-		public string Name { get; }
 	}
 }

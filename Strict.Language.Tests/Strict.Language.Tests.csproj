@@ -4,7 +4,6 @@
     <TargetFramework>netcoreapp3.1</TargetFramework>
 		<IsPackable>false</IsPackable>
 		<LangVersion>latest</LangVersion>
-		<Nullable>enable</Nullable>
 		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 		<WarningsAsErrors />
   </PropertyGroup>
