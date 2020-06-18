@@ -29,7 +29,7 @@ namespace Strict.Language.Tests
 			Assert.Throws<TypeParser.MustStartWithImplementOrHas>(() => parser.ParseCode("", @"method Run()"));
 
 		[Test]
-		public void JustMembersIsntValidCode() =>
+		public void JustMembersIsNotValidCode() =>
 			Assert.Throws<TypeParser.NoMethodsFound>(() => parser.ParseCode("", @"has log
 has count"));
 		
@@ -49,5 +49,7 @@ method Run()
 			Assert.That(app.Methods.First().Name, Is.EqualTo("Run()"));//TODO: remove (), need method parser
 			//void doesn't need a test, has no side effects inside strict: log.LastLine() is ""Hello World!""
 		}
+
+		//TODO Mahmoud write another program unit test
 	}
 }

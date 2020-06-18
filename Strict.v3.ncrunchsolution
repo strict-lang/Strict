@@ -1,6 +1,8 @@
 ﻿<SolutionConfiguration>
   <Settings>
     <AllowParallelTestExecution>True</AllowParallelTestExecution>
+    <DefaultTestTimeout>2000</DefaultTestTimeout>
+    <InstrumentationMode>Optimised</InstrumentationMode>
     <SolutionConfigured>True</SolutionConfigured>
   </Settings>
 </SolutionConfiguration>
