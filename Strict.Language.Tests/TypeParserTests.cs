@@ -29,7 +29,7 @@ namespace Strict.Language.Tests
 			Assert.Throws<TypeParser.MustStartWithImplementOrHas>(() => parser.ParseCode("", @"method Run()"));
 
 		[Test]
-		public void JustMembersIsntValidCode() =>
+		public void JustMembersIsNotValidCode() =>
 			Assert.Throws<TypeParser.NoMethodsFound>(() => parser.ParseCode("", @"has log
 has count"));
 		
@@ -48,5 +48,7 @@ method Run
 			Assert.That(app.Method.First().Name, Is.EqualTo("log"));
 			Assert.That(app.Methods.First().Name, Is.EqualTo("Run"));
 		}
+
+		//TODO Mahmoud write another program unit test
 	}
 }
