@@ -42,12 +42,11 @@ has count"));
 		{
 			var app = parser.ParseCode("Program", @"implement App
 has log
-method Run()
+method Run
 	log.WriteLine(""Hello World!"")");
 			Assert.That(app.Implement?.Trait.Name, Is.EqualTo("App"));
-			Assert.That(app.Has.First().Name, Is.EqualTo("log"));
-			Assert.That(app.Methods.First().Name, Is.EqualTo("Run()"));//TODO: remove (), need method parser
-			//void doesn't need a test, has no side effects inside strict: log.LastLine() is ""Hello World!""
+			Assert.That(app.Method.First().Name, Is.EqualTo("log"));
+			Assert.That(app.Methods.First().Name, Is.EqualTo("Run"));
 		}
 	}
 }

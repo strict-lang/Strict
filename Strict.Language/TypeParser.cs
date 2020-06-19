@@ -36,7 +36,7 @@ namespace Strict.Language
 					throw new ExtraWhitespacesFound(line, lineNumber);
 				if (line.Length == 0)
 					throw new EmptyLine();
-				var words = line.Split(' ');
+				var words = line.SplitWords();
 				if (words.Length == 1)
 					throw new LineWithJustOneWord(line, lineNumber);
 				if (lineNumber == 0 && words[0] == nameof(Implement).ToLower())
@@ -44,7 +44,7 @@ namespace Strict.Language
 					implement = new Implement(new Trait(words[1], null));
 					continue;
 				}
-				var isHasLine = words[0] == nameof(Type.Has).ToLower();
+				var isHasLine = words[0] == Keyword.Has;
 				if (!isHasLine && implement == null && has.Count == 0)
 					throw new MustStartWithImplementOrHas();
 				var isMethodLine = words[0] == nameof(Method).ToLower();
@@ -52,7 +52,7 @@ namespace Strict.Language
 					has.Add(new Member(words[1], Context.FindType(words.Last())));
 				else if (isMethodLine)
 				{
-					methods.Add(new Method(words[1], new Parameter[0],  Context.FindType(words.Last()))); //TODO: actual method parser
+					methods.Add(new Method(words[1], new Parameter[0], Context.FindType(words.Last()))); //TODO: actual method parser
 					lineNumber++;//dummy
 				}
 				else
@@ -87,9 +87,6 @@ namespace Strict.Language
 
 		public class NoMethodsFound : Exception{}
 
-		public Type ParseCode(string name, string code) => ParseLines(name, SplitLines(code));
-
-		private static string[] SplitLines(string text)
-			=> text.Split(new[] { Environment.NewLine, "\n" }, StringSplitOptions.None);
+		public Type ParseCode(string name, string code) => ParseLines(name, code.SplitLines());
 	}
 }

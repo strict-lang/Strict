@@ -1,8 +1,10 @@
-﻿namespace Strict.Language
+﻿using System.Collections.Generic;
+
+namespace Strict.Language
 {
 	public class Method
 	{
-		public Method(string name, Parameter[] parameters, Type returnType)
+		public Method(string name, IReadOnlyList<Parameter> parameters, Type returnType)
 		{
 			Name = name;
 			Parameters = parameters;
@@ -10,7 +12,7 @@
 		}
 
 		public string Name { get; }
-		public Parameter[] Parameters { get; }
+		public IReadOnlyList<Parameter> Parameters { get; }
 		public Type ReturnType { get; }
 	}
 }
