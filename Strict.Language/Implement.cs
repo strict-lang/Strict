@@ -2,7 +2,7 @@
 {
 	public class Implement
 	{
-		public Implement(Trait trait) => Trait = trait;
-		public Trait Trait { get; }
+		public Implement(Type trait) => Trait = trait;
+		public Type Trait { get; }
 	}
 }
