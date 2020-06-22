@@ -6,18 +6,18 @@ namespace Strict.Language.Tests
 	{
 		[SetUp]
 		public void CreateType() =>
-			type = new Type(new Package(nameof(MethodTests)), nameof(TypeTests), @"has log
+			type = new Type(new TestPackage(), nameof(TypeTests), @"has log
 method Run
 	log.WriteLine");
 		private Type type;
 
 		[Test]
 		public void MethodMustStartWithMethodOrFrom() =>
-			Assert.Throws<Method.InvalidSyntax>(() => new Method(type, "function",new string[0]));
+			Assert.Throws<Method.InvalidMethodDefinition>(() => new Method(type, "function",new string[0]));
 
 		[Test]
 		public void MustMustHaveAName() =>
-			Assert.Throws<LineLexer.NoMoreWords>(() => new Method(type, "method", new string[0]));
+			Assert.Throws<Method.InvalidSyntax>(() => new Method(type, "method a b", new string[0]));
 
 		[Test]
 		public void ParseDefinition()

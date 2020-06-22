@@ -9,42 +9,78 @@ namespace Strict.Language
 	/// </summary>
 	public class Method : Context
 	{
-		public Method(Type type, string firstLine, IReadOnlyList<string> lines) : this(type, new LineLexer(firstLine), lines){}
-
-		public Method(Type type, LineLexer definition, IReadOnlyList<string> lines) : base(GetName(definition))
+		public Method(Type type, string firstLine, IReadOnlyList<string> lines) : base(type,
+			GetName(firstLine))
 		{
-			this.type = type;
-			while (definition.HasNext)
-			{
-				var parameterName = definition.Next();
-				if (parameterName == Keyword.Returns)
-					break;
-				parameters.Add(new Parameter(parameterName, type.GetType(parameterName)));
-			}
-			ReturnType = Name == Keyword.From
-				? type
-				: type.GetType(definition.HasNext
-					? definition.Next()
-					: Base.None);
+			ReturnType = Name == Keyword.From ? type : type.GetType(Base.None);
+			ParseDefinition(Name == Keyword.From
+				? firstLine.Substring(Keyword.From.Length)
+				: firstLine.Substring(Keyword.Method.Length + 1 + Name.Length));
 			this.lines = lines;
-			//TODO: parse lazily: var lines = code.SplitLines();
 		}
 
-		private static string GetName(LineLexer definition) =>
-			definition.Next() switch
+		/// <summary>
+		/// Simple lexer to just parse the method definition and get all used names and types.
+		/// Method code itself is parsed in are more complex (BNF), complete and slow way.
+		/// </summary>
+		private static string GetName(string firstLine)
+		{
+			if (firstLine.StartsWith(Keyword.From + "("))
+				return Keyword.From;
+			if (!firstLine.StartsWith(Keyword.Method + " "))
+				throw new InvalidMethodDefinition(firstLine);
+			var name = firstLine.SplitWordsAndPunctuation()[1];
+			if (Keyword.IsKeyword(name))
+				throw new MethodNameCantBeKeyword(name);
+			return name;
+		}
+
+		public class MethodNameCantBeKeyword : Exception
+		{
+			public MethodNameCantBeKeyword(string methodName) : base(methodName) { }
+		}
+
+		public class InvalidMethodDefinition : Exception
+		{
+			public InvalidMethodDefinition(string line) : base(line) { }
+		}
+
+		private void ParseDefinition(string rest)
+		{
+			var returnsIndex =
+				rest.IndexOf(" " + Keyword.Returns + " ", StringComparison.InvariantCulture);
+			if (returnsIndex >= 0)
 			{
-				Keyword.Method => definition.Next(),
-				Keyword.From => Keyword.From,
-				_ => throw new InvalidSyntax()
-			};
+				ReturnType = Type.GetType(rest.Substring(returnsIndex + Keyword.Returns.Length + 2));
+				rest = rest.Substring(0, returnsIndex);
+			}
+			if (string.IsNullOrEmpty(rest))
+				return;
+			if (rest.StartsWith("(") && rest.EndsWith(")"))
+				ParseParameters(rest.Substring(1, rest.Length - 2));
+			else
+				throw new InvalidSyntax(rest);
+		}
 
-		private readonly Type type;
+		public void ParseParameters(string parametersText)
+		{
+			foreach (var nameAndType in parametersText.Split(", "))
+				parameters.Add(new Parameter(this, nameAndType));
+		}
 
-		public class InvalidSyntax : Exception { }
+		public Type Type => (Type)Parent;
+
+		public class InvalidSyntax : Exception
+		{
+			public InvalidSyntax(string rest) : base(rest) { }
+		}
 
 		public IReadOnlyList<Parameter> Parameters => parameters;
 		private readonly List<Parameter> parameters = new List<Parameter>();
-		public Type ReturnType { get; }
+		public Type ReturnType { get; private set; }
 		private IReadOnlyList<string> lines;
+
+		public override Type? FindType(string name, Type? searchingFromType = null) =>
+			Type.FindType(name, searchingFromType);
 	}
 }

@@ -11,7 +11,7 @@ namespace Strict.Language
 		public static string[] SplitWords(this string text) => text.Split(' ');
 
 		public static string[] SplitWordsAndPunctuation(this string text) =>
-			text.Split(new[] { ' ', '(', ')' }, StringSplitOptions.RemoveEmptyEntries);
+			text.Split(new[] { ' ', '(', ')', ',' }, StringSplitOptions.RemoveEmptyEntries);
 
 		public static string ToWordString<T>(this IReadOnlyCollection<T> list) =>
 			string.Join(", ", list);

@@ -2,15 +2,17 @@
 {
 	public abstract class NamedType
 	{
-		protected NamedType(string name, Type type)
+		protected NamedType(Context definedIn, string nameAndType)
 		{
-			Name = name;
-			Type = type;
+			var parts = nameAndType.Split(' ');
+			Name = parts[0];
+			Type = definedIn.GetType(parts.Length == 1
+				? parts[0].Substring(0, 1).ToUpperInvariant() + parts[0].Substring(1)
+				: parts[1]);
 		}
-
-		public string Name { get; }//TODO: regex: ([a-zA-Z]+[a-zA-Z0-9_]*), not sure if we even should allow numbers, normally not needed!
+		
+		public string Name { get; }//limit to regex: ([a-zA-Z]+[a-zA-Z]*)
 		public Type Type { get; } //([\w<>]+)
-
 		public override string ToString() => Name + " " + Type;
 	}
 }

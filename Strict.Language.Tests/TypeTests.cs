@@ -5,38 +5,48 @@ namespace Strict.Language.Tests
 	public class TypeTests
 	{
 		[SetUp]
-		public void CreatePackage() => package = new Package(nameof(TypeTests));
+		public void CreatePackage()
+		{
+			package = new TestPackage();
+			new Type(package, "App", "method Run");
+		}
+
 		private Package package;
+		
+		[Test]
+		public void EmptyCodeIsNotAllowed() =>
+			Assert.Throws<Type.NoCodeGiven>(() => new Type(package, Base.Count, ""));
 
 		[Test]
-		public void EmptyIsNotAllowed() =>
-			Assert.Throws<Type.EmptyLine>(() => new Type(package, Base.None, ""));
+		public void EmptyLineIsNotAllowed() =>
+			Assert.Throws<Type.EmptyLine>(() => new Type(package, Base.Count, @"
+"));
 
 		[Test]
 		public void WhitespacesAreNotAllowed()
 		{
-			Assert.Throws<Type.ExtraWhitespacesFound>(() => new Type(package, Base.None, " "));
-			Assert.Throws<Type.ExtraWhitespacesFound>(() => new Type(package, Base.None, "has\t"));
+			Assert.Throws<Type.ExtraWhitespacesFound>(() => new Type(package, Base.Count, " "));
+			Assert.Throws<Type.ExtraWhitespacesFound>(() => new Type(package, Base.HashCode, "has\t"));
 		}
 
 		[Test]
 		public void LineWithOneWordIsNotAllowed() =>
-			Assert.Throws<Type.LineWithJustOneWord>(() => new Type(package, Base.None, "has"));
+			Assert.Throws<Type.LineWithJustOneWord>(() => new Type(package, Base.Count, "has"));
 
 		[Test]
 		public void TypeParsersMustStartWithImplementOrHas() =>
 			Assert.Throws<Type.TypeHasNoMembersAndThusMustBeATraitWithoutMethodBodies>(() =>
-				new Type(package, Base.None, @"method Run
+				new Type(package, Base.Count, @"method Run
 	log.WriteLine"));
 
 		[Test]
 		public void JustMembersIsNotValidCode() =>
-			Assert.Throws<Type.NoMethodsFound>(() => new Type(package, Base.None, @"has log
+			Assert.Throws<Type.NoMethodsFound>(() => new Type(package, Base.Count, @"has log
 has count"));
 
 		[Test]
 		public void InvalidSyntax() =>
-			Assert.Throws<Type.InvalidSyntax>(() => new Type(package, Base.None, "has a\na b"));
+			Assert.Throws<Type.InvalidSyntax>(() => new Type(package, Base.Count, "has log\na b"));
 
 		[Test]
 		public void SimpleApp()
@@ -45,7 +55,7 @@ has count"));
 has log
 method Run
 	log.WriteLine(""Hello World!"")");
-			//need FindType implementation first: Assert.That(program.Implements[0].Trait.Name, Is.EqualTo("App"));
+			Assert.That(program.Implements[0].Trait.Name, Is.EqualTo("App"));
 			Assert.That(program.Members[0].Name, Is.EqualTo("log"));
 			Assert.That(program.Methods[0].Name, Is.EqualTo("Run"));
 		}
@@ -66,9 +76,9 @@ method Run
 		[Test]
 		public void Trait()
 		{
-			var app = new Type(package, "App", "method Run");
+			var app = new Type(package, "DummyApp", "method Run");
 			Assert.That(app.IsTrait, Is.True);
-			Assert.That(app.Name, Is.EqualTo("App"));
+			Assert.That(app.Name, Is.EqualTo("DummyApp"));
 			Assert.That(app.Methods[0].Name, Is.EqualTo("Run"));
 		}
 	}

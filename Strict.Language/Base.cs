@@ -6,6 +6,7 @@
 	public class Base
 	{
 		public const string None = nameof(None);
+		public const string Boolean = nameof(Boolean);
 		public const string Any = nameof(Any);
 		public const string Character = nameof(Character);
 		public const string Computation = nameof(Computation);
@@ -20,5 +21,6 @@
 		public const string Error = nameof(Error);
 		public const string Slice = nameof(Slice);
 		public const string Type = nameof(Type);
+		public const string Log = nameof(Log);
 	}
 }

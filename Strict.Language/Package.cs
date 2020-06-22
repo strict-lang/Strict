@@ -1,68 +1,61 @@
-﻿namespace Strict.Language
-{
-	//TODO: newest idea is to merge Type, TypeParser and TypeContext all in one class, maybe leave the parsing outside, but each Type could just be a context?
+﻿using System.Collections.Generic;
 
+namespace Strict.Language
+{
 	/// <summary>
 	/// In C# or Java called namespace or package as well, in Strict this is any code folder.
 	/// </summary>
 	public class Package : Context
 	{
-		public Package(string packageName) : base(packageName) { }
+		public Package(string packageName) : base(RootForPackages, packageName) { }
+
+		private static readonly Root RootForPackages = new Root();
 
 		/// <summary>
-		/// Contains all high level <see cref="Package"/>. It itself is empty, has no parent and
-		/// just contains all root children packages.
+		/// Contains all high level <see cref="Package"/>. Just contains the fallback None type (think
+		/// void) and Boolean, has no parent and just contains all root children packages.
 		/// </summary>
-		public class Root : Context
+		public class Root : Package
 		{
-			public Root() : base(string.Empty) { }
+			public Root() : base(null!, string.Empty)
+			{
+				new Type(this, Base.None, "");
+				new Type(this, Base.Boolean, "");
+			}
+
+			public override Type? FindType(string name, Type? searchingFromType = null) =>
+				name == Base.None
+					? types[0]
+					: name == Base.Boolean
+						? types[1]
+						: null;
 		}
 
-		public Package(Package parentPackage, string folderName) : base(folderName) { }
-	}
-	/*simply Type
-	public class TypeContext : Context
-	{
-		public Context(Package package, Type type){}
+		public Package(Package parentPackage, string folderName) : base(parentPackage, folderName) { }
 
-	}
-	*/
-	/*simply Method
-	public class MethodContext
-	{
-		public Context(TypeContext type, Method method){}
+		internal void Add(Type type) => types.Add(type);
+		private readonly List<Type> types = new List<Type>();
 
-	}
-	*/
-	/// <summary>
-	/// Keeps all known types for use, if in <see cref="Package"/> contains all known types
-	/// and traits the context is inside a type, all members are available as
-	/// well, in a method more scope information is available. The high level context knows it all.
-	/// </summary>
-	public abstract class Context
-	{
-		protected Context(string name) => Name = name;
-		public string Name { get; }
+		public override Type? FindType(string name, Type? searchingFromType = null) =>
+			types.Find(t => t.Name == name) ?? types.Find(t => t.FullName == name) ??
+			Parent.FindType(name) ?? FindTypeInChildren(name, searchingFromType);
 
-		public Type GetType(string name)
+		private Type? FindTypeInChildren(string name, Type? searchingFromType)
 		{
-			if (name == Name)
-				return (Type)this;
-			return FindType(name)!;
-		}
-		
-		public Type? FindType(string name)
-		{
+			foreach (var child in Children)
+				if (child != searchingFromType)
+				{
+					var childType = child is Package
+						? child.FindType(name, searchingFromType)
+						: child.Name == name || child.FullName == name
+							? child
+							: null;
+					if (childType != null)
+						return (Type)childType;
+				}
 			return null;
-
 		}
-		/*not needed?
-		public Type ParentType { get; } = Type.None;
 
-		public Trait GetTrait(string word)
-		{
-			return null!;
-		}
-		*/
+		public Type? FindDirectType(string name) => types.Find(t => t.Name == name);
 	}
 }

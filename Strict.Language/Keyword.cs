@@ -1,4 +1,6 @@
-﻿namespace Strict.Language
+﻿using System.Linq;
+
+namespace Strict.Language
 {
 	public static class Keyword
 	{
@@ -26,5 +28,13 @@
 		public const string If = "if";
 		public const string Else = "else";
 		public const string Yield = "yield";
+
+		public static bool IsKeyword(string name) => All.Contains(name);
+
+		private static readonly string[] All =
+		{
+			Has, As, Assert, Test, Create, Throw, Method, Returns, Is, Isnt, Not, True, False,
+			Continue, Break, Do, In, From, Return, To, For, If, Else, Yield
+		};
 	}
 }

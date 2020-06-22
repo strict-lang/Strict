@@ -12,16 +12,29 @@ namespace Strict.Language
 	/// </summary>
 	public class Type : Context
 	{
-		public Type(Package package, string name, string code) : base(name)
+		public Type(Package package, string name, string code) : base(package, name)
 		{
-			if (package.FindType(name) != null)
-				throw new TypeAlreadyExistsInPackage();
+			if (package.FindDirectType(name) != null)
+				throw new TypeAlreadyExistsInPackage(name, package);
+			if (string.IsNullOrEmpty(code) && name != Base.None && name != Base.Boolean)
+				throw new NoCodeGiven(name);
 			Package = package;
+			Package.Add(this);
 			lines = code.SplitLines();
-			Parse();
+			if (name != Base.None && name != Base.Boolean)
+				Parse();
 		}
 
-		public class TypeAlreadyExistsInPackage : Exception { }
+		public class TypeAlreadyExistsInPackage : Exception
+		{
+			public TypeAlreadyExistsInPackage(string name, Package package) : base(
+				name + " in package: " + package) { }
+		}
+
+		public class NoCodeGiven : Exception
+		{
+			public NoCodeGiven(string name) : base(name) { }
+		}
 
 		public Package Package { get; }
 		private readonly string[] lines;
@@ -31,7 +44,7 @@ namespace Strict.Language
 			for (lineNumber = 0; lineNumber < lines.Length; lineNumber++)
 				ParseLine(lines[lineNumber]);
 			if (methods.Count == 0)
-				throw new NoMethodsFound();
+				throw new NoMethodsFound(Name);
 		}
 		
 		private int lineNumber;
@@ -42,7 +55,7 @@ namespace Strict.Language
 			if (lineNumber == 0 && words[0] == nameof(Implement).ToLower())
 				implements.Add(new Implement(Package.GetType(words[1])));
 			else if (words[0] == Keyword.Has)
-				members.Add(new Member(words[1], Package.GetType(words.Last())));
+				members.Add(new Member(this, line.Substring(Keyword.Has.Length + 1)));
 			else if (words[0] == nameof(Method).ToLower())
 				methods.Add(new Method(this, line, GetAllMethodLines()));
 			else
@@ -54,7 +67,7 @@ namespace Strict.Language
 			if (line.Length != line.Trim().Length)
 				throw new ExtraWhitespacesFound(line, lineNumber);
 			if (line.Length == 0)
-				throw new EmptyLine();
+				throw new EmptyLine(Name);
 			var words = line.SplitWords();
 			if (words.Length == 1)
 				throw new LineWithJustOneWord(line, lineNumber);
@@ -67,7 +80,10 @@ namespace Strict.Language
 				line + " (" + lineNumber + ")") { }
 		}
 
-		public class EmptyLine : Exception{}
+		public class EmptyLine : Exception
+		{
+			public EmptyLine(string name) : base(name) { }
+		}
 
 		public class LineWithJustOneWord : Exception
 		{
@@ -82,7 +98,10 @@ namespace Strict.Language
 				line + " (" + lineNumber + ")") { }
 		}
 
-		public class NoMethodsFound : Exception{}
+		public class NoMethodsFound : Exception
+		{
+			public NoMethodsFound(string name) : base(name) { }
+		}
 
 		private IReadOnlyList<string> GetAllMethodLines()
 		{
@@ -105,11 +124,16 @@ namespace Strict.Language
 		
 		public static Type FromFile(Package package, string filePath)
 		{
-			//TODO: also check context if this filePath is correct for the namespace, etc. we are in atm!
+			//also check context if this filePath is correct for the namespace, etc. we are in atm!
 			return new Type(package, Path.GetFileNameWithoutExtension(filePath),
 				File.ReadAllText(filePath));
 		}
 
 		public override string ToString() => Name + Implements.ToWordString();
+
+		public override Type? FindType(string name, Type? searchingFromType = null) =>
+			name == Name || name == FullName
+				? this
+				: Package.FindType(name, this);
 	}
 }
