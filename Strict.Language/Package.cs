@@ -1,7 +1,10 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Strict.Language
 {
+	/// <inheritdoc />
 	/// <summary>
 	/// In C# or Java called namespace or package as well, in Strict this is any code folder.
 	/// </summary>
@@ -15,7 +18,7 @@ namespace Strict.Language
 		/// Contains all high level <see cref="Package"/>. Just contains the fallback None type (think
 		/// void) and Boolean, has no parent and just contains all root children packages.
 		/// </summary>
-		public class Root : Package
+		private class Root : Package
 		{
 			public Root() : base(null!, string.Empty)
 			{
@@ -24,11 +27,9 @@ namespace Strict.Language
 			}
 
 			public override Type? FindType(string name, Type? searchingFromType = null) =>
-				name == Base.None
-					? types[0]
-					: name == Base.Boolean
-						? types[1]
-						: null;
+				name == Base.None || name == Base.Boolean
+					? base.FindType(name, searchingFromType)
+					: null;
 		}
 
 		public Package(Package parentPackage, string folderName) : base(parentPackage, folderName) { }
@@ -38,7 +39,15 @@ namespace Strict.Language
 
 		public override Type? FindType(string name, Type? searchingFromType = null) =>
 			types.Find(t => t.Name == name) ?? types.Find(t => t.FullName == name) ??
+			AbortIfTypeIsPrivate(name) ??
 			Parent.FindType(name) ?? FindTypeInChildren(name, searchingFromType);
+
+		private static Type? AbortIfTypeIsPrivate(string name) =>
+			char.IsLower(name.Split('.').Last()[0])
+				? throw new PrivateTypesAreOnlyAvailableInItsPackage()
+				: (Type?)null;
+
+		public class PrivateTypesAreOnlyAvailableInItsPackage : Exception {}
 
 		private Type? FindTypeInChildren(string name, Type? searchingFromType)
 		{

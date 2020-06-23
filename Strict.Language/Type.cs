@@ -59,7 +59,7 @@ namespace Strict.Language
 			else if (words[0] == nameof(Method).ToLower())
 				methods.Add(new Method(this, line, GetAllMethodLines()));
 			else
-				throw new InvalidSyntax(line, lineNumber);
+				throw new InvalidLine(line, lineNumber);
 		}
 
 		private string[] ParseWords(string line)
@@ -91,10 +91,9 @@ namespace Strict.Language
 				line + " (" + lineNumber + ")") { }
 		}
 		
-		
-		public class InvalidSyntax : Exception
+		public class InvalidLine : Exception
 		{
-			public InvalidSyntax(string line, in int lineNumber) : base(
+			public InvalidLine(string line, in int lineNumber) : base(
 				line + " (" + lineNumber + ")") { }
 		}
 
@@ -121,13 +120,6 @@ namespace Strict.Language
 		public IReadOnlyList<Method> Methods => methods;
 		private readonly List<Method> methods = new List<Method>();
 		public bool IsTrait => Implements.Count == 0 && Members.Count == 0;
-		
-		public static Type FromFile(Package package, string filePath)
-		{
-			//also check context if this filePath is correct for the namespace, etc. we are in atm!
-			return new Type(package, Path.GetFileNameWithoutExtension(filePath),
-				File.ReadAllText(filePath));
-		}
 
 		public override string ToString() => Name + Implements.ToWordString();
 
@@ -135,5 +127,24 @@ namespace Strict.Language
 			name == Name || name == FullName
 				? this
 				: Package.FindType(name, this);
+
+		//ncrunch: no coverage start
+		public static Type FromFile(Package package, string filePath)
+		{
+			var paths = Path.GetDirectoryName(filePath)?.Split(Path.PathSeparator);
+			if (package.Name != paths.Last())
+				throw new FilePathMustMatchPackageName(package.Name, filePath);
+			if (!string.IsNullOrEmpty(package.Parent.Name) &&
+				(paths!.Length < 2 || package.Parent.Name != paths[^2]))
+				throw new FilePathMustMatchPackageName(package.Parent.Name, filePath);
+			return new Type(package, Path.GetFileNameWithoutExtension(filePath),
+				File.ReadAllText(filePath));
+		}
+
+		public class FilePathMustMatchPackageName : Exception
+		{
+			public FilePathMustMatchPackageName(string filePath, string packageName) : base(
+				filePath + " must be in package folder " + packageName) { }
+		}
 	}
 }

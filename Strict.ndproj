@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8" standalone="yes"?>
-<NDepend AppName="Strict" Platform="DotNet" FileWrittenByProductVersion="2019.3.0.9290">
+<NDepend AppName="Strict" Platform="DotNet" FileWrittenByProductVersion="2020.1.0.9404">
   <OutputDir KeepXmlFiles="False">.\NDependOut</OutputDir>
   <IDEFiles>
     <IDEFile FilePath=".\Strict.sln" Filters="-test" Configuration="DEBUG|AnyCPU" />
@@ -9,52 +9,19 @@
     <Name>System.Runtime</Name>
     <Name>System.Diagnostics.Debug</Name>
     <Name>System.Collections</Name>
-    <Name>Intel.RealSense</Name>
-    <Name>System.Threading.Thread</Name>
     <Name>System.Runtime.Extensions</Name>
     <Name>System.Linq</Name>
-    <Name>System.Console</Name>
-    <Name>MongoDB.Driver</Name>
-    <Name>System.Threading.Tasks</Name>
-    <Name>System.Linq.Expressions</Name>
-    <Name>MongoDB.Bson</Name>
-    <Name>MongoDB.Driver.Core</Name>
-    <Name>System.Threading</Name>
     <Name>System.IO.FileSystem</Name>
-    <Name>System.ComponentModel.Primitives</Name>
-    <Name>Microsoft.Extensions.Hosting.Abstractions</Name>
-    <Name>Microsoft.AspNetCore.Hosting.Abstractions</Name>
-    <Name>Microsoft.Extensions.Configuration.Abstractions</Name>
-    <Name>Microsoft.Extensions.DependencyInjection.Abstractions</Name>
-    <Name>Microsoft.AspNetCore.Http.Abstractions</Name>
-    <Name>System.ComponentModel</Name>
-    <Name>Microsoft.AspNetCore.Routing</Name>
-    <Name>Microsoft.AspNetCore.Mvc.Core</Name>
-    <Name>Microsoft.Extensions.Hosting</Name>
-    <Name>Microsoft.AspNetCore</Name>
-    <Name>Microsoft.AspNetCore.Mvc</Name>
-    <Name>Microsoft.AspNetCore.Diagnostics</Name>
-    <Name>Microsoft.AspNetCore.HttpsPolicy</Name>
-    <Name>Microsoft.AspNetCore.Authorization.Policy</Name>
-    <Name>Microsoft.AspNetCore.Hosting</Name>
-    <Name>FastYolo</Name>
-    <Name>PresentationFramework</Name>
-    <Name>PresentationCore</Name>
-    <Name>System.Diagnostics.Tools</Name>
-    <Name>System.Xaml</Name>
-    <Name>System.ObjectModel</Name>
-    <Name>System.IO.Ports</Name>
-    <Name>WindowsBase</Name>
     <Name>mscorlib</Name>
   </FrameworkAssemblies>
   <Dirs>
-    <Dir>C:\Users\benja\.nuget\packages\microsoft.windowsdesktop.app.ref\3.0.0\ref\netcoreapp3.0</Dir>
-    <Dir>C:\Users\Administrator\.nuget\packages\microsoft.windowsdesktop.app.ref\3.0.0\ref\netcoreapp3.0</Dir>
     <Dir>C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.0.0</Dir>
     <Dir>C:\Program Files\dotnet\sdk\NuGetFallbackFolder</Dir>
     <Dir>C:\Users\Abdul\.nuget\packages</Dir>
     <Dir>C:\Users\Administrator\.nuget\packages</Dir>
     <Dir>C:\Users\Benjamin\.nuget\packages</Dir>
+    <Dir>C:\Users\benja\.nuget\packages\microsoft.windowsdesktop.app.ref\3.0.0\ref\netcoreapp3.0</Dir>
+    <Dir>C:\Users\Administrator\.nuget\packages\microsoft.windowsdesktop.app.ref\3.0.0\ref\netcoreapp3.0</Dir>
   </Dirs>
   <MergeCodeGeneratedByCompiler>True</MergeCodeGeneratedByCompiler>
   <ZipSourceFiles>True</ZipSourceFiles>
@@ -98,6 +65,7 @@
   <SourceFileRebasing FromPath="" ToPath="" />
   <PathVariables />
   <RuleFiles />
+  <GraphFiles />
   <ProjectRules AreActive="True" />
   <ProjectDebtSettings DebtSettingsStorage="0" SettingsFilePath="">
     <DebtSettings>
@@ -241,9 +209,8 @@ warnif count > 0 from m in JustMyCode.Methods where
   !m.Name.StartsWith("On") &&
   !m.Name.StartsWith("Add") &&
   !m.Name.StartsWith("Create") &&
-  !m.Name.StartsWith("FillEntity")
-   // should be 1-3, 4 very rarely, 5 almost never, 6 is forbidden except for the few exceptions above
-   ? 6 : 5)
+  !m.Name.StartsWith("FillEntity") &&
+  m.NbParameters > 3
 
   orderby m.NbParameters descending
 select new { m, m.NbParameters, m.ParentType }
@@ -2631,10 +2598,7 @@ warnif count > 0
 from baseClass in JustMyCode.Types
 where baseClass.IsClass &&
  baseClass.Name != "Randomizer" &&
- baseClass.Name != "SceneEntityRepository" &&
- baseClass.Name != "BaseGraphicsContext" &&
- !baseClass.FullName.Contains("NVorbis") &&
- baseClass.Name != "SceneTreeItem" &&
+ !baseClass.FullName.Contains("Context") &&
  baseClass.NbChildren > 0 // <-- for optimization!
 let derivedClassesUsed = baseClass.DerivedTypes.UsedBy(baseClass)
    // Don't warn when a base class is using nested private derived class
@@ -4084,7 +4048,7 @@ select new {
 // that contain just a few types into a single namespace.
 //</HowToFix>
 ]]></Query>
-      <Query Active="True" DisplayList="True" DisplayStat="False" DisplaySelectionView="False" IsCriticalRule="False"><![CDATA[// <Name>Nested types should not be visible</Name>
+      <Query Active="False" DisplayList="True" DisplayStat="False" DisplaySelectionView="False" IsCriticalRule="False"><![CDATA[// <Name>Nested types should not be visible</Name>
 // <Id>ND1306:NestedTypesShouldNotBeVisible</Id>
 
 warnif count > 0 from t in JustMyCode.Types where 
@@ -7638,7 +7602,7 @@ select new {
 // However *nested private types* are hardly testable. Hence this rule  
 // might not be applied to types consumed directly by tests.
 //</HowToFix>]]></Query>
-      <Query Active="True" DisplayList="True" DisplayStat="False" DisplaySelectionView="False" IsCriticalRule="False"><![CDATA[// <Name>Avoid publicly visible constant fields</Name>
+      <Query Active="False" DisplayList="True" DisplayStat="False" DisplaySelectionView="False" IsCriticalRule="False"><![CDATA[// <Name>Avoid publicly visible constant fields</Name>
 // <Id>ND1804:AvoidPubliclyVisibleConstantFields</Id>
 
 warnif count > 0 
@@ -8005,7 +7969,7 @@ select new {
 //</Description>]]></Query>
     </Group>
     <Group Name="Immutability" Active="True" ShownInReport="False">
-      <Query Active="True" DisplayList="True" DisplayStat="False" DisplaySelectionView="False" IsCriticalRule="False"><![CDATA[// <Name>Fields should be marked as ReadOnly when possible</Name>
+      <Query Active="False" DisplayList="True" DisplayStat="False" DisplaySelectionView="False" IsCriticalRule="False"><![CDATA[// <Name>Fields should be marked as ReadOnly when possible</Name>
 // <Id>ND1900:FieldsShouldBeMarkedAsReadOnlyWhenPossible</Id>
 
 warnif count > 0 
@@ -13299,7 +13263,8 @@ warnif count > 0 from project in JustMyCode.Assemblies
 let parts = project.FilePath.FileNameWithoutExtension.Split('.').Length
 from reference in project.AssembliesUsed
 let referenceParts = reference.FilePath.FileNameWithoutExtension.Split('.').Length
-where !reference.Name.EndsWith(".Abstractions") &&
+where !reference.Name.StartsWith("System") &&
+  !reference.Name.EndsWith(".Abstractions") &&
   referenceParts > parts
 select new { project, parts, reference }]]></Query>
       <Query Active="True" DisplayList="True" DisplayStat="False" DisplaySelectionView="False" IsCriticalRule="False"><![CDATA[// <Name>Avoid having different sub types with same name</Name>
@@ -13324,7 +13289,7 @@ select new {
 //<HowToFix>
 // To fix a violation of this rule, rename concerned types.
 //</HowToFix>]]></Query>
-      <Query Active="True" DisplayList="True" DisplayStat="True" DisplaySelectionView="False" IsCriticalRule="False"><![CDATA[// <Name>Mark assemblies with assembly version (doesn't work for .net core)</Name>
+      <Query Active="False" DisplayList="True" DisplayStat="True" DisplaySelectionView="False" IsCriticalRule="False"><![CDATA[// <Name>Mark assemblies with assembly version (doesn't work for .net core)</Name>
 // <Id>ND2800:MarkAssembliesWithAssemblyVersion</Id>
 
 warnif count > 0 from a in Application.Assemblies where

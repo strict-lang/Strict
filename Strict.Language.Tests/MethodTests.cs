@@ -20,6 +20,11 @@ method Run
 			Assert.Throws<Method.InvalidSyntax>(() => new Method(type, "method a b", new string[0]));
 
 		[Test]
+		public void MethodNameCantBeKeyword() =>
+			Assert.Throws<Method.MethodNameCantBeKeyword>(
+				() => new Method(type, "method from", new string[0]));
+
+		[Test]
 		public void ParseDefinition()
 		{
 			var method = new Method(type, "method Run", new string[0]);
