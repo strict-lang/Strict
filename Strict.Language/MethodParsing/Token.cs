@@ -27,14 +27,14 @@ namespace Strict.Language.MethodParsing
 
 		public static Token FromNumber(double value)
 		{
-			if (cachedNumbers.TryGetValue(value, out var existing))
+			if (CachedNumbers.TryGetValue(value, out var existing))
 				return existing;
 			var newNumber = new Token(Base.Number, value);
-			cachedNumbers.Add(value, newNumber);
+			CachedNumbers.Add(value, newNumber);
 			return newNumber;
 		}
 
-		private static readonly Dictionary<double, Token> cachedNumbers = new Dictionary<double, Token>();
+		private static readonly Dictionary<double, Token> CachedNumbers = new Dictionary<double, Token>();
 
 		/// <summary>
 		/// Identifier words must have at least 3 characters, no numbers or special characters in them
@@ -50,16 +50,16 @@ namespace Strict.Language.MethodParsing
 
 		public static Token FromIdentifier(string name)
 		{
-			if (cachedIdentifiers.TryGetValue(name, out var existing))
+			if (CachedIdentifiers.TryGetValue(name, out var existing))
 				return existing;
 			var newIdentifier = new Token(IsPublicIdentifier(name)
 				? nameof(Public)
 				: nameof(Private), name);
-			cachedIdentifiers.Add(name, newIdentifier);
+			CachedIdentifiers.Add(name, newIdentifier);
 			return newIdentifier;
 		}
 
-		private static readonly Dictionary<string, Token> cachedIdentifiers = new Dictionary<string, Token>();
+		private static readonly Dictionary<string, Token> CachedIdentifiers = new Dictionary<string, Token>();
 
 		public override string ToString() =>
 			Value != null

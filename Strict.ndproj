@@ -5003,7 +5003,7 @@ select new {
 // http://www.kenneth-truyers.net/2013/05/12/the-n-layer-myth-and-basic-dependency-injection/
 //</HowToFix>
 ]]></Query>
-      <Query Active="True" DisplayList="True" DisplayStat="False" DisplaySelectionView="False" IsCriticalRule="False"><![CDATA[// <Name>Assemblies with poor cohesion (RelationalCohesion)</Name>
+      <Query Active="False" DisplayList="True" DisplayStat="False" DisplaySelectionView="False" IsCriticalRule="False"><![CDATA[// <Name>Assemblies with poor cohesion (RelationalCohesion)</Name>
 // <Id>ND1405:AssembliesWithPoorRelationalCohesion</Id>
 
 warnif count > 0 from a in Application.Assemblies 
@@ -5029,6 +5029,7 @@ where types.LongCount()> 20 &&
   !a.Name.Contains("Extensions") &&
   !a.Name.Contains("Frameworks") &&
   !a.Name.Contains("Resolvers") &&
+  !a.Name.Contains("Language") &&
   !a.Name.Contains("Modifiers")
 
 // R is the total number of relationship between types of the assemblies. 
