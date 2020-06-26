@@ -9,14 +9,14 @@ namespace Strict.Language
 	/// </summary>
 	public class Method : Context
 	{
-		public Method(Type type, string firstLine, IReadOnlyList<string> lines) : base(type,
-			GetName(firstLine))
+		public Method(Type type, string definitionLine, IReadOnlyList<string> body) : base(type,
+			GetName(definitionLine))
 		{
 			ReturnType = Name == Keyword.From ? type : type.GetType(Base.None);
 			ParseDefinition(Name == Keyword.From
-				? firstLine.Substring(Keyword.From.Length)
-				: firstLine.Substring(Keyword.Method.Length + 1 + Name.Length));
-			this.lines = lines;
+				? definitionLine.Substring(Keyword.From.Length)
+				: definitionLine.Substring(Keyword.Method.Length + 1 + Name.Length));
+			this.body = body;
 		}
 
 		/// <summary>
@@ -79,7 +79,7 @@ namespace Strict.Language
 		private readonly List<Parameter> parameters = new List<Parameter>();
 		public Type ReturnType { get; private set; }
 		// ReSharper disable once NotAccessedField.Local
-		private IReadOnlyList<string> lines;
+		private IReadOnlyList<string> body;
 
 		public override Type? FindType(string name, Type? searchingFromType = null) =>
 			Type.FindType(name, searchingFromType);
