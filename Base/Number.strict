@@ -1,0 +1,29 @@
++(other) returns Number
+  (5) is 5
+	Number(3) + 4 is 7
+	return self + other
+-(other) returns Number
+  (5) is -5
+	Number(3) - 2 is 1
+	return self - other
+/(other) returns Number
+	(50) is 0
+	Number(1) / 20 is 0.05
+	return self / other
+*(other) returns Number
+	Number(3) * 4 is 12
+	return self * other
+>(other) returns Is
+	test(0) is false
+	test(3) is true
+	return self > other
+>=(other) returns Is
+	test(0) is true
+	return self >= other
+<(other) returns Is
+	test(0) is false
+	test(3) is true
+	return self < other
+<=(other) returns Is
+	test(0) is true
+	return self <= other

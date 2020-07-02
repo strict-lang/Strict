@@ -1,0 +1,11 @@
+has Characters
+from(number)
+  test(45) is "45"
+  return stream digit from digits(number)
+    create Character(digit)
+digits(number) returns Iterator<Number>
+  test(1) is (1)
+  test(123) is (1, 2, 3)
+  if number / 10 > 0
+    yield digits(number / 10)
+  yield number % 10

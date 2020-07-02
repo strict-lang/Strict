@@ -41,14 +41,23 @@ namespace Strict.Language
 
 		private void Parse()
 		{
-			for (lineNumber = 0; lineNumber < lines.Length; lineNumber++)
-				ParseLine(lines[lineNumber]);
-			if (methods.Count == 0)
-				throw new NoMethodsFound(Name);
+			try
+			{
+				for (lineNumber = 0; lineNumber < lines.Length; lineNumber++)
+					ParseLine(lines[lineNumber]);
+				if (methods.Count == 0)
+					throw new NoMethodsFound(lineNumber, Name);
+			}
+			catch (Exception ex)
+			{
+				throw new ParsingFailed(ex, FilePath);
+			}
 		}
-		
+
+		public string FilePath => Path.Combine(Package.LocalPath, Name) + Extension;
+
 		private int lineNumber;
-		
+
 		private void ParseLine(string line)
 		{
 			var words = ParseWords(line);
@@ -59,60 +68,79 @@ namespace Strict.Language
 			else if (words[0] == nameof(Method).ToLower())
 				methods.Add(new Method(this, line, GetAllMethodLines()));
 			else
-				throw new InvalidLine(line, lineNumber);
+				throw new InvalidLine(line, lineNumber, words.First());
 		}
 
 		private string[] ParseWords(string line)
 		{
 			if (line.Length != line.Trim().Length)
-				throw new ExtraWhitespacesFound(line, lineNumber);
+				throw new ExtraWhitespacesFound(line, lineNumber, line);
 			if (line.Length == 0)
-				throw new EmptyLine(Name);
+				throw new EmptyLine(lineNumber, Name);
 			var words = line.SplitWords();
 			if (words.Length == 1)
-				throw new LineWithJustOneWord(line, lineNumber);
+				throw new LineWithJustOneWord(line, lineNumber, words[0]);
 			return words;
 		}
-		
-		public class ExtraWhitespacesFound : Exception
+
+		public class ExtraWhitespacesFound : LineException
 		{
-			public ExtraWhitespacesFound(string line, int lineNumber) : base(
-				line + " (" + lineNumber + ")") { }
+			public ExtraWhitespacesFound(string text, int line, string method) : base(text, line, method) { }
 		}
 
-		public class EmptyLine : Exception
+		public abstract class LineException : Exception
 		{
-			public EmptyLine(string name) : base(name) { }
+			protected LineException(string message, int line, string method) : base(message)
+			{
+				Number = line;
+				Method = method;
+			}
+
+			public int Number { get; }
+			public string Method { get; }
 		}
 
-		public class LineWithJustOneWord : Exception
+		public class EmptyLine : LineException
 		{
-			public LineWithJustOneWord(string line, int lineNumber) : base(
-				line + " (" + lineNumber + ")") { }
-		}
-		
-		public class InvalidLine : Exception
-		{
-			public InvalidLine(string line, in int lineNumber) : base(
-				line + " (" + lineNumber + ")") { }
+			public EmptyLine(int line, string method) : base("", line, method) { }
 		}
 
-		public class NoMethodsFound : Exception
+		public class LineWithJustOneWord : LineException
 		{
-			public NoMethodsFound(string name) : base(name) { }
+			public LineWithJustOneWord(string text, int line, string method) : base(text, line,
+				method) { }
+		}
+
+		public class InvalidLine : LineException
+		{
+			public InvalidLine(string text, int line, string method) : base(text, line, method) { }
+		}
+
+		public class NoMethodsFound : LineException
+		{
+			public NoMethodsFound(int line, string method) : base("", line, method) { }
 		}
 
 		private IReadOnlyList<string> GetAllMethodLines()
 		{
-			if (IsTrait && lineNumber+1 < lines.Length && lines[lineNumber+1].StartsWith("\t"))
+			if (IsTrait && lineNumber + 1 < lines.Length && lines[lineNumber + 1].StartsWith("\t"))
 				throw new TypeHasNoMembersAndThusMustBeATraitWithoutMethodBodies();
 			var methodLines = new List<string>();
 			while (++lineNumber < lines.Length && lines[lineNumber].StartsWith("\t"))
 				methodLines.Add(lines[lineNumber]);
 			return methodLines;
 		}
-		
+
 		public class TypeHasNoMembersAndThusMustBeATraitWithoutMethodBodies : Exception { }
+
+		public class ParsingFailed : Exception
+		{
+			public ParsingFailed(Exception inner, string filePath) : base(
+				inner is LineException line
+					? "\n   at " + line.Method + " in " + filePath + ":line " + line.Number
+					: filePath, inner) { }
+		}
+
 		public IReadOnlyList<Implement> Implements => implements;
 		private readonly List<Implement> implements = new List<Implement>();
 		public IReadOnlyList<Member> Members => members;
@@ -121,25 +149,33 @@ namespace Strict.Language
 		private readonly List<Method> methods = new List<Method>();
 		public bool IsTrait => Implements.Count == 0 && Members.Count == 0;
 
-		public override string ToString() => Name + Implements.ToWordString();
+		public override string ToString() => base.ToString() + Implements.InBrackets();
 
-		public override Type? FindType(string name, Type? searchingFromType = null) =>
-			name == Name || name == FullName
+		public override Type? FindType(string name, Package? searchingFromPackage = null,
+			Type? searchingFromType = null) =>
+			name == Name || name.Contains(".") && name == base.ToString()
 				? this
-				: Package.FindType(name, this);
+				: Package.FindType(name, searchingFromPackage ?? Package, searchingFromType ?? this);
 
-		//ncrunch: no coverage start
+		//ncrunch: no coverage start, still needs to be tested
 		public static Type FromFile(Package package, string filePath)
 		{
-			var paths = Path.GetDirectoryName(filePath)?.Split(Path.PathSeparator);
+			if (!filePath.EndsWith(Extension))
+				throw new FileExtensionMustBeStrict();
+			var directory = Path.GetDirectoryName(filePath)!;
+			var paths = directory.Split(Path.DirectorySeparatorChar);
 			if (package.Name != paths.Last())
-				throw new FilePathMustMatchPackageName(package.Name, filePath);
+				throw new FilePathMustMatchPackageName(package.Name, directory);
 			if (!string.IsNullOrEmpty(package.Parent.Name) &&
 				(paths!.Length < 2 || package.Parent.Name != paths[^2]))
-				throw new FilePathMustMatchPackageName(package.Parent.Name, filePath);
+				throw new FilePathMustMatchPackageName(package.Parent.Name, directory);
 			return new Type(package, Path.GetFileNameWithoutExtension(filePath),
 				File.ReadAllText(filePath));
 		}
+
+		public const string Extension = ".strict";
+
+		public class FileExtensionMustBeStrict : Exception { }
 
 		public class FilePathMustMatchPackageName : Exception
 		{

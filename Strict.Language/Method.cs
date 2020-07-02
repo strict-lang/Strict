@@ -81,7 +81,7 @@ namespace Strict.Language
 		// ReSharper disable once NotAccessedField.Local
 		private IReadOnlyList<string> body;
 
-		public override Type? FindType(string name, Type? searchingFromType = null) =>
-			Type.FindType(name, searchingFromType);
+		public override Type? FindType(string name, Package? searchingFromPackage = null, Type? searchingFromType = null) =>
+			Type.FindType(name, searchingFromPackage, searchingFromType);
 	}
 }

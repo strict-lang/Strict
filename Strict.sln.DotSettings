@@ -8,6 +8,7 @@
 	<s:Int64 x:Key="/Default/CodeInspection/CleanCode/MaximumMethodsInClass/@EntryValue">33</s:Int64>
 	<s:Int64 x:Key="/Default/CodeInspection/CleanCode/MaximumMethodStatements/@EntryValue">15</s:Int64>
 	<s:String x:Key="/Default/CodeInspection/CleanCode/MeaninglessClassNameSuffixes/@EntryValue">Handler,Manager,Controller,Helper,Wrapper,State,Type,Item,System,Action,Call,Properties</s:String>
+	<s:Boolean x:Key="/Default/CodeInspection/CodeAnnotations/NamespacesWithAnnotations/=DeltaEngine_002EEditor_002EAnnotations/@EntryIndexedValue">True</s:Boolean>
 	<s:Int64 x:Key="/Default/CodeInspection/CyclomaticComplexityAnalysis/Thresholds/=CSHARP/@EntryIndexedValue">11</s:Int64>
 	<s:String x:Key="/Default/CodeInspection/ExcludedFiles/GeneratedFilesAndFolders/=CF19BD64_002DF752_002D47EC_002DB929_002D77F57CC5AE90_002Fd_003AContent/@EntryIndexedValue">CF19BD64-F752-47EC-B929-77F57CC5AE90/d:Content</s:String>
 	<s:String x:Key="/Default/CodeInspection/GeneratedCode/GeneratedFileMasks/=DefaultSettings_002Exml/@EntryIndexedValue">DefaultSettings.xml</s:String>
@@ -447,6 +448,12 @@
 	<s:String x:Key="/Default/PatternsAndTemplates/Todo/TodoPatterns/=1FDC095573324B4393C3B649445524BD/Name/@EntryValue">In Progress</s:String>
 	<s:String x:Key="/Default/PatternsAndTemplates/Todo/TodoPatterns/=1FDC095573324B4393C3B649445524BD/Pattern/@EntryValue">(?&lt;=\W|^)(?&lt;TAG&gt;in progress)(\W|$)(.*)</s:String>
 	<s:String x:Key="/Default/PatternsAndTemplates/Todo/TodoPatterns/=1FDC095573324B4393C3B649445524BD/TodoIconStyle/@EntryValue">Normal</s:String>
+	<s:Boolean x:Key="/Default/PatternsAndTemplates/Todo/TodoPatterns/=3546847BE82034429972FF95137198B4/@KeyIndexDefined">True</s:Boolean>
+	<s:String x:Key="/Default/PatternsAndTemplates/Todo/TodoPatterns/=3546847BE82034429972FF95137198B4/Color/@EntryValue">WindowText</s:String>
+	<s:Boolean x:Key="/Default/PatternsAndTemplates/Todo/TodoPatterns/=3546847BE82034429972FF95137198B4/MatchComments/@EntryValue">True</s:Boolean>
+	<s:String x:Key="/Default/PatternsAndTemplates/Todo/TodoPatterns/=3546847BE82034429972FF95137198B4/Name/@EntryValue">In Progress</s:String>
+	<s:String x:Key="/Default/PatternsAndTemplates/Todo/TodoPatterns/=3546847BE82034429972FF95137198B4/Pattern/@EntryValue">(?&lt;=\W|^)(?&lt;TAG&gt;in progress)(\W|$)(.*)</s:String>
+	<s:String x:Key="/Default/PatternsAndTemplates/Todo/TodoPatterns/=3546847BE82034429972FF95137198B4/TodoIconStyle/@EntryValue">Normal</s:String>
 	<s:Boolean x:Key="/Default/PatternsAndTemplates/Todo/TodoPatterns/=4386F01B791C56499C7EA059B55FFB54/@KeyIndexDefined">False</s:Boolean>
 	<s:String x:Key="/Default/PatternsAndTemplates/Todo/TodoPatterns/=4386F01B791C56499C7EA059B55FFB54/Color/@EntryValue">Black</s:String>
 	<s:Boolean x:Key="/Default/PatternsAndTemplates/Todo/TodoPatterns/=6EBB07CBB7EFE94CBC78B01829F720C2/@KeyIndexDefined">True</s:Boolean>

@@ -15,5 +15,10 @@ namespace Strict.Language
 
 		public static string ToWordString<T>(this IReadOnlyCollection<T> list) =>
 			string.Join(", ", list);
+
+		public static string InBrackets<T>(this IReadOnlyCollection<T> list) =>
+			list.Count > 0
+				? "(" + string.Join(", ", list) + ")"
+				: "";
 	}
 }

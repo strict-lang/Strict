@@ -22,5 +22,6 @@
 		public const string Slice = nameof(Slice);
 		public const string Type = nameof(Type);
 		public const string Log = nameof(Log);
+		public const string App = nameof(App);
 	}
 }

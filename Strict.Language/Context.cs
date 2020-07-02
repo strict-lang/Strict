@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 
 namespace Strict.Language
 {
@@ -12,11 +13,19 @@ namespace Strict.Language
 	{
 		protected Context(Context parent, string name)
 		{
-			Parent = parent;
+			if (parent != null && (string.IsNullOrWhiteSpace(name) ||
+				!(this is Method) && !Regex.IsMatch(name, @"^[A-Za-z]+$")))
+				throw new NameMustBeAWordWithoutAnySpecialCharactersOrNumbers(name);
+			Parent = parent!;
 			// ReSharper disable once ConditionIsAlwaysTrueOrFalse
 			if (parent != null)
 				parent.children.Add(this);
 			Name = name;
+		}
+
+		public class NameMustBeAWordWithoutAnySpecialCharactersOrNumbers : Exception
+		{
+			public NameMustBeAWordWithoutAnySpecialCharactersOrNumbers(string name) : base(name) { }
 		}
 
 		public Context Parent { get; }
@@ -26,18 +35,18 @@ namespace Strict.Language
 
 		public Type GetType(string name)
 		{
-			if (name == Name || name == FullName)
+			if (name == Name || name == ToString())
 				return (Type)this;
 			var type = FindType(name);
 			if (type == null)
-				throw new TypeNotFound(name, FullName);
+				throw new TypeNotFound(name, ToString());
 			return type;
 		}
 
-		public string FullName =>
+		public override string ToString() =>
 			(string.IsNullOrEmpty(Parent.Name)
 				? ""
-				: Parent.FullName + ".") + Name;
+				: Parent + ".") + Name;
 
 		public class TypeNotFound : Exception
 		{
@@ -45,6 +54,6 @@ namespace Strict.Language
 				" not found in " + contextFullName) { }
 		}
 
-		public abstract Type? FindType(string name, Type? searchingFromType = null);
+		public abstract Type? FindType(string name, Package? searchingFromPackage = null, Type? searchingFromType = null);
 	}
 }

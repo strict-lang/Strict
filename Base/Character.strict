@@ -1,0 +1,10 @@
+implement Number
+from(number)
+	test(7) is '7'
+	return '0' + number
+from(text)
+	test("b") is 'b'
+	return text.Characters[0]
+to returns Text
+	test('a') is "a"
+	yield self

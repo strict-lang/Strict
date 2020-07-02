@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 
 namespace Strict.Language
@@ -26,9 +27,10 @@ namespace Strict.Language
 				new Type(this, Base.Boolean, "");
 			}
 
-			public override Type? FindType(string name, Type? searchingFromType = null) =>
+			public override Type? FindType(string name, Package? searchingFromPackage = null,
+				Type? searchingFromType = null) =>
 				name == Base.None || name == Base.Boolean
-					? base.FindType(name, searchingFromType)
+					? base.FindType(name, searchingFromPackage, searchingFromType)
 					: null;
 		}
 
@@ -37,10 +39,13 @@ namespace Strict.Language
 		internal void Add(Type type) => types.Add(type);
 		private readonly List<Type> types = new List<Type>();
 
-		public override Type? FindType(string name, Type? searchingFromType = null) =>
-			types.Find(t => t.Name == name) ?? types.Find(t => t.FullName == name) ??
-			AbortIfTypeIsPrivate(name) ??
-			Parent.FindType(name) ?? FindTypeInChildren(name, searchingFromType);
+		public override Type? FindType(string name, Package? searchingFromPackage = null,
+			Type? searchingFromType = null) =>
+			types.Find(t => t.Name == name) ?? (name.Contains(".")
+				? types.Find(t => t.ToString() == name)
+				: null) ?? AbortIfTypeIsPrivate(name) ??
+			Parent.FindType(name, this, searchingFromType) ??
+			FindTypeInChildren(name, searchingFromPackage, searchingFromType);
 
 		private static Type? AbortIfTypeIsPrivate(string name) =>
 			char.IsLower(name.Split('.').Last()[0])
@@ -49,14 +54,14 @@ namespace Strict.Language
 
 		public class PrivateTypesAreOnlyAvailableInItsPackage : Exception {}
 
-		private Type? FindTypeInChildren(string name, Type? searchingFromType)
+		private Type? FindTypeInChildren(string name, Package? searchingFromPackage, Type? searchingFromType)
 		{
 			foreach (var child in Children)
-				if (child != searchingFromType)
+				if (child != searchingFromType && child != searchingFromPackage)
 				{
 					var childType = child is Package
-						? child.FindType(name, searchingFromType)
-						: child.Name == name || child.FullName == name
+						? child.FindType(name, searchingFromPackage, searchingFromType)
+						: child.Name == name || child.ToString() == name
 							? child
 							: null;
 					if (childType != null)
@@ -66,5 +71,43 @@ namespace Strict.Language
 		}
 
 		public Type? FindDirectType(string name) => types.Find(t => t.Name == name);
+
+		/// <summary>
+		/// Loads a package from disc (or later any link like github) like Strict for base types
+		/// </summary>
+		public static Package FromDisk(string packageName)
+		{
+			if (packageName != nameof(Strict))
+				throw new OnlyStrictPackageIsAllowed();
+			//ncrunch: no coverage start, still needs to be tested ..
+			return FromDiskPath(BasePath + packageName);
+		}
+
+		public class OnlyStrictPackageIsAllowed : Exception { }
+
+		private static Package FromDiskPath(string packagePath)
+		{
+			var files = Directory.GetFiles(packagePath, "*" + Type.Extension);
+			var package = CreatePackageFromFiles(packagePath, RootForPackages, files);
+			return package;
+		}
+
+		private static Package CreatePackageFromFiles(string packagePath, Package parent,
+			string[] files)
+		{
+			if (parent != RootForPackages && files.Length == 0)
+				return null!;
+			var package = new Package(parent, Path.GetFileName(packagePath));
+			foreach (var filePath in files)
+				Type.FromFile(package, filePath);
+			foreach (var directory in Directory.GetDirectories(packagePath))
+				CreatePackageFromFiles(directory, package,
+					Directory.GetFiles(directory, "*" + Type.Extension));
+			return package;
+		}
+		
+		private static string BasePath => @"C:\code\GitHub\strict-lang\";
+		public string LocalPath =>
+			Path.Combine(BasePath, ToString().Replace('.', Path.DirectorySeparatorChar));
 	}
 }

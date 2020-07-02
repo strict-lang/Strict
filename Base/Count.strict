@@ -1,0 +1,8 @@
+implement Mutable
+implement Number
+Increase
+	Count(5).Increase is 6
+	self = self + 1
+Decrease
+	Count(3).Decrease is 2
+	self = self - 1

@@ -9,7 +9,30 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Strict.Language.Tests", "St
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{70C095D7-2B78-4174-9B4C-190331C15BE0}"
 	ProjectSection(SolutionItems) = preProject
+		.gitignore = .gitignore
+		README.md = README.md
 		Strict.ndproj = Strict.ndproj
+	EndProjectSection
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Strict.Compiler", "Strict.Compiler\Strict.Compiler.csproj", "{D9E14E41-8F3C-4B92-B773-227871A96F96}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Strict.Compiler.Roslyn", "Strict.Compiler.Roslyn\Strict.Compiler.Roslyn.csproj", "{00DC0E82-9C6A-45D2-A292-EFD3900FC96C}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Strict.Compiler.Tests", "Strict.Compiler.Tests\Strict.Compiler.Tests.csproj", "{E80EB301-EAC7-47ED-801C-DA4D775F7D6F}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Base", "Base", "{85AB8A69-69E3-4EF7-A7EC-26C793CB0610}"
+	ProjectSection(SolutionItems) = preProject
+		Base\Any.strict = Base\Any.strict
+		Base\App.strict = Base\App.strict
+		Base\Character.strict = Base\Character.strict
+		Base\Count.strict = Base\Count.strict
+		Base\HashCode.strict = Base\HashCode.strict
+		Base\Input.strict = Base\Input.strict
+		Base\Log.strict = Base\Log.strict
+		Base\Mutable.strict = Base\Mutable.strict
+		Base\Number.strict = Base\Number.strict
+		Base\Output.strict = Base\Output.strict
+		Base\Text.strict = Base\Text.strict
 	EndProjectSection
 EndProject
 Global
@@ -26,6 +49,18 @@ Global
 		{CF19B013-1BEE-4691-8F7F-B669C7A288EF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CF19B013-1BEE-4691-8F7F-B669C7A288EF}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{CF19B013-1BEE-4691-8F7F-B669C7A288EF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D9E14E41-8F3C-4B92-B773-227871A96F96}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D9E14E41-8F3C-4B92-B773-227871A96F96}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D9E14E41-8F3C-4B92-B773-227871A96F96}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D9E14E41-8F3C-4B92-B773-227871A96F96}.Release|Any CPU.Build.0 = Release|Any CPU
+		{00DC0E82-9C6A-45D2-A292-EFD3900FC96C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{00DC0E82-9C6A-45D2-A292-EFD3900FC96C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{00DC0E82-9C6A-45D2-A292-EFD3900FC96C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{00DC0E82-9C6A-45D2-A292-EFD3900FC96C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E80EB301-EAC7-47ED-801C-DA4D775F7D6F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E80EB301-EAC7-47ED-801C-DA4D775F7D6F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E80EB301-EAC7-47ED-801C-DA4D775F7D6F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E80EB301-EAC7-47ED-801C-DA4D775F7D6F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -23,14 +23,14 @@ namespace Strict.Language.Tests
 		[Test]
 		public void GetFullNames()
 		{
-			Assert.That(mainPackage.FullName, Is.EqualTo(nameof(TestPackage)));
-			Assert.That(mainType.FullName, Is.EqualTo(nameof(TestPackage) + "." + mainType.Name));
-			Assert.That(subPackage.FullName,
+			Assert.That(mainPackage.ToString(), Is.EqualTo(nameof(TestPackage)));
+			Assert.That(mainType.ToString(), Is.EqualTo(nameof(TestPackage) + "." + mainType.Name));
+			Assert.That(subPackage.ToString(),
 				Is.EqualTo(nameof(TestPackage) + "." + nameof(ContextTests)));
-			Assert.That(privateSubType.FullName,
+			Assert.That(privateSubType.ToString(),
 				Is.EqualTo(nameof(TestPackage) + "." + nameof(ContextTests) + "." +
 					privateSubType.Name));
-			Assert.That(publicSubType.FullName,
+			Assert.That(publicSubType.ToString(),
 				Is.EqualTo(
 					nameof(TestPackage) + "." + nameof(ContextTests) + "." + publicSubType.Name));
 		}
@@ -48,6 +48,15 @@ namespace Strict.Language.Tests
 
 		[Test]
 		public void FindSubType() =>
-			Assert.That(mainType.GetType(publicSubType.FullName), Is.EqualTo(publicSubType));
+			Assert.That(mainType.GetType(publicSubType.ToString()), Is.EqualTo(publicSubType));
+
+		[Test]
+		public void ContextNameMustNotContainSpecialCharactersOrNumbers()
+		{
+			Assert.Throws<Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers>(() =>
+				new Type(mainPackage, "MyClass123", ""));
+			Assert.Throws<Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers>(() =>
+				new Package(mainPackage, "$%"));
+		}
 	}
 }
