@@ -7,10 +7,10 @@ namespace Strict.Language.Tests
 	{
 		public TestPackage() : base(nameof(TestPackage))
 		{
-			new Type(this, Base.Any, "method IsEqualTo(target Any) returns Boolean");
-			new Type(this, Base.String, "method dummy");
-			new Type(this, Base.Log, "method WriteLine(text String)");
-			new Type(this, Base.Number, "method +(other Number) returns Number");
+			new Type(this, Base.Any, "is(any) returns Boolean");
+			new Type(this, Base.Text, "dummy");
+			new Type(this, Base.Log, "Write(text)");
+			new Type(this, Base.Number, "+(other) returns Number");
 		}
 	}
 }

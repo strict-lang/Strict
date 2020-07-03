@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace Strict.Language
 {
@@ -71,6 +72,7 @@ namespace Strict.Language
 		}
 
 		public Type? FindDirectType(string name) => types.Find(t => t.Name == name);
+		public Package GetSubPackage(string name) => (Package)Children.First(p => p.Name == name);
 
 		/// <summary>
 		/// Loads a package from disc (or later any link like github) like Strict for base types
@@ -79,19 +81,19 @@ namespace Strict.Language
 		{
 			if (packageName != nameof(Strict))
 				throw new OnlyStrictPackageIsAllowed();
-			//ncrunch: no coverage start, still needs to be tested ..
 			return FromDiskPath(BasePath + packageName);
 		}
 
 		public class OnlyStrictPackageIsAllowed : Exception { }
 
-		private static Package FromDiskPath(string packagePath)
-		{
-			var files = Directory.GetFiles(packagePath, "*" + Type.Extension);
-			var package = CreatePackageFromFiles(packagePath, RootForPackages, files);
-			return package;
-		}
+		private static Package FromDiskPath(string packagePath) =>
+			CreatePackageFromFiles(packagePath, RootForPackages,
+				Directory.GetFiles(packagePath, "*" + Type.Extension));
 
+		/// <summary>
+		/// Initially we need to create just empty types and then after they all have been created
+		/// we will fill and load them, otherwise we could not use types within the package context.
+		/// </summary>
 		private static Package CreatePackageFromFiles(string packagePath, Package parent,
 			string[] files)
 		{
@@ -99,7 +101,9 @@ namespace Strict.Language
 				return null!;
 			var package = new Package(parent, Path.GetFileName(packagePath));
 			foreach (var filePath in files)
-				Type.FromFile(package, filePath);
+				new Type(package, Path.GetFileNameWithoutExtension(filePath), string.Empty);
+			Parallel.For(0, package.types.Count,
+				async index => await package.types[index].ParseFile(files[index]));
 			foreach (var directory in Directory.GetDirectories(packagePath))
 				CreatePackageFromFiles(directory, package,
 					Directory.GetFiles(directory, "*" + Type.Extension));

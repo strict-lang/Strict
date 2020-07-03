@@ -22,7 +22,7 @@ namespace Strict.Compiler.Tests
 		[Test]
 		public void GenerateCSharpInterface()
 		{
-			var app = new Type(package, "DummyApp", "method Run");
+			var app = new Type(package, "DummyApp", "Run");
 			var file = generator.Generate(app);
 			Assert.That(file.ToString(), Is.EqualTo(@"public interface DummyApp
 {
@@ -36,8 +36,7 @@ namespace Strict.Compiler.Tests
 
 			var program = new Type(package, "Program", @"implement App
 has log
-
-method Run
+Run
 	log.Write(""Hello World"")");
 			var file = generator.Generate(program);
 			Assert.That(file.ToString(), Is.EqualTo(@"public class Program

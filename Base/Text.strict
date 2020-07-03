@@ -9,3 +9,7 @@ digits(number) returns Iterator<Number>
   if number / 10 > 0
     yield digits(number / 10)
   yield number % 10
++(other) returns Text
+  +("more") is "more"
+  "Hey" + " " + "you" is "Hey you"
+  return self.Characters + other.Characters

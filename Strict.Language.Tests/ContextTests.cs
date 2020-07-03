@@ -8,10 +8,10 @@ namespace Strict.Language.Tests
 		public void CreateContexts()
 		{
 			mainPackage = new Package(nameof(TestPackage)); 
-			mainType = new Type(mainPackage, "Yolo", "method dummy");
+			mainType = new Type(mainPackage, "Yolo", "dummy");
 			subPackage = new Package(mainPackage, nameof(ContextTests));
-			privateSubType = new Type(subPackage, "secret", "method dummy");
-			publicSubType = new Type(subPackage, "FindMe", "method dummy");
+			privateSubType = new Type(subPackage, "secret", "dummy");
+			publicSubType = new Type(subPackage, "FindMe", "dummy");
 		}
 
 		private Package mainPackage;

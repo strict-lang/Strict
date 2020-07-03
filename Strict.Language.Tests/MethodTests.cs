@@ -7,27 +7,23 @@ namespace Strict.Language.Tests
 		[SetUp]
 		public void CreateType() =>
 			type = new Type(new TestPackage(), nameof(TypeTests), @"has log
-method Run
+Run
 	log.WriteLine");
 		private Type type;
 
 		[Test]
-		public void MethodMustStartWithMethodOrFrom() =>
-			Assert.Throws<Method.InvalidMethodDefinition>(() => new Method(type, "function",new string[0]));
-
-		[Test]
 		public void MustMustHaveAName() =>
-			Assert.Throws<Method.InvalidSyntax>(() => new Method(type, "method a b", new string[0]));
+			Assert.Throws<Method.InvalidSyntax>(() => new Method(type, "a b", new string[0]));
 
 		[Test]
 		public void MethodNameCantBeKeyword() =>
 			Assert.Throws<Method.MethodNameCantBeKeyword>(
-				() => new Method(type, "method from", new string[0]));
+				() => new Method(type, "if", new string[0]));
 
 		[Test]
 		public void ParseDefinition()
 		{
-			var method = new Method(type, "method Run", new string[0]);
+			var method = new Method(type, "Run", new string[0]);
 			Assert.That(method.Name, Is.EqualTo("Run"));
 			Assert.That(method.Parameters, Is.Empty);
 			Assert.That(method.ReturnType, Is.EqualTo(type.GetType(Base.None)));

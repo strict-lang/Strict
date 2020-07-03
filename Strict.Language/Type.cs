@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace Strict.Language
 {
@@ -16,13 +17,10 @@ namespace Strict.Language
 		{
 			if (package.FindDirectType(name) != null)
 				throw new TypeAlreadyExistsInPackage(name, package);
-			if (string.IsNullOrEmpty(code) && name != Base.None && name != Base.Boolean)
-				throw new NoCodeGiven(name);
 			Package = package;
 			Package.Add(this);
-			lines = code.SplitLines();
-			if (name != Base.None && name != Base.Boolean)
-				Parse();
+			if (!string.IsNullOrEmpty(code))
+				Parse(code.SplitLines());
 		}
 
 		public class TypeAlreadyExistsInPackage : Exception
@@ -31,18 +29,13 @@ namespace Strict.Language
 				name + " in package: " + package) { }
 		}
 
-		public class NoCodeGiven : Exception
-		{
-			public NoCodeGiven(string name) : base(name) { }
-		}
-
 		public Package Package { get; }
-		private readonly string[] lines;
 
-		private void Parse()
+		private void Parse(string[] setLines)
 		{
 			try
 			{
+				lines = setLines;
 				for (lineNumber = 0; lineNumber < lines.Length; lineNumber++)
 					ParseLine(lines[lineNumber]);
 				if (methods.Count == 0)
@@ -54,9 +47,9 @@ namespace Strict.Language
 			}
 		}
 
-		public string FilePath => Path.Combine(Package.LocalPath, Name) + Extension;
-
+		private string[] lines = new string[0];
 		private int lineNumber;
+		public string FilePath => Path.Combine(Package.LocalPath, Name) + Extension;
 
 		private void ParseLine(string line)
 		{
@@ -65,10 +58,8 @@ namespace Strict.Language
 				implements.Add(new Implement(Package.GetType(words[1])));
 			else if (words[0] == Keyword.Has)
 				members.Add(new Member(this, line.Substring(Keyword.Has.Length + 1)));
-			else if (words[0] == nameof(Method).ToLower())
-				methods.Add(new Method(this, line, GetAllMethodLines()));
 			else
-				throw new InvalidLine(line, lineNumber, words.First());
+				methods.Add(new Method(this, line, GetAllMethodLines()));
 		}
 
 		private string[] ParseWords(string line)
@@ -77,10 +68,7 @@ namespace Strict.Language
 				throw new ExtraWhitespacesFound(line, lineNumber, line);
 			if (line.Length == 0)
 				throw new EmptyLine(lineNumber, Name);
-			var words = line.SplitWords();
-			if (words.Length == 1)
-				throw new LineWithJustOneWord(line, lineNumber, words[0]);
-			return words;
+			return line.SplitWords();
 		}
 
 		public class ExtraWhitespacesFound : LineException
@@ -104,18 +92,7 @@ namespace Strict.Language
 		{
 			public EmptyLine(int line, string method) : base("", line, method) { }
 		}
-
-		public class LineWithJustOneWord : LineException
-		{
-			public LineWithJustOneWord(string text, int line, string method) : base(text, line,
-				method) { }
-		}
-
-		public class InvalidLine : LineException
-		{
-			public InvalidLine(string text, int line, string method) : base(text, line, method) { }
-		}
-
+		
 		public class NoMethodsFound : LineException
 		{
 			public NoMethodsFound(int line, string method) : base("", line, method) { }
@@ -157,20 +134,18 @@ namespace Strict.Language
 				? this
 				: Package.FindType(name, searchingFromPackage ?? Package, searchingFromType ?? this);
 
-		//ncrunch: no coverage start, still needs to be tested
-		public static Type FromFile(Package package, string filePath)
+		public async Task ParseFile(string filePath)
 		{
 			if (!filePath.EndsWith(Extension))
 				throw new FileExtensionMustBeStrict();
 			var directory = Path.GetDirectoryName(filePath)!;
 			var paths = directory.Split(Path.DirectorySeparatorChar);
-			if (package.Name != paths.Last())
-				throw new FilePathMustMatchPackageName(package.Name, directory);
-			if (!string.IsNullOrEmpty(package.Parent.Name) &&
-				(paths!.Length < 2 || package.Parent.Name != paths[^2]))
-				throw new FilePathMustMatchPackageName(package.Parent.Name, directory);
-			return new Type(package, Path.GetFileNameWithoutExtension(filePath),
-				File.ReadAllText(filePath));
+			if (Package.Name != paths.Last())
+				throw new FilePathMustMatchPackageName(Package.Name, directory);
+			if (!string.IsNullOrEmpty(Package.Parent.Name) &&
+				(paths!.Length < 2 || Package.Parent.Name != paths[^2]))
+				throw new FilePathMustMatchPackageName(Package.Parent.Name, directory);
+			Parse(await File.ReadAllLinesAsync(filePath));
 		}
 
 		public const string Extension = ".strict";

@@ -7,9 +7,12 @@ namespace Strict.Language
 		public const string Has = "has";
 		public const string Let = "let";
 		public const string As = "as";
+		/// <summary>
+		/// Points to the class instance we are currently in
+		/// </summary>
+		public const string Self = "self";
 		public const string Test = "test";
 		public const string Throw = "throw";
-		public const string Method = "method";
 		public const string Is = "is";
 		public const string Not = "not";
 		public const string True = "true";
@@ -27,10 +30,13 @@ namespace Strict.Language
 		public const string Returns = "returns";
 		public static bool IsKeyword(this string name) => All.Contains(name);
 
+		public static bool IsKeywordFunction(this string name) =>
+			name == From || name == Is || name == To;
+
 		private static readonly string[] All =
 		{
-			Has, Let, As, Test, Throw, Method, Is, Not, True, False, Break, Do, In, From, Return,
-			To, For, If, Else, Yield, Returns
+			Has, Let, As, Test, Throw, Is, Not, True, False, Break, Do, In, From, Return, To, For,
+			If, Else, Yield, Returns
 		};
 	}
 }

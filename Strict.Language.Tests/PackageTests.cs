@@ -18,15 +18,13 @@ namespace Strict.Language.Tests
 			Assert.That(emptyPackage.FindType(Base.Number), Is.Null);
 		}
 
-		//ncrunch: no coverage start
-		[Test, Ignore("Parsing not done for method-less new base code")]
+		[Test]
 		public void LoadStrictBaseTypes()
 		{
-			//we first need to load all type names in a folder and allow all classes to use each others type, then fill them in!
-			var package = Package.FromDisk(nameof(Strict));
+			var package = Package.FromDisk(nameof(Strict)).GetSubPackage(nameof(Base));
 			Assert.That(package.FindDirectType(Base.Any), Is.Not.Null);
 			Assert.That(package.FindDirectType(Base.Number), Is.Not.Null);
-			Assert.That(package.FindDirectType(Base.Type), Is.Not.Null);
+			Assert.That(package.FindDirectType(Base.App), Is.Not.Null);
 		}
 	}
 }
