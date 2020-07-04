@@ -41,8 +41,6 @@ namespace Strict.Language
 			// ReSharper disable once InconsistentlySynchronizedField
 			if (Directory.Exists(targetPath) && AlreadyDownloaded.Contains(targetPath))
 				return targetPath;
-			lock (AlreadyDownloaded)
-				AlreadyDownloaded.Add(targetPath);
 			await DownloadAndExtract(packageUrl, packageName, targetPath);
 			return targetPath;
 		}
@@ -50,14 +48,30 @@ namespace Strict.Language
 		private static async Task DownloadAndExtract(Uri packageUrl, string packageName,
 			string targetPath)
 		{
+			try
+			{
+				await TryDownloadAndExtract(packageUrl, packageName, targetPath);
+			}
+			catch (IOException)
+			{
+				// Ignore if we got target files already and we got to the downloading and extracting step,
+				// seems to happen on CI when trying to download while another test extracts the zip.
+				if (!Directory.Exists(targetPath) || AlreadyDownloaded.Count == 0)
+					throw;
+			}
+		}
+
+		private static async Task TryDownloadAndExtract(Uri packageUrl, string packageName,
+			string targetPath)
+		{
 			using WebClient webClient = new WebClient();
 			var localZip = Path.Combine(CacheFolder, packageName + ".zip");
 			await webClient.DownloadFileTaskAsync(new Uri(packageUrl + "/archive/master.zip"),
 				localZip);
+			AlreadyDownloaded.Add(targetPath);
 			await Task.Run(() =>
 			{
-				lock (AlreadyDownloaded)
-					ZipFile.ExtractToDirectory(localZip, CacheFolder, true);
+				ZipFile.ExtractToDirectory(localZip, CacheFolder, true);
 				var masterDirectory = Path.Combine(CacheFolder, packageName + "-master");
 				if (!Directory.Exists(masterDirectory))
 					return;
@@ -73,7 +87,7 @@ namespace Strict.Language
 		public async Task<Package> LoadFromPath(string packagePath)
 		{
 			if (AlreadyLoadedPackages.TryGetValue(packagePath, out var loadedPackage))
-				return loadedPackage; // ncrunch: no coverage
+				return loadedPackage;
 			var newPackage = await CreatePackageFromFiles(packagePath,
 				Directory.GetFiles(packagePath, "*" + Type.Extension));
 			AlreadyLoadedPackages.Add(packagePath, newPackage);
