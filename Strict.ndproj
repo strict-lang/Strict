@@ -5350,7 +5350,7 @@ select new {
 // the assembly Foo3
 // shouldn't use directly 
 // the namespace Foo3.Foo4
-// because (TODO insert your reason)
+// because (insert your reason)
 
 //<Description>
 // This rule is a **sample rule** that shows how to

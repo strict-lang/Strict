@@ -31,10 +31,9 @@ namespace Strict.Compiler.Tests
 }"));
 		}
 
-		[Test, Ignore("TODO")]
+		[Test]
 		public void GenerateCSharpClass()
 		{
-
 			var program = new Type(package, "Program", @"implement App
 has log
 Run
