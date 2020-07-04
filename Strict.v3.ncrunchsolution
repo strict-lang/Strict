@@ -1,7 +1,7 @@
 ﻿<SolutionConfiguration>
   <Settings>
     <AllowParallelTestExecution>True</AllowParallelTestExecution>
-    <DefaultTestTimeout>2000</DefaultTestTimeout>
+    <DefaultTestTimeout>10000</DefaultTestTimeout>
     <InstrumentationMode>Optimised</InstrumentationMode>
     <MetricsExclusionList>
       <Value>Strict.Compiler.Roslyn\Strict.Compiler.Roslyn.csproj</Value>

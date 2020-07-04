@@ -28,11 +28,11 @@ namespace Strict.Language.Tests
 		{
 			Assert.That(
 				Assert.Throws<Type.ParsingFailed>(() => new Type(package, Base.Count, " ")).
-					InnerException, Is.TypeOf<Type.ExtraWhitespacesFound>());
+					InnerException, Is.TypeOf<Type.ExtraWhitespacesFoundAtBeginningOfLine>());
 			Assert.That(
 				Assert.Throws<Type.ParsingFailed>(() =>
 					new Type(package, Base.HashCode, "has\t")).InnerException,
-				Is.TypeOf<Type.ExtraWhitespacesFound>());
+				Is.TypeOf<Type.ExtraWhitespacesFoundAtEndOfLine>());
 		}
 
 		[Test]

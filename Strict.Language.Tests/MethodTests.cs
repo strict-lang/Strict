@@ -19,6 +19,10 @@ Run
 		public void MethodNameCantBeKeyword() =>
 			Assert.Throws<Method.MethodNameCantBeKeyword>(
 				() => new Method(type, "if", new string[0]));
+		
+		[Test]
+		public void ParametersMustNotBeEmpty() =>
+			Assert.Throws<Method.EmptyParametersMustBeRemoved>(() => new Method(type, "a()", new string[0]));
 
 		[Test]
 		public void ParseDefinition()

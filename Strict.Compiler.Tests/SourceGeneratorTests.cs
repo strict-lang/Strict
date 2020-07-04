@@ -11,7 +11,7 @@ namespace Strict.Compiler.Tests
 		[SetUp]
 		public void CreateGenerator()
 		{
-			Package.FromDisk(nameof(Strict));
+			Package.FromUrl(Package.StrictUrl);
 			package = new Package(nameof(SourceGeneratorTests));
 			generator = new CSharpGenerator();
 		}

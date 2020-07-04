@@ -35,6 +35,14 @@ namespace Strict.Language
 
 		public Type GetType(string name)
 		{
+			// Generics still need to be supported (see Log.strict for Output<text>)
+			if (name.StartsWith("Iterator<"))
+				name = name.Split('<', '>')[1];
+			if (name.Contains("<"))
+				name = name.Split('<')[0];
+			// Arrays are also not supported yet, simply return base type
+			if (name.EndsWith('s'))
+				name = name.Substring(0, name.Length - 1);
 			if (name == Name || name == ToString())
 				return (Type)this;
 			var type = FindType(name);

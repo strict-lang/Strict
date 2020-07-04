@@ -1,3 +1,5 @@
+using System;
+using System.Threading.Tasks;
 using NUnit.Framework;
 
 namespace Strict.Language.Tests
@@ -5,10 +7,14 @@ namespace Strict.Language.Tests
 	public class PackageTests
 	{
 		[Test]
-		public void LoadingUnknownPackageIsNotAllowedYet() =>
-			Assert.Throws<Package.OnlyStrictPackageIsAllowed>(() =>
-				Package.FromDisk(nameof(LoadingUnknownPackageIsNotAllowedYet)));
+		public void InvalidUrlWontWork() =>
+			Assert.ThrowsAsync<UriFormatException>(async () => await Package.FromUrl(nameof(InvalidUrlWontWork)));
 
+		[Test]
+		public void LoadingNonGithubPackageWontWork() =>
+			Assert.ThrowsAsync<Package.OnlyGithubDotComUrlsAreAllowedForNow>(async () =>
+				await Package.FromUrl("https://google.com"));
+		
 		[Test]
 		public void NoneAndBooleanAreAlwaysKnown()
 		{
@@ -19,12 +25,13 @@ namespace Strict.Language.Tests
 		}
 
 		[Test]
-		public void LoadStrictBaseTypes()
+		public async Task LoadStrictBaseTypes()
 		{
-			var package = Package.FromDisk(nameof(Strict)).GetSubPackage(nameof(Base));
-			Assert.That(package.FindDirectType(Base.Any), Is.Not.Null);
-			Assert.That(package.FindDirectType(Base.Number), Is.Not.Null);
-			Assert.That(package.FindDirectType(Base.App), Is.Not.Null);
+			var strictPackage = await Package.FromUrl(Package.StrictUrl);
+			var basePackage = strictPackage.GetSubPackage(nameof(Base));
+			Assert.That(basePackage.FindDirectType(Base.Any), Is.Not.Null);
+			Assert.That(basePackage.FindDirectType(Base.Number), Is.Not.Null);
+			Assert.That(basePackage.FindDirectType(Base.App), Is.Not.Null);
 		}
 	}
 }

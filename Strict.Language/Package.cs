@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
 
 namespace Strict.Language
@@ -75,18 +77,44 @@ namespace Strict.Language
 		public Package GetSubPackage(string name) => (Package)Children.First(p => p.Name == name);
 
 		/// <summary>
-		/// Loads a package from disc (or later any link like github) like Strict for base types
+		/// Loads from url (like github) and caches it to disc (will only check for updates once per day)
+		/// All locally cached packages and all their types in them are always available for any .strict
+		/// file in the Editor. If a type is not found, packages.strict.dev is asked if we can get a url.
 		/// </summary>
-		public static Package FromDisk(string packageName)
+		public static async Task<Package> FromUrl(string packageUrl)
 		{
-			if (packageName != nameof(Strict))
-				throw new OnlyStrictPackageIsAllowed();
-			return FromDiskPath(BasePath + packageName);
+			var uri = new Uri(packageUrl);
+			if (uri.Host != "github.com" || string.IsNullOrEmpty(uri.AbsolutePath) ||
+				// Allow other repositories as well, but put them in an empty main package name first
+				!uri.AbsolutePath.StartsWith("/strict-lang/"))
+				throw new OnlyGithubDotComUrlsAreAllowedForNow();
+			var packageName = uri.AbsolutePath.Split('/').Last();
+			var localPath = Path.Combine(CacheFolder, packageName);
+			if (!Directory.Exists(localPath))
+				await DownloadAndExtractRepository(packageUrl, localPath, packageName); //ncrunch: no coverage
+			return await FromDiskPath(localPath);
 		}
 
-		public class OnlyStrictPackageIsAllowed : Exception { }
+		public class OnlyGithubDotComUrlsAreAllowedForNow : Exception { }
 
-		private static Package FromDiskPath(string packagePath) =>
+		//ncrunch: no coverage start, should only be called rarely if we are missing a cached package
+		private static async Task DownloadAndExtractRepository(string packageUrl, string localPath, string packageName)
+		{
+			if (!Directory.Exists(CacheFolder))
+				Directory.CreateDirectory(CacheFolder);
+			using WebClient webClient = new WebClient();
+			var localZip = Path.Combine(CacheFolder, packageName + ".zip");
+			await webClient.DownloadFileTaskAsync(new Uri(packageUrl + "/archive/master.zip"), localZip);
+			await Task.Run(() =>
+			{
+				ZipFile.ExtractToDirectory(localZip, CacheFolder);
+				var masterDirectory = Path.Combine(CacheFolder, packageName + "-master");
+				if (Directory.Exists(masterDirectory))
+					Directory.Move(masterDirectory, localPath);
+			});
+		} // ncrunch: no coverage end
+
+		private static Task<Package> FromDiskPath(string packagePath) =>
 			CreatePackageFromFiles(packagePath, RootForPackages,
 				Directory.GetFiles(packagePath, "*" + Type.Extension));
 
@@ -94,7 +122,7 @@ namespace Strict.Language
 		/// Initially we need to create just empty types and then after they all have been created
 		/// we will fill and load them, otherwise we could not use types within the package context.
 		/// </summary>
-		private static Package CreatePackageFromFiles(string packagePath, Package parent,
+		private static async Task<Package> CreatePackageFromFiles(string packagePath, Package parent,
 			string[] files)
 		{
 			if (parent != RootForPackages && files.Length == 0)
@@ -102,16 +130,22 @@ namespace Strict.Language
 			var package = new Package(parent, Path.GetFileName(packagePath));
 			foreach (var filePath in files)
 				new Type(package, Path.GetFileNameWithoutExtension(filePath), string.Empty);
-			Parallel.For(0, package.types.Count,
-				async index => await package.types[index].ParseFile(files[index]));
+			var tasks = new List<Task>();
+			for (var index = 0; index < package.Children.Count; index++)
+				tasks.Add(package.types[index].ParseFile(files[index]));
 			foreach (var directory in Directory.GetDirectories(packagePath))
-				CreatePackageFromFiles(directory, package,
-					Directory.GetFiles(directory, "*" + Type.Extension));
+				tasks.Add(CreatePackageFromFiles(directory, package,
+					Directory.GetFiles(directory, "*" + Type.Extension)));
+			await Task.WhenAll(tasks);
 			return package;
 		}
-		
-		private static string BasePath => @"C:\code\GitHub\strict-lang\";
-		public string LocalPath =>
-			Path.Combine(BasePath, ToString().Replace('.', Path.DirectorySeparatorChar));
+
+		private static string CacheFolder =>
+			Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+				StrictPackages);
+		private const string StrictPackages = nameof(StrictPackages);
+		public string LocalCachePath =>
+			Path.Combine(CacheFolder, ToString().Replace('.', Path.DirectorySeparatorChar));
+		public const string StrictUrl = "https://github.com/strict-lang/Strict";
 	}
 }

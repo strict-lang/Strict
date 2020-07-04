@@ -45,11 +45,14 @@ namespace Strict.Language
 			}
 			if (string.IsNullOrEmpty(rest))
 				return;
-			if (rest.StartsWith("(") && rest.EndsWith(")"))
-				ParseParameters(rest.Substring(1, rest.Length - 2));
-			else
+			if (rest == "()")
+				throw new EmptyParametersMustBeRemoved();
+			if (!rest.StartsWith("(") || !rest.EndsWith(")"))
 				throw new InvalidSyntax(rest);
+			ParseParameters(rest.Substring(1, rest.Length - 2));
 		}
+
+		public class EmptyParametersMustBeRemoved : Exception { }
 
 		public void ParseParameters(string parametersText)
 		{

@@ -43,18 +43,20 @@ namespace Strict.Language
 			}
 			catch (Exception ex)
 			{
-				throw new ParsingFailed(ex, FilePath);
+				throw new ParsingFailed(ex, FilePath, lineNumber < lines.Length
+					? lines[lineNumber].SplitWords().First()
+					: "", lineNumber);
 			}
 		}
 
 		private string[] lines = new string[0];
 		private int lineNumber;
-		public string FilePath => Path.Combine(Package.LocalPath, Name) + Extension;
+		public string FilePath => Path.Combine(Package.LocalCachePath, Name) + Extension;
 
 		private void ParseLine(string line)
 		{
 			var words = ParseWords(line);
-			if (lineNumber == 0 && words[0] == nameof(Implement).ToLower())
+			if (words[0] == nameof(Implement).ToLower())
 				implements.Add(new Implement(Package.GetType(words[1])));
 			else if (words[0] == Keyword.Has)
 				members.Add(new Member(this, line.Substring(Keyword.Has.Length + 1)));
@@ -64,21 +66,30 @@ namespace Strict.Language
 
 		private string[] ParseWords(string line)
 		{
-			if (line.Length != line.Trim().Length)
-				throw new ExtraWhitespacesFound(line, lineNumber, line);
+			if (line.Length != line.TrimStart().Length)
+				throw new ExtraWhitespacesFoundAtBeginningOfLine(line, lineNumber, line);
+			if (line.Length != line.TrimEnd().Length)
+				throw new ExtraWhitespacesFoundAtEndOfLine(line, lineNumber, line);
 			if (line.Length == 0)
 				throw new EmptyLine(lineNumber, Name);
 			return line.SplitWords();
 		}
 
-		public class ExtraWhitespacesFound : LineException
+		public class ExtraWhitespacesFoundAtBeginningOfLine : ParsingFailedInLine
 		{
-			public ExtraWhitespacesFound(string text, int line, string method) : base(text, line, method) { }
+			public ExtraWhitespacesFoundAtBeginningOfLine(string text, int line, string method) :
+				base(text, line, method) { }
+		}
+		
+		public class ExtraWhitespacesFoundAtEndOfLine : ParsingFailedInLine
+		{
+			public ExtraWhitespacesFoundAtEndOfLine(string text, int line, string method) : base(
+				text, line, method) { }
 		}
 
-		public abstract class LineException : Exception
+		public abstract class ParsingFailedInLine : Exception
 		{
-			protected LineException(string message, int line, string method) : base(message)
+			protected ParsingFailedInLine(string message, int line, string method) : base(message)
 			{
 				Number = line;
 				Method = method;
@@ -88,14 +99,14 @@ namespace Strict.Language
 			public string Method { get; }
 		}
 
-		public class EmptyLine : LineException
+		public class EmptyLine : ParsingFailedInLine
 		{
 			public EmptyLine(int line, string method) : base("", line, method) { }
 		}
 		
-		public class NoMethodsFound : LineException
+		public class NoMethodsFound : ParsingFailedInLine
 		{
-			public NoMethodsFound(int line, string method) : base("", line, method) { }
+			public NoMethodsFound(int line, string method) : base("Each type must have at least one method, otherwise it is useless", line, method) { }
 		}
 
 		private IReadOnlyList<string> GetAllMethodLines()
@@ -103,8 +114,8 @@ namespace Strict.Language
 			if (IsTrait && lineNumber + 1 < lines.Length && lines[lineNumber + 1].StartsWith("\t"))
 				throw new TypeHasNoMembersAndThusMustBeATraitWithoutMethodBodies();
 			var methodLines = new List<string>();
-			while (++lineNumber < lines.Length && lines[lineNumber].StartsWith("\t"))
-				methodLines.Add(lines[lineNumber]);
+			while (lineNumber+1 < lines.Length && lines[lineNumber+1].StartsWith("\t"))
+				methodLines.Add(lines[lineNumber++]);
 			return methodLines;
 		}
 
@@ -112,10 +123,12 @@ namespace Strict.Language
 
 		public class ParsingFailed : Exception
 		{
-			public ParsingFailed(Exception inner, string filePath) : base(
-				inner is LineException line
+			public ParsingFailed(Exception inner, string filePath, string fallbackFirstWord,
+				int fallbackLineNumber) : base(inner is ParsingFailedInLine line
 					? "\n   at " + line.Method + " in " + filePath + ":line " + line.Number
-					: filePath, inner) { }
+					: "\n   at " + fallbackFirstWord + " in " + filePath + ":line " +
+					fallbackLineNumber,
+				inner) { }
 		}
 
 		public IReadOnlyList<Implement> Implements => implements;
@@ -124,7 +137,7 @@ namespace Strict.Language
 		private readonly List<Member> members = new List<Member>();
 		public IReadOnlyList<Method> Methods => methods;
 		private readonly List<Method> methods = new List<Method>();
-		public bool IsTrait => Implements.Count == 0 && Members.Count == 0;
+		public bool IsTrait => Implements.Count == 0 && Members.Count == 0 && Name != Base.Number;
 
 		public override string ToString() => base.ToString() + Implements.InBrackets();
 
