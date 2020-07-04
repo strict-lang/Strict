@@ -39,7 +39,7 @@ namespace Strict.Language
 				Directory.CreateDirectory(CacheFolder);
 			var targetPath = Path.Combine(CacheFolder, packageName);
 			// ReSharper disable once InconsistentlySynchronizedField
-			if (Directory.Exists(targetPath) && AlreadyDownloaded.Contains(targetPath))
+			if (Directory.Exists(targetPath) && AlreadyDownloadedThisSession.Contains(targetPath))
 				return targetPath;
 			await DownloadAndExtract(packageUrl, packageName, targetPath);
 			return targetPath;
@@ -56,7 +56,7 @@ namespace Strict.Language
 			{
 				// Ignore if we got target files already and we got to the downloading and extracting step,
 				// seems to happen on CI when trying to download while another test extracts the zip.
-				if (!Directory.Exists(targetPath) || AlreadyDownloaded.Count == 0)
+				if (!Directory.Exists(targetPath))
 					throw;
 			}
 		}
@@ -66,9 +66,12 @@ namespace Strict.Language
 		{
 			using WebClient webClient = new WebClient();
 			var localZip = Path.Combine(CacheFolder, packageName + ".zip");
+			if (currentlyDownloadingZip == localZip)
+				return;
+			currentlyDownloadingZip = localZip;
 			await webClient.DownloadFileTaskAsync(new Uri(packageUrl + "/archive/master.zip"),
 				localZip);
-			AlreadyDownloaded.Add(targetPath);
+			AlreadyDownloadedThisSession.Add(targetPath);
 			await Task.Run(() =>
 			{
 				ZipFile.ExtractToDirectory(localZip, CacheFolder, true);
@@ -81,7 +84,8 @@ namespace Strict.Language
 			});
 		}
 
-		private static readonly List<string> AlreadyDownloaded = new List<string>();
+		private static string currentlyDownloadingZip = "";
+		private static readonly List<string> AlreadyDownloadedThisSession = new List<string>();
 		//ncrunch: no coverage end
 
 		public async Task<Package> LoadFromPath(string packagePath)
