@@ -8,14 +8,12 @@ namespace Strict.Language.Tests
 {
 	public class RepositoriesTests
 	{
-		[SetUp]
-		public void CreateRepository() => repos = new Repositories();
-		private Repositories repos;
-
 		[Test]
 		public void InvalidPathWontWork() =>
 			Assert.ThrowsAsync<DirectoryNotFoundException>(async () =>
 				await repos.LoadFromPath(nameof(InvalidPathWontWork)));
+
+		private readonly Repositories repos = new Repositories();
 
 		[Test]
 		public void LoadingNonGithubPackageWontWork() =>

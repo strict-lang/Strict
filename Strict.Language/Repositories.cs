@@ -9,13 +9,27 @@ using System.Threading.Tasks;
 namespace Strict.Language
 {
 	/// <summary>
-	/// Loads packages from url (like github) and caches it to disc for the current run. All locally
-	/// cached packages and all types in them are always available for any .strict file in the Editor.
-	/// If a type is not found, packages.strict.dev is asked if we can get a url (used here to load).
+	/// Loads packages from url (like github) and caches it to disc for the current and subsequent
+	/// runs. Next time Repositories is created, we will check for outdated cache and delete the zip
+	/// files to allow redownloading fresh files. All locally cached packages and all types in them
+	/// are always available for any .strict file in the Editor. If a type is not found,
+	/// packages.strict.dev is asked if we can get a url (used here to load).
 	/// </summary>
 	/// <remarks>Everything in here is async, you can easily load many packages in parallel</remarks>
 	public class Repositories
 	{
+		/// <summary>
+		/// Gets rid of any cached zip files (keeps the actual files for use) older than 1h, which will
+		/// allow redownloading from github to get any changes, while still staying fast in local runs
+		/// when there are usually no changes happening.
+		/// </summary>
+		public Repositories()
+		{
+			foreach (var file in Directory.GetFiles(CacheFolder, "*.zip"))
+				if (File.GetLastWriteTimeUtc(file) < DateTime.UtcNow.AddHours(-1))
+					File.Delete(file); //ncrunch: no coverage, rarely happens
+		}
+
 		public async Task<Package> LoadFromUrl(Uri packageUrl)
 		{
 			if (packageUrl.Host != "github.com" || string.IsNullOrEmpty(packageUrl.AbsolutePath) ||
@@ -38,8 +52,7 @@ namespace Strict.Language
 			if (!Directory.Exists(CacheFolder))
 				Directory.CreateDirectory(CacheFolder);
 			var targetPath = Path.Combine(CacheFolder, packageName);
-			// ReSharper disable once InconsistentlySynchronizedField
-			if (Directory.Exists(targetPath) && AlreadyDownloadedThisSession.Contains(targetPath))
+			if (Directory.Exists(targetPath) && File.Exists( Path.Combine(CacheFolder, packageName + ".zip")))
 				return targetPath;
 			await DownloadAndExtract(packageUrl, packageName, targetPath);
 			return targetPath;
@@ -48,30 +61,10 @@ namespace Strict.Language
 		private static async Task DownloadAndExtract(Uri packageUrl, string packageName,
 			string targetPath)
 		{
-			try
-			{
-				await TryDownloadAndExtract(packageUrl, packageName, targetPath);
-			}
-			catch (IOException)
-			{
-				// Ignore if we got target files already and we got to the downloading and extracting step,
-				// seems to happen on CI when trying to download while another test extracts the zip.
-				if (!Directory.Exists(targetPath))
-					throw;
-			}
-		}
-
-		private static async Task TryDownloadAndExtract(Uri packageUrl, string packageName,
-			string targetPath)
-		{
-			using WebClient webClient = new WebClient();
 			var localZip = Path.Combine(CacheFolder, packageName + ".zip");
-			if (currentlyDownloadingZip == localZip)
-				return;
-			currentlyDownloadingZip = localZip;
-			await webClient.DownloadFileTaskAsync(new Uri(packageUrl + "/archive/master.zip"),
-				localZip);
-			AlreadyDownloadedThisSession.Add(targetPath);
+			File.CreateText(localZip).Close();
+			using WebClient webClient = new WebClient();
+			await webClient.DownloadFileTaskAsync(new Uri(packageUrl + "/archive/master.zip"), localZip);
 			await Task.Run(() =>
 			{
 				ZipFile.ExtractToDirectory(localZip, CacheFolder, true);
@@ -82,11 +75,7 @@ namespace Strict.Language
 					new DirectoryInfo(targetPath).Delete(true);
 				Directory.Move(masterDirectory, targetPath);
 			});
-		}
-
-		private static string currentlyDownloadingZip = "";
-		private static readonly List<string> AlreadyDownloadedThisSession = new List<string>();
-		//ncrunch: no coverage end
+		} //ncrunch: no coverage end
 
 		public async Task<Package> LoadFromPath(string packagePath)
 		{
@@ -138,7 +127,6 @@ namespace Strict.Language
 		/// .vs or _NCrunch) or numbers or dot separators (like Strict.Compiler) are allowed.
 		/// </summary>
 		private static bool IsValidCodeDirectory(string directory) => Path.GetFileName(directory).IsWord();
-
 		private static string DevelopmentFolder => Path.Combine(@"C:\code\GitHub\strict-lang");
 		private static string CacheFolder =>
 			Path.Combine( //ncrunch: no coverage, only downloaded and cached on non development machines
