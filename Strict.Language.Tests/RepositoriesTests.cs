@@ -32,7 +32,8 @@ namespace Strict.Language.Tests
 			Assert.That(basePackage.FindDirectType(Base.App), Is.Not.Null);
 		}
 
-		[Test]
+		//ncrunch: no coverage start
+		[Test][Category("Slow")]
 		public async Task LoadingSameRepositoryAgainUsesCache()
 		{
 			var tasks = new List<Task<Package>>();

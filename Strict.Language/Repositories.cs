@@ -73,7 +73,7 @@ namespace Strict.Language
 		public async Task<Package> LoadFromPath(string packagePath)
 		{
 			if (AlreadyLoadedPackages.TryGetValue(packagePath, out var loadedPackage))
-				return loadedPackage;
+				return loadedPackage; // ncrunch: no coverage
 			var newPackage = await CreatePackageFromFiles(packagePath,
 				Directory.GetFiles(packagePath, "*" + Type.Extension));
 			AlreadyLoadedPackages.Add(packagePath, newPackage);
