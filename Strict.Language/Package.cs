@@ -91,16 +91,14 @@ namespace Strict.Language
 			var packageName = uri.AbsolutePath.Split('/').Last();
 			var localPath = Path.Combine(DevelopmentFolder, packageName);
 			if (!Directory.Exists(localPath))
-				localPath = Path.Combine(CacheFolder, packageName); //ncrunch: no coverage
-			if (!Directory.Exists(localPath))
-				await DownloadAndExtractRepository(packageUrl, localPath, packageName); //ncrunch: no coverage
+				await DownloadAndExtractRepository(packageUrl,packageName); //ncrunch: no coverage, currently always done to update
 			return await FromDiskPath(localPath);
 		}
 
 		public class OnlyGithubDotComUrlsAreAllowedForNow : Exception { }
 
 		//ncrunch: no coverage start, should only be called rarely if we are missing a cached package
-		private static async Task DownloadAndExtractRepository(string packageUrl, string localPath, string packageName)
+		private static async Task DownloadAndExtractRepository(string packageUrl, string packageName)
 		{
 			if (!Directory.Exists(CacheFolder))
 				Directory.CreateDirectory(CacheFolder);
@@ -112,7 +110,7 @@ namespace Strict.Language
 				ZipFile.ExtractToDirectory(localZip, CacheFolder);
 				var masterDirectory = Path.Combine(CacheFolder, packageName + "-master");
 				if (Directory.Exists(masterDirectory))
-					Directory.Move(masterDirectory, localPath);
+					Directory.Move(masterDirectory, Path.Combine(CacheFolder, packageName));
 			});
 		} // ncrunch: no coverage end
 
