@@ -51,7 +51,7 @@ namespace Strict.Language
 
 		private string[] lines = new string[0];
 		private int lineNumber;
-		public string FilePath => Path.Combine(Package.LocalCachePath, Name) + Extension;
+		public string FilePath => Path.Combine(Package.FolderPath, Name) + Extension;
 
 		private void ParseLine(string line)
 		{
@@ -139,7 +139,7 @@ namespace Strict.Language
 		private readonly List<Method> methods = new List<Method>();
 		public bool IsTrait => Implements.Count == 0 && Members.Count == 0 && Name != Base.Number;
 
-		public override string ToString() => base.ToString() + Implements.InBrackets();
+		public override string ToString() => base.ToString() + Implements.ToBracketsString();
 
 		public override Type? FindType(string name, Package? searchingFromPackage = null,
 			Type? searchingFromType = null) =>

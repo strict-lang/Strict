@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 
 namespace Strict.Language
 {
@@ -13,12 +14,14 @@ namespace Strict.Language
 		public static string[] SplitWordsAndPunctuation(this string text) =>
 			text.Split(new[] { ' ', '(', ')', ',' }, StringSplitOptions.RemoveEmptyEntries);
 
-		public static string ToWordString<T>(this IReadOnlyCollection<T> list) =>
+		public static string ToWordListString<T>(this IReadOnlyCollection<T> list) =>
 			string.Join(", ", list);
 
-		public static string InBrackets<T>(this IReadOnlyCollection<T> list) =>
+		public static string ToBracketsString<T>(this IReadOnlyCollection<T> list) =>
 			list.Count > 0
-				? "(" + string.Join(", ", list) + ")"
+				? "(" + ToWordListString(list) + ")"
 				: "";
+
+		public static bool IsWord(this string text) => Regex.IsMatch(text, @"^[A-Za-z]+$");
 	}
 }

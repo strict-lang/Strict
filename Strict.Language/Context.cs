@@ -14,7 +14,7 @@ namespace Strict.Language
 		protected Context(Context parent, string name)
 		{
 			if (parent != null && (string.IsNullOrWhiteSpace(name) ||
-				!(this is Method) && !Regex.IsMatch(name, @"^[A-Za-z]+$")))
+				!(this is Method) && !name.IsWord()))
 				throw new NameMustBeAWordWithoutAnySpecialCharactersOrNumbers(name);
 			Parent = parent!;
 			// ReSharper disable once ConditionIsAlwaysTrueOrFalse

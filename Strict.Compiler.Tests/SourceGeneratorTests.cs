@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 using NUnit.Framework;
 using Strict.Compiler.Roslyn;
 using Strict.Language;
@@ -9,9 +10,9 @@ namespace Strict.Compiler.Tests
 	public class SourceGeneratorTests
 	{
 		[SetUp]
-		public void CreateGenerator()
+		public async Task CreateGenerator()
 		{
-			Package.FromUrl(Package.StrictUrl);
+			await new Repositories().LoadFromUrl(Repositories.StrictUrl);
 			package = new Package(nameof(SourceGeneratorTests));
 			generator = new CSharpGenerator();
 		}

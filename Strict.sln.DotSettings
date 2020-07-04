@@ -8,7 +8,6 @@
 	<s:Int64 x:Key="/Default/CodeInspection/CleanCode/MaximumMethodsInClass/@EntryValue">33</s:Int64>
 	<s:Int64 x:Key="/Default/CodeInspection/CleanCode/MaximumMethodStatements/@EntryValue">15</s:Int64>
 	<s:String x:Key="/Default/CodeInspection/CleanCode/MeaninglessClassNameSuffixes/@EntryValue">Handler,Manager,Controller,Helper,Wrapper,State,Type,Item,System,Action,Call,Properties</s:String>
-	<s:Boolean x:Key="/Default/CodeInspection/CodeAnnotations/NamespacesWithAnnotations/=DeltaEngine_002EEditor_002EAnnotations/@EntryIndexedValue">True</s:Boolean>
 	<s:Int64 x:Key="/Default/CodeInspection/CyclomaticComplexityAnalysis/Thresholds/=CSHARP/@EntryIndexedValue">11</s:Int64>
 	<s:String x:Key="/Default/CodeInspection/ExcludedFiles/GeneratedFilesAndFolders/=CF19BD64_002DF752_002D47EC_002DB929_002D77F57CC5AE90_002Fd_003AContent/@EntryIndexedValue">CF19BD64-F752-47EC-B929-77F57CC5AE90/d:Content</s:String>
 	<s:String x:Key="/Default/CodeInspection/GeneratedCode/GeneratedFileMasks/=DefaultSettings_002Exml/@EntryIndexedValue">DefaultSettings.xml</s:String>
@@ -360,9 +359,7 @@
 	<s:Boolean x:Key="/Default/Environment/GenerateMru/GroupByType/=Implementations/@EntryIndexedValue">False</s:Boolean>
 	<s:Boolean x:Key="/Default/Environment/GenerateMru/SortByName/=Implementations/@EntryIndexedValue">False</s:Boolean>
 	<s:String x:Key="/Default/Environment/Hierarchy/Build/SolBuilderDuo/UseMsbuildSolutionBuilder/@EntryValue">NewVersion</s:String>
-	<s:String x:Key="/Default/Environment/Hierarchy/PsiConfigurationSettingsKey/CustomLocation/@EntryValue">C:\Users\benja\AppData\Local\JetBrains\Transient\ReSharperPlatformVs15\v08_671fe7d3\SolutionCaches</s:String>
 	<s:Boolean x:Key="/Default/Environment/InjectedLayers/FileInjectedLayer/=E532D987698F714FAA904064B816C21F/@KeyIndexDefined">True</s:Boolean>
-	<s:String x:Key="/Default/Environment/InjectedLayers/FileInjectedLayer/=E532D987698F714FAA904064B816C21F/AbsolutePath/@EntryValue">C:\code\GitHub\strict-lang\Strict\Strict.sln.DotSettings</s:String>
 	<s:String x:Key="/Default/Environment/InjectedLayers/FileInjectedLayer/=E532D987698F714FAA904064B816C21F/RelativePath/@EntryValue"></s:String>
 	<s:Boolean x:Key="/Default/Environment/InjectedLayers/InjectedLayerCustomization/=FileE532D987698F714FAA904064B816C21F/@KeyIndexDefined">True</s:Boolean>
 	<s:Double x:Key="/Default/Environment/InjectedLayers/InjectedLayerCustomization/=FileE532D987698F714FAA904064B816C21F/RelativePriority/@EntryValue">1</s:Double>
