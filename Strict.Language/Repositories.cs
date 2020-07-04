@@ -24,7 +24,8 @@ namespace Strict.Language
 				throw new OnlyGithubDotComUrlsAreAllowedForNow();
 			var packageName = packageUrl.AbsolutePath.Split('/').Last();
 			var localPath = Path.Combine(DevelopmentFolder, packageName);
-			if (!Directory.Exists(localPath))
+			// For some reason on the CI server an empty folder is still created here with a .dotsettings file
+			if (!Directory.Exists(localPath) || Directory.GetFiles(localPath).Length < 2)
 				localPath = await DownloadAndExtractRepository(packageUrl, packageName); //ncrunch: no coverage
 			return await LoadFromPath(localPath);
 		}
@@ -45,10 +46,13 @@ namespace Strict.Language
 			await webClient.DownloadFileTaskAsync(new Uri(packageUrl + "/archive/master.zip"), localZip);
 			await Task.Run(() =>
 			{
-				ZipFile.ExtractToDirectory(localZip, CacheFolder);
+				ZipFile.ExtractToDirectory(localZip, CacheFolder, true);
 				var masterDirectory = Path.Combine(CacheFolder, packageName + "-master");
+				if (!Directory.Exists(masterDirectory))
+					return;
 				if (Directory.Exists(masterDirectory))
-					Directory.Move(masterDirectory, targetPath);
+					new DirectoryInfo(targetPath).Delete(true);
+				Directory.Move(masterDirectory, targetPath);
 			});
 			return targetPath;
 		} 
