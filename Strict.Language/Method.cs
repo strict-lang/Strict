@@ -70,6 +70,7 @@ namespace Strict.Language
 		public IReadOnlyList<Parameter> Parameters => parameters;
 		private readonly List<Parameter> parameters = new List<Parameter>();
 		public Type ReturnType { get; private set; }
+		// ReSharper disable once NotAccessedField.Local
 		private IReadOnlyList<string> body;
 
 		public override Type? FindType(string name, Package? searchingFromPackage = null,
