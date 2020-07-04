@@ -41,11 +41,15 @@ namespace Strict.Language
 				if (methods.Count == 0)
 					throw new NoMethodsFound(lineNumber, Name);
 			}
+			catch (ParsingFailedInLine line)
+			{
+				throw new ParsingFailed(line, FilePath);
+			}
 			catch (Exception ex)
 			{
-				throw new ParsingFailed(ex, FilePath, lineNumber < lines.Length
+				throw new ParsingFailed(ex, (lineNumber < lines.Length
 					? lines[lineNumber].SplitWords().First()
-					: "", lineNumber);
+					: "") + " in " + FilePath + ":line " + lineNumber);
 			}
 		}
 
@@ -123,12 +127,11 @@ namespace Strict.Language
 
 		public class ParsingFailed : Exception
 		{
-			public ParsingFailed(Exception inner, string filePath, string fallbackFirstWord,
-				int fallbackLineNumber) : base(inner is ParsingFailedInLine line
-					? "\n   at " + line.Method + " in " + filePath + ":line " + line.Number
-					: "\n   at " + fallbackFirstWord + " in " + filePath + ":line " +
-					fallbackLineNumber,
-				inner) { }
+			public ParsingFailed(ParsingFailedInLine line, string filePath) : base(
+				"\n   at " + line.Method + " in " + filePath + ":line " + line.Number, line) { }
+
+			public ParsingFailed(Exception inner, string fallbackWordAndLineNumber)
+				: base("\n   at " + fallbackWordAndLineNumber, inner) { }
 		}
 
 		public IReadOnlyList<Implement> Implements => implements;

@@ -38,15 +38,26 @@ namespace Strict.Language
 			if (!Directory.Exists(CacheFolder))
 				Directory.CreateDirectory(CacheFolder);
 			var targetPath = Path.Combine(CacheFolder, packageName);
+			// ReSharper disable once InconsistentlySynchronizedField
 			if (Directory.Exists(targetPath) && AlreadyDownloaded.Contains(targetPath))
 				return targetPath;
-			AlreadyDownloaded.Add(targetPath);
+			lock (AlreadyDownloaded)
+				AlreadyDownloaded.Add(targetPath);
+			await DownloadAndExtract(packageUrl, packageName, targetPath);
+			return targetPath;
+		}
+
+		private static async Task DownloadAndExtract(Uri packageUrl, string packageName,
+			string targetPath)
+		{
 			using WebClient webClient = new WebClient();
 			var localZip = Path.Combine(CacheFolder, packageName + ".zip");
-			await webClient.DownloadFileTaskAsync(new Uri(packageUrl + "/archive/master.zip"), localZip);
+			await webClient.DownloadFileTaskAsync(new Uri(packageUrl + "/archive/master.zip"),
+				localZip);
 			await Task.Run(() =>
 			{
-				ZipFile.ExtractToDirectory(localZip, CacheFolder, true);
+				lock (AlreadyDownloaded)
+					ZipFile.ExtractToDirectory(localZip, CacheFolder, true);
 				var masterDirectory = Path.Combine(CacheFolder, packageName + "-master");
 				if (!Directory.Exists(masterDirectory))
 					return;
@@ -54,11 +65,10 @@ namespace Strict.Language
 					new DirectoryInfo(targetPath).Delete(true);
 				Directory.Move(masterDirectory, targetPath);
 			});
-			return targetPath;
-		} 
+		}
 
 		private static readonly List<string> AlreadyDownloaded = new List<string>();
-		// ncrunch: no coverage end
+		//ncrunch: no coverage end
 
 		public async Task<Package> LoadFromPath(string packagePath)
 		{
@@ -83,6 +93,11 @@ namespace Strict.Language
 			// Main folder can be empty, other folders must contain at least one file to create a package
 			if (parent != null && files.Length == 0)
 				return parent; //ncrunch: no coverage, doesn't happen in nicely designed packages anyway
+			return await CreatePackage(packagePath, files, parent);
+		}
+
+		private static async Task<Package> CreatePackage(string packagePath, string[] files, Package? parent)
+		{
 			var package = parent != null
 				? new Package(parent, packagePath)
 				: new Package(packagePath);

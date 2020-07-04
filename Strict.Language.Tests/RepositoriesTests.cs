@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using NUnit.Framework;
@@ -34,8 +35,12 @@ namespace Strict.Language.Tests
 		[Test]
 		public async Task LoadingSameRepositoryAgainUsesCache()
 		{
-			var strictPackage = await repos.LoadFromUrl(Repositories.StrictUrl);
-			Assert.That(strictPackage.Children, Has.Count.GreaterThan(0));
+			var tasks = new List<Task<Package>>();
+			for (int index=0; index <  100; index++)
+				tasks.Add(repos.LoadFromUrl(Repositories.StrictUrl));
+			await Task.WhenAll(tasks);
+			foreach (var task in tasks)
+				Assert.That(task.Result, Is.EqualTo(tasks[0].Result));
 		}
 	}
 }
