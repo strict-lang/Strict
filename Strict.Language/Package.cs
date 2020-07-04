@@ -89,7 +89,9 @@ namespace Strict.Language
 				!uri.AbsolutePath.StartsWith("/strict-lang/"))
 				throw new OnlyGithubDotComUrlsAreAllowedForNow();
 			var packageName = uri.AbsolutePath.Split('/').Last();
-			var localPath = Path.Combine(CacheFolder, packageName);
+			var localPath = Path.Combine(DevelopmentFolder, packageName);
+			if (!Directory.Exists(localPath))
+				localPath = Path.Combine(CacheFolder, packageName); //ncrunch: no coverage
 			if (!Directory.Exists(localPath))
 				await DownloadAndExtractRepository(packageUrl, localPath, packageName); //ncrunch: no coverage
 			return await FromDiskPath(localPath);
@@ -140,6 +142,7 @@ namespace Strict.Language
 			return package;
 		}
 
+		private static string DevelopmentFolder => Path.Combine(@"C:\code\GitHub\strict-lang");
 		private static string CacheFolder =>
 			Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
 				StrictPackages);
