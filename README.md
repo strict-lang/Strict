@@ -1,11 +1,9 @@
 # Strict
 
-[![Build Status](http://build.deltaengine.net:8080/app/rest/builds/aggregated/strob:(buildType:(project:(id:Strict)))/statusIcon)](http://build.deltaengine.net:8080/viewType.html?buildTypeId=Strict&guest=1) [100% Coverage](http://build.deltaengine.net:8080/repository/download/Strict/.lastSuccessful/AllResults.html) [0 Issues](http://build.deltaengine.net:8080/repository/download/Strict/.lastSuccessful/NDependOut/NDependReport.html#Main)
+[![Build Status](http://build.deltaengine.net:8080/app/rest/builds/aggregated/strob:(buildType:(project:(id:Strict)))/statusIcon)](http://build.deltaengine.net:8080/viewType.html?buildTypeId=Strict&guest=1) <sup>[100% Coverage](http://build.deltaengine.net:8080/repository/download/Strict/.lastSuccessful/AllResults.html) [0 Issues](http://build.deltaengine.net:8080/repository/download/Strict/.lastSuccessful/NDependOut/NDependReport.html#Main)</sup>
 
 ![Strict Programming Language](https://strict.dev/img/StrictBanner.png)
 <center>Create well written and efficient code quickly</center>
-
-![Dependencies](http://build.deltaengine.net:8080/repository/download/Strict/.lastSuccessful/NDependOut/NDependReportFiles/ComponentDependenciesDiagram.png)
 
 ## Strict is a language computers can understand
 
