@@ -4,6 +4,7 @@ namespace Strict.Language
 {
 	public static class Keyword
 	{
+		public const string Implement = "implement";
 		public const string Has = "has";
 		public const string Let = "let";
 		public const string As = "as";

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Strict.Language.Extensions;
 
 namespace Strict.Language
 {
@@ -60,7 +61,7 @@ namespace Strict.Language
 		private void ParseLine(string line)
 		{
 			var words = ParseWords(line);
-			if (words[0] == nameof(Implement).ToLower())
+			if (words[0] == Keyword.Implement)
 				implements.Add(new Implement(Package.GetType(words[1])));
 			else if (words[0] == Keyword.Has)
 				members.Add(new Member(this, line.Substring(Keyword.Has.Length + 1)));
@@ -115,10 +116,10 @@ namespace Strict.Language
 
 		private IReadOnlyList<string> GetAllMethodLines()
 		{
-			if (IsTrait && lineNumber + 1 < lines.Length && lines[lineNumber + 1].StartsWith("\t"))
+			if (IsTrait && lineNumber + 1 < lines.Length && lines[lineNumber + 1].StartsWith('\t'))
 				throw new TypeHasNoMembersAndThusMustBeATraitWithoutMethodBodies();
 			var methodLines = new List<string>();
-			while (lineNumber+1 < lines.Length && lines[lineNumber+1].StartsWith("\t"))
+			while (lineNumber + 1 < lines.Length && lines[lineNumber + 1].StartsWith('\t'))
 				methodLines.Add(lines[lineNumber++]);
 			return methodLines;
 		}
@@ -141,14 +142,12 @@ namespace Strict.Language
 		public IReadOnlyList<Method> Methods => methods;
 		private readonly List<Method> methods = new List<Method>();
 		public bool IsTrait => Implements.Count == 0 && Members.Count == 0 && Name != Base.Number;
-
 		public override string ToString() => base.ToString() + Implements.ToBracketsString();
 
-		public override Type? FindType(string name, Package? searchingFromPackage = null,
-			Type? searchingFromType = null) =>
+		public override Type? FindType(string name, Context? searchingFrom = null) =>
 			name == Name || name.Contains(".") && name == base.ToString()
 				? this
-				: Package.FindType(name, searchingFromPackage ?? Package, searchingFromType ?? this);
+				: Package.FindType(name, searchingFrom ?? this);
 
 		public async Task ParseFile(string filePath)
 		{
@@ -167,7 +166,7 @@ namespace Strict.Language
 		public const string Extension = ".strict";
 
 		public class FileExtensionMustBeStrict : Exception { }
-
+		
 		public class FilePathMustMatchPackageName : Exception
 		{
 			public FilePathMustMatchPackageName(string filePath, string packageName) : base(

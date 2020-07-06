@@ -1,8 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text.RegularExpressions;
 
-namespace Strict.Language
+namespace Strict.Language.Extensions
 {
 	public static class StringExtensions
 	{
@@ -22,6 +21,15 @@ namespace Strict.Language
 				? "(" + ToWordListString(list) + ")"
 				: "";
 
-		public static bool IsWord(this string text) => Regex.IsMatch(text, @"^[A-Za-z]+$");
+		/// <summary>
+		/// Faster version of Regex.IsMatch(text, @"^[A-Za-z]+$");
+		/// </summary>
+		public static bool IsWord(this string text)
+		{
+			foreach (var c in text)
+				if ((c < 'A' || c > 'Z') && (c < 'a' || c > 'z'))
+					return false;
+			return true;
+		}
 	}
 }

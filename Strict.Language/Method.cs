@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Strict.Language.Extensions;
 
 namespace Strict.Language
 {
@@ -36,8 +37,7 @@ namespace Strict.Language
 
 		private void ParseDefinition(string rest)
 		{
-			var returnsIndex =
-				rest.IndexOf(" " + Keyword.Returns + " ", StringComparison.InvariantCulture);
+			var returnsIndex = rest.IndexOf(" " + Keyword.Returns + " ", StringComparison.Ordinal);
 			if (returnsIndex >= 0)
 			{
 				ReturnType = Type.GetType(rest.Substring(returnsIndex + Keyword.Returns.Length + 2));
@@ -47,7 +47,7 @@ namespace Strict.Language
 				return;
 			if (rest == "()")
 				throw new EmptyParametersMustBeRemoved();
-			if (!rest.StartsWith("(") || !rest.EndsWith(")"))
+			if (!rest.StartsWith('(') || !rest.EndsWith(')'))
 				throw new InvalidSyntax(rest);
 			ParseParameters(rest.Substring(1, rest.Length - 2));
 		}
@@ -73,10 +73,9 @@ namespace Strict.Language
 		// ReSharper disable once NotAccessedField.Local
 		private IReadOnlyList<string> body;
 
-		public override Type? FindType(string name, Package? searchingFromPackage = null,
-			Type? searchingFromType = null) =>
+		public override Type? FindType(string name, Context? searchingFrom = null) =>
 			name == Base.Other
 				? Type
-				: Type.FindType(name, searchingFromPackage, searchingFromType);
+				: Type.FindType(name, searchingFrom ?? this);
 	}
 }

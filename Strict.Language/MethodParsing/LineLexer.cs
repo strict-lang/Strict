@@ -41,7 +41,7 @@ namespace Strict.Language.MethodParsing
 
 		private void ParseWord()
 		{
-			if (word == "")
+			if (string.IsNullOrEmpty(word))
 				throw new UnexpectedSpaceOrEmptyParenthesisDetected(Position);
 			if (word.IsKeyword())
 				tokens.Add(Token.FromKeyword(word));

@@ -1,4 +1,5 @@
 using NUnit.Framework;
+using Strict.Language.Extensions;
 
 namespace Strict.Language.Tests
 {

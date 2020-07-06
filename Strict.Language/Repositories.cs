@@ -5,6 +5,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
+using Strict.Language.Extensions;
 
 namespace Strict.Language
 {
@@ -26,8 +27,10 @@ namespace Strict.Language
 		public Repositories()
 		{
 			foreach (var file in Directory.GetFiles(CacheFolder, "*.zip"))
+				//ncrunch: no coverage start, rarely happens
 				if (File.GetLastWriteTimeUtc(file) < DateTime.UtcNow.AddHours(-1))
-					File.Delete(file); //ncrunch: no coverage, rarely happens
+					File.Delete(file);
+			//ncrunch: no coverage end
 		}
 
 		public async Task<Package> LoadFromUrl(Uri packageUrl)

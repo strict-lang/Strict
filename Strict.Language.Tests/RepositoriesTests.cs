@@ -24,7 +24,7 @@ namespace Strict.Language.Tests
 		public async Task LoadStrictBaseTypes()
 		{
 			var strictPackage = await repos.LoadFromUrl(Repositories.StrictUrl);
-			var basePackage = strictPackage.GetSubPackage(nameof(Base));
+			var basePackage = strictPackage.FindSubPackage(nameof(Base))!;
 			Assert.That(basePackage.FindDirectType(Base.Any), Is.Not.Null);
 			Assert.That(basePackage.FindDirectType(Base.Number), Is.Not.Null);
 			Assert.That(basePackage.FindDirectType(Base.App), Is.Not.Null);

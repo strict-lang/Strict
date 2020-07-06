@@ -6,7 +6,6 @@ using Type = Strict.Language.Type;
 
 namespace Strict.Compiler.Tests
 {
-	[Ignore("first finish LoadStrictBaseTypes")]
 	public class SourceGeneratorTests
 	{
 		[SetUp]

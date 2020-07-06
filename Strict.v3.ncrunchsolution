@@ -3,10 +3,7 @@
     <AllowParallelTestExecution>True</AllowParallelTestExecution>
     <DefaultTestTimeout>10000</DefaultTestTimeout>
     <InstrumentationMode>Optimised</InstrumentationMode>
-    <MetricsExclusionList>
-      <Value>Strict.Compiler.Roslyn\Strict.Compiler.Roslyn.csproj</Value>
-      <Value>Strict.Compiler.Tests\Strict.Compiler.Tests.csproj</Value>
-    </MetricsExclusionList>
+    <MetricsExclusionList />
     <SolutionConfigured>True</SolutionConfigured>
   </Settings>
 </SolutionConfiguration>

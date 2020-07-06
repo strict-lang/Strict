@@ -1,5 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.Runtime.CompilerServices;
+using Strict.Language.Extensions;
 
 namespace Strict.Language
 {
@@ -16,9 +17,6 @@ namespace Strict.Language
 				!(this is Method) && !name.IsWord()))
 				throw new NameMustBeAWordWithoutAnySpecialCharactersOrNumbers(name);
 			Parent = parent!;
-			// ReSharper disable once ConditionIsAlwaysTrueOrFalse
-			if (parent != null)
-				parent.children.Add(this);
 			Name = name;
 		}
 
@@ -28,8 +26,6 @@ namespace Strict.Language
 		}
 
 		public Context Parent { get; }
-		public IReadOnlyList<Context> Children => children;
-		private readonly List<Context> children = new List<Context>();
 		public string Name { get; }
 
 		public Type GetType(string name)
@@ -39,21 +35,35 @@ namespace Strict.Language
 				name = name.Split('<', '>')[1];
 			if (name.Contains("<"))
 				name = name.Split('<')[0];
-			// Arrays are also not supported yet, simply return base type
+			// Arrays are also not supported yet, simply return base type, however only if we do not find a name ending with s already and do proper array fun
 			if (name.EndsWith('s'))
 				name = name.Substring(0, name.Length - 1);
-			if (name == Name || name == ToString())
+			if (name == Name)
 				return (Type)this;
-			var type = FindType(name);
+			var type = FindFullType(name) ?? FindType(name, this);
+			// packages.strict.dev should be asked if there is any downloadable public package containing the missing type
 			if (type == null)
 				throw new TypeNotFound(name, ToString());
 			return type;
 		}
 
+		private Type? FindFullType(string name) =>
+			name.Contains(".")
+				? name == ToString()
+					? this as Type
+					: GetPackage().FindFullType(name)
+				: null;
+
 		public override string ToString() =>
 			(string.IsNullOrEmpty(Parent.Name)
 				? ""
 				: Parent + ".") + Name;
+		
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public Package GetPackage() =>
+			this is Package package
+				? package
+				: Parent.GetPackage();
 
 		public class TypeNotFound : Exception
 		{
@@ -61,6 +71,6 @@ namespace Strict.Language
 				" not found in " + contextFullName) { }
 		}
 
-		public abstract Type? FindType(string name, Package? searchingFromPackage = null, Type? searchingFromType = null);
+		public abstract Type? FindType(string name, Context? searchingFrom = null);
 	}
 }
