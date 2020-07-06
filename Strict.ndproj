@@ -2839,6 +2839,7 @@ where !mOverride.IsUsing(mBase) &&
   !mOverride.Name.StartsWith("AddVertices(") &&
   !mOverride.Name.StartsWith("FillVertices") &&
   !mOverride.Name.StartsWith("GetEdge") &&
+  !mOverride.Name.Contains("FindType") &&
   mOverride.Name != "RunOneTick()" &&
   mOverride.Name != "LoadContentSettings()" &&
   !mOverride.FullName.Contains("Reloadable") &&

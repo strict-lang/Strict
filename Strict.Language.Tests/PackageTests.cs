@@ -97,9 +97,10 @@ namespace Strict.Language.Tests
 		{
 			var otherMainPackage =
 				new Package(nameof(LoadingTypesOverAndOverWillAlwaysQuicklyReturnTheSame));
-			for (int index = 0; index < 1000000; index++)
-				if (otherMainPackage.FindType(mainType.Name, otherMainPackage) != mainType)
-					throw new AssertionException("FindType failed"); //ncrunch: no coverage
+			for (int index = 0; index < 1000; index++)
+				if (otherMainPackage.FindType(mainType.Name, otherMainPackage).Name != mainType.Name)
+					throw new AssertionException("FindType=" + //ncrunch: no coverage
+						otherMainPackage.FindType(mainType.Name, otherMainPackage) + " didn't find " + mainType);
 		}
 	}
 }
