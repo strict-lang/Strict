@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Text.RegularExpressions;
 
-namespace Strict.Language.MethodParsing
+namespace Strict.Language.Tokens
 {
 	public class Token
 	{
@@ -29,11 +29,12 @@ namespace Strict.Language.MethodParsing
 		{
 			if (CachedNumbers.TryGetValue(value, out var existing))
 				return existing;
-			var newNumber = new Token(Base.Number, value);
+			var newNumber = new Token(Number, value);
 			CachedNumbers.Add(value, newNumber);
 			return newNumber;
 		}
-
+		
+		public const string Number = nameof(Number);
 		private static readonly Dictionary<double, Token> CachedNumbers = new Dictionary<double, Token>();
 
 		/// <summary>
@@ -113,11 +114,12 @@ namespace Strict.Language.MethodParsing
 		{
 			if (CachedTexts.TryGetValue(name, out var existing))
 				return existing;
-			var newText = new Token(Base.Text, name);
+			var newText = new Token(Text, name);
 			CachedTexts.Add(name, newText);
 			return newText;
 		}
-
+		
+		public const string Text = nameof(Text);
 		private static readonly Dictionary<string, Token> CachedTexts = new Dictionary<string, Token>();
 	}
 }

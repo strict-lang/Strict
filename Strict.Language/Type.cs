@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Strict.Language.Extensions;
+using Strict.Language.Tokens;
 
 namespace Strict.Language
 {

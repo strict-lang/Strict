@@ -1,7 +1,7 @@
 ﻿namespace Strict.Language
 {
 	/// <summary>
-	/// Simple helper to give us all the names of common base types often used. Number and Boolean are the most basic types,
+	/// Simple helper to give us all the names of common base types often used like Number and Boolean
 	/// </summary>
 	public class Base
 	{

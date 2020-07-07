@@ -1,9 +1,9 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
-using Strict.Language.MethodParsing;
+using Strict.Language.Tokens;
 
-namespace Strict.Language.Tests.MethodParsing
+namespace Strict.Language.Tests.Tokens
 {
 	public class LineLexerTests : Tokenizer
 	{

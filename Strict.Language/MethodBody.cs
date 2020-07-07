@@ -1,5 +1,5 @@
 ﻿using System.Collections.Generic;
-using Strict.Language.MethodParsing;
+using Strict.Language.Tokens;
 
 namespace Strict.Language
 {

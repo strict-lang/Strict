@@ -1,6 +1,6 @@
 ﻿using System.Linq;
 
-namespace Strict.Language
+namespace Strict.Language.Tokens
 {
 	public static class Keyword
 	{

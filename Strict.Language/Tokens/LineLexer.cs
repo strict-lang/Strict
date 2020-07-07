@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Strict.Language.MethodParsing
+namespace Strict.Language.Tokens
 {
 	public class LineLexer
 	{

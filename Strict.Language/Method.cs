@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Strict.Language.Extensions;
+using Strict.Language.Tokens;
 
 namespace Strict.Language
 {
