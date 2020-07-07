@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Strict.Language.Extensions;
+using Strict.Language.MethodParsing;
 
 namespace Strict.Language
 {
@@ -10,12 +11,12 @@ namespace Strict.Language
 	/// </summary>
 	public class Method : Context
 	{
-		public Method(Type type, string definitionLine, IReadOnlyList<string> body) : base(type,
+		public Method(Type type, string definitionLine, IReadOnlyList<string> bodyLines) : base(type,
 			GetName(definitionLine))
 		{
 			ReturnType = Name == Keyword.From ? type : type.GetType(Base.None);
 			ParseDefinition(definitionLine.Substring(Name.Length));
-			this.body = body;
+			body = new Lazy<MethodBody>(() => new MethodBody(this, bodyLines));
 		}
 
 		/// <summary>
@@ -70,8 +71,8 @@ namespace Strict.Language
 		public IReadOnlyList<Parameter> Parameters => parameters;
 		private readonly List<Parameter> parameters = new List<Parameter>();
 		public Type ReturnType { get; private set; }
-		// ReSharper disable once NotAccessedField.Local
-		private IReadOnlyList<string> body;
+		private readonly Lazy<MethodBody> body;
+		public MethodBody Body => body.Value;
 
 		public override Type? FindType(string name, Context? searchingFrom = null) =>
 			name == Base.Other

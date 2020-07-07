@@ -43,5 +43,14 @@ Run
 			Assert.That(method.Parameters[0].Type, Is.EqualTo(type.GetType("Number")));
 			Assert.That(method.ReturnType, Is.EqualTo(type));
 		}
+
+		[Test]
+		public void ParseBody()
+		{
+			var method = new Method(type, @"Run", new[] { @"	log.WriteLine(""Hey"")" });
+			Assert.That(method.Body.Expressions, Has.Count.EqualTo(1));
+			var expression = method.Body.Expressions[0];
+			Assert.That(expression.ReturnType, Is.EqualTo(type.GetType(Base.None)));
+		}
 	}
 }

@@ -51,9 +51,24 @@ namespace Strict.Language.MethodParsing
 				tokens.Add(Token.FromNumber(word));
 			else if (Token.IsValidIdentifier(word))
 				tokens.Add(Token.FromIdentifier(word));
+			else if (word.StartsWith('\"') && word.EndsWith('\"'))
+				tokens.Add(Token.FromText(word));
+			else if (word.Contains('.'))
+				AddIdentifierParts();
 			else
 				throw new InvalidIdentifierName(word, Position);
 			word = "";
+		}
+
+		private void AddIdentifierParts()
+		{
+			var split = word.Split('.');
+			for (var index = 0; index < split.Length; index++)
+			{
+				if (index > 0)
+					tokens.Add(Token.Dot);
+				tokens.Add(Token.FromIdentifier(split[index]));
+			}
 		}
 
 		private string word = "";

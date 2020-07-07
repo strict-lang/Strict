@@ -101,10 +101,23 @@ namespace Strict.Language.MethodParsing
 		public static Token Open = new Token(Operator.Open);
 		public static Token Close = new Token(Operator.Close);
 		public static Token Assign = new Token(Operator.Assign);
-		
+
 		public class InvalidOperator : Exception
 		{
 			public InvalidOperator(string operatorSymbol) : base(operatorSymbol) { }
 		}
+
+		public static Token Dot = new Token(".");
+
+		public static Token FromText(string name)
+		{
+			if (CachedTexts.TryGetValue(name, out var existing))
+				return existing;
+			var newText = new Token(Base.Text, name);
+			CachedTexts.Add(name, newText);
+			return newText;
+		}
+
+		private static readonly Dictionary<string, Token> CachedTexts = new Dictionary<string, Token>();
 	}
 }

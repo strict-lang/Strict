@@ -92,7 +92,23 @@ namespace Strict.Language.Tests.MethodParsing
 					Token.Plus,
 					Token.FromIdentifier("number"),
 					Token.Return,
-					Token.FromIdentifier("doubled"),
+					Token.FromIdentifier("doubled")
+				}));
+		}
+
+		[Test]
+		public void ProcessMethodCall()
+		{
+			lineLexer.Process("	log.WriteLine(\"Hey\")");
+			Assert.That(tokens,
+				Is.EqualTo(new List<Token>
+				{
+					Token.FromIdentifier("log"),
+					Token.Dot,
+					Token.FromIdentifier("WriteLine"),
+					Token.Open,
+					Token.FromText("\"Hey\""),
+					Token.Close
 				}));
 		}
 	}
