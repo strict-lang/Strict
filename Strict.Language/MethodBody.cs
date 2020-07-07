@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
+using Strict.Language.MethodParsing;
 
-namespace Strict.Language.MethodParsing
+namespace Strict.Language
 {
 	public class MethodBody : Tokenizer
 	{
