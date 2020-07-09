@@ -1,4 +1,5 @@
 using NUnit.Framework;
+using Strict.Language.Expressions;
 using Strict.Language.Extensions;
 
 namespace Strict.Language.Tests
@@ -47,10 +48,30 @@ Run
 		[Test]
 		public void ParseBody()
 		{
-			var method = new Method(type, @"Run", new[] { @"	log.WriteLine(""Hey"")" });
+			var code = @"log.WriteLine(""Hey"")";
+			var method = new Method(type, @"Run", new[] { "\t" + code });
 			Assert.That(method.Body.Expressions, Has.Count.EqualTo(1));
-			var expression = method.Body.Expressions[0];
-			Assert.That(expression.ReturnType, Is.EqualTo(type.GetType(Base.None)));
+			var methodCall = method.Body.Expressions[0] as MethodCall;
+			Assert.That(methodCall.ReturnType, Is.EqualTo(type.GetType(Base.None)));
+			Assert.That(methodCall.Method.Type, Is.EqualTo(type.GetType(Base.Log)));
+			Assert.That(methodCall.Method.Name, Is.EqualTo("WriteLine"));
+			Assert.That(methodCall.Arguments.Count, Is.EqualTo(1));
+			var text = methodCall.Arguments[0] as Value;
+			Assert.That(text.Data, Is.EqualTo("Hey"));
+			Assert.That(methodCall.ToString(), Is.EqualTo(code));
+		}
+
+		[Test]
+		public void ParseValues()
+		{
+			var code = @"return 5 + true";
+			var method = new Method(type, @"Run returns Number", new[] { "\t" + code });
+			var returnExpression = method.Body.Expressions[0] as Return;
+			Assert.That(returnExpression.ReturnType, Is.EqualTo(type.GetType(Base.Number)));
+			var binary = returnExpression.Expression as Binary;
+			Assert.That(binary.Left, Is.InstanceOf<Number>());
+			Assert.That(binary.Right, Is.InstanceOf<Boolean>());
+			Assert.That(returnExpression.ToString(), Is.EqualTo(code));
 		}
 	}
 }

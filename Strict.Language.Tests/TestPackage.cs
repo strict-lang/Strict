@@ -9,7 +9,7 @@ namespace Strict.Language.Tests
 		{
 			new Type(this, Base.Any, "is(any) returns Boolean");
 			new Type(this, Base.Text, "dummy");
-			new Type(this, Base.Log, "Write(text)");
+			new Type(this, Base.Log, "WriteLine(text)");
 			new Type(this, Base.Number, "+(other) returns Number");
 		}
 	}

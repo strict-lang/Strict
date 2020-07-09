@@ -75,6 +75,7 @@ namespace Strict.Language.Tokens
 				Keyword.From => From,
 				Keyword.Let => Let,
 				Keyword.Return => Return,
+				Keyword.True => True,
 				_ => throw new InvalidKeyword(keyword)
 			};
 		
@@ -83,6 +84,7 @@ namespace Strict.Language.Tokens
 		public static Token From = new Token(Keyword.From);
 		public static Token Let = new Token(Keyword.Let);
 		public static Token Return = new Token(Keyword.Return);
+		public static Token True = new Token(Keyword.True);
 
 		public class InvalidKeyword : Exception
 		{

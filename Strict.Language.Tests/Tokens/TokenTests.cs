@@ -1,4 +1,5 @@
-﻿using NUnit.Framework;
+﻿using System.Linq.Expressions;
+using NUnit.Framework;
 using Strict.Language.Tokens;
 
 namespace Strict.Language.Tests.Tokens
