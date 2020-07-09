@@ -15,6 +15,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Strict.Language.Tokens\Strict.Language.Tokens.csproj" />
     <ProjectReference Include="..\Strict.Language\Strict.Language.csproj" />
   </ItemGroup>
 

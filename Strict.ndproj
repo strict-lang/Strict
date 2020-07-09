@@ -4517,6 +4517,7 @@ from nA in namespacesSuspect
 where
   !nA.Name.EndsWith("Templates") &&
   !nA.Name.Contains("Components") &&
+  !nA.Name.Contains("Expressions") &&
   !nA.Name.Contains("Mocks")
 
 // Select namespaces mutually dependent with nA
@@ -4531,6 +4532,7 @@ where
   !nB.Name.EndsWith("Templates") &&
   !nB.Name.Contains("Components") &&
   !nB.Name.Contains("Views") &&
+  !nB.Name.Contains("Expressions") &&
   !nB.Name.Contains("Resolvers")
 
 // nA and nB are mutually dependent
@@ -4759,6 +4761,7 @@ where !cycle.Any(n=>
     n.Name.EndsWith("Templates") ||
     n.Name.Contains("Components") ||
     n.Name.Contains("Content") ||
+    n.Name.Contains("Expressions") ||
     n.Name.Contains("Resolvers"))
 select new { 
    suspect, 
