@@ -1,6 +1,6 @@
 ﻿using System.Linq;
 
-namespace Strict.Language.Tokens
+namespace Strict.Tokens
 {
 	public static class Operator
 	{

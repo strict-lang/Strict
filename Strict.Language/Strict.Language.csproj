@@ -9,7 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Strict.Language.Tokens\Strict.Language.Tokens.csproj" />
+    <ProjectReference Include="..\Strict.Tokens\Strict.Tokens.csproj" />
   </ItemGroup>
 
 </Project>

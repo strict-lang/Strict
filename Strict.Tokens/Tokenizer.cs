@@ -1,4 +1,4 @@
-﻿namespace Strict.Language.Tokens
+﻿namespace Strict.Tokens
 {
 	public interface Tokenizer
 	{

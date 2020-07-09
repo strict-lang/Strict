@@ -1,5 +1,5 @@
 ﻿using NUnit.Framework;
-using Strict.Language.Tokens;
+using Strict.Tokens;
 
 namespace Strict.Language.Tests.Tokens
 {

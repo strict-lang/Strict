@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Text.RegularExpressions;
 
-namespace Strict.Language.Tokens
+namespace Strict.Tokens
 {
 	public class Token
 	{

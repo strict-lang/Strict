@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using Strict.Language.Expressions;
-using Strict.Language.Tokens;
+using Strict.Tokens;
 
 namespace Strict.Language
 {

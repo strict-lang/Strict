@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
-using Strict.Language.Tokens;
+using Strict.Tokens;
 
 namespace Strict.Language.Tests.Tokens
 {

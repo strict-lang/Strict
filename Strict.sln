@@ -35,7 +35,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Base", "Base", "{85AB8A69-6
 		Base\Text.strict = Base\Text.strict
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Strict.Language.Tokens", "Strict.Language.Tokens\Strict.Language.Tokens.csproj", "{E836778D-87A0-468A-B6E3-96EA377D051C}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Strict.Tokens", "Strict.Tokens\Strict.Tokens.csproj", "{577D94BD-6166-469B-B095-E41682DEF3F7}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -63,10 +63,10 @@ Global
 		{E80EB301-EAC7-47ED-801C-DA4D775F7D6F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E80EB301-EAC7-47ED-801C-DA4D775F7D6F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E80EB301-EAC7-47ED-801C-DA4D775F7D6F}.Release|Any CPU.Build.0 = Release|Any CPU
-		{E836778D-87A0-468A-B6E3-96EA377D051C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{E836778D-87A0-468A-B6E3-96EA377D051C}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{E836778D-87A0-468A-B6E3-96EA377D051C}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{E836778D-87A0-468A-B6E3-96EA377D051C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{577D94BD-6166-469B-B095-E41682DEF3F7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{577D94BD-6166-469B-B095-E41682DEF3F7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{577D94BD-6166-469B-B095-E41682DEF3F7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{577D94BD-6166-469B-B095-E41682DEF3F7}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

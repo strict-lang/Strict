@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 using Strict.Language.Extensions;
-using Strict.Language.Tokens;
+using Strict.Tokens;
 
 namespace Strict.Language.Expressions
 {
