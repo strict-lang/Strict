@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Strict.Language.Extensions;
 using Strict.Tokens;
 
 namespace Strict.Language
@@ -15,14 +14,16 @@ namespace Strict.Language
 	/// </summary>
 	public class Type : Context
 	{
-		public Type(Package package, string name, string code) : base(package, name)
+		/// <summary>
+		/// Call ParserCode or ParseFile instead. This just sets the type name in the specified package.
+		/// </summary>
+		internal Type(Package package, string name, ExpressionParser expressionParser) : base(package, name)
 		{
 			if (package.FindDirectType(name) != null)
 				throw new TypeAlreadyExistsInPackage(name, package);
 			Package = package;
 			Package.Add(this);
-			if (!string.IsNullOrEmpty(code))
-				Parse(code.SplitLines());
+			this.expressionParser = expressionParser;
 		}
 
 		public class TypeAlreadyExistsInPackage : Exception
@@ -32,8 +33,12 @@ namespace Strict.Language
 		}
 
 		public Package Package { get; }
+		private readonly ExpressionParser expressionParser;
 
-		private void Parse(string[] setLines)
+		public static Type ParseCode(Package package, string name, ExpressionParser expressionParser, string code) =>
+			new Type(package, name, expressionParser).Parse(code.SplitLines());
+
+		private Type Parse(string[] setLines)
 		{
 			try
 			{
@@ -42,6 +47,7 @@ namespace Strict.Language
 					ParseLine(lines[lineNumber]);
 				if (methods.Count == 0)
 					throw new NoMethodsFound(lineNumber, Name);
+				return this;
 			}
 			catch (ParsingFailedInLine line)
 			{
@@ -67,7 +73,7 @@ namespace Strict.Language
 			else if (words[0] == Keyword.Has)
 				members.Add(new Member(this, line.Substring(Keyword.Has.Length + 1)));
 			else
-				methods.Add(new Method(this, line, GetAllMethodLines()));
+				methods.Add(new Method(this, line, GetAllMethodLines(), expressionParser));
 		}
 
 		private string[] ParseWords(string line)

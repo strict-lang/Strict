@@ -1,5 +1,4 @@
 ﻿using System.Collections.Generic;
-using Strict.Language.Extensions;
 using Strict.Tokens;
 
 namespace Strict.Language.Expressions

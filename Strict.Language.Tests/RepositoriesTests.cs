@@ -13,7 +13,7 @@ namespace Strict.Language.Tests
 			Assert.ThrowsAsync<DirectoryNotFoundException>(async () =>
 				await repos.LoadFromPath(nameof(InvalidPathWontWork)));
 
-		private readonly Repositories repos = new Repositories();
+		private readonly Repositories repos = new Repositories(null);
 
 		[Test]
 		public void LoadingNonGithubPackageWontWork() =>

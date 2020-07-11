@@ -1,4 +1,4 @@
-﻿namespace Strict.Language.Expressions
+﻿namespace Strict.Language
 {
 	/// <summary>
 	/// Each line in a method is an expression, many expressions have child expressions (if, for,

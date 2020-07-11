@@ -1,7 +1,6 @@
 ﻿using NUnit.Framework;
-using Strict.Tokens;
 
-namespace Strict.Language.Tests.Tokens
+namespace Strict.Tokens.Tests
 {
 	public class TokenTests
 	{

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using Strict.Language.Extensions;
 using Strict.Tokens;
 
 namespace Strict.Language
@@ -11,12 +10,12 @@ namespace Strict.Language
 	/// </summary>
 	public class Method : Context
 	{
-		public Method(Type type, string definitionLine, IReadOnlyList<string> bodyLines) : base(type,
+		public Method(Type type, string definitionLine, IReadOnlyList<string> bodyLines, ExpressionParser parser) : base(type,
 			GetName(definitionLine))
 		{
 			ReturnType = Name == Keyword.From ? type : type.GetType(Base.None);
 			ParseDefinition(definitionLine.Substring(Name.Length));
-			body = new Lazy<MethodBody>(() => new MethodBody(this, bodyLines));
+			body = new Lazy<MethodBody>(() => new MethodBody(this, bodyLines, parser));
 		}
 
 		/// <summary>

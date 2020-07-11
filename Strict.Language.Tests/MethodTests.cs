@@ -1,6 +1,5 @@
 using NUnit.Framework;
 using Strict.Language.Expressions;
-using Strict.Language.Extensions;
 
 namespace Strict.Language.Tests
 {
@@ -8,7 +7,7 @@ namespace Strict.Language.Tests
 	{
 		[SetUp]
 		public void CreateType() =>
-			type = new Type(new TestPackage(), nameof(TypeTests), @"has log
+			type = Type.ParseCode(new TestPackage(), nameof(TypeTests), null, @"has log
 Run
 	log.WriteLine");
 		private Type type;

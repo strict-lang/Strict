@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
-using Strict.Language.Extensions;
 
 namespace Strict.Language
 {

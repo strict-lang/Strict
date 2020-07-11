@@ -5,7 +5,6 @@ using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
-using Strict.Language.Extensions;
 
 namespace Strict.Language
 {
@@ -24,14 +23,16 @@ namespace Strict.Language
 		/// allow redownloading from github to get any changes, while still staying fast in local runs
 		/// when there are usually no changes happening.
 		/// </summary>
-		public Repositories()
+		public Repositories(ExpressionParser parser)
 		{
+			this.parser = parser;
 			foreach (var file in Directory.GetFiles(CacheFolder, "*.zip"))
 				//ncrunch: no coverage start, rarely happens
 				if (File.GetLastWriteTimeUtc(file) < DateTime.UtcNow.AddHours(-1))
 					File.Delete(file);
-			//ncrunch: no coverage end
-		}
+		} //ncrunch: no coverage end
+
+		private readonly ExpressionParser parser;
 
 		public async Task<Package> LoadFromUrl(Uri packageUrl)
 		{
@@ -43,19 +44,22 @@ namespace Strict.Language
 			var localPath = Path.Combine(DevelopmentFolder, packageName);
 			// For some reason on the CI server an empty folder is still created here with a .dotsettings file
 			if (!Directory.Exists(localPath) || Directory.GetFiles(localPath).Length < 2)
-				localPath = await DownloadAndExtractRepository(packageUrl, packageName); //ncrunch: no coverage
+				localPath =
+					await DownloadAndExtractRepository(packageUrl, packageName); //ncrunch: no coverage
 			return await LoadFromPath(localPath);
 		}
 
 		public class OnlyGithubDotComUrlsAreAllowedForNow : Exception { }
 
 		//ncrunch: no coverage start, only called once per session and only if not on development machine
-		private static async Task<string> DownloadAndExtractRepository(Uri packageUrl, string packageName)
+		private static async Task<string> DownloadAndExtractRepository(Uri packageUrl,
+			string packageName)
 		{
 			if (!Directory.Exists(CacheFolder))
 				Directory.CreateDirectory(CacheFolder);
 			var targetPath = Path.Combine(CacheFolder, packageName);
-			if (Directory.Exists(targetPath) && File.Exists( Path.Combine(CacheFolder, packageName + ".zip")))
+			if (Directory.Exists(targetPath) &&
+				File.Exists(Path.Combine(CacheFolder, packageName + ".zip")))
 				return targetPath;
 			await DownloadAndExtract(packageUrl, packageName, targetPath);
 			return targetPath;
@@ -67,7 +71,8 @@ namespace Strict.Language
 			var localZip = Path.Combine(CacheFolder, packageName + ".zip");
 			File.CreateText(localZip).Close();
 			using WebClient webClient = new WebClient();
-			await webClient.DownloadFileTaskAsync(new Uri(packageUrl + "/archive/master.zip"), localZip);
+			await webClient.DownloadFileTaskAsync(new Uri(packageUrl + "/archive/master.zip"),
+				localZip);
 			await Task.Run(() =>
 			{
 				ZipFile.ExtractToDirectory(localZip, CacheFolder, true);
@@ -97,23 +102,25 @@ namespace Strict.Language
 		/// Initially we need to create just empty types and then after they all have been created
 		/// we will fill and load them, otherwise we could not use types within the package context.
 		/// </summary>
-		private static async Task<Package> CreatePackageFromFiles(string packagePath, string[] files,
-			Package? parent = null)
+		private async Task<Package> CreatePackageFromFiles(string packagePath,
+			string[] files, Package? parent = null)
 		{
 			// Main folder can be empty, other folders must contain at least one file to create a package
 			if (parent != null && files.Length == 0)
-				return parent; //ncrunch: no coverage, doesn't happen in nicely designed packages anyway
+				return
+					parent; //ncrunch: no coverage, doesn't happen in nicely designed packages anyway
 			return await CreatePackage(packagePath, files, parent);
 		}
 
-		private static async Task<Package> CreatePackage(string packagePath, string[] files, Package? parent)
+		private async Task<Package> CreatePackage(string packagePath, string[] files,
+			Package? parent)
 		{
 			var package = parent != null
 				? new Package(parent, packagePath)
 				: new Package(packagePath);
 			var types = new List<Type>();
 			foreach (var filePath in files)
-				types.Add(new Type(package, Path.GetFileNameWithoutExtension(filePath), string.Empty));
+				types.Add(new Type(package, Path.GetFileNameWithoutExtension(filePath), parser));
 			var tasks = new List<Task>();
 			for (var index = 0; index < types.Count; index++)
 				tasks.Add(types[index].ParseFile(files[index]));
@@ -129,7 +136,9 @@ namespace Strict.Language
 		/// In Strict only words are valid directory names = package names, no symbols (like .git, .hg,
 		/// .vs or _NCrunch) or numbers or dot separators (like Strict.Compiler) are allowed.
 		/// </summary>
-		private static bool IsValidCodeDirectory(string directory) => Path.GetFileName(directory).IsWord();
+		private static bool IsValidCodeDirectory(string directory) =>
+			Path.GetFileName(directory).IsWord();
+
 		private static string DevelopmentFolder => Path.Combine(@"C:\code\GitHub\strict-lang");
 		private static string CacheFolder =>
 			Path.Combine( //ncrunch: no coverage, only downloaded and cached on non development machines

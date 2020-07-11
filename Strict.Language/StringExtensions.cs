@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace Strict.Language.Extensions
+namespace Strict.Language
 {
 	public static class StringExtensions
 	{

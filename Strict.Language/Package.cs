@@ -27,8 +27,8 @@ namespace Strict.Language
 		{
 			public Root() : base(null!, string.Empty)
 			{
-				none = new Type(this, Base.None, "");
-				boolean = new Type(this, Base.Boolean, "");
+				none = new Type(this, Base.None, null!);
+				boolean = new Type(this, Base.Boolean, null!);
 			}
 
 			private readonly Type none;
