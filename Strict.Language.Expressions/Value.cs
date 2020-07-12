@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections;
-
-namespace Strict.Language.Expressions
+﻿namespace Strict.Language.Expressions
 {
 	/// <summary>
 	/// Any expression with a fixed value, often optimized from all known code trees, often parameters

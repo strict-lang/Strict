@@ -41,5 +41,16 @@ Run
 		public void ThereMustBeNoTokensLeft() =>
 			Assert.Throws<MethodBody.UnprocessedTokensAtEndOfFile>(() =>
 				new MethodBody(type.Methods[0], this, new[] { "Dummy", "\tdummy" }));
+
+		[Test]
+		public void CompareExpressions()
+		{
+			var expression = new TestExpression(type);
+			Assert.That(expression, Is.EqualTo(new TestExpression(type)));
+			Assert.That(expression.GetHashCode(),
+				Is.EqualTo(new TestExpression(type).GetHashCode()));
+			Assert.That(new TestExpression(type.Methods[0].ReturnType), Is.Not.EqualTo(new TestExpression(type)));
+			Assert.That(expression.Equals((object)new TestExpression(type)), Is.True);
+		}
 	}
 }

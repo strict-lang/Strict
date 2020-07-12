@@ -106,7 +106,7 @@ namespace Strict.Tokens.Tests
 					Token.Dot,
 					Token.FromIdentifier("WriteLine"),
 					Token.Open,
-					Token.FromText("\"Hey\""),
+					Token.FromText("Hey"),
 					Token.Close
 				}));
 		}

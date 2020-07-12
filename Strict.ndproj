@@ -17,11 +17,8 @@
   <Dirs>
     <Dir>C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.0.0</Dir>
     <Dir>C:\Program Files\dotnet\sdk\NuGetFallbackFolder</Dir>
-    <Dir>C:\Users\Abdul\.nuget\packages</Dir>
     <Dir>C:\Users\Administrator\.nuget\packages</Dir>
     <Dir>C:\Users\Benjamin\.nuget\packages</Dir>
-    <Dir>C:\Users\benja\.nuget\packages\microsoft.windowsdesktop.app.ref\3.0.0\ref\netcoreapp3.0</Dir>
-    <Dir>C:\Users\Administrator\.nuget\packages\microsoft.windowsdesktop.app.ref\3.0.0\ref\netcoreapp3.0</Dir>
   </Dirs>
   <MergeCodeGeneratedByCompiler>True</MergeCodeGeneratedByCompiler>
   <ZipSourceFiles>True</ZipSourceFiles>
@@ -4517,7 +4514,6 @@ from nA in namespacesSuspect
 where
   !nA.Name.EndsWith("Templates") &&
   !nA.Name.Contains("Components") &&
-  !nA.Name.Contains("Expressions") &&
   !nA.Name.Contains("Mocks")
 
 // Select namespaces mutually dependent with nA
@@ -4532,7 +4528,6 @@ where
   !nB.Name.EndsWith("Templates") &&
   !nB.Name.Contains("Components") &&
   !nB.Name.Contains("Views") &&
-  !nB.Name.Contains("Expressions") &&
   !nB.Name.Contains("Resolvers")
 
 // nA and nB are mutually dependent
@@ -4761,7 +4756,6 @@ where !cycle.Any(n=>
     n.Name.EndsWith("Templates") ||
     n.Name.Contains("Components") ||
     n.Name.Contains("Content") ||
-    n.Name.Contains("Expressions") ||
     n.Name.Contains("Resolvers"))
 select new { 
    suspect, 

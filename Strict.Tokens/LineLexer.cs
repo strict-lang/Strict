@@ -52,7 +52,7 @@ namespace Strict.Tokens
 			else if (Token.IsValidIdentifier(word))
 				tokens.Add(Token.FromIdentifier(word));
 			else if (word.StartsWith('\"') && word.EndsWith('\"'))
-				tokens.Add(Token.FromText(word));
+				tokens.Add(Token.FromText(word[1..^1]));
 			else if (word.Contains('.'))
 				AddIdentifierParts();
 			else

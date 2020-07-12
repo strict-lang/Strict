@@ -34,5 +34,23 @@ namespace Strict.Tokens.Tests
 		public void OperatorTokenMustBeValid() =>
 			Assert.Throws<Token.InvalidOperator>(() =>
 				Token.FromOperator(nameof(OperatorTokenMustBeValid)));
+		
+		[Test]
+		public void CheckTokenType()
+		{
+			Assert.That(Token.FromOperator(Operator.Assign).IsIdentifier, Is.False);
+			Assert.That(Token.FromOperator(Operator.Open).IsNumber, Is.False);
+			Assert.That(Token.FromOperator(Operator.Close).IsText, Is.False);
+			Assert.That(Token.FromIdentifier(nameof(CheckTokenType)).IsIdentifier, Is.True);
+			Assert.That(Token.FromNumber(5).IsNumber, Is.True);
+			Assert.That(Token.FromText(nameof(TokenTests)).IsText, Is.True);
+		}
+
+		[Test]
+		public void CheckIfIsBinaryOperator()
+		{
+			Assert.That(Operator.Open.IsBinaryOperator(), Is.False);
+			Assert.That(Operator.Plus.IsBinaryOperator(), Is.True);
+		}
 	}
 }
