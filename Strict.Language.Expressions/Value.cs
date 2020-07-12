@@ -1,4 +1,7 @@
-﻿namespace Strict.Language.Expressions
+﻿using System;
+using System.Collections;
+
+namespace Strict.Language.Expressions
 {
 	/// <summary>
 	/// Any expression with a fixed value, often optimized from all known code trees, often parameters
@@ -8,6 +11,6 @@
 	{
 		public Value(Type valueType, object data) : base(valueType) => Data = data;
 		public object Data { get; }//ncrunch: no coverage
-		public override string ToString() => Data.ToString()!;//ncrunch: no coverage
+		public override string ToString() => Data.ToString()!;
 	}
 }

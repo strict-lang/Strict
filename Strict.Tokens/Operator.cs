@@ -16,6 +16,9 @@ namespace Strict.Tokens
 		public const string Greater = ">";
 		public static bool IsOperator(this string name) => All.Contains(name);
 
+		public static bool IsBinaryOperator(this string name) =>
+			name == Plus || name == Minus || name == Multiply || name == Divide || name == Modulate;
+
 		private static readonly string[] All =
 		{
 			Plus, Minus, Multiply, Divide, Modulate, Open, Close, Assign, Smaller, Greater

@@ -37,9 +37,11 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Base", "Base", "{85AB8A69-6
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Strict.Tokens", "Strict.Tokens\Strict.Tokens.csproj", "{577D94BD-6166-469B-B095-E41682DEF3F7}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Strict.Tokens.Tests", "Strict.Tokens.Tests\Strict.Tokens.Tests.csproj", "{EE1CEA38-DAB1-4711-884B-75357678A340}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Strict.Tokens.Tests", "Strict.Tokens.Tests\Strict.Tokens.Tests.csproj", "{EE1CEA38-DAB1-4711-884B-75357678A340}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Strict.Language.Expressions", "Strict.Language.Expressions\Strict.Language.Expressions.csproj", "{392902F7-F537-4384-920C-7BAE554A05B6}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Strict.Language.Expressions", "Strict.Language.Expressions\Strict.Language.Expressions.csproj", "{392902F7-F537-4384-920C-7BAE554A05B6}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Strict.Language.Expressions.Tests", "Strict.Language.Expressions.Tests\Strict.Language.Expressions.Tests.csproj", "{2BE244F7-6429-47E9-890D-86F0B915A77C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -79,6 +81,10 @@ Global
 		{392902F7-F537-4384-920C-7BAE554A05B6}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{392902F7-F537-4384-920C-7BAE554A05B6}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{392902F7-F537-4384-920C-7BAE554A05B6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2BE244F7-6429-47E9-890D-86F0B915A77C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2BE244F7-6429-47E9-890D-86F0B915A77C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2BE244F7-6429-47E9-890D-86F0B915A77C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2BE244F7-6429-47E9-890D-86F0B915A77C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

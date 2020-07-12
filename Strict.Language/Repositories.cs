@@ -44,8 +44,9 @@ namespace Strict.Language
 			var localPath = Path.Combine(DevelopmentFolder, packageName);
 			// For some reason on the CI server an empty folder is still created here with a .dotsettings file
 			if (!Directory.Exists(localPath) || Directory.GetFiles(localPath).Length < 2)
-				localPath =
-					await DownloadAndExtractRepository(packageUrl, packageName); //ncrunch: no coverage
+				//ncrunch: no coverage start
+				localPath = await DownloadAndExtractRepository(packageUrl, packageName);
+			//ncrunch: no coverage end
 			return await LoadFromPath(localPath);
 		}
 
@@ -102,13 +103,14 @@ namespace Strict.Language
 		/// Initially we need to create just empty types and then after they all have been created
 		/// we will fill and load them, otherwise we could not use types within the package context.
 		/// </summary>
-		private async Task<Package> CreatePackageFromFiles(string packagePath,
-			string[] files, Package? parent = null)
+		private async Task<Package> CreatePackageFromFiles(string packagePath, string[] files,
+			Package? parent = null)
 		{
 			// Main folder can be empty, other folders must contain at least one file to create a package
 			if (parent != null && files.Length == 0)
-				return
-					parent; //ncrunch: no coverage, doesn't happen in nicely designed packages anyway
+				//ncrunch: no coverage start, doesn't happen in nicely designed packages anyway
+				return parent;
+			//ncrunch: no coverage end
 			return await CreatePackage(packagePath, files, parent);
 		}
 

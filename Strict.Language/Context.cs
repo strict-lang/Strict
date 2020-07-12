@@ -36,7 +36,7 @@ namespace Strict.Language
 				name = name.Split('<')[0];
 			// Arrays are also not supported yet, simply return base type, however only if we do not find a name ending with s already and do proper array fun
 			if (name.EndsWith('s'))
-				name = name.Substring(0, name.Length - 1);
+				name = name[..^1];
 			if (name == Name)
 				return (Type)this;
 			var type = FindFullType(name) ?? FindType(name, this);

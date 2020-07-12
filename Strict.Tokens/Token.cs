@@ -36,6 +36,7 @@ namespace Strict.Tokens
 		
 		public const string Number = nameof(Number);
 		private static readonly Dictionary<double, Token> CachedNumbers = new Dictionary<double, Token>();
+		public bool IsNumber => Name == Number;
 
 		/// <summary>
 		/// Identifier words must have at least 3 characters, no numbers or special characters in them
@@ -48,6 +49,7 @@ namespace Strict.Tokens
 		private static string Public => "^[A-Z][a-z]+(?:[A-Z][a-z]+)*$";
 		private static bool IsPrivateIdentifier(string word) => Regex.IsMatch(word, Private);
 		private static string Private => "^[a-z][a-z]+(?:[A-Z][a-z]+)*$";
+		public bool IsIdentifier => Name == nameof(Public) || Name == nameof(Private);
 
 		public static Token FromIdentifier(string name)
 		{
@@ -123,5 +125,6 @@ namespace Strict.Tokens
 		
 		public const string Text = nameof(Text);
 		private static readonly Dictionary<string, Token> CachedTexts = new Dictionary<string, Token>();
+		public bool IsText => Name == Text;
 	}
 }

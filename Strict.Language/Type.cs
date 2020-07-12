@@ -17,7 +17,7 @@ namespace Strict.Language
 		/// <summary>
 		/// Call ParserCode or ParseFile instead. This just sets the type name in the specified package.
 		/// </summary>
-		internal Type(Package package, string name, ExpressionParser expressionParser) : base(package, name)
+		public Type(Package package, string name, ExpressionParser expressionParser) : base(package, name)
 		{
 			if (package.FindDirectType(name) != null)
 				throw new TypeAlreadyExistsInPackage(name, package);
@@ -34,11 +34,9 @@ namespace Strict.Language
 
 		public Package Package { get; }
 		private readonly ExpressionParser expressionParser;
+		public Type Parse(string code) => Parse(code.SplitLines());
 
-		public static Type ParseCode(Package package, string name, ExpressionParser expressionParser, string code) =>
-			new Type(package, name, expressionParser).Parse(code.SplitLines());
-
-		private Type Parse(string[] setLines)
+		public Type Parse(string[] setLines)
 		{
 			try
 			{
@@ -73,7 +71,7 @@ namespace Strict.Language
 			else if (words[0] == Keyword.Has)
 				members.Add(new Member(this, line.Substring(Keyword.Has.Length + 1)));
 			else
-				methods.Add(new Method(this, line, GetAllMethodLines(), expressionParser));
+				methods.Add(new Method(this, expressionParser, GetAllMethodLines(line)));
 		}
 
 		private string[] ParseWords(string line)
@@ -121,14 +119,14 @@ namespace Strict.Language
 			public NoMethodsFound(int line, string method) : base("Each type must have at least one method, otherwise it is useless", line, method) { }
 		}
 
-		private IReadOnlyList<string> GetAllMethodLines()
+		private string[] GetAllMethodLines(string definitionLine)
 		{
 			if (IsTrait && lineNumber + 1 < lines.Length && lines[lineNumber + 1].StartsWith('\t'))
 				throw new TypeHasNoMembersAndThusMustBeATraitWithoutMethodBodies();
-			var methodLines = new List<string>();
+			var methodLines = new List<string> { definitionLine };
 			while (lineNumber + 1 < lines.Length && lines[lineNumber + 1].StartsWith('\t'))
-				methodLines.Add(lines[lineNumber++]);
-			return methodLines;
+				methodLines.Add(lines[++lineNumber]);
+			return methodLines.ToArray();
 		}
 
 		public class TypeHasNoMembersAndThusMustBeATraitWithoutMethodBodies : Exception { }

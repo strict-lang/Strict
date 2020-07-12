@@ -2,6 +2,7 @@ using System.Threading.Tasks;
 using NUnit.Framework;
 using Strict.Compiler.Roslyn;
 using Strict.Language;
+using Strict.Language.Expressions;
 using Type = Strict.Language.Type;
 
 namespace Strict.Compiler.Tests
@@ -11,18 +12,20 @@ namespace Strict.Compiler.Tests
 		[SetUp]
 		public async Task CreateGenerator()
 		{
-			await new Repositories().LoadFromUrl(Repositories.StrictUrl);
+			parser = new AllExpressionParser();
+			await new Repositories(parser).LoadFromUrl(Repositories.StrictUrl);
 			package = new Package(nameof(SourceGeneratorTests));
 			generator = new CSharpGenerator();
 		}
 
+		private AllExpressionParser parser;
 		private Package package;
 		private SourceGenerator generator;
 
 		[Test]
 		public void GenerateCSharpInterface()
 		{
-			var app = new Type(package, "DummyApp", "Run");
+			var app = new Type(package, "DummyApp", parser).Parse("Run");
 			var file = generator.Generate(app);
 			Assert.That(file.ToString(), Is.EqualTo(@"public interface DummyApp
 {
@@ -33,7 +36,7 @@ namespace Strict.Compiler.Tests
 		[Test]
 		public void GenerateCSharpClass()
 		{
-			var program = new Type(package, "Program", @"implement App
+			var program = new Type(package, "Program", parser).Parse(@"implement App
 has log
 Run
 	log.Write(""Hello World"")");

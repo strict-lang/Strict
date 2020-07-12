@@ -9,10 +9,10 @@ namespace Strict.Language.Tests
 		public void CreateContexts()
 		{
 			mainPackage = new Package(nameof(TestPackage)); 
-			mainType = new Type(mainPackage, "Yolo", "dummy");
+			mainType = new Type(mainPackage, "Yolo", null);
 			subPackage = new Package(mainPackage, nameof(PackageTests));
-			privateSubType = new Type(subPackage, "secret", "dummy");
-			publicSubType = new Type(subPackage, "FindMe", "dummy");
+			privateSubType = new Type(subPackage, "secret", null);
+			publicSubType = new Type(subPackage, "FindMe", null);
 		}
 
 		private Package mainPackage;
@@ -73,7 +73,7 @@ namespace Strict.Language.Tests
 		public void ContextNameMustNotContainSpecialCharactersOrNumbers()
 		{
 			Assert.Throws<Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers>(() =>
-				new Type(mainPackage, "MyClass123", ""));
+				new Type(mainPackage, "MyClass123", null));
 			Assert.Throws<Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers>(() =>
 				new Package(mainPackage, "$%"));
 		}
@@ -81,7 +81,7 @@ namespace Strict.Language.Tests
 		[Test]
 		public async Task LoadTypesFromOtherPackage()
 		{
-			var strictPackage = await new Repositories().LoadFromUrl(Repositories.StrictUrl);
+			var strictPackage = await new Repositories(null).LoadFromUrl(Repositories.StrictUrl);
 			Assert.That(mainPackage.GetType(Base.App),
 				Is.EqualTo(strictPackage.GetType(Base.App)).And.
 					EqualTo(subPackage.GetType(Base.App)));

@@ -8,50 +8,52 @@ namespace Strict.Language.Tests
 		public void CreatePackage()
 		{
 			package = new TestPackage();
-			new Type(package, Base.App, "Run");
+			new Type(package, Base.App, null).Parse("Run");
 		}
 
 		private Package package;
 
 		[Test]
 		public void AddingTheSameNameIsNotAllowed() =>
-			Assert.Throws<Type.TypeAlreadyExistsInPackage>(() => new Type(package, "App", ""));
+			Assert.Throws<Type.TypeAlreadyExistsInPackage>(() => new Type(package, "App", null));
 
 		[Test]
 		public void EmptyLineIsNotAllowed() =>
 			Assert.That(
-				Assert.Throws<Type.ParsingFailed>(() => new Type(package, Base.Count, "\n")).
+				Assert.Throws<Type.ParsingFailed>(() => new Type(package, Base.Count, null).Parse("\n")).
 					InnerException, Is.TypeOf<Type.EmptyLine>());
 
 		[Test]
 		public void WhitespacesAreNotAllowed()
 		{
 			Assert.That(
-				Assert.Throws<Type.ParsingFailed>(() => new Type(package, Base.Count, " ")).
+				Assert.Throws<Type.ParsingFailed>(() => new Type(package, Base.Count, null).Parse(" ")).
 					InnerException, Is.TypeOf<Type.ExtraWhitespacesFoundAtBeginningOfLine>());
 			Assert.That(
 				Assert.Throws<Type.ParsingFailed>(() =>
-					new Type(package, Base.HashCode, "has\t")).InnerException,
+					new Type(package, Base.HashCode, null).Parse("has\t")).InnerException,
 				Is.TypeOf<Type.ExtraWhitespacesFoundAtEndOfLine>());
 		}
 
 		[Test]
 		public void TypeParsersMustStartWithImplementOrHas() =>
-			Assert.That(Assert.Throws<Type.ParsingFailed>(() => new Type(package, Base.Count,
-					@"Run
+			Assert.That(Assert.Throws<Type.ParsingFailed>(() =>
+					new Type(package, Base.Count, null).Parse(@"Run
 	log.WriteLine")).InnerException,
 				Is.TypeOf<Type.TypeHasNoMembersAndThusMustBeATraitWithoutMethodBodies>());
 
 		[Test]
 		public void JustMembersIsNotValidCode() =>
-			Assert.That(Assert.Throws<Type.ParsingFailed>(() => new Type(package, Base.Count,
-				@"has log
-has count")).InnerException, Is.TypeOf<Type.NoMethodsFound>());
+			Assert.That(
+				Assert.Throws<Type.ParsingFailed>(() =>
+						new Type(package, Base.Count, null).Parse(new[] { "has log", "has count" })).
+					InnerException, Is.TypeOf<Type.NoMethodsFound>());
 
 		[Test]
 		public void InvalidSyntax() =>
 			Assert.That(
-				Assert.Throws<Type.ParsingFailed>(() => new Type(package, Base.Count, "has log\na b")).
+				Assert.Throws<Type.ParsingFailed>(() =>
+						new Type(package, Base.Count, null).Parse(new[] { "has log", "a b" })).
 					InnerException, Is.TypeOf<Method.InvalidSyntax>());
 
 		[Test]
@@ -60,7 +62,7 @@ has count")).InnerException, Is.TypeOf<Type.NoMethodsFound>());
 
 		[Test]
 		public void SimpleApp() =>
-			CheckApp(new Type(package, "Program", @"implement App
+			CheckApp(new Type(package, "Program", null).Parse(@"implement App
 has log
 Run
 	log.Write(""Hello World!"")"));
@@ -74,7 +76,7 @@ Run
 
 		[Test]
 		public void AnotherApp() =>
-			CheckApp(new Type(package, "Program", @"implement App
+			CheckApp(new Type(package, "Program", null).Parse(@"implement App
 has log
 Run
 	for number in Range(0, 10)
@@ -83,7 +85,7 @@ Run
 		[Test]
 		public void Trait()
 		{
-			var app = new Type(package, "DummyApp", "Run");
+			var app = new Type(package, "DummyApp", null).Parse("Run");
 			Assert.That(app.IsTrait, Is.True);
 			Assert.That(app.Name, Is.EqualTo("DummyApp"));
 			Assert.That(app.Methods[0].Name, Is.EqualTo("Run"));
@@ -92,17 +94,17 @@ Run
 		[Test]
 		public void FileExtensionMustBeStrict() =>
 			Assert.ThrowsAsync<Type.FileExtensionMustBeStrict>(() =>
-				new Type(package, "DummyApp", "Run").ParseFile("test.txt"));
+				new Type(package, "DummyApp", null).ParseFile("test.txt"));
 
 		[Test]
 		public void FilePathMustMatchPackageName() =>
 			Assert.ThrowsAsync<Type.FilePathMustMatchPackageName>(() =>
-				new Type(package, "DummyApp", "Run").ParseFile("test.strict"));
+				new Type(package, "DummyApp", null).ParseFile("test.strict"));
 
 		[Test]
 		public void FilePathMustMatchMainPackageName() =>
 			Assert.ThrowsAsync<Type.FilePathMustMatchPackageName>(() =>
-				new Type(new Package(package, nameof(TypeTests)), "DummyApp", "Run").ParseFile(
+				new Type(new Package(package, nameof(TypeTests)), "DummyApp", null).ParseFile(
 					nameof(TypeTests) + "\\test.strict"));
 	}
 }

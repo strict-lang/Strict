@@ -1,72 +1,40 @@
 ﻿using System;
 using System.Collections.Generic;
-using Strict.Language.Expressions;
 using Strict.Tokens;
 
 namespace Strict.Language
 {
-	public class MethodBody : Tokenizer {
-		public MethodBody(Method method,IReadOnlyList<string> lines, ExpressionParser parser)
+	public class MethodBody : Tokenizer
+	{
+		public MethodBody(Method method, ExpressionParser parser, string[] lines)
 		{
 			var lexer = new LineLexer(this);
+			this.method = method;
 			this.parser = parser;
 			parser.Restart();
-			foreach (var line in lines)
-				lexer.Process(line);
+			for (var line = 1; line < lines.Length; line++)
+				lexer.Process(lines[line]);
 			if (unprocessedTokens.Count > 0)
-				throw new UnprocessedTokensAtEndOfFile(unprocessedTokens.ToWordListString());
+				throw new UnprocessedTokensAtEndOfFile(method, unprocessedTokens);
 			Expressions = parser.Expressions;
-			/*
-			var lineLexer = new LineLexer(this);
-			for (var index = 0; index < lines.Count; index++)
-				lineLexer.Process(lines[index]);
-			if (lines[0].StartsWith("\treturn"))
-			{
-				var number = method.GetType(Base.Number);
-				expressions.Add(new Return(new Binary(new Number(method, 5), number.Methods[0],
-					new Boolean(method, true))));
-			}
-			else
-			{
-				var log = method.GetType(Base.Log);
-				expressions.Add(new MethodCall(new MemberCall(method.Type.Members[0]),
-					log.Methods.First(m => m.Name == "WriteLine"), new MediaTypeNames.Text(method, "Hey")));
-			}
-		{
-			get;
-		}
-			*/
 		}
 
+		private readonly Method method;
 		private readonly ExpressionParser parser;
 		private readonly List<Token> unprocessedTokens = new List<Token>();
 
 		public class UnprocessedTokensAtEndOfFile : Exception
 		{
-			public UnprocessedTokensAtEndOfFile(string message) : base(message) { }
+			public UnprocessedTokensAtEndOfFile(Method method, IReadOnlyList<Token> tokens) : base(
+				method + "\nUnprocessed Tokens: " + tokens.ToWordListString()) { }
 		}
+
+		public Expression[] Expressions { get; }
 
 		public void Add(Token token)
 		{
 			unprocessedTokens.Add(token);
-			if (parser.Parse(unprocessedTokens))
-				unprocessedTokens.Clear();
-			/*dummy			
-			if (lines[0].StartsWith("\treturn"))
-			{
-				var number = method.GetType(Base.Number);
-				expressions.Add(new Return(new Binary(new Number(method, 5), number.Methods[0],
-					new Boolean(method, true))));
-			}
-			else
-			{
-				var log = method.GetType(Base.Log);
-				expressions.Add(new MethodCall(new MemberCall(method.Type.Members[0]),
-					log.Methods.First(m => m.Name == "WriteLine"), new MediaTypeNames.Text(method, "Hey")));
-			}
-			*/
+			parser.Parse(method, unprocessedTokens);
 		}
-
-		public IReadOnlyList<Expression> Expressions { get; }
 	}
 }

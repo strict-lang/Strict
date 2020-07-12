@@ -1,4 +1,6 @@
-﻿namespace Strict.Language
+﻿using System;
+
+namespace Strict.Language
 {
 	/// <summary>
 	/// Each line in a method is an expression, many expressions have child expressions (if, for,
@@ -6,9 +8,19 @@
 	/// There are no statements in Strict, every line in a method is an expression, every other
 	/// line in a .strict file is either implement, has or a method definition.
 	/// </summary>
-	public abstract class Expression
+	public abstract class Expression : IEquatable<Expression>
 	{
 		protected Expression(Type returnType) => ReturnType = returnType;
 		public Type ReturnType { get; }
+		
+		public bool Equals(Expression? other) =>
+			!ReferenceEquals(null, other) &&
+			(ReferenceEquals(this, other) || other.ToString() == ToString());
+
+		public override bool Equals(object? obj) =>
+			!ReferenceEquals(null, obj) && (ReferenceEquals(this, obj) ||
+				obj.GetType() == GetType() && Equals((Expression)obj));
+
+		public override int GetHashCode() => ToString()!.GetHashCode();
 	}
 }

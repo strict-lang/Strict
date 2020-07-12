@@ -10,12 +10,13 @@ namespace Strict.Language
 	/// </summary>
 	public class Method : Context
 	{
-		public Method(Type type, string definitionLine, IReadOnlyList<string> bodyLines, ExpressionParser parser) : base(type,
-			GetName(definitionLine))
+		public Method(Type type, ExpressionParser parser, string[] lines) : base(type, GetName(lines[0]))
 		{
-			ReturnType = Name == Keyword.From ? type : type.GetType(Base.None);
-			ParseDefinition(definitionLine.Substring(Name.Length));
-			body = new Lazy<MethodBody>(() => new MethodBody(this, bodyLines, parser));
+			ReturnType = Name == Keyword.From
+				? type
+				: type.GetType(Base.None);
+			ParseDefinition(lines[0].Substring(Name.Length));
+			body = new Lazy<MethodBody>(() => new MethodBody(this, parser, lines));
 		}
 
 		/// <summary>
@@ -49,7 +50,7 @@ namespace Strict.Language
 				throw new EmptyParametersMustBeRemoved();
 			if (!rest.StartsWith('(') || !rest.EndsWith(')'))
 				throw new InvalidSyntax(rest);
-			ParseParameters(rest.Substring(1, rest.Length - 2));
+			ParseParameters(rest[1..^1]);
 		}
 
 		public class EmptyParametersMustBeRemoved : Exception { }
