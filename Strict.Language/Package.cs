@@ -63,8 +63,7 @@ namespace Strict.Language
 		{
 			FolderPath = packagePath;
 			// ReSharper disable once ConditionIsAlwaysTrueOrFalse, check is needed for Root package
-			if (parentPackage != null)
-				parentPackage.children.Add(this);
+			parentPackage?.children.Add(this);
 		}
 
 		public string FolderPath { get; set; }

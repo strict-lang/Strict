@@ -26,10 +26,11 @@ namespace Strict.Language
 		public Repositories(ExpressionParser parser)
 		{
 			this.parser = parser;
-			foreach (var file in Directory.GetFiles(CacheFolder, "*.zip"))
+			if (Directory.Exists(CacheFolder))
 				//ncrunch: no coverage start, rarely happens
-				if (File.GetLastWriteTimeUtc(file) < DateTime.UtcNow.AddHours(-1))
-					File.Delete(file);
+				foreach (var file in Directory.GetFiles(CacheFolder, "*.zip"))
+					if (File.GetLastWriteTimeUtc(file) < DateTime.UtcNow.AddHours(-1))
+						File.Delete(file);
 		} //ncrunch: no coverage end
 
 		private readonly ExpressionParser parser;
