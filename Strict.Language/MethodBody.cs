@@ -8,7 +8,7 @@ namespace Strict.Language
 	{
 		public MethodBody(Method method, ExpressionParser parser, string[] lines)
 		{
-			var lexer = new LineLexer(this);
+			var lexer = new LineLexer(this);//TODO: also remove, just use ExpressionParser to get a tree for each method
 			this.method = method;
 			this.parser = parser;
 			parser.Restart();
@@ -34,7 +34,7 @@ namespace Strict.Language
 		public void Add(Token token)
 		{
 			unprocessedTokens.Add(token);
-			parser.Parse(method, unprocessedTokens);
+			parser.ParseOldTODO(method, unprocessedTokens);
 		}
 	}
 }

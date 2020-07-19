@@ -13,7 +13,7 @@ namespace Strict.Language
 		protected Expression(Type returnType) => ReturnType = returnType;
 		public Type ReturnType { get; }
 		
-		public bool Equals(Expression? other) =>
+		public virtual bool Equals(Expression? other) =>
 			!ReferenceEquals(null, other) &&
 			(ReferenceEquals(this, other) || other.ToString() == ToString());
 

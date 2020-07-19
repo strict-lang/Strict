@@ -13,6 +13,7 @@ namespace Strict.Language
 		public void Restart() => expressions.Clear();
 		public Expression[] Expressions => expressions.ToArray();
 		protected readonly List<Expression> expressions = new List<Expression>();
-		public abstract void Parse(Method method, List<Token> tokens);
+		public abstract void ParseOldTODO(Method method, List<Token> tokens);
+		public abstract Expression Parse(Method method, string lines);
 	}
 }

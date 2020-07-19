@@ -62,7 +62,7 @@ namespace Strict.Language
 			Path.GetFileName(packagePath))
 		{
 			FolderPath = packagePath;
-			// ReSharper disable once ConditionIsAlwaysTrueOrFalse, check is needed for Root package
+			// ReSharper disable once ConstantConditionalAccessQualifier, needed for Root package
 			parentPackage?.children.Add(this);
 		}
 

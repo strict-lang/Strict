@@ -25,12 +25,14 @@ Run
 				Is.EqualTo(type.Methods[0].ReturnType));
 		}
 
-		public override void Parse(Method method, List<Token> tokens)
+		public override void ParseOldTODO(Method method, List<Token> tokens)
 		{
 			if (tokens.Count == 3)
 				tokens.Clear();
 			expressions.Add(new TestExpression(method.ReturnType));
 		}
+
+		public override Expression Parse(Method method, string lines) => null;
 
 		public class TestExpression : Expression
 		{

@@ -21,11 +21,12 @@ namespace Strict.Language.Expressions.Tests
 		protected readonly Member member;
 		protected readonly Method method;
 		protected readonly Number number;
-
-		public override void Parse(Method parseMethod, List<Token> tokens)
+		
+		//old: TODO: remove and simplify
+		public override void ParseOldTODO(Method parseMethod, List<Token> tokens)
 		{
 			lastTokens = tokens;
-			base.Parse(parseMethod, tokens);
+			base.ParseOldTODO(parseMethod, tokens);
 		}
 
 		protected List<Token> lastTokens;
@@ -38,7 +39,7 @@ namespace Strict.Language.Expressions.Tests
 
 		public void ParseAndCheckOutputMatchesInput(string code, Expression expectedExpression)
 		{
-			Parse(method, GetTokens(code));
+			ParseOldTODO(method, GetTokens(code));
 			Assert.That(Expressions[0], Is.EqualTo(expectedExpression));
 			Assert.That(Expressions[0].ToString(), Is.EqualTo(code));
 		}

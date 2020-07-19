@@ -6,5 +6,8 @@
 			base(context.GetType(Base.Boolean), value) { }
 
 		public override string ToString() => Data.ToString()!.ToLower();
+
+		public override bool Equals(Expression? other) =>
+			other is Value v && (bool)Data == (bool)v.Data;
 	}
 }

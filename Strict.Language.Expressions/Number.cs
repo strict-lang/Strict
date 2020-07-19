@@ -9,5 +9,8 @@ namespace Strict.Language.Expressions
 
 		public override string ToString() =>
 			((double)Data).ToString(CultureInfo.InvariantCulture);
+		
+		public override bool Equals(Expression? other) =>
+			other is Value v && (double)Data == (double)v.Data;
 	}
 }

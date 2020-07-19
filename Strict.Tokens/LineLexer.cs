@@ -2,6 +2,10 @@
 
 namespace Strict.Tokens
 {
+	/// <summary>
+	/// Goes through each line and gives us basic Tokens for keywords and Identifiers.
+	/// See Expressions namespace for full parsing of method bodies.
+	/// </summary>
 	public class LineLexer
 	{
 		public LineLexer(Tokenizer tokens) => this.tokens = tokens;

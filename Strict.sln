@@ -41,7 +41,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Strict.Tokens.Tests", "Stri
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Strict.Language.Expressions", "Strict.Language.Expressions\Strict.Language.Expressions.csproj", "{392902F7-F537-4384-920C-7BAE554A05B6}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Strict.Language.Expressions.Tests", "Strict.Language.Expressions.Tests\Strict.Language.Expressions.Tests.csproj", "{2BE244F7-6429-47E9-890D-86F0B915A77C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Strict.Language.Expressions.Tests", "Strict.Language.Expressions.Tests\Strict.Language.Expressions.Tests.csproj", "{2BE244F7-6429-47E9-890D-86F0B915A77C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
