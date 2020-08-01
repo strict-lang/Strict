@@ -14,12 +14,12 @@ Run
 		[Test]
 		public void MustMustHaveAName() =>
 			Assert.Throws<Method.InvalidSyntax>(() => new Method(type, null, new[] { "a b" }));
-
+		/*unused
 		[Test]
 		public void MethodNameCantBeKeyword() =>
 			Assert.Throws<Method.MethodNameCantBeKeyword>(() =>
 				new Method(type, null, new[] { "if" }));
-
+		*/
 		[Test]
 		public void ParametersMustNotBeEmpty() =>
 			Assert.Throws<Method.EmptyParametersMustBeRemoved>(() =>

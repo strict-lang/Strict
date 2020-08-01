@@ -1,5 +1,4 @@
 ﻿using System.Collections.Generic;
-using Strict.Tokens;
 
 namespace Strict.Language
 {
@@ -10,10 +9,11 @@ namespace Strict.Language
 	/// </summary>
 	public abstract class ExpressionParser
 	{
+		/*should not longer be needed
 		public void Restart() => expressions.Clear();
 		public Expression[] Expressions => expressions.ToArray();
 		protected readonly List<Expression> expressions = new List<Expression>();
-		public abstract void ParseOldTODO(Method method, List<Token> tokens);
+		*/
 		public abstract Expression Parse(Method method, string lines);
 	}
 }

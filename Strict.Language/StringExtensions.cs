@@ -14,7 +14,7 @@ namespace Strict.Language
 			text.Split(new[] { ' ', '(', ')', ',' }, StringSplitOptions.RemoveEmptyEntries);
 
 		public static string ToWordListString<T>(this IReadOnlyCollection<T> list) =>
-			string.Join(", ", list);
+			String.Join(", ", list);
 
 		public static string ToBracketsString<T>(this IReadOnlyCollection<T> list) =>
 			list.Count > 0
@@ -31,5 +31,8 @@ namespace Strict.Language
 					return false;
 			return true;
 		}
+
+		public static string MakeFirstLetterUppercase(this string name) =>
+			name.Substring(0, 1).ToUpperInvariant() + name.Substring(1);
 	}
 }

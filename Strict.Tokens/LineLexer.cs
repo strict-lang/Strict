@@ -35,9 +35,9 @@ namespace Strict.Tokens
 			if (character == ' ' && previousCharacter != ')' || character == '(' || character == ')')
 				ParseWord();
 			if (character == '(')
-				tokens.Add(Token.Open);
+				tokens.Add(DefinitionToken.Open);
 			else if (character == ')')
-				tokens.Add(Token.Close);
+				tokens.Add(DefinitionToken.Close);
 			else if (character != ' ' && previousCharacter != ')')
 				word += character;
 			previousCharacter = character;
@@ -47,34 +47,37 @@ namespace Strict.Tokens
 		{
 			if (string.IsNullOrEmpty(word))
 				throw new UnexpectedSpaceOrEmptyParenthesisDetected(Position);
+			/*not used
 			if (word.IsKeyword())
-				tokens.Add(Token.FromKeyword(word));
+				tokens.Add(DefinitionToken.FromKeyword(word));
 			else if (word.IsOperator())
-				tokens.Add(Token.FromOperator(word));
-			else if (Token.IsValidNumber(word))
-				tokens.Add(Token.FromNumber(word));
-			else if (Token.IsValidIdentifier(word))
-				tokens.Add(Token.FromIdentifier(word));
+				tokens.Add(DefinitionToken.FromOperator(word));
+			else */if (DefinitionToken.IsValidNumber(word))
+				tokens.Add(DefinitionToken.FromNumber(word));
+			else if (DefinitionToken.IsValidIdentifier(word))
+				tokens.Add(DefinitionToken.FromIdentifier(word));
 			else if (word.StartsWith('\"') && word.EndsWith('\"'))
-				tokens.Add(Token.FromText(word[1..^1]));
+				tokens.Add(DefinitionToken.FromText(word[1..^1]));
+			/*also not used here
 			else if (word.Contains('.'))
 				AddIdentifierParts();
+			*/
 			else
 				throw new InvalidIdentifierName(word, Position);
 			word = "";
 		}
-
+		/*nah
 		private void AddIdentifierParts()
 		{
 			var split = word.Split('.');
 			for (var index = 0; index < split.Length; index++)
 			{
 				if (index > 0)
-					tokens.Add(Token.Dot);
-				tokens.Add(Token.FromIdentifier(split[index]));
+					tokens.Add(DefinitionToken.Dot);
+				tokens.Add(DefinitionToken.FromIdentifier(split[index]));
 			}
 		}
-
+		*/
 		private string word = "";
 		private int previousCharacter;
 

@@ -2,6 +2,6 @@
 {
 	public interface Tokenizer
 	{
-		void Add(Token token);
+		void Add(DefinitionToken token);
 	}
 }

@@ -11,22 +11,24 @@ namespace Strict.Language.Expressions
 {
 	public class AllExpressionParser : ExpressionParser//TODO: maybe merge .Parsing into here
 	{
-		public override void ParseOldTODO(Method method, List<Token> tokens)
+		/*TODO: 
+		public override void ParseOldTODO(Method method, List<DefinitionToken> tokens)
 		{
-			//TODO: this is very annoying to edit, maybe we should just create a new project and slowly get all features working there
+			//this is very annoying to edit, maybe we should just create a new project and slowly get all features working there
 			if (tokens.Count == 2 && tokens[0].Name.IsBinaryOperator() && tokens[1].IsNumber)
 				AddBinary(method, tokens);
-			else if (tokens.Count == 2 && tokens[0] == Strict.Tokens.Token.Dot)
+			else if (tokens.Count == 2 && tokens[0] == Strict.Tokens.DefinitionToken.Dot)
 				AddMethodCall(method);
-			else if (tokens.Count == 2 && tokens[0] == Strict.Tokens.Token.Return)
+			else if (tokens.Count == 2 && tokens[0] == Strict.Tokens.DefinitionToken.Return)
 				AddReturn(method, tokens);
 			else if (tokens.Count == 1 && !tokens[0].Name.IsBinaryOperator() &&
-				tokens[0] != Strict.Tokens.Token.Dot && tokens[0] != Strict.Tokens.Token.Return)
+				tokens[0] != Strict.Tokens.DefinitionToken.Dot && tokens[0] != Strict.Tokens.DefinitionToken.Return)
 				AddSingleToken(method, tokens);
 			else
 				return;
 			tokens.Clear();
 		}
+			*/
 
 		public override Expression Parse(Method method, string lines)
 		{
@@ -65,22 +67,24 @@ namespace Strict.Language.Expressions
 			=> ParseBinary(Try(Char('+').ThenReturn(BinaryOperatorType...Add));
 
 		*/
-		private void AddBinary(Method method, List<Token> tokens) =>
+
+		/*moar TODO
+		private void AddBinary(Method method, List<DefinitionToken> tokens) =>
 			expressions[^1] = new Binary(expressions[^1],
 				method.GetType(Base.Number).Methods.First(m => m.Name == tokens[0].Name),
 				GetValue(method, tokens[1]));
-		private static Value GetValue(Method method, Token token) =>
-			new Value(token.Name == Strict.Tokens.Token.Number
+		private static Value GetValue(Method method, DefinitionToken token) =>
+			new Value(token.Name == Strict.Tokens.DefinitionToken.Number
 				? method.GetType(Base.Number)
 				: method.GetType(Base.Boolean), token.Value!);
 
 		private void AddMethodCall(Method method) =>
 			expressions[^1] = new MethodCall(expressions[^1], method.Type.Methods[0]);
 
-		private void AddReturn(Method method, List<Token> tokens) =>
+		private void AddReturn(Method method, List<DefinitionToken> tokens) =>
 			expressions.Add(new Return(new Boolean(method, (bool)tokens[1].Value!)));
 
-		private void AddSingleToken(Method method, List<Token> tokens)
+		private void AddSingleToken(Method method, List<DefinitionToken> tokens)
 		{
 			if (tokens[0].IsNumber)
 				expressions.Add(new Number(method, (double)tokens[0].Value!));
@@ -96,8 +100,9 @@ namespace Strict.Language.Expressions
 
 		public class UnsupportedToken : Exception
 		{
-			public UnsupportedToken(Token token) : base(token.ToString()) { }
+			public UnsupportedToken(DefinitionToken token) : base(token.ToString()) { }
 		}
+		*/
 	}
 
 	public class MethodBodyExpression : Expression//TODO: merge with MethodBody, more refactoring needed

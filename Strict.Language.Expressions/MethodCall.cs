@@ -3,6 +3,7 @@ using Strict.Tokens;
 
 namespace Strict.Language.Expressions
 {
+	/*TODO
 	public class MethodCall : Expression
 	{
 		public MethodCall(Expression instance, Method method, params Expression[] arguments)
@@ -18,6 +19,7 @@ namespace Strict.Language.Expressions
 		public IReadOnlyList<Expression> Arguments { get; }
 
 		public override string ToString() =>
-			Instance + Token.Dot.Name + Method.Name + Arguments.ToBracketsString();
+			Instance + DefinitionToken.Dot.Name + Method.Name + Arguments.ToBracketsString();
 	}
+	*/
 }

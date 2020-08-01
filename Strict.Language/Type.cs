@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Strict.Tokens;
 
 namespace Strict.Language
 {
@@ -66,13 +65,16 @@ namespace Strict.Language
 		private void ParseLine(string line)
 		{
 			var words = ParseWords(line);
-			if (words[0] == Keyword.Implement)
+			if (words[0] == Implement)
 				implements.Add(new Implement(Package.GetType(words[1])));
-			else if (words[0] == Keyword.Has)
-				members.Add(new Member(this, line.Substring(Keyword.Has.Length + 1)));
+			else if (words[0] == Has)
+				members.Add(new Member(this, line.Substring(Has.Length + 1)));
 			else
 				methods.Add(new Method(this, expressionParser, GetAllMethodLines(line)));
 		}
+
+		public const string Implement = "implement";
+		public const string Has = "has";
 
 		private string[] ParseWords(string line)
 		{

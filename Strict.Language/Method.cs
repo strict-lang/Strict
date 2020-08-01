@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using Strict.Tokens;
+using System.Text;
 
 namespace Strict.Language
 {
@@ -12,11 +12,12 @@ namespace Strict.Language
 	{
 		public Method(Type type, ExpressionParser parser, string[] lines) : base(type, GetName(lines[0]))
 		{
-			ReturnType = Name == Keyword.From
+			ReturnType = Name == From
 				? type
 				: type.GetType(Base.None);
 			ParseDefinition(lines[0].Substring(Name.Length));
-			body = new Lazy<MethodBody>(() => new MethodBody(this, parser, lines));
+			body = new Lazy<MethodBody>(() =>
+				(MethodBody)parser.Parse(this, GetMethodBodyLines(lines)));
 		}
 
 		/// <summary>
@@ -26,22 +27,36 @@ namespace Strict.Language
 		private static string GetName(string firstLine)
 		{
 			var name = firstLine.SplitWordsAndPunctuation()[0];
-			return name.IsKeyword() && !name.IsKeywordFunction()
+			return /*unused: name.IsKeyword() && !name.IsKeywordFunction()
 				? throw new MethodNameCantBeKeyword(name)
-				: name;
+				: */name;
 		}
 
+		public const string From = "from";
+
+		/// <summary>
+		/// Skip the first method declaration line and remove the first tab from each line.
+		/// </summary>
+		private static string GetMethodBodyLines(string[] lines)
+		{
+			var bodyText = new StringBuilder();
+			for (int lineIndex = 1; lineIndex < lines.Length; lineIndex++)
+				bodyText.AppendLine(lines[lineIndex].Substring(1));
+			return bodyText.ToString();
+		}
+
+		/*unused
 		public class MethodNameCantBeKeyword : Exception
 		{
 			public MethodNameCantBeKeyword(string methodName) : base(methodName) { }
 		}
-
+		*/
 		private void ParseDefinition(string rest)
 		{
-			var returnsIndex = rest.IndexOf(" " + Keyword.Returns + " ", StringComparison.Ordinal);
+			var returnsIndex = rest.IndexOf(" " + Returns + " ", StringComparison.Ordinal);
 			if (returnsIndex >= 0)
 			{
-				ReturnType = Type.GetType(rest.Substring(returnsIndex + Keyword.Returns.Length + 2));
+				ReturnType = Type.GetType(rest.Substring(returnsIndex + Returns.Length + 2));
 				rest = rest.Substring(0, returnsIndex);
 			}
 			if (string.IsNullOrEmpty(rest))
@@ -52,6 +67,7 @@ namespace Strict.Language
 				throw new InvalidSyntax(rest);
 			ParseParameters(rest[1..^1]);
 		}
+		public const string Returns = "returns";
 
 		public class EmptyParametersMustBeRemoved : Exception { }
 

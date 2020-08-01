@@ -6,13 +6,15 @@
 		{
 			var parts = nameAndType.Split(' ');
 			Name = parts[0];
+			if (!Name.IsWord())
+				throw new Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers(Name);
 			Type = definedIn.GetType(parts.Length == 1
-				? parts[0].Substring(0, 1).ToUpperInvariant() + parts[0].Substring(1)
+				? parts[0].MakeFirstLetterUppercase()
 				: parts[1]);
 		}
-		
-		public string Name { get; }//limit to regex: ([a-zA-Z]+[a-zA-Z]*)
-		public Type Type { get; } //([\w<>]+)
+
+		public string Name { get; }
+		public Type Type { get; }
 		public override string ToString() => Name + " " + Type;
 	}
 }

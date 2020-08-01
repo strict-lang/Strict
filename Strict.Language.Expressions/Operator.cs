@@ -2,6 +2,7 @@
 
 namespace Strict.Tokens
 {
+	/*TODO: do with Pidgin
 	public static class Operator
 	{
 		public const string Plus = "+";
@@ -24,4 +25,5 @@ namespace Strict.Tokens
 			Plus, Minus, Multiply, Divide, Modulate, Open, Close, Assign, Smaller, Greater
 		};
 	}
+	*/
 }

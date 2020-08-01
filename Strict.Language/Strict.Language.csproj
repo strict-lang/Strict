@@ -8,8 +8,4 @@
 		<WarningsAsErrors />
   </PropertyGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\Strict.Tokens\Strict.Tokens.csproj" />
-  </ItemGroup>
-
 </Project>

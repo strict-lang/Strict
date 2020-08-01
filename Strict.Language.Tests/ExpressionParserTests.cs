@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using NUnit.Framework;
-using Strict.Tokens;
 
 namespace Strict.Language.Tests
 {
@@ -17,32 +16,38 @@ Run
 		[Test]
 		public void ParsingHappensAfterCallingBody()
 		{
-			Assert.That(Expressions, Is.Empty);
+			Assert.That(parseWasCalled, Is.False);
 			Assert.That(type.Methods[0].Body, Is.Not.Null);
-			Assert.That(Expressions, Is.Not.Empty);
+			Assert.That(parseWasCalled, Is.True);
 			Assert.That(type.Methods[0].Body.Expressions, Is.Not.Empty);
-			Assert.That(type.Methods[0].Body.Expressions[0].ReturnType,
-				Is.EqualTo(type.Methods[0].ReturnType));
+			Assert.That(type.Methods[0].Body.ReturnType, Is.EqualTo(type.Methods[0].ReturnType));
 		}
-
-		public override void ParseOldTODO(Method method, List<Token> tokens)
+		/*unused
+		public override void ParseOldTODO(Method method, List<DefinitionToken> tokens)
 		{
 			if (tokens.Count == 3)
 				tokens.Clear();
 			expressions.Add(new TestExpression(method.ReturnType));
 		}
+		[Test]
+		public void ThereMustBeNoTokensLeft() =>
+			Assert.Throws<MethodBody.UnprocessedTokensAtEndOfFile>(() =>
+				new MethodBody(type.Methods[0], this, new[] { "Dummy", "\tdummy" }));
 
-		public override Expression Parse(Method method, string lines) => null;
+		*/
+		public override Expression Parse(Method method, string lines)
+		{
+			parseWasCalled = true;
+			return new MethodBody(method,
+				new Expression[] { new TestExpression(type.Methods[0].ReturnType) });
+		}
+
+		private bool parseWasCalled;
 
 		public class TestExpression : Expression
 		{
 			public TestExpression(Type returnType) : base(returnType) { }
 		}
-
-		[Test]
-		public void ThereMustBeNoTokensLeft() =>
-			Assert.Throws<MethodBody.UnprocessedTokensAtEndOfFile>(() =>
-				new MethodBody(type.Methods[0], this, new[] { "Dummy", "\tdummy" }));
 
 		[Test]
 		public void CompareExpressions()

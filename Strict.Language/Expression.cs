@@ -22,7 +22,6 @@ namespace Strict.Language
 				obj.GetType() == GetType() && Equals((Expression)obj));
 
 		public override int GetHashCode() => ToString()!.GetHashCode();
-
 		public override string ToString() => base.ToString() + " " + ReturnType;
 	}
 }

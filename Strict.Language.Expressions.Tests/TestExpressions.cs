@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using NUnit.Framework;
 using Strict.Language.Tests;
-using Strict.Tokens;
 
 namespace Strict.Language.Expressions.Tests
 {
@@ -22,26 +21,27 @@ namespace Strict.Language.Expressions.Tests
 		protected readonly Method method;
 		protected readonly Number number;
 		
-		//old: TODO: remove and simplify
-		public override void ParseOldTODO(Method parseMethod, List<Token> tokens)
+		/*old: TODO: remove and simplify
+		public override void ParseOldTODO(Method parseMethod, List<DefinitionToken> tokens)
 		{
 			lastTokens = tokens;
 			base.ParseOldTODO(parseMethod, tokens);
 		}
 
-		protected List<Token> lastTokens;
+		protected List<DefinitionToken> lastTokens;
 
-		protected List<Token> GetTokens(string code)
+		protected List<DefinitionToken> GetTokens(string code)
 		{
 			new MethodBody(method, this, ("Dummy\n\t" + code).SplitLines());
 			return lastTokens;
 		}
-
+		
+		*/
 		public void ParseAndCheckOutputMatchesInput(string code, Expression expectedExpression)
 		{
-			ParseOldTODO(method, GetTokens(code));
-			Assert.That(Expressions[0], Is.EqualTo(expectedExpression));
-			Assert.That(Expressions[0].ToString(), Is.EqualTo(code));
+			var expression = Parse(method, code);
+			Assert.That(expression, Is.EqualTo(expectedExpression));
+			Assert.That(expression.ToString(), Is.EqualTo(code));
 		}
 	}
 }
