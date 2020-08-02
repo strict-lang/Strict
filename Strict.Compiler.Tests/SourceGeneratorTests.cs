@@ -12,13 +12,13 @@ namespace Strict.Compiler.Tests
 		[SetUp]
 		public async Task CreateGenerator()
 		{
-			parser = new AllExpressionParser();
+			parser = new PidginExpressionParser();
 			await new Repositories(parser).LoadFromUrl(Repositories.StrictUrl);
 			package = new Package(nameof(SourceGeneratorTests));
 			generator = new CSharpGenerator();
 		}
 
-		private AllExpressionParser parser;
+		private PidginExpressionParser parser;
 		private Package package;
 		private SourceGenerator generator;
 

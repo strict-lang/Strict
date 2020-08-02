@@ -4,7 +4,7 @@ using Strict.Language.Tests;
 
 namespace Strict.Language.Expressions.Tests
 {
-	public abstract class TestExpressions : AllExpressionParser
+	public abstract class TestExpressions : PidginExpressionParser
 	{
 		protected TestExpressions()
 		{
@@ -20,23 +20,7 @@ namespace Strict.Language.Expressions.Tests
 		protected readonly Member member;
 		protected readonly Method method;
 		protected readonly Number number;
-		
-		/*old: TODO: remove and simplify
-		public override void ParseOldTODO(Method parseMethod, List<DefinitionToken> tokens)
-		{
-			lastTokens = tokens;
-			base.ParseOldTODO(parseMethod, tokens);
-		}
 
-		protected List<DefinitionToken> lastTokens;
-
-		protected List<DefinitionToken> GetTokens(string code)
-		{
-			new MethodBody(method, this, ("Dummy\n\t" + code).SplitLines());
-			return lastTokens;
-		}
-		
-		*/
 		public void ParseAndCheckOutputMatchesInput(string code, Expression expectedExpression)
 		{
 			var expression = Parse(method, code);

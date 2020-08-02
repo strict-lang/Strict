@@ -7,7 +7,7 @@ namespace Strict.Language.Expressions.Tests
 		[Test]
 		public void ParseNumber()
 		{
-			var input = "5";//"let number = 5";
+			var input = "5";//"TODO: let number = 5";
 			var expected = new Number(method, 5);
 			Assert.That(Parse(method, input), Is.EqualTo(expected));
 		}
