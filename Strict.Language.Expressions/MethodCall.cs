@@ -2,7 +2,6 @@
 
 namespace Strict.Language.Expressions
 {
-	/*TODO
 	public class MethodCall : Expression
 	{
 		public MethodCall(Expression instance, Method method, params Expression[] arguments)
@@ -18,7 +17,7 @@ namespace Strict.Language.Expressions
 		public IReadOnlyList<Expression> Arguments { get; }
 
 		public override string ToString() =>
-			Instance + DefinitionToken.Dot.Name + Method.Name + Arguments.ToBracketsString();
+			//TODO: (Instance as Identifier)?.Type == Method.Parent ? "" :
+			Instance + "." + Method.Name + Arguments.ToBracketsString();
 	}
-	*/
 }

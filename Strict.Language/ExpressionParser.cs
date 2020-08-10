@@ -14,6 +14,6 @@ namespace Strict.Language
 		public Expression[] Expressions => expressions.ToArray();
 		protected readonly List<Expression> expressions = new List<Expression>();
 		*/
-		public abstract Expression Parse(Method method, string lines);
+		public abstract Expression Parse(Method context, string lines);
 	}
 }

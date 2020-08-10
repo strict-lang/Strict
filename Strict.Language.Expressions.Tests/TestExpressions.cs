@@ -4,7 +4,7 @@ using Strict.Language.Tests;
 
 namespace Strict.Language.Expressions.Tests
 {
-	public abstract class TestExpressions : PidginExpressionParser
+	public abstract class TestExpressions : Expressions.PidginExpressionParser
 	{
 		protected TestExpressions()
 		{

@@ -35,10 +35,10 @@ Run
 				new MethodBody(type.Methods[0], this, new[] { "Dummy", "\tdummy" }));
 
 		*/
-		public override Expression Parse(Method method, string lines)
+		public override Expression Parse(Method context, string lines)
 		{
 			parseWasCalled = true;
-			return new MethodBody(method,
+			return new MethodBody(context,
 				new Expression[] { new TestExpression(type.Methods[0].ReturnType) });
 		}
 

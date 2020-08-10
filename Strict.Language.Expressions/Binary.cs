@@ -1,6 +1,5 @@
 ﻿namespace Strict.Language.Expressions
 {
-	/*TODO
 	public class Binary : MethodCall
 	{
 		public Binary(Expression left, Method operatorMethod, Expression right) : base(left,
@@ -10,5 +9,4 @@
 		public Expression Right => Arguments[0];
 		public override string ToString() => Left + " " + Method.Name + " " + Right;
 	}
-	*/
 }
