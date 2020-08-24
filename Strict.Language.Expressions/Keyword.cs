@@ -1,8 +1,6 @@
-﻿using System.Linq;
-
-namespace Strict.Tokens
+﻿namespace Strict.Language.Expressions
 {
-	/*TODO: do via pidgin
+	/*TODO: used where needed, maybe should be back soon for own parsing
 	public static class Keyword
 	{
 		public const string Let = "let";

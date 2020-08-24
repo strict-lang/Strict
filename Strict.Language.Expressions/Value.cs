@@ -3,6 +3,8 @@
 	/// <summary>
 	/// Any expression with a fixed value, often optimized from all known code trees, often parameters
 	/// like the derived classes <see cref="Number"/>, <see cref="Boolean"/> or <see cref="Text"/>.
+	/// All expressions have a ReturnType and many expressions contains a <see cref="Value"/> like
+	/// <see cref="Assignment"/> or indirectly as parts of a <see cref="Binary"/> expression.
 	/// </summary>
 	public class Value : Expression
 	{

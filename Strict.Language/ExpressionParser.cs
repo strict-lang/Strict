@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-
-namespace Strict.Language
+﻿namespace Strict.Language
 {
 	/// <summary>
 	/// Abstracts the actual expressions and parsing away to the Expressions project.
@@ -9,11 +7,6 @@ namespace Strict.Language
 	/// </summary>
 	public abstract class ExpressionParser
 	{
-		/*should not longer be needed
-		public void Restart() => expressions.Clear();
-		public Expression[] Expressions => expressions.ToArray();
-		protected readonly List<Expression> expressions = new List<Expression>();
-		*/
 		public abstract Expression Parse(Method context, string lines);
 	}
 }

@@ -1,10 +1,11 @@
+using System;
 using System.Collections.Generic;
 using NUnit.Framework;
 using Strict.Language.Tests;
 
 namespace Strict.Language.Expressions.Tests
 {
-	public abstract class TestExpressions : Expressions.PidginExpressionParser
+	public abstract class TestExpressions : MethodExpressionParser
 	{
 		protected TestExpressions()
 		{
@@ -23,9 +24,19 @@ namespace Strict.Language.Expressions.Tests
 
 		public void ParseAndCheckOutputMatchesInput(string code, Expression expectedExpression)
 		{
-			var expression = Parse(method, code);
+			var expression = ParseExpression(method, code);
 			Assert.That(expression, Is.EqualTo(expectedExpression));
 			Assert.That(expression.ToString(), Is.EqualTo(code));
 		}
+		
+		public Expression ParseExpression(Method context, string lines)
+		{
+			var body = base.Parse(context, lines) as MethodBody;
+			if (body.Expressions.Count == 1)
+				return body.Expressions[0];
+			throw new MultipleExpressionsGiven();
+		}
+
+		public class MultipleExpressionsGiven : Exception { }
 	}
 }

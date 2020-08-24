@@ -13,6 +13,14 @@
 				: parts[1]);
 		}
 
+		protected NamedType(string name, Type type)
+		{
+			Name = name;
+			if (!Name.IsWord())
+				throw new Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers(Name);
+			Type = type;
+		}
+
 		public string Name { get; }
 		public Type Type { get; }
 		public override string ToString() => Name + " " + Type;

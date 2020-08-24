@@ -9,5 +9,13 @@
 
 		public override bool Equals(Expression? other) =>
 			other is Value v && (bool)Data == (bool)v.Data;
+
+		public static Expression? TryParse(Method context, string input) =>
+			input switch
+			{
+				"true" => new Boolean(context, true),
+				"false" => new Boolean(context, false),
+				_ => null
+			};
 	}
 }
