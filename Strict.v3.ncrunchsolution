@@ -3,7 +3,9 @@
     <AllowParallelTestExecution>True</AllowParallelTestExecution>
     <DefaultTestTimeout>10000</DefaultTestTimeout>
     <InstrumentationMode>Optimised</InstrumentationMode>
-    <MetricsExclusionList />
+    <MetricsExclusionList>
+      <Value>Strict.Language.Expressions\Strict.Language.Expressions.csproj</Value>
+    </MetricsExclusionList>
     <SolutionConfigured>True</SolutionConfigured>
   </Settings>
 </SolutionConfiguration>

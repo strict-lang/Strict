@@ -46,7 +46,7 @@ namespace Strict.Language.Expressions
 				Boolean.TryParse(context, input) ?? Text.TryParse(context, input);
 		}
 
-		private class UnknownExpression : Exception
+		public class UnknownExpression : Exception
 		{
 			public UnknownExpression(Method context, string input, int expressionNumber) : base(
 				input + "\n in " + context + " (Line " + expressionNumber + ")") { }

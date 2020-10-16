@@ -34,7 +34,7 @@ namespace Strict.Language.Expressions.Tests
 			var body = base.Parse(context, lines) as MethodBody;
 			if (body.Expressions.Count == 1)
 				return body.Expressions[0];
-			throw new MultipleExpressionsGiven();
+			throw new MultipleExpressionsGiven();//ncrunch: no coverage, need test for this
 		}
 
 		public class MultipleExpressionsGiven : Exception { }
