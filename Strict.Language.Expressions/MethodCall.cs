@@ -17,7 +17,6 @@ namespace Strict.Language.Expressions
 		public IReadOnlyList<Expression> Arguments { get; }
 
 		public override string ToString() =>
-			//TODO: (Instance as Identifier)?.Type == Method.Parent ? "" :
 			Instance + "." + Method.Name + Arguments.ToBracketsString();
 	}
 }
