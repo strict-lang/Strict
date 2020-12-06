@@ -5,11 +5,11 @@
 		<Nullable>enable</Nullable>
 		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 		<WarningsAsErrors />
+		<PlatformTarget>x64</PlatformTarget>
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Strict.Compiler\Strict.Compiler.csproj" />
-    <ProjectReference Include="..\Strict.Language\Strict.Language.csproj" />
+    <PackageReference Include="ManagedCudaNet5" Version="11.1.1" />
   </ItemGroup>
 
 </Project>
