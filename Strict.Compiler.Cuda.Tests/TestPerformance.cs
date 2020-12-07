@@ -7,7 +7,7 @@ namespace Strict.Compiler.Cuda.Tests
 	/// <summary>
 	/// Interestingly the chunksize doesn't matter much as long as it is 10 or more, after 100 there is almost no benefit.
 	/// </summary>
-	public record TestPerformance(int Iterations, int ChunkSize, Action<int, int> RunChunk)
+	public record TestPerformance(int Iterations, int ChunkSize, Action<int, int> RunChunk, Action<int> RunGpu)
 	{
 		public void Run()
 		{
@@ -45,8 +45,19 @@ namespace Strict.Compiler.Cuda.Tests
 		private void ParallelCpuChunks() =>
 			Parallel.For(0, Iterations / ChunkSize,
 				index => RunChunk(index * ChunkSize, ChunkSize));
-		
-		private void CudaGpu() { }
-		private void CudaGpuAndCpu() { }
+
+		private void CudaGpu()
+		{
+			RunGpu(Iterations);
+		}
+
+		private void CudaGpuAndCpu()
+		{
+			float gpuFactor = 15 / 16f;
+			int gpuIterations = (int)(Iterations * gpuFactor);
+			Parallel.Invoke(() => RunGpu(gpuIterations),
+				() => Parallel.For(gpuIterations / ChunkSize, Iterations / ChunkSize,
+					index => RunChunk(index * ChunkSize, ChunkSize)));
+		}
 	}
 }
