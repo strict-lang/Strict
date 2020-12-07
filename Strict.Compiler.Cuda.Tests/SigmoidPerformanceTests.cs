@@ -1,6 +1,4 @@
 using System;
-using System.Diagnostics;
-using System.Threading.Tasks;
 using NUnit.Framework;
 
 namespace Strict.Compiler.Cuda.Tests
@@ -8,6 +6,10 @@ namespace Strict.Compiler.Cuda.Tests
 	/// <summary>
 	/// Kinda stupid to do parallel as the overhead is way too much to make this work.
 	/// Improve the problem to a more realistic benchmark actually calculating neuron weights!
+	/// SingleThread() * 10000000: 203ms
+	/// SingleThreadChunks() * 10000000: 98ms
+	/// ParallelCpu() * 10000000: 272ms
+	/// ParallelCpuChunks() * 10000000: 107ms
 	/// </summary>
 	[Category("Slow")]
 	public class SigmoidPerformanceTests
@@ -15,52 +17,16 @@ namespace Strict.Compiler.Cuda.Tests
 		[Test]
 		public void CpuAndGpuLoops()
 		{
-			CheckPerformance(SingleThread);
-			CheckPerformance(ParallelCpu);
-			CheckPerformance(ParallelCpuChunks);
-			CheckPerformance(CudaGpu);
-			CheckPerformance(CudaGpuAndCpu);
-		}
-
-		private void CheckPerformance(Action runCode)
-		{
-			var watch = new Stopwatch();
-			watch.Restart();
-			runCode();
-			watch.Stop();
-			Console.WriteLine("Sigmoid " + NumberOfIterations + " calls on " + runCode.Method + ": " +
-				watch.ElapsedMilliseconds + "ms, output=" + output);
+			new TestPerformance(10000000, 100, SigmoidOutput).Run();
 		}
 		
-		public const int NumberOfIterations = 100000000;
-		public readonly Sigmoid sigmoid = new();
-		public class Sigmoid
+		public void SigmoidOutput(int start, int chunkSize)
 		{
-			public float Output(float x) => 1.0f / (1.0f + (float)Math.Exp(-x));
+			for (int n = 0; n < chunkSize; n++)
+				output = 1.0f / (1.0f + (float)Math.Exp(-Input));
 		}
 
-		private void SingleThread()
-		{
-			for (var i = 0; i < NumberOfIterations; i++)
-				output = sigmoid.Output(Input);
-		}
-
-		public float output = 0f;
+		private float output = 0f;
 		public const float Input = 0.265f;
-
-		private void ParallelCpu() => Parallel.For(0, NumberOfIterations, index => output = sigmoid.Output(Input));
-		
-		private void ParallelCpuChunks() => Parallel.For(0, NumberOfIterations/ChunkSize, index =>
-		{
-			for (var i = 0; i < ChunkSize; i++)
-				output = sigmoid.Output(Input);
-		});
-		/// <summary>
-		/// Interestingly the chunksize doesn't matter much as long as it is 10 or more, after 100 there is almost no benefit.
-		/// </summary>
-		public const int ChunkSize = 100;
-		
-		private void CudaGpu() { }
-		private void CudaGpuAndCpu() { }
 	}
 }
