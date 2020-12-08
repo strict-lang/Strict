@@ -17,7 +17,7 @@ namespace Strict.Compiler.Cuda.Tests
 		[Test]
 		public void CpuAndGpuLoops()
 		{
-			new TestPerformance(10000000, 100, SigmoidOutput, SigmoidGpu).Run();
+			new TestPerformance(10000000, 100, SigmoidOutput, SigmoidGpu, name=>{}).Run();
 		}
 
 		public void SigmoidOutput(int start, int chunkSize)

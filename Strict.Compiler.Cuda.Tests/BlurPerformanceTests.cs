@@ -1,3 +1,7 @@
+using System;
+using System.Drawing;
+using System.Drawing.Imaging;
+using System.IO;
 using ManagedCuda;
 using ManagedCuda.NVRTC;
 using NUnit.Framework;
@@ -24,83 +28,158 @@ namespace Strict.Compiler.Cuda.Tests
 	[Category("Slow")]
 	public class BlurPerformanceTests
 	{
+		//ncrunch: no coverage start
 		[Test]
 		public void CpuAndGpuLoops()
 		{
+			//both break the image pretty badly, but it is still somehow there .. needs better code yo
+			LoadImage();
 			CompileKernel();
-			new TestPerformance(Width*Height*BlurIterations, 100, Blur, BlurGpu).Run();
+			new TestPerformance(Width*Height*BlurIterations, 100, Blur, BlurGpu, SaveImage).Run();
 		}
 
-		private const int Width = 2048;
-		private const int Height = 1024;
+		private void LoadImage()
+		{
+			var bitmap =
+				new Bitmap(
+					@"C:\code\DeltaEngine\_VisualApprovalTests\LineTests.RenderCoordinateSystem.approved.png");
+			Width = bitmap.Width;
+			Height = bitmap.Height;
+			var data = bitmap.LockBits(new Rectangle(0, 0, bitmap.Width, bitmap.Height),
+				ImageLockMode.ReadOnly, bitmap.PixelFormat);
+			CreateColorImageFromBitmapData(bitmap, data);
+		}
+
+		private unsafe void CreateColorImageFromBitmapData(Bitmap bitmap, BitmapData data)
+		{
+			image = new byte[Width * Height * 4];
+			var pointer = (byte*) data.Scan0;
+			var offsetIncrease = bitmap.PixelFormat is PixelFormat.Format24bppRgb ? 3 : 4;
+			for (var y = 0; y < Height; y++)
+			for (var x = 0; x < Width; x++)
+			{
+				image[(x + y * Width) * 4] = *(pointer + 2);
+				image[(x + y * Width) * 4+1] = *(pointer + 1);
+				image[(x + y * Width) * 4+2] = *(pointer + 0);
+				pointer += offsetIncrease;
+			}
+		}
+		
+		private int Width;
+		private int Height;
+		private byte[] image;
 		private const int BlurIterations = 100;
 
 		public void CompileKernel()
 		{
 			//generate as output language obviously from strict code
-			string code = @"extern ""C"" __global__ void blur(float *image, float *output, size_t n)
+			string code = @"extern ""C"" __global__ void blur(unsigned char* image, unsigned char* output, size_t width, size_t height)
 {
   size_t tid = blockIdx.x * blockDim.x + threadIdx.x;
-  if (tid > 2048 && tid < n) {
-    output[tid] = (image[tid-2048]+image[tid-1]+image[tid]+image[tid+1]+image[tid+2048])/5;
+  if (tid > width && tid < width*height-width) {
+    output[tid] = image[tid];// (image[tid-2048]+image[tid-1]+image[tid]+image[tid+1]+image[tid+2048])/5;
   }
 }";
-			nvrtcResult result;
-			using (var rtc = new CudaRuntimeCompiler(code, "blur"))
+			using var rtc = new CudaRuntimeCompiler(code, "blur");
+			try
 			{
-				try
-				{
-					// see http://docs.nvidia.com/cuda/nvrtc/index.html for usage and options
-					//https://arnon.dk/matching-sm-architectures-arch-and-gencode-for-various-nvidia-cards/
-					//nvcc .\vectorAdd.cu -use_fast_math -ptx -m 64 -arch compute_61 -code sm_61 -o .\vectorAdd.ptx
-					rtc.Compile(new[] { "--gpu-architecture=compute_61" });//TODO: use max capabilities on actual hardware we have at runtime
-					result = nvrtcResult.Success;
-				} catch(NVRTCException ex)
-				{
-					result = ex.NVRTCError;
-					var r = ex.Message;
-				}
-				if (result == nvrtcResult.Success)
-				{
-					int deviceID = 0;
-					CudaContext ctx = new CudaContext(deviceID);
-					kernel = ctx.LoadKernelPTX(rtc.GetPTX(), "blur");
-					kernel.GridDimensions = (N + 511) / 512;
-					kernel.BlockDimensions = 512;
-					float[] input = new float[N];
-					d_A = input;
-					d_C = new CudaDeviceVariable<float>(N);
-				}
+				// Use max capabilities on actual hardware we have at runtime
+				Version computeVersion = CudaContext.GetDeviceComputeCapability(0);
+				string shaderModelVersion = "" + computeVersion.Major + computeVersion.Minor;
+				Console.WriteLine("ShaderModelVersion="+shaderModelVersion);
+				// see http://docs.nvidia.com/cuda/nvrtc/index.html for usage and options
+				//https://arnon.dk/matching-sm-architectures-arch-and-gencode-for-various-nvidia-cards/
+				//nvcc .\vectorAdd.cu -use_fast_math -ptx -m 64 -arch compute_61 -code sm_61 -o .\vectorAdd.ptx
+				//https://docs.nvidia.com/cuda/nvrtc/index.html#group__options
+				rtc.Compile(new[] { "--gpu-architecture=compute_"+shaderModelVersion });
+				Console.WriteLine("Cuda compile log: " + rtc.GetLogAsString());
+				int deviceID = 0;
+				CudaContext ctx = new CudaContext(deviceID);
+				kernel = ctx.LoadKernelPTX(rtc.GetPTX(), "blur");
+				kernel.GridDimensions = (Size + 511) / 512;
+				kernel.BlockDimensions = 512;
+				//unused: float[] copyInput = new float[Size];
+				input = image;
+				output = new CudaDeviceVariable<byte>(Size);
+			}
+			catch(NVRTCException ex)
+			{
+				Console.WriteLine("Cuda compile log: " + rtc.GetLogAsString());
+				throw new Exception(ex.NVRTCError+ " "+ex);
 			}
 		}
 
-		private const int N = Width * Height;
+		private int Size => Width * Height * 4;
 		private CudaKernel kernel;
-		private CudaDeviceVariable<float> d_A;
-		private CudaDeviceVariable<float> d_C;
+		private CudaDeviceVariable<byte> input;
+		private CudaDeviceVariable<byte> output;
 		
 		private void Blur(int start, int chunkSize)
 		{
-			if (start < Width)
+			if (start < Width * 4)
 				return;
-			const int Size = N;
-			for (int n = start; n < start + chunkSize; n++)
+			var size = Size;
+			for (int n = start; n < start + chunkSize; n+=4)
 			{
-				int output = image[n % Size] + image[(n - Width) % Size] + image[(n - 1) % Size] +
-					image[(n + 1) % Size] + image[(n + Width) % Size];
-				image[n % Size] = (byte)(output / 5);
+				int r = image[n % size] + image[(n - Width*4) % size] + image[(n - 4) % size] +
+					image[(n + 4) % size] + image[(n + Width*4) % size];
+				n++;
+				int g = image[n % size] + image[(n - Width*4) % size] + image[(n - 4) % size] +
+					image[(n + 4) % size] + image[(n + Width*4) % size];
+				n++;
+				int b = image[n % size] + image[(n - Width*4) % size] + image[(n - 4) % size] +
+					image[(n + 4) % size] + image[(n + Width*4) % size];
+				n -= 2;
+				image[(n+0) % size] = (byte)(r / 5);
+				image[(n+1) % size] = (byte)(b / 5);
+				image[(n+2) % size] = (byte)(g / 5);
 			}
 		}
 
-		private byte[] image = new byte[Width * Height];
-
 		private void BlurGpu(int iterations)
 		{
-			for (int i = 0; i < iterations / N; i++)
-				kernel.Run(d_A.DevicePointer, d_C.DevicePointer, N);
+			for (int i = 0; i < BlurIterations/*iterations / Size*/; i++)
+				kernel.Run(input.DevicePointer, output.DevicePointer, Width, Height);
 			// Copy result from device memory to host memory
 			// h_C contains the result in host memory
-			float[] h_C = d_C;
+			//float[] copyOutput = output;
+			image = output;
+		}
+
+		private void SaveImage(string methodName)
+		{
+			string filePath = methodName + "Blurred.jpg";
+			using var bitmap = AsBitmap(image);
+			using Stream stream = File.Open(filePath, FileMode.Create, FileAccess.ReadWrite);
+			bitmap.Save(stream, ImageFormat.Jpeg);
+			// Load original image back so we start fresh for the next performance test
+			LoadImage();
+		}
+		
+		public unsafe Bitmap AsBitmap(byte[] data, bool flipTopBottom = false)
+		{
+			var bitmap = new Bitmap(Width, Height);
+			var bitmapData = bitmap.LockBits(new Rectangle(0, 0, Width, Height), ImageLockMode.WriteOnly,
+				PixelFormat.Format24bppRgb);
+			var bitmapPointer = (byte*)bitmapData.Scan0.ToPointer();
+			SwitchRgbToBgr(data, bitmapPointer, bitmapData.Stride, flipTopBottom);
+			bitmap.UnlockBits(bitmapData);
+			return bitmap;
+		}
+		
+		private unsafe void SwitchRgbToBgr(byte[] data, byte* bitmapPointer, int stride, bool flipTopBottom)
+		{
+			for (int y = 0; y < Height; ++y)
+			for (int x = 0; x < Width; ++x)
+			{
+				int targetIndex = y * stride + x * 3;
+				int sourceIndex = flipTopBottom
+					? ((Height - 1 - y) * Width + x) * 3
+					: (y * Width + x) * 3;
+				bitmapPointer[targetIndex] = data[sourceIndex + 2];
+				bitmapPointer[targetIndex + 1] = data[sourceIndex + 1];
+				bitmapPointer[targetIndex + 2] = data[sourceIndex];
+			}
 		}
 	}
 }

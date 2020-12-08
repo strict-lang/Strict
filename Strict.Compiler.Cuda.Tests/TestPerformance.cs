@@ -7,16 +7,16 @@ namespace Strict.Compiler.Cuda.Tests
 	/// <summary>
 	/// Interestingly the chunksize doesn't matter much as long as it is 10 or more, after 100 there is almost no benefit.
 	/// </summary>
-	public record TestPerformance(int Iterations, int ChunkSize, Action<int, int> RunChunk, Action<int> RunGpu)
+	public record TestPerformance(int Iterations, int ChunkSize, Action<int, int> RunChunk, Action<int> RunGpu, Action<string> Done)
 	{
 		public void Run()
 		{
-			CheckPerformance(SingleThread);
-			CheckPerformance(SingleThreadChunks);
-			CheckPerformance(ParallelCpu);
+			//CheckPerformance(SingleThread);
+			//CheckPerformance(SingleThreadChunks);
+			//CheckPerformance(ParallelCpu);
 			CheckPerformance(ParallelCpuChunks);
 			CheckPerformance(CudaGpu);
-			CheckPerformance(CudaGpuAndCpu);
+			//CheckPerformance(CudaGpuAndCpu);
 		}
 		
 		protected void CheckPerformance(Action runCode)
@@ -25,7 +25,8 @@ namespace Strict.Compiler.Cuda.Tests
 			watch.Restart();
 			runCode();
 			watch.Stop();
-			Console.WriteLine(runCode.Method + " * "+Iterations+": " + watch.ElapsedMilliseconds + "ms");
+			Console.WriteLine(runCode.Method.Name + " * "+Iterations+": " + watch.ElapsedMilliseconds + "ms");
+			Done(runCode.Method.Name);
 		}
 		
 		private void SingleThread()
