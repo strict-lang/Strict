@@ -15,7 +15,7 @@ namespace Strict.Language.Expressions
 
 		public Identifier Name { get; }
 		public Expression Value { get; }
-
+		public override int GetHashCode() => Name.GetHashCode() ^ Value.GetHashCode();
 		public override string ToString() => "let " + Name + " = " + Value;
 
 		public override bool Equals(Expression? other) =>
@@ -31,16 +31,16 @@ namespace Strict.Language.Expressions
 			string[] parts =
 				input.Split(new[] { "let ", " = " }, StringSplitOptions.RemoveEmptyEntries);
 			if (parts.Length != 2)
-				return null;
+				throw new IncompleteLet(input);
 			var value = MethodExpressionParser.TryParse(context, parts[1]);
 			if (value == null)
-				throw new InvalidExpression(input);
+				throw new InvalidExpression(input, "let");
 			return new Assignment(Identifier.TryParse(parts[0], value.ReturnType)!, value);
 		}
 
-		public class InvalidExpression : Exception
+		public class IncompleteLet : Exception
 		{
-			public InvalidExpression(string input) : base(input) { }
+			public IncompleteLet(string input) : base(input) { }
 		}
 	}
 }

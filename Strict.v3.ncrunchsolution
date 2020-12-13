@@ -4,7 +4,8 @@
     <DefaultTestTimeout>10000</DefaultTestTimeout>
     <InstrumentationMode>Optimised</InstrumentationMode>
     <MetricsExclusionList>
-      <Value>Strict.Language.Expressions\Strict.Language.Expressions.csproj</Value>
+      <Value>Strict.Compiler.Cuda\Strict.Compiler.Cuda.csproj</Value>
+      <Value>Strict.Compiler.Cuda.Tests\Strict.Compiler.Cuda.Tests.csproj</Value>
     </MetricsExclusionList>
     <SolutionConfigured>True</SolutionConfigured>
   </Settings>

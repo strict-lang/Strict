@@ -171,7 +171,6 @@ namespace Strict.Language
 		}
 
 		public const string Extension = ".strict";
-
 		public class FileExtensionMustBeStrict : Exception { }
 		
 		public class FilePathMustMatchPackageName : Exception

@@ -43,7 +43,8 @@ namespace Strict.Language.Expressions
 			if (string.IsNullOrEmpty(input))
 				throw new Type.EmptyLine(0, context.Name);
 			return Assignment.TryParse(context, input) ?? Number.TryParse(context, input) ??
-				Boolean.TryParse(context, input) ?? Text.TryParse(context, input);
+				Boolean.TryParse(context, input) ??
+				Text.TryParse(context, input) ?? Binary.TryParse(context, input);
 		}
 
 		public class UnknownExpression : Exception
