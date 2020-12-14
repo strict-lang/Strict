@@ -11,7 +11,7 @@ namespace Strict.Language.Expressions
 		public Expression Right => Arguments[0];
 		public override string ToString() => Left + " " + Method.Name + " " + Right;
 		
-		public static Expression? TryParse(Method context, string input)
+		public new static Expression? TryParse(Method context, string input)
 		{
 			var parts = input.Split(' ', 3);
 			return parts.Length == 3 && parts[1][0].IsOperator()

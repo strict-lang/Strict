@@ -94,5 +94,11 @@ namespace Strict.Language
 			name == Base.Other
 				? Type
 				: Type.FindType(name, searchingFrom ?? this);
+
+		public Member FindMember(string methodName)
+		{
+			//TODO
+			return null!;
+		}
 	}
 }

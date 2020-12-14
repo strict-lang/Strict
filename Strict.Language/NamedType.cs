@@ -7,7 +7,7 @@
 			var parts = nameAndType.Split(' ');
 			Name = parts[0];
 			if (!Name.IsWord())
-				throw new Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers(Name);//ncrunch: no coverage, need test for this
+				throw new Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers(Name);
 			Type = definedIn.GetType(parts.Length == 1
 				? parts[0].MakeFirstLetterUppercase()
 				: parts[1]);
@@ -17,7 +17,7 @@
 		{
 			Name = name;
 			if (!Name.IsWord())
-				throw new Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers(Name);//ncrunch: no coverage, need test for this
+				throw new Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers(Name);
 			Type = type;
 		}
 

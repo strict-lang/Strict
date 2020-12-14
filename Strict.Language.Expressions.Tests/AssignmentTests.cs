@@ -1,4 +1,5 @@
 using NUnit.Framework;
+using Strict.Language.Tests;
 
 namespace Strict.Language.Expressions.Tests
 {
@@ -10,16 +11,34 @@ namespace Strict.Language.Expressions.Tests
 				Throws.Exception.InstanceOf<MultipleExpressionsGiven>());
 
 		[Test]
-		public void ParseNumber() =>
-			Assert.That(ParseExpression(method, "let number = 5"),
+		public void ParseNumber()
+		{
+			var assignment = (Assignment)ParseExpression(method, "let number = 5");
+			Assert.That(assignment,
 				Is.EqualTo(new Assignment(new Identifier(nameof(number), number.ReturnType),
 					number)));
+			Assert.That(assignment.Value.ReturnType, Is.EqualTo(number.ReturnType));
+			Assert.That(((Number)assignment.Value).ToString(), Is.EqualTo("5"));
+		}
 
+		[Test]
+		public void ParseText()
+		{
+			const string Input = "let value = \"Hey\"";
+			var expression = ParseExpression(method, Input) as Assignment;
+			Assert.That(expression.Name.ToString(), Is.EqualTo("value"));
+			Assert.That(expression.Value.ToString(), Is.EqualTo("\"Hey\""));
+			Assert.That(expression.ToString(), Is.EqualTo(Input));
+		}
+		
 		[Test]
 		public void AssignmentToString()
 		{
-			var input = "let value = 1";
-			Assert.That(ParseExpression(method, input).ToString(), Is.EqualTo(input));
+			const string Input = "let sum = 5 + 3";
+			var expression = ParseExpression(method, Input) as Assignment;
+			Assert.That(expression.Name.ToString(), Is.EqualTo("sum"));
+			Assert.That(expression.Value.ToString(), Is.EqualTo("5 + 3"));
+			Assert.That(expression.ToString(), Is.EqualTo(Input));
 		}
 
 		[Test]

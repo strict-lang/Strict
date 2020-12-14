@@ -34,23 +34,8 @@ namespace Strict.Language
 
 		public static string MakeFirstLetterUppercase(this string name) =>
 			name.Substring(0, 1).ToUpperInvariant() + name.Substring(1);
-		
-		public static string ToText<T>(this IEnumerable<T> texts, string separator = ", ",
-			int limit = 0)
-		{
-			if (limit == 0)
-				return string.Join(separator, texts);
-			var result = "";
-			foreach (var text in texts)
-			{
-				result += (result == ""
-					? ""
-					: separator) + text;
-				limit--;
-				if (limit <= 0)
-					break;
-			}
-			return result;
-		}
+
+		public static string ToText<T>(this IEnumerable<T> texts, string separator = ", ") =>
+			string.Join(separator, texts);
 	}
 }

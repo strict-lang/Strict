@@ -10,7 +10,7 @@ namespace Strict.Language.Expressions
 	/// </summary>
 	public class MethodExpressionParser : ExpressionParser
 	{
-		//change to MethodBody
+		//TODO: change to MethodBody
 		public override Expression Parse(Method context, string lines)
 		{
 			var mainLines = GetMainLines(lines);
@@ -38,13 +38,14 @@ namespace Strict.Language.Expressions
 			return mainLines;
 		}
 		
+		//TODO: shouldn't this be just in Expression.cs?
 		public static Expression? TryParse(Method context, string input)
 		{
 			if (string.IsNullOrEmpty(input))
 				throw new Type.EmptyLine(0, context.Name);
 			return Assignment.TryParse(context, input) ?? Number.TryParse(context, input) ??
-				Boolean.TryParse(context, input) ??
-				Text.TryParse(context, input) ?? Binary.TryParse(context, input);
+				Boolean.TryParse(context, input) ?? Text.TryParse(context, input) ??
+				Binary.TryParse(context, input) ?? MethodCall.TryParse(context, input);
 		}
 
 		public class UnknownExpression : Exception
