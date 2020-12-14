@@ -19,7 +19,7 @@ namespace Strict.Language.Expressions
 			Plus, Minus, Multiply, Divide, Modulate, Assign, Smaller, Greater
 		};
 	}
-	/*do with Pidgin
+	/*TODO do with Pidgin
 	public static class Operator
 	{
 		public const string Plus = "+";

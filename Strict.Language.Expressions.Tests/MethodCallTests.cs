@@ -6,7 +6,7 @@ namespace Strict.Language.Expressions.Tests
 	{
 		[Test]
 		public void ParseCall() =>
-			ParseAndCheckOutputMatchesInput("log.Run",
-				new MethodCall(new MemberCall(member), method));
+			ParseAndCheckOutputMatchesInput("log.WriteLine(\"Hi\")",
+				new MethodCall(new MemberCall(member), member.Type.Methods[0], new Text(type, "Hi")));
 	}
 }

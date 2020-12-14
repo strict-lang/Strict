@@ -1,5 +1,6 @@
 ﻿namespace Strict.Language
 {
+	// ReSharper disable once HollowTypeName
 	public abstract class NamedType
 	{
 		protected NamedType(Context definedIn, string nameAndType)

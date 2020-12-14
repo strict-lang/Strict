@@ -7,12 +7,7 @@
 	public class Identifier : NamedType
 	{
 		public Identifier(string name, Type type) : base(name, type) { }
-		
-		public static Identifier? TryParse(string input, Type type) =>
-			input.IsWord() && char.IsLower(input[0])
-				? new Identifier(input, type)
-				: null;
-
+		//still needed? public static bool IsIdentifier(string input) => input.IsWord() && char.IsLower(input[0]);
 		public override bool Equals(object? obj) => obj is NamedType other && Name == other.Name;
 		public override int GetHashCode() => Name.GetHashCode();
 		public override string ToString() => Name;

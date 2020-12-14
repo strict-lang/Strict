@@ -10,11 +10,13 @@ namespace Strict.Language.Expressions.Tests
 		protected TestExpressions()
 		{
 			type = new Type(new TestPackage(), "dummy", this);
-			member = new Member(type, "log");
+			member = new Member("log", new Value(type.GetType(Base.Log), null!));
 			((List<Member>)type.Members).Add(member);
 			method = new Method(type, this, new[] { "Run" });
 			((List<Method>)type.Methods).Add(method);
 			number = new Number(method, 5);
+			var bla = new Member("bla", number);
+			((List<Member>)type.Members).Add(bla);
 		}
 
 		protected readonly Type type;

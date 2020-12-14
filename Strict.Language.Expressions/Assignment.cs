@@ -32,10 +32,9 @@ namespace Strict.Language.Expressions
 				input.Split(new[] { "let ", " = " }, StringSplitOptions.RemoveEmptyEntries);
 			if (parts.Length != 2)
 				throw new IncompleteLet(input);
-			var value = MethodExpressionParser.TryParse(context, parts[1]);
-			if (value == null)
-				throw new InvalidExpression(input, "let");
-			return new Assignment(Identifier.TryParse(parts[0], value.ReturnType)!, value);
+			var value = MethodExpressionParser.TryParse(context, parts[1]) ??
+				throw new MethodExpressionParser.UnknownExpression(context, input);
+			return new Assignment(new Identifier(parts[0], value.ReturnType), value);
 		}
 
 		public class IncompleteLet : Exception

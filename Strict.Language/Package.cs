@@ -15,7 +15,7 @@ namespace Strict.Language
 		public Package(string packagePath) : this(RootForPackages, packagePath) { }
 
 		// ReSharper disable once PrivateFieldCanBeConvertedToLocalVariable, unique
-		private static readonly Root RootForPackages = new Root();
+		private static readonly Root RootForPackages = new();
 
 		/// <summary>
 		/// Contains all high level <see cref="Package"/>. Just contains the fallback None type (think
@@ -55,7 +55,7 @@ namespace Strict.Language
 
 			private string lastName = "";
 			private Type lastType = null!;
-			private readonly Dictionary<string, Type> cachedFoundTypes = new Dictionary<string, Type>();
+			private readonly Dictionary<string, Type> cachedFoundTypes = new();
 		}
 
 		public Package(Package parentPackage, string packagePath) : base(parentPackage,
@@ -67,9 +67,9 @@ namespace Strict.Language
 		}
 
 		public string FolderPath { get; set; }
-		private readonly List<Package> children = new List<Package>();
+		private readonly List<Package> children = new();
 		internal void Add(Type type) => types.Add(type);
-		private readonly List<Type> types = new List<Type>();
+		private readonly List<Type> types = new();
 		
 		public Type? FindFullType(string fullName)
 		{

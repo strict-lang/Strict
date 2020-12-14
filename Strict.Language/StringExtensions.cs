@@ -34,8 +34,5 @@ namespace Strict.Language
 
 		public static string MakeFirstLetterUppercase(this string name) =>
 			name.Substring(0, 1).ToUpperInvariant() + name.Substring(1);
-
-		public static string ToText<T>(this IEnumerable<T> texts, string separator = ", ") =>
-			string.Join(separator, texts);
 	}
 }

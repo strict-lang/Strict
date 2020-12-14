@@ -1,5 +1,4 @@
 using NUnit.Framework;
-using Strict.Language.Tests;
 
 namespace Strict.Language.Expressions.Tests
 {
@@ -40,6 +39,20 @@ namespace Strict.Language.Expressions.Tests
 			Assert.That(expression.Value.ToString(), Is.EqualTo("5 + 3"));
 			Assert.That(expression.ToString(), Is.EqualTo(Input));
 		}
+		
+		[Test]
+		public void IncompleteAssignment()
+		{
+			const string Input = "let sum = 5 + ";
+			Assert.That(() => ParseExpression(method, Input),
+				Throws.Exception.InstanceOf<IncompleteExpression>());
+		}
+
+		[Test]
+		public void IdentifierMustBeValidWord() =>
+			Assert.That(() => ParseExpression(method, "let number5 = 5"),
+				Throws.Exception.
+					InstanceOf<Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers>());
 
 		[Test]
 		public void AssignmentGetHashCode()
@@ -57,6 +70,6 @@ namespace Strict.Language.Expressions.Tests
 		[Test]
 		public void LetWithoutExpressionCannotParse() =>
 			Assert.That(() => ParseExpression(method, "let value = abc"),
-				Throws.Exception.InstanceOf<Assignment.InvalidExpression>());
+				Throws.Exception.InstanceOf<Method.MemberNotFound>());
 	}
 }

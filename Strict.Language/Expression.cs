@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Net.Mime;
 
 namespace Strict.Language
 {
@@ -23,11 +24,5 @@ namespace Strict.Language
 
 		public override int GetHashCode() => ToString()!.GetHashCode();
 		public override string ToString() => base.ToString() + " " + ReturnType;
-
-		public class InvalidExpression : Exception
-		{
-			public InvalidExpression(string input, string context) :
-				base(input + " in " + context) { }
-		}
 	}
 }

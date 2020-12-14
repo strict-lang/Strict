@@ -13,11 +13,11 @@ namespace Strict.Language.Expressions.Tests
 		[Test]
 		public void MissingLeftExpression() =>
 			Assert.That(() => ParseExpression(method, "bla + 5"),
-				Throws.Exception.InstanceOf<Expression.InvalidExpression>());
+				Throws.Exception.InstanceOf<UnknownExpression>());
 		
 		[Test]
 		public void MissingRightExpression() =>
 			Assert.That(() => ParseExpression(method, "5 + bla"),
-				Throws.Exception.InstanceOf<Expression.InvalidExpression>());
+				Throws.Exception.InstanceOf<UnknownExpression>());
 	}
 }

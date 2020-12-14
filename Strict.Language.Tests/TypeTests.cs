@@ -61,6 +61,11 @@ namespace Strict.Language.Tests
 			Assert.Throws<Context.TypeNotFound>(() => package.GetType(Base.Computation));
 
 		[Test]
+		public void TypeNameMustBeWord() =>
+			Assert.Throws<Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers>(() =>
+				new Member(package.GetType(Base.App), "blub7", null!));
+
+		[Test]
 		public void SimpleApp() =>
 			CheckApp(new Type(package, "Program", null).Parse(@"implement App
 has log

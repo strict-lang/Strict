@@ -72,7 +72,7 @@ namespace Strict.Language
 		{
 			var localZip = Path.Combine(CacheFolder, packageName + ".zip");
 			File.CreateText(localZip).Close();
-			using WebClient webClient = new WebClient();
+			using WebClient webClient = new();
 			await webClient.DownloadFileTaskAsync(new Uri(packageUrl + "/archive/master.zip"),
 				localZip);
 			await Task.Run(() =>
@@ -98,7 +98,7 @@ namespace Strict.Language
 		}
 
 		private static readonly Dictionary<string, Package> AlreadyLoadedPackages =
-			new Dictionary<string, Package>();
+			new();
 
 		/// <summary>
 		/// Initially we need to create just empty types and then after they all have been created
@@ -148,6 +148,6 @@ namespace Strict.Language
 				Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
 				StrictPackages);
 		private const string StrictPackages = nameof(StrictPackages);
-		public static readonly Uri StrictUrl = new Uri("https://github.com/strict-lang/Strict");
+		public static readonly Uri StrictUrl = new("https://github.com/strict-lang/Strict");
 	}
 }

@@ -21,13 +21,11 @@ namespace Strict.Language.Expressions
 
 		private static Expression TryParseBinary(Method context, string[] parts)
 		{
-			var left = MethodExpressionParser.TryParse(context, parts[0]);
-			if (left == null)
-				throw new InvalidExpression(parts.ToText(" "), nameof(left));
+			var left = MethodExpressionParser.TryParse(context, parts[0]) ??
+				throw new MethodExpressionParser.UnknownExpression(context, parts[0]);
 			var binaryOperator = parts[1];
-			var right = MethodExpressionParser.TryParse(context, parts[2]);
-			if (right == null)
-				throw new InvalidExpression(parts.ToText(" "), nameof(right));
+			var right = MethodExpressionParser.TryParse(context, parts[2]) ??
+				throw new MethodExpressionParser.UnknownExpression(context, parts[2]);
 			return new Binary(left, left.ReturnType.Methods.First(m => m.Name == binaryOperator),
 				right);
 		}

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace Strict.Language
@@ -85,7 +86,7 @@ namespace Strict.Language
 		}
 
 		public IReadOnlyList<Parameter> Parameters => parameters;
-		private readonly List<Parameter> parameters = new List<Parameter>();
+		private readonly List<Parameter> parameters = new();
 		public Type ReturnType { get; private set; }
 		private readonly Lazy<MethodBody> body;
 		public MethodBody Body => body.Value;
@@ -95,10 +96,14 @@ namespace Strict.Language
 				? Type
 				: Type.FindType(name, searchingFrom ?? this);
 
-		public Member FindMember(string methodName)
+		public Member GetMember(string name) =>
+			Type.Members.FirstOrDefault(m => m.Name == name) ??
+			throw new MemberNotFound(name, Type);
+
+		public class MemberNotFound : Exception
 		{
-			//TODO
-			return null!;
+			public MemberNotFound(string memberName, Type type) :
+				base(memberName + " in " + type) { }
 		}
 	}
 }

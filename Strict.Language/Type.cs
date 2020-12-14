@@ -68,7 +68,7 @@ namespace Strict.Language
 			if (words[0] == Implement)
 				implements.Add(new Implement(Package.GetType(words[1])));
 			else if (words[0] == Has)
-				members.Add(new Member(this, line.Substring(Has.Length + 1)));
+				members.Add(new Member(this, line.Substring(Has.Length + 1), null!));
 			else
 				methods.Add(new Method(this, expressionParser, GetAllMethodLines(line)));
 		}
@@ -118,7 +118,8 @@ namespace Strict.Language
 		
 		public class NoMethodsFound : ParsingFailedInLine
 		{
-			public NoMethodsFound(int line, string method) : base("Each type must have at least one method, otherwise it is useless", line, method) { }
+			public NoMethodsFound(int line, string method) : base(
+				"Each type must have at least one method, otherwise it is useless", line, method) { }
 		}
 
 		private string[] GetAllMethodLines(string definitionLine)
@@ -143,11 +144,11 @@ namespace Strict.Language
 		}
 
 		public IReadOnlyList<Implement> Implements => implements;
-		private readonly List<Implement> implements = new List<Implement>();
+		private readonly List<Implement> implements = new();
 		public IReadOnlyList<Member> Members => members;
-		private readonly List<Member> members = new List<Member>();
+		private readonly List<Member> members = new();
 		public IReadOnlyList<Method> Methods => methods;
-		private readonly List<Method> methods = new List<Method>();
+		private readonly List<Method> methods = new();
 		public bool IsTrait => Implements.Count == 0 && Members.Count == 0 && Name != Base.Number;
 		public override string ToString() => base.ToString() + Implements.ToBracketsString();
 
