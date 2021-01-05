@@ -4,7 +4,7 @@ namespace Strict.Compiler.Cuda.Tests
 {
 	public class KernelTests
 	{
-		[Test]
+		[Test][Category("Slow")]
 		public void CompileCudaCode()
 		{
 			//needs around 300ms
