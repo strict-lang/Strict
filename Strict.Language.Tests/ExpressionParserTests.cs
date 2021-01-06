@@ -22,7 +22,7 @@ Run
 			Assert.That(type.Methods[0].Body.ReturnType, Is.EqualTo(type.Methods[0].ReturnType));
 		}
 		/*unused
-		public override void ParseOldTODO(Method method, List<DefinitionToken> tokens)
+		public override void ParseOld(Method method, List<DefinitionToken> tokens)
 		{
 			if (tokens.Count == 3)
 				tokens.Clear();
