@@ -45,7 +45,7 @@ namespace Strict.Compiler.Cuda
 			if (result == nvrtcResult.Success)
 			{
 				//we could consume right away, this could be done in for caching or in the background for next usage
-				using var file = new StreamWriter(@"convokernel.ptx");
+				using var file = new StreamWriter(@"VectorAdd.ptx");
 				file.Write(rtc.GetPTXAsString());
 			}
 		}
@@ -56,7 +56,7 @@ namespace Strict.Compiler.Cuda
 			int N = 50000;
 			int deviceID = 0;
 			CudaContext ctx = new CudaContext(deviceID);
-			CudaKernel kernel = ctx.LoadKernel("VectorAdd.ptx", "VecAdd");
+			CudaKernel kernel = ctx.LoadKernel("VectorAdd.ptx", "saxpy");
 			kernel.GridDimensions = (N + 255) / 256;
 			kernel.BlockDimensions = 256;
 

@@ -10,7 +10,7 @@ namespace Strict.Language.Expressions
 	/// </summary>
 	public class MethodExpressionParser : ExpressionParser
 	{
-		//TODO: change to MethodBody
+		//change to MethodBody
 		public override Expression Parse(Method context, string lines)
 		{
 			var mainLines = GetMainLines(lines);
@@ -44,7 +44,7 @@ namespace Strict.Language.Expressions
 				throw new IncompleteExpression(context);
 			return Assignment.TryParse(context, input) ?? Number.TryParse(context, input) ??
 				Boolean.TryParse(context, input) ?? Text.TryParse(context, input) ??
-				Binary.TryParse(context, input) ?? MethodCall.TryParse(context, input);//TODO: member call missing
+				Binary.TryParse(context, input) ?? MethodCall.TryParse(context, input);//member call missing
 		}
 
 		public class UnknownExpression : Exception
