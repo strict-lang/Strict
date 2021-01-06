@@ -26,7 +26,7 @@ namespace Strict.Language.Expressions
 				? TryParseLet(context, input)
 				: null;
 
-		private static Expression? TryParseLet(Method context, string input)
+		private static Expression TryParseLet(Method context, string input)
 		{
 			string[] parts =
 				input.Split(new[] { "let ", " = " }, StringSplitOptions.RemoveEmptyEntries);

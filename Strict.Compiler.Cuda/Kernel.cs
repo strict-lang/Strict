@@ -8,16 +8,14 @@ namespace Strict.Compiler.Cuda
 	public class Kernel
 	{
 		public Kernel() => Context = new CudaContext(0);
-
-		public CudaContext Context { get; init;}
+		public CudaContext Context { get; init; }
 		public CudaBlas Handle => handle ??= new();
 		private CudaBlas? handle;
 
 		public void Dispose()
 		{
 			Context.Dispose();
-			if (Handle != null)
-				Handle.Dispose();
+			handle?.Dispose();
 		}
 		
 		public void CompileKernelAndSaveAsPtxFile()
@@ -31,26 +29,24 @@ namespace Strict.Compiler.Cuda
   }
 }";
 			nvrtcResult result;
-			using (var rtc = new CudaRuntimeCompiler(code, "saxpy"))
+			using var rtc = new CudaRuntimeCompiler(code, "saxpy");
+			try
 			{
-				try
-				{
-					// see http://docs.nvidia.com/cuda/nvrtc/index.html for usage and options
-					//https://arnon.dk/matching-sm-architectures-arch-and-gencode-for-various-nvidia-cards/
-					//nvcc .\vectorAdd.cu -use_fast_math -ptx -m 64 -arch compute_61 -code sm_61 -o .\vectorAdd.ptx
-					rtc.Compile(new[] { "--gpu-architecture=compute_61" });
-					result = nvrtcResult.Success;
-				} catch(NVRTCException ex)
-				{
-					result = ex.NVRTCError;
-					var r = ex.Message;
-				}
-				if (result == nvrtcResult.Success)
-				{
-					//we could consume right away, this could be done in for caching or in the background for next usage
-					using var file = new StreamWriter(@"convokernel.ptx");
-					file.Write(rtc.GetPTXAsString());
-				}
+				// see http://docs.nvidia.com/cuda/nvrtc/index.html for usage and options
+				//https://arnon.dk/matching-sm-architectures-arch-and-gencode-for-various-nvidia-cards/
+				//nvcc .\vectorAdd.cu -use_fast_math -ptx -m 64 -arch compute_61 -code sm_61 -o .\vectorAdd.ptx
+				rtc.Compile(new[] { "--gpu-architecture=compute_61" });
+				result = nvrtcResult.Success;
+			}
+			catch(NVRTCException ex)
+			{
+				result = ex.NVRTCError;
+			}
+			if (result == nvrtcResult.Success)
+			{
+				//we could consume right away, this could be done in for caching or in the background for next usage
+				using var file = new StreamWriter(@"convokernel.ptx");
+				file.Write(rtc.GetPTXAsString());
 			}
 		}
 		
@@ -68,7 +64,7 @@ namespace Strict.Compiler.Cuda
 			float[] h_A = new float[N];
 			float[] h_B = new float[N];
 
-			// TODO: Initialize input vectors h_A, h_B
+			// Initialize input vectors h_A, h_B
 
 			// Allocate vectors in device memory and copy vectors from host memory to device memory 
 			CudaDeviceVariable<float> d_A = h_A;
@@ -80,7 +76,7 @@ namespace Strict.Compiler.Cuda
 
 			// Copy result from device memory to host memory
 			// h_C contains the result in host memory
-			float[] h_C = d_C;
+			//float[] h_C = d_C;
 		}
 	}
 }

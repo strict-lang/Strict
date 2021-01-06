@@ -17,7 +17,8 @@ namespace Strict.Compiler.Cuda.Tests
 		[Test]
 		public void CpuAndGpuLoops()
 		{
-			new TestPerformance(10000000, 100, SigmoidOutput, SigmoidGpu, name=>{}).Run();
+			new TestPerformance(10000000, 100, SigmoidOutput, SigmoidGpu, _=>{}).Run();
+			Console.WriteLine("output="+output);
 		}
 
 		public void SigmoidOutput(int start, int chunkSize)
@@ -28,7 +29,7 @@ namespace Strict.Compiler.Cuda.Tests
 
 		private float output = 0f;
 		public const float Input = 0.265f;
-		
+
 		private void SigmoidGpu(int notImplementedYet) { }
 	}
 }

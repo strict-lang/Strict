@@ -47,10 +47,7 @@ namespace Strict.Compiler.Cuda.Tests
 			Parallel.For(0, Iterations / ChunkSize,
 				index => RunChunk(index * ChunkSize, ChunkSize));
 
-		private void CudaGpu()
-		{
-			RunGpu(Iterations);
-		}
+		private void CudaGpu() => RunGpu(Iterations);
 
 		private void CudaGpuAndCpu()
 		{
