@@ -13,10 +13,10 @@ namespace Strict.Compiler.Cuda.Tests
 		{
 			//CheckPerformance(SingleThread);
 			//CheckPerformance(SingleThreadChunks);
-			//CheckPerformance(ParallelCpu);
+			CheckPerformance(ParallelCpu);
 			CheckPerformance(ParallelCpuChunks);
 			CheckPerformance(CudaGpu);
-			//CheckPerformance(CudaGpuAndCpu);
+			CheckPerformance(CudaGpuAndCpu);
 		}
 		
 		protected void CheckPerformance(Action runCode)
@@ -54,7 +54,8 @@ namespace Strict.Compiler.Cuda.Tests
 
 		private void CudaGpuAndCpu()
 		{
-			float gpuFactor = 15 / 16f;
+			//not really worth it, only after many iterations +-1%
+			float gpuFactor = 0.97f;//1f - (21f / 464f);
 			int gpuIterations = (int)(Iterations * gpuFactor);
 			Parallel.Invoke(() => RunGpu(gpuIterations),
 				() => Parallel.For(gpuIterations / ChunkSize, Iterations / ChunkSize,

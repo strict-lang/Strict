@@ -42,7 +42,7 @@ namespace Strict.Compiler.Cuda.Tests
 		{
 			var bitmap =
 				new Bitmap(
-					@"C:\code\DeltaEngine\_VisualApprovalTests\LineTests.RenderCoordinateSystem.approved.png");
+					@"C:\code\DeltaEngine\_VisualApprovalTests\TexturedMeshTests.RenderTexturedBoxPlaneAndSphereWithImage.approved.png");
 			Width = bitmap.Width;
 			Height = bitmap.Height;
 			var data = bitmap.LockBits(new Rectangle(0, 0, bitmap.Width, bitmap.Height),
@@ -68,7 +68,7 @@ namespace Strict.Compiler.Cuda.Tests
 		private int Width;
 		private int Height;
 		private byte[] image;
-		private const int BlurIterations = 100;
+		private const int BlurIterations = 200;
 
 		public void CompileKernel()
 		{
@@ -119,21 +119,9 @@ namespace Strict.Compiler.Cuda.Tests
 			if (start < Width * 4)
 				return;
 			var size = Size;
-			for (int n = start; n < start + chunkSize; n+=4)
-			{
-				int r = image[n % size] + image[(n - Width*4) % size] + image[(n - 4) % size] +
-					image[(n + 4) % size] + image[(n + Width*4) % size];
-				n++;
-				int g = image[n % size] + image[(n - Width*4) % size] + image[(n - 4) % size] +
-					image[(n + 4) % size] + image[(n + Width*4) % size];
-				n++;
-				int b = image[n % size] + image[(n - Width*4) % size] + image[(n - 4) % size] +
-					image[(n + 4) % size] + image[(n + Width*4) % size];
-				n -= 2;
-				image[(n+0) % size] = (byte)(r / 5);
-				image[(n+1) % size] = (byte)(b / 5);
-				image[(n+2) % size] = (byte)(g / 5);
-			}
+			for (int n = start; n < start + chunkSize; n++)
+				image[(n + 0) % size] = (byte)((image[n % size] + image[(n - Width * 4) % size] +
+					image[(n - 4) % size] + image[(n + 4) % size] + image[(n + Width * 4) % size]) / 5);
 		}
 
 		private void BlurGpu(int iterations)
