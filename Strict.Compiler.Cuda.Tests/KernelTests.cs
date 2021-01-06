@@ -2,9 +2,10 @@ using NUnit.Framework;
 
 namespace Strict.Compiler.Cuda.Tests
 {
+	[Category("Slow")]
 	public class KernelTests
 	{
-		[Test][Category("Slow")]
+		[Test]
 		public void CompileCudaCode()
 		{
 			//needs around 300ms

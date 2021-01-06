@@ -4,6 +4,9 @@
       <NamedTestSelector>
         <TestName>Strict.Compiler.Cuda.Tests.BlurPerformanceTests.CpuAndGpuLoops</TestName>
       </NamedTestSelector>
+      <NamedTestSelector>
+        <TestName>Strict.Compiler.Cuda.Tests.KernelTests.CompileCudaCode</TestName>
+      </NamedTestSelector>
     </IgnoredTests>
   </Settings>
 </ProjectConfiguration>
