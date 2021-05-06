@@ -7,7 +7,7 @@ namespace Strict.Language.Expressions.Tests
 		[Test]
 		public void ParseText() =>
 			ParseAndCheckOutputMatchesInput("\"Hi\"", new Text(method, "Hi"));
-		/*check what pidgin reports on incomplete syntax
+		/*TODO check what pidgin reports on incomplete syntax
 		[Test]
 		public void ParseIncompleteText() =>
 			Assert.Throws<UnsupportedToken>(() => ParseAndCheckOutputMatchesInput("Text(", null));

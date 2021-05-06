@@ -126,7 +126,7 @@ namespace Strict.Compiler.Cuda.Tests
 
 		private void BlurGpu(int iterations)
 		{
-			for (int i = 0; i < BlurIterations/*iterations / Size*/; i++)
+			for (int i = 0; i < BlurIterations; i++)
 				kernel.Run(input.DevicePointer, output.DevicePointer, Width, Height);
 			// Copy result from device memory to host memory
 			// h_C contains the result in host memory

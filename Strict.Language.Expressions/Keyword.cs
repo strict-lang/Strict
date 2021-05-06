@@ -1,4 +1,4 @@
-﻿/*used where needed, maybe should be back soon for own parsing
+﻿/*TODO: used where needed, maybe should be back soon for own parsing
 namespace Strict.Language.Expressions
 {
 public static class Keyword

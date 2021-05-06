@@ -71,7 +71,8 @@ namespace Strict.Language
 			string targetPath)
 		{
 			var localZip = Path.Combine(CacheFolder, packageName + ".zip");
-			File.CreateText(localZip).Close();
+			lock (AlreadyLoadedPackages)
+				File.CreateText(localZip).Close();
 			using WebClient webClient = new();
 			await webClient.DownloadFileTaskAsync(new Uri(packageUrl + "/archive/master.zip"),
 				localZip);
@@ -81,7 +82,7 @@ namespace Strict.Language
 				var masterDirectory = Path.Combine(CacheFolder, packageName + "-master");
 				if (!Directory.Exists(masterDirectory))
 					return;
-				if (Directory.Exists(masterDirectory))
+				if (Directory.Exists(targetPath))
 					new DirectoryInfo(targetPath).Delete(true);
 				Directory.Move(masterDirectory, targetPath);
 			});

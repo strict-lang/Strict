@@ -45,7 +45,7 @@ namespace Strict.Language.Expressions
 		{
 			var method = context.Methods.FirstOrDefault(m => m.Name == methodName);
 			if (method == null)
-				return null; /*would be nice when () was used: throw new MethodNotFound(methodName, context.Type);
+				return null; /*TODO: would be nice when () was used: throw new MethodNotFound(methodName, context.Type);
 		private class MethodNotFound : Exception
 		{
 			public MethodNotFound(string methodName, Type type) : base(methodName +

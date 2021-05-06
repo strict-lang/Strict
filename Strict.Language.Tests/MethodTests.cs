@@ -14,7 +14,7 @@ Run
 		[Test]
 		public void MustMustHaveAName() =>
 			Assert.Throws<Method.InvalidSyntax>(() => new Method(type, null, new[] { "a b" }));
-		/*unused
+		/*TODO unused
 		[Test]
 		public void MethodNameCantBeKeyword() =>
 			Assert.Throws<Method.MethodNameCantBeKeyword>(() =>

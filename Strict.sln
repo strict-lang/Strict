@@ -10,6 +10,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{70C095D7-2B78-4174-9B4C-190331C15BE0}"
 	ProjectSection(SolutionItems) = preProject
 		.gitignore = .gitignore
+		HelloWorld.strict = HelloWorld.strict
 		README.md = README.md
 		Strict.ndproj = Strict.ndproj
 	EndProjectSection
@@ -41,7 +42,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Strict.Language.Expressions
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Strict.Compiler.Cuda", "Strict.Compiler.Cuda\Strict.Compiler.Cuda.csproj", "{91923749-602B-4E43-9291-EB01C74385D1}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Strict.Compiler.Cuda.Tests", "Strict.Compiler.Cuda.Tests\Strict.Compiler.Cuda.Tests.csproj", "{BB69FB3C-BFAD-42F1-BA4B-88A9C720A815}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Strict.Compiler.Cuda.Tests", "Strict.Compiler.Cuda.Tests\Strict.Compiler.Cuda.Tests.csproj", "{BB69FB3C-BFAD-42F1-BA4B-88A9C720A815}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

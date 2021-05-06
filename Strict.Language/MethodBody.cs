@@ -15,7 +15,7 @@ namespace Strict.Language
 
 		public IReadOnlyList<Expression> Expressions { get; }
 	}
-	/*simply don't use anymore, just use ExpressionParser.Parse and assign this to evaluated expression lazily to method.body
+	/*TODO: simply don't use anymore, just use ExpressionParser.Parse and assign this to evaluated expression lazily to method.body
 	public class MethodBody //Tokenizer remove this and just use Pidgin here, not directly, just create a base interface/abstract class in preparation!
 	{
 		public MethodBody(Method method, ExpressionParser parser, string[] lines)
@@ -23,7 +23,7 @@ namespace Strict.Language
 			//var lexer = new LineLexer(this);//also remove, just use ExpressionParser to get a tree for each method
 			this.method = method;
 			this.parser = parser;
-			/*obs parser.Restart();
+			/*TODO: obs parser.Restart();
 			for (var line = 1; line < lines.Length; line++)
 				lexer.Process(lines[line]);
 			if (unprocessedTokens.Count > 0)

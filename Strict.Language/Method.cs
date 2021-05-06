@@ -28,7 +28,7 @@ namespace Strict.Language
 		private static string GetName(string firstLine)
 		{
 			var name = firstLine.SplitWordsAndPunctuation()[0];
-			return /*unused: name.IsKeyword() && !name.IsKeywordFunction()
+			return /*TODO unused: name.IsKeyword() && !name.IsKeywordFunction()
 				? throw new MethodNameCantBeKeyword(name)
 				: */name;
 		}
@@ -46,7 +46,7 @@ namespace Strict.Language
 			return bodyText.ToString();
 		}
 
-		/*unused
+		/*TODO: unused
 		public class MethodNameCantBeKeyword : Exception
 		{
 			public MethodNameCantBeKeyword(string methodName) : base(methodName) { }
