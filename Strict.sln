@@ -9,10 +9,14 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Strict.Language.Tests", "St
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{70C095D7-2B78-4174-9B4C-190331C15BE0}"
 	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
+		.gitattributes = .gitattributes
 		.gitignore = .gitignore
 		HelloWorld.strict = HelloWorld.strict
 		README.md = README.md
 		Strict.ndproj = Strict.ndproj
+		Strict.sln.DotSettings = Strict.sln.DotSettings
+		Strict.v3.ncrunchsolution = Strict.v3.ncrunchsolution
 	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Strict.Compiler", "Strict.Compiler\Strict.Compiler.csproj", "{D9E14E41-8F3C-4B92-B773-227871A96F96}"
