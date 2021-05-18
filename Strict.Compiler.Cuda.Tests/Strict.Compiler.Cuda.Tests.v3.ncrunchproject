@@ -7,6 +7,9 @@
       <NamedTestSelector>
         <TestName>Strict.Compiler.Cuda.Tests.KernelTests.CompileCudaCode</TestName>
       </NamedTestSelector>
+      <NamedTestSelector>
+        <TestName>Strict.Compiler.Cuda.Tests.SigmoidPerformanceTests.CpuAndGpuLoops</TestName>
+      </NamedTestSelector>
     </IgnoredTests>
   </Settings>
 </ProjectConfiguration>
