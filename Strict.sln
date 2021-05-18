@@ -48,6 +48,14 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Strict.Compiler.Cuda", "Str
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Strict.Compiler.Cuda.Tests", "Strict.Compiler.Cuda.Tests\Strict.Compiler.Cuda.Tests.csproj", "{BB69FB3C-BFAD-42F1-BA4B-88A9C720A815}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Grammar", "Grammar", "{B3D76072-982F-4166-A87F-A1D6A2B67D85}"
+	ProjectSection(SolutionItems) = preProject
+		Grammar\language-configuration.json = Grammar\language-configuration.json
+		Grammar\README.md = Grammar\README.md
+		Grammar\Strict.bnf = Grammar\Strict.bnf
+		Grammar\strict.iro = Grammar\strict.iro
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
