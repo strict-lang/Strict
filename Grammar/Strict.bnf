@@ -1,18 +1,23 @@
-file := [implement type '\n'] {member} {method}
-member := has variable
-variable := Name [type]
-method ::= methodcall [returns type] '\n' [methodbody]
-methodcall ::= Name ['(' parameters ')']
-parameters ::= variable | variable [','] parameters
-methodbody ::= {expression '\n'} [return expression '\n']
-expression ::= true | false | from | to | Number | Text |
-	exp binary exp | unary exp |
-	let '=' expression |
-	methodcall |
-	if expression '\n' expression '\n' [else '\n' expression] |
-	for variable in expression to expression '\n' expression |
+file ::= {implement} {import} {member} {method}
+implement ::= 'implement' type '\n'
+import ::= 'import' namespace '\n'
+namespace ::= Name | namespace '.' Name
+type ::= Name
+member ::= 'has' variable '\n'
+variable ::= Name [type]
+method ::= methodcall ['returns' type] '\n' [block]
+methodcall ::= methodname ['(' parameters ')']
+methodname ::= Name | binary | unary | 'from' | 'to'
+parameters ::= variable | variable ',' parameters
+block ::= {'\t'} {expression '\n'} ['return' expression '\n']
+expression ::= 'true' | 'false' | 'from' | 'to' | Number | String |
+	expression binary expression | unary expression | [namespace] methodcall |
+	'let' Name '=' expression |
+	variablereference |
+	'if' expression '\n' block '\n' ['else' '\n' block] |
+	'for' variablereference 'in' expression 'to' expression '\n' expression
+variablereference ::= [namespace] Name
 binary ::= '+' | '-' | '*' | '/' | '%' |
 	'<' | '<=' | '>' | '>=' |
-	is | is not | and | or
-unary ::= '-' | not
-let ::= let variable = expression
+	'is' | 'is' 'not' | 'and' | 'or'
+unary ::= '-' | 'not'
