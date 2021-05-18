@@ -24,6 +24,7 @@ namespace Strict.Compiler.Cuda.Tests
     /// ParallelCpuChunks() * 209715200: 296ms
     /// CudaGpu() * 209715200: 32ms
     /// CudaGpuAndCpu() * 209715200: 29ms
+    /// Strict should be faster than all of these
     /// </summary>
     [Category("Slow")]
     public class BlurPerformanceTests
