@@ -1,4 +1,0 @@
-implement App
-has log
-Run
-  log.Write("Hello World")

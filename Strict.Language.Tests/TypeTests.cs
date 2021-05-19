@@ -66,6 +66,43 @@ namespace Strict.Language.Tests
 				new Member(package.GetType(Base.App), "blub7", null!));
 
 		[Test]
+		public void ImportMustBeFirst() =>
+			Assert.That(() => new Type(package, "Program", null).Parse(@"has number
+import TestPackage"),
+				Throws.InstanceOf<Type.ParsingFailed>().With.InnerException.
+					InstanceOf<Type.ImportMustBeFirst>());
+		
+		[Test]
+		public void ImportMustBeValidPackageName() =>
+			Assert.That(() => new Type(package, "Program", null).Parse(@"import $YI(*SI"),
+				Throws.InstanceOf<Type.ParsingFailed>().With.InnerException.
+					InstanceOf<Type.PackageNotFound>());
+
+		[Test]
+		public void Import()
+		{
+			var program = new Type(package, "Program", null).Parse(@"import TestPackage
+has number
+GetNumber returns Number
+	return number");
+			Assert.That(program.Imports[0].Name, Is.EqualTo(nameof(TestPackage)));
+		}
+		
+		[Test]
+		public void ImplementMustBeBeforeMembersAndMethods() =>
+			Assert.That(() => new Type(package, "Program", null).Parse(@"has log
+implement App"),
+				Throws.InstanceOf<Type.ParsingFailed>().With.InnerException.
+					InstanceOf<Type.ImplementMustComeBeforeMembersAndMethods>());
+		
+		[Test]
+		public void MembersMustComeBeforeMethods() =>
+			Assert.That(() => new Type(package, "Program", null).Parse(@"Run
+has log"),
+				Throws.InstanceOf<Type.ParsingFailed>().With.InnerException.
+					InstanceOf<Type.MembersMustComeBeforeMethods>());
+
+		[Test]
 		public void SimpleApp() =>
 			CheckApp(new Type(package, "Program", null).Parse(@"implement App
 has log
@@ -74,7 +111,7 @@ Run
 
 		private static void CheckApp(Type program)
 		{
-			Assert.That(program.Implements[0].Trait.Name, Is.EqualTo(Base.App));
+			Assert.That(program.Implements[0].Name, Is.EqualTo(Base.App));
 			Assert.That(program.Members[0].Name, Is.EqualTo("log"));
 			Assert.That(program.Methods[0].Name, Is.EqualTo("Run"));
 		}
@@ -86,7 +123,7 @@ has log
 Run
 	for number in Range(0, 10)
 		log.Write(""Counting: "" + number)"));
-
+		
 		[Test]
 		public void Trait()
 		{

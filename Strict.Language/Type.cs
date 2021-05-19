@@ -66,14 +66,58 @@ namespace Strict.Language
 		private void ParseLine(string line)
 		{
 			var words = ParseWords(line);
-			if (words[0] == Implement)
-				implements.Add(Package.GetType(words[1]));
-			else if (words[0] == Import)
-				imports.Add(Package.FindSubPackage(words[1])!);
+			if (words[0] == Import)
+				imports.Add(ParseImport(words));
+			else if (words[0] == Implement)
+				implements.Add(ParseImplement(words));
 			else if (words[0] == Has)
-				members.Add(new Member(this, line.Substring(Has.Length + 1), null!));
+				members.Add(ParseMember(line));
 			else
 				methods.Add(new Method(this, expressionParser, GetAllMethodLines(line)));
+		}
+
+		private Package ParseImport(string[] words)
+		{
+			if (implements.Count > 0 || members.Count > 0 || methods.Count > 0)
+				throw new ImportMustBeFirst(words[1]);
+			var import = Package.Find(words[1]);
+			if (import == null)
+				throw new PackageNotFound(words[1]);
+			return import;
+		}
+
+		public class ImportMustBeFirst : Exception
+		{
+			public ImportMustBeFirst(string package) : base(package) { }
+		}
+
+		public class PackageNotFound : Exception
+		{
+			public PackageNotFound(string package) : base(package) { }
+		}
+
+		private Type ParseImplement(string[] words)
+		{
+			if (members.Count > 0 || methods.Count > 0)
+				throw new ImplementMustComeBeforeMembersAndMethods(words[1]);
+			return Package.GetType(words[1]);
+		}
+
+		public class ImplementMustComeBeforeMembersAndMethods : Exception
+		{
+			public ImplementMustComeBeforeMembersAndMethods(string type) : base(type) { }
+		}
+
+		private Member ParseMember(string line)
+		{
+			if (methods.Count > 0)
+				throw new MembersMustComeBeforeMethods(line);
+			return new(this, line.Substring(Has.Length + 1), null!);
+		}
+
+		public class MembersMustComeBeforeMethods : Exception
+		{
+			public MembersMustComeBeforeMethods(string line) : base(line) { }
 		}
 
 		public const string Implement = "implement";

@@ -40,7 +40,7 @@ namespace Strict.Language
 			if (packageUrl.Host != "github.com" || string.IsNullOrEmpty(packageUrl.AbsolutePath) ||
 				// Allow other repositories as well, but put them in an empty main package name first
 				!packageUrl.AbsolutePath.StartsWith("/strict-lang/"))
-				throw new OnlyGithubDotComUrlsAreAllowedForNow();
+				throw new OnlyGithubDotComUrlsAreAllowedForNow(); //ncrunch: no coverage
 			var packageName = packageUrl.AbsolutePath.Split('/').Last();
 			var localPath = Path.Combine(DevelopmentFolder, packageName);
 			// For some reason on the CI server an empty folder is still created here with a .dotsettings file

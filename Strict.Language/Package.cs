@@ -43,7 +43,7 @@ namespace Strict.Language
 				if (name == lastName)
 					return lastType;
 				if (cachedFoundTypes.TryGetValue(name, out var previouslyFoundType))
-					return previouslyFoundType;
+					return previouslyFoundType; //ncrunch: no coverage
 				var type = FindTypeInChildrenPackages(name, searchingFrom as Package);
 				if (type == null)
 					return null;
@@ -130,6 +130,7 @@ namespace Strict.Language
 			return null;
 		}
 
-		public Package? FindSubPackage(string name) => children.FirstOrDefault(p => p.Name == name);
+		public Package? FindSubPackage(string name) => children.FirstOrDefault(p => p.Name == name || p.ToString() == name);
+		public Package? Find(string name) => FindSubPackage(name) ?? RootForPackages.FindSubPackage(name);
 	}
 }
