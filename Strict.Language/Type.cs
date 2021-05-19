@@ -67,7 +67,9 @@ namespace Strict.Language
 		{
 			var words = ParseWords(line);
 			if (words[0] == Implement)
-				implements.Add(new Implement(Package.GetType(words[1])));
+				implements.Add(Package.GetType(words[1]));
+			else if (words[0] == Import)
+				imports.Add(Package.FindSubPackage(words[1])!);
 			else if (words[0] == Has)
 				members.Add(new Member(this, line.Substring(Has.Length + 1), null!));
 			else
@@ -75,6 +77,7 @@ namespace Strict.Language
 		}
 
 		public const string Implement = "implement";
+		public const string Import = "import";
 		public const string Has = "has";
 
 		private string[] ParseWords(string line)
@@ -144,8 +147,10 @@ namespace Strict.Language
 				"\n   at " + fallbackWordAndLineNumber, inner) { }
 		}
 
-		public IReadOnlyList<Implement> Implements => implements;
-		private readonly List<Implement> implements = new();
+		public IReadOnlyList<Type> Implements => implements;
+		private readonly List<Type> implements = new();
+		public IReadOnlyList<Package> Imports => imports;
+		private readonly List<Package> imports = new();
 		public IReadOnlyList<Member> Members => members;
 		private readonly List<Member> members = new();
 		public IReadOnlyList<Method> Methods => methods;
