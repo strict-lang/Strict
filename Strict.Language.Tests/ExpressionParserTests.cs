@@ -22,19 +22,18 @@ Run
 			Assert.That(type.Methods[0].Body.ReturnType, Is.EqualTo(type.Methods[0].ReturnType));
 		}
 
-		/*TODO unused
-		public override void ParseOld(Method method, List<DefinitionToken> tokens)
-		{
-				if (tokens.Count == 3)
-						tokens.Clear();
-				expressions.Add(new TestExpression(method.ReturnType));
-		}
-		[Test]
-		public void ThereMustBeNoTokensLeft() =>
-				Assert.Throws<MethodBody.UnprocessedTokensAtEndOfFile>(() =>
-						new MethodBody(type.Methods[0], this, new[] { "Dummy", "\tdummy" }));
-
-		*/
+		// unused
+		// public override void ParseOld(Method method, List<DefinitionToken> tokens)
+		// {
+		//		if (tokens.Count == 3)
+		//				tokens.Clear();
+		//		expressions.Add(new TestExpression(method.ReturnType));
+		// }
+		// [Test]
+		// public void ThereMustBeNoTokensLeft() =>
+		//		Assert.Throws<MethodBody.UnprocessedTokensAtEndOfFile>(() =>
+		//				new MethodBody(type.Methods[0], this, new[] { "Dummy", "\tdummy" }));
+		
 		public override Expression Parse(Method context, string lines)
 		{
 			parseWasCalled = true;

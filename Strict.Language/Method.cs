@@ -25,13 +25,8 @@ namespace Strict.Language
 		/// Simple lexer to just parse the method definition and get all used names and types.
 		/// Method code itself is parsed in are more complex (BNF), complete and slow way.
 		/// </summary>
-		private static string GetName(string firstLine)
-		{
-			var name = firstLine.SplitWordsAndPunctuation()[0];
-			return /*TODO unused: name.IsKeyword() && !name.IsKeywordFunction()
-				? throw new MethodNameCantBeKeyword(name)
-				: */name;
-		}
+		private static string GetName(string firstLine) => firstLine.SplitWordsAndPunctuation()[0];
+		// not used anymore: return name.IsKeyword() && !name.IsKeywordFunction() ? throw new MethodNameCantBeKeyword(name) : name;
 
 		public const string From = "from";
 
@@ -46,12 +41,8 @@ namespace Strict.Language
 			return bodyText.ToString();
 		}
 
-		/*TODO: unused
-		public class MethodNameCantBeKeyword : Exception
-		{
-				public MethodNameCantBeKeyword(string methodName) : base(methodName) { }
-		}
-		*/
+		// not used anymore: public class MethodNameCantBeKeyword : Exception { public MethodNameCantBeKeyword(string methodName) : base(methodName) { } }
+
 		private void ParseDefinition(string rest)
 		{
 			var returnsIndex = rest.IndexOf(" " + Returns + " ", StringComparison.Ordinal);

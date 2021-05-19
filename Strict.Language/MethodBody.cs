@@ -15,41 +15,40 @@ namespace Strict.Language
 
 		public IReadOnlyList<Expression> Expressions { get; }
 	}
-	/*TODO: simply don't use anymore, just use ExpressionParser.Parse and assign this to evaluated expression lazily to method.body
-	public class MethodBody //Tokenizer remove this and just use Pidgin here, not directly, just create a base interface/abstract class in preparation!
-	{
-			public MethodBody(Method method, ExpressionParser parser, string[] lines)
-			{
-					//var lexer = new LineLexer(this);//also remove, just use ExpressionParser to get a tree for each method
-					this.method = method;
-					this.parser = parser;
-					/*TODO: obs parser.Restart();
-					for (var line = 1; line < lines.Length; line++)
-							lexer.Process(lines[line]);
-					if (unprocessedTokens.Count > 0)
-							throw new UnprocessedTokensAtEndOfFile(method, unprocessedTokens);
-					Expressions = parser.Expressions;
-					*
+	// simply don't use anymore, just use ExpressionParser.Parse and assign this to evaluated expression lazily to method.body
+	// public class MethodBody //Tokenizer remove this and just use Pidgin here, not directly, just create a base interface/abstract class in preparation!
+	// {
+	//	public MethodBody(Method method, ExpressionParser parser, string[] lines)
+	//	{
+	//			// var lexer = new LineLexer(this);//also remove, just use ExpressionParser to get a tree for each method
+	//			this.method = method;
+	//			this.parser = parser;
+	//			// not longer used parser.Restart();
+	//			for (var line = 1; line < lines.Length; line++)
+	//					lexer.Process(lines[line]);
+	//			if (unprocessedTokens.Count > 0)
+	//					throw new UnprocessedTokensAtEndOfFile(method, unprocessedTokens);
+	//			Expressions = parser.Expressions;
+	//			*
 
-			}
+	//	}
 
-			private readonly Method method;
-			private readonly ExpressionParser parser;
-			private readonly List<DefinitionToken> unprocessedTokens = new List<DefinitionToken>();
+	//	private readonly Method method;
+	//	private readonly ExpressionParser parser;
+	//	private readonly List<DefinitionToken> unprocessedTokens = new List<DefinitionToken>();
 
-			public class UnprocessedTokensAtEndOfFile : Exception
-			{
-					public UnprocessedTokensAtEndOfFile(Method method, IReadOnlyList<DefinitionToken> tokens) : base(
-							method + "\nUnprocessed Tokens: " + tokens.ToWordListString()) { }
-			}
+	//	public class UnprocessedTokensAtEndOfFile : Exception
+	//	{
+	//			public UnprocessedTokensAtEndOfFile(Method method, IReadOnlyList<DefinitionToken> tokens) : base(
+	//					method + "\nUnprocessed Tokens: " + tokens.ToWordListString()) { }
+	//	}
 
-			public Expression[] Expressions { get; }
+	//	public Expression[] Expressions { get; }
 
-			public void Add(DefinitionToken token)
-			{
-					unprocessedTokens.Add(token);
-					parser.Parse(method, unprocessedTokens);//just parse string lines directly!
-			}
-	}
-	*/
+	//	public void Add(DefinitionToken token)
+	//	{
+	//			unprocessedTokens.Add(token);
+	//			parser.Parse(method, unprocessedTokens);//just parse string lines directly!
+	//	}
+	// }
 }

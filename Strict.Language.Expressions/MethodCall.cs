@@ -45,15 +45,9 @@ namespace Strict.Language.Expressions
 			Expression[] arguments)
 		{
 			var method = context.Methods.FirstOrDefault(m => m.Name == methodName);
-			if (method == null)
-				return
-					null; /*TODO: would be nice when () was used: throw new MethodNotFound(methodName, context.Type);
-		private class MethodNotFound : Exception
-		{
-			public MethodNotFound(string methodName, Type type) : base(methodName +
-				" not found in " + type) { }
-		}*/
-			return new MethodCall(instance, method, arguments);
+			return method == null
+				? null
+				: new MethodCall(instance, method, arguments);
 		}
 
 		private static Expression[] GetArguments(Method context, string[] parts, string methodName)
