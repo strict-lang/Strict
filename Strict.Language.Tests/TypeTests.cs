@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using NUnit.Framework;
 
 namespace Strict.Language.Tests
@@ -71,7 +72,7 @@ namespace Strict.Language.Tests
 import TestPackage"),
 				Throws.InstanceOf<Type.ParsingFailed>().With.InnerException.
 					InstanceOf<Type.ImportMustBeFirst>());
-		
+
 		[Test]
 		public void ImportMustBeValidPackageName() =>
 			Assert.That(() => new Type(package, "Program", null).Parse(@"import $YI(*SI"),
@@ -87,14 +88,14 @@ GetNumber returns Number
 	return number");
 			Assert.That(program.Imports[0].Name, Is.EqualTo(nameof(TestPackage)));
 		}
-		
+
 		[Test]
 		public void ImplementMustBeBeforeMembersAndMethods() =>
 			Assert.That(() => new Type(package, "Program", null).Parse(@"has log
 implement App"),
 				Throws.InstanceOf<Type.ParsingFailed>().With.InnerException.
 					InstanceOf<Type.ImplementMustComeBeforeMembersAndMethods>());
-		
+
 		[Test]
 		public void MembersMustComeBeforeMethods() =>
 			Assert.That(() => new Type(package, "Program", null).Parse(@"Run
@@ -123,7 +124,7 @@ has log
 Run
 	for number in Range(0, 10)
 		log.Write(""Counting: "" + number)"));
-		
+
 		[Test]
 		public void Trait()
 		{

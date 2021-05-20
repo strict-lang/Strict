@@ -17,6 +17,16 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="TexturedMeshTests.RenderTexturedBoxPlaneAndSphereWithImage.approved.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="TexturedMeshTests.RenderTexturedBoxPlaneAndSphereWithImage.approved.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="NUnit" Version="3.12.0" />
     <PackageReference Include="NUnit3TestAdapter" Version="3.17.0" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.8.3" />

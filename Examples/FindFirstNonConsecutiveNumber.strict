@@ -1,0 +1,8 @@
+FirstNonConsecutive(numbers) returns Number
+	let numberGoUp = numbers[0]
+  for index from 1 to numbers.Length
+    if numbers[index] is numberGoUp + 1
+      numberGoUp = numberGoUp + 1
+    else
+      return numbers[index]
+  return 0

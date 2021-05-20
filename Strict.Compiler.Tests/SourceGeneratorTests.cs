@@ -3,7 +3,6 @@ using NUnit.Framework;
 using Strict.Compiler.Roslyn;
 using Strict.Language;
 using Strict.Language.Expressions;
-using Type = Strict.Language.Type;
 
 namespace Strict.Compiler.Tests
 {

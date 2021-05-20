@@ -2,7 +2,7 @@ file ::= {implement} {import} {member} {method}
 implement ::= 'implement' type '\n'
 import ::= 'import' namespace '\n'
 namespace ::= Name | namespace '.' Name
-type ::= Name
+type ::= Name | Name '[' ']'
 member ::= 'has' variable '\n'
 variable ::= Name [type]
 method ::= methodcall ['returns' type] '\n' [block]
@@ -14,6 +14,7 @@ expression ::= 'true' | 'false' | 'from' | 'to' | Number | String |
 	expression binary expression | unary expression | [namespace] methodcall |
 	'let' Name '=' expression |
 	variablereference |
+	variablereference '[' expression ']' |
 	'if' expression '\n' block '\n' ['else' '\n' block] |
 	'for' variablereference 'in' expression 'to' expression '\n' expression
 variablereference ::= [namespace] Name

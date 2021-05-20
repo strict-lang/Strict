@@ -33,7 +33,7 @@ Run
 		// public void ThereMustBeNoTokensLeft() =>
 		//		Assert.Throws<MethodBody.UnprocessedTokensAtEndOfFile>(() =>
 		//				new MethodBody(type.Methods[0], this, new[] { "Dummy", "\tdummy" }));
-		
+
 		public override Expression Parse(Method context, string lines)
 		{
 			parseWasCalled = true;
