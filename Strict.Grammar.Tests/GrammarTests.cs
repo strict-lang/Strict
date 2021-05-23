@@ -14,7 +14,7 @@ namespace Strict.Grammar.Tests
 			// Eto.Parse is not very good at catching errors, but it is the best we have currently.
 			// I spent an entire night evaluating alternatives and they weren't any better.
 
-			// Read the official grammar from the @"Grammar\Strict.bnf" file.
+			// Read the official grammar from the @"Grammar\Strict.ebnf" file.
 			var source = File.ReadAllText(@"..\..\..\..\Grammar\Strict.ebnf");
 			var start = "file";
 
