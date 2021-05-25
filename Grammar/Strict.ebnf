@@ -1,0 +1,44 @@
+/* TODO:
+   1. The newline stuff needs to be sorted; it should be defined consistently.
+   2. Methodcall should not be part of Method as methodcall does not accept types, whereas Method does.
+   3. Missing arguments to 'from' and 'to'?
+   4. Indentation really should be defined using the pseduo-tokens INDENT and DEDENT for it to be correct (see block: It allows any number of tabs).
+   5. How to assign to array elements?
+   6. indexer ought to be an optional, trailing part of the expression node.  Otherwise you can't index call results, literals, etc.
+*/
+LETTER    := [A-Za-z]
+DIGIT     := [0-9]
+NUMBER    := [0-9]+
+ESCAPE    := '\\'[nrt\]
+STRING    := ["]([^"\\]|ESCAPE)*["]
+LF        := '\n'
+TAB       := '\t'
+NAME      := [A-Za-z]+
+PATH      := NAME ('.' NAME)*
+file       = implement* import* member* method*
+implement  = 'implement' type LF
+import     = 'import' namespace LF
+namespace  = PATH
+type       = NAME ('[' ']')?
+member     = 'has' variable LF
+variable   = NAME type?
+method     = methodname ('(' parameters ')')? ('returns' type)? LF block?
+parameters = parameter (',' parameter)*
+parameter  = NAME type?
+methodname = NAME | binary_op | unary_op | 'from' | 'to'
+block      = (TAB* expression LF)* (TAB* 'return' expression LF)?
+expression = literal | variable | conversion | binary_exp | unary_exp | call | let | if | for
+literal    = 'true' | 'false' | NUMBER | STRING
+conversion = 'from' | 'to'
+variable   = namespace? NAME indexer?
+indexer    = '[' expression ']'
+binary_exp = expression binary_op expression
+unary_exp  = unary_op expression
+call       = namespace? methodname ('[' arguments ']')?
+arguments  = argument (',' argument)*
+argument   = expression
+let        = 'let' NAME '=' expression
+if         = 'if' expression LF block ('else' LF block)?
+for        = 'for' reference 'in' expression 'to' expression LF block
+binary_op  = '+' | '-' | '*' | '/' | '%' | '<' | '<=' | '>' | '>=' | 'is' | 'is' 'not' | 'and' | 'or'
+unary_op   = '-' | 'not'

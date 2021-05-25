@@ -1,6 +1,6 @@
 # Strict Grammar
 
-Strict is easy to read and write, there is usually only one way to do things and it doesn't need fluff like end of line characters. Blocks are indented and have no start, end or brakets (like in Python). All lines are expressions and have to evaluate to true, otherwise the execution and even compilation stops at this point. Callers can use catch blocks to check for this.
+Strict is easy to read and write, there is usually only one way to do things and it doesn't need fluff like end of line characters. Blocks are indented and have no start, end or brackets (like in Python). All lines are expressions and have to evaluate to true, otherwise the execution and even compilation stops at this point. Callers can use catch blocks to check for this.
 
 These grammar files are not really used to generate any lexer, parser, tokenizer. They are here for informational purposes and to generate syntax highlighting like for Textmate (.tmLanguage), which can be imported to Visual Studio Code, Textmate, Atom, Ace, Sublime, etc.
 
