@@ -1,39 +1,52 @@
+using System;
 using System.IO;
-using Eto.Parse;
 using Eto.Parse.Grammars;
-//using Eto.Parse.Grammars;
 using NUnit.Framework;
 
 namespace Strict.Grammar.Tests
 {
-	public class Tests
+	public class GrammarTests
 	{
-		[Test]
-		public void StrictGrammarIsValid()
+		[SetUp]
+		public void CreateGrammarAndSource()
 		{
-			// Eto.Parse is not very good at catching errors, but it is the best we have currently.
-			// I spent an entire night evaluating alternatives and they weren't any better.
-
-			// Read the official grammar from the @"Grammar\Strict.ebnf" file.
-			var source = File.ReadAllText(@"..\..\..\..\Grammar\Strict.ebnf");
-			var start = "file";
-
-			// Configure Eto.Parse to use a syntax somewhat similar to the one Ben used initially.
-			EbnfStyle style = 0;
-			// ... Allow range specifications ([A-Z], etc.) in token definitions (:=).
-			style |= EbnfStyle.CharacterSets;
-			// ... Use terminating cardinality flags: foo? bar* baz+ (necessary to use ranges).
-			style |= EbnfStyle.CardinalityFlags;
-			// ... Avoid using comma (,) as the rule separator (almost unreadable).
-			style |= EbnfStyle.WhitespaceSeparator;
-			// ... Allow backslash-escaped characters in strings.
-			style |= EbnfStyle.EscapeTerminalStrings;
-
-			// Attempt to parse the grammar to catch some errors.
-			var grammar = new EbnfGrammar(style).Build(source, start);
-
-			// Attempt to convert the grammar to code solely for the sake of discovering more errors.
-			string code = new EbnfGrammar(style).ToCode(source, start);
+			grammar = new EbnfGrammar(EbnfStyle.CharacterSets | EbnfStyle.CardinalityFlags |
+				EbnfStyle.WhitespaceSeparator | EbnfStyle.EscapeTerminalStrings);
+			source = File.ReadAllText("Strict.ebnf");
 		}
+
+		private EbnfGrammar grammar;
+		private string source;
+
+		[Test]
+		public void InvalidGrammarShouldFail() =>
+			Assert.That(() => grammar.Build(source, "unknown"), Throws.InstanceOf<ArgumentException>());
+
+		[Test]
+		public void StrictGrammarIsValid() => grammar.Build(source, Start);
+
+		private const string Start = "file";
+
+		[Test]
+		public void StrictCodeDoesNotCrash() =>
+			Assert.That(grammar.ToCode(source, Start), Is.Not.Empty);
+		
+		[Test]
+		public void StrictCodeRuns()
+		{
+			var parsedMember = grammar.Build(source, Start).Match("has number");
+			Assert.That(parsedMember.Errors, Is.Empty, parsedMember.GetErrorMessage(true));
+		}
+
+		[Test]
+		public void CheckAllBaseFiles()
+		{
+			foreach (var file in Directory.GetFiles(Directory.Exists(DefaultStrictBasePath)
+				? DefaultStrictBasePath
+				: @"S:\Strict\Base"))
+				Assert.That(grammar.Build(source, Start).Match(File.ReadAllText(file)), Is.Not.Empty);
+		}
+
+		private const string DefaultStrictBasePath= @"c:\code\GitHub\strict-lang\Strict\Base";
 	}
 }

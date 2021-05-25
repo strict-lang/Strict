@@ -13,9 +13,8 @@ ESCAPE    := '\\'[nrt\]
 STRING    := ["]([^"\\]|ESCAPE)*["]
 LF        := '\n'
 TAB       := '\t'
-NAME      := LETTER+ (LETTER|DIGIT)*
+NAME      := [A-Za-z]+
 PATH      := NAME ('.' NAME)*
-
 file       = implement* import* member* method*
 implement  = 'implement' type LF
 import     = 'import' namespace LF
