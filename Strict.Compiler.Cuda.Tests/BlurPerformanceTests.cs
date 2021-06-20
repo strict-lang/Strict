@@ -69,7 +69,7 @@ namespace Strict.Compiler.Cuda.Tests
 
 		private int Width;
 		private int Height;
-		private byte[] image;
+		private byte[] image = Array.Empty<byte>();
 		private const int BlurIterations = 200;
 
 		public void CompileKernel()
@@ -113,9 +113,9 @@ namespace Strict.Compiler.Cuda.Tests
 		}
 
 		private int Size => Width * Height * 4;
-		private CudaKernel kernel;
-		private CudaDeviceVariable<byte> input;
-		private CudaDeviceVariable<byte> output;
+		private CudaKernel kernel = null!;
+		private CudaDeviceVariable<byte> input = null!;
+		private CudaDeviceVariable<byte> output = null!;
 
 		private void Blur(int start, int chunkSize)
 		{

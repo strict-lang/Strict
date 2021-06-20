@@ -33,7 +33,7 @@ namespace Strict.Language.Expressions.Tests
 
 		public Expression ParseExpression(Method context, string lines)
 		{
-			var body = base.Parse(context, lines) as MethodBody;
+			var body = (MethodBody)base.Parse(context, lines);
 			return body.Expressions.Count == 1
 				? body.Expressions[0]
 				: throw new MultipleExpressionsGiven();

@@ -15,8 +15,8 @@ namespace Strict.Grammar.Tests
 			source = File.ReadAllText("Strict.ebnf");
 		}
 
-		private EbnfGrammar grammar;
-		private string source;
+		private EbnfGrammar grammar = null!;
+		private string source = null!;
 
 		[Test]
 		public void InvalidGrammarShouldFail() =>
@@ -30,7 +30,7 @@ namespace Strict.Grammar.Tests
 		[Test]
 		public void StrictCodeDoesNotCrash() =>
 			Assert.That(grammar.ToCode(source, Start), Is.Not.Empty);
-		
+		/*this is pretty hard to use, not really sure if this is the thing we should use, lets write our own grammar parser instead!
 		[Test]
 		public void StrictCodeRuns()
 		{
@@ -43,10 +43,22 @@ namespace Strict.Grammar.Tests
 		{
 			foreach (var file in Directory.GetFiles(Directory.Exists(DefaultStrictBasePath)
 				? DefaultStrictBasePath
-				: @"S:\Strict\Base"))
-				Assert.That(grammar.Build(source, Start).Match(File.ReadAllText(file)), Is.Not.Empty);
+				: Path.Combine(FindSolutionPath(), "..", "Strict", "Base")))
+			{
+				var checkedGrammar = grammar.Build(source, Start).Match(File.ReadAllText(file));
+				Assert.That(checkedGrammar.Errors, Is.Empty,
+					file + " " + string.Join(',',
+						checkedGrammar.Errors.Select(e =>
+							e + ": " + e.DescriptiveName + ", Children: " +
+							string.Join(',', e.Children.Select(c => c.DescriptiveName)))));
+			}
 		}
 
-		private const string DefaultStrictBasePath= @"c:\code\GitHub\strict-lang\Strict\Base";
+		private static string FindSolutionPath() =>
+			Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "..");
+
+		private static readonly string DefaultStrictBasePath =
+			Path.Combine(Repositories.DevelopmentFolder, "Strict", "Base");
+		*/
 	}
 }

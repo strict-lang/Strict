@@ -9,36 +9,36 @@ namespace Strict.Language.Tests
 		public void CreatePackage()
 		{
 			package = new TestPackage();
-			new Type(package, Base.App, null).Parse("Run");
+			new Type(package, Base.App, null!).Parse("Run");
 		}
 
-		private Package package;
+		private Package package = null!;
 
 		[Test]
 		public void AddingTheSameNameIsNotAllowed() =>
-			Assert.Throws<Type.TypeAlreadyExistsInPackage>(() => new Type(package, "App", null));
+			Assert.Throws<Type.TypeAlreadyExistsInPackage>(() => new Type(package, "App", null!));
 
 		[Test]
 		public void EmptyLineIsNotAllowed() =>
 			Assert.That(
-				Assert.Throws<Type.ParsingFailed>(() => new Type(package, Base.Count, null).Parse("\n")).
+				Assert.Throws<Type.ParsingFailed>(() => new Type(package, Base.Count, null!).Parse("\n")).
 					InnerException, Is.TypeOf<Type.EmptyLine>());
 
 		[Test]
 		public void WhitespacesAreNotAllowed()
 		{
 			Assert.That(
-				Assert.Throws<Type.ParsingFailed>(() => new Type(package, Base.Count, null).Parse(" ")).
+				Assert.Throws<Type.ParsingFailed>(() => new Type(package, Base.Count, null!).Parse(" ")).
 					InnerException, Is.TypeOf<Type.ExtraWhitespacesFoundAtBeginningOfLine>());
 			Assert.That(
 				Assert.Throws<Type.ParsingFailed>(() =>
-					new Type(package, Base.HashCode, null).Parse("has\t")).InnerException,
+					new Type(package, Base.HashCode, null!).Parse("has\t")).InnerException,
 				Is.TypeOf<Type.ExtraWhitespacesFoundAtEndOfLine>());
 		}
 
 		[Test]
 		public void TypeParsersMustStartWithImplementOrHas() =>
-			Assert.That(Assert.Throws<Type.ParsingFailed>(() => new Type(package, Base.Count, null).Parse(
+			Assert.That(Assert.Throws<Type.ParsingFailed>(() => new Type(package, Base.Count, null!).Parse(
 					@"Run
 	log.WriteLine")).InnerException,
 				Is.TypeOf<Type.TypeHasNoMembersAndThusMustBeATraitWithoutMethodBodies>());
@@ -47,14 +47,14 @@ namespace Strict.Language.Tests
 		public void JustMembersIsNotValidCode() =>
 			Assert.That(
 				Assert.Throws<Type.ParsingFailed>(() =>
-						new Type(package, Base.Count, null).Parse(new[] { "has log", "has count" })).
+						new Type(package, Base.Count, null!).Parse(new[] { "has log", "has count" })).
 					InnerException, Is.TypeOf<Type.NoMethodsFound>());
 
 		[Test]
 		public void InvalidSyntax() =>
 			Assert.That(
 				Assert.Throws<Type.ParsingFailed>(() =>
-					new Type(package, Base.Count, null).Parse(new[] { "has log", "a b" })).InnerException,
+					new Type(package, Base.Count, null!).Parse(new[] { "has log", "a b" })).InnerException,
 				Is.TypeOf<Method.InvalidSyntax>());
 
 		[Test]
@@ -68,21 +68,21 @@ namespace Strict.Language.Tests
 
 		[Test]
 		public void ImportMustBeFirst() =>
-			Assert.That(() => new Type(package, "Program", null).Parse(@"has number
+			Assert.That(() => new Type(package, "Program", null!).Parse(@"has number
 import TestPackage"),
 				Throws.InstanceOf<Type.ParsingFailed>().With.InnerException.
 					InstanceOf<Type.ImportMustBeFirst>());
 
 		[Test]
 		public void ImportMustBeValidPackageName() =>
-			Assert.That(() => new Type(package, "Program", null).Parse(@"import $YI(*SI"),
+			Assert.That(() => new Type(package, "Program", null!).Parse(@"import $YI(*SI"),
 				Throws.InstanceOf<Type.ParsingFailed>().With.InnerException.
 					InstanceOf<Type.PackageNotFound>());
 
 		[Test]
 		public void Import()
 		{
-			var program = new Type(package, "Program", null).Parse(@"import TestPackage
+			var program = new Type(package, "Program", null!).Parse(@"import TestPackage
 has number
 GetNumber returns Number
 	return number");
@@ -91,21 +91,21 @@ GetNumber returns Number
 
 		[Test]
 		public void ImplementMustBeBeforeMembersAndMethods() =>
-			Assert.That(() => new Type(package, "Program", null).Parse(@"has log
+			Assert.That(() => new Type(package, "Program", null!).Parse(@"has log
 implement App"),
 				Throws.InstanceOf<Type.ParsingFailed>().With.InnerException.
 					InstanceOf<Type.ImplementMustComeBeforeMembersAndMethods>());
 
 		[Test]
 		public void MembersMustComeBeforeMethods() =>
-			Assert.That(() => new Type(package, "Program", null).Parse(@"Run
+			Assert.That(() => new Type(package, "Program", null!).Parse(@"Run
 has log"),
 				Throws.InstanceOf<Type.ParsingFailed>().With.InnerException.
 					InstanceOf<Type.MembersMustComeBeforeMethods>());
 
 		[Test]
 		public void SimpleApp() =>
-			CheckApp(new Type(package, "Program", null).Parse(@"implement App
+			CheckApp(new Type(package, "Program", null!).Parse(@"implement App
 has log
 Run
 	log.Write(""Hello World!"")"));
@@ -119,7 +119,7 @@ Run
 
 		[Test]
 		public void AnotherApp() =>
-			CheckApp(new Type(package, "Program", null).Parse(@"implement App
+			CheckApp(new Type(package, "Program", null!).Parse(@"implement App
 has log
 Run
 	for number in Range(0, 10)
@@ -128,7 +128,7 @@ Run
 		[Test]
 		public void Trait()
 		{
-			var app = new Type(package, "DummyApp", null).Parse("Run");
+			var app = new Type(package, "DummyApp", null!).Parse("Run");
 			Assert.That(app.IsTrait, Is.True);
 			Assert.That(app.Name, Is.EqualTo("DummyApp"));
 			Assert.That(app.Methods[0].Name, Is.EqualTo("Run"));
@@ -137,17 +137,17 @@ Run
 		[Test]
 		public void FileExtensionMustBeStrict() =>
 			Assert.ThrowsAsync<Type.FileExtensionMustBeStrict>(() =>
-				new Type(package, "DummyApp", null).ParseFile("test.txt"));
+				new Type(package, "DummyApp", null!).ParseFile("test.txt"));
 
 		[Test]
 		public void FilePathMustMatchPackageName() =>
 			Assert.ThrowsAsync<Type.FilePathMustMatchPackageName>(() =>
-				new Type(package, "DummyApp", null).ParseFile("test.strict"));
+				new Type(package, "DummyApp", null!).ParseFile("test.strict"));
 
 		[Test]
 		public void FilePathMustMatchMainPackageName() =>
 			Assert.ThrowsAsync<Type.FilePathMustMatchPackageName>(() =>
-				new Type(new Package(package, nameof(TypeTests)), "DummyApp", null).ParseFile(
+				new Type(new Package(package, nameof(TypeTests)), "DummyApp", null!).ParseFile(
 					nameof(TypeTests) + "\\test.strict"));
 	}
 }

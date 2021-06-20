@@ -8,17 +8,17 @@ namespace Strict.Language.Tests
 		public void CreateContexts()
 		{
 			mainPackage = new Package(nameof(TestPackage));
-			mainType = new Type(mainPackage, "Yolo", null);
+			mainType = new Type(mainPackage, "Yolo", null!);
 			subPackage = new Package(mainPackage, nameof(PackageTests));
-			privateSubType = new Type(subPackage, "secret", null);
-			publicSubType = new Type(subPackage, "FindMe", null);
+			privateSubType = new Type(subPackage, "secret", null!);
+			publicSubType = new Type(subPackage, "FindMe", null!);
 		}
 
-		private Package mainPackage;
-		private Type mainType;
-		private Package subPackage;
-		private Type privateSubType;
-		private Type publicSubType;
+		private Package mainPackage = null!;
+		private Type mainType = null!;
+		private Package subPackage = null!;
+		private Type privateSubType = null!;
+		private Type publicSubType = null!;
 
 		[Test]
 		public void NoneAndBooleanAreAlwaysKnown()
@@ -70,7 +70,7 @@ namespace Strict.Language.Tests
 		public void ContextNameMustNotContainSpecialCharactersOrNumbers()
 		{
 			Assert.Throws<Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers>(() =>
-				new Type(mainPackage, "MyClass123", null));
+				new Type(mainPackage, "MyClass123", null!));
 			Assert.Throws<Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers>(() =>
 				new Package(mainPackage, "$%"));
 		}
@@ -95,7 +95,7 @@ namespace Strict.Language.Tests
 			var otherMainPackage =
 				new Package(nameof(LoadingTypesOverAndOverWillAlwaysQuicklyReturnTheSame));
 			for (var index = 0; index < 1000; index++)
-				if (otherMainPackage.FindType(mainType.Name, otherMainPackage).Name != mainType.Name)
+				if (otherMainPackage.FindType(mainType.Name, otherMainPackage)!.Name != mainType.Name)
 					throw new AssertionException("FindType=" + //ncrunch: no coverage
 						otherMainPackage.FindType(mainType.Name, otherMainPackage) + " didn't find " +
 						mainType);

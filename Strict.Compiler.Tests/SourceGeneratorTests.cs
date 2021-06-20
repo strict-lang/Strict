@@ -17,9 +17,9 @@ namespace Strict.Compiler.Tests
 			generator = new CSharpGenerator();
 		}
 
-		private MethodExpressionParser parser;
-		private Package package;
-		private SourceGenerator generator;
+		private MethodExpressionParser parser = null!;
+		private Package package = null!;
+		private SourceGenerator generator = null!;
 
 		[Test]
 		public void GenerateCSharpInterface()

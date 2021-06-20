@@ -23,7 +23,7 @@ namespace Strict.Language.Expressions.Tests
 		public void ParseText()
 		{
 			const string Input = "let value = \"Hey\"";
-			var expression = ParseExpression(method, Input) as Assignment;
+			var expression = (Assignment)ParseExpression(method, Input);
 			Assert.That(expression.Name.ToString(), Is.EqualTo("value"));
 			Assert.That(expression.Value.ToString(), Is.EqualTo("\"Hey\""));
 			Assert.That(expression.ToString(), Is.EqualTo(Input));
@@ -33,7 +33,7 @@ namespace Strict.Language.Expressions.Tests
 		public void AssignmentToString()
 		{
 			const string Input = "let sum = 5 + 3";
-			var expression = ParseExpression(method, Input) as Assignment;
+			var expression = (Assignment)ParseExpression(method, Input);
 			Assert.That(expression.Name.ToString(), Is.EqualTo("sum"));
 			Assert.That(expression.Value.ToString(), Is.EqualTo("5 + 3"));
 			Assert.That(expression.ToString(), Is.EqualTo(Input));
@@ -55,7 +55,7 @@ namespace Strict.Language.Expressions.Tests
 		[Test]
 		public void AssignmentGetHashCode()
 		{
-			var assignment = ParseExpression(method, "let value = 1") as Assignment;
+			var assignment = (Assignment)ParseExpression(method, "let value = 1");
 			Assert.That(assignment.GetHashCode(),
 				Is.EqualTo(assignment.Name.GetHashCode() ^ assignment.Value.GetHashCode()));
 		}

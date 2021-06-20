@@ -39,7 +39,7 @@ namespace Strict.Language
 		{
 			if (packageUrl.Host != "github.com" || string.IsNullOrEmpty(packageUrl.AbsolutePath) ||
 				// Allow other repositories as well, but put them in an empty main package name first
-				!packageUrl.AbsolutePath.StartsWith("/strict-lang/"))
+				!packageUrl.AbsolutePath.StartsWith("/strict-lang/", StringComparison.InvariantCulture))
 				throw new OnlyGithubDotComUrlsAreAllowedForNow(); //ncrunch: no coverage
 			var packageName = packageUrl.AbsolutePath.Split('/').Last();
 			var localPath = Path.Combine(DevelopmentFolder, packageName);
@@ -75,6 +75,8 @@ namespace Strict.Language
 			{
 				File.CreateText(localZip).Close();
 			}
+#pragma warning disable 618
+#pragma warning disable SYSLIB0014
 			using WebClient webClient = new();
 			await webClient.DownloadFileTaskAsync(new Uri(packageUrl + "/archive/master.zip"), localZip);
 			await Task.Run(() =>
@@ -142,7 +144,7 @@ namespace Strict.Language
 		private static bool IsValidCodeDirectory(string directory) =>
 			Path.GetFileName(directory).IsWord();
 
-		private static string DevelopmentFolder => Path.Combine(@"C:\code\GitHub\strict-lang");
+		public static string DevelopmentFolder => Path.Combine(@"C:\code\GitHub\strict-lang");
 		private static string CacheFolder =>
 			Path.Combine( //ncrunch: no coverage, only downloaded and cached on non development machines
 				Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), StrictPackages);

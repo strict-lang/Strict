@@ -10,8 +10,8 @@ namespace Strict.Language.Expressions.Tests
 		public void PrintHelloWorld()
 		{
 			var package = new TestPackage();
-			new Type(package, Base.App, null).Parse("Run");
-			var type = new Type(package, "Program", null).Parse(@"implement App
+			new Type(package, Base.App, null!).Parse("Run");
+			var type = new Type(package, "Program", null!).Parse(@"implement App
 has log
 Run
 	log.Write(text+number)");
@@ -32,7 +32,7 @@ Run
 					{
 						var call = (MethodCall)expression;
 						if (call.Method.Name == "Write")
-							Console.WriteLine((call.Arguments[0] as Text).Data);
+							Console.WriteLine((call.Arguments[0] as Text)?.Data);
 						else
 							throw new NotSupportedException();
 					}

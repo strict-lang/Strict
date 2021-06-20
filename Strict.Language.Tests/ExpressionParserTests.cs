@@ -10,7 +10,7 @@ namespace Strict.Language.Tests
 Run
 	log.WriteLine");
 
-		private Type type;
+		private Type type = null!;
 
 		[Test]
 		public void ParsingHappensAfterCallingBody()
