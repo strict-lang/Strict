@@ -1,4 +1,3 @@
-﻿namespace Strict.Compiler
-{
-	public interface SourceFile { }
-}
+﻿namespace Strict.Compiler;
+
+public interface SourceFile { }

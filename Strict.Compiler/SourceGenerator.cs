@@ -1,9 +1,8 @@
 ﻿using Strict.Language;
 
-namespace Strict.Compiler
+namespace Strict.Compiler;
+
+public interface SourceGenerator
 {
-	public interface SourceGenerator
-	{
-		SourceFile Generate(Type app);
-	}
+	SourceFile Generate(Type app);
 }

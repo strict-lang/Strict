@@ -1,7 +1,6 @@
-﻿namespace Strict.Language
+﻿namespace Strict.Language;
+
+public class Parameter : NamedType
 {
-	public class Parameter : NamedType
-	{
-		public Parameter(Method definedIn, string nameAndType) : base(definedIn, nameAndType) { }
-	}
+	public Parameter(Method definedIn, string nameAndType) : base(definedIn, nameAndType) { }
 }

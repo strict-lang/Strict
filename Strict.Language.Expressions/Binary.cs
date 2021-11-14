@@ -1,32 +1,31 @@
 ﻿using System.Linq;
 
-namespace Strict.Language.Expressions
+namespace Strict.Language.Expressions;
+
+public class Binary : MethodCall
 {
-	public class Binary : MethodCall
+	public Binary(Expression left, Method operatorMethod, Expression right) : base(left,
+		operatorMethod, right) { }
+
+	public Expression Left => Instance;
+	public Expression Right => Arguments[0];
+	public override string ToString() => Left + " " + Method.Name + " " + Right;
+
+	public new static Expression? TryParse(Method context, string input)
 	{
-		public Binary(Expression left, Method operatorMethod, Expression right) : base(left,
-			operatorMethod, right) { }
+		var parts = input.Split(' ', 3);
+		return parts.Length == 3 && parts[1][0].IsOperator()
+			? TryParseBinary(context, parts)
+			: null;
+	}
 
-		public Expression Left => Instance;
-		public Expression Right => Arguments[0];
-		public override string ToString() => Left + " " + Method.Name + " " + Right;
-
-		public new static Expression? TryParse(Method context, string input)
-		{
-			var parts = input.Split(' ', 3);
-			return parts.Length == 3 && parts[1][0].IsOperator()
-				? TryParseBinary(context, parts)
-				: null;
-		}
-
-		private static Expression TryParseBinary(Method context, string[] parts)
-		{
-			var left = MethodExpressionParser.TryParse(context, parts[0]) ??
-				throw new MethodExpressionParser.UnknownExpression(context, parts[0]);
-			var binaryOperator = parts[1];
-			var right = MethodExpressionParser.TryParse(context, parts[2]) ??
-				throw new MethodExpressionParser.UnknownExpression(context, parts[2]);
-			return new Binary(left, left.ReturnType.Methods.First(m => m.Name == binaryOperator), right);
-		}
+	private static Expression TryParseBinary(Method context, string[] parts)
+	{
+		var left = MethodExpressionParser.TryParse(context, parts[0]) ??
+			throw new MethodExpressionParser.UnknownExpression(context, parts[0]);
+		var binaryOperator = parts[1];
+		var right = MethodExpressionParser.TryParse(context, parts[2]) ??
+			throw new MethodExpressionParser.UnknownExpression(context, parts[2]);
+		return new Binary(left, left.ReturnType.Methods.First(m => m.Name == binaryOperator), right);
 	}
 }

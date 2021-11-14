@@ -1,9 +1,8 @@
 ﻿using Strict.Language;
 
-namespace Strict.Compiler.Roslyn
+namespace Strict.Compiler.Roslyn;
+
+public class CSharpGenerator : SourceGenerator
 {
-	public class CSharpGenerator : SourceGenerator
-	{
-		public SourceFile Generate(Type type) => new CSharpFile(type);
-	}
+	public SourceFile Generate(Type type) => new CSharpFile(type);
 }
