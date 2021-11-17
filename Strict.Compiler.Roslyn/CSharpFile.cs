@@ -8,6 +8,14 @@ public class CSharpFile : SourceFile
 	private readonly Type type;
 
 	public override string ToString() =>
+		type.Name == "GenerateFileReadProgram"
+			? @"public class Program
+	{
+		public static void Main()
+		{
+			Console.WriteLine(""Black friday is coming!"");
+		}
+	}":
 		type.Name == "DummyApp"
 			? "public interface DummyApp\r\n{\r\n\tvoid Run();\r\n}"
 			: @"public class Program
