@@ -54,7 +54,6 @@ Run
 	}
 
 	[Test]
-
 	public void GenerateFileReadProgram()
 	{
 		const string ExpectedText = "Black friday is coming!\r\n";
@@ -72,7 +71,6 @@ Run
 	{
 		File.Delete("Program.cs");
 		Process.Start("dotnet", "new console --name GenerateFileReadProgram");
-		 
 		File.WriteAllText("Program.cs", generatedCode);
 		var process = new Process
 		{
@@ -86,19 +84,16 @@ Run
 			}
 		};
 		process.Start();
-		string actualText = process.StandardOutput.ReadToEnd();
-		string error = process.StandardError.ReadToEnd();
-		if (error.Length>0)
-		{
-			throw new CompilationFailed(error,actualText);
-		}
+		var actualText = process.StandardOutput.ReadToEnd();
+		var error = process.StandardError.ReadToEnd();
+		if (error.Length > 0)
+			throw new CompilationFailed(error, actualText);
 		return actualText;
 	}
 
-	private class CompilationFailed : Exception
+	private sealed class CompilationFailed : Exception
 	{
 		public CompilationFailed(string error, string actualText) : base(error +
-			System.Environment.NewLine + actualText){}
-
+			Environment.NewLine + actualText) { }
 	}
 }

@@ -91,7 +91,6 @@ public class Package : Context
 	private static bool IsPrivateName(string name) => char.IsLower(name[0]);
 
 	public class FullNameMustContainPackageAndTypeNames : Exception { }
-
 	public class PrivateTypesAreOnlyAvailableInItsPackage : Exception { }
 
 	/// <summary>
@@ -109,19 +108,19 @@ public class Package : Context
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public Type? FindDirectType(string name)
 	{
-		for (var index = 0; index < types.Count; index++)
-			if (types[index].Name == name)
-				return types[index];
+		foreach (var t in types)
+			if (t.Name == name)
+				return t;
 		return null;
 	}
 
 	private Type? FindTypeInChildrenPackages(string name, Context? searchingFromPackage)
 	{
-		for (var index = 0; index < children.Count; index++)
-			if (children[index] != searchingFromPackage)
+		foreach (var t in children)
+			if (t != searchingFromPackage)
 			{
-				var childType = children[index].FindDirectType(name) ?? (children.Count > 0
-					? children[index].FindTypeInChildrenPackages(name, searchingFromPackage)
+				var childType = t.FindDirectType(name) ?? (children.Count > 0
+					? t.FindTypeInChildrenPackages(name, searchingFromPackage)
 					: null);
 				if (childType != null)
 					return childType;

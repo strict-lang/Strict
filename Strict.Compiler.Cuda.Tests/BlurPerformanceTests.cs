@@ -36,15 +36,15 @@ public class BlurPerformanceTests
 		//both break the image pretty badly, but it is still somehow there .. needs better code yo
 		LoadImage();
 		CompileKernel();
-		new TestPerformance(Width * Height * BlurIterations, 100, Blur, BlurGpu, SaveImage).Run();
+		new TestPerformance(width * height * BlurIterations, 100, Blur, BlurGpu, SaveImage).Run();
 	}
 
 	private void LoadImage()
 	{
 		var bitmap =
 			new Bitmap(@"TexturedMeshTests.RenderTexturedBoxPlaneAndSphereWithImage.approved.png");
-		Width = bitmap.Width;
-		Height = bitmap.Height;
+		width = bitmap.Width;
+		height = bitmap.Height;
 		var data = bitmap.LockBits(new Rectangle(0, 0, bitmap.Width, bitmap.Height),
 			ImageLockMode.ReadOnly, bitmap.PixelFormat);
 		CreateColorImageFromBitmapData(bitmap, data);
@@ -52,23 +52,23 @@ public class BlurPerformanceTests
 
 	private unsafe void CreateColorImageFromBitmapData(Bitmap bitmap, BitmapData data)
 	{
-		image = new byte[Width * Height * 4];
+		image = new byte[width * height * 4];
 		var pointer = (byte*)data.Scan0;
 		var offsetIncrease = bitmap.PixelFormat is PixelFormat.Format24bppRgb
 			? 3
 			: 4;
-		for (var y = 0; y < Height; y++)
-		for (var x = 0; x < Width; x++)
+		for (var y = 0; y < height; y++)
+		for (var x = 0; x < width; x++)
 		{
-			image[(x + y * Width) * 4] = *(pointer + 2);
-			image[(x + y * Width) * 4 + 1] = *(pointer + 1);
-			image[(x + y * Width) * 4 + 2] = *(pointer + 0);
+			image[(x + y * width) * 4] = *(pointer + 2);
+			image[(x + y * width) * 4 + 1] = *(pointer + 1);
+			image[(x + y * width) * 4 + 2] = *(pointer + 0);
 			pointer += offsetIncrease;
 		}
 	}
 
-	private int Width;
-	private int Height;
+	private int width;
+	private int height;
 	private byte[] image = Array.Empty<byte>();
 	private const int BlurIterations = 200;
 
@@ -112,26 +112,26 @@ public class BlurPerformanceTests
 		}
 	}
 
-	private int Size => Width * Height * 4;
+	private int Size => width * height * 4;
 	private CudaKernel kernel = null!;
 	private CudaDeviceVariable<byte> input = null!;
 	private CudaDeviceVariable<byte> output = null!;
 
 	private void Blur(int start, int chunkSize)
 	{
-		if (start < Width * 4)
+		if (start < width * 4)
 			return;
 		var size = Size;
 		for (var n = start; n < start + chunkSize; n++)
 			// ReSharper disable once ComplexConditionExpression
-			image[(n + 0) % size] = (byte)((image[n % size] + image[(n - Width * 4) % size] +
-				image[(n - 4) % size] + image[(n + 4) % size] + image[(n + Width * 4) % size]) / 5);
+			image[(n + 0) % size] = (byte)((image[n % size] + image[(n - width * 4) % size] +
+				image[(n - 4) % size] + image[(n + 4) % size] + image[(n + width * 4) % size]) / 5);
 	}
 
 	private void BlurGpu(int iterations)
 	{
 		for (var i = 0; i < BlurIterations; i++)
-			kernel.Run(input.DevicePointer, output.DevicePointer, Width, Height);
+			kernel.Run(input.DevicePointer, output.DevicePointer, width, height);
 		// Copy result from device memory to host memory
 		// h_C contains the result in host memory
 		//float[] copyOutput = output;
@@ -150,8 +150,8 @@ public class BlurPerformanceTests
 
 	public unsafe Bitmap AsBitmap(byte[] data, bool flipTopBottom = false)
 	{
-		var bitmap = new Bitmap(Width, Height);
-		var bitmapData = bitmap.LockBits(new Rectangle(0, 0, Width, Height), ImageLockMode.WriteOnly,
+		var bitmap = new Bitmap(width, height);
+		var bitmapData = bitmap.LockBits(new Rectangle(0, 0, width, height), ImageLockMode.WriteOnly,
 			PixelFormat.Format24bppRgb);
 		var bitmapPointer = (byte*)bitmapData.Scan0.ToPointer();
 		SwitchRgbToBgr(data, bitmapPointer, bitmapData.Stride, flipTopBottom);
@@ -162,14 +162,14 @@ public class BlurPerformanceTests
 	private unsafe void SwitchRgbToBgr(byte[] data, byte* bitmapPointer, int stride,
 		bool flipTopBottom)
 	{
-		for (var y = 0; y < Height; ++y)
-		for (var x = 0; x < Width; ++x)
+		for (var y = 0; y < height; ++y)
+		for (var x = 0; x < width; ++x)
 		{
 			var targetIndex = y * stride + x * 3;
 			// ReSharper disable once ComplexConditionExpression
 			var sourceIndex = flipTopBottom
-				? ((Height - 1 - y) * Width + x) * 3
-				: (y * Width + x) * 3;
+				? ((height - 1 - y) * width + x) * 3
+				: (y * width + x) * 3;
 			bitmapPointer[targetIndex] = data[sourceIndex + 2];
 			bitmapPointer[targetIndex + 1] = data[sourceIndex + 1];
 			bitmapPointer[targetIndex + 2] = data[sourceIndex];
