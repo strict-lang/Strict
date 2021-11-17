@@ -1,8 +1,12 @@
+using System;
+using System.Diagnostics;
+using System.IO;
 using System.Threading.Tasks;
 using NUnit.Framework;
 using Strict.Compiler.Roslyn;
 using Strict.Language;
 using Strict.Language.Expressions;
+using Type = Strict.Language.Type;
 
 namespace Strict.Compiler.Tests;
 
@@ -47,5 +51,54 @@ Run
 		Console.WriteLine(""Hello World"");
 	}
 }"));
+	}
+
+	[Test]
+
+	public void GenerateFileReadProgram()
+	{
+		const string ExpectedText = "Black friday is coming!\r\n";
+		File.WriteAllText("test.txt", ExpectedText);
+		var program = new Type(package, nameof(GenerateFileReadProgram), parser).Parse(@"implement App
+has file = ""test.txt""
+has log
+Run
+	log.Write(file.Read())");
+		var generatedCode = generator.Generate(program).ToString();
+		Assert.That(GenerateNewConsoleApp(generatedCode), Is.EqualTo(ExpectedText));
+	}
+
+	private static string GenerateNewConsoleApp(string? generatedCode)
+	{
+		File.Delete("Program.cs");
+		Process.Start("dotnet", "new console --name GenerateFileReadProgram");
+		 
+		File.WriteAllText("Program.cs", generatedCode);
+		var process = new Process
+		{
+			StartInfo = new ProcessStartInfo
+			{
+				FileName = "dotnet",
+				Arguments = "run " + "Program.cs",
+				UseShellExecute = false,
+				RedirectStandardOutput = true,
+				RedirectStandardError = true
+			}
+		};
+		process.Start();
+		string actualText = process.StandardOutput.ReadToEnd();
+		string error = process.StandardError.ReadToEnd();
+		if (error.Length>0)
+		{
+			throw new CompilationFailed(error,actualText);
+		}
+		return actualText;
+	}
+
+	private class CompilationFailed : Exception
+	{
+		public CompilationFailed(string error, string actualText) : base(error +
+			System.Environment.NewLine + actualText){}
+
 	}
 }

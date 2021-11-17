@@ -158,7 +158,7 @@ public class Repositories
 	private static bool IsValidCodeDirectory(string directory) =>
 		Path.GetFileName(directory).IsWord();
 
-	public static string DevelopmentFolder => Path.Combine(@"C:\code\GitHub\strict-lang");
+	public static string DevelopmentFolder => Path.Combine(@"C:\Users\Ali\Desktop\");
 	private static string CacheFolder =>
 		Path.Combine( //ncrunch: no coverage, only downloaded and cached on non development machines
 			Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), StrictPackages);

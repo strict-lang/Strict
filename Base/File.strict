@@ -1,0 +1,2 @@
+from(Text)
+Read returns Text
