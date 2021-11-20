@@ -69,9 +69,13 @@ Run
 
 	private static string GenerateNewConsoleApp(string? generatedCode)
 	{
-		File.Delete("Program.cs");
-		Process.Start("dotnet", "new console --name GenerateFileReadProgram");
-		File.WriteAllText("Program.cs", generatedCode);
+		const string FileReadProgramDirectory = "GenerateFileReadProgram";
+		if (Directory.Exists(FileReadProgramDirectory))
+			Directory.Delete(FileReadProgramDirectory, true);
+		var projectCreationProcess =
+			Process.Start("dotnet", "new console --name " + FileReadProgramDirectory);
+		projectCreationProcess.WaitForExit();
+		File.WriteAllText(FileReadProgramDirectory + "/Program.cs", generatedCode);
 		var process = new Process
 		{
 			StartInfo = new ProcessStartInfo
@@ -80,7 +84,8 @@ Run
 				Arguments = "run " + "Program.cs",
 				UseShellExecute = false,
 				RedirectStandardOutput = true,
-				RedirectStandardError = true
+				RedirectStandardError = true,
+				WorkingDirectory = FileReadProgramDirectory
 			}
 		};
 		process.Start();
