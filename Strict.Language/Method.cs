@@ -11,13 +11,13 @@ namespace Strict.Language;
 /// </summary>
 public class Method : Context
 {
-	public Method(Type type, ExpressionParser parser, string[] lines) : base(type,
+	public Method(Type type, ExpressionParser parser, IReadOnlyList<string> lines) : base(type,
 		GetName(lines[0]))
 	{
 		ReturnType = Name == From
 			? type
 			: type.GetType(Base.None);
-		ParseDefinition(lines[0].Substring(Name.Length));
+		ParseDefinition(lines[0][Name.Length..]);
 		body = new Lazy<MethodBody>(() => (MethodBody)parser.Parse(this, GetMethodBodyLines(lines)));
 	}
 
@@ -33,11 +33,11 @@ public class Method : Context
 	/// <summary>
 	/// Skip the first method declaration line and remove the first tab from each line.
 	/// </summary>
-	private static string GetMethodBodyLines(string[] lines)
+	private static string GetMethodBodyLines(IReadOnlyList<string> lines)
 	{
 		var bodyText = new StringBuilder();
-		for (var lineIndex = 1; lineIndex < lines.Length; lineIndex++)
-			bodyText.AppendLine(lines[lineIndex].Substring(1));
+		for (var lineIndex = 1; lineIndex < lines.Count; lineIndex++)
+			bodyText.AppendLine(lines[lineIndex][1..]);
 		return bodyText.ToString();
 	}
 
@@ -82,6 +82,7 @@ public class Method : Context
 	public Type ReturnType { get; private set; }
 	private readonly Lazy<MethodBody> body;
 	public MethodBody Body => body.Value;
+	public bool IsPublic => char.IsUpper(Name[0]);
 
 	public override Type? FindType(string name, Context? searchingFrom = null) =>
 		name == Base.Other

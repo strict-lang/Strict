@@ -1,30 +1,13 @@
 using System;
 using System.Diagnostics;
 using System.IO;
-using System.Threading.Tasks;
 using NUnit.Framework;
-using Strict.Compiler.Roslyn;
-using Strict.Language;
-using Strict.Language.Expressions;
 using Type = Strict.Language.Type;
 
 namespace Strict.Compiler.Tests;
 
-public class SourceGeneratorTests
+public class SourceGeneratorTests : TestGenerator
 {
-	[SetUp]
-	public async Task CreateGenerator()
-	{
-		parser = new MethodExpressionParser();
-		await new Repositories(parser).LoadFromUrl(Repositories.StrictUrl);
-		package = new Package(nameof(SourceGeneratorTests));
-		generator = new CSharpGenerator();
-	}
-
-	private MethodExpressionParser parser = null!;
-	private Package package = null!;
-	private SourceGenerator generator = null!;
-
 	[Test]
 	public void GenerateCSharpInterface()
 	{
@@ -39,10 +22,7 @@ public class SourceGeneratorTests
 	[Test]
 	public void GenerateCSharpClass()
 	{
-		var program = new Type(package, "Program", parser).Parse(@"implement App
-has log
-Run
-	log.Write(""Hello World"")");
+		var program = CreateHelloWorldProgramType();
 		var file = generator.Generate(program);
 		Assert.That(file.ToString(), Is.EqualTo(@"public class Program
 {
@@ -54,46 +34,70 @@ Run
 	}
 
 	[Test]
+	[Ignore("TODO: first finish CSharpTypeVisitorTests, finish VisitMember first, add File class (or use System.IO.File)")]
 	public void GenerateFileReadProgram()
 	{
-		const string ExpectedText = "Black friday is coming!\r\n";
-		File.WriteAllText("test.txt", ExpectedText);
+		//TODO: replace File = "test.txt" with: new FileStream("test.txt", FileMode.Open);
 		var program = new Type(package, nameof(GenerateFileReadProgram), parser).Parse(@"implement App
-has file = ""test.txt""
+has file = """ + TestTxt + @"""
 has log
 Run
 	log.Write(file.Read())");
 		var generatedCode = generator.Generate(program).ToString();
-		Assert.That(GenerateNewConsoleApp(generatedCode), Is.EqualTo(ExpectedText));
+		Assert.That(GenerateNewConsoleAppAndReturnOutput(ProjectFolder, generatedCode),
+			Is.EqualTo(ExpectedText));
 	}
 
-	private static string GenerateNewConsoleApp(string? generatedCode)
+	private const string ProjectFolder = nameof(GenerateFileReadProgram);
+	private const string ExpectedText = "Black friday is coming!!\r\n";
+	private const string TestTxt = "test.txt";
+
+	private static string GenerateNewConsoleAppAndReturnOutput(string folder, string? generatedCode)
 	{
-		File.Delete("Program.cs");
-		Process.Start("dotnet", "new console --name GenerateFileReadProgram");
-		File.WriteAllText("Program.cs", generatedCode);
+		if (!Directory.Exists(folder))
+		{ //ncrunch: no coverage start, only done once per folder
+			var creationOutput =
+				RunDotnetAndReturnOutput("", "new console --force --name " + folder, out var creationError);
+			if (!creationOutput.Contains("successful"))
+				throw new CompilationFailed(creationError, creationOutput);
+			File.WriteAllText(Path.Combine(folder, TestTxt), ExpectedText);
+		} //ncrunch: no coverage end
+		File.WriteAllText(Path.Combine(folder, "Program.cs"), generatedCode);
+		var actualText = RunDotnetAndReturnOutput(folder, "run", out var error);
+		if (error.Length > 0)
+			throw new CompilationFailed(error, actualText);
+		return actualText;
+	}
+
+	private static string RunDotnetAndReturnOutput(string folder, string argument, out string error)
+	{
 		var process = new Process
 		{
 			StartInfo = new ProcessStartInfo
 			{
+				WorkingDirectory = folder,
 				FileName = "dotnet",
-				Arguments = "run " + "Program.cs",
+				Arguments = argument,
 				UseShellExecute = false,
 				RedirectStandardOutput = true,
 				RedirectStandardError = true
 			}
 		};
 		process.Start();
-		var actualText = process.StandardOutput.ReadToEnd();
-		var error = process.StandardError.ReadToEnd();
-		if (error.Length > 0)
-			throw new CompilationFailed(error, actualText);
-		return actualText;
+		error = process.StandardError.ReadToEnd();
+		return process.StandardOutput.ReadToEnd();
 	}
 
 	private sealed class CompilationFailed : Exception
 	{
-		public CompilationFailed(string error, string actualText) : base(error +
-			Environment.NewLine + actualText) { }
+		public CompilationFailed(string error, string actualText) : base(error + Environment.NewLine +
+			actualText) { }
 	}
+
+	[Test]
+	public void InvalidConsoleAppWillGiveUsCompilationError() =>
+		Assert.That(
+			() => GenerateNewConsoleAppAndReturnOutput(
+				nameof(InvalidConsoleAppWillGiveUsCompilationError), "lafine=soeu"),
+			Throws.InstanceOf<CompilationFailed>().And.Message.Contains("The build failed."));
 }

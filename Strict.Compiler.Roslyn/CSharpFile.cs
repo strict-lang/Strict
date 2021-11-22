@@ -4,10 +4,17 @@ namespace Strict.Compiler.Roslyn;
 
 public class CSharpFile : SourceFile
 {
-	public CSharpFile(Type type) => this.type = type;
-	private readonly Type type;
+	public CSharpFile(Type type)
+	{
+		this.type = type;
+		visitor = new CSharpTypeVisitor(type);
+	}
 
-	public override string ToString() =>
+	private readonly Type type;
+	private readonly CSharpTypeVisitor visitor;
+
+	public override string ToString() => visitor.FileContent;
+	/*don't need this hack anymore
 		type.Name switch
 		{
 			"GenerateFileReadProgram" => @"public class Program
@@ -25,5 +32,5 @@ public class CSharpFile : SourceFile
 		Console.WriteLine(""Hello World"");
 	}
 }"
-		};
+		};*/
 }
