@@ -24,6 +24,7 @@ public class CSharpTypeVisitor : TypeVisitor
 			VisitMethod(method);
 		ParsingDone();
 	}
+
 	public string Name { get; }
 	private readonly bool isImplementingApp;
 	private readonly bool isInterface;
@@ -70,31 +71,32 @@ public class CSharpTypeVisitor : TypeVisitor
 
 	public void VisitMethod(Method method)
 	{
-		var isMainEntryPoint = isImplementingApp && method.Name == "Run";
-		var methodName = isMainEntryPoint
-			? "Main"
-			: method.Name;
-		var staticMain = isMainEntryPoint
-			? "static "
-			: "";
 		var accessModifier = isInterface
 			? ""
 			: method.IsPublic
 				? "public "
 				: "private ";
-		var parameters = string.Join(", ",
-			method.Parameters.Select(p => GetCSharpTypeName(p.Type) + " " + p.Name));
+		var isMainEntryPoint = isImplementingApp && method.Name == "Run";
+		var staticMain = isMainEntryPoint
+			? "static "
+			: "";
+		var methodName = isMainEntryPoint
+			? "Main"
+			: method.Name;
 		FileContent +=
-			$"\t{accessModifier}{staticMain}{GetCSharpTypeName(method.ReturnType)} {methodName}({parameters})";
-		if (isInterface)
-		{
-			FileContent += ";" + NewLine;
-			return;
-		}
-		FileContent += $"{NewLine}\t{{{NewLine}";
-		FileContent += new CSharpExpressionVisitor(method).Visit();
-		FileContent += "\t}" + NewLine;
+			$"\t{accessModifier}{staticMain}{GetCSharpTypeName(method.ReturnType)} " +
+			$"{methodName}({WriteParameters(method)})";
+		FileContent += isInterface
+			? ";" + NewLine
+			: WriteMethodBody(method);
 	}
+
+	private static string WriteMethodBody(Method method) =>
+		$"{NewLine}\t{{{NewLine}" + new CSharpExpressionVisitor(method).Visit() + "\t}" + NewLine;
+
+	private static string WriteParameters(Method method) =>
+		string.Join(", ",
+			method.Parameters.Select(p => GetCSharpTypeName(p.Type) + " " + p.Name));
 
 	private static string GetCSharpTypeName(Context type) =>
 		type.Name switch
