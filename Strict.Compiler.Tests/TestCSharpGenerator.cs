@@ -6,7 +6,7 @@ using Strict.Language.Expressions;
 
 namespace Strict.Compiler.Tests;
 
-public class TestGenerator
+public class TestCSharpGenerator
 {
 	[SetUp]
 	public async Task CreateGenerator()
@@ -21,12 +21,9 @@ public class TestGenerator
 	protected Package package = null!;
 	protected SourceGenerator generator = null!;
 
-	protected Type CreateHelloWorldProgramType()
-	{
-		var program = new Type(package, "Program", parser).Parse(@"implement App
+	protected Type CreateHelloWorldProgramType() =>
+		new Type(package, "Program", parser).Parse(@"implement App
 has log
 Run
 	log.Write(""Hello World"")");
-		return program;
-	}
 }

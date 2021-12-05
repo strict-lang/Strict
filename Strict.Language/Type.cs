@@ -46,6 +46,16 @@ public class Type : Context
 				ParseLine(lines[lineNumber]);
 			if (methods.Count == 0)
 				throw new NoMethodsFound(lineNumber, Name);
+			foreach (var trait in implements)
+				if (trait.IsTrait)
+				{
+					var nonImplementedTraitMethods =
+						new List<Method>(trait.Methods.Where(m => m.Name != Method.From));
+					foreach (var method in methods)
+						nonImplementedTraitMethods.RemoveAll(t => method.Name == t.Name);
+					if (nonImplementedTraitMethods.Count > 0)
+						throw new MustImplementAllTraitMethods(nonImplementedTraitMethods);
+				}
 			return this;
 		}
 		catch (ParsingFailedInLine line)
@@ -60,7 +70,7 @@ public class Type : Context
 		}
 	}
 
-	private string[] lines = new string[0];
+	private string[] lines = Array.Empty<string>();
 	private int lineNumber;
 	public string FilePath => Path.Combine(Package.FolderPath, Name) + Extension;
 
@@ -77,7 +87,7 @@ public class Type : Context
 			methods.Add(new Method(this, expressionParser, GetAllMethodLines(line)));
 	}
 
-	private Package ParseImport(string[] words)
+	private Package ParseImport(IReadOnlyList<string> words)
 	{
 		if (implements.Count > 0 || members.Count > 0 || methods.Count > 0)
 			throw new ImportMustBeFirst(words[1]);
@@ -97,17 +107,21 @@ public class Type : Context
 		public PackageNotFound(string package) : base(package) { }
 	}
 
-	private Type ParseImplement(string[] words)
+	private Type ParseImplement(IReadOnlyList<string> words)
 	{
 		if (members.Count > 0 || methods.Count > 0)
 			throw new ImplementMustComeBeforeMembersAndMethods(words[1]);
+		if (words[1] == "Any")
+			throw new ImplementAnyIsImplicitAndNotAllowed();
 		return Package.GetType(words[1]);
 	}
 
-	public class ImplementMustComeBeforeMembersAndMethods : Exception
+	public sealed class ImplementMustComeBeforeMembersAndMethods : Exception
 	{
 		public ImplementMustComeBeforeMembersAndMethods(string type) : base(type) { }
 	}
+
+	public sealed class ImplementAnyIsImplicitAndNotAllowed : Exception { }
 
 	private Member ParseMember(string line)
 	{
@@ -164,21 +178,31 @@ public class Type : Context
 		public string Method { get; }
 	}
 
-	public class EmptyLine : ParsingFailedInLine
+	public sealed class EmptyLine : ParsingFailedInLine
 	{
 		public EmptyLine(int line, string method) : base("", line, method) { }
 	}
 
-	public class NoMethodsFound : ParsingFailedInLine
+	public sealed class NoMethodsFound : ParsingFailedInLine
 	{
 		public NoMethodsFound(int line, string method) : base(
 			"Each type must have at least one method, otherwise it is useless", line, method) { }
 	}
 
+	public sealed class MustImplementAllTraitMethods : Exception
+	{
+		public MustImplementAllTraitMethods(IEnumerable<Method> missingTraitMethods) : base(
+			"Missing methods: " + string.Join(", ", missingTraitMethods)) { }
+	}
+
 	private string[] GetAllMethodLines(string definitionLine)
 	{
-		if (IsTrait && lineNumber + 1 < lines.Length && lines[lineNumber + 1].StartsWith('\t'))
+		var isNextLineValidMethodBody =
+			lineNumber + 1 < lines.Length && lines[lineNumber + 1].StartsWith('\t');
+		if (IsTrait && isNextLineValidMethodBody)
 			throw new TypeHasNoMembersAndThusMustBeATraitWithoutMethodBodies();
+		if (!IsTrait && !isNextLineValidMethodBody)
+			throw new TraitMethodMustBeImplemented(definitionLine);
 		var methodLines = new List<string> { definitionLine };
 		while (lineNumber + 1 < lines.Length && lines[lineNumber + 1].StartsWith('\t'))
 			methodLines.Add(lines[++lineNumber]);
@@ -186,6 +210,11 @@ public class Type : Context
 	}
 
 	public class TypeHasNoMembersAndThusMustBeATraitWithoutMethodBodies : Exception { }
+
+	public class TraitMethodMustBeImplemented : Exception
+	{
+		public TraitMethodMustBeImplemented(string definitionLine) : base(definitionLine) { }
+	}
 
 	public class ParsingFailed : Exception
 	{

@@ -53,8 +53,8 @@ public class TypeTests
 	public void InvalidSyntax() =>
 		Assert.That(
 			Assert.Throws<Type.ParsingFailed>(() =>
-				new Type(package, Base.Count, null!).Parse(new[] { "has log", "a b" })).InnerException,
-			Is.TypeOf<Method.InvalidSyntax>());
+					new Type(package, Base.Count, null!).Parse(new[] { "has log", "a b", "\tc" })).
+				InnerException, Is.TypeOf<Method.InvalidSyntax>());
 
 	[Test]
 	public void GetUnknownTypeWillCrash() =>
@@ -89,6 +89,12 @@ GetNumber returns Number
 	}
 
 	[Test]
+	public void ImplementAnyIsImplicitAndNotAllowed() =>
+		Assert.That(() => new Type(package, "Program", null!).Parse(@"implement Any"),
+			Throws.InstanceOf<Type.ParsingFailed>().With.InnerException.
+				InstanceOf<Type.ImplementAnyIsImplicitAndNotAllowed>());
+
+	[Test]
 	public void ImplementMustBeBeforeMembersAndMethods() =>
 		Assert.That(() => new Type(package, "Program", null!).Parse(@"has log
 implement App"),
@@ -114,6 +120,7 @@ Run
 		Assert.That(program.Implements[0].Name, Is.EqualTo(Base.App));
 		Assert.That(program.Members[0].Name, Is.EqualTo("log"));
 		Assert.That(program.Methods[0].Name, Is.EqualTo("Run"));
+		Assert.That(program.IsTrait, Is.False);
 	}
 
 	[Test]
@@ -123,6 +130,21 @@ has log
 Run
 	for number in Range(0, 10)
 		log.Write(""Counting: "" + number)"));
+
+	[Test]
+	public void MustImplementAllTraitMethods() =>
+		Assert.That(() => new Type(package, "Program", null!).Parse(@"implement App
+add(number)
+	return one + 1"),
+			Throws.InstanceOf<Type.ParsingFailed>().With.InnerException.
+				InstanceOf<Type.MustImplementAllTraitMethods>());
+
+	[Test]
+	public void TraitMethodsMustBeImplemented() =>
+		Assert.That(() => new Type(package, "Program", null!).Parse(@"implement App
+Run"),
+			Throws.InstanceOf<Type.ParsingFailed>().With.InnerException.
+				InstanceOf<Type.TraitMethodMustBeImplemented>());
 
 	[Test]
 	public void Trait()

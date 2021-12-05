@@ -1,3 +1,4 @@
 implement Number
 has any
 Compute returns Number
+	return 0

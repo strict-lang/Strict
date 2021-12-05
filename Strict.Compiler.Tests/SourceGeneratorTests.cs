@@ -6,7 +6,7 @@ using Type = Strict.Language.Type;
 
 namespace Strict.Compiler.Tests;
 
-public sealed class SourceGeneratorTests : TestGenerator
+public sealed class SourceGeneratorTests : TestCSharpGenerator
 {
 	[Test]
 	public void GenerateCSharpInterface()

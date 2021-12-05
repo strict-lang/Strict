@@ -5,7 +5,7 @@ using Type = Strict.Language.Type;
 
 namespace Strict.Compiler.Tests;
 
-public sealed class CSharpTypeVisitorTests : TestGenerator
+public sealed class CSharpTypeVisitorTests : TestCSharpGenerator
 {
 	[Test]
 	public void GenerateHelloWorldApp()
@@ -35,7 +35,29 @@ public sealed class CSharpTypeVisitorTests : TestGenerator
 
 	private const string Computer = "Computer";
 
-	//TODO: write more tests with many implements
+	[Test]
+	public void GenerateTypeThatImplementsMultipleTraits()
+	{
+		var program = new Type(package, "Program", parser).Parse(@"implement Input
+implement Output
+Read
+	System.WriteLine(""Read"")
+Write
+	System.WriteLine(""Write"")");
+		var visitor = new CSharpTypeVisitor(program);
+		Assert.That(visitor.Name, Is.EqualTo("Program"));
+		Assert.That(visitor.FileContent, Contains.Substring("public class Program"));
+		Assert.That(visitor.FileContent,
+			Contains.Substring(@"	public void Read()
+	{
+		Console.WriteLine(""Hello World"");
+	}"));
+		Assert.That(visitor.FileContent,
+			Contains.Substring(@"	public void Write()
+	{
+		Console.WriteLine(""Hello World"");
+	}"));
+	}
 
 	//TODO: test imports
 
