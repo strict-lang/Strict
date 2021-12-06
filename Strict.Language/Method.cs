@@ -48,8 +48,8 @@ public class Method : Context
 		var returnsIndex = rest.IndexOf(" " + Returns + " ", StringComparison.Ordinal);
 		if (returnsIndex >= 0)
 		{
-			ReturnType = Type.GetType(rest.Substring(returnsIndex + Returns.Length + 2));
-			rest = rest.Substring(0, returnsIndex);
+			ReturnType = Type.GetType(rest[(returnsIndex + Returns.Length + 2)..]);
+			rest = rest[..returnsIndex];
 		}
 		if (string.IsNullOrEmpty(rest))
 			return;
@@ -61,7 +61,6 @@ public class Method : Context
 	}
 
 	public const string Returns = "returns";
-
 	public class EmptyParametersMustBeRemoved : Exception { }
 
 	public void ParseParameters(string parametersText)

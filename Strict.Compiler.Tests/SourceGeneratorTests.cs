@@ -13,7 +13,9 @@ public sealed class SourceGeneratorTests : TestCSharpGenerator
 	{
 		var app = new Type(package, "DummyApp", parser).Parse("Run");
 		var file = generator.Generate(app);
-		Assert.That(file.ToString(), Is.EqualTo(@"public interface DummyApp
+		Assert.That(file.ToString(), Is.EqualTo(@"namespace SourceGeneratorTests;
+
+public interface DummyApp
 {
 	void Run();
 }"));
@@ -24,7 +26,9 @@ public sealed class SourceGeneratorTests : TestCSharpGenerator
 	{
 		var program = CreateHelloWorldProgramType();
 		var file = generator.Generate(program);
-		Assert.That(file.ToString(), Is.EqualTo(@"public class Program
+		Assert.That(file.ToString(), Is.EqualTo(@"namespace SourceGeneratorTests;
+
+public class Program
 {
 	public static void Main()
 	{
@@ -34,10 +38,8 @@ public sealed class SourceGeneratorTests : TestCSharpGenerator
 	}
 
 	[Test]
-	[Ignore("TODO: first finish CSharpTypeVisitorTests, finish VisitMember first, add File class (or use System.IO.File)")]
 	public void GenerateFileReadProgram()
 	{
-		//TODO: replace File = "test.txt" with: new FileStream("test.txt", FileMode.Open);
 		var program = new Type(package, nameof(GenerateFileReadProgram), parser).Parse(@"implement App
 has file = """ + TestTxt + @"""
 has log
@@ -49,7 +51,7 @@ Run
 	}
 
 	private const string ProjectFolder = nameof(GenerateFileReadProgram);
-	private const string ExpectedText = "Black friday is coming!!\r\n";
+	private const string ExpectedText = "Hello World\r\n";
 	private const string TestTxt = "test.txt";
 
 	private static string GenerateNewConsoleAppAndReturnOutput(string folder, string? generatedCode)

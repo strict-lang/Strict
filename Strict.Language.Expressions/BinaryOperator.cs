@@ -13,7 +13,6 @@ public static class BinaryOperator
 	public const char Smaller = '<';
 	public const char Greater = '>';
 	public static bool IsOperator(this char name) => All.Contains(name);
-
 	private static readonly char[] All =
 	{
 		Plus, Minus, Multiply, Divide, Modulate, Assign, Smaller, Greater

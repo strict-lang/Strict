@@ -18,16 +18,25 @@ public class TypeTests
 		Assert.Throws<Type.TypeAlreadyExistsInPackage>(() => new Type(package, "App", null!));
 
 	[Test]
-	public void EmptyLineIsNotAllowed() =>
-		Assert.That(
-			Assert.Throws<Type.ParsingFailed>(() => new Type(package, Base.Count, null!).Parse("\n")).
-				InnerException, Is.TypeOf<Type.EmptyLine>());
+	public void EmptyLineIsNotAllowed()
+	{
+		var emptyLineException = Assert.
+			Throws<Type.ParsingFailed>(() => new Type(package, Base.Count, null!).Parse("\n")).
+			InnerException as Type.EmptyLineIsNotAllowed;
+		Assert.That(emptyLineException, Is.TypeOf<Type.EmptyLineIsNotAllowed>());
+		Assert.That(emptyLineException!.Number, Is.EqualTo(0));
+		Assert.That(emptyLineException.Method, Is.EqualTo(Base.Count));
+	}
 
 	[Test]
 	public void WhitespacesAreNotAllowed()
 	{
 		Assert.That(
 			Assert.Throws<Type.ParsingFailed>(() => new Type(package, Base.Count, null!).Parse(" ")).
+				InnerException, Is.TypeOf<Type.ExtraWhitespacesFoundAtBeginningOfLine>());
+		Assert.That(
+			Assert.Throws<Type.ParsingFailed>(() => new Type(package, "Program", null!).Parse(@"Run
+ ")).
 				InnerException, Is.TypeOf<Type.ExtraWhitespacesFoundAtBeginningOfLine>());
 		Assert.That(
 			Assert.Throws<Type.ParsingFailed>(() =>
@@ -144,7 +153,7 @@ add(number)
 		Assert.That(() => new Type(package, "Program", null!).Parse(@"implement App
 Run"),
 			Throws.InstanceOf<Type.ParsingFailed>().With.InnerException.
-				InstanceOf<Type.TraitMethodMustBeImplemented>());
+				InstanceOf<Type.MethodMustBeImplementedInNonTraitType>());
 
 	[Test]
 	public void Trait()

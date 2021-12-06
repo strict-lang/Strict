@@ -59,8 +59,38 @@ Write
 	}"));
 	}
 
-	//TODO: test imports
+	[Test]
+	public void Import()
+	{
+		var interfaceType = new Type(package, Computer, parser).Parse(@"import Strict
+has number
+Run
+	System.WriteLine(number)");
+		var visitor = new CSharpTypeVisitor(interfaceType);
+		Assert.That(visitor.Name, Is.EqualTo(Computer));
+		Assert.That(visitor.FileContent, Contains.Substring("using Strict;"));
+		Assert.That(visitor.FileContent, Contains.Substring("namespace " + package.Name + ";"));
+		Assert.That(visitor.FileContent, Contains.Substring("public class " + Computer));
+		Assert.That(visitor.FileContent,
+			Contains.Substring("\tpublic void Run()" + Environment.NewLine));
+	}
 
-	//TODO: test members
-	//Assert.That(visitor.FileContent, Contains.Substring("\tprivate Log log;"));
+	[Test]
+	public void MemberInitializer()
+	{
+		var interfaceType = new Type(package, Computer, parser).Parse(@"import Strict
+has number
+has file = ""test.txt""
+Run
+	file.Write(number)");
+		var visitor = new CSharpTypeVisitor(interfaceType);
+		Assert.That(visitor.Name, Is.EqualTo(Computer));
+		Assert.That(visitor.FileContent, Contains.Substring("public class " + Computer));
+		Assert.That(visitor.FileContent, Contains.Substring("\tprivate int number;"));
+		Assert.That(visitor.FileContent,
+			Contains.Substring(
+				"\tprivate FileStream file = new FileStream(\"test.txt\", FileMode.Open);"));
+		Assert.That(visitor.FileContent,
+			Contains.Substring("\tpublic void Run()" + Environment.NewLine));
+	}
 }

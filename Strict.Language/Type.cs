@@ -41,22 +41,7 @@ public class Type : Context
 	{
 		try
 		{
-			lines = setLines;
-			for (lineNumber = 0; lineNumber < lines.Length; lineNumber++)
-				ParseLine(lines[lineNumber]);
-			if (methods.Count == 0)
-				throw new NoMethodsFound(lineNumber, Name);
-			foreach (var trait in implements)
-				if (trait.IsTrait)
-				{
-					var nonImplementedTraitMethods =
-						new List<Method>(trait.Methods.Where(m => m.Name != Method.From));
-					foreach (var method in methods)
-						nonImplementedTraitMethods.RemoveAll(t => method.Name == t.Name);
-					if (nonImplementedTraitMethods.Count > 0)
-						throw new MustImplementAllTraitMethods(nonImplementedTraitMethods);
-				}
-			return this;
+			return TryParse(setLines);
 		}
 		catch (ParsingFailedInLine line)
 		{
@@ -68,6 +53,27 @@ public class Type : Context
 				? lines[lineNumber].SplitWords().First()
 				: "") + " in " + FilePath + ":line " + lineNumber);
 		}
+	}
+
+	private Type TryParse(string[] setLines)
+	{
+		lines = setLines;
+		for (lineNumber = 0; lineNumber < lines.Length; lineNumber++)
+			ParseLine(lines[lineNumber]);
+		if (methods.Count == 0)
+			throw new NoMethodsFound(lineNumber, Name);
+		foreach (var trait in implements)
+			if (trait.IsTrait)
+				CheckIfTraitIsImplemented(trait);
+		return this;
+	}
+
+	private void CheckIfTraitIsImplemented(Type trait)
+	{
+		var nonImplementedTraitMethods = new List<Method>(trait.Methods.Where(m =>
+			m.Name != Method.From && methods.All(implementedMethod => m.Name != implementedMethod.Name)));
+		if (nonImplementedTraitMethods.Count > 0)
+			throw new MustImplementAllTraitMethods(nonImplementedTraitMethods);
 	}
 
 	private string[] lines = Array.Empty<string>();
@@ -150,7 +156,7 @@ public class Type : Context
 		if (line.Length != line.TrimEnd().Length)
 			throw new ExtraWhitespacesFoundAtEndOfLine(line, lineNumber, line);
 		if (line.Length == 0)
-			throw new EmptyLine(lineNumber, Name);
+			throw new EmptyLineIsNotAllowed(lineNumber, Name);
 		return line.SplitWords();
 	}
 
@@ -178,9 +184,9 @@ public class Type : Context
 		public string Method { get; }
 	}
 
-	public sealed class EmptyLine : ParsingFailedInLine
+	public sealed class EmptyLineIsNotAllowed : ParsingFailedInLine
 	{
-		public EmptyLine(int line, string method) : base("", line, method) { }
+		public EmptyLineIsNotAllowed(int line, string method) : base("", line, method) { }
 	}
 
 	public sealed class NoMethodsFound : ParsingFailedInLine
@@ -197,29 +203,40 @@ public class Type : Context
 
 	private string[] GetAllMethodLines(string definitionLine)
 	{
-		var isNextLineValidMethodBody =
-			lineNumber + 1 < lines.Length && lines[lineNumber + 1].StartsWith('\t');
-		if (IsTrait && isNextLineValidMethodBody)
-			throw new TypeHasNoMembersAndThusMustBeATraitWithoutMethodBodies();
-		if (!IsTrait && !isNextLineValidMethodBody)
-			throw new TraitMethodMustBeImplemented(definitionLine);
 		var methodLines = new List<string> { definitionLine };
-		while (lineNumber + 1 < lines.Length && lines[lineNumber + 1].StartsWith('\t'))
+		if (IsTrait && IsNextLineValidMethodBody())
+			throw new TypeHasNoMembersAndThusMustBeATraitWithoutMethodBodies();
+		if (!IsTrait && !IsNextLineValidMethodBody())
+			throw new MethodMustBeImplementedInNonTraitType(definitionLine);
+		while (IsNextLineValidMethodBody())
 			methodLines.Add(lines[++lineNumber]);
 		return methodLines.ToArray();
 	}
 
+	private bool IsNextLineValidMethodBody()
+	{
+		if (lineNumber + 1 >= lines.Length)
+			return false;
+		var line = lines[lineNumber + 1];
+		if (line.StartsWith('\t'))
+			return true;
+		if (line.Length != line.TrimStart().Length)
+			throw new ExtraWhitespacesFoundAtBeginningOfLine(line, lineNumber, line);
+		return false;
+	}
+
 	public class TypeHasNoMembersAndThusMustBeATraitWithoutMethodBodies : Exception { }
 
-	public class TraitMethodMustBeImplemented : Exception
+	// ReSharper disable once HollowTypeName
+	public class MethodMustBeImplementedInNonTraitType : Exception
 	{
-		public TraitMethodMustBeImplemented(string definitionLine) : base(definitionLine) { }
+		public MethodMustBeImplementedInNonTraitType(string definitionLine) : base(definitionLine) { }
 	}
 
 	public class ParsingFailed : Exception
 	{
 		public ParsingFailed(ParsingFailedInLine line, string filePath) : base(
-			"\n   at " + line.Method + " in " + filePath + ":line " + line.Number, line) { }
+			"\n   at " + line.Method + " in " + filePath + ":line " + (line.Number + 1), line) { }
 
 		public ParsingFailed(Exception inner, string fallbackWordAndLineNumber) : base(
 			"\n   at " + fallbackWordAndLineNumber, inner) { }

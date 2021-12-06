@@ -12,11 +12,11 @@ public class CSharpTypeVisitor : TypeVisitor
 		Name = type.Name;
 		isImplementingApp = type.Implements.Any(t => t.Name == Base.App);
 		isInterface = type.IsTrait;
-		//FileContent = "namespace " + type.Package.FolderPath + SemicolonAndLineBreak;
-		//foreach (var import in type.Imports)
-		//	VisitImport(import);
+		foreach (var import in type.Imports)
+			VisitImport(import);
 		foreach (var implement in type.Implements)
 			VisitImplement(implement);
+		FileContent += "namespace " + type.Package.FolderPath + SemicolonAndLineBreak + NewLine;
 		CreateClass();
 		foreach (var member in type.Members)
 			VisitMember(member);
@@ -28,15 +28,11 @@ public class CSharpTypeVisitor : TypeVisitor
 	public string Name { get; }
 	private readonly bool isImplementingApp;
 	private readonly bool isInterface;
-	public string FileContent { get; private set; } = "";
-	public void VisitImport(Package import) { }
-
-	/*
+	public string FileContent { get; private set; }
 
 	public void VisitImport(Package import) =>
 		FileContent += "using " + import.Name + SemicolonAndLineBreak;
-	
-	*/
+
 	public void VisitImplement(Type type)
 	{
 		if (isImplementingApp)
@@ -57,14 +53,16 @@ public class CSharpTypeVisitor : TypeVisitor
 
 	public void VisitMember(Member member)
 	{
-		if (member.Name != "log")
-		{
-			var accessModifier = member.IsPublic
-				? "public"
-				: "private";
-			FileContent += "\t" + accessModifier + " " + GetCSharpTypeName(member.Type) + " " + member.Name +
-				SemicolonAndLineBreak;
-		}
+		if (member.Name == "log")
+			return;
+		var accessModifier = member.IsPublic
+			? "public"
+			: "private";
+		var initializationExpression = "";
+		if (member.Value != null)
+			initializationExpression += " = " + new CSharpExpressionVisitor(member.Value).Visit();
+		FileContent += "\t" + accessModifier + " " + GetCSharpTypeName(member.Type) + " " +
+			member.Name + initializationExpression + SemicolonAndLineBreak;
 	}
 
 	private static readonly string SemicolonAndLineBreak = ";" + NewLine;
@@ -103,7 +101,8 @@ public class CSharpTypeVisitor : TypeVisitor
 		{
 			Base.None => "void",
 			Base.Number => "int",
-			_ => type.Name
+			"File" => "FileStream",
+			_ => type.Name //ncrunch: no coverage
 		};
 
 	public void ParsingDone() => FileContent += "}";

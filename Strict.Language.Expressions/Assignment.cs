@@ -28,7 +28,7 @@ public class Assignment : Expression
 
 	private static Expression TryParseLet(Method context, string input)
 	{
-		string[] parts = input.Split(new[] { "let ", " = " }, StringSplitOptions.RemoveEmptyEntries);
+		var parts = input.Split(new[] { "let ", " = " }, StringSplitOptions.RemoveEmptyEntries);
 		if (parts.Length != 2)
 			throw new IncompleteLet(input);
 		var value = MethodExpressionParser.TryParse(context, parts[1]) ??

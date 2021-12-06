@@ -13,8 +13,7 @@ public static class StringExtensions
 	public static string[] SplitWordsAndPunctuation(this string text) =>
 		text.Split(new[] { ' ', '(', ')', ',' }, StringSplitOptions.RemoveEmptyEntries);
 
-	public static string ToWordListString<T>(this IReadOnlyCollection<T> list) =>
-		string.Join(", ", list);
+	public static string ToWordListString<T>(this IEnumerable<T> list) => string.Join(", ", list);
 
 	public static string ToBracketsString<T>(this IReadOnlyCollection<T> list) =>
 		list.Count > 0
@@ -33,5 +32,5 @@ public static class StringExtensions
 	}
 
 	public static string MakeFirstLetterUppercase(this string name) =>
-		name.Substring(0, 1).ToUpperInvariant() + name.Substring(1);
+		name[..1].ToUpperInvariant() + name[1..];
 }
