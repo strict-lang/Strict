@@ -12,11 +12,7 @@ public class CSharpTypeVisitor : TypeVisitor
 		Name = type.Name;
 		isImplementingApp = type.Implements.Any(t => t.Name == Base.App);
 		isInterface = type.IsTrait;
-		foreach (var import in type.Imports)
-			VisitImport(import);
-		foreach (var implement in type.Implements)
-			VisitImplement(implement);
-		FileContent += "namespace " + type.Package.FolderPath + SemicolonAndLineBreak + NewLine;
+		CreateHeader(type);
 		CreateClass();
 		foreach (var member in type.Members)
 			VisitMember(member);
@@ -28,10 +24,20 @@ public class CSharpTypeVisitor : TypeVisitor
 	public string Name { get; }
 	private readonly bool isImplementingApp;
 	private readonly bool isInterface;
-	public string FileContent { get; private set; }
+
+	private void CreateHeader(Type type)
+	{
+		foreach (var import in type.Imports)
+			VisitImport(import);
+		foreach (var implement in type.Implements)
+			VisitImplement(implement);
+		FileContent += "namespace " + type.Package.FolderPath + SemicolonAndLineBreak + NewLine;
+	}
 
 	public void VisitImport(Package import) =>
 		FileContent += "using " + import.Name + SemicolonAndLineBreak;
+
+	public string FileContent { get; private set; } = "";
 
 	public void VisitImplement(Type type)
 	{

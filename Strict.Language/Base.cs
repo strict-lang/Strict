@@ -3,7 +3,7 @@
 /// <summary>
 /// Simple helper to give us all the names of common base types often used like Number and Boolean
 /// </summary>
-public class Base
+public static class Base
 {
 	/// <summary>
 	/// Has no implementation and is used for void, empty or none, which is not valid to assign.

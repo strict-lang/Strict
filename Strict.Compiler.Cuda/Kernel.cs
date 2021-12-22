@@ -1,11 +1,12 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using ManagedCuda;
 using ManagedCuda.CudaBlas;
 using ManagedCuda.NVRTC;
 
 namespace Strict.Compiler.Cuda;
 
-public class Kernel
+public class Kernel : IDisposable
 {
 	public Kernel() => Context = new CudaContext(0);
 	public CudaContext Context { get; init; }
