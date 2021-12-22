@@ -11,7 +11,7 @@ namespace Strict.Compiler.Cuda.Tests;
 /// ParallelCpu() * 10000000: 272ms
 /// ParallelCpuChunks() * 10000000: 107ms
 /// </summary>
-[Category("Slow")]
+[Category("Manual")]
 public class SigmoidPerformanceTests
 {
 	[Test]

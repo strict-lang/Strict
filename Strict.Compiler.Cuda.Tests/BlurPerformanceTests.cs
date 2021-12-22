@@ -26,7 +26,7 @@ namespace Strict.Compiler.Cuda.Tests;
 /// CudaGpuAndCpu() * 209715200: 29ms
 /// Strict should be faster than all of these
 /// </summary>
-[Category("Slow")]
+[Category("Manual")]
 public class BlurPerformanceTests
 {
 	//ncrunch: no coverage start

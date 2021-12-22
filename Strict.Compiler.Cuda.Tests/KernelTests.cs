@@ -2,7 +2,7 @@ using NUnit.Framework;
 
 namespace Strict.Compiler.Cuda.Tests;
 
-[Category("Slow")]
+[Category("Manual")]
 public class KernelTests
 {
 	[Test]
