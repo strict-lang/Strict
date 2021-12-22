@@ -67,7 +67,7 @@ public class Package : Context
 		parentPackage?.children.Add(this);
 	}
 
-	public string FolderPath { get; set; }
+	public string FolderPath { get; }
 	private readonly List<Package> children = new();
 	internal void Add(Type type) => types.Add(type);
 	private readonly List<Type> types = new();

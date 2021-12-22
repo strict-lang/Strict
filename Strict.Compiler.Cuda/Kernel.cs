@@ -9,7 +9,7 @@ namespace Strict.Compiler.Cuda;
 public class Kernel : IDisposable
 {
 	public Kernel() => Context = new CudaContext(0);
-	public CudaContext Context { get; init; }
+	public CudaContext Context { get; }
 	public CudaBlas Handle => handle ??= new();
 	private CudaBlas? handle;
 
