@@ -82,7 +82,7 @@ public class Package : Context
 		if (!fullName.StartsWith(ToString() + ".", StringComparison.Ordinal))
 			return (Parent as Package)?.FindFullType(fullName);
 		var subName = fullName.Replace(ToString() + ".", "");
-		return subName.Contains(".")
+		return subName.Contains('.')
 			? FindSubPackage(subName.Split('.')[0])?.FindFullType(fullName)
 			: FindDirectType(subName);
 	}

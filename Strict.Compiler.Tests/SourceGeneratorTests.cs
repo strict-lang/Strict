@@ -37,7 +37,9 @@ public class Program
 }"));
 	}
 
+	//ncrunch: no coverage start
 	[Test]
+	[Category("Slow")]
 	public void GenerateFileReadProgram()
 	{
 		var program = new Type(package, nameof(GenerateFileReadProgram), parser).Parse(@"implement App
@@ -57,18 +59,21 @@ Run
 	private static string GenerateNewConsoleAppAndReturnOutput(string folder, string? generatedCode)
 	{
 		if (!Directory.Exists(folder))
-		{ //ncrunch: no coverage start, only done once per folder
-			var creationOutput =
-				RunDotnetAndReturnOutput("", "new console --force --name " + folder, out var creationError);
-			if (!creationOutput.Contains("successful"))
-				throw new CompilationFailed(creationError, creationOutput);
-			File.WriteAllText(Path.Combine(folder, TestTxt), ExpectedText);
-		} //ncrunch: no coverage end
+			CreateFolderOnlyOnce(folder);
 		File.WriteAllText(Path.Combine(folder, "Program.cs"), generatedCode);
 		var actualText = RunDotnetAndReturnOutput(folder, "run", out var error);
 		if (error.Length > 0)
 			throw new CompilationFailed(error, actualText);
 		return actualText;
+	}
+
+	private static void CreateFolderOnlyOnce(string folder)
+	{
+		var creationOutput =
+			RunDotnetAndReturnOutput("", "new console --force --name " + folder, out var creationError);
+		if (!creationOutput.Contains("successful"))
+			throw new CompilationFailed(creationError, creationOutput);
+		File.WriteAllText(Path.Combine(folder, TestTxt), ExpectedText);
 	}
 
 	private static string RunDotnetAndReturnOutput(string folder, string argument, out string error)
@@ -97,6 +102,7 @@ Run
 	}
 
 	[Test]
+	[Category("Slow")]
 	public void InvalidConsoleAppWillGiveUsCompilationError() =>
 		Assert.That(
 			() => GenerateNewConsoleAppAndReturnOutput(

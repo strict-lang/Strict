@@ -28,12 +28,17 @@ public abstract class Context
 	public Context Parent { get; }
 	public string Name { get; }
 
+	/// <summary>
+	/// Could be optimized in the future for contexts that are used a lot (10+ calls) and have at
+	/// least 5+ types in its package. A dictionary could cache the same name calls (e.g. Number,
+	/// Text, etc. or even Base.Log always return the same type).
+	/// </summary>
 	public Type GetType(string name)
 	{
 		// Generics still need to be supported (see Log.strict for Output<text>)
 		if (name.StartsWith("Iterator<", StringComparison.Ordinal))
 			name = name.Split('<', '>')[1];
-		if (name.Contains("<"))
+		if (name.Contains('<'))
 			name = name.Split('<')[0];
 		// Arrays are also not supported yet, simply return base type, however only if we do not find a name ending with s already and do proper array fun
 		if (name.EndsWith('s'))
@@ -48,7 +53,7 @@ public abstract class Context
 	}
 
 	private Type? FindFullType(string name) =>
-		name.Contains(".")
+		name.Contains('.')
 			? name == ToString()
 				? this as Type
 				: GetPackage().FindFullType(name)

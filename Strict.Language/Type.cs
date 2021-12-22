@@ -254,7 +254,7 @@ public class Type : Context
 	public override string ToString() => base.ToString() + Implements.ToBracketsString();
 
 	public override Type? FindType(string name, Context? searchingFrom = null) =>
-		name == Name || name.Contains(".") && name == base.ToString()
+		name == Name || name.Contains('.') && name == base.ToString()
 			? this
 			: Package.FindType(name, searchingFrom ?? this);
 
