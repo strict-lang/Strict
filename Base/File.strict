@@ -1,2 +1,4 @@
 from(Text)
 Read returns Text
+Write(text)
+Delete

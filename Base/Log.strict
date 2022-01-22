@@ -1,3 +1,5 @@
 implement Output<Text>
 Write(text)
 	System.WriteLine(text)
+Write(number)
+	System.WriteLine(number)

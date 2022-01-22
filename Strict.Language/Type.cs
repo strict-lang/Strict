@@ -51,7 +51,7 @@ public class Type : Context
 		{
 			throw new ParsingFailed(ex, (lineNumber < lines.Length
 				? lines[lineNumber].SplitWords().First()
-				: "") + " in " + FilePath + ":line " + lineNumber);
+				: "") + " in " + FilePath + ":line " + (lineNumber + 1));
 		}
 	}
 

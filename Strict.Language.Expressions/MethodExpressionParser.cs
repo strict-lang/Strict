@@ -10,7 +10,7 @@ namespace Strict.Language.Expressions;
 /// </summary>
 public class MethodExpressionParser : ExpressionParser
 {
-	// change to MethodBody
+	//TODO: change to MethodBody
 	public override Expression Parse(Method context, string lines)
 	{
 		var mainLines = GetMainLines(lines);
@@ -25,20 +25,21 @@ public class MethodExpressionParser : ExpressionParser
 	{
 		var mainLines = new List<string>();
 		var currentLine = new StringBuilder(40);
-		for (var i = 0; i < lines.Length; i++)
-			if (lines[i] == '\n' && i + 1 < lines.Length && lines[i + 1] != '\t')
+		for (var index = 0; index < lines.Length; index++)
+			if (lines[index] == '\n' && NextLineIsNotExtraIndented(index, lines))
 			{
 				mainLines.Add(currentLine.ToString());
 				currentLine.Clear();
 			}
-			else if (lines[i] != '\r')
-			{
-				currentLine.Append(lines[i]);
-			}
+			else if (lines[index] != '\r' && (index < lines.Length - 1 || lines[index] != '\n'))
+				currentLine.Append(lines[index]);
 		if (currentLine.Length > 0)
 			mainLines.Add(currentLine.ToString());
 		return mainLines;
 	}
+
+	private static bool NextLineIsNotExtraIndented(int index, string lines) =>
+		index + 1 < lines.Length && lines[index + 1] != '\t';
 
 	public static Expression? TryParse(Method context, string input)
 	{
@@ -47,7 +48,7 @@ public class MethodExpressionParser : ExpressionParser
 		return Assignment.TryParse(context, input) ?? Number.TryParse(context, input) ??
 			Boolean.TryParse(context, input) ?? Text.TryParse(context, input) ??
 			Binary.TryParse(context, input) ??
-			MethodCall.TryParse(context, input); // still need member call!
+			MethodCall.TryParse(context, input); //TODO: still need member call!
 	}
 
 	public class UnknownExpression : Exception

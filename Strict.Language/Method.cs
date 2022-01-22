@@ -32,6 +32,8 @@ public class Method : Context
 
 	/// <summary>
 	/// Skip the first method declaration line and remove the first tab from each line.
+	/// Warning: This adds an extra newline at the last expression, which will
+	/// be cut off in the MethodExpressionParser.GetMainLines again, see test.
 	/// </summary>
 	private static string GetMethodBodyLines(IReadOnlyList<string> lines)
 	{

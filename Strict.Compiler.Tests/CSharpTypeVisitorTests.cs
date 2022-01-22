@@ -35,6 +35,7 @@ public sealed class CSharpTypeVisitorTests : TestCSharpGenerator
 
 	private const string Computer = "Computer";
 
+	//TODO: should be fixed next, probably no need for System, just call Console.Write and .WriteLine directly in the visitor!
 	[Test]
 	public void GenerateTypeThatImplementsMultipleTraits()
 	{
@@ -64,8 +65,9 @@ Write
 	{
 		var interfaceType = new Type(package, Computer, parser).Parse(@"import Strict
 has number
+has log
 Run
-	System.WriteLine(number)");
+	log.Write(number)");
 		var visitor = new CSharpTypeVisitor(interfaceType);
 		Assert.That(visitor.Name, Is.EqualTo(Computer));
 		Assert.That(visitor.FileContent, Contains.Substring("using Strict;"));
@@ -89,7 +91,7 @@ Run
 		Assert.That(visitor.FileContent, Contains.Substring("\tprivate int number;"));
 		Assert.That(visitor.FileContent,
 			Contains.Substring(
-				"\tprivate FileStream file = new FileStream(\"test.txt\", FileMode.Open);"));
+				"\tprivate FileStream file = new FileStream(\"test.txt\", FileMode.OpenOrCreate);"));
 		Assert.That(visitor.FileContent,
 			Contains.Substring("\tpublic void Run()" + Environment.NewLine));
 	}

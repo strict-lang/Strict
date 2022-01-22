@@ -34,4 +34,15 @@ return false");
 		Assert.That(lines[1], Is.EqualTo("if number is 5\n\treturn true"));
 		Assert.That(lines[2], Is.EqualTo("return false"));
 	}
+
+	[Test]
+	public void LastExpressionShouldNotHaveNewLine()
+	{
+		var lines = MethodExpressionParser.GetMainLines(@"file.Write(""Hello"")
+log.Write(file.Read())
+file.Delete()
+");
+		Assert.That(lines, Has.Count.EqualTo(3));
+		Assert.That(lines[2], Is.EqualTo("file.Delete()"));
+	}
 }
