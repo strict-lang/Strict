@@ -35,16 +35,16 @@ public sealed class CSharpTypeVisitorTests : TestCSharpGenerator
 
 	private const string Computer = "Computer";
 
-	//TODO: should be fixed next, probably no need for System, just call Console.Write and .WriteLine directly in the visitor!
 	[Test]
 	public void GenerateTypeThatImplementsMultipleTraits()
 	{
 		var program = new Type(package, "Program", parser).Parse(@"implement Input
 implement Output
+has system
 Read
-	System.WriteLine(""Read"")
+	system.WriteLine(""Read"")
 Write
-	System.WriteLine(""Write"")");
+	system.WriteLine(""Write"")");
 		var visitor = new CSharpTypeVisitor(program);
 		Assert.That(visitor.Name, Is.EqualTo("Program"));
 		Assert.That(visitor.FileContent, Contains.Substring("public class Program"));

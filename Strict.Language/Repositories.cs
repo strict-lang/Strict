@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
@@ -92,20 +93,13 @@ public class Repositories
 		if (Directory.Exists(targetPath))
 			new DirectoryInfo(targetPath).Delete(true);
 		Directory.Move(masterDirectory, targetPath);
-	}
-	//ncrunch: no coverage end
+	} //ncrunch: no coverage end
 
-	public async Task<Package> LoadFromPath(string packagePath)
-	{
-		if (AlreadyLoadedPackages.TryGetValue(packagePath, out var loadedPackage))
-			return loadedPackage; //ncrunch: no coverage
-		var newPackage = await CreatePackageFromFiles(packagePath,
-			Directory.GetFiles(packagePath, "*" + Type.Extension));
-		AlreadyLoadedPackages.Add(packagePath, newPackage);
-		return newPackage;
-	}
+	public Task<Package> LoadFromPath(string packagePath) =>
+		AlreadyLoadedPackages.GetOrAddAsync(packagePath,
+			path => CreatePackageFromFiles(path, Directory.GetFiles(path, "*" + Type.Extension)));
 
-	private static readonly Dictionary<string, Package> AlreadyLoadedPackages = new();
+	private static readonly ConcurrentDictionary<string, Task<Package>> AlreadyLoadedPackages = new();
 
 	/// <summary>
 	/// Initially we need to create just empty types and then after they all have been created

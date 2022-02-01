@@ -32,13 +32,23 @@ public class MethodCall : Expression
 	{
 		var methodName = parts[0];
 		if (!methodName.Contains('.'))
-			return GetMethodCall(new MemberCall(context.GetMember(methodName)), context.Type,
-				methodName, GetArguments(context, parts, methodName));
+			return TryParseMemberCallMethod(context, parts, methodName);
 		var memberParts = methodName.Split('.', 2);
 		methodName = memberParts[1];
-		var firstMember = context.GetMember(memberParts[0]);
-		return GetMethodCall(new MemberCall(firstMember), firstMember.Type, methodName,
+		var firstMember = MemberCall.TryParse(context, memberParts[0]);
+		if (firstMember == null)
+			throw new MemberCall.MemberNotFound(memberParts[0], context.Type);
+		return GetMethodCall(firstMember, firstMember.ReturnType, methodName,
 			GetArguments(context, parts, methodName));
+	}
+
+	private static Expression? TryParseMemberCallMethod(Method context, string[] parts,
+		string methodName)
+	{
+		var member = MemberCall.TryParse(context, methodName);
+		return member == null
+			? null
+			: GetMethodCall(member, context.Type, methodName, GetArguments(context, parts, methodName));
 	}
 
 	private static Expression? GetMethodCall(Expression instance, Type context, string methodName,
@@ -56,7 +66,7 @@ public class MethodCall : Expression
 		for (var i = 0; i < parts.Length - 1; i++)
 			arguments[i] = MethodExpressionParser.TryParse(context, parts[i + 1]) ??
 				throw new MethodExpressionParser.UnknownExpression(context,
-					parts[i] + " for " + methodName);
+					parts[i + 1] + " for " + methodName);
 		return arguments;
 	}
 }

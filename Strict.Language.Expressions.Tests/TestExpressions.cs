@@ -15,7 +15,7 @@ public abstract class TestExpressions : MethodExpressionParser
 		method = new Method(type, this, new[] { "Run" });
 		((List<Method>)type.Methods).Add(method);
 		number = new Number(method, 5);
-		var bla = new Member("bla", number);
+		bla = new Member("bla", number);
 		((List<Member>)type.Members).Add(bla);
 	}
 
@@ -23,6 +23,7 @@ public abstract class TestExpressions : MethodExpressionParser
 	protected readonly Member member;
 	protected readonly Method method;
 	protected readonly Number number;
+	protected readonly Member bla;
 
 	public void ParseAndCheckOutputMatchesInput(string code, Expression expectedExpression)
 	{
@@ -33,7 +34,7 @@ public abstract class TestExpressions : MethodExpressionParser
 
 	public Expression ParseExpression(Method context, string lines)
 	{
-		var body = (MethodBody)base.Parse(context, lines);
+		var body = base.Parse(context, lines);
 		return body.Expressions.Count == 1
 			? body.Expressions[0]
 			: throw new MultipleExpressionsGiven();

@@ -34,10 +34,9 @@ public class TypeTests
 		Assert.That(
 			Assert.Throws<Type.ParsingFailed>(() => new Type(package, Base.Count, null!).Parse(" ")).
 				InnerException, Is.TypeOf<Type.ExtraWhitespacesFoundAtBeginningOfLine>());
-		Assert.That(
-			Assert.Throws<Type.ParsingFailed>(() => new Type(package, "Program", null!).Parse(@"Run
- ")).
-				InnerException, Is.TypeOf<Type.ExtraWhitespacesFoundAtBeginningOfLine>());
+		Assert.That(Assert.Throws<Type.ParsingFailed>(() => new Type(package, "Program", null!).Parse(
+			@"Run
+ ")).InnerException, Is.TypeOf<Type.ExtraWhitespacesFoundAtBeginningOfLine>());
 		Assert.That(
 			Assert.Throws<Type.ParsingFailed>(() =>
 				new Type(package, Base.HashCode, null!).Parse("has\t")).InnerException,
@@ -46,8 +45,8 @@ public class TypeTests
 
 	[Test]
 	public void TypeParsersMustStartWithImplementOrHas() =>
-		Assert.That(Assert.Throws<Type.ParsingFailed>(() => new Type(package, Base.Count, null!).Parse(
-				@"Run
+		Assert.That(Assert.Throws<Type.ParsingFailed>(() =>
+				new Type(package, Base.Count, null!).Parse(@"Run
 	log.WriteLine")).InnerException,
 			Is.TypeOf<Type.TypeHasNoMembersAndThusMustBeATraitWithoutMethodBodies>());
 

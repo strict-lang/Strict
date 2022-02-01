@@ -269,8 +269,16 @@ public class Type : Context
 		if (!string.IsNullOrEmpty(Package.Parent.Name) &&
 			(paths.Length < 2 || Package.Parent.Name != paths[^2]))
 			throw new FilePathMustMatchPackageName(Package.Parent.Name, directory);
+		if (directory.EndsWith(@"\strict-lang\Strict", StringComparison.Ordinal))
+			throw new StrictFolderIsNotAllowedForRootUseBaseSubFolder(filePath); //ncrunch: no coverage
 		Parse(await File.ReadAllLinesAsync(filePath));
 	}
+
+	//ncrunch: no coverage start, tests too flacky when creating and deleting wrong file
+	public class StrictFolderIsNotAllowedForRootUseBaseSubFolder : Exception
+	{
+		public StrictFolderIsNotAllowedForRootUseBaseSubFolder(string filePath) : base(filePath) { }
+	} //ncrunch: no coverage end
 
 	public const string Extension = ".strict";
 	public class FileExtensionMustBeStrict : Exception { }

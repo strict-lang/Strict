@@ -11,12 +11,18 @@ public class BinaryTests : TestExpressions
 			new Binary(number, number.ReturnType.Methods.First(m => m.Name == "+"), number));
 
 	[Test]
+	public void Add5ToNumber() =>
+		ParseAndCheckOutputMatchesInput("bla + 5",
+			new Binary(new MemberCall(bla), number.ReturnType.Methods.First(m => m.Name == "+"),
+				number));
+
+	[Test]
 	public void MissingLeftExpression() =>
-		Assert.That(() => ParseExpression(method, "bla + 5"),
-			Throws.Exception.InstanceOf<UnknownExpression>());
+		Assert.That(() => ParseExpression(method, "unknown + 5"),
+			Throws.Exception.InstanceOf<MemberCall.MemberNotFound>());
 
 	[Test]
 	public void MissingRightExpression() =>
-		Assert.That(() => ParseExpression(method, "5 + bla"),
-			Throws.Exception.InstanceOf<UnknownExpression>());
+		Assert.That(() => ParseExpression(method, "5 + unknown"),
+			Throws.Exception.InstanceOf<MemberCall.MemberNotFound>());
 }

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 
 namespace Strict.Language;
@@ -89,12 +88,4 @@ public class Method : Context
 		name == Base.Other
 			? Type
 			: Type.FindType(name, searchingFrom ?? this);
-
-	public Member GetMember(string name) =>
-		Type.Members.FirstOrDefault(m => m.Name == name) ?? throw new MemberNotFound(name, Type);
-
-	public class MemberNotFound : Exception
-	{
-		public MemberNotFound(string memberName, Type type) : base(memberName + " in " + type) { }
-	}
 }

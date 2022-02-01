@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Strict.Compiler\Strict.Compiler.csproj" />
+    <ProjectReference Include="..\Strict.Language.Expressions\Strict.Language.Expressions.csproj" />
     <ProjectReference Include="..\Strict.Language\Strict.Language.csproj" />
   </ItemGroup>
 

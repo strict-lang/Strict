@@ -68,5 +68,5 @@ public class AssignmentTests : TestExpressions
 	[Test]
 	public void LetWithoutExpressionCannotParse() =>
 		Assert.That(() => ParseExpression(method, "let value = abc"),
-			Throws.Exception.InstanceOf<Method.MemberNotFound>());
+			Throws.Exception.InstanceOf<MemberCall.MemberNotFound>().With.Message.Contain("abc"));
 }
