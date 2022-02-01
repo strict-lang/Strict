@@ -1,5 +1,6 @@
 ﻿using System;
 using Strict.Language;
+using Strict.Language.Expressions;
 
 namespace Strict.Compiler.Roslyn;
 
@@ -28,4 +29,10 @@ File.Delete(""temp.txt"");
 "
 				: new string('\t', tabIndentation) + "Console.WriteLine(\"Hello World\");" +
 				Environment.NewLine;
+
+	//TODO: write tests for each of them
+	//ncrunch: no coverage start
+	public string Visit(MemberCall member) => null!;
+	public string Visit(MethodCall call) => null!;
+	public string Visit(Text text) => null!;
 }
