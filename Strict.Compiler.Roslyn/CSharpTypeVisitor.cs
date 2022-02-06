@@ -66,7 +66,7 @@ public class CSharpTypeVisitor : TypeVisitor
 			: "private";
 		var initializationExpression = "";
 		if (member.Value != null)
-			initializationExpression += " = " + new CSharpExpressionVisitor(member.Value).Visit();
+			initializationExpression += " = " + new CSharpExpressionVisitor().Visit(member.Value);
 		FileContent += "\t" + accessModifier + " " + GetCSharpTypeName(member.Type) + " " +
 			member.Name + initializationExpression + SemicolonAndLineBreak;
 	}
@@ -96,7 +96,7 @@ public class CSharpTypeVisitor : TypeVisitor
 	}
 
 	private static string WriteMethodBody(Method method) =>
-		$"{NewLine}\t{{{NewLine}" + new CSharpExpressionVisitor(method).Visit() + "\t}" + NewLine;
+		$"{NewLine}\t{{{NewLine}" + new CSharpExpressionVisitor().Visit(method.Body) + "\t}" + NewLine;
 
 	private static string WriteParameters(Method method) =>
 		string.Join(", ",

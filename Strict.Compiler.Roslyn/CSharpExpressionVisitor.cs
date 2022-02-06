@@ -1,19 +1,10 @@
-﻿using System;
-using Strict.Language;
+﻿using Strict.Language;
 using Strict.Language.Expressions;
+using Boolean = Strict.Language.Expressions.Boolean;
 
 namespace Strict.Compiler.Roslyn;
 
-public class CSharpExpressionVisitor : ExpressionVisitor
-{
-	// ReSharper disable once UnusedParameter.Local
-	public CSharpExpressionVisitor(Method method) =>
-		expression = new MethodBody(method, method.Body.Expressions);
-
-	public CSharpExpressionVisitor(Expression expression) => this.expression = expression;
-	private readonly Expression expression;
-
-	public string Visit(int tabIndentation = 2) =>
+	/*old
 		expression.ReturnType.Name == "File"
 			? "new FileStream(" + ((MethodBody)expression).Expressions[0] + ", FileMode.OpenOrCreate)"
 			: expression is MethodBody body && body.Expressions.Count == 3
@@ -29,10 +20,21 @@ File.Delete(""temp.txt"");
 "
 				: new string('\t', tabIndentation) + "Console.WriteLine(\"Hello World\");" +
 				Environment.NewLine;
+	*/
+public class CSharpExpressionVisitor : ExpressionVisitor
+{
+	protected override string Visit(MethodBody methodBody) => null!;
 
-	//TODO: write tests for each of them
-	//ncrunch: no coverage start
-	public string Visit(MemberCall member) => null!;
-	public string Visit(MethodCall call) => null!;
-	public string Visit(Text text) => null!;
+	protected override string Visit(Assignment assignment) =>
+		"var " + assignment.Name + " = " + assignment.Value + ";";
+
+	protected override string Visit(Binary binary) =>
+		binary.Left + " " + binary.Method.Name + " " + binary.Right;
+
+	protected override string Visit(Boolean boolean) => null!;
+	protected override string Visit(MemberCall memberCall) => null!;
+	protected override string Visit(MethodCall methodCall) => null!;
+	protected override string Visit(Number number) => null!;
+	protected override string Visit(Text text) => null!;
+	protected override string Visit(Value value) => null!;
 }
