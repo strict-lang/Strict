@@ -26,13 +26,13 @@ public class Assignment : Expression
 			? TryParseLet(context, input)
 			: null;
 
-	private static Expression TryParseLet(Method context, string input)
+	private static Expression TryParseLet(Method method, string input)
 	{
 		var parts = input.Split(new[] { "let ", " = " }, StringSplitOptions.RemoveEmptyEntries);
 		if (parts.Length != 2)
 			throw new IncompleteLet(input);
-		var value = MethodExpressionParser.TryParse(context, parts[1]) ??
-			throw new MethodExpressionParser.UnknownExpression(context, input);
+		var value = method.TryParse(parts[1]) ??
+			throw new MethodExpressionParser.UnknownExpression(method, input);
 		return new Assignment(new Identifier(parts[0], value.ReturnType), value);
 	}
 

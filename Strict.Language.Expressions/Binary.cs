@@ -19,13 +19,13 @@ public class Binary : MethodCall
 			: null;
 	}
 
-	private static Expression TryParseBinary(Method context, string[] parts)
+	private static Expression TryParseBinary(Method method, string[] parts)
 	{
-		var left = MethodExpressionParser.TryParse(context, parts[0]) ??
-			throw new MethodExpressionParser.UnknownExpression(context, parts[0]);
+		var left = method.TryParse(parts[0]) ??
+			throw new MethodExpressionParser.UnknownExpression(method, parts[0]);
 		var binaryOperator = parts[1];
-		var right = MethodExpressionParser.TryParse(context, parts[2]) ??
-			throw new MethodExpressionParser.UnknownExpression(context, parts[2]);
+		var right = method.TryParse(parts[2]) ??
+			throw new MethodExpressionParser.UnknownExpression(method, parts[2]);
 		return new Binary(left, left.ReturnType.Methods.First(m => m.Name == binaryOperator), right);
 	}
 }

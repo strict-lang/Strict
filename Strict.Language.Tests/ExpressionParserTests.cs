@@ -34,10 +34,10 @@ Run
 	//		Assert.Throws<MethodBody.UnprocessedTokensAtEndOfFile>(() =>
 	//				new MethodBody(type.Methods[0], this, new[] { "Dummy", "\tdummy" }));
 
-	public override Expression Parse(Method context, string lines)
+	public override Expression Parse(Method method)
 	{
 		parseWasCalled = true;
-		return new MethodBody(context,
+		return new MethodBody(method,
 			new Expression[] { new TestExpression(type.Methods[0].ReturnType) });
 	}
 
@@ -47,6 +47,10 @@ Run
 	{
 		public TestExpression(Type returnType) : base(returnType) { }
 	}
+
+	public override Expression Parse(Type typeForConstructor, string initializationLine) => null!;
+	public override Expression? TryParse(Method method, ref int lineNumber) => null;
+	public override Expression? TryParse(Method method, string line, ref int lineNumber) => null;
 
 	[Test]
 	public void CompareExpressions()

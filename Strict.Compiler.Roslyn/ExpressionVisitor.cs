@@ -1,7 +1,5 @@
-﻿using System;
-using Strict.Language;
+﻿using Strict.Language;
 using Strict.Language.Expressions;
-using Boolean = Strict.Language.Expressions.Boolean;
 
 namespace Strict.Compiler.Roslyn;
 
@@ -15,19 +13,13 @@ public abstract class ExpressionVisitor
 		{
 			MethodBody methodBody => Visit(methodBody),
 			Assignment assignment => Visit(assignment),
-			Binary binary => Visit(binary),
-			Boolean boolean => Visit(boolean),
-			MemberCall memberCall => Visit(memberCall),
-			MethodCall methodCall => Visit(methodCall),
-			Number number => Visit(number),
-			Text text => Visit(text),
-			Value value => Visit(value),
-			_ => throw new ExpressionNotSupported(expression)
+			_ => VisitWhenExpressionIsSameInCSharp(expression)
 		};
 
 	protected abstract string Visit(MethodBody methodBody);
 	protected abstract string Visit(Assignment assignment);
-	protected abstract string Visit(Binary binary);
+	protected abstract string VisitWhenExpressionIsSameInCSharp(Expression expression);
+	/*
 	protected abstract string Visit(Boolean boolean);
 	protected abstract string Visit(MemberCall memberCall);
 	protected abstract string Visit(MethodCall methodCall);
@@ -40,4 +32,5 @@ public abstract class ExpressionVisitor
 		public ExpressionNotSupported(Expression expression) : base(expression.GetType().Name + ": " +
 			expression) { }
 	}
+	*/
 }

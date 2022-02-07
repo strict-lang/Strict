@@ -14,7 +14,7 @@ public abstract class Context
 	{
 		// ReSharper disable once ConditionIsAlwaysTrueOrFalse
 		if (parent != null && (string.IsNullOrWhiteSpace(name) ||
-			!(this is Method) && !name.IsWord()))
+			this is not Method && !name.IsWord()))
 			throw new NameMustBeAWordWithoutAnySpecialCharactersOrNumbers(name);
 		Parent = parent!;
 		Name = name;

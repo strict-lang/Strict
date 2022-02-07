@@ -42,7 +42,7 @@ public class MethodCall : Expression
 			GetArguments(context, parts, methodName));
 	}
 
-	private static Expression? TryParseMemberCallMethod(Method context, string[] parts,
+	private static Expression? TryParseMemberCallMethod(Method context, IReadOnlyList<string> parts,
 		string methodName)
 	{
 		var member = MemberCall.TryParse(context, methodName);
@@ -60,12 +60,13 @@ public class MethodCall : Expression
 			: new MethodCall(instance, method, arguments);
 	}
 
-	private static Expression[] GetArguments(Method context, string[] parts, string methodName)
+	private static Expression[] GetArguments(Method method, IReadOnlyList<string> parts,
+		string methodName)
 	{
-		var arguments = new Expression[parts.Length - 1];
-		for (var i = 0; i < parts.Length - 1; i++)
-			arguments[i] = MethodExpressionParser.TryParse(context, parts[i + 1]) ??
-				throw new MethodExpressionParser.UnknownExpression(context,
+		var arguments = new Expression[parts.Count - 1];
+		for (var i = 0; i < parts.Count - 1; i++)
+			arguments[i] = method.TryParse(parts[i + 1]) ??
+				throw new MethodExpressionParser.UnknownExpression(method,
 					parts[i + 1] + " for " + methodName);
 		return arguments;
 	}

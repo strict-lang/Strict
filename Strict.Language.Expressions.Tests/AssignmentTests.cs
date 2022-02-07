@@ -44,7 +44,7 @@ public class AssignmentTests : TestExpressions
 	{
 		const string Input = "let sum = 5 + ";
 		Assert.That(() => ParseExpression(method, Input),
-			Throws.Exception.InstanceOf<IncompleteExpression>());
+			Throws.Exception.InstanceOf<EmptyExpression>());
 	}
 
 	[Test]

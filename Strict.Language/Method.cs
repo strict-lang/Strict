@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
 
 namespace Strict.Language;
 
@@ -13,36 +12,33 @@ public class Method : Context
 	public Method(Type type, ExpressionParser parser, IReadOnlyList<string> lines) : base(type,
 		GetName(lines[0]))
 	{
+		this.parser = parser;
 		ReturnType = Name == From
 			? type
 			: type.GetType(Base.None);
 		ParseDefinition(lines[0][Name.Length..]);
-		body = new Lazy<MethodBody>(() => (MethodBody)parser.Parse(this, GetMethodBodyLines(lines)));
+		bodyLines = GetLines(lines);
+		body = new Lazy<MethodBody>(() => (MethodBody)parser.Parse(this));
 	}
+
+	private readonly ExpressionParser parser;
+
+	public Expression? TryParse(string input)
+	{
+		var lineNumber = 1;
+		return parser.TryParse(this, input, ref lineNumber);
+	}
+
+	public Expression? TryParse(string input, ref int lineNumber) =>
+		parser.TryParse(this, input, ref lineNumber);
 
 	/// <summary>
 	/// Simple lexer to just parse the method definition and get all used names and types.
 	/// Method code itself is parsed in are more complex (BNF), complete and slow way.
 	/// </summary>
 	private static string GetName(string firstLine) => firstLine.SplitWordsAndPunctuation()[0];
-	// not used anymore: return name.IsKeyword() && !name.IsKeywordFunction() ? throw new MethodNameCantBeKeyword(name) : name;
 
 	public const string From = "from";
-
-	/// <summary>
-	/// Skip the first method declaration line and remove the first tab from each line.
-	/// Warning: This adds an extra newline at the last expression, which will
-	/// be cut off in the MethodExpressionParser.GetMainLines again, see test.
-	/// </summary>
-	private static string GetMethodBodyLines(IReadOnlyList<string> lines)
-	{
-		var bodyText = new StringBuilder();
-		for (var lineIndex = 1; lineIndex < lines.Count; lineIndex++)
-			bodyText.AppendLine(lines[lineIndex][1..]);
-		return bodyText.ToString();
-	}
-
-	// not used anymore: public class MethodNameCantBeKeyword : Exception { public MethodNameCantBeKeyword(string methodName) : base(methodName) { } }
 
 	private void ParseDefinition(string rest)
 	{
@@ -64,19 +60,71 @@ public class Method : Context
 	public const string Returns = "returns";
 	public class EmptyParametersMustBeRemoved : Exception { }
 
+	public class InvalidSyntax : Exception
+	{
+		public InvalidSyntax(string rest) : base(rest) { }
+	}
+
 	public void ParseParameters(string parametersText)
 	{
 		foreach (var nameAndType in parametersText.Split(", "))
 			parameters.Add(new Parameter(this, nameAndType));
 	}
 
-	public Type Type => (Type)Parent;
+	public readonly IReadOnlyList<Line> bodyLines;
 
-	public class InvalidSyntax : Exception
+	public sealed record Line(int Tabs, string Text)
 	{
-		public InvalidSyntax(string rest) : base(rest) { }
+		public override string ToString() => new string('\t', Tabs) + Text;
 	}
 
+	/// <summary>
+	/// Skips the first method declaration line, then counts and removes the tabs from each line.
+	/// </summary>
+	private static IReadOnlyList<Line> GetLines(IReadOnlyList<string> methodLines)
+	{
+		var bodyLines = new Line[methodLines.Count - 1];
+		for (var lineIndex = 1; lineIndex < methodLines.Count; lineIndex++)
+		{
+			var line = methodLines[lineIndex];
+			var tabs = 0;
+			foreach (var t in line)
+				if (t == '\t')
+					tabs++;
+				else
+					break;
+			bodyLines[lineIndex - 1] = new Line(tabs, line[tabs..]);
+			/*obs
+			line.coun
+			bodyText.AppendLine([1..]);
+		var mainLines = new List<string>();
+		var currentLine = new StringBuilder(40);
+		for (var index = 0; index < bodyText.Length; index++)
+			if (bodyText[index] == '\n' && NextLineIsNotExtraIndented(index, bodyText))
+			{
+				mainLines.Add(currentLine.ToString());
+				currentLine.Clear();
+			}
+			else if (bodyText[index] != '\r' && (index < bodyText.Length - 1 || bodyText[index] != '\n'))
+				currentLine.Append(bodyText[index]);
+		// Warning: This adds an extra newline at the last expression, which will
+		// be cut off in the MethodExpressionParser.GetMainLines again, see test.
+		if (currentLine.Length > 0)
+			mainLines.Add(currentLine.ToString());
+		return mainLines;
+	}
+
+	// not used anymore: public class MethodNameCantBeKeyword : Exception { public MethodNameCantBeKeyword(string methodName) : base(methodName) { } }
+	// not used anymore: return name.IsKeyword() && !name.IsKeywordFunction() ? throw new MethodNameCantBeKeyword(name) : name;
+	
+	private static bool NextLineIsNotExtraIndented(int index, string lines) =>
+		index + 1 < lines.Length && lines[index + 1] != '\t';
+			*/
+		}
+		return bodyLines;
+	}
+
+	public Type Type => (Type)Parent;
 	public IReadOnlyList<Parameter> Parameters => parameters;
 	private readonly List<Parameter> parameters = new();
 	public Type ReturnType { get; private set; }

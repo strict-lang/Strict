@@ -135,7 +135,8 @@ public class Type : Context
 			throw new MembersMustComeBeforeMethods(line);
 		var nameAndExpression = line[(Has.Length + 1)..].Split(" = ");
 		var expression = nameAndExpression.Length > 1
-			? expressionParser.Parse(new Member(this, nameAndExpression[0], null!).Type.Methods.First(), nameAndExpression[1])
+			? expressionParser.Parse(new Member(this, nameAndExpression[0], null!).Type,
+				nameAndExpression[1])
 			: null;
 		return new Member(this, nameAndExpression[0], expression);
 	}

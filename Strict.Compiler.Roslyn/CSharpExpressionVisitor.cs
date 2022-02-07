@@ -1,6 +1,5 @@
 ﻿using Strict.Language;
 using Strict.Language.Expressions;
-using Boolean = Strict.Language.Expressions.Boolean;
 
 namespace Strict.Compiler.Roslyn;
 
@@ -28,13 +27,15 @@ public class CSharpExpressionVisitor : ExpressionVisitor
 	protected override string Visit(Assignment assignment) =>
 		"var " + assignment.Name + " = " + assignment.Value + ";";
 
-	protected override string Visit(Binary binary) =>
-		binary.Left + " " + binary.Method.Name + " " + binary.Right;
-
-	protected override string Visit(Boolean boolean) => null!;
-	protected override string Visit(MemberCall memberCall) => null!;
-	protected override string Visit(MethodCall methodCall) => null!;
+	protected override string VisitWhenExpressionIsSameInCSharp(Expression expression) =>
+		expression.ToString();
+	/*all the same
+	protected override string Visit(Binary binary) => binary.ToString();
+	protected override string Visit(Boolean boolean) => boolean.ToString();
+	protected override string Visit(MemberCall memberCall) => memberCall.ToString();
+	protected override string Visit(MethodCall methodCall) => methodCall.ToString();
 	protected override string Visit(Number number) => null!;
 	protected override string Visit(Text text) => null!;
 	protected override string Visit(Value value) => null!;
+	*/
 }
