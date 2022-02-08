@@ -24,8 +24,8 @@ Run
 	[Test]
 	public void ParseDefinition()
 	{
-		var method = new Method(type, null!, new[] { "Run" });
-		Assert.That(method.Name, Is.EqualTo("Run"));
+		var method = new Method(type, null!, new[] { Run });
+		Assert.That(method.Name, Is.EqualTo(Run));
 		Assert.That(method.Parameters, Is.Empty);
 		Assert.That(method.ReturnType, Is.EqualTo(type.GetType(Base.None)));
 	}
@@ -39,4 +39,12 @@ Run
 		Assert.That(method.Parameters[0].Type, Is.EqualTo(type.GetType("Number")));
 		Assert.That(method.ReturnType, Is.EqualTo(type));
 	}
+
+	public const string Run = nameof(Run);
+	public const string LetNumber = "	let number = 5";
+	public const string LetOther = "	let other = 3";
+	public static readonly string[] NestedMethodLines =
+	{
+		"Run", LetNumber, "	if number is 5", "		return true", "	return false"
+	};
 }

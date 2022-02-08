@@ -25,7 +25,7 @@ public class Method : Context
 
 	public Expression? TryParse(string input)
 	{
-		var lineNumber = 1;
+		var lineNumber = 0;
 		return parser.TryParse(this, input, ref lineNumber);
 	}
 
@@ -81,47 +81,36 @@ public class Method : Context
 	/// <summary>
 	/// Skips the first method declaration line, then counts and removes the tabs from each line.
 	/// </summary>
-	private static IReadOnlyList<Line> GetLines(IReadOnlyList<string> methodLines)
+	private IReadOnlyList<Line> GetLines(IReadOnlyList<string> methodLines)
 	{
-		var bodyLines = new Line[methodLines.Count - 1];
-		for (var lineIndex = 1; lineIndex < methodLines.Count; lineIndex++)
-		{
-			var line = methodLines[lineIndex];
-			var tabs = 0;
-			foreach (var t in line)
-				if (t == '\t')
-					tabs++;
-				else
-					break;
-			bodyLines[lineIndex - 1] = new Line(tabs, line[tabs..]);
-			/*obs
-			line.coun
-			bodyText.AppendLine([1..]);
-		var mainLines = new List<string>();
-		var currentLine = new StringBuilder(40);
-		for (var index = 0; index < bodyText.Length; index++)
-			if (bodyText[index] == '\n' && NextLineIsNotExtraIndented(index, bodyText))
-			{
-				mainLines.Add(currentLine.ToString());
-				currentLine.Clear();
-			}
-			else if (bodyText[index] != '\r' && (index < bodyText.Length - 1 || bodyText[index] != '\n'))
-				currentLine.Append(bodyText[index]);
-		// Warning: This adds an extra newline at the last expression, which will
-		// be cut off in the MethodExpressionParser.GetMainLines again, see test.
-		if (currentLine.Length > 0)
-			mainLines.Add(currentLine.ToString());
-		return mainLines;
+		var lines = new Line[methodLines.Count - 1];
+		for (var lineNumber = 1; lineNumber < methodLines.Count; lineNumber++)
+			FillLine(methodLines[lineNumber], lineNumber, lines);
+		return lines;
 	}
 
-	// not used anymore: public class MethodNameCantBeKeyword : Exception { public MethodNameCantBeKeyword(string methodName) : base(methodName) { } }
-	// not used anymore: return name.IsKeyword() && !name.IsKeywordFunction() ? throw new MethodNameCantBeKeyword(name) : name;
-	
-	private static bool NextLineIsNotExtraIndented(int index, string lines) =>
-		index + 1 < lines.Length && lines[index + 1] != '\t';
-			*/
-		}
-		return bodyLines;
+	private void FillLine(string line, int lineNumber, IList<Line> lines)
+	{
+		if (line.Length == 0)
+			throw new Type.EmptyLineIsNotAllowed(lineNumber, Name);
+		var tabs = 0;
+		foreach (var t in line)
+			if (t == '\t')
+				tabs++;
+			else
+				break;
+		if (tabs is 0 or > 3)
+			throw new InvalidIndentation(line, lineNumber, Name);
+		if (line.Length - tabs != line.TrimStart().Length)
+			throw new Type.ExtraWhitespacesFoundAtBeginningOfLine(line, lineNumber, Name);
+		if (line.Length != line.TrimEnd().Length)
+			throw new Type.ExtraWhitespacesFoundAtEndOfLine(line, lineNumber, Name);
+		lines[lineNumber - 1] = new Line(tabs, line[tabs..]);
+	}
+
+	public sealed class InvalidIndentation : Type.ParsingFailedInLine
+	{
+		public InvalidIndentation(string line, int lineNumber, string method) : base(line, lineNumber, method) { }
 	}
 
 	public Type Type => (Type)Parent;

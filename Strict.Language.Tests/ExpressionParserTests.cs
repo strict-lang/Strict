@@ -22,18 +22,6 @@ Run
 		Assert.That(type.Methods[0].Body.ReturnType, Is.EqualTo(type.Methods[0].ReturnType));
 	}
 
-	// unused
-	// public override void ParseOld(Method method, List<DefinitionToken> tokens)
-	// {
-	//		if (tokens.Count == 3)
-	//				tokens.Clear();
-	//		expressions.Add(new TestExpression(method.ReturnType));
-	// }
-	// [Test]
-	// public void ThereMustBeNoTokensLeft() =>
-	//		Assert.Throws<MethodBody.UnprocessedTokensAtEndOfFile>(() =>
-	//				new MethodBody(type.Methods[0], this, new[] { "Dummy", "\tdummy" }));
-
 	public override Expression Parse(Method method)
 	{
 		parseWasCalled = true;
@@ -61,5 +49,58 @@ Run
 		Assert.That(new TestExpression(type.Methods[0].ReturnType),
 			Is.Not.EqualTo(new TestExpression(type)));
 		Assert.That(expression.Equals((object)new TestExpression(type)), Is.True);
+	}
+
+	[Test]
+	public void EmptyLineIsNotValidInMethods() =>
+		Assert.That(() => new Method(type, this, new[] { "Run", "" }),
+			Throws.InstanceOf<Type.EmptyLineIsNotAllowed>());
+
+	[Test]
+	public void NoIndentationIsNotValidInMethods() =>
+		Assert.That(() => new Method(type, this, new[] { "Run", "abc" }),
+			Throws.InstanceOf<Method.InvalidIndentation>());
+
+	[Test]
+	public void TooMuchIndentationIsNotValidInMethods() =>
+		Assert.That(() => new Method(type, this, new[] { "Run", new string('\t', 4) }),
+			Throws.InstanceOf<Method.InvalidIndentation>());
+
+	[Test]
+	public void ExtraWhitespacesAtBeginningOfLineAreNotAllowed() =>
+		Assert.That(() => new Method(type, this, new[] { "Run", "\t let abc = 3" }),
+			Throws.InstanceOf<Type.ExtraWhitespacesFoundAtBeginningOfLine>());
+
+	[Test]
+	public void ExtraWhitespacesAtEndOfLineAreNotAllowed() =>
+		Assert.That(() => new Method(type, this, new[] { "Run", "\tlet abc = 3 " }),
+			Throws.InstanceOf<Type.ExtraWhitespacesFoundAtEndOfLine>());
+
+	[Test]
+	public void GetSingleLine()
+	{
+		var method = new Method(type, this, new[] { "Run", MethodTests.LetNumber });
+		Assert.That(method.bodyLines, Has.Length.EqualTo(1));
+		Assert.That(method.bodyLines[0].ToString(), Is.EqualTo(MethodTests.LetNumber));
+	}
+
+	[Test]
+	public void GetMultipleLines()
+	{
+		var method = new Method(type, this, new[] { "Run", MethodTests.LetNumber, MethodTests.LetOther });
+		Assert.That(method.bodyLines, Has.Length.EqualTo(2));
+		Assert.That(method.bodyLines[0].ToString(), Is.EqualTo(MethodTests.LetNumber));
+		Assert.That(method.bodyLines[1].ToString(), Is.EqualTo(MethodTests.LetOther));
+	}
+
+	[Test]
+	public void GetNestedLines()
+	{
+		var method = new Method(type, this, MethodTests.NestedMethodLines);
+		Assert.That(method.bodyLines, Has.Length.EqualTo(4));
+		Assert.That(method.bodyLines[0].ToString(), Is.EqualTo(MethodTests.LetNumber));
+		Assert.That(method.bodyLines[1].ToString(), Is.EqualTo("	if number is 5"));
+		Assert.That(method.bodyLines[2].ToString(), Is.EqualTo("		return true"));
+		Assert.That(method.bodyLines[3].ToString(), Is.EqualTo("	return false"));
 	}
 }

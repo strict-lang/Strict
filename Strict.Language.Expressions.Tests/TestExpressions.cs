@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using NUnit.Framework;
 using Strict.Language.Tests;
 
@@ -14,7 +15,7 @@ public abstract class TestExpressions : MethodExpressionParser
 		((List<Member>)type.Members).Add(member);
 		method = new Method(type, this, new[] { "Run" });
 		((List<Method>)type.Methods).Add(method);
-		number = new Number(method, 5);
+		number = new Number(type, 5);
 		bla = new Member("bla", number);
 		((List<Member>)type.Members).Add(bla);
 	}
@@ -27,14 +28,16 @@ public abstract class TestExpressions : MethodExpressionParser
 
 	public void ParseAndCheckOutputMatchesInput(string code, Expression expectedExpression)
 	{
-		var expression = ParseExpression(method, code);
+		var expression = ParseExpression(code);
 		Assert.That(expression, Is.EqualTo(expectedExpression));
 		Assert.That(expression.ToString(), Is.EqualTo(code));
 	}
 
-	public Expression ParseExpression(Method context, string lines)
+	public Expression ParseExpression(params string[] lines)
 	{
-		var body = base.Parse(context, lines);
+		var methodLines = lines.Select(line => '\t' + line).ToList();
+		methodLines.Insert(0, MethodTests.Run);
+		var body = new Method(type, this, methodLines).Body;
 		return body.Expressions.Count == 1
 			? body.Expressions[0]
 			: throw new MultipleExpressionsGiven();

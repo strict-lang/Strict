@@ -18,11 +18,11 @@ public class BinaryTests : TestExpressions
 
 	[Test]
 	public void MissingLeftExpression() =>
-		Assert.That(() => ParseExpression(method, "unknown + 5"),
+		Assert.That(() => ParseExpression("unknown + 5"),
 			Throws.Exception.InstanceOf<MemberCall.MemberNotFound>());
 
 	[Test]
 	public void MissingRightExpression() =>
-		Assert.That(() => ParseExpression(method, "5 + unknown"),
+		Assert.That(() => ParseExpression("5 + unknown"),
 			Throws.Exception.InstanceOf<MemberCall.MemberNotFound>());
 }

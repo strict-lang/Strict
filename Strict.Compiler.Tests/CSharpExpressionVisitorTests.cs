@@ -58,8 +58,7 @@ public sealed class CSharpExpressionVisitorTests : TestExpressions
 	[TestCase("log.WriteLine(\"Hey\")", "log.WriteLine(\"Hey\")")]
 	[TestCase("log.Text", "log.Text")]
 	public void ConvertStrictToCSharp(string strictCode, string expectedCSharpCode) =>
-		Assert.That(visitor.Visit(ParseExpression(method, strictCode)),
-			Is.EqualTo(expectedCSharpCode));
+		Assert.That(visitor.Visit(ParseExpression(strictCode)), Is.EqualTo(expectedCSharpCode));
 
 	[Test]
 	public void GenerateSimpleMethodBody() =>

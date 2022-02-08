@@ -16,16 +16,16 @@ public sealed class MethodCallTests : TestExpressions
 
 	[Test]
 	public void ParseCallWithUnknownArgument() =>
-		Assert.That(() => ParseExpression(method, "log.WriteLine(unknown)"),
+		Assert.That(() => ParseExpression("log.WriteLine(unknown)"),
 			Throws.InstanceOf<MemberCall.MemberNotFound>());
 
 	[Test]
 	public void ParseCallWithUnknownMemberCallArgument() =>
-		Assert.That(() => ParseExpression(method, "log.WriteLine(log.unknown)"),
+		Assert.That(() => ParseExpression("log.WriteLine(log.unknown)"),
 			Throws.InstanceOf<MemberCall.MemberNotFound>().With.Message.EqualTo("unknown in TestPackage.Log"));
 
 	[Test]
 	public void MethodCallMembersMustBeWords() =>
-		Assert.That(() => ParseExpression(method, "0g9y53.WriteLine()"),
+		Assert.That(() => ParseExpression("0g9y53.WriteLine()"),
 			Throws.InstanceOf<MemberCall.MemberNotFound>());
 }
