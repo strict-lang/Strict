@@ -30,9 +30,9 @@ public class MethodExpressionParserTests : TestExpressions
 	{
 		var body = new Method(type, this, MethodTests.NestedMethodLines).Body;
 		Assert.That(body.Expressions, Has.Count.EqualTo(3));
-		Assert.That(body.Expressions[0].ToString(), Is.EqualTo(MethodTests.LetNumber));
+		Assert.That(body.Expressions[0].ToString(), Is.EqualTo(MethodTests.LetNumber[1..]));
 		Assert.That(body.Expressions[1].ToString(),
-			Is.EqualTo(MethodTests.NestedMethodLines[2] + "\r\n" + MethodTests.NestedMethodLines[3]));
-		Assert.That(body.Expressions[3].ToString(), Is.EqualTo("	return false"));
+			Is.EqualTo(MethodTests.NestedMethodLines[2][1..] + "\r\n" + MethodTests.NestedMethodLines[3][1..]));
+		Assert.That(body.Expressions[2].ToString(), Is.EqualTo("return false"));
 	}
 }

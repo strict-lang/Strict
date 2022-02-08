@@ -1,0 +1,10 @@
+is(any) returns Boolean
+is(type) returns Boolean
+as(type) returns Type
+to(any) returns Any
+and(boolean) returns Boolean
+and(number) returns Number
+or(boolean) returns Boolean
+or(number) returns Number
+xor(boolean) returns Boolean
+xor(number) returns Number

@@ -1,0 +1,4 @@
+has Name Text
+has Package Text
+to(text) returns Text
+	return Package + "." + Name

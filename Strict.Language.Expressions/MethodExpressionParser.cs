@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
 
 namespace Strict.Language.Expressions;
 
@@ -36,8 +35,9 @@ public class MethodExpressionParser : ExpressionParser
 
 	public override Expression? TryParse(Method method, string line, ref int lineNumber) =>
 		Assignment.TryParse(method, line) ?? If.TryParse(method, ref lineNumber) ??
-		Number.TryParse(method, line) ?? Boolean.TryParse(method, line) ??
-		Text.TryParse(method, line) ?? Binary.TryParse(method, line) ??
+		Return.TryParse(method, line) ?? Number.TryParse(method, line) ??
+		Boolean.TryParse(method, line) ?? Text.TryParse(method, line) ??
+		Binary.TryParse(method, line) ??
 		MethodCall.TryParse(method, line) ?? MemberCall.TryParse(method, line);
 
 	public class UnknownExpression : Exception

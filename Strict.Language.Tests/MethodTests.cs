@@ -45,6 +45,6 @@ Run
 	public const string LetOther = "	let other = 3";
 	public static readonly string[] NestedMethodLines =
 	{
-		"Run", LetNumber, "	if number is 5", "		return true", "	return false"
+		"Run", LetNumber, "	if bla is 5", "		return true", "	return false"
 	};
 }

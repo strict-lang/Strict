@@ -44,4 +44,6 @@ public static class Base
 	public const string Type = nameof(Type);
 	public const string Log = nameof(Log);
 	public const string App = nameof(App);
+	public const string BinaryOperator = nameof(BinaryOperator);
+	public const string UnaryOperator = nameof(UnaryOperator);
 }

@@ -99,7 +99,7 @@ Run
 		var method = new Method(type, this, MethodTests.NestedMethodLines);
 		Assert.That(method.bodyLines, Has.Length.EqualTo(4));
 		Assert.That(method.bodyLines[0].ToString(), Is.EqualTo(MethodTests.LetNumber));
-		Assert.That(method.bodyLines[1].ToString(), Is.EqualTo("	if number is 5"));
+		Assert.That(method.bodyLines[1].ToString(), Is.EqualTo("	if bla is 5"));
 		Assert.That(method.bodyLines[2].ToString(), Is.EqualTo("		return true"));
 		Assert.That(method.bodyLines[3].ToString(), Is.EqualTo("	return false"));
 	}

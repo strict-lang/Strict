@@ -25,4 +25,10 @@ public class BinaryTests : TestExpressions
 	public void MissingRightExpression() =>
 		Assert.That(() => ParseExpression("5 + unknown"),
 			Throws.Exception.InstanceOf<MemberCall.MemberNotFound>());
+
+	[Test]
+	public void ParseComparison() =>
+		ParseAndCheckOutputMatchesInput("bla is 5",
+			new Binary(new MemberCall(bla), binaryOperators.First(m => m.Name == BinaryOperator.Is),
+				number));
 }

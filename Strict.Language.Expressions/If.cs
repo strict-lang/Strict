@@ -43,11 +43,10 @@ public sealed class If : Expression
 				lineNumber, method.Name);
 		var then = method.TryParse(method.bodyLines[lineNumber].Text, ref lineNumber) ??
 			throw new MissingThen(method.bodyLines[lineNumber].Text);
-		Expression? optionalElse = null;
-		lineNumber++;
-		if (lineNumber < method.bodyLines.Count)
-			optionalElse = method.TryParse(method.bodyLines[lineNumber].Text, ref lineNumber);
-		return new If(condition, then, optionalElse);
+		if (lineNumber + 2 >= method.bodyLines.Count || method.bodyLines[lineNumber].Text != "else")
+			return new If(condition, then, null);
+		lineNumber += 2;
+		return new If(condition, then, method.TryParse(method.bodyLines[lineNumber].Text, ref lineNumber));
 	}
 
 	public sealed class MissingCondition : Exception

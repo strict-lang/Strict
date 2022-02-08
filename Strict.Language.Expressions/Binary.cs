@@ -14,7 +14,7 @@ public class Binary : MethodCall
 	public new static Expression? TryParse(Method context, string input)
 	{
 		var parts = input.Split(' ', 3);
-		return parts.Length == 3 && parts[1][0].IsOperator()
+		return parts.Length == 3 && parts[1].IsOperator()
 			? TryParseBinary(context, parts)
 			: null;
 	}
@@ -26,6 +26,8 @@ public class Binary : MethodCall
 		var binaryOperator = parts[1];
 		var right = method.TryParse(parts[2]) ??
 			throw new MethodExpressionParser.UnknownExpression(method, parts[2]);
-		return new Binary(left, left.ReturnType.Methods.First(m => m.Name == binaryOperator), right);
+		var operatorMethod = left.ReturnType.Methods.FirstOrDefault(m => m.Name == binaryOperator) ??
+			method.GetType(Base.BinaryOperator).Methods.First(m => m.Name == binaryOperator);
+		return new Binary(left, operatorMethod, right);
 	}
 }
