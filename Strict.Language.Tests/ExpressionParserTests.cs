@@ -36,7 +36,7 @@ Run
 		public TestExpression(Type returnType) : base(returnType) { }
 	}
 
-	public override Expression Parse(Type typeForConstructor, string initializationLine) => null!;
+	public override Expression ParseMethodCall(Type typeForConstructor, string initializationLine) => null!;
 	public override Expression? TryParse(Method method, ref int lineNumber) => null;
 	public override Expression? TryParse(Method method, string line, ref int lineNumber) => null;
 

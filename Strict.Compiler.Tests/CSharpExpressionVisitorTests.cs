@@ -1,8 +1,10 @@
 using System.Linq;
 using NUnit.Framework;
 using Strict.Compiler.Roslyn;
+using Strict.Language;
 using Strict.Language.Expressions;
 using Strict.Language.Expressions.Tests;
+using Strict.Language.Tests;
 
 namespace Strict.Compiler.Tests;
 
@@ -17,7 +19,7 @@ public sealed class CSharpExpressionVisitorTests : TestExpressions
 	public void GenerateAssignment() =>
 		Assert.That(
 			visitor.Visit(new Assignment(new Identifier(nameof(number), number.ReturnType), number)),
-			Is.EqualTo("var number = 5;"));
+			Is.EqualTo("var number = 5"));
 
 	[Test]
 	public void GenerateBinary() =>
@@ -39,7 +41,7 @@ public sealed class CSharpExpressionVisitorTests : TestExpressions
 	public void GenerateMethodCall() =>
 		Assert.That(
 			visitor.Visit(new MethodCall(new MemberCall(member), member.Type.Methods[0],
-				new Text(type, "Hi"))), Is.EqualTo("log.WriteLine(\"Hi\")"));
+				new Text(type, "Hi"))), Is.EqualTo("Console.WriteLine(\"Hi\")"));
 
 	[Test]
 	public void GenerateNumber() =>
@@ -50,18 +52,29 @@ public sealed class CSharpExpressionVisitorTests : TestExpressions
 	public void GenerateText() =>
 		Assert.That(visitor.Visit(new Text(method, "Hey")), Is.EqualTo("\"Hey\""));
 
-	[TestCase("let other = 3", "var other = 3;")]
+	[TestCase("let other = 3", "var other = 3")]
 	[TestCase("5 + 5", "5 + 5")]
 	[TestCase("true", "true")]
 	[TestCase("\"Hey\"", "\"Hey\"")]
 	[TestCase("42", "42")]
-	[TestCase("log.WriteLine(\"Hey\")", "log.WriteLine(\"Hey\")")]
+	[TestCase("log.WriteLine(\"Hey\")", "Console.WriteLine(\"Hey\")")]
 	[TestCase("log.Text", "log.Text")]
 	public void ConvertStrictToCSharp(string strictCode, string expectedCSharpCode) =>
 		Assert.That(visitor.Visit(ParseExpression(strictCode)), Is.EqualTo(expectedCSharpCode));
 
 	[Test]
-	public void GenerateSimpleMethodBody() =>
-		Assert.That(visitor.Visit(new Text(method, "Hey")), Is.EqualTo("\"Hey\""));
+	public void GenerateInterfaceMethodBody() =>
+		Assert.That(visitor.VisitBlock(method.Body)[0], Is.EqualTo("void Run();"));
 
+	[Test]
+	public void GenerateMultilineMethodBody()
+	{
+		var multilineMethod = new Method(type, this, MethodTests.NestedMethodLines);
+		Assert.That(visitor.VisitBlock(multilineMethod.Body),
+			Is.EqualTo(new[]
+			{
+				"public bool IsBla5()", "{", "	var number = 5;", "	if (bla == 5)", "		return true;",
+				"	return false;", "}"
+			}));
+	}
 }

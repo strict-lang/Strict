@@ -8,7 +8,7 @@
 public abstract class ExpressionParser
 {
 	public abstract Expression Parse(Method method);
-	public abstract Expression Parse(Type type, string initializationLine);
+	public abstract Expression ParseMethodCall(Type type, string initializationLine);
 	public abstract Expression? TryParse(Method method, ref int lineNumber);
 	public abstract Expression? TryParse(Method method, string line, ref int lineNumber);
 }

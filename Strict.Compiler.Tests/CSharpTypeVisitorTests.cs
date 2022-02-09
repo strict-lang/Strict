@@ -51,12 +51,12 @@ Write
 		Assert.That(visitor.FileContent,
 			Contains.Substring(@"	public void Read()
 	{
-		Console.WriteLine(""Hello World"");
+		Console.WriteLine(""Read"");
 	}"));
 		Assert.That(visitor.FileContent,
 			Contains.Substring(@"	public void Write()
 	{
-		Console.WriteLine(""Hello World"");
+		Console.WriteLine(""Write"");
 	}"));
 	}
 

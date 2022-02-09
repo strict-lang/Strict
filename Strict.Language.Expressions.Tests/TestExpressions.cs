@@ -15,7 +15,7 @@ public abstract class TestExpressions : MethodExpressionParser
 		unaryOperators = type.GetType(Base.UnaryOperator).Methods;
 		member = new Member("log", new Value(type.GetType(Base.Log), null!));
 		((List<Member>)type.Members).Add(member);
-		method = new Method(type, this, new[] { "Run" });
+		method = new Method(type, this, new[] { MethodTests.Run });
 		((List<Method>)type.Methods).Add(method);
 		number = new Number(type, 5);
 		bla = new Member("bla", number);

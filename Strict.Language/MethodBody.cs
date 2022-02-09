@@ -7,13 +7,22 @@ namespace Strict.Language;
 /// all executed and then the final result is returned (all previous expressions must succeed).
 /// Method parameters are in this context and can be used by any of the expressions nested here.
 /// </summary>
-public class MethodBody : Expression
+public class MethodBody : BlockExpression
 {
-	public MethodBody(Method method, IReadOnlyList<Expression> expressions) :
-		base(method.ReturnType) =>
+	public MethodBody(Method method, IReadOnlyList<Expression> expressions) : base(
+		method.ReturnType)
+	{
+		Method = method;
 		Expressions = expressions;
+	}
 
+	public Method Method { get; }
 	public IReadOnlyList<Expression> Expressions { get; }
+}
+
+public abstract class BlockExpression : Expression
+{
+	protected BlockExpression(Type returnType) : base(returnType) { }
 }
 // simply don't use anymore, just use ExpressionParser.Parse and assign this to evaluated expression lazily to method.body
 // public class MethodBody //Tokenizer remove this and just use Pidgin here, not directly, just create a base interface/abstract class in preparation!

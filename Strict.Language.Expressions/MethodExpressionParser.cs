@@ -22,19 +22,20 @@ public class MethodExpressionParser : ExpressionParser
 		return new MethodBody(method, expressions);
 	}
 
-	public override MethodBody Parse(Type type, string initializationLine)
+	public override Expression ParseMethodCall(Type type, string initializationLine)
 	{
-		var constructor = type.Methods[0];
+		var constructor = type.Methods[0]; //TODO: pick right constructor!
 		var lineNumber = 0;
-		return new MethodBody(constructor,
-			new[] { TryParse(constructor, initializationLine, ref lineNumber)! });
+		return new MethodCall(new Value(type, type), constructor,
+			//TODO: test multiple parameters
+			TryParse(constructor, initializationLine, ref lineNumber)!);
 	}
 
 	public override Expression? TryParse(Method method, ref int lineNumber) =>
 		TryParse(method, method.bodyLines[lineNumber].Text, ref lineNumber);
 
 	public override Expression? TryParse(Method method, string line, ref int lineNumber) =>
-		Assignment.TryParse(method, line) ?? If.TryParse(method, ref lineNumber) ??
+		Assignment.TryParse(method, line) ?? If.TryParse(method, line, ref lineNumber) ??
 		Return.TryParse(method, line) ?? Number.TryParse(method, line) ??
 		Boolean.TryParse(method, line) ?? Text.TryParse(method, line) ??
 		Binary.TryParse(method, line) ??

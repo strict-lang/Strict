@@ -10,6 +10,7 @@ public class CSharpTypeVisitor : TypeVisitor
 	public CSharpTypeVisitor(Type type)
 	{
 		Name = type.Name;
+		expressionVisitor = new CSharpExpressionVisitor();
 		isImplementingApp = type.Implements.Any(t => t.Name == Base.App);
 		isInterface = type.IsTrait;
 		CreateHeader(type);
@@ -22,6 +23,7 @@ public class CSharpTypeVisitor : TypeVisitor
 	}
 
 	public string Name { get; }
+	private readonly CSharpExpressionVisitor expressionVisitor;
 	private readonly bool isImplementingApp;
 	private readonly bool isInterface;
 
@@ -66,50 +68,15 @@ public class CSharpTypeVisitor : TypeVisitor
 			: "private";
 		var initializationExpression = "";
 		if (member.Value != null)
-			initializationExpression += " = " + new CSharpExpressionVisitor().Visit(member.Value);
-		FileContent += "\t" + accessModifier + " " + GetCSharpTypeName(member.Type) + " " +
+			initializationExpression += " = " + expressionVisitor.Visit(member.Value);
+		FileContent += "\t" + accessModifier + " " + expressionVisitor.GetCSharpTypeName(member.Type) + " " +
 			member.Name + initializationExpression + SemicolonAndLineBreak;
 	}
 
 	private static readonly string SemicolonAndLineBreak = ";" + NewLine;
 
-	public void VisitMethod(Method method)
-	{
-		var accessModifier = isInterface
-			? ""
-			: method.IsPublic
-				? "public "
-				: "private ";
-		var isMainEntryPoint = isImplementingApp && method.Name == "Run";
-		var staticMain = isMainEntryPoint
-			? "static "
-			: "";
-		var methodName = isMainEntryPoint
-			? "Main"
-			: method.Name;
-		FileContent +=
-			$"\t{accessModifier}{staticMain}{GetCSharpTypeName(method.ReturnType)} " +
-			$"{methodName}({WriteParameters(method)})";
-		FileContent += isInterface
-			? ";" + NewLine
-			: WriteMethodBody(method);
-	}
-
-	private static string WriteMethodBody(Method method) =>
-		$"{NewLine}\t{{{NewLine}" + new CSharpExpressionVisitor().Visit(method.Body) + "\t}" + NewLine;
-
-	private static string WriteParameters(Method method) =>
-		string.Join(", ",
-			method.Parameters.Select(p => GetCSharpTypeName(p.Type) + " " + p.Name));
-
-	private static string GetCSharpTypeName(Context type) =>
-		type.Name switch
-		{
-			Base.None => "void",
-			Base.Number => "int",
-			"File" => "FileStream",
-			_ => type.Name //ncrunch: no coverage
-		};
+	public void VisitMethod(Method method) =>
+		FileContent += "\t" + string.Join(NewLine + "\t", expressionVisitor.VisitBlock(method.Body)) + NewLine;
 
 	public void ParsingDone() => FileContent += "}";
 }

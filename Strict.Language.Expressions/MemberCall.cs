@@ -15,16 +15,16 @@ public class MemberCall : Expression
 
 	public MemberCall(MemberCall parent, Member member) : base(member.Type)
 	{
-		this.parent = parent;
+		Parent = parent;
 		Member = member;
 	}
 
-	private readonly MemberCall? parent;
+	public MemberCall? Parent { get; }
 	public Member Member { get; }
 
 	public override string ToString() =>
-		parent != null
-			? parent + "." + Member.Name
+		Parent != null
+			? Parent + "." + Member.Name
 			: Member.Name;
 
 	public static MemberCall? TryParse(Method context, string input) =>

@@ -38,6 +38,7 @@ public class Program
 	}
 
 	[Test]
+	[Ignore("TODO")]
 	public void CreateFileWriteIntoItReadItAndThenDeleteIt()
 	{
 		var program = new Type(package, nameof(CreateFileWriteIntoItReadItAndThenDeleteIt), parser).Parse(@"implement App

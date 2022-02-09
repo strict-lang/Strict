@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 
 namespace Strict.Language.Expressions;
 
@@ -19,7 +20,7 @@ public class Binary : MethodCall
 			: null;
 	}
 
-	private static Expression TryParseBinary(Method method, string[] parts)
+	private static Expression TryParseBinary(Method method, IReadOnlyList<string> parts)
 	{
 		var left = method.TryParse(parts[0]) ??
 			throw new MethodExpressionParser.UnknownExpression(method, parts[0]);

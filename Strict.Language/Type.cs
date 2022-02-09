@@ -70,8 +70,11 @@ public class Type : Context
 
 	private void CheckIfTraitIsImplemented(Type trait)
 	{
-		var nonImplementedTraitMethods = new List<Method>(trait.Methods.Where(m =>
-			m.Name != Method.From && methods.All(implementedMethod => m.Name != implementedMethod.Name)));
+		var nonImplementedTraitMethods = new List<Method>();
+		foreach (var traitMethod in trait.Methods)
+			if (traitMethod.Name != Method.From && methods.All(implementedMethod =>
+				traitMethod.Name != implementedMethod.Name))
+				nonImplementedTraitMethods.Add(traitMethod);
 		if (nonImplementedTraitMethods.Count > 0)
 			throw new MustImplementAllTraitMethods(nonImplementedTraitMethods);
 	}
@@ -135,7 +138,7 @@ public class Type : Context
 			throw new MembersMustComeBeforeMethods(line);
 		var nameAndExpression = line[(Has.Length + 1)..].Split(" = ");
 		var expression = nameAndExpression.Length > 1
-			? expressionParser.Parse(new Member(this, nameAndExpression[0], null!).Type,
+			? expressionParser.ParseMethodCall(new Member(this, nameAndExpression[0], null!).Type,
 				nameAndExpression[1])
 			: null;
 		return new Member(this, nameAndExpression[0], expression);

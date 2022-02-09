@@ -2,7 +2,7 @@
 
 namespace Strict.Language.Expressions;
 
-public sealed class If : Expression
+public sealed class If : BlockExpression
 {
 	public If(Expression condition, Expression then, Expression? optionalElse) : base(then.ReturnType)
 	{
@@ -26,15 +26,15 @@ public sealed class If : Expression
 	public override bool Equals(Expression? other) =>
 		other is If a && Equals(Condition, a.Condition) && Then.Equals(a.Then) && (OptionalElse?.Equals(a.OptionalElse) ?? true);
 
-	public static Expression? TryParse(Method method, ref int lineNumber) =>
-		method.bodyLines[lineNumber].Text.StartsWith("if ", StringComparison.Ordinal)
-			? TryParseIf(method, ref lineNumber)
+	public static Expression? TryParse(Method method, string line, ref int lineNumber) =>
+		line.StartsWith("if ", StringComparison.Ordinal)
+			? TryParseIf(method, line, ref lineNumber)
 			: null;
 
-	private static Expression TryParseIf(Method method, ref int lineNumber)
+	private static Expression TryParseIf(Method method, string line, ref int lineNumber)
 	{
-		var condition = method.TryParse(method.bodyLines[lineNumber].Text["if ".Length..]) ??
-			throw new MissingCondition(method.bodyLines[lineNumber].Text);
+		var condition = method.TryParse(line["if ".Length..]) ??
+			throw new MissingCondition(line);
 		lineNumber++;
 		if (lineNumber >= method.bodyLines.Count)
 			throw new MissingThen(method.bodyLines[lineNumber - 1].Text);
