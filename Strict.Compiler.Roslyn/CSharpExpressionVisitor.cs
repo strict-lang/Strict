@@ -12,17 +12,19 @@ public class CSharpExpressionVisitor : ExpressionVisitor
 	{
 		var method = methodBody.Method;
 		var isMainEntryPoint = method.Type.Implements.Any(t => t.Name == Base.App) && method.Name == "Run";
-		var staticMain = isMainEntryPoint
-			? "static "
-			: "";
 		var methodName = isMainEntryPoint
 			? "Main"
 			: method.Name;
 		var isInterface = methodBody.Method.Type.IsTrait || methodBody.Expressions.Count == 0;
 		var methodHeader =
-			$"{GetAccessModifier(isInterface, method)}{staticMain}{GetCSharpTypeName(method.ReturnType)} {methodName}({WriteParameters(method)})";
-		if (isInterface)
-			return new[] { methodHeader + ";" };
+			$"{GetAccessModifier(isInterface, method, isMainEntryPoint)}{GetCSharpTypeName(method.ReturnType)} {methodName}({WriteParameters(method)})";
+		return isInterface
+			? new[] { methodHeader + ";" }
+			: VisitMethodBody(methodBody, methodHeader);
+	}
+
+	private IReadOnlyList<string> VisitMethodBody(MethodBody methodBody, string methodHeader)
+	{
 		var methodLines = new List<string> { methodHeader, "{" };
 		methodLines.AddRange(Indent(methodBody.Expressions.Select(VisitBlock)));
 		methodLines.Add("}");
@@ -36,12 +38,14 @@ public class CSharpExpressionVisitor : ExpressionVisitor
 	private static IEnumerable<string> Indent(IEnumerable<IReadOnlyList<string>> expressions) =>
 		Indent(expressions.SelectMany(line => line));
 
-	public string GetAccessModifier(bool isTrait, Method method) =>
+	public string GetAccessModifier(bool isTrait, Method method, bool isMainEntryPoint) =>
 		isTrait
 			? ""
-			: method.IsPublic
+			: (method.IsPublic
 				? "public "
-				: "private ";
+				: "private ") + (isMainEntryPoint
+				? "static "
+				: "");
 
 	public string GetCSharpTypeName(Type type) =>
 		type.Name switch

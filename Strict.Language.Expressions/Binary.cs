@@ -27,8 +27,8 @@ public class Binary : MethodCall
 		var binaryOperator = parts[1];
 		var right = method.TryParse(parts[2]) ??
 			throw new MethodExpressionParser.UnknownExpression(method, parts[2]);
-		var operatorMethod = left.ReturnType.Methods.FirstOrDefault(m => m.Name == binaryOperator) ??
-			method.GetType(Base.BinaryOperator).Methods.First(m => m.Name == binaryOperator);
-		return new Binary(left, operatorMethod, right);
+		return new Binary(left,
+			left.ReturnType.Methods.FirstOrDefault(m => m.Name == binaryOperator) ?? method.
+				GetType(Base.BinaryOperator).Methods.First(m => m.Name == binaryOperator), right);
 	}
 }
