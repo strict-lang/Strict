@@ -11,12 +11,14 @@ public sealed class Return : Expression
 	public override bool Equals(Expression? other) => other is Return a && Equals(Value, a.Value);
 
 	public static Expression? TryParse(Method method, string line) =>
-		line.StartsWith("return ", StringComparison.Ordinal)
+		line.StartsWith("return", StringComparison.Ordinal)
 			? TryParseReturn(method, line)
 			: null;
 
 	private static Expression TryParseReturn(Method method, string line) =>
-		new Return(method.TryParse(line["return ".Length..]) ?? throw new MissingExpression(line));
+		new Return((line.Length < "return ".Length
+			? null
+			: method.TryParse(line["return ".Length..])) ?? throw new MissingExpression(line));
 
 	public sealed class MissingExpression : Exception
 	{

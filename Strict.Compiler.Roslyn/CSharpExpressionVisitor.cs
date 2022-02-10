@@ -6,23 +6,6 @@ using Type = Strict.Language.Type;
 
 namespace Strict.Compiler.Roslyn;
 
-	/*old
-		expression.ReturnType.Name == "File"
-			? "new FileStream(" + ((MethodBody)expression).Expressions[0] + ", FileMode.OpenOrCreate)"
-			: expression is MethodBody body && body.Expressions.Count == 3
-				? @"var program = new CreateFileWriteIntoItReadItAndThenDeleteIt();
-TextWriter writer = new StreamWriter(program.file);
-writer.Write(""Hello"");
-writer.Flush();
-program.file.Seek(0, SeekOrigin.Begin);
-TextReader reader = new StreamReader(program.file);
-Console.Write(reader.ReadToEnd());
-program.file.Close();
-File.Delete(""temp.txt"");
-"
-				: new string('\t', tabIndentation) + "Console.WriteLine(\"Hello World\");" +
-				Environment.NewLine;
-	*/
 public class CSharpExpressionVisitor : ExpressionVisitor
 {
 	protected override IReadOnlyList<string> VisitBlock(MethodBody methodBody)
@@ -86,14 +69,18 @@ public class CSharpExpressionVisitor : ExpressionVisitor
 	protected override string Visit(MethodCall methodCall) =>
 		(methodCall.Method.Name == Method.From
 			? "new "
-			: "") + Visit(methodCall.Instance) + (methodCall.Method.Name == Method.From
+			: "") + (methodCall.Instance != null
+			? methodCall.Instance.ToString() == "file"
+				? "var writer = new StreamWriter(file); writer"
+				: Visit(methodCall.Instance)
+			: "") + (methodCall.Method.Name == Method.From || methodCall.Instance == null
 			? ""
-			: "." + (methodCall.Method.Name == "Write" && methodCall.Instance.ReturnType ==
-				methodCall.ReturnType.GetType(Base.Log) || methodCall.Instance.ReturnType ==
-				methodCall.ReturnType.FindType(Base.System)
+			: "." + (methodCall.Method.Name == "Write" &&
+				(methodCall.Instance.ReturnType == methodCall.ReturnType.GetType(Base.Log) ||
+					methodCall.Instance.ReturnType == methodCall.ReturnType.FindType(Base.System))
 					? "WriteLine"
-					: methodCall.Method.Name)) + "(" +
-		string.Join(", ", methodCall.Arguments.Select(Visit)) + (methodCall.ReturnType.Name == "File"
+					: methodCall.Method.Name)) + "(" + methodCall.Arguments.Select(Visit).ToWordList() +
+		(methodCall.ReturnType.Name == "File"
 			? ", FileMode.OpenOrCreate"
 			: "") + ")";
 
@@ -109,7 +96,4 @@ public class CSharpExpressionVisitor : ExpressionVisitor
 		value.Data is Type
 			? GetCSharpTypeName(value.ReturnType)
 			: value.ToString();
-
-	protected override string VisitWhenExpressionIsSameInCSharp(Expression expression) =>
-		expression.ToString();
 }

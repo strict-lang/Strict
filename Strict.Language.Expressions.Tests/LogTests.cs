@@ -1,40 +1,27 @@
-using System;
 using NUnit.Framework;
 using Strict.Language.Tests;
 
 namespace Strict.Language.Expressions.Tests;
 
-public class LogTests
+public sealed class LogTests
 {
 	[Test]
 	public void PrintHelloWorld()
 	{
 		var package = new TestPackage();
 		new Type(package, Base.App, null!).Parse("Run");
-		var type = new Type(package, "Program", null!).Parse(@"implement App
+		var type = new Type(package, "Program", new MethodExpressionParser()).Parse(@"implement App
 has log
 Run
-	log.Write(text+number)");
-		// var interpreter = new Interpreter();
-		// interpreter.Run(type.Methods[0]);
-		Assert.That(type, Is.Not.Null);
+	log.Write(""Hello"")");
+		Assert.That(Run(type.Methods[0]), Is.EqualTo("Hello"));
 	}
 
-	//ncrunch: no coverage start
-	public class Interpreter
+	public string Run(Method method)
 	{
-		public void Run(Method method)
-		{
-			foreach (var expression in method.Body.Expressions)
-				if (expression is MethodCall call)
-				{
-					if (call.Method.Name == "Write")
-						Console.WriteLine((call.Arguments[0] as Text)?.Data);
-					else
-						throw new NotSupportedException();
-				}
-				else
-					throw new NotSupportedException();
-		}
+		foreach (var expression in method.Body.Expressions)
+			if (expression is MethodCall call && call.Method.Name == "Write")
+				return ((Text)call.Arguments[0]).Data.ToString()!;
+		return ""; //ncrunch: no coverage
 	}
 }

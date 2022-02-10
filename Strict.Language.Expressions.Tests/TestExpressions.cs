@@ -47,5 +47,5 @@ public abstract class TestExpressions : MethodExpressionParser
 			: throw new MultipleExpressionsGiven();
 	}
 
-	public class MultipleExpressionsGiven : Exception { }
+	public sealed class MultipleExpressionsGiven : Exception { }
 }

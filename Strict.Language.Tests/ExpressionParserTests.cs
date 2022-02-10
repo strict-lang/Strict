@@ -36,9 +36,11 @@ Run
 		public TestExpression(Type returnType) : base(returnType) { }
 	}
 
+	//ncrunch: no coverage start, not the focus here
 	public override Expression ParseMethodCall(Type typeForConstructor, string initializationLine) => null!;
-	public override Expression? TryParse(Method method, ref int lineNumber) => null;
+
 	public override Expression? TryParse(Method method, string line, ref int lineNumber) => null;
+	//ncrunch: no coverage end
 
 	[Test]
 	public void CompareExpressions()

@@ -2,7 +2,7 @@ using NUnit.Framework;
 
 namespace Strict.Language.Expressions.Tests;
 
-public class NumberTests : TestExpressions
+public sealed class NumberTests : TestExpressions
 {
 	[Test]
 	public void ParseNumber() => ParseAndCheckOutputMatchesInput("77", new Number(method, 77));

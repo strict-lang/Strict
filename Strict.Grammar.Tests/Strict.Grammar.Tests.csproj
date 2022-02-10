@@ -22,6 +22,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Strict.Language\Strict.Language.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Compile Update="GrammarTests.cs">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Compile>

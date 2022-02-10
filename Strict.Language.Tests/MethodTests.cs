@@ -35,7 +35,7 @@ Run
 	{
 		var method = new Method(type, null!, new[] { "from(number)" });
 		Assert.That(method.Name, Is.EqualTo("from"));
-		Assert.That(method.Parameters, Has.Count.EqualTo(1), method.Parameters.ToWordListString());
+		Assert.That(method.Parameters, Has.Count.EqualTo(1), method.Parameters.ToWordList());
 		Assert.That(method.Parameters[0].Type, Is.EqualTo(type.GetType("Number")));
 		Assert.That(method.ReturnType, Is.EqualTo(type));
 	}

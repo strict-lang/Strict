@@ -255,7 +255,7 @@ public class Type : Context
 	public IReadOnlyList<Method> Methods => methods;
 	private readonly List<Method> methods = new();
 	public bool IsTrait => Implements.Count == 0 && Members.Count == 0 && Name != Base.Number;
-	public override string ToString() => base.ToString() + Implements.ToBracketsString();
+	public override string ToString() => base.ToString() + Implements.ToBrackets();
 
 	public override Type? FindType(string name, Context? searchingFrom = null) =>
 		name == Name || name.Contains('.') && name == base.ToString()

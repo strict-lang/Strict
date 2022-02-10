@@ -7,7 +7,7 @@ namespace Strict.Language.Expressions;
 // ReSharper disable once HollowTypeName
 public class MethodCall : Expression
 {
-	public MethodCall(Expression instance, Method method, params Expression[] arguments) : base(
+	public MethodCall(Expression? instance, Method method, params Expression[] arguments) : base(
 		method.ReturnType)
 	{
 		Instance = instance;
@@ -15,12 +15,14 @@ public class MethodCall : Expression
 		Arguments = arguments;
 	}
 
-	public Expression Instance { get; }
+	public Expression? Instance { get; }
 	public Method Method { get; }
 	public IReadOnlyList<Expression> Arguments { get; }
 
 	public override string ToString() =>
-		Instance + "." + Method.Name + Arguments.ToBracketsString();
+		(Instance != null
+			? Instance + "."
+			: "") + Method.Name + Arguments.ToBrackets();
 
 	public static Expression? TryParse(Method context, string input) =>
 		input.EndsWith(')') && input.Contains('(')
@@ -31,43 +33,54 @@ public class MethodCall : Expression
 	private static Expression? TryParseMethod(Method context, params string[] parts)
 	{
 		var methodName = parts[0];
+		var arguments = parts.Length > 1
+			? GetArguments(context, parts[1], methodName)
+			: Array.Empty<Expression>();
 		if (!methodName.Contains('.'))
-			return TryParseMemberCallMethod(context, parts, methodName);
+			return FindMethodCall(null, context.Type, methodName, arguments);
 		var memberParts = methodName.Split('.', 2);
 		methodName = memberParts[1];
 		var firstMember = MemberCall.TryParse(context, memberParts[0]);
 		if (firstMember == null)
 			throw new MemberCall.MemberNotFound(memberParts[0], context.Type);
-		return GetMethodCall(firstMember, firstMember.ReturnType, methodName,
-			GetArguments(context, parts, methodName));
+		return FindMethodCall(firstMember, firstMember.ReturnType, methodName, arguments);
 	}
 
-	private static Expression? TryParseMemberCallMethod(Method context, IReadOnlyList<string> parts,
-		string methodName)
+	private static Expression[] GetArguments(Method method, string argumentsText, string methodName)
 	{
-		var member = MemberCall.TryParse(context, methodName);
-		return member == null
-			? null
-			: GetMethodCall(member, context.Type, methodName, GetArguments(context, parts, methodName));
+		var parts = argumentsText.Split(", ");
+		var arguments = new Expression[parts.Length];
+		for (var index = 0; index < parts.Length; index++)
+			arguments[index] = method.TryParse(parts[index]) ??
+				throw new MethodExpressionParser.UnknownExpression(method,
+					parts[index] + " for " + methodName + " argument " + index);
+		return arguments;
 	}
 
-	private static Expression? GetMethodCall(Expression instance, Type context, string methodName,
+	private static Expression? FindMethodCall(Expression? instance, Type context, string methodName,
 		Expression[] arguments)
 	{
+		if (!methodName.IsWord())
+			return null;
 		var method = context.Methods.FirstOrDefault(m => m.Name == methodName);
 		return method == null
-			? null
-			: new MethodCall(instance, method, arguments);
+			? throw new MethodNotFound(methodName, context)
+			: method.Parameters.Count != arguments.Length
+				? throw new ArgumentsDoNotMatchMethodParameters(arguments, method)
+				: new MethodCall(instance, method, arguments);
 	}
 
-	private static Expression[] GetArguments(Method method, IReadOnlyList<string> parts,
-		string methodName)
+	public sealed class MethodNotFound : Exception
 	{
-		var arguments = new Expression[parts.Count - 1];
-		for (var i = 0; i < parts.Count - 1; i++)
-			arguments[i] = method.TryParse(parts[i + 1]) ??
-				throw new MethodExpressionParser.UnknownExpression(method,
-					parts[i + 1] + " for " + methodName);
-		return arguments;
+		public MethodNotFound(string methodName, Type type) : base(methodName + " in " + type) { }
+	}
+
+	public sealed class ArgumentsDoNotMatchMethodParameters : Exception
+	{
+		public ArgumentsDoNotMatchMethodParameters(Expression[] arguments, Method method) : base(
+			(arguments.Length == 0
+				? "No arguments does "
+				: "Arguments: " + arguments.ToBrackets() + " do ") + "not match \"" + method.Type + "." +
+			method.Name + "\" method parameters: " + method.Parameters.ToBrackets()) { }
 	}
 }

@@ -3,7 +3,7 @@ using Strict.Language.Tests;
 
 namespace Strict.Language.Expressions.Tests;
 
-public class MethodExpressionParserTests : TestExpressions
+public sealed class MethodExpressionParserTests : TestExpressions
 {
 	[Test]
 	public void ParseSingleLine()

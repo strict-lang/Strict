@@ -16,6 +16,11 @@ public sealed class CSharpExpressionVisitorTests : TestExpressions
 	private CSharpExpressionVisitor visitor = null!;
 
 	[Test]
+	public void ShouldCallVisitBlockForBlockExpressions() =>
+		Assert.That(() => visitor.Visit(method.Body)[0],
+			Throws.InstanceOf<ExpressionVisitor.UseVisitBlock>());
+
+	[Test]
 	public void GenerateAssignment() =>
 		Assert.That(
 			visitor.Visit(new Assignment(new Identifier(nameof(number), number.ReturnType), number)),
@@ -57,7 +62,7 @@ public sealed class CSharpExpressionVisitorTests : TestExpressions
 	[TestCase("true", "true")]
 	[TestCase("\"Hey\"", "\"Hey\"")]
 	[TestCase("42", "42")]
-	[TestCase("log.WriteLine(\"Hey\")", "Console.WriteLine(\"Hey\")")]
+	[TestCase("log.Write(\"Hey\")", "Console.WriteLine(\"Hey\")")]
 	[TestCase("log.Text", "log.Text")]
 	public void ConvertStrictToCSharp(string strictCode, string expectedCSharpCode) =>
 		Assert.That(visitor.Visit(ParseExpression(strictCode)), Is.EqualTo(expectedCSharpCode));
@@ -75,6 +80,22 @@ public sealed class CSharpExpressionVisitorTests : TestExpressions
 			{
 				"public bool IsBla5()", "{", "	var number = 5;", "	if (bla == 5)", "		return true;",
 				"	return false;", "}"
+			}));
+	}
+
+	[Test]
+	public void GenerateIfElse()
+	{
+		var multilineMethod = new Method(type, this,
+			new[]
+			{
+				"IsBla5 returns Boolean", "	if bla is 5", "		return true", "	else", "		return false"
+			});
+		Assert.That(visitor.VisitBlock(multilineMethod.Body),
+			Is.EqualTo(new[]
+			{
+				"public bool IsBla5()", "{", "	if (bla == 5)", "		return true;", "	else",
+				"		return false;", "}"
 			}));
 	}
 }

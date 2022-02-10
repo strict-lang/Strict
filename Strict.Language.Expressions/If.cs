@@ -16,7 +16,7 @@ public sealed class If : BlockExpression
 	public Expression? OptionalElse { get; }
 
 	public override int GetHashCode() =>
-		Condition.GetHashCode() ^ Then.GetHashCode() ^ OptionalElse?.GetHashCode() ?? 0;
+		Condition.GetHashCode() ^ Then.GetHashCode() ^ (OptionalElse?.GetHashCode() ?? 0);
 
 	public override string ToString() =>
 		"if " + Condition + Environment.NewLine + "\t" + Then + (OptionalElse != null
@@ -27,9 +27,11 @@ public sealed class If : BlockExpression
 		other is If a && Equals(Condition, a.Condition) && Then.Equals(a.Then) && (OptionalElse?.Equals(a.OptionalElse) ?? true);
 
 	public static Expression? TryParse(Method method, string line, ref int lineNumber) =>
-		line.StartsWith("if ", StringComparison.Ordinal)
-			? TryParseIf(method, line, ref lineNumber)
-			: null;
+		line == "if"
+			? throw new MissingCondition(line)
+			: line.StartsWith("if ", StringComparison.Ordinal)
+				? TryParseIf(method, line, ref lineNumber)
+				: null;
 
 	private static Expression TryParseIf(Method method, string line, ref int lineNumber)
 	{
@@ -39,11 +41,11 @@ public sealed class If : BlockExpression
 		if (lineNumber >= method.bodyLines.Count)
 			throw new MissingThen(method.bodyLines[lineNumber - 1].Text);
 		if (method.bodyLines[lineNumber].Tabs != method.bodyLines[lineNumber - 1].Tabs + 1)
-			throw new Method.InvalidIndentation(string.Join('\n', method.bodyLines.ToWordListString()),
+			throw new Method.InvalidIndentation(string.Join('\n', method.bodyLines.ToWordList()),
 				lineNumber, method.Name);
 		var then = method.TryParse(method.bodyLines[lineNumber].Text, ref lineNumber) ??
 			throw new MissingThen(method.bodyLines[lineNumber].Text);
-		if (lineNumber + 2 >= method.bodyLines.Count || method.bodyLines[lineNumber].Text != "else")
+		if (lineNumber + 2 >= method.bodyLines.Count || method.bodyLines[lineNumber + 1].Text != "else")
 			return new If(condition, then, null);
 		lineNumber += 2;
 		return new If(condition, then, method.TryParse(method.bodyLines[lineNumber].Text, ref lineNumber));

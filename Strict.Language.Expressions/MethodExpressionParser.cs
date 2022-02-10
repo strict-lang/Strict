@@ -17,29 +17,25 @@ public class MethodExpressionParser : ExpressionParser
 	{
 		var expressions = new List<Expression>();
 		for (var lineNumber = 0; lineNumber < method.bodyLines.Count; lineNumber++)
-			expressions.Add(TryParse(method, ref lineNumber) ??
+			expressions.Add(TryParse(method, method.bodyLines[lineNumber].Text, ref lineNumber) ??
 				throw new UnknownExpression(method, method.bodyLines[lineNumber].Text, lineNumber));
 		return new MethodBody(method, expressions);
 	}
 
 	public override Expression ParseMethodCall(Type type, string initializationLine)
 	{
-		var constructor = type.Methods[0]; //TODO: pick right constructor!
+		var constructor = type.Methods[0];
 		var lineNumber = 0;
 		return new MethodCall(new Value(type, type), constructor,
-			//TODO: test multiple parameters
 			TryParse(constructor, initializationLine, ref lineNumber)!);
 	}
-
-	public override Expression? TryParse(Method method, ref int lineNumber) =>
-		TryParse(method, method.bodyLines[lineNumber].Text, ref lineNumber);
 
 	public override Expression? TryParse(Method method, string line, ref int lineNumber) =>
 		Assignment.TryParse(method, line) ?? If.TryParse(method, line, ref lineNumber) ??
 		Return.TryParse(method, line) ?? Number.TryParse(method, line) ??
 		Boolean.TryParse(method, line) ?? Text.TryParse(method, line) ??
 		Binary.TryParse(method, line) ??
-		MethodCall.TryParse(method, line) ?? MemberCall.TryParse(method, line);
+		MemberCall.TryParse(method, line) ?? MethodCall.TryParse(method, line);
 
 	public class UnknownExpression : Exception
 	{

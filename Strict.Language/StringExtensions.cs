@@ -13,11 +13,11 @@ public static class StringExtensions
 	public static string[] SplitWordsAndPunctuation(this string text) =>
 		text.Split(new[] { ' ', '(', ')', ',' }, StringSplitOptions.RemoveEmptyEntries);
 
-	public static string ToWordListString<T>(this IEnumerable<T> list) => string.Join(", ", list);
+	public static string ToWordList<T>(this IEnumerable<T> list) => string.Join(", ", list);
 
-	public static string ToBracketsString<T>(this IReadOnlyCollection<T> list) =>
+	public static string ToBrackets<T>(this IReadOnlyCollection<T> list) =>
 		list.Count > 0
-			? "(" + ToWordListString(list) + ")"
+			? "(" + ToWordList(list) + ")"
 			: "";
 
 	/// <summary>

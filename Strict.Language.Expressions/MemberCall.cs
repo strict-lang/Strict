@@ -28,16 +28,20 @@ public class MemberCall : Expression
 			: Member.Name;
 
 	public static MemberCall? TryParse(Method context, string input) =>
-		input.Contains('.')
-			? TryNestedMemberCall(context, input.Split('.', 2))
-			: TryMemberCall(context, input);
+		input.Contains('(')
+			? null
+			: input.Contains('.')
+				? TryNestedMemberCall(context, input.Split('.', 2))
+				: TryMemberCall(context, input);
 
-	private static MemberCall TryNestedMemberCall(Method context, IReadOnlyList<string> parts)
+	private static MemberCall? TryNestedMemberCall(Method context, IReadOnlyList<string> parts)
 	{
 		var first = TryMemberCall(context, parts[0])!;
 		var second = first.ReturnType.Members.FirstOrDefault(m => m.Name == parts[1]);
 		return second == null
-			? throw new MemberNotFound(parts[1], first.ReturnType)
+			? first.ReturnType.Methods.Any(m => m.Name == parts[1])
+				? null
+				: throw new MemberNotFound(parts[1], first.ReturnType)
 			: new MemberCall(first, second);
 	}
 
@@ -46,9 +50,11 @@ public class MemberCall : Expression
 		if (!name.IsWord())
 			return null;
 		var foundMember = context.Type.Members.FirstOrDefault(member => member.Name == name);
-		if (foundMember == null)
+		if (foundMember != null)
+			return new MemberCall(foundMember);
+		if (context.Type.Methods.All(m => m.Name != name))
 			throw new MemberNotFound(name, context.Type);
-		return new MemberCall(foundMember);
+		return null;
 	}
 
 	public class MemberNotFound : Exception
