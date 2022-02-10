@@ -38,20 +38,15 @@ public class Program
 	}
 
 	[Test]
-	[Ignore("TODO")]
-	public void CreateFileWriteIntoItReadItAndThenDeleteIt()
+	public void CreateFileAndWriteIntoIt()
 	{
-		var program = new Type(package, nameof(CreateFileWriteIntoItReadItAndThenDeleteIt), parser).Parse(@"implement App
+		var program = new Type(package, nameof(CreateFileAndWriteIntoIt), parser).Parse(@"implement App
 has file = """ + TemporaryFile + @"""
 has log
 Run
-	file.Write(""Hello"")
-	log.Write(file.Read())
-	file.Delete()");
+	file.Write(""Hello"")");
 		var generatedCode = generator.Generate(program).ToString()!;
-		Assert.That(GenerateNewConsoleAppAndReturnOutput(ProjectFolder, generatedCode),
-			Is.EqualTo("Hello"));
-		Assert.That(File.Exists(Path.Combine(ProjectFolder, TemporaryFile)), Is.False);
+		Assert.That(GenerateNewConsoleAppAndReturnOutput(ProjectFolder, generatedCode), Is.EqualTo(""));
 	}
 
 	private const string TemporaryFile = "temp.txt";

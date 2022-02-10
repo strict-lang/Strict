@@ -69,6 +69,8 @@ public class CSharpTypeVisitor : TypeVisitor
 		var initializationExpression = "";
 		if (member.Value != null)
 			initializationExpression += " = " + expressionVisitor.Visit(member.Value);
+		if (member.Name == "file")
+			accessModifier += " static";
 		FileContent += "\t" + accessModifier + " " + expressionVisitor.GetCSharpTypeName(member.Type) + " " +
 			member.Name + initializationExpression + SemicolonAndLineBreak;
 	}

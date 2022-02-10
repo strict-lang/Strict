@@ -45,7 +45,7 @@ public abstract class ExpressionVisitor
 			MethodCall call => Visit(call),
 			MemberCall member => Visit(member),
 			Value value => Visit(value),
-			_ => VisitWhenExpressionIsSameInCSharp(expression)
+			_ => expression.ToString() //ncrunch: no coverage
 		};
 
 	public class UseVisitBlock : Exception
@@ -63,5 +63,4 @@ public abstract class ExpressionVisitor
 	protected abstract string Visit(MethodCall methodCall);
 	protected abstract string Visit(MemberCall memberCall);
 	protected abstract string Visit(Value value);
-	protected abstract string VisitWhenExpressionIsSameInCSharp(Expression expression);
 }

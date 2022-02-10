@@ -91,7 +91,7 @@ Run
 		Assert.That(visitor.FileContent, Contains.Substring("\tprivate int number;"));
 		Assert.That(visitor.FileContent,
 			Contains.Substring(
-				"\tprivate FileStream file = new FileStream(\"test.txt\", FileMode.OpenOrCreate);"));
+				"\tprivate static FileStream file = new FileStream(\"test.txt\", FileMode.OpenOrCreate);"));
 		Assert.That(visitor.FileContent,
 			Contains.Substring("\tpublic void Run()" + Environment.NewLine));
 	}
