@@ -71,15 +71,12 @@ public class CSharpExpressionVisitor : ExpressionVisitor
 		"return " + Visit(returnExpression.Value);
 
 	protected override string Visit(MethodCall methodCall) =>
-		(methodCall.Method.Name == Method.From
-			? "new "
-			: "") + (methodCall.Instance != null
-			? methodCall.Instance.ToString() == "file"
-				? "var writer = new StreamWriter(file); writer"
-				: Visit(methodCall.Instance)
-			: "") + (methodCall.Method.Name == Method.From || methodCall.Instance == null
+		VisitMethodCallInstance(methodCall) +
+		(methodCall.Method.Name == Method.From || methodCall.Instance == null
 			? ""
-			: "." + (methodCall.Method.Name == "Write" &&
+			: "." + (methodCall.Method.Name == "Read" && methodCall.Instance.ToString() == "file"
+				? "ReadToEnd"
+				: methodCall.Method.Name == "Write" &&
 				methodCall.Instance.ReturnType.Name is Base.Log or Base.System
 					? "WriteLine"
 					: methodCall.Method.Name)) + "(" + methodCall.Arguments.Select(Visit).ToWordList() +
@@ -87,9 +84,21 @@ public class CSharpExpressionVisitor : ExpressionVisitor
 			? ", FileMode.OpenOrCreate"
 			: "") + ")";
 
+	private string VisitMethodCallInstance(MethodCall methodCall) =>
+		((methodCall.Arguments.FirstOrDefault() as MethodCall)?.Instance?.ToString() == "file"
+			? "var reader = new StreamReader(file);"
+			: "") + (methodCall.Method.Name == Method.From
+			? "new "
+			: "") + (methodCall.Instance != null
+			? methodCall.Instance.ToString() == "file" && methodCall.Method.Name == "Write"
+				? "var writer = new StreamWriter(file); writer"
+				: methodCall.Instance.ToString() == "file" && methodCall.Method.Name == "Read"
+					? "reader"
+					: Visit(methodCall.Instance)
+			: "");
+
 	protected override string Visit(MemberCall memberCall) =>
-		memberCall.Member.Type == memberCall.ReturnType.GetType(Base.Log) ||
-		memberCall.Member.Type == memberCall.ReturnType.FindType(Base.System)
+		memberCall.Member.Type.Name is Base.Log or Base.System
 			? "Console"
 			: memberCall.Parent != null
 				? memberCall.Parent + "." + memberCall.Member.Name

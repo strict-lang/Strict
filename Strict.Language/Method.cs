@@ -50,11 +50,16 @@ public class Method : Context
 		}
 		if (string.IsNullOrEmpty(rest))
 			return;
+		CheckForInvalidSyntax(rest);
+		ParseParameters(rest[1..^1]);
+	}
+
+	private static void CheckForInvalidSyntax(string rest)
+	{
 		if (rest == "()")
 			throw new EmptyParametersMustBeRemoved();
 		if (!rest.StartsWith('(') || !rest.EndsWith(')'))
 			throw new InvalidSyntax(rest);
-		ParseParameters(rest[1..^1]);
 	}
 
 	public const string Returns = "returns";
@@ -99,13 +104,18 @@ public class Method : Context
 				tabs++;
 			else
 				break;
+		CheckIndentation(line, lineNumber, tabs);
+		lines[lineNumber - 1] = new Line(tabs, line[tabs..]);
+	}
+
+	private void CheckIndentation(string line, int lineNumber, int tabs)
+	{
 		if (tabs is 0 or > 3)
 			throw new InvalidIndentation(line, lineNumber, Name);
 		if (line.Length - tabs != line.TrimStart().Length)
 			throw new Type.ExtraWhitespacesFoundAtBeginningOfLine(line, lineNumber, Name);
 		if (line.Length != line.TrimEnd().Length)
 			throw new Type.ExtraWhitespacesFoundAtEndOfLine(line, lineNumber, Name);
-		lines[lineNumber - 1] = new Line(tabs, line[tabs..]);
 	}
 
 	public sealed class InvalidIndentation : Type.ParsingFailedInLine

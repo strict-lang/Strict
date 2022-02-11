@@ -6,7 +6,7 @@ using NUnit.Framework;
 
 namespace Strict.Language.Tests;
 
-public class RepositoriesTests
+public sealed class RepositoriesTests
 {
 	[Test]
 	public void InvalidPathWontWork() =>

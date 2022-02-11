@@ -21,6 +21,7 @@ public static class ConcurrentDictionaryExtensions
 			? currentTask
 			: CreateOnlyOnce(source, key, valueFactory);
 
+	// ReSharper disable once MethodTooLong
 	private static Task<Value> CreateOnlyOnce<Key, Value>(ConcurrentDictionary<Key, Task<Value>> source, Key key,
 		Func<Key, Task<Value>> valueFactory) where Key : notnull
 	{

@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8" standalone="yes"?>
-<NDepend AppName="Strict" Platform="DotNet" FileWrittenByProductVersion="2020.1.0.9404">
+<NDepend AppName="Strict" Platform="DotNet" FileWrittenByProductVersion="2021.1.0.9500">
   <OutputDir KeepXmlFiles="False">.\NDependOut</OutputDir>
   <IDEFiles>
     <IDEFile FilePath=".\Strict.sln" Filters="-test" Configuration="DEBUG|AnyCPU" />
@@ -198,6 +198,7 @@ select new { t, t.NbLinesOfCode, t.NbILInstructions, t.Methods, t.Fields }
 //</HowToFix>]]></Query>
       <Query Active="True" DisplayList="True" DisplayStat="False" DisplaySelectionView="False" IsCriticalRule="True"><![CDATA[// <Name>Methods with too many parameters - critical</Name>
 warnif count > 0 from m in JustMyCode.Methods where 
+  !m.ParentType.IsRecord &&
   !m.HasAttribute("System.Runtime.InteropServices.DllImportAttribute".AllowNoMatch()) &&
   !m.ParentType.Name.EndsWith("PropertyDescriptor") &&
   !m.ParentType.Name.EndsWith("Message") &&
@@ -272,6 +273,7 @@ select new { m, lines=m.NbLinesOfCode-5, m.NbILInstructions }
 //</HowToFix>IsClassConstructor]]></Query>
       <Query Active="True" DisplayList="True" DisplayStat="False" DisplaySelectionView="False" IsCriticalRule="False"><![CDATA[// <Name>Methods with too many parameters</Name>
 warnif count > 0 from m in JustMyCode.Methods where 
+  !m.ParentType.IsRecord &&
   !m.HasAttribute("System.Runtime.InteropServices.DllImportAttribute".AllowNoMatch()) &&
   !m.ParentType.Name.Contains("Renderer") &&
    !m.FullName.Contains("NVorbis") &&
@@ -319,7 +321,8 @@ select new { m, m.NbParameters }
 //</HowToFix>]]></Query>
       <Query Active="True" DisplayList="True" DisplayStat="False" DisplaySelectionView="False" IsCriticalRule="False"><![CDATA[// <Name>Methods with too many overloads</Name>
 warnif count > 0 from m in JustMyCode.Methods where 
-  m.NbOverloads > 6 && 
+  m.NbOverloads > 6 &&
+  !m.Name.Contains("Visit") &&
   !m.IsOperator // Don't report operator overload
   orderby m.NbOverloads descending
 let overloads = 
@@ -1503,6 +1506,7 @@ select new {
       <Query Active="True" DisplayList="True" DisplayStat="False" DisplaySelectionView="False" IsCriticalRule="True"><![CDATA[// <Name>Avoid methods with too many parameters</Name>
 // <Id>ND1004:AvoidMethodsWithTooManyParameters</Id>
 warnif count > 0 from m in JustMyCode.Methods where 
+  !m.ParentType.IsRecord &&
   m.NbParameters >= 7 &&
   !m.Parent.NameLike("2D") &&
   !m.Parent.NameLike("Sprite") &&
@@ -2763,6 +2767,7 @@ warnif count > 0 from t in JustMyCode.Types where
  t.ParentType == null &&
  !t.IsSealed && 
  !t.IsStatic &&
+ t.NbLinesOfCode != 0 &&
  !t.IsPubliclyVisible // You might want to comment this condition 
                       // if you are developing an application,
                       // instead of developing a library
@@ -2823,7 +2828,8 @@ where  mBase.IsVirtual &&
       !mBase.IsPropertyGetter &&
       !mBase.IsPropertySetter &&
       !mBase.IsIndexerGetter &&
-      !mBase.IsIndexerSetter &&      
+      !mBase.IsIndexerSetter &&
+	  !mBase.Name.StartsWith("Equals(") &&
       // Don't take account of virtual methods of the Object type.
       !mBase.Name.EqualsAny("Equals(Object)","ToString()", "GetHashCode()","Finalize()", "Get(String)", "Dispose()")
 
@@ -3142,7 +3148,7 @@ let methodsThatCanBeMadeStatic =
          !m.IsPublic && !m.IsInternal && !m.Name.StartsWith("PrivateMethod") &&
          !m.AccessThis && !m.IsExplicitInterfaceImpl &&
          !m.IsProtected && // Protected method access doesn't match well with static methods
-
+     !m.ParentType.IsRecord &&
          // Don't warn about not yet implemented methods.
          !m.CreateA("System.NotImplementedException".AllowNoMatch()) &&
 
@@ -6654,6 +6660,7 @@ let canMethodBeConsideredAsDeadProc = new Func<IMethod, bool>(
          m.Name != "CopyNativeDllsFromPath" &&
          m.Name != "AreNativeDllsCopiedFromLocalNativeBinariesFolder" &&
          m.Name != "get_Is3D" &&
+		 m.Name != "PrintMembers(StringBuilder)" &&
          !m.ParentType.Name.Contains("Image") &&
          !m.ParentType.Name.Contains("Font") &&
          !m.ParentType.Name.Contains("Geometry") &&
@@ -8447,7 +8454,10 @@ select new {
 
 warnif count > 0 
 from f in JustMyCode.Fields where 
-   f.IsInitOnly && 
+   f.IsInitOnly &&
+   f.FieldType != null &&
+   f.FieldType.IsClass &&
+   f.Name != "Shared" &&
   !f.ParentType.IsPrivate &&
   !f.IsPrivate &&
   !f.IsProtected &&
@@ -9058,6 +9068,8 @@ from m in JustMyCode.Methods where
   !m.FullName.Contains("WebCam") &&
   !m.FullName.Contains("NVorbis") &&
   !m.FullName.Contains("Invokes") &&
+	!m.ParentType.IsRecord &&
+  !m.Name.StartsWith("<") && !m.FullName.Contains("$") &&
   !m.IsSpecialName &&
   !m.IsGeneratedByCompiler &&
   !m.IsExplicitInterfaceImpl // This can generate unexpected method name.
@@ -10738,7 +10750,7 @@ where  propSetter != null &&
       !propSetter.IsPrivate && // Ignore private setters since this is private implementation detail
       !propSetter.IsInternal &&
       !propSetter.ParentType.IsPrivate && // Ignore setters of private types
-
+      !propSetter.IsPropertyInit &&
        // Ignore properties of serializable types
       !propSetter.ParentType.TypesUsed.Any(t1 => t1.IsAttributeClass && t1.ParentNamespace.Name == "Newtonsoft.Json") &&
       !propSetter.ParentType.HasAttribute("System.Runtime.Serialization.DataContractAttribute".AllowNoMatch()) &&
@@ -13326,6 +13338,82 @@ select new {
 // To fix a violation of this rule, add a version number to the assembly 
 // by using the *System.Reflection.AssemblyVersionAttribute* attribute.
 //</HowToFix>]]></Query>
+      <Query Active="True" DisplayList="True" DisplayStat="True" DisplaySelectionView="False" IsCriticalRule="False"><![CDATA[// <Name>Calls to .Result are not allowed for Tasks</Name>
+      
+warnif count > 0 
+
+let resultMethods = ThirdParty.Methods.WithFullNameWildcardMatch(
+   "System.Threading.Tasks.Task<TResult>.get_Result*").ToHashSetEx()             
+
+from m in Application.Methods.UsingAny(resultMethods)
+select new { 
+   m,
+   resultMethodCalled = m.MethodsCalled.Intersect(resultMethods),
+   Debt = 1.ToMinutes().ToDebt(),
+   Severity = Severity.Medium
+}
+]]></Query>
+      <Query Active="True" DisplayList="True" DisplayStat="True" DisplaySelectionView="False" IsCriticalRule="False"><![CDATA[// <Name>Public static methods are not allowed (except in Extensions classes)</Name>
+
+warnif count > 0 
+from m in Application.Methods where 
+ m.IsStatic &&
+ m.IsPublic &&
+ !m.IsPropertyGetter &&
+ !m.IsOperator &&
+ !m.Name.StartsWith("Main") &&
+ !m.Name.StartsWith("Create") &&
+ !m.Name.StartsWith("From") &&
+ !m.Name.StartsWith("Save") &&
+ !m.Name.StartsWith("Is") &&
+ !m.Name.StartsWith("GetDefault") &&
+ !m.FullName.StartsWith("AsfMojo.") &&
+ !m.FullName.StartsWith("NVorbis") &&
+ !m.FullName.Contains("Frameworks") &&
+ !m.FullName.Contains("Serialize") &&
+ !m.FullName.Contains("Deserialize") &&
+ !m.ParentType.IsInternal &&
+  m.Name != "CheckForComponentsWithoutRenderer(Entity)" &&
+  m.Name != "Product<T>(List<List<T>>)" &&
+  m.ParentType.Name != "Logger" &&
+ !m.ParentType.Name.StartsWith("BinaryData") &&
+ !m.ParentType.Name.EndsWith("Invokes") &&
+ !m.ParentNamespace.Name.EndsWith("Internals") &&
+ !m.ParentType.Name.EndsWith("Extensions") &&
+ !m.ParentType.Name.EndsWith("Resolver")
+
+select new { 
+   m, 
+   m.NbLinesOfCode, 
+   Debt = 15.ToMinutes().ToDebt(),
+   Severity = Severity.High
+}
+]]></Query>
+      <Query Active="True" DisplayList="True" DisplayStat="True" DisplaySelectionView="False" IsCriticalRule="False"><![CDATA[// <Name>Find methods must return nullable (use Get method if you are sure the result exists)</Name>
+
+warnif count > 0 
+from m in Application.Methods where 
+ m.Name.StartsWith("Find") &&
+ m.IsStatic && //broken for some reason for non static or non public (probably even for private static)
+ m.IsPrivate && //waiting for NDepend to correctly report Nullable parenttype (currently only works 10%)
+ !m.FullName.Contains("AsfMojo") &&
+ !m.FullName.Contains("NVorbis") &&
+ !m.FullName.Contains("Tests") &&
+ m.ReturnType != null &&
+ m.ReturnType.Name != "String" &&
+ m.ReturnType.Name != "Int32" &&
+ !m.ReturnType.IsEnumeration &&
+ !m.ReturnType.Name.Contains("Enumerable") &&
+ !m.ReturnType.Name.Contains("List") &&
+ !m.ReturnType.Name.Contains("Nullable")
+
+select new { 
+   m, 
+   m.ReturnType, 
+   m.ReturnType.FullName,
+   Severity = Severity.High
+}
+]]></Query>
     </Group>
   </Queries>
 </NDepend>

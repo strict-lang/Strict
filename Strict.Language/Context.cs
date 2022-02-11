@@ -33,6 +33,7 @@ public abstract class Context
 	/// least 5+ types in its package. A dictionary could cache the same name calls (e.g. Number,
 	/// Text, etc. or even Base.Log always return the same type).
 	/// </summary>
+	// ReSharper disable once MethodTooLong
 	public Type GetType(string name)
 	{
 		// Generics still need to be supported (see Log.strict for Output<text>)

@@ -268,14 +268,19 @@ public class Type : Context
 			throw new FileExtensionMustBeStrict();
 		var directory = Path.GetDirectoryName(filePath)!;
 		var paths = directory.Split(Path.DirectorySeparatorChar);
+		CheckForFilePathErrors(filePath, paths, directory);
+		Parse(await File.ReadAllLinesAsync(filePath));
+	}
+
+	private void CheckForFilePathErrors(string filePath, IReadOnlyList<string> paths, string directory)
+	{
 		if (Package.Name != paths.Last())
 			throw new FilePathMustMatchPackageName(Package.Name, directory);
 		if (!string.IsNullOrEmpty(Package.Parent.Name) &&
-			(paths.Length < 2 || Package.Parent.Name != paths[^2]))
+			(paths.Count < 2 || Package.Parent.Name != paths[^2]))
 			throw new FilePathMustMatchPackageName(Package.Parent.Name, directory);
 		if (directory.EndsWith(@"\strict-lang\Strict", StringComparison.Ordinal))
 			throw new StrictFolderIsNotAllowedForRootUseBaseSubFolder(filePath); //ncrunch: no coverage
-		Parse(await File.ReadAllLinesAsync(filePath));
 	}
 
 	//ncrunch: no coverage start, tests too flacky when creating and deleting wrong file

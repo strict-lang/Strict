@@ -57,6 +57,7 @@ Run
 	[Category("Slow")]
 	public void GenerateFileReadProgram()
 	{
+		File.WriteAllText(Path.Combine(ProjectFolder, TestTxt), ExpectedText);
 		var program = new Type(package, nameof(GenerateFileReadProgram), parser).Parse(@"implement App
 has file = """ + TestTxt + @"""
 has log
@@ -64,12 +65,12 @@ Run
 	log.Write(file.Read())");
 		var generatedCode = generator.Generate(program).ToString()!;
 		Assert.That(GenerateNewConsoleAppAndReturnOutput(ProjectFolder, generatedCode),
-			Is.EqualTo(ExpectedText));
+			Is.EqualTo(ExpectedText + "\r\n"));
 		Assert.That(File.Exists(Path.Combine(ProjectFolder, TestTxt)), Is.True);
 	}
 
 	private const string ProjectFolder = nameof(GenerateFileReadProgram);
-	private const string ExpectedText = "Hello World\r\n";
+	private const string ExpectedText = "Hello World";
 	private const string TestTxt = "test.txt";
 
 	private static string GenerateNewConsoleAppAndReturnOutput(string folder, string generatedCode)
@@ -89,7 +90,6 @@ Run
 			RunDotnetAndReturnOutput("", "new console --force --name " + folder, out var creationError);
 		if (!creationOutput.Contains("successful"))
 			throw new CompilationFailed(creationError, creationOutput, generatedCode);
-		File.WriteAllText(Path.Combine(folder, TestTxt), ExpectedText);
 	}
 
 	private static string RunDotnetAndReturnOutput(string folder, string argument, out string error)

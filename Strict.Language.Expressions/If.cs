@@ -33,6 +33,7 @@ public sealed class If : BlockExpression
 				? TryParseIf(method, line, ref lineNumber)
 				: null;
 
+	// ReSharper disable once MethodTooLong
 	private static Expression TryParseIf(Method method, string line, ref int lineNumber)
 	{
 		var condition = method.TryParse(line["if ".Length..]) ??

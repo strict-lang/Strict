@@ -13,7 +13,7 @@ public class MethodExpressionParser : ExpressionParser
 	/// Called lazily by Method.Body and only if needed for execution (context should be over there
 	/// as parsing is done in parallel, we should not keep any state here).
 	/// </summary>
-	public override MethodBody Parse(Method method)
+	public override Expression Parse(Method method)
 	{
 		var expressions = new List<Expression>();
 		for (var lineNumber = 0; lineNumber < method.bodyLines.Count; lineNumber++)

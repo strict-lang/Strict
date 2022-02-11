@@ -19,6 +19,7 @@ public class Kernel : IDisposable
 		handle?.Dispose();
 	}
 
+	// ReSharper disable once MethodTooLong
 	public void CompileKernelAndSaveAsPtxFile()
 	{
 		//generate as output language obviously from strict code

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
@@ -47,12 +48,12 @@ public class BlurPerformanceTests
 		height = bitmap.Height;
 		var data = bitmap.LockBits(new Rectangle(0, 0, bitmap.Width, bitmap.Height),
 			ImageLockMode.ReadOnly, bitmap.PixelFormat);
+		image = new byte[width * height * 4];
 		CreateColorImageFromBitmapData(bitmap, data);
 	}
 
-	private unsafe void CreateColorImageFromBitmapData(Bitmap bitmap, BitmapData data)
+	private unsafe void CreateColorImageFromBitmapData(Image bitmap, BitmapData data)
 	{
-		image = new byte[width * height * 4];
 		var pointer = (byte*)data.Scan0;
 		var offsetIncrease = bitmap.PixelFormat is PixelFormat.Format24bppRgb
 			? 3
@@ -101,7 +102,6 @@ public class BlurPerformanceTests
 			kernel = ctx.LoadKernelPTX(rtc.GetPTX(), "blur");
 			kernel.GridDimensions = (Size + 511) / 512;
 			kernel.BlockDimensions = 512;
-			//unused: float[] copyInput = new float[Size];
 			input = image;
 			output = new CudaDeviceVariable<byte>(Size);
 		}
@@ -148,28 +148,24 @@ public class BlurPerformanceTests
 		LoadImage();
 	}
 
-	public unsafe Bitmap AsBitmap(byte[] data, bool flipTopBottom = false)
+	public unsafe Bitmap AsBitmap(byte[] data)
 	{
 		var bitmap = new Bitmap(width, height);
 		var bitmapData = bitmap.LockBits(new Rectangle(0, 0, width, height), ImageLockMode.WriteOnly,
 			PixelFormat.Format24bppRgb);
 		var bitmapPointer = (byte*)bitmapData.Scan0.ToPointer();
-		SwitchRgbToBgr(data, bitmapPointer, bitmapData.Stride, flipTopBottom);
+		SwitchRgbToBgr(data, bitmapPointer, bitmapData.Stride);
 		bitmap.UnlockBits(bitmapData);
 		return bitmap;
 	}
 
-	private unsafe void SwitchRgbToBgr(byte[] data, byte* bitmapPointer, int stride,
-		bool flipTopBottom)
+	private unsafe void SwitchRgbToBgr(IReadOnlyList<byte> data, byte* bitmapPointer, int stride)
 	{
 		for (var y = 0; y < height; ++y)
 		for (var x = 0; x < width; ++x)
 		{
 			var targetIndex = y * stride + x * 3;
-			// ReSharper disable once ComplexConditionExpression
-			var sourceIndex = flipTopBottom
-				? ((height - 1 - y) * width + x) * 3
-				: (y * width + x) * 3;
+			var sourceIndex = (y * width + x) * 3;
 			bitmapPointer[targetIndex] = data[sourceIndex + 2];
 			bitmapPointer[targetIndex + 1] = data[sourceIndex + 1];
 			bitmapPointer[targetIndex + 2] = data[sourceIndex];
