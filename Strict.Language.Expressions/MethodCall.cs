@@ -39,11 +39,10 @@ public class MethodCall : Expression
 		if (!methodName.Contains('.'))
 			return FindMethodCall(null, context.Type, methodName, arguments);
 		var memberParts = methodName.Split('.', 2);
-		methodName = memberParts[1];
 		var firstMember = MemberCall.TryParse(context, memberParts[0]);
 		if (firstMember == null)
 			throw new MemberCall.MemberNotFound(memberParts[0], context.Type);
-		return FindMethodCall(firstMember, firstMember.ReturnType, methodName, arguments);
+		return FindMethodCall(firstMember, firstMember.ReturnType, memberParts[1], arguments);
 	}
 
 	private static Expression[] GetArguments(Method method, string argumentsText, string methodName)
@@ -57,7 +56,8 @@ public class MethodCall : Expression
 		return arguments;
 	}
 
-	private static Expression? FindMethodCall(Expression? instance, Type context, string methodName,
+	// ReSharper disable once TooManyArguments
+	private static MethodCall? FindMethodCall(Expression? instance, Type context, string methodName,
 		Expression[] arguments)
 	{
 		if (!methodName.IsWord())

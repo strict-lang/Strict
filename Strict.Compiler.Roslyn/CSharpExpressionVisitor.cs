@@ -80,8 +80,7 @@ public class CSharpExpressionVisitor : ExpressionVisitor
 			: "") + (methodCall.Method.Name == Method.From || methodCall.Instance == null
 			? ""
 			: "." + (methodCall.Method.Name == "Write" &&
-				(methodCall.Instance.ReturnType == methodCall.ReturnType.GetType(Base.Log) ||
-					methodCall.Instance.ReturnType == methodCall.ReturnType.FindType(Base.System))
+				methodCall.Instance.ReturnType.Name is Base.Log or Base.System
 					? "WriteLine"
 					: methodCall.Method.Name)) + "(" + methodCall.Arguments.Select(Visit).ToWordList() +
 		(methodCall.ReturnType.Name == "File"

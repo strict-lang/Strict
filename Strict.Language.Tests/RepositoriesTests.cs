@@ -34,7 +34,7 @@ public class RepositoriesTests
 	public async Task LoadingSameRepositoryAgainUsesCache()
 	{
 		var tasks = new List<Task<Package>>();
-		for (var index = 0; index < 100; index++)
+		for (var index = 0; index < 20; index++)
 			tasks.Add(repos.LoadFromUrl(Repositories.StrictUrl));
 		await Task.WhenAll(tasks);
 		foreach (var task in tasks)

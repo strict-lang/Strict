@@ -37,7 +37,9 @@ public class Program
 }"));
 	}
 
+	//ncrunch: no coverage start
 	[Test]
+	[Category("Slow")]
 	public void CreateFileAndWriteIntoIt()
 	{
 		var program = new Type(package, nameof(CreateFileAndWriteIntoIt), parser).Parse(@"implement App
@@ -51,7 +53,6 @@ Run
 
 	private const string TemporaryFile = "temp.txt";
 
-	//ncrunch: no coverage start
 	[Test]
 	[Category("Slow")]
 	public void GenerateFileReadProgram()
