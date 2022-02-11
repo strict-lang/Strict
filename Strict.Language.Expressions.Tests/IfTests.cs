@@ -19,28 +19,21 @@ public sealed class IfTests : TestExpressions
 			Throws.InstanceOf<Method.InvalidIndentation>());
 
 	[Test]
-	public void ParseIf()
-	{
-		var expression = ParseExpression("if bla is 5", "\tlog.Write(\"Hey\")");
-		Assert.That(expression,
-			Is.EqualTo(new If(
-				new Binary(new MemberCall(bla), binaryOperators.First(m => m.Name == BinaryOperator.Is),
-					number),
-				new MethodCall(new MemberCall(member), member.Type.Methods[0], new Text(type, "Hey")),
-				null)));
-	}
+	public void ParseIf() =>
+		Assert.That(ParseExpression("if bla is 5", "\tlog.Write(\"Hey\")"),
+			Is.EqualTo(new If(GetCondition(), GetThen(), null)));
 
 	[Test]
-	public void ParseIfElse()
-	{
-		var expression = ParseExpression("if bla is 5", "\tlog.Write(\"Hey\")", "else", "\tRun");
-		Assert.That(expression,
-			Is.EqualTo(new If(
-				new Binary(new MemberCall(bla), binaryOperators.First(m => m.Name == BinaryOperator.Is),
-					number),
-				new MethodCall(new MemberCall(member), member.Type.Methods[0], new Text(type, "Hey")),
-				null)));
-	}
+	public void ParseIfElse() =>
+		Assert.That(ParseExpression("if bla is 5", "\tlog.Write(\"Hey\")", "else", "\tRun"),
+			Is.EqualTo(new If(GetCondition(), GetThen(), new MethodCall(null, method))).And.Not.
+				EqualTo(new If(GetCondition(), GetThen(), null)));
+
+	private MethodCall GetThen() =>
+		new(new MemberCall(member), member.Type.Methods[0], new Text(type, "Hey"));
+
+	private Binary GetCondition() =>
+		new(new MemberCall(bla), binaryOperators.First(m => m.Name == BinaryOperator.Is), number);
 
 	[Test]
 	public void ReturnGetHashCode()

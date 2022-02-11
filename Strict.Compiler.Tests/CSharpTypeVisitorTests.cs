@@ -12,12 +12,17 @@ public sealed class CSharpTypeVisitorTests : TestCSharpGenerator
 	{
 		var program = CreateHelloWorldProgramType();
 		var visitor = new CSharpTypeVisitor(program);
-		Assert.That(visitor.Name, Is.EqualTo("Program"));
-		Assert.That(visitor.FileContent, Contains.Substring("public class Program"));
+		AssertProgramClass(visitor);
 		Assert.That(visitor.FileContent,
 			Contains.Substring("\tpublic static void Main()" + Environment.NewLine + "\t{"));
 		Assert.That(visitor.FileContent,
 			Contains.Substring("\t\tConsole.WriteLine(\"Hello World\");"));
+	}
+
+	private static void AssertProgramClass(CSharpTypeVisitor visitor)
+	{
+		Assert.That(visitor.Name, Is.EqualTo("Program"));
+		Assert.That(visitor.FileContent, Contains.Substring("public class Program"));
 		Assert.That(visitor.FileContent.EndsWith("}", StringComparison.InvariantCulture), Is.True,
 			visitor.FileContent);
 	}
@@ -46,8 +51,7 @@ Read
 Write
 	system.WriteLine(""Write"")");
 		var visitor = new CSharpTypeVisitor(program);
-		Assert.That(visitor.Name, Is.EqualTo("Program"));
-		Assert.That(visitor.FileContent, Contains.Substring("public class Program"));
+		AssertProgramClass(visitor);
 		Assert.That(visitor.FileContent,
 			Contains.Substring(@"	public void Read()
 	{

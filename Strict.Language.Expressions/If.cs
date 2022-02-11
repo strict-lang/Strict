@@ -24,7 +24,8 @@ public sealed class If : BlockExpression
 			: "");
 
 	public override bool Equals(Expression? other) =>
-		other is If a && Equals(Condition, a.Condition) && Then.Equals(a.Then) && (OptionalElse?.Equals(a.OptionalElse) ?? true);
+		other is If a && Equals(Condition, a.Condition) && Then.Equals(a.Then) &&
+		(OptionalElse?.Equals(a.OptionalElse) ?? a.OptionalElse == null);
 
 	public static Expression? TryParse(Method method, string line, ref int lineNumber) =>
 		line == "if"

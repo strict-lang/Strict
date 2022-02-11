@@ -152,7 +152,22 @@ public class Repositories
 	private static bool IsValidCodeDirectory(string directory) =>
 		Path.GetFileName(directory).IsWord();
 
-	public static string DevelopmentFolder => Path.Combine(@"C:\code\GitHub\strict-lang\");
+	public static string DevelopmentFolder
+	{
+		get
+		{
+			var nCrunchOriginalSolutionFilePath =
+				Environment.GetEnvironmentVariable("NCrunch.OriginalSolutionPath") ?? "";
+			if (nCrunchOriginalSolutionFilePath != string.Empty)
+				return Path.GetDirectoryName(nCrunchOriginalSolutionFilePath)!;
+			//ncrunch: no coverage start
+			var teamCityCheckoutPath = Environment.GetEnvironmentVariable("TeamCityCheckoutPath");
+			return !string.IsNullOrEmpty(teamCityCheckoutPath)
+				? teamCityCheckoutPath
+				: @"C:\code\GitHub\strict-lang\";
+			//ncrunch: no coverage end
+		}
+	}
 	private static string CacheFolder =>
 		Path.Combine( //ncrunch: no coverage, only downloaded and cached on non development machines
 			Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), StrictPackages);
