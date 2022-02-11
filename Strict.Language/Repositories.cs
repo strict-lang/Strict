@@ -39,16 +39,16 @@ public class Repositories
 	public async Task<Package> LoadFromUrl(Uri packageUrl)
 	{
 		if (packageUrl.Host != "github.com" || string.IsNullOrEmpty(packageUrl.AbsolutePath) ||
-				// Allow other repositories as well, but put them in an empty main package name first
-				!packageUrl.AbsolutePath.StartsWith("/strict-lang/", StringComparison.InvariantCulture))
+			// Allow other repositories as well, but put them in an empty main package name first
+			!packageUrl.AbsolutePath.StartsWith("/strict-lang/", StringComparison.InvariantCulture))
 			throw new OnlyGithubDotComUrlsAreAllowedForNow(); //ncrunch: no coverage
 		var packageName = packageUrl.AbsolutePath.Split('/').Last();
-		var localPath = Path.Combine(DevelopmentFolder, packageName);
-		// For some reason on the CI server an empty folder is still created here with a .dotsettings file
-		if (!Directory.Exists(localPath) || Directory.GetFiles(localPath).Length < 2)
-			//ncrunch: no coverage start
-			localPath = await DownloadAndExtractRepository(packageUrl, packageName);
-		//ncrunch: no coverage end
+		var localPath = packageName == nameof(Strict)
+			? DevelopmentFolder
+			: "";
+		if (!Directory.Exists(localPath))
+			localPath =
+				await DownloadAndExtractRepository(packageUrl, packageName); //ncrunch: no coverage
 		return await LoadFromPath(localPath);
 	}
 
@@ -73,10 +73,7 @@ public class Repositories
 	{
 		var localZip = Path.Combine(CacheFolder, packageName + ".zip");
 		lock (AlreadyLoadedPackages)
-		{
 			File.CreateText(localZip).Close();
-		}
-#pragma warning disable 618
 #pragma warning disable SYSLIB0014
 		using WebClient webClient = new();
 		await webClient.DownloadFileTaskAsync(new Uri(packageUrl + "/archive/master.zip"), localZip);
@@ -92,7 +89,21 @@ public class Repositories
 			return;
 		if (Directory.Exists(targetPath))
 			new DirectoryInfo(targetPath).Delete(true);
-		Directory.Move(masterDirectory, targetPath);
+		TryMoveOrCopyWhenDeletionDidNotFullyWork(targetPath, masterDirectory);
+	}
+
+	private static void TryMoveOrCopyWhenDeletionDidNotFullyWork(string targetPath,
+		string masterDirectory)
+	{
+		try
+		{
+			Directory.Move(masterDirectory, targetPath);
+		}
+		catch
+		{
+			foreach (var file in Directory.GetFiles(masterDirectory))
+				File.Copy(file, Path.Combine(targetPath, Path.GetFileName(file)), true);
+		}
 	} //ncrunch: no coverage end
 
 	public Task<Package> LoadFromPath(string packagePath) =>
@@ -164,7 +175,7 @@ public class Repositories
 			var teamCityCheckoutPath = Environment.GetEnvironmentVariable("TeamCityCheckoutPath");
 			return !string.IsNullOrEmpty(teamCityCheckoutPath)
 				? teamCityCheckoutPath
-				: @"C:\code\GitHub\strict-lang\";
+				: @"C:\code\GitHub\strict-lang\Strict";
 			//ncrunch: no coverage end
 		}
 	}
