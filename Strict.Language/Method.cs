@@ -7,7 +7,7 @@ namespace Strict.Language;
 /// Methods are parsed lazily, which speeds up type and package parsing enormously and
 /// also provides us with all methods in a type usable in any other method if needed.
 /// </summary>
-public class Method : Context
+public sealed class Method : Context
 {
 	public Method(Type type, ExpressionParser parser, IReadOnlyList<string> lines) : base(type,
 		GetName(lines[0]))
@@ -63,9 +63,9 @@ public class Method : Context
 	}
 
 	public const string Returns = "returns";
-	public class EmptyParametersMustBeRemoved : Exception { }
+	public sealed class EmptyParametersMustBeRemoved : Exception { }
 
-	public class InvalidSyntax : Exception
+	public sealed class InvalidSyntax : Exception
 	{
 		public InvalidSyntax(string rest) : base(rest) { }
 	}

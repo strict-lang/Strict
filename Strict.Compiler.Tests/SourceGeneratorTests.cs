@@ -80,7 +80,7 @@ Run
 		File.WriteAllText(Path.Combine(folder, "Program.cs"), generatedCode);
 		var actualText = RunDotnetAndReturnOutput(folder, "run", out var error);
 		if (error.Length > 0)
-			throw new CompilationFailed(error, actualText, generatedCode);
+			throw new CSharpCompilationFailed(error, actualText, generatedCode);
 		return actualText;
 	}
 
@@ -89,7 +89,7 @@ Run
 		var creationOutput =
 			RunDotnetAndReturnOutput("", "new console --force --name " + folder, out var creationError);
 		if (!creationOutput.Contains("successful"))
-			throw new CompilationFailed(creationError, creationOutput, generatedCode);
+			throw new CSharpCompilationFailed(creationError, creationOutput, generatedCode);
 	}
 
 	private static string RunDotnetAndReturnOutput(string folder, string argument, out string error)
@@ -111,11 +111,11 @@ Run
 		return process.StandardOutput.ReadToEnd();
 	}
 
-	private sealed class CompilationFailed : Exception
+	public sealed class CSharpCompilationFailed : Exception
 	{
-		public CompilationFailed(string error, string actualText, string generatedCode) : base(error +
-			Environment.NewLine + actualText + Environment.NewLine + nameof(generatedCode) + ":" +
-			Environment.NewLine + generatedCode) { }
+		public CSharpCompilationFailed(string error, string actualText, string generatedCode) : base(
+			error + Environment.NewLine + actualText + Environment.NewLine + nameof(generatedCode) +
+			":" + Environment.NewLine + generatedCode) { }
 	}
 
 	[Test]
@@ -124,5 +124,5 @@ Run
 		Assert.That(
 			() => GenerateNewConsoleAppAndReturnOutput(
 				nameof(InvalidConsoleAppWillGiveUsCompilationError), "lafine=soeu"),
-			Throws.InstanceOf<CompilationFailed>().And.Message.Contains("The build failed."));
+			Throws.InstanceOf<CSharpCompilationFailed>().And.Message.Contains("The build failed."));
 }

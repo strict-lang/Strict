@@ -53,7 +53,7 @@ public class Repositories
 		return await LoadFromPath(localPath);
 	}
 
-	public class OnlyGithubDotComUrlsAreAllowedForNow : Exception { }
+	public sealed class OnlyGithubDotComUrlsAreAllowedForNow : Exception { }
 
 	//ncrunch: no coverage start, only called once per session and only if not on development machine
 	private static async Task<string> DownloadAndExtractRepository(Uri packageUrl,
@@ -100,7 +100,7 @@ public class Repositories
 		TryMoveOrCopyWhenDeletionDidNotFullyWork(targetPath, masterDirectory);
 	}
 
-	private sealed class NoMasterFolderFoundFromPackage : Exception
+	public sealed class NoMasterFolderFoundFromPackage : Exception
 	{
 		public NoMasterFolderFoundFromPackage(string packageName, string localZip) : base(
 			packageName + ", localZip: " + localZip) { }

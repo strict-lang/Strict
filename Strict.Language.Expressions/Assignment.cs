@@ -36,7 +36,7 @@ public class Assignment : Expression
 		return new Assignment(new Identifier(parts[0], value.ReturnType), value);
 	}
 
-	public class IncompleteLet : Exception
+	public sealed class IncompleteLet : Exception
 	{
 		public IncompleteLet(string input) : base(input) { }
 	}

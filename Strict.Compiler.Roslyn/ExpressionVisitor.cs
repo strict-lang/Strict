@@ -48,7 +48,7 @@ public abstract class ExpressionVisitor
 			_ => expression.ToString() //ncrunch: no coverage
 		};
 
-	public class UseVisitBlock : Exception
+	public sealed class UseVisitBlock : Exception
 	{
 		public UseVisitBlock(Expression expression) : base(expression.ToString()) { }
 	}

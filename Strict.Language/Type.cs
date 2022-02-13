@@ -27,7 +27,7 @@ public class Type : Context
 		this.expressionParser = expressionParser;
 	}
 
-	public class TypeAlreadyExistsInPackage : Exception
+	public sealed class TypeAlreadyExistsInPackage : Exception
 	{
 		public TypeAlreadyExistsInPackage(string name, Package package) : base(
 			name + " in package: " + package) { }
@@ -106,12 +106,12 @@ public class Type : Context
 		return import;
 	}
 
-	public class ImportMustBeFirst : Exception
+	public sealed class ImportMustBeFirst : Exception
 	{
 		public ImportMustBeFirst(string package) : base(package) { }
 	}
 
-	public class PackageNotFound : Exception
+	public sealed class PackageNotFound : Exception
 	{
 		public PackageNotFound(string package) : base(package) { }
 	}
@@ -144,7 +144,7 @@ public class Type : Context
 		return new Member(this, nameAndExpression[0], expression);
 	}
 
-	public class MembersMustComeBeforeMethods : Exception
+	public sealed class MembersMustComeBeforeMethods : Exception
 	{
 		public MembersMustComeBeforeMethods(string line) : base(line) { }
 	}
@@ -164,13 +164,13 @@ public class Type : Context
 		return line.SplitWords();
 	}
 
-	public class ExtraWhitespacesFoundAtBeginningOfLine : ParsingFailedInLine
+	public sealed class ExtraWhitespacesFoundAtBeginningOfLine : ParsingFailedInLine
 	{
 		public ExtraWhitespacesFoundAtBeginningOfLine(string text, int line, string method) : base(
 			text, line, method) { }
 	}
 
-	public class ExtraWhitespacesFoundAtEndOfLine : ParsingFailedInLine
+	public sealed class ExtraWhitespacesFoundAtEndOfLine : ParsingFailedInLine
 	{
 		public ExtraWhitespacesFoundAtEndOfLine(string text, int line, string method) : base(text,
 			line, method) { }
@@ -229,15 +229,15 @@ public class Type : Context
 		return false;
 	}
 
-	public class TypeHasNoMembersAndThusMustBeATraitWithoutMethodBodies : Exception { }
+	public sealed class TypeHasNoMembersAndThusMustBeATraitWithoutMethodBodies : Exception { }
 
 	// ReSharper disable once HollowTypeName
-	public class MethodMustBeImplementedInNonTraitType : Exception
+	public sealed class MethodMustBeImplementedInNonTraitType : Exception
 	{
 		public MethodMustBeImplementedInNonTraitType(string definitionLine) : base(definitionLine) { }
 	}
 
-	public class ParsingFailed : Exception
+	public sealed class ParsingFailed : Exception
 	{
 		public ParsingFailed(ParsingFailedInLine line, string filePath) : base(
 			"\n   at " + line.Method + " in " + filePath + ":line " + (line.Number + 1), line) { }
@@ -284,15 +284,15 @@ public class Type : Context
 	}
 
 	//ncrunch: no coverage start, tests too flacky when creating and deleting wrong file
-	public class StrictFolderIsNotAllowedForRootUseBaseSubFolder : Exception
+	public sealed class StrictFolderIsNotAllowedForRootUseBaseSubFolder : Exception
 	{
 		public StrictFolderIsNotAllowedForRootUseBaseSubFolder(string filePath) : base(filePath) { }
 	} //ncrunch: no coverage end
 
 	public const string Extension = ".strict";
-	public class FileExtensionMustBeStrict : Exception { }
+	public sealed class FileExtensionMustBeStrict : Exception { }
 
-	public class FilePathMustMatchPackageName : Exception
+	public sealed class FilePathMustMatchPackageName : Exception
 	{
 		public FilePathMustMatchPackageName(string filePath, string packageName) : base(filePath +
 			" must be in package folder " + packageName) { }

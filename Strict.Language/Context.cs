@@ -20,7 +20,7 @@ public abstract class Context
 		Name = name;
 	}
 
-	public class NameMustBeAWordWithoutAnySpecialCharactersOrNumbers : Exception
+	public sealed class NameMustBeAWordWithoutAnySpecialCharactersOrNumbers : Exception
 	{
 		public NameMustBeAWordWithoutAnySpecialCharactersOrNumbers(string name) : base(name) { }
 	}
@@ -71,7 +71,7 @@ public abstract class Context
 			? package
 			: Parent.GetPackage();
 
-	public class TypeNotFound : Exception
+	public sealed class TypeNotFound : Exception
 	{
 		public TypeNotFound(string typeName, string contextFullName) : base(
 			$"{typeName} not found in {contextFullName}") { }

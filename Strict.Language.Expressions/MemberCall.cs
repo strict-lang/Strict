@@ -57,7 +57,7 @@ public class MemberCall : Expression
 		return null;
 	}
 
-	public class MemberNotFound : Exception
+	public sealed class MemberNotFound : Exception
 	{
 		public MemberNotFound(string memberName, Type type) : base(memberName + " in " + type) { }
 	}
