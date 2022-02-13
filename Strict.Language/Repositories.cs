@@ -81,7 +81,7 @@ public class Repositories
 			UnzipInCacheFolderAndMoveToTargetPath(packageName, targetPath, localZip));
 	}
 
-	public static async Task DownloadFile(HttpClient client, Uri uri, string fileName)
+	private static async Task DownloadFile(HttpClient client, Uri uri, string fileName)
 	{
 		await using var stream = await client.GetStreamAsync(uri);
 		await using var file = new FileStream(fileName, FileMode.CreateNew);
