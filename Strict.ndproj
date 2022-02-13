@@ -2899,7 +2899,9 @@ where m.IsNewSlot && !m.IsExplicitInterfaceImpl && !m.IsGeneratedByCompiler
 
 // Notice how lookup is used to quickly retrieve methods with same name as m.
 // This makes the query 10 times faster than iterating each base methods to check their name.
-let baseMethodsHidden = lookup[m.Name].Where(m1 => m1 != m && t.DeriveFrom(m1.ParentType))
+let baseMethodsHidden = lookup[m.Name].Where(m1 => m1 != m &&
+ !m1.IsAbstract &&
+ t.DeriveFrom(m1.ParentType))
 
 where baseMethodsHidden.Count() > 0
 select new { 
@@ -3123,7 +3125,10 @@ from t in JustMyCode.Types.Where(t =>
    t.Name != "XmlConversion" &&
    t.Name != "RegisterScene" &&
    !t.IsGeneratedByCompiler &&
-
+   !t.IsRecord &&
+	 // Sub types are also broken in NDepend and don't report if they are records
+   !t.Name.Contains("+") &&
+	 
    // Don't advise to declare Global ASP.NET or ApiController methods as static
    !t.DeriveFrom("System.Web.HttpApplication".AllowNoMatch()) &&
    !t.DeriveFrom("System.Web.Http.ApiController".AllowNoMatch()) &&
@@ -3148,7 +3153,6 @@ let methodsThatCanBeMadeStatic =
          !m.IsPublic && !m.IsInternal && !m.Name.StartsWith("PrivateMethod") &&
          !m.AccessThis && !m.IsExplicitInterfaceImpl &&
          !m.IsProtected && // Protected method access doesn't match well with static methods
-     !m.ParentType.IsRecord &&
          // Don't warn about not yet implemented methods.
          !m.CreateA("System.NotImplementedException".AllowNoMatch()) &&
 
@@ -9481,6 +9485,9 @@ from m in Application.Methods where
   !m.FullName.Contains("NVorbis") &&
   !m.FullName.Contains("VideoInputs") &&
   m.ReturnType != null &&
+	// Exclude nullable return types is sadly still not working with NDepend
+  m.ReturnType.BaseClass != null &&
+  m.ReturnType.BaseClass.Name != "Expression" &&
   m.ReturnType.FullName != "System.Boolean" &&
   m.ReturnType.FullName != "System.Void" &&
   m.ReturnType.FullName != "System.IO.Stream" &&
@@ -13366,6 +13373,7 @@ from m in Application.Methods where
  !m.Name.StartsWith("From") &&
  !m.Name.StartsWith("Save") &&
  !m.Name.StartsWith("Is") &&
+ !m.Name.StartsWith("Try") &&
  !m.Name.StartsWith("GetDefault") &&
  !m.FullName.StartsWith("AsfMojo.") &&
  !m.FullName.StartsWith("NVorbis") &&
@@ -13405,7 +13413,10 @@ from m in Application.Methods where
  !m.ReturnType.IsEnumeration &&
  !m.ReturnType.Name.Contains("Enumerable") &&
  !m.ReturnType.Name.Contains("List") &&
- !m.ReturnType.Name.Contains("Nullable")
+ !m.ReturnType.Name.Contains("Nullable") &&
+  // Exclude nullable return types is sadly still not working with NDepend
+  m.ReturnType.BaseClass != null &&
+  m.ReturnType.BaseClass.Name != "Expression"
 
 select new { 
    m, 

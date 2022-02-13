@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
-using System.Net;
+using System.Net.Http;
 using System.Threading.Tasks;
 
 namespace Strict.Language;
@@ -47,8 +47,9 @@ public class Repositories
 			? DevelopmentFolder
 			: "";
 		if (!Directory.Exists(localPath))
-			localPath =
-				await DownloadAndExtractRepository(packageUrl, packageName); //ncrunch: no coverage
+			//ncrunch: no coverage start
+			localPath = await DownloadAndExtractRepository(packageUrl, packageName);
+		//ncrunch: no coverage end
 		return await LoadFromPath(localPath);
 	}
 
@@ -74,10 +75,17 @@ public class Repositories
 		var localZip = Path.Combine(CacheFolder, packageName + ".zip");
 		lock (AlreadyLoadedPackages)
 			File.CreateText(localZip).Close();
-#pragma warning disable SYSLIB0014
-		using WebClient webClient = new();
-		await webClient.DownloadFileTaskAsync(new Uri(packageUrl + "/archive/master.zip"), localZip);
-		await Task.Run(() => UnzipInCacheFolderAndMoveToTargetPath(packageName, targetPath, localZip));
+		using HttpClient client = new();
+		await DownloadFile(client, new Uri(packageUrl + "/archive/master.zip"), localZip);
+		await Task.Run(() =>
+			UnzipInCacheFolderAndMoveToTargetPath(packageName, targetPath, localZip));
+	}
+
+	public static async Task DownloadFile(HttpClient client, Uri uri, string fileName)
+	{
+		await using var stream = await client.GetStreamAsync(uri);
+		await using var file = new FileStream(fileName, FileMode.CreateNew);
+		await stream.CopyToAsync(file);
 	}
 
 	private static void UnzipInCacheFolderAndMoveToTargetPath(string packageName, string targetPath,
@@ -86,10 +94,16 @@ public class Repositories
 		ZipFile.ExtractToDirectory(localZip, CacheFolder, true);
 		var masterDirectory = Path.Combine(CacheFolder, packageName + "-master");
 		if (!Directory.Exists(masterDirectory))
-			return;
+			throw new NoMasterFolderFoundFromPackage(packageName, localZip);
 		if (Directory.Exists(targetPath))
 			new DirectoryInfo(targetPath).Delete(true);
 		TryMoveOrCopyWhenDeletionDidNotFullyWork(targetPath, masterDirectory);
+	}
+
+	private sealed class NoMasterFolderFoundFromPackage : Exception
+	{
+		public NoMasterFolderFoundFromPackage(string packageName, string localZip) : base(
+			packageName + ", localZip: " + localZip) { }
 	}
 
 	private static void TryMoveOrCopyWhenDeletionDidNotFullyWork(string targetPath,
