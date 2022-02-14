@@ -10,18 +10,23 @@ public sealed class Return : Expression
 	public override string ToString() => "return " + Value;
 	public override bool Equals(Expression? other) => other is Return a && Equals(Value, a.Value);
 
-	public static Expression? TryParse(Method method, string line) =>
-		line.StartsWith("return", StringComparison.Ordinal)
-			? TryParseReturn(method, line)
+	public static Expression? TryParse(Method.Line line) =>
+		line.Text.StartsWith("return", StringComparison.Ordinal)
+			? TryParseReturn(line)
 			: null;
 
-	private static Expression TryParseReturn(Method method, string line) =>
-		new Return((line.Length < "return ".Length
-			? null
-			: method.TryParse(line["return ".Length..])) ?? throw new MissingExpression(line));
-
-	public sealed class MissingExpression : Exception
+	private static Expression TryParseReturn(Method.Line line)
 	{
-		public MissingExpression(string line) : base(line) { }
+		var returnExpression = line.Text.Length < "return ".Length
+			? null
+			: line.Method.TryParseExpression(line, line.Text["return ".Length..]);
+		return returnExpression == null
+			? throw new MissingExpression(line)
+			: new Return(returnExpression);
+	}
+
+	public sealed class MissingExpression : Method.ParsingError
+	{
+		public MissingExpression(Method.Line line) : base(line) { }
 	}
 }

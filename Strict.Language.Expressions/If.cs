@@ -27,39 +27,51 @@ public sealed class If : BlockExpression
 		other is If a && Equals(Condition, a.Condition) && Then.Equals(a.Then) &&
 		(OptionalElse?.Equals(a.OptionalElse) ?? a.OptionalElse == null);
 
-	public static Expression? TryParse(Method method, string line, ref int lineNumber) =>
-		line == "if"
+	public static Expression? TryParse(Method.Line line, ref int methodLineNumber) =>
+		line.Text == "if"
 			? throw new MissingCondition(line)
-			: line.StartsWith("if ", StringComparison.Ordinal)
-				? TryParseIf(method, line, ref lineNumber)
-				: null;
+			: line.Text == "else"
+				? throw new UnexpectedElse(line)
+				: line.Text.StartsWith("if ", StringComparison.Ordinal)
+					? TryParseIf(line, ref methodLineNumber)
+					: null;
 
-	// ReSharper disable once MethodTooLong
-	private static Expression TryParseIf(Method method, string line, ref int lineNumber)
+	public sealed class MissingCondition : Method.ParsingError
 	{
-		var condition = method.TryParse(line["if ".Length..]) ??
+		public MissingCondition(Method.Line line) : base(line) { }
+	}
+
+	public sealed class UnexpectedElse : Method.ParsingError
+	{
+		public UnexpectedElse(Method.Line line) : base(line) { }
+	}
+
+	private static Expression TryParseIf(Method.Line line, ref int methodLineNumber)
+	{
+		var condition = line.Method.TryParseExpression(line, line.Text["if ".Length..]) ??
 			throw new MissingCondition(line);
-		lineNumber++;
-		if (lineNumber >= method.bodyLines.Count)
-			throw new MissingThen(method.bodyLines[lineNumber - 1].Text);
-		if (method.bodyLines[lineNumber].Tabs != method.bodyLines[lineNumber - 1].Tabs + 1)
-			throw new Method.InvalidIndentation(string.Join('\n', method.bodyLines.ToWordList()),
-				lineNumber, method.Name);
-		var then = method.TryParse(method.bodyLines[lineNumber].Text, ref lineNumber) ??
-			throw new MissingThen(method.bodyLines[lineNumber].Text);
-		if (lineNumber + 2 >= method.bodyLines.Count || method.bodyLines[lineNumber + 1].Text != "else")
+		methodLineNumber++;
+		var then = GetThenExpression(line.Method, ref methodLineNumber);
+		if (methodLineNumber + 2 >= line.Method.bodyLines.Count ||
+			line.Method.bodyLines[methodLineNumber + 1].Text != "else")
 			return new If(condition, then, null);
-		lineNumber += 2;
-		return new If(condition, then, method.TryParse(method.bodyLines[lineNumber].Text, ref lineNumber));
+		methodLineNumber += 2;
+		return new If(condition, then,
+			line.Method.ParseMethodLine(line.Method.bodyLines[methodLineNumber], ref methodLineNumber));
 	}
 
-	public sealed class MissingCondition : Exception
+	private static Expression GetThenExpression(Method method, ref int methodLineNumber)
 	{
-		public MissingCondition(string input) : base(input) { }
+		if (methodLineNumber >= method.bodyLines.Count)
+			throw new MissingThen(method.bodyLines[methodLineNumber - 1]);
+		if (method.bodyLines[methodLineNumber].Tabs != method.bodyLines[methodLineNumber - 1].Tabs + 1)
+			throw new Method.InvalidIndentation(string.Join('\n', method.bodyLines.ToWordList()),
+				methodLineNumber, method.Name);
+		return method.ParseMethodLine(method.bodyLines[methodLineNumber], ref methodLineNumber);
 	}
 
-	public sealed class MissingThen : Exception
+	public sealed class MissingThen : Method.ParsingError
 	{
-		public MissingThen(string otherLines) : base(otherLines) { }
+		public MissingThen(Method.Line line) : base(line) { }
 	}
 }

@@ -9,28 +9,40 @@ namespace Strict.Language;
 /// </summary>
 public sealed class Method : Context
 {
-	public Method(Type type, ExpressionParser parser, IReadOnlyList<string> lines) : base(type,
+	public Method(Type type, int typeLineNumber, ExpressionParser parser, IReadOnlyList<string> lines) : base(type,
 		GetName(lines[0]))
 	{
+		TypeLineNumber = typeLineNumber;
 		this.parser = parser;
 		ReturnType = Name == From
 			? type
 			: type.GetType(Base.None);
 		ParseDefinition(lines[0][Name.Length..]);
 		bodyLines = GetLines(lines);
-		body = new Lazy<MethodBody>(() => (MethodBody)parser.Parse(this));
+		body = new Lazy<MethodBody>(() => (MethodBody)parser.ParseMethodBody(this));
 	}
 
+	public int TypeLineNumber { get; }
 	private readonly ExpressionParser parser;
 
-	public Expression? TryParse(string input)
+	public Expression? TryParseExpression(Line line, string remainingPartToParse) =>
+		parser.TryParseExpression(line, remainingPartToParse);
+
+	/// <summary>
+	/// Every error that has some detail about the line number inside the method body should use this
+	/// </summary>
+	public abstract class ParsingError : Exception //TODO: merge with ParsingFailed, but it is sealed, so stuff has to change in Type.cs
+		//TODO: test if strict file is clickable from the error message in Visual Studio (has already same format)
 	{
-		var lineNumber = 0;
-		return parser.TryParse(this, input, ref lineNumber);
+		protected ParsingError(Line line, string? part = null, Type? referencingType = null) : base(
+			(part ?? line.ToString()) + (referencingType != null
+				? " in " + referencingType
+				: "") + "\n at " + line.Method + " in " + line.Method.Type.FilePath + ":line " +
+			(line.FileLineNumber + 1)) { }
 	}
 
-	public Expression? TryParse(string input, ref int lineNumber) =>
-		parser.TryParse(this, input, ref lineNumber);
+	public Expression ParseMethodLine(Line line, ref int methodLineNumber) =>
+		parser.ParseMethodLine(line, ref methodLineNumber);
 
 	/// <summary>
 	/// Simple lexer to just parse the method definition and get all used names and types.
@@ -76,36 +88,36 @@ public sealed class Method : Context
 			parameters.Add(new Parameter(this, nameAndType));
 	}
 
-	public readonly IReadOnlyList<Line> bodyLines;
-
-	public sealed record Line(int Tabs, string Text)
-	{
-		public override string ToString() => new string('\t', Tabs) + Text;
-	}
-
 	/// <summary>
 	/// Skips the first method declaration line, then counts and removes the tabs from each line.
 	/// </summary>
 	private IReadOnlyList<Line> GetLines(IReadOnlyList<string> methodLines)
 	{
 		var lines = new Line[methodLines.Count - 1];
-		for (var lineNumber = 1; lineNumber < methodLines.Count; lineNumber++)
-			FillLine(methodLines[lineNumber], lineNumber, lines);
+		for (var methodLineNumber = 1; methodLineNumber < methodLines.Count; methodLineNumber++)
+			FillLine(methodLines[methodLineNumber], methodLineNumber, lines);
 		return lines;
 	}
 
-	private void FillLine(string line, int lineNumber, IList<Line> lines)
+	private void FillLine(string line, int methodLineNumber, IList<Line> lines)
 	{
 		if (line.Length == 0)
-			throw new Type.EmptyLineIsNotAllowed(lineNumber, Name);
+			throw new Type.EmptyLineIsNotAllowed(methodLineNumber, Name);
 		var tabs = 0;
 		foreach (var t in line)
 			if (t == '\t')
 				tabs++;
 			else
 				break;
-		CheckIndentation(line, lineNumber, tabs);
-		lines[lineNumber - 1] = new Line(tabs, line[tabs..]);
+		CheckIndentation(line, methodLineNumber, tabs);
+		lines[methodLineNumber - 1] = new Line(this, tabs, line[tabs..], TypeLineNumber + methodLineNumber);
+	}
+
+	public readonly IReadOnlyList<Line> bodyLines;
+
+	public sealed record Line(Method Method, int Tabs, string Text, int FileLineNumber)
+	{
+		public override string ToString() => new string('\t', Tabs) + Text;
 	}
 
 	private void CheckIndentation(string line, int lineNumber, int tabs)

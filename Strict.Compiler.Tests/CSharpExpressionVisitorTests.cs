@@ -74,7 +74,7 @@ public sealed class CSharpExpressionVisitorTests : TestExpressions
 	[Test]
 	public void GenerateMultilineMethodBody()
 	{
-		var multilineMethod = new Method(type, this, MethodTests.NestedMethodLines);
+		var multilineMethod = new Method(type, 0, this, MethodTests.NestedMethodLines);
 		Assert.That(visitor.VisitBlock(multilineMethod.Body),
 			Is.EqualTo(new[]
 			{
@@ -86,7 +86,7 @@ public sealed class CSharpExpressionVisitorTests : TestExpressions
 	[Test]
 	public void GenerateIfElse()
 	{
-		var multilineMethod = new Method(type, this,
+		var multilineMethod = new Method(type, 0, this,
 			new[]
 			{
 				"IsBla5 returns Boolean", "	if bla is 5", "		return true", "	else", "		return false"

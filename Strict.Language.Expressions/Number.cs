@@ -10,8 +10,8 @@ public class Number : Value
 	public override bool Equals(Expression? other) =>
 		other is Value v && (double)Data == (double)v.Data;
 
-	public static Expression? TryParse(Method context, string input) =>
-		input.Length >= 1 && double.TryParse(input, out var number)
-			? new Number(context, number)
+	public static Expression? TryParse(Method.Line line, string partToParse) =>
+		partToParse.Length >= 1 && double.TryParse(partToParse, out var number)
+			? new Number(line.Method, number)
 			: null;
 }

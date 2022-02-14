@@ -19,16 +19,22 @@ public sealed class MethodCallTests : TestExpressions
 			new MethodCall(new MemberCall(member), member.Type.Methods[0], new MemberCall(bla)));
 
 	[Test]
-	public void ParseWithMissingParameter() =>
+	public void ParseWithMissingArgument() =>
 		Assert.That(() => ParseExpression("log.Write"),
-			Throws.InstanceOf<MethodCall.ArgumentsDoNotMatchMethodParameters>().With.Message.EqualTo(
+			Throws.InstanceOf<MethodCall.ArgumentsDoNotMatchMethodParameters>().With.Message.StartsWith(
 				"No arguments does not match \"TestPackage.Log.Write\" method parameters: (text TestPackage.Text)"));
 
 	[Test]
-	public void ParseWithTooManyParameters() =>
+	public void ParseWithTooManyArguments() =>
 		Assert.That(() => ParseExpression("log.Write(1, 2)"),
-			Throws.InstanceOf<MethodCall.ArgumentsDoNotMatchMethodParameters>().With.Message.EqualTo(
+			Throws.InstanceOf<MethodCall.ArgumentsDoNotMatchMethodParameters>().With.Message.StartsWith(
 				"Arguments: (1, 2) do not match \"TestPackage.Log.Write\" method parameters: (text TestPackage.Text)"));
+
+	[Test]
+	public void ParseWithInvalidExpressionArguments() =>
+		Assert.That(() => ParseExpression("log.Write(0g9y53)"),
+			Throws.InstanceOf<MethodCall.InvalidExpressionForArgument>().With.Message.StartsWith(
+				"0g9y53 for log.Write argument 0"));
 
 	[Test]
 	public void ParseUnknownMethod() =>
@@ -43,7 +49,7 @@ public sealed class MethodCallTests : TestExpressions
 	[Test]
 	public void ParseCallWithUnknownMemberCallArgument() =>
 		Assert.That(() => ParseExpression("log.Write(log.unknown)"),
-			Throws.InstanceOf<MemberCall.MemberNotFound>().With.Message.EqualTo("unknown in TestPackage.Log"));
+			Throws.InstanceOf<MemberCall.MemberNotFound>().With.Message.StartsWith("unknown in TestPackage.Log"));
 
 	[Test]
 	public void MethodCallMembersMustBeWords() =>

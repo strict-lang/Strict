@@ -7,7 +7,19 @@ public sealed class IfTests : TestExpressions
 {
 	[Test]
 	public void ParseIncompleteIf() =>
-		Assert.That(() => ParseExpression("if"), Throws.InstanceOf<If.MissingCondition>());
+		Assert.That(() => ParseExpression("if"),
+			Throws.InstanceOf<If.MissingCondition>().With.Message.
+				Contains(@"TestPackage\dummy.strict:line 2"));
+
+	[Test]
+	public void ParseInvalidSpaceAfterElseIsNotAllowed() =>
+		Assert.That(() => ParseExpression("else "), Throws.InstanceOf<Type.ExtraWhitespacesFoundAtEndOfLine>());
+
+	[Test]
+	public void ParseJustElseIsNotAllowed() =>
+		Assert.That(() => ParseExpression("else"),
+			Throws.InstanceOf<If.UnexpectedElse>().With.Message.
+				Contains(@"at TestPackage.dummy.Run in "));
 
 	[Test]
 	public void ParseIncompleteThen() =>
@@ -22,6 +34,12 @@ public sealed class IfTests : TestExpressions
 	public void ParseIf() =>
 		Assert.That(ParseExpression("if bla is 5", "\tlog.Write(\"Hey\")"),
 			Is.EqualTo(new If(GetCondition(), GetThen(), null)));
+
+	[Test]
+	public void ParseMissingElseExpression() =>
+		Assert.That(() => ParseExpression("if bla is 5", "\tRun", "else"),
+			Throws.InstanceOf<If.UnexpectedElse>().With.Message.
+				Contains(@"TestPackage\dummy.strict:line 4"));
 
 	[Test]
 	public void ParseIfElse() =>

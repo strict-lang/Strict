@@ -22,13 +22,6 @@ Run
 		Assert.That(type.Methods[0].Body.ReturnType, Is.EqualTo(type.Methods[0].ReturnType));
 	}
 
-	public override Expression Parse(Method method)
-	{
-		parseWasCalled = true;
-		return new MethodBody(method,
-			new Expression[] { new TestExpression(type.Methods[0].ReturnType) });
-	}
-
 	private bool parseWasCalled;
 
 	public class TestExpression : Expression
@@ -36,10 +29,22 @@ Run
 		public TestExpression(Type returnType) : base(returnType) { }
 	}
 
-	//ncrunch: no coverage start, not the focus here
-	public override Expression ParseMethodCall(Type typeForConstructor, string initializationLine) => null!;
+	public override Expression ParseMethodBody(Method method)
+	{
+		parseWasCalled = true;
+		return new MethodBody(method,
+			new Expression[] { new TestExpression(type.Methods[0].ReturnType) });
+	}
 
-	public override Expression? TryParse(Method method, string line, ref int lineNumber) => null;
+	//ncrunch: no coverage start, not the focus here
+	public override Expression ParseAssignmentExpression(Type assignmentType,
+		string initializationLine, int fileLineNumber) =>
+		null!;
+
+	public override Expression ParseMethodLine(Method.Line line, ref int methodLineNumber) => null!;
+
+	public override Expression? TryParseExpression(Method.Line line, string remainingPartToParse) =>
+		null;
 	//ncrunch: no coverage end
 
 	[Test]
@@ -55,33 +60,33 @@ Run
 
 	[Test]
 	public void EmptyLineIsNotValidInMethods() =>
-		Assert.That(() => new Method(type, this, new[] { "Run", "" }),
+		Assert.That(() => new Method(type, 0, this, new[] { "Run", "" }),
 			Throws.InstanceOf<Type.EmptyLineIsNotAllowed>());
 
 	[Test]
 	public void NoIndentationIsNotValidInMethods() =>
-		Assert.That(() => new Method(type, this, new[] { "Run", "abc" }),
+		Assert.That(() => new Method(type, 0, this, new[] { "Run", "abc" }),
 			Throws.InstanceOf<Method.InvalidIndentation>());
 
 	[Test]
 	public void TooMuchIndentationIsNotValidInMethods() =>
-		Assert.That(() => new Method(type, this, new[] { "Run", new string('\t', 4) }),
+		Assert.That(() => new Method(type, 0, this, new[] { "Run", new string('\t', 4) }),
 			Throws.InstanceOf<Method.InvalidIndentation>());
 
 	[Test]
 	public void ExtraWhitespacesAtBeginningOfLineAreNotAllowed() =>
-		Assert.That(() => new Method(type, this, new[] { "Run", "\t let abc = 3" }),
+		Assert.That(() => new Method(type, 0, this, new[] { "Run", "\t let abc = 3" }),
 			Throws.InstanceOf<Type.ExtraWhitespacesFoundAtBeginningOfLine>());
 
 	[Test]
 	public void ExtraWhitespacesAtEndOfLineAreNotAllowed() =>
-		Assert.That(() => new Method(type, this, new[] { "Run", "\tlet abc = 3 " }),
+		Assert.That(() => new Method(type, 0, this, new[] { "Run", "\tlet abc = 3 " }),
 			Throws.InstanceOf<Type.ExtraWhitespacesFoundAtEndOfLine>());
 
 	[Test]
 	public void GetSingleLine()
 	{
-		var method = new Method(type, this, new[] { "Run", MethodTests.LetNumber });
+		var method = new Method(type, 0, this, new[] { "Run", MethodTests.LetNumber });
 		Assert.That(method.bodyLines, Has.Length.EqualTo(1));
 		Assert.That(method.bodyLines[0].ToString(), Is.EqualTo(MethodTests.LetNumber));
 	}
@@ -89,7 +94,8 @@ Run
 	[Test]
 	public void GetMultipleLines()
 	{
-		var method = new Method(type, this, new[] { "Run", MethodTests.LetNumber, MethodTests.LetOther });
+		var method = new Method(type, 0, this,
+			new[] { "Run", MethodTests.LetNumber, MethodTests.LetOther });
 		Assert.That(method.bodyLines, Has.Length.EqualTo(2));
 		Assert.That(method.bodyLines[0].ToString(), Is.EqualTo(MethodTests.LetNumber));
 		Assert.That(method.bodyLines[1].ToString(), Is.EqualTo(MethodTests.LetOther));
@@ -98,7 +104,7 @@ Run
 	[Test]
 	public void GetNestedLines()
 	{
-		var method = new Method(type, this, MethodTests.NestedMethodLines);
+		var method = new Method(type, 0, this, MethodTests.NestedMethodLines);
 		Assert.That(method.bodyLines, Has.Length.EqualTo(4));
 		Assert.That(method.bodyLines[0].ToString(), Is.EqualTo(MethodTests.LetNumber));
 		Assert.That(method.bodyLines[1].ToString(), Is.EqualTo("	if bla is 5"));

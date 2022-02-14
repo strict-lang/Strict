@@ -15,7 +15,7 @@ public abstract class TestExpressions : MethodExpressionParser
 		unaryOperators = type.GetType(Base.UnaryOperator).Methods;
 		member = new Member("log", new Value(type.GetType(Base.Log), null!));
 		((List<Member>)type.Members).Add(member);
-		method = new Method(type, this, new[] { MethodTests.Run });
+		method = new Method(type, 0, this, new[] { MethodTests.Run });
 		((List<Method>)type.Methods).Add(method);
 		number = new Number(type, 5);
 		bla = new Member("bla", number);
@@ -41,7 +41,7 @@ public abstract class TestExpressions : MethodExpressionParser
 	{
 		var methodLines = lines.Select(line => '\t' + line).ToList();
 		methodLines.Insert(0, MethodTests.Run);
-		var body = new Method(type, this, methodLines).Body;
+		var body = new Method(type, 0, this, methodLines).Body;
 		return body.Expressions.Count == 1
 			? body.Expressions[0]
 			: throw new MultipleExpressionsGiven();

@@ -21,23 +21,23 @@ public class Assignment : Expression
 	public override bool Equals(Expression? other) =>
 		other is Assignment a && Equals(Name, a.Name) && Value.Equals(a.Value);
 
-	public static Expression? TryParse(Method context, string input) =>
-		input.StartsWith("let ", StringComparison.Ordinal)
-			? TryParseLet(context, input)
+	public static Expression? TryParse(Method.Line line) =>
+		line.Text.StartsWith("let ", StringComparison.Ordinal)
+			? TryParseLet(line)
 			: null;
 
-	private static Expression TryParseLet(Method method, string input)
+	private static Expression TryParseLet(Method.Line line)
 	{
-		var parts = input.Split(new[] { "let ", " = " }, StringSplitOptions.RemoveEmptyEntries);
+		var parts = line.Text.Split(new[] { "let ", " = " }, StringSplitOptions.RemoveEmptyEntries);
 		if (parts.Length != 2)
-			throw new IncompleteLet(input);
-		var value = method.TryParse(parts[1]) ??
-			throw new MethodExpressionParser.UnknownExpression(method, input);
+			throw new IncompleteLet(line);
+		var value = line.Method.TryParseExpression(line, parts[1]) ??
+			throw new MethodExpressionParser.UnknownExpression(line);
 		return new Assignment(new Identifier(parts[0], value.ReturnType), value);
 	}
 
-	public sealed class IncompleteLet : Exception
+	public sealed class IncompleteLet : Method.ParsingError
 	{
-		public IncompleteLet(string input) : base(input) { }
+		public IncompleteLet(Method.Line line) : base(line) { }
 	}
 }

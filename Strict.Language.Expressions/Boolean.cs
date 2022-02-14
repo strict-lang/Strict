@@ -8,11 +8,11 @@ public class Boolean : Value
 	public override bool Equals(Expression? other) =>
 		other is Value v && (bool)Data == (bool)v.Data;
 
-	public static Expression? TryParse(Method context, string input) =>
-		input switch
+	public static Expression? TryParse(Method.Line line, string partToParse) =>
+		partToParse switch
 		{
-			"true" => new Boolean(context, true),
-			"false" => new Boolean(context, false),
+			"true" => new Boolean(line.Method, true),
+			"false" => new Boolean(line.Method, false),
 			_ => null
 		};
 }

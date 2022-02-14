@@ -93,7 +93,7 @@ public class Type : Context
 		else if (words[0] == Has)
 			members.Add(ParseMember(line));
 		else
-			methods.Add(new Method(this, expressionParser, GetAllMethodLines(line)));
+			methods.Add(new Method(this, lineNumber, expressionParser, GetAllMethodLines(line)));
 	}
 
 	private Package ParseImport(IReadOnlyList<string> words)
@@ -138,8 +138,8 @@ public class Type : Context
 			throw new MembersMustComeBeforeMethods(line);
 		var nameAndExpression = line[(Has.Length + 1)..].Split(" = ");
 		var expression = nameAndExpression.Length > 1
-			? expressionParser.ParseMethodCall(new Member(this, nameAndExpression[0], null!).Type,
-				nameAndExpression[1])
+			? expressionParser.ParseAssignmentExpression(new Member(this, nameAndExpression[0], null!).Type,
+				nameAndExpression[1], lineNumber)
 			: null;
 		return new Member(this, nameAndExpression[0], expression);
 	}

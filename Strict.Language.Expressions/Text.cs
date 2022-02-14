@@ -8,8 +8,8 @@ public class Text : Value
 	public override bool Equals(Expression? other) =>
 		other is Value v && (string)Data == (string)v.Data;
 
-	public static Expression? TryParse(Method context, string input) =>
+	public static Expression? TryParse(Method.Line line, string input) =>
 		input.Length >= 2 && input[0] == '"' && input[^1] == '"'
-			? new Text(context, input[1..^1])
+			? new Text(line.Method, input[1..^1])
 			: null;
 }

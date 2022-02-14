@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 
 namespace Strict.Language.Expressions;
@@ -27,38 +26,39 @@ public class MemberCall : Expression
 			? Parent + "." + Member.Name
 			: Member.Name;
 
-	public static MemberCall? TryParse(Method context, string input) =>
-		input.Contains('(')
+	public static MemberCall? TryParse(Method.Line line, string partToParse) =>
+		partToParse.Contains('(')
 			? null
-			: input.Contains('.')
-				? TryNestedMemberCall(context, input.Split('.', 2))
-				: TryMemberCall(context, input);
+			: partToParse.Contains('.')
+				? TryNestedMemberCall(line, partToParse.Split('.', 2))
+				: TryMemberCall(line, partToParse);
 
-	private static MemberCall? TryNestedMemberCall(Method context, IReadOnlyList<string> parts)
+	private static MemberCall? TryNestedMemberCall(Method.Line line, IReadOnlyList<string> parts)
 	{
-		var first = TryMemberCall(context, parts[0])!;
+		var first = TryMemberCall(line, parts[0])!;
 		var second = first.ReturnType.Members.FirstOrDefault(m => m.Name == parts[1]);
 		return second == null
 			? first.ReturnType.Methods.Any(m => m.Name == parts[1])
 				? null
-				: throw new MemberNotFound(parts[1], first.ReturnType)
+				: throw new MemberNotFound(line, first.ReturnType, parts[1])
 			: new MemberCall(first, second);
 	}
 
-	private static MemberCall? TryMemberCall(Method context, string name)
+	private static MemberCall? TryMemberCall(Method.Line line, string name)
 	{
 		if (!name.IsWord())
 			return null;
-		var foundMember = context.Type.Members.FirstOrDefault(member => member.Name == name);
+		var foundMember = line.Method.Type.Members.FirstOrDefault(member => member.Name == name);
 		if (foundMember != null)
 			return new MemberCall(foundMember);
-		if (context.Type.Methods.All(m => m.Name != name))
-			throw new MemberNotFound(name, context.Type);
+		if (line.Method.Type.Methods.All(m => m.Name != name))
+			throw new MemberNotFound(line, line.Method.Type, name);
 		return null;
 	}
 
-	public sealed class MemberNotFound : Exception
+	public sealed class MemberNotFound : Method.ParsingError
 	{
-		public MemberNotFound(string memberName, Type type) : base(memberName + " in " + type) { }
+		public MemberNotFound(Method.Line line, Type memberType, string memberName) : base(line,
+			memberName, memberType) { }
 	}
 }
