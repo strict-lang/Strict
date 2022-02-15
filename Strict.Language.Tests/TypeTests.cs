@@ -18,51 +18,39 @@ public class TypeTests
 		Assert.Throws<Type.TypeAlreadyExistsInPackage>(() => new Type(package, "App", null!));
 
 	[Test]
-	public void EmptyLineIsNotAllowed()
-	{
-		var emptyLineException = Assert.
-			Throws<Type.ParsingFailed>(() => new Type(package, Base.Count, null!).Parse("\n")).
-			InnerException as Type.EmptyLineIsNotAllowed;
-		Assert.That(emptyLineException, Is.TypeOf<Type.EmptyLineIsNotAllowed>());
-		Assert.That(emptyLineException!.Number, Is.EqualTo(0));
-		Assert.That(emptyLineException.Method, Is.EqualTo(Base.Count));
-	}
+	public void EmptyLineIsNotAllowed() =>
+		Assert.That(() => new Type(package, Base.Count, null!).Parse("\n"),
+			Throws.InstanceOf<Type.EmptyLineIsNotAllowed>().With.Message.Contains("line 1"));
 
 	[Test]
 	public void WhitespacesAreNotAllowed()
 	{
-		Assert.That(
-			Assert.Throws<Type.ParsingFailed>(() => new Type(package, Base.Count, null!).Parse(" ")).
-				InnerException, Is.TypeOf<Type.ExtraWhitespacesFoundAtBeginningOfLine>());
-		Assert.That(Assert.Throws<Type.ParsingFailed>(() => new Type(package, "Program", null!).Parse(
-			@"Run
- ")).InnerException, Is.TypeOf<Type.ExtraWhitespacesFoundAtBeginningOfLine>());
-		Assert.That(
-			Assert.Throws<Type.ParsingFailed>(() =>
-				new Type(package, Base.HashCode, null!).Parse("has\t")).InnerException,
-			Is.TypeOf<Type.ExtraWhitespacesFoundAtEndOfLine>());
+		Assert.That(() => new Type(package, Base.Count, null!).Parse(" "),
+			Throws.InstanceOf<Type.ExtraWhitespacesFoundAtBeginningOfLine>());
+		Assert.That(() => new Type(package, "Program", null!).Parse(@"Run
+ "), Throws.InstanceOf<Type.ExtraWhitespacesFoundAtBeginningOfLine>());
+		Assert.That(() => new Type(package, Base.HashCode, null!).Parse("has\t"),
+			Throws.InstanceOf<Type.ExtraWhitespacesFoundAtEndOfLine>());
 	}
 
 	[Test]
 	public void TypeParsersMustStartWithImplementOrHas() =>
-		Assert.That(Assert.Throws<Type.ParsingFailed>(() =>
-				new Type(package, Base.Count, null!).Parse(@"Run
-	log.WriteLine")).InnerException,
-			Is.TypeOf<Type.TypeHasNoMembersAndThusMustBeATraitWithoutMethodBodies>());
+		Assert.That(() => new Type(package, Base.Count, null!).Parse(@"Run
+	log.WriteLine"),
+			Throws.InstanceOf<Type.TypeHasNoMembersAndThusMustBeATraitWithoutMethodBodies>());
 
 	[Test]
 	public void JustMembersIsNotValidCode() =>
 		Assert.That(
-			Assert.Throws<Type.ParsingFailed>(() =>
-					new Type(package, Base.Count, null!).Parse(new[] { "has log", "has count" })).
-				InnerException, Is.TypeOf<Type.NoMethodsFound>());
+			() => new Type(package, Base.Count, null!).Parse(new[] { "has log", "has count" }),
+			Throws.InstanceOf<Type.NoMethodsFound>());
 
 	[Test]
 	public void InvalidSyntax() =>
 		Assert.That(
-			Assert.Throws<Type.ParsingFailed>(() =>
-					new Type(package, Base.Count, null!).Parse(new[] { "has log", "a b", "\tc" })).
-				InnerException, Is.TypeOf<Method.InvalidSyntax>());
+			() => new Type(package, Base.Count, null!).Parse(new[] { "has log", "a b", "\tc" }),
+			Throws.InstanceOf<ParsingFailed>().With.InnerException.
+				InstanceOf<Method.InvalidSyntax>());
 
 	[Test]
 	public void GetUnknownTypeWillCrash() =>
@@ -76,14 +64,13 @@ public class TypeTests
 	[Test]
 	public void ImportMustBeFirst() =>
 		Assert.That(() => new Type(package, "Program", null!).Parse(@"has number
-import TestPackage"),
-			Throws.InstanceOf<Type.ParsingFailed>().With.InnerException.
-				InstanceOf<Type.ImportMustBeFirst>());
+import TestPackage"), Throws.InstanceOf<ParsingFailed>().With.InnerException.
+			InstanceOf<Type.ImportMustBeFirst>());
 
 	[Test]
 	public void ImportMustBeValidPackageName() =>
 		Assert.That(() => new Type(package, "Program", null!).Parse(@"import $YI(*SI"),
-			Throws.InstanceOf<Type.ParsingFailed>().With.InnerException.
+			Throws.InstanceOf<ParsingFailed>().With.InnerException.
 				InstanceOf<Type.PackageNotFound>());
 
 	[Test]
@@ -99,21 +86,21 @@ GetNumber returns Number
 	[Test]
 	public void ImplementAnyIsImplicitAndNotAllowed() =>
 		Assert.That(() => new Type(package, "Program", null!).Parse(@"implement Any"),
-			Throws.InstanceOf<Type.ParsingFailed>().With.InnerException.
+			Throws.InstanceOf<ParsingFailed>().With.InnerException.
 				InstanceOf<Type.ImplementAnyIsImplicitAndNotAllowed>());
 
 	[Test]
 	public void ImplementMustBeBeforeMembersAndMethods() =>
 		Assert.That(() => new Type(package, "Program", null!).Parse(@"has log
 implement App"),
-			Throws.InstanceOf<Type.ParsingFailed>().With.InnerException.
+			Throws.InstanceOf<ParsingFailed>().With.InnerException.
 				InstanceOf<Type.ImplementMustComeBeforeMembersAndMethods>());
 
 	[Test]
 	public void MembersMustComeBeforeMethods() =>
 		Assert.That(() => new Type(package, "Program", null!).Parse(@"Run
 has log"),
-			Throws.InstanceOf<Type.ParsingFailed>().With.InnerException.
+			Throws.InstanceOf<ParsingFailed>().With.InnerException.
 				InstanceOf<Type.MembersMustComeBeforeMethods>());
 
 	[Test]
@@ -144,15 +131,13 @@ Run
 		Assert.That(() => new Type(package, "Program", null!).Parse(@"implement App
 add(number)
 	return one + 1"),
-			Throws.InstanceOf<Type.ParsingFailed>().With.InnerException.
-				InstanceOf<Type.MustImplementAllTraitMethods>());
+			Throws.InstanceOf<Type.MustImplementAllTraitMethods>());
 
 	[Test]
 	public void TraitMethodsMustBeImplemented() =>
 		Assert.That(() => new Type(package, "Program", null!).Parse(@"implement App
 Run"),
-			Throws.InstanceOf<Type.ParsingFailed>().With.InnerException.
-				InstanceOf<Type.MethodMustBeImplementedInNonTraitType>());
+			Throws.InstanceOf<Type.MethodMustBeImplementedInNonTraitType>());
 
 	[Test]
 	public void Trait()

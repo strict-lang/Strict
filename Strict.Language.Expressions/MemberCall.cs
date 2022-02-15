@@ -56,7 +56,7 @@ public class MemberCall : Expression
 		return null;
 	}
 
-	public sealed class MemberNotFound : Method.ParsingError
+	public sealed class MemberNotFound : ParsingFailed
 	{
 		public MemberNotFound(Method.Line line, Type memberType, string memberName) : base(line,
 			memberName, memberType) { }

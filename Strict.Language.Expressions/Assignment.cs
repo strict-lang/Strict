@@ -36,7 +36,7 @@ public class Assignment : Expression
 		return new Assignment(new Identifier(parts[0], value.ReturnType), value);
 	}
 
-	public sealed class IncompleteLet : Method.ParsingError
+	public sealed class IncompleteLet : ParsingFailed
 	{
 		public IncompleteLet(Method.Line line) : base(line) { }
 	}

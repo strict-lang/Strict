@@ -36,12 +36,12 @@ public sealed class If : BlockExpression
 					? TryParseIf(line, ref methodLineNumber)
 					: null;
 
-	public sealed class MissingCondition : Method.ParsingError
+	public sealed class MissingCondition : ParsingFailed
 	{
 		public MissingCondition(Method.Line line) : base(line) { }
 	}
 
-	public sealed class UnexpectedElse : Method.ParsingError
+	public sealed class UnexpectedElse : ParsingFailed
 	{
 		public UnexpectedElse(Method.Line line) : base(line) { }
 	}
@@ -64,13 +64,14 @@ public sealed class If : BlockExpression
 	{
 		if (methodLineNumber >= method.bodyLines.Count)
 			throw new MissingThen(method.bodyLines[methodLineNumber - 1]);
-		if (method.bodyLines[methodLineNumber].Tabs != method.bodyLines[methodLineNumber - 1].Tabs + 1)
-			throw new Method.InvalidIndentation(string.Join('\n', method.bodyLines.ToWordList()),
-				methodLineNumber, method.Name);
+		if (method.bodyLines[methodLineNumber].Tabs !=
+			method.bodyLines[methodLineNumber - 1].Tabs + 1)
+			throw new Method.InvalidIndentation(method.Type, method.TypeLineNumber + methodLineNumber,
+				string.Join('\n', method.bodyLines.ToWordList()), method.Name);
 		return method.ParseMethodLine(method.bodyLines[methodLineNumber], ref methodLineNumber);
 	}
 
-	public sealed class MissingThen : Method.ParsingError
+	public sealed class MissingThen : ParsingFailed
 	{
 		public MissingThen(Method.Line line) : base(line) { }
 	}

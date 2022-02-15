@@ -17,13 +17,16 @@ public class Type : Context
 	/// <summary>
 	/// Call ParserCode or ParseFile instead. This just sets the type name in the specified package.
 	/// </summary>
-	public Type(Package package, string name, ExpressionParser expressionParser) : base(package,
-		name)
+	public Type(Package package, string filePath, ExpressionParser expressionParser) : base(package,
+		Path.GetFileNameWithoutExtension(filePath))
 	{
-		if (package.FindDirectType(name) != null)
-			throw new TypeAlreadyExistsInPackage(name, package);
+		if (package.FindDirectType(Name) != null)
+			throw new TypeAlreadyExistsInPackage(Name, package);
 		Package = package;
 		Package.Add(this);
+		FilePath = Name == filePath
+			? Path.Combine(Package.FolderPath, Name) + Extension
+			: filePath;
 		this.expressionParser = expressionParser;
 	}
 
@@ -34,34 +37,17 @@ public class Type : Context
 	}
 
 	public Package Package { get; }
+	public string FilePath { get; }
 	private readonly ExpressionParser expressionParser;
-	public Type Parse(string code) => Parse(code.SplitLines());
+	public Type Parse(string setLines) => Parse(setLines.SplitLines());
 
 	public Type Parse(string[] setLines)
 	{
-		try
-		{
-			return TryParse(setLines);
-		}
-		catch (ParsingFailedInLine line)
-		{
-			throw new ParsingFailed(line, FilePath);
-		}
-		catch (Exception ex)
-		{
-			throw new ParsingFailed(ex, (lineNumber < lines.Length
-				? lines[lineNumber].SplitWords().First()
-				: "") + " in " + FilePath + ":line " + (lineNumber + 1));
-		}
-	}
-
-	private Type TryParse(string[] setLines)
-	{
 		lines = setLines;
 		for (lineNumber = 0; lineNumber < lines.Length; lineNumber++)
-			ParseLine(lines[lineNumber]);
+			TryParseLine(lines[lineNumber]);
 		if (methods.Count == 0)
-			throw new NoMethodsFound(lineNumber, Name);
+			throw new NoMethodsFound(this, lineNumber);
 		foreach (var trait in implements)
 			if (trait.IsTrait)
 				CheckIfTraitIsImplemented(trait);
@@ -76,12 +62,27 @@ public class Type : Context
 				traitMethod.Name != implementedMethod.Name))
 				nonImplementedTraitMethods.Add(traitMethod);
 		if (nonImplementedTraitMethods.Count > 0)
-			throw new MustImplementAllTraitMethods(nonImplementedTraitMethods);
+			throw new MustImplementAllTraitMethods(this, nonImplementedTraitMethods);
 	}
 
 	private string[] lines = Array.Empty<string>();
 	private int lineNumber;
-	public string FilePath => Path.Combine(Package.FolderPath, Name) + Extension;
+
+	private void TryParseLine(string line)
+	{
+		try
+		{
+			ParseLine(line);
+		}
+		catch (ParsingFailed)
+		{
+			throw;
+		}
+		catch (Exception ex)
+		{
+			throw new ParsingFailed(this, lineNumber, line, "", ex);
+		}
+	}
 
 	private void ParseLine(string line)
 	{
@@ -156,62 +157,50 @@ public class Type : Context
 	private string[] ParseWords(string line)
 	{
 		if (line.Length != line.TrimStart().Length)
-			throw new ExtraWhitespacesFoundAtBeginningOfLine(line, lineNumber, line);
+			throw new ExtraWhitespacesFoundAtBeginningOfLine(this, lineNumber, line);
 		if (line.Length != line.TrimEnd().Length)
-			throw new ExtraWhitespacesFoundAtEndOfLine(line, lineNumber, line);
+			throw new ExtraWhitespacesFoundAtEndOfLine(this, lineNumber, line);
 		if (line.Length == 0)
-			throw new EmptyLineIsNotAllowed(lineNumber, Name);
+			throw new EmptyLineIsNotAllowed(this, lineNumber);
 		return line.SplitWords();
 	}
 
-	public sealed class ExtraWhitespacesFoundAtBeginningOfLine : ParsingFailedInLine
+	public sealed class ExtraWhitespacesFoundAtBeginningOfLine : ParsingFailed
 	{
-		public ExtraWhitespacesFoundAtBeginningOfLine(string text, int line, string method) : base(
-			text, line, method) { }
+		public ExtraWhitespacesFoundAtBeginningOfLine(Type type, int lineNumber, string message,
+			string method = "") : base(type, lineNumber, message, method) { }
 	}
 
-	public sealed class ExtraWhitespacesFoundAtEndOfLine : ParsingFailedInLine
+	public sealed class ExtraWhitespacesFoundAtEndOfLine : ParsingFailed
 	{
-		public ExtraWhitespacesFoundAtEndOfLine(string text, int line, string method) : base(text,
-			line, method) { }
+		public ExtraWhitespacesFoundAtEndOfLine(Type type, int lineNumber, string message,
+			string method = "") : base(type, lineNumber, message, method) { }
 	}
 
-	public abstract class ParsingFailedInLine : Exception
+	public sealed class EmptyLineIsNotAllowed : ParsingFailed
 	{
-		protected ParsingFailedInLine(string message, int line, string method) : base(message)
-		{
-			Number = line;
-			Method = method;
-		}
-
-		public int Number { get; }
-		public string Method { get; }
+		public EmptyLineIsNotAllowed(Type type, int lineNumber) : base(type, lineNumber) { }
 	}
 
-	public sealed class EmptyLineIsNotAllowed : ParsingFailedInLine
+	public sealed class NoMethodsFound : ParsingFailed
 	{
-		public EmptyLineIsNotAllowed(int line, string method) : base("", line, method) { }
+		public NoMethodsFound(Type type, int lineNumber) : base(type, lineNumber,
+			"Each type must have at least one method, otherwise it is useless") { }
 	}
 
-	public sealed class NoMethodsFound : ParsingFailedInLine
+	public sealed class MustImplementAllTraitMethods : ParsingFailed
 	{
-		public NoMethodsFound(int line, string method) : base(
-			"Each type must have at least one method, otherwise it is useless", line, method) { }
-	}
-
-	public sealed class MustImplementAllTraitMethods : Exception
-	{
-		public MustImplementAllTraitMethods(IEnumerable<Method> missingTraitMethods) : base(
-			"Missing methods: " + string.Join(", ", missingTraitMethods)) { }
+		public MustImplementAllTraitMethods(Type type, IEnumerable<Method> missingTraitMethods) :
+			base(type, type.lineNumber, "Missing methods: " + string.Join(", ", missingTraitMethods)) { }
 	}
 
 	private string[] GetAllMethodLines(string definitionLine)
 	{
 		var methodLines = new List<string> { definitionLine };
 		if (IsTrait && IsNextLineValidMethodBody())
-			throw new TypeHasNoMembersAndThusMustBeATraitWithoutMethodBodies();
+			throw new TypeHasNoMembersAndThusMustBeATraitWithoutMethodBodies(this);
 		if (!IsTrait && !IsNextLineValidMethodBody())
-			throw new MethodMustBeImplementedInNonTraitType(definitionLine);
+			throw new MethodMustBeImplementedInNonTraitType(this, definitionLine);
 		while (IsNextLineValidMethodBody())
 			methodLines.Add(lines[++lineNumber]);
 		return methodLines.ToArray();
@@ -225,25 +214,20 @@ public class Type : Context
 		if (line.StartsWith('\t'))
 			return true;
 		if (line.Length != line.TrimStart().Length)
-			throw new ExtraWhitespacesFoundAtBeginningOfLine(line, lineNumber, line);
+			throw new ExtraWhitespacesFoundAtBeginningOfLine(this, lineNumber, line);
 		return false;
 	}
 
-	public sealed class TypeHasNoMembersAndThusMustBeATraitWithoutMethodBodies : Exception { }
-
-	// ReSharper disable once HollowTypeName
-	public sealed class MethodMustBeImplementedInNonTraitType : Exception
+	public sealed class TypeHasNoMembersAndThusMustBeATraitWithoutMethodBodies : ParsingFailed
 	{
-		public MethodMustBeImplementedInNonTraitType(string definitionLine) : base(definitionLine) { }
+		public TypeHasNoMembersAndThusMustBeATraitWithoutMethodBodies(Type type) : base(type, 0) { }
 	}
 
-	public sealed class ParsingFailed : Exception
+	// ReSharper disable once HollowTypeName
+	public sealed class MethodMustBeImplementedInNonTraitType : ParsingFailed
 	{
-		public ParsingFailed(ParsingFailedInLine line, string filePath) : base(
-			"\n   at " + line.Method + " in " + filePath + ":line " + (line.Number + 1), line) { }
-
-		public ParsingFailed(Exception inner, string fallbackWordAndLineNumber) : base(
-			"\n   at " + fallbackWordAndLineNumber, inner) { }
+		public MethodMustBeImplementedInNonTraitType(Type type, string definitionLine) : base(type,
+			type.lineNumber, definitionLine) { }
 	}
 
 	public IReadOnlyList<Type> Implements => implements;
@@ -265,7 +249,7 @@ public class Type : Context
 	public async Task ParseFile(string filePath)
 	{
 		if (!filePath.EndsWith(Extension, StringComparison.Ordinal))
-			throw new FileExtensionMustBeStrict();
+			throw new FileExtensionMustBeStrict(filePath);
 		var directory = Path.GetDirectoryName(filePath)!;
 		var paths = directory.Split(Path.DirectorySeparatorChar);
 		CheckForFilePathErrors(filePath, paths, directory);
@@ -290,7 +274,11 @@ public class Type : Context
 	} //ncrunch: no coverage end
 
 	public const string Extension = ".strict";
-	public sealed class FileExtensionMustBeStrict : Exception { }
+
+	public sealed class FileExtensionMustBeStrict : Exception
+	{
+		public FileExtensionMustBeStrict(string filePath) : base(filePath) { }
+	}
 
 	public sealed class FilePathMustMatchPackageName : Exception
 	{

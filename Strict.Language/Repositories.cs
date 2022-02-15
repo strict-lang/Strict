@@ -148,7 +148,7 @@ public class Repositories
 			: new Package(packagePath);
 		var types = new List<Type>();
 		foreach (var filePath in files)
-			types.Add(new Type(package, Path.GetFileNameWithoutExtension(filePath), parser));
+			types.Add(new Type(package, filePath, parser));
 		await Task.WhenAll(ParseAllSubFolders(ParseAllFiles(files, types), packagePath, package));
 		return package;
 	}

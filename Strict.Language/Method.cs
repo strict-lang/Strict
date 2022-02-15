@@ -28,19 +28,6 @@ public sealed class Method : Context
 	public Expression? TryParseExpression(Line line, string remainingPartToParse) =>
 		parser.TryParseExpression(line, remainingPartToParse);
 
-	/// <summary>
-	/// Every error that has some detail about the line number inside the method body should use this
-	/// </summary>
-	public abstract class ParsingError : Exception //TODO: merge with ParsingFailed, but it is sealed, so stuff has to change in Type.cs
-		//TODO: test if strict file is clickable from the error message in Visual Studio (has already same format)
-	{
-		protected ParsingError(Line line, string? part = null, Type? referencingType = null) : base(
-			(part ?? line.ToString()) + (referencingType != null
-				? " in " + referencingType
-				: "") + "\n at " + line.Method + " in " + line.Method.Type.FilePath + ":line " +
-			(line.FileLineNumber + 1)) { }
-	}
-
 	public Expression ParseMethodLine(Line line, ref int methodLineNumber) =>
 		parser.ParseMethodLine(line, ref methodLineNumber);
 
@@ -102,14 +89,14 @@ public sealed class Method : Context
 	private void FillLine(string line, int methodLineNumber, IList<Line> lines)
 	{
 		if (line.Length == 0)
-			throw new Type.EmptyLineIsNotAllowed(methodLineNumber, Name);
+			throw new Type.EmptyLineIsNotAllowed(Type, TypeLineNumber + methodLineNumber);
 		var tabs = 0;
 		foreach (var t in line)
 			if (t == '\t')
 				tabs++;
 			else
 				break;
-		CheckIndentation(line, methodLineNumber, tabs);
+		CheckIndentation(line, TypeLineNumber + methodLineNumber, tabs);
 		lines[methodLineNumber - 1] = new Line(this, tabs, line[tabs..], TypeLineNumber + methodLineNumber);
 	}
 
@@ -123,16 +110,17 @@ public sealed class Method : Context
 	private void CheckIndentation(string line, int lineNumber, int tabs)
 	{
 		if (tabs is 0 or > 3)
-			throw new InvalidIndentation(line, lineNumber, Name);
+			throw new InvalidIndentation(Type, lineNumber, line, Name);
 		if (line.Length - tabs != line.TrimStart().Length)
-			throw new Type.ExtraWhitespacesFoundAtBeginningOfLine(line, lineNumber, Name);
+			throw new Type.ExtraWhitespacesFoundAtBeginningOfLine(Type, lineNumber, line, Name);
 		if (line.Length != line.TrimEnd().Length)
-			throw new Type.ExtraWhitespacesFoundAtEndOfLine(line, lineNumber, Name);
+			throw new Type.ExtraWhitespacesFoundAtEndOfLine(Type, lineNumber, line, Name);
 	}
 
-	public sealed class InvalidIndentation : Type.ParsingFailedInLine
+	public sealed class InvalidIndentation : ParsingFailed
 	{
-		public InvalidIndentation(string line, int lineNumber, string method) : base(line, lineNumber, method) { }
+		public InvalidIndentation(Type type, int lineNumber, string line, string method) : base(type,
+			lineNumber, method, line) { }
 	}
 
 	public Type Type => (Type)Parent;

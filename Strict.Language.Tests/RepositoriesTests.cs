@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using NUnit.Framework;
+using Strict.Language.Expressions;
 
 namespace Strict.Language.Tests;
 
@@ -39,5 +40,16 @@ public sealed class RepositoriesTests
 		await Task.WhenAll(tasks);
 		foreach (var task in tasks)
 			Assert.That(task.Result, Is.EqualTo(tasks[0].Result));
+	}
+
+	[Test]
+	public async Task MakeSureParsingFailedErrorMessagesAreClickable()
+	{
+		var parser = new MethodExpressionParser();
+		var strictPackage = await new Repositories(parser).LoadFromUrl(Repositories.StrictUrl);
+		Assert.That(
+			() => new Type(strictPackage.FindSubPackage("Examples")!, "Invalid", parser).Parse("has 1"),
+			Throws.InstanceOf<ParsingFailed>().With.Message.Contains(@"at Strict.Examples.Invalid in " +
+				Repositories.DevelopmentFolder + @"\Examples\Invalid.strict:line 1"));
 	}
 }

@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 using NUnit.Framework;
 
 namespace Strict.Language.Tests;
@@ -75,16 +76,16 @@ public class PackageTests
 			new Package(mainPackage, "$%"));
 	}
 
-	//[Test]
-	//public async Task LoadTypesFromOtherPackage()
-	//{
-	//	var strictPackage = await new Repositories(null).LoadFromUrl(Repositories.StrictUrl);
-	//	Assert.That(mainPackage.GetType(Base.App),
-	//		Is.EqualTo(strictPackage.GetType(Base.App)).And.
-	//			EqualTo(subPackage.GetType(Base.App)));
-	//	Assert.That(mainPackage.GetType(Base.Character),
-	//		Is.Not.EqualTo(mainPackage.GetType(Base.App)));
-	//}
+	[Test]
+	public async Task LoadTypesFromOtherPackage()
+	{
+		var strictPackage =
+			await new Repositories(new ExpressionParserTests()).LoadFromUrl(Repositories.StrictUrl);
+		Assert.That(mainPackage.GetType(Base.App),
+			Is.EqualTo(strictPackage.GetType(Base.App)).Or.EqualTo(subPackage.GetType(Base.App)));
+		Assert.That(mainPackage.GetType(Base.Character),
+			Is.Not.EqualTo(mainPackage.GetType(Base.App)));
+	}
 
 	/// <summary>
 	/// Can be used to profile and optimize the GetType performance by doing it many times

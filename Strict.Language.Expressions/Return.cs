@@ -25,7 +25,7 @@ public sealed class Return : Expression
 			: new Return(returnExpression);
 	}
 
-	public sealed class MissingExpression : Method.ParsingError
+	public sealed class MissingExpression : ParsingFailed
 	{
 		public MissingExpression(Method.Line line) : base(line) { }
 	}

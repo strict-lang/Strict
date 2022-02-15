@@ -56,7 +56,7 @@ public class MethodCall : Expression
 		return arguments;
 	}
 
-	public sealed class InvalidExpressionForArgument : Method.ParsingError
+	public sealed class InvalidExpressionForArgument : ParsingFailed
 	{
 		public InvalidExpressionForArgument(Method.Line line, string message) : base(line, message) { }
 	}
@@ -76,12 +76,12 @@ public class MethodCall : Expression
 				: new MethodCall(instance, method, arguments);
 	}
 
-	public sealed class MethodNotFound : Method.ParsingError
+	public sealed class MethodNotFound : ParsingFailed
 	{
 		public MethodNotFound(Method.Line line, string methodName, Type referencingType) : base(line, methodName, referencingType) { }
 	}
 
-	public sealed class ArgumentsDoNotMatchMethodParameters : Method.ParsingError
+	public sealed class ArgumentsDoNotMatchMethodParameters : ParsingFailed
 	{
 		public ArgumentsDoNotMatchMethodParameters(Method.Line line, Expression[] arguments,
 			Method method) : base(line, (arguments.Length == 0
