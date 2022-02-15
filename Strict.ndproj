@@ -5112,6 +5112,8 @@ let types = n.ChildTypes.Where(
 	(t.BaseClass == null ||
 	t.BaseClass.Name != "Exception" ||
 	t.BaseClass.BaseClass != null && t.BaseClass.BaseClass.Name != "Exception") &&
+	// Also exclude any sub classes, which are mostly exceptions too
+	!t.Name.Contains("+") &&
   !t.FullName.Contains("Entities") &&
   !t.FullName.Contains("Messages") &&
   !t.FullName.Contains("Components") &&
@@ -5136,7 +5138,7 @@ where
    relationalCohesion  > 4.0)
 select new { 
   n, 
-  n.ChildTypes,
+  types,
   relationalCohesion,
   Debt = 10.ToMinutes().ToDebt(),
   Severity = Severity.Low
