@@ -5108,7 +5108,10 @@ let types = n.ChildTypes.Where(
   !t.Name.EndsWith("Mocks") &&
   !t.Name.EndsWith("Extensions") &&
   !t.FullName.StartsWith("DeltaExtensions") &&
-  (t.BaseClass == null || t.BaseClass.Name != "Exception") &&
+	// Exclude any exception, we might have lots of sub classes for specific exceptions
+	(t.BaseClass == null ||
+	t.BaseClass.Name != "Exception" ||
+	t.BaseClass.BaseClass != null && t.BaseClass.BaseClass.Name != "Exception") &&
   !t.FullName.Contains("Entities") &&
   !t.FullName.Contains("Messages") &&
   !t.FullName.Contains("Components") &&

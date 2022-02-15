@@ -9,13 +9,16 @@ namespace Strict.Language;
 /// </summary>
 public class ParsingFailed : Exception
 {
-	// ReSharper disable once TooManyDependencies
-	public ParsingFailed(Type type, int fileLineNumber, string message = "", string method = "",
-		Exception? inner = null) : base((message == ""
-		? ""
-		: message) + "\n   at " + (method == ""
-		? type
-		: method) + " in " + type.FilePath + ":line " + (fileLineNumber + 1), inner) { }
+	public ParsingFailed(Type type, int fileLineNumber, string message = "", string method = "") :
+		base(message + GetClickableStacktraceLine(type, fileLineNumber, method)) { }
+
+	private static string GetClickableStacktraceLine(Type type, int fileLineNumber, string method) =>
+		"\n   at " + (method == ""
+			? type
+			: method) + " in " + type.FilePath + ":line " + (fileLineNumber + 1);
+
+	public ParsingFailed(Type type, int fileLineNumber, string message, Exception inner) : base(
+		message + GetClickableStacktraceLine(type, fileLineNumber, ""), inner) { }
 
 	protected ParsingFailed(Method.Line line, string? part = null,
 		Type? referencingOtherType = null) : this(line.Method.Type, line.FileLineNumber,

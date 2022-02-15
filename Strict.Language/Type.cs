@@ -80,7 +80,7 @@ public class Type : Context
 		}
 		catch (Exception ex)
 		{
-			throw new ParsingFailed(this, lineNumber, line, "", ex);
+			throw new ParsingFailed(this, lineNumber, line, ex);
 		}
 	}
 
