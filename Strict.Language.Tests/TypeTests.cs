@@ -46,13 +46,6 @@ public class TypeTests
 			Throws.InstanceOf<Type.NoMethodsFound>());
 
 	[Test]
-	public void InvalidSyntax() =>
-		Assert.That(
-			() => new Type(package, Base.Count, null!).Parse(new[] { "has log", "a b", "\tc" }),
-			Throws.InstanceOf<ParsingFailed>().With.InnerException.
-				InstanceOf<Method.InvalidSyntax>());
-
-	[Test]
 	public void GetUnknownTypeWillCrash() =>
 		Assert.Throws<Context.TypeNotFound>(() => package.GetType(Base.Computation));
 

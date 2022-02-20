@@ -1,0 +1,3 @@
+from(Text)
+GetFiles returns Texts
+GetDirectories returns Texts

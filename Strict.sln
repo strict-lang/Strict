@@ -31,6 +31,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Base", "Base", "{85AB8A69-6
 		Base\BinaryOperator.strict = Base\BinaryOperator.strict
 		Base\Character.strict = Base\Character.strict
 		Base\Count.strict = Base\Count.strict
+		Base\Directory.strict = Base\Directory.strict
 		Base\File.strict = Base\File.strict
 		Base\HashCode.strict = Base\HashCode.strict
 		Base\Input.strict = Base\Input.strict

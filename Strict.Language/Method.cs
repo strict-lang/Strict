@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Strict.Language;
 
@@ -12,6 +13,8 @@ public sealed class Method : Context
 	public Method(Type type, int typeLineNumber, ExpressionParser parser, IReadOnlyList<string> lines) : base(type,
 		GetName(lines[0]))
 	{
+		if (!Name.IsWordWithNumber() && !Name.IsOperator())
+			throw new NameMustBeAWordWithoutAnySpecialCharactersOrNumbers(Name);
 		TypeLineNumber = typeLineNumber;
 		this.parser = parser;
 		ReturnType = Name == From
@@ -41,32 +44,38 @@ public sealed class Method : Context
 
 	private void ParseDefinition(string rest)
 	{
+		rest = RemoveReturns(rest);
+		if (string.IsNullOrEmpty(rest))
+			return;
+		if (rest == "()")
+			throw new EmptyParametersMustBeRemoved(this);
+		ParseParameters(rest[1..^1]);
+	}
+
+	private string RemoveReturns(string rest)
+	{
 		var returnsIndex = rest.IndexOf(" " + Returns + " ", StringComparison.Ordinal);
 		if (returnsIndex >= 0)
 		{
 			ReturnType = Type.GetType(rest[(returnsIndex + Returns.Length + 2)..]);
 			rest = rest[..returnsIndex];
 		}
-		if (string.IsNullOrEmpty(rest))
-			return;
-		CheckForInvalidSyntax(rest);
-		ParseParameters(rest[1..^1]);
-	}
-
-	private static void CheckForInvalidSyntax(string rest)
-	{
-		if (rest == "()")
-			throw new EmptyParametersMustBeRemoved();
-		if (!rest.StartsWith('(') || !rest.EndsWith(')'))
-			throw new InvalidSyntax(rest);
+		else if (rest.Split(')').Last().Length > 0)
+			throw new ExpectedReturns(this, rest);
+		return rest;
 	}
 
 	public const string Returns = "returns";
-	public sealed class EmptyParametersMustBeRemoved : Exception { }
 
-	public sealed class InvalidSyntax : Exception
+	public sealed class EmptyParametersMustBeRemoved : ParsingFailed
 	{
-		public InvalidSyntax(string rest) : base(rest) { }
+		public EmptyParametersMustBeRemoved(Method method) : base(method.Type, 0, "", method.Name) { }
+	}
+
+	public sealed class ExpectedReturns : ParsingFailed
+	{
+		public ExpectedReturns(Method method, string rest) :
+			base(method.Type, 0, rest, method.Name) { }
 	}
 
 	public void ParseParameters(string parametersText)

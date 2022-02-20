@@ -11,7 +11,7 @@ public class BinaryTests : TestExpressions
 			new Binary(number, number.ReturnType.Methods.First(m => m.Name == "+"), number));
 
 	[Test]
-	public void Add5ToNumber() =>
+	public void AddFiveToNumber() =>
 		ParseAndCheckOutputMatchesInput("bla + 5",
 			new Binary(new MemberCall(bla), number.ReturnType.Methods.First(m => m.Name == "+"),
 				number));

@@ -63,6 +63,11 @@ public class AssignmentTests : TestExpressions
 			Throws.Exception.InstanceOf<Assignment.IncompleteLet>());
 
 	[Test]
+	public void LetWithoutValueCannotParse() =>
+		Assert.That(() => ParseExpression("let value"),
+			Throws.Exception.InstanceOf<Assignment.IncompleteLet>());
+
+	[Test]
 	public void LetWithoutExpressionCannotParse() =>
 		Assert.That(() => ParseExpression("let value = abc"),
 			Throws.Exception.InstanceOf<MemberCall.MemberNotFound>().With.Message.Contain("abc"));

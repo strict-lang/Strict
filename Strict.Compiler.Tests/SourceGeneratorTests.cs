@@ -49,6 +49,9 @@ Run
 	file.Write(""Hello"")");
 		var generatedCode = generator.Generate(program).ToString()!;
 		Assert.That(GenerateNewConsoleAppAndReturnOutput(ProjectFolder, generatedCode), Is.EqualTo(""));
+		Assert.That(File.Exists(Path.Combine(ProjectFolder, TemporaryFile)), Is.True);
+		Assert.That(File.ReadAllText(Path.Combine(ProjectFolder, TemporaryFile)),
+			Is.EqualTo("Hello"));
 	}
 
 	private const string TemporaryFile = "temp.txt";
@@ -125,4 +128,19 @@ Run
 			() => GenerateNewConsoleAppAndReturnOutput(
 				nameof(InvalidConsoleAppWillGiveUsCompilationError), "lafine=soeu"),
 			Throws.InstanceOf<CSharpCompilationFailed>().And.Message.Contains("The build failed."));
+
+	[Test]
+	[Category("Manual")] // work in progress
+	public void GenerateDirectoryGetFilesProgram()
+	{
+		var program = new Type(package, nameof(GenerateDirectoryGetFilesProgram), parser).Parse(@"implement App
+has directory = "".""
+has log
+Run
+	for filename from directory.GetFiles
+	log.Write(filename)");
+		var generatedCode = generator.Generate(program).ToString()!;
+		Assert.That(GenerateNewConsoleAppAndReturnOutput(ProjectFolder, generatedCode),
+			Is.EqualTo("Program.cs" + "\r\n"));
+	}
 }

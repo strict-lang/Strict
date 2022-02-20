@@ -1,6 +1,6 @@
 ﻿using System.Linq;
 
-namespace Strict.Language.Expressions;
+namespace Strict.Language;
 
 /// <summary>
 /// https://strict.dev/docs/Keywords

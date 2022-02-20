@@ -13,8 +13,13 @@ Run
 	private Type type = null!;
 
 	[Test]
-	public void MustMustHaveAName() =>
-		Assert.Throws<Method.InvalidSyntax>(() => new Method(type, 0, null!, new[] { "a b" }));
+	public void MustMustHaveAValidName() =>
+		Assert.Throws<Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers>(() =>
+			new Method(type, 0, null!, new[] { "5(text)" }));
+
+	[Test]
+	public void ReturnShouldBeReturns() =>
+		Assert.Throws<Method.ExpectedReturns>(() => new Method(type, 0, null!, new[] { "GetFiles return Texts" }));
 
 	[Test]
 	public void ParametersMustNotBeEmpty() =>

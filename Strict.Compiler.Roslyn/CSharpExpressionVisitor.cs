@@ -86,12 +86,12 @@ public class CSharpExpressionVisitor : ExpressionVisitor
 
 	private string VisitMethodCallInstance(MethodCall methodCall) =>
 		((methodCall.Arguments.FirstOrDefault() as MethodCall)?.Instance?.ToString() == "file"
-			? "var reader = new StreamReader(file);"
+			? "using var reader = new StreamReader(file);"
 			: "") + (methodCall.Method.Name == Method.From
 			? "new "
 			: "") + (methodCall.Instance != null
 			? methodCall.Instance.ToString() == "file" && methodCall.Method.Name == "Write"
-				? "var writer = new StreamWriter(file); writer"
+				? "using var writer = new StreamWriter(file); writer"
 				: methodCall.Instance.ToString() == "file" && methodCall.Method.Name == "Read"
 					? "reader"
 					: Visit(methodCall.Instance)
