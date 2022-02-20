@@ -24,6 +24,11 @@ public sealed class MemberCallTests : TestExpressions
 			Throws.InstanceOf<MemberCall.MemberNotFound>());
 
 	[Test]
+	public void MultipleWordsMemberNotFound() =>
+		Assert.That(() => ParseExpression("for filename from directory.GetFiles"),
+			Throws.InstanceOf<MemberCall.MemberNotFound>());
+
+	[Test]
 	public void NestedMemberIsNotAWord() =>
 		Assert.That(() => ParseExpression("log.5"), Throws.InstanceOf<MemberCall.MemberNotFound>());
 }
