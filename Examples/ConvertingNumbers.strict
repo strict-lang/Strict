@@ -1,0 +1,8 @@
+has numbers
+GetComplicatedSequenceTexts returns Texts
+	ConvertingNumbers(1, 21).GetComplicatedSequenceTexts is ("7", "16")
+	return numbers
+		to Text
+		Length * Length
+		4 + this * 3
+		to Text

@@ -1,15 +1,15 @@
 has Characters
 from(number)
-	test(45) is "45"
-	return stream digit from digits(number)
-		create Character(digit)
+	Text(45) is "45"
+	return digits(number)
+		Character(this)
 digits(number) returns Iterator<Number>
-	test(1) is (1)
-	test(123) is (1, 2, 3)
-	if number / 10 > 0
-		yield digits(number / 10)
-	yield number % 10
+	digits(1) is (1)
+	digits(123) is (1, 2, 3)
+	if floor(number / 10) is 0
+		return number % 10
+	return digits(floor(number / 10))
 +(other) returns Text
 	+("more") is "more"
 	"Hey" + " " + "you" is "Hey you"
-	return self.Characters + other.Characters
+	return Characters + other.Characters

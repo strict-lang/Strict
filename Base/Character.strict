@@ -1,10 +1,10 @@
 implement Number
 from(number)
-	test(7) is '7'
+	Character(7) is '7'
 	return '0' + number
 from(text)
-	test("b") is 'b'
+	Character("b") is 'b'
 	return text.Characters[0]
 to returns Text
-	test('a') is "a"
-	yield self
+	'a' to Text is "a"
+	return "" + this

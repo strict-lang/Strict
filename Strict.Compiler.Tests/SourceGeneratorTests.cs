@@ -134,11 +134,10 @@ Run
 	public void GenerateDirectoryGetFilesProgram()
 	{
 		var program = new Type(package, nameof(GenerateDirectoryGetFilesProgram), parser).Parse(@"implement App
-has directory = "".""
 has log
 Run
-	for filename from directory.GetFiles
-	log.Write(filename)");
+	Directory(""."").GetFiles
+		log.Write");
 		var generatedCode = generator.Generate(program).ToString()!;
 		Assert.That(GenerateNewConsoleAppAndReturnOutput(ProjectFolder, generatedCode),
 			Is.EqualTo("Program.cs" + "\r\n"));

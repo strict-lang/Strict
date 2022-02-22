@@ -25,7 +25,7 @@ public sealed class MemberCallTests : TestExpressions
 
 	[Test]
 	public void MultipleWordsMemberNotFound() =>
-		Assert.That(() => ParseExpression("for filename from directory.GetFiles"),
+		Assert.That(() => ParseExpression("directory.GetFiles"),
 			Throws.InstanceOf<MemberCall.MemberNotFound>());
 
 	[Test]

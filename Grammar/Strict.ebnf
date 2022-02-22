@@ -1,6 +1,6 @@
 /* TODO:
    1. The newline stuff needs to be sorted; it should be defined consistently.
-   2. Methodcall should not be part of Method as methodcall does not accept types, whereas Method does.
+   obs: 2. Methodcall should not be part of Method as methodcall does not accept types, whereas Method does.
    3. Missing arguments to 'from' and 'to'?
    4. Indentation really should be defined using the pseduo-tokens INDENT and DEDENT for it to be correct (see block: It allows any number of tabs).
    5. How to assign to array elements?

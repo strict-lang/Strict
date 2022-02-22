@@ -1,9 +1,7 @@
 has numbers
 FirstNonConsecutive returns Number
-	mutable numberGoUp = numbers[0]
-	for index from 1 to numbers.Length
-		if numbers[index] is numberGoUp + 1
-			numberGoUp = numberGoUp + 1
-		else
-			return numbers[index]
+	FindFirstNonConsecutiveNumber(1, 2, 3, 5, 6).FirstNonConsecutive is 5
+	Iterator(numbers)
+		if Value is not numbers[Index - 1]
+			return Value
 	return 0

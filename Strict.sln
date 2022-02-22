@@ -35,6 +35,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Base", "Base", "{85AB8A69-6
 		Base\File.strict = Base\File.strict
 		Base\HashCode.strict = Base\HashCode.strict
 		Base\Input.strict = Base\Input.strict
+		Base\Iterator.strict = Base\Iterator.strict
 		Base\Log.strict = Base\Log.strict
 		Base\Mutable.strict = Base\Mutable.strict
 		Base\Number.strict = Base\Number.strict
@@ -63,6 +64,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Grammar", "Grammar", "{B3D7
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Examples", "Examples", "{08C640D3-D0C7-4D04-8B96-EF6C92DA3C13}"
 	ProjectSection(SolutionItems) = preProject
+		Examples\ConvertingNumbers.strict = Examples\ConvertingNumbers.strict
 		Examples\FindFirstNonConsecutiveNumber.strict = Examples\FindFirstNonConsecutiveNumber.strict
 	EndProjectSection
 EndProject

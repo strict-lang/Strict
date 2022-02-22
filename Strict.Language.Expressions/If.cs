@@ -13,6 +13,10 @@ public sealed class If : BlockExpression
 
 	public Expression Condition { get; }
 	public Expression Then { get; }
+	/// <summary>
+	/// Rarely used as most of the time Then will return and anything after is automatically the else
+	/// (else is not allowed then). For multiple if/else or when not returning else might be useful.
+	/// </summary>
 	public Expression? OptionalElse { get; }
 
 	public override int GetHashCode() =>

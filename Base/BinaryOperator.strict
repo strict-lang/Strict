@@ -1,6 +1,6 @@
-is(any) returns Boolean
 is(type) returns Boolean
-as(type) returns Type
+is(any) returns Boolean
+to(type) returns Any
 to(any) returns Any
 and(boolean) returns Boolean
 and(number) returns Number
