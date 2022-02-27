@@ -99,4 +99,18 @@ Run
 		Assert.That(visitor.FileContent,
 			Contains.Substring("\tpublic void Run()" + Environment.NewLine));
 	}
+
+	[Test]
+	public void ReadAllConstructorAndPickCorrectOne()
+	{
+		var interfaceType = new Type(package, Computer, parser).Parse(@"import Strict
+has number
+has file = File(""test.txt"", ""open"")
+Run
+	file.Write(number)");
+		var visitor = new CSharpTypeVisitor(interfaceType);
+		Assert.That(visitor.FileContent,
+			Contains.Substring(
+				"\tprivate static FileStream file = new FileStream(\"test.txt\", FileMode.Open);"));
+	}
 }

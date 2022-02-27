@@ -1,5 +1,8 @@
 ﻿<ProjectConfiguration>
   <Settings>
+    <HiddenComponentWarnings>
+      <Value>LongTestTimesWithoutParallelExecution</Value>
+    </HiddenComponentWarnings>
     <IgnoredTests>
       <NamedTestSelector>
         <TestName>Strict.Compiler.Tests.SourceGeneratorTests.InvalidConsoleAppWillGiveUsCompilationError</TestName>

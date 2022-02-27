@@ -22,13 +22,13 @@ public sealed class MethodCallTests : TestExpressions
 	public void ParseWithMissingArgument() =>
 		Assert.That(() => ParseExpression("log.Write"),
 			Throws.InstanceOf<MethodCall.ArgumentsDoNotMatchMethodParameters>().With.Message.StartsWith(
-				"No arguments does not match \"TestPackage.Log.Write\" method parameters: (text TestPackage.Text)"));
+				"No arguments does not match TestPackage.Log.Write(text TestPackage.Text)"));
 
 	[Test]
 	public void ParseWithTooManyArguments() =>
 		Assert.That(() => ParseExpression("log.Write(1, 2)"),
 			Throws.InstanceOf<MethodCall.ArgumentsDoNotMatchMethodParameters>().With.Message.StartsWith(
-				"Arguments: (1, 2) do not match \"TestPackage.Log.Write\" method parameters: (text TestPackage.Text)"));
+				"Arguments: (1, 2) do not match TestPackage.Log.Write(text TestPackage.Text)"));
 
 	[Test]
 	public void ParseWithInvalidExpressionArguments() =>

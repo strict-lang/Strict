@@ -79,10 +79,15 @@ public class CSharpExpressionVisitor : ExpressionVisitor
 				: methodCall.Method.Name == "Write" &&
 				methodCall.Instance.ReturnType.Name is Base.Log or Base.System
 					? "WriteLine"
-					: methodCall.Method.Name)) + "(" + methodCall.Arguments.Select(Visit).ToWordList() +
-		(methodCall.ReturnType.Name == "File"
-			? ", FileMode.OpenOrCreate"
-			: "") + ")";
+					: methodCall.Method.Name)) + "(" + VisitArguments(methodCall) + ")";
+
+	private string VisitArguments(MethodCall methodCall) =>
+		methodCall.ReturnType.Name == "File"
+			? Visit(methodCall.Arguments[0]) + (methodCall.Arguments.Count == 2 &&
+				methodCall.Arguments[1] is Text fileMode && (string)fileMode.Data == "open"
+					? ", FileMode.Open"
+					: ", FileMode.OpenOrCreate")
+			: methodCall.Arguments.Select(Visit).ToWordList();
 
 	private string VisitMethodCallInstance(MethodCall methodCall) =>
 		((methodCall.Arguments.FirstOrDefault() as MethodCall)?.Instance?.ToString() == "file"

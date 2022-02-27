@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 
 namespace Strict.Language.Expressions;
 
@@ -8,12 +9,22 @@ namespace Strict.Language.Expressions;
 /// </summary>
 public class MethodExpressionParser : ExpressionParser
 {
-	public override Expression ParseAssignmentExpression(Type type, string initializationLine, int fileLineNumber)
+	public override Expression ParseAssignmentExpression(Type type, string initializationLine,
+		int fileLineNumber)
 	{
-		var constructor = type.Methods[0];
-		var line = new Method.Line(constructor, 0, initializationLine, fileLineNumber);
-		return new MethodCall(new Value(type, type), constructor,
-			TryParseExpression(line, initializationLine) ?? throw new UnknownExpression(line));
+		var line = new Method.Line(new Method(type, 0, this, new[] { Method.From }), 0,
+			initializationLine, 0);
+		var singleArgumentOrMethodCall = TryParseExpression(line, initializationLine) ??
+			throw new UnknownExpression(line);
+		Expression[] arguments;
+		if (singleArgumentOrMethodCall is MethodCall methodCall)
+			arguments = methodCall.Arguments.ToArray();
+		else
+			arguments = new[] { singleArgumentOrMethodCall };
+		foreach (var method in type.Methods)
+			if (method.Name == Method.From && method.Parameters.Count == arguments.Length)
+				return new MethodCall(new Value(type, type), method, arguments);
+		throw new UnknownExpression(line); //ncrunch: no coverage
 	}
 
 	public override Expression? TryParseExpression(Method.Line line, string partToParse) =>

@@ -37,7 +37,7 @@ public class MemberCall : Expression
 	{
 		var first = TryMemberCall(line, parts[0]);
 		if (first == null)
-			throw new MemberNotFound(line, line.Method.Type, parts[0]);
+			throw new MemberNotFound(line, line.Method.Type, parts[0]); //ncrunch: no coverage
 		var second = first.ReturnType.Members.FirstOrDefault(m => m.Name == parts[1]);
 		return second == null
 			? first.ReturnType.Methods.Any(m => m.Name == parts[1])

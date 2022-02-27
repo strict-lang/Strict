@@ -1,4 +1,5 @@
-from(Text)
+from(text)
+from(filePath Text, fileMode Text)
 Read returns Text
 Write(text)
 Delete

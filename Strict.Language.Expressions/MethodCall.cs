@@ -67,13 +67,16 @@ public class MethodCall : Expression
 	{
 		if (!methodName.IsWord())
 			return null;
-		var context = instance?.ReturnType ?? line.Method.Type;
-		var method = context.Methods.FirstOrDefault(m => m.Name == methodName);
-		return method == null
-			? throw new MethodNotFound(line, methodName, context)
-			: method.Parameters.Count != arguments.Length
-				? throw new ArgumentsDoNotMatchMethodParameters(line, arguments, method)
-				: new MethodCall(instance, method, arguments);
+		var type = instance?.ReturnType ?? line.Method.Type;
+		if (methodName == type.Name)
+			methodName = Method.From;
+		foreach (var method in type.Methods)
+			if (method.Name == methodName && method.Parameters.Count == arguments.Length)
+				return new MethodCall(instance, method, arguments);
+		return type.Methods.All(m => m.Name != methodName)
+			? throw new MethodNotFound(line, methodName, type)
+			: throw new ArgumentsDoNotMatchMethodParameters(line, arguments,
+				type.Methods.Where(n => n.Name == methodName));
 	}
 
 	public sealed class MethodNotFound : ParsingFailed
@@ -84,9 +87,8 @@ public class MethodCall : Expression
 	public sealed class ArgumentsDoNotMatchMethodParameters : ParsingFailed
 	{
 		public ArgumentsDoNotMatchMethodParameters(Method.Line line, Expression[] arguments,
-			Method method) : base(line, (arguments.Length == 0
-				? "No arguments does "
-				: "Arguments: " + arguments.ToBrackets() + " do ") + "not match \"" + method.Type + "." +
-			method.Name + "\" method parameters: " + method.Parameters.ToBrackets()) { }
+			IEnumerable<Method> methods) : base(line, (arguments.Length == 0
+			? "No arguments does "
+			: "Arguments: " + arguments.ToBrackets() + " do ") + "not match " + methods.ToWordList()) { }
 	}
 }

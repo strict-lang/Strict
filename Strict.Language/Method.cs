@@ -144,4 +144,6 @@ public sealed class Method : Context
 		name == Base.Other
 			? Type
 			: Type.FindType(name, searchingFrom ?? this);
+
+	public override string ToString() => base.ToString() + Parameters.ToBrackets();
 }
