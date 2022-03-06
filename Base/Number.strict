@@ -31,3 +31,12 @@ floor returns Number
 	floor(1) is 1
 	floor(2.4) is 2
 	return this - this % 1
+Clamp(min Number, max Number) returns Number
+	Number(5).Clamp(0, 10) is 5
+	Number(6).Clamp(10, 20) is 10
+	Number(20).Clamp(0, 10) is 10
+	if this < min
+		return min
+	if this > max
+		return max
+	return this
