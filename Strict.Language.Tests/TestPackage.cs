@@ -13,7 +13,9 @@ public class TestPackage : Package
 Write(text)
 	return Text");
 		new Type(this, Base.Number, null!).Parse(@"+(other) returns Number
-	return self + other");
+	return self + other
+Clamp(min Number, max Number) returns Number
+	return this");
 		new Type(this, Base.BinaryOperator, null!).Parse(@"is(any) returns Boolean");
 		new Type(this, Base.UnaryOperator, null!).Parse(@"not returns Boolean");
 	}
