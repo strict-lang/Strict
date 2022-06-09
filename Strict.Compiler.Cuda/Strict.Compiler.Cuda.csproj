@@ -9,7 +9,12 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="ManagedCudaNet5" Version="11.1.1" />
+    <PackageReference Include="ManagedCudaNet" Version="11.6.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Strict.Language.Expressions\Strict.Language.Expressions.csproj" />
+    <ProjectReference Include="..\Strict.Language\Strict.Language.csproj" />
   </ItemGroup>
 
 </Project>

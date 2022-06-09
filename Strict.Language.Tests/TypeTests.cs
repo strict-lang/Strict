@@ -15,7 +15,8 @@ public class TypeTests
 
 	[Test]
 	public void AddingTheSameNameIsNotAllowed() =>
-		Assert.Throws<Type.TypeAlreadyExistsInPackage>(() => new Type(package, "App", null!));
+		Assert.That(() => new Type(package, "App", null!),
+			Throws.InstanceOf<Type.TypeAlreadyExistsInPackage>());
 
 	[Test]
 	public void EmptyLineIsNotAllowed() =>
@@ -47,12 +48,12 @@ public class TypeTests
 
 	[Test]
 	public void GetUnknownTypeWillCrash() =>
-		Assert.Throws<Context.TypeNotFound>(() => package.GetType(Base.Computation));
+		Assert.That(() => package.GetType(Base.Computation), Throws.InstanceOf<Context.TypeNotFound>());
 
 	[Test]
 	public void TypeNameMustBeWord() =>
-		Assert.Throws<Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers>(() =>
-			new Member(package.GetType(Base.App), "blub7", null!));
+		Assert.That(() => new Member(package.GetType(Base.App), "blub7", null!),
+			Throws.InstanceOf<Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers>());
 
 	[Test]
 	public void ImportMustBeFirst() =>

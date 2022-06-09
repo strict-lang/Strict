@@ -33,6 +33,7 @@ Run
 		Assert.That(method.Name, Is.EqualTo(Run));
 		Assert.That(method.Parameters, Is.Empty);
 		Assert.That(method.ReturnType, Is.EqualTo(type.GetType(Base.None)));
+		Assert.That(method.ToString(), Is.EqualTo("TestPackage.TypeTests.Run"));
 	}
 
 	[Test]

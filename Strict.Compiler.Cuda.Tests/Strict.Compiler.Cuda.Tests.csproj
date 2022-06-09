@@ -18,10 +18,19 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Input\AddNumbers.cs" />
+    <Compile Remove="Input\InitializeDepths.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Remove="Output\InitializeDepths.cu" />
     <None Remove="TexturedMeshTests.RenderTexturedBoxPlaneAndSphereWithImage.approved.png" />
   </ItemGroup>
 
   <ItemGroup>
+    <Content Include="Input\AddNumbers.cs" />
+    <Content Include="Input\InitializeDepths.cs" />
+    <Content Include="Output\InitializeDepths.cu" />
     <Content Include="TexturedMeshTests.RenderTexturedBoxPlaneAndSphereWithImage.approved.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
