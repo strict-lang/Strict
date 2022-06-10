@@ -50,20 +50,6 @@ public class CSharpToCudaTranspilerTests
 	private Type GetParsedCSharpType(string fileName) =>
 		transpiler.ParseCSharp(@"..\..\..\Input\" + fileName + ".cs");
 
-	private const string AddNumbers = nameof(AddNumbers);
-
-	[Test]
-	public void GenerateCudaAndExecute()
-	{
-		var type = GetParsedCSharpType(AddNumbers);
-		var cuda = transpiler.GenerateCuda(type);
-		var expectedOutput = File.ReadAllText(@"..\..\..\Output\AddNumbers.cu");
-		Assert.That(cuda, Is.EqualTo(expectedOutput));
-		var rtc = CompileKernelAndSaveAsPtxFile(cuda);
-		var output = CreateAndRunKernel(rtc);
-		Assert.That(output[0], Is.EqualTo(3));
-	}
-
 	private static CudaDeviceVariable<int> CreateAndRunKernel(CudaRuntimeCompiler rtc)
 	{
 		var context = new CudaContext(0);
@@ -71,7 +57,7 @@ public class CSharpToCudaTranspilerTests
 		CudaDeviceVariable<int> first = new[] { 1 };
 		CudaDeviceVariable<int> second = new[] { 2 };
 		var output = new CudaDeviceVariable<int>(Count);
-		var kernel = context.LoadKernelPTX(rtc.GetPTX(), "AddNumbers");
+		var kernel = context.LoadKernelPTX(rtc.GetPTX(), AddNumbers);
 		kernel.Run(first.DevicePointer, second.DevicePointer, output.DevicePointer, Count);
 		return output;
 	}
@@ -79,11 +65,29 @@ public class CSharpToCudaTranspilerTests
 	private static CudaRuntimeCompiler CompileKernelAndSaveAsPtxFile(string code)
 	{
 		//generate as output language obviously from strict code
-		var rtc = new CudaRuntimeCompiler(code, "AddNumbers");
+		var rtc = new CudaRuntimeCompiler(code, AddNumbers);
 		// see http://docs.nvidia.com/cuda/nvrtc/index.html for usage and options
 		//https://arnon.dk/matching-sm-architectures-arch-and-gencode-for-various-nvidia-cards/
 		//nvcc .\vectorAdd.cu -use_fast_math -ptx -m 64 -arch compute_61 -code sm_61 -o .\vectorAdd.ptx
 		rtc.Compile(new[] { "--gpu-architecture=compute_61" });
 		return rtc;
 	}
+
+	[TestCase(AddNumbers, 3)]
+	[TestCase(SubtractNumbers, -1)]
+	[TestCase(MultiplyNumbers, 2)]
+	public void ParseGenerateCudaAndExecute(string fileName, int expectedNumber)
+	{
+		var type = GetParsedCSharpType(fileName);
+		var cuda = transpiler.GenerateCuda(type);
+		var expectedOutput = File.ReadAllText(@"..\..\..\Output\" + fileName + ".cu");
+		Assert.That(cuda, Is.EqualTo(expectedOutput));
+		var rtc = CompileKernelAndSaveAsPtxFile(cuda);
+		var output = CreateAndRunKernel(rtc);
+		Assert.That(output[0], Is.EqualTo(expectedNumber));
+	}
+
+	private const string AddNumbers = nameof(AddNumbers);
+	private const string SubtractNumbers = nameof(SubtractNumbers);
+	private const string MultiplyNumbers = nameof(MultiplyNumbers);
 }
