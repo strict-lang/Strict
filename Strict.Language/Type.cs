@@ -248,6 +248,10 @@ public class Type : Context
 			? this
 			: Package.FindType(name, searchingFrom ?? this);
 
+	/// <summary>
+	/// Called from <see cref="Repositories.ParseAllFiles"/> in parallel for all the files in the
+	/// package which is the reason for not calling this from constructor
+	/// </summary>
 	public async Task ParseFile(string filePath)
 	{
 		if (!filePath.EndsWith(Extension, StringComparison.Ordinal))

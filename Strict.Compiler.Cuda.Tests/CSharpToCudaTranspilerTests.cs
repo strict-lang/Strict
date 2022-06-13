@@ -11,13 +11,14 @@ namespace Strict.Compiler.Cuda.Tests;
 public class CSharpToCudaTranspilerTests
 {
 	[SetUp]
-	public async Task CreateTranspiler()
-	{
-		Repositories repos = new(new MethodExpressionParser());
-		var strictPackage = await repos.LoadFromUrl(Repositories.StrictUrl);
-		transpiler = new CSharpToCudaTranspiler(strictPackage);
-	}
+	public async Task CreateTranspiler() =>
+		transpiler = new CSharpToCudaTranspiler(await GetStrictPackage());
 
+	private static async Task<Package> GetStrictPackage() =>
+		cachedStrictPackage ??= await GetRepositories().LoadFromUrl(Repositories.StrictUrl);
+
+	private static Package? cachedStrictPackage;
+	private static Repositories GetRepositories() => new(new MethodExpressionParser());
 	private CSharpToCudaTranspiler transpiler = null!;
 
 	[TestCase("")]
@@ -47,6 +48,7 @@ public class CSharpToCudaTranspilerTests
 			Is.EqualTo("return first + second"));
 	}
 
+	//TODO: Add a unit test which returns MissingReturnStatement using invalid file
 	private Type GetParsedCSharpType(string fileName) =>
 		transpiler.ParseCSharp(@"..\..\..\Input\" + fileName + ".cs");
 

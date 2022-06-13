@@ -47,13 +47,10 @@ public class CSharpToCudaTranspiler
 }";
 	}
 
-	public Type ParseCSharp(string filePath)
-	{
-		if (filePath == "")
-			throw new InvalidCode();
-		var type = new CSharpType(package, filePath, parser);
-		return type;
-	}
+	public Type ParseCSharp(string filePath) =>
+		filePath == ""
+			? throw new InvalidCode()
+			: new CSharpType(package, filePath, parser);
 
 	public class InvalidCode : Exception { }
 }
@@ -98,11 +95,15 @@ public class CSharpType : Type
 		foreach (var line in inputCode)
 			if (line.StartsWith("\t\t", StringComparison.Ordinal))
 				returnStatement = line.Trim().Replace(";", "");
+		if (returnStatement == "")
+			throw new MissingReturnStatement();
 		var method = new Method(this, 0, new CSharpExpressionParser(),
 			new[] { "Add(first Number, second Number) returns Number", "\t" + returnStatement });
 		methods.Add(method);
 	}
 }
+
+public sealed class MissingReturnStatement : Exception { }
 
 //	private bool isAtEnd()
 //	{
