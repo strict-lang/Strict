@@ -17,7 +17,7 @@ public class Type : Context
 	/// <summary>
 	/// Call Parse instead. This just sets the type name in the specified package.
 	/// </summary>
-	public Type(Package package, string filePath, ExpressionParser expressionParser) : base(package,
+	public Type(Package package, string filePath, ExpressionParser? expressionParser) : base(package,
 		Path.GetFileNameWithoutExtension(filePath))
 	{
 		if (package.FindDirectType(Name) != null)
@@ -27,7 +27,7 @@ public class Type : Context
 		FilePath = Name == filePath
 			? Path.Combine(Package.FolderPath, Name) + Extension
 			: filePath;
-		this.expressionParser = expressionParser;
+		this.expressionParser = expressionParser!;
 	}
 
 	public sealed class TypeAlreadyExistsInPackage : Exception

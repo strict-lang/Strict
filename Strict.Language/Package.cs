@@ -27,8 +27,8 @@ public class Package : Context
 	{
 		public Root() : base(null, string.Empty)
 		{
-			cachedFoundTypes.Add(Base.None, new Type(this, Base.None, null!));
-			cachedFoundTypes.Add(Base.Boolean, new Type(this, Base.Boolean, null!));
+			cachedFoundTypes.Add(Base.None, new Type(this, Base.None, null));
+			cachedFoundTypes.Add(Base.Boolean, new Type(this, Base.Boolean, null));
 		}
 
 		public override Type? FindType(string name, Context? searchingFrom = null) =>
