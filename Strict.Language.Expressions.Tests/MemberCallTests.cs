@@ -18,9 +18,10 @@ public sealed class MemberCallTests : TestExpressions
 	public void MembersMustBeWords() =>
 		Assert.That(() => ParseExpression("0g9y53"), Throws.InstanceOf<UnknownExpression>());
 
-	[Test]
-	public void NestedMemberNotFound() =>
-		Assert.That(() => ParseExpression("log.unknown"),
+	[TestCase("log.unknown")]
+	[TestCase("1.log")]
+	public void NestedMemberNotFound(string lines) =>
+		Assert.That(() => ParseExpression(lines),
 			Throws.InstanceOf<MemberCall.MemberNotFound>());
 
 	[Test]

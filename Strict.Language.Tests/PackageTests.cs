@@ -27,9 +27,14 @@ public class PackageTests
 		var emptyPackage = new Package(nameof(NoneAndBooleanAreAlwaysKnown));
 		Assert.That(emptyPackage.FindType(Base.None, emptyPackage), Is.Not.Null);
 		Assert.That(emptyPackage.FindType(Base.Boolean, emptyPackage), Is.Not.Null);
+		Assert.That(emptyPackage.FindType("bool", emptyPackage), Is.Null);
 		Assert.That(emptyPackage.FindType(nameof(NoneAndBooleanAreAlwaysKnown), emptyPackage),
 			Is.Null);
 	}
+
+	[Test]
+	public void IsPrivateNameCheckShouldReturnNull() =>
+		Assert.That(new Package(nameof(IsPrivateNameCheckShouldReturnNull)).FindType("isPrivate"), Is.Null);
 
 	[Test]
 	public void RootPackageToStringShouldNotCrash()
