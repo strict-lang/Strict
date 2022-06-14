@@ -10,9 +10,8 @@ namespace Strict.Language;
 /// </summary>
 public abstract class Context
 {
-	protected Context(Context parent, string name)
+	protected Context(Context? parent, string name)
 	{
-		// ReSharper disable once ConditionIsAlwaysTrueOrFalse
 		if (parent != null && (string.IsNullOrWhiteSpace(name) ||
 			this is not Method && !name.IsWord()))
 			throw new NameMustBeAWordWithoutAnySpecialCharactersOrNumbers(name);
@@ -33,42 +32,44 @@ public abstract class Context
 	/// least 5+ types in its package. A dictionary could cache the same name calls (e.g. Number,
 	/// Text, etc. or even Base.Log always return the same type).
 	/// </summary>
-	// ReSharper disable once MethodTooLong
 	public Type GetType(string name)
 	{
 		// Generics still need to be supported (see Log.strict for Output<text>)
+		// https://deltaengine.fogbugz.com/f/cases/24562
 		if (name.StartsWith("Iterator<", StringComparison.Ordinal))
 			name = name.Split('<', '>')[1];
 		if (name.Contains('<'))
 			name = name.Split('<')[0];
 		// Arrays are also not supported yet, simply return base type, however only if we do not find a name ending with s already and do proper array fun
+		// https://deltaengine.fogbugz.com/f/cases/24563/
 		if (name.EndsWith('s'))
 			name = name[..^1];
 		if (name == Name)
 			return (Type)this;
-		var type = FindFullType(name) ?? FindType(name, this);
-		// packages.strict.dev should be asked if there is any downloadable public package containing the missing type
-		if (type == null)
+		return (FindFullType(name) ?? FindType(name, this)) ??
 			throw new TypeNotFound(name, ToString());
-		return type;
 	}
 
 	private Type? FindFullType(string name) =>
 		name.Contains('.')
 			? name == ToString()
 				? this as Type
-				: GetPackage().FindFullType(name)
+				: GetPackage()?.FindFullType(name)
 			: null;
 
 	public override string ToString() =>
-		(string.IsNullOrEmpty(Parent.Name)
+		// ReSharper disable once ConditionalAccessQualifierIsNonNullableAccordingToAPIContract
+		(string.IsNullOrEmpty(Parent?.Name)
 			? ""
 			: Parent + ".") + Name;
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public Package GetPackage() =>
+	public Package? GetPackage() =>
 		this is Package package
-			? package
+			// ReSharper disable once ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract
+			? Parent is null
+				? null
+				: package
 			: Parent.GetPackage();
 
 	public sealed class TypeNotFound : Exception

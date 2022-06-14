@@ -25,45 +25,32 @@ public class Package : Context
 	/// </summary>
 	private sealed class Root : Package
 	{
-		public Root() : base(null!, string.Empty)
+		public Root() : base(null, string.Empty)
 		{
-			none = new Type(this, Base.None, null!);
-			boolean = new Type(this, Base.Boolean, null!);
+			cachedFoundTypes.Add(Base.None, new Type(this, Base.None, null!));
+			cachedFoundTypes.Add(Base.Boolean, new Type(this, Base.Boolean, null!));
 		}
 
-		private readonly Type none;
-		private readonly Type boolean;
+		public override Type? FindType(string name, Context? searchingFrom = null) =>
+			cachedFoundTypes.TryGetValue(name, out var previouslyFoundType)
+				? previouslyFoundType
+				: FindTypeInChildrenAndCache(name, searchingFrom);
 
-		// ReSharper disable once MethodTooLong
-		public override Type? FindType(string name, Context? searchingFrom = null)
+		private Type? FindTypeInChildrenAndCache(string name, Context? searchingFrom)
 		{
-			if (name == Base.None)
-				return none;
-			if (name == Base.Boolean)
-				return boolean;
-			if (name == lastName)
-				return lastType;
-			if (cachedFoundTypes.TryGetValue(name, out var previouslyFoundType))
-				return previouslyFoundType; //ncrunch: no coverage
 			var type = FindTypeInChildrenPackages(name, searchingFrom as Package);
-			if (type == null)
-				return null;
-			lastName = name;
-			lastType = type;
-			cachedFoundTypes.Add(name, type);
+			cachedFoundTypes.Add(name, type!);
 			return type;
 		}
 
-		private string lastName = "";
-		private Type lastType = null!;
 		private readonly Dictionary<string, Type> cachedFoundTypes = new();
 	}
 
-	public Package(Package parentPackage, string packagePath) : base(parentPackage,
+	public Package(Package? parentPackage, string packagePath) : base(parentPackage,
 		Path.GetFileName(packagePath))
 	{
 		FolderPath = packagePath;
-		// ReSharper disable once ConstantConditionalAccessQualifier, needed for Root package
+		// ReSharper disable once ConditionalAccessQualifierIsNonNullableAccordingToAPIContract
 		parentPackage?.children.Add(this);
 	}
 
@@ -98,12 +85,30 @@ public class Package : Context
 	/// from simple binary searchs or finding types in other languages because in Strict any public
 	/// type can be used at any place. https://strict.dev/img/FindType2020-07-01.png
 	/// </summary>
-	public override Type? FindType(string name, Context? searchingFrom = null) =>
-		FindDirectType(name) ?? (IsPrivateName(name)
-			? null
-			: (children.Count > 0
-				? FindTypeInChildrenPackages(name, searchingFrom ?? this)
-				: null) ?? Parent.FindType(name, this));
+	public override Type? FindType(string name, Context? searchingFrom = null)
+	{
+		if (name == lastName)
+			return lastType;
+		if (IsPrivateName(name))
+			return null;
+		var type = FindDirectType(name) ??
+			FindTypeInChildrenOrParentPackages(name, searchingFrom);
+		lastName = name;
+		lastType = type;
+		return type;
+	}
+
+	private Type? FindTypeInChildrenOrParentPackages(string name, Context? searchingFrom)
+	{
+		Type? type = null;
+		if (children.Count > 0)
+			type = FindTypeInChildrenPackages(name, searchingFrom ?? this);
+		type ??= Parent.FindType(name, this);
+		return type;
+	}
+
+	private string lastName = "";
+	private Type? lastType;
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public Type? FindDirectType(string name)

@@ -139,7 +139,7 @@ public class Type : Context
 			throw new MembersMustComeBeforeMethods(line);
 		var nameAndExpression = line[(Has.Length + 1)..].Split(" = ");
 		var expression = nameAndExpression.Length > 1
-			? expressionParser.ParseAssignmentExpression(new Member(this, nameAndExpression[0], null!).Type,
+			? expressionParser.ParseAssignmentExpression(new Member(this, nameAndExpression[0], null).Type,
 				nameAndExpression[1], lineNumber)
 			: null;
 		return new Member(this, nameAndExpression[0], expression);

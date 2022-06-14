@@ -105,10 +105,10 @@ public class BlurPerformanceTests
 			input = image;
 			output = new CudaDeviceVariable<byte>(Size);
 		}
-		catch (NVRTCException ex)
+		catch (NVRTCException)
 		{
 			Console.WriteLine("Cuda compile log: " + rtc.GetLogAsString());
-			throw new Exception(ex.NVRTCError + " " + ex);
+			throw;
 		}
 	}
 

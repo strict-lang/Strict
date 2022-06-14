@@ -25,7 +25,7 @@ public static class ConcurrentDictionaryExtensions
 	private static Task<Value> CreateOnlyOnce<Key, Value>(ConcurrentDictionary<Key, Task<Value>> source, Key key,
 		Func<Key, Task<Value>> valueFactory) where Key : notnull
 	{
-		Task<Value> newTask = null!;
+		Task<Value>? newTask = null;
 		var wrappedNewTask = new Task<Task<Value>>(async () =>
 		{
 			try
@@ -34,8 +34,9 @@ public static class ConcurrentDictionaryExtensions
 			}
 			catch
 			{
-				// ReSharper disable once AccessToModifiedClosure
-				source.TryRemove(KeyValuePair.Create(key, newTask));
+				// ReSharper disable AccessToModifiedClosure
+				if (newTask != null)
+					source.TryRemove(KeyValuePair.Create(key, newTask));
 				throw;
 			}
 		});

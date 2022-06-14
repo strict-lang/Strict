@@ -11,15 +11,15 @@ public sealed class RepositoriesTests
 {
 	[Test]
 	public void InvalidPathWontWork() =>
-		Assert.ThrowsAsync<DirectoryNotFoundException>(async () =>
-			await repos.LoadFromPath(nameof(InvalidPathWontWork)));
+		Assert.ThrowsAsync<DirectoryNotFoundException>(() =>
+			repos.LoadFromPath(nameof(InvalidPathWontWork)));
 
 	private readonly Repositories repos = new(new ExpressionParserTests());
 
 	[Test]
 	public void LoadingNonGithubPackageWontWork() =>
-		Assert.ThrowsAsync<Repositories.OnlyGithubDotComUrlsAreAllowedForNow>(async () =>
-			await repos.LoadFromUrl(new Uri("https://google.com")));
+		Assert.ThrowsAsync<Repositories.OnlyGithubDotComUrlsAreAllowedForNow>(() =>
+			repos.LoadFromUrl(new Uri("https://google.com")));
 
 	[Test]
 	public async Task LoadStrictBaseTypes()

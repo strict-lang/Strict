@@ -32,6 +32,14 @@ public class PackageTests
 	}
 
 	[Test]
+	public void RootPackageToStringShouldNotCrash()
+	{
+		Assert.That(mainType.Package.Parent.ToString(), Is.Empty);
+		Assert.That(mainType.Package.Parent.FindType(Base.None)?.Name, Is.EqualTo(Base.None));
+		Assert.That(mainPackage.Parent.GetPackage(), Is.Null);
+	}
+
+	[Test]
 	public void GetFullNames()
 	{
 		Assert.That(mainPackage.ToString(), Is.EqualTo(nameof(TestPackage)));
