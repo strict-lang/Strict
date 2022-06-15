@@ -1,6 +1,6 @@
 ﻿public class MultiplyNumbers
 {
-	public int Multiply(int first, int second)
+	public float Multiply(float first, float second)
 	{
 		return first * second;
 	}

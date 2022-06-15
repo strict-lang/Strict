@@ -1,6 +1,6 @@
 ﻿public class AddNumbers
 {
-	public int Add(int first, int second)
+	public float Add(float first, float second)
 	{
 		return first + second;
 	}

@@ -22,11 +22,11 @@ public class CSharpToCudaTranspiler
 	public string Convert(string filePath)
 	{
 		var type = ParseCSharp(filePath);
-		var resultCuda = GenerateCuda(type);
-		return resultCuda;
+		return GenerateCuda(type);
 	}
 
-	public string GenerateCuda(Type type)
+	// ReSharper disable once MethodTooLong
+	public static string GenerateCuda(Type type)
 	{
 		// ReSharper disable once TooManyChainedReferences
 		var expression = type.Methods[0].Body.Expressions[0].ToString();
@@ -37,13 +37,36 @@ public class CSharpToCudaTranspiler
 				: expression.Contains('*')
 					? "*"
 					: "";
+		var parameterText = "";
+		string output;
+		foreach (var parameter in type.Methods[0].Parameters)
+		{
+			if (parameter.Type.Name != Base.Number)
+				throw new NotSupportedException(parameter.ToString());
+			if (parameter.Name is "Width" or "Height")
+				parameterText += "const int " + parameter.Name + ", ";
+			else if (parameter.Name == "initialDepth")
+				parameterText += "const float " + parameter.Name + ", ";
+			else
+				parameterText += "const float *" + parameter.Name + ", ";
+		}
+		parameterText += "float *output";
+		if (!parameterText.Contains("Width"))
+		{
+			parameterText += ", const int count";
+			output = "first[idx] " + @operator + @" second[idx]";
+		}
+		else
+		{
+			output = "initialDepth";
+		}
 		return
-			@"extern ""C"" __global__ void AddNumbers(const int *first, const int *second, int* output, const int count)
+			@"extern ""C"" __global__ void " + type.Methods[0].Name + "(" + parameterText + @")
 {
-	int ix = blockIdx.x * blockDim.x + threadIdx.x;
-	int iy = blockIdx.y * blockDim.y + threadIdx.y;
-	int idx = iy * blockDim.x + ix;
-	output[idx] = first[idx] " + @operator + @" second[idx];
+	int x = blockIdx.x * blockDim.x + threadIdx.x;
+	int y = blockIdx.y * blockDim.y + threadIdx.y;
+	int idx = y * blockDim.x + x;
+	output[idx] = " + output + @";
 }";
 	}
 
@@ -62,6 +85,9 @@ public class CSharpType : Type
 	{
 		public override Expression ParseMethodBody(Method method)
 		{
+			if (method.bodyLines.Last().Text.Contains("depth"))
+				return new MethodBody(method,
+					new List<Expression> { new Text(method, method.bodyLines.Last().Text) });
 			var binaryOperator = method.bodyLines.Last().Text.Contains('+')
 				? "+"
 				: method.bodyLines.Last().Text.Contains('-')
@@ -90,18 +116,47 @@ public class CSharpType : Type
 			line.Method.Body;
 	}
 
+	// ReSharper disable once CyclomaticComplexity
 	public CSharpType(Package strictPackage, string filePath, MethodExpressionParser parser) : base(
 		strictPackage, filePath, parser)
 	{
 		var inputCode = File.ReadAllLines(filePath);
+		var methodName = "";
+		var returnType = "";
+		var parameters = new List<string>();
 		var returnStatement = "";
 		foreach (var line in inputCode)
-			if (line.StartsWith("\t\t", StringComparison.Ordinal))
+		{
+			// ReSharper disable once ComplexConditionExpression
+			if (line == "" || line.Contains("{") || line.Contains("}") || line.StartsWith("using ", StringComparison.Ordinal) || line.StartsWith("namespace ", StringComparison.Ordinal) ||
+				line.Contains(Name) || line.Contains("this.") || line.StartsWith("\tprivate ", StringComparison.Ordinal) || line.StartsWith("\t\tfor ", StringComparison.Ordinal))
+				continue;
+			if (line.StartsWith("\t\treturn", StringComparison.Ordinal) || line.StartsWith("\t\t\t", StringComparison.Ordinal))
 				returnStatement = line.Trim().Replace(";", "");
+			else
+			{
+				var parts = line.Trim().Split(new[] { ' ', '(', ')', ',' }, StringSplitOptions.RemoveEmptyEntries);
+				if (parts[1] == "float")
+					returnType = " returns Number";
+				methodName = parts[2];
+				for (var index = 3; index < parts.Length; index += 2)
+					if (parts[index] == "DepthImage")
+					{
+						parameters.Add("input Number");
+						parameters.Add("Width Number");
+						parameters.Add("Height Number");
+						parameters.Add("initialDepth Number");
+					}
+					else if (parts[index] != "float")
+						throw new NotSupportedException(parts[index + 1]);
+					else
+						parameters.Add(parts[index + 1] + " Number");
+			}
+		}
 		if (returnStatement == "")
 			throw new MissingReturnStatement();
 		var method = new Method(this, 0, new CSharpExpressionParser(),
-			new[] { "Add(first Number, second Number) returns Number", "\t" + returnStatement });
+			new[] { methodName + parameters.ToBrackets() + returnType, "\t" + returnStatement });
 		methods.Add(method);
 	}
 }

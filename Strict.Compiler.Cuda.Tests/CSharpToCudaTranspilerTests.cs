@@ -26,15 +26,6 @@ public class CSharpToCudaTranspilerTests
 		Assert.That(() => transpiler.Convert(input),
 			Throws.InstanceOf<CSharpToCudaTranspiler.InvalidCode>());
 
-	[Ignore("")]
-	[Test]
-	public void GenerateInitializeDepthsCuda()
-	{
-		var inputCode = File.ReadAllText(@"..\..\..\Input\InitializeDepths.cs");
-		var expectedOutput = File.ReadAllText(@"..\..\..\Output\InitializeDepths.cu");
-		Assert.That(transpiler.Convert(inputCode), Is.EqualTo(expectedOutput));
-	}
-
 	[Test]
 	public void ParseAddNumbers()
 	{
@@ -49,48 +40,58 @@ public class CSharpToCudaTranspilerTests
 	}
 
 	//TODO: Add a unit test which returns MissingReturnStatement using invalid file
+
 	private Type GetParsedCSharpType(string fileName) =>
 		transpiler.ParseCSharp(@"..\..\..\Input\" + fileName + ".cs");
 
-	private static CudaDeviceVariable<int> CreateAndRunKernel(CudaRuntimeCompiler rtc)
+	private static CudaDeviceVariable<float> CreateAndRunKernel(CudaRuntimeCompiler rtc, string methodName)
 	{
 		var context = new CudaContext(0);
 		const int Count = 1;
-		CudaDeviceVariable<int> first = new[] { 1 };
-		CudaDeviceVariable<int> second = new[] { 2 };
-		var output = new CudaDeviceVariable<int>(Count);
-		var kernel = context.LoadKernelPTX(rtc.GetPTX(), AddNumbers);
+		CudaDeviceVariable<float> first = new[] { 1f };
+		CudaDeviceVariable<float> second = new[] { 2f };
+		var output = new CudaDeviceVariable<float>(Count);
+		var kernel = context.LoadKernelPTX(rtc.GetPTX(), methodName);
 		kernel.Run(first.DevicePointer, second.DevicePointer, output.DevicePointer, Count);
 		return output;
 	}
 
-	private static CudaRuntimeCompiler CompileKernelAndSaveAsPtxFile(string code)
+	private static CudaRuntimeCompiler CompileKernelAndSaveAsPtxFile(string code, string typeName)
 	{
 		//generate as output language obviously from strict code
-		var rtc = new CudaRuntimeCompiler(code, AddNumbers);
+		var rtc = new CudaRuntimeCompiler(code, typeName);
 		// see http://docs.nvidia.com/cuda/nvrtc/index.html for usage and options
 		//https://arnon.dk/matching-sm-architectures-arch-and-gencode-for-various-nvidia-cards/
 		//nvcc .\vectorAdd.cu -use_fast_math -ptx -m 64 -arch compute_61 -code sm_61 -o .\vectorAdd.ptx
-		rtc.Compile(new[] { "--gpu-architecture=compute_61" });
+		rtc.Compile(new[] { "--gpu-architecture=compute_75" });
 		return rtc;
 	}
 
-	[Category("Slow")]
+	//[Category("Slow")]
 	[TestCase(AddNumbers, 3)]
 	[TestCase(SubtractNumbers, -1)]
 	[TestCase(MultiplyNumbers, 2)]
+	//[TestCase(InitializeDepths, 2)]
 	public void ParseGenerateCudaAndExecute(string fileName, int expectedNumber)
 	{
 		var type = GetParsedCSharpType(fileName);
-		var cuda = transpiler.GenerateCuda(type);
+		var cuda = CSharpToCudaTranspiler.GenerateCuda(type);
 		var expectedOutput = File.ReadAllText(@"..\..\..\Output\" + fileName + ".cu");
 		Assert.That(cuda, Is.EqualTo(expectedOutput));
-		var rtc = CompileKernelAndSaveAsPtxFile(cuda);
-		var output = CreateAndRunKernel(rtc);
+		var rtc = CompileKernelAndSaveAsPtxFile(cuda, type.Name);
+		var output = CreateAndRunKernel(rtc, type.Methods[0].Name);
 		Assert.That(output[0], Is.EqualTo(expectedNumber));
+	}
+
+	[Test]
+	public void GenerateInitializeDepthsCuda()
+	{
+		var expectedOutput = File.ReadAllText(@"..\..\..\Output\" + InitializeDepths + ".cu");
+		Assert.That(transpiler.Convert(@"..\..\..\Input\" + InitializeDepths + ".cs"), Is.EqualTo(expectedOutput));
 	}
 
 	private const string AddNumbers = nameof(AddNumbers);
 	private const string SubtractNumbers = nameof(SubtractNumbers);
 	private const string MultiplyNumbers = nameof(MultiplyNumbers);
+	private const string InitializeDepths = nameof(InitializeDepths);
 }

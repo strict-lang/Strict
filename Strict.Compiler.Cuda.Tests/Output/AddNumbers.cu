@@ -1,7 +1,7 @@
-extern "C" __global__ void AddNumbers(const int *first, const int *second, int* output, const int count)
+extern "C" __global__ void Add(const float *first, const float *second, float *output, const int count)
 {
-	int ix = blockIdx.x * blockDim.x + threadIdx.x;
-	int iy = blockIdx.y * blockDim.y + threadIdx.y;
-	int idx = iy * blockDim.x + ix;
+	int x = blockIdx.x * blockDim.x + threadIdx.x;
+	int y = blockIdx.y * blockDim.y + threadIdx.y;
+	int idx = y * blockDim.x + x;
 	output[idx] = first[idx] + second[idx];
 }

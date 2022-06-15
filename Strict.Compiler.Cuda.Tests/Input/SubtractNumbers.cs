@@ -1,6 +1,6 @@
 ﻿public class SubtractNumbers
 {
-	public int Subtract(int first, int second)
+	public float Subtract(float first, float second)
 	{
 		return first - second;
 	}
