@@ -1,5 +1,4 @@
-﻿using System.IO;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using ManagedCuda;
 using ManagedCuda.NVRTC;
 using NUnit.Framework;
@@ -91,7 +90,6 @@ public class CSharpToCudaTranspilerTests
 	{
 		var type = GetParsedCSharpType(fileName);
 		var cuda = CSharpToCudaTranspiler.GenerateCuda(type);
-		var expectedOutput = File.ReadAllText(@"..\..\..\Output\" + fileName + ".cu");
 		var rtc = CompileKernelAndSaveAsPtxFile(cuda, type.Name);
 		var output = CreateAndRunKernel(rtc, type.Methods[0].Name);
 		Assert.That(output[0], Is.EqualTo(expectedNumber));
