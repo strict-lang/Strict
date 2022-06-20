@@ -117,7 +117,7 @@ public class CSharpType : Type
 	}
 
 	// ReSharper disable once CyclomaticComplexity
-	public CSharpType(Package strictPackage, string filePath, MethodExpressionParser parser) : base(
+	public CSharpType(Package strictPackage, string filePath, ExpressionParser parser) : base(
 		strictPackage, filePath, parser)
 	{
 		var inputCode = File.ReadAllLines(filePath);
@@ -127,9 +127,7 @@ public class CSharpType : Type
 		var returnStatement = "";
 		foreach (var line in inputCode)
 		{
-			// ReSharper disable once ComplexConditionExpression
-			if (line == "" || line.Contains("{") || line.Contains("}") || line.StartsWith("using ", StringComparison.Ordinal) || line.StartsWith("namespace ", StringComparison.Ordinal) ||
-				line.Contains(Name) || line.Contains("this.") || line.StartsWith("\tprivate ", StringComparison.Ordinal) || line.StartsWith("\t\tfor ", StringComparison.Ordinal))
+			if (HasIgnoredOrEmptyText(line))
 				continue;
 			if (line.StartsWith("\t\treturn", StringComparison.Ordinal) || line.StartsWith("\t\t\t", StringComparison.Ordinal))
 				returnStatement = line.Trim().Replace(";", "");
@@ -139,18 +137,7 @@ public class CSharpType : Type
 				if (parts[1] == "float")
 					returnType = " returns Number";
 				methodName = parts[2];
-				for (var index = 3; index < parts.Length; index += 2)
-					if (parts[index] == "DepthImage")
-					{
-						parameters.Add("input Number");
-						parameters.Add("Width Number");
-						parameters.Add("Height Number");
-						parameters.Add("initialDepth Number");
-					}
-					else if (parts[index] != "float")
-						throw new NotSupportedException(parts[index + 1]);
-					else
-						parameters.Add(parts[index + 1] + " Number");
+				AddMethodParameters(parts, parameters);
 			}
 		}
 		if (returnStatement == "")
@@ -159,40 +146,24 @@ public class CSharpType : Type
 			new[] { methodName + parameters.ToBrackets() + returnType, "\t" + returnStatement });
 		methods.Add(method);
 	}
+
+	private bool HasIgnoredOrEmptyText(string line) =>
+		line == "" || line.Contains("{") || line.Contains("}") || line.StartsWith("using ", StringComparison.Ordinal) || line.StartsWith("namespace ", StringComparison.Ordinal) ||
+		line.Contains(Name) || line.Contains("this.") || line.StartsWith("\tprivate ", StringComparison.Ordinal) || line.StartsWith("\t\tfor ", StringComparison.Ordinal);
+
+	private static void AddMethodParameters(IReadOnlyList<string> parts, List<string> parameters)
+	{
+		for (var index = 3; index < parts.Count; index += 2)
+			if (parts[index] == "DepthImage")
+				parameters.AddRange(new[]
+				{
+					"input Number", "Width Number", "Height Number", "initialDepth Number"
+				});
+			else if (parts[index] != "float")
+				throw new NotSupportedException(parts[index + 1]);
+			else
+				parameters.Add(parts[index + 1] + " Number");
+	}
 }
 
 public sealed class MissingReturnStatement : Exception { }
-
-//	private bool isAtEnd()
-//	{
-//		return false;
-//	}
-
-//	private List<Argument> GetArguments(int startIndex, string line)
-//	{
-//		var endPosition = GetMethodEndPosition(startIndex, line);
-//	}
-
-//	private int GetMethodEndPosition(int startIndex, string line)
-//	{
-//		for (var index = startIndex; index < line.Length; index++)
-//		{
-//			if(line[index] == ')'))
-//			return index;
-//		}
-//	}
-//}
-
-//internal record Argument(TokenType tokenType, string name);
-
-//internal enum TokenType
-//{
-//	LeftParenthesis,
-//	RightParenthesis,
-//	Plus,
-//	Minus,
-//	Multiply,
-//	Slash,
-//	String,
-//	Int
-//}
