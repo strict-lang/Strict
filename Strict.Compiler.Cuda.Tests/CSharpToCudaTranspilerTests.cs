@@ -81,7 +81,7 @@ public class CSharpToCudaTranspilerTests
 		return rtc;
 	}
 
-	//[Category("Slow")]
+	[Category("Slow")]
 	[TestCase(AddNumbers, 3)]
 	[TestCase(SubtractNumbers, -1)]
 	[TestCase(MultiplyNumbers, 2)]
