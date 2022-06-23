@@ -1,4 +1,9 @@
 implement Number
 has any
 Compute returns Number
-	return 0
+	if any is Number
+		return any
+	else if any is Text
+		return any.Length
+	else
+		return 0

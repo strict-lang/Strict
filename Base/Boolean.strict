@@ -1,0 +1,5 @@
+has Boolean
+is(other) returns Boolean
+	true is true
+	false is not true
+	return this is other

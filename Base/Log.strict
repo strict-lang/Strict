@@ -1,4 +1,4 @@
-implement Output<Text>
+implement Output(Text)
 Write(text)
 	System.WriteLine(text)
 Write(number)

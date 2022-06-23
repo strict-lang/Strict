@@ -40,6 +40,8 @@ public class MethodExpressionParser : ExpressionParser
 
 	public override Expression ParseMethodLine(Method.Line line, ref int methodLineNumber) =>
 		Assignment.TryParse(line) ?? If.TryParse(line, ref methodLineNumber) ??
+		//TODO: for loop
 		Return.TryParse(line) ??
+		//TODO: error
 		TryParseExpression(line, line.Text) ?? throw new UnknownExpression(line);
 }

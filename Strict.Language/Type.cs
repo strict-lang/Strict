@@ -46,7 +46,7 @@ public class Type : Context
 		lines = setLines;
 		for (lineNumber = 0; lineNumber < lines.Length; lineNumber++)
 			TryParseLine(lines[lineNumber]);
-		if (methods.Count == 0)
+		if (methods.Count == 0 && members.Count + implements.Count < 2)
 			throw new NoMethodsFound(this, lineNumber);
 		foreach (var trait in implements)
 			if (trait.IsTrait)

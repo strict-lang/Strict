@@ -37,13 +37,18 @@ public abstract class Context
 		// Generics still need to be supported (see Log.strict for Output<text>)
 		// https://deltaengine.fogbugz.com/f/cases/24562
 		if (name.StartsWith("Iterator<", StringComparison.Ordinal))
-			name = name.Split('<', '>')[1];
+			name = name.Split('<', '>')[1]; //TODO: round brackets now
 		if (name.Contains('<'))
 			name = name.Split('<')[0];
 		// Arrays are also not supported yet, simply return base type, however only if we do not find a name ending with s already and do proper array fun
 		// https://deltaengine.fogbugz.com/f/cases/24563/
+		//TODO: find all types here, in subnamespaces and all parent namespaces, but don't search further that have the exact name
+		//if no type is found, remove 's' (check again if that exists, do List of that)
+		//if still not found, remove 'es' and check again (buses, lenses, etc.)
+		//repositories will still not be found, so replace last i with y -> repository
+		//TODO: to create list, make new type from Base.List and inject the generic sub type
 		if (name.EndsWith('s'))
-			name = name[..^1];
+			name = name[..^1]; //TODO: make sure array access is also round brackets for us
 		if (name == Name)
 			return (Type)this;
 		return (FindFullType(name) ?? FindType(name, this)) ??

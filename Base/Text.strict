@@ -3,7 +3,7 @@ from(number)
 	Text(45) is "45"
 	return digits(number)
 		Character(this)
-digits(number) returns Iterator<Number>
+digits(number) returns Numbers
 	digits(1) is (1)
 	digits(123) is (1, 2, 3)
 	if floor(number / 10) is 0
