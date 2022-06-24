@@ -23,6 +23,18 @@ public static class BinaryOperator
 	public const string Or = "or";
 	public const string Xor = "xor";
 	public static bool IsOperator(this string name) => All.Contains(name);
+
+	public static bool HasOperator(this string line, out int operatorIndex)
+	{
+		operatorIndex = 0;
+		foreach (var character in line.Where(character => All.Contains(character.ToString())))
+		{
+			operatorIndex = line.IndexOf(character);
+			return true;
+		}
+		return false;
+	}
+
 	private static readonly string[] All =
 	{
 		Plus, Minus, Multiply, Divide, Modulate, Smaller, Greater, SmallerOrEqual, GreaterOrEqual,

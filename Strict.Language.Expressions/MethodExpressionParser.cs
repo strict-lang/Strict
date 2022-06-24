@@ -18,7 +18,7 @@ public class MethodExpressionParser : ExpressionParser
 
 	public override Expression? TryParseExpression(Method.Line line, string partToParse) =>
 		Number.TryParse(line, partToParse) ?? Boolean.TryParse(line, partToParse) ??
-		Text.TryParse(line, partToParse) ?? Binary.TryParse(line, partToParse) ??
+		Text.TryParse(line, partToParse) ?? Binary.TryParse(line, partToParse) ?? List.TryParse(line, partToParse) ??
 		MemberCall.TryParse(line, partToParse) ?? MethodCall.TryParse(line, partToParse);
 
 	public class UnknownExpression : ParsingFailed

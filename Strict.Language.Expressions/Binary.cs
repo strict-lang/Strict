@@ -14,7 +14,17 @@ public class Binary : MethodCall
 
 	public new static Expression? TryParse(Method.Line line, string input)
 	{
-		var parts = input.Split(' ', 3);
+		var parts = new string[3];
+		if (input.Contains('(') && input.Contains(')') && input.HasOperator(out var operatorIndex))
+		{
+			parts[0] = input[..operatorIndex].Trim();
+			parts[1] = input[operatorIndex].ToString();
+			parts[2] = input[(operatorIndex + 1)..].Trim();
+		}
+		else
+		{
+			parts = input.Split(' ', 3);
+		}
 		return parts.Length == 3 && parts[1].IsOperator()
 			? TryParseBinary(line, parts)
 			: null;
@@ -27,8 +37,15 @@ public class Binary : MethodCall
 		var binaryOperator = parts[1];
 		var right = line.Method.TryParseExpression(line, parts[2]) ??
 			throw new MethodExpressionParser.UnknownExpression(line, parts[2]);
+		if (left is List && right is Text) // TODO: Compare list element type before throwing error
+			throw new MismatchingTypeFound(line, parts[2]);
 		return new Binary(left,
 			left.ReturnType.Methods.FirstOrDefault(m => m.Name == binaryOperator) ?? line.Method.
 				GetType(Base.BinaryOperator).Methods.First(m => m.Name == binaryOperator), right);
+	}
+
+	public class MismatchingTypeFound : ParsingFailed
+	{
+		public MismatchingTypeFound(Method.Line line, string error = "") : base(line, error) { }
 	}
 }

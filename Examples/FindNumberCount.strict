@@ -1,0 +1,7 @@
+has numbers
+has count
+FindNumberCount returns Texts
+	NumberCount(5, 10).FindNumberCount is 6
+	Range(numbers(0), numbers(1))
+		count.Increase(1)
+	return count

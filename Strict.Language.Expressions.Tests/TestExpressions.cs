@@ -18,6 +18,7 @@ public abstract class TestExpressions : MethodExpressionParser
 		method = new Method(type, 0, this, new[] { MethodTests.Run });
 		((List<Method>)type.Methods).Add(method);
 		number = new Number(type, 5);
+		list = new List(type, "5");
 		bla = new Member("bla", number);
 		((List<Member>)type.Members).Add(bla);
 	}
@@ -29,6 +30,7 @@ public abstract class TestExpressions : MethodExpressionParser
 	protected readonly Method method;
 	protected readonly Number number;
 	protected readonly Member bla;
+	protected readonly List list;
 
 	public void ParseAndCheckOutputMatchesInput(string code, Expression expectedExpression)
 	{

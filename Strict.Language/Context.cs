@@ -36,10 +36,10 @@ public abstract class Context
 	{
 		// Generics still need to be supported (see Log.strict for Output<text>)
 		// https://deltaengine.fogbugz.com/f/cases/24562
-		if (name.StartsWith("Iterator<", StringComparison.Ordinal))
-			name = name.Split('<', '>')[1]; //TODO: round brackets now
-		if (name.Contains('<'))
-			name = name.Split('<')[0];
+		if (name.StartsWith("Iterator(", StringComparison.Ordinal))
+			name = name.Split('(', ')')[1]; //TODO: round brackets now
+		if (name.Contains('('))
+			name = name.Split('(')[0];
 		// Arrays are also not supported yet, simply return base type, however only if we do not find a name ending with s already and do proper array fun
 		// https://deltaengine.fogbugz.com/f/cases/24563/
 		//TODO: find all types here, in subnamespaces and all parent namespaces, but don't search further that have the exact name

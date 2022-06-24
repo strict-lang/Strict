@@ -1,3 +1,4 @@
+implement Mutable
 has anys
 is(other) returns Boolean
 	(1, 2) is (1, 2)
@@ -6,29 +7,12 @@ is(other) returns Boolean
 +(any) returns Anys
 	(1, 2, 3) + 4 is (1, 2, 3, 4)
 	("Hello", "World") + 5 is ("Hello", "World", "5")
-	//TODO: make test cases for Mr. Compiler
-	//compiler error: (1, 2, 3) + "4" is Error("Mismatching type")??
-	//compiler error: (1, 2) + File("test.txt") is (1, 2, File("test.txt"))
-	//compiler error:(1, 2, 3) + "hello" is ("1", "2", "3", "hello")
-	//compiler error:(1, 2, 3) + "hello" + 4 is ("1", "2", "3", "hello", "4")
-	return this + other	
+	return this + other
 +(other) returns Anys
 	(1, 2, 3) + (4, 5) is (1, 2, 3, 4, 5)
-  ("Hello", "World") + (1, 2) is ("Hello", "World", "1", "2")
+	("Hello", "World") + (1, 2) is ("Hello", "World", "1", "2")
 	("1", "2") + (3, 4) is ("1", "2", "3", "4")
 	("1", "2") to Numbers + (3, 4) is ("1", "2", "3", "4")
-	/*TODO: unit test with this strange example
-	let partialResult = (1, 2)
-		if this is 2
-			skip
-		to Text
-	partialResult + ("3", "4") is ("1", "2", "3", "4")
-	let strangeResult = if (1, 2) contains 3
-			(3, 4, 5)
-		else
-			(1, 2, 3)
-	strangeResult is (1, 2, 3)
-	*/
 	("3", "4") + (1, 2) to Text is ("3", "4", "(1, 2)")
 	("3", "4") + (1, 2) to Texts is ("3", "4", "1", "2")
 	(1, 2) + ("3", "4") to Numbers is (1, 2, 3, 4)
@@ -50,13 +34,6 @@ is(other) returns Boolean
 	(1, 2) * (3, 5) is (3, 10)
 	if Length is not other.Length
 		error ListsHaveDifferentDimensions
-	/*
-	compiler error: (1, 2, 3) * (1, 2)	 https://www.wolframalpha.com/input?i=%281%2C+2%2C+3%29+*+%281%2C+2%29
-Input
-{1, 2, 3}.{1, 2}
-Result
-(vectors have incompatible dimensions)
-*/
 	return this * other
 Sum returns Any
 	(1, 2, 3).Sum is 6

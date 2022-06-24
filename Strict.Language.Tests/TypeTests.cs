@@ -40,6 +40,7 @@ public class TypeTests
 	log.WriteLine"),
 			Throws.InstanceOf<Type.TypeHasNoMembersAndThusMustBeATraitWithoutMethodBodies>());
 
+	[Ignore("No longer true because Record types have no methods")]
 	[Test]
 	public void JustMembersIsNotValidCode() =>
 		Assert.That(
