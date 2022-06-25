@@ -37,7 +37,7 @@ public class Binary : MethodCall
 		var binaryOperator = parts[1];
 		var right = line.Method.TryParseExpression(line, parts[2]) ??
 			throw new MethodExpressionParser.UnknownExpression(line, parts[2]);
-		if (left is List && right is Text) // TODO: Compare list element type before throwing error
+		if (left is List list && list.Values.First() is not Text && right is Text)
 			throw new MismatchingTypeFound(line, parts[2]);
 		return new Binary(left,
 			left.ReturnType.Methods.FirstOrDefault(m => m.Name == binaryOperator) ?? line.Method.
