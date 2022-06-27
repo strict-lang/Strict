@@ -1,9 +1,10 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace Strict.Language.Expressions;
 
-public class Binary : MethodCall
+public sealed class Binary : MethodCall
 {
 	public Binary(Expression left, Method operatorMethod, Expression right) : base(left,
 		operatorMethod, right) { }
@@ -14,35 +15,39 @@ public class Binary : MethodCall
 
 	public new static Expression? TryParse(Method.Line line, string input)
 	{
+		if (!input.HasOperator(out var operatorText))
+			return null;
 		var parts = new string[3];
-		if (input.Contains('(') && input.Contains(')') && input.HasOperator(out var operatorIndex))
-		{
-			parts[0] = input[..operatorIndex].Trim();
-			parts[1] = input[operatorIndex].ToString();
-			parts[2] = input[(operatorIndex + 1)..].Trim();
-		}
-		else
-		{
-			parts = input.Split(' ', 3);
-		}
-		return parts.Length == 3 && parts[1].IsOperator()
-			? TryParseBinary(line, parts)
-			: null;
+		parts[0] = input[..input.IndexOf(operatorText, StringComparison.Ordinal)].Trim();
+		parts[1] = operatorText.Trim();
+		parts[2] =
+			input[(input.IndexOf(operatorText, StringComparison.Ordinal) + operatorText.Length)..].
+				Trim();
+		return TryParseBinary(line, parts);
 	}
 
 	private static Expression TryParseBinary(Method.Line line, IReadOnlyList<string> parts)
 	{
 		var left = line.Method.TryParseExpression(line, parts[0]) ??
 			throw new MethodExpressionParser.UnknownExpression(line, parts[0]);
-		var binaryOperator = parts[1];
 		var right = line.Method.TryParseExpression(line, parts[2]) ??
 			throw new MethodExpressionParser.UnknownExpression(line, parts[2]);
-		if (left is List list && list.Values.First() is not Text && right is Text)
+		if (HasMismatchingTypes(left, right))
 			throw new MismatchingTypeFound(line, parts[2]);
 		return new Binary(left,
-			left.ReturnType.Methods.FirstOrDefault(m => m.Name == binaryOperator) ?? line.Method.
-				GetType(Base.BinaryOperator).Methods.First(m => m.Name == binaryOperator), right);
+			left.ReturnType.Methods.FirstOrDefault(m => m.Name == parts[1]) ?? line.Method.
+				GetType(Base.BinaryOperator).Methods.First(m => m.Name == parts[1]), right);
 	}
+
+	private static bool HasMismatchingTypes(Expression left, Expression right) =>
+		left is List leftList && leftList.Values.First() is not Text && right switch
+		{
+			List rightList when rightList.Values.First() is Text => true,
+			Binary { Left: List rightBinaryLeftList } when rightBinaryLeftList.Values.First() is Text =>
+				true,
+			Binary { Left: Text } => true,
+			_ => leftList.Values.First() is not Text && right is Text
+		};
 
 	public class MismatchingTypeFound : ParsingFailed
 	{

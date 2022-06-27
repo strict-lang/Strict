@@ -7,6 +7,9 @@ namespace Strict.Language.Expressions.Tests;
 public sealed class ListTests : TestExpressions
 {
 	[TestCase("(1, 2, 3, 4, 5) + \"4\"")]
+	[TestCase("(1, 2, 3, 4, 5) + (\"hello\")")]
+	[TestCase("(1, 2, 3, 4, 5) + \"hello\" + 4")]
+	[TestCase("(1, 2, 3, 4, 5) + (\"hello\") + 4")]
 	public void MismatchingTypeFound(string input) =>
 		Assert.That(() => ParseExpression(input), Throws.InstanceOf<Binary.MismatchingTypeFound>()!);
 
@@ -24,6 +27,7 @@ public sealed class ListTests : TestExpressions
 
 	[TestCase("(1, 2, 3, 4, 5) + (6, 7, 8)", "1, 2, 3, 4, 5", "+", "6, 7, 8")]
 	[TestCase("(1, 2, 3, 4, 5) - (6, 7, 8)", "1, 2, 3, 4, 5", "-", "6, 7, 8")]
+	[TestCase("(1, 2, 3, 4, 5) is (1, 2, 3, 4, 5)", "1, 2, 3, 4, 5", "is", "1, 2, 3, 4, 5")]
 	public void ParseListsBinaryOperation(string input, params string[] expected) =>
 		ParseAndCheckOutputMatchesInput(input,
 			new Binary(
@@ -47,4 +51,15 @@ public sealed class ListTests : TestExpressions
 				new List(method, new List<Expression>(GetListExpressions(expected[0].Split(",")))),
 				list.ReturnType.Methods.First(m => m.Name == expected[1]),
 				new Text(method, expected[2])));
+
+	[TestCase("(1, 2, 3, 4, 5) + (1) + 4", 4, "1, 2, 3, 4, 5", "+", "1")]
+	public void ParseMultipleListExpression(string input, double expectedRight, params string[] expected) =>
+		ParseAndCheckOutputMatchesInput(input,
+			new Binary(
+				new List(method, new List<Expression>(GetListExpressions(expected[0].Split(",")))),
+				list.ReturnType.Methods.First(m => m.Name == expected[1]),
+				new Binary(
+					new List(method, new List<Expression>(GetListExpressions(expected[2].Split(",")))),
+					list.ReturnType.Methods.First(m => m.Name == expected[1]),
+					new Number(method, expectedRight))));
 }

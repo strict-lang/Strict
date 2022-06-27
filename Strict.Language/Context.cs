@@ -36,7 +36,7 @@ public abstract class Context
 	{
 		// Generics still need to be supported (see Log.strict for Output<text>)
 		// https://deltaengine.fogbugz.com/f/cases/24562
-		if (name.StartsWith("Iterator(", StringComparison.Ordinal))
+		if (name.StartsWith("List(", StringComparison.Ordinal))
 			name = name.Split('(', ')')[1];
 		if (name.Contains('('))
 			name = name.Split('(')[0];

@@ -24,15 +24,13 @@ public static class BinaryOperator
 	public const string Xor = "xor";
 	public static bool IsOperator(this string name) => All.Contains(name);
 
-	public static bool HasOperator(this string line, out int operatorIndex)
+	public static bool HasOperator(this string line, out string operatorText)
 	{
-		operatorIndex = 0;
-		foreach (var character in line.Where(character => All.Contains(character.ToString())))
-		{
-			operatorIndex = line.IndexOf(character);
-			return true;
-		}
-		return false;
+		operatorText = "";
+		if (!All.Any(l => line.Contains(" " + l + " ")))
+			return false;
+		operatorText = All.First(l => line.Contains(" " + l + " "));
+		return true;
 	}
 
 	private static readonly string[] All =

@@ -39,6 +39,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Base", "Base", "{85AB8A69-6
 		Base\Input.strict = Base\Input.strict
 		Base\List.strict = Base\List.strict
 		Base\Log.strict = Base\Log.strict
+		Base\Method.strict = Base\Method.strict
 		Base\Mutable.strict = Base\Mutable.strict
 		Base\Number.strict = Base\Number.strict
 		Base\Output.strict = Base\Output.strict
