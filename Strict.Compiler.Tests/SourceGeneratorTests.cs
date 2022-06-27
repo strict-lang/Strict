@@ -60,12 +60,14 @@ Run
 	[Category("Slow")]
 	public void GenerateFileReadProgram()
 	{
+		if (!Directory.Exists(ProjectFolder))
+			Directory.CreateDirectory(ProjectFolder);
 		File.WriteAllText(Path.Combine(ProjectFolder, TestTxt), ExpectedText);
 		var program = new Type(package, nameof(GenerateFileReadProgram), parser).Parse(@"implement App
 has file = """ + TestTxt + @"""
 has log
 Run
-	log.Write(file.Read())");
+	log.Write(file.Read)");
 		var generatedCode = generator.Generate(program).ToString()!;
 		Assert.That(GenerateNewConsoleAppAndReturnOutput(ProjectFolder, generatedCode),
 			Is.EqualTo(ExpectedText + "\r\n"));
@@ -73,13 +75,13 @@ Run
 	}
 
 	private const string ProjectFolder = nameof(GenerateFileReadProgram);
-	private const string ExpectedText = "Hello World";
+	private const string ExpectedText = "Hello, World";
 	private const string TestTxt = "test.txt";
 
 	private static string GenerateNewConsoleAppAndReturnOutput(string folder, string generatedCode)
 	{
 		if (!Directory.Exists(folder))
-			CreateFolderOnlyOnce(folder, generatedCode);
+			CreateFolderOnceByCreatingDotnetProject(folder, generatedCode);
 		File.WriteAllText(Path.Combine(folder, "Program.cs"), generatedCode);
 		var actualText = RunDotnetAndReturnOutput(folder, "run", out var error);
 		if (error.Length > 0)
@@ -87,7 +89,7 @@ Run
 		return actualText;
 	}
 
-	private static void CreateFolderOnlyOnce(string folder, string generatedCode)
+	private static void CreateFolderOnceByCreatingDotnetProject(string folder, string generatedCode)
 	{
 		var creationOutput =
 			RunDotnetAndReturnOutput("", "new console --force --name " + folder, out var creationError);
@@ -130,14 +132,15 @@ Run
 			Throws.InstanceOf<CSharpCompilationFailed>().And.Message.Contains("The build failed."));
 
 	[Test]
-	[Category("Manual")] // work in progress
+	[Category("Manual")] // TODO: List should be working before making this test work
 	public void GenerateDirectoryGetFilesProgram()
 	{
 		var program = new Type(package, nameof(GenerateDirectoryGetFilesProgram), parser).Parse(@"implement App
 has log
+has directory = "".""
 Run
-	Directory(""."").GetFiles
-		log.Write");
+	for value in directory.GetFiles
+		log.Write(value)");
 		var generatedCode = generator.Generate(program).ToString()!;
 		Assert.That(GenerateNewConsoleAppAndReturnOutput(ProjectFolder, generatedCode),
 			Is.EqualTo("Program.cs" + "\r\n"));

@@ -99,4 +99,17 @@ Run
 		Assert.That(visitor.FileContent,
 			Contains.Substring("\tpublic void Run()" + Environment.NewLine));
 	}
+
+	[Test]
+	public void GenerateListTypeProgram()
+	{
+		var program = new Type(package, "Program", parser).Parse(@"has numbers
+TestListsMethod returns Numbers
+	(1, 2, 3) + 5
+	return numbers");
+		var visitor = new CSharpTypeVisitor(program);
+		AssertProgramClass(visitor);
+		Assert.That(visitor.FileContent,
+			Contains.Substring(@"	private List<int> numbers;"));
+	}
 }

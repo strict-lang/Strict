@@ -4,5 +4,5 @@ GetComplicatedSequenceTexts returns Texts
 	return for numbers
 		to Text
 		Length * Length
-		4 + this * 3
+		4 + value * 3
 		to Text
