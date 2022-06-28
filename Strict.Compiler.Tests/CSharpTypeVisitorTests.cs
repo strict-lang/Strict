@@ -101,6 +101,41 @@ Run
 	}
 
 	[Test]
+	public void InitializeValueUsingConstructor()
+	{
+		var interfaceType = new Type(package, Computer, parser).Parse(@"import Strict
+has log
+Run
+	File(""test.txt"")");
+		var visitor = new CSharpTypeVisitor(interfaceType);
+		Assert.That(visitor.Name, Is.EqualTo(Computer));
+		Assert.That(visitor.FileContent, Contains.Substring("public class " + Computer));
+		Assert.That(visitor.FileContent,
+			Contains.Substring("\tpublic void Run()" + Environment.NewLine));
+		Assert.That(visitor.FileContent,
+			Contains.Substring(
+				"\tvar File = new FileStream(\"test.txt\", FileMode.OpenOrCreate);"));
+	}
+
+	[Test]
+	public void UseConstructorValueInMethodBody()
+	{
+		var interfaceType = new Type(package, Computer, parser).Parse(@"import Strict
+has number
+Run
+	File(""test.txt"").Write(number)");
+		var visitor = new CSharpTypeVisitor(interfaceType);
+		Assert.That(visitor.Name, Is.EqualTo(Computer));
+		Assert.That(visitor.FileContent, Contains.Substring("public class " + Computer));
+		Assert.That(visitor.FileContent,
+			Contains.Substring("\tpublic void Run()" + Environment.NewLine));
+		Assert.That(visitor.FileContent,
+			Contains.Substring(
+				"\tusing var writer = new StreamWriter(new FileStream(\"test.txt\", FileMode.OpenOrCreate));"));
+	}
+
+	[Ignore("Have to do it next after constructors and generics")]
+	[Test]
 	public void GenerateListTypeProgram()
 	{
 		var program = new Type(package, "Program", parser).Parse(@"has numbers
