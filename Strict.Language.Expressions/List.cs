@@ -3,10 +3,10 @@ using System.Linq;
 
 namespace Strict.Language.Expressions;
 
-public sealed class List : Value
+public sealed class List : Expression
 {
+	public List(Context context, List<Expression> values) : base(context.GetType(Base.List)) => Values = values;
 	public List<Expression> Values { get; }
-	public List(Context context, List<Expression> values) : base(context.GetType(Base.List), values) => Values = values;
 	public override string ToString() => "(" + ValuesToString() + ")";
 
 	private string ValuesToString() =>
@@ -28,4 +28,6 @@ public sealed class List : Value
 		}
 		return new List(line.Method, expressions);
 	}
+
+	public bool IsFirstType<T>() => Values.First() is T;
 }

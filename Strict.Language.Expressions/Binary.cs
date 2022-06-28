@@ -18,11 +18,10 @@ public sealed class Binary : MethodCall
 		if (!input.HasOperator(out var operatorText))
 			return null;
 		var parts = new string[3];
-		parts[0] = input[..input.IndexOf(operatorText, StringComparison.Ordinal)].Trim();
-		parts[1] = operatorText.Trim();
+		parts[0] = input[..(input.IndexOf(operatorText, StringComparison.Ordinal) - 1)];
+		parts[1] = operatorText;
 		parts[2] =
-			input[(input.IndexOf(operatorText, StringComparison.Ordinal) + operatorText.Length)..].
-				Trim();
+			input[(input.IndexOf(operatorText, StringComparison.Ordinal) + operatorText.Length + 1)..];
 		return TryParseBinary(line, parts);
 	}
 
@@ -40,13 +39,13 @@ public sealed class Binary : MethodCall
 	}
 
 	private static bool HasMismatchingTypes(Expression left, Expression right) =>
-		left is List leftList && leftList.Values.First() is not Text && right switch
+		left is List leftList && !leftList.IsFirstType<Text>() && right switch
 		{
-			List rightList when rightList.Values.First() is Text => true,
-			Binary { Left: List rightBinaryLeftList } when rightBinaryLeftList.Values.First() is Text =>
+			List rightList when rightList.IsFirstType<Text>() => true,
+			Binary { Left: List rightBinaryLeftList } when rightBinaryLeftList.IsFirstType<Text>() =>
 				true,
 			Binary { Left: Text } => true,
-			_ => leftList.Values.First() is not Text && right is Text
+			_ => !leftList.IsFirstType<Text>() && right is Text
 		};
 
 	public class MismatchingTypeFound : ParsingFailed
