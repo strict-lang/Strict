@@ -131,7 +131,7 @@ Run
 			Contains.Substring("\tpublic void Run()" + Environment.NewLine));
 		Assert.That(visitor.FileContent,
 			Contains.Substring(
-				"\tusing var writer = new StreamWriter(new FileStream(\"test.txt\", FileMode.OpenOrCreate));"));
+				"\tnew FileStream(\"test.txt\", FileMode.OpenOrCreate).Write(number);"));
 	}
 
 	[Ignore("Have to do it next after constructors and generics")]
