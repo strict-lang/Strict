@@ -241,7 +241,7 @@ public class Type : Context
 	public bool IsTrait => Implements.Count == 0 && Members.Count == 0 && Name != Base.Number;
 	public override string ToString() => base.ToString() + Implements.ToBrackets();
 
-	//TODO: To save the type and the method into the text file, may be use a ToSourceFile() method
+	//https://deltaengine.fogbugz.com/f/cases/24806
 
 	public override Type? FindType(string name, Context? searchingFrom = null) =>
 		name == Name || name.Contains('.') && name == base.ToString()
