@@ -4,14 +4,8 @@ using System.Linq;
 
 namespace Strict.Language.Expressions;
 
-public class Constructor : Expression
+public class Constructor
 {
-	public Constructor(Method method) : base(
-		method.ReturnType) =>
-		Method = method;
-
-	public Method Method { get; }
-
 	public static Expression? TryParse(Method.Line line, string partToParse) =>
 		partToParse.EndsWith(')') && partToParse.Contains('(')
 			? TryParseConstructor(line,
