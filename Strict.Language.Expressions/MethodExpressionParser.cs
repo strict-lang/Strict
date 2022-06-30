@@ -34,7 +34,12 @@ public class MethodExpressionParser : ExpressionParser
 	{
 		var expressions = new List<Expression>();
 		for (var lineNumber = 0; lineNumber < method.bodyLines.Count; lineNumber++)
-			expressions.Add(ParseMethodLine(method.bodyLines[lineNumber], ref lineNumber));
+		{
+			var expression = ParseMethodLine(method.bodyLines[lineNumber], ref lineNumber);
+			if (expression is Assignment assignment)
+				method.Variables.Add(assignment);
+			expressions.Add(expression);
+		}
 		return new MethodBody(method, expressions);
 	}
 

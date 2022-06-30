@@ -139,6 +139,7 @@ public sealed class Method : Context
 	private readonly Lazy<MethodBody> body;
 	public MethodBody Body => body.Value;
 	public bool IsPublic => char.IsUpper(Name[0]);
+	public readonly List<Expression> Variables = new();
 
 	public override Type? FindType(string name, Context? searchingFrom = null) =>
 		name == Base.Other

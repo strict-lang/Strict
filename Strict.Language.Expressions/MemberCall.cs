@@ -50,13 +50,20 @@ public class MemberCall : Expression
 	{
 		if (!name.IsWord())
 			return null;
-		var foundMember = line.Method.Type.Members.FirstOrDefault(member => member.Name == name);
-		if (foundMember != null)
-			return new MemberCall(foundMember);
-		if (line.Method.Type.Methods.All(m => m.Name != name))
-			throw new MemberNotFound(line, line.Method.Type, name);
-		return null;
+		var foundMember = TryLocalMemberCall(line, name)
+			?? line.Method.Type.Members.FirstOrDefault(member => member.Name == name);
+		return foundMember != null
+			? new MemberCall(foundMember)
+			: line.Method.Type.Methods.All(m => m.Name != name)
+				? throw new MemberNotFound(line, line.Method.Type, name)
+				: null;
 	}
+
+	private static Member? TryLocalMemberCall(Method.Line line, string name) =>
+		line.Method.Variables.FirstOrDefault(e => (e as Assignment)?.Name.Name == name) is Assignment
+			methodVariable
+			? new Member(methodVariable.Name.Name, methodVariable.Value)
+			: null;
 
 	public sealed class MemberNotFound : ParsingFailed
 	{

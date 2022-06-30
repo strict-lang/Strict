@@ -134,6 +134,22 @@ Run
 				"\tnew FileStream(\"test.txt\", FileMode.OpenOrCreate).Write(number);"));
 	}
 
+	[Test]
+	public void AccessLocalVariableAfterDeclaration()
+	{
+		var interfaceType = new Type(package, Computer, parser).Parse(@"import Strict
+has log
+Run
+	let random = ""test""
+	log.Write(random)");
+		var visitor = new CSharpTypeVisitor(interfaceType);
+		Assert.That(visitor.Name, Is.EqualTo(Computer));
+		Assert.That(visitor.FileContent, Contains.Substring("public class " + Computer));
+		Assert.That(visitor.FileContent,
+			Contains.Substring(
+				"\tConsole.WriteLine(random);"));
+	}
+
 	[Ignore("Have to do it next after constructors and generics")]
 	[Test]
 	public void GenerateListTypeProgram()
