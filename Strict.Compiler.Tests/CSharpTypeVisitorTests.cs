@@ -1,6 +1,7 @@
 using System;
 using NUnit.Framework;
 using Strict.Compiler.Roslyn;
+using Strict.Language.Expressions;
 using Type = Strict.Language.Type;
 
 namespace Strict.Compiler.Tests;
@@ -134,20 +135,35 @@ Run
 				"\tnew FileStream(\"test.txt\", FileMode.OpenOrCreate).Write(number);"));
 	}
 
+	[TestCase(@"import Strict
+has log
+Run
+	let random = ""test""
+	log.Write(randomm)")]
+	[TestCase(@"import Strict
+has log
+Run
+	log.Write(random)
+	let random = ""test""")]
+	public void LocalMemberNotFound(string code)
+	{
+		var interfaceType = new Type(package, Computer, parser).Parse(code);
+		Assert.That(() => new CSharpTypeVisitor(interfaceType),
+			Throws.InstanceOf<MemberCall.MemberNotFound>()!);
+	}
+
 	[Test]
 	public void AccessLocalVariableAfterDeclaration()
 	{
-		var interfaceType = new Type(package, Computer, parser).Parse(@"import Strict
+		var type = new Type(package, Computer, parser).Parse(@"import Strict
 has log
 Run
 	let random = ""test""
 	log.Write(random)");
-		var visitor = new CSharpTypeVisitor(interfaceType);
+		var visitor = new CSharpTypeVisitor(type);
 		Assert.That(visitor.Name, Is.EqualTo(Computer));
 		Assert.That(visitor.FileContent, Contains.Substring("public class " + Computer));
-		Assert.That(visitor.FileContent,
-			Contains.Substring(
-				"\tConsole.WriteLine(random);"));
+		Assert.That(visitor.FileContent, Contains.Substring("\tConsole.WriteLine(random);"));
 	}
 
 	[Ignore("Have to do it next after constructors and generics")]

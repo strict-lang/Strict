@@ -21,7 +21,7 @@ public class MethodExpressionParser : ExpressionParser
 		Text.TryParse(line, partToParse) ?? Binary.TryParse(line, partToParse) ?? List.TryParse(line, partToParse) ?? Constructor.TryParse(line, partToParse) ??
 		MemberCall.TryParse(line, partToParse) ?? MethodCall.TryParse(line, partToParse);
 
-	public class UnknownExpression : ParsingFailed
+	public sealed class UnknownExpression : ParsingFailed
 	{
 		public UnknownExpression(Method.Line line, string error = "") : base(line, error) { }
 	}
