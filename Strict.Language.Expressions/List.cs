@@ -17,21 +17,29 @@ public sealed class List : Expression
 			? TryParseList(line, input[1..^1].Split(","))
 			: null;
 
-	private static Expression TryParseList(Method.Line line, IEnumerable<string> elements)
-	{
-		var expressions = new List<Expression>();
-		foreach (var element in elements)
+	private static Expression TryParseList(Method.Line line, IEnumerable<string> elements) =>
+		new List(line.Method,
+			elements.Select(element => line.Method.TryParseExpression(line, element.Trim()) ??
+				throw new MethodExpressionParser.UnknownExpression(line, element)).ToList());
+
+	public static bool HasIncompatibleDimensions(Expression left, Expression right) =>
+		left is List leftList && right is List rightList &&
+		leftList.Values.Count != rightList.Values.Count;
+
+	//TODO: Need some alternate approach like extension method to compare types easily
+	public static bool HasMismatchingTypes(Expression left, Expression right) =>
+		left is List leftList && !leftList.IsFirstType<Text>() && right switch
 		{
-			var foundExpression = line.Method.TryParseExpression(line, element.Trim());
-			if (foundExpression != null)
-				expressions.Add(foundExpression);
-		}
-		return new List(line.Method, expressions);
-	}
+			List rightList when rightList.IsFirstType<Text>() => true,
+			Binary { Left: List rightBinaryLeftList } when rightBinaryLeftList.IsFirstType<Text>() =>
+				true,
+			Binary { Left: Text } => true,
+			_ => !leftList.IsFirstType<Text>() && right is Text
+		};
 
-	public bool IsFirstType<T>() => Values.First() is T;
+	private bool IsFirstType<T>() => Values.First() is T;
 
-	public class ListsHaveDifferentDimensions : ParsingFailed
+	public sealed class ListsHaveDifferentDimensions : ParsingFailed
 	{
 		public ListsHaveDifferentDimensions(Method.Line line, string error) : base(line, error) { }
 	}

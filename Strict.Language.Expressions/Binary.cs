@@ -31,9 +31,9 @@ public sealed class Binary : MethodCall
 			throw new MethodExpressionParser.UnknownExpression(line, parts[0]);
 		var right = line.Method.TryParseExpression(line, parts[2]) ??
 			throw new MethodExpressionParser.UnknownExpression(line, parts[2]);
-		if (HasMismatchingTypes(left, right))
+		if (List.HasMismatchingTypes(left, right))
 			throw new MismatchingTypeFound(line, parts[2]);
-		if (parts[1] == "*" && HasIncompatibleDimensions(left, right))
+		if (parts[1] == "*" && List.HasIncompatibleDimensions(left, right))
 			throw new List.ListsHaveDifferentDimensions(line, parts[0] + " " + parts[2]);
 		return new Binary(left,
 			left.ReturnType.Methods.FirstOrDefault(m => m.Name == parts[1]) ??
@@ -41,19 +41,7 @@ public sealed class Binary : MethodCall
 				GetType(Base.BinaryOperator).Methods.First(m => m.Name == parts[1]), right);
 	}
 
-	private static bool HasIncompatibleDimensions(Expression left, Expression right) =>
-		left is List leftList && right is List rightList &&
-		leftList.Values.Count != rightList.Values.Count;
 
-	private static bool HasMismatchingTypes(Expression left, Expression right) =>
-		left is List leftList && !leftList.IsFirstType<Text>() && right switch
-		{
-			List rightList when rightList.IsFirstType<Text>() => true,
-			Binary { Left: List rightBinaryLeftList } when rightBinaryLeftList.IsFirstType<Text>() =>
-				true,
-			Binary { Left: Text } => true,
-			_ => !leftList.IsFirstType<Text>() && right is Text
-		};
 
 	public class MismatchingTypeFound : ParsingFailed
 	{

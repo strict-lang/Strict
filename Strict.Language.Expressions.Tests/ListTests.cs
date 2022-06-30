@@ -16,6 +16,7 @@ public sealed class ListTests : TestExpressions
 			Throws.InstanceOf<Binary.MismatchingTypeFound>()!);
 
 	[TestCase("(1, 2, 3) * (1, 2)")]
+	[TestCase("(1, 2, 3) * (1, 2, 3, 4)")]
 	public void ListsHaveDifferentDimensions(string input) =>
 		Assert.That(() => ParseExpression(input),
 			Throws.InstanceOf<List.ListsHaveDifferentDimensions>()!);
@@ -36,6 +37,7 @@ public sealed class ListTests : TestExpressions
 	[TestCase("(1, 2, 3, 4, 5) + (6, 7, 8)", "1, 2, 3, 4, 5", "+", "6, 7, 8")]
 	[TestCase("(1, 2, 3, 4, 5) - (6, 7, 8)", "1, 2, 3, 4, 5", "-", "6, 7, 8")]
 	[TestCase("(1, 2, 3, 4, 5) is (1, 2, 3, 4, 5)", "1, 2, 3, 4, 5", "is", "1, 2, 3, 4, 5")]
+	[TestCase("(1, 2, 3, 4, 5) * (1, 2, 3, 4, 5)", "1, 2, 3, 4, 5", "*", "1, 2, 3, 4, 5")]
 	public void ParseListsBinaryOperation(string input, params string[] expected) =>
 		ParseAndCheckOutputMatchesInput(input,
 			new Binary(
