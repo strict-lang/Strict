@@ -101,70 +101,54 @@ Run
 			Contains.Substring("\tpublic void Run()" + Environment.NewLine));
 	}
 
-	[Test]
-	public void InitializeValueUsingConstructor()
-	{
-		var interfaceType = new Type(package, Computer, parser).Parse(@"import Strict
-has log
-Run
-	File(""test.txt"")");
-		var visitor = new CSharpTypeVisitor(interfaceType);
-		Assert.That(visitor.Name, Is.EqualTo(Computer));
-		Assert.That(visitor.FileContent, Contains.Substring("public class " + Computer));
-		Assert.That(visitor.FileContent,
-			Contains.Substring("\tpublic void Run()" + Environment.NewLine));
-		Assert.That(visitor.FileContent,
-			Contains.Substring(
-				"\tvar File = new FileStream(\"test.txt\", FileMode.OpenOrCreate);"));
-	}
-
-	[Test]
-	public void UseConstructorValueInMethodBody()
-	{
-		var interfaceType = new Type(package, Computer, parser).Parse(@"import Strict
-has number
-Run
-	File(""test.txt"").Write(number)");
-		var visitor = new CSharpTypeVisitor(interfaceType);
-		Assert.That(visitor.Name, Is.EqualTo(Computer));
-		Assert.That(visitor.FileContent, Contains.Substring("public class " + Computer));
-		Assert.That(visitor.FileContent,
-			Contains.Substring("\tpublic void Run()" + Environment.NewLine));
-		Assert.That(visitor.FileContent,
-			Contains.Substring(
-				"\tnew FileStream(\"test.txt\", FileMode.OpenOrCreate).Write(number);"));
-	}
-
-	[TestCase(@"import Strict
-has log
-Run
+	[TestCase(@"
 	let random = ""test""
 	log.Write(randomm)")]
-	[TestCase(@"import Strict
-has log
-Run
+	[TestCase(@"
 	log.Write(random)
 	let random = ""test""")]
-	public void LocalMemberNotFound(string code)
-	{
-		var interfaceType = new Type(package, Computer, parser).Parse(code);
-		Assert.That(() => new CSharpTypeVisitor(interfaceType),
+	public void LocalMemberNotFound(string code) =>
+		Assert.That(() => new CSharpTypeVisitor(new Type(package, Computer, parser).Parse(@"import Strict
+has log
+Run" + code)),
 			Throws.InstanceOf<MemberCall.MemberNotFound>()!);
-	}
 
 	[Test]
-	public void AccessLocalVariableAfterDeclaration()
-	{
-		var type = new Type(package, Computer, parser).Parse(@"import Strict
+	public void AccessLocalVariableAfterDeclaration() =>
+		Assert.That(
+			new CSharpTypeVisitor(
+				new Type(package, Computer, parser).Parse(@"import Strict
 has log
 Run
 	let random = ""test""
-	log.Write(random)");
-		var visitor = new CSharpTypeVisitor(type);
-		Assert.That(visitor.Name, Is.EqualTo(Computer));
-		Assert.That(visitor.FileContent, Contains.Substring("public class " + Computer));
-		Assert.That(visitor.FileContent, Contains.Substring("\tConsole.WriteLine(random);"));
-	}
+	log.Write(random)")).FileContent,
+			Contains.Substring("\tConsole.WriteLine(random);"));
+
+	[TestCase(@"	File(""test.txt"")
+	File.Write(number)",
+		"\tvar File = new FileStream(\"test.txt\", FileMode.OpenOrCreate);")]
+	[TestCase(@"	File(""test.txt"").Write(number)",
+		"\tnew FileStream(\"test.txt\", FileMode.OpenOrCreate).Write(number);")]
+	public void InitializeValueUsingConstructorInsideMethod(string code, string expected) =>
+		Assert.That(
+			new CSharpTypeVisitor(new Type(package, Computer, parser).Parse(@"import Strict
+has number
+Run
+" + code)).FileContent,
+			Contains.Substring(expected));
+
+	[TestCase("l + m", "l + m")]
+	[TestCase("l - m", "l - m")]
+	[TestCase("l * m", "l * m")]
+	public void ListsBinaryOperation(string code, string expected) =>
+		Assert.That(new CSharpTypeVisitor(new Type(package, Computer, parser).Parse($@"import Strict
+has log
+Run
+	let l = (1, 2) + (3, 4)
+	let m = (5, 6)
+	let r = {
+		code
+	}")).FileContent, Contains.Substring($"\tvar r = {expected};"));
 
 	[Ignore("Have to do it next after constructors and generics")]
 	[Test]

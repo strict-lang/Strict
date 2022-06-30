@@ -8,7 +8,7 @@ namespace Strict.Language.Expressions;
 /// a local member or if used in a different type via the Type.Member syntax.
 /// </summary>
 // ReSharper disable once HollowTypeName
-public class MemberCall : Expression
+public sealed class MemberCall : Expression
 {
 	public MemberCall(Member member) : base(member.Type) => Member = member;
 
