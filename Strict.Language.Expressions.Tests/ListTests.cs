@@ -12,14 +12,21 @@ public sealed class ListTests : TestExpressions
 	[TestCase("(1, 2, 3, 4, 5) + (\"hello\") + 4")]
 	//[TestCase("(Any) + (\"hello\") + 4")] https://deltaengine.fogbugz.com/f/cases/24791/
 	public void MismatchingTypeFound(string input) =>
-		Assert.That(() => ParseExpression(input), Throws.InstanceOf<Binary.MismatchingTypeFound>()!);
+		Assert.That(() => ParseExpression(input),
+			Throws.InstanceOf<Binary.MismatchingTypeFound>()!);
+
+	[TestCase("(1, 2, 3) * (1, 2)")]
+	public void ListsHaveDifferentDimensions(string input) =>
+		Assert.That(() => ParseExpression(input),
+			Throws.InstanceOf<List.ListsHaveDifferentDimensions>()!);
 
 	[TestCase("(1)", "1")]
 	[TestCase("(\"1\", \"2\", \"3\", \"4\", \"5\")", "\"1\", \"2\", \"3\", \"4\", \"5\"")]
 	[TestCase("(true, false, true, false)", "true, false, true, false")]
 	public void ParseLists(string input, string expected) =>
-		ParseAndCheckOutputMatchesInput(input, new List(method,
-			new List<Expression>(GetListExpressions(expected.Split(",")))));
+		ParseAndCheckOutputMatchesInput(input,
+			new List(method,
+				new List<Expression>(GetListExpressions(expected.Split(",")))));
 
 	private IEnumerable<Expression> GetListExpressions(IEnumerable<string> elements) =>
 		elements.Select(element =>

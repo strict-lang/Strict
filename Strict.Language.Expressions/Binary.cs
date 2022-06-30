@@ -33,10 +33,17 @@ public sealed class Binary : MethodCall
 			throw new MethodExpressionParser.UnknownExpression(line, parts[2]);
 		if (HasMismatchingTypes(left, right))
 			throw new MismatchingTypeFound(line, parts[2]);
+		if (parts[1] == "*" && HasIncompatibleDimensions(left, right))
+			throw new List.ListsHaveDifferentDimensions(line, parts[0] + " " + parts[2]);
 		return new Binary(left,
-			left.ReturnType.Methods.FirstOrDefault(m => m.Name == parts[1]) ?? line.Method.
+			left.ReturnType.Methods.FirstOrDefault(m => m.Name == parts[1]) ??
+			line.Method.
 				GetType(Base.BinaryOperator).Methods.First(m => m.Name == parts[1]), right);
 	}
+
+	private static bool HasIncompatibleDimensions(Expression left, Expression right) =>
+		left is List leftList && right is List rightList &&
+		leftList.Values.Count != rightList.Values.Count;
 
 	private static bool HasMismatchingTypes(Expression left, Expression right) =>
 		left is List leftList && !leftList.IsFirstType<Text>() && right switch

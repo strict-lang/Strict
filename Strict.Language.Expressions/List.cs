@@ -30,4 +30,9 @@ public sealed class List : Expression
 	}
 
 	public bool IsFirstType<T>() => Values.First() is T;
+
+	public class ListsHaveDifferentDimensions : ParsingFailed
+	{
+		public ListsHaveDifferentDimensions(Method.Line line, string error) : base(line, error) { }
+	}
 }

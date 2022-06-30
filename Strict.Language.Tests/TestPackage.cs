@@ -16,7 +16,8 @@ Write(text)
 	return self + other");
 		new Type(this, Base.List, null!).Parse(@"+(other) returns Anys
 -(other) returns Anys
-is(other) returns Boolean");
+is(other) returns Boolean
+*(other) returns Anys");
 		new Type(this, Base.BinaryOperator, null!).Parse(@"is(any) returns Boolean
 +(other) returns Anys");
 		new Type(this, Base.UnaryOperator, null!).Parse(@"not returns Boolean");
