@@ -35,6 +35,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Base", "Base", "{85AB8A69-6
 		Base\Directory.strict = Base\Directory.strict
 		Base\Error.strict = Base\Error.strict
 		Base\File.strict = Base\File.strict
+		Base\Generic.strict = Base\Generic.strict
 		Base\HashCode.strict = Base\HashCode.strict
 		Base\Input.strict = Base\Input.strict
 		Base\List.strict = Base\List.strict

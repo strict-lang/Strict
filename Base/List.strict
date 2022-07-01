@@ -1,5 +1,5 @@
 implement Mutable
-has anys
+implement Generic(Anys)
 is(other) returns Boolean
 	(1, 2) is (1, 2)
 	(1, 2, 3) is not (1, 2)
@@ -16,7 +16,7 @@ is(other) returns Boolean
 	(("1", "2") + (3, 4)) to Numbers is (1, 2, 3, 4)
 	3 + (4) is (3, 4)
 	return this + other
-+(any) returns Anys
++(addValue Generic(Any)) returns Generic(Anys)
 	(1, 2, 3) + 4 is (1, 2, 3, 4)
 	("Hello", "World") + 5 is ("Hello", "World", "5")
 	return this + other
@@ -35,9 +35,7 @@ is(other) returns Boolean
 	if Length is not other.Length
 		error ListsHaveDifferentDimensions
 	return this * other
-Sum returns Any
+Sum returns Number
 	(1, 2, 3).Sum is 6
-	let counter = 0
-	for value in anys
-		counter += value to Number
-	return counter
+	return for values
+		+ value to Number

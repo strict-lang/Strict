@@ -7,7 +7,7 @@ public class TestPackage : Package
 {
 	public TestPackage() : base(nameof(TestPackage))
 	{
-		new Type(this, Base.Any, null!).Parse("is(any) returns Boolean");
+		new Type(this, Base.Any, null!).Parse("is(other) returns Boolean");
 		new Type(this, Base.Text, null!).Parse("Run");
 		new Type(this, Base.Log, null!).Parse(@"has Text
 Write(text)

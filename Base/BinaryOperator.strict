@@ -1,7 +1,5 @@
 is(type) returns Boolean
-is(any) returns Boolean
-to(type) returns Any
-to(any) returns Any
+to(type) returns Type(type)
 and(boolean) returns Boolean
 and(number) returns Number
 or(boolean) returns Boolean
