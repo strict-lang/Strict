@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using LazyCache;
 
 namespace Strict.Language;
 
@@ -22,7 +23,7 @@ public sealed class Method : Context
 			: type.GetType(Base.None);
 		ParseDefinition(lines[0][Name.Length..]);
 		bodyLines = GetLines(lines);
-		body = new Lazy<MethodBody>(() => (MethodBody)parser.ParseMethodBody(this));
+		body = new AsyncLazy<MethodBody>(() => (MethodBody)parser.ParseMethodBody(this));
 	}
 
 	public int TypeLineNumber { get; }
@@ -136,8 +137,8 @@ public sealed class Method : Context
 	public IReadOnlyList<Parameter> Parameters => parameters;
 	private readonly List<Parameter> parameters = new();
 	public Type ReturnType { get; private set; }
-	private readonly Lazy<MethodBody> body;
-	public MethodBody Body => body.Value;
+	private readonly AsyncLazy<MethodBody> body;
+	public MethodBody Body => body.GetAwaiter().GetResult();
 	public bool IsPublic => char.IsUpper(Name[0]);
 	public readonly List<Expression> Variables = new();
 

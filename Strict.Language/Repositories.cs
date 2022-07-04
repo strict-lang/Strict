@@ -1,11 +1,11 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
+using LazyCache;
 
 namespace Strict.Language;
 
@@ -17,7 +17,7 @@ namespace Strict.Language;
 /// packages.strict.dev is asked if we can get a url (used here to load).
 /// </summary>
 /// <remarks>Everything in here is async, you can easily load many packages in parallel</remarks>
-public class Repositories
+public sealed class Repositories
 {
 	/// <summary>
 	/// Gets rid of any cached zip files (keeps the actual files for use) older than 1h, which will
@@ -26,6 +26,7 @@ public class Repositories
 	/// </summary>
 	public Repositories(ExpressionParser parser)
 	{
+		cacheService = new CachingService();
 		this.parser = parser;
 		if (Directory.Exists(CacheFolder))
 			//ncrunch: no coverage start, rarely happens
@@ -34,6 +35,7 @@ public class Repositories
 					File.Delete(file);
 	} //ncrunch: no coverage end
 
+	private readonly IAppCache cacheService;
 	private readonly ExpressionParser parser;
 
 	public async Task<Package> LoadFromUrl(Uri packageUrl)
@@ -54,8 +56,8 @@ public class Repositories
 	}
 
 	public sealed class OnlyGithubDotComUrlsAreAllowedForNow : Exception { }
-
 	//ncrunch: no coverage start, only called once per session and only if not on development machine
+
 	private static async Task<string> DownloadAndExtractRepository(Uri packageUrl,
 		string packageName)
 	{
@@ -73,8 +75,7 @@ public class Repositories
 		string targetPath)
 	{
 		var localZip = Path.Combine(CacheFolder, packageName + ".zip");
-		lock (AlreadyLoadedPackages)
-			File.CreateText(localZip).Close();
+		File.CreateText(localZip).Close();
 		using HttpClient client = new();
 		await DownloadFile(client, new Uri(packageUrl + "/archive/master.zip"), localZip);
 		await Task.Run(() =>
@@ -121,10 +122,10 @@ public class Repositories
 	} //ncrunch: no coverage end
 
 	public Task<Package> LoadFromPath(string packagePath) =>
-		AlreadyLoadedPackages.GetOrAddAsync(packagePath,
-			path => CreatePackageFromFiles(path, Directory.GetFiles(path, "*" + Type.Extension)));
+		cacheService.GetOrAddAsync(packagePath, _ => CreatePackageFromFiles(packagePath,
+			Directory.GetFiles(packagePath, "*" + Type.Extension))) ?? throw new CachingFailed();
 
-	private static readonly ConcurrentDictionary<string, Task<Package>> AlreadyLoadedPackages = new();
+	public sealed class CachingFailed : Exception { }
 
 	/// <summary>
 	/// Initially we need to create just empty types and then after they all have been created
@@ -199,3 +200,4 @@ public class Repositories
 	private const string StrictPackages = nameof(StrictPackages);
 	public static readonly Uri StrictUrl = new("https://github.com/strict-lang/Strict");
 }
+

@@ -41,8 +41,6 @@ public sealed class Binary : MethodCall
 				GetType(Base.BinaryOperator).Methods.First(m => m.Name == parts[1]), right);
 	}
 
-
-
 	public class MismatchingTypeFound : ParsingFailed
 	{
 		public MismatchingTypeFound(Method.Line line, string error = "") : base(line, error) { }
