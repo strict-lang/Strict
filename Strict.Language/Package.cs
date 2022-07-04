@@ -138,4 +138,6 @@ public class Package : Context
 
 	public Package? Find(string name) =>
 		FindSubPackage(name) ?? RootForPackages.FindSubPackage(name);
+
+	public void Remove(Type type) => types.Remove(type);
 }

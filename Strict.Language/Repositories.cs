@@ -40,23 +40,27 @@ public sealed class Repositories
 
 	public async Task<Package> LoadFromUrl(Uri packageUrl)
 	{
-		if (packageUrl.Host != "github.com" || string.IsNullOrEmpty(packageUrl.AbsolutePath) ||
+		if (packageUrl != StrictUrl && (packageUrl.Host != "github.com" || string.IsNullOrEmpty(packageUrl.AbsolutePath) ||
 			// Allow other repositories as well, but put them in an empty main package name first
-			!packageUrl.AbsolutePath.StartsWith("/strict-lang/", StringComparison.InvariantCulture))
+			!packageUrl.AbsolutePath.StartsWith("/strict-lang/", StringComparison.InvariantCulture)))
 			throw new OnlyGithubDotComUrlsAreAllowedForNow(); //ncrunch: no coverage
 		var packageName = packageUrl.AbsolutePath.Split('/').Last();
 		var localPath = packageName == nameof(Strict)
 			? DevelopmentFolder
 			: "";
-		if (!Directory.Exists(localPath))
-			//ncrunch: no coverage start
-			localPath = await DownloadAndExtractRepository(packageUrl, packageName);
-		//ncrunch: no coverage end
+		//nocrunch: no coverage start
+		if (!PreviouslyCheckedDirectories.Contains(localPath))
+		{
+			PreviouslyCheckedDirectories.Add(localPath);
+			if (!Directory.Exists(localPath))
+				localPath = await DownloadAndExtractRepository(packageUrl, packageName);
+		} //nocrunch: no coverage end
 		return await LoadFromPath(localPath);
 	}
 
 	public sealed class OnlyGithubDotComUrlsAreAllowedForNow : Exception { }
 	//ncrunch: no coverage start, only called once per session and only if not on development machine
+	private static readonly HashSet<string> PreviouslyCheckedDirectories = new();
 
 	private static async Task<string> DownloadAndExtractRepository(Uri packageUrl,
 		string packageName)

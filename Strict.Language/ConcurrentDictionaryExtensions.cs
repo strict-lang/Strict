@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 
 namespace Strict.Language;
 
+//TODO: delete, now replaced by LazyCache
 public static class ConcurrentDictionaryExtensions
 {
 	/// <summary>

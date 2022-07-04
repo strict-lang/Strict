@@ -1,4 +1,6 @@
 has anys
+Length returns Number
+	return anys.Length
 is(other) returns Boolean
 	(1, 2) is (1, 2)
 	(1, 2, 3) is not (1, 2)
