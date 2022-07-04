@@ -123,9 +123,7 @@ public sealed class Repositories
 
 	public Task<Package> LoadFromPath(string packagePath) =>
 		cacheService.GetOrAddAsync(packagePath, _ => CreatePackageFromFiles(packagePath,
-			Directory.GetFiles(packagePath, "*" + Type.Extension))) ?? throw new CachingFailed();
-
-	public sealed class CachingFailed : Exception { }
+			Directory.GetFiles(packagePath, "*" + Type.Extension)));
 
 	/// <summary>
 	/// Initially we need to create just empty types and then after they all have been created

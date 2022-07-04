@@ -35,14 +35,21 @@ public sealed class Binary : MethodCall
 			throw new MismatchingTypeFound(line, parts[2]);
 		if (parts[1] == "*" && List.HasIncompatibleDimensions(left, right))
 			throw new List.ListsHaveDifferentDimensions(line, parts[0] + " " + parts[2]);
-		return new Binary(left,
-			left.ReturnType.Methods.FirstOrDefault(m => m.Name == parts[1]) ??
+		var operatorMethod = left.ReturnType.Methods.FirstOrDefault(m => m.Name == parts[1]) ??
 			line.Method.
-				GetType(Base.BinaryOperator).Methods.First(m => m.Name == parts[1]), right);
+				GetType(Base.BinaryOperator).Methods.FirstOrDefault(m => m.Name == parts[1]) ??
+			throw new NoMatchingOperatorFound(left.ReturnType, parts[1]);
+		return new Binary(left,
+			operatorMethod, right);
 	}
 
 	public class MismatchingTypeFound : ParsingFailed
 	{
 		public MismatchingTypeFound(Method.Line line, string error = "") : base(line, error) { }
+	}
+
+	public sealed class NoMatchingOperatorFound : Exception
+	{
+		public NoMatchingOperatorFound(Type leftType, string operatorMethod) : base(nameof(leftType) + "=" + leftType + " or " + Base.BinaryOperator + " does not contain " + operatorMethod) { }
 	}
 }

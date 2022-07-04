@@ -13,6 +13,8 @@ public class TestPackage : Package
 Write(text)
 	return Text");
 		new Type(this, Base.Number, null!).Parse(@"+(other) returns Number
+	return self + other
+*(other) returns Number
 	return self + other");
 		new Type(this, Base.List, null!).Parse(@"+(other) returns Anys
 -(other) returns Anys

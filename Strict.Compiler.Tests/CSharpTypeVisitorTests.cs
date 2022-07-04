@@ -146,9 +146,7 @@ has log
 Run
 	let l = (1, 2) + (3, 4)
 	let m = (5, 6)
-	let r = {
-		code
-	}")).FileContent, Contains.Substring($"\tvar r = {expected};"));
+	let r = { code }")).FileContent, Contains.Substring($"\tvar r = {expected};"));
 
 	[Ignore("Have to do it next after constructors and generics")]
 	[Test]
