@@ -38,12 +38,4 @@ public class BinaryTests : TestExpressions
 			new Binary(new Binary(new Number(method, 2),
 					method.GetType(Base.Number).Methods.First(m => m.Name == "*"), new Number(method, 5)),
 				method.GetType(Base.Number).Methods.First(m => m.Name == "+"), new Number(method, 3)));
-
-	[Ignore("Grouping with brackets is not supported yet")]
-	[Test]
-	public void NestedBinaryWithBrackets() =>
-		ParseAndCheckOutputMatchesInput("2 * (5 + 3)",
-			new Binary(new Binary(new Number(method, 2),
-					method.GetType(Base.Number).Methods.First(m => m.Name == "*"), new Number(method, 5)),
-				method.GetType(Base.Number).Methods.First(m => m.Name == "+"), new Number(method, 3)));
 }
