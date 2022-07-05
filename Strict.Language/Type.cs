@@ -56,11 +56,9 @@ public class Type : Context
 
 	private void CheckIfTraitIsImplemented(Type trait)
 	{
-		var nonImplementedTraitMethods = new List<Method>();
-		foreach (var traitMethod in trait.Methods)
-			if (traitMethod.Name != Method.From && methods.All(implementedMethod =>
-				traitMethod.Name != implementedMethod.Name))
-				nonImplementedTraitMethods.Add(traitMethod);
+		var nonImplementedTraitMethods = trait.Methods.
+			Where(traitMethod => traitMethod.Name != Method.From &&
+				methods.All(implementedMethod => traitMethod.Name != implementedMethod.Name)).ToList();
 		if (nonImplementedTraitMethods.Count > 0)
 			throw new MustImplementAllTraitMethods(this, nonImplementedTraitMethods);
 	}

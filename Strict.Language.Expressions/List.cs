@@ -27,6 +27,7 @@ public sealed class List : Expression
 		leftList.Values.Count != rightList.Values.Count;
 
 	//TODO: Need some alternate approach like extension method to compare types easily
+	//TODO: as discussed in meeting, we use generics and always check if the right side is castable into the left side (via from), e.g. make a test where we add a Count to a list of Texts -> output list of texts (always from left side), we never change the left side type
 	public static bool HasMismatchingTypes(Expression left, Expression right) =>
 		left is List leftList && !leftList.IsFirstType<Text>() && right switch
 		{
