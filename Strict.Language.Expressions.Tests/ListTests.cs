@@ -62,9 +62,17 @@ public sealed class ListTests : TestExpressions
 				list.ReturnType.Methods.First(m => m.Name == expected[1]),
 				new Text(method, expected[2])));
 
-	[Ignore("TODO for tomorrow")]
+	[TestCase("(\"1\", \"2\", \"3\", \"4\") + 5")]
+	public void LeftTypeShouldNotBeChanged(string input)
+	{
+		var expression = ParseExpression(input);
+		Assert.That(expression, Is.InstanceOf<Binary>()!);
+		Assert.That(((Binary)expression).ReturnType, Is.EqualTo(list.ReturnType));
+	}
+
 	[TestCase("(1, 2, 3, 4, 5) + (1) + 4", 4, "1, 2, 3, 4, 5", "+", "1")]
-	public void ParseMultipleListExpression(string input, double expectedRight, params string[] expected) =>
+	public void
+		ParseMultipleListExpression(string input, double expectedRight, params string[] expected) =>
 		ParseAndCheckOutputMatchesInput(input,
 			new Binary(
 				new List(method, new List<Expression>(GetListExpressions(expected[0].Split(",")))),

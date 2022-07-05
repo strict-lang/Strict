@@ -135,7 +135,7 @@ public sealed class Method : Context
 	public Type Type => (Type)Parent;
 	public IReadOnlyList<Parameter> Parameters => parameters;
 	private readonly List<Parameter> parameters = new();
-	public Type ReturnType { get; private set; }
+	public Type ReturnType { get; set; }
 	private readonly Lazy<MethodBody> body;
 	public MethodBody Body => body.Value;
 	public bool IsPublic => char.IsUpper(Name[0]);

@@ -35,17 +35,15 @@ public sealed class Binary : MethodCall
 			throw new MismatchingTypeFound(line, parts[2]);
 		if (parts[1] == "*" && List.HasIncompatibleDimensions(left, right))
 			throw new List.ListsHaveDifferentDimensions(line, parts[0] + " " + parts[2]);
-		Console.WriteLine("left="+left+" type="+left.ReturnType+", right="+right+" type="+right.ReturnType+", methods="+left.ReturnType.Methods.ToWordList());
 		if (left.ReturnType == line.Method.GetType(Base.Any))
 			throw new AnyIsNotAllowed(line.Method, left);
 		if (right.ReturnType == line.Method.GetType(Base.Any))
 			throw new AnyIsNotAllowed(line.Method, right);
 		var operatorMethod = left.ReturnType.Methods.FirstOrDefault(m => m.Name == parts[1]) ??
-			line.Method.
-				GetType(Base.BinaryOperator).Methods.FirstOrDefault(m => m.Name == parts[1]) ??
+			line.Method.GetType(Base.BinaryOperator).Methods.FirstOrDefault(m => m.Name == parts[1]) ??
 			throw new NoMatchingOperatorFound(left.ReturnType, parts[1]);
-		return new Binary(left,
-			operatorMethod, right);
+		operatorMethod.ReturnType = left.ReturnType;
+		return new Binary(left, operatorMethod, right);
 	}
 
 	private sealed class AnyIsNotAllowed : Exception
@@ -55,7 +53,7 @@ public sealed class Binary : MethodCall
 			operand.ReturnType) { }
 	}
 
-	public class MismatchingTypeFound : ParsingFailed
+	public sealed class MismatchingTypeFound : ParsingFailed
 	{
 		public MismatchingTypeFound(Method.Line line, string error = "") : base(line, error) { }
 	}
