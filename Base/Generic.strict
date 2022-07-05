@@ -1,4 +1,1 @@
-from(Any)
-from(Anys)
-Any returns Type(Any)
-Anys returns List(Type(Any))
+has type

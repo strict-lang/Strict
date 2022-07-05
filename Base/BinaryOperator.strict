@@ -1,5 +1,5 @@
 is(type) returns Boolean
-to(type) returns Type(type)
+to(generic) returns Generic
 and(boolean) returns Boolean
 and(number) returns Number
 or(boolean) returns Boolean

@@ -49,8 +49,6 @@ public abstract class Context
 		//if still not found, remove 'es' and check again (buses, lenses, etc.)
 		//repositories will still not be found, so replace last i with y -> repository
 		//TODO: to create list, make new type from Base.List and inject the generic sub type
-		if (name is "Any" or "Anys")
-			throw new TypeNotFound(name, ToString());
 		if (name.EndsWith('s'))
 			name = name[..^1]; //TODO: make sure array access is also round brackets for us
 		if (name == Name)

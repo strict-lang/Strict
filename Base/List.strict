@@ -1,9 +1,9 @@
-implement Mutable
-implement Generic(Anys)
+implement Generic
+has elements Generics
 is(other) returns Boolean
 	(1, 2) is (1, 2)
 	(1, 2, 3) is not (1, 2)
-	return this is other
+	return elements is other.elements
 +(other) returns List
 	(1, 2, 3) + (4, 5) is (1, 2, 3, 4, 5)
 	("Hello", "World") + (1, 2) is ("Hello", "World", "1", "2")
@@ -15,27 +15,36 @@ is(other) returns Boolean
 	(1 + 2) * 3 is not 1 + 2 * 3
 	(("1", "2") + (3, 4)) to Numbers is (1, 2, 3, 4)
 	3 + (4) is (3, 4)
-	return this + other
-+(addValue Generic(Any)) returns Generic(Anys)
+	return elements + other.elements
++(addElement Generic) returns List
 	(1, 2, 3) + 4 is (1, 2, 3, 4)
 	("Hello", "World") + 5 is ("Hello", "World", "5")
-	return this + other
--(other) returns Number
+	return elements + addElement
+-(other) returns List
 	(1, 2, 3) - (3) is (1, 2)
+	return elements - other.elements
+-(removeElement Generic) returns List
+	(1, 2, 3) - 3 is (1, 2)
 	(1, 2, 3) - 4 is (1, 2, 3)
-	return this - other
+	return elements - removeElements
 /(other) returns List
-	(2, 4, 6) / 2 is (1, 2, 3)
+	(2, 4, 6) / (2) is (1, 2, 3)
 	(1, 2) / (2, 4) is (0.5, 0.5)
-	1 / (20, 10) is (0.05, 0.1)
-	return this / other
+	(1) / (20, 10) is (0.05, 0.1)
+	return elements / other.elements
+/(divider Generic) returns List
+	(2, 4, 6) / 2 is (1, 2, 3)
+	(20, 10) / 1 is (0.05, 0.1)
+	return elements / divider
 *(other) returns List
-	(1, 2) * 4 is (4, 8)
 	(1, 2) * (3, 5) is (3, 10)
 	if Length is not other.Length
 		error ListsHaveDifferentDimensions
-	return this * other
+	return elements * other.elements
+*(multiplier Generic) returns List
+	(1, 2) * 3 is (3, 6)
+	return elements * multiplier
 Sum returns Number
 	(1, 2, 3).Sum is 6
-	return for values
+	return for elements
 		+ value to Number
