@@ -17,12 +17,36 @@ public sealed class Method : Context
 			throw new NameMustBeAWordWithoutAnySpecialCharactersOrNumbers(Name);
 		TypeLineNumber = typeLineNumber;
 		this.parser = parser;
+		var rest = lines[0][Name.Length..];
 		ReturnType = Name == From
 			? type
-			: type.GetType(Base.None);
-		ParseDefinition(lines[0][Name.Length..]);
+			: GetReturnType(type, ref rest);
+		ParseDefinition(rest);
 		bodyLines = GetLines(lines);
 		body = new Lazy<MethodBody>(() => (MethodBody)parser.ParseMethodBody(this));
+	}
+
+	private void ParseDefinition(string rest)
+	{
+		if (string.IsNullOrEmpty(rest))
+			return;
+		if (rest == "()")
+			throw new EmptyParametersMustBeRemoved(this);
+		ParseParameters(rest[1..^1]);
+	}
+
+	private Type GetReturnType(Context type, ref string rest)
+	{
+		var returnType = type.GetType(Base.None);
+		var returnsIndex = rest.IndexOf(" " + Returns + " ", StringComparison.Ordinal);
+		if (returnsIndex >= 0)
+		{
+			returnType = Type.GetType(rest[(returnsIndex + Returns.Length + 2)..]);
+			rest = rest[..returnsIndex];
+		}
+		else if (rest.Split(')').Last().Length > 0)
+			throw new ExpectedReturns(this, rest);
+		return returnType;
 	}
 
 	public int TypeLineNumber { get; }
@@ -41,30 +65,6 @@ public sealed class Method : Context
 	private static string GetName(string firstLine) => firstLine.SplitWordsAndPunctuation()[0];
 
 	public const string From = "from";
-
-	private void ParseDefinition(string rest)
-	{
-		rest = RemoveReturns(rest);
-		if (string.IsNullOrEmpty(rest))
-			return;
-		if (rest == "()")
-			throw new EmptyParametersMustBeRemoved(this);
-		ParseParameters(rest[1..^1]);
-	}
-
-	private string RemoveReturns(string rest)
-	{
-		var returnsIndex = rest.IndexOf(" " + Returns + " ", StringComparison.Ordinal);
-		if (returnsIndex >= 0)
-		{
-			ReturnType = Type.GetType(rest[(returnsIndex + Returns.Length + 2)..]);
-			rest = rest[..returnsIndex];
-		}
-		else if (rest.Split(')').Last().Length > 0)
-			throw new ExpectedReturns(this, rest);
-		return rest;
-	}
-
 	public const string Returns = "returns";
 
 	public sealed class EmptyParametersMustBeRemoved : ParsingFailed
@@ -135,7 +135,7 @@ public sealed class Method : Context
 	public Type Type => (Type)Parent;
 	public IReadOnlyList<Parameter> Parameters => parameters;
 	private readonly List<Parameter> parameters = new();
-	public Type ReturnType { get; set; }
+	public Type ReturnType { get; }
 	private readonly Lazy<MethodBody> body;
 	public MethodBody Body => body.Value;
 	public bool IsPublic => char.IsUpper(Name[0]);

@@ -34,7 +34,6 @@ public abstract class Context
 	/// </summary>
 	public Type GetType(string name)
 	{
-		// TODO: Disallow Read returns Any in Input.strict => throw error if anything returns any
 		// fix tests whichever fails
 		// Generics still need to be supported (see Log.strict for Output<text>)
 		// https://deltaengine.fogbugz.com/f/cases/24562

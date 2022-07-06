@@ -42,7 +42,6 @@ public sealed class Binary : MethodCall
 		var operatorMethod = left.ReturnType.Methods.FirstOrDefault(m => m.Name == parts[1]) ??
 			line.Method.GetType(Base.BinaryOperator).Methods.FirstOrDefault(m => m.Name == parts[1]) ??
 			throw new NoMatchingOperatorFound(left.ReturnType, parts[1]);
-		operatorMethod.ReturnType = left.ReturnType;
 		return new Binary(left, operatorMethod, right);
 	}
 

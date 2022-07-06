@@ -16,12 +16,12 @@ Write(text)
 	return self + other
 *(other) returns Number
 	return self + other");
-		new Type(this, Base.List, null!).Parse(@"+(other) returns Anys
--(other) returns Anys
+		new Type(this, Base.List, null!).Parse(@"+(other) returns List
+-(other) returns List
 is(other) returns Boolean
-*(other) returns Anys");
+*(other) returns List");
 		new Type(this, Base.BinaryOperator, null!).Parse(@"is(any) returns Boolean
-+(other) returns Anys");
++(other) returns Text");
 		new Type(this, Base.UnaryOperator, null!).Parse(@"not returns Boolean");
 	}
 }
