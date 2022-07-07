@@ -35,7 +35,50 @@ public class BinaryTests : TestExpressions
 	[Test]
 	public void NestedBinary() =>
 		ParseAndCheckOutputMatchesInput("2 * 5 + 3",
-			new Binary(new Binary(new Number(method, 2),
+			new Binary(
+				new Binary(new Number(method, 2),
 					method.GetType(Base.Number).Methods.First(m => m.Name == "*"), new Number(method, 5)),
 				method.GetType(Base.Number).Methods.First(m => m.Name == "+"), new Number(method, 3)));
+
+	[Test]
+	public void NestedBinaryWithBrackets() =>
+		Assert.That(ParseExpression("2 * (5 + 3)"),
+			Is.EqualTo(new Binary(new Number(method, 2),
+				method.GetType(Base.Number).Methods.First(m => m.Name == "*"),
+				new Binary(new Number(method, 5),
+					method.GetType(Base.Number).Methods.First(m => m.Name == "+"),
+					new Number(method, 3)))));
+
+	[Test]
+	public void NestedBinaryExpressionsWithGrouping() =>
+		Assert.That(ParseExpression("(2 + 5) * 3"),
+			Is.EqualTo(new Binary(new Number(method, 2),
+				method.GetType(Base.Number).Methods.First(m => m.Name == "+"),
+				new Binary(new Number(method, 5),
+					method.GetType(Base.Number).Methods.First(m => m.Name == "*"),
+					new Number(method, 3)))));
+
+	[Test]
+	public void NestedBinaryExpressionsSingleGroup() =>
+		Assert.That(ParseExpression("6 + (2 + 5) * 3"),
+			Is.EqualTo(new Binary(new Number(method, 6),
+				method.GetType(Base.Number).Methods.First(m => m.Name == "+"),
+				new Binary(new Number(method, 2),
+					method.GetType(Base.Number).Methods.First(m => m.Name == "+"),
+					new Binary(new Number(method, 5),
+						method.GetType(Base.Number).Methods.First(m => m.Name == "*"),
+						new Number(method, 3))))));
+
+	[Test]
+	public void NestedBinaryExpressionsTwoGroups() =>
+		Assert.That(ParseExpression("(6 * 3) + (2 + 5) * 3"),
+			Is.EqualTo(new Binary(
+				new Binary(new Number(method, 6),
+					method.GetType(Base.Number).Methods.First(m => m.Name == "*"), new Number(method, 3)),
+				method.GetType(Base.Number).Methods.First(m => m.Name == "+"),
+				new Binary(
+					new Binary(new Number(method, 2),
+						method.GetType(Base.Number).Methods.First(m => m.Name == "+"), new Number(method, 5)),
+					method.GetType(Base.Number).Methods.First(m => m.Name == "*"),
+					new Number(method, 3)))));
 }

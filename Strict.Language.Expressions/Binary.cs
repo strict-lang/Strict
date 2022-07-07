@@ -17,12 +17,63 @@ public sealed class Binary : MethodCall
 	{
 		if (!input.HasOperator(out var operatorText))
 			return null;
-		var parts = new string[3];
-		parts[0] = input[..(input.IndexOf(operatorText, StringComparison.Ordinal) - 1)];
-		parts[1] = operatorText;
-		parts[2] =
-			input[(input.IndexOf(operatorText, StringComparison.Ordinal) + operatorText.Length + 1)..];
+		var parts = GetParts(input, operatorText);
+		//var parts = input.Split('(', ')', ' ');
+		//var binaryParts = new string[3];
+		//var firstPart = "";
+		//if (parts.Length == 3 && parts[1].IsOperator())
+		//	return TryParseBinary(line, parts);
+		//if (parts[0] == "" && parts[2] != ",")
+		//{
+		//	for (var index = 1; index < parts.Length; index++)
+		//	{
+		//		if (parts[index] == "")
+		//		{
+		//			binaryParts[0] = firstPart;
+		//			binaryParts[1] = parts[index + 1];
+		//			binaryParts[2] = input[(index + 6)..];
+		//			break;
+		//		}
+		//		firstPart += parts[index] + " ";
+		//	}
+		//	return TryParseBinary(line, binaryParts);
+		//}
 		return TryParseBinary(line, parts);
+	}
+
+	private static string[] GetParts(string input, string operatorText)
+	{
+		var parts = new string[3];
+		if (input.Contains('(') && input.Contains(')') &&
+			input[(input.IndexOf('(') + 1)..input.IndexOf(')')].HasOperator(out _))
+		{
+			if (input.IndexOf('(') == 0)
+			{
+				parts[0] = input[(input.IndexOf('(') + 1)..input.IndexOf(')')];
+				parts[1] = input.Substring(input.IndexOf(')') + 2, 1);
+				parts[2] = input[(input.IndexOf(')') + 3)..].Trim();
+			}
+			else if (input.IndexOf(')') < input.Length - 1)
+			{
+				parts[0] = input[..(input.IndexOf('(') - 2)];
+				parts[1] = input[2..(input.IndexOf('(') - 1)];
+				parts[2] = input[input.IndexOf('(')..];
+			}
+			else
+			{
+				parts[0] = input[..(input.IndexOf('(') - 2)];
+				parts[1] = input[2..(input.IndexOf('(') - 1)];
+				parts[2] = input[(input.IndexOf('(') + 1)..input.IndexOf(')')];
+			}
+		}
+		else
+		{
+			parts[0] = input[..(input.IndexOf(operatorText, StringComparison.Ordinal) - 1)];
+			parts[1] = operatorText;
+			parts[2] =
+				input[(input.IndexOf(operatorText, StringComparison.Ordinal) + operatorText.Length + 1)..];
+		}
+		return parts;
 	}
 
 	private static Expression TryParseBinary(Method.Line line, IReadOnlyList<string> parts)

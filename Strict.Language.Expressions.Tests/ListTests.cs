@@ -62,12 +62,20 @@ public sealed class ListTests : TestExpressions
 				list.ReturnType.Methods.First(m => m.Name == expected[1]),
 				new Text(method, expected[2])));
 
-	[TestCase("(\"1\", \"2\", \"3\", \"4\") + 5")]
-	public void LeftTypeShouldNotBeChanged(string input)
+	[Test]
+	public void LeftTypeShouldNotBeChanged()
 	{
-		var expression = ParseExpression(input);
+		var expression = ParseExpression("(\"1\", \"2\", \"3\", \"4\") + 5");
 		Assert.That(expression, Is.InstanceOf<Binary>()!);
 		Assert.That(((Binary)expression).ReturnType, Is.EqualTo(list.ReturnType));
+	}
+
+	[Test]
+	public void LeftTypeShouldNotBeChangedUnlessRightIsList()
+	{
+		var expression = ParseExpression("5 + (\"1\", \"2\", \"3\", \"4\")");
+		Assert.That(expression, Is.InstanceOf<Binary>()!);
+		Assert.That(((Binary)expression).ReturnType, Is.EqualTo(number.ReturnType));
 	}
 
 	[TestCase("(1, 2, 3, 4, 5) + (1) + 4", 4, "1, 2, 3, 4, 5", "+", "1")]

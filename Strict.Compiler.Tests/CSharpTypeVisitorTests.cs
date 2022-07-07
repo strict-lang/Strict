@@ -141,7 +141,7 @@ Run
 	[TestCase("l - m", "l - m")]
 	[TestCase("l * m", "l * m")]
 	public void ListsBinaryOperation(string code, string expected) =>
-		Assert.That(new CSharpTypeVisitor(new Type(package, Computer, parser).Parse($@"import Strict
+		Assert.That(new CSharpTypeVisitor(new Type(package, Computer, parser).Parse(@$"import Strict
 has log
 Run
 	let l = (1, 2) + (3, 4)

@@ -50,3 +50,19 @@ public class MethodExpressionParser : ExpressionParser
 		//TODO: error
 		TryParseExpression(line, line.Text) ?? throw new UnknownExpression(line);
 }
+
+//public class Group
+//{
+//	public static Expression? TryParse(Method.Line line, string input)
+//	{
+//		if (input.Contains('(') && input.Contains(')') &&
+//			input[(input.IndexOf('(') + 1)..input.IndexOf(')')].HasOperator(out _))
+//		{
+//			var left = line.Method.TryParseExpression(line, input[..1]);
+//			var right = line.Method.TryParseExpression(line, input[(input.IndexOf('(') + 1)..input.IndexOf(')')]);
+//			return new Binary(left!, left?.ReturnType.Methods.FirstOrDefault(o => o.Name == input[1..3].Trim()),
+//				right!);
+//		}
+//		return null;
+//	}
+//}

@@ -15,7 +15,7 @@ Write(text)
 		new Type(this, Base.Number, null!).Parse(@"+(other) returns Number
 	return self + other
 *(other) returns Number
-	return self + other");
+	return self * other");
 		new Type(this, Base.List, null!).Parse(@"+(other) returns List
 -(other) returns List
 is(other) returns Boolean
