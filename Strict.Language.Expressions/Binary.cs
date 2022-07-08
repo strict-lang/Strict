@@ -17,30 +17,15 @@ public sealed class Binary : MethodCall
 	{
 		if (!input.HasOperator(out var operatorText))
 			return null;
-		var parts = GetParts(input, operatorText);
-		//var parts = input.Split('(', ')', ' ');
-		//var binaryParts = new string[3];
-		//var firstPart = "";
-		//if (parts.Length == 3 && parts[1].IsOperator())
-		//	return TryParseBinary(line, parts);
-		//if (parts[0] == "" && parts[2] != ",")
-		//{
-		//	for (var index = 1; index < parts.Length; index++)
-		//	{
-		//		if (parts[index] == "")
-		//		{
-		//			binaryParts[0] = firstPart;
-		//			binaryParts[1] = parts[index + 1];
-		//			binaryParts[2] = input[(index + 6)..];
-		//			break;
-		//		}
-		//		firstPart += parts[index] + " ";
-		//	}
-		//	return TryParseBinary(line, binaryParts);
-		//}
+		var parts = new string[3];
+		parts[0] = input[..(input.IndexOf(operatorText, StringComparison.Ordinal) - 1)];
+		parts[1] = operatorText;
+		parts[2] =
+			input[(input.IndexOf(operatorText, StringComparison.Ordinal) + operatorText.Length + 1)..];
 		return TryParseBinary(line, parts);
 	}
 
+	// TODO: Delete Not used anymore
 	private static string[] GetParts(string input, string operatorText)
 	{
 		var parts = new string[3];
