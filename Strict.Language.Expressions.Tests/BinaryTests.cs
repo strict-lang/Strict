@@ -50,6 +50,7 @@ public class BinaryTests : TestExpressions
 	[TestCase("(((1 + 2) + (3 + 4)) * (5 + 6))")]
 	[TestCase("(1 + 2) * (2 + 5) + 3")]
 	[TestCase("3 + (1 + 2) * (2 + 5)")]
+	[TestCase("3 + (1 + 2) * 5 * (2 + 5)")]
 	public void ParseGroupExpression(string code)
 	{
 		var expression = ParseExpression(code);
