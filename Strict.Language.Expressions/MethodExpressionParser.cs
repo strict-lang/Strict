@@ -75,9 +75,22 @@ public class MethodExpressionParser : ExpressionParser
 				? left
 				: ParseRemainingText(line, left, currentGroup.Start + currentGroup.Length);
 		var nextGroupIndex = FindNextGroupIndex(line, groupIndex, currentGroup);
-		return nextGroupIndex > 0
-			? new Binary(left, FindOperatorMethod(left, GetOperatorText(line, currentGroup, nextGroupIndex)), ParseGroupExpressions(line, nextGroupIndex))
-			: left;
+		if (nextGroupIndex > 0)
+		{
+			var operatorText = GetOperatorText(line, currentGroup, nextGroupIndex);
+			var partsToParse = operatorText.Split(" ");
+			if (partsToParse.Length > 1)
+			{
+				left = new Binary(left, FindOperatorMethod(left, partsToParse[0]),
+					TryParseExpression(line, partsToParse[1]) ?? throw new UnknownExpression(line));
+				operatorText = partsToParse[2];
+			}
+			return new Binary(left,
+				FindOperatorMethod(left, operatorText),
+				ParseGroupExpressions(line, nextGroupIndex));
+		}
+		else
+			return left;
 	}
 
 	private Expression ParseNonGroupExpression(Method.Line line, Group currentGroup, Expression right)
