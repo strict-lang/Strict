@@ -25,42 +25,6 @@ public sealed class Binary : MethodCall
 		return TryParseBinary(line, parts);
 	}
 
-	// TODO: Delete Not used anymore
-	private static string[] GetParts(string input, string operatorText)
-	{
-		var parts = new string[3];
-		if (input.Contains('(') && input.Contains(')') &&
-			input[(input.IndexOf('(') + 1)..input.IndexOf(')')].HasOperator(out _))
-		{
-			if (input.IndexOf('(') == 0)
-			{
-				parts[0] = input[(input.IndexOf('(') + 1)..input.IndexOf(')')];
-				parts[1] = input.Substring(input.IndexOf(')') + 2, 1);
-				parts[2] = input[(input.IndexOf(')') + 3)..].Trim();
-			}
-			else if (input.IndexOf(')') < input.Length - 1)
-			{
-				parts[0] = input[..(input.IndexOf('(') - 2)];
-				parts[1] = input[2..(input.IndexOf('(') - 1)];
-				parts[2] = input[input.IndexOf('(')..];
-			}
-			else
-			{
-				parts[0] = input[..(input.IndexOf('(') - 2)];
-				parts[1] = input[2..(input.IndexOf('(') - 1)];
-				parts[2] = input[(input.IndexOf('(') + 1)..input.IndexOf(')')];
-			}
-		}
-		else
-		{
-			parts[0] = input[..(input.IndexOf(operatorText, StringComparison.Ordinal) - 1)];
-			parts[1] = operatorText;
-			parts[2] =
-				input[(input.IndexOf(operatorText, StringComparison.Ordinal) + operatorText.Length + 1)..];
-		}
-		return parts;
-	}
-
 	private static Expression TryParseBinary(Method.Line line, IReadOnlyList<string> parts)
 	{
 		var left = line.Method.TryParseExpression(line, parts[0]) ??
