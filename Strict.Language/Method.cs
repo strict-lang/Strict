@@ -113,7 +113,7 @@ public sealed class Method : Context
 
 	public sealed record Line(Method Method, int Tabs, string Text, int FileLineNumber)
 	{
-		public readonly List<Group> Groups = new GroupParser(Text).Groups;
+		public readonly List<Group> Groups = new BracketParser(Text).Groups;
 		public override string ToString() => new string('\t', Tabs) + Text;
 	}
 

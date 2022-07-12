@@ -2,30 +2,30 @@
 
 namespace Strict.Language.Tests;
 
-public sealed class GroupParserTests
+public sealed class BracketParserTests
 {
 	[Test]
 	public void InvalidClosingBracket() =>
-		Assert.That(() => new GroupParser(")(").Groups,
-			Throws.InstanceOf<GroupParser.UnbalancedBracketsFound>()!);
+		Assert.That(() => new BracketParser(")(").Groups,
+			Throws.InstanceOf<BracketParser.UnbalancedBracketsFound>()!);
 
 	[TestCase(")(")]
 	[TestCase("(2 + 2)(")]
 	[TestCase("(((2 + 2))")]
 	public void UnbalancedBracketsFound(string code) =>
-		Assert.That(() => new GroupParser(code).Groups,
-			Throws.InstanceOf<GroupParser.UnbalancedBracketsFound>()!);
+		Assert.That(() => new BracketParser(code).Groups,
+			Throws.InstanceOf<BracketParser.UnbalancedBracketsFound>()!);
 
 	[TestCase("")]
 	[TestCase("1")]
 	[TestCase("1 + 2")]
 	//[TestCase("(1, 2)")]
-	public void StringWithoutGroups(string code) => Assert.That(new GroupParser(code).Groups, Is.Empty);
+	public void StringWithoutGroups(string code) => Assert.That(new BracketParser(code).Groups, Is.Empty);
 
 	[Test]
 	public void EmptyGroup()
 	{
-		var groups = new GroupParser("()").Groups;
+		var groups = new BracketParser("()").Groups;
 		Assert.That(groups, Has.Count.EqualTo(1));
 		Assert.That(groups[0], Is.EqualTo(new Group(1)));
 	}
@@ -33,7 +33,7 @@ public sealed class GroupParserTests
 	[Test]
 	public void SingleGroup()
 	{
-		var groups = new GroupParser("(1 + 2)").Groups;
+		var groups = new BracketParser("(1 + 2)").Groups;
 		Assert.That(groups, Has.Count.EqualTo(1));
 		Assert.That(groups[0], Is.EqualTo(new Group(1) { Length = "1 + 2".Length }));
 	}
@@ -41,7 +41,7 @@ public sealed class GroupParserTests
 	[Test]
 	public void MultipleGroups()
 	{
-		var groups = new GroupParser("(1 + 2) * (3 + 5)").Groups;
+		var groups = new BracketParser("(1 + 2) * (3 + 5)").Groups;
 		Assert.That(groups, Has.Count!.EqualTo(2));
 		Assert.That(groups[0], Is.EqualTo(new Group(1) { Length = "1 + 2".Length }));
 		Assert.That(groups[1], Is.EqualTo(new Group(11) { Length = "3 + 5".Length }));
@@ -50,7 +50,7 @@ public sealed class GroupParserTests
 	[Test]
 	public void NestedGroups()
 	{
-		var groups = new GroupParser("(((1 + 2) * (3 + 5)) / (6 + 3))").Groups;
+		var groups = new BracketParser("(((1 + 2) * (3 + 5)) / (6 + 3))").Groups;
 		Assert.That(groups, Has.Count!.EqualTo(5));
 		Assert.That(groups[0], Is.EqualTo(new Group(3) { Length = "1 + 2".Length }));
 		Assert.That(groups[1], Is.EqualTo(new Group(13) { Length = "3 + 5".Length }));

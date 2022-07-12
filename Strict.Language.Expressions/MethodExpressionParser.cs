@@ -1,5 +1,4 @@
 ﻿using System.Collections.Generic;
-using System.Linq;
 
 namespace Strict.Language.Expressions;
 
@@ -57,81 +56,8 @@ public class MethodExpressionParser : ExpressionParser
 		catch (UnknownExpression e)
 		{
 			return line.Groups.Count > 0
-				? ParseGroupExpressions(line, 0)
+				? GroupExpressionParser.TryParse(line, 0)
 				: throw e;
 		}
 	}
-
-	private Expression ParseGroupExpressions(Method.Line line, int groupIndex)
-	{
-		var currentGroup = line.Groups[groupIndex];
-		var left =
-			TryParseExpression(line, line.Text.Substring(currentGroup.Start, currentGroup.Length)) ??
-			throw new UnknownExpression(line);
-		if (groupIndex == 0 && line.Text[..currentGroup.Start].Any(c => c != '('))
-			left = ParseNonGroupExpression(line, currentGroup, left);
-		if (groupIndex == line.Groups.Count - 1)
-			return line.Text.Length <= currentGroup.Start + currentGroup.Length + 1
-				? left
-				: ParseRemainingText(line, left, currentGroup.Start + currentGroup.Length);
-		var nextGroupIndex = FindNextGroupIndex(line, groupIndex, currentGroup);
-		if (nextGroupIndex > 0)
-		{
-			var operatorText = GetOperatorText(line, currentGroup, nextGroupIndex);
-			var partsToParse = operatorText.Split(" ");
-			if (partsToParse.Length > 1)
-			{
-				left = new Binary(left, FindOperatorMethod(left, partsToParse[0]),
-					TryParseExpression(line, partsToParse[1]) ?? throw new UnknownExpression(line));
-				operatorText = partsToParse[2];
-			}
-			return new Binary(left,
-				FindOperatorMethod(left, operatorText),
-				ParseGroupExpressions(line, nextGroupIndex));
-		}
-		else
-			return left;
-	}
-
-	private Expression ParseNonGroupExpression(Method.Line line, Group currentGroup, Expression right)
-	{
-		var partToParse = line.Text[..(currentGroup.Start - 1)].Split(" ");
-		var left = TryParseExpression(line, partToParse[0]) ?? throw new UnknownExpression(line);
-		return new Binary(left, FindOperatorMethod(left, partToParse[1]), right);
-	}
-
-	private Expression ParseRemainingText(Method.Line line, Expression left, int startIndex)
-	{
-		var operatorMethod =
-			left.ReturnType.Methods.FirstOrDefault(m =>
-				m.Name == line.Text.Substring(startIndex, 3).Replace("(", "").
-					Replace(")", "").Trim()) ?? throw new Binary.NoMatchingOperatorFound(left.ReturnType,
-				line.Text.Substring(startIndex, 3));
-		var remainingExpression =
-			TryParseExpression(line,
-				line.Text[(startIndex + 3)..].Replace("(", "").
-					Replace(")", "").Trim()) ?? throw new UnknownExpression(line);
-		return new Binary(left, operatorMethod, remainingExpression);
-	}
-
-	private static int FindNextGroupIndex(Method.Line line, int groupIndex, Group currentGroup)
-	{
-		var index = 1;
-		while (groupIndex + index < line.Groups.Count)
-		{
-			if (line.Groups[groupIndex + index].Start > currentGroup.Start)
-				return groupIndex + index;
-			index++;
-		}
-		return -1;
-	}
-
-	private static Method FindOperatorMethod(Expression left, string operatorText) =>
-		left.ReturnType.Methods.FirstOrDefault(m => m.Name == operatorText) ??
-		throw new Binary.NoMatchingOperatorFound(left.ReturnType, operatorText);
-
-	private static string GetOperatorText(Method.Line line, Group currentGroup, int nextGroupIndex) =>
-		line.
-			Text[(currentGroup.Start + currentGroup.Length)..(line.Groups[nextGroupIndex].Start - 1)].
-			Replace("(", "").Replace(")", "").Trim();
 }

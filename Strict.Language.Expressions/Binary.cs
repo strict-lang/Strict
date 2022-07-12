@@ -35,14 +35,19 @@ public sealed class Binary : MethodCall
 			throw new MismatchingTypeFound(line, parts[2]);
 		if (parts[1] == "*" && List.HasIncompatibleDimensions(left, right))
 			throw new List.ListsHaveDifferentDimensions(line, parts[0] + " " + parts[2]);
-		if (left.ReturnType == line.Method.GetType(Base.Any))
-			throw new AnyIsNotAllowed(line.Method, left);
-		if (right.ReturnType == line.Method.GetType(Base.Any))
-			throw new AnyIsNotAllowed(line.Method, right);
+		CheckForAnyExpressions(line, left, right);
 		var operatorMethod = left.ReturnType.Methods.FirstOrDefault(m => m.Name == parts[1]) ??
 			line.Method.GetType(Base.BinaryOperator).Methods.FirstOrDefault(m => m.Name == parts[1]) ??
 			throw new NoMatchingOperatorFound(left.ReturnType, parts[1]);
 		return new Binary(left, operatorMethod, right);
+	}
+
+	private static void CheckForAnyExpressions(Method.Line line, Expression left, Expression right)
+	{
+		if (left.ReturnType == line.Method.GetType(Base.Any))
+			throw new AnyIsNotAllowed(line.Method, left);
+		if (right.ReturnType == line.Method.GetType(Base.Any))
+			throw new AnyIsNotAllowed(line.Method, right);
 	}
 
 	private sealed class AnyIsNotAllowed : Exception

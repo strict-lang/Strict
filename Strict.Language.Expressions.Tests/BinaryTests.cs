@@ -57,7 +57,6 @@ public class BinaryTests : TestExpressions
 		Assert.That(expression.ToString(), Is.EqualTo(code.Replace("(", "").Replace(")", "")));
 	}
 
-	[Ignore("Complex case")]
 	[Test]
 	public void NestedBinaryWithBrackets() =>
 		Assert.That(ParseExpression("2 * (5 + 3)"),
@@ -67,7 +66,6 @@ public class BinaryTests : TestExpressions
 					method.GetType(Base.Number).Methods.First(m => m.Name == "+"),
 					new Number(method, 3)))));
 
-	[Ignore("Complex case")]
 	[Test]
 	public void NestedBinaryExpressionsWithGrouping() =>
 		Assert.That(ParseExpression("(2 + 5) * 3"),
@@ -77,7 +75,6 @@ public class BinaryTests : TestExpressions
 					method.GetType(Base.Number).Methods.First(m => m.Name == "*"),
 					new Number(method, 3)))));
 
-	[Ignore("Complex case")]
 	[Test]
 	public void NestedBinaryExpressionsSingleGroup() =>
 		Assert.That(ParseExpression("6 + (2 + 5) * 3"),
