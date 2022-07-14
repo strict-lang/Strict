@@ -20,13 +20,13 @@ public class TypeTests
 
 	[Test]
 	public void EmptyLineIsNotAllowed() =>
-		Assert.That(() => new Type(package, Base.Count, null!).Parse("\n"),
+		Assert.That(() => new Type(package, Base.Error, null!).Parse("\n"),
 			Throws.InstanceOf<Type.EmptyLineIsNotAllowed>().With.Message.Contains("line 1"));
 
 	[Test]
 	public void WhitespacesAreNotAllowed()
 	{
-		Assert.That(() => new Type(package, Base.Count, null!).Parse(" "),
+		Assert.That(() => new Type(package, Base.Error, null!).Parse(" "),
 			Throws.InstanceOf<Type.ExtraWhitespacesFoundAtBeginningOfLine>());
 		Assert.That(() => new Type(package, "Program", null!).Parse(@"Run
  "), Throws.InstanceOf<Type.ExtraWhitespacesFoundAtBeginningOfLine>());
@@ -36,16 +36,15 @@ public class TypeTests
 
 	[Test]
 	public void TypeParsersMustStartWithImplementOrHas() =>
-		Assert.That(() => new Type(package, Base.Count, null!).Parse(@"Run
+		Assert.That(() => new Type(package, Base.Error, null!).Parse(@"Run
 	log.WriteLine"),
 			Throws.InstanceOf<Type.TypeHasNoMembersAndThusMustBeATraitWithoutMethodBodies>());
 
-	[Ignore("No longer true because Record types have no methods")]
 	[Test]
-	public void JustMembersIsNotValidCode() =>
+	public void JustMembersAreAllowed() =>
 		Assert.That(
-			() => new Type(package, Base.Count, null!).Parse(new[] { "has log", "has count" }),
-			Throws.InstanceOf<Type.NoMethodsFound>());
+			new Type(package, Base.Error, null!).Parse(new[] { "has log", "has count" }).Members,
+			Has.Count.EqualTo(2));
 
 	[Test]
 	public void GetUnknownTypeWillCrash() =>

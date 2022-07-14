@@ -13,21 +13,20 @@ public class Constructor
 			: null;
 
 	private static Expression? TryParseConstructor(Method.Line line,
-		IReadOnlyList<string> parts, bool hasMethodCall)
+		IReadOnlyList<string> typeNameAndArguments, bool hasNestedMethodCall)
 	{
-		var type = line.Method.FindType(parts[0]);
+		var type = line.Method.FindType(typeNameAndArguments[0]);
 		if (type == null)
 			return null;
 		var constructorMethodCall = new MethodCall(new Value(type, type), type.Methods[0],
-			line.Method.TryParseExpression(line, parts[1]) ??
+			line.Method.TryParseExpression(line, typeNameAndArguments[1]) ??
 			throw new MethodExpressionParser.UnknownExpression(line));
-		if (!hasMethodCall)
-			return new Assignment(new Identifier(parts[0], type),
-				constructorMethodCall);
-		var arguments = parts.Count > 3
-			? GetArguments(line, parts.Skip(3).ToList())
+		if (!hasNestedMethodCall)
+			return constructorMethodCall;
+		var arguments = typeNameAndArguments.Count > 3
+			? GetArguments(line, typeNameAndArguments.Skip(3).ToList())
 			: Array.Empty<Expression>();
-		var method = type.Methods.FirstOrDefault(m => m.Name == parts[2][1..]) ?? throw new MethodCall.MethodNotFound(line, parts[2][1..], type);
+		var method = type.Methods.FirstOrDefault(m => m.Name == typeNameAndArguments[2][1..]) ?? throw new MethodCall.MethodNotFound(line, typeNameAndArguments[2][1..], type);
 		return new MethodCall(constructorMethodCall, method, arguments);
 	}
 

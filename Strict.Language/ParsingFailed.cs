@@ -20,9 +20,9 @@ public class ParsingFailed : Exception
 	public ParsingFailed(Type type, int fileLineNumber, string message, Exception inner) : base(
 		message + GetClickableStacktraceLine(type, fileLineNumber, ""), inner) { }
 
-	protected ParsingFailed(Method.Line line, string? part = null,
+	protected ParsingFailed(Method.Line line, string? message = null,
 		Type? referencingOtherType = null) : this(line.Method.Type, line.FileLineNumber,
-		(part ?? line.ToString()) + (referencingOtherType != null
+		(message ?? line.ToString()) + (referencingOtherType != null
 			? " in " + referencingOtherType
 			: ""), line.Method.ToString()) { }
 }

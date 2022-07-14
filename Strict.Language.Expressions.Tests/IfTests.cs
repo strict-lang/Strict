@@ -6,10 +6,30 @@ namespace Strict.Language.Expressions.Tests;
 public sealed class IfTests : TestExpressions
 {
 	[Test]
-	public void ParseIncompleteIf() =>
+	public void MissingCondition() =>
 		Assert.That(() => ParseExpression("if"),
 			Throws.InstanceOf<If.MissingCondition>().With.Message.
 				Contains(@"TestPackage\dummy.strict:line 2"));
+
+	[Test]
+	public void InvalidCondition() =>
+		Assert.That(() => ParseExpression("if 5", "\treturn 0"),
+			Throws.InstanceOf<If.InvalidCondition>());
+
+	[Test]
+	public void ReturnTypeOfThenAndElseMustNotBeAny() =>
+		Assert.That(() => ParseExpression("if 5 is 6", "\treturn 8", "else", "\treturn \"hello\"").ReturnType,
+			Throws.InstanceOf<If.ReturnTypeOfThenAndElseMustHaveMatchingType>());
+
+	[Test]
+	public void ReturnTypeOfThenAndElseIsNumberAndCountIsValid() =>
+		Assert.That(ParseExpression("if bla is 5", "\treturn Count(0)", "else", "\treturn 5").ReturnType,
+			Is.EqualTo(type.GetType(Base.Number)));
+
+	[Test]
+	public void ReturnTypeOfThenAndElseIsCountAndCharacterIsValid() =>
+		Assert.That(ParseExpression("if bla is 5", "\treturn Count(0)", "else", "\treturn Character(5)").ReturnType,
+			Is.EqualTo(type.GetType(Base.Number)));
 
 	[Test]
 	public void ParseInvalidSpaceAfterElseIsNotAllowed() =>
@@ -33,7 +53,7 @@ public sealed class IfTests : TestExpressions
 	[Test]
 	public void ParseIf() =>
 		Assert.That(ParseExpression("if bla is 5", "\tlog.Write(\"Hey\")"),
-			Is.EqualTo(new If(GetCondition(), GetThen(), null)));
+			Is.EqualTo(new If(GetCondition(), GetThen())));
 
 	[Test]
 	public void ParseMissingElseExpression() =>
@@ -45,7 +65,7 @@ public sealed class IfTests : TestExpressions
 	public void ParseIfElse() =>
 		Assert.That(ParseExpression("if bla is 5", "\tlog.Write(\"Hey\")", "else", "\tRun"),
 			Is.EqualTo(new If(GetCondition(), GetThen(), new MethodCall(null, method))).And.Not.
-				EqualTo(new If(GetCondition(), GetThen(), null)));
+				EqualTo(new If(GetCondition(), GetThen())));
 
 	private MethodCall GetThen() =>
 		new(new MemberCall(member), member.Type.Methods[0], new Text(type, "Hey"));

@@ -16,6 +16,15 @@ Write(text)
 	return self + other
 *(other) returns Number
 	return self * other");
+		new Type(this, Base.Count, null!).Parse(@"implement Number
+from(number)
+	value = number
+Increase
+	Count(5).Increase is 6
+	self = self + 1");
+		new Type(this, Base.Character, null!).Parse(@"implement Number
+from(number)
+	value = number");
 		new Type(this, Base.List, null!).Parse(@"+(other) returns List
 -(other) returns List
 is(other) returns Boolean

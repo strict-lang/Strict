@@ -10,7 +10,7 @@ public abstract class NamedType
 		if (!Name.IsWord())
 			throw new Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers(Name);
 		Type = definedIn.GetType(parts.Length == 1
-			? parts[0].MakeFirstLetterUppercase()
+			? Name.MakeFirstLetterUppercase()
 			: parts[1]);
 	}
 
@@ -24,5 +24,7 @@ public abstract class NamedType
 
 	public string Name { get; }
 	public Type Type { get; }
+	public override bool Equals(object? obj) => obj is NamedType other && Name == other.Name;
+	public override int GetHashCode() => Name.GetHashCode();
 	public override string ToString() => Name + " " + Type;
 }

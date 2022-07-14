@@ -11,13 +11,8 @@ public sealed class BracketParser
 
 	private static List<Group> TryParse(string code)
 	{
-		var groupStacks = new Stack<Group>();
-		return ParseByCharacter(code, groupStacks);
-	}
-
-	private static List<Group> ParseByCharacter(string code, Stack<Group> groupStacks)
-	{
 		var groups = new List<Group>();
+		var groupStacks = new Stack<Group>();
 		for (var index = 0; index < code.Length; index++)
 		{
 			PushGroupToStack(code, index, groupStacks);

@@ -19,7 +19,6 @@ public sealed class BracketParserTests
 	[TestCase("")]
 	[TestCase("1")]
 	[TestCase("1 + 2")]
-	//[TestCase("(1, 2)")]
 	public void StringWithoutGroups(string code) => Assert.That(new BracketParser(code).Groups, Is.Empty);
 
 	[Test]

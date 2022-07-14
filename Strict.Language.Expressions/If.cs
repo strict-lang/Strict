@@ -1,15 +1,25 @@
 ﻿using System;
+using System.Linq;
 
 namespace Strict.Language.Expressions;
 
 public sealed class If : BlockExpression
 {
-	public If(Expression condition, Expression then, Expression? optionalElse) : base(then.ReturnType)
+	public If(Expression condition, Expression then, Expression? optionalElse = null, Method.Line? line = null) : base(GetMatchingType(then.ReturnType, optionalElse?.ReturnType, line))
 	{
 		Condition = condition;
 		Then = then;
 		OptionalElse = optionalElse;
 	}
+
+	private static Type GetMatchingType(Type thenType, Type? elseType, Method.Line? line) =>
+		elseType == null || thenType == elseType || elseType.Implements.Contains(thenType)
+			? thenType
+			: thenType.Implements.Contains(elseType)
+				? elseType
+				: thenType.Implements.Union(elseType.Implements).FirstOrDefault() ??
+				throw new ReturnTypeOfThenAndElseMustHaveMatchingType(
+					line ?? new Method.Line(thenType.Methods[0], 0, "", 0), thenType, elseType);
 
 	public Expression Condition { get; }
 	public Expression Then { get; }
@@ -54,14 +64,23 @@ public sealed class If : BlockExpression
 	{
 		var condition = line.Method.TryParseExpression(line, line.Text["if ".Length..]) ??
 			throw new MissingCondition(line);
+		if (condition.ReturnType.Name != Base.Boolean)
+			throw new InvalidCondition(line, condition.ReturnType);
 		methodLineNumber++;
 		var then = GetThenExpression(line.Method, ref methodLineNumber);
 		if (methodLineNumber + 2 >= line.Method.bodyLines.Count ||
 			line.Method.bodyLines[methodLineNumber + 1].Text != "else")
-			return new If(condition, then, null);
+			return new If(condition, then, null, line);
 		methodLineNumber += 2;
 		return new If(condition, then,
-			line.Method.ParseMethodLine(line.Method.bodyLines[methodLineNumber], ref methodLineNumber));
+			line.Method.ParseMethodLine(line.Method.bodyLines[methodLineNumber], ref methodLineNumber),
+			line);
+	}
+
+	public class InvalidCondition : ParsingFailed
+	{
+		public InvalidCondition(Method.Line line, Type conditionReturnType) : base(line,
+			message: line.Text + "\n Return type " + conditionReturnType + " is not " + Base.Boolean) { }
 	}
 
 	private static Expression GetThenExpression(Method method, ref int methodLineNumber)
@@ -78,5 +97,11 @@ public sealed class If : BlockExpression
 	public sealed class MissingThen : ParsingFailed
 	{
 		public MissingThen(Method.Line line) : base(line) { }
+	}
+
+	// ReSharper disable once HollowTypeName
+	public class ReturnTypeOfThenAndElseMustHaveMatchingType : ParsingFailed
+	{
+		public ReturnTypeOfThenAndElseMustHaveMatchingType(Method.Line line, Type thenReturnType, Type optionalElseReturnType) : base(line, "The Then type: " + thenReturnType + " is not same as the Else type: " + optionalElseReturnType) { }
 	}
 }

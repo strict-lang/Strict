@@ -237,7 +237,11 @@ public class Type : Context
 	public IReadOnlyList<Method> Methods => methods;
 	protected readonly List<Method> methods = new();
 	public bool IsTrait => Implements.Count == 0 && Members.Count == 0 && Name != Base.Number;
-	public override string ToString() => base.ToString() + Implements.ToBrackets();
+
+	public override string ToString() =>
+		base.ToString() + (implements.Count > 0
+			? " " + nameof(Implements) + " " + Implements.ToWordList()
+			: "");
 
 	//https://deltaengine.fogbugz.com/f/cases/24806
 

@@ -124,9 +124,9 @@ Run
 	log.Write(random)")).FileContent,
 			Contains.Substring("\tConsole.WriteLine(random);"));
 
-	[TestCase(@"	File(""test.txt"")
-	File.Write(number)",
-		"\tvar File = new FileStream(\"test.txt\", FileMode.OpenOrCreate);")]
+	[TestCase(@"	let file = File(""test.txt"")
+	file.Write(number)",
+		"\tvar file = new FileStream(\"test.txt\", FileMode.OpenOrCreate);")]
 	[TestCase(@"	File(""test.txt"").Write(number)",
 		"\tnew FileStream(\"test.txt\", FileMode.OpenOrCreate).Write(number);")]
 	public void InitializeValueUsingConstructorInsideMethod(string code, string expected) =>
