@@ -15,7 +15,8 @@ public sealed class Binary : MethodCall
 
 	public new static Expression? TryParse(Method.Line line, string input)
 	{
-		if (!input.HasOperator(out var operatorText))
+		var operatorText = input.FindFirstOperator();
+		if (operatorText == null)
 			return null;
 		var parts = new string[3];
 		parts[0] = input[..(input.IndexOf(operatorText, StringComparison.Ordinal) - 1)];

@@ -24,14 +24,8 @@ public static class BinaryOperator
 	public const string Xor = "xor";
 	public static bool IsOperator(this string name) => All.Contains(name);
 
-	public static bool HasOperator(this string line, out string operatorText)
-	{
-		operatorText = "";
-		if (!All.Any(l => line.Contains(" " + l + " ")))
-			return false;
-		operatorText = All.First(l => line.Contains(" " + l + " "));
-		return true;
-	}
+	public static string? FindFirstOperator(this string line) =>
+		All.FirstOrDefault(l => line.Contains(" " + l + " ")); // TODO: Performance test with 1 Million lines and Optimize line.Contains with for loop
 
 	private static readonly string[] All =
 	{

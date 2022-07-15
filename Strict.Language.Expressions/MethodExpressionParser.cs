@@ -16,7 +16,7 @@ public class MethodExpressionParser : ExpressionParser
 			TryParseExpression(line, initializationLine) ?? throw new UnknownExpression(line));
 	}
 
-	public override Expression? TryParseExpression(Method.Line line, string partToParse) =>
+	public override Expression? TryParseExpression(Method.Line line, string partToParse) => // TODO: Tokenize partToParse
 		Number.TryParse(line, partToParse) ?? Boolean.TryParse(line, partToParse) ??
 		Text.TryParse(line, partToParse) ?? Binary.TryParse(line, partToParse) ?? List.TryParse(line, partToParse) ?? Constructor.TryParse(line, partToParse) ??
 		MemberCall.TryParse(line, partToParse) ?? MethodCall.TryParse(line, partToParse);
@@ -35,6 +35,8 @@ public class MethodExpressionParser : ExpressionParser
 		var expressions = new List<Expression>();
 		for (var lineNumber = 0; lineNumber < method.bodyLines.Count; lineNumber++)
 		{
+			//var tokens = tokenizer.GetTokens(method.bodyLines[lineNumber].Text);
+			//var outputQueue = new ShuntingYard(tokens).Output;
 			var expression = ParseMethodLine(method.bodyLines[lineNumber], ref lineNumber);
 			if (expression is Assignment assignment)
 				method.Variables.Add(assignment);
@@ -42,6 +44,8 @@ public class MethodExpressionParser : ExpressionParser
 		}
 		return new MethodBody(method, expressions);
 	}
+
+	//private readonly Tokenizer tokenizer = new();
 
 	public override Expression ParseMethodLine(Method.Line line, ref int methodLineNumber)
 	{
