@@ -113,6 +113,7 @@ has log
 Run" + code)),
 			Throws.InstanceOf<MemberCall.MemberNotFound>()!);
 
+	//TODO: flaky test, sometimes fails with MissingMethodImplementation (trait not loaded yet)
 	[Test]
 	public void AccessLocalVariableAfterDeclaration() =>
 		Assert.That(

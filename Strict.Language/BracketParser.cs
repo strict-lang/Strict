@@ -4,6 +4,7 @@ using System.Collections.Generic;
 
 namespace Strict.Language;
 
+//TODO: old, remove after PhraserTokenizer works, check if tests overlap
 public sealed class BracketParser
 {
 	public BracketParser(string code) => Groups = TryParse(code);

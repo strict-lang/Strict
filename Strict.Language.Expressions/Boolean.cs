@@ -1,4 +1,6 @@
-﻿namespace Strict.Language.Expressions;
+﻿using System;
+
+namespace Strict.Language.Expressions;
 
 public class Boolean : Value
 {
@@ -15,4 +17,20 @@ public class Boolean : Value
 			"false" => new Boolean(line.Method, false),
 			_ => null
 		};
+
+	public static Expression? TryParse(Method.Line line, Tuple<int, int> startAndLength) =>
+		line.Text.Substring(startAndLength.Item1, startAndLength.Item2) switch
+		{
+			"true" => new Boolean(line.Method, true),
+			"false" => new Boolean(line.Method, false),
+			_ => null
+		};
+
+	public static Expression? TryParse(Method method, ReadOnlySpan<char> partToParse) =>
+		// ReSharper disable once ConvertConditionalTernaryExpressionToSwitchExpression
+		partToParse == "true"
+			? new Boolean(method, true)
+			: partToParse == "false"
+				? new Boolean(method, false)
+				: null;
 }

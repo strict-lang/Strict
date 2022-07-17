@@ -1,4 +1,6 @@
-﻿namespace Strict.Language.Expressions;
+﻿using System;
+
+namespace Strict.Language.Expressions;
 
 public class Text : Value
 {
@@ -11,5 +13,10 @@ public class Text : Value
 	public static Expression? TryParse(Method.Line line, string input) =>
 		input.Length >= 2 && input[0] == '"' && input[^1] == '"'
 			? new Text(line.Method, input[1..^1])
+			: null;
+
+	public static Expression? TryParse(Method.Line line, ReadOnlySpan<char> input) =>
+		input.Length >= 2 && input[0] == '"' && input[^1] == '"'
+			? new Text(line.Method, input.Slice(1, input.Length - 2).ToString())
 			: null;
 }

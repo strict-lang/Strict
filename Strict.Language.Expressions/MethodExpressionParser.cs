@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 namespace Strict.Language.Expressions;
 
@@ -42,10 +43,11 @@ public class MethodExpressionParser : ExpressionParser
 				method.Variables.Add(assignment);
 			expressions.Add(expression);
 		}
+		//TODO: to clear link to original memory: method.bodyLines = Memory<char>.Empty; //ArraySegment<Method.Line>.Empty;
 		return new MethodBody(method, expressions);
 	}
 
-	//private readonly Tokenizer tokenizer = new();
+	//private readonly PhraseTokenizer tokenizer = new();
 
 	public override Expression ParseMethodLine(Method.Line line, ref int methodLineNumber)
 	{

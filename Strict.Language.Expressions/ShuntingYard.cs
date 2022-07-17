@@ -12,7 +12,8 @@ public sealed class ShuntingYard
 	{
 		foreach (var token in tokens)
 			PutTokenIntoStacks(token);
-		ApplyHigherPrecedenceOperators();
+		ApplyHigherOrEqualPrecedenceOperators();
+		//TODO: remove after done:
 		Console.WriteLine("Operators: " + string.Join(", ", operators) + " Output: " + string.Join(", ", Output));
 	}
 
@@ -21,34 +22,36 @@ public sealed class ShuntingYard
 		if (token[0] == '(')
 			operators.Push(token);
 		else if (token[0] == ')')
-			ApplyHigherPrecedenceOperators();
+			ApplyHigherOrEqualPrecedenceOperators();
 		else if ("+-*/".Contains(token[0]))
 		{
-			ApplyHigherPrecedenceOperators(GetPrecedence(token));
+			ApplyHigherOrEqualPrecedenceOperators(GetPrecedence(token));
 			operators.Push(token);
 		}
 		else
 			Output.Push(token);
-		Console.WriteLine("Consumed " + token + " Operators: " + string.Join(", ", operators) + " Output: " + string.Join(", ", Output));
+		//Console.WriteLine("Consumed " + token + " Operators: " + string.Join(", ", operators) + " Output: " + string.Join(", ", Output));
 	}
 
 	private readonly Stack<string> operators = new();
 	public Stack<string> Output { get; } = new();
 
-	private void ApplyHigherPrecedenceOperators(int precedence = 0)
+	private void ApplyHigherOrEqualPrecedenceOperators(int precedence = 0)
 	{
 		while (operators.Count > 0)
-		{
-			if (operators.Peek() == "(")
-			{
-				if (precedence == 0)
-					operators.Pop();
+			if (!IsOpeningBracket(precedence) && GetPrecedence(operators.Peek()) >= precedence)
+				Output.Push(operators.Pop());
+			else
 				return;
-			}
-			if (GetPrecedence(operators.Peek()) < precedence)
-				return;
-			Output.Push(operators.Pop());
-		}
+	}
+
+	private bool IsOpeningBracket(int precedence)
+	{
+		if (operators.Peek() != "(")
+			return false;
+		if (precedence == 0)
+			operators.Pop();
+		return true;
 	}
 
 	private static int GetPrecedence(string token) =>

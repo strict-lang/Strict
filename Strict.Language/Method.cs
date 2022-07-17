@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace Strict.Language;
 
@@ -10,7 +12,19 @@ namespace Strict.Language;
 /// </summary>
 public sealed class Method : Context
 {
-	public Method(Type type, int typeLineNumber, ExpressionParser parser, IReadOnlyList<string> lines) : base(type,
+	//json parser for comparison how to do async reading lines
+	public async Task ParseJson(StreamReader reader)
+	{
+		var dummy = new Memory<char>(new char[1024]);
+		var actualRead = await reader.ReadAsync(dummy);
+		dummy.Span.Slice(1, 10);
+	}
+
+	public Method(Type type, int typeLineNumber, ExpressionParser parser,
+		//TODO: Memory<char> from file for this method block, preparesd by lines (probably done in the caller)
+		//TODO: Memory<char> lines)
+		IReadOnlyList<string> lines)
+		: base(type,
 		GetName(lines[0]))
 	{
 		if (!Name.IsWordWithNumber() && !Name.IsOperator())
@@ -22,7 +36,7 @@ public sealed class Method : Context
 			? type
 			: GetReturnType(type, ref rest);
 		ParseDefinition(rest);
-		bodyLines = GetLines(lines);
+		bodyLines = GetLines(lines); //TODO: all of these should be links via Memory<char> to the original file
 		body = new Lazy<MethodBody>(() => (MethodBody)parser.ParseMethodBody(this));
 	}
 
@@ -59,10 +73,25 @@ public sealed class Method : Context
 		parser.ParseMethodLine(line, ref methodLineNumber);
 
 	/// <summary>
-	/// Simple lexer to just parse the method definition and get all used names and types.
-	/// Method code itself is parsed in are more complex (BNF), complete and slow way.
+	/// Simple lexer to just parse the method definition and get all used names and types. Method code
+	/// itself is parsed in are more complex way (Shunting yard/PhraserTokenizer/BNF/etc.) and slower.
 	/// </summary>
-	private static string GetName(string firstLine) => firstLine.SplitWordsAndPunctuation()[0];
+	private static string GetName(string firstLine)
+	{
+		//TODO: should be a ReadOnlySpan from the caller
+		Memory<char> block = new Memory<char>(firstLine.ToCharArray());
+		var blockSpan = block.Span;
+		//Run\n
+		//Run(number)
+		//Run returns Text\n
+		for (int i = 0; i < block.Length; i++)
+		{
+			if (blockSpan[i] == '(' || blockSpan[i] == ' ' || blockSpan[i] == '\n')
+				return blockSpan[..i].ToString();
+		}
+		//TODO: many times slower
+		return firstLine.SplitWordsAndPunctuation()[0];
+	}
 
 	public const string From = "from";
 	public const string Returns = "returns";
@@ -106,10 +135,17 @@ public sealed class Method : Context
 			else
 				break;
 		CheckIndentation(line, TypeLineNumber + methodLineNumber, tabs);
+		//TODO: use ReadOnlySpan till here, and then convert to string inside
 		lines[methodLineNumber - 1] = new Line(this, tabs, line[tabs..], TypeLineNumber + methodLineNumber);
 	}
 
 	public readonly IReadOnlyList<Line> bodyLines;
+
+	/*TODO: just an idea, probably makes no big difference as lines are parsed lazily, so this would keep file memory buffer around, which we also don't like 
+	public sealed record NewLine(Method Method, int Tabs, Memory<char> Text, int FileLineNumber)
+	{
+		public override string ToString() => new string('\t', Tabs) + Text;
+	}*/
 
 	public sealed record Line(Method Method, int Tabs, string Text, int FileLineNumber)
 	{
