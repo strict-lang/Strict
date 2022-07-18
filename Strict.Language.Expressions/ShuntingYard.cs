@@ -8,7 +8,7 @@ namespace Strict.Language.Expressions;
 /// </summary>
 public sealed class ShuntingYard
 {
-	public ShuntingYard(IEnumerable<string> tokens)
+	public ShuntingYard(IEnumerable<string> tokens)//TODO: ReadOnlyMemory<char> tokens should be used here
 	{
 		foreach (var token in tokens)
 			PutTokenIntoStacks(token);

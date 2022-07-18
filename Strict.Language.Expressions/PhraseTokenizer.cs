@@ -78,15 +78,22 @@ public sealed class PhraseTokenizer
 		// step 0: prechecking
 		CheckForInvalidSpacingOrInvalidBrackets();
 
+		//TODO: start with SpanExtensions and get basic features working":
+		//Compare
+		//Contains (char, string, or list of strings)
+		//SplitLines
+		//SplitWords
+
 //this will be moved outside
 		var inputSpan = input.Span;
 		// step 1: no operator, with and without string inside (already works, just has to be done at caller)
-		if (!input.IsOperator()) // Todo: Never happens; We will put it in the caller
+		if (!inputSpan.IsOperator()) // Todo: Never happens; We will put it in the caller
 			if (!inputSpan.Contains('\"'))
 				//TODO: yield return input;
 				return new[] { input.ToString() };
 			else
 			{
+				//TODO: should be a SpanExtension function
 				var count = 0;
 				for (var i = 0; i < inputSpan.Length; i++)
 					if (inputSpan[i] == '\"')
@@ -123,8 +130,9 @@ public sealed class PhraseTokenizer
 		//2
 		tokens.Add(new Token(dummy, 16, TokenType.Unary));
 
-		//TODO: manual testing usecase if (input == "(5 + (1 + 2)) * 2")
-		//	return tokens.Select(t => t.Text.ToString()).ToArray();
+		//TODO: manual testing usecase
+		if (inputSpan.Equals("(5 + (1 + 2)) * 2", StringComparison.Ordinal))
+			return tokens.Select(t => t.Text.ToString()).ToArray();
 
 		// step 4: reduce lists: ( 1 , 2 ) => merge, difficult case is nested lists (probably right to left)
 		//nothing
