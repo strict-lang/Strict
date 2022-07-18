@@ -1,10 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 
 namespace Strict.Language.Expressions;
 
-public record struct Token(Memory<char> Text, byte StartIndexOfLine, TokenType Type)
+//TODO: important performance considerations:
+//https://github.com/jackmott/LinqFaster
+//https://github.com/Zaczero/LinqFasterer
+//https://github.com/dotnet/runtime/pull/37742#issuecomment-642736794
+public record struct Token(ReadOnlyMemory<char> Text, byte StartIndexOfLine, TokenType Type)
 {
 	/*
 	public Token(Memory<char> text, int startIndexOfOriginalString)//, TokenType type)
@@ -61,8 +66,8 @@ public enum TokenType : byte
 
 public sealed class PhraseTokenizer
 {
-	public PhraseTokenizer(string input) => this.input = input;
-	private readonly string input;
+	public PhraseTokenizer(string input) => this.input = input.AsMemory();
+	private readonly ReadOnlyMemory<char> input;
 	private readonly List<Token> tokens = new();
 
 	// ReSharper disable once CyclomaticComplexity
@@ -71,16 +76,26 @@ public sealed class PhraseTokenizer
 	public IReadOnlyList<string> GetTokens()
 	{
 		// step 0: prechecking
-		CheckForInvalidSpacingOrInvalidBrackets(input);
+		CheckForInvalidSpacingOrInvalidBrackets();
 
 //this will be moved outside
+		var inputSpan = input.Span;
 		// step 1: no operator, with and without string inside (already works, just has to be done at caller)
-		if (input.FindFirstOperator() == null) // Todo: Never happens; We will put it in the caller
-			if (input.Count(c => c == '\"') % 2 == 0)
+		if (!input.IsOperator()) // Todo: Never happens; We will put it in the caller
+			if (!inputSpan.Contains('\"'))
 				//TODO: yield return input;
-				return new[] { input };
+				return new[] { input.ToString() };
 			else
-				throw new UnterminatedString(input);
+			{
+				var count = 0;
+				for (var i = 0; i < inputSpan.Length; i++)
+					if (inputSpan[i] == '\"')
+						count++;
+				if (count % 2 == 0)
+					return new[] { input.ToString() };
+				else
+					throw new UnterminatedString(input);
+			}
 
 		// step 3: always parse all strings first, make all inital tokens sperated by space (ignore), comma (keep for lists), brackets (keep for lists and shunting yard)
 		var dummy = Memory<char>.Empty;
@@ -108,8 +123,8 @@ public sealed class PhraseTokenizer
 		//2
 		tokens.Add(new Token(dummy, 16, TokenType.Unary));
 
-		if (input == "(5 + (1 + 2)) * 2")
-			return tokens.Select(t => t.Text.ToString()).ToArray();
+		//TODO: manual testing usecase if (input == "(5 + (1 + 2)) * 2")
+		//	return tokens.Select(t => t.Text.ToString()).ToArray();
 
 		// step 4: reduce lists: ( 1 , 2 ) => merge, difficult case is nested lists (probably right to left)
 		//nothing
@@ -137,9 +152,11 @@ public sealed class PhraseTokenizer
 		// tokens
 		// shunting yard
 		// 2 nested binary
-		if (!input.Contains('\"')) // TODO: Check list
+		/*TODO: old
+		if (!inputSpan.Contains('\"')) // TODO: Check list
 		{
-			foreach (var checkToken in input.Split(' '))
+			SpanLineEnumerator
+			foreach (var checkToken in inputSpan.Split(' '))
 			{
 				CheckForInvalidSpacingOrInvalidBrackets(checkToken);
 				var token = checkToken;
@@ -186,6 +203,7 @@ public sealed class PhraseTokenizer
 			}
 			return oldTokens;
 		}
+		*/
 		for (var index = 0; index < input.Length; index++)
 			ParseCharacter(ref index);
 		if (inString)
@@ -194,11 +212,11 @@ public sealed class PhraseTokenizer
 		return oldTokens;
 	}
 
-	private void CheckForInvalidSpacingOrInvalidBrackets(string text)
+	private void CheckForInvalidSpacingOrInvalidBrackets()
 	{
-		if (text == "" || text != text.Trim())
+		if (input.Length == 0 || input.Length != input.Trim().Length)
 			throw new InvalidSpacing(input);
-		if (input.Contains("()"))
+		if (input.Span.Contains("()", StringComparison.Ordinal))
 			throw new InvalidBrackets(input);
 	}
 
@@ -206,27 +224,28 @@ public sealed class PhraseTokenizer
 	// ReSharper disable once MethodTooLong
 	private void ParseCharacter(ref int index)
 	{
-		var startsList = input[index] == '(';
+		var inputSpan = input.Span;
+		var startsList = inputSpan[index] == '(';
 		if (startsList)
 			inList = true;
-		if (input[index] == ')')
+		if (inputSpan[index] == ')')
 		{
 			currentToken = string.Join("", listElements);
 			inList = false;
 		}
 		else if (inList)
 		{
-			listElements.Add(input[index].ToString());
+			listElements.Add(inputSpan[index].ToString());
 		}
 		else
 		{
-			var isQuote = input[index] == '\"';
+			var isQuote = inputSpan[index] == '\"';
 			if (isQuote && IsDoubleQuote(index))
-				currentToken += input[index++];
+				currentToken += inputSpan[index++];
 			else if (isQuote)
 				inString = !inString;
-			else if (inString || input[index] != ' ')
-				currentToken += input[index];
+			else if (inString || inputSpan[index] != ' ')
+				currentToken += inputSpan[index];
 			else
 				AddAndClearCurrentToken();
 		}
@@ -236,11 +255,11 @@ public sealed class PhraseTokenizer
 	private bool inString;
 
 	private bool IsDoubleQuote(int index) =>
-		inString && index + 1 < input.Length && input[index + 1] == '\"';
+		inString && index + 1 < input.Length && input.Span[index + 1] == '\"';
 
 	private void AddAndClearCurrentToken()
 	{
-		CheckForInvalidSpacingOrInvalidBrackets(currentToken);
+		//TODO: CheckForInvalidSpacingOrInvalidBrackets(currentToken);
 		oldTokens.Add(currentToken);
 		currentToken = "";
 	}
@@ -253,16 +272,16 @@ public sealed class PhraseTokenizer
 
 	public sealed class UnterminatedString : Exception
 	{
-		public UnterminatedString(string input) : base(input) { }
+		public UnterminatedString(ReadOnlyMemory<char> input) : base(input.ToString()) { }
 	}
 
 	public class InvalidSpacing : Exception
 	{
-		public InvalidSpacing(string input) : base(input) { }
+		public InvalidSpacing(ReadOnlyMemory<char> input) : base(input.ToString()) { }
 	}
 
 	public class InvalidBrackets : Exception
 	{
-		public InvalidBrackets(string input) : base(input) { }
+		public InvalidBrackets(ReadOnlyMemory<char> input) : base(input.ToString()) { }
 	}
 }

@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 
 namespace Strict.Language;
 
@@ -26,6 +27,25 @@ public static class BinaryOperator
 
 	public static string? FindFirstOperator(this string line) =>
 		All.FirstOrDefault(l => line.Contains(" " + l + " ")); // TODO: Performance test with 1 Million lines and Optimize line.Contains with for loop
+
+	private const string AnySingleCharacterOperator = Plus + Minus + Multiply + Divide + Modulate + Smaller + Greater;
+	private static readonly string[] MultiCharacterOperatorsWithSpaces =
+	{
+		' ' + SmallerOrEqual + ' ', ' ' + GreaterOrEqual + ' ', ' ' + Is + ' ', ' ' + And + ' ',
+		' ' + Or + ' ', ' ' + Xor + ' ', ' ' + As + ' ', ' ' + To + ' '
+	};
+
+	//TODO: do a performance test here for this!
+	public static bool IsOperator(this ReadOnlyMemory<char> line)
+	{
+		var span = line.Span;
+		if (span.IndexOfAny(AnySingleCharacterOperator) >= 0)
+			return true;
+		foreach (var multiCharacterOperator in MultiCharacterOperatorsWithSpaces)
+			if (span.IndexOf(multiCharacterOperator) >= 0)
+				return true;
+		return false;
+	}
 
 	private static readonly string[] All =
 	{
