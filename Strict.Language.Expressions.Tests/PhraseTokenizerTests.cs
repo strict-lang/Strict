@@ -54,8 +54,13 @@ public class PhraseTokenizerTests
 	//TODO: [TestCase("((\"Hello1\"), (\"Hi\")) + 1", 3)]
 	[TestCase("(\"Hello\", \"World\") + (1, 2) is (\"Hello\", \"World\", \"1\", \"2\")", 5)]
 	[TestCase("(\"1\", \"2\") to Numbers + (3, 4) is (\"1\", \"2\", \"3\", \"4\")", 7)]
-	public void GetTokens(string code, int expectedTokensCount) =>
-		Assert.That(new PhraseTokenizer(code).GetTokens().Count, Is.EqualTo(expectedTokensCount), string.Join(", ", new PhraseTokenizer(code).GetTokens()));
+	public void GetTokens(string code, int expectedTokensCount)
+	{
+		var tokens = new PhraseTokenizer(code).GetTokens();
+		var tokensAsString = string.Join(' ', tokens);
+		Assert.That(tokensAsString, Is.EqualTo(code));
+		Assert.That(tokens.Count, Is.EqualTo(expectedTokensCount), tokensAsString);
+	}
 
 	//TODO: Method call, List, Generics parsing should be handled
 

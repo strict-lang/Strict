@@ -8,7 +8,7 @@ public static class StringExtensions
 	public static string[] SplitLines(this string text) =>
 		text.Split(new[] { Environment.NewLine, "\n" }, StringSplitOptions.None);
 
-	public static string[] SplitWords(this string text) => text.Split(' ');
+	public static string[] SplitWords(this string text) => text.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 
 	public static string[] SplitWordsAndPunctuation(this string text) =>
 		text.Split(new[] { ' ', '(', ')', ',' }, StringSplitOptions.RemoveEmptyEntries);

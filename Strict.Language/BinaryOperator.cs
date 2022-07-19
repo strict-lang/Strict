@@ -25,28 +25,18 @@ public static class BinaryOperator
 	public const string Xor = "xor";
 	public static bool IsOperator(this string name) => All.Contains(name);
 
-	public static bool IsOperator(this ReadOnlySpan<char> name)
+	public static bool IsOperator(this ReadOnlySpan<char> name) =>
+		name.IndexOfAny(AnySingleCharacterOperator) >= 0 || name.Any(MultiCharacterOperators);
+
+	private static readonly string[] MultiCharacterOperators =
 	{
-		if (name.IndexOfAny(AnySingleCharacterOperator) >= 0)
-			return true;
-		foreach (var multiCharacterOperator in MultiCharacterOperators)
-			if (name.Equals(multiCharacterOperator.Span, StringComparison.Ordinal))
-				return true;
-		return false;
-	}
-	
-	private static readonly ReadOnlyMemory<char>[] MultiCharacterOperators =
-	{
-		SmallerOrEqual.AsMemory(), GreaterOrEqual.AsMemory(), Is.AsMemory(), And.AsMemory(), Or.AsMemory(), Xor.AsMemory(), As.AsMemory(), To.AsMemory()
+		SmallerOrEqual, GreaterOrEqual, Is, And, Or, Xor, As, To
 	};
 
 	public static string? FindFirstOperator(this string line) =>
-		All.FirstOrDefault(l => line.Contains(" " + l + " ")); // TODO: Performance test with 1 Million lines and Optimize line.Contains with for loop
+		All.FirstOrDefault(l => line.Contains(" " + l + " "));
 
 	private const string AnySingleCharacterOperator = Plus + Minus + Multiply + Divide + Modulate + Smaller + Greater;
-	
-
-	//TODO: do a performance test here for this!
 	private static readonly string[] All =
 	{
 		Plus, Minus, Multiply, Divide, Modulate, Smaller, Greater, SmallerOrEqual, GreaterOrEqual,

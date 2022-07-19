@@ -5,54 +5,8 @@ using System.Text;
 
 namespace Strict.Language.Expressions;
 
-//TODO: important performance considerations:
-//https://github.com/jackmott/LinqFaster
-//https://github.com/Zaczero/LinqFasterer
-//https://github.com/dotnet/runtime/pull/37742#issuecomment-642736794
-public record struct Token(ReadOnlyMemory<char> Text, byte StartIndexOfLine, TokenType Type)
-{
-	/*
-	public Token(Memory<char> text, int startIndexOfOriginalString)//, TokenType type)
-	{
-		Text = text;
-		StartIndexOfOriginalString = startIndexOfOriginalString;
-		//Type = type;
-	}
+public record struct Token(int Start, int End, TokenType Type);
 
-	public Memory<char> Text { get; }
-	public int StartIndexOfOriginalString { get; }
-	public TokenType Type { get; }
-	*/
-}
-
-/*
-public class UnaryToken : Token
-{
-	public UnaryToken(int start, int startIndexOfOriginalString) : base(null!, startIndexOfOriginalString) { }
-}
-public class OperatorToken : Token
-{
-	public OperatorToken(int start, int startIndexOfOriginalString) : base(null!, startIndexOfOriginalString) { }
-}
-public class BracketOpenToken : Token
-{
-	public BracketOpenToken(int start, int startIndexOfOriginalString) : base(null!, startIndexOfOriginalString) { }
-}
-public class BracketCloseToken : Token
-{
-	public BracketCloseToken(int start, int startIndexOfOriginalString) : base(null!, startIndexOfOriginalString) { }
-}
-public class StringToken : Token
-{
-	public StringToken(int start, int startIndexOfOriginalString) : base(null!, startIndexOfOriginalString) { }
-}
-public class ListToken : Token
-{
-	public ListToken(int start, int startIndexOfOriginalString) : base(null!, startIndexOfOriginalString) { }
-}
-*/
-//TODO: maybe add UnknownToken
-//
 public enum TokenType : byte
 {
 	Unary,
@@ -62,7 +16,6 @@ public enum TokenType : byte
 	BracketOpen,
 	BracketClose
 }
-//*/
 
 public sealed class PhraseTokenizer
 {
@@ -78,12 +31,6 @@ public sealed class PhraseTokenizer
 		// step 0: prechecking
 		CheckForInvalidSpacingOrInvalidBrackets();
 
-		//TODO: start with SpanExtensions and get basic features working":
-		//Compare
-		//Contains (char, string, or list of strings)
-		//SplitLines
-		//SplitWords
-
 //this will be moved outside
 		var inputSpan = input.Span;
 		// step 1: no operator, with and without string inside (already works, just has to be done at caller)
@@ -93,26 +40,33 @@ public sealed class PhraseTokenizer
 				return new[] { input.ToString() };
 			else
 			{
-				//TODO: should be a SpanExtension function
-				var count = 0;
-				for (var i = 0; i < inputSpan.Length; i++)
-					if (inputSpan[i] == '\"')
-						count++;
-				if (count % 2 == 0)
+				if (inputSpan.Count('\"') % 2 == 0)
 					return new[] { input.ToString() };
 				else
 					throw new UnterminatedString(input);
 			}
 
 		// step 3: always parse all strings first, make all inital tokens sperated by space (ignore), comma (keep for lists), brackets (keep for lists and shunting yard)
-		var dummy = Memory<char>.Empty;
+		var result = new List<string>();
+		foreach (var word in inputSpan.Split())
+		{
+			result.Add(word.ToString());
+		}
+		return result;
 		//(5 + (1 + 2)) * 2
 		//(
-		tokens.Add(new Token(dummy, 0, TokenType.BracketOpen));
-		//5
-		tokens.Add(new Token(dummy, 1, TokenType.Unary));
-		// +
-		tokens.Add(new Token(dummy, 3, TokenType.Operator));
+		//tokens.Add(new Token(0, 1, TokenType.BracketOpen));
+		////var tokenSpan = inputSpan[tokens[0].Start.. tokens[0].End]; This is how we get the value from span
+		////5
+		//tokens.Add(new Token(2, 3, TokenType.Unary));
+		//// +
+		//tokens.Add(new Token(4, 5, TokenType.Operator));
+		//if (inputSpan.Compare("5 + 2"))
+		//{
+		//	return tokens.Select(t => input.Span[t.Start.. t.End].ToString()).ToArray();
+		//}
+		/*
+		var dummy = Memory<char>.Empty;
 		//(
 		tokens.Add(new Token(dummy, 5, TokenType.BracketOpen));
 		//1
@@ -133,7 +87,7 @@ public sealed class PhraseTokenizer
 		//TODO: manual testing usecase
 		if (inputSpan.Equals("(5 + (1 + 2)) * 2", StringComparison.Ordinal))
 			return tokens.Select(t => t.Text.ToString()).ToArray();
-
+		*/
 		// step 4: reduce lists: ( 1 , 2 ) => merge, difficult case is nested lists (probably right to left)
 		//nothing
 
@@ -212,12 +166,12 @@ public sealed class PhraseTokenizer
 			return oldTokens;
 		}
 		*/
-		for (var index = 0; index < input.Length; index++)
-			ParseCharacter(ref index);
-		if (inString)
-			throw new UnterminatedString(input);
-		AddAndClearCurrentToken();
-		return oldTokens;
+		//for (var index = 0; index < input.Length; index++)
+		//	ParseCharacter(ref index);
+		//if (inString)
+		//	throw new UnterminatedString(input);
+		//AddAndClearCurrentToken();
+		//return oldTokens;
 	}
 
 	private void CheckForInvalidSpacingOrInvalidBrackets()
