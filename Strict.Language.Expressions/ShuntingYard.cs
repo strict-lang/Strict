@@ -8,28 +8,31 @@ namespace Strict.Language.Expressions;
 /// </summary>
 public sealed class ShuntingYard
 {
-	public ShuntingYard(IEnumerable<string> tokens)//TODO: ReadOnlyMemory<char> tokens should be used here
+	public ShuntingYard(string input) //TODO: ReadOnlyMemory<char> tokens should be used here
 	{
-		foreach (var token in tokens)
+		Input = input;
+		foreach (var token in new PhraseTokenizer(input).GetTokenRanges())
 			PutTokenIntoStacks(token);
 		ApplyHigherOrEqualPrecedenceOperators();
 		//TODO: remove after done:
 		Console.WriteLine("Operators: " + string.Join(", ", operators) + " Output: " + string.Join(", ", Output));
 	}
 
-	private void PutTokenIntoStacks(string token)
+	public string Input { get; }
+
+	private void PutTokenIntoStacks(Range token)
 	{
-		if (token[0] == '(')
-			operators.Push(token);
-		else if (token[0] == ')')
+		if (Input[token][0] == '(')
+			operators.Push(Input[token]);
+		else if (Input[token][0] == ')')
 			ApplyHigherOrEqualPrecedenceOperators();
-		else if ("+-*/".Contains(token[0]))
+		else if ("+-*/".Contains(Input[token]))
 		{
-			ApplyHigherOrEqualPrecedenceOperators(GetPrecedence(token));
-			operators.Push(token);
+			ApplyHigherOrEqualPrecedenceOperators(GetPrecedence(Input[token]));
+			operators.Push(Input[token]);
 		}
 		else
-			Output.Push(token);
+			Output.Push(Input[token]);
 		//Console.WriteLine("Consumed " + token + " Operators: " + string.Join(", ", operators) + " Output: " + string.Join(", ", Output));
 	}
 
