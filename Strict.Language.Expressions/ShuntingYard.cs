@@ -22,7 +22,7 @@ public sealed class ShuntingYard
 
 	private void PutTokenIntoStacks(Range token)
 	{
-		if (Input[token][0] == '(')
+		if (Input[token] == "(")
 			operators.Push(Input[token]);
 		else if (Input[token][0] == ')')
 			ApplyHigherOrEqualPrecedenceOperators();
