@@ -20,29 +20,48 @@ public sealed class ShuntingYard
 
 	public string Input { get; }
 
-	private void PutTokenIntoStacks(Range token)
+	// ReSharper disable once ExcessiveIndentation
+	// ReSharper disable once MethodTooLong
+	private void PutTokenIntoStacks(Range tokenRange)
 	{
-		if (Input[token] == "(")
-			operators.Push(Input[token]);
-		else if (Input[token][0] == ')')
-			ApplyHigherOrEqualPrecedenceOperators();
-		else if ("+-*/".Contains(Input[token]))
+		if (tokenRange.End.Value - tokenRange.Start.Value == 1)
 		{
-			ApplyHigherOrEqualPrecedenceOperators(GetPrecedence(Input[token]));
-			operators.Push(Input[token]);
+			var firstCharacter = Input[tokenRange.Start.Value];
+			if (firstCharacter == '(')
+				operators.Push(OpenBracket);
+			else if (firstCharacter == ')')
+				ApplyHigherOrEqualPrecedenceOperators();
+			else if (firstCharacter.IsSingleCharacterOperator())
+			{
+				ApplyHigherOrEqualPrecedenceOperators(BinaryOperator.GetPrecedence(firstCharacter));
+				operators.Push(firstCharacter.ToString());
+			}
+			else
+				Output.Push(firstCharacter.ToString());
 		}
 		else
-			Output.Push(Input[token]);
-		//Console.WriteLine("Consumed " + token + " Operators: " + string.Join(", ", operators) + " Output: " + string.Join(", ", Output));
+		{
+			var token = Input[tokenRange];
+			if (token.IsMultiCharacterOperator())
+			{
+				ApplyHigherOrEqualPrecedenceOperators(BinaryOperator.GetPrecedence(token));
+				operators.Push(token);
+			}
+			else
+				Output.Push(token);
+		}
+		//Console.WriteLine("Consumed " + tokenRange + " Operators: " + string.Join(", ", operators) + " Output: " + string.Join(", ", Output));
 	}
 
+	private const string OpenBracket = "(";
+	private const string CloseBracket = ")";
 	private readonly Stack<string> operators = new();
 	public Stack<string> Output { get; } = new();
 
 	private void ApplyHigherOrEqualPrecedenceOperators(int precedence = 0)
 	{
 		while (operators.Count > 0)
-			if (!IsOpeningBracket(precedence) && GetPrecedence(operators.Peek()) >= precedence)
+			if (!IsOpeningBracket(precedence) && BinaryOperator.GetPrecedence(operators.Peek()) >= precedence)
 				Output.Push(operators.Pop());
 			else
 				return;
@@ -56,14 +75,4 @@ public sealed class ShuntingYard
 			operators.Pop();
 		return true;
 	}
-
-	private static int GetPrecedence(string token) =>
-		token switch
-		{
-			"+" => 1,
-			"-" => 1,
-			"*" => 2,
-			"/" => 2,
-			_ => throw new NotSupportedException(token) //ncrunch: no coverage
-		};
 }

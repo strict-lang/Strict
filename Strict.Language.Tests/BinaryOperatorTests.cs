@@ -63,12 +63,12 @@ GetComplicatedSequenceTexts returns Texts
 					//Console.WriteLine("offset=" + offset + ", spaceIndex=" + spaceIndex);
 					var word = line.Slice(offset, spaceIndex);
 					//Console.WriteLine("second word: " + word.ToString());
-					if (word.IsOperator())
+					if (word.ToString().IsMultiCharacterOperator())
 						operatorCounter++;
 				} while (offset + spaceIndex < line.Length - 1);
 				/*slow, only 40% faster ..
 				foreach (var word in line.Split())
-					if (line.Slice(word.Start.Value, word.End.Value - word.Start.Value).IsOperator())
+					if (line.Slice(word.Start.Value, word.End.Value - word.Start.Value).IsSingleCharacterOperator())
 						operatorCounter++;
 				*/
 			}
