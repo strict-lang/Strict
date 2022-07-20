@@ -28,8 +28,7 @@ GetComplicatedSequenceTexts returns Texts
 		for (var iteration = 0; iteration < 1000; iteration++)
 		{
 			operatorCounter = 0;
-			foreach (var line in Input.SplitLines())
-			foreach (var word in line.SplitWords())
+			foreach (var word in Input.SplitWords())
 				if (word.IsOperator())
 					operatorCounter++;
 		}
@@ -57,7 +56,7 @@ GetComplicatedSequenceTexts returns Texts
 				do
 				{
 					offset += spaceIndex + 1;
-					var restSlice = line.Slice(offset);
+					var restSlice = line[offset..];
 					spaceIndex = restSlice.IndexOf(' ');
 					if (spaceIndex < 0)
 						spaceIndex = line.Length - offset;

@@ -1,21 +1,28 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 
 namespace Strict.Language;
 
 /// <summary>
-/// These extensions are only for strict used for parsing Strict files with strict rules
+/// Used for parsing Strict code, which needs to be exactly in the correct format
 /// </summary>
 public static class SpanExtensions
 {
 	public static SpanSplitEnumerator Split(this ReadOnlySpan<char> input, char splitter = ' ',
 		StringSplitOptions options = StringSplitOptions.None)
 	{
-		if (input.Length == 0)
+		CheckParameters(input.Length, options);
+		return new SpanSplitEnumerator(input, splitter, options);
+	}
+
+	internal static void CheckParameters(int inputLength, StringSplitOptions options)
+	{
+		if (inputLength == 0)
 			throw new EmptyInputIsNotAllowed();
 		if (options == StringSplitOptions.RemoveEmptyEntries)
-			throw new NotSupportedException("Strict will not allow multiple empty lines or spaces");
-		return new SpanSplitEnumerator(input, splitter, options);
+			throw new NotSupportedException(nameof(StringSplitOptions.RemoveEmptyEntries) +
+				" is not allowed as Strict does not allow multiple empty lines or spaces anyways");
 	}
 
 	public class EmptyInputIsNotAllowed : Exception { }
@@ -57,4 +64,40 @@ public static class SpanExtensions
 				count++;
 		return count;
 	}
+}
+/*tst
+public static class MemoryExtensions
+{
+	public static StringRangeEnumerator SplitRanges(this ReadOnlyMemory<char> input, char splitter = ' ',
+		StringSplitOptions options = StringSplitOptions.None)
+	{
+		SpanExtensions.CheckParameters(input.Length, options);
+		return new StringRangeEnumerator(input, splitter, options);
+	}
+}
+*/
+public sealed class StringRangeEnumerator : IEnumerable<Range>
+{
+	public StringRangeEnumerator(string input, char splitter)
+	{
+		this.input = input;
+		this.splitter = splitter;
+	}
+
+	private readonly string input;
+	private readonly char splitter;
+
+	public IEnumerator<Range> GetEnumerator()
+	{
+		if (offset >= input.Length)
+			yield break;
+		var start = offset;
+		for (; offset < input.Length; offset++)
+			if (input[offset] == splitter)
+				yield return start..offset++;
+		yield return start..;
+	}
+
+	private int offset = 0;
+	IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 }

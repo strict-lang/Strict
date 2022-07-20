@@ -37,9 +37,9 @@ public ref struct SpanSplitEnumerator
 	private bool GetWordBeforeSplitter(int index)
 	{
 		if (index == offset)
-			throw new InvalidConsecutiveSplitter(input, index);
+			throw new InvalidConsecutiveSplitter(input.ToString(), index);
 		if (index + 1 == input.Length)
-			throw new EmptyEntryNotAllowedAtTheEnd(input, index);
+			throw new EmptyEntryNotAllowedAtTheEnd(input.ToString(), index);
 		Current = options == StringSplitOptions.TrimEntries
 			? input[offset..index].Trim()
 			: input[offset..index];
@@ -49,13 +49,13 @@ public ref struct SpanSplitEnumerator
 
 	public sealed class InvalidConsecutiveSplitter : Exception
 	{
-		public InvalidConsecutiveSplitter(ReadOnlySpan<char> input, int index) : base("Input=" +
-			input.ToString() + ", index=" + index) { }
+		public InvalidConsecutiveSplitter(string input, int index) : base("Input=" +
+			input + ", index=" + index) { }
 	}
 
 	public sealed class EmptyEntryNotAllowedAtTheEnd : Exception
 	{
-		public EmptyEntryNotAllowedAtTheEnd(ReadOnlySpan<char> input, int index) : base("Input=" +
-			input.ToString() + ", index=" + index) { }
+		public EmptyEntryNotAllowedAtTheEnd(string input, int index) : base("Input=" +
+			input + ", index=" + index) { }
 	}
 }

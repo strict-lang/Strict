@@ -6,7 +6,7 @@
 	<s:Int64 x:Key="/Default/CodeInspection/CleanCode/MaximumIndentationDepth/@EntryValue">3</s:Int64>
 	<s:Int64 x:Key="/Default/CodeInspection/CleanCode/MaximumMethodParameters/@EntryValue">3</s:Int64>
 	<s:Int64 x:Key="/Default/CodeInspection/CleanCode/MaximumMethodsInClass/@EntryValue">24</s:Int64>
-	<s:Int64 x:Key="/Default/CodeInspection/CleanCode/MaximumMethodStatements/@EntryValue">10</s:Int64>
+	<s:Int64 x:Key="/Default/CodeInspection/CleanCode/MaximumMethodStatements/@EntryValue">11</s:Int64>
 	<s:String x:Key="/Default/CodeInspection/CleanCode/MeaninglessClassNameSuffixes/@EntryValue">Handler,Manager,Controller,Helper,Wrapper,State,Type,Item,System,Action,Call,Properties</s:String>
 	<s:Boolean x:Key="/Default/CodeInspection/CodeAnnotations/NamespacesWithAnnotations/=DeltaEngine_002EEditor_002EAnnotations/@EntryIndexedValue">True</s:Boolean>
 	<s:Int64 x:Key="/Default/CodeInspection/CyclomaticComplexityAnalysis/Thresholds/=CSHARP/@EntryIndexedValue">15</s:Int64>
@@ -1409,6 +1409,7 @@
 	<s:Boolean x:Key="/Default/UserDictionary/Words/=Merkur/@EntryIndexedValue">True</s:Boolean>
 	<s:Boolean x:Key="/Default/UserDictionary/Words/=Milli/@EntryIndexedValue">True</s:Boolean>
 	<s:Boolean x:Key="/Default/UserDictionary/Words/=Multigraph/@EntryIndexedValue">True</s:Boolean>
+	<s:Boolean x:Key="/Default/UserDictionary/Words/=Murali/@EntryIndexedValue">True</s:Boolean>
 	<s:Boolean x:Key="/Default/UserDictionary/Words/=n/@EntryIndexedValue">True</s:Boolean>
 	<s:Boolean x:Key="/Default/UserDictionary/Words/=nitems/@EntryIndexedValue">True</s:Boolean>
 	<s:Boolean x:Key="/Default/UserDictionary/Words/=nonexisting/@EntryIndexedValue">True</s:Boolean>

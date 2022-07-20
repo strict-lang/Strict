@@ -36,7 +36,7 @@ public class MethodExpressionParser : ExpressionParser
 		var expressions = new List<Expression>();
 		for (var lineNumber = 0; lineNumber < method.bodyLines.Count; lineNumber++)
 		{
-			//var tokens = tokenizer.GetTokens(method.bodyLines[lineNumber].Text);
+			//var tokens = tokenizer.GetTokenRanges(method.bodyLines[lineNumber].Text);
 			//var outputQueue = new ShuntingYard(tokens).Output;
 			var expression = ParseMethodLine(method.bodyLines[lineNumber], ref lineNumber);
 			if (expression is Assignment assignment)

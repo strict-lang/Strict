@@ -1,249 +1,115 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
 namespace Strict.Language.Expressions;
 
-public record struct Token(int Start, int End, TokenType Type);
-
-public enum TokenType : byte
-{
-	Unary,
-	Operator,
-	String,
-	List,
-	BracketOpen,
-	BracketClose
-}
-
+/// <summary>
+/// Optimized for speed and memory efficiency (no new), no memory is allocated except for the check
+/// if we are in a list or just grouping things when a bracket is found. Passed onto ShuntingYard.
+/// </summary>
+// ReSharper disable MethodTooLong
+// ReSharper disable ExcessiveIndentation
 public sealed class PhraseTokenizer
 {
-	public PhraseTokenizer(string input) => this.input = input.AsMemory();
-	private readonly ReadOnlyMemory<char> input;
-	private readonly List<Token> tokens = new();
-
-	// ReSharper disable once CyclomaticComplexity
-	// ReSharper disable once ExcessiveIndentation
-	// ReSharper disable once MethodTooLong
-	public IReadOnlyList<string> GetTokens()
+	public PhraseTokenizer(string input)
 	{
-		// step 0: prechecking
-		CheckForInvalidSpacingOrInvalidBrackets();
-
-//this will be moved outside
-		var inputSpan = input.Span;
-		// step 1: no operator, with and without string inside (already works, just has to be done at caller)
-		if (!inputSpan.IsOperator()) // Todo: Never happens; We will put it in the caller
-			if (!inputSpan.Contains('\"'))
-				//TODO: yield return input;
-				return new[] { input.ToString() };
-			else
-			{
-				if (inputSpan.Count('\"') % 2 == 0)
-					return new[] { input.ToString() };
-				else
-					throw new UnterminatedString(input);
-			}
-
-		// step 3: always parse all strings first, make all inital tokens sperated by space (ignore), comma (keep for lists), brackets (keep for lists and shunting yard)
-		var result = new List<string>();
-		foreach (var word in inputSpan.Split())
-		{
-			result.Add(word.ToString());
-		}
-		return result;
-		//(5 + (1 + 2)) * 2
-		//(
-		//tokens.Add(new Token(0, 1, TokenType.BracketOpen));
-		////var tokenSpan = inputSpan[tokens[0].Start.. tokens[0].End]; This is how we get the value from span
-		////5
-		//tokens.Add(new Token(2, 3, TokenType.Unary));
-		//// +
-		//tokens.Add(new Token(4, 5, TokenType.Operator));
-		//if (inputSpan.Compare("5 + 2"))
-		//{
-		//	return tokens.Select(t => input.Span[t.Start.. t.End].ToString()).ToArray();
-		//}
-		/*
-		var dummy = Memory<char>.Empty;
-		//(
-		tokens.Add(new Token(dummy, 5, TokenType.BracketOpen));
-		//1
-		tokens.Add(new Token(dummy, 6, TokenType.Unary));
-		// +
-		tokens.Add(new Token(dummy, 8, TokenType.Operator));
-		//2
-		tokens.Add(new Token(dummy, 10, TokenType.Unary));
-		//)
-		tokens.Add(new Token(dummy, 11, TokenType.BracketClose));
-		//)
-		tokens.Add(new Token(dummy, 12, TokenType.BracketClose));
-		// *
-		tokens.Add(new Token(dummy, 14, TokenType.Operator));
-		//2
-		tokens.Add(new Token(dummy, 16, TokenType.Unary));
-
-		//TODO: manual testing usecase
-		if (inputSpan.Equals("(5 + (1 + 2)) * 2", StringComparison.Ordinal))
-			return tokens.Select(t => t.Text.ToString()).ToArray();
-		*/
-		// step 4: reduce lists: ( 1 , 2 ) => merge, difficult case is nested lists (probably right to left)
-		//nothing
-
-		// step 5: return tokens, if one just use (5, string, list), if 2 unary method call (operator like - or not, then something), if 3 just normal binary.Parse, all other cases, shunting yard to create full tree (only expressions, no assignment)
-		//return tokens;
-
-		//  max line lenght of this class is 100
-
-		// ("a", "b", "a + b") + 3  -> no tokens. start
-		// (s1, s2, s3) + 3         -> ( s1 , s2 , s3 ) + 3  (9 tokens)
-		// l1 + 3                   -> l1 + 3 (3 tokens)
-		// tokens
-		// binary
-
-		// (1, 2, 3) + "lidjsfljfs"
-		// (1, 2, 3) + s1
-		// l1 + s1
-		// tokens
-		// binary
-
-		// (1, 2) + (3, 4) + "5"
-		// (1, 2) + (3, 4) + s1
-		// l1 + l2 + s1
-		// tokens
-		// shunting yard
-		// 2 nested binary
-		/*TODO: old
-		if (!inputSpan.Contains('\"')) // TODO: Check list
-		{
-			SpanLineEnumerator
-			foreach (var checkToken in inputSpan.Split(' '))
-			{
-				CheckForInvalidSpacingOrInvalidBrackets(checkToken);
-				var token = checkToken;
-				var startsList = token[0] == '(';
-				if (startsList)
-					inList = true;
-				if (inList)
-				{
-					listElements.Add(checkToken);
-				}
-				else if (startsList && token[^1] == ')')
-					oldTokens.Add(token);
-				else
-				{
-					if (startsList)
-					{
-						oldTokens.Add("(");
-						token = token[1..];
-					}
-					if (token[^1] == ')')
-					{
-						oldTokens.Add(token[..^1]);
-						token = ")";
-					}
-					oldTokens.Add(token);
-				}
-				if (checkToken.EndsWith(')'))
-				{
-					if (listElements.Any(t => t.IsOperator()))
-					{
-						oldTokens.Add("(");
-						oldTokens.Add(listElements[0][1..]);
-						for (var index = 1; index < listElements.Count - 1; index++)
-							oldTokens.Add(listElements[index]);
-						oldTokens.Add(listElements[^1][..^1]);
-						oldTokens.Add(")");
-					}
-					else
-					{
-						oldTokens.Add(string.Join(' ', listElements));
-					}
-					inList = false;
-				}
-			}
-			return oldTokens;
-		}
-		*/
-		//for (var index = 0; index < input.Length; index++)
-		//	ParseCharacter(ref index);
-		//if (inString)
-		//	throw new UnterminatedString(input);
-		//AddAndClearCurrentToken();
-		//return oldTokens;
-	}
-
-	private void CheckForInvalidSpacingOrInvalidBrackets()
-	{
-		if (input.Length == 0 || input.Length != input.Trim().Length)
+		if (input.Length == 0 || input[0] == ' ' || input[^1] == ' ' ||
+			input.Contains("  ", StringComparison.Ordinal))
 			throw new InvalidSpacing(input);
-		if (input.Span.Contains("()", StringComparison.Ordinal))
-			throw new InvalidBrackets(input);
+		if (input.Contains("()", StringComparison.Ordinal))
+			throw new InvalidEmptyOrUnmatchedBrackets(input);
+		this.input = input;
 	}
 
-	// ReSharper disable once ExcessiveIndentation
-	// ReSharper disable once MethodTooLong
-	private void ParseCharacter(ref int index)
+	private readonly string input;
+	private int index;
+	private int textStart = -1;
+	private int tokenStart = -1;
+
+	public IEnumerable<Range> GetTokenRanges()
 	{
-		var inputSpan = input.Span;
-		var startsList = inputSpan[index] == '(';
-		if (startsList)
-			inList = true;
-		if (inputSpan[index] == ')')
+		for (index = 0; index < input.Length; index++)
+			if (input[index] == '\"')
+			{
+				if (textStart == -1)
+					textStart = index;
+				else if (index + 1 < input.Length && input[index + 1] == '\"')
+					index++; // next character is still a text (double quote), continue text
+				else
+				{
+					yield return textStart..(index + 1);
+					textStart = -1;
+					tokenStart = -1;
+				}
+			}
+			else if (textStart == -1)
+				foreach (var token in GetNormalToken())
+					yield return token;
+		if (textStart != -1)
+			throw new UnterminatedString(input);
+		if (tokenStart >= 0)
+			yield return tokenStart..;
+	}
+
+	private IEnumerable<Range> GetNormalToken()
+	{
+		if (input[index] == '(')
+			foreach (var token in GetTokensTillMatchingClosingBracket())
+				yield return token;
+		else if (input[index] == ' ')
 		{
-			currentToken = string.Join("", listElements);
-			inList = false;
+			if (tokenStart >= 0)
+				yield return tokenStart..index;
+			tokenStart = -1;
 		}
-		else if (inList)
-		{
-			listElements.Add(inputSpan[index].ToString());
-		}
-		else
-		{
-			var isQuote = inputSpan[index] == '\"';
-			if (isQuote && IsDoubleQuote(index))
-				currentToken += inputSpan[index++];
-			else if (isQuote)
-				inString = !inString;
-			else if (inString || inputSpan[index] != ' ')
-				currentToken += inputSpan[index];
+		else if (tokenStart == -1)
+			tokenStart = index;
+	}
+
+	private IReadOnlyList<Range> GetTokensTillMatchingClosingBracket()
+	{
+		tokenStart = index + 1;
+		var result = new List<Range> { index..(index + 1) };
+		var foundListSeparator = false;
+		for (index++; index < input.Length; index++)
+			if (input[index] == ')')
+			{
+				if (tokenStart >= 0)
+					result.Add(tokenStart..index);
+				tokenStart = -1;
+				result.Add(index..(index + 1));
+				break;
+			}
+			else if (input[index] == ',')
+			{
+				foundListSeparator = true;
+				result.Add(index..(index + 1));
+			}
 			else
-				AddAndClearCurrentToken();
-		}
+				foreach (var token in GetNormalToken())
+					result.Add(token);
+		if (result.Count < 3)
+			throw new InvalidEmptyOrUnmatchedBrackets(input);
+		return result.Count == 3 || foundListSeparator
+			? MergeAllTokensIntoSingleList(result)
+			: result;
 	}
 
-	private string currentToken = "";
-	private bool inString;
-
-	private bool IsDoubleQuote(int index) =>
-		inString && index + 1 < input.Length && input.Span[index + 1] == '\"';
-
-	private void AddAndClearCurrentToken()
-	{
-		//TODO: CheckForInvalidSpacingOrInvalidBrackets(currentToken);
-		oldTokens.Add(currentToken);
-		currentToken = "";
-	}
-
-	//TODO: removed after Tokens fully work for all tests
-	private readonly List<string> oldTokens = new();
-	//TODO: just a hack, removed
-	private bool inList;
-	private readonly List<string> listElements = new();
+	private static Range[] MergeAllTokensIntoSingleList(List<Range> result) =>
+		new[] { result[0].Start..result[^1].End };
 
 	public sealed class UnterminatedString : Exception
 	{
-		public UnterminatedString(ReadOnlyMemory<char> input) : base(input.ToString()) { }
+		public UnterminatedString(string input) : base(input) { }
 	}
 
 	public class InvalidSpacing : Exception
 	{
-		public InvalidSpacing(ReadOnlyMemory<char> input) : base(input.ToString()) { }
+		public InvalidSpacing(string input) : base(input) { }
 	}
 
-	public class InvalidBrackets : Exception
+	public class InvalidEmptyOrUnmatchedBrackets : Exception
 	{
-		public InvalidBrackets(ReadOnlyMemory<char> input) : base(input.ToString()) { }
+		public InvalidEmptyOrUnmatchedBrackets(string input) : base(input) { }
 	}
 }
