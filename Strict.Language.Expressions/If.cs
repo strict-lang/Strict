@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace Strict.Language.Expressions;
@@ -62,7 +63,7 @@ public sealed class If : BlockExpression
 
 	private static Expression TryParseIf(Method.Line line, ref int methodLineNumber)
 	{
-		var condition = line.Method.TryParseExpression(line, line.Text["if ".Length..]) ??
+		var condition = line.Method.TryParseExpression(line, line.Text.AsSpan(3)) ??
 			throw new MissingCondition(line);
 		if (condition.ReturnType.Name != Base.Boolean)
 			throw new InvalidCondition(line, condition.ReturnType);

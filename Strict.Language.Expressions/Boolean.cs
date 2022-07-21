@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.CompilerServices;
 
 namespace Strict.Language.Expressions;
 
@@ -10,6 +11,7 @@ public class Boolean : Value
 	public override bool Equals(Expression? other) =>
 		other is Value v && (bool)Data == (bool)v.Data;
 
+	[Obsolete]
 	public static Expression? TryParse(Method.Line line, string partToParse) =>
 		partToParse switch
 		{
@@ -18,6 +20,7 @@ public class Boolean : Value
 			_ => null
 		};
 
+	[Obsolete]
 	public static Expression? TryParse(Method.Line line, Tuple<int, int> startAndLength) =>
 		line.Text.Substring(startAndLength.Item1, startAndLength.Item2) switch
 		{
@@ -26,11 +29,11 @@ public class Boolean : Value
 			_ => null
 		};
 
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static Expression? TryParse(Method method, ReadOnlySpan<char> partToParse) =>
-		// ReSharper disable once ConvertConditionalTernaryExpressionToSwitchExpression
-		partToParse == "true"
+		partToParse.Compare("true".AsSpan())
 			? new Boolean(method, true)
-			: partToParse == "false"
+			: partToParse.Compare("false".AsSpan())
 				? new Boolean(method, false)
 				: null;
 }

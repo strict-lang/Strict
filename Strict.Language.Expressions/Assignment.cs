@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Strict.Language.Expressions;
 
@@ -28,12 +30,14 @@ public class Assignment : Expression
 
 	private static Expression TryParseLet(Method.Line line)
 	{
-		var parts = line.Text.Split(new[] { "let ", " = " }, StringSplitOptions.RemoveEmptyEntries);
-		if (parts.Length != 2)
+		var parts = line.Text.AsSpan(4).Split();
+		parts.MoveNext();
+		var name = parts.Current.ToString();
+		if (!parts.MoveNext() || !parts.MoveNext())
 			throw new IncompleteLet(line);
-		var value = line.Method.TryParseExpression(line, parts[1]) ??
+		var value = line.Method.TryParseExpression(line, parts.Current) ??
 			throw new MethodExpressionParser.UnknownExpression(line);
-		return new Assignment(new Identifier(parts[0], value.ReturnType), value);
+		return new Assignment(new Identifier(name, value.ReturnType), value);
 	}
 
 	public sealed class IncompleteLet : ParsingFailed

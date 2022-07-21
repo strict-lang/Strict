@@ -7,6 +7,14 @@
 		<WarningsAsErrors />
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <NoWarn>1701;1702;8632</NoWarn>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <NoWarn>1701;1702;8632</NoWarn>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="LazyCache" Version="2.4.0" />
   </ItemGroup>

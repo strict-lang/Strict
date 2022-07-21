@@ -11,15 +11,17 @@ public sealed class Return : Expression
 	public override bool Equals(Expression? other) => other is Return a && Equals(Value, a.Value);
 
 	public static Expression? TryParse(Method.Line line) =>
-		line.Text.StartsWith("return", StringComparison.Ordinal)
+		line.Text.StartsWith(ReturnName, StringComparison.Ordinal)
 			? TryParseReturn(line)
 			: null;
 
+	private const string ReturnName = "return ";
+
 	private static Expression TryParseReturn(Method.Line line)
 	{
-		var returnExpression = line.Text.Length < "return ".Length
+		var returnExpression = line.Text.Length < ReturnName.Length
 			? null
-			: line.Method.TryParseExpression(line, line.Text["return ".Length..]);
+			: line.Method.TryParseExpression(line, line.Text.AsSpan(ReturnName.Length));
 		return returnExpression == null
 			? throw new MissingExpression(line)
 			: new Return(returnExpression);

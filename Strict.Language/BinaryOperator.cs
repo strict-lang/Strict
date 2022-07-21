@@ -94,6 +94,6 @@ public static class BinaryOperator
 			return 7;
 		if (token.Compare(Is))
 			return 10;
-		throw new NotSupportedException(token.ToString()); //ncrunch: no coverage
+		return GetPrecedence(token[0]);
 	}
 }

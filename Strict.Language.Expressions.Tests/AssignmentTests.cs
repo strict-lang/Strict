@@ -40,6 +40,17 @@ public class AssignmentTests : TestExpressions
 	}
 
 	[Test]
+	public void AssignmentWithNestedBinary()
+	{
+		const string Input = "let result = ((5 + 3) * 2 - 5) / 6";
+		var expression = (Assignment)ParseExpression(Input);
+		Assert.That(expression.Name.ToString(), Is.EqualTo("result"));
+		Assert.That(expression.Value, Is.InstanceOf<Binary>());
+		var rightExpression = (expression.Value as Binary)!.Right as Number;
+		Assert.That(rightExpression!.Data.ToString(), Is.EqualTo("6"));
+	}
+
+	[Test]
 	public void IncompleteAssignment() =>
 		Assert.That(() => ParseExpression("let sum = 5 +"),
 			Throws.Exception.InstanceOf<UnknownExpression>());

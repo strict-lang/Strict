@@ -66,7 +66,7 @@ public sealed class Method : Context
 	public int TypeLineNumber { get; }
 	private readonly ExpressionParser parser;
 
-	public Expression? TryParseExpression(Line line, string remainingPartToParse) =>
+	public Expression? TryParseExpression(Line line, ReadOnlySpan<char> remainingPartToParse) =>
 		parser.TryParseExpression(line, remainingPartToParse);
 
 	public Expression ParseMethodLine(Line line, ref int methodLineNumber) =>
@@ -182,4 +182,7 @@ public sealed class Method : Context
 		name == Base.Other
 			? Type
 			: Type.FindType(name, searchingFrom ?? this);
+
+	public Expression? TryParseExpressionFromTokens(Line line, Stack<string> tokens) =>
+		parser.TryParseExpressionFromTokens(line, tokens);
 }

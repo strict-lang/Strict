@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Linq.Expressions;
 
 namespace Strict.Language.Expressions;
 
@@ -9,6 +11,8 @@ namespace Strict.Language.Expressions;
 /// </summary>
 public class MethodExpressionParser : ExpressionParser
 {
+	private Stack<string> orderedTokens = new();
+
 	public override Expression ParseAssignmentExpression(Type type, string initializationLine, int fileLineNumber)
 	{
 		var constructor = type.Methods[0];
@@ -17,10 +21,28 @@ public class MethodExpressionParser : ExpressionParser
 			TryParseExpression(line, initializationLine) ?? throw new UnknownExpression(line));
 	}
 
-	public override Expression? TryParseExpression(Method.Line line, string partToParse) => // TODO: Tokenize partToParse
-		Number.TryParse(line, partToParse) ?? Boolean.TryParse(line, partToParse) ??
-		Text.TryParse(line, partToParse) ?? Binary.TryParse(line, partToParse) ?? List.TryParse(line, partToParse) ?? Constructor.TryParse(line, partToParse) ??
-		MemberCall.TryParse(line, partToParse) ?? MethodCall.TryParse(line, partToParse);
+	public override Expression? TryParseExpression(Method.Line line, ReadOnlySpan<char> partToParse)
+	{
+		if (partToParse.Contains(' '))
+		{
+			var postfixTokens = new ShuntingYard(partToParse).Output;
+			if (postfixTokens.Count == 1)
+			{
+				var token = postfixTokens.Pop();
+				return Text.TryParse(line, token) ?? List.TryParse(line, token);
+			}
+			if (postfixTokens.Count == 2)
+			{
+				// TODO: Unary goes here
+			}
+			return Binary.TryParse(line, postfixTokens);
+		}
+		return Text.TryParse(line, partToParse) ?? Boolean.TryParse(line.Method, partToParse) ??
+			Number.TryParse(line.Method, partToParse);
+		//TODO: Do below expression parsing outside of this method
+		//?? Constructor.TryParse(line, partToParse) ??
+		//MemberCall.TryParse(line, partToParse) ?? MethodCall.TryParse(line, partToParse);
+	}
 
 	public sealed class UnknownExpression : ParsingFailed
 	{
@@ -36,8 +58,6 @@ public class MethodExpressionParser : ExpressionParser
 		var expressions = new List<Expression>();
 		for (var lineNumber = 0; lineNumber < method.bodyLines.Count; lineNumber++)
 		{
-			//var tokens = tokenizer.GetTokenRanges(method.bodyLines[lineNumber].Text);
-			//var outputQueue = new ShuntingYard(tokens).Output;
 			var expression = ParseMethodLine(method.bodyLines[lineNumber], ref lineNumber);
 			if (expression is Assignment assignment)
 				method.Variables.Add(assignment);

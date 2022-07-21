@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 
 namespace Strict.Language.Expressions;
 
@@ -11,6 +13,7 @@ public class Number : Value
 	public override bool Equals(Expression? other) =>
 		other is Value v && (double)Data == (double)v.Data;
 
+	[Obsolete]
 	public static Expression? TryParse(Method.Line line, string partToParse) =>
 		partToParse.Length >= 1 && double.TryParse(partToParse, out var number)
 			? new Number(line.Method, number)

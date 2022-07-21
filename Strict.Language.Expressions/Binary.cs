@@ -13,36 +13,47 @@ public sealed class Binary : MethodCall
 	public Expression Right => Arguments[0];
 	public override string ToString() => Left + " " + Method.Name + " " + Right;
 
-	public new static Expression? TryParse(Method.Line line, string input)
-	{
-		var operatorText = input.FindFirstOperator();
-		if (operatorText == null)
-			return null;
-		var parts = new string[3];
-		parts[0] = input[..(input.IndexOf(operatorText, StringComparison.Ordinal) - 1)];
-		parts[1] = operatorText;
-		parts[2] =
-			input[(input.IndexOf(operatorText, StringComparison.Ordinal) + operatorText.Length + 1)..];
-		return TryParseBinary(line, parts);
-	}
+	public static Expression? TryParse(Method.Line line, Stack<string> postfixTokens) =>
+		postfixTokens.Count >= 3
+			? BuildBinaryExpression(postfixTokens.Pop(), postfixTokens, line)
+			: null;
 
-	private static Expression TryParseBinary(Method.Line line, IReadOnlyList<string> parts)
+	private static Expression BuildBinaryExpression(string operatorToken, Stack<string> tokens, Method.Line line)
 	{
-		var left = line.Method.TryParseExpression(line, parts[0]) ??
-			throw new MethodExpressionParser.UnknownExpression(line, parts[0]);
-		var right = line.Method.TryParseExpression(line, parts[2]) ??
-			throw new MethodExpressionParser.UnknownExpression(line, parts[2]);
-		if (List.HasMismatchingTypes(left, right))
-			throw new MismatchingTypeFound(line, parts[2]);
-		if (parts[1] == "*" && List.HasIncompatibleDimensions(left, right))
-			throw new List.ListsHaveDifferentDimensions(line, parts[0] + " " + parts[2]);
-		CheckForAnyExpressions(line, left, right);
-		var operatorMethod = left.ReturnType.Methods.FirstOrDefault(m => m.Name == parts[1]) ??
-			line.Method.GetType(Base.BinaryOperator).Methods.FirstOrDefault(m => m.Name == parts[1]) ??
-			throw new NoMatchingOperatorFound(left.ReturnType, parts[1]);
+		var right = GetUnaryOrBuildNestedBinary(tokens.Pop(), tokens, line);
+		var left = GetUnaryOrBuildNestedBinary(tokens.Pop(), tokens, line);
+		var operatorMethod = left.ReturnType.Methods.FirstOrDefault(m => m.Name == operatorToken) ??
+			line.Method.GetType(Base.BinaryOperator).Methods.FirstOrDefault(m => m.Name == operatorToken) ??
+			throw new NoMatchingOperatorFound(right.ReturnType, operatorToken);
 		return new Binary(left, operatorMethod, right);
 	}
 
+	private static Expression GetUnaryOrBuildNestedBinary(string nextToken, Stack<string> tokens,
+		Method.Line line) =>
+		nextToken[0].IsSingleCharacterOperator() || nextToken.IsMultiCharacterOperator()
+			? BuildBinaryExpression(nextToken, tokens, line)
+			: line.Method.TryParseExpression(line, nextToken) ??
+			throw new MethodExpressionParser.UnknownExpression(line);
+
+	//TODO; Remove
+	//private static Expression TryParseBinary(Method.Line line, IReadOnlyList<string> parts)
+	//{
+	//	var left = line.Method.TryParseExpression(line, parts[0]) ??
+	//		throw new MethodExpressionParser.UnknownExpression(line, parts[0]);
+	//	var right = line.Method.TryParseExpression(line, parts[2]) ??
+	//		throw new MethodExpressionParser.UnknownExpression(line, parts[2]);
+	//	if (List.HasMismatchingTypes(left, right))
+	//		throw new MismatchingTypeFound(line, parts[2]);
+	//	if (parts[1] == "*" && List.HasIncompatibleDimensions(left, right))
+	//		throw new List.ListsHaveDifferentDimensions(line, parts[0] + " " + parts[2]);
+	//	CheckForAnyExpressions(line, left, right);
+	//	var operatorMethod = left.ReturnType.Methods.FirstOrDefault(m => m.Name == parts[1]) ??
+	//		line.Method.GetType(Base.BinaryOperator).Methods.FirstOrDefault(m => m.Name == parts[1]) ??
+	//		throw new NoMatchingOperatorFound(left.ReturnType, parts[1]);
+	//	return new Binary(left, operatorMethod, right);
+	//}
+
+	// TODO: check if this needs to be called anywhere
 	private static void CheckForAnyExpressions(Method.Line line, Expression left, Expression right)
 	{
 		if (left.ReturnType == line.Method.GetType(Base.Any))

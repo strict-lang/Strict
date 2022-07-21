@@ -8,25 +8,24 @@ namespace Strict.Language.Expressions;
 /// </summary>
 public sealed class ShuntingYard
 {
-	public ShuntingYard(string input) //TODO: ReadOnlyMemory<char> tokens should be used here
+	public ShuntingYard(ReadOnlySpan<char> input) //TODO: ReadOnlyMemory<char> tokens should be used here
 	{
-		Input = input;
-		foreach (var token in new PhraseTokenizer(input).GetTokenRanges())
-			PutTokenIntoStacks(token);
+		foreach (var token in new PhraseTokenizer().GetTokenRanges(input))
+			PutTokenIntoStacks(token, input);
 		ApplyHigherOrEqualPrecedenceOperators();
 		//TODO: remove after done:
 		Console.WriteLine("Operators: " + string.Join(", ", operators) + " Output: " + string.Join(", ", Output));
 	}
 
-	public string Input { get; }
+	//public string Input { get; }
 
 	// ReSharper disable once ExcessiveIndentation
 	// ReSharper disable once MethodTooLong
-	private void PutTokenIntoStacks(Range tokenRange)
+	private void PutTokenIntoStacks(Range tokenRange, ReadOnlySpan<char> input)
 	{
 		if (tokenRange.End.Value - tokenRange.Start.Value == 1)
 		{
-			var firstCharacter = Input[tokenRange.Start.Value];
+			var firstCharacter = input[tokenRange.Start.Value];
 			if (firstCharacter == '(')
 				operators.Push(OpenBracket);
 			else if (firstCharacter == ')')
@@ -41,7 +40,7 @@ public sealed class ShuntingYard
 		}
 		else
 		{
-			var token = Input[tokenRange];
+			var token = input[tokenRange].ToString();
 			if (token.IsMultiCharacterOperator())
 			{
 				ApplyHigherOrEqualPrecedenceOperators(BinaryOperator.GetPrecedence(token));

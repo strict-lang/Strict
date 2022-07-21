@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace Strict.Language.Expressions;
@@ -12,16 +13,21 @@ public sealed class List : Expression
 	private string ValuesToString() =>
 		Values.Aggregate("", (current, expression) => current + (expression + ", ")).Trim()[..^1];
 
-	public static Expression? TryParse(Method.Line line, string input) =>
+	public static Expression? TryParse(Method.Line line, ReadOnlySpan<char> input) =>
 		input.Length > 2 && input[0] == '(' && input[^1] == ')'
-			? TryParseList(line, input[1..^1].Split(","))
+			? TryParseList(line, input[1..^1].Split(',', StringSplitOptions.TrimEntries))
 			: null;
 
-	private static Expression TryParseList(Method.Line line, IEnumerable<string> elements) =>
-		new List(line.Method,
-			elements.Select(element => line.Method.TryParseExpression(line, element.Trim()) ??
-				throw new MethodExpressionParser.UnknownExpression(line, element)).ToList());
+	private static Expression TryParseList(Method.Line line, SpanSplitEnumerator elements)
+	{
+		var expressions = new List<Expression>();
+		foreach (var element in elements)
+			expressions.Add(line.Method.TryParseExpression(line, element) ??
+				throw new MethodExpressionParser.UnknownExpression(line, element.ToString()));
+		return new List(line.Method, expressions);
+	}
 
+	//TODO: Probably not needed
 	public static bool HasIncompatibleDimensions(Expression left, Expression right) =>
 		left is List leftList && right is List rightList &&
 		leftList.Values.Count != rightList.Values.Count;

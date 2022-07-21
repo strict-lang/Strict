@@ -15,7 +15,11 @@ Write(text)
 		new Type(this, Base.Number, null!).Parse(@"+(other) returns Number
 	return self + other
 *(other) returns Number
-	return self * other");
+	return self * other
+-(other) returns Number
+	return self - other
+/(other) returns Number
+	return self / other");
 		new Type(this, Base.Count, null!).Parse(@"implement Number
 from(number)
 	value = number

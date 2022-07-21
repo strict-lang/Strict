@@ -43,35 +43,9 @@ GetComplicatedSequenceTexts returns Texts
 		for (var iteration = 0; iteration < 1000; iteration++)
 		{
 			operatorCounter = 0;
-			//foreach (var line in inputMemory.Span.EnumerateLines())
-			{
-				//TODO: put in SpanExtensions
-				var line = inputMemory.Span;
-				var spaceIndex = line.IndexOf(' ');
-				//Console.WriteLine("line="+line.ToString()+", spaceIndex="+spaceIndex);
-				if (spaceIndex < 0 || spaceIndex + 1 >= line.Length)
-					continue;
-				var offset = 0;
-				//ignore first word
-				do
-				{
-					offset += spaceIndex + 1;
-					var restSlice = line[offset..];
-					spaceIndex = restSlice.IndexOf(' ');
-					if (spaceIndex < 0)
-						spaceIndex = line.Length - offset;
-					//Console.WriteLine("offset=" + offset + ", spaceIndex=" + spaceIndex);
-					var word = line.Slice(offset, spaceIndex);
-					//Console.WriteLine("second word: " + word.ToString());
-					if (word.ToString().IsMultiCharacterOperator())
-						operatorCounter++;
-				} while (offset + spaceIndex < line.Length - 1);
-				/*slow, only 40% faster ..
-				foreach (var word in line.Split())
-					if (line.Slice(word.Start.Value, word.End.Value - word.Start.Value).IsSingleCharacterOperator())
-						operatorCounter++;
-				*/
-			}
+			foreach (var word in inputMemory.Span.Split())
+				if (word[0].IsSingleCharacterOperator() || word.ToString().IsMultiCharacterOperator()) // TODO: word.ToString() is doing spoiling the purpose of this test; fix it
+					operatorCounter++;
 		}
 		Assert.That(operatorCounter, Is.EqualTo(6));
 	}

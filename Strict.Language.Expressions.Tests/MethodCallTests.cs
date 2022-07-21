@@ -36,6 +36,7 @@ public sealed class MethodCallTests : TestExpressions
 			Throws.InstanceOf<MethodCall.InvalidExpressionForArgument>().With.Message.StartsWith(
 				"0g9y53 for log.Write argument 0"));
 
+	//[Ignore("For now")] //TODO: Fix once Shunting yard is integrated
 	[Test]
 	public void ParseUnknownMethod() =>
 		Assert.That(() => ParseExpression("log.NotExisting()"),
@@ -51,6 +52,7 @@ public sealed class MethodCallTests : TestExpressions
 		Assert.That(() => ParseExpression("log.Write(log.unknown)"),
 			Throws.InstanceOf<MemberCall.MemberNotFound>().With.Message.StartsWith("unknown in TestPackage.Log"));
 
+	//[Ignore("For now")] //TODO: Fix once Shunting yard is integrated
 	[Test]
 	public void MethodCallMembersMustBeWords() =>
 		Assert.That(() => ParseExpression("0g9y53.Write()"),

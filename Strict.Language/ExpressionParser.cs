@@ -1,4 +1,7 @@
-﻿namespace Strict.Language;
+﻿using System;
+using System.Collections.Generic;
+
+namespace Strict.Language;
 
 /// <summary>
 /// Abstracts the actual expressions and parsing away to the Expressions project.
@@ -10,5 +13,5 @@ public abstract class ExpressionParser
 	public abstract Expression ParseAssignmentExpression(Type type, string initializationLine, int fileLineNumber);
 	public abstract Expression ParseMethodBody(Method method);
 	public abstract Expression ParseMethodLine(Method.Line line, ref int methodLineNumber);
-	public abstract Expression? TryParseExpression(Method.Line line, string remainingPartToParse);
+	public abstract Expression? TryParseExpression(Method.Line line, ReadOnlySpan<char> remainingPartToParse);
 }
