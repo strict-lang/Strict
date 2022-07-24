@@ -4,33 +4,36 @@ using System.Collections.Generic;
 namespace Strict.Language.Expressions;
 
 /// <summary>
-/// Optimized for speed and memory efficiency (no new), no memory is allocated except for the check
-/// if we are in a list or just grouping things when a bracket is found. Passed onto ShuntingYard.
+/// Phrases are any expressions containing spaces (if not they are just single expressions and
+/// don't need any tokenizing). They could come from a full line of code, conditions of ifs,
+/// right part of assignments or method call arguments. Optimized for speed and memory efficiency
+/// (no new), no memory is allocated except for the check if we are in a list or just grouping.
 /// </summary>
 // ReSharper disable MethodTooLong
 // ReSharper disable ExcessiveIndentation
 public sealed class PhraseTokenizer
 {
-	//public PhraseTokenizer(string input)
-	//{
-	//	if (input.Length == 0 || input[0] == ' ' || input[^1] == ' ' ||
-	//		input.Contains("  ", StringComparison.Ordinal))
-	//		throw new InvalidSpacing(input);
-	//	if (input.Contains("()", StringComparison.Ordinal))
-	//		throw new InvalidEmptyOrUnmatchedBrackets(input);
-	//	this.input = input;
-	//}
+	public PhraseTokenizer(string input, Range partToParse)
+	{
+		var part = input.GetSpanFromRange(partToParse);
+		if (part.Length == 0 || part[0] == ' ' || part[^1] == ' ' ||
+			part.Contains("  ", StringComparison.Ordinal))
+			throw new InvalidSpacing(input);
+		if (part.Contains("()", StringComparison.Ordinal))
+			throw new InvalidEmptyOrUnmatchedBrackets(input);
+		this.input = input;
+		this.partToParse = partToParse;
+	}
 
-	//private readonly string input;
-	private int index;
-	private int textStart = -1;
-	private int tokenStart = -1;
+	private readonly string input;
+	private readonly Range partToParse;
 
-	public IEnumerable<Range> GetTokenRanges(ReadOnlySpan<char> input)
+	public void ProcessEachToken(Action<Range> processToken)
 	{
 		textStart = -1;
 		tokenStart = -1;
-		for (index = 0; index < input.Length; index++)
+		var (offset, length) = partToParse.GetOffsetAndLength(input.Length);
+		for (index = offset; index < offset + length; index++)
 			if (input[index] == '\"')
 			{
 				if (textStart == -1)
@@ -39,42 +42,48 @@ public sealed class PhraseTokenizer
 					index++; // next character is still a text (double quote), continue text
 				else
 				{
-					yield return textStart..(index + 1);
+					processToken(textStart..(index + 1));
 					textStart = -1;
 					tokenStart = -1;
 				}
 			}
 			else if (textStart == -1)
-				foreach (var token in GetNormalToken(input))
-					yield return token;
+				ProcessNormalToken(processToken);
 		if (textStart != -1)
-			throw new UnterminatedString(input.ToString());
+			throw new UnterminatedString(input[partToParse]);
 		if (tokenStart >= 0)
-			yield return tokenStart..;
+			processToken(tokenStart..);
 	}
 
-	private IEnumerable<Range> GetNormalToken(ReadOnlySpan<char> input)
+	private int index;
+	private int textStart = -1;
+	private int tokenStart = -1;
+
+	private void ProcessNormalToken(Action<Range> processToken)
 	{
-		if (input[index] == '(')
-			foreach (var token in GetTokensTillMatchingClosingBracket(input))
-				yield return token;
+		if (input[index] == OpenBracket)
+			foreach (var token in GetTokensTillMatchingClosingBracket())
+				processToken(token);
 		else if (input[index] == ' ')
 		{
 			if (tokenStart >= 0)
-				yield return tokenStart..index;
+				processToken(tokenStart..index);
 			tokenStart = -1;
 		}
 		else if (tokenStart == -1)
 			tokenStart = index;
 	}
 
-	private IReadOnlyList<Range> GetTokensTillMatchingClosingBracket(ReadOnlySpan<char> input)
+	internal const char OpenBracket = '(';
+	internal const char CloseBracket = ')';
+
+	private IReadOnlyList<Range> GetTokensTillMatchingClosingBracket()
 	{
 		tokenStart = index + 1;
 		var result = new List<Range> { index..(index + 1) };
 		var foundListSeparator = false;
 		for (index++; index < input.Length; index++)
-			if (input[index] == ')')
+			if (input[index] == CloseBracket)
 			{
 				if (tokenStart >= 0)
 					result.Add(tokenStart..index);
@@ -88,10 +97,9 @@ public sealed class PhraseTokenizer
 				result.Add(index..(index + 1));
 			}
 			else
-				foreach (var token in GetNormalToken(input))
-					result.Add(token);
+				ProcessNormalToken(result.Add);
 		if (result.Count < 3)
-			throw new InvalidEmptyOrUnmatchedBrackets(input.ToString());
+			throw new InvalidEmptyOrUnmatchedBrackets(input[partToParse]);
 		return result.Count == 3 || foundListSeparator
 			? MergeAllTokensIntoSingleList(result)
 			: result;

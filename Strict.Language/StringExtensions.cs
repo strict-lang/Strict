@@ -5,13 +5,6 @@ namespace Strict.Language;
 
 public static class StringExtensions
 {
-	/// <summary>
-	/// Instead of using one of String or other Split methods here, use this and SpanExtensions to
-	/// avoid allocating new memory on every split, especially in the tokenizer and parser.
-	/// </summary>
-	public static StringRangeEnumerator SplitRanges(this string input, char splitter = ' ') =>
-		new(input, splitter);
-
 	public static string[] SplitLines(this string text) =>
 		text.Split(new[] { Environment.NewLine, "\n" }, StringSplitOptions.None);
 

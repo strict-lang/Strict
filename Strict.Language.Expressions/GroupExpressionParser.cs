@@ -1,4 +1,6 @@
-﻿using System.Linq;
+﻿/*TODO: remove, not longer used
+using System;
+using System.Linq;
 
 namespace Strict.Language.Expressions;
 
@@ -42,7 +44,7 @@ public sealed class GroupExpressionParser
 		var operatorMethod = left.ReturnType.Methods.FirstOrDefault(m => m.Name == operatorText) ??
 			throw new Binary.NoMatchingOperatorFound(left.ReturnType, operatorText);
 		var remainingExpression = line.Method.TryParseExpression(line,
-			line.Text[(startIndex + 3)..]) ?? throw new MethodExpressionParser.UnknownExpression(line);
+			line.Text.AsSpan(startIndex + 3)) ?? throw new MethodExpressionParser.UnknownExpression(line);
 		return new Binary(left, operatorMethod, remainingExpression);
 	}
 
@@ -85,3 +87,4 @@ public sealed class GroupExpressionParser
 		left.ReturnType.Methods.FirstOrDefault(m => m.Name == operatorText) ??
 		throw new Binary.NoMatchingOperatorFound(left.ReturnType, operatorText);
 }
+*/

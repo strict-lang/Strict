@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 
 namespace Strict.Language;
@@ -66,9 +67,11 @@ public sealed class Method : Context
 	public int TypeLineNumber { get; }
 	private readonly ExpressionParser parser;
 
-	public Expression? TryParseExpression(Line line, ReadOnlySpan<char> remainingPartToParse) =>
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public Expression? TryParseExpression(Line line, Range remainingPartToParse) =>
 		parser.TryParseExpression(line, remainingPartToParse);
 
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public Expression ParseMethodLine(Line line, ref int methodLineNumber) =>
 		parser.ParseMethodLine(line, ref methodLineNumber);
 
@@ -183,6 +186,8 @@ public sealed class Method : Context
 			? Type
 			: Type.FindType(name, searchingFrom ?? this);
 
+	/*TODO: outdated!
 	public Expression? TryParseExpressionFromTokens(Line line, Stack<string> tokens) =>
 		parser.TryParseExpressionFromTokens(line, tokens);
+	*/
 }

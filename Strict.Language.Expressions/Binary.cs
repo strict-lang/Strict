@@ -13,27 +13,31 @@ public sealed class Binary : MethodCall
 	public Expression Right => Arguments[0];
 	public override string ToString() => Left + " " + Method.Name + " " + Right;
 
-	public static Expression? TryParse(Method.Line line, Stack<string> postfixTokens) =>
+	public static Expression? TryParse(Method.Line line, Stack<Range> postfixTokens) =>
 		postfixTokens.Count >= 3
-			? BuildBinaryExpression(postfixTokens.Pop(), postfixTokens, line)
+			? BuildBinaryExpression(line, postfixTokens.Pop(), postfixTokens)
 			: null;
 
-	private static Expression BuildBinaryExpression(string operatorToken, Stack<string> tokens, Method.Line line)
+	private static Expression BuildBinaryExpression(Method.Line line, Range operatorTokenRange, Stack<Range> tokens)
 	{
-		var right = GetUnaryOrBuildNestedBinary(tokens.Pop(), tokens, line);
-		var left = GetUnaryOrBuildNestedBinary(tokens.Pop(), tokens, line);
+		var right = GetUnaryOrBuildNestedBinary(line, tokens.Pop(), tokens);
+		var left = GetUnaryOrBuildNestedBinary(line, tokens.Pop(), tokens);
+		var operatorToken = line.Text[operatorTokenRange];//TODO: make more efficient
 		var operatorMethod = left.ReturnType.Methods.FirstOrDefault(m => m.Name == operatorToken) ??
 			line.Method.GetType(Base.BinaryOperator).Methods.FirstOrDefault(m => m.Name == operatorToken) ??
 			throw new NoMatchingOperatorFound(right.ReturnType, operatorToken);
 		return new Binary(left, operatorMethod, right);
 	}
 
-	private static Expression GetUnaryOrBuildNestedBinary(string nextToken, Stack<string> tokens,
-		Method.Line line) =>
-		nextToken[0].IsSingleCharacterOperator() || nextToken.IsMultiCharacterOperator()
-			? BuildBinaryExpression(nextToken, tokens, line)
-			: line.Method.TryParseExpression(line, nextToken) ??
+	private static Expression GetUnaryOrBuildNestedBinary(Method.Line line, Range nextTokenRange,
+		Stack<Range> tokens)
+	{
+		var nextToken = line.Text.GetSpanFromRange(nextTokenRange);//TODO: only needed for operator check, can be done more efficiently
+		return nextToken[0].IsSingleCharacterOperator() || nextToken.ToString().IsMultiCharacterOperator()
+			? BuildBinaryExpression(line, nextTokenRange, tokens)
+			: line.Method.TryParseExpression(line, nextTokenRange) ??
 			throw new MethodExpressionParser.UnknownExpression(line);
+	}
 
 	//TODO; Remove
 	//private static Expression TryParseBinary(Method.Line line, IReadOnlyList<string> parts)

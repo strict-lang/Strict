@@ -24,11 +24,16 @@ public class MethodCall : Expression
 			? Instance + "."
 			: "") + Method.Name + Arguments.ToBrackets();
 
-	public static Expression? TryParse(Method.Line line, string partToParse) =>
-		partToParse.EndsWith(')') && partToParse.Contains('(')
+	public static Expression? TryParse(Method.Line line, Range range)
+	{
+		var partToParse = line.Text.GetSpanFromRange(range).ToString();//TODO!
+		return partToParse.EndsWith(')') && partToParse.Contains('(')
 			? TryParseMethod(line,
+				//TODO: this should be list parsing
 				partToParse.Split(new[] { '(', ')' }, StringSplitOptions.RemoveEmptyEntries))
-			: TryParseMethod(line, partToParse);
+			//TODO: new should be avoided in all TryParse
+			: TryParseMethod(line, new string[] { partToParse });
+	}
 
 	private static Expression? TryParseMethod(Method.Line line, params string[] parts)
 	{
@@ -39,7 +44,7 @@ public class MethodCall : Expression
 		if (!methodName.Contains('.'))
 			return FindMethodCall(null, line, methodName, arguments);
 		var memberParts = methodName.Split('.', 2);
-		var firstMember = MemberCall.TryParse(line, memberParts[0]);
+		var firstMember = MemberCall.TryParse(line, ..);//TODO: bada bad badbada bdabda memberParts[0]);
 		if (firstMember == null)
 			throw new MemberCall.MemberNotFound(line, line.Method.Type, memberParts[0]);
 		return FindMethodCall(firstMember, line, memberParts[1], arguments);
@@ -47,10 +52,15 @@ public class MethodCall : Expression
 
 	private static Expression[] GetArguments(Method.Line line, string argumentsText, string methodName)
 	{
+		// someClass.ComplicatedMethod((1, 2, 3) + (4, 5), 7)
+		// list of 2 arguments:
+		// [0] = (1, 2, 3) + (4, 5)
+		// [1] = 7
+		// don't use this, broken, we already have working list parsing
 		var parts = argumentsText.Split(", ");
 		var arguments = new Expression[parts.Length];
 		for (var index = 0; index < parts.Length; index++)
-			arguments[index] = line.Method.TryParseExpression(line, parts[index]) ??
+			arguments[index] = line.Method.TryParseExpression(line, ..) ?? //TODO: broken, fix it! parts[index]) ??
 				throw new InvalidExpressionForArgument(line,
 					parts[index] + " for " + methodName + " argument " + index);
 		return arguments;

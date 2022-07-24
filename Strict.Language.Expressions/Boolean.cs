@@ -30,10 +30,13 @@ public class Boolean : Value
 		};
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static Expression? TryParse(Method method, ReadOnlySpan<char> partToParse) =>
-		partToParse.Compare("true".AsSpan())
-			? new Boolean(method, true)
-			: partToParse.Compare("false".AsSpan())
-				? new Boolean(method, false)
+	public static Expression? TryParse(Method.Line line, Range partToParse)
+	{
+		var part = line.Text.GetSpanFromRange(partToParse);
+		return part.Compare("true".AsSpan())
+			? new Boolean(line.Method, true)
+			: part.Compare("false".AsSpan())
+				? new Boolean(line.Method, false)
 				: null;
+	}
 }

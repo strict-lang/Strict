@@ -15,13 +15,13 @@ public sealed class Return : Expression
 			? TryParseReturn(line)
 			: null;
 
-	private const string ReturnName = "return ";
+	private const string ReturnName = "return";
 
 	private static Expression TryParseReturn(Method.Line line)
 	{
-		var returnExpression = line.Text.Length < ReturnName.Length
+		var returnExpression = line.Text.Length <= ReturnName.Length
 			? null
-			: line.Method.TryParseExpression(line, line.Text.AsSpan(ReturnName.Length));
+			: line.Method.TryParseExpression(line, (ReturnName.Length + 1)..);
 		return returnExpression == null
 			? throw new MissingExpression(line)
 			: new Return(returnExpression);

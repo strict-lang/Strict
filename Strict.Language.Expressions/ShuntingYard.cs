@@ -8,67 +8,72 @@ namespace Strict.Language.Expressions;
 /// </summary>
 public sealed class ShuntingYard
 {
-	public ShuntingYard(ReadOnlySpan<char> input) //TODO: ReadOnlyMemory<char> tokens should be used here
+	public ShuntingYard(string input, Range partToParse)
 	{
-		foreach (var token in new PhraseTokenizer().GetTokenRanges(input))
-			PutTokenIntoStacks(token, input);
+		this.input = input;
+		var tokenizer = new PhraseTokenizer(input, partToParse);
+		tokenizer.ProcessEachToken(PutTokenIntoStacks);
 		ApplyHigherOrEqualPrecedenceOperators();
 		//TODO: remove after done:
 		Console.WriteLine("Operators: " + string.Join(", ", operators) + " Output: " + string.Join(", ", Output));
 	}
 
-	//public string Input { get; }
+	private readonly string input;
 
-	// ReSharper disable once ExcessiveIndentation
-	// ReSharper disable once MethodTooLong
-	private void PutTokenIntoStacks(Range tokenRange, ReadOnlySpan<char> input)
+	private void PutTokenIntoStacks(Range tokenRange)
 	{
-		if (tokenRange.End.Value - tokenRange.Start.Value == 1)
-		{
-			var firstCharacter = input[tokenRange.Start.Value];
-			if (firstCharacter == '(')
-				operators.Push(OpenBracket);
-			else if (firstCharacter == ')')
-				ApplyHigherOrEqualPrecedenceOperators();
-			else if (firstCharacter.IsSingleCharacterOperator())
-			{
-				ApplyHigherOrEqualPrecedenceOperators(BinaryOperator.GetPrecedence(firstCharacter));
-				operators.Push(firstCharacter.ToString());
-			}
-			else
-				Output.Push(firstCharacter.ToString());
-		}
+		var (_, length) = tokenRange.GetOffsetAndLength(input.Length);
+		if (length == 1)
+			PutSingleCharacterTokenIntoStacks(tokenRange);
 		else
 		{
-			var token = input[tokenRange].ToString();
+			var token = input[tokenRange];
 			if (token.IsMultiCharacterOperator())
 			{
 				ApplyHigherOrEqualPrecedenceOperators(BinaryOperator.GetPrecedence(token));
-				operators.Push(token);
+				operators.Push(tokenRange);
 			}
 			else
-				Output.Push(token);
+				Output.Push(tokenRange);
 		}
-		//Console.WriteLine("Consumed " + tokenRange + " Operators: " + string.Join(", ", operators) + " Output: " + string.Join(", ", Output));
 	}
 
-	private const string OpenBracket = "(";
-	private const string CloseBracket = ")";
-	private readonly Stack<string> operators = new();
-	public Stack<string> Output { get; } = new();
+	private void PutSingleCharacterTokenIntoStacks(Range tokenRange)
+	{
+		var firstCharacter = input[tokenRange.Start.Value];
+		if (firstCharacter == PhraseTokenizer.OpenBracket)
+			operators.Push(tokenRange);
+		else if (firstCharacter == PhraseTokenizer.CloseBracket)
+			ApplyHigherOrEqualPrecedenceOperators();
+		else if (firstCharacter.IsSingleCharacterOperator())
+		{
+			ApplyHigherOrEqualPrecedenceOperators(BinaryOperator.GetPrecedence(firstCharacter));
+			operators.Push(tokenRange);
+		}
+		else
+			Output.Push(tokenRange);
+	}
+
+	private readonly Stack<Range> operators = new();
+	public Stack<Range> Output { get; } = new();
 
 	private void ApplyHigherOrEqualPrecedenceOperators(int precedence = 0)
 	{
 		while (operators.Count > 0)
-			if (!IsOpeningBracket(precedence) && BinaryOperator.GetPrecedence(operators.Peek()) >= precedence)
+			if (!IsOpeningBracket(precedence) && BinaryOperator.GetPrecedence(input.GetSpanFromRange(operators.Peek())) >= precedence)
 				Output.Push(operators.Pop());
 			else
 				return;
 	}
 
+	// 5 + 3
+	// ^ first operand (left) Range
+	//   ^ operator (range??????????)
+	//     ^ right Range
+
 	private bool IsOpeningBracket(int precedence)
 	{
-		if (operators.Peek() != "(")
+		if (input[operators.Peek().Start.Value] != PhraseTokenizer.OpenBracket)
 			return false;
 		if (precedence == 0)
 			operators.Pop();

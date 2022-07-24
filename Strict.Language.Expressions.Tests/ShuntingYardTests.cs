@@ -21,7 +21,9 @@ public sealed class ShuntingYardTests
 	[TestCase("((a, b) + (c, d)) * 2", "(a, b), (c, d), +, 2, *")]
 	[TestCase("((a, (b * e)) + (c, d)) * 2", "(a, (b * e)), (c, d), +, 2, *")]
 	[TestCase("(\"Hello\", \"World\")", "(\"Hello\", \"World\")")]
-	public void Parse(string input, string expected) =>
-		Assert.That(string.Join(", ", new ShuntingYard(input).Output.Reverse()),
-			Is.EqualTo(expected));
+	public void Parse(string input, string expected)
+	{
+		var tokens = new ShuntingYard(input, ..).Output.Reverse().Select(range => input[range]);
+		Assert.That(string.Join(", ", tokens), Is.EqualTo(expected));
+	}
 }

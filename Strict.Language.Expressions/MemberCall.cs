@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace Strict.Language.Expressions;
@@ -26,14 +27,17 @@ public sealed class MemberCall : Expression
 			? Parent + "." + Member.Name
 			: Member.Name;
 
-	public static MemberCall? TryParse(Method.Line line, string partToParse) =>
-		partToParse.Contains('(')
+	public static MemberCall? TryParse(Method.Line line, Range range)
+	{
+		var partToParse = line.Text.GetSpanFromRange(range);
+		return partToParse.Contains('(')
 			? null
 			: partToParse.Contains('.')
-				? TryNestedMemberCall(line, partToParse.Split('.', 2))
-				: TryMemberCall(line, partToParse);
+				? TryNestedMemberCall(line, partToParse.ToString().Split('.', 2))//TODO: nononono
+				: TryMemberCall(line, partToParse.ToString());//TODO: don't do that
+	}
 
-	private static MemberCall? TryNestedMemberCall(Method.Line line, IReadOnlyList<string> parts)
+	private static MemberCall? TryNestedMemberCall(Method.Line line, IReadOnlyList<string> parts) //TODO: use span!
 	{
 		var first = TryMemberCall(line, parts[0]);
 		if (first == null)

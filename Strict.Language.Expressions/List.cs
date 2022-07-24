@@ -13,16 +13,23 @@ public sealed class List : Expression
 	private string ValuesToString() =>
 		Values.Aggregate("", (current, expression) => current + (expression + ", ")).Trim()[..^1];
 
-	public static Expression? TryParse(Method.Line line, ReadOnlySpan<char> input) =>
-		input.Length > 2 && input[0] == '(' && input[^1] == ')'
+	public static Expression? TryParse(Method.Line line, Range range)
+	{
+		// (1, 2, 3) + (3, 4)
+		// ^l1       ^op ^l2
+		// ((1, 2), (3, 4))
+		// ^l1 -> this is problematic, add some tests, probably some grouping needed, ask Ben if you need some new grouping code, or use your own ..
+		var input = line.Text.GetSpanFromRange(range);
+		return input.Length > 2 && input[0] == '(' && input[^1] == ')'
 			? TryParseList(line, input[1..^1].Split(',', StringSplitOptions.TrimEntries))
 			: null;
+	}
 
 	private static Expression TryParseList(Method.Line line, SpanSplitEnumerator elements)
 	{
 		var expressions = new List<Expression>();
 		foreach (var element in elements)
-			expressions.Add(line.Method.TryParseExpression(line, element) ??
+			expressions.Add(line.Method.TryParseExpression(line, ..) ?? //TODO: this won't work, we need actual grouping and ranges above
 				throw new MethodExpressionParser.UnknownExpression(line, element.ToString()));
 		return new List(line.Method, expressions);
 	}

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 
 namespace Strict.Language;
 
@@ -14,6 +15,13 @@ public static class SpanExtensions
 	{
 		CheckParameters(input.Length, options);
 		return new SpanSplitEnumerator(input, splitter, options);
+	}
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static ReadOnlySpan<char> GetSpanFromRange(this string input, Range range)
+	{
+		var (offset, length) = range.GetOffsetAndLength(input.Length);
+		return input.AsSpan(offset, length);
 	}
 
 	internal static void CheckParameters(int inputLength, StringSplitOptions options)
@@ -75,16 +83,20 @@ public static class MemoryExtensions
 		return new StringRangeEnumerator(input, splitter, options);
 	}
 }
-*/
-public sealed class StringRangeEnumerator : IEnumerable<Range>
+*
+/// <summary>
+/// Instead of using one of String or other Split methods here, use this and SpanExtensions to
+/// avoid allocating new memory on every split, especially in the tokenizer and parser.
+/// </summary>
+public ref struct StringRangeEnumerator// : IEnumerable<Range>
 {
-	public StringRangeEnumerator(string input, char splitter)
+	public StringRangeEnumerator(ReadOnlySpan<char> input, char splitter)
 	{
 		this.input = input;
 		this.splitter = splitter;
 	}
 
-	private readonly string input;
+	private readonly ReadOnlySpan<char> input;
 	private readonly char splitter;
 
 	public IEnumerator<Range> GetEnumerator()
@@ -99,5 +111,6 @@ public sealed class StringRangeEnumerator : IEnumerable<Range>
 	}
 
 	private int offset = 0;
-	IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+	//IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 }
+*/

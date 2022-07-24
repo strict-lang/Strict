@@ -1,17 +1,24 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
 using NUnit.Framework;
 
 namespace Strict.Language.Expressions.Tests;
 
-public class PhraseTokenizerTests
+public sealed class PhraseTokenizerTests
 {
 	[TestCase("\"")]
 	[TestCase("\"random")]
 	[TestCase("\"random + \"\"")]
 	[TestCase("\"\"\"\"\"")]
 	public void UnterminatedString(string code) =>
-		Assert.That(() => new PhraseTokenizer(code).GetTokenRanges().Count(),
+		Assert.That(() => GetTokens(code).Count,
 			Throws.InstanceOf<PhraseTokenizer.UnterminatedString>());
+
+	private static List<string> GetTokens(string code)
+	{
+		var result = new List<string>();
+		new PhraseTokenizer(code, ..).ProcessEachToken(range => result.Add(code[range]));
+		return result;
+	}
 
 	[TestCase(" ")]
 	[TestCase("  ")]
@@ -19,7 +26,7 @@ public class PhraseTokenizerTests
 	[TestCase("5 +  2")]
 	[TestCase("\"hello \"  + 2")]
 	public void InvalidSpacing(string code) =>
-		Assert.That(() => new PhraseTokenizer(code).GetTokenRanges().Count(),
+		Assert.That(() => GetTokens(code).Count,
 			Throws.InstanceOf<PhraseTokenizer.InvalidSpacing>());
 
 	[TestCase("()")]
@@ -28,7 +35,7 @@ public class PhraseTokenizerTests
 	[TestCase("() + 5")]
 	[TestCase("(")]
 	public void InvalidEmptyOrUnmatchedBrackets(string code) =>
-		Assert.That(() => new PhraseTokenizer(code).GetTokenRanges().Count(),
+		Assert.That(() => GetTokens(code).Count,
 			Throws.InstanceOf<PhraseTokenizer.InvalidEmptyOrUnmatchedBrackets>());
 
 	[TestCase("5", 1)]
@@ -57,18 +64,9 @@ public class PhraseTokenizerTests
 	[TestCase("(\"1\", \"2\") to Numbers + (3, 4) is (\"1\", \"2\", \"3\", \"4\")", 7)]
 	public void GetTokenRanges(string code, int expectedTokensCount)
 	{
-		var tokens = new PhraseTokenizer(code).GetTokenRanges();
-		var tokensCount = 0;
-		var tokensAsString = "";
-		foreach (var token in tokens)
-		{
-			tokensCount++;
-			tokensAsString += (tokensAsString == ""
-				? ""
-				: " ") + code[token];
-		}
-		tokensAsString = tokensAsString.Replace("( ", "(").Replace(" )", ")");
-		Assert.That(tokensCount, Is.EqualTo(expectedTokensCount), tokensAsString);
+		var tokens = GetTokens(code);
+		var tokensAsString = string.Join(' ', tokens).Replace("( ", "(").Replace(" )", ")");
+		Assert.That(tokens.Count, Is.EqualTo(expectedTokensCount), tokensAsString);
 		Assert.That(tokensAsString, Is.EqualTo(code));
 	}
 }

@@ -9,6 +9,7 @@ namespace Strict.Language;
 /// </summary>
 public static class BinaryOperator
 {
+	//TODO: could be changed to Enum again, then use this as byte in ShuntingYard.operators, much more efficient
 	public const string Plus = "+";
 	public const string Minus = "-";
 	public const string Multiply = "*";
@@ -33,7 +34,7 @@ public static class BinaryOperator
 		AnySingleCharacterOperator.Contains(tokenFirstCharacter);
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static bool IsMultiCharacterOperator(this string name)
+	public static bool IsMultiCharacterOperator(this string name)//TODO: should be ReadOnlySpan again!
 	{
 		foreach (var checkOperator in MultiCharacterOperators)
 			if (checkOperator == name)

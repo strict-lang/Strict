@@ -63,8 +63,15 @@ public sealed class If : BlockExpression
 
 	private static Expression TryParseIf(Method.Line line, ref int methodLineNumber)
 	{
-		var condition = line.Method.TryParseExpression(line, line.Text.AsSpan(3)) ??
-			throw new MissingCondition(line);
+		// if 5 (checked and failed)
+		// if true (ok)
+		// if isInternal (not checked, bad) member
+		// if bla is 5 (ok)
+		// if HasMember("idontknow") <- ???????? method
+		// if number/text/list/boolean/spaces (binary, list, unary)
+		// if String(5) <- constructor ??????
+
+		var condition = line.Method.TryParseExpression(line, 3..) ?? throw new MissingCondition(line);
 		if (condition.ReturnType.Name != Base.Boolean)
 			throw new InvalidCondition(line, condition.ReturnType);
 		methodLineNumber++;

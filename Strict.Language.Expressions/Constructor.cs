@@ -4,13 +4,17 @@ using System.Linq;
 
 namespace Strict.Language.Expressions;
 
-public class Constructor
+public class Constructor //TODO: merge with normal method call
 {
-	public static Expression? TryParse(Method.Line line, string partToParse) =>
-		partToParse.EndsWith(')') && partToParse.Contains('(')
+	public static Expression? TryParse(Method.Line line, Range range)
+	{
+		var partToParse = line.Text[range];//TODO: use span here!
+		return partToParse.EndsWith(')') && partToParse.Contains('(')
 			? TryParseConstructor(line,
-				partToParse.Split(new[] { '(', ')' }, StringSplitOptions.RemoveEmptyEntries), partToParse.Contains(")."))
+				partToParse.Split(new[] { '(', ')' }, StringSplitOptions.RemoveEmptyEntries),
+				partToParse.Contains(")."))
 			: null;
+	}
 
 	private static Expression? TryParseConstructor(Method.Line line,
 		IReadOnlyList<string> typeNameAndArguments, bool hasNestedMethodCall)
@@ -19,7 +23,7 @@ public class Constructor
 		if (type == null)
 			return null;
 		var constructorMethodCall = new MethodCall(new Value(type, type), type.Methods[0],
-			line.Method.TryParseExpression(line, typeNameAndArguments[1]) ??
+			line.Method.TryParseExpression(line, ..) ??//TODO: broken anyways: typeNameAndArguments[1]) ??
 			throw new MethodExpressionParser.UnknownExpression(line));
 		if (!hasNestedMethodCall)
 			return constructorMethodCall;
@@ -34,7 +38,7 @@ public class Constructor
 	{
 		var arguments = new Expression[parts.Count];
 		for (var index = 0; index < parts.Count; index++)
-			arguments[index] = line.Method.TryParseExpression(line, parts[index]) ??
+			arguments[index] = line.Method.TryParseExpression(line, ..) ??//TODO: parts[index]) ??
 				throw new MethodCall.InvalidExpressionForArgument(line,
 					parts[index] + " for " + parts[index] + " argument " + index);
 		return arguments;

@@ -30,12 +30,16 @@ public class Assignment : Expression
 
 	private static Expression TryParseLet(Method.Line line)
 	{
-		var parts = line.Text.AsSpan(4).Split();
+		//let hello = "hello" + " " + "world"
+		//         ^ ^       ^ ^   ^ ^       END
+		//            Range(12, 35)
+ 		var parts = line.Text.AsSpan(4).Split();
 		parts.MoveNext();
 		var name = parts.Current.ToString();
 		if (!parts.MoveNext() || !parts.MoveNext())
 			throw new IncompleteLet(line);
-		var value = line.Method.TryParseExpression(line, parts.Current) ??
+		var startOfValueExpression = 4 + name.Length + 1 + 1 + 1;
+		var value = line.Method.TryParseExpression(line, startOfValueExpression..) ??
 			throw new MethodExpressionParser.UnknownExpression(line);
 		return new Assignment(new Identifier(name, value.ReturnType), value);
 	}

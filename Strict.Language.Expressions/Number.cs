@@ -19,8 +19,11 @@ public class Number : Value
 			? new Number(line.Method, number)
 			: null;
 
-	public static Expression? TryParse(Method method, ReadOnlySpan<char> partToParse) =>
-		partToParse.Length >= 1 && double.TryParse(partToParse, out var number)
-			? new Number(method, number)
+	public static Expression? TryParse(Method.Line line, Range range)
+	{
+		var input = line.Text.GetSpanFromRange(range);
+		return input.Length >= 1 && double.TryParse(input, out var number)
+			? new Number(line.Method, number)
 			: null;
+	}
 }

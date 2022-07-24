@@ -12,14 +12,11 @@ public class Text : Value
 	public override bool Equals(Expression? other) =>
 		other is Value v && (string)Data == (string)v.Data;
 
-	//[Obsolete]
-	//public static Expression? TryParse(Method.Line line, string input) =>
-	//	input.Length >= 2 && input[0] == '"' && input[^1] == '"'
-	//		? new Text(line.Method, input[1..^1])
-	//		: null;
-
-	public static Expression? TryParse(Method.Line line, ReadOnlySpan<char> input) =>
-		input.Length >= 2 && input[0] == '"' && input[^1] == '"'
+	public static Expression? TryParse(Method.Line line, Range range)
+	{
+		var input = line.Text.GetSpanFromRange(range);
+		return input.Length >= 2 && input[0] == '"' && input[^1] == '"'
 			? new Text(line.Method, input.Slice(1, input.Length - 2).ToString())
 			: null;
+	}
 }
