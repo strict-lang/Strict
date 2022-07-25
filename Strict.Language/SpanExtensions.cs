@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 
@@ -13,9 +12,21 @@ public static class SpanExtensions
 	public static SpanSplitEnumerator Split(this ReadOnlySpan<char> input, char splitter = ' ',
 		StringSplitOptions options = StringSplitOptions.None)
 	{
-		CheckParameters(input.Length, options);
+		if (input.Length == 0)
+			throw new EmptyInputIsNotAllowed();
+		if (options == StringSplitOptions.RemoveEmptyEntries)
+			throw new NotSupportedException(nameof(StringSplitOptions.RemoveEmptyEntries) +
+				" is not allowed as Strict does not allow multiple empty lines or spaces anyways");
 		return new SpanSplitEnumerator(input, splitter, options);
 	}
+
+	public class EmptyInputIsNotAllowed : Exception { }
+
+	public static RangeEnumerator SplitIntoRanges(this ReadOnlySpan<char> input,
+		char splitter = ' ', bool removeLeadingSpace = false) =>
+		input.Length == 0
+			? throw new EmptyInputIsNotAllowed()
+			: new RangeEnumerator(input, splitter, removeLeadingSpace);
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static ReadOnlySpan<char> GetSpanFromRange(this string input, Range range)
@@ -24,16 +35,12 @@ public static class SpanExtensions
 		return input.AsSpan(offset, length);
 	}
 
-	internal static void CheckParameters(int inputLength, StringSplitOptions options)
+	public static Range GetOuterRange(this Range inner, (int, int) offsetAndLength)
 	{
-		if (inputLength == 0)
-			throw new EmptyInputIsNotAllowed();
-		if (options == StringSplitOptions.RemoveEmptyEntries)
-			throw new NotSupportedException(nameof(StringSplitOptions.RemoveEmptyEntries) +
-				" is not allowed as Strict does not allow multiple empty lines or spaces anyways");
+		var (elementOffset, length) = inner.GetOffsetAndLength(offsetAndLength.Item2);
+		var start = offsetAndLength.Item1 + elementOffset;
+		return new Range(start, start + length);
 	}
-
-	public class EmptyInputIsNotAllowed : Exception { }
 
 	public static SpanSplitEnumerator SplitLines(this ReadOnlySpan<char> input) =>
 		Split(input, '\n');
@@ -72,7 +79,64 @@ public static class SpanExtensions
 				count++;
 		return count;
 	}
+
+	public static bool IsWord(this ReadOnlySpan<char> input)
+	{
+		foreach (var c in input)
+			if (c is (< 'A' or > 'Z') and (< 'a' or > 'z'))
+				return false;
+		return true;
+	}
 }
+
+/// <summary>
+/// Instead of using one of String or other Split methods here, use this and SpanExtensions to
+/// avoid allocating new memory on every split, especially in the tokenizer and parser.
+/// </summary>
+public ref struct RangeEnumerator
+{
+	public RangeEnumerator(ReadOnlySpan<char> input, char splitter, bool removeLeadingSpace = false)
+	{
+		this.input = input;
+		this.splitter = splitter;
+		this.removeLeadingSpace = removeLeadingSpace;
+	}
+
+	private readonly ReadOnlySpan<char> input;
+	private readonly char splitter;
+	private readonly bool removeLeadingSpace;
+	private int offset = 0;
+	public Range Current { get; private set; } = default;
+	public readonly RangeEnumerator GetEnumerator() => this;
+
+	public bool MoveNext()
+	{
+		if (offset >= input.Length)
+			return false;
+		for (var index = offset; index < input.Length; index++)
+			if (input[index] == splitter)
+				return GetWordBeforeSplitter(index);
+		if (removeLeadingSpace && input[offset] == ' ')
+			offset++;
+		Current = offset..;
+		offset = input.Length;
+		return true;
+	}
+
+	private bool GetWordBeforeSplitter(int index)
+	{
+		if (index == offset)
+			throw new SpanSplitEnumerator.InvalidConsecutiveSplitter(input.ToString(), index);
+		if (index + 1 == input.Length)
+			throw new SpanSplitEnumerator.EmptyEntryNotAllowedAtTheEnd(input.ToString(), index);
+		if (removeLeadingSpace && input[offset] == ' ')
+			offset++;
+		Current = offset..index;
+		offset = index + 1;
+		return true;
+	}
+}
+
 /*tst
 public static class MemoryExtensions
 {

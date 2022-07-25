@@ -20,17 +20,35 @@ public sealed class List : Expression
 		// ((1, 2), (3, 4))
 		// ^l1 -> this is problematic, add some tests, probably some grouping needed, ask Ben if you need some new grouping code, or use your own ..
 		var input = line.Text.GetSpanFromRange(range);
-		return input.Length > 2 && input[0] == '(' && input[^1] == ')'
-			? TryParseList(line, input[1..^1].Split(',', StringSplitOptions.TrimEntries))
-			: null;
+		if (input.Length >= 2 && input[0] == '(' && input[^1] == ')')
+		{
+			var innerSpan = input[1..^1];
+			if (innerSpan.IsEmpty)
+				throw new EmptyListNotAllowed(line, input.ToString());
+			var start = range.Start.Value + 1;
+			if (!innerSpan.Contains('(') && !innerSpan.Contains('"'))
+				return TryParseListFast(line, (start, innerSpan.Length),
+					innerSpan.SplitIntoRanges(',', true));
+			var expressions = new List<Expression>();
+			new PhraseTokenizer(line.Text, new Range(start, start + innerSpan.Length)).ProcessEachToken(
+				tokenRange =>
+				{
+					if (line.Text[tokenRange.Start.Value] != ',')
+						expressions.Add(line.Method.TryParseExpression(line, tokenRange) ??
+							throw new MethodExpressionParser.UnknownExpression(line, line.Text[tokenRange]));
+				});
+			return new List(line.Method, expressions);
+		}
+		else
+			return null;
 	}
 
-	private static Expression TryParseList(Method.Line line, SpanSplitEnumerator elements)
+	private static Expression TryParseListFast(Method.Line line, (int, int) offsetAndInnerSpanLength, RangeEnumerator elements)
 	{
 		var expressions = new List<Expression>();
 		foreach (var element in elements)
-			expressions.Add(line.Method.TryParseExpression(line, ..) ?? //TODO: this won't work, we need actual grouping and ranges above
-				throw new MethodExpressionParser.UnknownExpression(line, element.ToString()));
+			expressions.Add(line.Method.TryParseExpression(line, element.GetOuterRange(offsetAndInnerSpanLength)) ??
+				throw new MethodExpressionParser.UnknownExpression(line, line.Text[element.GetOuterRange(offsetAndInnerSpanLength)]));
 		return new List(line.Method, expressions);
 	}
 
@@ -55,5 +73,10 @@ public sealed class List : Expression
 	public sealed class ListsHaveDifferentDimensions : ParsingFailed
 	{
 		public ListsHaveDifferentDimensions(Method.Line line, string error) : base(line, error) { }
+	}
+
+	public class EmptyListNotAllowed : ParsingFailed
+	{
+		public EmptyListNotAllowed(Method.Line line, string error) : base(line, error) { }
 	}
 }

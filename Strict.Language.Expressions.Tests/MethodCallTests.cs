@@ -10,7 +10,7 @@ public sealed class MethodCallTests : TestExpressions
 
 	[Test]
 	public void ParseRemoteMethodCall() =>
-		ParseAndCheckOutputMatchesInput("log.Write(\"Hi\")",
+		ParseAndCheckOutputMatchesInput("log.Write(\"Hi \")",
 			new MethodCall(new MemberCall(member), member.Type.Methods[0], new Text(type, "Hi")));
 
 	[Test]

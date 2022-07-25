@@ -10,6 +10,15 @@ public class SpanExtensionsTests
 		Assert.That(() => "".AsSpan().Split(), Throws.InstanceOf<SpanExtensions.EmptyInputIsNotAllowed>());
 
 	[Test]
+	public void GetOuterRange()
+	{
+		const string Text = "Hello 1234";
+		var outerRange = (4..).GetOuterRange((2..8).GetOffsetAndLength(Text.Length));
+		Assert.That(outerRange, Is.EqualTo(6..8));
+		Assert.That(Text[outerRange], Is.EqualTo("12"));
+	}
+
+	[Test]
 	public void RemoveEmptyEntriesIsNotSupported() =>
 		Assert.That(() => "as ".AsSpan().Split(options: StringSplitOptions.RemoveEmptyEntries), Throws.InstanceOf<NotSupportedException>());
 

@@ -15,7 +15,7 @@ public sealed class ShuntingYard
 		tokenizer.ProcessEachToken(PutTokenIntoStacks);
 		ApplyHigherOrEqualPrecedenceOperators();
 		//TODO: remove after done:
-		Console.WriteLine("Operators: " + string.Join(", ", operators) + " Output: " + string.Join(", ", Output));
+		Console.WriteLine("Operators: " + string.Join(", ", operators) + " Output Ranges: " + string.Join(", ", Output));
 	}
 
 	private readonly string input;

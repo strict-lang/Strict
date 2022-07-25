@@ -9,7 +9,7 @@ public sealed class Binary : MethodCall
 	public Binary(Expression left, Method operatorMethod, Expression right) : base(left,
 		operatorMethod, right) { }
 
-	public Expression Left => Instance!;
+	public Expression Left => Instance!; // TODO: This is a hack, use proper method arguments 0 & 1
 	public Expression Right => Arguments[0];
 	public override string ToString() => Left + " " + Method.Name + " " + Right;
 
@@ -23,7 +23,7 @@ public sealed class Binary : MethodCall
 		var right = GetUnaryOrBuildNestedBinary(line, tokens.Pop(), tokens);
 		var left = GetUnaryOrBuildNestedBinary(line, tokens.Pop(), tokens);
 		var operatorToken = line.Text[operatorTokenRange];//TODO: make more efficient
-		var operatorMethod = left.ReturnType.Methods.FirstOrDefault(m => m.Name == operatorToken) ??
+		var operatorMethod = left.ReturnType.Methods.FirstOrDefault(m => m.Name == operatorToken) ?? // TODO: Match operator param types before
 			line.Method.GetType(Base.BinaryOperator).Methods.FirstOrDefault(m => m.Name == operatorToken) ??
 			throw new NoMatchingOperatorFound(right.ReturnType, operatorToken);
 		return new Binary(left, operatorMethod, right);
@@ -33,7 +33,7 @@ public sealed class Binary : MethodCall
 		Stack<Range> tokens)
 	{
 		var nextToken = line.Text.GetSpanFromRange(nextTokenRange);//TODO: only needed for operator check, can be done more efficiently
-		return nextToken[0].IsSingleCharacterOperator() || nextToken.ToString().IsMultiCharacterOperator()
+		return nextToken[0].IsSingleCharacterOperator() || nextToken.IsMultiCharacterOperator()
 			? BuildBinaryExpression(line, nextTokenRange, tokens)
 			: line.Method.TryParseExpression(line, nextTokenRange) ??
 			throw new MethodExpressionParser.UnknownExpression(line);

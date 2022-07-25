@@ -44,7 +44,7 @@ GetComplicatedSequenceTexts returns Texts
 		{
 			operatorCounter = 0;
 			foreach (var word in inputMemory.Span.Split())
-				if (word[0].IsSingleCharacterOperator() || word.ToString().IsMultiCharacterOperator()) // TODO: word.ToString() is doing spoiling the purpose of this test; fix it
+				if (word[0].IsSingleCharacterOperator() || word.IsMultiCharacterOperator())
 					operatorCounter++;
 		}
 		Assert.That(operatorCounter, Is.EqualTo(6));

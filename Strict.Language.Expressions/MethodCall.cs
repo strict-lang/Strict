@@ -26,8 +26,8 @@ public class MethodCall : Expression
 
 	public static Expression? TryParse(Method.Line line, Range range)
 	{
-		var partToParse = line.Text.GetSpanFromRange(range).ToString();//TODO!
-		return partToParse.EndsWith(')') && partToParse.Contains('(')
+		var partToParse = line.Text.GetSpanFromRange(range).ToString(); //TODO!
+		return partToParse[^1] == ')' && partToParse.Contains('(')
 			? TryParseMethod(line,
 				//TODO: this should be list parsing
 				partToParse.Split(new[] { '(', ')' }, StringSplitOptions.RemoveEmptyEntries))
@@ -42,12 +42,22 @@ public class MethodCall : Expression
 			? GetArguments(line, parts[1], methodName)
 			: Array.Empty<Expression>();
 		if (!methodName.Contains('.'))
-			return FindMethodCall(null, line, methodName, arguments);
+			// get the method 
+		{
+			var method = FindMethod(null, line, methodName, arguments);
+			if (method == null)
+				//TODO: If not found check types for constructor call may be inline it here?
+				return null;
+			return new MethodCall(null, method, arguments);
+		}
 		var memberParts = methodName.Split('.', 2);
-		var firstMember = MemberCall.TryParse(line, ..);//TODO: bada bad badbada bdabda memberParts[0]);
+		var firstMember = MemberCall.TryParse(line, ..); //TODO: bada bad badbada bdabda memberParts[0]);
 		if (firstMember == null)
 			throw new MemberCall.MemberNotFound(line, line.Method.Type, memberParts[0]);
-		return FindMethodCall(firstMember, line, memberParts[1], arguments);
+		var memberMethod = FindMethod(firstMember, line, memberParts[1], arguments);
+		return memberMethod != null
+			? new MethodCall(firstMember, memberMethod, arguments)
+			: throw new MethodNotFound(line, memberParts[1], firstMember.ReturnType); // TODO: still check for members
 	}
 
 	private static Expression[] GetArguments(Method.Line line, string argumentsText, string methodName)
@@ -72,7 +82,7 @@ public class MethodCall : Expression
 	}
 
 	// ReSharper disable once TooManyArguments
-	private static MethodCall? FindMethodCall(Expression? instance, Method.Line line, string methodName,
+	private static Method? FindMethod(Expression? instance, Method.Line line, string methodName,
 		Expression[] arguments)
 	{
 		if (!methodName.IsWord())
@@ -83,7 +93,7 @@ public class MethodCall : Expression
 			? throw new MethodNotFound(line, methodName, context)
 			: method.Parameters.Count != arguments.Length
 				? throw new ArgumentsDoNotMatchMethodParameters(line, arguments, method)
-				: new MethodCall(instance, method, arguments);
+				: method;
 	}
 
 	public sealed class MethodNotFound : ParsingFailed

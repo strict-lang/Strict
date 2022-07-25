@@ -9,15 +9,13 @@ public ref struct SpanSplitEnumerator
 		this.input = input;
 		this.splitter = splitter;
 		this.options = options;
-		offset = 0;
-		Current = default;
 	}
 
 	private readonly ReadOnlySpan<char> input;
 	private readonly char splitter;
 	private readonly StringSplitOptions options;
-	private int offset;
-	public ReadOnlySpan<char> Current { get; private set; }
+	private int offset = 0;
+	public ReadOnlySpan<char> Current { get; private set; } = default;
 	public readonly SpanSplitEnumerator GetEnumerator() => this;
 
 	public bool MoveNext()

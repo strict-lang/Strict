@@ -33,8 +33,10 @@ public static class BinaryOperator
 	public static bool IsSingleCharacterOperator(this char tokenFirstCharacter) =>
 		AnySingleCharacterOperator.Contains(tokenFirstCharacter);
 
+	private const string AnySingleCharacterOperator = Plus + Minus + Multiply + Divide + Modulate + Smaller + Greater;
+
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static bool IsMultiCharacterOperator(this string name)//TODO: should be ReadOnlySpan again!
+	public static bool IsMultiCharacterOperator(this string name)
 	{
 		foreach (var checkOperator in MultiCharacterOperators)
 			if (checkOperator == name)
@@ -47,10 +49,19 @@ public static class BinaryOperator
 		SmallerOrEqual, GreaterOrEqual, Is, And, Or, Xor, To
 	};
 
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static bool IsMultiCharacterOperator(this ReadOnlySpan<char> name)
+	{
+		foreach (var checkOperator in MultiCharacterOperators)
+			if (name.Compare(checkOperator))
+				return true;
+		return false;
+	}
+
+	[Obsolete] //TODO: remove once everything is green
 	public static string? FindFirstOperator(this string line) =>
 		All.FirstOrDefault(l => line.Contains(" " + l + " "));
 
-	private const string AnySingleCharacterOperator = Plus + Minus + Multiply + Divide + Modulate + Smaller + Greater;
 	private static readonly string[] All =
 	{
 		Plus, Minus, Multiply, Divide, Modulate, Smaller, Greater, SmallerOrEqual, GreaterOrEqual,
@@ -68,33 +79,32 @@ public static class BinaryOperator
 	/// Example: 1+2*3%4 to Text is "1" becomes: ((1+(2*(3%4))) to Text) is "1"
 	/// "5" to Number >= 6 is false becomes: (5 >= 6) is false
 	/// </summary>
-	/// <param name="tokenFirstCharacter"></param>
-	/// <returns></returns>
-	/// <exception cref="NotSupportedException"></exception>
 	public static int GetPrecedence(char tokenFirstCharacter) =>
 		tokenFirstCharacter switch
 		{
-			'+' => 1,
-			'-' => 1,
-			'*' => 2,
-			'/' => 2,
-			'^' => 3,
-			'%' => 4,
-			'<' => 6,
-			'>' => 6,
+			'+' => 2, // unary '-' operator has precendence 1
+			'-' => 2,
+			'*' => 3,
+			'/' => 3,
+			'^' => 4,
+			'%' => 5,
+			'<' => 8,
+			'>' => 8,
 			_ => throw new NotSupportedException(tokenFirstCharacter.ToString()) //ncrunch: no coverage
 		};
 
 	public static int GetPrecedence(ReadOnlySpan<char> token)
 	{
+		if (token.Compare("not"))
+			return 1;
 		if (token.Compare(To))
-			return 5;
-		if (token.Compare(SmallerOrEqual) || token.Compare(GreaterOrEqual))
-			return 6;
-		if (token.Compare(And) || token.Compare(Or) || token.Compare(Xor))
 			return 7;
+		if (token.Compare(SmallerOrEqual) || token.Compare(GreaterOrEqual))
+			return 8;
+		if (token.Compare(And) || token.Compare(Or) || token.Compare(Xor))
+			return 9;
 		if (token.Compare(Is))
-			return 10;
+			return 11;
 		return GetPrecedence(token[0]);
 	}
 }

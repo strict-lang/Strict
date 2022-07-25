@@ -3,3 +3,9 @@ is(other) returns Boolean
 	true is true
 	false is not true
 	return value is other
+to(Text) returns Text
+	true to Text is "true"
+	not true to Text is "false"
+	if value
+		return "true"
+	return "false"

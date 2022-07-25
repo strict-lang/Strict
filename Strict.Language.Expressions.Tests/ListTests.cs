@@ -4,9 +4,25 @@ using NUnit.Framework;
 
 namespace Strict.Language.Expressions.Tests;
 
-/*TODO
 public sealed class ListTests : TestExpressions
 {
+	[Test]
+	public void EmptyListNotAllowed() =>
+		Assert.That(() => ParseExpression("()"), Throws.InstanceOf<List.EmptyListNotAllowed>()!);
+
+	[TestCase("(1)", "1")]
+	[TestCase("(true, false, true, false)", "true, false, true, false")]
+	[TestCase("(\"1\", \"2\", \"3\", \"4\", \"5\")", "\"1\", \"2\", \"3\", \"4\", \"5\"")]
+	public void ParseLists(string input, string expected) =>
+		ParseAndCheckOutputMatchesInput(input,
+			new List(method,
+				new List<Expression>(GetListExpressions(expected.Split(", ")))));
+
+	[Test]
+	public void ParseLists() =>
+		ParseAndCheckOutputMatchesInput("((1, 3), (2, 4))",
+			new List(method, new List<Expression>(GetListExpressions(new[] { "(1, 3)", "(2, 4)" }))));
+
 	[TestCase("(1, 2, 3, 4, 5) + \"4\"")]
 	[TestCase("(1, 2, 3, 4, 5) + (\"hello\")")]
 	[TestCase("(1, 2, 3, 4, 5) + \"hello\" + 4")]
@@ -22,17 +38,9 @@ public sealed class ListTests : TestExpressions
 		Assert.That(() => ParseExpression(input),
 			Throws.InstanceOf<List.ListsHaveDifferentDimensions>()!);
 
-	[TestCase("(1)", "1")]
-	[TestCase("(\"1\", \"2\", \"3\", \"4\", \"5\")", "\"1\", \"2\", \"3\", \"4\", \"5\"")]
-	[TestCase("(true, false, true, false)", "true, false, true, false")]
-	public void ParseLists(string input, string expected) =>
-		ParseAndCheckOutputMatchesInput(input,
-			new List(method,
-				new List<Expression>(GetListExpressions(expected.Split(",")))));
-
 	private IEnumerable<Expression> GetListExpressions(IEnumerable<string> elements) =>
 		elements.Select(element =>
-				method.TryParseExpression(new Method.Line(method, 0, "", 0), element.Trim())).
+				method.TryParseExpression(new Method.Line(method, 0, element, 0), ..)).
 			Where(foundExpression => foundExpression != null).ToList()!;
 
 	[TestCase("(1, 2, 3, 4, 5) + (6, 7, 8)", "1, 2, 3, 4, 5", "+", "6, 7, 8")]
@@ -91,4 +99,3 @@ public sealed class ListTests : TestExpressions
 					list.ReturnType.Methods.First(m => m.Name == expected[1]),
 					new Number(method, expectedRight))));
 }
-*/

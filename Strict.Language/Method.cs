@@ -82,18 +82,18 @@ public sealed class Method : Context
 	private static string GetName(string firstLine)
 	{
 		//TODO: should be a ReadOnlySpan from the caller
-		Memory<char> block = new Memory<char>(firstLine.ToCharArray());
+		var block = new Memory<char>(firstLine.ToCharArray());
 		var blockSpan = block.Span;
 		//Run\n
 		//Run(number)
 		//Run returns Text\n
-		for (int i = 0; i < block.Length; i++)
+		for (var i = 0; i < block.Length; i++)
 		{
 			if (blockSpan[i] == '(' || blockSpan[i] == ' ' || blockSpan[i] == '\n')
 				return blockSpan[..i].ToString();
 		}
 		//TODO: many times slower
-		return firstLine.SplitWordsAndPunctuation()[0];
+		return firstLine; //.SplitWordsAndPunctuation()[0]; TODO: check if this splitting is still needed
 	}
 
 	public const string From = "from";
@@ -152,7 +152,6 @@ public sealed class Method : Context
 
 	public sealed record Line(Method Method, int Tabs, string Text, int FileLineNumber)
 	{
-		public readonly List<Group> Groups = new BracketParser(Text).Groups;
 		public override string ToString() => new string('\t', Tabs) + Text;
 	}
 

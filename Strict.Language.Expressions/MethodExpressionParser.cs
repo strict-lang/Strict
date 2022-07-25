@@ -17,14 +17,17 @@ public class MethodExpressionParser : ExpressionParser
 			TryParseExpression(line, ..) ?? throw new UnknownExpression(line));
 	}
 
-	public override Expression? TryParseExpression(Method.Line line, Range partToParse)
+	public override Expression? TryParseExpression(Method.Line line, Range rangeToParse)
 	{
-		if (!line.Text.GetSpanFromRange(partToParse).Contains(' '))
-			return Boolean.TryParse(line, partToParse) ?? Text.TryParse(line, partToParse) ??
-				List.TryParse(line, partToParse) ?? Constructor.TryParse(line, partToParse) ??
-				MemberCall.TryParse(line, partToParse) ?? MethodCall.TryParse(line, partToParse) ??
-				Number.TryParse(line, partToParse);
-		var postfixTokens = new ShuntingYard(line.Text, partToParse).Output;
+		var input = line.Text.GetSpanFromRange(rangeToParse);
+		if (input.IsEmpty)
+			throw new CannotParseEmptyInput(line);
+		if (!input.Contains(' '))
+			return Boolean.TryParse(line, rangeToParse) ?? Text.TryParse(line, rangeToParse) ??
+				List.TryParse(line, rangeToParse) ?? Constructor.TryParse(line, rangeToParse) ??
+				MemberCall.TryParse(line, rangeToParse) ?? MethodCall.TryParse(line, rangeToParse) ??
+				Number.TryParse(line, rangeToParse);
+		var postfixTokens = new ShuntingYard(line.Text, rangeToParse).Output;
 		if (postfixTokens.Count == 0)
 			throw new NotSupportedException(
 				"Something really bad went wrong, delete this when everything works!");
@@ -39,6 +42,11 @@ public class MethodExpressionParser : ExpressionParser
 			throw new NotSupportedException("Feed Murali more to get Unary done");
 		}
 		return Binary.TryParse(line, postfixTokens);
+	}
+
+	public class CannotParseEmptyInput : ParsingFailed
+	{
+		public CannotParseEmptyInput(Method.Line line) : base(line) { }
 	}
 
 	public sealed class UnknownExpression : ParsingFailed
@@ -68,8 +76,8 @@ public class MethodExpressionParser : ExpressionParser
 
 	public override Expression ParseMethodLine(Method.Line line, ref int methodLineNumber) =>
 		Assignment.TryParse(line) ?? If.TryParse(line, ref methodLineNumber) ??
-		//TODO: for loop
+		//https://deltaengine.fogbugz.com/f/cases/25210
 		Return.TryParse(line) ??
-		//TODO: error
+		//https://deltaengine.fogbugz.com/f/cases/25211
 		TryParseExpression(line, ..) ?? throw new UnknownExpression(line);
 }

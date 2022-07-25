@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 
 namespace Strict.Language.Expressions;
@@ -33,33 +32,38 @@ public sealed class MemberCall : Expression
 		return partToParse.Contains('(')
 			? null
 			: partToParse.Contains('.')
-				? TryNestedMemberCall(line, partToParse.ToString().Split('.', 2))//TODO: nononono
-				: TryMemberCall(line, partToParse.ToString());//TODO: don't do that
+				? TryNestedMemberCall(line, partToParse.Split('.'))
+				: TryMemberCall(line, partToParse);
 	}
 
-	private static MemberCall? TryNestedMemberCall(Method.Line line, IReadOnlyList<string> parts) //TODO: use span!
+	private static MemberCall? TryNestedMemberCall(Method.Line line, SpanSplitEnumerator partsEnumerator) //TODO: use span!
 	{
-		var first = TryMemberCall(line, parts[0]);
+		partsEnumerator.MoveNext();
+		var firstMemberName = partsEnumerator.Current.ToString();
+		var first = TryMemberCall(line, firstMemberName);
 		if (first == null)
-			throw new MemberNotFound(line, line.Method.Type, parts[0]);
-		var second = first.ReturnType.Members.FirstOrDefault(m => m.Name == parts[1]);
+			throw new MemberNotFound(line, line.Method.Type, firstMemberName);
+		partsEnumerator.MoveNext();
+		var secondMemberName = partsEnumerator.Current.ToString();
+		var second = first.ReturnType.Members.FirstOrDefault(m => m.Name == secondMemberName);
 		return second == null
-			? first.ReturnType.Methods.Any(m => m.Name == parts[1])
+			? first.ReturnType.Methods.Any(m => m.Name == secondMemberName)
 				? null
-				: throw new MemberNotFound(line, first.ReturnType, parts[1])
+				: throw new MemberNotFound(line, first.ReturnType, secondMemberName)
 			: new MemberCall(first, second);
 	}
 
-	private static MemberCall? TryMemberCall(Method.Line line, string name)
+	private static MemberCall? TryMemberCall(Method.Line line, ReadOnlySpan<char> name)
 	{
 		if (!name.IsWord())
 			return null;
-		var foundMember = TryLocalMemberCall(line, name)
-			?? line.Method.Type.Members.FirstOrDefault(member => member.Name == name);
+		var memberName = name.ToString(); //TODO: Is this correct? can we still use span after this statement?
+		var foundMember = TryLocalMemberCall(line, memberName)
+			?? line.Method.Type.Members.FirstOrDefault(member => member.Name == memberName);
 		return foundMember != null
 			? new MemberCall(foundMember)
-			: line.Method.Type.Methods.All(m => m.Name != name)
-				? throw new MemberNotFound(line, line.Method.Type, name)
+			: line.Method.Type.Methods.All(m => m.Name != memberName)
+				? throw new MemberNotFound(line, line.Method.Type, memberName)
 				: null;
 	}
 
