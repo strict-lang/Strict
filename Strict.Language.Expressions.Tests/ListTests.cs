@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
@@ -38,21 +39,33 @@ public sealed class ListTests : TestExpressions
 		Assert.That(() => ParseExpression(input),
 			Throws.InstanceOf<List.ListsHaveDifferentDimensions>()!);
 
-	private IEnumerable<Expression> GetListExpressions(IEnumerable<string> elements) =>
-		elements.Select(element =>
-				method.TryParseExpression(new Method.Line(method, 0, element, 0), ..)).
-			Where(foundExpression => foundExpression != null).ToList()!;
+	private IEnumerable<Expression> GetListExpressions(IEnumerable<string> elements)
+	{
+		var expressions = new List<Expression>();
+		foreach (var line in elements.Select(element => new Method.Line(method, 0, element.Trim(), 0)))
+			new PhraseTokenizer(line.Text, new Range(0, line.Text.Length)).ProcessEachToken(
+				tokenRange =>
+				{
+					if (line.Text[tokenRange.Start.Value] != ',')
+						expressions.Add(method.TryParseExpression(line, tokenRange) ??
+							throw new UnknownExpression(line, line.Text[tokenRange]));
+				});
+		return expressions;
+	}
 
 	[TestCase("(1, 2, 3, 4, 5) + (6, 7, 8)", "1, 2, 3, 4, 5", "+", "6, 7, 8")]
 	[TestCase("(1, 2, 3, 4, 5) - (6, 7, 8)", "1, 2, 3, 4, 5", "-", "6, 7, 8")]
 	[TestCase("(1, 2, 3, 4, 5) is (1, 2, 3, 4, 5)", "1, 2, 3, 4, 5", "is", "1, 2, 3, 4, 5")]
 	[TestCase("(1, 2, 3, 4, 5) * (1, 2, 3, 4, 5)", "1, 2, 3, 4, 5", "*", "1, 2, 3, 4, 5")]
-	public void ParseListsBinaryOperation(string input, params string[] expected) =>
+	public void ParseListsBinaryOperation(string input, params string[] expected)
+	{
+		Console.WriteLine(ParseExpression(input).ToString());
 		ParseAndCheckOutputMatchesInput(input,
 			new Binary(
 				new List(method, new List<Expression>(GetListExpressions(expected[0].Split(",")))),
 				list.ReturnType.Methods.First(m => m.Name == expected[1]),
 				new List(method, new List<Expression>(GetListExpressions(expected[2].Split(","))))));
+	}
 
 	[TestCase("(1, 2, 3, 4, 5) + 4", 4, "1, 2, 3, 4, 5", "+")]
 	[TestCase("(1, 2, 3, 4, 5) - 4", 4, "1, 2, 3, 4, 5", "-")]
