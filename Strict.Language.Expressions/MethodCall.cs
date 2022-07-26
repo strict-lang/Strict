@@ -48,7 +48,11 @@ public class MethodCall : Expression
 			var method = FindMethod(null, line, methodName, arguments);
 			if (method == null)
 				//TODO: If not found check types for constructor call may be inline it here?
-				return null;
+			{
+				return
+					TryParseConstructor(line,
+						range); //range.Start.Value..(methodName.Length + range.Start.Value));
+			}
 			return new MethodCall(null, method, arguments);
 		}
 		var memberParts = methodName.Split('.', 2);
@@ -91,11 +95,11 @@ public class MethodCall : Expression
 			return null;
 		var context = instance?.ReturnType ?? line.Method.Type;
 		var method = context.Methods.FirstOrDefault(m => m.Name == methodName);
-		return method == null
+		return method; /* TODO: add once constructor is fixed == null
 			? throw new MethodNotFound(line, methodName, context)
 			: method.Parameters.Count != arguments.Length
 				? throw new ArgumentsDoNotMatchMethodParameters(line, arguments, method)
-				: method;
+				: method;*/
 	}
 
 	public sealed class MethodNotFound : ParsingFailed
@@ -110,5 +114,43 @@ public class MethodCall : Expression
 				? "No arguments does "
 				: "Arguments: " + arguments.ToBrackets() + " do ") + "not match \"" + method.Type + "." +
 			method.Name + "\" method parameters: " + method.Parameters.ToBrackets()) { }
+	}
+
+	public static Expression? TryParseConstructor(Method.Line line, Range range)
+	{
+		var partToParse = line.Text[range]; //TODO: use span here!
+		return partToParse.EndsWith(')') && partToParse.Contains('(')
+			? TryParseConstructor(line,
+				partToParse.Split(new[] { '(', ')' }, StringSplitOptions.RemoveEmptyEntries),
+				partToParse.Contains(")."))
+			: null;
+	}
+
+	private static Expression? TryParseConstructor(Method.Line line,
+		IReadOnlyList<string> typeNameAndArguments, bool hasNestedMethodCall)
+	{
+		var type = line.Method.FindType(typeNameAndArguments[0]);
+		if (type == null)
+			return null;
+		var constructorMethodCall = new MethodCall(new Value(type, type), type.Methods[0], // TODO: Get constructor method using a helper method
+			line.Method.TryParseExpression(line, ..) ?? //TODO: broken anyways: typeNameAndArguments[1]) ?? use same method GetArguments method
+			throw new MethodExpressionParser.UnknownExpression(line));
+		if (!hasNestedMethodCall)
+			return constructorMethodCall;
+		var arguments = typeNameAndArguments.Count > 3
+			? GetArguments(line, typeNameAndArguments.Skip(3).ToList())
+			: Array.Empty<Expression>();
+		var method = type.Methods.FirstOrDefault(m => m.Name == typeNameAndArguments[2][1..]) ?? throw new MethodCall.MethodNotFound(line, typeNameAndArguments[2][1..], type);
+		return new MethodCall(constructorMethodCall, method, arguments);
+	}
+
+	private static Expression[] GetArguments(Method.Line line, IReadOnlyList<string> parts)
+	{
+		var arguments = new Expression[parts.Count];
+		for (var index = 0; index < parts.Count; index++)
+			arguments[index] = line.Method.TryParseExpression(line, ..) ??//TODO: parts[index]) ??
+				throw new MethodCall.InvalidExpressionForArgument(line,
+					parts[index] + " for " + parts[index] + " argument " + index);
+		return arguments;
 	}
 }

@@ -30,7 +30,7 @@ public class MethodExpressionParser : ExpressionParser
 		var postfixTokens = new ShuntingYard(line.Text, rangeToParse).Output;
 		if (postfixTokens.Count == 0)
 			throw new NotSupportedException(
-				"Something really bad went wrong, delete this when everything works!");
+				"Something really bad happened, delete this when everything works!");
 		else if (postfixTokens.Count == 1)
 		{
 			var range = postfixTokens.Pop();

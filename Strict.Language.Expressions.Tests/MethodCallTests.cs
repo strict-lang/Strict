@@ -55,4 +55,11 @@ public sealed class MethodCallTests : TestExpressions
 	public void MethodCallMembersMustBeWords() =>
 		Assert.That(() => ParseExpression("0g9y53.Write()"),
 			Throws.InstanceOf<MemberCall.MemberNotFound>());
+
+	[Test]
+	public void ConstructorMethodCall()
+	{
+		var code = @"Character(7)";
+		Assert.That(ParseExpression(code).ToString(), Is.EqualTo(code));
+	}
 }
