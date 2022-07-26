@@ -1,10 +1,10 @@
 implement Number
 from(number)
-	Character(7) is '7'
-	return '0' + number
+	Character(7) is "7"
+	return Character(0) + number
 from(text)
-	Character("b") is 'b'
+	Character("b") is "b"
 	return text.Characters[0]
 to returns Text
-	'a' to Text is "a"
-	return "" + this
+	Character("a") to Text is "a"
+	return "" + value

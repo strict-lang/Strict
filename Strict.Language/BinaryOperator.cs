@@ -58,10 +58,6 @@ public static class BinaryOperator
 		return false;
 	}
 
-	[Obsolete] //TODO: remove once everything is green
-	public static string? FindFirstOperator(this string line) =>
-		All.FirstOrDefault(l => line.Contains(" " + l + " "));
-
 	private static readonly string[] All =
 	{
 		Plus, Minus, Multiply, Divide, Modulate, Smaller, Greater, SmallerOrEqual, GreaterOrEqual,

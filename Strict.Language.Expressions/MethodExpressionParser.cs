@@ -24,7 +24,7 @@ public class MethodExpressionParser : ExpressionParser
 			throw new CannotParseEmptyInput(line);
 		if (!input.Contains(' '))
 			return Boolean.TryParse(line, rangeToParse) ?? Text.TryParse(line, rangeToParse) ??
-				List.TryParse(line, rangeToParse) ?? Constructor.TryParse(line, rangeToParse) ??
+				List.TryParse(line, rangeToParse) ?? // Constructor.TryParse(line, rangeToParse) ??
 				MemberCall.TryParse(line, rangeToParse) ?? MethodCall.TryParse(line, rangeToParse) ??
 				Number.TryParse(line, rangeToParse);
 		var postfixTokens = new ShuntingYard(line.Text, rangeToParse).Output;
@@ -39,7 +39,7 @@ public class MethodExpressionParser : ExpressionParser
 		else if (postfixTokens.Count == 2)
 		{
 			// TODO: Unary goes here
-			throw new NotSupportedException("Feed Murali more to get Unary done");
+			//throw new NotSupportedException("Feed Murali more to get Unary done");
 		}
 		return Binary.TryParse(line, postfixTokens);
 	}

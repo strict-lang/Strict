@@ -55,7 +55,7 @@ public sealed class MemberCall : Expression
 
 	private static MemberCall? TryMemberCall(Method.Line line, ReadOnlySpan<char> name)
 	{
-		if (!name.IsWord())
+		if (!name.IsWordOrText())
 			return null;
 		var memberName = name.ToString(); //TODO: Is this correct? can we still use span after this statement?
 		var foundMember = TryLocalMemberCall(line, memberName)

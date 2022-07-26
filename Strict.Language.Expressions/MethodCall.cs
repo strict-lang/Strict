@@ -30,19 +30,20 @@ public class MethodCall : Expression
 		return partToParse[^1] == ')' && partToParse.Contains('(')
 			? TryParseMethod(line,
 				//TODO: this should be list parsing
-				partToParse.Split(new[] { '(', ')' }, StringSplitOptions.RemoveEmptyEntries))
+				range, partToParse.Split(new[] { '(', ')' }, StringSplitOptions.RemoveEmptyEntries))
 			//TODO: new should be avoided in all TryParse
-			: TryParseMethod(line, new string[] { partToParse });
+			: TryParseMethod(line, range, new string[] { partToParse });
 	}
 
-	private static Expression? TryParseMethod(Method.Line line, params string[] parts)
+	private static Expression? TryParseMethod(Method.Line line, Range range, params string[] parts)
 	{
 		var methodName = parts[0];
+		var argumentStartIndex = range.Start.Value + parts[0].Length + 1;
 		var arguments = parts.Length > 1
-			? GetArguments(line, parts[1], methodName)
+			? GetArguments(line, parts[1], methodName, argumentStartIndex)
 			: Array.Empty<Expression>();
 		if (!methodName.Contains('.'))
-			// get the method 
+			// get the method
 		{
 			var method = FindMethod(null, line, methodName, arguments);
 			if (method == null)
@@ -51,7 +52,7 @@ public class MethodCall : Expression
 			return new MethodCall(null, method, arguments);
 		}
 		var memberParts = methodName.Split('.', 2);
-		var firstMember = MemberCall.TryParse(line, ..); //TODO: bada bad badbada bdabda memberParts[0]);
+		var firstMember = MemberCall.TryParse(line, range.Start..memberParts[0].Length);
 		if (firstMember == null)
 			throw new MemberCall.MemberNotFound(line, line.Method.Type, memberParts[0]);
 		var memberMethod = FindMethod(firstMember, line, memberParts[1], arguments);
@@ -60,7 +61,8 @@ public class MethodCall : Expression
 			: throw new MethodNotFound(line, memberParts[1], firstMember.ReturnType); // TODO: still check for members
 	}
 
-	private static Expression[] GetArguments(Method.Line line, string argumentsText, string methodName)
+	private static Expression[] GetArguments(Method.Line line, string argumentsText,
+		string methodName, int argumentStartIndex)
 	{
 		// someClass.ComplicatedMethod((1, 2, 3) + (4, 5), 7)
 		// list of 2 arguments:
@@ -70,7 +72,7 @@ public class MethodCall : Expression
 		var parts = argumentsText.Split(", ");
 		var arguments = new Expression[parts.Length];
 		for (var index = 0; index < parts.Length; index++)
-			arguments[index] = line.Method.TryParseExpression(line, ..) ?? //TODO: broken, fix it! parts[index]) ??
+			arguments[index] = line.Method.TryParseExpression(line, argumentStartIndex..(argumentStartIndex + parts[index].Length)) ??
 				throw new InvalidExpressionForArgument(line,
 					parts[index] + " for " + methodName + " argument " + index);
 		return arguments;

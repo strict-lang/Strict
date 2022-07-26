@@ -22,8 +22,7 @@ public sealed class Method : Context
 	}
 
 	public Method(Type type, int typeLineNumber, ExpressionParser parser,
-		//TODO: Memory<char> from file for this method block, preparesd by lines (probably done in the caller)
-		//TODO: Memory<char> lines)
+		// Memory<char> lines https://deltaengine.fogbugz.com/f/cases/25240
 		IReadOnlyList<string> lines)
 		: base(type,
 		GetName(lines[0]))
@@ -37,7 +36,7 @@ public sealed class Method : Context
 			? type
 			: GetReturnType(type, ref rest);
 		ParseDefinition(rest);
-		bodyLines = GetLines(lines); //TODO: all of these should be links via Memory<char> to the original file
+		bodyLines = GetLines(lines); //https://deltaengine.fogbugz.com/f/cases/25240
 		body = new Lazy<MethodBody>(() => (MethodBody)parser.ParseMethodBody(this));
 	}
 
@@ -93,7 +92,7 @@ public sealed class Method : Context
 				return blockSpan[..i].ToString();
 		}
 		//TODO: many times slower
-		return firstLine; //.SplitWordsAndPunctuation()[0]; TODO: check if this splitting is still needed
+		return firstLine.SplitWordsAndPunctuation()[0];
 	}
 
 	public const string From = "from";
@@ -184,9 +183,4 @@ public sealed class Method : Context
 		name == Base.Other
 			? Type
 			: Type.FindType(name, searchingFrom ?? this);
-
-	/*TODO: outdated!
-	public Expression? TryParseExpressionFromTokens(Line line, Stack<string> tokens) =>
-		parser.TryParseExpressionFromTokens(line, tokens);
-	*/
 }

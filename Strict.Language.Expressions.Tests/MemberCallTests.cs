@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
 
@@ -32,4 +33,15 @@ public sealed class MemberCallTests : TestExpressions
 	[Test]
 	public void NestedMemberIsNotAWord() =>
 		Assert.That(() => ParseExpression("log.5"), Throws.InstanceOf<MemberCall.MemberNotFound>());
+
+	[Test]
+	public void ValidMemberCall() =>
+		Assert.That(ParseExpression("\"hello\".Characters").ToString(), Is.EqualTo(new List<Expression>()
+		{
+			new Text(type, "h"),
+			new Text(type, "e"),
+			new Text(type, "l"),
+			new Text(type, "l"),
+			new Text(type, "o")
+		}));
 }

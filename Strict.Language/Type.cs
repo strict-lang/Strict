@@ -261,13 +261,7 @@ public class Type : Context
 		var directory = Path.GetDirectoryName(filePath)!;
 		var paths = directory.Split(Path.DirectorySeparatorChar);
 		CheckForFilePathErrors(filePath, paths, directory);
-		/*TODO: more memory efficient
-		await using Stream stream = new FileStream(filePath, FileMode.Open);
-		StreamReader reader = new StreamReader(stream);
-		string? line;
-		while ((line = await reader.ReadLineAsync()) != null)
-			TryParseLine(line);//TODO: to get this working fix methodline construction
-		//*/
+		//https://deltaengine.fogbugz.com/f/cases/25240
 		Parse(await File.ReadAllLinesAsync(filePath));
 	}
 

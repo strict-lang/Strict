@@ -80,10 +80,10 @@ public static class SpanExtensions
 		return count;
 	}
 
-	public static bool IsWord(this ReadOnlySpan<char> input)
+	public static bool IsWordOrText(this ReadOnlySpan<char> input)
 	{
 		foreach (var c in input)
-			if (c is (< 'A' or > 'Z') and (< 'a' or > 'z'))
+			if (c is (< 'A' or > 'Z') and (< 'a' or > 'z') && c != '"')
 				return false;
 		return true;
 	}
