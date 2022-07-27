@@ -60,6 +60,7 @@ public sealed class MemberCall : Expression
 		var memberName = name.ToString(); //TODO: Is this correct? can we still use span after this statement?
 		var foundMember = TryLocalMemberCall(line, memberName)
 			?? line.Method.Type.Members.FirstOrDefault(member => member.Name == memberName); // TODO: Find all parent members as well use unit test -> Count(5).Floor is 5
+		//TODO: the member can be anything, any expression, don't assume it is always a member!
 		return foundMember != null
 			? new MemberCall(foundMember)
 			: line.Method.Type.Methods.All(m => m.Name != memberName)

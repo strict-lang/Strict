@@ -4,21 +4,21 @@ using System.Linq;
 
 namespace Strict.Language.Expressions;
 
-public sealed class List : Expression
+public sealed class List : Value
 {
-	public List(Context context, List<Expression> values) : base(context.GetType(Base.List)) => Values = values;
+	public List(Context context, List<Expression> values) : base(context.GetType(Base.List),
+		//TODO: we should find the common base type for the whole list, see BinarySaveExtension and also how If handles this
+		values[0].ReturnType) => Values = values;
 	public List<Expression> Values { get; }
-	public override string ToString() => "(" + ValuesToString() + ")";
+	public override string ToString() => Values.ToBrackets();
 
-	private string ValuesToString() =>
-		Values.Aggregate("", (current, expression) => current + (expression + ", ")).Trim()[..^1];
-
+	//TODO: need more complex tests, seems to do the basics correct, but check all nested cases as well
+	// (1, 2, 3) + (3, 4)
+	// ^l1       ^op ^l2
+	// ((1, 2), (3, 4))
+	// ^l1 -> this is problematic, add some tests, probably some grouping needed, ask Ben if you need some new grouping code, or use your own ..
 	public static Expression? TryParse(Method.Line line, Range range)
 	{
-		// (1, 2, 3) + (3, 4)
-		// ^l1       ^op ^l2
-		// ((1, 2), (3, 4))
-		// ^l1 -> this is problematic, add some tests, probably some grouping needed, ask Ben if you need some new grouping code, or use your own ..
 		var input = line.Text.GetSpanFromRange(range);
 		if (input.Length >= 2 && input[0] == '(' && input[^1] == ')')
 		{

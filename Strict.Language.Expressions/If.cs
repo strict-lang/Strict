@@ -1,26 +1,45 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 
 namespace Strict.Language.Expressions;
 
+/// <summary>
+/// If expressions are used for branching, can also be used as an input for any other expression
+/// like method arguments, other conditions, etc. like conditional operators.
+/// </summary>
 public sealed class If : BlockExpression
 {
-	public If(Expression condition, Expression then, Expression? optionalElse = null, Method.Line? line = null) : base(GetMatchingType(then.ReturnType, optionalElse?.ReturnType, line))
+	public If(Expression condition, Expression then, Expression? optionalElse = null,
+		Method.Line? lineForErrorMessage = null) : base(GetMatchingType(then.ReturnType,
+		optionalElse?.ReturnType, lineForErrorMessage))
 	{
 		Condition = condition;
 		Then = then;
 		OptionalElse = optionalElse;
 	}
 
-	private static Type GetMatchingType(Type thenType, Type? elseType, Method.Line? line) =>
+	/// <summary>
+	/// The return type of the whole if expression must be a type compatible to both what the then
+	/// expression and the else expression return (if used). This is a common problem in static
+	/// programming languages and we can fix it here by evaluating both types and find a common base
+	/// type. If that is not possible there is a compilation error here.
+	/// </summary>
+	private static Type GetMatchingType(Type thenType, Type? elseType,
+		Method.Line? lineForErrorMessage) =>
 		elseType == null || thenType == elseType || elseType.Implements.Contains(thenType)
 			? thenType
 			: thenType.Implements.Contains(elseType)
 				? elseType
 				: thenType.Implements.Union(elseType.Implements).FirstOrDefault() ??
 				throw new ReturnTypeOfThenAndElseMustHaveMatchingType(
-					line ?? new Method.Line(thenType.Methods[0], 0, "", 0), thenType, elseType);
+					lineForErrorMessage ?? new Method.Line(thenType.Methods[0], 0, "", 0), thenType,
+					elseType);
+
+	// ReSharper disable once HollowTypeName
+	public class ReturnTypeOfThenAndElseMustHaveMatchingType : ParsingFailed
+	{
+		public ReturnTypeOfThenAndElseMustHaveMatchingType(Method.Line line, Type thenReturnType, Type optionalElseReturnType) : base(line, "The Then type: " + thenReturnType + " is not same as the Else type: " + optionalElseReturnType) { }
+	}
 
 	public Expression Condition { get; }
 	public Expression Then { get; }
@@ -61,16 +80,16 @@ public sealed class If : BlockExpression
 		public UnexpectedElse(Method.Line line) : base(line) { }
 	}
 
+	//TODO: some testing missing!
+	// if 5 (checked and failed)
+	// if true (ok)
+	// if isInternal (not checked, bad) member
+	// if bla is 5 (ok)
+	// if HasMember("idontknow") <- ???????? method
+	// if number/text/list/boolean/spaces (binary, list, unary)
+	// if String(5) <- constructor ??????
 	private static Expression TryParseIf(Method.Line line, ref int methodLineNumber)
 	{
-		// if 5 (checked and failed)
-		// if true (ok)
-		// if isInternal (not checked, bad) member
-		// if bla is 5 (ok)
-		// if HasMember("idontknow") <- ???????? method
-		// if number/text/list/boolean/spaces (binary, list, unary)
-		// if String(5) <- constructor ??????
-
 		var condition = line.Method.TryParseExpression(line, 3..) ?? throw new MissingCondition(line);
 		if (condition.ReturnType.Name != Base.Boolean)
 			throw new InvalidCondition(line, condition.ReturnType);
@@ -99,17 +118,12 @@ public sealed class If : BlockExpression
 			method.bodyLines[methodLineNumber - 1].Tabs + 1)
 			throw new Method.InvalidIndentation(method.Type, method.TypeLineNumber + methodLineNumber,
 				string.Join('\n', method.bodyLines.ToWordList()), method.Name);
+//TODO: this doesn't look like we support multiple lines in the then expression yet???
 		return method.ParseMethodLine(method.bodyLines[methodLineNumber], ref methodLineNumber);
 	}
 
 	public sealed class MissingThen : ParsingFailed
 	{
 		public MissingThen(Method.Line line) : base(line) { }
-	}
-
-	// ReSharper disable once HollowTypeName
-	public class ReturnTypeOfThenAndElseMustHaveMatchingType : ParsingFailed
-	{
-		public ReturnTypeOfThenAndElseMustHaveMatchingType(Method.Line line, Type thenReturnType, Type optionalElseReturnType) : base(line, "The Then type: " + thenReturnType + " is not same as the Else type: " + optionalElseReturnType) { }
 	}
 }

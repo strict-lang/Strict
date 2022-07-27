@@ -10,16 +10,6 @@ namespace Strict.Language.Tests;
 [SimpleJob(RunStrategy.Throughput, warmupCount: 1, targetCount: 10)]
 public class BinaryOperatorTests
 {
-	private const string Input = @"has numbers
-GetComplicatedSequenceTexts returns Texts
-	ConvertingNumbers(1, 21).GetComplicatedSequenceTexts is (""7"", ""16"")
-	return for numbers
-		 to Text
-		Length * Length
-		4 + value * 3
-		 to Text";
-	private readonly ReadOnlyMemory<char> inputMemory = Input.AsMemory();
-
 	[Benchmark]
 	[Test]
 	public void IsOperatorUsingStringContains()
@@ -34,6 +24,16 @@ GetComplicatedSequenceTexts returns Texts
 		}
 		Assert.That(operatorCounter, Is.EqualTo(6));
 	}
+
+	private const string Input = @"has numbers
+GetComplicatedSequenceTexts returns Texts
+	ConvertingNumbers(1, 21).GetComplicatedSequenceTexts is (""7"", ""16"")
+	return for numbers
+		 to Text
+		Length * Length
+		4 + value * 3
+		 to Text";
+	private readonly ReadOnlyMemory<char> inputMemory = Input.AsMemory();
 
 	[Benchmark]
 	[Test]
@@ -50,6 +50,7 @@ GetComplicatedSequenceTexts returns Texts
 		Assert.That(operatorCounter, Is.EqualTo(6));
 	}
 
+	//ncrunch: no coverage start
 	[Category("Manual")]
 	[Test]
 	public void BenchmarkIsOperator() => BenchmarkRunner.Run<BinaryOperatorTests>();

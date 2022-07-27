@@ -4,6 +4,7 @@ namespace Strict.Language;
 
 public ref struct SpanSplitEnumerator
 {
+	//ncrunch: no coverage start, for performance reasons disabled here
 	public SpanSplitEnumerator(ReadOnlySpan<char> input, char splitter, StringSplitOptions options)
 	{
 		this.input = input;

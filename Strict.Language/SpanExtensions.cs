@@ -5,10 +5,12 @@ using System.Runtime.CompilerServices;
 namespace Strict.Language;
 
 /// <summary>
-/// Used for parsing Strict code, which needs to be exactly in the correct format
+/// Optimized parsing of Strict code, which needs to be exactly in the correct format.
 /// </summary>
 public static class SpanExtensions
 {
+	//ncrunch: no coverage start, for performance reasons disabled here
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static SpanSplitEnumerator Split(this ReadOnlySpan<char> input, char splitter = ' ',
 		StringSplitOptions options = StringSplitOptions.None)
 	{
@@ -22,6 +24,11 @@ public static class SpanExtensions
 
 	public class EmptyInputIsNotAllowed : Exception { }
 
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static SpanSplitEnumerator SplitLines(this ReadOnlySpan<char> input) =>
+		Split(input, '\n');
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static RangeEnumerator SplitIntoRanges(this ReadOnlySpan<char> input,
 		char splitter = ' ', bool removeLeadingSpace = false) =>
 		input.Length == 0
@@ -35,6 +42,7 @@ public static class SpanExtensions
 		return input.AsSpan(offset, length);
 	}
 
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static Range GetOuterRange(this Range inner, (int, int) offsetAndLength)
 	{
 		var (elementOffset, length) = inner.GetOffsetAndLength(offsetAndLength.Item2);
@@ -42,9 +50,7 @@ public static class SpanExtensions
 		return new Range(start, start + length);
 	}
 
-	public static SpanSplitEnumerator SplitLines(this ReadOnlySpan<char> input) =>
-		Split(input, '\n');
-
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static bool Compare(this ReadOnlySpan<char> first, ReadOnlySpan<char> second)
 	{
 		if (first.Length != second.Length)
@@ -55,6 +61,7 @@ public static class SpanExtensions
 		return true;
 	}
 
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static bool Any(this ReadOnlySpan<char> input, IEnumerable<string> items)
 	{
 		foreach (var item in items)
@@ -63,6 +70,7 @@ public static class SpanExtensions
 		return false;
 	}
 
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static bool Contains(this ReadOnlySpan<char> input, IEnumerable<string> items)
 	{
 		foreach (var item in items)
@@ -71,6 +79,7 @@ public static class SpanExtensions
 		return false;
 	}
 
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static int Count(this ReadOnlySpan<char> input, char item)
 	{
 		var count = 0;
@@ -80,6 +89,7 @@ public static class SpanExtensions
 		return count;
 	}
 
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static bool IsWordOrText(this ReadOnlySpan<char> input)
 	{
 		foreach (var c in input)
@@ -87,94 +97,13 @@ public static class SpanExtensions
 				return false;
 		return true;
 	}
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static bool IsTrueText(this ReadOnlySpan<char> input) =>
+		input.Length == 4 && input[0] == 't' && input[1] == 'r' && input[2] == 'u' && input[3] == 'e';
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static bool IsFalseText(this ReadOnlySpan<char> input) =>
+		input.Length == 5 && input[0] == 'f' && input[1] == 'a' && input[2] == 'l' &&
+		input[3] == 's' && input[4] == 'e';
 }
-
-/// <summary>
-/// Instead of using one of String or other Split methods here, use this and SpanExtensions to
-/// avoid allocating new memory on every split, especially in the tokenizer and parser.
-/// </summary>
-public ref struct RangeEnumerator
-{
-	public RangeEnumerator(ReadOnlySpan<char> input, char splitter, bool removeLeadingSpace = false)
-	{
-		this.input = input;
-		this.splitter = splitter;
-		this.removeLeadingSpace = removeLeadingSpace;
-	}
-
-	private readonly ReadOnlySpan<char> input;
-	private readonly char splitter;
-	private readonly bool removeLeadingSpace;
-	private int offset = 0;
-	public Range Current { get; private set; } = default;
-	public readonly RangeEnumerator GetEnumerator() => this;
-
-	public bool MoveNext()
-	{
-		if (offset >= input.Length)
-			return false;
-		for (var index = offset; index < input.Length; index++)
-			if (input[index] == splitter)
-				return GetWordBeforeSplitter(index);
-		if (removeLeadingSpace && input[offset] == ' ')
-			offset++;
-		Current = offset..;
-		offset = input.Length;
-		return true;
-	}
-
-	private bool GetWordBeforeSplitter(int index)
-	{
-		if (index == offset)
-			throw new SpanSplitEnumerator.InvalidConsecutiveSplitter(input.ToString(), index);
-		if (index + 1 == input.Length)
-			throw new SpanSplitEnumerator.EmptyEntryNotAllowedAtTheEnd(input.ToString(), index);
-		if (removeLeadingSpace && input[offset] == ' ')
-			offset++;
-		Current = offset..index;
-		offset = index + 1;
-		return true;
-	}
-}
-
-/*tst
-public static class MemoryExtensions
-{
-	public static StringRangeEnumerator SplitRanges(this ReadOnlyMemory<char> input, char splitter = ' ',
-		StringSplitOptions options = StringSplitOptions.None)
-	{
-		SpanExtensions.CheckParameters(input.Length, options);
-		return new StringRangeEnumerator(input, splitter, options);
-	}
-}
-*
-/// <summary>
-/// Instead of using one of String or other Split methods here, use this and SpanExtensions to
-/// avoid allocating new memory on every split, especially in the tokenizer and parser.
-/// </summary>
-public ref struct StringRangeEnumerator// : IEnumerable<Range>
-{
-	public StringRangeEnumerator(ReadOnlySpan<char> input, char splitter)
-	{
-		this.input = input;
-		this.splitter = splitter;
-	}
-
-	private readonly ReadOnlySpan<char> input;
-	private readonly char splitter;
-
-	public IEnumerator<Range> GetEnumerator()
-	{
-		if (offset >= input.Length)
-			yield break;
-		var start = offset;
-		for (; offset < input.Length; offset++)
-			if (input[offset] == splitter)
-				yield return start..offset++;
-		yield return start..;
-	}
-
-	private int offset = 0;
-	//IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
-}
-*/

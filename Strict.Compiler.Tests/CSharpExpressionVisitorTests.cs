@@ -75,12 +75,13 @@ public sealed class CSharpExpressionVisitorTests : TestExpressions
 	public void GenerateMultilineMethodBody()
 	{
 		var multilineMethod = new Method(type, 0, this, MethodTests.NestedMethodLines);
-		Assert.That(visitor.VisitBlock(multilineMethod.Body),
-			Is.EqualTo(new[]
-			{
-				"public bool IsBla5()", "{", "	var number = 5;", "	if (bla == 5)", "		return true;",
-				"	return false;", "}"
-			}));
+		Assert.That(visitor.VisitBlock(multilineMethod.Body), Is.EqualTo(@"public bool IsBla5()
+{
+	var number = 5;
+	if (bla == 5)
+		return true;
+	return false;
+}".SplitLines()));
 	}
 
 	[Test]

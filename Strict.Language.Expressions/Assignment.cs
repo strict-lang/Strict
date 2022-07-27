@@ -1,13 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace Strict.Language.Expressions;
 
 /// <summary>
-/// Let statements in strict, which usually assigns a fixed value that is optimized away.
+/// Let assigns an <see cref="Identifier"/> variable, often a fixed value that is optimized away
 /// </summary>
-public class Assignment : Expression
+public sealed class Assignment : Expression
 {
 	public Assignment(Identifier name, Expression value) : base(value.ReturnType)
 	{
@@ -28,12 +26,15 @@ public class Assignment : Expression
 			? TryParseLet(line)
 			: null;
 
+	/// <summary>
+	/// Highly optimized parsing of assignments, skips over the let, grabs the name of the local
+	/// variable, then skips over the space, equal and space characters and parses the rest, e.g.
+	/// let hello = "hello" + " " + "world"
+	///          ^ ^       ^ ^   ^ ^       END, using TryParseExpression with Range(12, 35)
+	/// </summary>
 	private static Expression TryParseLet(Method.Line line)
 	{
-		//let hello = "hello" + " " + "world"
-		//         ^ ^       ^ ^   ^ ^       END
-		//            Range(12, 35)
- 		var parts = line.Text.AsSpan(4).Split();
+		var parts = line.Text.AsSpan(4).Split();
 		parts.MoveNext();
 		var name = parts.Current.ToString();
 		if (!parts.MoveNext() || !parts.MoveNext())

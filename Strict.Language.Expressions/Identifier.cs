@@ -3,8 +3,8 @@
 namespace Strict.Language.Expressions;
 
 /// <summary>
-/// Identifiers are added to the current context giving any expression access to it and its value
-/// in addition to type <see cref="Member"/> and method <see cref="Parameter"/>.
+/// Identifiers are variables added to the current context giving any expression access to it and
+/// its value in addition to type <see cref="Member"/> and method <see cref="Parameter"/>.
 /// </summary>
 public class Identifier : NamedType
 {
