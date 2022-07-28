@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using NUnit.Framework;
 
 namespace Strict.Language.Tests;
@@ -46,6 +47,8 @@ Run
 
 	public override Expression? TryParseExpression(Method.Line line, Range remainingPartToParse) =>
 		null;
+
+	public override List<Expression> ParseListArguments(Method.Line line, int start, int end) => null!;
 
 	//ncrunch: no coverage end
 

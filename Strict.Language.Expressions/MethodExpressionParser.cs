@@ -22,32 +22,113 @@ public class MethodExpressionParser : ExpressionParser
 		var input = line.Text.GetSpanFromRange(rangeToParse);
 		if (input.IsEmpty)
 			throw new CannotParseEmptyInput(line);
-		if (!input.Contains(' '))
+		if (!input.Contains(' ') && !input.Contains(','))
+		{
+			remainingToParse = 0;
 			return Boolean.TryParse(line, rangeToParse) ?? Text.TryParse(line, rangeToParse) ??
-				List.TryParse(line, rangeToParse) ?? // Constructor.TryParse(line, rangeToParse) ??
-				MemberCall.TryParse(line, rangeToParse) ?? MethodCall.TryParse(line, rangeToParse) ??
+				List.TryParseWithSingleElement(line, rangeToParse) ??
+				MemberCall.TryParseMemberOrZeroOrOneArgumentMethodCall(line, rangeToParse) ??
 				Number.TryParse(line, rangeToParse);
-		var postfixTokens = new ShuntingYard(line.Text, rangeToParse).Output;
-		if (postfixTokens.Count == 0)
-			throw new NotSupportedException(
-				"Something really bad happened, delete this when everything works!");
-		else if (postfixTokens.Count == 1)
-		{
-			var range = postfixTokens.Pop();
-			return Text.TryParse(line, range) ?? List.TryParse(line, range);
 		}
-		else if (postfixTokens.Count == 2)
+		//check for method call/member call here too
+		var postfix = new ShuntingYard(line.Text, rangeToParse);
+		remainingToParse = postfix.RemainingToParse;
+		return postfix.Output.Count switch
 		{
-			// TODO: Unary goes here
-			//throw new NotSupportedException("Feed Murali more to get Unary done");
-		}
-		return Binary.TryParse(line, postfixTokens);
+			1 => TryParseTextWithSpacesOrListWithMultipleOrNestedElements(line, postfix.Output.Pop()),
+			2 => // TODO: Unary goes here
+				throw new NotSupportedException("Feed Murali more to get Unary done"),
+			_ => Binary.TryParse(line, postfix.Output)
+		};
+		/*from list, same
+		 
+		var postfixTokens = new ShuntingYard(line.Text, range).Output;
+		if (postfixTokens.Count == 1)
+			elementsToFill.Add(line.Method.TryParseExpression(line, postfixTokens.Pop()) ??
+				throw new MethodExpressionParser.UnknownExpression(line, line.Text[range]));
+		else
+			foreach (var token in postfixTokens)
+			{
+				var expressions = new List<Expression>();
+				new PhraseTokenizer(line.Text, new Range(start, start + innerSpan.Length)).ProcessEachToken(
+					tokenRange =>
+					{
+						Console.WriteLine("TryParseWithMultipleOrNestedElements: token=" +
+							line.Text[tokenRange.Start.Value]);
+						if (line.Text[tokenRange.Start.Value] != ',')
+							expressions.Add(line.Method.TryParseExpression(line, tokenRange)
+								? 7
+						throw new MethodExpressionParser.UnknownExpression(line, line.Text[tokenRange]));
+					});
+			}
+		 */
 	}
+
+	private int remainingToParse;
 
 	public class CannotParseEmptyInput : ParsingFailed
 	{
 		public CannotParseEmptyInput(Method.Line line) : base(line) { }
 	}
+
+	/// <summary>
+	/// Figures out if there are any bracket groups or if there is binary expression action going on.
+	/// Could also contain strings, we don't know. Most of the time it will just be a bunch of values.
+	/// <see cref="ShuntingYard"/> will only parse till the next comma, has to call this till the end.
+	/// </summary>
+	public override List<Expression> ParseListArguments(Method.Line line, int start, int end)
+	{
+		var innerSpan = line.Text.AsSpan(start, end-start);
+		if (innerSpan.Contains('(') || innerSpan.Contains('"'))
+		{
+			var expressions = new List<Expression>();
+			do
+			{
+				expressions.Add(
+					line.Method.TryParseExpression(line, new Range(start, end)) ??
+					throw new UnknownExpression(line, line.Text[new Range(start, end)]));
+				start = end - remainingToParse;
+			} while (start < end);
+			return expressions;
+		}
+		return ParseAllElementsFast(line, (start, innerSpan.Length),
+			innerSpan.SplitIntoRanges(',', true));
+	}
+
+	private static List<Expression> ParseAllElementsFast(Method.Line line, (int, int) offsetAndInnerSpanLength, RangeEnumerator elements)
+	{
+		var expressions = new List<Expression>();
+		foreach (var element in elements)
+			expressions.Add(
+				line.Method.TryParseExpression(line, element.GetOuterRange(offsetAndInnerSpanLength)) ??
+				throw new UnknownExpression(line, line.Text[element.GetOuterRange(offsetAndInnerSpanLength)]));
+		return expressions;
+	}
+	
+	//TODO: Probably not needed
+	public static bool HasIncompatibleDimensions(Expression left, Expression right) =>
+		left is List leftList && right is List rightList &&
+		leftList.Values.Count != rightList.Values.Count;
+
+	//TODO: as discussed in meeting, we use generics and always check if the right side is castable into the left side (via from), e.g. make a test where we add a Count to a list of Texts -> output list of texts (always from left side), we never change the left side type
+	public static bool HasMismatchingTypes(Expression left, Expression right) =>
+		left is List leftList && !leftList.IsFirstType<Text>() && right switch
+		{
+			List rightList when rightList.IsFirstType<Text>() => true,
+			Binary { Left: List rightBinaryLeftList } when rightBinaryLeftList.IsFirstType<Text>() =>
+				true,
+			Binary { Left: Text } => true,
+			_ => !leftList.IsFirstType<Text>() && right is Text
+		};
+
+	public sealed class ListsHaveDifferentDimensions : ParsingFailed
+	{
+		public ListsHaveDifferentDimensions(Method.Line line, string error) : base(line, error) { }
+	}
+
+	private static Expression?
+		TryParseTextWithSpacesOrListWithMultipleOrNestedElements(Method.Line line, Range range) =>
+		Text.TryParse(line, range) ?? List.TryParseWithMultipleOrNestedElements(line, range);
 
 	public sealed class UnknownExpression : ParsingFailed
 	{
@@ -78,6 +159,5 @@ public class MethodExpressionParser : ExpressionParser
 		Assignment.TryParse(line) ?? If.TryParse(line, ref methodLineNumber) ??
 		//https://deltaengine.fogbugz.com/f/cases/25210
 		Return.TryParse(line) ??
-		//https://deltaengine.fogbugz.com/f/cases/25211
 		TryParseExpression(line, ..) ?? throw new UnknownExpression(line);
 }

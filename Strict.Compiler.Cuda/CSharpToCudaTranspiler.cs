@@ -100,21 +100,6 @@ public class CSharpType : Type
 				numberType.Methods.First(m => m.Name == binaryOperator), rightExpression));
 			return new MethodBody(method, new List<Expression> { returnExpression });
 		}
-		/*TODO: that is not a good reason!
-		//Method not implemented. Added dummy code to avoid Teamcity ForcedNull error
-		public override Expression ParseAssignmentExpression(Type type, string initializationLine,
-			int fileLineNumber) =>
-			type.Methods[0].Body;
-
-		//Method not implemented. Added dummy code to avoid Teamcity ForcedNull error
-		public override Expression ParseMethodLine(Method.Line line, ref int methodLineNumber) =>
-			line.Method.Body;
-
-		//Method not implemented. Added dummy code to avoid Teamcity ForcedNull error
-		public override Expression
-			TryParseExpression(Method.Line line, string remainingPartToParse) =>
-			line.Method.Body;
-		*/
 	}
 
 	// ReSharper disable once CyclomaticComplexity

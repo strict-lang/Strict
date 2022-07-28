@@ -22,11 +22,11 @@ public sealed class Binary : MethodCall
 	{
 		var right = GetUnaryOrBuildNestedBinary(line, tokens.Pop(), tokens);
 		var left = GetUnaryOrBuildNestedBinary(line, tokens.Pop(), tokens);
-		if (List.HasMismatchingTypes(left, right))
+		if (MethodExpressionParser.HasMismatchingTypes(left, right))
 			throw new MismatchingTypeFound(line);
 		var operatorToken = line.Text[operatorTokenRange]; //TODO: make more efficient
-		if (operatorToken == "*" && List.HasIncompatibleDimensions(left, right))
-			throw new List.ListsHaveDifferentDimensions(line, left + " " + right);
+		if (operatorToken == "*" && MethodExpressionParser.HasIncompatibleDimensions(left, right))
+			throw new MethodExpressionParser.ListsHaveDifferentDimensions(line, left + " " + right);
 		var operatorMethod = left.ReturnType.Methods.FirstOrDefault(m => m.Name == operatorToken) ?? // TODO: Match operator param types before
 			line.Method.GetType(Base.BinaryOperator).Methods.FirstOrDefault(m => m.Name == operatorToken) ??
 			throw new NoMatchingOperatorFound(right.ReturnType, operatorToken);

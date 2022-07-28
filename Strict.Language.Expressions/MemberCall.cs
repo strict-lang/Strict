@@ -26,6 +26,14 @@ public sealed class MemberCall : Expression
 			? Parent + "." + Member.Name
 			: Member.Name;
 
+	//TODO: error handling (same as constructor calling actually)
+	//https://deltaengine.fogbugz.com/f/cases/25211
+
+	public static Expression? TryParseMemberOrZeroOrOneArgumentMethodCall(Method.Line line, Range range)
+	{
+		return null; //TODO: ?? MethodCall.TryParse(line, rangeToParse)
+	}
+
 	public static MemberCall? TryParse(Method.Line line, Range range)
 	{
 		var partToParse = line.Text.GetSpanFromRange(range);

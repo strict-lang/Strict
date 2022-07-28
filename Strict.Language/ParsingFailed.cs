@@ -22,7 +22,9 @@ public class ParsingFailed : Exception
 
 	protected ParsingFailed(Method.Line line, string? message = null,
 		Type? referencingOtherType = null) : this(line.Method.Type, line.FileLineNumber,
-		(message ?? line.ToString()) + (referencingOtherType != null
+		(string.IsNullOrEmpty(message)
+			? line.ToString()
+			: message) + (referencingOtherType != null
 			? " in " + referencingOtherType
 			: ""), line.Method.ToString()) { }
 }

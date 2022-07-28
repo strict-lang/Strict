@@ -12,6 +12,10 @@ public class Text : Value
 	public override bool Equals(Expression? other) =>
 		other is Value v && (string)Data == (string)v.Data;
 
+	/// <summary>
+	/// Only called for input that does not contain any spaces or if there are spaces (like "Hello" +
+	/// " World") they are already split via <see cref="PhraseTokenizer"/> and thus is only a string.
+	/// </summary>
 	public static Expression? TryParse(Method.Line line, Range range)
 	{
 		var input = line.Text.GetSpanFromRange(range);

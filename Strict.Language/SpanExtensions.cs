@@ -51,6 +51,13 @@ public static class SpanExtensions
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static Range RemoveFirstAndLast(this Range range, int outerLength)
+	{
+		var (offset, length) = range.GetOffsetAndLength(outerLength);
+		return new Range(offset + 1, offset + length - 1);
+	}
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static bool Compare(this ReadOnlySpan<char> first, ReadOnlySpan<char> second)
 	{
 		if (first.Length != second.Length)

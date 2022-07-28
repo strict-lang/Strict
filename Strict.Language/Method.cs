@@ -71,8 +71,12 @@ public sealed class Method : Context
 		parser.TryParseExpression(line, remainingPartToParse);
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public List<Expression> ParseListArguments(Line line, int start, int end) =>
+		parser.ParseListArguments(line, start, end);
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public Expression ParseMethodLine(Line line, ref int methodLineNumber) =>
-		parser.ParseMethodLine(line, ref methodLineNumber);
+		parser.ParseMethodLine(line, ref methodLineNumber); //TODO: pretty sure we need to parse multiple lines like for if then or else, but also for for
 
 	/// <summary>
 	/// Simple lexer to just parse the method definition and get all used names and types. Method code

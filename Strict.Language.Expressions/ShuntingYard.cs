@@ -14,6 +14,8 @@ public sealed class ShuntingYard
 		var tokenizer = new PhraseTokenizer(input, partToParse);
 		tokenizer.ProcessEachToken(PutTokenIntoStacks);
 		ApplyHigherOrEqualPrecedenceOperators();
+		if (Output.Count == 0)
+			throw new NotSupportedException("Nothing found! Should never happen."); //ncrunch: no coverage
 		//TODO: remove after done:
 		Console.WriteLine("Operators: " + string.Join(", ", operators) + " Output Ranges: " + string.Join(", ", Output));
 	}
@@ -56,6 +58,12 @@ public sealed class ShuntingYard
 
 	private readonly Stack<Range> operators = new();
 	public Stack<Range> Output { get; } = new();
+	/// <summary>
+	/// When parsing of a binary expression is done and there is a comma separator outside of a list
+	/// we will stop parsing and return the expression we got so far. The caller can then start
+	/// parsing on the next list element again, see <see cref="MethodExpressionParser"/>. Normally 0.
+	/// </summary>
+	public int RemainingToParse { get; private set; } = 0;
 
 	private void ApplyHigherOrEqualPrecedenceOperators(int precedence = 0)
 	{
