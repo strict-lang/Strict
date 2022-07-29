@@ -5,6 +5,7 @@ namespace Strict.Language.Expressions;
 
 /// <summary>
 /// https://en.wikipedia.org/wiki/Shunting_yard_algorithm
+/// Supports strict lists, generics, arguments, inner lists, groups (all the same brackets) and texts.
 /// </summary>
 public sealed class ShuntingYard
 {
@@ -25,6 +26,7 @@ public sealed class ShuntingYard
 	private void PutTokenIntoStacks(Range tokenRange)
 	{
 		var (_, length) = tokenRange.GetOffsetAndLength(input.Length);
+		Console.WriteLine(nameof(PutTokenIntoStacks)+": "+input[tokenRange]);
 		if (length == 1)
 			PutSingleCharacterTokenIntoStacks(tokenRange);
 		else
@@ -53,7 +55,12 @@ public sealed class ShuntingYard
 			operators.Push(tokenRange);
 		}
 		else
+		{
+			// comma lists always need to flush everything out, this only happens when parsing inner elements via ParseListArguments
+			if (firstCharacter == ',')
+				ApplyHigherOrEqualPrecedenceOperators();
 			Output.Push(tokenRange);
+		}
 	}
 
 	private readonly Stack<Range> operators = new();

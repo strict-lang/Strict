@@ -65,8 +65,17 @@ public sealed class PhraseTokenizerTests
 	public void GetTokenRanges(string code, int expectedTokensCount)
 	{
 		var tokens = GetTokens(code);
-		var tokensAsString = string.Join(' ', tokens).Replace("( ", "(").Replace(" )", ")");
+		var tokensAsString = string.Join(' ', tokens).Replace("( ", "(").Replace(" )", ")").
+			Replace(" , ", ", ");
 		Assert.That(tokens.Count, Is.EqualTo(expectedTokensCount), tokensAsString);
 		Assert.That(tokensAsString, Is.EqualTo(code));
 	}
+
+	[TestCase("1, 2", 3)]
+	[TestCase("\"Hi\", \" there\"", 3)]
+	[TestCase("(1), (2)", 3)]
+	[TestCase("1, 2, 3, 4, 5", 9)]
+	[TestCase("(1, 2), (3, 4), (5)", 5)]
+	public void GetInnerListElements(string code, int expectedTokensCount) =>
+		GetTokenRanges(code, expectedTokensCount);
 }

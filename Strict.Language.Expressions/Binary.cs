@@ -25,6 +25,9 @@ public sealed class Binary : MethodCall
 		if (MethodExpressionParser.HasMismatchingTypes(left, right))
 			throw new MismatchingTypeFound(line);
 		var operatorToken = line.Text[operatorTokenRange]; //TODO: make more efficient
+		if (operatorToken == ",")
+			throw new NoMatchingOperatorFound(left.ReturnType,
+				operatorToken + " should be used for lists, not " + nameof(Binary));
 		if (operatorToken == "*" && MethodExpressionParser.HasIncompatibleDimensions(left, right))
 			throw new MethodExpressionParser.ListsHaveDifferentDimensions(line, left + " " + right);
 		var operatorMethod = left.ReturnType.Methods.FirstOrDefault(m => m.Name == operatorToken) ?? // TODO: Match operator param types before
@@ -39,8 +42,7 @@ public sealed class Binary : MethodCall
 		var nextToken = line.Text.GetSpanFromRange(nextTokenRange);//TODO: only needed for operator check, can be done more efficiently
 		return nextToken[0].IsSingleCharacterOperator() || nextToken.IsMultiCharacterOperator()
 			? BuildBinaryExpression(line, nextTokenRange, tokens)
-			: line.Method.TryParseExpression(line, nextTokenRange) ??
-			throw new MethodExpressionParser.UnknownExpression(line);
+			: line.Method.ParseExpression(line, nextTokenRange);
 	}
 
 	//TODO; Remove

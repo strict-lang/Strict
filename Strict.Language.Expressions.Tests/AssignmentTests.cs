@@ -53,7 +53,7 @@ public class AssignmentTests : TestExpressions
 	[Test]
 	public void IncompleteAssignment() =>
 		Assert.That(() => ParseExpression("let sum = 5 +"),
-			Throws.Exception.InstanceOf<UnknownExpression>());
+			Throws.Exception.InstanceOf<Method.UnknownExpression>());
 
 	[Test]
 	public void IdentifierMustBeValidWord() =>

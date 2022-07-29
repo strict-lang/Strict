@@ -31,10 +31,8 @@ public sealed class ListTests : TestExpressions
 			new PhraseTokenizer(line.Text, new Range(0, line.Text.Length)).ProcessEachToken(
 				tokenRange =>
 				{
-					//TODO: wtf is this?
 					if (line.Text[tokenRange.Start.Value] != ',')
-						expressions.Add(method.TryParseExpression(line, tokenRange) ??
-							throw new UnknownExpression(line, line.Text[tokenRange])); //TODO: also not needed!
+						expressions.Add(method.ParseExpression(line, tokenRange));
 				});
 		return expressions;
 	}

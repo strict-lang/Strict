@@ -25,8 +25,7 @@ public sealed class List : Value
 				: new List(line.Method,
 					new List<Expression>
 					{
-						line.Method.TryParseExpression(line, range.RemoveFirstAndLast(line.Text.Length)) ??
-						throw new MethodExpressionParser.UnknownExpression(line, input.ToString())
+						line.Method.ParseExpression(line, range.RemoveFirstAndLast(line.Text.Length))
 					});
 	}
 

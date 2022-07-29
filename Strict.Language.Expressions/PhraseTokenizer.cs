@@ -67,7 +67,18 @@ public sealed class PhraseTokenizer
 		else if (input[index] == ' ')
 		{
 			if (tokenStart >= 0)
-				processToken(tokenStart..index);
+			{
+				// If our previous character was a , and not alone we parsed it as one token (outside list
+				// element), it needs to be split into two tokens like for complex cases so processing
+				// elements works in ParseListElements
+				if (index > tokenStart + 1 && input[index - 1] == ',')
+				{
+					processToken(tokenStart..(index - 1));
+					processToken((index-1)..index);
+				}
+				else
+					processToken(tokenStart..index);
+			}
 			tokenStart = -1;
 		}
 		else if (tokenStart == -1)

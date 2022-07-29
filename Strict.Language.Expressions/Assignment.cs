@@ -40,8 +40,7 @@ public sealed class Assignment : Expression
 		if (!parts.MoveNext() || !parts.MoveNext())
 			throw new IncompleteLet(line);
 		var startOfValueExpression = 4 + name.Length + 1 + 1 + 1;
-		var value = line.Method.TryParseExpression(line, startOfValueExpression..) ??
-			throw new MethodExpressionParser.UnknownExpression(line);
+		var value = line.Method.ParseExpression(line, startOfValueExpression..);
 		return new Assignment(new Identifier(name, value.ReturnType), value);
 	}
 

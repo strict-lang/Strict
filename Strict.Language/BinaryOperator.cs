@@ -78,6 +78,7 @@ public static class BinaryOperator
 	public static int GetPrecedence(char tokenFirstCharacter) =>
 		tokenFirstCharacter switch
 		{
+			',' => 0, // always has to flush everything out
 			'+' => 2, // unary '-' operator has precendence 1
 			'-' => 2,
 			'*' => 3,

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Strict.Language.Expressions;
 
@@ -14,7 +15,7 @@ public class MethodExpressionParser : ExpressionParser
 		var constructor = type.Methods[0];
 		var line = new Method.Line(constructor, 0, initializationLine, fileLineNumber);
 		return new MethodCall(new Value(type, type), constructor,
-			TryParseExpression(line, ..) ?? throw new UnknownExpression(line));
+			TryParseExpression(line, ..) ?? throw new Method.UnknownExpression(line));
 	}
 
 	public override Expression? TryParseExpression(Method.Line line, Range rangeToParse)
@@ -32,13 +33,14 @@ public class MethodExpressionParser : ExpressionParser
 		}
 		//check for method call/member call here too
 		var postfix = new ShuntingYard(line.Text, rangeToParse);
-		remainingToParse = postfix.RemainingToParse;
+		remainingToParse = postfix.RemainingToParse;//TODO: maybe not longer needed, parses , fine already
 		return postfix.Output.Count switch
 		{
 			1 => TryParseTextWithSpacesOrListWithMultipleOrNestedElements(line, postfix.Output.Pop()),
 			2 => // TODO: Unary goes here
 				throw new NotSupportedException("Feed Murali more to get Unary done"),
-			_ => Binary.TryParse(line, postfix.Output)
+			_ => //TODO: should never happen here, Binary will complain if we have a comma there! postfix.Output.Count % 2 != 1 && line.Text[postfix.Output.Skip(1).First().Start.Value] == ',' ?
+				Binary.TryParse(line, postfix.Output)
 		};
 		/*from list, same
 		 
@@ -81,27 +83,55 @@ public class MethodExpressionParser : ExpressionParser
 		var innerSpan = line.Text.AsSpan(start, end-start);
 		if (innerSpan.Contains('(') || innerSpan.Contains('"'))
 		{
-			var expressions = new List<Expression>();
-			do
-			{
-				expressions.Add(
-					line.Method.TryParseExpression(line, new Range(start, end)) ??
-					throw new UnknownExpression(line, line.Text[new Range(start, end)]));
-				start = end - remainingToParse;
-			} while (start < end);
-			return expressions;
+			// The postfix data comes in upside down, so use another stack to restore order
+			var expressions = new Stack<Expression>();
+			// Similar to TryParseExpression, but we know there is commas separating things! 
+			var postfix = new ShuntingYard(line.Text, new Range(start, end));
+			remainingToParse = postfix.RemainingToParse;//TODO: maybe not longer needed, parses , fine already
+			if (postfix.Output.Count == 1)
+				expressions.Push(TryParseTextWithSpacesOrListWithMultipleOrNestedElements(line,
+					postfix.Output.Pop()) ??
+					throw new Method.UnknownExpression(line, line.Text[new Range(start, end)]));
+			else if (postfix.Output.Count == 2)
+				throw new NotSupportedException("Feed Murali more to get Unary done");
+			else
+				do
+				{
+					var range = postfix.Output.Peek();
+					Console.WriteLine("pushing list element "+line.Text[range]);
+					var span = line.Text.GetSpanFromRange(range);
+					// Is this a binary expression we have to put into the list (already tokenized and postfixed)
+					if (span.Length == 1 && span[0].IsSingleCharacterOperator() ||
+						span.IsMultiCharacterOperator())
+						expressions.Push(Binary.TryParse(line, postfix.Output) ??
+							throw new Method.UnknownExpression(line, line.Text[range]));
+					else
+						expressions.Push(line.Method.ParseExpression(line, postfix.Output.Pop()));
+					if (postfix.Output.Count > 0 && line.Text[postfix.Output.Pop().Start.Value] != ',')
+						throw new ListTokensAreNotSeparatedByComma(line);
+				} while (postfix.Output.Count > 0);
+				//postfix.Output.Count % 2 != 1 &&
+				//line.Text[postfix.Output.Skip(1).First().Start.Value] == ',' ?;}
+				//do
+				//{
+				//	start = end - remainingToParse;
+				//} while (start < end);
+			return expressions.ToList();
 		}
 		return ParseAllElementsFast(line, (start, innerSpan.Length),
 			innerSpan.SplitIntoRanges(',', true));
 	}
 
-	private static List<Expression> ParseAllElementsFast(Method.Line line, (int, int) offsetAndInnerSpanLength, RangeEnumerator elements)
+	public class ListTokensAreNotSeparatedByComma : ParsingFailed
+	{
+		public ListTokensAreNotSeparatedByComma(Method.Line line) : base(line) { }
+	}
+
+	private static List<Expression> ParseAllElementsFast(Method.Line line, (int, int) offsetAndLength, RangeEnumerator elements)
 	{
 		var expressions = new List<Expression>();
 		foreach (var element in elements)
-			expressions.Add(
-				line.Method.TryParseExpression(line, element.GetOuterRange(offsetAndInnerSpanLength)) ??
-				throw new UnknownExpression(line, line.Text[element.GetOuterRange(offsetAndInnerSpanLength)]));
+			expressions.Add(line.Method.ParseExpression(line, element.GetOuterRange(offsetAndLength)));
 		return expressions;
 	}
 	
@@ -130,11 +160,6 @@ public class MethodExpressionParser : ExpressionParser
 		TryParseTextWithSpacesOrListWithMultipleOrNestedElements(Method.Line line, Range range) =>
 		Text.TryParse(line, range) ?? List.TryParseWithMultipleOrNestedElements(line, range);
 
-	public sealed class UnknownExpression : ParsingFailed
-	{
-		public UnknownExpression(Method.Line line, string error = "") : base(line, error) { }
-	}
-
 	/// <summary>
 	/// Called lazily by Method.Body and only if needed for execution (context should be over there
 	/// as parsing is done in parallel, we should not keep any state here).
@@ -159,5 +184,5 @@ public class MethodExpressionParser : ExpressionParser
 		Assignment.TryParse(line) ?? If.TryParse(line, ref methodLineNumber) ??
 		//https://deltaengine.fogbugz.com/f/cases/25210
 		Return.TryParse(line) ??
-		TryParseExpression(line, ..) ?? throw new UnknownExpression(line);
+		TryParseExpression(line, ..) ?? throw new Method.UnknownExpression(line);
 }

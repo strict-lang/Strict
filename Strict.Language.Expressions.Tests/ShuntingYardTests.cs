@@ -21,6 +21,9 @@ public sealed class ShuntingYardTests
 	[TestCase("((a, b) + (c, d)) * 2", "(a, b), (c, d), +, 2, *")]
 	[TestCase("((a, (b * e)) + (c, d)) * 2", "(a, (b * e)), (c, d), +, 2, *")]
 	[TestCase("(\"Hello\", \"World\")", "(\"Hello\", \"World\")")]
+	[TestCase("1, 2, 3, 4, 5", "1, ,, 2, ,, 3, ,, 4, ,, 5")]
+	[TestCase("\"Hi\", \" there\"", "\"Hi\", ,, \" there\"")]
+	[TestCase("(1, 2, 3) + (3, 4), (4)", "(1, 2, 3), (3, 4), +, ,, (4)")]
 	public void Parse(string input, string expected)
 	{
 		var tokens = new ShuntingYard(input, ..).Output.Reverse().Select(range => input[range]);

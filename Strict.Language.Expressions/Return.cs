@@ -17,15 +17,10 @@ public sealed class Return : Expression
 
 	private const string ReturnName = "return";
 
-	private static Expression TryParseReturn(Method.Line line)
-	{
-		var returnExpression = line.Text.Length <= ReturnName.Length
-			? null
-			: line.Method.TryParseExpression(line, (ReturnName.Length + 1)..);
-		return returnExpression == null
+	private static Expression TryParseReturn(Method.Line line) =>
+		new Return(line.Text.Length <= ReturnName.Length
 			? throw new MissingExpression(line)
-			: new Return(returnExpression);
-	}
+			: line.Method.ParseExpression(line, (ReturnName.Length + 1).., nameof(MissingExpression)));
 
 	public sealed class MissingExpression : ParsingFailed
 	{

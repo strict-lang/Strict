@@ -76,9 +76,9 @@ public class MethodCall : Expression
 		var parts = argumentsText.Split(", ");
 		var arguments = new Expression[parts.Length];
 		for (var index = 0; index < parts.Length; index++)
-			arguments[index] = line.Method.TryParseExpression(line, argumentStartIndex..(argumentStartIndex + parts[index].Length)) ??
-				throw new InvalidExpressionForArgument(line,
-					parts[index] + " for " + methodName + " argument " + index);
+			arguments[index] = line.Method.ParseExpression(line,
+				argumentStartIndex..(argumentStartIndex + parts[index].Length),
+				parts[index] + " is invalid for " + methodName + " argument " + index);
 		return arguments;
 	}
 
@@ -132,9 +132,9 @@ public class MethodCall : Expression
 		var type = line.Method.FindType(typeNameAndArguments[0]);
 		if (type == null)
 			return null;
-		var constructorMethodCall = new MethodCall(new Value(type, type), type.Methods[0], // TODO: Get constructor method using a helper method
-			line.Method.TryParseExpression(line, ..) ?? //TODO: broken anyways: typeNameAndArguments[1]) ?? use same method GetArguments method
-			throw new MethodExpressionParser.UnknownExpression(line));
+		var constructorMethodCall = new MethodCall(new Value(type, type),
+			type.Methods[0], // TODO: Get constructor method using a helper method
+			line.Method.ParseExpression(line, ..)); //TODO: broken anyways: typeNameAndArguments[1]) ?? use same method GetArguments method
 		if (!hasNestedMethodCall)
 			return constructorMethodCall;
 		var arguments = typeNameAndArguments.Count > 3
@@ -148,9 +148,8 @@ public class MethodCall : Expression
 	{
 		var arguments = new Expression[parts.Count];
 		for (var index = 0; index < parts.Count; index++)
-			arguments[index] = line.Method.TryParseExpression(line, ..) ??//TODO: parts[index]) ??
-				throw new MethodCall.InvalidExpressionForArgument(line,
-					parts[index] + " for " + parts[index] + " argument " + index);
+			arguments[index] = line.Method.ParseExpression(line, ..,//TODO: parts[index]) ??
+				parts[index] + " is invalid for " + parts[index] + " argument " + index);//TODO: this is duplicated code!
 		return arguments;
 	}
 }

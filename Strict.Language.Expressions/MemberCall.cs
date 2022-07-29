@@ -31,7 +31,7 @@ public sealed class MemberCall : Expression
 
 	public static Expression? TryParseMemberOrZeroOrOneArgumentMethodCall(Method.Line line, Range range)
 	{
-		return null; //TODO: ?? MethodCall.TryParse(line, rangeToParse)
+		return TryParse(line, range); //TODO: ?? MethodCall.TryParse(line, rangeToParse)
 	}
 
 	public static MemberCall? TryParse(Method.Line line, Range range)
