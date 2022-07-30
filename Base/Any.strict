@@ -1,3 +1,5 @@
 to returns HashCode
 to returns Type
 to returns Text
+is(type) returns Boolean
+to(generic) returns Generic

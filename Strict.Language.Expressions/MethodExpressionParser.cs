@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using static Strict.Language.Expressions.Not;
+using static Strict.Language.Method;
 
 namespace Strict.Language.Expressions;
 
@@ -14,33 +16,29 @@ public class MethodExpressionParser : ExpressionParser
 	{
 		var constructor = type.Methods[0];
 		var line = new Method.Line(constructor, 0, initializationLine, fileLineNumber);
-		return new MethodCall(new Value(type, type), constructor,
-			TryParseExpression(line, ..) ?? throw new Method.UnknownExpression(line));
+		return new MethodCall(new Value(type, type), constructor, ParseExpression(line, ..));
 	}
 
-	public override Expression? TryParseExpression(Method.Line line, Range rangeToParse)
+	public override Expression ParseExpression(Method.Line line, Range rangeToParse)
 	{
 		var input = line.Text.GetSpanFromRange(rangeToParse);
 		if (input.IsEmpty)
 			throw new CannotParseEmptyInput(line);
 		if (!input.Contains(' ') && !input.Contains(','))
-		{
-			remainingToParse = 0;
 			return Boolean.TryParse(line, rangeToParse) ?? Text.TryParse(line, rangeToParse) ??
 				List.TryParseWithSingleElement(line, rangeToParse) ??
 				MemberCall.TryParseMemberOrZeroOrOneArgumentMethodCall(line, rangeToParse) ??
-				Number.TryParse(line, rangeToParse);
-		}
+				Number.TryParse(line, rangeToParse) ?? (input.IsOperator()
+					? throw new InvalidOperatorHere(line, input.ToString())
+					: throw new UnknownExpression(line, line.Text[rangeToParse]));
 		//check for method call/member call here too
 		var postfix = new ShuntingYard(line.Text, rangeToParse);
-		remainingToParse = postfix.RemainingToParse;//TODO: maybe not longer needed, parses , fine already
 		return postfix.Output.Count switch
 		{
-			1 => TryParseTextWithSpacesOrListWithMultipleOrNestedElements(line, postfix.Output.Pop()),
-			2 => // TODO: Unary goes here
-				throw new NotSupportedException("Feed Murali more to get Unary done"),
+			1 => ParseTextWithSpacesOrListWithMultipleOrNestedElements(line, postfix.Output.Pop()),
+			2 => Not.Parse(line, postfix),
 			_ => //TODO: should never happen here, Binary will complain if we have a comma there! postfix.Output.Count % 2 != 1 && line.Text[postfix.Output.Skip(1).First().Start.Value] == ',' ?
-				Binary.TryParse(line, postfix.Output)
+				Binary.Parse(line, postfix.Output)
 		};
 		/*from list, same
 		 
@@ -66,7 +64,10 @@ public class MethodExpressionParser : ExpressionParser
 		 */
 	}
 
-	private int remainingToParse;
+	public sealed class UnknownExpression : ParsingFailed
+	{
+		public UnknownExpression(Line line, string error = "") : base(line, error) { }
+	}
 
 	public class CannotParseEmptyInput : ParsingFailed
 	{
@@ -87,13 +88,11 @@ public class MethodExpressionParser : ExpressionParser
 			var expressions = new Stack<Expression>();
 			// Similar to TryParseExpression, but we know there is commas separating things! 
 			var postfix = new ShuntingYard(line.Text, new Range(start, end));
-			remainingToParse = postfix.RemainingToParse;//TODO: maybe not longer needed, parses , fine already
 			if (postfix.Output.Count == 1)
-				expressions.Push(TryParseTextWithSpacesOrListWithMultipleOrNestedElements(line,
-					postfix.Output.Pop()) ??
-					throw new Method.UnknownExpression(line, line.Text[new Range(start, end)]));
+				expressions.Push(ParseTextWithSpacesOrListWithMultipleOrNestedElements(line,
+					postfix.Output.Pop()));
 			else if (postfix.Output.Count == 2)
-				throw new NotSupportedException("Feed Murali more to get Unary done");
+				expressions.Push(Not.Parse(line, postfix));
 			else
 				do
 				{
@@ -103,8 +102,7 @@ public class MethodExpressionParser : ExpressionParser
 					// Is this a binary expression we have to put into the list (already tokenized and postfixed)
 					if (span.Length == 1 && span[0].IsSingleCharacterOperator() ||
 						span.IsMultiCharacterOperator())
-						expressions.Push(Binary.TryParse(line, postfix.Output) ??
-							throw new Method.UnknownExpression(line, line.Text[range]));
+						expressions.Push(Binary.Parse(line, postfix.Output));
 					else
 						expressions.Push(line.Method.ParseExpression(line, postfix.Output.Pop()));
 					if (postfix.Output.Count > 0 && line.Text[postfix.Output.Pop().Start.Value] != ',')
@@ -156,9 +154,15 @@ public class MethodExpressionParser : ExpressionParser
 		public ListsHaveDifferentDimensions(Method.Line line, string error) : base(line, error) { }
 	}
 
-	private static Expression?
-		TryParseTextWithSpacesOrListWithMultipleOrNestedElements(Method.Line line, Range range) =>
-		Text.TryParse(line, range) ?? List.TryParseWithMultipleOrNestedElements(line, range);
+	private static Expression
+		ParseTextWithSpacesOrListWithMultipleOrNestedElements(Method.Line line, Range range) =>
+		Text.TryParse(line, range) ?? List.TryParseWithMultipleOrNestedElements(line, range) ??
+		throw new InvalidSingleTokenExpression(line, line.Text[range]);
+
+	private sealed class InvalidSingleTokenExpression : ParsingFailed
+	{
+		public InvalidSingleTokenExpression(Line line, string message) : base(line, message) { }
+	}
 
 	/// <summary>
 	/// Called lazily by Method.Body and only if needed for execution (context should be over there
@@ -183,6 +187,5 @@ public class MethodExpressionParser : ExpressionParser
 	public override Expression ParseMethodLine(Method.Line line, ref int methodLineNumber) =>
 		Assignment.TryParse(line) ?? If.TryParse(line, ref methodLineNumber) ??
 		//https://deltaengine.fogbugz.com/f/cases/25210
-		Return.TryParse(line) ??
-		TryParseExpression(line, ..) ?? throw new Method.UnknownExpression(line);
+		Return.TryParse(line) ?? ParseExpression(line, ..);
 }

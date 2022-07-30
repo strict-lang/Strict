@@ -90,7 +90,7 @@ public sealed class If : BlockExpression
 	// if String(5) <- constructor ??????
 	private static Expression TryParseIf(Method.Line line, ref int methodLineNumber)
 	{
-		var condition = line.Method.ParseExpression(line, 3.., nameof(MissingCondition));
+		var condition = line.Method.ParseExpression(line, 3..);
 		if (condition.ReturnType.Name != Base.Boolean)
 			throw new InvalidCondition(line, condition.ReturnType);
 		methodLineNumber++;

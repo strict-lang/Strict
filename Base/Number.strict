@@ -1,3 +1,19 @@
+- returns Number
+	-1 is not 1
+	return -value
+and(other) returns Number
+	2 and 6 is 6
+	1 and 8 is 9
+	9 and 1 is 9
+	return value
+or(other) returns Number
+	2 or 3 is 3
+	16 or 8 is 16
+	return value
+xor(other) returns Number
+	1 xor 1 is 0
+	3 xor 2 is 1
+	return value
 is(other) returns Boolean
 	1 is 1
 	2 is not 3

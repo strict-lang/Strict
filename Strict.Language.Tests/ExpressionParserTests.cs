@@ -45,11 +45,11 @@ Run
 
 	public override Expression ParseMethodLine(Method.Line line, ref int methodLineNumber) => null!;
 
-	public override Expression? TryParseExpression(Method.Line line, Range remainingPartToParse) =>
-		null;
+	public override Expression ParseExpression(Method.Line line, Range remainingPartToParse) =>
+		null!;
 
-	public override List<Expression> ParseListArguments(Method.Line line, int start, int end) => null!;
-
+	public override List<Expression> ParseListArguments(Method.Line line, int start, int end) =>
+		null!;
 	//ncrunch: no coverage end
 
 	[Test]

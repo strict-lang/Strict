@@ -294,4 +294,56 @@ public class Type : Context
 		public FilePathMustMatchPackageName(string filePath, string packageName) : base(filePath +
 			" must be in package folder " + packageName) { }
 	}
+
+	//TODO: match arguments!
+	public Method GetMethod(string methodName)
+	{
+		if (AvailableMethods.TryGetValue(methodName, out var matchingMethods))
+			return matchingMethods.FirstOrDefault() ??
+				//will use different error here anyways
+				throw new NoMatchingMethodFound(this, methodName, AvailableMethods);
+		throw new NoMatchingMethodFound(this, methodName, AvailableMethods);
+	}
+
+	/// <summary>
+	/// Builds dictionary the first time we use it to access any method of this type or any of the
+	/// implements parent types recursively. Filtering still has to be done by <see cref="GetMethod"/>
+	/// </summary>
+	public IReadOnlyDictionary<string, List<Method>> AvailableMethods
+	{
+		get
+		{
+			if (cachedAvailableMethods != null)
+				return cachedAvailableMethods;
+			cachedAvailableMethods = new Dictionary<string, List<Method>>();
+			foreach (var method in methods)
+				if (cachedAvailableMethods.ContainsKey(method.Name))
+					cachedAvailableMethods[method.Name].Add(method);
+				else
+					cachedAvailableMethods.Add(method.Name, new List<Method> { method });
+			foreach (var implementType in implements)
+				AddAvailableMethods(implementType);
+			if (Name != Base.Any)
+				AddAvailableMethods(GetType(Base.Any));
+			return cachedAvailableMethods;
+		}
+	}
+
+	private void AddAvailableMethods(Type implementType)
+	{
+		foreach (var (methodName, otherMethods) in implementType.AvailableMethods)
+			if (cachedAvailableMethods!.ContainsKey(methodName))
+				cachedAvailableMethods[methodName].AddRange(otherMethods);
+			else
+				cachedAvailableMethods.Add(methodName, otherMethods);
+	}
+
+	private Dictionary<string, List<Method>>? cachedAvailableMethods;
+
+	public class NoMatchingMethodFound : Exception
+	{
+		public NoMatchingMethodFound(Type type, string methodName,
+			IReadOnlyDictionary<string, List<Method>> availableMethods) : base(methodName +
+			" not found for " + type + ", available methods" + availableMethods.Keys.ToWordList()) { }
+	}
 }

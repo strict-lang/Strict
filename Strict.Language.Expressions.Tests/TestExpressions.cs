@@ -11,8 +11,9 @@ public abstract class TestExpressions : MethodExpressionParser
 	protected TestExpressions()
 	{
 		type = new Type(new TestPackage(), "dummy", this);
-		binaryOperators = type.GetType(Base.BinaryOperator).Methods;
-		unaryOperators = type.GetType(Base.UnaryOperator).Methods;
+		boolean = type.GetType(Base.Boolean);
+		//use Boolean: binaryOperators = type.GetType(Base.BinaryOperator).Methods;
+		//use Boolean: unaryOperators = type.GetType(Base.UnaryOperator).Methods;
 		member = new Member("log", new Value(type.GetType(Base.Log), null!));
 		((List<Member>)type.Members).Add(member);
 		method = new Method(type, 0, this, new[] { MethodTests.Run });
@@ -24,8 +25,9 @@ public abstract class TestExpressions : MethodExpressionParser
 	}
 
 	protected readonly Type type;
-	protected readonly IReadOnlyList<Method> binaryOperators;
-	protected readonly IReadOnlyList<Method> unaryOperators;
+	protected readonly Type boolean;
+	//protected readonly IReadOnlyList<Method> binaryOperators;
+	//protected readonly IReadOnlyList<Method> unaryOperators;
 	protected readonly Member member;
 	protected readonly Method method;
 	protected readonly Number number;

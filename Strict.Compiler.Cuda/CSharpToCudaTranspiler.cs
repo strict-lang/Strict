@@ -94,10 +94,8 @@ public class CSharpType : Type
 					? "-"
 					: "*";
 			var numberType = method.FindType(Base.Number)!;
-			var leftExpression = new Value(numberType, "first");
-			var rightExpression = new Value(numberType, "second");
-			var returnExpression = new Return(new Binary(leftExpression,
-				numberType.Methods.First(m => m.Name == binaryOperator), rightExpression));
+			var returnExpression = new Return(new Binary(new Value(numberType, "first"),
+				numberType.GetMethod(binaryOperator), new Value(numberType, "second")));
 			return new MethodBody(method, new List<Expression> { returnExpression });
 		}
 	}

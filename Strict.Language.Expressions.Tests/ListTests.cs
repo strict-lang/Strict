@@ -65,7 +65,7 @@ public sealed class ListTests : TestExpressions
 		Console.WriteLine(ParseExpression(input).ToString());
 		ParseAndCheckOutputMatchesInput(input,
 			new Binary(new List(method, GetListExpressions(expected[0].Split(","))),
-				list.ReturnType.Methods.First(m => m.Name == expected[1]),
+				list.ReturnType.GetMethod(expected[1]),
 				new List(method, GetListExpressions(expected[2].Split(",")))));
 	}
 
@@ -75,15 +75,13 @@ public sealed class ListTests : TestExpressions
 		ParseListsWithNumber(string input, double expectedRight, params string[] expected) =>
 		ParseAndCheckOutputMatchesInput(input,
 			new Binary(new List(method, GetListExpressions(expected[0].Split(","))),
-				list.ReturnType.Methods.First(m => m.Name == expected[1]),
-				new Number(method, expectedRight)));
+				list.ReturnType.GetMethod(expected[1]), new Number(method, expectedRight)));
 
 	[TestCase("(\"1\", \"2\", \"3\", \"4\") + \"5\"", "\"1\", \"2\", \"3\", \"4\"", "+", "5")]
 	public void ParseListsWithString(string input, params string[] expected) =>
 		ParseAndCheckOutputMatchesInput(input,
 			new Binary(new List(method, GetListExpressions(expected[0].Split(","))),
-				list.ReturnType.Methods.First(m => m.Name == expected[1]),
-				new Text(method, expected[2])));
+				list.ReturnType.GetMethod(expected[1]), new Text(method, expected[2])));
 
 	[Test]
 	public void LeftTypeShouldNotBeChanged()
@@ -105,10 +103,9 @@ public sealed class ListTests : TestExpressions
 	public void ParseMultipleListInBinary() =>
 		ParseAndCheckOutputMatchesInput("(1, 2, 3, 4, 5) + (1) + 4",
 			new Binary(new List(method, GetListExpressions("1, 2, 3, 4, 5".Split(", "))),
-				list.ReturnType.Methods.First(m => m.Name == "+"),
+				list.ReturnType.GetMethod(BinaryOperator.Plus),
 				new Binary(new List(method, GetListExpressions("1".Split(", "))),
-					list.ReturnType.Methods.First(m => m.Name == "+"),
-					new Number(method, 4))));
+					list.ReturnType.GetMethod(BinaryOperator.Plus), new Number(method, 4))));
 
 	[Test]
 	public void ParseNestedLists() =>
@@ -117,7 +114,7 @@ public sealed class ListTests : TestExpressions
 				new List<Expression>
 				{
 					new Binary(new List(method, GetListExpressions("1, 2, 3".Split(", "))),
-						list.ReturnType.Methods.First(m => m.Name == "+"),
+						list.ReturnType.GetMethod(BinaryOperator.Plus),
 						new List(method, GetListExpressions("3, 4".Split(",")))),
 					new List(method, GetListExpressions("4".Split(", ")))
 				}));

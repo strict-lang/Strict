@@ -30,8 +30,8 @@ public sealed class CSharpExpressionVisitorTests : TestExpressions
 	[Test]
 	public void GenerateBinary() =>
 		Assert.That(
-			visitor.Visit(new Binary(number, number.ReturnType.Methods.First(m => m.Name == "+"),
-				number)), Is.EqualTo("5 + 5"));
+			visitor.Visit(new Binary(number, number.ReturnType.GetMethod(BinaryOperator.Plus), number)),
+			Is.EqualTo("5 + 5"));
 
 	[Test]
 	public void GenerateBoolean() =>

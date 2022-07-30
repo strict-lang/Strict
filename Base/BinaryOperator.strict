@@ -1,8 +1,0 @@
-is(type) returns Boolean
-to(generic) returns Generic
-and(boolean) returns Boolean
-and(number) returns Number
-or(boolean) returns Boolean
-or(number) returns Number
-xor(boolean) returns Boolean
-xor(number) returns Number

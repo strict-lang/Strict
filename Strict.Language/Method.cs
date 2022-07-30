@@ -67,17 +67,8 @@ public sealed class Method : Context
 	private readonly ExpressionParser parser;
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public Expression ParseExpression(Line line, Range remainingPartToParse,
-		string errorIfNoExpressionFound = "") =>
-		parser.TryParseExpression(line, remainingPartToParse) ?? throw new UnknownExpression(line,
-			(errorIfNoExpressionFound.Length == 0
-				? ""
-				: errorIfNoExpressionFound + " ") + line.Text[remainingPartToParse]);
-
-	public sealed class UnknownExpression : ParsingFailed
-	{
-		public UnknownExpression(Line line, string error = "") : base(line, error) { }
-	}
+	public Expression ParseExpression(Line line, Range rangeToParse) =>
+		parser.ParseExpression(line, rangeToParse);
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public List<Expression> ParseListArguments(Line line, int start, int end) =>

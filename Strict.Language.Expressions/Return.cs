@@ -20,7 +20,7 @@ public sealed class Return : Expression
 	private static Expression TryParseReturn(Method.Line line) =>
 		new Return(line.Text.Length <= ReturnName.Length
 			? throw new MissingExpression(line)
-			: line.Method.ParseExpression(line, (ReturnName.Length + 1).., nameof(MissingExpression)));
+			: line.Method.ParseExpression(line, (ReturnName.Length + 1)..));
 
 	public sealed class MissingExpression : ParsingFailed
 	{

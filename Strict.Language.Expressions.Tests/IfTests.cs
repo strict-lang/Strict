@@ -71,7 +71,7 @@ public sealed class IfTests : TestExpressions
 		new(new MemberCall(member), member.Type.Methods[0], new Text(type, "Hey"));
 
 	private Binary GetCondition() =>
-		new(new MemberCall(bla), binaryOperators.First(m => m.Name == BinaryOperator.Is), number);
+		new(new MemberCall(bla), boolean.GetMethod(BinaryOperator.Is), number);
 
 	[Test]
 	public void ReturnGetHashCode()

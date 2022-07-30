@@ -1,4 +1,5 @@
 using NUnit.Framework;
+using static Strict.Language.Expressions.Not;
 
 namespace Strict.Language.Expressions.Tests;
 
@@ -51,9 +52,26 @@ public class AssignmentTests : TestExpressions
 	}
 
 	[Test]
+	public void NotAssignment()
+	{
+		const string Input = "let inverted = not true";
+		var expression = (Assignment)ParseExpression(Input);
+		Assert.That(expression.Name.ToString(), Is.EqualTo("inverted"));
+		Assert.That(expression.Value, Is.InstanceOf<Not>());
+		Assert.That(expression.Value.ToString(), Is.EqualTo("not true"));
+		var rightExpression = (expression.Value as Not)!.Instance as Boolean;
+		Assert.That(rightExpression!.Data, Is.EqualTo(true));
+	}
+
+	[Test]
+	public void InvalidOperatorHere() =>
+		Assert.That(() => ParseExpression("let inverted = + true"),
+			Throws.Exception.InstanceOf<InvalidOperatorHere>());
+
+	[Test]
 	public void IncompleteAssignment() =>
 		Assert.That(() => ParseExpression("let sum = 5 +"),
-			Throws.Exception.InstanceOf<Method.UnknownExpression>());
+			Throws.Exception.InstanceOf<InvalidOperatorHere>());
 
 	[Test]
 	public void IdentifierMustBeValidWord() =>

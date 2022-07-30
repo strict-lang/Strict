@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 
 namespace Strict.Language.Expressions;
 
@@ -76,9 +77,15 @@ public class MethodCall : Expression
 		var parts = argumentsText.Split(", ");
 		var arguments = new Expression[parts.Length];
 		for (var index = 0; index < parts.Length; index++)
-			arguments[index] = line.Method.ParseExpression(line,
-				argumentStartIndex..(argumentStartIndex + parts[index].Length),
-				parts[index] + " is invalid for " + methodName + " argument " + index);
+			try
+			{
+				arguments[index] = line.Method.ParseExpression(line,
+					argumentStartIndex..(argumentStartIndex + parts[index].Length));
+			}
+			catch (MethodExpressionParser.UnknownExpression)
+			{
+				throw new InvalidExpressionForArgument(line, parts[index] + " is invalid for " + methodName + " argument " + index);
+			}
 		return arguments;
 	}
 
@@ -148,8 +155,16 @@ public class MethodCall : Expression
 	{
 		var arguments = new Expression[parts.Count];
 		for (var index = 0; index < parts.Count; index++)
-			arguments[index] = line.Method.ParseExpression(line, ..,//TODO: parts[index]) ??
-				parts[index] + " is invalid for " + parts[index] + " argument " + index);//TODO: this is duplicated code!
+			//TODO: this is the same as above
+			try
+			{
+				arguments[index] = line.Method.ParseExpression(line, ..); //TODO: parts[index]) ??
+			}
+			catch (MethodExpressionParser.UnknownExpression)
+			{ //TODO: this is duplicated code!
+				throw new InvalidExpressionForArgument(line,
+					parts[index] + " is invalid for " + parts[index] + " argument " + index);
+			}
 		return arguments;
 	}
 }

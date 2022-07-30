@@ -26,7 +26,7 @@ public sealed class ShuntingYard
 	private void PutTokenIntoStacks(Range tokenRange)
 	{
 		var (_, length) = tokenRange.GetOffsetAndLength(input.Length);
-		Console.WriteLine(nameof(PutTokenIntoStacks)+": "+input[tokenRange]);
+		Console.WriteLine(nameof(PutTokenIntoStacks) + ": " + input[tokenRange]);
 		if (length == 1)
 			PutSingleCharacterTokenIntoStacks(tokenRange);
 		else
@@ -65,12 +65,6 @@ public sealed class ShuntingYard
 
 	private readonly Stack<Range> operators = new();
 	public Stack<Range> Output { get; } = new();
-	/// <summary>
-	/// When parsing of a binary expression is done and there is a comma separator outside of a list
-	/// we will stop parsing and return the expression we got so far. The caller can then start
-	/// parsing on the next list element again, see <see cref="MethodExpressionParser"/>. Normally 0.
-	/// </summary>
-	public int RemainingToParse { get; private set; } = 0;
 
 	private void ApplyHigherOrEqualPrecedenceOperators(int precedence = 0)
 	{

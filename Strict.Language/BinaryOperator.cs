@@ -30,6 +30,12 @@ public static class BinaryOperator
 	public static bool IsOperator(this string name) => All.Contains(name);
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static bool IsOperator(this ReadOnlySpan<char> name) =>
+		name.Length == 1
+			? IsSingleCharacterOperator(name[0])
+			: IsMultiCharacterOperator(name);
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static bool IsSingleCharacterOperator(this char tokenFirstCharacter) =>
 		AnySingleCharacterOperator.Contains(tokenFirstCharacter);
 
@@ -79,7 +85,7 @@ public static class BinaryOperator
 		tokenFirstCharacter switch
 		{
 			',' => 0, // always has to flush everything out
-			'+' => 2, // unary '-' operator has precendence 1
+			'+' => 2, // unary '-' and 'not' operators have precendence 1
 			'-' => 2,
 			'*' => 3,
 			'/' => 3,
@@ -98,10 +104,14 @@ public static class BinaryOperator
 			return 7;
 		if (token.Compare(SmallerOrEqual) || token.Compare(GreaterOrEqual))
 			return 8;
-		if (token.Compare(And) || token.Compare(Or) || token.Compare(Xor))
+		if (token.Compare(And))
 			return 9;
-		if (token.Compare(Is))
+		if (token.Compare(Xor))
+			return 10;
+		if (token.Compare(Or))
 			return 11;
+		if (token.Compare(Is))
+			return 12;
 		return GetPrecedence(token[0]);
 	}
 }

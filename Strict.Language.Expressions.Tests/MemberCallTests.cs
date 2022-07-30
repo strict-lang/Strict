@@ -17,7 +17,7 @@ public sealed class MemberCallTests : TestExpressions
 
 	[Test]
 	public void MembersMustBeWords() =>
-		Assert.That(() => ParseExpression("0g9y53"), Throws.InstanceOf<Method.UnknownExpression>());
+		Assert.That(() => ParseExpression("0g9y53"), Throws.InstanceOf<UnknownExpression>());
 
 	[TestCase("log.unknown")]
 	[TestCase("1.log")]

@@ -13,10 +13,16 @@ public sealed class Binary : MethodCall
 	public Expression Right => Arguments[0];
 	public override string ToString() => Left + " " + Method.Name + " " + Right;
 
-	public static Expression? TryParse(Method.Line line, Stack<Range> postfixTokens) =>
-		postfixTokens.Count >= 3
-			? BuildBinaryExpression(line, postfixTokens.Pop(), postfixTokens)
-			: null;
+	public static Expression Parse(Method.Line line, Stack<Range> postfixTokens) =>
+		postfixTokens.Count < 3
+			? throw new IncompleteTokensForBinaryExpression(line, postfixTokens)
+			: BuildBinaryExpression(line, postfixTokens.Pop(), postfixTokens);
+
+	public sealed class IncompleteTokensForBinaryExpression : ParsingFailed
+	{
+		public IncompleteTokensForBinaryExpression(Method.Line line, IEnumerable<Range> postfixTokens) :
+			base(line, postfixTokens.Select(t => line.Text[t]).Reverse().ToWordList()) { }
+	}
 
 	private static Expression BuildBinaryExpression(Method.Line line, Range operatorTokenRange, Stack<Range> tokens)
 	{
@@ -30,8 +36,9 @@ public sealed class Binary : MethodCall
 				operatorToken + " should be used for lists, not " + nameof(Binary));
 		if (operatorToken == "*" && MethodExpressionParser.HasIncompatibleDimensions(left, right))
 			throw new MethodExpressionParser.ListsHaveDifferentDimensions(line, left + " " + right);
-		var operatorMethod = left.ReturnType.Methods.FirstOrDefault(m => m.Name == operatorToken) ?? // TODO: Match operator param types before
-			line.Method.GetType(Base.BinaryOperator).Methods.FirstOrDefault(m => m.Name == operatorToken) ??
+		// TODO: Match operator param types before
+		var operatorMethod = left.ReturnType.GetMethod(operatorToken) ??
+			//not longer needed: line.Method.GetType(Base.BinaryOperator).Methods.FirstOrDefault(m => m.Name == operatorToken) ??
 			throw new NoMatchingOperatorFound(right.ReturnType, operatorToken);
 		return new Binary(left, operatorMethod, right);
 	}
@@ -86,6 +93,6 @@ public sealed class Binary : MethodCall
 
 	public sealed class NoMatchingOperatorFound : Exception
 	{
-		public NoMatchingOperatorFound(Type leftType, string operatorMethod) : base(nameof(leftType) + "=" + leftType + " or " + Base.BinaryOperator + " does not contain " + operatorMethod) { }
+		public NoMatchingOperatorFound(Type leftType, string operatorMethod) : base(nameof(leftType) + "=" + leftType + " does not contain " + operatorMethod) { }
 	}
 }

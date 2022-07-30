@@ -27,7 +27,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Base", "Base", "{85AB8A69-6
 	ProjectSection(SolutionItems) = preProject
 		Base\Any.strict = Base\Any.strict
 		Base\App.strict = Base\App.strict
-		Base\BinaryOperator.strict = Base\BinaryOperator.strict
 		Base\Boolean.strict = Base\Boolean.strict
 		Base\Character.strict = Base\Character.strict
 		Base\Count.strict = Base\Count.strict
@@ -47,7 +46,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Base", "Base", "{85AB8A69-6
 		Base\System.strict = Base\System.strict
 		Base\Text.strict = Base\Text.strict
 		Base\Type.strict = Base\Type.strict
-		Base\UnaryOperator.strict = Base\UnaryOperator.strict
 	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Strict.Language.Expressions", "Strict.Language.Expressions\Strict.Language.Expressions.csproj", "{392902F7-F537-4384-920C-7BAE554A05B6}"

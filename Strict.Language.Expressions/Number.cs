@@ -27,3 +27,5 @@ public class Number : Value
 			: null;
 	}
 }
+
+//TODO: we need Range, Slice, Mutable, Error and looping soon https://strict.dev/docs/Keywords#buildin-types
