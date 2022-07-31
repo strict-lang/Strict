@@ -30,7 +30,7 @@ public sealed class CSharpExpressionVisitorTests : TestExpressions
 	[Test]
 	public void GenerateBinary() =>
 		Assert.That(
-			visitor.Visit(new Binary(number, number.ReturnType.GetMethod(BinaryOperator.Plus), number)),
+			visitor.Visit(new Binary(number, number.ReturnType.FindMethod(BinaryOperator.Plus)!, number)),
 			Is.EqualTo("5 + 5"));
 
 	[Test]
@@ -46,8 +46,8 @@ public sealed class CSharpExpressionVisitorTests : TestExpressions
 	[Test]
 	public void GenerateMethodCall() =>
 		Assert.That(
-			visitor.Visit(new MethodCall(new MemberCall(member), member.Type.Methods[0],
-				new Text(type, "Hi"))), Is.EqualTo("Console.WriteLine(\"Hi\")"));
+			visitor.Visit(new OneArgumentMethodCall(member.Type.Methods[0],
+				new MemberCall(member), new Text(type, "Hi"))), Is.EqualTo("Console.WriteLine(\"Hi\")"));
 
 	[Test]
 	public void GenerateNumber() =>

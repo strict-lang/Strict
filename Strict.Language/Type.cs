@@ -296,13 +296,13 @@ public class Type : Context
 	}
 
 	//TODO: match arguments!
-	public Method GetMethod(string methodName)
+	public Method? FindMethod(string methodName)
 	{
 		if (AvailableMethods.TryGetValue(methodName, out var matchingMethods))
 			return matchingMethods.FirstOrDefault() ??
 				//will use different error here anyways
 				throw new NoMatchingMethodFound(this, methodName, AvailableMethods);
-		throw new NoMatchingMethodFound(this, methodName, AvailableMethods);
+		return null;
 	}
 
 	/// <summary>

@@ -97,10 +97,10 @@ public static class SpanExtensions
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static bool IsWordOrText(this ReadOnlySpan<char> input)
+	public static bool IsWord(this ReadOnlySpan<char> input)
 	{
 		foreach (var c in input)
-			if (c is (< 'A' or > 'Z') and (< 'a' or > 'z') && c != '"')
+			if (c is (< 'A' or > 'Z') and (< 'a' or > 'z'))
 				return false;
 		return true;
 	}

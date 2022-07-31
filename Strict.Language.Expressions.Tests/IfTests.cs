@@ -64,14 +64,14 @@ public sealed class IfTests : TestExpressions
 	[Test]
 	public void ParseIfElse() =>
 		Assert.That(ParseExpression("if bla is 5", "\tlog.Write(\"Hey\")", "else", "\tRun"),
-			Is.EqualTo(new If(GetCondition(), GetThen(), new MethodCall(null, method))).And.Not.
+			Is.EqualTo(new If(GetCondition(), GetThen(), new NoArgumentMethodCall(method))).And.Not.
 				EqualTo(new If(GetCondition(), GetThen())));
 
-	private MethodCall GetThen() =>
-		new(new MemberCall(member), member.Type.Methods[0], new Text(type, "Hey"));
+	private OneArgumentMethodCall GetThen() =>
+		new(member.Type.Methods[0], new MemberCall(member), new Text(type, "Hey"));
 
 	private Binary GetCondition() =>
-		new(new MemberCall(bla), boolean.GetMethod(BinaryOperator.Is), number);
+		new(new MemberCall(bla), boolean.FindMethod(BinaryOperator.Is)!, number);
 
 	[Test]
 	public void ReturnGetHashCode()

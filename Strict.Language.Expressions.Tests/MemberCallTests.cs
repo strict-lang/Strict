@@ -12,8 +12,8 @@ public sealed class MemberCallTests : TestExpressions
 			new MemberCall(new MemberCall(member), member.Type.Members.First(m => m.Name == "Text")));
 
 	[Test]
-	public void MemberNotFound() =>
-		Assert.That(() => ParseExpression("unknown"), Throws.InstanceOf<MemberCall.MemberNotFound>());
+	public void UnknownMember() =>
+		Assert.That(() => ParseExpression("unknown"), Throws.InstanceOf<MemberNotFound>());
 
 	[Test]
 	public void MembersMustBeWords() =>
@@ -23,16 +23,16 @@ public sealed class MemberCallTests : TestExpressions
 	[TestCase("1.log")]
 	public void NestedMemberNotFound(string lines) =>
 		Assert.That(() => ParseExpression(lines),
-			Throws.InstanceOf<MemberCall.MemberNotFound>());
+			Throws.InstanceOf<MemberNotFound>());
 
 	[Test]
 	public void MultipleWordsMemberNotFound() =>
 		Assert.That(() => ParseExpression("directory.GetFiles"),
-			Throws.InstanceOf<MemberCall.MemberNotFound>());
+			Throws.InstanceOf<MemberNotFound>());
 
 	[Test]
 	public void NestedMemberIsNotAWord() =>
-		Assert.That(() => ParseExpression("log.5"), Throws.InstanceOf<MemberCall.MemberNotFound>());
+		Assert.That(() => ParseExpression("log.5"), Throws.InstanceOf<MemberNotFound>());
 
 	[Test]
 	public void ValidMemberCall() =>

@@ -1,5 +1,4 @@
 using NUnit.Framework;
-using static Strict.Language.Expressions.Not;
 
 namespace Strict.Language.Expressions.Tests;
 
@@ -47,8 +46,8 @@ public class AssignmentTests : TestExpressions
 		var expression = (Assignment)ParseExpression(Input);
 		Assert.That(expression.Name.ToString(), Is.EqualTo("result"));
 		Assert.That(expression.Value, Is.InstanceOf<Binary>());
-		var rightExpression = (expression.Value as Binary)!.Right as Number;
-		Assert.That(rightExpression!.Data.ToString(), Is.EqualTo("6"));
+		var rightExpression = (Number)((Binary)expression.Value).Argument;
+		Assert.That(rightExpression.Data, Is.EqualTo(6));
 	}
 
 	[Test]
@@ -64,7 +63,7 @@ public class AssignmentTests : TestExpressions
 	}
 
 	[Test]
-	public void InvalidOperatorHere() =>
+	public void OnlyNotIsValidUnaryOperator() =>
 		Assert.That(() => ParseExpression("let inverted = + true"),
 			Throws.Exception.InstanceOf<InvalidOperatorHere>());
 
@@ -99,5 +98,5 @@ public class AssignmentTests : TestExpressions
 	[Test]
 	public void LetWithoutExpressionCannotParse() =>
 		Assert.That(() => ParseExpression("let value = abc"),
-			Throws.Exception.InstanceOf<MemberCall.MemberNotFound>().With.Message.Contain("abc"));
+			Throws.Exception.InstanceOf<MemberNotFound>().With.Message.Contain("abc"));
 }

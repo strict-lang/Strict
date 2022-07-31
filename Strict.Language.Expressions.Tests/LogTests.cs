@@ -20,8 +20,8 @@ Run
 	public string Run(Method method)
 	{
 		foreach (var expression in method.Body.Expressions)
-			if (expression is MethodCall call && call.Method.Name == "Write")
-				return ((Text)call.Arguments[0]).Data.ToString()!;
+			if (expression is OneArgumentMethodCall call && call.Method.Name == "Write")
+				return ((Text)call.Argument).Data.ToString()!;
 		return ""; //ncrunch: no coverage
 	}
 }

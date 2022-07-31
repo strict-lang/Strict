@@ -95,7 +95,9 @@ public class CSharpType : Type
 					: "*";
 			var numberType = method.FindType(Base.Number)!;
 			var returnExpression = new Return(new Binary(new Value(numberType, "first"),
-				numberType.GetMethod(binaryOperator), new Value(numberType, "second")));
+				numberType.FindMethod(binaryOperator) ??
+				throw new Binary.NoMatchingOperatorFound(numberType, binaryOperator),
+				new Value(numberType, "second")));
 			return new MethodBody(method, new List<Expression> { returnExpression });
 		}
 	}

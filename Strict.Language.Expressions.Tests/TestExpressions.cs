@@ -14,7 +14,7 @@ public abstract class TestExpressions : MethodExpressionParser
 		boolean = type.GetType(Base.Boolean);
 		//use Boolean: binaryOperators = type.GetType(Base.BinaryOperator).Methods;
 		//use Boolean: unaryOperators = type.GetType(Base.UnaryOperator).Methods;
-		member = new Member("log", new Value(type.GetType(Base.Log), null!));
+		member = new Member("log", new From(type.GetType(Base.Log)));
 		((List<Member>)type.Members).Add(member);
 		method = new Method(type, 0, this, new[] { MethodTests.Run });
 		((List<Method>)type.Methods).Add(method);

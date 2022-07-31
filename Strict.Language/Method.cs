@@ -27,7 +27,7 @@ public sealed class Method : Context
 		: base(type,
 		GetName(lines[0]))
 	{
-		if (!Name.IsWordWithNumber() && !Name.IsOperator())
+		if (!Name.IsWord() && !Name.IsOperator())
 			throw new NameMustBeAWordWithoutAnySpecialCharactersOrNumbers(Name);
 		TypeLineNumber = typeLineNumber;
 		this.parser = parser;
@@ -85,17 +85,17 @@ public sealed class Method : Context
 	private static string GetName(string firstLine)
 	{
 		//TODO: should be a ReadOnlySpan from the caller
-		var block = new Memory<char>(firstLine.ToCharArray());
-		var blockSpan = block.Span;
+		//tst: var block = new Memory<char>(firstLine.ToCharArray());
+		var blockSpan = firstLine.AsSpan();//tst: block.Span;
 		//Run\n
 		//Run(number)
 		//Run returns Text\n
-		for (var i = 0; i < block.Length; i++)
+		for (var i = 0; i < blockSpan.Length; i++)
 		{
 			if (blockSpan[i] == '(' || blockSpan[i] == ' ' || blockSpan[i] == '\n')
 				return blockSpan[..i].ToString();
 		}
-		//TODO: many times slower
+		//TODO: many times slower, optimize!
 		return firstLine.SplitWordsAndPunctuation()[0];
 	}
 

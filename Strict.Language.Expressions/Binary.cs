@@ -4,14 +4,14 @@ using System.Linq;
 
 namespace Strict.Language.Expressions;
 
-public sealed class Binary : MethodCall
+public sealed class Binary : OneArgumentMethodCall
 {
-	public Binary(Expression left, Method operatorMethod, Expression right) : base(left,
-		operatorMethod, right) { }
+	public Binary(Expression left, Method operatorMethod, Expression right) : base(operatorMethod, left, right) { }
 
-	public Expression Left => Instance!; // TODO: This is a hack, use proper method arguments 0 & 1
-	public Expression Right => Arguments[0];
-	public override string ToString() => Left + " " + Method.Name + " " + Right;
+	//not really needed: public Expression Left => Instance!; // TODO: This is a hack, use proper method arguments 0 & 1
+	//public Expression Right => Arguments[0];
+	//TODO: we should check if groupings are correctly restored on ToString, e.g. (1 + 2) * 3 should not be regenerated as 1 + 2 * 3!
+	public override string ToString() => Instance + " " + Method.Name + " " + Argument;
 
 	public static Expression Parse(Method.Line line, Stack<Range> postfixTokens) =>
 		postfixTokens.Count < 3
@@ -37,7 +37,7 @@ public sealed class Binary : MethodCall
 		if (operatorToken == "*" && MethodExpressionParser.HasIncompatibleDimensions(left, right))
 			throw new MethodExpressionParser.ListsHaveDifferentDimensions(line, left + " " + right);
 		// TODO: Match operator param types before
-		var operatorMethod = left.ReturnType.GetMethod(operatorToken) ??
+		var operatorMethod = left.ReturnType.FindMethod(operatorToken) ??
 			//not longer needed: line.Method.GetType(Base.BinaryOperator).Methods.FirstOrDefault(m => m.Name == operatorToken) ??
 			throw new NoMatchingOperatorFound(right.ReturnType, operatorToken);
 		return new Binary(left, operatorMethod, right);

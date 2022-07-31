@@ -70,7 +70,10 @@ public class CSharpExpressionVisitor : ExpressionVisitor
 	protected override string Visit(Return returnExpression) =>
 		"return " + Visit(returnExpression.Value);
 
-	protected override string Visit(MethodCall methodCall) =>
+	protected override string Visit(ArgumentsMethodCall methodCall) => null!;
+	protected override string Visit(OneArgumentMethodCall methodCall) => null!;
+
+	protected override string Visit(NoArgumentMethodCall methodCall) =>
 		VisitMethodCallInstance(methodCall) +
 		(methodCall.Method.Name == Method.From || methodCall.Instance == null
 			? ""
@@ -79,13 +82,14 @@ public class CSharpExpressionVisitor : ExpressionVisitor
 				: methodCall.Method.Name == "Write" &&
 				methodCall.Instance.ReturnType.Name is Base.Log or Base.System
 					? "WriteLine"
-					: methodCall.Method.Name)) + "(" + methodCall.Arguments.Select(Visit).ToWordList() +
+					: methodCall.Method.Name)) + "(" + //TODO: methodCall.Arguments.Select(Visit).ToWordList() +
 		(methodCall.ReturnType.Name == "File"
 			? ", FileMode.OpenOrCreate"
 			: "") + ")";
 
-	private string VisitMethodCallInstance(MethodCall methodCall) =>
-		((methodCall.Arguments.FirstOrDefault() as MethodCall)?.Instance?.ToString() == "file"
+	private string VisitMethodCallInstance(NoArgumentMethodCall methodCall) => "";
+	/*//TODO: 
+		((methodCall.Arguments.FirstOrDefault() as NoArgumentMethodCall)?.Instance?.ToString() == "file"
 			? "using var reader = new StreamReader(file);"
 			: "") + (methodCall.Method.Name == Method.From
 			? "new "
@@ -96,6 +100,7 @@ public class CSharpExpressionVisitor : ExpressionVisitor
 					? "reader"
 					: Visit(methodCall.Instance)
 			: "");
+	*/
 
 	protected override string Visit(MemberCall memberCall) =>
 		memberCall.Member.Type.Name is Base.Log or Base.System
