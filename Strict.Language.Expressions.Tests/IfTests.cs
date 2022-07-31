@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using NUnit.Framework;
 
@@ -64,10 +65,10 @@ public sealed class IfTests : TestExpressions
 	[Test]
 	public void ParseIfElse() =>
 		Assert.That(ParseExpression("if bla is 5", "\tlog.Write(\"Hey\")", "else", "\tRun"),
-			Is.EqualTo(new If(GetCondition(), GetThen(), new NoArgumentMethodCall(method))).And.Not.
+			Is.EqualTo(new If(GetCondition(), GetThen(), new MethodCall(method))).And.Not.
 				EqualTo(new If(GetCondition(), GetThen())));
 
-	private OneArgumentMethodCall GetThen() =>
+	private MethodCall GetThen() =>
 		new(member.Type.Methods[0], new MemberCall(member), new Text(type, "Hey"));
 
 	private Binary GetCondition() =>

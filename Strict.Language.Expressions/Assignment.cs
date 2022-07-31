@@ -3,7 +3,7 @@
 namespace Strict.Language.Expressions;
 
 /// <summary>
-/// Let assigns an <see cref="Identifier"/> variable, often a fixed value that is optimized away
+/// Let assigns an <see cref="Identifier"/> variable, often a fixed value that is optimized away.
 /// </summary>
 public sealed class Assignment : Expression
 {

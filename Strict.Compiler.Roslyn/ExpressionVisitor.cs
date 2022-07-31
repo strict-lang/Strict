@@ -42,9 +42,7 @@ public abstract class ExpressionVisitor
 			Assignment assignment => Visit(assignment),
 			Binary binary => Visit(binary),
 			Return returnExpression => Visit(returnExpression),
-			ArgumentsMethodCall call => Visit(call),
-			OneArgumentMethodCall call => Visit(call),
-			NoArgumentMethodCall call => Visit(call),
+			MethodCall call => Visit(call),
 			MemberCall member => Visit(member),
 			Value value => Visit(value),
 			_ => expression.ToString() //ncrunch: no coverage
@@ -58,13 +56,11 @@ public abstract class ExpressionVisitor
 	protected abstract string Visit(Assignment assignment);
 
 	protected string Visit(Binary binary) =>
-		Visit(binary.Instance!) + " " + GetBinaryOperator(binary.Method.Name) + " " + Visit(binary.Argument);
+		Visit(binary.Instance!) + " " + GetBinaryOperator(binary.Method.Name) + " " + Visit(binary.Arguments[0]);
 
 	protected abstract string GetBinaryOperator(string methodName);
 	protected abstract string Visit(Return returnExpression);
-	protected abstract string Visit(ArgumentsMethodCall methodCall);
-	protected abstract string Visit(OneArgumentMethodCall methodCall);
-	protected abstract string Visit(NoArgumentMethodCall methodCall);
+	protected abstract string Visit(MethodCall methodCall);
 	protected abstract string Visit(MemberCall memberCall);
 	protected abstract string Visit(Value value);
 }

@@ -9,11 +9,11 @@ public sealed class MemberCall : Expression
 {
 	public MemberCall(Member member) : base(member.Type) => Member = member;
 	public Member Member { get; }
-	public MemberCall(Expression parent, Member member) : this(member) => Parent = parent;
-	public Expression? Parent { get; }
+	public MemberCall(Expression instance, Member member) : this(member) => Instance = instance;
+	public Expression? Instance { get; }
 
 	public override string ToString() =>
-		Parent != null
-			? Parent + "." + Member.Name
+		Instance != null
+			? Instance + "." + Member.Name
 			: Member.Name;
 }

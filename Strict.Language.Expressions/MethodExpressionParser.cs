@@ -15,7 +15,7 @@ public class MethodExpressionParser : ExpressionParser
 		var constructor = type.Methods[0];
 		var line = new Method.Line(constructor, 0, initializationLine, fileLineNumber);
 		//TODO: maybe non constructor calls also make sense here?
-		return new NoArgumentMethodCall(constructor, new From(type));//TODO: argument logic, ParseExpression(line, ..));
+		return new MethodCall(constructor, new From(type));//TODO: argument logic, ParseExpression(line, ..));
 	}
 
 	public override Expression ParseExpression(Method.Line line, Range rangeToParse)
@@ -82,52 +82,78 @@ public class MethodExpressionParser : ExpressionParser
 	//TODO: error handling (same as constructor calling actually)
 	//https://deltaengine.fogbugz.com/f/cases/25211
 
+	/// <summary>
+	/// By far the most common usecase, we call something from another instance, use some binary
+	/// operator (like is, to, +, etc.) or execute some method. For more arguments more complex
+	/// parsing has to be done and we have to invoke ShuntingYard for the argument list.
+	/// </summary>
 	public Expression? TryParseMemberOrZeroOrOneArgumentMethodCall(Method.Line line, Range range)
 	{
 		// We can early out here if this looks like a number digit
-		if (char.IsNumber(line.Text[range.Start.Value]))
+		if (char.IsNumber(line.Text[range.Start.Value])) //TODO: make sure this is really not a number yo, add a bunch of tests!
 			return null;
 		var partToParse = line.Text.GetSpanFromRange(range);
 		var argumentsStart = partToParse.IndexOf('(');
 		if (argumentsStart > 0)
+			return ParseNested(line, new Range(range.Start, range.Start.Value + argumentsStart),
+				ParseListArguments(line, argumentsStart + range.Start.Value + 1, partToParse.Length - 1));
+		return ParseNested(line, range, Array.Empty<Expression>());
+	}
+
+	private Expression? ParseNested(Method.Line line, Range range, IReadOnlyList<Expression> arguments)
+	{
+		var partToParse = line.Text.GetSpanFromRange(range);
+		if (partToParse.Contains('.'))
 		{
-			var arguments = ParseListArguments(line, argumentsStart + range.Start.Value + 1,
-				partToParse.Length - 1);
-			if (arguments.Count != 1)
-				throw new NotSupportedException("Expected exactly one argument here: " +
-					partToParse.ToString());
-			partToParse = line.Text.AsSpan(range.Start.Value, argumentsStart);
-			if (partToParse.Contains('.'))
+			var members = partToParse.Split('.');
+			var start = range.Start.Value;
+			Expression? current = null;
+			while (members.MoveNext())
 			{
-				var memberParts = partToParse.Split('.');
-				//messed, up call it manually: var member = GetNestedMemberCall(line, memberParts);
-				memberParts.MoveNext();
-				var firstMemberName = memberParts.Current;
-				var first = TryMemberCallOrNoArgumentMethodCall(line, firstMemberName, null);
-				if (first == null)
-					throw new MemberNotFound(line, line.Method.Type, firstMemberName.ToString());
-				memberParts.MoveNext();//should be in a loop obviously!
-				var method = first.ReturnType.FindMethod(memberParts.Current.ToString()) ??
-					throw new MethodNotFound(line, first + "." + memberParts.Current.ToString(),
-						first.ReturnType);
-				return new OneArgumentMethodCall(method, first, arguments[0]);
+				current = GetNestedExpression(current, line,
+					new Range(start, start + members.Current.Length));
+				start += members.Current.Length + 1;
 			}
-			else
-			{
-				var method = line.Method.Type.FindMethod(partToParse.ToString());
-				if (method != null)
-					return new OneArgumentMethodCall(method, null, arguments[0]);
-				return null;
-			}
-		}
-		else if (partToParse.Contains('.')) //make sure this is really not a number yo, add a bunch of tests!
-		{
-			var memberParts = partToParse.Split('.');
-			var member = GetNestedMemberCall(line, partToParse.Split('.'));
-			return TryMemberCallOrNoArgumentMethodCall(line, memberParts.Current, member);
+			return current;
 		}
 		else
-			return TryMemberCallOrNoArgumentMethodCall(line, partToParse, null);
+		{
+			//TODO? return TryMemberCallOrNoArgumentMethodCall(line, partToParse, null);
+			var method = line.Method.Type.FindMethod(partToParse.ToString());
+			if (method != null)
+				return new MethodCall(method, null, arguments);
+			return null;
+		}
+	}
+
+	private Expression GetNestedExpression(Expression? current, Method.Line line, Range range)
+	{
+		Console.WriteLine("GetNestedExpression: current="+current+", text="+line.Text[range]);
+		/*TODO
+		var first = TryMemberCallOrNoArgumentMethodCall(line, firstMemberName, null);
+		if (first == null)
+			throw new MemberNotFound(line, line.Method.Type, firstMemberName.ToString());
+		
+		var method = first.ReturnType.FindMethod(memberParts.Current.ToString()) ??
+			throw new MethodNotFound(line, first + "." + memberParts.Current.ToString(),
+				first.ReturnType);
+		return new OneArgumentMethodCall(method, first, arguments[0]);
+
+
+		while (members.MoveNext())
+		{
+			//TODO: abort when MoveNext is false, then we are done
+			partsEnumerator.MoveNext();
+			var secondMemberName = partsEnumerator.Current.ToString();
+			//TODO: this whole member thing is a bit strange, because each part can be a member, methodcall, number, whatever!
+			var second = //TryMemberCallOrNoArgumentMethodCall(line, secondMemberName, first);
+				first.ReturnType.Members.FirstOrDefault(m => m.Name == secondMemberName);
+			if (second == null)
+				throw new MemberNotFound(line, first.ReturnType, secondMemberName);
+			var member = new MemberCall(first, second);
+			return TryMemberCallOrNoArgumentMethodCall(line, members.Current, member);
+		*/
+		return null!;
 	}
 
 	private static Expression? TryParseMethod(Method.Line line, Range range, string[] parts)
@@ -150,7 +176,7 @@ public class MethodExpressionParser : ExpressionParser
 					TryParseFrom(line,
 						range); //range.Start.Value..(methodName.Length + range.Start.Value));
 			}
-			return new NoArgumentMethodCall(method, null);//TODO, arguments);
+			return new MethodCall(method, null, arguments);
 		}
 		/*TODO: should be way more generic, it is not just a nested member call, it can be anything!
 		var memberParts = methodName.Split('.', 2);
@@ -239,8 +265,8 @@ public class MethodExpressionParser : ExpressionParser
 		var type = line.Method.FindType(typeNameAndArguments[0]);
 		if (type == null)
 			return null;
-		var constructorMethodCall = new NoArgumentMethodCall(type.Methods[0], // TODO: Get constructor method using a helper method
-			new From(type));//TODO, line.Method.ParseExpression(line, ..)); //TODO: broken anyways: typeNameAndArguments[1]) ?? use same method GetArguments method
+		var constructorMethodCall = new MethodCall(type.Methods[0], // TODO: Get constructor method using a helper method
+			new From(type), Array.Empty<Expression>());//TODO, line.Method.ParseExpression(line, ..)); //TODO: broken anyways: typeNameAndArguments[1]) ?? use same method GetArguments method
 		//TODO: this makes no sense!
 		if (!hasNestedMethodCall)
 			return constructorMethodCall;
@@ -248,7 +274,7 @@ public class MethodExpressionParser : ExpressionParser
 			? GetArguments(line, typeNameAndArguments.Skip(3).ToList())
 			: Array.Empty<Expression>();
 		var method = type.Methods.FirstOrDefault(m => m.Name == typeNameAndArguments[2][1..]) ?? throw new MethodNotFound(line, typeNameAndArguments[2][1..], type);
-		return new NoArgumentMethodCall(method, constructorMethodCall);//TODO, arguments);
+		return new MethodCall(method, constructorMethodCall, arguments);
 	}
 
 	private static Expression[] GetArguments(Method.Line line, IReadOnlyList<string> parts)
@@ -314,25 +340,7 @@ public class MethodExpressionParser : ExpressionParser
 //	}
 //}
 
-	private static MemberCall GetNestedMemberCall(Method.Line line, SpanSplitEnumerator partsEnumerator)
-	{
-		partsEnumerator.MoveNext();
-		var firstMemberName = partsEnumerator.Current;
-		var first = TryMemberCallOrNoArgumentMethodCall(line, firstMemberName, null);
-		if (first == null)
-			throw new MemberNotFound(line, line.Method.Type, firstMemberName.ToString());
-		//TODO: abort when MoveNext is false, then we are done
-		partsEnumerator.MoveNext();
-		var secondMemberName = partsEnumerator.Current.ToString();
-		//TODO: this whole member thing is a bit strange, because each part can be a member, methodcall, number, whatever!
-		var second = //TryMemberCallOrNoArgumentMethodCall(line, secondMemberName, first);
-			first.ReturnType.Members.FirstOrDefault(m => m.Name == secondMemberName);
-		if (second == null)
-			throw new MemberNotFound(line, first.ReturnType, secondMemberName);
-		return new MemberCall(first, second);
-	}
-
-	private static Expression? TryMemberCallOrNoArgumentMethodCall(Method.Line line, ReadOnlySpan<char> name, MemberCall? memberInstance)
+private static Expression? TryMemberCallOrMethodCall(Method.Line line, ReadOnlySpan<char> name, MemberCall? memberInstance)
 	{
 		if (!name.IsWord())
 			return null;
@@ -368,7 +376,7 @@ public class MethodExpressionParser : ExpressionParser
 		//TODO: the member can be anything, any expression, don't assume it is always a member!
 		var method = line.Method.Type.FindMethod(name.ToString());
 		if (method != null)
-			return new NoArgumentMethodCall(method, memberInstance);
+			return new MethodCall(method, memberInstance);
 		return null;
 	}
 

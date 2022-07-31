@@ -70,10 +70,7 @@ public class CSharpExpressionVisitor : ExpressionVisitor
 	protected override string Visit(Return returnExpression) =>
 		"return " + Visit(returnExpression.Value);
 
-	protected override string Visit(ArgumentsMethodCall methodCall) => null!;
-	protected override string Visit(OneArgumentMethodCall methodCall) => null!;
-
-	protected override string Visit(NoArgumentMethodCall methodCall) =>
+	protected override string Visit(MethodCall methodCall) =>
 		VisitMethodCallInstance(methodCall) +
 		(methodCall.Method.Name == Method.From || methodCall.Instance == null
 			? ""
@@ -87,9 +84,8 @@ public class CSharpExpressionVisitor : ExpressionVisitor
 			? ", FileMode.OpenOrCreate"
 			: "") + ")";
 
-	private string VisitMethodCallInstance(NoArgumentMethodCall methodCall) => "";
-	/*//TODO: 
-		((methodCall.Arguments.FirstOrDefault() as NoArgumentMethodCall)?.Instance?.ToString() == "file"
+	private string VisitMethodCallInstance(MethodCall methodCall) =>
+		((methodCall.Arguments.FirstOrDefault() as MethodCall)?.Instance?.ToString() == "file"
 			? "using var reader = new StreamReader(file);"
 			: "") + (methodCall.Method.Name == Method.From
 			? "new "
@@ -100,13 +96,12 @@ public class CSharpExpressionVisitor : ExpressionVisitor
 					? "reader"
 					: Visit(methodCall.Instance)
 			: "");
-	*/
 
 	protected override string Visit(MemberCall memberCall) =>
 		memberCall.Member.Type.Name is Base.Log or Base.System
 			? "Console"
-			: memberCall.Parent != null
-				? memberCall.Parent + "." + memberCall.Member.Name
+			: memberCall.Instance != null
+				? memberCall.Instance + "." + memberCall.Member.Name
 				: memberCall.Member.Name;
 
 	protected override string Visit(Value value) =>

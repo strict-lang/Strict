@@ -46,13 +46,12 @@ public sealed class CSharpExpressionVisitorTests : TestExpressions
 	[Test]
 	public void GenerateMethodCall() =>
 		Assert.That(
-			visitor.Visit(new OneArgumentMethodCall(member.Type.Methods[0],
-				new MemberCall(member), new Text(type, "Hi"))), Is.EqualTo("Console.WriteLine(\"Hi\")"));
+			visitor.Visit(new MethodCall(member.Type.Methods[0], new MemberCall(member),
+				new Text(type, "Hi"))), Is.EqualTo("Console.WriteLine(\"Hi\")"));
 
 	[Test]
 	public void GenerateNumber() =>
-		Assert.That(
-			visitor.Visit(new Number(method, 77)), Is.EqualTo("77"));
+		Assert.That(visitor.Visit(new Number(method, 77)), Is.EqualTo("77"));
 
 	[Test]
 	public void GenerateText() =>

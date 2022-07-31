@@ -7,13 +7,13 @@ namespace Strict.Language.Expressions;
 /// it will fail to find this as an identifier and check if one of the supported unary one letter
 /// expression was used and will do the minus operation directly there.
 /// </summary>
-public sealed class Not : NoArgumentMethodCall
+public sealed class Not : MethodCall
 {
 	public Not(Expression right) : base(
 		right.ReturnType.FindMethod(UnaryOperator.Not) ??
 		throw new Binary.NoMatchingOperatorFound(right.ReturnType, UnaryOperator.Not), right) { }
 
-	public override string ToString() => UnaryOperator.Not + " " + Instance;
+	public override string ToString() => UnaryOperator.Not + " " + Instance!;
 
 	public static Expression Parse(Method.Line line, ShuntingYard postfixTokens)
 	{

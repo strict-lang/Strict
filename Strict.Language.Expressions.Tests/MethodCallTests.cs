@@ -1,3 +1,4 @@
+using System;
 using NUnit.Framework;
 
 namespace Strict.Language.Expressions.Tests;
@@ -6,19 +7,17 @@ public sealed class MethodCallTests : TestExpressions
 {
 	[Test]
 	public void ParseLocalMethodCall() =>
-		ParseAndCheckOutputMatchesInput("Run", new NoArgumentMethodCall(type.Methods[0]));
+		ParseAndCheckOutputMatchesInput("Run", new MethodCall(type.Methods[0]));
 
 	[Test]
 	public void ParseCallWithArgument() =>
 		ParseAndCheckOutputMatchesInput("log.Write(bla)",
-			new OneArgumentMethodCall(member.Type.Methods[0], new MemberCall(member),
-				new MemberCall(bla)));
+			new MethodCall(member.Type.Methods[0], new MemberCall(member), new MemberCall(bla)));
 
 	[Test]
 	public void ParseCallWithTextArgument() =>
 		ParseAndCheckOutputMatchesInput("log.Write(\"Hi\")",
-			new OneArgumentMethodCall(member.Type.Methods[0], new MemberCall(member),
-				new Text(type, "Hi")));
+			new MethodCall(member.Type.Methods[0], new MemberCall(member), new Text(type, "Hi")));
 
 	[Test]
 	public void ParseWithMissingArgument() =>
@@ -63,7 +62,7 @@ public sealed class MethodCallTests : TestExpressions
 	{
 		var characterType = type.GetType(Base.Character);
 		Assert.That(ParseExpression("Character(7)"),
-			Is.EqualTo(new OneArgumentMethodCall(characterType.FindMethod(Method.From)!,
+			Is.EqualTo(new MethodCall(characterType.FindMethod(Method.From)!,
 				new From(characterType), new Number(type, 7))));
 	}
 }

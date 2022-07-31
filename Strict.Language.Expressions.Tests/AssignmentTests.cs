@@ -46,7 +46,7 @@ public class AssignmentTests : TestExpressions
 		var expression = (Assignment)ParseExpression(Input);
 		Assert.That(expression.Name.ToString(), Is.EqualTo("result"));
 		Assert.That(expression.Value, Is.InstanceOf<Binary>());
-		var rightExpression = (Number)((Binary)expression.Value).Argument;
+		var rightExpression = (Number)((Binary)expression.Value).Arguments[0];
 		Assert.That(rightExpression.Data, Is.EqualTo(6));
 	}
 
