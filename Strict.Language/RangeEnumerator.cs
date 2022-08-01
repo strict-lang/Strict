@@ -9,16 +9,18 @@ namespace Strict.Language;
 public ref struct RangeEnumerator
 {
 	//ncrunch: no coverage start, for performance reasons disabled here
-	public RangeEnumerator(ReadOnlySpan<char> input, char splitter, bool removeLeadingSpace = false)
+	public RangeEnumerator(ReadOnlySpan<char> input, char splitter, Index outerRangeOffset)
 	{
 		this.input = input;
 		this.splitter = splitter;
-		this.removeLeadingSpace = removeLeadingSpace;
+		removeLeadingSpace = splitter == ',';
+		outerStart = outerRangeOffset.Value;
 	}
 
 	private readonly ReadOnlySpan<char> input;
 	private readonly char splitter;
-	private readonly bool removeLeadingSpace;
+	private readonly bool removeLeadingSpace = false;
+	private readonly int outerStart = 0;
 	private int offset = 0;
 	public Range Current { get; private set; } = default;
 	public readonly RangeEnumerator GetEnumerator() => this;
@@ -32,7 +34,7 @@ public ref struct RangeEnumerator
 				return GetWordBeforeSplitter(index);
 		if (removeLeadingSpace && input[offset] == ' ')
 			offset++;
-		Current = offset..;
+		Current = (outerStart + offset)..(outerStart + input.Length);
 		offset = input.Length;
 		return true;
 	}
@@ -45,7 +47,7 @@ public ref struct RangeEnumerator
 			throw new SpanSplitEnumerator.EmptyEntryNotAllowedAtTheEnd(input.ToString(), index);
 		if (removeLeadingSpace && input[offset] == ' ')
 			offset++;
-		Current = offset..index;
+		Current = (outerStart + offset)..(outerStart + index);
 		offset = index + 1;
 		return true;
 	}

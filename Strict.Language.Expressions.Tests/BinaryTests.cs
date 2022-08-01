@@ -12,22 +12,22 @@ public class BinaryTests : TestExpressions
 	[Test]
 	public void AddFiveToNumber() =>
 		ParseAndCheckOutputMatchesInput("bla + 5",
-			new Binary(new MemberCall(bla), number.ReturnType.FindMethod(BinaryOperator.Plus)!, number));
+			new Binary(new MemberCall(null, bla), number.ReturnType.FindMethod(BinaryOperator.Plus)!, number));
 
 	[Test]
 	public void MissingLeftExpression() =>
 		Assert.That(() => ParseExpression("unknown + 5"),
-			Throws.Exception.InstanceOf<MemberNotFound>());
+			Throws.Exception.InstanceOf<MemberOrMethodNotFound>());
 
 	[Test]
 	public void MissingRightExpression() =>
 		Assert.That(() => ParseExpression("5 + unknown"),
-			Throws.Exception.InstanceOf<MemberNotFound>());
+			Throws.Exception.InstanceOf<MemberOrMethodNotFound>());
 
 	[Test]
 	public void ParseComparison() =>
 		ParseAndCheckOutputMatchesInput("bla is 5",
-			new Binary(new MemberCall(bla), boolean.FindMethod(BinaryOperator.Is)!, number));
+			new Binary(new MemberCall(null, bla), boolean.FindMethod(BinaryOperator.Is)!, number));
 
 	[Test]
 	public void NestedBinary() =>

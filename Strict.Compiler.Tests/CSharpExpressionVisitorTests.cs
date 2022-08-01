@@ -23,8 +23,7 @@ public sealed class CSharpExpressionVisitorTests : TestExpressions
 
 	[Test]
 	public void GenerateAssignment() =>
-		Assert.That(
-			visitor.Visit(new Assignment(new Identifier(nameof(number), number.ReturnType), number)),
+		Assert.That(visitor.Visit(new Assignment(method, nameof(number), number)),
 			Is.EqualTo("var number = 5"));
 
 	[Test]
@@ -40,13 +39,13 @@ public sealed class CSharpExpressionVisitorTests : TestExpressions
 	[Test]
 	public void GenerateMemberCall() =>
 		Assert.That(
-			visitor.Visit(new MemberCall(new MemberCall(member),
+			visitor.Visit(new MemberCall(new MemberCall(null, member),
 				member.Type.Members.First(m => m.Name == "Text"))), Is.EqualTo("log.Text"));
 
 	[Test]
 	public void GenerateMethodCall() =>
 		Assert.That(
-			visitor.Visit(new MethodCall(member.Type.Methods[0], new MemberCall(member),
+			visitor.Visit(new MethodCall(member.Type.Methods[0], new MemberCall(null, member),
 				new Text(type, "Hi"))), Is.EqualTo("Console.WriteLine(\"Hi\")"));
 
 	[Test]

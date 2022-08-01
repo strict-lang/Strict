@@ -13,7 +13,8 @@ namespace Strict.Language.Expressions;
 // ReSharper disable once HollowTypeName
 public class MethodCall : Expression
 {
-	public MethodCall(Method method, Expression? instance, IReadOnlyList<Expression> arguments) : base(method.ReturnType)
+	public MethodCall(Method method, Expression? instance, IReadOnlyList<Expression> arguments) :
+		base(method.ReturnType)
 	{
 		Instance = instance;
 		Method = method;
@@ -32,6 +33,8 @@ public class MethodCall : Expression
 
 	public override string ToString() =>
 		Instance != null
-			? Instance + "." + Method.Name + Arguments.ToBrackets()
-			: Method.Name + Arguments.ToBrackets();
+			? $"{Instance}.{Method.Name}{Arguments.ToBrackets()}"
+			: Arguments.Count > 0
+				? $"{Method.Name}{Arguments.ToBrackets()}"
+				: Method.Name;
 }

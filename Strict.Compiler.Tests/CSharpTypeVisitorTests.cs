@@ -116,7 +116,7 @@ Run
 		Assert.That(() => new CSharpTypeVisitor(new Type(package, Computer, parser).Parse(@"import Strict
 has log
 Run" + code)),
-			Throws.InstanceOf<MethodExpressionParser.MemberNotFound>()!);
+			Throws.InstanceOf<MethodExpressionParser.MemberOrMethodNotFound>()!);
 
 	//TODO: flaky test, sometimes fails with MissingMethodImplementation (trait not loaded yet)
 	[Test]

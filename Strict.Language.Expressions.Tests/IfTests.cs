@@ -69,10 +69,10 @@ public sealed class IfTests : TestExpressions
 				EqualTo(new If(GetCondition(), GetThen())));
 
 	private MethodCall GetThen() =>
-		new(member.Type.Methods[0], new MemberCall(member), new Text(type, "Hey"));
+		new(member.Type.Methods[0], new MemberCall(null, member), new Text(type, "Hey"));
 
 	private Binary GetCondition() =>
-		new(new MemberCall(bla), boolean.FindMethod(BinaryOperator.Is)!, number);
+		new(new MemberCall(null, bla), boolean.FindMethod(BinaryOperator.Is)!, number);
 
 	[Test]
 	public void ReturnGetHashCode()

@@ -29,13 +29,6 @@ public static class SpanExtensions
 		Split(input, '\n');
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static RangeEnumerator SplitIntoRanges(this ReadOnlySpan<char> input,
-		char splitter = ' ', bool removeLeadingSpace = false) =>
-		input.Length == 0
-			? throw new EmptyInputIsNotAllowed()
-			: new RangeEnumerator(input, splitter, removeLeadingSpace);
-
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static ReadOnlySpan<char> GetSpanFromRange(this string input, Range range)
 	{
 		var (offset, length) = range.GetOffsetAndLength(input.Length);

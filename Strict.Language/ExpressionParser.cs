@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 
 namespace Strict.Language;
@@ -14,6 +13,6 @@ public abstract class ExpressionParser
 	public abstract Expression ParseAssignmentExpression(Type type, string initializationLine, int fileLineNumber);
 	public abstract Expression ParseMethodBody(Method method);
 	public abstract Expression ParseMethodLine(Method.Line line, ref int methodLineNumber);
-	public abstract Expression ParseExpression(Method.Line line, Range rangeToParse);
-	public abstract List<Expression> ParseListArguments(Method.Line line, int start, int end);
+	public abstract Expression ParseExpression(Method.Line line, Range range);
+	public abstract List<Expression> ParseListArguments(Method.Line line, Range range);
 }

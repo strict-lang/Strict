@@ -13,7 +13,7 @@ namespace Strict.Language;
 /// </summary>
 public sealed class Method : Context
 {
-	//json parser for comparison how to do async reading lines
+	//TODO: json parser for comparison how to do async reading lines
 	public async Task ParseJson(StreamReader reader)
 	{
 		var dummy = new Memory<char>(new char[1024]);
@@ -24,8 +24,7 @@ public sealed class Method : Context
 	public Method(Type type, int typeLineNumber, ExpressionParser parser,
 		// Memory<char> lines https://deltaengine.fogbugz.com/f/cases/25240
 		IReadOnlyList<string> lines)
-		: base(type,
-		GetName(lines[0]))
+		: base(type, GetName(lines[0]))
 	{
 		if (!Name.IsWord() && !Name.IsOperator())
 			throw new NameMustBeAWordWithoutAnySpecialCharactersOrNumbers(Name);
@@ -71,8 +70,8 @@ public sealed class Method : Context
 		parser.ParseExpression(line, rangeToParse);
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public List<Expression> ParseListArguments(Line line, int start, int end) =>
-		parser.ParseListArguments(line, start, end);
+	public List<Expression> ParseListArguments(Line line, Range range) =>
+		parser.ParseListArguments(line, range);
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public Expression ParseMethodLine(Line line, ref int methodLineNumber) =>
@@ -181,7 +180,7 @@ public sealed class Method : Context
 	private readonly Lazy<MethodBody> body;
 	public MethodBody Body => body.Value;
 	public bool IsPublic => char.IsUpper(Name[0]);
-	public readonly List<Expression> Variables = new();
+	public readonly Dictionary<string, Expression> Variables = new();
 
 	public override Type? FindType(string name, Context? searchingFrom = null) =>
 		name == Base.Other

@@ -13,8 +13,7 @@ public class AssignmentTests : TestExpressions
 	public void ParseNumber()
 	{
 		var assignment = (Assignment)ParseExpression("let number = 5");
-		Assert.That(assignment,
-			Is.EqualTo(new Assignment(new Identifier(nameof(number), number.ReturnType), number)));
+		Assert.That(assignment, Is.EqualTo(new Assignment(method, nameof(number), number)));
 		Assert.That(assignment.Value.ReturnType, Is.EqualTo(number.ReturnType));
 		Assert.That(((Number)assignment.Value).ToString(), Is.EqualTo("5"));
 	}
@@ -24,7 +23,7 @@ public class AssignmentTests : TestExpressions
 	{
 		const string Input = "let value = \"Hey\"";
 		var expression = (Assignment)ParseExpression(Input);
-		Assert.That(expression.Name.ToString(), Is.EqualTo("value"));
+		Assert.That(expression.Name, Is.EqualTo("value"));
 		Assert.That(expression.Value.ToString(), Is.EqualTo("\"Hey\""));
 		Assert.That(expression.ToString(), Is.EqualTo(Input));
 	}
@@ -34,7 +33,7 @@ public class AssignmentTests : TestExpressions
 	{
 		const string Input = "let sum = 5 + 3";
 		var expression = (Assignment)ParseExpression(Input);
-		Assert.That(expression.Name.ToString(), Is.EqualTo("sum"));
+		Assert.That(expression.Name, Is.EqualTo("sum"));
 		Assert.That(expression.Value.ToString(), Is.EqualTo("5 + 3"));
 		Assert.That(expression.ToString(), Is.EqualTo(Input));
 	}
@@ -44,7 +43,7 @@ public class AssignmentTests : TestExpressions
 	{
 		const string Input = "let result = ((5 + 3) * 2 - 5) / 6";
 		var expression = (Assignment)ParseExpression(Input);
-		Assert.That(expression.Name.ToString(), Is.EqualTo("result"));
+		Assert.That(expression.Name, Is.EqualTo("result"));
 		Assert.That(expression.Value, Is.InstanceOf<Binary>());
 		var rightExpression = (Number)((Binary)expression.Value).Arguments[0];
 		Assert.That(rightExpression.Data, Is.EqualTo(6));
@@ -55,7 +54,7 @@ public class AssignmentTests : TestExpressions
 	{
 		const string Input = "let inverted = not true";
 		var expression = (Assignment)ParseExpression(Input);
-		Assert.That(expression.Name.ToString(), Is.EqualTo("inverted"));
+		Assert.That(expression.Name, Is.EqualTo("inverted"));
 		Assert.That(expression.Value, Is.InstanceOf<Not>());
 		Assert.That(expression.Value.ToString(), Is.EqualTo("not true"));
 		var rightExpression = (expression.Value as Not)!.Instance as Boolean;
@@ -98,5 +97,5 @@ public class AssignmentTests : TestExpressions
 	[Test]
 	public void LetWithoutExpressionCannotParse() =>
 		Assert.That(() => ParseExpression("let value = abc"),
-			Throws.Exception.InstanceOf<MemberNotFound>().With.Message.Contain("abc"));
+			Throws.Exception.InstanceOf<UnknownExpression>().With.Message.Contain("abc"));
 }

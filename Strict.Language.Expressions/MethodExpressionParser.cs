@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq; //TODO: linq should be avoided for better performance
+using System.Linq.Expressions;
+using static Strict.Language.Method;
 
 namespace Strict.Language.Expressions;
 
@@ -18,20 +20,20 @@ public class MethodExpressionParser : ExpressionParser
 		return new MethodCall(constructor, new From(type));//TODO: argument logic, ParseExpression(line, ..));
 	}
 
-	public override Expression ParseExpression(Method.Line line, Range rangeToParse)
+	public override Expression ParseExpression(Method.Line line, Range range)
 	{
-		var input = line.Text.GetSpanFromRange(rangeToParse);
+		var input = line.Text.GetSpanFromRange(range);
 		if (input.IsEmpty)
 			throw new CannotParseEmptyInput(line);
 		if (!input.Contains(' ') && !input.Contains(','))
-			return Boolean.TryParse(line, rangeToParse) ?? Text.TryParse(line, rangeToParse) ??
-				List.TryParseWithSingleElement(line, rangeToParse) ??
-				TryParseMemberOrZeroOrOneArgumentMethodCall(line, rangeToParse) ??
-				Number.TryParse(line, rangeToParse) ?? (input.IsOperator()
+			return Boolean.TryParse(line, range) ?? Text.TryParse(line, range) ??
+				List.TryParseWithSingleElement(line, range) ??
+				TryParseMemberOrZeroOrOneArgumentMethodCall(line, range) ??
+				Number.TryParse(line, range) ?? (input.IsOperator()
 					? throw new InvalidOperatorHere(line, input.ToString())
-					: throw new UnknownExpression(line, line.Text[rangeToParse]));
+					: throw new UnknownExpression(line, line.Text[range]));
 		//check for method call/member call here too
-		var postfix = new ShuntingYard(line.Text, rangeToParse);
+		var postfix = new ShuntingYard(line.Text, range);
 		return postfix.Output.Count switch
 		{
 			1 => ParseTextWithSpacesOrListWithMultipleOrNestedElements(line, postfix.Output.Pop()),
@@ -92,69 +94,173 @@ public class MethodExpressionParser : ExpressionParser
 		// We can early out here if this looks like a number digit
 		if (char.IsNumber(line.Text[range.Start.Value])) //TODO: make sure this is really not a number yo, add a bunch of tests!
 			return null;
-		var partToParse = line.Text.GetSpanFromRange(range);
-		var argumentsStart = partToParse.IndexOf('(');
+		var toParse = line.Text.GetSpanFromRange(range);
+		var argumentsStart = toParse.IndexOf('(');
 		if (argumentsStart > 0)
-			return ParseNested(line, new Range(range.Start, range.Start.Value + argumentsStart),
-				ParseListArguments(line, argumentsStart + range.Start.Value + 1, partToParse.Length - 1));
-		return ParseNested(line, range, Array.Empty<Expression>());
+			return ParseInContext(line.Method.Type, line,
+				new Range(range.Start, range.Start.Value + argumentsStart),
+				ParseListArguments(line,
+					new Range(argumentsStart + range.Start.Value + 1, toParse.Length - 1)));
+		return ParseInContext(line.Method.Type, line, range, Array.Empty<Expression>());
 	}
 
-	private Expression? ParseNested(Method.Line line, Range range, IReadOnlyList<Expression> arguments)
+	private Expression? ParseInContext(Context context, Method.Line line, Range range, IReadOnlyList<Expression> arguments)
 	{
 		var partToParse = line.Text.GetSpanFromRange(range);
+		Console.WriteLine(nameof(ParseInContext) + " " + context + ", " + partToParse.ToString());
 		if (partToParse.Contains('.'))
 		{
-			var members = partToParse.Split('.');
-			var start = range.Start.Value;
+			var members = new RangeEnumerator(partToParse, '.', range.Start);
 			Expression? current = null;
 			while (members.MoveNext())
 			{
-				current = GetNestedExpression(current, line,
-					new Range(start, start + members.Current.Length));
-				start += members.Current.Length + 1;
+				var expression = TryMemberOrMethodCall(context, current, line, members.Current, arguments);
+				if (expression == null)
+				{
+					// Could also be a Text or List, bool or number are not allowed here in this nested context
+					expression = Text.TryParse(line, members.Current) ?? List.TryParseWithSingleElement(line, members.Current);
+					if (expression == null)
+						throw new MemberOrMethodNotFound(line, current?.ReturnType ?? line.Method.Type,
+							line.Text[members.Current]);
+				}
+				current = expression;
+				context = current.ReturnType;
 			}
 			return current;
 		}
-		else
-		{
-			//TODO? return TryMemberCallOrNoArgumentMethodCall(line, partToParse, null);
-			var method = line.Method.Type.FindMethod(partToParse.ToString());
-			if (method != null)
-				return new MethodCall(method, null, arguments);
-			return null;
-		}
+		return TryMemberOrMethodCall(context, null, line, range, arguments);
 	}
 
-	private Expression GetNestedExpression(Expression? current, Method.Line line, Range range)
+	private static Expression? TryMemberOrMethodCall(Context context, Expression? instance, Method.Line line, Range range,
+		IReadOnlyList<Expression> arguments)
 	{
-		Console.WriteLine("GetNestedExpression: current="+current+", text="+line.Text[range]);
-		/*TODO
-		var first = TryMemberCallOrNoArgumentMethodCall(line, firstMemberName, null);
-		if (first == null)
-			throw new MemberNotFound(line, line.Method.Type, firstMemberName.ToString());
-		
-		var method = first.ReturnType.FindMethod(memberParts.Current.ToString()) ??
-			throw new MethodNotFound(line, first + "." + memberParts.Current.ToString(),
-				first.ReturnType);
-		return new OneArgumentMethodCall(method, first, arguments[0]);
-
-
-		while (members.MoveNext())
+		var partToParse = line.Text.GetSpanFromRange(range);
+		if (!partToParse.IsWord())
+			return null;
+		//foreach (var (name, variableValue) in GetAvailableVariables(context))
+		//	if (partToParse.Equals(name, StringComparison.Ordinal))
+		//		return variableValue;//TODO: should be member yo
+		//TODO: test: Find all parent members as well use unit test -> Count(5).Floor is 5
+		if (arguments.Count == 0)
 		{
-			//TODO: abort when MoveNext is false, then we are done
-			partsEnumerator.MoveNext();
-			var secondMemberName = partsEnumerator.Current.ToString();
-			//TODO: this whole member thing is a bit strange, because each part can be a member, methodcall, number, whatever!
-			var second = //TryMemberCallOrNoArgumentMethodCall(line, secondMemberName, first);
-				first.ReturnType.Members.FirstOrDefault(m => m.Name == secondMemberName);
-			if (second == null)
-				throw new MemberNotFound(line, first.ReturnType, secondMemberName);
-			var member = new MemberCall(first, second);
-			return TryMemberCallOrNoArgumentMethodCall(line, members.Current, member);
-		*/
-		return null!;
+			var type = context as Type;
+			if (context is Method method)
+			{
+				foreach (var (name, value) in method.Variables)
+					if (partToParse.Equals(name, StringComparison.Ordinal))
+						return new VariableCall(name, value);
+				foreach (var parameter in method.Parameters)
+					if (partToParse.Equals(parameter.Name, StringComparison.Ordinal))
+						return new ParameterCall(parameter);
+				type = method.ReturnType;
+			}
+			var memberCall = TryFindMemberCall(type!, instance, partToParse);
+			if (memberCall != null)
+				return memberCall;
+			Console.WriteLine("ParseNested found no member in " + line.Method);
+		}
+		//TODO: the member can be anything, any expression, don't assume it is always a member!
+		//TODO: constructor needed here!
+		var method2 = line.Method.Type.FindMethod(partToParse.ToString());
+		if (method2 != null)
+			return new MethodCall(method2, instance, arguments);
+		Console.WriteLine("ParseNested found no local method " + line.Method.Type);
+		return null;
 	}
+
+	private static Expression? TryFindMemberCall(Type type, Expression? instance, ReadOnlySpan<char> partToParse)
+	{
+		foreach (var member in type.Members)
+			if (partToParse.Equals(member.Name, StringComparison.Ordinal))
+				return new MemberCall(instance, member);
+		foreach (var implementType in type.Implements)
+		{
+			var memberCall = TryFindMemberCall(implementType, instance, partToParse);
+			if (memberCall != null)
+				return memberCall;
+		}
+		return null;
+	}
+
+	/*TODO: remove, would make things easier, but extremely slow! remove after we have a stable code structure!
+	/// <summary>
+	/// Provides a list of all named members, parameters and local variables with their current values
+	/// available in this context scope, all the way recursively down including all implements.
+	/// </summary>
+	public static Dictionary<NamedType, Expression> GetAvailableVariables(Context context)
+	{
+		//TODO: optimize! we always only add things, each Context can provide their own implementation as well!
+		Dictionary<NamedType, Expression> result = new Dictionary<NamedType, Expression>();
+		if (context is Method method)
+		{
+			foreach (var variable in method.Variables)
+			{
+				if (variable is Assignment assignment)
+					result.Add(assignment.Name.Name, assignment);
+			}
+			foreach (var parameter in method.Parameters)
+			{
+				if (variable is Assignment assignment)
+					result.Add(parameter.Name, parameter. assignment);
+			}
+		}
+		var foundMember = foundArgument != null
+			? new Member(foundArgument.Name.Name, foundArgument.Value)
+			: null; // TODO: Find all parent members as well use unit test -> Count(5).Floor is 5
+		if (foundMember == null)
+		{
+			foundMember = null;
+			foreach (var member in line.Method.Type.Members)
+			{
+				if (partToParse.Equals(member.Name, StringComparison.Ordinal))
+				{
+					foundMember = member;
+					break;
+				}
+			}
+		}
+		if (foundMember != null)
+			return new MemberCall(foundMember);
+		Console.WriteLine("ParseNested found no member in " + line.Method);
+		//TODO: the member can be anything, any expression, don't assume it is always a member!
+		var method2 = line.Method.Type.FindMethod(partToParse.ToString());
+		if (method2 != null)
+			return new MethodCall(method2, null, arguments);
+		Console.WriteLine("ParseNested found no local method " + line.Method.Type);
+		return result;
+	}
+	/*TODO
+private Expression GetNestedExpression(Expression? current, Method.Line line, Range range, IReadOnlyList<Expression> arguments)
+{
+	Console.WriteLine("GetNestedExpression: current="+current+", text="+line.Text[range]);
+	return TryMemberOrMethodCall( //TODO?current, should all be in scope class
+			line, line.Text.GetSpanFromRange(range), arguments) ??
+		throw new MemberOrMethodNotFound(line, line.Method.Type, line.Text[range]);
+	var first = TryMemberCallOrNoArgumentMethodCall(line, firstMemberName, null);
+	if (first == null)
+		throw new MemberNotFound(line, line.Method.Type, firstMemberName.ToString());
+	
+	var method = first.ReturnType.FindMethod(memberParts.Current.ToString()) ??
+		throw new MethodNotFound(line, first + "." + memberParts.Current.ToString(),
+			first.ReturnType);
+	return new OneArgumentMethodCall(method, first, arguments[0]);
+
+
+	while (members.MoveNext())
+	{
+		//TODO: abort when MoveNext is false, then we are done
+		partsEnumerator.MoveNext();
+		var secondMemberName = partsEnumerator.Current.ToString();
+		//TODO: this whole member thing is a bit strange, because each part can be a member, methodcall, number, whatever!
+		var second = //TryMemberCallOrNoArgumentMethodCall(line, secondMemberName, first);
+			first.ReturnType.Members.FirstOrDefault(m => m.Name == secondMemberName);
+		if (second == null)
+			throw new MemberNotFound(line, first.ReturnType, secondMemberName);
+		var member = new MemberCall(first, second);
+		return TryMemberCallOrNoArgumentMethodCall(line, members.Current, member);
+	//return null!;
+}
+	*/
 
 	private static Expression? TryParseMethod(Method.Line line, Range range, string[] parts)
 	{
@@ -340,49 +446,9 @@ public class MethodExpressionParser : ExpressionParser
 //	}
 //}
 
-private static Expression? TryMemberCallOrMethodCall(Method.Line line, ReadOnlySpan<char> name, MemberCall? memberInstance)
+public sealed class MemberOrMethodNotFound : ParsingFailed
 	{
-		if (!name.IsWord())
-			return null;
-		//TODO: this is all scope name checking and should be in its own class
-		//TODO: this scope MUST check in the scope of memberInstance, only if it is null we should check here!
-		Assignment? foundArgument = null;
-		foreach (var variable in line.Method.Variables)
-		{
-			if (variable is Assignment assignment &&
-				name.Equals(assignment.Name.Name, StringComparison.Ordinal))
-			{
-				foundArgument = assignment;
-				break;
-			}
-		}
-		var foundMember = foundArgument != null
-			? new Member(foundArgument.Name.Name, foundArgument.Value)
-			: null; // TODO: Find all parent members as well use unit test -> Count(5).Floor is 5
-		if (foundMember == null)
-		{
-			foundMember = null;
-			foreach (var member in line.Method.Type.Members)
-			{
-				if (name.Equals(member.Name, StringComparison.Ordinal))
-				{
-					foundMember = member;
-					break;
-				}
-			}
-		}
-		if (foundMember != null)
-			return new MemberCall(foundMember);
-		//TODO: the member can be anything, any expression, don't assume it is always a member!
-		var method = line.Method.Type.FindMethod(name.ToString());
-		if (method != null)
-			return new MethodCall(method, memberInstance);
-		return null;
-	}
-
-	public sealed class MemberNotFound : ParsingFailed
-	{
-		public MemberNotFound(Method.Line line, Type memberType, string memberName) : base(line,
+		public MemberOrMethodNotFound(Method.Line line, Type memberType, string memberName) : base(line,
 			memberName, memberType) { }
 	}
 
@@ -391,15 +457,15 @@ private static Expression? TryMemberCallOrMethodCall(Method.Line line, ReadOnlyS
 	/// Could also contain strings, we don't know. Most of the time it will just be a bunch of values.
 	/// <see cref="ShuntingYard"/> will only parse till the next comma, has to call this till the end.
 	/// </summary>
-	public override List<Expression> ParseListArguments(Method.Line line, int start, int end)
+	public override List<Expression> ParseListArguments(Method.Line line, Range range)
 	{
-		var innerSpan = line.Text.AsSpan(start, end-start);
+		var innerSpan = line.Text.GetSpanFromRange(range);
 		if (innerSpan.Contains('(') || innerSpan.Contains('"'))
 		{
 			// The postfix data comes in upside down, so use another stack to restore order
 			var expressions = new Stack<Expression>();
 			// Similar to TryParseExpression, but we know there is commas separating things! 
-			var postfix = new ShuntingYard(line.Text, new Range(start, end));
+			var postfix = new ShuntingYard(line.Text, range);
 			if (postfix.Output.Count == 1)
 				expressions.Push(ParseTextWithSpacesOrListWithMultipleOrNestedElements(line,
 					postfix.Output.Pop()));
@@ -408,9 +474,8 @@ private static Expression? TryMemberCallOrMethodCall(Method.Line line, ReadOnlyS
 			else
 				do
 				{
-					var range = postfix.Output.Peek();
-					Console.WriteLine("pushing list element "+line.Text[range]);
-					var span = line.Text.GetSpanFromRange(range);
+					Console.WriteLine("pushing list element "+line.Text[postfix.Output.Peek()]);
+					var span = line.Text.GetSpanFromRange(postfix.Output.Peek());
 					// Is this a binary expression we have to put into the list (already tokenized and postfixed)
 					if (span.Length == 1 && span[0].IsSingleCharacterOperator() ||
 						span.IsMultiCharacterOperator())
@@ -428,8 +493,7 @@ private static Expression? TryMemberCallOrMethodCall(Method.Line line, ReadOnlyS
 				//} while (start < end);
 			return expressions.ToList();
 		}
-		return ParseAllElementsFast(line, (start, innerSpan.Length),
-			innerSpan.SplitIntoRanges(',', true));
+		return ParseAllElementsFast(line, new RangeEnumerator(innerSpan, ',', range.Start));
 	}
 
 	public class ListTokensAreNotSeparatedByComma : ParsingFailed
@@ -437,14 +501,14 @@ private static Expression? TryMemberCallOrMethodCall(Method.Line line, ReadOnlyS
 		public ListTokensAreNotSeparatedByComma(Method.Line line) : base(line) { }
 	}
 
-	private static List<Expression> ParseAllElementsFast(Method.Line line, (int, int) offsetAndLength, RangeEnumerator elements)
+	private static List<Expression> ParseAllElementsFast(Method.Line line, RangeEnumerator elements)
 	{
 		var expressions = new List<Expression>();
 		foreach (var element in elements)
-			expressions.Add(line.Method.ParseExpression(line, element.GetOuterRange(offsetAndLength)));
+			expressions.Add(line.Method.ParseExpression(line, element));
 		return expressions;
 	}
-	
+
 	//TODO: Probably not needed
 	public static bool HasIncompatibleDimensions(Expression left, Expression right) =>
 		left is List leftList && right is List rightList &&
@@ -482,15 +546,11 @@ private static Expression? TryMemberCallOrMethodCall(Method.Line line, ReadOnlyS
 	/// </summary>
 	public override Expression ParseMethodBody(Method method)
 	{
+		if (method.bodyLines.Count == 0)
+			return new MethodBody(method, Array.Empty<Expression>());
 		var expressions = new List<Expression>();
 		for (var lineNumber = 0; lineNumber < method.bodyLines.Count; lineNumber++)
-		{
-			var expression = ParseMethodLine(method.bodyLines[lineNumber], ref lineNumber);
-			if (expression is Assignment assignment)
-				method.Variables.Add(assignment);
-			expressions.Add(expression);
-		}
-		//TODO: to clear link to original memory: method.bodyLines = Memory<char>.Empty; //ArraySegment<Method.Line>.Empty;
+			expressions.Add(ParseMethodLine(method.bodyLines[lineNumber], ref lineNumber));
 		return new MethodBody(method, expressions);
 	}
 

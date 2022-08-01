@@ -40,8 +40,8 @@ public sealed class List : Value
 		if (input.Length <= 2 || input[0] != '(' || input[^1] != ')')
 			return null;
 		Console.WriteLine("TryParseWithMultipleOrNestedElements: "+input[1..^1].ToString());
-		return new List(line.Method, line.Method.ParseListArguments(line, range.Start.Value + 1,
-			range.Start.Value + input.Length - 1));
+		return new List(line.Method,
+			line.Method.ParseListArguments(line, range.RemoveFirstAndLast(input.Length)));
 	}
 
 	public class EmptyListNotAllowed : ParsingFailed

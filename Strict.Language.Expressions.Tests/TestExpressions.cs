@@ -14,13 +14,13 @@ public abstract class TestExpressions : MethodExpressionParser
 		boolean = type.GetType(Base.Boolean);
 		//use Boolean: binaryOperators = type.GetType(Base.BinaryOperator).Methods;
 		//use Boolean: unaryOperators = type.GetType(Base.UnaryOperator).Methods;
-		member = new Member("log", new From(type.GetType(Base.Log)));
+		member = new Member(type, "log", new From(type.GetType(Base.Log)));
 		((List<Member>)type.Members).Add(member);
 		method = new Method(type, 0, this, new[] { MethodTests.Run });
 		((List<Method>)type.Methods).Add(method);
 		number = new Number(type, 5);
 		list = new List(type, new List<Expression> { new Number(type, 5) });
-		bla = new Member("bla", number);
+		bla = new Member(type, "bla", number);
 		((List<Member>)type.Members).Add(bla);
 	}
 

@@ -12,12 +12,12 @@ public sealed class MethodCallTests : TestExpressions
 	[Test]
 	public void ParseCallWithArgument() =>
 		ParseAndCheckOutputMatchesInput("log.Write(bla)",
-			new MethodCall(member.Type.Methods[0], new MemberCall(member), new MemberCall(bla)));
+			new MethodCall(member.Type.Methods[0], new MemberCall(null, member), new MemberCall(null, bla)));
 
 	[Test]
 	public void ParseCallWithTextArgument() =>
 		ParseAndCheckOutputMatchesInput("log.Write(\"Hi\")",
-			new MethodCall(member.Type.Methods[0], new MemberCall(member), new Text(type, "Hi")));
+			new MethodCall(member.Type.Methods[0], new MemberCall(null, member), new Text(type, "Hi")));
 
 	[Test]
 	public void ParseWithMissingArgument() =>
@@ -46,16 +46,16 @@ public sealed class MethodCallTests : TestExpressions
 
 	[Test]
 	public void ParseCallWithUnknownArgument() =>
-		Assert.That(() => ParseExpression("log.Write(unknown)"), Throws.InstanceOf<MemberNotFound>());
+		Assert.That(() => ParseExpression("log.Write(unknown)"), Throws.InstanceOf<MemberOrMethodNotFound>());
 
 	[Test]
 	public void ParseCallWithUnknownMemberCallArgument() =>
 		Assert.That(() => ParseExpression("log.Write(log.unknown)"),
-			Throws.InstanceOf<MemberNotFound>().With.Message.StartsWith("unknown in TestPackage.Log"));
+			Throws.InstanceOf<MemberOrMethodNotFound>().With.Message.StartsWith("unknown in TestPackage.Log"));
 
 	[Test]
 	public void MethodCallMembersMustBeWords() =>
-		Assert.That(() => ParseExpression("0g9y53.Write()"), Throws.InstanceOf<MemberNotFound>());
+		Assert.That(() => ParseExpression("0g9y53.Write()"), Throws.InstanceOf<MemberOrMethodNotFound>());
 
 	[Test]
 	public void FromMethodCall()

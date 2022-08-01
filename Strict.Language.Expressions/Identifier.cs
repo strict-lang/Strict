@@ -1,4 +1,5 @@
-﻿using System;
+﻿/*TODO: remove, not really needed anymore, each method can keep track of all its parameters, assignments and which members it has access to
+using System;
 
 namespace Strict.Language.Expressions;
 
@@ -21,3 +22,4 @@ public class Identifier : NamedType
 
 	public override string ToString() => Name;
 }
+*/

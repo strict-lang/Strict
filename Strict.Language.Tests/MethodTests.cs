@@ -51,7 +51,7 @@ Run
 	public const string LetOther = "	let other = 3";
 	public static readonly string[] NestedMethodLines =
 	{
-		"IsBla5 returns Boolean",
+		"IsBlaFive returns Boolean",
 		LetNumber,
 		"	if bla is 5",
 		"		return true",

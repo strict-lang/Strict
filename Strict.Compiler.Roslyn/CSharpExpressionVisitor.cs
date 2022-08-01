@@ -100,9 +100,9 @@ public class CSharpExpressionVisitor : ExpressionVisitor
 	protected override string Visit(MemberCall memberCall) =>
 		memberCall.Member.Type.Name is Base.Log or Base.System
 			? "Console"
-			: memberCall.Instance != null
+			: /*not longer used this way! memberCall.Instance != null
 				? memberCall.Instance + "." + memberCall.Member.Name
-				: memberCall.Member.Name;
+				: */memberCall.Member.Name;
 
 	protected override string Visit(Value value) =>
 		value.Data is Type

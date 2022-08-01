@@ -1,12 +1,13 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 
 namespace Strict.Language;
 
 /// <summary>
-/// Keeps all known types for use, if in <see cref="Package"/> contains all known types
-/// and traits the context is inside a type, all members are available as
-/// well, in a method more scope information is available. The high level context knows it all.
+/// Keeps all known types for use, if in <see cref="Package"/> contains all known types and traits
+/// the context is inside a type, all members are available as well, in a method more information
+/// is available. The high level context knows all types, low level scope in method nows locals.
 /// </summary>
 public abstract class Context
 {

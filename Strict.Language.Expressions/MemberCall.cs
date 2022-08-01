@@ -1,19 +1,41 @@
 ﻿namespace Strict.Language.Expressions;
 
-/// <summary>
-/// Links a type member up to an expression making it usable in a method body. Will be written as
-/// a local member or if used in a different type via the Type.Member syntax.
-/// </summary>
 // ReSharper disable once HollowTypeName
 public sealed class MemberCall : Expression
 {
-	public MemberCall(Member member) : base(member.Type) => Member = member;
-	public Member Member { get; }
-	public MemberCall(Expression instance, Member member) : this(member) => Instance = instance;
+	public MemberCall(Expression? instance, Member member) : base(member.Type)
+	{
+		Instance = instance;
+		Member = member;
+	}
+
 	public Expression? Instance { get; }
+	public Member Member { get; }
 
 	public override string ToString() =>
 		Instance != null
-			? Instance + "." + Member.Name
+			? $"{Instance}.{Member.Name}"
 			: Member.Name;
+}
+
+// ReSharper disable once HollowTypeName
+public sealed class VariableCall : Expression
+{
+	public VariableCall(string name, Expression value) : base(value.ReturnType)
+	{
+		Name = name;
+		Value = value;
+	}
+
+	public string Name { get; }
+	public Expression Value { get; }
+	public override string ToString() => Name;
+}
+
+// ReSharper disable once HollowTypeName
+public sealed class ParameterCall : Expression
+{
+	public ParameterCall(Parameter parameter) : base(parameter.Type) => Parameter = parameter;
+	public Parameter Parameter { get; }
+	public override string ToString() => Parameter.Name;
 }

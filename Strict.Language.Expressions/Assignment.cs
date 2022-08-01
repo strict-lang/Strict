@@ -3,17 +3,20 @@
 namespace Strict.Language.Expressions;
 
 /// <summary>
-/// Let assigns an <see cref="Identifier"/> variable, often a fixed value that is optimized away.
+/// Let assigns a variable in a method, often a fixed value that is optimized away.
 /// </summary>
 public sealed class Assignment : Expression
 {
-	public Assignment(Identifier name, Expression value) : base(value.ReturnType)
+	public Assignment(Method inMethod, string name, Expression value) : base(value.ReturnType)
 	{
+		if (!name.IsWord())
+			throw new Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers(name);
+		inMethod.Variables.Add(name, value);
 		Name = name;
 		Value = value;
 	}
 
-	public Identifier Name { get; }
+	public string Name { get; }
 	public Expression Value { get; }
 	public override int GetHashCode() => Name.GetHashCode() ^ Value.GetHashCode();
 	public override string ToString() => "let " + Name + " = " + Value;
@@ -41,7 +44,7 @@ public sealed class Assignment : Expression
 			throw new IncompleteLet(line);
 		var startOfValueExpression = 4 + name.Length + 1 + 1 + 1;
 		var value = line.Method.ParseExpression(line, startOfValueExpression..);
-		return new Assignment(new Identifier(name, value.ReturnType), value);
+		return new Assignment(line.Method, name, value);
 	}
 
 	public sealed class IncompleteLet : ParsingFailed
