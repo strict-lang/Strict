@@ -6,8 +6,8 @@ namespace Strict.Language.Expressions;
 
 public sealed class Binary : MethodCall
 {
-	public Binary(Expression left, Method operatorMethod, Expression right) : base(operatorMethod,
-		left, right) { }
+	public Binary(Expression left, Method operatorMethod, Expression right) : base(method: operatorMethod,
+		instance: left, firstArgumentOnly: right) { }
 
 	//TODO: we should check if groupings are correctly restored on ToString, e.g. (1 + 2) * 3 should not be regenerated as 1 + 2 * 3!
 	public override string ToString() => Instance + " " + Method.Name + " " + Arguments[0];
@@ -43,13 +43,11 @@ public sealed class Binary : MethodCall
 	}
 
 	private static Expression GetUnaryOrBuildNestedBinary(Method.Line line, Range nextTokenRange,
-		Stack<Range> tokens)
-	{
-		var nextToken = line.Text.GetSpanFromRange(nextTokenRange);//TODO: only needed for operator check, can be done more efficiently
-		return nextToken[0].IsSingleCharacterOperator() || nextToken.IsMultiCharacterOperator()
+		Stack<Range> tokens) =>
+		line.Text[nextTokenRange.Start.Value].IsSingleCharacterOperator() ||
+		line.Text.GetSpanFromRange(nextTokenRange).IsMultiCharacterOperator()
 			? BuildBinaryExpression(line, nextTokenRange, tokens)
 			: line.Method.ParseExpression(line, nextTokenRange);
-	}
 
 	//TODO; Remove
 	//private static Expression TryParseBinary(Method.Line line, IReadOnlyList<string> parts)

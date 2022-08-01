@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq; //TODO: linq should be avoided for better performance
-using System.Linq.Expressions;
-using static Strict.Language.Method;
 
 namespace Strict.Language.Expressions;
 
@@ -32,7 +30,6 @@ public class MethodExpressionParser : ExpressionParser
 				Number.TryParse(line, range) ?? (input.IsOperator()
 					? throw new InvalidOperatorHere(line, input.ToString())
 					: throw new UnknownExpression(line, line.Text[range]));
-		//check for method call/member call here too
 		var postfix = new ShuntingYard(line.Text, range);
 		return postfix.Output.Count switch
 		{

@@ -29,11 +29,6 @@ public sealed class List : Value
 					});
 	}
 
-	//TODO: need more complex tests, seems to do the basics correct, but check all nested cases as well
-	// (1, 2, 3) + (3, 4)
-	// ^l1       ^op ^l2
-	// ((1, 2), (3, 4))
-	// ^l1 -> this is problematic, add some tests, probably some grouping needed, ask Ben if you need some new grouping code, or use your own ..
 	public static Expression? TryParseWithMultipleOrNestedElements(Method.Line line, Range range)
 	{
 		var input = line.Text.GetSpanFromRange(range);

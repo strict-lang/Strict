@@ -1,28 +1,20 @@
 has Boolean
 not returns Boolean
 	not true is false
-	if value
-		return false
-	return true
+	return value ? false else true
 and(other) returns Boolean
 	true and false is false
 	true and true is true
-	if value and other
-		return true
-	return false
+	return value and other ? true else false
 or(other) returns Boolean
 	true or false is true
 	false or false is false
-	if value or other
-		return false
-	return true
+	return value or other ? false else true
 xor(other) returns Boolean
 	true xor true is false
 	false xor true is true
 	not (false xor false) is true
-	if value and other or not value and not other
-		return false
-	return true
+	return (value and other) or (not value and not other) ? false else true
 is(other) returns Boolean
 	true is true
 	false is not true
@@ -30,6 +22,4 @@ is(other) returns Boolean
 to(Text) returns Text
 	true to Text is "true"
 	not true to Text is "false"
-	if value
-		return "true"
-	return "false"
+	return value ? "true" else "false"

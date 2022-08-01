@@ -15,14 +15,19 @@ public class BinaryTests : TestExpressions
 			new Binary(new MemberCall(null, bla), number.ReturnType.FindMethod(BinaryOperator.Plus)!, number));
 
 	[Test]
+	public void InvalidLeftNestedExpression() =>
+		Assert.That(() => ParseExpression("bla.Unknown + 5"),
+			Throws.Exception.InstanceOf<MemberOrMethodNotFound>());
+
+	[Test]
 	public void MissingLeftExpression() =>
 		Assert.That(() => ParseExpression("unknown + 5"),
-			Throws.Exception.InstanceOf<MemberOrMethodNotFound>());
+			Throws.Exception.InstanceOf<UnknownExpression>());
 
 	[Test]
 	public void MissingRightExpression() =>
 		Assert.That(() => ParseExpression("5 + unknown"),
-			Throws.Exception.InstanceOf<MemberOrMethodNotFound>());
+			Throws.Exception.InstanceOf<UnknownExpression>());
 
 	[Test]
 	public void ParseComparison() =>

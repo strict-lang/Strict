@@ -13,15 +13,10 @@ public class Number : Value
 	public override bool Equals(Expression? other) =>
 		other is Value v && (double)Data == (double)v.Data;
 
-	[Obsolete]
-	public static Expression? TryParse(Method.Line line, string partToParse) =>
-		partToParse.Length >= 1 && double.TryParse(partToParse, out var number)
-			? new Number(line.Method, number)
-			: null;
-
 	public static Expression? TryParse(Method.Line line, Range range)
 	{
 		var input = line.Text.GetSpanFromRange(range);
+		//TODO: maybe good idea to do a quick performance comparision of int.TryParse and do that first if 90%+ is that case, fall back to double parsing
 		return input.Length >= 1 && double.TryParse(input, out var number)
 			? new Number(line.Method, number)
 			: null;

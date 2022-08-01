@@ -22,7 +22,6 @@ public static class BinaryOperator
 	public const string GreaterOrEqual = ">=";
 	public const string Is = "is";
 	public const string To = "to";
-	//TODO: discuss in
 	public const string And = "and";
 	public const string Or = "or";
 	public const string Xor = "xor";

@@ -307,7 +307,7 @@ public class Type : Context
 
 	/// <summary>
 	/// Builds dictionary the first time we use it to access any method of this type or any of the
-	/// implements parent types recursively. Filtering still has to be done by <see cref="GetMethod"/>
+	/// implements parent types recursively. Filtering has to be done by <see cref="FindMethod"/>
 	/// </summary>
 	public IReadOnlyDictionary<string, List<Method>> AvailableMethods
 	{

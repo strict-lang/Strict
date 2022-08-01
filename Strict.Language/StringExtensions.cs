@@ -31,17 +31,6 @@ public static class StringExtensions
 		return true;
 	}
 
-	/*TODO: shouldn't be needed and isn't allowed
-	public static bool IsWordWithNumber(this string text)
-	{
-		for (var index = 0; index < text.Length; index++)
-			if (text[index] is (< 'A' or > 'Z') and (< 'a' or > 'z') &&
-				(index == 0 || text[index] is < '0' or > '9'))
-				return false;
-		return true;
-	}
-	*/
-
 	public static string MakeFirstLetterUppercase(this string name) =>
 		name[..1].ToUpperInvariant() + name[1..];
 }

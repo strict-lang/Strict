@@ -9,6 +9,13 @@ namespace Strict.Language.Expressions;
 /// </summary>
 public sealed class If : BlockExpression
 {
+	//TODO: support conditionals as discussed 2022-08-01
+	//examples:
+	//var connectedText;
+	//if (isConnected) connectedText = "Yes"; else connectedText = "No";
+	//let connectedText = isConnected ? "Yes" else "No"
+	//let text = hammer.isConnected and machine.isOnline ? "Yes" else "No"
+	
 	public If(Expression condition, Expression then, Expression? optionalElse = null,
 		Method.Line? lineForErrorMessage = null) : base(GetMatchingType(then.ReturnType,
 		optionalElse?.ReturnType, lineForErrorMessage))
