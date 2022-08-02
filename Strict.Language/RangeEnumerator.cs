@@ -27,7 +27,7 @@ public ref struct RangeEnumerator
 
 	public bool MoveNext()
 	{
-		if (offset >= input.Length)
+		if (IsAtEnd)
 			return false;
 		for (var index = offset; index < input.Length; index++)
 			if (input[index] == splitter)
@@ -38,6 +38,8 @@ public ref struct RangeEnumerator
 		offset = input.Length;
 		return true;
 	}
+
+	public readonly bool IsAtEnd => offset >= input.Length;
 
 	private bool GetWordBeforeSplitter(int index)
 	{

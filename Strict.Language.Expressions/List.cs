@@ -21,7 +21,7 @@ public sealed class List : Value
 		return input.Length < 2 || input[0] != '(' || input[^1] != ')'
 			? null
 			: input.Length == 2
-				? throw new EmptyListNotAllowed(line, input.ToString())
+				? throw new EmptyListNotAllowed(line)
 				: new List(line.Method,
 					new List<Expression>
 					{
@@ -36,12 +36,12 @@ public sealed class List : Value
 			return null;
 		Console.WriteLine("TryParseWithMultipleOrNestedElements: "+input[1..^1].ToString());
 		return new List(line.Method,
-			line.Method.ParseListArguments(line, range.RemoveFirstAndLast(input.Length)));
+			line.Method.ParseListArguments(line, range.RemoveFirstAndLast(line.Text.Length)));
 	}
 
 	public class EmptyListNotAllowed : ParsingFailed
 	{
-		public EmptyListNotAllowed(Method.Line line, string error) : base(line, error) { }
+		public EmptyListNotAllowed(Method.Line line) : base(line, "()") { }
 	}
 
 	internal bool IsFirstType<T>() => Values.First() is T;

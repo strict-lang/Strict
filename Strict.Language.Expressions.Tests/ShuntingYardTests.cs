@@ -28,5 +28,26 @@ public sealed class ShuntingYardTests
 	{
 		var tokens = new ShuntingYard(input, ..).Output.Reverse().Select(range => input[range]);
 		Assert.That(string.Join(", ", tokens), Is.EqualTo(expected));
+
 	}
+
+	//TODO: check if we need more tests, maybe higher up at ParseExpression tests
+	// 5 + 3
+	// ^ first operand (left) Range
+	//   ^ operator (range??????????)
+	//     ^ right Range
+
+	// ((1, 2), (3, 4)) + 1
+	// ^list            ^op ^number
+	// op, number, list (nested)
+
+	// (first + second - 1 + 7 + 7, 3, 5, 6)
+	// ^list (with a bunch of things, binary, numbers)
+
+	// log.Write       ("Hi")
+	// ^mem ^me        ^arguments (list)
+
+	//(1, 2), (3, 4) -> list , list -> 3 tokens (middle one is NOT an operator)
+	//first + second, 3, 5, 6, binary: + second first (then): , 3 , 5 , 6 -> 9 tokens (upside)
+	//"Hi" -> 1 token -> Text
 }

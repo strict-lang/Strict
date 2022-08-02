@@ -10,8 +10,7 @@ namespace Strict.Language.Expressions;
 public sealed class Not : MethodCall
 {
 	public Not(Expression right) : base(
-		right.ReturnType.FindMethod(UnaryOperator.Not) ??
-		throw new Binary.NoMatchingOperatorFound(right.ReturnType, UnaryOperator.Not), right) { }
+		right.ReturnType.GetMethod(UnaryOperator.Not, Array.Empty<Expression>()), right) { }
 
 	public override string ToString() => UnaryOperator.Not + " " + Instance!;
 

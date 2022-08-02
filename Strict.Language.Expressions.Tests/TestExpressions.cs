@@ -12,8 +12,6 @@ public abstract class TestExpressions : MethodExpressionParser
 	{
 		type = new Type(new TestPackage(), "dummy", this);
 		boolean = type.GetType(Base.Boolean);
-		//use Boolean: binaryOperators = type.GetType(Base.BinaryOperator).Methods;
-		//use Boolean: unaryOperators = type.GetType(Base.UnaryOperator).Methods;
 		member = new Member(type, "log", new From(type.GetType(Base.Log)));
 		((List<Member>)type.Members).Add(member);
 		method = new Method(type, 0, this, new[] { MethodTests.Run });
@@ -26,8 +24,6 @@ public abstract class TestExpressions : MethodExpressionParser
 
 	protected readonly Type type;
 	protected readonly Type boolean;
-	//protected readonly IReadOnlyList<Method> binaryOperators;
-	//protected readonly IReadOnlyList<Method> unaryOperators;
 	protected readonly Member member;
 	protected readonly Method method;
 	protected readonly Number number;
@@ -52,4 +48,13 @@ public abstract class TestExpressions : MethodExpressionParser
 	}
 
 	public sealed class MultipleExpressionsGiven : Exception { }
+
+	protected static MethodCall CreateFromMethodCall(Type fromType, params Expression[] arguments) =>
+		new(fromType.FindMethod(Method.From, arguments)!, new From(fromType), arguments);
+
+	protected static Binary CreateBinary(Expression left, string operatorName, Expression right)
+	{
+		var arguments = new[] { right };
+		return new Binary(left, left.ReturnType.FindMethod(operatorName, arguments)!, arguments);
+	}
 }

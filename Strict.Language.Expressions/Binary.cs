@@ -6,8 +6,8 @@ namespace Strict.Language.Expressions;
 
 public sealed class Binary : MethodCall
 {
-	public Binary(Expression left, Method operatorMethod, Expression right) : base(method: operatorMethod,
-		instance: left, firstArgumentOnly: right) { }
+	public Binary(Expression left, Method operatorMethod, Expression[] right) : base(operatorMethod,
+		left, right) { }
 
 	//TODO: we should check if groupings are correctly restored on ToString, e.g. (1 + 2) * 3 should not be regenerated as 1 + 2 * 3!
 	public override string ToString() => Instance + " " + Method.Name + " " + Arguments[0];
@@ -30,16 +30,10 @@ public sealed class Binary : MethodCall
 		if (MethodExpressionParser.HasMismatchingTypes(left, right))
 			throw new MismatchingTypeFound(line);
 		var operatorToken = line.Text[operatorTokenRange]; //TODO: make more efficient
-		if (operatorToken == ",")
-			throw new NoMatchingOperatorFound(left.ReturnType,
-				operatorToken + " should be used for lists, not " + nameof(Binary));
 		if (operatorToken == "*" && MethodExpressionParser.HasIncompatibleDimensions(left, right))
 			throw new MethodExpressionParser.ListsHaveDifferentDimensions(line, left + " " + right);
-		// TODO: Match operator param types before
-		var operatorMethod = left.ReturnType.FindMethod(operatorToken) ??
-			//not longer needed: line.Method.GetType(Base.BinaryOperator).Methods.FirstOrDefault(m => m.Name == operatorToken) ??
-			throw new NoMatchingOperatorFound(right.ReturnType, operatorToken);
-		return new Binary(left, operatorMethod, right);
+		var arguments = new[] { right };
+		return new Binary(left, left.ReturnType.GetMethod(operatorToken, arguments), arguments);
 	}
 
 	private static Expression GetUnaryOrBuildNestedBinary(Method.Line line, Range nextTokenRange,
@@ -48,24 +42,6 @@ public sealed class Binary : MethodCall
 		line.Text.GetSpanFromRange(nextTokenRange).IsMultiCharacterOperator()
 			? BuildBinaryExpression(line, nextTokenRange, tokens)
 			: line.Method.ParseExpression(line, nextTokenRange);
-
-	//TODO; Remove
-	//private static Expression TryParseBinary(Method.Line line, IReadOnlyList<string> parts)
-	//{
-	//	var left = line.Method.TryParseExpression(line, parts[0]) ??
-	//		throw new MethodExpressionParser.UnknownExpression(line, parts[0]);
-	//	var right = line.Method.TryParseExpression(line, parts[2]) ??
-	//		throw new MethodExpressionParser.UnknownExpression(line, parts[2]);
-	//	if (List.HasMismatchingTypes(left, right))
-	//		throw new MismatchingTypeFound(line, parts[2]);
-	//	if (parts[1] == "*" && List.HasIncompatibleDimensions(left, right))
-	//		throw new List.ListsHaveDifferentDimensions(line, parts[0] + " " + parts[2]);
-	//	CheckForAnyExpressions(line, left, right);
-	//	var operatorMethod = left.ReturnType.Methods.FirstOrDefault(m => m.Name == parts[1]) ??
-	//		line.Method.GetType(Base.BinaryOperator).Methods.FirstOrDefault(m => m.Name == parts[1]) ??
-	//		throw new NoMatchingOperatorFound(left.ReturnType, parts[1]);
-	//	return new Binary(left, operatorMethod, right);
-	//}
 
 	// TODO: check if this needs to be called anywhere
 	private static void CheckForAnyExpressions(Method.Line line, Expression left, Expression right)
@@ -86,10 +62,5 @@ public sealed class Binary : MethodCall
 	public sealed class MismatchingTypeFound : ParsingFailed
 	{
 		public MismatchingTypeFound(Method.Line line, string error = "") : base(line, error) { }
-	}
-
-	public sealed class NoMatchingOperatorFound : Exception
-	{
-		public NoMatchingOperatorFound(Type leftType, string operatorMethod) : base(nameof(leftType) + "=" + leftType + " does not contain " + operatorMethod) { }
 	}
 }

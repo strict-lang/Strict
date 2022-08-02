@@ -32,7 +32,9 @@ Run
 	return value");
 		new Type(this, Base.Log, null!).Parse(@"has Text
 Write(text)
-	return Text");
+	return Text
+Write(number)
+	return number");
 		new Type(this, Base.List, null!).Parse(@"+(other) returns List
 -(other) returns List
 is(other) returns Boolean

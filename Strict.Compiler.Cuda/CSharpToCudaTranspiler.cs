@@ -94,10 +94,9 @@ public class CSharpType : Type
 					? "-"
 					: "*";
 			var numberType = method.FindType(Base.Number)!;
+			var arguments = new Expression[] { new Value(numberType, "second") };
 			var returnExpression = new Return(new Binary(new Value(numberType, "first"),
-				numberType.FindMethod(binaryOperator) ??
-				throw new Binary.NoMatchingOperatorFound(numberType, binaryOperator),
-				new Value(numberType, "second")));
+				numberType.GetMethod(binaryOperator, arguments), arguments));
 			return new MethodBody(method, new List<Expression> { returnExpression });
 		}
 	}

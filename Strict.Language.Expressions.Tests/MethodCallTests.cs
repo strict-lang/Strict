@@ -1,4 +1,3 @@
-using System;
 using NUnit.Framework;
 
 namespace Strict.Language.Expressions.Tests;
@@ -12,41 +11,49 @@ public sealed class MethodCallTests : TestExpressions
 	[Test]
 	public void ParseCallWithArgument() =>
 		ParseAndCheckOutputMatchesInput("log.Write(bla)",
-			new MethodCall(member.Type.Methods[0], new MemberCall(null, member), new MemberCall(null, bla)));
+			new MethodCall(member.Type.Methods[0], new MemberCall(null, member),
+				new[] { new MemberCall(null, bla) }));
 
 	[Test]
 	public void ParseCallWithTextArgument() =>
 		ParseAndCheckOutputMatchesInput("log.Write(\"Hi\")",
-			new MethodCall(member.Type.Methods[0], new MemberCall(null, member), new Text(type, "Hi")));
+			new MethodCall(member.Type.Methods[0], new MemberCall(null, member),
+				new[] { new Text(type, "Hi") }));
 
 	[Test]
 	public void ParseWithMissingArgument() =>
 		Assert.That(() => ParseExpression("log.Write"),
-			Throws.InstanceOf<ArgumentsDoNotMatchMethodParameters>().With.Message.
+			Throws.InstanceOf<Type.ArgumentsDoNotMatchMethodParameters>().With.Message.
 				StartsWith(
 					"No arguments does not match \"TestPackage.Log.Write\" method parameters: (text TestPackage.Text)"));
 
 	[Test]
 	public void ParseWithTooManyArguments() =>
 		Assert.That(() => ParseExpression("log.Write(1, 2)"),
-			Throws.InstanceOf<ArgumentsDoNotMatchMethodParameters>().With.Message.
+			Throws.InstanceOf<Type.ArgumentsDoNotMatchMethodParameters>().With.Message.
 				StartsWith(
-					"Arguments: (1, 2) do not match \"TestPackage.Log.Write\" method parameters: (text TestPackage.Text)"));
+					"Arguments: TestPackage.Number 1, TestPackage.Number 2 do not match \"TestPackage.Log.Write\" method parameters: (text TestPackage.Text)"));
 
 	[Test]
 	public void ParseWithInvalidExpressionArguments() =>
-		Assert.That(() => ParseExpression("log.Write(0g9y53)"),
+		Assert.That(() => ParseExpression("log.Write(g9y53)"),
 			Throws.InstanceOf<InvalidExpressionForArgument>().With.Message.
-				StartsWith("0g9y53 for log.Write argument 0"));
+				StartsWith("g9y53 is invalid for argument 0"));
 
 	[Test]
-	public void ParseUnknownMethod() =>
+	public void EmptyBracketsAreNotAllowed() =>
 		Assert.That(() => ParseExpression("log.NotExisting()"),
-			Throws.InstanceOf<MethodNotFound>());
+			Throws.InstanceOf<List.EmptyListNotAllowed>());
 
 	[Test]
-	public void ParseCallWithUnknownArgument() =>
-		Assert.That(() => ParseExpression("log.Write(unknown)"), Throws.InstanceOf<MemberOrMethodNotFound>());
+	public void MethodNotFound() =>
+		Assert.That(() => ParseExpression("log.NotExisting"),
+			Throws.InstanceOf<MemberOrMethodNotFound>());
+
+	[Test]
+	public void ArgumentsDoNotMatchMethodParameters() =>
+		Assert.That(() => ParseExpression("Character(\"Hi\")"),
+			Throws.InstanceOf<Type.ArgumentsDoNotMatchMethodParameters>());
 
 	[Test]
 	public void ParseCallWithUnknownMemberCallArgument() =>
@@ -55,14 +62,16 @@ public sealed class MethodCallTests : TestExpressions
 
 	[Test]
 	public void MethodCallMembersMustBeWords() =>
-		Assert.That(() => ParseExpression("0g9y53.Write()"), Throws.InstanceOf<MemberOrMethodNotFound>());
+		Assert.That(() => ParseExpression("g9y53.Write"), Throws.InstanceOf<MemberOrMethodNotFound>());
 
 	[Test]
-	public void FromMethodCall()
-	{
-		var characterType = type.GetType(Base.Character);
+	public void FromMethodCall() =>
 		Assert.That(ParseExpression("Character(7)"),
-			Is.EqualTo(new MethodCall(characterType.FindMethod(Method.From)!,
-				new From(characterType), new Number(type, 7))));
-	}
+			Is.EqualTo(CreateFromMethodCall(type.GetType(Base.Character), new Number(type, 7))));
+
+	//TODO: should correctly find method and call the right number of argument MethodCall
+	// someClass.ComplicatedMethod((1, 2, 3) + (4, 5), 7)
+	// list of 2 arguments:
+	// [0] = (1, 2, 3) + (4, 5)
+	// [1] = 7
 }

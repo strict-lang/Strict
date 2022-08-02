@@ -2,17 +2,16 @@ using NUnit.Framework;
 
 namespace Strict.Language.Expressions.Tests;
 
-public class BinaryTests : TestExpressions
+public sealed class BinaryTests : TestExpressions
 {
 	[Test]
 	public void ParseBinary() =>
-		ParseAndCheckOutputMatchesInput("5 + 5",
-			new Binary(number, number.ReturnType.FindMethod(BinaryOperator.Plus)!, number));
+		ParseAndCheckOutputMatchesInput("5 + 5", CreateBinary(number, BinaryOperator.Plus, number));
 
 	[Test]
 	public void AddFiveToNumber() =>
 		ParseAndCheckOutputMatchesInput("bla + 5",
-			new Binary(new MemberCall(null, bla), number.ReturnType.FindMethod(BinaryOperator.Plus)!, number));
+			CreateBinary(new MemberCall(null, bla), BinaryOperator.Plus, number));
 
 	[Test]
 	public void InvalidLeftNestedExpression() =>
@@ -32,15 +31,14 @@ public class BinaryTests : TestExpressions
 	[Test]
 	public void ParseComparison() =>
 		ParseAndCheckOutputMatchesInput("bla is 5",
-			new Binary(new MemberCall(null, bla), boolean.FindMethod(BinaryOperator.Is)!, number));
+			CreateBinary(new MemberCall(null, bla), BinaryOperator.Is, number));
 
 	[Test]
 	public void NestedBinary() =>
 		ParseAndCheckOutputMatchesInput("2 * 5 + 3",
-			new Binary(
-				new Binary(new Number(method, 2),
-					method.GetType(Base.Number).FindMethod(BinaryOperator.Multiply)!, new Number(method, 5)),
-				method.GetType(Base.Number).FindMethod(BinaryOperator.Plus)!, new Number(method, 3)));
+			CreateBinary(
+				CreateBinary(new Number(method, 2), BinaryOperator.Multiply, new Number(method, 5)),
+				BinaryOperator.Plus, new Number(method, 3)));
 
 	[TestCase("1 + 2")]
 	[TestCase("(1 is 1)")]
@@ -62,41 +60,29 @@ public class BinaryTests : TestExpressions
 	[Test]
 	public void NestedBinaryWithBrackets() =>
 		Assert.That(ParseExpression("2 * (5 + 3)"),
-			Is.EqualTo(new Binary(new Number(method, 2),
-				method.GetType(Base.Number).FindMethod(BinaryOperator.Multiply)!,
-				new Binary(new Number(method, 5),
-					method.GetType(Base.Number).FindMethod(BinaryOperator.Plus)!, new Number(method, 3)))));
+			Is.EqualTo(CreateBinary(new Number(method, 2), BinaryOperator.Multiply,
+				CreateBinary(new Number(method, 5), BinaryOperator.Plus, new Number(method, 3)))));
 
 	[Test]
 	public void NestedBinaryExpressionsWithGrouping() =>
 		Assert.That(ParseExpression("(2 + 5) * 3"),
-			Is.EqualTo(new Binary(new Number(method, 2),
-				method.GetType(Base.Number).FindMethod(BinaryOperator.Plus)!,
-				new Binary(new Number(method, 5),
-					method.GetType(Base.Number).FindMethod(BinaryOperator.Multiply)!,
-					new Number(method, 3)))));
+			Is.EqualTo(CreateBinary(new Number(method, 2), BinaryOperator.Plus,
+				CreateBinary(new Number(method, 5), BinaryOperator.Multiply, new Number(method, 3)))));
 
 	[Test]
 	public void NestedBinaryExpressionsSingleGroup() =>
 		Assert.That(ParseExpression("6 + (2 + 5) * 3"),
-			Is.EqualTo(new Binary(new Number(method, 6),
-				method.GetType(Base.Number).FindMethod(BinaryOperator.Plus)!,
-				new Binary(new Number(method, 2),
-					method.GetType(Base.Number).FindMethod(BinaryOperator.Plus)!,
-					new Binary(new Number(method, 5),
-						method.GetType(Base.Number).FindMethod(BinaryOperator.Multiply)!,
-						new Number(method, 3))))));
+			Is.EqualTo(CreateBinary(new Number(method, 6), BinaryOperator.Plus,
+				CreateBinary(new Number(method, 2), BinaryOperator.Plus,
+					CreateBinary(new Number(method, 5), BinaryOperator.Multiply, new Number(method, 3))))));
 
 	[Test]
 	public void NestedBinaryExpressionsTwoGroups() =>
 		Assert.That(ParseExpression("(6 * 3) + (2 + 5) * 3"),
-			Is.EqualTo(new Binary(
-				new Binary(new Number(method, 6),
-					method.GetType(Base.Number).FindMethod(BinaryOperator.Multiply)!, new Number(method, 3)),
-				method.GetType(Base.Number).FindMethod(BinaryOperator.Plus)!,
-				new Binary(
-					new Binary(new Number(method, 2),
-						method.GetType(Base.Number).FindMethod(BinaryOperator.Plus)!, new Number(method, 5)),
-					method.GetType(Base.Number).FindMethod(BinaryOperator.Multiply)!,
-					new Number(method, 3)))));
+			Is.EqualTo(CreateBinary(
+				CreateBinary(new Number(method, 6), BinaryOperator.Multiply, new Number(method, 3)),
+				BinaryOperator.Plus,
+				CreateBinary(
+					CreateBinary(new Number(method, 2), BinaryOperator.Plus, new Number(method, 5)),
+					BinaryOperator.Multiply, new Number(method, 3)))));
 }

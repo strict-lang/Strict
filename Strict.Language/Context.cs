@@ -66,7 +66,7 @@ public abstract class Context
 
 	public override string ToString() =>
 		// ReSharper disable once ConditionalAccessQualifierIsNonNullableAccordingToAPIContract
-		(string.IsNullOrEmpty(Parent?.Name)
+		(string.IsNullOrEmpty(Parent?.Name) || Parent.Name is nameof(Base)
 			? ""
 			: Parent + ".") + Name;
 

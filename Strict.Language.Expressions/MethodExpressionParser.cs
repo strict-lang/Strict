@@ -15,7 +15,7 @@ public class MethodExpressionParser : ExpressionParser
 		var constructor = type.Methods[0];
 		var line = new Method.Line(constructor, 0, initializationLine, fileLineNumber);
 		//TODO: maybe non constructor calls also make sense here?
-		return new MethodCall(constructor, new From(type));//TODO: argument logic, ParseExpression(line, ..));
+		return new MethodCall(constructor, new From(type));//TODO: argument logic need some more tests, ParseExpression(line, ..));
 	}
 
 	public override Expression ParseExpression(Method.Line line, Range range)
@@ -33,7 +33,7 @@ public class MethodExpressionParser : ExpressionParser
 		var postfix = new ShuntingYard(line.Text, range);
 		return postfix.Output.Count switch
 		{
-			1 => ParseTextWithSpacesOrListWithMultipleOrNestedElements(line, postfix.Output.Pop()),
+			1 => TryParseMemberOrZeroOrOneArgumentMethodCall(line, range) ?? ParseTextWithSpacesOrListWithMultipleOrNestedElements(line, postfix.Output.Pop()),
 			//TODO: can also be any method call or anything we excluded above that was still 1 token
 			2 => Not.Parse(line, postfix),
 			_ => //TODO: should never happen here, Binary will complain if we have a comma there! postfix.Output.Count % 2 != 1 && line.Text[postfix.Output.Skip(1).First().Start.Value] == ',' ?
@@ -97,7 +97,7 @@ public class MethodExpressionParser : ExpressionParser
 			return ParseInContext(line.Method.Type, line,
 				new Range(range.Start, range.Start.Value + argumentsStart),
 				ParseListArguments(line,
-					new Range(argumentsStart + range.Start.Value + 1, toParse.Length - 1)));
+					new Range(argumentsStart + range.Start.Value + 1, toParse.Length + range.Start.Value - 1)));
 		return ParseInContext(line.Method.Type, line, range, Array.Empty<Expression>());
 	}
 
@@ -111,15 +111,24 @@ public class MethodExpressionParser : ExpressionParser
 			Expression? current = null;
 			while (members.MoveNext())
 			{
-				var expression = TryMemberOrMethodCall(context, current, line, members.Current, arguments);
-				if (expression == null)
+				if (current == null)
 				{
-					// Could also be a Text or List, bool or number are not allowed here in this nested context
-					expression = Text.TryParse(line, members.Current) ?? List.TryParseWithSingleElement(line, members.Current);
-					if (expression == null)
-						throw new MemberOrMethodNotFound(line, current?.ReturnType ?? line.Method.Type,
-							line.Text[members.Current]);
+					current = Text.TryParse(line, members.Current) ??
+						List.TryParseWithSingleElement(line, members.Current);
+					if (current != null)
+					{
+						context = current.ReturnType;
+						continue;
+					}
 				}
+				var expression = TryMemberOrMethodCall(context, current, line, members.Current,
+					// arguments are only needed for the last part
+					members.IsAtEnd
+						? arguments
+						: Array.Empty<Expression>());
+				if (expression == null)
+					throw new MemberOrMethodNotFound(line, current?.ReturnType ?? line.Method.Type,
+						line.Text[members.Current]);
 				current = expression;
 				context = current.ReturnType;
 			}
@@ -134,13 +143,14 @@ public class MethodExpressionParser : ExpressionParser
 		var partToParse = line.Text.GetSpanFromRange(range);
 		if (!partToParse.IsWord())
 			return null;
+		Console.WriteLine(nameof(TryMemberOrMethodCall) + ": " + partToParse.ToString()+" in "+context+" with arguments="+arguments.ToWordList());
 		//foreach (var (name, variableValue) in GetAvailableVariables(context))
 		//	if (partToParse.Equals(name, StringComparison.Ordinal))
 		//		return variableValue;//TODO: should be member yo
 		//TODO: test: Find all parent members as well use unit test -> Count(5).Floor is 5
+		var type = context as Type ?? line.Method.Type;
 		if (arguments.Count == 0)
 		{
-			var type = context as Type;
 			if (context is Method method)
 			{
 				foreach (var (name, value) in method.Variables)
@@ -158,10 +168,17 @@ public class MethodExpressionParser : ExpressionParser
 		}
 		//TODO: the member can be anything, any expression, don't assume it is always a member!
 		//TODO: constructor needed here!
-		var method2 = line.Method.Type.FindMethod(partToParse.ToString());
+		var methodName = partToParse.ToString();
+		var method2 = type.FindMethod(methodName, arguments);
 		if (method2 != null)
 			return new MethodCall(method2, instance, arguments);
-		Console.WriteLine("ParseNested found no local method " + line.Method.Type);
+		if (instance == null)
+		{
+			var fromType = line.Method.FindType(methodName);
+			if (fromType != null)
+				return new MethodCall(fromType.GetMethod(Method.From, arguments), new From(fromType), arguments);
+		}
+		Console.WriteLine("ParseNested found no local method in " + line.Method.Type+": "+methodName);
 		return null;
 	}
 
@@ -179,271 +196,7 @@ public class MethodExpressionParser : ExpressionParser
 		return null;
 	}
 
-	/*TODO: remove, would make things easier, but extremely slow! remove after we have a stable code structure!
-	/// <summary>
-	/// Provides a list of all named members, parameters and local variables with their current values
-	/// available in this context scope, all the way recursively down including all implements.
-	/// </summary>
-	public static Dictionary<NamedType, Expression> GetAvailableVariables(Context context)
-	{
-		//TODO: optimize! we always only add things, each Context can provide their own implementation as well!
-		Dictionary<NamedType, Expression> result = new Dictionary<NamedType, Expression>();
-		if (context is Method method)
-		{
-			foreach (var variable in method.Variables)
-			{
-				if (variable is Assignment assignment)
-					result.Add(assignment.Name.Name, assignment);
-			}
-			foreach (var parameter in method.Parameters)
-			{
-				if (variable is Assignment assignment)
-					result.Add(parameter.Name, parameter. assignment);
-			}
-		}
-		var foundMember = foundArgument != null
-			? new Member(foundArgument.Name.Name, foundArgument.Value)
-			: null; // TODO: Find all parent members as well use unit test -> Count(5).Floor is 5
-		if (foundMember == null)
-		{
-			foundMember = null;
-			foreach (var member in line.Method.Type.Members)
-			{
-				if (partToParse.Equals(member.Name, StringComparison.Ordinal))
-				{
-					foundMember = member;
-					break;
-				}
-			}
-		}
-		if (foundMember != null)
-			return new MemberCall(foundMember);
-		Console.WriteLine("ParseNested found no member in " + line.Method);
-		//TODO: the member can be anything, any expression, don't assume it is always a member!
-		var method2 = line.Method.Type.FindMethod(partToParse.ToString());
-		if (method2 != null)
-			return new MethodCall(method2, null, arguments);
-		Console.WriteLine("ParseNested found no local method " + line.Method.Type);
-		return result;
-	}
-	/*TODO
-private Expression GetNestedExpression(Expression? current, Method.Line line, Range range, IReadOnlyList<Expression> arguments)
-{
-	Console.WriteLine("GetNestedExpression: current="+current+", text="+line.Text[range]);
-	return TryMemberOrMethodCall( //TODO?current, should all be in scope class
-			line, line.Text.GetSpanFromRange(range), arguments) ??
-		throw new MemberOrMethodNotFound(line, line.Method.Type, line.Text[range]);
-	var first = TryMemberCallOrNoArgumentMethodCall(line, firstMemberName, null);
-	if (first == null)
-		throw new MemberNotFound(line, line.Method.Type, firstMemberName.ToString());
-	
-	var method = first.ReturnType.FindMethod(memberParts.Current.ToString()) ??
-		throw new MethodNotFound(line, first + "." + memberParts.Current.ToString(),
-			first.ReturnType);
-	return new OneArgumentMethodCall(method, first, arguments[0]);
-
-
-	while (members.MoveNext())
-	{
-		//TODO: abort when MoveNext is false, then we are done
-		partsEnumerator.MoveNext();
-		var secondMemberName = partsEnumerator.Current.ToString();
-		//TODO: this whole member thing is a bit strange, because each part can be a member, methodcall, number, whatever!
-		var second = //TryMemberCallOrNoArgumentMethodCall(line, secondMemberName, first);
-			first.ReturnType.Members.FirstOrDefault(m => m.Name == secondMemberName);
-		if (second == null)
-			throw new MemberNotFound(line, first.ReturnType, secondMemberName);
-		var member = new MemberCall(first, second);
-		return TryMemberCallOrNoArgumentMethodCall(line, members.Current, member);
-	//return null!;
-}
-	*/
-
-	private static Expression? TryParseMethod(Method.Line line, Range range, string[] parts)
-	{
-		var methodName = parts[0];
-		var argumentStartIndex = range.Start.Value + parts[0].Length + 1;
-		Expression[] arguments;
-		if (parts.Length > 1)
-			arguments = GetArguments(line, parts[1], methodName, argumentStartIndex);
-		else
-			arguments = Array.Empty<Expression>();
-		if (!methodName.Contains('.'))
-			// get the method
-		{
-			var method = FindMethod(null, line, methodName, arguments);
-			if (method == null)
-				//TODO: If not found check types for constructor call may be inline it here?
-			{
-				return
-					TryParseFrom(line,
-						range); //range.Start.Value..(methodName.Length + range.Start.Value));
-			}
-			return new MethodCall(method, null, arguments);
-		}
-		/*TODO: should be way more generic, it is not just a nested member call, it can be anything!
-		var memberParts = methodName.Split('.', 2);
-		var firstMember = MemberCall.TryParse(line, range.Start..memberParts[0].Length);
-		if (firstMember == null)
-			throw new MemberCall.MemberNotFound(line, line.Method.Type, memberParts[0]);
-		var memberMethod = FindMethod(firstMember, line, memberParts[1], arguments);
-		return memberMethod != null
-			? new NoArgumentMethodCall(memberMethod, firstMember)//TODO, arguments)
-			: throw new MethodNotFound(line, memberParts[1], firstMember.ReturnType); // TODO: still check for members
-		*/
-		throw new NotSupportedException("TODO");
-	}
-
-	//TODO: should correctly find method and call the right number of argument MethodCall
-	private static Expression[] GetArguments(Method.Line line, string argumentsText,
-		string methodName, int argumentStartIndex)
-	{
-		// someClass.ComplicatedMethod((1, 2, 3) + (4, 5), 7)
-		// list of 2 arguments:
-		// [0] = (1, 2, 3) + (4, 5)
-		// [1] = 7
-		// don't use this, broken, we already have working list parsing
-		var parts = argumentsText.Split(", ");
-		var arguments = new Expression[parts.Length];
-		for (var index = 0; index < parts.Length; index++)
-			try
-			{
-				arguments[index] = line.Method.ParseExpression(line,
-					argumentStartIndex..(argumentStartIndex + parts[index].Length));
-			}
-			catch (MethodExpressionParser.UnknownExpression)
-			{
-				throw new InvalidExpressionForArgument(line, parts[index] + " is invalid for " + methodName + " argument " + index);
-			}
-		return arguments;
-	}
-
-	public sealed class InvalidExpressionForArgument : ParsingFailed
-	{
-		public InvalidExpressionForArgument(Method.Line line, string message) : base(line, message) { }
-	}
-
-	// ReSharper disable once TooManyArguments
-	private static Method? FindMethod(Expression? instance, Method.Line line, string methodName,
-		Expression[] arguments)
-	{
-		if (!methodName.IsWord())
-			return null;
-		var context = instance?.ReturnType ?? line.Method.Type;
-		var method = context.Methods.FirstOrDefault(m => m.Name == methodName);
-		return method; /* TODO: add once constructor is fixed == null
-			? throw new MethodNotFound(line, methodName, context)
-			: method.Parameters.Count != arguments.Length
-				? throw new ArgumentsDoNotMatchMethodParameters(line, arguments, method)
-				: method;*/
-	}
-
-	public sealed class MethodNotFound : ParsingFailed
-	{
-		public MethodNotFound(Method.Line line, string methodName, Type referencingType) : base(line, methodName, referencingType) { }
-	}
-
-	public sealed class ArgumentsDoNotMatchMethodParameters : ParsingFailed
-	{
-		public ArgumentsDoNotMatchMethodParameters(Method.Line line, Expression[] arguments,
-			Method method) : base(line, (arguments.Length == 0
-				? "No arguments does "
-				: "Arguments: " + arguments.ToBrackets() + " do ") + "not match \"" + method.Type + "." +
-			method.Name + "\" method parameters: " + method.Parameters.ToBrackets()) { }
-	}
-
-	public static Expression? TryParseFrom(Method.Line line, Range range)
-	{
-		var partToParse = line.Text[range]; //TODO: use span here!
-		return partToParse.EndsWith(')') && partToParse.Contains('(')
-			? TryParseFrom(line,
-				partToParse.Split(new[] { '(', ')' }, StringSplitOptions.RemoveEmptyEntries),
-				partToParse.Contains(")."))
-			: null;
-	}
-
-	private static Expression? TryParseFrom(Method.Line line,
-		IReadOnlyList<string> typeNameAndArguments, bool hasNestedMethodCall)
-	{
-		var type = line.Method.FindType(typeNameAndArguments[0]);
-		if (type == null)
-			return null;
-		var constructorMethodCall = new MethodCall(type.Methods[0], // TODO: Get constructor method using a helper method
-			new From(type), Array.Empty<Expression>());//TODO, line.Method.ParseExpression(line, ..)); //TODO: broken anyways: typeNameAndArguments[1]) ?? use same method GetArguments method
-		//TODO: this makes no sense!
-		if (!hasNestedMethodCall)
-			return constructorMethodCall;
-		var arguments = typeNameAndArguments.Count > 3
-			? GetArguments(line, typeNameAndArguments.Skip(3).ToList())
-			: Array.Empty<Expression>();
-		var method = type.Methods.FirstOrDefault(m => m.Name == typeNameAndArguments[2][1..]) ?? throw new MethodNotFound(line, typeNameAndArguments[2][1..], type);
-		return new MethodCall(method, constructorMethodCall, arguments);
-	}
-
-	private static Expression[] GetArguments(Method.Line line, IReadOnlyList<string> parts)
-	{
-		var arguments = new Expression[parts.Count];
-		for (var index = 0; index < parts.Count; index++)
-			//TODO: this is the same as above
-			try
-			{
-				arguments[index] = line.Method.ParseExpression(line, ..); //TODO: parts[index]) ??
-			}
-			catch (MethodExpressionParser.UnknownExpression)
-			{ //TODO: this is duplicated code!
-				throw new InvalidExpressionForArgument(line,
-					parts[index] + " is invalid for " + parts[index] + " argument " + index);
-			}
-		return arguments;
-	}
-//using System;
-//using System.Collections.Generic;
-//using System.Linq;
-
-//namespace Strict.Language.Expressions;
-
-//public class Constructor //TODO: merge with normal method call
-//{
-//	public static Expression? TryParse(Method.Line line, Range range)
-//	{
-//		var partToParse = line.Text[range];//TODO: use span here!
-//		return partToParse.EndsWith(')') && partToParse.Contains('(')
-//			? TryParseConstructor(line,
-//				partToParse.Split(new[] { '(', ')' }, StringSplitOptions.RemoveEmptyEntries),
-//				partToParse.Contains(")."))
-//			: null;
-//	}
-
-//	private static Expression? TryParseConstructor(Method.Line line,
-//		IReadOnlyList<string> typeNameAndArguments, bool hasNestedMethodCall)
-//	{
-//		var type = line.Method.FindType(typeNameAndArguments[0]);
-//		if (type == null)
-//			return null;
-//		var constructorMethodCall = new MethodCall(new Value(type, type), type.Methods[0],
-//			line.Method.TryParseExpression(line, ..) ??//TODO: broken anyways: typeNameAndArguments[1]) ??
-//			throw new MethodExpressionParser.UnknownExpression(line));
-//		if (!hasNestedMethodCall)
-//			return constructorMethodCall;
-//		var arguments = typeNameAndArguments.Count > 3
-//			? GetArguments(line, typeNameAndArguments.Skip(3).ToList())
-//			: Array.Empty<Expression>();
-//		var method = type.Methods.FirstOrDefault(m => m.Name == typeNameAndArguments[2][1..]) ?? throw new MethodCall.MethodNotFound(line, typeNameAndArguments[2][1..], type);
-//		return new MethodCall(constructorMethodCall, method, arguments);
-//	}
-
-//	private static Expression[] GetArguments(Method.Line line, IReadOnlyList<string> parts)
-//	{
-//		var arguments = new Expression[parts.Count];
-//		for (var index = 0; index < parts.Count; index++)
-//			arguments[index] = line.Method.TryParseExpression(line, ..) ??//TODO: parts[index]) ??
-//				throw new MethodCall.InvalidExpressionForArgument(line,
-//					parts[index] + " for " + parts[index] + " argument " + index);
-//		return arguments;
-//	}
-//}
-
-public sealed class MemberOrMethodNotFound : ParsingFailed
+	public sealed class MemberOrMethodNotFound : ParsingFailed
 	{
 		public MemberOrMethodNotFound(Method.Line line, Type memberType, string memberName) : base(line,
 			memberName, memberType) { }
@@ -474,23 +227,33 @@ public sealed class MemberOrMethodNotFound : ParsingFailed
 					Console.WriteLine("pushing list element "+line.Text[postfix.Output.Peek()]);
 					var span = line.Text.GetSpanFromRange(postfix.Output.Peek());
 					// Is this a binary expression we have to put into the list (already tokenized and postfixed)
-					if (span.Length == 1 && span[0].IsSingleCharacterOperator() ||
-						span.IsMultiCharacterOperator())
-						expressions.Push(Binary.Parse(line, postfix.Output));
-					else
-						expressions.Push(line.Method.ParseExpression(line, postfix.Output.Pop()));
+					try
+					{
+						if (span.Length == 1 && span[0].IsSingleCharacterOperator() ||
+							span.IsMultiCharacterOperator())
+							expressions.Push(Binary.Parse(line, postfix.Output));
+						else
+							expressions.Push(line.Method.ParseExpression(line, postfix.Output.Pop()));
+					}
+					catch (UnknownExpression ex)
+					{
+						throw new InvalidExpressionForArgument(line,
+							span.ToString() + " is invalid for argument " + expressions.Count + " " +
+							ex.Message);
+					}
 					if (postfix.Output.Count > 0 && line.Text[postfix.Output.Pop().Start.Value] != ',')
 						throw new ListTokensAreNotSeparatedByComma(line);
 				} while (postfix.Output.Count > 0);
-				//postfix.Output.Count % 2 != 1 &&
-				//line.Text[postfix.Output.Skip(1).First().Start.Value] == ',' ?;}
-				//do
-				//{
-				//	start = end - remainingToParse;
-				//} while (start < end);
 			return expressions.ToList();
 		}
+		if (innerSpan.Length == 0)
+			throw new List.EmptyListNotAllowed(line);
 		return ParseAllElementsFast(line, new RangeEnumerator(innerSpan, ',', range.Start));
+	}
+
+	public sealed class InvalidExpressionForArgument : ParsingFailed
+	{
+		public InvalidExpressionForArgument(Method.Line line, string message) : base(line, message) { }
 	}
 
 	public class ListTokensAreNotSeparatedByComma : ParsingFailed
@@ -502,7 +265,16 @@ public sealed class MemberOrMethodNotFound : ParsingFailed
 	{
 		var expressions = new List<Expression>();
 		foreach (var element in elements)
-			expressions.Add(line.Method.ParseExpression(line, element));
+			try
+			{
+				expressions.Add(line.Method.ParseExpression(line, element));
+			}
+			catch (UnknownExpression ex)
+			{
+				throw new InvalidExpressionForArgument(line,
+					line.Text[element] + " is invalid for argument " + expressions.Count + " " + ex.Message);
+			}
+		Console.WriteLine(nameof(ParseAllElementsFast)+": "+expressions.ToWordList());
 		return expressions;
 	}
 

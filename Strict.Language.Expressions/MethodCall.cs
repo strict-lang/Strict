@@ -25,9 +25,6 @@ public class MethodCall : Expression
 	public Expression? Instance { get; }
 	public IReadOnlyList<Expression> Arguments { get; }
 
-	public MethodCall(Method method, Expression? instance, Expression firstArgumentOnly) : this(
-		method, instance, new[] { firstArgumentOnly }) { }
-
 	public MethodCall(Method method, Expression? instance = null) : this(method, instance,
 		Array.Empty<Expression>()) { }
 
