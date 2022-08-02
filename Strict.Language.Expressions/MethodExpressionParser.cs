@@ -39,28 +39,6 @@ public class MethodExpressionParser : ExpressionParser
 			_ => //TODO: should never happen here, Binary will complain if we have a comma there! postfix.Output.Count % 2 != 1 && line.Text[postfix.Output.Skip(1).First().Start.Value] == ',' ?
 				Binary.Parse(line, postfix.Output)
 		};
-		/*from list, same
-		 
-		var postfixTokens = new ShuntingYard(line.Text, range).Output;
-		if (postfixTokens.Count == 1)
-			elementsToFill.Add(line.Method.TryParseExpression(line, postfixTokens.Pop()) ??
-				throw new MethodExpressionParser.UnknownExpression(line, line.Text[range]));
-		else
-			foreach (var token in postfixTokens)
-			{
-				var expressions = new List<Expression>();
-				new PhraseTokenizer(line.Text, new Range(start, start + innerSpan.Length)).ProcessEachToken(
-					tokenRange =>
-					{
-						Console.WriteLine("TryParseWithMultipleOrNestedElements: token=" +
-							line.Text[tokenRange.Start.Value]);
-						if (line.Text[tokenRange.Start.Value] != ',')
-							expressions.Add(line.Method.TryParseExpression(line, tokenRange)
-								? 7
-						throw new MethodExpressionParser.UnknownExpression(line, line.Text[tokenRange]));
-					});
-			}
-		 */
 	}
 
 	public sealed class InvalidOperatorHere : ParsingFailed

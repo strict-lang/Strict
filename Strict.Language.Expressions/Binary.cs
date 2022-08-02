@@ -6,10 +6,10 @@ namespace Strict.Language.Expressions;
 
 public sealed class Binary : MethodCall
 {
-	public Binary(Expression left, Method operatorMethod, Expression[] right) : base(operatorMethod,
-		left, right) { }
+	public Binary(Expression left, Method operatorMethod, Expression[] right) :
+		base(operatorMethod, left, right) { }
 
-	//TODO: we should check if groupings are correctly restored on ToString, e.g. (1 + 2) * 3 should not be regenerated as 1 + 2 * 3!
+	//TODO: we should check if groupings are correctly restored on ToString, e.g. (1 + 2) * 3 should not be regenerated as 1 + 2 * 3! Adding brackets around each binary expression will save the original expression but cumbersome to read? Confirm with Ben
 	public override string ToString() => Instance + " " + Method.Name + " " + Arguments[0];
 
 	public static Expression Parse(Method.Line line, Stack<Range> postfixTokens) =>
@@ -42,22 +42,6 @@ public sealed class Binary : MethodCall
 		line.Text.GetSpanFromRange(nextTokenRange).IsMultiCharacterOperator()
 			? BuildBinaryExpression(line, nextTokenRange, tokens)
 			: line.Method.ParseExpression(line, nextTokenRange);
-
-	// TODO: check if this needs to be called anywhere
-	private static void CheckForAnyExpressions(Method.Line line, Expression left, Expression right)
-	{
-		if (left.ReturnType == line.Method.GetType(Base.Any))
-			throw new AnyIsNotAllowed(line.Method, left);
-		if (right.ReturnType == line.Method.GetType(Base.Any))
-			throw new AnyIsNotAllowed(line.Method, right);
-	}
-
-	private sealed class AnyIsNotAllowed : Exception
-	{
-		public AnyIsNotAllowed(Method lineMethod, Expression operand) : base("\n" + lineMethod +
-			"\n" + string.Join('\n', lineMethod.bodyLines) + "\noperand=" + operand + ", type=" +
-			operand.ReturnType) { }
-	}
 
 	public sealed class MismatchingTypeFound : ParsingFailed
 	{

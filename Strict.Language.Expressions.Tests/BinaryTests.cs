@@ -44,7 +44,7 @@ public sealed class BinaryTests : TestExpressions
 	[TestCase("(1 is 1)")]
 	[TestCase("(1 * 1)")]
 	[TestCase("(1 + 2 + 3)")]
-	[TestCase("(1 + 2) + (3 + 4)")]
+	[TestCase("(1 + 2) * (3 + 4)")]
 	[TestCase("(1 + 2) + (3 + 4) * (5 + 6)")]
 	[TestCase("((1 + 2) + (3 + 4)) * (5 + 6)")]
 	[TestCase("(((1 + 2) + (3 + 4)) * (5 + 6))")]
@@ -66,15 +66,13 @@ public sealed class BinaryTests : TestExpressions
 	[Test]
 	public void NestedBinaryExpressionsWithGrouping() =>
 		Assert.That(ParseExpression("(2 + 5) * 3"),
-			Is.EqualTo(CreateBinary(new Number(method, 2), BinaryOperator.Plus,
-				CreateBinary(new Number(method, 5), BinaryOperator.Multiply, new Number(method, 3)))));
+			Is.EqualTo(CreateBinary(CreateBinary(new Number(method, 2), BinaryOperator.Plus, new Number(method, 5)), BinaryOperator.Multiply, new Number(method, 3))));
 
 	[Test]
 	public void NestedBinaryExpressionsSingleGroup() =>
 		Assert.That(ParseExpression("6 + (2 + 5) * 3"),
 			Is.EqualTo(CreateBinary(new Number(method, 6), BinaryOperator.Plus,
-				CreateBinary(new Number(method, 2), BinaryOperator.Plus,
-					CreateBinary(new Number(method, 5), BinaryOperator.Multiply, new Number(method, 3))))));
+				CreateBinary(CreateBinary(new Number(method, 2), BinaryOperator.Plus, new Number(method, 5)), BinaryOperator.Multiply, new Number(method, 3)))));
 
 	[Test]
 	public void NestedBinaryExpressionsTwoGroups() =>
