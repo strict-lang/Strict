@@ -11,7 +11,8 @@ namespace Strict.Language.Expressions.Tests;
 public class NumberTests : TestExpressions
 {
 	[Test]
-	public void NumberWithCharacters() => Assert.That(() => ParseExpression("7abc"), Throws.InstanceOf<UnknownExpression>());
+	public void NumberWithCharacters() =>
+		Assert.That(() => ParseExpression("7abc"), Throws.InstanceOf<UnknownExpression>());
 
 	[Test]
 	public void ParseNumber() => ParseAndCheckOutputMatchesInput("77", new Number(method, 77));
@@ -23,25 +24,19 @@ public class NumberTests : TestExpressions
 	[TestCase("7.05")]
 	[TestCase("0.5")]
 	[TestCase("77")]
-	public void ValidNumbers(string input) => Assert.That(ParseExpression(input), Is.EqualTo(new Number(method, double.Parse(input))));
+	public void ValidNumbers(string input) =>
+		Assert.That(ParseExpression(input), Is.EqualTo(new Number(method, double.Parse(input))));
 
 	/// <summary>
 	///		Method			 |     Mean |    Error |   StdDev | Allocated
-	/// IntTryParse		 | 11.30 ms | 0.123 ms | 0.064 ms |      1 KB |
-	/// DoubleTryParse | 46.19 ms | 0.371 ms | 0.221 ms |      1 KB |
+	/// IntTryParse		 | 11.36 ms | 0.306 ms | 0.182 ms |      1 KB  |
+	/// DoubleTryParse | 47.32 ms | 1.510 ms | 0.790 ms |      1 KB	 |
 	/// </summary>
 	[Category("Manual")]
 	[Benchmark]
 	[Test]
 	public void IntTryParse()
 	{
-		const string Case1 = "7";
-		const string Case2 = "7.59";
-		const string Case3 = "text";
-		const string Case4 = "0.5";
-		const string Case5 = "-50.5";
-		const string Case6 = "5045142575";
-		const string Case7 = "2000000102";
 		var case8 = "50".AsSpan();
 		var case9 = "2000000102".AsSpan();
 		var counter = 0;
@@ -73,18 +68,19 @@ public class NumberTests : TestExpressions
 		Assert.That(counter, Is.EqualTo(400000));
 	}
 
+	private const string Case1 = "7";
+	private const string Case2 = "7.59";
+	private const string Case3 = "text";
+	private const string Case4 = "0.5";
+	private const string Case5 = "-50.5";
+	private const string Case6 = "5045142575";
+	private const string Case7 = "2000000102";
+
 	[Category("Manual")]
 	[Benchmark]
 	[Test]
 	public void DoubleTryParse()
 	{
-		const string Case1 = "7";
-		const string Case2 = "7.59";
-		const string Case3 = "text";
-		const string Case4 = "0.5";
-		const string Case5 = "-50.5";
-		const string Case6 = "5045142575";
-		const string Case7 = "2000000102";
 		var case8 = "50".AsSpan();
 		var case9 = "2000000102".AsSpan();
 		var counter = 0;
@@ -118,5 +114,5 @@ public class NumberTests : TestExpressions
 
 	[Category("Manual")]
 	[Test]
-	public void BenchmarkCompare() => BenchmarkRunner.Run<NumberTests>();
+	public void BenchmarkTryParseCompare() => BenchmarkRunner.Run<NumberTests>();
 }

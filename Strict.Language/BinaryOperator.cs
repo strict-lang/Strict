@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Linq;
 using System.Runtime.CompilerServices;
 
 namespace Strict.Language;
@@ -25,9 +24,6 @@ public static class BinaryOperator
 	public const string And = "and";
 	public const string Or = "or";
 	public const string Xor = "xor";
-
-	//TODO: remove
-	public static bool IsOperator(this string name) => All.Contains(name);
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static bool IsOperator(this ReadOnlySpan<char> name) =>

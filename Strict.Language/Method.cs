@@ -26,7 +26,8 @@ public sealed class Method : Context
 		IReadOnlyList<string> lines)
 		: base(type, GetName(lines[0]))
 	{
-		if (!Name.IsWord() && !Name.IsOperator())
+		var nameAsSpan = Name.AsSpan();
+		if (!nameAsSpan.IsWord() && !nameAsSpan.IsOperator())
 			throw new NameMustBeAWordWithoutAnySpecialCharactersOrNumbers(Name);
 		TypeLineNumber = typeLineNumber;
 		this.parser = parser;
