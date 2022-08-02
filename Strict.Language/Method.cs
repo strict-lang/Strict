@@ -85,15 +85,13 @@ public sealed class Method : Context
 	{
 		//TODO: should be a ReadOnlySpan from the caller
 		//tst: var block = new Memory<char>(firstLine.ToCharArray());
-		var blockSpan = firstLine.AsSpan();//tst: block.Span;
+		var blockSpan = firstLine.AsSpan(); //tst: block.Span;
 		//Run\n
 		//Run(number)
 		//Run returns Text\n
 		for (var i = 0; i < blockSpan.Length; i++)
-		{
 			if (blockSpan[i] == '(' || blockSpan[i] == ' ' || blockSpan[i] == '\n')
 				return blockSpan[..i].ToString();
-		}
 		//TODO: many times slower, optimize!
 		return firstLine.SplitWordsAndPunctuation()[0];
 	}
@@ -145,7 +143,6 @@ public sealed class Method : Context
 	}
 
 	public readonly IReadOnlyList<Line> bodyLines;
-
 	/*TODO: just an idea, probably makes no big difference as lines are parsed lazily, so this would keep file memory buffer around, which we also don't like 
 	public sealed record NewLine(Method Method, int Tabs, Memory<char> Text, int FileLineNumber)
 	{

@@ -8,7 +8,9 @@ public sealed class List : Value
 {
 	public List(Context context, List<Expression> values) : base(context.GetType(Base.List),
 		//TODO: we should find the common base type for the whole list, see BinarySaveExtension and also how If handles this
-		values[0].ReturnType) => Values = values;
+		values[0].ReturnType) =>
+		Values = values;
+
 	public List<Expression> Values { get; }
 	public override string ToString() => Values.ToBrackets();
 
@@ -34,7 +36,7 @@ public sealed class List : Value
 		var input = line.Text.GetSpanFromRange(range);
 		if (input.Length <= 2 || input[0] != '(' || input[^1] != ')')
 			return null;
-		Console.WriteLine("TryParseWithMultipleOrNestedElements: "+input[1..^1].ToString());
+		Console.WriteLine("TryParseWithMultipleOrNestedElements: " + input[1..^1].ToString());
 		return new List(line.Method,
 			line.Method.ParseListArguments(line, range.RemoveFirstAndLast(line.Text.Length)));
 	}

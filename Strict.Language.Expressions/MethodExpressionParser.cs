@@ -15,7 +15,7 @@ public class MethodExpressionParser : ExpressionParser
 		var constructor = type.Methods[0];
 		var line = new Method.Line(constructor, 0, initializationLine, fileLineNumber);
 		//TODO: maybe non constructor calls also make sense here?
-		return new MethodCall(constructor, new From(type));//TODO: argument logic need some more tests, ParseExpression(line, ..));
+		return new MethodCall(constructor, new From(type)); //TODO: argument logic need some more tests, ParseExpression(line, ..));
 	}
 
 	public override Expression ParseExpression(Method.Line line, Range range)
@@ -89,7 +89,7 @@ public class MethodExpressionParser : ExpressionParser
 	public Expression? TryParseMemberOrZeroOrOneArgumentMethodCall(Method.Line line, Range range)
 	{
 		// We can early out here if this looks like a number digit
-		if (char.IsNumber(line.Text[range.Start.Value])) //TODO: make sure this is really not a number yo, add a bunch of tests!
+		if (char.IsNumber(line.Text[range.Start.Value]))
 			return null;
 		var toParse = line.Text.GetSpanFromRange(range);
 		var argumentsStart = toParse.IndexOf('(');

@@ -28,7 +28,6 @@ public sealed class ShuntingYardTests
 	{
 		var tokens = new ShuntingYard(input, ..).Output.Reverse().Select(range => input[range]);
 		Assert.That(string.Join(", ", tokens), Is.EqualTo(expected));
-
 	}
 
 	//TODO: check if we need more tests, maybe higher up at ParseExpression tests

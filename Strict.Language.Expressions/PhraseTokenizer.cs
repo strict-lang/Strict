@@ -74,7 +74,7 @@ public sealed class PhraseTokenizer
 				if (index > tokenStart + 1 && input[index - 1] == ',')
 				{
 					processToken(tokenStart..(index - 1));
-					processToken((index-1)..index);
+					processToken((index - 1)..index);
 				}
 				else
 					processToken(tokenStart..index);

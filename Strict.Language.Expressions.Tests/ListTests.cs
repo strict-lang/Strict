@@ -117,10 +117,14 @@ public sealed class ListTests : TestExpressions
 					new List(method, GetListExpressions("4".Split(", ")))
 				}));
 
-	//TODO: need more complex tests (mix string with , and , outside string and binary operator), seems to do the basics correct, but check all nested cases as well
-	// (1, 2, 3) + (3, 4)
-	// ^l1       ^op ^l2
-	// ((1, 2), (3, 4))
-	// ^l1 -> this is problematic, add some tests, probably some grouping needed, ask Ben if you need some new grouping code, or use your own ..
-	//[TestCase("((\"Hello, World\", \"Yoyo (it is my secret+1)\"), 4 + 3 to Text) + 7", (evil case, but works)
+	[Test]
+	public void ParseComplexLists() =>
+		Assert.That(
+			ParseExpression("((\"Hello, World\", \"Yoyo (it is my secret+1)\"), (\"4\")) + 7"),
+			Is.EqualTo(CreateBinary(
+				new List(method,
+					GetListExpressions(new[]
+					{
+						"((\"Hello, World\", \"Yoyo (it is my secret+1)\"), (\"4\"))"
+					})), BinaryOperator.Plus, number)));
 }

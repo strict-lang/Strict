@@ -9,7 +9,7 @@ namespace Strict.Language;
 /// </summary>
 public static class BinaryOperator
 {
-	//TODO: could be changed to Enum again, then use this as byte in ShuntingYard.operators, much more efficient
+	//https://deltaengine.fogbugz.com/f/cases/25287
 	public const string Plus = "+";
 	public const string Minus = "-";
 	public const string Multiply = "*";
@@ -25,6 +25,7 @@ public static class BinaryOperator
 	public const string And = "and";
 	public const string Or = "or";
 	public const string Xor = "xor";
+
 	//TODO: remove
 	public static bool IsOperator(this string name) => All.Contains(name);
 
@@ -109,6 +110,7 @@ public static class BinaryOperator
 			return 10;
 		if (token.Compare(Or))
 			return 11;
+		// ReSharper disable once ConvertIfStatementToReturnStatement
 		if (token.Compare(Is))
 			return 12;
 		return GetPrecedence(token[0]);
