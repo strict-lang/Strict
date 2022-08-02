@@ -224,7 +224,7 @@ public class MethodExpressionParser : ExpressionParser
 			else
 				do
 				{
-					Console.WriteLine("pushing list element "+line.Text[postfix.Output.Peek()]);
+					Console.WriteLine("pushing list element " +line.Text[postfix.Output.Peek()]);
 					var span = line.Text.GetSpanFromRange(postfix.Output.Peek());
 					// Is this a binary expression we have to put into the list (already tokenized and postfixed)
 					try
