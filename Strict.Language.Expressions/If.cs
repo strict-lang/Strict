@@ -92,9 +92,7 @@ public sealed class If : BlockExpression
 	// if String(5) <- constructor ??????
 	private static Expression TryParseIf(Method.Line line, ref int methodLineNumber)
 	{
-		var condition = line.Method.ParseExpression(line, 3..);
-		if (condition.ReturnType.Name != Base.Boolean)
-			throw new InvalidCondition(line, condition.ReturnType);
+		var condition = GetConditionExpression(line, 3..);
 		methodLineNumber++;
 		var then = GetThenExpression(line.Method, ref methodLineNumber);
 		if (methodLineNumber + 2 >= line.Method.bodyLines.Count ||
@@ -104,6 +102,14 @@ public sealed class If : BlockExpression
 		return new If(condition, then,
 			line.Method.ParseMethodLine(line.Method.bodyLines[methodLineNumber], ref methodLineNumber),
 			line);
+	}
+
+	private static Expression GetConditionExpression(Method.Line line, Range conditionRange)
+	{
+		var condition = line.Method.ParseExpression(line, conditionRange);
+		if (condition.ReturnType.Name != Base.Boolean)
+			throw new InvalidCondition(line, condition.ReturnType);
+		return condition;
 	}
 
 	public class InvalidCondition : ParsingFailed
@@ -127,5 +133,23 @@ public sealed class If : BlockExpression
 	public sealed class MissingThen : ParsingFailed
 	{
 		public MissingThen(Method.Line line) : base(line) { }
+	}
+
+	public static Expression TryParseConditional(Method.Line line, Range range)
+	{
+		var rangeEnumerator = new RangeEnumerator(line.Text.GetSpanFromRange(range), '?', range.Start);
+		rangeEnumerator.MoveNext();
+		var condition = GetConditionExpression(line, rangeEnumerator.Current.Start..(rangeEnumerator.Current.End.Value - 1));
+		rangeEnumerator.MoveNext();
+		var elseStartingIndex = line.Text.GetSpanFromRange(rangeEnumerator.Current).IndexOf("else");
+		if (elseStartingIndex < 0)
+			throw new MissingElseExpression(line);
+		var thenLength = rangeEnumerator.Current.Start.Value + elseStartingIndex;
+		return new If(condition, line.Method.ParseExpression(line, rangeEnumerator.Current.Start..(thenLength - 1)), line.Method.ParseExpression(line, (thenLength + 4 + 1)..), line);
+	}
+
+	public sealed class MissingElseExpression : ParsingFailed
+	{
+		public MissingElseExpression(Method.Line line) : base(line) { }
 	}
 }

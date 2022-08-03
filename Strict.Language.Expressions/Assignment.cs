@@ -37,13 +37,16 @@ public sealed class Assignment : Expression
 	/// </summary>
 	private static Expression TryParseLet(Method.Line line)
 	{
-		var parts = line.Text.AsSpan(4).Split();
+		var remainingPartSpan = line.Text.AsSpan(4);
+		var parts = remainingPartSpan.Split();
 		parts.MoveNext();
 		var name = parts.Current.ToString();
 		if (!parts.MoveNext() || !parts.MoveNext())
 			throw new IncompleteLet(line);
 		var startOfValueExpression = 4 + name.Length + 1 + 1 + 1;
-		var value = line.Method.ParseExpression(line, startOfValueExpression..);
+		var value = remainingPartSpan.Contains('?')
+			? If.TryParseConditional(line, startOfValueExpression..)
+			: line.Method.ParseExpression(line, startOfValueExpression..);
 		return new Assignment(line.Method, name, value);
 	}
 

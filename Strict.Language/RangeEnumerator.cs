@@ -13,7 +13,7 @@ public ref struct RangeEnumerator
 	{
 		this.input = input;
 		this.splitter = splitter;
-		removeLeadingSpace = splitter == ',';
+		removeLeadingSpace = splitter is ',' or '?';
 		outerStart = outerRangeOffset.Value;
 	}
 

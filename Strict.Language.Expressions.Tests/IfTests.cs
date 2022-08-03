@@ -80,4 +80,30 @@ public sealed class IfTests : TestExpressions
 		Assert.That(ifExpression.GetHashCode(),
 			Is.EqualTo(ifExpression.Condition.GetHashCode() ^ ifExpression.Then.GetHashCode()));
 	}
+
+	[Test]
+	public void MissingElseExpression() =>
+		Assert.That(() => ParseExpression("let result = true ? true"),
+			Throws.InstanceOf<If.MissingElseExpression>());
+
+	[Test]
+	public void InvalidConditionInConditionalExpression() =>
+		Assert.That(() => ParseExpression("let result = 5 ? true"),
+			Throws.InstanceOf<If.InvalidCondition>());
+
+	[Test]
+	public void ReturnTypeOfThenAndElseMustHaveMatchingType() =>
+		Assert.That(() => ParseExpression("let result = true ? true else 5"),
+			Throws.InstanceOf<If.ReturnTypeOfThenAndElseMustHaveMatchingType>());
+
+	[TestCase("let result = true ? true else false")]
+	[TestCase("let result = false ? \"Yes\" else \"No\"")]
+	[TestCase("let result = 5 is 5 ? (1, 2) else (3, 4)")]
+	public void ValidConditionalExpressions(string code)
+	{
+		var expression = ParseExpression(code);
+		Assert.That(expression, Is.InstanceOf<Assignment>()!);
+		var assignment = expression as Assignment;
+		Assert.That(assignment?.Value, Is.InstanceOf<If>()!);
+	}
 }

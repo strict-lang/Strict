@@ -61,7 +61,6 @@ public class MethodExpressionParser : ExpressionParser
 		public CannotParseEmptyInput(Method.Line line) : base(line) { }
 	}
 
-	//TODO: error handling (same as constructor calling actually)
 	//https://deltaengine.fogbugz.com/f/cases/25211
 
 	/// <summary>
