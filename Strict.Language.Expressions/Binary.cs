@@ -9,8 +9,15 @@ public sealed class Binary : MethodCall
 	public Binary(Expression left, Method operatorMethod, Expression[] right) :
 		base(operatorMethod, left, right) { }
 
-	//TODO: we should check if groupings are correctly restored on ToString, e.g. (1 + 2) * 3 should not be regenerated as 1 + 2 * 3! Adding brackets around each binary expression will save the original expression but cumbersome to read? Confirm with Ben
-	public override string ToString() => Instance + " " + Method.Name + " " + Arguments[0];
+	public override string ToString() =>
+		AddNestedBracketsIfNeeded(Instance!) + " " + Method.Name + " " +
+		AddNestedBracketsIfNeeded(Arguments[0]);
+
+	private string AddNestedBracketsIfNeeded(Expression child) =>
+		child is Binary childBinary && BinaryOperator.GetPrecedence(childBinary.Method.Name) <
+		BinaryOperator.GetPrecedence(Method.Name)
+			? $"({child})"
+			: child.ToString();
 
 	public static Expression Parse(Method.Line line, Stack<Range> postfixTokens) =>
 		postfixTokens.Count < 3

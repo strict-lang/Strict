@@ -41,21 +41,18 @@ public sealed class BinaryTests : TestExpressions
 				BinaryOperator.Plus, new Number(method, 3)));
 
 	[TestCase("1 + 2")]
-	[TestCase("(1 is 1)")]
-	[TestCase("(1 * 1)")]
-	[TestCase("(1 + 2 + 3)")]
+	[TestCase("1 is 1")]
+	[TestCase("1 * 2 + 1")]
+	[TestCase("(1 + 2) * 3")]
 	[TestCase("(1 + 2) * (3 + 4)")]
-	[TestCase("(1 + 2) + (3 + 4) * (5 + 6)")]
-	[TestCase("((1 + 2) + (3 + 4)) * (5 + 6)")]
-	[TestCase("(((1 + 2) + (3 + 4)) * (5 + 6))")]
+	[TestCase("1 + 2 + (3 + 4) * (5 + 6)")]
+	[TestCase("(1 + 2 + 3 + 4) * (5 + 6)")]
+	[TestCase("((1 + 2) * (3 + 4) + 1) * (5 + 6)")]
 	[TestCase("(1 + 2) * (2 + 5) + 3")]
 	[TestCase("3 + (1 + 2) * (2 + 5)")]
 	[TestCase("3 + (1 + 2) * 5 * (2 + 5)")]
-	public void ParseGroupExpression(string code)
-	{
-		var expression = ParseExpression(code);
-		Assert.That(expression.ToString(), Is.EqualTo(code.Replace("(", "").Replace(")", "")));
-	}
+	public void ParseGroupExpression(string code) =>
+		Assert.That(ParseExpression(code).ToString(), Is.EqualTo(code));
 
 	[Test]
 	public void NestedBinaryWithBrackets() =>

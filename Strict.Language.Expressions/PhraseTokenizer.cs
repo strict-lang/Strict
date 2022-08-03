@@ -16,6 +16,11 @@ public sealed class PhraseTokenizer
 	public PhraseTokenizer(string input, Range partToParse)
 	{
 		var part = input.GetSpanFromRange(partToParse);
+		Console.WriteLine("***"+nameof(PhraseTokenizer) + ": " + part.ToString());
+		if (part.ToString().StartsWith("it is"))
+		{
+
+		}
 		if (part.Length == 0 || part[0] == ' ' || part[^1] == ' ' ||
 			part.Contains("  ", StringComparison.Ordinal))
 			throw new InvalidSpacing(input);
@@ -52,7 +57,7 @@ public sealed class PhraseTokenizer
 		if (textStart != -1)
 			throw new UnterminatedString(input[partToParse]);
 		if (tokenStart >= 0)
-			processToken(tokenStart..);
+			processToken(tokenStart..(offset + length));
 	}
 
 	private int index;

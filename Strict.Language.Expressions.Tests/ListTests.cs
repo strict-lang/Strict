@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
+using static Strict.Language.Type;
 
 namespace Strict.Language.Expressions.Tests;
 
@@ -91,12 +92,9 @@ public sealed class ListTests : TestExpressions
 	}
 
 	[Test]
-	public void LeftTypeShouldNotBeChangedUnlessRightIsList()
-	{
-		var expression = ParseExpression("5 + (\"1\", \"2\", \"3\", \"4\")");
-		Assert.That(expression, Is.InstanceOf<Binary>()!);
-		Assert.That(((Binary)expression).ReturnType, Is.EqualTo(number.ReturnType));
-	}
+	public void LeftTypeShouldNotBeChangedUnlessRightIsList() =>
+		Assert.That(() => ParseExpression("5 + (\"1\", \"2\", \"3\", \"4\")"),
+			Throws.InstanceOf<ArgumentsDoNotMatchMethodParameters>());
 
 	[Test]
 	public void ParseMultipleListInBinary() =>
@@ -120,11 +118,11 @@ public sealed class ListTests : TestExpressions
 	[Test]
 	public void ParseComplexLists() =>
 		Assert.That(
-			ParseExpression("((\"Hello, World\", \"Yoyo (it is my secret+1)\"), (\"4\")) + 7"),
+			ParseExpression("((\"Hello, World\", \"Yoyo (it is my secret + 1)\"), (\"4\")) + 7"),
 			Is.EqualTo(CreateBinary(
 				new List(method,
 					GetListExpressions(new[]
 					{
-						"((\"Hello, World\", \"Yoyo (it is my secret+1)\"), (\"4\"))"
-					})), BinaryOperator.Plus, number)));
+						"(\"Hello, World\", \"Yoyo (it is my secret + 1)\"), (\"4\")"
+					})), BinaryOperator.Plus, new Number(method, 7))));
 }

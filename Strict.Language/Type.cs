@@ -323,7 +323,16 @@ public class Type : Context
 
 	private bool IsCompatible(Type sameOrBaseType) =>
 		this == sameOrBaseType || sameOrBaseType.Name == Base.Any ||
-		implements.Contains(sameOrBaseType);
+		implements.Contains(sameOrBaseType) || CanUpCast(sameOrBaseType);
+
+	private bool CanUpCast(Type sameOrBaseType)
+	{
+		if (sameOrBaseType.Name is Base.List)
+			return Name == Base.Number || implements.Contains(GetType(Base.Number)) || Name == Base.Text;//TODO: check actual generics of this list type!
+		if (sameOrBaseType.Name is Base.Text or Base.List)
+			return Name == Base.Number || implements.Contains(GetType(Base.Number));
+		return false;
+	}
 
 	/// <summary>
 	/// Builds dictionary the first time we use it to access any method of this type or any of the

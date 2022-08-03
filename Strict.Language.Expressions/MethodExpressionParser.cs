@@ -30,6 +30,9 @@ public class MethodExpressionParser : ExpressionParser
 				Number.TryParse(line, range) ?? (input.IsOperator()
 					? throw new InvalidOperatorHere(line, input.ToString())
 					: throw new UnknownExpression(line, line.Text[range]));
+		// If this is just a simple text string, there is no need to invoke ShuntingYard
+		if (input.Length >= 2 && input[0] == '"' && input[^1] == '"' && input.Count('"') == 2)
+			return new Text(line.Method, input.Slice(1, input.Length - 2).ToString());
 		var postfix = new ShuntingYard(line.Text, range);
 		return postfix.Output.Count switch
 		{

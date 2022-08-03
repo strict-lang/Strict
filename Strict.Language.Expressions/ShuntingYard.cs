@@ -32,6 +32,10 @@ public sealed class ShuntingYard
 		else
 		{
 			var token = input[tokenRange];
+			if (token.Contains(')'))
+			{
+
+			}
 			if (token.IsMultiCharacterOperator())
 			{
 				ApplyHigherOrEqualPrecedenceOperators(BinaryOperator.GetPrecedence(token));
