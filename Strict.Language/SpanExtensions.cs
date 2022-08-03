@@ -108,7 +108,8 @@ public static class SpanExtensions
 		input[3] == 's' && input[4] == 'e';
 
 	/// <summary>
-	/// Heavily optimized number parsing, which is 10 times faster than int.TryParse and 50 times
+	/// Heavily optimized number parsing, which can be 10 times faster than int.TryParse and 50
+	/// times
 	/// faster than double.TryParse.
 	/// </summary>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -119,29 +120,22 @@ public static class SpanExtensions
 		{
 			if (!TryParseNumber(input[1..], out number))
 				return false;
-			//Console.WriteLine("found negative number, negating it: "+number);
 			number = -number;
 			return true;
 		}
 		number = input[0] - '0';
 		// Trick from char.IsDigit, which calls char.IsBetween using uint to do an in between check
 		if ((uint)number > 9)
-			//Console.WriteLine("not single digit number: " + number);
 			return false;
-		//Console.WriteLine("first digit number: " + number);
 		var decimalPosition = input.Length;
 		for (var index = 1; index < input.Length; index++)
 		{
 			var letter = input[index];
-			//Console.WriteLine("letter " + index + ": " + letter);
 			var digit = (uint)(letter - '0');
 			if (digit <= 9)
 				number = number * 10 + digit;
 			else if (letter == '.')
-			{
 				decimalPosition = index + 1;
-				//Console.WriteLine("decimalPosition: " + decimalPosition);
-			}
 			else if (letter == 'e' && index + 2 < input.Length)
 			{
 				var existingExponent = decimalPosition == input.Length
@@ -157,10 +151,8 @@ public static class SpanExtensions
 					exponentSign = 1;
 				else
 					index++;
-				//Console.WriteLine("exponentSign: " + exponentSign + ", rest=" + input[index..].ToString());
 				if (!TryParseNumber(input[index..], out var exponent))
 					return false;
-				//Console.WriteLine("exponentSign=" + exponentSign + ", exponent=" + exponent +", existingExponent=" + existingExponent);
 				exponent = exponentSign * exponent - existingExponent;
 				number *= Math.Pow(10, exponent);
 				return true;
@@ -169,10 +161,8 @@ public static class SpanExtensions
 			else if (index + 1 < input.Length)
 				return false;
 		}
-		//Console.WriteLine("full number: " + number);
 		if (decimalPosition < input.Length)
 			number /= Math.Pow(10, input.Length - decimalPosition);
-		//Console.WriteLine("decimal: " + number);
 		return true;
 	}
 }

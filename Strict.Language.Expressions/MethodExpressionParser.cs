@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq; //TODO: linq should be avoided for better performance
 
 namespace Strict.Language.Expressions;
 
@@ -14,8 +13,7 @@ public class MethodExpressionParser : ExpressionParser
 	{
 		var constructor = type.Methods[0];
 		var line = new Method.Line(constructor, 0, initializationLine, fileLineNumber);
-		//TODO: maybe non constructor calls also make sense here?
-		return new MethodCall(constructor, new From(type)); //TODO: argument logic need some more tests, ParseExpression(line, ..));
+		return new MethodCall(constructor, new From(type)); //TODO: argument logic need some more tests, ParseExpression(line, ..)); maybe non constructor calls also make sense here?
 	}
 
 	public override Expression ParseExpression(Method.Line line, Range range)
@@ -23,7 +21,7 @@ public class MethodExpressionParser : ExpressionParser
 		var input = line.Text.GetSpanFromRange(range);
 		if (input.IsEmpty)
 			throw new CannotParseEmptyInput(line);
-		if (!input.Contains(' ') && !input.Contains(','))
+		if (input.Length < 3 || !input.Contains(' ') && !input.Contains(','))
 			return Boolean.TryParse(line, range) ?? Text.TryParse(line, range) ??
 				List.TryParseWithSingleElement(line, range) ??
 				TryParseMemberOrZeroOrOneArgumentMethodCall(line, range) ??
@@ -31,7 +29,7 @@ public class MethodExpressionParser : ExpressionParser
 					? throw new InvalidOperatorHere(line, input.ToString())
 					: throw new UnknownExpression(line, line.Text[range]));
 		// If this is just a simple text string, there is no need to invoke ShuntingYard
-		if (input.Length >= 2 && input[0] == '"' && input[^1] == '"' && input.Count('"') == 2)
+		if (input[0] == '"' && input[^1] == '"' && input.Count('"') == 2)
 			return new Text(line.Method, input.Slice(1, input.Length - 2).ToString());
 		var postfix = new ShuntingYard(line.Text, range);
 		return postfix.Output.Count switch
@@ -85,7 +83,9 @@ public class MethodExpressionParser : ExpressionParser
 	private Expression? ParseInContext(Context context, Method.Line line, Range range, IReadOnlyList<Expression> arguments)
 	{
 		var partToParse = line.Text.GetSpanFromRange(range);
-		Console.WriteLine(nameof(ParseInContext) + " " + context + ", " + partToParse.ToString());
+#if LOG_DETAILS
+		Logger.Info(nameof(ParseInContext) + " " + context + ", " + partToParse.ToString());
+#endif
 		if (partToParse.Contains('.'))
 		{
 			var members = new RangeEnumerator(partToParse, '.', range.Start);
@@ -124,7 +124,9 @@ public class MethodExpressionParser : ExpressionParser
 		var partToParse = line.Text.GetSpanFromRange(range);
 		if (!partToParse.IsWord())
 			return null;
-		Console.WriteLine(nameof(TryMemberOrMethodCall) + ": " + partToParse.ToString()+" in "+context+" with arguments="+arguments.ToWordList());
+#if LOG_DETAILS
+		Logger.Info(nameof(TryMemberOrMethodCall) + ": " + partToParse.ToString()+" in "+context+" with arguments="+arguments.ToWordList());
+#endif
 		//foreach (var (name, variableValue) in GetAvailableVariables(context))
 		//	if (partToParse.Equals(name, StringComparison.Ordinal))
 		//		return variableValue;//TODO: should be member yo
@@ -145,10 +147,11 @@ public class MethodExpressionParser : ExpressionParser
 			var memberCall = TryFindMemberCall(type!, instance, partToParse);
 			if (memberCall != null)
 				return memberCall;
-			Console.WriteLine("ParseNested found no member in " + line.Method);
+#if LOG_DETAILS
+			Logger.Info("ParseNested found no member in " + line.Method);
+#endif
 		}
-		//TODO: the member can be anything, any expression, don't assume it is always a member!
-		//TODO: constructor needed here!
+		//TODO: the member can be anything, any expression, don't assume it is always a member/method!
 		var methodName = partToParse.ToString();
 		var method2 = type.FindMethod(methodName, arguments);
 		if (method2 != null)
@@ -159,7 +162,9 @@ public class MethodExpressionParser : ExpressionParser
 			if (fromType != null)
 				return new MethodCall(fromType.GetMethod(Method.From, arguments), new From(fromType), arguments);
 		}
-		Console.WriteLine("ParseNested found no local method in " + line.Method.Type+": "+methodName);
+#if LOG_DETAILS
+		Logger.Info("ParseNested found no local method in " + line.Method.Type+": "+methodName);
+#endif
 		return null;
 	}
 
@@ -205,7 +210,9 @@ public class MethodExpressionParser : ExpressionParser
 			else
 				do
 				{
-					Console.WriteLine("pushing list element " +line.Text[postfix.Output.Peek()]);
+#if LOG_DETAILS
+					Logger.Info("pushing list element " +line.Text[postfix.Output.Peek()]);
+#endif
 					var span = line.Text.GetSpanFromRange(postfix.Output.Peek());
 					// Is this a binary expression we have to put into the list (already tokenized and postfixed)
 					try
@@ -225,7 +232,7 @@ public class MethodExpressionParser : ExpressionParser
 					if (postfix.Output.Count > 0 && line.Text[postfix.Output.Pop().Start.Value] != ',')
 						throw new ListTokensAreNotSeparatedByComma(line);
 				} while (postfix.Output.Count > 0);
-			return expressions.ToList();
+			return new List<Expression>(expressions);
 		}
 		if (innerSpan.Length == 0)
 			throw new List.EmptyListNotAllowed(line);
@@ -255,29 +262,10 @@ public class MethodExpressionParser : ExpressionParser
 				throw new InvalidExpressionForArgument(line,
 					line.Text[element] + " is invalid for argument " + expressions.Count + " " + ex.Message);
 			}
-		Console.WriteLine(nameof(ParseAllElementsFast)+": "+expressions.ToWordList());
+#if LOG_DETAILS
+		Logger.Info(nameof(ParseAllElementsFast)+": "+expressions.ToWordList());
+#endif
 		return expressions;
-	}
-
-	//TODO: Probably not needed
-	public static bool HasIncompatibleDimensions(Expression left, Expression right) =>
-		left is List leftList && right is List rightList &&
-		leftList.Values.Count != rightList.Values.Count;
-
-	//TODO: as discussed in meeting, we use generics and always check if the right side is castable into the left side (via from), e.g. make a test where we add a Count to a list of Texts -> output list of texts (always from left side), we never change the left side type
-	public static bool HasMismatchingTypes(Expression left, Expression right) =>
-		left is List leftList && !leftList.IsFirstType<Text>() && right switch
-		{
-			List rightList when rightList.IsFirstType<Text>() => true,
-			Binary { Instance: List rightBinaryLeftList } when rightBinaryLeftList.IsFirstType<Text>() =>
-				true,
-			Binary { Instance: Text } => true,
-			_ => !leftList.IsFirstType<Text>() && right is Text
-		};
-
-	public sealed class ListsHaveDifferentDimensions : ParsingFailed
-	{
-		public ListsHaveDifferentDimensions(Method.Line line, string error) : base(line, error) { }
 	}
 
 	private static Expression

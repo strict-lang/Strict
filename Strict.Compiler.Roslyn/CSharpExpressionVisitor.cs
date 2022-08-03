@@ -79,7 +79,7 @@ public class CSharpExpressionVisitor : ExpressionVisitor
 				: methodCall.Method.Name == "Write" &&
 				methodCall.Instance.ReturnType.Name is Base.Log or Base.System
 					? "WriteLine"
-					: methodCall.Method.Name)) + "(" + //TODO: methodCall.Arguments.Select(Visit).ToWordList() +
+					: methodCall.Method.Name)) + "(" + methodCall.Arguments.Select(Visit).ToWordList() +
 		(methodCall.ReturnType.Name == "File"
 			? ", FileMode.OpenOrCreate"
 			: "") + ")";
@@ -100,9 +100,9 @@ public class CSharpExpressionVisitor : ExpressionVisitor
 	protected override string Visit(MemberCall memberCall) =>
 		memberCall.Member.Type.Name is Base.Log or Base.System
 			? "Console"
-			: /*not longer used this way! memberCall.Instance != null
+			: memberCall.Instance != null
 				? memberCall.Instance + "." + memberCall.Member.Name
-				: */memberCall.Member.Name;
+				: memberCall.Member.Name;
 
 	protected override string Visit(Value value) =>
 		value.Data is Type

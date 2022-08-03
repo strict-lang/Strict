@@ -11,16 +11,25 @@ namespace Strict.Language.Expressions;
 /// </summary>
 // ReSharper disable MethodTooLong
 // ReSharper disable ExcessiveIndentation
+//ncrunch: no coverage start, for better performance
 public sealed class PhraseTokenizer
 {
 	public PhraseTokenizer(string input, Range partToParse)
 	{
 		var part = input.GetSpanFromRange(partToParse);
-		Console.WriteLine("***"+nameof(PhraseTokenizer) + ": " + part.ToString());
-		if (part.ToString().StartsWith("it is"))
+		if (part.Length < 3)
 		{
-
+			if (part[0] == ' ')
+				throw new InvalidSpacing(part.ToString());
+			if (part[0] == '\"' && (part.Length == 1 || part[1] != '\"'))
+				throw new UnterminatedString(part.ToString());
+			if (part[0] == '(')
+				throw new InvalidEmptyOrUnmatchedBrackets(part.ToString());
+			throw new NotSupportedException("Input should never be this small: " + part.ToString());
 		}
+#if LOG_DETAILS
+		Logger.Info("***"+nameof(PhraseTokenizer) + ": " + part.ToString());
+#endif
 		if (part.Length == 0 || part[0] == ' ' || part[^1] == ' ' ||
 			part.Contains("  ", StringComparison.Ordinal))
 			throw new InvalidSpacing(input);

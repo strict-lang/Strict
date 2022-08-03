@@ -34,11 +34,10 @@ public sealed class List : Value
 	public static Expression? TryParseWithMultipleOrNestedElements(Method.Line line, Range range)
 	{
 		var input = line.Text.GetSpanFromRange(range);
-		if (input.Length <= 2 || input[0] != '(' || input[^1] != ')')
-			return null;
-		Console.WriteLine("TryParseWithMultipleOrNestedElements: " + input[1..^1].ToString());
-		return new List(line.Method,
-			line.Method.ParseListArguments(line, range.RemoveFirstAndLast(line.Text.Length)));
+		return input.Length > 2 && input[0] == '(' && input[^1] == ')'
+			? new List(line.Method,
+				line.Method.ParseListArguments(line, range.RemoveFirstAndLast(line.Text.Length)))
+			: null;
 	}
 
 	public class EmptyListNotAllowed : ParsingFailed

@@ -17,8 +17,9 @@ public sealed class ShuntingYard
 		ApplyHigherOrEqualPrecedenceOperators();
 		if (Output.Count == 0)
 			throw new NotSupportedException("Nothing found! Should never happen."); //ncrunch: no coverage
-		//TODO: remove after done:
-		Console.WriteLine("Operators: " + string.Join(", ", operators) + " Output Ranges: " + string.Join(", ", Output));
+#if LOG_DETAILS
+		Logger.Info("Operators: " + string.Join(", ", operators) + " Output Ranges: " + string.Join(", ", Output));
+#endif
 	}
 
 	private readonly string input;
@@ -26,16 +27,14 @@ public sealed class ShuntingYard
 	private void PutTokenIntoStacks(Range tokenRange)
 	{
 		var (_, length) = tokenRange.GetOffsetAndLength(input.Length);
-		Console.WriteLine(nameof(PutTokenIntoStacks) + ": " + input[tokenRange]);
+#if LOG_DETAILS
+		//Logger.Info(nameof(PutTokenIntoStacks) + ": " + input[tokenRange]);
+#endif
 		if (length == 1)
 			PutSingleCharacterTokenIntoStacks(tokenRange);
 		else
 		{
 			var token = input[tokenRange];
-			if (token.Contains(')'))
-			{
-
-			}
 			if (token.IsMultiCharacterOperator())
 			{
 				ApplyHigherOrEqualPrecedenceOperators(BinaryOperator.GetPrecedence(token));

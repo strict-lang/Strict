@@ -5,7 +5,7 @@ namespace Strict.Language.Expressions.Tests;
 
 public sealed class ShuntingYardTests
 {
-	[TestCase("a", "a")]
+	[TestCase("abc", "abc")]
 	[TestCase("a + b", "a, b, +")]
 	[TestCase("(2 + (3 + 5) * 5) * 2", "2, 3, 5, +, 5, *, +, 2, *")]
 	[TestCase("a + b * c - d", "a, b, c, *, +, d, -")]

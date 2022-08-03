@@ -38,7 +38,7 @@ public sealed class PhraseTokenizerTests
 		Assert.That(() => GetTokens(code).Count,
 			Throws.InstanceOf<PhraseTokenizer.InvalidEmptyOrUnmatchedBrackets>());
 
-	[TestCase("5", 1)]
+	[TestCase("512", 1)]
 	[TestCase("hello", 1)]
 	[TestCase("\"something\"", 1)]
 	[TestCase("5 + 2", 3)]

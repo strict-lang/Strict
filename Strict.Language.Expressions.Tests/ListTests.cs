@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
-using static Strict.Language.Type;
 
 namespace Strict.Language.Expressions.Tests;
 
@@ -29,12 +28,15 @@ public sealed class ListTests : TestExpressions
 		var expressions = new List<Expression>();
 		foreach (var line in
 			elements.Select(element => new Method.Line(method, 0, element.Trim(), 0)))
-			new PhraseTokenizer(line.Text, new Range(0, line.Text.Length)).ProcessEachToken(
-				tokenRange =>
-				{
-					if (line.Text[tokenRange.Start.Value] != ',')
-						expressions.Add(method.ParseExpression(line, tokenRange));
-				});
+			if (line.Text.Length > 3)
+				new PhraseTokenizer(line.Text, new Range(0, line.Text.Length)).ProcessEachToken(
+					tokenRange =>
+					{
+						if (line.Text[tokenRange.Start.Value] != ',')
+							expressions.Add(method.ParseExpression(line, tokenRange));
+					});
+			else
+				expressions.Add(method.ParseExpression(line, ..));
 		return expressions;
 	}
 
@@ -55,19 +57,16 @@ public sealed class ListTests : TestExpressions
 	[TestCase("(1, 2, 3) * (1, 2, 3, 4)")]
 	public void ListsHaveDifferentDimensionsIsNotAllowed(string input) =>
 		Assert.That(() => ParseExpression(input),
-			Throws.InstanceOf<ListsHaveDifferentDimensions>()!);
+			Throws.InstanceOf<Binary.ListsHaveDifferentDimensions>()!);
 
 	[TestCase("(1, 2, 3, 4, 5) + (6, 7, 8)", "1, 2, 3, 4, 5", "+", "6, 7, 8")]
 	[TestCase("(1, 2, 3, 4, 5) - (6, 7, 8)", "1, 2, 3, 4, 5", "-", "6, 7, 8")]
 	[TestCase("(1, 2, 3, 4, 5) is (1, 2, 3, 4, 5)", "1, 2, 3, 4, 5", "is", "1, 2, 3, 4, 5")]
 	[TestCase("(1, 2, 3, 4, 5) * (1, 2, 3, 4, 5)", "1, 2, 3, 4, 5", "*", "1, 2, 3, 4, 5")]
-	public void ParseListsBinaryOperation(string input, params string[] expected)
-	{
-		Console.WriteLine(ParseExpression(input).ToString());
+	public void ParseListsBinaryOperation(string input, params string[] expected) =>
 		ParseAndCheckOutputMatchesInput(input,
 			CreateBinary(new List(method, GetListExpressions(expected[0].Split(","))), expected[1],
 				new List(method, GetListExpressions(expected[2].Split(",")))));
-	}
 
 	[TestCase("(1, 2, 3, 4, 5) + 4", 4, "1, 2, 3, 4, 5", "+")]
 	[TestCase("(1, 2, 3, 4, 5) - 4", 4, "1, 2, 3, 4, 5", "-")]
@@ -94,7 +93,7 @@ public sealed class ListTests : TestExpressions
 	[Test]
 	public void LeftTypeShouldNotBeChangedUnlessRightIsList() =>
 		Assert.That(() => ParseExpression("5 + (\"1\", \"2\", \"3\", \"4\")"),
-			Throws.InstanceOf<ArgumentsDoNotMatchMethodParameters>());
+			Throws.InstanceOf<Type.ArgumentsDoNotMatchMethodParameters>());
 
 	[Test]
 	public void ParseMultipleListInBinary() =>
