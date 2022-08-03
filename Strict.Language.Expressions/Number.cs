@@ -11,17 +11,8 @@ public sealed class Number : Value
 	public override bool Equals(Expression? other) =>
 		other is Value v && (double)Data == (double)v.Data;
 
-	public static Expression? TryParse(Method.Line line, Range range)
-	{
-		var input = line.Text.GetSpanFromRange(range);
-		return input.Length < 1
-			? null
-			: int.TryParse(input, out var number)
-				? new Number(line.Method, number)
-				: double.TryParse(input, out var doubleNumber)
-					? new Number(line.Method, doubleNumber)
-					: null;
-	}
+	public static Expression? TryParse(Method.Line line, Range range) =>
+		line.Text.GetSpanFromRange(range).TryParseNumber(out var number)
+			? new Number(line.Method, number)
+			: null;
 }
-
-//https://deltaengine.fogbugz.com/f/cases/25307
