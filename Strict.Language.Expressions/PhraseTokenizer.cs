@@ -28,7 +28,7 @@ public sealed class PhraseTokenizer
 			throw new NotSupportedException("Input should never be this small: " + part.ToString());
 		}
 #if LOG_DETAILS
-		Logger.Info("***"+nameof(PhraseTokenizer) + ": " + part.ToString());
+		Logger.Info("* " + nameof(PhraseTokenizer) + ": " + part.ToString());
 #endif
 		if (part.Length == 0 || part[0] == ' ' || part[^1] == ' ' ||
 			part.Contains("  ", StringComparison.Ordinal))

@@ -31,6 +31,10 @@ public class MethodExpressionParser : ExpressionParser
 		// If this is just a simple text string, there is no need to invoke ShuntingYard
 		if (input[0] == '"' && input[^1] == '"' && input.Count('"') == 2)
 			return new Text(line.Method, input.Slice(1, input.Length - 2).ToString());
+		// If this is just a simple list, no need to invoke ShuntingYard yet, grab each list element
+		if (input[0] == '(' && input[^1] == ')' && input.Contains(',') && input.Count('(') == 1)
+			return new List(line.Method,
+				line.Method.ParseListArguments(line, range.RemoveFirstAndLast(line.Text.Length)));
 		var postfix = new ShuntingYard(line.Text, range);
 		return postfix.Output.Count switch
 		{
@@ -196,7 +200,7 @@ public class MethodExpressionParser : ExpressionParser
 	public override List<Expression> ParseListArguments(Method.Line line, Range range)
 	{
 		var innerSpan = line.Text.GetSpanFromRange(range);
-		if (innerSpan.Contains('(') || innerSpan.Contains('"'))
+		if (innerSpan.Contains('(') || innerSpan.Contains('"') && innerSpan.Contains(' '))
 		{
 			// The postfix data comes in upside down, so use another stack to restore order
 			var expressions = new Stack<Expression>();
