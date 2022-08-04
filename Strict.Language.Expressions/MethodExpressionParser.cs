@@ -33,7 +33,7 @@ public class MethodExpressionParser : ExpressionParser
 			return new Text(line.Method, input.Slice(1, input.Length - 2).ToString());
 		// If this is just a simple list, no need to invoke ShuntingYard yet, grab each list element
 		if (input[0] == '(' && input[^1] == ')' && input.Contains(',') && input.Count('(') == 1)
-			return new List(line.Method,
+			return new List(line,
 				line.Method.ParseListArguments(line, range.RemoveFirstAndLast(line.Text.Length)));
 		var postfix = new ShuntingYard(line.Text, range);
 		return postfix.Output.Count switch
