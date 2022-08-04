@@ -145,7 +145,10 @@ public sealed class If : BlockExpression
 		if (elseStartingIndex < 0)
 			throw new MissingElseExpression(line);
 		var thenLength = rangeEnumerator.Current.Start.Value + elseStartingIndex;
-		return new If(condition, line.Method.ParseExpression(line, rangeEnumerator.Current.Start..(thenLength - 1)), line.Method.ParseExpression(line, (thenLength + 4 + 1)..), line);
+		return new If(condition,
+			line.Method.ParseExpression(line,
+				(rangeEnumerator.Current.Start.Value + 1)..(thenLength - 1)),
+			line.Method.ParseExpression(line, (thenLength + 4 + 1)..), line);
 	}
 
 	public sealed class MissingElseExpression : ParsingFailed
