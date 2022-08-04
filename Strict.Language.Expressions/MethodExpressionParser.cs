@@ -36,12 +36,16 @@ public class MethodExpressionParser : ExpressionParser
 			return new List(line,
 				line.Method.ParseListArguments(line, range.RemoveFirstAndLast(line.Text.Length)));
 		var postfix = new ShuntingYard(line.Text, range);
+		//if (input.Contains('?'))
+		//	return If.TryParseConditional(line, range) ??
+		//		throw new UnknownExpression(line, line.Text[range]);
 		return postfix.Output.Count switch
 		{
 			1 => TryParseMemberOrZeroOrOneArgumentMethodCall(line, range) ?? ParseTextWithSpacesOrListWithMultipleOrNestedElements(line, postfix.Output.Pop()),
 			//TODO: can also be any method call or anything we excluded above that was still 1 token
 			2 => Not.Parse(line, postfix),
 			_ => //TODO: should never happen here, Binary will complain if we have a comma there! postfix.Output.Count % 2 != 1 && line.Text[postfix.Output.Skip(1).First().Start.Value] == ',' ?
+				If.TryParseConditional(line, range) ??
 				Binary.Parse(line, postfix.Output)
 		};
 	}

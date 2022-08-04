@@ -99,6 +99,8 @@ public sealed class IfTests : TestExpressions
 	[TestCase("let result = true ? true else false")]
 	[TestCase("let result = false ? \"Yes\" else \"No\"")]
 	[TestCase("let result = 5 is 5 ? (1, 2) else (3, 4)")]
+	//[TestCase("let result = 5 + (false ? 1 else 2)")]
+	[TestCase("Log.Write(true ? \"Yes\" else \"No\")")]
 	public void ValidConditionalExpressions(string code)
 	{
 		var expression = ParseExpression(code);

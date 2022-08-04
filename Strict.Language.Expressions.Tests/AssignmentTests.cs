@@ -98,4 +98,16 @@ public class AssignmentTests : TestExpressions
 	public void LetWithoutExpressionCannotParse() =>
 		Assert.That(() => ParseExpression("let value = abc"),
 			Throws.Exception.InstanceOf<UnknownExpression>().With.Message.Contain("abc"));
+
+//	[Test]
+//	public void AssignmentWithArguments()
+//	{
+//		const string Code = "has input = Text(5)";
+//		var type = new Type(null!, "Assignment", new MethodExpressionParser()).Parse(@"import Strict
+//has number
+//has file = ""test.txt""
+//Run
+//	file.Write(number)");
+//		var expression = (Assignment)ParseExpression(Code);
+//	}
 }

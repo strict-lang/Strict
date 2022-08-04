@@ -135,9 +135,12 @@ public sealed class If : BlockExpression
 		public MissingThen(Method.Line line) : base(line) { }
 	}
 
-	public static Expression TryParseConditional(Method.Line line, Range range)
+	public static Expression? TryParseConditional(Method.Line line, Range range)
 	{
-		var rangeEnumerator = new RangeEnumerator(line.Text.GetSpanFromRange(range), '?', range.Start);
+		var partToParseSpan = line.Text.GetSpanFromRange(range);
+		if (!partToParseSpan.Contains('?'))
+			return null;
+		var rangeEnumerator = new RangeEnumerator(partToParseSpan, '?', range.Start);
 		rangeEnumerator.MoveNext();
 		var condition = GetConditionExpression(line, rangeEnumerator.Current.Start..(rangeEnumerator.Current.End.Value - 1));
 		rangeEnumerator.MoveNext();

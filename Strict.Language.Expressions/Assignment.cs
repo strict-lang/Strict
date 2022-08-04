@@ -44,10 +44,7 @@ public sealed class Assignment : Expression
 		if (!parts.MoveNext() || !parts.MoveNext())
 			throw new IncompleteLet(line);
 		var startOfValueExpression = 4 + name.Length + 1 + 1 + 1;
-		var value = remainingPartSpan.Contains('?')
-			? If.TryParseConditional(line, startOfValueExpression..)
-			: line.Method.ParseExpression(line, startOfValueExpression..);
-		return new Assignment(line.Method, name, value);
+		return new Assignment(line.Method, name, line.Method.ParseExpression(line, startOfValueExpression..));
 	}
 
 	public sealed class IncompleteLet : ParsingFailed
