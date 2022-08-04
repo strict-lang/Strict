@@ -1,13 +1,19 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Threading.Tasks;
+using BenchmarkDotNet.Attributes;
+using BenchmarkDotNet.Engines;
+using BenchmarkDotNet.Running;
 using NUnit.Framework;
 using Strict.Language.Expressions;
 
 namespace Strict.Language.Tests;
 
-public sealed class RepositoriesTests
+[MemoryDiagnoser]
+[SimpleJob(RunStrategy.Throughput, warmupCount: 1, targetCount: 10)]
+public class RepositoriesTests
 {
 	[Test]
 	public void InvalidPathWontWork() =>
@@ -51,8 +57,76 @@ public sealed class RepositoriesTests
 		var parser = new MethodExpressionParser();
 		var strictPackage = await new Repositories(parser).LoadFromUrl(Repositories.StrictUrl);
 		Assert.That(
-			() => new Type(strictPackage.FindSubPackage("Examples")!, "Invalid", parser).Parse("has 1"),
+			() => new Type(strictPackage.FindSubPackage("Examples")!,
+				new FileData("Invalid", new[] { "has 1" }), parser),
 			Throws.InstanceOf<ParsingFailed>().With.Message.Contains(@"at Strict.Examples.Invalid in " +
 				Repositories.DevelopmentFolder + @"\Examples\Invalid.strict:line 1"));
 	}
+
+	//ncrunch: no coverage start
+	[Test]
+	[Category("Slow")]
+	[Benchmark]
+	public async Task LoadingZippedStrictBase()
+	{
+		var zipFilePath = Path.Combine(Repositories.DevelopmentFolder, "Base.zip");
+		if (!File.Exists(zipFilePath))
+			ZipFile.CreateFromDirectory(BaseFolder, zipFilePath);
+		for (var iteration = 0; iteration < MaxIterations; iteration++)
+		{
+			var tasks = new List<Task>();
+			foreach (var entry in ZipFile.OpenRead(zipFilePath).Entries)
+				tasks.Add(new StreamReader(entry.Open()).ReadToEndAsync());
+			await Task.WhenAll(tasks);
+		}
+	}
+
+	[Test]
+	[Category("Slow")]
+	[Benchmark]
+	public void LoadingAllStrictFilesSequentially()
+	{
+		for (var iteration = 0; iteration < MaxIterations; iteration++)
+			foreach (var file in Directory.GetFiles(BaseFolder, "*.strict"))
+				File.ReadAllLines(file);
+	}
+
+	private const int MaxIterations = 1000;
+	private static string BaseFolder => Path.Combine(Repositories.DevelopmentFolder, "Base");
+
+	[Test]
+	[Category("Slow")]
+	[Benchmark]
+	public async Task LoadingAllStrictFilesInParallel()
+	{
+		for (var iteration = 0; iteration < MaxIterations; iteration++)
+		{
+			var tasks = new List<Task>();
+			foreach (var file in Directory.GetFiles(BaseFolder, "*.strict"))
+				tasks.Add(File.ReadAllLinesAsync(file));
+			await Task.WhenAll(tasks);
+		}
+	}
+
+	[Test]
+	[Category("Slow")]
+	[Benchmark]
+	public async Task LoadingAllStrictFilesAllTextAsyncParallel()
+	{
+		for (var iteration = 0; iteration < MaxIterations; iteration++)
+		{
+			var tasks = new List<Task>();
+			foreach (var file in Directory.GetFiles(BaseFolder, "*.strict"))
+				tasks.Add(File.ReadAllTextAsync(file));
+			await Task.WhenAll(tasks);
+		}
+	}
+
+	/// <summary>
+	/// Zip file loading makes a difference (4-5 times faster), but otherwise there is close to zero
+	/// impact how we load the files, parallel or not, async is only 10-20% faster and not important.
+	/// </summary>
+	[Test]
+	[Category("Manual")]
+	public void LoadingFilesPerformance() => BenchmarkRunner.Run<RepositoriesTests>();
 }

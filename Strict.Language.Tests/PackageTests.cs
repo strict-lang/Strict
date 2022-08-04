@@ -1,3 +1,4 @@
+using System;
 using System.Threading.Tasks;
 using NUnit.Framework;
 
@@ -9,10 +10,10 @@ public class PackageTests
 	public void CreateContexts()
 	{
 		mainPackage = new Package(nameof(TestPackage));
-		mainType = new Type(mainPackage, "Yolo", null!);
+		mainType = new Type(mainPackage,  new FileData("Yolo", new[] { "Run" }), null!);
 		subPackage = new Package(mainPackage, nameof(PackageTests));
-		privateSubType = new Type(subPackage, "secret", null!);
-		publicSubType = new Type(subPackage, "FindMe", null!);
+		privateSubType = new Type(subPackage, new FileData("secret", new[] { "Run" }), null!);
+		publicSubType = new Type(subPackage, new FileData("FindMe", new[] { "Run" }), null!);
 	}
 
 	private Package mainPackage = null!;
@@ -84,14 +85,13 @@ public class PackageTests
 	public void ContextNameMustNotContainSpecialCharactersOrNumbers()
 	{
 		Assert.Throws<Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers>(() =>
-			new Type(mainPackage, "MyClass123", null!));
+			new Type(mainPackage, new FileData("MyClass123", Array.Empty<string>()), null!));
 		Assert.Throws<Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers>(() =>
 			new Package(mainPackage, "$%"));
 	}
 
-	//TODO: this test is also flaky sometimes and fails with MustImplementAllTraits
 	[Test]
-	[Ignore("TODO: flaky Strict.Language.Type+MustImplementAllTraitMethods : Missing methods: Strict.Base.Text.digits, Strict.Base.Text.+\r\n   at Strict.Base.Error Implements ")]
+	[Ignore("TODO: first load None (if still needed), then Any, then Boolean in Root, do fill them with logic later AFTER all other types are loaded. We also need to figure out which dependencies have to load first")]
 	public async Task LoadTypesFromOtherPackage()
 	{
 		var strictPackage =

@@ -27,8 +27,9 @@ public class Package : Context
 	{
 		public Root() : base(null, string.Empty)
 		{
-			cachedFoundTypes.Add(Base.None, new Type(this, Base.None, null));
-			cachedFoundTypes.Add(Base.Boolean, new Type(this, Base.Boolean, null));
+			cachedFoundTypes.Add(Base.None, new Type(this, new FileData(Base.None, Array.Empty<string>()), null!));
+			//TODO: there is probably a better solution to this, still parse Boolean (has lots of file content), ignore None
+			cachedFoundTypes.Add(Base.Boolean, new Type(this, new FileData(Base.Boolean, Array.Empty<string>()), null!));
 		}
 
 		public override Type? FindType(string name, Context? searchingFrom = null) =>

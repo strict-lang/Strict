@@ -6,9 +6,9 @@ public class MethodTests
 {
 	[SetUp]
 	public void CreateType() =>
-		type = new Type(new TestPackage(), nameof(TypeTests), null!).Parse(@"has log
+		type = new Type(new TestPackage(), new FileData(nameof(TypeTests), @"has log
 Run
-	log.WriteLine");
+	log.WriteLine".SplitLines()), null!);
 
 	private Type type = null!;
 
