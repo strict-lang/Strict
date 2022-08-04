@@ -8,9 +8,9 @@ public class ExpressionParserTests : ExpressionParser
 {
 	[SetUp]
 	public void CreateType() =>
-		type = new Type(new TestPackage(), nameof(TypeTests), this).Parse(@"has log
+		type = new Type(new TestPackage(), new FileData(nameof(TypeTests), @"has log
 Run
-	log.WriteLine");
+	log.WriteLine".SplitLines()), this);
 
 	private Type type = null!;
 

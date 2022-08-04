@@ -151,11 +151,14 @@ public sealed class Repositories
 			: new Package(packagePath);
 		var types = new List<Type>();
 		foreach (var filePath in files)
-			types.Add(new Type(package, filePath, parser));
-		await Task.WhenAll(ParseAllSubFolders(ParseAllFiles(files, types), packagePath, package));
+			types.Add(new Type(package,
+				new FileData(Path.GetFileNameWithoutExtension(filePath), File.ReadAllLines(filePath)),
+				parser));
+		await Task.WhenAll(ParseAllSubFolders(//ParseAllFiles(files, types),
+			packagePath, package));
 		return package;
 	}
-
+	/*unused
 	private static List<Task> ParseAllFiles(IReadOnlyList<string> files, IReadOnlyList<Type> types)
 	{
 		var tasks = new List<Task>();
@@ -163,9 +166,11 @@ public sealed class Repositories
 			tasks.Add(types[index].ParseFile(files[index]));
 		return tasks;
 	}
-
-	private List<Task> ParseAllSubFolders(List<Task> tasks, string packagePath, Package package)
+	*/
+	private List<Task> ParseAllSubFolders(//List<Task> tasks,
+		string packagePath, Package package)
 	{
+		var tasks = new List<Task>();
 		foreach (var directory in Directory.GetDirectories(packagePath))
 			if (IsValidCodeDirectory(directory))
 				tasks.Add(CreatePackageFromFiles(directory,

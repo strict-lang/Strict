@@ -103,7 +103,7 @@ public class CSharpType : Type
 
 	// ReSharper disable once CyclomaticComplexity
 	public CSharpType(Package strictPackage, string filePath, ExpressionParser parser) : base(
-		strictPackage, filePath, parser)
+		strictPackage, new FileData(Path.GetFileNameWithoutExtension(filePath), File.ReadAllLines(filePath)), parser)
 	{
 		var inputCode = File.ReadAllLines(filePath);
 		var methodName = "";

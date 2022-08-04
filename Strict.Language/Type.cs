@@ -14,20 +14,20 @@ namespace Strict.Language;
 // ReSharper disable once HollowTypeName
 public class Type : Context
 {
-	/// <summary>
-	/// Call Parse instead. This just sets the type name in the specified package.
-	/// </summary>
-	public Type(Package package, string filePath, ExpressionParser? expressionParser) : base(package,
-		Path.GetFileNameWithoutExtension(filePath))
+	public Type(Package package, FileData file, ExpressionParser expressionParser) : base(package, file.Name)
 	{
 		if (package.FindDirectType(Name) != null)
 			throw new TypeAlreadyExistsInPackage(Name, package);
-		Package = package;
-		Package.Add(this);
-		FilePath = Name == filePath
-			? Path.Combine(Package.FolderPath, Name) + Extension
-			: filePath;
-		this.expressionParser = expressionParser!;
+		package.Add(this);
+		this.expressionParser = expressionParser;
+		for (lineNumber = 0; lineNumber < file.Lines.Length; lineNumber++)
+			TryParseLine(file.Lines[lineNumber], file.Lines);
+		if (Name != Base.None && Name != Base.Boolean && //TODO: hack to make Root dummy parsing work!
+			methods.Count == 0 && members.Count + implements.Count < 2)
+			throw new NoMethodsFound(this, lineNumber);
+		foreach (var trait in implements)
+			if (trait.IsTrait)
+				CheckIfTraitIsImplemented(trait);
 	}
 
 	public sealed class TypeAlreadyExistsInPackage : Exception
@@ -36,23 +36,10 @@ public class Type : Context
 			name + " in package: " + package) { }
 	}
 
-	public Package Package { get; }
-	public string FilePath { get; }
 	private readonly ExpressionParser expressionParser;
-	public Type Parse(string setLines) => Parse(setLines.SplitLines());
-
-	public Type Parse(string[] setLines)
-	{
-		lines = setLines;
-		for (lineNumber = 0; lineNumber < lines.Length; lineNumber++)
-			TryParseLine(lines[lineNumber]);
-		if (methods.Count == 0 && members.Count + implements.Count < 2)
-			throw new NoMethodsFound(this, lineNumber);
-		foreach (var trait in implements)
-			if (trait.IsTrait)
-				CheckIfTraitIsImplemented(trait);
-		return this;
-	}
+	private int lineNumber;
+	public string FilePath => Path.Combine(Package.FolderPath, Name) + Extension;
+	public Package Package => (Package)Parent;
 
 	private void CheckIfTraitIsImplemented(Type trait)
 	{
@@ -63,14 +50,11 @@ public class Type : Context
 			throw new MustImplementAllTraitMethods(this, nonImplementedTraitMethods);
 	}
 
-	private string[] lines = Array.Empty<string>();
-	private int lineNumber;
-
-	private void TryParseLine(string line)
+	private void TryParseLine(string line, string[] lines)
 	{
 		try
 		{
-			ParseLine(line);
+			ParseLine(line, lines);
 		}
 		catch (ParsingFailed)
 		{
@@ -82,7 +66,7 @@ public class Type : Context
 		}
 	}
 
-	private void ParseLine(string line)
+	private void ParseLine(string line, string[] lines)
 	{
 		var words = ParseWords(line);
 		if (words[0] == Import)
@@ -92,7 +76,7 @@ public class Type : Context
 		else if (words[0] == Has)
 			members.Add(ParseMember(line));
 		else
-			methods.Add(new Method(this, lineNumber, expressionParser, GetAllMethodLines(line)));
+			methods.Add(new Method(this, lineNumber, expressionParser, GetAllMethodLines(line, lines)));
 	}
 
 	private Package ParseImport(IReadOnlyList<string> words)
@@ -192,19 +176,19 @@ public class Type : Context
 			base(type, type.lineNumber, "Missing methods: " + string.Join(", ", missingTraitMethods)) { }
 	}
 
-	private string[] GetAllMethodLines(string definitionLine)
+	private string[] GetAllMethodLines(string definitionLine, string[] lines)
 	{
 		var methodLines = new List<string> { definitionLine };
-		if (IsTrait && IsNextLineValidMethodBody())
+		if (IsTrait && IsNextLineValidMethodBody(lines))
 			throw new TypeHasNoMembersAndThusMustBeATraitWithoutMethodBodies(this);
-		if (!IsTrait && !IsNextLineValidMethodBody())
+		if (!IsTrait && !IsNextLineValidMethodBody(lines))
 			throw new MethodMustBeImplementedInNonTraitType(this, definitionLine);
-		while (IsNextLineValidMethodBody())
+		while (IsNextLineValidMethodBody(lines))
 			methodLines.Add(lines[++lineNumber]);
-		return methodLines.ToArray();
+		return methodLines.ToArray(); //TODO: would be cool if this can be avoided
 	}
 
-	private bool IsNextLineValidMethodBody()
+	private bool IsNextLineValidMethodBody(string[] lines)
 	{
 		if (lineNumber + 1 >= lines.Length)
 			return false;
@@ -243,13 +227,13 @@ public class Type : Context
 			? " " + nameof(Implements) + " " + Implements.ToWordList()
 			: "");
 
-	//https://deltaengine.fogbugz.com/f/cases/24806
+	//TODO: https://deltaengine.fogbugz.com/f/cases/24806
 
 	public override Type? FindType(string name, Context? searchingFrom = null) =>
 		name == Name || name.Contains('.') && name == base.ToString()
 			? this
 			: Package.FindType(name, searchingFrom ?? this);
-
+	/*TODO: not longer called
 	/// <summary>
 	/// Called from <see cref="Repositories.ParseAllFiles"/> in parallel for all the files in the
 	/// package which is the reason for not calling this from constructor
@@ -264,14 +248,16 @@ public class Type : Context
 		//https://deltaengine.fogbugz.com/f/cases/25240
 		Parse(await File.ReadAllLinesAsync(filePath));
 	}
-
+	*/
 	private void CheckForFilePathErrors(string filePath, IReadOnlyList<string> paths, string directory)
 	{
+		/*TODO: remove
 		if (Package.Name != paths.Last())
 			throw new FilePathMustMatchPackageName(Package.Name, directory);
 		if (!string.IsNullOrEmpty(Package.Parent.Name) &&
 			(paths.Count < 2 || Package.Parent.Name != paths[^2]))
 			throw new FilePathMustMatchPackageName(Package.Parent.Name, directory);
+		*/
 		if (directory.EndsWith(@"\strict-lang\Strict", StringComparison.Ordinal))
 			throw new StrictFolderIsNotAllowedForRootUseBaseSubFolder(filePath); //ncrunch: no coverage
 	}
@@ -283,7 +269,7 @@ public class Type : Context
 	} //ncrunch: no coverage end
 
 	public const string Extension = ".strict";
-
+	/*TODO: remove, can't be wrong anymore
 	public sealed class FileExtensionMustBeStrict : Exception
 	{
 		public FileExtensionMustBeStrict(string filePath) : base(filePath) { }
@@ -294,7 +280,7 @@ public class Type : Context
 		public FilePathMustMatchPackageName(string filePath, string packageName) : base(filePath +
 			" must be in package folder " + packageName) { }
 	}
-
+	*/
 	public Method GetMethod(string methodName, IReadOnlyList<Expression> arguments) =>
 		FindMethod(methodName, arguments) ??
 		throw new NoMatchingMethodFound(this, methodName, AvailableMethods);
@@ -386,3 +372,5 @@ public class Type : Context
 				method.Parameters.ToBrackets()) { }
 	}
 }
+
+public record FileData(string Name, string[] Lines);

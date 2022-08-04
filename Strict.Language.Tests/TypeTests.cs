@@ -8,42 +8,43 @@ public class TypeTests
 	public void CreatePackage()
 	{
 		package = new TestPackage();
-		new Type(package, Base.App, null!).Parse("Run");
+		CreateType(Base.App, "Run");
 	}
+
+	private Type CreateType(string name, params string[] lines) =>
+		//TODO: invent MockFileData
+		new(package, new FileData(name, lines), null!);
 
 	private Package package = null!;
 
 	[Test]
 	public void AddingTheSameNameIsNotAllowed() =>
-		Assert.That(() => new Type(package, "App", null!),
-			Throws.InstanceOf<Type.TypeAlreadyExistsInPackage>());
+		Assert.That(() => CreateType(Base.App, "Run"), Throws.InstanceOf<Type.TypeAlreadyExistsInPackage>());
 
 	[Test]
 	public void EmptyLineIsNotAllowed() =>
-		Assert.That(() => new Type(package, Base.Error, null!).Parse("\n"),
+		Assert.That(() => CreateType(Base.Error, ""),
 			Throws.InstanceOf<Type.EmptyLineIsNotAllowed>().With.Message.Contains("line 1"));
 
 	[Test]
 	public void WhitespacesAreNotAllowed()
 	{
-		Assert.That(() => new Type(package, Base.Error, null!).Parse(" "),
+		Assert.That(() => CreateType(Base.Error, " "),
 			Throws.InstanceOf<Type.ExtraWhitespacesFoundAtBeginningOfLine>());
-		Assert.That(() => new Type(package, "Program", null!).Parse(@"Run
- "), Throws.InstanceOf<Type.ExtraWhitespacesFoundAtBeginningOfLine>());
-		Assert.That(() => new Type(package, Base.HashCode, null!).Parse("has\t"),
+		Assert.That(() => CreateType("Program", "Run", " "),
+			Throws.InstanceOf<Type.ExtraWhitespacesFoundAtBeginningOfLine>());
+		Assert.That(() => CreateType(Base.HashCode, "has\t"),
 			Throws.InstanceOf<Type.ExtraWhitespacesFoundAtEndOfLine>());
 	}
 
 	[Test]
 	public void TypeParsersMustStartWithImplementOrHas() =>
-		Assert.That(() => new Type(package, Base.Error, null!).Parse(@"Run
-	log.WriteLine"),
+		Assert.That(() => CreateType(Base.Error, "Run", "\tlog.WriteLine"),
 			Throws.InstanceOf<Type.TypeHasNoMembersAndThusMustBeATraitWithoutMethodBodies>());
 
 	[Test]
 	public void JustMembersAreAllowed() =>
-		Assert.That(
-			new Type(package, Base.Error, null!).Parse(new[] { "has log", "has count" }).Members,
+		Assert.That(CreateType(Base.Error, "has log", "has count").Members,
 			Has.Count.EqualTo(2));
 
 	[Test]
@@ -57,52 +58,44 @@ public class TypeTests
 
 	[Test]
 	public void ImportMustBeFirst() =>
-		Assert.That(() => new Type(package, "Program", null!).Parse(@"has number
-import TestPackage"), Throws.InstanceOf<ParsingFailed>().With.InnerException.
+		Assert.That(() => CreateType("Program", "has number", "import TestPackage"), Throws.InstanceOf<ParsingFailed>().With.InnerException.
 			InstanceOf<Type.ImportMustBeFirst>());
 
 	[Test]
 	public void ImportMustBeValidPackageName() =>
-		Assert.That(() => new Type(package, "Program", null!).Parse(@"import $YI(*SI"),
+		Assert.That(() => CreateType("Program", "import $YI(*SI"),
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.
 				InstanceOf<Type.PackageNotFound>());
 
 	[Test]
 	public void Import()
 	{
-		var program = new Type(package, "Program", null!).Parse(@"import TestPackage
-has number
-GetNumber returns Number
-	return number");
+		var program = CreateType("Program", "import TestPackage", "has number", "GetNumber returns Number", "\treturn number");
 		Assert.That(program.Imports[0].Name, Is.EqualTo(nameof(TestPackage)));
 	}
 
 	[Test]
 	public void ImplementAnyIsImplicitAndNotAllowed() =>
-		Assert.That(() => new Type(package, "Program", null!).Parse(@"implement Any"),
+		Assert.That(() => CreateType("Program", "implement Any"),
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.
 				InstanceOf<Type.ImplementAnyIsImplicitAndNotAllowed>());
 
 	[Test]
 	public void ImplementMustBeBeforeMembersAndMethods() =>
-		Assert.That(() => new Type(package, "Program", null!).Parse(@"has log
-implement App"),
+		Assert.That(() => CreateType("Program", "has log", "implement App"),
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.
 				InstanceOf<Type.ImplementMustComeBeforeMembersAndMethods>());
 
 	[Test]
 	public void MembersMustComeBeforeMethods() =>
-		Assert.That(() => new Type(package, "Program", null!).Parse(@"Run
-has log"),
+		Assert.That(() => CreateType("Program", "Run", "has log"),
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.
 				InstanceOf<Type.MembersMustComeBeforeMethods>());
 
 	[Test]
 	public void SimpleApp() =>
-		CheckApp(new Type(package, "Program", null!).Parse(@"implement App
-has log
-Run
-	log.Write(""Hello World!"")"));
+		CheckApp(CreateType("Program", "implement App", "has log", "Run",
+			"\tlog.Write(\"Hello World!\")"));
 
 	private static void CheckApp(Type program)
 	{
@@ -114,34 +107,27 @@ Run
 
 	[Test]
 	public void AnotherApp() =>
-		CheckApp(new Type(package, "Program", null!).Parse(@"implement App
-has log
-Run
-	for number in Range(0, 10)
-		log.Write(""Counting: "" + number)"));
+		CheckApp(CreateType("Program", "implement App", "has log", "Run", "\tfor number in Range(0, 10)", "\t\tlog.Write(\"Counting: \" + number)"));
 
 	[Test]
 	public void MustImplementAllTraitMethods() =>
-		Assert.That(() => new Type(package, "Program", null!).Parse(@"implement App
-add(number)
-	return one + 1"),
+		Assert.That(() => CreateType("Program", "implement App", "add(number)", "\treturn one + 1"),
 			Throws.InstanceOf<Type.MustImplementAllTraitMethods>());
 
 	[Test]
 	public void TraitMethodsMustBeImplemented() =>
-		Assert.That(() => new Type(package, "Program", null!).Parse(@"implement App
-Run"),
+		Assert.That(() => CreateType("Program", "implement App", "Run"),
 			Throws.InstanceOf<Type.MethodMustBeImplementedInNonTraitType>());
 
 	[Test]
 	public void Trait()
 	{
-		var app = new Type(package, "DummyApp", null!).Parse("Run");
+		var app = CreateType("DummyApp", "Run");
 		Assert.That(app.IsTrait, Is.True);
 		Assert.That(app.Name, Is.EqualTo("DummyApp"));
 		Assert.That(app.Methods[0].Name, Is.EqualTo("Run"));
 	}
-
+	/*TODO: remove, can't be wrong anymore, only name is passed into constructor
 	[Test]
 	public void FileExtensionMustBeStrict() =>
 		Assert.ThrowsAsync<Type.FileExtensionMustBeStrict>(() =>
@@ -157,4 +143,5 @@ Run"),
 		Assert.ThrowsAsync<Type.FilePathMustMatchPackageName>(() =>
 			new Type(new Package(package, nameof(TypeTests)), "DummyApp", null!).ParseFile(
 				nameof(TypeTests) + "\\test.strict"));
+	*/
 }
