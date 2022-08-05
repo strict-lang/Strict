@@ -127,21 +127,4 @@ public class TypeTests
 		Assert.That(app.Name, Is.EqualTo("DummyApp"));
 		Assert.That(app.Methods[0].Name, Is.EqualTo("Run"));
 	}
-	/*TODO: remove, can't be wrong anymore, only name is passed into constructor
-	[Test]
-	public void FileExtensionMustBeStrict() =>
-		Assert.ThrowsAsync<Type.FileExtensionMustBeStrict>(() =>
-			new Type(package, "DummyApp", null!).ParseFile("test.txt"));
-
-	[Test]
-	public void FilePathMustMatchPackageName() =>
-		Assert.ThrowsAsync<Type.FilePathMustMatchPackageName>(() =>
-			new Type(package, "DummyApp", null!).ParseFile("test.strict"));
-
-	[Test]
-	public void FilePathMustMatchMainPackageName() =>
-		Assert.ThrowsAsync<Type.FilePathMustMatchPackageName>(() =>
-			new Type(new Package(package, nameof(TypeTests)), "DummyApp", null!).ParseFile(
-				nameof(TypeTests) + "\\test.strict"));
-	*/
 }

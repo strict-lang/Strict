@@ -129,7 +129,7 @@ public sealed class If : BlockExpression
 			method.bodyLines[methodLineNumber - 1].Tabs + 1)
 			throw new Method.InvalidIndentation(method.Type, method.TypeLineNumber + methodLineNumber,
 				string.Join('\n', method.bodyLines.ToWordList()), method.Name);
-//TODO: this doesn't look like we support multiple lines in the then expression yet???
+		//https://deltaengine.fogbugz.com/f/cases/25323
 		return method.ParseMethodLine(method.bodyLines[methodLineNumber], ref methodLineNumber);
 	}
 

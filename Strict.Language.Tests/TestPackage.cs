@@ -29,7 +29,12 @@ from(number)
 Run
 	value is not """"
 +(other) returns Text
-	return value".SplitLines()), null!);
+	return value
+digits(number) returns Numbers
+	if floor(number / 10) is 0
+		return (number % 10)
+	else
+		return digits(floor(number / 10)) + number % 10".SplitLines()), null!);
 		new Type(this, new FileData(Base.Log, @"has Text
 Write(text)
 	return Text

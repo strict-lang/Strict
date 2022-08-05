@@ -80,4 +80,12 @@ public sealed class BinaryTests : TestExpressions
 				CreateBinary(
 					CreateBinary(new Number(method, 2), BinaryOperator.Plus, new Number(method, 5)),
 					BinaryOperator.Multiply, new Number(method, 3)))));
+
+	[Test]
+	public void HasMatchingLeftAndRightExpressionTypes()
+	{
+		var expression = ParseExpression("(\"a\", \"b\") + Count(5)");
+		Assert.That(expression, Is.InstanceOf<Binary>()!);
+		Assert.That(((Binary)expression).ReturnType, Is.EqualTo(type.GetType(Base.Text)));
+	}
 }

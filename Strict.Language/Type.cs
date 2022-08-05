@@ -2,8 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Threading.Tasks;
 
 namespace Strict.Language;
 
@@ -228,37 +226,15 @@ public class Type : Context
 			? " " + nameof(Implements) + " " + Implements.ToWordList()
 			: "");
 
-	//TODO: https://deltaengine.fogbugz.com/f/cases/24806
+	//https://deltaengine.fogbugz.com/f/cases/24806
 
 	public override Type? FindType(string name, Context? searchingFrom = null) =>
 		name == Name || name.Contains('.') && name == base.ToString()
 			? this
 			: Package.FindType(name, searchingFrom ?? this);
-	/*TODO: not longer called
-	/// <summary>
-	/// Called from <see cref="Repositories.ParseAllFiles"/> in parallel for all the files in the
-	/// package which is the reason for not calling this from constructor
-	/// </summary>
-	public async Task ParseFile(string filePath)
-	{
-		if (!filePath.EndsWith(Extension, StringComparison.Ordinal))
-			throw new FileExtensionMustBeStrict(filePath);
-		var directory = Path.GetDirectoryName(filePath)!;
-		var paths = directory.Split(Path.DirectorySeparatorChar);
-		CheckForFilePathErrors(filePath, paths, directory);
-		//https://deltaengine.fogbugz.com/f/cases/25240
-		Parse(await File.ReadAllLinesAsync(filePath));
-	}
-	*/
+
 	private void CheckForFilePathErrors(string filePath, IReadOnlyList<string> paths, string directory)
 	{
-		/*TODO: remove
-		if (Package.Name != paths.Last())
-			throw new FilePathMustMatchPackageName(Package.Name, directory);
-		if (!string.IsNullOrEmpty(Package.Parent.Name) &&
-			(paths.Count < 2 || Package.Parent.Name != paths[^2]))
-			throw new FilePathMustMatchPackageName(Package.Parent.Name, directory);
-		*/
 		if (directory.EndsWith(@"\strict-lang\Strict", StringComparison.Ordinal))
 			throw new StrictFolderIsNotAllowedForRootUseBaseSubFolder(filePath); //ncrunch: no coverage
 	}
@@ -270,18 +246,7 @@ public class Type : Context
 	} //ncrunch: no coverage end
 
 	public const string Extension = ".strict";
-	/*TODO: remove, can't be wrong anymore
-	public sealed class FileExtensionMustBeStrict : Exception
-	{
-		public FileExtensionMustBeStrict(string filePath) : base(filePath) { }
-	}
 
-	public sealed class FilePathMustMatchPackageName : Exception
-	{
-		public FilePathMustMatchPackageName(string filePath, string packageName) : base(filePath +
-			" must be in package folder " + packageName) { }
-	}
-	*/
 	public Method GetMethod(string methodName, IReadOnlyList<Expression> arguments) =>
 		FindMethod(methodName, arguments) ?? (methodName == Method.From && arguments.Count == 0
 			? throw new StaticMethodCallsAreNotPossible(this)
@@ -321,7 +286,7 @@ public class Type : Context
 	private bool CanUpCast(Type sameOrBaseType)
 	{
 		if (sameOrBaseType.Name is Base.List)
-			return Name == Base.Number || implements.Contains(GetType(Base.Number)) || Name == Base.Text;//TODO: check actual generics of this list type!
+			return Name == Base.Number || implements.Contains(GetType(Base.Number)) || Name == Base.Text; //TODO: check actual generics of this list type!
 		if (sameOrBaseType.Name is Base.Text or Base.List)
 			return Name == Base.Number || implements.Contains(GetType(Base.Number));
 		return false;

@@ -82,19 +82,17 @@ public sealed class Method : Context
 	/// Simple lexer to just parse the method definition and get all used names and types. Method code
 	/// itself is parsed in are more complex way (Shunting yard/PhraserTokenizer/BNF/etc.) and slower.
 	/// </summary>
-	private static string GetName(string firstLine)
+	private static string GetName(ReadOnlySpan<char> firstLine)
 	{
-		//TODO: should be a ReadOnlySpan from the caller
-		//tst: var block = new Memory<char>(firstLine.ToCharArray());
-		var blockSpan = firstLine.AsSpan(); //tst: block.Span;
 		//Run\n
 		//Run(number)
 		//Run returns Text\n
-		for (var i = 0; i < blockSpan.Length; i++)
-			if (blockSpan[i] == '(' || blockSpan[i] == ' ' || blockSpan[i] == '\n')
-				return blockSpan[..i].ToString();
-		//TODO: many times slower, optimize!
-		return firstLine.SplitWordsAndPunctuation()[0];
+		for (var i = 0; i < firstLine.Length; i++)
+			if (firstLine[i] == '(' || firstLine[i] == ' ' || firstLine[i] == '\n')
+				return firstLine[..i].ToString();
+		var spanSplitEnumerator = firstLine.Split();
+		spanSplitEnumerator.MoveNext();
+		return spanSplitEnumerator.Current.ToString();
 	}
 
 	public const string From = "from";

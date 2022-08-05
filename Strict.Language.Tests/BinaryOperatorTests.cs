@@ -21,7 +21,7 @@ GetComplicatedSequenceTexts returns Texts
 	return for numbers
 		 to Text
 		Length * Length
-		4 + value * 3
+		4 + value * 3 ^ 2
 		 to Text";
 	private readonly ReadOnlyMemory<char> inputMemory = Input.AsMemory();
 
@@ -37,7 +37,7 @@ GetComplicatedSequenceTexts returns Texts
 				if (word[0].IsSingleCharacterOperator() || word.IsMultiCharacterOperator())
 					operatorCounter++;
 		}
-		Assert.That(operatorCounter, Is.EqualTo(6));
+		Assert.That(operatorCounter, Is.EqualTo(7));
 	}
 
 	//ncrunch: no coverage start

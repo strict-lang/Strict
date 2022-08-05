@@ -13,7 +13,7 @@ public static class BinaryOperator
 	public const string Minus = "-";
 	public const string Multiply = "*";
 	public const string Divide = "/";
-	public const string Power = "^"; //TODO: got no test for this
+	public const string Power = "^";
 	public const string Modulate = "%";
 	public const string Smaller = "<";
 	public const string Greater = ">";
@@ -35,7 +35,7 @@ public static class BinaryOperator
 	public static bool IsSingleCharacterOperator(this char tokenFirstCharacter) =>
 		AnySingleCharacterOperator.Contains(tokenFirstCharacter);
 
-	private const string AnySingleCharacterOperator = Plus + Minus + Multiply + Divide + Modulate + Smaller + Greater;
+	private const string AnySingleCharacterOperator = Plus + Minus + Multiply + Divide + Modulate + Smaller + Greater + Power;
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static bool IsMultiCharacterOperator(this string name)

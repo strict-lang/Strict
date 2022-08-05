@@ -49,7 +49,7 @@ public abstract class Context
 		//repositories will still not be found, so replace last i with y -> repository
 		//TODO: to create list, make new type from Base.List and inject the generic sub type
 		if (name.EndsWith('s'))
-			name = name[..^1]; //TODO: make sure array access is also round brackets for us
+			name = name[..^1]; //https://deltaengine.fogbugz.com/f/cases/25321
 		if (name == Name)
 			return (Type)this;
 		return (FindFullType(name) ?? FindType(name, this)) ??

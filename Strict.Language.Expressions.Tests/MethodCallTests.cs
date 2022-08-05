@@ -69,9 +69,13 @@ public sealed class MethodCallTests : TestExpressions
 		Assert.That(ParseExpression("Character(7)"),
 			Is.EqualTo(CreateFromMethodCall(type.GetType(Base.Character), new Number(type, 7))));
 
-	//TODO: should correctly find method and call the right number of argument MethodCall
+	//TODO: should correctly find method and call the right number of argument MethodCall -> Is below test correct?
 	// someClass.ComplicatedMethod((1, 2, 3) + (4, 5), 7)
 	// list of 2 arguments:
 	// [0] = (1, 2, 3) + (4, 5)
 	// [1] = 7
+	[Test]
+	public void FindRightMethodCall() =>
+		Assert.That(ParseExpression("digits(7)"),
+			Is.EqualTo(CreateFromMethodCall(type.GetType(Base.Count), new Number(type, 7))));
 }
