@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 
 namespace Strict.Language;
@@ -282,8 +283,14 @@ public class Type : Context
 	}
 	*/
 	public Method GetMethod(string methodName, IReadOnlyList<Expression> arguments) =>
-		FindMethod(methodName, arguments) ??
-		throw new NoMatchingMethodFound(this, methodName, AvailableMethods);
+		FindMethod(methodName, arguments) ?? (methodName == Method.From && arguments.Count == 0
+			? throw new StaticMethodCallsAreNotPossible(this)
+			: throw new NoMatchingMethodFound(this, methodName, AvailableMethods));
+
+	public sealed class StaticMethodCallsAreNotPossible : Exception
+	{
+		public StaticMethodCallsAreNotPossible(Type type) : base(type.ToString()) { }
+	}
 
 	public Method? FindMethod(string methodName, IReadOnlyList<Expression> arguments)
 	{
@@ -359,7 +366,7 @@ public class Type : Context
 	{
 		public NoMatchingMethodFound(Type type, string methodName,
 			IReadOnlyDictionary<string, List<Method>> availableMethods) : base(methodName +
-			" not found for " + type + ", available methods" + availableMethods.Keys.ToWordList()) { }
+			" not found for " + type + ", available methods: " + availableMethods.Keys.ToWordList()) { }
 	}
 
 	public sealed class ArgumentsDoNotMatchMethodParameters : Exception

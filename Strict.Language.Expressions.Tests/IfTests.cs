@@ -89,7 +89,7 @@ public sealed class IfTests : TestExpressions
 	[Test]
 	public void InvalidConditionInConditionalExpression() =>
 		Assert.That(() => ParseExpression("let result = 5 ? true"),
-			Throws.InstanceOf<If.InvalidCondition>());
+			Throws.InstanceOf<UnknownExpression>());
 
 	[Test]
 	public void ReturnTypeOfThenAndElseMustHaveMatchingType() =>
@@ -99,13 +99,23 @@ public sealed class IfTests : TestExpressions
 	[TestCase("let result = true ? true else false")]
 	[TestCase("let result = false ? \"Yes\" else \"No\"")]
 	[TestCase("let result = 5 is 5 ? (1, 2) else (3, 4)")]
-	//[TestCase("let result = 5 + (false ? 1 else 2)")]
-	[TestCase("Log.Write(true ? \"Yes\" else \"No\")")]
+	[TestCase("let result = 5 + (false ? 1 else 2)")]
 	public void ValidConditionalExpressions(string code)
 	{
 		var expression = ParseExpression(code);
 		Assert.That(expression, Is.InstanceOf<Assignment>()!);
 		var assignment = expression as Assignment;
-		Assert.That(assignment?.Value, Is.InstanceOf<If>()!);
+		Assert.That(assignment?.Value, Is.InstanceOf<If>().Or.InstanceOf<Binary>()!);
 	}
+
+	[Test]
+	public void ConditionalExpressionsCannotBeNested() =>
+		Assert.That(() => ParseExpression("let result = true ? true else (5 is 5 ? false else true)"),
+			Throws.InstanceOf<If.ConditionalExpressionsCannotBeNested>());
+
+	[TestCase("log.Write(true ? \"Yes\" else \"No\")")]
+	[TestCase("let something = 5 is 5 ? false else true")]
+	[TestCase("return 6 is 5 ? true else false")]
+	public void ConditionalExpressionsAsPartOfOtherExpression(string code) =>
+		Assert.That(ParseExpression(code).ToString(), Is.EqualTo(code));
 }

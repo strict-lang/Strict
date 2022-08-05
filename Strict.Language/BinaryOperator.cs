@@ -13,7 +13,7 @@ public static class BinaryOperator
 	public const string Minus = "-";
 	public const string Multiply = "*";
 	public const string Divide = "/";
-	public const string Power = "^";
+	public const string Power = "^"; //TODO: got no test for this
 	public const string Modulate = "%";
 	public const string Smaller = "<";
 	public const string Greater = ">";

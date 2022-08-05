@@ -116,7 +116,7 @@ public sealed class PhraseTokenizer
 				result.Add(index..(index + 1));
 				break;
 			}
-			else if (input[index] == ',')
+			else if (input[index] == ',' || input[index] == '?')
 			{
 				foundListSeparator = true;
 				result.Add(index..(index + 1));

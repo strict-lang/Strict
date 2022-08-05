@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Strict.Language.Expressions;
 
@@ -18,7 +19,8 @@ public sealed class ShuntingYard
 		if (Output.Count == 0)
 			throw new NotSupportedException("Nothing found! Should never happen."); //ncrunch: no coverage
 #if LOG_DETAILS
-		Logger.Info("Operators: " + string.Join(", ", operators) + " Output Ranges: " + string.Join(", ", Output));
+		Logger.Info("Operators: " + string.Join(", ", operators) + " Output Ranges: " +
+			string.Join(", ", Output.Select(range => range + "=" + input[range])));
 #endif
 	}
 
@@ -28,7 +30,7 @@ public sealed class ShuntingYard
 	{
 		var (_, length) = tokenRange.GetOffsetAndLength(input.Length);
 #if LOG_DETAILS
-		//Logger.Info(nameof(PutTokenIntoStacks) + ": " + input[tokenRange]);
+		Logger.Info(nameof(PutTokenIntoStacks) + ": " + input[tokenRange]);
 #endif
 		if (length == 1)
 			PutSingleCharacterTokenIntoStacks(tokenRange);

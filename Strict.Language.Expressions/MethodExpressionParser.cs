@@ -35,17 +35,16 @@ public class MethodExpressionParser : ExpressionParser
 		if (input[0] == '(' && input[^1] == ')' && input.Contains(',') && input.Count('(') == 1)
 			return new List(line,
 				line.Method.ParseListArguments(line, range.RemoveFirstAndLast(line.Text.Length)));
+		// Conditionals are only supported here and can't be nested
+		if (If.CanTryParseConditional(line, range))
+			return If.ParseConditional(line, range);
 		var postfix = new ShuntingYard(line.Text, range);
-		//if (input.Contains('?'))
-		//	return If.TryParseConditional(line, range) ??
-		//		throw new UnknownExpression(line, line.Text[range]);
 		return postfix.Output.Count switch
 		{
 			1 => TryParseMemberOrZeroOrOneArgumentMethodCall(line, range) ?? ParseTextWithSpacesOrListWithMultipleOrNestedElements(line, postfix.Output.Pop()),
 			//TODO: can also be any method call or anything we excluded above that was still 1 token
 			2 => Not.Parse(line, postfix),
 			_ => //TODO: should never happen here, Binary will complain if we have a comma there! postfix.Output.Count % 2 != 1 && line.Text[postfix.Output.Skip(1).First().Start.Value] == ',' ?
-				If.TryParseConditional(line, range) ??
 				Binary.Parse(line, postfix.Output)
 		};
 	}
@@ -114,10 +113,8 @@ public class MethodExpressionParser : ExpressionParser
 					members.IsAtEnd
 						? arguments
 						: Array.Empty<Expression>());
-				if (expression == null)
-					throw new MemberOrMethodNotFound(line, current?.ReturnType ?? line.Method.Type,
-						line.Text[members.Current]);
-				current = expression;
+				current = expression ?? throw new MemberOrMethodNotFound(line,
+					current?.ReturnType ?? line.Method.Type, line.Text[members.Current]);
 				context = current.ReturnType;
 			}
 			return current;
@@ -205,6 +202,8 @@ public class MethodExpressionParser : ExpressionParser
 		var innerSpan = line.Text.GetSpanFromRange(range);
 		if (innerSpan.Contains('(') || innerSpan.Contains('"') && innerSpan.Contains(' '))
 		{
+			if (If.CanTryParseConditional(line, range))
+				return new List<Expression> { If.ParseConditional(line, range) };
 			// The postfix data comes in upside down, so use another stack to restore order
 			var expressions = new Stack<Expression>();
 			// Similar to TryParseExpression, but we know there is commas separating things! 

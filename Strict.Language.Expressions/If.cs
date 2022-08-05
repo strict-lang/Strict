@@ -9,8 +9,6 @@ namespace Strict.Language.Expressions;
 /// </summary>
 public sealed class If : BlockExpression
 {
-	//https://deltaengine.fogbugz.com/f/cases/25289
-
 	public If(Expression condition, Expression then, Expression? optionalElse = null,
 		Method.Line? lineForErrorMessage = null) : base(GetMatchingType(then.ReturnType,
 		optionalElse?.ReturnType, lineForErrorMessage))
@@ -55,9 +53,12 @@ public sealed class If : BlockExpression
 		Condition.GetHashCode() ^ Then.GetHashCode() ^ (OptionalElse?.GetHashCode() ?? 0);
 
 	public override string ToString() =>
-		"if " + Condition + Environment.NewLine + "\t" + Then + (OptionalElse != null
-			? Environment.NewLine + "else" + Environment.NewLine + "\t" + OptionalElse
-			: "");
+		OptionalElse != null && Then.ReturnType == OptionalElse.ReturnType &&
+		Then is not BlockExpression && OptionalElse is not BlockExpression
+			? Condition + " ? " + Then + " else " + OptionalElse
+			: "if " + Condition + Environment.NewLine + "\t" + Then + (OptionalElse != null
+				? Environment.NewLine + "else" + Environment.NewLine + "\t" + OptionalElse
+				: "");
 
 	public override bool Equals(Expression? other) =>
 		other is If a && Equals(Condition, a.Condition) && Then.Equals(a.Then) &&
@@ -114,8 +115,10 @@ public sealed class If : BlockExpression
 
 	public class InvalidCondition : ParsingFailed
 	{
-		public InvalidCondition(Method.Line line, Type conditionReturnType) : base(line,
-			message: line.Text + "\n Return type " + conditionReturnType + " is not " + Base.Boolean) { }
+		public InvalidCondition(Method.Line line, Type? conditionReturnType = null) : base(line,
+			conditionReturnType != null
+				? line.Text + "\n Return type " + conditionReturnType + " is not " + Base.Boolean
+				: null) { }
 	}
 
 	private static Expression GetThenExpression(Method method, ref int methodLineNumber)
@@ -135,27 +138,45 @@ public sealed class If : BlockExpression
 		public MissingThen(Method.Line line) : base(line) { }
 	}
 
-	public static Expression? TryParseConditional(Method.Line line, Range range)
+	public static bool CanTryParseConditional(Method.Line line, Range range)
 	{
-		var partToParseSpan = line.Text.GetSpanFromRange(range);
-		if (!partToParseSpan.Contains('?'))
-			return null;
-		var rangeEnumerator = new RangeEnumerator(partToParseSpan, '?', range.Start);
-		rangeEnumerator.MoveNext();
-		var condition = GetConditionExpression(line, rangeEnumerator.Current.Start..(rangeEnumerator.Current.End.Value - 1));
-		rangeEnumerator.MoveNext();
-		var elseStartingIndex = line.Text.GetSpanFromRange(rangeEnumerator.Current).IndexOf("else");
-		if (elseStartingIndex < 0)
+		var input = line.Text.GetSpanFromRange(range);
+		var questionMarkIndex = input.IndexOf('?');
+		var firstBracket = input.IndexOf('(');
+		if (questionMarkIndex > 2 && (firstBracket == -1 || firstBracket > questionMarkIndex))
+			return input.Count('?') > 1
+				? throw new ConditionalExpressionsCannotBeNested(line)
+				: true;
+		return false;
+	}
+
+	public static If ParseConditional(Method.Line line, Range range)
+	{
+		var input = line.Text.GetSpanFromRange(range);
+#if LOG_DETAILS
+		Logger.Info(nameof(ParseConditional) + " " + input.ToString());
+#endif
+		var questionMarkIndex = input.IndexOf('?');
+		if (questionMarkIndex < 2)
+			throw new InvalidCondition(line);
+		var elseIndex = input.IndexOf(" else ");
+		if (elseIndex <= 5)
 			throw new MissingElseExpression(line);
-		var thenLength = rangeEnumerator.Current.Start.Value + elseStartingIndex;
-		return new If(condition,
-			line.Method.ParseExpression(line,
-				(rangeEnumerator.Current.Start.Value + 1)..(thenLength - 1)),
-			line.Method.ParseExpression(line, (thenLength + 4 + 1)..), line);
+		var start = range.Start.Value;
+		var conditionRange = start..(start + questionMarkIndex - 1);
+		var thenRange = (start + questionMarkIndex + 2)..(start + elseIndex);
+		var elseRange = (start + elseIndex + 6)..(start + input.Length);
+		return new If(GetConditionExpression(line, conditionRange),
+			line.Method.ParseExpression(line, thenRange), line.Method.ParseExpression(line, elseRange));
 	}
 
 	public sealed class MissingElseExpression : ParsingFailed
 	{
 		public MissingElseExpression(Method.Line line) : base(line) { }
+	}
+
+	public sealed class ConditionalExpressionsCannotBeNested : ParsingFailed
+	{
+		public ConditionalExpressionsCannotBeNested(Method.Line line) : base(line) { }
 	}
 }

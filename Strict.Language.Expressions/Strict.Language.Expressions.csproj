@@ -5,6 +5,7 @@
 		<Nullable>enable</Nullable>
 		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 		<WarningsAsErrors />
+		<DefineConstants>$(DefineConstants)TRACE;LOG_DETAILS</DefineConstants>
 	</PropertyGroup>
 
 	<ItemGroup>
