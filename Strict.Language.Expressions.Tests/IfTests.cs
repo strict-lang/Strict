@@ -115,7 +115,7 @@ public sealed class IfTests : TestExpressions
 
 	[TestCase("log.Write(true ? \"Yes\" else \"No\")")]
 	[TestCase("log.Write(true ? \"Yes\" + \"text\" else \"No\")")]
-	[TestCase("log.Write(\"Result\" + (true ? \"Yes\" else \"No\"))")] //TODO: Bug in the method expression parser; Shunting yard removes method call log.Write and gives back only binary tokens?
+	[TestCase("log.Write(\"Result\" + (true ? \"Yes\" else \"No\"))")]
 	[TestCase("let something = 5 is 5 ? false else true")]
 	[TestCase("return 6 is 5 ? true else false")]
 	public void ConditionalExpressionsAsPartOfOtherExpression(string code) =>

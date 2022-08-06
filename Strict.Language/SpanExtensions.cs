@@ -109,8 +109,7 @@ public static class SpanExtensions
 
 	/// <summary>
 	/// Heavily optimized number parsing, which can be 10 times faster than int.TryParse and 50
-	/// times
-	/// faster than double.TryParse.
+	/// times faster than double.TryParse.
 	/// </summary>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	// ReSharper disable once MethodTooLong

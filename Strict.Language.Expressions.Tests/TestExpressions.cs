@@ -10,7 +10,7 @@ public abstract class TestExpressions : MethodExpressionParser
 {
 	protected TestExpressions()
 	{
-		type = new Type(new TestPackage(), new FileData("dummy", new[] { "Run"}), this);
+		type = new Type(new TestPackage(), new FileData("dummy", new[] { "Run" }), this);
 		boolean = type.GetType(Base.Boolean);
 		member = new Member(type, "log", new From(type.GetType(Base.Log)));
 		((List<Member>)type.Members).Add(member);

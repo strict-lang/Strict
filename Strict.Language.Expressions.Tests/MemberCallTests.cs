@@ -20,11 +20,17 @@ public sealed class MemberCallTests : TestExpressions
 
 	[Test]
 	public void NestedMemberNotFound() =>
-		Assert.That(() => ParseExpression("log.unknown"), Throws.InstanceOf<MemberOrMethodNotFound>());
+		Assert.That(() => ParseExpression("log.unknown"),
+			Throws.InstanceOf<MemberOrMethodNotFound>().With.Message.
+				StartsWith("unknown in TestPackage.Log"));
 
 	[Test]
-	public void NumbersCanNotHaveNestedCalls() =>
-		Assert.That(() => ParseExpression("1.log"), Throws.InstanceOf<UnknownExpression>());
+	public void NumbersCanNotStartNestedCall() =>
+		Assert.That(() => ParseExpression("1.log"), Throws.InstanceOf<NumbersCanNotBeInNestedCalls>());
+
+	[Test]
+	public void OperatorsCannotBeInNestedCalls() =>
+		Assert.That(() => ParseExpression("+.log"), Throws.InstanceOf<InvalidOperatorHere>());
 
 	[Test]
 	public void MultipleWordsMemberNotFound() =>
@@ -33,7 +39,7 @@ public sealed class MemberCallTests : TestExpressions
 
 	[Test]
 	public void NestedMemberIsNotAWord() =>
-		Assert.That(() => ParseExpression("log.5"), Throws.InstanceOf<MemberOrMethodNotFound>());
+		Assert.That(() => ParseExpression("log.5"), Throws.InstanceOf<NumbersCanNotBeInNestedCalls>());
 
 	[Test]
 	public void ValidMemberCall() =>

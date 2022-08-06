@@ -261,7 +261,6 @@ public class Type : Context
 	{
 		if (!AvailableMethods.TryGetValue(methodName, out var matchingMethods))
 			return null;
-		var bestMatch = matchingMethods[0];
 		foreach (var method in matchingMethods)
 			if (method.Parameters.Count == arguments.Count)
 			{
@@ -274,9 +273,8 @@ public class Type : Context
 					}
 				if (doAllParameterTypesMatch)
 					return method;
-				bestMatch = method;
 			}
-		throw new ArgumentsDoNotMatchMethodParameters(arguments, bestMatch);
+		throw new ArgumentsDoNotMatchMethodParameters(arguments, matchingMethods);
 	}
 
 	private bool IsCompatible(Type sameOrBaseType) =>
@@ -336,12 +334,14 @@ public class Type : Context
 
 	public sealed class ArgumentsDoNotMatchMethodParameters : Exception
 	{
-		public ArgumentsDoNotMatchMethodParameters(IReadOnlyList<Expression> arguments, Method method)
-			: base((arguments.Count == 0
-					? "No arguments does "
-					: "Arguments: " + arguments.Select(a => a.ReturnType + " " + a).ToWordList() + " do ") +
-				"not match \"" + method.Type + "." + method.Name + "\" method parameters: " +
-				method.Parameters.ToBrackets()) { }
+		public ArgumentsDoNotMatchMethodParameters(IReadOnlyList<Expression> arguments,
+			IEnumerable<Method> allMethods) : base((arguments.Count == 0
+				? "No arguments does "
+				: (arguments.Count == 1
+					? "Argument: "
+					: "Arguments: ") + arguments.Select(a => a.ReturnType + " " + a).ToWordList() +
+				" do ") + "not match:\n" +
+			string.Join('\n', allMethods.Select(m => m + m.Parameters.ToBrackets()))) { }
 	}
 }
 

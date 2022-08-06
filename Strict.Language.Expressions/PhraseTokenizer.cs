@@ -75,9 +75,15 @@ public sealed class PhraseTokenizer
 
 	private void ProcessNormalToken(Action<Range> processToken)
 	{
-		if (input[index] == OpenBracket)
+		if (input[index] == OpenBracket)// && (index == tokenStart || tokenStart == -1))
+		{
+			//if (tokenStart > 0 && index > tokenStart)
+			//
+			//	processToken(tokenStart..index);
+			//tokenStart = index + 1;
 			foreach (var token in GetTokensTillMatchingClosingBracket())
 				processToken(token);
+		}
 		else if (input[index] == ' ')
 		{
 			if (tokenStart >= 0)
@@ -104,9 +110,17 @@ public sealed class PhraseTokenizer
 
 	private IReadOnlyList<Range> GetTokensTillMatchingClosingBracket()
 	{
+		if (tokenStart < 0)
+			tokenStart = index;
+		// It is very important to catch everything before the opening bracket as well. However if this
+		// is a binary expression we want to catch, split the initial range as its own method call.
+		var result = new List<Range>();
+		if (index > tokenStart)
+			result.Add(tokenStart..index);
+		result.Add(index..(index + 1));
 		tokenStart = index + 1;
-		var result = new List<Range> { index..(index + 1) };
 		var foundListSeparator = false;
+		var foundNoSpace = true;
 		for (index++; index < input.Length; index++)
 			if (input[index] == CloseBracket)
 			{
@@ -122,12 +136,16 @@ public sealed class PhraseTokenizer
 				result.Add(index..(index + 1));
 			}
 			else
+			{
+				if (input[index] == ' ')
+					foundNoSpace = false;
 				ProcessNormalToken(result.Add);
+			}
 		if (result.Count < 3)
 			throw new InvalidEmptyOrUnmatchedBrackets(input[partToParse]);
-		return result.Count == 3 || foundListSeparator
-			? MergeAllTokensIntoSingleList(result)
-			: result;
+		if (result.Count == 3 || foundListSeparator || foundNoSpace)
+			return MergeAllTokensIntoSingleList(result);
+		return result;
 	}
 
 	private static Range[] MergeAllTokensIntoSingleList(List<Range> result) =>

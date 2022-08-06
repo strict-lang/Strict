@@ -23,9 +23,8 @@ public class MethodExpressionParser : ExpressionParser
 			throw new CannotParseEmptyInput(line);
 		if (input.Length < 3 || !input.Contains(' ') && !input.Contains(','))
 			return Boolean.TryParse(line, range) ?? Text.TryParse(line, range) ??
-				List.TryParseWithSingleElement(line, range) ??
-				TryParseMemberOrZeroOrOneArgumentMethodCall(line, range) ??
-				Number.TryParse(line, range) ?? (input.IsOperator()
+				List.TryParseWithSingleElement(line, range) ?? Number.TryParse(line, range) ??
+				TryParseMemberOrZeroOrOneArgumentMethodCall(line, range) ?? (input.IsOperator()
 					? throw new InvalidOperatorHere(line, input.ToString())
 					: throw new UnknownExpression(line, line.Text[range]));
 		// If this is just a simple text string, there is no need to invoke ShuntingYard
@@ -39,14 +38,32 @@ public class MethodExpressionParser : ExpressionParser
 		if (If.CanTryParseConditional(line, range))
 			return If.ParseConditional(line, range);
 		var postfix = new ShuntingYard(line.Text, range);
-		return postfix.Output.Count switch
-		{
-			1 => TryParseMemberOrZeroOrOneArgumentMethodCall(line, range) ?? ParseTextWithSpacesOrListWithMultipleOrNestedElements(line, postfix.Output.Pop()),
-			//TODO: can also be any method call or anything we excluded above that was still 1 token
-			2 => Not.Parse(line, postfix),
-			_ => //TODO: should never happen here, Binary will complain if we have a comma there! postfix.Output.Count % 2 != 1 && line.Text[postfix.Output.Skip(1).First().Start.Value] == ',' ?
-				Binary.Parse(line, postfix.Output)
-		};
+		if (postfix.Output.Count == 1)
+			return TryParseMemberOrZeroOrOneArgumentMethodCall(line, range) ??
+				ParseTextWithSpacesOrListWithMultipleOrNestedElements(line, postfix.Output.Pop());
+		if (postfix.Output.Count == 2)
+			return ParseMethodCallWithArguments(line, postfix);
+		var binary = Binary.Parse(line, postfix.Output);
+		if (postfix.Output.Count == 0)
+			return binary;
+		return ParseInContext(line.Method.Type, line, postfix.Output.Peek(), new[] { binary }) ??
+			throw new UnknownExpression(line, line.Text[postfix.Output.Peek()]);
+	}
+
+	private Expression ParseMethodCallWithArguments(Method.Line line, ShuntingYard postfix)
+	{
+		var argumentsRange = postfix.Output.Pop();
+		var methodRange = postfix.Output.Pop();
+#if LOG_DETAILS
+		Logger.Info(nameof(ParseMethodCallWithArguments) + ", method=" + line.Text[methodRange] +
+			" arguments=" + line.Text[argumentsRange]);
+#endif
+		if (line.Text[argumentsRange.Start.Value] == '(')
+			return ParseInContext(line.Method.Type, line, methodRange,
+				ParseListArguments(line, argumentsRange.RemoveFirstAndLast(line.Text.Length))) ?? throw new MemberOrMethodNotFound(line, line.Method.Type, line.Text[methodRange]);
+		return line.Text.GetSpanFromRange(methodRange).Equals(UnaryOperator.Not, StringComparison.Ordinal)
+			? new Not(line.Method.ParseExpression(line, argumentsRange))
+			: throw new InvalidOperatorHere(line, line.Text[methodRange]);
 	}
 
 	public sealed class InvalidOperatorHere : ParsingFailed
@@ -73,9 +90,6 @@ public class MethodExpressionParser : ExpressionParser
 	/// </summary>
 	public Expression? TryParseMemberOrZeroOrOneArgumentMethodCall(Method.Line line, Range range)
 	{
-		// We can early out here if this looks like a number digit
-		if (char.IsNumber(line.Text[range.Start.Value]))
-			return null;
 		var toParse = line.Text.GetSpanFromRange(range);
 		var argumentsStart = toParse.IndexOf('(');
 		if (argumentsStart > 0)
@@ -113,13 +127,26 @@ public class MethodExpressionParser : ExpressionParser
 					members.IsAtEnd
 						? arguments
 						: Array.Empty<Expression>());
-				current = expression ?? throw new MemberOrMethodNotFound(line,
-					current?.ReturnType ?? line.Method.Type, line.Text[members.Current]);
+				if (expression == null)
+				{
+					if (line.Text.GetSpanFromRange(members.Current).IsOperator())
+						throw new InvalidOperatorHere(line, line.Text[members.Current]);
+					if (line.Text.GetSpanFromRange(members.Current).TryParseNumber(out _))
+						throw new NumbersCanNotBeInNestedCalls(line, line.Text[members.Current]);
+					throw new MemberOrMethodNotFound(line, current?.ReturnType ?? line.Method.Type,
+						line.Text[members.Current]);
+				}
+				current = expression;
 				context = current.ReturnType;
 			}
 			return current;
 		}
 		return TryMemberOrMethodCall(context, null, line, range, arguments);
+	}
+
+	public sealed class NumbersCanNotBeInNestedCalls : ParsingFailed
+	{
+		public NumbersCanNotBeInNestedCalls(Method.Line line, string text) : base(line, text) { }
 	}
 
 	private static Expression? TryMemberOrMethodCall(Context context, Expression? instance, Method.Line line, Range range,
@@ -212,7 +239,7 @@ public class MethodExpressionParser : ExpressionParser
 				expressions.Push(ParseTextWithSpacesOrListWithMultipleOrNestedElements(line,
 					postfix.Output.Pop()));
 			else if (postfix.Output.Count == 2)
-				expressions.Push(Not.Parse(line, postfix));
+				expressions.Push(ParseMethodCallWithArguments(line, postfix));
 			else
 				do
 				{
