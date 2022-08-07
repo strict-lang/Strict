@@ -2,18 +2,17 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using NUnit.Framework;
+using Strict.Language;
 using Type = Strict.Language.Type;
 
 namespace Strict.Compiler.Tests;
 
-/*TODO: fix me
-[Ignore("TODO: flaky Strict.Language.Type+MustImplementAllTraitMethods : Missing methods: Strict.Base.Text.digits, Strict.Base.Text.+\r\n   at Strict.Base.Error Implements ")]
 public sealed class SourceGeneratorTests : TestCSharpGenerator
 {
 	[Test]
 	public void GenerateCSharpInterface()
 	{
-		var app = new Type(package, "DummyApp", parser).Parse("Run");
+		var app = new Type(package, new FileData("DummyApp", new[] { "Run" }), parser);
 		var file = generator.Generate(app);
 		Assert.That(file.ToString(), Is.EqualTo(@"namespace SourceGeneratorTests;
 
@@ -44,11 +43,12 @@ public class Program
 	[Category("Slow")]
 	public void CreateFileAndWriteIntoIt()
 	{
-		var program = new Type(package, nameof(CreateFileAndWriteIntoIt), parser).Parse(@"implement App
+		var program = new Type(package, new FileData(nameof(CreateFileAndWriteIntoIt),
+			(@"implement App
 has file = """ + TemporaryFile + @"""
 has log
 Run
-	file.Write(""Hello"")");
+	file.Write(""Hello"")").SplitLines()), parser);
 		var generatedCode = generator.Generate(program).ToString()!;
 		Assert.That(GenerateNewConsoleAppAndReturnOutput(ProjectFolder, generatedCode), Is.EqualTo(""));
 		Assert.That(File.Exists(Path.Combine(ProjectFolder, TemporaryFile)), Is.True);
@@ -65,11 +65,11 @@ Run
 		if (!Directory.Exists(ProjectFolder))
 			Directory.CreateDirectory(ProjectFolder);
 		File.WriteAllText(Path.Combine(ProjectFolder, TestTxt), ExpectedText);
-		var program = new Type(package, nameof(GenerateFileReadProgram), parser).Parse(@"implement App
+		var program = new Type(package, new FileData(nameof(GenerateFileReadProgram), (@"implement App
 has file = """ + TestTxt + @"""
 has log
 Run
-	log.Write(file.Read)");
+	log.Write(file.Read)").SplitLines()), parser);
 		var generatedCode = generator.Generate(program).ToString()!;
 		Assert.That(GenerateNewConsoleAppAndReturnOutput(ProjectFolder, generatedCode),
 			Is.EqualTo(ExpectedText + "\r\n"));
@@ -134,18 +134,18 @@ Run
 			Throws.InstanceOf<CSharpCompilationFailed>().And.Message.Contains("The build failed."));
 
 	[Test]
-	[Category("Manual")] // TODO: List should be working before making this test work
+	[Category("Manual")]
 	public void GenerateDirectoryGetFilesProgram()
 	{
-		var program = new Type(package, nameof(GenerateDirectoryGetFilesProgram), parser).Parse(@"implement App
+		var program = new Type(package, new FileData(nameof(GenerateDirectoryGetFilesProgram),
+			@"implement App
 has log
 has directory = "".""
 Run
 	for value in directory.GetFiles
-		log.Write(value)");
+		log.Write(value)".SplitLines()), parser);
 		var generatedCode = generator.Generate(program).ToString()!;
 		Assert.That(GenerateNewConsoleAppAndReturnOutput(ProjectFolder, generatedCode),
 			Is.EqualTo("Program.cs" + "\r\n"));
 	}
 }
-*/

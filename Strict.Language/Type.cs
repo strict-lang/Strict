@@ -21,7 +21,7 @@ public class Type : Context
 		this.expressionParser = expressionParser;
 		for (lineNumber = 0; lineNumber < file.Lines.Length; lineNumber++)
 			TryParseLine(file.Lines[lineNumber], file.Lines);
-		if (Name != Base.None && Name != Base.Boolean && //TODO: hack to make Root dummy parsing work!
+		if (Name != Base.None && Name != Base.Boolean &&
 			methods.Count == 0 && members.Count + implements.Count < 2)
 			throw new NoMethodsFound(this, lineNumber);
 		foreach (var trait in implements)
@@ -184,7 +184,7 @@ public class Type : Context
 			throw new MethodMustBeImplementedInNonTraitType(this, definitionLine);
 		while (IsNextLineValidMethodBody(lines))
 			methodLines.Add(lines[++lineNumber]);
-		return methodLines.ToArray(); //TODO: would be cool if this can be avoided
+		return methodLines.ToArray();
 	}
 
 	private bool IsNextLineValidMethodBody(string[] lines)
@@ -284,7 +284,7 @@ public class Type : Context
 	private bool CanUpCast(Type sameOrBaseType)
 	{
 		if (sameOrBaseType.Name is Base.List)
-			return Name == Base.Number || implements.Contains(GetType(Base.Number)) || Name == Base.Text; //TODO: check actual generics of this list type!
+			return Name == Base.Number || implements.Contains(GetType(Base.Number)) || Name == Base.Text;
 		if (sameOrBaseType.Name is Base.Text or Base.List)
 			return Name == Base.Number || implements.Contains(GetType(Base.Number));
 		return false;

@@ -7,7 +7,7 @@ using Strict.Language.Expressions;
 
 namespace Strict.Compiler.Cuda.Tests;
 
-[Ignore("TODO: fix all other things first")]
+[Ignore("fix all other things first")]
 public class CSharpToCudaTranspilerTests
 {
 	[SetUp]

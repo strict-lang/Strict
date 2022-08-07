@@ -13,7 +13,7 @@ public class MethodExpressionParser : ExpressionParser
 	{
 		var constructor = type.Methods[0];
 		var line = new Method.Line(constructor, 0, initializationLine, fileLineNumber);
-		return new MethodCall(constructor, new From(type)); //TODO: argument logic need some more tests, ParseExpression(line, ..)); maybe non constructor calls also make sense here?
+		return new MethodCall(constructor, new From(type));
 	}
 
 	public override Expression ParseExpression(Method.Line line, Range range)
@@ -158,10 +158,6 @@ public class MethodExpressionParser : ExpressionParser
 #if LOG_DETAILS
 		Logger.Info(nameof(TryMemberOrMethodCall) + ": " + partToParse.ToString()+" in "+context+" with arguments="+arguments.ToWordList());
 #endif
-		//foreach (var (name, variableValue) in GetAvailableVariables(context))
-		//	if (partToParse.Equals(name, StringComparison.Ordinal))
-		//		return variableValue;//TODO: should be member yo
-		//TODO: test: Find all parent members as well use unit test -> Count(5).Floor is 5
 		var type = context as Type ?? line.Method.Type;
 		if (arguments.Count == 0)
 		{
@@ -182,7 +178,6 @@ public class MethodExpressionParser : ExpressionParser
 			Logger.Info("ParseNested found no member in " + line.Method);
 #endif
 		}
-		//TODO: the member can be anything, any expression, don't assume it is always a member/method!
 		var methodName = partToParse.ToString();
 		var method2 = type.FindMethod(methodName, arguments);
 		if (method2 != null)

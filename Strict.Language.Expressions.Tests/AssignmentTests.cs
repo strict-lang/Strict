@@ -98,16 +98,16 @@ public class AssignmentTests : TestExpressions
 	public void LetWithoutExpressionCannotParse() =>
 		Assert.That(() => ParseExpression("let value = abc"),
 			Throws.Exception.InstanceOf<UnknownExpression>().With.Message.Contain("abc"));
-	//TODO: Check with Ben and resolve
-//	[Test]
-//	public void AssignmentWithArguments()
-//	{
-//		const string Code = "has input = Text(5)";
-//		var type = new Type(null!, "Assignment", new MethodExpressionParser()).Parse(@"import Strict
-//has number
-//has file = ""test.txt""
-//Run
-//	file.Write(number)");
-//		var expression = (Assignment)ParseExpression(Code);
-//	}
+
+	[Test]
+	public void AssignmentWithArguments()
+	{
+		const string Code = "has input = Text(5)";
+		// this is a bit strange, why would we need assigmentType here, it is not used by Code yet?
+		var assignmentType = new Type(type.Package, new FileData("Assignment", @"has number
+has file = ""test.txt""
+Run
+	file.Write(number)".SplitLines()), new MethodExpressionParser());
+		Assert.That(((Assignment)ParseExpression(Code)).ToString(), Is.EqualTo(Code));
+	}
 }

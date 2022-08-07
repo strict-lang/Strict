@@ -36,7 +36,7 @@ public sealed class Binary : MethodCall
 		var left = GetUnaryOrBuildNestedBinary(line, tokens.Pop(), tokens);
 		if (HasMismatchingTypes(left, right))
 			throw new MismatchingTypeFound(line);
-		var operatorToken = line.Text[operatorTokenRange]; //TODO: make more efficient
+		var operatorToken = line.Text[operatorTokenRange];
 		if (operatorToken == "*" && HasIncompatibleDimensions(left, right))
 			throw new ListsHaveDifferentDimensions(line, left + " " + right);
 		var arguments = new[] { right };

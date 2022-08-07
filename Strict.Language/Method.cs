@@ -13,14 +13,6 @@ namespace Strict.Language;
 /// </summary>
 public sealed class Method : Context
 {
-	//TODO: json parser for comparison how to do async reading lines
-	public async Task ParseJson(StreamReader reader)
-	{
-		var dummy = new Memory<char>(new char[1024]);
-		var actualRead = await reader.ReadAsync(dummy);
-		dummy.Span.Slice(1, 10);
-	}
-
 	public Method(Type type, int typeLineNumber, ExpressionParser parser,
 		// Memory<char> lines https://deltaengine.fogbugz.com/f/cases/25240
 		IReadOnlyList<string> lines)
@@ -76,17 +68,15 @@ public sealed class Method : Context
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public Expression ParseMethodLine(Line line, ref int methodLineNumber) =>
-		parser.ParseMethodLine(line, ref methodLineNumber); //TODO: pretty sure we need to parse multiple lines like for if then or else, but also for for
+		parser.ParseMethodLine(line, ref methodLineNumber);
 
 	/// <summary>
 	/// Simple lexer to just parse the method definition and get all used names and types. Method code
 	/// itself is parsed in are more complex way (Shunting yard/PhraserTokenizer/BNF/etc.) and slower.
+	/// Examples: Run\n, Run(number)\n, Run returns Text\n
 	/// </summary>
 	private static string GetName(ReadOnlySpan<char> firstLine)
 	{
-		//Run\n
-		//Run(number)
-		//Run returns Text\n
 		for (var i = 0; i < firstLine.Length; i++)
 			if (firstLine[i] == '(' || firstLine[i] == ' ' || firstLine[i] == '\n')
 				return firstLine[..i].ToString();
@@ -137,16 +127,10 @@ public sealed class Method : Context
 			else
 				break;
 		CheckIndentation(line, TypeLineNumber + methodLineNumber, tabs);
-		//TODO: use ReadOnlySpan till here, and then convert to string inside
 		lines[methodLineNumber - 1] = new Line(this, tabs, line[tabs..], TypeLineNumber + methodLineNumber);
 	}
 
 	public readonly IReadOnlyList<Line> bodyLines;
-	/*TODO: just an idea, probably makes no big difference as lines are parsed lazily, so this would keep file memory buffer around, which we also don't like 
-	public sealed record NewLine(Method Method, int Tabs, Memory<char> Text, int FileLineNumber)
-	{
-		public override string ToString() => new string('\t', Tabs) + Text;
-	}*/
 
 	public sealed record Line(Method Method, int Tabs, string Text, int FileLineNumber)
 	{

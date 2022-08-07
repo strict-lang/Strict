@@ -91,7 +91,6 @@ public class PackageTests
 	}
 
 	[Test]
-	[Ignore("TODO: first load None (if still needed), then Any, then Boolean in Root, do fill them with logic later AFTER all other types are loaded. We also need to figure out which dependencies have to load first")]
 	public async Task LoadTypesFromOtherPackage()
 	{
 		var strictPackage =

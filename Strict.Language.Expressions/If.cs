@@ -83,14 +83,6 @@ public sealed class If : BlockExpression
 		public UnexpectedElse(Method.Line line) : base(line) { }
 	}
 
-	//TODO: some testing missing!
-	// if 5 (checked and failed)
-	// if true (ok)
-	// if isInternal (not checked, bad) member
-	// if bla is 5 (ok)
-	// if HasMember("idontknow") <- ???????? method
-	// if number/text/list/boolean/spaces (binary, list, unary)
-	// if String(5) <- constructor ??????
 	private static Expression TryParseIf(Method.Line line, ref int methodLineNumber)
 	{
 		var condition = GetConditionExpression(line, 3..);

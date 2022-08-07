@@ -1,17 +1,15 @@
 using System;
 using NUnit.Framework;
 using Strict.Compiler.Roslyn;
+using Strict.Language;
 using Strict.Language.Expressions;
 using Type = Strict.Language.Type;
 
 namespace Strict.Compiler.Tests;
 
-/*TODO: fix me
-[Ignore("TODO: flaky Strict.Language.Type+MustImplementAllTraitMethods : Missing methods: Strict.Base.Text.digits, Strict.Base.Text.+\r\n   at Strict.Base.Error Implements ")]
 public sealed class CSharpTypeVisitorTests : TestCSharpGenerator
 {
 	[Test]
-	[Ignore("TODO: flaky Strict.Language.Type+MustImplementAllTraitMethods : Missing methods: Strict.Base.Text.digits, Strict.Base.Text.+\r\n   at Strict.Base.Error Implements ")]
 	public void GenerateHelloWorldApp()
 	{
 		var program = CreateHelloWorldProgramType();
@@ -32,10 +30,10 @@ public sealed class CSharpTypeVisitorTests : TestCSharpGenerator
 	}
 
 	[Test]
-	[Ignore("TODO: flaky Strict.Language.Type+MustImplementAllTraitMethods : Missing methods: Strict.Base.Text.digits, Strict.Base.Text.+\r\n   at Strict.Base.Error Implements ")]
 	public void GenerateInterface()
 	{
-		var interfaceType = new Type(package, Computer, parser).Parse(@"Compute(number)");
+		var interfaceType =
+			new Type(package, new FileData(Computer, new[] { "Compute(number)" }), parser);
 		var visitor = new CSharpTypeVisitor(interfaceType);
 		Assert.That(visitor.Name, Is.EqualTo(Computer));
 		Assert.That(visitor.FileContent, Contains.Substring("public interface " + Computer));
@@ -46,16 +44,15 @@ public sealed class CSharpTypeVisitorTests : TestCSharpGenerator
 	private const string Computer = "Computer";
 
 	[Test]
-	[Ignore("TODO: flaky Strict.Language.Type+MustImplementAllTraitMethods : Missing methods: Strict.Base.Text.digits, Strict.Base.Text.+\r\n   at Strict.Base.Error Implements ")]
 	public void GenerateTypeThatImplementsMultipleTraits()
 	{
-		var program = new Type(package, "Program", parser).Parse(@"implement Input
+		var program = new Type(package, new FileData("Program", @"implement Input
 implement Output
 has system
 Read
 	system.WriteLine(""Read"")
 Write
-	system.WriteLine(""Write"")");
+	system.WriteLine(""Write"")".SplitLines()), parser);
 		var visitor = new CSharpTypeVisitor(program);
 		AssertProgramClass(visitor);
 		Assert.That(visitor.FileContent,
@@ -71,14 +68,13 @@ Write
 	}
 
 	[Test]
-	[Ignore("TODO: flaky Strict.Language.Type+MustImplementAllTraitMethods : Missing methods: Strict.Base.Text.digits, Strict.Base.Text.+\r\n   at Strict.Base.Error Implements ")]
 	public void Import()
 	{
-		var interfaceType = new Type(package, Computer, parser).Parse(@"import Strict
+		var interfaceType = new Type(package, new FileData(Computer, @"import Strict
 has number
 has log
 Run
-	log.Write(number)");
+	log.Write(number)".SplitLines()), parser);
 		var visitor = new CSharpTypeVisitor(interfaceType);
 		Assert.That(visitor.Name, Is.EqualTo(Computer));
 		Assert.That(visitor.FileContent, Contains.Substring("using Strict;"));
@@ -91,11 +87,11 @@ Run
 	[Test]
 	public void MemberInitializer()
 	{
-		var interfaceType = new Type(package, Computer, parser).Parse(@"import Strict
+		var interfaceType = new Type(package, new FileData(Computer, @"import Strict
 has number
 has file = ""test.txt""
 Run
-	file.Write(number)");
+	file.Write(number)".SplitLines()), parser);
 		var visitor = new CSharpTypeVisitor(interfaceType);
 		Assert.That(visitor.Name, Is.EqualTo(Computer));
 		Assert.That(visitor.FileContent, Contains.Substring("public class " + Computer));
@@ -114,63 +110,54 @@ Run
 	log.Write(random)
 	let random = ""test""")]
 	public void LocalMemberNotFound(string code) =>
-		Assert.That(() => new CSharpTypeVisitor(new Type(package, Computer, parser).Parse(@"import Strict
+		Assert.That(() => new CSharpTypeVisitor(new Type(package, new FileData(Computer, (@"import Strict
 has log
-Run" + code)),
+Run" + code).SplitLines()), parser)),
 			Throws.InstanceOf<MethodExpressionParser.MemberOrMethodNotFound>()!);
 
-	//TODO: flaky test, sometimes fails with MissingMethodImplementation (trait not loaded yet)
 	[Test]
-	[Ignore("TODO: fix!")]
 	public void AccessLocalVariableAfterDeclaration() =>
 		Assert.That(
 			new CSharpTypeVisitor(
-				new Type(package, Computer, parser).Parse(@"import Strict
+				new Type(package, new FileData(Computer, @"import Strict
 has log
 Run
 	let random = ""test""
-	log.Write(random)")).FileContent,
+	log.Write(random)".SplitLines()), parser)).FileContent,
 			Contains.Substring("\tConsole.WriteLine(random);"));
 
 	[TestCase(@"	let file = File(""test.txt"")
-	file.Write(number)",
-		"\tvar file = new FileStream(\"test.txt\", FileMode.OpenOrCreate);")]
+	file.Write(number)", "\tvar file = new FileStream(\"test.txt\", FileMode.OpenOrCreate);")]
 	[TestCase(@"	File(""test.txt"").Write(number)",
 		"\tnew FileStream(\"test.txt\", FileMode.OpenOrCreate).Write(number);")]
-	[Ignore("TODO: flaky Strict.Language.Type+MustImplementAllTraitMethods : Missing methods: Strict.Base.Text.digits, Strict.Base.Text.+\r\n   at Strict.Base.Error Implements ")]
 	public void InitializeValueUsingConstructorInsideMethod(string code, string expected) =>
-		Assert.That(
-			new CSharpTypeVisitor(new Type(package, Computer, parser).Parse(@"import Strict
+		Assert.That(new CSharpTypeVisitor(new Type(package, new FileData(Computer, (@"import Strict
 has number
 Run
-" + code)).FileContent,
-			Contains.Substring(expected));
+" + code).SplitLines()), parser)).FileContent, Contains.Substring(expected));
 
 	[TestCase("l + m", "l + m")]
 	[TestCase("l - m", "l - m")]
 	[TestCase("l * m", "l * m")]
 	public void ListsBinaryOperation(string code, string expected) =>
-		Assert.That(new CSharpTypeVisitor(new Type(package, Computer, parser).Parse(@$"import Strict
+		Assert.That(new CSharpTypeVisitor(new Type(package, new FileData(Computer, @$"import Strict
 has log
 Run
 	let l = (1, 2) + (3, 4)
 	let m = (5, 6)
 	let r = {
 		code
-	}")).FileContent, Contains.Substring($"\tvar r = {expected};"));
+	}".SplitLines()), parser)).FileContent, Contains.Substring($"\tvar r = {expected};"));
 
-	[Ignore("Have to do it next after constructors and generics")]
 	[Test]
 	public void GenerateListTypeProgram()
 	{
-		var program = new Type(package, "Program", parser).Parse(@"has numbers
+		var program = new Type(package, new FileData("Program", @"has numbers
 TestListsMethod returns Numbers
 	(1, 2, 3) + 5
-	return numbers");
+	return numbers".SplitLines()), parser);
 		var visitor = new CSharpTypeVisitor(program);
 		AssertProgramClass(visitor);
-		Assert.That(visitor.FileContent,
-			Contains.Substring(@"	private List<int> numbers;"));
+		Assert.That(visitor.FileContent, Contains.Substring(@"	private List<int> numbers;"));
 	}
 }
-*/

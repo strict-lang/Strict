@@ -6,7 +6,6 @@ using Strict.Language.Expressions;
 
 namespace Strict.Compiler.Tests;
 
-/*TODO: fix me
 public class TestCSharpGenerator
 {
 	[SetUp]
@@ -23,9 +22,8 @@ public class TestCSharpGenerator
 	protected SourceGenerator generator = null!;
 
 	protected Type CreateHelloWorldProgramType() =>
-		new Type(package, "Program", parser).Parse(@"implement App
+		new(package, new FileData("Program", @"implement App
 has log
 Run
-	log.Write(""Hello World"")");
+	log.Write(""Hello World"")".SplitLines()), parser);
 }
-*/

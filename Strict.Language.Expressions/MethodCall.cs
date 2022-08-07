@@ -30,7 +30,9 @@ public class MethodCall : Expression
 
 	public override string ToString() =>
 		Instance != null
-			? $"{Instance}.{Method.Name}{Arguments.ToBrackets()}"
+			? Method.Name == Method.From
+				? $"{Instance}{Arguments.ToBrackets()}"
+				: $"{Instance}.{Method.Name}{Arguments.ToBrackets()}"
 			: Arguments.Count > 0
 				? $"{Method.Name}{Arguments.ToBrackets()}"
 				: Method.Name;

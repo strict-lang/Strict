@@ -8,7 +8,6 @@ using Strict.Language.Tests;
 
 namespace Strict.Compiler.Tests;
 
-[Ignore("TODO: fix at the end")]
 public sealed class CSharpExpressionVisitorTests : TestExpressions
 {
 	[SetUp]

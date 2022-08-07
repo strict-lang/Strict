@@ -1,4 +1,3 @@
-implement Generic
 has elements Generics
 Length returns Number
 	return elements.Length

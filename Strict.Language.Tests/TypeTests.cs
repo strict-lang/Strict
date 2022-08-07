@@ -12,7 +12,6 @@ public class TypeTests
 	}
 
 	private Type CreateType(string name, params string[] lines) =>
-		//TODO: invent MockFileData
 		new(package, new FileData(name, lines), null!);
 
 	private Package package = null!;

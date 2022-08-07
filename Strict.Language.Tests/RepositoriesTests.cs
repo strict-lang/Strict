@@ -28,7 +28,6 @@ public class RepositoriesTests
 			repos.LoadFromUrl(new Uri("https://google.com")));
 
 	[Test]
-	[Ignore("TODO: also still flaky: Missing methods: Strict.Base.Text.digits, Strict.Base.Text.+")]
 	public async Task LoadStrictBaseTypes()
 	{
 		var strictPackage = await repos.LoadFromUrl(Repositories.StrictUrl);
@@ -39,7 +38,6 @@ public class RepositoriesTests
 	}
 
 	[Test]
-	[Ignore("TODO: flaky Strict.Language.Type+MustImplementAllTraitMethods : Missing methods: Strict.Base.Text.digits, Strict.Base.Text.+\r\n   at Strict.Base.Error Implements ")]
 	public async Task LoadingSameRepositoryAgainUsesCache()
 	{
 		var tasks = new List<Task<Package>>();
@@ -51,7 +49,6 @@ public class RepositoriesTests
 	}
 
 	[Test]
-	[Ignore("TODO: flaky as well Strict.Language.Type+MustImplementAllTraitMethods : Missing methods: Strict.Base.Text.digits, Strict.Base.Text.+")]
 	public async Task MakeSureParsingFailedErrorMessagesAreClickable()
 	{
 		var parser = new MethodExpressionParser();
