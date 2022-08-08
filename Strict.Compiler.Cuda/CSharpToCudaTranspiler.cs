@@ -73,7 +73,7 @@ public class CSharpToCudaTranspiler
 	public Type ParseCSharp(string filePath) =>
 		filePath == ""
 			? throw new InvalidCode()
-			: new CSharpType(package, filePath, parser);
+			: new CSharpType(package, filePath).ParseMembersAndMethods(parser);
 
 	public class InvalidCode : Exception { }
 }
@@ -102,8 +102,8 @@ public class CSharpType : Type
 	}
 
 	// ReSharper disable once CyclomaticComplexity
-	public CSharpType(Package strictPackage, string filePath, ExpressionParser parser) : base(
-		strictPackage, new FileData(Path.GetFileNameWithoutExtension(filePath), File.ReadAllLines(filePath)), parser)
+	public CSharpType(Package strictPackage, string filePath) : base(
+		strictPackage, new TypeLines(Path.GetFileNameWithoutExtension(filePath), File.ReadAllLines(filePath)))
 	{
 		var inputCode = File.ReadAllLines(filePath);
 		var methodName = "";

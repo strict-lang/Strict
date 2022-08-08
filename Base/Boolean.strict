@@ -1,4 +1,3 @@
-has Boolean
 not returns Boolean
 	not true is false
 	return value ? false else true

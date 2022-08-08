@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Threading.Tasks;
 
 namespace Strict.Language;
 
@@ -78,11 +76,9 @@ public sealed class Method : Context
 	private static string GetName(ReadOnlySpan<char> firstLine)
 	{
 		for (var i = 0; i < firstLine.Length; i++)
-			if (firstLine[i] == '(' || firstLine[i] == ' ' || firstLine[i] == '\n')
+			if (firstLine[i] == '(' || firstLine[i] == ' ')
 				return firstLine[..i].ToString();
-		var spanSplitEnumerator = firstLine.Split();
-		spanSplitEnumerator.MoveNext();
-		return spanSplitEnumerator.Current.ToString();
+		return firstLine.ToString();
 	}
 
 	public const string From = "from";

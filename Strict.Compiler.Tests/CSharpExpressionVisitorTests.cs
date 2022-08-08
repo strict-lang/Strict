@@ -8,6 +8,7 @@ using Strict.Language.Tests;
 
 namespace Strict.Compiler.Tests;
 
+[Ignore("TODO: Not yet done")]
 public sealed class CSharpExpressionVisitorTests : TestExpressions
 {
 	[SetUp]
@@ -78,7 +79,7 @@ public sealed class CSharpExpressionVisitorTests : TestExpressions
 	if (bla == 5)
 		return true;
 	return false;
-}".SplitLines()));
+}"));
 	}
 
 	[Test]

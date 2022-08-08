@@ -5,10 +5,7 @@ namespace Strict.Language.Tests;
 public class MethodTests
 {
 	[SetUp]
-	public void CreateType() =>
-		type = new Type(new TestPackage(), new FileData(nameof(TypeTests), @"has log
-Run
-	log.WriteLine".SplitLines()), null!);
+	public void CreateType() => type = new Type(new TestPackage(), new MockRunTypeLines());
 
 	private Type type = null!;
 
@@ -33,7 +30,7 @@ Run
 		Assert.That(method.Name, Is.EqualTo(Run));
 		Assert.That(method.Parameters, Is.Empty);
 		Assert.That(method.ReturnType, Is.EqualTo(type.GetType(Base.None)));
-		Assert.That(method.ToString(), Is.EqualTo("TestPackage.TypeTests.Run"));
+		Assert.That(method.ToString(), Is.EqualTo("TestPackage.MockRunTypeLines.Run"));
 	}
 
 	[Test]

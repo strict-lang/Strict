@@ -1,18 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 
 namespace Strict.Language;
 
 public static class StringExtensions
 {
-	public static string[] SplitLines(this string text) =>
-		text.Split(new[] { Environment.NewLine, "\n" }, StringSplitOptions.None);
-
-	public static string[] SplitWords(this string text) => text.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-
-	public static string[] SplitWordsAndPunctuation(this string text) =>
-		text.Split(new[] { ' ', '(', ')', ',' }, StringSplitOptions.RemoveEmptyEntries);
-
 	public static string ToWordList<T>(this IEnumerable<T> list) => string.Join(", ", list);
 
 	public static string ToBrackets<T>(this IReadOnlyCollection<T> list) =>
@@ -26,7 +17,7 @@ public static class StringExtensions
 	public static bool IsWord(this string text)
 	{
 		foreach (var c in text)
-			if (c is (< 'A' or > 'Z') and (< 'a' or > 'z'))
+			if (!char.IsAsciiLetter(c))
 				return false;
 		return true;
 	}

@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Runtime.CompilerServices;
 
 namespace Strict.Language;
@@ -19,17 +18,15 @@ public class Package : Context
 
 	/// <summary>
 	/// Contains all high level <see cref="Package"/>. Just contains the fallback None type (think
-	/// void) and Boolean, has no parent and just contains all root children packages. Also features
-	/// a cache of types searched from here so future access is much faster. See green comment here:
-	/// https://strict.dev/img/FindType2020-07-01.png
+	/// void), Any (think object) and Boolean, has no parent and just contains all root children
+	/// packages. Also features a cache of types searched from here so future access is much faster.
+	/// See green comment here: https://strict.dev/img/FindType2020-07-01.png
 	/// </summary>
 	private sealed class Root : Package
 	{
-		public Root() : base(null, string.Empty)
-		{
-			cachedFoundTypes.Add(Base.None, new Type(this, new FileData(Base.None, Array.Empty<string>()), null!));
-			cachedFoundTypes.Add(Base.Boolean, new Type(this, new FileData(Base.Boolean, Array.Empty<string>()), null!));
-		}
+		public Root() : base(null, string.Empty) =>
+			cachedFoundTypes.Add(Base.None,
+				new Type(this, new TypeLines(Base.None, Array.Empty<string>())));
 
 		public override Type? FindType(string name, Context? searchingFrom = null) =>
 			cachedFoundTypes.TryGetValue(name, out var previouslyFoundType)
@@ -133,8 +130,13 @@ public class Package : Context
 		return null;
 	}
 
-	public Package? FindSubPackage(string name) =>
-		children.FirstOrDefault(p => p.Name == name || p.ToString() == name);
+	public Package? FindSubPackage(string name)
+	{
+		foreach (var child in children)
+			if (child.Name == name || child.FullName == name)
+				return child;
+		return null;
+	}
 
 	public Package? Find(string name) =>
 		FindSubPackage(name) ?? RootForPackages.FindSubPackage(name);

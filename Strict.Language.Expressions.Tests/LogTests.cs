@@ -9,11 +9,11 @@ public sealed class LogTests
 	public void PrintHelloWorld()
 	{
 		var package = new TestPackage();
-		new Type(package, new FileData(Base.App, new[] { "Run" }), null!);
-		var type = new Type(package, new FileData("Program", @"implement App
-has log
-Run
-	log.Write(""Hello"")".SplitLines()), new MethodExpressionParser());
+		new Type(package, new TypeLines(Base.App, "Run"));
+		var type =
+			new Type(package,
+					new TypeLines("Program", "implement App", "has log", "Run", "\tlog.Write(\"Hello\")")).
+				ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(Run(type.Methods[0]), Is.EqualTo("Hello"));
 	}
 

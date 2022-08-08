@@ -9,10 +9,11 @@ namespace Strict.Language.Expressions;
 /// </summary>
 public class MethodExpressionParser : ExpressionParser
 {
-	public override Expression ParseAssignmentExpression(Type type, string initializationLine, int fileLineNumber)
+	public override Expression ParseAssignmentExpression(Type type,
+		ReadOnlySpan<char> initializationLine, int fileLineNumber)
 	{
 		var constructor = type.Methods[0];
-		var line = new Method.Line(constructor, 0, initializationLine, fileLineNumber);
+		//TODO var line = new Method.Line(constructor, 0, initializationLine, fileLineNumber);
 		return new MethodCall(constructor, new From(type));
 	}
 
@@ -92,7 +93,7 @@ public class MethodExpressionParser : ExpressionParser
 	{
 		var toParse = line.Text.GetSpanFromRange(range);
 		var argumentsStart = toParse.IndexOf('(');
-		if (argumentsStart > 0)
+		if (argumentsStart > 0 && toParse[^1] == ')')
 			return ParseInContext(line.Method.Type, line,
 				new Range(range.Start, range.Start.Value + argumentsStart),
 				ParseListArguments(line,
@@ -122,11 +123,13 @@ public class MethodExpressionParser : ExpressionParser
 						continue;
 					}
 				}
-				var expression = TryMemberOrMethodCall(context, current, line, members.Current,
-					// arguments are only needed for the last part
-					members.IsAtEnd
-						? arguments
-						: Array.Empty<Expression>());
+				var expression = line.Text.GetSpanFromRange(members.Current).Contains('(')
+					? TryParseMemberOrZeroOrOneArgumentMethodCall(line, members.Current)
+					: TryMemberOrMethodCall(context, current, line, members.Current,
+						// arguments are only needed for the last part
+						members.IsAtEnd
+							? arguments
+							: Array.Empty<Expression>());
 				if (expression == null)
 				{
 					if (line.Text.GetSpanFromRange(members.Current).IsOperator())
@@ -153,10 +156,11 @@ public class MethodExpressionParser : ExpressionParser
 		IReadOnlyList<Expression> arguments)
 	{
 		var partToParse = line.Text.GetSpanFromRange(range);
-		if (!partToParse.IsWord())
+		if (!partToParse.IsWord() && !partToParse.Contains(' ') && !partToParse.Contains('('))
 			return null;
 #if LOG_DETAILS
-		Logger.Info(nameof(TryMemberOrMethodCall) + ": " + partToParse.ToString()+" in "+context+" with arguments="+arguments.ToWordList());
+		Logger.Info(nameof(TryMemberOrMethodCall) + ": " + partToParse.ToString() + " in " + context +
+			" with arguments=" + arguments.ToWordList());
 #endif
 		var type = context as Type ?? line.Method.Type;
 		if (arguments.Count == 0)
@@ -171,7 +175,7 @@ public class MethodExpressionParser : ExpressionParser
 						return new ParameterCall(parameter);
 				type = method.ReturnType;
 			}
-			var memberCall = TryFindMemberCall(type!, instance, partToParse);
+			var memberCall = TryFindMemberCall(type, instance, partToParse);
 			if (memberCall != null)
 				return memberCall;
 #if LOG_DETAILS
@@ -189,7 +193,7 @@ public class MethodExpressionParser : ExpressionParser
 				return new MethodCall(fromType.GetMethod(Method.From, arguments), new From(fromType), arguments);
 		}
 #if LOG_DETAILS
-		Logger.Info("ParseNested found no local method in " + line.Method.Type+": "+methodName);
+		Logger.Info("ParseNested found no local method in " + line.Method.Type + ": " + methodName);
 #endif
 		return null;
 	}
@@ -228,7 +232,7 @@ public class MethodExpressionParser : ExpressionParser
 				return new List<Expression> { If.ParseConditional(line, range) };
 			// The postfix data comes in upside down, so use another stack to restore order
 			var expressions = new Stack<Expression>();
-			// Similar to TryParseExpression, but we know there is commas separating things! 
+			// Similar to TryParseExpression, but we know there is commas separating things!
 			var postfix = new ShuntingYard(line.Text, range);
 			if (postfix.Output.Count == 1)
 				expressions.Push(ParseTextWithSpacesOrListWithMultipleOrNestedElements(line,
@@ -239,7 +243,7 @@ public class MethodExpressionParser : ExpressionParser
 				do
 				{
 #if LOG_DETAILS
-					Logger.Info("pushing list element " +line.Text[postfix.Output.Peek()]);
+					Logger.Info("pushing list element " + line.Text[postfix.Output.Peek()]);
 #endif
 					var span = line.Text.GetSpanFromRange(postfix.Output.Peek());
 					// Is this a binary expression we have to put into the list (already tokenized and postfixed)
@@ -291,7 +295,7 @@ public class MethodExpressionParser : ExpressionParser
 					line.Text[element] + " is invalid for argument " + expressions.Count + " " + ex.Message);
 			}
 #if LOG_DETAILS
-		Logger.Info(nameof(ParseAllElementsFast)+": "+expressions.ToWordList());
+		Logger.Info(nameof(ParseAllElementsFast) + ": " + expressions.ToWordList());
 #endif
 		return expressions;
 	}

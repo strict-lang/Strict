@@ -62,7 +62,7 @@ GetComplicatedSequenceTexts returns Texts
 	public void SplitWords(string input)
 	{
 		var index = 0;
-		var expectedWords = input.SplitWords();
+		var expectedWords = input.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 		foreach (var wordSpan in input.AsSpan().Split())
 		{
 			Assert.That(wordSpan.ToString(), Is.EqualTo(expectedWords[index]));
@@ -88,7 +88,7 @@ GetComplicatedSequenceTexts returns Texts
 	[TestCase("aksbdkasbd\nsadnakjsdnk")]
 	public void SplitLines(string input)
 	{
-		var expectedLines = input.SplitLines();
+		var expectedLines = input.Split(new[] { Environment.NewLine, "\n" }, StringSplitOptions.None);
 		var index = 0;
 		foreach (var wordSpan in input.AsSpan().SplitLines())
 		{

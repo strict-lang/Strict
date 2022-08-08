@@ -48,13 +48,13 @@ public sealed class Repositories
 		var localPath = packageName == nameof(Strict)
 			? DevelopmentFolder
 			: "";
-		//nocrunch: no coverage start
+		//ncrunch: no coverage start
 		if (!PreviouslyCheckedDirectories.Contains(localPath))
 		{
 			PreviouslyCheckedDirectories.Add(localPath);
 			if (!Directory.Exists(localPath))
 				localPath = await DownloadAndExtractRepository(packageUrl, packageName);
-		} //nocrunch: no coverage end
+		} //ncrunch: no coverage end
 		return await LoadFromPath(localPath);
 	}
 
@@ -133,45 +133,103 @@ public sealed class Repositories
 	/// Initially we need to create just empty types and then after they all have been created
 	/// we will fill and load them, otherwise we could not use types within the package context.
 	/// </summary>
-	private async Task<Package> CreatePackageFromFiles(string packagePath, IReadOnlyList<string> files,
-		Package? parent = null)
-	{
+	private async Task<Package> CreatePackageFromFiles(string packagePath,
+		IReadOnlyCollection<string> files, Package? parent = null) =>
 		// Main folder can be empty, other folders must contain at least one file to create a package
-		if (parent != null && files.Count == 0)
-			//ncrunch: no coverage start, doesn't happen in nicely designed packages anyway
-			return parent;
-		//ncrunch: no coverage end
-		return await CreatePackage(packagePath, files, parent);
-	}
+		parent != null && files.Count == 0
+			? parent
+			: await CreatePackage(packagePath, files, parent);
 
-	private async Task<Package> CreatePackage(string packagePath, IReadOnlyList<string> files, Package? parent)
+	private async Task<Package> CreatePackage(string packagePath, IEnumerable<string> files,
+		Package? parent)
 	{
 		var package = parent != null
 			? new Package(parent, packagePath)
 			: new Package(packagePath);
 		var types = new List<Type>();
+		var filesWithImplements = new Dictionary<string, TypeLines>();
 		foreach (var filePath in files)
-			types.Add(new Type(package,
-				new FileData(Path.GetFileNameWithoutExtension(filePath), File.ReadAllLines(filePath)),
-				parser));
-		await Task.WhenAll(ParseAllSubFolders(//ParseAllFiles(files, types),
-			packagePath, package));
+		{
+			var lines = new TypeLines(Path.GetFileNameWithoutExtension(filePath),
+				// ReSharper disable once MethodHasAsyncOverload, would be way slower with async here
+				File.ReadAllLines(filePath));
+			if (lines.ImplementTypes.Count > 0)
+				filesWithImplements.Add(lines.Name, lines);
+			else
+				types.Add(new Type(package, lines));
+		}
+		foreach (var typeLines in SortFilesWithImplements(filesWithImplements))
+			types.Add(new Type(package, typeLines));
+		foreach (var type in types)
+			type.ParseMembersAndMethods(parser);
+		var subDirectories = Directory.GetDirectories(packagePath);
+		if (subDirectories.Length > 0)
+			await Task.WhenAll(ParseAllSubFolders(subDirectories, package));
 		return package;
 	}
-	/*unused
-	private static List<Task> ParseAllFiles(IReadOnlyList<string> files, IReadOnlyList<Type> types)
+
+	/// <summary>
+	/// https://en.wikipedia.org/wiki/Breadth-first_search
+	/// </summary>
+	public IEnumerable<TypeLines> SortFilesWithImplements(Dictionary<string, TypeLines> files)
 	{
-		var tasks = new List<Task>();
-		for (var index = 0; index < types.Count; index++)
-			tasks.Add(types[index].ParseFile(files[index]));
-		return tasks;
+		if (!GotNestedImplements(files))
+			return files.Values;
+		var reversedDependencies = new Stack<TypeLines>();
+		var inDegree = CreateInDegreeGraphMap(files);
+		var zeroDegreeQueue = CreateZeroDegreeQueue(inDegree);
+		while (zeroDegreeQueue.Count > 0)
+			if (files.TryGetValue(zeroDegreeQueue.Dequeue(), out var lines))
+			{
+				reversedDependencies.Push(lines);
+				foreach (var vertex in lines.ImplementTypes)
+					if (inDegree[vertex]-- > 0 && inDegree[vertex]-- == 0)
+						zeroDegreeQueue.Enqueue(vertex);
+			}
+		return reversedDependencies;
 	}
-	*/
-	private List<Task> ParseAllSubFolders(//List<Task> tasks,
-		string packagePath, Package package)
+
+	private static Queue<string> CreateZeroDegreeQueue(Dictionary<string, int> inDegree)
+	{
+		var zeroDegreeQueue = new Queue<string>();
+		foreach (var vertex in inDegree)
+			if (vertex.Value == 0)
+				zeroDegreeQueue.Enqueue(vertex.Key);
+		return zeroDegreeQueue;
+	}
+
+	private static Dictionary<string, int> CreateInDegreeGraphMap(Dictionary<string, TypeLines> filesWithImplements)
+	{
+		var inDegree = new Dictionary<string, int>();
+		foreach (var kvp in filesWithImplements)
+		{
+			if (!inDegree.ContainsKey(kvp.Key))
+				inDegree.Add(kvp.Key, 0);
+			foreach (var edge in kvp.Value.ImplementTypes)
+				if (inDegree.ContainsKey(edge))
+					inDegree[edge]++;
+				else
+					inDegree.Add(edge, 1);
+		}
+		return inDegree;
+	}
+
+	private static bool GotNestedImplements(Dictionary<string, TypeLines> filesWithImplements)
+	{
+		var gotNestedImplements = false;
+		foreach (var file in filesWithImplements)
+			if (file.Value.ImplementTypes.Any(filesWithImplements.ContainsKey))
+			{
+				gotNestedImplements = true;
+				break;
+			}
+		return gotNestedImplements;
+	}
+
+	private List<Task> ParseAllSubFolders(IEnumerable<string> subDirectories, Package package)
 	{
 		var tasks = new List<Task>();
-		foreach (var directory in Directory.GetDirectories(packagePath))
+		foreach (var directory in subDirectories)
 			if (IsValidCodeDirectory(directory))
 				tasks.Add(CreatePackageFromFiles(directory,
 					Directory.GetFiles(directory, "*" + Type.Extension), package));

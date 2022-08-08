@@ -17,6 +17,9 @@ public abstract class Context
 			throw new NameMustBeAWordWithoutAnySpecialCharactersOrNumbers(name);
 		Parent = parent!;
 		Name = name;
+		FullName = string.IsNullOrEmpty(parent?.Name) || parent.Name is nameof(Base)
+			? name
+			: parent + "." + name;
 	}
 
 	public sealed class NameMustBeAWordWithoutAnySpecialCharactersOrNumbers : Exception
@@ -26,6 +29,7 @@ public abstract class Context
 
 	public Context Parent { get; }
 	public string Name { get; }
+	public string FullName { get; }
 
 	/// <summary>
 	/// Could be optimized in the future for contexts that are used a lot (10+ calls) and have at
@@ -43,21 +47,17 @@ public abstract class Context
 		if (name == Name)
 			return (Type)this;
 		return (FindFullType(name) ?? FindType(name, this)) ??
-			throw new TypeNotFound(name, ToString());
+			throw new TypeNotFound(name, FullName);
 	}
 
 	private Type? FindFullType(string name) =>
 		name.Contains('.')
-			? name == ToString()
+			? name == FullName
 				? this as Type
 				: GetPackage()?.FindFullType(name)
 			: null;
 
-	public override string ToString() =>
-		// ReSharper disable once ConditionalAccessQualifierIsNonNullableAccordingToAPIContract
-		(string.IsNullOrEmpty(Parent?.Name) || Parent.Name is nameof(Base)
-			? ""
-			: Parent + ".") + Name;
+	public override string ToString() => FullName;
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public Package? GetPackage() =>

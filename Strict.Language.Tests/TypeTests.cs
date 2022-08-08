@@ -12,7 +12,7 @@ public class TypeTests
 	}
 
 	private Type CreateType(string name, params string[] lines) =>
-		new(package, new FileData(name, lines), null!);
+		new Type(package, new TypeLines(name, lines)).ParseMembersAndMethods(null!);
 
 	private Package package = null!;
 
@@ -30,7 +30,7 @@ public class TypeTests
 	{
 		Assert.That(() => CreateType(Base.Error, " "),
 			Throws.InstanceOf<Type.ExtraWhitespacesFoundAtBeginningOfLine>());
-		Assert.That(() => CreateType("Program", "Run", " "),
+		Assert.That(() => CreateType("Program", " implement App"),
 			Throws.InstanceOf<Type.ExtraWhitespacesFoundAtBeginningOfLine>());
 		Assert.That(() => CreateType(Base.HashCode, "has\t"),
 			Throws.InstanceOf<Type.ExtraWhitespacesFoundAtEndOfLine>());
@@ -38,13 +38,14 @@ public class TypeTests
 
 	[Test]
 	public void TypeParsersMustStartWithImplementOrHas() =>
-		Assert.That(() => CreateType(Base.Error, "Run", "\tlog.WriteLine"),
+		Assert.That(
+			() => CreateType(Base.Error, "Run", "\tlog.WriteLine"),
 			Throws.InstanceOf<Type.TypeHasNoMembersAndThusMustBeATraitWithoutMethodBodies>());
 
 	[Test]
 	public void JustMembersAreAllowed() =>
-		Assert.That(CreateType(Base.Error, "has log", "has count").Members,
-			Has.Count.EqualTo(2));
+		Assert.That(CreateType(Base.Error, "has log", "has count").Members.Count,
+			Is.EqualTo(2));
 
 	[Test]
 	public void GetUnknownTypeWillCrash() =>
@@ -56,40 +57,19 @@ public class TypeTests
 			Throws.InstanceOf<Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers>());
 
 	[Test]
-	public void ImportMustBeFirst() =>
-		Assert.That(() => CreateType("Program", "has number", "import TestPackage"), Throws.InstanceOf<ParsingFailed>().With.InnerException.
-			InstanceOf<Type.ImportMustBeFirst>());
-
-	[Test]
-	public void ImportMustBeValidPackageName() =>
-		Assert.That(() => CreateType("Program", "import $YI(*SI"),
-			Throws.InstanceOf<ParsingFailed>().With.InnerException.
-				InstanceOf<Type.PackageNotFound>());
-
-	[Test]
-	public void Import()
-	{
-		var program = CreateType("Program", "import TestPackage", "has number", "GetNumber returns Number", "\treturn number");
-		Assert.That(program.Imports[0].Name, Is.EqualTo(nameof(TestPackage)));
-	}
-
-	[Test]
 	public void ImplementAnyIsImplicitAndNotAllowed() =>
 		Assert.That(() => CreateType("Program", "implement Any"),
-			Throws.InstanceOf<ParsingFailed>().With.InnerException.
-				InstanceOf<Type.ImplementAnyIsImplicitAndNotAllowed>());
+			Throws.InstanceOf<Type.ImplementAnyIsImplicitAndNotAllowed>());
 
 	[Test]
 	public void ImplementMustBeBeforeMembersAndMethods() =>
 		Assert.That(() => CreateType("Program", "has log", "implement App"),
-			Throws.InstanceOf<ParsingFailed>().With.InnerException.
-				InstanceOf<Type.ImplementMustComeBeforeMembersAndMethods>());
+			Throws.InstanceOf<Type.ImplementMustComeBeforeMembersAndMethods>());
 
 	[Test]
 	public void MembersMustComeBeforeMethods() =>
 		Assert.That(() => CreateType("Program", "Run", "has log"),
-			Throws.InstanceOf<ParsingFailed>().With.InnerException.
-				InstanceOf<Type.MembersMustComeBeforeMethods>());
+			Throws.InstanceOf<Type.MembersMustComeBeforeMethods>());
 
 	[Test]
 	public void SimpleApp() =>

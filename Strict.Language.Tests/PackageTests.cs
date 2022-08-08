@@ -10,10 +10,10 @@ public class PackageTests
 	public void CreateContexts()
 	{
 		mainPackage = new Package(nameof(TestPackage));
-		mainType = new Type(mainPackage,  new FileData("Yolo", new[] { "Run" }), null!);
+		mainType = new Type(mainPackage, new TypeLines("Yolo", "Run"));
 		subPackage = new Package(mainPackage, nameof(PackageTests));
-		privateSubType = new Type(subPackage, new FileData("secret", new[] { "Run" }), null!);
-		publicSubType = new Type(subPackage, new FileData("FindMe", new[] { "Run" }), null!);
+		privateSubType = new Type(subPackage, new TypeLines("secret", "Run"));
+		publicSubType = new Type(subPackage, new TypeLines("FindMe", "Run"));
 	}
 
 	private Package mainPackage = null!;
@@ -85,7 +85,7 @@ public class PackageTests
 	public void ContextNameMustNotContainSpecialCharactersOrNumbers()
 	{
 		Assert.Throws<Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers>(() =>
-			new Type(mainPackage, new FileData("MyClass123", Array.Empty<string>()), null!));
+			new Type(mainPackage, new TypeLines("MyClass123", Array.Empty<string>())));
 		Assert.Throws<Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers>(() =>
 			new Package(mainPackage, "$%"));
 	}

@@ -9,12 +9,12 @@ namespace Strict.Compiler.Tests;
 public class TestCSharpGenerator
 {
 	[SetUp]
-	public async Task CreateGenerator()
+	public Task CreateGenerator()
 	{
 		parser = new MethodExpressionParser();
-		await new Repositories(parser).LoadFromUrl(Repositories.StrictUrl);
 		package = new Package(nameof(SourceGeneratorTests));
 		generator = new CSharpGenerator();
+		return new Repositories(parser).LoadFromUrl(Repositories.StrictUrl);
 	}
 
 	protected MethodExpressionParser parser = null!;
@@ -22,8 +22,8 @@ public class TestCSharpGenerator
 	protected SourceGenerator generator = null!;
 
 	protected Type CreateHelloWorldProgramType() =>
-		new(package, new FileData("Program", @"implement App
-has log
-Run
-	log.Write(""Hello World"")".SplitLines()), parser);
+		new Type(package,
+				new TypeLines("Program", "implement App", "has log", "Run",
+					"\tlog.Write(\"Hello World\")")).
+			ParseMembersAndMethods(parser);
 }

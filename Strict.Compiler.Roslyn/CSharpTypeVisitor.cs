@@ -29,15 +29,10 @@ public class CSharpTypeVisitor : TypeVisitor
 
 	private void CreateHeader(Type type)
 	{
-		foreach (var import in type.Imports)
-			VisitImport(import);
 		foreach (var implement in type.Implements)
 			VisitImplement(implement);
 		FileContent += "namespace " + type.Package.FolderPath + SemicolonAndLineBreak + NewLine;
 	}
-
-	public void VisitImport(Package import) =>
-		FileContent += "using " + import.Name + SemicolonAndLineBreak;
 
 	public string FileContent { get; private set; } = "";
 

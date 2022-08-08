@@ -46,7 +46,7 @@ is(other) returns Boolean
 <=(other) returns Boolean
 	0 <= 0 is true
 	return value <= other
-floor returns Number
-	floor(1) is 1
-	floor(2.4) is 2
+Floor returns Number
+	Floor(1) is 1
+	Floor(2.4) is 2
 	return value - value % 1

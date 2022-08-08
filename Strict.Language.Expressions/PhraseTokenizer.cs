@@ -75,15 +75,9 @@ public sealed class PhraseTokenizer
 
 	private void ProcessNormalToken(Action<Range> processToken)
 	{
-		if (input[index] == OpenBracket)// && (index == tokenStart || tokenStart == -1))
-		{
-			//if (tokenStart > 0 && index > tokenStart)
-			//
-			//	processToken(tokenStart..index);
-			//tokenStart = index + 1;
+		if (input[index] == OpenBracket)
 			foreach (var token in GetTokensTillMatchingClosingBracket())
 				processToken(token);
-		}
 		else if (input[index] == ' ')
 		{
 			if (tokenStart >= 0)

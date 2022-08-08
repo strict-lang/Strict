@@ -13,20 +13,30 @@ namespace Strict.Language;
 // ReSharper disable once HollowTypeName
 public class Type : Context
 {
-	public Type(Package package, FileData file, ExpressionParser expressionParser) : base(package, file.Name)
+	public Type(Package package, TypeLines file) : base(package, file.Name)
 	{
 		if (package.FindDirectType(Name) != null)
 			throw new TypeAlreadyExistsInPackage(Name, package);
 		package.Add(this);
-		this.expressionParser = expressionParser;
-		for (lineNumber = 0; lineNumber < file.Lines.Length; lineNumber++)
-			TryParseLine(file.Lines[lineNumber], file.Lines);
-		if (Name != Base.None && Name != Base.Boolean &&
-			methods.Count == 0 && members.Count + implements.Count < 2)
-			throw new NoMethodsFound(this, lineNumber);
-		foreach (var trait in implements)
-			if (trait.IsTrait)
-				CheckIfTraitIsImplemented(trait);
+		lines = file.Lines;
+		for (lineNumber = 0; lineNumber < lines.Length; lineNumber++)
+			if (ValidateCurrentLineIsNonEmptyAndTrimmed().
+				StartsWith(Implement, StringComparison.Ordinal))
+				implements.Add(ParseImplement(lines[lineNumber][Implement.Length..]));
+			else
+				break;
+	}
+
+	private string ValidateCurrentLineIsNonEmptyAndTrimmed()
+	{
+		var line = lines[lineNumber];
+		if (line.Length == 0)
+			throw new EmptyLineIsNotAllowed(this, lineNumber);
+		if (char.IsWhiteSpace(line[0]))
+			throw new ExtraWhitespacesFoundAtBeginningOfLine(this, lineNumber, line);
+		if (char.IsWhiteSpace(line[^1]))
+			throw new ExtraWhitespacesFoundAtEndOfLine(this, lineNumber, line);
+		return line;
 	}
 
 	public sealed class TypeAlreadyExistsInPackage : Exception
@@ -35,7 +45,7 @@ public class Type : Context
 			name + " in package: " + package) { }
 	}
 
-	private readonly ExpressionParser expressionParser;
+	private readonly string[] lines;
 	private int lineNumber;
 	public string FilePath => Path.Combine(Package.FolderPath, Name) + Extension;
 	public Package Package => (Package)Parent;
@@ -49,11 +59,72 @@ public class Type : Context
 			throw new MustImplementAllTraitMethods(this, nonImplementedTraitMethods);
 	}
 
-	private void TryParseLine(string line, string[] lines)
+	private Type ParseImplement(string remainingLine)
 	{
+		if (members.Count > 0 || methods.Count > 0)
+			throw new ImplementMustComeBeforeMembersAndMethods(this, lineNumber, remainingLine);
+		if (remainingLine == Base.Any)
+			throw new ImplementAnyIsImplicitAndNotAllowed(this, lineNumber, remainingLine);
 		try
 		{
-			ParseLine(line, lines);
+			return Package.GetType(remainingLine);
+		}
+		catch (TypeNotFound ex)
+		{
+			throw new ParsingFailed(this, lineNumber, ex.Message, ex);
+		}
+	}
+
+	public sealed class ImplementMustComeBeforeMembersAndMethods : ParsingFailed
+	{
+		public ImplementMustComeBeforeMembersAndMethods(Type type, int lineNumber, string name) :
+			base(type, lineNumber, name) { }
+	}
+
+	public sealed class ImplementAnyIsImplicitAndNotAllowed : ParsingFailed
+	{
+		public ImplementAnyIsImplicitAndNotAllowed(Type type, int lineNumber, string name) : base(
+			type, lineNumber, name) { }
+	}
+
+	/// <summary>
+	/// Extra parsing step that has to be done OUTSIDE the constructor as we might not know all types
+	/// needed for member (especially assignments) and method parsing (especially return types).
+	/// </summary>
+	public Type ParseMembersAndMethods(ExpressionParser parser)
+	{
+		for (; lineNumber < lines.Length; lineNumber++)
+			if (ValidateCurrentLineIsNonEmptyAndTrimmed().StartsWith(Has, StringComparison.Ordinal))
+				members.Add(ParseMember(parser, lines[lineNumber].AsSpan(Has.Length)));
+			else if (lines[lineNumber].StartsWith(Implement, StringComparison.Ordinal))
+				throw new ImplementMustComeBeforeMembersAndMethods(this, lineNumber, lines[lineNumber]);
+			else
+				methods.Add(new Method(this, lineNumber, parser, GetAllMethodLines(lines[lineNumber])));
+		if (Name != Base.None && Name != Base.Any && Name != Base.Boolean &&
+			methods.Count == 0 && members.Count + implements.Count < 2)
+			throw new NoMethodsFound(this, lineNumber);
+		foreach (var trait in implements)
+			if (trait.IsTrait)
+				CheckIfTraitIsImplemented(trait);
+		return this;
+	}
+
+	private Member ParseMember(ExpressionParser parser, ReadOnlySpan<char> remainingLine)
+	{
+		if (methods.Count > 0)
+			throw new MembersMustComeBeforeMethods(this, lineNumber, remainingLine.ToString());
+		var nameAndExpression = remainingLine.Split();
+		nameAndExpression.MoveNext();
+		var nameAndType = nameAndExpression.Current.ToString();
+		if (nameAndExpression.MoveNext() && nameAndExpression.Current[0] != '=')
+			nameAndType += " " + nameAndExpression.Current.ToString();
+		try
+		{
+			var expression = nameAndExpression.MoveNext()
+				? parser.ParseAssignmentExpression(new Member(this, nameAndType, null).Type,
+					nameAndExpression.Current, lineNumber)
+				: null;
+			return new Member(this, nameAndType, expression);
 		}
 		catch (ParsingFailed)
 		{
@@ -61,90 +132,18 @@ public class Type : Context
 		}
 		catch (Exception ex)
 		{
-			throw new ParsingFailed(this, lineNumber, line, ex);
+			throw new ParsingFailed(this, lineNumber, ex.Message, ex);
 		}
 	}
 
-	private void ParseLine(string line, string[] lines)
+	public sealed class MembersMustComeBeforeMethods : ParsingFailed
 	{
-		var words = ParseWords(line);
-		if (words[0] == Import)
-			imports.Add(ParseImport(words));
-		else if (words[0] == Implement)
-			implements.Add(ParseImplement(words));
-		else if (words[0] == Has)
-			members.Add(ParseMember(line));
-		else
-			methods.Add(new Method(this, lineNumber, expressionParser, GetAllMethodLines(line, lines)));
+		public MembersMustComeBeforeMethods(Type type, int lineNumber, string line) : base(type,
+			lineNumber, line) { }
 	}
 
-	private Package ParseImport(IReadOnlyList<string> words)
-	{
-		if (implements.Count > 0 || members.Count > 0 || methods.Count > 0)
-			throw new ImportMustBeFirst(words[1]);
-		var import = Package.Find(words[1]);
-		if (import == null)
-			throw new PackageNotFound(words[1]);
-		return import;
-	}
-
-	public sealed class ImportMustBeFirst : Exception
-	{
-		public ImportMustBeFirst(string package) : base(package) { }
-	}
-
-	public sealed class PackageNotFound : Exception
-	{
-		public PackageNotFound(string package) : base(package) { }
-	}
-
-	private Type ParseImplement(IReadOnlyList<string> words)
-	{
-		if (members.Count > 0 || methods.Count > 0)
-			throw new ImplementMustComeBeforeMembersAndMethods(words[1]);
-		if (words[1] == "Any")
-			throw new ImplementAnyIsImplicitAndNotAllowed();
-		return Package.GetType(words[1]);
-	}
-
-	public sealed class ImplementMustComeBeforeMembersAndMethods : Exception
-	{
-		public ImplementMustComeBeforeMembersAndMethods(string type) : base(type) { }
-	}
-
-	public sealed class ImplementAnyIsImplicitAndNotAllowed : Exception { }
-
-	private Member ParseMember(string line)
-	{
-		if (methods.Count > 0)
-			throw new MembersMustComeBeforeMethods(line);
-		var nameAndExpression = line[(Has.Length + 1)..].Split(" = ");
-		var expression = nameAndExpression.Length > 1
-			? expressionParser.ParseAssignmentExpression(new Member(this, nameAndExpression[0], null).Type,
-				nameAndExpression[1], lineNumber)
-			: null;
-		return new Member(this, nameAndExpression[0], expression);
-	}
-
-	public sealed class MembersMustComeBeforeMethods : Exception
-	{
-		public MembersMustComeBeforeMethods(string line) : base(line) { }
-	}
-
-	public const string Implement = "implement";
-	public const string Import = "import";
-	public const string Has = "has";
-
-	private string[] ParseWords(string line)
-	{
-		if (line.Length != line.TrimStart().Length)
-			throw new ExtraWhitespacesFoundAtBeginningOfLine(this, lineNumber, line);
-		if (line.Length != line.TrimEnd().Length)
-			throw new ExtraWhitespacesFoundAtEndOfLine(this, lineNumber, line);
-		if (line.Length == 0)
-			throw new EmptyLineIsNotAllowed(this, lineNumber);
-		return line.SplitWords();
-	}
+	public const string Implement = "implement ";
+	public const string Has = "has ";
 
 	public sealed class ExtraWhitespacesFoundAtBeginningOfLine : ParsingFailed
 	{
@@ -175,19 +174,19 @@ public class Type : Context
 			base(type, type.lineNumber, "Missing methods: " + string.Join(", ", missingTraitMethods)) { }
 	}
 
-	private string[] GetAllMethodLines(string definitionLine, string[] lines)
+	private string[] GetAllMethodLines(string definitionLine)
 	{
 		var methodLines = new List<string> { definitionLine };
-		if (IsTrait && IsNextLineValidMethodBody(lines))
+		if (IsTrait && IsNextLineValidMethodBody())
 			throw new TypeHasNoMembersAndThusMustBeATraitWithoutMethodBodies(this);
-		if (!IsTrait && !IsNextLineValidMethodBody(lines))
+		if (!IsTrait && !IsNextLineValidMethodBody())
 			throw new MethodMustBeImplementedInNonTraitType(this, definitionLine);
-		while (IsNextLineValidMethodBody(lines))
+		while (IsNextLineValidMethodBody())
 			methodLines.Add(lines[++lineNumber]);
 		return methodLines.ToArray();
 	}
 
-	private bool IsNextLineValidMethodBody(string[] lines)
+	private bool IsNextLineValidMethodBody()
 	{
 		if (lineNumber + 1 >= lines.Length)
 			return false;
@@ -213,37 +212,22 @@ public class Type : Context
 
 	public IReadOnlyList<Type> Implements => implements;
 	private readonly List<Type> implements = new();
-	public IReadOnlyList<Package> Imports => imports;
-	private readonly List<Package> imports = new();
 	public IReadOnlyList<Member> Members => members;
 	private readonly List<Member> members = new();
 	public IReadOnlyList<Method> Methods => methods;
 	protected readonly List<Method> methods = new();
-	public bool IsTrait => Implements.Count == 0 && Members.Count == 0 && Name != Base.Number;
+	public bool IsTrait =>
+		Implements.Count == 0 && Members.Count == 0 && Name != Base.Number && Name != Base.Boolean;
 
 	public override string ToString() =>
 		base.ToString() + (implements.Count > 0
 			? " " + nameof(Implements) + " " + Implements.ToWordList()
 			: "");
 
-	//https://deltaengine.fogbugz.com/f/cases/24806
-
 	public override Type? FindType(string name, Context? searchingFrom = null) =>
 		name == Name || name.Contains('.') && name == base.ToString()
 			? this
 			: Package.FindType(name, searchingFrom ?? this);
-
-	private void CheckForFilePathErrors(string filePath, IReadOnlyList<string> paths, string directory)
-	{
-		if (directory.EndsWith(@"\strict-lang\Strict", StringComparison.Ordinal))
-			throw new StrictFolderIsNotAllowedForRootUseBaseSubFolder(filePath); //ncrunch: no coverage
-	}
-
-	//ncrunch: no coverage start, tests too flacky when creating and deleting wrong file
-	public sealed class StrictFolderIsNotAllowedForRootUseBaseSubFolder : Exception
-	{
-		public StrictFolderIsNotAllowedForRootUseBaseSubFolder(string filePath) : base(filePath) { }
-	} //ncrunch: no coverage end
 
 	public const string Extension = ".strict";
 
@@ -344,5 +328,3 @@ public class Type : Context
 			string.Join('\n', allMethods.Select(m => m + m.Parameters.ToBrackets()))) { }
 	}
 }
-
-public record FileData(string Name, string[] Lines);

@@ -71,7 +71,7 @@ TestPackage.Log.Write(number TestPackage.Number)"));
 	public void MethodCallMembersMustBeWords() =>
 		Assert.That(() => ParseExpression("g9y53.Write"), Throws.InstanceOf<MemberOrMethodNotFound>());
 
-	[TestCase()]
+	[Test]
 	public void SimpleFromMethodCall() =>
 		Assert.That(ParseExpression("Character(7)"),
 			Is.EqualTo(CreateFromMethodCall(type.GetType(Base.Character), new Number(type, 7))));

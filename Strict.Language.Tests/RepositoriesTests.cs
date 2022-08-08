@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using System.Threading.Tasks;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Engines;
@@ -55,9 +56,25 @@ public class RepositoriesTests
 		var strictPackage = await new Repositories(parser).LoadFromUrl(Repositories.StrictUrl);
 		Assert.That(
 			() => new Type(strictPackage.FindSubPackage("Examples")!,
-				new FileData("Invalid", new[] { "has 1" }), parser),
+				new TypeLines("Invalid", "has 1")).ParseMembersAndMethods(null!),
 			Throws.InstanceOf<ParsingFailed>().With.Message.Contains(@"at Strict.Examples.Invalid in " +
 				Repositories.DevelopmentFolder + @"\Examples\Invalid.strict:line 1"));
+	}
+
+	[Test]
+	public void SortImplements()
+	{
+		var file1 = new TypeLines("File1", "implement File2");
+		var file2 = new TypeLines("File2", "implement File3", "implement Number");
+		var file3 = new TypeLines("File3", "implement Number");
+		var filesWithImplements = new Dictionary<string, TypeLines>
+		{
+			{ file1.Name, file1 }, { file2.Name, file2 }, { file3.Name, file3 }
+		};
+		Assert.That(
+			string.Join(", ",
+				new Repositories(null!).SortFilesWithImplements(filesWithImplements).
+					Select(file => file.Name)), Is.EqualTo("File3, File2, File1"));
 	}
 
 	//ncrunch: no coverage start
@@ -78,6 +95,9 @@ public class RepositoriesTests
 		}
 	}
 
+	private static string BaseFolder => Path.Combine(Repositories.DevelopmentFolder, "Base");
+	private const int MaxIterations = 1000;
+
 	[Test]
 	[Category("Slow")]
 	[Benchmark]
@@ -88,13 +108,23 @@ public class RepositoriesTests
 				File.ReadAllLines(file);
 	}
 
-	private const int MaxIterations = 1000;
-	private static string BaseFolder => Path.Combine(Repositories.DevelopmentFolder, "Base");
+	/// <summary>
+	/// By far the slowest way (2-3x slower) to load files (even though ReSharper suggests it)
+	/// </summary>
+	[Test]
+	[Category("Slow")]
+	[Benchmark]
+	public async Task LoadingAllStrictFilesAsync()
+	{
+		for (var iteration = 0; iteration < MaxIterations; iteration++)
+			foreach (var file in Directory.GetFiles(BaseFolder, "*.strict"))
+				await File.ReadAllLinesAsync(file);
+	}
 
 	[Test]
 	[Category("Slow")]
 	[Benchmark]
-	public async Task LoadingAllStrictFilesInParallel()
+	public async Task LoadingAllStrictFilesAsyncInParallel()
 	{
 		for (var iteration = 0; iteration < MaxIterations; iteration++)
 		{
@@ -114,7 +144,10 @@ public class RepositoriesTests
 		{
 			var tasks = new List<Task>();
 			foreach (var file in Directory.GetFiles(BaseFolder, "*.strict"))
-				tasks.Add(File.ReadAllTextAsync(file));
+			{
+				async void Action() => (await File.ReadAllTextAsync(file)).Split("\n");
+				tasks.Add(new Task(Action));
+			}
 			await Task.WhenAll(tasks);
 		}
 	}

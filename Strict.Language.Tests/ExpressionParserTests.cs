@@ -8,9 +8,7 @@ public class ExpressionParserTests : ExpressionParser
 {
 	[SetUp]
 	public void CreateType() =>
-		type = new Type(new TestPackage(), new FileData(nameof(TypeTests), @"has log
-Run
-	log.WriteLine".SplitLines()), this);
+		type = new Type(new TestPackage(), new MockRunTypeLines()).ParseMembersAndMethods(this);
 
 	private Type type = null!;
 
@@ -40,7 +38,7 @@ Run
 
 	//ncrunch: no coverage start, not the focus here
 	public override Expression ParseAssignmentExpression(Type assignmentType,
-		string initializationLine, int fileLineNumber) =>
+		ReadOnlySpan<char> initializationLine, int fileLineNumber) =>
 		null!;
 
 	public override Expression ParseMethodLine(Method.Line line, ref int methodLineNumber) => null!;
