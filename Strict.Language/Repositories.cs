@@ -126,8 +126,9 @@ public sealed class Repositories
 	} //ncrunch: no coverage end
 
 	public Task<Package> LoadFromPath(string packagePath) =>
-		cacheService.GetOrAddAsync(packagePath, _ => CreatePackageFromFiles(packagePath,
-			Directory.GetFiles(packagePath, "*" + Type.Extension)));
+		//cacheService.GetOrAddAsync(packagePath, _ =>
+		CreatePackageFromFiles(packagePath, Directory.GetFiles(packagePath, "*" + Type.Extension));
+			//);
 
 	/// <summary>
 	/// Initially we need to create just empty types and then after they all have been created
@@ -140,6 +141,7 @@ public sealed class Repositories
 			? parent
 			: await CreatePackage(packagePath, files, parent);
 
+	// ReSharper disable once MethodTooLong
 	private async Task<Package> CreatePackage(string packagePath, IEnumerable<string> files,
 		Package? parent)
 	{
@@ -171,20 +173,57 @@ public sealed class Repositories
 	/// <summary>
 	/// https://en.wikipedia.org/wiki/Breadth-first_search
 	/// </summary>
-	public IEnumerable<TypeLines> SortFilesWithImplements(Dictionary<string, TypeLines> files)
+	public IEnumerable<TypeLines> SortFilesWithImplements(Dictionary<string, TypeLines> files) =>
+		GotNestedImplements(files)
+			? EmptyDegreeQueueAndGenerateSortedOutput(files, CreateInDegreeGraphMap(files))
+			: files.Values;
+
+	private static bool GotNestedImplements(Dictionary<string, TypeLines> filesWithImplements)
 	{
-		if (!GotNestedImplements(files))
-			return files.Values;
+		foreach (var file in filesWithImplements)
+			// ReSharper disable once ForCanBeConvertedToForeach
+			for (var index = 0; index < file.Value.ImplementTypes.Count; index++)
+				if (filesWithImplements.ContainsKey(file.Value.ImplementTypes[index]))
+					return true;
+		return false;
+	}
+
+	// ReSharper disable once MethodTooLong
+	private static Dictionary<string, int> CreateInDegreeGraphMap(Dictionary<string, TypeLines> filesWithImplements)
+	{
+		var inDegree = new Dictionary<string, int>();
+		foreach (var kvp in filesWithImplements)
+		{
+			if (!inDegree.ContainsKey(kvp.Key))
+				inDegree.Add(kvp.Key, 0);
+			// ReSharper disable once ForCanBeConvertedToForeach
+			for (var index = 0; index < kvp.Value.ImplementTypes.Count; index++)
+			{
+				var edge = kvp.Value.ImplementTypes[index];
+				if (!inDegree.TryAdd(edge, 1))
+					inDegree[edge]++;
+			}
+		}
+		return inDegree;
+	}
+
+	// ReSharper disable once MethodTooLong
+	private static Stack<TypeLines> EmptyDegreeQueueAndGenerateSortedOutput(IReadOnlyDictionary<string, TypeLines> files,
+		Dictionary<string, int> inDegree)
+	{
 		var reversedDependencies = new Stack<TypeLines>();
-		var inDegree = CreateInDegreeGraphMap(files);
 		var zeroDegreeQueue = CreateZeroDegreeQueue(inDegree);
 		while (zeroDegreeQueue.Count > 0)
 			if (files.TryGetValue(zeroDegreeQueue.Dequeue(), out var lines))
 			{
 				reversedDependencies.Push(lines);
-				foreach (var vertex in lines.ImplementTypes)
-					if (inDegree[vertex]-- > 0 && inDegree[vertex]-- == 0)
+				// ReSharper disable once ForCanBeConvertedToForeach
+				for (var index = 0; index < lines.ImplementTypes.Count; index++)
+				{
+					var vertex = lines.ImplementTypes[index];
+					if (--inDegree[vertex] == 0)
 						zeroDegreeQueue.Enqueue(vertex);
+				}
 			}
 		return reversedDependencies;
 	}
@@ -196,34 +235,6 @@ public sealed class Repositories
 			if (vertex.Value == 0)
 				zeroDegreeQueue.Enqueue(vertex.Key);
 		return zeroDegreeQueue;
-	}
-
-	private static Dictionary<string, int> CreateInDegreeGraphMap(Dictionary<string, TypeLines> filesWithImplements)
-	{
-		var inDegree = new Dictionary<string, int>();
-		foreach (var kvp in filesWithImplements)
-		{
-			if (!inDegree.ContainsKey(kvp.Key))
-				inDegree.Add(kvp.Key, 0);
-			foreach (var edge in kvp.Value.ImplementTypes)
-				if (inDegree.ContainsKey(edge))
-					inDegree[edge]++;
-				else
-					inDegree.Add(edge, 1);
-		}
-		return inDegree;
-	}
-
-	private static bool GotNestedImplements(Dictionary<string, TypeLines> filesWithImplements)
-	{
-		var gotNestedImplements = false;
-		foreach (var file in filesWithImplements)
-			if (file.Value.ImplementTypes.Any(filesWithImplements.ContainsKey))
-			{
-				gotNestedImplements = true;
-				break;
-			}
-		return gotNestedImplements;
 	}
 
 	private List<Task> ParseAllSubFolders(IEnumerable<string> subDirectories, Package package)

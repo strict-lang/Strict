@@ -103,9 +103,13 @@ public class Type : Context
 		if (Name != Base.None && Name != Base.Any && Name != Base.Boolean &&
 			methods.Count == 0 && members.Count + implements.Count < 2)
 			throw new NoMethodsFound(this, lineNumber);
-		foreach (var trait in implements)
+		//TODO: convert all the inner foreach loops if possible to avoid creating memory while parsing (IEnumerator always eats up some bytes)
+		for (var index = 0; index < implements.Count; index++)
+		{
+			var trait = implements[index];
 			if (trait.IsTrait)
 				CheckIfTraitIsImplemented(trait);
+		}
 		return this;
 	}
 

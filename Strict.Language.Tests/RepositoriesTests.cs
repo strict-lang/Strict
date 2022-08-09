@@ -6,7 +6,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Engines;
-using BenchmarkDotNet.Running;
 using NUnit.Framework;
 using Strict.Language.Expressions;
 
@@ -61,27 +60,91 @@ public class RepositoriesTests
 				Repositories.DevelopmentFolder + @"\Examples\Invalid.strict:line 1"));
 	}
 
+	/// <summary>
+	/// Each indentation is one depth level lower
+	/// File1 needs File2
+	///  File2 needs File3 and Number
+	///   File3 needs File4
+	///    File4 needs File5 and File6
+	///			 File5 needs Number
+	/// File6 needs File5
+	/// </summary>
 	[Test]
-	public void SortImplements()
+	public void SortImplements() =>
+		Assert.That(
+			string.Join(", ",
+				new Repositories(null!).SortFilesWithImplements(CreateComplexImplementsDependencies()).
+					Select(file => file.Name)), Is.EqualTo("File5, File4, File3, File2, File6, File1"));
+
+	private static Dictionary<string, TypeLines> CreateComplexImplementsDependencies()
 	{
 		var file1 = new TypeLines("File1", "implement File2");
 		var file2 = new TypeLines("File2", "implement File3", "implement Number");
-		var file3 = new TypeLines("File3", "implement Number");
+		var file3 = new TypeLines("File3", "implement File4");
+		var file4 = new TypeLines("File4", "implement File5", "implement File 6");
+		var file5 = new TypeLines("File5", "implement Number");
+		var file6 = new TypeLines("File6", "implement File5");
 		var filesWithImplements = new Dictionary<string, TypeLines>
 		{
-			{ file1.Name, file1 }, { file2.Name, file2 }, { file3.Name, file3 }
+			{ file1.Name, file1 },
+			{ file2.Name, file2 },
+			{ file3.Name, file3 },
+			{ file4.Name, file4 },
+			{ file5.Name, file5 },
+			{ file6.Name, file6 }
 		};
-		Assert.That(
-			string.Join(", ",
-				new Repositories(null!).SortFilesWithImplements(filesWithImplements).
-					Select(file => file.Name)), Is.EqualTo("File3, File2, File1"));
+		return filesWithImplements;
 	}
 
 	//ncrunch: no coverage start
+	/*
 	[Test]
 	[Category("Slow")]
 	[Benchmark]
-	public async Task LoadingZippedStrictBase()
+	public void SortImplementsOneMillionTimes()
+	{
+		var files = CreateComplexImplementsDependencies();
+		var repository = new Repositories(null!);
+		for (var count = 0; count < 1000 * 1000; count++)
+			repository.SortFilesWithImplements(files);
+	}
+
+	[Test]
+	[Category("Slow")]
+	[Benchmark]
+	public void SortImplementsOneMillionTimesInParallel()
+	{
+		var files = CreateComplexImplementsDependencies();
+		var repository = new Repositories(null!);
+		Parallel.For(0, 12, (_, _) =>
+		{
+			for (var count = 0; count < 1000 * 1000; count++)
+				repository.SortFilesWithImplements(files);
+		});
+	}
+
+	/// <summary>
+	/// Zip file loading makes a difference (4-5 times faster), but otherwise there is close to zero
+	/// impact how we load the files, parallel or not, async is only 10-20% faster and not important.
+	/// File.ReadAllLinesAsync is by far the slowest way (2-3x slower) to load files.
+	/// </summary>
+	[Test]
+	[Category("Slow")]
+	[Benchmark]
+	public void LoadingAllStrictFilesWithoutAsyncHundredTimes()
+	{
+		for (var iteration = 0; iteration < MaxIterations; iteration++)
+			foreach (var file in Directory.GetFiles(BaseFolder, "*.strict"))
+				File.ReadAllLines(file);
+	}
+
+	private const int MaxIterations = 100;
+	private static string BaseFolder => Path.Combine(Repositories.DevelopmentFolder, "Base");
+
+	[Test]
+	[Category("Slow")]
+	[Benchmark]
+	public async Task LoadingZippedStrictBaseHundredTimes()
 	{
 		var zipFilePath = Path.Combine(Repositories.DevelopmentFolder, "Base.zip");
 		if (!File.Exists(zipFilePath))
@@ -94,69 +157,13 @@ public class RepositoriesTests
 			await Task.WhenAll(tasks);
 		}
 	}
-
-	private static string BaseFolder => Path.Combine(Repositories.DevelopmentFolder, "Base");
-	private const int MaxIterations = 1000;
-
+	*/
 	[Test]
 	[Category("Slow")]
 	[Benchmark]
-	public void LoadingAllStrictFilesSequentially()
+	public async Task LoadStrictBaseTypesJust10TimesWithDisabledCache()
 	{
-		for (var iteration = 0; iteration < MaxIterations; iteration++)
-			foreach (var file in Directory.GetFiles(BaseFolder, "*.strict"))
-				File.ReadAllLines(file);
+		for (var iteration = 0; iteration < 1000; iteration++)
+			await repos.LoadFromUrl(Repositories.StrictUrl);
 	}
-
-	/// <summary>
-	/// By far the slowest way (2-3x slower) to load files (even though ReSharper suggests it)
-	/// </summary>
-	[Test]
-	[Category("Slow")]
-	[Benchmark]
-	public async Task LoadingAllStrictFilesAsync()
-	{
-		for (var iteration = 0; iteration < MaxIterations; iteration++)
-			foreach (var file in Directory.GetFiles(BaseFolder, "*.strict"))
-				await File.ReadAllLinesAsync(file);
-	}
-
-	[Test]
-	[Category("Slow")]
-	[Benchmark]
-	public async Task LoadingAllStrictFilesAsyncInParallel()
-	{
-		for (var iteration = 0; iteration < MaxIterations; iteration++)
-		{
-			var tasks = new List<Task>();
-			foreach (var file in Directory.GetFiles(BaseFolder, "*.strict"))
-				tasks.Add(File.ReadAllLinesAsync(file));
-			await Task.WhenAll(tasks);
-		}
-	}
-
-	[Test]
-	[Category("Slow")]
-	[Benchmark]
-	public async Task LoadingAllStrictFilesAllTextAsyncParallel()
-	{
-		for (var iteration = 0; iteration < MaxIterations; iteration++)
-		{
-			var tasks = new List<Task>();
-			foreach (var file in Directory.GetFiles(BaseFolder, "*.strict"))
-			{
-				async void Action() => (await File.ReadAllTextAsync(file)).Split("\n");
-				tasks.Add(new Task(Action));
-			}
-			await Task.WhenAll(tasks);
-		}
-	}
-
-	/// <summary>
-	/// Zip file loading makes a difference (4-5 times faster), but otherwise there is close to zero
-	/// impact how we load the files, parallel or not, async is only 10-20% faster and not important.
-	/// </summary>
-	[Test]
-	[Category("Manual")]
-	public void LoadingFilesPerformance() => BenchmarkRunner.Run<RepositoriesTests>();
 }

@@ -25,17 +25,27 @@ public class TypeLines
 
 	private IReadOnlyList<string> ExtractImplementTypes()
 	{
-		var implements = new List<string>();
+		IList<string> implements = Array.Empty<string>();
 		foreach (var line in Lines)
 			if (line.StartsWith(Type.Implement, StringComparison.Ordinal))
 			{
-				var remainingLine = line[Type.Implement.Length..];
-				if (remainingLine.Contains('('))
-					implements.AddRange(remainingLine.Split(new[] { '(', ')', ',' },
-						StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries));
-				else
-					implements.Add(remainingLine);
+				if (implements.Count == 0)
+					implements = new List<string>();
+				AddImplements(line, implements);
 			}
-		return implements;
+			else
+				break;
+		return (IReadOnlyList<string>)implements;
+	}
+
+	private static void AddImplements(string line, ICollection<string> implements)
+	{
+		var remainingLine = line[Type.Implement.Length..];
+		if (remainingLine.Contains('('))
+			foreach (var part in remainingLine.Split(new[] { '(', ')', ',' },
+				StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
+				implements.Add(part);
+		else
+			implements.Add(remainingLine);
 	}
 }
