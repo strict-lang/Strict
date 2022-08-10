@@ -26,10 +26,6 @@ public static class Base
 	/// optimize this away to anything that makes sense in the current context.
 	/// </summary>
 	public const string Number = nameof(Number);
-	/// <summary>
-	/// Easy way to get another instance of the class type we are currently in.
-	/// </summary>
-	public const string Other = nameof(Other);
 	public const string Character = nameof(Character);
 	public const string Computation = nameof(Computation);
 	public const string Count = nameof(Count);
@@ -46,4 +42,8 @@ public static class Base
 	public const string App = nameof(App);
 	public const string System = nameof(System);
 	public const string List = nameof(List);
+	/// <summary>
+	/// Easy way to get another instance of the class type we are currently in.
+	/// </summary>
+	public const string Other = nameof(Other);
 }

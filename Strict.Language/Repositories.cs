@@ -126,9 +126,9 @@ public sealed class Repositories
 	} //ncrunch: no coverage end
 
 	public Task<Package> LoadFromPath(string packagePath) =>
-		//cacheService.GetOrAddAsync(packagePath, _ =>
-		CreatePackageFromFiles(packagePath, Directory.GetFiles(packagePath, "*" + Type.Extension));
-			//);
+		cacheService.GetOrAddAsync(packagePath,
+			_ => CreatePackageFromFiles(packagePath,
+				Directory.GetFiles(packagePath, "*" + Type.Extension)));
 
 	/// <summary>
 	/// Initially we need to create just empty types and then after they all have been created
@@ -149,7 +149,7 @@ public sealed class Repositories
 			? new Package(parent, packagePath)
 			: new Package(packagePath);
 		var types = new List<Type>();
-		var filesWithImplements = new Dictionary<string, TypeLines>();
+		var filesWithImplements = new Dictionary<string, TypeLines>(StringComparer.Ordinal);
 		foreach (var filePath in files)
 		{
 			var lines = new TypeLines(Path.GetFileNameWithoutExtension(filePath),
@@ -191,7 +191,7 @@ public sealed class Repositories
 	// ReSharper disable once MethodTooLong
 	private static Dictionary<string, int> CreateInDegreeGraphMap(Dictionary<string, TypeLines> filesWithImplements)
 	{
-		var inDegree = new Dictionary<string, int>();
+		var inDegree = new Dictionary<string, int>(StringComparer.Ordinal);
 		foreach (var kvp in filesWithImplements)
 		{
 			if (!inDegree.ContainsKey(kvp.Key))

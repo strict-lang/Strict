@@ -19,6 +19,11 @@ public class MethodTests
 		Assert.Throws<Method.ExpectedReturns>(() => new Method(type, 0, null!, new[] { "GetFiles return Texts" }));
 
 	[Test]
+	public void InvalidMethodParameters() =>
+		Assert.Throws<Method.InvalidMethodParameters>(() =>
+			new Method(type, 0, null!, new[] { "a(" }));
+
+	[Test]
 	public void ParametersMustNotBeEmpty() =>
 		Assert.Throws<Method.EmptyParametersMustBeRemoved>(() =>
 			new Method(type, 0, null!, new[] { "a()" }));

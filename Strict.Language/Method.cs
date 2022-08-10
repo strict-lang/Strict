@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.CompilerServices;
 
 namespace Strict.Language;
@@ -11,50 +10,69 @@ namespace Strict.Language;
 /// </summary>
 public sealed class Method : Context
 {
-	public Method(Type type, int typeLineNumber, ExpressionParser parser,
-		// Memory<char> lines https://deltaengine.fogbugz.com/f/cases/25240
-		IReadOnlyList<string> lines)
+	public Method(Type type, int typeLineNumber, ExpressionParser parser, IReadOnlyList<string> lines)
 		: base(type, GetName(lines[0]))
 	{
-		var nameAsSpan = Name.AsSpan();
-		if (!nameAsSpan.IsWord() && !nameAsSpan.IsOperator())
-			throw new NameMustBeAWordWithoutAnySpecialCharactersOrNumbers(Name);
 		TypeLineNumber = typeLineNumber;
 		this.parser = parser;
-		var rest = lines[0][Name.Length..];
-		ReturnType = Name == From
-			? type
-			: GetReturnType(type, ref rest);
-		ParseDefinition(rest);
-		bodyLines = GetLines(lines); //https://deltaengine.fogbugz.com/f/cases/25240
-		body = new Lazy<MethodBody>(() => (MethodBody)parser.ParseMethodBody(this));
-	}
-
-	private void ParseDefinition(string rest)
-	{
-		if (string.IsNullOrEmpty(rest))
-			return;
-		if (rest == "()")
-			throw new EmptyParametersMustBeRemoved(this);
-		ParseParameters(rest[1..^1]);
-	}
-
-	private Type GetReturnType(Context type, ref string rest)
-	{
-		var returnType = type.GetType(Base.None);
-		var returnsIndex = rest.IndexOf(" " + Returns + " ", StringComparison.Ordinal);
-		if (returnsIndex >= 0)
+		var rest = lines[0].AsSpan(Name.Length);
+		if (Name == From)
 		{
-			returnType = Type.GetType(rest[(returnsIndex + Returns.Length + 2)..]);
-			rest = rest[..returnsIndex];
+			ReturnType = type;
+			ParseParameters(rest);
 		}
-		else if (rest.Split(')').Last().Length > 0)
-			throw new ExpectedReturns(this, rest);
-		return returnType;
+		else
+			ReturnType = ParseReturnTypeAndParseParameters(type, rest);
+		bodyLines = GetLines(lines);
+		body = new Lazy<MethodBody>(() => (MethodBody)parser.ParseMethodBody(this));
 	}
 
 	public int TypeLineNumber { get; }
 	private readonly ExpressionParser parser;
+
+	private Type ParseReturnTypeAndParseParameters(Type type, ReadOnlySpan<char> rest)
+	{
+		if (rest.Length <= 0)
+		{
+			ParseParameters(rest);
+			return type.GetType(Base.None);
+		}
+		var returnsIndex = rest.IndexOf(ReturnsWithSpaces, StringComparison.Ordinal);
+		if (returnsIndex >= 0)
+		{
+			ParseParameters(rest[..returnsIndex]);
+			return Type.GetType(rest[(returnsIndex + Returns.Length + 2)..].ToString());
+		}
+		ParseParameters(rest);
+		return type.GetType(Base.None);
+	}
+
+	private void ParseParameters(ReadOnlySpan<char> rest)
+	{
+		if (rest.Length == 0)
+			return;
+		if (rest[^1] != ')')
+			throw rest[0] != '('
+				? new ExpectedReturns(this, rest.ToString())
+				: new InvalidMethodParameters(this, rest.ToString());
+		if (rest.Length == 2)
+			throw new EmptyParametersMustBeRemoved(this);
+		foreach (var nameAndType in rest[1..^1].Split(',', StringSplitOptions.TrimEntries))
+			parameters.Add(new Parameter(this, nameAndType.ToString()));
+	}
+
+	public sealed class InvalidMethodParameters : ParsingFailed
+	{
+		public InvalidMethodParameters(Method method, string rest) : base(method.Type, 0, rest,
+			method.Name) { }
+	}
+
+	public sealed class EmptyParametersMustBeRemoved : ParsingFailed
+	{
+		public EmptyParametersMustBeRemoved(Method method) : base(method.Type, 0, "", method.Name) { }
+	}
+
+	private const string ReturnsWithSpaces = " " + Returns + " ";
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public Expression ParseExpression(Line line, Range rangeToParse) =>
@@ -75,30 +93,25 @@ public sealed class Method : Context
 	/// </summary>
 	private static string GetName(ReadOnlySpan<char> firstLine)
 	{
+		var name = firstLine;
 		for (var i = 0; i < firstLine.Length; i++)
 			if (firstLine[i] == '(' || firstLine[i] == ' ')
-				return firstLine[..i].ToString();
-		return firstLine.ToString();
+			{
+				name = firstLine[..i];
+				break;
+			}
+		if (!name.IsWord() && !name.IsOperator())
+			throw new NameMustBeAWordWithoutAnySpecialCharactersOrNumbers(name.ToString());
+		return name.ToString();
 	}
 
 	public const string From = "from";
 	public const string Returns = "returns";
 
-	public sealed class EmptyParametersMustBeRemoved : ParsingFailed
-	{
-		public EmptyParametersMustBeRemoved(Method method) : base(method.Type, 0, "", method.Name) { }
-	}
-
 	public sealed class ExpectedReturns : ParsingFailed
 	{
 		public ExpectedReturns(Method method, string rest) :
 			base(method.Type, 0, rest, method.Name) { }
-	}
-
-	public void ParseParameters(string parametersText)
-	{
-		foreach (var nameAndType in parametersText.Split(", "))
-			parameters.Add(new Parameter(this, nameAndType));
 	}
 
 	/// <summary>
@@ -156,8 +169,26 @@ public sealed class Method : Context
 	private readonly Lazy<MethodBody> body;
 	public MethodBody Body => body.Value;
 	public bool IsPublic => char.IsUpper(Name[0]);
-	//TODO: slow and eats up a lot of memory, should be only created when needed
-	public readonly Dictionary<string, Expression> Variables = new();
+	/// <summary>
+	/// Dictionaries are slow and eats up a lot of memory, only created when needed.
+	/// </summary>
+	private Dictionary<string, Expression>? variables;
+
+	public void AddVariable(string name, Expression value)
+	{
+		variables ??= new Dictionary<string, Expression>(StringComparer.Ordinal);
+		variables.Add(name, value);
+	}
+
+	public Expression? FindVariableValue(ReadOnlySpan<char> searchFor)
+	{
+		if (variables == null)
+			return null;
+		foreach (var (name, value) in variables)
+			if (searchFor.Equals(name, StringComparison.Ordinal))
+				return value;
+		return null;
+	}
 
 	public override Type? FindType(string name, Context? searchingFrom = null) =>
 		name == Base.Other

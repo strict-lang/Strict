@@ -17,7 +17,9 @@ public class CSharpToCudaTranspilerTests
 	private static async Task<Package> GetStrictPackage() =>
 		cachedStrictPackage ??= await GetRepositories().LoadFromUrl(Repositories.StrictUrl);
 
+#pragma warning disable CS8632
 	private static Package? cachedStrictPackage;
+#pragma warning restore CS8632
 	private static Repositories GetRepositories() => new(new MethodExpressionParser());
 	private CSharpToCudaTranspiler transpiler = null!;
 

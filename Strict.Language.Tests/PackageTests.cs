@@ -23,19 +23,17 @@ public class PackageTests
 	private Type publicSubType = null!;
 
 	[Test]
-	public void NoneAndBooleanAreAlwaysKnown()
+	public void NoneIsAlwaysKnown()
 	{
-		var emptyPackage = new Package(nameof(NoneAndBooleanAreAlwaysKnown));
+		var emptyPackage = new Package(nameof(NoneIsAlwaysKnown));
 		Assert.That(emptyPackage.FindType(Base.None, emptyPackage), Is.Not.Null);
-		Assert.That(emptyPackage.FindType(Base.Boolean, emptyPackage), Is.Not.Null);
-		Assert.That(emptyPackage.FindType("bool", emptyPackage), Is.Null);
-		Assert.That(emptyPackage.FindType(nameof(NoneAndBooleanAreAlwaysKnown), emptyPackage),
-			Is.Null);
+		Assert.That(emptyPackage.FindType(nameof(NoneIsAlwaysKnown), emptyPackage), Is.Null);
 	}
 
 	[Test]
 	public void IsPrivateNameCheckShouldReturnNull() =>
-		Assert.That(new Package(nameof(IsPrivateNameCheckShouldReturnNull)).FindType("isPrivate"), Is.Null);
+		Assert.That(new Package(nameof(IsPrivateNameCheckShouldReturnNull)).FindType("isPrivate"),
+			Is.Null);
 
 	[Test]
 	public void RootPackageToStringShouldNotCrash()

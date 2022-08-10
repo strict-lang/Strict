@@ -167,9 +167,9 @@ public class MethodExpressionParser : ExpressionParser
 		{
 			if (context is Method method)
 			{
-				foreach (var (name, value) in method.Variables)
-					if (partToParse.Equals(name, StringComparison.Ordinal))
-						return new VariableCall(name, value);
+				var variableValue = method.FindVariableValue(partToParse);
+				if (variableValue != null)
+					return new VariableCall(partToParse.ToString(), variableValue);
 				foreach (var parameter in method.Parameters)
 					if (partToParse.Equals(parameter.Name, StringComparison.Ordinal))
 						return new ParameterCall(parameter);

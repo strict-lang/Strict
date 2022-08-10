@@ -8,7 +8,6 @@ namespace Strict.Language;
 /// </summary>
 public static class BinaryOperator
 {
-	//https://deltaengine.fogbugz.com/f/cases/25287
 	public const string Plus = "+";
 	public const string Minus = "-";
 	public const string Multiply = "*";
@@ -40,8 +39,9 @@ public static class BinaryOperator
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static bool IsMultiCharacterOperator(this string name)
 	{
-		foreach (var checkOperator in MultiCharacterOperators)
-			if (checkOperator == name)
+		// ReSharper disable once ForCanBeConvertedToForeach
+		for (var index = 0; index < MultiCharacterOperators.Length; index++)
+			if (MultiCharacterOperators[index] == name)
 				return true;
 		return false;
 	}
@@ -54,9 +54,11 @@ public static class BinaryOperator
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static bool IsMultiCharacterOperator(this ReadOnlySpan<char> name)
 	{
-		foreach (var checkOperator in MultiCharacterOperators)
-			if (name.Compare(checkOperator))
-				return true;
+		if (name.Length <= 3)
+			// ReSharper disable once ForCanBeConvertedToForeach
+			for (var index = 0; index < MultiCharacterOperators.Length; index++)
+				if (name.Compare(MultiCharacterOperators[index]))
+					return true;
 		return false;
 	}
 

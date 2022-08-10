@@ -17,10 +17,10 @@ public class Package : Context
 	private static readonly Root RootForPackages = new();
 
 	/// <summary>
-	/// Contains all high level <see cref="Package"/>. Just contains the fallback None type (think
-	/// void), Any (think object) and Boolean, has no parent and just contains all root children
-	/// packages. Also features a cache of types searched from here so future access is much faster.
-	/// See green comment here: https://strict.dev/img/FindType2020-07-01.png
+	/// Contains all high level <see cref="Package"/>s. Just contains the fallback None type (think
+	/// void), has no parent and just contains all root children packages. Also features a cache of
+	/// types searched from here so future access is much faster. See green comment here:
+	/// https://strict.dev/img/FindType2020-07-01.png
 	/// </summary>
 	private sealed class Root : Package
 	{
@@ -40,7 +40,7 @@ public class Package : Context
 			return type;
 		}
 
-		private readonly Dictionary<string, Type> cachedFoundTypes = new();
+		private readonly Dictionary<string, Type> cachedFoundTypes = new(StringComparer.Ordinal);
 	}
 
 	public Package(Package? parentPackage, string packagePath) : base(parentPackage,

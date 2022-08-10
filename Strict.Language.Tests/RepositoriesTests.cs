@@ -97,28 +97,27 @@ public class RepositoriesTests
 	}
 
 	//ncrunch: no coverage start
-	/*
 	[Test]
 	[Category("Slow")]
 	[Benchmark]
-	public void SortImplementsOneMillionTimes()
+	public void SortImplementsOneThousandTimes()
 	{
 		var files = CreateComplexImplementsDependencies();
 		var repository = new Repositories(null!);
-		for (var count = 0; count < 1000 * 1000; count++)
+		for (var count = 0; count < 1000; count++)
 			repository.SortFilesWithImplements(files);
 	}
 
 	[Test]
 	[Category("Slow")]
 	[Benchmark]
-	public void SortImplementsOneMillionTimesInParallel()
+	public void SortImplementsOneThousandTimesInParallel()
 	{
 		var files = CreateComplexImplementsDependencies();
 		var repository = new Repositories(null!);
 		Parallel.For(0, 12, (_, _) =>
 		{
-			for (var count = 0; count < 1000 * 1000; count++)
+			for (var count = 0; count < 1000; count++)
 				repository.SortFilesWithImplements(files);
 		});
 	}
@@ -133,12 +132,11 @@ public class RepositoriesTests
 	[Benchmark]
 	public void LoadingAllStrictFilesWithoutAsyncHundredTimes()
 	{
-		for (var iteration = 0; iteration < MaxIterations; iteration++)
+		for (var iteration = 0; iteration < 100; iteration++)
 			foreach (var file in Directory.GetFiles(BaseFolder, "*.strict"))
 				File.ReadAllLines(file);
 	}
 
-	private const int MaxIterations = 100;
 	private static string BaseFolder => Path.Combine(Repositories.DevelopmentFolder, "Base");
 
 	[Test]
@@ -149,7 +147,7 @@ public class RepositoriesTests
 		var zipFilePath = Path.Combine(Repositories.DevelopmentFolder, "Base.zip");
 		if (!File.Exists(zipFilePath))
 			ZipFile.CreateFromDirectory(BaseFolder, zipFilePath);
-		for (var iteration = 0; iteration < MaxIterations; iteration++)
+		for (var iteration = 0; iteration < 100; iteration++)
 		{
 			var tasks = new List<Task>();
 			foreach (var entry in ZipFile.OpenRead(zipFilePath).Entries)
@@ -157,13 +155,16 @@ public class RepositoriesTests
 			await Task.WhenAll(tasks);
 		}
 	}
-	*/
+
 	[Test]
 	[Category("Slow")]
 	[Benchmark]
-	public async Task LoadStrictBaseTypesJust10TimesWithDisabledCache()
+	public async Task LoadStrictBaseTypesHundredTimes()
 	{
-		for (var iteration = 0; iteration < 1000; iteration++)
+		//await repos.LoadFromUrl(Repositories.StrictUrl);
+		//MemoryProfiler.GetSnapshot(nameof(LoadStrictBaseTypesTenTimes) + " once");
+		for (var iteration = 0; iteration < 100; iteration++)
 			await repos.LoadFromUrl(Repositories.StrictUrl);
+		//MemoryProfiler.GetSnapshot(nameof(LoadStrictBaseTypesTenTimes) + "10");
 	}
 }

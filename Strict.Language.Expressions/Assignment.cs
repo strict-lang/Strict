@@ -11,7 +11,7 @@ public sealed class Assignment : Expression
 	{
 		if (!name.IsWord())
 			throw new Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers(name);
-		inMethod.Variables.Add(name, value);
+		inMethod.AddVariable(name, value);
 		Name = name;
 		Value = value;
 	}
