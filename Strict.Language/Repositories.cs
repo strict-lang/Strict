@@ -142,13 +142,13 @@ public sealed class Repositories
 			: await CreatePackage(packagePath, files, parent);
 
 	// ReSharper disable once MethodTooLong
-	private async Task<Package> CreatePackage(string packagePath, IEnumerable<string> files,
+	private async Task<Package> CreatePackage(string packagePath, IReadOnlyCollection<string> files,
 		Package? parent)
 	{
 		var package = parent != null
 			? new Package(parent, packagePath)
 			: new Package(packagePath);
-		var types = new List<Type>();
+		var types = new List<Type>(files.Count);
 		var filesWithImplements = new Dictionary<string, TypeLines>(StringComparer.Ordinal);
 		foreach (var filePath in files)
 		{
