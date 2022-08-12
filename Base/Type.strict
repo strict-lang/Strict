@@ -1,5 +1,5 @@
 has Name Text
 has Package Text
-to returns Text
+to Text
 	to Text is "Strict.Base.Type"
-	return Package + "." + Name
+	Package + "." + Name

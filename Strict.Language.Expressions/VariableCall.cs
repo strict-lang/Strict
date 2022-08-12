@@ -3,13 +3,14 @@
 // ReSharper disable once HollowTypeName
 public sealed class VariableCall : Expression
 {
-	public VariableCall(string name, Expression value) : base(value.ReturnType)
+	//TODO: need tests, also need to check if variable is available, crash if trying to use something that is not in scope, etc.
+	public VariableCall(string name, Expression currentValue) : base(currentValue.ReturnType)
 	{
 		Name = name;
-		Value = value;
+		CurrentValue = currentValue;
 	}
 
 	public string Name { get; }
-	public Expression Value { get; }
+	public Expression CurrentValue { get; }
 	public override string ToString() => Name;
 }

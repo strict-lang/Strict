@@ -5,11 +5,6 @@ namespace Strict.Language.Expressions.Tests;
 public class AssignmentTests : TestExpressions
 {
 	[Test]
-	public void MultipleStatementsAreNotAllowedHere() =>
-		Assert.That(() => ParseExpression("let number = 5", "let other = 3"),
-			Throws.Exception.InstanceOf<MultipleExpressionsGiven>());
-
-	[Test]
 	public void ParseNumber()
 	{
 		var assignment = (Assignment)ParseExpression("let number = 5");

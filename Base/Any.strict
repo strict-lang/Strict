@@ -1,5 +1,5 @@
-to returns HashCode
-to returns Type
-to returns Text
-is(type) returns Boolean
-to(generic) returns Generic
+to HashCode
+to Type
+to Text
+is(type) Boolean
+to(generic) Generic

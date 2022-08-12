@@ -1,8 +1,8 @@
 implement Mutable
 implement Number
-Increase
-	Count(5).Increase is 6
-	self = self + 1
-Decrease
-	Count(3).Decrease is 2
-	self = self - 1
+Increment
+	Count(5).Increment is 6
+	value = value + 1
+Decrement
+	Count(3).Decrement is 2
+	value = value - 1

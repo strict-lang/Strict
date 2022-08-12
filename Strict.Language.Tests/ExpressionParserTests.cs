@@ -109,6 +109,6 @@ public class ExpressionParserTests : ExpressionParser
 		Assert.That(method.bodyLines[0].ToString(), Is.EqualTo(MethodTests.LetNumber));
 		Assert.That(method.bodyLines[1].ToString(), Is.EqualTo("	if bla is 5"));
 		Assert.That(method.bodyLines[2].ToString(), Is.EqualTo("		return true"));
-		Assert.That(method.bodyLines[3].ToString(), Is.EqualTo("	return false"));
+		Assert.That(method.bodyLines[3].ToString(), Is.EqualTo("	false"));
 	}
 }

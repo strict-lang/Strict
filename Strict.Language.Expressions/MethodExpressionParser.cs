@@ -321,6 +321,8 @@ public class MethodExpressionParser : ExpressionParser
 		var expressions = new List<Expression>();
 		for (var lineNumber = 0; lineNumber < method.bodyLines.Count; lineNumber++)
 			expressions.Add(ParseMethodLine(method.bodyLines[lineNumber], ref lineNumber));
+		if (expressions.Count > 0 && expressions[^1] is Return)
+			throw new Return.ReturnAsLastExpressionIsNotNeeded(method.bodyLines[^1]);
 		return new MethodBody(method, expressions);
 	}
 

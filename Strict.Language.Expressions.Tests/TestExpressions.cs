@@ -30,11 +30,14 @@ public abstract class TestExpressions : MethodExpressionParser
 	protected readonly Member bla;
 	protected readonly List list;
 
-	public void ParseAndCheckOutputMatchesInput(string code, Expression expectedExpression)
+	public void ParseAndCheckOutputMatchesInput(string singleLine, Expression expectedExpression) =>
+		ParseAndCheckOutputMatchesInput(new[] { singleLine }, expectedExpression);
+
+	public void ParseAndCheckOutputMatchesInput(string[] lines, Expression expectedExpression)
 	{
-		var expression = ParseExpression(code);
+		var expression = ParseExpression(lines);
 		Assert.That(expression, Is.EqualTo(expectedExpression));
-		Assert.That(expression.ToString(), Is.EqualTo(code));
+		Assert.That(string.Join(Environment.NewLine, lines), Does.StartWith(expression.ToString()));
 	}
 
 	public Expression ParseExpression(params string[] lines)
@@ -42,12 +45,8 @@ public abstract class TestExpressions : MethodExpressionParser
 		var methodLines = lines.Select(line => '\t' + line).ToList();
 		methodLines.Insert(0, MethodTests.Run);
 		var body = new Method(type, 0, this, methodLines).Body;
-		return body.Expressions.Count == 1
-			? body.Expressions[0]
-			: throw new MultipleExpressionsGiven();
+		return body.Expressions[0];
 	}
-
-	public sealed class MultipleExpressionsGiven : Exception { }
 
 	protected static MethodCall CreateFromMethodCall(Type fromType, params Expression[] arguments) =>
 		new(fromType.FindMethod(Method.From, arguments)!, new From(fromType), arguments);

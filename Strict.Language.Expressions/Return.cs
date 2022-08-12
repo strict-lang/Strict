@@ -12,18 +12,20 @@ public sealed class Return : Expression
 
 	public static Expression? TryParse(Method.Line line) =>
 		line.Text.StartsWith(ReturnName, StringComparison.Ordinal)
-			? TryParseReturn(line)
+			? new Return(line.Text.Length <= ReturnName.Length
+				? throw new MissingExpression(line)
+				: line.Method.ParseExpression(line, (ReturnName.Length + 1)..))
 			: null;
 
 	private const string ReturnName = "return";
 
-	private static Expression TryParseReturn(Method.Line line) =>
-		new Return(line.Text.Length <= ReturnName.Length
-			? throw new MissingExpression(line)
-			: line.Method.ParseExpression(line, (ReturnName.Length + 1)..));
-
 	public sealed class MissingExpression : ParsingFailed
 	{
 		public MissingExpression(Method.Line line) : base(line) { }
+	}
+
+	public sealed class ReturnAsLastExpressionIsNotNeeded : ParsingFailed
+	{
+		public ReturnAsLastExpressionIsNotNeeded(Method.Line line) : base(line) { }
 	}
 }

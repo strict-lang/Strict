@@ -33,6 +33,6 @@ public sealed class MethodExpressionParserTests : TestExpressions
 		Assert.That(body.Expressions[0].ToString(), Is.EqualTo(MethodTests.LetNumber[1..]));
 		Assert.That(body.Expressions[1].ToString(),
 			Is.EqualTo(MethodTests.NestedMethodLines[2][1..] + "\r\n" + MethodTests.NestedMethodLines[3][1..]));
-		Assert.That(body.Expressions[2].ToString(), Is.EqualTo("return false"));
+		Assert.That(body.Expressions[2].ToString(), Is.EqualTo("false"));
 	}
 }

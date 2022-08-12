@@ -24,4 +24,7 @@ public static class StringExtensions
 
 	public static string MakeFirstLetterUppercase(this string name) =>
 		name[..1].ToUpperInvariant() + name[1..];
+
+	public static string MakeFirstLetterLowercase(this string name) =>
+		name[..1].ToLowerInvariant() + name[1..];
 }

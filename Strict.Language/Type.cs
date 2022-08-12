@@ -94,12 +94,17 @@ public class Type : Context
 	public Type ParseMembersAndMethods(ExpressionParser parser)
 	{
 		for (; lineNumber < lines.Length; lineNumber++)
-			if (ValidateCurrentLineIsNonEmptyAndTrimmed().StartsWith(Has, StringComparison.Ordinal))
-				members.Add(ParseMember(parser, lines[lineNumber].AsSpan(Has.Length)));
-			else if (lines[lineNumber].StartsWith(Implement, StringComparison.Ordinal))
-				throw new ImplementMustComeBeforeMembersAndMethods(this, lineNumber, lines[lineNumber]);
-			else
-				methods.Add(new Method(this, lineNumber, parser, GetAllMethodLines(lines[lineNumber])));
+		{
+			var rememberStartMethodLineNumber = lineNumber;
+			try
+			{
+				ParseLineForMembersAndMethods(parser);
+			}
+			catch (TypeNotFound ex)
+			{
+				throw new ParsingFailed(this, rememberStartMethodLineNumber, ex.Message, ex);
+			}
+		}
 		if (Name != Base.None && Name != Base.Any && Name != Base.Boolean &&
 			methods.Count == 0 && members.Count + implements.Count < 2)
 			throw new NoMethodsFound(this, lineNumber);
@@ -111,6 +116,16 @@ public class Type : Context
 				CheckIfTraitIsImplemented(trait);
 		}
 		return this;
+	}
+
+	private void ParseLineForMembersAndMethods(ExpressionParser parser)
+	{
+		if (ValidateCurrentLineIsNonEmptyAndTrimmed().StartsWith(Has, StringComparison.Ordinal))
+			members.Add(ParseMember(parser, lines[lineNumber].AsSpan(Has.Length)));
+		else if (lines[lineNumber].StartsWith(Implement, StringComparison.Ordinal))
+			throw new ImplementMustComeBeforeMembersAndMethods(this, lineNumber, lines[lineNumber]);
+		else
+			methods.Add(new Method(this, lineNumber, parser, GetAllMethodLines(lines[lineNumber])));
 	}
 
 	private Member ParseMember(ExpressionParser parser, ReadOnlySpan<char> remainingLine)
@@ -236,19 +251,13 @@ public class Type : Context
 	public const string Extension = ".strict";
 
 	public Method GetMethod(string methodName, IReadOnlyList<Expression> arguments) =>
-		FindMethod(methodName, arguments) ?? (methodName == Method.From && arguments.Count == 0
-			? throw new StaticMethodCallsAreNotPossible(this)
-			: throw new NoMatchingMethodFound(this, methodName, AvailableMethods));
-
-	public sealed class StaticMethodCallsAreNotPossible : Exception
-	{
-		public StaticMethodCallsAreNotPossible(Type type) : base(type.ToString()) { }
-	}
+		FindMethod(methodName, arguments) ??
+		throw new NoMatchingMethodFound(this, methodName, AvailableMethods);
 
 	public Method? FindMethod(string methodName, IReadOnlyList<Expression> arguments)
 	{
 		if (!AvailableMethods.TryGetValue(methodName, out var matchingMethods))
-			return null;
+			return FindAndCreateFromBaseMethod(methodName, arguments);
 		foreach (var method in matchingMethods)
 			if (method.Parameters.Count == arguments.Count)
 			{
@@ -263,6 +272,20 @@ public class Type : Context
 					return method;
 			}
 		throw new ArgumentsDoNotMatchMethodParameters(arguments, matchingMethods);
+	}
+
+	private Method? FindAndCreateFromBaseMethod(string methodName,
+		IReadOnlyList<Expression> arguments)
+	{
+		if (methodName == Method.From && arguments.Count == 1)
+			foreach (var implementType in implements)
+				if (implementType == arguments[0].ReturnType)
+					return new Method(this, 0, null!,
+						new[] { "from(" + implementType.Name.MakeFirstLetterLowercase() + ")" });
+		//TODO: also allow creation from any of the has members available, e.g. Stacktrace.strict
+		//from(method)
+		//	Method = method
+		return null;
 	}
 
 	private bool IsCompatible(Type sameOrBaseType) =>
@@ -328,7 +351,7 @@ public class Type : Context
 				: (arguments.Count == 1
 					? "Argument: "
 					: "Arguments: ") + arguments.Select(a => a.ReturnType + " " + a).ToWordList() +
-				" do ") + "not match:\n" +
-			string.Join('\n', allMethods.Select(m => m + m.Parameters.ToBrackets()))) { }
+				" do ") +
+			"not match:\n" + string.Join('\n', allMethods)) { }
 	}
 }

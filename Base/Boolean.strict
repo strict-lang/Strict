@@ -1,24 +1,24 @@
-not returns Boolean
+not Boolean
 	not true is false
-	return value ? false else true
-and(other) returns Boolean
+	value ? false else true
+and(other) Boolean
 	true and false is false
 	true and true is true
-	return value and other ? true else false
-or(other) returns Boolean
+	value and other ? true else false
+or(other) Boolean
 	true or false is true
 	false or false is false
-	return value or other ? false else true
-xor(other) returns Boolean
+	value or other ? false else true
+xor(other) Boolean
 	true xor true is false
 	false xor true is true
 	not (false xor false) is true
-	return (value and other) or (not value and not other) ? false else true
-is(other) returns Boolean
+	(value and other) or (not value and not other) ? false else true
+is(other) Boolean
 	true is true
 	false is not true
-	return value is other
-to(Text) returns Text
+	value is other
+to(Text) Text
 	true to Text is "true"
 	not true to Text is "false"
-	return value ? "true" else "false"
+	value ? "true" else "false"

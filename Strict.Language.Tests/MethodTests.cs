@@ -15,8 +15,8 @@ public class MethodTests
 			new Method(type, 0, null!, new[] { "5(text)" }));
 
 	[Test]
-	public void ReturnShouldBeReturns() =>
-		Assert.Throws<Method.ExpectedReturns>(() => new Method(type, 0, null!, new[] { "GetFiles return Texts" }));
+	public void ReturnTypeMustBeBeLast() =>
+		Assert.Throws<Context.TypeNotFound>(() => new Method(type, 0, null!, new[] { "Texts GetFiles" }));
 
 	[Test]
 	public void InvalidMethodParameters() =>
@@ -35,7 +35,7 @@ public class MethodTests
 		Assert.That(method.Name, Is.EqualTo(Run));
 		Assert.That(method.Parameters, Is.Empty);
 		Assert.That(method.ReturnType, Is.EqualTo(type.GetType(Base.None)));
-		Assert.That(method.ToString(), Is.EqualTo("TestPackage.MockRunTypeLines.Run"));
+		Assert.That(method.ToString(), Is.EqualTo(Run));
 	}
 
 	[Test]
@@ -49,14 +49,25 @@ public class MethodTests
 	}
 
 	public const string Run = nameof(Run);
-	public const string LetNumber = "	let number = 5";
-	public const string LetOther = "	let other = 3";
+
+	[Test]
+	public void ParseWithReturnType()
+	{
+		var method = new Method(type, 0, null!, NestedMethodLines);
+		Assert.That(method.Name, Is.EqualTo("IsBlaFive"));
+		Assert.That(method.Parameters, Is.Empty);
+		Assert.That(method.ReturnType, Is.EqualTo(type.GetType(Base.Boolean)));
+		Assert.That(method.ToString(), Is.EqualTo(NestedMethodLines[0]));
+	}
+
 	public static readonly string[] NestedMethodLines =
 	{
-		"IsBlaFive returns Boolean",
+		"IsBlaFive Boolean",
 		LetNumber,
 		"	if bla is 5",
 		"		return true",
-		"	return false"
+		"	false"
 	};
+	public const string LetNumber = "	let number = 5";
+	public const string LetOther = "	let other = 3";
 }

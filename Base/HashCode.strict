@@ -1,8 +1,6 @@
 implement Number
-Compute returns Number
+Compute Number
 	Compute(5) is 5
 	if value is Number
 		return value
-	if value is Text
-		return value.Length
-	return 0
+	value is Text ? value.Length else 0

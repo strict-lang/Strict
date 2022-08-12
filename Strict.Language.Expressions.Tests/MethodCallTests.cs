@@ -8,7 +8,7 @@ public sealed class MethodCallTests : TestExpressions
 	[SetUp]
 	public void AddComplexMethod() =>
 		((List<Method>)type.Methods).Add(new Method(type, 0, this,
-			new[] { "complexMethod(numbers, add Number) returns Number", "\treturn 1" }));
+			new[] { "complexMethod(numbers, add Number) Number", "\t1" }));
 
 	[Test]
 	public void ParseLocalMethodCall() =>
@@ -30,7 +30,7 @@ public sealed class MethodCallTests : TestExpressions
 	public void ParseWithMissingArgument() =>
 		Assert.That(() => ParseExpression("log.Write"),
 			Throws.InstanceOf<Type.ArgumentsDoNotMatchMethodParameters>().With.Message.StartsWith(
-				"No arguments does not match:\nTestPackage.Log.Write(text TestPackage.Text)\nTestPackage.Log.Write(number TestPackage.Number)"));
+				"No arguments does not match:\nWrite(text TestPackage.Text)\nWrite(number TestPackage.Number)"));
 
 	[Test]
 	public void ParseWithTooManyArguments() =>
@@ -75,7 +75,7 @@ public sealed class MethodCallTests : TestExpressions
 			Is.EqualTo(CreateFromMethodCall(type.GetType(Base.Character), new Number(type, 7))));
 
 	[TestCase("Count(5)")]
-	[TestCase("Count(5).Increase")]
+	[TestCase("Count(5).Increment")]
 	[TestCase("Count(5).Floor")]
 	public void FromExample(string fromMethodCall) =>
 		Assert.That(ParseExpression(fromMethodCall).ToString(), Is.EqualTo(fromMethodCall));

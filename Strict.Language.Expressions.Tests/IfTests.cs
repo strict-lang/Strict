@@ -37,8 +37,7 @@ public sealed class IfTests : TestExpressions
 	[Test]
 	public void ParseJustElseIsNotAllowed() =>
 		Assert.That(() => ParseExpression("else"),
-			Throws.InstanceOf<If.UnexpectedElse>().With.Message.
-				Contains(@"at TestPackage.dummy.Run in "));
+			Throws.InstanceOf<If.UnexpectedElse>().With.Message.Contains(@"at Run in "));
 
 	[Test]
 	public void ParseIncompleteThen() =>
@@ -117,7 +116,7 @@ public sealed class IfTests : TestExpressions
 	[TestCase("log.Write(true ? \"Yes\" + \"text\" else \"No\")")]
 	[TestCase("log.Write(\"Result\" + (true ? \"Yes\" else \"No\"))")]
 	[TestCase("let something = 5 is 5 ? false else true")]
-	[TestCase("return 6 is 5 ? true else false")]
+	[TestCase("6 is 5 ? true else false")]
 	public void ConditionalExpressionsAsPartOfOtherExpression(string code) =>
 		Assert.That(ParseExpression(code).ToString(), Is.EqualTo(code));
 }

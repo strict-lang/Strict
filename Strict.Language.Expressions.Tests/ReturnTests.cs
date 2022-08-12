@@ -9,13 +9,19 @@ public sealed class ReturnTests : TestExpressions
 		Assert.That(() => ParseExpression("return"), Throws.InstanceOf<Return.MissingExpression>());
 
 	[Test]
+	public void ReturnAsLastExpressionIsNotNeeded() =>
+		Assert.That(() => ParseExpression("return 1"),
+			Throws.InstanceOf<Return.ReturnAsLastExpressionIsNotNeeded>());
+
+	[Test]
 	public void ParseReturnNumber() =>
-		ParseAndCheckOutputMatchesInput("return 33", new Return(new Number(method, 33)));
+		ParseAndCheckOutputMatchesInput(new[] { "if true", "\treturn 33", "0" },
+			new If(new Boolean(method, true), new Return(new Number(method, 33))));
 
 	[Test]
 	public void ReturnGetHashCode()
 	{
-		var returnExpression = (Return)ParseExpression("return 1");
+		var returnExpression = new Return(new Number(method, 33));
 		Assert.That(returnExpression.GetHashCode(), Is.EqualTo(returnExpression.Value.GetHashCode()));
 	}
 }

@@ -15,14 +15,7 @@ public sealed class Method : Context
 	{
 		TypeLineNumber = typeLineNumber;
 		this.parser = parser;
-		var rest = lines[0].AsSpan(Name.Length);
-		if (Name == From)
-		{
-			ReturnType = type;
-			ParseParameters(rest);
-		}
-		else
-			ReturnType = ParseReturnTypeAndParseParameters(type, rest);
+		ReturnType = ParseParametersAndReturnType(type, lines[0].AsSpan(Name.Length));
 		bodyLines = GetLines(lines);
 		body = new Lazy<MethodBody>(() => (MethodBody)parser.ParseMethodBody(this));
 	}
@@ -30,36 +23,32 @@ public sealed class Method : Context
 	public int TypeLineNumber { get; }
 	private readonly ExpressionParser parser;
 
-	private Type ParseReturnTypeAndParseParameters(Type type, ReadOnlySpan<char> rest)
-	{
-		if (rest.Length <= 0)
-		{
-			ParseParameters(rest);
-			return type.GetType(Base.None);
-		}
-		var returnsIndex = rest.IndexOf(ReturnsWithSpaces, StringComparison.Ordinal);
-		if (returnsIndex >= 0)
-		{
-			ParseParameters(rest[..returnsIndex]);
-			return Type.GetType(rest[(returnsIndex + Returns.Length + 2)..].ToString());
-		}
-		ParseParameters(rest);
-		return type.GetType(Base.None);
-	}
-
-	private void ParseParameters(ReadOnlySpan<char> rest)
+	private Type ParseParametersAndReturnType(Type type, ReadOnlySpan<char> rest)
 	{
 		if (rest.Length == 0)
-			return;
-		if (rest[^1] != ')')
-			throw rest[0] != '('
-				? new ExpectedReturns(this, rest.ToString())
-				: new InvalidMethodParameters(this, rest.ToString());
-		if (rest.Length == 2)
+			return GetEmptyReturnType(type);
+		var closingBracketIndex = rest.LastIndexOf(')');
+		var gotBrackets = closingBracketIndex > 0;
+		if (gotBrackets&& rest.Length == 2)
 			throw new EmptyParametersMustBeRemoved(this);
-		foreach (var nameAndType in rest[1..^1].Split(',', StringSplitOptions.TrimEntries))
+		if (rest[0] == ' ' && !gotBrackets)
+			return Type.GetType(rest[1..].ToString());
+		if (rest[0] != '(' == gotBrackets || rest.Length < 2)
+			throw new InvalidMethodParameters(this, rest.ToString());
+		if (!gotBrackets)
+			return type.GetType(rest[1..].ToString());
+		foreach (var nameAndType in rest[1..closingBracketIndex].
+			Split(',', StringSplitOptions.TrimEntries))
 			parameters.Add(new Parameter(this, nameAndType.ToString()));
+		return closingBracketIndex+2 < rest.Length
+			? Type.GetType(rest[(closingBracketIndex + 2)..].ToString())
+			: GetEmptyReturnType(type);
 	}
+
+	private Type GetEmptyReturnType(Type type) =>
+		Name == From
+			? type
+			: type.GetType(Base.None);
 
 	public sealed class InvalidMethodParameters : ParsingFailed
 	{
@@ -71,8 +60,6 @@ public sealed class Method : Context
 	{
 		public EmptyParametersMustBeRemoved(Method method) : base(method.Type, 0, "", method.Name) { }
 	}
-
-	private const string ReturnsWithSpaces = " " + Returns + " ";
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public Expression ParseExpression(Line line, Range rangeToParse) =>
@@ -106,13 +93,6 @@ public sealed class Method : Context
 	}
 
 	public const string From = "from";
-	public const string Returns = "returns";
-
-	public sealed class ExpectedReturns : ParsingFailed
-	{
-		public ExpectedReturns(Method method, string rest) :
-			base(method.Type, 0, rest, method.Name) { }
-	}
 
 	/// <summary>
 	/// Skips the first method declaration line, then counts and removes the tabs from each line.
@@ -191,7 +171,20 @@ public sealed class Method : Context
 	}
 
 	public override Type? FindType(string name, Context? searchingFrom = null) =>
-		name == Base.Other
+		name == Value //TODO: figure out current scope searchingFrom is Method method && method.?
 			? Type
-			: Type.FindType(name, searchingFrom ?? this);
+			: name == Other
+				? Type
+				: Type.FindType(name, searchingFrom ?? this);
+
+	/// <summary>
+	/// Easy way to get another instance of the class type we are currently in.
+	/// </summary>
+	public const string Other = nameof(Other);
+	public const string Value = nameof(Value);
+
+	public override string ToString() =>
+		Name + parameters.ToBrackets() + (ReturnType.Name == Base.None
+			? ""
+			: " " + ReturnType.Name);
 }

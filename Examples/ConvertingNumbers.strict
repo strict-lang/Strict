@@ -1,7 +1,7 @@
 has numbers
-GetComplicatedSequenceTexts returns Texts
+GetComplicatedSequenceTexts Texts
 	ConvertingNumbers(1, 21).GetComplicatedSequenceTexts is ("16")
-	return for numbers
+	for numbers
 		to Text
 		Length * Length
 		if value > 3

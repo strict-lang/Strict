@@ -1,4 +1,4 @@
 from(Text)
-Read returns Text
+Read Text
 Write(text)
 Delete

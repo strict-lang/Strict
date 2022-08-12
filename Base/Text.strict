@@ -1,16 +1,13 @@
 has Characters
 from(number)
 	Text(45) is "45"
-	return for digits(number)
+	for digits(number)
 		Character(value)
-digits(number) returns Numbers
+digits(number) Numbers
 	digits(1) is (1)
 	digits(123) is (1, 2, 3)
-	if floor(number / 10) is 0
-		return (number % 10)
-	else
-		return digits(floor(number / 10)) + number % 10
-+(other) returns Text
+	floor(number / 10) is 0 ? (number % 10) else digits(floor(number / 10)) + number % 10
++(other) Text
 	+("more") is "more"
 	"Hey" + " " + "you" is "Hey you"
-	return Characters + other.Characters
+	Characters + other.Characters

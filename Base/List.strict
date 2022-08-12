@@ -1,11 +1,11 @@
 has elements Generics
-Length returns Number
-	return elements.Length
-is(other) returns Boolean
+Length Number
+	elements.Length
+is(other) Boolean
 	(1, 2) is (1, 2)
 	(1, 2, 3) is not (1, 2)
-	return elements is other.elements
-+(other) returns List
+	elements is other.elements
++(other) List
 	(1, 2, 3) + (4, 5) is (1, 2, 3, 4, 5)
 	("Hello", "World") + (1, 2) is ("Hello", "World", "1", "2")
 	("1", "2") + (3, 4) is ("1", "2", "3", "4")
@@ -16,36 +16,36 @@ is(other) returns Boolean
 	(1 + 2) * 3 is not 1 + 2 * 3
 	(("1", "2") + (3, 4)) to Numbers is (1, 2, 3, 4)
 	3 + (4) is (3, 4)
-	return elements + other.elements
-+(addElement Generic) returns List
+	elements + other.elements
++(addElement Generic) List
 	(1, 2, 3) + 4 is (1, 2, 3, 4)
 	("Hello", "World") + 5 is ("Hello", "World", "5")
-	return elements + addElement
--(other) returns List
+	elements + addElement
+-(other) List
 	(1, 2, 3) - (3) is (1, 2)
-	return elements - other.elements
--(removeElement Generic) returns List
+	elements - other.elements
+-(removeElement Generic) List
 	(1, 2, 3) - 3 is (1, 2)
 	(1, 2, 3) - 4 is (1, 2, 3)
-	return elements - removeElements
-/(other) returns List
+	elements - removeElements
+/(other) List
 	(2, 4, 6) / (2) is (1, 2, 3)
 	(1, 2) / (2, 4) is (0.5, 0.5)
 	(1) / (20, 10) is (0.05, 0.1)
-	return elements / other.elements
-/(divider Generic) returns List
+	elements / other.elements
+/(divider Generic) List
 	(2, 4, 6) / 2 is (1, 2, 3)
 	(20, 10) / 1 is (0.05, 0.1)
-	return elements / divider
-*(other) returns List
+	elements / divider
+*(other) List
 	(1, 2) * (3, 5) is (3, 10)
 	if Length is not other.Length
 		error ListsHaveDifferentDimensions
-	return elements * other.elements
-*(multiplier Generic) returns List
+	elements * other.elements
+*(multiplier Generic) List
 	(1, 2) * 3 is (3, 6)
-	return elements * multiplier
-Sum returns Number
+	elements * multiplier
+Sum Generic
 	(1, 2, 3).Sum is 6
-	return for elements
-		+ value to Number
+	for elements
+		+ value

@@ -42,8 +42,4 @@ public static class Base
 	public const string App = nameof(App);
 	public const string System = nameof(System);
 	public const string List = nameof(List);
-	/// <summary>
-	/// Easy way to get another instance of the class type we are currently in.
-	/// </summary>
-	public const string Other = nameof(Other);
 }

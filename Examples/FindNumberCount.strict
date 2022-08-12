@@ -1,7 +1,7 @@
 has numbers
-FindNumberCount returns Texts
+FindNumberCount Texts
 	NumberCount(5, 10).FindNumberCount is 6
 	let count
 	for Range(numbers(0), numbers(1))
-		count.Increase(1)
-	return count
+		count.Increment
+	count
