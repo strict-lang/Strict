@@ -10,12 +10,8 @@ namespace Strict.Language;
 public class MethodBody : BlockExpression
 {
 	public MethodBody(Method method, IReadOnlyList<Expression> expressions) : base(
-		method.ReturnType)
-	{
+		method.ReturnType, expressions) =>
 		Method = method;
-		Expressions = expressions;
-	}
 
 	public Method Method { get; }
-	public IReadOnlyList<Expression> Expressions { get; }
 }

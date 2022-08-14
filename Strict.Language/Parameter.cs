@@ -2,5 +2,5 @@
 
 public sealed class Parameter : NamedType
 {
-	public Parameter(Method definedIn, string nameAndType) : base(definedIn, nameAndType) { }
+	public Parameter(Type parentType, string nameAndType) : base(parentType, nameAndType) { }
 }

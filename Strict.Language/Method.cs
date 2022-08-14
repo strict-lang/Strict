@@ -17,7 +17,6 @@ public sealed class Method : Context
 		this.parser = parser;
 		ReturnType = ParseParametersAndReturnType(type, lines[0].AsSpan(Name.Length));
 		bodyLines = GetLines(lines);
-		body = new Lazy<MethodBody>(() => (MethodBody)parser.ParseMethodBody(this));
 	}
 
 	public int TypeLineNumber { get; }
@@ -29,18 +28,23 @@ public sealed class Method : Context
 			return GetEmptyReturnType(type);
 		var closingBracketIndex = rest.LastIndexOf(')');
 		var gotBrackets = closingBracketIndex > 0;
-		if (gotBrackets&& rest.Length == 2)
-			throw new EmptyParametersMustBeRemoved(this);
-		if (rest[0] == ' ' && !gotBrackets)
-			return Type.GetType(rest[1..].ToString());
-		if (rest[0] != '(' == gotBrackets || rest.Length < 2)
-			throw new InvalidMethodParameters(this, rest.ToString());
-		if (!gotBrackets)
-			return type.GetType(rest[1..].ToString());
+		return gotBrackets && rest.Length == 2
+			? throw new EmptyParametersMustBeRemoved(this)
+			: rest[0] == ' ' && !gotBrackets
+				? Type.GetType(rest[1..].ToString())
+				: rest[0] != '(' == gotBrackets || rest.Length < 2
+					? throw new InvalidMethodParameters(this, rest.ToString())
+					: !gotBrackets
+						? type.GetType(rest[1..].ToString())
+						: ParseParameters(type, rest, closingBracketIndex);
+	}
+
+	private Type ParseParameters(Type type, ReadOnlySpan<char> rest, int closingBracketIndex)
+	{
 		foreach (var nameAndType in rest[1..closingBracketIndex].
 			Split(',', StringSplitOptions.TrimEntries))
-			parameters.Add(new Parameter(this, nameAndType.ToString()));
-		return closingBracketIndex+2 < rest.Length
+			parameters.Add(new Parameter(type, nameAndType.ToString()));
+		return closingBracketIndex + 2 < rest.Length
 			? Type.GetType(rest[(closingBracketIndex + 2)..].ToString())
 			: GetEmptyReturnType(type);
 	}
@@ -146,42 +150,31 @@ public sealed class Method : Context
 	public IReadOnlyList<Parameter> Parameters => parameters;
 	private readonly List<Parameter> parameters = new();
 	public Type ReturnType { get; }
-	private readonly Lazy<MethodBody> body;
-	public MethodBody Body => body.Value;
 	public bool IsPublic => char.IsUpper(Name[0]);
-	/// <summary>
-	/// Dictionaries are slow and eats up a lot of memory, only created when needed.
-	/// </summary>
-	private Dictionary<string, Expression>? variables;
-
-	public void AddVariable(string name, Expression value)
-	{
-		variables ??= new Dictionary<string, Expression>(StringComparer.Ordinal);
-		variables.Add(name, value);
-	}
-
-	public Expression? FindVariableValue(ReadOnlySpan<char> searchFor)
-	{
-		if (variables == null)
-			return null;
-		foreach (var (name, value) in variables)
-			if (searchFor.Equals(name, StringComparison.Ordinal))
-				return value;
-		return null;
-	}
 
 	public override Type? FindType(string name, Context? searchingFrom = null) =>
-		name == Value //TODO: figure out current scope searchingFrom is Method method && method.?
+		name == Value
 			? Type
-			: name == Other
-				? Type
-				: Type.FindType(name, searchingFrom ?? this);
+			: Type.FindType(name, searchingFrom ?? this);
 
-	/// <summary>
-	/// Easy way to get another instance of the class type we are currently in.
-	/// </summary>
-	public const string Other = nameof(Other);
-	public const string Value = nameof(Value);
+	public const string Value = nameof(Value);//TODO: has a different meaning in for BlockExpression
+	public MethodBody Body
+	{
+		get
+		{
+			if (body != null)
+				return body;
+			if (bodyLines.Count == 0)
+				return body = new MethodBody(this, Array.Empty<Expression>());
+			var expressions = new List<Expression>();
+			body = new MethodBody(this, expressions);
+			for (var lineNumber = 0; lineNumber < bodyLines.Count; lineNumber++)
+				expressions.Add(ParseMethodLine(bodyLines[lineNumber], ref lineNumber));
+			parser.ValidateMethodBodyExpressions(expressions, bodyLines);
+			return body;
+		}
+	}
+	private MethodBody? body;
 
 	public override string ToString() =>
 		Name + parameters.ToBrackets() + (ReturnType.Name == Base.None

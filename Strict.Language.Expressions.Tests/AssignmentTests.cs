@@ -8,7 +8,7 @@ public class AssignmentTests : TestExpressions
 	public void ParseNumber()
 	{
 		var assignment = (Assignment)ParseExpression("let number = 5");
-		Assert.That(assignment, Is.EqualTo(new Assignment(method, nameof(number), number)));
+		Assert.That(assignment, Is.EqualTo(new Assignment(method.Body, nameof(number), number)));
 		Assert.That(assignment.Value.ReturnType, Is.EqualTo(number.ReturnType));
 		Assert.That(((Number)assignment.Value).ToString(), Is.EqualTo("5"));
 	}

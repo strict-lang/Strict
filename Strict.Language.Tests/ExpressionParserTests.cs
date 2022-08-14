@@ -29,13 +29,6 @@ public class ExpressionParserTests : ExpressionParser
 		public TestExpression(Type returnType) : base(returnType) { }
 	}
 
-	public override Expression ParseMethodBody(Method method)
-	{
-		parseWasCalled = true;
-		return new MethodBody(method,
-			new Expression[] { new TestExpression(type.Methods[0].ReturnType) });
-	}
-
 	//ncrunch: no coverage start, not the focus here
 	public override Expression ParseAssignmentExpression(Type assignmentType,
 		ReadOnlySpan<char> initializationLine, int fileLineNumber) =>
@@ -46,6 +39,10 @@ public class ExpressionParserTests : ExpressionParser
 
 	public override List<Expression> ParseListArguments(Method.Line line, Range range) => null!;
 	//ncrunch: no coverage end
+
+	public override void ValidateMethodBodyExpressions(IReadOnlyList<Expression> expressions,
+		IReadOnlyList<Method.Line> bodyLines) =>
+		parseWasCalled = true;
 
 	[Test]
 	public void CompareExpressions()

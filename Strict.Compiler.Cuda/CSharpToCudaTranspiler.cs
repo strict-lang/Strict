@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using Strict.Language;
 using Strict.Language.Expressions;
 using Type = Strict.Language.Type;
@@ -83,7 +82,8 @@ public class CSharpType : Type
 {
 	public class CSharpExpressionParser : MethodExpressionParser
 	{
-		public override Expression ParseMethodBody(Method method)
+		/*this is a hack anyways
+		public override BlockExpression ParseMethodBody(Method method)
 		{
 			if (method.bodyLines.Last().Text.Contains("depth"))
 				return new MethodBody(method,
@@ -99,6 +99,7 @@ public class CSharpType : Type
 				numberType.GetMethod(binaryOperator, arguments), arguments));
 			return new MethodBody(method, new List<Expression> { returnExpression });
 		}
+		*/
 	}
 
 	// ReSharper disable once CyclomaticComplexity

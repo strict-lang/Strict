@@ -167,7 +167,7 @@ public class MethodExpressionParser : ExpressionParser
 		{
 			if (context is Method method)
 			{
-				var variableValue = method.FindVariableValue(partToParse);
+				var variableValue = method.Body.FindVariableValue(partToParse);
 				if (variableValue != null)
 					return new VariableCall(partToParse.ToString(), variableValue);
 				foreach (var parameter in method.Parameters)
@@ -310,23 +310,11 @@ public class MethodExpressionParser : ExpressionParser
 		public InvalidSingleTokenExpression(Method.Line line, string message) : base(line, message) { }
 	}
 
-	/// <summary>
-	/// Called lazily by Method.Body and only if needed for execution (context should be over there
-	/// as parsing is done in parallel, we should not keep any state here).
-	/// </summary>
-	public override Expression ParseMethodBody(Method method)
+	public override void ValidateMethodBodyExpressions(IReadOnlyList<Expression> expressions, IReadOnlyList<Method.Line> bodyLines)
 	{
-		if (method.bodyLines.Count == 0)
-			return new MethodBody(method, Array.Empty<Expression>());
-		var expressions = new List<Expression>();
-		for (var lineNumber = 0; lineNumber < method.bodyLines.Count; lineNumber++)
-			expressions.Add(ParseMethodLine(method.bodyLines[lineNumber], ref lineNumber));
 		if (expressions.Count > 0 && expressions[^1] is Return)
-			throw new Return.ReturnAsLastExpressionIsNotNeeded(method.bodyLines[^1]);
-		return new MethodBody(method, expressions);
+			throw new Return.ReturnAsLastExpressionIsNotNeeded(bodyLines[^1]);
 	}
-
-	//private readonly PhraseTokenizer tokenizer = new();
 
 	public override Expression ParseMethodLine(Method.Line line, ref int methodLineNumber) =>
 		Assignment.TryParse(line) ?? If.TryParse(line, ref methodLineNumber) ??

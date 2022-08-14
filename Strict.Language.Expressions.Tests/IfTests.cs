@@ -119,4 +119,23 @@ public sealed class IfTests : TestExpressions
 	[TestCase("6 is 5 ? true else false")]
 	public void ConditionalExpressionsAsPartOfOtherExpression(string code) =>
 		Assert.That(ParseExpression(code).ToString(), Is.EqualTo(code));
+
+	[Test]
+	public void IfHasDifferentScopeThanMethod()
+	{
+		Assert.That(() => ParseExpression("if bla is 5", "\tlet abc = \"abc\"", "log.Write(abc)"),
+			Throws.InstanceOf<VariableCall.IdentifierNotFound>());
+		Assert.That(ParseExpression("if bla is 5", "\tlet abc = \"abc\"", "\tlog.Write(abc)"),
+			Is.EqualTo(new If(GetCondition(), CreateThenBlock())));
+	}
+
+	private BlockExpression CreateThenBlock()
+	{
+		var expressions = new Expression[2];
+		var block = new BlockExpression(method.GetType(Base.None), expressions);
+		expressions[0] = new Assignment(block, "abc", new Text(method, "abc"));
+		var arguments = new Expression[] { new VariableCall("abc", block.FindVariableValue("abc")!) };
+		expressions[1] = new MethodCall(member.Type.GetMethod("Write", arguments), new MemberCall(null, member), arguments);
+		return block;
+	}
 }

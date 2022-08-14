@@ -244,10 +244,14 @@ public class Type : Context
 			: "");
 
 	public override Type? FindType(string name, Context? searchingFrom = null) =>
-		name == Name || name.Contains('.') && name == base.ToString()
+		name == Name || name.Contains('.') && name == base.ToString() || name == Other
 			? this
 			: Package.FindType(name, searchingFrom ?? this);
 
+	/// <summary>
+	/// Easy way to get another instance of the class type we are currently in.
+	/// </summary>
+	public const string Other = nameof(Other);
 	public const string Extension = ".strict";
 
 	public Method GetMethod(string methodName, IReadOnlyList<Expression> arguments) =>

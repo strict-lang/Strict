@@ -7,7 +7,7 @@ namespace Strict.Language.Expressions;
 /// If expressions are used for branching, can also be used as an input for any other expression
 /// like method arguments, other conditions, etc. like conditional operators.
 /// </summary>
-public sealed class If : BlockExpression
+public sealed class If : Expression
 {
 	public If(Expression condition, Expression then, Expression? optionalElse = null,
 		Method.Line? lineForErrorMessage = null) : base(GetMatchingType(then.ReturnType,
