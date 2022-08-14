@@ -7,7 +7,7 @@ namespace Strict.Language.Expressions;
 /// </summary>
 public sealed class Assignment : Expression
 {
-	public Assignment(BlockExpression scope, string name, Expression value) : base(value.ReturnType)
+	public Assignment(Body scope, string name, Expression value) : base(value.ReturnType)
 	{
 		if (!name.IsWord())
 			throw new Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers(name);

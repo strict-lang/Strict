@@ -13,9 +13,4 @@ public sealed class VariableCall : Expression//TODO: maybe rename to LetCall, bu
 	public string Name { get; }
 	public Expression CurrentValue { get; }
 	public override string ToString() => Name;
-
-	public sealed class IdentifierNotFound : ParsingFailed
-	{
-		public IdentifierNotFound(Method.Line line, string name) : base(line, name) { }
-	}
 }

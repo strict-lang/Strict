@@ -23,9 +23,4 @@ public sealed class Return : Expression
 	{
 		public MissingExpression(Method.Line line) : base(line) { }
 	}
-
-	public sealed class ReturnAsLastExpressionIsNotNeeded : ParsingFailed
-	{
-		public ReturnAsLastExpressionIsNotNeeded(Method.Line line) : base(line) { }
-	}
 }

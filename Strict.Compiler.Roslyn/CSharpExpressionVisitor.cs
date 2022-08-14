@@ -8,7 +8,7 @@ namespace Strict.Compiler.Roslyn;
 
 public class CSharpExpressionVisitor : ExpressionVisitor
 {
-	protected override IReadOnlyList<string> VisitBlock(MethodBody methodBody)
+	protected override IReadOnlyList<string> VisitBody(Body methodBody)
 	{
 		var method = methodBody.Method;
 		var isMainEntryPoint = method.Type.Implements.Any(t => t.Name == Base.App) && method.Name == "Run";
@@ -20,13 +20,13 @@ public class CSharpExpressionVisitor : ExpressionVisitor
 			$"{GetAccessModifier(isInterface, method, isMainEntryPoint)}{GetCSharpTypeName(method.ReturnType)} {methodName}({WriteParameters(method)})";
 		return isInterface
 			? new[] { methodHeader + ";" }
-			: VisitMethodBody(methodBody, methodHeader);
+			: VisitBody(methodBody, methodHeader);
 	}
 
-	private IReadOnlyList<string> VisitMethodBody(MethodBody methodBody, string methodHeader)
+	private IReadOnlyList<string> VisitBody(Body methodBody, string methodHeader)
 	{
 		var methodLines = new List<string> { methodHeader, "{" };
-		methodLines.AddRange(Indent(methodBody.Expressions.Select(VisitBlock)));
+		methodLines.AddRange(Indent(methodBody.Expressions.Select(VisitBody)));
 		methodLines.Add("}");
 		return methodLines;
 	}

@@ -92,7 +92,7 @@ public class AssignmentTests : TestExpressions
 	[Test]
 	public void LetWithoutExpressionCannotParse() =>
 		Assert.That(() => ParseExpression("let value = abc"),
-			Throws.Exception.InstanceOf<UnknownExpression>().With.Message.Contain("abc"));
+			Throws.Exception.InstanceOf<IdentifierNotFound>().With.Message.Contain("abc"));
 
 	[Test]
 	[Ignore("TODO: Not yet done")]

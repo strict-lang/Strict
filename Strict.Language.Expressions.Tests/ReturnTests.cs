@@ -11,7 +11,7 @@ public sealed class ReturnTests : TestExpressions
 	[Test]
 	public void ReturnAsLastExpressionIsNotNeeded() =>
 		Assert.That(() => ParseExpression("return 1"),
-			Throws.InstanceOf<Return.ReturnAsLastExpressionIsNotNeeded>());
+			Throws.InstanceOf<Body.ReturnAsLastExpressionIsNotNeeded>());
 
 	[Test]
 	public void ParseReturnNumber() =>

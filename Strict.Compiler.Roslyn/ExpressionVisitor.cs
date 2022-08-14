@@ -11,24 +11,24 @@ namespace Strict.Compiler.Roslyn;
 /// </summary>
 public abstract class ExpressionVisitor
 {
-	public IReadOnlyList<string> VisitBlock(Expression expression) =>
+	public IReadOnlyList<string> VisitBody(Expression expression) =>
 		expression switch
 		{
-			MethodBody methodBody => VisitBlock(methodBody),
-			If ifExpression => VisitBlock(ifExpression),
+			Body body => VisitBody(body),
+			If ifExpression => VisitIf(ifExpression),
 			_ => new[] { Visit(expression) + ";" }
 		};
 
-	protected abstract IReadOnlyList<string> VisitBlock(MethodBody methodBody);
+	protected abstract IReadOnlyList<string> VisitBody(Body body);
 
-	protected IReadOnlyList<string> VisitBlock(If ifExpression)
+	protected IReadOnlyList<string> VisitIf(If ifExpression)
 	{
 		var block = new List<string> { "if (" + Visit(ifExpression.Condition) + ")" };
-		block.AddRange(Indent(VisitBlock(ifExpression.Then)));
+		block.AddRange(Indent(VisitBody(ifExpression.Then)));
 		if (ifExpression.OptionalElse == null)
 			return block;
 		block.Add("else");
-		block.AddRange(Indent(VisitBlock(ifExpression.OptionalElse)));
+		block.AddRange(Indent(VisitBody(ifExpression.OptionalElse)));
 		return block;
 	}
 
@@ -38,7 +38,7 @@ public abstract class ExpressionVisitor
 	public string Visit(Expression expression) =>
 		expression switch
 		{
-			BlockExpression => throw new UseVisitBlock(expression),
+			Body => throw new UseVisitBody(expression),
 			Assignment assignment => Visit(assignment),
 			Binary binary => Visit(binary),
 			Return returnExpression => Visit(returnExpression),
@@ -48,9 +48,9 @@ public abstract class ExpressionVisitor
 			_ => expression.ToString() //ncrunch: no coverage
 		};
 
-	public sealed class UseVisitBlock : Exception
+	public sealed class UseVisitBody : Exception
 	{
-		public UseVisitBlock(Expression expression) : base(expression.ToString()) { }
+		public UseVisitBody(Expression expression) : base(expression.ToString()) { }
 	}
 
 	protected abstract string Visit(Assignment assignment);

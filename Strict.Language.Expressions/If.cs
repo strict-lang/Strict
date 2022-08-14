@@ -54,7 +54,7 @@ public sealed class If : Expression
 
 	public override string ToString() =>
 		OptionalElse != null && Then.ReturnType == OptionalElse.ReturnType &&
-		Then is not BlockExpression && OptionalElse is not BlockExpression
+		Then is not Body && OptionalElse is not Body
 			? Condition + " ? " + Then + " else " + OptionalElse
 			: "if " + Condition + Environment.NewLine + "\t" + Then + (OptionalElse != null
 				? Environment.NewLine + "else" + Environment.NewLine + "\t" + OptionalElse

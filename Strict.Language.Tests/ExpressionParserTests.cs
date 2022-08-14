@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using NUnit.Framework;
+using Strict.Language.Expressions;
 
 namespace Strict.Language.Tests;
 
@@ -34,15 +35,16 @@ public class ExpressionParserTests : ExpressionParser
 		ReadOnlySpan<char> initializationLine, int fileLineNumber) =>
 		null!;
 
-	public override Expression ParseMethodLine(Method.Line line, ref int methodLineNumber) => null!;
+	public override Expression ParseMethodLine(Method.Line line, ref int methodLineNumber)
+	{
+		parseWasCalled = true;
+		return new Number(line.Method, 1);
+	}
+
 	public override Expression ParseExpression(Method.Line line, Range range) => null!;
 
 	public override List<Expression> ParseListArguments(Method.Line line, Range range) => null!;
 	//ncrunch: no coverage end
-
-	public override void ValidateMethodBodyExpressions(IReadOnlyList<Expression> expressions,
-		IReadOnlyList<Method.Line> bodyLines) =>
-		parseWasCalled = true;
 
 	[Test]
 	public void CompareExpressions()

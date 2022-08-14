@@ -158,23 +158,24 @@ public sealed class Method : Context
 			: Type.FindType(name, searchingFrom ?? this);
 
 	public const string Value = nameof(Value);//TODO: has a different meaning in for BlockExpression
-	public MethodBody Body
+	public Body Body
 	{
 		get
 		{
 			if (body != null)
 				return body;
-			if (bodyLines.Count == 0)
-				return body = new MethodBody(this, Array.Empty<Expression>());
-			var expressions = new List<Expression>();
-			body = new MethodBody(this, expressions);
-			for (var lineNumber = 0; lineNumber < bodyLines.Count; lineNumber++)
-				expressions.Add(ParseMethodLine(bodyLines[lineNumber], ref lineNumber));
-			parser.ValidateMethodBodyExpressions(expressions, bodyLines);
+			body = new Body(this);
+			if (bodyLines.Count > 0)
+			{
+				var expressions = new List<Expression>();
+				for (var lineNumber = 0; lineNumber < bodyLines.Count; lineNumber++)
+					expressions.Add(ParseMethodLine(bodyLines[lineNumber], ref lineNumber));
+				body.SetAndValidateExpressions(expressions, bodyLines);
+			}
 			return body;
 		}
 	}
-	private MethodBody? body;
+	private Body? body;
 
 	public override string ToString() =>
 		Name + parameters.ToBrackets() + (ReturnType.Name == Base.None

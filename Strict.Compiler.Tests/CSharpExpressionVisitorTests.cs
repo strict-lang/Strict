@@ -19,7 +19,7 @@ public sealed class CSharpExpressionVisitorTests : TestExpressions
 	[Test]
 	public void ShouldCallVisitBlockForBlockExpressions() =>
 		Assert.That(() => visitor.Visit(method.Body)[0],
-			Throws.InstanceOf<ExpressionVisitor.UseVisitBlock>());
+			Throws.InstanceOf<ExpressionVisitor.UseVisitBody>());
 
 	[Test]
 	public void GenerateAssignment() =>
@@ -67,13 +67,13 @@ public sealed class CSharpExpressionVisitorTests : TestExpressions
 
 	[Test]
 	public void GenerateInterfaceMethodBody() =>
-		Assert.That(visitor.VisitBlock(method.Body)[0], Is.EqualTo("void Run();"));
+		Assert.That(visitor.VisitBody(method.Body)[0], Is.EqualTo("void Run();"));
 
 	[Test]
 	public void GenerateMultilineMethodBody()
 	{
 		var multilineMethod = new Method(type, 0, this, MethodTests.NestedMethodLines);
-		Assert.That(visitor.VisitBlock(multilineMethod.Body), Is.EqualTo(@"public bool IsBla5()
+		Assert.That(visitor.VisitBody(multilineMethod.Body), Is.EqualTo(@"public bool IsBla5()
 {
 	var number = 5;
 	if (bla == 5)
@@ -90,7 +90,7 @@ public sealed class CSharpExpressionVisitorTests : TestExpressions
 			{
 				"IsBla5 returns Boolean", "	if bla is 5", "		return true", "	else", "		return false"
 			});
-		Assert.That(visitor.VisitBlock(multilineMethod.Body),
+		Assert.That(visitor.VisitBody(multilineMethod.Body),
 			Is.EqualTo(new[]
 			{
 				"public bool IsBla5()", "{", "	if (bla == 5)", "		return true;", "	else",

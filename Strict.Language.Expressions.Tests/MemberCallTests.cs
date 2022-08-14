@@ -12,7 +12,7 @@ public sealed class MemberCallTests : TestExpressions
 
 	[Test]
 	public void UnknownMember() =>
-		Assert.That(() => ParseExpression("unknown"), Throws.InstanceOf<UnknownExpression>());
+		Assert.That(() => ParseExpression("unknown"), Throws.InstanceOf<IdentifierNotFound>());
 
 	[Test]
 	public void MembersMustBeWords() =>

@@ -7,7 +7,7 @@ namespace Strict.Language;
 /// Keeps all known types for use, if in <see cref="Package"/> contains all known types and traits
 /// the context is inside a type, all members are available as well, in a method more information
 /// is available. The high level context knows all types, low level scope in methods is managed via
-/// <see cref="BlockExpression"/> (which is every MethodBody, If.Then, If.Else or For).
+/// <see cref="Body"/> (which is every MethodBody, If.Then, If.Else or For).
 /// </summary>
 public abstract class Context
 {

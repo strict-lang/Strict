@@ -27,7 +27,9 @@ public class MethodExpressionParser : ExpressionParser
 				List.TryParseWithSingleElement(line, range) ?? Number.TryParse(line, range) ??
 				TryParseMemberOrZeroOrOneArgumentMethodCall(line, range) ?? (input.IsOperator()
 					? throw new InvalidOperatorHere(line, input.ToString())
-					: throw new UnknownExpression(line, line.Text[range]));
+					: input.IsWord()
+						? throw new IdentifierNotFound(line, line.Text[range])
+						: throw new UnknownExpression(line, line.Text[range]));
 		// If this is just a simple text string, there is no need to invoke ShuntingYard
 		if (input[0] == '"' && input[^1] == '"' && input.Count('"') == 2)
 			return new Text(line.Method, input.Slice(1, input.Length - 2).ToString());
@@ -70,6 +72,11 @@ public class MethodExpressionParser : ExpressionParser
 	public sealed class InvalidOperatorHere : ParsingFailed
 	{
 		public InvalidOperatorHere(Method.Line line, string message) : base(line, message) { }
+	}
+
+	public sealed class IdentifierNotFound : ParsingFailed
+	{
+		public IdentifierNotFound(Method.Line line, string name) : base(line, name) { }
 	}
 
 	public sealed class UnknownExpression : ParsingFailed
@@ -179,7 +186,7 @@ public class MethodExpressionParser : ExpressionParser
 			if (memberCall != null)
 				return memberCall;
 #if LOG_DETAILS
-			Logger.Info("ParseNested found no member in " + line.Method);
+			Logger.Info(nameof(TryMemberOrMethodCall) + " found no member in " + line.Method);
 #endif
 		}
 		var methodName = partToParse.ToString();
@@ -257,7 +264,7 @@ public class MethodExpressionParser : ExpressionParser
 					}
 					catch (UnknownExpression ex)
 					{
-						throw new InvalidExpressionForArgument(line,
+						throw new UnknownExpressionForArgument(line,
 							span.ToString() + " is invalid for argument " + expressions.Count + " " +
 							ex.Message);
 					}
@@ -271,9 +278,9 @@ public class MethodExpressionParser : ExpressionParser
 		return ParseAllElementsFast(line, new RangeEnumerator(innerSpan, ',', range.Start));
 	}
 
-	public sealed class InvalidExpressionForArgument : ParsingFailed
+	public sealed class UnknownExpressionForArgument : ParsingFailed
 	{
-		public InvalidExpressionForArgument(Method.Line line, string message) : base(line, message) { }
+		public UnknownExpressionForArgument(Method.Line line, string message) : base(line, message) { }
 	}
 
 	public class ListTokensAreNotSeparatedByComma : ParsingFailed
@@ -291,8 +298,8 @@ public class MethodExpressionParser : ExpressionParser
 			}
 			catch (UnknownExpression ex)
 			{
-				throw new InvalidExpressionForArgument(line,
-					line.Text[element] + " is invalid for argument " + expressions.Count + " " + ex.Message);
+				throw new UnknownExpressionForArgument(line,
+					line.Text[element] + " (argument " + expressions.Count + ")\n" + ex.StackTrace);
 			}
 #if LOG_DETAILS
 		Logger.Info(nameof(ParseAllElementsFast) + ": " + expressions.ToWordList());
@@ -308,12 +315,6 @@ public class MethodExpressionParser : ExpressionParser
 	private sealed class InvalidSingleTokenExpression : ParsingFailed
 	{
 		public InvalidSingleTokenExpression(Method.Line line, string message) : base(line, message) { }
-	}
-
-	public override void ValidateMethodBodyExpressions(IReadOnlyList<Expression> expressions, IReadOnlyList<Method.Line> bodyLines)
-	{
-		if (expressions.Count > 0 && expressions[^1] is Return)
-			throw new Return.ReturnAsLastExpressionIsNotNeeded(bodyLines[^1]);
 	}
 
 	public override Expression ParseMethodLine(Method.Line line, ref int methodLineNumber) =>

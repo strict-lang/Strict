@@ -41,8 +41,8 @@ public sealed class MethodCallTests : TestExpressions
 	[Test]
 	public void ParseWithInvalidExpressionArguments() =>
 		Assert.That(() => ParseExpression("log.Write(g9y53)"),
-			Throws.InstanceOf<InvalidExpressionForArgument>().With.Message.
-				StartsWith("g9y53 is invalid for argument 0"));
+			Throws.InstanceOf<UnknownExpressionForArgument>().With.Message.
+				StartsWith("g9y53 (argument 0)"));
 
 	[Test]
 	public void EmptyBracketsAreNotAllowed() =>
