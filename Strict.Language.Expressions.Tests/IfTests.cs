@@ -123,13 +123,19 @@ public sealed class IfTests : TestExpressions
 	[Test]
 	public void IfHasDifferentScopeThanMethod()
 	{
-		Assert.That(() => ParseExpression("if bla is 5", "\tlet abc = \"abc\"", "log.Write(abc)"),
+		Assert.That(() => ParseExpression(
+				"if bla is 5",
+				"\tlet abc = \"abc\"",
+				"log.Write(abc)"),
 			Throws.InstanceOf<IdentifierNotFound>());
-		Assert.That(ParseExpression("if bla is 5", "\tlet abc = \"abc\"", "\tlog.Write(abc)"),
+		Assert.That(ParseExpression(
+				"if bla is 5",
+				"\tlet abc = \"abc\"",
+				"\tlog.Write(abc)"),
 			Is.EqualTo(new If(GetCondition(), CreateThenBlock())));
 	}
 
-	private Body CreateThenBlock()
+	private Expression CreateThenBlock()
 	{
 		var expressions = new Expression[2];
 		var body = new Body(method);//.GetType(Base.None), expressions);
@@ -137,6 +143,6 @@ public sealed class IfTests : TestExpressions
 		var arguments = new Expression[] { new VariableCall("abc", body.FindVariableValue("abc")!) };
 		expressions[1] = new MethodCall(member.Type.GetMethod("Write", arguments), new MemberCall(null, member), arguments);
 		body.SetAndValidateExpressions(expressions, new Method.Line[2]);
-		return body;
+		return body.Expressions[0];
 	}
 }

@@ -172,11 +172,11 @@ public class MethodExpressionParser : ExpressionParser
 		var type = context as Type ?? line.Method.Type;
 		if (arguments.Count == 0)
 		{
+			var variableValue = line.Body?.FindVariableValue(partToParse);
+			if (variableValue != null)
+				return new VariableCall(partToParse.ToString(), variableValue);
 			if (context is Method method)
 			{
-				var variableValue = method.Body.FindVariableValue(partToParse);
-				if (variableValue != null)
-					return new VariableCall(partToParse.ToString(), variableValue);
 				foreach (var parameter in method.Parameters)
 					if (partToParse.Equals(parameter.Name, StringComparison.Ordinal))
 						return new ParameterCall(parameter);

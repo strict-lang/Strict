@@ -28,7 +28,8 @@ public class Body : Expression
 	/// After parsing each of the expressions in this body is done, we will validate them all here.
 	/// In case this is the method body, the last expression return type must match our return type.
 	/// </summary>
-	public void SetAndValidateExpressions(IReadOnlyList<Expression> expressions, IReadOnlyList<Method.Line> bodyLines)
+	public void SetAndValidateExpressions(IReadOnlyList<Expression> expressions,
+		IReadOnlyList<Method.Line> bodyLines)
 	{
 		Expressions = expressions;
 		if (Parent == null && expressions[^1].GetType().Name == "Return")
@@ -47,10 +48,11 @@ public class Body : Expression
 	/// </summary>
 	private Dictionary<string, Expression>? variables;
 
-	public void AddVariable(string name, Expression value)
+	public Body AddVariable(string name, Expression value)
 	{
 		variables ??= new Dictionary<string, Expression>(StringComparer.Ordinal);
 		variables.Add(name, value);
+		return this;
 	}
 
 	public Expression? FindVariableValue(ReadOnlySpan<char> searchFor)

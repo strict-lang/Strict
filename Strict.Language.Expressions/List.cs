@@ -21,9 +21,11 @@ public sealed class List : Value
 			throw new ListElementsMustHaveMatchingType(
 				lineForErrorMessage ?? new Method.Line(returnTypes[0].Methods[0], 0, "", 0), returnTypes);
 
+	// ReSharper disable once HollowTypeName
 	public sealed class ListElementsMustHaveMatchingType : ParsingFailed
 	{
-		public ListElementsMustHaveMatchingType(Method.Line line, IEnumerable<Type> returnTypes) : base(line, "List has one or many mismatching types " + string.Join(", ", returnTypes)) { }
+		public ListElementsMustHaveMatchingType(Method.Line line, IEnumerable<Type> returnTypes) :
+			base(line, "List has one or many mismatching types " + string.Join(", ", returnTypes)) { }
 	}
 
 	public List<Expression> Values { get; }
