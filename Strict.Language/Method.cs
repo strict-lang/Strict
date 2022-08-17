@@ -109,23 +109,48 @@ public sealed class Method : Context
 		return lines;
 	}
 
+	private readonly Stack<Body> bodies = new();
+	public readonly IReadOnlyList<Line> bodyLines;
+
 	private void FillLine(string line, int methodLineNumber, IList<Line> lines)
 	{
 		if (line.Length == 0)
 			throw new Type.EmptyLineIsNotAllowed(Type, TypeLineNumber + methodLineNumber);
+		var tabs = GetTabs(line);
+		PushOrPopBodyBasedOnTabsDepth(tabs);
+		CheckIndentation(line, TypeLineNumber + methodLineNumber, tabs);
+		lines[methodLineNumber - 1] = new Line(this, tabs, line[tabs..], TypeLineNumber + methodLineNumber,
+			bodies.Count > 0
+				? bodies.Peek()
+				: null);
+	}
+
+	private void PushOrPopBodyBasedOnTabsDepth(int tabs)
+	{
+		if (tabs > previousTabs)
+			bodies.Push(new Body(this, bodies.Count > 0
+				? bodies.Peek()
+				: null));
+		else if (tabs < previousTabs)
+			bodies.Pop();
+		previousTabs = tabs;
+	}
+
+	private static int GetTabs(string line)
+	{
 		var tabs = 0;
 		foreach (var t in line)
 			if (t == '\t')
 				tabs++;
 			else
 				break;
-		CheckIndentation(line, TypeLineNumber + methodLineNumber, tabs);
-		lines[methodLineNumber - 1] = new Line(this, tabs, line[tabs..], TypeLineNumber + methodLineNumber);
+		return tabs;
 	}
 
-	public readonly IReadOnlyList<Line> bodyLines;
+	private int previousTabs;
 
-	public sealed record Line(Method Method, int Tabs, string Text, int FileLineNumber)
+	public sealed record Line(Method Method, int Tabs, string Text, int FileLineNumber,
+		Body? Body = null)
 	{
 		public override string ToString() => new string('\t', Tabs) + Text;
 	}
@@ -162,20 +187,24 @@ public sealed class Method : Context
 	{
 		get
 		{
-			if (body != null)
-				return body;
-			body = new Body(this);
+			if (cachedMethodBody != null)
+				return cachedMethodBody;
 			if (bodyLines.Count > 0)
-			{
-				var expressions = new List<Expression>();
-				for (var lineNumber = 0; lineNumber < bodyLines.Count; lineNumber++)
-					expressions.Add(ParseMethodLine(bodyLines[lineNumber], ref lineNumber));
-				body.SetAndValidateExpressions(expressions, bodyLines);
-			}
-			return body;
+				return ParseBodyExpressions();
+			return cachedMethodBody = new Body(this);
 		}
 	}
-	private Body? body;
+	private Body? cachedMethodBody;
+
+	private Body ParseBodyExpressions()
+	{
+		cachedMethodBody = bodyLines[0].Body!;
+		var expressions = new List<Expression>();
+		for (var lineNumber = 0; lineNumber < bodyLines.Count; lineNumber++)
+			expressions.Add(ParseMethodLine(bodyLines[lineNumber], ref lineNumber));
+		cachedMethodBody.SetAndValidateExpressions(expressions, bodyLines);
+		return cachedMethodBody;
+	}
 
 	public override string ToString() =>
 		Name + parameters.ToBrackets() + (ReturnType.Name == Base.None

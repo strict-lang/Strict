@@ -7,11 +7,11 @@ namespace Strict.Language.Expressions;
 /// </summary>
 public sealed class Assignment : Expression
 {
-	public Assignment(Body scope, string name, Expression value) : base(value.ReturnType)
+	public Assignment(Body? scope, string name, Expression value) : base(value.ReturnType)
 	{
 		if (!name.IsWord())
 			throw new Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers(name);
-		scope.AddVariable(name, value);
+		scope?.AddVariable(name, value);
 		Name = name;
 		Value = value;
 	}
@@ -44,7 +44,7 @@ public sealed class Assignment : Expression
 		if (!parts.MoveNext() || !parts.MoveNext())
 			throw new IncompleteLet(line);
 		var startOfValueExpression = 4 + name.Length + 1 + 1 + 1;
-		return new Assignment(line.Method.Body, name, line.Method.ParseExpression(line, startOfValueExpression..));
+		return new Assignment(line.Body, name, line.Method.ParseExpression(line, startOfValueExpression..));
 	}
 
 	public sealed class IncompleteLet : ParsingFailed
