@@ -7,9 +7,10 @@ using Type = Strict.Language.Type;
 
 namespace Strict.Compiler.Tests;
 
-[Ignore("TODO: Not yet done")]
+//[Ignore("TODO: Not yet done")]
 public sealed class CSharpTypeVisitorTests : TestCSharpGenerator
 {
+	[Ignore("TODO: Not yet done")]
 	[Test]
 	public void GenerateHelloWorldApp()
 	{
@@ -63,6 +64,7 @@ public sealed class CSharpTypeVisitorTests : TestCSharpGenerator
 	}"));
 	}
 
+	[Ignore("TODO: Not yet done")]
 	[Test]
 	public void Import()
 	{
@@ -79,6 +81,7 @@ public sealed class CSharpTypeVisitorTests : TestCSharpGenerator
 			Contains.Substring("\tpublic void Run()" + Environment.NewLine));
 	}
 
+	[Ignore("TODO: Not yet done")]
 	[Test]
 	public void MemberInitializer()
 	{
@@ -102,9 +105,10 @@ public sealed class CSharpTypeVisitorTests : TestCSharpGenerator
 			() => new CSharpTypeVisitor(
 				new Type(package,
 					new TypeLines(Computer, "has log", "Run", "", "\tlet random = \"test\"",
-						"\tlog.Write(randomm)")).ParseMembersAndMethods(parser)),
+						"\tlog.Write(random)")).ParseMembersAndMethods(parser)),
 			Throws.InstanceOf<MethodExpressionParser.MemberOrMethodNotFound>()!);
 
+	[Ignore("TODO: Not yet done")]
 	[Test]
 	public void AccessLocalVariableAfterDeclaration() =>
 		Assert.That(
@@ -114,6 +118,7 @@ public sealed class CSharpTypeVisitorTests : TestCSharpGenerator
 						"\tlog.Write(random)")).ParseMembersAndMethods(parser)).FileContent,
 			Contains.Substring("\tConsole.WriteLine(random);"));
 
+	[Ignore("TODO: Not yet done")]
 	[TestCase(@"	let file = File(""test.txt"")
 	file.Write(number)", "\tvar file = new FileStream(\"test.txt\", FileMode.OpenOrCreate);")]
 	[TestCase(@"	File(""test.txt"").Write(number)",
@@ -137,6 +142,7 @@ Run
 	}".Split(Environment.NewLine))).ParseMembersAndMethods(parser)).FileContent,
 			Contains.Substring($"\tvar r = {expected};"));
 
+	[Ignore("TODO: Not yet done")]
 	[Test]
 	public void GenerateListTypeProgram()
 	{
@@ -147,5 +153,26 @@ Run
 		var visitor = new CSharpTypeVisitor(program);
 		AssertProgramClass(visitor);
 		Assert.That(visitor.FileContent, Contains.Substring(@"	private List<int> numbers;"));
+	}
+
+	[Test]
+	public void AssignmentWithMethodCall()
+	{
+		var program = new Type(package,
+			new TypeLines("Program", "implement App", "MethodToCall", "\t\"Hello World\"", "Run",
+				"\tlet result = MethodToCall")).ParseMembersAndMethods(parser);
+		Assert.That(program.Methods[0].ToString(), Is.EqualTo("MethodToCall"));
+		Assert.That(program.Methods[1].Body.Expressions[0].ToString(),
+			Is.EqualTo("let result = MethodToCall"));
+	}
+
+	[Test]
+	public void LocalMethodCallShouldHaveCorrectReturnType()
+	{
+		var program = new Type(package,
+			new TypeLines("Program", "implement App", "LocalMethod", "\t\"Hello World\"", "Run",
+				"\t\"Random Text\"")).ParseMembersAndMethods(parser);
+		Assert.That(program.Methods[0].ToString(), Is.EqualTo("LocalMethod"));
+		Assert.That(program.Methods[0].ReturnType.Name, Is.EqualTo(Base.Text));
 	}
 }
