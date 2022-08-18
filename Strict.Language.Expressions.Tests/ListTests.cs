@@ -64,7 +64,7 @@ public sealed class ListTests : TestExpressions
 	[TestCase("(1, 2, 3, 4, 5) + \"hello\" + 4")]
 	[TestCase("(1, 2, 3, 4, 5) + (\"hello\") + 4")]
 	public void MismatchingTypeFound(string input) =>
-		Assert.That(() => ParseExpression(input), Throws.InstanceOf<Binary.MismatchingTypeFound>()!);
+		Assert.That(() => ParseExpression(input), Throws.InstanceOf<Type.ArgumentsDoNotMatchMethodParameters>()!);
 
 	[TestCase("(1, 2, 3) * (1, 2)")]
 	[TestCase("(1, 2, 3) * (1, 2, 3, 4)")]

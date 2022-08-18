@@ -34,8 +34,6 @@ public sealed class Binary : MethodCall
 	{
 		var right = GetUnaryOrBuildNestedBinary(line, tokens.Pop(), tokens);
 		var left = GetUnaryOrBuildNestedBinary(line, tokens.Pop(), tokens);
-		if (HasMismatchingTypes(left, right))
-			throw new MismatchingTypeFound(line);
 		var operatorToken = line.Text[operatorTokenRange];
 		if (operatorToken == "*" && HasIncompatibleDimensions(left, right))
 			throw new ListsHaveDifferentDimensions(line, left + " " + right);
@@ -50,24 +48,9 @@ public sealed class Binary : MethodCall
 			? BuildBinaryExpression(line, nextTokenRange, tokens)
 			: line.Method.ParseExpression(line, nextTokenRange);
 
-	public sealed class MismatchingTypeFound : ParsingFailed
-	{
-		public MismatchingTypeFound(Method.Line line, string error = "") : base(line, error) { }
-	}
-
 	public static bool HasIncompatibleDimensions(Expression left, Expression right) =>
 		left is List leftList && right is List rightList &&
 		leftList.Values.Count != rightList.Values.Count;
-
-	public static bool HasMismatchingTypes(Expression left, Expression right) =>
-		left is List leftList && !leftList.IsFirstType<Text>() && right switch
-		{
-			List rightList when rightList.IsFirstType<Text>() => true,
-			Binary { Instance: List rightBinaryLeftList } when rightBinaryLeftList.IsFirstType<Text>() =>
-				true,
-			Binary { Instance: Text } => true,
-			_ => !leftList.IsFirstType<Text>() && right is Text
-		};
 
 	public sealed class ListsHaveDifferentDimensions : ParsingFailed
 	{
