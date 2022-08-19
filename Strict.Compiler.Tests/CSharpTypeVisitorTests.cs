@@ -167,7 +167,6 @@ Run
 	}
 
 	[Test]
-	[Ignore("TODO: Not yet done")]
 	public void LocalMethodCallShouldHaveCorrectReturnType()
 	{
 		var program = new Type(package,
