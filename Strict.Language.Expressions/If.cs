@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace Strict.Language.Expressions;
@@ -87,14 +88,13 @@ public sealed class If : Expression
 	{
 		var condition = GetConditionExpression(line, 3..);
 		methodLineNumber++;
-		var then = GetThenExpression(line.Method, ref methodLineNumber);
+		var then = GetThenOrElseExpression(line.Method, ref methodLineNumber);
 		if (methodLineNumber + 2 >= line.Method.bodyLines.Count ||
 			line.Method.bodyLines[methodLineNumber + 1].Text != "else")
 			return new If(condition, then, null, line);
 		methodLineNumber += 2;
 		return new If(condition, then,
-			line.Method.ParseMethodLine(line.Method.bodyLines[methodLineNumber], ref methodLineNumber),
-			line);
+			GetThenOrElseExpression(line.Method, ref methodLineNumber), line);
 	}
 
 	private static Expression GetConditionExpression(Method.Line line, Range conditionRange)
@@ -113,22 +113,39 @@ public sealed class If : Expression
 				: null) { }
 	}
 
-	private static Expression GetThenExpression(Method method, ref int methodLineNumber)
+	private static Body GetThenOrElseExpression(Method method, ref int methodLineNumber)
 	{
 		if (methodLineNumber >= method.bodyLines.Count)
-			throw new MissingThen(method.bodyLines[methodLineNumber - 1]);
-		if (method.bodyLines[methodLineNumber].Tabs !=
-			method.bodyLines[methodLineNumber - 1].Tabs + 1)
+			throw new MissingThenOrElseBlock(method.bodyLines[methodLineNumber - 1]);
+		var subBlockTabCount = method.bodyLines[methodLineNumber - 1].Tabs + 1;
+		if (!IsNextLineSameBlockExpression(method, methodLineNumber, subBlockTabCount))
 			throw new Method.InvalidIndentation(method.Type, method.TypeLineNumber + methodLineNumber,
 				string.Join('\n', method.bodyLines.ToWordList()), method.Name);
-		//https://deltaengine.fogbugz.com/f/cases/25323
-		return method.ParseMethodLine(method.bodyLines[methodLineNumber], ref methodLineNumber);
+		return new Body(method, GetBodyExpressions(method, ref methodLineNumber, subBlockTabCount));
 	}
 
-	public sealed class MissingThen : ParsingFailed
+	private static List<Expression> GetBodyExpressions(Method method, ref int methodLineNumber,
+		int subBlockTabCount)
 	{
-		public MissingThen(Method.Line line) : base(line) { }
+		var expressions = new List<Expression>();
+		for (var _ = methodLineNumber;
+			methodLineNumber < method.bodyLines.Count &&
+			IsNextLineSameBlockExpression(method, methodLineNumber, subBlockTabCount);
+			methodLineNumber++)
+			expressions.Add(method.ParseMethodLine(method.bodyLines[methodLineNumber],
+				ref methodLineNumber));
+		methodLineNumber--;
+		return expressions;
 	}
+
+	public sealed class MissingThenOrElseBlock : ParsingFailed
+	{
+		public MissingThenOrElseBlock(Method.Line line) : base(line) { }
+	}
+
+	private static bool IsNextLineSameBlockExpression(Method method, int methodLineNumber,
+		int thenTabCount) =>
+		method.bodyLines[methodLineNumber].Tabs == thenTabCount;
 
 	public static bool CanTryParseConditional(Method.Line line, Range range)
 	{

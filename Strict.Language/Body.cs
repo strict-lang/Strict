@@ -21,6 +21,12 @@ public class Body : Expression
 		Parent = parent;
 	}
 
+	public Body(Method method, IReadOnlyList<Expression> expressions) : base(expressions[0].ReturnType)
+	{
+		Method = method;
+		Expressions = expressions;
+	}
+
 	public Method Method { get; }
 	public Body? Parent { get; }
 
@@ -63,4 +69,6 @@ public class Body : Expression
 					return value;
 		return Parent?.FindVariableValue(searchFor);
 	}
+
+	public override string ToString() => string.Join("\n\t", Expressions);
 }

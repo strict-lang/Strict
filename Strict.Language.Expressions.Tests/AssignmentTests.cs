@@ -110,11 +110,8 @@ public class AssignmentTests : TestExpressions
 	[Ignore("TODO: Not yet done")]
 	public void AssignmentWithArguments()
 	{
-		const string Code = "has input = Text(5)";
-		// this is a bit strange, why would we need assigmentType here, it is not used by Code yet?
-		//var assignmentType =
-		new Type(type.Package,
-			new TypeLines("Assignment", "has number", "has file = \"test.txt\"", "Run", "\tfile.Write(number)")).ParseMembersAndMethods(new MethodExpressionParser());
-		Assert.That(((Assignment)ParseExpression(Code)).ToString(), Is.EqualTo(Code));
+		var program = new Type(type.Package,
+			new TypeLines("Assignment", "has number", "has file = File(\"test.txt\")", "Run", "\tlet a = 5")).ParseMembersAndMethods(new MethodExpressionParser());
+		Assert.That(program.Members[0].Name, Is.EqualTo("File"));
 	}
 }

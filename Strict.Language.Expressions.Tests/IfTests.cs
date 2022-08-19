@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using NUnit.Framework;
 
 namespace Strict.Language.Expressions.Tests;
@@ -41,7 +42,7 @@ public sealed class IfTests : TestExpressions
 
 	[Test]
 	public void ParseIncompleteThen() =>
-		Assert.That(() => ParseExpression("if bla is 5"), Throws.InstanceOf<If.MissingThen>());
+		Assert.That(() => ParseExpression("if bla is 5"), Throws.InstanceOf<If.MissingThenOrElseBlock>());
 
 	[Test]
 	public void ParseWrongIndentation() =>
@@ -121,21 +122,22 @@ public sealed class IfTests : TestExpressions
 		Assert.That(ParseExpression(code).ToString(), Is.EqualTo(code));
 
 	[Test]
-	public void IfHasDifferentScopeThanMethod()
-	{
+	public void IfHasDifferentScopeThanMethod() =>
 		Assert.That(() => ParseExpression(
 				"if bla is 5",
 				"\tlet abc = \"abc\"",
 				"log.Write(abc)"),
 			Throws.InstanceOf<IdentifierNotFound>());
+
+	[Test]
+	public void ThenBlockWithTwoExpressions() =>
 		Assert.That(ParseExpression(
 				"if bla is 5",
 				"\tlet abc = \"abc\"",
 				"\tlog.Write(abc)"),
-			Is.EqualTo(new If(GetCondition(), CreateThenBlock())));
-	}
+			Is.EqualTo(new If(GetCondition(), CreateThenOrElseBlock())));
 
-	private Expression CreateThenBlock()
+	private Expression CreateThenOrElseBlock()
 	{
 		var expressions = new Expression[2];
 		var body = new Body(method);//.GetType(Base.None), expressions);
@@ -143,6 +145,22 @@ public sealed class IfTests : TestExpressions
 		var arguments = new Expression[] { new VariableCall("abc", body.FindVariableValue("abc")!) };
 		expressions[1] = new MethodCall(member.Type.GetMethod("Write", arguments), new MemberCall(null, member), arguments);
 		body.SetAndValidateExpressions(expressions, new Method.Line[2]);
-		return body.Expressions[0];
+		return body;
+	}
+
+	[Test]
+	public void IfElseWithBlockThenAndElseExpressions()
+	{
+		var expression = ParseExpression("if bla is 5",
+			"\tlet abc = \"abc\"",
+			"\tlog.Write(abc)",
+			"else",
+			"\tlet abc = \"abc\"",
+			"\tlog.Write(abc)");
+		Assert.That(
+			expression,
+			Is.EqualTo(new If(GetCondition(), CreateThenOrElseBlock(), CreateThenOrElseBlock())));
+		Assert.That(((expression as If)?.Then as Body)!.Expressions.Count, Is.EqualTo(2));
+		Assert.That(((expression as If)?.OptionalElse as Body)!.Expressions.Count, Is.EqualTo(2));
 	}
 }

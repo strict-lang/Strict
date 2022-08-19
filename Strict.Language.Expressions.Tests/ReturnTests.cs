@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using NUnit.Framework;
 
 namespace Strict.Language.Expressions.Tests;
@@ -16,7 +17,8 @@ public sealed class ReturnTests : TestExpressions
 	[Test]
 	public void ParseReturnNumber() =>
 		ParseAndCheckOutputMatchesInput(new[] { "if true", "\treturn 33", "0" },
-			new If(new Boolean(method, true), new Return(new Number(method, 33))));
+			new If(new Boolean(method, true),
+				new Body(method, new List<Expression> { new Return(new Number(method, 33)) })));
 
 	[Test]
 	public void ReturnGetHashCode()

@@ -193,7 +193,7 @@ public class Type : Context
 			base(type, type.lineNumber, "Missing methods: " + string.Join(", ", missingTraitMethods)) { }
 	}
 
-	private string[] GetAllMethodLines(string definitionLine)
+	private List<string> GetAllMethodLines(string definitionLine)
 	{
 		var methodLines = new List<string> { definitionLine };
 		if (IsTrait && IsNextLineValidMethodBody())
@@ -202,7 +202,7 @@ public class Type : Context
 			throw new MethodMustBeImplementedInNonTraitType(this, definitionLine);
 		while (IsNextLineValidMethodBody())
 			methodLines.Add(lines[++lineNumber]);
-		return methodLines.ToArray();
+		return methodLines;
 	}
 
 	private bool IsNextLineValidMethodBody()
