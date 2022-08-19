@@ -159,9 +159,9 @@ Run
 	public void AssignmentWithMethodCall()
 	{
 		var program = new Type(package,
-			new TypeLines("Program", "implement App", "MethodToCall", "\t\"Hello World\"", "Run",
+			new TypeLines("Program", "implement App", "MethodToCall Text", "\t\"Hello World\"", "Run",
 				"\tlet result = MethodToCall")).ParseMembersAndMethods(parser);
-		Assert.That(program.Methods[0].ToString(), Is.EqualTo("MethodToCall"));
+		Assert.That(program.Methods[0].ToString(), Is.EqualTo("MethodToCall Text"));
 		Assert.That(program.Methods[1].Body.Expressions[0].ToString(),
 			Is.EqualTo("let result = MethodToCall"));
 	}
@@ -170,9 +170,8 @@ Run
 	public void LocalMethodCallShouldHaveCorrectReturnType()
 	{
 		var program = new Type(package,
-			new TypeLines("Program", "implement App", "LocalMethod", "\t\"Hello World\"", "Run",
+			new TypeLines("Program", "implement App", "LocalMethod Text", "\t\"Hello World\"", "Run",
 				"\t\"Random Text\"")).ParseMembersAndMethods(parser);
-		Assert.That(program.Methods[0].ToString(), Is.EqualTo("LocalMethod"));
 		Assert.That(program.Methods[0].ReturnType.Name, Is.EqualTo(Base.Text));
 	}
 }

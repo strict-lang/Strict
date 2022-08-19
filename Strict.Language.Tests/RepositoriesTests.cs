@@ -84,7 +84,7 @@ public class RepositoriesTests
 		var file4 = new TypeLines("File4", "implement File5", "implement File 6");
 		var file5 = new TypeLines("File5", "implement Number");
 		var file6 = new TypeLines("File6", "implement File5");
-		var filesWithImplements = new Dictionary<string, TypeLines>
+		var filesWithImplements = new Dictionary<string, TypeLines>(StringComparer.Ordinal)
 		{
 			{ file1.Name, file1 },
 			{ file2.Name, file2 },

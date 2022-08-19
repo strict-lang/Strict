@@ -125,7 +125,7 @@ public class Type : Context
 		else if (lines[lineNumber].StartsWith(Implement, StringComparison.Ordinal))
 			throw new ImplementMustComeBeforeMembersAndMethods(this, lineNumber, lines[lineNumber]);
 		else
-			methods.Add(new Method(this, lineNumber, parser, GetAllMethodLines(lines[lineNumber])));
+			methods.Add(new Method(this, lineNumber, parser, GetAllMethodLines()));
 	}
 
 	private Member ParseMember(ExpressionParser parser, ReadOnlySpan<char> remainingLine)
@@ -193,16 +193,16 @@ public class Type : Context
 			base(type, type.lineNumber, "Missing methods: " + string.Join(", ", missingTraitMethods)) { }
 	}
 
-	private string[] GetAllMethodLines(string definitionLine)
+	private string[] GetAllMethodLines()
 	{
-		var methodLines = new List<string> { definitionLine };
 		if (IsTrait && IsNextLineValidMethodBody())
 			throw new TypeHasNoMembersAndThusMustBeATraitWithoutMethodBodies(this);
 		if (!IsTrait && !IsNextLineValidMethodBody())
-			throw new MethodMustBeImplementedInNonTraitType(this, definitionLine);
+			throw new MethodMustBeImplementedInNonTraitType(this, lines[lineNumber]);
+		var methodLineNumber = lineNumber;
 		while (IsNextLineValidMethodBody())
-			methodLines.Add(lines[++lineNumber]);
-		return methodLines.ToArray();
+			lineNumber++;
+		return lines[methodLineNumber..(lineNumber + 1)];
 	}
 
 	private bool IsNextLineValidMethodBody()
@@ -315,7 +315,7 @@ public class Type : Context
 		{
 			if (cachedAvailableMethods != null)
 				return cachedAvailableMethods;
-			cachedAvailableMethods = new Dictionary<string, List<Method>>();
+			cachedAvailableMethods = new Dictionary<string, List<Method>>(StringComparer.Ordinal);
 			foreach (var method in methods)
 				if (cachedAvailableMethods.ContainsKey(method.Name))
 					cachedAvailableMethods[method.Name].Add(method);
