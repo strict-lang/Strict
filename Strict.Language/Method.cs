@@ -182,7 +182,7 @@ public sealed class Method : Context
 			? Type
 			: Type.FindType(name, searchingFrom ?? this);
 
-	public const string Value = nameof(Value);//TODO: has a different meaning in for BlockExpression
+	public const string Value = nameof(Value); //TODO: has a different meaning in for BlockExpression
 	public Body Body
 	{
 		get

@@ -39,8 +39,9 @@ is(other) Boolean
 	elements / divider
 *(other) List
 	(1, 2) * (3, 5) is (3, 10)
+	(1) * (1, 2) is List.Error.ListsHaveDifferentDimensions
 	if Length is not other.Length
-		error ListsHaveDifferentDimensions
+		List.Error.ListsHaveDifferentDimensions
 	elements * other.elements
 *(multiplier Generic) List
 	(1, 2) * 3 is (3, 6)

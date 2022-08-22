@@ -174,4 +174,32 @@ Run
 				"\t\"Random Text\"")).ParseMembersAndMethods(parser);
 		Assert.That(program.Methods[0].ReturnType.Name, Is.EqualTo(Base.Text));
 	}
+
+	[Test]
+	public void LetAssignmentWithConstructorCall()
+	{
+		var program = new Type(package,
+			new TypeLines("Program", "implement App", "Run", "\tlet file = File(\"test.txt\")")).ParseMembersAndMethods(parser);
+		Assert.That(program.Methods[0].Body.Expressions[0].ToString(), Is.EqualTo("let file = File(\"test.txt\")"));
+		Assert.That(program.Methods[0].Body.Expressions[0].ReturnType.Name, Is.EqualTo("File"));
+	}
+
+	[Test]
+	public void AssignmentWithConstructorCall()
+	{
+		var program = new Type(package,
+			new TypeLines("Program", "implement App", "has file = \"test.txt\"", "Run", "\tlet a = 5")).ParseMembersAndMethods(parser);
+		Assert.That(program.Members[0].Value?.ToString(), Is.EqualTo("File(\"test.txt\")"));
+		Assert.That(program.Members[0].Value?.ReturnType.Name, Is.EqualTo("File"));
+	}
+
+	[Ignore("We don't allow non constructor expressions atm in has member")]
+	[Test]
+	public void AssignmentUsingGlobalMemberCall()
+	{
+		var program = new Type(package,
+			new TypeLines("Program", "implement App", "has file = \"test.txt\"", "has fileDescription = file.Length > 1000 ? \"big file\" : \"small file\"", "Run", "\tlet a = 5")).ParseMembersAndMethods(parser);
+		Assert.That(program.Members[1].Name, Is.EqualTo("fileDescription"));
+		Assert.That(program.Members[1].Value, Is.EqualTo("file.Length > 1000 ? \"big file\" : \"small file\""));
+	}
 }

@@ -12,9 +12,9 @@ public class MethodExpressionParser : ExpressionParser
 	public override Expression ParseAssignmentExpression(Type type,
 		ReadOnlySpan<char> initializationLine, int fileLineNumber)
 	{
-		var constructor = type.Methods[0];
-		//TODO var line = new Method.Line(constructor, 0, initializationLine, fileLineNumber);
-		return new MethodCall(constructor, new From(type));
+		var line = new Method.Line(type.Methods[0], 0, initializationLine.ToString(), fileLineNumber); // TODO: No idea how to avoid line here
+		var arguments = new[] { ParseExpression(line, ..) };
+		return new MethodCall(type.GetMethod(Method.From, arguments), new From(type), arguments);
 	}
 
 	public override Expression ParseExpression(Method.Line line, Range range)
