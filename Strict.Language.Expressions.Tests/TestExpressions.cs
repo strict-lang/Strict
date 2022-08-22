@@ -44,8 +44,7 @@ public abstract class TestExpressions : MethodExpressionParser
 	{
 		var methodLines = lines.Select(line => '\t' + line).ToList();
 		methodLines.Insert(0, MethodTests.Run);
-		var body = new Method(type, 0, this, methodLines).Body;
-		return body.Expressions[0];
+		return new Method(type, 0, this, methodLines).Body.Expressions[0];
 	}
 
 	protected static MethodCall CreateFromMethodCall(Type fromType, params Expression[] arguments) =>

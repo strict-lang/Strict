@@ -10,7 +10,7 @@ namespace Strict.Language.Expressions;
 public class MethodExpressionParser : ExpressionParser
 {
 	public override Expression ParseAssignmentExpression(Type type,
-		ReadOnlySpan<char> initializationLine, int fileLineNumber)
+		ReadOnlySpan<char> initializationLine, int fileLineNumber, ExpressionParser expressionParser)
 	{
 		var constructor = type.Methods[0];
 		//TODO var line = new Method.Line(constructor, 0, initializationLine, fileLineNumber);

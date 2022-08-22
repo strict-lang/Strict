@@ -11,7 +11,7 @@ namespace Strict.Language;
 public abstract class ExpressionParser
 {
 	public abstract Expression ParseAssignmentExpression(Type type,
-		ReadOnlySpan<char> initializationLine, int fileLineNumber);
+		ReadOnlySpan<char> initializationLine, int fileLineNumber, ExpressionParser expressionParser);
 
 	public abstract Expression ParseMethodLine(Method.Line line, ref int methodLineNumber);
 	public abstract Expression ParseExpression(Method.Line line, Range range);

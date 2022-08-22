@@ -32,7 +32,7 @@ public class ExpressionParserTests : ExpressionParser
 
 	//ncrunch: no coverage start, not the focus here
 	public override Expression ParseAssignmentExpression(Type assignmentType,
-		ReadOnlySpan<char> initializationLine, int fileLineNumber) =>
+		ReadOnlySpan<char> initializationLine, int fileLineNumber, ExpressionParser expressionParser) =>
 		null!;
 
 	public override Expression ParseMethodLine(Method.Line line, ref int methodLineNumber)

@@ -15,12 +15,16 @@ public sealed class Method : Context
 	{
 		TypeLineNumber = typeLineNumber;
 		this.parser = parser;
+		this.lines = lines;
 		ReturnType = ParseParametersAndReturnType(type, lines[0].AsSpan(Name.Length));
-		bodyLines = GetLines(lines);
+		if (lines.Count > 1)
+			methodBody = PreParseBody();
 	}
 
 	public int TypeLineNumber { get; }
 	private readonly ExpressionParser parser;
+	private readonly IReadOnlyList<string> lines;
+	private Body? methodBody;
 
 	private Type ParseParametersAndReturnType(Type type, ReadOnlySpan<char> rest)
 	{
@@ -100,40 +104,28 @@ public sealed class Method : Context
 
 	/// <summary>
 	/// Skips the first method declaration line, then counts and removes the tabs from each line.
+	/// Also groups all expressions on the same tabs level into bodies. In case a body has only
+	/// a single line (which is most often the case), that only expression is used directly.
 	/// </summary>
-	private IReadOnlyList<Line> GetLines(IReadOnlyList<string> methodLines)
+	private Body PreParseBody(int tabs = 0, Body? parent = null)
 	{
-		var lines = new Line[methodLines.Count - 1];
-		for (var methodLineNumber = 1; methodLineNumber < methodLines.Count; methodLineNumber++)
-			FillLine(methodLines[methodLineNumber], methodLineNumber, lines);
-		return lines;
+		var body = new Body(this, tabs, parent);
+		for (methodLineNumber++; methodLineNumber < lines.Count; methodLineNumber++)
+			FillLine(body);
+		return body;
 	}
 
-	private readonly Stack<Body> bodies = new();
-	public readonly IReadOnlyList<Line> bodyLines;
+	private int methodLineNumber;
 
-	private void FillLine(string line, int methodLineNumber, IList<Line> lines)
+	private void FillLine(Body body)
 	{
+		var line = lines[methodLineNumber];
 		if (line.Length == 0)
 			throw new Type.EmptyLineIsNotAllowed(Type, TypeLineNumber + methodLineNumber);
 		var tabs = GetTabs(line);
-		PushOrPopBodyBasedOnTabsDepth(tabs);
+		PushOrPopBodyBasedOnTabsDepth(body, tabs);
 		CheckIndentation(line, TypeLineNumber + methodLineNumber, tabs);
-		lines[methodLineNumber - 1] = new Line(this, tabs, line[tabs..], TypeLineNumber + methodLineNumber,
-			bodies.Count > 0
-				? bodies.Peek()
-				: null);
-	}
-
-	private void PushOrPopBodyBasedOnTabsDepth(int tabs)
-	{
-		if (tabs > previousTabs)
-			bodies.Push(new Body(this, bodies.Count > 0
-				? bodies.Peek()
-				: null));
-		else if (tabs < previousTabs)
-			bodies.Pop();
-		previousTabs = tabs;
+		//TODO: methodLines[methodLineNumber - 1] = new Line(this, tabs, line[tabs..], TypeLineNumber + methodLineNumber, bodies.Count > 0 ? bodies.Peek() : null);
 	}
 
 	private static int GetTabs(string line)
@@ -147,13 +139,30 @@ public sealed class Method : Context
 		return tabs;
 	}
 
-	private int previousTabs;
+	//TODO: still needed?
+	private readonly Stack<Body> bodies = new();
 
+	private void PushOrPopBodyBasedOnTabsDepth(Body body, int tabs)
+	{
+		if (tabs > body.Tabs)
+			body.PushNestedBody(PreParseBody(tabs, body));
+		/*not needed yo?
+		else if (tabs < previousTabs)
+			bodies.Pop();
+		previousTabs = tabs;
+		*/
+	}
+
+	//TODO: not really needed, we can just the body we are in: private int previousTabs;
+	//TODO: remove, not longer needed, directly merged into Body
 	public sealed record Line(Method Method, int Tabs, string Text, int FileLineNumber,
 		Body? Body = null)
 	{
 		public override string ToString() => new string('\t', Tabs) + Text;
 	}
+
+	//TODO: dummy, remove!
+	public List<Line> bodyLines = new();
 
 	private void CheckIndentation(string line, int lineNumber, int tabs)
 	{
@@ -189,21 +198,32 @@ public sealed class Method : Context
 		{
 			if (cachedMethodBody != null)
 				return cachedMethodBody;
+			cachedMethodBody = null!;
+			/*TODO
+			cachedMethodBody = bodyLines.Count > 0
+				? cachedMethodBody = bodyLines[0].Body!
+				: new Body(this);
+			var lineNumber = 0;
 			if (bodyLines.Count > 0)
-				return ParseBodyExpressions();
-			return cachedMethodBody = new Body(this);
+				ParseBodyExpressions(cachedMethodBody, ref lineNumber);
+			*/
+			return cachedMethodBody;
 		}
 	}
 	private Body? cachedMethodBody;
 
-	private Body ParseBodyExpressions()
+	public void ParseBodyExpressions(Body body, ref int methodLineNumber, int tabLevel = 0)
 	{
-		cachedMethodBody = bodyLines[0].Body!;
 		var expressions = new List<Expression>();
-		for (var lineNumber = 0; lineNumber < bodyLines.Count; lineNumber++)
-			expressions.Add(ParseMethodLine(bodyLines[lineNumber], ref lineNumber));
-		cachedMethodBody.SetAndValidateExpressions(expressions, bodyLines);
-		return cachedMethodBody;
+/*TODO
+		for (; methodLineNumber < bodyLines.Count; methodLineNumber++)
+		{
+			if (bodyLines[methodLineNumber].Tabs < tabLevel)
+				break;
+			expressions.Add(ParseMethodLine(bodyLines[methodLineNumber], ref methodLineNumber));
+		}
+		body.SetAndValidateExpressions(expressions, bodyLines);
+*/
 	}
 
 	public override string ToString() =>

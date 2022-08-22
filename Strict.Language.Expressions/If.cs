@@ -117,12 +117,16 @@ public sealed class If : Expression
 	{
 		if (methodLineNumber >= method.bodyLines.Count)
 			throw new MissingThen(method.bodyLines[methodLineNumber - 1]);
-		if (method.bodyLines[methodLineNumber].Tabs !=
-			method.bodyLines[methodLineNumber - 1].Tabs + 1)
+		var line = method.bodyLines[methodLineNumber];
+		if (line.Tabs != method.bodyLines[methodLineNumber - 1].Tabs + 1)
 			throw new Method.InvalidIndentation(method.Type, method.TypeLineNumber + methodLineNumber,
 				string.Join('\n', method.bodyLines.ToWordList()), method.Name);
-		//https://deltaengine.fogbugz.com/f/cases/25323
-		return method.ParseMethodLine(method.bodyLines[methodLineNumber], ref methodLineNumber);
+		if (line.Body == null)
+			throw new ArgumentNullException(nameof(line.Body));
+		method.ParseBodyExpressions(line.Body, ref methodLineNumber, line.Tabs);
+		return line.Body.Expressions.Count > 1
+			? line.Body
+			: line.Body.Expressions[0];
 	}
 
 	public sealed class MissingThen : ParsingFailed

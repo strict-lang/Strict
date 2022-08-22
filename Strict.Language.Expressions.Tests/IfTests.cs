@@ -121,28 +121,39 @@ public sealed class IfTests : TestExpressions
 		Assert.That(ParseExpression(code).ToString(), Is.EqualTo(code));
 
 	[Test]
-	public void IfHasDifferentScopeThanMethod()
-	{
+	public void CannotUseVariableFromLowerScope() =>
 		Assert.That(() => ParseExpression(
 				"if bla is 5",
 				"\tlet abc = \"abc\"",
 				"log.Write(abc)"),
-			Throws.InstanceOf<IdentifierNotFound>());
+			Throws.InstanceOf<IdentifierNotFound>().With.Message.StartWith("abc"));
+
+	[Test]
+	public void IfHasDifferentScopeThanMethod() =>
 		Assert.That(ParseExpression(
 				"if bla is 5",
 				"\tlet abc = \"abc\"",
 				"\tlog.Write(abc)"),
 			Is.EqualTo(new If(GetCondition(), CreateThenBlock())));
-	}
 
 	private Expression CreateThenBlock()
 	{
+		var body = new Body(method);
 		var expressions = new Expression[2];
-		var body = new Body(method);//.GetType(Base.None), expressions);
 		expressions[0] = new Assignment(body, "abc", new Text(method, "abc"));
 		var arguments = new Expression[] { new VariableCall("abc", body.FindVariableValue("abc")!) };
 		expressions[1] = new MethodCall(member.Type.GetMethod("Write", arguments), new MemberCall(null, member), arguments);
 		body.SetAndValidateExpressions(expressions, new Method.Line[2]);
-		return body.Expressions[0];
+		return body;
 	}
+
+	[Test]
+	public void IfAndElseHaveThirOwnScopes() =>
+		Assert.That(() => ParseExpression(
+				"if bla is 5",
+				"\tlet ifText = \"in if\"",
+				"\tlog.Write(ifText)",
+				"else",
+				"\tlog.Write(ifText)"),
+			Throws.InstanceOf<IdentifierNotFound>().With.Message.StartWith("ifText"));
 }

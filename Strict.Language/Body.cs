@@ -8,32 +8,53 @@ namespace Strict.Language;
 /// all executed and then the final result is returned (all previous expressions must succeed).
 /// Method parameters are in this context and can be used by any of the expressions nested here.
 /// </summary>
-public class Body : Expression
+public sealed class Body : Expression
 {
 	/// <summary>
 	/// At construction time we only now the method we are in the if there is a parent Body we are in.
 	/// While parsing each of the expressions we need to check for variables as defined below. This
 	/// means the expressions list can't be done yet and needs this object to exist for scope parsing
 	/// </summary>
-	public Body(Method method, Body? parent = null) : base(method.ReturnType)
+	public Body(Method method, int tabs = 0 /*TODO: force this parameter to be used*/, Body? parent = null) : base(method.ReturnType)
 	{
 		Method = method;
+		Tabs = tabs;
 		Parent = parent;
 	}
 
 	public Method Method { get; }
+	public int Tabs { get; }
 	public Body? Parent { get; }
+
+	public void PushNestedBody(Body child)
+	{
+		if (Expressions.Count == 0)
+			Expressions = new List<Expression>();
+		((List<Expression>)Expressions).Add(child);
+	}
 
 	/// <summary>
 	/// After parsing each of the expressions in this body is done, we will validate them all here.
 	/// In case this is the method body, the last expression return type must match our return type.
 	/// </summary>
 	public void SetAndValidateExpressions(IReadOnlyList<Expression> expressions,
-		IReadOnlyList<Method.Line> bodyLines)
+		IReadOnlyList<Method.Line> bodyLines,
+		//TODO: put these parameters first and force them!
+		string Text = "", int FileLineNumber = 0)
 	{
+		if (expressions.Count == 0)
+			throw new SpanExtensions.EmptyInputIsNotAllowed();
+		if (expressions.Count == 1)
+			throw new SingleExpressionBodyDoesNotMakeAnySense(bodyLines[0], expressions[0]);
 		Expressions = expressions;
 		if (Parent == null && expressions[^1].GetType().Name == "Return")
 			throw new ReturnAsLastExpressionIsNotNeeded(bodyLines[^1]);
+	}
+
+	public sealed class SingleExpressionBodyDoesNotMakeAnySense : ParsingFailed
+	{
+		public SingleExpressionBodyDoesNotMakeAnySense(Method.Line line, Expression expression) :
+			base(line, expression.ToString()) { }
 	}
 
 	public IReadOnlyList<Expression> Expressions { get; private set; } = Array.Empty<Expression>();
@@ -63,4 +84,6 @@ public class Body : Expression
 					return value;
 		return Parent?.FindVariableValue(searchFor);
 	}
+
+	public override string ToString() => string.Join(Environment.NewLine, Expressions);
 }

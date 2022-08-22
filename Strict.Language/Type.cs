@@ -141,7 +141,7 @@ public class Type : Context
 		{
 			var expression = nameAndExpression.MoveNext()
 				? parser.ParseAssignmentExpression(new Member(this, nameAndType, null).Type,
-					nameAndExpression.Current, lineNumber)
+					nameAndExpression.Current, lineNumber, parser)
 				: null;
 			return new Member(this, nameAndType, expression);
 		}
