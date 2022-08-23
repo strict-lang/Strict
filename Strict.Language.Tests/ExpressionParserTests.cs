@@ -14,13 +14,12 @@ public class ExpressionParserTests : ExpressionParser
 	private Type type = null!;
 
 	[Test]
-	public void ParsingHappensAfterCallingBody()
+	public void ParsingHappensAfterCallingGetBodyAndParseIfNeeded()
 	{
 		Assert.That(parseWasCalled, Is.False);
-		Assert.That(type.Methods[0].Body, Is.Not.Null);
+		Assert.That(type.Methods[0].GetBodyAndParseIfNeeded(), Is.InstanceOf<Expression>());
 		Assert.That(parseWasCalled, Is.True);
-		Assert.That(type.Methods[0].Body.Expressions, Is.Not.Empty);
-		Assert.That(type.Methods[0].Body.ReturnType, Is.EqualTo(type.Methods[0].ReturnType));
+		Assert.That(type.Methods[0].GetBodyAndParseIfNeeded().ReturnType, Is.EqualTo(type.Methods[0].ReturnType));
 	}
 
 	private bool parseWasCalled;
@@ -31,19 +30,20 @@ public class ExpressionParserTests : ExpressionParser
 	}
 
 	//ncrunch: no coverage start, not the focus here
+	// ReSharper disable once TooManyArguments
 	public override Expression ParseAssignmentExpression(Type assignmentType,
-		ReadOnlySpan<char> initializationLine, int fileLineNumber, ExpressionParser expressionParser) =>
+		ReadOnlySpan<char> initializationLine, int fileLineNumber) =>
 		null!;
 
-	public override Expression ParseMethodLine(Method.Line line, ref int methodLineNumber)
+	public override Expression ParseLineExpression(Body body, ReadOnlySpan<char> line)
 	{
 		parseWasCalled = true;
-		return new Number(line.Method, 1);
+		return new Number(body.Method, 1);
 	}
 
-	public override Expression ParseExpression(Method.Line line, Range range) => null!;
+	public override Expression ParseExpression(Body body, ReadOnlySpan<char> text) => null!;
 
-	public override List<Expression> ParseListArguments(Method.Line line, Range range) => null!;
+	public override List<Expression> ParseListArguments(Body body, ReadOnlySpan<char> text) => null!;
 	//ncrunch: no coverage end
 
 	[Test]

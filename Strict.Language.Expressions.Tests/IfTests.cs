@@ -69,9 +69,6 @@ public sealed class IfTests : TestExpressions
 		new(member.Type.Methods[0], new MemberCall(null, member),
 			new Expression[] { new Text(type, "Hey") });
 
-	private Binary GetCondition() =>
-		CreateBinary(new MemberCall(null, bla), BinaryOperator.Is, number);
-
 	[Test]
 	public void ReturnGetHashCode()
 	{
@@ -119,41 +116,4 @@ public sealed class IfTests : TestExpressions
 	[TestCase("6 is 5 ? true else false")]
 	public void ConditionalExpressionsAsPartOfOtherExpression(string code) =>
 		Assert.That(ParseExpression(code).ToString(), Is.EqualTo(code));
-
-	[Test]
-	public void CannotUseVariableFromLowerScope() =>
-		Assert.That(() => ParseExpression(
-				"if bla is 5",
-				"\tlet abc = \"abc\"",
-				"log.Write(abc)"),
-			Throws.InstanceOf<IdentifierNotFound>().With.Message.StartWith("abc"));
-
-	[Test]
-	public void IfHasDifferentScopeThanMethod() =>
-		Assert.That(ParseExpression(
-				"if bla is 5",
-				"\tlet abc = \"abc\"",
-				"\tlog.Write(abc)"),
-			Is.EqualTo(new If(GetCondition(), CreateThenBlock())));
-
-	private Expression CreateThenBlock()
-	{
-		var body = new Body(method);
-		var expressions = new Expression[2];
-		expressions[0] = new Assignment(body, "abc", new Text(method, "abc"));
-		var arguments = new Expression[] { new VariableCall("abc", body.FindVariableValue("abc")!) };
-		expressions[1] = new MethodCall(member.Type.GetMethod("Write", arguments), new MemberCall(null, member), arguments);
-		body.SetAndValidateExpressions(expressions, new Method.Line[2]);
-		return body;
-	}
-
-	[Test]
-	public void IfAndElseHaveThirOwnScopes() =>
-		Assert.That(() => ParseExpression(
-				"if bla is 5",
-				"\tlet ifText = \"in if\"",
-				"\tlog.Write(ifText)",
-				"else",
-				"\tlog.Write(ifText)"),
-			Throws.InstanceOf<IdentifierNotFound>().With.Message.StartWith("ifText"));
 }

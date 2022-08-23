@@ -1,5 +1,8 @@
 ﻿using System.Collections.Generic;
 using System;
+using System.Runtime.CompilerServices;
+
+[assembly: InternalsVisibleTo("Strict.Language.Expressions.Tests")]
 
 namespace Strict.Language;
 
@@ -15,18 +18,24 @@ public sealed class Body : Expression
 	/// While parsing each of the expressions we need to check for variables as defined below. This
 	/// means the expressions list can't be done yet and needs this object to exist for scope parsing
 	/// </summary>
-	public Body(Method method, int tabs = 0 /*TODO: force this parameter to be used*/, Body? parent = null) : base(method.ReturnType)
+	public Body(Method method, int tabs = 0, Body? parent = null) : base(method.ReturnType)
 	{
 		Method = method;
 		Tabs = tabs;
 		Parent = parent;
+		if (parent != null)
+			children.Add(this);
 	}
 
 	public Method Method { get; }
 	public int Tabs { get; }
 	public Body? Parent { get; }
+	private readonly List<Body> children = new();
+	public Range LineRange { get; internal set; }
+	public int ParsingLineNumber { get; internal set; }
+	public string CurrentLine => Method.lines[ParsingLineNumber];
 
-	public void PushNestedBody(Body child)
+	public void PushNestedBody(Body child) //TODO: what?
 	{
 		if (Expressions.Count == 0)
 			Expressions = new List<Expression>();
@@ -34,34 +43,38 @@ public sealed class Body : Expression
 	}
 
 	/// <summary>
-	/// After parsing each of the expressions in this body is done, we will validate them all here.
-	/// In case this is the method body, the last expression return type must match our return type.
+	/// Called when actually needed and code needs to run, usually triggered by
+	/// <see cref="Method.GetBodyAndParseIfNeeded()"/> and child bodies inside. After parsing all
+	/// expressions in this body, we will validate them all here. If there are multiple expressions,
+	/// this body is returned, otherwise just a single expression is directly returned and the body
+	/// is discarded. The last expression return type must match our (method or caller) return type.
 	/// </summary>
-	public void SetAndValidateExpressions(IReadOnlyList<Expression> expressions,
-		IReadOnlyList<Method.Line> bodyLines,
-		//TODO: put these parameters first and force them!
-		string Text = "", int FileLineNumber = 0)
+	public Expression Parse()
 	{
-		if (expressions.Count == 0)
-			throw new SpanExtensions.EmptyInputIsNotAllowed();
-		if (expressions.Count == 1)
-			throw new SingleExpressionBodyDoesNotMakeAnySense(bodyLines[0], expressions[0]);
+		//TODO: we should probably split test expressions from production expressions here!
+		var expressions = new List<Expression>();
+		for (ParsingLineNumber = LineRange.Start.Value; ParsingLineNumber < LineRange.End.Value; ParsingLineNumber++)
+			expressions.Add(Method.ParseLine(this));
+		SetExpressions(expressions);
+		return Expressions.Count == 1
+			? Expressions[0]
+			: this;
+	}
+
+	internal void SetExpressions(IReadOnlyList<Expression> expressions)
+	{
 		Expressions = expressions;
-		if (Parent == null && expressions[^1].GetType().Name == "Return")
-			throw new ReturnAsLastExpressionIsNotNeeded(bodyLines[^1]);
+		if (Expressions.Count == 0)
+			throw new SpanExtensions.EmptyInputIsNotAllowed();
+		if (Parent == null && Expressions[^1].GetType().Name == "Return")
+			throw new ReturnAsLastExpressionIsNotNeeded(null!);
 	}
-
-	public sealed class SingleExpressionBodyDoesNotMakeAnySense : ParsingFailed
-	{
-		public SingleExpressionBodyDoesNotMakeAnySense(Method.Line line, Expression expression) :
-			base(line, expression.ToString()) { }
-	}
-
+	
 	public IReadOnlyList<Expression> Expressions { get; private set; } = Array.Empty<Expression>();
 
 	public sealed class ReturnAsLastExpressionIsNotNeeded : ParsingFailed
 	{
-		public ReturnAsLastExpressionIsNotNeeded(Method.Line line) : base(line) { }
+		public ReturnAsLastExpressionIsNotNeeded(Body body) : base(body) { }
 	}
 
 	/// <summary>

@@ -24,9 +24,9 @@ public sealed class Assignment : Expression
 	public override bool Equals(Expression? other) =>
 		other is Assignment a && Equals(Name, a.Name) && Value.Equals(a.Value);
 
-	public static Expression? TryParse(Method.Line line) =>
-		line.Text.StartsWith("let ", StringComparison.Ordinal)
-			? TryParseLet(line)
+	public static Expression? TryParse(Body body, ReadOnlySpan<char> line) =>
+		line.StartsWith("let ", StringComparison.Ordinal)
+			? TryParseLet(body, line)
 			: null;
 
 	/// <summary>
@@ -35,20 +35,19 @@ public sealed class Assignment : Expression
 	/// let hello = "hello" + " " + "world"
 	///          ^ ^       ^ ^   ^ ^       END, using TryParseExpression with Range(12, 35)
 	/// </summary>
-	private static Expression TryParseLet(Method.Line line)
+	private static Expression TryParseLet(Body body, ReadOnlySpan<char> line)
 	{
-		var remainingPartSpan = line.Text.AsSpan(4);
-		var parts = remainingPartSpan.Split();
+		var parts = line[4..].Split();
 		parts.MoveNext();
 		var name = parts.Current.ToString();
 		if (!parts.MoveNext() || !parts.MoveNext())
-			throw new IncompleteLet(line);
+			throw new IncompleteLet(body);
 		var startOfValueExpression = 4 + name.Length + 1 + 1 + 1;
-		return new Assignment(line.Body, name, line.Method.ParseExpression(line, startOfValueExpression..));
+		return new Assignment(body, name, body.Method.ParseExpression(body, startOfValueExpression..));
 	}
 
 	public sealed class IncompleteLet : ParsingFailed
 	{
-		public IncompleteLet(Method.Line line) : base(line) { }
+		public IncompleteLet(Body body) : base(body) { }
 	}
 }

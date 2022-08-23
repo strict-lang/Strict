@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using NUnit.Framework;
 using Strict.Language.Tests;
 
@@ -42,9 +41,11 @@ public abstract class TestExpressions : MethodExpressionParser
 
 	public Expression ParseExpression(params string[] lines)
 	{
-		var methodLines = lines.Select(line => '\t' + line).ToList();
-		methodLines.Insert(0, MethodTests.Run);
-		return new Method(type, 0, this, methodLines).Body.Expressions[0];
+		var methodLines = new string[lines.Length + 1];
+		methodLines[0] = MethodTests.Run;
+		for (var index = 0; index < lines.Length; index++)
+			methodLines[index + 1] = '\t' + lines[index];
+		return new Method(type, 0, this, methodLines).GetBodyAndParseIfNeeded();
 	}
 
 	protected static MethodCall CreateFromMethodCall(Type fromType, params Expression[] arguments) =>
@@ -55,4 +56,7 @@ public abstract class TestExpressions : MethodExpressionParser
 		var arguments = new[] { right };
 		return new Binary(left, left.ReturnType.FindMethod(operatorName, arguments)!, arguments);
 	}
+
+	protected Binary GetCondition() =>
+		CreateBinary(new MemberCall(null, bla), BinaryOperator.Is, number);
 }

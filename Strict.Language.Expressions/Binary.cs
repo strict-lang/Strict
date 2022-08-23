@@ -19,18 +19,18 @@ public sealed class Binary : MethodCall
 			? $"({child})"
 			: child.ToString();
 
-	public static Expression Parse(Method.Line line, Stack<Range> postfixTokens) =>
+	public static Expression Parse(Body body, Stack<Range> postfixTokens) =>
 		postfixTokens.Count < 3
 			? throw new IncompleteTokensForBinaryExpression(line, postfixTokens)
 			: BuildBinaryExpression(line, postfixTokens.Pop(), postfixTokens);
 
 	public sealed class IncompleteTokensForBinaryExpression : ParsingFailed
 	{
-		public IncompleteTokensForBinaryExpression(Method.Line line, IEnumerable<Range> postfixTokens) :
+		public IncompleteTokensForBinaryExpression(Body body, IEnumerable<Range> postfixTokens) :
 			base(line, postfixTokens.Select(t => line.Text[t]).Reverse().ToWordList()) { }
 	}
 
-	private static Expression BuildBinaryExpression(Method.Line line, Range operatorTokenRange, Stack<Range> tokens)
+	private static Expression BuildBinaryExpression(Body body, Range operatorTokenRange, Stack<Range> tokens)
 	{
 		var right = GetUnaryOrBuildNestedBinary(line, tokens.Pop(), tokens);
 		var left = GetUnaryOrBuildNestedBinary(line, tokens.Pop(), tokens);
@@ -41,7 +41,7 @@ public sealed class Binary : MethodCall
 		return new Binary(left, left.ReturnType.GetMethod(operatorToken, arguments), arguments);
 	}
 
-	private static Expression GetUnaryOrBuildNestedBinary(Method.Line line, Range nextTokenRange,
+	private static Expression GetUnaryOrBuildNestedBinary(Body body, Range nextTokenRange,
 		Stack<Range> tokens) =>
 		line.Text[nextTokenRange.Start.Value].IsSingleCharacterOperator() ||
 		line.Text.GetSpanFromRange(nextTokenRange).IsMultiCharacterOperator()
@@ -54,6 +54,6 @@ public sealed class Binary : MethodCall
 
 	public sealed class ListsHaveDifferentDimensions : ParsingFailed
 	{
-		public ListsHaveDifferentDimensions(Method.Line line, string error) : base(line, error) { }
+		public ListsHaveDifferentDimensions(Body body, string error) : base(body, error) { }
 	}
 }

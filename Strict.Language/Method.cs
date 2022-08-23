@@ -21,10 +21,29 @@ public sealed class Method : Context
 			methodBody = PreParseBody();
 	}
 
+	/// <summary>
+	/// Simple lexer to just parse the method definition and get all used names and types. Method code
+	/// itself is parsed only on demand (when GetBodyAndParseIfNeeded is called) in are more complex
+	/// way (Shunting yard/BNF/etc.) and slower. Examples: Run, Run(number), Run returns Text
+	/// </summary>
+	private static string GetName(ReadOnlySpan<char> firstLine)
+	{
+		var name = firstLine;
+		for (var i = 0; i < firstLine.Length; i++)
+			if (firstLine[i] == '(' || firstLine[i] == ' ')
+			{
+				name = firstLine[..i];
+				break;
+			}
+		if (!name.IsWord() && !name.IsOperator())
+			throw new NameMustBeAWordWithoutAnySpecialCharactersOrNumbers(name.ToString());
+		return name.ToString();
+	}
+
 	public int TypeLineNumber { get; }
 	private readonly ExpressionParser parser;
-	private readonly IReadOnlyList<string> lines;
-	private Body? methodBody;
+	internal readonly IReadOnlyList<string> lines;
+	private readonly Body? methodBody;
 
 	private Type ParseParametersAndReturnType(Type type, ReadOnlySpan<char> rest)
 	{
@@ -70,35 +89,16 @@ public sealed class Method : Context
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public Expression ParseExpression(Line line, Range rangeToParse) =>
-		parser.ParseExpression(line, rangeToParse);
+	public Expression ParseLine(Body body) =>
+		parser.ParseLineExpression(body, body.CurrentLine.AsSpan(body.Tabs));
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public List<Expression> ParseListArguments(Line line, Range range) =>
-		parser.ParseListArguments(line, range);
+	public Expression ParseExpression(Body body, ReadOnlySpan<char> text) =>
+		parser.ParseExpression(body, text);
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public Expression ParseMethodLine(Line line, ref int methodLineNumber) =>
-		parser.ParseMethodLine(line, ref methodLineNumber);
-
-	/// <summary>
-	/// Simple lexer to just parse the method definition and get all used names and types. Method code
-	/// itself is parsed in are more complex way (Shunting yard/PhraserTokenizer/BNF/etc.) and slower.
-	/// Examples: Run\n, Run(number)\n, Run returns Text\n
-	/// </summary>
-	private static string GetName(ReadOnlySpan<char> firstLine)
-	{
-		var name = firstLine;
-		for (var i = 0; i < firstLine.Length; i++)
-			if (firstLine[i] == '(' || firstLine[i] == ' ')
-			{
-				name = firstLine[..i];
-				break;
-			}
-		if (!name.IsWord() && !name.IsOperator())
-			throw new NameMustBeAWordWithoutAnySpecialCharactersOrNumbers(name.ToString());
-		return name.ToString();
-	}
+	public List<Expression> ParseListArguments(Body body, ReadOnlySpan<char> text) =>
+		parser.ParseListArguments(body, text);
 
 	public const string From = "from";
 
@@ -107,25 +107,30 @@ public sealed class Method : Context
 	/// Also groups all expressions on the same tabs level into bodies. In case a body has only
 	/// a single line (which is most often the case), that only expression is used directly.
 	/// </summary>
-	private Body PreParseBody(int tabs = 0, Body? parent = null)
+	private Body PreParseBody(int parentTabs = 0, Body? parent = null)
 	{
-		var body = new Body(this, tabs, parent);
+		var body = new Body(this, parentTabs, parent);
+		var startLine = methodLineNumber;
 		for (methodLineNumber++; methodLineNumber < lines.Count; methodLineNumber++)
-			FillLine(body);
+			if (CheckBodyLine(lines[methodLineNumber], body))
+				break;
+		body.LineRange = new Range(startLine, methodLineNumber);
 		return body;
 	}
 
 	private int methodLineNumber;
 
-	private void FillLine(Body body)
+	private bool CheckBodyLine(string line, Body body)
 	{
-		var line = lines[methodLineNumber];
 		if (line.Length == 0)
 			throw new Type.EmptyLineIsNotAllowed(Type, TypeLineNumber + methodLineNumber);
 		var tabs = GetTabs(line);
-		PushOrPopBodyBasedOnTabsDepth(body, tabs);
+		if (tabs > body.Tabs)
+			PreParseBody(tabs, body);
+		else if (tabs < body.Tabs)
+			return true;
 		CheckIndentation(line, TypeLineNumber + methodLineNumber, tabs);
-		//TODO: methodLines[methodLineNumber - 1] = new Line(this, tabs, line[tabs..], TypeLineNumber + methodLineNumber, bodies.Count > 0 ? bodies.Peek() : null);
+		return false;
 	}
 
 	private static int GetTabs(string line)
@@ -139,38 +144,13 @@ public sealed class Method : Context
 		return tabs;
 	}
 
-	//TODO: still needed?
-	private readonly Stack<Body> bodies = new();
-
-	private void PushOrPopBodyBasedOnTabsDepth(Body body, int tabs)
-	{
-		if (tabs > body.Tabs)
-			body.PushNestedBody(PreParseBody(tabs, body));
-		/*not needed yo?
-		else if (tabs < previousTabs)
-			bodies.Pop();
-		previousTabs = tabs;
-		*/
-	}
-
-	//TODO: not really needed, we can just the body we are in: private int previousTabs;
-	//TODO: remove, not longer needed, directly merged into Body
-	public sealed record Line(Method Method, int Tabs, string Text, int FileLineNumber,
-		Body? Body = null)
-	{
-		public override string ToString() => new string('\t', Tabs) + Text;
-	}
-
-	//TODO: dummy, remove!
-	public List<Line> bodyLines = new();
-
 	private void CheckIndentation(string line, int lineNumber, int tabs)
 	{
 		if (tabs is 0 or > 3)
 			throw new InvalidIndentation(Type, lineNumber, line, Name);
-		if (line.Length - tabs != line.TrimStart().Length)
+		if (char.IsWhiteSpace(line[tabs]))
 			throw new Type.ExtraWhitespacesFoundAtBeginningOfLine(Type, lineNumber, line, Name);
-		if (line.Length != line.TrimEnd().Length)
+		if (char.IsWhiteSpace(line[^1]))
 			throw new Type.ExtraWhitespacesFoundAtEndOfLine(Type, lineNumber, line, Name);
 	}
 
@@ -191,40 +171,16 @@ public sealed class Method : Context
 			? Type
 			: Type.FindType(name, searchingFrom ?? this);
 
-	public const string Value = nameof(Value);//TODO: has a different meaning in for BlockExpression
-	public Body Body
-	{
-		get
-		{
-			if (cachedMethodBody != null)
-				return cachedMethodBody;
-			cachedMethodBody = null!;
-			/*TODO
-			cachedMethodBody = bodyLines.Count > 0
-				? cachedMethodBody = bodyLines[0].Body!
-				: new Body(this);
-			var lineNumber = 0;
-			if (bodyLines.Count > 0)
-				ParseBodyExpressions(cachedMethodBody, ref lineNumber);
-			*/
-			return cachedMethodBody;
-		}
-	}
-	private Body? cachedMethodBody;
+	public const string Value = nameof(Value); //TODO: has a different meaning in nested Bodys
 
-	public void ParseBodyExpressions(Body body, ref int methodLineNumber, int tabLevel = 0)
-	{
-		var expressions = new List<Expression>();
-/*TODO
-		for (; methodLineNumber < bodyLines.Count; methodLineNumber++)
-		{
-			if (bodyLines[methodLineNumber].Tabs < tabLevel)
-				break;
-			expressions.Add(ParseMethodLine(bodyLines[methodLineNumber], ref methodLineNumber));
-		}
-		body.SetAndValidateExpressions(expressions, bodyLines);
-*/
-	}
+	public Expression GetBodyAndParseIfNeeded() =>
+		methodBody == null
+			? throw new CannotCallBodyOnTraitMethod()
+			: methodBody.Expressions.Count > 0
+				? methodBody
+				: methodBody.Parse();
+
+	public class CannotCallBodyOnTraitMethod : Exception { }
 
 	public override string ToString() =>
 		Name + parameters.ToBrackets() + (ReturnType.Name == Base.None

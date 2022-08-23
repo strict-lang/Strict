@@ -38,7 +38,10 @@ public sealed class If : Expression
 	// ReSharper disable once HollowTypeName
 	public class ReturnTypeOfThenAndElseMustHaveMatchingType : ParsingFailed
 	{
-		public ReturnTypeOfThenAndElseMustHaveMatchingType(Method.Line line, Type thenReturnType, Type optionalElseReturnType) : base(line, "The Then type: " + thenReturnType + " is not same as the Else type: " + optionalElseReturnType) { }
+		public ReturnTypeOfThenAndElseMustHaveMatchingType(Body body, Type thenReturnType,
+			Type optionalElseReturnType) : base(body,
+			"The Then type: " + thenReturnType + " is not same as the Else type: " +
+			optionalElseReturnType) { }
 	}
 
 	public Expression Condition { get; }
@@ -64,37 +67,37 @@ public sealed class If : Expression
 		other is If a && Equals(Condition, a.Condition) && Then.Equals(a.Then) &&
 		(OptionalElse?.Equals(a.OptionalElse) ?? a.OptionalElse == null);
 
-	public static Expression? TryParse(Method.Line line, ref int methodLineNumber) =>
-		line.Text == "if"
-			? throw new MissingCondition(line)
-			: line.Text == "else"
-				? throw new UnexpectedElse(line)
-				: line.Text.StartsWith("if ", StringComparison.Ordinal)
-					? TryParseIf(line, ref methodLineNumber)
+	public static Expression? TryParse(Body body, ReadOnlySpan<char> line) =>
+		line.Equals("if", StringComparison.Ordinal)
+			? throw new MissingCondition(body)
+			: line.Equals("else", StringComparison.Ordinal)
+				? throw new UnexpectedElse(body)
+				: line.StartsWith("if ", StringComparison.Ordinal)
+					? TryParseIf(body, line)
 					: null;
 
 	public sealed class MissingCondition : ParsingFailed
 	{
-		public MissingCondition(Method.Line line) : base(line) { }
+		public MissingCondition(Body body) : base(body) { }
 	}
 
 	public sealed class UnexpectedElse : ParsingFailed
 	{
-		public UnexpectedElse(Method.Line line) : base(line) { }
+		public UnexpectedElse(Body body) : base(body) { }
 	}
 
-	private static Expression TryParseIf(Method.Line line, ref int methodLineNumber)
+	private static Expression TryParseIf(Body body, ReadOnlySpan<char> line)
 	{
-		var condition = GetConditionExpression(line, 3..);
+		var condition = GetConditionExpression(body, line, 3..);
 		methodLineNumber++;
-		var then = GetThenExpression(line.Method, ref methodLineNumber);
-		if (methodLineNumber + 2 >= line.Method.bodyLines.Count ||
-			line.Method.bodyLines[methodLineNumber + 1].Text != "else")
+		var then = GetThenExpression(body.Method, ref methodLineNumber);
+		if (methodLineNumber + 2 >= body.Method.bodyLines.Count ||
+			body.Method.bodyLines[methodLineNumber + 1].Text != "else")
 			return new If(condition, then, null, line);
 		methodLineNumber += 2;
 		return new If(condition, then,
-			line.Method.ParseMethodLine(line.Method.bodyLines[methodLineNumber], ref methodLineNumber),
-			line);
+			null!, //TODO: line.Method.ParseMethodLine(line.Method.bodyLines[methodLineNumber], ref methodLineNumber),
+			body);
 	}
 
 	private static Expression GetConditionExpression(Method.Line line, Range conditionRange)
@@ -123,7 +126,7 @@ public sealed class If : Expression
 				string.Join('\n', method.bodyLines.ToWordList()), method.Name);
 		if (line.Body == null)
 			throw new ArgumentNullException(nameof(line.Body));
-		method.ParseBodyExpressions(line.Body, ref methodLineNumber, line.Tabs);
+		//TODO: pass in body and parse that! method.ParseBodyExpressions(line.Body, ref methodLineNumber, line.Tabs);
 		return line.Body.Expressions.Count > 1
 			? line.Body
 			: line.Body.Expressions[0];
@@ -146,6 +149,7 @@ public sealed class If : Expression
 		return false;
 	}
 
+	// ReSharper disable once MethodTooLong
 	public static If ParseConditional(Method.Line line, Range range)
 	{
 		var input = line.Text.GetSpanFromRange(range);

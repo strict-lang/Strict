@@ -162,8 +162,7 @@ Run
 			new TypeLines("Program", "implement App", "MethodToCall Text", "\t\"Hello World\"", "Run",
 				"\tlet result = MethodToCall")).ParseMembersAndMethods(parser);
 		Assert.That(program.Methods[0].ToString(), Is.EqualTo("MethodToCall Text"));
-		Assert.That(program.Methods[1].Body.Expressions[0].ToString(),
-			Is.EqualTo("let result = MethodToCall"));
+		Assert.That(program.Methods[1].GetBodyAndParseIfNeeded().ToString(), Is.EqualTo("let result = MethodToCall"));
 	}
 
 	[Test]

@@ -10,17 +10,17 @@ public sealed class Return : Expression
 	public override string ToString() => "return " + Value;
 	public override bool Equals(Expression? other) => other is Return a && Equals(Value, a.Value);
 
-	public static Expression? TryParse(Method.Line line) =>
-		line.Text.StartsWith(ReturnName, StringComparison.Ordinal)
-			? new Return(line.Text.Length <= ReturnName.Length
-				? throw new MissingExpression(line)
-				: line.Method.ParseExpression(line, (ReturnName.Length + 1)..))
+	public static Expression? TryParse(Body body, ReadOnlySpan<char> line) =>
+		line.StartsWith(ReturnName, StringComparison.Ordinal)
+			? new Return(line.Length <= ReturnName.Length
+				? throw new MissingExpression(body)
+				: body.Method.ParseExpression(body, line[7..]))
 			: null;
 
 	private const string ReturnName = "return";
 
 	public sealed class MissingExpression : ParsingFailed
 	{
-		public MissingExpression(Method.Line line) : base(line) { }
+		public MissingExpression(Body body) : base(body) { }
 	}
 }
