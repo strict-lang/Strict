@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.CompilerServices;
 
 namespace Strict.Language;
@@ -164,5 +165,14 @@ public static class SpanExtensions
 		if (decimalPosition < input.Length)
 			number /= Math.Pow(10, input.Length - decimalPosition);
 		return true;
+	}
+
+	public static IEnumerable<string> GetTextsFromRanges(this ReadOnlySpan<char> input, IEnumerable<Range> ranges)
+	{
+		var count = ranges.Count();
+		var texts = new string[count];
+		for (var index = 0; index < count; index++)
+			texts[index] = input[ranges.ElementAt(index)].ToString();
+		return texts;
 	}
 }

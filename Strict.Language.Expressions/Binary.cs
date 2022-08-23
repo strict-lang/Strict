@@ -19,34 +19,35 @@ public sealed class Binary : MethodCall
 			? $"({child})"
 			: child.ToString();
 
-	public static Expression Parse(Body body, Stack<Range> postfixTokens) =>
+	public static Expression Parse(Body body, ReadOnlySpan<char> input, Stack<Range> postfixTokens) =>
 		postfixTokens.Count < 3
-			? throw new IncompleteTokensForBinaryExpression(line, postfixTokens)
-			: BuildBinaryExpression(line, postfixTokens.Pop(), postfixTokens);
+			? throw new IncompleteTokensForBinaryExpression(body, input, postfixTokens)
+			: BuildBinaryExpression(body, input, postfixTokens.Pop(), postfixTokens);
 
 	public sealed class IncompleteTokensForBinaryExpression : ParsingFailed
 	{
-		public IncompleteTokensForBinaryExpression(Body body, IEnumerable<Range> postfixTokens) :
-			base(line, postfixTokens.Select(t => line.Text[t]).Reverse().ToWordList()) { }
+		public IncompleteTokensForBinaryExpression(Body body, ReadOnlySpan<char> input,
+			IEnumerable<Range> postfixTokens) :
+			base(body, input.GetTextsFromRanges(postfixTokens).Reverse().ToWordList()) { }
 	}
 
-	private static Expression BuildBinaryExpression(Body body, Range operatorTokenRange, Stack<Range> tokens)
+	private static Expression BuildBinaryExpression(Body body, ReadOnlySpan<char> input, Range operatorTokenRange, Stack<Range> tokens)
 	{
-		var right = GetUnaryOrBuildNestedBinary(line, tokens.Pop(), tokens);
-		var left = GetUnaryOrBuildNestedBinary(line, tokens.Pop(), tokens);
-		var operatorToken = line.Text[operatorTokenRange];
+		var right = GetUnaryOrBuildNestedBinary(body, input, tokens.Pop(), tokens);
+		var left = GetUnaryOrBuildNestedBinary(body, input, tokens.Pop(), tokens);
+		var operatorToken = input[operatorTokenRange].ToString();
 		if (operatorToken == "*" && HasIncompatibleDimensions(left, right))
-			throw new ListsHaveDifferentDimensions(line, left + " " + right);
+			throw new ListsHaveDifferentDimensions(body, left + " " + right);
 		var arguments = new[] { right };
 		return new Binary(left, left.ReturnType.GetMethod(operatorToken, arguments), arguments);
 	}
 
-	private static Expression GetUnaryOrBuildNestedBinary(Body body, Range nextTokenRange,
+	private static Expression GetUnaryOrBuildNestedBinary(Body body, ReadOnlySpan<char> input, Range nextTokenRange,
 		Stack<Range> tokens) =>
-		line.Text[nextTokenRange.Start.Value].IsSingleCharacterOperator() ||
-		line.Text.GetSpanFromRange(nextTokenRange).IsMultiCharacterOperator()
-			? BuildBinaryExpression(line, nextTokenRange, tokens)
-			: line.Method.ParseExpression(line, nextTokenRange);
+		input[nextTokenRange.Start.Value].IsSingleCharacterOperator() ||
+		input[nextTokenRange].IsMultiCharacterOperator()
+			? BuildBinaryExpression(body, input, nextTokenRange, tokens)
+			: body.Method.ParseExpression(body, input[nextTokenRange]);
 
 	public static bool HasIncompatibleDimensions(Expression left, Expression right) =>
 		left is List leftList && right is List rightList &&

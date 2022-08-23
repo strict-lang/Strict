@@ -126,7 +126,7 @@ public sealed class Method : Context
 			throw new Type.EmptyLineIsNotAllowed(Type, TypeLineNumber + methodLineNumber);
 		var tabs = GetTabs(line);
 		if (tabs > body.Tabs)
-			PreParseBody(tabs, body);
+			PreParseBody(tabs, body); // body instance returned from this method is not used?
 		else if (tabs < body.Tabs)
 			return true;
 		CheckIndentation(line, TypeLineNumber + methodLineNumber, tabs);
