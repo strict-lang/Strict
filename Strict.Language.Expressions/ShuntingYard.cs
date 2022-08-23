@@ -10,10 +10,10 @@ namespace Strict.Language.Expressions;
 /// </summary>
 public sealed class ShuntingYard
 {
-	public ShuntingYard(string input, Range partToParse)
+	public ShuntingYard(string input)
 	{
 		this.input = input;
-		var tokenizer = new PhraseTokenizer(input, partToParse);
+		var tokenizer = new PhraseTokenizer(input);
 		tokenizer.ProcessEachToken(PutTokenIntoStacks);
 		ApplyHigherOrEqualPrecedenceOperators();
 		if (Output.Count == 0)
@@ -76,7 +76,7 @@ public sealed class ShuntingYard
 	{
 		while (operators.Count > 0)
 			if (!IsOpeningBracket(precedence) &&
-				BinaryOperator.GetPrecedence(input.GetSpanFromRange(operators.Peek())) >= precedence)
+				BinaryOperator.GetPrecedence(input[operators.Peek()].AsSpan()) >= precedence)
 				Output.Push(operators.Pop());
 			else
 				return;

@@ -32,7 +32,7 @@ public sealed class Body : Expression
 	public Body? Parent { get; }
 	private readonly List<Body> children = new();
 	public Range LineRange { get; internal set; }
-	public int ParsingLineNumber { get; internal set; }
+	public int ParsingLineNumber { get; set; }
 	public string CurrentLine => Method.lines[ParsingLineNumber];
 
 	public void PushNestedBody(Body child) //TODO: what?
@@ -99,4 +99,6 @@ public sealed class Body : Expression
 	}
 
 	public override string ToString() => string.Join(Environment.NewLine, Expressions);
+
+	public string GetLine(int lineNumber) => Method.lines[lineNumber];
 }

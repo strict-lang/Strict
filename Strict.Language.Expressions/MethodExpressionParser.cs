@@ -49,13 +49,13 @@ public class MethodExpressionParser : ExpressionParser
 		// Conditionals are only supported here and can't be nested
 		if (If.CanTryParseConditional(body, input))
 			return If.ParseConditional(body, input);
-		var postfix = new ShuntingYard(line.Text, range); //TODO: Should be input span instead of body.CurrentLine
+		var postfix = new ShuntingYard(input.ToString());
 		if (postfix.Output.Count == 1)
 			return TryParseMemberOrZeroOrOneArgumentMethodCall(body, input) ??
 				ParseTextWithSpacesOrListWithMultipleOrNestedElements(body, input[postfix.Output.Pop()]);
 		if (postfix.Output.Count == 2)
 			return ParseMethodCallWithArguments(body, input, postfix);
-		var binary = Binary.Parse(body, postfix.Output);
+		var binary = Binary.Parse(body, input, postfix.Output);
 		if (postfix.Output.Count == 0)
 			return binary;
 		return ParseInContext(body.Method.Type, body, input[postfix.Output.Peek()], new[] { binary }) ??
@@ -252,7 +252,7 @@ public class MethodExpressionParser : ExpressionParser
 			// The postfix data comes in upside down, so use another stack to restore order
 			var expressions = new Stack<Expression>();
 			// Similar to TryParseExpression, but we know there is commas separating things!
-			var postfix = new ShuntingYard(line.Text, range); // TODO:should be innerSpan instead of whole line text
+			var postfix = new ShuntingYard(innerSpan.ToString());
 			if (postfix.Output.Count == 1)
 				expressions.Push(ParseTextWithSpacesOrListWithMultipleOrNestedElements(body,
 					innerSpan[postfix.Output.Pop()]));
@@ -270,7 +270,7 @@ public class MethodExpressionParser : ExpressionParser
 					{
 						if (span.Length == 1 && span[0].IsSingleCharacterOperator() ||
 							span.IsMultiCharacterOperator())
-							expressions.Push(Binary.Parse(body, postfix.Output));
+							expressions.Push(Binary.Parse(body, innerSpan, postfix.Output));
 						else
 							expressions.Push(body.Method.ParseExpression(body, innerSpan[postfix.Output.Pop()]));
 					}
