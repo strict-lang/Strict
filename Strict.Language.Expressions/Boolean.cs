@@ -12,13 +12,10 @@ public sealed class Boolean : Value
 		other is Value v && (bool)Data == (bool)v.Data;
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static Expression? TryParse(Method.Line line, Range partToParse)
-	{
-		var part = line.Text.GetSpanFromRange(partToParse);
-		return part.IsTrueText()
-			? new Boolean(line.Method, true)
-			: part.IsFalseText()
-				? new Boolean(line.Method, false)
+	public static Expression? TryParse(Body body, ReadOnlySpan<char> line) =>
+		line.IsTrueText()
+			? new Boolean(body.Method, true)
+			: line.IsFalseText()
+				? new Boolean(body.Method, false)
 				: null;
-	}
 }

@@ -11,8 +11,8 @@ public sealed class Number : Value
 	public override bool Equals(Expression? other) =>
 		other is Value v && (double)Data == (double)v.Data;
 
-	public static Expression? TryParse(Method.Line line, Range range) =>
-		line.Text.GetSpanFromRange(range).TryParseNumber(out var number)
-			? new Number(line.Method, number)
+	public static Expression? TryParse(Body body, ReadOnlySpan<char> line) =>
+		line.TryParseNumber(out var number)
+			? new Number(body.Method, number)
 			: null;
 }

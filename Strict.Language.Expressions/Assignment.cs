@@ -43,7 +43,7 @@ public sealed class Assignment : Expression
 		if (!parts.MoveNext() || !parts.MoveNext())
 			throw new IncompleteLet(body);
 		var startOfValueExpression = 4 + name.Length + 1 + 1 + 1;
-		return new Assignment(body, name, body.Method.ParseExpression(body, startOfValueExpression..));
+		return new Assignment(body, name, body.Method.ParseExpression(body, line[startOfValueExpression..]));
 	}
 
 	public sealed class IncompleteLet : ParsingFailed
