@@ -29,18 +29,13 @@ public class ExpressionParserTests : ExpressionParser
 		public TestExpression(Type returnType) : base(returnType) { }
 	}
 
-	//ncrunch: no coverage start, not the focus here
-	// ReSharper disable once TooManyArguments
-	public override Expression ParseAssignmentExpression(Type assignmentType,
-		ReadOnlySpan<char> initializationLine, int fileLineNumber) =>
-		null!;
-
 	public override Expression ParseLineExpression(Body body, ReadOnlySpan<char> line)
 	{
 		parseWasCalled = true;
 		return new Number(body.Method, 1);
 	}
 
+	//ncrunch: no coverage start, not the focus here
 	public override Expression ParseExpression(Body body, ReadOnlySpan<char> text) => null!;
 
 	public override List<Expression> ParseListArguments(Body body, ReadOnlySpan<char> text) => null!;
@@ -86,8 +81,9 @@ public class ExpressionParserTests : ExpressionParser
 	public void GetSingleLine()
 	{
 		var method = new Method(type, 0, this, new[] { "Run", MethodTests.LetNumber });
-		Assert.That(method.bodyLines, Has.Length.EqualTo(1));
-		Assert.That(method.bodyLines[0].ToString(), Is.EqualTo(MethodTests.LetNumber));
+		Assert.That(method.lines, Has.Length.EqualTo(2));
+		Assert.That(method.lines[0], Is.EqualTo("Run"));
+		Assert.That(method.lines[1], Is.EqualTo(MethodTests.LetNumber));
 	}
 
 	[Test]
@@ -95,19 +91,19 @@ public class ExpressionParserTests : ExpressionParser
 	{
 		var method = new Method(type, 0, this,
 			new[] { "Run", MethodTests.LetNumber, MethodTests.LetOther });
-		Assert.That(method.bodyLines, Has.Length.EqualTo(2));
-		Assert.That(method.bodyLines[0].ToString(), Is.EqualTo(MethodTests.LetNumber));
-		Assert.That(method.bodyLines[1].ToString(), Is.EqualTo(MethodTests.LetOther));
+		Assert.That(method.lines, Has.Length.EqualTo(3));
+		Assert.That(method.lines[1], Is.EqualTo(MethodTests.LetNumber));
+		Assert.That(method.lines[2], Is.EqualTo(MethodTests.LetOther));
 	}
 
 	[Test]
 	public void GetNestedLines()
 	{
 		var method = new Method(type, 0, this, MethodTests.NestedMethodLines);
-		Assert.That(method.bodyLines, Has.Length.EqualTo(4));
-		Assert.That(method.bodyLines[0].ToString(), Is.EqualTo(MethodTests.LetNumber));
-		Assert.That(method.bodyLines[1].ToString(), Is.EqualTo("	if bla is 5"));
-		Assert.That(method.bodyLines[2].ToString(), Is.EqualTo("		return true"));
-		Assert.That(method.bodyLines[3].ToString(), Is.EqualTo("	false"));
+		Assert.That(method.lines, Has.Length.EqualTo(5));
+		Assert.That(method.lines[1], Is.EqualTo(MethodTests.LetNumber));
+		Assert.That(method.lines[2], Is.EqualTo("	if bla is 5"));
+		Assert.That(method.lines[3], Is.EqualTo("		return true"));
+		Assert.That(method.lines[4], Is.EqualTo("	false"));
 	}
 }

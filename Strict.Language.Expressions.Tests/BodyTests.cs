@@ -4,7 +4,7 @@ namespace Strict.Language.Expressions.Tests;
 
 public sealed class BodyTests : TestExpressions
 {
-	/*TODO: these tests make close to no sense now
+	/*TODO: these tests make close to no sense now, instead look at the uncovered lines and add tests for those!
 	[Test]
 	public void ReturnAsLastExpressionIsNotNeeded() =>
 		Assert.That(() => new Body(method).ParseExpressions(
@@ -77,7 +77,7 @@ public sealed class BodyTests : TestExpressions
 	}
 
 	[Test]
-	public void IfAndElseHaveThirOwnScopes() =>
+	public void IfAndElseHaveTheirOwnScopes() =>
 		Assert.That(() => ParseExpression(
 				"if bla is 5",
 				"\tlet ifText = \"in if\"",

@@ -149,8 +149,10 @@ public class Type : Context
 		try
 		{
 			var expression = nameAndExpression.MoveNext()
-				? parser.ParseAssignmentExpression(new Member(this, nameAndType, null).Type,
-					nameAndExpression.Current, lineNumber)
+				? parser.ParseExpression(
+					//TODO: dummy!
+					new Body(new Method(this, 0, parser, new[] { "Dummy" })),
+					remainingLine[(nameAndType.Length + 3)..])
 				: null;
 			return new Member(this, nameAndType, expression);
 		}

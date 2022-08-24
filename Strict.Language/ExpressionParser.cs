@@ -11,10 +11,6 @@ namespace Strict.Language;
 /// </summary>
 public abstract class ExpressionParser
 {
-	// ReSharper disable once TooManyArguments
-	public abstract Expression ParseAssignmentExpression(Type type,
-		ReadOnlySpan<char> initializationLine, int fileLineNumber);
-
 	public abstract Expression ParseLineExpression(Body body, ReadOnlySpan<char> line);
 	public abstract Expression ParseExpression(Body body, ReadOnlySpan<char> text);
 	public abstract List<Expression> ParseListArguments(Body body, ReadOnlySpan<char> text);

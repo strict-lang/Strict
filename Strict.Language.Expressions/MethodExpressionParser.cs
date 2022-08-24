@@ -10,11 +10,6 @@ namespace Strict.Language.Expressions;
 /// </summary>
 public class MethodExpressionParser : ExpressionParser
 {
-	// ReSharper disable once TooManyArguments
-	public override Expression ParseAssignmentExpression(Type type,
-		ReadOnlySpan<char> initializationLine, int fileLineNumber) =>
-		new MethodCall(type.Methods[0], new From(type));
-
 	/// <summary>
 	/// Slightly slower version that checks high level expressions that can only occur at the line
 	/// level like let, if, for (those will increase methodLineNumber as well) and return.
@@ -111,7 +106,7 @@ public class MethodExpressionParser : ExpressionParser
 			return ParseInContext(body.Method.Type, body,
 				input[..argumentsStart],
 				ParseListArguments(body,
-					input[(argumentsStart + 1)..]));
+					input[(argumentsStart + 1)..^1]));
 		return ParseInContext(body.Method.Type, body, input, Array.Empty<Expression>());
 	}
 

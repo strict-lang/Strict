@@ -18,19 +18,19 @@ public sealed class Body : Expression
 	/// While parsing each of the expressions we need to check for variables as defined below. This
 	/// means the expressions list can't be done yet and needs this object to exist for scope parsing
 	/// </summary>
-	public Body(Method method, int tabs = 0, Body? parent = null) : base(method.ReturnType)
+	public Body(Method? method, int tabs = 0, Body? parent = null) : base(method?.ReturnType ?? null!)
 	{
-		Method = method;
+		Method = method!;
 		Tabs = tabs;
 		Parent = parent;
-		if (parent != null)
-			children.Add(this);
+		parent?.children.Add(this);
 	}
 
 	public Method Method { get; }
 	public int Tabs { get; }
 	public Body? Parent { get; }
-	private readonly List<Body> children = new();
+	//TODO: make private again
+	public readonly List<Body> children = new();
 	public Range LineRange { get; internal set; }
 	public int ParsingLineNumber { get; set; }
 	public string CurrentLine => Method.lines[ParsingLineNumber];
@@ -44,7 +44,7 @@ public sealed class Body : Expression
 
 	/// <summary>
 	/// Called when actually needed and code needs to run, usually triggered by
-	/// <see cref="Method.GetBodyAndParseIfNeeded()"/> and child bodies inside. After parsing all
+	/// Method.GetBodyAndParseIfNeeded and child bodies inside. After parsing all
 	/// expressions in this body, we will validate them all here. If there are multiple expressions,
 	/// this body is returned, otherwise just a single expression is directly returned and the body
 	/// is discarded. The last expression return type must match our (method or caller) return type.
@@ -53,7 +53,8 @@ public sealed class Body : Expression
 	{
 		//TODO: we should probably split test expressions from production expressions here!
 		var expressions = new List<Expression>();
-		for (ParsingLineNumber = LineRange.Start.Value; ParsingLineNumber < LineRange.End.Value; ParsingLineNumber++)
+		for (ParsingLineNumber = LineRange.Start.Value; ParsingLineNumber < LineRange.End.Value;
+			ParsingLineNumber++)
 			expressions.Add(Method.ParseLine(this));
 		SetExpressions(expressions);
 		return Expressions.Count == 1
@@ -61,15 +62,17 @@ public sealed class Body : Expression
 			: this;
 	}
 
-	internal void SetExpressions(IReadOnlyList<Expression> expressions)
+	internal Body SetExpressions(IReadOnlyList<Expression> expressions)
 	{
 		Expressions = expressions;
 		if (Expressions.Count == 0)
 			throw new SpanExtensions.EmptyInputIsNotAllowed();
-		if (Parent == null && Expressions[^1].GetType().Name == "Return")
-			throw new ReturnAsLastExpressionIsNotNeeded(null!);
+		if (Parent != null || Expressions[^1].GetType().Name != "Return")
+			return this;
+		ParsingLineNumber--;
+		throw new ReturnAsLastExpressionIsNotNeeded(this);
 	}
-	
+
 	public IReadOnlyList<Expression> Expressions { get; private set; } = Array.Empty<Expression>();
 
 	public sealed class ReturnAsLastExpressionIsNotNeeded : ParsingFailed
@@ -99,6 +102,21 @@ public sealed class Body : Expression
 	}
 
 	public override string ToString() => string.Join(Environment.NewLine, Expressions);
-
 	public string GetLine(int lineNumber) => Method.lines[lineNumber];
+
+	public Body? FindCurrentChild()
+	{
+		// ReSharper disable once ForCanBeConvertedToForeach
+		for (var index = 0; index < children.Count; index++)
+		{
+			var child = children[index];
+			if (child.LineRange.Start.Value <= ParsingLineNumber)
+				continue;
+			if (child.LineRange.Start.Value > ParsingLineNumber + 1)
+				break;
+			ParsingLineNumber += child.LineRange.End.Value - child.LineRange.Start.Value;
+			return child;
+		}
+		return null;
+	}
 }

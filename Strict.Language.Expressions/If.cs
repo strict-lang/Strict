@@ -89,15 +89,27 @@ public sealed class If : Expression
 	private static Expression TryParseIf(Body body, ReadOnlySpan<char> line)
 	{
 		var condition = GetConditionExpression(body, line[3..]);
+		var thenBody = body.FindCurrentChild();
+		if (thenBody == null)
+			throw new MissingThen(body);
+		var then = thenBody.Parse();
+		return HasElse(body)
+			? CreateIfWithElse(body, condition, then)
+			: new If(condition, then, null, body);
+	}
+
+	private static bool HasElse(Body body) =>
+		body.ParsingLineNumber + 2 < body.LineRange.End.Value && body.
+			GetLine(body.ParsingLineNumber + 1).AsSpan(body.Tabs).
+			Equals("else", StringComparison.Ordinal);
+
+	private static Expression CreateIfWithElse(Body body, Expression condition, Expression then)
+	{
 		body.ParsingLineNumber++;
-		var then = GetThenExpression(body);
-		if (body.ParsingLineNumber + 2 >= body.LineRange.End.Value ||
-			body.GetLine(body.ParsingLineNumber + 1) != "else")
-			return new If(condition, then, null, body);
-		body.ParsingLineNumber += 2;
-		return new If(condition, then,
-			null!, //TODO: line.Method.ParseMethodLine(line.Method.bodyLines[methodLineNumber], ref methodLineNumber),
-			body);
+		var elseBody = body.FindCurrentChild();
+		return elseBody == null
+			? throw new MissingElseExpression(body)
+			: new If(condition, then, elseBody.Parse(), body);
 	}
 
 	private static Expression GetConditionExpression(Body body, ReadOnlySpan<char> line)
@@ -114,23 +126,6 @@ public sealed class If : Expression
 			conditionReturnType != null
 				? body.CurrentLine + "\n Return type " + conditionReturnType + " is not " + Base.Boolean
 				: null) { } //TODO: Test whether body.CurrentLine has correct text at this point?
-	}
-
-	private static Expression GetThenExpression(Body body)
-	{
-		if (body.ParsingLineNumber >= body.LineRange.End.Value)
-			throw new MissingThen(body);
-		//var line = method.bodyLines[methodLineNumber];
-		//if (line.Tabs != method.bodyLines[methodLineNumber - 1].Tabs + 1)
-		//	throw new Method.InvalidIndentation(method.Type, method.TypeLineNumber + methodLineNumber,
-		//		string.Join('\n', method.bodyLines.ToWordList()), method.Name);
-		//if (line.Body == null)
-		//	throw new ArgumentNullException(nameof(line.Body));
-		//TODO: pass in body and parse that! method.ParseBodyExpressions(line.Body, ref methodLineNumber, line.Tabs);
-		body.Parse(); // not sure whether this is the correct body parsing
-		return body.Expressions.Count > 1
-			? body
-			: body.Expressions[0];
 	}
 
 	public sealed class MissingThen : ParsingFailed

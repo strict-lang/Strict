@@ -70,4 +70,13 @@ public class MethodTests
 	};
 	public const string LetNumber = "	let number = 5";
 	public const string LetOther = "	let other = 3";
+
+	[Test]
+	public void TraitMethodBodiesShouldNotBeCalled()
+	{
+		var appTrait =
+			new Type(type.Package, new TypeLines("DummyApp", "Run")).ParseMembersAndMethods(null!);
+		Assert.That(() => appTrait.Methods[0].GetBodyAndParseIfNeeded(),
+			Throws.InstanceOf<Method.CannotCallBodyOnTraitMethod>());
+	}
 }

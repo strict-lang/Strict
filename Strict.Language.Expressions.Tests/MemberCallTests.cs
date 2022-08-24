@@ -46,4 +46,42 @@ public sealed class MemberCallTests : TestExpressions
 		Assert.That(ParseExpression("\"hello\".Characters"),
 			Is.EqualTo(new MemberCall(new Text(method, "hello"),
 				new Member(method.GetType(Base.Text), "Characters", null))));
+
+	[Test]
+	public void MemberWithArgumentsInitializerShouldNotHaveType() =>
+		Assert.That(
+			() => new Type(type.Package, new TypeLines("Assignment", "has input Text = Text(5)")).
+				ParseMembersAndMethods(new MethodExpressionParser()),
+			Throws.InstanceOf<ParsingFailed>().With.InnerException.
+				InstanceOf<NamedType.AssignmentWithInitializerTypeShouldNotHaveNameWithType>());
+
+	[Test]
+	public void MemberWithArgumentsInitializer()
+	{
+		var assignmentType =
+			new Type(type.Package,
+				new TypeLines(nameof(MemberWithArgumentsInitializer), "has input = Text(5)",
+					"GetInput Text", "\tinput")).ParseMembersAndMethods(new MethodExpressionParser());
+		Assert.That(assignmentType.Members[0].Name, Is.EqualTo("input"));
+		Assert.That(assignmentType.Members[0].Type, Is.EqualTo(type.GetType(Base.Text)));
+		Assert.That(assignmentType.Members[0].Value, Is.InstanceOf<MethodCall>());
+		var methodCall = (MethodCall)assignmentType.Members[0].Value!;
+		Assert.That(methodCall.Instance!.ReturnType.Name, Is.EqualTo(Base.Text));
+		Assert.That(methodCall.Arguments[0], Is.EqualTo(new Number(type, 5)));
+	}
+
+	[Test]
+	public void MemberWithBinaryExpression()
+	{
+		var assignmentType =
+			new Type(type.Package,
+					new TypeLines(nameof(MemberWithBinaryExpression), "has combinedNumber = 3 + 5",
+						"GetCombined Number", "\tcombinedNumber")).
+				ParseMembersAndMethods(new MethodExpressionParser());
+		Assert.That(assignmentType.Members[0].Name, Is.EqualTo("combinedNumber"));
+		Assert.That(assignmentType.Members[0].Type, Is.EqualTo(type.GetType(Base.Number)));
+		var binary = (Binary)assignmentType.Members[0].Value!;
+		Assert.That(binary.Instance, Is.EqualTo(new Number(type, 3)));
+		Assert.That(binary.Arguments[0], Is.EqualTo(new Number(type, 5)));
+	}
 }

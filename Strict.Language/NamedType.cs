@@ -21,10 +21,18 @@ public abstract class NamedType
 		else
 		{
 			Name = nameAndType.ToString();
+			Type = typeFromValue;
+			if (Name.Contains(' '))
+				throw new AssignmentWithInitializerTypeShouldNotHaveNameWithType(Name);
 			if (!Name.IsWord())
 				throw new Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers(Name);
-			Type = typeFromValue;
 		}
+	}
+
+	// ReSharper disable once HollowTypeName
+	public sealed class AssignmentWithInitializerTypeShouldNotHaveNameWithType : Exception
+	{
+		public AssignmentWithInitializerTypeShouldNotHaveNameWithType(string name) : base(name) { }
 	}
 
 	public string Name { get; }

@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 
+[assembly: InternalsVisibleTo("Strict.Language.Tests")]
+
 namespace Strict.Language;
 
 /// <summary>
@@ -107,18 +109,18 @@ public sealed class Method : Context
 	/// Also groups all expressions on the same tabs level into bodies. In case a body has only
 	/// a single line (which is most often the case), that only expression is used directly.
 	/// </summary>
-	private Body PreParseBody(int parentTabs = 0, Body? parent = null)
+	private Body PreParseBody(int parentTabs = 1, Body? parent = null)
 	{
 		var body = new Body(this, parentTabs, parent);
 		var startLine = methodLineNumber;
-		for (methodLineNumber++; methodLineNumber < lines.Count; methodLineNumber++)
+		for (; methodLineNumber < lines.Count; methodLineNumber++)
 			if (CheckBodyLine(lines[methodLineNumber], body))
 				break;
-		body.LineRange = new Range(startLine, methodLineNumber);
+		body.LineRange = new Range(startLine, Math.Min(methodLineNumber, lines.Count));
 		return body;
 	}
 
-	private int methodLineNumber;
+	private int methodLineNumber = 1;
 
 	private bool CheckBodyLine(string line, Body body)
 	{
@@ -126,11 +128,9 @@ public sealed class Method : Context
 			throw new Type.EmptyLineIsNotAllowed(Type, TypeLineNumber + methodLineNumber);
 		var tabs = GetTabs(line);
 		if (tabs > body.Tabs)
-			PreParseBody(tabs, body); // body instance returned from this method is not used?
-		else if (tabs < body.Tabs)
-			return true;
+			PreParseBody(tabs, body); //TODO: body instance returned from this method is not used?
 		CheckIndentation(line, TypeLineNumber + methodLineNumber, tabs);
-		return false;
+		return tabs < body.Tabs;
 	}
 
 	private static int GetTabs(string line)

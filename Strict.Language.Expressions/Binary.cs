@@ -31,6 +31,7 @@ public sealed class Binary : MethodCall
 			base(body, input.GetTextsFromRanges(postfixTokens).Reverse().ToWordList()) { }
 	}
 
+	// ReSharper disable once TooManyArguments
 	private static Expression BuildBinaryExpression(Body body, ReadOnlySpan<char> input, Range operatorTokenRange, Stack<Range> tokens)
 	{
 		var right = GetUnaryOrBuildNestedBinary(body, input, tokens.Pop(), tokens);
@@ -42,6 +43,7 @@ public sealed class Binary : MethodCall
 		return new Binary(left, left.ReturnType.GetMethod(operatorToken, arguments), arguments);
 	}
 
+	// ReSharper disable once TooManyArguments
 	private static Expression GetUnaryOrBuildNestedBinary(Body body, ReadOnlySpan<char> input, Range nextTokenRange,
 		Stack<Range> tokens) =>
 		input[nextTokenRange.Start.Value].IsSingleCharacterOperator() ||

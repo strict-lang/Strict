@@ -7,8 +7,14 @@ public class TestPackage : Package
 {
 	public TestPackage() : base(nameof(TestPackage))
 	{
-		var anyType = new Type(this, new TypeLines(Base.Any, "is(other) Boolean"));
-		new Type(this, new TypeLines(Base.Boolean, "not Boolean", "\tfalse", "is(any) Boolean", "\ttrue")).ParseMembersAndMethods(null!);
+		// @formatter:off
+		var anyType = new Type(this, new TypeLines(Base.Any,
+			"is(other) Boolean"));
+		new Type(this, new TypeLines(Base.Boolean,
+			"not Boolean",
+			"\tfalse",
+			"is(any) Boolean",
+			"\ttrue")).ParseMembersAndMethods(null!);
 		anyType.ParseMembersAndMethods(null!);
 		new Type(this,
 			new TypeLines(Base.Number,
@@ -23,13 +29,21 @@ public class TestPackage : Package
 				"Floor Number",
 				"\tvalue - value % 1")).ParseMembersAndMethods(null!);
 		new Type(this,
-			new TypeLines(Base.Count, "implement Number", "Increment",
-				"\tCount(5).Increment is 6", "\tvalue = value + 1")).ParseMembersAndMethods(null!);
+			new TypeLines(Base.Count,
+				"implement Number",
+				"Increment",
+				"\tCount(5).Increment is 6",
+				"\tvalue = value + 1")).ParseMembersAndMethods(null!);
 		new Type(this,
-			new TypeLines(Base.Character, "implement Number", "from(number)", "\tvalue = number")).ParseMembersAndMethods(null!);
+			new TypeLines(Base.Character,
+				"implement Number",
+				"from(number)",
+				"\tvalue = number")).ParseMembersAndMethods(null!);
 		new Type(this,
 			new TypeLines(Base.Text,
 				"has Characters",
+				"from(number)",
+				"\tvalue = Character(number)",
 				"Run",
 				"\tvalue is not \"\"",
 				"+(other) Text",

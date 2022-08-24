@@ -16,7 +16,7 @@ public sealed class IfTests : TestExpressions
 			Throws.InstanceOf<If.InvalidCondition>());
 
 	[Test]
-	public void ReturnTypeOfThenAndElseMustNotBeAny() =>
+	public void ReturnTypeOfThenAndElseMustHaveMatchingType() =>
 		Assert.That(() => ParseExpression("if 5 is 6", "\treturn 8", "else", "\treturn \"hello\"").ReturnType,
 			Throws.InstanceOf<If.ReturnTypeOfThenAndElseMustHaveMatchingType>());
 
@@ -44,9 +44,8 @@ public sealed class IfTests : TestExpressions
 		Assert.That(() => ParseExpression("if bla is 5"), Throws.InstanceOf<If.MissingThen>());
 
 	[Test]
-	public void ParseWrongIndentation() =>
-		Assert.That(() => ParseExpression("if bla is 5", "Run"),
-			Throws.InstanceOf<Method.InvalidIndentation>());
+	public void MissingThen() =>
+		Assert.That(() => ParseExpression("if bla is 5", "Run"), Throws.InstanceOf<If.MissingThen>());
 
 	[Test]
 	public void ParseIf() =>
@@ -88,7 +87,7 @@ public sealed class IfTests : TestExpressions
 			Throws.InstanceOf<UnknownExpression>());
 
 	[Test]
-	public void ReturnTypeOfThenAndElseMustHaveMatchingType() =>
+	public void ReturnTypeOfConditionalThenAndElseMustHaveMatchingType() =>
 		Assert.That(() => ParseExpression("let result = true ? true else 5"),
 			Throws.InstanceOf<If.ReturnTypeOfThenAndElseMustHaveMatchingType>());
 
