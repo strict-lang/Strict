@@ -77,6 +77,8 @@ public sealed class MethodCallTests : TestExpressions
 	[TestCase("Count(5)")]
 	[TestCase("Count(5).Increment")]
 	[TestCase("Count(5).Floor")]
+	[TestCase("Range(0, 10)")]
+	[TestCase("Range(5, 10)")]
 	public void FromExample(string fromMethodCall) =>
 		Assert.That(ParseExpression(fromMethodCall).ToString(), Is.EqualTo(fromMethodCall));
 

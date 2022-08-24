@@ -34,6 +34,8 @@ public class MethodExpressionParser : ExpressionParser
 					: input.IsWord()
 						? throw new IdentifierNotFound(body, input.ToString())
 						: throw new UnknownExpression(body, input.ToString()));
+		if (input.StartsWith("error "))
+			return TryParseErrorExpression(body, input[6..]);
 		// If this is just a simple text string, there is no need to invoke ShuntingYard
 		if (input[0] == '"' && input[^1] == '"' && input.Count('"') == 2)
 			return new Text(body.Method, input.Slice(1, input.Length - 2).ToString());
@@ -55,6 +57,14 @@ public class MethodExpressionParser : ExpressionParser
 			return binary;
 		return ParseInContext(body.Method.Type, body, input[postfix.Output.Peek()], new[] { binary }) ??
 			throw new UnknownExpression(body, input[postfix.Output.Peek()].ToString());
+	}
+
+	private Error TryParseErrorExpression(Body body, ReadOnlySpan<char> partToParse)
+	{
+		var expression = ParseExpression(body, partToParse);
+		if (expression.ReturnType.Name != Base.Text)
+			throw new ArgumentException("Error must be a text");
+		return new Error(expression);
 	}
 
 	private Expression ParseMethodCallWithArguments(Body body, ReadOnlySpan<char> input,

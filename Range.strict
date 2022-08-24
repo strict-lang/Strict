@@ -1,0 +1,10 @@
+implement Number
+has Start Number
+has End Number
+from(start Number, end Number)
+	Start = start
+	End = end
+Length
+	Range(0, 5).Length is 5
+	Range(2, 18).Length is 16
+	End - Start
