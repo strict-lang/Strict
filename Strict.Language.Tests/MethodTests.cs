@@ -70,6 +70,7 @@ public class MethodTests
 	};
 	public const string LetNumber = "	let number = 5";
 	public const string LetOther = "	let other = 3";
+	public const string LetErrorMessage = "\tlet errorMessage = \"some error\"";
 
 	[Test]
 	public void TraitMethodBodiesShouldNotBeCalled()
