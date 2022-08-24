@@ -18,18 +18,12 @@ public sealed class Body : Expression
 	/// While parsing each of the expressions we need to check for variables as defined below. This
 	/// means the expressions list can't be done yet and needs this object to exist for scope parsing
 	/// </summary>
-	public Body(Method? method, int tabs = 0, Body? parent = null) : base(method?.ReturnType ?? null!)
+	public Body(Method? method, int tabs = 0, Body? parent = null) : base(method?.ReturnType ?? new Type(new Package(null, ""), new TypeLines(""))) //TODO: Dummy initilization to avoid forced null
 	{
 		Method = method!;
 		Tabs = tabs;
 		Parent = parent;
 		parent?.children.Add(this);
-	}
-
-	public Body(Method method, IReadOnlyList<Expression> expressions) : base(expressions[0].ReturnType)
-	{
-		Method = method;
-		Expressions = expressions;
 	}
 
 	public Method Method { get; }

@@ -5,6 +5,11 @@ namespace Strict.Language.Expressions.Tests;
 
 public sealed class ListTests : TestExpressions
 {
+	[SetUp]
+	public void CreateParser() => parser = new MethodExpressionParser();
+
+	private MethodExpressionParser parser = null!;
+
 	[Test]
 	public void EmptyListNotAllowed() =>
 		Assert.That(() => ParseExpression("()"), Throws.InstanceOf<List.EmptyListNotAllowed>()!);
@@ -139,4 +144,23 @@ public sealed class ListTests : TestExpressions
 					{
 						"(\"Hello, World\", \"Yoyo (it is my secret + 1)\"), (\"4\")"
 					})), BinaryOperator.Plus, new Number(method, 7))));
+
+	[Test]
+	public void ListGenericLengthAddition()
+	{
+		var program = new Type(type.Package,
+			new TypeLines(nameof(ListGenericLengthAddition), "has listOne Numbers", "has listTwo List(Number)", "AddListLength Number", "\tlistOne.Length + listTwo.Length")).ParseMembersAndMethods(parser);
+		Assert.That(program.Members[0].Name, Is.EqualTo("listOne"));
+		Assert.That(program.Members[0].Type, Is.EqualTo(type.GetType(Base.Number)));
+		Assert.That(program.Members[1].Type, Is.EqualTo(type.GetType(Base.Number)));
+	}
+
+	[Test]
+	public void ListAdditionWithGeneric()
+	{
+		var program = new Type(type.Package,
+			new TypeLines(nameof(ListAdditionWithGeneric), "has elements Numbers", "Add(other Numbers) List", "\telements + other.elements")).ParseMembersAndMethods(parser);
+		Assert.That(program.Members[0].Name, Is.EqualTo("elements"));
+		Assert.That(program.Methods[0].ReturnType.Name, Is.EqualTo("List"));
+	}
 }
