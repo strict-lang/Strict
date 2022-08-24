@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 
 namespace Strict.Language.Expressions;
 
@@ -9,198 +10,202 @@ namespace Strict.Language.Expressions;
 /// </summary>
 public class MethodExpressionParser : ExpressionParser
 {
-	public override Expression ParseAssignmentExpression(Type type,
-		ReadOnlySpan<char> initializationLine, int fileLineNumber)
-	{
-		var line = new Method.Line(type.Methods[0], 0, initializationLine.ToString(), fileLineNumber); // TODO: No idea how to avoid line here
-		var arguments = new[] { ParseExpression(line, ..) };
-		return new MethodCall(type.GetMethod(Method.From, arguments), new From(type), arguments);
-	}
+	/// <summary>
+	/// Slightly slower version that checks high level expressions that can only occur at the line
+	/// level like let, if, for (those will increase methodLineNumber as well) and return.
+	/// Every other expression can be nested and can appear anywhere.
+	/// </summary>
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public override Expression ParseLineExpression(Body body, ReadOnlySpan<char> line) =>
+		Assignment.TryParse(body, line) ?? If.TryParse(body, line) ?? For.TryParse(body, line) ??
+		Return.TryParse(body, line) ?? ParseExpression(body, line);
 
-	public override Expression ParseExpression(Method.Line line, Range range)
+	// ReSharper disable once CyclomaticComplexity
+	// ReSharper disable once MethodTooLong
+	public override Expression ParseExpression(Body body, ReadOnlySpan<char> input)
 	{
-		var input = line.Text.GetSpanFromRange(range);
 		if (input.IsEmpty)
-			throw new CannotParseEmptyInput(line);
+			throw new CannotParseEmptyInput(body);
 		if (input.Length < 3 || !input.Contains(' ') && !input.Contains(','))
-			return Boolean.TryParse(line, range) ?? Text.TryParse(line, range) ??
-				List.TryParseWithSingleElement(line, range) ?? Number.TryParse(line, range) ??
-				TryParseMemberOrZeroOrOneArgumentMethodCall(line, range) ?? (input.IsOperator()
-					? throw new InvalidOperatorHere(line, input.ToString())
+			return Boolean.TryParse(body, input) ?? Text.TryParse(body, input) ??
+				List.TryParseWithSingleElement(body, input) ?? Number.TryParse(body, input) ??
+				TryParseMemberOrZeroOrOneArgumentMethodCall(body, input) ?? (input.IsOperator()
+					? throw new InvalidOperatorHere(body, input.ToString())
 					: input.IsWord()
-						? throw new IdentifierNotFound(line, line.Text[range])
-						: throw new UnknownExpression(line, line.Text[range]));
+						? throw new IdentifierNotFound(body, input.ToString())
+						: throw new UnknownExpression(body, input.ToString()));
 		// If this is just a simple text string, there is no need to invoke ShuntingYard
 		if (input[0] == '"' && input[^1] == '"' && input.Count('"') == 2)
-			return new Text(line.Method, input.Slice(1, input.Length - 2).ToString());
+			return new Text(body.Method, input.Slice(1, input.Length - 2).ToString());
 		// If this is just a simple list, no need to invoke ShuntingYard yet, grab each list element
 		if (input[0] == '(' && input[^1] == ')' && input.Contains(',') && input.Count('(') == 1)
-			return new List(line,
-				line.Method.ParseListArguments(line, range.RemoveFirstAndLast(line.Text.Length)));
+			return new List(body,
+				body.Method.ParseListArguments(body, input[1..^1]));
 		// Conditionals are only supported here and can't be nested
-		if (If.CanTryParseConditional(line, range))
-			return If.ParseConditional(line, range);
-		var postfix = new ShuntingYard(line.Text, range);
+		if (If.CanTryParseConditional(body, input))
+			return If.ParseConditional(body, input);
+		var postfix = new ShuntingYard(input.ToString());
 		if (postfix.Output.Count == 1)
-			return TryParseMemberOrZeroOrOneArgumentMethodCall(line, range) ??
-				ParseTextWithSpacesOrListWithMultipleOrNestedElements(line, postfix.Output.Pop());
+			return TryParseMemberOrZeroOrOneArgumentMethodCall(body, input) ??
+				ParseTextWithSpacesOrListWithMultipleOrNestedElements(body, input[postfix.Output.Pop()]);
 		if (postfix.Output.Count == 2)
-			return ParseMethodCallWithArguments(line, postfix);
-		var binary = Binary.Parse(line, postfix.Output);
+			return ParseMethodCallWithArguments(body, input, postfix);
+		var binary = Binary.Parse(body, input, postfix.Output);
 		if (postfix.Output.Count == 0)
 			return binary;
-		return ParseInContext(line.Method.Type, line, postfix.Output.Peek(), new[] { binary }) ??
-			throw new UnknownExpression(line, line.Text[postfix.Output.Peek()]);
+		return ParseInContext(body.Method.Type, body, input[postfix.Output.Peek()], new[] { binary }) ??
+			throw new UnknownExpression(body, input[postfix.Output.Peek()].ToString());
 	}
 
-	private Expression ParseMethodCallWithArguments(Method.Line line, ShuntingYard postfix)
+	private Expression ParseMethodCallWithArguments(Body body, ReadOnlySpan<char> input,
+		ShuntingYard postfix)
 	{
 		var argumentsRange = postfix.Output.Pop();
 		var methodRange = postfix.Output.Pop();
 #if LOG_DETAILS
-		Logger.Info(nameof(ParseMethodCallWithArguments) + ", method=" + line.Text[methodRange] +
-			" arguments=" + line.Text[argumentsRange]);
+		Logger.Info(nameof(ParseMethodCallWithArguments) + ", method=" + input[methodRange].ToString() +
+			" arguments=" + input[argumentsRange].ToString());
 #endif
-		if (line.Text[argumentsRange.Start.Value] == '(')
-			return ParseInContext(line.Method.Type, line, methodRange,
-				ParseListArguments(line, argumentsRange.RemoveFirstAndLast(line.Text.Length))) ?? throw new MemberOrMethodNotFound(line, line.Method.Type, line.Text[methodRange]);
-		return line.Text.GetSpanFromRange(methodRange).Equals(UnaryOperator.Not, StringComparison.Ordinal)
-			? new Not(line.Method.ParseExpression(line, argumentsRange))
-			: throw new InvalidOperatorHere(line, line.Text[methodRange]);
+		if (input[argumentsRange.Start.Value] == '(')
+			return ParseInContext(body.Method.Type, body, input[methodRange],
+				ParseListArguments(body, input[(argumentsRange.Start.Value + 1)..(argumentsRange.End.Value - 1)])) ?? throw new MemberOrMethodNotFound(body, body.Method.Type, input[methodRange].ToString());
+		return input[methodRange].Equals(UnaryOperator.Not, StringComparison.Ordinal)
+			? new Not(body.Method.ParseExpression(body, input[argumentsRange]))
+			: throw new InvalidOperatorHere(body, input[methodRange].ToString());
 	}
 
 	public sealed class InvalidOperatorHere : ParsingFailed
 	{
-		public InvalidOperatorHere(Method.Line line, string message) : base(line, message) { }
+		public InvalidOperatorHere(Body body, string message) : base(body, message) { }
 	}
 
 	public sealed class IdentifierNotFound : ParsingFailed
 	{
-		public IdentifierNotFound(Method.Line line, string name) : base(line, name) { }
+		public IdentifierNotFound(Body body, string name) : base(body, name) { }
 	}
 
 	public sealed class UnknownExpression : ParsingFailed
 	{
-		public UnknownExpression(Method.Line line, string error = "") : base(line, error) { }
+		public UnknownExpression(Body body, string error = "") : base(body, error) { }
 	}
 
 	public class CannotParseEmptyInput : ParsingFailed
 	{
-		public CannotParseEmptyInput(Method.Line line) : base(line) { }
+		public CannotParseEmptyInput(Body body) : base(body) { }
 	}
-
-	//https://deltaengine.fogbugz.com/f/cases/25211
 
 	/// <summary>
 	/// By far the most common usecase, we call something from another instance, use some binary
 	/// operator (like is, to, +, etc.) or execute some method. For more arguments more complex
 	/// parsing has to be done and we have to invoke ShuntingYard for the argument list.
 	/// </summary>
-	public Expression? TryParseMemberOrZeroOrOneArgumentMethodCall(Method.Line line, Range range)
+	public Expression? TryParseMemberOrZeroOrOneArgumentMethodCall(Body body, ReadOnlySpan<char> input)
 	{
-		var toParse = line.Text.GetSpanFromRange(range);
-		var argumentsStart = toParse.IndexOf('(');
-		if (argumentsStart > 0 && toParse[^1] == ')')
-			return ParseInContext(line.Method.Type, line,
-				new Range(range.Start, range.Start.Value + argumentsStart),
-				ParseListArguments(line,
-					new Range(argumentsStart + range.Start.Value + 1, toParse.Length + range.Start.Value - 1)));
-		return ParseInContext(line.Method.Type, line, range, Array.Empty<Expression>());
+		var argumentsStart = input.IndexOf('(');
+		if (argumentsStart > 0 && input[^1] == ')')
+			return ParseInContext(body.Method.Type, body,
+				input[..argumentsStart],
+				ParseListArguments(body,
+					input[(argumentsStart + 1)..^1]));
+		return ParseInContext(body.Method.Type, body, input, Array.Empty<Expression>());
 	}
 
-	private Expression? ParseInContext(Context context, Method.Line line, Range range, IReadOnlyList<Expression> arguments)
+	// ReSharper disable once TooManyArguments
+	// ReSharper disable once MethodTooLong
+	private Expression? ParseInContext(Context context, Body body, ReadOnlySpan<char> input, IReadOnlyList<Expression> arguments)
 	{
-		var partToParse = line.Text.GetSpanFromRange(range);
 #if LOG_DETAILS
-		Logger.Info(nameof(ParseInContext) + " " + context + ", " + partToParse.ToString());
+		Logger.Info(nameof(ParseInContext) + " " + context + ", " + input.ToString());
 #endif
-		if (partToParse.Contains('.'))
+		if (input.Contains('.'))
 		{
-			var members = new RangeEnumerator(partToParse, '.', range.Start);
+			var members = new RangeEnumerator(input, '.', 0);
 			Expression? current = null;
 			while (members.MoveNext())
 			{
 				if (current == null)
 				{
-					current = Text.TryParse(line, members.Current) ??
-						List.TryParseWithSingleElement(line, members.Current);
+					current = Text.TryParse(body, input[members.Current]) ??
+						List.TryParseWithSingleElement(body, input[members.Current]);
 					if (current != null)
 					{
 						context = current.ReturnType;
 						continue;
 					}
 				}
-				var expression = line.Text.GetSpanFromRange(members.Current).Contains('(')
-					? TryParseMemberOrZeroOrOneArgumentMethodCall(line, members.Current)
-					: TryMemberOrMethodCall(context, current, line, members.Current,
+				var expression = input[members.Current].Contains('(')
+					? TryParseMemberOrZeroOrOneArgumentMethodCall(body, input[members.Current])
+					: TryMemberOrMethodCall(context, current, body, input[members.Current],
 						// arguments are only needed for the last part
 						members.IsAtEnd
 							? arguments
 							: Array.Empty<Expression>());
 				if (expression == null)
 				{
-					if (line.Text.GetSpanFromRange(members.Current).IsOperator())
-						throw new InvalidOperatorHere(line, line.Text[members.Current]);
-					if (line.Text.GetSpanFromRange(members.Current).TryParseNumber(out _))
-						throw new NumbersCanNotBeInNestedCalls(line, line.Text[members.Current]);
-					throw new MemberOrMethodNotFound(line, current?.ReturnType ?? line.Method.Type,
-						line.Text[members.Current]);
+					if (input[members.Current].IsOperator())
+						throw new InvalidOperatorHere(body, input[members.Current].ToString());
+					if (input[members.Current].TryParseNumber(out _))
+						throw new NumbersCanNotBeInNestedCalls(body, input[members.Current].ToString());
+					throw new MemberOrMethodNotFound(body, current?.ReturnType ?? body.Method.Type,
+						input[members.Current].ToString());
 				}
 				current = expression;
 				context = current.ReturnType;
 			}
 			return current;
 		}
-		return TryMemberOrMethodCall(context, null, line, range, arguments);
+		return TryMemberOrMethodCall(context, null, body, input, arguments);
 	}
 
 	public sealed class NumbersCanNotBeInNestedCalls : ParsingFailed
 	{
-		public NumbersCanNotBeInNestedCalls(Method.Line line, string text) : base(line, text) { }
+		public NumbersCanNotBeInNestedCalls(Body body, string text) : base(body, text) { }
 	}
 
-	private static Expression? TryMemberOrMethodCall(Context context, Expression? instance, Method.Line line, Range range,
+	// ReSharper disable once TooManyArguments
+	// ReSharper disable once ExcessiveIndentation
+	// ReSharper disable once MethodTooLong
+	private static Expression? TryMemberOrMethodCall(Context context, Expression? instance, Body body, ReadOnlySpan<char> input,
 		IReadOnlyList<Expression> arguments)
 	{
-		var partToParse = line.Text.GetSpanFromRange(range);
-		if (!partToParse.IsWord() && !partToParse.Contains(' ') && !partToParse.Contains('('))
+		if (!input.IsWord() && !input.Contains(' ') && !input.Contains('('))
 			return null;
 #if LOG_DETAILS
-		Logger.Info(nameof(TryMemberOrMethodCall) + ": " + partToParse.ToString() + " in " + context +
+		Logger.Info(nameof(TryMemberOrMethodCall) + ": " + input.ToString() + " in " + context +
 			" with arguments=" + arguments.ToWordList());
 #endif
-		var type = context as Type ?? line.Method.Type;
+		var type = context as Type ?? body.Method.Type;
 		if (arguments.Count == 0)
 		{
-			var variableValue = line.Body?.FindVariableValue(partToParse);
+			var variableValue = body.FindVariableValue(input);
 			if (variableValue != null)
-				return new VariableCall(partToParse.ToString(), variableValue);
+				return new VariableCall(input.ToString(), variableValue);
 			if (context is Method method)
 			{
 				foreach (var parameter in method.Parameters)
-					if (partToParse.Equals(parameter.Name, StringComparison.Ordinal))
+					if (input.Equals(parameter.Name, StringComparison.Ordinal))
 						return new ParameterCall(parameter);
 				type = method.ReturnType;
 			}
-			var memberCall = TryFindMemberCall(type, instance, partToParse);
+			var memberCall = TryFindMemberCall(type, instance, input);
 			if (memberCall != null)
 				return memberCall;
 #if LOG_DETAILS
-			Logger.Info(nameof(TryMemberOrMethodCall) + " found no member in " + line.Method);
+			Logger.Info(nameof(TryMemberOrMethodCall) + " found no member in " + body.Method);
 #endif
 		}
-		var methodName = partToParse.ToString();
+		var methodName = input.ToString();
 		var method2 = type.FindMethod(methodName, arguments);
 		if (method2 != null)
 			return new MethodCall(method2, instance, arguments);
 		if (instance == null)
 		{
-			var fromType = line.Method.FindType(methodName);
+			var fromType = body.Method.FindType(methodName);
 			if (fromType != null)
 				return new MethodCall(fromType.GetMethod(Method.From, arguments), new From(fromType), arguments);
 		}
 #if LOG_DETAILS
-		Logger.Info("ParseNested found no local method in " + line.Method.Type + ": " + methodName);
+		Logger.Info("ParseNested found no local method in " + body.Method.Type + ": " + methodName);
 #endif
 		return null;
 	}
@@ -221,7 +226,7 @@ public class MethodExpressionParser : ExpressionParser
 
 	public sealed class MemberOrMethodNotFound : ParsingFailed
 	{
-		public MemberOrMethodNotFound(Method.Line line, Type memberType, string memberName) : base(line,
+		public MemberOrMethodNotFound(Body body, Type memberType, string memberName) : base(body,
 			memberName, memberType) { }
 	}
 
@@ -230,76 +235,79 @@ public class MethodExpressionParser : ExpressionParser
 	/// Could also contain strings, we don't know. Most of the time it will just be a bunch of values.
 	/// <see cref="ShuntingYard"/> will only parse till the next comma, has to call this till the end.
 	/// </summary>
-	public override List<Expression> ParseListArguments(Method.Line line, Range range)
+	// ReSharper disable once CyclomaticComplexity
+	// ReSharper disable once ExcessiveIndentation
+	// ReSharper disable once MethodTooLong
+	public override List<Expression> ParseListArguments(Body body, ReadOnlySpan<char> innerSpan)
 	{
-		var innerSpan = line.Text.GetSpanFromRange(range);
 		if (innerSpan.Contains('(') || innerSpan.Contains('"') && innerSpan.Contains(' '))
 		{
-			if (If.CanTryParseConditional(line, range))
-				return new List<Expression> { If.ParseConditional(line, range) };
+			if (If.CanTryParseConditional(body, innerSpan))
+				return new List<Expression> { If.ParseConditional(body, innerSpan) };
 			// The postfix data comes in upside down, so use another stack to restore order
 			var expressions = new Stack<Expression>();
 			// Similar to TryParseExpression, but we know there is commas separating things!
-			var postfix = new ShuntingYard(line.Text, range);
+			var postfix = new ShuntingYard(innerSpan.ToString());
 			if (postfix.Output.Count == 1)
-				expressions.Push(ParseTextWithSpacesOrListWithMultipleOrNestedElements(line,
-					postfix.Output.Pop()));
+				expressions.Push(ParseTextWithSpacesOrListWithMultipleOrNestedElements(body,
+					innerSpan[postfix.Output.Pop()]));
 			else if (postfix.Output.Count == 2)
-				expressions.Push(ParseMethodCallWithArguments(line, postfix));
+				expressions.Push(ParseMethodCallWithArguments(body, innerSpan, postfix));
 			else
 				do
 				{
 #if LOG_DETAILS
-					Logger.Info("pushing list element " + line.Text[postfix.Output.Peek()]);
+					Logger.Info("pushing list element " + innerSpan[postfix.Output.Peek()].ToString());
 #endif
-					var span = line.Text.GetSpanFromRange(postfix.Output.Peek());
+					var span = innerSpan[postfix.Output.Peek()];
 					// Is this a binary expression we have to put into the list (already tokenized and postfixed)
 					try
 					{
 						if (span.Length == 1 && span[0].IsSingleCharacterOperator() ||
 							span.IsMultiCharacterOperator())
-							expressions.Push(Binary.Parse(line, postfix.Output));
+							expressions.Push(Binary.Parse(body, innerSpan, postfix.Output));
 						else
-							expressions.Push(line.Method.ParseExpression(line, postfix.Output.Pop()));
+							expressions.Push(body.Method.ParseExpression(body, innerSpan[postfix.Output.Pop()]));
 					}
 					catch (UnknownExpression ex)
 					{
-						throw new UnknownExpressionForArgument(line,
+						throw new UnknownExpressionForArgument(body,
 							span.ToString() + " is invalid for argument " + expressions.Count + " " +
 							ex.Message);
 					}
-					if (postfix.Output.Count > 0 && line.Text[postfix.Output.Pop().Start.Value] != ',')
-						throw new ListTokensAreNotSeparatedByComma(line);
+					if (postfix.Output.Count > 0 && innerSpan[postfix.Output.Pop().Start.Value] != ',')
+						throw new ListTokensAreNotSeparatedByComma(body);
 				} while (postfix.Output.Count > 0);
 			return new List<Expression>(expressions);
 		}
 		if (innerSpan.Length == 0)
-			throw new List.EmptyListNotAllowed(line);
-		return ParseAllElementsFast(line, new RangeEnumerator(innerSpan, ',', range.Start));
+			throw new List.EmptyListNotAllowed(body);
+		return ParseAllElementsFast(body, innerSpan, new RangeEnumerator(innerSpan, ',', 0));
 	}
 
 	public sealed class UnknownExpressionForArgument : ParsingFailed
 	{
-		public UnknownExpressionForArgument(Method.Line line, string message) : base(line, message) { }
+		public UnknownExpressionForArgument(Body body, string message) : base(body, message) { }
 	}
 
 	public class ListTokensAreNotSeparatedByComma : ParsingFailed
 	{
-		public ListTokensAreNotSeparatedByComma(Method.Line line) : base(line) { }
+		public ListTokensAreNotSeparatedByComma(Body body) : base(body) { }
 	}
 
-	private static List<Expression> ParseAllElementsFast(Method.Line line, RangeEnumerator elements)
+	private static List<Expression> ParseAllElementsFast(Body body, ReadOnlySpan<char> input,
+		RangeEnumerator elements)
 	{
 		var expressions = new List<Expression>();
 		foreach (var element in elements)
 			try
 			{
-				expressions.Add(line.Method.ParseExpression(line, element));
+				expressions.Add(body.Method.ParseExpression(body, input[element]));
 			}
 			catch (UnknownExpression ex)
 			{
-				throw new UnknownExpressionForArgument(line,
-					line.Text[element] + " (argument " + expressions.Count + ")\n" + ex.StackTrace);
+				throw new UnknownExpressionForArgument(body,
+					input[element].ToString() + " (argument " + expressions.Count + ")\n" + ex.StackTrace);
 			}
 #if LOG_DETAILS
 		Logger.Info(nameof(ParseAllElementsFast) + ": " + expressions.ToWordList());
@@ -308,17 +316,12 @@ public class MethodExpressionParser : ExpressionParser
 	}
 
 	private static Expression
-		ParseTextWithSpacesOrListWithMultipleOrNestedElements(Method.Line line, Range range) =>
-		Text.TryParse(line, range) ?? List.TryParseWithMultipleOrNestedElements(line, range) ??
-		throw new InvalidSingleTokenExpression(line, line.Text[range]);
+		ParseTextWithSpacesOrListWithMultipleOrNestedElements(Body body, ReadOnlySpan<char> input) =>
+		Text.TryParse(body, input) ?? List.TryParseWithMultipleOrNestedElements(body, input) ??
+		throw new InvalidSingleTokenExpression(body, input.ToString());
 
 	private sealed class InvalidSingleTokenExpression : ParsingFailed
 	{
-		public InvalidSingleTokenExpression(Method.Line line, string message) : base(line, message) { }
+		public InvalidSingleTokenExpression(Body body, string message) : base(body, message) { }
 	}
-
-	public override Expression ParseMethodLine(Method.Line line, ref int methodLineNumber) =>
-		Assignment.TryParse(line) ?? If.TryParse(line, ref methodLineNumber) ??
-		//https://deltaengine.fogbugz.com/f/cases/25210
-		Return.TryParse(line) ?? ParseExpression(line, ..);
 }

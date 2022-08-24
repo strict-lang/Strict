@@ -94,6 +94,7 @@ public static class BinaryOperator
 			_ => throw new NotSupportedException(tokenFirstCharacter.ToString()) //ncrunch: no coverage
 		};
 
+	// ReSharper disable once MethodTooLong
 	public static int GetPrecedence(ReadOnlySpan<char> token)
 	{
 		if (token.Compare("not"))

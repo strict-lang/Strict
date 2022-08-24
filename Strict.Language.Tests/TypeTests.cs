@@ -73,7 +73,11 @@ public class TypeTests
 
 	[Test]
 	public void SimpleApp() =>
-		CheckApp(CreateType("Program", "implement App", "has log", "Run",
+		// @formatter:off
+		CheckApp(CreateType("Program",
+			"implement App",
+			"has log",
+			"Run",
 			"\tlog.Write(\"Hello World!\")"));
 
 	private static void CheckApp(Type program)
@@ -86,11 +90,19 @@ public class TypeTests
 
 	[Test]
 	public void AnotherApp() =>
-		CheckApp(CreateType("Program", "implement App", "has log", "Run", "\tfor number in Range(0, 10)", "\t\tlog.Write(\"Counting: \" + number)"));
+		CheckApp(CreateType("Program",
+			"implement App",
+			"has log",
+			"Run",
+			"\tfor number in Range(0, 10)",
+			"\t\tlog.Write(\"Counting: \" + number)"));
 
 	[Test]
 	public void MustImplementAllTraitMethods() =>
-		Assert.That(() => CreateType("Program", "implement App", "add(number)", "\treturn one + 1"),
+		Assert.That(() => CreateType("Program",
+				"implement App",
+				"add(number)",
+				"\treturn one + 1"),
 			Throws.InstanceOf<Type.MustImplementAllTraitMethods>());
 
 	[Test]

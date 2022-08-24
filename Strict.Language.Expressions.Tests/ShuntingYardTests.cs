@@ -26,7 +26,7 @@ public sealed class ShuntingYardTests
 	[TestCase("(1, 2, 3) + (3, 4), (4)", "(1, 2, 3), (3, 4), +, ,, (4)")]
 	public void Parse(string input, string expected)
 	{
-		var tokens = new ShuntingYard(input, ..).Output.Reverse().Select(range => input[range]);
+		var tokens = new ShuntingYard(input).Output.Reverse().Select(range => input[range]);
 		Assert.That(string.Join(", ", tokens), Is.EqualTo(expected));
 	}
 }

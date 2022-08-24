@@ -7,7 +7,7 @@ using Type = Strict.Language.Type;
 
 namespace Strict.Compiler.Tests;
 
-//[Ignore("TODO: Not yet done")]
+[Ignore("TODO: Not yet done")]
 public sealed class CSharpTypeVisitorTests : TestCSharpGenerator
 {
 	[Ignore("TODO: Not yet done")]
@@ -158,19 +158,27 @@ Run
 	[Test]
 	public void AssignmentWithMethodCall()
 	{
+		// @formatter:off
 		var program = new Type(package,
-			new TypeLines("Program", "implement App", "MethodToCall Text", "\t\"Hello World\"", "Run",
+			new TypeLines("Program",
+				"implement App",
+				"MethodToCall Text",
+				"\t\"Hello World\"",
+				"Run",
 				"\tlet result = MethodToCall")).ParseMembersAndMethods(parser);
 		Assert.That(program.Methods[0].ToString(), Is.EqualTo("MethodToCall Text"));
-		Assert.That(program.Methods[1].Body.Expressions[0].ToString(),
-			Is.EqualTo("let result = MethodToCall"));
+		Assert.That(program.Methods[1].GetBodyAndParseIfNeeded().ToString(), Is.EqualTo("let result = MethodToCall"));
 	}
 
 	[Test]
 	public void LocalMethodCallShouldHaveCorrectReturnType()
 	{
 		var program = new Type(package,
-			new TypeLines("Program", "implement App", "LocalMethod Text", "\t\"Hello World\"", "Run",
+			new TypeLines("Program",
+				"implement App",
+				"LocalMethod Text",
+				"\t\"Hello World\"",
+				"Run",
 				"\t\"Random Text\"")).ParseMembersAndMethods(parser);
 		Assert.That(program.Methods[0].ReturnType.Name, Is.EqualTo(Base.Text));
 	}

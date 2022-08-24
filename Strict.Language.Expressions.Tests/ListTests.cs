@@ -1,6 +1,4 @@
-using System;
 using System.Collections.Generic;
-using System.Linq;
 using NUnit.Framework;
 
 namespace Strict.Language.Expressions.Tests;
@@ -15,7 +13,7 @@ public sealed class ListTests : TestExpressions
 	[TestCase("(5.23)", 5.23)]
 	public void ParseSingleElementLists(string input, double expectedElement) =>
 		ParseAndCheckOutputMatchesInput(input,
-			new List(new Method.Line(method, 0, "", 0), new List<Expression> { new Number(method, expectedElement) }));
+			new List(new Body(method), new List<Expression> { new Number(method, expectedElement) }));
 
 	[TestCase("(\"1\", 2)")]
 	[TestCase("(1, 2.5, \"5\")")]
@@ -28,43 +26,46 @@ public sealed class ListTests : TestExpressions
 	[TestCase("(\"1\", \"2\", \"3\", \"4\", \"5\")", "\"1\", \"2\", \"3\", \"4\", \"5\"")]
 	public void ParseLists(string input, string expected) =>
 		ParseAndCheckOutputMatchesInput(input,
-			new List(new Method.Line(method, 0, "", 0), GetListExpressions(expected.Split(", "))));
+			new List(new Body(method), GetListExpressions(expected.Split(", "))));
 
 	private List<Expression> GetListExpressions(IEnumerable<string> elements)
 	{
 		var expressions = new List<Expression>();
-		foreach (var line in
-			elements.Select(element => new Method.Line(method, 0, element.Trim(), 0)))
-			if (line.Text.Length > 3)
-				new PhraseTokenizer(line.Text, new Range(0, line.Text.Length)).ProcessEachToken(
-					tokenRange =>
-					{
-						if (line.Text[tokenRange.Start.Value] != ',')
-							expressions.Add(method.ParseExpression(line, tokenRange));
-					});
-			else
-				expressions.Add(method.ParseExpression(line, ..));
+		var body = new Body(method);
+		foreach (var elementWithSpace in elements)
+			AddElementExpression(expressions, elementWithSpace.TrimStart(), body);
 		return expressions;
+	}
+
+	private void AddElementExpression(ICollection<Expression> expressions, string element, Body body)
+	{
+		if (element.Length > 3)
+			new PhraseTokenizer(element).ProcessEachToken(tokenRange =>
+			{
+				if (element[tokenRange.Start.Value] != ',')
+					expressions.Add(method.ParseExpression(body, element[tokenRange]));
+			});
+		else
+			expressions.Add(method.ParseExpression(body, element));
 	}
 
 	[TestCase("(5, Count(5))")]
 	[TestCase("(5, 2 + 5)")]
 	public void ListElementsWithMatchingParentType(string code) =>
-		Assert.That(
-			ParseExpression(code),
-			Is.InstanceOf<List>());
+		Assert.That(ParseExpression(code), Is.InstanceOf<List>());
 
 	[Test]
 	public void ParseLists() =>
 		ParseAndCheckOutputMatchesInput("((1, 3), (2, 4))",
-			new List(new Method.Line(method, 0, "", 0), GetListExpressions(new[] { "(1, 3)", "(2, 4)" })));
+			new List(new Body(method), GetListExpressions(new[] { "(1, 3)", "(2, 4)" })));
 
 	[TestCase("(1, 2, 3, 4, 5) + \"4\"")]
 	[TestCase("(1, 2, 3, 4, 5) + (\"hello\")")]
 	[TestCase("(1, 2, 3, 4, 5) + \"hello\" + 4")]
 	[TestCase("(1, 2, 3, 4, 5) + (\"hello\") + 4")]
 	public void MismatchingTypeFound(string input) =>
-		Assert.That(() => ParseExpression(input), Throws.InstanceOf<Type.ArgumentsDoNotMatchMethodParameters>()!);
+		Assert.That(() => ParseExpression(input),
+			Throws.InstanceOf<Type.ArgumentsDoNotMatchMethodParameters>()!);
 
 	[TestCase("(1, 2, 3) * (1, 2)")]
 	[TestCase("(1, 2, 3) * (1, 2, 3, 4)")]
@@ -78,22 +79,22 @@ public sealed class ListTests : TestExpressions
 	[TestCase("(1, 2, 3, 4, 5) * (1, 2, 3, 4, 5)", "1, 2, 3, 4, 5", "*", "1, 2, 3, 4, 5")]
 	public void ParseListsBinaryOperation(string input, params string[] expected) =>
 		ParseAndCheckOutputMatchesInput(input,
-			CreateBinary(new List(new Method.Line(method, 0, "", 0), GetListExpressions(expected[0].Split(","))), expected[1],
-				new List(new Method.Line(method, 0, "", 0), GetListExpressions(expected[2].Split(",")))));
+			CreateBinary(new List(new Body(method), GetListExpressions(expected[0].Split(","))),
+				expected[1], new List(new Body(method), GetListExpressions(expected[2].Split(",")))));
 
 	[TestCase("(1, 2, 3, 4, 5) + 4", 4, "1, 2, 3, 4, 5", "+")]
 	[TestCase("(1, 2, 3, 4, 5) - 4", 4, "1, 2, 3, 4, 5", "-")]
 	public void
 		ParseListsWithNumber(string input, double expectedRight, params string[] expected) =>
 		ParseAndCheckOutputMatchesInput(input,
-			CreateBinary(new List(new Method.Line(method, 0, "", 0), GetListExpressions(expected[0].Split(","))), expected[1],
-				new Number(method, expectedRight)));
+			CreateBinary(new List(new Body(method), GetListExpressions(expected[0].Split(","))),
+				expected[1], new Number(method, expectedRight)));
 
 	[TestCase("(\"1\", \"2\", \"3\", \"4\") + \"5\"", "\"1\", \"2\", \"3\", \"4\"", "+", "5")]
 	public void ParseListsWithString(string input, params string[] expected) =>
 		ParseAndCheckOutputMatchesInput(input,
-			CreateBinary(new List(new Method.Line(method, 0, "", 0), GetListExpressions(expected[0].Split(","))), expected[1],
-				new Text(method, expected[2])));
+			CreateBinary(new List(new Body(method), GetListExpressions(expected[0].Split(","))),
+				expected[1], new Text(method, expected[2])));
 
 	[Test]
 	public void LeftTypeShouldNotBeChanged()
@@ -111,20 +112,21 @@ public sealed class ListTests : TestExpressions
 	[Test]
 	public void ParseMultipleListInBinary() =>
 		ParseAndCheckOutputMatchesInput("(1, 2, 3, 4, 5) + (1) + 4",
-			CreateBinary(new List(new Method.Line(method, 0, "", 0), GetListExpressions("1, 2, 3, 4, 5".Split(", "))),
+			CreateBinary(new List(new Body(method), GetListExpressions("1, 2, 3, 4, 5".Split(", "))),
 				BinaryOperator.Plus,
-				CreateBinary(new List(new Method.Line(method, 0, "", 0), GetListExpressions("1".Split(", "))), BinaryOperator.Plus,
-					new Number(method, 4))));
+				CreateBinary(new List(new Body(method), GetListExpressions("1".Split(", "))),
+					BinaryOperator.Plus, new Number(method, 4))));
 
 	[Test]
 	public void ParseNestedLists() =>
 		ParseAndCheckOutputMatchesInput("((1, 2, 3) + (3, 4), (4))",
-			new List(new Method.Line(method, 0, "", 0),
+			new List(new Body(method),
 				new List<Expression>
 				{
-					CreateBinary(new List(new Method.Line(method, 0, "", 0), GetListExpressions("1, 2, 3".Split(", "))),
-						BinaryOperator.Plus, new List(new Method.Line(method, 0, "", 0), GetListExpressions("3, 4".Split(",")))),
-					new List(new Method.Line(method, 0, "", 0), GetListExpressions("4".Split(", ")))
+					CreateBinary(new List(new Body(method), GetListExpressions("1, 2, 3".Split(", "))),
+						BinaryOperator.Plus,
+						new List(new Body(method), GetListExpressions("3, 4".Split(", ")))),
+					new List(new Body(method), GetListExpressions("4".Split(", ")))
 				}));
 
 	[Test]
@@ -132,7 +134,7 @@ public sealed class ListTests : TestExpressions
 		Assert.That(
 			ParseExpression("((\"Hello, World\", \"Yoyo (it is my secret + 1)\"), (\"4\")) + 7"),
 			Is.EqualTo(CreateBinary(
-				new List(new Method.Line(method, 0, "", 0),
+				new List(new Body(method),
 					GetListExpressions(new[]
 					{
 						"(\"Hello, World\", \"Yoyo (it is my secret + 1)\"), (\"4\")"

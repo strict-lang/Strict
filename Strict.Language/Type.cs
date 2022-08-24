@@ -93,6 +93,22 @@ public class Type : Context
 	/// </summary>
 	public Type ParseMembersAndMethods(ExpressionParser parser)
 	{
+		ParseAllRemainingLinesIntoMembersAndMethods(parser);
+		if (methods.Count == 0 && members.Count + implements.Count < 2 && !IsNoneAnyOrBoolean())
+			throw new NoMethodsFound(this, lineNumber);
+		// ReSharper disable once ForCanBeConvertedToForeach, for performance reasons:
+		// https://codeblog.jonskeet.uk/2009/01/29/for-vs-foreach-on-arrays-and-lists/
+		for (var index = 0; index < implements.Count; index++)
+		{
+			var trait = implements[index];
+			if (trait.IsTrait)
+				CheckIfTraitIsImplemented(trait);
+		}
+		return this;
+	}
+
+	private void ParseAllRemainingLinesIntoMembersAndMethods(ExpressionParser parser)
+	{
 		for (; lineNumber < lines.Length; lineNumber++)
 		{
 			var rememberStartMethodLineNumber = lineNumber;
@@ -105,18 +121,10 @@ public class Type : Context
 				throw new ParsingFailed(this, rememberStartMethodLineNumber, ex.Message, ex);
 			}
 		}
-		if (Name != Base.None && Name != Base.Any && Name != Base.Boolean &&
-			methods.Count == 0 && members.Count + implements.Count < 2)
-			throw new NoMethodsFound(this, lineNumber);
-		// ReSharper disable once ForCanBeConvertedToForeach
-		for (var index = 0; index < implements.Count; index++)
-		{
-			var trait = implements[index];
-			if (trait.IsTrait)
-				CheckIfTraitIsImplemented(trait);
-		}
-		return this;
 	}
+
+	private bool IsNoneAnyOrBoolean() =>
+		Name == Base.None || Name == Base.Any && Name == Base.Boolean;
 
 	private void ParseLineForMembersAndMethods(ExpressionParser parser)
 	{
@@ -128,6 +136,7 @@ public class Type : Context
 			methods.Add(new Method(this, lineNumber, parser, GetAllMethodLines()));
 	}
 
+	// ReSharper disable once MethodTooLong
 	private Member ParseMember(ExpressionParser parser, ReadOnlySpan<char> remainingLine)
 	{
 		if (methods.Count > 0)
@@ -140,8 +149,10 @@ public class Type : Context
 		try
 		{
 			var expression = nameAndExpression.MoveNext()
-				? parser.ParseAssignmentExpression(new Member(this, nameAndType, null).Type,
-					nameAndExpression.Current, lineNumber)
+				? parser.ParseExpression(
+					//TODO: dummy!
+					new Body(new Method(this, 0, parser, new[] { "Dummy" })),
+					remainingLine[(nameAndType.Length + 3)..])
 				: null;
 			return new Member(this, nameAndType, expression);
 		}
@@ -263,19 +274,18 @@ public class Type : Context
 		if (!AvailableMethods.TryGetValue(methodName, out var matchingMethods))
 			return FindAndCreateFromBaseMethod(methodName, arguments);
 		foreach (var method in matchingMethods)
-			if (method.Parameters.Count == arguments.Count)
-			{
-				var doAllParameterTypesMatch = true;
-				for (var index = 0; index < method.Parameters.Count; index++)
-					if (!arguments[index].ReturnType.IsCompatible(method.Parameters[index].Type))
-					{
-						doAllParameterTypesMatch = false;
-						break;
-					}
-				if (doAllParameterTypesMatch)
-					return method;
-			}
+			if (method.Parameters.Count == arguments.Count &&
+				IsMethodWithMatchingParameters(arguments, method))
+				return method;
 		throw new ArgumentsDoNotMatchMethodParameters(arguments, matchingMethods);
+	}
+
+	private static bool IsMethodWithMatchingParameters(IReadOnlyList<Expression> arguments, Method method)
+	{
+		for (var index = 0; index < method.Parameters.Count; index++)
+			if (!arguments[index].ReturnType.IsCompatible(method.Parameters[index].Type))
+				return false;
+		return true;
 	}
 
 	private Method? FindAndCreateFromBaseMethod(string methodName,

@@ -14,12 +14,12 @@ public sealed class Not : MethodCall
 
 	public override string ToString() => UnaryOperator.Not + " " + Instance!;
 
-	public static Expression Parse(Method.Line line, ShuntingYard postfixTokens)
+	public static Expression Parse(Body body, ReadOnlySpan<char> input, ShuntingYard postfixTokens)
 	{
-		var right = line.Method.ParseExpression(line, postfixTokens.Output.Pop());
-		var operatorText = line.Text.GetSpanFromRange(postfixTokens.Output.Pop());
+		var right = body.Method.ParseExpression(body, input[postfixTokens.Output.Pop()]);
+		var operatorText = input[postfixTokens.Output.Pop()];
 		return operatorText.Equals(UnaryOperator.Not, StringComparison.Ordinal)
 			? new Not(right)
-			: throw new MethodExpressionParser.InvalidOperatorHere(line, operatorText.ToString());
+			: throw new MethodExpressionParser.InvalidOperatorHere(body, operatorText.ToString());
 	}
 }

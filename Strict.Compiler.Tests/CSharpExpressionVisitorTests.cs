@@ -18,12 +18,12 @@ public sealed class CSharpExpressionVisitorTests : TestExpressions
 
 	[Test]
 	public void ShouldCallVisitBlockForBlockExpressions() =>
-		Assert.That(() => visitor.Visit(method.Body)[0],
+		Assert.That(() => visitor.Visit(method.GetBodyAndParseIfNeeded())[0],
 			Throws.InstanceOf<ExpressionVisitor.UseVisitBody>());
 
 	[Test]
 	public void GenerateAssignment() =>
-		Assert.That(visitor.Visit(new Assignment(method.Body, nameof(number), number)),
+		Assert.That(visitor.Visit(new Assignment((Body)method.GetBodyAndParseIfNeeded(), nameof(number), number)),
 			Is.EqualTo("var number = 5"));
 
 	[Test]
@@ -67,13 +67,13 @@ public sealed class CSharpExpressionVisitorTests : TestExpressions
 
 	[Test]
 	public void GenerateInterfaceMethodBody() =>
-		Assert.That(visitor.VisitBody(method.Body)[0], Is.EqualTo("void Run();"));
+		Assert.That(visitor.VisitBody(method.GetBodyAndParseIfNeeded())[0], Is.EqualTo("void Run();"));
 
 	[Test]
 	public void GenerateMultilineMethodBody()
 	{
 		var multilineMethod = new Method(type, 0, this, MethodTests.NestedMethodLines);
-		Assert.That(visitor.VisitBody(multilineMethod.Body), Is.EqualTo(@"public bool IsBla5()
+		Assert.That(visitor.VisitBody(multilineMethod.GetBodyAndParseIfNeeded()), Is.EqualTo(@"public bool IsBla5()
 {
 	var number = 5;
 	if (bla == 5)
@@ -85,16 +85,26 @@ public sealed class CSharpExpressionVisitorTests : TestExpressions
 	[Test]
 	public void GenerateIfElse()
 	{
+		// @formatter:off
 		var multilineMethod = new Method(type, 0, this,
 			new[]
 			{
-				"IsBla5 returns Boolean", "	if bla is 5", "		return true", "	else", "		return false"
+				"IsBla5 returns Boolean",
+				"	if bla is 5",
+				"		return true",
+				"	else",
+				"		return false"
 			});
-		Assert.That(visitor.VisitBody(multilineMethod.Body),
+		Assert.That(visitor.VisitBody(multilineMethod.GetBodyAndParseIfNeeded()),
 			Is.EqualTo(new[]
 			{
-				"public bool IsBla5()", "{", "	if (bla == 5)", "		return true;", "	else",
-				"		return false;", "}"
+				"public bool IsBla5()",
+				"{",
+				"	if (bla == 5)",
+				"		return true;",
+				"	else",
+				"		return false;",
+				"}"
 			}));
 	}
 }

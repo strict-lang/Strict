@@ -27,8 +27,7 @@ public class CSharpToCudaTranspiler
 	// ReSharper disable once MethodTooLong
 	public static string GenerateCuda(Type type)
 	{
-		// ReSharper disable once TooManyChainedReferences
-		var expression = type.Methods[0].Body.Expressions[0].ToString();
+		var expression = type.Methods[0].GetBodyAndParseIfNeeded().ToString();
 		var @operator = expression.Contains('+')
 			? "+"
 			: expression.Contains('-')

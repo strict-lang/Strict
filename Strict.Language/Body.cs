@@ -1,5 +1,8 @@
 ﻿using System.Collections.Generic;
 using System;
+using System.Runtime.CompilerServices;
+
+[assembly: InternalsVisibleTo("Strict.Language.Expressions.Tests")]
 
 namespace Strict.Language;
 
@@ -8,17 +11,19 @@ namespace Strict.Language;
 /// all executed and then the final result is returned (all previous expressions must succeed).
 /// Method parameters are in this context and can be used by any of the expressions nested here.
 /// </summary>
-public class Body : Expression
+public sealed class Body : Expression
 {
 	/// <summary>
 	/// At construction time we only now the method we are in the if there is a parent Body we are in.
 	/// While parsing each of the expressions we need to check for variables as defined below. This
 	/// means the expressions list can't be done yet and needs this object to exist for scope parsing
 	/// </summary>
-	public Body(Method method, Body? parent = null) : base(method.ReturnType)
+	public Body(Method? method, int tabs = 0, Body? parent = null) : base(method?.ReturnType ?? null!)
 	{
-		Method = method;
+		Method = method!;
+		Tabs = tabs;
 		Parent = parent;
+		parent?.children.Add(this);
 	}
 
 	public Body(Method method, IReadOnlyList<Expression> expressions) : base(expressions[0].ReturnType)
@@ -28,25 +33,57 @@ public class Body : Expression
 	}
 
 	public Method Method { get; }
+	public int Tabs { get; }
 	public Body? Parent { get; }
+	//TODO: make private again
+	public readonly List<Body> children = new();
+	public Range LineRange { get; internal set; }
+	public int ParsingLineNumber { get; set; }
+	public string CurrentLine => Method.lines[ParsingLineNumber];
+
+	public void PushNestedBody(Body child) //TODO: what?
+	{
+		if (Expressions.Count == 0)
+			Expressions = new List<Expression>();
+		((List<Expression>)Expressions).Add(child);
+	}
 
 	/// <summary>
-	/// After parsing each of the expressions in this body is done, we will validate them all here.
-	/// In case this is the method body, the last expression return type must match our return type.
+	/// Called when actually needed and code needs to run, usually triggered by
+	/// Method.GetBodyAndParseIfNeeded and child bodies inside. After parsing all
+	/// expressions in this body, we will validate them all here. If there are multiple expressions,
+	/// this body is returned, otherwise just a single expression is directly returned and the body
+	/// is discarded. The last expression return type must match our (method or caller) return type.
 	/// </summary>
-	public void SetAndValidateExpressions(IReadOnlyList<Expression> expressions,
-		IReadOnlyList<Method.Line> bodyLines)
+	public Expression Parse()
+	{
+		//TODO: we should probably split test expressions from production expressions here!
+		var expressions = new List<Expression>();
+		for (ParsingLineNumber = LineRange.Start.Value; ParsingLineNumber < LineRange.End.Value;
+			ParsingLineNumber++)
+			expressions.Add(Method.ParseLine(this));
+		SetExpressions(expressions);
+		return Expressions.Count == 1
+			? Expressions[0]
+			: this;
+	}
+
+	internal Body SetExpressions(IReadOnlyList<Expression> expressions)
 	{
 		Expressions = expressions;
-		if (Parent == null && expressions[^1].GetType().Name == "Return")
-			throw new ReturnAsLastExpressionIsNotNeeded(bodyLines[^1]);
+		if (Expressions.Count == 0)
+			throw new SpanExtensions.EmptyInputIsNotAllowed();
+		if (Parent != null || Expressions[^1].GetType().Name != "Return")
+			return this;
+		ParsingLineNumber--;
+		throw new ReturnAsLastExpressionIsNotNeeded(this);
 	}
 
 	public IReadOnlyList<Expression> Expressions { get; private set; } = Array.Empty<Expression>();
 
 	public sealed class ReturnAsLastExpressionIsNotNeeded : ParsingFailed
 	{
-		public ReturnAsLastExpressionIsNotNeeded(Method.Line line) : base(line) { }
+		public ReturnAsLastExpressionIsNotNeeded(Body body) : base(body) { }
 	}
 
 	/// <summary>
@@ -70,5 +107,22 @@ public class Body : Expression
 		return Parent?.FindVariableValue(searchFor);
 	}
 
-	public override string ToString() => string.Join("\n\t", Expressions);
+	public override string ToString() => string.Join(Environment.NewLine, Expressions);
+	public string GetLine(int lineNumber) => Method.lines[lineNumber];
+
+	public Body? FindCurrentChild()
+	{
+		// ReSharper disable once ForCanBeConvertedToForeach
+		for (var index = 0; index < children.Count; index++)
+		{
+			var child = children[index];
+			if (child.LineRange.Start.Value <= ParsingLineNumber)
+				continue;
+			if (child.LineRange.Start.Value > ParsingLineNumber + 1)
+				break;
+			ParsingLineNumber += child.LineRange.End.Value - child.LineRange.Start.Value;
+			return child;
+		}
+		return null;
+	}
 }

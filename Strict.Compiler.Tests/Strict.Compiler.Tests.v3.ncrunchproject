@@ -13,6 +13,9 @@
       <NamedTestSelector>
         <TestName>Strict.Compiler.Tests.SourceGeneratorTests.GenerateDirectoryGetFilesProgram</TestName>
       </NamedTestSelector>
+      <NamedTestSelector>
+        <TestName>Strict.Compiler.Tests.SourceGeneratorTests.GenerateCSharpInterface</TestName>
+      </NamedTestSelector>
     </IgnoredTests>
   </Settings>
 </ProjectConfiguration>

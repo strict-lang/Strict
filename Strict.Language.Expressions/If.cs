@@ -11,8 +11,8 @@ namespace Strict.Language.Expressions;
 public sealed class If : Expression
 {
 	public If(Expression condition, Expression then, Expression? optionalElse = null,
-		Method.Line? lineForErrorMessage = null) : base(GetMatchingType(then.ReturnType,
-		optionalElse?.ReturnType, lineForErrorMessage))
+		Body? bodyForErrorMessage = null) : base(GetMatchingType(then.ReturnType,
+		optionalElse?.ReturnType, bodyForErrorMessage))
 	{
 		Condition = condition;
 		Then = then;
@@ -26,20 +26,23 @@ public sealed class If : Expression
 	/// type. If that is not possible there is a compilation error here.
 	/// </summary>
 	private static Type GetMatchingType(Type thenType, Type? elseType,
-		Method.Line? lineForErrorMessage) =>
+		Body? bodyForErrorMessage) =>
 		elseType == null || thenType == elseType || elseType.Implements.Contains(thenType)
 			? thenType
 			: thenType.Implements.Contains(elseType)
 				? elseType
 				: thenType.Implements.Union(elseType.Implements).FirstOrDefault() ??
 				throw new ReturnTypeOfThenAndElseMustHaveMatchingType(
-					lineForErrorMessage ?? new Method.Line(thenType.Methods[0], 0, "", 0), thenType,
+					bodyForErrorMessage ?? new Body(thenType.Methods[0]), thenType,
 					elseType);
 
 	// ReSharper disable once HollowTypeName
 	public class ReturnTypeOfThenAndElseMustHaveMatchingType : ParsingFailed
 	{
-		public ReturnTypeOfThenAndElseMustHaveMatchingType(Method.Line line, Type thenReturnType, Type optionalElseReturnType) : base(line, "The Then type: " + thenReturnType + " is not same as the Else type: " + optionalElseReturnType) { }
+		public ReturnTypeOfThenAndElseMustHaveMatchingType(Body body, Type thenReturnType,
+			Type optionalElseReturnType) : base(body,
+			"The Then type: " + thenReturnType + " is not same as the Else type: " +
+			optionalElseReturnType) { }
 	}
 
 	public Expression Condition { get; }
@@ -65,127 +68,105 @@ public sealed class If : Expression
 		other is If a && Equals(Condition, a.Condition) && Then.Equals(a.Then) &&
 		(OptionalElse?.Equals(a.OptionalElse) ?? a.OptionalElse == null);
 
-	public static Expression? TryParse(Method.Line line, ref int methodLineNumber) =>
-		line.Text == "if"
-			? throw new MissingCondition(line)
-			: line.Text == "else"
-				? throw new UnexpectedElse(line)
-				: line.Text.StartsWith("if ", StringComparison.Ordinal)
-					? TryParseIf(line, ref methodLineNumber)
+	public static Expression? TryParse(Body body, ReadOnlySpan<char> line) =>
+		line.Equals("if", StringComparison.Ordinal)
+			? throw new MissingCondition(body)
+			: line.Equals("else", StringComparison.Ordinal)
+				? throw new UnexpectedElse(body)
+				: line.StartsWith("if ", StringComparison.Ordinal)
+					? TryParseIf(body, line)
 					: null;
 
 	public sealed class MissingCondition : ParsingFailed
 	{
-		public MissingCondition(Method.Line line) : base(line) { }
+		public MissingCondition(Body body) : base(body) { }
 	}
 
 	public sealed class UnexpectedElse : ParsingFailed
 	{
-		public UnexpectedElse(Method.Line line) : base(line) { }
+		public UnexpectedElse(Body body) : base(body) { }
 	}
 
-	private static Expression TryParseIf(Method.Line line, ref int methodLineNumber)
+	private static Expression TryParseIf(Body body, ReadOnlySpan<char> line)
 	{
-		var condition = GetConditionExpression(line, 3..);
-		methodLineNumber++;
-		var then = GetThenOrElseExpression(line.Method, ref methodLineNumber);
-		if (methodLineNumber + 2 >= line.Method.bodyLines.Count ||
-			line.Method.bodyLines[methodLineNumber + 1].Text != "else")
-			return new If(condition, then, null, line);
-		methodLineNumber += 2;
-		return new If(condition, then,
-			GetThenOrElseExpression(line.Method, ref methodLineNumber), line);
+		var condition = GetConditionExpression(body, line[3..]);
+		var thenBody = body.FindCurrentChild();
+		if (thenBody == null)
+			throw new MissingThen(body);
+		var then = thenBody.Parse();
+		return HasElse(body)
+			? CreateIfWithElse(body, condition, then)
+			: new If(condition, then, null, body);
 	}
 
-	private static Expression GetConditionExpression(Method.Line line, Range conditionRange)
+	private static bool HasElse(Body body) =>
+		body.ParsingLineNumber + 2 < body.LineRange.End.Value && body.
+			GetLine(body.ParsingLineNumber + 1).AsSpan(body.Tabs).
+			Equals("else", StringComparison.Ordinal);
+
+	private static Expression CreateIfWithElse(Body body, Expression condition, Expression then)
 	{
-		var condition = line.Method.ParseExpression(line, conditionRange);
+		body.ParsingLineNumber++;
+		var elseBody = body.FindCurrentChild();
+		return elseBody == null
+			? throw new MissingElseExpression(body)
+			: new If(condition, then, elseBody.Parse(), body);
+	}
+
+	private static Expression GetConditionExpression(Body body, ReadOnlySpan<char> line)
+	{
+		var condition = body.Method.ParseExpression(body, line);
 		if (condition.ReturnType.Name != Base.Boolean)
-			throw new InvalidCondition(line, condition.ReturnType);
+			throw new InvalidCondition(body, condition.ReturnType);
 		return condition;
 	}
 
 	public class InvalidCondition : ParsingFailed
 	{
-		public InvalidCondition(Method.Line line, Type? conditionReturnType = null) : base(line,
+		public InvalidCondition(Body body, Type? conditionReturnType = null) : base(body,
 			conditionReturnType != null
-				? line.Text + "\n Return type " + conditionReturnType + " is not " + Base.Boolean
+				? body.CurrentLine + "\n Return type " + conditionReturnType + " is not " + Base.Boolean
 				: null) { }
-	}
-
-	private static Body GetThenOrElseExpression(Method method, ref int methodLineNumber)
-	{
-		if (methodLineNumber >= method.bodyLines.Count)
-			throw new MissingThenOrElseBlock(method.bodyLines[methodLineNumber - 1]);
-		var subBlockTabCount = method.bodyLines[methodLineNumber - 1].Tabs + 1;
-		if (!IsNextLineSameBlockExpression(method, methodLineNumber, subBlockTabCount))
-			throw new Method.InvalidIndentation(method.Type, method.TypeLineNumber + methodLineNumber,
-				string.Join('\n', method.bodyLines.ToWordList()), method.Name);
-		return new Body(method, GetBodyExpressions(method, ref methodLineNumber, subBlockTabCount));
-	}
-
-	private static List<Expression> GetBodyExpressions(Method method, ref int methodLineNumber,
-		int subBlockTabCount)
-	{
-		var expressions = new List<Expression>();
-		for (var _ = methodLineNumber;
-			methodLineNumber < method.bodyLines.Count &&
-			IsNextLineSameBlockExpression(method, methodLineNumber, subBlockTabCount);
-			methodLineNumber++)
-			expressions.Add(method.ParseMethodLine(method.bodyLines[methodLineNumber],
-				ref methodLineNumber));
-		methodLineNumber--;
-		return expressions;
 	}
 
 	public sealed class MissingThenOrElseBlock : ParsingFailed
 	{
-		public MissingThenOrElseBlock(Method.Line line) : base(line) { }
+		public MissingThen(Method.Line line) : base(line) { }
 	}
 
-	private static bool IsNextLineSameBlockExpression(Method method, int methodLineNumber,
-		int thenTabCount) =>
-		method.bodyLines[methodLineNumber].Tabs == thenTabCount;
-
-	public static bool CanTryParseConditional(Method.Line line, Range range)
+	public static bool CanTryParseConditional(Body body, ReadOnlySpan<char> input)
 	{
-		var input = line.Text.GetSpanFromRange(range);
 		var questionMarkIndex = input.IndexOf('?');
 		var firstBracket = input.IndexOf('(');
 		if (questionMarkIndex > 2 && (firstBracket == -1 || firstBracket > questionMarkIndex))
 			return input.Count('?') > 1
-				? throw new ConditionalExpressionsCannotBeNested(line)
+				? throw new ConditionalExpressionsCannotBeNested(body)
 				: true;
 		return false;
 	}
 
-	public static If ParseConditional(Method.Line line, Range range)
+	public sealed class ConditionalExpressionsCannotBeNested : ParsingFailed
 	{
-		var input = line.Text.GetSpanFromRange(range);
+		public ConditionalExpressionsCannotBeNested(Body body) : base(body) { }
+	}
+
+	public static If ParseConditional(Body body, ReadOnlySpan<char> input)
+	{
 #if LOG_DETAILS
 		Logger.Info(nameof(ParseConditional) + " " + input.ToString());
 #endif
 		var questionMarkIndex = input.IndexOf('?');
 		if (questionMarkIndex < 2)
-			throw new InvalidCondition(line);
+			throw new InvalidCondition(body);
 		var elseIndex = input.IndexOf(" else ");
 		if (elseIndex <= 5)
-			throw new MissingElseExpression(line);
-		var start = range.Start.Value;
-		var conditionRange = start..(start + questionMarkIndex - 1);
-		var thenRange = (start + questionMarkIndex + 2)..(start + elseIndex);
-		var elseRange = (start + elseIndex + 6)..(start + input.Length);
-		return new If(GetConditionExpression(line, conditionRange),
-			line.Method.ParseExpression(line, thenRange), line.Method.ParseExpression(line, elseRange));
+			throw new MissingElseExpression(body);
+		return new If(GetConditionExpression(body, input[..(questionMarkIndex - 1)]),
+			body.Method.ParseExpression(body, input[(questionMarkIndex + 2)..elseIndex]), body.Method.ParseExpression(body, input[(elseIndex + 6)..]));
 	}
 
 	public sealed class MissingElseExpression : ParsingFailed
 	{
-		public MissingElseExpression(Method.Line line) : base(line) { }
-	}
-
-	public sealed class ConditionalExpressionsCannotBeNested : ParsingFailed
-	{
-		public ConditionalExpressionsCannotBeNested(Method.Line line) : base(line) { }
+		public MissingElseExpression(Body body) : base(body) { }
 	}
 }

@@ -19,9 +19,8 @@ public sealed class LogTests
 
 	public string Run(Method method)
 	{
-		foreach (var expression in method.Body.Expressions)
-			if (expression is MethodCall call && call.Method.Name == "Write")
-				return ((Text)call.Arguments[0]).Data.ToString()!;
+		if (method.GetBodyAndParseIfNeeded() is MethodCall call && call.Method.Name == "Write")
+			return ((Text)call.Arguments[0]).Data.ToString()!;
 		return ""; //ncrunch: no coverage
 	}
 }

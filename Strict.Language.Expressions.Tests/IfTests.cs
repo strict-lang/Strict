@@ -17,7 +17,7 @@ public sealed class IfTests : TestExpressions
 			Throws.InstanceOf<If.InvalidCondition>());
 
 	[Test]
-	public void ReturnTypeOfThenAndElseMustNotBeAny() =>
+	public void ReturnTypeOfThenAndElseMustHaveMatchingType() =>
 		Assert.That(() => ParseExpression("if 5 is 6", "\treturn 8", "else", "\treturn \"hello\"").ReturnType,
 			Throws.InstanceOf<If.ReturnTypeOfThenAndElseMustHaveMatchingType>());
 
@@ -45,9 +45,8 @@ public sealed class IfTests : TestExpressions
 		Assert.That(() => ParseExpression("if bla is 5"), Throws.InstanceOf<If.MissingThenOrElseBlock>());
 
 	[Test]
-	public void ParseWrongIndentation() =>
-		Assert.That(() => ParseExpression("if bla is 5", "Run"),
-			Throws.InstanceOf<Method.InvalidIndentation>());
+	public void MissingThen() =>
+		Assert.That(() => ParseExpression("if bla is 5", "Run"), Throws.InstanceOf<If.MissingThen>());
 
 	[Test]
 	public void ParseIf() =>
@@ -70,9 +69,6 @@ public sealed class IfTests : TestExpressions
 		new(member.Type.Methods[0], new MemberCall(null, member),
 			new Expression[] { new Text(type, "Hey") });
 
-	private Binary GetCondition() =>
-		CreateBinary(new MemberCall(null, bla), BinaryOperator.Is, number);
-
 	[Test]
 	public void ReturnGetHashCode()
 	{
@@ -92,7 +88,7 @@ public sealed class IfTests : TestExpressions
 			Throws.InstanceOf<UnknownExpression>());
 
 	[Test]
-	public void ReturnTypeOfThenAndElseMustHaveMatchingType() =>
+	public void ReturnTypeOfConditionalThenAndElseMustHaveMatchingType() =>
 		Assert.That(() => ParseExpression("let result = true ? true else 5"),
 			Throws.InstanceOf<If.ReturnTypeOfThenAndElseMustHaveMatchingType>());
 
@@ -120,47 +116,4 @@ public sealed class IfTests : TestExpressions
 	[TestCase("6 is 5 ? true else false")]
 	public void ConditionalExpressionsAsPartOfOtherExpression(string code) =>
 		Assert.That(ParseExpression(code).ToString(), Is.EqualTo(code));
-
-	[Test]
-	public void IfHasDifferentScopeThanMethod() =>
-		Assert.That(() => ParseExpression(
-				"if bla is 5",
-				"\tlet abc = \"abc\"",
-				"log.Write(abc)"),
-			Throws.InstanceOf<IdentifierNotFound>());
-
-	[Test]
-	public void ThenBlockWithTwoExpressions() =>
-		Assert.That(ParseExpression(
-				"if bla is 5",
-				"\tlet abc = \"abc\"",
-				"\tlog.Write(abc)"),
-			Is.EqualTo(new If(GetCondition(), CreateThenOrElseBlock())));
-
-	private Expression CreateThenOrElseBlock()
-	{
-		var expressions = new Expression[2];
-		var body = new Body(method);//.GetType(Base.None), expressions);
-		expressions[0] = new Assignment(body, "abc", new Text(method, "abc"));
-		var arguments = new Expression[] { new VariableCall("abc", body.FindVariableValue("abc")!) };
-		expressions[1] = new MethodCall(member.Type.GetMethod("Write", arguments), new MemberCall(null, member), arguments);
-		body.SetAndValidateExpressions(expressions, new Method.Line[2]);
-		return body;
-	}
-
-	[Test]
-	public void IfElseWithBlockThenAndElseExpressions()
-	{
-		var expression = ParseExpression("if bla is 5",
-			"\tlet abc = \"abc\"",
-			"\tlog.Write(abc)",
-			"else",
-			"\tlet abc = \"abc\"",
-			"\tlog.Write(abc)");
-		Assert.That(
-			expression,
-			Is.EqualTo(new If(GetCondition(), CreateThenOrElseBlock(), CreateThenOrElseBlock())));
-		Assert.That(((expression as If)?.Then as Body)!.Expressions.Count, Is.EqualTo(2));
-		Assert.That(((expression as If)?.OptionalElse as Body)!.Expressions.Count, Is.EqualTo(2));
-	}
 }

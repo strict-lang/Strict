@@ -10,10 +10,10 @@ namespace Strict.Language.Expressions;
 /// </summary>
 public sealed class ShuntingYard
 {
-	public ShuntingYard(string input, Range partToParse)
+	public ShuntingYard(string input)
 	{
 		this.input = input;
-		var tokenizer = new PhraseTokenizer(input, partToParse);
+		var tokenizer = new PhraseTokenizer(input);
 		tokenizer.ProcessEachToken(PutTokenIntoStacks);
 		ApplyHigherOrEqualPrecedenceOperators();
 		if (Output.Count == 0)
@@ -36,10 +36,9 @@ public sealed class ShuntingYard
 			PutSingleCharacterTokenIntoStacks(tokenRange);
 		else
 		{
-			var token = input[tokenRange];
-			if (token.IsMultiCharacterOperator())
+			if (input[tokenRange].IsMultiCharacterOperator())
 			{
-				ApplyHigherOrEqualPrecedenceOperators(BinaryOperator.GetPrecedence(token));
+				ApplyHigherOrEqualPrecedenceOperators(BinaryOperator.GetPrecedence(input[tokenRange]));
 				operators.Push(tokenRange);
 			}
 			else
@@ -47,6 +46,8 @@ public sealed class ShuntingYard
 		}
 	}
 
+	// ReSharper disable once ExcessiveIndentation
+	// ReSharper disable once MethodTooLong
 	private void PutSingleCharacterTokenIntoStacks(Range tokenRange)
 	{
 		var firstCharacter = input[tokenRange.Start.Value];
@@ -61,7 +62,7 @@ public sealed class ShuntingYard
 		}
 		else
 		{
-			// comma lists always need to flush everything out, this only happens when parsing inner elements via ParseListArguments
+			// Comma lists always need to flush, happens when parsing inner elements via ParseListArguments
 			if (firstCharacter == ',')
 				ApplyHigherOrEqualPrecedenceOperators();
 			Output.Push(tokenRange);
@@ -75,7 +76,7 @@ public sealed class ShuntingYard
 	{
 		while (operators.Count > 0)
 			if (!IsOpeningBracket(precedence) &&
-				BinaryOperator.GetPrecedence(input.GetSpanFromRange(operators.Peek())) >= precedence)
+				BinaryOperator.GetPrecedence(input[operators.Peek()].AsSpan()) >= precedence)
 				Output.Push(operators.Pop());
 			else
 				return;

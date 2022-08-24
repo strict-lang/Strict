@@ -14,21 +14,21 @@ namespace Strict.Language.Expressions;
 //ncrunch: no coverage start, for better performance
 public sealed class PhraseTokenizer
 {
-	public PhraseTokenizer(string input, Range partToParse)
+	public PhraseTokenizer(string input)
 	{
-		var part = input.GetSpanFromRange(partToParse);
+		var part = input.AsSpan();
 		if (part.Length < 3)
 		{
 			if (part[0] == ' ')
-				throw new InvalidSpacing(part.ToString());
+				throw new InvalidSpacing(input);
 			if (part[0] == '\"' && (part.Length == 1 || part[1] != '\"'))
-				throw new UnterminatedString(part.ToString());
+				throw new UnterminatedString(input);
 			if (part[0] == '(')
-				throw new InvalidEmptyOrUnmatchedBrackets(part.ToString());
-			throw new NotSupportedException("Input should never be this small: " + part.ToString());
+				throw new InvalidEmptyOrUnmatchedBrackets(input);
+			throw new NotSupportedException("Input should never be this small: " + input);
 		}
 #if LOG_DETAILS
-		Logger.Info("* " + nameof(PhraseTokenizer) + ": " + part.ToString());
+		Logger.Info("* " + nameof(PhraseTokenizer) + ": " + input);
 #endif
 		if (part.Length == 0 || part[0] == ' ' || part[^1] == ' ' ||
 			part.Contains("  ", StringComparison.Ordinal))
@@ -36,18 +36,15 @@ public sealed class PhraseTokenizer
 		if (part.Contains("()", StringComparison.Ordinal))
 			throw new InvalidEmptyOrUnmatchedBrackets(input);
 		this.input = input;
-		this.partToParse = partToParse;
 	}
 
 	private readonly string input;
-	private readonly Range partToParse;
 
 	public void ProcessEachToken(Action<Range> processToken)
 	{
 		textStart = -1;
 		tokenStart = -1;
-		var (offset, length) = partToParse.GetOffsetAndLength(input.Length);
-		for (index = offset; index < offset + length; index++)
+		for (index = 0; index < input.Length; index++)
 			if (input[index] == '\"')
 			{
 				if (textStart == -1)
@@ -64,9 +61,9 @@ public sealed class PhraseTokenizer
 			else if (textStart == -1)
 				ProcessNormalToken(processToken);
 		if (textStart != -1)
-			throw new UnterminatedString(input[partToParse]);
+			throw new UnterminatedString(input);
 		if (tokenStart >= 0)
-			processToken(tokenStart..(offset + length));
+			processToken(tokenStart..input.Length);
 	}
 
 	private int index;
@@ -136,7 +133,7 @@ public sealed class PhraseTokenizer
 				ProcessNormalToken(result.Add);
 			}
 		if (result.Count < 3)
-			throw new InvalidEmptyOrUnmatchedBrackets(input[partToParse]);
+			throw new InvalidEmptyOrUnmatchedBrackets(input);
 		if (result.Count == 3 || foundListSeparator || foundNoSpace)
 			return MergeAllTokensIntoSingleList(result);
 		return result;

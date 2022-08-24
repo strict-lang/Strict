@@ -16,7 +16,7 @@ public sealed class PhraseTokenizerTests
 	private static List<string> GetTokens(string code)
 	{
 		var result = new List<string>();
-		new PhraseTokenizer(code, ..).ProcessEachToken(range => result.Add(code[range]));
+		new PhraseTokenizer(code).ProcessEachToken(range => result.Add(code[range]));
 		return result;
 	}
 

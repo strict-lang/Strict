@@ -8,7 +8,7 @@ public class AssignmentTests : TestExpressions
 	public void ParseNumber()
 	{
 		var assignment = (Assignment)ParseExpression("let number = 5");
-		Assert.That(assignment, Is.EqualTo(new Assignment(method.Body, nameof(number), number)));
+		Assert.That(assignment, Is.EqualTo(new Assignment(new Body(method), nameof(number), number)));
 		Assert.That(assignment.Value.ReturnType, Is.EqualTo(number.ReturnType));
 		Assert.That(((Number)assignment.Value).ToString(), Is.EqualTo("5"));
 	}
@@ -105,13 +105,4 @@ public class AssignmentTests : TestExpressions
 	public void LetWithoutExpressionCannotParse() =>
 		Assert.That(() => ParseExpression("let value = abc"),
 			Throws.Exception.InstanceOf<IdentifierNotFound>().With.Message.Contain("abc"));
-
-	[Test]
-	[Ignore("TODO: Not yet done")]
-	public void AssignmentWithArguments()
-	{
-		var program = new Type(type.Package,
-			new TypeLines("Assignment", "has number", "has file = File(\"test.txt\")", "Run", "\tlet a = 5")).ParseMembersAndMethods(new MethodExpressionParser());
-		Assert.That(program.Members[0].Name, Is.EqualTo("File"));
-	}
 }
