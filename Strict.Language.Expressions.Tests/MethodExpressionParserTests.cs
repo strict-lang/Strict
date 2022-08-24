@@ -43,10 +43,10 @@ public sealed class MethodExpressionParserTests : TestExpressions
 	}
 
 	[TestCase("\terror errorMessage")]
-	[TestCase("\terror \"Error occurred\"")]
+	[TestCase("\terror \"error occurred\"")]
 	[TestCase("\terror \"error occurred: \" + errorMessage")]
 	[TestCase("\terror \"error occurred: \" + errorMessage + \"at line\"")]
-	[TestCase("\terror \"error occurred: \" + errorMessage + \"at line\"")]
+	[TestCase("\terror \"error occurred: \" + errorMessage + \"at line\" + 5")]
 	public void ParseErrorExpression(string errorExpression)
 	{
 		var body = (Body)new Method(type, 0, this,
