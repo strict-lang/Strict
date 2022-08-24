@@ -29,6 +29,18 @@ public class TestPackage : Package
 				"Floor Number",
 				"\tvalue - value % 1")).ParseMembersAndMethods(null!);
 		new Type(this,
+			new TypeLines(Base.Range,
+				"implement Number",
+				"has Start Number",
+				"has End Number",
+				"from(start Number, end Number)",
+				"\tStart = start",
+				"\tEnd = end",
+				"Length",
+				"\tRange(0, 5).Length is 5",
+				"\tRange(2, 18).Length is 16",
+				"\tEnd - Start")).ParseMembersAndMethods(null!);
+		new Type(this,
 			new TypeLines(Base.Count,
 				"implement Number",
 				"Increment",
@@ -66,5 +78,6 @@ public class TestPackage : Package
 				"-(other) List",
 				"is(other) Boolean",
 				"*(other) List")).ParseMembersAndMethods(null!);
+
 	}
 }
