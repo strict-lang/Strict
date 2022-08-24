@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using NUnit.Framework;
 
 namespace Strict.Language.Expressions.Tests;
@@ -42,7 +41,7 @@ public sealed class IfTests : TestExpressions
 
 	[Test]
 	public void ParseIncompleteThen() =>
-		Assert.That(() => ParseExpression("if bla is 5"), Throws.InstanceOf<If.MissingThenOrElseBlock>());
+		Assert.That(() => ParseExpression("if bla is 5"), Throws.InstanceOf<If.MissingThen>());
 
 	[Test]
 	public void MissingThen() =>

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 
 namespace Strict.Language.Expressions;
@@ -129,9 +128,9 @@ public sealed class If : Expression
 				: null) { }
 	}
 
-	public sealed class MissingThenOrElseBlock : ParsingFailed
+	public sealed class MissingThen : ParsingFailed
 	{
-		public MissingThen(Method.Line line) : base(line) { }
+		public MissingThen(Body body) : base(body) { }
 	}
 
 	public static bool CanTryParseConditional(Body body, ReadOnlySpan<char> input)

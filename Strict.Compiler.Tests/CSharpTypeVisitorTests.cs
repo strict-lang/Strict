@@ -188,8 +188,8 @@ Run
 	{
 		var program = new Type(package,
 			new TypeLines("Program", "implement App", "Run", "\tlet file = File(\"test.txt\")")).ParseMembersAndMethods(parser);
-		Assert.That(program.Methods[0].Body.Expressions[0].ToString(), Is.EqualTo("let file = File(\"test.txt\")"));
-		Assert.That(program.Methods[0].Body.Expressions[0].ReturnType.Name, Is.EqualTo("File"));
+		Assert.That(program.Methods[0].ToString(), Is.EqualTo("let file = File(\"test.txt\")"));
+		Assert.That(program.Methods[0].ReturnType.Name, Is.EqualTo("File"));
 	}
 
 	[Test]
