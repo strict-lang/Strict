@@ -79,6 +79,9 @@ public class MethodExpressionParser : ExpressionParser
 		if (input[argumentsRange.Start.Value] == '(')
 			return ParseInContext(body.Method.Type, body, input[methodRange],
 				ParseListArguments(body, input[(argumentsRange.Start.Value + 1)..(argumentsRange.End.Value - 1)])) ?? throw new MemberOrMethodNotFound(body, body.Method.Type, input[methodRange].ToString());
+		if (input[argumentsRange.Start.Value] == '.')
+			return ParseInContext(body.Method.Type, body, input, Array.Empty<Expression>()) ??
+				throw new InvalidOperatorHere(body, input[methodRange].ToString());
 		return input[methodRange].Equals(UnaryOperator.Not, StringComparison.Ordinal)
 			? new Not(body.Method.ParseExpression(body, input[argumentsRange]))
 			: throw new InvalidOperatorHere(body, input[methodRange].ToString());
