@@ -7,6 +7,11 @@ namespace Strict.Language.Expressions.Tests;
 public sealed class MethodExpressionParserTests : TestExpressions
 {
 	[Test]
+	public void CannotParseEmptyInputException() =>
+		Assert.That(() => new MethodExpressionParser().ParseExpression(new Body(method), ""),
+			Throws.InstanceOf<CannotParseEmptyInput>()!);
+
+	[Test]
 	public void ParseSingleLine()
 	{
 		var body = new Method(type, 0, this, new[] { MethodTests.Run, MethodTests.LetNumber }).

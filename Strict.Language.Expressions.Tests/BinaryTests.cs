@@ -1,4 +1,5 @@
 using NUnit.Framework;
+using static Strict.Language.Expressions.Binary;
 
 namespace Strict.Language.Expressions.Tests;
 

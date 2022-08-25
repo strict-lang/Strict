@@ -8,7 +8,7 @@ public sealed class Return : Expression
 	public Expression Value { get; }
 	public override int GetHashCode() => Value.GetHashCode();
 	public override string ToString() => "return " + Value;
-	public override bool Equals(Expression? other) => other is Return a && Equals(Value, a.Value);
+	public override bool Equals(Expression? other) => other is Return a && Equals(Value, a.Value); //ncrunch: no coverage
 
 	public static Expression? TryParse(Body body, ReadOnlySpan<char> line) =>
 		line.StartsWith(ReturnName, StringComparison.Ordinal)

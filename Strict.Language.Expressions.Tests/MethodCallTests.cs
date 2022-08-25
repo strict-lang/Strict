@@ -6,9 +6,13 @@ namespace Strict.Language.Expressions.Tests;
 public sealed class MethodCallTests : TestExpressions
 {
 	[SetUp]
-	public void AddComplexMethod() =>
+	public void AddComplexMethods()
+	{
 		((List<Method>)type.Methods).Add(new Method(type, 0, this,
 			new[] { "complexMethod(numbers, add Number) Number", "\t1" }));
+		((List<Method>)type.Methods).Add(new Method(type, 0, this,
+			new[] { "complexMethod(texts) Texts", "\t1" }));
+	}
 
 	[Test]
 	public void ParseLocalMethodCall() =>
@@ -70,6 +74,17 @@ public sealed class MethodCallTests : TestExpressions
 		Assert.That(() => ParseExpression("g9y53.Write"), Throws.InstanceOf<MemberOrMethodNotFound>());
 
 	[Test]
+	public void UnknownExpressionForArgumentException() =>
+		Assert.That(() => ParseExpression("complexMethod((\"1 + 5\" + \"5\"))"),
+			Throws.InstanceOf<UnknownExpressionForArgument>().With.Message.
+				StartsWith("+ is invalid for argument 0"));
+
+	[Test]
+	public void ListTokensAreNotSeparatedByCommaException() =>
+		Assert.That(() => ParseExpression("complexMethod((\"1 + 5\" 5, \"5 + 5\"))"),
+			Throws.InstanceOf<ListTokensAreNotSeparatedByComma>());
+
+	[Test]
 	public void SimpleFromMethodCall() =>
 		Assert.That(ParseExpression("Character(7)"),
 			Is.EqualTo(CreateFromMethodCall(type.GetType(Base.Character), new Number(type, 7))));
@@ -87,6 +102,7 @@ public sealed class MethodCallTests : TestExpressions
 	[TestCase("complexMethod((1), 2)")]
 	[TestCase("complexMethod((1, 2, 3) + (4, 5), 7)")]
 	[TestCase("complexMethod((1, 2, 3) + (4, 5), complexMethod((1, 2, 3), 4))")]
+	[TestCase("complexMethod((\"1 + 5\", \"5 + 5\"))")]
 	public void FindRightMethodCall(string methodCall) =>
 		Assert.That(ParseExpression(methodCall).ToString(), Is.EqualTo(methodCall));
 }

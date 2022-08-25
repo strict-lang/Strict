@@ -28,7 +28,7 @@ public sealed class Binary : MethodCall
 	{
 		public IncompleteTokensForBinaryExpression(Body body, ReadOnlySpan<char> input,
 			IEnumerable<Range> postfixTokens) :
-			base(body, input.GetTextsFromRanges(postfixTokens).Reverse().ToWordList()) { }
+			base(body, input.GetTextsFromRanges(postfixTokens).Reverse().ToWordList()) { } //ncrunch: no coverage
 	}
 
 	// ReSharper disable once TooManyArguments

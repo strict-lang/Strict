@@ -55,6 +55,4 @@ public sealed class List : Value
 	{
 		public EmptyListNotAllowed(Body body) : base(body, "()") { }
 	}
-
-	internal bool IsFirstType<T>() => Values.First() is T;
 }

@@ -156,7 +156,7 @@ public sealed class If : Expression
 #endif
 		var questionMarkIndex = input.IndexOf('?');
 		if (questionMarkIndex < 2)
-			throw new InvalidCondition(body);
+			throw new InvalidCondition(body); //ncrunch: no coverage
 		var elseIndex = input.IndexOf(" else ");
 		if (elseIndex <= 5)
 			throw new MissingElseExpression(body);

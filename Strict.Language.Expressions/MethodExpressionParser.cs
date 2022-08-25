@@ -77,7 +77,7 @@ public class MethodExpressionParser : ExpressionParser
 			" arguments=" + input[argumentsRange].ToString());
 #endif
 		if (input[argumentsRange.Start.Value] == '(')
-			return ParseInContext(body.Method.Type, body, input[methodRange],
+			return ParseInContext(body.Method.Type, body, input[methodRange], // MethodCall always produces single token from ShutingYard so this call never happens atm, I think using unary operator could be a way to hit this line
 				ParseListArguments(body, input[(argumentsRange.Start.Value + 1)..(argumentsRange.End.Value - 1)])) ?? throw new MemberOrMethodNotFound(body, body.Method.Type, input[methodRange].ToString());
 		if (input[argumentsRange.Start.Value] == '.')
 			return ParseInContext(body.Method.Type, body, input, Array.Empty<Expression>()) ??
@@ -265,7 +265,7 @@ public class MethodExpressionParser : ExpressionParser
 				expressions.Push(ParseTextWithSpacesOrListWithMultipleOrNestedElements(body,
 					innerSpan[postfix.Output.Pop()]));
 			else if (postfix.Output.Count == 2)
-				expressions.Push(ParseMethodCallWithArguments(body, innerSpan, postfix));
+				expressions.Push(ParseMethodCallWithArguments(body, innerSpan, postfix)); // this line could be tested after unary operator (e.g. not) is working
 			else
 				do
 				{
@@ -335,6 +335,6 @@ public class MethodExpressionParser : ExpressionParser
 
 	private sealed class InvalidSingleTokenExpression : ParsingFailed
 	{
-		public InvalidSingleTokenExpression(Body body, string message) : base(body, message) { }
+		public InvalidSingleTokenExpression(Body body, string message) : base(body, message) { } // tried various combinations to test this case but never happens
 	}
 }

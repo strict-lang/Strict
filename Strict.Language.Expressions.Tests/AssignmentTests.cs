@@ -4,6 +4,16 @@ namespace Strict.Language.Expressions.Tests;
 
 public class AssignmentTests : TestExpressions
 {
+	[SetUp]
+	public void CreateParserAndPackage()
+	{
+		parser = new MethodExpressionParser();
+		package = new Package(nameof(AssignmentTests));
+	}
+
+	private ExpressionParser parser = null!;
+	private Package package = null!;
+
 	[Test]
 	public void ParseNumber()
 	{
@@ -105,4 +115,32 @@ public class AssignmentTests : TestExpressions
 	public void LetWithoutExpressionCannotParse() =>
 		Assert.That(() => ParseExpression("let value = abc"),
 			Throws.Exception.InstanceOf<IdentifierNotFound>().With.Message.Contain("abc"));
+
+	[Test]
+	public void AssignmentWithMethodCall()
+	{
+		// @formatter:off
+		var program = new Type(package,
+			new TypeLines(nameof(AssignmentWithMethodCall),
+				"has log",
+				"MethodToCall Text",
+				"\t\"Hello World\"",
+		"Run",
+				"\tlet result = MethodToCall")).ParseMembersAndMethods(parser);
+		Assert.That(program.Methods[0].ToString(), Is.EqualTo("MethodToCall Text"));
+		Assert.That(program.Methods[1].GetBodyAndParseIfNeeded().ToString(), Is.EqualTo("let result = MethodToCall"));
+	}
+
+	[Test]
+	public void LocalMethodCallShouldHaveCorrectReturnType()
+	{
+		var program = new Type(type.Package,
+			new TypeLines(nameof(LocalMethodCallShouldHaveCorrectReturnType),
+				"has log",
+				"LocalMethod Text",
+				"\t\"Hello World\"",
+		"Run",
+				"\t\"Random Text\"")).ParseMembersAndMethods(parser);
+		Assert.That(program.Methods[0].ReturnType.Name, Is.EqualTo(Base.Text));
+	}
 }
