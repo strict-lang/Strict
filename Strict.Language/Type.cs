@@ -62,7 +62,7 @@ public class Type : Context
 	private Type ParseImplement(string remainingLine)
 	{
 		if (members.Count > 0 || methods.Count > 0)
-			throw new ImplementMustComeBeforeMembersAndMethods(this, lineNumber, remainingLine);
+			throw new ImplementMustComeBeforeMembersAndMethods(this, lineNumber, remainingLine); //ncrunch: no coverage this condition never pass since this method is always called before any members or methods are parsed
 		if (remainingLine == Base.Any)
 			throw new ImplementAnyIsImplicitAndNotAllowed(this, lineNumber, remainingLine);
 		try
@@ -156,7 +156,7 @@ public class Type : Context
 				: null;
 			return new Member(this, nameAndType, expression);
 		}
-		catch (ParsingFailed)
+		catch (ParsingFailed) // Unit test should be added after Member parsing logic is finished
 		{
 			throw;
 		}

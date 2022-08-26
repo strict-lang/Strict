@@ -103,4 +103,8 @@ public sealed class MethodCallTests : TestExpressions
 	[TestCase("complexMethod((\"1 + 5\", \"5 + 5\"))")]
 	public void FindRightMethodCall(string methodCall) =>
 		Assert.That(ParseExpression(methodCall).ToString(), Is.EqualTo(methodCall));
+
+	[Test]
+	public void IsMethodPublic() =>
+		Assert.That((ParseExpression("Run") as MethodCall)?.Method.IsPublic, Is.True);
 }

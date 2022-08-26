@@ -56,6 +56,14 @@ public sealed class MemberCallTests : TestExpressions
 				InstanceOf<NamedType.AssignmentWithInitializerTypeShouldNotHaveNameWithType>());
 
 	[Test]
+	public void NameMustBeAWordWithoutAnySpecialCharactersOrNumbers() =>
+		Assert.That(
+			() => new Type(type.Package, new TypeLines(nameof(NameMustBeAWordWithoutAnySpecialCharactersOrNumbers), "has input1$ = Text(5)")).
+				ParseMembersAndMethods(new MethodExpressionParser()),
+			Throws.InstanceOf<ParsingFailed>().With.InnerException.
+				InstanceOf<Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers>());
+
+	[Test]
 	public void MemberWithArgumentsInitializer()
 	{
 		var assignmentType =
@@ -63,11 +71,26 @@ public sealed class MemberCallTests : TestExpressions
 				new TypeLines(nameof(MemberWithArgumentsInitializer), "has input = Text(5)",
 					"GetInput Text", "\tinput")).ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(assignmentType.Members[0].Name, Is.EqualTo("input"));
+		Assert.That(assignmentType.Members[0].IsPublic, Is.False);
 		Assert.That(assignmentType.Members[0].Type, Is.EqualTo(type.GetType(Base.Text)));
 		Assert.That(assignmentType.Members[0].Value, Is.InstanceOf<MethodCall>());
 		var methodCall = (MethodCall)assignmentType.Members[0].Value!;
 		Assert.That(methodCall.Instance!.ReturnType.Name, Is.EqualTo(Base.Text));
 		Assert.That(methodCall.Arguments[0], Is.EqualTo(new Number(type, 5)));
+	}
+
+	[Test]
+	public void MemberGetHashCodeAndEquals()
+	{
+		var memberCall =
+			new Type(type.Package,
+				new TypeLines(nameof(MemberGetHashCodeAndEquals), "has input = Text(5)",
+					"GetInput Text", "\tinput")).ParseMembersAndMethods(new MethodExpressionParser());
+		Assert.That(memberCall.Members[0].GetHashCode(),
+			Is.EqualTo(memberCall.Members[0].Name.GetHashCode()));
+		Assert.That(
+			memberCall.Members[0].Equals(new Member(memberCall, "input", new Text(memberCall, "5"))),
+			Is.True);
 	}
 
 	[Test]

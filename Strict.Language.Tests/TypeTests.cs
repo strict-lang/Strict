@@ -1,4 +1,8 @@
+using System;
+using System.Collections.Generic;
 using NUnit.Framework;
+using Strict.Language.Expressions;
+using List = Strict.Language.Expressions.List;
 
 namespace Strict.Language.Tests;
 
@@ -18,7 +22,8 @@ public class TypeTests
 
 	[Test]
 	public void AddingTheSameNameIsNotAllowed() =>
-		Assert.That(() => CreateType(Base.App, "Run"), Throws.InstanceOf<Type.TypeAlreadyExistsInPackage>());
+		Assert.That(() => CreateType(Base.App, "Run"),
+			Throws.InstanceOf<Type.TypeAlreadyExistsInPackage>());
 
 	[Test]
 	public void EmptyLineIsNotAllowed() =>
@@ -38,18 +43,47 @@ public class TypeTests
 
 	[Test]
 	public void TypeParsersMustStartWithImplementOrHas() =>
-		Assert.That(
-			() => CreateType(Base.Error, "Run", "\tlog.WriteLine"),
+		Assert.That(() => CreateType(Base.Error, "Run", "\tlog.WriteLine"),
 			Throws.InstanceOf<Type.TypeHasNoMembersAndThusMustBeATraitWithoutMethodBodies>());
 
 	[Test]
 	public void JustMembersAreAllowed() =>
-		Assert.That(CreateType(Base.Error, "has log", "has count").Members.Count,
-			Is.EqualTo(2));
+		Assert.That(CreateType(Base.Error, "has log", "has count").Members.Count, Is.EqualTo(2));
 
 	[Test]
 	public void GetUnknownTypeWillCrash() =>
-		Assert.That(() => package.GetType(Base.Computation), Throws.InstanceOf<Context.TypeNotFound>());
+		Assert.That(() => package.GetType(Base.Computation),
+			Throws.InstanceOf<Context.TypeNotFound>());
+
+	[TestCase("implement invalidType")]
+	[TestCase("has log", "Run InvalidType", "\tlet a = 5")]
+	public void TypeNotFound(params string[] lines) =>
+		Assert.That(() => CreateType(Base.Error, lines),
+			Throws.InstanceOf<ParsingFailed>().With.InnerException.InstanceOf<Context.TypeNotFound>());
+
+	[Test]
+	public void NoMethodsFound() =>
+		Assert.That(
+			() => new Type(new Package(nameof(NoMethodsFound)), new TypeLines("dummy", "has log")).
+				ParseMembersAndMethods(null!), Throws.InstanceOf<Type.NoMethodsFound>());
+
+	[Test]
+	public void ExtraWhitespacesFoundAtBeginningOfLine() =>
+		Assert.That(
+			() => CreateType(nameof(ExtraWhitespacesFoundAtBeginningOfLine),
+				"has log",
+				"Run",
+				" let a = 5"), Throws.InstanceOf<Type.ExtraWhitespacesFoundAtBeginningOfLine>());
+
+	[Test]
+	public void NoMatchingMethodFound() =>
+		Assert.That(
+			() => CreateType(nameof(NoMatchingMethodFound),
+					"has log",
+					"Run",
+					"\tlet a = 5").
+				GetMethod("UnknownMethod", Array.Empty<Expression>()),
+			Throws.InstanceOf<Type.NoMatchingMethodFound>());
 
 	[Test]
 	public void TypeNameMustBeWord() =>
@@ -107,15 +141,37 @@ public class TypeTests
 
 	[Test]
 	public void TraitMethodsMustBeImplemented() =>
-		Assert.That(() => CreateType("Program", "implement App", "Run"),
+		Assert.That(() => CreateType("Program",
+				"implement App",
+				"Run"),
 			Throws.InstanceOf<Type.MethodMustBeImplementedInNonTraitType>());
 
 	[Test]
 	public void Trait()
 	{
-		var app = CreateType("DummyApp", "Run");
+		var app = CreateType("DummyApp","Run");
 		Assert.That(app.IsTrait, Is.True);
 		Assert.That(app.Name, Is.EqualTo("DummyApp"));
 		Assert.That(app.Methods[0].Name, Is.EqualTo("Run"));
+	}
+
+		[Test]
+	public void ImplementsWithBrackets() => Assert.That(new TypeLines(nameof(ImplementsWithBrackets),"implement Text(Character)", "has log").ImplementTypes, Has.Count.EqualTo(2));
+
+	[Test]
+	public void CanUpCastNumberWithList()
+	{
+		var type = CreateType(nameof(CanUpCastNumberWithList),
+			"has log",
+			"Add(first Number, other List) List",
+			"\tfirst + other");
+		var result = type.FindMethod("Add", new List<Expression> {
+				new Number(type, 5),
+				new List(null!, new List<Expression> {
+					new Number(type, 6),
+					new Number(type, 7)
+				})});
+		Assert.That(result, Is.InstanceOf<Method>());
+		Assert.That(result?.ToString(), Is.EqualTo("Add(first TestPackage.Number, other TestPackage.List) List"));
 	}
 }

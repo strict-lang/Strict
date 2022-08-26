@@ -75,6 +75,21 @@ public class PackageTests
 	}
 
 	[Test]
+	public void FindPackage() =>
+		Assert.That(mainPackage.Find(subPackage.ToString()), Is.EqualTo(subPackage));
+
+	[Test]
+	public void FindUnknownPackage() =>
+		Assert.That(mainPackage.Find(nameof(FindUnknownPackage)), Is.Null);
+
+	[Test]
+	public void RemovePackage()
+	{
+		mainPackage.Remove(mainType);
+		Assert.That(mainPackage.FindDirectType(publicSubType.Name), Is.Null);
+	}
+
+	[Test]
 	public void FindingFullTypeRequiresFullName() =>
 		Assert.Throws<Package.FullNameMustContainPackageAndTypeNames>(() =>
 			mainPackage.FindFullType(publicSubType.Name));
