@@ -1,6 +1,10 @@
 - Number
 	-1 is not 1
 	-value
+to Text
+	5 to Text is "5"
+	10.1 to Text is "10.1"
+	"" + value
 and(other) Number
 	2 and 6 is 6
 	1 and 8 is 9
@@ -32,6 +36,12 @@ is(other) Boolean
 *(other) Number
 	3 * 4 is 12
 	value * other
+%(other) Number
+	100 % 10 is 1
+	value % other
+^(other) Number
+	2 ^ 2 is 4
+	value ^ other
 >(other) Boolean
 	0 > 0 is false
 	3 > 1 is true

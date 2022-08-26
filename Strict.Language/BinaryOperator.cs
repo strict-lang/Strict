@@ -82,7 +82,7 @@ public static class BinaryOperator
 	public static int GetPrecedence(char tokenFirstCharacter) =>
 		tokenFirstCharacter switch
 		{
-			',' => 0, // always has to flush everything out
+			',' => 0, // ncrunch: no coverage always has to flush everything out; ',' cannot be reached because this method is called only for operators
 			'+' => 2, // unary '-' and 'not' operators have precendence 1
 			'-' => 2,
 			'*' => 3,
@@ -97,7 +97,7 @@ public static class BinaryOperator
 	// ReSharper disable once MethodTooLong
 	public static int GetPrecedence(ReadOnlySpan<char> token)
 	{
-		if (token.Compare("not"))
+		if (token.Compare("not")) // TODO: not operator parsing is not supported yet
 			return 1;
 		if (token.Compare(To))
 			return 7;

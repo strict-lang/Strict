@@ -1,5 +1,4 @@
 using NUnit.Framework;
-using static Strict.Language.Expressions.Binary;
 
 namespace Strict.Language.Expressions.Tests;
 
@@ -43,15 +42,21 @@ public sealed class BinaryTests : TestExpressions
 
 	[TestCase("1 + 2")]
 	[TestCase("1 is 1")]
+	[TestCase("true xor true")]
+	//[TestCase("5 to Text")] //TODO: Need to support to Operator parsing
 	[TestCase("1 * 2 + 1")]
 	[TestCase("(1 + 2) * 3")]
 	[TestCase("(1 + 2) * (3 + 4)")]
+	[TestCase("(2 + 2) ^ (5 - 4)")]
 	[TestCase("1 + 2 + (3 + 4) * (5 + 6)")]
 	[TestCase("(1 + 2 + 3 + 4) * (5 + 6)")]
 	[TestCase("((1 + 2) * (3 + 4) + 1) * (5 + 6)")]
 	[TestCase("(1 + 2) * (2 + 5) + 3")]
 	[TestCase("3 + (1 + 2) * (2 + 5)")]
 	[TestCase("3 + (1 + 2) * 5 * (2 + 5)")]
+	[TestCase("3 + (1 + 2) % (5 * (2 + 5))")]
+	[TestCase("(1 + 5, 2, 3) + (5, 2 * 5)")]
+	[TestCase("(5 > 4) or (10 < 100.5) and (5 >= 5) and (5 <= 6)")]
 	public void ParseGroupExpressionProducesSameCode(string code) =>
 		Assert.That(ParseExpression(code).ToString(), Is.EqualTo(code));
 

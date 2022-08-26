@@ -87,6 +87,19 @@ public sealed class BodyTests : TestExpressions
 			Throws.InstanceOf<IdentifierNotFound>().With.Message.StartWith("ifText"));
 
 	[Test]
+	public void MissingThenDueToIncorrectChildBodyStart() =>
+		Assert.That(() => ParseExpression(
+				"if bla is 5",
+				"let abc = \"abc\"",
+				"\tlog.Write(abc)"),
+			Throws.InstanceOf<If.MissingThen>());
+
+	[Test]
+	public void EmptyInputIsNotAllowed() =>
+		Assert.That(() => new Body(method).Parse(),
+			Throws.InstanceOf<SpanExtensions.EmptyInputIsNotAllowed>());
+
+	[Test]
 	public void CheckVariableCallCurrentValue()
 	{
 		var ifExpression = ParseExpression("if bla is 5", "\tlet abc = \"abc\"", "\tlog.Write(abc)") as If;

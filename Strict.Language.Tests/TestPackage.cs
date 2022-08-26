@@ -12,11 +12,17 @@ public class TestPackage : Package
 			"is(other) Boolean"));
 		new Type(this, new TypeLines(Base.Boolean,
 			"not Boolean",
-			"\tfalse",
-			"is(any) Boolean",
-			"\ttrue")).ParseMembersAndMethods(null!);
+			"\tvalue ? false else true",
+			"is(other) Boolean",
+			"\tvalue is other",
+			"and(other) Boolean",
+			"\tvalue and other ? true else false",
+			"or(other) Boolean",
+			"\tvalue or other ? false else true",
+			"xor(other) Boolean",
+			"\t(value and other) or (not value and not other) ? false else true")).ParseMembersAndMethods(null!);
 		anyType.ParseMembersAndMethods(null!);
-		new Type(this,
+		var numberType = new Type(this,
 			new TypeLines(Base.Number,
 				"+(other) Number",
 				"\tvalue + other",
@@ -27,7 +33,21 @@ public class TestPackage : Package
 				"/(other) Number",
 				"\tvalue / other",
 				"Floor Number",
-				"\tvalue - value % 1")).ParseMembersAndMethods(null!);
+				"\tvalue - value % 1",
+				"%(other) Number",
+				"\tvalue % other",
+				">(other) Boolean",
+				"\tvalue > other",
+				"<(other) Boolean",
+				"\tvalue < other",
+				"^(other) Number",
+				"\tvalue ^ other",
+				">=(other) Boolean",
+				"\tvalue >= other",
+				"<=(other) Boolean",
+				"\tvalue <= other",
+				"to Text",
+				"\t\"\" + value"));
 		new Type(this,
 			new TypeLines(Base.Range,
 				"implement Number",
@@ -65,6 +85,7 @@ public class TestPackage : Package
 				"\t\treturn (number % 10)",
 				"\telse",
 				"\t\treturn digits(floor(number / 10)) + number % 10")).ParseMembersAndMethods(null!);
+		numberType.ParseMembersAndMethods(null!);
 		new Type(this,
 			new TypeLines(Base.Log,
 				"has Text",
