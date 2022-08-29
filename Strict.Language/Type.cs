@@ -149,14 +149,11 @@ public class Type : Context
 		try
 		{
 			var expression = nameAndExpression.MoveNext()
-				? parser.ParseExpression(
-					//TODO: dummy!
-					new Body(new Method(this, 0, parser, new[] { "Dummy" })),
-					remainingLine[(nameAndType.Length + 3)..])
+				? GetMemberExpression(parser, nameAndType.MakeFirstLetterUppercase(), remainingLine[(nameAndType.Length + 3)..])
 				: null;
 			return new Member(this, nameAndType, expression);
 		}
-		catch (ParsingFailed) // Unit test should be added after Member parsing logic is finished
+		catch (ParsingFailed) // TODO: Unit test should be added after Member parsing logic is finished
 		{
 			throw;
 		}
@@ -164,6 +161,16 @@ public class Type : Context
 		{
 			throw new ParsingFailed(this, lineNumber, ex.Message, ex);
 		}
+	}
+
+	private Expression GetMemberExpression(ExpressionParser parser, string memberName, ReadOnlySpan<char> remainingTextSpan)
+	{
+		if (FindType(memberName) != null && !remainingTextSpan.StartsWith(memberName))
+			remainingTextSpan = string.Concat(memberName, "(",
+				remainingTextSpan, ")").AsSpan(); //TODO: though this is a rare case, any other alternative would be good?
+		return parser.ParseExpression(
+			//TODO: dummy! I think this works fine for all tests now. Should we need to change this?
+			new Body(new Method(this, 0, parser, new[] { "MemberCall" })), remainingTextSpan);
 	}
 
 	public sealed class MembersMustComeBeforeMethods : ParsingFailed

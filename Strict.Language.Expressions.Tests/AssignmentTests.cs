@@ -143,4 +143,20 @@ public class AssignmentTests : TestExpressions
 				"\t\"Random Text\"")).ParseMembersAndMethods(parser);
 		Assert.That(program.Methods[0].ReturnType.Name, Is.EqualTo(Base.Text));
 	}
+
+	[Test]
+	public void LetAssignmentWithConstructorCall()
+	{
+		// @formatter:off
+		var program = new Type(package,
+			new TypeLines(nameof(LetAssignmentWithConstructorCall),
+				"has log",
+				"Run",
+				"\tlet file = File(\"test.txt\")")).ParseMembersAndMethods(parser);
+		var expression = program.Methods[0].GetBodyAndParseIfNeeded();
+		Assert.That(expression, Is.InstanceOf<Assignment>());
+		var assignment = expression as Assignment;
+		Assert.That(assignment?.Value.ToString(), Is.EqualTo("File(\"test.txt\")"));
+	}
+
 }

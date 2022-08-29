@@ -5,6 +5,11 @@ namespace Strict.Language.Expressions.Tests;
 
 public sealed class MemberCallTests : TestExpressions
 {
+	[SetUp]
+	public void CreateParser() => parser = new MethodExpressionParser();
+
+	private ExpressionParser parser = null!;
+
 	[Test]
 	public void UseKnownMember() =>
 		ParseAndCheckOutputMatchesInput("log.Text",
@@ -51,7 +56,7 @@ public sealed class MemberCallTests : TestExpressions
 	public void MemberWithArgumentsInitializerShouldNotHaveType() =>
 		Assert.That(
 			() => new Type(type.Package, new TypeLines("Assignment", "has input Text = Text(5)")).
-				ParseMembersAndMethods(new MethodExpressionParser()),
+				ParseMembersAndMethods(parser),
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.
 				InstanceOf<NamedType.AssignmentWithInitializerTypeShouldNotHaveNameWithType>());
 
@@ -59,7 +64,7 @@ public sealed class MemberCallTests : TestExpressions
 	public void NameMustBeAWordWithoutAnySpecialCharactersOrNumbers() =>
 		Assert.That(
 			() => new Type(type.Package, new TypeLines(nameof(NameMustBeAWordWithoutAnySpecialCharactersOrNumbers), "has input1$ = Text(5)")).
-				ParseMembersAndMethods(new MethodExpressionParser()),
+				ParseMembersAndMethods(parser),
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.
 				InstanceOf<Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers>());
 
@@ -69,7 +74,7 @@ public sealed class MemberCallTests : TestExpressions
 		var assignmentType =
 			new Type(type.Package,
 				new TypeLines(nameof(MemberWithArgumentsInitializer), "has input = Text(5)",
-					"GetInput Text", "\tinput")).ParseMembersAndMethods(new MethodExpressionParser());
+					"GetInput Text", "\tinput")).ParseMembersAndMethods(parser);
 		Assert.That(assignmentType.Members[0].Name, Is.EqualTo("input"));
 		Assert.That(assignmentType.Members[0].IsPublic, Is.False);
 		Assert.That(assignmentType.Members[0].Type, Is.EqualTo(type.GetType(Base.Text)));
@@ -85,7 +90,7 @@ public sealed class MemberCallTests : TestExpressions
 		var memberCall =
 			new Type(type.Package,
 				new TypeLines(nameof(MemberGetHashCodeAndEquals), "has input = Text(5)",
-					"GetInput Text", "\tinput")).ParseMembersAndMethods(new MethodExpressionParser());
+					"GetInput Text", "\tinput")).ParseMembersAndMethods(parser);
 		Assert.That(memberCall.Members[0].GetHashCode(),
 			Is.EqualTo(memberCall.Members[0].Name.GetHashCode()));
 		Assert.That(
@@ -96,15 +101,61 @@ public sealed class MemberCallTests : TestExpressions
 	[Test]
 	public void MemberWithBinaryExpression()
 	{
+		// @formatter:off
 		var assignmentType =
 			new Type(type.Package,
-					new TypeLines(nameof(MemberWithBinaryExpression), "has combinedNumber = 3 + 5",
-						"GetCombined Number", "\tcombinedNumber")).
-				ParseMembersAndMethods(new MethodExpressionParser());
+					new TypeLines(nameof(MemberWithBinaryExpression),
+						"has combinedNumber = 3 + 5",
+						"GetCombined Number",
+						"\tcombinedNumber")).
+				ParseMembersAndMethods(parser);
 		Assert.That(assignmentType.Members[0].Name, Is.EqualTo("combinedNumber"));
 		Assert.That(assignmentType.Members[0].Type, Is.EqualTo(type.GetType(Base.Number)));
 		var binary = (Binary)assignmentType.Members[0].Value!;
 		Assert.That(binary.Instance, Is.EqualTo(new Number(type, 3)));
 		Assert.That(binary.Arguments[0], Is.EqualTo(new Number(type, 5)));
+	}
+
+	[Test]
+	public void FromConstructorCall()
+	{
+		// @formatter:off
+		var program = new Type(type.Package,
+			new TypeLines(nameof(FromConstructorCall),
+				"has file = File(\"test.txt\")",
+				"Run",
+				"\tlet a = 5")).ParseMembersAndMethods(parser);
+		Assert.That(program.Members[0].Value?.ToString(), Is.EqualTo("File(\"test.txt\")"));
+		Assert.That(program.Members[0].Value?.ReturnType.Name, Is.EqualTo("File"));
+	}
+
+		[Test]
+	public void FromConstructorCallUsingMemberName()
+	{
+		// @formatter:off
+		var program = new Type(type.Package,
+			new TypeLines(nameof(FromConstructorCallUsingMemberName),
+				"has file = \"test.txt\"",
+				"Run",
+				"\tlet a = 5")).ParseMembersAndMethods(parser);
+		Assert.That(program.Members[0].Value?.ToString(), Is.EqualTo("File(\"test.txt\")"));
+		Assert.That(program.Members[0].Value?.ReturnType.Name, Is.EqualTo("File"));
+	}
+
+	[Test]
+	public void MemberCallUsingAnotherMember()
+	{
+		// @formatter:off
+		var program = new Type(type.Package,
+			new TypeLines(nameof(MemberCallUsingAnotherMember),
+				"has file = File(\"test.txt\")",
+				"has fileDescription = file.Length > 1000 ? \"big file\" else \"small file\"",
+				"Run",
+				"\tlet a = 5")).ParseMembersAndMethods(parser);
+		Assert.That(program.Members[0].Name, Is.EqualTo("file"));
+		Assert.That(program.Members[1].Name, Is.EqualTo("fileDescription"));
+		var expression = program.Members[1].Value;
+		Assert.That(expression, Is.InstanceOf<If>());
+		Assert.That(expression?.ToString(), Is.EqualTo("file.Length > 1000 ? \"big file\" else \"small file\""));
 	}
 }

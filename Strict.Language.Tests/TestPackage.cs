@@ -99,6 +99,13 @@ public class TestPackage : Package
 				"-(other) List",
 				"is(other) Boolean",
 				"*(other) List")).ParseMembersAndMethods(null!);
+		new Type(this,
+			new TypeLines("File",
+				"from(Text)",
+				"Read Text",
+				"Write(text)",
+				"Delete",
+				"Length Number")).ParseMembersAndMethods(null!);
 
 	}
 }
