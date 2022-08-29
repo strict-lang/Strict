@@ -100,7 +100,7 @@ public class TestPackage : Package
 				"is(other) Boolean",
 				"*(other) List")).ParseMembersAndMethods(null!);
 		new Type(this,
-			new TypeLines("File",
+			new TypeLines(Base.File,
 				"from(Text)",
 				"Read Text",
 				"Write(text)",

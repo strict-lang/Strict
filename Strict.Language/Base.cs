@@ -42,4 +42,6 @@ public static class Base
 	public const string App = nameof(App);
 	public const string System = nameof(System);
 	public const string List = nameof(List);
+	public const string File = nameof(File);
+	public const string Return = nameof(Return);
 }

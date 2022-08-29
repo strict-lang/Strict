@@ -42,7 +42,7 @@ public abstract class TestExpressions : MethodExpressionParser
 	public Expression ParseExpression(params string[] lines)
 	{
 		var methodLines = new string[lines.Length + 1];
-		methodLines[0] = MethodTests.Run;
+		methodLines[0] = MethodTests.Run + " " + Base.Number;
 		for (var index = 0; index < lines.Length; index++)
 			methodLines[index + 1] = '\t' + lines[index];
 		return new Method(type, 0, this, methodLines).GetBodyAndParseIfNeeded();

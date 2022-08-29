@@ -158,5 +158,4 @@ public class AssignmentTests : TestExpressions
 		var assignment = expression as Assignment;
 		Assert.That(assignment?.Value.ToString(), Is.EqualTo("File(\"test.txt\")"));
 	}
-
 }

@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System;
+using System.Linq;
 using System.Runtime.CompilerServices;
 
 [assembly: InternalsVisibleTo("Strict.Language.Expressions.Tests")]
@@ -62,18 +63,35 @@ public sealed class Body : Expression
 			: this;
 	}
 
+	// ReSharper disable once MethodTooLong
 	internal Body SetExpressions(IReadOnlyList<Expression> expressions)
 	{
 		Expressions = expressions;
 		if (Expressions.Count == 0)
 			throw new SpanExtensions.EmptyInputIsNotAllowed();
-		if (Parent != null || Expressions[^1].GetType().Name != "Return")
+		var isLastExpressionReturn = Expressions[^1].GetType().Name == Base.Return;
+		if (!isLastExpressionReturn)
 			return this;
+		var lastExpressionType = Expressions[^1].ReturnType;
+		if (Parent != null)
+			return isLastExpressionReturn &&
+				!ChildHasMatchingMethodReturnType(Parent.ReturnType, lastExpressionType)
+					? throw new ChildBodyReturnTypeMustMatchMethodReturnType(this, lastExpressionType)
+					: this;
 		ParsingLineNumber--;
 		throw new ReturnAsLastExpressionIsNotNeeded(this);
 	}
 
 	public IReadOnlyList<Expression> Expressions { get; private set; } = Array.Empty<Expression>();
+
+	private static bool ChildHasMatchingMethodReturnType(Type parentType, Type childType) =>
+		childType.Name == Base.None || parentType == childType || childType.Implements.Contains(parentType);
+
+	// ReSharper disable once HollowTypeName
+	public class ChildBodyReturnTypeMustMatchMethodReturnType : ParsingFailed
+	{
+		public ChildBodyReturnTypeMustMatchMethodReturnType(Body body, Type childReturnType) : base(body, $"Child body return type: {childReturnType} is not matching with Parent return type: {body.Parent?.ReturnType} in method line: {--body.ParsingLineNumber}") { }
+	}
 
 	public sealed class ReturnAsLastExpressionIsNotNeeded : ParsingFailed
 	{
