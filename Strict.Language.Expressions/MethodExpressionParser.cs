@@ -215,7 +215,8 @@ public class MethodExpressionParser : ExpressionParser
 		{
 			var fromType = body.Method.FindType(methodName);
 			if (fromType != null)
-				return new MethodCall(fromType.GetMethod(Method.From, arguments), new From(fromType), arguments);
+				return new MethodCall(fromType.GetMethod(Method.From, arguments), new From(fromType),
+					arguments);
 		}
 #if LOG_DETAILS
 		Logger.Info("ParseNested found no local method in " + body.Method.Type + ": " + methodName);

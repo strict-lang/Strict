@@ -71,7 +71,8 @@ public sealed class BodyTests : TestExpressions
 		var expressions = new Expression[2];
 		expressions[0] = new Assignment(body, "abc", new Text(method, "abc"));
 		var arguments = new Expression[] { new VariableCall("abc", body.FindVariableValue("abc")!) };
-		expressions[1] = new MethodCall(member.Type.GetMethod("Write", arguments), new MemberCall(null, member), arguments);
+		expressions[1] = new MethodCall(member.Type.GetMethod("Write", arguments),
+			new MemberCall(null, member), arguments);
 		body.SetExpressions(expressions);
 		return body;
 	}
@@ -79,6 +80,7 @@ public sealed class BodyTests : TestExpressions
 	[Test]
 	public void IfAndElseHaveTheirOwnScopes() =>
 		Assert.That(() => ParseExpression(
+				// @formatter:off
 				"if bla is 5",
 				"\tlet ifText = \"in if\"",
 				"\tlog.Write(ifText)",
@@ -102,7 +104,10 @@ public sealed class BodyTests : TestExpressions
 	[Test]
 	public void CheckVariableCallCurrentValue()
 	{
-		var ifExpression = ParseExpression("if bla is 5", "\tlet abc = \"abc\"", "\tlog.Write(abc)") as If;
+		var ifExpression = ParseExpression(
+			"if bla is 5",
+			"\tlet abc = \"abc\"",
+			"\tlog.Write(abc)") as If;
 		var variableCall =
 			((ifExpression?.Then as Body)?.Expressions[1] as MethodCall)?.Arguments[0] as VariableCall;
 		Assert.That(variableCall?.CurrentValue.ToString(), Is.EqualTo("\"abc\""));
