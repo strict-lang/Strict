@@ -32,12 +32,13 @@ public sealed class Binary : MethodCall
 	}
 
 	// ReSharper disable once TooManyArguments
-	private static Expression BuildBinaryExpression(Body body, ReadOnlySpan<char> input, Range operatorTokenRange, Stack<Range> tokens)
+	private static Expression BuildBinaryExpression(Body body, ReadOnlySpan<char> input,
+		Range operatorTokenRange, Stack<Range> tokens)
 	{
 		var right = GetUnaryOrBuildNestedBinary(body, input, tokens.Pop(), tokens);
 		var left = GetUnaryOrBuildNestedBinary(body, input, tokens.Pop(), tokens);
 		var operatorToken = input[operatorTokenRange].ToString();
-		if (operatorToken == "*" && HasIncompatibleDimensions(left, right))
+		if (operatorToken == BinaryOperator.Multiply && HasIncompatibleDimensions(left, right))
 			throw new ListsHaveDifferentDimensions(body, left + " " + right);
 		var arguments = new[] { right };
 		return new Binary(left, left.ReturnType.GetMethod(operatorToken, arguments), arguments);

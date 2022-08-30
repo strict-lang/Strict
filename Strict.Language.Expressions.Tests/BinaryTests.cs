@@ -1,4 +1,5 @@
 using NUnit.Framework;
+using static Strict.Language.Type;
 
 namespace Strict.Language.Expressions.Tests;
 
@@ -27,6 +28,18 @@ public sealed class BinaryTests : TestExpressions
 	public void MissingRightExpression() =>
 		Assert.That(() => ParseExpression("5 + unknown"),
 			Throws.Exception.InstanceOf<IdentifierNotFound>());
+
+	[Test]
+	public void ArgumentsDoNotMatchBinaryOperatorParameters() =>
+		Assert.That(() => ParseExpression("5 / \"text\""),
+			Throws.Exception.InstanceOf<ArgumentsDoNotMatchMethodParameters>().With.Message.Contains(
+				"Argument: TestPackage.Text \"text\" do not match:\n/(other TestPackage.Number) Number"));
+
+	[Test]
+	public void NoMatchingMethodFound() =>
+		Assert.That(() => ParseExpression("\"text1\" - \"text\""),
+			Throws.Exception.InstanceOf<NoMatchingMethodFound>().With.Message.Contains(
+				"not found for TestPackage.Text, available methods"));
 
 	[Test]
 	public void ParseComparison() =>
