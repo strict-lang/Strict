@@ -153,7 +153,7 @@ public class Type : Context
 				: null;
 			return new Member(this, nameAndType, expression);
 		}
-		catch (ParsingFailed) // TODO: Unit test should be added after Member parsing logic is finished
+		catch (ParsingFailed)
 		{
 			throw;
 		}
@@ -167,7 +167,7 @@ public class Type : Context
 	{
 		if (FindType(memberName) != null && !remainingTextSpan.StartsWith(memberName))
 			remainingTextSpan = string.Concat(memberName, "(",
-				remainingTextSpan, ")").AsSpan(); //TODO: though this is a rare case, any other alternative would be good?
+				remainingTextSpan, ")").AsSpan();
 		return parser.ParseExpression(
 			//TODO: dummy! I think this works fine for all tests now. Should we need to change this?
 			new Body(new Method(this, 0, parser, new[] { "MemberCall" })), remainingTextSpan);

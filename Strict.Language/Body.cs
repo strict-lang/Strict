@@ -29,8 +29,7 @@ public sealed class Body : Expression
 
 	public Method Method { get; }
 	public int Tabs { get; }
-	public Body? Parent { get; }
-	//TODO: make private again
+	private Body? Parent { get; }
 	public readonly List<Body> children = new();
 	public Range LineRange { get; internal set; }
 	public int ParsingLineNumber { get; set; }
@@ -69,17 +68,17 @@ public sealed class Body : Expression
 		Expressions = expressions;
 		if (Expressions.Count == 0)
 			throw new SpanExtensions.EmptyInputIsNotAllowed();
-		var isLastExpressionReturn = Expressions[^1].GetType().Name == Base.Return;
+		var isLastExpressionReturn = Expressions[^1].GetType().Name == "Return";
 		if (!isLastExpressionReturn)
 			return this;
 		var lastExpressionType = Expressions[^1].ReturnType;
-		if (Parent != null)
-			return isLastExpressionReturn &&
-				!ChildHasMatchingMethodReturnType(Parent.ReturnType, lastExpressionType)
-					? throw new ChildBodyReturnTypeMustMatchMethodReturnType(this, lastExpressionType)
-					: this;
 		ParsingLineNumber--;
-		throw new ReturnAsLastExpressionIsNotNeeded(this);
+		return Parent != null
+			? isLastExpressionReturn &&
+			!ChildHasMatchingMethodReturnType(Parent.ReturnType, lastExpressionType)
+				? throw new ChildBodyReturnTypeMustMatchMethodReturnType(this, lastExpressionType)
+				: this
+			: throw new ReturnAsLastExpressionIsNotNeeded(this);
 	}
 
 	public IReadOnlyList<Expression> Expressions { get; private set; } = Array.Empty<Expression>();
@@ -88,9 +87,11 @@ public sealed class Body : Expression
 		childType.Name == Base.None || parentType == childType || childType.Implements.Contains(parentType);
 
 	// ReSharper disable once HollowTypeName
-	public class ChildBodyReturnTypeMustMatchMethodReturnType : ParsingFailed
+	public sealed class ChildBodyReturnTypeMustMatchMethodReturnType : ParsingFailed
 	{
-		public ChildBodyReturnTypeMustMatchMethodReturnType(Body body, Type childReturnType) : base(body, $"Child body return type: {childReturnType} is not matching with Parent return type: {body.Parent?.ReturnType} in method line: {--body.ParsingLineNumber}") { }
+		public ChildBodyReturnTypeMustMatchMethodReturnType(Body body, Type childReturnType) : base(body,
+			$"Child body return type: {childReturnType} is not matching with Parent return type:" +
+			$" {body.Parent?.ReturnType} in method line: {body.ParsingLineNumber}") { }
 	}
 
 	public sealed class ReturnAsLastExpressionIsNotNeeded : ParsingFailed

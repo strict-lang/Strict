@@ -15,12 +15,19 @@ public sealed class ReturnTests : TestExpressions
 
 	[Test]
 	public void ParseReturnNumber() =>
-		ParseAndCheckOutputMatchesInput(new[] { "if true", "\treturn 33", "0" },
-			new Body(method).SetExpressions(new Expression[]
+		Assert.That(new Method(type, 0, this,
+				new[]
+				{
+					"ReturnParse Number",
+					"	if true",
+					"		return 33",
+					"	0"
+				}).GetBodyAndParseIfNeeded(),
+			Is.EqualTo(new Body(method).SetExpressions(new Expression[]
 			{
 				new If(new Boolean(method, true), new Return(new Number(method, 33))),
 				new Number(method, 0)
-			}));
+			})));
 
 	[Test]
 	public void ReturnGetHashCode()

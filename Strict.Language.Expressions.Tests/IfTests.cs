@@ -23,12 +23,28 @@ public sealed class IfTests : TestExpressions
 
 	[Test]
 	public void ReturnTypeOfThenAndElseIsNumberAndCountIsValid() =>
-		Assert.That(ParseExpression("if bla is 5", "\treturn Count(0)", "else", "\treturn 5").ReturnType,
+		Assert.That(new Method(type, 0, this,
+				new[]
+				{
+					"ReturnMethod Number",
+					"	if bla is 5",
+					"		return Count(0)",
+					"	else",
+					"		return 5"
+				}).GetBodyAndParseIfNeeded().ReturnType,
 			Is.EqualTo(type.GetType(Base.Number)));
 
 	[Test]
 	public void ReturnTypeOfThenAndElseIsCountAndCharacterIsValid() =>
-		Assert.That(ParseExpression("if bla is 5", "\treturn Count(0)", "else", "\treturn Character(5)").ReturnType,
+		Assert.That(new Method(type, 0, this,
+				new[]
+				{
+					"ReturnMethod Number",
+					"	if bla is 5",
+					"		return Count(0)",
+					"	else",
+					"		return Character(5)"
+				}).GetBodyAndParseIfNeeded().ReturnType,
 			Is.EqualTo(type.GetType(Base.Number)));
 
 	[Test]
@@ -38,7 +54,7 @@ public sealed class IfTests : TestExpressions
 	[Test]
 	public void ParseJustElseIsNotAllowed() =>
 		Assert.That(() => ParseExpression("else"),
-			Throws.InstanceOf<If.UnexpectedElse>().With.Message.Contains(@"at Run Number in "));
+			Throws.InstanceOf<If.UnexpectedElse>().With.Message.Contains(@"at Run in "));
 
 	[Test]
 	public void ParseIncompleteThen() =>
@@ -134,7 +150,6 @@ public sealed class IfTests : TestExpressions
 	[Test]
 	public void ReturnTypeOfElseMustMatchMethodReturnType()
 	{
-		// @formatter:off
 		var program = new Type(new Package(nameof(IfTests)),
 			new TypeLines(nameof(ReturnTypeOfElseMustMatchMethodReturnType),
 				"has log",
@@ -150,7 +165,6 @@ public sealed class IfTests : TestExpressions
 	[Test]
 	public void ThenReturnsImplementedTypeOfMethodReturnType()
 	{
-		// @formatter:off
 		var program = new Type(new Package(nameof(IfTests)),
 			new TypeLines(nameof(ThenReturnsImplementedTypeOfMethodReturnType),
 				"has log",
@@ -159,14 +173,12 @@ public sealed class IfTests : TestExpressions
 				"		let file = File(\"test.txt\")",
 				"		return Count(5)",
 				"	6")).ParseMembersAndMethods(new MethodExpressionParser());
-		var expression = program.Methods[0].GetBodyAndParseIfNeeded() as Body;
-		Assert.That(expression?.children[0].ReturnType.ToString(), Is.EqualTo("TestPackage.Number"));
+		Assert.That(((Body) program.Methods[0].GetBodyAndParseIfNeeded()).children[0].ReturnType.ToString(), Is.EqualTo("TestPackage.Number"));
 	}
 
 	[Test]
 	public void MultiLineThenAndElseWithMatchingMethodReturnType()
 	{
-		// @formatter:off
 		var program = new Type(new Package(nameof(IfTests)),
 			new TypeLines(nameof(MultiLineThenAndElseWithMatchingMethodReturnType),
 				"has log",
@@ -177,9 +189,9 @@ public sealed class IfTests : TestExpressions
 				"	else",
 				"		return \"Hi\"",
 				"	\"don't matter\"")).ParseMembersAndMethods(new MethodExpressionParser());
-		var expression = program.Methods[0].GetBodyAndParseIfNeeded() as Body;
-		Assert.That(expression?.ReturnType.ToString(), Is.EqualTo("TestPackage.Text"));
-		Assert.That(expression?.children[0].ReturnType.ToString(), Is.EqualTo("TestPackage.Text"));
-		Assert.That(expression?.children[1].ReturnType.ToString(), Is.EqualTo("TestPackage.Text"));
+		var body = (Body) program.Methods[0].GetBodyAndParseIfNeeded();
+		Assert.That(body.ReturnType.ToString(), Is.EqualTo("TestPackage.Text"));
+		Assert.That(body.children[0].ReturnType.ToString(), Is.EqualTo("TestPackage.Text"));
+		Assert.That(body.children[1].ReturnType.ToString(), Is.EqualTo("TestPackage.Text"));
 	}
 }

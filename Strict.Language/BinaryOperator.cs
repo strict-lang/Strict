@@ -97,7 +97,7 @@ public static class BinaryOperator
 	// ReSharper disable once MethodTooLong
 	public static int GetPrecedence(ReadOnlySpan<char> token)
 	{
-		if (token.Compare("not")) // TODO: not operator parsing is not supported yet
+		if (token.Compare("not")) //https://deltaengine.fogbugz.com/f/cases/25695/
 			return 1;
 		if (token.Compare(To))
 			return 7;
