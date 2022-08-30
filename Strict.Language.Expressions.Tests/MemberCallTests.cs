@@ -61,6 +61,13 @@ public sealed class MemberCallTests : TestExpressions
 				InstanceOf<NamedType.AssignmentWithInitializerTypeShouldNotHaveNameWithType>());
 
 	[Test]
+	public void UnknownExpressionInMemberInitializer() =>
+		Assert.That(
+			() => new Type(type.Package,
+					new TypeLines(nameof(UnknownExpressionInMemberInitializer), "has input Text = random")).
+				ParseMembersAndMethods(parser), Throws.InstanceOf<ParsingFailed>()!);
+
+	[Test]
 	public void NameMustBeAWordWithoutAnySpecialCharactersOrNumbers() =>
 		Assert.That(
 			() => new Type(type.Package, new TypeLines(nameof(NameMustBeAWordWithoutAnySpecialCharactersOrNumbers), "has input1$ = Text(5)")).
@@ -119,7 +126,6 @@ public sealed class MemberCallTests : TestExpressions
 	[Test]
 	public void FromConstructorCall()
 	{
-		// @formatter:off
 		var program = new Type(type.Package,
 			new TypeLines(nameof(FromConstructorCall),
 				"has file = File(\"test.txt\")",
@@ -132,7 +138,6 @@ public sealed class MemberCallTests : TestExpressions
 		[Test]
 	public void FromConstructorCallUsingMemberName()
 	{
-		// @formatter:off
 		var program = new Type(type.Package,
 			new TypeLines(nameof(FromConstructorCallUsingMemberName),
 				"has file = \"test.txt\"",
@@ -145,7 +150,6 @@ public sealed class MemberCallTests : TestExpressions
 	[Test]
 	public void MemberCallUsingAnotherMember()
 	{
-		// @formatter:off
 		var program = new Type(type.Package,
 			new TypeLines(nameof(MemberCallUsingAnotherMember),
 				"has file = File(\"test.txt\")",
@@ -154,8 +158,7 @@ public sealed class MemberCallTests : TestExpressions
 				"\tlet a = 5")).ParseMembersAndMethods(parser);
 		Assert.That(program.Members[0].Name, Is.EqualTo("file"));
 		Assert.That(program.Members[1].Name, Is.EqualTo("fileDescription"));
-		var expression = program.Members[1].Value;
-		Assert.That(expression, Is.InstanceOf<If>());
-		Assert.That(expression?.ToString(), Is.EqualTo("file.Length > 1000 ? \"big file\" else \"small file\""));
+		Assert.That(program.Members[1].Value?.ToString(),
+			Is.EqualTo("file.Length > 1000 ? \"big file\" else \"small file\""));
 	}
 }

@@ -128,7 +128,8 @@ public class AssignmentTests : TestExpressions
 		"Run",
 				"\tlet result = MethodToCall")).ParseMembersAndMethods(parser);
 		Assert.That(program.Methods[0].ToString(), Is.EqualTo("MethodToCall Text"));
-		Assert.That(program.Methods[1].GetBodyAndParseIfNeeded().ToString(), Is.EqualTo("let result = MethodToCall"));
+		Assert.That(program.Methods[1].GetBodyAndParseIfNeeded().ToString(),
+			Is.EqualTo("let result = MethodToCall"));
 	}
 
 	[Test]
@@ -145,17 +146,11 @@ public class AssignmentTests : TestExpressions
 	}
 
 	[Test]
-	public void LetAssignmentWithConstructorCall()
-	{
-		// @formatter:off
-		var program = new Type(package,
-			new TypeLines(nameof(LetAssignmentWithConstructorCall),
-				"has log",
-				"Run",
-				"\tlet file = File(\"test.txt\")")).ParseMembersAndMethods(parser);
-		var expression = program.Methods[0].GetBodyAndParseIfNeeded();
-		Assert.That(expression, Is.InstanceOf<Assignment>());
-		var assignment = expression as Assignment;
-		Assert.That(assignment?.Value.ToString(), Is.EqualTo("File(\"test.txt\")"));
-	}
+	public void LetAssignmentWithConstructorCall() =>
+		Assert.That(
+			((Assignment)new Type(package,
+					new TypeLines(nameof(LetAssignmentWithConstructorCall), "has log",
+						"Run",
+						"\tlet file = File(\"test.txt\")")).ParseMembersAndMethods(parser).Methods[0].
+				GetBodyAndParseIfNeeded()).Value.ToString(), Is.EqualTo("File(\"test.txt\")"));
 }
