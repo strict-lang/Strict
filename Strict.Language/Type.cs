@@ -301,12 +301,23 @@ public class Type : Context
 		if (methodName == Method.From && arguments.Count == 1)
 			foreach (var implementType in implements)
 				if (implementType == arguments[0].ReturnType)
-					return new Method(this, 0, null!,
+					return new Method(this, 0, dummyExpressionParser,
 						new[] { "from(" + implementType.Name.MakeFirstLetterLowercase() + ")" });
 		//TODO: also allow creation from any of the has members available, e.g. Stacktrace.strict
 		//from(method)
 		//	Method = method
 		return null;
+	}
+
+	private readonly ExpressionParser dummyExpressionParser = new DummyExpressionParser();
+
+	private sealed class DummyExpressionParser : ExpressionParser
+	{
+		public override Expression ParseLineExpression(Body body, ReadOnlySpan<char> line) => body;
+		public override Expression ParseExpression(Body body, ReadOnlySpan<char> text) => body;
+
+		public override List<Expression> ParseListArguments(Body body, ReadOnlySpan<char> text) =>
+			new();
 	}
 
 	private bool IsCompatible(Type sameOrBaseType) =>
