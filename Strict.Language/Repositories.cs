@@ -164,7 +164,7 @@ public sealed class Repositories
 		}
 		var sortedFiles = SortFilesWithImplements(filesWithImplements);
 #if LOG_DETAILS
-		Console.WriteLine("CreatePackage sortedFiles=" + sortedFiles.ToWordList() + ", types=" +
+		Logger.Info("CreatePackage sortedFiles=" + sortedFiles.ToWordList() + ", types=" +
 			types.ToWordList());
 #endif
 		foreach (var typeLines in sortedFiles)

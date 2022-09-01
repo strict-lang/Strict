@@ -1,7 +1,7 @@
 ﻿#if LOG_DETAILS
 using System;
 
-namespace Strict.Language.Expressions;
+namespace Strict.Language;
 
 public sealed class Logger
 {
