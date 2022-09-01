@@ -70,6 +70,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Examples", "Examples", "{08
 		Examples\ConvertingNumbers.strict = Examples\ConvertingNumbers.strict
 		Examples\FindFirstNonConsecutiveNumber.strict = Examples\FindFirstNonConsecutiveNumber.strict
 		Examples\FindNumberCount.strict = Examples\FindNumberCount.strict
+		Examples\ReduceButGrow.strict = Examples\ReduceButGrow.strict
+		Examples\RemoveExclamation.strict = Examples\RemoveExclamation.strict
 	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Strict.Grammar.Tests", "Strict.Grammar.Tests\Strict.Grammar.Tests.csproj", "{D5C4A512-DDBE-4460-AFE9-25C510405F9D}"

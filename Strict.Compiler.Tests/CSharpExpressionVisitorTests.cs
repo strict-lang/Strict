@@ -89,7 +89,7 @@ public sealed class CSharpExpressionVisitorTests : TestExpressions
 		var multilineMethod = new Method(type, 0, this,
 			new[]
 			{
-				"IsBla5 returns Boolean",
+				"IsBlaFive Boolean",
 				"	if bla is 5",
 				"		return true",
 				"	else",
@@ -98,13 +98,10 @@ public sealed class CSharpExpressionVisitorTests : TestExpressions
 		Assert.That(visitor.VisitBody(multilineMethod.GetBodyAndParseIfNeeded()),
 			Is.EqualTo(new[]
 			{
-				"public bool IsBla5()",
-				"{",
-				"	if (bla == 5)",
-				"		return true;",
-				"	else",
-				"		return false;",
-				"}"
+				"if (bla == 5)",
+				"	return true;",
+				"else",
+				"	return false;"
 			}));
 	}
 }

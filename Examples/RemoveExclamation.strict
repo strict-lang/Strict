@@ -1,0 +1,8 @@
+has input Text
+Remove Text
+	RemoveExclamation("Hello There!").Remove is "Hello There"
+	let result = ""
+	for input
+		if value is not "!"
+			result = result + value
+	result

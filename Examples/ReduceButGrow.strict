@@ -1,0 +1,7 @@
+has numbers List(Number)
+GetMultiplicationOfNumbers Number
+	ReduceButGrow((2, 3, 4, 5)).GetMultiplicationOfNumbers is 120
+	let result = 1
+	for numbers
+		result = result * value
+	result
