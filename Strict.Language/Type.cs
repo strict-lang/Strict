@@ -163,20 +163,20 @@ public class Type : Context
 		}
 	}
 
+	public sealed class MembersMustComeBeforeMethods : ParsingFailed
+	{
+		public MembersMustComeBeforeMethods(Type type, int lineNumber, string line) : base(type,
+			lineNumber, line) { }
+	}
+
 	private Expression GetMemberExpression(ExpressionParser parser, string memberName, ReadOnlySpan<char> remainingTextSpan)
 	{
 		if (FindType(memberName) != null && !remainingTextSpan.StartsWith(memberName))
 			remainingTextSpan = string.Concat(memberName, "(",
 				remainingTextSpan, ")").AsSpan();
 		return parser.ParseExpression(
-			//TODO: dummy! I think this works fine for all tests now. Should we need to change this?
-			new Body(new Method(this, 0, parser, new[] { "MemberCall" })), remainingTextSpan);
-	}
-
-	public sealed class MembersMustComeBeforeMethods : ParsingFailed
-	{
-		public MembersMustComeBeforeMethods(Type type, int lineNumber, string line) : base(type,
-			lineNumber, line) { }
+			//https://deltaengine.fogbugz.com/f/cases/25731/
+			new Body(new Method(this, 0, parser, new[] { "EmptyBody" })), remainingTextSpan);
 	}
 
 	public const string Implement = "implement ";

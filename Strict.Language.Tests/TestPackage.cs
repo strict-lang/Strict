@@ -61,11 +61,17 @@ public class TestPackage : Package
 				"\tRange(2, 18).Length is 16",
 				"\tEnd - Start")).ParseMembersAndMethods(null!);
 		new Type(this,
+			new TypeLines("TypeWithLength",
+				"Length Number")).ParseMembersAndMethods(null!);
+		new Type(this,
 			new TypeLines(Base.Count,
 				"implement Number",
+				"implement TypeWithLength",
 				"Increment",
 				"\tCount(5).Increment is 6",
-				"\tvalue = value + 1")).ParseMembersAndMethods(null!);
+				"\tvalue = value + 1",
+				"Length Number",
+				"\tnumber.Length")).ParseMembersAndMethods(null!);
 		new Type(this,
 			new TypeLines(Base.Character,
 				"implement Number",
@@ -106,6 +112,8 @@ public class TestPackage : Package
 				"Write(text)",
 				"Delete",
 				"Length Number")).ParseMembersAndMethods(null!);
-
+		new Type(this,
+			new TypeLines(Base.Type,
+				"to Text")).ParseMembersAndMethods(null!);
 	}
 }

@@ -107,4 +107,19 @@ public sealed class MethodCallTests : TestExpressions
 	[Test]
 	public void IsMethodPublic() =>
 		Assert.That((ParseExpression("Run") as MethodCall)?.Method.IsPublic, Is.True);
+
+	[Test]
+	public void TypeImplementsGenericTypeWithLength()
+	{
+		var program = new Type(type.Package,
+			new TypeLines(nameof(TypeImplementsGenericTypeWithLength),
+				"has log",
+				"GetLength(type TypeWithLength) Number",
+				"\ttype.Length",
+				"Dummy",
+				"\tlet countOfFive = Count(5)",
+				"\tlet typeLength = GetLength(countOfFive)")).ParseMembersAndMethods(new MethodExpressionParser());
+		Assert.That(program.Methods[1].GetBodyAndParseIfNeeded().ToString(),
+			Is.EqualTo("let countOfFive = Count(5)\r\nlet typeLength = GetLength(countOfFive)"));
+	}
 }
