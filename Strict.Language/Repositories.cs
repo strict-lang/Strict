@@ -148,6 +148,8 @@ public sealed class Repositories
 		var package = parent != null
 			? new Package(parent, packagePath)
 			: new Package(packagePath);
+		if (package.Name == nameof(Strict) && files.Count > 0)
+			throw new NoFilesAllowedInStrictFolderNeedsToBeInASubFolder(files);
 		var types = new List<Type>(files.Count);
 		var filesWithImplements = new Dictionary<string, TypeLines>(StringComparer.Ordinal);
 		foreach (var filePath in files)
@@ -160,7 +162,12 @@ public sealed class Repositories
 			else
 				types.Add(new Type(package, lines));
 		}
-		foreach (var typeLines in SortFilesWithImplements(filesWithImplements))
+		var sortedFiles = SortFilesWithImplements(filesWithImplements);
+#if LOG_DETAILS
+		Console.WriteLine("CreatePackage sortedFiles=" + sortedFiles.ToWordList() + ", types=" +
+			types.ToWordList());
+#endif
+		foreach (var typeLines in sortedFiles)
 			types.Add(new Type(package, typeLines));
 		foreach (var type in types)
 			type.ParseMembersAndMethods(parser);
@@ -168,6 +175,12 @@ public sealed class Repositories
 		if (subDirectories.Length > 0)
 			await Task.WhenAll(ParseAllSubFolders(subDirectories, package));
 		return package;
+	}
+
+	private sealed class NoFilesAllowedInStrictFolderNeedsToBeInASubFolder : Exception
+	{
+		public NoFilesAllowedInStrictFolderNeedsToBeInASubFolder(IEnumerable<string> files) : base(
+			files.ToWordList()) { }
 	}
 
 	/// <summary>

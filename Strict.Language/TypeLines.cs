@@ -48,4 +48,6 @@ public class TypeLines
 		else
 			implements.Add(remainingLine);
 	}
+
+	public override string ToString() => Name + ImplementTypes.ToBrackets();
 }
