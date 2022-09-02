@@ -1,0 +1,10 @@
+has elements List(Generic)
+Reverse List(Generic)
+	ReverseList((1, 2, 3, 4)).Reverse is (4, 3, 2, 1)
+	ReverseList(("A", "B", "C", "D")).Reverse is ("D", "C", "B", "A")
+	ReverseList((true, false)).Reverse is (false, true)
+	let reversedList List(Generic)
+	let index = 0
+	for elements
+		reversedList(elements.Length - 1 - index) = value
+	reversedList

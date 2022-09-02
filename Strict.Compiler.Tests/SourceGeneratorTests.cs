@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Threading.Tasks;
 using NUnit.Framework;
 using Strict.Language;
 using Type = Strict.Language.Type;
@@ -136,4 +137,40 @@ public class Program
 		Assert.That(GenerateNewConsoleAppAndReturnOutput(ProjectFolder, generatedCode),
 			Is.EqualTo("Program.cs" + Environment.NewLine));
 	}
+
+	[Category("Manual")] // Unit Tests in strict are not compiling; after removing them this test works
+	[Test]
+	public async Task ArithmeticFunction() =>
+		await GenerateCSharpByReadingStrictProgramAndCompareWithOutput(nameof(ArithmeticFunction));
+
+	public async Task GenerateCSharpByReadingStrictProgramAndCompareWithOutput(string programName)
+	{
+		var lines = await File.ReadAllLinesAsync(Path.Combine(ExampleFolder, $"{programName}.strict"));
+		var program = new Type(package, new TypeLines(programName, lines)).ParseMembersAndMethods(parser);
+		var generatedCode = generator.Generate(program).ToString()!;
+		Assert.That(generatedCode,
+			Is.EqualTo(string.Join(Environment.NewLine, await File.ReadAllLinesAsync(Path.Combine(ExampleFolder, $"Output/{programName}.cs")))), generatedCode);
+	}
+
+	private static string ExampleFolder => Path.Combine(Repositories.DevelopmentFolder, "Examples");
+
+	[Ignore("this test will work once for loop is working")]
+	[Test]
+	public async Task ReduceButGrow() =>
+		await GenerateCSharpByReadingStrictProgramAndCompareWithOutput(nameof(ReduceButGrow));
+
+	[Ignore("for is not working yet - Tests in strict file are not compiling; Also variable are immutable in strict which causes this program to fail")]
+	[Test]
+	public async Task Fibonacci() =>
+		await GenerateCSharpByReadingStrictProgramAndCompareWithOutput(nameof(Fibonacci));
+
+	[Ignore("this test will work once for loop is working")]
+	[Test]
+	public async Task ReverseList() =>
+		await GenerateCSharpByReadingStrictProgramAndCompareWithOutput(nameof(ReverseList));
+
+	[Ignore("this test will work once for loop and not operator is working")]
+	[Test]
+	public async Task RemoveExclamation() =>
+		await GenerateCSharpByReadingStrictProgramAndCompareWithOutput(nameof(RemoveExclamation));
 }

@@ -1,6 +1,8 @@
 has input Text
 Remove Text
 	RemoveExclamation("Hello There!").Remove is "Hello There"
+	RemoveExclamation("Hi!!!").Remove is "Hi"
+	RemoveExclamation("Wow! Awesome! There!").Remove is "Wow Awesome"
 	let result = ""
 	for input
 		if value is not "!"

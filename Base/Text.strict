@@ -11,3 +11,7 @@ digits(number) Numbers
 	+("more") is "more"
 	"Hey" + " " + "you" is "Hey you"
 	Characters + other.Characters
+is(other) Boolean
+	"Hey" is "Hey" is true
+	"Hi" is "Hey" is false
+	value is other
