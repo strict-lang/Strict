@@ -8,3 +8,8 @@ Length
 	Range(0, 5).Length is 5
 	Range(2, 18).Length is 16
 	End - Start
+Sum
+	Sum(Range(2, 5)) is 2 + 3 + 4
+	Sum(Range(42 45)) is 42 + 43 + 44
+	for value
+		+ value

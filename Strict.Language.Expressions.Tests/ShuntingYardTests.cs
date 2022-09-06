@@ -1,5 +1,4 @@
-﻿using System;
-using System.Linq;
+﻿using System.Linq;
 using NUnit.Framework;
 
 namespace Strict.Language.Expressions.Tests;
@@ -34,22 +33,24 @@ public sealed class ShuntingYardTests
 	[Test]
 	public void ParseIfWithIsNot()
 	{
-		var postfix = new ShuntingYard("if bla is not 25");
-		Assert.That(postfix.Output.Pop(), Is.EqualTo(new Range(7, 13)));
-		Assert.That(postfix.Output.Pop(), Is.EqualTo(new Range(14, 16)));
-		Assert.That(postfix.Output.Pop(), Is.EqualTo(new Range(3, 6)));
-		Assert.That(postfix.Output.Pop(), Is.EqualTo(new Range(0, 2)));
+		var input = "if bla is not 5";
+		var postfix = new ShuntingYard(input);
+		Assert.That(input[postfix.Output.Pop()], Is.EqualTo(BinaryOperator.IsNot));
+		Assert.That(input[postfix.Output.Pop()], Is.EqualTo("5"));
+		Assert.That(input[postfix.Output.Pop()], Is.EqualTo("bla"));
+		Assert.That(input[postfix.Output.Pop()], Is.EqualTo("if"));
 	}
 
 	[Test]
 	public void ParseIsNotWithMultipleProceedings()
 	{
-		var postfix = new ShuntingYard("if bla is not (bla - 25)");
-		Assert.That(postfix.Output.Pop(), Is.EqualTo(new Range(7, 13)));
-		Assert.That(postfix.Output.Pop(), Is.EqualTo(new Range(19, 20)));
-		Assert.That(postfix.Output.Pop(), Is.EqualTo(new Range(21, 23)));
-		Assert.That(postfix.Output.Pop(), Is.EqualTo(new Range(15, 18)));
-		Assert.That(postfix.Output.Pop(), Is.EqualTo(new Range(3, 6)));
-		Assert.That(postfix.Output.Pop(), Is.EqualTo(new Range(0, 2)));
+		var input = "if bla is not (bla - 25)";
+		var postfix = new ShuntingYard(input);
+		Assert.That(input[postfix.Output.Pop()], Is.EqualTo(BinaryOperator.IsNot));
+		Assert.That(input[postfix.Output.Pop()], Is.EqualTo(BinaryOperator.Minus));
+		Assert.That(input[postfix.Output.Pop()], Is.EqualTo("25"));
+		Assert.That(input[postfix.Output.Pop()], Is.EqualTo("bla"));
+		Assert.That(input[postfix.Output.Pop()], Is.EqualTo("bla"));
+		Assert.That(input[postfix.Output.Pop()], Is.EqualTo("if"));
 	}
 }
