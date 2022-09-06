@@ -19,6 +19,7 @@ public static class BinaryOperator
 	public const string SmallerOrEqual = "<=";
 	public const string GreaterOrEqual = ">=";
 	public const string Is = "is";
+	public const string IsNot = "is not";
 	public const string To = "to";
 	public const string And = "and";
 	public const string Or = "or";
@@ -48,7 +49,7 @@ public static class BinaryOperator
 
 	private static readonly string[] MultiCharacterOperators =
 	{
-		SmallerOrEqual, GreaterOrEqual, Is, And, Or, Xor, To
+		SmallerOrEqual, GreaterOrEqual, Is, IsNot, And, Or, Xor, To
 	};
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -109,9 +110,11 @@ public static class BinaryOperator
 			return 10;
 		if (token.Compare(Or))
 			return 11;
-		// ReSharper disable once ConvertIfStatementToReturnStatement
 		if (token.Compare(Is))
 			return 12;
+		// ReSharper disable once ConvertIfStatementToReturnStatement
+		if (token.Compare(IsNot))
+			return 13;
 		return GetPrecedence(token[0]);
 	}
 }

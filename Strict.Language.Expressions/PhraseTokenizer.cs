@@ -87,6 +87,12 @@ public sealed class PhraseTokenizer
 					processToken(tokenStart..(index - 1));
 					processToken((index - 1)..index);
 				}
+				//Need to find a better way to do this (used for recognising "is not")
+				else if (input[index - 1] == 's' && input[index + 1] == 'n')
+				{
+					processToken(tokenStart..(index + 4));
+					index += 4;
+				}
 				else
 					processToken(tokenStart..index);
 			}

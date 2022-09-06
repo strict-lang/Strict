@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using NUnit.Framework;
 
 namespace Strict.Language.Expressions.Tests;
@@ -28,5 +29,27 @@ public sealed class ShuntingYardTests
 	{
 		var tokens = new ShuntingYard(input).Output.Reverse().Select(range => input[range]);
 		Assert.That(string.Join(", ", tokens), Is.EqualTo(expected));
+	}
+
+	[Test]
+	public void ParseIfWithIsNot()
+	{
+		var postfix = new ShuntingYard("if bla is not 25");
+		Assert.That(postfix.Output.Pop(), Is.EqualTo(new Range(7, 13)));
+		Assert.That(postfix.Output.Pop(), Is.EqualTo(new Range(14, 16)));
+		Assert.That(postfix.Output.Pop(), Is.EqualTo(new Range(3, 6)));
+		Assert.That(postfix.Output.Pop(), Is.EqualTo(new Range(0, 2)));
+	}
+
+	[Test]
+	public void ParseIsNotWithMultipleProceedings()
+	{
+		var postfix = new ShuntingYard("if bla is not (bla - 25)");
+		Assert.That(postfix.Output.Pop(), Is.EqualTo(new Range(7, 13)));
+		Assert.That(postfix.Output.Pop(), Is.EqualTo(new Range(19, 20)));
+		Assert.That(postfix.Output.Pop(), Is.EqualTo(new Range(21, 23)));
+		Assert.That(postfix.Output.Pop(), Is.EqualTo(new Range(15, 18)));
+		Assert.That(postfix.Output.Pop(), Is.EqualTo(new Range(3, 6)));
+		Assert.That(postfix.Output.Pop(), Is.EqualTo(new Range(0, 2)));
 	}
 }
