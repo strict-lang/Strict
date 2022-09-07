@@ -51,18 +51,12 @@ public sealed class BodyTests : TestExpressions
 
 	[Test]
 	public void CannotUseVariableFromLowerScope() =>
-		Assert.That(() => ParseExpression(
-				"if bla is 5",
-				"\tlet abc = \"abc\"",
-				"log.Write(abc)"),
+		Assert.That(() => ParseExpression("if bla is 5", "\tlet abc = \"abc\"", "log.Write(abc)"),
 			Throws.InstanceOf<IdentifierNotFound>().With.Message.StartWith("abc"));
 
 	[Test]
 	public void IfHasDifferentScopeThanMethod() =>
-		Assert.That(ParseExpression(
-				"if bla is 5",
-				"\tlet abc = \"abc\"",
-				"\tlog.Write(abc)"),
+		Assert.That(ParseExpression("if bla is 5", "\tlet abc = \"abc\"", "\tlog.Write(abc)"),
 			Is.EqualTo(new If(GetCondition(), CreateThenBlock())));
 
 	private Expression CreateThenBlock()
@@ -107,7 +101,7 @@ public sealed class BodyTests : TestExpressions
 		var ifExpression = ParseExpression(
 			"if bla is 5",
 			"\tlet abc = \"abc\"",
-			"\tlog.Write(\"abc\")") as If;
+			"\tlog.Write(abc)") as If;
 		var variableCall =
 			((ifExpression?.Then as Body)?.Expressions[1] as MethodCall)?.Arguments[0] as VariableCall;
 		Assert.That(variableCall?.CurrentValue.ToString(), Is.EqualTo("\"abc\""));
