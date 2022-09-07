@@ -54,13 +54,13 @@ public sealed class ForTests : TestExpressions
 					"\tfor Range(0, n)", "\t\tresult.Increment", "\tresult")).
 			ParseMembersAndMethods(new MethodExpressionParser());
 		var parsedExpression = (Body)programType.Methods[0].GetBodyAndParseIfNeeded();
-		var method = ((For)parsedExpression.Expressions[1]).Body as MethodCall;
+		var forMethodCall = ((For)parsedExpression.Expressions[1]).Body as MethodCall;
 		Assert.That(parsedExpression.ReturnType.Name, Is.EqualTo(Base.Number));
 		Assert.That(parsedExpression.Expressions[1], Is.TypeOf(typeof(For)));
 		Assert.That(((For)parsedExpression.Expressions[1]).Value.ToString(),
 			Is.EqualTo("Range(0, n)"));
-		Assert.That(((VariableCall?)method?.Instance)?.Name, Is.EqualTo("result"));
-		Assert.That(method?.Method.Name, Is.EqualTo("Increment"));
+		Assert.That(((VariableCall?)forMethodCall?.Instance)?.Name, Is.EqualTo("result"));
+		Assert.That(forMethodCall?.Method.Name, Is.EqualTo("Increment"));
 	}
 
 	[Test]
