@@ -107,7 +107,7 @@ public sealed class BodyTests : TestExpressions
 		var ifExpression = ParseExpression(
 			"if bla is 5",
 			"\tlet abc = \"abc\"",
-			"\tlog.Write(abc)") as If;
+			"\tlog.Write(\"abc\")") as If;
 		var variableCall =
 			((ifExpression?.Then as Body)?.Expressions[1] as MethodCall)?.Arguments[0] as VariableCall;
 		Assert.That(variableCall?.CurrentValue.ToString(), Is.EqualTo("\"abc\""));

@@ -5,20 +5,20 @@ using System.Runtime.CompilerServices;
 namespace Strict.Language.Expressions;
 
 /// <summary>
-/// Parses method bodies by splitting into main lines (lines starting without tabs)
-/// and getting the expression recursively via parser combinator logic in each expression.
+///   Parses method bodies by splitting into main lines (lines starting without tabs)
+///   and getting the expression recursively via parser combinator logic in each expression.
 /// </summary>
 public class MethodExpressionParser : ExpressionParser
 {
 	/// <summary>
-	/// Slightly slower version that checks high level expressions that can only occur at the line
-	/// level like let, if, for (those will increase methodLineNumber as well) and return.
-	/// Every other expression can be nested and can appear anywhere.
+	///   Slightly slower version that checks high level expressions that can only occur at the line
+	///   level like let, if, for (those will increase methodLineNumber as well) and return.
+	///   Every other expression can be nested and can appear anywhere.
 	/// </summary>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public override Expression ParseLineExpression(Body body, ReadOnlySpan<char> line) =>
-		Assignment.TryParse(body, line) ?? If.TryParse(body, line) ?? For.TryParse(body, line) ??
-		Return.TryParse(body, line) ?? ParseExpression(body, line);
+		Assignment.TryParse(body, line) ?? If.TryParse(body, line) ??
+		For.TryParse(body, line.Trim()) ?? Return.TryParse(body, line) ?? ParseExpression(body, line);
 
 	// ReSharper disable once CyclomaticComplexity
 	// ReSharper disable once MethodTooLong
@@ -41,8 +41,7 @@ public class MethodExpressionParser : ExpressionParser
 			return new Text(body.Method, input.Slice(1, input.Length - 2).ToString());
 		// If this is just a simple list, no need to invoke ShuntingYard yet, grab each list element
 		if (input[0] == '(' && input[^1] == ')' && input.Contains(',') && input.Count('(') == 1)
-			return new List(body,
-				body.Method.ParseListArguments(body, input[1..^1]));
+			return new List(body, body.Method.ParseListArguments(body, input[1..^1]));
 		// Conditionals are only supported here and can't be nested
 		if (If.CanTryParseConditional(body, input))
 			return If.ParseConditional(body, input);
@@ -55,7 +54,8 @@ public class MethodExpressionParser : ExpressionParser
 		var binary = Binary.Parse(body, input, postfix.Output);
 		if (postfix.Output.Count == 0)
 			return binary;
-		return ParseInContext(body.Method.Type, body, input[postfix.Output.Peek()], new[] { binary }) ??
+		return ParseInContext(body.Method.Type, body, input[postfix.Output.Peek()],
+				new[] { binary }) ??
 			throw new UnknownExpression(body, input[postfix.Output.Peek()].ToString());
 	}
 
@@ -73,12 +73,15 @@ public class MethodExpressionParser : ExpressionParser
 		var argumentsRange = postfix.Output.Pop();
 		var methodRange = postfix.Output.Pop();
 #if LOG_DETAILS
-		Logger.Info(nameof(ParseMethodCallWithArguments) + ", method=" + input[methodRange].ToString() +
-			" arguments=" + input[argumentsRange].ToString());
+		Logger.Info(nameof(ParseMethodCallWithArguments) + ", method=" +
+			input[methodRange].ToString() + " arguments=" + input[argumentsRange].ToString());
 #endif
 		if (input[argumentsRange.Start.Value] == '(')
-			return ParseInContext(body.Method.Type, body, input[methodRange], // MethodCall always produces single token from ShutingYard so this call never happens atm, I think using unary operator could be a way to hit this line
-				ParseListArguments(body, input[(argumentsRange.Start.Value + 1)..(argumentsRange.End.Value - 1)])) ?? throw new MemberOrMethodNotFound(body, body.Method.Type, input[methodRange].ToString());
+			return ParseInContext(body.Method.Type, body,
+					input[methodRange], // MethodCall always produces single token from ShutingYard so this call never happens atm, I think using unary operator could be a way to hit this line
+					ParseListArguments(body,
+						input[(argumentsRange.Start.Value + 1)..(argumentsRange.End.Value - 1)])) ??
+				throw new MemberOrMethodNotFound(body, body.Method.Type, input[methodRange].ToString());
 		if (input[argumentsRange.Start.Value] == '.')
 			return ParseInContext(body.Method.Type, body, input, Array.Empty<Expression>()) ??
 				throw new InvalidOperatorHere(body, input[methodRange].ToString());
@@ -87,45 +90,25 @@ public class MethodExpressionParser : ExpressionParser
 			: throw new InvalidOperatorHere(body, input[methodRange].ToString());
 	}
 
-	public sealed class InvalidOperatorHere : ParsingFailed
-	{
-		public InvalidOperatorHere(Body body, string message) : base(body, message) { }
-	}
-
-	public sealed class IdentifierNotFound : ParsingFailed
-	{
-		public IdentifierNotFound(Body body, string name) : base(body, name) { }
-	}
-
-	public sealed class UnknownExpression : ParsingFailed
-	{
-		public UnknownExpression(Body body, string error = "") : base(body, error) { }
-	}
-
-	public class CannotParseEmptyInput : ParsingFailed
-	{
-		public CannotParseEmptyInput(Body body) : base(body) { }
-	}
-
 	/// <summary>
-	/// By far the most common usecase, we call something from another instance, use some binary
-	/// operator (like is, to, +, etc.) or execute some method. For more arguments more complex
-	/// parsing has to be done and we have to invoke ShuntingYard for the argument list.
+	///   By far the most common usecase, we call something from another instance, use some binary
+	///   operator (like is, to, +, etc.) or execute some method. For more arguments more complex
+	///   parsing has to be done and we have to invoke ShuntingYard for the argument list.
 	/// </summary>
-	public Expression? TryParseMemberOrZeroOrOneArgumentMethodCall(Body body, ReadOnlySpan<char> input)
+	public Expression? TryParseMemberOrZeroOrOneArgumentMethodCall(Body body,
+		ReadOnlySpan<char> input)
 	{
 		var argumentsStart = input.IndexOf('(');
 		if (argumentsStart > 0 && input[^1] == ')')
-			return ParseInContext(body.Method.Type, body,
-				input[..argumentsStart],
-				ParseListArguments(body,
-					input[(argumentsStart + 1)..^1]));
+			return ParseInContext(body.Method.Type, body, input[..argumentsStart],
+				ParseListArguments(body, input[(argumentsStart + 1)..^1]));
 		return ParseInContext(body.Method.Type, body, input, Array.Empty<Expression>());
 	}
 
 	// ReSharper disable once TooManyArguments
 	// ReSharper disable once MethodTooLong
-	private Expression? ParseInContext(Context context, Body body, ReadOnlySpan<char> input, IReadOnlyList<Expression> arguments)
+	private Expression? ParseInContext(Context context, Body body, ReadOnlySpan<char> input,
+		IReadOnlyList<Expression> arguments)
 	{
 #if LOG_DETAILS
 		Logger.Info(nameof(ParseInContext) + " " + context + ", " + input.ToString());
@@ -170,16 +153,11 @@ public class MethodExpressionParser : ExpressionParser
 		return TryMemberOrMethodCall(context, null, body, input, arguments);
 	}
 
-	public sealed class NumbersCanNotBeInNestedCalls : ParsingFailed
-	{
-		public NumbersCanNotBeInNestedCalls(Body body, string text) : base(body, text) { }
-	}
-
 	// ReSharper disable once TooManyArguments
 	// ReSharper disable once ExcessiveIndentation
 	// ReSharper disable once MethodTooLong
-	private static Expression? TryMemberOrMethodCall(Context context, Expression? instance, Body body, ReadOnlySpan<char> input,
-		IReadOnlyList<Expression> arguments)
+	private static Expression? TryMemberOrMethodCall(Context context, Expression? instance,
+		Body body, ReadOnlySpan<char> input, IReadOnlyList<Expression> arguments)
 	{
 		if (!input.IsWord() && !input.Contains(' ') && !input.Contains('('))
 			return null;
@@ -224,7 +202,8 @@ public class MethodExpressionParser : ExpressionParser
 		return null;
 	}
 
-	private static Expression? TryFindMemberCall(Type type, Expression? instance, ReadOnlySpan<char> partToParse)
+	private static Expression? TryFindMemberCall(Type type, Expression? instance,
+		ReadOnlySpan<char> partToParse)
 	{
 		foreach (var member in type.Members)
 			if (partToParse.Equals(member.Name, StringComparison.Ordinal))
@@ -238,16 +217,10 @@ public class MethodExpressionParser : ExpressionParser
 		return null;
 	}
 
-	public sealed class MemberOrMethodNotFound : ParsingFailed
-	{
-		public MemberOrMethodNotFound(Body body, Type memberType, string memberName) : base(body,
-			memberName, memberType) { }
-	}
-
 	/// <summary>
-	/// Figures out if there are any bracket groups or if there is binary expression action going on.
-	/// Could also contain strings, we don't know. Most of the time it will just be a bunch of values.
-	/// <see cref="ShuntingYard"/> will only parse till the next comma, has to call this till the end.
+	///   Figures out if there are any bracket groups or if there is binary expression action going on.
+	///   Could also contain strings, we don't know. Most of the time it will just be a bunch of values.
+	///   <see cref="ShuntingYard" /> will only parse till the next comma, has to call this till the end.
 	/// </summary>
 	// ReSharper disable once CyclomaticComplexity
 	// ReSharper disable once ExcessiveIndentation
@@ -266,7 +239,9 @@ public class MethodExpressionParser : ExpressionParser
 				expressions.Push(ParseTextWithSpacesOrListWithMultipleOrNestedElements(body,
 					innerSpan[postfix.Output.Pop()]));
 			else if (postfix.Output.Count == 2)
-				expressions.Push(ParseMethodCallWithArguments(body, innerSpan, postfix)); // this line could be tested after unary operator (e.g. not) is working
+				expressions.Push(
+					ParseMethodCallWithArguments(body, innerSpan,
+						postfix)); // this line could be tested after unary operator (e.g. not) is working
 			else
 				do
 				{
@@ -281,7 +256,8 @@ public class MethodExpressionParser : ExpressionParser
 							span.IsMultiCharacterOperator())
 							expressions.Push(Binary.Parse(body, innerSpan, postfix.Output));
 						else
-							expressions.Push(body.Method.ParseExpression(body, innerSpan[postfix.Output.Pop()]));
+							expressions.Push(
+								body.Method.ParseExpression(body, innerSpan[postfix.Output.Pop()]));
 					}
 					catch (UnknownExpression ex)
 					{
@@ -297,16 +273,6 @@ public class MethodExpressionParser : ExpressionParser
 		if (innerSpan.Length == 0)
 			throw new List.EmptyListNotAllowed(body);
 		return ParseAllElementsFast(body, innerSpan, new RangeEnumerator(innerSpan, ',', 0));
-	}
-
-	public sealed class UnknownExpressionForArgument : ParsingFailed
-	{
-		public UnknownExpressionForArgument(Body body, string message) : base(body, message) { }
-	}
-
-	public class ListTokensAreNotSeparatedByComma : ParsingFailed
-	{
-		public ListTokensAreNotSeparatedByComma(Body body) : base(body) { }
 	}
 
 	private static List<Expression> ParseAllElementsFast(Body body, ReadOnlySpan<char> input,
@@ -334,8 +300,50 @@ public class MethodExpressionParser : ExpressionParser
 		Text.TryParse(body, input) ?? List.TryParseWithMultipleOrNestedElements(body, input) ??
 		throw new InvalidSingleTokenExpression(body, input.ToString());
 
+	public sealed class InvalidOperatorHere : ParsingFailed
+	{
+		public InvalidOperatorHere(Body body, string message) : base(body, message) { }
+	}
+
+	public sealed class IdentifierNotFound : ParsingFailed
+	{
+		public IdentifierNotFound(Body body, string name) : base(body, name) { }
+	}
+
+	public sealed class UnknownExpression : ParsingFailed
+	{
+		public UnknownExpression(Body body, string error = "") : base(body, error) { }
+	}
+
+	public class CannotParseEmptyInput : ParsingFailed
+	{
+		public CannotParseEmptyInput(Body body) : base(body) { }
+	}
+
+	public sealed class NumbersCanNotBeInNestedCalls : ParsingFailed
+	{
+		public NumbersCanNotBeInNestedCalls(Body body, string text) : base(body, text) { }
+	}
+
+	public sealed class MemberOrMethodNotFound : ParsingFailed
+	{
+		public MemberOrMethodNotFound(Body body, Type memberType, string memberName) : base(body,
+			memberName, memberType) { }
+	}
+
+	public sealed class UnknownExpressionForArgument : ParsingFailed
+	{
+		public UnknownExpressionForArgument(Body body, string message) : base(body, message) { }
+	}
+
+	public class ListTokensAreNotSeparatedByComma : ParsingFailed
+	{
+		public ListTokensAreNotSeparatedByComma(Body body) : base(body) { }
+	}
+
 	private sealed class InvalidSingleTokenExpression : ParsingFailed
 	{
-		public InvalidSingleTokenExpression(Body body, string message) : base(body, message) { } // tried various combinations to test this case but never happens
+		public InvalidSingleTokenExpression(Body body, string message) :
+			base(body, message) { } // tried various combinations to test this case but never happens
 	}
 }
