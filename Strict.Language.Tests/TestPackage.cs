@@ -1,7 +1,7 @@
 namespace Strict.Language.Tests;
 
 /// <summary>
-/// Helper context to provide a bunch of helper types to make tests work.
+///   Helper context to provide a bunch of helper types to make tests work.
 /// </summary>
 public class TestPackage : Package
 {
@@ -24,6 +24,8 @@ public class TestPackage : Package
 		anyType.ParseMembersAndMethods(null!);
 		var numberType = new Type(this,
 			new TypeLines(Base.Number,
+				"is not(other) Boolean",
+				"\tvalue != other",
 				"+(other) Number",
 				"\tvalue + other",
 				"*(other) Number",

@@ -15,41 +15,37 @@ public sealed class IfTests : TestExpressions
 		Assert.That(() => ParseExpression("if 5", "\treturn 0"),
 			Throws.InstanceOf<If.InvalidCondition>());
 
-	[Ignore("TODO: Delete; This won't happen as child body return types are first validated with method return type")]
+	[Ignore(
+		"TODO: Delete; This won't happen as child body return types are first validated with method return type")]
 	[Test]
 	public void ReturnTypeOfThenAndElseMustHaveMatchingType() =>
-		Assert.That(() => ParseExpression("if 5 is 6", "\treturn 8", "else", "\treturn \"hello\"").ReturnType,
+		Assert.That(
+			() => ParseExpression("if 5 is 6", "\treturn 8", "else", "\treturn \"hello\"").ReturnType,
 			Throws.InstanceOf<If.ReturnTypeOfThenAndElseMustHaveMatchingType>());
 
 	[Test]
 	public void ReturnTypeOfThenAndElseIsNumberAndCountIsValid() =>
-		Assert.That(new Method(type, 0, this,
+		Assert.That(
+			new Method(type, 0, this,
 				new[]
 				{
-					"ReturnMethod Number",
-					"	if bla is 5",
-					"		return Count(0)",
-					"	else",
-					"		return 5"
-				}).GetBodyAndParseIfNeeded().ReturnType,
-			Is.EqualTo(type.GetType(Base.Number)));
+					"ReturnMethod Number", "	if bla is 5", "		return Count(0)", "	else", "		return 5"
+				}).GetBodyAndParseIfNeeded().ReturnType, Is.EqualTo(type.GetType(Base.Number)));
 
 	[Test]
 	public void ReturnTypeOfThenAndElseIsCountAndCharacterIsValid() =>
-		Assert.That(new Method(type, 0, this,
+		Assert.That(
+			new Method(type, 0, this,
 				new[]
 				{
-					"ReturnMethod Number",
-					"	if bla is 5",
-					"		return Count(0)",
-					"	else",
+					"ReturnMethod Number", "	if bla is 5", "		return Count(0)", "	else",
 					"		return Character(5)"
-				}).GetBodyAndParseIfNeeded().ReturnType,
-			Is.EqualTo(type.GetType(Base.Number)));
+				}).GetBodyAndParseIfNeeded().ReturnType, Is.EqualTo(type.GetType(Base.Number)));
 
 	[Test]
 	public void ParseInvalidSpaceAfterElseIsNotAllowed() =>
-		Assert.That(() => ParseExpression("else "), Throws.InstanceOf<Type.ExtraWhitespacesFoundAtEndOfLine>());
+		Assert.That(() => ParseExpression("else "),
+			Throws.InstanceOf<Type.ExtraWhitespacesFoundAtEndOfLine>());
 
 	[Test]
 	public void ParseJustElseIsNotAllowed() =>
@@ -68,6 +64,17 @@ public sealed class IfTests : TestExpressions
 	public void ParseIf() =>
 		Assert.That(ParseExpression("if bla is 5", "\tlog.Write(\"Hey\")"),
 			Is.EqualTo(new If(GetCondition(), GetThen())));
+
+	[Test]
+	public void ParseIfNot() =>
+		Assert.That(ParseExpression("if bla is not 5", "\tlog.Write(\"Hey\")"),
+			Is.EqualTo(new If(GetCondition(true), GetThen())));
+
+	[Test]
+	public void InvalidIsNotUsageOnDifferentType() =>
+		Assert.That(() => ParseExpression("if bla is not \"blu\"", "\tlog.Write(\"Hey\")"),
+			Throws.InstanceOf<Type.ArgumentsDoNotMatchMethodParameters>().With.Message.
+				Contains("blu"));
 
 	[Test]
 	public void ParseMissingElseExpression() =>
@@ -112,6 +119,7 @@ public sealed class IfTests : TestExpressions
 	[TestCase("let result = false ? \"Yes\" else \"No\"")]
 	[TestCase("let result = 5 is 5 ? (1, 2) else (3, 4)")]
 	[TestCase("let result = 5 + (false ? 1 else 2)")]
+	[TestCase("let result = 5 is not 4 ? (1, 2) else (3, 4)")]
 	public void ValidConditionalExpressions(string code)
 	{
 		var expression = ParseExpression(code);

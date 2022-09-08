@@ -57,6 +57,9 @@ public abstract class TestExpressions : MethodExpressionParser
 		return new Binary(left, left.ReturnType.FindMethod(operatorName, arguments)!, arguments);
 	}
 
-	protected Binary GetCondition() =>
-		CreateBinary(new MemberCall(null, bla), BinaryOperator.Is, number);
+	protected Binary GetCondition(bool isNot = false) =>
+		CreateBinary(new MemberCall(null, bla), isNot
+			? BinaryOperator.IsNot
+			: BinaryOperator.Is, number);
+
 }

@@ -14,7 +14,7 @@ public sealed class Not : MethodCall
 
 	public override string ToString() => UnaryOperator.Not + " " + Instance!;
 
-	public static Expression Parse(Body body, ReadOnlySpan<char> input, ShuntingYard postfixTokens)
+	public static Expression TryParse(Body body, ReadOnlySpan<char> input, ShuntingYard postfixTokens)
 	{
 		var right = body.Method.ParseExpression(body, input[postfixTokens.Output.Pop()]);
 		var operatorText = input[postfixTokens.Output.Pop()];

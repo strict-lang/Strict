@@ -94,7 +94,7 @@ public static class SpanExtensions
 	public static bool IsWord(this ReadOnlySpan<char> input)
 	{
 		foreach (var c in input)
-			if (c is (< 'A' or > 'Z') and (< 'a' or > 'z'))
+			if (c is (< 'A' or > 'Z') and (< 'a' or > 'z') and not ' ')
 				return false;
 		return true;
 	}

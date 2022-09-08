@@ -21,7 +21,11 @@ xor(other) Number
 is(other) Boolean
 	1 is 1
 	2 is not 3
-	value is other
+	value is
+is not(other) Boolean
+	1 is not 3
+	2 is not 3
+	value is not other
 +(other) Number
 	3 + 4 is 7
 	value + other

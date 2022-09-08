@@ -79,6 +79,11 @@ public class AssignmentTests : TestExpressions
 	}
 
 	[Test]
+	public void InvalidNotAssignment() =>
+		Assert.That(() => ParseExpression("let inverted = not 5"),
+			Throws.InstanceOf<Type.NoMatchingMethodFound>());
+
+	[Test]
 	public void OnlyNotIsValidUnaryOperator() =>
 		Assert.That(() => ParseExpression("let inverted = + true"),
 			Throws.Exception.InstanceOf<InvalidOperatorHere>());
