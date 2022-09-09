@@ -13,12 +13,14 @@ public static class BinaryOperator
 	public const string Multiply = "*";
 	public const string Divide = "/";
 	public const string Power = "^";
+	public const string Equal = "=";
 	public const string Modulate = "%";
 	public const string Smaller = "<";
 	public const string Greater = ">";
 	public const string SmallerOrEqual = "<=";
 	public const string GreaterOrEqual = ">=";
 	public const string Is = "is";
+	public const string In = "in";
 	public const string IsNot = "is not";
 	public const string To = "to";
 	public const string And = "and";
@@ -35,7 +37,7 @@ public static class BinaryOperator
 	public static bool IsSingleCharacterOperator(this char tokenFirstCharacter) =>
 		AnySingleCharacterOperator.Contains(tokenFirstCharacter);
 
-	private const string AnySingleCharacterOperator = Plus + Minus + Multiply + Divide + Modulate + Smaller + Greater + Power;
+	private const string AnySingleCharacterOperator = Plus + Minus + Multiply + Divide + Modulate + Smaller + Greater + Power + Equal;
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static bool IsMultiCharacterOperator(this string name)
@@ -49,7 +51,7 @@ public static class BinaryOperator
 
 	private static readonly string[] MultiCharacterOperators =
 	{
-		SmallerOrEqual, GreaterOrEqual, Is, IsNot, And, Or, Xor, To
+		SmallerOrEqual, GreaterOrEqual, Is, IsNot, In, And, Or, Xor, To
 	};
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -66,7 +68,7 @@ public static class BinaryOperator
 	private static readonly string[] All =
 	{
 		Plus, Minus, Multiply, Divide, Modulate, Smaller, Greater, SmallerOrEqual, GreaterOrEqual,
-		Is, And, Or, Xor, To
+		Is, IsNot, In, And, Or, Xor, To, Equal
 	};
 	private static readonly string[] Arithmetic = { Plus, Minus, Multiply, Divide, Modulate };
 	private static readonly string[] Comparison =
@@ -84,6 +86,7 @@ public static class BinaryOperator
 		tokenFirstCharacter switch
 		{
 			',' => 0, // ncrunch: no coverage always has to flush everything out; ',' cannot be reached because this method is called only for operators
+			'=' => 1, // ncrunch: no coverage always has to flush everything out; ',' cannot be reached because this method is called only for operators
 			'+' => 2, // unary '-' and 'not' operators have precendence 1
 			'-' => 2,
 			'*' => 3,
@@ -112,9 +115,11 @@ public static class BinaryOperator
 			return 11;
 		if (token.Compare(Is))
 			return 12;
+		if (token.Compare(In))
+			return 13;
 		// ReSharper disable once ConvertIfStatementToReturnStatement
 		if (token.Compare(IsNot))
-			return 13;
+			return 14;
 		return GetPrecedence(token[0]);
 	}
 }

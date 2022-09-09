@@ -344,6 +344,6 @@ public class MethodExpressionParser : ExpressionParser
 	private sealed class InvalidSingleTokenExpression : ParsingFailed
 	{
 		public InvalidSingleTokenExpression(Body body, string message) :
-			base(body, message) { } // tried various combinations to test this case but never happens
+			base(body, message) { }
 	}
 }

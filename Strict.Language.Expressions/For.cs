@@ -2,7 +2,6 @@
 
 namespace Strict.Language.Expressions;
 
-//TODO: docusaurus link for all expressions!
 public sealed class For : Expression
 {
 	private const string ForName = "for";
@@ -13,7 +12,7 @@ public sealed class For : Expression
 		Body = body;
 	}
 
-	public Expression Value { get; } //TODO: for Range, for list, etc.
+	public Expression Value { get; }
 	public Expression Body { get; }
 	public override int GetHashCode() => Value.GetHashCode();
 	public override string ToString() => $"for {Value}";
@@ -28,9 +27,10 @@ public sealed class For : Expression
 		var innerBody = body.FindCurrentChild();
 		if (innerBody == null)
 			throw new MissingInnerBody(body);
-		var bodyExpression = innerBody.Parse();
-		return new For(body.Method.ParseExpression(body, line[4..]), bodyExpression);
+		return new For(body.Method.ParseExpression(body, line[4..]), innerBody.Parse());
 	}
+
+
 
 	public sealed class MissingExpression : ParsingFailed
 	{
