@@ -15,13 +15,11 @@ public sealed class IfTests : TestExpressions
 		Assert.That(() => ParseExpression("if 5", "\treturn 0"),
 			Throws.InstanceOf<If.InvalidCondition>());
 
-	[Ignore(
-		"TODO: Delete; This won't happen as child body return types are first validated with method return type")]
 	[Test]
 	public void ReturnTypeOfThenAndElseMustHaveMatchingType() =>
 		Assert.That(
 			() => ParseExpression("if 5 is 6", "\treturn 8", "else", "\treturn \"hello\"").ReturnType,
-			Throws.InstanceOf<If.ReturnTypeOfThenAndElseMustHaveMatchingType>());
+			Throws.InstanceOf<Body.ChildBodyReturnTypeMustMatchMethodReturnType>());
 
 	[Test]
 	public void ReturnTypeOfThenAndElseIsNumberAndCountIsValid() =>
@@ -29,7 +27,12 @@ public sealed class IfTests : TestExpressions
 			new Method(type, 0, this,
 				new[]
 				{
-					"ReturnMethod Number", "	if bla is 5", "		return Count(0)", "	else", "		return 5"
+					//@formatter.off
+					"ReturnMethod Number",
+					"	if bla is 5",
+					"		return Count(0)",
+					"	else",
+					"		return 5"
 				}).GetBodyAndParseIfNeeded().ReturnType, Is.EqualTo(type.GetType(Base.Number)));
 
 	[Test]
@@ -38,7 +41,11 @@ public sealed class IfTests : TestExpressions
 			new Method(type, 0, this,
 				new[]
 				{
-					"ReturnMethod Number", "	if bla is 5", "		return Count(0)", "	else",
+					//@formatter.off
+					"ReturnMethod Number",
+					"	if bla is 5",
+					"		return Count(0)",
+					"	else",
 					"		return Character(5)"
 				}).GetBodyAndParseIfNeeded().ReturnType, Is.EqualTo(type.GetType(Base.Number)));
 
@@ -70,11 +77,22 @@ public sealed class IfTests : TestExpressions
 		Assert.That(ParseExpression("if bla is not 5", "\tlog.Write(\"Hey\")"),
 			Is.EqualTo(new If(GetCondition(true), GetThen())));
 
+	[TestCase("no")]
+	[TestCase("nope")]
+	[TestCase("n")]
+	public void InvalidNotKeyword(string invalidKeyword) =>
+		Assert.That(() => ParseExpression($"if bla is {invalidKeyword} 5", "\tlog.Write(\"Hey\")"),
+			Throws.InstanceOf<IdentifierNotFound>().With.Message.StartsWith(invalidKeyword));
+
+	[Test]
+	public void InvalidSpacingInsteadOfNot() =>
+		Assert.That(() => ParseExpression("if bla is  5", "\tlog.Write(\"Hey\")"),
+			Throws.InstanceOf<PhraseTokenizer.InvalidSpacing>());
+
 	[Test]
 	public void InvalidIsNotUsageOnDifferentType() =>
 		Assert.That(() => ParseExpression("if bla is not \"blu\"", "\tlog.Write(\"Hey\")"),
-			Throws.InstanceOf<Type.ArgumentsDoNotMatchMethodParameters>().With.Message.
-				Contains("blu"));
+			Throws.InstanceOf<Type.ArgumentsDoNotMatchMethodParameters>().With.Message.Contains("blu"));
 
 	[Test]
 	public void ParseMissingElseExpression() =>

@@ -9,7 +9,7 @@ public class TestPackage : Package
 	{
 		// @formatter:off
 		var anyType = new Type(this, new TypeLines(Base.Any,
-			"is(other) Boolean"));
+			"is(other) Boolean", "not(other) Boolean"));
 		new Type(this, new TypeLines(Base.Boolean,
 			"not Boolean",
 			"\tvalue ? false else true",
@@ -44,6 +44,8 @@ public class TestPackage : Package
 				"\tvalue < other",
 				"^(other) Number",
 				"\tvalue ^ other",
+				"in(other) Number",
+				"\tvalue",
 				">=(other) Boolean",
 				"\tvalue >= other",
 				"<=(other) Boolean",

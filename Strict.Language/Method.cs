@@ -31,16 +31,21 @@ public sealed class Method : Context
 	private static string GetName(ReadOnlySpan<char> firstLine)
 	{
 		var name = firstLine;
-		for (var i = 0; i < firstLine.Length; i++)
+		bool isNameIsNotOperator = false;
+			for (var i = 0; i < firstLine.Length; i++)
 			if (firstLine[i] == '(' || firstLine[i] == ' ')
 			{
 				name = firstLine[..i];
 				//Not good, need to think of a better way to figure out "is not"
-				if (name[^1] == 's' && firstLine[i + 1] == 'n' && firstLine[i + 2] == 'o')
+				if (name[^1] == 's' && firstLine[i..].Length > 4 && firstLine[i + 1] == 'n' &&
+					firstLine[i + 2] == 'o' && firstLine[i + 3] == 't')
+				{
+					isNameIsNotOperator = true;
 					name = firstLine[..(i + 4)];
+				}
 				break;
 			}
-		if (!name.IsWord() && !name.IsOperator())
+		if (!name.IsWord() && !name.IsOperator() && !isNameIsNotOperator)
 			throw new NameMustBeAWordWithoutAnySpecialCharactersOrNumbers(name.ToString());
 		return name.ToString();
 	}
