@@ -41,7 +41,6 @@ public sealed class IfTests : TestExpressions
 			new Method(type, 0, this,
 				new[]
 				{
-					//@formatter.off
 					"ReturnMethod Number",
 					"	if bla is 5",
 					"		return Count(0)",
@@ -162,7 +161,6 @@ public sealed class IfTests : TestExpressions
 	[Test]
 	public void ReturnTypeOfThenMustMatchMethodReturnType()
 	{
-		// @formatter:off
 		var program = new Type(new Package(nameof(IfTests)),
 			new TypeLines(nameof(ReturnTypeOfThenMustMatchMethodReturnType),
 				"has log",
