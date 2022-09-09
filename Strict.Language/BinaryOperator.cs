@@ -13,7 +13,6 @@ public static class BinaryOperator
 	public const string Multiply = "*";
 	public const string Divide = "/";
 	public const string Power = "^";
-	public const string Equal = "=";
 	public const string Modulate = "%";
 	public const string Smaller = "<";
 	public const string Greater = ">";
@@ -37,7 +36,7 @@ public static class BinaryOperator
 	public static bool IsSingleCharacterOperator(this char tokenFirstCharacter) =>
 		AnySingleCharacterOperator.Contains(tokenFirstCharacter);
 
-	private const string AnySingleCharacterOperator = Plus + Minus + Multiply + Divide + Modulate + Smaller + Greater + Power + Equal;
+	private const string AnySingleCharacterOperator = Plus + Minus + Multiply + Divide + Modulate + Smaller + Greater + Power;
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static bool IsMultiCharacterOperator(this string name)
@@ -68,7 +67,7 @@ public static class BinaryOperator
 	private static readonly string[] All =
 	{
 		Plus, Minus, Multiply, Divide, Modulate, Smaller, Greater, SmallerOrEqual, GreaterOrEqual,
-		Is, IsNot, In, And, Or, Xor, To, Equal
+		Is, IsNot, In, And, Or, Xor, To
 	};
 	private static readonly string[] Arithmetic = { Plus, Minus, Multiply, Divide, Modulate };
 	private static readonly string[] Comparison =
@@ -86,7 +85,6 @@ public static class BinaryOperator
 		tokenFirstCharacter switch
 		{
 			',' => 0, // ncrunch: no coverage always has to flush everything out; ',' cannot be reached because this method is called only for operators
-			'=' => 1, // ncrunch: no coverage always has to flush everything out; ',' cannot be reached because this method is called only for operators
 			'+' => 2, // unary '-' and 'not' operators have precendence 1
 			'-' => 2,
 			'*' => 3,
