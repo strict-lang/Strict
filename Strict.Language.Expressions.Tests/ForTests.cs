@@ -84,6 +84,17 @@ public sealed class ForTests : TestExpressions
 	}
 
 	[Test]
+	public void ParseWithNumber()
+	{
+		var forExpression =
+			((Body)ParseExpression("let iterationCount = 10", "for iterationCount",
+				"\tlog.Write(index)")).Expressions[1] as For;
+		Assert.That(forExpression?.Body.ToString(), Is.EqualTo("log.Write(index)"));
+		Assert.That(forExpression?.Value.ToString(), Is.EqualTo("iterationCount"));
+		Assert.That(forExpression?.ToString(), Is.EqualTo("for iterationCount"));
+	}
+
+	[Test]
 	public void ValidLoopProgram()
 	{
 		var programType = new Type(type.Package,

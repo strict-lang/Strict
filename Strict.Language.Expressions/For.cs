@@ -31,9 +31,15 @@ public sealed class For : Expression
 			throw new MissingInnerBody(body);
 		if (line.Contains(IndexName, StringComparison.Ordinal))
 			throw new UsageOfInferredVariable(body);
-		return !line.Contains("Range", StringComparison.Ordinal)
-			? new For(body.Method.ParseExpression(body, line[4..]), innerBody.Parse())
-			: ParseForRange(body, line, innerBody);
+		return line.Contains("Range", StringComparison.Ordinal)
+			? ParseForRange(body, line, innerBody)
+			: ParseFor(body, line, innerBody);
+	}
+
+	private static Expression? ParseFor(Body body, ReadOnlySpan<char> line, Body innerBody)
+	{
+		innerBody.AddVariable(IndexName, new Number(body.Method, 0));
+		return new For(body.Method.ParseExpression(body, line[4..]), innerBody.Parse());
 	}
 
 	private static Expression ParseForRange(Body body, ReadOnlySpan<char> line, Body innerBody)
