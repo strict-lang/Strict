@@ -144,7 +144,6 @@ public sealed class MemberCallTests : TestExpressions
 				"Run",
 				"\tlet a = 5")).ParseMembersAndMethods(parser);
 		Assert.That(program.Members[0].Value?.ReturnType.Name, Is.EqualTo("File"));
-		Assert.That(program.Members[0].Value?.ToString(), Is.EqualTo("File(\"test.txt\")"));
 	}
 
 	[Test]

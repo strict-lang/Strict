@@ -104,9 +104,9 @@ public sealed class ListTests : TestExpressions
 	[Test]
 	public void LeftTypeShouldNotBeChanged()
 	{
-		var expression = ParseExpression("(\"1\", \"2\", \"3\", \"4\") + 5");
-		Assert.That(expression, Is.InstanceOf<Binary>()!);
-		Assert.That(((Binary)expression).ReturnType, Is.EqualTo(type.GetType(Base.Text)));
+		var parsedExpression = ParseExpression("(\"1\", \"2\", \"3\", \"4\") + 5");
+		Assert.That(parsedExpression, Is.InstanceOf<Binary>()!);
+		Assert.That(((Binary)parsedExpression).ReturnType, Is.EqualTo(type.GetType(Base.Text)));
 	}
 
 	[Test]

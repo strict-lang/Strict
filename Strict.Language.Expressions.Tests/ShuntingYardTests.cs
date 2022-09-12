@@ -34,11 +34,11 @@ public sealed class ShuntingYardTests
 	public void ParseIfWithIsNot()
 	{
 		const string Input = "if bla is not 5";
-		var postfix = new ShuntingYard(Input);
-		Assert.That(Input[postfix.Output.Pop()], Is.EqualTo(BinaryOperator.IsNot));
-		Assert.That(Input[postfix.Output.Pop()], Is.EqualTo("5"));
-		Assert.That(Input[postfix.Output.Pop()], Is.EqualTo("bla"));
-		Assert.That(Input[postfix.Output.Pop()], Is.EqualTo("if"));
+		var tokens = new ShuntingYard(Input);
+		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo(BinaryOperator.IsNot));
+		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo("5"));
+		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo("bla"));
+		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo("if"));
 	}
 
 	[Test]
