@@ -5,6 +5,8 @@ namespace Strict.Language.Expressions;
 public sealed class For : Expression
 {
 	private const string ForName = "for";
+	private const string IndexName = "index";
+	private const string InName = "in";
 
 	public For(Expression value, Expression body) : base(value.ReturnType)
 	{
@@ -27,6 +29,21 @@ public sealed class For : Expression
 		var innerBody = body.FindCurrentChild();
 		if (innerBody == null)
 			throw new MissingInnerBody(body);
+		if (line.Contains(IndexName, StringComparison.Ordinal))
+			throw new UsageOfInferredVariable(body);
+		if (!line.Contains("Range", StringComparison.Ordinal))
+			return new For(body.Method.ParseExpression(body, line[4..]), innerBody.Parse());
+		var variableExpressionValue =
+			string.Concat(line[line.LastIndexOf('R')..(line.LastIndexOf(')') + 1)], ".Start".AsSpan());
+		if (line.Contains(InName, StringComparison.Ordinal) &&
+			!line.Contains(IndexName, StringComparison.Ordinal))
+		{
+			var variableName = line[4..(line.LastIndexOf(InName) - 1)];
+			if (body.FindVariableValue(variableName) == null)
+				body.AddVariable(variableName.ToString(),
+					body.Method.ParseExpression(body, variableExpressionValue));
+		}
+		innerBody.AddVariable(IndexName, body.Method.ParseExpression(body, variableExpressionValue));
 		return new For(body.Method.ParseExpression(body, line[4..]), innerBody.Parse());
 	}
 
@@ -38,5 +55,10 @@ public sealed class For : Expression
 	public sealed class MissingInnerBody : ParsingFailed
 	{
 		public MissingInnerBody(Body body) : base(body) { }
+	}
+
+	public sealed class UsageOfInferredVariable : ParsingFailed
+	{
+		public UsageOfInferredVariable(Body body) : base(body) { }
 	}
 }
