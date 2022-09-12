@@ -55,6 +55,11 @@ public sealed class BodyTests : TestExpressions
 			Throws.InstanceOf<IdentifierNotFound>().With.Message.StartWith("abc"));
 
 	[Test]
+	public void UnknownVariable() =>
+		Assert.That(() => ParseExpression("if bla is 5", "\tlog.Write(unknownVariable)"),
+			Throws.InstanceOf<IdentifierNotFound>().With.Message.StartWith("unknownVariable"));
+
+	[Test]
 	public void IfHasDifferentScopeThanMethod() =>
 		Assert.That(ParseExpression("if bla is 5", "\tlet abc = \"abc\"", "\tlog.Write(abc)"),
 			Is.EqualTo(new If(GetCondition(), CreateThenBlock())));
@@ -80,6 +85,7 @@ public sealed class BodyTests : TestExpressions
 				"\tlog.Write(ifText)",
 				"else",
 				"\tlog.Write(ifText)"),
+				// @formatter:on
 			Throws.InstanceOf<IdentifierNotFound>().With.Message.StartWith("ifText"));
 
 	[Test]
@@ -105,5 +111,24 @@ public sealed class BodyTests : TestExpressions
 		var variableCall =
 			((ifExpression?.Then as Body)?.Expressions[1] as MethodCall)?.Arguments[0] as VariableCall;
 		Assert.That(variableCall?.CurrentValue.ToString(), Is.EqualTo("\"abc\""));
+	}
+
+	[Test]
+	public void ReturnCorrectValueForSameNameVariableCallBasedOnScope()
+	{
+		var parentIf = (If)ParseExpression(
+			"if bla is 5",
+			"\tlet abc = \"abc\"",
+			"\tif bla is 5.0",
+			"\t\tlet abc = 5",
+			"\t\tlog.Write(abc)",
+			"\tlog.Write(abc)");
+		var childIf = (If)((Body)parentIf.Then).Expressions[1];
+		var childVariableCall =
+			(VariableCall)((MethodCall)((Body)childIf.Then).Expressions[1]).Arguments[0];
+		Assert.That(childVariableCall.CurrentValue.ToString(), Is.EqualTo("5"));
+		var parentVariableCall =
+			(VariableCall)((MethodCall)((Body)parentIf.Then).Expressions[2]).Arguments[0];
+		Assert.That(parentVariableCall.CurrentValue.ToString(), Is.EqualTo("\"abc\""));
 	}
 }
