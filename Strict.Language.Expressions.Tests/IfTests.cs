@@ -2,6 +2,7 @@ using NUnit.Framework;
 
 namespace Strict.Language.Expressions.Tests;
 
+// ReSharper disable once ClassTooBig
 public sealed class IfTests : TestExpressions
 {
 	[Test]
@@ -27,7 +28,7 @@ public sealed class IfTests : TestExpressions
 			new Method(type, 0, this,
 				new[]
 				{
-					//@formatter.off
+					// @formatter:off
 					"ReturnMethod Number",
 					"	if bla is 5",
 					"		return Count(0)",
@@ -46,6 +47,7 @@ public sealed class IfTests : TestExpressions
 					"		return Count(0)",
 					"	else",
 					"		return Character(5)"
+					// @formatter:on
 				}).GetBodyAndParseIfNeeded().ReturnType, Is.EqualTo(type.GetType(Base.Number)));
 
 	[Test]
@@ -79,6 +81,7 @@ public sealed class IfTests : TestExpressions
 	[TestCase("no")]
 	[TestCase("nope")]
 	[TestCase("n")]
+	//[TestCase("note")] TODO: Failing case for not operator
 	public void InvalidNotKeyword(string invalidKeyword) =>
 		Assert.That(() => ParseExpression($"if bla is {invalidKeyword} 5", "\tlog.Write(\"Hey\")"),
 			Throws.InstanceOf<IdentifierNotFound>().With.Message.StartsWith(invalidKeyword));
@@ -174,8 +177,9 @@ public sealed class IfTests : TestExpressions
 	[Test]
 	public void ReturnTypeOfElseMustMatchMethodReturnType()
 	{
-		var program = new Type(new Package(nameof(IfTests)),
-			new TypeLines(nameof(ReturnTypeOfElseMustMatchMethodReturnType),
+		var program = new Type(new Package(nameof(IfTests)), new TypeLines(
+			nameof(ReturnTypeOfElseMustMatchMethodReturnType),
+				// @formatter:off
 				"has log",
 				"Run Text",
 				"	if 5 is 5",
@@ -183,6 +187,7 @@ public sealed class IfTests : TestExpressions
 				"		return \"Hello\"",
 				"	else",
 				"		return true")).ParseMembersAndMethods(new MethodExpressionParser());
+				// @formatter:on
 		Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(), Throws.InstanceOf<Body.ChildBodyReturnTypeMustMatchMethodReturnType>().With.Message.Contains("Child body return type: TestPackage.Boolean is not matching with Parent return type: TestPackage.Text in method line: 5"));
 	}
 
@@ -191,13 +196,15 @@ public sealed class IfTests : TestExpressions
 	{
 		var program = new Type(new Package(nameof(IfTests)),
 			new TypeLines(nameof(ThenReturnsImplementedTypeOfMethodReturnType),
+				// @formatter:off
 				"has log",
 				"Run Number",
 				"	if 5 is 5",
 				"		let file = File(\"test.txt\")",
 				"		return Count(5)",
 				"	6")).ParseMembersAndMethods(new MethodExpressionParser());
-		Assert.That(((Body) program.Methods[0].GetBodyAndParseIfNeeded()).children[0].ReturnType.ToString(), Is.EqualTo("TestPackage.Number"));
+				// @formatter:on
+		Assert.That(((Body)program.Methods[0].GetBodyAndParseIfNeeded()).children[0].ReturnType.ToString(), Is.EqualTo("TestPackage.Number"));
 	}
 
 	[Test]
@@ -205,6 +212,7 @@ public sealed class IfTests : TestExpressions
 	{
 		var program = new Type(new Package(nameof(IfTests)),
 			new TypeLines(nameof(MultiLineThenAndElseWithMatchingMethodReturnType),
+				// @formatter:off
 				"has log",
 				"ValidRun Text",
 				"	if 5 is 5",
@@ -213,7 +221,8 @@ public sealed class IfTests : TestExpressions
 				"	else",
 				"		return \"Hi\"",
 				"	\"don't matter\"")).ParseMembersAndMethods(new MethodExpressionParser());
-		var body = (Body) program.Methods[0].GetBodyAndParseIfNeeded();
+				// @formatter:on
+		var body = (Body)program.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(body.ReturnType.ToString(), Is.EqualTo("TestPackage.Text"));
 		Assert.That(body.children[0].ReturnType.ToString(), Is.EqualTo("TestPackage.Text"));
 		Assert.That(body.children[1].ReturnType.ToString(), Is.EqualTo("TestPackage.Text"));

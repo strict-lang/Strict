@@ -61,5 +61,4 @@ public abstract class TestExpressions : MethodExpressionParser
 		CreateBinary(new MemberCall(null, bla), isNot
 			? BinaryOperator.IsNot
 			: BinaryOperator.Is, number);
-
 }

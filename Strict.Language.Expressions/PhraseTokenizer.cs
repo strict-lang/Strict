@@ -88,6 +88,7 @@ public sealed class PhraseTokenizer
 					processToken((index - 1)..index);
 				}
 				//Need to find a better way to do this (used for recognising "is not")
+				// ReSharper disable once ComplexConditionExpression
 				else if (input[index - 1] == 's' && input[index..].Length > 4 &&
 					input[index + 1] == 'n' && input[index + 2] == 'o' && input[index + 3] == 't')
 				{

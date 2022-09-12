@@ -30,8 +30,6 @@ public sealed class For : Expression
 		return new For(body.Method.ParseExpression(body, line[4..]), innerBody.Parse());
 	}
 
-
-
 	public sealed class MissingExpression : ParsingFailed
 	{
 		public MissingExpression(Body body) : base(body) { }

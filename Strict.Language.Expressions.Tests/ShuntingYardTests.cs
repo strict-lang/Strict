@@ -33,24 +33,24 @@ public sealed class ShuntingYardTests
 	[Test]
 	public void ParseIfWithIsNot()
 	{
-		var input = "if bla is not 5";
-		var postfix = new ShuntingYard(input);
-		Assert.That(input[postfix.Output.Pop()], Is.EqualTo(BinaryOperator.IsNot));
-		Assert.That(input[postfix.Output.Pop()], Is.EqualTo("5"));
-		Assert.That(input[postfix.Output.Pop()], Is.EqualTo("bla"));
-		Assert.That(input[postfix.Output.Pop()], Is.EqualTo("if"));
+		const string Input = "if bla is not 5";
+		var postfix = new ShuntingYard(Input);
+		Assert.That(Input[postfix.Output.Pop()], Is.EqualTo(BinaryOperator.IsNot));
+		Assert.That(Input[postfix.Output.Pop()], Is.EqualTo("5"));
+		Assert.That(Input[postfix.Output.Pop()], Is.EqualTo("bla"));
+		Assert.That(Input[postfix.Output.Pop()], Is.EqualTo("if"));
 	}
 
 	[Test]
 	public void ParseIsNotWithMultipleProceedings()
 	{
-		var input = "if bla is not (bla - 25)";
-		var postfix = new ShuntingYard(input);
-		Assert.That(input[postfix.Output.Pop()], Is.EqualTo(BinaryOperator.IsNot));
-		Assert.That(input[postfix.Output.Pop()], Is.EqualTo(BinaryOperator.Minus));
-		Assert.That(input[postfix.Output.Pop()], Is.EqualTo("25"));
-		Assert.That(input[postfix.Output.Pop()], Is.EqualTo("bla"));
-		Assert.That(input[postfix.Output.Pop()], Is.EqualTo("bla"));
-		Assert.That(input[postfix.Output.Pop()], Is.EqualTo("if"));
+		const string Input = "if bla is not (bla - 25)";
+		var postfix = new ShuntingYard(Input);
+		Assert.That(Input[postfix.Output.Pop()], Is.EqualTo(BinaryOperator.IsNot));
+		Assert.That(Input[postfix.Output.Pop()], Is.EqualTo(BinaryOperator.Minus));
+		Assert.That(Input[postfix.Output.Pop()], Is.EqualTo("25"));
+		Assert.That(Input[postfix.Output.Pop()], Is.EqualTo("bla"));
+		Assert.That(Input[postfix.Output.Pop()], Is.EqualTo("bla"));
+		Assert.That(Input[postfix.Output.Pop()], Is.EqualTo("if"));
 	}
 }
