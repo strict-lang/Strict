@@ -58,6 +58,7 @@ public sealed class BinaryTests : TestExpressions
 	[TestCase("true xor true")]
 	//[TestCase("5 to Text")] //TODO: Need to support to Operator parsing
 	[TestCase("1 * 2 + 1")]
+	[TestCase("5 * 2 ^ 2")]
 	[TestCase("(1 + 2) * 3")]
 	[TestCase("(1 + 2) * (3 + 4)")]
 	[TestCase("(2 + 2) ^ (5 - 4)")]
@@ -72,6 +73,10 @@ public sealed class BinaryTests : TestExpressions
 	[TestCase("(5 > 4) or (10 < 100.5) and (5 >= 5) and (5 <= 6)")]
 	public void ParseGroupExpressionProducesSameCode(string code) =>
 		Assert.That(ParseExpression(code).ToString(), Is.EqualTo(code));
+
+	[Test]
+	public void ParsePowerWithMultiplyOperator() =>
+		ParseAndCheckOutputMatchesInput("(5 * 2) ^ 2", CreateBinary(CreateBinary(number, BinaryOperator.Multiply, new Number(type, 2)), BinaryOperator.Power, new Number(type, 2)));
 
 	[Test]
 	public void NestedBinaryWithBrackets() =>
