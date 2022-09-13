@@ -38,61 +38,56 @@ public sealed class ForTests : TestExpressions
 	}
 
 	[Test]
-	public void UsageOfInferredVariable() =>
+	public void IndexIsReserved() =>
 		Assert.That(() => ParseExpression("for index in Range(0, 5)", "\tlog.Write(index)"),
-			Throws.InstanceOf<For.UsageOfInferredVariable>());
+			Throws.InstanceOf<For.IndexIsReserved>());
 
 	[Test]
-	public void ParseForRangeExpression()
-	{
-		var forExpression = (For)ParseExpression("for Range(2, 5)", "\tlog.Write(index)");
-		Assert.That(forExpression.Body.ToString(), Is.EqualTo("log.Write(index)"));
-		Assert.That(forExpression.Value, Is.EqualTo(ParseExpression("Range(2, 5)")));
-		Assert.That(forExpression.ToString(), Is.EqualTo("for Range(2, 5)"));
-	}
+	public void DuplicateImplicitIndexInNestedFor() =>
+		Assert.That(
+			() => ParseExpression("for Range(2, 5)", "\tfor Range(0, 10)", "\t\tlog.Write(index)"),
+			Throws.InstanceOf<For.DuplicateImplicitIndex>());
 
 	[Test]
-	public void ParseForInExpression()
-	{
-		var forExpression =
-			((Body)ParseExpression("let myIndex = 0", "for myIndex in Range(0, 5)",
-				"\tlog.Write(myIndex)")).Expressions[1] as For;
-		Assert.That(forExpression?.Body.ToString(), Is.EqualTo("log.Write(myIndex)"));
-		Assert.That(forExpression?.Value.ToString(), Is.EqualTo("myIndex in Range(0, 5)"));
-		Assert.That(forExpression?.ToString(), Is.EqualTo("for myIndex in Range(0, 5)"));
-	}
+	public void ParseForRangeExpression() =>
+		Assert.That(((For)ParseExpression("for Range(2, 5)", "\tlog.Write(index)")).ToString(),
+			Is.EqualTo("for Range(2, 5)\n\tlog.Write(index)"));
 
 	[Test]
-	public void ParseForInExpressionWithCustomVariableName()
-	{
-		var forExpression =
-			(For)ParseExpression("for myIndex in Range(0, 5)", "\tlog.Write(myIndex)");
-		Assert.That(forExpression.Body.ToString(), Is.EqualTo("log.Write(myIndex)"));
-		Assert.That(forExpression.Value.ToString(), Is.EqualTo("myIndex in Range(0, 5)"));
-		Assert.That(forExpression.ToString(), Is.EqualTo("for myIndex in Range(0, 5)"));
-	}
+	public void ParseForInExpression() =>
+		Assert.That(
+			((For)((Body)ParseExpression("let myIndex = 0", "for myIndex in Range(0, 5)",
+				"\tlog.Write(myIndex)")).Expressions[1]).ToString(),
+			Is.EqualTo("for myIndex in Range(0, 5)\n\tlog.Write(myIndex)"));
 
 	[Test]
-	public void ParseForListExpression()
-	{
-		var forExpression =
-			((Body)ParseExpression("let element = 0", "for element in (1, 2, 3)",
-				"\tlog.Write(element)")).Expressions[1] as For;
-		Assert.That(forExpression?.Body.ToString(), Is.EqualTo("log.Write(element)"));
-		Assert.That(forExpression?.Value.ToString(), Is.EqualTo("element in (1, 2, 3)"));
-		Assert.That(forExpression?.ToString(), Is.EqualTo("for element in (1, 2, 3)"));
-	}
+	public void ParseForInExpressionWithCustomVariableName() =>
+		Assert.That(
+			((For)ParseExpression("for myIndex in Range(0, 5)", "\tlog.Write(myIndex)")).ToString(),
+			Is.EqualTo("for myIndex in Range(0, 5)\n\tlog.Write(myIndex)"));
 
 	[Test]
-	public void ParseWithNumber()
-	{
-		var forExpression =
-			((Body)ParseExpression("let iterationCount = 10", "for iterationCount",
-				"\tlog.Write(index)")).Expressions[1] as For;
-		Assert.That(forExpression?.Body.ToString(), Is.EqualTo("log.Write(index)"));
-		Assert.That(forExpression?.Value.ToString(), Is.EqualTo("iterationCount"));
-		Assert.That(forExpression?.ToString(), Is.EqualTo("for iterationCount"));
-	}
+	public void ParseForListExpression() =>
+		Assert.That(
+			((For)((Body)ParseExpression("let element = 0", "for element in (1, 2, 3)",
+				"\tlog.Write(element)")).Expressions[1]).ToString(),
+			Is.EqualTo("for element in (1, 2, 3)\n\tlog.Write(element)"));
+
+	[Test]
+	public void ParseWithNumber() =>
+		Assert.That(
+			((For)((Body)ParseExpression("let iterationCount = 10", "for iterationCount",
+				"\tlog.Write(index)")).Expressions[1]).ToString(),
+			Is.EqualTo("for iterationCount\n\tlog.Write(index)"));
+
+	[Test]
+	public void ParseNestedFor() =>
+		//@formatter.off
+		Assert.That(
+			((For)ParseExpression("for myIndex in Range(2, 5)", "\tlog.Write(myIndex)",
+				"\tfor Range(0, 10)", "\t\tlog.Write(index)")).ToString(),
+			Is.EqualTo(
+				"for myIndex in Range(2, 5)\n\tlog.Write(myIndex)\r\nfor Range(0, 10)\n\tlog.Write(index)"));
 
 	[Test]
 	public void ValidLoopProgram()
@@ -102,22 +97,12 @@ public sealed class ForTests : TestExpressions
 					"\tfor Range(0, n)", "\t\tresult.Increment", "\tresult")).
 			ParseMembersAndMethods(new MethodExpressionParser());
 		var parsedExpression = (Body)programType.Methods[0].GetBodyAndParseIfNeeded();
-		var forMethodCall = ((For)parsedExpression.Expressions[1]).Body as MethodCall;
+		var forMethodCall = (MethodCall)((For)parsedExpression.Expressions[1]).Body;
 		Assert.That(parsedExpression.ReturnType.Name, Is.EqualTo(Base.Number));
 		Assert.That(parsedExpression.Expressions[1], Is.TypeOf(typeof(For)));
 		Assert.That(((For)parsedExpression.Expressions[1]).Value.ToString(),
 			Is.EqualTo("Range(0, n)"));
-		Assert.That(((VariableCall?)forMethodCall?.Instance)?.Name, Is.EqualTo("result"));
-		Assert.That(forMethodCall?.Method.Name, Is.EqualTo("Increment"));
-	}
-
-	[Test]
-	public void ParseNestedFor()
-	{
-		var forExpression =
-			(For)ParseExpression("for Range(2, 5)", "\tfor Range(0, 10)", "\t\tlog.Write(index)");
-		Assert.That(forExpression.ToString(), Is.EqualTo("for Range(2, 5)"));
-		Assert.That(forExpression.Body.ToString(), Is.EqualTo("for Range(0, 10)"));
-		Assert.That(((For)forExpression.Body).Body.ToString(), Is.EqualTo("log.Write(index)"));
+		Assert.That(((VariableCall)forMethodCall.Instance!).Name, Is.EqualTo("result"));
+		Assert.That(forMethodCall.Method.Name, Is.EqualTo("Increment"));
 	}
 }
