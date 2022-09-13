@@ -1,4 +1,4 @@
-has elements Generic
+has elements Generics
 Length Number
 	elements.Length
 is(other) Boolean

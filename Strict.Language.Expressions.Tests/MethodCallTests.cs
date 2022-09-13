@@ -113,13 +113,13 @@ public sealed class MethodCallTests : TestExpressions
 	{
 		var program = new Type(type.Package,
 			new TypeLines(nameof(TypeImplementsGenericTypeWithLength),
-				"has log",
-				"GetLength(type TypeWithLength) Number",
-				"\ttype.Length",
+				"has log", //unused member should be removed later when we allow class without members
+				"GetLengthSquare(type HasLength) Number",
+				"\ttype.Length * type.Length",
 				"Dummy",
 				"\tlet countOfFive = Count(5)",
-				"\tlet typeLength = GetLength(countOfFive)")).ParseMembersAndMethods(new MethodExpressionParser());
+				"\tlet lengthSquare = GetLengthSquare(countOfFive)")).ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(program.Methods[1].GetBodyAndParseIfNeeded().ToString(),
-			Is.EqualTo("let countOfFive = Count(5)\r\nlet typeLength = GetLength(countOfFive)"));
+			Is.EqualTo("let countOfFive = Count(5)\r\nlet lengthSquare = GetLengthSquare(countOfFive)"));
 	}
 }

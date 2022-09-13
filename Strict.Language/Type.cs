@@ -175,7 +175,6 @@ public class Type : Context
 			remainingTextSpan = string.Concat(memberName, "(",
 				remainingTextSpan, ")").AsSpan();
 		return parser.ParseExpression(
-			//https://deltaengine.fogbugz.com/f/cases/25731/
 			new Body(new Method(this, 0, parser, new[] { "EmptyBody" })), remainingTextSpan);
 	}
 
