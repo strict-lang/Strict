@@ -105,6 +105,7 @@ public class TestPackage : Package
 				"\tnumber")).ParseMembersAndMethods(null!);
 		new Type(this,
 			new TypeLines(Base.List,
+				"First",
 				"+(other) List",
 				"-(other) List",
 				"is(other) Boolean",

@@ -50,3 +50,6 @@ Sum Generic
 	(1, 2, 3).Sum is 6
 	for elements
 		+ value
+First Generic
+	(1, 2, 3).First is 1
+	elements(0)

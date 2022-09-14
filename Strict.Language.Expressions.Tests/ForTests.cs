@@ -33,7 +33,7 @@ public sealed class ForTests : TestExpressions
 	[Test]
 	public void MatchingHashCode()
 	{
-		var forExpression = (For)ParseExpression("for Range(2, 5)", "\tlog.Write(\"Hi\")");
+		var forExpression = (For)ParseExpression("for Range(2, 5)", "\tlog.Write(index)");
 		Assert.That(forExpression.GetHashCode(), Is.EqualTo(forExpression.Value.GetHashCode()));
 	}
 
@@ -41,6 +41,11 @@ public sealed class ForTests : TestExpressions
 	public void IndexIsReserved() =>
 		Assert.That(() => ParseExpression("for index in Range(0, 5)", "\tlog.Write(index)"),
 			Throws.InstanceOf<For.IndexIsReserved>());
+
+	[Test]
+	public void UnidentifiedIterable() =>
+		Assert.That(() => ParseExpression("for element in gibberish", "\tlog.Write(element)"),
+			Throws.InstanceOf<For.UnidentifiedIterable>());
 
 	[Test]
 	public void DuplicateImplicitIndexInNestedFor() =>
@@ -68,10 +73,22 @@ public sealed class ForTests : TestExpressions
 
 	[Test]
 	public void ParseForListExpression() =>
+		Assert.That(((For)ParseExpression("for (1, 2, 3)", "\tlog.Write(index)")).ToString(),
+			Is.EqualTo("for (1, 2, 3)\n\tlog.Write(index)"));
+
+	[Test]
+	public void ParseForListExpressionWithIterableVariable() =>
 		Assert.That(
-			((For)((Body)ParseExpression("let element = 0", "for element in (1, 2, 3)",
-				"\tlog.Write(element)")).Expressions[1]).ToString(),
-			Is.EqualTo("for element in (1, 2, 3)\n\tlog.Write(element)"));
+			((For)((Body)ParseExpression("let numbers = (1, 2, 3)", "for numbers",
+				"\tlog.Write(index)")).Expressions[1]).ToString(),
+			Is.EqualTo("for numbers\n\tlog.Write(index)"));
+
+	[Test]
+	public void ParseForListWithExplicitVariable() =>
+		Assert.That(
+			((For)((Body)ParseExpression( "let number = 0",
+				"for number in (1, 2, 3)", "\tlog.Write(number)")).Expressions[1]).ToString(),
+			Is.EqualTo("for number in (1, 2, 3)\n\tlog.Write(number)"));
 
 	[Test]
 	public void ParseWithNumber() =>
@@ -84,8 +101,10 @@ public sealed class ForTests : TestExpressions
 	public void ParseNestedFor() =>
 		//@formatter.off
 		Assert.That(
-			((For)ParseExpression("for myIndex in Range(2, 5)", "\tlog.Write(myIndex)",
-				"\tfor Range(0, 10)", "\t\tlog.Write(index)")).ToString(),
+			((For)ParseExpression("for myIndex in Range(2, 5)",
+				"\tlog.Write(myIndex)",
+				"\tfor Range(0, 10)",
+				"\t\tlog.Write(index)")).ToString(),
 			Is.EqualTo(
 				"for myIndex in Range(2, 5)\n\tlog.Write(myIndex)\r\nfor Range(0, 10)\n\tlog.Write(index)"));
 

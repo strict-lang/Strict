@@ -2,13 +2,19 @@
 
 namespace Strict.Language.Expressions;
 
+/// <summary>
+/// Parses for loop expressions. Usually loop would have an implicit variable if not explicitly given anything,
+/// so the variable is parsed with the first value of the iterable,
+/// e.g for list the first element of the list or for range from 0
+/// If explicit variable is given, the variable is added in the body, similarly to implicit index/value variables.
+/// </summary>
 public sealed class For : Expression
 {
 	private const string ForName = "for";
 	private const string IndexName = "index";
 	private const string InName = "in";
 
-	public For(Expression value, Expression body) : base(value.ReturnType)
+	private For(Expression value, Expression body) : base(value.ReturnType)
 	{
 		Value = value;
 		Body = body;
@@ -31,46 +37,51 @@ public sealed class For : Expression
 			throw new MissingInnerBody(body);
 		if (line.Contains(IndexName, StringComparison.Ordinal))
 			throw new IndexIsReserved(body);
-		return line.Contains("Range", StringComparison.Ordinal)
-			? ParseForRange(body, line, innerBody)
-			: ParseFor(body, line, innerBody);
+		return ParseFor(body, line, innerBody);
 	}
 
 	private static Expression ParseFor(Body body, ReadOnlySpan<char> line, Body innerBody)
 	{
+		if (!line.Contains(InName, StringComparison.Ordinal) ||
+			line.Contains(IndexName, StringComparison.Ordinal))
+			return ParseForWithImplicitVariable(body, line, innerBody);
+		var iterable = body.FindVariableValue(FindIterableName(line));
+		if (iterable == null && line[^1] != ')')
+			throw new UnidentifiedIterable(body);
+		var variableExpressionValue = line.Contains("Range", StringComparison.Ordinal)
+			? GetRangeExpression(line)
+			: $"{FindIterableName(line)}.First";
+		return ParseWithExplicitVariable(body, line, innerBody, variableExpressionValue.AsSpan());
+	}
+
+	private static Expression ParseForWithImplicitVariable(Body body, ReadOnlySpan<char> line,
+		Body innerBody)
+	{
+		if (body.FindVariableValue(IndexName) != null)
+			throw new DuplicateImplicitIndex(body);
 		innerBody.AddVariable(IndexName, new Number(body.Method, 0));
 		return new For(body.Method.ParseExpression(body, line[4..]), innerBody.Parse());
 	}
 
-	private static Expression ParseForRange(Body body, ReadOnlySpan<char> line, Body innerBody)
+	// ReSharper disable once TooManyArguments
+	private static Expression ParseWithExplicitVariable(Body body, ReadOnlySpan<char> line,
+		Body innerBody, ReadOnlySpan<char> expressionText)
 	{
-		if (line.Contains(InName, StringComparison.Ordinal) &&
-			!line.Contains(IndexName, StringComparison.Ordinal))
-			return ParseWithCustomVariable(body, line, innerBody);
-		if (body.FindVariableValue(IndexName) != null)
-			throw new DuplicateImplicitIndex(body);
-		return ParseWithImplicitVariable(body, line, innerBody);
-	}
-
-	private static Expression ParseWithImplicitVariable(Body body, ReadOnlySpan<char> line,
-		Body innerBody)
-	{
-		innerBody.AddVariable(IndexName, body.Method.ParseExpression(body, RangeExpression(line)));
-		return new For(body.Method.ParseExpression(body, line[4..]), innerBody.Parse());
-	}
-
-	private static Expression ParseWithCustomVariable(Body body, ReadOnlySpan<char> line,
-		Body innerBody)
-	{
-		var variableName = line[4..(line.LastIndexOf(InName) - 1)];
+		var variableName = FindVariableName(line);
 		if (body.FindVariableValue(variableName) == null)
 			body.AddVariable(variableName.ToString(),
-				body.Method.ParseExpression(body, RangeExpression(line)));
+				body.Method.ParseExpression(body, expressionText));
 		return new For(body.Method.ParseExpression(body, line[4..]), innerBody.Parse());
 	}
 
-	private static string RangeExpression(ReadOnlySpan<char> line) =>
+	private static string GetRangeExpression(ReadOnlySpan<char> line) =>
 		string.Concat(line[line.LastIndexOf('R')..(line.LastIndexOf(')') + 1)], ".Start".AsSpan());
+
+	private static ReadOnlySpan<char> FindVariableName(ReadOnlySpan<char> line) =>
+		line[4..(line.LastIndexOf(InName) - 1)];
+
+	private static ReadOnlySpan<char> FindIterableName(ReadOnlySpan<char> line) =>
+		line[(line.LastIndexOf(InName) + 3)..];
 
 	public sealed class MissingExpression : ParsingFailed
 	{
@@ -90,5 +101,10 @@ public sealed class For : Expression
 	public sealed class DuplicateImplicitIndex : ParsingFailed
 	{
 		public DuplicateImplicitIndex(Body body) : base(body) { }
+	}
+
+	public sealed class UnidentifiedIterable : ParsingFailed
+	{
+		public UnidentifiedIterable(Body body) : base(body) { }
 	}
 }
