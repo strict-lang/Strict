@@ -86,7 +86,7 @@ public sealed class ForTests : TestExpressions
 	[Test]
 	public void ParseForListWithExplicitVariable() =>
 		Assert.That(
-			((For)((Body)ParseExpression( "let number = 0",
+			((For)((Body)ParseExpression("let number = 0",
 				"for number in (1, 2, 3)", "\tlog.Write(number)")).Expressions[1]).ToString(),
 			Is.EqualTo("for number in (1, 2, 3)\n\tlog.Write(number)"));
 
