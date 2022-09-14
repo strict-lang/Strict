@@ -5,6 +5,5 @@ Reverse List
 	ReverseList((true, false)).Reverse is (false, true)
 	let reversedList List
 	let index = 0
-	for elements
-		reversedList(elements.Length - 1 - index) = value
-	reversedList
+	return for index in Range(elements.Length - 1, 0)
+		reversedList(index)

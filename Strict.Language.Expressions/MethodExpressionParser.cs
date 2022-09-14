@@ -18,7 +18,7 @@ public class MethodExpressionParser : ExpressionParser
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public override Expression ParseLineExpression(Body body, ReadOnlySpan<char> line) =>
 		Assignment.TryParse(body, line) ?? If.TryParse(body, line) ??
-		For.TryParse(body, line.Trim()) ?? Return.TryParse(body, line) ?? ParseExpression(body, line);
+		For.TryParse(body, line.Trim()) ?? Return.TryParse(body, line) ?? Mutable.TryParse(body, line) ?? ParseExpression(body, line);
 
 	// ReSharper disable once CyclomaticComplexity
 	// ReSharper disable once MethodTooLong

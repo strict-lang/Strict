@@ -6,7 +6,8 @@ using List = Strict.Language.Expressions.List;
 
 namespace Strict.Language.Tests;
 
-public class TypeTests
+// ReSharper disable once ClassTooBig
+public sealed class TypeTests
 {
 	[SetUp]
 	public void CreatePackage()
@@ -172,4 +173,45 @@ public class TypeTests
 		Assert.That(result?.ToString(),
 			Is.EqualTo("Add(first TestPackage.Number, other TestPackage.List) List"));
 	}
+
+	[TestCase("has number", "Run", "\tnumber = 1 + 1")]
+	[TestCase("has number", "Run", "\tlet result = 5", "\tresult = 6")]
+	public void ImmutableTypesCannotBeChanged(params string[] code) =>
+		Assert.That(
+			() => new Type(package, new TypeLines(nameof(ImmutableTypesCannotBeChanged), code)).ParseMembersAndMethods(new MethodExpressionParser()).Methods[0].GetBodyAndParseIfNeeded(),
+			Throws.InstanceOf<Mutable.ImmutableTypesCannotBeChanged>());
+
+	[TestCase("has count = 0", "Run", "\tcount = 5")]
+	[TestCase("has counter = Count(0)", "Run", "\tcounter = 5")]
+	public void MutableMemberTypesCanBeChanged(params string[] code)
+	{
+		var type = new Type(package, new TypeLines(nameof(MutableMemberTypesCanBeChanged), code)).
+			ParseMembersAndMethods(new MethodExpressionParser());
+		type.Methods[0].GetBodyAndParseIfNeeded();
+		Assert.That(type.Members[0].Value, Is.EqualTo(new Number(type, 5)));
+	}
+
+	[TestCase("has number",
+		"Run",
+		"\tlet result = Count(2)",
+		"\tresult = Count(5)")]
+	[TestCase("has number",
+		"Run",
+		"\tlet result = Mutable(2)",
+		"\tresult = Count(5)")]
+	public void MutableVariableCanBeChanged(params string[] code)
+	{
+		var type = new Type(package, new TypeLines(nameof(MutableVariableCanBeChanged), code)).
+			ParseMembersAndMethods(new MethodExpressionParser());
+		var body = (Body)type.Methods[0].GetBodyAndParseIfNeeded();
+		Assert.That(body.FindVariableValue("result")!.ToString(), Is.EqualTo("Count(5)"));
+	}
+
+	[Test]
+	public void InvalidAssignmentTarget() =>
+		Assert.That(
+			() => new Type(package,
+					new TypeLines(nameof(InvalidAssignmentTarget), "has log", "Run", "\tCount(6) = 6")).
+				ParseMembersAndMethods(new MethodExpressionParser()).Methods[0].GetBodyAndParseIfNeeded(),
+			Throws.InstanceOf<Mutable.InvalidAssignmentTarget>());
 }

@@ -104,10 +104,14 @@ public sealed class Body : Expression
 	/// </summary>
 	private Dictionary<string, Expression>? variables;
 
-	public Body AddVariable(string name, Expression value)
+	public Body AddOrUpdateVariable(string name, Expression value)
 	{
 		variables ??= new Dictionary<string, Expression>(StringComparer.Ordinal);
-		variables.Add(name, value);
+		if (!variables.TryAdd(name, value))
+		{
+			variables.Remove(name);
+			variables.Add(name, value);
+		}
 		return this;
 	}
 

@@ -68,9 +68,15 @@ public class TestPackage : Package
 			new TypeLines("HasLength",
 				"Length Number")).ParseMembersAndMethods(null!);
 		new Type(this,
+			new TypeLines(Base.Mutable,
+				"from(any)")).ParseMembersAndMethods(null!);
+		new Type(this,
 			new TypeLines(Base.Count,
 				"implement Number",
 				"implement HasLength",
+				"implement Mutable",
+				"from(number)",
+				"\tnumber",
 				"Increment",
 				"\tCount(5).Increment is 6",
 				"\tvalue = value + 1",

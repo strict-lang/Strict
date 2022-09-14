@@ -39,14 +39,14 @@ public sealed class BodyTests : TestExpressions
 	[Test]
 	public void FindVariableValue() =>
 		Assert.That(
-			new Body(method).AddVariable("num", new Number(method, 5)).FindVariableValue("num"),
+			new Body(method).AddOrUpdateVariable("num", new Number(method, 5)).FindVariableValue("num"),
 			Is.EqualTo(new Number(method, 5)));
 
 	[Test]
 	public void FindParentVariableValue() =>
 		Assert.That(
-			new Body(method, 0, new Body(method).AddVariable("str", new Text(method, "Hello"))).
-				AddVariable("num", new Number(method, 5)).FindVariableValue("str"),
+			new Body(method, 0, new Body(method).AddOrUpdateVariable("str", new Text(method, "Hello"))).
+				AddOrUpdateVariable("num", new Number(method, 5)).FindVariableValue("str"),
 			Is.EqualTo(new Text(method, "Hello")));
 
 	[Test]

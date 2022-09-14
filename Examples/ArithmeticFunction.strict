@@ -1,16 +1,14 @@
-has first Number
-has second Number
-has operation Text
-Calculate Number
-	ArithmeticFunction(10, 5, "add").Calculate is 15
-	ArithmeticFunction(10, 5, "subtract").Calculate is 5
-	ArithmeticFunction(10, 5, "multiply").Calculate is 50
-	ArithmeticFunction(10, 5, "divide").Calculate is 2
+has numbers
+Calculate(operation Text) Number
+	ArithmeticFunction(10, 5).Calculate("add") is 15
+	ArithmeticFunction(10, 5).Calculate("subtract") is 5
+	ArithmeticFunction(10, 5).Calculate("multiply") is 50
+	ArithmeticFunction(10, 5).Calculate("divide") is 2
 	if operation is "add"
-		return first + second
+		return numbers(0) + numbers(1)
 	if operation is "subtract"
-		return first - second
+		return numbers(0) - numbers(1)
 	if operation is "multiply"
-		return first * second
+		return numbers(0) + numbers(1)
 	if operation is "divide"
 		return first / second

@@ -6,6 +6,6 @@ public class Member : NamedType
 		nameAndType, value?.ReturnType) =>
 		Value = value;
 
-	public Expression? Value { get; }
+	public Expression? Value { get; set; }
 	public bool IsPublic => char.IsUpper(Name[0]);
 }
