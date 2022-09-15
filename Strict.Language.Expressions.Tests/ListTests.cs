@@ -104,8 +104,10 @@ public sealed class ListTests : TestExpressions
 	[Test]
 	public void LeftTypeShouldNotBeChanged()
 	{
-		var parsedExpression = ParseExpression("(\"1\", \"2\", \"3\", \"4\") + 5");
+		const string Code = "(\"1\", \"2\", \"3\", \"4\") + 5";
+		var parsedExpression = ParseExpression(Code);
 		Assert.That(parsedExpression, Is.InstanceOf<Binary>()!);
+		Assert.That(parsedExpression.ToString(), Is.EqualTo(Code));
 		Assert.That(((Binary)parsedExpression).ReturnType, Is.EqualTo(type.GetType(Base.Text)));
 	}
 
@@ -136,14 +138,12 @@ public sealed class ListTests : TestExpressions
 
 	[Test]
 	public void ParseComplexLists() =>
-		Assert.That(
-			ParseExpression("((\"Hello, World\", \"Yoyo (it is my secret + 1)\"), (\"4\")) + 7"),
-			Is.EqualTo(CreateBinary(
-				new List(new Body(method),
-					GetListExpressions(new[]
-					{
-						"(\"Hello, World\", \"Yoyo (it is my secret + 1)\"), (\"4\")"
-					})), BinaryOperator.Plus, new Number(method, 7))));
+		ParseAndCheckOutputMatchesInput("((\"Hello, World\", \"Yoyo (it is my secret + 1)\"), (\"4\")) + 7", CreateBinary(
+			new List(new Body(method),
+				GetListExpressions(new[]
+				{
+					"(\"Hello, World\", \"Yoyo (it is my secret + 1)\"), (\"4\")"
+				})), BinaryOperator.Plus, new Number(method, 7)));
 
 	[Test]
 	public void ListGenericLengthAddition()

@@ -59,7 +59,7 @@ public sealed class For : Expression
 	{
 		if (body.FindVariableValue(IndexName) != null)
 			throw new DuplicateImplicitIndex(body);
-		innerBody.AddOrUpdateVariable(IndexName, new Number(body.Method, 0));
+		innerBody.AddVariable(IndexName, new Number(body.Method, 0));
 		return new For(body.Method.ParseExpression(body, line[4..]), innerBody.Parse());
 	}
 
@@ -69,7 +69,7 @@ public sealed class For : Expression
 	{
 		var variableName = FindVariableName(line);
 		if (body.FindVariableValue(variableName) == null)
-			body.AddOrUpdateVariable(variableName.ToString(),
+			body.AddVariable(variableName.ToString(),
 				body.Method.ParseExpression(body, expressionText));
 		return new For(body.Method.ParseExpression(body, line[4..]), innerBody.Parse());
 	}

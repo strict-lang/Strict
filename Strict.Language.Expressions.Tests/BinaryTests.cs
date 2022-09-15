@@ -80,34 +80,34 @@ public sealed class BinaryTests : TestExpressions
 
 	[Test]
 	public void NestedBinaryWithBrackets() =>
-		Assert.That(ParseExpression("2 * (5 + 3)"),
-			Is.EqualTo(CreateBinary(new Number(method, 2), BinaryOperator.Multiply,
-				CreateBinary(new Number(method, 5), BinaryOperator.Plus, new Number(method, 3)))));
+		ParseAndCheckOutputMatchesInput("2 * (5 + 3)",
+			CreateBinary(new Number(method, 2), BinaryOperator.Multiply,
+				CreateBinary(new Number(method, 5), BinaryOperator.Plus, new Number(method, 3))));
 
 	[Test]
 	public void NestedBinaryExpressionsWithGrouping() =>
-		Assert.That(ParseExpression("(2 + 5) * 3"),
-			Is.EqualTo(CreateBinary(
+		ParseAndCheckOutputMatchesInput("(2 + 5) * 3",
+			CreateBinary(
 				CreateBinary(new Number(method, 2), BinaryOperator.Plus, new Number(method, 5)),
-				BinaryOperator.Multiply, new Number(method, 3))));
+				BinaryOperator.Multiply, new Number(method, 3)));
 
 	[Test]
 	public void NestedBinaryExpressionsSingleGroup() =>
-		Assert.That(ParseExpression("6 + (7 + 8) * 9"),
-			Is.EqualTo(CreateBinary(new Number(method, 6), BinaryOperator.Plus,
+		ParseAndCheckOutputMatchesInput("6 + (7 + 8) * 9",
+			CreateBinary(new Number(method, 6), BinaryOperator.Plus,
 				CreateBinary(
 					CreateBinary(new Number(method, 7), BinaryOperator.Plus, new Number(method, 8)),
-					BinaryOperator.Multiply, new Number(method, 9)))));
+					BinaryOperator.Multiply, new Number(method, 9))));
 
 	[Test]
 	public void NestedBinaryExpressionsTwoGroups() =>
-		Assert.That(ParseExpression("(1 * 2) + (3 + 4) * 5."),
-			Is.EqualTo(CreateBinary(
-				CreateBinary(new Number(method, 1), BinaryOperator.Multiply, new Number(method, 2)),
-				BinaryOperator.Plus,
+		ParseAndCheckOutputMatchesInput("(1 + 2) * (3 + 4) * 5",
+			CreateBinary(
+				CreateBinary(new Number(method, 1), BinaryOperator.Plus, new Number(method, 2)),
+				BinaryOperator.Multiply,
 				CreateBinary(
 					CreateBinary(new Number(method, 3), BinaryOperator.Plus, new Number(method, 4)),
-					BinaryOperator.Multiply, new Number(method, 5)))));
+					BinaryOperator.Multiply, new Number(method, 5))));
 
 	[Test]
 	public void HasMatchingLeftAndRightExpressionTypes()

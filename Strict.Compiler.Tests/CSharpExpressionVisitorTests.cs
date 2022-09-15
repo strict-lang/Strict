@@ -8,7 +8,7 @@ using Strict.Language.Tests;
 
 namespace Strict.Compiler.Tests;
 
-[Ignore("TODO: Not yet done")]
+//[Ignore("TODO: Not yet done")]
 public sealed class CSharpExpressionVisitorTests : TestExpressions
 {
 	[SetUp]
@@ -16,11 +16,13 @@ public sealed class CSharpExpressionVisitorTests : TestExpressions
 
 	private CSharpExpressionVisitor visitor = null!;
 
+	[Ignore("TODO: Not yet done")]
 	[Test]
 	public void ShouldCallVisitBlockForBlockExpressions() =>
 		Assert.That(() => visitor.Visit(method.GetBodyAndParseIfNeeded())[0],
 			Throws.InstanceOf<ExpressionVisitor.UseVisitBody>());
 
+	[Ignore("TODO: Not yet done")]
 	[Test]
 	public void GenerateAssignment() =>
 		Assert.That(visitor.Visit(new Assignment((Body)method.GetBodyAndParseIfNeeded(), nameof(number), number)),
@@ -65,6 +67,7 @@ public sealed class CSharpExpressionVisitorTests : TestExpressions
 	public void ConvertStrictToCSharp(string strictCode, string expectedCSharpCode) =>
 		Assert.That(visitor.Visit(ParseExpression(strictCode)), Is.EqualTo(expectedCSharpCode));
 
+	[Ignore("TODO: Not yet done")]
 	[Test]
 	public void GenerateInterfaceMethodBody() =>
 		Assert.That(visitor.VisitBody(method.GetBodyAndParseIfNeeded())[0], Is.EqualTo("void Run();"));
@@ -73,35 +76,43 @@ public sealed class CSharpExpressionVisitorTests : TestExpressions
 	public void GenerateMultilineMethodBody()
 	{
 		var multilineMethod = new Method(type, 0, this, MethodTests.NestedMethodLines);
-		Assert.That(visitor.VisitBody(multilineMethod.GetBodyAndParseIfNeeded()), Is.EqualTo(@"public bool IsBla5()
-{
-	var number = 5;
-	if (bla == 5)
-		return true;
-	return false;
-}"));
+		Assert.That(visitor.VisitBody(multilineMethod.GetBodyAndParseIfNeeded()), Is.EqualTo(new[]
+		{
+			// @formatter:off
+			"public bool IsBlaFive()",
+			"{",
+			"	var number = 5;",
+			"	if (bla == 5)",
+			"		return true;",
+			"	false;",
+			"}"
+		}));
 	}
 
 	[Test]
 	public void GenerateIfElse()
 	{
-		// @formatter:off
 		var multilineMethod = new Method(type, 0, this,
 			new[]
 			{
 				"IsBlaFive Boolean",
-				"	if bla is 5",
+				"	let value = 5",
+				"	if value is 5",
 				"		return true",
 				"	else",
-				"		return false"
+				"		return false",
 			});
 		Assert.That(visitor.VisitBody(multilineMethod.GetBodyAndParseIfNeeded()),
 			Is.EqualTo(new[]
 			{
-				"if (bla == 5)",
-				"	return true;",
-				"else",
-				"	return false;"
+				"public bool IsBlaFive()",
+        "{",
+				"	var value = 5;",
+				"	if (value == 5)",
+				"		return true;",
+				"	else",
+				"		return false;",
+				"}"
 			}));
 	}
 }

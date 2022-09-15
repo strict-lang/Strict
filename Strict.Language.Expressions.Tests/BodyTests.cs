@@ -4,49 +4,17 @@ namespace Strict.Language.Expressions.Tests;
 
 public sealed class BodyTests : TestExpressions
 {
-	/*TODO: these tests make close to no sense now, instead look at the uncovered lines and add tests for those!
-	[Test]
-	public void ReturnAsLastExpressionIsNotNeeded() =>
-		Assert.That(() => new Body(method).ParseExpressions(
-			new Expression[]
-			{
-				new Assignment(new Body(method), "num", new Number(method, 5)),
-				new Return(new Number(method, 5))
-			} /*,
-				new[]
-				{
-					new Method.Line(method, 1, "let num = 5", 1),
-					new Method.Line(method, 1, "return num", 2)
-				}*), Throws.InstanceOf<ReturnAsLastExpressionIsNotNeeded>());
-
-	[Test]
-	public void BodyToString()
-	{
-		var body = new Body(method);
-		body.SetAndValidateExpressions(
-			new Expression[]
-			{
-				new Assignment(new Body(method), "num", new Number(method, 5)), new Number(method, 5)
-			} /*,
-			new[]
-			{
-				new Method.Line(method, 1, "let num = 5", 1), new Method.Line(method, 1, "num", 2)
-			}*);
-		Assert.That(body.ToString(),
-			Is.EqualTo(body.Expressions[0] + Environment.NewLine + body.Expressions[1]));
-	}
-	*/
 	[Test]
 	public void FindVariableValue() =>
 		Assert.That(
-			new Body(method).AddOrUpdateVariable("num", new Number(method, 5)).FindVariableValue("num"),
+			new Body(method).AddVariable("num", new Number(method, 5)).FindVariableValue("num"),
 			Is.EqualTo(new Number(method, 5)));
 
 	[Test]
 	public void FindParentVariableValue() =>
 		Assert.That(
-			new Body(method, 0, new Body(method).AddOrUpdateVariable("str", new Text(method, "Hello"))).
-				AddOrUpdateVariable("num", new Number(method, 5)).FindVariableValue("str"),
+			new Body(method, 0, new Body(method).AddVariable("str", new Text(method, "Hello"))).
+				AddVariable("num", new Number(method, 5)).FindVariableValue("str"),
 			Is.EqualTo(new Text(method, "Hello")));
 
 	[Test]
@@ -58,6 +26,23 @@ public sealed class BodyTests : TestExpressions
 	public void UnknownVariable() =>
 		Assert.That(() => ParseExpression("if bla is 5", "\tlog.Write(unknownVariable)"),
 			Throws.InstanceOf<IdentifierNotFound>().With.Message.StartWith("unknownVariable"));
+
+	[Test]
+	public void CannotAccessAnotherMethodVariable()
+	{
+		var program = new Type(new Package(nameof(CannotAccessAnotherMethodVariable)),
+			new TypeLines(nameof(CannotAccessAnotherMethodVariable),
+				// @formatter:off
+				"has log",
+				"Run",
+				"\tlet number = 5",
+				"Add",
+				"\tlog.Write(number)")).ParseMembersAndMethods(new MethodExpressionParser());
+		// @formatter:on
+		Assert.That(
+			() => program.Methods[1].GetBodyAndParseIfNeeded(),
+			Throws.InstanceOf<IdentifierNotFound>().With.Message.StartWith("number"));
+	}
 
 	[Test]
 	public void IfHasDifferentScopeThanMethod() =>
@@ -114,21 +99,14 @@ public sealed class BodyTests : TestExpressions
 	}
 
 	[Test]
-	public void ReturnCorrectValueForSameNameVariableCallBasedOnScope()
-	{
-		var parentIf = (If)ParseExpression(
-			"if bla is 5",
-			"\tlet abc = \"abc\"",
-			"\tif bla is 5.0",
-			"\t\tlet abc = 5",
-			"\t\tlog.Write(abc)",
-			"\tlog.Write(abc)");
-		var childIf = (If)((Body)parentIf.Then).Expressions[1];
-		var childVariableCall =
-			(VariableCall)((MethodCall)((Body)childIf.Then).Expressions[1]).Arguments[0];
-		Assert.That(childVariableCall.CurrentValue.ToString(), Is.EqualTo("5"));
-		var parentVariableCall =
-			(VariableCall)((MethodCall)((Body)parentIf.Then).Expressions[2]).Arguments[0];
-		Assert.That(parentVariableCall.CurrentValue.ToString(), Is.EqualTo("\"abc\""));
-	}
+	public void DuplicateVariableNameFound() =>
+		Assert.That(() => ParseExpression("if bla is 5", "\tlet abc = 5", "\tlet abc = 5"),
+			Throws.InstanceOf<Body.DuplicateVariableNameFound>().With.Message.StartsWith("abc"));
+
+	[Test]
+	public void DuplicateVariableInLowerScopeIsNotAllowed() =>
+		Assert.That(
+			() => ParseExpression("if bla is 5", "\tlet outerScope = \"abc\"", "\tif bla is 5.0",
+				"\t\tlet outerScope = 5"),
+			Throws.InstanceOf<Body.DuplicateVariableNameFound>().With.Message.StartsWith("outerScope"));
 }

@@ -33,7 +33,7 @@ public class Mutable
 			memberCall.Member.Value = body.Method.ParseExpression(body, remainingLineSpan);
 			return memberCall;
 		case VariableCall variableCall:
-			body.AddOrUpdateVariable(variableCall.Name, body.Method.ParseExpression(body, remainingLineSpan));
+			body.UpdateVariable(variableCall.Name, body.Method.ParseExpression(body, remainingLineSpan));
 			return variableCall;
 		default:
 			throw new InvalidAssignmentTarget(body, expression.ToString());

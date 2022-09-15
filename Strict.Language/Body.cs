@@ -104,15 +104,33 @@ public sealed class Body : Expression
 	/// </summary>
 	private Dictionary<string, Expression>? variables;
 
-	public Body AddOrUpdateVariable(string name, Expression value)
+	public Body AddVariable(string name, Expression value)
 	{
 		variables ??= new Dictionary<string, Expression>(StringComparer.Ordinal);
-		if (!variables.TryAdd(name, value))
+		if (IsDuplicateVariableName(name))
+			throw new DuplicateVariableNameFound(this, name);
+		variables.Add(name, value);
+		return this;
+	}
+
+	private bool IsDuplicateVariableName(string name) =>
+		variables != null && (variables.ContainsKey(name) ||
+			Parent != null && Parent.IsDuplicateVariableName(name));
+
+	public sealed class DuplicateVariableNameFound : ParsingFailed
+	{
+		public DuplicateVariableNameFound(Body body, string message) : base(body, message) { }
+	}
+
+	public void UpdateVariable(string name, Expression value)
+	{
+		if (variables != null && variables.ContainsKey(name))
 		{
 			variables.Remove(name);
 			variables.Add(name, value);
 		}
-		return this;
+		else
+			throw new InvalidOperationException(); //this should not happen since variable call is already verified
 	}
 
 	public Expression? FindVariableValue(ReadOnlySpan<char> searchFor)
