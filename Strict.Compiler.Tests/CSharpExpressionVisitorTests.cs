@@ -100,7 +100,7 @@ public sealed class CSharpExpressionVisitorTests : TestExpressions
 				"	if value is 5",
 				"		return true",
 				"	else",
-				"		return false",
+				"		return false"
 			});
 		Assert.That(visitor.VisitBody(multilineMethod.GetBodyAndParseIfNeeded()),
 			Is.EqualTo(new[]

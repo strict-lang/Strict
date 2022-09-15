@@ -66,33 +66,33 @@ public class BooleanTests : TestExpressions
 	[Test]
 	public void SpanEquals()
 	{
-		var case1 = "isOpen is true".AsSpan("isOpen is ".Length);
-		var case2 = "isOpen is false".AsSpan("isOpen is ".Length);
-		var case3 = "isOpen is false".AsSpan("isOpen ".Length);
-		var case4 = "isOpen is false".AsSpan(0, "isOpen".Length);
-		var case5 = "true".AsSpan();
+		var caseOne = "isOpen is true".AsSpan("isOpen is ".Length);
+		var caseTwo = "isOpen is false".AsSpan("isOpen is ".Length);
+		var caseThree = "isOpen is false".AsSpan("isOpen ".Length);
+		var caseFour = "isOpen is false".AsSpan(0, "isOpen".Length);
+		var caseFive = "true".AsSpan();
 		var counter = 0;
 		for (var iteration = 0; iteration < 100000; iteration++)
 		{
-			if (case1.Equals("true", StringComparison.Ordinal))
+			if (caseOne.Equals("true", StringComparison.Ordinal))
 				counter--;
-			else if (case1.Equals("false", StringComparison.Ordinal))
+			else if (caseOne.Equals("false", StringComparison.Ordinal))
 				counter++;
-			if (case2.Equals("true", StringComparison.Ordinal))
+			if (caseTwo.Equals("true", StringComparison.Ordinal))
 				counter--;
-			else if (case2.Equals("false", StringComparison.Ordinal))
+			else if (caseTwo.Equals("false", StringComparison.Ordinal))
 				counter++;
-			if (case3.Equals("true", StringComparison.Ordinal))
+			if (caseThree.Equals("true", StringComparison.Ordinal))
 				counter--;
-			else if (case3.Equals("false", StringComparison.Ordinal))
+			else if (caseThree.Equals("false", StringComparison.Ordinal))
 				counter++;
-			if (case4.Equals("true", StringComparison.Ordinal))
+			if (caseFour.Equals("true", StringComparison.Ordinal))
 				counter--;
-			else if (case4.Equals("false", StringComparison.Ordinal))
+			else if (caseFour.Equals("false", StringComparison.Ordinal))
 				counter++;
-			if (case5.Equals("true", StringComparison.Ordinal))
+			if (caseFive.Equals("true", StringComparison.Ordinal))
 				counter--;
-			else if (case5.Equals("false", StringComparison.Ordinal))
+			else if (caseFive.Equals("false", StringComparison.Ordinal))
 				counter++;
 		}
 		Assert.That(counter, Is.EqualTo(-100000));
@@ -102,43 +102,43 @@ public class BooleanTests : TestExpressions
 	[Test]
 	public void SpanBooleanTryParse()
 	{
-		var case1 = "isOpen is true".AsSpan("isOpen is ".Length);
-		var case2 = "isOpen is false".AsSpan("isOpen is ".Length);
-		var case3 = "isOpen is false".AsSpan("isOpen ".Length);
-		var case4 = "isOpen is false".AsSpan(0, "isOpen".Length);
-		var case5 = "true".AsSpan();
+		var firstCase = "isOpen is true".AsSpan("isOpen is ".Length);
+		var secondCase = "isOpen is false".AsSpan("isOpen is ".Length);
+		var thirdCase = "isOpen is false".AsSpan("isOpen ".Length);
+		var fourthCase = "isOpen is false".AsSpan(0, "isOpen".Length);
+		var fifthCase = "true".AsSpan();
 		var counter = 0;
 		for (var iteration = 0; iteration < 100000; iteration++)
 		{
-			if (bool.TryParse(case1, out var result1))
+			if (bool.TryParse(firstCase, out var result1))
 			{
 				if (result1)
 					counter--;
 				else
 					counter++;
 			}
-			if (bool.TryParse(case2, out var result2))
+			if (bool.TryParse(secondCase, out var result2))
 			{
 				if (result2)
 					counter--;
 				else
 					counter++;
 			}
-			if (bool.TryParse(case3, out var result3))
+			if (bool.TryParse(thirdCase, out var result3))
 			{
 				if (result3)
 					counter--;
 				else
 					counter++;
 			}
-			if (bool.TryParse(case4, out var result4))
+			if (bool.TryParse(fourthCase, out var result4))
 			{
 				if (result4)
 					counter--;
 				else
 					counter++;
 			}
-			if (bool.TryParse(case5, out var result5))
+			if (bool.TryParse(fifthCase, out var result5))
 			{
 				if (result5)
 					counter--;
