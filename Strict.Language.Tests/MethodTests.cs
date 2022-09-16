@@ -1,4 +1,5 @@
 using NUnit.Framework;
+using Strict.Language.Expressions;
 
 namespace Strict.Language.Tests;
 
@@ -79,5 +80,19 @@ public class MethodTests
 			new Type(type.Package, new TypeLines("DummyApp", "Run")).ParseMembersAndMethods(null!);
 		Assert.That(() => appTrait.Methods[0].GetBodyAndParseIfNeeded(),
 			Throws.InstanceOf<Method.CannotCallBodyOnTraitMethod>());
+	}
+
+	[Test]
+	public void AccessValidMethodParametersInMethodBody()
+	{
+		var method = new Method(type, 0, new MethodExpressionParser(), new[]
+		{
+			"Run(variable Text)",
+			"	let result = variable + \"5\""
+		});
+		Assert.That(method.Name, Is.EqualTo(Run));
+		Assert.That(method.Parameters, Has.Count.EqualTo(1));
+		var binary = (Binary)((Assignment)method.GetBodyAndParseIfNeeded()).Value;
+		Assert.That(binary.Instance, Is.InstanceOf<ParameterCall>());
 	}
 }

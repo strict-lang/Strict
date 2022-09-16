@@ -147,6 +147,7 @@ public class Program
 	{
 		var lines = await File.ReadAllLinesAsync(Path.Combine(ExampleFolder, $"{programName}.strict"));
 		var program = new Type(package, new TypeLines(programName, lines)).ParseMembersAndMethods(parser);
+		program.Methods[0].GetBodyAndParseIfNeeded();
 		var generatedCode = generator.Generate(program).ToString()!;
 		Assert.That(generatedCode,
 			Is.EqualTo(string.Join(Environment.NewLine, await File.ReadAllLinesAsync(Path.Combine(ExampleFolder, $"Output/{programName}.cs")))), generatedCode);
