@@ -55,11 +55,13 @@ public sealed class For : Expression
 	{
 		var variableName = FindVariableName(line);
 		var variableExpressionValue = line.Contains("Range", StringComparison.Ordinal)
-			? $"{GetRangeExpression(line)}.Start"
-			: $"{FindIterableName(line)}.First";
+			? $"Mutable({GetRangeExpression(line)}.Start)"
+			: $"Mutable{FindIterableName(line)}.First)";
 		if (body.FindVariableValue(variableName) == null)
 			body.AddVariable(variableName.ToString(),
 				body.Method.ParseExpression(body, variableExpressionValue));
+		if (body.FindVariableValue(variableName)?.ReturnType.Name != Base.Mutable)
+			throw new ImmutableIterator(body);
 	}
 
 	private static void CheckForUnidentifiedIterable(Body body, ReadOnlySpan<char> line)
@@ -109,5 +111,10 @@ public sealed class For : Expression
 	public sealed class UnidentifiedIterable : ParsingFailed
 	{
 		public UnidentifiedIterable(Body body) : base(body) { }
+	}
+
+	public sealed class ImmutableIterator : ParsingFailed
+	{
+		public ImmutableIterator(Body body) : base(body) { }
 	}
 }

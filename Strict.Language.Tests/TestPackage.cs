@@ -9,7 +9,7 @@ public class TestPackage : Package
 	{
 		// @formatter:off
 		var anyType = new Type(this, new TypeLines(Base.Any,
-			"is(other) Boolean", "not(other) Boolean"));
+			"is(other) Boolean", "not(other) Boolean", "in(other) Any"));
 		new Type(this, new TypeLines(Base.Boolean,
 			"not Boolean",
 			"\tvalue ? false else true",
@@ -44,8 +44,6 @@ public class TestPackage : Package
 				"\tvalue < other",
 				"^(other) Number",
 				"\tvalue ^ other",
-				"in(other) Number",
-				"\tvalue",
 				">=(other) Boolean",
 				"\tvalue >= other",
 				"<=(other) Boolean",
@@ -108,7 +106,9 @@ public class TestPackage : Package
 				"Write(text)",
 				"\tText",
 				"Write(number)",
-				"\tnumber")).ParseMembersAndMethods(null!);
+				"\tnumber",
+				"Write(mutable)",
+				"\tmutable")).ParseMembersAndMethods(null!);
 		new Type(this,
 			new TypeLines(Base.List,
 				"First",
