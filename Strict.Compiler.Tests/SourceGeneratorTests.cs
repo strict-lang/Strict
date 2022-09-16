@@ -140,8 +140,8 @@ public class Program
 
 	[Category("Manual")] // Unit Tests in strict are not compiling; after removing them this test works
 	[Test]
-	public async Task ArithmeticFunction() =>
-		await GenerateCSharpByReadingStrictProgramAndCompareWithOutput(nameof(ArithmeticFunction));
+	public Task ArithmeticFunction() =>
+		GenerateCSharpByReadingStrictProgramAndCompareWithOutput(nameof(ArithmeticFunction));
 
 	public async Task GenerateCSharpByReadingStrictProgramAndCompareWithOutput(string programName)
 	{
@@ -156,21 +156,21 @@ public class Program
 
 	[Ignore("this test will work once for loop is working")]
 	[Test]
-	public async Task ReduceButGrow() =>
-		await GenerateCSharpByReadingStrictProgramAndCompareWithOutput(nameof(ReduceButGrow));
+	public Task ReduceButGrow() =>
+		GenerateCSharpByReadingStrictProgramAndCompareWithOutput(nameof(ReduceButGrow));
 
 	[Ignore("for is not working yet - Tests in strict file are not compiling; Also variable are immutable in strict which causes this program to fail")]
 	[Test]
-	public async Task Fibonacci() =>
-		await GenerateCSharpByReadingStrictProgramAndCompareWithOutput(nameof(Fibonacci));
+	public Task Fibonacci() =>
+		GenerateCSharpByReadingStrictProgramAndCompareWithOutput(nameof(Fibonacci));
 
 	[Ignore("this test will work once for loop is working")]
 	[Test]
-	public async Task ReverseList() =>
-		await GenerateCSharpByReadingStrictProgramAndCompareWithOutput(nameof(ReverseList));
+	public Task ReverseList() =>
+		GenerateCSharpByReadingStrictProgramAndCompareWithOutput(nameof(ReverseList));
 
 	[Ignore("this test will work once for loop and not operator is working")]
 	[Test]
-	public async Task RemoveExclamation() =>
-		await GenerateCSharpByReadingStrictProgramAndCompareWithOutput(nameof(RemoveExclamation));
+	public Task RemoveExclamation() =>
+		GenerateCSharpByReadingStrictProgramAndCompareWithOutput(nameof(RemoveExclamation));
 }

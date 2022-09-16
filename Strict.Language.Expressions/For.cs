@@ -44,17 +44,31 @@ public sealed class For : Expression
 	{
 		if (!line.Contains(InName, StringComparison.Ordinal) ||
 			line.Contains(IndexName, StringComparison.Ordinal))
-			return ParseForWithImplicitVariable(body, line, innerBody);
-		var iterable = body.FindVariableValue(FindIterableName(line));
-		if (iterable == null && line[^1] != ')')
-			throw new UnidentifiedIterable(body);
-		var variableExpressionValue = line.Contains("Range", StringComparison.Ordinal)
-			? GetRangeExpression(line)
-			: $"{FindIterableName(line)}.First";
-		return ParseWithExplicitVariable(body, line, innerBody, variableExpressionValue.AsSpan());
+			return ParseWithImplicitVariable(body, line, innerBody);
+		CheckForUnidentifiedIterable(body, line);
+		AddExplicitVariableIfDoesNotExist(body, line);
+		return new For(body.Method.ParseExpression(body, line[4..]), innerBody.Parse());
 	}
 
-	private static Expression ParseForWithImplicitVariable(Body body, ReadOnlySpan<char> line,
+	private static void AddExplicitVariableIfDoesNotExist(Body body,
+		ReadOnlySpan<char> line)
+	{
+		var variableName = FindVariableName(line);
+		var variableExpressionValue = line.Contains("Range", StringComparison.Ordinal)
+			? $"{GetRangeExpression(line)}.Start"
+			: $"{FindIterableName(line)}.First";
+		if (body.FindVariableValue(variableName) == null)
+			body.AddVariable(variableName.ToString(),
+				body.Method.ParseExpression(body, variableExpressionValue));
+	}
+
+	private static void CheckForUnidentifiedIterable(Body body, ReadOnlySpan<char> line)
+	{
+		if (body.FindVariableValue(FindIterableName(line)) == null && line[^1] != ')')
+			throw new UnidentifiedIterable(body);
+	}
+
+	private static Expression ParseWithImplicitVariable(Body body, ReadOnlySpan<char> line,
 		Body innerBody)
 	{
 		if (body.FindVariableValue(IndexName) != null)
@@ -63,19 +77,8 @@ public sealed class For : Expression
 		return new For(body.Method.ParseExpression(body, line[4..]), innerBody.Parse());
 	}
 
-	// ReSharper disable once TooManyArguments
-	private static Expression ParseWithExplicitVariable(Body body, ReadOnlySpan<char> line,
-		Body innerBody, ReadOnlySpan<char> expressionText)
-	{
-		var variableName = FindVariableName(line);
-		if (body.FindVariableValue(variableName) == null)
-			body.AddVariable(variableName.ToString(),
-				body.Method.ParseExpression(body, expressionText));
-		return new For(body.Method.ParseExpression(body, line[4..]), innerBody.Parse());
-	}
-
-	private static string GetRangeExpression(ReadOnlySpan<char> line) =>
-		string.Concat(line[line.LastIndexOf('R')..(line.LastIndexOf(')') + 1)], ".Start".AsSpan());
+	private static ReadOnlySpan<char> GetRangeExpression(ReadOnlySpan<char> line) =>
+		line[line.LastIndexOf('R')..(line.LastIndexOf(')') + 1)];
 
 	private static ReadOnlySpan<char> FindVariableName(ReadOnlySpan<char> line) =>
 		line[4..(line.LastIndexOf(InName) - 1)];
