@@ -37,10 +37,7 @@ public sealed class Method : Context
 			if (firstLine[i] == '(' || firstLine[i] == ' ')
 			{
 				name = firstLine[..i];
-				//Not good, need to think of a better way to figure out "is not"
-				// ReSharper disable once ComplexConditionExpression
-				if (name[^1] == 's' && firstLine[i..].Length > 4 && firstLine[i + 1] == 'n' &&
-					firstLine[i + 2] == 'o' && firstLine[i + 3] == 't')
+				if (firstLine.StartsWith("is not(", StringComparison.Ordinal))
 				{
 					isNameIsNotOperator = true;
 					name = firstLine[..(i + 4)];

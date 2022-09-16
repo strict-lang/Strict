@@ -78,10 +78,11 @@ public sealed class IfTests : TestExpressions
 		Assert.That(ParseExpression("if bla is not 5", "\tlog.Write(\"Hey\")"),
 			Is.EqualTo(new If(GetCondition(true), GetThen())));
 
+	[TestCase("n")]
 	[TestCase("no")]
 	[TestCase("nope")]
-	[TestCase("n")]
-	//[TestCase("note")] TODO: Failing case for not operator
+	[TestCase("nott")]
+	[TestCase("note")]
 	public void InvalidNotKeyword(string invalidKeyword) =>
 		Assert.That(() => ParseExpression($"if bla is {invalidKeyword} 5", "\tlog.Write(\"Hey\")"),
 			Throws.InstanceOf<IdentifierNotFound>().With.Message.StartsWith(invalidKeyword));
