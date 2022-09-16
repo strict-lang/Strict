@@ -126,7 +126,8 @@ public sealed class PhraseTokenizer
 					result.Add(tokenStart..index);
 				tokenStart = -1;
 				result.Add(index..(index + 1));
-				break;
+				if (index + 1 < input.Length && input[index + 1] != '.') //To consume Nested member or method call as single token
+					break;
 			}
 			else if (input[index] == ',' || input[index] == '?')
 			{
