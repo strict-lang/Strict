@@ -74,7 +74,10 @@ public sealed class PhraseTokenizer
 	{
 		if (input[index] == OpenBracket)
 			foreach (var token in GetTokensTillMatchingClosingBracket())
-				processToken(token);
+				if (index + 1 < input.Length && input[index + 1] == '.')
+					tokenStart = token.Start.Value;
+				else
+					processToken(token);
 		else if (input[index] == ' ')
 		{
 			if (tokenStart >= 0)
@@ -126,8 +129,7 @@ public sealed class PhraseTokenizer
 					result.Add(tokenStart..index);
 				tokenStart = -1;
 				result.Add(index..(index + 1));
-				if (index + 1 < input.Length && input[index + 1] != '.') //To consume Nested member or method call as single token
-					break;
+				break;
 			}
 			else if (input[index] == ',' || input[index] == '?')
 			{
