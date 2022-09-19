@@ -175,4 +175,22 @@ public static class SpanExtensions
 			texts[index] = input[ranges.ElementAt(index)].ToString();
 		return texts;
 	}
+
+	// ReSharper disable once ExcessiveIndentation
+	public static int FindMatchingBracketIndex(this ReadOnlySpan<char> input, int startIndex)
+	{
+		if (startIndex < 0)
+			return -1;
+		var bracketCount = 1;
+		for (var index = startIndex + 1; index < input.Length; index++)
+			if (input[index] == '(')
+				bracketCount++;
+			else if (input[index] == ')')
+			{
+				bracketCount--;
+				if (bracketCount == 0)
+					return index;
+			}
+		return -1;
+	}
 }

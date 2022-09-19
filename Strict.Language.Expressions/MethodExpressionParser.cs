@@ -99,9 +99,16 @@ public class MethodExpressionParser : ExpressionParser
 		ReadOnlySpan<char> input)
 	{
 		var argumentsStart = input.IndexOf('(');
-		if (argumentsStart > 0 && input[^1] == ')')
-			return ParseInContext(body.Method.Type, body, input[..argumentsStart],
-				ParseListArguments(body, input[(argumentsStart + 1)..^1]));
+		var argumentsEnd = input.FindMatchingBracketIndex(argumentsStart);
+		if (argumentsStart > 0 && argumentsEnd > 0)
+		{
+			var call = ParseInContext(body.Method.Type, body, input[..argumentsStart],
+				ParseListArguments(body, input[(argumentsStart + 1)..argumentsEnd]));
+			if (argumentsEnd < input.Length - 1)
+				return TryMemberOrMethodCall(body.Method.Type, call, body, input[(argumentsEnd + 2)..],
+					Array.Empty<Expression>());
+			return call;
+		}
 		return ParseInContext(body.Method.Type, body, input, Array.Empty<Expression>());
 	}
 

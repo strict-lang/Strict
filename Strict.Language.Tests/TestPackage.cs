@@ -75,9 +75,11 @@ public class TestPackage : Package
 				"implement Mutable",
 				"from(number)",
 				"\tnumber",
-				"Increment",
+				"Increment Count",
 				"\tCount(5).Increment is 6",
 				"\tvalue = value + 1",
+				"Floor Number",
+				"\tvalue",
 				"Length Number",
 				"\tnumber.Length")).ParseMembersAndMethods(null!);
 		new Type(this,

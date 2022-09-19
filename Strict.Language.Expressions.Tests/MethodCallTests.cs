@@ -122,4 +122,18 @@ public sealed class MethodCallTests : TestExpressions
 		Assert.That(program.Methods[1].GetBodyAndParseIfNeeded().ToString(),
 			Is.EqualTo("let countOfFive = Count(5)\r\nlet lengthSquare = GetLengthSquare(countOfFive)"));
 	}
+
+	[Test]
+	public void ConstructorCallWithMethodCall()
+	{
+		var program = new Type(type.Package,
+			new TypeLines("ArithmeticFunction",
+				"has numbers",
+				"from(first Number, second Number)",
+				"\tnumbers = (first, second)",
+				"Calculate(text) Number",
+				"\tArithmeticFunction(10, 5).Calculate(\"add\")",
+				"\t1")).ParseMembersAndMethods(new MethodExpressionParser());
+		program.Methods[1].GetBodyAndParseIfNeeded();
+	}
 }
