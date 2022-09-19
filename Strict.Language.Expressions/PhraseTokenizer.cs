@@ -74,10 +74,7 @@ public sealed class PhraseTokenizer
 	{
 		if (input[index] == OpenBracket)
 			foreach (var token in GetTokensTillMatchingClosingBracket())
-				if (index + 1 < input.Length && input[index + 1] == '.')
-					tokenStart = token.Start.Value;
-				else
-					processToken(token);
+				processToken(token);
 		else if (input[index] == ' ')
 		{
 			if (tokenStart >= 0)
@@ -90,7 +87,6 @@ public sealed class PhraseTokenizer
 					processToken(tokenStart..(index - 1));
 					processToken((index - 1)..index);
 				}
-
 				// ReSharper disable once ComplexConditionExpression
 				else if (input[index - 1] == 's' && input[index..].Length > 4 && input[(index + 1)..(index + 5)] == "not ")
 				{
@@ -109,6 +105,7 @@ public sealed class PhraseTokenizer
 	internal const char OpenBracket = '(';
 	internal const char CloseBracket = ')';
 
+	// ReSharper disable once CyclomaticComplexity
 	private IReadOnlyList<Range> GetTokensTillMatchingClosingBracket()
 	{
 		if (tokenStart < 0)
@@ -121,6 +118,7 @@ public sealed class PhraseTokenizer
 		result.Add(index..(index + 1));
 		tokenStart = index + 1;
 		var foundListSeparator = false;
+		var isInMethodCall = false;
 		var foundNoSpace = true;
 		for (index++; index < input.Length; index++)
 			if (input[index] == CloseBracket)
@@ -129,7 +127,8 @@ public sealed class PhraseTokenizer
 					result.Add(tokenStart..index);
 				tokenStart = -1;
 				result.Add(index..(index + 1));
-				break;
+				if (index + 1 < input.Length && input[index + 1] != '.') //To consume Nested member or method call as single token
+					break;
 			}
 			else if (input[index] == ',' || input[index] == '?')
 			{
@@ -138,9 +137,15 @@ public sealed class PhraseTokenizer
 			}
 			else
 			{
+				if (input[index - 1] == '.')
+					isInMethodCall = true;
 				if (input[index] == ' ')
 					foundNoSpace = false;
 				ProcessNormalToken(result.Add);
+				// ReSharper disable once ComplexConditionExpression
+				if (isInMethodCall && index + 1 < input.Length && input[index] == CloseBracket &&
+					input[index + 1] != '.')
+					break;
 			}
 		if (result.Count < 3)
 			throw new InvalidEmptyOrUnmatchedBrackets(input);

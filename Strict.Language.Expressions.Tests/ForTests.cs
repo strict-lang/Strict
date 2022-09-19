@@ -83,6 +83,18 @@ public sealed class ForTests : TestExpressions
 			Is.EqualTo("for (1, 2, 3)\n\tlog.Write(index)"));
 
 	[Test]
+	public void ParseForListExpressionWithValue() =>
+		Assert.That(((For)ParseExpression("for (1, 2, 3)", "\tlog.Write(value)")).ToString(),
+			Is.EqualTo("for (1, 2, 3)\n\tlog.Write(value)"));
+
+	[Test]
+	public void ValidIteratorReturnTypeWithValue() =>
+		Assert.That(
+			((MethodCall)((VariableCall)((MethodCall)((For)ParseExpression("for (1, 2, 3)",
+				"\tlog.Write(value)")).Body).Arguments[0]).CurrentValue).Arguments[0].ReturnType.Name,
+			Is.EqualTo(Base.Number));
+
+	[Test]
 	public void ParseForListExpressionWithIterableVariable() =>
 		Assert.That(
 			((For)((Body)ParseExpression("let numbers = (1, 2, 3)", "for numbers",
@@ -92,8 +104,8 @@ public sealed class ForTests : TestExpressions
 	[Test]
 	public void ParseForListWithExplicitVariable() =>
 		Assert.That(
-			((For)((Body)ParseExpression("let number = Mutable(0)",
-				"for number in (1, 2, 3)", "\tlog.Write(number)")).Expressions[1]).ToString(),
+			((For)((Body)ParseExpression("let number = Mutable(0)", "for number in (1, 2, 3)",
+				"\tlog.Write(number)")).Expressions[1]).ToString(),
 			Is.EqualTo("for number in (1, 2, 3)\n\tlog.Write(number)"));
 
 	[Test]
@@ -118,9 +130,8 @@ public sealed class ForTests : TestExpressions
 	public void ParseForWithListOfTexts() =>
 		Assert.That(
 			() => ((For)((Body)ParseExpression("let element = Mutable(0)",
-				"for element in (\"1\", \"2\", \"3\")",
-				"\tlog.Write(element)")).Expressions[1]).ToString(),
-			Is.EqualTo("for element in (\"1\", \"2\", \"3\")\n\tlog.Write(element)"));
+					"for element in (\"1\", \"2\", \"3\")", "\tlog.Write(element)")).Expressions[1]).
+				ToString(), Is.EqualTo("for element in (\"1\", \"2\", \"3\")\n\tlog.Write(element)"));
 
 	[Test]
 	public void ValidIteratorReturnTypeForRange() =>
@@ -131,10 +142,10 @@ public sealed class ForTests : TestExpressions
 	[Test]
 	public void ValidIteratorReturnTypeTextForList() =>
 		Assert.That(
-			((MethodCall)((VariableCall)((MethodCall)((For)((Body)ParseExpression("let element = Mutable(\"1\")",
-					"for element in (\"1\", \"2\", \"3\")",
-					"\tlog.Write(element)")).Expressions[1]).Body).
-				Arguments[0]).CurrentValue).Arguments[0].ReturnType.Name == Base.Text);
+			((MethodCall)((VariableCall)((MethodCall)((For)((Body)ParseExpression(
+				"let element = Mutable(\"1\")", "for element in (\"1\", \"2\", \"3\")",
+				"\tlog.Write(element)")).Expressions[1]).Body).Arguments[0]).CurrentValue).Arguments[0].
+			ReturnType.Name == Base.Text);
 
 	[Test]
 	public void ValidLoopProgram()

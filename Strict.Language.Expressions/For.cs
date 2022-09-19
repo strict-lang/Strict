@@ -11,6 +11,7 @@ namespace Strict.Language.Expressions;
 public sealed class For : Expression
 {
 	private const string ForName = "for";
+	private const string ValueName = "value";
 	private const string IndexName = "index";
 	private const string InName = "in";
 
@@ -54,12 +55,9 @@ public sealed class For : Expression
 		ReadOnlySpan<char> line)
 	{
 		var variableName = FindVariableName(line);
-		var variableExpressionValue = line.Contains("Range", StringComparison.Ordinal)
-			? $"Mutable({GetRangeExpression(line)}.Start)"
-			: $"Mutable{FindIterableName(line)}.First)";
 		if (body.FindVariableValue(variableName) == null)
 			body.AddVariable(variableName.ToString(),
-				body.Method.ParseExpression(body, variableExpressionValue));
+				body.Method.ParseExpression(body, GetVariableExpressionValue(line)));
 		if (body.FindVariableValue(variableName)?.ReturnType.Name != Base.Mutable)
 			throw new ImmutableIterator(body);
 	}
@@ -76,8 +74,15 @@ public sealed class For : Expression
 		if (body.FindVariableValue(IndexName) != null)
 			throw new DuplicateImplicitIndex(body);
 		innerBody.AddVariable(IndexName, new Number(body.Method, 0));
+		innerBody.AddVariable(ValueName,
+			innerBody.Method.ParseExpression(innerBody, GetVariableExpressionValue(line)));
 		return new For(body.Method.ParseExpression(body, line[4..]), innerBody.Parse());
 	}
+
+	private static string GetVariableExpressionValue(ReadOnlySpan<char> line) =>
+		line.Contains("Range", StringComparison.Ordinal)
+			? $"Mutable({GetRangeExpression(line)}.Start)"
+			: $"Mutable({FindIterableName(line)})"; //Add .First as soon as generic type is implemented
 
 	private static ReadOnlySpan<char> GetRangeExpression(ReadOnlySpan<char> line) =>
 		line[line.LastIndexOf('R')..(line.LastIndexOf(')') + 1)];
@@ -86,7 +91,9 @@ public sealed class For : Expression
 		line[4..(line.LastIndexOf(InName) - 1)];
 
 	private static ReadOnlySpan<char> FindIterableName(ReadOnlySpan<char> line) =>
-		line[(line.LastIndexOf(InName) + 3)..];
+		line.Contains(InName, StringComparison.Ordinal)
+			? line[(line.LastIndexOf(InName) + 3)..]
+			: line[(line.IndexOf(' ') + 1)..];
 
 	public sealed class MissingExpression : ParsingFailed
 	{

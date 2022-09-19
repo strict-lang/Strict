@@ -100,6 +100,7 @@ public class TestPackage : Package
 				"\telse",
 				"\t\treturn digits(floor(number / 10)) + number % 10")).ParseMembersAndMethods(null!);
 		numberType.ParseMembersAndMethods(null!);
+		new Type(this, new TypeLines(Base.Generic, "from(any)")).ParseMembersAndMethods(null!);
 		new Type(this,
 			new TypeLines(Base.Log,
 				"has Text",
@@ -111,11 +112,17 @@ public class TestPackage : Package
 				"\tmutable")).ParseMembersAndMethods(null!);
 		new Type(this,
 			new TypeLines(Base.List,
-				"First",
+				"has Generic",
+				"First Text",
+				"\telements(0)",
 				"+(other) List",
+				"\tvalue + other",
 				"-(other) List",
+				"\tvalue - other",
 				"is(other) Boolean",
-				"*(other) List")).ParseMembersAndMethods(null!);
+				"\tvalue is other",
+				"*(other) List",
+				"\tvalue * other")).ParseMembersAndMethods(null!);
 		new Type(this,
 			new TypeLines(Base.File,
 				"from(Text)",

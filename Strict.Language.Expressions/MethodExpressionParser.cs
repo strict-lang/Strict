@@ -122,7 +122,7 @@ public class MethodExpressionParser : ExpressionParser
 				if (current == null)
 				{
 					current = Text.TryParse(body, input[members.Current]) ??
-						List.TryParseWithSingleElement(body, input[members.Current]);
+						List.TryParseWithMultipleOrNestedElements(body, input[members.Current]);
 					if (current != null)
 					{
 						context = current.ReturnType;
