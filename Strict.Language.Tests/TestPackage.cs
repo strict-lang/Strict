@@ -8,22 +8,20 @@ public class TestPackage : Package
 	public TestPackage() : base(nameof(TestPackage))
 	{
 		// @formatter:off
-		var anyType = new Type(this, new TypeLines(Base.Any,
-			"is(other) Boolean", "not(other) Boolean", "in(other) Any"));
-		new Type(this, new TypeLines(Base.Boolean,
-			"not Boolean",
-			"\tvalue ? false else true",
-			"is(other) Boolean",
-			"\tvalue is other",
-			"and(other) Boolean",
-			"\tvalue and other ? true else false",
-			"or(other) Boolean",
-			"\tvalue or other ? false else true",
-			"xor(other) Boolean",
-			"\t(value and other) or (not value and not other) ? false else true")).ParseMembersAndMethods(null!);
-		anyType.ParseMembersAndMethods(null!);
-		var numberType = new Type(this,
-			new TypeLines(Base.Number,
+		var types = new[] {
+			new Type(this, new TypeLines(Base.Any, "is(other) Boolean", "in(other) Any")),
+			new Type(this, new TypeLines(Base.Boolean,
+				"not Boolean",
+				"\tvalue ? false else true",
+				"is(other) Boolean",
+				"\tvalue is other",
+				"and(other) Boolean",
+				"\tvalue and other ? true else false",
+				"or(other) Boolean",
+				"\tvalue or other ? false else true",
+				"xor(other) Boolean",
+				"\t(value and other) or (not value and not other) ? false else true")),
+			new Type(this, new TypeLines(Base.Number,
 				"is not(other) Boolean",
 				"\tvalue != other",
 				"+(other) Number",
@@ -49,9 +47,8 @@ public class TestPackage : Package
 				"<=(other) Boolean",
 				"\tvalue <= other",
 				"to Text",
-				"\t\"\" + value"));
-		new Type(this,
-			new TypeLines(Base.Range,
+				"\t\"\" + value")),
+			new Type(this, new TypeLines(Base.Range,
 				"implement Number",
 				"has Start Number",
 				"has End Number",
@@ -61,15 +58,10 @@ public class TestPackage : Package
 				"Length",
 				"\tRange(0, 5).Length is 5",
 				"\tRange(2, 18).Length is 16",
-				"\tEnd - Start")).ParseMembersAndMethods(null!);
-		new Type(this,
-			new TypeLines("HasLength",
-				"Length Number")).ParseMembersAndMethods(null!);
-		new Type(this,
-			new TypeLines(Base.Mutable,
-				"from(any)")).ParseMembersAndMethods(null!);
-		new Type(this,
-			new TypeLines(Base.Count,
+				"\tEnd - Start")),
+			new Type(this, new TypeLines("HasLength", "Length Number")),
+			new Type(this, new TypeLines(Base.Mutable, "from(generic)")),
+			new Type(this, new TypeLines(Base.Count,
 				"implement Number",
 				"implement HasLength",
 				"implement Mutable",
@@ -81,14 +73,12 @@ public class TestPackage : Package
 				"Floor Number",
 				"\tvalue",
 				"Length Number",
-				"\tnumber.Length")).ParseMembersAndMethods(null!);
-		new Type(this,
-			new TypeLines(Base.Character,
+				"\tnumber.Length")),
+			new Type(this, new TypeLines(Base.Character,
 				"implement Number",
 				"from(number)",
-				"\tvalue = number")).ParseMembersAndMethods(null!);
-		new Type(this,
-			new TypeLines(Base.Text,
+				"\tvalue = number")),
+			new Type(this, new TypeLines(Base.Text,
 				"has Characters",
 				"from(number)",
 				"\tvalue = Character(number)",
@@ -100,21 +90,22 @@ public class TestPackage : Package
 				"\tif floor(number / 10) is 0",
 				"\t\treturn (number % 10)",
 				"\telse",
-				"\t\treturn digits(floor(number / 10)) + number % 10")).ParseMembersAndMethods(null!);
-		numberType.ParseMembersAndMethods(null!);
-		new Type(this, new TypeLines(Base.Generic, "from(any)")).ParseMembersAndMethods(null!);
-		new Type(this,
-			new TypeLines(Base.Log,
+				"\t\treturn digits(floor(number / 10)) + number % 10")),
+			new Type(this, new TypeLines(Base.Type, "to Text")),
+			new Type(this, new TypeLines(Base.Generic, "from(type)")),
+			new Type(this, new TypeLines(Base.Log,
 				"has Text",
 				"Write(text)",
 				"\tText",
 				"Write(number)",
 				"\tnumber",
 				"Write(mutable)",
-				"\tmutable")).ParseMembersAndMethods(null!);
-		new Type(this,
-			new TypeLines(Base.List,
+				"\tmutable")),
+			new Type(this, new TypeLines(Base.List,
 				"has elements Generics",
+				"Length Number",
+				"\tList((1, 2)).Length is 2",
+				"\telements.Length",
 				"First Text",
 				"\telements(0)",
 				"+(other) List",
@@ -124,16 +115,15 @@ public class TestPackage : Package
 				"is(other) Boolean",
 				"\tvalue is other",
 				"*(other) List",
-				"\tvalue * other")).ParseMembersAndMethods(null!);
-		new Type(this,
-			new TypeLines(Base.File,
+				"\tvalue * other")),
+			new Type(this, new TypeLines(Base.File,
 				"from(Text)",
 				"Read Text",
 				"Write(text)",
 				"Delete",
-				"Length Number")).ParseMembersAndMethods(null!);
-		new Type(this,
-			new TypeLines(Base.Type,
-				"to Text")).ParseMembersAndMethods(null!);
+				"Length Number"))
+		};
+		foreach (var type in types)
+			type.ParseMembersAndMethods(null!);
 	}
 }

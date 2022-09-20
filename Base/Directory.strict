@@ -1,3 +1,3 @@
-from(Text)
+from(text)
 GetFiles Texts
 GetDirectories Texts

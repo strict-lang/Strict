@@ -39,17 +39,29 @@ public abstract class Context
 	/// </summary>
 	public Type GetType(string name)
 	{
-		if (name.StartsWith("List(", StringComparison.Ordinal))
-			name = name.Split('(', ')')[1];
-		if (name.Contains('('))
-			name = name.Split('(')[0];
-		if (name.EndsWith('s'))
-			name = name[..^1];
 		if (name == Name)
 			return (Type)this;
+		if (!name.EndsWith('s'))
+			return (FindFullType(name) ?? FindType(name, this)) ??
+				throw new TypeNotFound(name, FullName);
+		var listType = FindListType(name[..^1]);
+		if (listType != null)
+			return listType;
 		return (FindFullType(name) ?? FindType(name, this)) ??
 			throw new TypeNotFound(name, FullName);
 	}
+
+	private Type? FindListType(string singularName)
+	{
+		if (singularName == Base.Generic)
+			return GetType(Base.List);
+		var elementType = FindFullType(singularName) ?? FindType(singularName, this);
+		return elementType != null
+			? GetListType(elementType)
+			: null;
+	}
+
+	public GenericType GetListType(Type implementation) => GetType(Base.List).GetGenericImplementation(implementation);
 
 	private Type? FindFullType(string name) =>
 		name.Contains('.')

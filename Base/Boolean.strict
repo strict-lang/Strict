@@ -18,7 +18,7 @@ is(other) Boolean
 	true is true
 	false is not true
 	value is other
-to(Text) Text
+to Text
 	true to Text is "true"
 	not true to Text is "false"
 	value ? "true" else "false"

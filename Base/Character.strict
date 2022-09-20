@@ -8,3 +8,6 @@ from(text)
 to Text
 	Character("a") to Text is "a"
 	"" + value
++(other)
+	Character("1") + Character("2") is "12"
+	"" + value + other

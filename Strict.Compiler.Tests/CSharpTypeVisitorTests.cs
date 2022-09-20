@@ -48,15 +48,25 @@ public sealed class CSharpTypeVisitorTests : TestCSharpGenerator
 	[Test]
 	public void GenerateTypeThatImplementsMultipleTraits()
 	{
-		var program = new Type(package,
-				new TypeLines("Program", "implement Input", "implement Output", "has system", "Read",
-					"\tsystem.WriteLine(\"Read\")", "Write", "\tsystem.WriteLine(\"Write\")")).
+		var program = new Type(package, new TypeLines(
+				// @formatter.off
+				"Program",
+				"implement Input",
+				"implement Output",
+				"has system",
+				"Read",
+				"\tsystem.WriteLine(\"Read\")",
+				"\t\"\"",
+				"Write(generic)",
+				"\tsystem.WriteLine(\"Write\")")).
+			// @formatter.on
 			ParseMembersAndMethods(parser);
 		var visitor = new CSharpTypeVisitor(program);
 		AssertProgramClass(visitor);
-		Assert.That(visitor.FileContent, Contains.Substring(@"	public void Read()
+		Assert.That(visitor.FileContent, Contains.Substring(@"	public string Read()
 	{
 		Console.WriteLine(""Read"");
+		return "";
 	}"));
 		Assert.That(visitor.FileContent, Contains.Substring(@"	public void Write()
 	{
