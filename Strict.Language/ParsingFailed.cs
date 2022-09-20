@@ -9,7 +9,7 @@ namespace Strict.Language;
 /// </summary>
 public class ParsingFailed : Exception
 {
-	public ParsingFailed(Type type, int fileLineNumber, string message = "", string method = "") :
+	protected ParsingFailed(Type type, int fileLineNumber, string message = "", string method = "") :
 		base(message + GetClickableStacktraceLine(type, fileLineNumber, method)) { }
 
 	private static string GetClickableStacktraceLine(Type type, int fileLineNumber, string method) =>

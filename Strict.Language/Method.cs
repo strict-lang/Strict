@@ -98,8 +98,8 @@ public sealed class Method : Context
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public Expression ParseLine(Body body) =>
-		parser.ParseLineExpression(body, body.CurrentLine.AsSpan(body.Tabs));
+	public Expression ParseLine(Body body, string currentLine) =>
+		parser.ParseLineExpression(body, currentLine.AsSpan(body.Tabs));
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public Expression ParseExpression(Body body, ReadOnlySpan<char> text) =>

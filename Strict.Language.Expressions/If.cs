@@ -120,11 +120,11 @@ public sealed class If : Expression
 		return condition;
 	}
 
-	public class InvalidCondition : ParsingFailed
+	public sealed class InvalidCondition : ParsingFailed
 	{
 		public InvalidCondition(Body body, Type? conditionReturnType = null) : base(body,
 			conditionReturnType != null
-				? body.CurrentLine + "\n Return type " + conditionReturnType + " is not " + Base.Boolean
+				? body.Method.FullName + "\n Return type " + conditionReturnType + " is not " + Base.Boolean
 				: null) { }
 	}
 

@@ -33,15 +33,7 @@ public sealed class Body : Expression
 	public readonly List<Body> children = new();
 	public Range LineRange { get; internal set; }
 	public int ParsingLineNumber { get; set; }
-	//TODO: shouldn't be public, only needed for parsing, finished Body should only expose finished expression stuff
-	public string CurrentLine => Method.lines[ParsingLineNumber];
-
-	public void PushNestedBody(Body child) //TODO: what?
-	{
-		if (Expressions.Count == 0)
-			Expressions = new List<Expression>();
-		((List<Expression>)Expressions).Add(child);
-	}
+	internal string CurrentLine => Method.lines[ParsingLineNumber];
 
 	/// <summary>
 	/// Called when actually needed and code needs to run, usually triggered by
@@ -56,7 +48,7 @@ public sealed class Body : Expression
 		var expressions = new List<Expression>();
 		for (ParsingLineNumber = LineRange.Start.Value; ParsingLineNumber < LineRange.End.Value;
 			ParsingLineNumber++)
-			expressions.Add(Method.ParseLine(this));
+			expressions.Add(Method.ParseLine(this, CurrentLine));
 		SetExpressions(expressions);
 		return Expressions.Count == 1
 			? Expressions[0]
