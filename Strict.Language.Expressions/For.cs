@@ -47,19 +47,32 @@ public sealed class For : Expression
 			line.Contains(IndexName, StringComparison.Ordinal))
 			return ParseWithImplicitVariable(body, line, innerBody);
 		CheckForUnidentifiedIterable(body, line);
-		AddExplicitVariableIfDoesNotExist(body, line);
-		return new For(body.Method.ParseExpression(body, line[4..]), innerBody.Parse());
+		return ParseWithExplicitVariable(body, line, innerBody);
 	}
 
-	private static void AddExplicitVariableIfDoesNotExist(Body body,
-		ReadOnlySpan<char> line)
+	private static Expression ParseWithExplicitVariable(Body body,
+		ReadOnlySpan<char> line, Body innerBody)
 	{
 		var variableName = FindVariableName(line);
-		if (body.FindVariableValue(variableName) == null)
+		var variableValue = body.FindVariableValue(variableName);
+		if (variableValue == null)
 			body.AddVariable(variableName.ToString(),
 				body.Method.ParseExpression(body, GetVariableExpressionValue(line)));
 		if (body.FindVariableValue(variableName)?.ReturnType.Name != Base.Mutable)
 			throw new ImmutableIterator(body);
+		var forValueExpression = body.Method.ParseExpression(body, line[4..]);
+		CheckForIncorrectMatchingTypes(body, variableName, forValueExpression);
+		return new For(forValueExpression, innerBody.Parse());
+	}
+
+	private static void CheckForIncorrectMatchingTypes(Body body, ReadOnlySpan<char> variableName,
+		Expression forValueExpression)
+	{
+		var mutableValue = body.FindVariableValue(variableName) as Mutable;
+		var iteratorValue = ((Binary)forValueExpression).Arguments[0].ReturnType.Name;
+		if ((iteratorValue != Base.Range || mutableValue?.DataReturnType.Name != Base.Number)
+			&& iteratorValue != mutableValue?.DataReturnType.Name)
+			throw new IteratorTypeDoesNotMatchWithIterable(body);
 	}
 
 	private static void CheckForUnidentifiedIterable(Body body, ReadOnlySpan<char> line)
@@ -82,7 +95,7 @@ public sealed class For : Expression
 	private static string GetVariableExpressionValue(ReadOnlySpan<char> line) =>
 		line.Contains("Range", StringComparison.Ordinal)
 			? $"Mutable({GetRangeExpression(line)}.Start)"
-			: $"Mutable({FindIterableName(line)})"; //Add .First as soon as generic type is implemented
+			: $"Mutable({FindIterableName(line)})";
 
 	private static ReadOnlySpan<char> GetRangeExpression(ReadOnlySpan<char> line) =>
 		line[line.LastIndexOf('R')..(line.LastIndexOf(')') + 1)];
@@ -123,5 +136,10 @@ public sealed class For : Expression
 	public sealed class ImmutableIterator : ParsingFailed
 	{
 		public ImmutableIterator(Body body) : base(body) { }
+	}
+
+	public sealed class IteratorTypeDoesNotMatchWithIterable : ParsingFailed
+	{
+		public IteratorTypeDoesNotMatchWithIterable(Body body) : base(body) { }
 	}
 }
