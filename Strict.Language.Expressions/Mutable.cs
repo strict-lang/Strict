@@ -10,7 +10,7 @@ public sealed class Mutable : Value
 	public static Expression? TryParse(Body body, ReadOnlySpan<char> line) =>
 		line.Contains(new[] { " = " })
 			? TryParseReassignment(body, line)
-			: TryParseInitialization(body,line);
+			: TryParseInitialization(body, line);
 
 	public Type DataReturnType => ((Expression)Data).ReturnType;
 
@@ -59,5 +59,4 @@ public sealed class Mutable : Value
 	{
 		public ImmutableTypesCannotBeChanged(Body body, string message) : base(body, message) { }
 	}
-
 }
