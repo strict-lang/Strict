@@ -160,4 +160,17 @@ public sealed class MemberCallTests : TestExpressions
 		Assert.That(program.Members[1].Value?.ToString(),
 			Is.EqualTo("file.Length > 1000 ? \"big file\" else \"small file\""));
 	}
+
+	[Test]
+	public void BaseTypeMemberCallInDerivedType()
+	{
+		var program = new Type(type.Package,
+			new TypeLines(nameof(BaseTypeMemberCallInDerivedType),
+				"implement Range",
+				"Run",
+				"\tlet a = End + 5")).ParseMembersAndMethods(parser);
+		var assignment = (Assignment)program.Methods[0].GetBodyAndParseIfNeeded();
+		Assert.That(((Binary)assignment.Value).Instance,
+			Is.InstanceOf<MemberCall>());
+	}
 }

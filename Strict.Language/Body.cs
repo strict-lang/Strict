@@ -122,8 +122,6 @@ public sealed class Body : Expression
 			variables.Remove(name);
 			variables.Add(name, value);
 		}
-		else
-			throw new InvalidOperationException(); //this should not happen since variable call is already verified
 	}
 
 	public Expression? FindVariableValue(ReadOnlySpan<char> searchFor)

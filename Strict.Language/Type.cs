@@ -302,9 +302,6 @@ public class Type : Context
 				if (implementType == arguments[0].ReturnType)
 					return new Method(this, 0, dummyExpressionParser,
 						new[] { "from(" + implementType.Name.MakeFirstLetterLowercase() + ")" });
-		//TODO: also allow creation from any of the has members available, e.g. Stacktrace.strict
-		//from(method)
-		//	Method = method
 		return null;
 	}
 
