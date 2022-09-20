@@ -177,6 +177,7 @@ public static class SpanExtensions
 	}
 
 	// ReSharper disable once ExcessiveIndentation
+	// ReSharper disable once MethodTooLong
 	public static int FindMatchingBracketIndex(this ReadOnlySpan<char> input, int startIndex)
 	{
 		if (startIndex < 0)

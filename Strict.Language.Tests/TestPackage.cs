@@ -114,7 +114,7 @@ public class TestPackage : Package
 				"\tmutable")).ParseMembersAndMethods(null!);
 		new Type(this,
 			new TypeLines(Base.List,
-				"has Generic",
+				"has elements Generics",
 				"First Text",
 				"\telements(0)",
 				"+(other) List",

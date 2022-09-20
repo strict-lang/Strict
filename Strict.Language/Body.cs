@@ -33,6 +33,7 @@ public sealed class Body : Expression
 	public readonly List<Body> children = new();
 	public Range LineRange { get; internal set; }
 	public int ParsingLineNumber { get; set; }
+	//TODO: shouldn't be public, only needed for parsing, finished Body should only expose finished expression stuff
 	public string CurrentLine => Method.lines[ParsingLineNumber];
 
 	public void PushNestedBody(Body child) //TODO: what?

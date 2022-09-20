@@ -214,4 +214,22 @@ public sealed class TypeTests
 					new TypeLines(nameof(InvalidAssignmentTarget), "has log", "Run", "\tCount(6) = 6")).
 				ParseMembersAndMethods(new MethodExpressionParser()).Methods[0].GetBodyAndParseIfNeeded(),
 			Throws.InstanceOf<Mutable.InvalidAssignmentTarget>());
+
+	/*TODO
+	[Test]
+	public void MakeSureGenericTypeIsProperlyGenerated()
+	{
+		var listType = new Type(package,
+			new TypeLines(nameof(List), "has elements Generics", "Length", "\tList((1, 2)).Length is 2",
+				"\telements.Length"));
+		Assert.That(listType.Members[0].Type, Is.EqualTo(package.GetType(Base.List, Base.Generic)));
+		var lengthBody = listType.ParseMembersAndMethods(new MethodExpressionParser()).Methods[0].
+			GetBodyAndParseIfNeeded();
+		Assert.That(lengthBody.ReturnType, Is.EqualTo(package.GetType(Base.Number)));
+		var binary = (Binary)((Body)lengthBody).Expressions[0];
+		var lengthCall = (MethodCall)binary.Instance;
+		var constructorCall = lengthCall.Instance;
+		Assert.That(constructorCall.ReturnType, Is.EqualTo(package.GetType(Base.List, Base.Number)));
+	}
+	*/
 }
