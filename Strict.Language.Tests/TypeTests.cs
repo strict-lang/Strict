@@ -174,6 +174,16 @@ public sealed class TypeTests
 			Is.EqualTo("Add(first TestPackage.Number, other TestPackage.List) List"));
 	}
 
+	[TestCase(Base.Number, "has number", "Run", "\tlet result = Mutable(2)")]
+	[TestCase(Base.Text, "has number", "Run", "\tlet result = Mutable(\"2\")")]
+	public void MutableTypesHaveProperDataReturnType(string expected, params string[] code)
+	{
+		var expression = (Assignment)
+			new Type(package, new TypeLines(nameof(MutableTypesHaveProperDataReturnType), code)).
+				ParseMembersAndMethods(new MethodExpressionParser()).Methods[0].GetBodyAndParseIfNeeded();
+		Assert.That(((Mutable)expression.Value).DataReturnType.Name, Is.EqualTo(expected));
+	}
+
 	[TestCase("has number", "Run", "\tnumber = 1 + 1")]
 	[TestCase("has number", "Run", "\tlet result = 5", "\tresult = 6")]
 	public void ImmutableTypesCannotBeChanged(params string[] code) =>

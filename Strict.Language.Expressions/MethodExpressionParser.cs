@@ -26,9 +26,9 @@ public class MethodExpressionParser : ExpressionParser
 	{
 		if (input.IsEmpty)
 			throw new CannotParseEmptyInput(body);
-		if (input.Length < 3 || !input.Contains(' ') && !input.Contains(','))
+		if (input.Length < 3 || !input.Contains(' ') && !input.Contains(',') || input.StartsWith(Base.Mutable))
 			return Boolean.TryParse(body, input) ?? Text.TryParse(body, input) ??
-				List.TryParseWithSingleElement(body, input) ?? Number.TryParse(body, input) ??
+				List.TryParseWithSingleElement(body, input) ?? Number.TryParse(body, input) ?? Mutable.TryParse(body, input) ??
 				TryParseMemberOrZeroOrOneArgumentMethodCall(body, input) ?? (input.IsOperator()
 					? throw new InvalidOperatorHere(body, input.ToString())
 					: input.IsWord()

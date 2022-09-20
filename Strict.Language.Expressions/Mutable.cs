@@ -3,12 +3,16 @@ using System.Linq;
 
 namespace Strict.Language.Expressions;
 
-public class Mutable
+public sealed class Mutable : Value
 {
+	private Mutable(Context context, Expression expression) : base(context.GetType(Base.Mutable), expression) { }
+
 	public static Expression? TryParse(Body body, ReadOnlySpan<char> line) =>
 		line.Contains(new[] { " = " })
 			? TryParseReassignment(body, line)
-			: null;
+			: TryParseInitialization(body,line);
+
+	public Type DataReturnType => ((Expression)Data).ReturnType;
 
 	private static Expression TryParseReassignment(Body body, ReadOnlySpan<char> line)
 	{
@@ -19,6 +23,12 @@ public class Mutable
 			? UpdateMemberOrVariableValue(body, expression, line[(parts.Current.Length + 1 + 1 + 1)..])
 			: throw new ImmutableTypesCannotBeChanged(body, parts.Current.ToString());
 	}
+
+	private static Expression? TryParseInitialization(Body body, ReadOnlySpan<char> line) =>
+		line.StartsWith("Mutable", StringComparison.Ordinal)
+			? new Mutable(body.Method,
+				body.Method.ParseExpression(body, line[(line.IndexOf('(') + 1)..line.LastIndexOf(')')]))
+			: null;
 
 	private static bool IsMutable(Expression expression) =>
 		expression.ReturnType.Name == Base.Mutable ||
@@ -31,10 +41,10 @@ public class Mutable
 		{
 		case MemberCall memberCall:
 			memberCall.Member.Value = body.Method.ParseExpression(body, remainingLineSpan);
-			return memberCall;
+			return new Mutable(body.Method, memberCall);
 		case VariableCall variableCall:
 			body.UpdateVariable(variableCall.Name, body.Method.ParseExpression(body, remainingLineSpan));
-			return variableCall;
+			return new Mutable(body.Method, variableCall);
 		default:
 			throw new InvalidAssignmentTarget(body, expression.ToString());
 		}
@@ -49,4 +59,5 @@ public class Mutable
 	{
 		public ImmutableTypesCannotBeChanged(Body body, string message) : base(body, message) { }
 	}
+
 }
