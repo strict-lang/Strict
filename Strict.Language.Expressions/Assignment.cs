@@ -33,7 +33,7 @@ public sealed class Assignment : Expression
 	/// Highly optimized parsing of assignments, skips over the let, grabs the name of the local
 	/// variable, then skips over the space, equal and space characters and parses the rest, e.g.
 	/// let hello = "hello" + " " + "world"
-	///          ^ ^       ^ ^   ^ ^       END, using TryParseExpression with Range(12, 35)
+	///					 ^ ^       ^ ^   ^ ^       END, using TryParseExpression with Range(12, 35)
 	/// </summary>
 	private static Expression TryParseLet(Body body, ReadOnlySpan<char> line)
 	{

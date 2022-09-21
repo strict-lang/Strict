@@ -240,4 +240,10 @@ public sealed class TypeTests
 		Assert.That(numbersType.Generic, Is.EqualTo(package.GetType(Base.List)));
 		Assert.That(numbersType.Implementation, Is.EqualTo(package.GetType(Base.Number)));
 	}
+
+	[Test]
+	public void CannotGetGenericImplementationOnNonGenericType() =>
+		Assert.That(
+			() => package.GetType(Base.Text).GetGenericImplementation(package.GetType(Base.Number)),
+			Throws.InstanceOf<Type.CannotGetGenericImplementationOnNonGenericType>());
 }

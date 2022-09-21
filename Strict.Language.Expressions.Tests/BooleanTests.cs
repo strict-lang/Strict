@@ -20,8 +20,8 @@ public class BooleanTests : TestExpressions
 	//ncrunch: no coverage start
 	/// <summary>
 	/// SpanIsTrueTextOrIsFalseText |   160.8 us |  1.64 us |  0.86 us |      1 KB |
-	///                  SpanEquals |   283.7 us | 13.68 us |  9.05 us |      1 KB |
-	///         SpanBooleanTryParse | 1,730.8 us | 26.90 us | 17.79 us |      1 KB |
+	/// SpanEquals									|   283.7 us | 13.68 us |  9.05 us |      1 KB |
+	/// SpanBooleanTryParse					| 1,730.8 us | 26.90 us | 17.79 us |      1 KB |
 	/// </summary>
 	[Benchmark]
 	[Test]

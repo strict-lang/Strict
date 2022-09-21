@@ -344,6 +344,7 @@ public class Type : Context
 
 	private readonly ExpressionParser dummyExpressionParser = new DummyExpressionParser();
 
+	//ncrunch: no coverage start
 	private sealed class DummyExpressionParser : ExpressionParser
 	{
 		public override Expression ParseLineExpression(Body body, ReadOnlySpan<char> line) => body;
@@ -351,7 +352,7 @@ public class Type : Context
 
 		public override List<Expression> ParseListArguments(Body body, ReadOnlySpan<char> text) =>
 			new();
-	}
+	} //ncrunch: no coverage end
 
 	private bool IsCompatible(Type sameOrBaseType) =>
 		this == sameOrBaseType || sameOrBaseType.Name == Base.Any ||

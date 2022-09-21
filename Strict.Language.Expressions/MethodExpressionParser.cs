@@ -5,15 +5,15 @@ using System.Runtime.CompilerServices;
 namespace Strict.Language.Expressions;
 
 /// <summary>
-///   Parses method bodies by splitting into main lines (lines starting without tabs)
-///   and getting the expression recursively via parser combinator logic in each expression.
+/// Parses method bodies by splitting into main lines (lines starting without tabs)
+/// and getting the expression recursively via parser combinator logic in each expression.
 /// </summary>
 public class MethodExpressionParser : ExpressionParser
 {
 	/// <summary>
-	///   Slightly slower version that checks high level expressions that can only occur at the line
-	///   level like let, if, for (those will increase methodLineNumber as well) and return.
-	///   Every other expression can be nested and can appear anywhere.
+	/// Slightly slower version that checks high level expressions that can only occur at the line
+	/// level like let, if, for (those will increase methodLineNumber as well) and return.
+	/// Every other expression can be nested and can appear anywhere.
 	/// </summary>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public override Expression ParseLineExpression(Body body, ReadOnlySpan<char> line) =>
@@ -91,9 +91,9 @@ public class MethodExpressionParser : ExpressionParser
 	}
 
 	/// <summary>
-	///   By far the most common usecase, we call something from another instance, use some binary
-	///   operator (like is, to, +, etc.) or execute some method. For more arguments more complex
-	///   parsing has to be done and we have to invoke ShuntingYard for the argument list.
+	/// By far the most common usecase, we call something from another instance, use some binary
+	/// operator (like is, to, +, etc.) or execute some method. For more arguments more complex
+	/// parsing has to be done and we have to invoke ShuntingYard for the argument list.
 	/// </summary>
 	public Expression? TryParseMemberOrZeroOrOneArgumentMethodCall(Body body,
 		ReadOnlySpan<char> input)
@@ -221,9 +221,9 @@ public class MethodExpressionParser : ExpressionParser
 	}
 
 	/// <summary>
-	///   Figures out if there are any bracket groups or if there is binary expression action going on.
-	///   Could also contain strings, we don't know. Most of the time it will just be a bunch of values.
-	///   <see cref="ShuntingYard" /> will only parse till the next comma, has to call this till the end.
+	/// Figures out if there are any bracket groups or if there is binary expression action going on.
+	/// Could also contain strings, we don't know. Most of the time it will just be a bunch of values.
+	/// <see cref="ShuntingYard" /> will only parse till the next comma, has to call this till the end.
 	/// </summary>
 	// ReSharper disable once CyclomaticComplexity
 	// ReSharper disable once ExcessiveIndentation

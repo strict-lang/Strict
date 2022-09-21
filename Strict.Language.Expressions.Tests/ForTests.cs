@@ -28,8 +28,16 @@ public sealed class ForTests : TestExpressions
 
 	[Test]
 	public void ValidExpressionType() =>
-		Assert.That(() => ParseExpression("for Range(2, 5)", "\tlog.Write(\"Hi\")"),
+		Assert.That(ParseExpression("for Range(2, 5)", "\tlog.Write(\"Hi\")"),
 			Is.TypeOf(typeof(For)));
+
+	[Test]
+	public void Equals()
+	{
+		var first = ParseExpression("for Range(2, 5)", "\tlog.Write(\"Hi\")");
+		var second = ParseExpression("for Range(2, 5)", "\tlog.Write(\"Hi\")");
+		Assert.That(first.Equals(second), Is.True);
+	}
 
 	[Test]
 	public void MatchingHashCode()

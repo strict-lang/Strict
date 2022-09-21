@@ -177,7 +177,7 @@ public sealed class Repositories
 		return package;
 	}
 
-	private sealed class NoFilesAllowedInStrictFolderNeedsToBeInASubFolder : Exception
+	public sealed class NoFilesAllowedInStrictFolderNeedsToBeInASubFolder : Exception
 	{
 		public NoFilesAllowedInStrictFolderNeedsToBeInASubFolder(IEnumerable<string> files) : base(
 			files.ToWordList()) { }

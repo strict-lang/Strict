@@ -1,7 +1,7 @@
 namespace Strict.Language.Tests;
 
 /// <summary>
-///   Helper context to provide a bunch of helper types to make tests work.
+/// Helper context to provide a bunch of helper types to make tests work.
 /// </summary>
 public class TestPackage : Package
 {

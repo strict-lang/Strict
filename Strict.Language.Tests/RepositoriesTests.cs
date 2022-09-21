@@ -37,6 +37,17 @@ public class RepositoriesTests
 		Assert.That(basePackage.FindDirectType(Base.App), Is.Not.Null);
 	}
 
+	[Category("Manual")]
+	[Test]
+	public void NoFilesAllowedInStrictFolderNeedsToBeInASubFolder()
+	{
+		var strictFilePath = Path.Combine(Repositories.DevelopmentFolder, "UnitTestForCoverage.strict");
+		File.Create(strictFilePath).Close();
+		Assert.That(() =>
+			repos.LoadFromPath(Repositories.DevelopmentFolder), Throws.InstanceOf<Repositories.NoFilesAllowedInStrictFolderNeedsToBeInASubFolder>());
+		File.Delete(strictFilePath);
+	}
+
 	[Test]
 	public async Task LoadingSameRepositoryAgainUsesCache()
 	{

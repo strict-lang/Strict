@@ -50,11 +50,11 @@ public class NumberTests : TestExpressions
 	/// <summary>
 	/// All benchmarks ran 1 million iterations, so normal usecase of numbers is 1 billions of a
 	/// second, no text is a little less than that.
-	///       SpanTryParseNumber | 10,918.2 us | 328.83 us | 217.50 us |      1 KB |
-	///   SpanTextTryParseNumber |    935.3 us |  20.65 us |  13.66 us |      1 KB |
-	/// SpanSimpleTryParseNumber |  1,173.8 us |  39.75 us |  26.29 us |      1 KB |
-	///              IntTryParse | 30,177.0 us | 734.38 us | 485.75 us |      1 KB |
-	///           DoubleTryParse | 35,744.1 us | 639.56 us | 423.03 us |      1 KB |
+	/// SpanTryParseNumber				| 10,918.2 us | 328.83 us | 217.50 us |      1 KB |
+	/// SpanTextTryParseNumber		|    935.3 us |  20.65 us |  13.66 us |      1 KB |
+	/// SpanSimpleTryParseNumber	|  1,173.8 us |  39.75 us |  26.29 us |      1 KB |
+	/// IntTryParse								| 30,177.0 us | 734.38 us | 485.75 us |      1 KB |
+	/// DoubleTryParse						| 35,744.1 us | 639.56 us | 423.03 us |      1 KB |
 	/// </summary>
 	// ReSharper disable CyclomaticComplexity
 	// ReSharper disable MethodTooLong

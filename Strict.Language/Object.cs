@@ -1,4 +1,4 @@
-﻿/*TODO: maybe later? left over from GenericType refactoring
+﻿/*https://deltaengine.fogbugz.com/f/cases/25970
 namespace Strict.Language;
 
 public class Object
@@ -11,8 +11,6 @@ public class Object
 
 	public Type Type { get; }
 	public Type? GenericImplementation { get; }
-	//TODO: we can also store value this currently has, lines it was defined and used, etc.
-	//TODO: is mutable, can be reduced/constant from now on, etc.
 
 	public override string ToString() =>
 		Type.Name + (GenericImplementation != null
