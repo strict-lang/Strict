@@ -20,7 +20,7 @@ public sealed class IfTests : TestExpressions
 	public void ReturnTypeOfThenAndElseMustHaveMatchingType() =>
 		Assert.That(
 			() => ParseExpression("if 5 is 6", "\treturn 8", "else", "\treturn \"hello\"").ReturnType,
-			Throws.InstanceOf<Body.ChildBodyReturnTypeMustMatchMethodReturnType>());
+			Throws.InstanceOf<If.ReturnTypeOfThenAndElseMustHaveMatchingType>());
 
 	[Test]
 	public void ReturnTypeOfThenAndElseIsNumberAndCountIsValid() =>
@@ -168,7 +168,7 @@ public sealed class IfTests : TestExpressions
 		var program = new Type(new Package(nameof(IfTests)),
 			new TypeLines(nameof(ReturnTypeOfThenMustMatchMethodReturnType),
 				"has log",
-				"Run Text",
+				"InvalidRun Text",
 				"	if 5 is 5",
 				"		let file = File(\"test.txt\")",
 				"		return 5")).ParseMembersAndMethods(new MethodExpressionParser());
@@ -182,7 +182,7 @@ public sealed class IfTests : TestExpressions
 			nameof(ReturnTypeOfElseMustMatchMethodReturnType),
 				// @formatter:off
 				"has log",
-				"Run Text",
+				"InvalidRun Text",
 				"	if 5 is 5",
 				"		let file = File(\"test.txt\")",
 				"		return \"Hello\"",
@@ -199,7 +199,7 @@ public sealed class IfTests : TestExpressions
 			new TypeLines(nameof(ThenReturnsImplementedTypeOfMethodReturnType),
 				// @formatter:off
 				"has log",
-				"Run Number",
+				"InvalidRun Number",
 				"	if 5 is 5",
 				"		let file = File(\"test.txt\")",
 				"		return Count(5)",

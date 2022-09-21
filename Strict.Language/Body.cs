@@ -61,23 +61,28 @@ public sealed class Body : Expression
 		Expressions = expressions;
 		if (Expressions.Count == 0)
 			throw new SpanExtensions.EmptyInputIsNotAllowed();
-		var isLastExpressionReturn = Expressions[^1].GetType().Name == "Return";
+		ParsingLineNumber--;
+		var isLastExpressionReturn = Expressions[^1].GetType().Name == Base.Return;
+		var lastExpression = Expressions[^1];
+		if (Method.Name != Base.Run &&
+			!ChildHasMatchingMethodReturnType(Parent == null
+				? Method.ReturnType
+				: Parent.ReturnType, lastExpression))
+			throw new ChildBodyReturnTypeMustMatchMethodReturnType(this, lastExpression.ReturnType);
 		if (!isLastExpressionReturn)
 			return this;
-		var lastExpressionType = Expressions[^1].ReturnType;
-		ParsingLineNumber--;
 		return Parent != null
-			? isLastExpressionReturn &&
-			!ChildHasMatchingMethodReturnType(Parent.ReturnType, lastExpressionType)
-				? throw new ChildBodyReturnTypeMustMatchMethodReturnType(this, lastExpressionType)
-				: this
+			? this
 			: throw new ReturnAsLastExpressionIsNotNeeded(this);
 	}
 
 	public IReadOnlyList<Expression> Expressions { get; private set; } = Array.Empty<Expression>();
 
-	private static bool ChildHasMatchingMethodReturnType(Type parentType, Type childType) =>
-		childType.Name == Base.None || parentType == childType || childType.Implements.Contains(parentType);
+	private static bool
+		ChildHasMatchingMethodReturnType(Type parentType, Expression lastExpression) =>
+		lastExpression.GetType().Name == Base.Assignment && parentType.Name == Base.None ||
+		parentType == lastExpression.ReturnType ||
+		lastExpression.ReturnType.Implements.Contains(parentType);
 
 	// ReSharper disable once HollowTypeName
 	public sealed class ChildBodyReturnTypeMustMatchMethodReturnType : ParsingFailed

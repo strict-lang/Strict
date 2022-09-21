@@ -14,6 +14,18 @@ public sealed class ReturnTests : TestExpressions
 			Throws.InstanceOf<Body.ReturnAsLastExpressionIsNotNeeded>());
 
 	[Test]
+	public void ReturnTypeMustExistIfMethodReturnsSomething() =>
+		Assert.That(
+			() => new Method(type, 0, this, new[] { "ReturnNumber", "\t5" }).GetBodyAndParseIfNeeded(),
+			Throws.InstanceOf<Body.ChildBodyReturnTypeMustMatchMethodReturnType>());
+
+	[Test]
+	public void ReturnTypeMustMatchWhateverMethodIsReturning() =>
+		Assert.That(
+			() => new Method(type, 0, this, new[] { "ReturnNumber Text", "\t5" }).GetBodyAndParseIfNeeded(),
+			Throws.InstanceOf<Body.ChildBodyReturnTypeMustMatchMethodReturnType>());
+
+	[Test]
 	public void ParseReturnNumber() =>
 		Assert.That(new Method(type, 0, this,
 				new[]
