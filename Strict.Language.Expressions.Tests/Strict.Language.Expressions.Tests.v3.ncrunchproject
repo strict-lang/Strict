@@ -1,0 +1,15 @@
+﻿<ProjectConfiguration>
+  <Settings>
+    <IgnoredTests>
+      <NamedTestSelector>
+        <TestName>Strict.Language.Expressions.Tests.MethodCallTests.ConstructorCallWithMethodCall</TestName>
+      </NamedTestSelector>
+      <NamedTestSelector>
+        <TestName>Strict.Language.Expressions.Tests.MethodCallTests.FromExample("Count(5).Increment")</TestName>
+      </NamedTestSelector>
+      <NamedTestSelector>
+        <TestName>Strict.Language.Expressions.Tests.MethodCallTests.FromExample("Count(5).Floor")</TestName>
+      </NamedTestSelector>
+    </IgnoredTests>
+  </Settings>
+</ProjectConfiguration>

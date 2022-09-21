@@ -225,21 +225,19 @@ public sealed class TypeTests
 				ParseMembersAndMethods(new MethodExpressionParser()).Methods[0].GetBodyAndParseIfNeeded(),
 			Throws.InstanceOf<Mutable.InvalidAssignmentTarget>());
 
-	/*TODO
 	[Test]
 	public void MakeSureGenericTypeIsProperlyGenerated()
 	{
-		var listType = new Type(package,
-			new TypeLines(nameof(List), "has elements Generics", "Length", "\tList((1, 2)).Length is 2",
-				"\telements.Length"));
-		Assert.That(listType.Members[0].Type, Is.EqualTo(package.GetType(Base.List, Base.Generic)));
-		var lengthBody = listType.ParseMembersAndMethods(new MethodExpressionParser()).Methods[0].
-			GetBodyAndParseIfNeeded();
-		Assert.That(lengthBody.ReturnType, Is.EqualTo(package.GetType(Base.Number)));
-		var binary = (Binary)((Body)lengthBody).Expressions[0];
-		var lengthCall = (MethodCall)binary.Instance;
-		var constructorCall = lengthCall.Instance;
-		Assert.That(constructorCall.ReturnType, Is.EqualTo(package.GetType(Base.List, Base.Number)));
+		var listType = package.GetType(Base.List);
+		Assert.That(listType.IsGeneric, Is.True);
+		Assert.That(listType.Members[0].Type, Is.EqualTo(listType));
+		var getNumbersBody = new Type(package,
+				new TypeLines(nameof(MakeSureGenericTypeIsProperlyGenerated), "has numbers", "GetNumbers Numbers",
+					"\tnumbers")).ParseMembersAndMethods(new MethodExpressionParser()).
+			Methods[0].GetBodyAndParseIfNeeded();
+		var numbersType = package.GetListType(package.GetType(Base.Number));
+		Assert.That(getNumbersBody.ReturnType, Is.EqualTo(numbersType));
+		Assert.That(numbersType.Generic, Is.EqualTo(package.GetType(Base.List)));
+		Assert.That(numbersType.Implementation, Is.EqualTo(package.GetType(Base.Number)));
 	}
-	*/
 }

@@ -1,1 +1,2 @@
-from(Any)
+has Name Text
+has Type

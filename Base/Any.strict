@@ -1,5 +1,6 @@
 to HashCode
 to Type
 to Text
-is(type) Boolean
-to(generic) Generic
+is(other) Boolean
+not(other) Boolean
+in(other) Any

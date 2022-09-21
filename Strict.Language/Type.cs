@@ -36,8 +36,12 @@ public class Type : Context
 			throw new ExtraWhitespacesFoundAtBeginningOfLine(this, lineNumber, line);
 		if (char.IsWhiteSpace(line[^1]))
 			throw new ExtraWhitespacesFoundAtEndOfLine(this, lineNumber, line);
+		if (line.Contains("Generic", StringComparison.Ordinal))
+			IsGeneric = true;
 		return line;
 	}
+
+	public bool IsGeneric { get; private set; }
 
 	public sealed class TypeAlreadyExistsInPackage : Exception
 	{
@@ -107,6 +111,7 @@ public class Type : Context
 		return this;
 	}
 
+	// ReSharper disable once MethodTooLong
 	private void ParseAllRemainingLinesIntoMembersAndMethods(ExpressionParser parser)
 	{
 		for (; lineNumber < lines.Length; lineNumber++)
@@ -120,11 +125,21 @@ public class Type : Context
 			{
 				throw new ParsingFailed(this, rememberStartMethodLineNumber, ex.Message, ex);
 			}
+			catch (ParsingFailed)
+			{
+				throw;
+			}
+			catch (Exception ex)
+			{
+				throw new ParsingFailed(this, rememberStartMethodLineNumber,
+					string.IsNullOrEmpty(ex.Message)
+						? ex.GetType().Name
+						: ex.Message, ex);
+			}
 		}
 	}
 
-	private bool IsNoneAnyOrBoolean() =>
-		Name == Base.None || Name == Base.Any && Name == Base.Boolean;
+	private bool IsNoneAnyOrBoolean() => Name is Base.None or Base.Any or Base.Boolean;
 
 	private void ParseLineForMembersAndMethods(ExpressionParser parser)
 	{
@@ -269,6 +284,28 @@ public class Type : Context
 	/// Easy way to get another instance of the class type we are currently in.
 	/// </summary>
 	public const string Other = nameof(Other);
+
+	public GenericType GetGenericImplementation(Type implementation)
+	{
+		if (!IsGeneric)
+			throw new CannotGetGenericImplementationOnNonGenericType(Name, implementation);
+		cachedGenericTypes ??= new Dictionary<string, GenericType>(StringComparer.Ordinal);
+		if (cachedGenericTypes.TryGetValue(implementation.Name, out var genericType))
+			return genericType;
+		genericType = new GenericType(this, implementation);
+		cachedGenericTypes.Add(implementation.Name, genericType);
+		return genericType;
+	}
+
+	private Dictionary<string, GenericType>? cachedGenericTypes;
+
+	// ReSharper disable once HollowTypeName
+	public sealed class CannotGetGenericImplementationOnNonGenericType : Exception
+	{
+		public CannotGetGenericImplementationOnNonGenericType(string name, Type implementation) :
+			base("Type: " + name + ", Generic Implementation: " + implementation) { }
+	}
+
 	public const string Extension = ".strict";
 
 	public Method GetMethod(string methodName, IReadOnlyList<Expression> arguments) =>
@@ -382,4 +419,17 @@ public class Type : Context
 				" do ") +
 			"not match:\n" + string.Join('\n', allMethods)) { }
 	}
+}
+
+// ReSharper disable once HollowTypeName
+public sealed class GenericType : Type
+{
+	public GenericType(Type generic, Type implementation) : base(generic.Package, new TypeLines(generic.Name + implementation.Name))
+	{
+		Generic = generic;
+		Implementation = implementation;
+	}
+
+	public Type Generic { get; }
+	public Type Implementation { get; }
 }

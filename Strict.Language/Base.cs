@@ -29,19 +29,19 @@ public static class Base
 	public const string Character = nameof(Character);
 	public const string Computation = nameof(Computation);
 	public const string Count = nameof(Count);
-	public const string Function = nameof(Function);
 	public const string HashCode = nameof(HashCode);
-	public const string Iteration = nameof(Iteration);
 	public const string Mutable = nameof(Mutable);
 	public const string Range = nameof(Range);
 	public const string Text = nameof(Text);
 	public const string Error = nameof(Error);
-	public const string Slice = nameof(Slice);
+	public const string For = nameof(For);
+	public const string Generic = nameof(Generic);
+	public const string List = nameof(List);
 	public const string Type = nameof(Type);
+	public const string Method = nameof(Method);
 	public const string Log = nameof(Log);
 	public const string App = nameof(App);
 	public const string System = nameof(System);
-	public const string List = nameof(List);
 	public const string File = nameof(File);
-	public const string Generic = nameof(Generic);
+	public const string Directory = nameof(Directory);
 }

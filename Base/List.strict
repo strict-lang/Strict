@@ -1,5 +1,6 @@
 has elements Generics
 Length Number
+	(1, 2).Length is 2
 	elements.Length
 is(other) Boolean
 	(1, 2) is (1, 2)
@@ -16,6 +17,7 @@ is(other) Boolean
 	(1 + 2) * 3 is not 1 + 2 * 3
 	(("1", "2") + (3, 4)) to Numbers is (1, 2, 3, 4)
 	3 + (4) is (3, 4)
+	(1) + ("Hi") is Error("Cannot downcast Texts to fit to Numbers")
 	elements + other.elements
 +(addElement Generic) List
 	(1, 2, 3) + 4 is (1, 2, 3, 4)
@@ -53,3 +55,6 @@ Sum Generic
 First Generic
 	(1, 2, 3).First is 1
 	elements(0)
+in Generic
+	in (1, 2) is 1
+	element(0)
