@@ -100,6 +100,7 @@ public sealed class Method : Context
 	{
 		public EmptyParametersMustBeRemoved(Method method) : base(method.Type, 0, "", method.Name) { }
 	}
+
 	public sealed class ParametersMustStartWithLowerCase : ParsingFailed
 	{
 		public ParametersMustStartWithLowerCase(Method method) : base(method.Type, 0, "", method.Name) { }
