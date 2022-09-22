@@ -13,13 +13,4 @@ public sealed class Not : MethodCall
 		right.ReturnType.GetMethod(UnaryOperator.Not, Array.Empty<Expression>()), right) { }
 
 	public override string ToString() => UnaryOperator.Not + " " + Instance!;
-
-	public static Expression TryParse(Body body, ReadOnlySpan<char> input, ShuntingYard postfixTokens)
-	{
-		var right = body.Method.ParseExpression(body, input[postfixTokens.Output.Pop()]);
-		var operatorText = input[postfixTokens.Output.Pop()];
-		return operatorText.Equals(UnaryOperator.Not, StringComparison.Ordinal)
-			? new Not(right)
-			: throw new MethodExpressionParser.InvalidOperatorHere(body, operatorText.ToString());
-	}
 }
