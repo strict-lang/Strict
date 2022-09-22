@@ -135,6 +135,27 @@ public sealed class TypeTests
 				"\treturn one + 1"),
 			Throws.InstanceOf<Type.MustImplementAllTraitMethods>());
 
+	[TestCase("Number")]
+	[TestCase("Text")]
+	public void MustHaveFromAutomaticallyWithMembers(string memberType) =>
+		Assert.That(CreateType("Program",
+				$"has {memberType}",
+				$"add({memberType.ToLower()})",
+				"\treturn one + 1").Methods[^1].lines,
+			Is.EqualTo(new [] {$"from({memberType.ToLower()} {memberType})", $"\t{memberType} = {memberType.ToLower()}"}));
+
+	[Test]
+	public void MustHaveFromAutomaticallyWithImplementAndMembers()
+	{
+		var type = CreateType("Program",
+				"implement Number",
+				"has Bla Text",
+				"add(Number)",
+				"\treturn one + 1");
+		Assert.That(type.Methods[^1].lines,
+			Is.EqualTo(new [] {"from(bla Text)", "\tBla = bla"}));
+		Assert.That(type.Methods[^2].lines, Is.EqualTo(new [] {"from(number)", "\tNumber = number"}));
+}
 	[Test]
 	public void TraitMethodsMustBeImplemented() =>
 		Assert.That(() => CreateType("Program",

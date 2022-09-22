@@ -11,6 +11,7 @@ namespace Strict.Language;
 /// There is no typical lexing/scoping/token splitting needed as Strict syntax is very strict.
 /// </summary>
 // ReSharper disable once HollowTypeName
+// ReSharper disable once ClassTooBig
 public class Type : Context
 {
 	public Type(Package package, TypeLines file) : base(package, file.Name)
@@ -56,9 +57,9 @@ public class Type : Context
 
 	private void CheckIfTraitIsImplemented(Type trait)
 	{
-		var nonImplementedTraitMethods = trait.Methods.
-			Where(traitMethod => traitMethod.Name != Method.From &&
-				methods.All(implementedMethod => traitMethod.Name != implementedMethod.Name)).ToList();
+		var nonImplementedTraitMethods = trait.Methods.Where(traitMethod =>
+			traitMethod.Name != Method.From &&
+			methods.All(implementedMethod => traitMethod.Name != implementedMethod.Name)).ToList();
 		if (nonImplementedTraitMethods.Count > 0)
 			throw new MustImplementAllTraitMethods(this, nonImplementedTraitMethods);
 	}
@@ -66,7 +67,9 @@ public class Type : Context
 	private Type ParseImplement(string remainingLine)
 	{
 		if (members.Count > 0 || methods.Count > 0)
-			throw new ImplementMustComeBeforeMembersAndMethods(this, lineNumber, remainingLine); //ncrunch: no coverage this condition never pass since this method is always called before any members or methods are parsed
+			throw
+				new ImplementMustComeBeforeMembersAndMethods(this, lineNumber,
+					remainingLine); //ncrunch: no coverage this condition never pass since this method is always called before any members or methods are parsed
 		if (remainingLine == Base.Any)
 			throw new ImplementAnyIsImplicitAndNotAllowed(this, lineNumber, remainingLine);
 		try
@@ -98,7 +101,8 @@ public class Type : Context
 	public Type ParseMembersAndMethods(ExpressionParser parser)
 	{
 		ParseAllRemainingLinesIntoMembersAndMethods(parser);
-		if (methods.Count == 0 && members.Count + implements.Count < 2 && !IsNoneAnyOrBoolean())
+		if (methods.Count <= members.Count && members.Count + implements.Count < 2 &&
+			!IsNoneAnyOrBoolean())
 			throw new NoMethodsFound(this, lineNumber);
 		// ReSharper disable once ForCanBeConvertedToForeach, for performance reasons:
 		// https://codeblog.jonskeet.uk/2009/01/29/for-vs-foreach-on-arrays-and-lists/
@@ -118,6 +122,8 @@ public class Type : Context
 			var rememberStartMethodLineNumber = lineNumber;
 			ParseInTryCatchBlock(parser, rememberStartMethodLineNumber);
 		}
+		AddFromMethodForImplementsIfDoesNotExist(parser);
+		AddFromMethodForMembersIfDoesNotExist(parser);
 	}
 
 	private void ParseInTryCatchBlock(ExpressionParser parser, int rememberStartMethodLineNumber)
@@ -136,10 +142,36 @@ public class Type : Context
 		}
 		catch (Exception ex)
 		{
-			throw new ParsingFailed(this, rememberStartMethodLineNumber, string.IsNullOrEmpty(ex.Message)
-				? ex.GetType().Name
-				: ex.Message, ex);
+			throw new ParsingFailed(this, rememberStartMethodLineNumber,
+				string.IsNullOrEmpty(ex.Message)
+					? ex.GetType().Name
+					: ex.Message, ex);
 		}
+	}
+
+	private void AddFromMethodForMembersIfDoesNotExist(ExpressionParser parser)
+	{
+		foreach (var member in members.Where(member =>
+			!lines.Any(x => x.Contains($"{From}({member.Name.ToLower()}"))))
+			methods.Add(new Method(this, ++lineNumber, parser,
+				new[]
+				{
+					$"{From}({member.Name.ToLower()} {member.Type.Name})",
+					$"\t{member.Name} = {member.Name.ToLower()}"
+				}));
+	}
+
+	private void AddFromMethodForImplementsIfDoesNotExist(ExpressionParser parser)
+	{
+		foreach (var implement in implements.Where(implement =>
+				!lines.Any(x => x.Contains($"{From}({implement.Name.ToLower()}"))).
+			Where(implement => !implement.IsTrait))
+			methods.Add(new Method(this, ++lineNumber, parser,
+				new[]
+				{
+					$"{From}({implement.Name.ToLower()})",
+					$"\t{implement.Name} = {implement.Name.ToLower()}"
+				}));
 	}
 
 	private bool IsNoneAnyOrBoolean() => Name is Base.None or Base.Any or Base.Boolean;
@@ -167,7 +199,8 @@ public class Type : Context
 		try
 		{
 			return new Member(this, nameAndType, nameAndExpression.MoveNext()
-				? GetMemberExpression(parser, nameAndType.MakeFirstLetterUppercase(), remainingLine[(nameAndType.Length + 3)..])
+				? GetMemberExpression(parser, nameAndType.MakeFirstLetterUppercase(),
+					remainingLine[(nameAndType.Length + 3)..])
 				: null);
 		}
 		catch (ParsingFailed)
@@ -186,17 +219,18 @@ public class Type : Context
 			lineNumber, line) { }
 	}
 
-	private Expression GetMemberExpression(ExpressionParser parser, string memberName, ReadOnlySpan<char> remainingTextSpan)
+	private Expression GetMemberExpression(ExpressionParser parser, string memberName,
+		ReadOnlySpan<char> remainingTextSpan)
 	{
 		if (FindType(memberName) != null && !remainingTextSpan.StartsWith(memberName))
-			remainingTextSpan = string.Concat(memberName, "(",
-				remainingTextSpan, ")").AsSpan();
-		return parser.ParseExpression(
-			new Body(new Method(this, 0, parser, new[] { "EmptyBody" })), remainingTextSpan);
+			remainingTextSpan = string.Concat(memberName, "(", remainingTextSpan, ")").AsSpan();
+		return parser.ParseExpression(new Body(new Method(this, 0, parser, new[] { "EmptyBody" })),
+			remainingTextSpan);
 	}
 
 	public const string Implement = "implement ";
 	public const string Has = "has ";
+	public const string From = "from";
 
 	public sealed class ExtraWhitespacesFoundAtBeginningOfLine : ParsingFailed
 	{
@@ -224,7 +258,8 @@ public class Type : Context
 	public sealed class MustImplementAllTraitMethods : ParsingFailed
 	{
 		public MustImplementAllTraitMethods(Type type, IEnumerable<Method> missingTraitMethods) :
-			base(type, type.lineNumber, "Missing methods: " + string.Join(", ", missingTraitMethods)) { }
+			base(type, type.lineNumber,
+				"Missing methods: " + string.Join(", ", missingTraitMethods)) { }
 	}
 
 	private string[] GetAllMethodLines()
@@ -325,7 +360,8 @@ public class Type : Context
 		throw new ArgumentsDoNotMatchMethodParameters(arguments, matchingMethods);
 	}
 
-	private static bool IsMethodWithMatchingParameters(IReadOnlyList<Expression> arguments, Method method)
+	private static bool IsMethodWithMatchingParameters(IReadOnlyList<Expression> arguments,
+		Method method)
 	{
 		for (var index = 0; index < method.Parameters.Count; index++)
 			if (!arguments[index].ReturnType.IsCompatible(method.Parameters[index].Type))
@@ -363,7 +399,8 @@ public class Type : Context
 	private bool CanUpCast(Type sameOrBaseType)
 	{
 		if (sameOrBaseType.Name is Base.List)
-			return Name == Base.Number || implements.Contains(GetType(Base.Number)) || Name == Base.Text;
+			return Name == Base.Number || implements.Contains(GetType(Base.Number)) ||
+				Name == Base.Text;
 		if (sameOrBaseType.Name is Base.Text or Base.List)
 			return Name == Base.Number || implements.Contains(GetType(Base.Number));
 		return false;
@@ -427,7 +464,8 @@ public class Type : Context
 // ReSharper disable once HollowTypeName
 public sealed class GenericType : Type
 {
-	public GenericType(Type generic, Type implementation) : base(generic.Package, new TypeLines(generic.Name + implementation.Name))
+	public GenericType(Type generic, Type implementation) : base(generic.Package,
+		new TypeLines(generic.Name + implementation.Name))
 	{
 		Generic = generic;
 		Implementation = implementation;
