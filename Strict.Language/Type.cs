@@ -111,31 +111,34 @@ public class Type : Context
 		return this;
 	}
 
-	// ReSharper disable once MethodTooLong
 	private void ParseAllRemainingLinesIntoMembersAndMethods(ExpressionParser parser)
 	{
 		for (; lineNumber < lines.Length; lineNumber++)
 		{
 			var rememberStartMethodLineNumber = lineNumber;
-			try
-			{
-				ParseLineForMembersAndMethods(parser);
-			}
-			catch (TypeNotFound ex)
-			{
-				throw new ParsingFailed(this, rememberStartMethodLineNumber, ex.Message, ex);
-			}
-			catch (ParsingFailed)
-			{
-				throw;
-			}
-			catch (Exception ex)
-			{
-				throw new ParsingFailed(this, rememberStartMethodLineNumber,
-					string.IsNullOrEmpty(ex.Message)
-						? ex.GetType().Name
-						: ex.Message, ex);
-			}
+			ParseInTryCatchBlock(parser, rememberStartMethodLineNumber);
+		}
+	}
+
+	private void ParseInTryCatchBlock(ExpressionParser parser, int rememberStartMethodLineNumber)
+	{
+		try
+		{
+			ParseLineForMembersAndMethods(parser);
+		}
+		catch (TypeNotFound ex)
+		{
+			throw new ParsingFailed(this, rememberStartMethodLineNumber, ex.Message, ex);
+		}
+		catch (ParsingFailed)
+		{
+			throw;
+		}
+		catch (Exception ex)
+		{
+			throw new ParsingFailed(this, rememberStartMethodLineNumber, string.IsNullOrEmpty(ex.Message)
+				? ex.GetType().Name
+				: ex.Message, ex);
 		}
 	}
 
@@ -163,10 +166,9 @@ public class Type : Context
 			nameAndType += " " + nameAndExpression.Current.ToString();
 		try
 		{
-			var expression = nameAndExpression.MoveNext()
+			return new Member(this, nameAndType, nameAndExpression.MoveNext()
 				? GetMemberExpression(parser, nameAndType.MakeFirstLetterUppercase(), remainingLine[(nameAndType.Length + 3)..])
-				: null;
-			return new Member(this, nameAndType, expression);
+				: null);
 		}
 		catch (ParsingFailed)
 		{

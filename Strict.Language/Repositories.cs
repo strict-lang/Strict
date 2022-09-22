@@ -141,7 +141,6 @@ public sealed class Repositories
 			? parent
 			: await CreatePackage(packagePath, files, parent);
 
-	// ReSharper disable once MethodTooLong
 	private async Task<Package> CreatePackage(string packagePath, IReadOnlyCollection<string> files,
 		Package? parent)
 	{
@@ -150,6 +149,21 @@ public sealed class Repositories
 			: new Package(packagePath);
 		if (package.Name == nameof(Strict) && files.Count > 0)
 			throw new NoFilesAllowedInStrictFolderNeedsToBeInASubFolder(files);
+		var types = GetTypes(files, package);
+		foreach (var type in types)
+			type.ParseMembersAndMethods(parser);
+		await GetSubDirectoriesAndParse(packagePath, package);
+		return package;
+	}
+
+	public sealed class NoFilesAllowedInStrictFolderNeedsToBeInASubFolder : Exception
+	{
+		public NoFilesAllowedInStrictFolderNeedsToBeInASubFolder(IEnumerable<string> files) : base(
+			files.ToWordList()) { }
+	}
+
+	private ICollection<Type> GetTypes(IReadOnlyCollection<string> files, Package package)
+	{
 		var types = new List<Type>(files.Count);
 		var filesWithImplements = new Dictionary<string, TypeLines>(StringComparer.Ordinal);
 		foreach (var filePath in files)
@@ -162,25 +176,7 @@ public sealed class Repositories
 			else
 				types.Add(new Type(package, lines));
 		}
-		var sortedFiles = SortFilesWithImplements(filesWithImplements);
-#if LOG_DETAILS
-		Logger.Info("CreatePackage sortedFiles=" + sortedFiles.ToWordList() + ", types=" +
-			types.ToWordList());
-#endif
-		foreach (var typeLines in sortedFiles)
-			types.Add(new Type(package, typeLines));
-		foreach (var type in types)
-			type.ParseMembersAndMethods(parser);
-		var subDirectories = Directory.GetDirectories(packagePath);
-		if (subDirectories.Length > 0)
-			await Task.WhenAll(ParseAllSubFolders(subDirectories, package));
-		return package;
-	}
-
-	public sealed class NoFilesAllowedInStrictFolderNeedsToBeInASubFolder : Exception
-	{
-		public NoFilesAllowedInStrictFolderNeedsToBeInASubFolder(IEnumerable<string> files) : base(
-			files.ToWordList()) { }
+		return GetTypesFromSortedFiles(types, SortFilesWithImplements(filesWithImplements), package);
 	}
 
 	/// <summary>
@@ -201,7 +197,6 @@ public sealed class Repositories
 		return false;
 	}
 
-	// ReSharper disable once MethodTooLong
 	private static Dictionary<string, int> CreateInDegreeGraphMap(Dictionary<string, TypeLines> filesWithImplements)
 	{
 		var inDegree = new Dictionary<string, int>(StringComparer.Ordinal);
@@ -209,18 +204,13 @@ public sealed class Repositories
 		{
 			if (!inDegree.ContainsKey(kvp.Key))
 				inDegree.Add(kvp.Key, 0);
-			// ReSharper disable once ForCanBeConvertedToForeach
-			for (var index = 0; index < kvp.Value.ImplementTypes.Count; index++)
-			{
-				var edge = kvp.Value.ImplementTypes[index];
+			foreach (var edge in kvp.Value.ImplementTypes)
 				if (!inDegree.TryAdd(edge, 1))
 					inDegree[edge]++;
-			}
 		}
 		return inDegree;
 	}
 
-	// ReSharper disable once MethodTooLong
 	private static Stack<TypeLines> EmptyDegreeQueueAndGenerateSortedOutput(IReadOnlyDictionary<string, TypeLines> files,
 		Dictionary<string, int> inDegree)
 	{
@@ -230,13 +220,9 @@ public sealed class Repositories
 			if (files.TryGetValue(zeroDegreeQueue.Dequeue(), out var lines))
 			{
 				reversedDependencies.Push(lines);
-				// ReSharper disable once ForCanBeConvertedToForeach
-				for (var index = 0; index < lines.ImplementTypes.Count; index++)
-				{
-					var vertex = lines.ImplementTypes[index];
+				foreach (var vertex in lines.ImplementTypes)
 					if (--inDegree[vertex] == 0)
 						zeroDegreeQueue.Enqueue(vertex);
-				}
 			}
 		return reversedDependencies;
 	}
@@ -248,6 +234,24 @@ public sealed class Repositories
 			if (vertex.Value == 0)
 				zeroDegreeQueue.Enqueue(vertex.Key);
 		return zeroDegreeQueue;
+	}
+
+	private static ICollection<Type> GetTypesFromSortedFiles(ICollection<Type> types, IEnumerable<TypeLines> sortedFiles, Package package)
+	{
+#if LOG_DETAILS
+		Logger.Info("CreatePackage sortedFiles=" + sortedFiles.ToWordList() + ", types=" +
+			types.ToWordList());
+#endif
+		foreach (var typeLines in sortedFiles)
+			types.Add(new Type(package, typeLines));
+		return types;
+	}
+
+	private async Task GetSubDirectoriesAndParse(string packagePath, Package package)
+	{
+		var subDirectories = Directory.GetDirectories(packagePath);
+		if (subDirectories.Length > 0)
+			await Task.WhenAll(ParseAllSubFolders(subDirectories, package));
 	}
 
 	private List<Task> ParseAllSubFolders(IEnumerable<string> subDirectories, Package package)

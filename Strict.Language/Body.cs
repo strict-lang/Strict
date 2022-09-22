@@ -55,7 +55,6 @@ public sealed class Body : Expression
 			: this;
 	}
 
-	// ReSharper disable once MethodTooLong
 	internal Body SetExpressions(IReadOnlyList<Expression> expressions)
 	{
 		Expressions = expressions;
@@ -69,11 +68,11 @@ public sealed class Body : Expression
 				? Method.ReturnType
 				: Parent.ReturnType, lastExpression))
 			throw new ChildBodyReturnTypeMustMatchMethodReturnType(this, lastExpression.ReturnType);
-		if (!isLastExpressionReturn)
-			return this;
-		return Parent != null
+		return !isLastExpressionReturn
 			? this
-			: throw new ReturnAsLastExpressionIsNotNeeded(this);
+			: Parent != null
+				? this
+				: throw new ReturnAsLastExpressionIsNotNeeded(this);
 	}
 
 	public IReadOnlyList<Expression> Expressions { get; private set; } = Array.Empty<Expression>();

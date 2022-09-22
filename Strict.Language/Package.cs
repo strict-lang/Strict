@@ -12,8 +12,6 @@ namespace Strict.Language;
 public class Package : Context
 {
 	public Package(string packagePath) : this(RootForPackages, packagePath) { }
-
-	// ReSharper disable once PrivateFieldCanBeConvertedToLocalVariable, unique
 	private static readonly Root RootForPackages = new();
 
 	/// <summary>
@@ -47,7 +45,6 @@ public class Package : Context
 		Path.GetFileName(packagePath))
 	{
 		FolderPath = packagePath;
-		// ReSharper disable once ConditionalAccessQualifierIsNonNullableAccordingToAPIContract
 		parentPackage?.children.Add(this);
 	}
 
