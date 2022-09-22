@@ -75,7 +75,11 @@ public sealed class Method : Context
 	{
 		foreach (var nameAndType in rest[1..closingBracketIndex].
 			Split(',', StringSplitOptions.TrimEntries))
+		{
+			if (char.IsUpper(nameAndType[0]))
+				throw new ParametersMustStartWithLowerCase(this);
 			parameters.Add(new Parameter(type, nameAndType.ToString()));
+		}
 		return closingBracketIndex + 2 < rest.Length
 			? Type.GetType(rest[(closingBracketIndex + 2)..].ToString())
 			: GetEmptyReturnType(type);
@@ -95,6 +99,10 @@ public sealed class Method : Context
 	public sealed class EmptyParametersMustBeRemoved : ParsingFailed
 	{
 		public EmptyParametersMustBeRemoved(Method method) : base(method.Type, 0, "", method.Name) { }
+	}
+	public sealed class ParametersMustStartWithLowerCase : ParsingFailed
+	{
+		public ParametersMustStartWithLowerCase(Method method) : base(method.Type, 0, "", method.Name) { }
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -174,11 +182,11 @@ public sealed class Method : Context
 	public bool IsPublic => char.IsUpper(Name[0]);
 
 	public override Type? FindType(string name, Context? searchingFrom = null) =>
-		name == Value
+		name == ValueName
 			? Type
 			: Type.FindType(name, searchingFrom ?? this);
 
-	public const string Value = nameof(Value); //TODO: has a different meaning in nested Bodys
+	public const string ValueName = "Value";
 
 	public Expression GetBodyAndParseIfNeeded() =>
 		methodBody == null

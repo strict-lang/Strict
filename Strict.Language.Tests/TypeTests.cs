@@ -150,7 +150,7 @@ public sealed class TypeTests
 		var type = CreateType("Program",
 				"implement Number",
 				"has Bla Text",
-				"add(Number)",
+				"add(number)",
 				"\treturn one + 1");
 		Assert.That(type.Methods[^1].lines,
 			Is.EqualTo(new [] {"from(bla Text)", "\tBla = bla"}));

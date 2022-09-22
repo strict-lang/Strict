@@ -3,7 +3,7 @@ using Strict.Language.Expressions;
 
 namespace Strict.Language.Tests;
 
-public class MethodTests
+public sealed class MethodTests
 {
 	[SetUp]
 	public void CreateType() => type = new Type(new TestPackage(), new MockRunTypeLines());
@@ -12,22 +12,31 @@ public class MethodTests
 
 	[Test]
 	public void MustMustHaveAValidName() =>
-		Assert.Throws<Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers>(() =>
-			new Method(type, 0, null!, new[] { "5(text)" }));
+		Assert.That(() => new Method(type, 0, null!, new[] { "5(text)" }),
+			Throws.InstanceOf<Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers>());
 
 	[Test]
 	public void ReturnTypeMustBeBeLast() =>
-		Assert.Throws<Context.TypeNotFound>(() => new Method(type, 0, null!, new[] { "Texts GetFiles" }));
+		Assert.That(() => new Method(type, 0, null!, new[] { "Texts GetFiles" }),
+			Throws.InstanceOf<Context.TypeNotFound>());
 
 	[Test]
 	public void InvalidMethodParameters() =>
-		Assert.Throws<Method.InvalidMethodParameters>(() =>
-			new Method(type, 0, null!, new[] { "a(" }));
+		Assert.Throws<Method.InvalidMethodParameters>(
+			() => new Method(type, 0, null!, new[] { "a(" }));
 
 	[Test]
 	public void ParametersMustNotBeEmpty() =>
-		Assert.Throws<Method.EmptyParametersMustBeRemoved>(() =>
-			new Method(type, 0, null!, new[] { "a()" }));
+		Assert.That(() => new Method(type, 0, null!, new[] { "a()" }),
+			Throws.InstanceOf<Method.EmptyParametersMustBeRemoved>());
+
+	[TestCase("from(Text)")]
+	[TestCase("from(Number)")]
+	[TestCase("from(Start Number, End Number)")]
+	[TestCase("from(start Number, End Number)")]
+	public void UpperCaseParameterWithNoTypeSpecificationIsNotAllowed(string method) =>
+		Assert.That(() => new Method(type, 0, null!, new[] { method }),
+			Throws.InstanceOf<Method.ParametersMustStartWithLowerCase>());
 
 	[Test]
 	public void ParseDefinition()
