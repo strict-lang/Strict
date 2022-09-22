@@ -95,7 +95,7 @@ public sealed class For : Expression
 	private static string GetVariableExpressionValue(ReadOnlySpan<char> line) =>
 		line.Contains("Range", StringComparison.Ordinal)
 			? $"Mutable({GetRangeExpression(line)}.Start)"
-			: $"Mutable({FindIterableName(line)})";
+			: $"Mutable({FindIterableName(line)}).First";
 
 	private static ReadOnlySpan<char> GetRangeExpression(ReadOnlySpan<char> line) =>
 		line[line.LastIndexOf('R')..(line.LastIndexOf(')') + 1)];
