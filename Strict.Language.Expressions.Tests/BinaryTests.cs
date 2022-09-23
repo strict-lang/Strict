@@ -42,6 +42,23 @@ public sealed class BinaryTests : TestExpressions
 				"not found for TestPackage.Text, available methods"));
 
 	[Test]
+	public void ConversionTypeNotFound() =>
+		Assert.That(() => ParseExpression("5 to gibberish"),
+			Throws.InstanceOf<To.ConversionTypeNotFound>());
+
+	[TestCase("5 to Log")]
+	[TestCase("5 to Range")]
+	[TestCase("5 to Boolean")]
+	public void ConversionNotImplemented(string code) =>
+		Assert.That(() => ParseExpression(code),
+			Throws.InstanceOf<To.NotImplemented>());
+
+	[Test]
+	public void InvalidUsageOfToOperator() =>
+		Assert.That(() => ParseExpression("to(Text)"),
+			Throws.InstanceOf<Type.ArgumentsDoNotMatchMethodParameters>());
+
+	[Test]
 	public void ParseComparison() =>
 		ParseAndCheckOutputMatchesInput("bla is 5",
 			CreateBinary(new MemberCall(null, bla), BinaryOperator.Is, number));
@@ -73,6 +90,9 @@ public sealed class BinaryTests : TestExpressions
 	[TestCase("(5 > 4) or (10 < 100.5) and (5 >= 5) and (5 <= 6)")]
 	public void ParseGroupExpressionProducesSameCode(string code) =>
 		Assert.That(ParseExpression(code).ToString(), Is.EqualTo(code));
+
+	[Test]
+	public void ParseToOperator() => Assert.That(((To)ParseExpression("5 to Text")).ConversionType.Name == "\"5 to Text".Split(' ')[^1]);
 
 	[Test]
 	public void ParsePowerWithMultiplyOperator() =>

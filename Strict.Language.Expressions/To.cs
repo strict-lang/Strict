@@ -16,11 +16,19 @@ public sealed class To : MethodCall
 		var conversionType = body.ReturnType.FindType(text.ToString());
 		if (conversionType == null)
 			throw new ConversionTypeNotFound(body);
+		var method = left.ReturnType.GetMethod(BinaryOperator.To, Array.Empty<Expression>());
+		if (method.ReturnType != conversionType)
+			throw new NotImplemented(body);
 		return new To(left, left.ReturnType.GetMethod(BinaryOperator.To, Array.Empty<Expression>()), conversionType);
 	}
 
 	public sealed class ConversionTypeNotFound : ParsingFailed
 	{
 		public ConversionTypeNotFound(Body body) : base(body) { }
+	}
+
+	public sealed class NotImplemented : ParsingFailed
+	{
+		public NotImplemented(Body body) : base(body) { }
 	}
 }

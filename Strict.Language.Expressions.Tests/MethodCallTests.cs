@@ -85,16 +85,6 @@ public sealed class MethodCallTests : TestExpressions
 			Throws.InstanceOf<ListTokensAreNotSeparatedByComma>());
 
 	[Test]
-	public void TypeNotFound() =>
-		Assert.That(() => ParseExpression("5 to gibberish"),
-			Throws.InstanceOf<To.ConversionTypeNotFound>());
-
-	[Test]
-	public void InvalidUsageOfToOperator() =>
-		Assert.That(() => ParseExpression("to(Text)"),
-			Throws.InstanceOf<Type.ArgumentsDoNotMatchMethodParameters>());
-
-	[Test]
 	public void SimpleFromMethodCall() =>
 		Assert.That(ParseExpression("Character(7)"),
 			Is.EqualTo(CreateFromMethodCall(type.GetType(Base.Character), new Number(type, 7))));
@@ -106,15 +96,6 @@ public sealed class MethodCallTests : TestExpressions
 	[TestCase("Range(0, 10).Length")]
 	public void FromExample(string fromMethodCall) =>
 		Assert.That(ParseExpression(fromMethodCall).ToString(), Is.EqualTo(fromMethodCall));
-
-	[TestCase("5 to Text")]
-	[TestCase("(5 + 10) to Text")]
-	public void ParseToOperator(string code)
-	{
-		Assert.That(ParseExpression(code).ToString(),
-			Is.EqualTo(code.Replace(")", "").Replace("(", "")));
-		Assert.That(((To)ParseExpression(code)).ConversionType.Name == code.Split(' ')[^1]);
-	}
 
 	[Ignore("TODO: none of this works")]
 	[TestCase("complexMethod((1), 2)")]
