@@ -108,13 +108,30 @@ public sealed class ListTests : TestExpressions
 		var parsedExpression = ParseExpression(Code);
 		Assert.That(parsedExpression, Is.InstanceOf<Binary>()!);
 		Assert.That(parsedExpression.ToString(), Is.EqualTo(Code));
-		Assert.That(((Binary)parsedExpression).ReturnType, Is.EqualTo(type.GetType(Base.Text)));
+		Assert.That(((Binary)parsedExpression).ReturnType,
+			Is.EqualTo(type.GetType(Base.List + Base.Text)));
 	}
 
 	[Test]
 	public void LeftTypeShouldNotBeChangedUnlessRightIsList() =>
 		Assert.That(() => ParseExpression("5 + (\"1\", \"2\", \"3\", \"4\")"),
 			Throws.InstanceOf<Type.ArgumentsDoNotMatchMethodParameters>());
+
+	[TestCase("Number(5)")]
+	[TestCase("Text(\"Hi\")")]
+	[TestCase("Boolean(true)")]
+	[TestCase("List((1, 2))")]
+	[TestCase("List((\"Hi\", \"There\"))")]
+	public new void ConstructorForSameTypeArgumentIsNotAllowed(string code) =>
+		Assert.That(() => ParseExpression(code),
+			Throws.InstanceOf<ConstructorForSameTypeArgumentIsNotAllowed>());
+
+	[TestCase("(1, 2)", Base.Number)]
+	[TestCase("(\"1\", \"2\")", Base.Text)]
+	[TestCase("(true, false)", Base.Boolean)]
+	public void ListShouldHaveCorrectImplementationReturnType(string code, string expectedType) =>
+		Assert.That(ParseExpression(code).ReturnType,
+			Is.EqualTo(type.GetListType(type.GetType(expectedType))));
 
 	[Test]
 	public void ParseMultipleListInBinary() =>

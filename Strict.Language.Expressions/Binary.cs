@@ -7,7 +7,14 @@ namespace Strict.Language.Expressions;
 public sealed class Binary : MethodCall
 {
 	public Binary(Expression left, Method operatorMethod, Expression[] right) :
-		base(operatorMethod, left, right) { }
+		base(SetReturnTypeForGenericMethod(operatorMethod, left), left, right) { }
+
+	private static Method SetReturnTypeForGenericMethod(Method operatorMethod, Expression left)
+	{
+		if (operatorMethod.ReturnType.IsGeneric)
+			operatorMethod.ReturnType = left.ReturnType;
+		return operatorMethod;
+	}
 
 	public override string ToString() =>
 		AddNestedBracketsIfNeeded(Instance!) + " " + Method.Name + " " +
@@ -15,7 +22,7 @@ public sealed class Binary : MethodCall
 
 	private string AddNestedBracketsIfNeeded(Expression child) =>
 		child is Binary childBinary && BinaryOperator.GetPrecedence(childBinary.Method.Name) <
-		BinaryOperator.GetPrecedence(Method.Name)
+		BinaryOperator.GetPrecedence(Method.Name) || child is If
 			? $"({child})"
 			: child.ToString();
 

@@ -7,8 +7,8 @@ namespace Strict.Language.Expressions;
 public sealed class List : Value
 {
 	public List(Body bodyForErrorMessage, List<Expression> values) : base(
-		GetCommonBaseType(values.Select(v => v.ReturnType).ToList(),
-			bodyForErrorMessage), //Any other better approach other than ToList?
+		values[0].ReturnType.GetListType(GetCommonBaseType(values.Select(v => v.ReturnType).ToList(),
+			bodyForErrorMessage)), //Any other better approach other than ToList?
 		values) =>
 		Values = values;
 

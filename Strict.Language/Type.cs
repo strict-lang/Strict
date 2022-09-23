@@ -346,7 +346,9 @@ public class Type : Context
 	public const string Extension = ".strict";
 
 	public Method GetMethod(string methodName, IReadOnlyList<Expression> arguments) =>
-		FindMethod(methodName, arguments) ??
+		(this is GenericType genericType
+			? genericType.Generic
+			: this).FindMethod(methodName, arguments) ??
 		throw new NoMatchingMethodFound(this, methodName, AvailableMethods);
 
 	public Method? FindMethod(string methodName, IReadOnlyList<Expression> arguments)
@@ -364,8 +366,13 @@ public class Type : Context
 		Method method)
 	{
 		for (var index = 0; index < method.Parameters.Count; index++)
-			if (!arguments[index].ReturnType.IsCompatible(method.Parameters[index].Type))
+		{
+			var argumentReturnType = arguments[index].ReturnType;
+			if (argumentReturnType is GenericType genericType)
+				argumentReturnType = genericType.Implementation;
+			if (!argumentReturnType.IsCompatible(method.Parameters[index].Type))
 				return false;
+		}
 		return true;
 	}
 

@@ -108,7 +108,7 @@ public sealed class ForTests : TestExpressions
 		Assert.That(
 			((Mutable)((VariableCall)((MethodCall)((For)ParseExpression("for (1, 2, 3)",
 				"\tlog.Write(value)")).Body).Arguments[0]).CurrentValue).DataReturnType.Name,
-			Is.EqualTo(Base.Number));
+			Is.EqualTo(Base.List + Base.Number));
 
 	[Test]
 	public void ParseForListExpressionWithIterableVariable() =>

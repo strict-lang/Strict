@@ -196,14 +196,23 @@ public class MethodExpressionParser : ExpressionParser
 		{
 			var fromType = body.Method.FindType(methodName);
 			if (fromType != null)
+			{
+				if (IsConstructorUsedWithSameArgumentType(arguments, fromType))
+					throw new ConstructorForSameTypeArgumentIsNotAllowed(body);
 				return new MethodCall(fromType.GetMethod(Method.From, arguments), new From(fromType),
 					arguments);
+			}
 		}
 #if LOG_DETAILS
 		Logger.Info("ParseNested found no local method in " + body.Method.Type + ": " + methodName);
 #endif
 		return null;
 	}
+
+	private static bool
+		IsConstructorUsedWithSameArgumentType(IReadOnlyList<Expression> arguments, Type fromType) =>
+		arguments.Count == 1 && fromType == arguments[0].ReturnType ||
+		arguments[0].ReturnType is GenericType genericType && fromType == genericType.Generic;
 
 	private static Expression? TryFindMemberCall(Type type, Expression? instance,
 		ReadOnlySpan<char> partToParse)
@@ -218,6 +227,11 @@ public class MethodExpressionParser : ExpressionParser
 				return memberCall;
 		}
 		return null;
+	}
+
+	public class ConstructorForSameTypeArgumentIsNotAllowed : ParsingFailed
+	{
+		public ConstructorForSameTypeArgumentIsNotAllowed(Body body) : base(body) { }
 	}
 
 	/// <summary>

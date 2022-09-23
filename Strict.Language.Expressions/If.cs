@@ -137,7 +137,7 @@ public sealed class If : Expression
 	{
 		var questionMarkIndex = input.IndexOf('?');
 		var firstBracket = input.IndexOf('(');
-		if (questionMarkIndex > 2 && (firstBracket == -1 || firstBracket > questionMarkIndex))
+		if (questionMarkIndex > 2 && (firstBracket == -1 || firstBracket > questionMarkIndex || firstBracket == 0 && input[^1] == ')'))
 			return input.Count('?') > 1
 				? throw new ConditionalExpressionsCannotBeNested(body)
 				: true;
@@ -154,6 +154,8 @@ public sealed class If : Expression
 #if LOG_DETAILS
 		Logger.Info(nameof(ParseConditional) + " " + input.ToString());
 #endif
+		if (input[0] == '(' && input[^1] == ')')
+			input = input[1..^1];
 		var questionMarkIndex = input.IndexOf('?');
 		if (questionMarkIndex < 2)
 			throw new InvalidCondition(body); //ncrunch: no coverage

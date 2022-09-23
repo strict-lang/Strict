@@ -70,6 +70,8 @@ public sealed class For : Expression
 	{
 		var mutableValue = body.FindVariableValue(variableName) as Mutable;
 		var iteratorValue = ((Binary)forValueExpression).Arguments[0].ReturnType.Name;
+		if (((Binary)forValueExpression).Arguments[0].ReturnType is GenericType genericType)
+			iteratorValue = genericType.Implementation.Name;
 		if ((iteratorValue != Base.Range || mutableValue?.DataReturnType.Name != Base.Number)
 			&& iteratorValue != mutableValue?.DataReturnType.Name)
 			throw new IteratorTypeDoesNotMatchWithIterable(body);
