@@ -56,7 +56,7 @@ public sealed class BinaryTests : TestExpressions
 	[TestCase("1 + 2")]
 	[TestCase("1 is 1")]
 	[TestCase("true xor true")]
-	//[TestCase("5 to Text")] //TODO: Need to support to Operator parsing
+	[TestCase("5 to Text")]
 	[TestCase("1 * 2 + 1")]
 	[TestCase("5 * 2 ^ 2")]
 	[TestCase("(1 + 2) * 3")]

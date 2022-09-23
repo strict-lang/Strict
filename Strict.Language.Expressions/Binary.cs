@@ -35,9 +35,19 @@ public sealed class Binary : MethodCall
 	private static Expression BuildBinaryExpression(Body body, ReadOnlySpan<char> input,
 		Range operatorTokenRange, Stack<Range> tokens)
 	{
+		var operatorToken = input[operatorTokenRange].ToString();
+		return operatorToken == BinaryOperator.To
+			? To.Parse(body, input[tokens.Pop()],
+				GetUnaryOrBuildNestedBinary(body, input, tokens.Pop(), tokens))
+			: BuildRegularBinaryExpression(body, input, tokens, operatorToken);
+	}
+
+	// ReSharper disable once TooManyArguments
+	private static Expression BuildRegularBinaryExpression(Body body, ReadOnlySpan<char> input,
+		Stack<Range> tokens, string operatorToken)
+	{
 		var right = GetUnaryOrBuildNestedBinary(body, input, tokens.Pop(), tokens);
 		var left = GetUnaryOrBuildNestedBinary(body, input, tokens.Pop(), tokens);
-		var operatorToken = input[operatorTokenRange].ToString();
 		if (operatorToken == BinaryOperator.Multiply && HasIncompatibleDimensions(left, right))
 			throw new ListsHaveDifferentDimensions(body, left + " " + right);
 		var arguments = new[] { right };
