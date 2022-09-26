@@ -105,7 +105,7 @@ public class Type : Context
 	public Type ParseMembersAndMethods(ExpressionParser parser)
 	{
 		ParseAllRemainingLinesIntoMembersAndMethods(parser);
-		if (methods.Count <= members.Count && members.Count + implements.Count < 2 &&
+		if (methods.Count == 0 && members.Count + implements.Count < 2 &&
 			!IsNoneAnyOrBoolean())
 			throw new NoMethodsFound(this, lineNumber);
 		// ReSharper disable once ForCanBeConvertedToForeach, for performance reasons:
@@ -126,8 +126,6 @@ public class Type : Context
 			var rememberStartMethodLineNumber = lineNumber;
 			ParseInTryCatchBlock(parser, rememberStartMethodLineNumber);
 		}
-		AddFromMethodForImplementsIfDoesNotExist(parser);
-		AddFromMethodForMembersIfDoesNotExist(parser);
 	}
 
 	private void ParseInTryCatchBlock(ExpressionParser parser, int rememberStartMethodLineNumber)
@@ -151,31 +149,6 @@ public class Type : Context
 					? ex.GetType().Name
 					: ex.Message, ex);
 		}
-	}
-
-	private void AddFromMethodForMembersIfDoesNotExist(ExpressionParser parser)
-	{
-		foreach (var member in members.Where(member =>
-			!lines.Any(x => x.Contains($"{From}({member.Name.ToLower()}"))))
-			methods.Add(new Method(this, ++lineNumber, parser,
-				new[]
-				{
-					$"{From}({member.Name.ToLower()} {member.Type.Name})",
-					$"\t{member.Name} = {member.Name.ToLower()}"
-				}));
-	}
-
-	private void AddFromMethodForImplementsIfDoesNotExist(ExpressionParser parser)
-	{
-		foreach (var implement in implements.Where(implement =>
-				!lines.Any(x => x.Contains($"{From}({implement.Name.ToLower()}"))).
-			Where(implement => !implement.IsTrait))
-			methods.Add(new Method(this, ++lineNumber, parser,
-				new[]
-				{
-					$"{From}({implement.Name.ToLower()})",
-					$"\t{implement.Name} = {implement.Name.ToLower()}"
-				}));
 	}
 
 	private bool IsNoneAnyOrBoolean() => Name is Base.None or Base.Any or Base.Boolean;
@@ -369,7 +342,8 @@ public class Type : Context
 			if (method.Parameters.Count == arguments.Count &&
 				IsMethodWithMatchingParameters(arguments, method))
 				return method;
-		throw new ArgumentsDoNotMatchMethodParameters(arguments, matchingMethods);
+		return FindAndCreateFromBaseMethod(methodName, arguments) ??
+			throw new ArgumentsDoNotMatchMethodParameters(arguments, matchingMethods);
 	}
 
 	private static bool IsMethodWithMatchingParameters(IReadOnlyList<Expression> arguments,
@@ -405,12 +379,40 @@ public class Type : Context
 	private Method? FindAndCreateFromBaseMethod(string methodName,
 		IReadOnlyList<Expression> arguments)
 	{
-		if (methodName == Method.From && arguments.Count == 1)
-			foreach (var implementType in implements)
-				if (implementType == arguments[0].ReturnType)
-					return new Method(this, 0, dummyExpressionParser,
-						new[] { "from(" + implementType.Name.MakeFirstLetterLowercase() + ")" });
-		return null;
+		if (methodName != Method.From || arguments.Count > members.Count && arguments.Count > implements.Count)
+			return null;
+		var fromMethod = "from(";
+		fromMethod += GetMatchingMemberParametersIfExist(arguments) ??
+			GetMatchingImplementParametersIfExists(arguments);
+		return fromMethod.Length > 5 && fromMethod.Split(',').Length - 1 == arguments.Count
+			? new Method(this, 0, dummyExpressionParser, new[] { $"{fromMethod[..^2]})" })
+			: null;
+	}
+
+	private string? GetMatchingMemberParametersIfExist(IReadOnlyList<Expression> arguments)
+	{
+		var argumentIndex = 0;
+		string? parameters = null;
+		foreach (var member in members)
+			if (arguments.Count > argumentIndex && member.Type == arguments[argumentIndex].ReturnType)
+			{
+				parameters += $"{member.Name.MakeFirstLetterLowercase()} {member.Type.Name}, ";
+				argumentIndex++;
+			}
+		return parameters;
+	}
+
+	private string? GetMatchingImplementParametersIfExists(IReadOnlyList<Expression> arguments)
+	{
+		var argumentIndex = 0;
+		string? parameters = null;
+		foreach (var implement in implements)
+			if (arguments.Count > argumentIndex && implement == arguments[argumentIndex].ReturnType)
+			{
+				parameters += $"{implement.Name.MakeFirstLetterLowercase()} {implement.Name}, ";
+				argumentIndex++;
+			}
+		return parameters;
 	}
 
 	private readonly ExpressionParser dummyExpressionParser = new DummyExpressionParser();

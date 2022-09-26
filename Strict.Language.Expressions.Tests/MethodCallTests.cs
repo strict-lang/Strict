@@ -90,12 +90,18 @@ public sealed class MethodCallTests : TestExpressions
 			Is.EqualTo(CreateFromMethodCall(type.GetType(Base.Character), new Number(type, 7))));
 
 	[TestCase("Count(5)")]
+	[TestCase("Character(5)")]
 	[TestCase("Count(5).Increment")]
 	[TestCase("Count(5).Floor")]
 	[TestCase("Range(0, 10)")]
 	[TestCase("Range(0, 10).Length")]
 	public void FromExample(string fromMethodCall) =>
 		Assert.That(ParseExpression(fromMethodCall).ToString(), Is.EqualTo(fromMethodCall));
+
+	[Test]
+	public void FromExampleFailsOnImproperParameters() =>
+		Assert.That(() => ParseExpression("Range(1, 2, 3, 4)"),
+			Throws.InstanceOf<Type.NoMatchingMethodFound>());
 
 	[Ignore("TODO: none of this works")]
 	[TestCase("complexMethod((1), 2)")]
