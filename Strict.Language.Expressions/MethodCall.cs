@@ -11,7 +11,7 @@ namespace Strict.Language.Expressions;
 /// Like MemberCall has the same syntax when parent instance is used: Type.Method
 /// </summary>
 // ReSharper disable once HollowTypeName
-public class MethodCall : Expression
+public class MethodCall : NonGenericExpression
 {
 	public MethodCall(Method method, Expression? instance, IReadOnlyList<Expression> arguments) :
 		base(method.ReturnType)

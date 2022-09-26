@@ -10,11 +10,6 @@ namespace Strict.Language.Expressions;
 /// </summary>
 public sealed class For : Expression
 {
-	private const string ForName = "for";
-	private const string ValueName = "value";
-	private const string IndexName = "index";
-	private const string InName = "in";
-
 	private For(Expression value, Expression body) : base(value.ReturnType)
 	{
 		Value = value;
@@ -26,6 +21,10 @@ public sealed class For : Expression
 	public override int GetHashCode() => Value.GetHashCode();
 	public override string ToString() => $"for {Value}\n\t{Body}";
 	public override bool Equals(Expression? other) => other is For a && Equals(Value, a.Value);
+	private const string ForName = "for";
+	private const string ValueName = "value";
+	private const string IndexName = "index";
+	private const string InName = "in";
 
 	public static Expression? TryParse(Body body, ReadOnlySpan<char> line)
 	{

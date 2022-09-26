@@ -42,8 +42,6 @@ public class Type : Context
 		return line;
 	}
 
-	public bool IsGeneric { get; private set; }
-
 	public sealed class TypeAlreadyExistsInPackage : Exception
 	{
 		public TypeAlreadyExistsInPackage(string name, Package package) : base(
@@ -54,6 +52,16 @@ public class Type : Context
 	private int lineNumber;
 	public string FilePath => Path.Combine(Package.FolderPath, Name) + Extension;
 	public Package Package => (Package)Parent;
+	/// <summary>
+	/// Generic types cannot be used directly as we don't know the implementation to be used (e.g. a
+	/// list, we need to know the type of the elements), you must them from <see cref="GenericType"/>!
+	/// </summary>
+	public bool IsGeneric { get; private set; }
+
+	public class GenericTypesCannotBeUsedDirectlyUseImplementation : Exception
+	{
+		public GenericTypesCannotBeUsedDirectlyUseImplementation(Type type) : base(type.ToString()) { }
+	}
 
 	private void CheckIfTraitIsImplemented(Type trait)
 	{
@@ -66,10 +74,6 @@ public class Type : Context
 
 	private Type ParseImplement(string remainingLine)
 	{
-		if (members.Count > 0 || methods.Count > 0)
-			throw
-				new ImplementMustComeBeforeMembersAndMethods(this, lineNumber,
-					remainingLine); //ncrunch: no coverage this condition never pass since this method is always called before any members or methods are parsed
 		if (remainingLine == Base.Any)
 			throw new ImplementAnyIsImplicitAndNotAllowed(this, lineNumber, remainingLine);
 		try
@@ -186,22 +190,13 @@ public class Type : Context
 			methods.Add(new Method(this, lineNumber, parser, GetAllMethodLines()));
 	}
 
-	// ReSharper disable once MethodTooLong
 	private Member ParseMember(ExpressionParser parser, ReadOnlySpan<char> remainingLine)
 	{
 		if (methods.Count > 0)
 			throw new MembersMustComeBeforeMethods(this, lineNumber, remainingLine.ToString());
-		var nameAndExpression = remainingLine.Split();
-		nameAndExpression.MoveNext();
-		var nameAndType = nameAndExpression.Current.ToString();
-		if (nameAndExpression.MoveNext() && nameAndExpression.Current[0] != '=')
-			nameAndType += " " + nameAndExpression.Current.ToString();
 		try
 		{
-			return new Member(this, nameAndType, nameAndExpression.MoveNext()
-				? GetMemberExpression(parser, nameAndType.MakeFirstLetterUppercase(),
-					remainingLine[(nameAndType.Length + 3)..])
-				: null);
+			return TryParseMember(parser, remainingLine);
 		}
 		catch (ParsingFailed)
 		{
@@ -213,6 +208,19 @@ public class Type : Context
 		}
 	}
 
+	private Member TryParseMember(ExpressionParser parser, ReadOnlySpan<char> remainingLine)
+	{
+		var nameAndExpression = remainingLine.Split();
+		nameAndExpression.MoveNext();
+		var nameAndType = nameAndExpression.Current.ToString();
+		if (nameAndExpression.MoveNext() && nameAndExpression.Current[0] != '=')
+			nameAndType += " " + nameAndExpression.Current.ToString();
+		return new Member(this, nameAndType, nameAndExpression.MoveNext()
+			? GetMemberExpression(parser, nameAndType.MakeFirstLetterUppercase(),
+				remainingLine[(nameAndType.Length + 3)..])
+			: null);
+	}
+
 	public sealed class MembersMustComeBeforeMethods : ParsingFailed
 	{
 		public MembersMustComeBeforeMethods(Type type, int lineNumber, string line) : base(type,
@@ -220,13 +228,15 @@ public class Type : Context
 	}
 
 	private Expression GetMemberExpression(ExpressionParser parser, string memberName,
-		ReadOnlySpan<char> remainingTextSpan)
-	{
-		if (FindType(memberName) != null && !remainingTextSpan.StartsWith(memberName))
-			remainingTextSpan = string.Concat(memberName, "(", remainingTextSpan, ")").AsSpan();
-		return parser.ParseExpression(new Body(new Method(this, 0, parser, new[] { "EmptyBody" })),
-			remainingTextSpan);
-	}
+		ReadOnlySpan<char> remainingTextSpan) =>
+		parser.ParseExpression(new Body(new Method(this, 0, parser, new[] { "EmptyBody" })),
+			GetFromConstructorCallFromUpcastableMemberOrJustEvaluate(memberName, remainingTextSpan));
+
+	private ReadOnlySpan<char> GetFromConstructorCallFromUpcastableMemberOrJustEvaluate(
+		string memberName, ReadOnlySpan<char> remainingTextSpan) =>
+		FindType(memberName) != null && !remainingTextSpan.StartsWith(memberName)
+			? string.Concat(memberName, "(", remainingTextSpan, ")").AsSpan()
+			: remainingTextSpan;
 
 	public const string Implement = "implement ";
 	public const string Has = "has ";
@@ -367,14 +377,30 @@ public class Type : Context
 	{
 		for (var index = 0; index < method.Parameters.Count; index++)
 		{
+			if (method.Parameters[index].Type.IsList != arguments[index].ReturnType.IsList)
+				return false;
+			//TODO: the main thing we need to check always and everywhere is if a generic type was misused. like List method call is only allowed if I am already a implementation, why would we ever cast from the generic List to ListNumber, it should start out as ListNumber, otherwise we can't call the + method
 			var argumentReturnType = arguments[index].ReturnType;
 			if (argumentReturnType is GenericType genericType)
 				argumentReturnType = genericType.Implementation;
+			if (method.Parameters[index].Type is GenericType parameterGenericType)
+			{
+				if (!argumentReturnType.IsCompatible(parameterGenericType.Implementation))
+					return false;
+				continue;
+			}
+			if (method.Parameters[index].Type.IsGeneric)
+				throw new GenericTypesCannotBeUsedDirectlyUseImplementation(method.Parameters[index].Type);
 			if (!argumentReturnType.IsCompatible(method.Parameters[index].Type))
 				return false;
 		}
 		return true;
 	}
+
+	public bool IsList =>
+		IsGeneric
+			? Name == Base.List
+			: this is GenericType generic && generic.Generic.Name == Base.List;
 
 	private Method? FindAndCreateFromBaseMethod(string methodName,
 		IReadOnlyList<Expression> arguments)
@@ -403,11 +429,28 @@ public class Type : Context
 		this == sameOrBaseType || sameOrBaseType.Name == Base.Any ||
 		implements.Contains(sameOrBaseType) || CanUpCast(sameOrBaseType);
 
+	/*the checks in Type.IsCompatible are all upside down:
+
+      if (argumentReturnType is GenericType genericType)
+        argumentReturnType = genericType.Implementation;
+
+the main issue is however here:
+  private bool CanUpCast(Type sameOrBaseType)
+  {
+    if (sameOrBaseType.Name is Base.List)
+      return Name == Base.Number  implements.Contains(GetType(Base.Number)) 
+        Name == Base.Text;
+
+why would any Number or Text or anything that implements number (what is this specific case doing here?) be upcastable to a list, that makes zero sense.
+
+the sameOrBaseType.Name == Base.Any || is also a bit strange.
+
+I have no idea how you got this far with checks like these*/
 	private bool CanUpCast(Type sameOrBaseType)
 	{
-		if (sameOrBaseType.Name is Base.List)
-			return Name == Base.Number || implements.Contains(GetType(Base.Number)) ||
-				Name == Base.Text;
+		//nonsensical: if (sameOrBaseType.Name is Base.List)
+		//	return Name == Base.Number || implements.Contains(GetType(Base.Number)) ||
+		//		Name == Base.Text;
 		if (sameOrBaseType.Name is Base.Text or Base.List)
 			return Name == Base.Number || implements.Contains(GetType(Base.Number));
 		return false;
@@ -466,18 +509,4 @@ public class Type : Context
 				" do ") +
 			"not match:\n" + string.Join('\n', allMethods)) { }
 	}
-}
-
-// ReSharper disable once HollowTypeName
-public sealed class GenericType : Type
-{
-	public GenericType(Type generic, Type implementation) : base(generic.Package,
-		new TypeLines(generic.Name + implementation.Name))
-	{
-		Generic = generic;
-		Implementation = implementation;
-	}
-
-	public Type Generic { get; }
-	public Type Implementation { get; }
 }

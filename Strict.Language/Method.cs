@@ -179,7 +179,7 @@ public sealed class Method : Context
 	public Type Type => (Type)Parent;
 	public IReadOnlyList<Parameter> Parameters => parameters;
 	private readonly List<Parameter> parameters = new();
-	public Type ReturnType { get; set; }
+	public Type ReturnType { get; }
 	public bool IsPublic => char.IsUpper(Name[0]);
 
 	public override Type? FindType(string name, Context? searchingFrom = null) =>

@@ -1,7 +1,7 @@
 ﻿namespace Strict.Language.Expressions;
 
 // ReSharper disable once HollowTypeName
-public sealed class MemberCall : Expression
+public sealed class MemberCall : NonGenericExpression
 {
 	public MemberCall(Expression? instance, Member member) : base(member.Type)
 	{

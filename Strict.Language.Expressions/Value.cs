@@ -8,7 +8,7 @@
 /// <see cref="Assignment"/> or indirectly as parts of a <see cref="Binary"/> expression.
 /// For generic values like <see cref="List"/> the Data contains the generic type used.
 /// </summary>
-public class Value : Expression
+public class Value : NonGenericExpression
 {
 	public Value(Type valueType, object data) : base(valueType) => Data = data;
 	public object Data { get; }

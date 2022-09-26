@@ -7,14 +7,17 @@ namespace Strict.Language.Expressions;
 public sealed class Binary : MethodCall
 {
 	public Binary(Expression left, Method operatorMethod, Expression[] right) :
-		base(SetReturnTypeForGenericMethod(operatorMethod, left), left, right) { }
+		base(operatorMethod, left, right) { }
 
+	/*TODO: what???? this needs to be solved in general, this is one of the reasons we have the problems with generics atm!
 	private static Method SetReturnTypeForGenericMethod(Method operatorMethod, Expression left)
 	{
 		if (operatorMethod.ReturnType.IsGeneric)
+	//TODO: how is this even allowed????
 			operatorMethod.ReturnType = left.ReturnType;
 		return operatorMethod;
 	}
+	*/
 
 	public override string ToString() =>
 		AddNestedBracketsIfNeeded(Instance!) + " " + Method.Name + " " +
@@ -63,11 +66,16 @@ public sealed class Binary : MethodCall
 
 	// ReSharper disable once TooManyArguments
 	private static Expression GetUnaryOrBuildNestedBinary(Body body, ReadOnlySpan<char> input, Range nextTokenRange,
-		Stack<Range> tokens) =>
-		input[nextTokenRange.Start.Value].IsSingleCharacterOperator() ||
-		input[nextTokenRange].IsMultiCharacterOperator()
-			? BuildBinaryExpression(body, input, nextTokenRange, tokens)
-			: body.Method.ParseExpression(body, input[nextTokenRange]);
+		Stack<Range> tokens)
+	{
+		var expression = input[nextTokenRange.Start.Value].IsSingleCharacterOperator() ||
+			input[nextTokenRange].IsMultiCharacterOperator()
+				? BuildBinaryExpression(body, input, nextTokenRange, tokens)
+				: body.Method.ParseExpression(body, input[nextTokenRange]);
+		if (expression.ReturnType.IsGeneric)
+			throw new Type.GenericTypesCannotBeUsedDirectlyUseImplementation(expression.ReturnType);
+		return expression;
+	}
 
 	public static bool HasIncompatibleDimensions(Expression left, Expression right) =>
 		left is List leftList && right is List rightList &&

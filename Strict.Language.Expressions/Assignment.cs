@@ -5,7 +5,7 @@ namespace Strict.Language.Expressions;
 /// <summary>
 /// Let assigns a variable in a method, often a fixed value that is optimized away.
 /// </summary>
-public sealed class Assignment : Expression
+public sealed class Assignment : NonGenericExpression
 {
 	public Assignment(Body? scope, string name, Expression value) : base(value.ReturnType)
 	{

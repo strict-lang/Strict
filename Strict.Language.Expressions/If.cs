@@ -137,12 +137,18 @@ public sealed class If : Expression
 	{
 		var questionMarkIndex = input.IndexOf('?');
 		var firstBracket = input.IndexOf('(');
-		if (questionMarkIndex > 2 && (firstBracket == -1 || firstBracket > questionMarkIndex || firstBracket == 0 && input[^1] == ')'))
+		if (questionMarkIndex > 2 &&
+			NoFirstBracketOrSurroundedByIt(input, firstBracket, questionMarkIndex))
 			return input.Count('?') > 1
 				? throw new ConditionalExpressionsCannotBeNested(body)
 				: true;
 		return false;
 	}
+
+	private static bool NoFirstBracketOrSurroundedByIt(ReadOnlySpan<char> input, int firstBracket,
+		int questionMarkIndex) =>
+		firstBracket == -1 || firstBracket > questionMarkIndex ||
+		firstBracket == 0 && input[^1] == ')';
 
 	public sealed class ConditionalExpressionsCannotBeNested : ParsingFailed
 	{
