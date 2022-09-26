@@ -26,6 +26,8 @@ public class MethodExpressionParser : ExpressionParser
 	{
 		if (input.IsEmpty)
 			throw new CannotParseEmptyInput(body);
+		if (IsExpressionTypeAny(input))
+			throw new ExpressionWithTypeAnyIsNotAllowed(body, input.ToString());
 		if (input.Length < 3 || !input.Contains(' ') && !input.Contains(',') || input.StartsWith(Base.Mutable))
 			return Boolean.TryParse(body, input) ?? Text.TryParse(body, input) ??
 				List.TryParseWithSingleElement(body, input) ?? Number.TryParse(body, input) ?? Mutable.TryParse(body, input) ??
@@ -58,6 +60,8 @@ public class MethodExpressionParser : ExpressionParser
 				new[] { binary }) ??
 			throw new UnknownExpression(body, input[postfix.Output.Peek()].ToString());
 	}
+
+	private static bool IsExpressionTypeAny(ReadOnlySpan<char> input) => input.Equals(Base.Any, StringComparison.Ordinal) || input.StartsWith(Base.Any + "(");
 
 	private Error TryParseErrorExpression(Body body, ReadOnlySpan<char> partToParse)
 	{
@@ -212,7 +216,7 @@ public class MethodExpressionParser : ExpressionParser
 	private static bool
 		IsConstructorUsedWithSameArgumentType(IReadOnlyList<Expression> arguments, Type fromType) =>
 		arguments.Count == 1 && (fromType == arguments[0].ReturnType ||
-		arguments[0].ReturnType is GenericType genericType && fromType == genericType.Generic);
+			arguments[0].ReturnType is GenericType genericType && fromType == genericType.Generic);
 
 	private static Expression? TryFindMemberCall(Type type, Expression? instance,
 		ReadOnlySpan<char> partToParse)
@@ -335,6 +339,11 @@ public class MethodExpressionParser : ExpressionParser
 	public class CannotParseEmptyInput : ParsingFailed
 	{
 		public CannotParseEmptyInput(Body body) : base(body) { }
+	}
+
+	public sealed class ExpressionWithTypeAnyIsNotAllowed : ParsingFailed
+	{
+		public ExpressionWithTypeAnyIsNotAllowed(Body body, string message) : base(body, message) { }
 	}
 
 	public sealed class NumbersCanNotBeInNestedCalls : ParsingFailed

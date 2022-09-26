@@ -91,6 +91,34 @@ public sealed class TypeTests
 		Assert.That(() => CreateType("Program", "implement Any"),
 			Throws.InstanceOf<Type.ImplementAnyIsImplicitAndNotAllowed>());
 
+	[TestCase("has any")]
+	[TestCase("has random Any")]
+	public void MemberWithTypeAnyIsNotAllowed(string line) =>
+		Assert.That(() => CreateType("Program", line),
+			Throws.InstanceOf<Type.MemberWithTypeAnyIsNotAllowed>());
+
+	[TestCase("has log", "Run", "\tlet result = Any")]
+	[TestCase("has log", "Run", "\tlet result = Any(5)")]
+	[TestCase("has log", "Run", "\tlet result = 5 + Any(5)")]
+	public void VariableWithTypeAnyIsNotAllowed(params string[] lines)
+	{
+		var type = new Type(package, new TypeLines(nameof(VariableWithTypeAnyIsNotAllowed), lines)).ParseMembersAndMethods(new MethodExpressionParser());
+		Assert.That(() => type.Methods[0].GetBodyAndParseIfNeeded(),
+			Throws.InstanceOf<MethodExpressionParser.ExpressionWithTypeAnyIsNotAllowed>().With.Message.
+				Contains("Any"));
+	}
+
+	[TestCase("has log", "Run(any)", "\tlet result = 5")]
+	[TestCase("has log", "Run(input Any)", "\tlet result = 5")]
+	public void MethodParameterWithTypeAnyIsNotAllowed(params string[] lines) =>
+		Assert.That(() => CreateType("Program", lines),
+			Throws.InstanceOf<Method.ParametersWithTypeAnyIsNotAllowed>());
+
+	[Test]
+	public void MethodReturnTypeAsAnyIsNotAllowed() =>
+		Assert.That(() => CreateType("Program", "has log", "Run Any", "\tlet result = 5"),
+			Throws.InstanceOf<Method.MethodReturnTypeAsAnyIsNotAllowed>()!);
+
 	[Test]
 	public void ImplementMustBeBeforeMembersAndMethods() =>
 		Assert.That(() => CreateType("Program", "has log", "implement App"),

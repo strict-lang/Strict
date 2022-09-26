@@ -58,6 +58,8 @@ public sealed class Method : Context
 	{
 		if (rest.Length == 0)
 			return GetEmptyReturnType(type);
+		if (IsReturnTypeAny(rest))
+			throw new MethodReturnTypeAsAnyIsNotAllowed(this, rest.ToString());
 		var closingBracketIndex = rest.LastIndexOf(')');
 		var gotBrackets = closingBracketIndex > 0;
 		return gotBrackets && rest.Length == 2
@@ -71,6 +73,19 @@ public sealed class Method : Context
 						: ParseParameters(type, rest, closingBracketIndex);
 	}
 
+	private Type GetEmptyReturnType(Type type) =>
+		Name == From
+			? type
+			: type.GetType(Base.None);
+
+	private static bool IsReturnTypeAny(ReadOnlySpan<char> rest) =>
+		rest[0] == ' ' && rest[1..].Equals(Base.Any, StringComparison.Ordinal);
+
+	public sealed class MethodReturnTypeAsAnyIsNotAllowed : ParsingFailed
+	{
+		public MethodReturnTypeAsAnyIsNotAllowed(Method method, string name) : base(method.Type, 0, name) { }
+	}
+
 	private Type ParseParameters(Type type, ReadOnlySpan<char> rest, int closingBracketIndex)
 	{
 		foreach (var nameAndType in rest[1..closingBracketIndex].
@@ -78,17 +93,24 @@ public sealed class Method : Context
 		{
 			if (char.IsUpper(nameAndType[0]))
 				throw new ParametersMustStartWithLowerCase(this);
-			parameters.Add(new Parameter(type, nameAndType.ToString()));
+			var nameAndTypeAsString = nameAndType.ToString();
+			if (IsParameterTypeAny(nameAndTypeAsString))
+				throw new ParametersWithTypeAnyIsNotAllowed(this, nameAndTypeAsString);
+			parameters.Add(new Parameter(type, nameAndTypeAsString));
 		}
 		return closingBracketIndex + 2 < rest.Length
 			? Type.GetType(rest[(closingBracketIndex + 2)..].ToString())
 			: GetEmptyReturnType(type);
 	}
 
-	private Type GetEmptyReturnType(Type type) =>
-		Name == From
-			? type
-			: type.GetType(Base.None);
+	private static bool IsParameterTypeAny(string nameAndTypeString) =>
+		nameAndTypeString == Base.Any.MakeFirstLetterLowercase() ||
+		nameAndTypeString.Contains(" Any");
+
+	public sealed class ParametersWithTypeAnyIsNotAllowed : ParsingFailed
+	{
+		public ParametersWithTypeAnyIsNotAllowed(Method method, string name) : base(method.Type, 0, name) { }
+	}
 
 	public sealed class InvalidMethodParameters : ParsingFailed
 	{

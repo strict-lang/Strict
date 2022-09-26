@@ -188,10 +188,19 @@ public class Type : Context
 		var nameAndType = nameAndExpression.Current.ToString();
 		if (nameAndExpression.MoveNext() && nameAndExpression.Current[0] != '=')
 			nameAndType += " " + nameAndExpression.Current.ToString();
+		if (IsMemberTypeAny(nameAndType, nameAndExpression))
+			throw new MemberWithTypeAnyIsNotAllowed(this, lineNumber, nameAndType);
 		return new Member(this, nameAndType, nameAndExpression.MoveNext()
 			? GetMemberExpression(parser, nameAndType.MakeFirstLetterUppercase(),
 				remainingLine[(nameAndType.Length + 3)..])
 			: null);
+	}
+
+	private static bool IsMemberTypeAny(string nameAndType, SpanSplitEnumerator nameAndExpression) => nameAndType == Base.Any.MakeFirstLetterLowercase() || nameAndExpression.Current.Equals(Base.Any, StringComparison.Ordinal);
+
+	public sealed class MemberWithTypeAnyIsNotAllowed : ParsingFailed
+	{
+		public MemberWithTypeAnyIsNotAllowed(Type type, int lineNumber, string name) : base(type, lineNumber, name) { }
 	}
 
 	public sealed class MembersMustComeBeforeMethods : ParsingFailed
@@ -329,9 +338,7 @@ public class Type : Context
 	public const string Extension = ".strict";
 
 	public Method GetMethod(string methodName, IReadOnlyList<Expression> arguments) =>
-		(this is GenericType genericType
-			? genericType.Generic
-			: this).FindMethod(methodName, arguments) ??
+		FindMethod(methodName, arguments) ??
 		throw new NoMatchingMethodFound(this, methodName, AvailableMethods);
 
 	public Method? FindMethod(string methodName, IReadOnlyList<Expression> arguments)
