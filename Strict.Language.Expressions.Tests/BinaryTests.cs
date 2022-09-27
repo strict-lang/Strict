@@ -33,7 +33,7 @@ public sealed class BinaryTests : TestExpressions
 	public void ArgumentsDoNotMatchBinaryOperatorParameters() =>
 		Assert.That(() => ParseExpression("5 / \"text\""),
 			Throws.Exception.InstanceOf<ArgumentsDoNotMatchMethodParameters>().With.Message.Contains(
-				"Argument: TestPackage.Text \"text\" do not match:\n/(other TestPackage.Number) Number"));
+				"Argument: \"text\" TestPackage.Text do not match these method(s):\n/(other TestPackage.Number) Number"));
 
 	[Test]
 	public void NoMatchingMethodFound() =>

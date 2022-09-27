@@ -23,4 +23,12 @@ public abstract class Expression : IEquatable<Expression>
 
 	public override int GetHashCode() => ToString().GetHashCode();
 	public override string ToString() => base.ToString() + " " + ReturnType;
+
+	public string ToStringWithType()
+	{
+		var text = ToString();
+		return !text.EndsWith(ReturnType.ToString(), StringComparison.Ordinal)
+			? text + " " + ReturnType
+			: text;
+	}
 }

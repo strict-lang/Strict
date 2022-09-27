@@ -200,8 +200,8 @@ public sealed class Method : Context
 
 	public Type Type => (Type)Parent;
 	public IReadOnlyList<Parameter> Parameters => parameters;
-	private readonly List<Parameter> parameters = new();
-	public Type ReturnType { get; }
+	private List<Parameter> parameters = new();
+	public Type ReturnType { get; private set; }
 	public bool IsPublic => char.IsUpper(Name[0]);
 
 	public override Type? FindType(string name, Context? searchingFrom = null) =>
@@ -224,4 +224,23 @@ public sealed class Method : Context
 		Name + parameters.ToBrackets() + (ReturnType.Name == Base.None
 			? ""
 			: " " + ReturnType.Name);
+
+	public Method CloneWithImplementation(GenericType typeWithImplementation)
+	{
+		var clone = (Method)MemberwiseClone();
+		clone.ReturnType = ReplaceWithImplementationOrGenericType(clone.ReturnType, typeWithImplementation);
+		clone.parameters = new List<Parameter>(parameters);
+		for (var index = 0; index < clone.Parameters.Count; index++)
+			clone.parameters[index] = clone.parameters[index].CloneWithImplementationType(
+				ReplaceWithImplementationOrGenericType(clone.Parameters[index].Type,
+					typeWithImplementation));
+		return clone;
+	}
+
+	private static Type ReplaceWithImplementationOrGenericType(Type type, GenericType typeWithImplementation) =>
+		type.Name == Base.Generic
+			? typeWithImplementation.Implementation //Number
+			: type.IsGeneric
+				? typeWithImplementation //ListNumber
+				: type;
 }

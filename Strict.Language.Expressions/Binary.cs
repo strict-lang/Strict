@@ -73,7 +73,7 @@ public sealed class Binary : MethodCall
 				? BuildBinaryExpression(body, input, nextTokenRange, tokens)
 				: body.Method.ParseExpression(body, input[nextTokenRange]);
 		if (expression.ReturnType.IsGeneric)
-			throw new Type.GenericTypesCannotBeUsedDirectlyUseImplementation(expression.ReturnType);
+			throw new Type.GenericTypesCannotBeUsedDirectlyUseImplementation(expression.ReturnType, expression.ToString());
 		return expression;
 	}
 

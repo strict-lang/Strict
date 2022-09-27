@@ -36,7 +36,7 @@ public abstract class NamedType
 	}
 
 	public string Name { get; }
-	public Type Type { get; }
+	public Type Type { get; protected set; }
 	public override bool Equals(object? obj) => obj is NamedType other && Name == other.Name;
 	public override int GetHashCode() => Name.GetHashCode();
 	public override string ToString() => Name + " " + Type;

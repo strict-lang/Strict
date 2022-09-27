@@ -34,13 +34,13 @@ public sealed class MethodCallTests : TestExpressions
 	public void ParseWithMissingArgument() =>
 		Assert.That(() => ParseExpression("log.Write"),
 			Throws.InstanceOf<Type.ArgumentsDoNotMatchMethodParameters>().With.Message.StartsWith(
-				"No arguments does not match:\nWrite(text TestPackage.Text)\nWrite(number TestPackage.Number)"));
+				"No arguments does not match these method(s):\nWrite(text TestPackage.Text)\nWrite(number TestPackage.Number)\nWrite(mutable TestPackage.Mutable)"));
 
 	[Test]
 	public void ParseWithTooManyArguments() =>
 		Assert.That(() => ParseExpression("log.Write(1, 2)"),
 			Throws.InstanceOf<Type.ArgumentsDoNotMatchMethodParameters>().With.Message.
-				StartsWith("Arguments: TestPackage.Number 1, TestPackage.Number 2 do not match"));
+				StartsWith("Arguments: 1 TestPackage.Number, 2 TestPackage.Number do not match"));
 
 	[Test]
 	public void ParseWithInvalidExpressionArguments() =>

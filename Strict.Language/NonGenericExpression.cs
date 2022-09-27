@@ -9,6 +9,7 @@ public abstract class NonGenericExpression : Expression
 	protected NonGenericExpression(Type returnType) : base(returnType)
 	{
 		if (returnType.IsGeneric)
-			throw new Type.GenericTypesCannotBeUsedDirectlyUseImplementation(returnType);
+			throw new Type.GenericTypesCannotBeUsedDirectlyUseImplementation(returnType,
+				GetType().Name);
 	}
 }

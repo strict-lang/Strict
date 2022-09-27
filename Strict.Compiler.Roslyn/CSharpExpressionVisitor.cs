@@ -8,6 +8,7 @@ namespace Strict.Compiler.Roslyn;
 
 public class CSharpExpressionVisitor : ExpressionVisitor
 {
+	//TODO: this is wrong, Body can be inside a method, this always asumes every method only has 1 body, which is also NOT true, it can just be a single expression
 	protected override IReadOnlyList<string> VisitBody(Body methodBody)
 	{
 		var method = methodBody.Method;

@@ -20,6 +20,7 @@ public class Type : Context
 			throw new TypeAlreadyExistsInPackage(Name, package);
 		package.Add(this);
 		lines = file.Lines;
+		IsGeneric = Name == Base.Generic;
 		for (lineNumber = 0; lineNumber < lines.Length; lineNumber++)
 			if (ValidateCurrentLineIsNonEmptyAndTrimmed().
 				StartsWith(Implement, StringComparison.Ordinal))
@@ -60,7 +61,8 @@ public class Type : Context
 
 	public class GenericTypesCannotBeUsedDirectlyUseImplementation : Exception
 	{
-		public GenericTypesCannotBeUsedDirectlyUseImplementation(Type type) : base(type.ToString()) { }
+		public GenericTypesCannotBeUsedDirectlyUseImplementation(Type type, string extraInformation) :
+			base(type + " " + extraInformation) { }
 	}
 
 	private void CheckIfTraitIsImplemented(Type trait)
@@ -353,26 +355,30 @@ public class Type : Context
 			throw new ArgumentsDoNotMatchMethodParameters(arguments, matchingMethods);
 	}
 
+	// ReSharper disable once MethodTooLong
 	private static bool IsMethodWithMatchingParameters(IReadOnlyList<Expression> arguments,
 		Method method)
 	{
 		for (var index = 0; index < method.Parameters.Count; index++)
 		{
-			if (method.Parameters[index].Type.IsList != arguments[index].ReturnType.IsList)
+			var methodParameterType = method.Parameters[index].Type;
+			var argumentReturnType = arguments[index].ReturnType;
+			if (methodParameterType.IsList != argumentReturnType.IsList)
 				return false;
 			//TODO: the main thing we need to check always and everywhere is if a generic type was misused. like List method call is only allowed if I am already a implementation, why would we ever cast from the generic List to ListNumber, it should start out as ListNumber, otherwise we can't call the + method
-			var argumentReturnType = arguments[index].ReturnType;
-			if (argumentReturnType is GenericType genericType)
-				argumentReturnType = genericType.Implementation;
-			if (method.Parameters[index].Type is GenericType parameterGenericType)
+			if (argumentReturnType == methodParameterType)
+				return true;
+			if (methodParameterType is GenericType parameterGenericType)
 			{
 				if (!argumentReturnType.IsCompatible(parameterGenericType.Implementation))
 					return false;
 				continue;
 			}
-			if (method.Parameters[index].Type.IsGeneric)
-				throw new GenericTypesCannotBeUsedDirectlyUseImplementation(method.Parameters[index].Type);
-			if (!argumentReturnType.IsCompatible(method.Parameters[index].Type))
+			if (methodParameterType.IsGeneric)
+				throw new GenericTypesCannotBeUsedDirectlyUseImplementation(methodParameterType,
+					"(parameter " + index + ") is not usable with argument " + arguments[index].ToStringWithType() + " in " +
+					method);
+			if (!argumentReturnType.IsCompatible(methodParameterType))
 				return false;
 		}
 		return true;
@@ -435,8 +441,8 @@ public class Type : Context
 	} //ncrunch: no coverage end
 
 	private bool IsCompatible(Type sameOrBaseType) =>
-		this == sameOrBaseType || sameOrBaseType.Name == Base.Any ||
-		implements.Contains(sameOrBaseType) || CanUpCast(sameOrBaseType);
+		this == sameOrBaseType || sameOrBaseType.Name == Base.Any || implements.Contains(sameOrBaseType) ||
+		CanUpCast(sameOrBaseType);
 
 	/*the checks in Type.IsCompatible are all upside down:
 
@@ -457,9 +463,6 @@ the sameOrBaseType.Name == Base.Any || is also a bit strange.
 I have no idea how you got this far with checks like these*/
 	private bool CanUpCast(Type sameOrBaseType)
 	{
-		//nonsensical: if (sameOrBaseType.Name is Base.List)
-		//	return Name == Base.Number || implements.Contains(GetType(Base.Number)) ||
-		//		Name == Base.Text;
 		if (sameOrBaseType.Name is Base.Text or Base.List)
 			return Name == Base.Number || implements.Contains(GetType(Base.Number));
 		return false;
@@ -482,7 +485,9 @@ I have no idea how you got this far with checks like these*/
 				else
 					cachedAvailableMethods.Add(method.Name, new List<Method> { method });
 			foreach (var implementType in implements)
-				AddAvailableMethods(implementType);
+				// If we are in a specific implementation (GenericType), don't add generic methods
+				if (IsGeneric || !implementType.IsGeneric)
+					AddAvailableMethods(implementType);
 			if (Name != Base.Any)
 				AddAvailableMethods(GetType(Base.Any));
 			return cachedAvailableMethods;
@@ -514,8 +519,9 @@ I have no idea how you got this far with checks like these*/
 				? "No arguments does "
 				: (arguments.Count == 1
 					? "Argument: "
-					: "Arguments: ") + arguments.Select(a => a.ReturnType + " " + a).ToWordList() +
+					: "Arguments: ") + arguments.Select(a => a.ToStringWithType()).ToWordList() +
 				" do ") +
-			"not match:\n" + string.Join('\n', allMethods)) { }
+			"not match these method(s):\n" + string.Join("\n",
+				allMethods)) { }
 	}
 }
