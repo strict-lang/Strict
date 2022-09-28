@@ -88,7 +88,7 @@ public sealed class Body : Expression
 	{
 		public ChildBodyReturnTypeMustMatchMethodReturnType(Body body, Type childReturnType) : base(body,
 			$"Child body return type: {childReturnType} is not matching with Parent return type:" +
-			$" {body.Parent?.ReturnType} in method line: {body.ParsingLineNumber}") { }
+			$" {(body.Parent == null ? body.Method.ReturnType : body.Parent.ReturnType)} in method line: {body.ParsingLineNumber}") { }
 	}
 
 	public sealed class ReturnAsLastExpressionIsNotNeeded : ParsingFailed

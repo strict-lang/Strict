@@ -38,7 +38,7 @@ public class Type : Context
 			throw new ExtraWhitespacesFoundAtBeginningOfLine(this, lineNumber, line);
 		if (char.IsWhiteSpace(line[^1]))
 			throw new ExtraWhitespacesFoundAtEndOfLine(this, lineNumber, line);
-		if (line.Contains("Generic", StringComparison.Ordinal))
+		if (line.Contains(Base.Generic, StringComparison.Ordinal))
 			IsGeneric = true;
 		return line;
 	}
@@ -362,9 +362,8 @@ public class Type : Context
 		{
 			var methodParameterType = method.Parameters[index].Type;
 			var argumentReturnType = arguments[index].ReturnType;
-			if (methodParameterType.IsList != argumentReturnType.IsList)
+			if (methodParameterType.IsList != argumentReturnType.IsList && methodParameterType.Name != Base.Any) //TODO: to allow finding "in(any)" method from Any type for all For iterators. Any other approach general approach would be good?
 				return false;
-			//TODO: the main thing we need to check always and everywhere is if a generic type was misused. like List method call is only allowed if I am already a implementation, why would we ever cast from the generic List to ListNumber, it should start out as ListNumber, otherwise we can't call the + method
 			if (argumentReturnType == methodParameterType)
 				return true;
 			if (methodParameterType is GenericType parameterGenericType)
@@ -480,7 +479,7 @@ I have no idea how you got this far with checks like these*/
 					cachedAvailableMethods.Add(method.Name, new List<Method> { method });
 			foreach (var implementType in implements)
 				// If we are in a specific implementation (GenericType), don't add generic methods
-				if (IsGeneric || !implementType.IsGeneric)
+				if (IsGeneric || !implementType.IsGeneric && implementType.Name != Base.Mutable) // TODO: Need to find a good solution here; temporary hack to not add from(any) Mutable to all types which implements it
 					AddAvailableMethods(implementType);
 			if (Name != Base.Any)
 				AddAvailableMethods(GetType(Base.Any));

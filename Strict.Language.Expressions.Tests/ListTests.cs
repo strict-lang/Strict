@@ -155,12 +155,15 @@ public sealed class ListTests : TestExpressions
 
 	[Test]
 	public void ParseComplexLists() =>
-		ParseAndCheckOutputMatchesInput("((\"Hello, World\", \"Yoyo (it is my secret + 1)\"), (\"4\")) + 7", CreateBinary(
-			new List(new Body(method),
-				GetListExpressions(new[]
-				{
-					"(\"Hello, World\", \"Yoyo (it is my secret + 1)\"), (\"4\")"
-				})), BinaryOperator.Plus, new Number(method, 7)));
+		ParseAndCheckOutputMatchesInput(
+			"((\"Hello, World\", \"Yoyo (it is my secret + 1)\"), (\"4\")) + (\"7\")",
+			CreateBinary(
+				new List(new Body(method),
+					GetListExpressions(new[]
+					{
+						"(\"Hello, World\", \"Yoyo (it is my secret + 1)\"), (\"4\")"
+					})), BinaryOperator.Plus,
+				new List(new Body(method), new List<Expression> { new Text(method, "7") })));
 
 	[Test]
 	public void ListGenericLengthAddition()
