@@ -444,21 +444,16 @@ public class Type : Context
 		CanUpCast(sameOrBaseType);
 
 	/*the checks in Type.IsCompatible are all upside down:
-
       if (argumentReturnType is GenericType genericType)
         argumentReturnType = genericType.Implementation;
-
 the main issue is however here:
   private bool CanUpCast(Type sameOrBaseType)
   {
     if (sameOrBaseType.Name is Base.List)
       return Name == Base.Number  implements.Contains(GetType(Base.Number)) 
         Name == Base.Text;
-
 why would any Number or Text or anything that implements number (what is this specific case doing here?) be upcastable to a list, that makes zero sense.
-
 the sameOrBaseType.Name == Base.Any || is also a bit strange.
-
 I have no idea how you got this far with checks like these*/
 	private bool CanUpCast(Type sameOrBaseType)
 	{
@@ -520,6 +515,7 @@ I have no idea how you got this far with checks like these*/
 					? "Argument: "
 					: "Arguments: ") + arguments.Select(a => a.ToStringWithType()).ToWordList() +
 				" do ") +
-			"not match:\n" + string.Join('\n', allMethods)) { }
+			"not match these method(s):\n" + string.Join("\n",
+				allMethods)) { }
 	}
 }
