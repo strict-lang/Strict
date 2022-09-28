@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
-
 [assembly: InternalsVisibleTo("Strict.Language.Tests")]
 
 namespace Strict.Language;
@@ -205,11 +204,9 @@ public sealed class Method : Context
 	public bool IsPublic => char.IsUpper(Name[0]);
 
 	public override Type? FindType(string name, Context? searchingFrom = null) =>
-		name == ValueName
+		name == Base.Value
 			? Type
 			: Type.FindType(name, searchingFrom ?? this);
-
-	public const string ValueName = "Value";
 
 	public Expression GetBodyAndParseIfNeeded() =>
 		methodBody == null

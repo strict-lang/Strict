@@ -34,7 +34,7 @@ public sealed class MethodCallTests : TestExpressions
 	public void ParseWithMissingArgument() =>
 		Assert.That(() => ParseExpression("log.Write"),
 			Throws.InstanceOf<Type.ArgumentsDoNotMatchMethodParameters>().With.Message.StartsWith(
-				"No arguments does not match these method(s):\nWrite(text TestPackage.Text)\nWrite(number TestPackage.Number)\nWrite(mutable TestPackage.Mutable)"));
+				"No arguments does not match:\nWrite(text TestPackage.Text)\nWrite(number TestPackage.Number)\nWrite(mutable TestPackage.Mutable)"));
 
 	[Test]
 	public void ParseWithTooManyArguments() =>
@@ -114,6 +114,38 @@ public sealed class MethodCallTests : TestExpressions
 	[Test]
 	public void IsMethodPublic() =>
 		Assert.That((ParseExpression("Run") as MethodCall)?.Method.IsPublic, Is.True);
+
+	[Test]
+	public void ValueMustHaveCorrectType()
+	{
+		var program = new Type(type.Package, new TypeLines(
+				nameof(ValueMustHaveCorrectType),
+				"has log",
+				"has Number",
+				$"Dummy(dummy Number) {nameof(ValueMustHaveCorrectType)}",
+				"\tlet result = value",
+				"\tresult")).
+			ParseMembersAndMethods(new MethodExpressionParser());
+		var body = (Body)program.Methods[0].GetBodyAndParseIfNeeded();
+		Assert.That(body.FindVariableValue("value")?.ReturnType, Is.EqualTo(program));
+	}
+
+	[Test]
+	public void CanAccessThePropertiesOfValue()
+	{
+		var program = new Type(type.Package, new TypeLines(
+				nameof(CanAccessThePropertiesOfValue),
+				"has log",
+				"has Number",
+				"has myMember Text",
+				"Dummy(dummy Number) Text",
+				"\tlet result = value.myMember",
+				"\tresult")).
+			ParseMembersAndMethods(new MethodExpressionParser());
+		var body = (Body)program.Methods[0].GetBodyAndParseIfNeeded();
+		Assert.That(body.FindVariableValue("value")?.ReturnType, Is.EqualTo(program));
+		Assert.That(body.FindVariableValue("result")?.ReturnType.Name, Is.EqualTo("Text"));
+	}
 
 	[Test]
 	public void TypeImplementsGenericTypeWithLength()

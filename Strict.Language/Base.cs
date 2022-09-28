@@ -47,4 +47,5 @@ public static class Base
 	public const string Directory = nameof(Directory);
 	public const string Run = nameof(Run);
 	public const string Assignment = nameof(Assignment);
+	public const string Value = "value";
 }

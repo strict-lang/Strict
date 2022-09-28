@@ -224,7 +224,6 @@ public class Type : Context
 
 	public const string Implement = "implement ";
 	public const string Has = "has ";
-	public const string From = "from";
 
 	public sealed class ExtraWhitespacesFoundAtBeginningOfLine : ParsingFailed
 	{
@@ -521,7 +520,6 @@ I have no idea how you got this far with checks like these*/
 					? "Argument: "
 					: "Arguments: ") + arguments.Select(a => a.ToStringWithType()).ToWordList() +
 				" do ") +
-			"not match these method(s):\n" + string.Join("\n",
-				allMethods)) { }
+			"not match:\n" + string.Join('\n', allMethods)) { }
 	}
 }

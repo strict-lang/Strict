@@ -182,6 +182,12 @@ public class MethodExpressionParser : ExpressionParser
 			var variableValue = body.FindVariableValue(input);
 			if (variableValue != null)
 				return new VariableCall(input.ToString(), variableValue);
+			if (input.Equals(Base.Value, StringComparison.Ordinal))
+			{
+				var valueInstance = Instance.Parse(body.Method);
+				body.AddVariable(Base.Value, valueInstance);
+				return valueInstance;
+			}
 			foreach (var parameter in body.Method.Parameters)
 				if (input.Equals(parameter.Name, StringComparison.Ordinal))
 					return new ParameterCall(parameter);
