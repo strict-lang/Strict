@@ -17,13 +17,13 @@ public sealed class ReturnTests : TestExpressions
 	public void ReturnTypeMustExistIfMethodReturnsSomething() =>
 		Assert.That(
 			() => new Method(type, 0, this, new[] { "ReturnNumber", "\t5" }).GetBodyAndParseIfNeeded(),
-			Throws.InstanceOf<Body.ChildBodyReturnTypeMustMatchMethodReturnType>());
+			Throws.InstanceOf<Body.ChildBodyReturnTypeMustMatchMethod>());
 
 	[Test]
 	public void ReturnTypeMustMatchWhateverMethodIsReturning() =>
 		Assert.That(
 			() => new Method(type, 0, this, new[] { "ReturnNumber Text", "\t5" }).GetBodyAndParseIfNeeded(),
-			Throws.InstanceOf<Body.ChildBodyReturnTypeMustMatchMethodReturnType>());
+			Throws.InstanceOf<Body.ChildBodyReturnTypeMustMatchMethod>());
 
 	[Test]
 	public void ParseReturnNumber() =>

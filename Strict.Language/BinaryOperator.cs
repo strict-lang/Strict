@@ -96,28 +96,22 @@ public static class BinaryOperator
 			_ => throw new NotSupportedException(tokenFirstCharacter.ToString()) //ncrunch: no coverage
 		};
 
-	// ReSharper disable once MethodTooLong
-	public static int GetPrecedence(ReadOnlySpan<char> token)
-	{
-		if (token.Compare("not")) //https://deltaengine.fogbugz.com/f/cases/25695/
-			return 1;
-		if (token.Compare(To))
-			return 7;
-		if (token.Compare(SmallerOrEqual) || token.Compare(GreaterOrEqual))
-			return 8;
-		if (token.Compare(And))
-			return 9;
-		if (token.Compare(Xor))
-			return 10;
-		if (token.Compare(Or))
-			return 11;
-		if (token.Compare(Is))
-			return 12;
-		if (token.Compare(In))
-			return 13;
-		// ReSharper disable once ConvertIfStatementToReturnStatement
-		if (token.Compare(IsNot))
-			return 14;
-		return GetPrecedence(token[0]);
-	}
+	public static int GetPrecedence(ReadOnlySpan<char> token) =>
+		token.Compare(To)
+			? 7
+			: token.Compare(SmallerOrEqual) || token.Compare(GreaterOrEqual)
+				? 8
+				: token.Compare(And)
+					? 9
+					: token.Compare(Xor)
+						? 10
+						: token.Compare(Or)
+							? 11
+							: token.Compare(Is)
+								? 12
+								: token.Compare(In)
+									? 13
+									: token.Compare(IsNot)
+										? 14
+										: GetPrecedence(token[0]);
 }

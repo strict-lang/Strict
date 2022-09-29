@@ -176,22 +176,26 @@ public static class SpanExtensions
 		return texts;
 	}
 
-	// ReSharper disable once ExcessiveIndentation
-	// ReSharper disable once MethodTooLong
 	public static int FindMatchingBracketIndex(this ReadOnlySpan<char> input, int startIndex)
 	{
 		if (startIndex < 0)
 			return -1;
 		var bracketCount = 1;
 		for (var index = startIndex + 1; index < input.Length; index++)
-			if (input[index] == '(')
-				bracketCount++;
-			else if (input[index] == ')')
-			{
-				bracketCount--;
-				if (bracketCount == 0)
-					return index;
-			}
+		{
+			bracketCount = CountBrackets(input, index, bracketCount);
+			if (bracketCount == 0)
+				return index;
+		}
 		return -1;
+	}
+
+	private static int CountBrackets(ReadOnlySpan<char> input, int index, int bracketCount)
+	{
+		if (input[index] == '(')
+			bracketCount++;
+		else if (input[index] == ')')
+			bracketCount--;
+		return bracketCount;
 	}
 }

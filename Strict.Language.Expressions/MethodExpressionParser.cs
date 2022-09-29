@@ -20,33 +20,25 @@ public class MethodExpressionParser : ExpressionParser
 		Assignment.TryParse(body, line) ?? If.TryParse(body, line) ??
 		For.TryParse(body, line.Trim()) ?? Return.TryParse(body, line) ?? Mutable.TryParse(body, line) ?? ParseExpression(body, line);
 
-	// ReSharper disable once CyclomaticComplexity
-	// ReSharper disable once MethodTooLong
 	public override Expression ParseExpression(Body body, ReadOnlySpan<char> input)
+	{
+		CheckIfEmptyOrAny(body, input);
+		if (input.Length < 3 || !input.Contains(' ') && !input.Contains(',') || input.StartsWith(Base.Mutable))
+			return TryParseCommon(body, input);
+		var expression = TryParse(body, input);
+		return expression ?? TryParseMethodOrMember(body, input);
+	}
+
+	private static void CheckIfEmptyOrAny(Body body, ReadOnlySpan<char> input)
 	{
 		if (input.IsEmpty)
 			throw new CannotParseEmptyInput(body);
 		if (IsExpressionTypeAny(input))
 			throw new ExpressionWithTypeAnyIsNotAllowed(body, input.ToString());
-		if (input.Length < 3 || !input.Contains(' ') && !input.Contains(',') || input.StartsWith(Base.Mutable))
-			return Boolean.TryParse(body, input) ?? Text.TryParse(body, input) ??
-				List.TryParseWithSingleElement(body, input) ?? Number.TryParse(body, input) ?? Mutable.TryParse(body, input) ??
-				TryParseMemberOrZeroOrOneArgumentMethodCall(body, input) ?? (input.IsOperator()
-					? throw new InvalidOperatorHere(body, input.ToString())
-					: input.IsWord()
-						? throw new IdentifierNotFound(body, input.ToString())
-						: throw new UnknownExpression(body, input.ToString()));
-		if (input.StartsWith("error "))
-			return TryParseErrorExpression(body, input[6..]);
-		// If this is just a simple text string, there is no need to invoke ShuntingYard
-		if (input[0] == '"' && input[^1] == '"' && input.Count('"') == 2)
-			return new Text(body.Method, input.Slice(1, input.Length - 2).ToString());
-		// If this is just a simple list, no need to invoke ShuntingYard yet, grab each list element
-		if (input[0] == '(' && input[^1] == ')' && input.Contains(',') && input.Count('(') == 1)
-			return new List(body, body.Method.ParseListArguments(body, input[1..^1]));
-		// Conditionals are only supported here and can't be nested
-		if (If.CanTryParseConditional(body, input))
-			return If.ParseConditional(body, input);
+	}
+
+	private Expression TryParseMethodOrMember(Body body, ReadOnlySpan<char> input)
+	{
 		var postfix = new ShuntingYard(input.ToString());
 		if (postfix.Output.Count == 1)
 			return TryParseMemberOrZeroOrOneArgumentMethodCall(body, input) ??
@@ -60,6 +52,33 @@ public class MethodExpressionParser : ExpressionParser
 				new[] { binary }) ??
 			throw new UnknownExpression(body, input[postfix.Output.Peek()].ToString());
 	}
+
+	private Expression TryParseCommon(Body body, ReadOnlySpan<char> input) =>
+		Boolean.TryParse(body, input) ?? Text.TryParse(body, input) ??
+		List.TryParseWithSingleElement(body, input) ?? Number.TryParse(body, input) ??
+		Mutable.TryParse(body, input) ?? TryParseMemberOrZeroOrOneArgumentMethodCall(body, input) ??
+		(input.IsOperator()
+			? throw new InvalidOperatorHere(body, input.ToString())
+			: input.IsWord()
+				? throw new IdentifierNotFound(body, input.ToString())
+				: throw new UnknownExpression(body, input.ToString()));
+
+	private Expression? TryParse(Body body, ReadOnlySpan<char> input) =>
+		input.StartsWith("Error ")
+			? TryParseErrorExpression(body, input[6..])
+			:
+			// If this is just a simple text string, there is no need to invoke ShuntingYard
+			input[0] == '"' && input[^1] == '"' && input.Count('"') == 2
+				? new Text(body.Method, input.Slice(1, input.Length - 2).ToString())
+				:
+				// If this is just a simple list, no need to invoke ShuntingYard yet, grab each list element
+				input[0] == '(' && input[^1] == ')' && input.Contains(',') && input.Count('(') == 1
+					? new List(body, body.Method.ParseListArguments(body, input[1..^1]))
+					:
+					// Conditionals are only supported here and can't be nested
+					If.CanTryParseConditional(body, input)
+						? If.ParseConditional(body, input)
+						: null;
 
 	private static bool IsExpressionTypeAny(ReadOnlySpan<char> input) => input.Equals(Base.Any, StringComparison.Ordinal) || input.StartsWith(Base.Any + "(");
 
@@ -108,10 +127,10 @@ public class MethodExpressionParser : ExpressionParser
 		{
 			var call = ParseInContext(body.Method.Type, body, input[..argumentsStart],
 				ParseListArguments(body, input[(argumentsStart + 1)..argumentsEnd]));
-			if (argumentsEnd < input.Length - 1)
-				return TryMemberOrMethodCall(body.Method.Type, call, body, input[(argumentsEnd + 2)..],
-					Array.Empty<Expression>());
-			return call;
+			return argumentsEnd < input.Length - 1
+				// ReSharper disable once TailRecursiveCall
+				? TryParseMemberOrZeroOrOneArgumentMethodCall(body, input[(argumentsEnd + 2)..])
+				: call;
 		}
 		return ParseInContext(body.Method.Type, body, input, Array.Empty<Expression>());
 	}

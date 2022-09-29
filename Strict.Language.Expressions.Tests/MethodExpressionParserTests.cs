@@ -47,11 +47,11 @@ public sealed class MethodExpressionParserTests : TestExpressions
 		Assert.That(body.Expressions[2].ToString(), Is.EqualTo("false"));
 	}
 
-	[TestCase("\terror errorMessage")]
-	[TestCase("\terror \"error occurred\"")]
-	[TestCase("\terror \"error occurred: \" + errorMessage")]
-	[TestCase("\terror \"error occurred: \" + errorMessage + \"at line\"")]
-	[TestCase("\terror \"error occurred: \" + errorMessage + \"at line\" + 5")]
+	[TestCase("\tError errorMessage")]
+	[TestCase("\tError \"error occurred\"")]
+	[TestCase("\tError \"error occurred: \" + errorMessage")]
+	[TestCase("\tError \"error occurred: \" + errorMessage + \"at line\"")]
+	[TestCase("\tError \"error occurred: \" + errorMessage + \"at line\" + 5")]
 	public void ParseErrorExpression(string errorExpression)
 	{
 		var body = (Body)new Method(type, 0, this,
@@ -67,6 +67,6 @@ public sealed class MethodExpressionParserTests : TestExpressions
 	public void ParseInvalidTestException() =>
 		Assert.That(
 			() => (Body)new Method(type, 0, this,
-					new[] { MethodTests.Run, MethodTests.LetNumber, "\terror number" }).
+					new[] { MethodTests.Run, MethodTests.LetNumber, "\tError number" }).
 				GetBodyAndParseIfNeeded(), Throws.Exception.InstanceOf<ArgumentException>());
 }

@@ -28,26 +28,24 @@ public sealed class Method : Context
 	/// itself is parsed only on demand (when GetBodyAndParseIfNeeded is called) in are more complex
 	/// way (Shunting yard/BNF/etc.) and slower. Examples: Run, Run(number), Run returns Text
 	/// </summary>
-	// ReSharper disable once MethodTooLong
 	private static string GetName(ReadOnlySpan<char> firstLine)
 	{
 		var name = firstLine;
-		var isNameIsNotOperator = false;
 		for (var i = 0; i < firstLine.Length; i++)
 			if (firstLine[i] == '(' || firstLine[i] == ' ')
 			{
 				name = firstLine[..i];
-				if (firstLine.StartsWith("is not(", StringComparison.Ordinal))
-				{
-					isNameIsNotOperator = true;
+				if (NameIsNotOperator(firstLine))
 					name = firstLine[..(i + 4)];
-				}
 				break;
 			}
-		if (!name.IsWord() && !name.IsOperator() && !isNameIsNotOperator)
-			throw new NameMustBeAWordWithoutAnySpecialCharactersOrNumbers(name.ToString());
-		return name.ToString();
+		return !name.IsWord() && !name.IsOperator() && !NameIsNotOperator(firstLine)
+			? throw new NameMustBeAWordWithoutAnySpecialCharactersOrNumbers(name.ToString())
+			: name.ToString();
 	}
+
+	private static bool NameIsNotOperator(ReadOnlySpan<char> input) =>
+		input.StartsWith("is not(", StringComparison.Ordinal);
 
 	public int TypeLineNumber { get; }
 	private readonly ExpressionParser parser;

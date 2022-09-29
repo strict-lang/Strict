@@ -67,7 +67,7 @@ public sealed class Body : Expression
 			!ChildHasMatchingMethodReturnType(Parent == null
 				? Method.ReturnType
 				: Parent.ReturnType, lastExpression))
-			throw new ChildBodyReturnTypeMustMatchMethodReturnType(this, lastExpression.ReturnType);
+			throw new ChildBodyReturnTypeMustMatchMethod(this, lastExpression.ReturnType);
 		return !isLastExpressionReturn
 			? this
 			: Parent != null
@@ -83,10 +83,9 @@ public sealed class Body : Expression
 		parentType == lastExpression.ReturnType ||
 		lastExpression.ReturnType.Implements.Contains(parentType);
 
-	// ReSharper disable once HollowTypeName
-	public sealed class ChildBodyReturnTypeMustMatchMethodReturnType : ParsingFailed
+	public sealed class ChildBodyReturnTypeMustMatchMethod : ParsingFailed
 	{
-		public ChildBodyReturnTypeMustMatchMethodReturnType(Body body, Type childReturnType) : base(body,
+		public ChildBodyReturnTypeMustMatchMethod(Body body, Type childReturnType) : base(body,
 			$"Child body return type: {childReturnType} is not matching with Parent return type:" +
 			$" {(body.Parent == null ? body.Method.ReturnType : body.Parent.ReturnType)} in method line: {body.ParsingLineNumber}") { }
 	}

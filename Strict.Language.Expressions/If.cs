@@ -155,7 +155,7 @@ public sealed class If : Expression
 		public ConditionalExpressionsCannotBeNested(Body body) : base(body) { }
 	}
 
-	public static If ParseConditional(Body body, ReadOnlySpan<char> input)
+	public static Expression ParseConditional(Body body, ReadOnlySpan<char> input)
 	{
 #if LOG_DETAILS
 		Logger.Info(nameof(ParseConditional) + " " + input.ToString());

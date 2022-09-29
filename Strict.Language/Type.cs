@@ -260,7 +260,7 @@ public class Type : Context
 		if (IsTrait && IsNextLineValidMethodBody())
 			throw new TypeHasNoMembersAndThusMustBeATraitWithoutMethodBodies(this);
 		if (!IsTrait && !IsNextLineValidMethodBody())
-			throw new MethodMustBeImplementedInNonTraitType(this, lines[lineNumber]);
+			throw new MethodMustBeImplementedInNonTrait(this, lines[lineNumber]);
 		var methodLineNumber = lineNumber;
 		while (IsNextLineValidMethodBody())
 			lineNumber++;
@@ -284,10 +284,9 @@ public class Type : Context
 		public TypeHasNoMembersAndThusMustBeATraitWithoutMethodBodies(Type type) : base(type, 0) { }
 	}
 
-	// ReSharper disable once HollowTypeName
-	public sealed class MethodMustBeImplementedInNonTraitType : ParsingFailed
+	public sealed class MethodMustBeImplementedInNonTrait : ParsingFailed
 	{
-		public MethodMustBeImplementedInNonTraitType(Type type, string definitionLine) : base(type,
+		public MethodMustBeImplementedInNonTrait(Type type, string definitionLine) : base(type,
 			type.lineNumber, definitionLine) { }
 	}
 
@@ -318,7 +317,7 @@ public class Type : Context
 	public GenericType GetGenericImplementation(Type implementation)
 	{
 		if (!IsGeneric)
-			throw new CannotGetGenericImplementationOnNonGenericType(Name, implementation);
+			throw new CannotGetGenericImplementationOnNonGeneric(Name, implementation);
 		cachedGenericTypes ??= new Dictionary<string, GenericType>(StringComparer.Ordinal);
 		if (cachedGenericTypes.TryGetValue(implementation.Name, out var genericType))
 			return genericType;
@@ -329,10 +328,9 @@ public class Type : Context
 
 	private Dictionary<string, GenericType>? cachedGenericTypes;
 
-	// ReSharper disable once HollowTypeName
-	public sealed class CannotGetGenericImplementationOnNonGenericType : Exception
+	public sealed class CannotGetGenericImplementationOnNonGeneric : Exception
 	{
-		public CannotGetGenericImplementationOnNonGenericType(string name, Type implementation) :
+		public CannotGetGenericImplementationOnNonGeneric(string name, Type implementation) :
 			base("Type: " + name + ", Generic Implementation: " + implementation) { }
 	}
 

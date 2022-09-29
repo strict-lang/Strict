@@ -173,7 +173,7 @@ public sealed class IfTests : TestExpressions
 				"	if 5 is 5",
 				"		let file = File(\"test.txt\")",
 				"		return 5")).ParseMembersAndMethods(new MethodExpressionParser());
-		Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(), Throws.InstanceOf<Body.ChildBodyReturnTypeMustMatchMethodReturnType>().With.Message.Contains("Child body return type: TestPackage.Number is not matching with Parent return type: TestPackage.Text in method line: 3"));
+		Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(), Throws.InstanceOf<Body.ChildBodyReturnTypeMustMatchMethod>().With.Message.Contains("Child body return type: TestPackage.Number is not matching with Parent return type: TestPackage.Text in method line: 3"));
 	}
 
 	[Test]
@@ -190,7 +190,7 @@ public sealed class IfTests : TestExpressions
 				"	else",
 				"		return true")).ParseMembersAndMethods(new MethodExpressionParser());
 				// @formatter:on
-		Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(), Throws.InstanceOf<Body.ChildBodyReturnTypeMustMatchMethodReturnType>().With.Message.Contains("Child body return type: TestPackage.Boolean is not matching with Parent return type: TestPackage.Text in method line: 5"));
+		Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(), Throws.InstanceOf<Body.ChildBodyReturnTypeMustMatchMethod>().With.Message.Contains("Child body return type: TestPackage.Boolean is not matching with Parent return type: TestPackage.Text in method line: 5"));
 	}
 
 	[Test]

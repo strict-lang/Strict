@@ -48,7 +48,7 @@ public sealed class Binary : MethodCall
 		var operatorToken = input[operatorTokenRange].ToString();
 		return operatorToken == BinaryOperator.To
 			? To.Parse(body, input[tokens.Pop()],
-				GetUnaryOrBuildNestedBinary(body, input, tokens.Pop(), tokens))
+				GetUnaryOrBuildNestedBinary(body, input, tokens))
 			: BuildRegularBinaryExpression(body, input, tokens, operatorToken);
 	}
 
@@ -56,18 +56,18 @@ public sealed class Binary : MethodCall
 	private static Expression BuildRegularBinaryExpression(Body body, ReadOnlySpan<char> input,
 		Stack<Range> tokens, string operatorToken)
 	{
-		var right = GetUnaryOrBuildNestedBinary(body, input, tokens.Pop(), tokens);
-		var left = GetUnaryOrBuildNestedBinary(body, input, tokens.Pop(), tokens);
+		var right = GetUnaryOrBuildNestedBinary(body, input, tokens);
+		var left = GetUnaryOrBuildNestedBinary(body, input, tokens);
 		if (operatorToken == BinaryOperator.Multiply && HasIncompatibleDimensions(left, right))
 			throw new ListsHaveDifferentDimensions(body, left + " " + right);
 		var arguments = new[] { right };
 		return new Binary(left, left.ReturnType.GetMethod(operatorToken, arguments), arguments);
 	}
 
-	// ReSharper disable once TooManyArguments
-	private static Expression GetUnaryOrBuildNestedBinary(Body body, ReadOnlySpan<char> input, Range nextTokenRange,
+	private static Expression GetUnaryOrBuildNestedBinary(Body body, ReadOnlySpan<char> input,
 		Stack<Range> tokens)
 	{
+		var nextTokenRange = tokens.Pop();
 		var expression = input[nextTokenRange.Start.Value].IsSingleCharacterOperator() ||
 			input[nextTokenRange].IsMultiCharacterOperator()
 				? BuildBinaryExpression(body, input, nextTokenRange, tokens)
@@ -77,7 +77,7 @@ public sealed class Binary : MethodCall
 		return expression;
 	}
 
-	public static bool HasIncompatibleDimensions(Expression left, Expression right) =>
+	private static bool HasIncompatibleDimensions(Expression left, Expression right) =>
 		left is List leftList && right is List rightList &&
 		leftList.Values.Count != rightList.Values.Count;
 
