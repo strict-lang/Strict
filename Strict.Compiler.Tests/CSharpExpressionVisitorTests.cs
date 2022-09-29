@@ -8,7 +8,6 @@ using Strict.Language.Tests;
 
 namespace Strict.Compiler.Tests;
 
-//[Ignore("TODO: Not yet done")]
 public sealed class CSharpExpressionVisitorTests : TestExpressions
 {
 	[SetUp]
@@ -16,17 +15,16 @@ public sealed class CSharpExpressionVisitorTests : TestExpressions
 
 	private CSharpExpressionVisitor visitor = null!;
 
-	[Ignore("TODO: Not yet done")]
 	[Test]
 	public void ShouldCallVisitBlockForBlockExpressions() =>
-		Assert.That(() => visitor.Visit(method.GetBodyAndParseIfNeeded())[0],
+		Assert.That(() => visitor.Visit(methodWithBody.GetBodyAndParseIfNeeded())[0],
 			Throws.InstanceOf<ExpressionVisitor.UseVisitBody>());
 
-	[Ignore("TODO: Not yet done")]
 	[Test]
 	public void GenerateAssignment() =>
-		Assert.That(visitor.Visit(new Assignment((Body)method.GetBodyAndParseIfNeeded(), nameof(number), number)),
-			Is.EqualTo("var number = 5"));
+		Assert.That(
+			visitor.Visit(new Assignment((Body)methodWithBody.GetBodyAndParseIfNeeded(), nameof(number),
+				number)), Is.EqualTo("var number = 5"));
 
 	[Test]
 	public void GenerateBinary() =>
@@ -67,10 +65,10 @@ public sealed class CSharpExpressionVisitorTests : TestExpressions
 	public void ConvertStrictToCSharp(string strictCode, string expectedCSharpCode) =>
 		Assert.That(visitor.Visit(ParseExpression(strictCode)), Is.EqualTo(expectedCSharpCode));
 
-	[Ignore("TODO: Not yet done")]
 	[Test]
 	public void GenerateInterfaceMethodBody() =>
-		Assert.That(visitor.VisitBody(method.GetBodyAndParseIfNeeded())[0], Is.EqualTo("void Run();"));
+		Assert.That(visitor.VisitBody(methodWithBody.GetBodyAndParseIfNeeded())[0],
+			Is.EqualTo("public void Run()"));
 
 	[Test]
 	public void GenerateMultilineMethodBody()
