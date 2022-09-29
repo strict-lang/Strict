@@ -9,16 +9,6 @@ public sealed class Binary : MethodCall
 	public Binary(Expression left, Method operatorMethod, Expression[] right) :
 		base(operatorMethod, left, right) { }
 
-	/*TODO: what???? this needs to be solved in general, this is one of the reasons we have the problems with generics atm!
-	private static Method SetReturnTypeForGenericMethod(Method operatorMethod, Expression left)
-	{
-		if (operatorMethod.ReturnType.IsGeneric)
-	//TODO: how is this even allowed????
-			operatorMethod.ReturnType = left.ReturnType;
-		return operatorMethod;
-	}
-	*/
-
 	public override string ToString() =>
 		AddNestedBracketsIfNeeded(Instance!) + " " + Method.Name + " " +
 		AddNestedBracketsIfNeeded(Arguments[0]);

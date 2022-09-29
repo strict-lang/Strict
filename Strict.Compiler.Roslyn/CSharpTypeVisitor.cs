@@ -73,7 +73,9 @@ public class CSharpTypeVisitor : TypeVisitor
 	private static readonly string SemicolonAndLineBreak = ";" + NewLine;
 
 	public void VisitMethod(Method method) =>
-		FileContent += "\t" + string.Join(NewLine + "\t", expressionVisitor.VisitBody(method.GetBodyAndParseIfNeeded())) + NewLine;
+		FileContent += "\t" + string.Join(NewLine + "\t", expressionVisitor.VisitBody(isInterface
+			? new Body(method)
+			: method.GetBodyAndParseIfNeeded())) + NewLine;
 
 	public void ParsingDone() => FileContent += "}";
 }

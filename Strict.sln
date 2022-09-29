@@ -68,6 +68,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Examples", "Examples", "{08C640D3-D0C7-4D04-8B96-EF6C92DA3C13}"
 	ProjectSection(SolutionItems) = preProject
 		Examples\ArithmeticFunction.strict = Examples\ArithmeticFunction.strict
+		Examples\Beeramid.strict = Examples\Beeramid.strict
 		Examples\ConvertingNumbers.strict = Examples\ConvertingNumbers.strict
 		Examples\Fibonacci.strict = Examples\Fibonacci.strict
 		Examples\FindFirstNonConsecutiveNumber.strict = Examples\FindFirstNonConsecutiveNumber.strict
@@ -82,6 +83,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Output", "Output", "{F2D1EC5E-C769-417C-B508-350E0E86C2F9}"
 	ProjectSection(SolutionItems) = preProject
 		Examples\Output\ArithmeticFunction.cs = Examples\Output\ArithmeticFunction.cs
+		Examples\Output\Beeramid.cs = Examples\Output\Beeramid.cs
 		Examples\Output\Fibonacci.cs = Examples\Output\Fibonacci.cs
 		Examples\Output\ReduceButGrow.cs = Examples\Output\ReduceButGrow.cs
 		Examples\Output\RemoveExclamation.cs = Examples\Output\RemoveExclamation.cs

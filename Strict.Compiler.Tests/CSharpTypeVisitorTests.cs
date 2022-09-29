@@ -7,7 +7,6 @@ using Type = Strict.Language.Type;
 
 namespace Strict.Compiler.Tests;
 
-[Ignore("TODO: Not yet done")]
 public sealed class CSharpTypeVisitorTests : TestCSharpGenerator
 {
 	[Ignore("TODO: Not yet done")]
@@ -45,6 +44,7 @@ public sealed class CSharpTypeVisitorTests : TestCSharpGenerator
 
 	private const string Computer = "Computer";
 
+	[Ignore("TODO: Generic parameter type should be replaced")]
 	[Test]
 	public void GenerateTypeThatImplementsMultipleTraits()
 	{
@@ -139,6 +139,7 @@ Run
 " + code).Split(Environment.NewLine))).ParseMembersAndMethods(parser)).FileContent,
 			Contains.Substring(expected));
 
+	[Ignore("TODO: Not yet done")]
 	[TestCase("l + m", "l + m")]
 	[TestCase("l - m", "l - m")]
 	[TestCase("l * m", "l * m")]

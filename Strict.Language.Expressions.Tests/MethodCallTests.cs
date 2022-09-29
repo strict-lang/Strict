@@ -103,7 +103,6 @@ public sealed class MethodCallTests : TestExpressions
 		Assert.That(() => ParseExpression("Range(1, 2, 3, 4)"),
 			Throws.InstanceOf<Type.NoMatchingMethodFound>());
 
-	[Ignore("TODO: none of this works")]
 	[TestCase("complexMethod((1), 2)")]
 	[TestCase("complexMethod((1, 2, 3) + (4, 5), 7)")]
 	[TestCase("complexMethod((1, 2, 3) + (4, 5), complexMethod((1, 2, 3), 4))")]

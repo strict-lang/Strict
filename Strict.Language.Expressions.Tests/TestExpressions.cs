@@ -14,7 +14,9 @@ public abstract class TestExpressions : MethodExpressionParser
 		member = new Member(type, "log", new From(type.GetType(Base.Log)));
 		((List<Member>)type.Members).Add(member);
 		method = new Method(type, 0, this, new[] { MethodTests.Run });
-		((List<Method>)type.Methods).Add(method);
+		methodWithBody = new Method(type, 0, this,
+			new[] { MethodTests.Run, "\tlet variable = 5", "\tvariable + 5" });
+		((List<Method>)type.Methods).AddRange(new List<Method> { method, methodWithBody });
 		number = new Number(type, 5);
 		list = new List(new Body(method), new List<Expression> { new Number(type, 5) });
 		bla = new Member(type, "bla", number);
@@ -25,6 +27,7 @@ public abstract class TestExpressions : MethodExpressionParser
 	protected readonly Type boolean;
 	protected readonly Member member;
 	protected readonly Method method;
+	protected readonly Method methodWithBody;
 	protected readonly Number number;
 	protected readonly Member bla;
 	protected readonly List list;
