@@ -168,7 +168,7 @@ public sealed class TypeTests
 		Assert.That(() => CreateType("Program",
 				"implement App",
 				"Run"),
-			Throws.InstanceOf<Type.MethodMustBeImplementedInNonTraitType>());
+			Throws.InstanceOf<Type.MethodMustBeImplementedInNonTrait>());
 	// @formatter:on
 
 	[Test]
@@ -273,5 +273,5 @@ public sealed class TypeTests
 	public void CannotGetGenericImplementationOnNonGenericType() =>
 		Assert.That(
 			() => package.GetType(Base.Text).GetGenericImplementation(package.GetType(Base.Number)),
-			Throws.InstanceOf<Type.CannotGetGenericImplementationOnNonGenericType>());
+			Throws.InstanceOf<Type.CannotGetGenericImplementationOnNonGeneric>());
 }
