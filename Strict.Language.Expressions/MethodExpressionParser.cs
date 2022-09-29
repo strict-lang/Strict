@@ -23,10 +23,10 @@ public class MethodExpressionParser : ExpressionParser
 	public override Expression ParseExpression(Body body, ReadOnlySpan<char> input)
 	{
 		CheckIfEmptyOrAny(body, input);
-		if (input.Length < 3 || !input.Contains(' ') && !input.Contains(',') || input.StartsWith(Base.Mutable))
-			return TryParseCommon(body, input);
-		var expression = TryParse(body, input);
-		return expression ?? TryParseMethodOrMember(body, input);
+		return input.Length < 3 || !input.Contains(' ') && !input.Contains(',') ||
+			input.StartsWith(Base.Mutable)
+				? TryParseCommon(body, input)
+				: TryParse(body, input) ?? TryParseMethodOrMember(body, input);
 	}
 
 	private static void CheckIfEmptyOrAny(Body body, ReadOnlySpan<char> input)

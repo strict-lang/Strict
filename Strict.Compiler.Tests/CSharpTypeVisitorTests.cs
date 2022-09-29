@@ -9,7 +9,7 @@ namespace Strict.Compiler.Tests;
 
 public sealed class CSharpTypeVisitorTests : TestCSharpGenerator
 {
-	[Ignore("TODO: Not yet done")]
+	[Ignore("TODO: Generic parameter type should be replaced for any non-generic type method")]
 	[Test]
 	public void GenerateHelloWorldApp()
 	{
@@ -44,7 +44,7 @@ public sealed class CSharpTypeVisitorTests : TestCSharpGenerator
 
 	private const string Computer = "Computer";
 
-	[Ignore("TODO: Generic parameter type should be replaced")]
+	[Ignore("TODO: Generic parameter type should be replaced for any non-generic type method")]
 	[Test]
 	public void GenerateTypeThatImplementsMultipleTraits()
 	{
@@ -74,7 +74,7 @@ public sealed class CSharpTypeVisitorTests : TestCSharpGenerator
 	}"));
 	}
 
-	[Ignore("TODO: Not yet done")]
+	[Ignore("TODO: Generic parameter type should be replaced for any non-generic type method")]
 	[Test]
 	public void Import()
 	{
@@ -91,15 +91,15 @@ public sealed class CSharpTypeVisitorTests : TestCSharpGenerator
 			Contains.Substring("\tpublic void Run()" + Environment.NewLine));
 	}
 
-	[Ignore("TODO: Not yet done")]
 	[Test]
 	public void MemberInitializer()
 	{
-		var interfaceType =
+		var program =
 			new Type(package,
 				new TypeLines(Computer, "has number", "has file = \"test.txt\"", "Run",
-					"\tfile.Write(number)")).ParseMembersAndMethods(parser);
-		var visitor = new CSharpTypeVisitor(interfaceType);
+					"\tfile.Write(number)",
+					"\t6")).ParseMembersAndMethods(parser);
+		var visitor = new CSharpTypeVisitor(program);
 		Assert.That(visitor.Name, Is.EqualTo(Computer));
 		Assert.That(visitor.FileContent, Contains.Substring("public class " + Computer));
 		Assert.That(visitor.FileContent, Contains.Substring("\tprivate int number;"));
@@ -110,15 +110,15 @@ public sealed class CSharpTypeVisitorTests : TestCSharpGenerator
 			Contains.Substring("\tpublic void Run()" + Environment.NewLine));
 	}
 
+	[Test]
 	public void LocalMemberNotFound() =>
 		Assert.That(
 			() => new CSharpTypeVisitor(
 				new Type(package,
-					new TypeLines(Computer, "has log", "Run", "", "\tlet random = \"test\"",
-						"\tlog.Write(random)")).ParseMembersAndMethods(parser)),
+					new TypeLines(Computer, "has log", "Run", "\tlet random = log.unknown")).ParseMembersAndMethods(parser)),
 			Throws.InstanceOf<MethodExpressionParser.MemberOrMethodNotFound>()!);
 
-	[Ignore("TODO: Not yet done")]
+	[Ignore("TODO: Generic parameter type should be replaced for any non-generic type method")]
 	[Test]
 	public void AccessLocalVariableAfterDeclaration() =>
 		Assert.That(
@@ -159,7 +159,7 @@ Run
 	{
 		var program =
 			new Type(package,
-				new TypeLines("Program", "has numbers", "TestListsMethod returns Numbers",
+				new TypeLines("Program", "has numbers", "TestListsMethod Numbers",
 					"\t(1, 2, 3) + 5", "\treturn numbers")).ParseMembersAndMethods(parser);
 		var visitor = new CSharpTypeVisitor(program);
 		AssertProgramClass(visitor);

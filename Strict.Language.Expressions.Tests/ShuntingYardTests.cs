@@ -21,10 +21,12 @@ public sealed class ShuntingYardTests
 	[TestCase("((a, b) + (c, d)) * 2", "(a, b), (c, d), +, 2, *")]
 	[TestCase("((a, (b * e)) + (c, d)) * 2", "(a, (b * e)), (c, d), +, 2, *")]
 	[TestCase("(\"Hello\", \"World\")", "(\"Hello\", \"World\")")]
+	[TestCase("(\"Hello World\", \"Hi World\", \"5 + 4 + 5\")", "(\"Hello World\", \"Hi World\", \"5 + 4 + 5\")")]
 	[TestCase("1, 2, 3, 4, 5", "1, ,, 2, ,, 3, ,, 4, ,, 5")]
 	[TestCase("\"Hi\", \" there\"", "\"Hi\", ,, \" there\"")]
 	[TestCase("(1, 2, 3) + (3, 4), (4)", "(1, 2, 3), (3, 4), +, ,, (4)")]
 	[TestCase("ArithmeticFunction(10, 5).Calculate(\"add\") is 15", "ArithmeticFunction(10, 5).Calculate(\"add\"), 15, is")]
+	[TestCase("Foo(\"Hello World\")", "Foo(\"Hello World\")")]
 	public void Parse(string input, string expected)
 	{
 		var tokens = new ShuntingYard(input).Output.Reverse().Select(range => input[range]);
@@ -54,4 +56,12 @@ public sealed class ShuntingYardTests
 		Assert.That(Input[postfix.Output.Pop()], Is.EqualTo("bla"));
 		Assert.That(Input[postfix.Output.Pop()], Is.EqualTo("if"));
 	}
+
+	[TestCase("log.Write(\"Hello)")]
+	[TestCase("log.Write(\"Hello\"\")")]
+	[TestCase("(1\")")]
+	[TestCase("(\"Hel\"lo\")")]
+	public void UnterminatedStringInsideBrackets(string input) =>
+		Assert.That(() => new ShuntingYard(input),
+			Throws.InstanceOf<PhraseTokenizer.UnterminatedString>());
 }

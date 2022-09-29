@@ -46,24 +46,27 @@ public sealed class PhraseTokenizer
 		tokenStart = -1;
 		for (index = 0; index < input.Length; index++)
 			if (input[index] == '\"')
-			{
-				if (textStart == -1)
-					textStart = index;
-				else if (index + 1 < input.Length && input[index + 1] == '\"')
-					index++; // next character is still a text (double quote), continue text
-				else
-				{
-					processToken(textStart..(index + 1));
-					textStart = -1;
-					tokenStart = -1;
-				}
-			}
+				GetSingleTokenTillEndOfText(processToken);
 			else if (textStart == -1)
 				ProcessNormalToken(processToken);
 		if (textStart != -1)
 			throw new UnterminatedString(input);
 		if (tokenStart >= 0)
 			processToken(tokenStart..input.Length);
+	}
+
+	private void GetSingleTokenTillEndOfText(Action<Range> processToken)
+	{
+		if (textStart == -1)
+			textStart = index;
+		else if (index + 1 < input.Length && input[index + 1] == '\"')
+			index++; // next character is still a text (double quote), continue text
+		else
+		{
+			processToken(textStart..(index + 1));
+			textStart = -1;
+			tokenStart = -1;
+		}
 	}
 
 	private int index;
@@ -121,32 +124,38 @@ public sealed class PhraseTokenizer
 		var isInMethodCall = false;
 		var foundNoSpace = true;
 		for (index++; index < input.Length; index++)
-			if (input[index] == CloseBracket)
-			{
-				if (tokenStart >= 0)
-					result.Add(tokenStart..index);
-				tokenStart = -1;
-				result.Add(index..(index + 1));
-				if (index + 1 < input.Length && input[index + 1] != '.') //To consume Nested member or method call as single token
-					break;
-			}
-			else if (input[index] == ',' || input[index] == '?')
-			{
-				foundListSeparator = true;
-				result.Add(index..(index + 1));
-			}
-			else
-			{
-				if (input[index - 1] == '.')
-					isInMethodCall = true;
-				if (input[index] == ' ')
-					foundNoSpace = false;
-				ProcessNormalToken(result.Add);
-				// ReSharper disable once ComplexConditionExpression
-				if (isInMethodCall && index + 1 < input.Length && input[index] == CloseBracket &&
-					input[index + 1] != '.')
-					break;
-			}
+			if (input[index] == '\"')
+				GetSingleTokenTillEndOfText(result.Add);
+			else if (textStart == -1)
+				if (input[index] == CloseBracket)
+				{
+					if (tokenStart >= 0)
+						result.Add(tokenStart..index);
+					tokenStart = -1;
+					result.Add(index..(index + 1));
+					if (index + 1 < input.Length &&
+						input[index + 1] != '.') //To consume Nested member or method call as single token
+						break;
+				}
+				else if (input[index] == ',' || input[index] == '?')
+				{
+					foundListSeparator = true;
+					result.Add(index..(index + 1));
+				}
+				else
+				{
+					if (input[index - 1] == '.')
+						isInMethodCall = true;
+					if (input[index] == ' ')
+						foundNoSpace = false;
+					ProcessNormalToken(result.Add);
+					// ReSharper disable once ComplexConditionExpression
+					if (isInMethodCall && index + 1 < input.Length && input[index] == CloseBracket &&
+						input[index + 1] != '.')
+						break;
+				}
+		if (textStart != -1)
+			throw new UnterminatedString(input);
 		if (result.Count < 3)
 			throw new InvalidEmptyOrUnmatchedBrackets(input);
 		if (result.Count == 3 || foundListSeparator || foundNoSpace)

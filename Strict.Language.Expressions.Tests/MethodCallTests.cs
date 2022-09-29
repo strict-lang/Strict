@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using NUnit.Framework;
+using static Strict.Language.Type;
 
 namespace Strict.Language.Expressions.Tests;
 
@@ -76,8 +77,8 @@ public sealed class MethodCallTests : TestExpressions
 	[Test]
 	public void UnknownExpressionForArgumentException() =>
 		Assert.That(() => ParseExpression("complexMethod((\"1 + 5\" + \"5\"))"),
-			Throws.InstanceOf<UnknownExpressionForArgument>().With.Message.
-				StartsWith("+ is invalid for argument 0"));
+			Throws.InstanceOf<ArgumentsDoNotMatchMethodParameters>().With.Message.
+				StartsWith("Argument: \"1 + 5\" + \"5\" "));
 
 	[Test]
 	public void ListTokensAreNotSeparatedByCommaException() =>
