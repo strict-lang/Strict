@@ -11,6 +11,7 @@ namespace Strict.Language.Expressions;
 /// </summary>
 // ReSharper disable MethodTooLong
 // ReSharper disable ExcessiveIndentation
+//ncrunch: no coverage start, for better performance
 public sealed class PhraseTokenizer
 {
 	public PhraseTokenizer(string input)
