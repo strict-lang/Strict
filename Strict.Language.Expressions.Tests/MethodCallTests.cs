@@ -1,10 +1,10 @@
-using System;
 using System.Collections.Generic;
 using NUnit.Framework;
 using static Strict.Language.Type;
 
 namespace Strict.Language.Expressions.Tests;
 
+// ReSharper disable once ClassTooBig
 public sealed class MethodCallTests : TestExpressions
 {
 	[SetUp]
@@ -152,14 +152,14 @@ public sealed class MethodCallTests : TestExpressions
 		"has numbers",
 		"has texts",
 		"Dummy",
-		$"\tlet instanceWithNumbers = ProgramWithHas(1, 2, 3)",
-		$"\tlet instanceWithTexts = ProgramWithHas(\"1\", \"2\", \"3\")")]
+		"\tlet instanceWithNumbers = ProgramWithHas(1, 2, 3)",
+		"\tlet instanceWithTexts = ProgramWithHas(\"1\", \"2\", \"3\")")]
 	[TestCase("ProgramWithImplement",
 		"implement Numbers",
 		"implement Texts",
 		"Dummy",
-		$"\tlet instanceWithNumbers = ProgramWithImplement(1, 2, 3)",
-		$"\tlet instanceWithTexts = ProgramWithImplement(\"1\", \"2\", \"3\")")]
+		"\tlet instanceWithNumbers = ProgramWithImplement(1, 2, 3)",
+		"\tlet instanceWithTexts = ProgramWithImplement(\"1\", \"2\", \"3\")")]
 	public void ParseConstructorCallWithList(string programName, params string[] code)
 	{
 		var program = new Type(type.Package, new TypeLines(
@@ -200,5 +200,19 @@ public sealed class MethodCallTests : TestExpressions
 				"\tArithmeticFunction(10, 5).Calculate(\"add\")",
 				"\t1")).ParseMembersAndMethods(new MethodExpressionParser());
 		program.Methods[1].GetBodyAndParseIfNeeded();
+	}
+
+	[Test]
+	public void NestedMethodCall()
+	{
+		var program = new Type(type.Package,
+				new TypeLines(nameof(NestedMethodCall), "has log", "Run",
+					"\tFile(\"fileName\").Write(\"someText\")", "\ttrue")).
+			ParseMembersAndMethods(new MethodExpressionParser());
+		var body = (Body)program.Methods[0].GetBodyAndParseIfNeeded();
+		Assert.That(body.Expressions[0], Is.InstanceOf<MethodCall>());
+		Assert.That(((MethodCall)body.Expressions[0]).Method.Name, Is.EqualTo("Write"));
+		Assert.That(((MethodCall)body.Expressions[0]).Instance?.ToString(),
+			Is.EqualTo("File(\"fileName\")"));
 	}
 }

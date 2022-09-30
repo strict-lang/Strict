@@ -41,7 +41,7 @@ public class MethodExpressionParser : ExpressionParser
 	{
 		var postfix = new ShuntingYard(input.ToString());
 		if (postfix.Output.Count == 1)
-			return TryParseMemberOrZeroOrOneArgumentMethodCall(body, input) ??
+			return TryParseMemberOrZeroOrOneArgumentMethodOrNestedCall(body, input) ??
 				ParseTextWithSpacesOrListWithMultipleOrNestedElements(body, input[postfix.Output.Pop()]);
 		if (postfix.Output.Count == 2)
 			return ParseMethodCallWithArguments(body, input, postfix);
@@ -56,7 +56,7 @@ public class MethodExpressionParser : ExpressionParser
 	private Expression TryParseCommon(Body body, ReadOnlySpan<char> input) =>
 		Boolean.TryParse(body, input) ?? Text.TryParse(body, input) ??
 		List.TryParseWithSingleElement(body, input) ?? Number.TryParse(body, input) ??
-		Mutable.TryParse(body, input) ?? TryParseMemberOrZeroOrOneArgumentMethodCall(body, input) ??
+		Mutable.TryParse(body, input) ?? TryParseMemberOrZeroOrOneArgumentMethodOrNestedCall(body, input) ??
 		(input.IsOperator()
 			? throw new InvalidOperatorHere(body, input.ToString())
 			: input.IsWord()
@@ -118,21 +118,39 @@ public class MethodExpressionParser : ExpressionParser
 	/// operator (like is, to, +, etc.) or execute some method. For more arguments more complex
 	/// parsing has to be done and we have to invoke ShuntingYard for the argument list.
 	/// </summary>
-	public Expression? TryParseMemberOrZeroOrOneArgumentMethodCall(Body body,
+	public Expression? TryParseMemberOrZeroOrOneArgumentMethodOrNestedCall(Body body,
 		ReadOnlySpan<char> input)
 	{
 		var argumentsStart = input.IndexOf('(');
 		var argumentsEnd = input.FindMatchingBracketIndex(argumentsStart);
+		ChangeArgumentStartEndIfNestedMethodCall(input, ref argumentsStart, ref argumentsEnd);
 		if (argumentsStart > 0 && argumentsEnd > 0)
 		{
 			var call = ParseInContext(body.Method.Type, body, input[..argumentsStart],
 				ParseListArguments(body, input[(argumentsStart + 1)..argumentsEnd]));
 			return argumentsEnd < input.Length - 1
 				// ReSharper disable once TailRecursiveCall
-				? TryParseMemberOrZeroOrOneArgumentMethodCall(body, input[(argumentsEnd + 2)..])
+				? TryParseMemberOrZeroOrOneArgumentMethodOrNestedCall(body, input[(argumentsEnd + 2)..])
 				: call;
 		}
 		return ParseInContext(body.Method.Type, body, input, Array.Empty<Expression>());
+	}
+
+	private static void ChangeArgumentStartEndIfNestedMethodCall(ReadOnlySpan<char> input,
+		ref int argumentsStart, ref int argumentsEnd)
+	{
+		if (IsNestedMethodCallWithParentMethodParameter(input, argumentsStart, argumentsEnd))
+		{
+			argumentsStart = input.LastIndexOf('(');
+			argumentsEnd = input.FindMatchingBracketIndex(argumentsStart);
+		}
+	}
+
+	private static bool IsNestedMethodCallWithParentMethodParameter(ReadOnlySpan<char> input, int argumentsStart, int argumentsEnd)
+	{
+		var innerArgumentStart = input.LastIndexOf('(');
+		return argumentsStart != innerArgumentStart && argumentsEnd < innerArgumentStart &&
+			input.IndexOf('.') < innerArgumentStart;
 	}
 
 	// ReSharper disable once TooManyArguments
@@ -160,7 +178,7 @@ public class MethodExpressionParser : ExpressionParser
 					}
 				}
 				var expression = input[members.Current].Contains('(')
-					? TryParseMemberOrZeroOrOneArgumentMethodCall(body, input[members.Current])
+					? TryParseMemberOrZeroOrOneArgumentMethodOrNestedCall(body, input[members.Current])
 					: TryMemberOrMethodCall(context, current, body, input[members.Current],
 						// arguments are only needed for the last part
 						members.IsAtEnd

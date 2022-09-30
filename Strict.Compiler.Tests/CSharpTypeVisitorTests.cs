@@ -128,11 +128,10 @@ public sealed class CSharpTypeVisitorTests : TestCSharpGenerator
 						"\tlog.Write(random)")).ParseMembersAndMethods(parser)).FileContent,
 			Contains.Substring("\tConsole.WriteLine(random);"));
 
-	[Ignore("TODO: Not yet done")]
 	[TestCase(@"	let file = File(""test.txt"")
 	file.Write(number)", "\tvar file = new FileStream(\"test.txt\", FileMode.OpenOrCreate);")]
-	[TestCase(@"	File(""test.txt"").Write(number)",
-		"\tnew FileStream(\"test.txt\", FileMode.OpenOrCreate).Write(number);")]
+	[TestCase(@"	File(""test"").Write(number)",
+		"\tnew FileStream(\"test\", FileMode.OpenOrCreate).Write(number);")]
 	public void InitializeValueUsingConstructorInsideMethod(string code, string expected) =>
 		Assert.That(new CSharpTypeVisitor(new Type(package, new TypeLines(Computer, (@"has number
 Run
