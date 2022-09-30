@@ -66,6 +66,7 @@ public sealed class PhraseTokenizerTests
 	[TestCase("Run((5, 5)).Test(1)", 1)]
 	[TestCase("ReduceButGrow(120, 5, 40, 0) is 10", 3)]
 	[TestCase("ArithmeticFunction(10, 5).Calculate(\"add\") is 15", 3)]
+	[TestCase("ReduceButGrow(2, 3, 4, 5).GetMultiplicationOfNumbers is 120", 3)]
 	public void GetTokenRanges(string code, int expectedTokensCount)
 	{
 		var tokens = GetTokens(code);

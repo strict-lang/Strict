@@ -11,7 +11,6 @@ namespace Strict.Language.Expressions;
 /// </summary>
 // ReSharper disable MethodTooLong
 // ReSharper disable ExcessiveIndentation
-//ncrunch: no coverage start, for better performance
 public sealed class PhraseTokenizer
 {
 	public PhraseTokenizer(string input)
@@ -149,10 +148,14 @@ public sealed class PhraseTokenizer
 					if (input[index] == ' ')
 						foundNoSpace = false;
 					ProcessNormalToken(result.Add);
-					// ReSharper disable once ComplexConditionExpression
-					if (isInMethodCall && index + 1 < input.Length && input[index] == CloseBracket &&
-						input[index + 1] != '.')
-						break;
+					if (isInMethodCall)
+					{
+						if (index + 1 < input.Length && input[index] == CloseBracket &&
+							input[index + 1] != '.')
+							break;
+						if (MemberOrMethodCallWithNoArguments())
+							break;
+					}
 				}
 		if (textStart != -1)
 			throw new UnterminatedString(input);
@@ -162,6 +165,9 @@ public sealed class PhraseTokenizer
 			return MergeAllTokensIntoSingleList(result);
 		return result;
 	}
+
+	private bool MemberOrMethodCallWithNoArguments() =>
+		index > 0 && input[index - 1] == ' ' && input[index - 2] != ',';
 
 	private static Range[] MergeAllTokensIntoSingleList(List<Range> result) =>
 		new[] { result[0].Start..result[^1].End };
