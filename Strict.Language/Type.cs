@@ -388,15 +388,19 @@ public class Type : Context
 	private Method? FindAndCreateFromBaseMethod(string methodName,
 		IReadOnlyList<Expression> arguments)
 	{
-		if (methodName != Method.From || arguments.Count > members.Count && arguments.Count > implements.Count)
+		if (methodName != Method.From)
 			return null;
 		var fromMethod = "from(";
 		fromMethod += GetMatchingMemberParametersIfExist(arguments) ??
 			GetMatchingImplementParametersIfExists(arguments);
-		return fromMethod.Length > 5 && fromMethod.Split(',').Length - 1 == arguments.Count
-			? new Method(this, 0, dummyExpressionParser, new[] { $"{fromMethod[..^2]})" })
-			: null;
+		return fromMethod.Length > 5 && isMatchedWithList
+			? BuildMethod($"{fromMethod})")
+			: fromMethod.Length > 5 && fromMethod.Split(',').Length - 1 == arguments.Count
+				? BuildMethod($"{fromMethod[..^2]})")
+				: null;
 	}
+
+	private Method BuildMethod(string fromMethod) => new(this, 0, dummyExpressionParser, new[] { fromMethod });
 
 	private string? GetMatchingMemberParametersIfExist(IReadOnlyList<Expression> arguments)
 	{
@@ -408,8 +412,32 @@ public class Type : Context
 				parameters += $"{member.Name.MakeFirstLetterLowercase()} {member.Type.Name}, ";
 				argumentIndex++;
 			}
-		return parameters;
+		return TryGetMatchedParameters(arguments, parameters);
 	}
+
+	private string? TryCheckForMatchingMembersAndGetParameters(IReadOnlyList<Expression> arguments)
+	{
+		var matchedMember = members.FirstOrDefault(member =>
+			member.Type.IsList && arguments.All(argument =>
+				argument.ReturnType == ((GenericType)member.Type).Implementation));
+		if (matchedMember == null)
+			return null;
+		isMatchedWithList = true;
+		return $"{matchedMember.Name.MakeFirstLetterLowercase()}";
+	}
+
+	private string? TryCheckForMatchingImplementsAndGetParameters(IReadOnlyList<Expression> arguments)
+	{
+		var matchedImplement = implements.FirstOrDefault(implement =>
+			implement.IsList && arguments.All(argument =>
+				argument.ReturnType == ((GenericType)implement).Implementation));
+		if (matchedImplement == null)
+			return null;
+		isMatchedWithList = true;
+		return $"{((GenericType)matchedImplement).Implementation.Name.MakeFirstLetterLowercase()}s";
+	}
+
+	private bool isMatchedWithList;
 
 	private string? GetMatchingImplementParametersIfExists(IReadOnlyList<Expression> arguments)
 	{
@@ -421,8 +449,18 @@ public class Type : Context
 				parameters += $"{implement.Name.MakeFirstLetterLowercase()} {implement.Name}, ";
 				argumentIndex++;
 			}
-		return parameters;
+		return TryGetMatchedParameters(arguments, parameters, false);
 	}
+
+	private string? TryGetMatchedParameters(IReadOnlyList<Expression> arguments, string? parameters,
+		bool isMember = true) =>
+		isMember
+			? parameters == null && arguments.Count > 0
+				? TryCheckForMatchingMembersAndGetParameters(arguments)
+				: parameters
+			: parameters == null && arguments.Count > 0
+				? TryCheckForMatchingImplementsAndGetParameters(arguments)
+				: parameters;
 
 	private readonly ExpressionParser dummyExpressionParser = new DummyExpressionParser();
 

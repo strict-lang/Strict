@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using NUnit.Framework;
 using static Strict.Language.Type;
@@ -102,7 +103,7 @@ public sealed class MethodCallTests : TestExpressions
 	[Test]
 	public void FromExampleFailsOnImproperParameters() =>
 		Assert.That(() => ParseExpression("Range(1, 2, 3, 4)"),
-			Throws.InstanceOf<Type.NoMatchingMethodFound>());
+			Throws.InstanceOf<NoMatchingMethodFound>());
 
 	[TestCase("complexMethod((1), 2)")]
 	[TestCase("complexMethod((1, 2, 3) + (4, 5), 7)")]
@@ -145,6 +146,31 @@ public sealed class MethodCallTests : TestExpressions
 		var body = (Body)program.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(body.FindVariableValue("value")?.ReturnType, Is.EqualTo(program));
 		Assert.That(body.FindVariableValue("result")?.ReturnType.Name, Is.EqualTo("Text"));
+	}
+
+	[TestCase("ProgramWithHas",
+		"has numbers",
+		"has texts",
+		"Dummy",
+		$"\tlet instanceWithNumbers = ProgramWithHas(1, 2, 3)",
+		$"\tlet instanceWithTexts = ProgramWithHas(\"1\", \"2\", \"3\")")]
+	[TestCase("ProgramWithImplement",
+		"implement Numbers",
+		"implement Texts",
+		"Dummy",
+		$"\tlet instanceWithNumbers = ProgramWithImplement(1, 2, 3)",
+		$"\tlet instanceWithTexts = ProgramWithImplement(\"1\", \"2\", \"3\")")]
+	public void ParseConstructorCallWithList(string programName, params string[] code)
+	{
+		var program = new Type(type.Package, new TypeLines(
+				programName,
+				code)).
+			ParseMembersAndMethods(new MethodExpressionParser());
+		var body = (Body)program.Methods[0].GetBodyAndParseIfNeeded();
+		Assert.That(((MethodCall)((Assignment)body.Expressions[0]).Value).Method.Parameters[0].Name,
+			Is.EqualTo("numbers"));
+		Assert.That(((MethodCall)((Assignment)body.Expressions[1]).Value).Method.Parameters[0].Name,
+			Is.EqualTo("texts"));
 	}
 
 	[Test]
