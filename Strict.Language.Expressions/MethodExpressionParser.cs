@@ -127,13 +127,26 @@ public class MethodExpressionParser : ExpressionParser
 		if (argumentsStart > 0 && argumentsEnd > 0)
 		{
 			var call = ParseInContext(body.Method.Type, body, input[..argumentsStart],
-				ParseListArguments(body, input[(argumentsStart + 1)..argumentsEnd]));
+					ParseListArguments(body, input[(argumentsStart + 1)..argumentsEnd])) ??
+				TryParseListElementByIndex(body, input, input[(argumentsStart + 1)..argumentsEnd]);
 			return argumentsEnd < input.Length - 1
 				// ReSharper disable once TailRecursiveCall
 				? TryParseMemberOrZeroOrOneArgumentMethodOrNestedCall(body, input[(argumentsEnd + 2)..])
 				: call;
 		}
 		return ParseInContext(body.Method.Type, body, input, Array.Empty<Expression>());
+	}
+
+	//https://deltaengine.fogbugz.com/f/cases/26205
+	private static Expression? TryParseListElementByIndex(Body body, ReadOnlySpan<char> input,
+		ReadOnlySpan<char> indexArgument)
+	{
+		var member = body.Method.ParseExpression(body, input[..input.IndexOf('(')]);
+		return member.ReturnType.Name.StartsWith(Base.List, StringComparison.Ordinal)
+			? null
+			: int.TryParse(indexArgument, out var index)
+				? ((List)member).Values[index]
+				: null;
 	}
 
 	private static void ChangeArgumentStartEndIfNestedMethodCall(ReadOnlySpan<char> input,

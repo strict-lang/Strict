@@ -1,9 +1,9 @@
 implement Number
 from(number)
-	Character(7) is "7"
+	7 to Character is "7"
 	Character(0) + number
 from(text)
-	Character("b") is "b"
+	"b" to Character is "b"
 	text.Characters[0]
 to Text
 	Character("a") to Text is "a"
@@ -11,3 +11,7 @@ to Text
 +(other)
 	Character("1") + Character("2") is "12"
 	"" + value + other
+to Number
+	Character("3") to Number is 3
+	let result = value - Character(0)
+	result is in Range(0, 10) ? result else Error("Not a number: " + value)

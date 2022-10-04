@@ -18,7 +18,9 @@ public sealed class To : MethodCall
 			throw new ConversionTypeNotFound(body);
 		var method = left.ReturnType.GetMethod(BinaryOperator.To, Array.Empty<Expression>());
 		if (method.ReturnType != conversionType)
-			throw new NotImplemented(body);
+			throw new ConversionTypeIsIncompatible(body,
+				$"Conversion for {left.ReturnType.Name} and {conversionType.Name} does not exist",
+				conversionType);
 		return new To(left, left.ReturnType.GetMethod(BinaryOperator.To, Array.Empty<Expression>()), conversionType);
 	}
 
@@ -27,8 +29,8 @@ public sealed class To : MethodCall
 		public ConversionTypeNotFound(Body body) : base(body) { }
 	}
 
-	public sealed class NotImplemented : ParsingFailed
+	public sealed class ConversionTypeIsIncompatible : ParsingFailed
 	{
-		public NotImplemented(Body body) : base(body) { }
+		public ConversionTypeIsIncompatible(Body body, string message, Type type) : base(body, message, type) { }
 	}
 }

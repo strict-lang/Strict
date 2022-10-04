@@ -8,7 +8,7 @@ public sealed class Mutable : Value
 	private Mutable(Context context, Expression expression) : base(context.GetType(Base.Mutable), expression) { }
 
 	public static Expression? TryParse(Body body, ReadOnlySpan<char> line) =>
-		line.Contains(new[] { " = " })
+		line.Contains(" = ", StringComparison.Ordinal)
 			? TryParseReassignment(body, line)
 			: TryParseInitialization(body, line);
 
@@ -20,7 +20,7 @@ public sealed class Mutable : Value
 		parts.MoveNext();
 		var expression = body.Method.ParseExpression(body, parts.Current);
 		return IsMutable(expression)
-			? UpdateMemberOrVariableValue(body, expression, line[(parts.Current.Length + 1 + 1 + 1)..])
+			? UpdateMemberOrVariableValue(body, expression, line[(parts.Current.Length + 3)..])
 			: throw new ImmutableTypesCannotBeChanged(body, parts.Current.ToString());
 	}
 

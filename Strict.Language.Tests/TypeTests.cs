@@ -202,6 +202,20 @@ public sealed class TypeTests
 			Is.EqualTo("Add(first TestPackage.Number, other TestPackage.List) List"));
 	}
 
+	[Test]
+	public void GenericTypesCannotBeUsedDirectlyUseImplementation()
+	{
+		var type = CreateType(nameof(CanUpCastNumberWithList), "has generic",
+			"Add(first Generic, other List) List", "\tfirst + other");
+		Assert.That(
+			() => type.FindMethod("Add",
+				new List<Expression>
+				{
+					new Number(type, 5),
+					new List(null!, new List<Expression> { new Number(type, 6), new Number(type, 7) })
+				}), Throws.InstanceOf<Type.GenericTypesCannotBeUsedDirectlyUseImplementation>());
+	}
+
 	[TestCase(Base.Number, "has number", "Run", "\tlet result = Mutable(2)")]
 	[TestCase(Base.Text, "has number", "Run", "\tlet result = Mutable(\"2\")")]
 	public void MutableTypesHaveProperDataReturnType(string expected, params string[] code)

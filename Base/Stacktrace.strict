@@ -1,8 +1,6 @@
 has Method
 has FilePath Text
 has Line Number
-from(method)
-	Method = method
 to Text
 	to Text is "	at Stacktrace.to in Base\Stacktrace.strict:line 7"
 	Stacktrace(from) to Text is "	at Stacktrace.from in Base\Stacktrace.strict:line 7"

@@ -51,7 +51,8 @@ public sealed class BinaryTests : TestExpressions
 	[TestCase("5 to Boolean")]
 	public void ConversionNotImplemented(string code) =>
 		Assert.That(() => ParseExpression(code),
-			Throws.InstanceOf<To.NotImplemented>());
+			Throws.InstanceOf<To.ConversionTypeIsIncompatible>().With.Message.
+				StartsWith("Conversion for Number"));
 
 	[Test]
 	public void InvalidUsageOfToOperator() =>
@@ -92,11 +93,15 @@ public sealed class BinaryTests : TestExpressions
 		Assert.That(ParseExpression(code).ToString(), Is.EqualTo(code));
 
 	[Test]
-	public void ParseToOperator() => Assert.That(((To)ParseExpression("5 to Text")).ConversionType.Name == "\"5 to Text".Split(' ')[^1]);
+	public void ParseToOperator() =>
+		Assert.That(((To)ParseExpression("5 to Text")).ConversionType.Name ==
+			"\"5 to Text".Split(' ')[^1]);
 
 	[Test]
 	public void ParsePowerWithMultiplyOperator() =>
-		ParseAndCheckOutputMatchesInput("(5 * 2) ^ 2", CreateBinary(CreateBinary(number, BinaryOperator.Multiply, new Number(type, 2)), BinaryOperator.Power, new Number(type, 2)));
+		ParseAndCheckOutputMatchesInput("(5 * 2) ^ 2",
+			CreateBinary(CreateBinary(number, BinaryOperator.Multiply, new Number(type, 2)),
+				BinaryOperator.Power, new Number(type, 2)));
 
 	[Test]
 	public void NestedBinaryWithBrackets() =>

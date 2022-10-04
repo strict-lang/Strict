@@ -1,10 +1,33 @@
-- Number
-	-1 is not 1
-	-value
+from(text)
+	"5" to Text is 5
+	"123" to Text is 123
+	"-17" to Text is 17
+	"1.3" to Text is 1.3
+	"1e10" to Text is 1e10
+	for text.Reverse
+		+ value to Number * index	^ 10
 to Text
 	5 to Text is "5"
 	10.1 to Text is "10.1"
-	"" + value
+	for digits
+		Character(value)
+digits Numbers
+	1.digits is (1)
+	123.digits is (1, 2, 3)
+	let mextPart = (number / 10).Floor
+	let currentDigit = number % 10
+	nextDigit is 0 ? currentDigit else nextPart.digits + currentDigit
+Floor Number
+	Floor(1) is 1
+	Floor(2.4) is 2
+	value - value % 1
+is(other) Boolean
+	"Hey" is "Hey" is true
+	"Hi" is "Hey" is false
+	value is other
+- Number
+	-1 is not 1
+	-value
 and(other) Number
 	2 and 6 is 6
 	1 and 8 is 9
@@ -60,7 +83,3 @@ is not(other) Boolean
 <=(other) Boolean
 	0 <= 0 is true
 	value <= other
-Floor Number
-	Floor(1) is 1
-	Floor(2.4) is 2
-	value - value % 1
