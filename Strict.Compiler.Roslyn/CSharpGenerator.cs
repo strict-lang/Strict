@@ -2,7 +2,7 @@
 
 namespace Strict.Compiler.Roslyn;
 
-public class CSharpGenerator : SourceGenerator
+public sealed class CSharpGenerator : SourceGenerator
 {
 	public SourceFile Generate(Type type) => new CSharpFile(type);
 }

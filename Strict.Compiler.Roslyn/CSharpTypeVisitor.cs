@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Strict.Language;
 using Type = Strict.Language.Type;
@@ -19,6 +20,7 @@ public class CSharpTypeVisitor : TypeVisitor
 			VisitMember(member);
 		foreach (var method in type.Methods)
 			VisitMethod(method);
+		AddTests();
 		ParsingDone();
 	}
 
@@ -61,21 +63,51 @@ public class CSharpTypeVisitor : TypeVisitor
 		var accessModifier = member.IsPublic
 			? "public"
 			: "private";
+		var csharpTypeName = expressionVisitor.GetCSharpTypeName(member.Type);
+		var initializationExpression = BuildInitializationExpression(member, csharpTypeName, ref accessModifier);
+		FileContent += "\t" + accessModifier + " " + csharpTypeName + " " +
+			member.Name + initializationExpression + SemicolonAndLineBreak;
+	}
+
+	private string BuildInitializationExpression(Member member, string csharpTypeName,
+		ref string accessModifier)
+	{
 		var initializationExpression = "";
 		if (member.Value != null)
 			initializationExpression += " = " + expressionVisitor.Visit(member.Value);
 		if (member.Name == "file")
 			accessModifier += " static";
-		FileContent += "\t" + accessModifier + " " + expressionVisitor.GetCSharpTypeName(member.Type) + " " +
-			member.Name + initializationExpression + SemicolonAndLineBreak;
+		if (string.IsNullOrEmpty(initializationExpression) && member.Type.IsList)
+			initializationExpression += $" = new {csharpTypeName}()";
+		return initializationExpression;
 	}
 
 	private static readonly string SemicolonAndLineBreak = ";" + NewLine;
 
-	public void VisitMethod(Method method) =>
-		FileContent += "\t" + string.Join(NewLine + "\t", expressionVisitor.VisitBody(isInterface
+	public void VisitMethod(Method method)
+	{
+		var body = expressionVisitor.VisitBody(isInterface
 			? new Body(method)
-			: method.GetBodyAndParseIfNeeded())) + NewLine;
+			: method.GetBodyAndParseIfNeeded());
+		testExpressions.Add(method.Name,
+			body.Where(line =>
+				line.StartsWith("\tnew ", StringComparison.Ordinal) && line.Contains("==")));
+		FileContent += "\t" + string.Join(NewLine + "\t",
+			body.Where(line =>
+				!line.StartsWith("\tnew ", StringComparison.Ordinal) || !line.Contains("=="))) + NewLine;
+	}
 
+	private Dictionary<string,IEnumerable<string>> testExpressions = new();
 	public void ParsingDone() => FileContent += "}";
+
+	private void AddTests()
+	{
+		foreach (var testMethod in testExpressions)
+		{
+			FileContent += $"{NewLine}\t[Test]" + $"{NewLine}\tpublic void {testMethod.Key}()" + $"{NewLine}\t{{";
+			foreach (var test in testMethod.Value)
+				FileContent += $"{NewLine}\t\tAssert.That(() => {test[1..^1]}));";
+		}
+		FileContent += $"{NewLine}\t}}{NewLine}";
+	}
 }

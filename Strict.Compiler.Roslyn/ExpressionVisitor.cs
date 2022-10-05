@@ -45,6 +45,7 @@ public abstract class ExpressionVisitor
 			MethodCall call => Visit(call),
 			MemberCall member => Visit(member),
 			Value value => Visit(value),
+			ListCall => expression.ToString().Replace('(','[').Replace(')',']'),
 			_ => expression.ToString() //ncrunch: no coverage
 		};
 

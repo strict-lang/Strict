@@ -2,18 +2,25 @@
 
 public class ArithmeticFunction
 {
-	private int first;
-	private int second;
-	private Text operation;
-	public int Calculate()
+	private List<int> numbers = new List<int>();
+	public int Calculate(string operation)
 	{
 		if (operation == "add")
-			return first + second;
+			return numbers[0] + numbers[1];
 		if (operation == "subtract")
-			return first - second;
+			return numbers[0] - numbers[1];
 		if (operation == "multiply")
-			return first * second;
+			return numbers[0] * numbers[1];
 		if (operation == "divide")
-			return first / second;
+			return numbers[0] / numbers[1];
+	}
+
+	[Test]
+	public void Calculate()
+	{
+		Assert.That(() => new ArithmeticFunction(10, 5).Calculate("add") == 15));
+		Assert.That(() => new ArithmeticFunction(10, 5).Calculate("subtract") == 5));
+		Assert.That(() => new ArithmeticFunction(10, 5).Calculate("multiply") == 50));
+		Assert.That(() => new ArithmeticFunction(10, 5).Calculate("divide") == 2));
 	}
 }

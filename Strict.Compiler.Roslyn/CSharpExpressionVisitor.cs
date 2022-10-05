@@ -47,15 +47,20 @@ public class CSharpExpressionVisitor : ExpressionVisitor
 				? "static "
 				: "");
 
-	public string GetCSharpTypeName(Type type) =>
-		type.Name switch
+	public string GetCSharpTypeName(Type type)
+	{
+		if (type.IsList)
+			return $"List<{GetCSharpTypeName(((GenericType)type).Implementation)}>";
+		return type.Name switch
 		{
 			Base.None => "void",
 			Base.Number => "int",
+			Base.Text => "string",
 			Base.Boolean => "bool",
 			"File" => "FileStream",
 			_ => type.Name
 		};
+	}
 
 	protected override string GetBinaryOperator(string methodName) =>
 		methodName switch

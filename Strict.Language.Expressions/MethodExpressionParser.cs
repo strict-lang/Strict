@@ -273,20 +273,14 @@ public class MethodExpressionParser : ExpressionParser
 	}
 
 	private static Expression? TryListCall(Body body, Expression? variable,
-		IReadOnlyList<Expression> arguments)
-	{
-		if (variable == null)
-			return null;
-		if (variable.ReturnType.IsList)
-		{
-			if (arguments.Count > 0)
-				return new ListCall(variable, arguments[0]);
-		}
-		else if (arguments.Count > 0 && variable is not MethodCall)
-			throw new InvalidArgumentItIsNotMethodOrListCall(body, variable, arguments);
-		return variable;
-	}
-
+		IReadOnlyList<Expression> arguments) =>
+		variable is null or MethodCall
+			? variable
+			: arguments.Count > 0
+				? variable.ReturnType.IsList
+					? new ListCall(variable, arguments[0])
+					: throw new InvalidArgumentItIsNotMethodOrListCall(body, variable, arguments)
+				: variable;
 
 	private static bool
 		IsConstructorUsedWithSameArgumentType(IReadOnlyList<Expression> arguments, Type fromType) =>

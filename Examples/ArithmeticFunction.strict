@@ -9,6 +9,6 @@ Calculate(operation Text) Number
 	if operation is "subtract"
 		return numbers(0) - numbers(1)
 	if operation is "multiply"
-		return numbers(0) + numbers(1)
+		return numbers(0) * numbers(1)
 	if operation is "divide"
-		return first / second
+		return numbers(0) / numbers(1)
