@@ -56,3 +56,5 @@ public sealed class List : Value
 		public EmptyListNotAllowed(Body body) : base(body, "()") { }
 	}
 }
+
+//text.characters[0]

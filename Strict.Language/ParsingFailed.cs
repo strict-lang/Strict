@@ -12,7 +12,7 @@ public class ParsingFailed : Exception
 	protected ParsingFailed(Type type, int fileLineNumber, string message = "", string method = "") :
 		base(message + GetClickableStacktraceLine(type, fileLineNumber, method)) { }
 
-	internal static string GetClickableStacktraceLine(Type type, int fileLineNumber, string method) =>
+	public static string GetClickableStacktraceLine(Type type, int fileLineNumber, string method) =>
 		"\n   at " + (method == ""
 			? type
 			: method) + " in " + type.FilePath + ":line " + (fileLineNumber + 1);

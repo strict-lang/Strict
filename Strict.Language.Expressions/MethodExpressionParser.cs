@@ -18,7 +18,8 @@ public class MethodExpressionParser : ExpressionParser
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public override Expression ParseLineExpression(Body body, ReadOnlySpan<char> line) =>
 		Assignment.TryParse(body, line) ?? If.TryParse(body, line) ??
-		For.TryParse(body, line.Trim()) ?? Return.TryParse(body, line) ?? Mutable.TryParse(body, line) ?? ParseExpression(body, line);
+		For.TryParse(body, line.Trim()) ?? Return.TryParse(body, line) ??
+		Mutable.TryParse(body, line) ?? ParseExpression(body, line);
 
 	public override Expression ParseExpression(Body body, ReadOnlySpan<char> input)
 	{
@@ -56,8 +57,8 @@ public class MethodExpressionParser : ExpressionParser
 	private Expression TryParseCommon(Body body, ReadOnlySpan<char> input) =>
 		Boolean.TryParse(body, input) ?? Text.TryParse(body, input) ??
 		List.TryParseWithSingleElement(body, input) ?? Number.TryParse(body, input) ??
-		Mutable.TryParse(body, input) ?? TryParseMemberOrZeroOrOneArgumentMethodOrNestedCall(body, input) ??
-		(input.IsOperator()
+		Mutable.TryParse(body, input) ??
+		TryParseMemberOrZeroOrOneArgumentMethodOrNestedCall(body, input) ?? (input.IsOperator()
 			? throw new InvalidOperatorHere(body, input.ToString())
 			: input.IsWord()
 				? throw new IdentifierNotFound(body, input.ToString())
@@ -80,7 +81,8 @@ public class MethodExpressionParser : ExpressionParser
 						? If.ParseConditional(body, input)
 						: null;
 
-	private static bool IsExpressionTypeAny(ReadOnlySpan<char> input) => input.Equals(Base.Any, StringComparison.Ordinal) || input.StartsWith(Base.Any + "(");
+	private static bool IsExpressionTypeAny(ReadOnlySpan<char> input) =>
+		input.Equals(Base.Any, StringComparison.Ordinal) || input.StartsWith(Base.Any + "(");
 
 	private Error TryParseErrorExpression(Body body, ReadOnlySpan<char> partToParse)
 	{
@@ -142,11 +144,9 @@ public class MethodExpressionParser : ExpressionParser
 		ReadOnlySpan<char> indexArgument)
 	{
 		var member = body.Method.ParseExpression(body, input[..input.IndexOf('(')]);
-		return member.ReturnType.Name.StartsWith(Base.List, StringComparison.Ordinal)
-			? null
-			: int.TryParse(indexArgument, out var index)
-				? ((List)member).Values[index]
-				: null;
+		if (member.ReturnType.IsList)
+			return new ListCall(member, body.Method.ParseExpression(body, indexArgument));
+		return (ListCall?)null;
 	}
 
 	private static void ChangeArgumentStartEndIfNestedMethodCall(ReadOnlySpan<char> input,
@@ -159,7 +159,8 @@ public class MethodExpressionParser : ExpressionParser
 		}
 	}
 
-	private static bool IsNestedMethodCallWithParentMethodParameter(ReadOnlySpan<char> input, int argumentsStart, int argumentsEnd)
+	private static bool IsNestedMethodCallWithParentMethodParameter(ReadOnlySpan<char> input,
+		int argumentsStart, int argumentsEnd)
 	{
 		var innerArgumentStart = input.LastIndexOf('(');
 		return argumentsStart != innerArgumentStart && argumentsEnd < innerArgumentStart &&
@@ -168,6 +169,7 @@ public class MethodExpressionParser : ExpressionParser
 
 	// ReSharper disable once TooManyArguments
 	// ReSharper disable once MethodTooLong
+	// ReSharper disable once CyclomaticComplexity
 	private Expression? ParseInContext(Context context, Body body, ReadOnlySpan<char> input,
 		IReadOnlyList<Expression> arguments)
 	{
@@ -203,15 +205,19 @@ public class MethodExpressionParser : ExpressionParser
 						throw new InvalidOperatorHere(body, input[members.Current].ToString());
 					if (input[members.Current].TryParseNumber(out _))
 						throw new NumbersCanNotBeInNestedCalls(body, input[members.Current].ToString());
-					throw new MemberOrMethodNotFound(body, current?.ReturnType ?? body.Method.Type,
-						input[members.Current].ToString());
+					var referenceType = current?.ReturnType ?? body.Method.Type;
+					throw new MemberOrMethodNotFound(body, null, input[members.Current].ToString() +
+						($" in {referenceType}") + (current?.ReturnType != null
+							? ParsingFailed.GetClickableStacktraceLine(current.ReturnType, 0, string.Empty)
+							: string.Empty));
 				}
 				current = expression;
 				context = current.ReturnType;
 			}
-			return current;
+			return TryListCall(body, current, arguments);
 		}
-		return TryMemberOrMethodCall(context, null, body, input, arguments);
+		return TryListCall(body, TryMemberOrMethodCall(context, null, body, input, arguments),
+			arguments);
 	}
 
 	// ReSharper disable once TooManyArguments
@@ -227,27 +233,24 @@ public class MethodExpressionParser : ExpressionParser
 			" with arguments=" + arguments.ToWordList());
 #endif
 		var type = context as Type ?? body.Method.Type;
-		if (arguments.Count == 0)
+		var variableValue = body.FindVariableValue(input);
+		if (variableValue != null)
+			return new VariableCall(input.ToString(), variableValue);
+		if (input.Equals(Base.Value, StringComparison.Ordinal))
 		{
-			var variableValue = body.FindVariableValue(input);
-			if (variableValue != null)
-				return new VariableCall(input.ToString(), variableValue);
-			if (input.Equals(Base.Value, StringComparison.Ordinal))
-			{
-				var valueInstance = Instance.Parse(body.Method);
-				body.AddVariable(Base.Value, valueInstance);
-				return valueInstance;
-			}
-			foreach (var parameter in body.Method.Parameters)
-				if (input.Equals(parameter.Name, StringComparison.Ordinal))
-					return new ParameterCall(parameter);
-			var memberCall = TryFindMemberCall(type, instance, input);
-			if (memberCall != null)
-				return memberCall;
-#if LOG_DETAILS
-			Logger.Info(nameof(TryMemberOrMethodCall) + " found no member in " + body.Method);
-#endif
+			var valueInstance = Instance.Parse(body.Method);
+			body.AddVariable(Base.Value, valueInstance);
+			return valueInstance;
 		}
+		foreach (var parameter in body.Method.Parameters)
+			if (input.Equals(parameter.Name, StringComparison.Ordinal))
+				return new ParameterCall(parameter);
+		var memberCall = TryFindMemberCall(type, instance, input);
+		if (memberCall != null)
+			return memberCall;
+#if LOG_DETAILS
+		Logger.Info(nameof(TryMemberOrMethodCall) + " found no member in " + body.Method);
+#endif
 		var methodName = input.ToString();
 		var method2 = type.FindMethod(methodName, arguments);
 		if (method2 != null)
@@ -268,6 +271,22 @@ public class MethodExpressionParser : ExpressionParser
 #endif
 		return null;
 	}
+
+	private static Expression? TryListCall(Body body, Expression? variable,
+		IReadOnlyList<Expression> arguments)
+	{
+		if (variable == null)
+			return null;
+		if (variable.ReturnType.IsList)
+		{
+			if (arguments.Count > 0)
+				return new ListCall(variable, arguments[0]);
+		}
+		else if (arguments.Count > 0 && variable is not MethodCall)
+			throw new InvalidArgumentItIsNotMethodOrListCall(body, variable, arguments);
+		return variable;
+	}
+
 
 	private static bool
 		IsConstructorUsedWithSameArgumentType(IReadOnlyList<Expression> arguments, Type fromType) =>
@@ -409,7 +428,7 @@ public class MethodExpressionParser : ExpressionParser
 
 	public sealed class MemberOrMethodNotFound : ParsingFailed
 	{
-		public MemberOrMethodNotFound(Body body, Type memberType, string memberName) : base(body,
+		public MemberOrMethodNotFound(Body body, Type? memberType, string memberName) : base(body,
 			memberName, memberType) { }
 	}
 
@@ -425,7 +444,15 @@ public class MethodExpressionParser : ExpressionParser
 
 	private sealed class InvalidSingleTokenExpression : ParsingFailed
 	{
-		public InvalidSingleTokenExpression(Body body, string message) :
-			base(body, message) { }
+		public InvalidSingleTokenExpression(Body body, string message) : base(body, message) { }
 	}
+
+	// ReSharper disable once HollowTypeName
+	private sealed class InvalidArgumentItIsNotMethodOrListCall : ParsingFailed
+	{
+		public InvalidArgumentItIsNotMethodOrListCall(Body body, Expression variable,
+			IEnumerable<Expression> arguments) : base(body, arguments.ToWordList(),
+			variable.ReturnType) { }
+	}
+
 }
