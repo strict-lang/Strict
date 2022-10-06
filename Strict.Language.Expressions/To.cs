@@ -17,7 +17,7 @@ public sealed class To : MethodCall
 		if (conversionType == null)
 			throw new ConversionTypeNotFound(body);
 		var method = left.ReturnType.GetMethod(BinaryOperator.To, Array.Empty<Expression>());
-		if (method.ReturnType != conversionType)
+		if (method.ReturnType.Name != conversionType.Name)
 			throw new ConversionTypeIsIncompatible(body,
 				$"Conversion for {left.ReturnType.Name} and {conversionType.Name} does not exist",
 				conversionType);

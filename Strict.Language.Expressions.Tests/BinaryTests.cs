@@ -94,8 +94,7 @@ public sealed class BinaryTests : TestExpressions
 
 	[Test]
 	public void ParseToOperator() =>
-		Assert.That(((To)ParseExpression("5 to Text")).ConversionType.Name ==
-			"\"5 to Text".Split(' ')[^1]);
+		Assert.That(((To)ParseExpression("5 to Text")).ConversionType.Name, Is.EqualTo(Base.Text));
 
 	[Test]
 	public void ParsePowerWithMultiplyOperator() =>

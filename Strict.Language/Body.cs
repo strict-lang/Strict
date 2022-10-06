@@ -49,6 +49,7 @@ public sealed class Body : Expression
 		for (ParsingLineNumber = LineRange.Start.Value; ParsingLineNumber < LineRange.End.Value;
 			ParsingLineNumber++)
 			expressions.Add(Method.ParseLine(this, CurrentLine));
+		//TODO: this is where the VM runs all the tests and reduces the expressions
 		SetExpressions(expressions);
 		return Expressions.Count == 1
 			? Expressions[0]
@@ -62,6 +63,7 @@ public sealed class Body : Expression
 			throw new SpanExtensions.EmptyInputIsNotAllowed();
 		ParsingLineNumber--;
 		var isLastExpressionReturn = Expressions[^1].GetType().Name == Base.Return;
+		//TODO: case 26229 use this to check each return (must match as well, see ArithemticFunction (maybe already there in child body thing)), but also to check every other line expression must be either a test (bool must return true) or void (nothing returned or assignment or if or for, etc.)
 		var lastExpression = Expressions[^1];
 		if (Method.Name != Base.Run &&
 			!ChildHasMatchingMethodReturnType(Parent == null
