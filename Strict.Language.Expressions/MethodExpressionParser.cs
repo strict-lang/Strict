@@ -144,9 +144,9 @@ public class MethodExpressionParser : ExpressionParser
 		ReadOnlySpan<char> indexArgument)
 	{
 		var member = body.Method.ParseExpression(body, input[..input.IndexOf('(')]);
-		if (member.ReturnType.IsList)
-			return new ListCall(member, body.Method.ParseExpression(body, indexArgument));
-		return (ListCall?)null;
+		return member.ReturnType.IsList
+			? new ListCall(member, body.Method.ParseExpression(body, indexArgument))
+			: null;
 	}
 
 	private static void ChangeArgumentStartEndIfNestedMethodCall(ReadOnlySpan<char> input,
@@ -207,7 +207,7 @@ public class MethodExpressionParser : ExpressionParser
 						throw new NumbersCanNotBeInNestedCalls(body, input[members.Current].ToString());
 					var referenceType = current?.ReturnType ?? body.Method.Type;
 					throw new MemberOrMethodNotFound(body, null, input[members.Current].ToString() +
-						($" in {referenceType}") + (current?.ReturnType != null
+						$" in {referenceType}" + (current?.ReturnType != null
 							? ParsingFailed.GetClickableStacktraceLine(current.ReturnType, 0, string.Empty)
 							: string.Empty));
 				}
@@ -448,5 +448,4 @@ public class MethodExpressionParser : ExpressionParser
 			IEnumerable<Expression> arguments) : base(body, arguments.ToWordList(),
 			variable.ReturnType) { }
 	}
-
 }

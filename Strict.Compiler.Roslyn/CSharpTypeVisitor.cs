@@ -97,7 +97,7 @@ public class CSharpTypeVisitor : TypeVisitor
 				!line.StartsWith("\tnew ", StringComparison.Ordinal) || !line.Contains("=="))) + NewLine;
 	}
 
-	private Dictionary<string,IEnumerable<string>> testExpressions = new();
+	private readonly Dictionary<string, IEnumerable<string>> testExpressions = new();
 	public void ParsingDone() => FileContent += "}";
 
 	private void AddTests()

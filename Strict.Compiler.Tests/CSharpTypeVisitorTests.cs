@@ -3,6 +3,7 @@ using NUnit.Framework;
 using Strict.Compiler.Roslyn;
 using Strict.Language;
 using Strict.Language.Expressions;
+using Strict.Language.Tests;
 using Type = Strict.Language.Type;
 
 namespace Strict.Compiler.Tests;
@@ -138,12 +139,11 @@ Run
 " + code).Split(Environment.NewLine))).ParseMembersAndMethods(parser)).FileContent,
 			Contains.Substring(expected));
 
-	[Ignore("TODO: Not yet done")]
 	[TestCase("l + m", "l + m")]
 	[TestCase("l - m", "l - m")]
 	[TestCase("l * m", "l * m")]
 	public void ListsBinaryOperation(string code, string expected) =>
-		Assert.That(new CSharpTypeVisitor(new Type(package, new TypeLines(Computer, @$"has log
+		Assert.That(new CSharpTypeVisitor(new Type(new TestPackage(), new TypeLines(Computer, @$"has log
 Run
 	let l = (1, 2) + (3, 4)
 	let m = (5, 6)
@@ -152,16 +152,15 @@ Run
 	}".Split(Environment.NewLine))).ParseMembersAndMethods(parser)).FileContent,
 			Contains.Substring($"\tvar r = {expected};"));
 
-	[Ignore("TODO: Not yet done")]
 	[Test]
 	public void GenerateListTypeProgram()
 	{
 		var program =
-			new Type(package,
+			new Type(new TestPackage(),
 				new TypeLines("Program", "has numbers", "TestListsMethod Numbers",
-					"\t(1, 2, 3) + 5", "\treturn numbers")).ParseMembersAndMethods(parser);
+					"\t(1, 2, 3) + 5", "\tnumbers")).ParseMembersAndMethods(parser);
 		var visitor = new CSharpTypeVisitor(program);
 		AssertProgramClass(visitor);
-		Assert.That(visitor.FileContent, Contains.Substring(@"	private List<int> numbers;"));
+		Assert.That(visitor.FileContent, Contains.Substring(@"	private List<int> numbers"));
 	}
 }
