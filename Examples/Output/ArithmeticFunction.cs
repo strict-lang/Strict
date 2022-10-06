@@ -16,7 +16,7 @@ public class ArithmeticFunction
 	}
 
 	[Test]
-	public void Calculate()
+	public void CalculateTest()
 	{
 		Assert.That(() => new ArithmeticFunction(10, 5).Calculate("add") == 15));
 		Assert.That(() => new ArithmeticFunction(10, 5).Calculate("subtract") == 5));

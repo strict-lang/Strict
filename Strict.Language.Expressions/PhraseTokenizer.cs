@@ -146,8 +146,8 @@ public sealed class PhraseTokenizer
 				{
 					if (input[index - 1] == '.')
 						isInMethodCall = true;
-					if (input[index] == ' ')
-						foundNoSpace = false;
+					if (input[index] == ' '){
+						foundNoSpace = false;}
 					ProcessNormalToken(result.Add);
 					if (isInMethodCall)
 					{
@@ -162,13 +162,16 @@ public sealed class PhraseTokenizer
 			throw new UnterminatedString(input);
 		if (result.Count < 3)
 			throw new InvalidEmptyOrUnmatchedBrackets(input);
-		if (result.Count == 3 || foundListSeparator || foundNoSpace)
+		if (result.Count == 3 || foundListSeparator || foundNoSpace || IsNotBinaryOperator())
 			return MergeAllTokensIntoSingleList(result);
 		return result;
 	}
 
 	private bool MemberOrMethodCallWithNoArguments() =>
 		index > 0 && input[index - 1] == ' ' && input[index - 2] != ',';
+
+	private bool IsNotBinaryOperator() =>
+		input[index - 1] == ' ' && (input[index] != '*' || input[index] != '+' || input[index] != '-' || input[index] != '/');
 
 	private static Range[] MergeAllTokensIntoSingleList(List<Range> result) =>
 		new[] { result[0].Start..result[^1].End };

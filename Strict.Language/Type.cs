@@ -418,12 +418,12 @@ public class Type : Context
 	private string? TryCheckForMatchingMembersAndGetParameters(IReadOnlyList<Expression> arguments)
 	{
 		var matchedMember = members.FirstOrDefault(member =>
-			member.Type.IsList && arguments.All(argument =>
+			member.Type.IsList && arguments.All(argument => member.Type.Name == Base.List ||
 				argument.ReturnType == ((GenericType)member.Type).Implementation));
 		if (matchedMember == null)
 			return null;
 		isMatchedWithList = true;
-		return $"{matchedMember.Name.MakeFirstLetterLowercase()}";
+		return $"{matchedMember.Name.MakeFirstLetterLowercase()} {matchedMember.Type.Name}";
 	}
 
 	private string? TryCheckForMatchingImplementsAndGetParameters(IReadOnlyList<Expression> arguments)
