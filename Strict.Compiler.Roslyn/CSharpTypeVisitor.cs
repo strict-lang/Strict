@@ -86,28 +86,51 @@ public class CSharpTypeVisitor : TypeVisitor
 
 	public void VisitMethod(Method method)
 	{
-		var body = expressionVisitor.VisitBody(isInterface
-			? new Body(method)
-			: method.GetBodyAndParseIfNeeded());
+		VisitMethodHeader(method);
+		if (!isInterface)
+			VisitMethodBody(method);
+	}
+
+	private void VisitMethodHeader(Method method) => FileContent += "\t" + expressionVisitor.VisitMethodHeader(method, isInterface);
+
+	private void VisitMethodBody(Method method)
+	{
+		var body = expressionVisitor.VisitBody(method.GetBodyAndParseIfNeeded());
 		testExpressions.Add(method.Name,
 			body.Where(line =>
 				line.StartsWith("\tnew ", StringComparison.Ordinal) && line.Contains("==")));
-		FileContent += "\t" + string.Join(NewLine + "\t",
-			body.Where(line =>
-				!line.StartsWith("\tnew ", StringComparison.Ordinal) || !line.Contains("=="))) + NewLine;
+		FileContent += (body.Count == 1
+				? "\t" + body[0]
+				: string.Join(LineBreakAndSpace,
+					body.Where(line =>
+						!line.StartsWith("\tnew ", StringComparison.Ordinal) || !line.Contains("==")))) +
+			LineBreakAndSpace + "}" + NewLine;
 	}
 
 	private readonly Dictionary<string, IEnumerable<string>> testExpressions = new();
-	public void ParsingDone() => FileContent += "}";
+	private static readonly string LineBreakAndSpace = NewLine + "\t";
 
 	private void AddTests()
 	{
+		var hasTestMethods = false;
 		foreach (var testMethod in testExpressions)
 		{
-			FileContent += $"{NewLine}\t[Test]" + $"{NewLine}\tpublic void {testMethod.Key}Test()" + $"{NewLine}\t{{";
-			foreach (var test in testMethod.Value)
-				FileContent += $"{NewLine}\t\tAssert.That(() => {test[1..^1]}));";
+			if (!testMethod.Value.Any())
+				break;
+			hasTestMethods = true;
+			AddTestExpressions(testMethod);
 		}
-		FileContent += $"{NewLine}\t}}{NewLine}";
+		if(hasTestMethods)
+			FileContent += $"{NewLine}\t}}{NewLine}";
 	}
+
+	private void AddTestExpressions(KeyValuePair<string, IEnumerable<string>> testMethod)
+	{
+		FileContent += $"{NewLine}\t[Test]" + $"{NewLine}\tpublic void {testMethod.Key}Test()" +
+			$"{NewLine}\t{{";
+		foreach (var test in testMethod.Value)
+			FileContent += $"{NewLine}\t\tAssert.That(() => {test[1..^1]}));";
+	}
+
+	public void ParsingDone() => FileContent += "}";
 }

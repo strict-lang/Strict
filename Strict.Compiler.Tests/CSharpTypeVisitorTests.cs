@@ -10,7 +10,6 @@ namespace Strict.Compiler.Tests;
 
 public sealed class CSharpTypeVisitorTests : TestCSharpGenerator
 {
-	[Ignore("TODO: Generic parameter type should be replaced for any non-generic type method")]
 	[Test]
 	public void GenerateHelloWorldApp()
 	{
@@ -45,7 +44,6 @@ public sealed class CSharpTypeVisitorTests : TestCSharpGenerator
 
 	private const string Computer = "Computer";
 
-	[Ignore("TODO: Generic parameter type should be replaced for any non-generic type method")]
 	[Test]
 	public void GenerateTypeThatImplementsMultipleTraits()
 	{
@@ -55,7 +53,7 @@ public sealed class CSharpTypeVisitorTests : TestCSharpGenerator
 				"implement Input",
 				"implement Output",
 				"has system",
-				"Read",
+				"Read Text",
 				"\tsystem.WriteLine(\"Read\")",
 				"\t\"\"",
 				"Write(generic)",
@@ -67,15 +65,14 @@ public sealed class CSharpTypeVisitorTests : TestCSharpGenerator
 		Assert.That(visitor.FileContent, Contains.Substring(@"	public string Read()
 	{
 		Console.WriteLine(""Read"");
-		return "";
+		"""";
 	}"));
-		Assert.That(visitor.FileContent, Contains.Substring(@"	public void Write()
+		Assert.That(visitor.FileContent, Contains.Substring(@"	public void Write(Generic generic)
 	{
 		Console.WriteLine(""Write"");
 	}"));
 	}
 
-	[Ignore("TODO: Generic parameter type should be replaced for any non-generic type method")]
 	[Test]
 	public void Import()
 	{
@@ -85,7 +82,6 @@ public sealed class CSharpTypeVisitorTests : TestCSharpGenerator
 				ParseMembersAndMethods(parser);
 		var visitor = new CSharpTypeVisitor(interfaceType);
 		Assert.That(visitor.Name, Is.EqualTo(Computer));
-		Assert.That(visitor.FileContent, Contains.Substring("using Strict;"));
 		Assert.That(visitor.FileContent, Contains.Substring("namespace " + package.Name + ";"));
 		Assert.That(visitor.FileContent, Contains.Substring("public class " + Computer));
 		Assert.That(visitor.FileContent,
@@ -119,7 +115,6 @@ public sealed class CSharpTypeVisitorTests : TestCSharpGenerator
 					new TypeLines(Computer, "has log", "Run", "\tlet random = log.unknown")).ParseMembersAndMethods(parser)),
 			Throws.InstanceOf<MethodExpressionParser.MemberOrMethodNotFound>()!);
 
-	[Ignore("TODO: Generic parameter type should be replaced for any non-generic type method")]
 	[Test]
 	public void AccessLocalVariableAfterDeclaration() =>
 		Assert.That(
@@ -162,5 +157,36 @@ Run
 		var visitor = new CSharpTypeVisitor(program);
 		AssertProgramClass(visitor);
 		Assert.That(visitor.FileContent, Contains.Substring(@"	private List<int> numbers"));
+	}
+
+	[Test]
+	public void GenerateNestedBodyProgram()
+	{
+		var program = new Type(package, new TypeLines(
+				// @formatter.off
+				"Program",
+				"has system",
+				"NestedMethod Number",
+				"	if 5 is 5",
+				"		if 5 is not 6",
+				"			let a = 5",
+				"		else",
+				"			let b = 5")).
+			// @formatter.on
+			ParseMembersAndMethods(parser);
+		Assert.That(new CSharpTypeVisitor(program).FileContent, Contains.Substring(@"namespace SourceGeneratorTests;
+
+public class Program
+{
+	private System system;
+	public int NestedMethod()
+	{
+	if (5 == 5)
+		if (5 is not 6)
+			var a = 5;
+		else
+			var b = 5;
+	}
+}"));
 	}
 }

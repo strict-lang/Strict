@@ -68,7 +68,7 @@ public sealed class CSharpExpressionVisitorTests : TestExpressions
 	[Test]
 	public void GenerateInterfaceMethodBody() =>
 		Assert.That(visitor.VisitBody(methodWithBody.GetBodyAndParseIfNeeded())[0],
-			Is.EqualTo("public void Run()"));
+			Is.EqualTo("	var variable = 5;"));
 
 	[Test]
 	public void GenerateMultilineMethodBody()
@@ -77,13 +77,10 @@ public sealed class CSharpExpressionVisitorTests : TestExpressions
 		Assert.That(visitor.VisitBody(multilineMethod.GetBodyAndParseIfNeeded()), Is.EqualTo(new[]
 		{
 			// @formatter:off
-			"public bool IsBlaFive()",
-			"{",
 			"	var number = 5;",
 			"	if (bla == 5)",
 			"		return true;",
-			"	false;",
-			"}"
+			"	false;"
 		}));
 	}
 
@@ -103,14 +100,11 @@ public sealed class CSharpExpressionVisitorTests : TestExpressions
 		Assert.That(visitor.VisitBody(multilineMethod.GetBodyAndParseIfNeeded()),
 			Is.EqualTo(new[]
 			{
-				"public bool IsBlaFive()",
-        "{",
 				"	var value = 5;",
 				"	if (value == 5)",
 				"		return true;",
 				"	else",
-				"		return false;",
-				"}"
+				"		return false;"
 			}));
 	}
 }

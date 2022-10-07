@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Strict.Language;
 using Strict.Language.Expressions;
@@ -8,35 +9,25 @@ namespace Strict.Compiler.Roslyn;
 
 public class CSharpExpressionVisitor : ExpressionVisitor
 {
-	protected override IReadOnlyList<string> VisitBody(Body methodBody)
-	{
-		var method = methodBody.Method;
-		var isMainEntryPoint = method.Type.Implements.Any(t => t.Name == Base.App) && method.Name == "Run";
-		var methodName = isMainEntryPoint
-			? "Main"
-			: method.Name;
-		var isInterface = methodBody.Method.Type.IsTrait || methodBody.Expressions.Count == 0;
-		var methodHeader =
-			$"{GetAccessModifier(isInterface, method, isMainEntryPoint)}{GetCSharpTypeName(method.ReturnType)} {methodName}({WriteParameters(method)})";
-		return isInterface
-			? new[] { methodHeader + ";" }
-			: VisitBody(methodBody, methodHeader);
-	}
-
-	private IReadOnlyList<string> VisitBody(Body methodBody, string methodHeader)
-	{
-		var methodLines = new List<string> { methodHeader, "{" };
-		methodLines.AddRange(Indent(methodBody.Expressions.Select(VisitBody)));
-		methodLines.Add("}");
-		return methodLines;
-	}
-
-	private string WriteParameters(Method method) =>
-		string.Join(", ",
-			method.Parameters.Select(p => GetCSharpTypeName(p.Type) + " " + p.Name));
+	protected override IReadOnlyList<string> VisitBody(Body methodBody) =>
+		Indent(methodBody.Expressions.Select(VisitBody)).ToList();
 
 	private static IEnumerable<string> Indent(IEnumerable<IReadOnlyList<string>> expressions) =>
 		Indent(expressions.SelectMany(line => line));
+
+	public string VisitMethodHeader(Method method, bool isInterface)
+	{
+		var isMainEntryPoint =
+			method.Type.Implements.Any(t => t.Name == Base.App) && method.Name == "Run";
+		var methodName = isMainEntryPoint
+			? "Main"
+			: method.Name;
+		var methodHeader =
+			$"{GetAccessModifier(isInterface, method, isMainEntryPoint)}{GetCSharpTypeName(method.ReturnType)} {methodName}({WriteParameters(method)})";
+		return isInterface
+			? methodHeader + ";" + NewLine
+			: methodHeader + NewLine + "\t{" + NewLine + "\t";
+	}
 
 	public string GetAccessModifier(bool isTrait, Method method, bool isMainEntryPoint) =>
 		isTrait
@@ -61,6 +52,12 @@ public class CSharpExpressionVisitor : ExpressionVisitor
 			_ => type.Name
 		};
 	}
+
+	private string WriteParameters(Method method) =>
+		string.Join(", ",
+			method.Parameters.Select(p => GetCSharpTypeName(p.Type) + " " + p.Name));
+
+	private static readonly string NewLine = Environment.NewLine;
 
 	protected override string GetBinaryOperator(string methodName) =>
 		methodName switch
