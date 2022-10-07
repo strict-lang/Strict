@@ -104,7 +104,7 @@ public class CSharpTypeVisitor : TypeVisitor
 	{
 		foreach (var testMethod in testExpressions)
 		{
-			FileContent += $"{NewLine}\t[Test]" + $"{NewLine}\tpublic void {testMethod.Key}()" + $"{NewLine}\t{{";
+			FileContent += $"{NewLine}\t[Test]" + $"{NewLine}\tpublic void {testMethod.Key}Test()" + $"{NewLine}\t{{";
 			foreach (var test in testMethod.Value)
 				FileContent += $"{NewLine}\t\tAssert.That(() => {test[1..^1]}));";
 		}

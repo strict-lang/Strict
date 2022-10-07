@@ -162,7 +162,7 @@ public sealed class PhraseTokenizer
 			throw new UnterminatedString(input);
 		if (result.Count < 3)
 			throw new InvalidEmptyOrUnmatchedBrackets(input);
-		if (result.Count == 3 || foundListSeparator || foundNoSpace || IsNotBinaryOperator())
+		if (result.Count == 3 || foundListSeparator || foundNoSpace || IsNotBinaryOperation())
 			return MergeAllTokensIntoSingleList(result);
 		return result;
 	}
@@ -170,8 +170,8 @@ public sealed class PhraseTokenizer
 	private bool MemberOrMethodCallWithNoArguments() =>
 		index > 0 && input[index - 1] == ' ' && input[index - 2] != ',';
 
-	private bool IsNotBinaryOperator() =>
-		input[index - 1] == ' ' && (input[index] != '*' || input[index] != '+' || input[index] != '-' || input[index] != '/');
+	private bool IsNotBinaryOperation() =>
+		input[index - 1] == ' ' && (input[index] != '*' && input[index] != '+' && input[index] != '-' && input[index] != '/');
 
 	private static Range[] MergeAllTokensIntoSingleList(List<Range> result) =>
 		new[] { result[0].Start..result[^1].End };
