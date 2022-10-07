@@ -171,7 +171,7 @@ public sealed class PhraseTokenizer
 		index > 0 && input[index - 1] == ' ' && input[index - 2] != ',';
 
 	private bool IsNotBinaryOperation() =>
-		input[index - 1] == ' ' && (input[index] != '*' && input[index] != '+' && input[index] != '-' && input[index] != '/');
+		input[index - 1] == ' ' && input[index] != '*' && input[index] != '+' && input[index] != '-' && input[index] != '/';
 
 	private static Range[] MergeAllTokensIntoSingleList(List<Range> result) =>
 		new[] { result[0].Start..result[^1].End };

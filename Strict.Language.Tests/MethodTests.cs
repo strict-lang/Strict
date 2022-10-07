@@ -104,4 +104,22 @@ public sealed class MethodTests
 		var binary = (Binary)((Assignment)method.GetBodyAndParseIfNeeded()).Value;
 		Assert.That(binary.Instance, Is.InstanceOf<ParameterCall>());
 	}
+
+	[TestCase("Run(variable Generic)")]
+	[TestCase("Run(generic)")]
+	[TestCase("Run(number, input Generic, generic)")]
+	[TestCase("Run(number) Generic")]
+	public void GenericMethods(string methodHeader) =>
+		Assert.That(new Method(type, 0, new MethodExpressionParser(), new[]
+		{
+			methodHeader
+		}).IsGeneric, Is.True);
+
+	[TestCase("Run(text) Number")]
+	[TestCase("Run(variable Number, input Text) Boolean")]
+	public void NonGenericMethods(string methodHeader) =>
+		Assert.That(new Method(type, 0, new MethodExpressionParser(), new[]
+		{
+			methodHeader
+		}).IsGeneric, Is.False);
 }

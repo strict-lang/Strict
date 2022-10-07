@@ -120,7 +120,7 @@ public class CSharpTypeVisitor : TypeVisitor
 			hasTestMethods = true;
 			AddTestExpressions(testMethod);
 		}
-		if(hasTestMethods)
+		if (hasTestMethods)
 			FileContent += $"{NewLine}\t}}{NewLine}";
 	}
 

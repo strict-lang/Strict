@@ -288,4 +288,19 @@ public sealed class TypeTests
 		Assert.That(
 			() => package.GetType(Base.Text).GetGenericImplementation(package.GetType(Base.Number)),
 			Throws.InstanceOf<Type.CannotGetGenericImplementationOnNonGeneric>());
+
+	[Test]
+	public void UsingGenericMethodIsAllowed()
+	{
+		var type = CreateType(nameof(CanUpCastNumberWithList), "has log",
+			"Add(first Generic, other List) List", "\tfirst + other");
+		Assert.That(
+			type.FindMethod("Add",
+				new List<Expression>
+				{
+					new Text(type, "hello"),
+					new List(null!, new List<Expression> { new Number(type, 6), new Number(type, 7) })
+				})?.ToString(),
+			Is.EqualTo("Add(first TestPackage.Generic, other TestPackage.List) List"));
+	}
 }
