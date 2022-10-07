@@ -24,7 +24,6 @@ public interface DummyApp
 	}
 
 	[Test]
-	[Ignore("TODO: Not yet done")]
 	public void GenerateCSharpClass()
 	{
 		var program = CreateHelloWorldProgramType();
@@ -127,18 +126,19 @@ public class Program
 				nameof(InvalidConsoleAppWillGiveUsCompilationError), "lafine=soeu"),
 			Throws.InstanceOf<CSharpCompilationFailed>().And.Message.Contains("The build failed."));
 
+	[Ignore("Visiting For expressions needs to be supported")]
 	[Test]
 	[Category("Manual")]
 	public void GenerateDirectoryGetFilesProgram()
 	{
 		var program = new Type(package, new TypeLines(nameof(GenerateDirectoryGetFilesProgram),
-			"implement App", "has log", "has directory = \".\"", "Run", "\tfor value in directory.GetFiles", "\t\tlog.Write(value)")).ParseMembersAndMethods(parser);
+			"implement App", "has log", "has directory = \".\"", "Run", "\tfor directory.GetFiles", "\t\tlog.Write(value)")).ParseMembersAndMethods(parser);
 		var generatedCode = generator.Generate(program).ToString()!;
 		Assert.That(GenerateNewConsoleAppAndReturnOutput(ProjectFolder, generatedCode),
 			Is.EqualTo("Program.cs" + Environment.NewLine));
 	}
 
-	[Category("Manual")] // Unit Tests in strict are not compiling; after removing them this test works
+	[Category("Manual")]
 	[Test]
 	public Task ArithmeticFunction() =>
 		GenerateCSharpByReadingStrictProgramAndCompareWithOutput(nameof(ArithmeticFunction));

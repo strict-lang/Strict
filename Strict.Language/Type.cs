@@ -29,6 +29,12 @@ public class Type : Context
 				break;
 	}
 
+	public sealed class TypeAlreadyExistsInPackage : Exception
+	{
+		public TypeAlreadyExistsInPackage(string name, Package package) : base(
+			name + " in package: " + package) { }
+	}
+
 	private string ValidateCurrentLineIsNonEmptyAndTrimmed()
 	{
 		var line = lines[lineNumber];
@@ -38,16 +44,14 @@ public class Type : Context
 			throw new ExtraWhitespacesFoundAtBeginningOfLine(this, lineNumber, line);
 		if (char.IsWhiteSpace(line[^1]))
 			throw new ExtraWhitespacesFoundAtEndOfLine(this, lineNumber, line);
-		if (line.Contains(Base.Generic, StringComparison.Ordinal))
+		if (HasGenericMember(line))
 			IsGeneric = true;
 		return line;
 	}
 
-	public sealed class TypeAlreadyExistsInPackage : Exception
-	{
-		public TypeAlreadyExistsInPackage(string name, Package package) : base(
-			name + " in package: " + package) { }
-	}
+	private static bool HasGenericMember(string line) =>
+		line.StartsWith(Has, StringComparison.Ordinal) && (line.Contains(Base.Generic, StringComparison.Ordinal)
+			|| line.Contains(Base.Generic.MakeFirstLetterLowercase(), StringComparison.Ordinal));
 
 	private readonly string[] lines;
 	private int lineNumber;
@@ -342,6 +346,9 @@ public class Type : Context
 
 	public Method? FindMethod(string methodName, IReadOnlyList<Expression> arguments)
 	{
+		if (IsGeneric)
+			throw new GenericTypesCannotBeUsedDirectlyUseImplementation(this,
+				"Type is Generic and cannot be used directly");
 		if (!AvailableMethods.TryGetValue(methodName, out var matchingMethods))
 			return FindAndCreateFromBaseMethod(methodName, arguments);
 		foreach (var method in matchingMethods)
@@ -360,9 +367,9 @@ public class Type : Context
 		{
 			var methodParameterType = method.Parameters[index].Type;
 			var argumentReturnType = arguments[index].ReturnType;
-			if (methodParameterType.IsList != argumentReturnType.IsList && methodParameterType.Name != Base.Any) //TODO: to allow finding "in(any)" method from Any type for all For iterators. Any other approach general approach would be good?
+			if (methodParameterType.IsList != argumentReturnType.IsList && methodParameterType.Name != Base.Any)
 				return false;
-			if (argumentReturnType == methodParameterType)
+			if (argumentReturnType == methodParameterType || method.IsGeneric)
 				return true;
 			if (methodParameterType is GenericType parameterGenericType)
 			{
@@ -515,7 +522,7 @@ I have no idea how you got this far with checks like these*/
 					cachedAvailableMethods.Add(method.Name, new List<Method> { method });
 			foreach (var implementType in implements)
 				// If we are in a specific implementation (GenericType), don't add generic methods
-				if (IsGeneric || !implementType.IsGeneric && implementType.Name != Base.Mutable) // TODO: Need to find a good solution here; temporary hack to not add from(any) Mutable to all types which implements it
+				if (IsGeneric || !implementType.IsGeneric && implementType.Name != Base.Mutable)
 					AddAvailableMethods(implementType);
 			if (Name != Base.Any)
 				AddAvailableMethods(GetType(Base.Any));

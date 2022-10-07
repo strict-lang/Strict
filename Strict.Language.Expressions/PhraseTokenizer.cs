@@ -146,8 +146,8 @@ public sealed class PhraseTokenizer
 				{
 					if (input[index - 1] == '.')
 						isInMethodCall = true;
-					if (input[index] == ' '){
-						foundNoSpace = false;}
+					if (input[index] == ' ')
+						foundNoSpace = false;
 					ProcessNormalToken(result.Add);
 					if (isInMethodCall)
 					{

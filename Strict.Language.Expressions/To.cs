@@ -21,7 +21,8 @@ public sealed class To : MethodCall
 			throw new ConversionTypeIsIncompatible(body,
 				$"Conversion for {left.ReturnType.Name} and {conversionType.Name} does not exist",
 				conversionType);
-		return new To(left, left.ReturnType.GetMethod(BinaryOperator.To, Array.Empty<Expression>()), conversionType);
+		return new To(left, left.ReturnType.GetMethod(BinaryOperator.To, Array.Empty<Expression>()),
+			conversionType);
 	}
 
 	public sealed class ConversionTypeNotFound : ParsingFailed

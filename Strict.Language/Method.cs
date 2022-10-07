@@ -58,6 +58,8 @@ public sealed class Method : Context
 			return GetEmptyReturnType(type);
 		if (IsReturnTypeAny(rest))
 			throw new MethodReturnTypeAsAnyIsNotAllowed(this, rest.ToString());
+		if (IsMethodGeneric(rest))
+			IsGeneric = true;
 		var closingBracketIndex = rest.LastIndexOf(')');
 		var gotBrackets = closingBracketIndex > 0;
 		return gotBrackets && rest.Length == 2
@@ -84,6 +86,11 @@ public sealed class Method : Context
 		public MethodReturnTypeAsAnyIsNotAllowed(Method method, string name) : base(method.Type, 0, name) { }
 	}
 
+	private static bool IsMethodGeneric(ReadOnlySpan<char> headerLine) =>
+		headerLine.Contains(Base.Generic, StringComparison.Ordinal) ||
+		headerLine.Contains(Base.Generic.MakeFirstLetterLowercase(),
+			StringComparison.Ordinal);
+
 	private Type ParseParameters(Type type, ReadOnlySpan<char> rest, int closingBracketIndex)
 	{
 		foreach (var nameAndType in rest[1..closingBracketIndex].
@@ -100,6 +107,8 @@ public sealed class Method : Context
 			? Type.GetType(rest[(closingBracketIndex + 2)..].ToString())
 			: GetEmptyReturnType(type);
 	}
+
+	public bool IsGeneric { get; private set; }
 
 	private static bool IsParameterTypeAny(string nameAndTypeString) =>
 		nameAndTypeString == Base.Any.MakeFirstLetterLowercase() ||
@@ -230,6 +239,7 @@ public sealed class Method : Context
 			clone.parameters[index] = clone.parameters[index].CloneWithImplementationType(
 				ReplaceWithImplementationOrGenericType(clone.Parameters[index].Type,
 					typeWithImplementation));
+		clone.IsGeneric = false;
 		return clone;
 	}
 
