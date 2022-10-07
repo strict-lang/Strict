@@ -17,7 +17,7 @@ public sealed class ForTests : TestExpressions
 	[Test]
 	public void InvalidForExpression() =>
 		Assert.That(() => ParseExpression("for gibberish", "\tlog.Write(\"Hi\")"),
-			Throws.InstanceOf<IdentifierNotFound>());
+			Throws.InstanceOf<For.UnidentifiedIterable>());
 
 	[Test]
 	public void VariableOutOfScope() =>
@@ -106,9 +106,9 @@ public sealed class ForTests : TestExpressions
 	[Test]
 	public void ValidIteratorReturnTypeWithValue() =>
 		Assert.That(
-			((Mutable)((VariableCall)((MethodCall)((For)ParseExpression("for (1, 2, 3)",
-				"\tlog.Write(value)")).Body).Arguments[0]).CurrentValue).DataReturnType.Name,
-			Is.EqualTo(Base.List + Base.Number));
+			((VariableCall)((MethodCall)((For)ParseExpression("for (1, 2, 3)",
+				"\tlog.Write(value)")).Body).Arguments[0]).ReturnType.Name,
+			Is.EqualTo(Base.Number));
 
 	[Test]
 	public void ParseForListExpressionWithIterableVariable() =>

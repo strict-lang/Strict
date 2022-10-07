@@ -339,10 +339,17 @@ public class Type : Context
 	}
 
 	public const string Extension = ".strict";
+	public Member? FindMember(string name) => Members.FirstOrDefault(member => member.Name == name);
 
 	public Method GetMethod(string methodName, IReadOnlyList<Expression> arguments) =>
 		FindMethod(methodName, arguments) ??
 		throw new NoMatchingMethodFound(this, methodName, AvailableMethods);
+
+	public void AssignMethodsToMutable(Type type)
+	{
+		if (Name == Base.Mutable)
+			methods.AddRange(type.Methods);
+	}
 
 	public Method? FindMethod(string methodName, IReadOnlyList<Expression> arguments)
 	{
@@ -377,6 +384,9 @@ public class Type : Context
 					return false;
 				continue;
 			}
+			if (argumentReturnType.IsMutable && argumentReturnType.MutableReturnType?.Name ==
+				methodParameterType.Name)
+				return true;
 			if (methodParameterType.IsGeneric)
 				throw new GenericTypesCannotBeUsedDirectlyUseImplementation(methodParameterType,
 					"(parameter " + index + ") is not usable with argument " + arguments[index].ToStringWithType() + " in " +
@@ -391,7 +401,9 @@ public class Type : Context
 		IsGeneric
 			? Name == Base.List
 			: this is GenericType generic && generic.Generic.Name == Base.List;
+	private bool IsMutable => Name == Base.Mutable;
 
+	public Type? MutableReturnType { get; set; }
 	private Method? FindAndCreateFromBaseMethod(string methodName,
 		IReadOnlyList<Expression> arguments)
 	{

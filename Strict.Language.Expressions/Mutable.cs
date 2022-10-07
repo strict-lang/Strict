@@ -5,7 +5,12 @@ namespace Strict.Language.Expressions;
 
 public sealed class Mutable : Value
 {
-	private Mutable(Context context, Expression expression) : base(context.GetType(Base.Mutable), expression) { }
+	private Mutable(Context context, Expression expression) : base(context.GetType(Base.Mutable),
+		expression)
+	{
+		ReturnType.AssignMethodsToMutable(DataReturnType);
+		ReturnType.MutableReturnType = DataReturnType;
+	}
 
 	public static Expression? TryParse(Body body, ReadOnlySpan<char> line) =>
 		line.Contains(" = ", StringComparison.Ordinal)

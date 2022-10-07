@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using NUnit.Framework;
 using static Strict.Language.Type;
 
@@ -101,6 +102,14 @@ public sealed class MethodCallTests : TestExpressions
 		Assert.That(ParseExpression(fromMethodCall).ToString(), Is.EqualTo(fromMethodCall));
 
 	[Test]
+	public void MakeSureMutableHasAllTheTypesOfItsChild()
+	{
+		var expression = ParseExpression("Mutable(7)");
+		Assert.That(
+			expression.ReturnType.Methods.Count, Is.EqualTo(((Mutable)expression).DataReturnType.Methods.Count + 1));
+	}
+
+	[Test]
 	public void FromExampleFailsOnImproperParameters() =>
 		Assert.That(() => ParseExpression("Range(1, 2, 3, 4)"),
 			Throws.InstanceOf<NoMatchingMethodFound>());
@@ -187,6 +196,20 @@ public sealed class MethodCallTests : TestExpressions
 		Assert.That(program.Methods[1].GetBodyAndParseIfNeeded().ToString(),
 			Is.EqualTo("let countOfFive = Count(5)\r\nlet lengthSquare = GetLengthSquare(countOfFive)"));
 	}
+
+	[Test]
+	public void MutableCanUseChildMethods()
+	{
+		var program = new Type(type.Package,
+			new TypeLines(nameof(MutableCanUseChildMethods),
+				"has log",
+				"Dummy Number",
+				"\tlet mutableNumber = Mutable(5)",
+				"\tmutableNumber + 10")).ParseMembersAndMethods(new MethodExpressionParser());
+		Assert.That(program.Methods[0].GetBodyAndParseIfNeeded().ToString(),
+			Is.EqualTo("let mutableNumber = 5\r\nmutableNumber + 10"));
+	}
+
 
 	[Test]
 	public void ConstructorCallWithMethodCall()
