@@ -7,6 +7,7 @@ public abstract class NamedType
 {
 	protected NamedType(Context definedIn, ReadOnlySpan<char> nameAndType, Type? typeFromValue = null)
 	{
+		IsMutable = nameAndType.Contains("Mutable(", StringComparison.Ordinal);
 		if (typeFromValue == null)
 		{
 			var parts = nameAndType.Split();
@@ -15,7 +16,7 @@ public abstract class NamedType
 			if (!Name.IsWord())
 				throw new Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers(Name);
 			Type = definedIn.GetType(parts.MoveNext()
-				? parts.Current.ToString()
+				? GetTypeName(parts.Current.ToString())
 				: Name.MakeFirstLetterUppercase());
 		}
 		else
@@ -28,6 +29,13 @@ public abstract class NamedType
 				throw new Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers(Name);
 		}
 	}
+
+	public bool IsMutable { get; }
+
+	private string GetTypeName(string typeName) =>
+		IsMutable
+			? typeName[(typeName.IndexOf('(') + 1)..typeName.IndexOf(')')]
+			: typeName;
 
 	// ReSharper disable once HollowTypeName
 	public sealed class AssignmentWithInitializerTypeShouldNotHaveNameWithType : Exception

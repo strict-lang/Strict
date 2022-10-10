@@ -303,4 +303,27 @@ public sealed class TypeTests
 				})?.ToString(),
 			Is.EqualTo("Add(first TestPackage.Generic, other TestPackage.List) List"));
 	}
+
+	[Test]
+	public void GenericMethodShouldAcceptAllInputTypes()
+	{
+		var type = CreateType(nameof(GenericMethodShouldAcceptAllInputTypes),
+			"implement Output",
+			"has log",
+			"Write(generic)", "\tlog.Write(generic)");
+		Assert.That(
+			type.FindMethod("Write",
+				new List<Expression>
+				{
+					new Text(type, "hello")
+				})?.ToString(),
+			Is.EqualTo("Write(generic TestPackage.Generic)"));
+		Assert.That(
+			type.FindMethod("Write",
+				new List<Expression>
+				{
+					new Number(type, 5)
+				})?.ToString(),
+			Is.EqualTo("Write(generic TestPackage.Generic)"));
+	}
 }

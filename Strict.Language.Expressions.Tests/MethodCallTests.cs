@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Linq;
 using NUnit.Framework;
 using static Strict.Language.Type;
 
@@ -105,8 +104,8 @@ public sealed class MethodCallTests : TestExpressions
 	public void MakeSureMutableHasAllTheTypesOfItsChild()
 	{
 		var expression = ParseExpression("Mutable(7)");
-		Assert.That(
-			expression.ReturnType.Methods.Count, Is.EqualTo(((Mutable)expression).DataReturnType.Methods.Count + 1));
+		Assert.That(expression.ReturnType.Methods.Count,
+			Is.EqualTo(((Mutable)expression).DataReturnType.Methods.Count + 2));
 	}
 
 	[Test]
@@ -209,7 +208,6 @@ public sealed class MethodCallTests : TestExpressions
 		Assert.That(program.Methods[0].GetBodyAndParseIfNeeded().ToString(),
 			Is.EqualTo("let mutableNumber = 5\r\nmutableNumber + 10"));
 	}
-
 
 	[Test]
 	public void ConstructorCallWithMethodCall()

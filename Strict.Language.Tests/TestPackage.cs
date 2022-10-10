@@ -57,7 +57,9 @@ public class TestPackage : Package
 				"\tRange(2, 18).Length is 16",
 				"\tEnd - Start")),
 			new Type(this, new TypeLines("HasLength", "Length Number")),
-			new Type(this, new TypeLines(Base.Mutable, "from(any)")),
+			new Type(this, new TypeLines(Base.Mutable,
+				"from(any)",
+				"from(type)")),
 			new Type(this, new TypeLines(Base.Count,
 				"implement Number",
 				"implement HasLength",
@@ -120,7 +122,8 @@ public class TestPackage : Package
 				"Read Text",
 				"Write(text)",
 				"Delete",
-				"Length Number"))
+				"Length Number")),
+			new Type(this, new TypeLines(Base.Output, "Write(generic)"))
 		};
 		foreach (var type in types)
 			type.ParseMembersAndMethods(null!);

@@ -48,4 +48,5 @@ public static class Base
 	public const string Run = nameof(Run);
 	public const string Assignment = nameof(Assignment);
 	public const string Value = "value";
+	public const string Output = nameof(Output);
 }

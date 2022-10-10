@@ -185,4 +185,15 @@ public sealed class ListTests : TestExpressions
 		Assert.That(program.Members[0].Name, Is.EqualTo("elements"));
 		Assert.That(program.Methods[0].ReturnType.Name, Is.EqualTo("List"));
 	}
+
+	[TestCase("Add(input Count) List", "NumbersCompatibleWithCount")]
+	[TestCase("Add(input Character) List", "NumbersCompatibleWithCharacter")]
+	public void NumbersCompatibleWithImplementedTypes(string code, string testName)
+	{
+		var program = new Type(type.Package,
+				new TypeLines(testName, "has log", code, "\tlet result = (1, 2, 3, input)")).
+			ParseMembersAndMethods(parser);
+		Assert.That(program.Methods[0].GetBodyAndParseIfNeeded().ReturnType,
+			Is.EqualTo(program.GetListType(type.GetType(Base.Number))));
+	}
 }
