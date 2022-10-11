@@ -19,7 +19,6 @@ public class Kernel : IDisposable
 		handle?.Dispose();
 	}
 
-	// ReSharper disable once MethodTooLong
 	public void CompileKernelAndSaveAsPtxFile()
 	{
 		//generate as output language obviously from strict code
@@ -30,8 +29,15 @@ public class Kernel : IDisposable
     out[tid] = a * x[tid] + y[tid];
   }
 }";
-		nvrtcResult result;
 		using var rtc = new CudaRuntimeCompiler(Code, "saxpy");
+		var result = CompileInTryCatch(rtc);
+		if (result == nvrtcResult.Success)
+			GeneratePtxOutputFile(rtc);
+	}
+
+	private static nvrtcResult CompileInTryCatch(CudaRuntimeCompiler rtc)
+	{
+		nvrtcResult result;
 		try
 		{
 			// see http://docs.nvidia.com/cuda/nvrtc/index.html for usage and options
@@ -44,11 +50,12 @@ public class Kernel : IDisposable
 		{
 			result = ex.NVRTCError;
 		}
-		if (result == nvrtcResult.Success)
-		{
-			//we could consume right away, this could be done in for caching or in the background for next usage
-			using var file = new StreamWriter(@"VectorAdd.ptx");
-			file.Write(rtc.GetPTXAsString());
-		}
+		return result;
+	}
+
+	private static void GeneratePtxOutputFile(CudaRuntimeCompiler rtc)
+	{ //we could consume right away, this could be done in for caching or in the background for next usage
+		using var file = new StreamWriter(@"VectorAdd.ptx");
+		file.Write(rtc.GetPTXAsString());
 	}
 }

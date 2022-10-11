@@ -312,57 +312,60 @@ public class MethodExpressionParser : ExpressionParser
 	/// Could also contain strings, we don't know. Most of the time it will just be a bunch of values.
 	/// <see cref="ShuntingYard" /> will only parse till the next comma, has to call this till the end.
 	/// </summary>
-	// ReSharper disable once CyclomaticComplexity
-	// ReSharper disable once ExcessiveIndentation
-	// ReSharper disable once MethodTooLong
 	public override List<Expression> ParseListArguments(Body body, ReadOnlySpan<char> innerSpan)
 	{
 		if (innerSpan.Contains('(') || innerSpan.Contains('"') && innerSpan.Contains(' '))
 		{
 			if (If.CanTryParseConditional(body, innerSpan))
 				return new List<Expression> { If.ParseConditional(body, innerSpan) };
-			// The postfix data comes in upside down, so use another stack to restore order
-			var expressions = new Stack<Expression>();
 			// Similar to TryParseExpression, but we know there is commas separating things!
 			var postfix = new ShuntingYard(innerSpan.ToString());
-			if (postfix.Output.Count == 1)
-				expressions.Push(ParseTextWithSpacesOrListWithMultipleOrNestedElements(body,
-					innerSpan[postfix.Output.Pop()]));
-			else if (postfix.Output.Count == 2)
-				expressions.Push(
-					ParseMethodCallWithArguments(body, innerSpan,
-						postfix)); // this line could be tested after unary operator (e.g. not) is working
-			else
-				do
-				{
-#if LOG_DETAILS
-					Logger.Info("pushing list element " + innerSpan[postfix.Output.Peek()].ToString());
-#endif
-					var span = innerSpan[postfix.Output.Peek()];
-					// Is this a binary expression we have to put into the list (already tokenized and postfixed)
-					try
-					{
-						if (span.Length == 1 && span[0].IsSingleCharacterOperator() ||
-							span.IsMultiCharacterOperator())
-							expressions.Push(Binary.Parse(body, innerSpan, postfix.Output));
-						else
-							expressions.Push(
-								body.Method.ParseExpression(body, innerSpan[postfix.Output.Pop()]));
-					}
-					catch (UnknownExpression ex)
-					{
-						throw new UnknownExpressionForArgument(body,
-							span.ToString() + " is invalid for argument " + expressions.Count + " " +
-							ex.Message);
-					}
-					if (postfix.Output.Count > 0 && innerSpan[postfix.Output.Pop().Start.Value] != ',')
-						throw new ListTokensAreNotSeparatedByComma(body);
-				} while (postfix.Output.Count > 0);
+			// The postfix data comes in upside down, so use another stack to restore order
+			var expressions = GetListArgumentsUsingPostfixTokens(body, innerSpan, postfix);
 			return new List<Expression>(expressions);
 		}
 		if (innerSpan.Length == 0)
 			throw new List.EmptyListNotAllowed(body);
 		return ParseAllElementsFast(body, innerSpan, new RangeEnumerator(innerSpan, ',', 0));
+	}
+
+	// ReSharper disable once MethodTooLong
+	private Stack<Expression> GetListArgumentsUsingPostfixTokens(Body body, ReadOnlySpan<char> innerSpan,
+		ShuntingYard postfix)
+	{
+		var expressions = new Stack<Expression>();
+		if (postfix.Output.Count == 1)
+			expressions.Push(ParseTextWithSpacesOrListWithMultipleOrNestedElements(body,
+				innerSpan[postfix.Output.Pop()]));
+		else if (postfix.Output.Count == 2)
+			expressions.Push(
+				ParseMethodCallWithArguments(body, innerSpan,
+					postfix)); // this line could be tested after unary operator (e.g. not) is working
+		else
+			do
+			{
+#if LOG_DETAILS
+				Logger.Info("pushing list element " + innerSpan[postfix.Output.Peek()].ToString());
+#endif
+				var span = innerSpan[postfix.Output.Peek()];
+				// Is this a binary expression we have to put into the list (already tokenized and postfixed)
+				try
+				{
+					if (span.Length == 1 && span[0].IsSingleCharacterOperator() ||
+						span.IsMultiCharacterOperator())
+						expressions.Push(Binary.Parse(body, innerSpan, postfix.Output));
+					else
+						expressions.Push(body.Method.ParseExpression(body, innerSpan[postfix.Output.Pop()]));
+				}
+				catch (UnknownExpression ex)
+				{
+					throw new UnknownExpressionForArgument(body,
+						span.ToString() + " is invalid for argument " + expressions.Count + " " + ex.Message);
+				}
+				if (postfix.Output.Count > 0 && innerSpan[postfix.Output.Pop().Start.Value] != ',')
+					throw new ListTokensAreNotSeparatedByComma(body);
+			} while (postfix.Output.Count > 0);
+		return expressions;
 	}
 
 	private static List<Expression> ParseAllElementsFast(Body body, ReadOnlySpan<char> input,

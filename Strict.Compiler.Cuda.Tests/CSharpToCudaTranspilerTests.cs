@@ -49,7 +49,6 @@ public class CSharpToCudaTranspilerTests
 	private Type GetParsedCSharpType(string fileName) =>
 		transpiler.ParseCSharp(@"..\..\..\Input\" + fileName + ".cs");
 
-	// ReSharper disable once MethodTooLong
 	private static CudaDeviceVariable<float> CreateAndRunKernel(CudaRuntimeCompiler rtc, string methodName)
 	{
 		var context = new CudaContext(0);
@@ -57,20 +56,26 @@ public class CSharpToCudaTranspilerTests
 		var output = new CudaDeviceVariable<float>(Count);
 		var kernel = context.LoadKernelPTX(rtc.GetPTX(), methodName);
 		if (methodName == "Process")
-		{
-			CudaDeviceVariable<float> input = new[] { 1f };
-			const int Width = 1;
-			const int Height = 1;
-			const float InitialDepth = 5f;
-			kernel.Run(input.DevicePointer, Width, Height, InitialDepth, output.DevicePointer);
-		}
+			RunKernelForProcessMethod(kernel, output);
 		else
-		{
-			CudaDeviceVariable<float> first = new[] { 1f };
-			CudaDeviceVariable<float> second = new[] { 2f };
-			kernel.Run(first.DevicePointer, second.DevicePointer, output.DevicePointer, Count);
-		}
+			RunKernel(kernel, output, Count);
 		return output;
+	}
+
+	private static void RunKernel(CudaKernel? kernel, CudaDeviceVariable<float> output, int count)
+	{
+		CudaDeviceVariable<float> first = new[] { 1f };
+		CudaDeviceVariable<float> second = new[] { 2f };
+		kernel?.Run(first.DevicePointer, second.DevicePointer, output.DevicePointer, count);
+	}
+
+	private static void RunKernelForProcessMethod(CudaKernel? kernel, CudaDeviceVariable<float> output)
+	{
+		CudaDeviceVariable<float> input = new[] { 1f };
+		const int Width = 1;
+		const int Height = 1;
+		const float InitialDepth = 5f;
+		kernel?.Run(input.DevicePointer, Width, Height, InitialDepth, output.DevicePointer);
 	}
 
 	private static CudaRuntimeCompiler CompileKernelAndSaveAsPtxFile(string code, string typeName)

@@ -24,35 +24,15 @@ public class CSharpToCudaTranspiler
 		return GenerateCuda(type);
 	}
 
-	// ReSharper disable once MethodTooLong
 	public static string GenerateCuda(Type type)
 	{
 		var expression = type.Methods[0].GetBodyAndParseIfNeeded().ToString();
-		var @operator = expression.Contains('+')
-			? "+"
-			: expression.Contains('-')
-				? "-"
-				: expression.Contains('*')
-					? "*"
-					: "";
-		var parameterText = "";
+		var parameterText = GetParameterTextWithNameAndType(type) + "float *output";
 		string output;
-		foreach (var parameter in type.Methods[0].Parameters)
-		{
-			if (parameter.Type.Name != Base.Number)
-				throw new NotSupportedException(parameter.ToString());
-			if (parameter.Name is "Width" or "Height")
-				parameterText += "const int " + parameter.Name + ", ";
-			else if (parameter.Name == "initialDepth")
-				parameterText += "const float " + parameter.Name + ", ";
-			else
-				parameterText += "const float *" + parameter.Name + ", ";
-		}
-		parameterText += "float *output";
 		if (!parameterText.Contains("Width"))
 		{
 			parameterText += ", const int count";
-			output = "first[idx] " + @operator + @" second[idx]";
+			output = "first[idx] " + GetOperator(expression) + @" second[idx]";
 		}
 		else
 		{
@@ -66,6 +46,31 @@ public class CSharpToCudaTranspiler
 	int idx = y * blockDim.x + x;
 	output[idx] = " + output + @";
 }";
+	}
+
+	private static string GetOperator(string expression) =>
+		expression.Contains('+')
+			? "+"
+			: expression.Contains('-')
+				? "-"
+				: expression.Contains('*')
+					? "*"
+					: "";
+
+	private static string GetParameterTextWithNameAndType(Type type)
+	{
+		var parameterText = "";
+		foreach (var parameter in type.Methods[0].Parameters)
+			parameterText += parameter.Type.Name switch
+			{
+				Base.Number when parameter.Name is "Width" or "Height" => "const int " + parameter.Name +
+					", ",
+				Base.Number when parameter.Name == "initialDepth" => "const float " + parameter.Name +
+					", ",
+				Base.Number => "const float *" + parameter.Name + ", ",
+				_ => throw new NotSupportedException(parameter.ToString())
+			};
+		return parameterText;
 	}
 
 	public Type ParseCSharp(string filePath) =>
@@ -101,7 +106,6 @@ public class CSharpType : Type
 		*/
 	}
 
-	// ReSharper disable once CyclomaticComplexity
 	public CSharpType(Package strictPackage, string filePath) : base(
 		strictPackage, new TypeLines(Path.GetFileNameWithoutExtension(filePath), File.ReadAllLines(filePath)))
 	{

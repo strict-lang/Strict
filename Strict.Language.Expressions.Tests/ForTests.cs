@@ -2,7 +2,6 @@
 
 namespace Strict.Language.Expressions.Tests;
 
-// ReSharper disable once ClassTooBig
 public sealed class ForTests : TestExpressions
 {
 	[Test]
@@ -15,11 +14,6 @@ public sealed class ForTests : TestExpressions
 		Assert.That(() => ParseExpression("for"), Throws.InstanceOf<For.MissingExpression>());
 
 	[Test]
-	public void InvalidForExpression() =>
-		Assert.That(() => ParseExpression("for gibberish", "\tlog.Write(\"Hi\")"),
-			Throws.InstanceOf<For.UnidentifiedIterable>());
-
-	[Test]
 	public void VariableOutOfScope() =>
 		Assert.That(
 			() => ParseExpression("for Range(2, 5)", "\tlet num = 5", "for Range(0, 10)",
@@ -27,15 +21,11 @@ public sealed class ForTests : TestExpressions
 			Throws.InstanceOf<IdentifierNotFound>().With.Message.StartWith("num"));
 
 	[Test]
-	public void ValidExpressionType() =>
-		Assert.That(ParseExpression("for Range(2, 5)", "\tlog.Write(\"Hi\")"),
-			Is.TypeOf(typeof(For)));
-
-	[Test]
 	public void Equals()
 	{
 		var first = ParseExpression("for Range(2, 5)", "\tlog.Write(\"Hi\")");
 		var second = ParseExpression("for Range(2, 5)", "\tlog.Write(\"Hi\")");
+		Assert.That(first, Is.InstanceOf<For>());
 		Assert.That(first.Equals(second), Is.True);
 	}
 
@@ -51,9 +41,10 @@ public sealed class ForTests : TestExpressions
 		Assert.That(() => ParseExpression("for index in Range(0, 5)", "\tlog.Write(index)"),
 			Throws.InstanceOf<For.IndexIsReserved>());
 
-	[Test]
-	public void UnidentifiedIterable() =>
-		Assert.That(() => ParseExpression("for element in gibberish", "\tlog.Write(element)"),
+	[TestCase("for gibberish", "\tlog.Write(\"Hi\")")]
+	[TestCase("for element in gibberish", "\tlog.Write(element)")]
+	public void UnidentifiedIterable(params string[] lines) =>
+		Assert.That(() => ParseExpression(lines),
 			Throws.InstanceOf<For.UnidentifiedIterable>());
 
 	[Test]

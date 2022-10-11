@@ -73,7 +73,6 @@ public class BlurPerformanceTests
 	private byte[] image = Array.Empty<byte>();
 	private const int BlurIterations = 200;
 
-	// ReSharper disable once MethodTooLong
 	public void CompileKernel()
 	{
 		//generate as output language obviously from strict code
@@ -85,31 +84,40 @@ public class BlurPerformanceTests
   }
 }";
 		using var rtc = new CudaRuntimeCompiler(Code, "blur");
+		CompileInTryCatchBlock(rtc);
+	}
+
+	private void CompileInTryCatchBlock(CudaRuntimeCompiler rtc)
+	{
 		try
 		{
 			// Use max capabilities on actual hardware we have at runtime
 			var computeVersion = CudaContext.GetDeviceComputeCapability(0);
 			var shaderModelVersion = "" + computeVersion.Major + computeVersion.Minor;
 			Console.WriteLine("ShaderModelVersion=" + shaderModelVersion);
-			// see http://docs.nvidia.com/cuda/nvrtc/index.html for usage and options
-			//https://arnon.dk/matching-sm-architectures-arch-and-gencode-for-various-nvidia-cards/
-			//nvcc .\vectorAdd.cu -use_fast_math -ptx -m 64 -arch compute_61 -code sm_61 -o .\vectorAdd.ptx
-			//https://docs.nvidia.com/cuda/nvrtc/index.html#group__options
-			rtc.Compile(new[] { "--gpu-architecture=compute_" + shaderModelVersion });
-			Console.WriteLine("Cuda compile log: " + rtc.GetLogAsString());
-			const int DeviceID = 0;
-			var ctx = new CudaContext(DeviceID);
-			kernel = ctx.LoadKernelPTX(rtc.GetPTX(), "blur");
-			kernel.GridDimensions = (Size + 511) / 512;
-			kernel.BlockDimensions = 512;
-			input = image;
-			output = new CudaDeviceVariable<byte>(Size);
+			Compile(rtc, shaderModelVersion);
 		}
 		catch (NVRTCException)
 		{
 			Console.WriteLine("Cuda compile log: " + rtc.GetLogAsString());
 			throw;
 		}
+	}
+
+	private void Compile(CudaRuntimeCompiler rtc, string shaderModelVersion)
+	{ // see http://docs.nvidia.com/cuda/nvrtc/index.html for usage and options
+		//https://arnon.dk/matching-sm-architectures-arch-and-gencode-for-various-nvidia-cards/
+		//nvcc .\vectorAdd.cu -use_fast_math -ptx -m 64 -arch compute_61 -code sm_61 -o .\vectorAdd.ptx
+		//https://docs.nvidia.com/cuda/nvrtc/index.html#group__options
+		rtc.Compile(new[] { "--gpu-architecture=compute_" + shaderModelVersion });
+		Console.WriteLine("Cuda compile log: " + rtc.GetLogAsString());
+		const int DeviceID = 0;
+		var ctx = new CudaContext(DeviceID);
+		kernel = ctx.LoadKernelPTX(rtc.GetPTX(), "blur");
+		kernel.GridDimensions = (Size + 511) / 512;
+		kernel.BlockDimensions = 512;
+		input = image;
+		output = new CudaDeviceVariable<byte>(Size);
 	}
 
 	private int Size => width * height * 4;
