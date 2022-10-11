@@ -1,6 +1,6 @@
 ﻿namespace Strict.VM;
 
-public class Instruction
+public sealed class Instruction
 {
 	public Instruction(OperationCode operationCode, int value = 0)
 	{
