@@ -102,8 +102,8 @@ public class MethodExpressionParser : ExpressionParser
 			input[methodRange].ToString() + " arguments=" + input[argumentsRange].ToString());
 #endif
 		if (input[argumentsRange.Start.Value] == '(')
-			return ParseInContext(body.Method.Type, body,
-					input[methodRange], // MethodCall always produces single token from ShutingYard so this call never happens atm, I think using unary operator could be a way to hit this line
+			return ParseInContext(body.Method.Type, body, //ncrunch: no coverage
+					input[methodRange],
 					ParseListArguments(body,
 						input[(argumentsRange.Start.Value + 1)..(argumentsRange.End.Value - 1)])) ??
 				throw new MemberOrMethodNotFound(body, body.Method.Type, input[methodRange].ToString());
@@ -340,7 +340,7 @@ public class MethodExpressionParser : ExpressionParser
 		else if (postfix.Output.Count == 2)
 			expressions.Push(
 				ParseMethodCallWithArguments(body, innerSpan,
-					postfix)); // this line could be tested after unary operator (e.g. not) is working
+					postfix));
 		else
 			do
 			{
@@ -441,10 +441,10 @@ public class MethodExpressionParser : ExpressionParser
 
 	private sealed class InvalidSingleTokenExpression : ParsingFailed
 	{
-		public InvalidSingleTokenExpression(Body body, string message) : base(body, message) { }
+		public InvalidSingleTokenExpression(Body body, string message) : base(body, message) { } //ncrunch: no coverage
 	}
 
-	private sealed class InvalidArgumentItIsNotMethodOrListCall : ParsingFailed
+	public sealed class InvalidArgumentItIsNotMethodOrListCall : ParsingFailed
 	{
 		public InvalidArgumentItIsNotMethodOrListCall(Body body, Expression variable,
 			IEnumerable<Expression> arguments) : base(body, arguments.ToWordList(),

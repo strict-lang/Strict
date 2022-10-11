@@ -196,4 +196,30 @@ public sealed class ListTests : TestExpressions
 		Assert.That(program.Methods[0].GetBodyAndParseIfNeeded().ReturnType,
 			Is.EqualTo(program.GetListType(type.GetType(Base.Number))));
 	}
+
+	[Test]
+	public void NotOperatorInAssignment()
+	{
+		var assignment = (Assignment)new Type(type.Package,
+				new TypeLines(nameof(NotOperatorInAssignment), "has numbers", "NotOperator",
+					"\tlet result = ((not true))")).ParseMembersAndMethods(parser).Methods[0].
+			GetBodyAndParseIfNeeded();
+		Assert.That(assignment.ToString(), Is.EqualTo("let result = (not true)"));
+	}
+
+	[Test]
+	public void UnknownExpressionForArgumentInList() =>
+		Assert.That(() => new Type(type.Package,
+				new TypeLines(nameof(UnknownExpressionForArgumentInList), "has log", "UnknownExpression",
+					"\tlet result = ((1, 2), 9gfhy5)")).ParseMembersAndMethods(parser).Methods[0].
+			GetBodyAndParseIfNeeded(), Throws.InstanceOf<UnknownExpressionForArgument>()!);
+
+	[Test]
+	public void AccessListElementsByIndex() =>
+		Assert.That(
+			() => new Type(type.Package,
+					new TypeLines(nameof(AccessListElementsByIndex), "has numbers",
+						"AccessZeroIndexElement Number", "\tlet something = numbers(0)", "\tsomething(0)")).
+				ParseMembersAndMethods(parser).Methods[0].GetBodyAndParseIfNeeded(),
+			Throws.InstanceOf<InvalidArgumentItIsNotMethodOrListCall>());
 }

@@ -63,7 +63,7 @@ public sealed class Binary : MethodCall
 				? BuildBinaryExpression(body, input, nextTokenRange, tokens)
 				: body.Method.ParseExpression(body, input[nextTokenRange]);
 		if (expression.ReturnType.IsGeneric)
-			throw new Type.GenericTypesCannotBeUsedDirectlyUseImplementation(expression.ReturnType, expression.ToString());
+			throw new Type.GenericTypesCannotBeUsedDirectlyUseImplementation(expression.ReturnType, expression.ToString()); //ncrunch: no coverage this line cannot be reached as Type.FindMethod already filters this condition
 		return expression;
 	}
 
