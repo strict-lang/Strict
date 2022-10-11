@@ -122,4 +122,15 @@ public sealed class MethodTests
 		{
 			methodHeader
 		}).IsGeneric, Is.False);
+
+	[Test]
+	public void CloningWithSameParameterType()
+	{
+		var method = new Method(type, 0, new MethodExpressionParser(), new[]
+		{
+			"Run(variable Text)",
+			"	\"5\""
+		});
+		Assert.That(method.Parameters[0].CloneWithImplementationType(type.GetType(Base.Text)), Is.EqualTo(method.Parameters[0]));
+	}
 }
