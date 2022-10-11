@@ -10,7 +10,6 @@ namespace Strict.Language.Expressions;
 /// <see cref="Binary"/> or <see cref="Not"/> unary call (which are all normal methods as well).
 /// Like MemberCall has the same syntax when parent instance is used: Type.Method
 /// </summary>
-// ReSharper disable once HollowTypeName
 public class MethodCall : NonGenericExpression
 {
 	public MethodCall(Method method, Expression? instance, IReadOnlyList<Expression> arguments) :

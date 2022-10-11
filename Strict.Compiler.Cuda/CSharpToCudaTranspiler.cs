@@ -81,7 +81,6 @@ public class CSharpToCudaTranspiler
 	public class InvalidCode : Exception { }
 }
 
-// ReSharper disable once HollowTypeName
 public class CSharpType : Type
 {
 	public class CSharpExpressionParser : MethodExpressionParser

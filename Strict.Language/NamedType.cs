@@ -2,7 +2,6 @@
 
 namespace Strict.Language;
 
-// ReSharper disable once HollowTypeName
 public abstract class NamedType
 {
 	protected NamedType(Context definedIn, ReadOnlySpan<char> nameAndType, Type? typeFromValue = null)
@@ -37,7 +36,6 @@ public abstract class NamedType
 			? typeName[(typeName.IndexOf('(') + 1)..typeName.IndexOf(')')]
 			: typeName;
 
-	// ReSharper disable once HollowTypeName
 	public sealed class AssignmentWithInitializerTypeShouldNotHaveNameWithType : Exception
 	{
 		public AssignmentWithInitializerTypeShouldNotHaveNameWithType(string name) : base(name) { }

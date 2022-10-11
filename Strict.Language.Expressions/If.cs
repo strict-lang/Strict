@@ -35,7 +35,6 @@ public sealed class If : Expression
 					bodyForErrorMessage ?? new Body(thenType.Methods[0]), thenType,
 					elseType);
 
-	// ReSharper disable once HollowTypeName
 	public class ReturnTypeOfThenAndElseMustHaveMatchingType : ParsingFailed
 	{
 		public ReturnTypeOfThenAndElseMustHaveMatchingType(Body body, Type thenReturnType,

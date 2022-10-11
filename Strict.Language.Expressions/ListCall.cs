@@ -1,6 +1,5 @@
 ﻿namespace Strict.Language.Expressions;
 
-// ReSharper disable once HollowTypeName
 public sealed class ListCall : NonGenericExpression
 {
 	public ListCall(Expression list, Expression index) : base(

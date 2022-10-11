@@ -10,7 +10,6 @@ namespace Strict.Language;
 /// Strict code only contains optionally implement, then has*, then methods*. No empty lines.
 /// There is no typical lexing/scoping/token splitting needed as Strict syntax is very strict.
 /// </summary>
-// ReSharper disable once HollowTypeName
 // ReSharper disable once ClassTooBig
 public class Type : Context
 {
@@ -402,8 +401,8 @@ public class Type : Context
 			? Name == Base.List
 			: this is GenericType generic && generic.Generic.Name == Base.List;
 	private bool IsMutable => Name == Base.Mutable;
-
 	public Type? MutableReturnType { get; set; }
+
 	private Method? FindAndCreateFromBaseMethod(string methodName,
 		IReadOnlyList<Expression> arguments)
 	{

@@ -21,7 +21,6 @@ public sealed class List : Value
 			throw new ListElementsMustHaveMatchingType(
 				bodyForErrorMessage, returnTypes);
 
-	// ReSharper disable once HollowTypeName
 	public sealed class ListElementsMustHaveMatchingType : ParsingFailed
 	{
 		public ListElementsMustHaveMatchingType(Body body, IEnumerable<Type> returnTypes) :

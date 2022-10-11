@@ -444,7 +444,6 @@ public class MethodExpressionParser : ExpressionParser
 		public InvalidSingleTokenExpression(Body body, string message) : base(body, message) { }
 	}
 
-	// ReSharper disable once HollowTypeName
 	private sealed class InvalidArgumentItIsNotMethodOrListCall : ParsingFailed
 	{
 		public InvalidArgumentItIsNotMethodOrListCall(Body body, Expression variable,
