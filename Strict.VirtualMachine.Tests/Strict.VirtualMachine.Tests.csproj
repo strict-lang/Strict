@@ -16,7 +16,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\Strict.VM\Strict.VirtualMachine.csproj" />
+		<ProjectReference Include="..\Strict.VirtualMachine\Strict.VirtualMachine.csproj" />
 	</ItemGroup>
 
 </Project>
