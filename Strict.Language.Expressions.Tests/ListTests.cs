@@ -216,10 +216,18 @@ public sealed class ListTests : TestExpressions
 			GetBodyAndParseIfNeeded(), Throws.InstanceOf<UnknownExpressionForArgument>()!);
 
 	[Test]
-	public void AccessListElementsByIndex() =>
+	public void AccessListElementsByIndex()
+	{
+		var expression = new Type(type.Package,
+			new TypeLines(nameof(AccessListElementsByIndex), "has numbers", "AccessZeroIndexElement Number", "\tnumbers(0)")).ParseMembersAndMethods(parser).Methods[0].GetBodyAndParseIfNeeded();
+		Assert.That(expression.ToString(), Is.EqualTo("numbers(0)"));
+	}
+
+	[Test]
+	public void CheckIfInvalidArgumentIsNotMethodOrListCall() =>
 		Assert.That(
 			() => new Type(type.Package,
-					new TypeLines(nameof(AccessListElementsByIndex), "has numbers",
+					new TypeLines(nameof(CheckIfInvalidArgumentIsNotMethodOrListCall), "has numbers",
 						"AccessZeroIndexElement Number", "\tlet something = numbers(0)", "\tsomething(0)")).
 				ParseMembersAndMethods(parser).Methods[0].GetBodyAndParseIfNeeded(),
 			Throws.InstanceOf<InvalidArgumentItIsNotMethodOrListCall>());
