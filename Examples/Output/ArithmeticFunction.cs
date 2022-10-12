@@ -21,6 +21,5 @@ public class ArithmeticFunction
 		Assert.That(() => new ArithmeticFunction(10, 5).Calculate("add") == 15));
 		Assert.That(() => new ArithmeticFunction(10, 5).Calculate("subtract") == 5));
 		Assert.That(() => new ArithmeticFunction(10, 5).Calculate("multiply") == 50));
-		Assert.That(() => new ArithmeticFunction(10, 5).Calculate("divide") == 2));
 	}
 }

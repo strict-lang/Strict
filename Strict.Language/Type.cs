@@ -15,6 +15,8 @@ public class Type : Context
 {
 	public Type(Package package, TypeLines file) : base(package, file.Name)
 	{
+		if (file.Lines.Length > 256)
+			throw new LinesCountMustNotExceedTwoHundredFiftySix(this, file.Lines.Length);
 		if (package.FindDirectType(Name) != null)
 			throw new TypeAlreadyExistsInPackage(Name, package);
 		package.Add(this);
@@ -26,6 +28,11 @@ public class Type : Context
 				implements.Add(ParseImplement(lines[lineNumber][Implement.Length..]));
 			else
 				break;
+	}
+
+	public sealed class LinesCountMustNotExceedTwoHundredFiftySix : ParsingFailed
+	{
+		public LinesCountMustNotExceedTwoHundredFiftySix(Type type, int lineCount) : base(type, 0, $"Type {type.Name} has lines count {lineCount} but limit is 256") { }
 	}
 
 	public sealed class TypeAlreadyExistsInPackage : Exception
@@ -110,9 +117,7 @@ public class Type : Context
 	public Type ParseMembersAndMethods(ExpressionParser parser)
 	{
 		ParseAllRemainingLinesIntoMembersAndMethods(parser);
-		if (methods.Count == 0 && members.Count + implements.Count < 2 &&
-			!IsNoneAnyOrBoolean())
-			throw new NoMethodsFound(this, lineNumber);
+		ValidateMethodAndMemberCountLimits();
 		// ReSharper disable once ForCanBeConvertedToForeach, for performance reasons:
 		// https://codeblog.jonskeet.uk/2009/01/29/for-vs-foreach-on-arrays-and-lists/
 		for (var index = 0; index < implements.Count; index++)
@@ -122,6 +127,32 @@ public class Type : Context
 				CheckIfTraitIsImplemented(trait);
 		}
 		return this;
+	}
+
+	private void ValidateMethodAndMemberCountLimits()
+	{
+		if (methods.Count == 0 && members.Count + implements.Count < 2 && !IsNoneAnyOrBoolean())
+			throw new NoMethodsFound(this, lineNumber);
+		if (members.Count > 10)
+			throw new MembersCountMustNotExceedTen(this);
+		if (methods.Count > 15 && Package.Name != nameof(Base))
+			throw new MethodCountMustNotExceedFifteen(this);
+	}
+
+	public sealed class NoMethodsFound : ParsingFailed
+	{
+		public NoMethodsFound(Type type, int lineNumber) : base(type, lineNumber,
+			"Each type must have at least one method, otherwise it is useless") { }
+	}
+
+	public sealed class MembersCountMustNotExceedTen : ParsingFailed
+	{
+		public MembersCountMustNotExceedTen(Type type) : base(type, 0, $"Type {type.Name} has member count {type.members.Count} but limit is 10") { }
+	}
+
+	public sealed class MethodCountMustNotExceedFifteen : ParsingFailed
+	{
+		public MethodCountMustNotExceedFifteen(Type type) : base(type, 0, $"Type {type.Name} has method count {type.methods.Count} but limit is 15") { }
 	}
 
 	private void ParseAllRemainingLinesIntoMembersAndMethods(ExpressionParser parser)
@@ -245,12 +276,6 @@ public class Type : Context
 		public EmptyLineIsNotAllowed(Type type, int lineNumber) : base(type, lineNumber) { }
 	}
 
-	public sealed class NoMethodsFound : ParsingFailed
-	{
-		public NoMethodsFound(Type type, int lineNumber) : base(type, lineNumber,
-			"Each type must have at least one method, otherwise it is useless") { }
-	}
-
 	public sealed class MustImplementAllTraitMethods : ParsingFailed
 	{
 		public MustImplementAllTraitMethods(Type type, IEnumerable<Method> missingTraitMethods) :
@@ -275,11 +300,32 @@ public class Type : Context
 		if (lineNumber + 1 >= lines.Length)
 			return false;
 		var line = lines[lineNumber + 1];
+		ValidateNestingAndLineCharacterCountLimit(line);
 		if (line.StartsWith('\t'))
 			return true;
 		if (line.Length != line.TrimStart().Length)
 			throw new ExtraWhitespacesFoundAtBeginningOfLine(this, lineNumber, line);
 		return false;
+	}
+
+	private void ValidateNestingAndLineCharacterCountLimit(string line)
+	{
+		if (line.StartsWith(SixTabs, StringComparison.Ordinal))
+			throw new NestingMoreThanFiveLevelsIsNotAllowed(this, lineNumber + 1);
+		if (line.Length > 120)
+			throw new CharacterCountMustBeWithinOneHundredTwenty(this, line.Length, lineNumber + 1);
+	}
+
+	private const string SixTabs = "\t\t\t\t\t\t";
+
+	public sealed class NestingMoreThanFiveLevelsIsNotAllowed : ParsingFailed
+	{
+		public NestingMoreThanFiveLevelsIsNotAllowed(Type type, int lineNumber) : base(type, lineNumber, $"Type {type.Name} has more than 5 levels of nesting in line: {lineNumber + 1}") { }
+	}
+
+	public sealed class CharacterCountMustBeWithinOneHundredTwenty : ParsingFailed
+	{
+		public CharacterCountMustBeWithinOneHundredTwenty(Type type, int lineLength, int lineNumber) : base(type, lineNumber, $"Type {type.Name} has character count {lineLength} in line: {lineNumber + 1} but limit is 256") { }
 	}
 
 	public sealed class TypeHasNoMembersAndThusMustBeATraitWithoutMethodBodies : ParsingFailed
