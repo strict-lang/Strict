@@ -2,76 +2,49 @@
 
 public sealed class VirtualMachine
 {
-	public readonly Register register = new();
-
-	// ReSharper disable once MethodTooLong
-	public void Run(Instruction[] instructions)
+	public double Execute(IReadOnlyList<Statement> statements)
 	{
-		while (register.CurrentInstructionIndex != -1)
-			switch (instructions[register.CurrentInstructionIndex].OperationCode)
-			{
-			case OperationCode.Add:
-				AddInstruction();
-				break;
-			case OperationCode.Push:
-				PushInstruction(instructions[register.CurrentInstructionIndex].Value);
-				break;
-			case OperationCode.Quit:
-				QuitInstruction();
-				break;
-			case OperationCode.Subtract:
-				SubtractInstruction();
-				break;
-			case OperationCode.Multiply:
-				MultiplyInstruction();
-				break;
-			case OperationCode.Divide:
-				DivideInstruction();
-				break;
-			}
+		for (var instructionIndex = 0; instructionIndex < statements.Count; instructionIndex++)
+			ExecuteStatement(statements[instructionIndex], ref instructionIndex);
+		return stack.Pop();
+		//TODO: check for stack balance
 	}
 
-	private void AddInstruction()
+	private void ExecuteStatement(Statement statement, ref int instructionIndex)
 	{
-		var (right, left) = GetOperands();
-		register.Stack.Push(right + left);
-		++register.CurrentInstructionIndex;
+		if (statement.Instruction == Instruction.Set)
+			registers[statement.Register] = statement.Value;
+		else if (statement.Instruction == Instruction.JumpIfNotZero)
+		{
+			if (registers[Register.A] != 0)
+				instructionIndex -= (int)statement.Value;
+		}
+		else if (statement.Instruction == Instruction.Push)
+			stack.Push(statement.Value);
+		else
+			ExecuteOperation(statement);
 	}
 
-	private void SubtractInstruction()
-	{
-		var (right, left) = GetOperands();
-		register.Stack.Push(left - right);
-		++register.CurrentInstructionIndex;
-	}
+	private readonly Stack<double> stack = new();
+	private readonly Dictionary<Register, double> registers = new();
 
-	private void MultiplyInstruction()
+	private void ExecuteOperation(Statement statement)
 	{
-		var (right, left) = GetOperands();
-		register.Stack.Push(right * left);
-		++register.CurrentInstructionIndex;
+		var right = stack.Pop();
+		var left = statement.Register != Register.None
+			? registers[statement.Register]
+			: stack.Pop();
+		var result = statement.Instruction switch
+		{
+			Instruction.Add => left + right,
+			Instruction.Subtract => left - right,
+			Instruction.Multiply => left * right,
+			Instruction.Divide => left / right,
+			_ => throw new NotSupportedException(statement.ToString())
+		};
+		if (statement.Register != Register.None)
+			registers[statement.Register] = result;
+		else
+			stack.Push(result);
 	}
-
-	private void DivideInstruction()
-	{
-		var (right, left) = GetOperands();
-		register.Stack.Push(left / right);
-		++register.CurrentInstructionIndex;
-	}
-
-	private void PushInstruction(int value)
-	{
-		register.Stack.Push(value);
-		++register.CurrentInstructionIndex;
-	}
-
-	private (int, int) GetOperands()
-	{
-		if (register.Stack.TryPop(out var right) && register.Stack.TryPop(out var left))
-			return (right, left);
-		throw new StackElementDoesNotExistWhenInstructionIsCalled();
-	}
-
-	private void QuitInstruction() => register.CurrentInstructionIndex = -1;
-	public sealed class StackElementDoesNotExistWhenInstructionIsCalled : Exception { }
 }
