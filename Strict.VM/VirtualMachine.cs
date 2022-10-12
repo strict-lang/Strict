@@ -1,4 +1,4 @@
-﻿namespace Strict.VM;
+﻿namespace Strict.VirtualMachine;
 
 public sealed class VirtualMachine
 {
@@ -7,7 +7,6 @@ public sealed class VirtualMachine
 		for (var instructionIndex = 0; instructionIndex < statements.Count; instructionIndex++)
 			ExecuteStatement(statements[instructionIndex], ref instructionIndex);
 		return stack.Pop();
-		//TODO: check for stack balance
 	}
 
 	private void ExecuteStatement(Statement statement, ref int instructionIndex)
@@ -40,7 +39,7 @@ public sealed class VirtualMachine
 			Instruction.Subtract => left - right,
 			Instruction.Multiply => left * right,
 			Instruction.Divide => left / right,
-			_ => throw new NotSupportedException(statement.ToString())
+			_ => throw new NotSupportedException() //ncrunch: no coverage
 		};
 		if (statement.Register != Register.None)
 			registers[statement.Register] = result;

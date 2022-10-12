@@ -1,4 +1,4 @@
-﻿namespace Strict.VM;
+﻿namespace Strict.VirtualMachine;
 
 public enum Register
 {

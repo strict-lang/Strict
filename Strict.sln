@@ -90,9 +90,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Output", "Output", "{F2D1EC
 		Examples\Output\ReverseList.cs = Examples\Output\ReverseList.cs
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Strict.VM", "Strict.VM\Strict.VM.csproj", "{8F9553D2-C39F-464E-AF77-C80BF4486AB3}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Strict.VirtualMachine", "Strict.VM\Strict.VirtualMachine.csproj", "{8F9553D2-C39F-464E-AF77-C80BF4486AB3}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Strict.VM.Tests", "Strict.VM.Tests\Strict.VM.Tests.csproj", "{99775657-0FFD-4D1B-AB4F-A53622F75A17}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Strict.VirtualMachine.Tests", "Strict.VM.Tests\Strict.VirtualMachine.Tests.csproj", "{99775657-0FFD-4D1B-AB4F-A53622F75A17}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

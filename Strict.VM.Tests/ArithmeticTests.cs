@@ -1,12 +1,11 @@
 using NUnit.Framework;
-using static Strict.VM.VirtualMachine;
 
-namespace Strict.VM.Tests;
+namespace Strict.VirtualMachine.Tests;
 
 public sealed class ArithmeticTests
 {
 	[SetUp]
-	public void Setup() => machine = new VirtualMachine();
+	public void Setup() => machine = new Strict.VirtualMachine.VirtualMachine();
 
 	private VirtualMachine machine = null!;
 
@@ -30,45 +29,12 @@ public sealed class ArithmeticTests
 		Assert.That(
 			machine.Execute(new Statement[]
 			{
-				//new(Instruction.Set, Register.A, 5),
+				new(Instruction.Set, Register.A, 5),
 				new(Instruction.Push, 1),
 				new(Instruction.Push, 2), // jumps here
 				new(Instruction.Add),
 				new(Instruction.Push, 1),
-				//new(Instruction.Subtract, Register.A),
+				new(Instruction.Subtract, Register.A),
 				new(Instruction.JumpIfNotZero, 5)
 			}), Is.EqualTo(1 + 2 + 2 + 2 + 2 + 2));
-
-
-
-
-
-
-
-
-
-
-
-
-	//TODO: inputs and outputs should not just be doubles, but actual Value or strict expressions
-	/*
-	public void SimpleArithmeticAddition()
-	{
-		var instructions = new Statement[]
-		{
-			new(Instruction.Push, 5),
-			new(Instruction.Push, 10),
-			new(Instruction.Add)
-		};
-		machine.Run(instructions);
-		Assert.That(machine.register.Stack.Pop(), Is.EqualTo(20));
-	}
-
-	[Test]
-	public void StackElementDoesNotExistWhenInstructionIsCalled()
-	{
-		var instructions = new Statement[] { new(Instruction.Add), new(Instruction.Quit) };
-		Assert.That(() => machine.Run(instructions),
-			Throws.InstanceOf<StackElementDoesNotExistWhenInstructionIsCalled>());
-	}*/
 }
