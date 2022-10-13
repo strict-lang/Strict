@@ -22,7 +22,7 @@ public sealed class LimitTests
 			Throws.InstanceOf<Method.MethodLengthMustNotExceedTwelve>().With.Message.
 				Contains("Method Run has 13 lines but limit is 12"));
 
-	private Type CreateType(string name, string[] lines) =>
+	private Type CreateType(string name, params string[] lines) =>
 		new Type(package, new TypeLines(name, lines)).ParseMembersAndMethods(new MethodExpressionParser());
 
 	private static string[] CreateProgramWithDuplicateLines(IEnumerable<string> defaultLines, int count, params string[] linesToDuplicate)
@@ -44,9 +44,8 @@ public sealed class LimitTests
 	[Test]
 	public void MethodParameterCountMustNotExceedThree() =>
 		Assert.That(
-			() => new Type(package,
-					new TypeLines(nameof(MethodParameterCountMustNotExceedThree), "has log",
-						"Run(first Number, second Number, third Number, fourth Number)", "\tlog.Write(5)")).
+			() => CreateType(nameof(MethodParameterCountMustNotExceedThree), "has log",
+					"Run(first Number, second Number, third Number, fourth Number)", "\tlog.Write(5)").
 				ParseMembersAndMethods(new MethodExpressionParser()),
 			Throws.InstanceOf<Method.MethodParameterCountMustNotExceedThree>().With.Message.
 				Contains("Method Run has parameters count 4 but limit is 3"));
@@ -79,33 +78,28 @@ public sealed class LimitTests
 
 	[Test]
 	public void NestingMoreThanFiveLevelsIsNotAllowed() =>
-		Assert.That(() => CreateType(nameof(NestingMoreThanFiveLevelsIsNotAllowed), new[]
-			{
-						// @formatter:off
-						"has log",
-						"Run",
-						"	if 5 is 5",
-						"		if 6 is 6",
-						"			if 7 is 7",
-						"				if 8 is 8",
-						"					if 9 is 9",
-						"						log.Write(5)"
-						// @formatter:on
-			}).ParseMembersAndMethods(new MethodExpressionParser()),
+		Assert.That(() => CreateType(nameof(NestingMoreThanFiveLevelsIsNotAllowed),
+				// @formatter:off
+				"has log",
+				"Run",
+				"	if 5 is 5",
+				"		if 6 is 6",
+				"			if 7 is 7",
+				"				if 8 is 8",
+				"					if 9 is 9",
+				"						log.Write(5)")
+				// @formatter:on
+				.ParseMembersAndMethods(new MethodExpressionParser()),
 			Throws.InstanceOf<Type.NestingMoreThanFiveLevelsIsNotAllowed>().With.Message.Contains(
 				"Type NestingMoreThanFiveLevelsIsNotAllowed has more than 5 levels of nesting in line: 8"));
 
 	[Test]
 	public void CharacterCountMustBeWithinOneHundredTwenty() =>
-		Assert.That(() => CreateType(nameof(CharacterCountMustBeWithinOneHundredTwenty), new[]
-			{
-						// @formatter:off
-						"has bonus Number",
-						"has price Number",
-						"CalculateCompleteLevelCount(numberOfCans Number, levelCount Number) Number",
-						"	let remainingCans = numberOfCans - (levelCount * levelCount)remainingCans < ((levelCount + 1) * (levelCount + 1)) ? levelCount else CalculateCompleteLevelCount(remainingCans, levelCount + 1)"
-				// @formatter:on
-			}).ParseMembersAndMethods(new MethodExpressionParser()),
+		Assert.That(() => CreateType(nameof(CharacterCountMustBeWithinOneHundredTwenty),
+				"has bonus Number",
+				"has price Number",
+				"CalculateCompleteLevelCount(numberOfCans Number, levelCount Number) Number",
+				"	let remainingCans = numberOfCans - (levelCount * levelCount)remainingCans < ((levelCount + 1) * (levelCount + 1)) ? levelCount else CalculateCompleteLevelCount(remainingCans, levelCount + 1)").ParseMembersAndMethods(new MethodExpressionParser()),
 			Throws.InstanceOf<Type.CharacterCountMustBeWithinOneHundredTwenty>().With.Message.Contains(
 				"Type CharacterCountMustBeWithinOneHundredTwenty has character count 191 in line: 4 but limit is 256"));
 }

@@ -30,8 +30,7 @@ public class RepositoriesTests
 	[Test]
 	public async Task LoadStrictBaseTypes()
 	{
-		var strictPackage = await repos.LoadFromUrl(Repositories.StrictUrl);
-		var basePackage = strictPackage.FindSubPackage(nameof(Base))!;
+		var basePackage = await repos.LoadFromUrl(Repositories.StrictUrl);
 		Assert.That(basePackage.FindDirectType(Base.Any), Is.Not.Null);
 		Assert.That(basePackage.FindDirectType(Base.Number), Is.Not.Null);
 		Assert.That(basePackage.FindDirectType(Base.App), Is.Not.Null);
@@ -65,11 +64,20 @@ public class RepositoriesTests
 		var parser = new MethodExpressionParser();
 		var strictPackage = await new Repositories(parser).LoadFromUrl(Repositories.StrictUrl);
 		Assert.That(
-			() => new Type(strictPackage.FindSubPackage("Examples")!,
+			() => new Type(strictPackage,
 				new TypeLines("Invalid", "has 1")).ParseMembersAndMethods(null!),
-			Throws.InstanceOf<ParsingFailed>().With.Message.Contains(@"at Strict.Examples.Invalid in " +
-				Repositories.DevelopmentFolder + @"\Examples\Invalid.strict:line 1"));
+			Throws.InstanceOf<ParsingFailed>().With.Message.Contains(@"Base\Invalid.strict:line 1"));
 	}
+
+	[Ignore("Base package is not loaded before examples")]
+	[Test]
+	public void LoadStrictExamplesPackageFiles() =>
+		Assert.That(
+			async () =>
+				new Type(
+					await new Repositories(new MethodExpressionParser()).LoadFromUrl(Repositories.
+						StrictExampleUrl), new TypeLines("Invalid", "has 1")).ParseMembersAndMethods(null!),
+			Throws.InstanceOf<ParsingFailed>().With.Message.Contains(@"Base\Invalid.strict:line 1"));
 
 	/// <summary>
 	/// Each indentation is one depth level lower

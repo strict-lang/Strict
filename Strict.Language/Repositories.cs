@@ -47,8 +47,8 @@ public sealed class Repositories
 		var packageName = packageUrl.AbsolutePath.Split('/').Last();
 		var localPath = packageName == nameof(Strict)
 			? DevelopmentFolder
-			: "";
-		//ncrunch: no coverage start
+			: Path.Combine(CacheFolder, packageName);
+		//ncrunch: no coverage starat
 		if (!PreviouslyCheckedDirectories.Contains(localPath))
 		{
 			PreviouslyCheckedDirectories.Add(localPath);
@@ -89,7 +89,7 @@ public sealed class Repositories
 	private static async Task DownloadFile(HttpClient client, Uri uri, string fileName)
 	{
 		await using var stream = await client.GetStreamAsync(uri);
-		await using var file = new FileStream(fileName, FileMode.CreateNew);
+		await using var file = new FileStream(fileName, FileMode.OpenOrCreate);
 		await stream.CopyToAsync(file);
 	}
 
@@ -146,7 +146,9 @@ public sealed class Repositories
 	{
 		var package = parent != null
 			? new Package(parent, packagePath)
-			: new Package(packagePath);
+			: new Package(packagePath.Contains('.')
+				? packagePath.Split('.')[1]
+				: packagePath);
 		if (package.Name == nameof(Strict) && files.Count > 0)
 			throw new NoFilesAllowedInStrictFolderNeedsToBeInASubFolder(files);
 		var types = GetTypes(files, package);
@@ -291,6 +293,7 @@ public sealed class Repositories
 		Path.Combine( //ncrunch: no coverage, only downloaded and cached on non development machines
 			Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), StrictPackages);
 	private const string StrictPackages = nameof(StrictPackages);
-	public static readonly Uri StrictUrl = new("https://github.com/strict-lang/Strict");
+	public static readonly Uri StrictUrl = new("https://github.com/strict-lang/Strict.Base");
+	public static readonly Uri StrictExampleUrl = new("https://github.com/strict-lang/Strict.Examples");
 }
 
