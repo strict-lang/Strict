@@ -2,6 +2,7 @@
 
 public enum Register
 {
-	None,
-	A
+	R0,
+	R1,
+	R2
 }

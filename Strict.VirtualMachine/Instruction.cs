@@ -2,11 +2,19 @@
 
 public enum Instruction
 {
-	Push,
+	Set,
 	Add,
 	Subtract,
 	Multiply,
 	Divide,
-	Set,
-	JumpIfNotZero
+	BinaryOperatorsSeparator = 100,
+	GreaterThan,
+	LessThan,
+	Equal,
+	NotEqual,
+	ConditionalSeparator = 200,
+	JumpIfTrue,
+	JumpIfFalse,
+	JumpIfNotZero,
+	JumpsSeparator = 300
 }

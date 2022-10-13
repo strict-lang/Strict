@@ -2,48 +2,75 @@
 
 public sealed class VirtualMachine
 {
-	public double Execute(IReadOnlyList<Statement> statements)
+	public Dictionary<Register, double> Execute(IReadOnlyList<Statement> statements)
 	{
-		for (var instructionIndex = 0; instructionIndex < statements.Count; instructionIndex++)
-			ExecuteStatement(statements[instructionIndex], ref instructionIndex);
-		return stack.Pop();
+		for (instructionIndex = 0; instructionIndex < statements.Count; instructionIndex++)
+			ExecuteStatement(statements[instructionIndex]);
+		return registers;
 	}
 
-	private void ExecuteStatement(Statement statement, ref int instructionIndex)
+	private void ExecuteStatement(Statement statement)
 	{
 		if (statement.Instruction == Instruction.Set)
-			registers[statement.Register] = statement.Value;
-		else if (statement.Instruction == Instruction.JumpIfNotZero)
-		{
-			if (registers[Register.A] != 0)
-				instructionIndex -= (int)statement.Value;
-		}
-		else if (statement.Instruction == Instruction.Push)
-			stack.Push(statement.Value);
+			foreach (var register in statement.Registers)
+				registers[register] = statement.Value;
 		else
-			ExecuteOperation(statement);
+			TryExecute(statement);
 	}
 
-	private readonly Stack<double> stack = new();
-	private readonly Dictionary<Register, double> registers = new();
-
-	private void ExecuteOperation(Statement statement)
+	private void TryExecute(Statement statement)
 	{
-		var right = stack.Pop();
-		var left = statement.Register != Register.None
-			? registers[statement.Register]
-			: stack.Pop();
-		var result = statement.Instruction switch
+		var instructionPosition = (int)statement.Instruction;
+		if (instructionPosition is >= 1 and < (int)Instruction.BinaryOperatorsSeparator)
+			TryOperationExecution(statement);
+		else if (instructionPosition is >= 100 and < (int)Instruction.ConditionalSeparator)
+			TryConditionalOperationExecution(statement);
+		else if (instructionPosition is >= 9 and <= (int)Instruction.JumpsSeparator)
+			TryJumpOperation(statement);
+	}
+
+	private readonly Dictionary<Register, double> registers = new();
+	private int instructionIndex;
+
+	private void TryOperationExecution(Statement statement)
+	{
+		var (right, left) = GetOperands(statement);
+		registers[statement.Registers[^1]] = statement.Instruction switch
 		{
 			Instruction.Add => left + right,
 			Instruction.Subtract => left - right,
 			Instruction.Multiply => left * right,
 			Instruction.Divide => left / right,
-			_ => throw new NotSupportedException() //ncrunch: no coverage
+			_ => registers[statement.Registers[^1]] //ncrunch: no coverage
 		};
-		if (statement.Register != Register.None)
-			registers[statement.Register] = result;
-		else
-			stack.Push(result);
+	}
+
+	private (double, double) GetOperands(Statement statement) =>
+		(registers[statement.Registers[1]], registers[statement.Registers[0]]);
+
+	private void TryConditionalOperationExecution(Statement statement)
+	{
+		var (right, left) = GetOperands(statement);
+		var result = statement.Instruction switch
+		{
+			Instruction.GreaterThan => left > right,
+			Instruction.LessThan => left < right,
+			Instruction.Equal => left == right,
+			Instruction.NotEqual => left != right,
+			_ => false //ncrunch: no coverage
+		};
+		conditionFlag = result;
+	}
+
+	private bool conditionFlag;
+
+	private void TryJumpOperation(Statement statement)
+	{
+		if (statement.Instruction == Instruction.JumpIfTrue && conditionFlag)
+			instructionIndex += (int)statement.Value;
+		else if (statement.Instruction == Instruction.JumpIfFalse && !conditionFlag)
+			instructionIndex += (int)statement.Value;
+		else if (statement.Instruction == Instruction.JumpIfNotZero && registers[statement.Registers[0]] != 0)
+			instructionIndex += (int)statement.Value;
 	}
 }

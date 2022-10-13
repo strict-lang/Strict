@@ -1,7 +1,8 @@
 ﻿namespace Strict.VirtualMachine;
 
-public sealed record Statement(Instruction Instruction, Register Register, double Value = 0)
+public sealed record Statement(Instruction Instruction, double Value = 0,
+	params Register[] Registers)
 {
-	public Statement(Instruction instruction, double value = 0) : this(instruction, Register.None,
-		value) { }
+	public Statement(Instruction instruction, params Register[] registers) : this(instruction, 0,
+		registers) { }
 }
