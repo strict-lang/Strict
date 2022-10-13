@@ -294,6 +294,5 @@ public sealed class Repositories
 			Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), StrictPackages);
 	private const string StrictPackages = nameof(StrictPackages);
 	public static readonly Uri StrictUrl = new("https://github.com/strict-lang/Strict.Base");
-	public static readonly Uri StrictExampleUrl = new("https://github.com/strict-lang/Strict.Examples");
 }
 

@@ -69,15 +69,22 @@ public class RepositoriesTests
 			Throws.InstanceOf<ParsingFailed>().With.Message.Contains(@"Base\Invalid.strict:line 1"));
 	}
 
-	[Ignore("Base package is not loaded before examples")]
 	[Test]
-	public void LoadStrictExamplesPackageFiles() =>
-		Assert.That(
-			async () =>
-				new Type(
-					await new Repositories(new MethodExpressionParser()).LoadFromUrl(Repositories.
-						StrictExampleUrl), new TypeLines("Invalid", "has 1")).ParseMembersAndMethods(null!),
-			Throws.InstanceOf<ParsingFailed>().With.Message.Contains(@"Base\Invalid.strict:line 1"));
+	public async Task LoadStrictExamplesPackageAndUseBasePackageTypes()
+	{
+		var parser = new MethodExpressionParser();
+		var repositories = new Repositories(parser);
+		var basePackage =
+			await repositories.LoadFromUrl(Repositories.
+				StrictUrl);
+		var examplesPackage = await repositories.LoadFromUrl(StrictExamplesUrl);
+		var program = new Type(examplesPackage, new TypeLines("ValidProgram", "has number", "Run Number", "\tnumber")).
+			ParseMembersAndMethods(parser);
+		Assert.That(program.Methods[0].ReturnType.ToString(), Contains.Substring(Base.Number));
+		Assert.That(program.Members[0].Type.ToString(), Contains.Substring(Base.Number));
+	}
+
+	public static readonly Uri StrictExamplesUrl = new("https://github.com/strict-lang/Strict.Examples");
 
 	/// <summary>
 	/// Each indentation is one depth level lower
