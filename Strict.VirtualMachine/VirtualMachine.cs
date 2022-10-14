@@ -46,7 +46,9 @@ public sealed class VirtualMachine
 	}
 
 	private (double, double) GetOperands(Statement statement) =>
-		(registers[statement.Registers[1]], registers[statement.Registers[0]]);
+		registers.Count < 2
+			? throw new OperandsRequired()
+			: (registers[statement.Registers[1]], registers[statement.Registers[0]]);
 
 	private void TryConditionalOperationExecution(Statement statement)
 	{
@@ -70,7 +72,10 @@ public sealed class VirtualMachine
 			instructionIndex += (int)statement.Value;
 		else if (statement.Instruction == Instruction.JumpIfFalse && !conditionFlag)
 			instructionIndex += (int)statement.Value;
-		else if (statement.Instruction == Instruction.JumpIfNotZero && registers[statement.Registers[0]] != 0)
+		else if (statement.Instruction == Instruction.JumpIfNotZero &&
+			registers[statement.Registers[0]] != 0)
 			instructionIndex += (int)statement.Value;
 	}
+
+	public class OperandsRequired : Exception { }
 }

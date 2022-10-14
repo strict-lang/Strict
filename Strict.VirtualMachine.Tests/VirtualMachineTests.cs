@@ -22,7 +22,8 @@ public sealed class VirtualMachineTests
 		new Statement[]
 		{
 			new(Instruction.Set, inputs[0], Register.R0),
-			new(Instruction.Set, inputs[1], Register.R1), new(operation, Register.R0, Register.R1)
+			new(Instruction.Set, inputs[1], Register.R1),
+			new(operation, Register.R0, Register.R1)
 		};
 
 	[Test]
@@ -42,7 +43,8 @@ public sealed class VirtualMachineTests
 		Assert.That(
 			machine.Execute(new Statement[]
 			{
-				new(Instruction.Set, 5, Register.R0), new(Instruction.Set, 1, Register.R1),
+				new(Instruction.Set, 5, Register.R0),
+				new(Instruction.Set, 1, Register.R1),
 				new(Instruction.Set, 10, Register.R2),
 				new(Instruction.LessThan, Register.R2, Register.R0), new(Instruction.JumpIfTrue, 2),
 				new(Instruction.Add, Register.R2, Register.R0, Register.R0)
@@ -57,10 +59,17 @@ public sealed class VirtualMachineTests
 		Assert.That(machine.Execute(new Statement[]
 		{
 			new(Instruction.Set, registers[0], Register.R0),
-			new(Instruction.Set, registers[1], Register.R1), new(conditional, Register.R0, Register.R1),
+			new(Instruction.Set, registers[1], Register.R1),
+			new(conditional, Register.R0, Register.R1),
 			new(Instruction.JumpIfTrue, 2),
 			new(Instruction.Subtract, Register.R1, Register.R0, Register.R0), //else
 			new(Instruction.JumpIfFalse, 2), // if above condition was false, skip the next one
 			new(Instruction.Add, Register.R0, Register.R1, Register.R0) //if
 		})[Register.R0], Is.EqualTo(expected));
+
+	[TestCase(Instruction.Add)]
+	[TestCase(Instruction.GreaterThan)]
+	public void OperandsRequired(Instruction instruction) =>
+		Assert.That(() => machine.Execute(new Statement[] { new(instruction, Register.R0) }),
+			Throws.InstanceOf<VirtualMachine.OperandsRequired>());
 }
