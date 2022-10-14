@@ -48,7 +48,7 @@ public sealed class Repositories
 		var localPath = packageName == nameof(Strict)
 			? DevelopmentFolder
 			: Path.Combine(CacheFolder, packageName);
-		//ncrunch: no coverage starat
+		//ncrunch: no coverage start
 		if (!PreviouslyCheckedDirectories.Contains(localPath))
 		{
 			PreviouslyCheckedDirectories.Add(localPath);
@@ -79,7 +79,6 @@ public sealed class Repositories
 		string targetPath)
 	{
 		var localZip = Path.Combine(CacheFolder, packageName + ".zip");
-		File.CreateText(localZip).Close();
 		using HttpClient client = new();
 		await DownloadFile(client, new Uri(packageUrl + "/archive/master.zip"), localZip);
 		await Task.Run(() =>
@@ -89,7 +88,7 @@ public sealed class Repositories
 	private static async Task DownloadFile(HttpClient client, Uri uri, string fileName)
 	{
 		await using var stream = await client.GetStreamAsync(uri);
-		await using var file = new FileStream(fileName, FileMode.OpenOrCreate);
+		await using var file = new FileStream(fileName, FileMode.CreateNew);
 		await stream.CopyToAsync(file);
 	}
 
