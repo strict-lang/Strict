@@ -36,17 +36,6 @@ public class RepositoriesTests
 		Assert.That(basePackage.FindDirectType(Base.App), Is.Not.Null);
 	}
 
-	[Category("Manual")]
-	[Test]
-	public void NoFilesAllowedInStrictFolderNeedsToBeInASubFolder()
-	{
-		var strictFilePath = Path.Combine(Repositories.DevelopmentFolder, "UnitTestForCoverage.strict");
-		File.Create(strictFilePath).Close();
-		Assert.That(() =>
-			repos.LoadFromPath(Repositories.DevelopmentFolder), Throws.InstanceOf<Repositories.NoFilesAllowedInStrictFolderNeedsToBeInASubFolder>());
-		File.Delete(strictFilePath);
-	}
-
 	[Test]
 	public async Task LoadingSameRepositoryAgainUsesCache()
 	{
@@ -122,6 +111,17 @@ public class RepositoriesTests
 	}
 
 	//ncrunch: no coverage start
+	[Category("Manual")]
+	[Test]
+	public void NoFilesAllowedInStrictFolderNeedsToBeInASubFolder()
+	{
+		var strictFilePath = Path.Combine(Repositories.DevelopmentFolder, "UnitTestForCoverage.strict");
+		File.Create(strictFilePath).Close();
+		Assert.That(() =>
+			repos.LoadFromPath(Repositories.DevelopmentFolder), Throws.InstanceOf<Repositories.NoFilesAllowedInStrictFolderNeedsToBeInASubFolder>());
+		File.Delete(strictFilePath);
+	}
+
 	[Test]
 	[Category("Slow")]
 	[Benchmark]
@@ -191,5 +191,5 @@ public class RepositoriesTests
 		for (var iteration = 0; iteration < 100; iteration++)
 			await repos.LoadFromUrl(Repositories.StrictUrl);
 		//MemoryProfiler.GetSnapshot(nameof(LoadStrictBaseTypesTenTimes) + "10");
-	}
+	} //ncrunch: no coverage end
 }

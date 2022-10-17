@@ -149,7 +149,7 @@ public sealed class Repositories
 				? packagePath.Split('.')[1]
 				: packagePath);
 		if (package.Name == nameof(Strict) && files.Count > 0)
-			throw new NoFilesAllowedInStrictFolderNeedsToBeInASubFolder(files);
+			throw new NoFilesAllowedInStrictFolderNeedsToBeInASubFolder(files); //ncrunch: no coverage covered in a manual test
 		var types = GetTypes(files, package);
 		foreach (var type in types)
 			type.ParseMembersAndMethods(parser);
@@ -157,11 +157,12 @@ public sealed class Repositories
 		return package;
 	}
 
+	//ncrunch: no coverage start
 	public sealed class NoFilesAllowedInStrictFolderNeedsToBeInASubFolder : Exception
 	{
 		public NoFilesAllowedInStrictFolderNeedsToBeInASubFolder(IEnumerable<string> files) : base(
 			files.ToWordList()) { }
-	}
+	} //ncrunch: no coverage end
 
 	private ICollection<Type> GetTypes(IReadOnlyCollection<string> files, Package package)
 	{
@@ -274,13 +275,13 @@ public sealed class Repositories
 
 	public static string DevelopmentFolder
 	{
+		//ncrunch: no coverage start
 		get
 		{
 			var nCrunchOriginalSolutionFilePath =
 				Environment.GetEnvironmentVariable("NCrunch.OriginalSolutionPath") ?? "";
 			if (nCrunchOriginalSolutionFilePath != string.Empty)
 				return Path.GetDirectoryName(nCrunchOriginalSolutionFilePath)!;
-			//ncrunch: no coverage start
 			var teamCityCheckoutPath = Environment.GetEnvironmentVariable("TeamCityCheckoutPath");
 			return !string.IsNullOrEmpty(teamCityCheckoutPath)
 				? teamCityCheckoutPath
