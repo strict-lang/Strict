@@ -54,6 +54,9 @@ Sum Generic
 First Generic
 	(1, 2, 3).First is 1
 	elements(0)
+Last Generic
+	(1, 2, 3).Last is 3
+	elements(-1)
 in Generic
 	in (1, 2) is 1
 	element(0)

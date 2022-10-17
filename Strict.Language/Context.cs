@@ -13,7 +13,7 @@ public abstract class Context
 {
 	protected Context(Context? parent, string name)
 	{
-		if (parent != null && (string.IsNullOrWhiteSpace(name) ||
+		if (parent != null && this is not GenericType && (string.IsNullOrWhiteSpace(name) ||
 			this is not Method && !name.IsWord()))
 			throw new NameMustBeAWordWithoutAnySpecialCharactersOrNumbers(name);
 		Parent = parent!;
@@ -50,6 +50,9 @@ public abstract class Context
 		return (FindFullType(name) ?? FindType(name, this)) ??
 			throw new TypeNotFound(name, FullName);
 	}
+
+	public Type GetType(string genericType, string implementationType) =>
+		GetType(genericType + "(" + implementationType + ")");
 
 	private Type? FindListType(string singularName)
 	{

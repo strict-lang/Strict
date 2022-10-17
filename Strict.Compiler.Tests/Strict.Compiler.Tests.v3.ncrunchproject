@@ -10,6 +10,9 @@
       <NamedTestSelector>
         <TestName>Strict.Compiler.Tests.SourceGeneratorTests.CreateFileAndWriteIntoIt</TestName>
       </NamedTestSelector>
+      <FixtureTestSelector>
+        <FixtureName>Strict.Compiler.Tests.CSharpTypeVisitorTests</FixtureName>
+      </FixtureTestSelector>
     </IgnoredTests>
   </Settings>
 </ProjectConfiguration>

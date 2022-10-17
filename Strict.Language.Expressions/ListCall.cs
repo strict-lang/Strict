@@ -1,6 +1,6 @@
 ﻿namespace Strict.Language.Expressions;
 
-public sealed class ListCall : NonGenericExpression
+public sealed class ListCall : ConcreteExpression
 {
 	public ListCall(Expression list, Expression index) : base(
 		((GenericType)list.ReturnType).Implementation)

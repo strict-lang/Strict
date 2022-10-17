@@ -1,6 +1,6 @@
 ﻿namespace Strict.Language.Expressions;
 
-public sealed class VariableCall : NonGenericExpression
+public sealed class VariableCall : ConcreteExpression
 {
 	public VariableCall(string name, Expression currentValue) : base(currentValue.ReturnType)
 	{

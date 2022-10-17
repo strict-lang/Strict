@@ -22,7 +22,8 @@ public sealed class VirtualMachineTests
 		new Statement[]
 		{
 			new(Instruction.Set, inputs[0], Register.R0),
-			new(Instruction.Set, inputs[1], Register.R1), new(operation, Register.R0, Register.R1)
+			new(Instruction.Set, inputs[1], Register.R1),
+			new(operation, Register.R0, Register.R1)
 		};
 
 	[Test]

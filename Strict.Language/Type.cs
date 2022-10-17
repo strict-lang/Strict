@@ -133,6 +133,7 @@ public class Type : Context
 	{
 		if (methods.Count == 0 && members.Count + implements.Count < 2 && !IsNoneAnyOrBoolean())
 			throw new NoMethodsFound(this, lineNumber);
+		//TODO: Allow for enum types Type.IsEnum (which is NO method, only const members, which also needs a limit -> 50, please add)
 		if (members.Count > 10)
 			throw new MembersCountMustNotExceedTen(this);
 		if (methods.Count > 15 && Package.Name != nameof(Base))
@@ -320,12 +321,16 @@ public class Type : Context
 
 	public sealed class NestingMoreThanFiveLevelsIsNotAllowed : ParsingFailed
 	{
-		public NestingMoreThanFiveLevelsIsNotAllowed(Type type, int lineNumber) : base(type, lineNumber, $"Type {type.Name} has more than 5 levels of nesting in line: {lineNumber + 1}") { }
+		public NestingMoreThanFiveLevelsIsNotAllowed(Type type, int lineNumber) : base(type,
+			lineNumber,
+			$"Type {type.Name} has more than 5 levels of nesting in line: {lineNumber + 1}") { }
 	}
 
 	public sealed class CharacterCountMustBeWithinOneHundredTwenty : ParsingFailed
 	{
-		public CharacterCountMustBeWithinOneHundredTwenty(Type type, int lineLength, int lineNumber) : base(type, lineNumber, $"Type {type.Name} has character count {lineLength} in line: {lineNumber + 1} but limit is 256") { }
+		public CharacterCountMustBeWithinOneHundredTwenty(Type type, int lineLength, int lineNumber) :
+			base(type, lineNumber,
+				$"Type {type.Name} has character count {lineLength} in line: {lineNumber + 1} but limit is 256") { }
 	}
 
 	public sealed class TypeHasNoMembersAndThusMustBeATraitWithoutMethodBodies : ParsingFailed
@@ -528,6 +533,7 @@ public class Type : Context
 
 	private readonly ExpressionParser dummyExpressionParser = new DummyExpressionParser();
 
+	//TODO: this should not be here
 	//ncrunch: no coverage start
 	private sealed class DummyExpressionParser : ExpressionParser
 	{
@@ -542,7 +548,8 @@ public class Type : Context
 		this == sameOrBaseType || sameOrBaseType.Name == Base.Any || implements.Contains(sameOrBaseType) ||
 		CanUpCast(sameOrBaseType);
 
-	/*the checks in Type.IsCompatible are all upside down:
+	/*TODO: cleanup:
+	 the checks in Type.IsCompatible are all upside down:
       if (argumentReturnType is GenericType genericType)
         argumentReturnType = genericType.Implementation;
 the main issue is however here:

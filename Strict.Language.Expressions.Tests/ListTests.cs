@@ -110,7 +110,7 @@ public sealed class ListTests : TestExpressions
 		Assert.That(parsedExpression, Is.InstanceOf<Binary>()!);
 		Assert.That(parsedExpression.ToString(), Is.EqualTo(Code));
 		Assert.That(((Binary)parsedExpression).ReturnType,
-			Is.EqualTo(type.GetType(Base.List + Base.Text)));
+			Is.EqualTo(type.GetType(Base.List, Base.Text)));
 	}
 
 	[Test]

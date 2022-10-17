@@ -10,11 +10,13 @@ namespace Strict.Language.Expressions;
 /// <see cref="Binary"/> or <see cref="Not"/> unary call (which are all normal methods as well).
 /// Like MemberCall has the same syntax when parent instance is used: Type.Method
 /// </summary>
-public class MethodCall : NonGenericExpression
+public class MethodCall : ConcreteExpression
 {
 	public MethodCall(Method method, Expression? instance, IReadOnlyList<Expression> arguments) :
 		base(method.ReturnType)
 	{
+		if (method.Name == Method.From && instance != null)
+			throw new NotSupportedException("Makes no sense, we don't have an instance yet");
 		Instance = instance;
 		Method = method;
 		Arguments = arguments;
@@ -29,10 +31,11 @@ public class MethodCall : NonGenericExpression
 
 	public override string ToString() =>
 		Instance != null
-			? Method.Name == Method.From
-				? $"{Instance}{Arguments.ToBrackets()}"
-				: $"{Instance}.{Method.Name}{Arguments.ToBrackets()}"
-			: Arguments.Count > 0
-				? $"{Method.Name}{Arguments.ToBrackets()}"
-				: Method.Name;
+			? $"{Instance}.{Method.Name}{Arguments.ToBrackets()}"
+			: $"{GetProperMethodName()}{Arguments.ToBrackets()}";
+
+	private string GetProperMethodName() =>
+		Method.Name == Method.From
+			? Method.ReturnType.Name
+			: Method.Name;
 }

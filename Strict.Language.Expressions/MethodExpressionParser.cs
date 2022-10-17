@@ -156,6 +156,7 @@ public class MethodExpressionParser : ExpressionParser
 			input.IndexOf('.') < innerArgumentStart;
 	}
 
+	//TODO: cleanup
 	// ReSharper disable once TooManyArguments
 	// ReSharper disable once MethodTooLong
 	// ReSharper disable once CyclomaticComplexity
@@ -209,6 +210,7 @@ public class MethodExpressionParser : ExpressionParser
 			arguments);
 	}
 
+	//TODO: cleanup
 	// ReSharper disable once TooManyArguments
 	// ReSharper disable once ExcessiveIndentation
 	// ReSharper disable once MethodTooLong
@@ -244,14 +246,19 @@ public class MethodExpressionParser : ExpressionParser
 		var method2 = type.FindMethod(methodName, arguments);
 		if (method2 != null)
 			return new MethodCall(method2, instance, arguments);
+		//TODO: put in its own method, this is the only static code that we allow for from AND enums, see beginning of case 26349
 		if (instance == null)
 		{
+			//is the input the type we are talking about, example: RemoveExclamation("Hi!!!"), "Hi!!!" is argument, the method "RemoveExclamation" obviously doesn't exist, so we find the type here (also Instruction.Add)
 			var fromType = body.Method.FindType(methodName);
 			if (fromType != null)
 			{
 				if (IsConstructorUsedWithSameArgumentType(arguments, fromType))
 					throw new ConstructorForSameTypeArgumentIsNotAllowed(body);
-				return new MethodCall(fromType.GetMethod(Method.From, arguments), new From(fromType),
+				return new MethodCall(fromType.GetMethod(Method.From, arguments),
+					//TODO: this would be constants and enum values here if that is the usecase
+					//not really needed ever, use Method.ReturnType: new From(fromType),
+					null,
 					arguments);
 			}
 		}
@@ -318,6 +325,7 @@ public class MethodExpressionParser : ExpressionParser
 		return ParseAllElementsFast(body, innerSpan, new RangeEnumerator(innerSpan, ',', 0));
 	}
 
+	//TODO: cleanup
 	// ReSharper disable once MethodTooLong
 	private Stack<Expression> GetListArgumentsUsingPostfixTokens(Body body, ReadOnlySpan<char> innerSpan,
 		ShuntingYard postfix)

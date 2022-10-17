@@ -87,7 +87,7 @@ public sealed class MemberCallTests : TestExpressions
 		Assert.That(assignmentType.Members[0].Type, Is.EqualTo(type.GetType(Base.Text)));
 		Assert.That(assignmentType.Members[0].Value, Is.InstanceOf<MethodCall>());
 		var methodCall = (MethodCall)assignmentType.Members[0].Value!;
-		Assert.That(methodCall.Instance!.ReturnType.Name, Is.EqualTo(Base.Text));
+		Assert.That(methodCall.Method.ReturnType.Name, Is.EqualTo(Base.Text));
 		Assert.That(methodCall.Arguments[0], Is.EqualTo(new Number(type, 5)));
 	}
 

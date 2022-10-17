@@ -69,6 +69,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Examples", "Examples", "{08
 	ProjectSection(SolutionItems) = preProject
 		Examples\ArithmeticFunction.strict = Examples\ArithmeticFunction.strict
 		Examples\Beeramid.strict = Examples\Beeramid.strict
+		Examples\ConsoleApp.strict = Examples\ConsoleApp.strict
 		Examples\ConvertingNumbers.strict = Examples\ConvertingNumbers.strict
 		Examples\Fibonacci.strict = Examples\Fibonacci.strict
 		Examples\FindFirstNonConsecutiveNumber.strict = Examples\FindFirstNonConsecutiveNumber.strict

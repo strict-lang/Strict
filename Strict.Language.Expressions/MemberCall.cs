@@ -1,6 +1,6 @@
 ﻿namespace Strict.Language.Expressions;
 
-public sealed class MemberCall : NonGenericExpression
+public sealed class MemberCall : ConcreteExpression
 {
 	public MemberCall(Expression? instance, Member member) : base(member.Type)
 	{
