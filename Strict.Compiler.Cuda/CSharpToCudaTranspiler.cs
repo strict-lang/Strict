@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Strict.Language;
 using Strict.Language.Expressions;
 using Type = Strict.Language.Type;
@@ -57,21 +58,15 @@ public class CSharpToCudaTranspiler
 					? "*"
 					: "";
 
-	private static string GetParameterTextWithNameAndType(Type type)
-	{
-		var parameterText = "";
-		foreach (var parameter in type.Methods[0].Parameters)
-			parameterText += parameter.Type.Name switch
+	private static string GetParameterTextWithNameAndType(Type type) =>
+		type.Methods[0].
+			Parameters.Aggregate("", (current, parameter) => current + parameter.Type.Name switch
 			{
-				Base.Number when parameter.Name is "Width" or "Height" => "const int " + parameter.Name +
-					", ",
-				Base.Number when parameter.Name == "initialDepth" => "const float " + parameter.Name +
-					", ",
+				Base.Number when parameter.Name is "Width" or "Height" => "const int " + parameter.Name + ", ",
+				Base.Number when parameter.Name == "initialDepth" => "const float " + parameter.Name + ", ",
 				Base.Number => "const float *" + parameter.Name + ", ",
 				_ => throw new NotSupportedException(parameter.ToString())
-			};
-		return parameterText;
-	}
+			});
 
 	public Type ParseCSharp(string filePath) =>
 		filePath == ""
