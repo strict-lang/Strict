@@ -191,12 +191,11 @@ public sealed class TypeTests
 	{
 		var type = CreateType(nameof(CanUpCastNumberWithList), "has log",
 			"Add(first Number, other List) List", "\tfirst + other");
-		var result = type.FindMethod("Add",
-			new List<Expression>
-			{
-				new Number(type, 5),
-				new List(null!, new List<Expression> { new Number(type, 6), new Number(type, 7) })
-			});
+		var result = type.FindMethod("Add", new List<Expression>
+		{
+			new Number(type, 5),
+			new List(null!, new List<Expression> { new Number(type, 6), new Number(type, 7) })
+		});
 		Assert.That(result, Is.InstanceOf<Method>());
 		Assert.That(result?.ToString(),
 			Is.EqualTo("Add(first TestPackage.Number, other TestPackage.List) List"));
@@ -211,8 +210,8 @@ public sealed class TypeTests
 			() => type.FindMethod("AddGeneric",
 				new List<Expression>
 				{
-					new Number(type, 5),
-					new List(null!, new List<Expression> { new Number(type, 6), new Number(type, 7) })
+					new Number(type, 6),
+					new List(null!, new List<Expression> { new Number(type, 7), new Number(type, 8) })
 				}), Throws.InstanceOf<Type.GenericTypesCannotBeUsedDirectlyUseImplementation>());
 	}
 

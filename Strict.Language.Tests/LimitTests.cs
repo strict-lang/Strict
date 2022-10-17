@@ -22,9 +22,6 @@ public sealed class LimitTests
 			Throws.InstanceOf<Method.MethodLengthMustNotExceedTwelve>().With.Message.
 				Contains("Method Run has 13 lines but limit is 12"));
 
-	private Type CreateType(string name, string line) =>
-		new Type(package, new TypeLines(name, line)).ParseMembersAndMethods(new MethodExpressionParser());
-
 	private Type CreateType(string name, string[] lines) =>
 		new Type(package, new TypeLines(name, lines)).ParseMembersAndMethods(new MethodExpressionParser());
 
