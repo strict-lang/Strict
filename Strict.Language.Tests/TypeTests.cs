@@ -206,9 +206,9 @@ public sealed class TypeTests
 	public void GenericTypesCannotBeUsedDirectlyUseImplementation()
 	{
 		var type = CreateType(nameof(GenericTypesCannotBeUsedDirectlyUseImplementation), "has generic",
-			"Add(first Generic, other List) List", "\tfirst + other");
+			"AddGeneric(first Generic, other List) List", "\tfirst + other");
 		Assert.That(
-			() => type.FindMethod("Add",
+			() => type.FindMethod("AddGeneric",
 				new List<Expression>
 				{
 					new Number(type, 5),

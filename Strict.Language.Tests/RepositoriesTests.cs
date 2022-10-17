@@ -74,9 +74,8 @@ public class RepositoriesTests
 	{
 		var parser = new MethodExpressionParser();
 		var repositories = new Repositories(parser);
-		var basePackage =
-			await repositories.LoadFromUrl(Repositories.
-				StrictUrl);
+		await repositories.LoadFromUrl(Repositories.
+			StrictUrl);
 		var examplesPackage = await repositories.LoadFromUrl(StrictExamplesUrl);
 		var program = new Type(examplesPackage, new TypeLines("ValidProgram", "has number", "Run Number", "\tnumber")).
 			ParseMembersAndMethods(parser);

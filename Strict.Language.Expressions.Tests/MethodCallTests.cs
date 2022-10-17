@@ -135,8 +135,9 @@ public sealed class MethodCallTests : TestExpressions
 				"\tlet result = value",
 				"\tresult")).
 			ParseMembersAndMethods(new MethodExpressionParser());
-		var body = (Body)program.Methods[0].GetBodyAndParseIfNeeded();
-		Assert.That(body.FindVariableValue("value")?.ReturnType, Is.EqualTo(program));
+		Assert.That(
+			((Body)program.Methods[0].GetBodyAndParseIfNeeded()).FindVariableValue("value")?.ReturnType,
+			Is.EqualTo(program));
 	}
 
 	[Test]
