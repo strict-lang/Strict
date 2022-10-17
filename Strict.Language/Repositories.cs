@@ -286,8 +286,7 @@ public sealed class Repositories
 			return !string.IsNullOrEmpty(teamCityCheckoutPath)
 				? teamCityCheckoutPath
 				: @"C:\code\GitHub\strict-lang\Strict";
-			//ncrunch: no coverage end
-		}
+		} //ncrunch: no coverage end
 	}
 	private static string CacheFolder =>
 		Path.Combine( //ncrunch: no coverage, only downloaded and cached on non development machines
