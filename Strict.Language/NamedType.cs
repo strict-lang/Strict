@@ -31,10 +31,19 @@ public abstract class NamedType
 
 	public bool IsMutable { get; }
 
-	private string GetTypeName(string typeName) =>
-		IsMutable
+	private string GetTypeName(string typeName)
+	{
+		if (typeName.StartsWith("List(", StringComparison.Ordinal))
+			throw new ListPrefixIsNotAllowedUseImplementationTypeNameInPlural(typeName);
+		return IsMutable
 			? typeName[(typeName.IndexOf('(') + 1)..typeName.IndexOf(')')]
 			: typeName;
+	}
+
+	public sealed class ListPrefixIsNotAllowedUseImplementationTypeNameInPlural : Exception
+	{
+		public ListPrefixIsNotAllowedUseImplementationTypeNameInPlural(string typeName) : base($"List should not be used as prefix for {typeName} instead use {typeName.GetTextInsideBrackets()}s") { }
+	}
 
 	public sealed class AssignmentWithInitializerTypeShouldNotHaveNameWithType : Exception
 	{

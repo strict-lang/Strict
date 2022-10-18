@@ -135,9 +135,20 @@ public sealed class ListTests : TestExpressions
 						"has elements List(Number)", "has something Number",
 						"AddSomethingWithListLength Number", "\telements.Length + something")).
 				ParseMembersAndMethods(parser),
-			Throws.InstanceOf<Type.ListPrefixIsNotAllowedUseImplementationTypeNameInPlural>()!.With.
+			Throws.InstanceOf<ParsingFailed>().With.InnerException.InstanceOf<NamedType.ListPrefixIsNotAllowedUseImplementationTypeNameInPlural>()!.With.
 				Message.Contains(
 					"List should not be used as prefix for List(Number) instead use Numbers"));
+
+	[Test]
+	public void MethodParameterWithListPrefixInTypeIsNotAllowed() =>
+		Assert.That(
+			() => new Type(type.Package,
+					new TypeLines(nameof(MethodParameterWithListPrefixInTypeIsNotAllowed), "has log",
+						"AddNumberToTexts(input List(Text), number) List(Text)", "\tinput + number")).
+				ParseMembersAndMethods(parser),
+			Throws.InstanceOf<ParsingFailed>().With.InnerException.
+				InstanceOf<NamedType.ListPrefixIsNotAllowedUseImplementationTypeNameInPlural>()!.With.
+				Message.Contains("List should not be used as prefix for List(Text) instead use Texts"));
 
 	[TestCase("(1, 2)", Base.Number)]
 	[TestCase("(\"1\", \"2\")", Base.Text)]

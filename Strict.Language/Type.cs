@@ -225,25 +225,13 @@ public class Type : Context
 		nameAndExpression.MoveNext();
 		var nameAndType = nameAndExpression.Current.ToString();
 		if (nameAndExpression.MoveNext() && nameAndExpression.Current[0] != '=')
-		{
 			nameAndType += " " + nameAndExpression.Current.ToString();
-			if (nameAndExpression.Current.StartsWith("List("))
-				throw new ListPrefixIsNotAllowedUseImplementationTypeNameInPlural(this, lineNumber,
-					nameAndExpression.Current.ToString());
-		}
 		return IsMemberTypeAny(nameAndType, nameAndExpression)
 			? throw new MemberWithTypeAnyIsNotAllowed(this, lineNumber, nameAndType)
 			: new Member(this, nameAndType, nameAndExpression.MoveNext()
 				? GetMemberExpression(parser, nameAndType.MakeFirstLetterUppercase(),
 					remainingLine[(nameAndType.Length + 3)..])
 				: null);
-	}
-
-	public sealed class ListPrefixIsNotAllowedUseImplementationTypeNameInPlural : ParsingFailed
-	{
-		public ListPrefixIsNotAllowedUseImplementationTypeNameInPlural(Type type, int lineNumber,
-			string typeName) : base(type, lineNumber,
-			$"List should not be used as prefix for {typeName} instead use {typeName.GetTextInsideBrackets()}s") { }
 	}
 
 	private static bool IsMemberTypeAny(string nameAndType, SpanSplitEnumerator nameAndExpression) => nameAndType == Base.Any.MakeFirstLetterLowercase() || nameAndExpression.Current.Equals(Base.Any, StringComparison.Ordinal);
