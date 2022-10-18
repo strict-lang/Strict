@@ -127,6 +127,18 @@ public sealed class ListTests : TestExpressions
 		Assert.That(() => ParseExpression(code),
 			Throws.InstanceOf<ConstructorForSameTypeArgumentIsNotAllowed>());
 
+	[Test]
+	public void MemberWithListPrefixInTypeIsNotAllowed() =>
+		Assert.That(
+			() => new Type(type.Package,
+					new TypeLines(nameof(MemberWithListPrefixInTypeIsNotAllowed),
+						"has elements List(Number)", "has something Number",
+						"AddSomethingWithListLength Number", "\telements.Length + something")).
+				ParseMembersAndMethods(parser),
+			Throws.InstanceOf<Type.ListPrefixIsNotAllowedUseImplementationTypeNameInPlural>()!.With.
+				Message.Contains(
+					"List should not be used as prefix for List(Number) instead use Numbers"));
+
 	[TestCase("(1, 2)", Base.Number)]
 	[TestCase("(\"1\", \"2\")", Base.Text)]
 	[TestCase("(true, false)", Base.Boolean)]

@@ -147,12 +147,14 @@ public class Type : Context
 
 	public sealed class MembersCountMustNotExceedTen : ParsingFailed
 	{
-		public MembersCountMustNotExceedTen(Type type) : base(type, 0, $"Type {type.Name} has member count {type.members.Count} but limit is 10") { }
+		public MembersCountMustNotExceedTen(Type type) : base(type, 0,
+			$"Type {type.Name} has member count {type.members.Count} but limit is 10") { }
 	}
 
 	public sealed class MethodCountMustNotExceedFifteen : ParsingFailed
 	{
-		public MethodCountMustNotExceedFifteen(Type type) : base(type, 0, $"Type {type.Name} has method count {type.methods.Count} but limit is 15") { }
+		public MethodCountMustNotExceedFifteen(Type type) : base(type, 0,
+			$"Type {type.Name} has method count {type.methods.Count} but limit is 15") { }
 	}
 
 	private void ParseAllRemainingLinesIntoMembersAndMethods(ExpressionParser parser)
@@ -223,13 +225,25 @@ public class Type : Context
 		nameAndExpression.MoveNext();
 		var nameAndType = nameAndExpression.Current.ToString();
 		if (nameAndExpression.MoveNext() && nameAndExpression.Current[0] != '=')
+		{
 			nameAndType += " " + nameAndExpression.Current.ToString();
-		if (IsMemberTypeAny(nameAndType, nameAndExpression))
-			throw new MemberWithTypeAnyIsNotAllowed(this, lineNumber, nameAndType);
-		return new Member(this, nameAndType, nameAndExpression.MoveNext()
-			? GetMemberExpression(parser, nameAndType.MakeFirstLetterUppercase(),
-				remainingLine[(nameAndType.Length + 3)..])
-			: null);
+			if (nameAndExpression.Current.StartsWith("List("))
+				throw new ListPrefixIsNotAllowedUseImplementationTypeNameInPlural(this, lineNumber,
+					nameAndExpression.Current.ToString());
+		}
+		return IsMemberTypeAny(nameAndType, nameAndExpression)
+			? throw new MemberWithTypeAnyIsNotAllowed(this, lineNumber, nameAndType)
+			: new Member(this, nameAndType, nameAndExpression.MoveNext()
+				? GetMemberExpression(parser, nameAndType.MakeFirstLetterUppercase(),
+					remainingLine[(nameAndType.Length + 3)..])
+				: null);
+	}
+
+	public sealed class ListPrefixIsNotAllowedUseImplementationTypeNameInPlural : ParsingFailed
+	{
+		public ListPrefixIsNotAllowedUseImplementationTypeNameInPlural(Type type, int lineNumber,
+			string typeName) : base(type, lineNumber,
+			$"List should not be used as prefix for {typeName} instead use {typeName.GetTextInsideBrackets()}s") { }
 	}
 
 	private static bool IsMemberTypeAny(string nameAndType, SpanSplitEnumerator nameAndExpression) => nameAndType == Base.Any.MakeFirstLetterLowercase() || nameAndExpression.Current.Equals(Base.Any, StringComparison.Ordinal);
@@ -438,8 +452,8 @@ public class Type : Context
 				return true;
 			if (methodParameterType.IsGeneric)
 				throw new GenericTypesCannotBeUsedDirectlyUseImplementation(methodParameterType,
-					"(parameter " + index + ") is not usable with argument " + arguments[index].ToStringWithType() + " in " +
-					method);
+					"(parameter " + index + ") is not usable with argument " +
+					arguments[index].ToStringWithType() + " in " + method);
 			if (!argumentReturnType.IsCompatible(methodParameterType))
 				return false;
 		}

@@ -27,4 +27,13 @@ public static class StringExtensions
 
 	public static string MakeFirstLetterLowercase(this string name) =>
 		name[..1].ToLowerInvariant() + name[1..];
+
+	public static string GetTextInsideBrackets(this string text)
+	{
+		var bracketStartIndex = text.IndexOf('(');
+		var bracketEndIndex = text.IndexOf(')');
+		return bracketStartIndex > -1 && bracketStartIndex < bracketEndIndex
+			? text[(bracketStartIndex + 1)..bracketEndIndex]
+			: text;
+	}
 }
