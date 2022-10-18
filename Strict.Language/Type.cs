@@ -133,7 +133,6 @@ public class Type : Context
 	{
 		if (methods.Count == 0 && members.Count + implements.Count < 2 && !IsNoneAnyOrBoolean())
 			throw new NoMethodsFound(this, lineNumber);
-		//TODO: Allow for enum types Type.IsEnum (which is NO method, only const members, which also needs a limit -> 50, please add)
 		if (members.Count > 10)
 			throw new MembersCountMustNotExceedTen(this);
 		if (methods.Count > 15 && Package.Name != nameof(Base))
@@ -533,7 +532,6 @@ public class Type : Context
 
 	private readonly ExpressionParser dummyExpressionParser = new DummyExpressionParser();
 
-	//TODO: this should not be here
 	//ncrunch: no coverage start
 	private sealed class DummyExpressionParser : ExpressionParser
 	{
@@ -548,20 +546,7 @@ public class Type : Context
 		this == sameOrBaseType || sameOrBaseType.Name == Base.Any || implements.Contains(sameOrBaseType) ||
 		CanUpCast(sameOrBaseType);
 
-	/*TODO: cleanup:
-	 the checks in Type.IsCompatible are all upside down:
-      if (argumentReturnType is GenericType genericType)
-        argumentReturnType = genericType.Implementation;
-the main issue is however here:
-  private bool CanUpCast(Type sameOrBaseType)
-  {
-    if (sameOrBaseType.Name is Base.List)
-      return Name == Base.Number  implements.Contains(GetType(Base.Number)) 
-        Name == Base.Text;
-why would any Number or Text or anything that implements number (what is this specific case doing here?) be upcastable to a list, that makes zero sense.
-the sameOrBaseType.Name == Base.Any || is also a bit strange.
-I have no idea how you got this far with checks like these*/
-	private bool CanUpCast(Type sameOrBaseType)
+	private bool CanUpCast(Context sameOrBaseType)
 	{
 		if (sameOrBaseType.Name is Base.Text or Base.List)
 			return Name == Base.Number || implements.Contains(GetType(Base.Number));

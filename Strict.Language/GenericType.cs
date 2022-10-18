@@ -4,7 +4,6 @@ namespace Strict.Language;
 
 public sealed class GenericType : Type
 {
-	//TODO: make implementation array (can have many, add example and test for this)
 	public GenericType(Type generic, Type implementation) : base(generic.Package,
 		new TypeLines(generic.Name + "(" + implementation.Name + ")", Implement + generic.Name))
 	{

@@ -8,7 +8,7 @@ public sealed class List : Value
 {
 	public List(Body bodyForErrorMessage, List<Expression> values) : base(
 		values[0].ReturnType.GetListType(GetCommonBaseType(values.Select(v => v.ReturnType).ToList(),
-			bodyForErrorMessage)), //TODO: Any other better approach other than ToList?
+			bodyForErrorMessage)),
 		values) =>
 		Values = values;
 

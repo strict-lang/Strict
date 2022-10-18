@@ -16,7 +16,7 @@ public class MethodCall : ConcreteExpression
 		base(method.ReturnType)
 	{
 		if (method.Name == Method.From && instance != null)
-			throw new NotSupportedException("Makes no sense, we don't have an instance yet");
+			throw new NotSupportedException("Makes no sense, we don't have an instance yet"); //ncrunch: no coverage
 		Instance = instance;
 		Method = method;
 		Arguments = arguments;

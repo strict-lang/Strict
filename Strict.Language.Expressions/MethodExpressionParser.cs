@@ -24,10 +24,11 @@ public class MethodExpressionParser : ExpressionParser
 	public override Expression ParseExpression(Body body, ReadOnlySpan<char> input)
 	{
 		CheckIfEmptyOrAny(body, input);
-		return input.Length < 3 || !input.Contains(' ') && !input.Contains(',') ||
+		return input.Length < 3 || !input.Contains(' ') && !input.Contains(',') // && !input.Contains(").", StringComparison.Ordinal)
+			||
 			input.StartsWith(Base.Mutable)
 				? TryParseCommon(body, input)
-				: TryParse(body, input) ?? TryParseMethodOrMember(body, input);
+				: TryParseErrorOrTextOrListOrConditionalExpression(body, input) ?? TryParseMethodOrMember(body, input);
 	}
 
 	private static void CheckIfEmptyOrAny(Body body, ReadOnlySpan<char> input)
@@ -64,7 +65,7 @@ public class MethodExpressionParser : ExpressionParser
 				? throw new IdentifierNotFound(body, input.ToString())
 				: throw new UnknownExpression(body, input.ToString()));
 
-	private Expression? TryParse(Body body, ReadOnlySpan<char> input) =>
+	private Expression? TryParseErrorOrTextOrListOrConditionalExpression(Body body, ReadOnlySpan<char> input) =>
 		input.StartsWith("Error ")
 			? TryParseErrorExpression(body, input[6..])
 			:
@@ -126,16 +127,10 @@ public class MethodExpressionParser : ExpressionParser
 		var argumentsStart = input.IndexOf('(');
 		var argumentsEnd = input.FindMatchingBracketIndex(argumentsStart);
 		ChangeArgumentStartEndIfNestedMethodCall(input, ref argumentsStart, ref argumentsEnd);
-		if (argumentsStart > 0 && argumentsEnd > 0)
-		{
-			var call = ParseInContext(body.Method.Type, body, input[..argumentsStart],
+		return argumentsStart <= 0 || argumentsEnd <= 0 || argumentsEnd < input.Length - 1
+			? ParseInContext(body.Method.Type, body, input, Array.Empty<Expression>())
+			: ParseInContext(body.Method.Type, body, input[..argumentsStart],
 				ParseListArguments(body, input[(argumentsStart + 1)..argumentsEnd]));
-			return argumentsEnd < input.Length - 1
-				// ReSharper disable once TailRecursiveCall
-				? TryParseMemberOrZeroOrOneArgumentMethodOrNestedCall(body, input[(argumentsEnd + 2)..])
-				: call;
-		}
-		return ParseInContext(body.Method.Type, body, input, Array.Empty<Expression>());
 	}
 
 	private static void ChangeArgumentStartEndIfNestedMethodCall(ReadOnlySpan<char> input,
@@ -156,7 +151,7 @@ public class MethodExpressionParser : ExpressionParser
 			input.IndexOf('.') < innerArgumentStart;
 	}
 
-	//TODO: cleanup
+	//https://deltaengine.fogbugz.com/f/cases/26383
 	// ReSharper disable once TooManyArguments
 	// ReSharper disable once MethodTooLong
 	// ReSharper disable once CyclomaticComplexity
@@ -210,7 +205,7 @@ public class MethodExpressionParser : ExpressionParser
 			arguments);
 	}
 
-	//TODO: cleanup
+	//https://deltaengine.fogbugz.com/f/cases/26383
 	// ReSharper disable once TooManyArguments
 	// ReSharper disable once ExcessiveIndentation
 	// ReSharper disable once MethodTooLong
@@ -246,25 +241,28 @@ public class MethodExpressionParser : ExpressionParser
 		var method2 = type.FindMethod(methodName, arguments);
 		if (method2 != null)
 			return new MethodCall(method2, instance, arguments);
-		//TODO: put in its own method, this is the only static code that we allow for from AND enums, see beginning of case 26349
 		if (instance == null)
-		{
-			//is the input the type we are talking about, example: RemoveExclamation("Hi!!!"), "Hi!!!" is argument, the method "RemoveExclamation" obviously doesn't exist, so we find the type here (also Instruction.Add)
-			var fromType = body.Method.FindType(methodName);
-			if (fromType != null)
-			{
-				if (IsConstructorUsedWithSameArgumentType(arguments, fromType))
-					throw new ConstructorForSameTypeArgumentIsNotAllowed(body);
-				return new MethodCall(fromType.GetMethod(Method.From, arguments),
-					//TODO: this would be constants and enum values here if that is the usecase
-					//not really needed ever, use Method.ReturnType: new From(fromType),
-					null,
-					arguments);
-			}
-		}
+			return TryParseFromOrEnum(body, arguments, methodName);
 #if LOG_DETAILS
 		Logger.Info("ParseNested found no local method in " + body.Method.Type + ": " + methodName);
 #endif
+		return null;
+	}
+
+	private static Expression? TryParseFromOrEnum(Body body, IReadOnlyList<Expression> arguments,
+		string methodName)
+	{
+		// this is the only static code that we allow for from AND enums, see beginning of case 26349; is the input the type we are talking about, example: RemoveExclamation("Hi!!!"), "Hi!!!" is argument, the method "RemoveExclamation" obviously doesn't exist, so we find the type here (also Instruction.Add)
+		var fromType = body.Method.FindType(methodName);
+		if (fromType != null)
+		{
+			if (IsConstructorUsedWithSameArgumentType(arguments, fromType))
+				throw new ConstructorForSameTypeArgumentIsNotAllowed(body);
+			return new MethodCall(fromType.GetMethod(Method.From, arguments),
+				//Case 26390: this would be constants and enum values here if that is the usecase https://deltaengine.fogbugz.com/f/cases/26390/
+				//not really needed ever, use Method.ReturnType: new From(fromType),
+				null, arguments);
+		}
 		return null;
 	}
 
@@ -325,7 +323,7 @@ public class MethodExpressionParser : ExpressionParser
 		return ParseAllElementsFast(body, innerSpan, new RangeEnumerator(innerSpan, ',', 0));
 	}
 
-	//TODO: cleanup
+	//https://deltaengine.fogbugz.com/f/cases/26383
 	// ReSharper disable once MethodTooLong
 	private Stack<Expression> GetListArgumentsUsingPostfixTokens(Body body, ReadOnlySpan<char> innerSpan,
 		ShuntingYard postfix)

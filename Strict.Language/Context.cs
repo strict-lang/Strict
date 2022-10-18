@@ -64,7 +64,8 @@ public abstract class Context
 			: null;
 	}
 
-	public GenericType GetListType(Type implementation) => GetType(Base.List).GetGenericImplementation(implementation);
+	public GenericType GetListType(Type implementation) =>
+		GetType(Base.List).GetGenericImplementation(implementation);
 
 	private Type? FindFullType(string name) =>
 		name.Contains('.')
