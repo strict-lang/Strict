@@ -41,7 +41,7 @@ public class CSharpExpressionVisitor : ExpressionVisitor
 	public string GetCSharpTypeName(Type type)
 	{
 		if (type.IsList)
-			return $"List<{GetCSharpTypeName(((GenericType)type).Implementation)}>";
+			return $"List<{GetCSharpTypeName(((GenericType)type).ImplementationTypes[0])}>";
 		return type.Name switch
 		{
 			Base.None => "void",

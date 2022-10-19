@@ -195,8 +195,8 @@ public sealed class ListTests : TestExpressions
 		var program = new Type(type.Package,
 			new TypeLines(nameof(ListGenericLengthAddition), "has listOne Numbers", "has listTwo Numbers", "AddListLength Number", "\tlistOne.Length + listTwo.Length")).ParseMembersAndMethods(parser);
 		Assert.That(program.Members[0].Name, Is.EqualTo("listOne"));
-		var numbersListType =
-			type.GetType(Base.List).GetGenericImplementation(type.GetType(Base.Number));
+		var numbersListType = type.GetType(Base.List).
+			GetGenericImplementation(new List<Type> { type.GetType(Base.Number) });
 		Assert.That(program.Members[0].Type, Is.EqualTo(numbersListType));
 		Assert.That(program.Members[1].Type, Is.EqualTo(numbersListType));
 	}

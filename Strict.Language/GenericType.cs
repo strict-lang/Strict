@@ -1,25 +1,26 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 
 namespace Strict.Language;
 
 public sealed class GenericType : Type
 {
-	public GenericType(Type generic, Type implementation) : base(generic.Package,
-		new TypeLines(GetTypeName(generic, implementation.Name), Implement + generic.Name))
+	public GenericType(Type generic, IReadOnlyList<Type> implementationTypes) : base(generic.Package,
+		new TypeLines(GetTypeName(generic, implementationTypes), Implement + generic.Name))
 	{
 		Generic = generic;
-		Implementation = implementation;
+		ImplementationTypes = implementationTypes;
 		foreach (var methodsByNames in Generic.AvailableMethods)
 		foreach (var method in methodsByNames.Value)
 			if (method.ReturnType.IsGeneric || method.Parameters.Any(p => p.Type.IsGeneric))
 				methods.Add(method.CloneWithImplementation(this));
 	}
 
-	private static string GetTypeName(Type generic, string implementationTypeName) =>
+	private static string GetTypeName(Type generic, IReadOnlyList<Type> implementationTypes) =>
 		generic.IsList
-			? implementationTypeName.MakeItPlural()
-			: generic.Name + "(" + implementationTypeName + ")";
+			? implementationTypes[0].Name.MakeItPlural()
+			: generic.Name + implementationTypes.ToBrackets();
 
 	public Type Generic { get; }
-	public Type Implementation { get; }
+	public IReadOnlyList<Type> ImplementationTypes { get; }
 }

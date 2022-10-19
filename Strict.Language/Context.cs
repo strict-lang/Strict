@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 
 namespace Strict.Language;
@@ -41,6 +42,8 @@ public abstract class Context
 	{
 		if (name == Name)
 			return (Type)this;
+		if (name.Contains('(') && name.EndsWith(')'))
+			return GetGenericTypeWithArguments(name);
 		if (!name.EndsWith('s'))
 			return (FindFullType(name) ?? FindType(name, this)) ??
 				throw new TypeNotFound(name, FullName);
@@ -49,6 +52,34 @@ public abstract class Context
 			return listType;
 		return (FindFullType(name) ?? FindType(name, this)) ??
 			throw new TypeNotFound(name, FullName);
+	}
+
+	private Type GetGenericTypeWithArguments(string name)
+	{
+		var mainType = GetType(name[..name.IndexOf('(')]);
+		var argumentTypes = GetArgumentTypes(name[(mainType.Name.Length + 1)..^1].
+			Split(',', StringSplitOptions.TrimEntries));
+		if (mainType.Members.Count != argumentTypes.Count) //TODO: Do we need to take all members count here or just Type or Generic members?
+			throw new TypeArgumentsDoNotMatchWithMainType(mainType, argumentTypes);
+		return mainType.IsGeneric
+			? mainType.GetGenericImplementation(argumentTypes)
+			: mainType; //TODO: This needs to be constructed properly for non-generic type with Type parameters
+	}
+
+	private List<Type> GetArgumentTypes(IEnumerable<string> argumentTypeNames)
+	{
+		var argumentTypes = new List<Type>();
+		foreach (var argumentTypeName in argumentTypeNames)
+			argumentTypes.Add(GetType(argumentTypeName));
+		return argumentTypes;
+	}
+
+	public sealed class TypeArgumentsDoNotMatchWithMainType : Exception
+	{
+		public TypeArgumentsDoNotMatchWithMainType(Type mainType,
+			IReadOnlyCollection<Type> argumentTypes) : base(
+			$"Argument(s) {argumentTypes.ToBrackets()} does not match type {mainType.Name}" +
+			$" with constructor {mainType.Name}{mainType.Members.ToBrackets()}") { }
 	}
 
 	private Type? FindListType(string singularName)
@@ -62,7 +93,7 @@ public abstract class Context
 	}
 
 	public GenericType GetListType(Type implementation) =>
-		GetType(Base.List).GetGenericImplementation(implementation);
+		GetType(Base.List).GetGenericImplementation(new List<Type> { implementation });
 
 	private Type? FindFullType(string name) =>
 		name.Contains('.')

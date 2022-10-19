@@ -225,14 +225,29 @@ public class Type : Context
 		nameAndExpression.MoveNext();
 		var nameAndType = nameAndExpression.Current.ToString();
 		if (nameAndExpression.MoveNext() && nameAndExpression.Current[0] != '=')
-			nameAndType += " " + nameAndExpression.Current.ToString();
+			nameAndType += " " + GetMemberType(nameAndExpression);
 		return IsMemberTypeAny(nameAndType, nameAndExpression)
 			? throw new MemberWithTypeAnyIsNotAllowed(this, lineNumber, nameAndType)
-			: new Member(this, nameAndType, nameAndExpression.MoveNext()
+			: new Member(this, nameAndType, HasMemberExpression(nameAndExpression)
 				? GetMemberExpression(parser, nameAndType.MakeFirstLetterUppercase(),
 					remainingLine[(nameAndType.Length + 3)..])
 				: null);
 	}
+
+	private static string GetMemberType(SpanSplitEnumerator nameAndExpression)
+	{
+		var memberType = nameAndExpression.Current.ToString();
+		while (nameAndExpression.Current[^1] == ',')
+		{
+			nameAndExpression.MoveNext();
+			memberType += " " + nameAndExpression.Current.ToString();
+		}
+		return memberType;
+	}
+
+	private static bool HasMemberExpression(SpanSplitEnumerator nameAndExpression) =>
+		nameAndExpression.Current[0] == '=' ||
+		nameAndExpression.MoveNext() && nameAndExpression.Current[0] == '=';
 
 	private static bool IsMemberTypeAny(string nameAndType, SpanSplitEnumerator nameAndExpression) => nameAndType == Base.Any.MakeFirstLetterLowercase() || nameAndExpression.Current.Equals(Base.Any, StringComparison.Ordinal);
 
@@ -369,15 +384,15 @@ public class Type : Context
 	/// </summary>
 	public const string Other = nameof(Other);
 
-	public GenericType GetGenericImplementation(Type implementation)
+	public GenericType GetGenericImplementation(List<Type> implementationTypes)
 	{
 		if (!IsGeneric)
-			throw new CannotGetGenericImplementationOnNonGeneric(Name, implementation);
+			throw new CannotGetGenericImplementationOnNonGeneric(Name, implementationTypes);
 		cachedGenericTypes ??= new Dictionary<string, GenericType>(StringComparer.Ordinal);
-		if (cachedGenericTypes.TryGetValue(implementation.Name, out var genericType))
+		if (cachedGenericTypes.TryGetValue(Name + implementationTypes.ToBrackets(), out var genericType))
 			return genericType;
-		genericType = new GenericType(this, implementation);
-		cachedGenericTypes.Add(implementation.Name, genericType);
+		genericType = new GenericType(this, implementationTypes);
+		cachedGenericTypes.Add(Name + implementationTypes.ToBrackets(), genericType);
 		return genericType;
 	}
 
@@ -385,8 +400,8 @@ public class Type : Context
 
 	public sealed class CannotGetGenericImplementationOnNonGeneric : Exception
 	{
-		public CannotGetGenericImplementationOnNonGeneric(string name, Type implementation) :
-			base("Type: " + name + ", Generic Implementation: " + implementation) { }
+		public CannotGetGenericImplementationOnNonGeneric(string name, List<Type> implementations) :
+			base("Type: " + name + ", Generic Implementation: " + implementations.ToWordList()) { }
 	}
 
 	public const string Extension = ".strict";
@@ -431,7 +446,7 @@ public class Type : Context
 				return true;
 			if (methodParameterType is GenericType parameterGenericType)
 			{
-				if (!argumentReturnType.IsCompatible(parameterGenericType.Implementation))
+				if (!argumentReturnType.IsCompatible(parameterGenericType.ImplementationTypes[index]))
 					return false;
 				continue;
 			}
@@ -489,7 +504,7 @@ public class Type : Context
 	{
 		var matchedMember = members.FirstOrDefault(member =>
 			member.Type.IsList && arguments.All(argument => member.Type.Name == Base.List ||
-				argument.ReturnType == ((GenericType)member.Type).Implementation));
+				argument.ReturnType == ((GenericType)member.Type).ImplementationTypes[0])); // used 0 index here because GenericType is List
 		if (matchedMember == null)
 			return null;
 		isMatchedWithList = true;
@@ -500,11 +515,11 @@ public class Type : Context
 	{
 		var matchedImplement = implements.FirstOrDefault(implement =>
 			implement.IsList && arguments.All(argument =>
-				argument.ReturnType == ((GenericType)implement).Implementation));
+				argument.ReturnType == ((GenericType)implement).ImplementationTypes[0]));
 		if (matchedImplement == null)
 			return null;
 		isMatchedWithList = true;
-		return $"{((GenericType)matchedImplement).Implementation.Name.MakeFirstLetterLowercase()}s";
+		return $"{((GenericType)matchedImplement).ImplementationTypes[0].Name.MakeFirstLetterLowercase()}s";
 	}
 
 	private bool isMatchedWithList;
