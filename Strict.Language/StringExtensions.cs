@@ -36,4 +36,6 @@ public static class StringExtensions
 			? text[(bracketStartIndex + 1)..bracketEndIndex]
 			: text;
 	}
+
+	public static string MakeItPlural(this string name) => name + "s";
 }

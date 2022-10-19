@@ -51,9 +51,6 @@ public abstract class Context
 			throw new TypeNotFound(name, FullName);
 	}
 
-	public Type GetType(string genericType, string implementationType) =>
-		GetType(genericType + "(" + implementationType + ")");
-
 	private Type? FindListType(string singularName)
 	{
 		if (singularName == Base.Generic)
