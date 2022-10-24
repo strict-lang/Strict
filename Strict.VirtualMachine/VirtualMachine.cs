@@ -1,8 +1,10 @@
-﻿namespace Strict.VirtualMachine;
+﻿using Strict.Language;
+
+namespace Strict.VirtualMachine;
 
 public sealed class VirtualMachine
 {
-	public Dictionary<Register, double> Execute(IReadOnlyList<Statement> statements)
+	public Dictionary<Register, Instance> Execute(IReadOnlyList<Statement> statements)
 	{
 		for (instructionIndex = 0; instructionIndex < statements.Count; instructionIndex++)
 			ExecuteStatement(statements[instructionIndex]);
@@ -13,7 +15,7 @@ public sealed class VirtualMachine
 	{
 		if (statement.Instruction == Instruction.Set)
 			foreach (var register in statement.Registers)
-				registers[register] = statement.Value;
+				registers[register] = statement.Instance;
 		else
 			TryExecute(statement);
 	}
@@ -29,7 +31,7 @@ public sealed class VirtualMachine
 			TryJumpOperation(statement);
 	}
 
-	private readonly Dictionary<Register, double> registers = new();
+	private readonly Dictionary<Register, Instance> registers = new();
 	private int instructionIndex;
 
 	private void TryOperationExecution(Statement statement)
@@ -37,15 +39,30 @@ public sealed class VirtualMachine
 		var (right, left) = GetOperands(statement);
 		registers[statement.Registers[^1]] = statement.Instruction switch
 		{
-			Instruction.Add => left + right,
-			Instruction.Subtract => left - right,
-			Instruction.Multiply => left * right,
-			Instruction.Divide => left / right,
+			Instruction.Add => GetAdditionResult(left, right),
+			Instruction.Subtract => new Instance(right.ReturnType,
+				Convert.ToDouble(left.Value) - Convert.ToDouble(right.Value)),
+			Instruction.Multiply => new Instance(right.ReturnType,
+				Convert.ToDouble(left.Value) * Convert.ToDouble(right.Value)),
+			Instruction.Divide => new Instance(right.ReturnType,
+				Convert.ToDouble(left.Value) / Convert.ToDouble(right.Value)),
 			_ => registers[statement.Registers[^1]] //ncrunch: no coverage
 		};
 	}
 
-	private (double, double) GetOperands(Statement statement) =>
+	private static Instance GetAdditionResult(Instance left, Instance right)
+	{
+		if (left.ReturnType.Name == Base.Number && right.ReturnType.Name == Base.Number)
+			return new Instance(right.ReturnType,
+				Convert.ToDouble(left.Value) + Convert.ToDouble(right.Value));
+		if (left.ReturnType.Name == Base.Text && right.ReturnType.Name == Base.Text)
+			return new Instance(right.ReturnType, left.Value.ToString() + right.Value);
+		if (right.ReturnType.Name == Base.Text && left.ReturnType.Name == Base.Number)
+			return new Instance(right.ReturnType, left.Value.ToString() + right.Value);
+		return new Instance(right.ReturnType, right.Value.ToString() + left.Value);
+	}
+
+	private (Instance, Instance) GetOperands(Statement statement) =>
 		registers.Count < 2
 			? throw new OperandsRequired()
 			: (registers[statement.Registers[1]], registers[statement.Registers[0]]);
@@ -55,10 +72,10 @@ public sealed class VirtualMachine
 		var (right, left) = GetOperands(statement);
 		var result = statement.Instruction switch
 		{
-			Instruction.GreaterThan => left > right,
-			Instruction.LessThan => left < right,
-			Instruction.Equal => left == right,
-			Instruction.NotEqual => left != right,
+			Instruction.GreaterThan => Convert.ToDouble(left.Value) > Convert.ToDouble(right.Value),
+			Instruction.LessThan => Convert.ToDouble(left.Value) < Convert.ToDouble(right.Value),
+			Instruction.Equal => left.Value.Equals(right.Value),
+			Instruction.NotEqual => !left.Value.Equals(right.Value),
 			_ => false //ncrunch: no coverage
 		};
 		conditionFlag = result;
@@ -69,12 +86,12 @@ public sealed class VirtualMachine
 	private void TryJumpOperation(Statement statement)
 	{
 		if (statement.Instruction == Instruction.JumpIfTrue && conditionFlag)
-			instructionIndex += (int)statement.Value;
+			instructionIndex += Convert.ToInt32(statement.Instance.Value);
 		else if (statement.Instruction == Instruction.JumpIfFalse && !conditionFlag)
-			instructionIndex += (int)statement.Value;
+			instructionIndex += Convert.ToInt32(statement.Instance.Value);
 		else if (statement.Instruction == Instruction.JumpIfNotZero &&
-			registers[statement.Registers[0]] != 0)
-			instructionIndex += (int)statement.Value;
+			Convert.ToInt32(registers[statement.Registers[0]].Value) != 0)
+			instructionIndex += Convert.ToInt32(statement.Instance.Value);
 	}
 
 	public class OperandsRequired : Exception { }
