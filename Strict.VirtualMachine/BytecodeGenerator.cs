@@ -9,7 +9,7 @@ public sealed class BytecodeGenerator
 	{
 		var statements = method.Parameters.Select(parameter =>
 				new Statement(Instruction.SetVariable,
-					new Instance(parameter.Type, 0, parameter.Name))).
+					new Instance(parameter.Type, 0))).
 			ToList();
 		var body = method.GetBodyAndParseIfNeeded();
 		if (body is Binary binary)
@@ -27,8 +27,8 @@ public sealed class BytecodeGenerator
 	{
 		if (binary.Instance != null)
 		{
-			statements.Add(new LoadStatement(binary.Instance.ToString(), Register.R0));
-			statements.Add(new LoadStatement(binary.Arguments[0].ToString(), Register.R1));
+			statements.Add(new LoadStatement(Register.R0));
+			statements.Add(new LoadStatement(Register.R1));
 			statements.Add(new Statement(Instruction.Add, Register.R0, Register.R1, Register.R2));
 		}
 	}

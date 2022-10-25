@@ -1,7 +1,7 @@
 ﻿namespace Strict.VirtualMachine;
 
-public sealed record LoadStatement(string Name, Register Register) : Statement(Instruction.Load,
+public sealed record LoadStatement(Register Register) : Statement(Instruction.Load,
 	Register)
 {
-	public override string ToString() => $"{Instruction} {Name} {Register}";
+	public override string ToString() => $"{Instruction} {Register}";
 }

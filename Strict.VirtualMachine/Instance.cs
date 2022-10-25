@@ -6,16 +6,14 @@ namespace Strict.VirtualMachine;
 /// The only place where we can have a "static" method call to one of the from methods of a type
 /// before we have a type instance yet, it is the only way to create instances.
 /// </summary>
-public class Instance
+public sealed class Instance
 {
-	public Instance(Type type, object value, string? name = null)
+	public Instance(Type type, object value)
 	{
 		ReturnType = type;
 		Value = value;
-		Name = name;
 	}
 
-	public string? Name { get; set; }
 	public Type ReturnType { get; }
 	public object Value { get; }
 }

@@ -8,10 +8,9 @@ namespace Strict.VirtualMachine.Tests;
 
 public sealed class BytecodeGeneratorTests
 {
-	private readonly BytecodeGenerator generator = new();
 	private static readonly Package Package = new TestPackage();
 
-	[TestCase("SetVariable 0\nSetVariable 0\nLoad first R0\nLoad second R1\nAdd R0, R1, R2",
+	[TestCase("SetVariable 0\nSetVariable 0\nLoad R0\nLoad R1\nAdd R0, R1, R2",
 		"Add",
 		"has Number",
 		"Calculate(first Number, second Number) Number",

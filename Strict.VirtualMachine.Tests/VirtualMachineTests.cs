@@ -45,8 +45,8 @@ public sealed class VirtualMachineTests
 		Assert.That(
 			machine.Execute(new Statement[]
 			{
-				new(Instruction.SetVariable, new Instance(NumberType, 5, "bla")),
-				new LoadStatement("someVar", Register.R0)
+				new(Instruction.SetVariable, new Instance(NumberType, 5)),
+				new LoadStatement(Register.R0)
 			})[Register.R0].Value, Is.EqualTo(5));
 
 	[Test]
