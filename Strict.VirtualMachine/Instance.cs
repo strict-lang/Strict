@@ -8,12 +8,14 @@ namespace Strict.VirtualMachine;
 /// </summary>
 public class Instance
 {
-	public Instance(Type type, object value)
+	public Instance(Type type, object value, string? name = null)
 	{
 		ReturnType = type;
 		Value = value;
+		Name = name;
 	}
 
+	public string? Name { get; set; }
 	public Type ReturnType { get; }
 	public object Value { get; }
 }

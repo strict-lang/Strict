@@ -41,12 +41,21 @@ public sealed class VirtualMachineTests
 		};
 
 	[Test]
+	public void LoadVariable() =>
+		Assert.That(
+			machine.Execute(new Statement[]
+			{
+				new(Instruction.SetVariable, new Instance(NumberType, 5, "bla")),
+				new LoadStatement("someVar", Register.R0)
+			})[Register.R0].Value, Is.EqualTo(5));
+
+	[Test]
 	public void AddFiveTimes() =>
 		Assert.That(machine.Execute(new Statement[]
 		{
 			new(Instruction.Set, new Instance(NumberType, 5), Register.R0),
 			new(Instruction.Set, new Instance(NumberType, 1), Register.R1),
-			new(Instruction.Set, new Instance(NumberType, 0), Register.R2), //initialized with 0
+			new(Instruction.Set, new Instance(NumberType, 0), Register.R2),
 			new(Instruction.Add, Register.R0, Register.R2, Register.R2), // R2 = R0 + R2
 			new(Instruction.Subtract, Register.R0, Register.R1, Register.R0),
 			new(Instruction.JumpIfNotZero, new Instance(NumberType, -3), Register.R0)
@@ -77,10 +86,10 @@ public sealed class VirtualMachineTests
 			new(Instruction.Set, new Instance(NumberType, registers[1]), Register.R1),
 			new(conditional, Register.R0, Register.R1),
 			new(Instruction.JumpIfTrue, new Instance(NumberType, 2)),
-			new(Instruction.Subtract, Register.R1, Register.R0, Register.R0), //else
+			new(Instruction.Subtract, Register.R1, Register.R0, Register.R0),
 			new(Instruction.JumpIfFalse,
-				new Instance(NumberType, 2)), // if above condition was false, skip the next one
-			new(Instruction.Add, Register.R0, Register.R1, Register.R0) //if
+				new Instance(NumberType, 2)),
+			new(Instruction.Add, Register.R0, Register.R1, Register.R0)
 		})[Register.R0].Value, Is.EqualTo(expected));
 
 	[TestCase(Instruction.Add)]

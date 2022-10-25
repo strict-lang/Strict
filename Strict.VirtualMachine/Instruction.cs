@@ -3,18 +3,21 @@
 public enum Instruction
 {
 	Set,
+	SetVariable,
+	Load,
+	SetLoadSeparator = 100,
 	Add,
 	Subtract,
 	Multiply,
 	Divide,
-	BinaryOperatorsSeparator = 100,
+	BinaryOperatorsSeparator = 200,
 	GreaterThan,
 	LessThan,
 	Equal,
 	NotEqual,
-	ConditionalSeparator = 200,
+	ConditionalSeparator = 300,
 	JumpIfTrue,
 	JumpIfFalse,
 	JumpIfNotZero,
-	JumpsSeparator = 300
+	JumpsSeparator = 400
 }

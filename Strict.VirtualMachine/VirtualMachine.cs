@@ -13,9 +13,13 @@ public sealed class VirtualMachine
 
 	private void ExecuteStatement(Statement statement)
 	{
-		if (statement.Instruction == Instruction.Set)
+		if (statement.Instruction == Instruction.Set && statement.Instance != null)
 			foreach (var register in statement.Registers)
 				registers[register] = statement.Instance;
+		else if (statement.Instruction == Instruction.SetVariable && statement.Instance != null)
+			variables.Push(statement.Instance);
+		else if (statement.Instruction == Instruction.Load)
+			registers[((LoadStatement)statement).Register] = variables.Pop();
 		else
 			TryExecute(statement);
 	}
@@ -23,7 +27,7 @@ public sealed class VirtualMachine
 	private void TryExecute(Statement statement)
 	{
 		var instructionPosition = (int)statement.Instruction;
-		if (instructionPosition is >= 1 and < (int)Instruction.BinaryOperatorsSeparator)
+		if (instructionPosition is >= (int)Instruction.SetLoadSeparator and < (int)Instruction.BinaryOperatorsSeparator)
 			TryOperationExecution(statement);
 		else if (instructionPosition is >= 100 and < (int)Instruction.ConditionalSeparator)
 			TryConditionalOperationExecution(statement);
@@ -32,6 +36,7 @@ public sealed class VirtualMachine
 	}
 
 	private readonly Dictionary<Register, Instance> registers = new();
+	private readonly Stack<Instance> variables = new();
 	private int instructionIndex;
 
 	private void TryOperationExecution(Statement statement)
@@ -70,7 +75,7 @@ public sealed class VirtualMachine
 	private void TryConditionalOperationExecution(Statement statement)
 	{
 		var (right, left) = GetOperands(statement);
-		var result = statement.Instruction switch
+		conditionFlag = statement.Instruction switch
 		{
 			Instruction.GreaterThan => Convert.ToDouble(left.Value) > Convert.ToDouble(right.Value),
 			Instruction.LessThan => Convert.ToDouble(left.Value) < Convert.ToDouble(right.Value),
@@ -78,13 +83,14 @@ public sealed class VirtualMachine
 			Instruction.NotEqual => !left.Value.Equals(right.Value),
 			_ => false //ncrunch: no coverage
 		};
-		conditionFlag = result;
 	}
 
 	private bool conditionFlag;
 
 	private void TryJumpOperation(Statement statement)
 	{
+		if (statement.Instance == null)
+			return;
 		if (statement.Instruction == Instruction.JumpIfTrue && conditionFlag)
 			instructionIndex += Convert.ToInt32(statement.Instance.Value);
 		else if (statement.Instruction == Instruction.JumpIfFalse && !conditionFlag)
