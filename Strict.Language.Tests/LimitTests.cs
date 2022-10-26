@@ -57,7 +57,8 @@ public sealed class LimitTests
 	[Test]
 	public void MembersCountMustNotExceedTen() =>
 		Assert.That(
-			() => CreateType(nameof(MembersCountMustNotExceedTen), CreateDuplicateLines(11, "has log").ToArray()).
+			() => CreateType(nameof(MembersCountMustNotExceedTen),
+					CreateProgramWithDuplicateLines(new[] { "implement Number" }, 11, "has log").ToArray()).
 				ParseMembersAndMethods(new MethodExpressionParser()),
 			Throws.InstanceOf<Type.MembersCountMustNotExceedTen>().With.Message.
 				Contains("Type MembersCountMustNotExceedTen has member count 11 but limit is 10"));
@@ -109,4 +110,13 @@ public sealed class LimitTests
 				}).ParseMembersAndMethods(new MethodExpressionParser()),
 			Throws.InstanceOf<Type.CharacterCountMustBeWithinOneHundredTwenty>().With.Message.Contains(
 				"Type CharacterCountMustBeWithinOneHundredTwenty has character count 191 in line: 4 but limit is 256"));
+
+	[Test]
+	public void EnumMembersCountShouldNotExceedFifty() =>
+		Assert.That(
+			() => CreateType(nameof(EnumMembersCountShouldNotExceedFifty),
+					CreateDuplicateLines(51, "has bonus Number").ToArray()).
+				ParseMembersAndMethods(new MethodExpressionParser()),
+			Throws.InstanceOf<Type.EnumMembersCountShouldNotExceedFifty>().With.Message.Contains(
+				"Enum EnumMembersCountShouldNotExceedFifty has member count 51 but limit is 50"));
 }

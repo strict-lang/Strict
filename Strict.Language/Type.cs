@@ -131,13 +131,26 @@ public class Type : Context
 
 	private void ValidateMethodAndMemberCountLimits()
 	{
-		if (methods.Count == 0 && members.Count + implements.Count < 2 && !IsNoneAnyOrBoolean())
+		if (IsEnum && members.Count > 50)
+			throw new EnumMembersCountShouldNotExceedFifty(this);
+		if (IsEnum)
+			return;
+		if (HasNoMethodsAndLessThanTwoMembersOrImplements() && !IsNoneAnyOrBoolean())
 			throw new NoMethodsFound(this, lineNumber);
 		if (members.Count > 10)
 			throw new MembersCountMustNotExceedTen(this);
 		if (methods.Count > 15 && Package.Name != nameof(Base))
 			throw new MethodCountMustNotExceedFifteen(this);
 	}
+
+	public sealed class EnumMembersCountShouldNotExceedFifty : ParsingFailed
+	{
+		public EnumMembersCountShouldNotExceedFifty(Type type) : base(type, 0,
+			$"Enum {type.Name} has member count {type.members.Count} but limit is 50") { }
+	}
+
+	private bool HasNoMethodsAndLessThanTwoMembersOrImplements() => methods.Count == 0 && members.Count + implements.Count < 2;
+	private bool IsNoneAnyOrBoolean() => Name is Base.None or Base.Any or Base.Boolean;
 
 	public sealed class NoMethodsFound : ParsingFailed
 	{
@@ -164,7 +177,11 @@ public class Type : Context
 			var rememberStartMethodLineNumber = lineNumber;
 			ParseInTryCatchBlock(parser, rememberStartMethodLineNumber);
 		}
+		if (methods.Count == 0 && members.Count > 0 && implements.Count == 0)
+			IsEnum = true;
 	}
+
+	public bool IsEnum { get; private set; }
 
 	private void ParseInTryCatchBlock(ExpressionParser parser, int rememberStartMethodLineNumber)
 	{
@@ -188,8 +205,6 @@ public class Type : Context
 					: ex.Message, ex);
 		}
 	}
-
-	private bool IsNoneAnyOrBoolean() => Name is Base.None or Base.Any or Base.Boolean;
 
 	private void ParseLineForMembersAndMethods(ExpressionParser parser)
 	{
