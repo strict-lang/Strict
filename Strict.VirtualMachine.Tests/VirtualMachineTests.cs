@@ -10,8 +10,10 @@ public sealed class VirtualMachineTests : TestExpressions
 {
 	private static readonly Type NumberType = new TestPackage().FindType(Base.Number)!;
 	private static readonly Type TextType = new TestPackage().FindType(Base.Text)!;
+
 	[SetUp]
 	public void Setup() => vm = new VirtualMachine();
+
 	private VirtualMachine vm = null!;
 
 	[TestCase(Instruction.Add, 15, 5, 10)]
@@ -54,7 +56,7 @@ public sealed class VirtualMachineTests : TestExpressions
 			new(Instruction.SetVariable, new Instance(NumberType, 10)),
 			new(Instruction.SetVariable, new Instance(NumberType, 5)), new LoadStatement(Register.R0),
 			new LoadStatement(Register.R1),
-			new(Instruction.Add, Register.R0, Register.R1, Register.R2),
+			new(Instruction.Add, Register.R0, Register.R1, Register.R2)
 		})[Register.R2].Value, Is.EqualTo(15));
 
 	[Test]
