@@ -1,20 +1,18 @@
 using NUnit.Framework;
 using Strict.Language;
+using Strict.Language.Expressions.Tests;
 using Strict.Language.Tests;
 using Type = Strict.Language.Type;
 
 namespace Strict.VirtualMachine.Tests;
 
-public sealed class VirtualMachineTests
+public sealed class VirtualMachineTests : TestExpressions
 {
-	private static readonly Package Package = new TestPackage();
-	private static readonly Type NumberType = Package.FindType(Base.Number)!;
-	private static readonly Type TextType = Package.FindType(Base.Text)!;
-
+	private static readonly Type NumberType = new TestPackage().FindType(Base.Number)!;
+	private static readonly Type TextType = new TestPackage().FindType(Base.Text)!;
 	[SetUp]
-	public void Setup() => machine = new VirtualMachine();
-
-	private VirtualMachine machine = null!;
+	public void Setup() => vm = new VirtualMachine();
+	private VirtualMachine vm = null!;
 
 	[TestCase(Instruction.Add, 15, 5, 10)]
 	[TestCase(Instruction.Subtract, 5, 8, 3)]
@@ -24,7 +22,7 @@ public sealed class VirtualMachineTests
 	[TestCase(Instruction.Add, "510", 5, "10")]
 	[TestCase(Instruction.Add, "510", "5", "10")]
 	public void Execute(Instruction operation, object expected, params object[] inputs) =>
-		Assert.That(machine.Execute(BuildStatements(inputs, operation))[Register.R1].Value,
+		Assert.That(vm.Execute(BuildStatements(inputs, operation))[Register.R1].Value,
 			Is.EqualTo(expected));
 
 	private static Statement[]
@@ -43,15 +41,25 @@ public sealed class VirtualMachineTests
 	[Test]
 	public void LoadVariable() =>
 		Assert.That(
-			machine.Execute(new Statement[]
+			vm.Execute(new Statement[]
 			{
 				new(Instruction.SetVariable, new Instance(NumberType, 5)),
 				new LoadStatement(Register.R0)
 			})[Register.R0].Value, Is.EqualTo(5));
 
 	[Test]
+	public void SetAndAdd() =>
+		Assert.That(vm.Execute(new Statement[]
+		{
+			new(Instruction.SetVariable, new Instance(NumberType, 10)),
+			new(Instruction.SetVariable, new Instance(NumberType, 5)), new LoadStatement(Register.R0),
+			new LoadStatement(Register.R1),
+			new(Instruction.Add, Register.R0, Register.R1, Register.R2),
+		})[Register.R2].Value, Is.EqualTo(15));
+
+	[Test]
 	public void AddFiveTimes() =>
-		Assert.That(machine.Execute(new Statement[]
+		Assert.That(vm.Execute(new Statement[]
 		{
 			new(Instruction.Set, new Instance(NumberType, 5), Register.R0),
 			new(Instruction.Set, new Instance(NumberType, 1), Register.R1),
@@ -64,7 +72,7 @@ public sealed class VirtualMachineTests
 	[Test]
 	public void ConditionalJump() =>
 		Assert.That(
-			machine.Execute(new Statement[]
+			vm.Execute(new Statement[]
 			{
 				new(Instruction.Set, new Instance(NumberType, 5), Register.R0),
 				new(Instruction.Set, new Instance(NumberType, 1), Register.R1),
@@ -80,7 +88,7 @@ public sealed class VirtualMachineTests
 	[TestCase(Instruction.Equal, new[] { 5, 5 }, 5 + 5)]
 	[TestCase(Instruction.NotEqual, new[] { 5, 5 }, 5 - 5)]
 	public void ConditionalJumpIfAndElse(Instruction conditional, int[] registers, int expected) =>
-		Assert.That(machine.Execute(new Statement[]
+		Assert.That(vm.Execute(new Statement[]
 		{
 			new(Instruction.Set, new Instance(NumberType, registers[0]), Register.R0),
 			new(Instruction.Set, new Instance(NumberType, registers[1]), Register.R1),
@@ -95,6 +103,6 @@ public sealed class VirtualMachineTests
 	[TestCase(Instruction.Add)]
 	[TestCase(Instruction.GreaterThan)]
 	public void OperandsRequired(Instruction instruction) =>
-		Assert.That(() => machine.Execute(new Statement[] { new(instruction, Register.R0) }),
+		Assert.That(() => vm.Execute(new Statement[] { new(instruction, Register.R0) }),
 			Throws.InstanceOf<VirtualMachine.OperandsRequired>());
 }

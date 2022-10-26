@@ -1,28 +1,42 @@
 ﻿using NUnit.Framework;
 using Strict.Language;
 using Strict.Language.Expressions;
-using Strict.Language.Tests;
+using Strict.Language.Expressions.Tests;
 using Type = Strict.Language.Type;
 
 namespace Strict.VirtualMachine.Tests;
 
-public sealed class BytecodeGeneratorTests
+public sealed class ByteCodeGeneratorTests : TestExpressions
 {
-	private static readonly Package Package = new TestPackage();
-
-	[TestCase("SetVariable 0\nSetVariable 0\nLoad R0\nLoad R1\nAdd R0, R1, R2",
+	[TestCase(
+		"Add(10, 5).Calculate",
 		"Add",
-		"has Number",
-		"Calculate(first Number, second Number) Number",
-		"\tfirst + second")]
-	public void Generate(string expectedBytecode, string programName, params string[] code)
+		"SetVariable 10\nSetVariable 5\nLoad R0\nLoad R1\nAdd R0, R1, R2",
+		"has First Number",
+		"has Second Number",
+		"from(first Number, second Number)",
+		"\tFirst = first",
+		"\tSecond = second",
+		"Calculate Number",
+		"\tAdd(10, 5).Calculate is 15",
+		"\tFirst + Second")]
+	[TestCase(
+		"Multiply(10).By(2)",
+		"Multiply",
+		"SetVariable 10\nSetVariable 2\nLoad R0\nLoad R1\nMultiply R0, R1, R2",
+		"has number",
+		"By(multiplyBy Number) Number",
+		"\tMultiply(10).By(2) is 20",
+		"\tnumber * multiplyBy")]
+	// ReSharper disable once TooManyArguments
+	public void Generate(string methodCall, string programName, string expectedByteCode, params string[] code)
 	{
-		var program =
-			new Type(Package, new TypeLines(programName, code)).ParseMembersAndMethods(
-				new MethodExpressionParser());
-		var statements = BytecodeGenerator.Generate(program.Methods[0]);
+		new Type(type.Package, new TypeLines(programName, code)).ParseMembersAndMethods(
+			new MethodExpressionParser());
+		var expression = (MethodCall)ParseExpression(methodCall);
+		var statements = new BytecodeGenerator(expression).Generate();
 		var statementsString = "";
-		statements.ForEach(statement => statementsString += $"{statement}\n");
-		Assert.That(statementsString.Trim(), Is.EqualTo(expectedBytecode));
+		statements?.ForEach(statement => statementsString += $"{statement}\n");
+		Assert.That(statementsString.Trim(), Is.EqualTo(expectedByteCode));
 	}
 }

@@ -1,4 +1,6 @@
-﻿using Type = Strict.Language.Type;
+﻿using Strict.Language;
+using Strict.Language.Expressions;
+using Type = Strict.Language.Type;
 
 namespace Strict.VirtualMachine;
 
@@ -12,6 +14,15 @@ public sealed class Instance
 	{
 		ReturnType = type;
 		Value = value;
+	}
+
+	public Instance(Expression expression)
+	{
+		ReturnType = expression.ReturnType;
+		if (expression is Value value)
+			Value = value.Data;
+		else
+			Value = new object();
 	}
 
 	public Type ReturnType { get; }

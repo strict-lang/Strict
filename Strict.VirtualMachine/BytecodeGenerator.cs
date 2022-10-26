@@ -5,21 +5,49 @@ namespace Strict.VirtualMachine;
 
 public sealed class BytecodeGenerator
 {
-	public static List<Statement> Generate(Method method)
+	public BytecodeGenerator(MethodCall methodCall)
 	{
-		var statements = method.Parameters.Select(parameter =>
-				new Statement(Instruction.SetVariable,
-					new Instance(parameter.Type, 0))).
-			ToList();
-		var body = method.GetBodyAndParseIfNeeded();
-		if (body is Binary binary)
+		Method = methodCall.Method;
+		if (methodCall.Instance != null)
+			InstanceArguments = ((MethodCall)methodCall.Instance).Arguments;
+		MethodArguments = methodCall.Arguments;
+	}
+
+	public IReadOnlyList<Expression> MethodArguments { get; }
+	private IReadOnlyList<Expression>? InstanceArguments { get; }
+	private Method Method { get; }
+
+	public List<Statement>? Generate()
+	{
+		var statements = BuildSetStatementsFromParameters();
+		var body = (Body)Method.GetBodyAndParseIfNeeded();
+		foreach (var expression in body.Expressions)
+			if (expression is Binary binary)
+				GenerateCodeForBinary(binary, statements);
+		return statements;
+	}
+
+	private List<Statement>? BuildSetStatementsFromParameters()
+	{
+		var statements = InstanceArguments?.
+			Select(argument => new Statement(Instruction.SetVariable, new Instance(argument))).ToList();
+		statements?.AddRange(MethodArguments.Select(argument =>
+			new Statement(Instruction.SetVariable, new Instance(argument))));
+		return statements;
+	}
+
+	private static void GenerateCodeForBinary(MethodCall binary, ICollection<Statement>? statements)
+	{
+		if (statements != null)
 			switch (binary.Method.Name)
 			{
 			case BinaryOperator.Plus:
 				GenerateAdditionStatements(statements, binary);
 				break;
+			case BinaryOperator.Multiply:
+				GenerateMultiplyStatements(statements, binary);
+				break;
 			}
-		return statements;
 	}
 
 	private static void GenerateAdditionStatements(ICollection<Statement> statements,
@@ -30,6 +58,17 @@ public sealed class BytecodeGenerator
 			statements.Add(new LoadStatement(Register.R0));
 			statements.Add(new LoadStatement(Register.R1));
 			statements.Add(new Statement(Instruction.Add, Register.R0, Register.R1, Register.R2));
+		}
+	}
+
+	private static void GenerateMultiplyStatements(ICollection<Statement> statements,
+		MethodCall binary)
+	{
+		if (binary.Instance != null)
+		{
+			statements.Add(new LoadStatement(Register.R0));
+			statements.Add(new LoadStatement(Register.R1));
+			statements.Add(new Statement(Instruction.Multiply, Register.R0, Register.R1, Register.R2));
 		}
 	}
 }
