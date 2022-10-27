@@ -252,15 +252,14 @@ public class MethodExpressionParser : ExpressionParser
 	private static Expression? TryParseFromOrEnum(Body body, IReadOnlyList<Expression> arguments,
 		string methodName)
 	{
-		// this is the only static code that we allow for from AND enums, see beginning of case 26349; is the input the type we are talking about, example: RemoveExclamation("Hi!!!"), "Hi!!!" is argument, the method "RemoveExclamation" obviously doesn't exist, so we find the type here (also Instruction.Add)
 		var fromType = body.Method.FindType(methodName);
 		if (fromType != null)
 		{
 			if (IsConstructorUsedWithSameArgumentType(arguments, fromType))
 				throw new ConstructorForSameTypeArgumentIsNotAllowed(body);
+			if (fromType.IsEnum)
+				return new EnumCall(fromType);
 			return new MethodCall(fromType.GetMethod(Method.From, arguments),
-				//Case 26390: this would be constants and enum values here if that is the usecase https://deltaengine.fogbugz.com/f/cases/26390/
-				//not really needed ever, use Method.ReturnType: new From(fromType),
 				null, arguments);
 		}
 		return null;
