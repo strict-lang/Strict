@@ -45,8 +45,8 @@ public sealed class Repositories
 			!packageUrl.AbsolutePath.StartsWith("/strict-lang/", StringComparison.InvariantCulture)))
 			throw new OnlyGithubDotComUrlsAreAllowedForNow(); //ncrunch: no coverage
 		var packageName = packageUrl.AbsolutePath.Split('/').Last();
-		var localPath = packageName == nameof(Strict)
-			? DevelopmentFolder
+		var localPath = packageName == nameof(Strict) + "." + nameof(Base)
+			? DevelopmentFolder + "." + nameof(Base)
 			: Path.Combine(CacheFolder, packageName);
 		//ncrunch: no coverage start
 		if (!PreviouslyCheckedDirectories.Contains(localPath))
