@@ -15,7 +15,7 @@ public abstract class NamedType
 			if (!Name.IsWord())
 				throw new Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers(Name);
 			Type = definedIn.GetType(parts.MoveNext()
-				? GetTypeName(parts.Current.ToString())
+				? GetTypeName(nameAndType[(Name.Length + 1)..].ToString())
 				: Name.MakeFirstLetterUppercase());
 		}
 		else

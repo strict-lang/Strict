@@ -7,7 +7,7 @@ using List = Strict.Language.Expressions.List;
 namespace Strict.Language.Tests;
 
 // ReSharper disable once ClassTooBig
-public sealed class TypeTests
+public class TypeTests
 {
 	[SetUp]
 	public void CreatePackage()
@@ -19,7 +19,7 @@ public sealed class TypeTests
 	private Type CreateType(string name, params string[] lines) =>
 		new Type(package, new TypeLines(name, lines)).ParseMembersAndMethods(null!);
 
-	private Package package = null!;
+	public Package package = null!;
 
 	[Test]
 	public void AddingTheSameNameIsNotAllowed() =>
@@ -279,13 +279,14 @@ public sealed class TypeTests
 		var numbersType = package.GetListType(package.GetType(Base.Number));
 		Assert.That(getNumbersBody.ReturnType, Is.EqualTo(numbersType));
 		Assert.That(numbersType.Generic, Is.EqualTo(package.GetType(Base.List)));
-		Assert.That(numbersType.Implementation, Is.EqualTo(package.GetType(Base.Number)));
+		Assert.That(numbersType.ImplementationTypes[0], Is.EqualTo(package.GetType(Base.Number)));
 	}
 
 	[Test]
 	public void CannotGetGenericImplementationOnNonGenericType() =>
 		Assert.That(
-			() => package.GetType(Base.Text).GetGenericImplementation(package.GetType(Base.Number)),
+			() => package.GetType(Base.Text).
+				GetGenericImplementation(new List<Type> { package.GetType(Base.Number) }),
 			Throws.InstanceOf<Type.CannotGetGenericImplementationOnNonGeneric>());
 
 	[Test]

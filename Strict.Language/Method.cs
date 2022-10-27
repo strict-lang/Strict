@@ -248,19 +248,20 @@ public sealed class Method : Context
 	public Method CloneWithImplementation(GenericType typeWithImplementation)
 	{
 		var clone = (Method)MemberwiseClone();
-		clone.ReturnType = ReplaceWithImplementationOrGenericType(clone.ReturnType, typeWithImplementation);
+		clone.ReturnType = ReplaceWithImplementationOrGenericType(clone.ReturnType, typeWithImplementation, 0);
 		clone.parameters = new List<Parameter>(parameters);
 		for (var index = 0; index < clone.Parameters.Count; index++)
 			clone.parameters[index] = clone.parameters[index].CloneWithImplementationType(
 				ReplaceWithImplementationOrGenericType(clone.Parameters[index].Type,
-					typeWithImplementation));
+					typeWithImplementation, index));
 		clone.IsGeneric = false;
 		return clone;
 	}
 
-	private static Type ReplaceWithImplementationOrGenericType(Type type, GenericType typeWithImplementation) =>
+	private static Type ReplaceWithImplementationOrGenericType(Type type,
+		GenericType typeWithImplementation, int index) =>
 		type.Name == Base.Generic
-			? typeWithImplementation.Implementation //Number
+			? typeWithImplementation.ImplementationTypes[index] //Number
 			: type.IsGeneric
 				? typeWithImplementation //ListNumber
 				: type;

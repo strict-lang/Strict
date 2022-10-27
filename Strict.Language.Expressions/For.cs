@@ -80,7 +80,7 @@ public sealed class For : Expression
 		var mutableValue = body.FindVariableValue(variableName) as Mutable;
 		var iteratorType = ((Binary)forValueExpression).Arguments[0].ReturnType;
 		if (iteratorType is GenericType genericType)
-			iteratorType = genericType.Implementation;
+			iteratorType = genericType.ImplementationTypes[0]; //TODO: atm, only lists are used but this needs to be verified for other generic types
 		if ((iteratorType.Name != Base.Range || mutableValue?.DataReturnType.Name != Base.Number)
 			&& iteratorType.Name != mutableValue?.DataReturnType.Name)
 			throw new IteratorTypeDoesNotMatchWithIterable(body);
