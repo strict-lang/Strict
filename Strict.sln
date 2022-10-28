@@ -95,6 +95,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Strict.VirtualMachine", "St
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Strict.VirtualMachine.Tests", "Strict.VirtualMachine.Tests\Strict.VirtualMachine.Tests.csproj", "{5E6881F6-E27F-4D99-8A29-10E39468CDB6}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Strict.LanguageServer", "Stirct.LanguageServer\Strict.LanguageServer.csproj", "{D2BF7635-15B6-409D-B15F-E21B2697AC14}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -149,6 +151,10 @@ Global
 		{5E6881F6-E27F-4D99-8A29-10E39468CDB6}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5E6881F6-E27F-4D99-8A29-10E39468CDB6}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5E6881F6-E27F-4D99-8A29-10E39468CDB6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D2BF7635-15B6-409D-B15F-E21B2697AC14}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D2BF7635-15B6-409D-B15F-E21B2697AC14}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D2BF7635-15B6-409D-B15F-E21B2697AC14}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D2BF7635-15B6-409D-B15F-E21B2697AC14}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
