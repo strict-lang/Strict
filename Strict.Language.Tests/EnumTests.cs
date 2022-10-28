@@ -13,14 +13,22 @@ public sealed class EnumTests
 		new Type(package,
 			new TypeLines("Connection", "has Google = \"https://google.com\"",
 				"has Apple = \"https://apple.com\"")).ParseMembersAndMethods(parser);
+		CreateInstructionEnumType();
 	}
+
+	private void CreateInstructionEnumType() =>
+		new Type(package,
+			new TypeLines("Instruction", "implement Number", "has Set Number", "has Add Number", "has Subtract Number",
+				"has Multiply Number", "has Divide Number", "has BinaryOperatorsSeparator = 100",
+				"has GreaterThan Number", "has LessThan Number", "has Equal Number", "has NotEqual Number",
+				"has ConditionalSeparator = 200", "has JumpIfTrue Number", "has JumpIfFalse Number",
+				"has JumpIfNotZero Number", "has JumpsSeparator = 300")).ParseMembersAndMethods(parser);
 
 	private Package package = null!;
 	private ExpressionParser parser = null!;
 
 	[TestCase(true, "has log", "has number")]
 	[TestCase(true, "has log")]
-	[TestCase(false, "implement Number", "has log")]
 	[TestCase(false, "has log", "Run", "\t5")]
 	public void CheckTypeIsEnum(bool expected, params string[] lines)
 	{
@@ -52,5 +60,58 @@ public sealed class EnumTests
 		var memberCall = (MemberCall)consumingType.Members[0].Value!;
 		Assert.That(memberCall.Member.Name, Is.EqualTo("Google"));
 		Assert.That(consumingType.Members[0].Type.Name, Is.EqualTo("Text"));
+	}
+
+	[Test]
+	public void EnumWithoutValuesUsedAsMemberAndVariable()
+	{
+		var consumingType = new Type(package,
+				new TypeLines(nameof(EnumWithoutValuesUsedAsMemberAndVariable),
+					"has something = Instruction.Add", "Run", "\tlet myInstruction = Instruction.Set")).
+			ParseMembersAndMethods(parser);
+		Assert.That(consumingType.GetType("Instruction").IsEnum, Is.True);
+		Assert.That(((MemberCall)consumingType.Members[0].Value!).Member.Name, Is.EqualTo("Add"));
+		var assignment = (Assignment)consumingType.Methods[0].GetBodyAndParseIfNeeded();
+		Assert.That(assignment.Value, Is.InstanceOf<MemberCall>()!);
+		var member = ((MemberCall)assignment.Value).Member;
+		Assert.That(member.Name, Is.EqualTo("Set"));
+		Assert.That(member.Type.Name, Is.EqualTo("Number"));
+	}
+
+	[Test]
+	public void CompareEnums()
+	{
+		var consumingType = new Type(package,
+				new TypeLines(nameof(CompareEnums),
+					"has receivedInstruction = Instruction.Add",
+					"ExecuteInstruction(numbers) Number",
+					"\tif receivedInstruction is Instruction.Add",
+					"\t\treturn numbers(0) + numbers(1)")).
+			ParseMembersAndMethods(parser);
+		var ifExpression = (If)consumingType.Methods[0].GetBodyAndParseIfNeeded();
+		Assert.That(ifExpression.Condition.ReturnType.Name, Is.EqualTo(Base.Boolean));
+		var binary = (Binary)ifExpression.Condition;
+		Assert.That(((MemberCall)binary.Arguments[0]).Member.Name, Is.EqualTo("Add"));
+		Assert.That(((MemberCall)((MemberCall)binary.Instance!).Member.Value!).Member.Name,
+			Is.EqualTo("Add"));
+	}
+
+	[Test]
+	public void UseEnumAsMethodParameters()
+	{
+		var consumingType = new Type(package,
+				new TypeLines(nameof(UseEnumAsMethodParameters),
+					"has log",
+					"ExecuteInstruction(numbers, instruction) Number",
+					"\tif instruction is Instruction.Add",
+					"\t\treturn numbers(0) + numbers(1)",
+					"CallExecute Number",
+					"\tlet result = ExecuteInstruction((1, 2), Instruction.Add)")).
+			ParseMembersAndMethods(parser);
+		var _ = (If)consumingType.Methods[0].GetBodyAndParseIfNeeded();
+		var result = (Assignment)consumingType.Methods[1].GetBodyAndParseIfNeeded();
+		Assert.That(result.Value, Is.InstanceOf<MethodCall>());
+		Assert.That(((MemberCall)((MethodCall)result.Value).Arguments[1]).Member.Name,
+			Is.EqualTo("Add"));
 	}
 }

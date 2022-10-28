@@ -173,4 +173,27 @@ public sealed class MemberCallTests : TestExpressions
 		Assert.That(((Binary)assignment.Value).Instance,
 			Is.InstanceOf<MemberCall>());
 	}
+
+	[Test]
+	public void DuplicateMembersAreNotAllowed() =>
+		Assert.That(() => new Type(type.Package,
+			new TypeLines(nameof(DuplicateMembersAreNotAllowed),
+				"has something Number",
+				"has something Number",
+				"Run",
+				"\tlet a = 5")).ParseMembersAndMethods(parser),
+			Throws.InstanceOf<Type.DuplicateMembersAreNotAllowed>());
+
+	[Test]
+	public void MembersWithDifferentNamesAreAllowed()
+	{
+		var program = new Type(type.Package,
+			new TypeLines(nameof(MembersWithDifferentNamesAreAllowed),
+				"has something Number",
+				"has somethingDifferent Number",
+				"Run",
+				"\tlet a = 5")).ParseMembersAndMethods(parser);
+		Assert.That(program.Members[0].Name, Is.EqualTo("something"));
+		Assert.That(program.Members[1].Name, Is.EqualTo("somethingDifferent"));
+	}
 }

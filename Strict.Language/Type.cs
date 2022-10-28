@@ -131,22 +131,20 @@ public class Type : Context
 
 	private void ValidateMethodAndMemberCountLimits()
 	{
-		if (IsEnum && members.Count > 50)
-			throw new EnumMembersCountShouldNotExceedFifty(this);
+		if (members.Count > 50)
+			throw new MemberCountShouldNotExceedFifty(this);
 		if (IsEnum)
 			return;
 		if (HasNoMethodsAndLessThanTwoMembersOrImplements() && !IsNoneAnyOrBoolean())
 			throw new NoMethodsFound(this, lineNumber);
-		if (members.Count > 10)
-			throw new MembersCountMustNotExceedTen(this);
 		if (methods.Count > 15 && Package.Name != nameof(Base))
 			throw new MethodCountMustNotExceedFifteen(this);
 	}
 
-	public sealed class EnumMembersCountShouldNotExceedFifty : ParsingFailed
+	public sealed class MemberCountShouldNotExceedFifty : ParsingFailed
 	{
-		public EnumMembersCountShouldNotExceedFifty(Type type) : base(type, 0,
-			$"Enum {type.Name} has member count {type.members.Count} but limit is 50") { }
+		public MemberCountShouldNotExceedFifty(Type type) : base(type, 0,
+			$"{type.Name} has member count {type.members.Count} but limit is 50") { }
 	}
 
 	private bool HasNoMethodsAndLessThanTwoMembersOrImplements() => methods.Count == 0 && members.Count + implements.Count < 2;
@@ -156,12 +154,6 @@ public class Type : Context
 	{
 		public NoMethodsFound(Type type, int lineNumber) : base(type, lineNumber,
 			"Each type must have at least one method, otherwise it is useless") { }
-	}
-
-	public sealed class MembersCountMustNotExceedTen : ParsingFailed
-	{
-		public MembersCountMustNotExceedTen(Type type) : base(type, 0,
-			$"Type {type.Name} has member count {type.members.Count} but limit is 10") { }
 	}
 
 	public sealed class MethodCountMustNotExceedFifteen : ParsingFailed
@@ -177,7 +169,7 @@ public class Type : Context
 			var rememberStartMethodLineNumber = lineNumber;
 			ParseInTryCatchBlock(parser, rememberStartMethodLineNumber);
 		}
-		if (methods.Count == 0 && members.Count > 0 && implements.Count == 0)
+		if (methods.Count == 0 && members.Count > 0)
 			IsEnum = true;
 	}
 
@@ -209,11 +201,19 @@ public class Type : Context
 	private void ParseLineForMembersAndMethods(ExpressionParser parser)
 	{
 		if (ValidateCurrentLineIsNonEmptyAndTrimmed().StartsWith(Has, StringComparison.Ordinal))
-			members.Add(ParseMember(parser, lines[lineNumber].AsSpan(Has.Length)));
+			members.Add(GetNewMember(parser));
 		else if (lines[lineNumber].StartsWith(Implement, StringComparison.Ordinal))
 			throw new ImplementMustComeBeforeMembersAndMethods(this, lineNumber, lines[lineNumber]);
 		else
 			methods.Add(new Method(this, lineNumber, parser, GetAllMethodLines()));
+	}
+
+	private Member GetNewMember(ExpressionParser parser)
+	{
+		var member = ParseMember(parser, lines[lineNumber].AsSpan(Has.Length));
+		if (members.Any(m => m.Name == member.Name))
+			throw new DuplicateMembersAreNotAllowed(this, lineNumber, member.Name);
+		return member;
 	}
 
 	private Member ParseMember(ExpressionParser parser, ReadOnlySpan<char> remainingLine)
@@ -260,16 +260,16 @@ public class Type : Context
 		return memberType;
 	}
 
-	private static bool HasMemberExpression(SpanSplitEnumerator nameAndExpression) =>
-		nameAndExpression.Current[0] == '=' ||
-		nameAndExpression.MoveNext() && nameAndExpression.Current[0] == '=';
-
 	private static bool IsMemberTypeAny(string nameAndType, SpanSplitEnumerator nameAndExpression) => nameAndType == Base.Any.MakeFirstLetterLowercase() || nameAndExpression.Current.Equals(Base.Any, StringComparison.Ordinal);
 
 	public sealed class MemberWithTypeAnyIsNotAllowed : ParsingFailed
 	{
 		public MemberWithTypeAnyIsNotAllowed(Type type, int lineNumber, string name) : base(type, lineNumber, name) { }
 	}
+
+	private static bool HasMemberExpression(SpanSplitEnumerator nameAndExpression) =>
+		nameAndExpression.Current[0] == '=' ||
+		nameAndExpression.MoveNext() && nameAndExpression.Current[0] == '=';
 
 	public sealed class MembersMustComeBeforeMethods : ParsingFailed
 	{
@@ -287,6 +287,12 @@ public class Type : Context
 		FindType(memberName) != null && !remainingTextSpan.StartsWith(memberName)
 			? string.Concat(memberName, "(", remainingTextSpan, ")").AsSpan()
 			: remainingTextSpan;
+
+	public sealed class DuplicateMembersAreNotAllowed : ParsingFailed
+	{
+		public DuplicateMembersAreNotAllowed(Type type, int lineNumber, string name) :
+			base(type, lineNumber, name) { }
+	}
 
 	public const string Implement = "implement ";
 	public const string Has = "has ";
@@ -458,7 +464,7 @@ public class Type : Context
 			if (methodParameterType.IsList != argumentReturnType.IsList && methodParameterType.Name != Base.Any)
 				return false;
 			if (argumentReturnType == methodParameterType || method.IsGeneric)
-				return true;
+				continue;
 			if (methodParameterType is GenericType parameterGenericType)
 			{
 				if (!argumentReturnType.IsCompatible(parameterGenericType.ImplementationTypes[index]))
@@ -467,7 +473,7 @@ public class Type : Context
 			}
 			if (argumentReturnType.IsMutable && argumentReturnType.MutableReturnType?.Name ==
 				methodParameterType.Name)
-				return true;
+				continue;
 			if (methodParameterType.IsGeneric)
 				throw new GenericTypesCannotBeUsedDirectlyUseImplementation(methodParameterType,
 					"(parameter " + index + ") is not usable with argument " +
@@ -497,7 +503,9 @@ public class Type : Context
 			? BuildMethod($"{fromMethod})")
 			: fromMethod.Length > 5 && fromMethod.Split(',').Length - 1 == arguments.Count
 				? BuildMethod($"{fromMethod[..^2]})")
-				: null;
+				: IsEnum
+					? BuildMethod(fromMethod[..^1])
+					: null;
 	}
 
 	private Method BuildMethod(string fromMethod) => new(this, 0, dummyExpressionParser, new[] { fromMethod });
@@ -575,7 +583,8 @@ public class Type : Context
 	} //ncrunch: no coverage end
 
 	private bool IsCompatible(Type sameOrBaseType) =>
-		this == sameOrBaseType || sameOrBaseType.Name == Base.Any || implements.Contains(sameOrBaseType) ||
+		this == sameOrBaseType || sameOrBaseType.Name == Base.Any ||
+		implements.Contains(sameOrBaseType) || sameOrBaseType.Implements.Contains(this) ||
 		CanUpCast(sameOrBaseType);
 
 	private bool CanUpCast(Context sameOrBaseType)

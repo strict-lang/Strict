@@ -253,16 +253,11 @@ public class MethodExpressionParser : ExpressionParser
 		string methodName)
 	{
 		var fromType = body.Method.FindType(methodName);
-		if (fromType != null)
-		{
-			if (IsConstructorUsedWithSameArgumentType(arguments, fromType))
-				throw new ConstructorForSameTypeArgumentIsNotAllowed(body);
-			if (fromType.IsEnum)
-				return new EnumCall(fromType);
-			return new MethodCall(fromType.GetMethod(Method.From, arguments),
-				null, arguments);
-		}
-		return null;
+		return fromType == null
+			? null
+			: IsConstructorUsedWithSameArgumentType(arguments, fromType)
+				? throw new ConstructorForSameTypeArgumentIsNotAllowed(body)
+				: new MethodCall(fromType.GetMethod(Method.From, arguments), null, arguments);
 	}
 
 	private static Expression? TryListCall(Body body, Expression? variable,

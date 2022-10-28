@@ -190,7 +190,7 @@ public class TypeTests
 	public void CanUpCastNumberWithList()
 	{
 		var type = CreateType(nameof(CanUpCastNumberWithList), "has log",
-			"Add(first Number, other List) List", "\tfirst + other");
+			"Add(first Number, other Numbers) List", "\tfirst + other");
 		var result = type.FindMethod("Add", new List<Expression>
 		{
 			new Number(type, 5),
@@ -198,7 +198,7 @@ public class TypeTests
 		});
 		Assert.That(result, Is.InstanceOf<Method>());
 		Assert.That(result?.ToString(),
-			Is.EqualTo("Add(first TestPackage.Number, other TestPackage.List) List"));
+			Is.EqualTo("Add(first TestPackage.Number, other TestPackage.Numbers Implements TestPackage.List) List"));
 	}
 
 	[Test]

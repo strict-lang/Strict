@@ -1,5 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using NUnit.Framework;
 using Strict.Language.Expressions;
 
@@ -55,15 +57,6 @@ public sealed class LimitTests
 				Contains("Method Run has parameters count 4 but limit is 3"));
 
 	[Test]
-	public void MembersCountMustNotExceedTen() =>
-		Assert.That(
-			() => CreateType(nameof(MembersCountMustNotExceedTen),
-					CreateProgramWithDuplicateLines(new[] { "implement Number" }, 11, "has log").ToArray()).
-				ParseMembersAndMethods(new MethodExpressionParser()),
-			Throws.InstanceOf<Type.MembersCountMustNotExceedTen>().With.Message.
-				Contains("Type MembersCountMustNotExceedTen has member count 11 but limit is 10"));
-
-	[Test]
 	public void MethodCountMustNotExceedFifteen() =>
 		Assert.That(
 			() => CreateType(nameof(MethodCountMustNotExceedFifteen), CreateProgramWithDuplicateLines(
@@ -112,11 +105,28 @@ public sealed class LimitTests
 				"Type CharacterCountMustBeWithinOneHundredTwenty has character count 191 in line: 4 but limit is 256"));
 
 	[Test]
-	public void EnumMembersCountShouldNotExceedFifty() =>
+	public void MemberCountShouldNotExceedFifty() =>
 		Assert.That(
-			() => CreateType(nameof(EnumMembersCountShouldNotExceedFifty),
-					CreateDuplicateLines(51, "has bonus Number").ToArray()).
+			() => CreateType(nameof(MemberCountShouldNotExceedFifty),
+					CreateRandomMemberLines(51)).
 				ParseMembersAndMethods(new MethodExpressionParser()),
-			Throws.InstanceOf<Type.EnumMembersCountShouldNotExceedFifty>().With.Message.Contains(
-				"Enum EnumMembersCountShouldNotExceedFifty has member count 51 but limit is 50"));
+			Throws.InstanceOf<Type.MemberCountShouldNotExceedFifty>().With.Message.Contains(
+				"MemberCountShouldNotExceedFifty has member count 51 but limit is 50"));
+
+	private static string[] CreateRandomMemberLines(int count)
+	{
+		var lines = new string[count];
+		var random = new Random();
+		for (var index = 0; index < count; index++)
+			lines[index] = "has " + GetRandomMemberName(random, 6) + " Number";
+		return lines;
+	}
+
+	private static string GetRandomMemberName(Random random, int size)
+	{
+		var result = new StringBuilder();
+		for (var i = 0; i < size; i++)
+			result.Append((char)random.Next('a', 'a' + 26));
+		return result.ToString();
+	}
 }

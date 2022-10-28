@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 
 namespace Strict.LanguageServer;
 
+// ReSharper disable once HollowTypeName
 public sealed class StrictDocumentManager
 {
 	private readonly ConcurrentDictionary<DocumentUri, string> strictDocuments = new();
