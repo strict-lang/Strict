@@ -12,39 +12,37 @@ namespace Strict.LanguageServer;
 // ReSharper disable once HollowTypeName
 public sealed class TextDocumentSyncHandler : ITextDocumentSyncHandler
 {
-	public TextDocumentSyncHandler(ILanguageServerFacade languageServer) => this.languageServer = languageServer;
-	private readonly StrictDocumentManager documentManager = new();
+	public TextDocumentSyncHandler(ILanguageServerFacade languageServer) =>
+		this.languageServer = languageServer;
+
+	public readonly StrictDocumentManager DocumentManager = new();
 	private readonly ILanguageServerFacade languageServer;
 	private readonly DocumentSelector documentSelector = new(
-		new DocumentFilter
-		{
-			Pattern = "**/*.strict"
-		}
-	);
+		new DocumentFilter { Pattern = "**/*.strict" });
 	public TextDocumentAttributes GetTextDocumentAttributes(DocumentUri uri) => new(uri, "strict");
 
-	public Task<Unit> Handle(DidChangeTextDocumentParams request, CancellationToken cancellationToken)
+	public Task<Unit> Handle(DidChangeTextDocumentParams request,
+		CancellationToken cancellationToken)
 	{
-		var documentPath = request.TextDocument.Uri.ToString();
-		var text = request.ContentChanges.ToArray()[0].Text;
-		documentManager.Update(documentPath, text);
-		languageServer.Window.LogInfo($"Updated document: {documentPath}\n{text}");
+		var uri = request.TextDocument.Uri.ToString();
+		DocumentManager.Update(uri, request.ContentChanges.ToArray());
+		languageServer.Window.LogInfo($"Updated document: {uri}\n{DocumentManager.Get(uri)}");
 		return Unit.Task;
 	}
 
 	public Task<Unit> Handle(DidOpenTextDocumentParams request, CancellationToken cancellationToken)
 	{
-		documentManager.Update(request.TextDocument.Uri, request.TextDocument.Text);
+		DocumentManager.AddOrUpdate(request.TextDocument.Uri, request.TextDocument.Text);
 		return Unit.Task;
 	}
 
 	public Task<Unit> Handle(DidCloseTextDocumentParams request,
 		CancellationToken cancellationToken) =>
-		throw new NotImplementedException();
+		Unit.Task;
 
 	public Task<Unit>
 		Handle(DidSaveTextDocumentParams request, CancellationToken cancellationToken) =>
-		throw new NotImplementedException();
+		Unit.Task;
 
 	public TextDocumentChangeRegistrationOptions GetRegistrationOptions(
 		SynchronizationCapability capability, ClientCapabilities clientCapabilities) =>
@@ -54,10 +52,7 @@ public sealed class TextDocumentSyncHandler : ITextDocumentSyncHandler
 		IRegistration<TextDocumentSaveRegistrationOptions, SynchronizationCapability>.
 		GetRegistrationOptions(SynchronizationCapability capability,
 			ClientCapabilities clientCapabilities) =>
-		new()
-		{
-			DocumentSelector = documentSelector, IncludeText = true
-		};
+		new() { DocumentSelector = documentSelector, IncludeText = true };
 
 	TextDocumentOpenRegistrationOptions
 		IRegistration<TextDocumentOpenRegistrationOptions, SynchronizationCapability>.
