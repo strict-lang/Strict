@@ -367,7 +367,7 @@ public class Type : Context
 	{
 		public CharacterCountMustBeWithinOneHundredTwenty(Type type, int lineLength, int lineNumber) :
 			base(type, lineNumber,
-				$"Type {type.Name} has character count {lineLength} in line: {lineNumber + 1} but limit is 256") { }
+				$"Type {type.Name} has character count {lineLength} in line: {lineNumber + 1} but limit is 120") { }
 	}
 
 	public sealed class TypeHasNoMembersAndThusMustBeATraitWithoutMethodBodies : ParsingFailed

@@ -16,7 +16,7 @@ public sealed class Method : Context
 		: base(type, GetName(lines[0]))
 	{
 		if (lines.Count > 12)
-			throw new MethodLengthMustNotExceedTwelve(this, lines.Count);
+			throw new MethodLengthMustNotExceedTwelve(this, lines.Count, typeLineNumber);
 		TypeLineNumber = typeLineNumber;
 		this.parser = parser;
 		this.lines = lines;
@@ -27,7 +27,7 @@ public sealed class Method : Context
 
 	public sealed class MethodLengthMustNotExceedTwelve : ParsingFailed
 	{
-		public MethodLengthMustNotExceedTwelve(Method method, int linesCount) : base(method.Type, 0, $"Method {method.Name} has {linesCount} lines but limit is 12") { }
+		public MethodLengthMustNotExceedTwelve(Method method, int linesCount, int lineNumber) : base(method.Type, lineNumber, $"Method {method.Name} has {linesCount} lines but limit is 12") { }
 	}
 
 	/// <summary>

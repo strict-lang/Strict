@@ -102,7 +102,7 @@ public sealed class LimitTests
 					"	let remainingCans = numberOfCans - (levelCount * levelCount)remainingCans < ((levelCount + 1) * (levelCount + 1)) ? levelCount else CalculateCompleteLevelCount(remainingCans, levelCount + 1)"
 				}).ParseMembersAndMethods(new MethodExpressionParser()),
 			Throws.InstanceOf<Type.CharacterCountMustBeWithinOneHundredTwenty>().With.Message.Contains(
-				"Type CharacterCountMustBeWithinOneHundredTwenty has character count 191 in line: 4 but limit is 256"));
+				"Type CharacterCountMustBeWithinOneHundredTwenty has character count 191 in line: 4 but limit is 120"));
 
 	[Test]
 	public void MemberCountShouldNotExceedFifty() =>

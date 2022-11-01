@@ -4,6 +4,7 @@ using System.IO;
 using System.Threading.Tasks;
 using NUnit.Framework;
 using Strict.Language;
+using Strict.Language.Tests;
 using Type = Strict.Language.Type;
 
 namespace Strict.Compiler.Tests;
@@ -145,15 +146,20 @@ public class Program
 
 	public async Task GenerateCSharpByReadingStrictProgramAndCompareWithOutput(string programName)
 	{
-		var lines = await File.ReadAllLinesAsync(Path.Combine(ExampleFolder, $"{programName}.strict"));
-		var program = new Type(package, new TypeLines(programName, lines)).ParseMembersAndMethods(parser);
+		var program = await ReadStrictFileAndCreateType(programName);
 		program.Methods[0].GetBodyAndParseIfNeeded();
 		var generatedCode = generator.Generate(program).ToString()!;
 		Assert.That(generatedCode,
 			Is.EqualTo(string.Join(Environment.NewLine, await File.ReadAllLinesAsync(Path.Combine(ExampleFolder, $"Output/{programName}.cs")))), generatedCode);
 	}
 
-	private static string ExampleFolder => Path.Combine(Repositories.DevelopmentFolder, "Examples");
+	private async Task<Type> ReadStrictFileAndCreateType(string programName) =>
+		new Type(new TestPackage(),
+				new TypeLines(programName,
+					await File.ReadAllLinesAsync(Path.Combine(ExampleFolder, $"{programName}.strict")))).
+			ParseMembersAndMethods(parser);
+
+	private static string ExampleFolder => Repositories.DevelopmentFolder + ".Examples";
 
 	[Ignore("this test will work once for loop is working")]
 	[Test]
@@ -174,4 +180,13 @@ public class Program
 	[Test]
 	public Task RemoveExclamation() =>
 		GenerateCSharpByReadingStrictProgramAndCompareWithOutput(nameof(RemoveExclamation));
+
+	[Test]
+	public async Task ExecuteOperation()
+	{
+		await ReadStrictFileAndCreateType("Register");
+		await ReadStrictFileAndCreateType("Instruction");
+		await ReadStrictFileAndCreateType("Statement");
+		await GenerateCSharpByReadingStrictProgramAndCompareWithOutput(nameof(ExecuteOperation));
+	}
 }
