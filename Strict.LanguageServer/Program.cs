@@ -7,7 +7,7 @@ using Nerdbank.Streams;
 using OmniSharp.Extensions.LanguageServer.Server;
 using Strict.LanguageServer;
 using PipeOptions = System.IO.Pipes.PipeOptions;
-
+//ncrunch: no coverage start
 var (input, output) = await CreateAndGetPipeline();
 // @formatter:off
 var server = await LanguageServer.From(options =>
@@ -18,6 +18,7 @@ var server = await LanguageServer.From(options =>
 		.WithServices(ConfigureServices)
 		.WithHandler<TextDocumentSyncHandler>());
 Console.WriteLine("Client connected!");
+
 await Task.WhenAny(Task.Run(async () =>
 {
 	while (true)
@@ -44,3 +45,4 @@ static async Task<(PipeReader input, PipeWriter output)> CreateAndGetPipeline()
 	var pipeline = pipe.UsePipe();
 	return (pipeline.Input, pipeline.Output);
 }
+//ncrunch: no coverage end
