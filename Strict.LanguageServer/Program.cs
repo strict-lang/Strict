@@ -7,6 +7,7 @@ using Nerdbank.Streams;
 using OmniSharp.Extensions.LanguageServer.Server;
 using Strict.LanguageServer;
 using PipeOptions = System.IO.Pipes.PipeOptions;
+
 //ncrunch: no coverage start
 var (input, output) = await CreateAndGetPipeline();
 // @formatter:off
