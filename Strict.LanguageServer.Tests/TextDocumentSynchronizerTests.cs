@@ -10,9 +10,9 @@ using Range = OmniSharp.Extensions.LanguageServer.Protocol.Models.Range;
 
 namespace Strict.LanguageServer.Tests;
 
-public sealed class TextDocumentSyncHandlerTests
+public sealed class TextDocumentSynchronizerTests
 {
-	private TextDocumentSyncHandler handler = null!;
+	private TextDocumentSynchronizer handler = null!;
 	private static readonly DocumentUri URI = new("", "", "test.strict", "", "");
 
 	[SetUp]
@@ -22,7 +22,7 @@ public sealed class TextDocumentSyncHandlerTests
 		windowMock.Setup(expression => expression.SendNotification(It.IsAny<string>()));
 		var languageMock = new Mock<ILanguageServer>();
 		languageMock.Setup(expression => expression.Window).Returns(windowMock.Object);
-		handler = new TextDocumentSyncHandler(languageMock.Object);
+		handler = new TextDocumentSynchronizer(languageMock.Object);
 		handler.DocumentManager.AddOrUpdate(URI, "let bla = 5");
 	}
 
