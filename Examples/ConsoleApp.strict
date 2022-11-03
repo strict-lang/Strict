@@ -1,6 +1,0 @@
-implement App
-has log
-has IsDone Mutable(Boolean)
-Run
-	log.Write("Hello, World!")
-	IsDone = true

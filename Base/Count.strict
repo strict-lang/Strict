@@ -1,8 +1,0 @@
-implement Mutable
-implement Number
-Increment
-	Count(5).Increment is 6
-	value = value + 1
-Decrement
-	Count(3).Decrement is 2
-	value = value - 1
