@@ -3,12 +3,13 @@ using Strict.Language.Expressions;
 
 namespace Strict.Language.Tests;
 
-public sealed class GenericTypeTests : TypeTests
+public sealed class GenericTypeTests
 {
 	[SetUp]
 	public void CreateParserAndComparerType()
 	{
 		parser = new MethodExpressionParser();
+		package = new TestPackage();
 		CreateType("Comparer",
 			new[]
 			{
@@ -18,6 +19,7 @@ public sealed class GenericTypeTests : TypeTests
 	}
 
 	private ExpressionParser parser = null!;
+	public Package package = null!;
 
 	private void CreateType(string name, string[] lines) =>
 		new Type(package,

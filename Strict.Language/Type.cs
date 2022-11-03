@@ -15,7 +15,7 @@ public class Type : Context
 {
 	public Type(Package package, TypeLines file) : base(package, file.Name)
 	{
-		if (file.Lines.Length > 256)
+		if (file.Lines.Length > Limit.LineCount)
 			throw new LinesCountMustNotExceedTwoHundredFiftySix(this, file.Lines.Length);
 		if (package.FindDirectType(Name) != null)
 			throw new TypeAlreadyExistsInPackage(Name, package);
@@ -32,7 +32,7 @@ public class Type : Context
 
 	public sealed class LinesCountMustNotExceedTwoHundredFiftySix : ParsingFailed
 	{
-		public LinesCountMustNotExceedTwoHundredFiftySix(Type type, int lineCount) : base(type, 0, $"Type {type.Name} has lines count {lineCount} but limit is 256") { }
+		public LinesCountMustNotExceedTwoHundredFiftySix(Type type, int lineCount) : base(type, 0, $"Type {type.Name} has lines count {lineCount} but limit is {Limit.LineCount}") { }
 	}
 
 	public sealed class TypeAlreadyExistsInPackage : Exception
@@ -131,20 +131,20 @@ public class Type : Context
 
 	private void ValidateMethodAndMemberCountLimits()
 	{
-		if (members.Count > 50)
+		if (members.Count > Limit.MemberCount)
 			throw new MemberCountShouldNotExceedFifty(this);
 		if (IsEnum)
 			return;
 		if (HasNoMethodsAndLessThanTwoMembersOrImplements() && !IsNoneAnyOrBoolean())
 			throw new NoMethodsFound(this, lineNumber);
-		if (methods.Count > 15 && Package.Name != nameof(Base))
+		if (methods.Count > Limit.MethodCount && Package.Name != nameof(Base))
 			throw new MethodCountMustNotExceedFifteen(this);
 	}
 
 	public sealed class MemberCountShouldNotExceedFifty : ParsingFailed
 	{
 		public MemberCountShouldNotExceedFifty(Type type) : base(type, 0,
-			$"{type.Name} has member count {type.members.Count} but limit is 50") { }
+			$"{type.Name} has member count {type.members.Count} but limit is {Limit.MemberCount}") { }
 	}
 
 	private bool HasNoMethodsAndLessThanTwoMembersOrImplements() => methods.Count == 0 && members.Count + implements.Count < 2;
@@ -159,7 +159,7 @@ public class Type : Context
 	public sealed class MethodCountMustNotExceedFifteen : ParsingFailed
 	{
 		public MethodCountMustNotExceedFifteen(Type type) : base(type, 0,
-			$"Type {type.Name} has method count {type.methods.Count} but limit is 15") { }
+			$"Type {type.Name} has method count {type.methods.Count} but limit is {Limit.MethodCount}") { }
 	}
 
 	private void ParseAllRemainingLinesIntoMembersAndMethods(ExpressionParser parser)
@@ -350,7 +350,7 @@ public class Type : Context
 	{
 		if (line.StartsWith(SixTabs, StringComparison.Ordinal))
 			throw new NestingMoreThanFiveLevelsIsNotAllowed(this, lineNumber + 1);
-		if (line.Length > 120)
+		if (line.Length > Limit.CharacterCount)
 			throw new CharacterCountMustBeWithinOneHundredTwenty(this, line.Length, lineNumber + 1);
 	}
 
@@ -360,14 +360,14 @@ public class Type : Context
 	{
 		public NestingMoreThanFiveLevelsIsNotAllowed(Type type, int lineNumber) : base(type,
 			lineNumber,
-			$"Type {type.Name} has more than 5 levels of nesting in line: {lineNumber + 1}") { }
+			$"Type {type.Name} has more than {Limit.NestingLevel} levels of nesting in line: {lineNumber + 1}") { }
 	}
 
 	public sealed class CharacterCountMustBeWithinOneHundredTwenty : ParsingFailed
 	{
 		public CharacterCountMustBeWithinOneHundredTwenty(Type type, int lineLength, int lineNumber) :
 			base(type, lineNumber,
-				$"Type {type.Name} has character count {lineLength} in line: {lineNumber + 1} but limit is 120") { }
+				$"Type {type.Name} has character count {lineLength} in line: {lineNumber + 1} but limit is {Limit.CharacterCount}") { }
 	}
 
 	public sealed class TypeHasNoMembersAndThusMustBeATraitWithoutMethodBodies : ParsingFailed
@@ -612,7 +612,7 @@ public class Type : Context
 					cachedAvailableMethods.Add(method.Name, new List<Method> { method });
 			foreach (var implementType in implements)
 				// If we are in a specific implementation (GenericType), don't add generic methods
-				if (IsGeneric || !implementType.IsGeneric && implementType.Name != Base.Mutable)
+				if (implementType.Name != Base.Mutable)
 					AddAvailableMethods(implementType);
 			if (Name != Base.Any)
 				AddAvailableMethods(GetType(Base.Any));
@@ -623,10 +623,15 @@ public class Type : Context
 	private void AddAvailableMethods(Type implementType)
 	{
 		foreach (var (methodName, otherMethods) in implementType.AvailableMethods)
+		{
+			var nonGenericMethods = new List<Method>(implementType.IsGeneric
+				? otherMethods.Where(m => !m.IsGeneric && !m.Parameters.Any(p => p.Type.IsGeneric))
+				: otherMethods);
 			if (cachedAvailableMethods!.ContainsKey(methodName))
-				cachedAvailableMethods[methodName].AddRange(otherMethods);
+				cachedAvailableMethods[methodName].AddRange(nonGenericMethods);
 			else
-				cachedAvailableMethods.Add(methodName, otherMethods);
+				cachedAvailableMethods.Add(methodName, nonGenericMethods);
+		}
 	}
 
 	private Dictionary<string, List<Method>>? cachedAvailableMethods;

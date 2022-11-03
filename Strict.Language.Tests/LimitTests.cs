@@ -22,7 +22,7 @@ public sealed class LimitTests
 						new[] { "has log", "Run(first Number, second Number)" }, 12, "\tlog.Write(5)")).
 				ParseMembersAndMethods(new MethodExpressionParser()),
 			Throws.InstanceOf<Method.MethodLengthMustNotExceedTwelve>().With.Message.
-				Contains("Method Run has 13 lines but limit is 12"));
+				Contains($"Method Run has 13 lines but limit is {Limit.MethodLength}"));
 
 	private Type CreateType(string name, string[] lines) =>
 		new Type(package, new TypeLines(name, lines)).ParseMembersAndMethods(new MethodExpressionParser());
@@ -54,7 +54,7 @@ public sealed class LimitTests
 					"\tlog.Write(5)"
 				}).ParseMembersAndMethods(new MethodExpressionParser()),
 			Throws.InstanceOf<Method.MethodParameterCountMustNotExceedThree>().With.Message.
-				Contains("Method Run has parameters count 4 but limit is 3"));
+				Contains($"Method Run has parameters count 4 but limit is {Limit.ParameterCount}"));
 
 	[Test]
 	public void MethodCountMustNotExceedFifteen() =>
@@ -63,7 +63,7 @@ public sealed class LimitTests
 					new[] { "has log" }, 16, "Run(first Number, second Number)", "\tfirst")).
 				ParseMembersAndMethods(new MethodExpressionParser()),
 			Throws.InstanceOf<Type.MethodCountMustNotExceedFifteen>().With.Message.
-				Contains("Type MethodCountMustNotExceedFifteen has method count 16 but limit is 15"));
+				Contains($"Type MethodCountMustNotExceedFifteen has method count 16 but limit is {Limit.MethodCount}"));
 
 	[Test]
 	public void LinesCountMustNotExceedTwoHundredFiftySix() =>
@@ -72,7 +72,7 @@ public sealed class LimitTests
 					CreateDuplicateLines(257, "has log").ToArray()).
 				ParseMembersAndMethods(new MethodExpressionParser()),
 			Throws.InstanceOf<Type.LinesCountMustNotExceedTwoHundredFiftySix>().With.Message.Contains(
-				"Type LinesCountMustNotExceedTwoHundredFiftySix has lines count 257 but limit is 256"));
+				$"Type LinesCountMustNotExceedTwoHundredFiftySix has lines count 257 but limit is {Limit.LineCount}"));
 
 	[Test]
 	public void NestingMoreThanFiveLevelsIsNotAllowed() =>
@@ -89,7 +89,7 @@ public sealed class LimitTests
 				"						log.Write(5)" // @formatter:on
 			}).ParseMembersAndMethods(new MethodExpressionParser()),
 			Throws.InstanceOf<Type.NestingMoreThanFiveLevelsIsNotAllowed>().With.Message.Contains(
-				"Type NestingMoreThanFiveLevelsIsNotAllowed has more than 5 levels of nesting in line: 8"));
+				$"Type NestingMoreThanFiveLevelsIsNotAllowed has more than {Limit.NestingLevel} levels of nesting in line: 8"));
 
 	[Test]
 	public void CharacterCountMustBeWithinOneHundredTwenty() =>
@@ -102,16 +102,15 @@ public sealed class LimitTests
 					"	let remainingCans = numberOfCans - (levelCount * levelCount)remainingCans < ((levelCount + 1) * (levelCount + 1)) ? levelCount else CalculateCompleteLevelCount(remainingCans, levelCount + 1)"
 				}).ParseMembersAndMethods(new MethodExpressionParser()),
 			Throws.InstanceOf<Type.CharacterCountMustBeWithinOneHundredTwenty>().With.Message.Contains(
-				"Type CharacterCountMustBeWithinOneHundredTwenty has character count 191 in line: 4 but limit is 120"));
+				$"Type CharacterCountMustBeWithinOneHundredTwenty has character count 191 in line: 4 but limit is {Limit.CharacterCount}"));
 
 	[Test]
 	public void MemberCountShouldNotExceedFifty() =>
 		Assert.That(
-			() => CreateType(nameof(MemberCountShouldNotExceedFifty),
-					CreateRandomMemberLines(51)).
+			() => CreateType(nameof(MemberCountShouldNotExceedFifty), CreateRandomMemberLines(51)).
 				ParseMembersAndMethods(new MethodExpressionParser()),
 			Throws.InstanceOf<Type.MemberCountShouldNotExceedFifty>().With.Message.Contains(
-				"MemberCountShouldNotExceedFifty has member count 51 but limit is 50"));
+				$"MemberCountShouldNotExceedFifty has member count 51 but limit is {Limit.MemberCount}"));
 
 	private static string[] CreateRandomMemberLines(int count)
 	{
