@@ -3,8 +3,10 @@
 public enum Instruction
 {
 	Set,
-	SetVariable,
+	StoreVariable,
+	StoreConstant,
 	Load,
+	LoadConstant,
 	SetLoadSeparator = 100,
 	Add,
 	Subtract,

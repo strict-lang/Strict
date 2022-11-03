@@ -7,33 +7,51 @@ public sealed class BytecodeGenerator
 {
 	public BytecodeGenerator(MethodCall methodCall)
 	{
+		InstanceArguments = new Dictionary<string, Expression>();
 		Method = methodCall.Method;
 		if (methodCall.Instance != null)
-			InstanceArguments = ((MethodCall)methodCall.Instance).Arguments;
-		MethodArguments = methodCall.Arguments;
+			AddInstanceMemberVariables((MethodCall)methodCall.Instance);
+		AddMethodParameterVariables(methodCall);
 	}
 
-	public IReadOnlyList<Expression> MethodArguments { get; }
-	private IReadOnlyList<Expression>? InstanceArguments { get; }
+	private void AddInstanceMemberVariables(MethodCall instance)
+	{
+		for (var parameterIndex = 0; parameterIndex < instance.Method.Parameters.Count;
+			parameterIndex++)
+			InstanceArguments?.Add(instance.ReturnType.Members[parameterIndex].Name,
+				instance.Arguments[parameterIndex]);
+	}
+
+	private void AddMethodParameterVariables(MethodCall methodCall)
+	{
+		for (var parameterIndex = 0; parameterIndex < Method.Parameters.Count; parameterIndex++)
+			InstanceArguments?.Add(Method.Parameters[parameterIndex].Name,
+				methodCall.Arguments[parameterIndex]);
+	}
+
+	private Dictionary<string, Expression>? InstanceArguments { get; }
 	private Method Method { get; }
 
-	public List<Statement>? Generate()
+	public List<Statement> Generate()
 	{
 		var statements = BuildSetStatementsFromParameters();
 		var body = (Body)Method.GetBodyAndParseIfNeeded();
-		foreach (var expression in body.Expressions)
-			if (expression is Binary binary)
-				GenerateCodeForBinary(binary, statements);
+		GenerateCode(body, statements);
 		return statements;
 	}
 
-	private List<Statement>? BuildSetStatementsFromParameters()
+	private static void GenerateCode(Body body, ICollection<Statement> statements)
 	{
-		var statements = InstanceArguments?.
-			Select(argument => new Statement(Instruction.SetVariable, new Instance(argument))).ToList();
-		statements?.AddRange(MethodArguments.Select(argument =>
-			new Statement(Instruction.SetVariable, new Instance(argument))));
-		return statements;
+		foreach (var expression in body.Expressions)
+			if (expression is Binary binary)
+				GenerateCodeForBinary(binary, statements);
+	}
+
+	private List<Statement> BuildSetStatementsFromParameters()
+	{
+		var statements = InstanceArguments?.Select(argument =>
+			new StoreStatement(new Instance(argument.Value), argument.Key)).ToList();
+		return new List<Statement>(statements!);
 	}
 
 	private static void GenerateCodeForBinary(MethodCall binary, ICollection<Statement>? statements)
@@ -55,9 +73,9 @@ public sealed class BytecodeGenerator
 	{
 		if (binary.Instance != null)
 		{
-			statements.Add(new LoadStatement(Register.R0));
-			statements.Add(new LoadStatement(Register.R1));
-			statements.Add(new Statement(Instruction.Add, Register.R0, Register.R1, Register.R2));
+			statements.Add(new LoadVariableStatement(Register.R1, binary.Instance.ToString()));
+			statements.Add(new LoadVariableStatement(Register.R0, binary.Arguments[0].ToString()));
+			statements.Add(new Statement(Instruction.Add, Register.R1, Register.R0, Register.R2));
 		}
 	}
 
@@ -66,8 +84,8 @@ public sealed class BytecodeGenerator
 	{
 		if (binary.Instance != null)
 		{
-			statements.Add(new LoadStatement(Register.R0));
-			statements.Add(new LoadStatement(Register.R1));
+			statements.Add(new LoadVariableStatement(Register.R1, binary.Instance.ToString()));
+			statements.Add(new LoadVariableStatement(Register.R0, binary.Arguments[0].ToString()));
 			statements.Add(new Statement(Instruction.Multiply, Register.R0, Register.R1, Register.R2));
 		}
 	}

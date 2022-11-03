@@ -16,10 +16,10 @@ public sealed class VirtualMachine
 		if (statement.Instruction == Instruction.Set && statement.Instance != null)
 			foreach (var register in statement.Registers)
 				registers[register] = statement.Instance;
-		else if (statement.Instruction == Instruction.SetVariable && statement.Instance != null)
-			variables.Push(statement.Instance);
-		else if (statement.Instruction == Instruction.Load)
-			registers[((LoadStatement)statement).Register] = variables.Pop();
+		else if (statement.Instruction == Instruction.StoreConstant && statement.Instance != null)
+			constantVariables.Push(statement.Instance);
+		else if (statement.Instruction == Instruction.LoadConstant)
+			registers[((LoadConstantStatement)statement).Register] = constantVariables.Pop();
 		else
 			TryExecute(statement);
 	}
@@ -36,7 +36,7 @@ public sealed class VirtualMachine
 	}
 
 	private readonly Dictionary<Register, Instance> registers = new();
-	private readonly Stack<Instance> variables = new();
+	private readonly Stack<Instance> constantVariables = new();
 	private int instructionIndex;
 
 	private void TryOperationExecution(Statement statement)
