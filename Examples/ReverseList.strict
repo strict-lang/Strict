@@ -1,7 +1,0 @@
-has elements List
-Reverse List
-	ReverseList(1, 2, 3, 4).Reverse is (4, 3, 2, 1)
-	ReverseList("A", "B", "C", "D").Reverse is ("D", "C", "B", "A")
-	ReverseList(true, false).Reverse is (false, true)
-	return for Range(elements.Length - 1, 0)
-		elements(index)

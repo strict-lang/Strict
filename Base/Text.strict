@@ -1,5 +1,0 @@
-has Characters
-+(other) Text
-	+("more") is "more"
-	"Hey" + " " + "you" is "Hey you"
-	Characters + other.Characters

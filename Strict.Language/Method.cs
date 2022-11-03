@@ -15,7 +15,7 @@ public sealed class Method : Context
 	public Method(Type type, int typeLineNumber, ExpressionParser parser, IReadOnlyList<string> lines)
 		: base(type, GetName(lines[0]))
 	{
-		if (lines.Count > 12)
+		if (lines.Count > Limit.MethodLength)
 			throw new MethodLengthMustNotExceedTwelve(this, lines.Count, typeLineNumber);
 		TypeLineNumber = typeLineNumber;
 		this.parser = parser;
@@ -27,7 +27,7 @@ public sealed class Method : Context
 
 	public sealed class MethodLengthMustNotExceedTwelve : ParsingFailed
 	{
-		public MethodLengthMustNotExceedTwelve(Method method, int linesCount, int lineNumber) : base(method.Type, lineNumber, $"Method {method.Name} has {linesCount} lines but limit is 12") { }
+		public MethodLengthMustNotExceedTwelve(Method method, int linesCount, int lineNumber) : base(method.Type, lineNumber, $"Method {method.Name} has {linesCount} lines but limit is {Limit.MethodLength}") { }
 	}
 
 	/// <summary>
@@ -110,7 +110,7 @@ public sealed class Method : Context
 				throw new ParametersWithTypeAnyIsNotAllowed(this, nameAndTypeAsString);
 			parameters.Add(new Parameter(type, nameAndTypeAsString));
 		}
-		return parameters.Count > 3
+		return parameters.Count > Limit.ParameterCount
 			? throw new MethodParameterCountMustNotExceedThree(this,
 				TypeLineNumber + methodLineNumber - 1)
 			: closingBracketIndex + 2 < rest.Length
@@ -120,7 +120,7 @@ public sealed class Method : Context
 
 	public sealed class MethodParameterCountMustNotExceedThree : ParsingFailed
 	{
-		public MethodParameterCountMustNotExceedThree(Method method, int lineNumber) : base(method.Type, lineNumber, $"Method {method.Name} has parameters count {method.Parameters.Count} but limit is 3") { }
+		public MethodParameterCountMustNotExceedThree(Method method, int lineNumber) : base(method.Type, lineNumber, $"Method {method.Name} has parameters count {method.Parameters.Count} but limit is {Limit.ParameterCount}") { }
 	}
 
 	public bool IsGeneric { get; private set; }

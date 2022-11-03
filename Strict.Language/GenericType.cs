@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 
 namespace Strict.Language;
 
@@ -11,7 +12,8 @@ public sealed class GenericType : Type
 		ImplementationTypes = implementationTypes;
 		foreach (var methodsByNames in Generic.AvailableMethods)
 		foreach (var method in methodsByNames.Value)
-			methods.Add(method.CloneWithImplementation(this));
+			if (method.ReturnType.IsGeneric || method.Parameters.Any(p => p.Type.IsGeneric))
+				methods.Add(method.CloneWithImplementation(this));
 	}
 
 	private static string GetTypeName(Type generic, IReadOnlyList<Type> implementationTypes) =>

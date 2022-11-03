@@ -9,10 +9,9 @@ using OmniSharp.Extensions.LanguageServer.Protocol.Window;
 
 namespace Strict.LanguageServer;
 
-// ReSharper disable once HollowTypeName
-public sealed class TextDocumentSyncHandler : ITextDocumentSyncHandler
+public sealed class TextDocumentSynchronizer : ITextDocumentSyncHandler
 {
-	public TextDocumentSyncHandler(ILanguageServerFacade languageServer) =>
+	public TextDocumentSynchronizer(ILanguageServerFacade languageServer) =>
 		this.languageServer = languageServer;
 
 	public readonly StrictDocumentManager DocumentManager = new();

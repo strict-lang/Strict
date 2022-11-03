@@ -47,61 +47,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Strict.VirtualMachine.Tests
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Strict.LanguageServer", "Strict.LanguageServer\Strict.LanguageServer.csproj", "{FF9E14D4-F3B5-4A95-92D2-C77D37269D8C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Strict.LanguageServer.Tests", "Strict.LanguageServer.Tests\Strict.LanguageServer.Tests.csproj", "{BC6C366A-0DBB-44EA-9DBA-C6A528EA1EAE}"
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Examples", "Examples", "{50B7F600-8310-4D86-AB04-657D2714C888}"
-	ProjectSection(SolutionItems) = preProject
-		..\Strict.Examples\ArithmeticFunction.strict = ..\Strict.Examples\ArithmeticFunction.strict
-		..\Strict.Examples\Beeramid.strict = ..\Strict.Examples\Beeramid.strict
-		..\Strict.Examples\ConvertingNumbers.strict = ..\Strict.Examples\ConvertingNumbers.strict
-		..\Strict.Examples\ExecuteOperation.strict = ..\Strict.Examples\ExecuteOperation.strict
-		..\Strict.Examples\Fibonacci.strict = ..\Strict.Examples\Fibonacci.strict
-		..\Strict.Examples\FindFirstNonConsecutiveNumber.strict = ..\Strict.Examples\FindFirstNonConsecutiveNumber.strict
-		..\Strict.Examples\FindNumberCount.strict = ..\Strict.Examples\FindNumberCount.strict
-		..\Strict.Examples\Instruction.strict = ..\Strict.Examples\Instruction.strict
-		..\Strict.Examples\ReduceButGrow.strict = ..\Strict.Examples\ReduceButGrow.strict
-		..\Strict.Examples\Register.strict = ..\Strict.Examples\Register.strict
-		..\Strict.Examples\RemoveExclamation.strict = ..\Strict.Examples\RemoveExclamation.strict
-		..\Strict.Examples\ReverseList.strict = ..\Strict.Examples\ReverseList.strict
-		..\Strict.Examples\Statement.strict = ..\Strict.Examples\Statement.strict
-	EndProjectSection
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Output", "Output", "{681E844B-6615-4DDE-9EEC-085CAED55696}"
-	ProjectSection(SolutionItems) = preProject
-		..\Strict.Examples\Output\ArithmeticFunction.cs = ..\Strict.Examples\Output\ArithmeticFunction.cs
-		..\Strict.Examples\Output\Beeramid.cs = ..\Strict.Examples\Output\Beeramid.cs
-		..\Strict.Examples\Output\ExecuteOperation.cs = ..\Strict.Examples\Output\ExecuteOperation.cs
-		..\Strict.Examples\Output\Fibonacci.cs = ..\Strict.Examples\Output\Fibonacci.cs
-		..\Strict.Examples\Output\ReduceButGrow.cs = ..\Strict.Examples\Output\ReduceButGrow.cs
-		..\Strict.Examples\Output\RemoveExclamation.cs = ..\Strict.Examples\Output\RemoveExclamation.cs
-		..\Strict.Examples\Output\ReverseList.cs = ..\Strict.Examples\Output\ReverseList.cs
-	EndProjectSection
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Base", "Base", "{9ECF1631-CAFF-4CDE-8F11-ECF80EBBB3D9}"
-	ProjectSection(SolutionItems) = preProject
-		..\Strict.Base\Any.strict = ..\Strict.Base\Any.strict
-		..\Strict.Base\App.strict = ..\Strict.Base\App.strict
-		..\Strict.Base\Boolean.strict = ..\Strict.Base\Boolean.strict
-		..\Strict.Base\Character.strict = ..\Strict.Base\Character.strict
-		..\Strict.Base\Count.strict = ..\Strict.Base\Count.strict
-		..\Strict.Base\Directory.strict = ..\Strict.Base\Directory.strict
-		..\Strict.Base\Error.strict = ..\Strict.Base\Error.strict
-		..\Strict.Base\File.strict = ..\Strict.Base\File.strict
-		..\Strict.Base\Generic.strict = ..\Strict.Base\Generic.strict
-		..\Strict.Base\HashCode.strict = ..\Strict.Base\HashCode.strict
-		..\Strict.Base\Input.strict = ..\Strict.Base\Input.strict
-		..\Strict.Base\List.strict = ..\Strict.Base\List.strict
-		..\Strict.Base\Log.strict = ..\Strict.Base\Log.strict
-		..\Strict.Base\Method.strict = ..\Strict.Base\Method.strict
-		..\Strict.Base\Mutable.strict = ..\Strict.Base\Mutable.strict
-		..\Strict.Base\Number.strict = ..\Strict.Base\Number.strict
-		..\Strict.Base\Output.strict = ..\Strict.Base\Output.strict
-		..\Strict.Base\Range.strict = ..\Strict.Base\Range.strict
-		..\Strict.Base\Stacktrace.strict = ..\Strict.Base\Stacktrace.strict
-		..\Strict.Base\System.strict = ..\Strict.Base\System.strict
-		..\Strict.Base\Text.strict = ..\Strict.Base\Text.strict
-		..\Strict.Base\Type.strict = ..\Strict.Base\Type.strict
-	EndProjectSection
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Strict.LanguageServer.Tests", "Strict.LanguageServer.Tests\Strict.LanguageServer.Tests.csproj", "{BC6C366A-0DBB-44EA-9DBA-C6A528EA1EAE}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -168,9 +114,6 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
-	EndGlobalSection
-	GlobalSection(NestedProjects) = preSolution
-		{681E844B-6615-4DDE-9EEC-085CAED55696} = {50B7F600-8310-4D86-AB04-657D2714C888}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {DEA35D12-F095-424A-8A50-6D7EBE08D917}
