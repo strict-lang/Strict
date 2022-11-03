@@ -8,6 +8,7 @@ public sealed class Mutable : Value
 	private Mutable(Context context, Expression expression) : base(context.GetType(Base.Mutable),
 		expression)
 	{
+		ReturnType.AddDataReturnTypeToMutableImplements(DataReturnType);
 		ReturnType.AssignMethodsToMutable(DataReturnType);
 		ReturnType.MutableReturnType = DataReturnType;
 	}

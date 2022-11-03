@@ -127,7 +127,7 @@ public class Program
 				nameof(InvalidConsoleAppWillGiveUsCompilationError), "lafine=soeu"),
 			Throws.InstanceOf<CSharpCompilationFailed>().And.Message.Contains("The build failed."));
 
-	[Ignore("Visiting For expressions needs to be supported")]
+	//[Ignore("Visiting For expressions needs to be supported")]
 	[Test]
 	[Category("Manual")]
 	public void GenerateDirectoryGetFilesProgram()
@@ -161,12 +161,12 @@ public class Program
 
 	private static string ExampleFolder => Repositories.DevelopmentFolder + ".Examples";
 
-	[Ignore("this test will work once for loop is working")]
+	[Ignore("Printing for expressions are pending")]
 	[Test]
 	public Task ReduceButGrow() =>
 		GenerateCSharpByReadingStrictProgramAndCompareWithOutput(nameof(ReduceButGrow));
 
-	[Ignore("for is not working yet - Tests in strict file are not compiling; Also variable are immutable in strict which causes this program to fail")]
+	[Ignore("Printing for expressions are pending")]
 	[Test]
 	public Task Fibonacci() =>
 		GenerateCSharpByReadingStrictProgramAndCompareWithOutput(nameof(Fibonacci));
@@ -176,7 +176,7 @@ public class Program
 	public Task ReverseList() =>
 		GenerateCSharpByReadingStrictProgramAndCompareWithOutput(nameof(ReverseList));
 
-	[Ignore("this test will work once for loop and not operator is working")]
+	[Ignore("Is Not operator working in this example")]
 	[Test]
 	public Task RemoveExclamation() =>
 		GenerateCSharpByReadingStrictProgramAndCompareWithOutput(nameof(RemoveExclamation));

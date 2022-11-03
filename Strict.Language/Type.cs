@@ -655,4 +655,10 @@ public class Type : Context
 			"not match these method(s):\n" + string.Join("\n",
 				allMethods)) { }
 	}
+
+	public void AddDataReturnTypeToMutableImplements(Type dataReturnType)
+	{
+		if (Name == Base.Mutable && !implements.Contains(dataReturnType))
+			implements.Add(dataReturnType);
+	}
 }
