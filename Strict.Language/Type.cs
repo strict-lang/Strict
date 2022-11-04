@@ -179,6 +179,10 @@ public class Type : Context
 	{
 		try
 		{
+			if (Name == "CheckParentTabsAfterChildBodyIsParsed")
+			{
+
+			}
 			ParseLineForMembersAndMethods(parser);
 		}
 		catch (TypeNotFound ex)
@@ -328,8 +332,18 @@ public class Type : Context
 		if (!IsTrait && !IsNextLineValidMethodBody())
 			throw new MethodMustBeImplementedInNonTrait(this, lines[lineNumber]);
 		var methodLineNumber = lineNumber;
+		//var listStartLineNumber = -1;
 		while (IsNextLineValidMethodBody())
+		{
 			lineNumber++;
+			//if (lines[lineNumber - 1].EndsWith(','))
+			//{
+			//	if (listStartLineNumber == -1)
+			//		listStartLineNumber = lineNumber - 1;
+			//	lines[listStartLineNumber] += lines[lineNumber];
+			//	//lines[lineNumber] = string.Empty;
+			//}
+		}
 		return lines[methodLineNumber..(lineNumber + 1)];
 	}
 

@@ -254,4 +254,27 @@ public sealed class ListTests : TestExpressions
 						"AccessZeroIndexElement Number", "\tlet something = numbers(0)", "\tsomething(0)")).
 				ParseMembersAndMethods(parser).Methods[0].GetBodyAndParseIfNeeded(),
 			Throws.InstanceOf<InvalidArgumentItIsNotMethodOrListCall>());
+
+	[Test]
+	public void ParseMultiLineExpression()
+	{
+		var expression = new Type(type.Package,
+			new TypeLines(nameof(ParseMultiLineExpression),
+				"has numbers",
+				"has anotherNumbers Numbers",
+				"Run",
+				"\tlet result = (numbers(0),",
+				"\tnumbers(1),",
+				"\tnumbers(2),",
+				"\tnumbers(3),",
+				"\tnumbers(4),",
+				"\tnumbers(5),",
+				"\tnumbers(6),",
+				"\tanotherNumbers(0),",
+				"\tanotherNumbers(1),",
+				"\tanotherNumbers(2)) + 5",
+				"Runn",
+				"\tsomething")).ParseMembersAndMethods(parser).Methods[0].GetBodyAndParseIfNeeded();
+		Assert.That(expression.ToString(), Is.EqualTo("same as input"));
+	}
 }
