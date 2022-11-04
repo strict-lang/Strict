@@ -3,15 +3,23 @@ using Strict.Language.Expressions;
 
 namespace Strict.VirtualMachine;
 
-public sealed class BytecodeGenerator
+public sealed class ByteCodeGenerator
 {
-	public BytecodeGenerator(MethodCall methodCall)
+	public ByteCodeGenerator(MethodCall methodCall)
 	{
 		InstanceArguments = new Dictionary<string, Expression>();
 		Method = methodCall.Method;
 		if (methodCall.Instance != null)
 			AddInstanceMemberVariables((MethodCall)methodCall.Instance);
 		AddMethodParameterVariables(methodCall);
+		StoreAndLoadVariables();
+	}
+
+	private void StoreAndLoadVariables()
+	{
+		if (InstanceArguments != null)
+			foreach (var argument in InstanceArguments)
+				statements.Add(new StoreStatement(new Instance(argument.Value), argument.Key));
 	}
 
 	private void AddInstanceMemberVariables(MethodCall instance)
@@ -29,64 +37,108 @@ public sealed class BytecodeGenerator
 				methodCall.Arguments[parameterIndex]);
 	}
 
+	private readonly Register[] registers = Enum.GetValues<Register>();
+	private int nextRegister;
 	private Dictionary<string, Expression>? InstanceArguments { get; }
 	private Method Method { get; }
+	private readonly List<Statement> statements = new();
 
-	public List<Statement> Generate()
+	public List<Statement> Generate() =>
+		GenerateStatements(((Body)Method.GetBodyAndParseIfNeeded()).Expressions);
+
+	private List<Statement> GenerateStatements(IEnumerable<Expression> expressions)
 	{
-		var statements = BuildSetStatementsFromParameters();
-		var body = (Body)Method.GetBodyAndParseIfNeeded();
-		GenerateCode(body, statements);
+		foreach (var expression in expressions)
+			GenerateStatementsFromExpression(expression);
 		return statements;
 	}
 
-	private static void GenerateCode(Body body, ICollection<Statement> statements)
+	private void GenerateStatementsFromExpression(Expression expression)
 	{
-		foreach (var expression in body.Expressions)
-			if (expression is Binary binary)
-				GenerateCodeForBinary(binary, statements);
-	}
-
-	private List<Statement> BuildSetStatementsFromParameters()
-	{
-		var statements = InstanceArguments?.Select(argument =>
-			new StoreStatement(new Instance(argument.Value), argument.Key)).ToList();
-		return new List<Statement>(statements!);
-	}
-
-	private static void GenerateCodeForBinary(MethodCall binary, ICollection<Statement>? statements)
-	{
-		if (statements != null)
-			switch (binary.Method.Name)
-			{
-			case BinaryOperator.Plus:
-				GenerateAdditionStatements(statements, binary);
-				break;
-			case BinaryOperator.Multiply:
-				GenerateMultiplyStatements(statements, binary);
-				break;
-			}
-	}
-
-	private static void GenerateAdditionStatements(ICollection<Statement> statements,
-		MethodCall binary)
-	{
-		if (binary.Instance != null)
+		if (expression is Return returnExpression)
 		{
-			statements.Add(new LoadVariableStatement(Register.R1, binary.Instance.ToString()));
-			statements.Add(new LoadVariableStatement(Register.R0, binary.Arguments[0].ToString()));
-			statements.Add(new Statement(Instruction.Add, Register.R1, Register.R0, Register.R2));
+			GenerateStatements(new[] { returnExpression.Value });
+			statements.Add(new Statement(Instruction.Return, registers[^2]));
+		}
+		if (expression is Binary binary)
+			GenerateCodeForBinary(binary);
+		else if (expression is If ifExpression)
+			GenerateIfStatements(ifExpression);
+	}
+
+	private void GenerateIfStatements(If ifExpression)
+	{
+		GenerateCodeForIfCondition((Binary)ifExpression.Condition);
+		GenerateCodeForThen(ifExpression);
+	}
+
+	private void GenerateCodeForThen(If ifExpression) => GenerateStatements(new[] { ifExpression.Then });
+
+	private void GenerateCodeForBinary(MethodCall binary)
+	{
+		switch (binary.Method.Name)
+		{
+		case BinaryOperator.Plus:
+			GenerateAdditionStatements(binary);
+			break;
+		case BinaryOperator.Multiply:
+			GenerateMultiplyStatements(binary);
+			break;
+		case BinaryOperator.Minus:
+			GenerateSubtractionStatements(binary);
+			break;
+		case BinaryOperator.Divide:
+			GenerateDivisionStatements(binary);
+			break;
 		}
 	}
 
-	private static void GenerateMultiplyStatements(ICollection<Statement> statements,
-		MethodCall binary)
+	private void GenerateCodeForIfCondition(Binary condition)
+	{
+		if (condition.Instance is Value instanceValue)
+			statements.Add(new LoadConstantStatement(AllocateRegister(),
+				new Instance(instanceValue.ReturnType, instanceValue.Data)));
+		else
+			statements.Add(new LoadVariableStatement(AllocateRegister(),
+				condition.Instance?.ToString() ?? throw new InvalidOperationException()));
+		if (condition.Arguments[0] is Value argumentValue)
+			statements.Add(new LoadConstantStatement(AllocateRegister(),
+				new Instance(argumentValue.ReturnType, argumentValue.Data)));
+		else
+			statements.Add(new LoadVariableStatement(AllocateRegister(),
+				condition.Arguments[0].ToString()));
+		statements.Add(new Statement(Instruction.Equal, registers[nextRegister - 2],
+			registers[nextRegister - 1]));
+		statements.Add(new JumpStatement(Instruction.JumpIfFalse, 2));
+	}
+
+	private Register AllocateRegister() =>
+		nextRegister < registers.Length
+			? registers[nextRegister++]
+			: registers[0];
+
+	private void GenerateAdditionStatements(MethodCall binary) =>
+		GenerateBinaryStatements(binary, Instruction.Add);
+
+	private void GenerateSubtractionStatements(MethodCall binary) =>
+		GenerateBinaryStatements(binary, Instruction.Subtract);
+
+	private void GenerateDivisionStatements(MethodCall binary) =>
+		GenerateBinaryStatements(binary, Instruction.Divide);
+
+	private void GenerateMultiplyStatements(MethodCall binary) =>
+		GenerateBinaryStatements(binary, Instruction.Multiply);
+
+	private void GenerateBinaryStatements(MethodCall binary, Instruction operationInstruction)
 	{
 		if (binary.Instance != null)
 		{
-			statements.Add(new LoadVariableStatement(Register.R1, binary.Instance.ToString()));
-			statements.Add(new LoadVariableStatement(Register.R0, binary.Arguments[0].ToString()));
-			statements.Add(new Statement(Instruction.Multiply, Register.R0, Register.R1, Register.R2));
+			statements.Add(new LoadVariableStatement(AllocateRegister(), binary.Instance.ToString()));
+			statements.Add(
+				new LoadVariableStatement(AllocateRegister(), binary.Arguments[0].ToString()));
+			statements.Add(new Statement(operationInstruction, registers[nextRegister - 2],
+				registers[nextRegister - 1], registers[nextRegister - 2]));
+			nextRegister = 0;
 		}
 	}
 }

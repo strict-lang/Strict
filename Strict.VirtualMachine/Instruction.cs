@@ -21,5 +21,6 @@ public enum Instruction
 	JumpIfTrue,
 	JumpIfFalse,
 	JumpIfNotZero,
-	JumpsSeparator = 400
+	JumpsSeparator = 400,
+	Return
 }

@@ -45,17 +45,15 @@ public sealed class VirtualMachineTests : TestExpressions
 		Assert.That(
 			vm.Execute(new Statement[]
 			{
-				new(Instruction.StoreConstant, new Instance(NumberType, 5)),
-				new LoadConstantStatement(Register.R0)
+				new LoadConstantStatement(Register.R0, new Instance(NumberType, 5))
 			})[Register.R0].Value, Is.EqualTo(5));
 
 	[Test]
 	public void SetAndAdd() =>
 		Assert.That(vm.Execute(new Statement[]
 		{
-			new(Instruction.StoreConstant, new Instance(NumberType, 10)),
-			new(Instruction.StoreConstant, new Instance(NumberType, 5)), new LoadConstantStatement(Register.R0),
-			new LoadConstantStatement(Register.R1),
+			new LoadConstantStatement(Register.R0, new Instance(NumberType, 10)),
+			new LoadConstantStatement(Register.R1, new Instance(NumberType, 5)),
 			new(Instruction.Add, Register.R0, Register.R1, Register.R2)
 		})[Register.R2].Value, Is.EqualTo(15));
 

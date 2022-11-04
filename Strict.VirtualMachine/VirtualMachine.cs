@@ -6,20 +6,23 @@ public sealed class VirtualMachine
 {
 	public Dictionary<Register, Instance> Execute(IReadOnlyList<Statement> statements)
 	{
-		for (instructionIndex = 0; instructionIndex < statements.Count; instructionIndex++)
+		for (instructionIndex = 0; instructionIndex != -1 && instructionIndex < statements.Count; instructionIndex++)
 			ExecuteStatement(statements[instructionIndex]);
 		return registers;
 	}
 
 	private void ExecuteStatement(Statement statement)
 	{
+		if (statement.Instruction == Instruction.Return)
+		{
+			instructionIndex = -1;
+			return;
+		}
 		if (statement.Instruction == Instruction.Set && statement.Instance != null)
 			foreach (var register in statement.Registers)
 				registers[register] = statement.Instance;
-		else if (statement.Instruction == Instruction.StoreConstant && statement.Instance != null)
-			constantVariables.Push(statement.Instance);
 		else if (statement.Instruction == Instruction.LoadConstant)
-			registers[((LoadConstantStatement)statement).Register] = constantVariables.Pop();
+			registers[statement.Registers[0]] = statement.Instance ?? throw new InvalidOperationException();
 		else
 			TryExecute(statement);
 	}
@@ -27,7 +30,8 @@ public sealed class VirtualMachine
 	private void TryExecute(Statement statement)
 	{
 		var instructionPosition = (int)statement.Instruction;
-		if (instructionPosition is >= (int)Instruction.SetLoadSeparator and < (int)Instruction.BinaryOperatorsSeparator)
+		if (instructionPosition is >= (int)Instruction.SetLoadSeparator
+			and < (int)Instruction.BinaryOperatorsSeparator)
 			TryOperationExecution(statement);
 		else if (instructionPosition is >= 100 and < (int)Instruction.ConditionalSeparator)
 			TryConditionalOperationExecution(statement);
@@ -36,7 +40,6 @@ public sealed class VirtualMachine
 	}
 
 	private readonly Dictionary<Register, Instance> registers = new();
-	private readonly Stack<Instance> constantVariables = new();
 	private int instructionIndex;
 
 	private void TryOperationExecution(Statement statement)
