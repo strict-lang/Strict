@@ -189,4 +189,12 @@ public class Program
 		await ReadStrictFileAndCreateType("Statement");
 		await GenerateCSharpByReadingStrictProgramAndCompareWithOutput(nameof(ExecuteOperation));
 	}
+
+	[Ignore("Printing for expressions are pending")]
+	[Test]
+	public async Task LinkedListAnalyzer()
+	{
+		await ReadStrictFileAndCreateType("Node");
+		await GenerateCSharpByReadingStrictProgramAndCompareWithOutput(nameof(LinkedListAnalyzer));
+	}
 }

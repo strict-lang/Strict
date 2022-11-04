@@ -38,7 +38,7 @@ public sealed class Mutable : Value
 
 	private static bool IsMutable(Expression expression) =>
 		expression.ReturnType.Name == Base.Mutable ||
-		expression.ReturnType.Implements.Any(t => t.Name == Base.Mutable);
+		expression.ReturnType.Implements.Any(t => t.Name == Base.Mutable) || expression is MemberCall memberCall && memberCall.Member.IsMutable;
 
 	private static Expression UpdateMemberOrVariableValue(Body body,
 		Expression expression, ReadOnlySpan<char> remainingLineSpan)

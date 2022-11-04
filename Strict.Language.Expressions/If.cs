@@ -146,7 +146,7 @@ public sealed class If : Expression
 
 	private static bool NoFirstBracketOrSurroundedByIt(ReadOnlySpan<char> input, int firstBracket,
 		int questionMarkIndex) =>
-		firstBracket == -1 || firstBracket > questionMarkIndex ||
+		firstBracket == -1 || firstBracket > questionMarkIndex || input.IndexOf(')') < questionMarkIndex ||
 		firstBracket == 0 && input[^1] == ')';
 
 	public sealed class ConditionalExpressionsCannotBeNested : ParsingFailed
