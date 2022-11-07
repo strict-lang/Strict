@@ -1,10 +1,9 @@
 ﻿using OmniSharp.Extensions.LanguageServer.Protocol.Models;
 
-namespace Strict.LanguageServer
+namespace Strict.LanguageServer;
+
+public static class BaseSelectors
 {
-	public static class BaseSelectors
-	{
-		public static readonly DocumentSelector StrictDocumentSelector = new(
-			new DocumentFilter { Pattern = "**/*.strict" });
-	}
+	public static readonly DocumentSelector StrictDocumentSelector = new(
+		new DocumentFilter { Pattern = "**/*.strict" });
 }
