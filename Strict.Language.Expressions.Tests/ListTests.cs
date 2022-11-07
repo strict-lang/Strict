@@ -269,7 +269,7 @@ public sealed class ListTests : TestExpressions
 					"\t5,",
 					"\t6,",
 					"\t7)",
-					"Runn",
+					"ExtraMethodNotCalled",
 					"\tsomething"))
 				// @formatter:on
 				.ParseMembersAndMethods(parser).Methods[0].GetBodyAndParseIfNeeded(),
@@ -286,7 +286,7 @@ public sealed class ListTests : TestExpressions
 					"\t2,",
 					"\t3,",
 					"\t4,",
-					"Runn",
+					"ExtraMethodNotCalled",
 					"\tsomething"))
 				// @formatter:on
 				.ParseMembersAndMethods(parser).Methods[0].GetBodyAndParseIfNeeded(),
@@ -294,28 +294,33 @@ public sealed class ListTests : TestExpressions
 				StartWith("\tlet result = (1, 2, 3, 4,"));
 
 	[Test]
-	public void ParseMultiLineExpression()
+	public void ParseMultiLineExpressionAndPrintSameAsInput()
 	{
-		var assignment = (Assignment)new Type(type.Package,
-				new TypeLines(nameof(ParseMultiLineExpression),
+		var program = new Type(type.Package,
+				new TypeLines(nameof(ParseMultiLineExpressionAndPrintSameAsInput),
 					// @formatter:off
-				"has numbers",
-				"has anotherNumbers Numbers",
-				"Run",
-				"\tlet result = (numbers(0),",
-				"\tnumbers(1),",
-				"\tnumbers(2),",
-				"\tnumbers(3),",
-				"\tnumbers(4),",
-				"\tnumbers(5),",
-				"\tnumbers(6),",
-				"\tanotherNumbers(0),",
-				"\tanotherNumbers(1),",
-				"\tanotherNumbers(2)) + 5",
-				"Runn",
-				"\tsomething"))
-					// @formatter:off
-			.ParseMembersAndMethods(parser).Methods[0].GetBodyAndParseIfNeeded();
-		Assert.That(((Binary)assignment.Value).Instance, Is.InstanceOf<List>());
+					"has numbers",
+					"has anotherNumbers Numbers",
+					"Run Numbers",
+					"\t(numbers(0),",
+					"\tnumbers(1),",
+					"\tnumbers(2),",
+					"\tnumbers(3),",
+					"\tnumbers(4),",
+					"\tnumbers(5),",
+					"\tnumbers(6),",
+					"\tanotherNumbers(0),",
+					"\tanotherNumbers(1),",
+					"\tanotherNumbers(2))",
+					"ExtraMethodNotCalled",
+					"\tsomething"))
+			// @formatter:off
+			.ParseMembersAndMethods(parser);
+		var expression = program.Methods[0].GetBodyAndParseIfNeeded();
+		Assert.That(expression, Is.InstanceOf<List>());
+		Assert.That(expression.ToString(),
+			Is.EqualTo("(numbers(0),\n\tnumbers(1),\n\tnumbers(2),\n\tnumbers(3),\n\tnumbers(4),\n\tnumbers(5),"+
+				"\n\tnumbers(6),\n\tanotherNumbers(0),\n\tanotherNumbers(1),\n\tanotherNumbers(2))"));
+		Assert.That(program.Methods[1].lines.Count, Is.EqualTo(2));
 	}
 }
