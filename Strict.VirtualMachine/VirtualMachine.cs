@@ -57,10 +57,10 @@ public sealed class VirtualMachine
 			TryJumpOperation((JumpStatement)statement);
 	}
 
-	public readonly Dictionary<Register, Instance> Registers = new();
+	public Dictionary<Register, Instance> Registers { get; } = new();
 	private readonly Dictionary<string, Instance> variables = new();
 	private int instructionIndex;
-	public Instance? Returns;
+	public Instance? Returns { get; private set; }
 
 	private void TryBinaryOperationExecution(Statement statement)
 	{
