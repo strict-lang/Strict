@@ -256,10 +256,49 @@ public sealed class ListTests : TestExpressions
 			Throws.InstanceOf<InvalidArgumentItIsNotMethodOrListCall>());
 
 	[Test]
+	public void MultiLineListsAllowedOnlyWhenLengthIsMoreThanHundred() =>
+		Assert.That(() => new Type(type.Package, new TypeLines(
+					nameof(MultiLineListsAllowedOnlyWhenLengthIsMoreThanHundred),
+					// @formatter:off
+					"has log",
+					"Run",
+					"\tlet result = (1,",
+					"\t2,",
+					"\t3,",
+					"\t4,",
+					"\t5,",
+					"\t6,",
+					"\t7)",
+					"Runn",
+					"\tsomething"))
+				// @formatter:on
+				.ParseMembersAndMethods(parser).Methods[0].GetBodyAndParseIfNeeded(),
+			Throws.InstanceOf<Type.MultiLineListsAllowedOnlyWhenLengthIsMoreThanHundred>().With.Message.
+				Contains("Current length: 35, Minimum Length for Multi line list expression: 100"));
+
+	[Test]
+	public void UnterminatedMultiLineListFound() =>
+		Assert.That(() => new Type(type.Package, new TypeLines(nameof(UnterminatedMultiLineListFound),
+					// @formatter:off
+					"has log",
+					"Run",
+					"\tlet result = (1,",
+					"\t2,",
+					"\t3,",
+					"\t4,",
+					"Runn",
+					"\tsomething"))
+				// @formatter:on
+				.ParseMembersAndMethods(parser).Methods[0].GetBodyAndParseIfNeeded(),
+			Throws.InstanceOf<Type.UnterminatedMultiLineListFound>().With.Message.
+				StartWith("\tlet result = (1, 2, 3, 4,"));
+
+	[Test]
 	public void ParseMultiLineExpression()
 	{
-		var expression = new Type(type.Package,
-			new TypeLines(nameof(ParseMultiLineExpression),
+		var assignment = (Assignment)new Type(type.Package,
+				new TypeLines(nameof(ParseMultiLineExpression),
+					// @formatter:off
 				"has numbers",
 				"has anotherNumbers Numbers",
 				"Run",
@@ -274,7 +313,9 @@ public sealed class ListTests : TestExpressions
 				"\tanotherNumbers(1),",
 				"\tanotherNumbers(2)) + 5",
 				"Runn",
-				"\tsomething")).ParseMembersAndMethods(parser).Methods[0].GetBodyAndParseIfNeeded();
-		Assert.That(expression.ToString(), Is.EqualTo("same as input"));
+				"\tsomething"))
+					// @formatter:off
+			.ParseMembersAndMethods(parser).Methods[0].GetBodyAndParseIfNeeded();
+		Assert.That(((Binary)assignment.Value).Instance, Is.InstanceOf<List>());
 	}
 }
