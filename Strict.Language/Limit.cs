@@ -8,5 +8,6 @@ public static class Limit
 	public const int LineCount = 256;
 	public const int NestingLevel = 5;
 	public const int CharacterCount = 120;
+	public const int ListCharacterCount = 100;
 	public const int MemberCount = 50;
 }

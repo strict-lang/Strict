@@ -28,7 +28,14 @@ public sealed class List : Value
 	}
 
 	public List<Expression> Values { get; }
-	public override string ToString() => Values.ToBrackets();
+
+	public override string ToString()
+	{
+		var result = Values.ToBrackets();
+		return result.Length > Limit.ListCharacterCount
+			? result.Replace(", ", ",\n\t")
+			: result;
+	}
 
 	/// <summary>
 	/// Since there was no space found we can check much quicker what is inside the list

@@ -254,4 +254,97 @@ public sealed class ListTests : TestExpressions
 						"AccessZeroIndexElement Number", "\tlet something = numbers(0)", "\tsomething(0)")).
 				ParseMembersAndMethods(parser).Methods[0].GetBodyAndParseIfNeeded(),
 			Throws.InstanceOf<InvalidArgumentItIsNotMethodOrListCall>());
+
+	[Test]
+	public void MultiLineListsAllowedOnlyWhenLengthIsMoreThanHundred() =>
+		Assert.That(() => new Type(type.Package, new TypeLines(
+					nameof(MultiLineListsAllowedOnlyWhenLengthIsMoreThanHundred),
+					// @formatter:off
+					"has log",
+					"Run",
+					"\tlet result = (1,",
+					"\t2,",
+					"\t3,",
+					"\t4,",
+					"\t5,",
+					"\t6,",
+					"\t7)",
+					"ExtraMethodNotCalled",
+					"\tsomething"))
+				// @formatter:on
+				.ParseMembersAndMethods(parser).Methods[0].GetBodyAndParseIfNeeded(),
+			Throws.InstanceOf<Type.MultiLineListsAllowedOnlyWhenLengthIsMoreThanHundred>().With.Message.
+				Contains("Current length: 35, Minimum Length for Multi line list expression: 100"));
+
+	[Test]
+	public void UnterminatedMultiLineListFound() =>
+		Assert.That(() => new Type(type.Package, new TypeLines(nameof(UnterminatedMultiLineListFound),
+					// @formatter:off
+					"has log",
+					"Run",
+					"\tlet result = (1,",
+					"\t2,",
+					"\t3,",
+					"\t4,",
+					"ExtraMethodNotCalled",
+					"\tsomething"))
+				// @formatter:on
+				.ParseMembersAndMethods(parser).Methods[0].GetBodyAndParseIfNeeded(),
+			Throws.InstanceOf<Type.UnterminatedMultiLineListFound>().With.Message.
+				StartWith("\tlet result = (1, 2, 3, 4,"));
+
+	// @formatter:off
+	[TestCase("ParseMultiLineExpressionWithNumbers", "(numbers(0),\n\tnumbers(1),\n\tnumbers(2),\n\tnumbers(3),\n\tnumbers(4),\n\tnumbers(5)," +
+		"\n\tnumbers(6),\n\tanotherNumbers(0),\n\tanotherNumbers(1),\n\tanotherNumbers(2))", "has numbers",
+		"has anotherNumbers Numbers",
+		"Run Numbers",
+		"\t(numbers(0),",
+		"\tnumbers(1),",
+		"\tnumbers(2),",
+		"\tnumbers(3),",
+		"\tnumbers(4),",
+		"\tnumbers(5),",
+		"\tnumbers(6),",
+		"\tanotherNumbers(0),",
+		"\tanotherNumbers(1),",
+		"\tanotherNumbers(2))",
+		"ExtraMethodNotCalled",
+		"\tsomething")]
+	[TestCase("ParseMultiLineExpressionWithText", "(\"somethingsomethingsomething + 5\","+
+						"\n\t\"somethingsomethingsomethingsomething\","+
+						"\n\t\"somethingsomethingsomethingsomething\","+
+						"\n\t\"somethingsomethingsomethingsomething\","+
+						"\n\t\"somethingsomethingsomethingsomething\","+
+						"\n\t\"somethingsomethingsomethingsomething\","+
+						"\n\t\"somethingsomethingsomethingsomething\","+
+						"\n\t\"somethingsomethingsomethingsomething\","+
+						"\n\t\"somethingsomethingsomethingsomething\","+
+						"\n\t\"somethingsomethingsomethingsomething\","+
+						"\n\t\"somethingsomethingsomethingsomething\")",
+						"has log",
+					"Run Numbers",
+					"\t(\"somethingsomethingsomething + 5\",",
+					"\t\"somethingsomethingsomethingsomething\",",
+					"\t\"somethingsomethingsomethingsomething\",",
+					"\t\"somethingsomethingsomethingsomething\",",
+					"\t\"somethingsomethingsomethingsomething\",",
+					"\t\"somethingsomethingsomethingsomething\",",
+					"\t\"somethingsomethingsomethingsomething\",",
+					"\t\"somethingsomethingsomethingsomething\",",
+					"\t\"somethingsomethingsomethingsomething\",",
+					"\t\"somethingsomethingsomethingsomething\",",
+					"\t\"somethingsomethingsomethingsomething\")",
+					"ExtraMethodNotCalled",
+					"\tsomething")]
+	// @formatter:on
+	public void ParseMultiLineExpressionAndPrintSameAsInput(string testName, string expected, params string[] code)
+	{
+		var program = new Type(type.Package,
+				new TypeLines(testName, code)).
+			ParseMembersAndMethods(parser);
+		var expression = program.Methods[0].GetBodyAndParseIfNeeded();
+		Assert.That(expression, Is.InstanceOf<List>());
+		Assert.That(expression.ToString(), Is.EqualTo(expected));
+		Assert.That(program.Methods[1].lines.Count, Is.EqualTo(2));
+	}
 }

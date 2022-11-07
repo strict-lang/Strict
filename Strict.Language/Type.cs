@@ -59,7 +59,7 @@ public class Type : Context
 		line.StartsWith(Has, StringComparison.Ordinal) && (line.Contains(Base.Generic, StringComparison.Ordinal)
 			|| line.Contains(Base.Generic.MakeFirstLetterLowercase(), StringComparison.Ordinal));
 
-	private readonly string[] lines;
+	private string[] lines;
 	private int lineNumber;
 	public string FilePath => Path.Combine(Package.FolderPath, Name) + Extension;
 	public Package Package => (Package)Parent;
@@ -328,9 +328,11 @@ public class Type : Context
 		if (!IsTrait && !IsNextLineValidMethodBody())
 			throw new MethodMustBeImplementedInNonTrait(this, lines[lineNumber]);
 		var methodLineNumber = lineNumber;
-		while (IsNextLineValidMethodBody())
-			lineNumber++;
-		return lines[methodLineNumber..(lineNumber + 1)];
+		IncrementLineNumberTillMethodEnd();
+		return listStartLineNumber != -1
+			? throw new UnterminatedMultiLineListFound(this, listStartLineNumber - 1,
+				lines[listStartLineNumber])
+			: lines[methodLineNumber..(lineNumber + 1)];
 	}
 
 	private bool IsNextLineValidMethodBody()
@@ -379,6 +381,55 @@ public class Type : Context
 	{
 		public MethodMustBeImplementedInNonTrait(Type type, string definitionLine) : base(type,
 			type.lineNumber, definitionLine) { }
+	}
+
+	private void IncrementLineNumberTillMethodEnd()
+	{
+		while (IsNextLineValidMethodBody())
+		{
+			lineNumber++;
+			if (lines[lineNumber - 1].EndsWith(','))
+				MergeMultiLineListIntoSingleLine();
+			if (listStartLineNumber != -1 && listEndLineNumber != -1)
+				SetNewLinesAndLineNumbersAfterMerge();
+		}
+	}
+
+	private void MergeMultiLineListIntoSingleLine()
+	{
+		if (listStartLineNumber == -1)
+			listStartLineNumber = lineNumber - 1;
+		lines[listStartLineNumber] += ' ' + lines[lineNumber].TrimStart();
+		if (!lines[lineNumber].EndsWith(','))
+		{
+			listEndLineNumber = lineNumber;
+			if (lines[listStartLineNumber].Length < Limit.ListCharacterCount)
+				throw new MultiLineListsAllowedOnlyWhenLengthIsMoreThanHundred(this,
+					listStartLineNumber - 1, lines[listStartLineNumber].Length);
+		}
+	}
+
+	private int listStartLineNumber = -1;
+	private int listEndLineNumber = -1;
+
+	public sealed class MultiLineListsAllowedOnlyWhenLengthIsMoreThanHundred : ParsingFailed
+	{
+		public MultiLineListsAllowedOnlyWhenLengthIsMoreThanHundred(Type type, int lineNumber, int length) : base(type, lineNumber, $"Current length: {length}, Minimum Length for Multi line list expression: {Limit.ListCharacterCount}") { }
+	}
+
+	private void SetNewLinesAndLineNumbersAfterMerge()
+	{
+		var newLines = new List<string>(lines[..(listStartLineNumber + 1)]);
+		newLines.AddRange(lines[(listEndLineNumber + 1)..]);
+		lines = newLines.ToArray();
+		lineNumber = listStartLineNumber;
+		listStartLineNumber = -1;
+		listEndLineNumber = -1;
+	}
+
+	public sealed class UnterminatedMultiLineListFound : ParsingFailed
+	{
+		public UnterminatedMultiLineListFound(Type type, int lineNumber, string line) : base(type, lineNumber, line) { }
 	}
 
 	public IReadOnlyList<Type> Implements => implements;
