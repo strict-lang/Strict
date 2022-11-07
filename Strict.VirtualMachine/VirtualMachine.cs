@@ -4,27 +4,45 @@ namespace Strict.VirtualMachine;
 
 public sealed class VirtualMachine
 {
-	public Dictionary<Register, Instance> Execute(IReadOnlyList<Statement> statements)
+	public VirtualMachine Execute(IReadOnlyList<Statement> statements)
 	{
-		for (instructionIndex = 0; instructionIndex != -1 && instructionIndex < statements.Count; instructionIndex++)
+		for (instructionIndex = 0; instructionIndex != -1 && instructionIndex < statements.Count;
+			instructionIndex++)
 			ExecuteStatement(statements[instructionIndex]);
-		return registers;
+		return this;
 	}
 
 	private void ExecuteStatement(Statement statement)
 	{
 		if (statement.Instruction == Instruction.Return)
 		{
-			instructionIndex = -1;
+			instructionIndex = -2;
+			Returns = Registers[statement.Registers[0]];
 			return;
 		}
-		if (statement.Instruction == Instruction.Set && statement.Instance != null)
+		TryStoreInstructions(statement);
+		TryLoadInstructions(statement);
+		TryExecute(statement);
+	}
+
+	private void TryStoreInstructions(Statement statement)
+	{
+		if (statement.Instance == null)
+			return;
+		if (statement.Instruction == Instruction.Set)
 			foreach (var register in statement.Registers)
-				registers[register] = statement.Instance;
-		else if (statement.Instruction == Instruction.LoadConstant)
-			registers[statement.Registers[0]] = statement.Instance ?? throw new InvalidOperationException();
-		else
-			TryExecute(statement);
+				Registers[register] = statement.Instance;
+		else if (statement.Instruction == Instruction.StoreVariable)
+			variables[((StoreStatement)statement).Identifier] = statement.Instance;
+	}
+
+	private void TryLoadInstructions(Statement statement)
+	{
+		if (statement.Instruction is Instruction.Load)
+			Registers[statement.Registers[0]] =
+				variables[((LoadVariableStatement)statement).Identifier];
+		else if (statement is LoadConstantStatement loadConstantStatement)
+			Registers[loadConstantStatement.Register] = loadConstantStatement.ConstantInstance;
 	}
 
 	private void TryExecute(Statement statement)
@@ -32,20 +50,22 @@ public sealed class VirtualMachine
 		var instructionPosition = (int)statement.Instruction;
 		if (instructionPosition is >= (int)Instruction.SetLoadSeparator
 			and < (int)Instruction.BinaryOperatorsSeparator)
-			TryOperationExecution(statement);
+			TryBinaryOperationExecution(statement);
 		else if (instructionPosition is >= 100 and < (int)Instruction.ConditionalSeparator)
 			TryConditionalOperationExecution(statement);
 		else if (instructionPosition is >= 9 and <= (int)Instruction.JumpsSeparator)
-			TryJumpOperation(statement);
+			TryJumpOperation((JumpStatement)statement);
 	}
 
-	private readonly Dictionary<Register, Instance> registers = new();
+	public readonly Dictionary<Register, Instance> Registers = new();
+	private readonly Dictionary<string, Instance> variables = new();
 	private int instructionIndex;
+	public Instance? Returns;
 
-	private void TryOperationExecution(Statement statement)
+	private void TryBinaryOperationExecution(Statement statement)
 	{
 		var (right, left) = GetOperands(statement);
-		registers[statement.Registers[^1]] = statement.Instruction switch
+		Registers[statement.Registers[^1]] = statement.Instruction switch
 		{
 			Instruction.Add => GetAdditionResult(left, right),
 			Instruction.Subtract => new Instance(right.ReturnType,
@@ -54,7 +74,7 @@ public sealed class VirtualMachine
 				Convert.ToDouble(left.Value) * Convert.ToDouble(right.Value)),
 			Instruction.Divide => new Instance(right.ReturnType,
 				Convert.ToDouble(left.Value) / Convert.ToDouble(right.Value)),
-			_ => registers[statement.Registers[^1]] //ncrunch: no coverage
+			_ => Registers[statement.Registers[^1]] //ncrunch: no coverage
 		};
 	}
 
@@ -71,9 +91,9 @@ public sealed class VirtualMachine
 	}
 
 	private (Instance, Instance) GetOperands(Statement statement) =>
-		registers.Count < 2
+		Registers.Count < 2
 			? throw new OperandsRequired()
-			: (registers[statement.Registers[1]], registers[statement.Registers[0]]);
+			: (Registers[statement.Registers[1]], Registers[statement.Registers[0]]);
 
 	private void TryConditionalOperationExecution(Statement statement)
 	{
@@ -90,17 +110,13 @@ public sealed class VirtualMachine
 
 	private bool conditionFlag;
 
-	private void TryJumpOperation(Statement statement)
+	private void TryJumpOperation(JumpStatement statement)
 	{
-		if (statement.Instance == null)
-			return;
-		if (statement.Instruction == Instruction.JumpIfTrue && conditionFlag)
-			instructionIndex += Convert.ToInt32(statement.Instance.Value);
-		else if (statement.Instruction == Instruction.JumpIfFalse && !conditionFlag)
-			instructionIndex += Convert.ToInt32(statement.Instance.Value);
-		else if (statement.Instruction == Instruction.JumpIfNotZero &&
-			Convert.ToInt32(registers[statement.Registers[0]].Value) != 0)
-			instructionIndex += Convert.ToInt32(statement.Instance.Value);
+		if (conditionFlag && statement.Instruction is Instruction.JumpIfTrue ||
+			!conditionFlag && statement.Instruction is Instruction.JumpIfFalse ||
+			statement.Instruction is Instruction.JumpIfNotZero &&
+			Convert.ToInt32(Registers[statement.RegisterToCheckForZero].Value) != 0)
+			instructionIndex += Convert.ToInt32(statement.Steps);
 	}
 
 	public class OperandsRequired : Exception { }

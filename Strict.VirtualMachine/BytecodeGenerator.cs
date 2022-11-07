@@ -58,7 +58,7 @@ public sealed class ByteCodeGenerator
 		if (expression is Return returnExpression)
 		{
 			GenerateStatements(new[] { returnExpression.Value });
-			statements.Add(new Statement(Instruction.Return, registers[^2]));
+			statements.Add(new ReturnStatement(registers[^2]));
 		}
 		if (expression is Binary binary)
 			GenerateCodeForBinary(binary);
@@ -93,7 +93,7 @@ public sealed class ByteCodeGenerator
 		}
 	}
 
-	private void GenerateCodeForIfCondition(Binary condition)
+	private void GenerateCodeForIfCondition(MethodCall condition)
 	{
 		if (condition.Instance is Value instanceValue)
 			statements.Add(new LoadConstantStatement(AllocateRegister(),
@@ -109,7 +109,7 @@ public sealed class ByteCodeGenerator
 				condition.Arguments[0].ToString()));
 		statements.Add(new Statement(Instruction.Equal, registers[nextRegister - 2],
 			registers[nextRegister - 1]));
-		statements.Add(new JumpStatement(Instruction.JumpIfFalse, 2));
+		statements.Add(new JumpStatement(Instruction.JumpIfFalse, 4));
 	}
 
 	private Register AllocateRegister() =>

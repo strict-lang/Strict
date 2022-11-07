@@ -1,16 +1,9 @@
 using NUnit.Framework;
-using Strict.Language;
-using Strict.Language.Expressions.Tests;
-using Strict.Language.Tests;
-using Type = Strict.Language.Type;
 
 namespace Strict.VirtualMachine.Tests;
 
-public sealed class VirtualMachineTests : TestExpressions
+public sealed class VirtualMachineTests : BaseVirtualMachineTests
 {
-	private static readonly Type NumberType = new TestPackage().FindType(Base.Number)!;
-	private static readonly Type TextType = new TestPackage().FindType(Base.Text)!;
-
 	[SetUp]
 	public void Setup() => vm = new VirtualMachine();
 
@@ -24,7 +17,7 @@ public sealed class VirtualMachineTests : TestExpressions
 	[TestCase(Instruction.Add, "510", 5, "10")]
 	[TestCase(Instruction.Add, "510", "5", "10")]
 	public void Execute(Instruction operation, object expected, params object[] inputs) =>
-		Assert.That(vm.Execute(BuildStatements(inputs, operation))[Register.R1].Value,
+		Assert.That(vm.Execute(BuildStatements(inputs, operation)).Registers[Register.R1].Value,
 			Is.EqualTo(expected));
 
 	private static Statement[]
@@ -46,7 +39,7 @@ public sealed class VirtualMachineTests : TestExpressions
 			vm.Execute(new Statement[]
 			{
 				new LoadConstantStatement(Register.R0, new Instance(NumberType, 5))
-			})[Register.R0].Value, Is.EqualTo(5));
+			}).Registers[Register.R0].Value, Is.EqualTo(5));
 
 	[Test]
 	public void SetAndAdd() =>
@@ -55,7 +48,7 @@ public sealed class VirtualMachineTests : TestExpressions
 			new LoadConstantStatement(Register.R0, new Instance(NumberType, 10)),
 			new LoadConstantStatement(Register.R1, new Instance(NumberType, 5)),
 			new(Instruction.Add, Register.R0, Register.R1, Register.R2)
-		})[Register.R2].Value, Is.EqualTo(15));
+		}).Registers[Register.R2].Value, Is.EqualTo(15));
 
 	[Test]
 	public void AddFiveTimes() =>
@@ -66,8 +59,19 @@ public sealed class VirtualMachineTests : TestExpressions
 			new(Instruction.Set, new Instance(NumberType, 0), Register.R2),
 			new(Instruction.Add, Register.R0, Register.R2, Register.R2), // R2 = R0 + R2
 			new(Instruction.Subtract, Register.R0, Register.R1, Register.R0),
-			new(Instruction.JumpIfNotZero, new Instance(NumberType, -3), Register.R0)
-		})[Register.R2].Value, Is.EqualTo(0 + 5 + 4 + 3 + 2 + 1));
+			new JumpStatement(Instruction.JumpIfNotZero, -3)
+		}).Registers[Register.R2].Value, Is.EqualTo(0 + 5 + 4 + 3 + 2 + 1));
+
+	[TestCase("ArithmeticFunction(10, 5).Calculate(\"add\")", 15)]
+	[TestCase("ArithmeticFunction(10, 5).Calculate(\"subtract\")", 5)]
+	[TestCase("ArithmeticFunction(10, 5).Calculate(\"multiply\")", 50)]
+	[TestCase("ArithmeticFunction(10, 5).Calculate(\"divide\")", 2)]
+	public void RunArithmeticFunctionExample(string methodCall, int expectedResult)
+	{
+		var statements = new ByteCodeGenerator(GenerateMethodCallFromSource("ArithmeticFunction",
+			methodCall, ArithmeticFunctionExample)).Generate();
+		Assert.That(vm.Execute(statements).Returns?.Value, Is.EqualTo(expectedResult));
+	}
 
 	[Test]
 	public void ConditionalJump() =>
@@ -78,9 +82,9 @@ public sealed class VirtualMachineTests : TestExpressions
 				new(Instruction.Set, new Instance(NumberType, 1), Register.R1),
 				new(Instruction.Set, new Instance(NumberType, 10), Register.R2),
 				new(Instruction.LessThan, Register.R2, Register.R0),
-				new(Instruction.JumpIfTrue, new Instance(NumberType, 2)),
+				new JumpStatement(Instruction.JumpIfTrue, 2),
 				new(Instruction.Add, Register.R2, Register.R0, Register.R0)
-			})[Register.R0].Value, Is.EqualTo(15));
+			}).Registers[Register.R0].Value, Is.EqualTo(15));
 
 	[TestCase(Instruction.GreaterThan, new[] { 1, 2 }, 2 - 1)]
 	[TestCase(Instruction.LessThan, new[] { 1, 2 }, 1 + 2)]
@@ -92,12 +96,11 @@ public sealed class VirtualMachineTests : TestExpressions
 			new(Instruction.Set, new Instance(NumberType, registers[0]), Register.R0),
 			new(Instruction.Set, new Instance(NumberType, registers[1]), Register.R1),
 			new(conditional, Register.R0, Register.R1),
-			new(Instruction.JumpIfTrue, new Instance(NumberType, 2)),
+			new JumpStatement(Instruction.JumpIfTrue, 2),
 			new(Instruction.Subtract, Register.R1, Register.R0, Register.R0),
-			new(Instruction.JumpIfFalse,
-				new Instance(NumberType, 2)),
+			new JumpStatement(Instruction.JumpIfFalse, 2),
 			new(Instruction.Add, Register.R0, Register.R1, Register.R0)
-		})[Register.R0].Value, Is.EqualTo(expected));
+		}).Registers[Register.R0].Value, Is.EqualTo(expected));
 
 	[TestCase(Instruction.Add)]
 	[TestCase(Instruction.GreaterThan)]
