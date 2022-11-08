@@ -190,7 +190,7 @@ public sealed class Method : Context
 		if (tabs > body.Tabs)
 			PreParseBody(tabs, body);
 		CheckIndentation(line, TypeLineNumber + methodLineNumber, tabs);
-		return tabs < body.Tabs;
+		return IsCurrentLineInBodyScope(body.Tabs);
 	}
 
 	private static int GetTabs(string line)
@@ -219,6 +219,9 @@ public sealed class Method : Context
 		public InvalidIndentation(Type type, int lineNumber, string line, string method) : base(type,
 			lineNumber, method, line) { }
 	}
+
+	private bool IsCurrentLineInBodyScope(int bodyTabs) =>
+		methodLineNumber < lines.Count && GetTabs(lines[methodLineNumber]) != bodyTabs;
 
 	public Type Type => (Type)Parent;
 	public IReadOnlyList<Parameter> Parameters => parameters;
