@@ -109,4 +109,28 @@ public sealed class BodyTests : TestExpressions
 			() => ParseExpression("if bla is 5", "\tlet outerScope = \"abc\"", "\tif bla is 5.0",
 				"\t\tlet outerScope = 5"),
 			Throws.InstanceOf<Body.DuplicateVariableNameFound>().With.Message.StartsWith("outerScope"));
+
+	[Test]
+	public void ChildBodyReturnsFromThreeTabsToOneDirectly()
+	{
+		var program = new Type(new Package(nameof(ChildBodyReturnsFromThreeTabsToOneDirectly)),
+			new TypeLines(nameof(ChildBodyReturnsFromThreeTabsToOneDirectly),
+                // @formatter:off
+                "has log",
+                "Run",
+                "\tlet number = 5",
+                "\tfor Range(1, number)",
+                "\t\tif index is number",
+                "\t\t\tlet current = index",
+                "\t\t\treturn current",
+                "\tnumber")).ParseMembersAndMethods(new MethodExpressionParser());
+		// @formatter:on
+		var body = (Body)program.Methods[0].GetBodyAndParseIfNeeded();
+		Assert.That(body.Tabs, Is.EqualTo(1));
+		Assert.That(body.children[0].Tabs, Is.EqualTo(2));
+		Assert.That(body.children[0].children[0].Tabs, Is.EqualTo(3));
+		Assert.That(body.LineRange, Is.EqualTo(1..7));
+		Assert.That(body.children[0].LineRange, Is.EqualTo(3..6));
+		Assert.That(body.children[0].children[0].LineRange, Is.EqualTo(4..6));
+	}
 }

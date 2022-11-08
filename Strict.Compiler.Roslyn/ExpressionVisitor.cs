@@ -16,6 +16,7 @@ public abstract class ExpressionVisitor
 		{
 			Body body => VisitBody(body),
 			If ifExpression => VisitIf(ifExpression),
+			For forExpression => VisitFor(forExpression),
 			_ => new[] { Visit(expression) + ";" }
 		};
 
@@ -39,6 +40,7 @@ public abstract class ExpressionVisitor
 		expression switch
 		{
 			Body => throw new UseVisitBody(expression),
+			For forExpression => Visit(forExpression),
 			Assignment assignment => Visit(assignment),
 			Binary binary => Visit(binary),
 			Return returnExpression => Visit(returnExpression),
@@ -64,4 +66,5 @@ public abstract class ExpressionVisitor
 	protected abstract string Visit(MethodCall methodCall);
 	protected abstract string Visit(MemberCall memberCall);
 	protected abstract string Visit(Value value);
+	protected abstract IReadOnlyList<string> VisitFor(For forExpression);
 }

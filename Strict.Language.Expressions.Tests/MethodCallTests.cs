@@ -237,4 +237,21 @@ public sealed class MethodCallTests : TestExpressions
 		Assert.That(((MethodCall)body.Expressions[0]).Instance?.ToString(),
 			Is.EqualTo("File(\"fileName\")"));
 	}
+
+	[Test]
+	public void MethodCallAsMethodParameter()
+	{
+		var program = new Type(type.Package,
+				new TypeLines(nameof(MethodCallAsMethodParameter),
+					"has log",
+					"AppendFiveWithInput(number) Number",
+					"\tAppendFiveWithInput(AppendFiveWithInput(5)) is 15",
+					"\tnumber + 5")).
+			ParseMembersAndMethods(new MethodExpressionParser());
+		var body = (Body)program.Methods[0].GetBodyAndParseIfNeeded();
+		Assert.That(body.Expressions[0].ToString(),
+			Is.EqualTo("AppendFiveWithInput(AppendFiveWithInput(5)) is 15"));
+		Assert.That(((MethodCall)((MethodCall)body.Expressions[0]).Instance!).Arguments[0].ToString(),
+			Is.EqualTo("AppendFiveWithInput(5)"));
+	}
 }

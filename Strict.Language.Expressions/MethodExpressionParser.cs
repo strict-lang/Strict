@@ -377,9 +377,10 @@ public class MethodExpressionParser : ExpressionParser
 		return expressions;
 	}
 
-	private static Expression
+	private Expression
 		ParseTextWithSpacesOrListWithMultipleOrNestedElements(Body body, ReadOnlySpan<char> input) =>
 		Text.TryParse(body, input) ?? List.TryParseWithMultipleOrNestedElements(body, input) ??
+		TryParseMemberOrZeroOrOneArgumentMethodOrNestedCall(body, input) ??
 		throw new InvalidSingleTokenExpression(body, input.ToString());
 
 	public sealed class InvalidOperatorHere : ParsingFailed
