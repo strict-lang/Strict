@@ -150,7 +150,9 @@ public class Program
 		program.Methods[0].GetBodyAndParseIfNeeded();
 		var generatedCode = generator.Generate(program).ToString()!;
 		Assert.That(generatedCode,
-			Is.EqualTo(string.Join(Environment.NewLine, await File.ReadAllLinesAsync(Path.Combine(ExampleFolder, $"Output/{programName}.cs")))), generatedCode);
+			Is.EqualTo(string.
+				Join(Environment.NewLine,
+					await File.ReadAllLinesAsync(Path.Combine(ExampleFolder, $"Output/{programName}.cs")))), generatedCode);
 	}
 
 	private async Task<Type> ReadStrictFileAndCreateType(string programName) =>
@@ -161,12 +163,10 @@ public class Program
 
 	private static string ExampleFolder => Repositories.DevelopmentFolder + ".Examples";
 
-	[Ignore("Printing for expressions are pending")]
 	[Test]
 	public Task ReduceButGrow() =>
 		GenerateCSharpByReadingStrictProgramAndCompareWithOutput(nameof(ReduceButGrow));
 
-	[Ignore("Printing for expressions are pending")]
 	[Test]
 	public Task Fibonacci() =>
 		GenerateCSharpByReadingStrictProgramAndCompareWithOutput(nameof(Fibonacci));
@@ -190,7 +190,6 @@ public class Program
 		await GenerateCSharpByReadingStrictProgramAndCompareWithOutput(nameof(ExecuteOperation));
 	}
 
-	[Ignore("Printing for expressions are pending")]
 	[Test]
 	public async Task LinkedListAnalyzer()
 	{

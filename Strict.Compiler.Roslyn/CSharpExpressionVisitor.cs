@@ -81,7 +81,9 @@ public class CSharpExpressionVisitor : ExpressionVisitor
 			: methodCall.Method.Name == "Write" &&
 			methodCall.Instance?.ReturnType.Name is Base.Log or Base.System
 				? "WriteLine"
-				: methodCall.Method.Name) + "(" + methodCall.Arguments.Select(Visit).ToWordList() +
+				: methodCall.Method.Name == Method.From
+					? methodCall.Method.Type.Name
+					: methodCall.Method.Name) + "(" + methodCall.Arguments.Select(Visit).ToWordList() +
 		(methodCall.ReturnType.Name == "File"
 			? ", FileMode.OpenOrCreate"
 			: "") + ")";
@@ -110,4 +112,11 @@ public class CSharpExpressionVisitor : ExpressionVisitor
 		value.Data is Type
 			? GetCSharpTypeName(value.ReturnType)
 			: value.ToString();
+
+	protected override IReadOnlyList<string> VisitFor(For forExpression)
+	{
+		var block = new List<string> { "foreach (var index in " + Visit(forExpression.Value) + ")" };
+		block.AddRange(Indent(VisitBody(forExpression.Body)));
+		return block;
+	}
 }
