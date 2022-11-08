@@ -11,10 +11,14 @@ namespace Strict.LanguageServer;
 
 public sealed class TextDocumentSynchronizer : ITextDocumentSyncHandler
 {
-	public TextDocumentSynchronizer(ILanguageServerFacade languageServer) =>
+	public TextDocumentSynchronizer(ILanguageServerFacade languageServer,
+		StrictDocumentManager documentManager)
+	{
 		this.languageServer = languageServer;
+		DocumentManager = documentManager;
+	}
 
-	public readonly StrictDocumentManager DocumentManager = new();
+	public StrictDocumentManager DocumentManager { get; }
 	private readonly ILanguageServerFacade languageServer;
 	private readonly DocumentSelector documentSelector = new(
 		new DocumentFilter { Pattern = "**/*.strict" });
@@ -24,14 +28,18 @@ public sealed class TextDocumentSynchronizer : ITextDocumentSyncHandler
 		CancellationToken cancellationToken)
 	{
 		var uri = request.TextDocument.Uri.ToString();
+		if (!DocumentManager.Contains(uri))
+			DocumentManager.AddOrUpdate(uri,
+				request.ContentChanges.ToArray().Select(x => x.Text).ToArray());
 		DocumentManager.Update(uri, request.ContentChanges.ToArray());
-		languageServer.Window.LogInfo($"Updated document: {uri}\n{DocumentManager.Get(uri)}");
+		languageServer.Window.LogInfo($"Updated document: {uri}\n{DocumentManager.Get(uri)[^1]}");
 		return Unit.Task;
 	}
 
 	public Task<Unit> Handle(DidOpenTextDocumentParams request, CancellationToken cancellationToken)
 	{
-		DocumentManager.AddOrUpdate(request.TextDocument.Uri, request.TextDocument.Text);
+		DocumentManager.AddOrUpdate(request.TextDocument.Uri,
+			request.TextDocument.Text.Split("\r\n"));
 		return Unit.Task;
 	}
 

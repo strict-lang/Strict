@@ -22,7 +22,7 @@ public sealed class TextDocumentSynchronizerTests
 		windowMock.Setup(expression => expression.SendNotification(It.IsAny<string>()));
 		var languageMock = new Mock<ILanguageServer>();
 		languageMock.Setup(expression => expression.Window).Returns(windowMock.Object);
-		handler = new TextDocumentSynchronizer(languageMock.Object);
+		handler = new TextDocumentSynchronizer(languageMock.Object, new StrictDocumentManager());
 		handler.DocumentManager.AddOrUpdate(URI, "let bla = 5");
 	}
 

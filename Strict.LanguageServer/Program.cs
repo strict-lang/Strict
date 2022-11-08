@@ -17,7 +17,9 @@ var server = await LanguageServer.From(options =>
 		.WithLoggerFactory(new LoggerFactory())
 		.AddDefaultLoggingProvider()
 		.WithServices(ConfigureServices)
-		.WithHandler<TextDocumentSynchronizer>());
+		.WithHandler<TextDocumentSynchronizer>()
+		.WithHandler<AutoCompletion>()
+		.WithHandler<CommandExecution>());
 Console.WriteLine("Client connected!");
 
 await Task.WhenAny(Task.Run(async () =>

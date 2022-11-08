@@ -26,6 +26,8 @@ public sealed class StrictDocumentManager
 		strictDocuments[uri] = content.ToArray();
 	}
 
+	public bool Contains(DocumentUri uri) => strictDocuments.ContainsKey(uri);
+
 	public void AddOrUpdate(DocumentUri uri, params string[] lines) =>
 		strictDocuments.AddOrUpdate(uri, lines, (_, _) => lines);
 
