@@ -1,44 +1,23 @@
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Moq;
 using NUnit.Framework;
 using OmniSharp.Extensions.LanguageServer.Protocol;
 using OmniSharp.Extensions.LanguageServer.Protocol.Models;
-using OmniSharp.Extensions.LanguageServer.Protocol.Server;
 using Range = OmniSharp.Extensions.LanguageServer.Protocol.Models.Range;
 
 namespace Strict.LanguageServer.Tests;
 
-public sealed class TextDocumentSynchronizerTests
+public sealed class TextDocumentSynchronizerTests : LanguageServerTests
 {
-	private TextDocumentSynchronizer handler = null!;
-	private static readonly DocumentUri URI = new("", "", "test.strict", "", "");
+	private static readonly DocumentUri MultiLineURI = new("", "", "MultiLine.strict", "", "");
 
 	[SetUp]
-	public void Setup()
-	{
-		var windowMock = new Mock<IWindowLanguageServer>();
-		windowMock.Setup(expression => expression.SendNotification(It.IsAny<string>()));
-		var languageMock = new Mock<ILanguageServer>();
-		languageMock.Setup(expression => expression.Window).Returns(windowMock.Object);
-		handler = new TextDocumentSynchronizer(languageMock.Object, new StrictDocumentManager());
-		handler.DocumentManager.AddOrUpdate(URI, "let bla = 5");
-	}
-
-	[Test]
-	public async Task HandleOpenTextDocumentAsync()
-	{
-		await handler.Handle(
-			new DidOpenTextDocumentParams
-			{
-				TextDocument = new TextDocumentItem
-				{
-					Text = "let bla = 5", LanguageId = "strict", Uri = URI
-				}
-			}, new CancellationToken());
-		Assert.That(handler.DocumentManager.Get(URI), Is.EqualTo(new[] { "let bla = 5" }));
-	}
+	public void MultiLineSetup() =>
+		handler.Document.AddOrUpdate(MultiLineURI,
+			"has number",
+			"Add(num Number) Number",
+			"\tnum + number");
 
 	private static IEnumerable<TestCaseData> TextDocumentChangeCases
 	{
@@ -55,6 +34,18 @@ public sealed class TextDocumentSynchronizerTests
 		}
 		//ncrunch: no coverage end
 	}
+	private static IEnumerable<TestCaseData> MultiLineTextDocumentChanges
+	{
+		//ncrunch: no coverage start
+		get
+		{
+			yield return new TestCaseData(new Range(1, 22, 2, 13), "",
+				new[] { "has number", "Add(num Number) Number" });
+			yield return new TestCaseData(new Range(1, 12, 2, 13), "",
+				new[] { "has number", "Add(num Numb" });
+		}
+		//ncrunch: no coverage end
+	}
 
 	[TestCaseSource(nameof(TextDocumentChangeCases))]
 	public async Task HandleChangeTextDocumentAsync(Range range, string text, string[] expected)
@@ -66,6 +57,19 @@ public sealed class TextDocumentSynchronizerTests
 				ContentChanges = new Container<TextDocumentContentChangeEvent>(
 					new TextDocumentContentChangeEvent { Range = range, Text = text })
 			}, new CancellationToken());
-		Assert.That(handler.DocumentManager.Get(URI), Is.EqualTo(expected));
+		Assert.That(handler.Document.Get(URI), Is.EqualTo(expected));
+	}
+
+	[TestCaseSource(nameof(MultiLineTextDocumentChanges))]
+	public async Task HandleMultiLineChangeTextDocumentAsync(Range range, string text, string[] expected)
+	{
+		await handler.Handle(
+			new DidChangeTextDocumentParams
+			{
+				TextDocument = new OptionalVersionedTextDocumentIdentifier { Uri = MultiLineURI },
+				ContentChanges = new Container<TextDocumentContentChangeEvent>(
+					new TextDocumentContentChangeEvent { Range = range, Text = text })
+			}, new CancellationToken());
+		Assert.That(handler.Document.Get(MultiLineURI), Is.EqualTo(expected));
 	}
 }

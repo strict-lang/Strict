@@ -19,9 +19,9 @@ var server = await LanguageServer.From(options =>
 		.WithServices(ConfigureServices)
 		.WithHandler<TextDocumentSynchronizer>()
 		.WithHandler<AutoCompletion>()
-		.WithHandler<CommandExecution>());
+		.WithHandler<CommandExecutor>());
 Console.WriteLine("Client connected!");
-
+// @formatter:on
 await Task.WhenAny(Task.Run(async () =>
 {
 	while (true)
@@ -37,8 +37,11 @@ await Task.WhenAny(Task.Run(async () =>
 	}
 }), server.WaitForExit);
 
-static void ConfigureServices(IServiceCollection services) =>
-	services.AddSingleton<StrictDocumentManager>();
+static void ConfigureServices(IServiceCollection services)
+{
+	services.AddSingleton<StrictDocument>();
+	services.AddSingleton<PackageSetup>();
+}
 
 static async Task<(PipeReader input, PipeWriter output)> CreateAndGetPipeline()
 {
