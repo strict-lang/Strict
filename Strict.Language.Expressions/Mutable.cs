@@ -9,7 +9,6 @@ public sealed class Mutable : Value
 		expression)
 	{
 		ReturnType.AddDataReturnTypeToMutableImplements(DataReturnType);
-		ReturnType.AssignMethodsToMutable(DataReturnType);
 		ReturnType.MutableReturnType = DataReturnType;
 	}
 

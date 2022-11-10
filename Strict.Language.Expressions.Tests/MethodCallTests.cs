@@ -101,11 +101,11 @@ public sealed class MethodCallTests : TestExpressions
 		Assert.That(ParseExpression(fromMethodCall).ToString(), Is.EqualTo(fromMethodCall));
 
 	[Test]
-	public void MakeSureMutableHasAllTheTypesOfItsChild()
+	public void MakeSureMutableMethodsAreNotModified()
 	{
 		var expression = ParseExpression("Mutable(7)");
 		Assert.That(expression.ReturnType.Methods.Count,
-			Is.EqualTo(((Mutable)expression).DataReturnType.Methods.Count + 2));
+			Is.EqualTo(2));
 	}
 
 	[Test]

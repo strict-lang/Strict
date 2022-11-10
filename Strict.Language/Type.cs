@@ -483,12 +483,6 @@ public class Type : Context
 		FindMethod(methodName, arguments) ??
 		throw new NoMatchingMethodFound(this, methodName, AvailableMethods);
 
-	public void AssignMethodsToMutable(Type type)
-	{
-		if (Name == Base.Mutable)
-			methods.AddRange(type.Methods);
-	}
-
 	public Method? FindMethod(string methodName, IReadOnlyList<Expression> arguments)
 	{
 		if (IsGeneric)
