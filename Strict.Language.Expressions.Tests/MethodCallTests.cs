@@ -254,4 +254,48 @@ public sealed class MethodCallTests : TestExpressions
 		Assert.That(((MethodCall)((MethodCall)body.Expressions[0]).Instance!).Arguments[0].ToString(),
 			Is.EqualTo("AppendFiveWithInput(5)"));
 	}
+
+	[Test]
+	public void TypeCanBeAutoInitialized()
+	{
+		new Type(type.Package,
+				new TypeLines(nameof(TypeCanBeAutoInitialized),
+					"has log",
+					"AddFiveWithInput(number) Number",
+					"\tAddFiveWithInput(AddFiveWithInput(5)) is 15",
+					"\tnumber + 5")).
+			ParseMembersAndMethods(new MethodExpressionParser());
+		var consumingType = new Type(type.Package,
+				new TypeLines("AutoInitializedTypeConsumer",
+					"has typeCanBeAutoInitialized",
+					"GetResult(number) Number",
+					"\tGetResult(10) is 15",
+					"\ttypeCanBeAutoInitialized.AddFiveWithInput(number)")).
+			ParseMembersAndMethods(new MethodExpressionParser());
+		var body = (Body)consumingType.Methods[0].GetBodyAndParseIfNeeded();
+		Assert.That(consumingType.Members[0].Type.Name, Is.EqualTo("TypeCanBeAutoInitialized"));
+		Assert.That(((MethodCall)body.Expressions[1]).Instance?.ReturnType.Name, Is.EqualTo("TypeCanBeAutoInitialized"));
+	}
+
+	[Test]
+	public void TypeCannotBeAutoInitialized()
+	{
+		new Type(type.Package,
+				new TypeLines(nameof(TypeCannotBeAutoInitialized),
+					"has number",
+					"AddFiveWithInput Number",
+					"\tTypeCannotBeAutoInitialized(10).AddFiveWithInput is 15",
+					"\tnumber + 5")).
+			ParseMembersAndMethods(new MethodExpressionParser());
+		var consumer = new Type(type.Package,
+				new TypeLines("ConsumingType",
+					"has log",
+					"GetResult(number) Number",
+					"\tGetResult(10) is 15",
+					"\tlet instance = TypeCannotBeAutoInitialized(number)",
+					"\tinstance.AddFiveWithInput")).
+			ParseMembersAndMethods(new MethodExpressionParser());
+		var body = (Body)consumer.Methods[0].GetBodyAndParseIfNeeded();
+		Assert.That(((Assignment)body.Expressions[1]).Value.ReturnType.Name, Is.EqualTo("TypeCannotBeAutoInitialized"));
+	}
 }
