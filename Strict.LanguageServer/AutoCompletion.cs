@@ -9,10 +9,10 @@ namespace Strict.LanguageServer;
 
 public sealed class AutoCompletion : ICompletionHandler
 {
-	private readonly StrictDocumentManager documentManager;
+	private readonly StrictDocument documentManager;
 	private readonly TestPackage package = new();
 
-	public AutoCompletion(StrictDocumentManager documentManager) =>
+	public AutoCompletion(StrictDocument documentManager) =>
 		this.documentManager = documentManager;
 
 	public Task<CompletionList> Handle(CompletionParams request,
