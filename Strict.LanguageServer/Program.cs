@@ -18,7 +18,7 @@ var server = await LanguageServer.From(options =>
 		.AddDefaultLoggingProvider()
 		.WithServices(ConfigureServices)
 		.WithHandler<TextDocumentSynchronizer>()
-		.WithHandler<AutoCompletion>()
+		.WithHandler<LanguageAutoComplete>()
 		.WithHandler<CommandExecutor>());
 Console.WriteLine("Client connected!");
 // @formatter:on
