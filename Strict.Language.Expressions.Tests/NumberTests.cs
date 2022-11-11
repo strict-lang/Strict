@@ -36,6 +36,19 @@ public class NumberTests : TestExpressions
 	public void ValidNumbers(string input) =>
 		Assert.That(ParseExpression(input), Is.EqualTo(new Number(method, double.Parse(input))));
 
+	[Test]
+	public void ParseTextToNumberUsingFromIsNotAllowed() =>
+		Assert.That(() => ParseExpression("Number(\"5\")"),
+			Throws.InstanceOf<Type.NoMatchingMethodFound>());
+
+	[Test]
+	public void ParseNumberToText()
+	{
+		var methodCall = (MethodCall)ParseExpression("5 to Text");
+		Assert.That(methodCall.ReturnType, Is.EqualTo(type.GetType(Base.Text)));
+		Assert.That(methodCall.Instance, Is.EqualTo(new Number(method, 5)));
+	}
+
 	private const string Case1 = "1";
 	private const string Case2 = "7.59";
 	private const string Case3 = "10";

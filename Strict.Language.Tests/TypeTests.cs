@@ -360,4 +360,31 @@ public class TypeTests
 					new List(null!, new List<Expression> { new Text(type, "hello") })
 				}), Throws.InstanceOf<Type.GenericTypesCannotBeUsedDirectlyUseImplementation>());
 	}
+
+	[Test]
+	public void CreateTypeUsingConstructorMembers()
+	{
+		new Type(package,
+			new TypeLines("Customer", "has name Text", "has age Number", "Print Text",
+				"\t\"Customer Name: \" + name + \" Age: \" + age")).ParseMembersAndMethods(new MethodExpressionParser());
+		var createCustomer = new Type(package,
+			new TypeLines(nameof(CreateTypeUsingConstructorMembers), "has log", "Something",
+				"\tlet customer = Customer(\"Murali\", 28)")).ParseMembersAndMethods(new MethodExpressionParser());
+		var assignment = (Assignment)createCustomer.Methods[0].GetBodyAndParseIfNeeded();
+		Assert.That(assignment.Value.ReturnType.Name, Is.EqualTo("Customer"));
+		Assert.That(assignment.Value.ToString(), Is.EqualTo("Customer(\"Murali\", 28)"));
+	}
+
+	[Test]
+	public void UsingToMethodForComplexTypeConstructorIsForbidden()
+	{
+		new Type(package,
+			new TypeLines("Customer", "has name Text", "has age Number", "Print Text",
+				"\t\"Customer Name: \" + name + \" Age: \" + age")).ParseMembersAndMethods(new MethodExpressionParser());
+		var createCustomer = new Type(package,
+			new TypeLines(nameof(CreateTypeUsingConstructorMembers), "has log", "Something",
+				"\tlet customer = (\"Murali\", 28) to Customer")).ParseMembersAndMethods(new MethodExpressionParser());
+		Assert.That(() => createCustomer.Methods[0].GetBodyAndParseIfNeeded(),
+			Throws.InstanceOf<List.ListElementsMustHaveMatchingType>());
+	}
 }
