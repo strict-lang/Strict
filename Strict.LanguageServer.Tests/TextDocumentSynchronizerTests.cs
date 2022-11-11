@@ -14,7 +14,7 @@ public sealed class TextDocumentSynchronizerTests : LanguageServerTests
 
 	[SetUp]
 	public void MultiLineSetup() =>
-		handler.Document.AddOrUpdate(MultiLineURI,
+		textDocumentHandler.Document.AddOrUpdate(MultiLineURI,
 			"has number",
 			"Add(num Number) Number",
 			"\tnum + number");
@@ -50,26 +50,26 @@ public sealed class TextDocumentSynchronizerTests : LanguageServerTests
 	[TestCaseSource(nameof(TextDocumentChangeCases))]
 	public async Task HandleChangeTextDocumentAsync(Range range, string text, string[] expected)
 	{
-		await handler.Handle(
+		await textDocumentHandler.Handle(
 			new DidChangeTextDocumentParams
 			{
 				TextDocument = new OptionalVersionedTextDocumentIdentifier { Uri = URI },
 				ContentChanges = new Container<TextDocumentContentChangeEvent>(
 					new TextDocumentContentChangeEvent { Range = range, Text = text })
 			}, new CancellationToken());
-		Assert.That(handler.Document.Get(URI), Is.EqualTo(expected));
+		Assert.That(textDocumentHandler.Document.Get(URI), Is.EqualTo(expected));
 	}
 
 	[TestCaseSource(nameof(MultiLineTextDocumentChanges))]
 	public async Task HandleMultiLineChangeTextDocumentAsync(Range range, string text, string[] expected)
 	{
-		await handler.Handle(
+		await textDocumentHandler.Handle(
 			new DidChangeTextDocumentParams
 			{
 				TextDocument = new OptionalVersionedTextDocumentIdentifier { Uri = MultiLineURI },
 				ContentChanges = new Container<TextDocumentContentChangeEvent>(
 					new TextDocumentContentChangeEvent { Range = range, Text = text })
 			}, new CancellationToken());
-		Assert.That(handler.Document.Get(MultiLineURI), Is.EqualTo(expected));
+		Assert.That(textDocumentHandler.Document.Get(MultiLineURI), Is.EqualTo(expected));
 	}
 }
