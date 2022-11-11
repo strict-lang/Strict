@@ -35,17 +35,21 @@ public sealed class StrictDocument
 		{
 			if (change.Text.Contains('\n'))
 				content.Add(change.Text.Split('\n')[^1]);
-			else
+			else if (change.Range.End.Character - change.Range.Start.Character > 0)
 				content[change.Range.Start.Line] = content[change.Range.Start.Line].
 					Remove(change.Range.Start.Character,
 						change.Range.End.Character - change.Range.Start.Character).
+					Insert(change.Range.Start.Character, change.Text);
+			else
+				content[change.Range.Start.Line] = content[change.Range.Start.Line].
 					Insert(change.Range.Start.Character, change.Text);
 		}
 	}
 
 	private void HandleForMultiLineDeletion(int endLine, int startLine, int startCharacter)
 	{
-		content.RemoveRange(endLine, endLine - startLine);
+		if (endLine - startLine > 0)
+			content.RemoveRange(endLine, endLine - startLine);
 		content[^1] = content[^1][..startCharacter];
 	}
 
