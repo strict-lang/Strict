@@ -1,6 +1,7 @@
 ﻿using System.Collections.Concurrent;
 using OmniSharp.Extensions.LanguageServer.Protocol;
 using OmniSharp.Extensions.LanguageServer.Protocol.Models;
+using Range = OmniSharp.Extensions.LanguageServer.Protocol.Models.Range;
 
 namespace Strict.LanguageServer;
 
@@ -23,8 +24,7 @@ public sealed class StrictDocument
 			content.Add(change.Text);
 		else if (change.Range != null && change.Text == "" &&
 			change.Range.Start.Line < change.Range.End.Line)
-			HandleForMultiLineDeletion(change.Range.End.Line, change.Range.Start.Line,
-				change.Range.Start.Character);
+			HandleForMultiLineDeletion(change.Range.Start, change.Range.End);
 		else
 			HandleForDocumentChange(change);
 	}
@@ -46,13 +46,28 @@ public sealed class StrictDocument
 		}
 	}
 
-	private void HandleForMultiLineDeletion(int endLine, int startLine, int startCharacter)
+	private void HandleForMultiLineDeletion(Position start, Position end)
 	{
-		if (endLine - startLine > 0)
-			content.RemoveRange(startCharacter == 0
-				? startLine
-				: startLine + 1, endLine - startLine);
-		content[^1] = content[^1][..startCharacter];
+		if (end.Line == content.Count - 1 && end.Character >= content[end.Line].Length)
+			RemoveLinesTillEndAndUpdateStartLine(start, end);
+		else
+			RemoveLinesInMiddleAndUpdateStartAndEndLines(start, end);
+	}
+
+	private void RemoveLinesInMiddleAndUpdateStartAndEndLines(Position start, Position end)
+	{
+		content[start.Line] = content[start.Line][..start.Character];
+		content[end.Line] = content[end.Line][end.Character..];
+		if (end.Line - start.Line > 1)
+			content.RemoveRange(start.Line + 1, end.Line - (start.Line + 1));
+	}
+
+	private void RemoveLinesTillEndAndUpdateStartLine(Position start, Position end)
+	{
+		content.RemoveRange(start.Character == 0
+			? start.Line
+			: start.Line + 1, end.Line - start.Line);
+		content[^1] = content[^1][..start.Character];
 	}
 
 	public bool Contains(DocumentUri uri) => strictDocuments.ContainsKey(uri);
