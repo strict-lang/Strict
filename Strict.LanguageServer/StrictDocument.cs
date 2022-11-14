@@ -49,7 +49,9 @@ public sealed class StrictDocument
 	private void HandleForMultiLineDeletion(int endLine, int startLine, int startCharacter)
 	{
 		if (endLine - startLine > 0)
-			content.RemoveRange(endLine, endLine - startLine);
+			content.RemoveRange(startCharacter == 0
+				? startLine
+				: startLine + 1, endLine - startLine);
 		content[^1] = content[^1][..startCharacter];
 	}
 

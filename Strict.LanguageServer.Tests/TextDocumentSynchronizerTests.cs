@@ -43,6 +43,11 @@ public sealed class TextDocumentSynchronizerTests : LanguageServerTests
 				new[] { "has number", "Add(num Number) Number" });
 			yield return new TestCaseData(new Range(1, 12, 2, 13), "",
 				new[] { "has number", "Add(num Numb" });
+			yield return new TestCaseData(new Range(0, 0, 2, 14), "",
+				new[] { "" });
+			yield return new TestCaseData(new Range(0, 1, 2, 14), "",
+				new[] { "h" });
+			yield return new TestCaseData(new Range(1, 1, 2, 14), "", new[] { "has number", "A" });
 		}
 		//ncrunch: no coverage end
 	}
