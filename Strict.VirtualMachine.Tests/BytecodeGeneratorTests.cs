@@ -4,7 +4,8 @@ namespace Strict.VirtualMachine.Tests;
 
 public sealed class ByteCodeGeneratorTests : BaseVirtualMachineTests
 {
-	private static IEnumerable<TestCaseData> BytecodeCases
+	//ncrunch: no coverage start
+	private static IEnumerable<TestCaseData> ByteCodeCases
 	{
 		get
 		{
@@ -35,6 +36,21 @@ public sealed class ByteCodeGeneratorTests : BaseVirtualMachineTests
 				{
 					"has number", "By(multiplyBy Number) Number", "\tMultiply(10).By(2) is 20",
 					"\tnumber * multiplyBy"
+				});
+			yield return new TestCaseData("Bla(10).SomeFunction", "Bla",
+				new Statement[]
+				{
+					new StoreStatement(new Instance(NumberType, 10), "number"),
+					new StoreStatement(new Instance(NumberType, 5), "bla"),
+					new LoadVariableStatement(Register.R0, "bla"),
+					new ReturnStatement(Register.R0)
+				},
+				new[]
+				{
+					"has number",
+					"SomeFunction Number",
+					"\tlet bla = 5",
+					"\tbla"
 				});
 			yield return new TestCaseData("ArithmeticFunction(10, 5).Calculate(\"add\")",
 				"ArithmeticFunction",
@@ -75,9 +91,10 @@ public sealed class ByteCodeGeneratorTests : BaseVirtualMachineTests
 				}, ArithmeticFunctionExample);
 		}
 	}
+	//ncrunch: no coverage end
 
 	// @formatter:on
-	[TestCaseSource(nameof(BytecodeCases))]
+	[TestCaseSource(nameof(ByteCodeCases))]
 	// ReSharper disable once TooManyArguments
 	public void Generate(string methodCall, string programName, Statement[] expectedByteCode,
 		params string[] code)

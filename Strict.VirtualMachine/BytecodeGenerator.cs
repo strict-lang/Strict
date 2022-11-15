@@ -46,11 +46,23 @@ public sealed class ByteCodeGenerator
 	public List<Statement> Generate() =>
 		GenerateStatements(((Body)Method.GetBodyAndParseIfNeeded()).Expressions);
 
-	private List<Statement> GenerateStatements(IEnumerable<Expression> expressions)
+	private List<Statement> GenerateStatements(IReadOnlyList<Expression> expressions)
 	{
-		foreach (var expression in expressions)
-			GenerateStatementsFromExpression(expression);
+		for (var index = 0; index < expressions.Count(); index++ )
+		{
+			if (expressions.Count - 1 == index && expressions[index] is VariableCall variableCall)
+				GenerateStatementsFromSeamlessReturn(variableCall);
+			GenerateStatementsFromExpression(expressions[index]);
+		}
+
 		return statements;
+	}
+
+	private void GenerateStatementsFromSeamlessReturn(VariableCall variableCall)
+	{
+		var registerToReturn = AllocateRegister();
+		statements.Add(new LoadVariableStatement(registerToReturn, variableCall.Name));
+		statements.Add(new ReturnStatement(registerToReturn));
 	}
 
 	private void GenerateStatementsFromExpression(Expression expression)
@@ -64,6 +76,9 @@ public sealed class ByteCodeGenerator
 			GenerateCodeForBinary(binary);
 		else if (expression is If ifExpression)
 			GenerateIfStatements(ifExpression);
+		else if (expression is Assignment assignmentExpression)
+			statements.Add(new StoreStatement(new Instance(assignmentExpression.ReturnType, assignmentExpression.Value),
+				assignmentExpression.Name));
 	}
 
 	private void GenerateIfStatements(If ifExpression)
