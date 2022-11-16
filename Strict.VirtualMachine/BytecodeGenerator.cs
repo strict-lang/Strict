@@ -48,13 +48,12 @@ public sealed class ByteCodeGenerator
 
 	private List<Statement> GenerateStatements(IReadOnlyList<Expression> expressions)
 	{
-		for (var index = 0; index < expressions.Count(); index++ )
+		for (var index = 0; index < expressions.Count(); index++)
 		{
 			if (expressions.Count - 1 == index && expressions[index] is VariableCall variableCall)
 				GenerateStatementsFromSeamlessReturn(variableCall);
 			GenerateStatementsFromExpression(expressions[index]);
 		}
-
 		return statements;
 	}
 
@@ -77,7 +76,8 @@ public sealed class ByteCodeGenerator
 		else if (expression is If ifExpression)
 			GenerateIfStatements(ifExpression);
 		else if (expression is Assignment assignmentExpression)
-			statements.Add(new StoreStatement(new Instance(assignmentExpression.ReturnType, assignmentExpression.Value),
+			statements.Add(new StoreStatement(
+				new Instance(assignmentExpression.ReturnType, assignmentExpression.Value),
 				assignmentExpression.Name));
 	}
 
@@ -87,23 +87,24 @@ public sealed class ByteCodeGenerator
 		GenerateCodeForThen(ifExpression);
 	}
 
-	private void GenerateCodeForThen(If ifExpression) => GenerateStatements(new[] { ifExpression.Then });
+	private void GenerateCodeForThen(If ifExpression) =>
+		GenerateStatements(new[] { ifExpression.Then });
 
 	private void GenerateCodeForBinary(MethodCall binary)
 	{
 		switch (binary.Method.Name)
 		{
 		case BinaryOperator.Plus:
-			GenerateAdditionStatements(binary);
+			GenerateBinaryStatement(binary, Instruction.Add);
 			break;
 		case BinaryOperator.Multiply:
-			GenerateMultiplyStatements(binary);
+			GenerateBinaryStatement(binary, Instruction.Multiply);
 			break;
 		case BinaryOperator.Minus:
-			GenerateSubtractionStatements(binary);
+			GenerateBinaryStatement(binary, Instruction.Subtract);
 			break;
 		case BinaryOperator.Divide:
-			GenerateDivisionStatements(binary);
+			GenerateBinaryStatement(binary, Instruction.Divide);
 			break;
 		}
 	}
@@ -132,19 +133,7 @@ public sealed class ByteCodeGenerator
 			? registers[nextRegister++]
 			: registers[0];
 
-	private void GenerateAdditionStatements(MethodCall binary) =>
-		GenerateBinaryStatements(binary, Instruction.Add);
-
-	private void GenerateSubtractionStatements(MethodCall binary) =>
-		GenerateBinaryStatements(binary, Instruction.Subtract);
-
-	private void GenerateDivisionStatements(MethodCall binary) =>
-		GenerateBinaryStatements(binary, Instruction.Divide);
-
-	private void GenerateMultiplyStatements(MethodCall binary) =>
-		GenerateBinaryStatements(binary, Instruction.Multiply);
-
-	private void GenerateBinaryStatements(MethodCall binary, Instruction operationInstruction)
+	private void GenerateBinaryStatement(MethodCall binary, Instruction operationInstruction)
 	{
 		if (binary.Instance != null)
 		{

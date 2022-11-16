@@ -2,7 +2,6 @@
 using OmniSharp.Extensions.LanguageServer.Protocol.Document;
 using OmniSharp.Extensions.LanguageServer.Protocol.Models;
 using Strict.Language;
-using Strict.Language.Expressions;
 using Type = Strict.Language.Type;
 
 namespace Strict.LanguageServer;
@@ -10,12 +9,11 @@ namespace Strict.LanguageServer;
 public sealed class LanguageAutoComplete : ICompletionHandler
 {
 	private readonly StrictDocument documentManager;
-	private Package? package;
-	private readonly PackageSetup packageSetup;
+	private readonly Package package;
 
-	public LanguageAutoComplete(StrictDocument documentManager, PackageSetup packageSetup)
+	public LanguageAutoComplete(StrictDocument documentManager, Package package)
 	{
-		this.packageSetup = packageSetup;
+		this.package = package;
 		this.documentManager = documentManager;
 	}
 
@@ -26,19 +24,16 @@ public sealed class LanguageAutoComplete : ICompletionHandler
 			return await Task.FromResult(new CompletionList()).ConfigureAwait(false);
 		var code = documentManager.Get(request.TextDocument.Uri);
 		var typeName = request.TextDocument.Uri.Path.GetFileName();
-		var member = await GetMemberAsync(request, typeName, code);
+		var member = GetMember(request, typeName, code);
 		if (member != null)
 			return await GetCompletionMethodsAsync(member.Type.Name).ConfigureAwait(false);
 		return await Task.FromResult(new CompletionList()).ConfigureAwait(false);
 	}
 
-	private async Task<Member?> GetMemberAsync(TextDocumentPositionParams request, string typeName,
+	private Member? GetMember(TextDocumentPositionParams request, string typeName,
 		IReadOnlyList<string> code)
 	{
-		package ??= await packageSetup.GetPackageAsync(Repositories.DevelopmentFolder + ".Base");
-		var type = package.FindDirectType(typeName) ?? new Type(package,
-				new TypeLines(typeName, code.Select(line => line.Replace("    ", "\t")).ToArray())).
-			ParseMembersAndMethods(new MethodExpressionParser());
+		var type = package.SynchronizeAndGetType(typeName, code);
 		var typeToFind = code[request.Position.Line].Split('.')[0].Trim();
 		var member = type.Members.FirstOrDefault(member => member.Name == typeToFind);
 		return member;
@@ -46,18 +41,37 @@ public sealed class LanguageAutoComplete : ICompletionHandler
 
 	private async Task<CompletionList> GetCompletionMethodsAsync(string typeName)
 	{
-		var completionType = package?.FindType(typeName);
+		var completionType = package.FindType(typeName);
 		if (completionType != null)
-			return await Task.FromResult(new CompletionList(
-					CreateCompletionItems(completionType.Methods.Select(method => method.Name)))).
+		{
+			var completionItems = GetCompletionItemsForMembersAndMethods(completionType);
+			return await Task.FromResult(new CompletionList(CreateCompletionItems(completionItems))).
 				ConfigureAwait(false);
+		}
 		return await Task.FromResult(new CompletionList()).ConfigureAwait(false);
 	}
 
-	private static IEnumerable<CompletionItem> CreateCompletionItems(IEnumerable<string> items) =>
-		items.Select(item => new CompletionItem
+	private static List<StrictCompletionItem> GetCompletionItemsForMembersAndMethods(Type completionType)
+	{
+		var completionItems = CreateCompletionItemsForMethods(completionType.Methods);
+		completionItems.AddRange(CreateCompletionItemsForMembers(completionType.Members));
+		return completionItems;
+	}
+
+	private static List<StrictCompletionItem>
+		CreateCompletionItemsForMethods(IEnumerable<Method> methods) =>
+		methods.Select(method => method.Name).
+			Select(name => new StrictCompletionItem(name, CompletionItemKind.Method)).ToList();
+
+	private static IEnumerable<StrictCompletionItem>
+		CreateCompletionItemsForMembers(IEnumerable<Member> members) =>
+		members.Where(member => member.IsPublic).Select(member => member.Name).Select(name =>
+			new StrictCompletionItem(name, CompletionItemKind.Method));
+
+	private static IEnumerable<CompletionItem> CreateCompletionItems(IEnumerable<StrictCompletionItem> completionItems) =>
+		completionItems.Select(item => new CompletionItem
 		{
-			InsertText = item, FilterText = item, Label = item, Kind = CompletionItemKind.Method
+			InsertText = item.Name, FilterText = item.Name, Label = item.Name, Kind = item.CompletionKind
 		});
 
 	public CompletionRegistrationOptions GetRegistrationOptions(CompletionCapability capability,
@@ -68,4 +82,6 @@ public sealed class LanguageAutoComplete : ICompletionHandler
 			DocumentSelector = BaseSelectors.StrictDocumentSelector,
 			ResolveProvider = true
 		};
+
+	private sealed record StrictCompletionItem(string Name, CompletionItemKind CompletionKind);
 }

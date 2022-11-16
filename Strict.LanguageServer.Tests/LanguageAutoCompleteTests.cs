@@ -2,30 +2,33 @@
 using System.Threading;
 using System.Threading.Tasks;
 using NUnit.Framework;
+using OmniSharp.Extensions.LanguageServer.Protocol;
 using OmniSharp.Extensions.LanguageServer.Protocol.Models;
+using Strict.Language;
 
 namespace Strict.LanguageServer.Tests;
 
 public sealed class LanguageAutoCompleteTests : LanguageServerTests
 {
-	private LanguageAutoComplete autocompleteHandler = null!;
-
-	[SetUp]
-	public void InitializeHandler()
+	[TestCase(0, "Write", "has log", "Log(message Text)", "\tlog.")]
+	[TestCase(2, "Start", "has range Range", "Bla", "\trange.")]
+	public async Task HandleLogAutoCompleteAsync(int itemIndex, string completionName, params string[] code)
 	{
+		var documentUri = GetDocumentUri(completionName);
 		var strictDocument = new StrictDocument();
-		strictDocument.AddOrUpdate(URI, "has log", "Log(message Text)", "\tlog.");
-		autocompleteHandler = new LanguageAutoComplete(strictDocument, new PackageSetup());
-	}
-
-	[Test]
-	public async Task HandleLogAutoCompleteAsync() =>
+		strictDocument.AddOrUpdate(documentUri, code);
+		var autocompleteHandler = new LanguageAutoComplete(strictDocument,
+			await new PackageSetup().GetPackageAsync(Repositories.DevelopmentFolder + ".Base"));
 		Assert.That(
 			(await autocompleteHandler.Handle(
 				new CompletionParams
 				{
 					Context = new CompletionContext { TriggerCharacter = "." },
-					TextDocument = new TextDocumentIdentifier(URI),
+					TextDocument = new TextDocumentIdentifier(documentUri),
 					Position = new Position { Character = 8, Line = 2 }
-				}, CancellationToken.None)).Items.ToArray()[0].Label, Is.EqualTo("Write"));
+				}, CancellationToken.None)).Items.ToArray()[itemIndex].Label, Is.EqualTo(completionName));
+	}
+
+	private static DocumentUri GetDocumentUri(string seed) =>
+		new("", "", $"Test{seed}.strict", "", "");
 }

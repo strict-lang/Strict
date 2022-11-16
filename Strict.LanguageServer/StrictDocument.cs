@@ -1,7 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using OmniSharp.Extensions.LanguageServer.Protocol;
 using OmniSharp.Extensions.LanguageServer.Protocol.Models;
-using Range = OmniSharp.Extensions.LanguageServer.Protocol.Models.Range;
 
 namespace Strict.LanguageServer;
 

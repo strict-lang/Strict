@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Nerdbank.Streams;
 using OmniSharp.Extensions.LanguageServer.Server;
+using Strict.Language;
 using Strict.LanguageServer;
 using PipeOptions = System.IO.Pipes.PipeOptions;
 
@@ -40,7 +41,8 @@ await Task.WhenAny(Task.Run(async () =>
 static void ConfigureServices(IServiceCollection services)
 {
 	services.AddSingleton<StrictDocument>();
-	services.AddSingleton<PackageSetup>();
+	services.AddSingleton(new PackageSetup().
+		GetPackageAsync(Repositories.DevelopmentFolder + ".Base").Result);
 }
 
 static async Task<(PipeReader input, PipeWriter output)> CreateAndGetPipeline()

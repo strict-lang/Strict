@@ -19,39 +19,35 @@ public class CommandExecutor : IExecuteCommandHandler
 	private const string CommandName = "strict-vscode-client.run";
 	private readonly StrictDocument document;
 	private readonly ILanguageServerFacade languageServer;
-	private readonly PackageSetup packageSetup;
+	private readonly Package package;
 
 	public CommandExecutor(ILanguageServerFacade languageServer, StrictDocument document,
-		PackageSetup packageSetup)
+		Package package)
 	{
 		this.document = document;
 		this.languageServer = languageServer;
-		this.packageSetup = packageSetup;
+		this.package = package;
 	}
 
-	async Task<Unit> IRequestHandler<ExecuteCommandParams, Unit>.Handle(
+	Task<Unit> IRequestHandler<ExecuteCommandParams, Unit>.Handle(
 		ExecuteCommandParams request, CancellationToken cancellationToken)
 	{
 		var methodCall = request.Arguments?[0]["label"].ToString();
 		var documentUri =
 			DocumentUri.From(request.Arguments?[1].ToString() ?? throw new PathCanNotBeEmpty());
-		var basePackage =
-			await packageSetup.GetPackageAsync(Repositories.DevelopmentFolder + ".Base");
 		var folderName = documentUri.Path.GetFolderName();
-		var package = basePackage.Find(folderName) ?? new Package(basePackage, folderName);
-		AddAndExecute(documentUri, methodCall, package);
+		var subPackage = package.Find(folderName) ?? new Package(package, folderName);
+		AddAndExecute(documentUri, methodCall, subPackage);
 		if (vm.Returns != null)
 			languageServer.Window.LogInfo($"Output: {vm.Returns.Value}");
-		return await Unit.Task.ConfigureAwait(false);
+		return Unit.Task;
 	}
 
-	private void AddAndExecute(DocumentUri documentUri, string? methodCall, Package package)
+	private void AddAndExecute(DocumentUri documentUri, string? methodCall, Package subPackage)
 	{
 		var code = document.Get(documentUri);
 		var typeName = documentUri.Path.GetFileName();
-		var type = package.FindDirectType(typeName) ?? new Type(package,
-				new TypeLines(typeName, code.Select(line => line.Replace("    ", "\t")).ToArray())).
-			ParseMembersAndMethods(new MethodExpressionParser());
+		var type = subPackage.SynchronizeAndGetType(typeName, code);
 		var call = (MethodCall)ParseExpression(type, methodCall);
 		var statements = new ByteCodeGenerator(call).Generate();
 		vm.Execute(statements);

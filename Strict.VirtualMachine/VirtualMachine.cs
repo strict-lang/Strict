@@ -1,4 +1,5 @@
 ﻿using Strict.Language;
+using Strict.Language.Expressions;
 
 namespace Strict.VirtualMachine;
 
@@ -16,9 +17,12 @@ public sealed class VirtualMachine
 	{
 		if (statement.Instruction == Instruction.Return)
 		{
-			instructionIndex = -2;
 			Returns = Registers[statement.Registers[0]];
-			return;
+			if (Returns.Value.GetType().IsPrimitive || Returns.Value is Value)
+			{
+				instructionIndex = -2;
+				return;
+			}
 		}
 		TryStoreInstructions(statement);
 		TryLoadInstructions(statement);
