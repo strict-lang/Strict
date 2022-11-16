@@ -78,4 +78,17 @@ public sealed class StrictDocument
 		strictDocuments.TryGetValue(uri, out var code)
 			? code
 			: new[] { "" };
+
+	public IEnumerable<Diagnostic> GetDiagnostics() =>
+		new List<Diagnostic>()
+		{
+			new()
+			{
+				Code = "DiagnosticInfo",
+				Message = "Key is not complete",
+				Severity = DiagnosticSeverity.Warning,
+				Range = ((0, 0), (1, 3)),
+				Source = "STRICT"
+			}
+		};
 }

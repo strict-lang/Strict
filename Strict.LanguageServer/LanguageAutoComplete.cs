@@ -20,7 +20,7 @@ public sealed class LanguageAutoComplete : ICompletionHandler
 	public async Task<CompletionList> Handle(CompletionParams request,
 		CancellationToken cancellationToken)
 	{
-		if (request.Context?.TriggerCharacter != ".")
+		if (request.Context?.TriggerCharacter != "." && request.Context?.TriggerCharacter != "/n")
 			return await Task.FromResult(new CompletionList()).ConfigureAwait(false);
 		var code = documentManager.Get(request.TextDocument.Uri);
 		var typeName = request.TextDocument.Uri.Path.GetFileName();

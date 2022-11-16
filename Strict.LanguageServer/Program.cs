@@ -20,7 +20,8 @@ var server = await LanguageServer.From(options =>
 		.WithServices(ConfigureServices)
 		.WithHandler<TextDocumentSynchronizer>()
 		.WithHandler<LanguageAutoComplete>()
-		.WithHandler<CommandExecutor>());
+		.WithHandler<CommandExecutor>()
+		.WithHandler<DocumentHighlighter>());
 Console.WriteLine("Client connected!");
 // @formatter:on
 await Task.WhenAny(Task.Run(async () =>

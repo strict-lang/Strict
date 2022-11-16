@@ -29,6 +29,12 @@ public sealed class TextDocumentSynchronizer : ITextDocumentSyncHandler
 			Document.AddOrUpdate(uri, request.ContentChanges.ToArray().Select(x => x.Text).ToArray());
 		Document.Update(uri, request.ContentChanges.ToArray());
 		languageServer.Window.LogInfo($"Updated document: {uri}\n{Document.Get(uri)[^1]}");
+		languageServer.TextDocument.PublishDiagnostics(new PublishDiagnosticsParams()
+		{
+			Diagnostics = new Container<Diagnostic>(Document.GetDiagnostics()),
+			Uri = uri,
+			Version = 1
+		});
 		return Unit.Task;
 	}
 
