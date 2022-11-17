@@ -5,6 +5,12 @@ namespace Strict.VirtualMachine;
 
 public sealed class VirtualMachine
 {
+	private readonly Dictionary<string, Instance> variables = new();
+	private bool conditionFlag;
+	private int instructionIndex;
+	public Dictionary<Register, Instance> Registers { get; } = new();
+	public Instance? Returns { get; private set; }
+
 	public VirtualMachine Execute(IReadOnlyList<Statement> statements)
 	{
 		for (instructionIndex = 0; instructionIndex != -1 && instructionIndex < statements.Count;
@@ -61,11 +67,6 @@ public sealed class VirtualMachine
 			TryJumpOperation((JumpStatement)statement);
 	}
 
-	public Dictionary<Register, Instance> Registers { get; } = new();
-	private readonly Dictionary<string, Instance> variables = new();
-	private int instructionIndex;
-	public Instance? Returns { get; private set; }
-
 	private void TryBinaryOperationExecution(Statement statement)
 	{
 		var (right, left) = GetOperands(statement);
@@ -111,8 +112,6 @@ public sealed class VirtualMachine
 			_ => false //ncrunch: no coverage
 		};
 	}
-
-	private bool conditionFlag;
 
 	private void TryJumpOperation(JumpStatement statement)
 	{

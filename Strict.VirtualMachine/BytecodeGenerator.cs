@@ -5,6 +5,11 @@ namespace Strict.VirtualMachine;
 
 public sealed class ByteCodeGenerator
 {
+	private readonly Register[] registers = Enum.GetValues<Register>();
+	private readonly List<Statement> statements = new();
+	private int nextRegister;
+	private Register previousRegister;
+
 	public ByteCodeGenerator(MethodCall methodCall)
 	{
 		InstanceArguments = new Dictionary<string, Expression>();
@@ -14,6 +19,9 @@ public sealed class ByteCodeGenerator
 		AddMethodParameterVariables(methodCall);
 		StoreAndLoadVariables();
 	}
+
+	private Dictionary<string, Expression>? InstanceArguments { get; }
+	private Method Method { get; }
 
 	private void StoreAndLoadVariables()
 	{
@@ -37,44 +45,37 @@ public sealed class ByteCodeGenerator
 				methodCall.Arguments[parameterIndex]);
 	}
 
-	private readonly Register[] registers = Enum.GetValues<Register>();
-	private int nextRegister;
-	private Dictionary<string, Expression>? InstanceArguments { get; }
-	private Method Method { get; }
-	private readonly List<Statement> statements = new();
-
 	public List<Statement> Generate() =>
 		GenerateStatements(((Body)Method.GetBodyAndParseIfNeeded()).Expressions);
 
 	private List<Statement> GenerateStatements(IReadOnlyList<Expression> expressions)
 	{
 		for (var index = 0; index < expressions.Count(); index++)
-		{
-			if (expressions.Count - 1 == index && expressions[index] is VariableCall variableCall)
-				GenerateStatementsFromSeamlessReturn(variableCall);
-			GenerateStatementsFromExpression(expressions[index]);
-		}
+			if (expressions.Count - 1 == index && expressions[index] is not Assignment and not If
+				|| expressions[index] is Return)
+				GenerateStatementsFromSeamlessReturn(expressions[index]);
+			else
+				GenerateStatementsFromExpression(expressions[index]);
 		return statements;
 	}
 
-	private void GenerateStatementsFromSeamlessReturn(VariableCall variableCall)
+	private void GenerateStatementsFromSeamlessReturn(Expression expression)
 	{
-		var registerToReturn = AllocateRegister();
-		statements.Add(new LoadVariableStatement(registerToReturn, variableCall.Name));
-		statements.Add(new ReturnStatement(registerToReturn));
+		if (expression is Return returnExpression)
+			GenerateStatementsFromExpression(returnExpression.Value);
+		else
+			GenerateStatementsFromExpression(expression);
+		statements.Add(new ReturnStatement(previousRegister));
 	}
 
 	private void GenerateStatementsFromExpression(Expression expression)
 	{
-		if (expression is Return returnExpression)
-		{
-			GenerateStatements(new[] { returnExpression.Value });
-			statements.Add(new ReturnStatement(registers[^2]));
-		}
 		if (expression is Binary binary)
 			GenerateCodeForBinary(binary);
 		else if (expression is If ifExpression)
 			GenerateIfStatements(ifExpression);
+		else if (expression is VariableCall variableCall)
+			statements.Add(new LoadVariableStatement(AllocateRegister(), variableCall.Name));
 		else if (expression is Assignment assignmentExpression)
 			statements.Add(new StoreStatement(
 				new Instance(assignmentExpression.ReturnType, assignmentExpression.Value),
@@ -111,38 +112,42 @@ public sealed class ByteCodeGenerator
 
 	private void GenerateCodeForIfCondition(MethodCall condition)
 	{
+		var (leftRegister, rightRegister) = (AllocateRegister(), AllocateRegister());
 		if (condition.Instance is Value instanceValue)
-			statements.Add(new LoadConstantStatement(AllocateRegister(),
+			statements.Add(new LoadConstantStatement(leftRegister,
 				new Instance(instanceValue.ReturnType, instanceValue.Data)));
 		else
-			statements.Add(new LoadVariableStatement(AllocateRegister(),
+			statements.Add(new LoadVariableStatement(leftRegister,
 				condition.Instance?.ToString() ?? throw new InvalidOperationException()));
 		if (condition.Arguments[0] is Value argumentValue)
-			statements.Add(new LoadConstantStatement(AllocateRegister(),
+			statements.Add(new LoadConstantStatement(rightRegister,
 				new Instance(argumentValue.ReturnType, argumentValue.Data)));
 		else
-			statements.Add(new LoadVariableStatement(AllocateRegister(),
+			statements.Add(new LoadVariableStatement(rightRegister,
 				condition.Arguments[0].ToString()));
-		statements.Add(new Statement(Instruction.Equal, registers[nextRegister - 2],
-			registers[nextRegister - 1]));
+		statements.Add(new Statement(Instruction.Equal, leftRegister,
+			rightRegister));
 		statements.Add(new JumpStatement(Instruction.JumpIfFalse, 4));
 	}
 
-	private Register AllocateRegister() =>
-		nextRegister < registers.Length
-			? registers[nextRegister++]
-			: registers[0];
+	private Register AllocateRegister()
+	{
+		if (nextRegister == registers.Length)
+			nextRegister = 0;
+		previousRegister = registers[nextRegister];
+		return registers[nextRegister++];
+	}
 
 	private void GenerateBinaryStatement(MethodCall binary, Instruction operationInstruction)
 	{
 		if (binary.Instance != null)
 		{
-			statements.Add(new LoadVariableStatement(AllocateRegister(), binary.Instance.ToString()));
+			var (leftRegister, rightRegister) = (AllocateRegister(), AllocateRegister());
+			statements.Add(new LoadVariableStatement(leftRegister, binary.Instance.ToString()));
 			statements.Add(
-				new LoadVariableStatement(AllocateRegister(), binary.Arguments[0].ToString()));
-			statements.Add(new Statement(operationInstruction, registers[nextRegister - 2],
-				registers[nextRegister - 1], registers[nextRegister - 2]));
-			nextRegister = 0;
+				new LoadVariableStatement(rightRegister, binary.Arguments[0].ToString()));
+			statements.Add(new Statement(operationInstruction, leftRegister,
+				rightRegister, AllocateRegister()));
 		}
 	}
 }

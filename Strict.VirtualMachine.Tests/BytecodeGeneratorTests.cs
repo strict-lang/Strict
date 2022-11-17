@@ -16,7 +16,8 @@ public sealed class ByteCodeGeneratorTests : BaseVirtualMachineTests
 					new StoreStatement(new Instance(NumberType, 5), "Second"),
 					new LoadVariableStatement(Register.R0, "First"),
 					new LoadVariableStatement(Register.R1, "Second"),
-					new(Instruction.Add, Register.R0, Register.R1, Register.R0)
+					new(Instruction.Add, Register.R0, Register.R1, Register.R2),
+					new ReturnStatement(Register.R2)
 				},
 				new[]
 				{
@@ -30,7 +31,8 @@ public sealed class ByteCodeGeneratorTests : BaseVirtualMachineTests
 					new StoreStatement(new Instance(NumberType, 2), "multiplyBy"),
 					new LoadVariableStatement(Register.R0, "number"),
 					new LoadVariableStatement(Register.R1, "multiplyBy"),
-					new(Instruction.Multiply, Register.R0, Register.R1, Register.R0)
+					new(Instruction.Multiply, Register.R0, Register.R1, Register.R2),
+					new ReturnStatement(Register.R2)
 				},
 				new[]
 				{
@@ -43,14 +45,13 @@ public sealed class ByteCodeGeneratorTests : BaseVirtualMachineTests
 					new StoreStatement(new Instance(NumberType, 10), "number"),
 					new StoreStatement(new Instance(NumberType, 5), "bla"),
 					new LoadVariableStatement(Register.R0, "bla"),
-					new ReturnStatement(Register.R0)
+					new LoadVariableStatement(Register.R1, "number"),
+					new(Instruction.Add, Register.R0, Register.R1, Register.R2),
+					new ReturnStatement(Register.R2)
 				},
 				new[]
 				{
-					"has number",
-					"SomeFunction Number",
-					"\tlet bla = 5",
-					"\tbla"
+					"has number", "SomeFunction Number", "\tlet bla = 5", "\tbla + number"
 				});
 			yield return new TestCaseData("ArithmeticFunction(10, 5).Calculate(\"add\")",
 				"ArithmeticFunction",
@@ -65,29 +66,32 @@ public sealed class ByteCodeGeneratorTests : BaseVirtualMachineTests
 					new JumpStatement(Instruction.JumpIfFalse, 4),
 					new LoadVariableStatement(Register.R2, "First"),
 					new LoadVariableStatement(Register.R3, "Second"),
-					new(Instruction.Add, Register.R2, Register.R3, Register.R2),
-					new ReturnStatement(Register.R2), new LoadVariableStatement(Register.R0, "operation"),
-					new LoadConstantStatement(Register.R1, new Instance(TextType, "subtract")),
-					new(Instruction.Equal, Register.R0, Register.R1),
+					new(Instruction.Add, Register.R2, Register.R3, Register.R0),
+					new ReturnStatement(Register.R0),
+					new LoadVariableStatement(Register.R1, "operation"),
+					new LoadConstantStatement(Register.R2, new Instance(TextType, "subtract")),
+					new(Instruction.Equal, Register.R1, Register.R2),
 					new JumpStatement(Instruction.JumpIfFalse, 4),
-					new LoadVariableStatement(Register.R2, "First"),
-					new LoadVariableStatement(Register.R3, "Second"),
-					new(Instruction.Subtract, Register.R2, Register.R3, Register.R2),
-					new ReturnStatement(Register.R2), new LoadVariableStatement(Register.R0, "operation"),
-					new LoadConstantStatement(Register.R1, new Instance(TextType, "multiply")),
-					new(Instruction.Equal, Register.R0, Register.R1),
+					new LoadVariableStatement(Register.R3, "First"),
+					new LoadVariableStatement(Register.R0, "Second"),
+					new(Instruction.Subtract, Register.R3, Register.R0, Register.R1),
+					new ReturnStatement(Register.R1),
+					new LoadVariableStatement(Register.R2, "operation"),
+					new LoadConstantStatement(Register.R3, new Instance(TextType, "multiply")),
+					new(Instruction.Equal, Register.R2, Register.R3),
 					new JumpStatement(Instruction.JumpIfFalse, 4),
-					new LoadVariableStatement(Register.R2, "First"),
-					new LoadVariableStatement(Register.R3, "Second"),
-					new(Instruction.Multiply, Register.R2, Register.R3, Register.R2),
-					new ReturnStatement(Register.R2), new LoadVariableStatement(Register.R0, "operation"),
-					new LoadConstantStatement(Register.R1, new Instance(TextType, "divide")),
-					new(Instruction.Equal, Register.R0, Register.R1),
+					new LoadVariableStatement(Register.R0, "First"),
+					new LoadVariableStatement(Register.R1, "Second"),
+					new(Instruction.Multiply, Register.R0, Register.R1, Register.R2),
+					new ReturnStatement(Register.R2),
+					new LoadVariableStatement(Register.R3, "operation"),
+					new LoadConstantStatement(Register.R0, new Instance(TextType, "divide")),
+					new(Instruction.Equal, Register.R3, Register.R0),
 					new JumpStatement(Instruction.JumpIfFalse, 4),
-					new LoadVariableStatement(Register.R2, "First"),
-					new LoadVariableStatement(Register.R3, "Second"),
-					new(Instruction.Divide, Register.R2, Register.R3, Register.R2),
-					new ReturnStatement(Register.R2)
+					new LoadVariableStatement(Register.R1, "First"),
+					new LoadVariableStatement(Register.R2, "Second"),
+					new(Instruction.Divide, Register.R1, Register.R2, Register.R3),
+					new ReturnStatement(Register.R3)
 				}, ArithmeticFunctionExample);
 		}
 	}
