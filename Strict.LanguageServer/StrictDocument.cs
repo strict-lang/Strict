@@ -1,6 +1,11 @@
 ﻿using System.Collections.Concurrent;
+using System.Collections.Immutable;
 using OmniSharp.Extensions.LanguageServer.Protocol;
 using OmniSharp.Extensions.LanguageServer.Protocol.Models;
+using OmniSharp.Extensions.LanguageServer.Protocol.Server;
+using OmniSharp.Extensions.LanguageServer.Protocol.Window;
+using Strict.Language;
+using Range = OmniSharp.Extensions.LanguageServer.Protocol.Models.Range;
 
 namespace Strict.LanguageServer;
 
@@ -79,16 +84,51 @@ public sealed class StrictDocument
 			? code
 			: new[] { "" };
 
-	public IEnumerable<Diagnostic> GetDiagnostics() =>
-		new List<Diagnostic>()
+	public IEnumerable<Diagnostic> GetDiagnostics(Package package, DocumentUri uri,
+		ILanguageServerFacade languageServer)
+	{
+		var diagnostics = ImmutableArray<Diagnostic>.Empty.ToBuilder();
+		try
 		{
-			new()
+			ParseCurrentFile(package, uri);
+		}
+		catch (Exception exception)
+		{
+			languageServer.Window.LogError(exception.Message);
+			diagnostics.Add(new Diagnostic
 			{
-				Code = "DiagnosticInfo",
-				Message = "Key is not complete",
-				Severity = DiagnosticSeverity.Warning,
-				Range = ((0, 0), (1, 3)),
-				Source = "STRICT"
-			}
-		};
+				Code = exception.GetType().Name,
+				Severity = DiagnosticSeverity.Error,
+				Message = exception.GetType().Name + ": " + exception.Message,
+				Range = GetErrorTextRange(exception.Message),
+				Source = exception.Source,
+				Tags = new Container<DiagnosticTag>(DiagnosticTag.Unnecessary)
+			});
+		}
+		return diagnostics;
+	}
+
+	private void ParseCurrentFile(Package package, DocumentUri uri)
+	{
+		var folderName = uri.Path.GetFolderName();
+		var subPackage = package.Find(folderName) ?? new Package(package, folderName);
+		var type = subPackage.SynchronizeAndGetType(uri.Path.GetFileName(), content);
+		if (type is { IsTrait: false })
+			ParseTypeMethods(type.Methods);
+	}
+
+	private static void ParseTypeMethods(IEnumerable<Method> methods)
+	{
+		foreach (var method in methods)
+			if (!method.IsGeneric)
+				method.GetBodyAndParseIfNeeded();
+	}
+
+	private Range GetErrorTextRange(string errorMessage)
+	{
+		int.TryParse(errorMessage.Split(' ')[^1], out var lineNumber);
+		lineNumber = int.Clamp(lineNumber - 1, 0, content.Count - 1);
+		return new Range(lineNumber, content[lineNumber].TrimStart().Length, lineNumber,
+			content[lineNumber].Length);
+	}
 }

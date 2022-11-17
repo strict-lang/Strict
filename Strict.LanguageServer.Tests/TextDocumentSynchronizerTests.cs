@@ -10,7 +10,7 @@ namespace Strict.LanguageServer.Tests;
 
 public sealed class TextDocumentSynchronizerTests : LanguageServerTests
 {
-	private static readonly DocumentUri MultiLineURI = new("", "", "MultiLine.strict", "", "");
+	private static readonly DocumentUri MultiLineURI = new("", "", "Test/MultiLine.strict", "", "");
 
 	[SetUp]
 	public void MultiLineSetup() =>

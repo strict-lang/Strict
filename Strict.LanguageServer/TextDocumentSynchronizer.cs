@@ -6,19 +6,22 @@ using OmniSharp.Extensions.LanguageServer.Protocol.Models;
 using OmniSharp.Extensions.LanguageServer.Protocol.Server;
 using OmniSharp.Extensions.LanguageServer.Protocol.Server.Capabilities;
 using OmniSharp.Extensions.LanguageServer.Protocol.Window;
+using Strict.Language;
 
 namespace Strict.LanguageServer;
 
 public sealed class TextDocumentSynchronizer : ITextDocumentSyncHandler
 {
-	public TextDocumentSynchronizer(ILanguageServerFacade languageServer, StrictDocument document)
+	public TextDocumentSynchronizer(ILanguageServerFacade languageServer, StrictDocument document, Package package)
 	{
 		this.languageServer = languageServer;
 		Document = document;
+		this.package = package;
 	}
 
 	public StrictDocument Document { get; }
 	private readonly ILanguageServerFacade languageServer;
+	private readonly Package package;
 	public TextDocumentAttributes GetTextDocumentAttributes(DocumentUri uri) => new(uri, "strict");
 
 	public Task<Unit> Handle(DidChangeTextDocumentParams request,
@@ -29,14 +32,20 @@ public sealed class TextDocumentSynchronizer : ITextDocumentSyncHandler
 			Document.AddOrUpdate(uri, request.ContentChanges.ToArray().Select(x => x.Text).ToArray());
 		Document.Update(uri, request.ContentChanges.ToArray());
 		languageServer.Window.LogInfo($"Updated document: {uri}\n{Document.Get(uri)[^1]}");
-		languageServer.TextDocument.PublishDiagnostics(new PublishDiagnosticsParams()
+		ParseUpdatedCodeAndPublishDiagnostics(request, uri);
+		return Unit.Task;
+	}
+
+	private void
+		ParseUpdatedCodeAndPublishDiagnostics(DidChangeTextDocumentParams request, string uri) =>
+		languageServer.TextDocument.PublishDiagnostics(new PublishDiagnosticsParams
 		{
-			Diagnostics = new Container<Diagnostic>(Document.GetDiagnostics()),
+			Diagnostics =
+				new Container<Diagnostic>(Document.GetDiagnostics(package, request.TextDocument.Uri,
+					languageServer)),
 			Uri = uri,
 			Version = 1
 		});
-		return Unit.Task;
-	}
 
 	public Task<Unit> Handle(DidOpenTextDocumentParams request, CancellationToken cancellationToken)
 	{
