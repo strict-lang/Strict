@@ -5,12 +5,17 @@ namespace Strict.Language.Expressions;
 
 public sealed class Mutable : Value
 {
-	private Mutable(Context context, Expression expression) : base(context.GetType(Base.Mutable),
+	private Mutable(Context context, Expression expression) : base(GetMutableReturnType(context, expression),
 		expression)
 	{
 		ReturnType.AddDataReturnTypeToMutableImplements(DataReturnType);
 		ReturnType.MutableReturnType = DataReturnType;
 	}
+
+	private static Type GetMutableReturnType(Context context, Expression expression) =>
+		expression.ReturnType.Name.StartsWith(Base.Mutable, StringComparison.Ordinal)
+			? expression.ReturnType
+			: context.GetType(Base.Mutable + "(" + expression.ReturnType.Name + ")");
 
 	public static Expression? TryParse(Body body, ReadOnlySpan<char> line) =>
 		line.Contains(" = ", StringComparison.Ordinal)

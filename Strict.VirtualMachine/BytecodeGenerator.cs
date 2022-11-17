@@ -68,6 +68,7 @@ public sealed class ByteCodeGenerator
 		statements.Add(new ReturnStatement(previousRegister));
 	}
 
+	// ReSharper disable once ExcessiveIndentation
 	private void GenerateStatementsFromExpression(Expression expression)
 	{
 		if (expression is Binary binary)

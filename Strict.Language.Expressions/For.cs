@@ -54,7 +54,10 @@ public sealed class For : Expression
 	{
 		var variableName = FindIterableName(line);
 		AddVariableIfDoesNotExist(body, line, variableName);
-		if (body.FindVariableValue(variableName)?.ReturnType.Name != Base.Mutable && HasIn(line))
+		var variableValue = body.FindVariableValue(variableName);
+		if (variableValue != null &&
+			!variableValue.ReturnType.Name.StartsWith(Base.Mutable, StringComparison.Ordinal) &&
+			HasIn(line))
 			throw new ImmutableIterator(body);
 		var forExpression = body.Method.ParseExpression(body, line[4..]);
 		if (HasIn(line))

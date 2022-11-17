@@ -703,7 +703,7 @@ public class Type : Context
 
 	public void AddDataReturnTypeToMutableImplements(Type dataReturnType)
 	{
-		if (Name == Base.Mutable && !implements.Contains(dataReturnType))
+		if (Name.StartsWith(Base.Mutable, StringComparison.Ordinal) && !implements.Contains(dataReturnType))
 			implements.Add(dataReturnType);
 	}
 }

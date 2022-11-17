@@ -104,8 +104,9 @@ public sealed class MethodCallTests : TestExpressions
 	public void MakeSureMutableMethodsAreNotModified()
 	{
 		var expression = ParseExpression("Mutable(7)");
-		Assert.That(expression.ReturnType.Methods.Count,
-			Is.EqualTo(2));
+		Assert.That(expression.ReturnType.Name,
+			Is.EqualTo(Base.Mutable + "(TestPackage." + Base.Number + ")"));
+		Assert.That(type.GetType(Base.Mutable).Methods.Count, Is.EqualTo(0));
 	}
 
 	[Test]
