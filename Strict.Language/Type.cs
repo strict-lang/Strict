@@ -498,14 +498,17 @@ public class Type : Context
 			throw new ArgumentsDoNotMatchMethodParameters(arguments, matchingMethods);
 	}
 
+	private static bool IsMethodWithMatchingParameters(IEnumerable<Expression> arguments,
+		Method method) =>
+		IsMethodWithMatchingParameters(arguments.Select(a => a.ReturnType).ToList(), method);
+
 	// ReSharper disable once MethodTooLong
-	private static bool IsMethodWithMatchingParameters(IReadOnlyList<Expression> arguments,
-		Method method)
+	private static bool IsMethodWithMatchingParameters(IReadOnlyList<Type> argumentTypes, Method method)
 	{
 		for (var index = 0; index < method.Parameters.Count; index++)
 		{
 			var methodParameterType = method.Parameters[index].Type;
-			var argumentReturnType = arguments[index].ReturnType;
+			var argumentReturnType = argumentTypes[index];
 			if (methodParameterType.IsList != argumentReturnType.IsList && methodParameterType.Name != Base.Any)
 				return false;
 			if (argumentReturnType == methodParameterType || method.IsGeneric)
@@ -522,7 +525,7 @@ public class Type : Context
 			if (methodParameterType.IsGeneric)
 				throw new GenericTypesCannotBeUsedDirectlyUseImplementation(methodParameterType,
 					"(parameter " + index + ") is not usable with argument " +
-					arguments[index].ToStringWithType() + " in " + method);
+					argumentTypes[index] + " in " + method);
 			if (!argumentReturnType.IsCompatible(methodParameterType))
 				return false;
 		}
@@ -699,11 +702,32 @@ public class Type : Context
 				" do ") +
 			"not match these method(s):\n" + string.Join("\n",
 				allMethods)) { }
+
+		public ArgumentsDoNotMatchMethodParameters(IReadOnlyCollection<Type> argumentTypes,
+			IEnumerable<Method> matchingMethods) : base((argumentTypes.Count == 0
+				? "No arguments does "
+				: (argumentTypes.Count == 1
+					? "Argument: "
+					: "Arguments: ") + argumentTypes.ToWordList() + " do ") +
+			"not match these method(s):\n" +
+			string.Join("\n", matchingMethods)) { }
 	}
 
 	public void AddDataReturnTypeToMutableImplements(Type dataReturnType)
 	{
 		if (Name.StartsWith(Base.Mutable, StringComparison.Ordinal) && !implements.Contains(dataReturnType))
 			implements.Add(dataReturnType);
+	}
+
+	public Method? FindMethodByArgumentTypes(string methodName, List<Type> argumentTypes)
+	{
+		if (!AvailableMethods.TryGetValue(methodName, out var matchingMethods))
+			return null;
+		foreach (var method in matchingMethods)
+			if (method.Parameters.Count == argumentTypes.Count &&
+				IsMethodWithMatchingParameters(argumentTypes, method))
+				return method;
+		throw new ArgumentsDoNotMatchMethodParameters(argumentTypes,
+			matchingMethods);
 	}
 }

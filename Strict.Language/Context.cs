@@ -59,7 +59,7 @@ public abstract class Context
 		var mainType = GetType(name[..name.IndexOf('(')]);
 		var argumentTypes = GetArgumentTypes(name[(mainType.Name.Length + 1)..^1].
 			Split(',', StringSplitOptions.TrimEntries));
-		if (mainType.Members.Count != argumentTypes.Count) //TODO: Do we need to take all members count here or just Type or Generic members?
+		if (mainType.Members.Count != argumentTypes.Count && mainType.FindMethodByArgumentTypes(Method.From, argumentTypes) == null)
 			throw new TypeArgumentsDoNotMatchWithMainType(mainType, argumentTypes);
 		return mainType.IsGeneric
 			? mainType.GetGenericImplementation(argumentTypes)
