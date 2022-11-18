@@ -26,9 +26,13 @@ public sealed class StrictDocument
 	{
 		if (change.Range != null && content.Count - 1 < change.Range.Start.Line)
 			content.Add(change.Text);
-		else if (change.Range != null && change.Text == "" &&
-			change.Range.Start.Line < change.Range.End.Line)
+		else if (change.Range != null && change.Range.Start.Line < change.Range.End.Line)
+		{
 			HandleForMultiLineDeletion(change.Range.Start, change.Range.End);
+			if (change.Text != "")
+				content[change.Range.Start.Line] = content[change.Range.Start.Line].
+					Insert(change.Range.Start.Character, change.Text);
+		}
 		else
 			HandleForDocumentChange(change);
 	}
