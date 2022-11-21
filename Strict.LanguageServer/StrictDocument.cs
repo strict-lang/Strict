@@ -64,10 +64,8 @@ public sealed class StrictDocument
 
 	private void RemoveLinesInMiddleAndUpdateStartAndEndLines(Position start, Position end)
 	{
-		content[start.Line] = content[start.Line][..start.Character];
-		content[end.Line] = content[end.Line][end.Character..];
-		if (end.Line - start.Line > 1)
-			content.RemoveRange(start.Line + 1, end.Line - (start.Line + 1));
+		content[start.Line] = content[start.Line][..start.Character] + content[end.Line][end.Character..];
+		content.RemoveRange(start.Line + 1, end.Line - start.Line);
 	}
 
 	private void RemoveLinesTillEndAndUpdateStartLine(Position start, Position end)
