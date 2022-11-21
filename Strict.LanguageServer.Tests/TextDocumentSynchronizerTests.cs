@@ -13,11 +13,12 @@ public sealed class TextDocumentSynchronizerTests : LanguageServerTests
 	private static readonly DocumentUri MultiLineURI = new("", "", "Test/MultiLine.strict", "", "");
 
 	[SetUp]
-	public void MultiLineSetup() =>
-		textDocumentHandler.Document.AddOrUpdate(MultiLineURI,
-			"has number",
-			"Add(num Number) Number",
+	public void MultiLineSetup()
+	{
+		textDocumentHandler.Document.AddOrUpdate(MultiLineURI, "has number", "Add(num Number) Number",
 			"\tnum + number");
+		textDocumentHandler.Document.InitializeContent(MultiLineURI);
+	}
 
 	private static IEnumerable<TestCaseData> TextDocumentChangeCases
 	{
@@ -81,5 +82,31 @@ public sealed class TextDocumentSynchronizerTests : LanguageServerTests
 					new TextDocumentContentChangeEvent { Range = range, Text = text })
 			}, new CancellationToken());
 		Assert.That(textDocumentHandler.Document.Get(MultiLineURI), Is.EqualTo(expected));
+	}
+
+	[Test]
+	public async Task HandleSaveTextDocumentAsync()
+	{
+		await textDocumentHandler.Handle(
+			new DidSaveTextDocumentParams
+			{
+				TextDocument = new OptionalVersionedTextDocumentIdentifier { Uri = MultiLineURI }
+			}, new CancellationToken());
+		var subPackage = testPackage.FindSubPackage(MultiLineURI.Path.GetFolderName());
+		Assert.That(subPackage, Is.Not.Null);
+		Assert.That(subPackage?.GetType(MultiLineURI.Path.GetFileName()), Is.Not.Null);
+	}
+
+	[TestCase("has number\r\nAdd(num Number) Number\r\n\tnum + number")]
+	public async Task HandleOpenTextDocumentAsync(string text)
+	{
+		await textDocumentHandler.Handle(
+			new DidOpenTextDocumentParams
+			{
+				TextDocument = new TextDocumentItem { Uri = MultiLineURI, Text = text }
+			}, new CancellationToken());
+		var subPackage = testPackage.FindSubPackage(MultiLineURI.Path.GetFolderName());
+		Assert.That(subPackage, Is.Not.Null);
+		Assert.That(subPackage?.GetType(MultiLineURI.Path.GetFileName()), Is.Not.Null);
 	}
 }

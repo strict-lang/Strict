@@ -22,7 +22,9 @@ public class LanguageServerTests
 		languageServer.Setup(expression => expression.TextDocument).
 			Returns(new Mock<ITextDocumentLanguageServer>().Object);
 		textDocumentHandler =
-			new TextDocumentSynchronizer(languageServer.Object, new StrictDocument(), new TestPackage());
+			new TextDocumentSynchronizer(languageServer.Object, new StrictDocument(), testPackage);
 		textDocumentHandler.Document.AddOrUpdate(URI, "let bla = 5");
 	}
+
+	protected readonly TestPackage testPackage = new();
 }
