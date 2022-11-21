@@ -34,9 +34,17 @@ public sealed class LanguageAutoComplete : ICompletionHandler
 		IReadOnlyList<string> code)
 	{
 		var type = package.SynchronizeAndGetType(typeName, code);
-		var typeToFind = code[request.Position.Line].Split('.')[0].Trim();
+		var typeToFind = GetTypeToFind(code[request.Position.Line]);
 		var member = type.Members.FirstOrDefault(member => member.Name == typeToFind);
 		return member;
+	}
+
+	private static string GetTypeToFind(string line)
+	{
+		var splitText = line.Split('.')[0].Split(' ', StringSplitOptions.TrimEntries);
+		return splitText.Length == 1
+			? splitText[0]
+			: splitText[^1];
 	}
 
 	private async Task<CompletionList> GetCompletionMethodsAsync(string typeName)
