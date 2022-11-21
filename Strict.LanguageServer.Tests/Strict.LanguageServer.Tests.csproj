@@ -17,6 +17,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Strict.Language.Tests\Strict.Language.Tests.csproj" />
     <ProjectReference Include="..\Strict.LanguageServer\Strict.LanguageServer.csproj" />
   </ItemGroup>
 

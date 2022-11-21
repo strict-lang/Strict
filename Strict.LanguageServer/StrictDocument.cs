@@ -25,7 +25,7 @@ public sealed class StrictDocument
 	private void UpdateDocument(TextDocumentContentChangeEvent change)
 	{
 		if (change.Range != null && content.Count - 1 < change.Range.Start.Line)
-			content.Add(change.Text);
+			AddSingleOrMultiLineNewTextToContent(change);
 		else if (change.Range != null && change.Range.Start.Line < change.Range.End.Line)
 		{
 			HandleForMultiLineDeletion(change.Range.Start, change.Range.End);
@@ -35,6 +35,14 @@ public sealed class StrictDocument
 		}
 		else
 			HandleForDocumentChange(change);
+	}
+
+	private void AddSingleOrMultiLineNewTextToContent(TextDocumentContentChangeEvent change)
+	{
+		if (change.Text.Contains('\n'))
+			content.AddRange(change.Text.Split('\n'));
+		else
+			content.Add(change.Text);
 	}
 
 	private void HandleForDocumentChange(TextDocumentContentChangeEvent change)
@@ -124,7 +132,7 @@ public sealed class StrictDocument
 		foreach (var method in methods)
 			if (!method.IsGeneric)
 				method.GetBodyAndParseIfNeeded();
-	}
+	} //ncrunch: no coverage
 
 	private Range GetErrorTextRange(string errorMessage)
 	{

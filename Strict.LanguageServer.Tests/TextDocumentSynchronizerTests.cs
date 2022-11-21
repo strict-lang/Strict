@@ -51,6 +51,8 @@ public sealed class TextDocumentSynchronizerTests : LanguageServerTests
 			yield return new TestCaseData(new Range(1, 3, 2, 14), "", new[] { "has number", "Add" });
 			yield return new TestCaseData(new Range(0, 3, 1, 3), "", new[] { "has(num Number) Number", "\tnum + number" });
 			yield return new TestCaseData(new Range(0, 3, 2, 3), "", new[] { "hasm + number" });
+			yield return new TestCaseData(new Range(3, 0, 4, 2), "NextMethod\n\t5",
+				new[] { "has number", "Add(num Number) Number", "\tnum + number", "NextMethod", "\t5" });
 		}
 		//ncrunch: no coverage end
 	}

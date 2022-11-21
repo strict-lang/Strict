@@ -2,7 +2,7 @@
 using NUnit.Framework;
 using OmniSharp.Extensions.LanguageServer.Protocol;
 using OmniSharp.Extensions.LanguageServer.Protocol.Server;
-using Strict.Language;
+using Strict.Language.Tests;
 
 namespace Strict.LanguageServer.Tests;
 
@@ -22,7 +22,7 @@ public class LanguageServerTests
 		languageServer.Setup(expression => expression.TextDocument).
 			Returns(new Mock<ITextDocumentLanguageServer>().Object);
 		textDocumentHandler =
-			new TextDocumentSynchronizer(languageServer.Object, new StrictDocument(), new Package("Dummy"));
+			new TextDocumentSynchronizer(languageServer.Object, new StrictDocument(), new TestPackage());
 		textDocumentHandler.Document.AddOrUpdate(URI, "let bla = 5");
 	}
 }
