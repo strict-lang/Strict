@@ -141,4 +141,6 @@ public sealed class StrictDocument
 		return new Range(lineNumber, content[lineNumber].TrimStart().Length, lineNumber,
 			content[lineNumber].Length);
 	}
+
+	public void InitializeContent(DocumentUri uri) => content = strictDocuments[uri].ToList();
 }

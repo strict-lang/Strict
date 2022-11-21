@@ -32,16 +32,16 @@ public sealed class TextDocumentSynchronizer : ITextDocumentSyncHandler
 			Document.AddOrUpdate(uri, request.ContentChanges.ToArray().Select(x => x.Text).ToArray());
 		Document.Update(uri, request.ContentChanges.ToArray());
 		languageServer.Window.LogInfo($"Updated document: {uri}\n{Document.Get(uri)[^1]}");
-		ParseUpdatedCodeAndPublishDiagnostics(request, uri);
+		ParseUpdatedCodeAndPublishDiagnostics(request.TextDocument.Uri);
 		return Unit.Task;
 	}
 
 	private void
-		ParseUpdatedCodeAndPublishDiagnostics(DidChangeTextDocumentParams request, string uri) =>
+		ParseUpdatedCodeAndPublishDiagnostics(DocumentUri uri) =>
 		languageServer.TextDocument.PublishDiagnostics(new PublishDiagnosticsParams
 		{
 			Diagnostics =
-				new Container<Diagnostic>(Document.GetDiagnostics(package, request.TextDocument.Uri,
+				new Container<Diagnostic>(Document.GetDiagnostics(package, uri,
 					languageServer)),
 			Uri = uri,
 			Version = 1
@@ -50,6 +50,8 @@ public sealed class TextDocumentSynchronizer : ITextDocumentSyncHandler
 	public Task<Unit> Handle(DidOpenTextDocumentParams request, CancellationToken cancellationToken)
 	{
 		Document.AddOrUpdate(request.TextDocument.Uri, request.TextDocument.Text.Split("\r\n"));
+		Document.InitializeContent(request.TextDocument.Uri);
+		ParseUpdatedCodeAndPublishDiagnostics(request.TextDocument.Uri);
 		return Unit.Task;
 	}
 
@@ -58,8 +60,11 @@ public sealed class TextDocumentSynchronizer : ITextDocumentSyncHandler
 		Unit.Task;
 
 	public Task<Unit>
-		Handle(DidSaveTextDocumentParams request, CancellationToken cancellationToken) =>
-		Unit.Task;
+		Handle(DidSaveTextDocumentParams request, CancellationToken cancellationToken)
+	{
+		ParseUpdatedCodeAndPublishDiagnostics(request.TextDocument.Uri);
+		return Unit.Task;
+	}
 
 	public TextDocumentChangeRegistrationOptions GetRegistrationOptions(
 		SynchronizationCapability capability, ClientCapabilities clientCapabilities) =>
