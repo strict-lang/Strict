@@ -8,7 +8,7 @@ using Strict.Language;
 
 namespace Strict.LanguageServer.Tests;
 
-public sealed class LanguageAutoCompleteTests : LanguageServerTests
+public sealed class AutoCompletorTests : LanguageServerTests
 {
 	[TestCase(0, "Write", "has log", "Log(message Text)", "\tlog.")]
 	[TestCase(2, "Start", "has range Range", "Bla", "\trange.")]
@@ -17,7 +17,7 @@ public sealed class LanguageAutoCompleteTests : LanguageServerTests
 		var documentUri = GetDocumentUri(completionName);
 		var strictDocument = new StrictDocument();
 		strictDocument.AddOrUpdate(documentUri, code);
-		var autocompleteHandler = new LanguageAutoComplete(strictDocument,
+		var autocompleteHandler = new AutoCompletor(strictDocument,
 			await new PackageSetup().GetPackageAsync(Repositories.DevelopmentFolder + ".Base"));
 		Assert.That(
 			(await autocompleteHandler.Handle(

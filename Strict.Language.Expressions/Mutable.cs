@@ -53,8 +53,9 @@ public sealed class Mutable : Value
 			memberCall.Member.Value = body.Method.ParseExpression(body, remainingLineSpan);
 			return new Mutable(body.Method, memberCall);
 		case VariableCall variableCall:
-			body.UpdateVariable(variableCall.Name, body.Method.ParseExpression(body, remainingLineSpan));
-			return new Mutable(body.Method, variableCall);
+			var variableCallExpression = body.Method.ParseExpression(body, remainingLineSpan);
+			body.UpdateVariable(variableCall.Name, variableCallExpression);
+			return new Mutable(body.Method, variableCallExpression);
 		default:
 			throw new InvalidAssignmentTarget(body, expression.ToString());
 		}

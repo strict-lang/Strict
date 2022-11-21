@@ -28,6 +28,16 @@ public class BaseVirtualMachineTests : TestExpressions
 		"\tif operation is \"divide\"",
 		"\t\treturn First / Second"
 	};
+	protected static readonly string[] SimpleLoopExample =
+	{
+		"has number",
+		"GetMultiplicationOfNumbers Number",
+		"\tlet result = Mutable(1)",
+		"\tlet multiplier = 2",
+		"\tfor number",
+		"\t\tresult = result * multiplier",
+		"\tresult"
+	};
 	//ncrunch: no coverage end
 
 	protected MethodCall GenerateMethodCallFromSource(string programName, string methodCall, params string[] source)

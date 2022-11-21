@@ -50,9 +50,9 @@ public sealed class ByteCodeGenerator
 
 	private List<Statement> GenerateStatements(IReadOnlyList<Expression> expressions)
 	{
-		for (var index = 0; index < expressions.Count(); index++)
-			if (expressions.Count - 1 == index && expressions[index] is not Assignment and not If
-				|| expressions[index] is Return)
+		for (var index = 0; index < expressions.Count; index++)
+			if (expressions.Count - 1 == index && expressions[index] is not Assignment and not If ||
+				expressions[index] is Return)
 				GenerateStatementsFromSeamlessReturn(expressions[index]);
 			else
 				GenerateStatementsFromExpression(expressions[index]);
@@ -68,19 +68,98 @@ public sealed class ByteCodeGenerator
 		statements.Add(new ReturnStatement(previousRegister));
 	}
 
-	// ReSharper disable once ExcessiveIndentation
 	private void GenerateStatementsFromExpression(Expression expression)
 	{
-		if (expression is Binary binary)
-			GenerateCodeForBinary(binary);
-		else if (expression is If ifExpression)
-			GenerateIfStatements(ifExpression);
-		else if (expression is VariableCall variableCall)
-			statements.Add(new LoadVariableStatement(AllocateRegister(), variableCall.Name));
-		else if (expression is Assignment assignmentExpression)
+		TryGenerateBinaryStatements(expression);
+		TryGenerateIfStatements(expression);
+		TryGenerateAssignmentStatements(expression);
+		TryGenerateLoopStatements(expression);
+		TryGenerateMutableStatements(expression);
+	}
+
+	private void TryGenerateMutableStatements(Expression expression)
+	{
+		if (expression is Mutable mutableExpression)
+			GenerateStatementsFromExpression((Expression)mutableExpression.Data);
+	}
+
+	private void TryGenerateLoopStatements(Expression expression)
+	{
+		if (expression is For forExpression)
+			GenerateLoopStatements(forExpression);
+	}
+
+	private void TryGenerateAssignmentStatements(Expression expression)
+	{
+		if (expression is Assignment assignmentExpression)
 			statements.Add(new StoreStatement(
 				new Instance(assignmentExpression.ReturnType, assignmentExpression.Value),
 				assignmentExpression.Name));
+	}
+
+	private void TryGenerateIfStatements(Expression expression)
+	{
+		if (expression is If ifExpression)
+			GenerateIfStatements(ifExpression);
+	}
+
+	private void TryGenerateBinaryStatements(Expression expression)
+	{
+		if (expression is Binary binary)
+			GenerateCodeForBinary(binary);
+	}
+
+	private void GenerateLoopStatements(For forExpression)
+	{
+		var iterableName = forExpression.Value.ToString();
+		var iterableInstance = statements.LastOrDefault(statement =>
+				statement is StoreStatement storeStatement && storeStatement.Identifier == iterableName)?.
+			Instance;
+		if (iterableInstance != null)
+		{
+			var length = iterableInstance.Value is string
+				? iterableInstance.Value.ToString()?.Length
+				: Convert.ToInt32(iterableInstance.Value);
+			if (length != null)
+				GenerateLoopStatements(forExpression, iterableInstance);
+		}
+		FreeRegisters();
+	}
+
+	private void GenerateLoopStatements(For forExpression, Instance iterableInstance)
+	{
+		var length = iterableInstance.Value is string
+			? iterableInstance.Value.ToString()?.Length
+			: Convert.ToInt32(iterableInstance.Value);
+		if (length == null)
+			return;
+		var (registerForIterationCount, registerForIndexReduction) =
+			(AllocateRegister(true), AllocateRegister(true));
+		var statementCountBeforeLoopStart = statements.Count;
+		statements.Add(new LoadConstantStatement(registerForIterationCount,
+			new Instance(iterableInstance.ReturnType, length)));
+		statements.Add(new LoadConstantStatement(registerForIndexReduction,
+			new Instance(iterableInstance.ReturnType, 1)));
+		statements.Add(new StoreStatement(iterableInstance, "value"));
+		GenerateStatementsForLoopBody(forExpression);
+		GenerateIteratorReductionAndJumpStatementsForLoop(registerForIterationCount,
+			registerForIndexReduction, statements.Count - statementCountBeforeLoopStart);
+	}
+
+	private void GenerateStatementsForLoopBody(For forExpression)
+	{
+		if (forExpression.Body is Body forExpressionBody)
+			GenerateStatements(forExpressionBody.Expressions);
+		else
+			GenerateStatementsFromExpression(forExpression.Body);
+	}
+
+	private void GenerateIteratorReductionAndJumpStatementsForLoop(
+		Register registerForIterationCount, Register registerForIndexReduction, int steps)
+	{
+		statements.Add(new Statement(Instruction.Subtract, registerForIterationCount,
+			registerForIndexReduction, registerForIterationCount));
+		statements.Add(new JumpStatement(Instruction.JumpIfNotZero, -steps, registerForIterationCount));
 	}
 
 	private void GenerateIfStatements(If ifExpression)
@@ -124,20 +203,26 @@ public sealed class ByteCodeGenerator
 			statements.Add(new LoadConstantStatement(rightRegister,
 				new Instance(argumentValue.ReturnType, argumentValue.Data)));
 		else
-			statements.Add(new LoadVariableStatement(rightRegister,
-				condition.Arguments[0].ToString()));
-		statements.Add(new Statement(Instruction.Equal, leftRegister,
-			rightRegister));
+			statements.Add(new LoadVariableStatement(rightRegister, condition.Arguments[0].ToString()));
+		statements.Add(new Statement(Instruction.Equal, leftRegister, rightRegister));
 		statements.Add(new JumpStatement(Instruction.JumpIfFalse, 4));
 	}
 
-	private Register AllocateRegister()
+	private Register AllocateRegister(bool @lock = false)
 	{
 		if (nextRegister == registers.Length)
 			nextRegister = 0;
 		previousRegister = registers[nextRegister];
-		return registers[nextRegister++];
+		var currentRegister = registers[nextRegister++];
+		if (lockedRegisters.Contains(currentRegister))
+			currentRegister = AllocateRegister();
+		if (@lock)
+			lockedRegisters.Add(currentRegister);
+		return currentRegister;
 	}
+
+	private void FreeRegisters() => lockedRegisters.Clear();
+	private readonly List<Register> lockedRegisters = new();
 
 	private void GenerateBinaryStatement(MethodCall binary, Instruction operationInstruction)
 	{
@@ -145,10 +230,9 @@ public sealed class ByteCodeGenerator
 		{
 			var (leftRegister, rightRegister) = (AllocateRegister(), AllocateRegister());
 			statements.Add(new LoadVariableStatement(leftRegister, binary.Instance.ToString()));
-			statements.Add(
-				new LoadVariableStatement(rightRegister, binary.Arguments[0].ToString()));
-			statements.Add(new Statement(operationInstruction, leftRegister,
-				rightRegister, AllocateRegister()));
+			statements.Add(new LoadVariableStatement(rightRegister, binary.Arguments[0].ToString()));
+			statements.Add(new Statement(operationInstruction, leftRegister, rightRegister,
+				AllocateRegister()));
 		}
 	}
 }

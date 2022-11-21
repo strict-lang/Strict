@@ -74,6 +74,25 @@ public sealed class VirtualMachineTests : BaseVirtualMachineTests
 	}
 
 	[Test]
+	public void ReduceButGrowLoopExample() =>
+		Assert.That(
+			vm.Execute(new Statement[]
+			{
+				new StoreStatement(new Instance(NumberType, 10), "number"),
+				new StoreStatement(new Instance(NumberType, 1), "result"),
+				new StoreStatement(new Instance(NumberType, 2), "multiplier"),
+				new LoadConstantStatement(Register.R0, new Instance(NumberType, 10)),
+				new LoadConstantStatement(Register.R1, new Instance(NumberType, 1)),
+				new StoreStatement(new Instance(NumberType, 10), "value"),
+				new LoadVariableStatement(Register.R2, "result"),
+				new LoadVariableStatement(Register.R3, "multiplier"),
+				new(Instruction.Multiply, Register.R2, Register.R3, Register.R2),
+				new(Instruction.Subtract, Register.R0, Register.R1, Register.R0),
+				new JumpStatement(Instruction.JumpIfNotZero, -3, Register.R0),
+				new ReturnStatement(Register.R2)
+			}).Returns?.Value, Is.EqualTo(1024));
+
+	[Test]
 	public void ConditionalJump() =>
 		Assert.That(
 			vm.Execute(new Statement[]
