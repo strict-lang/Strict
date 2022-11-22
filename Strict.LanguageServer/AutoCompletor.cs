@@ -24,32 +24,60 @@ public sealed class AutoCompletor : ICompletionHandler
 			return await Task.FromResult(new CompletionList()).ConfigureAwait(false);
 		var code = documentManager.Get(request.TextDocument.Uri);
 		var typeName = request.TextDocument.Uri.Path.GetFileName();
-		var member = GetMember(request, typeName, code);
-		if (member != null)
-			return await GetCompletionMethodsAsync(member.Type.Name).ConfigureAwait(false);
-		return await Task.FromResult(new CompletionList()).ConfigureAwait(false);
+		var completionType = GetCompletionType(request, typeName, code);
+		return completionType != null
+			? await GetCompletionMethodsAsync(completionType).ConfigureAwait(false)
+			: await Task.FromResult(new CompletionList()).ConfigureAwait(false);
 	}
 
-	private Member? GetMember(TextDocumentPositionParams request, string typeName,
+	private Type? GetCompletionType(TextDocumentPositionParams request, string typeName,
 		IReadOnlyList<string> code)
 	{
 		var type = package.SynchronizeAndGetType(typeName, code);
-		var typeToFind = code[request.Position.Line].Split('.')[0].Trim();
-		var member = type.Members.FirstOrDefault(member => member.Name == typeToFind);
-		return member;
+		var typeToFind = GetTypeToFind(code[request.Position.Line]);
+		return FindMemberTypeName(type, typeToFind) ?? FindMethod(request, code, type)?.Parameters.
+			FirstOrDefault(p => p.Name == typeToFind)?.Type;
 	}
 
-	private async Task<CompletionList> GetCompletionMethodsAsync(string typeName)
+	private static string GetTypeToFind(string line)
 	{
-		var completionType = package.FindType(typeName);
-		if (completionType != null)
-		{
-			var completionItems = GetCompletionItemsForMembersAndMethods(completionType);
-			return await Task.FromResult(new CompletionList(CreateCompletionItems(completionItems))).
-				ConfigureAwait(false);
-		}
-		return await Task.FromResult(new CompletionList()).ConfigureAwait(false);
+		var splitText = line.Split('.')[0].Split(' ', StringSplitOptions.TrimEntries);
+		return splitText.Length == 1
+			? splitText[0]
+			: splitText[^1];
 	}
+
+	private static Type? FindMemberTypeName(Type type, string typeToFind) => type.Members.FirstOrDefault(m => m.Name == typeToFind)?.Type;
+
+	private static Method? FindMethod(TextDocumentPositionParams request,
+		IReadOnlyList<string> code, Type type) =>
+		type.Methods.Count == 1
+			? type.Methods[0]
+			: FindMethodFromLine(request, code, type);
+
+	private static Method? FindMethodFromLine(TextDocumentPositionParams request, IReadOnlyList<string> code, Type type)
+	{
+		var methodName = FindMethodName(code, request.Position.Line - 1);
+		return type.Methods.FirstOrDefault(method => method.Name == methodName);
+	}
+
+	private static string? FindMethodName(IReadOnlyList<string> code, int lineNumber)
+	{
+		while (lineNumber > 0)
+		{
+			var currentLine = code[lineNumber];
+			if (currentLine[0] != ' ' && currentLine[0] != '\t')
+				return currentLine.Contains('(')
+					? currentLine.Split('(')[0]
+					: currentLine.Split(' ')[0];
+			lineNumber--; //ncrunch: no coverage start
+		}
+		return null; //ncrunch: no coverage end
+	}
+
+	private static Task<CompletionList> GetCompletionMethodsAsync(Type completionType) =>
+		Task.FromResult(new CompletionList(
+			CreateCompletionItems(GetCompletionItemsForMembersAndMethods(completionType))));
 
 	private static List<StrictCompletionItem> GetCompletionItemsForMembersAndMethods(Type completionType)
 	{
