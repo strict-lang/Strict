@@ -61,12 +61,12 @@ public sealed class ByteCodeGeneratorTests : BaseVirtualMachineTests
 					new StoreStatement(new Instance(NumberType, 2), "multiplier"),
 					new LoadConstantStatement(Register.R0, new Instance(NumberType, 10)),
 					new LoadConstantStatement(Register.R1, new Instance(NumberType, 1)),
-					new StoreStatement(new Instance(NumberType, 10), "value"),
+					new InitLoopStatement("number"),
 					new LoadVariableStatement(Register.R2, "result"),
 					new LoadVariableStatement(Register.R3, "multiplier"),
 					new(Instruction.Multiply, Register.R2, Register.R3, Register.R2),
 					new(Instruction.Subtract, Register.R0, Register.R1, Register.R0),
-					new JumpStatement(Instruction.JumpIfNotZero, -3),
+					new JumpStatement(Instruction.JumpIfNotZero, -4),
 					new ReturnStatement(Register.R2)
 				}, SimpleLoopExample);
 			yield return new TestCaseData("ArithmeticFunction(10, 5).Calculate(\"add\")",

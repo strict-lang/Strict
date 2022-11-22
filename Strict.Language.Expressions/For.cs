@@ -91,7 +91,8 @@ public sealed class For : Expression
 
 	private static void CheckForUnidentifiedIterable(Body body, ReadOnlySpan<char> line)
 	{
-		if (body.FindVariableValue(FindIterableName(line)) == null && body.Method.Type.FindMember(FindIterableName(line).ToString()) == null && line[^1] != ')')
+		if (body.FindVariableValue(FindIterableName(line)) == null &&
+			body.Method.Type.FindMember(FindIterableName(line).ToString()) == null && line[^1] != ')')
 			throw new UnidentifiedIterable(body);
 	}
 

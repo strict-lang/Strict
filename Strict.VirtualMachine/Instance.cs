@@ -10,11 +10,13 @@ namespace Strict.VirtualMachine;
 /// </summary>
 public sealed class Instance
 {
-	public Instance(Type type, object value)
+	public Instance(Type? type, object value)
 	{
 		ReturnType = type;
 		Value = value;
 	}
+
+	public Instance(object value) => Value = value;
 
 	public Instance(Expression expression)
 	{
@@ -25,6 +27,6 @@ public sealed class Instance
 			Value = new object();
 	}
 
-	public Type ReturnType { get; }
-	public object Value { get; }
+	public Type? ReturnType { get; }
+	public object Value { get; set; }
 }

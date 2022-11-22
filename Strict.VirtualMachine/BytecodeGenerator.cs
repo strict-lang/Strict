@@ -135,12 +135,12 @@ public sealed class ByteCodeGenerator
 			return;
 		var (registerForIterationCount, registerForIndexReduction) =
 			(AllocateRegister(true), AllocateRegister(true));
-		var statementCountBeforeLoopStart = statements.Count;
 		statements.Add(new LoadConstantStatement(registerForIterationCount,
 			new Instance(iterableInstance.ReturnType, length)));
 		statements.Add(new LoadConstantStatement(registerForIndexReduction,
 			new Instance(iterableInstance.ReturnType, 1)));
-		statements.Add(new StoreStatement(iterableInstance, "value"));
+		statements.Add(new InitLoopStatement(forExpression.Value.ToString()));
+		var statementCountBeforeLoopStart = statements.Count;
 		GenerateStatementsForLoopBody(forExpression);
 		GenerateIteratorReductionAndJumpStatementsForLoop(registerForIterationCount,
 			registerForIndexReduction, statements.Count - statementCountBeforeLoopStart);
@@ -159,7 +159,7 @@ public sealed class ByteCodeGenerator
 	{
 		statements.Add(new Statement(Instruction.Subtract, registerForIterationCount,
 			registerForIndexReduction, registerForIterationCount));
-		statements.Add(new JumpStatement(Instruction.JumpIfNotZero, -steps, registerForIterationCount));
+		statements.Add(new JumpStatement(Instruction.JumpIfNotZero, -steps - 1, registerForIterationCount));
 	}
 
 	private void GenerateIfStatements(If ifExpression)

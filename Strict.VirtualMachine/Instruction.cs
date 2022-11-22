@@ -7,6 +7,7 @@ public enum Instruction
 	StoreConstant,
 	Load,
 	LoadConstant,
+	InitLoopStatement,
 	SetLoadSeparator = 100,
 	Add,
 	Subtract,
