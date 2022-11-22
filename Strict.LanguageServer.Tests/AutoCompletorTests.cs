@@ -11,7 +11,7 @@ namespace Strict.LanguageServer.Tests;
 public sealed class AutoCompletorTests : LanguageServerTests
 {
 	[SetUp]
-	public async Task CreateStrictDocument()
+	public async Task CreateStrictDocumentAsync()
 	{
 		strictDocument = new StrictDocument();
 		package = await new PackageSetup().GetPackageAsync(Repositories.DevelopmentFolder + ".Base");
@@ -62,14 +62,14 @@ public sealed class AutoCompletorTests : LanguageServerTests
 	}
 
 	[Test]
-	public async Task HandleInvalidTriggerCharacter() =>
+	public async Task HandleInvalidTriggerCharacterAsync() =>
 		Assert.That(
 			(await new AutoCompletor(strictDocument, package).Handle(
 				new CompletionParams
 				{
 					Context = new CompletionContext { TriggerCharacter = "/" },
 					TextDocument =
-						new TextDocumentIdentifier(GetDocumentUri(nameof(HandleInvalidTriggerCharacter))),
+						new TextDocumentIdentifier(GetDocumentUri(nameof(HandleInvalidTriggerCharacterAsync))),
 					Position = new Position { Character = 8, Line = 0 }
 				}, CancellationToken.None)).Items.Count(), Is.EqualTo(0));
 }
