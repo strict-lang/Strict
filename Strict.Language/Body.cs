@@ -63,7 +63,7 @@ public sealed class Body : Expression
 		ParsingLineNumber--;
 		var isLastExpressionReturn = Expressions[^1].GetType().Name == Base.Return;
 		var lastExpression = Expressions[^1];
-		if (Method.Name != Base.Run &&
+		if ((isLastExpressionReturn || IsMethodReturn()) && Method.Name != Base.Run &&
 			!ChildHasMatchingMethodReturnType(Parent == null
 				? Method.ReturnType
 				: Parent.ReturnType, lastExpression))
@@ -74,6 +74,10 @@ public sealed class Body : Expression
 				? this
 				: throw new ReturnAsLastExpressionIsNotNeeded(this);
 	}
+
+	private bool IsMethodReturn() =>
+		ParsingLineNumber > 0 && ParsingLineNumber < LineRange.End.Value &&
+		!CurrentLine.StartsWith("\t\t", StringComparison.Ordinal);
 
 	public IReadOnlyList<Expression> Expressions { get; private set; } = Array.Empty<Expression>();
 
