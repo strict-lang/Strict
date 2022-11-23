@@ -66,9 +66,25 @@ public sealed class ByteCodeGeneratorTests : BaseVirtualMachineTests
 					new LoadVariableStatement(Register.R3, "multiplier"),
 					new(Instruction.Multiply, Register.R2, Register.R3, Register.R2),
 					new(Instruction.Subtract, Register.R0, Register.R1, Register.R0),
-					new JumpStatement(Instruction.JumpIfNotZero, -4),
+					new JumpStatement(Instruction.JumpIfNotZero, -5),
 					new ReturnStatement(Register.R2)
 				}, SimpleLoopExample);
+			yield return new TestCaseData("RemoveParentheses(\"some(thing)\").Remove",
+				"RemoveParentheses",
+				new Statement[]
+				{
+					new StoreStatement(new Instance(TextType, "some(thing)"), "text"),
+					new StoreStatement(new Instance(TextType, "\"\""), "result"),
+					new StoreStatement(new Instance(NumberType, 0), "count"),
+					new LoadConstantStatement(Register.R0, new Instance(NumberType, 11)),
+					new LoadConstantStatement(Register.R1, new Instance(NumberType, 1)),
+					new InitLoopStatement("text"),
+					new LoadVariableStatement(Register.R2, "value"),
+					new LoadConstantStatement(Register.R3, new Instance(NumberType, 1)),
+					new(Instruction.Equal, Register.R2, Register.R3),
+					new JumpStatement(Instruction.JumpIfFalse, 4)
+				},
+				RemoveParenthesesKata);
 			yield return new TestCaseData("ArithmeticFunction(10, 5).Calculate(\"add\")",
 				"ArithmeticFunction",
 				new Statement[]

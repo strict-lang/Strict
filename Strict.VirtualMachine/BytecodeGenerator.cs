@@ -18,8 +18,10 @@ public sealed class ByteCodeGenerator
 			AddInstanceMemberVariables((MethodCall)methodCall.Instance);
 		AddMethodParameterVariables(methodCall);
 		StoreAndLoadVariables();
+		Expressions = ((Body)Method.GetBodyAndParseIfNeeded()).Expressions;
 	}
 
+	public IReadOnlyList<Expression> Expressions { get; }
 	private Dictionary<string, Expression>? InstanceArguments { get; }
 	private Method Method { get; }
 
@@ -46,20 +48,20 @@ public sealed class ByteCodeGenerator
 	}
 
 	public List<Statement> Generate() =>
-		GenerateStatements(((Body)Method.GetBodyAndParseIfNeeded()).Expressions);
+		GenerateStatements(Expressions);
 
 	private List<Statement> GenerateStatements(IReadOnlyList<Expression> expressions)
 	{
 		for (var index = 0; index < expressions.Count; index++)
 			if (expressions.Count - 1 == index && expressions[index] is not Assignment and not If ||
 				expressions[index] is Return)
-				GenerateStatementsFromSeamlessReturn(expressions[index]);
+				GenerateStatementsFromReturn(expressions[index]);
 			else
 				GenerateStatementsFromExpression(expressions[index]);
 		return statements;
 	}
 
-	private void GenerateStatementsFromSeamlessReturn(Expression expression)
+	private void GenerateStatementsFromReturn(Expression expression)
 	{
 		if (expression is Return returnExpression)
 			GenerateStatementsFromExpression(returnExpression.Value);
@@ -139,8 +141,8 @@ public sealed class ByteCodeGenerator
 			new Instance(iterableInstance.ReturnType, length)));
 		statements.Add(new LoadConstantStatement(registerForIndexReduction,
 			new Instance(iterableInstance.ReturnType, 1)));
-		statements.Add(new InitLoopStatement(forExpression.Value.ToString()));
 		var statementCountBeforeLoopStart = statements.Count;
+		statements.Add(new InitLoopStatement(forExpression.Value.ToString()));
 		GenerateStatementsForLoopBody(forExpression);
 		GenerateIteratorReductionAndJumpStatementsForLoop(registerForIterationCount,
 			registerForIndexReduction, statements.Count - statementCountBeforeLoopStart);

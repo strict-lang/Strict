@@ -38,6 +38,22 @@ public class BaseVirtualMachineTests : TestExpressions
 		"\t\tresult = result * multiplier",
 		"\tresult"
 	};
+
+	protected static readonly string[] RemoveParenthesesKata =
+	{
+		"has text",
+		"Remove Text",
+		"\tlet result = Mutable(\"\")",
+		"\tlet count = Mutable(0)",
+		"\tfor text",
+		"\t\tif value is \"(\"",
+		"\t\t\tcount = count + 1",
+		"\t\tif value is \")\"",
+		"\t\t\tcount = count - 1",
+		"\t\tif count is 0",
+		"\t\t\tresult = result + value",
+		"\tresult"
+	};
 	//ncrunch: no coverage end
 
 	protected MethodCall GenerateMethodCallFromSource(string programName, string methodCall, params string[] source)

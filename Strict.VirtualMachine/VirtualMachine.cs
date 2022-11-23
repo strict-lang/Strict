@@ -8,6 +8,7 @@ public sealed class VirtualMachine
 	private readonly Dictionary<string, Instance> variables = new();
 	private bool conditionFlag;
 	private int instructionIndex;
+	private bool isVariableReloadingLocked;
 	public Dictionary<Register, Instance> Registers { get; } = new();
 	public Instance? Returns { get; private set; }
 
@@ -31,16 +32,13 @@ public sealed class VirtualMachine
 
 	private bool TryExecuteReturn(Statement statement)
 	{
-		if (statement.Instruction == Instruction.Return)
-		{
-			Returns = Registers[statement.Registers[0]];
-			if (Returns.Value.GetType().IsPrimitive || Returns.Value is Value)
-			{
-				instructionIndex = -2;
-				return true;
-			}
-		}
-		return false;
+		if (statement.Instruction != Instruction.Return)
+			return false;
+		Returns = Registers[statement.Registers[0]];
+		if (!Returns.Value.GetType().IsPrimitive && Returns.Value is not Value)
+			return false;
+		instructionIndex = -2;
+		return true;
 	}
 
 	private void TryLoopInitInstruction(Statement statement)
@@ -54,8 +52,11 @@ public sealed class VirtualMachine
 			variables.TryGetValue(initLoopStatement.Identifier, out var iterableVariable);
 			if (iterableVariable != null)
 				AlterValueVariable(iterableVariable);
+			LockVariableReloading();
 		}
 	}
+
+	private void LockVariableReloading() => isVariableReloadingLocked = true;
 
 	private void AlterValueVariable(Instance iterableVariable)
 	{
@@ -83,10 +84,16 @@ public sealed class VirtualMachine
 	private void TryLoadInstructions(Statement statement)
 	{
 		if (statement.Instruction is Instruction.Load)
-			Registers[statement.Registers[0]] =
-				variables[((LoadVariableStatement)statement).Identifier];
+			LoadVariableIntoRegister((LoadVariableStatement)statement);
 		else if (statement is LoadConstantStatement loadConstantStatement)
 			Registers[loadConstantStatement.Register] = loadConstantStatement.ConstantInstance;
+	}
+
+	private void LoadVariableIntoRegister(LoadVariableStatement statement)
+	{
+		if (Registers.ContainsKey(statement.Register) && isVariableReloadingLocked)
+			return;
+		Registers[statement.Register] = variables[statement.Identifier];
 	}
 
 	private void TryExecute(Statement statement)
@@ -155,7 +162,10 @@ public sealed class VirtualMachine
 			statement.Instruction is Instruction.JumpIfNotZero &&
 			Convert.ToInt32(Registers[statement.RegisterToCheckForZero].Value) != 0)
 			instructionIndex += Convert.ToInt32(statement.Steps);
+		else
+			UnLockVariableReloading();
 	}
 
+	private void UnLockVariableReloading() => isVariableReloadingLocked = false;
 	public class OperandsRequired : Exception { }
 }

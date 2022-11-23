@@ -88,7 +88,7 @@ public sealed class VirtualMachineTests : BaseVirtualMachineTests
 				new LoadVariableStatement(Register.R3, "multiplier"),
 				new(Instruction.Multiply, Register.R2, Register.R3, Register.R2),
 				new(Instruction.Subtract, Register.R0, Register.R1, Register.R0),
-				new JumpStatement(Instruction.JumpIfNotZero, -4),
+				new JumpStatement(Instruction.JumpIfNotZero, -5),
 				new ReturnStatement(Register.R2)
 			}).Returns?.Value, Is.EqualTo(1024));
 
