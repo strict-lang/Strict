@@ -196,4 +196,8 @@ public class Program
 		await ReadStrictFileAndCreateType("Node");
 		await GenerateCSharpByReadingStrictProgramAndCompareWithOutput(nameof(LinkedListAnalyzer));
 	}
+
+	[Test]
+	public async Task RemoveParentheses() =>
+		await GenerateCSharpByReadingStrictProgramAndCompareWithOutput(nameof(RemoveParentheses));
 }
