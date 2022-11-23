@@ -108,7 +108,7 @@ public sealed class AutoCompletor : ICompletionHandler
 		{
 			TriggerCharacters = new Container<string>("."),
 			DocumentSelector = BaseSelectors.StrictDocumentSelector,
-			ResolveProvider = true
+			ResolveProvider = false
 		};
 
 	private sealed record StrictCompletionItem(string Name, CompletionItemKind CompletionKind);
