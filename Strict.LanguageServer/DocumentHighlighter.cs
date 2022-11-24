@@ -21,7 +21,11 @@ public class DocumentHighlighter : IDocumentHighlightHandler
 		var document = documentSynchronizer.Document.Get(request.TextDocument.Uri);
 		return new[]
 		{
-			new DocumentHighlight { Kind = DocumentHighlightKind.Write, Range = new Range(1, 0, Array.IndexOf(document, document[^1]), document[^1].Length) }
+			new DocumentHighlight
+			{
+				Kind = DocumentHighlightKind.Write, Range = new Range(request.Position.Line, 0, request.Position.Line,
+					document[request.Position.Line].Length)
+			}
 		};
 	}
 

@@ -198,6 +198,6 @@ public class Program
 	}
 
 	[Test]
-	public async Task RemoveParentheses() =>
-		await GenerateCSharpByReadingStrictProgramAndCompareWithOutput(nameof(RemoveParentheses));
+	public Task RemoveParentheses() =>
+		GenerateCSharpByReadingStrictProgramAndCompareWithOutput(nameof(RemoveParentheses));
 }
