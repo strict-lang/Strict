@@ -38,7 +38,6 @@ public class BaseVirtualMachineTests : TestExpressions
 		"\t\tresult = result * multiplier",
 		"\tresult"
 	};
-
 	protected static readonly string[] RemoveParenthesesKata =
 	{
 		"has text",

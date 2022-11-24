@@ -9,14 +9,16 @@ public sealed class VirtualMachine
 	private bool conditionFlag;
 	private int instructionIndex;
 	private bool isVariableReloadingLocked;
+	private IList<Statement> statements = new List<Statement>();
 	public Dictionary<Register, Instance> Registers { get; } = new();
 	public Instance? Returns { get; private set; }
 
-	public VirtualMachine Execute(IReadOnlyList<Statement> statements)
+	public VirtualMachine Execute(IList<Statement> allStatements)
 	{
-		for (instructionIndex = 0; instructionIndex != -1 && instructionIndex < statements.Count;
+		statements = allStatements;
+		for (instructionIndex = 0; instructionIndex != -1 && instructionIndex < allStatements.Count;
 			instructionIndex++)
-			ExecuteStatement(statements[instructionIndex]);
+			ExecuteStatement(allStatements[instructionIndex]);
 		return this;
 	}
 
@@ -162,6 +164,15 @@ public sealed class VirtualMachine
 			statement.Instruction is Instruction.JumpIfNotZero &&
 			Convert.ToInt32(Registers[statement.RegisterToCheckForZero].Value) != 0)
 			instructionIndex += Convert.ToInt32(statement.Steps);
+		else if (!conditionFlag && statement.Instruction is Instruction.JumpToIdIfFalse)
+		{
+			var id = ((JumpViaIdStatement)statement).Id;
+			var endIndex = statements.IndexOf(statements.First(jumpStatement =>
+				jumpStatement.Instruction is Instruction.JumpEnd &&
+				jumpStatement is JumpViaIdStatement jumpViaId && jumpViaId.Id == id));
+			if (endIndex != -1)
+				instructionIndex = endIndex;
+		}
 		else
 			UnLockVariableReloading();
 	}

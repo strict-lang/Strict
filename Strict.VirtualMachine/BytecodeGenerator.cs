@@ -7,6 +7,8 @@ public sealed class ByteCodeGenerator
 {
 	private readonly Register[] registers = Enum.GetValues<Register>();
 	private readonly List<Statement> statements = new();
+	private int conditionalId;
+	private readonly Stack<int> idStack = new();
 	private int nextRegister;
 	private Register previousRegister;
 
@@ -52,12 +54,11 @@ public sealed class ByteCodeGenerator
 
 	private List<Statement> GenerateStatements(IReadOnlyList<Expression> expressions)
 	{
-		for (var index = 0; index < expressions.Count; index++)
-			if (expressions.Count - 1 == index && expressions[index] is not Assignment and not If ||
-				expressions[index] is Return)
-				GenerateStatementsFromReturn(expressions[index]);
+		foreach (var expression in expressions)
+			if ((expression.GetHashCode() == Expressions[^1].GetHashCode() || expression is Return) && expression is not If)
+				GenerateStatementsFromReturn(expression);
 			else
-				GenerateStatementsFromExpression(expressions[index]);
+				GenerateStatementsFromExpression(expression);
 		return statements;
 	}
 
@@ -168,6 +169,7 @@ public sealed class ByteCodeGenerator
 	{
 		GenerateCodeForIfCondition((Binary)ifExpression.Condition);
 		GenerateCodeForThen(ifExpression);
+		statements.Add(new JumpViaIdStatement(Instruction.JumpEnd, idStack.Pop()));
 	}
 
 	private void GenerateCodeForThen(If ifExpression) =>
@@ -207,7 +209,8 @@ public sealed class ByteCodeGenerator
 		else
 			statements.Add(new LoadVariableStatement(rightRegister, condition.Arguments[0].ToString()));
 		statements.Add(new Statement(Instruction.Equal, leftRegister, rightRegister));
-		statements.Add(new JumpStatement(Instruction.JumpIfFalse, 4));
+		idStack.Push(conditionalId);
+		statements.Add(new JumpViaIdStatement(Instruction.JumpToIdIfFalse, conditionalId++));
 	}
 
 	private Register AllocateRegister(bool @lock = false)
@@ -231,8 +234,14 @@ public sealed class ByteCodeGenerator
 		if (binary.Instance != null)
 		{
 			var (leftRegister, rightRegister) = (AllocateRegister(), AllocateRegister());
-			statements.Add(new LoadVariableStatement(leftRegister, binary.Instance.ToString()));
-			statements.Add(new LoadVariableStatement(rightRegister, binary.Arguments[0].ToString()));
+			if (binary.Instance is Value instanceValue)
+				statements.Add(new LoadConstantStatement(leftRegister, new Instance(instanceValue)));
+			else
+				statements.Add(new LoadVariableStatement(leftRegister, binary.Instance.ToString()));
+			if (binary.Arguments[0] is Value argumentsValue)
+				statements.Add(new LoadConstantStatement(rightRegister, new Instance(argumentsValue)));
+			else
+				statements.Add(new LoadVariableStatement(rightRegister, binary.Arguments[0].ToString()));
 			statements.Add(new Statement(operationInstruction, leftRegister, rightRegister,
 				AllocateRegister()));
 		}
