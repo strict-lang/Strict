@@ -93,6 +93,11 @@ public sealed class VirtualMachineTests : BaseVirtualMachineTests
 			}).Returns?.Value, Is.EqualTo(1024));
 
 	[Test]
+	public void RemoveParentheses() =>
+		Assert.That(
+			vm.Execute(ExpectedStatementsOfRemoveParanthesesKata).Returns?.Value, Is.EqualTo("some"));
+
+	[Test]
 	public void ConditionalJump() =>
 		Assert.That(
 			vm.Execute(new Statement[]
