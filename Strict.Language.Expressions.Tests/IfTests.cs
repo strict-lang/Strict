@@ -100,7 +100,7 @@ public sealed class IfTests : TestExpressions
 	[Test]
 	public void ParseMissingElseExpression() =>
 		Assert.That(() => ParseExpression("if bla is 5", "\tRun", "else"),
-			Throws.InstanceOf<If.UnexpectedElse>().With.Message.
+			Throws.InstanceOf<If.MissingElseExpression>().With.Message.
 				Contains(@"TestPackage\dummy.strict:line 4"));
 
 	[Test]
@@ -228,5 +228,84 @@ public sealed class IfTests : TestExpressions
 		Assert.That(body.ReturnType.ToString(), Is.EqualTo("TestPackage.Text"));
 		Assert.That(body.children[0].ReturnType.ToString(), Is.EqualTo("TestPackage.Text"));
 		Assert.That(body.children[1].ReturnType.ToString(), Is.EqualTo("TestPackage.Text"));
+	}
+
+	[Test]
+	public void ParseElseIf() =>
+		Assert.That(ParseExpression("if bla is 5", "\tlog.Write(\"Hey\")", "else if bla is 5", "\tlog.Write(\"Hey\")"),
+			Is.EqualTo(new If(GetCondition(), GetThen(), new If(GetCondition(), GetThen()))));
+
+	[TestCase("else if bla is 6")]
+	[TestCase("else if")]
+	[TestCase("if bla is 5", "\tlog.Write(\"Hey\")", "else if")]
+	public void UnexpectedElseIf(params string[] code) =>
+		Assert.That(() => ParseExpression(code),
+			Throws.InstanceOf<If.UnexpectedElse>());
+
+	[Test]
+	public void ElseIfWithoutThen() =>
+		Assert.That(() => ParseExpression("if bla is 5", "\tlog.Write(\"Hey\")", "else if bla is 5"),
+			Throws.InstanceOf<If.MissingThen>());
+
+	[Test]
+	public void ValidMultipleElseIf()
+	{
+		var program = new Type(new Package(nameof(IfTests)),
+			new TypeLines(nameof(ValidMultipleElseIf),
+				// @formatter:off
+				"has log",
+				"ValidRun Text",
+				"	if 5 is 5",
+				"		let file = File(\"test.txt\")",
+				"		return \"Hello\"",
+				"	else if 6 is 6",
+				"		log.Write(\"Hi\")",
+				"		return \"Hi\"",
+				"	else if 7 is 7",
+				"		log.Write(\"Hello\")",
+				"		return \"Hello\"",
+				"	\"don't matter\"")).ParseMembersAndMethods(new MethodExpressionParser());
+		// @formatter:on
+		var body = (Body)program.Methods[0].GetBodyAndParseIfNeeded();
+		Assert.That(body.children[1].ReturnType.ToString(), Is.EqualTo("TestPackage.Text"));
+		Assert.That(body.children.Count, Is.EqualTo(3));
+	}
+
+	[Test]
+	public void ElseIfMissingThen()
+	{
+		var program = new Type(new Package(nameof(IfTests)),
+			new TypeLines(nameof(ElseIfMissingThen),
+				// @formatter:off
+				"has log",
+				"ValidRun Text",
+				"	if 5 is 5",
+				"		let file = File(\"test.txt\")",
+				"		return \"Hello\"",
+				"	else if 6 is 6",
+				"	let something = \"Hi\"",
+				"	\"don't matter\"")).ParseMembersAndMethods(new MethodExpressionParser());
+		// @formatter:on
+		Assert.That(() => (Body)program.Methods[0].GetBodyAndParseIfNeeded(),
+			Throws.InstanceOf<If.MissingThen>());
+	}
+
+	[Test]
+	public void MultiLineElseWithMismatchingReturnType()
+	{
+		var program = new Type(new Package(nameof(IfTests)), new TypeLines(
+			nameof(MultiLineElseWithMismatchingReturnType),
+				// @formatter:off
+				"has log",
+				"MismatchingElseIfReturn Text",
+				"	if 5 is 5",
+				"		let file = File(\"test.txt\")",
+				"		return \"Hello\"",
+				"	else if 6 is 6",
+				"		return 5",
+				"	\"don't matter\"")).ParseMembersAndMethods(new MethodExpressionParser());
+		// @formatter:on
+		Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(),
+			Throws.InstanceOf<Body.ChildBodyReturnTypeMustMatchMethod>());
 	}
 }

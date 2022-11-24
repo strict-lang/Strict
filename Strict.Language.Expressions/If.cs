@@ -69,7 +69,7 @@ public sealed class If : Expression
 	public static Expression? TryParse(Body body, ReadOnlySpan<char> line) =>
 		line.Equals("if", StringComparison.Ordinal)
 			? throw new MissingCondition(body)
-			: line.Equals("else", StringComparison.Ordinal)
+			: line.Equals("else", StringComparison.Ordinal) || line.StartsWith("else if", StringComparison.Ordinal)
 				? throw new UnexpectedElse(body)
 				: line.StartsWith("if ", StringComparison.Ordinal)
 					? TryParseIf(body, line)
@@ -92,23 +92,9 @@ public sealed class If : Expression
 		if (thenBody == null)
 			throw new MissingThen(body);
 		var then = thenBody.Parse();
-		return HasElse(body)
-			? CreateIfWithElse(body, condition, then)
-			: new If(condition, then, null, body);
-	}
-
-	private static bool HasElse(Body body) =>
-		body.ParsingLineNumber + 2 < body.LineRange.End.Value && body.
-			GetLine(body.ParsingLineNumber + 1).AsSpan(body.Tabs).
-			Equals("else", StringComparison.Ordinal);
-
-	private static Expression CreateIfWithElse(Body body, Expression condition, Expression then)
-	{
-		body.ParsingLineNumber++;
-		var elseBody = body.FindCurrentChild();
-		return elseBody == null
-			? throw new MissingElseExpression(body)
-			: new If(condition, then, elseBody.Parse(), body);
+		return new If(condition, then, HasRemainingBody(body)
+			? CreateElseIfOrElse(body, body.GetLine(body.ParsingLineNumber + 1).AsSpan(body.Tabs))
+			: null, body);
 	}
 
 	private static Expression GetConditionExpression(Body body, ReadOnlySpan<char> line)
@@ -130,6 +116,30 @@ public sealed class If : Expression
 	public sealed class MissingThen : ParsingFailed
 	{
 		public MissingThen(Body body) : base(body) { }
+	}
+
+	private static bool HasRemainingBody(Body body) =>
+		body.ParsingLineNumber + 1 < body.LineRange.End.Value;
+
+	private static Expression? CreateElseIfOrElse(Body body, ReadOnlySpan<char> line) =>
+		HasElseIf(line)
+			? TryParseIf(body, body.GetLine(body.ParsingLineNumber++ + 1).AsSpan(body.Tabs + 5))
+			: HasOnlyElse(line)
+				? CreateElse(body)
+				: null;
+
+	private static bool HasElseIf(ReadOnlySpan<char> line) =>
+		line.StartsWith("else if ", StringComparison.Ordinal);
+
+	private static bool HasOnlyElse(ReadOnlySpan<char> line) => line.Equals("else", StringComparison.Ordinal);
+
+	private static Expression CreateElse(Body body)
+	{
+		body.ParsingLineNumber++;
+		var elseBody = body.FindCurrentChild();
+		return elseBody == null
+			? throw new MissingElseExpression(body)
+			: elseBody.Parse();
 	}
 
 	public static bool CanTryParseConditional(Body body, ReadOnlySpan<char> input)
