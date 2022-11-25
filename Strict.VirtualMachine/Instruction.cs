@@ -5,6 +5,7 @@ public enum Instruction
 	Set,
 	StoreVariable,
 	StoreConstant,
+	StoreFromRegister,
 	Load,
 	LoadConstant,
 	InitLoopStatement,

@@ -11,5 +11,5 @@ public enum Register
 	R6,
 	R7,
 	R8,
-	R9,
+	R9
 }

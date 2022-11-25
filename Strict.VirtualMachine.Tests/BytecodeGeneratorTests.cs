@@ -19,8 +19,8 @@ public sealed class ByteCodeGeneratorTests : BaseVirtualMachineTests
 					new StoreFromRegisterStatement(Register.R3, "something"),
 					new LoadVariableStatement(Register.R3, "something"),
 					new LoadConstantStatement(Register.R4, new Instance(NumberType, 5)),
-					new (Instruction.Add, Register.R3, Register.R4, Register.R5),
-					new ReturnStatement(Register.R5),
+					new(Instruction.Add, Register.R3, Register.R4, Register.R5),
+					new ReturnStatement(Register.R5)
 				},
 				new[]
 				{
