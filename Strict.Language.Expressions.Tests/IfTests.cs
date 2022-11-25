@@ -1,3 +1,4 @@
+using System;
 using NUnit.Framework;
 
 namespace Strict.Language.Expressions.Tests;
@@ -256,7 +257,6 @@ public sealed class IfTests : TestExpressions
 				"has log",
 				"ValidRun Text",
 				"	if 5 is 5",
-				"		let file = File(\"test.txt\")",
 				"		return \"Hello\"",
 				"	else if 6 is 6",
 				"		log.Write(\"Hi\")",
@@ -267,6 +267,16 @@ public sealed class IfTests : TestExpressions
 				"	\"don't matter\"")).ParseMembersAndMethods(new MethodExpressionParser());
 		// @formatter:on
 		var body = (Body)program.Methods[0].GetBodyAndParseIfNeeded();
+		Assert.That(body.ToString(), Is.EqualTo(string.Join(Environment.NewLine,
+			"if 5 is 5",
+			"	return \"Hello\"",
+			"else if 6 is 6",
+			"	log.Write(\"Hi\")",
+			"	return \"Hi\"",
+			"else if 7 is 7",
+			"	log.Write(\"Hello\")",
+			"	return \"Hello\"",
+			"\"don't matter\"")), body.ToString());
 		Assert.That(body.children[1].ReturnType.ToString(), Is.EqualTo("TestPackage.Text"));
 		Assert.That(body.children.Count, Is.EqualTo(3));
 	}

@@ -55,11 +55,17 @@ public sealed class If : Expression
 		Condition.GetHashCode() ^ Then.GetHashCode() ^ (OptionalElse?.GetHashCode() ?? 0);
 
 	public override string ToString() =>
-		OptionalElse != null && Then.ReturnType == OptionalElse.ReturnType &&
-		Then is not Body && OptionalElse is not Body
+		OptionalElse != null && Then.ReturnType == OptionalElse.ReturnType && Then is not Body &&
+		OptionalElse is not Body && OptionalElse is not If
 			? Condition + " ? " + Then + " else " + OptionalElse
-			: "if " + Condition + Environment.NewLine + "\t" + Then + (OptionalElse != null
-				? Environment.NewLine + "else" + Environment.NewLine + "\t" + OptionalElse
+			: "if " + Condition + Environment.NewLine + "\t" + (Then is Body thenBody
+				? string.Join(Environment.NewLine + "\t", thenBody.Expressions)
+				: Then) + (OptionalElse != null
+				? Environment.NewLine + "else" + (OptionalElse is If
+					? " "
+					: Environment.NewLine + "\t") + (OptionalElse is Body elseBody
+					? string.Join(Environment.NewLine + "\t", elseBody.Expressions)
+					: OptionalElse)
 				: "");
 
 	public override bool Equals(Expression? other) =>
