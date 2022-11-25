@@ -1,4 +1,6 @@
-﻿namespace Strict.Language.Expressions;
+﻿using System;
+
+namespace Strict.Language.Expressions;
 
 /// <summary>
 /// Any expression with a fixed value, often optimized from all known code trees. Mostly used as
@@ -13,4 +15,6 @@ public class Value : ConcreteExpression
 	public Value(Type valueType, object data) : base(valueType) => Data = data;
 	public object Data { get; }
 	public override string ToString() => Data.ToString()!;
+	public override bool Equals(object? other) => Data.Equals(other);
+	public override int GetHashCode() => HashCode.Combine(base.GetHashCode(), Data);
 }

@@ -8,7 +8,6 @@ public sealed class VirtualMachine
 	private readonly Dictionary<string, Instance> variables = new();
 	private bool conditionFlag;
 	private int instructionIndex;
-	private bool isVariableReloadingLocked;
 	private IList<Statement> statements = new List<Statement>();
 	public Dictionary<Register, Instance> Registers { get; } = new();
 	public Instance? Returns { get; private set; }
@@ -54,11 +53,8 @@ public sealed class VirtualMachine
 			variables.TryGetValue(initLoopStatement.Identifier, out var iterableVariable);
 			if (iterableVariable != null)
 				AlterValueVariable(iterableVariable);
-			LockVariableReloading();
 		}
 	}
-
-	private void LockVariableReloading() => isVariableReloadingLocked = true;
 
 	private void AlterValueVariable(Instance iterableVariable)
 	{
@@ -69,18 +65,21 @@ public sealed class VirtualMachine
 		else if (iterableVariable.ReturnType?.Name == Base.Number)
 			variables["value"] = new Instance(Convert.ToInt32(iterableVariable.Value) + index);
 		else if (iterableVariable.ReturnType?.Name == Base.Text && value != null)
-			variables["value"] = new Instance(value[index]);
+			variables["value"] = new Instance(value[index].ToString());
 	}
 
 	private void TryStoreInstructions(Statement statement)
 	{
-		if (statement.Instance == null)
+		if (statement.Instruction > Instruction.SetLoadSeparator)
 			return;
-		if (statement.Instruction == Instruction.Set)
+		if (statement.Instruction == Instruction.Set && statement.Instance != null)
 			foreach (var register in statement.Registers)
 				Registers[register] = statement.Instance;
-		else if (statement.Instruction == Instruction.StoreVariable)
+		else if (statement.Instruction == Instruction.StoreVariable && statement.Instance != null)
 			variables[((StoreStatement)statement).Identifier] = statement.Instance;
+		else if (statement.Instruction == Instruction.StoreFromRegister)
+			variables[((StoreFromRegisterStatement)statement).Identifier] =
+				Registers[statement.Registers[0]];
 	}
 
 	private void TryLoadInstructions(Statement statement)
@@ -91,12 +90,7 @@ public sealed class VirtualMachine
 			Registers[loadConstantStatement.Register] = loadConstantStatement.ConstantInstance;
 	}
 
-	private void LoadVariableIntoRegister(LoadVariableStatement statement)
-	{
-		if (Registers.ContainsKey(statement.Register) && isVariableReloadingLocked)
-			return;
-		Registers[statement.Register] = variables[statement.Identifier];
-	}
+	private void LoadVariableIntoRegister(LoadVariableStatement statement) => Registers[statement.Register] = variables[statement.Identifier];
 
 	private void TryExecute(Statement statement)
 	{
@@ -113,18 +107,17 @@ public sealed class VirtualMachine
 	private void TryBinaryOperationExecution(Statement statement)
 	{
 		var (right, left) = GetOperands(statement);
-		if (right.ReturnType != null)
-			Registers[statement.Registers[^1]] = statement.Instruction switch
-			{
-				Instruction.Add => GetAdditionResult(left, right),
-				Instruction.Subtract => new Instance(right.ReturnType,
-					Convert.ToDouble(left.Value) - Convert.ToDouble(right.Value)),
-				Instruction.Multiply => new Instance(right.ReturnType,
-					Convert.ToDouble(left.Value) * Convert.ToDouble(right.Value)),
-				Instruction.Divide => new Instance(right.ReturnType,
-					Convert.ToDouble(left.Value) / Convert.ToDouble(right.Value)),
-				_ => Registers[statement.Registers[^1]] //ncrunch: no coverage
-			};
+		Registers[statement.Registers[^1]] = statement.Instruction switch
+		{
+			Instruction.Add => GetAdditionResult(left, right),
+			Instruction.Subtract => new Instance(right.ReturnType,
+				Convert.ToDouble(left.Value) - Convert.ToDouble(right.Value)),
+			Instruction.Multiply => new Instance(right.ReturnType,
+				Convert.ToDouble(left.Value) * Convert.ToDouble(right.Value)),
+			Instruction.Divide => new Instance(right.ReturnType,
+				Convert.ToDouble(left.Value) / Convert.ToDouble(right.Value)),
+			_ => Registers[statement.Registers[^1]] //ncrunch: no coverage
+		};
 	}
 
 	private static Instance GetAdditionResult(Instance left, Instance right)
@@ -136,7 +129,7 @@ public sealed class VirtualMachine
 			return new Instance(right.ReturnType, left.Value.ToString() + right.Value);
 		if (right.ReturnType?.Name == Base.Text && left.ReturnType?.Name == Base.Number)
 			return new Instance(right.ReturnType, left.Value.ToString() + right.Value);
-		return new Instance(right.ReturnType, right.Value.ToString() + left.Value);
+		return new Instance(right.ReturnType, left.Value.ToString() + right.Value);
 	}
 
 	private (Instance, Instance) GetOperands(Statement statement) =>
@@ -173,10 +166,7 @@ public sealed class VirtualMachine
 			if (endIndex != -1)
 				instructionIndex = endIndex;
 		}
-		else
-			UnLockVariableReloading();
 	}
 
-	private void UnLockVariableReloading() => isVariableReloadingLocked = false;
 	public class OperandsRequired : Exception { }
 }

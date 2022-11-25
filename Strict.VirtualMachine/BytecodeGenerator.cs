@@ -78,6 +78,13 @@ public sealed class ByteCodeGenerator
 		TryGenerateAssignmentStatements(expression);
 		TryGenerateLoopStatements(expression);
 		TryGenerateMutableStatements(expression);
+		TryGenerateVariableCallStatement(expression);
+	}
+
+	private void TryGenerateVariableCallStatement(Expression expression)
+	{
+		if(expression is VariableCall)
+			statements.Add(new LoadVariableStatement(AllocateRegister(), expression.ToString()));
 	}
 
 	private void TryGenerateMutableStatements(Expression expression)
@@ -98,12 +105,12 @@ public sealed class ByteCodeGenerator
 			return;
 		if (assignmentExpression.Value is Value assignmentValue)
 			statements.Add(new StoreStatement(
-				new Instance(assignmentExpression.ReturnType, assignmentValue),
+				new Instance(assignmentExpression.ReturnType, assignmentValue.Data),
 				assignmentExpression.Name));
 		else
 		{
 			GenerateStatementsFromExpression(assignmentExpression.Value);
-			statements.Add(new StoreFromRegisterStatement(registers[nextRegister], assignmentExpression.Name));
+			statements.Add(new StoreFromRegisterStatement(registers[nextRegister - 1], assignmentExpression.Name));
 		}
 	}
 
@@ -169,7 +176,7 @@ public sealed class ByteCodeGenerator
 	{
 		statements.Add(new Statement(Instruction.Subtract, registerForIterationCount,
 			registerForIndexReduction, registerForIterationCount));
-		statements.Add(new JumpStatement(Instruction.JumpIfNotZero, -steps - 1, registerForIterationCount));
+		statements.Add(new JumpStatement(Instruction.JumpIfNotZero, -steps - 2, registerForIterationCount));
 	}
 
 	private void GenerateIfStatements(If ifExpression)

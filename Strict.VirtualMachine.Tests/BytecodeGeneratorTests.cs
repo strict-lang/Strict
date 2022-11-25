@@ -16,7 +16,7 @@ public sealed class ByteCodeGeneratorTests : BaseVirtualMachineTests
 					new LoadVariableStatement(Register.R0, "bla"),
 					new LoadConstantStatement(Register.R1, new Instance(NumberType, 5)),
 					new(Instruction.Add, Register.R0, Register.R1, Register.R2),
-					new StoreFromRegisterStatement(Register.R3, "something"),
+					new StoreFromRegisterStatement(Register.R2, "something"),
 					new LoadVariableStatement(Register.R3, "something"),
 					new LoadConstantStatement(Register.R4, new Instance(NumberType, 5)),
 					new(Instruction.Add, Register.R3, Register.R4, Register.R5),
@@ -84,9 +84,12 @@ public sealed class ByteCodeGeneratorTests : BaseVirtualMachineTests
 					new LoadConstantStatement(Register.R1, new Instance(NumberType, 1)),
 					new InitLoopStatement("number"), new LoadVariableStatement(Register.R2, "result"),
 					new LoadVariableStatement(Register.R3, "multiplier"),
-					new(Instruction.Multiply, Register.R2, Register.R3, Register.R2),
+					new(Instruction.Multiply, Register.R2, Register.R3, Register.R4),
+					new StoreFromRegisterStatement(Register.R4, "result"),
 					new(Instruction.Subtract, Register.R0, Register.R1, Register.R0),
-					new JumpStatement(Instruction.JumpIfNotZero, -5), new ReturnStatement(Register.R2)
+					new JumpStatement(Instruction.JumpIfNotZero, -7),
+					new LoadVariableStatement(Register.R5, "result"),
+					new ReturnStatement(Register.R5)
 				}, SimpleLoopExample);
 			yield return new TestCaseData("RemoveParentheses(\"some(thing)\").Remove",
 				"RemoveParentheses",

@@ -13,7 +13,7 @@ public sealed class VirtualMachineTests : BaseVirtualMachineTests
 	[TestCase(Instruction.Subtract, 5, 8, 3)]
 	[TestCase(Instruction.Multiply, 4, 2, 2)]
 	[TestCase(Instruction.Divide, 3, 7.5, 2.5)]
-	[TestCase(Instruction.Add, "105", "5", 10)]
+	[TestCase(Instruction.Add, "510", "5", 10)]
 	[TestCase(Instruction.Add, "510", 5, "10")]
 	[TestCase(Instruction.Add, "510", "5", "10")]
 	public void Execute(Instruction operation, object expected, params object[] inputs) =>
@@ -86,16 +86,22 @@ public sealed class VirtualMachineTests : BaseVirtualMachineTests
 				new InitLoopStatement("number"),
 				new LoadVariableStatement(Register.R2, "result"),
 				new LoadVariableStatement(Register.R3, "multiplier"),
-				new(Instruction.Multiply, Register.R2, Register.R3, Register.R2),
+				new(Instruction.Multiply, Register.R2, Register.R3, Register.R4),
+				new StoreFromRegisterStatement(Register.R4, "result"),
 				new(Instruction.Subtract, Register.R0, Register.R1, Register.R0),
-				new JumpStatement(Instruction.JumpIfNotZero, -5),
-				new ReturnStatement(Register.R2)
+				new JumpStatement(Instruction.JumpIfNotZero, -6),
+				new LoadVariableStatement(Register.R5, "result"),
+				new ReturnStatement(Register.R5)
 			}).Returns?.Value, Is.EqualTo(1024));
 
-	[Test]
-	public void RemoveParentheses() =>
-		Assert.That(
-			vm.Execute(ExpectedStatementsOfRemoveParanthesesKata).Returns?.Value, Is.EqualTo("some"));
+	[TestCase("RemoveParentheses(\"some(thing)\").Remove", "some")]
+	[TestCase("RemoveParentheses(\"(some)thing\").Remove", "thing")]
+	public void RemoveParentheses(string methodCall, string expectedResult)
+	{
+		var statements = new ByteCodeGenerator(GenerateMethodCallFromSource("RemoveParentheses",
+			methodCall, RemoveParenthesesKata)).Generate();
+		Assert.That(vm.Execute(statements).Returns?.Value, Is.EqualTo(expectedResult));
+	}
 
 	[Test]
 	public void ConditionalJump() =>

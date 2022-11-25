@@ -5,7 +5,7 @@ namespace Strict.Language.Expressions;
 public sealed class Text : Value
 {
 	public Text(Context context, string value) : base(context.GetType(Base.Text), value) { }
-	public override string ToString() => "\"" + Data + "\"";
+	public override string ToString() => Data.ToString() ?? "";
 
 	public override bool Equals(Expression? other) =>
 		other is Value v && (string)Data == (string)v.Data;
