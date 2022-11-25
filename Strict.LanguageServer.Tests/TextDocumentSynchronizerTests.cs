@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -54,6 +55,8 @@ public sealed class TextDocumentSynchronizerTests : LanguageServerTests
 			yield return new TestCaseData(new Range(0, 3, 2, 3), "", new[] { "hasm + number" });
 			yield return new TestCaseData(new Range(3, 0, 4, 2), "NextMethod\n\t5",
 				new[] { "has number", "Add(num Number) Number", "\tnum + number", "NextMethod", "\t5" });
+			yield return new TestCaseData(new Range(2, 10, 2, 10), Environment.NewLine,
+				new[] { "has number", "Add(num Number) Number", "\tnum + number", "" });
 		}
 		//ncrunch: no coverage end
 	}
