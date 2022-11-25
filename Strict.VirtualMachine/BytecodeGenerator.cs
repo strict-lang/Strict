@@ -52,7 +52,7 @@ public sealed class ByteCodeGenerator
 	public List<Statement> Generate() =>
 		GenerateStatements(Expressions);
 
-	private List<Statement> GenerateStatements(IReadOnlyList<Expression> expressions)
+	private List<Statement> GenerateStatements(IEnumerable<Expression> expressions)
 	{
 		foreach (var expression in expressions)
 			if ((expression.GetHashCode() == Expressions[^1].GetHashCode() || expression is Return) && expression is not If)
@@ -94,10 +94,17 @@ public sealed class ByteCodeGenerator
 
 	private void TryGenerateAssignmentStatements(Expression expression)
 	{
-		if (expression is Assignment assignmentExpression)
+		if (expression is not Assignment assignmentExpression)
+			return;
+		if (assignmentExpression.Value is Value assignmentValue)
 			statements.Add(new StoreStatement(
-				new Instance(assignmentExpression.ReturnType, assignmentExpression.Value),
+				new Instance(assignmentExpression.ReturnType, assignmentValue),
 				assignmentExpression.Name));
+		else
+		{
+			GenerateStatementsFromExpression(assignmentExpression.Value);
+			statements.Add(new StoreFromRegisterStatement(registers[nextRegister], assignmentExpression.Name));
+		}
 	}
 
 	private void TryGenerateIfStatements(Expression expression)
@@ -233,7 +240,7 @@ public sealed class ByteCodeGenerator
 	{
 		if (binary.Instance != null)
 		{
-			var (leftRegister, rightRegister) = (AllocateRegister(), AllocateRegister());
+			var (leftRegister, rightRegister, resultRegister) = (AllocateRegister(), AllocateRegister(), AllocateRegister());
 			if (binary.Instance is Value instanceValue)
 				statements.Add(new LoadConstantStatement(leftRegister, new Instance(instanceValue)));
 			else
@@ -243,7 +250,7 @@ public sealed class ByteCodeGenerator
 			else
 				statements.Add(new LoadVariableStatement(rightRegister, binary.Arguments[0].ToString()));
 			statements.Add(new Statement(operationInstruction, leftRegister, rightRegister,
-				AllocateRegister()));
+				resultRegister));
 		}
 	}
 }

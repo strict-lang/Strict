@@ -32,43 +32,56 @@ public class BaseVirtualMachineTests : TestExpressions
 		new JumpViaIdStatement(Instruction.JumpToIdIfFalse, 0),
 		new LoadVariableStatement(Register.R2, "First"),
 		new LoadVariableStatement(Register.R3, "Second"),
-		new(Instruction.Add, Register.R2, Register.R3, Register.R0),
-		new ReturnStatement(Register.R0), new JumpViaIdStatement(Instruction.JumpEnd, 0),
-		new LoadVariableStatement(Register.R1, "operation"),
-		new LoadConstantStatement(Register.R2, new Instance(TextType, "subtract")),
-		new(Instruction.Equal, Register.R1, Register.R2),
+		new(Instruction.Add, Register.R2, Register.R3, Register.R4),
+		new ReturnStatement(Register.R4), new JumpViaIdStatement(Instruction.JumpEnd, 0),
+		new LoadVariableStatement(Register.R5, "operation"),
+		new LoadConstantStatement(Register.R6, new Instance(TextType, "subtract")),
+		new(Instruction.Equal, Register.R5, Register.R6),
 		new JumpViaIdStatement(Instruction.JumpToIdIfFalse, 1),
-		new LoadVariableStatement(Register.R3, "First"),
-		new LoadVariableStatement(Register.R0, "Second"),
-		new(Instruction.Subtract, Register.R3, Register.R0, Register.R1),
-		new ReturnStatement(Register.R1), new JumpViaIdStatement(Instruction.JumpEnd, 1),
-		new LoadVariableStatement(Register.R2, "operation"),
-		new LoadConstantStatement(Register.R3, new Instance(TextType, "multiply")),
-		new(Instruction.Equal, Register.R2, Register.R3),
+		new LoadVariableStatement(Register.R7, "First"),
+		new LoadVariableStatement(Register.R8, "Second"),
+		new(Instruction.Subtract, Register.R7, Register.R8, Register.R9),
+		new ReturnStatement(Register.R9), new JumpViaIdStatement(Instruction.JumpEnd, 1),
+		new LoadVariableStatement(Register.R0, "operation"),
+		new LoadConstantStatement(Register.R1, new Instance(TextType, "multiply")),
+		new(Instruction.Equal, Register.R0, Register.R1),
 		new JumpViaIdStatement(Instruction.JumpToIdIfFalse, 2),
-		new LoadVariableStatement(Register.R0, "First"),
-		new LoadVariableStatement(Register.R1, "Second"),
-		new(Instruction.Multiply, Register.R0, Register.R1, Register.R2),
-		new ReturnStatement(Register.R2), new JumpViaIdStatement(Instruction.JumpEnd, 2),
-		new LoadVariableStatement(Register.R3, "operation"),
-		new LoadConstantStatement(Register.R0, new Instance(TextType, "divide")),
-		new(Instruction.Equal, Register.R3, Register.R0),
+		new LoadVariableStatement(Register.R2, "First"),
+		new LoadVariableStatement(Register.R3, "Second"),
+		new(Instruction.Multiply, Register.R2, Register.R3, Register.R4),
+		new ReturnStatement(Register.R4), new JumpViaIdStatement(Instruction.JumpEnd, 2),
+		new LoadVariableStatement(Register.R5, "operation"),
+		new LoadConstantStatement(Register.R6, new Instance(TextType, "divide")),
+		new(Instruction.Equal, Register.R5, Register.R6),
 		new JumpViaIdStatement(Instruction.JumpToIdIfFalse, 3),
-		new LoadVariableStatement(Register.R1, "First"),
-		new LoadVariableStatement(Register.R2, "Second"),
-		new(Instruction.Divide, Register.R1, Register.R2, Register.R3),
-		new ReturnStatement(Register.R3), new JumpViaIdStatement(Instruction.JumpEnd, 3)
+		new LoadVariableStatement(Register.R7, "First"),
+		new LoadVariableStatement(Register.R8, "Second"),
+		new(Instruction.Divide, Register.R7, Register.R8, Register.R9),
+		new ReturnStatement(Register.R9), new JumpViaIdStatement(Instruction.JumpEnd, 3)
 	};
 	protected static readonly string[] SimpleLoopExample =
 	{
-		"has number", "GetMultiplicationOfNumbers Number", "\tlet result = Mutable(1)",
-		"\tlet multiplier = 2", "\tfor number", "\t\tresult = result * multiplier", "\tresult"
+		"has number",
+		"GetMultiplicationOfNumbers Number",
+		"\tlet result = Mutable(1)",
+		"\tlet multiplier = 2",
+		"\tfor number",
+		"\t\tresult = result * multiplier",
+		"\tresult"
 	};
 	protected static readonly string[] RemoveParenthesesKata =
 	{
-		"has text", "Remove Text", "\tlet result = Mutable(\"\")", "\tlet count = Mutable(0)",
-		"\tfor text", "\t\tif value is \"(\"", "\t\t\tcount = count + 1", "\t\tif value is \")\"",
-		"\t\t\tcount = count - 1", "\t\tif count is 0", "\t\t\tresult = result + value", "\tresult"
+		"has text",
+		"Remove Text",
+		"\tlet result = Mutable(\"\")",
+		"\tlet count = Mutable(0)",
+		"\tfor text", "\t\tif value is \"(\"",
+		"\t\t\tcount = count + 1",
+		"\t\tif value is \")\"",
+		"\t\t\tcount = count - 1",
+		"\t\tif count is 0",
+		"\t\t\tresult = result + value",
+		"\tresult"
 	};
 	protected static readonly Statement[] ExpectedStatementsOfRemoveParanthesesKata =
 	{
@@ -81,12 +94,13 @@ public class BaseVirtualMachineTests : TestExpressions
 		new LoadConstantStatement(Register.R3, new Instance(TextType, "(")),
 		new(Instruction.Equal, Register.R2, Register.R3),
 		new JumpViaIdStatement(Instruction.JumpToIdIfFalse, 0),
-		new LoadVariableStatement(Register.R2, "count"),
-		new LoadConstantStatement(Register.R3, new Instance(NumberType, 1)),
-		new(Instruction.Add, Register.R2, Register.R3, Register.R2),
+		new LoadVariableStatement(Register.R4, "count"),
+		new LoadConstantStatement(Register.R5, new Instance(NumberType, 1)),
+		new(Instruction.Add, Register.R4, Register.R5, Register.R6),
+		new StoreFromRegisterStatement(Register.R5, "count"),
 		new JumpViaIdStatement(Instruction.JumpEnd, 0),
-		new LoadVariableStatement(Register.R3, "value"),
-		new LoadConstantStatement(Register.R2, new Instance(TextType, ")")),
+		new LoadVariableStatement(Register.R5, "value"),
+		new LoadConstantStatement(Register.R6, new Instance(TextType, ")")),
 		new(Instruction.Equal, Register.R3, Register.R2),
 		new JumpViaIdStatement(Instruction.JumpToIdIfFalse, 1),
 		new LoadVariableStatement(Register.R3, "count"),
@@ -102,7 +116,8 @@ public class BaseVirtualMachineTests : TestExpressions
 		new(Instruction.Add, Register.R2, Register.R3, Register.R2),
 		new JumpViaIdStatement(Instruction.JumpEnd, 2),
 		new(Instruction.Subtract, Register.R0, Register.R1, Register.R0),
-		new JumpStatement(Instruction.JumpIfNotZero, -26), new ReturnStatement(Register.R2)
+		new JumpStatement(Instruction.JumpIfNotZero, -26),
+		new ReturnStatement(Register.R2)
 	};
 	//ncrunch: no coverage end
 

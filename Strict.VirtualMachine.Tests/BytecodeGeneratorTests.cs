@@ -9,6 +9,27 @@ public sealed class ByteCodeGeneratorTests : BaseVirtualMachineTests
 	{
 		get
 		{
+			yield return new TestCaseData("Test(5).Assign", "Test", new Statement[]
+				{
+					new StoreStatement(new Instance(NumberType, 5), "number"),
+					new StoreStatement(new Instance(NumberType, 5), "bla"),
+					new LoadVariableStatement(Register.R0, "bla"),
+					new LoadConstantStatement(Register.R1, new Instance(NumberType, 5)),
+					new(Instruction.Add, Register.R0, Register.R1, Register.R2),
+					new StoreFromRegisterStatement(Register.R3, "something"),
+					new LoadVariableStatement(Register.R3, "something"),
+					new LoadConstantStatement(Register.R4, new Instance(NumberType, 5)),
+					new (Instruction.Add, Register.R3, Register.R4, Register.R5),
+					new ReturnStatement(Register.R5),
+				},
+				new[]
+				{
+					"has number",
+					"Assign Number",
+					"\tlet bla = 5",
+					"\tlet something = bla + 5",
+					"\tsomething + 10"
+				});
 			yield return new TestCaseData("Add(10, 5).Calculate", "Add",
 				new Statement[]
 				{
@@ -21,8 +42,11 @@ public sealed class ByteCodeGeneratorTests : BaseVirtualMachineTests
 				},
 				new[]
 				{
-					"has First Number", "has Second Number", "Calculate Number",
-					"\tAdd(10, 5).Calculate is 15", "\tFirst + Second"
+					"has First Number",
+					"has Second Number",
+					"Calculate Number",
+					"\tAdd(10, 5).Calculate is 15",
+					"\tFirst + Second"
 				});
 			yield return new TestCaseData("Multiply(10).By(2)", "Multiply",
 				new Statement[]
@@ -66,42 +90,7 @@ public sealed class ByteCodeGeneratorTests : BaseVirtualMachineTests
 				}, SimpleLoopExample);
 			yield return new TestCaseData("RemoveParentheses(\"some(thing)\").Remove",
 				"RemoveParentheses",
-				new Statement[]
-				{
-					new StoreStatement(new Instance(TextType, "some(thing)"), "text"),
-					new StoreStatement(new Instance(TextType, "\"\""), "result"),
-					new StoreStatement(new Instance(NumberType, 0), "count"),
-					new LoadConstantStatement(Register.R0, new Instance(NumberType, 11)),
-					new LoadConstantStatement(Register.R1, new Instance(NumberType, 1)),
-					new InitLoopStatement("text"),
-					new LoadVariableStatement(Register.R2, "value"),
-					new LoadConstantStatement(Register.R3, new Instance(TextType, "(")),
-					new(Instruction.Equal, Register.R2, Register.R3),
-					new JumpViaIdStatement(Instruction.JumpToIdIfFalse, 0),
-					new LoadVariableStatement(Register.R2, "count"),
-					new LoadConstantStatement(Register.R3, new Instance(NumberType, 1)),
-					new(Instruction.Add, Register.R2, Register.R3, Register.R2),
-					new JumpViaIdStatement(Instruction.JumpEnd, 0),
-					new LoadVariableStatement(Register.R3, "value"),
-					new LoadConstantStatement(Register.R2, new Instance(TextType, ")")),
-					new(Instruction.Equal, Register.R3, Register.R2),
-					new JumpViaIdStatement(Instruction.JumpToIdIfFalse, 1),
-					new LoadVariableStatement(Register.R3, "count"),
-					new LoadConstantStatement(Register.R2, new Instance(NumberType, 1)),
-					new(Instruction.Subtract, Register.R3, Register.R2, Register.R3),
-					new JumpViaIdStatement(Instruction.JumpEnd, 1),
-					new LoadVariableStatement(Register.R2, "count"),
-					new LoadConstantStatement(Register.R3, new Instance(NumberType, 0)),
-					new(Instruction.Equal, Register.R2, Register.R3),
-					new JumpViaIdStatement(Instruction.JumpToIdIfFalse, 2),
-					new LoadVariableStatement(Register.R2, "result"),
-					new LoadVariableStatement(Register.R3, "value"),
-					new(Instruction.Add, Register.R2, Register.R3, Register.R2),
-					new JumpViaIdStatement(Instruction.JumpEnd, 2),
-					new(Instruction.Subtract, Register.R0, Register.R1, Register.R0),
-					new JumpStatement(Instruction.JumpIfNotZero, -26),
-					new ReturnStatement(Register.R2)
-				},
+				ExpectedStatementsOfRemoveParanthesesKata,
 				RemoveParenthesesKata);
 			yield return new TestCaseData("ArithmeticFunction(10, 5).Calculate(\"add\")",
 				"ArithmeticFunction", ExpectedStatementsOfArithmeticFunctionExample,
