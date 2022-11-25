@@ -14,18 +14,21 @@ public sealed class StrictDocument
 	private readonly ConcurrentDictionary<DocumentUri, string[]> strictDocuments = new();
 	private List<string> content = new();
 
-	public void Update(DocumentUri uri, IEnumerable<TextDocumentContentChangeEvent> changes)
+	public void Update(DocumentUri uri, TextDocumentContentChangeEvent[] changes)
 	{
 		content = strictDocuments[uri].ToList();
-		foreach (var change in changes)
-			UpdateDocument(change);
+		if (changes.Length > 0)
+			UpdateDocument(changes[0]);
 		strictDocuments[uri] = content.ToArray();
 	}
 
+	// ReSharper disable once ExcessiveIndentation
 	private void UpdateDocument(TextDocumentContentChangeEvent change)
 	{
-		if (change.Range != null && content.Count - 1 < change.Range.Start.Line)
-			AddSingleOrMultiLineNewTextToContent(change);
+		if (change.Range != null && change.Text.StartsWith(Environment.NewLine, StringComparison.Ordinal) && change.Range.Start.Line == change.Range.End.Line)
+			content.Insert(change.Range.Start.Line + 1, change.Text[2..]);
+		else if (change.Range != null && content.Count - 1 < change.Range.Start.Line)
+			AddSingleOrMultiLineNewText(change);
 		else if (change.Range != null && change.Range.Start.Line < change.Range.End.Line)
 		{
 			HandleForMultiLineDeletion(change.Range.Start, change.Range.End);
@@ -37,7 +40,7 @@ public sealed class StrictDocument
 			HandleForDocumentChange(change);
 	}
 
-	private void AddSingleOrMultiLineNewTextToContent(TextDocumentContentChangeEvent change)
+	private void AddSingleOrMultiLineNewText(TextDocumentContentChangeEvent change)
 	{
 		if (change.Text.Contains('\n'))
 			content.AddRange(change.Text.Split('\n'));
@@ -47,19 +50,18 @@ public sealed class StrictDocument
 
 	private void HandleForDocumentChange(TextDocumentContentChangeEvent change)
 	{
-		if (change.Range != null)
-		{
-			if (change.Text.Contains('\n'))
-				content.Add(change.Text.Split('\n')[^1]);
-			else if (change.Range.End.Character - change.Range.Start.Character > 0)
-				content[change.Range.Start.Line] = content[change.Range.Start.Line].
-					Remove(change.Range.Start.Character,
-						change.Range.End.Character - change.Range.Start.Character).
-					Insert(change.Range.Start.Character, change.Text);
-			else
-				content[change.Range.Start.Line] = content[change.Range.Start.Line].
-					Insert(change.Range.Start.Character, change.Text);
-		}
+		if (change.Range == null)
+			return;
+		if (change.Text.Contains('\n'))
+			content.Add(change.Text.Split('\n')[^1]);
+		else if (change.Range.End.Character - change.Range.Start.Character > 0)
+			content[change.Range.Start.Line] = content[change.Range.Start.Line].
+				Remove(change.Range.Start.Character,
+					change.Range.End.Character - change.Range.Start.Character).
+				Insert(change.Range.Start.Character, change.Text);
+		else
+			content[change.Range.Start.Line] = content[change.Range.Start.Line].
+				Insert(change.Range.Start.Character, change.Text);
 	}
 
 	private void HandleForMultiLineDeletion(Position start, Position end)

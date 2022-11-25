@@ -10,13 +10,19 @@ namespace Strict.Language.Expressions;
 public sealed class If : Expression
 {
 	public If(Expression condition, Expression then, Expression? optionalElse = null,
-		Body? bodyForErrorMessage = null) : base(GetMatchingType(then.ReturnType,
-		optionalElse?.ReturnType, bodyForErrorMessage))
+		Body? bodyForErrorMessage = null) : base(CheckExpressionAndGetMatchingType(then,
+		optionalElse, bodyForErrorMessage))
 	{
 		Condition = condition;
 		Then = then;
 		OptionalElse = optionalElse;
 	}
+
+	private static Type CheckExpressionAndGetMatchingType(Expression then, Expression? optionalElse,
+		Body? bodyForErrorMessage) =>
+		then is Assignment || optionalElse is Assignment
+			? then.ReturnType
+			: GetMatchingType(then.ReturnType, optionalElse?.ReturnType, bodyForErrorMessage);
 
 	/// <summary>
 	/// The return type of the whole if expression must be a type compatible to both what the then
