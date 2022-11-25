@@ -519,7 +519,7 @@ public class Type : Context
 					return false;
 				continue;
 			}
-			if (argumentReturnType.IsMutable && argumentReturnType.MutableReturnType?.Name ==
+			if (argumentReturnType.IsMutable() && argumentReturnType.MutableReturnType?.Name ==
 				methodParameterType.Name)
 				continue;
 			if (methodParameterType.IsGeneric)
@@ -536,7 +536,7 @@ public class Type : Context
 		IsGeneric
 			? Name == Base.List
 			: this is GenericType generic && generic.Generic.Name == Base.List;
-	private bool IsMutable => Name == Base.Mutable;
+	public bool IsMutable() => Name == Base.Mutable || Implements.Any(type => type.Name == Base.Mutable);
 	public Type? MutableReturnType { get; set; }
 
 	private Method? FindAndCreateFromBaseMethod(string methodName,

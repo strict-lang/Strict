@@ -11,7 +11,11 @@ public sealed class Assignment : ConcreteExpression
 	{
 		if (!name.IsWord())
 			throw new Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers(name);
-		scope?.AddVariable(name, value);
+		var variable = scope?.FindVariableValue(name);
+		if (variable != null && variable.ReturnType.IsMutable())
+			scope?.UpdateVariable(name, value);
+		else
+			scope?.AddVariable(name, value);
 		Name = name;
 		Value = value;
 	}
