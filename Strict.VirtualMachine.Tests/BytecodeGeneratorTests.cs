@@ -1,5 +1,4 @@
 ﻿using NUnit.Framework;
-using Strict.Language.Expressions;
 
 namespace Strict.VirtualMachine.Tests;
 
@@ -94,7 +93,7 @@ public sealed class ByteCodeGeneratorTests : BaseVirtualMachineTests
 					new JumpViaIdStatement(Instruction.JumpToIdIfFalse, 1),
 					new LoadVariableStatement(Register.R3, "count"),
 					new LoadConstantStatement(Register.R2, new Instance(NumberType, 1)),
-					new (Instruction.Subtract, Register.R3, Register.R2, Register.R3),
+					new(Instruction.Subtract, Register.R3, Register.R2, Register.R3),
 					new JumpViaIdStatement(Instruction.JumpEnd, 1),
 					new LoadVariableStatement(Register.R2, "count"),
 					new LoadConstantStatement(Register.R3, new Instance(NumberType, 0)),
@@ -102,11 +101,11 @@ public sealed class ByteCodeGeneratorTests : BaseVirtualMachineTests
 					new JumpViaIdStatement(Instruction.JumpToIdIfFalse, 2),
 					new LoadVariableStatement(Register.R2, "result"),
 					new LoadVariableStatement(Register.R3, "value"),
-					new (Instruction.Add, Register.R2, Register.R3, Register.R2),
+					new(Instruction.Add, Register.R2, Register.R3, Register.R2),
 					new JumpViaIdStatement(Instruction.JumpEnd, 2),
-					new (Instruction.Subtract, Register.R0, Register.R1, Register.R0),
+					new(Instruction.Subtract, Register.R0, Register.R1, Register.R0),
 					new JumpStatement(Instruction.JumpIfNotZero, -26),
-					new ReturnStatement(Register.R2),
+					new ReturnStatement(Register.R2)
 				},
 				RemoveParenthesesKata);
 			yield return new TestCaseData("ArithmeticFunction(10, 5).Calculate(\"add\")",
