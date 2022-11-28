@@ -13,7 +13,10 @@ public sealed class Instance
 	public Instance(Type? type, object value)
 	{
 		ReturnType = type;
-		Value = value;
+		if (value is Value valueObj)
+			Value = valueObj.Data;
+		else
+			Value = value;
 	}
 
 	public Instance(object value) => Value = value;
