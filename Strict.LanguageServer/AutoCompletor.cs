@@ -36,7 +36,8 @@ public sealed class AutoCompletor : ICompletionHandler
 		var type = package.SynchronizeAndGetType(typeName, code);
 		var typeToFind = GetTypeToFind(code[request.Position.Line]);
 		return FindMemberTypeName(type, typeToFind) ?? FindMethod(request, code, type)?.Parameters.
-			FirstOrDefault(p => p.Name == typeToFind)?.Type;
+				FirstOrDefault(p => p.Name == typeToFind)?.Type ??
+			FindVariable(FindLine(code, typeToFind, request.Position.Line - 1), type);
 	}
 
 	private static string GetTypeToFind(string line)
@@ -73,6 +74,31 @@ public sealed class AutoCompletor : ICompletionHandler
 			lineNumber--; //ncrunch: no coverage start
 		}
 		return null; //ncrunch: no coverage end
+	}
+
+	private static Type? FindVariable(string? line, Type type)
+	{
+		try
+		{
+			var expression = type.ParseExpression(line);
+			return expression.ReturnType;
+		}
+		catch
+		{
+			return null;
+		}
+	}
+
+	private static string? FindLine(IReadOnlyList<string> code, string variableName, int lineNumber)
+	{
+		while (lineNumber > 0)
+		{
+			var currentLine = code[lineNumber];
+			if (currentLine.Contains("let " + variableName + " = "))
+				return currentLine.Trim()[(4 + variableName.Length + 3)..];
+			lineNumber--;
+		}
+		return null;
 	}
 
 	private static Task<CompletionList> GetCompletionMethodsAsync(Type completionType) =>

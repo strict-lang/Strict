@@ -8,7 +8,6 @@ using OmniSharp.Extensions.LanguageServer.Protocol.Workspace;
 using Strict.Language;
 using Strict.Language.Expressions;
 using Strict.VirtualMachine;
-using Type = Strict.Language.Type;
 
 namespace Strict.LanguageServer;
 //ncrunch: no coverage start
@@ -48,7 +47,7 @@ public class CommandExecutor : IExecuteCommandHandler
 		var code = document.Get(documentUri);
 		var typeName = documentUri.Path.GetFileName();
 		var type = subPackage.SynchronizeAndGetType(typeName, code);
-		var call = (MethodCall)ParseExpression(type, methodCall);
+		var call = (MethodCall)type.ParseExpression(methodCall);
 		var statements = new ByteCodeGenerator(call).Generate();
 		vm.Execute(statements);
 	}
@@ -56,16 +55,6 @@ public class CommandExecutor : IExecuteCommandHandler
 	public ExecuteCommandRegistrationOptions GetRegistrationOptions(
 		ExecuteCommandCapability capability, ClientCapabilities clientCapabilities) =>
 		new() { Commands = new Container<string>(CommandName) };
-
-	private static Expression ParseExpression(Type type, params string?[] lines)
-	{
-		var methodLines = new string[lines.Length + 1];
-		methodLines[0] = "Run";
-		for (var index = 0; index < lines.Length; index++)
-			methodLines[index + 1] = '\t' + lines[index];
-		return new Method(type, 0, new MethodExpressionParser(), methodLines).
-			GetBodyAndParseIfNeeded();
-	}
 }
 
 public class PathCanNotBeEmpty : Exception { }

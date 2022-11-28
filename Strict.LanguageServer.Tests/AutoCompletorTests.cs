@@ -20,11 +20,40 @@ public sealed class AutoCompletorTests : LanguageServerTests
 	private StrictDocument strictDocument = null!;
 	private Package package = null!;
 
-	[TestCase(0, "Write", "has log", "Log(message Text)", "\tlog.")]
-	[TestCase(2, "Start", "has range Range", "Bla", "\trange.")]
-	[TestCase(0, "+", "has log", "CheckText(message Text)", "\tmessage.")]
-	[TestCase(0, "+", "has log", "FirstMethod(message Text)", "\tmessage.", "SecondMethod Number", "\t5")]
-	public async Task HandleLogAutoCompleteAsync(int itemIndex, string completionName, params string[] code)
+	// @formatter:off
+	[TestCase("Write", 2,
+		"has log",
+		"Log(message Text)",
+		"\tlog.")]
+	[TestCase("Length", 2,
+		"has range Range",
+		"Bla",
+		"\trange.")]
+	[TestCase("+", 2,
+		"has log",
+		"CheckText(message Text)",
+		"\tmessage.")]
+	[TestCase("+", 4,
+		"has log",
+		"SecondMethod Number",
+		"\t5",
+		"FirstMethod(message Text)",
+		"\tmessage.")]
+	[TestCase("+", 3,
+		"has text",
+		"VariableCall",
+		"\tlet something = \"hello\" + text",
+		"\tsomething.",
+		"SecondMethod Number",
+		"\t5")]
+	[TestCase("not", 5,
+		"has text",
+		"UnusedMethod",
+		"\tlet result = 5",
+		"TriggerInMiddleOfTheLine",
+		"\tlet result = true",
+		"\tlet another = result.")] // @formatter:on
+	public async Task HandleLogAutoCompleteAsync(string completionName, int lineNumber, params string[] code)
 	{
 		var documentUri = GetDocumentUri(completionName == "+"
 			? "Plus"
@@ -37,8 +66,8 @@ public sealed class AutoCompletorTests : LanguageServerTests
 				{
 					Context = new CompletionContext { TriggerCharacter = "." },
 					TextDocument = new TextDocumentIdentifier(documentUri),
-					Position = new Position { Character = 8, Line = 2 }
-				}, CancellationToken.None)).Items.ToArray()[itemIndex].Label, Is.EqualTo(completionName));
+					Position = new Position { Character = 8, Line = lineNumber }
+				}, CancellationToken.None)).Items.ToArray()[0].Label, Is.EqualTo(completionName));
 	}
 
 	private static DocumentUri GetDocumentUri(string seed) =>
