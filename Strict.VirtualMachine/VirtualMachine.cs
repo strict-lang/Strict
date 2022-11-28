@@ -14,11 +14,22 @@ public sealed class VirtualMachine
 
 	public VirtualMachine Execute(IList<Statement> allStatements)
 	{
+		Clear();
 		statements = allStatements;
 		for (instructionIndex = 0; instructionIndex != -1 && instructionIndex < allStatements.Count;
 			instructionIndex++)
 			ExecuteStatement(allStatements[instructionIndex]);
 		return this;
+	}
+
+	private void Clear()
+	{
+		variables.Clear();
+		conditionFlag = false;
+		instructionIndex = 0;
+		statements.Clear();
+		Registers.Clear();
+		Returns = null;
 	}
 
 	private void ExecuteStatement(Statement statement)
