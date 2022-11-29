@@ -147,6 +147,17 @@ public class BaseVirtualMachineTests : TestExpressions
 				}), "myList"),
 		new LoadVariableStatement(Register.R0, "myList"), new ReturnStatement(Register.R0)
 	};
+	protected static readonly string[] InvertValueKata =
+	{
+		"has numbers",
+		"Invert Text",
+		"\tlet result = Mutable(\"\")",
+		"\tfor numbers",
+		"\t\tresult = result + (0 - value)",
+		"\tresult"
+	};
+	protected static readonly Statement[] ExpectedStatementsOfInvertValueKata = Array.Empty<Statement>();
+
 	//ncrunch: no coverage end
 
 	protected MethodCall GenerateMethodCallFromSource(string programName, string methodCall,

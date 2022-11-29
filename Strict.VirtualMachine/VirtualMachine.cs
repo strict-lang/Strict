@@ -72,7 +72,7 @@ public sealed class VirtualMachine
 		var index = Convert.ToInt32(variables["index"].Value);
 		var value = iterableVariable.Value.ToString();
 		if (iterableVariable.ReturnType is { IsList: true })
-			variables["value"] = new Instance(((List)iterableVariable.Value).Values[index]);
+			variables["value"] = new Instance(((List<Expression>)iterableVariable.Value)[index]);
 		else if (iterableVariable.ReturnType?.Name == Base.Number)
 			variables["value"] = new Instance(Convert.ToInt32(iterableVariable.Value) + index);
 		else if (iterableVariable.ReturnType?.Name == Base.Text && value != null)
@@ -140,7 +140,7 @@ public sealed class VirtualMachine
 			return new Instance(right.ReturnType, left.Value.ToString() + right.Value);
 		if (right.ReturnType?.Name == Base.Text && left.ReturnType?.Name == Base.Number)
 			return new Instance(right.ReturnType, left.Value.ToString() + right.Value);
-		return new Instance(right.ReturnType, left.Value.ToString() + right.Value);
+		return new Instance(left.ReturnType, left.Value + right.Value.ToString());
 	}
 
 	private (Instance, Instance) GetOperands(Statement statement) =>

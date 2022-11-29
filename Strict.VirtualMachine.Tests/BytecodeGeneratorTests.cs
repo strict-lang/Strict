@@ -101,6 +101,9 @@ public sealed class ByteCodeGeneratorTests : BaseVirtualMachineTests
 			yield return new TestCaseData("SimpleListDeclaration(5).Declare",
 				"SimpleListDeclaration", ExpectedStatementsOfSimpleListDeclaration,
 				SimpleListDeclarationExample);
+			yield return new TestCaseData("Invertor(1, 2, 3, 4).Invert",
+				"Invertor", ExpectedStatementsOfInvertValueKata,
+				InvertValueKata);
 		}
 	}
 	//ncrunch: no coverage end

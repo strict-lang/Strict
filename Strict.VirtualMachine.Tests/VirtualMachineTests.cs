@@ -103,6 +103,14 @@ public sealed class VirtualMachineTests : BaseVirtualMachineTests
 		Assert.That(vm.Execute(statements).Returns?.Value, Is.EqualTo(expectedResult));
 	}
 
+	[TestCase("Invertor(1, 2, 3, 4, 5).Invert", "-1-2-3-4-5")]
+	public void InvertValues(string methodCall, string expectedResult)
+	{
+		var statements = new ByteCodeGenerator(GenerateMethodCallFromSource("Invertor",
+			methodCall, InvertValueKata)).Generate();
+		Assert.That(vm.Execute(statements).Returns?.Value, Is.EqualTo(expectedResult));
+	}
+
 	[Test]
 	public void ConditionalJump() =>
 		Assert.That(
