@@ -133,4 +133,30 @@ public sealed class MethodTests
 		});
 		Assert.That(method.Parameters[0].CloneWithImplementationType(type.GetType(Base.Text)), Is.EqualTo(method.Parameters[0]));
 	}
+
+	[Test]
+	public void SplitTestExpressions()
+	{
+		var customType = new Type(new TestPackage(),
+			new TypeLines(nameof(SplitTestExpressions),
+				"has log",
+				"AddFive(variable Text) Text",
+				"	AddFive(\"5\") is \"55\"",
+				"	AddFive(\"6\") is \"65\"",
+				"	variable + \"5\"")).ParseMembersAndMethods(new MethodExpressionParser());
+		customType.Methods[0].GetBodyAndParseIfNeeded();
+		Assert.That(customType.Methods[0].Tests.Count, Is.EqualTo(2));
+	}
+
+	[Test]
+	public void ConditionalExpressionIsNotTest()
+	{
+		var customType = new Type(new TestPackage(),
+			new TypeLines(nameof(SplitTestExpressions),
+				"has log",
+				"ConditionalExpressionIsNotTest Boolean",
+				"	5 is 5 ? true else false")).ParseMembersAndMethods(new MethodExpressionParser());
+		customType.Methods[0].GetBodyAndParseIfNeeded();
+		Assert.That(customType.Methods[0].Tests.Count, Is.EqualTo(0));
+	}
 }

@@ -151,8 +151,18 @@ public sealed class Method : Context
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public Expression ParseLine(Body body, string currentLine) =>
-		parser.ParseLineExpression(body, currentLine.AsSpan(body.Tabs));
+	public Expression ParseLine(Body body, string currentLine)
+	{
+		var expression = parser.ParseLineExpression(body, currentLine.AsSpan(body.Tabs));
+		if (IsTestExpression(currentLine, expression))
+			Tests.Add(expression);
+		return expression;
+	}
+
+	private static bool IsTestExpression(string currentLine, Expression expression) =>
+		currentLine.Contains($" {BinaryOperator.Is} ") &&
+		!currentLine.Trim().StartsWith("if", StringComparison.Ordinal) &&
+		!currentLine.Contains("?") && expression.ReturnType.Name == Base.Boolean;
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public Expression ParseExpression(Body body, ReadOnlySpan<char> text) =>
@@ -228,6 +238,7 @@ public sealed class Method : Context
 	private List<Parameter> parameters = new();
 	public Type ReturnType { get; private set; }
 	public bool IsPublic => char.IsUpper(Name[0]);
+	public List<Expression> Tests { get; } = new();
 
 	public override Type? FindType(string name, Context? searchingFrom = null) =>
 		name == Base.Value
