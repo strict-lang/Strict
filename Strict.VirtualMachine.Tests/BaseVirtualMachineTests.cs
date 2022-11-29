@@ -85,8 +85,6 @@ public class BaseVirtualMachineTests : TestExpressions
 		"\t\t\tcount = count - 1",
 		"\tresult"
 	};
-
-
 	protected static readonly Statement[] ExpectedStatementsOfRemoveParanthesesKata =
 	{
 		new StoreStatement(new Instance(TextType, "some(thing)"), "text"),
@@ -127,7 +125,6 @@ public class BaseVirtualMachineTests : TestExpressions
 		new LoadVariableStatement(Register.R9, "result"),
 		new ReturnStatement(Register.R9)
 	};
-
 	protected static readonly string[] SimpleListDeclarationExample =
 	{
 		"has number",
@@ -135,7 +132,6 @@ public class BaseVirtualMachineTests : TestExpressions
 		"\tlet myList = (1, 2, 3, 4 ,5)",
 		"\tmyList"
 	};
-
 	protected static readonly Statement[] ExpectedStatementsOfSimpleListDeclaration =
 	{
 		new StoreStatement(new Instance(NumberType, 5), "number"),
@@ -147,7 +143,7 @@ public class BaseVirtualMachineTests : TestExpressions
 					new Value(NumberType, 2),
 					new Value(NumberType, 3),
 					new Value(NumberType, 4),
-					new Value(NumberType, 5),
+					new Value(NumberType, 5)
 				}), "myList"),
 		new LoadVariableStatement(Register.R0, "myList"), new ReturnStatement(Register.R0)
 	};

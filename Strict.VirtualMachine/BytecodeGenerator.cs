@@ -3,6 +3,7 @@ using Strict.Language.Expressions;
 
 namespace Strict.VirtualMachine;
 
+// ReSharper disable once ClassTooBig
 public sealed class ByteCodeGenerator
 {
 	private readonly Register[] registers = Enum.GetValues<Register>();
