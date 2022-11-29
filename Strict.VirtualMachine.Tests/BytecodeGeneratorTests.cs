@@ -98,6 +98,9 @@ public sealed class ByteCodeGeneratorTests : BaseVirtualMachineTests
 			yield return new TestCaseData("ArithmeticFunction(10, 5).Calculate(\"add\")",
 				"ArithmeticFunction", ExpectedStatementsOfArithmeticFunctionExample,
 				ArithmeticFunctionExample);
+			yield return new TestCaseData("SimpleListDeclaration(5).Declare",
+				"SimpleListDeclaration", ExpectedStatementsOfSimpleListDeclaration,
+				SimpleListDeclarationExample);
 		}
 	}
 	//ncrunch: no coverage end

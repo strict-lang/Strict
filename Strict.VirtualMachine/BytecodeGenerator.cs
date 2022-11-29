@@ -104,15 +104,19 @@ public sealed class ByteCodeGenerator
 		if (expression is not Assignment assignmentExpression)
 			return;
 		if (assignmentExpression.Value is Value assignmentValue)
-			statements.Add(new StoreStatement(
-				new Instance(assignmentExpression.ReturnType, assignmentValue.Data),
-				assignmentExpression.Name));
+			TryGenerateStatementsForAssignmentValue(assignmentValue, assignmentExpression.Name);
 		else
 		{
 			GenerateStatementsFromExpression(assignmentExpression.Value);
 			statements.Add(new StoreFromRegisterStatement(registers[nextRegister - 1], assignmentExpression.Name));
 		}
 	}
+
+	private void TryGenerateStatementsForAssignmentValue(
+		Value assignmentValue, string variableName) =>
+		statements.Add(new StoreStatement(
+			new Instance(assignmentValue.ReturnType, assignmentValue.Data),
+			variableName));
 
 	private void TryGenerateIfStatements(Expression expression)
 	{

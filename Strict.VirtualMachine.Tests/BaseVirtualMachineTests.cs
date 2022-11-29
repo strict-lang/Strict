@@ -11,6 +11,7 @@ public class BaseVirtualMachineTests : TestExpressions
 	//ncrunch: no coverage start
 	protected static readonly Type NumberType = new TestPackage().FindType(Base.Number)!;
 	protected static readonly Type TextType = new TestPackage().FindType(Base.Text)!;
+	protected static readonly Type ListType = new TestPackage().FindType(Base.List)!;
 	protected static readonly string[] ArithmeticFunctionExample =
 	{
 		"has First Number", "has Second Number", "Calculate(operation Text) Number",
@@ -84,6 +85,8 @@ public class BaseVirtualMachineTests : TestExpressions
 		"\t\t\tcount = count - 1",
 		"\tresult"
 	};
+
+
 	protected static readonly Statement[] ExpectedStatementsOfRemoveParanthesesKata =
 	{
 		new StoreStatement(new Instance(TextType, "some(thing)"), "text"),
@@ -123,6 +126,30 @@ public class BaseVirtualMachineTests : TestExpressions
 		new JumpStatement(Instruction.JumpIfNotZero, -30),
 		new LoadVariableStatement(Register.R9, "result"),
 		new ReturnStatement(Register.R9)
+	};
+
+	protected static readonly string[] SimpleListDeclarationExample =
+	{
+		"has number",
+		"Declare Numbers",
+		"\tlet myList = (1, 2, 3, 4 ,5)",
+		"\tmyList"
+	};
+
+	protected static readonly Statement[] ExpectedStatementsOfSimpleListDeclaration =
+	{
+		new StoreStatement(new Instance(NumberType, 5), "number"),
+		new StoreStatement(
+			new Instance(ListType,
+				new List<Expression>
+				{
+					new Value(NumberType, 1),
+					new Value(NumberType, 2),
+					new Value(NumberType, 3),
+					new Value(NumberType, 4),
+					new Value(NumberType, 5),
+				}), "myList"),
+		new LoadVariableStatement(Register.R0, "myList"), new ReturnStatement(Register.R0)
 	};
 	//ncrunch: no coverage end
 
