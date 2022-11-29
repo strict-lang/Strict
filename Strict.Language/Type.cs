@@ -575,7 +575,7 @@ public class Type : Context
 	{
 		var matchedMember = members.FirstOrDefault(member =>
 			member.Type.IsList && arguments.All(argument => member.Type.Name == Base.List ||
-				argument.ReturnType == ((GenericType)member.Type).ImplementationTypes[0])); // used 0 index here because GenericType is List
+				argument.ReturnType == ((GenericType)member.Type).ImplementationTypes[0]));
 		if (matchedMember == null)
 			return null;
 		isMatchedWithList = true;

@@ -387,4 +387,14 @@ public class TypeTests
 		Assert.That(() => createCustomer.Methods[0].GetBodyAndParseIfNeeded(),
 			Throws.InstanceOf<List.ListElementsMustHaveMatchingType>());
 	}
+
+	[Test]
+	public void CreateStacktraceTypeUsingMembersInConstructor()
+	{
+		var logger = new Type(package,
+			new TypeLines("Logger", "has log", "has method", "has trace = Stacktrace(method, \"filePath\", 5)", "Log Text",
+				"\tlog.Write(stacktrace to Text)")).ParseMembersAndMethods(new MethodExpressionParser());
+		Assert.That(logger.Members[2].Type.Name, Is.EqualTo("Stacktrace"));
+		Assert.That(logger.Members[2].Type.Members.Count, Is.EqualTo(3));
+	}
 }

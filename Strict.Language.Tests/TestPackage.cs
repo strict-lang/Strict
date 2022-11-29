@@ -136,7 +136,9 @@ public class TestPackage : Package
 				"Write(text)",
 				"Delete",
 				"Length Number")),
-			new Type(this, new TypeLines(Base.Output, "Write(generic)"))
+			new Type(this, new TypeLines(Base.Output, "Write(generic)")),
+			new Type(this, new TypeLines(Base.Method, "has Name Text", "has Type")),
+			new Type(this, new TypeLines(Base.Stacktrace, "has Method", "has FilePath Text", "has Line Number"))
 		};
 		foreach (var type in types)
 			type.ParseMembersAndMethods(null!);
