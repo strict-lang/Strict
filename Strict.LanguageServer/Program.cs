@@ -11,6 +11,7 @@ using PipeOptions = System.IO.Pipes.PipeOptions;
 
 //ncrunch: no coverage start
 var (input, output) = await CreateAndGetPipeline();
+Console.WriteLine("Connecting...");
 // @formatter:off
 var server = await LanguageServer.From(options =>
 	options.WithInput(input)
@@ -23,6 +24,7 @@ var server = await LanguageServer.From(options =>
 		.WithHandler<CommandExecutor>()
 		.WithHandler<DocumentHighlighter>());
 Console.WriteLine("Client connected!");
+await server.WaitForExit;
 // @formatter:on
 await Task.WhenAny(Task.Run(async () =>
 {

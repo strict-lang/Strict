@@ -299,12 +299,11 @@ public sealed class ByteCodeGenerator
 	{
 		var (leftRegister, rightRegister, resultRegister) =
 			(AllocateRegister(), AllocateRegister(), AllocateRegister());
-		if (binary.Instance == null)
-			return resultRegister;
 		if (binary.Instance is Value instanceValue)
 			statements.Add(new LoadConstantStatement(leftRegister, new Instance(instanceValue)));
 		else
-			statements.Add(new LoadVariableStatement(leftRegister, binary.Instance.ToString()));
+			statements.Add(new LoadVariableStatement(leftRegister,
+				binary.Instance?.ToString() ?? throw new InstanceNameNotFound()));
 		if (binary.Arguments[0] is Value argumentsValue)
 			statements.Add(new LoadConstantStatement(rightRegister, new Instance(argumentsValue)));
 		else
@@ -313,4 +312,6 @@ public sealed class ByteCodeGenerator
 			resultRegister));
 		return resultRegister;
 	}
+
+	private sealed class InstanceNameNotFound : Exception { }
 }

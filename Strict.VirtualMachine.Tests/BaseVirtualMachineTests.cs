@@ -156,7 +156,31 @@ public class BaseVirtualMachineTests : TestExpressions
 		"\t\tresult = result + (0 - value)",
 		"\tresult"
 	};
-	protected static readonly Statement[] ExpectedStatementsOfInvertValueKata = Array.Empty<Statement>();
+	protected static readonly Statement[] ExpectedStatementsOfInvertValueKata =
+	{
+		new StoreStatement(new Instance(ListType, new List<Expression>
+		{
+			new Value(NumberType, 1),
+			new Value(NumberType, 2),
+			new Value(NumberType, 3),
+			new Value(NumberType, 4),
+			new Value(NumberType, 5)
+		}), "numbers"),
+		new StoreStatement(new Instance(TextType, ""), "result"),
+		new LoadConstantStatement(Register.R0, new Instance(NumberType, 4)),
+		new LoadConstantStatement(Register.R1, new Instance(NumberType, 1)),
+		new InitLoopStatement("numbers"),
+		new LoadConstantStatement(Register.R2, new Instance(NumberType, 0)),
+		new LoadVariableStatement(Register.R3, "value"),
+		new(Instruction.Subtract, Register.R2, Register.R3, Register.R4),
+		new LoadVariableStatement(Register.R5, "result"),
+		new(Instruction.Add, Register.R5, Register.R4, Register.R6),
+		new StoreFromRegisterStatement(Register.R6, "result"),
+		new(Instruction.Subtract, Register.R0, Register.R1, Register.R0),
+		new JumpStatement(Instruction.JumpIfNotZero, -9),
+		new LoadVariableStatement(Register.R7, "result"),
+		new ReturnStatement(Register.R7)
+	};
 
 	//ncrunch: no coverage end
 
