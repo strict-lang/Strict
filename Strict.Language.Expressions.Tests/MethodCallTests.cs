@@ -208,7 +208,7 @@ public sealed class MethodCallTests : TestExpressions
 				"\tlet mutableNumber = Mutable(5)",
 				"\tmutableNumber + 10")).ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(program.Methods[0].GetBodyAndParseIfNeeded().ToString(),
-			Is.EqualTo("let mutableNumber = 5\r\nmutableNumber + 10"));
+			Is.EqualTo("let mutableNumber = Mutable(5)\r\nmutableNumber + 10"));
 	}
 
 	[Test]

@@ -198,4 +198,9 @@ public static class SpanExtensions
 			bracketCount--;
 		return bracketCount;
 	}
+
+	public static bool IsFirstLetterUppercase(this ReadOnlySpan<char> input) =>
+		char.IsAsciiLetterUpper(input[0]);
+
+	public static bool IsPlural(this ReadOnlySpan<char> input) => input[^1] == 's';
 }

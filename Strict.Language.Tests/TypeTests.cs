@@ -248,7 +248,7 @@ public class TypeTests
 		"\tresult = Count(5)")]
 	[TestCase("has number",
 		"Run",
-		"\tlet result = Mutable(2)",
+		"\tlet result = Mutable(Count(2))",
 		"\tresult = Count(5)")]
 	public void MutableVariableCanBeChanged(params string[] code)
 	{

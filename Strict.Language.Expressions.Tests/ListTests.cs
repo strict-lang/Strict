@@ -247,6 +247,48 @@ public sealed class ListTests : TestExpressions
 	}
 
 	[Test]
+	public void AllowMutableListWithEmptyExpressions()
+	{
+		var expression = (Body)new Type(type.Package,
+			new TypeLines(nameof(AllowMutableListWithEmptyExpressions),
+				"has numbers",
+				"CreateMutableList Numbers",
+				"\tlet result = Mutable(Numbers)",
+				"\tfor numbers",
+				"\t\tresult = result + (0 - value)",
+				"\tresult")).ParseMembersAndMethods(parser).Methods[0].GetBodyAndParseIfNeeded();
+		Assert.That(expression.Expressions[0].ToString(), Is.EqualTo("let result = Mutable(Numbers)"));
+		Assert.That(((Assignment)expression.Expressions[0]).Value.ReturnType.FullName,
+			Is.EqualTo("TestPackage.Mutable(TestPackage.Numbers Implements TestPackage.List)"));
+	}
+
+	[Test]
+	public void CreateMemberWithMutableListType()
+	{
+		var mutableTextsType = new Type(type.Package,
+			new TypeLines(nameof(CreateMemberWithMutableListType),
+				"has mutableTexts Mutable(Texts)",
+				"AddFiveToMutableList Texts",
+				"\tmutableTexts = mutableTexts + 5",
+				"\tmutableTexts")).ParseMembersAndMethods(parser);
+		var expression = (Body)mutableTextsType.Methods[0].GetBodyAndParseIfNeeded();
+		Assert.That(mutableTextsType.Members[0].Value?.ToString(),
+			Is.EqualTo("mutableTexts + 5"));
+		Assert.That(((MemberCall)expression.Expressions[0]).Member.Value?.ToString(),
+			Is.EqualTo("mutableTexts + 5"));
+	}
+
+	[Test]
+	public void OnlyListTypeIsAllowedAsMutableExpressionArgument() =>
+		Assert.That(
+			() => new Type(type.Package,
+					new TypeLines(nameof(OnlyListTypeIsAllowedAsMutableExpressionArgument),
+						"has unused Log",
+						"MutableWithNumber Number", "\tlet result = Mutable(Number)", "\tresult")).
+				ParseMembersAndMethods(parser).Methods[0].GetBodyAndParseIfNeeded(),
+			Throws.InstanceOf<Type.NoMatchingMethodFound>());
+
+	[Test]
 	public void CheckIfInvalidArgumentIsNotMethodOrListCall() =>
 		Assert.That(
 			() => new Type(type.Package,

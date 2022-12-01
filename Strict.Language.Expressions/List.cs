@@ -12,6 +12,9 @@ public sealed class List : Value
 		values) =>
 		Values = values;
 
+	public List(Type type) : base(type, Array.Empty<Expression>()) =>
+		Values = new List<Expression>();
+
 	private static Type
 		GetCommonBaseType(IReadOnlyList<Type> returnTypes, Body bodyForErrorMessage) =>
 		returnTypes.Count == 1 || returnTypes.All(t => t == returnTypes[0]) ||

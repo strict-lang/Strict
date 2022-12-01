@@ -630,7 +630,7 @@ public class Type : Context
 			new();
 	} //ncrunch: no coverage end
 
-	private bool IsCompatible(Type sameOrBaseType) =>
+	public bool IsCompatible(Type sameOrBaseType) =>
 		this == sameOrBaseType || sameOrBaseType.Name == Base.Any ||
 		implements.Contains(sameOrBaseType) || sameOrBaseType.Implements.Contains(this) ||
 		CanUpCast(sameOrBaseType);
