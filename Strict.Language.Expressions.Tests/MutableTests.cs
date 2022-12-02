@@ -53,8 +53,8 @@ public sealed class MutableTests : TestExpressions
 		var program = new Type(type.Package,
 			new TypeLines(nameof(MutableVariablesWithSameImplementationTypeShouldUseSameType), "has unused Number",
 				"UnusedMethod Number",
-				"\tlet first = Mutable(5)",
-				"\tlet second = Mutable(6)",
+				"\tlet first = Mutable 5",
+				"\tlet second = Mutable 6",
 				"\tfirst + second")).ParseMembersAndMethods(parser);
 		var body = (Body)program.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(body.Expressions[0].ReturnType.Name, Is.EqualTo(Base.Mutable + "(TestPackage." + Base.Number + ")"));
@@ -66,7 +66,7 @@ public sealed class MutableTests : TestExpressions
 		"TryChangeMutableDataType Text",
 		"\tsomething = 5")]
 	[TestCase("AssignNumbersToTexts",
-		"has something Mutable(Texts)",
+		"has something = Mutable Texts",
 		"TryChangeMutableDataType Text",
 		"\tsomething = (5, 4, 3)")]
 	public void NotMatchingValueTypeForReassignment(string testName, params string[] code) =>
@@ -74,4 +74,27 @@ public sealed class MutableTests : TestExpressions
 			() => new Type(type.Package, new TypeLines(testName, code)).ParseMembersAndMethods(parser).
 				Methods[0].GetBodyAndParseIfNeeded(),
 			Throws.InstanceOf<Mutable.NotMatchingValueTypeForReassignment>());
+
+	[Test]
+	public void MutableVariableInstanceUsingSpace()
+	{
+		var program = new Type(type.Package,
+				new TypeLines(nameof(MutableVariableInstanceUsingSpace), "has log",
+					"Add(input Count) Number",
+					"\tlet result = Mutable 5",
+					"\tresult = result + input")).
+			ParseMembersAndMethods(parser);
+		var body = (Body)program.Methods[0].GetBodyAndParseIfNeeded();
+		Assert.That(((Assignment)body.Expressions[0]).Value.ToString(), Is.EqualTo("Mutable 5"));
+	}
+
+	[Test]
+	public void MissingMutableArgument() =>
+		Assert.That(
+			() => new Type(type.Package,
+					new TypeLines(nameof(MissingMutableArgument), "has log", "Add(input Count) Number",
+						"\tlet result = Mutable", "\tresult = result + input")).
+				ParseMembersAndMethods(parser).
+				Methods[0].GetBodyAndParseIfNeeded(),
+			Throws.InstanceOf<Mutable.MissingMutableArgument>());
 }

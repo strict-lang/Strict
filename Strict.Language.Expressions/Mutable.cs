@@ -37,15 +37,32 @@ public sealed class Mutable : Value
 	private static Expression? TryParseInitialization(Body body, ReadOnlySpan<char> line) =>
 		line.StartsWith("Mutable", StringComparison.Ordinal)
 			? new Mutable(body.Method,
-				ParseMutableTypeArgument(body, line))
+				ParseMutableTypeArgument(body, line[7..]))
 			: null;
 
 	private static Expression ParseMutableTypeArgument(Body body, ReadOnlySpan<char> line)
 	{
-		var argumentText = line[(line.IndexOf('(') + 1)..line.LastIndexOf(')')];
+		var argumentText = line.Length > 0
+			? line[0] == ' '
+				? SplitAndGetArgumentText(body, line[1..])
+				: line[(line.IndexOf('(') + 1)..line.LastIndexOf(')')]
+			: throw new MissingMutableArgument(body);
 		return argumentText.IsFirstLetterUppercase() && argumentText.IsPlural()
 			? CreateEmptyListExpression(body, argumentText)
 			: body.Method.ParseExpression(body, argumentText);
+	}
+
+	private static ReadOnlySpan<char> SplitAndGetArgumentText(Body body, ReadOnlySpan<char> line)
+	{
+		var spanEnumerator = line.Split(' ', StringSplitOptions.TrimEntries);
+		return spanEnumerator.MoveNext()
+			? spanEnumerator.Current
+			: throw new MissingMutableArgument(body);
+	}
+
+	public sealed class MissingMutableArgument : ParsingFailed
+	{
+		public MissingMutableArgument(Body body) : base(body) { }
 	}
 
 	private static Expression
@@ -90,7 +107,9 @@ public sealed class Mutable : Value
 	}
 
 	public override string ToString() =>
-		"Mutable(" + (Data is List
-			? DataReturnType.Name
-			: Data) + ")";
+		"Mutable" + (Data is List dataList
+			? dataList.Values.Count == 0
+				? " " + DataReturnType.Name
+				: "(" + Data + ")"
+			: " " + Data);
 }

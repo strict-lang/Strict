@@ -253,11 +253,11 @@ public sealed class ListTests : TestExpressions
 			new TypeLines(nameof(AllowMutableListWithEmptyExpressions),
 				"has numbers",
 				"CreateMutableList Numbers",
-				"\tlet result = Mutable(Numbers)",
+				"\tlet result = Mutable Numbers",
 				"\tfor numbers",
 				"\t\tresult = result + (0 - value)",
 				"\tresult")).ParseMembersAndMethods(parser).Methods[0].GetBodyAndParseIfNeeded();
-		Assert.That(expression.Expressions[0].ToString(), Is.EqualTo("let result = Mutable(Numbers)"));
+		Assert.That(expression.Expressions[0].ToString(), Is.EqualTo("let result = Mutable Numbers"));
 		Assert.That(((Assignment)expression.Expressions[0]).Value.ReturnType.FullName,
 			Is.EqualTo("TestPackage.Mutable(TestPackage.Numbers Implements TestPackage.List)"));
 	}
@@ -284,7 +284,7 @@ public sealed class ListTests : TestExpressions
 			() => new Type(type.Package,
 					new TypeLines(nameof(OnlyListTypeIsAllowedAsMutableExpressionArgument),
 						"has unused Log",
-						"MutableWithNumber Number", "\tlet result = Mutable(Number)", "\tresult")).
+						"MutableWithNumber Number", "\tlet result = Mutable Number", "\tresult")).
 				ParseMembersAndMethods(parser).Methods[0].GetBodyAndParseIfNeeded(),
 			Throws.InstanceOf<Type.NoMatchingMethodFound>());
 

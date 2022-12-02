@@ -121,8 +121,8 @@ public sealed class For : Expression
 		var value = iterableName[^1] == ')'
 			? iterableName[1..iterableName.IndexOf(',')].ToString()
 			: variable != null && variable.IsList
-				? $"Mutable({iterableName}(0))"
-				: $"Mutable({iterableName})";
+				? $"Mutable {iterableName}(0)"
+				: $"Mutable {iterableName}";
 		return value;
 	}
 

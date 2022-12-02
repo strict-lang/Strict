@@ -103,7 +103,7 @@ public sealed class MethodCallTests : TestExpressions
 	[Test]
 	public void MakeSureMutableMethodsAreNotModified()
 	{
-		var expression = ParseExpression("Mutable(7)");
+		var expression = ParseExpression("Mutable 7");
 		Assert.That(expression.ReturnType.Name,
 			Is.EqualTo(Base.Mutable + "(TestPackage." + Base.Number + ")"));
 		Assert.That(type.GetType(Base.Mutable).Methods.Count, Is.EqualTo(0));
@@ -205,10 +205,10 @@ public sealed class MethodCallTests : TestExpressions
 			new TypeLines(nameof(MutableCanUseChildMethods),
 				"has log",
 				"Dummy Number",
-				"\tlet mutableNumber = Mutable(5)",
+				"\tlet mutableNumber = Mutable 5",
 				"\tmutableNumber + 10")).ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(program.Methods[0].GetBodyAndParseIfNeeded().ToString(),
-			Is.EqualTo("let mutableNumber = Mutable(5)\r\nmutableNumber + 10"));
+			Is.EqualTo("let mutableNumber = Mutable 5\r\nmutableNumber + 10"));
 	}
 
 	[Test]
