@@ -98,8 +98,8 @@ public class TypeTests
 			Throws.InstanceOf<Type.MemberWithTypeAnyIsNotAllowed>());
 
 	[TestCase("has log", "Run", "\tlet result = Any")]
-	[TestCase("has log", "Run", "\tlet result = Any(5)")]
-	[TestCase("has log", "Run", "\tlet result = 5 + Any(5)")]
+	[TestCase("has log", "Run", "\tlet result = Any 5")]
+	[TestCase("has log", "Run", "\tlet result = 5 + Any 5")]
 	public void VariableWithTypeAnyIsNotAllowed(params string[] lines)
 	{
 		var type = new Type(package, new TypeLines(nameof(VariableWithTypeAnyIsNotAllowed), lines)).ParseMembersAndMethods(new MethodExpressionParser());
@@ -233,7 +233,7 @@ public class TypeTests
 			Throws.InstanceOf<Mutable.ImmutableTypesCannotBeChanged>());
 
 	[TestCase("has count = 0", "Run", "\tcount = 5")]
-	[TestCase("has counter = Count(0)", "Run", "\tcounter = 5")]
+	[TestCase("has counter = Count 0", "Run", "\tcounter = 5")]
 	public void MutableMemberTypesCanBeChanged(params string[] code)
 	{
 		var type = new Type(package, new TypeLines(nameof(MutableMemberTypesCanBeChanged), code)).
@@ -244,18 +244,18 @@ public class TypeTests
 
 	[TestCase("has number",
 		"Run",
-		"\tlet result = Count(2)",
-		"\tresult = Count(5)")]
+		"\tlet result = Count 2",
+		"\tresult = Count 5")]
 	[TestCase("has number",
 		"Run",
-		"\tlet result = Mutable Count(2)",
-		"\tresult = Count(5)")]
+		"\tlet result = Mutable(Count(2))",
+		"\tresult = Count 5")]
 	public void MutableVariableCanBeChanged(params string[] code)
 	{
 		var type = new Type(package, new TypeLines(nameof(MutableVariableCanBeChanged), code)).
 			ParseMembersAndMethods(new MethodExpressionParser());
 		var body = (Body)type.Methods[0].GetBodyAndParseIfNeeded();
-		Assert.That(body.FindVariableValue("result")!.ToString(), Is.EqualTo("Count(5)"));
+		Assert.That(body.FindVariableValue("result")!.ToString(), Is.EqualTo("Count 5"));
 	}
 
 	[Test]

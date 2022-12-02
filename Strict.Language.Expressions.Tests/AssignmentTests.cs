@@ -156,6 +156,6 @@ public class AssignmentTests : TestExpressions
 			((Assignment)new Type(package,
 					new TypeLines(nameof(LetAssignmentWithConstructorCall), "has log",
 						"Run",
-						"\tlet file = File(\"test.txt\")")).ParseMembersAndMethods(parser).Methods[0].
-				GetBodyAndParseIfNeeded()).Value.ToString(), Is.EqualTo("File(\"test.txt\")"));
+						"\tlet file = File \"test.txt\"")).ParseMembersAndMethods(parser).Methods[0].
+				GetBodyAndParseIfNeeded()).Value.ToString(), Is.EqualTo("File \"test.txt\""));
 }

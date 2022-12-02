@@ -83,7 +83,8 @@ public class MethodExpressionParser : ExpressionParser
 						: null;
 
 	private static bool IsExpressionTypeAny(ReadOnlySpan<char> input) =>
-		input.Equals(Base.Any, StringComparison.Ordinal) || input.StartsWith(Base.Any + "(");
+		input.Equals(Base.Any, StringComparison.Ordinal) || input.StartsWith(Base.Any + "(") ||
+		input.StartsWith(Base.Any + " ");
 
 	private Error TryParseErrorExpression(Body body, ReadOnlySpan<char> partToParse)
 	{
@@ -113,8 +114,15 @@ public class MethodExpressionParser : ExpressionParser
 				throw new InvalidOperatorHere(body, input[methodRange].ToString());
 		return input[methodRange].Equals(UnaryOperator.Not, StringComparison.Ordinal)
 			? new Not(body.Method.ParseExpression(body, input[argumentsRange]))
-			: throw new InvalidOperatorHere(body, input[methodRange].ToString());
+			: IsSingleArgumentMethodCall(input, methodRange)
+				? ParseInContext(body.Method.Type, body, input[methodRange],
+					new[] { ParseExpression(body, input[argumentsRange]) }) ??
+				throw new MemberOrMethodNotFound(body, body.Method.Type, input[methodRange].ToString())
+				: throw new InvalidOperatorHere(body, input[methodRange].ToString());
 	}
+
+	private static bool IsSingleArgumentMethodCall(ReadOnlySpan<char> input, Range methodRange) =>
+		input.Length > methodRange.End.Value && input[methodRange.End.Value] == ' ';
 
 	/// <summary>
 	/// By far the most common usecase, we call something from another instance, use some binary

@@ -259,10 +259,10 @@ public sealed class IfTests : TestExpressions
 				"	if 5 is 5",
 				"		return \"Hello\"",
 				"	else if 6 is 6",
-				"		log.Write(\"Hi\")",
+				"		log.Write \"Hi\"",
 				"		return \"Hi\"",
 				"	else if 7 is 7",
-				"		log.Write(\"Hello\")",
+				"		log.Write \"Hello\"",
 				"		return \"Hello\"",
 				"	\"don't matter\"")).ParseMembersAndMethods(new MethodExpressionParser());
 		// @formatter:on
@@ -271,10 +271,10 @@ public sealed class IfTests : TestExpressions
 			"if 5 is 5",
 			"	return \"Hello\"",
 			"else if 6 is 6",
-			"	log.Write(\"Hi\")",
+			"	log.Write \"Hi\"",
 			"	return \"Hi\"",
 			"else if 7 is 7",
-			"	log.Write(\"Hello\")",
+			"	log.Write \"Hello\"",
 			"	return \"Hello\"",
 			"\"don't matter\"")), body.ToString());
 		Assert.That(body.children[1].ReturnType.ToString(), Is.EqualTo("TestPackage.Text"));
