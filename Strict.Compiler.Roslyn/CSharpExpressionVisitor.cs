@@ -66,8 +66,13 @@ public class CSharpExpressionVisitor : ExpressionVisitor
 			_ => methodName
 		};
 
-	protected override string Visit(Assignment assignment) =>
-		"var " + assignment.Name + " = " + Visit(assignment.Value);
+	protected override string Visit(Assignment assignment)
+	{
+		var value = Visit(assignment.Value);
+		if (value.StartsWith("Mutable ", StringComparison.OrdinalIgnoreCase))
+			value = "Mutable(" + value["Mutable ".Length..] + ")";
+		return "var " + assignment.Name + " = " + value;
+	}
 
 	protected override string Visit(Return returnExpression) =>
 		"return " + Visit(returnExpression.Value);

@@ -4,8 +4,11 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net.Http;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using LazyCache;
+
+[assembly: InternalsVisibleTo("Strict.Compiler.Tests")]
 
 namespace Strict.Language;
 
@@ -62,7 +65,7 @@ public sealed class Repositories
 	//ncrunch: no coverage start, only called once per session and only if not on development machine
 	private static readonly HashSet<string> PreviouslyCheckedDirectories = new();
 
-	private static async Task<string> DownloadAndExtractRepository(Uri packageUrl,
+	internal static async Task<string> DownloadAndExtractRepository(Uri packageUrl,
 		string packageName)
 	{
 		if (!Directory.Exists(CacheFolder))

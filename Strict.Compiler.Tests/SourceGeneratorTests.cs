@@ -150,18 +150,28 @@ public class Program
 		program.Methods[0].GetBodyAndParseIfNeeded();
 		var generatedCode = generator.Generate(program).ToString()!;
 		Assert.That(generatedCode,
-			Is.EqualTo(string.
-				Join(Environment.NewLine,
-					await File.ReadAllLinesAsync(Path.Combine(ExampleFolder, $"Output/{programName}.cs")))), generatedCode);
+			Is.EqualTo(string.Join(Environment.NewLine,
+				await File.ReadAllLinesAsync(Path.Combine(await GetExampleFolder(),
+					$"Output/{programName}.cs")))), generatedCode);
 	}
 
 	private async Task<Type> ReadStrictFileAndCreateType(string programName) =>
 		new Type(new TestPackage(),
-				new TypeLines(programName,
-					await File.ReadAllLinesAsync(Path.Combine(ExampleFolder, $"{programName}.strict")))).
-			ParseMembersAndMethods(parser);
+			new TypeLines(programName,
+				await File.ReadAllLinesAsync(Path.Combine(await GetExampleFolder(),
+					$"{programName}.strict")))).ParseMembersAndMethods(parser);
 
-	private static string ExampleFolder => Repositories.DevelopmentFolder + ".Examples";
+	private static async Task<string> GetExampleFolder()
+	{
+		const string ExamplesSubFolder = ".Examples";
+		var developmentExamplesFolder = Repositories.DevelopmentFolder + ExamplesSubFolder;
+		if (Directory.Exists(developmentExamplesFolder))
+			return developmentExamplesFolder;
+		const string ExamplesPackageName = nameof(Strict) + ExamplesSubFolder;
+		return await Repositories.DownloadAndExtractRepository(
+				new Uri("https://github.com/strict-lang/" + ExamplesPackageName), ExamplesPackageName).
+			ConfigureAwait(false);
+	}
 
 	[Test]
 	public Task ReduceButGrow() =>
