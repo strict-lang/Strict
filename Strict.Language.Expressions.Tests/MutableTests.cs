@@ -61,19 +61,14 @@ public sealed class MutableTests : TestExpressions
 		Assert.That(body.Expressions[0].ReturnType, Is.EqualTo(body.Expressions[1].ReturnType));
 	}
 
-	[TestCase("AssignNumberToTextType",
-		"has something Mutable(Text)",
-		"TryChangeMutableDataType Text",
-		"\tsomething = 5")]
-	[TestCase("AssignNumbersToTexts",
-		"has something = Mutable Texts",
-		"TryChangeMutableDataType Text",
-		"\tsomething = (5, 4, 3)")]
-	public void NotMatchingValueTypeForReassignment(string testName, params string[] code) =>
+	[TestCase("AssignNumberToTextType", "has something Mutable(Text)",
+		"TryChangeMutableDataType Text", "\tsomething = 5")]
+	[TestCase("AssignNumbersToTexts", "has something = Mutable Texts",
+		"TryChangeMutableDataType Text", "\tsomething = (5, 4, 3)")]
+	public void InvalidDataAssignment(string testName, params string[] code) =>
 		Assert.That(
 			() => new Type(type.Package, new TypeLines(testName, code)).ParseMembersAndMethods(parser).
-				Methods[0].GetBodyAndParseIfNeeded(),
-			Throws.InstanceOf<Mutable.NotMatchingValueTypeForReassignment>());
+				Methods[0].GetBodyAndParseIfNeeded(), Throws.InstanceOf<Mutable.InvalidDataAssignment>());
 
 	[Test]
 	public void MutableVariableInstanceUsingSpace()
@@ -97,4 +92,31 @@ public sealed class MutableTests : TestExpressions
 				ParseMembersAndMethods(parser).
 				Methods[0].GetBodyAndParseIfNeeded(),
 			Throws.InstanceOf<Mutable.MissingMutableArgument>());
+
+	[TestCase("Mutable(5)", "NumberArgument")]
+	[TestCase("Mutable(log)", "MutableLog")]
+	public void BracketsNotAllowedForSingleArgumentsUseSpaceSyntax(string code, string testName) =>
+		Assert.That(
+			() => new Type(type.Package,
+					new TypeLines(testName, "has log", "Add(input Count) Number",
+						$"\tlet result = {code}", "\tresult = result + input")).
+				ParseMembersAndMethods(parser).
+				Methods[0].GetBodyAndParseIfNeeded(),
+			Throws.InstanceOf<Mutable.BracketsNotAllowedForSingleArgumentsUseSpaceSyntax>());
+
+	[TestCase("Mutable(1, 2, 3)", "Numbers", "MutableTypeWithListArgumentIsAllowed")]
+	[TestCase("Mutable(Range(1, 10).Start)", "Number", "MutableTypeWithNestedCallShouldUseBrackets")]
+	public void MutableTypeWithListArgumentIsAllowed(string code, string returnType, string testName)
+	{
+		var program = new Type(type.Package,
+				new TypeLines(testName, "has log",
+					$"Add(input Count) {returnType}",
+					$"\tlet result = {code}",
+					"\tresult = result + input",
+					"\tresult")).
+			ParseMembersAndMethods(parser);
+		var body = (Body)program.Methods[0].GetBodyAndParseIfNeeded();
+		Assert.That(((Assignment)body.Expressions[0]).Value.ToString(),
+			Is.EqualTo(code));
+	}
 }

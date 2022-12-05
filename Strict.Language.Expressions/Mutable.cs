@@ -45,7 +45,7 @@ public sealed class Mutable : Value
 		var argumentText = line.Length > 0
 			? line[0] == ' '
 				? SplitAndGetArgumentText(body, line[1..])
-				: line[(line.IndexOf('(') + 1)..line.LastIndexOf(')')]
+				: CheckCountAndGetArgumentText(body, line)
 			: throw new MissingMutableArgument(body);
 		return argumentText.IsFirstLetterUppercase() && argumentText.IsPlural()
 			? CreateEmptyListExpression(body, argumentText)
@@ -65,6 +65,31 @@ public sealed class Mutable : Value
 		public MissingMutableArgument(Body body) : base(body) { }
 	}
 
+	private static ReadOnlySpan<char> CheckCountAndGetArgumentText(Body body,
+		ReadOnlySpan<char> line)
+	{
+		var bracketIndex = line.IndexOf('(');
+		var bracketLastIndex = line.LastIndexOf('(');
+		return HasSingleArgumentInBrackets(line, bracketLastIndex, bracketIndex)
+			? throw new BracketsNotAllowedForSingleArgumentsUseSpaceSyntax(body, line.ToString())
+			: HasNestedCall(line, bracketIndex, bracketLastIndex)
+				? line[(bracketIndex + 1)..line.LastIndexOf(')')]
+				: line[bracketIndex..(line.LastIndexOf(')') + 1)];
+	}
+
+	private static bool HasSingleArgumentInBrackets(ReadOnlySpan<char> line, int bracketLastIndex,
+		int bracketIndex) =>
+		!line.Contains(' ') && !line.Contains(',') && bracketLastIndex == bracketIndex;
+
+	private static bool HasNestedCall(ReadOnlySpan<char> line, int bracketIndex,
+		int bracketLastIndex) =>
+		bracketIndex != bracketLastIndex && line.IndexOf(',') > bracketLastIndex;
+
+	public sealed class BracketsNotAllowedForSingleArgumentsUseSpaceSyntax : ParsingFailed
+	{
+		public BracketsNotAllowedForSingleArgumentsUseSpaceSyntax(Body body, string line) : base(body, line) { }
+	}
+
 	private static Expression
 		CreateEmptyListExpression(Body body, ReadOnlySpan<char> argumentText) =>
 		new List(body.Method.Type.GetType(argumentText.ToString()));
@@ -77,7 +102,7 @@ public sealed class Mutable : Value
 		Expression expression, Expression newExpression)
 	{
 		if (!expression.ReturnType.IsCompatible(newExpression.ReturnType))
-			throw new NotMatchingValueTypeForReassignment(body, expression.ReturnType.Name,
+			throw new InvalidDataAssignment(body, expression.ReturnType.Name,
 				newExpression.ReturnType.Name);
 		switch (expression)
 		{
@@ -91,9 +116,9 @@ public sealed class Mutable : Value
 		}
 	}
 
-	public sealed class NotMatchingValueTypeForReassignment : ParsingFailed
+	public sealed class InvalidDataAssignment : ParsingFailed
 	{
-		public NotMatchingValueTypeForReassignment(Body body, string currentValueType, string newValueType) : base(body, $"Cannot assign {newValueType} value type to {currentValueType} member or variable") { }
+		public InvalidDataAssignment(Body body, string currentValueType, string newValueType) : base(body, $"Cannot assign {newValueType} value type to {currentValueType} member or variable") { }
 	}
 
 	public sealed class InvalidAssignmentTarget : ParsingFailed
@@ -107,9 +132,19 @@ public sealed class Mutable : Value
 	}
 
 	public override string ToString() =>
-		"Mutable" + (Data is List dataList
-			? dataList.Values.Count == 0
-				? " " + DataReturnType.Name
-				: "(" + Data + ")"
-			: " " + Data);
+		"Mutable" + (Data is List dataList && dataList.Values.Count == 0
+			? " " + DataReturnType.Name
+			: AddBracketsForNestedCall());
+
+	private string? AddBracketsForNestedCall()
+	{
+		var dataText = Data.ToString();
+		return dataText == null
+			? dataText
+			: dataText[0] == '('
+				? dataText
+				: dataText.IndexOf('(') > 0
+					? "(" + dataText + ")"
+					: " " + Data;
+	}
 }
