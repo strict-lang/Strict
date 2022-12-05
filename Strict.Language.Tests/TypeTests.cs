@@ -242,17 +242,13 @@ public class TypeTests
 		Assert.That(type.Members[0].Value, Is.EqualTo(new Number(type, 5)));
 	}
 
-	[TestCase("has number",
-		"Run",
-		"\tlet result = Count 2",
-		"\tresult = Count 5")]
-	[TestCase("has number",
-		"Run",
-		"\tlet result = Mutable(Count(2))",
-		"\tresult = Count 5")]
-	public void MutableVariableCanBeChanged(params string[] code)
+	[Test]
+	public void MutableVariableCanBeChanged()
 	{
-		var type = new Type(package, new TypeLines(nameof(MutableVariableCanBeChanged), code)).
+		var type = new Type(package, new TypeLines(nameof(MutableVariableCanBeChanged), "has number",
+				"Run",
+				"\tlet result = Count 2",
+				"\tresult = Count 5")).
 			ParseMembersAndMethods(new MethodExpressionParser());
 		var body = (Body)type.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(body.FindVariableValue("result")!.ToString(), Is.EqualTo("Count 5"));
