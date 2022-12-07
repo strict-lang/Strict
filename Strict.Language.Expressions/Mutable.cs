@@ -43,21 +43,11 @@ public sealed class Mutable : Value
 	private static Expression ParseMutableTypeArgument(Body body, ReadOnlySpan<char> line)
 	{
 		var argumentText = line.Length > 0
-			? line[0] == ' '
-				? SplitAndGetArgumentText(body, line[1..])
-				: CheckCountAndGetArgumentText(body, line)
+			? GetArgumentText(line)
 			: throw new MissingMutableArgument(body);
 		return argumentText.IsFirstLetterUppercase() && argumentText.IsPlural()
 			? CreateEmptyListExpression(body, argumentText)
 			: body.Method.ParseExpression(body, argumentText);
-	}
-
-	private static ReadOnlySpan<char> SplitAndGetArgumentText(Body body, ReadOnlySpan<char> line)
-	{
-		var spanEnumerator = line.Split(' ', StringSplitOptions.TrimEntries);
-		return spanEnumerator.MoveNext()
-			? spanEnumerator.Current
-			: throw new MissingMutableArgument(body);
 	}
 
 	public sealed class MissingMutableArgument : ParsingFailed
@@ -65,30 +55,10 @@ public sealed class Mutable : Value
 		public MissingMutableArgument(Body body) : base(body) { }
 	}
 
-	private static ReadOnlySpan<char> CheckCountAndGetArgumentText(Body body,
-		ReadOnlySpan<char> line)
-	{
-		var bracketIndex = line.IndexOf('(');
-		var bracketLastIndex = line.LastIndexOf('(');
-		return HasSingleArgumentInBrackets(line, bracketLastIndex, bracketIndex)
-			? throw new BracketsNotAllowedForSingleArgumentsUseSpaceSyntax(body, line.ToString())
-			: HasNestedCall(line, bracketIndex, bracketLastIndex)
-				? line[(bracketIndex + 1)..line.LastIndexOf(')')]
-				: line[bracketIndex..(line.LastIndexOf(')') + 1)];
-	}
-
-	private static bool HasSingleArgumentInBrackets(ReadOnlySpan<char> line, int bracketLastIndex,
-		int bracketIndex) =>
-		!line.Contains(' ') && !line.Contains(',') && bracketLastIndex == bracketIndex;
-
-	private static bool HasNestedCall(ReadOnlySpan<char> line, int bracketIndex,
-		int bracketLastIndex) =>
-		bracketIndex != bracketLastIndex && line.IndexOf(',') > bracketLastIndex;
-
-	public sealed class BracketsNotAllowedForSingleArgumentsUseSpaceSyntax : ParsingFailed
-	{
-		public BracketsNotAllowedForSingleArgumentsUseSpaceSyntax(Body body, string line) : base(body, line) { }
-	}
+	private static ReadOnlySpan<char> GetArgumentText(ReadOnlySpan<char> line) =>
+		line.Contains(',') && !line.Contains('.')
+			? line[line.IndexOf('(')..(line.LastIndexOf(')') + 1)]
+			: line[(line.IndexOf('(') + 1)..line.LastIndexOf(')')];
 
 	private static Expression
 		CreateEmptyListExpression(Body body, ReadOnlySpan<char> argumentText) =>
@@ -132,19 +102,9 @@ public sealed class Mutable : Value
 	}
 
 	public override string ToString() =>
-		"Mutable" + (Data is List dataList && dataList.Values.Count == 0
-			? " " + DataReturnType.Name
-			: AddBracketsForNestedCall());
-
-	private string? AddBracketsForNestedCall()
-	{
-		var dataText = Data.ToString();
-		return dataText == null
-			? dataText
-			: dataText[0] == '('
-				? dataText
-				: dataText.IndexOf('(') > 0
-					? "(" + dataText + ")"
-					: " " + Data;
-	}
+		"Mutable" + (Data is List listData
+			? listData.Values.Count == 0
+				? "(" + DataReturnType.Name + ")"
+				: Data
+			: "(" + Data + ")");
 }

@@ -64,7 +64,7 @@ public class BaseVirtualMachineTests : TestExpressions
 	{
 		"has number",
 		"GetMultiplicationOfNumbers Number",
-		"\tlet result = Mutable 1",
+		"\tlet result = Mutable(1)",
 		"\tlet multiplier = 2",
 		"\tfor number",
 		"\t\tresult = result * multiplier",
@@ -74,8 +74,8 @@ public class BaseVirtualMachineTests : TestExpressions
 	{
 		"has text",
 		"Remove Text",
-		"\tlet result = Mutable \"\"",
-		"\tlet count = Mutable 0",
+		"\tlet result = Mutable(\"\")",
+		"\tlet count = Mutable(0)",
 		"\tfor text",
 		"\t\tif value is \"(\"",
 		"\t\t\tcount = count + 1",
@@ -151,7 +151,7 @@ public class BaseVirtualMachineTests : TestExpressions
 	{
 		"has numbers",
 		"Invert Text",
-		"\tlet result = Mutable \"\"",
+		"\tlet result = Mutable(\"\")",
 		"\tfor numbers",
 		"\t\tresult = result + (0 - value)",
 		"\tresult"

@@ -128,10 +128,10 @@ public sealed class MemberCallTests : TestExpressions
 	{
 		var program = new Type(type.Package,
 			new TypeLines(nameof(FromConstructorCall),
-				"has file = File \"test.txt\"",
+				"has file = File(\"test.txt\")",
 				"Run",
 				"\tlet a = 5")).ParseMembersAndMethods(parser);
-		Assert.That(program.Members[0].Value?.ToString(), Is.EqualTo("File \"test.txt\""));
+		Assert.That(program.Members[0].Value?.ToString(), Is.EqualTo("File(\"test.txt\")"));
 		Assert.That(program.Members[0].Value?.ReturnType.Name, Is.EqualTo("File"));
 	}
 

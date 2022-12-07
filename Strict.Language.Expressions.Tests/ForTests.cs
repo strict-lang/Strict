@@ -62,37 +62,37 @@ public sealed class ForTests : TestExpressions
 	[Test]
 	public void IteratorHasMatchingTypeWithIterable() =>
 		Assert.That(() =>
-				ParseExpression("let element = Mutable 0",
+				ParseExpression("let element = Mutable(0)",
 					"for element in (\"1\", \"2\", \"3\")", "\tlog.Write(element)"),
 			Throws.InstanceOf<For.IteratorTypeDoesNotMatchWithIterable>());
 
 	[Test]
 	public void ParseForRangeExpression() =>
-		Assert.That(((For)ParseExpression("for Range(2, 5)", "\tlog.Write index")).ToString(),
-			Is.EqualTo("for Range(2, 5)\n\tlog.Write index"));
+		Assert.That(((For)ParseExpression("for Range(2, 5)", "\tlog.Write(index)")).ToString(),
+			Is.EqualTo("for Range(2, 5)\n\tlog.Write(index)"));
 
 	[Test]
 	public void ParseForInExpression() =>
 		Assert.That(
-			((For)((Body)ParseExpression("let myIndex = Mutable 0", "for myIndex in Range(0, 5)",
-				"\tlog.Write myIndex")).Expressions[1]).ToString(),
-			Is.EqualTo("for myIndex in Range(0, 5)\n\tlog.Write myIndex"));
+			((For)((Body)ParseExpression("let myIndex = Mutable(0)", "for myIndex in Range(0, 5)",
+				"\tlog.Write(myIndex)")).Expressions[1]).ToString(),
+			Is.EqualTo("for myIndex in Range(0, 5)\n\tlog.Write(myIndex)"));
 
 	[Test]
 	public void ParseForInExpressionWithCustomVariableName() =>
 		Assert.That(
-			((For)ParseExpression("for myIndex in Range(0, 5)", "\tlog.Write myIndex")).ToString(),
-			Is.EqualTo("for myIndex in Range(0, 5)\n\tlog.Write myIndex"));
+			((For)ParseExpression("for myIndex in Range(0, 5)", "\tlog.Write(myIndex)")).ToString(),
+			Is.EqualTo("for myIndex in Range(0, 5)\n\tlog.Write(myIndex)"));
 
 	[Test]
 	public void ParseForListExpression() =>
-		Assert.That(((For)ParseExpression("for (1, 2, 3)", "\tlog.Write index")).ToString(),
-			Is.EqualTo("for (1, 2, 3)\n\tlog.Write index"));
+		Assert.That(((For)ParseExpression("for (1, 2, 3)", "\tlog.Write(index)")).ToString(),
+			Is.EqualTo("for (1, 2, 3)\n\tlog.Write(index)"));
 
 	[Test]
 	public void ParseForListExpressionWithValue() =>
-		Assert.That(((For)ParseExpression("for (1, 2, 3)", "\tlog.Write value")).ToString(),
-			Is.EqualTo("for (1, 2, 3)\n\tlog.Write value"));
+		Assert.That(((For)ParseExpression("for (1, 2, 3)", "\tlog.Write(value)")).ToString(),
+			Is.EqualTo("for (1, 2, 3)\n\tlog.Write(value)"));
 
 	[Test]
 	public void ValidIteratorReturnTypeWithValue() =>
@@ -105,22 +105,22 @@ public sealed class ForTests : TestExpressions
 	public void ParseForListExpressionWithIterableVariable() =>
 		Assert.That(
 			((For)((Body)ParseExpression("let elements = (1, 2, 3)", "for elements",
-				"\tlog.Write index")).Expressions[1]).ToString(),
-			Is.EqualTo("for elements\n\tlog.Write index"));
+				"\tlog.Write(index)")).Expressions[1]).ToString(),
+			Is.EqualTo("for elements\n\tlog.Write(index)"));
 
 	[Test]
 	public void ParseForListWithExplicitVariable() =>
 		Assert.That(
-			((For)((Body)ParseExpression("let element = Mutable 0", "for element in (1, 2, 3)",
-				"\tlog.Write element")).Expressions[1]).ToString(),
-			Is.EqualTo("for element in (1, 2, 3)\n\tlog.Write element"));
+			((For)((Body)ParseExpression("let element = Mutable(0)", "for element in (1, 2, 3)",
+				"\tlog.Write(element)")).Expressions[1]).ToString(),
+			Is.EqualTo("for element in (1, 2, 3)\n\tlog.Write(element)"));
 
 	[Test]
 	public void ParseWithNumber() =>
 		Assert.That(
 			((For)((Body)ParseExpression("let iterationCount = 10", "for iterationCount",
-				"\tlog.Write index")).Expressions[1]).ToString(),
-			Is.EqualTo("for iterationCount\n\tlog.Write index"));
+				"\tlog.Write(index)")).Expressions[1]).ToString(),
+			Is.EqualTo("for iterationCount\n\tlog.Write(index)"));
 
 	[Test]
 	public void ParseNestedFor() =>
@@ -129,16 +129,16 @@ public sealed class ForTests : TestExpressions
 			((For)ParseExpression("for myIndex in Range(2, 5)",
 				"\tlog.Write(myIndex)",
 				"\tfor Range(0, 10)",
-				"\t\tlog.Write index")).ToString(),
+				"\t\tlog.Write(index)")).ToString(),
 			Is.EqualTo(
-				"for myIndex in Range(2, 5)\n\tlog.Write myIndex\r\nfor Range(0, 10)\n\tlog.Write index"));
+				"for myIndex in Range(2, 5)\n\tlog.Write(myIndex)\r\nfor Range(0, 10)\n\tlog.Write(index)"));
 
 	[Test]
 	public void ParseForWithListOfTexts() =>
 		Assert.That(
-			() => ((For)((Body)ParseExpression("let element = Mutable \"1\"",
-					"for element in (\"1\", \"2\", \"3\")", "\tlog.Write element")).Expressions[1]).
-				ToString(), Is.EqualTo("for element in (\"1\", \"2\", \"3\")\n\tlog.Write element"));
+			() => ((For)((Body)ParseExpression("let element = Mutable(\"1\")",
+					"for element in (\"1\", \"2\", \"3\")", "\tlog.Write(element)")).Expressions[1]).
+				ToString(), Is.EqualTo("for element in (\"1\", \"2\", \"3\")\n\tlog.Write(element)"));
 
 	[Test]
 	public void ValidIteratorReturnTypeForRange() =>
@@ -150,14 +150,14 @@ public sealed class ForTests : TestExpressions
 	public void ValidIteratorReturnTypeTextForList() =>
 		Assert.That(
 			((Mutable)((VariableCall)((MethodCall)((For)((Body)ParseExpression(
-				"let element = Mutable \"1\"", "for element in (\"1\", \"2\", \"3\")",
+				"let element = Mutable(\"1\")", "for element in (\"1\", \"2\", \"3\")",
 				"\tlog.Write(element)")).Expressions[1]).Body).Arguments[0]).CurrentValue).DataReturnType.Name == Base.Text);
 
 	[Test]
 	public void ValidLoopProgram()
 	{
 		var programType = new Type(type.Package,
-				new TypeLines(Base.App, "has number", "CountNumber Number", "\tlet result = Count 1",
+				new TypeLines(Base.App, "has number", "CountNumber Number", "\tlet result = Count(1)",
 					"\tfor Range(0, number)", "\t\tresult.Increment", "\tresult")).
 			ParseMembersAndMethods(new MethodExpressionParser());
 		var parsedExpression = (Body)programType.Methods[0].GetBodyAndParseIfNeeded();

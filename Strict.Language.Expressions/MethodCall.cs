@@ -31,31 +31,8 @@ public class MethodCall : ConcreteExpression
 
 	public override string ToString() =>
 		Instance != null
-			? CheckNestedMethodCallAndPrint(Instance)
-			: $"{GetProperMethodName()}{PrintArguments(Arguments)}";
-
-	private string CheckNestedMethodCallAndPrint(Expression instance)
-	{
-		var expressionText = instance.ToString();
-		return IsNestedMethodCall(expressionText)
-			? $"{expressionText.Replace(' ', '(') + ")"}.{Method.Name}{Arguments.ToBrackets()}"
-			: $"{instance}.{Method.Name}{PrintArguments(Arguments)}";
-	}
-
-	private static bool IsNestedMethodCall(ReadOnlySpan<char> input) =>
-		input.Contains(' ') && !input.Contains('(');
-
-	private static string PrintArguments(IReadOnlyList<Expression> arguments)
-	{
-		if (arguments.Count != 1)
-			return arguments.ToBrackets();
-		var argumentText = arguments[0].ToString();
-		return !argumentText.Contains(' ')
-			? " " + argumentText
-			: !argumentText.Contains('?') && !argumentText.Contains('(')
-				? "(" + argumentText.Replace(' ', '(') + "))"
-				: arguments.ToBrackets();
-	}
+			? $"{Instance}.{Method.Name}{Arguments.ToBrackets()}"
+			: $"{GetProperMethodName()}{Arguments.ToBrackets()}";
 
 	private string GetProperMethodName() =>
 		Method.Name == Method.From

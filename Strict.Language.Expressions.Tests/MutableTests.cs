@@ -53,8 +53,8 @@ public sealed class MutableTests : TestExpressions
 		var program = new Type(type.Package,
 			new TypeLines(nameof(MutableVariablesWithSameImplementationTypeShouldUseSameType), "has unused Number",
 				"UnusedMethod Number",
-				"\tlet first = Mutable 5",
-				"\tlet second = Mutable 6",
+				"\tlet first = Mutable(5)",
+				"\tlet second = Mutable(6)",
 				"\tfirst + second")).ParseMembersAndMethods(parser);
 		var body = (Body)program.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(body.Expressions[0].ReturnType.Name, Is.EqualTo(Base.Mutable + "(TestPackage." + Base.Number + ")"));
@@ -63,7 +63,7 @@ public sealed class MutableTests : TestExpressions
 
 	[TestCase("AssignNumberToTextType", "has something Mutable(Text)",
 		"TryChangeMutableDataType Text", "\tsomething = 5")]
-	[TestCase("AssignNumbersToTexts", "has something = Mutable Texts",
+	[TestCase("AssignNumbersToTexts", "has something = Mutable(Texts)",
 		"TryChangeMutableDataType Text", "\tsomething = (5, 4, 3)")]
 	public void InvalidDataAssignment(string testName, params string[] code) =>
 		Assert.That(
@@ -76,11 +76,11 @@ public sealed class MutableTests : TestExpressions
 		var program = new Type(type.Package,
 				new TypeLines(nameof(MutableVariableInstanceUsingSpace), "has log",
 					"Add(input Count) Number",
-					"\tlet result = Mutable 5",
+					"\tlet result = Mutable(5)",
 					"\tresult = result + input")).
 			ParseMembersAndMethods(parser);
 		var body = (Body)program.Methods[0].GetBodyAndParseIfNeeded();
-		Assert.That(((Assignment)body.Expressions[0]).Value.ToString(), Is.EqualTo("Mutable 5"));
+		Assert.That(((Assignment)body.Expressions[0]).Value.ToString(), Is.EqualTo("Mutable(5)"));
 	}
 
 	[Test]
@@ -92,17 +92,6 @@ public sealed class MutableTests : TestExpressions
 				ParseMembersAndMethods(parser).
 				Methods[0].GetBodyAndParseIfNeeded(),
 			Throws.InstanceOf<Mutable.MissingMutableArgument>());
-
-	[TestCase("Mutable(5)", "NumberArgument")]
-	[TestCase("Mutable(log)", "MutableLog")]
-	public void BracketsNotAllowedForSingleArgumentsUseSpaceSyntax(string code, string testName) =>
-		Assert.That(
-			() => new Type(type.Package,
-					new TypeLines(testName, "has log", "Add(input Count) Number",
-						$"\tlet result = {code}", "\tresult = result + input")).
-				ParseMembersAndMethods(parser).
-				Methods[0].GetBodyAndParseIfNeeded(),
-			Throws.InstanceOf<Mutable.BracketsNotAllowedForSingleArgumentsUseSpaceSyntax>());
 
 	[TestCase("Mutable(1, 2, 3)", "Numbers", "MutableTypeWithListArgumentIsAllowed")]
 	[TestCase("Mutable(Range(1, 10).Start)", "Number", "MutableTypeWithNestedCallShouldUseBrackets")]

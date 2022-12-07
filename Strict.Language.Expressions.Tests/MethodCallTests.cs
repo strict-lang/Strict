@@ -22,13 +22,13 @@ public sealed class MethodCallTests : TestExpressions
 
 	[Test]
 	public void ParseCallWithArgument() =>
-		ParseAndCheckOutputMatchesInput("log.Write bla",
+		ParseAndCheckOutputMatchesInput("log.Write(bla)",
 			new MethodCall(member.Type.Methods[0], new MemberCall(null, member),
 				new[] { new MemberCall(null, bla) }));
 
 	[Test]
 	public void ParseCallWithTextArgument() =>
-		ParseAndCheckOutputMatchesInput("log.Write \"Hi\"",
+		ParseAndCheckOutputMatchesInput("log.Write(\"Hi\")",
 			new MethodCall(member.Type.Methods[0], new MemberCall(null, member),
 				new[] { new Text(type, "Hi") }));
 
@@ -62,7 +62,7 @@ public sealed class MethodCallTests : TestExpressions
 
 	[Test]
 	public void ArgumentsDoNotMatchMethodParameters() =>
-		Assert.That(() => ParseExpression("Character \"Hi\""),
+		Assert.That(() => ParseExpression("Character(\"Hi\")"),
 			Throws.InstanceOf<Type.ArgumentsDoNotMatchMethodParameters>());
 
 	[Test]
@@ -88,11 +88,11 @@ public sealed class MethodCallTests : TestExpressions
 
 	[Test]
 	public void SimpleFromMethodCall() =>
-		Assert.That(ParseExpression("Character 7"),
+		Assert.That(ParseExpression("Character(7)"),
 			Is.EqualTo(CreateFromMethodCall(type.GetType(Base.Character), new Number(type, 7))));
 
-	[TestCase("Count 5")]
-	[TestCase("Character 5")]
+	[TestCase("Count(5)")]
+	[TestCase("Character(5)")]
 	[TestCase("Count(5).Increment")]
 	[TestCase("Count(5).Floor")]
 	[TestCase("Range(0, 10)")]
@@ -103,7 +103,7 @@ public sealed class MethodCallTests : TestExpressions
 	[Test]
 	public void MakeSureMutableMethodsAreNotModified()
 	{
-		var expression = ParseExpression("Mutable 7");
+		var expression = ParseExpression("Mutable(7)");
 		Assert.That(expression.ReturnType.Name,
 			Is.EqualTo(Base.Mutable + "(TestPackage." + Base.Number + ")"));
 		Assert.That(type.GetType(Base.Mutable).Methods.Count, Is.EqualTo(0));
@@ -192,10 +192,11 @@ public sealed class MethodCallTests : TestExpressions
 				"GetLengthSquare(type HasLength) Number",
 				"\ttype.Length * type.Length",
 				"Dummy",
-				"\tlet countOfFive = Count 5",
-				"\tlet lengthSquare = GetLengthSquare countOfFive")).ParseMembersAndMethods(new MethodExpressionParser());
+				"\tlet countOfFive = Count(5)",
+				"\tlet lengthSquare = GetLengthSquare(countOfFive)")).ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(program.Methods[1].GetBodyAndParseIfNeeded().ToString(),
-			Is.EqualTo("let countOfFive = Count 5\r\nlet lengthSquare = GetLengthSquare countOfFive"));
+			Is.EqualTo(
+				"let countOfFive = Count(5)\r\nlet lengthSquare = GetLengthSquare(countOfFive)"));
 	}
 
 	[Test]
@@ -205,10 +206,10 @@ public sealed class MethodCallTests : TestExpressions
 			new TypeLines(nameof(MutableCanUseChildMethods),
 				"has log",
 				"Dummy Number",
-				"\tlet mutableNumber = Mutable 5",
+				"\tlet mutableNumber = Mutable(5)",
 				"\tmutableNumber + 10")).ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(program.Methods[0].GetBodyAndParseIfNeeded().ToString(),
-			Is.EqualTo("let mutableNumber = Mutable 5\r\nmutableNumber + 10"));
+			Is.EqualTo("let mutableNumber = Mutable(5)\r\nmutableNumber + 10"));
 	}
 
 	[Test]
@@ -237,7 +238,7 @@ public sealed class MethodCallTests : TestExpressions
 		Assert.That(((MethodCall)body.Expressions[0]).Method.Name, Is.EqualTo("Write"));
 		Assert.That(((MethodCall)body.Expressions[0]).ToString(), Is.EqualTo("File(\"fileName\").Write(\"someText\")"));
 		Assert.That(((MethodCall)body.Expressions[0]).Instance?.ToString(),
-			Is.EqualTo("File \"fileName\""));
+			Is.EqualTo("File(\"fileName\")"));
 	}
 
 	[Test]
@@ -254,7 +255,7 @@ public sealed class MethodCallTests : TestExpressions
 		Assert.That(body.Expressions[0].ToString(),
 			Is.EqualTo("AppendFiveWithInput(AppendFiveWithInput(5)) is 15"));
 		Assert.That(((MethodCall)((MethodCall)body.Expressions[0]).Instance!).Arguments[0].ToString(),
-			Is.EqualTo("AppendFiveWithInput 5"));
+			Is.EqualTo("AppendFiveWithInput(5)"));
 	}
 
 	[Test]
