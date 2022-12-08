@@ -225,6 +225,9 @@ public sealed class ByteCodeGenerator
 		case BinaryOperator.Divide:
 			GenerateBinaryStatement(binary, Instruction.Divide);
 			break;
+		case BinaryOperator.Modulate:
+			GenerateBinaryStatement(binary, Instruction.Modulate);
+			break;
 		}
 	}
 

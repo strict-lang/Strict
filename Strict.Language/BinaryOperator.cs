@@ -85,33 +85,31 @@ public static class BinaryOperator
 		tokenFirstCharacter switch
 		{
 			',' => 0, // ncrunch: no coverage always has to flush everything out; ',' cannot be reached because this method is called only for operators
-			'+' => 2, // unary '-' and 'not' operators have precendence 1
-			'-' => 2,
-			'*' => 3,
-			'/' => 3,
-			'^' => 4,
-			'%' => 5,
-			'<' => 8,
-			'>' => 8,
+			'+' => 11, // unary '-' and 'not' operators have precendence 10
+			'-' => 11,
+			'%' => 12,
+			'*' => 13,
+			'/' => 13,
+			'^' => 14,
+			'<' => 7,
+			'>' => 7,
 			_ => throw new NotSupportedException(tokenFirstCharacter.ToString()) //ncrunch: no coverage
 		};
 
 	public static int GetPrecedence(ReadOnlySpan<char> token) =>
 		token.Compare(To)
-			? 7
-			: token.Compare(SmallerOrEqual) || token.Compare(GreaterOrEqual)
-				? 8
-				: token.Compare(And)
-					? 9
-					: token.Compare(Xor)
-						? 10
-						: token.Compare(Or)
-							? 11
-							: token.Compare(Is)
-								? 12
-								: token.Compare(In)
-									? 13
-									: token.Compare(IsNot)
-										? 14
-										: GetPrecedence(token[0]);
+			? 8
+			: token.Compare(In)
+				? 9
+				: token.Compare(SmallerOrEqual) || token.Compare(GreaterOrEqual)
+					? 7
+					: token.Compare(And)
+						? 6
+						: token.Compare(Xor)
+							? 5
+							: token.Compare(Or)
+								? 4
+								: token.Compare(Is) || token.Compare(IsNot)
+									? 1
+									: GetPrecedence(token[0]);
 }

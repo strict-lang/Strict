@@ -127,6 +127,8 @@ public sealed class VirtualMachine
 				Convert.ToDouble(left.Value) * Convert.ToDouble(right.Value)),
 			Instruction.Divide => new Instance(right.ReturnType,
 				Convert.ToDouble(left.Value) / Convert.ToDouble(right.Value)),
+			Instruction.Modulate => new Instance(right.ReturnType,
+				Convert.ToDouble(left.Value) % Convert.ToDouble(right.Value)),
 			_ => Registers[statement.Registers[^1]] //ncrunch: no coverage
 		};
 	}
