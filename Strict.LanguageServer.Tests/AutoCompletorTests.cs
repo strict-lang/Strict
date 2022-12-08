@@ -5,6 +5,7 @@ using NUnit.Framework;
 using OmniSharp.Extensions.LanguageServer.Protocol;
 using OmniSharp.Extensions.LanguageServer.Protocol.Models;
 using Strict.Language;
+using Strict.Language.Expressions;
 
 namespace Strict.LanguageServer.Tests;
 
@@ -14,7 +15,7 @@ public sealed class AutoCompletorTests : LanguageServerTests
 	public async Task CreateStrictDocumentAsync()
 	{
 		strictDocument = new StrictDocument();
-		package = await new PackageSetup().GetPackageAsync(Repositories.DevelopmentFolder + ".Base");
+		package = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
 	}
 
 	private StrictDocument strictDocument = null!;

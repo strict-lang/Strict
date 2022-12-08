@@ -106,8 +106,7 @@ public class PackageTests
 	[Test]
 	public async Task LoadTypesFromOtherPackage()
 	{
-		var strictPackage =
-			await new Repositories(new ExpressionParserTests()).LoadFromUrl(Repositories.StrictUrl);
+		var strictPackage = await new Repositories(new ExpressionParserTests()).LoadStrictPackage();
 		Assert.That(mainPackage.GetType(Base.App),
 			Is.EqualTo(strictPackage.GetType(Base.App)).Or.EqualTo(subPackage.GetType(Base.App)));
 		Assert.That(mainPackage.GetType(Base.Character),

@@ -163,10 +163,10 @@ public class Program
 
 	private static async Task<string> GetExampleFolder()
 	{
-		const string ExamplesSubFolder = ".Examples";
-		var developmentExamplesFolder = Repositories.DevelopmentFolder + ExamplesSubFolder;
-		if (Directory.Exists(developmentExamplesFolder))
-			return developmentExamplesFolder;
+		const string ExamplesSubFolder = "Examples";
+		const string DevelopmentExamplesFolder = Repositories.StrictDevelopmentFolderPrefix + ExamplesSubFolder;
+		if (Directory.Exists(DevelopmentExamplesFolder))
+			return DevelopmentExamplesFolder;
 		const string ExamplesPackageName = nameof(Strict) + ExamplesSubFolder;
 		return await Repositories.DownloadAndExtractRepository(
 				new Uri("https://github.com/strict-lang/" + ExamplesPackageName), ExamplesPackageName).

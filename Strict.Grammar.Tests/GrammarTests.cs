@@ -67,5 +67,5 @@ public class GrammarTests
 		Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "..");
 
 	private static readonly string DefaultStrictBasePath =
-		Path.Combine(Repositories.DevelopmentFolder, "Strict", "Base");
+		Path.Combine(Repositories.StrictDevelopmentFolderPrefix, "Base");
 }

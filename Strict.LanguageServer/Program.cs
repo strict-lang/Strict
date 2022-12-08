@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Nerdbank.Streams;
 using OmniSharp.Extensions.LanguageServer.Server;
 using Strict.Language;
+using Strict.Language.Expressions;
 using Strict.LanguageServer;
 using PipeOptions = System.IO.Pipes.PipeOptions;
 
@@ -13,12 +14,13 @@ using PipeOptions = System.IO.Pipes.PipeOptions;
 var (input, output) = await CreateAndGetPipeline();
 Console.WriteLine("Connecting...");
 // @formatter:off
+ var strictBase = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
 var server = await LanguageServer.From(options =>
 	options.WithInput(input)
 		.WithOutput(output)
 		.WithLoggerFactory(new LoggerFactory())
 		.AddDefaultLoggingProvider()
-		.WithServices(ConfigureServices)
+		.WithServices(services => ConfigureServices(services, strictBase))
 		.WithHandler<TextDocumentSynchronizer>()
 		.WithHandler<AutoCompletor>()
 		.WithHandler<CommandExecutor>()
@@ -41,11 +43,10 @@ await Task.WhenAny(Task.Run(async () =>
 	}
 }), server.WaitForExit);
 
-static void ConfigureServices(IServiceCollection services)
+static void ConfigureServices(IServiceCollection services, Package strictBase)
 {
 	services.AddSingleton<StrictDocument>();
-	services.AddSingleton(new PackageSetup().
-		GetPackageAsync(Repositories.DevelopmentFolder + ".Base").Result);
+	services.AddSingleton(strictBase);
 }
 
 static async Task<(PipeReader input, PipeWriter output)> CreateAndGetPipeline()
