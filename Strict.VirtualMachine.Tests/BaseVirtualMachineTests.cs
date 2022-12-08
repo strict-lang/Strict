@@ -182,8 +182,6 @@ public class BaseVirtualMachineTests : TestExpressions
 		new ReturnStatement(Register.R7)
 	};
 
-	//ncrunch: no coverage end
-
 	protected MethodCall GenerateMethodCallFromSource(string programName, string methodCall,
 		params string[] source)
 	{

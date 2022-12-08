@@ -10,6 +10,8 @@ namespace Strict.VirtualMachine;
 /// </summary>
 public sealed class Instance
 {
+	private readonly string typeName = string.Empty;
+
 	public Instance(Type? type, object value)
 	{
 		ReturnType = type;
@@ -19,7 +21,11 @@ public sealed class Instance
 			Value = value;
 	}
 
-	public Instance(object value) => Value = value;
+	public Instance(string typeName, object value)
+	{
+		Value = value;
+		this.typeName = typeName;
+	}
 
 	public Instance(Expression expression)
 	{
@@ -31,5 +37,11 @@ public sealed class Instance
 	}
 
 	public Type? ReturnType { get; }
+	public string? TypeName =>
+		ReturnType == null
+			? typeName
+			: ReturnType.IsMutable()
+				? ReturnType.MutableReturnType?.Name
+				: ReturnType.Name;
 	public object Value { get; set; }
 }

@@ -111,6 +111,23 @@ public sealed class VirtualMachineTests : BaseVirtualMachineTests
 		Assert.That(vm.Execute(statements).Returns?.Value, Is.EqualTo(expectedResult));
 	}
 
+	[TestCase("EvenSumCalculator(100).IsEven", 2450, new[]
+	{
+		"has number",
+		"IsEven Number",
+		"\tlet sum = Mutable(0)",
+		"\tfor number",
+		"\t\tif (index % 2) is 0",
+		"\t\t\tsum = sum + index",
+		"\tsum"
+	})]
+	public void CompileCompositeBinariesInIfCorrectlyWithModulo(string methodCall, int expectedResult, params string[] code)
+	{
+		var statements = new ByteCodeGenerator(GenerateMethodCallFromSource("EvenSumCalculator",
+			methodCall, code)).Generate();
+		Assert.That(vm.Execute(statements).Returns?.Value, Is.EqualTo(expectedResult));
+	}
+
 	[Test]
 	public void ConditionalJump() =>
 		Assert.That(

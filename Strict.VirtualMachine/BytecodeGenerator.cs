@@ -145,11 +145,7 @@ public sealed class ByteCodeGenerator
 				statement is StoreStatement storeStatement && storeStatement.Identifier == iterableName)?.
 			Instance;
 		if (iterableInstance != null)
-		{
-			var length = GetLength(iterableInstance);
-			if (length != null)
-				GenerateRestLoopStatements(forExpression, iterableInstance);
-		}
+			GenerateRestLoopStatements(forExpression, iterableInstance);
 		FreeRegisters();
 	}
 
@@ -157,8 +153,8 @@ public sealed class ByteCodeGenerator
 	{
 		if (iterableInstance.Value is string iterableString)
 			return iterableString.Length;
-		if (iterableInstance.Value is int iterableInt)
-			return iterableInt;
+		if (iterableInstance.Value is int or double)
+			return Convert.ToInt32(iterableInstance.Value);
 		if (iterableInstance.ReturnType != null && iterableInstance.ReturnType.IsList)
 			return ((IEnumerable<Expression>)iterableInstance.Value).Count();
 		return 0;
@@ -211,43 +207,72 @@ public sealed class ByteCodeGenerator
 
 	private void GenerateCodeForBinary(MethodCall binary)
 	{
-		switch (binary.Method.Name)
+		if (binary.Method.Name != "is")
 		{
-		case BinaryOperator.Plus:
-			GenerateBinaryStatement(binary, Instruction.Add);
-			break;
-		case BinaryOperator.Multiply:
-			GenerateBinaryStatement(binary, Instruction.Multiply);
-			break;
-		case BinaryOperator.Minus:
-			GenerateBinaryStatement(binary, Instruction.Subtract);
-			break;
-		case BinaryOperator.Divide:
-			GenerateBinaryStatement(binary, Instruction.Divide);
-			break;
+			var instruction = GetInstructionBasedOnBinaryOperationName(binary.Method.Name);
+			GenerateBinaryStatement(binary, instruction);
 		}
 	}
 
+	private static Instruction GetInstructionBasedOnBinaryOperationName(string binaryOperator) =>
+		binaryOperator switch
+		{
+			BinaryOperator.Plus => Instruction.Add,
+			BinaryOperator.Multiply => Instruction.Multiply,
+			BinaryOperator.Minus => Instruction.Subtract,
+			BinaryOperator.Divide => Instruction.Divide,
+			BinaryOperator.Modulate => Instruction.Modulo,
+			_ => throw new NotImplementedException()
+		};
+
 	private void GenerateCodeForIfCondition(MethodCall condition)
 	{
-		var (leftRegister, rightRegister) = (AllocateRegister(), AllocateRegister());
-		if (condition.Instance is Value instanceValue)
-			statements.Add(new LoadConstantStatement(leftRegister,
-				new Instance(instanceValue.ReturnType, instanceValue.Data)));
-		else
-			statements.Add(new LoadVariableStatement(leftRegister,
-				condition.Instance?.ToString() ?? throw new InvalidOperationException()));
-		if (condition.Arguments[0] is Value argumentValue)
-			statements.Add(new LoadConstantStatement(rightRegister,
-				new Instance(argumentValue.ReturnType, argumentValue.Data)));
-		else
-			statements.Add(new LoadVariableStatement(rightRegister, condition.Arguments[0].ToString()));
+		var leftRegister = GenerateLeftSideForIfCondition(condition);
+		var rightRegister = GenerateRightSideForIfCondition(condition);
 		statements.Add(new Statement(Instruction.Equal, leftRegister, rightRegister));
 		idStack.Push(conditionalId);
 		statements.Add(new JumpViaIdStatement(Instruction.JumpToIdIfFalse, conditionalId++));
 	}
 
-	private Register AllocateRegister(bool @lock = false)
+	private Register GenerateRightSideForIfCondition(MethodCall condition)
+	{
+		var rightRegister = AllocateRegister();
+		if (condition.Arguments[0] is Value argumentValue)
+			statements.Add(new LoadConstantStatement(rightRegister,
+				new Instance(argumentValue.ReturnType, argumentValue.Data)));
+		else
+			statements.Add(new LoadVariableStatement(rightRegister, condition.Arguments[0].ToString()));
+		return rightRegister;
+	}
+
+	private Register GenerateLeftSideForIfCondition(MethodCall condition)
+	{
+		if (condition.Instance is Value instanceValue)
+			return LoadConstantForIfConditionLeft(instanceValue);
+		if (condition.Instance is Binary binaryInstance)
+			return GenerateValueBinaryStatements(binaryInstance, GetInstructionBasedOnBinaryOperationName(binaryInstance.Method.Name));
+		{
+			return LoadVariableForIfConditionLeft(condition);
+		}
+	}
+
+	private Register LoadConstantForIfConditionLeft(Value instanceValue)
+	{
+		var leftRegister = AllocateRegister();
+		statements.Add(new LoadConstantStatement(leftRegister,
+			new Instance(instanceValue.ReturnType, instanceValue.Data)));
+		return leftRegister;
+	}
+
+	private Register LoadVariableForIfConditionLeft(MethodCall condition)
+	{
+		var leftRegister = AllocateRegister();
+		statements.Add(new LoadVariableStatement(leftRegister,
+			condition.Instance?.ToString() ?? throw new InvalidOperationException()));
+		return leftRegister;
+	}
+
+	private Register AllocateRegister(bool isLocked = false)
 	{
 		if (nextRegister == registers.Length)
 			nextRegister = 0;
@@ -255,7 +280,7 @@ public sealed class ByteCodeGenerator
 		var currentRegister = registers[nextRegister++];
 		if (lockedRegisters.Contains(currentRegister))
 			currentRegister = AllocateRegister();
-		if (@lock)
+		if (isLocked)
 			lockedRegisters.Add(currentRegister);
 		return currentRegister;
 	}
@@ -285,13 +310,11 @@ public sealed class ByteCodeGenerator
 		Binary binaryArg)
 	{
 		var right = GenerateValueBinaryStatements(binaryArg,
-			binaryArg.Method.Name == BinaryOperator.Plus
-				? Instruction.Add
-				: Instruction.Subtract);
-		var leftRegister = AllocateRegister();
+			GetInstructionBasedOnBinaryOperationName(binaryArg.Method.Name));
+		var left = AllocateRegister();
 		if (binary.Instance != null)
-			statements.Add(new LoadVariableStatement(leftRegister, binary.Instance.ToString()));
-		statements.Add(new Statement(operationInstruction, leftRegister, right, AllocateRegister()));
+			statements.Add(new LoadVariableStatement(left, binary.Instance.ToString()));
+		statements.Add(new Statement(operationInstruction, left, right, AllocateRegister()));
 	}
 
 	private Register GenerateValueBinaryStatements(MethodCall binary,

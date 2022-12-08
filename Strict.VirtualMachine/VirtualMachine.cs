@@ -60,7 +60,7 @@ public sealed class VirtualMachine
 			if (variables.ContainsKey("index"))
 				variables["index"].Value = Convert.ToInt32(variables["index"].Value) + 1;
 			else
-				variables.Add("index", new Instance(0));
+				variables.Add("index", new Instance(Base.Number, 0));
 			variables.TryGetValue(initLoopStatement.Identifier, out var iterableVariable);
 			if (iterableVariable != null)
 				AlterValueVariable(iterableVariable);
@@ -74,9 +74,9 @@ public sealed class VirtualMachine
 		if (iterableVariable.ReturnType is { IsList: true })
 			variables["value"] = new Instance(((List<Expression>)iterableVariable.Value)[index]);
 		else if (iterableVariable.ReturnType?.Name == Base.Number)
-			variables["value"] = new Instance(Convert.ToInt32(iterableVariable.Value) + index);
+			variables["value"] = new Instance(Base.Number, Convert.ToInt32(iterableVariable.Value) + index);
 		else if (iterableVariable.ReturnType?.Name == Base.Text && value != null)
-			variables["value"] = new Instance(value[index].ToString());
+			variables["value"] = new Instance(Base.Number, value[index].ToString());
 	}
 
 	private void TryStoreInstructions(Statement statement)
@@ -127,18 +127,22 @@ public sealed class VirtualMachine
 				Convert.ToDouble(left.Value) * Convert.ToDouble(right.Value)),
 			Instruction.Divide => new Instance(right.ReturnType,
 				Convert.ToDouble(left.Value) / Convert.ToDouble(right.Value)),
+			Instruction.Modulo => new Instance(right.ReturnType,
+				Convert.ToDouble(left.Value) % Convert.ToDouble(right.Value)),
 			_ => Registers[statement.Registers[^1]] //ncrunch: no coverage
 		};
 	}
 
 	private static Instance GetAdditionResult(Instance left, Instance right)
 	{
-		if (left.ReturnType?.Name == Base.Number && right.ReturnType?.Name == Base.Number)
-			return new Instance(right.ReturnType,
+		var leftReturnTypeName = left.TypeName;
+		var rightReturnTypeName = right.TypeName;
+		if (leftReturnTypeName == Base.Number && rightReturnTypeName == Base.Number)
+			return new Instance(right.ReturnType ?? left.ReturnType,
 				Convert.ToDouble(left.Value) + Convert.ToDouble(right.Value));
-		if (left.ReturnType?.Name == Base.Text && right.ReturnType?.Name == Base.Text)
-			return new Instance(right.ReturnType, left.Value.ToString() + right.Value);
-		if (right.ReturnType?.Name == Base.Text && left.ReturnType?.Name == Base.Number)
+		if (leftReturnTypeName == Base.Text && rightReturnTypeName == Base.Text)
+			return new Instance(right.ReturnType ?? left.ReturnType, left.Value.ToString() + right.Value);
+		if (rightReturnTypeName == Base.Text && leftReturnTypeName == Base.Number)
 			return new Instance(right.ReturnType, left.Value.ToString() + right.Value);
 		return new Instance(left.ReturnType, left.Value + right.Value.ToString());
 	}
@@ -166,7 +170,7 @@ public sealed class VirtualMachine
 		if (conditionFlag && statement.Instruction is Instruction.JumpIfTrue ||
 			!conditionFlag && statement.Instruction is Instruction.JumpIfFalse ||
 			statement.Instruction is Instruction.JumpIfNotZero &&
-			Convert.ToInt32(Registers[statement.RegisterToCheckForZero].Value) != 0)
+			Convert.ToInt32(Registers[statement.RegisterToCheckForZero].Value) > 0)
 			instructionIndex += Convert.ToInt32(statement.Steps);
 		else if (!conditionFlag && statement.Instruction is Instruction.JumpToIdIfFalse)
 		{

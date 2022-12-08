@@ -14,6 +14,7 @@ public enum Instruction
 	Subtract,
 	Multiply,
 	Divide,
+	Modulo,
 	BinaryOperatorsSeparator = 200,
 	GreaterThan,
 	LessThan,
