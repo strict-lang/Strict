@@ -94,12 +94,14 @@ public sealed class AutoCompletor : ICompletionHandler
 		while (lineNumber > 0)
 		{
 			var currentLine = code[lineNumber];
-			if (currentLine.Contains("let " + variableName + " = "))
-				return currentLine.Trim()[(4 + variableName.Length + 3)..];
+			if (currentLine.Contains(Constant + " " + variableName + " = "))
+				return currentLine.Trim()[(Constant.Length + 1 + variableName.Length + 3)..];
 			lineNumber--;
 		}
 		return null;
 	}
+
+	private const string Constant = "constant";
 
 	private static Task<CompletionList> GetCompletionMethodsAsync(Type completionType) =>
 		Task.FromResult(new CompletionList(

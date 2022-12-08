@@ -30,7 +30,7 @@ public class RepositoriesTests
 	[Test]
 	public async Task LoadStrictBaseTypes()
 	{
-		var basePackage = await repos.LoadFromUrl(Repositories.StrictUrl);
+		var basePackage = await repos.LoadStrictPackage();
 		Assert.That(basePackage.FindDirectType(Base.Any), Is.Not.Null);
 		Assert.That(basePackage.FindDirectType(Base.Number), Is.Not.Null);
 		Assert.That(basePackage.FindDirectType(Base.App), Is.Not.Null);
@@ -41,7 +41,7 @@ public class RepositoriesTests
 	{
 		var tasks = new List<Task<Package>>();
 		for (var index = 0; index < 10; index++)
-			tasks.Add(repos.LoadFromUrl(Repositories.StrictUrl));
+			tasks.Add(repos.LoadStrictPackage());
 		await Task.WhenAll(tasks);
 		foreach (var task in tasks)
 			Assert.That(task.Result, Is.EqualTo(tasks[0].Result));
@@ -51,7 +51,7 @@ public class RepositoriesTests
 	public async Task MakeSureParsingFailedErrorMessagesAreClickable()
 	{
 		var parser = new MethodExpressionParser();
-		var strictPackage = await new Repositories(parser).LoadFromUrl(Repositories.StrictUrl);
+		var strictPackage = await new Repositories(parser).LoadStrictPackage();
 		Assert.That(
 			() => new Type(strictPackage,
 				new TypeLines("Invalid", "has 1")).ParseMembersAndMethods(null!),
@@ -63,16 +63,13 @@ public class RepositoriesTests
 	{
 		var parser = new MethodExpressionParser();
 		var repositories = new Repositories(parser);
-		await repositories.LoadFromUrl(Repositories.
-			StrictUrl);
-		var examplesPackage = await repositories.LoadFromUrl(StrictExamplesUrl);
+		await repositories.LoadStrictPackage();
+		var examplesPackage = await repositories.LoadStrictPackage("Examples");
 		var program = new Type(examplesPackage, new TypeLines("ValidProgram", "has number", "Run Number", "\tnumber")).
 			ParseMembersAndMethods(parser);
 		Assert.That(program.Methods[0].ReturnType.ToString(), Contains.Substring(Base.Number));
 		Assert.That(program.Members[0].Type.ToString(), Contains.Substring(Base.Number));
 	}
-
-	public static readonly Uri StrictExamplesUrl = new("https://github.com/strict-lang/Strict.Examples");
 
 	/// <summary>
 	/// Each indentation is one depth level lower
@@ -115,12 +112,15 @@ public class RepositoriesTests
 	[Test]
 	public void NoFilesAllowedInStrictFolderNeedsToBeInASubFolder()
 	{
-		var strictFilePath = Path.Combine(Repositories.DevelopmentFolder, "UnitTestForCoverage.strict");
+		var strictFilePath = Path.Combine(StrictDevelopmentFolder,
+			"UnitTestForCoverage.strict");
 		File.Create(strictFilePath).Close();
-		Assert.That(() =>
-			repos.LoadFromPath(Repositories.DevelopmentFolder), Throws.InstanceOf<Repositories.NoFilesAllowedInStrictFolderNeedsToBeInASubFolder>());
+		Assert.That(() => repos.LoadFromPath(StrictDevelopmentFolder),
+			Throws.InstanceOf<Repositories.NoFilesAllowedInStrictFolderNeedsToBeInASubFolder>());
 		File.Delete(strictFilePath);
 	}
+
+	public static readonly string StrictDevelopmentFolder = Repositories.StrictDevelopmentFolderPrefix[..^1];
 
 	[Test]
 	[Category("Slow")]
@@ -162,14 +162,14 @@ public class RepositoriesTests
 				File.ReadAllLines(file);
 	}
 
-	private static string BaseFolder => Path.Combine(Repositories.DevelopmentFolder, "Base");
+	private static string BaseFolder => Repositories.StrictDevelopmentFolderPrefix + nameof(Base);
 
 	[Test]
 	[Category("Slow")]
 	[Benchmark]
 	public async Task LoadingZippedStrictBaseHundredTimes()
 	{
-		var zipFilePath = Path.Combine(Repositories.DevelopmentFolder, "Base.zip");
+		var zipFilePath = Path.Combine(StrictDevelopmentFolder, "Base.zip");
 		if (!File.Exists(zipFilePath))
 			ZipFile.CreateFromDirectory(BaseFolder, zipFilePath);
 		for (var iteration = 0; iteration < 100; iteration++)
@@ -186,10 +186,10 @@ public class RepositoriesTests
 	[Benchmark]
 	public async Task LoadStrictBaseTypesHundredTimes()
 	{
-		//await repos.LoadFromUrl(Repositories.StrictUrl);
+		//await repos.LoadStrictPackage();
 		//MemoryProfiler.GetSnapshot(nameof(LoadStrictBaseTypesTenTimes) + " once");
 		for (var iteration = 0; iteration < 100; iteration++)
-			await repos.LoadFromUrl(Repositories.StrictUrl);
+			await repos.LoadStrictPackage();
 		//MemoryProfiler.GetSnapshot(nameof(LoadStrictBaseTypesTenTimes) + "10");
 	} //ncrunch: no coverage end
 }

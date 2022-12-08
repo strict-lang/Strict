@@ -64,8 +64,8 @@ public class BaseVirtualMachineTests : TestExpressions
 	{
 		"has number",
 		"GetMultiplicationOfNumbers Number",
-		"\tlet result = Mutable(1)",
-		"\tlet multiplier = 2",
+		"\tconstant result = Mutable(1)",
+		"\tconstant multiplier = 2",
 		"\tfor number",
 		"\t\tresult = result * multiplier",
 		"\tresult"
@@ -74,8 +74,8 @@ public class BaseVirtualMachineTests : TestExpressions
 	{
 		"has text",
 		"Remove Text",
-		"\tlet result = Mutable(\"\")",
-		"\tlet count = Mutable(0)",
+		"\tconstant result = Mutable(\"\")",
+		"\tconstant count = Mutable(0)",
 		"\tfor text",
 		"\t\tif value is \"(\"",
 		"\t\t\tcount = count + 1",
@@ -129,7 +129,7 @@ public class BaseVirtualMachineTests : TestExpressions
 	{
 		"has number",
 		"Declare Numbers",
-		"\tlet myList = (1, 2, 3, 4 ,5)",
+		"\tconstant myList = (1, 2, 3, 4 ,5)",
 		"\tmyList"
 	};
 	protected static readonly Statement[] ExpectedStatementsOfSimpleListDeclaration =
@@ -151,7 +151,7 @@ public class BaseVirtualMachineTests : TestExpressions
 	{
 		"has numbers",
 		"Invert Text",
-		"\tlet result = Mutable(\"\")",
+		"\tconstant result = Mutable(\"\")",
 		"\tfor numbers",
 		"\t\tresult = result + (0 - value)",
 		"\tresult"

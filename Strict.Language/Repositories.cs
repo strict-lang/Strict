@@ -43,23 +43,29 @@ public sealed class Repositories
 
 	public async Task<Package> LoadFromUrl(Uri packageUrl)
 	{
-		if (packageUrl != StrictUrl && (packageUrl.Host != "github.com" || string.IsNullOrEmpty(packageUrl.AbsolutePath) ||
-			// Allow other repositories as well, but put them in an empty main package name first
-			!packageUrl.AbsolutePath.StartsWith("/strict-lang/", StringComparison.InvariantCulture)))
-			throw new OnlyGithubDotComUrlsAreAllowedForNow(); //ncrunch: no coverage
+		var isStrictPackage = packageUrl.AbsoluteUri.StartsWith(StrictPrefixUri.AbsoluteUri, StringComparison.Ordinal);
+		if (!isStrictPackage && (packageUrl.Host != "github.com" || string.IsNullOrEmpty(packageUrl.AbsolutePath)))
+			throw new OnlyGithubDotComUrlsAreAllowedForNow();
 		var packageName = packageUrl.AbsolutePath.Split('/').Last();
-		var localPath = packageName == nameof(Strict) + "." + nameof(Base)
-			? DevelopmentFolder + "." + nameof(Base)
-			: Path.Combine(CacheFolder, packageName);
-		//ncrunch: no coverage start
-		if (!PreviouslyCheckedDirectories.Contains(localPath))
+		if (isStrictPackage)
 		{
-			PreviouslyCheckedDirectories.Add(localPath);
-			if (!Directory.Exists(localPath))
-				localPath = await DownloadAndExtractRepository(packageUrl, packageName);
-		} //ncrunch: no coverage end
+			var developmentFolder = StrictDevelopmentFolderPrefix.Replace(nameof(Strict) + ".", packageName);
+			if (Directory.Exists(developmentFolder))
+				return await LoadFromPath(developmentFolder);
+		}
+		//ncrunch: no coverage start
+		var localPath = Path.Combine(CacheFolder, packageName);
+		if (PreviouslyCheckedDirectories.Contains(localPath))
+			return await LoadFromPath(localPath);
+		PreviouslyCheckedDirectories.Add(localPath);
+		if (!Directory.Exists(localPath))
+			localPath = await DownloadAndExtractRepository(packageUrl, packageName);
 		return await LoadFromPath(localPath);
+		//ncrunch: no coverage end
 	}
+
+	public Task<Package> LoadStrictPackage(string packagePostfixName = nameof(Base)) =>
+		LoadFromUrl(new Uri(StrictPrefixUri.AbsoluteUri + packagePostfixName));
 
 	public sealed class OnlyGithubDotComUrlsAreAllowedForNow : Exception { }
 	//ncrunch: no coverage start, only called once per session and only if not on development machine
@@ -276,25 +282,11 @@ public sealed class Repositories
 	private static bool IsValidCodeDirectory(string directory) =>
 		Path.GetFileName(directory).IsWord();
 
-	public static string DevelopmentFolder
-	{
-		//ncrunch: no coverage start
-		get
-		{
-			var nCrunchOriginalSolutionFilePath =
-				Environment.GetEnvironmentVariable("NCrunch.OriginalSolutionPath") ?? "";
-			if (nCrunchOriginalSolutionFilePath != string.Empty)
-				return Path.GetDirectoryName(nCrunchOriginalSolutionFilePath)!;
-			var teamCityCheckoutPath = Environment.GetEnvironmentVariable("TeamCityCheckoutPath");
-			return !string.IsNullOrEmpty(teamCityCheckoutPath)
-				? teamCityCheckoutPath
-				: @"C:\code\GitHub\strict-lang\Strict";
-		} //ncrunch: no coverage end
-	}
+	public const string StrictDevelopmentFolderPrefix = @"C:\code\GitHub\strict-lang\Strict.";
 	private static string CacheFolder =>
 		Path.Combine( //ncrunch: no coverage, only downloaded and cached on non development machines
 			Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), StrictPackages);
 	private const string StrictPackages = nameof(StrictPackages);
-	public static readonly Uri StrictUrl = new("https://github.com/strict-lang/Strict.Base");
+	public static readonly Uri StrictPrefixUri = new("https://github.com/strict-lang/Strict.");
 }
 

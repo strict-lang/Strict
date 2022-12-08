@@ -124,24 +124,24 @@ public sealed class IfTests : TestExpressions
 
 	[Test]
 	public void MissingElseExpression() =>
-		Assert.That(() => ParseExpression("let result = true ? true"),
+		Assert.That(() => ParseExpression("constant result = true ? true"),
 			Throws.InstanceOf<If.MissingElseExpression>());
 
 	[Test]
 	public void InvalidConditionInConditionalExpression() =>
-		Assert.That(() => ParseExpression("let result = 5 ? true"),
+		Assert.That(() => ParseExpression("constant result = 5 ? true"),
 			Throws.InstanceOf<UnknownExpression>());
 
 	[Test]
 	public void ReturnTypeOfConditionalThenAndElseMustHaveMatchingType() =>
-		Assert.That(() => ParseExpression("let result = true ? true else 5"),
+		Assert.That(() => ParseExpression("constant result = true ? true else 5"),
 			Throws.InstanceOf<If.ReturnTypeOfThenAndElseMustHaveMatchingType>());
 
-	[TestCase("let result = true ? true else false")]
-	[TestCase("let result = false ? \"Yes\" else \"No\"")]
-	[TestCase("let result = 5 is 5 ? (1, 2) else (3, 4)")]
-	[TestCase("let result = 5 + (false ? 1 else 2)")]
-	[TestCase("let result = 5 is not 4 ? (1, 2) else (3, 4)")]
+	[TestCase("constant result = true ? true else false")]
+	[TestCase("constant result = false ? \"Yes\" else \"No\"")]
+	[TestCase("constant result = 5 is 5 ? (1, 2) else (3, 4)")]
+	[TestCase("constant result = 5 + (false ? 1 else 2)")]
+	[TestCase("constant result = 5 is not 4 ? (1, 2) else (3, 4)")]
 	public void ValidConditionalExpressions(string code)
 	{
 		var expression = ParseExpression(code);
@@ -152,14 +152,14 @@ public sealed class IfTests : TestExpressions
 
 	[Test]
 	public void ConditionalExpressionsCannotBeNested() =>
-		Assert.That(() => ParseExpression("let result = true ? true else (5 is 5 ? false else true)"),
+		Assert.That(() => ParseExpression("constant result = true ? true else (5 is 5 ? false else true)"),
 			Throws.InstanceOf<If.ConditionalExpressionsCannotBeNested>());
 
 	[TestCase("log.Write(true ? \"Yes\" else \"No\")")]
 	[TestCase("log.Write(true ? \"Yes\" + \"text\" else \"No\")")]
 	[TestCase("log.Write(\"Result\" + (true ? \"Yes\" else \"No\"))")]
 	[TestCase("log.Write((true ? \"Yes\" else \"No\") + \"Result\")")]
-	[TestCase("let something = 5 is 5 ? false else true")]
+	[TestCase("constant something = 5 is 5 ? false else true")]
 	[TestCase("6 is 5 ? true else false")]
 	public void ConditionalExpressionsAsPartOfOtherExpression(string code) =>
 		Assert.That(ParseExpression(code).ToString(), Is.EqualTo(code));
@@ -172,7 +172,7 @@ public sealed class IfTests : TestExpressions
 				"has log",
 				"InvalidRun Text",
 				"	if 5 is 5",
-				"		let file = File(\"test.txt\")",
+				"		constant file = File(\"test.txt\")",
 				"		return 5")).ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(), Throws.InstanceOf<Body.ChildBodyReturnTypeMustMatchMethod>().With.Message.Contains("Child body return type: TestPackage.Number is not matching with Parent return type: TestPackage.Text in method line: 3"));
 	}
@@ -186,7 +186,7 @@ public sealed class IfTests : TestExpressions
 				"has log",
 				"InvalidRun Text",
 				"	if 5 is 5",
-				"		let file = File(\"test.txt\")",
+				"		constant file = File(\"test.txt\")",
 				"		return \"Hello\"",
 				"	else",
 				"		return true")).ParseMembersAndMethods(new MethodExpressionParser());
@@ -203,7 +203,7 @@ public sealed class IfTests : TestExpressions
 				"has log",
 				"InvalidRun Number",
 				"	if 5 is 5",
-				"		let file = File(\"test.txt\")",
+				"		constant file = File(\"test.txt\")",
 				"		return Count(5)",
 				"	6")).ParseMembersAndMethods(new MethodExpressionParser());
 				// @formatter:on
@@ -219,7 +219,7 @@ public sealed class IfTests : TestExpressions
 				"has log",
 				"ValidRun Text",
 				"	if 5 is 5",
-				"		let file = File(\"test.txt\")",
+				"		constant file = File(\"test.txt\")",
 				"		return \"Hello\"",
 				"	else",
 				"		return \"Hi\"",
@@ -290,10 +290,10 @@ public sealed class IfTests : TestExpressions
 				"has log",
 				"ValidRun Text",
 				"	if 5 is 5",
-				"		let file = File(\"test.txt\")",
+				"		constant file = File(\"test.txt\")",
 				"		return \"Hello\"",
 				"	else if 6 is 6",
-				"	let something = \"Hi\"",
+				"	constant something = \"Hi\"",
 				"	\"don't matter\"")).ParseMembersAndMethods(new MethodExpressionParser());
 		// @formatter:on
 		Assert.That(() => (Body)program.Methods[0].GetBodyAndParseIfNeeded(),
@@ -309,7 +309,7 @@ public sealed class IfTests : TestExpressions
 				"has log",
 				"MismatchingElseIfReturn Text",
 				"	if 5 is 5",
-				"		let file = File(\"test.txt\")",
+				"		constant file = File(\"test.txt\")",
 				"		return \"Hello\"",
 				"	else if 6 is 6",
 				"		return 5",

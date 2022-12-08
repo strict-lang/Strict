@@ -14,7 +14,7 @@ public class TestCSharpGenerator
 		parser = new MethodExpressionParser();
 		package = new Package(nameof(SourceGeneratorTests));
 		generator = new CSharpGenerator();
-		return new Repositories(parser).LoadFromUrl(Repositories.StrictUrl);
+		return new Repositories(parser).LoadStrictPackage();
 	}
 
 	protected MethodExpressionParser parser = null!;

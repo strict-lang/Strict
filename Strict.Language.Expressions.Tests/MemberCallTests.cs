@@ -130,7 +130,7 @@ public sealed class MemberCallTests : TestExpressions
 			new TypeLines(nameof(FromConstructorCall),
 				"has file = File(\"test.txt\")",
 				"Run",
-				"\tlet a = 5")).ParseMembersAndMethods(parser);
+				"\tconstant a = 5")).ParseMembersAndMethods(parser);
 		Assert.That(program.Members[0].Value?.ToString(), Is.EqualTo("File(\"test.txt\")"));
 		Assert.That(program.Members[0].Value?.ReturnType.Name, Is.EqualTo("File"));
 	}
@@ -142,7 +142,7 @@ public sealed class MemberCallTests : TestExpressions
 			new TypeLines(nameof(FromConstructorCallUsingMemberName),
 				"has file = \"test.txt\"",
 				"Run",
-				"\tlet a = 5")).ParseMembersAndMethods(parser);
+				"\tconstant a = 5")).ParseMembersAndMethods(parser);
 		Assert.That(program.Members[0].Value?.ReturnType.Name, Is.EqualTo("File"));
 	}
 
@@ -154,7 +154,7 @@ public sealed class MemberCallTests : TestExpressions
 				"has file = File(\"test.txt\")",
 				"has fileDescription = file.Length > 1000 ? \"big file\" else \"small file\"",
 				"Run",
-				"\tlet a = 5")).ParseMembersAndMethods(parser);
+				"\tconstant a = 5")).ParseMembersAndMethods(parser);
 		Assert.That(program.Members[0].Name, Is.EqualTo("file"));
 		Assert.That(program.Members[1].Name, Is.EqualTo("fileDescription"));
 		Assert.That(program.Members[1].Value?.ToString(),
@@ -168,7 +168,7 @@ public sealed class MemberCallTests : TestExpressions
 			new TypeLines(nameof(BaseTypeMemberCallInDerivedType),
 				"implement Range",
 				"Run",
-				"\tlet a = End + 5")).ParseMembersAndMethods(parser);
+				"\tconstant a = End + 5")).ParseMembersAndMethods(parser);
 		var assignment = (Assignment)program.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(((Binary)assignment.Value).Instance,
 			Is.InstanceOf<MemberCall>());
@@ -181,7 +181,7 @@ public sealed class MemberCallTests : TestExpressions
 				"has something Number",
 				"has something Number",
 				"Run",
-				"\tlet a = 5")).ParseMembersAndMethods(parser),
+				"\tconstant a = 5")).ParseMembersAndMethods(parser),
 			Throws.InstanceOf<Type.DuplicateMembersAreNotAllowed>());
 
 	[Test]
@@ -192,7 +192,7 @@ public sealed class MemberCallTests : TestExpressions
 				"has something Number",
 				"has somethingDifferent Number",
 				"Run",
-				"\tlet a = 5")).ParseMembersAndMethods(parser);
+				"\tconstant a = 5")).ParseMembersAndMethods(parser);
 		Assert.That(program.Members[0].Name, Is.EqualTo("something"));
 		Assert.That(program.Members[1].Name, Is.EqualTo("somethingDifferent"));
 	}

@@ -23,7 +23,7 @@ public class LanguageServerTests
 			Returns(new Mock<ITextDocumentLanguageServer>().Object);
 		textDocumentHandler =
 			new TextDocumentSynchronizer(languageServer.Object, new StrictDocument(), testPackage);
-		textDocumentHandler.Document.AddOrUpdate(URI, "let bla = 5");
+		textDocumentHandler.Document.AddOrUpdate(URI, "constant bla = 5");
 	}
 
 	protected readonly TestPackage testPackage = new();

@@ -99,8 +99,17 @@ public class CSharpTypeVisitor : TypeVisitor
 		testExpressions.Add(method.Name,
 			body.Where(line =>
 				line.StartsWith("\tnew ", StringComparison.Ordinal) && line.Contains("==")));
-		FileContent +=
-			$"{(body.Count == 1 ? "\t" + body[0] : string.Join(LineBreakAndSpace, body.Where(line => !line.StartsWith("\tnew ", StringComparison.Ordinal) || !line.Contains("=="))))}{LineBreakAndSpace}}}{NewLine}";
+		FileContent += $"{
+			(body.Count == 1
+				? "\t" + body[0]
+				: string.Join(LineBreakAndSpace,
+					body.Where(line =>
+						!line.StartsWith("\tnew ", StringComparison.Ordinal) || !line.Contains("=="))))
+		}{
+			LineBreakAndSpace
+		}}}{
+			NewLine
+		}";
 	}
 
 	private readonly Dictionary<string, IEnumerable<string>> testExpressions = new();

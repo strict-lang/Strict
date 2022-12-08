@@ -69,12 +69,12 @@ public class ExpressionParserTests : ExpressionParser
 
 	[Test]
 	public void ExtraWhitespacesAtBeginningOfLineAreNotAllowed() =>
-		Assert.That(() => new Method(type, 0, this, new[] { "Run", "\t let abc = 3" }),
+		Assert.That(() => new Method(type, 0, this, new[] { "Run", "\t constant abc = 3" }),
 			Throws.InstanceOf<Type.ExtraWhitespacesFoundAtBeginningOfLine>());
 
 	[Test]
 	public void ExtraWhitespacesAtEndOfLineAreNotAllowed() =>
-		Assert.That(() => new Method(type, 0, this, new[] { "Run", "\tlet abc = 3 " }),
+		Assert.That(() => new Method(type, 0, this, new[] { "Run", "\tconstant abc = 3 " }),
 			Throws.InstanceOf<Type.ExtraWhitespacesFoundAtEndOfLine>());
 
 	[Test]

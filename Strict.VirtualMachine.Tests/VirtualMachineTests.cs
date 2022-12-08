@@ -13,6 +13,7 @@ public sealed class VirtualMachineTests : BaseVirtualMachineTests
 	[TestCase(Instruction.Subtract, 5, 8, 3)]
 	[TestCase(Instruction.Multiply, 4, 2, 2)]
 	[TestCase(Instruction.Divide, 3, 7.5, 2.5)]
+	[TestCase(Instruction.Modulate, 1, 5, 2)]
 	[TestCase(Instruction.Add, "510", "5", 10)]
 	[TestCase(Instruction.Add, "510", 5, "10")]
 	[TestCase(Instruction.Add, "510", "5", "10")]

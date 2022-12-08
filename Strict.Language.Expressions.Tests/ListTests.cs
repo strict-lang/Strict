@@ -215,7 +215,7 @@ public sealed class ListTests : TestExpressions
 	public void NumbersCompatibleWithImplementedTypes(string code, string testName)
 	{
 		var program = new Type(type.Package,
-				new TypeLines(testName, "has log", code, "\tlet result = (1, 2, 3, input)")).
+				new TypeLines(testName, "has log", code, "\tconstant result = (1, 2, 3, input)")).
 			ParseMembersAndMethods(parser);
 		Assert.That(program.Methods[0].GetBodyAndParseIfNeeded().ReturnType,
 			Is.EqualTo(program.GetListType(type.GetType(Base.Number))));
@@ -226,16 +226,16 @@ public sealed class ListTests : TestExpressions
 	{
 		var assignment = (Assignment)new Type(type.Package,
 				new TypeLines(nameof(NotOperatorInAssignment), "has numbers", "NotOperator",
-					"\tlet result = ((not true))")).ParseMembersAndMethods(parser).Methods[0].
+					"\tconstant result = ((not true))")).ParseMembersAndMethods(parser).Methods[0].
 			GetBodyAndParseIfNeeded();
-		Assert.That(assignment.ToString(), Is.EqualTo("let result = (not true)"));
+		Assert.That(assignment.ToString(), Is.EqualTo("constant result = (not true)"));
 	}
 
 	[Test]
 	public void UnknownExpressionForArgumentInList() =>
 		Assert.That(() => new Type(type.Package,
 				new TypeLines(nameof(UnknownExpressionForArgumentInList), "has log", "UnknownExpression",
-					"\tlet result = ((1, 2), 9gfhy5)")).ParseMembersAndMethods(parser).Methods[0].
+					"\tconstant result = ((1, 2), 9gfhy5)")).ParseMembersAndMethods(parser).Methods[0].
 			GetBodyAndParseIfNeeded(), Throws.InstanceOf<UnknownExpressionForArgument>()!);
 
 	[Test]
@@ -253,11 +253,11 @@ public sealed class ListTests : TestExpressions
 			new TypeLines(nameof(AllowMutableListWithEmptyExpressions),
 				"has numbers",
 				"CreateMutableList Numbers",
-				"\tlet result = Mutable(Numbers)",
+				"\tconstant result = Mutable(Numbers)",
 				"\tfor numbers",
 				"\t\tresult = result + (0 - value)",
 				"\tresult")).ParseMembersAndMethods(parser).Methods[0].GetBodyAndParseIfNeeded();
-		Assert.That(expression.Expressions[0].ToString(), Is.EqualTo("let result = Mutable(Numbers)"));
+		Assert.That(expression.Expressions[0].ToString(), Is.EqualTo("constant result = Mutable(Numbers)"));
 		Assert.That(((Assignment)expression.Expressions[0]).Value.ReturnType.FullName,
 			Is.EqualTo("TestPackage.Mutable(TestPackage.Numbers Implements TestPackage.List)"));
 	}
@@ -284,7 +284,7 @@ public sealed class ListTests : TestExpressions
 			() => new Type(type.Package,
 					new TypeLines(nameof(OnlyListTypeIsAllowedAsMutableExpressionArgument),
 						"has unused Log",
-						"MutableWithNumber Number", "\tlet result = Mutable(Number)", "\tresult")).
+						"MutableWithNumber Number", "\tconstant result = Mutable(Number)", "\tresult")).
 				ParseMembersAndMethods(parser).Methods[0].GetBodyAndParseIfNeeded(),
 			Throws.InstanceOf<Type.NoMatchingMethodFound>());
 
@@ -293,7 +293,7 @@ public sealed class ListTests : TestExpressions
 		Assert.That(
 			() => new Type(type.Package,
 					new TypeLines(nameof(CheckIfInvalidArgumentIsNotMethodOrListCall), "has numbers",
-						"AccessZeroIndexElement Number", "\tlet something = numbers(0)", "\tsomething(0)")).
+						"AccessZeroIndexElement Number", "\tconstant something = numbers(0)", "\tsomething(0)")).
 				ParseMembersAndMethods(parser).Methods[0].GetBodyAndParseIfNeeded(),
 			Throws.InstanceOf<InvalidArgumentItIsNotMethodOrListCall>());
 
@@ -304,7 +304,7 @@ public sealed class ListTests : TestExpressions
 					// @formatter:off
 					"has log",
 					"Run",
-					"\tlet result = (1,",
+					"\tconstant result = (1,",
 					"\t2,",
 					"\t3,",
 					"\t4,",
@@ -316,7 +316,7 @@ public sealed class ListTests : TestExpressions
 				// @formatter:on
 				.ParseMembersAndMethods(parser).Methods[0].GetBodyAndParseIfNeeded(),
 			Throws.InstanceOf<Type.MultiLineListsAllowedOnlyWhenLengthIsMoreThanHundred>().With.Message.
-				Contains("Current length: 35, Minimum Length for Multi line list expression: 100"));
+				Contains("Current length: 40, Minimum Length for Multi line list expression: 100"));
 
 	[Test]
 	public void UnterminatedMultiLineListFound() =>
@@ -324,7 +324,7 @@ public sealed class ListTests : TestExpressions
 					// @formatter:off
 					"has log",
 					"Run",
-					"\tlet result = (1,",
+					"\tconstant result = (1,",
 					"\t2,",
 					"\t3,",
 					"\t4,",
@@ -333,7 +333,7 @@ public sealed class ListTests : TestExpressions
 				// @formatter:on
 				.ParseMembersAndMethods(parser).Methods[0].GetBodyAndParseIfNeeded(),
 			Throws.InstanceOf<Type.UnterminatedMultiLineListFound>().With.Message.
-				StartWith("\tlet result = (1, 2, 3, 4,"));
+				StartWith("\tconstant result = (1, 2, 3, 4,"));
 
 	// @formatter:off
 	[TestCase("ParseMultiLineExpressionWithNumbers", "(numbers(0),\n\tnumbers(1),\n\tnumbers(2),\n\tnumbers(3),\n\tnumbers(4),\n\tnumbers(5)," +

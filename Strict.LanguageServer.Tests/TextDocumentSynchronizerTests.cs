@@ -26,13 +26,13 @@ public sealed class TextDocumentSynchronizerTests : LanguageServerTests
 		//ncrunch: no coverage start
 		get
 		{
-			yield return new TestCaseData(new Range(0, 0, 0, 0), "\t", new[] { "\tlet bla = 5" });
-			yield return new TestCaseData(new Range(0, 10, 0, 10), "5", new[] { "let bla = 55" });
-			yield return new TestCaseData(new Range(0, 0, 0, 11), "let bla = 15",
-				new[] { "let bla = 15" });
-			yield return new TestCaseData(new Range(0, 0, 0, 4), "", new[] { "bla = 5" });
-			yield return new TestCaseData(new Range(1, 0, 1, 0), "let something = 5",
-				new[] { "let bla = 5", "let something = 5" });
+			yield return new TestCaseData(new Range(0, 0, 0, 0), "\t", new[] { "\tconstant bla = 5" });
+			yield return new TestCaseData(new Range(0, 15, 0, 15), "5", new[] { "constant bla = 55" });
+			yield return new TestCaseData(new Range(0, 0, 0, 16), "constant bla = 15",
+				new[] { "constant bla = 15" });
+			yield return new TestCaseData(new Range(0, 0, 0, 9), "", new[] { "bla = 5" });
+			yield return new TestCaseData(new Range(1, 0, 1, 0), "constant something = 5",
+				new[] { "constant bla = 5", "constant something = 5" });
 		}
 		//ncrunch: no coverage end
 	}

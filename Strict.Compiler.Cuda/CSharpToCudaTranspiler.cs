@@ -10,9 +10,9 @@ namespace Strict.Compiler.Cuda;
 
 public class CSharpToCudaTranspiler
 {
-	public CSharpToCudaTranspiler(Package strictPackage)
+	public CSharpToCudaTranspiler(Package strictBase)
 	{
-		package = new Package(strictPackage, nameof(CSharpToCudaTranspiler));
+		package = new Package(strictBase, nameof(CSharpToCudaTranspiler));
 		parser = new CSharpType.CSharpExpressionParser();
 	}
 

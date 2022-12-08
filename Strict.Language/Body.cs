@@ -91,8 +91,13 @@ public sealed class Body : Expression
 	public sealed class ChildBodyReturnTypeMustMatchMethod : ParsingFailed
 	{
 		public ChildBodyReturnTypeMustMatchMethod(Body body, Type childReturnType) : base(body,
-			$"Child body return type: {childReturnType} is not matching with Parent return type:" +
-			$" {(body.Parent == null ? body.Method.ReturnType : body.Parent.ReturnType)} in method line: {body.ParsingLineNumber}") { }
+			$"Child body return type: {childReturnType} is not matching with Parent return type:" + $" {
+				(body.Parent == null
+					? body.Method.ReturnType
+					: body.Parent.ReturnType)
+			} in method line: {
+				body.ParsingLineNumber
+			}") { }
 	}
 
 	public sealed class ReturnAsLastExpressionIsNotNeeded : ParsingFailed

@@ -55,7 +55,7 @@ public sealed class CSharpExpressionVisitorTests : TestExpressions
 	public void GenerateText() =>
 		Assert.That(visitor.Visit(new Text(method, "Hey")), Is.EqualTo("\"Hey\""));
 
-	[TestCase("let other = 3", "var other = 3")]
+	[TestCase("constant other = 3", "var other = 3")]
 	[TestCase("5 + 5", "5 + 5")]
 	[TestCase("true", "true")]
 	[TestCase("\"Hey\"", "\"Hey\"")]
@@ -91,7 +91,7 @@ public sealed class CSharpExpressionVisitorTests : TestExpressions
 			new[]
 			{
 				"IsBlaFive Boolean",
-				"	let value = 5",
+				"	constant value = 5",
 				"	if value is 5",
 				"		return true",
 				"	else",

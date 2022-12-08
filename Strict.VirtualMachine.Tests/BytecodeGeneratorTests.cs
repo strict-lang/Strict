@@ -26,8 +26,8 @@ public sealed class ByteCodeGeneratorTests : BaseVirtualMachineTests
 				{
 					"has number",
 					"Assign Number",
-					"\tlet bla = 5",
-					"\tlet something = bla + 5",
+					"\tconstant bla = 5",
+					"\tconstant something = bla + 5",
 					"\tsomething + 10"
 				});
 			yield return new TestCaseData("Add(10, 5).Calculate", "Add",
@@ -72,7 +72,7 @@ public sealed class ByteCodeGeneratorTests : BaseVirtualMachineTests
 					new LoadVariableStatement(Register.R1, "number"),
 					new(Instruction.Add, Register.R0, Register.R1, Register.R2),
 					new ReturnStatement(Register.R2)
-				}, new[] { "has number", "SomeFunction Number", "\tlet bla = 5", "\tbla + number" });
+				}, new[] { "has number", "SomeFunction Number", "\tconstant bla = 5", "\tbla + number" });
 			yield return new TestCaseData("SimpleLoopExample(10).GetMultiplicationOfNumbers",
 				"SimpleLoopExample",
 				new Statement[]

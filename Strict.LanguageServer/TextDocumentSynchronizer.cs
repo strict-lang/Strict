@@ -12,16 +12,16 @@ namespace Strict.LanguageServer;
 
 public sealed class TextDocumentSynchronizer : ITextDocumentSyncHandler
 {
-	public TextDocumentSynchronizer(ILanguageServerFacade languageServer, StrictDocument document, Package package)
+	public TextDocumentSynchronizer(ILanguageServerFacade languageServer, StrictDocument document, Package strictBase)
 	{
 		this.languageServer = languageServer;
 		Document = document;
-		this.package = package;
+		this.strictBase = strictBase;
 	}
 
 	public StrictDocument Document { get; }
 	private readonly ILanguageServerFacade languageServer;
-	private readonly Package package;
+	private readonly Package strictBase;
 	public TextDocumentAttributes GetTextDocumentAttributes(DocumentUri uri) => new(uri, "strict");
 
 	public Task<Unit> Handle(DidChangeTextDocumentParams request,
@@ -41,7 +41,7 @@ public sealed class TextDocumentSynchronizer : ITextDocumentSyncHandler
 		languageServer.TextDocument.PublishDiagnostics(new PublishDiagnosticsParams
 		{
 			Diagnostics =
-				new Container<Diagnostic>(Document.GetDiagnostics(package, uri,
+				new Container<Diagnostic>(Document.GetDiagnostics(strictBase, uri,
 					languageServer)),
 			Uri = uri,
 			Version = 1

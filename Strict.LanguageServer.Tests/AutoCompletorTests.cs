@@ -5,6 +5,7 @@ using NUnit.Framework;
 using OmniSharp.Extensions.LanguageServer.Protocol;
 using OmniSharp.Extensions.LanguageServer.Protocol.Models;
 using Strict.Language;
+using Strict.Language.Expressions;
 
 namespace Strict.LanguageServer.Tests;
 
@@ -14,7 +15,7 @@ public sealed class AutoCompletorTests : LanguageServerTests
 	public async Task CreateStrictDocumentAsync()
 	{
 		strictDocument = new StrictDocument();
-		package = await new PackageSetup().GetPackageAsync(Repositories.DevelopmentFolder + ".Base");
+		package = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
 	}
 
 	private StrictDocument strictDocument = null!;
@@ -42,17 +43,17 @@ public sealed class AutoCompletorTests : LanguageServerTests
 	[TestCase("+", 3,
 		"has text",
 		"VariableCall",
-		"\tlet something = \"hello\" + text",
+		"\tconstant something = \"hello\" + text",
 		"\tsomething.",
 		"SecondMethod Number",
 		"\t5")]
 	[TestCase("not", 5,
 		"has text",
 		"UnusedMethod",
-		"\tlet result = 5",
+		"\tconstant result = 5",
 		"TriggerInMiddleOfTheLine",
-		"\tlet result = true",
-		"\tlet another = result.")] // @formatter:on
+		"\tconstant result = true",
+		"\tconstant another = result.")] // @formatter:on
 	public async Task HandleLogAutoCompleteAsync(string completionName, int lineNumber, params string[] code)
 	{
 		var documentUri = GetDocumentUri(completionName == "+"

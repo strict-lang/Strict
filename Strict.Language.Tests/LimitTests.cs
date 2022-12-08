@@ -99,10 +99,10 @@ public sealed class LimitTests
 				{
 					"has bonus Number", "has price Number",
 					"CalculateCompleteLevelCount(numberOfCans Number, levelCount Number) Number",
-					"	let remainingCans = numberOfCans - (levelCount * levelCount)remainingCans < ((levelCount + 1) * (levelCount + 1)) ? levelCount else CalculateCompleteLevelCount(remainingCans, levelCount + 1)"
+					"	constant remainingCans = numberOfCans - (levelCount * levelCount)remainingCans < ((levelCount + 1) * (levelCount + 1)) ? levelCount else CalculateCompleteLevelCount(remainingCans, levelCount + 1)"
 				}).ParseMembersAndMethods(new MethodExpressionParser()),
 			Throws.InstanceOf<Type.CharacterCountMustBeWithinOneHundredTwenty>().With.Message.Contains(
-				$"Type CharacterCountMustBeWithinOneHundredTwenty has character count 191 in line: 4 but limit is {Limit.CharacterCount}"));
+				$"Type CharacterCountMustBeWithinOneHundredTwenty has character count 196 in line: 4 but limit is {Limit.CharacterCount}"));
 
 	[Test]
 	public void MemberCountShouldNotExceedFifty() =>
