@@ -42,7 +42,7 @@ public sealed class EnumTests
 	{
 		var consumingType = new Type(package,
 			new TypeLines(nameof(UseEnumWithoutConstructor), "has log",
-				"Run", "\tlet url = Connection.Google")).ParseMembersAndMethods(parser);
+				"Run", "\tconstant url = Connection.Google")).ParseMembersAndMethods(parser);
 		var assignment = (Assignment)consumingType.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(assignment.Value, Is.InstanceOf<MemberCall>()!);
 		var member = ((MemberCall)assignment.Value).Member;
@@ -67,7 +67,7 @@ public sealed class EnumTests
 	{
 		var consumingType = new Type(package,
 				new TypeLines(nameof(EnumWithoutValuesUsedAsMemberAndVariable),
-					"has something = Instruction.Add", "Run", "\tlet myInstruction = Instruction.Set")).
+					"has something = Instruction.Add", "Run", "\tconstant myInstruction = Instruction.Set")).
 			ParseMembersAndMethods(parser);
 		Assert.That(consumingType.GetType("Instruction").IsEnum, Is.True);
 		Assert.That(((MemberCall)consumingType.Members[0].Value!).Member.Name, Is.EqualTo("Add"));
@@ -106,7 +106,7 @@ public sealed class EnumTests
 					"\tif instruction is Instruction.Add",
 					"\t\treturn numbers(0) + numbers(1)",
 					"CallExecute Number",
-					"\tlet result = ExecuteInstruction((1, 2), Instruction.Add)")).
+					"\tconstant result = ExecuteInstruction((1, 2), Instruction.Add)")).
 			ParseMembersAndMethods(parser);
 		var _ = (If)consumingType.Methods[0].GetBodyAndParseIfNeeded();
 		var result = (Assignment)consumingType.Methods[1].GetBodyAndParseIfNeeded();

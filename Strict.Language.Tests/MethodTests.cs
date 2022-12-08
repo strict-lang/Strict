@@ -78,9 +78,9 @@ public sealed class MethodTests
 		"		return true",
 		"	false"
 	};
-	public const string LetNumber = "	let number = 5";
-	public const string LetOther = "	let other = 3";
-	public const string LetErrorMessage = "\tlet errorMessage = \"some error\"";
+	public const string LetNumber = "	constant number = 5";
+	public const string LetOther = "	constant other = 3";
+	public const string LetErrorMessage = "\tconstant errorMessage = \"some error\"";
 
 	[Test]
 	public void TraitMethodBodiesShouldNotBeCalled()
@@ -97,7 +97,7 @@ public sealed class MethodTests
 		var method = new Method(type, 0, new MethodExpressionParser(), new[]
 		{
 			"Run(variable Text)",
-			"	let result = variable + \"5\""
+			"	constant result = variable + \"5\""
 		});
 		Assert.That(method.Name, Is.EqualTo(Run));
 		Assert.That(method.Parameters, Has.Count.EqualTo(1));

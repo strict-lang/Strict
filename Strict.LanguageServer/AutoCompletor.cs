@@ -94,8 +94,8 @@ public sealed class AutoCompletor : ICompletionHandler
 		while (lineNumber > 0)
 		{
 			var currentLine = code[lineNumber];
-			if (currentLine.Contains("let " + variableName + " = "))
-				return currentLine.Trim()[(4 + variableName.Length + 3)..];
+			if (currentLine.Contains("constant " + variableName + " = "))
+				return currentLine.Trim()[(9 + variableName.Length + 3)..];
 			lineNumber--;
 		}
 		return null;

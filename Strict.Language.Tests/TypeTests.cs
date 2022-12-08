@@ -57,7 +57,7 @@ public class TypeTests
 			Throws.InstanceOf<Context.TypeNotFound>());
 
 	[TestCase("implement invalidType")]
-	[TestCase("has log", "Run InvalidType", "\tlet a = 5")]
+	[TestCase("has log", "Run InvalidType", "\tconstant a = 5")]
 	public void TypeNotFound(params string[] lines) =>
 		Assert.That(() => CreateType(Base.Error, lines),
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.InstanceOf<Context.TypeNotFound>());
@@ -72,12 +72,12 @@ public class TypeTests
 	public void ExtraWhitespacesFoundAtBeginningOfLine() =>
 		Assert.That(
 			() => CreateType(nameof(ExtraWhitespacesFoundAtBeginningOfLine), "has log", "Run",
-				" let a = 5"), Throws.InstanceOf<Type.ExtraWhitespacesFoundAtBeginningOfLine>());
+				" constant a = 5"), Throws.InstanceOf<Type.ExtraWhitespacesFoundAtBeginningOfLine>());
 
 	[Test]
 	public void NoMatchingMethodFound() =>
 		Assert.That(
-			() => CreateType(nameof(NoMatchingMethodFound), "has log", "Run", "\tlet a = 5").
+			() => CreateType(nameof(NoMatchingMethodFound), "has log", "Run", "\tconstant a = 5").
 				GetMethod("UnknownMethod", Array.Empty<Expression>()),
 			Throws.InstanceOf<Type.NoMatchingMethodFound>());
 
@@ -97,9 +97,9 @@ public class TypeTests
 		Assert.That(() => CreateType("Program", line),
 			Throws.InstanceOf<Type.MemberWithTypeAnyIsNotAllowed>());
 
-	[TestCase("has log", "Run", "\tlet result = Any")]
-	[TestCase("has log", "Run", "\tlet result = Any(5)")]
-	[TestCase("has log", "Run", "\tlet result = 5 + Any(5)")]
+	[TestCase("has log", "Run", "\tconstant result = Any")]
+	[TestCase("has log", "Run", "\tconstant result = Any(5)")]
+	[TestCase("has log", "Run", "\tconstant result = 5 + Any(5)")]
 	public void VariableWithTypeAnyIsNotAllowed(params string[] lines)
 	{
 		var type = new Type(package, new TypeLines(nameof(VariableWithTypeAnyIsNotAllowed), lines)).ParseMembersAndMethods(new MethodExpressionParser());
@@ -108,15 +108,15 @@ public class TypeTests
 				Contains("Any"));
 	}
 
-	[TestCase("has log", "Run(any)", "\tlet result = 5")]
-	[TestCase("has log", "Run(input Any)", "\tlet result = 5")]
+	[TestCase("has log", "Run(any)", "\tconstant result = 5")]
+	[TestCase("has log", "Run(input Any)", "\tconstant result = 5")]
 	public void MethodParameterWithTypeAnyIsNotAllowed(params string[] lines) =>
 		Assert.That(() => CreateType("Program", lines),
 			Throws.InstanceOf<Method.ParametersWithTypeAnyIsNotAllowed>());
 
 	[Test]
 	public void MethodReturnTypeAsAnyIsNotAllowed() =>
-		Assert.That(() => CreateType("Program", "has log", "Run Any", "\tlet result = 5"),
+		Assert.That(() => CreateType("Program", "has log", "Run Any", "\tconstant result = 5"),
 			Throws.InstanceOf<Method.MethodReturnTypeAsAnyIsNotAllowed>()!);
 
 	[Test]
@@ -215,8 +215,8 @@ public class TypeTests
 				}), Throws.InstanceOf<Type.GenericTypesCannotBeUsedDirectlyUseImplementation>());
 	}
 
-	[TestCase(Base.Number, "has number", "Run", "\tlet result = Mutable(2)")]
-	[TestCase(Base.Text, "has number", "Run", "\tlet result = Mutable(\"2\")")]
+	[TestCase(Base.Number, "has number", "Run", "\tconstant result = Mutable(2)")]
+	[TestCase(Base.Text, "has number", "Run", "\tconstant result = Mutable(\"2\")")]
 	public void MutableTypesHaveProperDataReturnType(string expected, params string[] code)
 	{
 		var expression = (Assignment)
@@ -226,7 +226,7 @@ public class TypeTests
 	}
 
 	[TestCase("has number", "Run", "\tnumber = 1 + 1")]
-	[TestCase("has number", "Run", "\tlet result = 5", "\tresult = 6")]
+	[TestCase("has number", "Run", "\tconstant result = 5", "\tresult = 6")]
 	public void ImmutableTypesCannotBeChanged(params string[] code) =>
 		Assert.That(
 			() => new Type(package, new TypeLines(nameof(ImmutableTypesCannotBeChanged), code)).ParseMembersAndMethods(new MethodExpressionParser()).Methods[0].GetBodyAndParseIfNeeded(),
@@ -247,7 +247,7 @@ public class TypeTests
 	{
 		var type = new Type(package, new TypeLines(nameof(MutableVariableCanBeChanged), "has number",
 				"Run",
-				"\tlet result = Count(2)",
+				"\tconstant result = Count(2)",
 				"\tresult = Count(5)")).
 			ParseMembersAndMethods(new MethodExpressionParser());
 		var body = (Body)type.Methods[0].GetBodyAndParseIfNeeded();
@@ -330,7 +330,7 @@ public class TypeTests
 					new TypeLines(nameof(NonGenericExpressionCannotBeGeneric),
 						"has list",
 						"Something",
-						"\tlet result = list + 5")).ParseMembersAndMethods(new MethodExpressionParser()).
+						"\tconstant result = list + 5")).ParseMembersAndMethods(new MethodExpressionParser()).
 				Methods[0].GetBodyAndParseIfNeeded(), Throws.InstanceOf<Type.GenericTypesCannotBeUsedDirectlyUseImplementation>());
 
 	[Test]
@@ -340,7 +340,7 @@ public class TypeTests
 				new TypeLines(nameof(InvalidProgram),
 					"has list",
 					"Something41",
-					"\tlet result = list + 5")).ParseMembersAndMethods(null!),
+					"\tconstant result = list + 5")).ParseMembersAndMethods(null!),
 			Throws.InstanceOf<ParsingFailed>());
 
 	[Test]
@@ -348,7 +348,7 @@ public class TypeTests
 	{
 		var type = new Type(package,
 			new TypeLines(nameof(InvalidProgram), "has log", "Something(input List)",
-				"\tlet result = list + 5")).ParseMembersAndMethods(new MethodExpressionParser());
+				"\tconstant result = list + 5")).ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(
 			() => type.FindMethod("Something",
 				new List<Expression>
@@ -365,7 +365,7 @@ public class TypeTests
 				"\t\"Customer Name: \" + name + \" Age: \" + age")).ParseMembersAndMethods(new MethodExpressionParser());
 		var createCustomer = new Type(package,
 			new TypeLines(nameof(CreateTypeUsingConstructorMembers), "has log", "Something",
-				"\tlet customer = Customer(\"Murali\", 28)")).ParseMembersAndMethods(new MethodExpressionParser());
+				"\tconstant customer = Customer(\"Murali\", 28)")).ParseMembersAndMethods(new MethodExpressionParser());
 		var assignment = (Assignment)createCustomer.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(assignment.Value.ReturnType.Name, Is.EqualTo("Customer"));
 		Assert.That(assignment.Value.ToString(), Is.EqualTo("Customer(\"Murali\", 28)"));
@@ -379,7 +379,7 @@ public class TypeTests
 				"\t\"Customer Name: \" + name + \" Age: \" + age")).ParseMembersAndMethods(new MethodExpressionParser());
 		var createCustomer = new Type(package,
 			new TypeLines(nameof(CreateTypeUsingConstructorMembers), "has log", "Something",
-				"\tlet customer = (\"Murali\", 28) to Customer")).ParseMembersAndMethods(new MethodExpressionParser());
+				"\tconstant customer = (\"Murali\", 28) to Customer")).ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(() => createCustomer.Methods[0].GetBodyAndParseIfNeeded(),
 			Throws.InstanceOf<List.ListElementsMustHaveMatchingType>());
 	}

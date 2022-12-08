@@ -133,7 +133,7 @@ public sealed class MethodCallTests : TestExpressions
 				"has log",
 				"has Number",
 				$"Dummy(dummy Number) {nameof(ValueMustHaveCorrectType)}",
-				"\tlet result = value",
+				"\tconstant result = value",
 				"\tresult")).
 			ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(
@@ -150,7 +150,7 @@ public sealed class MethodCallTests : TestExpressions
 				"has Number",
 				"has myMember Text",
 				"Dummy(dummy Number) Text",
-				"\tlet result = value.myMember",
+				"\tconstant result = value.myMember",
 				"\tresult")).
 			ParseMembersAndMethods(new MethodExpressionParser());
 		var body = (Body)program.Methods[0].GetBodyAndParseIfNeeded();
@@ -162,14 +162,14 @@ public sealed class MethodCallTests : TestExpressions
 		"has numbers",
 		"has texts",
 		"Dummy",
-		"\tlet instanceWithNumbers = ProgramWithHas(1, 2, 3)",
-		"\tlet instanceWithTexts = ProgramWithHas(\"1\", \"2\", \"3\")")]
+		"\tconstant instanceWithNumbers = ProgramWithHas(1, 2, 3)",
+		"\tconstant instanceWithTexts = ProgramWithHas(\"1\", \"2\", \"3\")")]
 	[TestCase("ProgramWithImplement",
 		"implement Numbers",
 		"implement Texts",
 		"Dummy",
-		"\tlet instanceWithNumbers = ProgramWithImplement(1, 2, 3)",
-		"\tlet instanceWithTexts = ProgramWithImplement(\"1\", \"2\", \"3\")")]
+		"\tconstant instanceWithNumbers = ProgramWithImplement(1, 2, 3)",
+		"\tconstant instanceWithTexts = ProgramWithImplement(\"1\", \"2\", \"3\")")]
 	public void ParseConstructorCallWithList(string programName, params string[] code)
 	{
 		var program = new Type(type.Package, new TypeLines(
@@ -192,11 +192,11 @@ public sealed class MethodCallTests : TestExpressions
 				"GetLengthSquare(type HasLength) Number",
 				"\ttype.Length * type.Length",
 				"Dummy",
-				"\tlet countOfFive = Count(5)",
-				"\tlet lengthSquare = GetLengthSquare(countOfFive)")).ParseMembersAndMethods(new MethodExpressionParser());
+				"\tconstant countOfFive = Count(5)",
+				"\tconstant lengthSquare = GetLengthSquare(countOfFive)")).ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(program.Methods[1].GetBodyAndParseIfNeeded().ToString(),
 			Is.EqualTo(
-				"let countOfFive = Count(5)\r\nlet lengthSquare = GetLengthSquare(countOfFive)"));
+				"constant countOfFive = Count(5)\r\nconstant lengthSquare = GetLengthSquare(countOfFive)"));
 	}
 
 	[Test]
@@ -206,10 +206,10 @@ public sealed class MethodCallTests : TestExpressions
 			new TypeLines(nameof(MutableCanUseChildMethods),
 				"has log",
 				"Dummy Number",
-				"\tlet mutableNumber = Mutable(5)",
+				"\tconstant mutableNumber = Mutable(5)",
 				"\tmutableNumber + 10")).ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(program.Methods[0].GetBodyAndParseIfNeeded().ToString(),
-			Is.EqualTo("let mutableNumber = Mutable(5)\r\nmutableNumber + 10"));
+			Is.EqualTo("constant mutableNumber = Mutable(5)\r\nmutableNumber + 10"));
 	}
 
 	[Test]
@@ -295,7 +295,7 @@ public sealed class MethodCallTests : TestExpressions
 					"has log",
 					"GetResult(number) Number",
 					"\tGetResult(10) is 15",
-					"\tlet instance = TypeCannotBeAutoInitialized(number)",
+					"\tconstant instance = TypeCannotBeAutoInitialized(number)",
 					"\tinstance.AddFiveWithInput")).
 			ParseMembersAndMethods(new MethodExpressionParser());
 		var body = (Body)consumer.Methods[0].GetBodyAndParseIfNeeded();

@@ -17,7 +17,7 @@ public class AssignmentTests : TestExpressions
 	[Test]
 	public void ParseNumber()
 	{
-		var assignment = (Assignment)ParseExpression("let number = 5");
+		var assignment = (Assignment)ParseExpression("constant number = 5");
 		Assert.That(assignment, Is.EqualTo(new Assignment(new Body(method), nameof(number), number)));
 		Assert.That(assignment.Value.ReturnType, Is.EqualTo(number.ReturnType));
 		Assert.That(((Number)assignment.Value).ToString(), Is.EqualTo("5"));
@@ -26,7 +26,7 @@ public class AssignmentTests : TestExpressions
 	[Test]
 	public void ParseText()
 	{
-		const string Input = "let value = \"Hey\"";
+		const string Input = "constant value = \"Hey\"";
 		var expression = (Assignment)ParseExpression(Input);
 		Assert.That(expression.Name, Is.EqualTo("value"));
 		Assert.That(expression.Value.ToString(), Is.EqualTo("\"Hey\""));
@@ -36,7 +36,7 @@ public class AssignmentTests : TestExpressions
 	[Test]
 	public void AssignmentToString()
 	{
-		const string Input = "let sum = 5 + 3";
+		const string Input = "constant sum = 5 + 3";
 		var expression = (Assignment)ParseExpression(Input);
 		Assert.That(expression.Name, Is.EqualTo("sum"));
 		Assert.That(expression.Value.ToString(), Is.EqualTo("5 + 3"));
@@ -46,7 +46,7 @@ public class AssignmentTests : TestExpressions
 	[Test]
 	public void AssignmentWithNestedBinary()
 	{
-		const string Input = "let result = ((5 + 3) * 2 - 5) / 6";
+		const string Input = "constant result = ((5 + 3) * 2 - 5) / 6";
 		var expression = (Assignment)ParseExpression(Input);
 		Assert.That(expression.Name, Is.EqualTo("result"));
 		Assert.That(expression.Value, Is.InstanceOf<Binary>());
@@ -57,7 +57,7 @@ public class AssignmentTests : TestExpressions
 	[Test]
 	public void AssignmentWithListAddition()
 	{
-		const string Input = "let numbers = (1, 2, 3) + 6";
+		const string Input = "constant numbers = (1, 2, 3) + 6";
 		var expression = (Assignment)ParseExpression(Input);
 		Assert.That(expression.Name, Is.EqualTo("numbers"));
 		Assert.That(expression.ReturnType.Name, Is.EqualTo(Base.Number.MakeItPlural()));
@@ -69,7 +69,7 @@ public class AssignmentTests : TestExpressions
 	[Test]
 	public void NotAssignment()
 	{
-		const string Input = "let inverted = not true";
+		const string Input = "constant inverted = not true";
 		var expression = (Assignment)ParseExpression(Input);
 		Assert.That(expression.Name, Is.EqualTo("inverted"));
 		Assert.That(expression.Value, Is.InstanceOf<Not>());
@@ -80,45 +80,45 @@ public class AssignmentTests : TestExpressions
 
 	[Test]
 	public void InvalidNotAssignment() =>
-		Assert.That(() => ParseExpression("let inverted = not 5"),
+		Assert.That(() => ParseExpression("constant inverted = not 5"),
 			Throws.InstanceOf<Type.NoMatchingMethodFound>());
 
 	[Test]
 	public void OnlyNotIsValidUnaryOperator() =>
-		Assert.That(() => ParseExpression("let inverted = + true"),
+		Assert.That(() => ParseExpression("constant inverted = + true"),
 			Throws.Exception.InstanceOf<InvalidOperatorHere>());
 
 	[Test]
 	public void IncompleteAssignment() =>
-		Assert.That(() => ParseExpression("let sum = 5 +"),
+		Assert.That(() => ParseExpression("constant sum = 5 +"),
 			Throws.Exception.InstanceOf<InvalidOperatorHere>());
 
 	[Test]
 	public void IdentifierMustBeValidWord() =>
-		Assert.That(() => ParseExpression("let number5 = 5"),
+		Assert.That(() => ParseExpression("constant number5 = 5"),
 			Throws.Exception.InstanceOf<Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers>());
 
 	[Test]
 	public void AssignmentGetHashCode()
 	{
-		var assignment = (Assignment)ParseExpression("let value = 1");
+		var assignment = (Assignment)ParseExpression("constant value = 1");
 		Assert.That(assignment.GetHashCode(),
 			Is.EqualTo(assignment.Name.GetHashCode() ^ assignment.Value.GetHashCode()));
 	}
 
 	[Test]
 	public void LetWithoutVariableNameCannotParse() =>
-		Assert.That(() => ParseExpression("let 5"),
+		Assert.That(() => ParseExpression("constant 5"),
 			Throws.Exception.InstanceOf<Assignment.IncompleteLet>());
 
 	[Test]
 	public void LetWithoutValueCannotParse() =>
-		Assert.That(() => ParseExpression("let value"),
+		Assert.That(() => ParseExpression("constant value"),
 			Throws.Exception.InstanceOf<Assignment.IncompleteLet>());
 
 	[Test]
 	public void LetWithoutExpressionCannotParse() =>
-		Assert.That(() => ParseExpression("let value = abc"),
+		Assert.That(() => ParseExpression("constant value = abc"),
 			Throws.Exception.InstanceOf<IdentifierNotFound>().With.Message.Contain("abc"));
 
 	[Test]
@@ -131,10 +131,10 @@ public class AssignmentTests : TestExpressions
 				"MethodToCall Text",
 				"\t\"Hello World\"",
 		"Run",
-				"\tlet result = MethodToCall")).ParseMembersAndMethods(parser);
+				"\tconstant result = MethodToCall")).ParseMembersAndMethods(parser);
 		Assert.That(program.Methods[0].ToString(), Is.EqualTo("MethodToCall Text"));
 		Assert.That(program.Methods[1].GetBodyAndParseIfNeeded().ToString(),
-			Is.EqualTo("let result = MethodToCall"));
+			Is.EqualTo("constant result = MethodToCall"));
 	}
 
 	[Test]
@@ -156,6 +156,6 @@ public class AssignmentTests : TestExpressions
 			((Assignment)new Type(package,
 					new TypeLines(nameof(LetAssignmentWithConstructorCall), "has log",
 						"Run",
-						"\tlet file = File(\"test.txt\")")).ParseMembersAndMethods(parser).Methods[0].
+						"\tconstant file = File(\"test.txt\")")).ParseMembersAndMethods(parser).Methods[0].
 				GetBodyAndParseIfNeeded()).Value.ToString(), Is.EqualTo("File(\"test.txt\")"));
 }

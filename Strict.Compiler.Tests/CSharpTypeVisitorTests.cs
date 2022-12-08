@@ -112,7 +112,7 @@ public sealed class CSharpTypeVisitorTests : TestCSharpGenerator
 		Assert.That(
 			() => new CSharpTypeVisitor(
 				new Type(package,
-					new TypeLines(Computer, "has log", "Run", "\tlet random = log.unknown")).ParseMembersAndMethods(parser)),
+					new TypeLines(Computer, "has log", "Run", "\tconstant random = log.unknown")).ParseMembersAndMethods(parser)),
 			Throws.InstanceOf<MethodExpressionParser.MemberOrMethodNotFound>()!);
 
 	[Test]
@@ -120,11 +120,11 @@ public sealed class CSharpTypeVisitorTests : TestCSharpGenerator
 		Assert.That(
 			new CSharpTypeVisitor(
 				new Type(package,
-					new TypeLines(Computer, "has log", "Run", "\tlet random = \"test\"",
+					new TypeLines(Computer, "has log", "Run", "\tconstant random = \"test\"",
 						"\tlog.Write(random)")).ParseMembersAndMethods(parser)).FileContent,
 			Contains.Substring("\tConsole.WriteLine(random);"));
 
-	[TestCase(@"	let file = File(""test.txt"")
+	[TestCase(@"	constant file = File(""test.txt"")
 	file.Write(number)", "\tvar file = new FileStream(\"test.txt\", FileMode.OpenOrCreate);")]
 	[TestCase(@"	File(""test"").Write(number)",
 		"\tnew FileStream(\"test\", FileMode.OpenOrCreate).Write(number);")]
@@ -140,9 +140,9 @@ Run
 	public void ListsBinaryOperation(string code, string expected) =>
 		Assert.That(new CSharpTypeVisitor(new Type(new TestPackage(), new TypeLines(Computer, @$"has log
 Run
-	let l = (1, 2) + (3, 4)
-	let m = (5, 6)
-	let r = {
+	constant l = (1, 2) + (3, 4)
+	constant m = (5, 6)
+	constant r = {
 		code
 	}".Split(Environment.NewLine))).ParseMembersAndMethods(parser)).FileContent,
 			Contains.Substring($"\tvar r = {expected};"));
@@ -169,9 +169,9 @@ Run
 				"NestedMethod Number",
 				"	if 5 is 5",
 				"		if 5 is not 6",
-				"			let a = 5",
+				"			constant a = 5",
 				"		else",
-				"			let b = 5")).
+				"			constant b = 5")).
 			// @formatter.on
 			ParseMembersAndMethods(parser);
 		Assert.That(new CSharpTypeVisitor(program).FileContent, Contains.Substring(@"namespace SourceGeneratorTests;

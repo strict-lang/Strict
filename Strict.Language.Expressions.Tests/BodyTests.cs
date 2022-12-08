@@ -19,7 +19,7 @@ public sealed class BodyTests : TestExpressions
 
 	[Test]
 	public void CannotUseVariableFromLowerScope() =>
-		Assert.That(() => ParseExpression("if bla is 5", "\tlet abc = \"abc\"", "log.Write(abc)"),
+		Assert.That(() => ParseExpression("if bla is 5", "\tconstant abc = \"abc\"", "log.Write(abc)"),
 			Throws.InstanceOf<IdentifierNotFound>().With.Message.StartWith("abc"));
 
 	[Test]
@@ -35,7 +35,7 @@ public sealed class BodyTests : TestExpressions
 				// @formatter:off
 				"has log",
 				"Run",
-				"\tlet number = 5",
+				"\tconstant number = 5",
 				"Add",
 				"\tlog.Write(number)")).ParseMembersAndMethods(new MethodExpressionParser());
 		// @formatter:on
@@ -46,7 +46,7 @@ public sealed class BodyTests : TestExpressions
 
 	[Test]
 	public void IfHasDifferentScopeThanMethod() =>
-		Assert.That(ParseExpression("if bla is 5", "\tlet abc = \"abc\"", "\tlog.Write(abc)"),
+		Assert.That(ParseExpression("if bla is 5", "\tconstant abc = \"abc\"", "\tlog.Write(abc)"),
 			Is.EqualTo(new If(GetCondition(), CreateThenBlock())));
 
 	private Expression CreateThenBlock()
@@ -66,7 +66,7 @@ public sealed class BodyTests : TestExpressions
 		Assert.That(() => ParseExpression(
 				// @formatter:off
 				"if bla is 5",
-				"\tlet ifText = \"in if\"",
+				"\tconstant ifText = \"in if\"",
 				"\tlog.Write(ifText)",
 				"else",
 				"\tlog.Write(ifText)"),
@@ -77,7 +77,7 @@ public sealed class BodyTests : TestExpressions
 	public void MissingThenDueToIncorrectChildBodyStart() =>
 		Assert.That(() => ParseExpression(
 				"if bla is 5",
-				"let abc = \"abc\"",
+				"constant abc = \"abc\"",
 				"\tlog.Write(abc)"),
 			Throws.InstanceOf<If.MissingThen>());
 
@@ -91,7 +91,7 @@ public sealed class BodyTests : TestExpressions
 	{
 		var ifExpression = ParseExpression(
 			"if bla is 5",
-			"\tlet abc = \"abc\"",
+			"\tconstant abc = \"abc\"",
 			"\tlog.Write(abc)") as If;
 		var variableCall =
 			((ifExpression?.Then as Body)?.Expressions[1] as MethodCall)?.Arguments[0] as VariableCall;
@@ -100,14 +100,14 @@ public sealed class BodyTests : TestExpressions
 
 	[Test]
 	public void DuplicateVariableNameFound() =>
-		Assert.That(() => ParseExpression("if bla is 5", "\tlet abc = 5", "\tlet abc = 5"),
+		Assert.That(() => ParseExpression("if bla is 5", "\tconstant abc = 5", "\tconstant abc = 5"),
 			Throws.InstanceOf<Body.DuplicateVariableNameFound>().With.Message.StartsWith("abc"));
 
 	[Test]
 	public void DuplicateVariableInLowerScopeIsNotAllowed() =>
 		Assert.That(
-			() => ParseExpression("if bla is 5", "\tlet outerScope = \"abc\"", "\tif bla is 5.0",
-				"\t\tlet outerScope = 5"),
+			() => ParseExpression("if bla is 5", "\tconstant outerScope = \"abc\"", "\tif bla is 5.0",
+				"\t\tconstant outerScope = 5"),
 			Throws.InstanceOf<Body.DuplicateVariableNameFound>().With.Message.StartsWith("outerScope"));
 
 	[Test]
@@ -118,10 +118,10 @@ public sealed class BodyTests : TestExpressions
                 // @formatter:off
                 "has log",
                 "Run",
-                "\tlet number = 5",
+                "\tconstant number = 5",
                 "\tfor Range(1, number)",
                 "\t\tif index is number",
-                "\t\t\tlet current = index",
+                "\t\t\tconstant current = index",
                 "\t\t\treturn current",
                 "\tnumber")).ParseMembersAndMethods(new MethodExpressionParser());
 		// @formatter:on

@@ -15,7 +15,7 @@ public abstract class TestExpressions : MethodExpressionParser
 		((List<Member>)type.Members).Add(member);
 		method = new Method(type, 0, this, new[] { MethodTests.Run });
 		methodWithBody = new Method(type, 0, this,
-			new[] { MethodTests.Run, "\tlet variable = 5", "\tvariable + 5" });
+			new[] { MethodTests.Run, "\tconstant variable = 5", "\tvariable + 5" });
 		((List<Method>)type.Methods).AddRange(new List<Method> { method, methodWithBody });
 		number = new Number(type, 5);
 		list = new List(new Body(method), new List<Expression> { new Number(type, 5) });

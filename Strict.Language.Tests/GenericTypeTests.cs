@@ -31,7 +31,7 @@ public sealed class GenericTypeTests
 		Assert.That(
 			() => new Type(package,
 				new TypeLines("SimpleProgram", "has something Comparer(Text)", "Invoke",
-					"\tlet result = something.Compare")).ParseMembersAndMethods(parser),
+					"\tconstant result = something.Compare")).ParseMembersAndMethods(parser),
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.
 				InstanceOf<Context.TypeArgumentsDoNotMatchWithMainType>().With.Message.Contains(
 					"Argument(s) (TestPackage.Text) does not match type Comparer with constructor Comparer(FirstType TestPackage.Generic, SecondType TestPackage.Generic)"));
@@ -43,7 +43,7 @@ public sealed class GenericTypeTests
 			new TypeLines("SimpleProgram",
 				"has something Comparer(Text, Number)",
 				"Invoke",
-				"\tlet result = something.Compare")).ParseMembersAndMethods(new MethodExpressionParser());
+				"\tconstant result = something.Compare")).ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(usingGenericType.Members[0].Type.Name, Is.EqualTo("Comparer(TestPackage.Text, TestPackage.Number)"));
 	}
 

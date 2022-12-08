@@ -16,7 +16,7 @@ public sealed class ForTests : TestExpressions
 	[Test]
 	public void VariableOutOfScope() =>
 		Assert.That(
-			() => ParseExpression("for Range(2, 5)", "\tlet num = 5", "for Range(0, 10)",
+			() => ParseExpression("for Range(2, 5)", "\tconstant num = 5", "for Range(0, 10)",
 				"\tlog.Write(num)"),
 			Throws.InstanceOf<IdentifierNotFound>().With.Message.StartWith("num"));
 
@@ -56,13 +56,13 @@ public sealed class ForTests : TestExpressions
 	[Test]
 	public void ImmutableVariableNotAllowedToBeAnIterator() =>
 		Assert.That(
-			() => ParseExpression("let myIndex = 0", "for myIndex in Range(0, 10)",
+			() => ParseExpression("constant myIndex = 0", "for myIndex in Range(0, 10)",
 				"\tlog.Write(myIndex)"), Throws.InstanceOf<For.ImmutableIterator>());
 
 	[Test]
 	public void IteratorHasMatchingTypeWithIterable() =>
 		Assert.That(() =>
-				ParseExpression("let element = Mutable(0)",
+				ParseExpression("constant element = Mutable(0)",
 					"for element in (\"1\", \"2\", \"3\")", "\tlog.Write(element)"),
 			Throws.InstanceOf<For.IteratorTypeDoesNotMatchWithIterable>());
 
@@ -74,7 +74,7 @@ public sealed class ForTests : TestExpressions
 	[Test]
 	public void ParseForInExpression() =>
 		Assert.That(
-			((For)((Body)ParseExpression("let myIndex = Mutable(0)", "for myIndex in Range(0, 5)",
+			((For)((Body)ParseExpression("constant myIndex = Mutable(0)", "for myIndex in Range(0, 5)",
 				"\tlog.Write(myIndex)")).Expressions[1]).ToString(),
 			Is.EqualTo("for myIndex in Range(0, 5)\n\tlog.Write(myIndex)"));
 
@@ -104,21 +104,21 @@ public sealed class ForTests : TestExpressions
 	[Test]
 	public void ParseForListExpressionWithIterableVariable() =>
 		Assert.That(
-			((For)((Body)ParseExpression("let elements = (1, 2, 3)", "for elements",
+			((For)((Body)ParseExpression("constant elements = (1, 2, 3)", "for elements",
 				"\tlog.Write(index)")).Expressions[1]).ToString(),
 			Is.EqualTo("for elements\n\tlog.Write(index)"));
 
 	[Test]
 	public void ParseForListWithExplicitVariable() =>
 		Assert.That(
-			((For)((Body)ParseExpression("let element = Mutable(0)", "for element in (1, 2, 3)",
+			((For)((Body)ParseExpression("constant element = Mutable(0)", "for element in (1, 2, 3)",
 				"\tlog.Write(element)")).Expressions[1]).ToString(),
 			Is.EqualTo("for element in (1, 2, 3)\n\tlog.Write(element)"));
 
 	[Test]
 	public void ParseWithNumber() =>
 		Assert.That(
-			((For)((Body)ParseExpression("let iterationCount = 10", "for iterationCount",
+			((For)((Body)ParseExpression("constant iterationCount = 10", "for iterationCount",
 				"\tlog.Write(index)")).Expressions[1]).ToString(),
 			Is.EqualTo("for iterationCount\n\tlog.Write(index)"));
 
@@ -136,7 +136,7 @@ public sealed class ForTests : TestExpressions
 	[Test]
 	public void ParseForWithListOfTexts() =>
 		Assert.That(
-			() => ((For)((Body)ParseExpression("let element = Mutable(\"1\")",
+			() => ((For)((Body)ParseExpression("constant element = Mutable(\"1\")",
 					"for element in (\"1\", \"2\", \"3\")", "\tlog.Write(element)")).Expressions[1]).
 				ToString(), Is.EqualTo("for element in (\"1\", \"2\", \"3\")\n\tlog.Write(element)"));
 
@@ -150,14 +150,14 @@ public sealed class ForTests : TestExpressions
 	public void ValidIteratorReturnTypeTextForList() =>
 		Assert.That(
 			((Mutable)((VariableCall)((MethodCall)((For)((Body)ParseExpression(
-				"let element = Mutable(\"1\")", "for element in (\"1\", \"2\", \"3\")",
+				"constant element = Mutable(\"1\")", "for element in (\"1\", \"2\", \"3\")",
 				"\tlog.Write(element)")).Expressions[1]).Body).Arguments[0]).CurrentValue).DataReturnType.Name == Base.Text);
 
 	[Test]
 	public void ValidLoopProgram()
 	{
 		var programType = new Type(type.Package,
-				new TypeLines(Base.App, "has number", "CountNumber Number", "\tlet result = Count(1)",
+				new TypeLines(Base.App, "has number", "CountNumber Number", "\tconstant result = Count(1)",
 					"\tfor Range(0, number)", "\t\tresult.Increment", "\tresult")).
 			ParseMembersAndMethods(new MethodExpressionParser());
 		var parsedExpression = (Body)programType.Methods[0].GetBodyAndParseIfNeeded();
