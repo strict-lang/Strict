@@ -6,13 +6,5 @@ public record Statement(Instruction Instruction, Instance? Instance, params Regi
 		registers) { }
 
 	public override string ToString() =>
-		$"{
-			Instruction
-		} {
-			Instance?.Value
-		}{
-			(Registers.Length > 0
-				? string.Join(", ", Registers)
-				: "")
-		}";
+		$"{Instruction} {Instance?.Value}{(Registers.Length > 0 ? string.Join(", ", Registers) : "")}";
 }

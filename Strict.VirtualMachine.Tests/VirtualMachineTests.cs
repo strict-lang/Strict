@@ -13,7 +13,7 @@ public sealed class VirtualMachineTests : BaseVirtualMachineTests
 	[TestCase(Instruction.Subtract, 5, 8, 3)]
 	[TestCase(Instruction.Multiply, 4, 2, 2)]
 	[TestCase(Instruction.Divide, 3, 7.5, 2.5)]
-	[TestCase(Instruction.Modulate, 1, 5, 2)]
+	[TestCase(Instruction.Modulo, 1, 5, 2)]
 	[TestCase(Instruction.Add, "510", "5", 10)]
 	[TestCase(Instruction.Add, "510", 5, "10")]
 	[TestCase(Instruction.Add, "510", "5", "10")]
@@ -116,7 +116,7 @@ public sealed class VirtualMachineTests : BaseVirtualMachineTests
 	{
 		"has number",
 		"IsEven Number",
-		"\tlet sum = Mutable(0)",
+		"\tconstant sum = Mutable(0)",
 		"\tfor number",
 		"\t\tif (index % 2) is 0",
 		"\t\t\tsum = sum + index",
