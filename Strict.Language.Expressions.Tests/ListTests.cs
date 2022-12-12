@@ -253,11 +253,11 @@ public sealed class ListTests : TestExpressions
 			new TypeLines(nameof(AllowMutableListWithEmptyExpressions),
 				"has numbers",
 				"CreateMutableList Numbers",
-				"\tconstant result = Mutable(Numbers)",
+				"\tmutable result = Numbers",
 				"\tfor numbers",
 				"\t\tresult = result + (0 - value)",
 				"\tresult")).ParseMembersAndMethods(parser).Methods[0].GetBodyAndParseIfNeeded();
-		Assert.That(expression.Expressions[0].ToString(), Is.EqualTo("constant result = Mutable(Numbers)"));
+		Assert.That(expression.Expressions[0].ToString(), Is.EqualTo("mutable result = Numbers"));
 		Assert.That(((Assignment)expression.Expressions[0]).Value.ReturnType.FullName,
 			Is.EqualTo("TestPackage.Mutable(TestPackage.Numbers Implements TestPackage.List)"));
 	}

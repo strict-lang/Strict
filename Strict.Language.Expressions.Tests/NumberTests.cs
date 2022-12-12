@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Engines;
 using BenchmarkDotNet.Running;
@@ -34,7 +35,7 @@ public class NumberTests : TestExpressions
 	[TestCase("1e-10")]
 	[TestCase("7.5e+13")]
 	public void ValidNumbers(string input) =>
-		Assert.That(ParseExpression(input), Is.EqualTo(new Number(method, double.Parse(input))));
+		Assert.That(ParseExpression(input), Is.EqualTo(new Number(method, double.Parse(input, CultureInfo.InvariantCulture))));
 
 	[Test]
 	public void ParseTextToNumberUsingFromIsNotAllowed() =>

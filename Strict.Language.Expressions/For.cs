@@ -56,8 +56,8 @@ public sealed class For : Expression
 		AddVariableIfDoesNotExist(body, line, variableName);
 		var variableValue = body.FindVariableValue(variableName);
 		if (variableValue != null &&
-			!variableValue.ReturnType.Name.StartsWith(Base.Mutable, StringComparison.Ordinal) &&
-			HasIn(line))
+			!variableValue.ReturnType.IsMutable()
+			&& HasIn(line))
 			throw new ImmutableIterator(body);
 		var forExpression = body.Method.ParseExpression(body, line[4..]);
 		if (HasIn(line))
@@ -73,8 +73,8 @@ public sealed class For : Expression
 		if (variableValue != null)
 			return;
 		if (body.Method.Type.FindMember(variableName.ToString()) == null)
-			body.AddVariable(variableName.ToString(),
-				body.Method.ParseExpression(body, GetVariableExpressionValue(body, line)));
+			body.AddVariable(variableName.ToString(), new Mutable(body.Method,
+				body.Method.ParseExpression(body, GetVariableExpressionValue(body, line))));
 	}
 
 	private static void CheckForIncorrectMatchingTypes(Body body, ReadOnlySpan<char> variableName,
@@ -108,21 +108,21 @@ public sealed class For : Expression
 	private static void AddImplicitVariables(Body body, ReadOnlySpan<char> line, Body innerBody)
 	{
 		innerBody.AddVariable(IndexName, new Number(body.Method, 0));
-		innerBody.AddVariable(ValueName,
-			innerBody.Method.ParseExpression(innerBody, GetVariableExpressionValue(body, line)));
+		innerBody.AddVariable(ValueName, new Mutable(innerBody.Method,
+			innerBody.Method.ParseExpression(innerBody, GetVariableExpressionValue(body, line))));
 	}
 
 	private static string GetVariableExpressionValue(Body body, ReadOnlySpan<char> line)
 	{
 		if (line.Contains("Range", StringComparison.Ordinal))
-			return $"Mutable({GetRangeExpression(line)}.Start)";
+			return $"{GetRangeExpression(line)}.Start";
 		var iterableName = FindIterableName(line);
 		var variable = body.FindVariableValue(iterableName)?.ReturnType ?? body.Method.Type.FindMember(iterableName.ToString())?.Type;
 		var value = iterableName[^1] == ')'
 			? iterableName[1..iterableName.IndexOf(',')].ToString()
 			: variable != null && variable.IsList
-				? $"Mutable({iterableName}(0))"
-				: $"Mutable({iterableName})";
+				? $"{iterableName}(0)"
+				: $"{iterableName}";
 		return value;
 	}
 

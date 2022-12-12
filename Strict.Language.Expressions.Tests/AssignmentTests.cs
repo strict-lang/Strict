@@ -109,12 +109,12 @@ public class AssignmentTests : TestExpressions
 	[Test]
 	public void LetWithoutVariableNameCannotParse() =>
 		Assert.That(() => ParseExpression("constant 5"),
-			Throws.Exception.InstanceOf<Assignment.IncompleteLet>());
+			Throws.Exception.InstanceOf<Assignment.MissingAssignmentValueExpression>());
 
 	[Test]
 	public void LetWithoutValueCannotParse() =>
 		Assert.That(() => ParseExpression("constant value"),
-			Throws.Exception.InstanceOf<Assignment.IncompleteLet>());
+			Throws.Exception.InstanceOf<Assignment.MissingAssignmentValueExpression>());
 
 	[Test]
 	public void LetWithoutExpressionCannotParse() =>

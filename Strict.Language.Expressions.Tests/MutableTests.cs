@@ -1,4 +1,5 @@
 ﻿using NUnit.Framework;
+using static Strict.Language.Expressions.Assignment;
 
 namespace Strict.Language.Expressions.Tests;
 
@@ -53,8 +54,8 @@ public sealed class MutableTests : TestExpressions
 		var program = new Type(type.Package,
 			new TypeLines(nameof(MutableVariablesWithSameImplementationTypeShouldUseSameType), "has unused Number",
 				"UnusedMethod Number",
-				"\tconstant first = Mutable(5)",
-				"\tconstant second = Mutable(6)",
+				"\tmutable first = 5",
+				"\tmutable second = 6",
 				"\tfirst + second")).ParseMembersAndMethods(parser);
 		var body = (Body)program.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(body.Expressions[0].ReturnType.Name, Is.EqualTo(Base.Mutable + "(TestPackage." + Base.Number + ")"));
@@ -63,7 +64,7 @@ public sealed class MutableTests : TestExpressions
 
 	[TestCase("AssignNumberToTextType", "has something Mutable(Text)",
 		"TryChangeMutableDataType Text", "\tsomething = 5")]
-	[TestCase("AssignNumbersToTexts", "has something = Mutable(Texts)",
+	[TestCase("AssignNumbersToTexts", "has something Mutable(Texts)",
 		"TryChangeMutableDataType Text", "\tsomething = (5, 4, 3)")]
 	public void InvalidDataAssignment(string testName, params string[] code) =>
 		Assert.That(
@@ -76,11 +77,11 @@ public sealed class MutableTests : TestExpressions
 		var program = new Type(type.Package,
 				new TypeLines(nameof(MutableVariableInstanceUsingSpace), "has log",
 					"Add(input Count) Number",
-					"\tconstant result = Mutable(5)",
+					"\tmutable result = 5",
 					"\tresult = result + input")).
 			ParseMembersAndMethods(parser);
 		var body = (Body)program.Methods[0].GetBodyAndParseIfNeeded();
-		Assert.That(((Assignment)body.Expressions[0]).Value.ToString(), Is.EqualTo("Mutable(5)"));
+		Assert.That(((Assignment)body.Expressions[0]).Value.ToString(), Is.EqualTo("5"));
 	}
 
 	[Test]
@@ -88,24 +89,55 @@ public sealed class MutableTests : TestExpressions
 		Assert.That(
 			() => new Type(type.Package,
 					new TypeLines(nameof(MissingMutableArgument), "has log", "Add(input Count) Number",
-						"\tconstant result = Mutable", "\tresult = result + input")).
+						"\tconstant result =", "\tresult = result + input")).
 				ParseMembersAndMethods(parser).
 				Methods[0].GetBodyAndParseIfNeeded(),
-			Throws.InstanceOf<Mutable.MissingMutableArgument>());
+			Throws.InstanceOf<MissingAssignmentValueExpression>());
 
-	[TestCase("Mutable(1, 2, 3)", "Numbers", "MutableTypeWithListArgumentIsAllowed")]
-	[TestCase("Mutable(Range(1, 10).Start)", "Number", "MutableTypeWithNestedCallShouldUseBrackets")]
+	[TestCase("(1, 2, 3)", "Numbers", "MutableTypeWithListArgumentIsAllowed")]
+	[TestCase("Range(1, 10).Start", "Number", "MutableTypeWithNestedCallShouldUseBrackets")]
 	public void MutableTypeWithListArgumentIsAllowed(string code, string returnType, string testName)
 	{
 		var program = new Type(type.Package,
 				new TypeLines(testName, "has log",
 					$"Add(input Count) {returnType}",
-					$"\tconstant result = {code}",
+					$"\tmutable result = {code}",
 					"\tresult = result + input",
 					"\tresult")).
 			ParseMembersAndMethods(parser);
 		var body = (Body)program.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(((Assignment)body.Expressions[0]).Value.ToString(),
 			Is.EqualTo(code));
+	}
+
+	[Test]
+	public void AssignmentWithMutableKeyword()
+	{
+		var program = new Type(type.Package,
+				new TypeLines(nameof(AssignmentWithMutableKeyword), "has something Character",
+					"CountEvenNumbers(limit Number) Number",
+					"\tmutable counter = 0",
+					"\tfor Range(0, limit)",
+					"\t\tcounter = counter + 1",
+					"\tcounter")).
+			ParseMembersAndMethods(parser);
+		var body = (Body)program.Methods[0].GetBodyAndParseIfNeeded();
+		Assert.That(body.ReturnType,
+			Is.EqualTo(type.GetType(Base.Number)));
+		Assert.That(body.Expressions[0].ReturnType.Name,
+			Is.EqualTo("Mutable(TestPackage.Number)"));
+	}
+
+	[Test]
+	public void MissingAssignmentValueExpression()
+	{
+		var program = new Type(type.Package,
+				new TypeLines(nameof(MissingAssignmentValueExpression), "has something Character",
+					"CountEvenNumbers(limit Number) Number",
+					"\tmutable counter =",
+					"\tcounter")).
+			ParseMembersAndMethods(parser);
+		Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(),
+			Throws.InstanceOf<MissingAssignmentValueExpression>());
 	}
 }

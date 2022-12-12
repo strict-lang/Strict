@@ -116,7 +116,7 @@ public sealed class VirtualMachineTests : BaseVirtualMachineTests
 	{
 		"has number",
 		"IsEven Number",
-		"\tconstant sum = Mutable(0)",
+		"\tmutable sum = 0",
 		"\tfor number",
 		"\t\tif (index % 2) is 0",
 		"\t\t\tsum = sum + index",

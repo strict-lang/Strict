@@ -23,7 +23,13 @@ public sealed class Assignment : ConcreteExpression
 	public string Name { get; }
 	public Expression Value { get; }
 	public override int GetHashCode() => Name.GetHashCode() ^ Value.GetHashCode();
-	public override string ToString() => Constant + " " + Name + " = " + Value;
+
+	public override string ToString() =>
+		(Value.ReturnType.IsMutable()
+			? Mutable
+			: Constant) + " " + Name + " = " + Value;
+
+	private const string Mutable = "mutable";
 	private const string Constant = "constant";
 
 	public override bool Equals(Expression? other) =>
@@ -31,8 +37,10 @@ public sealed class Assignment : ConcreteExpression
 
 	public static Expression? TryParse(Body body, ReadOnlySpan<char> line) =>
 		line.StartsWith(Constant + " ", StringComparison.Ordinal)
-			? TryParseLet(body, line)
-			: null;
+			? TryParseConstant(body, line, Constant.Length + 1)
+			: line.StartsWith(Mutable + " ", StringComparison.Ordinal)
+				? TryParseConstant(body, line, Mutable.Length + 1)
+				: null;
 
 	/// <summary>
 	/// Highly optimized parsing of assignments, skips over the let, grabs the name of the local
@@ -40,19 +48,24 @@ public sealed class Assignment : ConcreteExpression
 	/// constant hello = "hello" + " " + "world"
 	///					 ^ ^       ^ ^   ^ ^       END, using TryParseExpression with Range(12, 35)
 	/// </summary>
-	private static Expression TryParseLet(Body body, ReadOnlySpan<char> line)
+	private static Expression TryParseConstant(Body body, ReadOnlySpan<char> line, int startIndex)
 	{
-		var parts = line[(Constant.Length + 1)..].Split();
+		var parts = line[startIndex..].Split();
 		parts.MoveNext();
 		var name = parts.Current.ToString();
 		if (!parts.MoveNext() || !parts.MoveNext())
-			throw new IncompleteLet(body);
-		var startOfValueExpression = Constant.Length + 1 + name.Length + 1 + 1 + 1;
-		return new Assignment(body, name, body.Method.ParseExpression(body, line[startOfValueExpression..]));
+			throw new MissingAssignmentValueExpression(body);
+		var expressionSpan = line[(startIndex + name.Length + 1 + 1 + 1)..];
+		return new Assignment(body, name, startIndex == 8
+			? new Mutable(body.Method,
+				expressionSpan.IsFirstLetterUppercase() && expressionSpan.IsPlural()
+					? new List(body.Method.Type.GetType(expressionSpan.ToString()))
+					: body.Method.ParseExpression(body, expressionSpan))
+			: body.Method.ParseExpression(body, expressionSpan));
 	}
 
-	public sealed class IncompleteLet : ParsingFailed
+	public sealed class MissingAssignmentValueExpression : ParsingFailed
 	{
-		public IncompleteLet(Body body) : base(body) { }
+		public MissingAssignmentValueExpression(Body body) : base(body) { }
 	}
 }

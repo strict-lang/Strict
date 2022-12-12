@@ -215,8 +215,8 @@ public class TypeTests
 				}), Throws.InstanceOf<Type.GenericTypesCannotBeUsedDirectlyUseImplementation>());
 	}
 
-	[TestCase(Base.Number, "has number", "Run", "\tconstant result = Mutable(2)")]
-	[TestCase(Base.Text, "has number", "Run", "\tconstant result = Mutable(\"2\")")]
+	[TestCase(Base.Number, "has number", "Run", "\tmutable result = 2")]
+	[TestCase(Base.Text, "has number", "Run", "\tmutable result = \"2\"")]
 	public void MutableTypesHaveProperDataReturnType(string expected, params string[] code)
 	{
 		var expression = (Assignment)

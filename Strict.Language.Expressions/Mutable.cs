@@ -5,7 +5,7 @@ namespace Strict.Language.Expressions;
 
 public sealed class Mutable : Value
 {
-	private Mutable(Context context, Expression expression) : base(GetMutableReturnType(context, expression),
+	public Mutable(Context context, Expression expression) : base(GetMutableReturnType(context, expression),
 		expression)
 	{
 		ReturnType.AddDataReturnTypeToMutableImplements(DataReturnType);
@@ -20,7 +20,7 @@ public sealed class Mutable : Value
 	public static Expression? TryParse(Body body, ReadOnlySpan<char> line) =>
 		line.Contains(" = ", StringComparison.Ordinal)
 			? TryParseReassignment(body, line)
-			: TryParseInitialization(body, line);
+			: null;
 
 	public Type DataReturnType => ((Expression)Data).ReturnType;
 
@@ -33,36 +33,6 @@ public sealed class Mutable : Value
 			? UpdateMemberOrVariableValue(body, expression, body.Method.ParseExpression(body, line[(parts.Current.Length + 3)..]))
 			: throw new ImmutableTypesCannotBeChanged(body, parts.Current.ToString());
 	}
-
-	private static Expression? TryParseInitialization(Body body, ReadOnlySpan<char> line) =>
-		line.StartsWith("Mutable", StringComparison.Ordinal)
-			? new Mutable(body.Method,
-				ParseMutableTypeArgument(body, line[7..]))
-			: null;
-
-	private static Expression ParseMutableTypeArgument(Body body, ReadOnlySpan<char> line)
-	{
-		var argumentText = line.Length > 0
-			? GetArgumentText(line)
-			: throw new MissingMutableArgument(body);
-		return argumentText.IsFirstLetterUppercase() && argumentText.IsPlural()
-			? CreateEmptyListExpression(body, argumentText)
-			: body.Method.ParseExpression(body, argumentText);
-	}
-
-	public sealed class MissingMutableArgument : ParsingFailed
-	{
-		public MissingMutableArgument(Body body) : base(body) { }
-	}
-
-	private static ReadOnlySpan<char> GetArgumentText(ReadOnlySpan<char> line) =>
-		line.Contains(',') && !line.Contains('.')
-			? line[line.IndexOf('(')..(line.LastIndexOf(')') + 1)]
-			: line[(line.IndexOf('(') + 1)..line.LastIndexOf(')')];
-
-	private static Expression
-		CreateEmptyListExpression(Body body, ReadOnlySpan<char> argumentText) =>
-		new List(body.Method.Type.GetType(argumentText.ToString()));
 
 	private static bool IsMutable(Expression expression) =>
 		expression.ReturnType.Name == Base.Mutable ||
@@ -102,9 +72,7 @@ public sealed class Mutable : Value
 	}
 
 	public override string ToString() =>
-		"Mutable" + (Data is List listData
-			? listData.Values.Count == 0
-				? "(" + DataReturnType.Name + ")"
-				: Data
-			: "(" + Data + ")");
+		Data is List { Values.Count: 0 }
+			? DataReturnType.Name
+			: base.ToString();
 }

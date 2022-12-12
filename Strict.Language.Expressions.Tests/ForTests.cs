@@ -62,7 +62,7 @@ public sealed class ForTests : TestExpressions
 	[Test]
 	public void IteratorHasMatchingTypeWithIterable() =>
 		Assert.That(() =>
-				ParseExpression("constant element = Mutable(0)",
+				ParseExpression("mutable element = 0",
 					"for element in (\"1\", \"2\", \"3\")", "\tlog.Write(element)"),
 			Throws.InstanceOf<For.IteratorTypeDoesNotMatchWithIterable>());
 
@@ -74,7 +74,7 @@ public sealed class ForTests : TestExpressions
 	[Test]
 	public void ParseForInExpression() =>
 		Assert.That(
-			((For)((Body)ParseExpression("constant myIndex = Mutable(0)", "for myIndex in Range(0, 5)",
+			((For)((Body)ParseExpression("mutable myIndex = 0", "for myIndex in Range(0, 5)",
 				"\tlog.Write(myIndex)")).Expressions[1]).ToString(),
 			Is.EqualTo("for myIndex in Range(0, 5)\n\tlog.Write(myIndex)"));
 
@@ -97,9 +97,9 @@ public sealed class ForTests : TestExpressions
 	[Test]
 	public void ValidIteratorReturnTypeWithValue() =>
 		Assert.That(
-			((VariableCall)((MethodCall)((For)ParseExpression("for (1, 2, 3)",
-				"\tlog.Write(value)")).Body).Arguments[0]).ReturnType.Name,
-			Is.EqualTo(Base.Number));
+			((VariableCall)((MethodCall)((For)ParseExpression("for (1, 2, 3)", "\tlog.Write(value)")).
+				Body).Arguments[0]).ReturnType.FullName,
+			Is.EqualTo("TestPackage.Mutable(TestPackage.Number)"));
 
 	[Test]
 	public void ParseForListExpressionWithIterableVariable() =>
@@ -111,7 +111,7 @@ public sealed class ForTests : TestExpressions
 	[Test]
 	public void ParseForListWithExplicitVariable() =>
 		Assert.That(
-			((For)((Body)ParseExpression("constant element = Mutable(0)", "for element in (1, 2, 3)",
+			((For)((Body)ParseExpression("mutable element = 0", "for element in (1, 2, 3)",
 				"\tlog.Write(element)")).Expressions[1]).ToString(),
 			Is.EqualTo("for element in (1, 2, 3)\n\tlog.Write(element)"));
 
@@ -136,7 +136,7 @@ public sealed class ForTests : TestExpressions
 	[Test]
 	public void ParseForWithListOfTexts() =>
 		Assert.That(
-			() => ((For)((Body)ParseExpression("constant element = Mutable(\"1\")",
+			() => ((For)((Body)ParseExpression("mutable element = \"1\"",
 					"for element in (\"1\", \"2\", \"3\")", "\tlog.Write(element)")).Expressions[1]).
 				ToString(), Is.EqualTo("for element in (\"1\", \"2\", \"3\")\n\tlog.Write(element)"));
 
@@ -150,7 +150,7 @@ public sealed class ForTests : TestExpressions
 	public void ValidIteratorReturnTypeTextForList() =>
 		Assert.That(
 			((Mutable)((VariableCall)((MethodCall)((For)((Body)ParseExpression(
-				"constant element = Mutable(\"1\")", "for element in (\"1\", \"2\", \"3\")",
+				"mutable element = \"1\"", "for element in (\"1\", \"2\", \"3\")",
 				"\tlog.Write(element)")).Expressions[1]).Body).Arguments[0]).CurrentValue).DataReturnType.Name == Base.Text);
 
 	[Test]
