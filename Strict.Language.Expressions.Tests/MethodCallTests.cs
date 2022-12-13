@@ -186,17 +186,23 @@ public sealed class MethodCallTests : TestExpressions
 	[Test]
 	public void TypeImplementsGenericTypeWithLength()
 	{
+		new Type(type.Package,
+			new TypeLines("HasLengthImplementation",
+				"implement HasLength",
+				"has number",
+				"Length Number",
+				"\tnumber.Length")).ParseMembersAndMethods(new MethodExpressionParser());
 		var program = new Type(type.Package,
 			new TypeLines(nameof(TypeImplementsGenericTypeWithLength),
 				"has log", //unused member should be removed later when we allow class without members
 				"GetLengthSquare(type HasLength) Number",
 				"\ttype.Length * type.Length",
 				"Dummy",
-				"\tconstant countOfFive = Count(5)",
+				"\tconstant countOfFive = HasLengthImplementation(5)",
 				"\tconstant lengthSquare = GetLengthSquare(countOfFive)")).ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(program.Methods[1].GetBodyAndParseIfNeeded().ToString(),
 			Is.EqualTo(
-				"mutable countOfFive = Count(5)\r\nconstant lengthSquare = GetLengthSquare(countOfFive)"));
+				"constant countOfFive = HasLengthImplementation(5)\r\nconstant lengthSquare = GetLengthSquare(countOfFive)"));
 	}
 
 	[Test]

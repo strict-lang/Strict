@@ -157,16 +157,13 @@ public sealed class ForTests : TestExpressions
 	public void ValidLoopProgram()
 	{
 		var programType = new Type(type.Package,
-				new TypeLines(Base.App, "has number", "CountNumber Number", "\tconstant result = Count(1)",
-					"\tfor Range(0, number)", "\t\tresult.Increment", "\tresult")).
+				new TypeLines(Base.App, "has number", "CountNumber Number", "\tmutable result = 1",
+					"\tfor Range(0, number)", "\t\tresult = result + 1", "\tresult")).
 			ParseMembersAndMethods(new MethodExpressionParser());
 		var parsedExpression = (Body)programType.Methods[0].GetBodyAndParseIfNeeded();
-		var forMethodCall = (MethodCall)((For)parsedExpression.Expressions[1]).Body;
 		Assert.That(parsedExpression.ReturnType.Name, Is.EqualTo(Base.Number));
 		Assert.That(parsedExpression.Expressions[1], Is.TypeOf(typeof(For)));
 		Assert.That(((For)parsedExpression.Expressions[1]).Value.ToString(),
 			Is.EqualTo("Range(0, number)"));
-		Assert.That(((VariableCall)forMethodCall.Instance!).Name, Is.EqualTo("result"));
-		Assert.That(forMethodCall.Method.Name, Is.EqualTo("Increment"));
 	}
 }

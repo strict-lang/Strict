@@ -140,4 +140,30 @@ public sealed class MutableTests : TestExpressions
 		Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(),
 			Throws.InstanceOf<MissingAssignmentValueExpression>());
 	}
+
+	[Test]
+	public void DirectUsageOfMutableTypesOrImplementsAreForbidden()
+	{
+		var program = new Type(type.Package,
+				new TypeLines(nameof(DirectUsageOfMutableTypesOrImplementsAreForbidden), "has unused Character",
+					"DummyCount(limit Number) Number",
+					"\tconstant result = Count(5)",
+					"\tresult")).
+			ParseMembersAndMethods(parser);
+		Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(),
+			Throws.InstanceOf<DirectUsageOfMutableTypesOrImplementsAreForbidden>()!);
+	}
+
+	[Test]
+	public void GenericTypesCannotBeUsedDirectlyUseImplementation()
+	{
+		var program = new Type(type.Package,
+				new TypeLines(nameof(GenericTypesCannotBeUsedDirectlyUseImplementation), "has unused Character",
+					"DummyCount(limit Number) Number",
+					"\tconstant result = Mutable(5)",
+					"\tresult")).
+			ParseMembersAndMethods(parser);
+		Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(),
+			Throws.InstanceOf<Type.GenericTypesCannotBeUsedDirectlyUseImplementation>()!);
+	}
 }

@@ -247,11 +247,11 @@ public class TypeTests
 	{
 		var type = new Type(package, new TypeLines(nameof(MutableVariableCanBeChanged), "has number",
 				"Run",
-				"\tconstant result = Count(2)",
-				"\tresult = Count(5)")).
+				"\tmutable result = 2",
+				"\tresult = 5")).
 			ParseMembersAndMethods(new MethodExpressionParser());
 		var body = (Body)type.Methods[0].GetBodyAndParseIfNeeded();
-		Assert.That(body.FindVariableValue("result")!.ToString(), Is.EqualTo("Count(5)"));
+		Assert.That(body.FindVariableValue("result")!.ToString(), Is.EqualTo("5"));
 	}
 
 	[Test]
@@ -392,5 +392,17 @@ public class TypeTests
 				"\tlog.Write(stacktrace to Text)")).ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(logger.Members[2].Type.Name, Is.EqualTo("Stacktrace"));
 		Assert.That(logger.Members[2].Type.Members.Count, Is.EqualTo(3));
+	}
+
+	[Test]
+	public void MutableTypesOrImplementsShouldNotBeUsedDirectly()
+	{
+		var type = new Type(package, new TypeLines(nameof(MutableTypesOrImplementsShouldNotBeUsedDirectly), "has number",
+				"Run",
+				"\tmutable result = Count(2)",
+				"\tresult = Count(5)")).
+			ParseMembersAndMethods(new MethodExpressionParser());
+		Assert.That(() => type.Methods[0].GetBodyAndParseIfNeeded(),
+			Throws.InstanceOf<Assignment.DirectUsageOfMutableTypesOrImplementsAreForbidden>());
 	}
 }

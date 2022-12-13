@@ -37,9 +37,9 @@ public sealed class Assignment : ConcreteExpression
 
 	public static Expression? TryParse(Body body, ReadOnlySpan<char> line) =>
 		line.StartsWith(Constant + " ", StringComparison.Ordinal)
-			? TryParseConstant(body, line, Constant.Length + 1)
+			? TryParseAssignment(body, line, Constant.Length + 1)
 			: line.StartsWith(Mutable + " ", StringComparison.Ordinal)
-				? TryParseConstant(body, line, Mutable.Length + 1)
+				? TryParseAssignment(body, line, Mutable.Length + 1)
 				: null;
 
 	/// <summary>
@@ -48,7 +48,7 @@ public sealed class Assignment : ConcreteExpression
 	/// constant hello = "hello" + " " + "world"
 	///					 ^ ^       ^ ^   ^ ^       END, using TryParseExpression with Range(12, 35)
 	/// </summary>
-	private static Expression TryParseConstant(Body body, ReadOnlySpan<char> line, int startIndex)
+	private static Expression TryParseAssignment(Body body, ReadOnlySpan<char> line, int startIndex)
 	{
 		var parts = line[startIndex..].Split();
 		parts.MoveNext();
@@ -56,12 +56,27 @@ public sealed class Assignment : ConcreteExpression
 		if (!parts.MoveNext() || !parts.MoveNext())
 			throw new MissingAssignmentValueExpression(body);
 		var expressionSpan = line[(startIndex + name.Length + 1 + 1 + 1)..];
+		var expression = expressionSpan.IsFirstLetterUppercase() && expressionSpan.IsPlural()
+			? new List(body.Method.Type.GetType(expressionSpan.ToString()))
+			: ParseExpressionAndCheckType(body, expressionSpan, name);
 		return new Assignment(body, name, startIndex == 8
-			? new Mutable(body.Method,
-				expressionSpan.IsFirstLetterUppercase() && expressionSpan.IsPlural()
-					? new List(body.Method.Type.GetType(expressionSpan.ToString()))
-					: body.Method.ParseExpression(body, expressionSpan))
-			: body.Method.ParseExpression(body, expressionSpan));
+			? new Mutable(body.Method, expression)
+			: expression);
+	}
+
+	private static Expression ParseExpressionAndCheckType(Body body,
+		ReadOnlySpan<char> expressionSpan, ReadOnlySpan<char> variableName)
+	{
+		var expression = body.Method.ParseExpression(body, expressionSpan);
+		if (expression.ReturnType.IsMutable())
+			throw new DirectUsageOfMutableTypesOrImplementsAreForbidden(body, expressionSpan.ToString(),
+				variableName.ToString());
+		return expression;
+	}
+
+	public sealed class DirectUsageOfMutableTypesOrImplementsAreForbidden : ParsingFailed
+	{
+		public DirectUsageOfMutableTypesOrImplementsAreForbidden(Body body, string expressionText, string variableName) : base(body, $"Direct usage of mutable types or type that implements Mutable {expressionText} are not allowed. Instead use immutable types for variable {variableName}") { }
 	}
 
 	public sealed class MissingAssignmentValueExpression : ParsingFailed
