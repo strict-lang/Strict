@@ -9,7 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="ManagedCudaNet" Version="11.6.2" />
+    <PackageReference Include="ManagedCudaNet" Version="12.0.0" />
   </ItemGroup>
 
   <ItemGroup>
