@@ -6,7 +6,6 @@ public abstract class NamedType
 {
 	protected NamedType(Context definedIn, ReadOnlySpan<char> nameAndType, Type? typeFromValue = null)
 	{
-		IsMutable = nameAndType.Contains("Mutable(", StringComparison.Ordinal);
 		if (typeFromValue == null)
 		{
 			var parts = nameAndType.Split();
@@ -29,7 +28,7 @@ public abstract class NamedType
 		}
 	}
 
-	public bool IsMutable { get; }
+	public bool IsMutable { get; protected init; }
 
 	private string GetTypeName(string typeName)
 	{

@@ -5,8 +5,8 @@ namespace Strict.Language.Expressions;
 
 public sealed class Mutable : Value
 {
-	public Mutable(Context context, Expression expression) : base(GetMutableReturnType(context, expression),
-		expression)
+	public Mutable(Context context, Expression expression) : base(
+		GetMutableReturnType(context, expression), expression)
 	{
 		ReturnType.AddDataReturnTypeToMutableImplements(DataReturnType);
 		ReturnType.MutableReturnType = DataReturnType;

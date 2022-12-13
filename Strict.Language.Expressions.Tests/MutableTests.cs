@@ -14,7 +14,7 @@ public sealed class MutableTests : TestExpressions
 	public void MutableMemberConstructorWithType()
 	{
 		var program = new Type(type.Package,
-				new TypeLines(nameof(MutableMemberConstructorWithType), "has something Mutable(Number)",
+				new TypeLines(nameof(MutableMemberConstructorWithType), "mutable something Number",
 					"Add(input Count) Number",
 					"\tconstant result = something + input")).
 			ParseMembersAndMethods(parser);
@@ -27,9 +27,9 @@ public sealed class MutableTests : TestExpressions
 	public void MutableMethodParameterWithType()
 	{
 		var program = new Type(type.Package,
-				new TypeLines(nameof(MutableMethodParameterWithType), "has something Character",
+				new TypeLines(nameof(MutableMethodParameterWithType), "has something Number",
 					"Add(input Mutable(Number)) Number",
-					"\tconstant result = input + something")).
+					"\tconstant result = something + input")).
 			ParseMembersAndMethods(parser);
 		Assert.That(program.Methods[0].Parameters[0].IsMutable,
 			Is.True);
@@ -159,11 +159,38 @@ public sealed class MutableTests : TestExpressions
 	{
 		var program = new Type(type.Package,
 				new TypeLines(nameof(GenericTypesCannotBeUsedDirectlyUseImplementation), "has unused Character",
-					"DummyCount(limit Number) Number",
+					"DummyCount Number",
 					"\tconstant result = Mutable(5)",
 					"\tresult")).
 			ParseMembersAndMethods(parser);
 		Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(),
 			Throws.InstanceOf<Type.GenericTypesCannotBeUsedDirectlyUseImplementation>()!);
+	}
+
+	[Test]
+	public void MemberCannotBeAssignedWithMutableType() =>
+		Assert.That(
+			() => new Type(type.Package,
+					new TypeLines(nameof(MemberCannotBeAssignedWithMutableType), "has input = Mutable(0)",
+						"DummyMethod Number", "\tconstant result = Count(5)", "\tresult")).
+				ParseMembersAndMethods(parser),
+			Throws.InstanceOf<ParsingFailed>().With.InnerException.
+				InstanceOf<Type.GenericTypesCannotBeUsedDirectlyUseImplementation>());
+
+	[Test]
+	public void MemberDeclarationUsingMutableKeyword()
+	{
+		var program = new Type(type.Package,
+				new TypeLines(nameof(MemberDeclarationUsingMutableKeyword), "mutable input = 0",
+					"DummyAssignment(limit Number) Number",
+					"\tif limit > 5",
+					"\t\tinput = 5",
+					"\telse",
+					"\t\tinput = 10",
+					"\tinput")).
+			ParseMembersAndMethods(parser);
+		program.Methods[0].GetBodyAndParseIfNeeded();
+		Assert.That(program.Members[0].IsMutable, Is.True);
+		Assert.That(program.Members[0].Value?.ToString(), Is.EqualTo("10"));
 	}
 }

@@ -200,29 +200,33 @@ public class Type : Context
 
 	private void ParseLineForMembersAndMethods(ExpressionParser parser)
 	{
-		if (ValidateCurrentLineIsNonEmptyAndTrimmed().StartsWith(Has, StringComparison.Ordinal))
-			members.Add(GetNewMember(parser));
+		var line = ValidateCurrentLineIsNonEmptyAndTrimmed();
+		if (line.StartsWith(Has, StringComparison.Ordinal))
+			members.Add(GetNewMember(parser, Has));
+		else if (line.StartsWith(Mutable, StringComparison.Ordinal))
+			members.Add(GetNewMember(parser, Mutable));
 		else if (lines[lineNumber].StartsWith(Implement, StringComparison.Ordinal))
 			throw new ImplementMustComeBeforeMembersAndMethods(this, lineNumber, lines[lineNumber]);
 		else
 			methods.Add(new Method(this, lineNumber, parser, GetAllMethodLines()));
 	}
 
-	private Member GetNewMember(ExpressionParser parser)
+	private Member GetNewMember(ExpressionParser parser, string memberKeyword)
 	{
-		var member = ParseMember(parser, lines[lineNumber].AsSpan(Has.Length));
+		var member = ParseMember(parser, lines[lineNumber].AsSpan(memberKeyword.Length), memberKeyword);
 		if (members.Any(m => m.Name == member.Name))
 			throw new DuplicateMembersAreNotAllowed(this, lineNumber, member.Name);
 		return member;
 	}
 
-	private Member ParseMember(ExpressionParser parser, ReadOnlySpan<char> remainingLine)
+	private Member ParseMember(ExpressionParser parser, ReadOnlySpan<char> remainingLine,
+		string memberKeyword)
 	{
 		if (methods.Count > 0)
 			throw new MembersMustComeBeforeMethods(this, lineNumber, remainingLine.ToString());
 		try
 		{
-			return TryParseMember(parser, remainingLine);
+			return TryParseMember(parser, remainingLine, memberKeyword);
 		}
 		catch (ParsingFailed)
 		{
@@ -234,7 +238,8 @@ public class Type : Context
 		}
 	}
 
-	private Member TryParseMember(ExpressionParser parser, ReadOnlySpan<char> remainingLine)
+	private Member TryParseMember(ExpressionParser parser, ReadOnlySpan<char> remainingLine,
+		string memberKeyword)
 	{
 		var nameAndExpression = remainingLine.Split();
 		nameAndExpression.MoveNext();
@@ -246,7 +251,7 @@ public class Type : Context
 			: new Member(this, nameAndType, HasMemberExpression(nameAndExpression)
 				? GetMemberExpression(parser, nameAndType.MakeFirstLetterUppercase(),
 					remainingLine[(nameAndType.Length + 3)..])
-				: null);
+				: null, memberKeyword);
 	}
 
 	private static string GetMemberType(SpanSplitEnumerator nameAndExpression)
@@ -260,6 +265,7 @@ public class Type : Context
 		return memberType;
 	}
 
+	public sealed class DirectUsageOfMutableTypesOrImplementsAreForbidden : Exception { }
 	private static bool IsMemberTypeAny(string nameAndType, SpanSplitEnumerator nameAndExpression) => nameAndType == Base.Any.MakeFirstLetterLowercase() || nameAndExpression.Current.Equals(Base.Any, StringComparison.Ordinal);
 
 	public sealed class MemberWithTypeAnyIsNotAllowed : ParsingFailed
@@ -296,6 +302,7 @@ public class Type : Context
 
 	public const string Implement = "implement ";
 	public const string Has = "has ";
+	public const string Mutable = "mutable ";
 
 	public sealed class ExtraWhitespacesFoundAtBeginningOfLine : ParsingFailed
 	{
@@ -520,7 +527,8 @@ public class Type : Context
 				continue;
 			}
 			if (argumentReturnType.IsMutable() && argumentReturnType.MutableReturnType?.Name ==
-				methodParameterType.Name)
+				methodParameterType.Name ||
+				IsArgumentImplementationTypeMatchParameterType(argumentReturnType, methodParameterType))
 				continue;
 			if (methodParameterType.IsGeneric)
 				throw new GenericTypesCannotBeUsedDirectlyUseImplementation(methodParameterType,
@@ -532,6 +540,7 @@ public class Type : Context
 		return true;
 	}
 
+	private static bool IsArgumentImplementationTypeMatchParameterType(Type argumentReturnType, Type methodParameterType) => argumentReturnType is GenericType argumentGenericType && argumentGenericType.ImplementationTypes.Any(t => t == methodParameterType);
 	public bool IsList =>
 		IsGeneric
 			? Name == Base.List

@@ -267,7 +267,7 @@ public sealed class ListTests : TestExpressions
 	{
 		var mutableTextsType = new Type(type.Package,
 			new TypeLines(nameof(CreateMemberWithMutableListType),
-				"has mutableTexts Mutable(Texts)",
+				"mutable mutableTexts Texts",
 				"AddFiveToMutableList Texts",
 				"\tmutableTexts = mutableTexts + 5",
 				"\tmutableTexts")).ParseMembersAndMethods(parser);
