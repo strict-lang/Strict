@@ -172,7 +172,7 @@ public sealed class VirtualMachine
 			statement.Instruction is Instruction.JumpIfNotZero &&
 			Convert.ToInt32(Registers[statement.RegisterToCheckForZero].Value) > 0)
 			instructionIndex += Convert.ToInt32(statement.Steps);
-		else if (!conditionFlag && statement.Instruction is Instruction.JumpToIdIfFalse)
+		else if (!conditionFlag && statement.Instruction is Instruction.JumpToIdIfFalse || conditionFlag && statement.Instruction is Instruction.JumpToIdIfTrue)
 		{
 			var id = ((JumpViaIdStatement)statement).Id;
 			var endIndex = statements.IndexOf(statements.First(jumpStatement =>

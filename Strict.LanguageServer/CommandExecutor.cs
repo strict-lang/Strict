@@ -49,6 +49,8 @@ public class CommandExecutor : IExecuteCommandHandler
 		var type = subPackage.SynchronizeAndGetType(typeName, code);
 		var call = (MethodCall)type.ParseExpression(methodCall);
 		var statements = new ByteCodeGenerator(call).Generate();
+		languageServer.Window.LogInfo(
+			$"Compiling : \n{string.Join(",", statements.ConvertAll(statement => statement + Environment.NewLine))}");
 		vm.Execute(statements);
 	}
 

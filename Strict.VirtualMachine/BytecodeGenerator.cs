@@ -200,6 +200,13 @@ public sealed class ByteCodeGenerator
 		GenerateCodeForIfCondition((Binary)ifExpression.Condition);
 		GenerateCodeForThen(ifExpression);
 		statements.Add(new JumpViaIdStatement(Instruction.JumpEnd, idStack.Pop()));
+		if (ifExpression.OptionalElse != null)
+		{
+			idStack.Push(conditionalId);
+			statements.Add(new JumpViaIdStatement(Instruction.JumpToIdIfTrue, conditionalId++));
+			GenerateStatements(new[] { ifExpression.OptionalElse });
+			statements.Add(new JumpViaIdStatement(Instruction.JumpEnd, idStack.Pop()));
+		}
 	}
 
 	private void GenerateCodeForThen(If ifExpression) =>
@@ -225,14 +232,24 @@ public sealed class ByteCodeGenerator
 			_ => throw new NotImplementedException()
 		};
 
-	private void GenerateCodeForIfCondition(MethodCall condition)
+	private void GenerateCodeForIfCondition(Binary condition)
 	{
 		var leftRegister = GenerateLeftSideForIfCondition(condition);
 		var rightRegister = GenerateRightSideForIfCondition(condition);
-		statements.Add(new Statement(Instruction.Equal, leftRegister, rightRegister));
+		statements.Add(new Statement(GetConditionalInstruction(condition.Method), leftRegister,
+			rightRegister));
 		idStack.Push(conditionalId);
 		statements.Add(new JumpViaIdStatement(Instruction.JumpToIdIfFalse, conditionalId++));
 	}
+
+	private static Instruction GetConditionalInstruction(Method condition) =>
+		condition.Name switch
+		{
+			BinaryOperator.Greater => Instruction.GreaterThan,
+			BinaryOperator.Smaller => Instruction.LessThan,
+			BinaryOperator.Is => Instruction.Equal,
+			_ => Instruction.Equal
+		};
 
 	private Register GenerateRightSideForIfCondition(MethodCall condition)
 	{

@@ -26,6 +26,7 @@ public enum Instruction
 	JumpIfNotZero,
 	JumpEnd,
 	JumpToIdIfFalse,
+	JumpToIdIfTrue,
 	JumpsSeparator = 400,
 	Return
 }
