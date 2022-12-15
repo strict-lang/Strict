@@ -49,7 +49,7 @@ public class TypeTests
 
 	[Test]
 	public void JustMembersAreAllowed() =>
-		Assert.That(CreateType(Base.Error, "has log", "has count").Members.Count, Is.EqualTo(2));
+		Assert.That(CreateType(Base.Error, "has log", "mutable counter Number").Members.Count, Is.EqualTo(2));
 
 	[Test]
 	public void GetUnknownTypeWillCrash() =>
@@ -232,8 +232,8 @@ public class TypeTests
 			() => new Type(package, new TypeLines(nameof(ImmutableTypesCannotBeChanged), code)).ParseMembersAndMethods(new MethodExpressionParser()).Methods[0].GetBodyAndParseIfNeeded(),
 			Throws.InstanceOf<Mutable.ImmutableTypesCannotBeChanged>());
 
-	[TestCase("has count = 0", "Run", "\tcount = 5")]
-	[TestCase("has counter = Count(0)", "Run", "\tcounter = 5")]
+	[TestCase("mutable canBeModified = 0", "Run", "\tcanBeModified = 5")]
+	[TestCase("mutable counter = 0", "Run", "\tcounter = 5")]
 	public void MutableMemberTypesCanBeChanged(params string[] code)
 	{
 		var type = new Type(package, new TypeLines(nameof(MutableMemberTypesCanBeChanged), code)).

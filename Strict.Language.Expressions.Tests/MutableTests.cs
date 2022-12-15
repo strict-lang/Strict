@@ -41,7 +41,7 @@ public sealed class MutableTests : TestExpressions
 	public void MutableMemberWithTextType()
 	{
 		var program = new Type(type.Package,
-				new TypeLines(nameof(MutableMemberWithTextType), "has something Mutable(Text)",
+				new TypeLines(nameof(MutableMemberWithTextType), "mutable something Text",
 					"Add(input Count) Text",
 					"\tconstant result = input + something")).
 			ParseMembersAndMethods(parser);
@@ -62,9 +62,9 @@ public sealed class MutableTests : TestExpressions
 		Assert.That(body.Expressions[0].ReturnType, Is.EqualTo(body.Expressions[1].ReturnType));
 	}
 
-	[TestCase("AssignNumberToTextType", "has something Mutable(Text)",
+	[TestCase("AssignNumberToTextType", "mutable something Text",
 		"TryChangeMutableDataType Text", "\tsomething = 5")]
-	[TestCase("AssignNumbersToTexts", "has something Mutable(Texts)",
+	[TestCase("AssignNumbersToTexts", "mutable something Texts",
 		"TryChangeMutableDataType Text", "\tsomething = (5, 4, 3)")]
 	public void InvalidDataAssignment(string testName, params string[] code) =>
 		Assert.That(
@@ -193,4 +193,15 @@ public sealed class MutableTests : TestExpressions
 		Assert.That(program.Members[0].IsMutable, Is.True);
 		Assert.That(program.Members[0].Value?.ToString(), Is.EqualTo("10"));
 	}
+
+	[TestCase("Mutable", "Mutable(Number)")]
+	[TestCase("Count", "Count")]
+	[TestCase("CountWithValue", "= Count(5)")]
+	public void MutableTypesOrImplementsUsageInMembersAreForbidden(string testName, string code) =>
+		Assert.That(
+			() => new Type(type.Package,
+				new TypeLines(testName + nameof(MutableTypesOrImplementsUsageInMembersAreForbidden),
+					$"mutable something {code}", "Add(input Count) Number",
+					"\tconstant result = something + input")).ParseMembersAndMethods(parser),
+			Throws.InstanceOf<Type.UsingMutableTypesOrImplementsAreNotAllowed>());
 }

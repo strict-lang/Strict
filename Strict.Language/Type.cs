@@ -265,7 +265,12 @@ public class Type : Context
 		return memberType;
 	}
 
-	public sealed class DirectUsageOfMutableTypesOrImplementsAreForbidden : Exception { }
+	public sealed class UsingMutableTypesOrImplementsAreNotAllowed : ParsingFailed
+	{
+		public UsingMutableTypesOrImplementsAreNotAllowed(Type type,
+			string memberName) : base(type, 0, $"Member Name: {memberName}") { }
+	}
+
 	private static bool IsMemberTypeAny(string nameAndType, SpanSplitEnumerator nameAndExpression) => nameAndType == Base.Any.MakeFirstLetterLowercase() || nameAndExpression.Current.Equals(Base.Any, StringComparison.Ordinal);
 
 	public sealed class MemberWithTypeAnyIsNotAllowed : ParsingFailed
