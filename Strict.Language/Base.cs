@@ -51,4 +51,5 @@ public static class Base
 	public const string Value = "value";
 	public const string Output = nameof(Output);
 	public const string Stacktrace = nameof(Stacktrace);
+	public const string Name = nameof(Name);
 }
