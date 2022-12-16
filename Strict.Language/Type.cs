@@ -16,23 +16,17 @@ public class Type : Context
 	public Type(Package package, TypeLines file) : base(package, file.Name)
 	{
 		if (file.Lines.Length > Limit.LineCount)
-			throw new LinesCountMustNotExceedTwoHundredFiftySix(this, file.Lines.Length);
+			throw new LinesCountMustNotExceedLimit(this, file.Lines.Length);
 		if (package.FindDirectType(Name) != null)
 			throw new TypeAlreadyExistsInPackage(Name, package);
 		package.Add(this);
 		lines = file.Lines;
-		IsGeneric = Name == Base.Generic;
-		for (lineNumber = 0; lineNumber < lines.Length; lineNumber++)
-			if (ValidateCurrentLineIsNonEmptyAndTrimmed().
-				StartsWith(Implement, StringComparison.Ordinal))
-				implements.Add(ParseImplement(lines[lineNumber][Implement.Length..]));
-			else
-				break;
+		IsGeneric = Name == Base.Generic || OneOfFirstThreeLinesContainsGeneric();
 	}
 
-	public sealed class LinesCountMustNotExceedTwoHundredFiftySix : ParsingFailed
+	public sealed class LinesCountMustNotExceedLimit : ParsingFailed
 	{
-		public LinesCountMustNotExceedTwoHundredFiftySix(Type type, int lineCount) : base(type, 0, $"Type {type.Name} has lines count {lineCount} but limit is {Limit.LineCount}") { }
+		public LinesCountMustNotExceedLimit(Type type, int lineCount) : base(type, 0, $"Type {type.Name} has lines count {lineCount} but limit is {Limit.LineCount}") { }
 	}
 
 	public sealed class TypeAlreadyExistsInPackage : Exception
@@ -41,78 +35,31 @@ public class Type : Context
 			name + " in package: " + package) { }
 	}
 
-	private string ValidateCurrentLineIsNonEmptyAndTrimmed()
-	{
-		var line = lines[lineNumber];
-		if (line.Length == 0)
-			throw new EmptyLineIsNotAllowed(this, lineNumber);
-		if (char.IsWhiteSpace(line[0]))
-			throw new ExtraWhitespacesFoundAtBeginningOfLine(this, lineNumber, line);
-		if (char.IsWhiteSpace(line[^1]))
-			throw new ExtraWhitespacesFoundAtEndOfLine(this, lineNumber, line);
-		if (HasGenericMember(line))
-			IsGeneric = true;
-		return line;
-	}
-
-	private static bool HasGenericMember(string line) =>
-		line.StartsWith(Has, StringComparison.Ordinal) && (line.Contains(Base.Generic, StringComparison.Ordinal)
-			|| line.Contains(Base.Generic.MakeFirstLetterLowercase(), StringComparison.Ordinal));
-
 	private string[] lines;
 	private int lineNumber;
-	public string FilePath => Path.Combine(Package.FolderPath, Name) + Extension;
-	public Package Package => (Package)Parent;
 	/// <summary>
 	/// Generic types cannot be used directly as we don't know the implementation to be used (e.g. a
 	/// list, we need to know the type of the elements), you must them from <see cref="GenericType"/>!
 	/// </summary>
-	public bool IsGeneric { get; private set; }
+	public bool IsGeneric { get; }
 
-	public class GenericTypesCannotBeUsedDirectlyUseImplementation : Exception
+	private bool OneOfFirstThreeLinesContainsGeneric()
 	{
-		public GenericTypesCannotBeUsedDirectlyUseImplementation(Type type, string extraInformation) :
-			base(type + " " + extraInformation) { }
+		for (var line = 0; line < lines.Length && line < 3; line++)
+			if (HasGenericMember(lines[line]))
+				return true;
+		return false;
 	}
 
-	private void CheckIfTraitIsImplemented(Type trait)
-	{
-		var nonImplementedTraitMethods = trait.Methods.Where(traitMethod =>
-			traitMethod.Name != Method.From &&
-			methods.All(implementedMethod => traitMethod.Name != implementedMethod.Name)).ToList();
-		if (nonImplementedTraitMethods.Count > 0)
-			throw new MustImplementAllTraitMethods(this, nonImplementedTraitMethods);
-	}
-
-	private Type ParseImplement(string remainingLine)
-	{
-		if (remainingLine == Base.Any)
-			throw new ImplementAnyIsImplicitAndNotAllowed(this, lineNumber, remainingLine);
-		try
-		{
-			return Package.GetType(remainingLine);
-		}
-		catch (TypeNotFound ex)
-		{
-			throw new ParsingFailed(this, lineNumber, ex.Message, ex);
-		}
-	}
-
-	public sealed class ImplementMustComeBeforeMembersAndMethods : ParsingFailed
-	{
-		public ImplementMustComeBeforeMembersAndMethods(Type type, int lineNumber, string name) :
-			base(type, lineNumber, name) { }
-	}
-
-	public sealed class ImplementAnyIsImplicitAndNotAllowed : ParsingFailed
-	{
-		public ImplementAnyIsImplicitAndNotAllowed(Type type, int lineNumber, string name) : base(
-			type, lineNumber, name) { }
-	}
+	private static bool HasGenericMember(string line) =>
+		(line.StartsWith(Has, StringComparison.Ordinal) ||
+			line.StartsWith(Mutable, StringComparison.Ordinal)) &&
+		(line.Contains(Base.Generic, StringComparison.Ordinal) ||
+			line.Contains(Base.GenericLowercase, StringComparison.Ordinal));
 
 	/// <summary>
-	/// Extra parsing step that has to be done OUTSIDE the constructor as we might not know all types
-	/// needed for member (especially assignments) and method parsing (especially return types).
+	/// Parsing has to be done OUTSIDE the constructor as we first need all types and inside might not
+	/// know all types yet needed for member assignments and method parsing (especially return types).
 	/// </summary>
 	public Type ParseMembersAndMethods(ExpressionParser parser)
 	{
@@ -120,46 +67,13 @@ public class Type : Context
 		ValidateMethodAndMemberCountLimits();
 		// ReSharper disable once ForCanBeConvertedToForeach, for performance reasons:
 		// https://codeblog.jonskeet.uk/2009/01/29/for-vs-foreach-on-arrays-and-lists/
-		for (var index = 0; index < implements.Count; index++)
+		for (var index = 0; index < members.Count; index++)
 		{
-			var trait = implements[index];
+			var trait = members[index].Type;
 			if (trait.IsTrait)
 				CheckIfTraitIsImplemented(trait);
 		}
 		return this;
-	}
-
-	private void ValidateMethodAndMemberCountLimits()
-	{
-		if (members.Count > Limit.MemberCount)
-			throw new MemberCountShouldNotExceedFifty(this);
-		if (IsEnum)
-			return;
-		if (HasNoMethodsAndLessThanTwoMembersOrImplements() && !IsNoneAnyOrBoolean())
-			throw new NoMethodsFound(this, lineNumber);
-		if (methods.Count > Limit.MethodCount && Package.Name != nameof(Base))
-			throw new MethodCountMustNotExceedFifteen(this);
-	}
-
-	public sealed class MemberCountShouldNotExceedFifty : ParsingFailed
-	{
-		public MemberCountShouldNotExceedFifty(Type type) : base(type, 0,
-			$"{type.Name} has member count {type.members.Count} but limit is {Limit.MemberCount}") { }
-	}
-
-	private bool HasNoMethodsAndLessThanTwoMembersOrImplements() => methods.Count == 0 && members.Count + implements.Count < 2;
-	private bool IsNoneAnyOrBoolean() => Name is Base.None or Base.Any or Base.Boolean;
-
-	public sealed class NoMethodsFound : ParsingFailed
-	{
-		public NoMethodsFound(Type type, int lineNumber) : base(type, lineNumber,
-			"Each type must have at least one method, otherwise it is useless") { }
-	}
-
-	public sealed class MethodCountMustNotExceedFifteen : ParsingFailed
-	{
-		public MethodCountMustNotExceedFifteen(Type type) : base(type, 0,
-			$"Type {type.Name} has method count {type.methods.Count} but limit is {Limit.MethodCount}") { }
 	}
 
 	private void ParseAllRemainingLinesIntoMembersAndMethods(ExpressionParser parser)
@@ -169,11 +83,7 @@ public class Type : Context
 			var rememberStartMethodLineNumber = lineNumber;
 			ParseInTryCatchBlock(parser, rememberStartMethodLineNumber);
 		}
-		if (methods.Count == 0 && members.Count > 0)
-			IsEnum = true;
 	}
-
-	public bool IsEnum { get; private set; }
 
 	private void ParseInTryCatchBlock(ExpressionParser parser, int rememberStartMethodLineNumber)
 	{
@@ -202,31 +112,60 @@ public class Type : Context
 	{
 		var line = ValidateCurrentLineIsNonEmptyAndTrimmed();
 		if (line.StartsWith(Has, StringComparison.Ordinal))
-			members.Add(GetNewMember(parser, Has));
-		else if (line.StartsWith(Mutable, StringComparison.Ordinal))
-			members.Add(GetNewMember(parser, Mutable));
-		else if (lines[lineNumber].StartsWith(Implement, StringComparison.Ordinal))
-			throw new ImplementMustComeBeforeMembersAndMethods(this, lineNumber, lines[lineNumber]);
+			members.Add(GetNewMember(parser));
+		else if (line.StartsWith(Mutable, StringComparison.Ordinal) &&
+			!(lineNumber + 1 < lines.Length && lines[lineNumber + 1].StartsWith('\t')))
+			members.Add(GetNewMember(parser, true));
 		else
 			methods.Add(new Method(this, lineNumber, parser, GetAllMethodLines()));
 	}
 
-	private Member GetNewMember(ExpressionParser parser, string memberKeyword)
+	private string ValidateCurrentLineIsNonEmptyAndTrimmed()
 	{
-		var member = ParseMember(parser, lines[lineNumber].AsSpan(memberKeyword.Length), memberKeyword);
+		var line = lines[lineNumber];
+		if (line.Length == 0)
+			throw new EmptyLineIsNotAllowed(this, lineNumber);
+		if (char.IsWhiteSpace(line[0]))
+			throw new ExtraWhitespacesFoundAtBeginningOfLine(this, lineNumber, line);
+		if (char.IsWhiteSpace(line[^1]))
+			throw new ExtraWhitespacesFoundAtEndOfLine(this, lineNumber, line);
+		return line;
+	}
+
+	public sealed class ExtraWhitespacesFoundAtBeginningOfLine : ParsingFailed
+	{
+		public ExtraWhitespacesFoundAtBeginningOfLine(Type type, int lineNumber, string message,
+			string method = "") : base(type, lineNumber, message, method) { }
+	}
+
+	public sealed class ExtraWhitespacesFoundAtEndOfLine : ParsingFailed
+	{
+		public ExtraWhitespacesFoundAtEndOfLine(Type type, int lineNumber, string message,
+			string method = "") : base(type, lineNumber, message, method) { }
+	}
+
+	public sealed class EmptyLineIsNotAllowed : ParsingFailed
+	{
+		public EmptyLineIsNotAllowed(Type type, int lineNumber) : base(type, lineNumber) { }
+	}
+
+	private Member GetNewMember(ExpressionParser parser, bool usedMutableKeyword = false)
+	{
+		var member = ParseMember(parser, lines[lineNumber].AsSpan((usedMutableKeyword
+			? Mutable
+			: Has).Length), usedMutableKeyword);
 		if (members.Any(m => m.Name == member.Name))
 			throw new DuplicateMembersAreNotAllowed(this, lineNumber, member.Name);
 		return member;
 	}
 
-	private Member ParseMember(ExpressionParser parser, ReadOnlySpan<char> remainingLine,
-		string memberKeyword)
+	private Member ParseMember(ExpressionParser parser, ReadOnlySpan<char> remainingLine, bool usedMutableKeyword)
 	{
 		if (methods.Count > 0)
 			throw new MembersMustComeBeforeMethods(this, lineNumber, remainingLine.ToString());
 		try
 		{
-			return TryParseMember(parser, remainingLine, memberKeyword);
+			return TryParseMember(parser, remainingLine, usedMutableKeyword);
 		}
 		catch (ParsingFailed)
 		{
@@ -239,7 +178,7 @@ public class Type : Context
 	}
 
 	private Member TryParseMember(ExpressionParser parser, ReadOnlySpan<char> remainingLine,
-		string memberKeyword)
+		bool usedMutableKeyword)
 	{
 		var nameAndExpression = remainingLine.Split();
 		nameAndExpression.MoveNext();
@@ -251,7 +190,7 @@ public class Type : Context
 			: new Member(this, nameAndType, HasMemberExpression(nameAndExpression)
 				? GetMemberExpression(parser, nameAndType.MakeFirstLetterUppercase(),
 					remainingLine[(nameAndType.Length + 3)..])
-				: null, memberKeyword);
+				: null, usedMutableKeyword);
 	}
 
 	private static string GetMemberType(SpanSplitEnumerator nameAndExpression)
@@ -305,32 +244,64 @@ public class Type : Context
 			base(type, lineNumber, name) { }
 	}
 
-	public const string Implement = "implement ";
 	public const string Has = "has ";
 	public const string Mutable = "mutable ";
-
-	public sealed class ExtraWhitespacesFoundAtBeginningOfLine : ParsingFailed
-	{
-		public ExtraWhitespacesFoundAtBeginningOfLine(Type type, int lineNumber, string message,
-			string method = "") : base(type, lineNumber, message, method) { }
-	}
-
-	public sealed class ExtraWhitespacesFoundAtEndOfLine : ParsingFailed
-	{
-		public ExtraWhitespacesFoundAtEndOfLine(Type type, int lineNumber, string message,
-			string method = "") : base(type, lineNumber, message, method) { }
-	}
-
-	public sealed class EmptyLineIsNotAllowed : ParsingFailed
-	{
-		public EmptyLineIsNotAllowed(Type type, int lineNumber) : base(type, lineNumber) { }
-	}
 
 	public sealed class MustImplementAllTraitMethods : ParsingFailed
 	{
 		public MustImplementAllTraitMethods(Type type, IEnumerable<Method> missingTraitMethods) :
 			base(type, type.lineNumber,
 				"Missing methods: " + string.Join(", ", missingTraitMethods)) { }
+	}
+
+	private void ValidateMethodAndMemberCountLimits()
+	{
+		var memberLimit = IsDatatypeOrEnum
+			? Limit.MemberCountForEnums
+			: Limit.MemberCount;
+		if (members.Count > memberLimit)
+			throw new MemberCountShouldNotExceedLimit(this, memberLimit);
+		if (IsDatatypeOrEnum)
+			return;
+		if (methods.Count == 0 && members.Count < 2 && !IsNoneAnyOrBoolean())
+			throw new NoMethodsFound(this, lineNumber);
+		if (methods.Count > Limit.MethodCount && Package.Name != nameof(Base))
+			throw new MethodCountMustNotExceedLimit(this);
+	}
+
+	public bool IsDatatypeOrEnum =>
+		methods.Count == 0 &&
+		(members.Count > 1 || members.Count == 1 && members[0].Value is not null);
+
+	public sealed class MemberCountShouldNotExceedLimit : ParsingFailed
+	{
+		public MemberCountShouldNotExceedLimit(Type type, int limit) : base(type, 0,
+			$"{type.Name} type has {type.members.Count} members, max: {limit}") { }
+	}
+
+	private bool IsNoneAnyOrBoolean() => Name is Base.None or Base.Any or Base.Boolean;
+
+	public sealed class NoMethodsFound : ParsingFailed
+	{
+		public NoMethodsFound(Type type, int lineNumber) : base(type, lineNumber,
+			"Each type must have at least two members (datatypes and enums) or at least one method, otherwise it is useless") { }
+	}
+
+	public Package Package => (Package)Parent;
+
+	public sealed class MethodCountMustNotExceedLimit : ParsingFailed
+	{
+		public MethodCountMustNotExceedLimit(Type type) : base(type, 0,
+			$"Type {type.Name} has method count {type.methods.Count} but limit is {Limit.MethodCount}") { }
+	}
+
+	private void CheckIfTraitIsImplemented(Type trait)
+	{
+		var nonImplementedTraitMethods = trait.Methods.Where(traitMethod =>
+			traitMethod.Name != Method.From &&
+			methods.All(implementedMethod => traitMethod.Name != implementedMethod.Name)).ToList();
+		if (nonImplementedTraitMethods.Count > 0)
+			throw new MustImplementAllTraitMethods(this, nonImplementedTraitMethods);
 	}
 
 	private string[] GetAllMethodLines()
@@ -365,7 +336,7 @@ public class Type : Context
 		if (line.StartsWith(SixTabs, StringComparison.Ordinal))
 			throw new NestingMoreThanFiveLevelsIsNotAllowed(this, lineNumber + 1);
 		if (line.Length > Limit.CharacterCount)
-			throw new CharacterCountMustBeWithinOneHundredTwenty(this, line.Length, lineNumber + 1);
+			throw new CharacterCountMustBeWithinLimit(this, line.Length, lineNumber + 1);
 	}
 
 	private const string SixTabs = "\t\t\t\t\t\t";
@@ -377,9 +348,9 @@ public class Type : Context
 			$"Type {type.Name} has more than {Limit.NestingLevel} levels of nesting in line: {lineNumber + 1}") { }
 	}
 
-	public sealed class CharacterCountMustBeWithinOneHundredTwenty : ParsingFailed
+	public sealed class CharacterCountMustBeWithinLimit : ParsingFailed
 	{
-		public CharacterCountMustBeWithinOneHundredTwenty(Type type, int lineLength, int lineNumber) :
+		public CharacterCountMustBeWithinLimit(Type type, int lineLength, int lineNumber) :
 			base(type, lineNumber,
 				$"Type {type.Name} has character count {lineLength} in line: {lineNumber + 1} but limit is {Limit.CharacterCount}") { }
 	}
@@ -412,13 +383,12 @@ public class Type : Context
 		if (listStartLineNumber == -1)
 			listStartLineNumber = lineNumber - 1;
 		lines[listStartLineNumber] += ' ' + lines[lineNumber].TrimStart();
-		if (!lines[lineNumber].EndsWith(','))
-		{
-			listEndLineNumber = lineNumber;
-			if (lines[listStartLineNumber].Length < Limit.ListCharacterCount)
-				throw new MultiLineListsAllowedOnlyWhenLengthIsMoreThanHundred(this,
-					listStartLineNumber - 1, lines[listStartLineNumber].Length);
-		}
+		if (lines[lineNumber].EndsWith(','))
+			return;
+		listEndLineNumber = lineNumber;
+		if (lines[listStartLineNumber].Length < Limit.ListCharacterCount)
+			throw new MultiLineListsAllowedOnlyWhenLengthIsMoreThanHundred(this,
+				listStartLineNumber - 1, lines[listStartLineNumber].Length);
 	}
 
 	private int listStartLineNumber = -1;
@@ -444,18 +414,15 @@ public class Type : Context
 		public UnterminatedMultiLineListFound(Type type, int lineNumber, string line) : base(type, lineNumber, line) { }
 	}
 
-	public IReadOnlyList<Type> Implements => implements;
-	private readonly List<Type> implements = new();
 	public IReadOnlyList<Member> Members => members;
 	private readonly List<Member> members = new();
 	public IReadOnlyList<Method> Methods => methods;
 	protected readonly List<Method> methods = new();
-	public bool IsTrait =>
-		Implements.Count == 0 && Members.Count == 0 && Name != Base.Number && Name != Base.Boolean;
+	public bool IsTrait => Members.Count == 0 && Name != Base.Number && Name != Base.Boolean;
 
 	public override string ToString() =>
-		base.ToString() + (implements.Count > 0
-			? " " + nameof(Implements) + " " + Implements.ToWordList()
+		base.ToString() + (members.Count > 0
+			? " " + nameof(Members) + " " + members.ToWordList()
 			: "");
 
 	public override Type? FindType(string name, Context? searchingFrom = null) =>
@@ -467,6 +434,10 @@ public class Type : Context
 	/// Easy way to get another instance of the class type we are currently in.
 	/// </summary>
 	public const string Other = nameof(Other);
+	/// <summary>
+	/// In a for loop a different "value" is used, this way we can still get to the outer instance.
+	/// </summary>
+	public const string Outer = nameof(Outer);
 
 	public GenericType GetGenericImplementation(List<Type> implementationTypes)
 	{
@@ -484,7 +455,7 @@ public class Type : Context
 
 	public sealed class CannotGetGenericImplementationOnNonGeneric : Exception
 	{
-		public CannotGetGenericImplementationOnNonGeneric(string name, List<Type> implementations) :
+		public CannotGetGenericImplementationOnNonGeneric(string name, IEnumerable<Type> implementations) :
 			base("Type: " + name + ", Generic Implementation: " + implementations.ToWordList()) { }
 	}
 
@@ -510,6 +481,12 @@ public class Type : Context
 			throw new ArgumentsDoNotMatchMethodParameters(arguments, matchingMethods);
 	}
 
+	public class GenericTypesCannotBeUsedDirectlyUseImplementation : Exception
+	{
+		public GenericTypesCannotBeUsedDirectlyUseImplementation(Type type, string extraInformation) :
+			base(type + " " + extraInformation) { }
+	}
+
 	private static bool IsMethodWithMatchingParameters(IEnumerable<Expression> arguments,
 		Method method) =>
 		IsMethodWithMatchingParameters(arguments.Select(a => a.ReturnType).ToList(), method);
@@ -521,9 +498,10 @@ public class Type : Context
 		{
 			var methodParameterType = method.Parameters[index].Type;
 			var argumentReturnType = argumentTypes[index];
-			if (methodParameterType.IsList != argumentReturnType.IsList && methodParameterType.Name != Base.Any)
+			if (methodParameterType.IsIterator != argumentReturnType.IsIterator && methodParameterType.Name != Base.Any)
 				return false;
-			if (argumentReturnType == methodParameterType || method.IsGeneric)
+			if (argumentReturnType == methodParameterType || method.IsGeneric ||
+				IsArgumentImplementationTypeMatchParameterType(argumentReturnType, methodParameterType))
 				continue;
 			if (methodParameterType is GenericType parameterGenericType)
 			{
@@ -531,10 +509,6 @@ public class Type : Context
 					return false;
 				continue;
 			}
-			if (argumentReturnType.IsMutable() && argumentReturnType.MutableReturnType?.Name ==
-				methodParameterType.Name ||
-				IsArgumentImplementationTypeMatchParameterType(argumentReturnType, methodParameterType))
-				continue;
 			if (methodParameterType.IsGeneric)
 				throw new GenericTypesCannotBeUsedDirectlyUseImplementation(methodParameterType,
 					"(parameter " + index + ") is not usable with argument " +
@@ -546,12 +520,12 @@ public class Type : Context
 	}
 
 	private static bool IsArgumentImplementationTypeMatchParameterType(Type argumentReturnType, Type methodParameterType) => argumentReturnType is GenericType argumentGenericType && argumentGenericType.ImplementationTypes.Any(t => t == methodParameterType);
-	public bool IsList =>
-		IsGeneric
-			? Name == Base.List
-			: this is GenericType generic && generic.Generic.Name == Base.List;
-	public bool IsMutable() => Name == Base.Mutable || Implements.Any(type => type.Name == Base.Mutable);
-	public Type? MutableReturnType { get; set; }
+	/// <summary>
+	/// Any non public member is automatically iteratable if it has Iterator, for example Text.strict
+	/// or Error.strict have public members you have to iterate over yourself.
+	/// </summary>
+	public bool IsIterator =>
+		Name == Base.Iterator || members.Any(member => !member.IsPublic && member.Type.IsIterator);
 
 	private Method? FindAndCreateFromBaseMethod(string methodName,
 		IReadOnlyList<Expression> arguments)
@@ -565,7 +539,7 @@ public class Type : Context
 			? BuildMethod($"{fromMethod})")
 			: fromMethod.Length > 5 && fromMethod.Split(',').Length - 1 == arguments.Count
 				? BuildMethod($"{fromMethod[..^2]})")
-				: IsEnum
+				: IsDatatypeOrEnum
 					? BuildMethod(fromMethod[..^1])
 					: null;
 	}
@@ -588,7 +562,8 @@ public class Type : Context
 	private string? TryCheckForMatchingMembersAndGetParameters(IReadOnlyList<Expression> arguments)
 	{
 		var matchedMember = members.FirstOrDefault(member =>
-			member.Type.IsList && arguments.All(argument => member.Type.Name == Base.List ||
+			//TODO: check this
+			member.Type.IsIterator && arguments.All(argument => member.Type.Name == Base.List ||
 				argument.ReturnType == ((GenericType)member.Type).ImplementationTypes[0]));
 		if (matchedMember == null)
 			return null;
@@ -598,13 +573,13 @@ public class Type : Context
 
 	private string? TryCheckForMatchingImplementsAndGetParameters(IReadOnlyList<Expression> arguments)
 	{
-		var matchedImplement = implements.FirstOrDefault(implement =>
-			implement.IsList && arguments.All(argument =>
-				argument.ReturnType == ((GenericType)implement).ImplementationTypes[0]));
+		var matchedImplement = members.FirstOrDefault(member =>
+			member.Type.IsIterator && arguments.All(argument =>
+				argument.ReturnType == ((GenericType)member.Type).ImplementationTypes[0]));
 		if (matchedImplement == null)
 			return null;
 		isMatchedWithList = true;
-		return $"{((GenericType)matchedImplement).ImplementationTypes[0].Name.MakeFirstLetterLowercase()}s";
+		return $"{((GenericType)matchedImplement.Type).ImplementationTypes[0].Name.MakeFirstLetterLowercase()}s";
 	}
 
 	private bool isMatchedWithList;
@@ -613,10 +588,10 @@ public class Type : Context
 	{
 		var argumentIndex = 0;
 		string? parameters = null;
-		foreach (var implement in implements)
-			if (arguments.Count > argumentIndex && implement == arguments[argumentIndex].ReturnType)
+		foreach (var member in members)
+			if (arguments.Count > argumentIndex && member.Type == arguments[argumentIndex].ReturnType)
 			{
-				parameters += $"{implement.Name.MakeFirstLetterLowercase()} {implement.Name}, ";
+				parameters += $"{member.Name.MakeFirstLetterLowercase()} {member.Name}, ";
 				argumentIndex++;
 			}
 		return TryGetMatchedParameters(arguments, parameters, false);
@@ -645,20 +620,23 @@ public class Type : Context
 	} //ncrunch: no coverage end
 
 	public bool IsCompatible(Type sameOrBaseType) =>
-		this == sameOrBaseType || sameOrBaseType.Name == Base.Any ||
-		implements.Contains(sameOrBaseType) || sameOrBaseType.Implements.Contains(this) ||
+		this == sameOrBaseType || members.Any(member => member.Type.IsCompatible(sameOrBaseType)) ||
 		CanUpCast(sameOrBaseType);
 
-	private bool CanUpCast(Context sameOrBaseType)
+	private bool CanUpCast(Type sameOrBaseType)
 	{
-		if (sameOrBaseType.Name is Base.Text or Base.List)
-			return Name == Base.Number || implements.Contains(GetType(Base.Number));
+		if (sameOrBaseType.IsIterator)
+			return //TODO: remove, cannot find a usecase: Name == Base.Number ||
+				//TODO: check if this makes sense
+				members.Any(member => member.Type == GetType(Base.Number));
 		return false;
 	}
 
+
+
 	/// <summary>
 	/// Builds dictionary the first time we use it to access any method of this type or any of the
-	/// implements parent types recursively. Filtering has to be done by <see cref="FindMethod"/>
+	/// member types recursively (if not there yet). Filtering has to be done by <see cref="FindMethod"/>
 	/// </summary>
 	public IReadOnlyDictionary<string, List<Method>> AvailableMethods
 	{
@@ -672,12 +650,11 @@ public class Type : Context
 					cachedAvailableMethods[method.Name].Add(method);
 				else
 					cachedAvailableMethods.Add(method.Name, new List<Method> { method });
-			foreach (var implementType in implements)
-				// If we are in a specific implementation (GenericType), don't add generic methods
-				if (implementType.Name != Base.Mutable)
-					AddAvailableMethods(implementType);
+			foreach (var member in members)
+				if (!member.Type.IsTrait)
+					AddAvailableMethods(member.Type);
 			if (Name != Base.Any)
-				AddAvailableMethods(GetType(Base.Any));
+				AddAvailableMethods(GetType(Base.Any)); //TODO: cache this, no need to build again and again
 			return cachedAvailableMethods;
 		}
 	}
@@ -725,12 +702,6 @@ public class Type : Context
 					: "Arguments: ") + argumentTypes.ToWordList() + " do ") +
 			"not match these method(s):\n" +
 			string.Join("\n", matchingMethods)) { }
-	}
-
-	public void AddDataReturnTypeToMutableImplements(Type dataReturnType)
-	{
-		if (Name.StartsWith(Base.Mutable, StringComparison.Ordinal) && !implements.Contains(dataReturnType))
-			implements.Add(dataReturnType);
 	}
 
 	public Method? FindMethodByArgumentTypes(string methodName, List<Type> argumentTypes)

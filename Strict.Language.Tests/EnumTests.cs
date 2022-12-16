@@ -34,7 +34,7 @@ public sealed class EnumTests
 	{
 		var type = new Type(package,
 			new TypeLines(nameof(CheckTypeIsEnum), lines)).ParseMembersAndMethods(parser);
-		Assert.That(type.IsEnum, Is.EqualTo(expected));
+		Assert.That(type.IsDatatypeOrEnum, Is.EqualTo(expected));
 	}
 
 	[Test]
@@ -69,7 +69,7 @@ public sealed class EnumTests
 				new TypeLines(nameof(EnumWithoutValuesUsedAsMemberAndVariable),
 					"has something = Instruction.Add", "Run", "\tconstant myInstruction = Instruction.Set")).
 			ParseMembersAndMethods(parser);
-		Assert.That(consumingType.GetType("Instruction").IsEnum, Is.True);
+		Assert.That(consumingType.GetType("Instruction").IsDatatypeOrEnum, Is.True);
 		Assert.That(((MemberCall)consumingType.Members[0].Value!).Member.Name, Is.EqualTo("Add"));
 		var assignment = (Assignment)consumingType.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(assignment.Value, Is.InstanceOf<MemberCall>()!);

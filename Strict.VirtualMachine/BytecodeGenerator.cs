@@ -39,7 +39,7 @@ public sealed class ByteCodeGenerator
 	{
 		for (var parameterIndex = 0; parameterIndex < instance.Method.Parameters.Count;
 			parameterIndex++)
-			if (instance.Method.Parameters[parameterIndex].Type.IsList)
+			if (instance.Method.Parameters[parameterIndex].Type.IsIterator)
 				statements.Add(new StoreStatement(
 					new Instance(instance.Method.Parameters[parameterIndex].Type, instance.Arguments),
 					instance.ReturnType.Members[parameterIndex].Name));
@@ -155,7 +155,7 @@ public sealed class ByteCodeGenerator
 			return iterableString.Length;
 		if (iterableInstance.Value is int or double)
 			return Convert.ToInt32(iterableInstance.Value);
-		if (iterableInstance.ReturnType != null && iterableInstance.ReturnType.IsList)
+		if (iterableInstance.ReturnType != null && iterableInstance.ReturnType.IsIterator)
 			return ((IEnumerable<Expression>)iterableInstance.Value).Count();
 		return 0;
 	}

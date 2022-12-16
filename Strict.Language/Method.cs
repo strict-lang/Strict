@@ -106,7 +106,7 @@ public sealed class Method : Context
 			if (char.IsUpper(nameAndType[0]))
 				throw new ParametersMustStartWithLowerCase(this);
 			var nameAndTypeAsString = nameAndType.ToString();
-			if (IsParameterTypeAny(nameAndTypeAsString) && type.Name != Base.Mutable)
+			if (IsParameterTypeAny(nameAndTypeAsString))
 				throw new ParametersWithTypeAnyIsNotAllowed(this, nameAndTypeAsString);
 			parameters.Add(new Parameter(type, nameAndTypeAsString));
 		}

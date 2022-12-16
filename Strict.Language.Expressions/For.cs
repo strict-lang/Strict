@@ -55,9 +55,7 @@ public sealed class For : Expression
 		var variableName = FindIterableName(line);
 		AddVariableIfDoesNotExist(body, line, variableName);
 		var variableValue = body.FindVariableValue(variableName);
-		if (variableValue != null &&
-			!variableValue.ReturnType.IsMutable()
-			&& HasIn(line))
+		if (variableValue is { IsMutable: false } && HasIn(line))
 			throw new ImmutableIterator(body);
 		var forExpression = body.Method.ParseExpression(body, line[4..]);
 		if (HasIn(line))
@@ -82,7 +80,7 @@ public sealed class For : Expression
 	{
 		var mutableValue = body.FindVariableValue(variableName) as Mutable;
 		var iteratorType = ((Binary)forValueExpression).Arguments[0].ReturnType;
-		if (iteratorType is GenericType { IsList: true } genericType)
+		if (iteratorType is GenericType { IsIterator: true } genericType)
 			iteratorType = genericType.ImplementationTypes[0];
 		if ((iteratorType.Name != Base.Range || mutableValue?.DataReturnType.Name != Base.Number)
 			&& iteratorType.Name != mutableValue?.DataReturnType.Name)
@@ -120,7 +118,7 @@ public sealed class For : Expression
 		var variable = body.FindVariableValue(iterableName)?.ReturnType ?? body.Method.Type.FindMember(iterableName.ToString())?.Type;
 		var value = iterableName[^1] == ')'
 			? iterableName[1..iterableName.IndexOf(',')].ToString()
-			: variable != null && variable.IsList
+			: variable != null && variable.IsIterator
 				? $"{iterableName}(0)"
 				: $"{iterableName}";
 		return value;

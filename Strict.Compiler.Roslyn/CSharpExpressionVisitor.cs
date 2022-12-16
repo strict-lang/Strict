@@ -40,7 +40,7 @@ public class CSharpExpressionVisitor : ExpressionVisitor
 
 	public string GetCSharpTypeName(Type type)
 	{
-		if (type.IsList)
+		if (type.IsIterator)
 			return $"List<{GetCSharpTypeName(((GenericType)type).ImplementationTypes[0])}>";
 		return type.Name switch
 		{

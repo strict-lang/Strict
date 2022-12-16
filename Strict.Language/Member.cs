@@ -2,13 +2,11 @@
 
 public class Member : NamedType
 {
-	public Member(Type definedIn, string nameAndType, Expression? value, string keyword = "") : base(definedIn,
+	public Member(Type definedIn, string nameAndType, Expression? value, bool usedMutableKeyword = false) : base(definedIn,
 		nameAndType, value?.ReturnType)
 	{
-		if (Type.IsMutable())
-			throw new Type.UsingMutableTypesOrImplementsAreNotAllowed(Type, nameAndType);
 		Value = value;
-		if (keyword == Type.Mutable)
+		if (usedMutableKeyword)
 			IsMutable = true;
 	}
 

@@ -1,4 +1,5 @@
-﻿using System;
+﻿/*TODO: not longer needed
+using System;
 using System.Linq;
 
 namespace Strict.Language.Expressions;
@@ -8,8 +9,7 @@ public sealed class Mutable : Value
 	public Mutable(Context context, Expression expression) : base(
 		GetMutableReturnType(context, expression), expression)
 	{
-		ReturnType.AddDataReturnTypeToMutableImplements(DataReturnType);
-		ReturnType.MutableReturnType = DataReturnType;
+		ReturnType = DataReturnType;
 	}
 
 	private static Type GetMutableReturnType(Context context, Expression expression) =>
@@ -75,4 +75,4 @@ public sealed class Mutable : Value
 		Data is List { Values.Count: 0 }
 			? DataReturnType.Name
 			: base.ToString();
-}
+}*/

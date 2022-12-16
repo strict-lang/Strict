@@ -62,7 +62,7 @@ public sealed class LimitTests
 			() => CreateType(nameof(MethodCountMustNotExceedFifteen), CreateProgramWithDuplicateLines(
 					new[] { "has log" }, 16, "Run(first Number, second Number)", "\tfirst")).
 				ParseMembersAndMethods(new MethodExpressionParser()),
-			Throws.InstanceOf<Type.MethodCountMustNotExceedFifteen>().With.Message.
+			Throws.InstanceOf<Type.MethodCountMustNotExceedLimit>().With.Message.
 				Contains($"Type MethodCountMustNotExceedFifteen has method count 16 but limit is {Limit.MethodCount}"));
 
 	[Test]
@@ -71,7 +71,7 @@ public sealed class LimitTests
 			() => CreateType(nameof(LinesCountMustNotExceedTwoHundredFiftySix),
 					CreateDuplicateLines(257, "has log").ToArray()).
 				ParseMembersAndMethods(new MethodExpressionParser()),
-			Throws.InstanceOf<Type.LinesCountMustNotExceedTwoHundredFiftySix>().With.Message.Contains(
+			Throws.InstanceOf<Type.LinesCountMustNotExceedLimit>().With.Message.Contains(
 				$"Type LinesCountMustNotExceedTwoHundredFiftySix has lines count 257 but limit is {Limit.LineCount}"));
 
 	[Test]
@@ -101,16 +101,16 @@ public sealed class LimitTests
 					"CalculateCompleteLevelCount(numberOfCans Number, levelCount Number) Number",
 					"	constant remainingCans = numberOfCans - (levelCount * levelCount)remainingCans < ((levelCount + 1) * (levelCount + 1)) ? levelCount else CalculateCompleteLevelCount(remainingCans, levelCount + 1)"
 				}).ParseMembersAndMethods(new MethodExpressionParser()),
-			Throws.InstanceOf<Type.CharacterCountMustBeWithinOneHundredTwenty>().With.Message.Contains(
-				$"Type CharacterCountMustBeWithinOneHundredTwenty has character count 196 in line: 4 but limit is {Limit.CharacterCount}"));
+			Throws.InstanceOf<Type.CharacterCountMustBeWithinLimit>().With.Message.Contains(
+				$"Type CharacterCountMustBeWithinLimit has character count 196 in line: 4 but limit is {Limit.CharacterCount}"));
 
 	[Test]
-	public void MemberCountShouldNotExceedFifty() =>
+	public void MemberCountShouldNotExceedFifteen() =>
 		Assert.That(
-			() => CreateType(nameof(MemberCountShouldNotExceedFifty), CreateRandomMemberLines(51)).
+			() => CreateType(nameof(MemberCountShouldNotExceedFifteen), CreateRandomMemberLines(16)).
 				ParseMembersAndMethods(new MethodExpressionParser()),
-			Throws.InstanceOf<Type.MemberCountShouldNotExceedFifty>().With.Message.Contains(
-				$"MemberCountShouldNotExceedFifty has member count 51 but limit is {Limit.MemberCount}"));
+			Throws.InstanceOf<Type.MemberCountShouldNotExceedLimit>().With.Message.Contains(
+				$"MemberCountShouldNotExceedFifteen has member count 16 but limit is {Limit.MemberCount}"));
 
 	private static string[] CreateRandomMemberLines(int count)
 	{

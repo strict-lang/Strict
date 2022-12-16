@@ -77,7 +77,7 @@ public class CSharpTypeVisitor : TypeVisitor
 			initializationExpression += " = " + expressionVisitor.Visit(member.Value);
 		if (member.Name == "file")
 			accessModifier += " static";
-		if (string.IsNullOrEmpty(initializationExpression) && member.Type.IsList)
+		if (string.IsNullOrEmpty(initializationExpression) && member.Type.IsIterator)
 			initializationExpression += $" = new {csharpTypeName}()";
 		return initializationExpression;
 	}

@@ -12,6 +12,7 @@ public abstract class Expression : IEquatable<Expression>
 {
 	protected Expression(Type returnType) => ReturnType = returnType;
 	public Type ReturnType { get; }
+	public bool IsMutable { get; } => throw new NotImplementedException("TODO: has to be rethought, the Type.IsMutable() makes no sense, see Telegram discussion");
 
 	public virtual bool Equals(Expression? other) =>
 		!ReferenceEquals(null, other) &&

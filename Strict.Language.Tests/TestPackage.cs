@@ -59,6 +59,7 @@ public class TestPackage : Package
 				"\tEnd - Start")),
 			new Type(this, new TypeLines(Base.Mutable,
 				"has generic")),
+			//TODO: remove
 			new Type(this, new TypeLines(Base.Count,
 				"implement Number",
 				"implement Mutable",

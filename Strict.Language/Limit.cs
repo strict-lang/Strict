@@ -9,5 +9,6 @@ public static class Limit
 	public const int NestingLevel = 5;
 	public const int CharacterCount = 120;
 	public const int ListCharacterCount = 100;
-	public const int MemberCount = 50;
+	public const int MemberCount = 15;
+	public const int MemberCountForEnums = 40;
 }

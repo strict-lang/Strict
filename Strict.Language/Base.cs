@@ -30,12 +30,13 @@ public static class Base
 	public const string Computation = nameof(Computation);
 	public const string Count = nameof(Count);
 	public const string HashCode = nameof(HashCode);
-	public const string Mutable = nameof(Mutable);
 	public const string Range = nameof(Range);
 	public const string Text = nameof(Text);
 	public const string Error = nameof(Error);
 	public const string For = nameof(For);
 	public const string Generic = nameof(Generic);
+	public const string GenericLowercase = "generic";
+	public const string Iterator = nameof(Iterator);
 	public const string List = nameof(List);
 	public const string Type = nameof(Type);
 	public const string Method = nameof(Method);

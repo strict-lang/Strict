@@ -12,6 +12,7 @@ public sealed class Assignment : ConcreteExpression
 		if (!name.IsWord())
 			throw new Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers(name);
 		var variable = scope?.FindVariableValue(name);
+		if (variable != null && variable.IsMutable)
 		if (variable != null && variable.ReturnType.IsMutable())
 			scope?.UpdateVariable(name, value);
 		else
@@ -19,6 +20,41 @@ public sealed class Assignment : ConcreteExpression
 		Name = name;
 		Value = value;
 	}
+
+	//Clever.strict
+	//mutable Number
+	//Compute Number
+	//	5 + number
+
+	//has clever = Clever(3)
+	//has number
+	//Run
+	//  clever.Compute is 8
+	//  clever.Number = 5
+	//  //error: clever = Clever(10)
+	//	clever.Compute is 10
+	//  constant bla = 5
+	//  mutable blub = Compute
+	//  constant number = bla + 1
+	//  mutable swappedBlub = blub
+	//  blub = 49
+	//  mutable temporary = swappedBlub
+	//  swappedBlub = 50
+	//  temporary is 9
+	//  temporary is 10
+	//  temporary is 11
+	//  swappedBlub is 50
+	//  blub is 49
+
+	//Compute Number
+	//  clever.Number.Increment
+	//  clever.Compute
+	//
+	//  mutable myError = Error
+	//  Run is myError
+	//  if blub > 49
+	//		myError("123")
+	//  myError("456")
 
 	public string Name { get; }
 	public Expression Value { get; }

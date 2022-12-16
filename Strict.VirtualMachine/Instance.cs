@@ -40,8 +40,6 @@ public sealed class Instance
 	public string? TypeName =>
 		ReturnType == null
 			? typeName
-			: ReturnType.IsMutable()
-				? ReturnType.MutableReturnType?.Name
-				: ReturnType.Name;
+			: throw new NotImplementedException("ReturnType.IsMutable() does make no sense, the expression must be checked! ? ReturnType.MutableReturnType?.Name : ReturnType.Name");
 	public object Value { get; set; }
 }

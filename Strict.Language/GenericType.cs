@@ -6,7 +6,7 @@ namespace Strict.Language;
 public sealed class GenericType : Type
 {
 	public GenericType(Type generic, IReadOnlyList<Type> implementationTypes) : base(generic.Package,
-		new TypeLines(GetTypeName(generic, implementationTypes), Implement + generic.Name))
+		new TypeLines(GetTypeName(generic, implementationTypes), Has + generic.Name))
 	{
 		Generic = generic;
 		ImplementationTypes = implementationTypes;
@@ -17,7 +17,7 @@ public sealed class GenericType : Type
 	}
 
 	private static string GetTypeName(Type generic, IReadOnlyList<Type> implementationTypes) =>
-		generic.IsList
+		generic.IsIterator
 			? implementationTypes[0].Name.MakeItPlural()
 			: generic.Name + implementationTypes.ToBrackets();
 

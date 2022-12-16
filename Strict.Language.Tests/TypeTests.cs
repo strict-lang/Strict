@@ -36,14 +36,14 @@ public class TypeTests
 	{
 		Assert.That(() => CreateType(Base.Error, " "),
 			Throws.InstanceOf<Type.ExtraWhitespacesFoundAtBeginningOfLine>());
-		Assert.That(() => CreateType("Program", " implement App"),
+		Assert.That(() => CreateType("Program", " has App"),
 			Throws.InstanceOf<Type.ExtraWhitespacesFoundAtBeginningOfLine>());
 		Assert.That(() => CreateType(Base.HashCode, "has\t"),
 			Throws.InstanceOf<Type.ExtraWhitespacesFoundAtEndOfLine>());
 	}
 
 	[Test]
-	public void TypeParsersMustStartWithImplementOrHas() =>
+	public void TypeParsersMustStartWithMember() =>
 		Assert.That(() => CreateType(Base.Error, "Run", "\tlog.WriteLine"),
 			Throws.InstanceOf<Type.TypeHasNoMembersAndThusMustBeATraitWithoutMethodBodies>());
 
@@ -56,7 +56,7 @@ public class TypeTests
 		Assert.That(() => package.GetType(Base.Computation),
 			Throws.InstanceOf<Context.TypeNotFound>());
 
-	[TestCase("implement invalidType")]
+	[TestCase("has invalidType")]
 	[TestCase("has log", "Run InvalidType", "\tconstant a = 5")]
 	public void TypeNotFound(params string[] lines) =>
 		Assert.That(() => CreateType(Base.Error, lines),
@@ -65,7 +65,7 @@ public class TypeTests
 	[Test]
 	public void NoMethodsFound() =>
 		Assert.That(
-			() => new Type(new Package(nameof(NoMethodsFound)), new TypeLines("dummy", "implement Number")).
+			() => new Type(new Package(nameof(NoMethodsFound)), new TypeLines("dummy", "has Number")).
 				ParseMembersAndMethods(null!), Throws.InstanceOf<Type.NoMethodsFound>());
 
 	[Test]
@@ -85,11 +85,6 @@ public class TypeTests
 	public void TypeNameMustBeWord() =>
 		Assert.That(() => new Member(package.GetType(Base.App), "blub7", null!),
 			Throws.InstanceOf<Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers>());
-
-	[Test]
-	public void ImplementAnyIsImplicitAndNotAllowed() =>
-		Assert.That(() => CreateType("Program", "implement Any"),
-			Throws.InstanceOf<Type.ImplementAnyIsImplicitAndNotAllowed>());
 
 	[TestCase("has any")]
 	[TestCase("has random Any")]
