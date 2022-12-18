@@ -182,7 +182,7 @@ public sealed class Repositories
 			var lines = new TypeLines(Path.GetFileNameWithoutExtension(filePath),
 				// ReSharper disable once MethodHasAsyncOverload, would be way slower with async here
 				File.ReadAllLines(filePath));
-			if (lines.ImplementTypes.Count > 0)
+			if (lines.MemberTypes.Count > 0)
 				filesWithImplements.Add(lines.Name, lines);
 			else
 				types.Add(new Type(package, lines));
@@ -202,8 +202,8 @@ public sealed class Repositories
 	{
 		foreach (var file in filesWithImplements)
 			// ReSharper disable once ForCanBeConvertedToForeach
-			for (var index = 0; index < file.Value.ImplementTypes.Count; index++)
-				if (filesWithImplements.ContainsKey(file.Value.ImplementTypes[index]))
+			for (var index = 0; index < file.Value.MemberTypes.Count; index++)
+				if (filesWithImplements.ContainsKey(file.Value.MemberTypes[index]))
 					return true;
 		return false;
 	}
@@ -215,7 +215,7 @@ public sealed class Repositories
 		{
 			if (!inDegree.ContainsKey(kvp.Key))
 				inDegree.Add(kvp.Key, 0);
-			foreach (var edge in kvp.Value.ImplementTypes)
+			foreach (var edge in kvp.Value.MemberTypes)
 				if (!inDegree.TryAdd(edge, 1))
 					inDegree[edge]++;
 		}
@@ -231,7 +231,7 @@ public sealed class Repositories
 			if (files.TryGetValue(zeroDegreeQueue.Dequeue(), out var lines))
 			{
 				reversedDependencies.Push(lines);
-				foreach (var vertex in lines.ImplementTypes)
+				foreach (var vertex in lines.MemberTypes)
 					if (--inDegree[vertex] == 0)
 						zeroDegreeQueue.Enqueue(vertex);
 			}

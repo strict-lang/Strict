@@ -12,7 +12,7 @@ public class CSharpTypeVisitor : TypeVisitor
 	{
 		Name = type.Name;
 		expressionVisitor = new CSharpExpressionVisitor();
-		isImplementingApp = type.Implements.Any(t => t.Name == Base.App);
+		isImplementingApp = type.Members.Any(t => t.Type.Name == Base.App);
 		isInterface = type.IsTrait;
 		CreateHeader(type);
 		CreateClass();
@@ -31,8 +31,8 @@ public class CSharpTypeVisitor : TypeVisitor
 
 	private void CreateHeader(Type type)
 	{
-		foreach (var implement in type.Implements)
-			VisitImplement(implement);
+		//TODO: not longer like this: foreach (var implement in type.Implements)
+		//	VisitImplement(implement);
 		FileContent += "namespace " + type.Package.FolderPath + SemicolonAndLineBreak + NewLine;
 	}
 

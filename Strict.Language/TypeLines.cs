@@ -5,7 +5,7 @@ namespace Strict.Language;
 
 /// <summary>
 /// Optimization to split type parsing into three steps:
-/// Step 1 is to just load the file lines (or mock it) and inspect the implement lines only.
+/// Step 1 is to just load the file lines (or mock it) and inspect the member lines only.
 /// Step 2 is to sort by dependencies and create each of the types
 /// Step 3 is to actually resolve each of the types members and members (which can be in a
 /// different order as well, methods are also evaluated lazily and not at parsing time)
@@ -16,38 +16,38 @@ public class TypeLines
 	{
 		Name = name;
 		Lines = lines;
-		ImplementTypes = ExtractImplementTypes();
+		MemberTypes = ExtractMemberTypes();
 	}
 
 	public string Name { get; }
 	public string[] Lines { get; }
-	public IReadOnlyList<string> ImplementTypes { get; }
+	public IReadOnlyList<string> MemberTypes { get; }
 
-	private IReadOnlyList<string> ExtractImplementTypes()
+	private IReadOnlyList<string> ExtractMemberTypes()
 	{
-		IList<string> implements = Array.Empty<string>();
+		// Often there are no members, no need to create a new empty list
+		IList<string> members = Array.Empty<string>();
 		foreach (var line in Lines)
-			if (line.StartsWith(Type.Implement, StringComparison.Ordinal))
-			{
-				if (implements.Count == 0)
-					implements = new List<string>();
-				AddImplements(line, implements);
-			}
+			if (line.StartsWith(Type.Has, StringComparison.Ordinal))
+				AddMemberType(line[Type.Has.Length..], ref members);
+			else if (line.StartsWith(Type.Mutable, StringComparison.Ordinal))
+				AddMemberType(line[Type.Mutable.Length..], ref members);
 			else
 				break;
-		return (IReadOnlyList<string>)implements;
+		return (IReadOnlyList<string>)members;
 	}
 
-	private static void AddImplements(string line, ICollection<string> implements)
+	private static void AddMemberType(string remainingLine, ref IList<string> memberTypes)
 	{
-		var remainingLine = line[Type.Implement.Length..];
+		if (memberTypes.Count == 0)
+			memberTypes = new List<string>();
 		if (remainingLine.Contains('('))
 			foreach (var part in remainingLine.Split(new[] { '(', ')', ',' },
 				StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
-				implements.Add(part);
+				memberTypes.Add(part);
 		else
-			implements.Add(remainingLine);
+			memberTypes.Add(remainingLine);
 	}
 
-	public override string ToString() => Name + ImplementTypes.ToBrackets();
+	public override string ToString() => Name + MemberTypes.ToBrackets();
 }

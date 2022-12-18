@@ -47,7 +47,7 @@ public sealed class MutableTests : TestExpressions
 			ParseMembersAndMethods(parser);
 		Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(), Throws.InstanceOf<Type.ArgumentsDoNotMatchMethodParameters>());
 	}
-
+	/*TODO
 	[Test]
 	public void MutableVariablesWithSameImplementationTypeShouldUseSameType()
 	{
@@ -70,6 +70,7 @@ public sealed class MutableTests : TestExpressions
 		Assert.That(
 			() => new Type(type.Package, new TypeLines(testName, code)).ParseMembersAndMethods(parser).
 				Methods[0].GetBodyAndParseIfNeeded(), Throws.InstanceOf<Mutable.InvalidDataAssignment>());
+	*/
 
 	[Test]
 	public void MutableVariableInstanceUsingSpace()

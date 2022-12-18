@@ -14,6 +14,7 @@ public static class Base
 	/// These methods don't have to be implemented by any class, they are automatically implemented.
 	/// </summary>
 	public const string Any = nameof(Any);
+	public const string AnyLowercase = "any";
 	/// <summary>
 	/// Most basic type, can only be true or false, any statement must either be None or return a
 	/// Boolean (anything else is a compiler error). Any statement returning false (like a failing

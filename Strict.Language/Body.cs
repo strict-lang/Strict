@@ -1,6 +1,5 @@
 ﻿using System.Collections.Generic;
 using System;
-using System.Linq;
 using System.Runtime.CompilerServices;
 
 [assembly: InternalsVisibleTo("Strict.Language.Expressions.Tests")]
@@ -37,10 +36,10 @@ public sealed class Body : Expression
 
 	/// <summary>
 	/// Called when actually needed and code needs to run, usually triggered by
-	/// Method.GetBodyAndParseIfNeeded and child bodies inside. After parsing all
-	/// expressions in this body, we will validate them all here. If there are multiple expressions,
-	/// this body is returned, otherwise just a single expression is directly returned and the body
-	/// is discarded. The last expression return type must match our (method or caller) return type.
+	/// Method.GetBodyAndParseIfNeeded and child bodies inside. After parsing all expressions in this
+	/// body, we will validate them all here. If there are multiple expressions, this body is
+	/// returned, otherwise just a single expression is directly returned and the body is discarded.
+	/// The last expression return type must match our (method or caller) return type.
 	/// </summary>
 	public Expression Parse()
 	{
@@ -81,12 +80,14 @@ public sealed class Body : Expression
 
 	public IReadOnlyList<Expression> Expressions { get; private set; } = Array.Empty<Expression>();
 
+	/// <summary>
+	/// We don't have access to the specific expressions here, so we need to do GetType().Name checks
+	/// </summary>
 	private static bool
 		ChildHasMatchingMethodReturnType(Type parentType, Expression lastExpression) =>
 		lastExpression.GetType().Name == Base.Assignment && parentType.Name == Base.None ||
-		parentType.Name == lastExpression.ReturnType.Name ||
-		lastExpression.ReturnType.Implements.Contains(parentType) ||
-		lastExpression.GetType().Name == Base.Error;
+		lastExpression.GetType().Name == Base.Error ||
+		lastExpression.ReturnType.IsCompatible(parentType);
 
 	public sealed class ChildBodyReturnTypeMustMatchMethod : ParsingFailed
 	{
@@ -112,30 +113,19 @@ public sealed class Body : Expression
 
 	public Body AddVariable(string name, Expression value)
 	{
+		if (FindVariableValue(name.AsSpan()) != null)
+			throw new ValueIsNotMutableAndCannotBeChanged(this, name);
 		variables ??= new Dictionary<string, Expression>(StringComparer.Ordinal);
-		if (IsDuplicateVariableName(name))
-			throw new DuplicateVariableNameFound(this, name);
 		variables.Add(name, value);
 		return this;
 	}
 
-	private bool IsDuplicateVariableName(string name) =>
-		variables != null && (variables.ContainsKey(name) ||
-			Parent != null && Parent.IsDuplicateVariableName(name));
-
-	public sealed class DuplicateVariableNameFound : ParsingFailed
+	public sealed class ValueIsNotMutableAndCannotBeChanged : ParsingFailed
 	{
-		public DuplicateVariableNameFound(Body body, string message) : base(body, message) { }
+		public ValueIsNotMutableAndCannotBeChanged(Body body, string name) : base(body, name) { }
 	}
 
-	public void UpdateVariable(string name, Expression value)
-	{
-		if (variables != null && variables.ContainsKey(name))
-		{
-			variables.Remove(name);
-			variables.Add(name, value);
-		}
-	}
+	public void UpdateVariable(string name, Expression value) => variables![name] = value;
 
 	public Expression? FindVariableValue(ReadOnlySpan<char> searchFor)
 	{

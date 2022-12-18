@@ -210,7 +210,10 @@ public class Type : Context
 			string memberName) : base(type, 0, $"Member Name: {memberName}") { }
 	}
 
-	private static bool IsMemberTypeAny(string nameAndType, SpanSplitEnumerator nameAndExpression) => nameAndType == Base.Any.MakeFirstLetterLowercase() || nameAndExpression.Current.Equals(Base.Any, StringComparison.Ordinal);
+	private static bool
+		IsMemberTypeAny(string nameAndType, SpanSplitEnumerator nameAndExpression) =>
+		nameAndType == Base.AnyLowercase ||
+		nameAndExpression.Current.Equals(Base.Any, StringComparison.Ordinal);
 
 	public sealed class MemberWithTypeAnyIsNotAllowed : ParsingFailed
 	{
@@ -414,6 +417,7 @@ public class Type : Context
 		public UnterminatedMultiLineListFound(Type type, int lineNumber, string line) : base(type, lineNumber, line) { }
 	}
 
+	//TODO: Members.Select( or Members.Where( or Members.Any( is used a lot to find all types recursively, probably better if we calculate this once and use the much faster optimized list (with all duplicates removed as well) instead to find matching types
 	public IReadOnlyList<Member> Members => members;
 	private readonly List<Member> members = new();
 	public IReadOnlyList<Method> Methods => methods;
@@ -459,6 +463,7 @@ public class Type : Context
 			base("Type: " + name + ", Generic Implementation: " + implementations.ToWordList()) { }
 	}
 
+	public string FilePath => Path.Combine(Package.FolderPath, Name) + Extension;
 	public const string Extension = ".strict";
 	public Member? FindMember(string name) => Members.FirstOrDefault(member => member.Name == name);
 
@@ -632,7 +637,29 @@ public class Type : Context
 		return false;
 	}
 
-
+	/// <summary>
+	/// When two types are using in a conditional expression, i.e. then and else return types and both
+	/// are not based on each other, find the common base type that works for both.
+	/// </summary>
+	public Type? FindFirstUnionType(Type elseType)
+	{
+		foreach (var member in members)
+			if (elseType.members.Any(otherMember => otherMember.Type == member.Type))
+				return member.Type;
+		foreach (var member in members)
+		{
+			var subUnionType = member.Type.FindFirstUnionType(elseType);
+			if (subUnionType != null)
+				return subUnionType;
+		}
+		foreach (var otherMember in elseType.members)
+		{
+			var otherSubUnionType = otherMember.Type.FindFirstUnionType(this);
+			if (otherSubUnionType != null)
+				return otherSubUnionType;
+		}
+		return null;
+	}
 
 	/// <summary>
 	/// Builds dictionary the first time we use it to access any method of this type or any of the

@@ -13,7 +13,6 @@ public sealed class Assignment : ConcreteExpression
 			throw new Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers(name);
 		var variable = scope?.FindVariableValue(name);
 		if (variable != null && variable.IsMutable)
-		if (variable != null && variable.ReturnType.IsMutable())
 			scope?.UpdateVariable(name, value);
 		else
 			scope?.AddVariable(name, value);
@@ -21,47 +20,12 @@ public sealed class Assignment : ConcreteExpression
 		Value = value;
 	}
 
-	//Clever.strict
-	//mutable Number
-	//Compute Number
-	//	5 + number
-
-	//has clever = Clever(3)
-	//has number
-	//Run
-	//  clever.Compute is 8
-	//  clever.Number = 5
-	//  //error: clever = Clever(10)
-	//	clever.Compute is 10
-	//  constant bla = 5
-	//  mutable blub = Compute
-	//  constant number = bla + 1
-	//  mutable swappedBlub = blub
-	//  blub = 49
-	//  mutable temporary = swappedBlub
-	//  swappedBlub = 50
-	//  temporary is 9
-	//  temporary is 10
-	//  temporary is 11
-	//  swappedBlub is 50
-	//  blub is 49
-
-	//Compute Number
-	//  clever.Number.Increment
-	//  clever.Compute
-	//
-	//  mutable myError = Error
-	//  Run is myError
-	//  if blub > 49
-	//		myError("123")
-	//  myError("456")
-
 	public string Name { get; }
 	public Expression Value { get; }
 	public override int GetHashCode() => Name.GetHashCode() ^ Value.GetHashCode();
 
 	public override string ToString() =>
-		(Value.ReturnType.IsMutable()
+		(Value.IsMutable
 			? Mutable
 			: Constant) + " " + Name + " = " + Value;
 
@@ -95,16 +59,18 @@ public sealed class Assignment : ConcreteExpression
 		var expression = expressionSpan.IsFirstLetterUppercase() && expressionSpan.IsPlural()
 			? new List(body.Method.Type.GetType(expressionSpan.ToString()))
 			: ParseExpressionAndCheckType(body, expressionSpan, name);
-		return new Assignment(body, name, startIndex == 8
-			? new Mutable(body.Method, expression)
-			: expression);
+		return new Assignment(body, name,
+			//TODO? startIndex == 8
+			//? new Mutable(body.Method, expression)
+			//:
+			expression);
 	}
 
 	private static Expression ParseExpressionAndCheckType(Body body,
 		ReadOnlySpan<char> expressionSpan, ReadOnlySpan<char> variableName)
 	{
 		var expression = body.Method.ParseExpression(body, expressionSpan);
-		if (expression.ReturnType.IsMutable())
+		if (expression.IsMutable)
 			throw new DirectUsageOfMutableTypesOrImplementsAreForbidden(body, expressionSpan.ToString(),
 				variableName.ToString());
 		return expression;

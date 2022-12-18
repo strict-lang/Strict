@@ -18,11 +18,10 @@ public sealed class List : Value
 	private static Type
 		GetCommonBaseType(IReadOnlyList<Type> returnTypes, Body bodyForErrorMessage) =>
 		returnTypes.Count == 1 || returnTypes.All(t => t == returnTypes[0]) ||
-		returnTypes.Any(t => t.Implements.Contains(returnTypes[0]))
+		returnTypes.Any(t => t.Members.Any(member => member.Type == returnTypes[0]))
 			? returnTypes[0]
-			: returnTypes.FirstOrDefault(t => returnTypes[0].Implements.Contains(t)) ??
-			throw new ListElementsMustHaveMatchingType(
-				bodyForErrorMessage, returnTypes);
+			: returnTypes.FirstOrDefault(t => returnTypes[0].Members.Any(m => m.Type == t)) ??
+			throw new ListElementsMustHaveMatchingType(bodyForErrorMessage, returnTypes);
 
 	public sealed class ListElementsMustHaveMatchingType : ParsingFailed
 	{

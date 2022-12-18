@@ -95,8 +95,8 @@ public sealed class ByteCodeGenerator
 
 	private void TryGenerateMutableStatements(Expression expression)
 	{
-		if (expression is Mutable mutableExpression)
-			GenerateStatementsFromExpression((Expression)mutableExpression.Data);
+		if (expression.IsMutable)
+			GenerateStatementsFromExpression(expression); //TODO? (Expression)mutableExpression.Data);
 	}
 
 	private void TryGenerateLoopStatements(Expression expression)

@@ -19,14 +19,15 @@ public class MethodExpressionParser : ExpressionParser
 	public override Expression ParseLineExpression(Body body, ReadOnlySpan<char> line) =>
 		Assignment.TryParse(body, line) ?? If.TryParse(body, line) ??
 		For.TryParse(body, line.Trim()) ?? Return.TryParse(body, line) ??
-		Mutable.TryParse(body, line) ?? ParseExpression(body, line);
+		//TODO: removed: Mutable.TryParse(body, line) ??
+		ParseExpression(body, line);
 
 	public override Expression ParseExpression(Body body, ReadOnlySpan<char> input)
 	{
 		CheckIfEmptyOrAny(body, input);
 		return input.Length < 3 || !input.Contains(' ') && !input.Contains(',') // && !input.Contains(").", StringComparison.Ordinal)
 			||
-			input.StartsWith(Base.Mutable)
+			input.StartsWith(Type.Mutable) //TODO, what is this checking?
 				? TryParseCommon(body, input)
 				: TryParseErrorOrTextOrListOrConditionalExpression(body, input) ?? TryParseMethodOrMember(body, input);
 	}
@@ -58,7 +59,7 @@ public class MethodExpressionParser : ExpressionParser
 	private Expression TryParseCommon(Body body, ReadOnlySpan<char> input) =>
 		Boolean.TryParse(body, input) ?? Text.TryParse(body, input) ??
 		List.TryParseWithSingleElement(body, input) ?? Number.TryParse(body, input) ??
-		Mutable.TryParse(body, input) ??
+		//TODO? Mutable.TryParse(body, input) ??
 		TryParseMemberOrZeroOrOneArgumentMethodOrNestedCall(body, input) ?? (input.IsOperator()
 			? throw new InvalidOperatorHere(body, input.ToString())
 			: input.IsWord()
@@ -281,12 +282,14 @@ public class MethodExpressionParser : ExpressionParser
 		foreach (var member in type.Members)
 			if (partToParse.Equals(member.Name, StringComparison.Ordinal))
 				return new MemberCall(instance, member);
+		/*TODO: remove, already checked in Members
 		foreach (var implementType in type.Implements)
 		{
 			var memberCall = TryFindMemberCall(implementType, instance, partToParse);
 			if (memberCall != null)
 				return memberCall;
 		}
+		*/
 		return null;
 	}
 

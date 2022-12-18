@@ -12,7 +12,16 @@ public abstract class Expression : IEquatable<Expression>
 {
 	protected Expression(Type returnType) => ReturnType = returnType;
 	public Type ReturnType { get; }
-	public bool IsMutable { get; } => throw new NotImplementedException("TODO: has to be rethought, the Type.IsMutable() makes no sense, see Telegram discussion");
+	public bool IsMutable { get; protected set; }
+	/// <summary>
+	/// By default all expressions should be immutable in Strict. However, many times some part of the
+	/// code will actually change something, thus making that expression AND anything that calls it
+	/// immutable. Think of it as a virus that spreads all the way up. However if a high level
+	/// expression is actually still immutable, it means everything it calls is also immutable and
+	/// thus it can be evaluated once and will never change its value, a very important optimization.
+	/// </summary>
+	//TODO: figure out!
+	public bool ContainsAnythingMutable { get; protected set; }
 
 	public virtual bool Equals(Expression? other) =>
 		!ReferenceEquals(null, other) &&

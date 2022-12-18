@@ -30,16 +30,14 @@ public sealed class If : Expression
 	/// programming languages and we can fix it here by evaluating both types and find a common base
 	/// type. If that is not possible there is a compilation error here.
 	/// </summary>
-	private static Type GetMatchingType(Type thenType, Type? elseType,
-		Body? bodyForErrorMessage) =>
-		elseType == null || thenType == elseType || elseType.Implements.Contains(thenType)
+	private static Type GetMatchingType(Type thenType, Type? elseType, Body? bodyForErrorMessage) =>
+		elseType == null || elseType.IsCompatible(thenType)
 			? thenType
-			: thenType.Implements.Contains(elseType)
+			: thenType.IsCompatible(elseType)
 				? elseType
-				: thenType.Implements.Union(elseType.Implements).FirstOrDefault() ??
+				: thenType.FindFirstUnionType(elseType) ??
 				throw new ReturnTypeOfThenAndElseMustHaveMatchingType(
-					bodyForErrorMessage ?? new Body(thenType.Methods[0]), thenType,
-					elseType);
+					bodyForErrorMessage ?? new Body(thenType.Methods[0]), thenType, elseType);
 
 	public class ReturnTypeOfThenAndElseMustHaveMatchingType : ParsingFailed
 	{

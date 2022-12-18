@@ -149,9 +149,9 @@ public sealed class ForTests : TestExpressions
 	[Test]
 	public void ValidIteratorReturnTypeTextForList() =>
 		Assert.That(
-			((Mutable)((VariableCall)((MethodCall)((For)((Body)ParseExpression(
+			(((VariableCall)((MethodCall)((For)((Body)ParseExpression(
 				"mutable element = \"1\"", "for element in (\"1\", \"2\", \"3\")",
-				"\tlog.Write(element)")).Expressions[1]).Body).Arguments[0]).CurrentValue).DataReturnType.Name == Base.Text);
+				"\tlog.Write(element)")).Expressions[1]).Body).Arguments[0]).CurrentValue).ReturnType.Name == Base.Text);
 
 	[Test]
 	public void ValidLoopProgram()

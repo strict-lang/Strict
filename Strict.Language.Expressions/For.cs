@@ -71,19 +71,19 @@ public sealed class For : Expression
 		if (variableValue != null)
 			return;
 		if (body.Method.Type.FindMember(variableName.ToString()) == null)
-			body.AddVariable(variableName.ToString(), new Mutable(body.Method,
-				body.Method.ParseExpression(body, GetVariableExpressionValue(body, line))));
+			body.AddVariable(variableName.ToString(), //TODO? new Mutable(body.Method,
+				body.Method.ParseExpression(body, GetVariableExpressionValue(body, line)));
 	}
 
 	private static void CheckForIncorrectMatchingTypes(Body body, ReadOnlySpan<char> variableName,
 		Expression forValueExpression)
 	{
-		var mutableValue = body.FindVariableValue(variableName) as Mutable;
+		var mutableValue = body.FindVariableValue(variableName);//TODO? as Mutable;
 		var iteratorType = ((Binary)forValueExpression).Arguments[0].ReturnType;
 		if (iteratorType is GenericType { IsIterator: true } genericType)
 			iteratorType = genericType.ImplementationTypes[0];
-		if ((iteratorType.Name != Base.Range || mutableValue?.DataReturnType.Name != Base.Number)
-			&& iteratorType.Name != mutableValue?.DataReturnType.Name)
+		if ((iteratorType.Name != Base.Range || mutableValue?.ReturnType.Name != Base.Number)
+			&& iteratorType.Name != mutableValue?.ReturnType.Name)
 			throw new IteratorTypeDoesNotMatchWithIterable(body);
 	}
 
@@ -106,8 +106,8 @@ public sealed class For : Expression
 	private static void AddImplicitVariables(Body body, ReadOnlySpan<char> line, Body innerBody)
 	{
 		innerBody.AddVariable(IndexName, new Number(body.Method, 0));
-		innerBody.AddVariable(ValueName, new Mutable(innerBody.Method,
-			innerBody.Method.ParseExpression(innerBody, GetVariableExpressionValue(body, line))));
+		innerBody.AddVariable(ValueName, //TODO? new Mutable(innerBody.Method,
+			innerBody.Method.ParseExpression(innerBody, GetVariableExpressionValue(body, line)));
 	}
 
 	private static string GetVariableExpressionValue(Body body, ReadOnlySpan<char> line)
