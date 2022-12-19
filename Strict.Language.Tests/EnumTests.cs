@@ -18,7 +18,7 @@ public sealed class EnumTests
 
 	private void CreateInstructionEnumType() =>
 		new Type(package,
-			new TypeLines("Instruction", "implement Number", "has Set Number", "has Add Number", "has Subtract Number",
+			new TypeLines("Instruction", "has Number", "has Set Number", "has Add Number", "has Subtract Number",
 				"has Multiply Number", "has Divide Number", "has BinaryOperatorsSeparator = 100",
 				"has GreaterThan Number", "has LessThan Number", "has Equal Number", "has NotEqual Number",
 				"has ConditionalSeparator = 200", "has JumpIfTrue Number", "has JumpIfFalse Number",
@@ -28,7 +28,7 @@ public sealed class EnumTests
 	private ExpressionParser parser = null!;
 
 	[TestCase(true, "has log", "has number")]
-	[TestCase(true, "has log")]
+	[TestCase(true, "has log", "has boolean")]
 	[TestCase(false, "has log", "Run", "\t5")]
 	public void CheckTypeIsEnum(bool expected, params string[] lines)
 	{

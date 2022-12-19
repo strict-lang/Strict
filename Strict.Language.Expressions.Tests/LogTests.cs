@@ -12,7 +12,7 @@ public sealed class LogTests
 		new Type(package, new TypeLines(Base.App, "Run"));
 		var type =
 			new Type(package,
-					new TypeLines("Program", "implement App", "has log", "Run", "\tlog.Write(\"Hello\")")).
+					new TypeLines("Program", "has App", "has log", "Run", "\tlog.Write(\"Hello\")")).
 				ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(Run(type.Methods[0]), Is.EqualTo("Hello"));
 	}

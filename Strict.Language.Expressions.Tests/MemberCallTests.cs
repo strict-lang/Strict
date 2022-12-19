@@ -166,9 +166,9 @@ public sealed class MemberCallTests : TestExpressions
 	{
 		var program = new Type(type.Package,
 			new TypeLines(nameof(BaseTypeMemberCallInDerivedType),
-				"implement Range",
+				"has Range",
 				"Run",
-				"\tconstant a = End + 5")).ParseMembersAndMethods(parser);
+				"\tconstant a = Range.End + 5")).ParseMembersAndMethods(parser);
 		var assignment = (Assignment)program.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(((Binary)assignment.Value).Instance,
 			Is.InstanceOf<MemberCall>());

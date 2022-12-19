@@ -23,7 +23,7 @@ public class TestCSharpGenerator
 
 	protected Type CreateHelloWorldProgramType() =>
 		new Type(package,
-				new TypeLines("Program", "implement App", "has log", "Run",
+				new TypeLines("Program", "has App", "has log", "Run",
 					"\tlog.Write(\"Hello World\")")).
 			ParseMembersAndMethods(parser);
 }

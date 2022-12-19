@@ -36,7 +36,7 @@ public sealed class MethodCallTests : TestExpressions
 	public void ParseWithMissingArgument() =>
 		Assert.That(() => ParseExpression("log.Write"),
 			Throws.InstanceOf<ArgumentsDoNotMatchMethodParameters>().With.Message.StartsWith(
-				"No arguments does not match these method(s):\nWrite(text TestPackage.Text)\nWrite(number TestPackage.Number)"));
+				"No arguments does not match these method(s):\nWrite(generic TestPackage.Generic)"));
 
 	[Test]
 	public void ParseWithTooManyArguments() =>
@@ -91,10 +91,7 @@ public sealed class MethodCallTests : TestExpressions
 		Assert.That(ParseExpression("Character(7)"),
 			Is.EqualTo(CreateFromMethodCall(type.GetType(Base.Character), new Number(type, 7))));
 
-	[TestCase("Count(5)")]
 	[TestCase("Character(5)")]
-	[TestCase("Count(5).Increment")]
-	[TestCase("Count(5).Floor")]
 	[TestCase("Range(0, 10)")]
 	[TestCase("Range(0, 10).Length")]
 	public void FromExample(string fromMethodCall) =>
@@ -158,29 +155,22 @@ public sealed class MethodCallTests : TestExpressions
 		Assert.That(body.FindVariableValue("result")?.ReturnType.Name, Is.EqualTo("Text"));
 	}
 
-	[TestCase("ProgramWithHas",
+	[TestCase("ProgramWithHas", "numbers",
 		"has numbers",
-		"has texts",
 		"Dummy",
-		"\tconstant instanceWithNumbers = ProgramWithHas(1, 2, 3)",
-		"\tconstant instanceWithTexts = ProgramWithHas(\"1\", \"2\", \"3\")")]
-	[TestCase("ProgramWithImplement",
-		"implement Numbers",
-		"implement Texts",
+		"\tconstant instanceWithNumbers = ProgramWithHas((1, 2, 3))")]
+	[TestCase("ProgramWithPublicMember",
+		"texts", "has Texts",
 		"Dummy",
-		"\tconstant instanceWithNumbers = ProgramWithImplement(1, 2, 3)",
-		"\tconstant instanceWithTexts = ProgramWithImplement(\"1\", \"2\", \"3\")")]
-	public void ParseConstructorCallWithList(string programName, params string[] code)
+		"\tconstant instanceWithTexts = ProgramWithPublicMember((\"1\", \"2\", \"3\"))")]
+	public void ParseConstructorCallWithList(string programName, string expected, params string[] code)
 	{
 		var program = new Type(type.Package, new TypeLines(
 				programName,
 				code)).
 			ParseMembersAndMethods(new MethodExpressionParser());
-		var body = (Body)program.Methods[0].GetBodyAndParseIfNeeded();
-		Assert.That(((MethodCall)((Assignment)body.Expressions[0]).Value).Method.Parameters[0].Name,
-			Is.EqualTo("numbers"));
-		Assert.That(((MethodCall)((Assignment)body.Expressions[1]).Value).Method.Parameters[0].Name,
-			Is.EqualTo("texts"));
+		var assignment = (Assignment)program.Methods[0].GetBodyAndParseIfNeeded();
+		Assert.That(((MethodCall)assignment.Value).Method.Parameters[0].Name, Is.EqualTo(expected));
 	}
 
 	[Test]
@@ -188,7 +178,7 @@ public sealed class MethodCallTests : TestExpressions
 	{
 		new Type(type.Package,
 			new TypeLines("HasLengthImplementation",
-				"implement HasLength",
+				"has HasLength",
 				"has number",
 				"Length Number",
 				"\tnumber.Length")).ParseMembersAndMethods(new MethodExpressionParser());

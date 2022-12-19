@@ -29,12 +29,10 @@ public class CSharpTypeVisitor : TypeVisitor
 	private readonly bool isImplementingApp;
 	private readonly bool isInterface;
 
-	private void CreateHeader(Type type)
-	{
+	private void CreateHeader(Type type) =>
 		//TODO: not longer like this: foreach (var implement in type.Implements)
 		//	VisitImplement(implement);
 		FileContent += "namespace " + type.Package.FolderPath + SemicolonAndLineBreak + NewLine;
-	}
 
 	public string FileContent { get; private set; } = "";
 

@@ -89,12 +89,12 @@ public class RepositoriesTests
 
 	private static Dictionary<string, TypeLines> CreateComplexImplementsDependencies()
 	{
-		var file1 = new TypeLines("File1", "implement File2");
-		var file2 = new TypeLines("File2", "implement File3", "implement Number");
-		var file3 = new TypeLines("File3", "implement File4");
-		var file4 = new TypeLines("File4", "implement File5", "implement File 6");
-		var file5 = new TypeLines("File5", "implement Number");
-		var file6 = new TypeLines("File6", "implement File5");
+		var file1 = new TypeLines("File1", "has File2");
+		var file2 = new TypeLines("File2", "has File3", "has Number");
+		var file3 = new TypeLines("File3", "has File4");
+		var file4 = new TypeLines("File4", "has File5", "has File 6");
+		var file5 = new TypeLines("File5", "has Number");
+		var file6 = new TypeLines("File6", "has File5");
 		var filesWithImplements = new Dictionary<string, TypeLines>(StringComparer.Ordinal)
 		{
 			{ file1.Name, file1 },

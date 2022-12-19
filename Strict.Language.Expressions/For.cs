@@ -78,7 +78,7 @@ public sealed class For : Expression
 	private static void CheckForIncorrectMatchingTypes(Body body, ReadOnlySpan<char> variableName,
 		Expression forValueExpression)
 	{
-		var mutableValue = body.FindVariableValue(variableName);//TODO? as Mutable;
+		var mutableValue = body.FindVariableValue(variableName); //TODO? as Mutable;
 		var iteratorType = ((Binary)forValueExpression).Arguments[0].ReturnType;
 		if (iteratorType is GenericType { IsIterator: true } genericType)
 			iteratorType = genericType.ImplementationTypes[0];

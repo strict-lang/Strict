@@ -15,7 +15,7 @@ public sealed class MutableTests : TestExpressions
 	{
 		var program = new Type(type.Package,
 				new TypeLines(nameof(MutableMemberConstructorWithType), "mutable something Number",
-					"Add(input Count) Number",
+					"Add(input Number) Number",
 					"\tconstant result = something + input")).
 			ParseMembersAndMethods(parser);
 		Assert.That(program.Members[0].IsMutable, Is.True);
@@ -161,7 +161,7 @@ public sealed class MutableTests : TestExpressions
 		var program = new Type(type.Package,
 				new TypeLines(nameof(GenericTypesCannotBeUsedDirectlyUseImplementation), "has unused Character",
 					"DummyCount Number",
-					"\tconstant result = Mutable(5)",
+					"\tconstant result = List(5, 5)",
 					"\tresult")).
 			ParseMembersAndMethods(parser);
 		Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(),

@@ -50,8 +50,8 @@ public sealed class CSharpTypeVisitorTests : TestCSharpGenerator
 		var program = new Type(package, new TypeLines(
 				// @formatter.off
 				"Program",
-				"implement Input",
-				"implement Output",
+				"has Input",
+				"has Output",
 				"has system",
 				"Read Text",
 				"\tsystem.WriteLine(\"Read\")",

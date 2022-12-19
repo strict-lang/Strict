@@ -113,12 +113,7 @@ public class TypeTests
 	public void MethodReturnTypeAsAnyIsNotAllowed() =>
 		Assert.That(() => CreateType("Program", "has log", "Run Any", "\tconstant result = 5"),
 			Throws.InstanceOf<Method.MethodReturnTypeAsAnyIsNotAllowed>()!);
-	/*TODO: remove
-	[Test]
-	public void ImplementMustBeBeforeMembersAndMethods() =>
-		Assert.That(() => CreateType("Program", "has log", "implement App"),
-			Throws.InstanceOf<Type.ImplementMustComeBeforeMembersAndMethods>());
-*/
+
 	[Test]
 	public void MembersMustComeBeforeMethods() =>
 		Assert.That(() => CreateType("Program", "Run", "has log"),
@@ -128,7 +123,7 @@ public class TypeTests
 	public void SimpleApp() =>
 		// @formatter:off
 		CheckApp(CreateType("Program",
-			"implement App",
+			"has App",
 			"has log",
 			"Run",
 			"\tlog.Write(\"Hello World!\")"));
@@ -136,7 +131,7 @@ public class TypeTests
 	private static void CheckApp(Type program)
 	{
 		Assert.That(program.Members[0].Type.Name, Is.EqualTo(Base.App));
-		Assert.That(program.Members[0].Name, Is.EqualTo("log"));
+		Assert.That(program.Members[1].Name, Is.EqualTo("log"));
 		Assert.That(program.Methods[0].Name, Is.EqualTo("Run"));
 		Assert.That(program.IsTrait, Is.False);
 	}
@@ -144,7 +139,7 @@ public class TypeTests
 	[Test]
 	public void AnotherApp() =>
 		CheckApp(CreateType("Program",
-			"implement App",
+			"has App",
 			"has log",
 			"Run",
 			"\tfor number in Range(0, 10)",
@@ -153,7 +148,7 @@ public class TypeTests
 	[Test]
 	public void MustImplementAllTraitMethods() =>
 		Assert.That(() => CreateType("Program",
-				"implement App",
+				"has App",
 				"add(number)",
 				"\treturn one + 1"),
 			Throws.InstanceOf<Type.MustImplementAllTraitMethods>());
@@ -161,7 +156,7 @@ public class TypeTests
 	[Test]
 	public void TraitMethodsMustBeImplemented() =>
 		Assert.That(() => CreateType("Program",
-				"implement App",
+				"has App",
 				"Run"),
 			Throws.InstanceOf<Type.MethodMustBeImplementedInNonTrait>());
 	// @formatter:on
@@ -176,12 +171,6 @@ public class TypeTests
 	}
 
 	[Test]
-	public void ImplementsWithBrackets() =>
-		Assert.That(
-			new TypeLines(nameof(ImplementsWithBrackets), "implement Text(Character)", "has log").
-				MemberTypes, Has.Count.EqualTo(2));
-
-	[Test]
 	public void CanUpCastNumberWithList()
 	{
 		var type = CreateType(nameof(CanUpCastNumberWithList), "has log",
@@ -193,7 +182,7 @@ public class TypeTests
 		});
 		Assert.That(result, Is.InstanceOf<Method>());
 		Assert.That(result?.ToString(),
-			Is.EqualTo("Add(first TestPackage.Number, other TestPackage.Numbers Implements TestPackage.List) List"));
+			Is.EqualTo("Add(first TestPackage.Number, other TestPackage.Numbers) List"));
 	}
 
 	[Test]
@@ -300,7 +289,7 @@ public class TypeTests
 	public void GenericMethodShouldAcceptAllInputTypes()
 	{
 		var type = CreateType(nameof(GenericMethodShouldAcceptAllInputTypes),
-			"implement Output",
+			"has Output",
 			"has log",
 			"Write(generic)", "\tlog.Write(generic)");
 		Assert.That(

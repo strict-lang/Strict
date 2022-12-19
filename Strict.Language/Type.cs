@@ -67,12 +67,13 @@ public class Type : Context
 		ValidateMethodAndMemberCountLimits();
 		// ReSharper disable once ForCanBeConvertedToForeach, for performance reasons:
 		// https://codeblog.jonskeet.uk/2009/01/29/for-vs-foreach-on-arrays-and-lists/
-		for (var index = 0; index < members.Count; index++)
-		{
-			var trait = members[index].Type;
-			if (trait.IsTrait)
-				CheckIfTraitIsImplemented(trait);
-		}
+		//TODO: Traits feature should be modified, all member type methods cannot be implemented
+		//for (var index = 0; index < members.Count; index++)
+		//{
+		//	var trait = members[index].Type;
+		//	if (trait.IsTrait)
+		//		CheckIfTraitIsImplemented(trait);
+		//}
 		return this;
 	}
 
@@ -311,8 +312,9 @@ public class Type : Context
 	{
 		if (IsTrait && IsNextLineValidMethodBody())
 			throw new TypeHasNoMembersAndThusMustBeATraitWithoutMethodBodies(this);
-		if (!IsTrait && !IsNextLineValidMethodBody())
-			throw new MethodMustBeImplementedInNonTrait(this, lines[lineNumber]);
+		//TODO: update this based on Trait behavior
+		//if (!IsTrait && !IsNextLineValidMethodBody())
+		//	throw new MethodMustBeImplementedInNonTrait(this, lines[lineNumber]);
 		var methodLineNumber = lineNumber;
 		IncrementLineNumberTillMethodEnd();
 		return listStartLineNumber != -1
@@ -424,10 +426,10 @@ public class Type : Context
 	protected readonly List<Method> methods = new();
 	public bool IsTrait => Members.Count == 0 && Name != Base.Number && Name != Base.Boolean;
 
-	public override string ToString() =>
-		base.ToString() + (members.Count > 0
-			? " " + nameof(Members) + " " + members.ToWordList()
-			: "");
+	//TODO: Causing stackoverflow public override string ToString() =>
+	//	base.ToString() + (members.Count > 0
+	//		? " " + nameof(Members) + " " + members.ToWordList()
+	//		: "");
 
 	public override Type? FindType(string name, Context? searchingFrom = null) =>
 		name == Name || name.Contains('.') && name == base.ToString() || name == Other
@@ -530,7 +532,8 @@ public class Type : Context
 	/// or Error.strict have public members you have to iterate over yourself.
 	/// </summary>
 	public bool IsIterator =>
-		Name == Base.Iterator || members.Any(member => !member.IsPublic && member.Type.IsIterator);
+		Name == Base.Iterator || members.Any(member => member is { IsPublic: false, Type.Name: Base.Iterator });
+	//TODO causing stackoverflow because of circular dependency, fix it || members.Any(member => !member.IsPublic && member.Type.IsIterator);
 
 	private Method? FindAndCreateFromBaseMethod(string methodName,
 		IReadOnlyList<Expression> arguments)

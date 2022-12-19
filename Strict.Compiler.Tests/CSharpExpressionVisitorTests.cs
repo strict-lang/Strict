@@ -39,7 +39,7 @@ public sealed class CSharpExpressionVisitorTests : TestExpressions
 	public void GenerateMemberCall() =>
 		Assert.That(
 			visitor.Visit(new MemberCall(new MemberCall(null, member),
-				member.Type.Members.First(m => m.Name == "Text"))), Is.EqualTo("log.Text"));
+				member.Type.Members.First(m => m.Name == "output"))), Is.EqualTo("log.output"));
 
 	[Test]
 	public void GenerateMethodCall() =>
@@ -61,7 +61,7 @@ public sealed class CSharpExpressionVisitorTests : TestExpressions
 	[TestCase("\"Hey\"", "\"Hey\"")]
 	[TestCase("42", "42")]
 	[TestCase("log.Write(\"Hey\")", "Console.WriteLine(\"Hey\")")]
-	[TestCase("log.Text", "log.Text")]
+	[TestCase("log.output", "log.output")]
 	public void ConvertStrictToCSharp(string strictCode, string expectedCSharpCode) =>
 		Assert.That(visitor.Visit(ParseExpression(strictCode)), Is.EqualTo(expectedCSharpCode));
 
