@@ -5,10 +5,8 @@ namespace Strict.Language.Expressions;
 public sealed class MutableAssignment : ConcreteExpression
 {
 	private MutableAssignment(Body scope, string name, Expression newValue) :
-		base(newValue.ReturnType, true)
-	{
+		base(newValue.ReturnType, true) =>
 		scope.UpdateVariable(name, newValue);
-	}
 
 	public static Expression? TryParse(Body body, ReadOnlySpan<char> line) =>
 		line.Contains(" = ", StringComparison.Ordinal)
@@ -21,17 +19,15 @@ public sealed class MutableAssignment : ConcreteExpression
 		parts.MoveNext();
 		var expression = body.Method.ParseExpression(body, parts.Current);
 		var newExpression = body.Method.ParseExpression(body, line[(parts.Current.Length + 3)..]);
-		return expression.IsMutable
-			? UpdateMemberOrVariableValue(body, expression, newExpression)
-			: throw new Body.ValueIsNotMutableAndCannotBeChanged(body, parts.Current.ToString());
+		if (!expression.ReturnType.IsCompatible(newExpression.ReturnType))
+			throw new ValueTypeNotMatchingWithAssignmentType(body, expression.ReturnType.Name,
+				newExpression.ReturnType.Name);
+		return UpdateMemberOrVariableValue(body, expression, newExpression);
 	}
 
 	private static Expression UpdateMemberOrVariableValue(Body body,
 		Expression expression, Expression newExpression)
 	{
-		if (!expression.ReturnType.IsCompatible(newExpression.ReturnType))
-			throw new ValueTypeNotMatchingWithAssignmentType(body, expression.ReturnType.Name,
-				newExpression.ReturnType.Name);
 		switch (expression)
 		{
 		case MemberCall memberCall:

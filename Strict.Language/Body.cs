@@ -132,7 +132,7 @@ public sealed class Body : Expression
 		var variable = FindVariableValue(name);
 		if (variable == null)
 			throw new IdentifierNotFound(this, name);
-		if (variable.IsMutable)
+		if (!variable.IsMutable)
 			throw new ValueIsNotMutableAndCannotBeChanged(this, name);
 		variables![name] = value;
 	}

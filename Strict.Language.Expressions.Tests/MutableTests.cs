@@ -23,26 +23,27 @@ public sealed class MutableTests : TestExpressions
 			Is.EqualTo(type.GetType(Base.Number)));
 	}
 
-	[Test]
-	public void MutableMethodParameterWithType()
-	{
-		var program = new Type(type.Package,
-				new TypeLines(nameof(MutableMethodParameterWithType), "has something Number",
-					"Add(input Mutable(Number)) Number",
-					"\tconstant result = something + input")).
-			ParseMembersAndMethods(parser);
-		Assert.That(program.Methods[0].Parameters[0].IsMutable,
-			Is.True);
-		Assert.That(program.Methods[0].GetBodyAndParseIfNeeded().ReturnType,
-			Is.EqualTo(type.GetType(Base.Number)));
-	}
+	//TODO: Mutable method parameter has valid any use case? should it be mutable input Number?
+	//[Test]
+	//public void MutableMethodParameterWithType()
+	//{
+	//	var program = new Type(type.Package,
+	//			new TypeLines(nameof(MutableMethodParameterWithType), "has something Number",
+	//				"Add(input Mutable(Number)) Number",
+	//				"\tconstant result = something + input")).
+	//		ParseMembersAndMethods(parser);
+	//	Assert.That(program.Methods[0].Parameters[0].IsMutable,
+	//		Is.True);
+	//	Assert.That(program.Methods[0].GetBodyAndParseIfNeeded().ReturnType,
+	//		Is.EqualTo(type.GetType(Base.Number)));
+	//}
 
 	[Test]
 	public void MutableMemberWithTextType()
 	{
 		var program = new Type(type.Package,
 				new TypeLines(nameof(MutableMemberWithTextType), "mutable something Text",
-					"Add(input Count) Text",
+					"Add(input Number) Text",
 					"\tconstant result = input + something")).
 			ParseMembersAndMethods(parser);
 		Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(), Throws.InstanceOf<Type.ArgumentsDoNotMatchMethodParameters>());
@@ -77,7 +78,7 @@ public sealed class MutableTests : TestExpressions
 	{
 		var program = new Type(type.Package,
 				new TypeLines(nameof(MutableVariableInstanceUsingSpace), "has log",
-					"Add(input Count) Number",
+					"Add(input Number) Number",
 					"\tmutable result = 5",
 					"\tresult = result + input")).
 			ParseMembersAndMethods(parser);
@@ -89,7 +90,7 @@ public sealed class MutableTests : TestExpressions
 	public void MissingMutableArgument() =>
 		Assert.That(
 			() => new Type(type.Package,
-					new TypeLines(nameof(MissingMutableArgument), "has log", "Add(input Count) Number",
+					new TypeLines(nameof(MissingMutableArgument), "has log", "Add(input Number) Number",
 						"\tconstant result =", "\tresult = result + input")).
 				ParseMembersAndMethods(parser).
 				Methods[0].GetBodyAndParseIfNeeded(),
@@ -126,7 +127,7 @@ public sealed class MutableTests : TestExpressions
 		Assert.That(body.ReturnType,
 			Is.EqualTo(type.GetType(Base.Number)));
 		Assert.That(body.Expressions[0].ReturnType.Name,
-			Is.EqualTo("Mutable(TestPackage.Number)"));
+			Is.EqualTo("Number"));
 	}
 
 	[Test]
@@ -142,18 +143,19 @@ public sealed class MutableTests : TestExpressions
 			Throws.InstanceOf<MissingAssignmentValueExpression>());
 	}
 
-	[Test]
-	public void DirectUsageOfMutableTypesOrImplementsAreForbidden()
-	{
-		var program = new Type(type.Package,
-				new TypeLines(nameof(DirectUsageOfMutableTypesOrImplementsAreForbidden), "has unused Character",
-					"DummyCount(limit Number) Number",
-					"\tconstant result = Count(5)",
-					"\tresult")).
-			ParseMembersAndMethods(parser);
-		Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(),
-			Throws.InstanceOf<MutableAssignment.DirectUsageOfMutableTypesOrImplementsAreForbidden>()!);
-	}
+	//TODO: Remove since this usecase is not valid anymore
+	//[Test]
+	//public void DirectUsageOfMutableTypesOrImplementsAreForbidden()
+	//{
+	//	var program = new Type(type.Package,
+	//			new TypeLines(nameof(DirectUsageOfMutableTypesOrImplementsAreForbidden), "has unused Character",
+	//				"DummyCount(limit Number) Number",
+	//				"\tconstant result = Mutable(5)",
+	//				"\tresult")).
+	//		ParseMembersAndMethods(parser);
+	//	Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(),
+	//		Throws.InstanceOf<MutableAssignment.DirectUsageOfMutableTypesOrImplementsAreForbidden>()!);
+	//}
 
 	[Test]
 	public void GenericTypesCannotBeUsedDirectlyUseImplementation()
@@ -167,16 +169,6 @@ public sealed class MutableTests : TestExpressions
 		Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(),
 			Throws.InstanceOf<Type.GenericTypesCannotBeUsedDirectlyUseImplementation>()!);
 	}
-
-	[Test]
-	public void MemberCannotBeAssignedWithMutableType() =>
-		Assert.That(
-			() => new Type(type.Package,
-					new TypeLines(nameof(MemberCannotBeAssignedWithMutableType), "has input = Mutable(0)",
-						"DummyMethod Number", "\tconstant result = Count(5)", "\tresult")).
-				ParseMembersAndMethods(parser),
-			Throws.InstanceOf<ParsingFailed>().With.InnerException.
-				InstanceOf<Type.GenericTypesCannotBeUsedDirectlyUseImplementation>());
 
 	[Test]
 	public void MemberDeclarationUsingMutableKeyword()
@@ -197,12 +189,11 @@ public sealed class MutableTests : TestExpressions
 
 	[TestCase("Mutable", "Mutable(Number)")]
 	[TestCase("Count", "Count")]
-	[TestCase("CountWithValue", "= Count(5)")]
 	public void MutableTypesOrImplementsUsageInMembersAreForbidden(string testName, string code) =>
 		Assert.That(
 			() => new Type(type.Package,
 				new TypeLines(testName + nameof(MutableTypesOrImplementsUsageInMembersAreForbidden),
 					$"mutable something {code}", "Add(input Count) Number",
 					"\tconstant result = something + input")).ParseMembersAndMethods(parser),
-			Throws.InstanceOf<Type.UsingMutableTypesOrImplementsAreNotAllowed>());
+			Throws.InstanceOf<ParsingFailed>().With.InnerException.InstanceOf<Context.TypeNotFound>());
 }

@@ -12,6 +12,7 @@ public class MutableDeclaration : ConstantDeclaration
 		var value = valueSpan.IsFirstLetterUppercase() && valueSpan.IsPlural()
 			? new List(body.Method.Type.GetType(valueSpan.ToString()))
 			: body.Method.ParseExpression(body, valueSpan);
+		value.IsMutable = true;
 		return new MutableDeclaration(body, name, value);
 	}
 

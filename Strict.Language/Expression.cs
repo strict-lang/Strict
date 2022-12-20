@@ -17,7 +17,7 @@ public abstract class Expression : IEquatable<Expression>
 	}
 
 	public Type ReturnType { get; }
-	public bool IsMutable { get; }
+	public bool IsMutable { get; set; }
 	/// <summary>
 	/// By default all expressions should be immutable in Strict. However, many times some part of the
 	/// code will actually change something, thus making that expression AND anything that calls it
