@@ -41,7 +41,7 @@ public abstract class ExpressionVisitor
 		{
 			Body => throw new UseVisitBody(expression),
 			For forExpression => Visit(forExpression),
-			Assignment assignment => Visit(assignment),
+			ConstantDeclaration assignment => Visit(assignment),
 			Binary binary => Visit(binary),
 			Return returnExpression => Visit(returnExpression),
 			MethodCall call => Visit(call),
@@ -56,7 +56,7 @@ public abstract class ExpressionVisitor
 		public UseVisitBody(Expression expression) : base(expression.ToString()) { }
 	}
 
-	protected abstract string Visit(Assignment assignment);
+	protected abstract string Visit(ConstantDeclaration constantDeclaration);
 
 	protected string Visit(Binary binary) =>
 		Visit(binary.Instance!) + " " + GetBinaryOperator(binary.Method.Name) + " " + Visit(binary.Arguments[0]);

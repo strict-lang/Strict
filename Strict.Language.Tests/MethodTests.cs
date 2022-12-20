@@ -101,7 +101,7 @@ public sealed class MethodTests
 		});
 		Assert.That(method.Name, Is.EqualTo(Run));
 		Assert.That(method.Parameters, Has.Count.EqualTo(1));
-		var binary = (Binary)((Assignment)method.GetBodyAndParseIfNeeded()).Value;
+		var binary = (Binary)((ConstantDeclaration)method.GetBodyAndParseIfNeeded()).Value;
 		Assert.That(binary.Instance, Is.InstanceOf<ParameterCall>());
 	}
 

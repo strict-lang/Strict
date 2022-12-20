@@ -107,7 +107,7 @@ public sealed class ByteCodeGenerator
 
 	private void TryGenerateAssignmentStatements(Expression expression)
 	{
-		if (expression is not Assignment assignmentExpression)
+		if (expression is not ConstantDeclaration assignmentExpression)
 			return;
 		if (assignmentExpression.Value is Value assignmentValue)
 		{

@@ -20,7 +20,7 @@ public sealed class If : Expression
 
 	private static Type CheckExpressionAndGetMatchingType(Expression then, Expression? optionalElse,
 		Body? bodyForErrorMessage) =>
-		then is Assignment || optionalElse is Assignment
+		then is ConstantDeclaration || optionalElse is ConstantDeclaration
 			? then.ReturnType
 			: GetMatchingType(then.ReturnType, optionalElse?.ReturnType, bodyForErrorMessage);
 

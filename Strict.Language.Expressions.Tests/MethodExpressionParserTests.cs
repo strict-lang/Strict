@@ -17,7 +17,7 @@ public sealed class MethodExpressionParserTests : TestExpressions
 		var body = new Method(type, 0, this, new[] { MethodTests.Run, MethodTests.LetNumber }).
 			GetBodyAndParseIfNeeded();
 		Assert.That(body.ReturnType, Is.EqualTo(type.FindType(Base.Number)));
-		Assert.That(body, Is.TypeOf<Assignment>());
+		Assert.That(body, Is.TypeOf<ConstantDeclaration>());
 		Assert.That(body.ReturnType, Is.EqualTo(number.ReturnType));
 		Assert.That(body.ToString(), Is.EqualTo(MethodTests.LetNumber[1..]));
 	}

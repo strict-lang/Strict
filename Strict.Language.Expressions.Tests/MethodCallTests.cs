@@ -77,9 +77,9 @@ public sealed class MethodCallTests : TestExpressions
 
 	[Test]
 	public void UnknownExpressionForArgumentException() =>
-		Assert.That(() => ParseExpression("complexMethod((\"1 + 5\" + \"5\"))"),
+		Assert.That(() => ParseExpression("complexMethod(5)"),
 			Throws.InstanceOf<ArgumentsDoNotMatchMethodParameters>().With.Message.
-				StartsWith("Argument: \"1 + 5\" + \"5\" "));
+				StartsWith("Argument: 5 "));
 
 	[Test]
 	public void ListTokensAreNotSeparatedByCommaException() =>
@@ -169,7 +169,7 @@ public sealed class MethodCallTests : TestExpressions
 				programName,
 				code)).
 			ParseMembersAndMethods(new MethodExpressionParser());
-		var assignment = (Assignment)program.Methods[0].GetBodyAndParseIfNeeded();
+		var assignment = (ConstantDeclaration)program.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(((MethodCall)assignment.Value).Method.Parameters[0].Name, Is.EqualTo(expected));
 	}
 
@@ -295,6 +295,6 @@ public sealed class MethodCallTests : TestExpressions
 					"\tinstance.AddFiveWithInput")).
 			ParseMembersAndMethods(new MethodExpressionParser());
 		var body = (Body)consumer.Methods[0].GetBodyAndParseIfNeeded();
-		Assert.That(((Assignment)body.Expressions[1]).Value.ReturnType.Name, Is.EqualTo("TypeCannotBeAutoInitialized"));
+		Assert.That(((ConstantDeclaration)body.Expressions[1]).Value.ReturnType.Name, Is.EqualTo("TypeCannotBeAutoInitialized"));
 	}
 }

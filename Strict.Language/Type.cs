@@ -532,8 +532,8 @@ public class Type : Context
 	/// or Error.strict have public members you have to iterate over yourself.
 	/// </summary>
 	public bool IsIterator =>
-		Name == Base.Iterator || members.Any(member => member is { IsPublic: false, Type.Name: Base.Iterator });
-	//TODO causing stackoverflow because of circular dependency, fix it || members.Any(member => !member.IsPublic && member.Type.IsIterator);
+		Name == Base.Iterator
+		|| members.Any(member => !member.IsPublic && member.Type.IsIterator);
 
 	private Method? FindAndCreateFromBaseMethod(string methodName,
 		IReadOnlyList<Expression> arguments)
@@ -627,6 +627,11 @@ public class Type : Context
 			new();
 	} //ncrunch: no coverage end
 
+	/// <summary>
+	/// TODO: create a case if you cast something to a field, you should not lose anything in that casting
+	/// </summary>
+	/// <param name="sameOrBaseType"></param>
+	/// <returns></returns>
 	public bool IsCompatible(Type sameOrBaseType) =>
 		this == sameOrBaseType || members.Any(member => member.Type.IsCompatible(sameOrBaseType)) ||
 		CanUpCast(sameOrBaseType);

@@ -10,9 +10,14 @@ namespace Strict.Language;
 /// </summary>
 public abstract class Expression : IEquatable<Expression>
 {
-	protected Expression(Type returnType) => ReturnType = returnType;
+	protected Expression(Type returnType, bool isMutable = false)
+	{
+		ReturnType = returnType;
+		IsMutable = isMutable;
+	}
+
 	public Type ReturnType { get; }
-	public bool IsMutable { get; protected set; }
+	public bool IsMutable { get; }
 	/// <summary>
 	/// By default all expressions should be immutable in Strict. However, many times some part of the
 	/// code will actually change something, thus making that expression AND anything that calls it

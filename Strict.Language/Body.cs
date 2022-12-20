@@ -1,6 +1,8 @@
 ﻿using System.Collections.Generic;
 using System;
+using System.Linq;
 using System.Runtime.CompilerServices;
+using static System.Formats.Asn1.AsnWriter;
 
 [assembly: InternalsVisibleTo("Strict.Language.Expressions.Tests")]
 
@@ -125,7 +127,28 @@ public sealed class Body : Expression
 		public ValueIsNotMutableAndCannotBeChanged(Body body, string name) : base(body, name) { }
 	}
 
-	public void UpdateVariable(string name, Expression value) => variables![name] = value;
+	public void UpdateVariable(string name, Expression value)
+	{
+		var variable = FindVariableValue(name);
+		if (variable == null)
+			throw new IdentifierNotFound(this, name);
+		if (variable.IsMutable)
+			throw new ValueIsNotMutableAndCannotBeChanged(this, name);
+		variables![name] = value;
+	}
+
+	public sealed class IdentifierNotFound : ParsingFailed
+	{
+		public IdentifierNotFound(Body body, string name) : base(body, name + ", Variables in scope: " + body.GetAllVariablesNames().ToWordList()) { }
+	}
+
+	private List<string> GetAllVariablesNames()
+	{
+		var allVariables = variables?.Keys.ToList() ?? new List<string>();
+		if (Parent != null)
+			allVariables.AddRange(Parent.GetAllVariablesNames());
+		return allVariables;
+	}
 
 	public Expression? FindVariableValue(ReadOnlySpan<char> searchFor)
 	{

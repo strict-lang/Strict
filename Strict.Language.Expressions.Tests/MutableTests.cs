@@ -1,5 +1,5 @@
 ﻿using NUnit.Framework;
-using static Strict.Language.Expressions.Assignment;
+using static Strict.Language.Expressions.ConstantDeclaration;
 
 namespace Strict.Language.Expressions.Tests;
 
@@ -66,10 +66,10 @@ public sealed class MutableTests : TestExpressions
 		"TryChangeMutableDataType Text", "\tsomething = 5")]
 	[TestCase("AssignNumbersToTexts", "mutable something Texts",
 		"TryChangeMutableDataType Text", "\tsomething = (5, 4, 3)")]
-	public void InvalidDataAssignment(string testName, params string[] code) =>
+	public void ValueTypeNotMatchingWithAssignmentType(string testName, params string[] code) =>
 		Assert.That(
 			() => new Type(type.Package, new TypeLines(testName, code)).ParseMembersAndMethods(parser).
-				Methods[0].GetBodyAndParseIfNeeded(), Throws.InstanceOf<Mutable.InvalidDataAssignment>());
+				Methods[0].GetBodyAndParseIfNeeded(), Throws.InstanceOf<Mutable.ValueTypeNotMatchingWithAssignmentType>());
 	*/
 
 	[Test]
@@ -82,7 +82,7 @@ public sealed class MutableTests : TestExpressions
 					"\tresult = result + input")).
 			ParseMembersAndMethods(parser);
 		var body = (Body)program.Methods[0].GetBodyAndParseIfNeeded();
-		Assert.That(((Assignment)body.Expressions[0]).Value.ToString(), Is.EqualTo("5"));
+		Assert.That(((ConstantDeclaration)body.Expressions[0]).Value.ToString(), Is.EqualTo("5"));
 	}
 
 	[Test]
@@ -101,13 +101,13 @@ public sealed class MutableTests : TestExpressions
 	{
 		var program = new Type(type.Package,
 				new TypeLines(testName, "has log",
-					$"Add(input Count) {returnType}",
+					$"Add(input Number) {returnType}",
 					$"\tmutable result = {code}",
 					"\tresult = result + input",
 					"\tresult")).
 			ParseMembersAndMethods(parser);
 		var body = (Body)program.Methods[0].GetBodyAndParseIfNeeded();
-		Assert.That(((Assignment)body.Expressions[0]).Value.ToString(),
+		Assert.That(((ConstantDeclaration)body.Expressions[0]).Value.ToString(),
 			Is.EqualTo(code));
 	}
 
@@ -152,7 +152,7 @@ public sealed class MutableTests : TestExpressions
 					"\tresult")).
 			ParseMembersAndMethods(parser);
 		Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(),
-			Throws.InstanceOf<DirectUsageOfMutableTypesOrImplementsAreForbidden>()!);
+			Throws.InstanceOf<MutableAssignment.DirectUsageOfMutableTypesOrImplementsAreForbidden>()!);
 	}
 
 	[Test]

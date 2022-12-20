@@ -20,12 +20,12 @@ public sealed class BodyTests : TestExpressions
 	[Test]
 	public void CannotUseVariableFromLowerScope() =>
 		Assert.That(() => ParseExpression("if bla is 5", "\tconstant abc = \"abc\"", "log.Write(abc)"),
-			Throws.InstanceOf<IdentifierNotFound>().With.Message.StartWith("abc"));
+			Throws.InstanceOf<Body.IdentifierNotFound>().With.Message.StartWith("abc"));
 
 	[Test]
 	public void UnknownVariable() =>
 		Assert.That(() => ParseExpression("if bla is 5", "\tlog.Write(unknownVariable)"),
-			Throws.InstanceOf<IdentifierNotFound>().With.Message.StartWith("unknownVariable"));
+			Throws.InstanceOf<Body.IdentifierNotFound>().With.Message.StartWith("unknownVariable"));
 
 	[Test]
 	public void CannotAccessAnotherMethodVariable()
@@ -41,7 +41,7 @@ public sealed class BodyTests : TestExpressions
 		// @formatter:on
 		Assert.That(
 			() => program.Methods[1].GetBodyAndParseIfNeeded(),
-			Throws.InstanceOf<IdentifierNotFound>().With.Message.StartWith("number"));
+			Throws.InstanceOf<Body.IdentifierNotFound>().With.Message.StartWith("number"));
 	}
 
 	[Test]
@@ -53,7 +53,7 @@ public sealed class BodyTests : TestExpressions
 	{
 		var body = new Body(method);
 		var expressions = new Expression[2];
-		expressions[0] = new Assignment(body, "abc", new Text(method, "abc"));
+		expressions[0] = new ConstantDeclaration(body, "abc", new Text(method, "abc"));
 		var arguments = new Expression[] { new VariableCall("abc", body.FindVariableValue("abc")!) };
 		expressions[1] = new MethodCall(member.Type.GetMethod("Write", arguments),
 			new MemberCall(null, member), arguments);
@@ -71,7 +71,7 @@ public sealed class BodyTests : TestExpressions
 				"else",
 				"\tlog.Write(ifText)"),
 				// @formatter:on
-			Throws.InstanceOf<IdentifierNotFound>().With.Message.StartWith("ifText"));
+			Throws.InstanceOf<Body.IdentifierNotFound>().With.Message.StartWith("ifText"));
 
 	[Test]
 	public void MissingThenDueToIncorrectChildBodyStart() =>

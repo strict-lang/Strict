@@ -17,10 +17,10 @@ public class MethodExpressionParser : ExpressionParser
 	/// </summary>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public override Expression ParseLineExpression(Body body, ReadOnlySpan<char> line) =>
-		Assignment.TryParse(body, line) ?? If.TryParse(body, line) ??
+		ConstantDeclaration.TryParse(body, line, ConstantDeclaration.Constant) ?? If.TryParse(body, line) ??
 		For.TryParse(body, line.Trim()) ?? Return.TryParse(body, line) ??
-		//TODO: removed: Mutable.TryParse(body, line) ??
-		ParseExpression(body, line);
+		ConstantDeclaration.TryParse(body, line, MutableDeclaration.Mutable) ??
+		MutableAssignment.TryParse(body, line) ?? ParseExpression(body, line);
 
 	public override Expression ParseExpression(Body body, ReadOnlySpan<char> input)
 	{
@@ -63,7 +63,7 @@ public class MethodExpressionParser : ExpressionParser
 		TryParseMemberOrZeroOrOneArgumentMethodOrNestedCall(body, input) ?? (input.IsOperator()
 			? throw new InvalidOperatorHere(body, input.ToString())
 			: input.IsWord()
-				? throw new IdentifierNotFound(body, input.ToString())
+				? throw new Body.IdentifierNotFound(body, input.ToString())
 				: throw new UnknownExpression(body, input.ToString()));
 
 	private Expression? TryParseErrorOrTextOrListOrConditionalExpression(Body body, ReadOnlySpan<char> input) =>
@@ -389,11 +389,6 @@ public class MethodExpressionParser : ExpressionParser
 	public sealed class InvalidOperatorHere : ParsingFailed
 	{
 		public InvalidOperatorHere(Body body, string message) : base(body, message) { }
-	}
-
-	public sealed class IdentifierNotFound : ParsingFailed
-	{
-		public IdentifierNotFound(Body body, string name) : base(body, name) { }
 	}
 
 	public sealed class UnknownExpression : ParsingFailed

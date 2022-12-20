@@ -43,7 +43,7 @@ public sealed class EnumTests
 		var consumingType = new Type(package,
 			new TypeLines(nameof(UseEnumWithoutConstructor), "has log",
 				"Run", "\tconstant url = Connection.Google")).ParseMembersAndMethods(parser);
-		var assignment = (Assignment)consumingType.Methods[0].GetBodyAndParseIfNeeded();
+		var assignment = (ConstantDeclaration)consumingType.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(assignment.Value, Is.InstanceOf<MemberCall>()!);
 		var member = ((MemberCall)assignment.Value).Member;
 		Assert.That(member.Name, Is.EqualTo("Google"));
@@ -71,7 +71,7 @@ public sealed class EnumTests
 			ParseMembersAndMethods(parser);
 		Assert.That(consumingType.GetType("Instruction").IsDatatypeOrEnum, Is.True);
 		Assert.That(((MemberCall)consumingType.Members[0].Value!).Member.Name, Is.EqualTo("Add"));
-		var assignment = (Assignment)consumingType.Methods[0].GetBodyAndParseIfNeeded();
+		var assignment = (ConstantDeclaration)consumingType.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(assignment.Value, Is.InstanceOf<MemberCall>()!);
 		var member = ((MemberCall)assignment.Value).Member;
 		Assert.That(member.Name, Is.EqualTo("Set"));
@@ -109,7 +109,7 @@ public sealed class EnumTests
 					"\tconstant result = ExecuteInstruction((1, 2), Instruction.Add)")).
 			ParseMembersAndMethods(parser);
 		var _ = (If)consumingType.Methods[0].GetBodyAndParseIfNeeded();
-		var result = (Assignment)consumingType.Methods[1].GetBodyAndParseIfNeeded();
+		var result = (ConstantDeclaration)consumingType.Methods[1].GetBodyAndParseIfNeeded();
 		Assert.That(result.Value, Is.InstanceOf<MethodCall>());
 		Assert.That(((MemberCall)((MethodCall)result.Value).Arguments[1]).Member.Name,
 			Is.EqualTo("Add"));

@@ -22,12 +22,12 @@ public sealed class BinaryTests : TestExpressions
 	[Test]
 	public void MissingLeftExpression() =>
 		Assert.That(() => ParseExpression("unknown + 5"),
-			Throws.Exception.InstanceOf<IdentifierNotFound>());
+			Throws.Exception.InstanceOf<Body.IdentifierNotFound>());
 
 	[Test]
 	public void MissingRightExpression() =>
 		Assert.That(() => ParseExpression("5 + unknown"),
-			Throws.Exception.InstanceOf<IdentifierNotFound>());
+			Throws.Exception.InstanceOf<Body.IdentifierNotFound>());
 
 	[Test]
 	public void ArgumentsDoNotMatchBinaryOperatorParameters() =>

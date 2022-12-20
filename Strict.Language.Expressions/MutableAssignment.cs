@@ -1,42 +1,30 @@
-﻿/*TODO: not longer needed
-using System;
-using System.Linq;
+﻿using System;
 
 namespace Strict.Language.Expressions;
 
-public sealed class Mutable : Value
+public sealed class MutableAssignment : ConcreteExpression
 {
-	public Mutable(Context context, Expression expression) : base(
-		GetMutableReturnType(context, expression), expression)
+	private MutableAssignment(Body scope, string name, Expression newValue) :
+		base(newValue.ReturnType, true)
 	{
-		ReturnType = DataReturnType;
+		scope.UpdateVariable(name, newValue);
 	}
-
-	private static Type GetMutableReturnType(Context context, Expression expression) =>
-		expression.ReturnType.Name.StartsWith(Base.Mutable, StringComparison.Ordinal)
-			? expression.ReturnType
-			: context.GetType(Base.Mutable + "(" + expression.ReturnType.Name + ")");
 
 	public static Expression? TryParse(Body body, ReadOnlySpan<char> line) =>
 		line.Contains(" = ", StringComparison.Ordinal)
 			? TryParseReassignment(body, line)
 			: null;
 
-	public Type DataReturnType => ((Expression)Data).ReturnType;
-
 	private static Expression TryParseReassignment(Body body, ReadOnlySpan<char> line)
 	{
 		var parts = line.Split();
 		parts.MoveNext();
 		var expression = body.Method.ParseExpression(body, parts.Current);
-		return IsMutable(expression)
-			? UpdateMemberOrVariableValue(body, expression, body.Method.ParseExpression(body, line[(parts.Current.Length + 3)..]))
-			: throw new ImmutableTypesCannotBeChanged(body, parts.Current.ToString());
+		var newExpression = body.Method.ParseExpression(body, line[(parts.Current.Length + 3)..]);
+		return expression.IsMutable
+			? UpdateMemberOrVariableValue(body, expression, newExpression)
+			: throw new Body.ValueIsNotMutableAndCannotBeChanged(body, parts.Current.ToString());
 	}
-
-	private static bool IsMutable(Expression expression) =>
-		expression.ReturnType.Name == Base.Mutable ||
-		expression.ReturnType.Implements.Any(t => t.Name == Base.Mutable) || expression is MemberCall memberCall && memberCall.Member.IsMutable;
 
 	private static Expression UpdateMemberOrVariableValue(Body body,
 		Expression expression, Expression newExpression)
@@ -50,7 +38,7 @@ public sealed class Mutable : Value
 			memberCall.Member.Value = newExpression;
 			return memberCall;
 		case VariableCall variableCall:
-			return new ConstantDeclaration(body, variableCall.Name, newExpression);
+			return new MutableAssignment(body, variableCall.Name, newExpression);
 		default:
 			throw new InvalidAssignmentTarget(body, expression.ToString());
 		}
@@ -66,13 +54,8 @@ public sealed class Mutable : Value
 		public InvalidAssignmentTarget(Body body, string message) : base(body, message) { }
 	}
 
-	public sealed class ImmutableTypesCannotBeChanged : ParsingFailed
+	public sealed class DirectUsageOfMutableTypesOrImplementsAreForbidden : ParsingFailed
 	{
-		public ImmutableTypesCannotBeChanged(Body body, string message) : base(body, message) { }
+		public DirectUsageOfMutableTypesOrImplementsAreForbidden(Body body, string expressionText, string variableName) : base(body, $"Direct usage of mutable types or type that implements Mutable {expressionText} are not allowed. Instead use immutable types for variable {variableName}") { }
 	}
-
-	public override string ToString() =>
-		Data is List { Values.Count: 0 }
-			? DataReturnType.Name
-			: base.ToString();
-}*/
+}

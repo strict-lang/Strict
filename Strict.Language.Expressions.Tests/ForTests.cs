@@ -18,7 +18,7 @@ public sealed class ForTests : TestExpressions
 		Assert.That(
 			() => ParseExpression("for Range(2, 5)", "\tconstant num = 5", "for Range(0, 10)",
 				"\tlog.Write(num)"),
-			Throws.InstanceOf<IdentifierNotFound>().With.Message.StartWith("num"));
+			Throws.InstanceOf<Body.IdentifierNotFound>().With.Message.StartWith("num"));
 
 	[Test]
 	public void Equals()

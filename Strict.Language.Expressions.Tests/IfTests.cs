@@ -87,7 +87,7 @@ public sealed class IfTests : TestExpressions
 	[TestCase("note")]
 	public void InvalidNotKeyword(string invalidKeyword) =>
 		Assert.That(() => ParseExpression($"if bla is {invalidKeyword} 5", "\tlog.Write(\"Hey\")"),
-			Throws.InstanceOf<IdentifierNotFound>().With.Message.StartsWith(invalidKeyword));
+			Throws.InstanceOf<Body.IdentifierNotFound>().With.Message.StartsWith(invalidKeyword));
 
 	[Test]
 	public void InvalidSpacingInsteadOfNot() =>
@@ -146,8 +146,8 @@ public sealed class IfTests : TestExpressions
 	public void ValidConditionalExpressions(string code)
 	{
 		var expression = ParseExpression(code);
-		Assert.That(expression, Is.InstanceOf<Assignment>()!);
-		var assignment = expression as Assignment;
+		Assert.That(expression, Is.InstanceOf<ConstantDeclaration>()!);
+		var assignment = expression as ConstantDeclaration;
 		Assert.That(assignment?.Value, Is.InstanceOf<If>().Or.InstanceOf<Binary>()!);
 	}
 

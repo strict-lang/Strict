@@ -203,7 +203,7 @@ public class TypeTests
 	[TestCase(Base.Text, "has number", "Run", "\tmutable result = \"2\"")]
 	public void MutableTypesHaveProperDataReturnType(string expected, params string[] code)
 	{
-		var expression = (Assignment)
+		var expression = (ConstantDeclaration)
 			new Type(package, new TypeLines(nameof(MutableTypesHaveProperDataReturnType), code)).
 				ParseMembersAndMethods(new MethodExpressionParser()).Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That((expression.Value).ReturnType.Name, Is.EqualTo(expected));
@@ -351,7 +351,7 @@ public class TypeTests
 		var createCustomer = new Type(package,
 			new TypeLines(nameof(CreateTypeUsingConstructorMembers), "has log", "Something",
 				"\tconstant customer = Customer(\"Murali\", 28)")).ParseMembersAndMethods(new MethodExpressionParser());
-		var assignment = (Assignment)createCustomer.Methods[0].GetBodyAndParseIfNeeded();
+		var assignment = (ConstantDeclaration)createCustomer.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(assignment.Value.ReturnType.Name, Is.EqualTo("Customer"));
 		Assert.That(assignment.Value.ToString(), Is.EqualTo("Customer(\"Murali\", 28)"));
 	}
@@ -388,6 +388,6 @@ public class TypeTests
 				"\tresult = Count(5)")).
 			ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(() => type.Methods[0].GetBodyAndParseIfNeeded(),
-			Throws.InstanceOf<Assignment.DirectUsageOfMutableTypesOrImplementsAreForbidden>());
+			Throws.InstanceOf<MutableAssignment.DirectUsageOfMutableTypesOrImplementsAreForbidden>());
 	}
 }

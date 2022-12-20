@@ -23,7 +23,7 @@ public sealed class CSharpExpressionVisitorTests : TestExpressions
 	[Test]
 	public void GenerateAssignment() =>
 		Assert.That(
-			visitor.Visit(new Assignment((Body)methodWithBody.GetBodyAndParseIfNeeded(), nameof(number),
+			visitor.Visit(new ConstantDeclaration((Body)methodWithBody.GetBodyAndParseIfNeeded(), nameof(number),
 				number)), Is.EqualTo("var number = 5"));
 
 	[Test]
