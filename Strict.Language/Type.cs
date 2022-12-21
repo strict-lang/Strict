@@ -508,6 +508,8 @@ public class Type : Context
 			if (argumentReturnType == methodParameterType || method.IsGeneric ||
 				IsArgumentImplementationTypeMatchParameterType(argumentReturnType, methodParameterType))
 				continue;
+			if (methodParameterType.IsDatatypeOrEnum && methodParameterType.Members[0].Type == argumentReturnType)
+				continue;
 			if (methodParameterType is GenericType parameterGenericType)
 			{
 				if (!argumentReturnType.IsCompatible(parameterGenericType.ImplementationTypes[index]))
