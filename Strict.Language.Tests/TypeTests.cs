@@ -206,7 +206,7 @@ public class TypeTests
 		var expression = (ConstantDeclaration)
 			new Type(package, new TypeLines(nameof(MutableTypesHaveProperDataReturnType), code)).
 				ParseMembersAndMethods(new MethodExpressionParser()).Methods[0].GetBodyAndParseIfNeeded();
-		Assert.That((expression.Value).ReturnType.Name, Is.EqualTo(expected));
+		Assert.That(expression.Value.ReturnType.Name, Is.EqualTo(expected));
 	}
 
 	/*TODO
@@ -238,6 +238,7 @@ public class TypeTests
 		var body = (Body)type.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(body.FindVariableValue("result")!.ToString(), Is.EqualTo("5"));
 	}
+
 	/*TODO
 	[Test]
 	public void InvalidAssignmentTarget() =>

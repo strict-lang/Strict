@@ -36,7 +36,8 @@ public class ExpressionParserTests : ExpressionParser
 	}
 
 	//ncrunch: no coverage start, not the focus here
-	public override Expression ParseExpression(Body body, ReadOnlySpan<char> text) => null!;
+	public override Expression ParseExpression(Body body, ReadOnlySpan<char> text) =>
+		new Value(type.GetType(Base.Number), int.Parse(text));
 
 	public override List<Expression> ParseListArguments(Body body, ReadOnlySpan<char> text) => null!;
 	//ncrunch: no coverage end

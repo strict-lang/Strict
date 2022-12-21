@@ -627,23 +627,15 @@ public class Type : Context
 			new();
 	} //ncrunch: no coverage end
 
-	/// <summary>
-	/// TODO: create a case if you cast something to a field, you should not lose anything in that casting
-	/// </summary>
-	/// <param name="sameOrBaseType"></param>
-	/// <returns></returns>
+	//TODO: create a case if you cast something to a field, you should not lose anything in that casting
 	public bool IsCompatible(Type sameOrBaseType) =>
 		this == sameOrBaseType || members.Any(member => member.Type.IsCompatible(sameOrBaseType)) ||
 		CanUpCast(sameOrBaseType);
 
-	private bool CanUpCast(Type sameOrBaseType)
-	{
-		if (sameOrBaseType.IsIterator)
-			return //TODO: remove, cannot find a usecase: Name == Base.Number ||
-				//TODO: check if this makes sense
-				members.Any(member => member.Type == GetType(Base.Number));
-		return false;
-	}
+	private bool CanUpCast(Type sameOrBaseType) =>
+		//TODO: remove, cannot find a usecase: Name == Base.Number ||
+		//TODO: check if this makes sense, we don't like special rules
+		sameOrBaseType.IsIterator && members.Any(member => member.Type == GetType(Base.Number));
 
 	/// <summary>
 	/// When two types are using in a conditional expression, i.e. then and else return types and both

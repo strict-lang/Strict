@@ -1,5 +1,4 @@
-﻿using System;
-using Type = Strict.Language.Type;
+﻿using Type = Strict.Language.Type;
 
 namespace Strict.Compiler;
 

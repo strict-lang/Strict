@@ -20,14 +20,16 @@ public sealed class Method : Context
 		TypeLineNumber = typeLineNumber;
 		this.parser = parser;
 		this.lines = lines;
-		ReturnType = ParseParametersAndReturnType(type, lines[0].AsSpan(Name.Length));
 		if (lines.Count > 1)
 			methodBody = PreParseBody();
+		ReturnType = ParseParametersAndReturnType(type, lines[0].AsSpan(Name.Length));
 	}
 
 	public sealed class MethodLengthMustNotExceedTwelve : ParsingFailed
 	{
-		public MethodLengthMustNotExceedTwelve(Method method, int linesCount, int lineNumber) : base(method.Type, lineNumber, $"Method {method.Name} has {linesCount} lines but limit is {Limit.MethodLength}") { }
+		public MethodLengthMustNotExceedTwelve(Method method, int linesCount, int lineNumber) : base(
+			method.Type, lineNumber,
+			$"Method {method.Name} has {linesCount} lines but limit is {Limit.MethodLength}") { }
 	}
 
 	/// <summary>
@@ -68,16 +70,25 @@ public sealed class Method : Context
 		if (IsMethodGeneric(rest))
 			IsGeneric = true;
 		var closingBracketIndex = rest.LastIndexOf(')');
+		var lastOpeningBracketIndex = rest.LastIndexOf('(');
+		// If the type contains brackets, exclude it from the rest for proper parameter parsing
+		if (lastOpeningBracketIndex > 2)
+		{
+			var lastSpaceIndex = rest.LastIndexOf(' ');
+			if (lastSpaceIndex > 0)
+				ParseParameters(type, rest, lastSpaceIndex - 1);
+			return Type.GetType(rest[lastSpaceIndex..].ToString());
+		}
 		var gotBrackets = closingBracketIndex > 0;
-		return gotBrackets && rest.Length == 2
-			? throw new EmptyParametersMustBeRemoved(this)
-			: rest[0] == ' ' && !gotBrackets
-				? Type.GetType(rest[1..].ToString())
-				: rest[0] != '(' == gotBrackets || rest.Length < 2
-					? throw new InvalidMethodParameters(this, rest.ToString())
-					: !gotBrackets
-						? type.GetType(rest[1..].ToString())
-						: ParseParameters(type, rest, closingBracketIndex);
+		if (gotBrackets && rest.Length == 2)
+			throw new EmptyParametersMustBeRemoved(this);
+		return rest[0] == ' ' && !gotBrackets
+			? Type.GetType(rest[1..].ToString())
+			: rest[0] != '(' == gotBrackets || rest.Length < 2
+				? throw new InvalidMethodParameters(this, rest.ToString())
+				: !gotBrackets
+					? type.GetType(rest[1..].ToString())
+					: ParseParameters(type, rest, closingBracketIndex);
 	}
 
 	private Type GetEmptyReturnType(Type type) =>
@@ -95,8 +106,7 @@ public sealed class Method : Context
 
 	private static bool IsMethodGeneric(ReadOnlySpan<char> headerLine) =>
 		headerLine.Contains(Base.Generic, StringComparison.Ordinal) ||
-		headerLine.Contains(Base.Generic.MakeFirstLetterLowercase(),
-			StringComparison.Ordinal);
+		headerLine.Contains(Base.Generic.MakeFirstLetterLowercase(), StringComparison.Ordinal);
 
 	private Type ParseParameters(Type type, ReadOnlySpan<char> rest, int closingBracketIndex)
 	{
@@ -108,7 +118,17 @@ public sealed class Method : Context
 			var nameAndTypeAsString = nameAndType.ToString();
 			if (IsParameterTypeAny(nameAndTypeAsString))
 				throw new ParametersWithTypeAnyIsNotAllowed(this, nameAndTypeAsString);
-			parameters.Add(new Parameter(type, nameAndTypeAsString));
+			if (nameAndTypeAsString.Contains(" = "))
+			{
+				var nameAndDefaultValue = nameAndTypeAsString.Split(" = ");
+				var defaultValue = ParseExpression(methodBody!, nameAndDefaultValue[1]);
+				if (defaultValue == null)
+					throw new DefaultValueCouldNotBeParsedIntoExpression(this,
+						TypeLineNumber + methodLineNumber - 1, nameAndDefaultValue[1]);
+				parameters.Add(new Parameter(type, nameAndDefaultValue[0], defaultValue));
+			}
+			else
+				parameters.Add(new Parameter(type, nameAndTypeAsString));
 		}
 		return parameters.Count > Limit.ParameterCount
 			? throw new MethodParameterCountMustNotExceedThree(this,
@@ -116,6 +136,12 @@ public sealed class Method : Context
 			: closingBracketIndex + 2 < rest.Length
 				? Type.GetType(rest[(closingBracketIndex + 2)..].ToString())
 				: GetEmptyReturnType(type);
+	}
+
+	private sealed class DefaultValueCouldNotBeParsedIntoExpression : ParsingFailed
+	{
+		public DefaultValueCouldNotBeParsedIntoExpression(Method method, int lineNumber,
+			string defaultValueExpression) : base(method.Type, lineNumber, defaultValueExpression) { }
 	}
 
 	public sealed class MethodParameterCountMustNotExceedThree : ParsingFailed

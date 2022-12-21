@@ -96,6 +96,7 @@ public sealed class MethodCallTests : TestExpressions
 	[TestCase("Range(0, 10).Length")]
 	public void FromExample(string fromMethodCall) =>
 		Assert.That(ParseExpression(fromMethodCall).ToString(), Is.EqualTo(fromMethodCall));
+
 	/*TODO
 	[Test]
 	public void MakeSureMutableMethodsAreNotModified()

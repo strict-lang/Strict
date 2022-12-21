@@ -30,6 +30,7 @@ public class CSharpTypeVisitor : TypeVisitor
 	private readonly bool isInterface;
 
 	private void CreateHeader(Type type) =>
+		//TODO: we still have to find out the actual dependencies (members can be both contained and the base classes/interfaces)
 		//TODO: not longer like this: foreach (var implement in type.Implements)
 		//	VisitImplement(implement);
 		FileContent += "namespace " + type.Package.FolderPath + SemicolonAndLineBreak + NewLine;

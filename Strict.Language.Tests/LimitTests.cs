@@ -92,25 +92,28 @@ public sealed class LimitTests
 				$"Type NestingMoreThanFiveLevelsIsNotAllowed has more than {Limit.NestingLevel} levels of nesting in line: 8"));
 
 	[Test]
-	public void CharacterCountMustBeWithinOneHundredTwenty() =>
+	public void CharacterCountMustBeWithinLimit() =>
 		Assert.That(
-			() => CreateType(nameof(CharacterCountMustBeWithinOneHundredTwenty),
+			() => CreateType(nameof(CharacterCountMustBeWithinLimit),
 				new[]
 				{
 					"has bonus Number", "has price Number",
 					"CalculateCompleteLevelCount(numberOfCans Number, levelCount Number) Number",
 					"	constant remainingCans = numberOfCans - (levelCount * levelCount)remainingCans < ((levelCount + 1) * (levelCount + 1)) ? levelCount else CalculateCompleteLevelCount(remainingCans, levelCount + 1)"
 				}).ParseMembersAndMethods(new MethodExpressionParser()),
-			Throws.InstanceOf<Type.CharacterCountMustBeWithinLimit>().With.Message.Contains(
-				$"Type CharacterCountMustBeWithinLimit has character count 196 in line: 4 but limit is {Limit.CharacterCount}"));
+			Throws.InstanceOf<Type.CharacterCountMustBeWithinLimit>().With.Message.Contains("Type " +
+				nameof(CharacterCountMustBeWithinLimit) +
+				" has character count 196 in line: 4 but limit is " + Limit.CharacterCount));
 
 	[Test]
-	public void MemberCountShouldNotExceedFifteen() =>
+	public void MemberCountShouldNotExceedLimit() =>
 		Assert.That(
-			() => CreateType(nameof(MemberCountShouldNotExceedFifteen), CreateRandomMemberLines(16)).
+			() => CreateType(nameof(MemberCountShouldNotExceedLimit),
+					CreateRandomMemberLines(Limit.MemberCountForEnums + 1)).
 				ParseMembersAndMethods(new MethodExpressionParser()),
 			Throws.InstanceOf<Type.MemberCountShouldNotExceedLimit>().With.Message.Contains(
-				$"MemberCountShouldNotExceedFifteen has member count 16 but limit is {Limit.MemberCount}"));
+				nameof(Type.MemberCountShouldNotExceedLimit) + " type has " +
+				(Limit.MemberCountForEnums + 1) + " members, max: " + Limit.MemberCountForEnums));
 
 	private static string[] CreateRandomMemberLines(int count)
 	{
