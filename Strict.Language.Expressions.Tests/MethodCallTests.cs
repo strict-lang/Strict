@@ -158,11 +158,11 @@ public sealed class MethodCallTests : TestExpressions
 
 	[TestCase("ProgramWithHas", "numbers",
 		"has numbers",
-		"Dummy ProgramWithHas",
+		"Dummy",
 		"\tconstant instanceWithNumbers = ProgramWithHas((1, 2, 3))")]
 	[TestCase("ProgramWithPublicMember",
 		"texts", "has Texts",
-		"Dummy ProgramWithPublicMember",
+		"Dummy",
 		"\tconstant instanceWithTexts = ProgramWithPublicMember((\"1\", \"2\", \"3\"))")]
 	public void ParseConstructorCallWithList(string programName, string expected, params string[] code)
 	{

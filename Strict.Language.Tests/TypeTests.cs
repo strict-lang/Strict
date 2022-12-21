@@ -253,7 +253,7 @@ public class TypeTests
 	{
 		var listType = package.GetType(Base.List);
 		Assert.That(listType.IsGeneric, Is.True);
-		Assert.That(listType.Members[0].Type, Is.EqualTo(listType));
+		Assert.That(listType.Members[0].Type, Is.EqualTo(package.GetType(Base.Iterator)));
 		var getNumbersBody = new Type(package,
 				new TypeLines(nameof(MakeSureGenericTypeIsProperlyGenerated), "has numbers", "GetNumbers Numbers",
 					"\tnumbers")).ParseMembersAndMethods(new MethodExpressionParser()).
@@ -385,10 +385,21 @@ public class TypeTests
 	{
 		var type = new Type(package, new TypeLines(nameof(MutableTypesOrImplementsShouldNotBeUsedDirectly), "has number",
 				"Run",
-				"\tmutable result = Count(2)",
-				"\tresult = Count(5)")).
+				"\tmutable result = Mutable(2)")).
 			ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(() => type.Methods[0].GetBodyAndParseIfNeeded(),
-			Throws.InstanceOf<MutableAssignment.DirectUsageOfMutableTypesOrImplementsAreForbidden>());
+			Throws.InstanceOf<Type.GenericTypesCannotBeUsedDirectlyUseImplementation>());
 	}
+
+	//TODO: support parsing of Mutable(Number)(2)
+	//[Test]
+	//public void MutableTypesOrImplementsShouldNotBeUsedDirectlyy()
+	//{
+	//	var type = new Type(package, new TypeLines(nameof(MutableTypesOrImplementsShouldNotBeUsedDirectlyy), "has number",
+	//			"Run",
+	//			"\tmutable result = Mutable(Number)(2)")).
+	//		ParseMembersAndMethods(new MethodExpressionParser());
+	//	Assert.That(() => type.Methods[0].GetBodyAndParseIfNeeded(),
+	//		Throws.InstanceOf<Type.GenericTypesCannotBeUsedDirectlyUseImplementation>());
+	//}
 }

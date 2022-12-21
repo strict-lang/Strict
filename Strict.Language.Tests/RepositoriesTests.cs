@@ -84,7 +84,7 @@ public class RepositoriesTests
 	public void SortImplements() =>
 		Assert.That(
 			string.Join(", ",
-				new Repositories(null!).SortFilesWithImplements(CreateComplexImplementsDependencies()).
+				new Repositories(null!).SortFilesByMemberUsage(CreateComplexImplementsDependencies()).
 					Select(file => file.Name)), Is.EqualTo("File5, File4, File3, File2, File6, File1"));
 
 	private static Dictionary<string, TypeLines> CreateComplexImplementsDependencies()
@@ -130,7 +130,7 @@ public class RepositoriesTests
 		var files = CreateComplexImplementsDependencies();
 		var repository = new Repositories(null!);
 		for (var count = 0; count < 1000; count++)
-			repository.SortFilesWithImplements(files);
+			repository.SortFilesByMemberUsage(files);
 	}
 
 	[Test]
@@ -143,7 +143,7 @@ public class RepositoriesTests
 		Parallel.For(0, 12, (_, _) =>
 		{
 			for (var count = 0; count < 1000; count++)
-				repository.SortFilesWithImplements(files);
+				repository.SortFilesByMemberUsage(files);
 		});
 	}
 

@@ -67,13 +67,12 @@ public class Type : Context
 		ValidateMethodAndMemberCountLimits();
 		// ReSharper disable once ForCanBeConvertedToForeach, for performance reasons:
 		// https://codeblog.jonskeet.uk/2009/01/29/for-vs-foreach-on-arrays-and-lists/
-		//TODO: Traits feature should be modified, all member type methods cannot be implemented
-		//for (var index = 0; index < members.Count; index++)
-		//{
-		//	var trait = members[index].Type;
-		//	if (trait.IsTrait)
-		//		CheckIfTraitIsImplemented(trait);
-		//}
+		for (var index = 0; index < members.Count; index++)
+		{
+			var trait = members[index].Type;
+			if (trait.IsTrait)
+				CheckIfTraitIsImplemented(trait);
+		}
 		return this;
 	}
 
@@ -312,9 +311,8 @@ public class Type : Context
 	{
 		if (IsTrait && IsNextLineValidMethodBody())
 			throw new TypeHasNoMembersAndThusMustBeATraitWithoutMethodBodies(this);
-		//TODO: update this based on Trait behavior
-		//if (!IsTrait && !IsNextLineValidMethodBody())
-		//	throw new MethodMustBeImplementedInNonTrait(this, lines[lineNumber]);
+		if (!IsTrait && !IsNextLineValidMethodBody())
+			throw new MethodMustBeImplementedInNonTrait(this, lines[lineNumber]);
 		var methodLineNumber = lineNumber;
 		IncrementLineNumberTillMethodEnd();
 		return listStartLineNumber != -1
@@ -424,7 +422,7 @@ public class Type : Context
 	private readonly List<Member> members = new();
 	public IReadOnlyList<Method> Methods => methods;
 	protected readonly List<Method> methods = new();
-	public bool IsTrait => Members.Count == 0 && Name != Base.Number && Name != Base.Boolean;
+	public bool IsTrait => Members.Count == 0 && Name != Base.Number && Name != Base.Boolean && this is not GenericType; //TODO: added temporary check till GenericType has all members loaded from constructor
 
 	//TODO: Causing stackoverflow public override string ToString() =>
 	//	base.ToString() + (members.Count > 0
@@ -530,10 +528,12 @@ public class Type : Context
 	/// <summary>
 	/// Any non public member is automatically iteratable if it has Iterator, for example Text.strict
 	/// or Error.strict have public members you have to iterate over yourself.
+	/// If there are two private iterators, then pick the first member automatically
 	/// </summary>
 	public bool IsIterator =>
 		Name == Base.Iterator
-		|| members.Any(member => !member.IsPublic && member.Type.IsIterator);
+		|| members.Any(member => !member.IsPublic && member.Type.IsIterator)
+		|| this is GenericType; //TODO: temporary workaround until GenericTypes has all memebers loaded from constructor
 
 	private Method? FindAndCreateFromBaseMethod(string methodName,
 		IReadOnlyList<Expression> arguments)

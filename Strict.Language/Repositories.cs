@@ -176,34 +176,34 @@ public sealed class Repositories
 	private ICollection<Type> GetTypes(IReadOnlyCollection<string> files, Package package)
 	{
 		var types = new List<Type>(files.Count);
-		var filesWithImplements = new Dictionary<string, TypeLines>(StringComparer.Ordinal);
+		var filesWithMembers = new Dictionary<string, TypeLines>(StringComparer.Ordinal);
 		foreach (var filePath in files)
 		{
 			var lines = new TypeLines(Path.GetFileNameWithoutExtension(filePath),
 				// ReSharper disable once MethodHasAsyncOverload, would be way slower with async here
 				File.ReadAllLines(filePath));
 			if (lines.MemberTypes.Count > 0)
-				filesWithImplements.Add(lines.Name, lines);
+				filesWithMembers.Add(lines.Name, lines);
 			else
 				types.Add(new Type(package, lines));
 		}
-		return GetTypesFromSortedFiles(types, SortFilesWithImplements(filesWithImplements), package);
+		return GetTypesFromSortedFiles(types, SortFilesByMemberUsage(filesWithMembers), package);
 	}
 
 	/// <summary>
 	/// https://en.wikipedia.org/wiki/Breadth-first_search
 	/// </summary>
-	public IEnumerable<TypeLines> SortFilesWithImplements(Dictionary<string, TypeLines> files) =>
+	public IEnumerable<TypeLines> SortFilesByMemberUsage(Dictionary<string, TypeLines> files) =>
 		GotNestedImplements(files)
 			? EmptyDegreeQueueAndGenerateSortedOutput(files, CreateInDegreeGraphMap(files))
 			: files.Values;
 
-	private static bool GotNestedImplements(Dictionary<string, TypeLines> filesWithImplements)
+	private static bool GotNestedImplements(Dictionary<string, TypeLines> filesWithMembers)
 	{
-		foreach (var file in filesWithImplements)
+		foreach (var file in filesWithMembers)
 			// ReSharper disable once ForCanBeConvertedToForeach
 			for (var index = 0; index < file.Value.MemberTypes.Count; index++)
-				if (filesWithImplements.ContainsKey(file.Value.MemberTypes[index]))
+				if (filesWithMembers.ContainsKey(file.Value.MemberTypes[index]))
 					return true;
 		return false;
 	}

@@ -45,6 +45,11 @@ public class TypeLines
 			foreach (var part in remainingLine.Split(new[] { '(', ')', ',' },
 				StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
 				memberTypes.Add(part);
+		else if (remainingLine.EndsWith('s'))
+		{
+			memberTypes.Add(Base.List);
+			memberTypes.Add(remainingLine[..^1].MakeFirstLetterUppercase());
+		}
 		else
 			memberTypes.Add(remainingLine);
 	}

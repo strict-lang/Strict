@@ -20,9 +20,9 @@ public sealed class Method : Context
 		TypeLineNumber = typeLineNumber;
 		this.parser = parser;
 		this.lines = lines;
+		ReturnType = ParseParametersAndReturnType(type, lines[0].AsSpan(Name.Length));
 		if (lines.Count > 1)
 			methodBody = PreParseBody();
-		ReturnType = ParseParametersAndReturnType(type, lines[0].AsSpan(Name.Length));
 	}
 
 	public sealed class MethodLengthMustNotExceedTwelve : ParsingFailed

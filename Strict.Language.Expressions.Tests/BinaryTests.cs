@@ -37,9 +37,9 @@ public sealed class BinaryTests : TestExpressions
 
 	[Test]
 	public void NoMatchingMethodFound() =>
-		Assert.That(() => ParseExpression("\"text1\" - \"text\""),
+		Assert.That(() => ParseExpression("true - \"text\""),
 			Throws.Exception.InstanceOf<NoMatchingMethodFound>().With.Message.Contains(
-				"not found for TestPackage.Text, available methods"));
+				"not found for TestPackage.Boolean, available methods"));
 
 	[Test]
 	public void ConversionTypeNotFound() =>

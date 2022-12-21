@@ -86,7 +86,7 @@ public sealed class Body : Expression
 	/// </summary>
 	private static bool
 		ChildHasMatchingMethodReturnType(Type parentType, Expression lastExpression) =>
-		lastExpression.GetType().Name == Base.Assignment && parentType.Name == Base.None ||
+		lastExpression.GetType().Name == Base.ConstantDeclaration && parentType.Name == Base.None ||
 		lastExpression.GetType().Name == Base.Error ||
 		lastExpression.ReturnType.IsCompatible(parentType);
 
