@@ -57,7 +57,7 @@ public sealed class For : Expression
 		var variableValue = body.FindVariableValue(variableName);
 		if (variableValue is { IsMutable: false } && HasIn(line))
 			throw new ImmutableIterator(body);
-		var forExpression = body.Method.ParseExpression(body, line[4..]);
+		var forExpression = body.Method.ParseExpression(body, line[(4 + variableName.Length + 4)..]);
 		if (HasIn(line))
 			CheckForIncorrectMatchingTypes(body, variableName, forExpression);
 		else
@@ -79,7 +79,7 @@ public sealed class For : Expression
 		Expression forValueExpression)
 	{
 		var mutableValue = body.FindVariableValue(variableName); //TODO? as Mutable;
-		var iteratorType = ((Binary)forValueExpression).Arguments[0].ReturnType;
+		var iteratorType = forValueExpression.ReturnType;
 		if (iteratorType is GenericType { IsIterator: true } genericType)
 			iteratorType = genericType.ImplementationTypes[0];
 		if ((iteratorType.Name != Base.Range || mutableValue?.ReturnType.Name != Base.Number)
