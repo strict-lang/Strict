@@ -35,8 +35,8 @@ public sealed class GenericTypeTests
 				new TypeLines("SimpleProgram", "has something Comparer(Text)", "Invoke",
 					"\tconstant result = something.Compare")).ParseMembersAndMethods(parser),
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.
-				InstanceOf<Context.TypeArgumentsDoNotMatchGenericType>().With.Message.Contains(
-					"Argument(s) (TestPackage.Text) does not match type Comparer with constructor Comparer(FirstType TestPackage.Generic, SecondType TestPackage.Generic)"));
+				InstanceOf<Context.TypeArgumentsCountDoesNotMatchGenericType>().With.Message.Contains(
+					"The generic type Comparer needs these type arguments: (FirstTypes TestPackage.List, SecondType TestPackage.Generic), does not match provided types: (TestPackage.Text)"));
 
 	[Test]
 	public void GenericTypeWithMultipleImplementations()
@@ -67,5 +67,5 @@ public sealed class GenericTypeTests
 						"has custom Comparer(Number)", "UnusedMethod Number", "\t5")).
 				ParseMembersAndMethods(new MethodExpressionParser()),
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.
-				InstanceOf<Type.TypeArgumentsDoNotMatchGenericType>());
+				InstanceOf<Context.TypeArgumentsCountDoesNotMatchGenericType>());
 }

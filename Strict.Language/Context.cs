@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Xml.Linq;
 
 namespace Strict.Language;
 
@@ -78,9 +77,9 @@ public abstract class Context
 		return argumentTypes;
 	}
 
-	public sealed class TypeArgumentsDoNotMatchGenericType : Exception
+	public sealed class TypeArgumentsCountDoesNotMatchGenericType : Exception
 	{
-		public TypeArgumentsDoNotMatchGenericType(Type mainType,
+		public TypeArgumentsCountDoesNotMatchGenericType(Type mainType,
 			IReadOnlyCollection<Type> typeArguments) : base($"The generic type {
 				mainType.Name
 			} needs these type arguments: {

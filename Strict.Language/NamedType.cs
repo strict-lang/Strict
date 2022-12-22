@@ -30,13 +30,11 @@ public abstract class NamedType
 
 	public bool IsMutable { get; protected init; }
 
-	private string GetTypeName(string typeName)
+	private static string GetTypeName(string typeName)
 	{
 		if (typeName.StartsWith("List(", StringComparison.Ordinal))
 			throw new ListPrefixIsNotAllowedUseImplementationTypeNameInPlural(typeName);
-		return IsMutable
-			? typeName[(typeName.IndexOf('(') + 1)..typeName.IndexOf(')')]
-			: typeName;
+		return typeName;
 	}
 
 	public sealed class ListPrefixIsNotAllowedUseImplementationTypeNameInPlural : Exception

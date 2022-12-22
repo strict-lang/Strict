@@ -20,9 +20,11 @@ public sealed class Method : Context
 		TypeLineNumber = typeLineNumber;
 		this.parser = parser;
 		this.lines = lines;
-		ReturnType = ParseParametersAndReturnType(type, lines[0].AsSpan(Name.Length));
+		var restSpan = lines[0].AsSpan(Name.Length);
+		ReturnType = ParseReturnType(type, restSpan);
 		if (lines.Count > 1)
 			methodBody = PreParseBody();
+		ParseParameters(type, restSpan);
 	}
 
 	public sealed class MethodLengthMustNotExceedTwelve : ParsingFailed
@@ -61,7 +63,7 @@ public sealed class Method : Context
 	internal readonly IReadOnlyList<string> lines;
 	private readonly Body? methodBody;
 
-	private Type ParseParametersAndReturnType(Type type, ReadOnlySpan<char> rest)
+	private Type ParseReturnType(Type type, ReadOnlySpan<char> rest)
 	{
 		if (rest.Length == 0)
 			return GetEmptyReturnType(type);
@@ -71,30 +73,42 @@ public sealed class Method : Context
 			IsGeneric = true;
 		var closingBracketIndex = rest.LastIndexOf(')');
 		var lastOpeningBracketIndex = rest.LastIndexOf('(');
-		// If the type contains brackets, exclude it from the rest for proper parameter parsing
 		if (lastOpeningBracketIndex > 2)
-		{
-			var lastSpaceIndex = rest.LastIndexOf(' ');
-			if (lastSpaceIndex > 0)
-				ParseParameters(type, rest, lastSpaceIndex - 1);
-			return Type.GetType(rest[(lastSpaceIndex + 1)..].ToString());
-		}
+			return Type.GetType(rest[(rest.LastIndexOf(' ') + 1)..].ToString());
 		var gotBrackets = closingBracketIndex > 0;
-		if (gotBrackets && rest.Length == 2)
-			throw new EmptyParametersMustBeRemoved(this);
-		return rest[0] == ' ' && !gotBrackets
-			? Type.GetType(rest[1..].ToString())
+		return gotBrackets && rest.Length == 2
+			? throw new EmptyParametersMustBeRemoved(this)
 			: rest[0] != '(' == gotBrackets || rest.Length < 2
 				? throw new InvalidMethodParameters(this, rest.ToString())
-				: !gotBrackets
+				: rest[0] == ' ' && !gotBrackets
 					? type.GetType(rest[1..].ToString())
-					: ParseParameters(type, rest, closingBracketIndex);
+					: closingBracketIndex + 2 < rest.Length
+						? Type.GetType(rest[(closingBracketIndex + 2)..].ToString())
+						: GetEmptyReturnType(type);
 	}
 
 	private Type GetEmptyReturnType(Type type) =>
 		Name == From
 			? type
 			: type.GetType(Base.None);
+
+	private void ParseParameters(Type type, ReadOnlySpan<char> rest)
+	{
+		if (rest.Length == 0)
+			return;
+		var closingBracketIndex = rest.LastIndexOf(')');
+		var lastOpeningBracketIndex = rest.LastIndexOf('(');
+		// If the type contains brackets, exclude it from the rest for proper parameter parsing
+		if (lastOpeningBracketIndex > 2)
+		{
+			var lastSpaceIndex = rest.LastIndexOf(' ');
+			if (lastSpaceIndex > 0)
+				ParseAndAddParameters(type, rest, lastSpaceIndex - 1);
+			return;
+		}
+		if (closingBracketIndex > 0)
+			ParseAndAddParameters(type, rest, closingBracketIndex);
+	}
 
 	private static bool IsReturnTypeAny(ReadOnlySpan<char> rest) =>
 		rest[0] == ' ' && rest[1..].Equals(Base.Any, StringComparison.Ordinal);
@@ -108,7 +122,7 @@ public sealed class Method : Context
 		headerLine.Contains(Base.Generic, StringComparison.Ordinal) ||
 		headerLine.Contains(Base.Generic.MakeFirstLetterLowercase(), StringComparison.Ordinal);
 
-	private Type ParseParameters(Type type, ReadOnlySpan<char> rest, int closingBracketIndex)
+	private void ParseAndAddParameters(Type type, ReadOnlySpan<char> rest, int closingBracketIndex)
 	{
 		foreach (var nameAndType in rest[1..closingBracketIndex].
 			Split(',', StringSplitOptions.TrimEntries))
@@ -130,12 +144,9 @@ public sealed class Method : Context
 			else
 				parameters.Add(new Parameter(type, nameAndTypeAsString));
 		}
-		return parameters.Count > Limit.ParameterCount
-			? throw new MethodParameterCountMustNotExceedThree(this,
-				TypeLineNumber + methodLineNumber - 1)
-			: closingBracketIndex + 2 < rest.Length
-				? Type.GetType(rest[(closingBracketIndex + 2)..].ToString())
-				: GetEmptyReturnType(type);
+		if (parameters.Count > Limit.ParameterCount)
+			throw new MethodParameterCountMustNotExceedThree(this,
+				TypeLineNumber + methodLineNumber - 1);
 	}
 
 	private sealed class DefaultValueCouldNotBeParsedIntoExpression : ParsingFailed

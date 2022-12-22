@@ -11,6 +11,11 @@ public sealed class GenericType : Type
 	{
 		Generic = generic;
 		ImplementationTypes = implementationTypes;
+		var implementationTypeIndex = 0;
+		foreach (var member in Generic.Members)
+			members.Add(member.Type.IsGeneric
+				? member.CloneWithImplementation(implementationTypes[implementationTypeIndex++])
+				: member);
 		foreach (var methodsByNames in Generic.AvailableMethods)
 		foreach (var method in methodsByNames.Value)
 			if (method.ReturnType.IsGeneric || method.Parameters.Any(p => p.Type.IsGeneric))

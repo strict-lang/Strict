@@ -12,4 +12,9 @@ public class Member : NamedType
 
 	public Expression? Value { get; set; }
 	public bool IsPublic => char.IsUpper(Name[0]);
+
+	public Member CloneWithImplementation(Type implementationType) =>
+		new(Name, implementationType, IsMutable);
+
+	private Member(string name, Type newType, bool isMutable) : base(newType, name, newType) => IsMutable = isMutable;
 }

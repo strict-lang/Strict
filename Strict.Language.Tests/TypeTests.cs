@@ -275,15 +275,16 @@ public class TypeTests
 	public void UsingGenericMethodIsAllowed()
 	{
 		var type = CreateType(nameof(CanUpCastNumberWithList), "has log",
-			"Add(first Generic, other List) List", "\tfirst + other");
+			"Add(other Texts, first Generic) List", "\tother + first");
 		Assert.That(
 			type.FindMethod("Add",
 				new List<Expression>
 				{
-					new Text(type, "hello"),
-					new List(null!, new List<Expression> { new Number(type, 6), new Number(type, 7) })
+					new List(null!,
+						new List<Expression> { new Text(type, "Hi"), new Text(type, "Hello") }),
+					new Number(type, 5)
 				})?.ToString(),
-			Is.EqualTo("Add(first TestPackage.Generic, other TestPackage.List) List"));
+			Is.EqualTo("Add(other TestPackage.Texts, first TestPackage.Generic) List"));
 	}
 
 	[Test]
@@ -330,17 +331,17 @@ public class TypeTests
 			Throws.InstanceOf<ParsingFailed>());
 
 	[Test]
-	public void MethodParameterTypeShouldNotBeGeneric()
+	public void MethodParameterCanBeGeneric()
 	{
 		var type = new Type(package,
-			new TypeLines(nameof(InvalidProgram), "has log", "Something(input List)",
-				"\tconstant result = list + 5")).ParseMembersAndMethods(new MethodExpressionParser());
+			new TypeLines(nameof(InvalidProgram), "has log", "Something(input Generics)",
+				"\tconstant result = input + 5")).ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(
-			() => type.FindMethod("Something",
+			type.FindMethod("Something",
 				new List<Expression>
 				{
 					new List(null!, new List<Expression> { new Text(type, "hello") })
-				}), Throws.InstanceOf<Type.GenericTypesCannotBeUsedDirectlyUseImplementation>());
+				}), Is.Not.Null);
 	}
 
 	[Test]

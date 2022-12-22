@@ -210,8 +210,8 @@ public sealed class ListTests : TestExpressions
 		Assert.That(program.Methods[0].ReturnType.Name, Is.EqualTo("List"));
 	}
 
-	[TestCase("Add(input Count) List", "NumbersCompatibleWithCount")]
-	[TestCase("Add(input Character) List", "NumbersCompatibleWithCharacter")]
+	[TestCase("Add(input Number) Generics", "NumbersCompatibleWithCount")]
+	[TestCase("Add(input Character) Generics", "NumbersCompatibleWithCharacter")]
 	public void NumbersCompatibleWithImplementedTypes(string code, string testName)
 	{
 		var program = new Type(type.Package,

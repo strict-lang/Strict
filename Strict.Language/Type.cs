@@ -187,9 +187,6 @@ public class Type : Context
 		var nameAndType = nameAndExpression.Current.ToString();
 		if (nameAndExpression.MoveNext() && nameAndExpression.Current[0] != '=')
 			nameAndType += " " + GetMemberType(nameAndExpression);
-		//TODO: hack for Name.strict
-		if (nameAndType == "text(not \"")
-			nameAndType = "text";
 		return IsMemberTypeAny(nameAndType, nameAndExpression)
 			? throw new MemberWithTypeAnyIsNotAllowed(this, lineNumber, nameAndType)
 			: new Member(this, nameAndType, HasMemberExpression(nameAndExpression)
@@ -426,7 +423,7 @@ public class Type : Context
 
 	//TODO: Members.Select( or Members.Where( or Members.Any( is used a lot to find all types recursively, probably better if we calculate this once and use the much faster optimized list (with all duplicates removed as well) instead to find matching types
 	public IReadOnlyList<Member> Members => members;
-	private readonly List<Member> members = new();
+	protected readonly List<Member> members = new();
 	public IReadOnlyList<Method> Methods => methods;
 	protected readonly List<Method> methods = new();
 	public bool IsTrait => Members.Count == 0 && Name != Base.Number && Name != Base.Boolean && this is not GenericType; //TODO: added temporary check till GenericType has all members loaded from constructor
@@ -470,8 +467,8 @@ public class Type : Context
 
 	private GenericType CreateGenericImplementation(string key, IReadOnlyList<Type> implementationTypes)
 	{
-		if (Members.Count(m => m.Type.IsGeneric) != implementationTypes.Count)
-			throw new TypeArgumentsDoNotMatchGenericType(this, implementationTypes);
+		if (Name != Base.List && Members.Count(m => m.Type.IsGeneric) != implementationTypes.Count)
+			throw new TypeArgumentsCountDoesNotMatchGenericType(this, implementationTypes);
 		var genericType = new GenericType(this, implementationTypes);
 		cachedGenericTypes!.Add(key, genericType);
 		return genericType;
@@ -529,13 +526,13 @@ public class Type : Context
 		{
 			var methodParameterType = method.Parameters[index].Type;
 			var argumentReturnType = argumentTypes[index];
-			if (methodParameterType.IsIterator != argumentReturnType.IsIterator && methodParameterType.Name != Base.Any)
-				return false;
 			if (argumentReturnType == methodParameterType || method.IsGeneric ||
 				IsArgumentImplementationTypeMatchParameterType(argumentReturnType, methodParameterType))
 				continue;
 			if (methodParameterType.IsDatatypeOrEnum && methodParameterType.Members[0].Type == argumentReturnType)
 				continue;
+			if (methodParameterType.IsIterator != argumentReturnType.IsIterator && methodParameterType.Name != Base.Any)
+				return false;
 			if (methodParameterType is GenericType parameterGenericType)
 			{
 				if (!argumentReturnType.IsCompatible(parameterGenericType.ImplementationTypes[index]))
@@ -560,7 +557,6 @@ public class Type : Context
 	/// </summary>
 	public bool IsIterator =>
 		Name == Base.Iterator || members.Any(member => !member.IsPublic && member.Type.IsIterator);
-		/*TODO: || this is GenericType; //TODO: temporary workaround until GenericTypes has all memebers loaded from constructor*/
 
 	private Method? FindAndCreateFromBaseMethod(string methodName,
 		IReadOnlyList<Expression> arguments)

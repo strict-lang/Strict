@@ -37,21 +37,29 @@ public class TypeLines
 		return (IReadOnlyList<string>)members;
 	}
 
-	private static void AddMemberType(string remainingLine, ref IList<string> memberTypes)
+	private void AddMemberType(string remainingLine, ref IList<string> memberTypes)
 	{
 		if (memberTypes.Count == 0)
 			memberTypes = new List<string>();
 		if (remainingLine.Contains('('))
 			foreach (var part in remainingLine.Split(new[] { '(', ')', ',' },
 				StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
-				memberTypes.Add(part);
+				AddIfNotExisting(memberTypes, part);
 		else if (remainingLine.EndsWith('s'))
 		{
-			memberTypes.Add(Base.List);
-			memberTypes.Add(remainingLine[..^1].MakeFirstLetterUppercase());
+			AddIfNotExisting(memberTypes, Base.List);
+			AddIfNotExisting(memberTypes, remainingLine[..^1].MakeFirstLetterUppercase());
 		}
 		else
-			memberTypes.Add(remainingLine);
+			AddIfNotExisting(memberTypes, remainingLine.MakeFirstLetterUppercase());
+	}
+
+	private void AddIfNotExisting(ICollection<string> memberTypes, string typeName)
+	{
+		if (typeName.Contains(' '))
+			typeName = typeName.Split(' ')[1];
+		if (!memberTypes.Contains(typeName) && Name != typeName)
+			memberTypes.Add(typeName);
 	}
 
 	public override string ToString() => Name + MemberTypes.ToBrackets();
