@@ -76,7 +76,7 @@ public class TestPackage : Package
 				"\tconstant result = value - Character(0)",
 				"\tresult is in Range(0, 10) ? result else notANumber(value)")),
 			new Type(this, new TypeLines(Base.Mutable,
-				"has generic", "has log")),
+				"has generic")),
 			new Type(this, new TypeLines(Base.Iterator,
 				"for Generic", "in(element Generic) Boolean",
 				"Length Number")),

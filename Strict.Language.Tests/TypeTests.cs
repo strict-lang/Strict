@@ -258,7 +258,7 @@ public class TypeTests
 				new TypeLines(nameof(MakeSureGenericTypeIsProperlyGenerated), "has numbers", "GetNumbers Numbers",
 					"\tnumbers")).ParseMembersAndMethods(new MethodExpressionParser()).
 			Methods[0].GetBodyAndParseIfNeeded();
-		var numbersType = package.GetListType(package.GetType(Base.Number));
+		var numbersType = package.GetListImplementationType(package.GetType(Base.Number));
 		Assert.That(getNumbersBody.ReturnType, Is.EqualTo(numbersType));
 		Assert.That(numbersType.Generic, Is.EqualTo(package.GetType(Base.List)));
 		Assert.That(numbersType.ImplementationTypes[0], Is.EqualTo(package.GetType(Base.Number)));

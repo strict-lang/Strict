@@ -13,7 +13,9 @@ public sealed class GenericTypeTests
 		CreateType("Comparer",
 			new[]
 			{
-				"has FirstType Generic", "has SecondType Generic", "Compare",
+				"has FirstTypes Generics",
+				"has SecondType Generic",
+				"Compare",
 				"\tfirstType is secondType"
 			});
 		CreateType("CustomType", new[] { "from(first Generic, second Generic)" });
@@ -27,13 +29,13 @@ public sealed class GenericTypeTests
 			new TypeLines(name, lines)).ParseMembersAndMethods(parser);
 
 	[Test]
-	public void TypeArgumentsDoNotMatchWithMainTypeConstructor() =>
+	public void TypeArgumentsDoNotMatchGenericTypeConstructor() =>
 		Assert.That(
 			() => new Type(package,
 				new TypeLines("SimpleProgram", "has something Comparer(Text)", "Invoke",
 					"\tconstant result = something.Compare")).ParseMembersAndMethods(parser),
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.
-				InstanceOf<Context.TypeArgumentsDoNotMatchWithMainType>().With.Message.Contains(
+				InstanceOf<Context.TypeArgumentsDoNotMatchGenericType>().With.Message.Contains(
 					"Argument(s) (TestPackage.Text) does not match type Comparer with constructor Comparer(FirstType TestPackage.Generic, SecondType TestPackage.Generic)"));
 
 	[Test]
@@ -48,23 +50,22 @@ public sealed class GenericTypeTests
 	}
 
 	[Test]
-	public void ConsumeCustomGenericTypeWithCustomConstructor()
-	{
-		var consumeCustomType = new Type(package,
-			new TypeLines(nameof(ConsumeCustomGenericTypeWithCustomConstructor),
-				"has custom CustomType(Number, Text)",
-				"UnusedMethod Number",
-				"\t5")).ParseMembersAndMethods(new MethodExpressionParser());
-		Assert.That(consumeCustomType.Members[0].Type.Name, Is.EqualTo("CustomType"));
-	}
-
-	[Test]
-	public void CustomGenericTypeWithInvalidTypeArguments() =>
+	public void CannotGetGenericImplementationOnNonGeneric() =>
 		Assert.That(
 			() => new Type(package,
-					new TypeLines(nameof(CustomGenericTypeWithInvalidTypeArguments),
-						"has custom CustomType(Number)", "UnusedMethod Number", "\t5")).
+					new TypeLines(nameof(CannotGetGenericImplementationOnNonGeneric),
+						"has custom Boolean(Number, Text)")).
 				ParseMembersAndMethods(new MethodExpressionParser()),
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.
-				InstanceOf<Type.ArgumentsDoNotMatchMethodParameters>());
+				InstanceOf<Type.CannotGetGenericImplementationOnNonGeneric>());
+
+	[Test]
+	public void TypeArgumentsDoNotMatchGenericType() =>
+		Assert.That(
+			() => new Type(package,
+					new TypeLines(nameof(TypeArgumentsDoNotMatchGenericType),
+						"has custom Comparer(Number)", "UnusedMethod Number", "\t5")).
+				ParseMembersAndMethods(new MethodExpressionParser()),
+			Throws.InstanceOf<ParsingFailed>().With.InnerException.
+				InstanceOf<Type.TypeArgumentsDoNotMatchGenericType>());
 }

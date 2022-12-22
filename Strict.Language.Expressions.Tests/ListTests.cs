@@ -155,7 +155,7 @@ public sealed class ListTests : TestExpressions
 	[TestCase("(true, false)", Base.Boolean)]
 	public void ListShouldHaveCorrectImplementationReturnType(string code, string expectedType) =>
 		Assert.That(ParseExpression(code).ReturnType,
-			Is.EqualTo(type.GetListType(type.GetType(expectedType))));
+			Is.EqualTo(type.GetListImplementationType(type.GetType(expectedType))));
 
 	[Test]
 	public void ParseMultipleListInBinary() =>
@@ -218,7 +218,7 @@ public sealed class ListTests : TestExpressions
 				new TypeLines(testName, "has log", code, "\tconstant result = (1, 2, 3, input)")).
 			ParseMembersAndMethods(parser);
 		Assert.That(program.Methods[0].GetBodyAndParseIfNeeded().ReturnType,
-			Is.EqualTo(program.GetListType(type.GetType(Base.Number))));
+			Is.EqualTo(program.GetListImplementationType(type.GetType(Base.Number))));
 	}
 
 	[Test]

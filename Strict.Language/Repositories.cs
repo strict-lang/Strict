@@ -182,7 +182,7 @@ public sealed class Repositories
 			var lines = new TypeLines(Path.GetFileNameWithoutExtension(filePath),
 				// ReSharper disable once MethodHasAsyncOverload, would be way slower with async here
 				File.ReadAllLines(filePath));
-			if (lines.MemberTypes.Count > 0)
+			if (lines.Name != Base.Mutable && lines.MemberTypes.Count > 0)
 				filesWithMembers.Add(lines.Name, lines);
 			else
 				types.Add(new Type(package, lines));

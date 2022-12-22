@@ -77,7 +77,7 @@ public sealed class Method : Context
 			var lastSpaceIndex = rest.LastIndexOf(' ');
 			if (lastSpaceIndex > 0)
 				ParseParameters(type, rest, lastSpaceIndex - 1);
-			return Type.GetType(rest[lastSpaceIndex..].ToString());
+			return Type.GetType(rest[(lastSpaceIndex + 1)..].ToString());
 		}
 		var gotBrackets = closingBracketIndex > 0;
 		if (gotBrackets && rest.Length == 2)

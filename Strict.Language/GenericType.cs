@@ -5,6 +5,7 @@ namespace Strict.Language;
 
 public sealed class GenericType : Type
 {
+	//TODO: should be optimized, almost all cases are exactly one implementation type (e.g. list)
 	public GenericType(Type generic, IReadOnlyList<Type> implementationTypes) : base(generic.Package,
 		new TypeLines(GetTypeName(generic, implementationTypes), Has + generic.Name))
 	{
@@ -17,7 +18,7 @@ public sealed class GenericType : Type
 	}
 
 	private static string GetTypeName(Type generic, IReadOnlyList<Type> implementationTypes) =>
-		generic.IsIterator
+		generic.Name == Base.List
 			? implementationTypes[0].Name.MakeItPlural()
 			: generic.Name + implementationTypes.ToBrackets();
 

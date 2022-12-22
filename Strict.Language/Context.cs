@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Xml.Linq;
 
 namespace Strict.Language;
 
@@ -34,9 +36,12 @@ public abstract class Context
 	public string FullName { get; }
 
 	/// <summary>
-	/// Could be optimized in the future for contexts that are used a lot (10+ calls) and have at
+	/// TODO: Could be optimized in the future for contexts that are used a lot (10+ calls) and have at
 	/// least 5+ types in its package. A dictionary could cache the same name calls (e.g. Number,
 	/// Text, etc. or even Base.Log always return the same type).
+	/// TODO: check type limit stuff, will make parsing much more complex!
+	///characters(2) ???? not a type
+	///has Characters(2) -> limit???
 	/// </summary>
 	public Type GetType(string name)
 	{
@@ -47,11 +52,14 @@ public abstract class Context
 		if (!name.EndsWith('s'))
 			return (FindFullType(name) ?? FindType(name, this)) ??
 				throw new TypeNotFound(name, FullName);
-		var listType = FindListType(name[..^1]);
-		if (listType != null)
-			return listType;
-		return (FindFullType(name) ?? FindType(name, this)) ??
-			throw new TypeNotFound(name, FullName);
+		var singularName = name[..^1];
+		if (singularName == Base.Generic)
+			// ReSharper disable once TailRecursiveCall
+			return GetType(Base.List);
+		var elementType = FindFullType(singularName) ?? FindType(singularName, this);
+		if (elementType != null)
+			return GetListImplementationType(elementType);
+		return (FindFullType(name) ?? FindType(name, this)) ?? throw new TypeNotFound(name, FullName);
 	}
 
 	private Type GetGenericTypeWithArguments(string name)
@@ -59,11 +67,7 @@ public abstract class Context
 		var mainType = GetType(name[..name.IndexOf('(')]);
 		var argumentTypes = GetArgumentTypes(name[(mainType.Name.Length + 1)..^1].
 			Split(',', StringSplitOptions.TrimEntries));
-		if (mainType.Members.Count != argumentTypes.Count && mainType.FindMethodByArgumentTypes(Method.From, argumentTypes) == null)
-			throw new TypeArgumentsDoNotMatchWithMainType(mainType, argumentTypes);
-		return mainType.IsGeneric
-			? mainType.GetGenericImplementation(argumentTypes)
-			: mainType; //TODO: This needs to be constructed properly for non-generic type with Type parameters
+		return mainType.GetGenericImplementation(argumentTypes);
 	}
 
 	private List<Type> GetArgumentTypes(IEnumerable<string> argumentTypeNames)
@@ -74,26 +78,20 @@ public abstract class Context
 		return argumentTypes;
 	}
 
-	public sealed class TypeArgumentsDoNotMatchWithMainType : Exception
+	public sealed class TypeArgumentsDoNotMatchGenericType : Exception
 	{
-		public TypeArgumentsDoNotMatchWithMainType(Type mainType,
-			IReadOnlyCollection<Type> argumentTypes) : base(
-			$"Argument(s) {argumentTypes.ToBrackets()} does not match type {mainType.Name}" +
-			$" with constructor {mainType.Name}{mainType.Members.ToBrackets()}") { }
+		public TypeArgumentsDoNotMatchGenericType(Type mainType,
+			IReadOnlyCollection<Type> typeArguments) : base($"The generic type {
+				mainType.Name
+			} needs these type arguments: {
+				mainType.Members.Where(m => m.Type.IsGeneric).ToList().ToBrackets()
+			}, does not match provided types: {
+				typeArguments.ToBrackets()
+			}") { }
 	}
 
-	private Type? FindListType(string singularName)
-	{
-		if (singularName == Base.Generic)
-			return GetType(Base.List);
-		var elementType = FindFullType(singularName) ?? FindType(singularName, this);
-		return elementType != null
-			? GetListType(elementType)
-			: null;
-	}
-
-	public GenericType GetListType(Type implementation) =>
-		GetType(Base.List).GetGenericImplementation(new List<Type> { implementation });
+	public GenericType GetListImplementationType(Type implementation) =>
+		GetType(Base.List).GetGenericImplementation(implementation);
 
 	private Type? FindFullType(string name) =>
 		name.Contains('.')

@@ -26,7 +26,8 @@ public class Type : Context
 
 	public sealed class LinesCountMustNotExceedLimit : ParsingFailed
 	{
-		public LinesCountMustNotExceedLimit(Type type, int lineCount) : base(type, 0, $"Type {type.Name} has lines count {lineCount} but limit is {Limit.LineCount}") { }
+		public LinesCountMustNotExceedLimit(Type type, int lineCount) : base(type, 0,
+			$"Type {type.Name} has lines count {lineCount} but limit is {Limit.LineCount}") { }
 	}
 
 	public sealed class TypeAlreadyExistsInPackage : Exception
@@ -159,7 +160,8 @@ public class Type : Context
 		return member;
 	}
 
-	private Member ParseMember(ExpressionParser parser, ReadOnlySpan<char> remainingLine, bool usedMutableKeyword)
+	private Member ParseMember(ExpressionParser parser, ReadOnlySpan<char> remainingLine,
+		bool usedMutableKeyword)
 	{
 		if (methods.Count > 0)
 			throw new MembersMustComeBeforeMethods(this, lineNumber, remainingLine.ToString());
@@ -185,6 +187,9 @@ public class Type : Context
 		var nameAndType = nameAndExpression.Current.ToString();
 		if (nameAndExpression.MoveNext() && nameAndExpression.Current[0] != '=')
 			nameAndType += " " + GetMemberType(nameAndExpression);
+		//TODO: hack for Name.strict
+		if (nameAndType == "text(not \"")
+			nameAndType = "text";
 		return IsMemberTypeAny(nameAndType, nameAndExpression)
 			? throw new MemberWithTypeAnyIsNotAllowed(this, lineNumber, nameAndType)
 			: new Member(this, nameAndType, HasMemberExpression(nameAndExpression)
@@ -266,7 +271,9 @@ public class Type : Context
 			throw new MemberCountShouldNotExceedLimit(this, memberLimit);
 		if (IsDatatypeOrEnum)
 			return;
-		if (methods.Count == 0 && members.Count < 2 && !IsNoneAnyOrBoolean())
+		if (methods.Count == 0 && members.Count < 2 && !IsNoneAnyOrBoolean() &&
+			//TODO: hack because limits are not functional yet
+			Name != Base.Name)
 			throw new NoMethodsFound(this, lineNumber);
 		if (methods.Count > Limit.MethodCount && Package.Name != nameof(Base))
 			throw new MethodCountMustNotExceedLimit(this);
@@ -282,7 +289,7 @@ public class Type : Context
 			$"{type.Name} type has {type.members.Count} members, max: {limit}") { }
 	}
 
-	private bool IsNoneAnyOrBoolean() => Name is Base.None or Base.Any or Base.Boolean;
+	private bool IsNoneAnyOrBoolean() => Name is Base.None or Base.Any or Base.Boolean or Base.Mutable;
 
 	public sealed class NoMethodsFound : ParsingFailed
 	{
@@ -430,7 +437,7 @@ public class Type : Context
 	//		: "");
 
 	public override Type? FindType(string name, Context? searchingFrom = null) =>
-		name == Name || name.Contains('.') && name == base.ToString() || name == Other
+		name == Name || name.Contains('.') && name == base.ToString() || name is Other or Outer
 			? this
 			: Package.FindType(name, searchingFrom ?? this);
 
@@ -443,24 +450,43 @@ public class Type : Context
 	/// </summary>
 	public const string Outer = nameof(Outer);
 
-	public GenericType GetGenericImplementation(List<Type> implementationTypes)
+	public GenericType GetGenericImplementation(Type singleImplementationType)
+	{
+		var key = Name + "(" + singleImplementationType.Name + ")"; //TODO: make fast in GenericType
+		return GetGenericImplementation(key) ?? CreateGenericImplementation(key, new[] { singleImplementationType });
+	}
+
+	private GenericType? GetGenericImplementation(string key)
 	{
 		if (!IsGeneric)
-			throw new CannotGetGenericImplementationOnNonGeneric(Name, implementationTypes);
+			throw new CannotGetGenericImplementationOnNonGeneric(Name, key);
 		cachedGenericTypes ??= new Dictionary<string, GenericType>(StringComparer.Ordinal);
-		if (cachedGenericTypes.TryGetValue(Name + implementationTypes.ToBrackets(), out var genericType))
-			return genericType;
-		genericType = new GenericType(this, implementationTypes);
-		cachedGenericTypes.Add(Name + implementationTypes.ToBrackets(), genericType);
-		return genericType;
+		return cachedGenericTypes.TryGetValue(key, out var genericType)
+			? genericType
+			: null;
 	}
 
 	private Dictionary<string, GenericType>? cachedGenericTypes;
 
+	private GenericType CreateGenericImplementation(string key, IReadOnlyList<Type> implementationTypes)
+	{
+		if (Members.Count(m => m.Type.IsGeneric) != implementationTypes.Count)
+			throw new TypeArgumentsDoNotMatchGenericType(this, implementationTypes);
+		var genericType = new GenericType(this, implementationTypes);
+		cachedGenericTypes!.Add(key, genericType);
+		return genericType;
+	}
+
+	public GenericType GetGenericImplementation(List<Type> implementationTypes)
+	{
+		var key = Name + implementationTypes.Select(t => t.Name).ToList().ToBrackets();
+		return GetGenericImplementation(key) ?? CreateGenericImplementation(key, implementationTypes);
+	}
+
 	public sealed class CannotGetGenericImplementationOnNonGeneric : Exception
 	{
-		public CannotGetGenericImplementationOnNonGeneric(string name, IEnumerable<Type> implementations) :
-			base("Type: " + name + ", Generic Implementation: " + implementations.ToWordList()) { }
+		public CannotGetGenericImplementationOnNonGeneric(string name, string key) :
+			base("Type: " + name + ", Generic Implementation: " + key) { }
 	}
 
 	public string FilePath => Path.Combine(Package.FolderPath, Name) + Extension;
@@ -533,9 +559,8 @@ public class Type : Context
 	/// If there are two private iterators, then pick the first member automatically
 	/// </summary>
 	public bool IsIterator =>
-		Name == Base.Iterator
-		|| members.Any(member => !member.IsPublic && member.Type.IsIterator)
-		|| this is GenericType; //TODO: temporary workaround until GenericTypes has all memebers loaded from constructor
+		Name == Base.Iterator || members.Any(member => !member.IsPublic && member.Type.IsIterator);
+		/*TODO: || this is GenericType; //TODO: temporary workaround until GenericTypes has all memebers loaded from constructor*/
 
 	private Method? FindAndCreateFromBaseMethod(string methodName,
 		IReadOnlyList<Expression> arguments)
