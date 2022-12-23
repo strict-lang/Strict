@@ -47,7 +47,16 @@ public class Program
 	public void CreateFileAndWriteIntoIt()
 	{
 		var program = new Type(package, new TypeLines(nameof(CreateFileAndWriteIntoIt),
-			"has App", "has file = \"" + TemporaryFile + "\"", "has log", "Run", "\tfile.Write(\"Hello\")")).ParseMembersAndMethods(parser);
+			"has App", // App has run funtion so its used as a trait with implementation
+			"has file = \"" + TemporaryFile + "\"", // component because its initialized
+			"has output", // 
+			"has file", // means implementation? should error
+			"has log",
+			"Run2",
+			"\tfile.Write(\"Hello\")",
+			"\toutput.Write(5)",
+			"\tlog.Write(6)",
+			"\tfileSystem.Write(5)")).ParseMembersAndMethods(parser);
 		var generatedCode = generator.Generate(program).ToString()!;
 		Assert.That(GenerateNewConsoleAppAndReturnOutput(ProjectFolder, generatedCode), Is.EqualTo(""));
 		Assert.That(File.Exists(Path.Combine(ProjectFolder, TemporaryFile)), Is.True);

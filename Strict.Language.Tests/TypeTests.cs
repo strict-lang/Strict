@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using NUnit.Framework;
 using Strict.Language.Expressions;
 using List = Strict.Language.Expressions.List;
@@ -7,7 +8,7 @@ using List = Strict.Language.Expressions.List;
 namespace Strict.Language.Tests;
 
 // ReSharper disable once ClassTooBig
-public class TypeTests
+public sealed class TypeTests
 {
 	[SetUp]
 	public void CreatePackage()
@@ -146,12 +147,21 @@ public class TypeTests
 			"\t\tlog.Write(\"Counting: \" + number)"));
 
 	[Test]
-	public void MustImplementAllTraitMethods() =>
+	public void NotImplementingAnyTraitMethodsAreAllowed() =>
 		Assert.That(() => CreateType("Program",
 				"has App",
 				"add(number)",
-				"\treturn one + 1"),
-			Throws.InstanceOf<Type.MustImplementAllTraitMethods>());
+				"\treturn one + 1"), Is.Not.Null);
+
+	[Test]
+	public void CannotImplementFewTraitMethodsAndLeaveOthers()
+	{
+		var type = new Type(package,
+			new TypeLines(nameof(CannotImplementFewTraitMethodsAndLeaveOthers),
+				"has file = \"test.txt\"", "Write(text)", "\tfile.Write(text)"));
+		Assert.That(() => type.ParseMembersAndMethods(new MethodExpressionParser()),
+			Throws.InstanceOf<Type.MustImplementAllTraitMethodsOrNone>());
+	}
 
 	[Test]
 	public void TraitMethodsMustBeImplemented() =>
@@ -392,9 +402,26 @@ public class TypeTests
 			Throws.InstanceOf<Type.GenericTypesCannotBeUsedDirectlyUseImplementation>());
 	}
 
+	[Test]
+	public void RangeTypeShouldHaveCorrectAvailableMethods()
+	{
+		var range = package.GetType(Base.Range);
+		Assert.That(
+			range.AvailableMethods.Values.Select(methods => methods.Count).Sum(),
+			Is.EqualTo(8));
+	}
+
+	[Test]
+	public void TextTypeShouldHaveCorrectAvailableMethods()
+	{
+		var text = package.GetType(Base.Text + "s");
+		Assert.That(text.AvailableMethods.Values.Select(methods => methods.Count).Sum(),
+			Is.EqualTo(44));
+	}
+
 	//TODO: support parsing of Mutable(Number)(2)
 	//[Test]
-	//public void MutableTypesOrImplementsShouldNotBeUsedDirectlyy()
+	//public void CreateMutableNumberWithAnotherArgument()
 	//{
 	//	var type = new Type(package, new TypeLines(nameof(MutableTypesOrImplementsShouldNotBeUsedDirectlyy), "has number",
 	//			"Run",

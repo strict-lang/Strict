@@ -72,7 +72,7 @@ public class Type : Context
 		{
 			var trait = members[index].Type;
 			if (trait.IsTrait)
-				CheckIfTraitIsImplemented(trait);
+				CheckIfTraitIsImplementedFullyOrNone(trait);
 		}
 		return this;
 	}
@@ -252,11 +252,12 @@ public class Type : Context
 	public const string Has = "has ";
 	public const string Mutable = "mutable ";
 
-	public sealed class MustImplementAllTraitMethods : ParsingFailed
+	public sealed class MustImplementAllTraitMethodsOrNone : ParsingFailed
 	{
-		public MustImplementAllTraitMethods(Type type, IEnumerable<Method> missingTraitMethods) :
+		public MustImplementAllTraitMethodsOrNone(Type type, string traitName,
+			IEnumerable<Method> missingTraitMethods) :
 			base(type, type.lineNumber,
-				"Missing methods: " + string.Join(", ", missingTraitMethods)) { }
+				"Trait Type:" + traitName + " Missing methods: " + string.Join(", ", missingTraitMethods)) { }
 	}
 
 	private void ValidateMethodAndMemberCountLimits()
@@ -302,13 +303,13 @@ public class Type : Context
 			$"Type {type.Name} has method count {type.methods.Count} but limit is {Limit.MethodCount}") { }
 	}
 
-	private void CheckIfTraitIsImplemented(Type trait)
+	private void CheckIfTraitIsImplementedFullyOrNone(Type trait)
 	{
 		var nonImplementedTraitMethods = trait.Methods.Where(traitMethod =>
 			traitMethod.Name != Method.From &&
 			methods.All(implementedMethod => traitMethod.Name != implementedMethod.Name)).ToList();
-		if (nonImplementedTraitMethods.Count > 0)
-			throw new MustImplementAllTraitMethods(this, nonImplementedTraitMethods);
+		if (nonImplementedTraitMethods.Count > 0 && nonImplementedTraitMethods.Count != trait.Methods.Count(traitMethod => traitMethod.Name != Method.From))
+			throw new MustImplementAllTraitMethodsOrNone(this, trait.Name, nonImplementedTraitMethods);
 	}
 
 	private string[] GetAllMethodLines()
@@ -426,9 +427,10 @@ public class Type : Context
 	protected readonly List<Member> members = new();
 	public IReadOnlyList<Method> Methods => methods;
 	protected readonly List<Method> methods = new();
-	public bool IsTrait => Members.Count == 0 && Name != Base.Number && Name != Base.Boolean && this is not GenericType; //TODO: added temporary check till GenericType has all members loaded from constructor
+	public bool IsTrait => Members.Count == 0 && Name != Base.Number && Name != Base.Boolean;
 
-	//TODO: Causing stackoverflow public override string ToString() =>
+	//TODO: Causing stackoverflow
+	//public override string ToString() =>
 	//	base.ToString() + (members.Count > 0
 	//		? " " + nameof(Members) + " " + members.ToWordList()
 	//		: "");
@@ -701,7 +703,7 @@ public class Type : Context
 				else
 					cachedAvailableMethods.Add(method.Name, new List<Method> { method });
 			foreach (var member in members)
-				if (!member.Type.IsTrait)
+				if (!member.IsPublic && !member.Type.IsTrait) // TODO: this should check IsImplemented
 					AddAvailableMethods(member.Type);
 			if (Name != Base.Any)
 				AddAvailableMethods(GetType(Base.Any)); //TODO: cache this, no need to build again and again
@@ -713,6 +715,7 @@ public class Type : Context
 	{
 		foreach (var (methodName, otherMethods) in implementType.AvailableMethods)
 		{
+			//TODO: Don't copy private methods of anything
 			var nonGenericMethods = new List<Method>(implementType.IsGeneric
 				? otherMethods.Where(m => !m.IsGeneric && !m.Parameters.Any(p => p.Type.IsGeneric))
 				: otherMethods);

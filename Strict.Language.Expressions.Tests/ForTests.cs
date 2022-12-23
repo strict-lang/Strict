@@ -98,8 +98,7 @@ public sealed class ForTests : TestExpressions
 	public void ValidIteratorReturnTypeWithValue() =>
 		Assert.That(
 			((VariableCall)((MethodCall)((For)ParseExpression("for (1, 2, 3)", "\tlog.Write(value)")).
-				Body).Arguments[0]).ReturnType.FullName,
-			Is.EqualTo("TestPackage.Mutable(TestPackage.Number)"));
+				Body).Arguments[0]).ReturnType.FullName, Is.EqualTo("TestPackage.Number"));
 
 	[Test]
 	public void ParseForListExpressionWithIterableVariable() =>
