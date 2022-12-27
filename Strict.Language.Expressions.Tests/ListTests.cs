@@ -294,8 +294,8 @@ public sealed class ListTests : TestExpressions
 	public void CheckIfInvalidArgumentIsNotMethodOrListCall() =>
 		Assert.That(
 			() => new Type(type.Package,
-					new TypeLines(nameof(CheckIfInvalidArgumentIsNotMethodOrListCall), "has numbers",
-						"AccessZeroIndexElement Number", "\tconstant something = numbers(0)", "\tsomething(0)")).
+					new TypeLines(nameof(CheckIfInvalidArgumentIsNotMethodOrListCall), "has booleans",
+						"AccessZeroIndexElement Boolean", "\tconstant firstValue = booleans(0)", "\tfirstValue(0)")).
 				ParseMembersAndMethods(parser).Methods[0].GetBodyAndParseIfNeeded(),
 			Throws.InstanceOf<InvalidArgumentItIsNotMethodOrListCall>());
 

@@ -22,8 +22,8 @@ public sealed class ReturnTests : TestExpressions
 	[Test]
 	public void ReturnTypeMustMatchWhateverMethodIsReturning() =>
 		Assert.That(
-			() => new Method(type, 0, this, new[] { "ReturnNumber Text", "\t5" }).GetBodyAndParseIfNeeded(),
-			Throws.InstanceOf<Body.ChildBodyReturnTypeMustMatchMethod>());
+			() => new Method(type, 0, this, new[] { "ReturnNumber Number", "\t\"5\"" }).
+				GetBodyAndParseIfNeeded(), Throws.InstanceOf<Body.ChildBodyReturnTypeMustMatchMethod>());
 
 	[Test]
 	public void ParseReturnNumber() =>

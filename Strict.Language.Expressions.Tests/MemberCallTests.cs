@@ -12,8 +12,7 @@ public sealed class MemberCallTests : TestExpressions
 
 	[Test]
 	public void UseKnownMember() =>
-		ParseAndCheckOutputMatchesInput("log.Text",
-			new MemberCall(new MemberCall(null, member), member.Type.Members.First(m => m.Name == "Text")));
+		Assert.That(ParseExpression("Type(\"Hello\").Name").ToString(), Is.EqualTo("Type(\"Hello\").Name"));
 
 	[Test]
 	public void UnknownMember() =>
@@ -48,9 +47,7 @@ public sealed class MemberCallTests : TestExpressions
 
 	[Test]
 	public void ValidMemberCall() =>
-		Assert.That(ParseExpression("\"hello\".Characters"),
-			Is.EqualTo(new MemberCall(new Text(method, "hello"),
-				new Member(method.GetType(Base.Text), "Characters", null))));
+		Assert.That(ParseExpression("Range(0, 5).Start").ToString(), Is.EqualTo("Range(0, 5).Start"));
 
 	[Test]
 	public void MemberWithArgumentsInitializerShouldNotHaveType() =>

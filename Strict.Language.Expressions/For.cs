@@ -71,8 +71,11 @@ public sealed class For : Expression
 		if (variableValue != null)
 			return;
 		if (body.Method.Type.FindMember(variableName.ToString()) == null)
-			body.AddVariable(variableName.ToString(), //TODO? new Mutable(body.Method,
-				body.Method.ParseExpression(body, GetVariableExpressionValue(body, line)));
+		{
+			variableValue = body.Method.ParseExpression(body, GetVariableExpressionValue(body, line));
+			variableValue.IsMutable = true;
+			body.AddVariable(variableName.ToString(), variableValue);
+		}
 	}
 
 	private static void CheckForIncorrectMatchingTypes(Body body, ReadOnlySpan<char> variableName,
@@ -111,8 +114,9 @@ public sealed class For : Expression
 	private static void AddImplicitVariables(Body body, ReadOnlySpan<char> line, Body innerBody)
 	{
 		innerBody.AddVariable(IndexName, new Number(body.Method, 0));
-		innerBody.AddVariable(ValueName, //TODO? new Mutable(innerBody.Method,
-			innerBody.Method.ParseExpression(innerBody, GetVariableExpressionValue(body, line)));
+		var variableValue = innerBody.Method.ParseExpression(innerBody, GetVariableExpressionValue(body, line));
+		variableValue.IsMutable = true;
+		innerBody.AddVariable(ValueName, variableValue);
 	}
 
 	private static string GetVariableExpressionValue(Body body, ReadOnlySpan<char> line)

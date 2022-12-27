@@ -42,8 +42,8 @@ public sealed class MutableTests : TestExpressions
 	public void MutableMemberWithTextType()
 	{
 		var program = new Type(type.Package,
-				new TypeLines(nameof(MutableMemberWithTextType), "mutable something Number",
-					"Add(input Text) Text",
+				new TypeLines(nameof(MutableMemberWithTextType), "mutable something Text",
+					"Add(input Number) Text",
 					"\tconstant result = input + something")).
 			ParseMembersAndMethods(parser);
 		Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(),

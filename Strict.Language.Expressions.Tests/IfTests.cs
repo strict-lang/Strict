@@ -20,7 +20,7 @@ public sealed class IfTests : TestExpressions
 	[Test]
 	public void ReturnTypeOfThenAndElseMustHaveMatchingType() =>
 		Assert.That(
-			() => ParseExpression("if 5 is 6", "\treturn 8", "else", "\treturn \"hello\"").ReturnType,
+			() => ParseExpression("if 5 is 6", "\treturn \"hello\"", "else", "\treturn true").ReturnType,
 			Throws.InstanceOf<If.ReturnTypeOfThenAndElseMustHaveMatchingType>());
 
 	//TODO: Allowing Character to Number is not making sense
@@ -171,11 +171,11 @@ public sealed class IfTests : TestExpressions
 		var program = new Type(new Package(nameof(IfTests)),
 			new TypeLines(nameof(ReturnTypeOfThenMustMatchMethodReturnType),
 				"has log",
-				"InvalidRun Text",
+				"InvalidRun Number",
 				"	if 5 is 5",
 				"		constant file = File(\"test.txt\")",
-				"		return 5")).ParseMembersAndMethods(new MethodExpressionParser());
-		Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(), Throws.InstanceOf<Body.ChildBodyReturnTypeMustMatchMethod>().With.Message.Contains("Child body return type: TestPackage.Number is not matching with Parent return type: TestPackage.Text in method line: 3"));
+				"		return \"5\"")).ParseMembersAndMethods(new MethodExpressionParser());
+		Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(), Throws.InstanceOf<Body.ChildBodyReturnTypeMustMatchMethod>().With.Message.Contains("Child body return type: TestPackage.Text is not matching with Parent return type: TestPackage.Number in method line: 3"));
 	}
 
 	[Test]
@@ -314,7 +314,7 @@ public sealed class IfTests : TestExpressions
 				"		constant file = File(\"test.txt\")",
 				"		return \"Hello\"",
 				"	else if 6 is 6",
-				"		return 5",
+				"		return true",
 				"	\"don't matter\"")).ParseMembersAndMethods(new MethodExpressionParser());
 		// @formatter:on
 		Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(),

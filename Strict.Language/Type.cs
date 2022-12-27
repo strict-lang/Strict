@@ -535,12 +535,6 @@ public class Type : Context
 				continue;
 			if (methodParameterType.IsIterator != argumentReturnType.IsIterator && methodParameterType.Name != Base.Any)
 				return false;
-			if (methodParameterType is GenericType parameterGenericType)
-			{
-				if (!argumentReturnType.IsCompatible(parameterGenericType.ImplementationTypes[index]))
-					return false;
-				continue;
-			}
 			if (methodParameterType.IsGeneric)
 				throw new GenericTypesCannotBeUsedDirectlyUseImplementation(methodParameterType,
 					"(parameter " + index + ") is not usable with argument " +

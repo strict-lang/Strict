@@ -132,6 +132,7 @@ public sealed class ForTests : TestExpressions
 			Is.EqualTo(
 				"for myIndex in Range(2, 5)\n\tlog.Write(myIndex)\r\nfor Range(0, 10)\n\tlog.Write(index)"));
 
+	//"TODO: Texts is not allowed since 'in' method is not accepting Texts parameter. temporarily added in method to any type"
 	[Test]
 	public void ParseForWithListOfTexts() =>
 		Assert.That(
@@ -145,12 +146,13 @@ public sealed class ForTests : TestExpressions
 			((MethodCall)((For)ParseExpression("for Range(0, 10)", "\tlog.Write(index)")).Body).
 			Arguments[0].ReturnType.Name == Base.Number);
 
+	//"TODO: Texts is not allowed since 'in' method is not accepting Texts parameter. temporarily added in method to any type"
 	[Test]
 	public void ValidIteratorReturnTypeTextForList() =>
 		Assert.That(
-			((VariableCall)((MethodCall)((For)((Body)ParseExpression(
-				"mutable element = \"1\"", "for element in (\"1\", \"2\", \"3\")",
-				"\tlog.Write(element)")).Expressions[1]).Body).Arguments[0]).CurrentValue.ReturnType.Name == Base.Text);
+			((VariableCall)((MethodCall)((For)((Body)ParseExpression("mutable element = \"1\"",
+					"for element in (\"1\", \"2\", \"3\")", "\tlog.Write(element)")).Expressions[1]).Body).
+				Arguments[0]).CurrentValue.ReturnType.Name == Base.Text);
 
 	[Test]
 	public void ValidLoopProgram()

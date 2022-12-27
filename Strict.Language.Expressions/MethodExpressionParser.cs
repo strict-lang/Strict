@@ -267,7 +267,7 @@ public class MethodExpressionParser : ExpressionParser
 		variable is null or MethodCall
 			? variable
 			: arguments.Count > 0
-				? variable.ReturnType.IsIterator && variable.ReturnType is GenericType
+				? variable.ReturnType.IsIterator
 					? new ListCall(variable, arguments[0])
 					: throw new InvalidArgumentItIsNotMethodOrListCall(body, variable, arguments)
 				: variable;

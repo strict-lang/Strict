@@ -3,7 +3,9 @@
 public sealed class ListCall : ConcreteExpression
 {
 	public ListCall(Expression list, Expression index) : base(
-		((GenericType)list.ReturnType).ImplementationTypes[0])
+		list.ReturnType is GenericType listReturnType
+			? listReturnType.ImplementationTypes[0]
+			: list.ReturnType)
 	{
 		List = list;
 		Index = index;

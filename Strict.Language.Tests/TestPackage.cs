@@ -9,7 +9,7 @@ public class TestPackage : Package
 	{
 		// @formatter:off
 		var types = new[] {
-			new Type(this, new TypeLines(Base.Any, "to Type", "to Text", "is(other) Boolean", "not(other) Boolean")),
+			new Type(this, new TypeLines(Base.Any, "to Type", "to Text", "is(other) Boolean", "not(other) Boolean", "in(generics) Boolean")),
 			new Type(this, new TypeLines(Base.Boolean,
 				"not Boolean",
 				"\tvalue ? false else true",
@@ -162,7 +162,7 @@ public class TestPackage : Package
 				"\t\treturn digits(floor(number / 10)) + number % 10",
 				"to Number",
 				"\t\"3\" to Number is 3",
-				"\tfor Characters.Reverse",
+				"\tfor characters.Reverse",
 				"\t\t+ value to Number * index ^ 10",
 				"is(other) Boolean",
 				"\t\"Hey\" is \"Hey\" is true",
