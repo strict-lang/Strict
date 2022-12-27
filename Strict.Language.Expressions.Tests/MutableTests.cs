@@ -42,11 +42,12 @@ public sealed class MutableTests : TestExpressions
 	public void MutableMemberWithTextType()
 	{
 		var program = new Type(type.Package,
-				new TypeLines(nameof(MutableMemberWithTextType), "mutable something Text",
-					"Add(input Number) Text",
+				new TypeLines(nameof(MutableMemberWithTextType), "mutable something Number",
+					"Add(input Text) Text",
 					"\tconstant result = input + something")).
 			ParseMembersAndMethods(parser);
-		Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(), Throws.InstanceOf<Type.ArgumentsDoNotMatchMethodParameters>());
+		Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(),
+			Throws.InstanceOf<Type.ArgumentsDoNotMatchMethodParameters>());
 	}
 	/*TODO
 	[Test]

@@ -11,9 +11,9 @@ public sealed class MethodCallTests : TestExpressions
 	public void AddComplexMethods()
 	{
 		((List<Method>)type.Methods).Add(new Method(type, 0, this,
-			new[] { "complexMethod(numbers, add Number) Number", "\t1" }));
+			new[] { "ComplexMethod(numbers, add Number) Number", "\t1" }));
 		((List<Method>)type.Methods).Add(new Method(type, 0, this,
-			new[] { "complexMethod(texts) Texts", "\t1" }));
+			new[] { "ComplexMethod(texts) Texts", "\t1" }));
 	}
 
 	[Test]
@@ -77,13 +77,13 @@ public sealed class MethodCallTests : TestExpressions
 
 	[Test]
 	public void UnknownExpressionForArgumentException() =>
-		Assert.That(() => ParseExpression("complexMethod(5)"),
+		Assert.That(() => ParseExpression("ComplexMethod(5)"),
 			Throws.InstanceOf<ArgumentsDoNotMatchMethodParameters>().With.Message.
 				StartsWith("Argument: 5 "));
 
 	[Test]
 	public void ListTokensAreNotSeparatedByCommaException() =>
-		Assert.That(() => ParseExpression("complexMethod((\"1 + 5\" 5, \"5 + 5\"))"),
+		Assert.That(() => ParseExpression("ComplexMethod((\"1 + 5\" 5, \"5 + 5\"))"),
 			Throws.InstanceOf<ListTokensAreNotSeparatedByComma>());
 
 	[Test]
@@ -112,10 +112,10 @@ public sealed class MethodCallTests : TestExpressions
 		Assert.That(() => ParseExpression("Range(1, 2, 3, 4)"),
 			Throws.InstanceOf<NoMatchingMethodFound>());
 
-	[TestCase("complexMethod((1), 2)")]
-	[TestCase("complexMethod((1, 2, 3) + (4, 5), 7)")]
-	[TestCase("complexMethod((1, 2, 3) + (4, 5), complexMethod((1, 2, 3), 4))")]
-	[TestCase("complexMethod((\"1 + 5\", \"5 + 5\"))")]
+	[TestCase("ComplexMethod((1), 2)")]
+	[TestCase("ComplexMethod((1, 2, 3) + (4, 5), 7)")]
+	[TestCase("ComplexMethod((1, 2, 3) + (4, 5), ComplexMethod((1, 2, 3), 4))")]
+	[TestCase("ComplexMethod((\"1 + 5\", \"5 + 5\"))")]
 	public void FindRightMethodCall(string methodCall) =>
 		Assert.That(ParseExpression(methodCall).ToString(), Is.EqualTo(methodCall));
 
@@ -180,20 +180,20 @@ public sealed class MethodCallTests : TestExpressions
 		new Type(type.Package,
 			new TypeLines("HasLengthImplementation",
 				"has HasLength",
-				"has number",
+				"has boolean",
 				"Length Number",
-				"\tnumber.Length")).ParseMembersAndMethods(new MethodExpressionParser());
+				"\tvalue")).ParseMembersAndMethods(new MethodExpressionParser());
 		var program = new Type(type.Package,
 			new TypeLines(nameof(TypeImplementsGenericTypeWithLength),
 				"has log", //unused member should be removed later when we allow class without members
 				"GetLengthSquare(type HasLength) Number",
 				"\ttype.Length * type.Length",
 				"Dummy",
-				"\tconstant countOfFive = HasLengthImplementation(5)",
+				"\tconstant countOfFive = HasLengthImplementation(true)",
 				"\tconstant lengthSquare = GetLengthSquare(countOfFive)")).ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(program.Methods[1].GetBodyAndParseIfNeeded().ToString(),
 			Is.EqualTo(
-				"constant countOfFive = HasLengthImplementation(5)\r\nconstant lengthSquare = GetLengthSquare(countOfFive)"));
+				"constant countOfFive = HasLengthImplementation(true)\r\nconstant lengthSquare = GetLengthSquare(countOfFive)"));
 	}
 
 	[Test]

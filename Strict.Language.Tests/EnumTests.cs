@@ -102,7 +102,7 @@ public sealed class EnumTests
 		var consumingType = new Type(package,
 				new TypeLines(nameof(UseEnumAsMethodParameters),
 					"has log",
-					"ExecuteInstruction(numbers, instruction) Number",
+					"ExecuteInstruction(numbers, instruction Number) Number",
 					"\tif instruction is Instruction.Add",
 					"\t\treturn numbers(0) + numbers(1)",
 					"CallExecute Number",

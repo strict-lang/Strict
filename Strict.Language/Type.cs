@@ -597,7 +597,8 @@ public class Type : Context
 		var matchedMember = members.FirstOrDefault(member =>
 			//TODO: check this
 			member.Type.IsIterator && arguments.All(argument => member.Type.Name == Base.List ||
-				argument.ReturnType == ((GenericType)member.Type).ImplementationTypes[0]));
+				member.Type is GenericType genericMemberType &&
+				argument.ReturnType == genericMemberType.ImplementationTypes[0]));
 		if (matchedMember == null)
 			return null;
 		isMatchedWithList = true;
@@ -608,7 +609,8 @@ public class Type : Context
 	{
 		var matchedImplement = members.FirstOrDefault(member =>
 			member.Type.IsIterator && arguments.All(argument =>
-				argument.ReturnType == ((GenericType)member.Type).ImplementationTypes[0]));
+				member.Type is GenericType genericMemberType &&
+				argument.ReturnType == genericMemberType.ImplementationTypes[0]));
 		if (matchedImplement == null)
 			return null;
 		isMatchedWithList = true;
@@ -654,11 +656,11 @@ public class Type : Context
 
 	//TODO: create a case if you cast something to a field, you should not lose anything in that casting
 	public bool IsCompatible(Type sameOrBaseType) =>
-		this == sameOrBaseType || members.Any(member => member.Type.IsCompatible(sameOrBaseType)) ||
+		this == sameOrBaseType || members.Any(member => member.Type == sameOrBaseType) ||
 		CanUpCast(sameOrBaseType);
 
 	private bool CanUpCast(Type sameOrBaseType) =>
-		//TODO: remove, cannot find a usecase: Name == Base.Number ||
+		sameOrBaseType.Name == Base.Text && Name == Base.Number ||
 		//TODO: check if this makes sense, we don't like special rules
 		sameOrBaseType.IsIterator && members.Any(member => member.Type == GetType(Base.Number));
 
@@ -698,12 +700,16 @@ public class Type : Context
 				return cachedAvailableMethods;
 			cachedAvailableMethods = new Dictionary<string, List<Method>>(StringComparer.Ordinal);
 			foreach (var method in methods)
+			{
+				if (!method.IsPublic && method.Name != Method.From && !method.Name.AsSpan().IsOperator())
+					continue;
 				if (cachedAvailableMethods.ContainsKey(method.Name))
 					cachedAvailableMethods[method.Name].Add(method);
 				else
 					cachedAvailableMethods.Add(method.Name, new List<Method> { method });
+			}
 			foreach (var member in members)
-				if (!member.IsPublic && !member.Type.IsTrait) // TODO: this should check IsImplemented
+				if (!member.IsPublic && !member.Type.IsTrait) // TODO: this should check if this type is an implementation of the trait or using as component
 					AddAvailableMethods(member.Type);
 			if (Name != Base.Any)
 				AddAvailableMethods(GetType(Base.Any)); //TODO: cache this, no need to build again and again

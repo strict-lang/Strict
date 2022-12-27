@@ -14,6 +14,7 @@ public sealed class TypeTests
 	public void CreatePackage()
 	{
 		package = new TestPackage();
+		parser = new MethodExpressionParser();
 		CreateType(Base.App, "Run");
 	}
 
@@ -21,6 +22,7 @@ public sealed class TypeTests
 		new Type(package, new TypeLines(name, lines)).ParseMembersAndMethods(null!);
 
 	public Package package = null!;
+	public ExpressionParser parser = null!;
 
 	[Test]
 	public void AddingTheSameNameIsNotAllowed() =>
@@ -98,7 +100,7 @@ public sealed class TypeTests
 	[TestCase("has log", "Run", "\tconstant result = 5 + Any(5)")]
 	public void VariableWithTypeAnyIsNotAllowed(params string[] lines)
 	{
-		var type = new Type(package, new TypeLines(nameof(VariableWithTypeAnyIsNotAllowed), lines)).ParseMembersAndMethods(new MethodExpressionParser());
+		var type = new Type(package, new TypeLines(nameof(VariableWithTypeAnyIsNotAllowed), lines)).ParseMembersAndMethods(parser);
 		Assert.That(() => type.Methods[0].GetBodyAndParseIfNeeded(),
 			Throws.InstanceOf<MethodExpressionParser.ExpressionWithTypeAnyIsNotAllowed>().With.Message.
 				Contains("Any"));
@@ -159,7 +161,7 @@ public sealed class TypeTests
 		var type = new Type(package,
 			new TypeLines(nameof(CannotImplementFewTraitMethodsAndLeaveOthers),
 				"has file = \"test.txt\"", "Write(text)", "\tfile.Write(text)"));
-		Assert.That(() => type.ParseMembersAndMethods(new MethodExpressionParser()),
+		Assert.That(() => type.ParseMembersAndMethods(parser),
 			Throws.InstanceOf<Type.MustImplementAllTraitMethodsOrNone>());
 	}
 
@@ -215,7 +217,7 @@ public sealed class TypeTests
 	{
 		var expression = (ConstantDeclaration)
 			new Type(package, new TypeLines(nameof(MutableTypesHaveProperDataReturnType), code)).
-				ParseMembersAndMethods(new MethodExpressionParser()).Methods[0].GetBodyAndParseIfNeeded();
+				ParseMembersAndMethods(parser).Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(expression.Value.ReturnType.Name, Is.EqualTo(expected));
 	}
 
@@ -224,7 +226,7 @@ public sealed class TypeTests
 	[TestCase("has number", "Run", "\tconstant result = 5", "\tresult = 6")]
 	public void ImmutableTypesCannotBeChanged(params string[] code) =>
 		Assert.That(
-			() => new Type(package, new TypeLines(nameof(ImmutableTypesCannotBeChanged), code)).ParseMembersAndMethods(new MethodExpressionParser()).Methods[0].GetBodyAndParseIfNeeded(),
+			() => new Type(package, new TypeLines(nameof(ImmutableTypesCannotBeChanged), code)).ParseMembersAndMethods(parser).Methods[0].GetBodyAndParseIfNeeded(),
 			Throws.InstanceOf<Mutable.ImmutableTypesCannotBeChanged>());
 	*/
 	[TestCase("mutable canBeModified = 0", "Run", "\tcanBeModified = 5")]
@@ -232,7 +234,7 @@ public sealed class TypeTests
 	public void MutableMemberTypesCanBeChanged(params string[] code)
 	{
 		var type = new Type(package, new TypeLines(nameof(MutableMemberTypesCanBeChanged), code)).
-			ParseMembersAndMethods(new MethodExpressionParser());
+			ParseMembersAndMethods(parser);
 		type.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(type.Members[0].Value, Is.EqualTo(new Number(type, 5)));
 	}
@@ -244,7 +246,7 @@ public sealed class TypeTests
 				"Run",
 				"\tmutable result = 2",
 				"\tresult = 5")).
-			ParseMembersAndMethods(new MethodExpressionParser());
+			ParseMembersAndMethods(parser);
 		var body = (Body)type.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(body.FindVariableValue("result")!.ToString(), Is.EqualTo("5"));
 	}
@@ -255,7 +257,7 @@ public sealed class TypeTests
 		Assert.That(
 			() => new Type(package,
 					new TypeLines(nameof(InvalidAssignmentTarget), "has log", "Run", "\tCount(6) = 6")).
-				ParseMembersAndMethods(new MethodExpressionParser()).Methods[0].GetBodyAndParseIfNeeded(),
+				ParseMembersAndMethods(parser).Methods[0].GetBodyAndParseIfNeeded(),
 			Throws.InstanceOf<Mutable.InvalidAssignmentTarget>());
 	*/
 	[Test]
@@ -266,7 +268,7 @@ public sealed class TypeTests
 		Assert.That(listType.Members[0].Type, Is.EqualTo(package.GetType(Base.Iterator)));
 		var getNumbersBody = new Type(package,
 				new TypeLines(nameof(MakeSureGenericTypeIsProperlyGenerated), "has numbers", "GetNumbers Numbers",
-					"\tnumbers")).ParseMembersAndMethods(new MethodExpressionParser()).
+					"\tnumbers")).ParseMembersAndMethods(parser).
 			Methods[0].GetBodyAndParseIfNeeded();
 		var numbersType = package.GetListImplementationType(package.GetType(Base.Number));
 		Assert.That(getNumbersBody.ReturnType, Is.EqualTo(numbersType));
@@ -327,7 +329,7 @@ public sealed class TypeTests
 					new TypeLines(nameof(NonGenericExpressionCannotBeGeneric),
 						"has list",
 						"Something",
-						"\tconstant result = list + 5")).ParseMembersAndMethods(new MethodExpressionParser()).
+						"\tconstant result = list + 5")).ParseMembersAndMethods(parser).
 				Methods[0].GetBodyAndParseIfNeeded(), Throws.InstanceOf<Type.GenericTypesCannotBeUsedDirectlyUseImplementation>());
 
 	[Test]
@@ -345,7 +347,7 @@ public sealed class TypeTests
 	{
 		var type = new Type(package,
 			new TypeLines(nameof(InvalidProgram), "has log", "Something(input Generics)",
-				"\tconstant result = input + 5")).ParseMembersAndMethods(new MethodExpressionParser());
+				"\tconstant result = input + 5")).ParseMembersAndMethods(parser);
 		Assert.That(
 			type.FindMethod("Something",
 				new List<Expression>
@@ -359,10 +361,10 @@ public sealed class TypeTests
 	{
 		new Type(package,
 			new TypeLines("Customer", "has name Text", "has age Number", "Print Text",
-				"\t\"Customer Name: \" + name + \" Age: \" + age")).ParseMembersAndMethods(new MethodExpressionParser());
+				"\t\"Customer Name: \" + name + \" Age: \" + age")).ParseMembersAndMethods(parser);
 		var createCustomer = new Type(package,
 			new TypeLines(nameof(CreateTypeUsingConstructorMembers), "has log", "Something",
-				"\tconstant customer = Customer(\"Murali\", 28)")).ParseMembersAndMethods(new MethodExpressionParser());
+				"\tconstant customer = Customer(\"Murali\", 28)")).ParseMembersAndMethods(parser);
 		var assignment = (ConstantDeclaration)createCustomer.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(assignment.Value.ReturnType.Name, Is.EqualTo("Customer"));
 		Assert.That(assignment.Value.ToString(), Is.EqualTo("Customer(\"Murali\", 28)"));
@@ -373,10 +375,10 @@ public sealed class TypeTests
 	{
 		new Type(package,
 			new TypeLines("Customer", "has name Text", "has age Number", "Print Text",
-				"\t\"Customer Name: \" + name + \" Age: \" + age")).ParseMembersAndMethods(new MethodExpressionParser());
+				"\t\"Customer Name: \" + name + \" Age: \" + age")).ParseMembersAndMethods(parser);
 		var createCustomer = new Type(package,
 			new TypeLines(nameof(CreateTypeUsingConstructorMembers), "has log", "Something",
-				"\tconstant customer = (\"Murali\", 28) to Customer")).ParseMembersAndMethods(new MethodExpressionParser());
+				"\tconstant customer = (\"Murali\", 28) to Customer")).ParseMembersAndMethods(parser);
 		Assert.That(() => createCustomer.Methods[0].GetBodyAndParseIfNeeded(),
 			Throws.InstanceOf<List.ListElementsMustHaveMatchingType>());
 	}
@@ -386,7 +388,7 @@ public sealed class TypeTests
 	{
 		var logger = new Type(package,
 			new TypeLines("Logger", "has log", "has method", "has trace = Stacktrace(method, \"filePath\", 5)", "Log Text",
-				"\tlog.Write(stacktrace to Text)")).ParseMembersAndMethods(new MethodExpressionParser());
+				"\tlog.Write(stacktrace to Text)")).ParseMembersAndMethods(parser);
 		Assert.That(logger.Members[2].Type.Name, Is.EqualTo("Stacktrace"));
 		Assert.That(logger.Members[2].Type.Members.Count, Is.EqualTo(3));
 	}
@@ -397,7 +399,7 @@ public sealed class TypeTests
 		var type = new Type(package, new TypeLines(nameof(MutableTypesOrImplementsShouldNotBeUsedDirectly), "has number",
 				"Run",
 				"\tmutable result = Mutable(2)")).
-			ParseMembersAndMethods(new MethodExpressionParser());
+			ParseMembersAndMethods(parser);
 		Assert.That(() => type.Methods[0].GetBodyAndParseIfNeeded(),
 			Throws.InstanceOf<Type.GenericTypesCannotBeUsedDirectlyUseImplementation>());
 	}
@@ -408,7 +410,7 @@ public sealed class TypeTests
 		var range = package.GetType(Base.Range);
 		Assert.That(
 			range.AvailableMethods.Values.Select(methods => methods.Count).Sum(),
-			Is.EqualTo(8));
+			Is.EqualTo(7));
 	}
 
 	[Test]
@@ -416,7 +418,18 @@ public sealed class TypeTests
 	{
 		var text = package.GetType(Base.Text + "s");
 		Assert.That(text.AvailableMethods.Values.Select(methods => methods.Count).Sum(),
-			Is.EqualTo(44));
+			Is.EqualTo(41));
+	}
+
+	[Test]
+	public void PrivateMethodsShouldNotBeAddedToAvailableMethods()
+	{
+		var type = new Type(package, new TypeLines(nameof(PrivateMethodsShouldNotBeAddedToAvailableMethods),
+			"has output", "run", "\tconstant n = 5"));
+		type.ParseMembersAndMethods(parser);
+		Assert.That(type.Methods.Count, Is.EqualTo(1));
+		Console.WriteLine(type.AvailableMethods.Keys.ToWordList());
+		Assert.That(type.AvailableMethods.Keys.Contains("run"), Is.False);
 	}
 
 	//TODO: support parsing of Mutable(Number)(2)
@@ -426,7 +439,7 @@ public sealed class TypeTests
 	//	var type = new Type(package, new TypeLines(nameof(MutableTypesOrImplementsShouldNotBeUsedDirectlyy), "has number",
 	//			"Run",
 	//			"\tmutable result = Mutable(Number)(2)")).
-	//		ParseMembersAndMethods(new MethodExpressionParser());
+	//		ParseMembersAndMethods(parser);
 	//	Assert.That(() => type.Methods[0].GetBodyAndParseIfNeeded(),
 	//		Throws.InstanceOf<Type.GenericTypesCannotBeUsedDirectlyUseImplementation>());
 	//}

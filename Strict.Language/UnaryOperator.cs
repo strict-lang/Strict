@@ -1,4 +1,4 @@
-﻿namespace Strict.Language.Expressions;
+﻿namespace Strict.Language;
 
 public static class UnaryOperator
 {

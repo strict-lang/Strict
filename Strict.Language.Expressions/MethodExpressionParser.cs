@@ -112,9 +112,10 @@ public class MethodExpressionParser : ExpressionParser
 		if (input[argumentsRange.Start.Value] == '.')
 			return ParseInContext(body.Method.Type, body, input, Array.Empty<Expression>()) ??
 				throw new InvalidOperatorHere(body, input[methodRange].ToString());
-		return input[methodRange].Equals(UnaryOperator.Not, StringComparison.Ordinal)
-			? new Not(body.Method.ParseExpression(body, input[argumentsRange]))
-			: throw new InvalidOperatorHere(body, input[methodRange].ToString());
+		if (input[argumentsRange].Equals(UnaryOperator.Not, StringComparison.Ordinal))
+			return new Not(body.Method.ParseExpression(body, input[methodRange]));
+		else
+			throw new InvalidOperatorHere(body, input[methodRange].ToString());
 	}
 
 	/// <summary>
@@ -266,7 +267,7 @@ public class MethodExpressionParser : ExpressionParser
 		variable is null or MethodCall
 			? variable
 			: arguments.Count > 0
-				? variable.ReturnType.IsIterator
+				? variable.ReturnType.IsIterator && variable.ReturnType is GenericType
 					? new ListCall(variable, arguments[0])
 					: throw new InvalidArgumentItIsNotMethodOrListCall(body, variable, arguments)
 				: variable;

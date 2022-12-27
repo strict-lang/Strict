@@ -50,13 +50,13 @@ public static class BinaryOperator
 
 	private static readonly string[] MultiCharacterOperators =
 	{
-		SmallerOrEqual, GreaterOrEqual, Is, IsNot, In, And, Or, Xor, To
+		SmallerOrEqual, GreaterOrEqual, Is, IsNot, In, And, Or, Xor, To, UnaryOperator.Not
 	};
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static bool IsMultiCharacterOperator(this ReadOnlySpan<char> name)
 	{
-		if (name.Length <= 3)
+		if (name.Length is <= 3 or 6)
 			// ReSharper disable once ForCanBeConvertedToForeach
 			for (var index = 0; index < MultiCharacterOperators.Length; index++)
 				if (name.Compare(MultiCharacterOperators[index]))
@@ -109,7 +109,9 @@ public static class BinaryOperator
 							? 5
 							: token.Compare(Or)
 								? 4
-								: token.Compare(Is) || token.Compare(IsNot)
-									? 1
-									: GetPrecedence(token[0]);
+								: token.Compare(UnaryOperator.Not)
+									? 3
+									: token.Compare(Is) || token.Compare(IsNot)
+										? 1
+										: GetPrecedence(token[0]);
 }
