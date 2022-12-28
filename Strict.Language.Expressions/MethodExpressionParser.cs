@@ -103,19 +103,18 @@ public class MethodExpressionParser : ExpressionParser
 		Logger.Info(nameof(ParseMethodCallWithArguments) + ", method=" +
 			input[methodRange].ToString() + " arguments=" + input[argumentsRange].ToString());
 #endif
-		if (input[argumentsRange.Start.Value] == '(')
-			return ParseInContext(body.Method.Type, body, //ncrunch: no coverage
-					input[methodRange],
-					ParseListArguments(body,
-						input[(argumentsRange.Start.Value + 1)..(argumentsRange.End.Value - 1)])) ??
-				throw new MemberOrMethodNotFound(body, body.Method.Type, input[methodRange].ToString());
-		if (input[argumentsRange.Start.Value] == '.')
-			return ParseInContext(body.Method.Type, body, input, Array.Empty<Expression>()) ??
-				throw new InvalidOperatorHere(body, input[methodRange].ToString());
-		if (input[argumentsRange].Equals(UnaryOperator.Not, StringComparison.Ordinal))
-			return new Not(body.Method.ParseExpression(body, input[methodRange]));
-		else
-			throw new InvalidOperatorHere(body, input[methodRange].ToString());
+		return input[argumentsRange.Start.Value] == '('
+			? ParseInContext(body.Method.Type, body, //ncrunch: no coverage
+				input[methodRange],
+				ParseListArguments(body,
+					input[(argumentsRange.Start.Value + 1)..(argumentsRange.End.Value - 1)])) ??
+			throw new MemberOrMethodNotFound(body, body.Method.Type, input[methodRange].ToString())
+			: input[argumentsRange.Start.Value] == '.'
+				? ParseInContext(body.Method.Type, body, input, Array.Empty<Expression>()) ??
+				throw new InvalidOperatorHere(body, input[methodRange].ToString())
+				: input[argumentsRange].Equals(UnaryOperator.Not, StringComparison.Ordinal)
+					? new Not(body.Method.ParseExpression(body, input[methodRange]))
+					: throw new InvalidOperatorHere(body, input[methodRange].ToString());
 	}
 
 	/// <summary>

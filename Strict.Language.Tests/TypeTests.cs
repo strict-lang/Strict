@@ -428,8 +428,23 @@ public sealed class TypeTests
 			"has output", "run", "\tconstant n = 5"));
 		type.ParseMembersAndMethods(parser);
 		Assert.That(type.Methods.Count, Is.EqualTo(1));
-		Console.WriteLine(type.AvailableMethods.Keys.ToWordList());
 		Assert.That(type.AvailableMethods.Keys.Contains("run"), Is.False);
+	}
+
+	[Test]
+	public void MembersPrivateMethodsShouldNotBeAddedToAvailableMethods()
+	{
+		new Type(package,
+			new TypeLines("ProgramWithPublicAndPrivateMethods", "has log", "PublicMethod", "\tlog.Write(\"I am exposed\")", "privateMethod", "\tlog.Write(\"Support privacy\")")).ParseMembersAndMethods(parser);
+		var type = new Type(package,
+			new TypeLines(nameof(MembersPrivateMethodsShouldNotBeAddedToAvailableMethods),
+				"has programWithPublicAndPrivateMethods", "run", "\tconstant n = 5"));
+		type.ParseMembersAndMethods(parser);
+		Assert.That(type.AvailableMethods.Keys.Contains("privateMethod"), Is.False);
+		Assert.That(type.AvailableMethods.Keys.Contains("PublicMethod"), Is.True);
+		Assert.That(
+			type.AvailableMethods.Values.Select(methodsList => methodsList).Any(methods =>
+				methods.Any(method => !method.IsPublic && !method.Name.AsSpan().IsOperator())), Is.False);
 	}
 
 	//TODO: support parsing of Mutable(Number)(2)

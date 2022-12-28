@@ -12,7 +12,7 @@ using Strict.Language.Expressions;
 namespace Strict.Language.Tests;
 
 [MemoryDiagnoser]
-[SimpleJob(RunStrategy.Throughput, warmupCount: 1, targetCount: 10)]
+[SimpleJob(RunStrategy.Throughput, warmupCount: 1, iterationCount: 10)]
 public class RepositoriesTests
 {
 	[Test]

@@ -560,8 +560,7 @@ public class Type : Context
 		if (methodName != Method.From)
 			return null;
 		var fromMethod = "from(";
-		fromMethod += GetMatchingMemberParametersIfExist(arguments) ??
-			GetMatchingImplementParametersIfExists(arguments);
+		fromMethod += GetMatchingMemberParametersIfExist(arguments);
 		return fromMethod.Length > 5 && isMatchedWithList
 			? BuildMethod($"{fromMethod})")
 			: fromMethod.Length > 5 && fromMethod.Split(',').Length - 1 == arguments.Count
@@ -570,8 +569,6 @@ public class Type : Context
 					? BuildMethod(fromMethod[..^1])
 					: null;
 	}
-
-	private Method BuildMethod(string fromMethod) => new(this, 0, dummyExpressionParser, new[] { fromMethod });
 
 	private string? GetMatchingMemberParametersIfExist(IReadOnlyList<Expression> arguments)
 	{
@@ -586,56 +583,25 @@ public class Type : Context
 		return TryGetMatchedParameters(arguments, parameters);
 	}
 
+	private string? TryGetMatchedParameters(IReadOnlyList<Expression> arguments, string? parameters) =>
+		parameters == null && arguments.Count > 0
+			? TryCheckForMatchingMembersAndGetParameters(arguments)
+			: parameters;
+
 	private string? TryCheckForMatchingMembersAndGetParameters(IReadOnlyList<Expression> arguments)
 	{
 		var matchedMember = members.FirstOrDefault(member =>
-			//TODO: check this
-			member.Type.IsIterator && arguments.All(argument => member.Type.Name == Base.List ||
+			member.Type.IsIterator && arguments.All(argument => argument.ReturnType == member.Type ||
 				member.Type is GenericType genericMemberType &&
 				argument.ReturnType == genericMemberType.ImplementationTypes[0]));
 		if (matchedMember == null)
 			return null;
 		isMatchedWithList = true;
-		return $"{matchedMember.Name.MakeFirstLetterLowercase()} {matchedMember.Type.Name}";
-	}
-
-	private string? TryCheckForMatchingImplementsAndGetParameters(IReadOnlyList<Expression> arguments)
-	{
-		var matchedImplement = members.FirstOrDefault(member =>
-			member.Type.IsIterator && arguments.All(argument =>
-				member.Type is GenericType genericMemberType &&
-				argument.ReturnType == genericMemberType.ImplementationTypes[0]));
-		if (matchedImplement == null)
-			return null;
-		isMatchedWithList = true;
-		return $"{((GenericType)matchedImplement.Type).ImplementationTypes[0].Name.MakeFirstLetterLowercase()}s";
+		return $"{matchedMember.Name.MakeFirstLetterLowercase()} {matchedMember.Type.Name}"; //TODO: No use case found, try to write unit test and adjust string format if needed
 	}
 
 	private bool isMatchedWithList;
-
-	private string? GetMatchingImplementParametersIfExists(IReadOnlyList<Expression> arguments)
-	{
-		var argumentIndex = 0;
-		string? parameters = null;
-		foreach (var member in members)
-			if (arguments.Count > argumentIndex && member.Type == arguments[argumentIndex].ReturnType)
-			{
-				parameters += $"{member.Name.MakeFirstLetterLowercase()} {member.Name}, ";
-				argumentIndex++;
-			}
-		return TryGetMatchedParameters(arguments, parameters, false);
-	}
-
-	private string? TryGetMatchedParameters(IReadOnlyList<Expression> arguments, string? parameters,
-		bool isMember = true) =>
-		isMember
-			? parameters == null && arguments.Count > 0
-				? TryCheckForMatchingMembersAndGetParameters(arguments)
-				: parameters
-			: parameters == null && arguments.Count > 0
-				? TryCheckForMatchingImplementsAndGetParameters(arguments)
-				: parameters;
-
+	private Method BuildMethod(string fromMethod) => new(this, 0, dummyExpressionParser, new[] { fromMethod });
 	private readonly ExpressionParser dummyExpressionParser = new DummyExpressionParser();
 
 	//ncrunch: no coverage start
@@ -648,15 +614,14 @@ public class Type : Context
 			new();
 	} //ncrunch: no coverage end
 
-	//TODO: create a case if you cast something to a field, you should not lose anything in that casting
 	public bool IsCompatible(Type sameOrBaseType) =>
 		this == sameOrBaseType || members.Any(member => member.Type == sameOrBaseType) ||
 		CanUpCast(sameOrBaseType);
 
+	// Created a case https://deltaengine.fogbugz.com/f/cases/27017
 	private bool CanUpCast(Type sameOrBaseType) =>
-		sameOrBaseType.Name == Base.Text && Name == Base.Number ||
-		//TODO: check if this makes sense, we don't like special rules
-		sameOrBaseType.IsIterator && members.Any(member => member.Type == GetType(Base.Number));
+		sameOrBaseType.Name == Base.Text && Name == Base.Number || sameOrBaseType.IsIterator &&
+		members.Any(member => member.Type == GetType(Base.Number));
 
 	/// <summary>
 	/// When two types are using in a conditional expression, i.e. then and else return types and both
@@ -704,29 +669,41 @@ public class Type : Context
 			}
 			foreach (var member in members)
 				if (!member.IsPublic && !member.Type.IsTrait) // TODO: this should check if this type is an implementation of the trait or using as component
-					AddAvailableMethods(member.Type);
+					AddNonGenericMethods(member.Type);
 			if (Name != Base.Any)
-				AddAvailableMethods(GetType(Base.Any)); //TODO: cache this, no need to build again and again
+				AddAnyMethods();
 			return cachedAvailableMethods;
 		}
 	}
+	private Dictionary<string, List<Method>>? cachedAvailableMethods;
 
-	private void AddAvailableMethods(Type implementType)
+	private void AddNonGenericMethods(Type implementType)
 	{
 		foreach (var (methodName, otherMethods) in implementType.AvailableMethods)
 		{
-			//TODO: Don't copy private methods of anything
 			var nonGenericMethods = new List<Method>(implementType.IsGeneric
 				? otherMethods.Where(m => !m.IsGeneric && !m.Parameters.Any(p => p.Type.IsGeneric))
 				: otherMethods);
-			if (cachedAvailableMethods!.ContainsKey(methodName))
-				cachedAvailableMethods[methodName].AddRange(nonGenericMethods);
-			else
-				cachedAvailableMethods.Add(methodName, nonGenericMethods);
+			AddAvailableMethods(methodName, nonGenericMethods);
 		}
 	}
 
-	private Dictionary<string, List<Method>>? cachedAvailableMethods;
+	private void AddAvailableMethods(string methodName, List<Method> newMethods)
+	{
+		if (cachedAvailableMethods!.ContainsKey(methodName))
+			cachedAvailableMethods[methodName].AddRange(newMethods);
+		else
+			cachedAvailableMethods.Add(methodName, newMethods);
+	}
+
+	private void AddAnyMethods()
+	{
+		cachedAnyMethods ??= GetType(Base.Any).AvailableMethods;
+		foreach (var (methodName, anyMethods) in cachedAnyMethods)
+			AddAvailableMethods(methodName, anyMethods);
+	}
+
+	private static IReadOnlyDictionary<string, List<Method>>? cachedAnyMethods;
 
 	public class NoMatchingMethodFound : Exception
 	{
