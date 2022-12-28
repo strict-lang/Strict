@@ -33,6 +33,8 @@ public sealed class List : Value
 
 	public override string ToString()
 	{
+		if (Values.Count == 0)
+			return ReturnType.Name;
 		var result = Values.ToBrackets();
 		return result.Length > Limit.ListCharacterCount
 			? result.Replace(", ", ",\n\t")

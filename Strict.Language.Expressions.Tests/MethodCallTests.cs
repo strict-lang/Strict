@@ -97,16 +97,15 @@ public sealed class MethodCallTests : TestExpressions
 	public void FromExample(string fromMethodCall) =>
 		Assert.That(ParseExpression(fromMethodCall).ToString(), Is.EqualTo(fromMethodCall));
 
-	/*TODO
 	[Test]
-	public void MakeSureMutableMethodsAreNotModified()
+	public void MakeSureMutableTypeMethodsAreNotModified()
 	{
 		var expression = ParseExpression("mutable variable = 7");
-		Assert.That(expression.ReturnType.Name,
-			Is.EqualTo(Base.Mutable + "(TestPackage." + Base.Number + ")"));
 		Assert.That(type.GetType(Base.Mutable).Methods.Count, Is.EqualTo(0));
+		Assert.That(expression is MutableDeclaration, Is.True);
+		Assert.That(((MutableDeclaration)expression).Value.IsMutable, Is.True);
 	}
-	*/
+
 	[Test]
 	public void FromExampleFailsOnImproperParameters() =>
 		Assert.That(() => ParseExpression("Range(1, 2, 3, 4)"),

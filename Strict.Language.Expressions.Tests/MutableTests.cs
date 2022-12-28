@@ -49,7 +49,7 @@ public sealed class MutableTests : TestExpressions
 		Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(),
 			Throws.InstanceOf<Type.ArgumentsDoNotMatchMethodParameters>());
 	}
-	/*TODO
+
 	[Test]
 	public void MutableVariablesWithSameImplementationTypeShouldUseSameType()
 	{
@@ -60,19 +60,19 @@ public sealed class MutableTests : TestExpressions
 				"\tmutable second = 6",
 				"\tfirst + second")).ParseMembersAndMethods(parser);
 		var body = (Body)program.Methods[0].GetBodyAndParseIfNeeded();
-		Assert.That(body.Expressions[0].ReturnType.Name, Is.EqualTo(Base.Mutable + "(TestPackage." + Base.Number + ")"));
+		Assert.That(body.Expressions[0].IsMutable, Is.True);
 		Assert.That(body.Expressions[0].ReturnType, Is.EqualTo(body.Expressions[1].ReturnType));
 	}
 
-	[TestCase("AssignNumberToTextType", "mutable something Text",
-		"TryChangeMutableDataType Text", "\tsomething = 5")]
-	[TestCase("AssignNumbersToTexts", "mutable something Texts",
-		"TryChangeMutableDataType Text", "\tsomething = (5, 4, 3)")]
+	[TestCase("AssignNumberToTextType", "mutable something Text", "TryChangeMutableDataType Text",
+		"\tsomething = 5")]
+	[TestCase("AssignNumbersToTexts", "mutable something Texts", "TryChangeMutableDataType Text",
+		"\tsomething = (5, 4, 3)")]
 	public void ValueTypeNotMatchingWithAssignmentType(string testName, params string[] code) =>
 		Assert.That(
 			() => new Type(type.Package, new TypeLines(testName, code)).ParseMembersAndMethods(parser).
-				Methods[0].GetBodyAndParseIfNeeded(), Throws.InstanceOf<Mutable.ValueTypeNotMatchingWithAssignmentType>());
-	*/
+				Methods[0].GetBodyAndParseIfNeeded(),
+			Throws.InstanceOf<MutableAssignment.ValueTypeNotMatchingWithAssignmentType>());
 
 	[Test]
 	public void MutableVariableInstanceUsingSpace()
@@ -144,19 +144,18 @@ public sealed class MutableTests : TestExpressions
 			Throws.InstanceOf<MissingAssignmentValueExpression>());
 	}
 
-	//TODO: Remove since this usecase is not valid anymore
-	//[Test]
-	//public void DirectUsageOfMutableTypesOrImplementsAreForbidden()
-	//{
-	//	var program = new Type(type.Package,
-	//			new TypeLines(nameof(DirectUsageOfMutableTypesOrImplementsAreForbidden), "has unused Character",
-	//				"DummyCount(limit Number) Number",
-	//				"\tconstant result = Mutable(5)",
-	//				"\tresult")).
-	//		ParseMembersAndMethods(parser);
-	//	Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(),
-	//		Throws.InstanceOf<MutableAssignment.DirectUsageOfMutableTypesOrImplementsAreForbidden>()!);
-	//}
+	[Test]
+	public void DirectUsageOfMutableTypesOrImplementsAreForbidden()
+	{
+		var program = new Type(type.Package,
+				new TypeLines(nameof(DirectUsageOfMutableTypesOrImplementsAreForbidden), "has unused Character",
+					"DummyCount(limit Number) Number",
+					"\tconstant result = Mutable(5)",
+					"\tresult")).
+			ParseMembersAndMethods(parser);
+		Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(),
+			Throws.InstanceOf<Type.GenericTypesCannotBeUsedDirectlyUseImplementation>()!);
+	}
 
 	[Test]
 	public void GenericTypesCannotBeUsedDirectlyUseImplementation()

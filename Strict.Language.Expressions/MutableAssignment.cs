@@ -31,8 +31,12 @@ public sealed class MutableAssignment : ConcreteExpression
 		switch (expression)
 		{
 		case MemberCall memberCall:
+		{
+			if (!memberCall.Member.IsMutable)
+				throw new Body.ValueIsNotMutableAndCannotBeChanged(body, memberCall.Member.Name);
 			memberCall.Member.Value = newExpression;
 			return memberCall;
+		}
 		case VariableCall variableCall:
 			return new MutableAssignment(body, variableCall.Name, newExpression);
 		default:

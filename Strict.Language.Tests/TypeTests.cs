@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
 using Strict.Language.Expressions;
+using static Strict.Language.Body;
 using List = Strict.Language.Expressions.List;
 
 namespace Strict.Language.Tests;
@@ -221,14 +222,13 @@ public sealed class TypeTests
 		Assert.That(expression.Value.ReturnType.Name, Is.EqualTo(expected));
 	}
 
-	/*TODO
 	[TestCase("has number", "Run", "\tnumber = 1 + 1")]
 	[TestCase("has number", "Run", "\tconstant result = 5", "\tresult = 6")]
 	public void ImmutableTypesCannotBeChanged(params string[] code) =>
 		Assert.That(
 			() => new Type(package, new TypeLines(nameof(ImmutableTypesCannotBeChanged), code)).ParseMembersAndMethods(parser).Methods[0].GetBodyAndParseIfNeeded(),
-			Throws.InstanceOf<Mutable.ImmutableTypesCannotBeChanged>());
-	*/
+			Throws.InstanceOf<ValueIsNotMutableAndCannotBeChanged>());
+
 	[TestCase("mutable canBeModified = 0", "Run", "\tcanBeModified = 5")]
 	[TestCase("mutable counter = 0", "Run", "\tcounter = 5")]
 	public void MutableMemberTypesCanBeChanged(params string[] code)
@@ -251,15 +251,15 @@ public sealed class TypeTests
 		Assert.That(body.FindVariableValue("result")!.ToString(), Is.EqualTo("5"));
 	}
 
-	/*TODO
 	[Test]
-	public void InvalidAssignmentTarget() =>
+	public void ValueTypeNotMatchingWithAssignmentType() =>
 		Assert.That(
 			() => new Type(package,
-					new TypeLines(nameof(InvalidAssignmentTarget), "has log", "Run", "\tCount(6) = 6")).
-				ParseMembersAndMethods(parser).Methods[0].GetBodyAndParseIfNeeded(),
-			Throws.InstanceOf<Mutable.InvalidAssignmentTarget>());
-	*/
+					new TypeLines(nameof(ValueTypeNotMatchingWithAssignmentType), "has log", "Run",
+						"\tlog.Write(5) = 6")).ParseMembersAndMethods(parser).Methods[0].
+				GetBodyAndParseIfNeeded(),
+			Throws.InstanceOf<MutableAssignment.ValueTypeNotMatchingWithAssignmentType>());
+
 	[Test]
 	public void MakeSureGenericTypeIsProperlyGenerated()
 	{
@@ -447,15 +447,15 @@ public sealed class TypeTests
 				methods.Any(method => !method.IsPublic && !method.Name.AsSpan().IsOperator())), Is.False);
 	}
 
-	//TODO: support parsing of Mutable(Number)(2)
-	//[Test]
-	//public void CreateMutableNumberWithAnotherArgument()
-	//{
-	//	var type = new Type(package, new TypeLines(nameof(MutableTypesOrImplementsShouldNotBeUsedDirectlyy), "has number",
-	//			"Run",
-	//			"\tmutable result = Mutable(Number)(2)")).
-	//		ParseMembersAndMethods(parser);
-	//	Assert.That(() => type.Methods[0].GetBodyAndParseIfNeeded(),
-	//		Throws.InstanceOf<Type.GenericTypesCannotBeUsedDirectlyUseImplementation>());
-	//}
+	[Ignore("TODO: support parsing of Mutable(Number)(2)")]
+	[Test]
+	public void CreateMutableNumberWithAnotherArgument()
+	{
+		var type =
+			new Type(package,
+				new TypeLines(nameof(CreateMutableNumberWithAnotherArgument), "has number",
+					"Run", "\tmutable result = Mutable(Number)(2)")).ParseMembersAndMethods(parser);
+		Assert.That(() => type.Methods[0].GetBodyAndParseIfNeeded(),
+			Throws.InstanceOf<Type.GenericTypesCannotBeUsedDirectlyUseImplementation>());
+	}
 }

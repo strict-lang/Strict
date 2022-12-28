@@ -246,7 +246,6 @@ public sealed class ListTests : TestExpressions
 		Assert.That(expression.ToString(), Is.EqualTo("numbers(0)"));
 	}
 
-	[Ignore("TODO: Mutable reassignment is removed. fix it in parser")]
 	[Test]
 	public void AllowMutableListWithEmptyExpressions()
 	{
@@ -260,10 +259,9 @@ public sealed class ListTests : TestExpressions
 				"\tresult")).ParseMembersAndMethods(parser).Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(expression.Expressions[0].ToString(), Is.EqualTo("mutable result = Numbers"));
 		Assert.That(((ConstantDeclaration)expression.Expressions[0]).Value.ReturnType.FullName,
-			Is.EqualTo("TestPackage.Mutable(TestPackage.Numbers Implements TestPackage.List)"));
+			Is.EqualTo("TestPackage.Numbers"));
 	}
 
-	[Ignore("TODO: Mutable reassignment is removed. fix it in parser")]
 	[Test]
 	public void CreateMemberWithMutableListType()
 	{
@@ -271,7 +269,7 @@ public sealed class ListTests : TestExpressions
 			new TypeLines(nameof(CreateMemberWithMutableListType),
 				"mutable mutableTexts Texts",
 				"AddFiveToMutableList Texts",
-				"\tmutableTexts = mutableTexts + \"5\"",
+				"\tmutableTexts = mutableTexts + 5",
 				"\tmutableTexts")).ParseMembersAndMethods(parser);
 		var expression = (Body)mutableTextsType.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(mutableTextsType.Members[0].Value?.ToString(),
