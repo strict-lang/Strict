@@ -23,20 +23,30 @@ public sealed class MutableTests : TestExpressions
 			Is.EqualTo(type.GetType(Base.Number)));
 	}
 
-	//TODO: Mutable method parameter has valid any use case? should it be mutable input Number?
-	//[Test]
-	//public void MutableMethodParameterWithType()
-	//{
-	//	var program = new Type(type.Package,
-	//			new TypeLines(nameof(MutableMethodParameterWithType), "has something Number",
-	//				"Add(input Mutable(Number)) Number",
-	//				"\tconstant result = something + input")).
-	//		ParseMembersAndMethods(parser);
-	//	Assert.That(program.Methods[0].Parameters[0].IsMutable,
-	//		Is.True);
-	//	Assert.That(program.Methods[0].GetBodyAndParseIfNeeded().ReturnType,
-	//		Is.EqualTo(type.GetType(Base.Number)));
-	//}
+	[Test]
+	public void MutableMethodParameterWithType()
+	{
+		var program = new Type(type.Package,
+				new TypeLines(nameof(MutableMethodParameterWithType), "has something Number",
+					"Add(mutable input Number, mutable text) Number",
+					"\tinput = something + input")).
+			ParseMembersAndMethods(parser);
+		Assert.That(program.Methods[0].Parameters[0].IsMutable,
+			Is.True);
+		Assert.That(program.Methods[0].Parameters[1].IsMutable,
+			Is.True);
+		Assert.That(program.Methods[0].GetBodyAndParseIfNeeded().ReturnType,
+			Is.EqualTo(type.GetType(Base.Number)));
+	}
+
+	[Test]
+	public void IncompleteMutableMethodParameter() =>
+		Assert.That(
+			() => new Type(type.Package,
+					new TypeLines(nameof(IncompleteMutableMethodParameter), "has something Number",
+						"Add(mutable input) Number", "\tinput = something + input")).
+				ParseMembersAndMethods(parser),
+			Throws.InstanceOf<ParsingFailed>().With.InnerException.InstanceOf<Context.TypeNotFound>());
 
 	[Test]
 	public void MutableMemberWithTextType()

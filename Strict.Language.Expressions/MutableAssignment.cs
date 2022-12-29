@@ -30,6 +30,8 @@ public sealed class MutableAssignment : ConcreteExpression
 	{
 		switch (expression)
 		{
+		case VariableCall variableCall:
+			return new MutableAssignment(body, variableCall.Name, newExpression);
 		case MemberCall memberCall:
 		{
 			if (!memberCall.Member.IsMutable)
@@ -37,8 +39,13 @@ public sealed class MutableAssignment : ConcreteExpression
 			memberCall.Member.Value = newExpression;
 			return memberCall;
 		}
-		case VariableCall variableCall:
-			return new MutableAssignment(body, variableCall.Name, newExpression);
+		case ParameterCall parameterCall:
+		{
+			if (!parameterCall.Parameter.IsMutable)
+				throw new Body.ValueIsNotMutableAndCannotBeChanged(body, parameterCall.Parameter.Name);
+			parameterCall.Parameter = new Parameter(body.Method.Type, parameterCall.Parameter.Name, newExpression);
+			return parameterCall;
+		}
 		default:
 			throw new InvalidAssignmentTarget(body, expression.ToString());
 		}

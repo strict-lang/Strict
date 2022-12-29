@@ -159,4 +159,42 @@ public sealed class MethodTests
 		customType.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(customType.Methods[0].Tests.Count, Is.EqualTo(0));
 	}
+
+	[Test]
+	public void MethodParameterWithDefaultValue()
+	{
+		var method = new Method(type, 0, new MethodExpressionParser(), new[]
+		{
+			"Run(input = \"Hello\")",
+			"	\"5\""
+		});
+		Assert.That(method.Parameters[0].DefaultValue, Is.EqualTo(new Text(type, "Hello")));
+	}
+
+	[Test]
+	public void ImmutableMethodParameterValueCannotBeChanged()
+	{
+		var method = new Method(type, 0, new MethodExpressionParser(), new[]
+		{
+			"Run(input = \"Hello\")",
+			"	input = \"Hi\"",
+			"	\"5\""
+		});
+		Assert.That(() => method.GetBodyAndParseIfNeeded(),
+			Throws.InstanceOf<Body.ValueIsNotMutableAndCannotBeChanged>());
+	}
+
+	[Test]
+	public void MutableMethodParameterCannotHaveDefaultValue() =>
+		Assert.That(
+			() => new Method(type, 0, new MethodExpressionParser(),
+				new[] { "Run(mutable input = \"Hello\")", "	input = 5", "	\"5\"" }),
+			Throws.InstanceOf<Method.MutableParameterCannotHaveDefaultValue>());
+
+	[Test]
+	public void MissingParameterDefaultValue() =>
+		Assert.That(
+			() => new Method(type, 0, new MethodExpressionParser(),
+				new[] { "Run(input =)", "	input = 5", "	\"5\"" }),
+			Throws.InstanceOf<Method.MissingParameterDefaultValue>());
 }

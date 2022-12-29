@@ -10,8 +10,9 @@ public sealed class Parameter : NamedType
 
 	public Expression? DefaultValue { get; }
 
-	public Parameter(Type parentType, string nameAndType) : base(parentType, nameAndType) =>
-		IsMutable = nameAndType.Contains("Mutable(", StringComparison.Ordinal);
+	public Parameter(Type parentType, string nameAndType) : base(parentType,
+		nameAndType.Replace(Type.Mutable, "")) =>
+		IsMutable = nameAndType.Contains(Type.Mutable, StringComparison.Ordinal);
 
 	public Parameter CloneWithImplementationType(Type newType)
 	{

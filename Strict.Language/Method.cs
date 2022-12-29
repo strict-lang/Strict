@@ -92,6 +92,20 @@ public sealed class Method : Context
 			? type
 			: type.GetType(Base.None);
 
+	private static bool IsReturnTypeAny(ReadOnlySpan<char> rest) =>
+		rest[0] == ' ' && rest[1..].Equals(Base.Any, StringComparison.Ordinal);
+
+	public sealed class MethodReturnTypeAsAnyIsNotAllowed : ParsingFailed
+	{
+		public MethodReturnTypeAsAnyIsNotAllowed(Method method, string name) : base(method.Type, 0, name) { }
+	}
+
+	private static bool IsMethodGeneric(ReadOnlySpan<char> headerLine) =>
+		headerLine.Contains(Base.Generic, StringComparison.Ordinal) ||
+		headerLine.Contains(Base.Generic.MakeFirstLetterLowercase(), StringComparison.Ordinal);
+
+	public bool IsGeneric { get; private set; }
+
 	private void ParseParameters(Type type, ReadOnlySpan<char> rest)
 	{
 		if (rest.Length == 0)
@@ -110,18 +124,6 @@ public sealed class Method : Context
 			ParseAndAddParameters(type, rest, closingBracketIndex);
 	}
 
-	private static bool IsReturnTypeAny(ReadOnlySpan<char> rest) =>
-		rest[0] == ' ' && rest[1..].Equals(Base.Any, StringComparison.Ordinal);
-
-	public sealed class MethodReturnTypeAsAnyIsNotAllowed : ParsingFailed
-	{
-		public MethodReturnTypeAsAnyIsNotAllowed(Method method, string name) : base(method.Type, 0, name) { }
-	}
-
-	private static bool IsMethodGeneric(ReadOnlySpan<char> headerLine) =>
-		headerLine.Contains(Base.Generic, StringComparison.Ordinal) ||
-		headerLine.Contains(Base.Generic.MakeFirstLetterLowercase(), StringComparison.Ordinal);
-
 	private void ParseAndAddParameters(Type type, ReadOnlySpan<char> rest, int closingBracketIndex)
 	{
 		foreach (var nameAndType in rest[1..closingBracketIndex].
@@ -132,35 +134,19 @@ public sealed class Method : Context
 			var nameAndTypeAsString = nameAndType.ToString();
 			if (IsParameterTypeAny(nameAndTypeAsString))
 				throw new ParametersWithTypeAnyIsNotAllowed(this, nameAndTypeAsString);
-			if (nameAndTypeAsString.Contains(" = "))
-			{
-				var nameAndDefaultValue = nameAndTypeAsString.Split(" = ");
-				var defaultValue = ParseExpression(methodBody!, nameAndDefaultValue[1]);
-				if (defaultValue == null)
-					throw new DefaultValueCouldNotBeParsedIntoExpression(this,
-						TypeLineNumber + methodLineNumber - 1, nameAndDefaultValue[1]);
-				parameters.Add(new Parameter(type, nameAndDefaultValue[0], defaultValue));
-			}
-			else
-				parameters.Add(new Parameter(type, nameAndTypeAsString));
+			parameters.Add(nameAndTypeAsString.Contains('=')
+				? GetParameterByExtractingNameAndDefaultValue(type, nameAndTypeAsString)
+				: new Parameter(type, nameAndTypeAsString));
 		}
 		if (parameters.Count > Limit.ParameterCount)
 			throw new MethodParameterCountMustNotExceedThree(this,
 				TypeLineNumber + methodLineNumber - 1);
 	}
 
-	private sealed class DefaultValueCouldNotBeParsedIntoExpression : ParsingFailed
+	public sealed class ParametersMustStartWithLowerCase : ParsingFailed
 	{
-		public DefaultValueCouldNotBeParsedIntoExpression(Method method, int lineNumber,
-			string defaultValueExpression) : base(method.Type, lineNumber, defaultValueExpression) { }
+		public ParametersMustStartWithLowerCase(Method method) : base(method.Type, 0, "", method.Name) { }
 	}
-
-	public sealed class MethodParameterCountMustNotExceedThree : ParsingFailed
-	{
-		public MethodParameterCountMustNotExceedThree(Method method, int lineNumber) : base(method.Type, lineNumber, $"Method {method.Name} has parameters count {method.Parameters.Count} but limit is {Limit.ParameterCount}") { }
-	}
-
-	public bool IsGeneric { get; private set; }
 
 	private static bool IsParameterTypeAny(string nameAndTypeString) =>
 		nameAndTypeString == Base.Any.MakeFirstLetterLowercase() ||
@@ -169,6 +155,44 @@ public sealed class Method : Context
 	public sealed class ParametersWithTypeAnyIsNotAllowed : ParsingFailed
 	{
 		public ParametersWithTypeAnyIsNotAllowed(Method method, string name) : base(method.Type, 0, name) { }
+	}
+
+	private Parameter GetParameterByExtractingNameAndDefaultValue(Type type,
+		string nameAndTypeAsString)
+	{
+		if (nameAndTypeAsString.Contains(Type.Mutable))
+			throw new MutableParameterCannotHaveDefaultValue(this, TypeLineNumber + methodLineNumber - 1,
+				nameAndTypeAsString);
+		var nameAndDefaultValue = nameAndTypeAsString.Split(" = ");
+		if (nameAndDefaultValue.Length < 2)
+			throw new MissingParameterDefaultValue(this, TypeLineNumber + methodLineNumber - 1,
+				nameAndTypeAsString);
+		var defaultValue = ParseExpression(methodBody!, nameAndDefaultValue[1]);
+		if (defaultValue == null)
+			throw new DefaultValueCouldNotBeParsedIntoExpression(this,
+				TypeLineNumber + methodLineNumber - 1, nameAndTypeAsString);
+		return new Parameter(type, nameAndDefaultValue[0], defaultValue);
+	}
+
+	public class MutableParameterCannotHaveDefaultValue : ParsingFailed
+	{
+		public MutableParameterCannotHaveDefaultValue(Method method, int lineNumber, string nameAndType) : base(method.Type, lineNumber, nameAndType) { }
+	}
+
+	public sealed class MissingParameterDefaultValue : ParsingFailed
+	{
+		public MissingParameterDefaultValue(Method method, int lineNumber, string nameAndType) : base(method.Type, lineNumber, nameAndType) { }
+	}
+
+	public sealed class DefaultValueCouldNotBeParsedIntoExpression : ParsingFailed
+	{
+		public DefaultValueCouldNotBeParsedIntoExpression(Method method, int lineNumber,
+			string defaultValueExpression) : base(method.Type, lineNumber, defaultValueExpression) { }
+	}
+
+	public sealed class MethodParameterCountMustNotExceedThree : ParsingFailed
+	{
+		public MethodParameterCountMustNotExceedThree(Method method, int lineNumber) : base(method.Type, lineNumber, $"Method {method.Name} has parameters count {method.Parameters.Count} but limit is {Limit.ParameterCount}") { }
 	}
 
 	public sealed class InvalidMethodParameters : ParsingFailed
@@ -180,11 +204,6 @@ public sealed class Method : Context
 	public sealed class EmptyParametersMustBeRemoved : ParsingFailed
 	{
 		public EmptyParametersMustBeRemoved(Method method) : base(method.Type, 0, "", method.Name) { }
-	}
-
-	public sealed class ParametersMustStartWithLowerCase : ParsingFailed
-	{
-		public ParametersMustStartWithLowerCase(Method method) : base(method.Type, 0, "", method.Name) { }
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
