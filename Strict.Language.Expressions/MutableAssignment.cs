@@ -19,7 +19,7 @@ public sealed class MutableAssignment : ConcreteExpression
 		parts.MoveNext();
 		var expression = body.Method.ParseExpression(body, parts.Current);
 		var newExpression = body.Method.ParseExpression(body, line[(parts.Current.Length + 3)..]);
-		if (!expression.ReturnType.IsCompatible(newExpression.ReturnType))
+		if (!newExpression.ReturnType.IsCompatible(expression.ReturnType))
 			throw new ValueTypeNotMatchingWithAssignmentType(body, expression.ReturnType.Name,
 				newExpression.ReturnType.Name);
 		return UpdateMemberOrVariableValue(body, expression, newExpression);

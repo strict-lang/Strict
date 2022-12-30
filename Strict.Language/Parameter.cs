@@ -4,9 +4,12 @@ namespace Strict.Language;
 
 public sealed class Parameter : NamedType
 {
-	public Parameter(Type parentType, string name, Expression defaultValue) : base(parentType, name,
-		defaultValue.ReturnType) =>
+	public Parameter(Type parentType, string name, Expression defaultValue) : base(parentType, name.Replace(Type.Mutable, ""),
+		defaultValue.ReturnType)
+	{
 		DefaultValue = defaultValue;
+		IsMutable = name.Contains(Type.Mutable, StringComparison.Ordinal);
+	}
 
 	public Expression? DefaultValue { get; }
 

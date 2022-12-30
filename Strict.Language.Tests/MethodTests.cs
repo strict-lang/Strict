@@ -177,24 +177,23 @@ public sealed class MethodTests
 		var method = new Method(type, 0, new MethodExpressionParser(), new[]
 		{
 			"Run(input = \"Hello\")",
-			"	input = \"Hi\"",
-			"	\"5\""
+			"	input = \"Hi\""
 		});
 		Assert.That(() => method.GetBodyAndParseIfNeeded(),
 			Throws.InstanceOf<Body.ValueIsNotMutableAndCannotBeChanged>());
 	}
 
 	[Test]
-	public void MutableMethodParameterCannotHaveDefaultValue() =>
+	public void ValueTypeNotMatchingWithAssignmentType() =>
 		Assert.That(
 			() => new Method(type, 0, new MethodExpressionParser(),
-				new[] { "Run(mutable input = \"Hello\")", "	input = 5", "	\"5\"" }),
-			Throws.InstanceOf<Method.MutableParameterCannotHaveDefaultValue>());
+				new[] { "Run(mutable input = 0)", "	input = \"5\"" }).GetBodyAndParseIfNeeded(),
+			Throws.InstanceOf<MutableAssignment.ValueTypeNotMatchingWithAssignmentType>());
 
 	[Test]
 	public void MissingParameterDefaultValue() =>
 		Assert.That(
 			() => new Method(type, 0, new MethodExpressionParser(),
-				new[] { "Run(input =)", "	input = 5", "	\"5\"" }),
+				new[] { "Run(input =)", "	5" }),
 			Throws.InstanceOf<Method.MissingParameterDefaultValue>());
 }

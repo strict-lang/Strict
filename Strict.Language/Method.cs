@@ -160,9 +160,6 @@ public sealed class Method : Context
 	private Parameter GetParameterByExtractingNameAndDefaultValue(Type type,
 		string nameAndTypeAsString)
 	{
-		if (nameAndTypeAsString.Contains(Type.Mutable))
-			throw new MutableParameterCannotHaveDefaultValue(this, TypeLineNumber + methodLineNumber - 1,
-				nameAndTypeAsString);
 		var nameAndDefaultValue = nameAndTypeAsString.Split(" = ");
 		if (nameAndDefaultValue.Length < 2)
 			throw new MissingParameterDefaultValue(this, TypeLineNumber + methodLineNumber - 1,
@@ -172,11 +169,6 @@ public sealed class Method : Context
 			throw new DefaultValueCouldNotBeParsedIntoExpression(this,
 				TypeLineNumber + methodLineNumber - 1, nameAndTypeAsString);
 		return new Parameter(type, nameAndDefaultValue[0], defaultValue);
-	}
-
-	public class MutableParameterCannotHaveDefaultValue : ParsingFailed
-	{
-		public MutableParameterCannotHaveDefaultValue(Method method, int lineNumber, string nameAndType) : base(method.Type, lineNumber, nameAndType) { }
 	}
 
 	public sealed class MissingParameterDefaultValue : ParsingFailed

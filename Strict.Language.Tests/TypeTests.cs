@@ -454,7 +454,7 @@ public sealed class TypeTests
 		var type =
 			new Type(package,
 				new TypeLines(nameof(CreateMutableNumberWithAnotherArgument), "has number",
-					"Run", "\tmutable result = Mutable(Number)(2)")).ParseMembersAndMethods(parser);
+					"Run", "\tmutable result = Number(2)")).ParseMembersAndMethods(parser);
 		Assert.That(() => type.Methods[0].GetBodyAndParseIfNeeded(),
 			Throws.InstanceOf<Type.GenericTypesCannotBeUsedDirectlyUseImplementation>());
 	}

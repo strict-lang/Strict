@@ -74,10 +74,10 @@ public sealed class MutableTests : TestExpressions
 		Assert.That(body.Expressions[0].ReturnType, Is.EqualTo(body.Expressions[1].ReturnType));
 	}
 
-	[TestCase("AssignNumberToTextType", "mutable something Text", "TryChangeMutableDataType Text",
-		"\tsomething = 5")]
-	[TestCase("AssignNumbersToTexts", "mutable something Texts", "TryChangeMutableDataType Text",
-		"\tsomething = (5, 4, 3)")]
+	[TestCase("AssignNumberToTextType", "mutable something Number", "TryChangeMutableDataType Text",
+		"\tsomething = \"5\"")]
+	[TestCase("AssignNumbersToTexts", "mutable something Numbers", "TryChangeMutableDataType Text",
+		"\tsomething = (\"5\", \"4\", \"3\")")]
 	public void ValueTypeNotMatchingWithAssignmentType(string testName, params string[] code) =>
 		Assert.That(
 			() => new Type(type.Package, new TypeLines(testName, code)).ParseMembersAndMethods(parser).
