@@ -32,13 +32,13 @@ public sealed class TypeTests
 
 	[Test]
 	public void EmptyLineIsNotAllowed() =>
-		Assert.That(() => CreateType(Base.Error, ""),
+		Assert.That(() => CreateType(Base.HashCode, ""),
 			Throws.InstanceOf<Type.EmptyLineIsNotAllowed>().With.Message.Contains("line 1"));
 
 	[Test]
 	public void WhitespacesAreNotAllowed()
 	{
-		Assert.That(() => CreateType(Base.Error, " "),
+		Assert.That(() => CreateType("Whitespace", " "),
 			Throws.InstanceOf<Type.ExtraWhitespacesFoundAtBeginningOfLine>());
 		Assert.That(() => CreateType("Program", " has App"),
 			Throws.InstanceOf<Type.ExtraWhitespacesFoundAtBeginningOfLine>());
@@ -48,12 +48,12 @@ public sealed class TypeTests
 
 	[Test]
 	public void TypeParsersMustStartWithMember() =>
-		Assert.That(() => CreateType(Base.Error, "Run", "\tlog.WriteLine"),
+		Assert.That(() => CreateType(Base.HashCode, "Run", "\tlog.WriteLine"),
 			Throws.InstanceOf<Type.TypeHasNoMembersAndThusMustBeATraitWithoutMethodBodies>());
 
 	[Test]
 	public void JustMembersAreAllowed() =>
-		Assert.That(CreateType(Base.Error, "has log", "mutable counter Number").Members.Count, Is.EqualTo(2));
+		Assert.That(CreateType(Base.HashCode, "has log", "mutable counter Number").Members.Count, Is.EqualTo(2));
 
 	[Test]
 	public void GetUnknownTypeWillCrash() =>
@@ -63,7 +63,7 @@ public sealed class TypeTests
 	[TestCase("has invalidType")]
 	[TestCase("has log", "Run InvalidType", "\tconstant a = 5")]
 	public void TypeNotFound(params string[] lines) =>
-		Assert.That(() => CreateType(Base.Error, lines),
+		Assert.That(() => CreateType(Base.HashCode, lines),
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.InstanceOf<Context.TypeNotFound>());
 
 	[Test]
@@ -457,5 +457,20 @@ public sealed class TypeTests
 					"Run", "\tmutable result = Number(2)")).ParseMembersAndMethods(parser);
 		Assert.That(() => type.Methods[0].GetBodyAndParseIfNeeded(),
 			Throws.InstanceOf<Type.GenericTypesCannotBeUsedDirectlyUseImplementation>());
+	}
+
+	[TestCase(Base.Output, 0)]
+	[TestCase(Base.Mutable, 1)]
+	[TestCase(Base.Log, 1)]
+	[TestCase(Base.Number, 1)]
+	[TestCase(Base.Character, 2)]
+	[TestCase(Base.Text, 4)]
+	[TestCase(Base.Error, 10)]
+	public void ValidateAvailableMemberTypesCount(string name, int expectedCount)
+	{
+		var type = package.GetType(name);
+		Assert.That(
+			type.AvailableMemberTypes.Count,
+			Is.EqualTo(expectedCount), type.AvailableMemberTypes.ToWordList());
 	}
 }

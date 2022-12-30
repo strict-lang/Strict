@@ -422,12 +422,29 @@ public class Type : Context
 		public UnterminatedMultiLineListFound(Type type, int lineNumber, string line) : base(type, lineNumber, line) { }
 	}
 
-	//TODO: Members.Select( or Members.Where( or Members.Any( is used a lot to find all types recursively, probably better if we calculate this once and use the much faster optimized list (with all duplicates removed as well) instead to find matching types
 	public IReadOnlyList<Member> Members => members;
 	protected readonly List<Member> members = new();
 	public IReadOnlyList<Method> Methods => methods;
 	protected readonly List<Method> methods = new();
 	public bool IsTrait => Members.Count == 0 && Name != Base.Number && Name != Base.Boolean;
+	public Dictionary<string, Type> AvailableMemberTypes
+	{
+		get
+		{
+			if (cachedAvailableMemberTypes != null)
+				return cachedAvailableMemberTypes;
+			cachedAvailableMemberTypes = new Dictionary<string, Type>();
+			foreach (var member in members)
+			{
+				if (cachedAvailableMemberTypes.TryAdd(member.Type.Name, member.Type))
+					foreach (var (availableMemberName, availableMemberType) in member.Type.
+						AvailableMemberTypes)
+						cachedAvailableMemberTypes.TryAdd(availableMemberName, availableMemberType);
+			}
+			return cachedAvailableMemberTypes;
+		}
+	}
+	private Dictionary<string, Type>? cachedAvailableMemberTypes;
 
 	//TODO: Causing stackoverflow
 	//public override string ToString() =>

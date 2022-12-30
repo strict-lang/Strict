@@ -185,7 +185,8 @@ public class TestPackage : Package
 				"Delete",
 				"Length Number")),
 			new Type(this, new TypeLines(Base.Output, "Write(generic)")),
-			new Type(this, new TypeLines(Base.Name, "has text", "has log")),
+			new Type(this, new TypeLines(Base.Name, "has text")),
+			new Type(this, new TypeLines(Base.Error, "has Text", "has Stacktraces")),
 			new Type(this, new TypeLines(Base.Method, "has Name", "has Type")),
 			new Type(this, new TypeLines(Base.Stacktrace, "has Method", "has FilePath Text", "has Line Number"))
 		};
