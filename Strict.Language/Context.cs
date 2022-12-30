@@ -34,14 +34,6 @@ public abstract class Context
 	public string Name { get; }
 	public string FullName { get; }
 
-	/// <summary>
-	/// TODO: Could be optimized in the future for contexts that are used a lot (10+ calls) and have at
-	/// least 5+ types in its package. A dictionary could cache the same name calls (e.g. Number,
-	/// Text, etc. or even Base.Log always return the same type).
-	/// TODO: check type limit stuff, will make parsing much more complex!
-	///characters(2) ???? not a type
-	///has Characters(2) -> limit???
-	/// </summary>
 	public Type GetType(string name)
 	{
 		if (name == Name)

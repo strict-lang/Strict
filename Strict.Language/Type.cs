@@ -435,12 +435,10 @@ public class Type : Context
 				return cachedAvailableMemberTypes;
 			cachedAvailableMemberTypes = new Dictionary<string, Type>();
 			foreach (var member in members)
-			{
 				if (cachedAvailableMemberTypes.TryAdd(member.Type.Name, member.Type))
 					foreach (var (availableMemberName, availableMemberType) in member.Type.
 						AvailableMemberTypes)
 						cachedAvailableMemberTypes.TryAdd(availableMemberName, availableMemberType);
-			}
 			return cachedAvailableMemberTypes;
 		}
 	}
