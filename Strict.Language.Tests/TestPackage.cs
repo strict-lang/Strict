@@ -9,7 +9,7 @@ public class TestPackage : Package
 	{
 		// @formatter:off
 		var types = new[] {
-			new Type(this, new TypeLines(Base.Any, "to Type", "to Text", "is(other) Boolean", "not(other) Boolean", "in(generics) Boolean")),
+			new Type(this, new TypeLines(Base.Any, "to Type", "to Text", "is(other) Boolean", "not(other) Boolean")),
 			new Type(this, new TypeLines(Base.Boolean,
 				"not Boolean",
 				"\tvalue ? false else true",
@@ -145,8 +145,9 @@ public class TestPackage : Package
 				"for Generic",
 				"\tfor elements",
 				"\t\treturn value",
-				"in(element Generic) Boolean",
-				"\t\telement")),
+				"in(iterator) Generic",
+				"\t1 in(5, 6) is 5",
+				"\telement(0)")),
 			new Type(this, new TypeLines(Base.Text,
 				"has characters",
 				"from(number)",

@@ -408,9 +408,8 @@ public sealed class TypeTests
 	public void RangeTypeShouldHaveCorrectAvailableMethods()
 	{
 		var range = package.GetType(Base.Range);
-		Assert.That(
-			range.AvailableMethods.Values.Select(methods => methods.Count).Sum(),
-			Is.EqualTo(8));
+		Assert.That(range.AvailableMethods.Values.Select(methods => methods.Count).Sum(),
+			Is.EqualTo(7));
 	}
 
 	[Test]
@@ -418,7 +417,7 @@ public sealed class TypeTests
 	{
 		var text = package.GetType(Base.Text + "s");
 		Assert.That(text.AvailableMethods.Values.Select(methods => methods.Count).Sum(),
-			Is.EqualTo(47));
+			Is.EqualTo(41));
 	}
 
 	[Test]
@@ -445,18 +444,6 @@ public sealed class TypeTests
 		Assert.That(
 			type.AvailableMethods.Values.Select(methodsList => methodsList).Any(methods =>
 				methods.Any(method => !method.IsPublic && !method.Name.AsSpan().IsOperator())), Is.False);
-	}
-
-	[Ignore("TODO: support parsing of Mutable(Number)(2)")]
-	[Test]
-	public void CreateMutableNumberWithAnotherArgument()
-	{
-		var type =
-			new Type(package,
-				new TypeLines(nameof(CreateMutableNumberWithAnotherArgument), "has number",
-					"Run", "\tmutable result = Number(2)")).ParseMembersAndMethods(parser);
-		Assert.That(() => type.Methods[0].GetBodyAndParseIfNeeded(),
-			Throws.InstanceOf<Type.GenericTypesCannotBeUsedDirectlyUseImplementation>());
 	}
 
 	[TestCase(Base.Output, 0)]

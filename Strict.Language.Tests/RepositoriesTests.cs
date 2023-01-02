@@ -58,7 +58,7 @@ public class RepositoriesTests
 			Throws.InstanceOf<ParsingFailed>().With.Message.Contains(@"Base\Invalid.strict:line 1"));
 	}
 
-	[Ignore("TODO: Fix examples folder strict files to get parsed")]
+	[Ignore("TODO: Fixing Members with limit syntax first to make this work for VectorTwoD")]
 	[Test]
 	public async Task LoadStrictExamplesPackageAndUseBasePackageTypes()
 	{
