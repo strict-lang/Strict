@@ -307,7 +307,7 @@ public sealed class Method : Context
 			? ""
 			: " " + ReturnType.Name);
 
-	public Method CloneWithImplementation(GenericType typeWithImplementation)
+	public Method CloneWithImplementation(GenericTypeImplementation typeWithImplementation)
 	{
 		var clone = (Method)MemberwiseClone();
 		clone.ReturnType = ReplaceWithImplementationOrGenericType(clone.ReturnType, typeWithImplementation, 0);
@@ -321,7 +321,7 @@ public sealed class Method : Context
 	}
 
 	private static Type ReplaceWithImplementationOrGenericType(Type type,
-		GenericType typeWithImplementation, int index) =>
+		GenericTypeImplementation typeWithImplementation, int index) =>
 		type.Name == Base.Generic
 			? typeWithImplementation.ImplementationTypes[index] //Number
 			: type.IsGeneric

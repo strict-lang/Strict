@@ -83,7 +83,7 @@ public sealed class For : Expression
 	{
 		var mutableValue = body.FindVariableValue(variableName);
 		var iteratorType = GetIteratorType(forValueExpression);
-		if (iteratorType is GenericType { IsIterator: true } genericType)
+		if (iteratorType is GenericTypeImplementation { IsIterator: true } genericType)
 			iteratorType = genericType.ImplementationTypes[0];
 		if ((iteratorType.Name != Base.Range || mutableValue?.ReturnType.Name != Base.Number)
 			&& iteratorType.Name != mutableValue?.ReturnType.Name)

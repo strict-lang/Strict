@@ -1,12 +1,12 @@
-﻿using System.Collections.Generic;
-using System.Linq;
+﻿using System;
+using System.Collections.Generic;
 
 namespace Strict.Language;
 
-public sealed class GenericType : Type
+public sealed class GenericTypeImplementation : Type
 {
 	//TODO: should be optimized, almost all cases are exactly one implementation type (e.g. list)
-	public GenericType(Type generic, IReadOnlyList<Type> implementationTypes) : base(generic.Package,
+	public GenericTypeImplementation(Type generic, IReadOnlyList<Type> implementationTypes) : base(generic.Package,
 		new TypeLines(GetTypeName(generic, implementationTypes), Has + generic.Name))
 	{
 		Generic = generic;
@@ -18,7 +18,7 @@ public sealed class GenericType : Type
 				: member);
 		foreach (var methodsByNames in Generic.AvailableMethods)
 		foreach (var method in methodsByNames.Value)
-			if (method.ReturnType.IsGeneric || method.Parameters.Any(p => p.Type.IsGeneric))
+			if (method.IsPublic || method.Name.AsSpan().IsOperator())
 				methods.Add(method.CloneWithImplementation(this));
 	}
 

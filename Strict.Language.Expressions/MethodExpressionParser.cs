@@ -272,7 +272,7 @@ public class MethodExpressionParser : ExpressionParser
 	private static bool
 		IsConstructorUsedWithSameArgumentType(IReadOnlyList<Expression> arguments, Type fromType) =>
 		arguments.Count == 1 && (fromType == arguments[0].ReturnType ||
-			arguments[0].ReturnType is GenericType genericType && fromType == genericType.Generic);
+			arguments[0].ReturnType is GenericTypeImplementation genericType && fromType == genericType.Generic);
 
 	private static Expression? TryFindMemberCall(Type type, Expression? instance,
 		ReadOnlySpan<char> partToParse)

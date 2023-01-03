@@ -15,7 +15,7 @@ public abstract class Context
 {
 	protected Context(Context? parent, string name)
 	{
-		if (parent != null && this is not GenericType && (string.IsNullOrWhiteSpace(name) ||
+		if (parent != null && this is not GenericTypeImplementation && (string.IsNullOrWhiteSpace(name) ||
 			this is not Method && !name.IsWord()))
 			throw new NameMustBeAWordWithoutAnySpecialCharactersOrNumbers(name);
 		Parent = parent!;
@@ -81,7 +81,7 @@ public abstract class Context
 			}") { }
 	}
 
-	public GenericType GetListImplementationType(Type implementation) =>
+	public GenericTypeImplementation GetListImplementationType(Type implementation) =>
 		GetType(Base.List).GetGenericImplementation(implementation);
 
 	private Type? FindFullType(string name) =>

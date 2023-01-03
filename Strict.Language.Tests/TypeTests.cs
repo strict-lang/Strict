@@ -20,7 +20,7 @@ public sealed class TypeTests
 	}
 
 	private Type CreateType(string name, params string[] lines) =>
-		new Type(package, new TypeLines(name, lines)).ParseMembersAndMethods(null!);
+		new Type(package, new TypeLines(name, lines)).ParseMembersAndMethods(parser);
 
 	public Package package = null!;
 	public ExpressionParser parser = null!;
@@ -417,7 +417,7 @@ public sealed class TypeTests
 	{
 		var text = package.GetType(Base.Text + "s");
 		Assert.That(text.AvailableMethods.Values.Select(methods => methods.Count).Sum(),
-			Is.EqualTo(41));
+			Is.EqualTo(53), text.AvailableMethods.Keys.ToWordList());
 	}
 
 	[Test]
@@ -456,8 +456,60 @@ public sealed class TypeTests
 	public void ValidateAvailableMemberTypesCount(string name, int expectedCount)
 	{
 		var type = package.GetType(name);
-		Assert.That(
-			type.AvailableMemberTypes.Count,
-			Is.EqualTo(expectedCount), type.AvailableMemberTypes.ToWordList());
+		Assert.That(type.AvailableMemberTypes.Count, Is.EqualTo(expectedCount),
+			type.AvailableMemberTypes.ToWordList());
 	}
+
+	[TestCase("has numbers with Length is 2")]
+	[TestCase("has something Numbers with Length is 2")]
+	public void MemberWithConstraintsUsingWithKeyword(string code)
+	{
+		var memberWithConstraintType = CreateType(nameof(MemberWithConstraintsUsingWithKeyword), code,
+			"AddNumbers Number", "\tnumbers(0) + numbers(1)");
+		var member = memberWithConstraintType.Members[0];
+		Assert.That(member.Type.Name, Is.EqualTo("Numbers"));
+		Assert.That(member.Constraints?.Length, Is.EqualTo(1));
+		Assert.That(member.Constraints?[0].ToString(), Is.EqualTo("Length is 2"));
+	}
+
+	[Test]
+	public void MutableMemberWithConstraintsUsingWithKeyword()
+	{
+		var memberWithConstraintType = CreateType(nameof(MutableMemberWithConstraintsUsingWithKeyword), "mutable something with Length is 2 = (1, 2)",
+			"AddNumbers Number", "\tnumbers(0) + numbers(1)");
+		var member = memberWithConstraintType.Members[0];
+		Assert.That(member.Name, Is.EqualTo("something"));
+		Assert.That(member.Type.Name, Is.EqualTo("Numbers"));
+		Assert.That(member.Constraints?.Length, Is.EqualTo(1));
+		Assert.That(member.Constraints?[0].ToString(), Is.EqualTo("Length is 2"));
+		Assert.That(member.Value, Is.InstanceOf<List>());
+		Assert.That(member.Value?.ToString(), Is.EqualTo("(1, 2)"));
+	}
+
+	[Test]
+	public void MemberWithMultipleConstraintsUsingAndKeyword()
+	{
+		var memberWithConstraintType = CreateType(nameof(MemberWithMultipleConstraintsUsingAndKeyword), "mutable numbers with Length is 2 and value(0) > 0",
+			"AddNumbers Number", "\tnumbers(0) + numbers(1)");
+		var member = memberWithConstraintType.Members[0];
+		Assert.That(member.Name, Is.EqualTo("numbers"));
+		Assert.That(member.Type.Name, Is.EqualTo("Numbers"));
+		Assert.That(member.Constraints?.Length, Is.EqualTo(2));
+		Assert.That(member.Constraints?[1].ToString(), Is.EqualTo("value(0) > 0"));
+	}
+
+	[Test]
+	public void ConstraintsWithOtherThanBooleanReturnTypeIsInvalid() =>
+		Assert.That(
+			() => CreateType(nameof(ConstraintsWithOtherThanBooleanReturnTypeIsInvalid),
+				"mutable numbers with Length + 2", "AddNumbers Number", "\tnumbers(0) + numbers(1)"),
+			Throws.InstanceOf<Member.InvalidConstraintExpression>());
+
+	[Test]
+	public void MissingConstraintExpression() =>
+		Assert.That(
+			() => CreateType(nameof(MissingConstraintExpression),
+				"mutable numbers with", "AddNumbers Number", "\tnumbers(0) + numbers(1)"),
+			Throws.InstanceOf<Type.MemberMissingConstraintExpression>());
 }
+

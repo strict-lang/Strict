@@ -40,7 +40,7 @@ public class Type : Context
 	private int lineNumber;
 	/// <summary>
 	/// Generic types cannot be used directly as we don't know the implementation to be used (e.g. a
-	/// list, we need to know the type of the elements), you must them from <see cref="GenericType"/>!
+	/// list, we need to know the type of the elements), you must them from <see cref="GenericTypeImplementation"/>!
 	/// </summary>
 	public bool IsGeneric { get; }
 
@@ -179,21 +179,64 @@ public class Type : Context
 		}
 	}
 
+	//TODO: Refactoring is pending
 	private Member TryParseMember(ExpressionParser parser, ReadOnlySpan<char> remainingLine,
 		bool usedMutableKeyword)
 	{
 		var nameAndExpression = remainingLine.Split();
 		nameAndExpression.MoveNext();
 		var nameAndType = nameAndExpression.Current.ToString();
-		if (nameAndExpression.MoveNext() && nameAndExpression.Current[0] != '=')
-			nameAndType += " " + GetMemberType(nameAndExpression);
-		return IsMemberTypeAny(nameAndType, nameAndExpression)
-			? throw new MemberWithTypeAnyIsNotAllowed(this, lineNumber, nameAndType)
-			: new Member(this, nameAndType, HasMemberExpression(nameAndExpression)
-				? GetMemberExpression(parser, nameAndType.MakeFirstLetterUppercase(),
-					remainingLine[(nameAndType.Length + 3)..])
-				: null, usedMutableKeyword);
+		Expression? memberExpression = null;
+		var constraintsSpan = ReadOnlySpan<char>.Empty;
+		if (nameAndExpression.MoveNext())
+		{
+			var wordAfterName = nameAndExpression.Current.ToString();
+			if (nameAndExpression.Current[0] == EqualCharacter)
+				memberExpression = GetMemberExpression(parser, nameAndType.MakeFirstLetterUppercase(),
+					remainingLine[(nameAndType.Length + 3)..]);
+			else if (wordAfterName != With)
+				nameAndType += " " + GetMemberType(nameAndExpression);
+			if (HasConstraints(wordAfterName, ref nameAndExpression))
+			{
+				if (!nameAndExpression.MoveNext())
+					throw new MemberMissingConstraintExpression(this, lineNumber, nameAndType);
+				var equalIndex = remainingLine.IndexOf(EqualCharacter);
+				if (equalIndex > 0)
+				{
+					constraintsSpan =
+						remainingLine[(nameAndType.Length + 1 + With.Length + 1)..(equalIndex - 1)];
+					memberExpression = GetMemberExpression(parser, nameAndType.MakeFirstLetterUppercase(),
+						remainingLine[(equalIndex + 2)..]);
+				}
+				else
+					constraintsSpan = remainingLine[(nameAndType.Length + 1 + With.Length + 1)..];
+			}
+			else if (nameAndExpression.Current[0] == EqualCharacter)
+				throw new NamedType.AssignmentWithInitializerTypeShouldNotHaveNameWithType(nameAndType);
+		}
+		if (IsMemberTypeAny(nameAndType, nameAndExpression))
+			throw new MemberWithTypeAnyIsNotAllowed(this, lineNumber, nameAndType);
+		var member = new Member(this, nameAndType, memberExpression,
+			usedMutableKeyword);
+		if (!constraintsSpan.IsEmpty)
+			member.ParseConstraints(parser,
+				constraintsSpan.ToString().Split(BinaryOperator.And, StringSplitOptions.TrimEntries));
+		return member;
 	}
+
+	private const char EqualCharacter = '=';
+	private const string With = "with";
+
+	private Expression GetMemberExpression(ExpressionParser parser, string memberName,
+		ReadOnlySpan<char> remainingTextSpan) =>
+		parser.ParseExpression(new Body(new Method(this, 0, parser, new[] { "EmptyBody" })),
+			GetFromConstructorCallFromUpcastableMemberOrJustEvaluate(memberName, remainingTextSpan));
+
+	private ReadOnlySpan<char> GetFromConstructorCallFromUpcastableMemberOrJustEvaluate(
+		string memberName, ReadOnlySpan<char> remainingTextSpan) =>
+		FindType(memberName) != null && !remainingTextSpan.StartsWith(memberName)
+			? string.Concat(memberName, "(", remainingTextSpan, ")").AsSpan()
+			: remainingTextSpan;
 
 	private static string GetMemberType(SpanSplitEnumerator nameAndExpression)
 	{
@@ -206,10 +249,12 @@ public class Type : Context
 		return memberType;
 	}
 
-	public sealed class UsingMutableTypesOrImplementsAreNotAllowed : ParsingFailed
+	private static bool HasConstraints(string wordAfterName, ref SpanSplitEnumerator nameAndExpression) => wordAfterName == With || nameAndExpression.MoveNext() && nameAndExpression.Current.ToString() == With;
+
+	public sealed class MemberMissingConstraintExpression : ParsingFailed
 	{
-		public UsingMutableTypesOrImplementsAreNotAllowed(Type type,
-			string memberName) : base(type, 0, $"Member Name: {memberName}") { }
+		public MemberMissingConstraintExpression(Type type, int lineNumber, string memberName) : base(
+			type, lineNumber, memberName) { }
 	}
 
 	private static bool
@@ -222,26 +267,11 @@ public class Type : Context
 		public MemberWithTypeAnyIsNotAllowed(Type type, int lineNumber, string name) : base(type, lineNumber, name) { }
 	}
 
-	private static bool HasMemberExpression(SpanSplitEnumerator nameAndExpression) =>
-		nameAndExpression.Current[0] == '=' ||
-		nameAndExpression.MoveNext() && nameAndExpression.Current[0] == '=';
-
 	public sealed class MembersMustComeBeforeMethods : ParsingFailed
 	{
 		public MembersMustComeBeforeMethods(Type type, int lineNumber, string line) : base(type,
 			lineNumber, line) { }
 	}
-
-	private Expression GetMemberExpression(ExpressionParser parser, string memberName,
-		ReadOnlySpan<char> remainingTextSpan) =>
-		parser.ParseExpression(new Body(new Method(this, 0, parser, new[] { "EmptyBody" })),
-			GetFromConstructorCallFromUpcastableMemberOrJustEvaluate(memberName, remainingTextSpan));
-
-	private ReadOnlySpan<char> GetFromConstructorCallFromUpcastableMemberOrJustEvaluate(
-		string memberName, ReadOnlySpan<char> remainingTextSpan) =>
-		FindType(memberName) != null && !remainingTextSpan.StartsWith(memberName)
-			? string.Concat(memberName, "(", remainingTextSpan, ")").AsSpan()
-			: remainingTextSpan;
 
 	public sealed class DuplicateMembersAreNotAllowed : ParsingFailed
 	{
@@ -464,34 +494,34 @@ public class Type : Context
 	/// </summary>
 	public const string Outer = nameof(Outer);
 
-	public GenericType GetGenericImplementation(Type singleImplementationType)
+	public GenericTypeImplementation GetGenericImplementation(Type singleImplementationType)
 	{
 		var key = Name + "(" + singleImplementationType.Name + ")"; //TODO: make fast in GenericType
 		return GetGenericImplementation(key) ?? CreateGenericImplementation(key, new[] { singleImplementationType });
 	}
 
-	private GenericType? GetGenericImplementation(string key)
+	private GenericTypeImplementation? GetGenericImplementation(string key)
 	{
 		if (!IsGeneric)
 			throw new CannotGetGenericImplementationOnNonGeneric(Name, key);
-		cachedGenericTypes ??= new Dictionary<string, GenericType>(StringComparer.Ordinal);
+		cachedGenericTypes ??= new Dictionary<string, GenericTypeImplementation>(StringComparer.Ordinal);
 		return cachedGenericTypes.TryGetValue(key, out var genericType)
 			? genericType
 			: null;
 	}
 
-	private Dictionary<string, GenericType>? cachedGenericTypes;
+	private Dictionary<string, GenericTypeImplementation>? cachedGenericTypes;
 
-	private GenericType CreateGenericImplementation(string key, IReadOnlyList<Type> implementationTypes)
+	private GenericTypeImplementation CreateGenericImplementation(string key, IReadOnlyList<Type> implementationTypes)
 	{
 		if (Name != Base.List && Members.Count(m => m.Type.IsGeneric) != implementationTypes.Count)
 			throw new TypeArgumentsCountDoesNotMatchGenericType(this, implementationTypes);
-		var genericType = new GenericType(this, implementationTypes);
+		var genericType = new GenericTypeImplementation(this, implementationTypes);
 		cachedGenericTypes!.Add(key, genericType);
 		return genericType;
 	}
 
-	public GenericType GetGenericImplementation(List<Type> implementationTypes)
+	public GenericTypeImplementation GetGenericImplementation(List<Type> implementationTypes)
 	{
 		var key = Name + implementationTypes.Select(t => t.Name).ToList().ToBrackets();
 		return GetGenericImplementation(key) ?? CreateGenericImplementation(key, implementationTypes);
@@ -560,7 +590,7 @@ public class Type : Context
 		return true;
 	}
 
-	private static bool IsArgumentImplementationTypeMatchParameterType(Type argumentReturnType, Type methodParameterType) => argumentReturnType is GenericType argumentGenericType && argumentGenericType.ImplementationTypes.Any(t => t == methodParameterType);
+	private static bool IsArgumentImplementationTypeMatchParameterType(Type argumentReturnType, Type methodParameterType) => argumentReturnType is GenericTypeImplementation argumentGenericType && argumentGenericType.ImplementationTypes.Any(t => t == methodParameterType);
 	/// <summary>
 	/// Any non public member is automatically iteratable if it has Iterator, for example Text.strict
 	/// or Error.strict have public members you have to iterate over yourself.
@@ -607,7 +637,7 @@ public class Type : Context
 	{
 		var matchedMember = members.FirstOrDefault(member =>
 			member.Type.IsIterator && arguments.All(argument => argument.ReturnType == member.Type ||
-				member.Type is GenericType genericMemberType &&
+				member.Type is GenericTypeImplementation genericMemberType &&
 				argument.ReturnType == genericMemberType.ImplementationTypes[0]));
 		if (matchedMember == null)
 			return null;

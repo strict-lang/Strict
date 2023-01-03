@@ -131,7 +131,7 @@ public sealed class MemberCallTests : TestExpressions
 		Assert.That(program.Members[0].Value?.ReturnType.Name, Is.EqualTo("File"));
 	}
 
-		[Test]
+	[Test]
 	public void FromConstructorCallUsingMemberName()
 	{
 		var program = new Type(type.Package,

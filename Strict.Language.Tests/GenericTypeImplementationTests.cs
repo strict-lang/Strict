@@ -3,7 +3,7 @@ using Strict.Language.Expressions;
 
 namespace Strict.Language.Tests;
 
-public sealed class GenericTypeTests
+public sealed class GenericTypeImplementationTests
 {
 	[SetUp]
 	public void CreateParserAndComparerType()
