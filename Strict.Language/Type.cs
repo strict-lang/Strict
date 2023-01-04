@@ -613,13 +613,11 @@ public class Type : Context
 			return null;
 		var fromMethod = "from(";
 		fromMethod += GetMatchingMemberParametersIfExist(arguments);
-		return fromMethod.Length > 5 && isMatchedWithList
-			? BuildMethod($"{fromMethod})")
-			: fromMethod.Length > 5 && fromMethod.Split(',').Length - 1 == arguments.Count
-				? BuildMethod($"{fromMethod[..^2]})")
-				: IsDatatypeOrEnum
-					? BuildMethod(fromMethod[..^1])
-					: null;
+		return fromMethod.Length > 5 && fromMethod.Split(',').Length - 1 == arguments.Count
+			? BuildMethod($"{fromMethod[..^2]})")
+			: IsDatatypeOrEnum
+				? BuildMethod(fromMethod[..^1])
+				: null;
 	}
 
 	private string? GetMatchingMemberParametersIfExist(IReadOnlyList<Expression> arguments)
@@ -632,27 +630,9 @@ public class Type : Context
 				parameters += $"{member.Name.MakeFirstLetterLowercase()} {member.Type.Name}, ";
 				argumentIndex++;
 			}
-		return TryGetMatchedParameters(arguments, parameters);
+		return parameters;
 	}
 
-	private string? TryGetMatchedParameters(IReadOnlyList<Expression> arguments, string? parameters) =>
-		parameters == null && arguments.Count > 0
-			? TryCheckForMatchingMembersAndGetParameters(arguments)
-			: parameters;
-
-	private string? TryCheckForMatchingMembersAndGetParameters(IReadOnlyList<Expression> arguments)
-	{
-		var matchedMember = members.FirstOrDefault(member =>
-			member.Type.IsIterator && arguments.All(argument => argument.ReturnType == member.Type ||
-				member.Type is GenericTypeImplementation genericMemberType &&
-				argument.ReturnType == genericMemberType.ImplementationTypes[0]));
-		if (matchedMember == null)
-			return null;
-		isMatchedWithList = true;
-		return $"{matchedMember.Name.MakeFirstLetterLowercase()} {matchedMember.Type.Name}"; //TODO: No use case found, try to write unit test and adjust string format if needed
-	}
-
-	private bool isMatchedWithList;
 	private Method BuildMethod(string fromMethod) => new(this, 0, dummyExpressionParser, new[] { fromMethod });
 	private readonly ExpressionParser dummyExpressionParser = new DummyExpressionParser();
 
@@ -720,13 +700,19 @@ public class Type : Context
 					cachedAvailableMethods.Add(method.Name, new List<Method> { method });
 			}
 			foreach (var member in members)
-				if (!member.IsPublic && !member.Type.IsTrait) // TODO: this should check if this type is an implementation of the trait or using as component
+				if (!member.IsPublic && !IsTraitImplementation(member.Type))
 					AddNonGenericMethods(member.Type);
 			if (Name != Base.Any)
 				AddAnyMethods();
 			return cachedAvailableMethods;
 		}
 	}
+
+	private bool IsTraitImplementation(Type memberType) =>
+		memberType.IsTrait && methods.Count >= memberType.Methods.Count &&
+		memberType.Methods.All(typeMethod =>
+			methods.Any(method => method.HasEqualSignature(typeMethod)));
+
 	private Dictionary<string, List<Method>>? cachedAvailableMethods;
 
 	private void AddNonGenericMethods(Type implementType)

@@ -63,7 +63,7 @@ public sealed class MethodCallTests : TestExpressions
 	[Test]
 	public void ArgumentsDoNotMatchMethodParameters() =>
 		Assert.That(() => ParseExpression("Character(\"Hi\")"),
-			Throws.InstanceOf<Type.ArgumentsDoNotMatchMethodParameters>());
+			Throws.InstanceOf<ArgumentsDoNotMatchMethodParameters>());
 
 	[Test]
 	public void ParseCallWithUnknownMemberCallArgument() =>

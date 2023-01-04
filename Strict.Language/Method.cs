@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.CompilerServices;
 
 [assembly: InternalsVisibleTo("Strict.Language.Tests")]
@@ -327,4 +328,13 @@ public sealed class Method : Context
 			: type.IsGeneric
 				? typeWithImplementation //ListNumber
 				: type;
+
+	public bool HasEqualSignature(Method method) =>
+		Name == method.Name && Parameters.Count == method.Parameters.Count &&
+		(ReturnType == method.ReturnType || method.ReturnType.Name == Base.Generic ||
+			ReturnType.Name == Base.Generic) && HasSameParameterTypes(method);
+
+	private bool HasSameParameterTypes(Method method) =>
+		!method.Parameters.Where((parameter, index) =>
+			parameter.Type.Name != Base.Generic && Parameters[index].Type != parameter.Type).Any();
 }
