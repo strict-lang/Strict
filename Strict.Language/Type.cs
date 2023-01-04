@@ -179,49 +179,60 @@ public class Type : Context
 		}
 	}
 
-	//TODO: Refactoring is pending
 	private Member TryParseMember(ExpressionParser parser, ReadOnlySpan<char> remainingLine,
 		bool usedMutableKeyword)
 	{
 		var nameAndExpression = remainingLine.Split();
 		nameAndExpression.MoveNext();
 		var nameAndType = nameAndExpression.Current.ToString();
-		Expression? memberExpression = null;
-		var constraintsSpan = ReadOnlySpan<char>.Empty;
 		if (nameAndExpression.MoveNext())
 		{
 			var wordAfterName = nameAndExpression.Current.ToString();
 			if (nameAndExpression.Current[0] == EqualCharacter)
-				memberExpression = GetMemberExpression(parser, nameAndType.MakeFirstLetterUppercase(),
-					remainingLine[(nameAndType.Length + 3)..]);
-			else if (wordAfterName != With)
+				return new Member(this, nameAndType,
+					GetMemberExpression(parser, nameAndType.MakeFirstLetterUppercase(),
+						remainingLine[(nameAndType.Length + 3)..]), usedMutableKeyword);
+			if (wordAfterName != With)
 				nameAndType += " " + GetMemberType(nameAndExpression);
 			if (HasConstraints(wordAfterName, ref nameAndExpression))
-			{
-				if (!nameAndExpression.MoveNext())
-					throw new MemberMissingConstraintExpression(this, lineNumber, nameAndType);
-				var equalIndex = remainingLine.IndexOf(EqualCharacter);
-				if (equalIndex > 0)
-				{
-					constraintsSpan =
-						remainingLine[(nameAndType.Length + 1 + With.Length + 1)..(equalIndex - 1)];
-					memberExpression = GetMemberExpression(parser, nameAndType.MakeFirstLetterUppercase(),
-						remainingLine[(equalIndex + 2)..]);
-				}
-				else
-					constraintsSpan = remainingLine[(nameAndType.Length + 1 + With.Length + 1)..];
-			}
-			else if (nameAndExpression.Current[0] == EqualCharacter)
+				return !nameAndExpression.MoveNext()
+					? throw new MemberMissingConstraintExpression(this, lineNumber, nameAndType)
+					: IsMemberTypeAny(nameAndType, nameAndExpression)
+						? throw new MemberWithTypeAnyIsNotAllowed(this, lineNumber, nameAndType)
+						: GetMemberWithConstraints(parser, remainingLine, usedMutableKeyword, nameAndType);
+			if (nameAndExpression.Current[0] == EqualCharacter)
 				throw new NamedType.AssignmentWithInitializerTypeShouldNotHaveNameWithType(nameAndType);
 		}
-		if (IsMemberTypeAny(nameAndType, nameAndExpression))
-			throw new MemberWithTypeAnyIsNotAllowed(this, lineNumber, nameAndType);
-		var member = new Member(this, nameAndType, memberExpression,
-			usedMutableKeyword);
+		return IsMemberTypeAny(nameAndType, nameAndExpression)
+			? throw new MemberWithTypeAnyIsNotAllowed(this, lineNumber, nameAndType)
+			: new Member(this, nameAndType, null, usedMutableKeyword);
+	}
+
+	private Member GetMemberWithConstraints(ExpressionParser parser, ReadOnlySpan<char> remainingLine,
+		bool usedMutableKeyword, string nameAndType)
+	{
+		var member = new Member(this, nameAndType,
+			ExtractConstraintsSpanAndValueExpression(parser, remainingLine, nameAndType,
+				out var constraintsSpan), usedMutableKeyword);
 		if (!constraintsSpan.IsEmpty)
 			member.ParseConstraints(parser,
 				constraintsSpan.ToString().Split(BinaryOperator.And, StringSplitOptions.TrimEntries));
 		return member;
+	}
+
+	protected Expression? ExtractConstraintsSpanAndValueExpression(ExpressionParser parser,
+		ReadOnlySpan<char> remainingLine, string nameAndType,
+		out ReadOnlySpan<char> constraintsSpan)
+	{
+		var equalIndex = remainingLine.IndexOf(EqualCharacter);
+		if (equalIndex > 0)
+		{
+			constraintsSpan = remainingLine[(nameAndType.Length + 1 + With.Length + 1)..(equalIndex - 1)];
+			return GetMemberExpression(parser, nameAndType.MakeFirstLetterUppercase(),
+				remainingLine[(equalIndex + 2)..]);
+		}
+		constraintsSpan = remainingLine[(nameAndType.Length + 1 + With.Length + 1)..];
+		return null;
 	}
 
 	private const char EqualCharacter = '=';
@@ -562,17 +573,13 @@ public class Type : Context
 			base(type + " " + extraInformation) { }
 	}
 
-	private static bool IsMethodWithMatchingParameters(IEnumerable<Expression> arguments,
-		Method method) =>
-		IsMethodWithMatchingParameters(arguments.Select(a => a.ReturnType).ToList(), method);
-
-	// ReSharper disable once MethodTooLong
-	private static bool IsMethodWithMatchingParameters(IReadOnlyList<Type> argumentTypes, Method method)
+	private static bool IsMethodWithMatchingParameters(IReadOnlyList<Expression> arguments,
+		Method method)
 	{
 		for (var index = 0; index < method.Parameters.Count; index++)
 		{
 			var methodParameterType = method.Parameters[index].Type;
-			var argumentReturnType = argumentTypes[index];
+			var argumentReturnType = arguments[index].ReturnType;
 			if (argumentReturnType == methodParameterType || method.IsGeneric ||
 				IsArgumentImplementationTypeMatchParameterType(argumentReturnType, methodParameterType))
 				continue;
@@ -583,7 +590,7 @@ public class Type : Context
 			if (methodParameterType.IsGeneric)
 				throw new GenericTypesCannotBeUsedDirectlyUseImplementation(methodParameterType,
 					"(parameter " + index + ") is not usable with argument " +
-					argumentTypes[index] + " in " + method);
+					arguments[index].ReturnType + " in " + method);
 			if (!argumentReturnType.IsCompatible(methodParameterType))
 				return false;
 		}
@@ -768,26 +775,5 @@ public class Type : Context
 				" do ") +
 			"not match these method(s):\n" + string.Join("\n",
 				allMethods)) { }
-
-		public ArgumentsDoNotMatchMethodParameters(IReadOnlyCollection<Type> argumentTypes,
-			IEnumerable<Method> matchingMethods) : base((argumentTypes.Count == 0
-				? "No arguments does "
-				: (argumentTypes.Count == 1
-					? "Argument: "
-					: "Arguments: ") + argumentTypes.ToWordList() + " do ") +
-			"not match these method(s):\n" +
-			string.Join("\n", matchingMethods)) { }
-	}
-
-	public Method? FindMethodByArgumentTypes(string methodName, List<Type> argumentTypes)
-	{
-		if (!AvailableMethods.TryGetValue(methodName, out var matchingMethods))
-			return null;
-		foreach (var method in matchingMethods)
-			if (method.Parameters.Count == argumentTypes.Count &&
-				IsMethodWithMatchingParameters(argumentTypes, method))
-				return method;
-		throw new ArgumentsDoNotMatchMethodParameters(argumentTypes,
-			matchingMethods);
 	}
 }
