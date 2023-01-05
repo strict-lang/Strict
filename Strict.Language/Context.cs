@@ -15,9 +15,14 @@ public abstract class Context
 {
 	protected Context(Context? parent, string name)
 	{
-		if (parent != null && this is not GenericTypeImplementation && (string.IsNullOrWhiteSpace(name) ||
-			this is not Method && !name.IsWord()))
+		var lastLetterNumber = -1;
+		if (parent != null && this is not GenericTypeImplementation &&
+			(string.IsNullOrWhiteSpace(name) ||
+				this is not Method && this is not Package && !name.IsWordOrWordWithNumberAtEnd(out lastLetterNumber) ||
+				HasConflictingType(parent, name, lastLetterNumber)))
 			throw new NameMustBeAWordWithoutAnySpecialCharactersOrNumbers(name);
+		if (this is Package && !name.IsAlphaNumericWithAllowedSpecialCharacters())
+			throw new PackageNameMustBeAWordWithoutSpecialCharacters(name);
 		Parent = parent!;
 		Name = name;
 		FullName = string.IsNullOrEmpty(parent?.Name) || parent.Name is nameof(Base)
@@ -25,9 +30,18 @@ public abstract class Context
 			: parent + "." + name;
 	}
 
+	private static bool HasConflictingType(Context context, string name, int number) =>
+		number != -1 && context.FindType(name[..^1]) != null;
+
 	public sealed class NameMustBeAWordWithoutAnySpecialCharactersOrNumbers : Exception
 	{
 		public NameMustBeAWordWithoutAnySpecialCharactersOrNumbers(string name) : base(name) { }
+	}
+
+	public sealed class PackageNameMustBeAWordWithoutSpecialCharacters : Exception
+	{
+		public PackageNameMustBeAWordWithoutSpecialCharacters(string name) : base("Name " + name +
+			" ;Allowed characters: Alphabets, Numbers or '-' in the middle or end of the name") { }
 	}
 
 	public Context Parent { get; }

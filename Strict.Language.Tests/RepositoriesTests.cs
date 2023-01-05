@@ -58,13 +58,13 @@ public class RepositoriesTests
 			Throws.InstanceOf<ParsingFailed>().With.Message.Contains(@"Base\Invalid.strict:line 1"));
 	}
 
-	[Ignore("TODO: Fixing Members with limit syntax first to make this work for VectorTwoD")]
 	[Test]
 	public async Task LoadStrictExamplesPackageAndUseBasePackageTypes()
 	{
 		var parser = new MethodExpressionParser();
 		var repositories = new Repositories(parser);
 		await repositories.LoadStrictPackage();
+		var mathPackage = await repositories.LoadStrictPackage("Math");
 		var examplesPackage = await repositories.LoadStrictPackage("Examples");
 		var program = new Type(examplesPackage, new TypeLines("ValidProgram", "has number", "Run Number", "\tnumber")).
 			ParseMembersAndMethods(parser);

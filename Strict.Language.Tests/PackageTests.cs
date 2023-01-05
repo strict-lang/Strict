@@ -97,11 +97,27 @@ public class PackageTests
 	[Test]
 	public void ContextNameMustNotContainSpecialCharactersOrNumbers()
 	{
-		Assert.Throws<Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers>(() =>
-			new Type(mainPackage, new TypeLines("MyClass123", Array.Empty<string>())));
-		Assert.Throws<Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers>(() =>
-			new Package(mainPackage, "$%"));
+		Assert.That(() => new Type(mainPackage, new TypeLines("MyClass123", Array.Empty<string>())),
+			Throws.InstanceOf<Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers>());
+		Assert.That(() => new Package(mainPackage, "$%"),
+			Throws.InstanceOf<
+				Context.PackageNameMustBeAWordWithoutSpecialCharacters>());
 	}
+
+	[TestCase("Hello-World")]
+	[TestCase("MyPackage2")]
+	[TestCase("Math-Algebra-2")]
+	public void PackageNameCanContainNumbersOrHyphenInMiddleOrEnd(string name) =>
+		Assert.That(() => new Package(mainPackage, name),
+			Does.Not.InstanceOf<Context.PackageNameMustBeAWordWithoutSpecialCharacters>());
+
+	[TestCase("1Pack")]
+	[TestCase("-Pack")]
+	[TestCase("Pack,")]
+	[TestCase("Pack(*^&*)")]
+	public void PackageNameMustNotContainNumbersOrHyphenInBeginning(string name) =>
+		Assert.That(() => new Package(mainPackage, name),
+			Throws.InstanceOf<Context.PackageNameMustBeAWordWithoutSpecialCharacters>());
 
 	[Test]
 	public async Task LoadTypesFromOtherPackage()

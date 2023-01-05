@@ -22,6 +22,25 @@ public static class StringExtensions
 		return true;
 	}
 
+	public static bool IsWordOrWordWithNumberAtEnd(this string text, out int number)
+	{
+		number = -1;
+		for (var index = 0; index < text.Length; index++)
+			if (!char.IsAsciiLetter(text[index]))
+				return index == text.Length - 1 && int.TryParse(text[index].ToString(), out number) &&
+					number is > 1 and < 10;
+		return true;
+	}
+
+	public static bool IsAlphaNumericWithAllowedSpecialCharacters(this string text)
+	{
+		for (var index = 0; index < text.Length; index++)
+			if (!char.IsAsciiLetter(text[index]) &&
+				(index == 0 || text[index] != '-' && !char.IsNumber(text[index])))
+				return false;
+		return true;
+	}
+	
 	public static string MakeFirstLetterUppercase(this string name) =>
 		name[..1].ToUpperInvariant() + name[1..];
 

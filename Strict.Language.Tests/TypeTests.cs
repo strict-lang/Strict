@@ -511,5 +511,33 @@ public sealed class TypeTests
 			() => CreateType(nameof(MissingConstraintExpression),
 				"mutable numbers with", "AddNumbers Number", "\tnumbers(0) + numbers(1)"),
 			Throws.InstanceOf<Type.MemberMissingConstraintExpression>());
+
+	[Test]
+	public void TypeNameCanHaveOneNumberAtEnd()
+	{
+		var vector2 = CreateType("Vector2", "has numbers", "AddNumbers Number",
+			"\tnumbers(0) + numbers(1)");
+		Assert.That(() => vector2.Name, Is.EqualTo("Vector2"));
+	}
+
+	[TestCase("2Vector")]
+	[TestCase("Vector22")]
+	[TestCase("Matrix0")]
+	[TestCase("Matrix1")]
+	public void InvalidTypeNames(string typeName) =>
+		Assert.That(() => CreateType(typeName, "has numbers", "Unused Number", "\t1"),
+			Throws.
+				InstanceOf<
+					Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers>());
+
+	[Test]
+	public void NumberInTheEndIsNotAllowedIfTypeWithoutNumberExists()
+	{
+		CreateType("Matrix", "has numbers", "Unused Number", "\t1");
+		Assert.That(() => CreateType("Matrix2", "has numbers", "Unused Number", "\t1"),
+			Throws.
+				InstanceOf<
+					Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers>());
+	}
 }
 
