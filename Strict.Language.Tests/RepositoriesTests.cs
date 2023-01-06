@@ -64,7 +64,7 @@ public class RepositoriesTests
 		var parser = new MethodExpressionParser();
 		var repositories = new Repositories(parser);
 		await repositories.LoadStrictPackage();
-		var mathPackage = await repositories.LoadStrictPackage("Math");
+		await repositories.LoadStrictPackage("Math");
 		var examplesPackage = await repositories.LoadStrictPackage("Examples");
 		var program = new Type(examplesPackage, new TypeLines("ValidProgram", "has number", "Run Number", "\tnumber")).
 			ParseMembersAndMethods(parser);

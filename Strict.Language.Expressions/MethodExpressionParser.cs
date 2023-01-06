@@ -212,7 +212,12 @@ public class MethodExpressionParser : ExpressionParser
 		Body body, ReadOnlySpan<char> input, IReadOnlyList<Expression> arguments)
 	{
 		if (!input.IsWord() && !input.Contains(' ') && !input.Contains('('))
-			return null;
+		{
+			var typeName = input.ToString();
+			return typeName.IsWordOrWordWithNumberAtEnd(out _)
+				? TryParseFromOrEnum(body, arguments, typeName)
+				: null;
+		}
 #if LOG_DETAILS
 		Logger.Info(nameof(TryMemberOrMethodCall) + ": " + input.ToString() + " in " + context +
 			" with arguments=" + arguments.ToWordList());

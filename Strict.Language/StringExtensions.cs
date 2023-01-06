@@ -40,7 +40,7 @@ public static class StringExtensions
 				return false;
 		return true;
 	}
-	
+
 	public static string MakeFirstLetterUppercase(this string name) =>
 		name[..1].ToUpperInvariant() + name[1..];
 
