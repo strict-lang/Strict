@@ -23,9 +23,8 @@ public sealed class IfTests : TestExpressions
 			() => ParseExpression("if 5 is 6", "\treturn \"hello\"", "else", "\treturn true").ReturnType,
 			Throws.InstanceOf<If.ReturnTypeOfThenAndElseMustHaveMatchingType>());
 
-	//TODO: Allowing Character to Number is not making sense
 	[Test]
-	public void ReturnTypeOfThenAndElseIsNumberAndCountIsValid() =>
+	public void ReturnTypeOfThenAndElseIsNumberAndCharacterIsValid() =>
 		Assert.That(
 			new Method(type, 0, this,
 				new[]
@@ -36,20 +35,6 @@ public sealed class IfTests : TestExpressions
 					"		return Character(5)",
 					"	else",
 					"		return 5"
-				}).GetBodyAndParseIfNeeded().ReturnType, Is.EqualTo(type.GetType(Base.Number)));
-
-	[Test]
-	public void ReturnTypeOfThenAndElseIsCountAndCharacterIsValid() =>
-		Assert.That(
-			new Method(type, 0, this,
-				new[]
-				{
-					"ReturnMethod Number",
-					"	if bla is 5",
-					"		return 5",
-					"	else",
-					"		return Character(5)"
-					// @formatter:on
 				}).GetBodyAndParseIfNeeded().ReturnType, Is.EqualTo(type.GetType(Base.Number)));
 
 	[Test]
@@ -195,7 +180,6 @@ public sealed class IfTests : TestExpressions
 		Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(), Throws.InstanceOf<Body.ChildBodyReturnTypeMustMatchMethod>().With.Message.Contains("Child body return type: TestPackage.Boolean is not matching with Parent return type: TestPackage.Text in method line: 5"));
 	}
 
-	//TODO: Character return type matching number is not correct, fix it
 	[Test]
 	public void ThenReturnsImplementedTypeOfMethodReturnType()
 	{

@@ -539,5 +539,28 @@ public sealed class TypeTests
 				InstanceOf<
 					Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers>());
 	}
+
+	[Test]
+	public void AppleTypeCompatibilityCheck()
+	{
+		var apple = CreateType("Apple", "has name", "Quantity Number", "\tvalue.Length");
+		var redApple = CreateType("RedApple", "has apple", "Color Text", "\tvalue.Color");
+		Assert.That(apple.IsCompatible(redApple), Is.False);
+		Assert.That(redApple.IsCompatible(apple), Is.True);
+	}
+
+	[Test]
+	public void LoggerIsCompatibleWithFile()
+	{
+		var logger = CreateType("Logger", "has source File", "Log Number", "\tvalue");
+		Assert.That(logger.IsCompatible(package.GetType(Base.File)), Is.True);
+	}
+
+	[Test]
+	public void AccountantIsNotCompatibleWithFile()
+	{
+		var accountant = CreateType("Accountant", "has taxFile File", "has assetFile File", "Calculate Number", "\tvalue");
+		Assert.That(accountant.IsCompatible(package.GetType(Base.File)), Is.False);
+	}
 }
 

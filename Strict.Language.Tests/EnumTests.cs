@@ -12,7 +12,7 @@ public sealed class EnumTests
 		parser = new MethodExpressionParser();
 		new Type(package,
 			new TypeLines("Connection", "has Google = \"https://google.com\"",
-				"has Apple = \"https://apple.com\"")).ParseMembersAndMethods(parser);
+				"has Microsoft = \"https://microsoft.com\"")).ParseMembersAndMethods(parser);
 		CreateInstructionEnumType();
 	}
 

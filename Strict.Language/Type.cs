@@ -445,7 +445,10 @@ public class Type : Context
 
 	public sealed class MultiLineListsAllowedOnlyWhenLengthIsMoreThanHundred : ParsingFailed
 	{
-		public MultiLineListsAllowedOnlyWhenLengthIsMoreThanHundred(Type type, int lineNumber, int length) : base(type, lineNumber, $"Current length: {length}, Minimum Length for Multi line list expression: {Limit.ListCharacterCount}") { }
+		public MultiLineListsAllowedOnlyWhenLengthIsMoreThanHundred(Type type, int lineNumber,
+			int length) : base(type, lineNumber,
+			"Current length: " + length +
+			$", Minimum Length for Multi line list expression: {Limit.ListCharacterCount}") { }
 	}
 
 	private void SetNewLinesAndLineNumbersAfterMerge()
@@ -647,8 +650,13 @@ public class Type : Context
 	} //ncrunch: no coverage end
 
 	public bool IsCompatible(Type sameOrBaseType) =>
-		this == sameOrBaseType || members.Any(member => member.Type == sameOrBaseType) ||
+		this == sameOrBaseType ||
+		HasAnyCompatibleMember(sameOrBaseType) ||
 		CanUpCast(sameOrBaseType);
+
+	private bool HasAnyCompatibleMember(Type sameOrBaseType) =>
+		members.Any(member =>
+			member.Type == sameOrBaseType && members.Count(m => m.Type == member.Type) == 1);
 
 	// Created a case https://deltaengine.fogbugz.com/f/cases/27017
 	private bool CanUpCast(Type sameOrBaseType) =>
