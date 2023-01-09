@@ -196,7 +196,7 @@ public sealed class ForTests : TestExpressions
 	{
 		var programType = new Type(type.Package,
 				new TypeLines(nameof(IterateNameType), "has number", "LogError Number", "\tconstant name = Name(\"Strict\")",
-					$"\tfor name", "\t\tvalue")).
+					"\tfor name", "\t\tvalue")).
 			ParseMembersAndMethods(new MethodExpressionParser());
 		var parsedExpression = (Body)programType.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(parsedExpression.Expressions[1], Is.TypeOf(typeof(For)));

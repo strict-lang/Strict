@@ -9,7 +9,6 @@ using Type = Strict.Language.Type;
 
 namespace Strict.Compiler.Tests;
 
-[Ignore("TODO: fix later")]
 public sealed class SourceGeneratorTests : TestCSharpGenerator
 {
 	[Test]
@@ -34,11 +33,12 @@ public interface DummyApp
 
 public class Program
 {
+	public App App;
 	public static void Main()
 	{
 		Console.WriteLine(""Hello World"");
 	}
-}"));
+}"), file.ToString());
 	}
 
 	//ncrunch: no coverage start
@@ -201,6 +201,7 @@ public class Program
 	public Task RemoveExclamation() =>
 		GenerateCSharpByReadingStrictProgramAndCompareWithOutput(nameof(RemoveExclamation));
 
+	[Ignore("Fix: Register type does not have + method (Number methods)")]
 	[Test]
 	public async Task ExecuteOperation()
 	{

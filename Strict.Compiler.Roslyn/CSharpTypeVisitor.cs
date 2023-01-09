@@ -6,7 +6,7 @@ using Type = Strict.Language.Type;
 
 namespace Strict.Compiler.Roslyn;
 
-public class CSharpTypeVisitor : TypeVisitor
+public sealed class CSharpTypeVisitor : TypeVisitor
 {
 	public CSharpTypeVisitor(Type type)
 	{
@@ -29,11 +29,13 @@ public class CSharpTypeVisitor : TypeVisitor
 	private readonly bool isImplementingApp;
 	private readonly bool isInterface;
 
-	private void CreateHeader(Type type) =>
-		//TODO: we still have to find out the actual dependencies (members can be both contained and the base classes/interfaces)
-		//TODO: not longer like this: foreach (var implement in type.Implements)
-		//	VisitImplement(implement);
+	private void CreateHeader(Type type)
+	{
+		foreach (var member in type.Members)
+			if (type.IsTraitImplementation(member.Type))
+				VisitImplement(member.Type);
 		FileContent += "namespace " + type.Package.FolderPath + SemicolonAndLineBreak + NewLine;
+	}
 
 	public string FileContent { get; private set; } = "";
 

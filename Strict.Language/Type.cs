@@ -583,7 +583,7 @@ public class Type : Context
 		{
 			var methodParameterType = method.Parameters[index].Type;
 			var argumentReturnType = arguments[index].ReturnType;
-			if (argumentReturnType == methodParameterType || method.IsGeneric ||
+			if (argumentReturnType == methodParameterType || method.IsGeneric || methodParameterType.Name == Base.Any ||
 				IsArgumentImplementationTypeMatchParameterType(argumentReturnType, methodParameterType))
 				continue;
 			if (methodParameterType.IsDatatypeOrEnum && methodParameterType.Members[0].Type == argumentReturnType)
@@ -716,7 +716,7 @@ public class Type : Context
 		}
 	}
 
-	private bool IsTraitImplementation(Type memberType) =>
+	public bool IsTraitImplementation(Type memberType) =>
 		memberType.IsTrait && methods.Count >= memberType.Methods.Count &&
 		memberType.Methods.All(typeMethod =>
 			methods.Any(method => method.HasEqualSignature(typeMethod)));

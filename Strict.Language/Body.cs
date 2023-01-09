@@ -128,12 +128,13 @@ public sealed class Body : Expression
 
 	public void UpdateVariable(string name, Expression value)
 	{
-		var variable = FindVariableValue(name);
-		if (variable == null)
+		var variableScopeBody = FindVariableBody(name);
+		var variable = variableScopeBody?.FindVariableValue(name) ??
 			throw new IdentifierNotFound(this, name);
 		if (!variable.IsMutable)
 			throw new ValueIsNotMutableAndCannotBeChanged(this, name);
-		variables![name] = value;
+		if (variableScopeBody.variables != null)
+			variableScopeBody.variables[name] = value;
 	}
 
 	public sealed class IdentifierNotFound : ParsingFailed
@@ -156,6 +157,15 @@ public sealed class Body : Expression
 				if (searchFor.Equals(name, StringComparison.Ordinal))
 					return value;
 		return Parent?.FindVariableValue(searchFor);
+	}
+
+	private Body? FindVariableBody(ReadOnlySpan<char> searchFor)
+	{
+		if (variables != null)
+			foreach (var (name, _) in variables)
+				if (searchFor.Equals(name, StringComparison.Ordinal))
+					return this;
+		return Parent?.FindVariableBody(searchFor);
 	}
 
 	public override string ToString() => string.Join(Environment.NewLine, Expressions);

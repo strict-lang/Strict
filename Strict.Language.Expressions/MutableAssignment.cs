@@ -4,9 +4,17 @@ namespace Strict.Language.Expressions;
 
 public sealed class MutableAssignment : ConcreteExpression
 {
-	private MutableAssignment(Body scope, string name, Expression newValue) :
-		base(newValue.ReturnType, true) =>
-		scope.UpdateVariable(name, newValue);
+	private MutableAssignment(Body scope, string name, Expression value) :
+		base(value.ReturnType, true)
+	{
+		Name = name;
+		Value = value;
+		value.IsMutable = true;
+		scope.UpdateVariable(name, value);
+	}
+
+	public string Name { get; }
+	public Expression Value { get; }
 
 	public static Expression? TryParse(Body body, ReadOnlySpan<char> line) =>
 		line.Contains(" = ", StringComparison.Ordinal)
@@ -51,6 +59,8 @@ public sealed class MutableAssignment : ConcreteExpression
 		}
 	}
 
+	public override string ToString() => Name + " = " + Value;
+
 	public sealed class ValueTypeNotMatchingWithAssignmentType : ParsingFailed
 	{
 		public ValueTypeNotMatchingWithAssignmentType(Body body, string currentValueType, string newValueType) : base(body, $"Cannot assign {newValueType} value type to {currentValueType} member or variable") { }
@@ -59,10 +69,5 @@ public sealed class MutableAssignment : ConcreteExpression
 	public sealed class InvalidAssignmentTarget : ParsingFailed
 	{
 		public InvalidAssignmentTarget(Body body, string message) : base(body, message) { }
-	}
-
-	public sealed class DirectUsageOfMutableTypesOrImplementsAreForbidden : ParsingFailed
-	{
-		public DirectUsageOfMutableTypesOrImplementsAreForbidden(Body body, string expressionText, string variableName) : base(body, $"Direct usage of mutable types or type that implements Mutable {expressionText} are not allowed. Instead use immutable types for variable {variableName}") { }
 	}
 }
