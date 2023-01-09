@@ -2,5 +2,5 @@
 
 public sealed class Error : Expression
 {
-	public Error(Expression message) : base(message.ReturnType) { }
+	public Error(Expression message) : base(message.ReturnType.GetType(Base.Error)) { }
 }

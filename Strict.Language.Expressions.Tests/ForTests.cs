@@ -165,4 +165,41 @@ public sealed class ForTests : TestExpressions
 		Assert.That(((For)parsedExpression.Expressions[1]).Value.ToString(),
 			Is.EqualTo("Range(0, number)"));
 	}
+
+	[Test]
+	public void ErrorExpressionIsNotAnIterator()
+	{
+		var programType = new Type(type.Package,
+				new TypeLines(nameof(ErrorExpressionIsNotAnIterator), "has number", "LogError Number", "\tconstant error = Error \"Process Failed\"",
+					"\tfor error", "\t\tvalue")).
+			ParseMembersAndMethods(new MethodExpressionParser());
+		Assert.That(() => programType.Methods[0].GetBodyAndParseIfNeeded(),
+			Throws.InstanceOf<For.ExpressionTypeIsNotAnIterator>());
+	}
+
+	[TestCase("error.Stacktraces", nameof(IterateErrorTypeMembers) + "StackTrace")]
+	[TestCase("error.Text", nameof(IterateErrorTypeMembers) + "Text")]
+	public void IterateErrorTypeMembers(string forExpressionText, string testName)
+	{
+		var programType = new Type(type.Package,
+				new TypeLines(testName, "has number", "LogError Number", "\tconstant error = Error \"Process Failed\"",
+					$"\tfor {forExpressionText}", "\t\tvalue")).
+			ParseMembersAndMethods(new MethodExpressionParser());
+		var parsedExpression = (Body)programType.Methods[0].GetBodyAndParseIfNeeded();
+		Assert.That(parsedExpression.Expressions[1], Is.TypeOf(typeof(For)));
+		Assert.That(((For)parsedExpression.Expressions[1]).Value.ToString(),
+			Is.EqualTo(forExpressionText));
+	}
+
+	[Test]
+	public void IterateNameType()
+	{
+		var programType = new Type(type.Package,
+				new TypeLines(nameof(IterateNameType), "has number", "LogError Number", "\tconstant name = Name(\"Strict\")",
+					$"\tfor name", "\t\tvalue")).
+			ParseMembersAndMethods(new MethodExpressionParser());
+		var parsedExpression = (Body)programType.Methods[0].GetBodyAndParseIfNeeded();
+		Assert.That(parsedExpression.Expressions[1], Is.TypeOf(typeof(For)));
+		Assert.That(((For)parsedExpression.Expressions[1]).Value.ToString(), Is.EqualTo("name"));
+	}
 }

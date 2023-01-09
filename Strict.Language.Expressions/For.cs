@@ -62,7 +62,16 @@ public sealed class For : Expression
 			CheckForIncorrectMatchingTypes(body, variableName, forExpression);
 		else
 			AddImplicitVariables(body, line, innerBody);
+		if (!GetIteratorType(forExpression).IsIterator)
+			throw new ExpressionTypeIsNotAnIterator(body, forExpression.ReturnType.Name,
+				line[4..].ToString());
 		return new For(forExpression, innerBody.Parse());
+	}
+
+	public sealed class ExpressionTypeIsNotAnIterator : ParsingFailed
+	{
+		public ExpressionTypeIsNotAnIterator(Body body, string typeName, string line) : base(body,
+			$"Type {typeName} in line " + line) { }
 	}
 
 	private static void AddVariableIfDoesNotExist(Body body, ReadOnlySpan<char> line, ReadOnlySpan<char> variableName)
@@ -139,7 +148,9 @@ public sealed class For : Expression
 	private static ReadOnlySpan<char> FindIterableName(ReadOnlySpan<char> line) =>
 		line.Contains(InName, StringComparison.Ordinal)
 			? line[4..(line.LastIndexOf(InName) - 1)]
-			: line[(line.IndexOf(' ') + 1)..];
+			: line.Contains('.')
+				? line[(line.IndexOf(' ') + 1)..line.IndexOf('.')]
+				: line[(line.IndexOf(' ') + 1)..];
 
 	public sealed class MissingExpression : ParsingFailed
 	{
