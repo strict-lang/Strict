@@ -563,4 +563,3 @@ public sealed class TypeTests
 		Assert.That(accountant.IsCompatible(package.GetType(Base.File)), Is.False);
 	}
 }
-
