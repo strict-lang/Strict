@@ -5,7 +5,6 @@ namespace Strict.Language;
 
 public sealed class GenericTypeImplementation : Type
 {
-	//TODO: should be optimized, almost all cases are exactly one implementation type (e.g. list)
 	public GenericTypeImplementation(Type generic, IReadOnlyList<Type> implementationTypes) : base(generic.Package,
 		new TypeLines(GetTypeName(generic, implementationTypes), Has + generic.Name))
 	{

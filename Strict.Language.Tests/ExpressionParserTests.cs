@@ -40,7 +40,7 @@ public class ExpressionParserTests : ExpressionParser
 	{
 		if (type == null!)
 			CreateType();
-		return new Value(type!.GetType(Base.Number), int.Parse(text));
+		return new Value(type!.GetType(Base.Boolean), int.TryParse(text, out _));
 	}
 
 	public override List<Expression> ParseListArguments(Body body, ReadOnlySpan<char> text) => null!;

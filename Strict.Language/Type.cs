@@ -311,7 +311,6 @@ public class Type : Context
 		if (IsDatatypeOrEnum)
 			return;
 		if (methods.Count == 0 && members.Count < 2 && !IsNoneAnyOrBoolean() &&
-			//TODO: hack because limits are not functional yet
 			Name != Base.Name)
 			throw new NoMethodsFound(this, lineNumber);
 		if (methods.Count > Limit.MethodCount && Package.Name != nameof(Base))
@@ -510,7 +509,7 @@ public class Type : Context
 
 	public GenericTypeImplementation GetGenericImplementation(Type singleImplementationType)
 	{
-		var key = Name + "(" + singleImplementationType.Name + ")"; //TODO: make fast in GenericType
+		var key = Name + "(" + singleImplementationType.Name + ")";
 		return GetGenericImplementation(key) ?? CreateGenericImplementation(key, new[] { singleImplementationType });
 	}
 
