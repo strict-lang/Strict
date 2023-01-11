@@ -2,7 +2,7 @@
 
 namespace Strict.Language.Expressions.Tests;
 
-public class ErrorTests : TestExpressions
+public sealed class ErrorTests : TestExpressions
 {
 	[Test]
 	public void ParseErrorExpression()
@@ -22,5 +22,24 @@ public class ErrorTests : TestExpressions
 			Is.EqualTo(type.GetType(Base.Error)));
 		Assert.That(((If)parsedExpression.Expressions[1]).OptionalElse?.ToString(),
 			Is.EqualTo("return NotANumber"));
+	}
+
+	[Test]
+	public void TypeLevelErrorExpression()
+	{
+		var programType = new Type(type.Package,
+				new TypeLines(nameof(TypeLevelErrorExpression),
+					"has number",
+					"mutable NotANumber = Error",
+					"CheckNumberInRangeTen Number",
+					"\tif number is Range(0, 10)",
+					"\t\treturn number",
+					"\telse",
+					"\t\treturn NotANumber")).
+			ParseMembersAndMethods(new MethodExpressionParser());
+		var ifExpression = (If)programType.Methods[0].GetBodyAndParseIfNeeded();
+		Assert.That(programType.Members[1].Type,
+			Is.EqualTo(type.GetType(Base.Error)));
+		Assert.That(ifExpression.OptionalElse?.ToString(), Is.EqualTo("return NotANumber"));
 	}
 }
