@@ -1,4 +1,5 @@
 using NUnit.Framework;
+using static Strict.Language.Expressions.Text;
 
 namespace Strict.Language.Expressions.Tests;
 
@@ -15,4 +16,13 @@ public sealed class TextTests : TestExpressions
 		Assert.That(methodCall.Method.Name, Is.EqualTo("to"));
 		Assert.That(methodCall.Instance?.ToString(), Is.EqualTo("\"5\""));
 	}
+
+	[Test]
+	public void TextExceededMaximumCharacterLimitUseMultiLine() =>
+		Assert.That(
+			() => ParseExpression(
+				"\"HiHelloHowAreYouHiHelloHowAreYouHiHelloHowAreYouHiHelloHowAreYouHiHelloHowAreYouHiHelloHowAreYouHi" +
+				"HelloHowAreYouHiHelloHowAreYouHiHelloHowAreYouHiHelloHowAreYouHiHelloHowAreYouHiHelloHowAreYouHiHelloHowAreYou\""),
+			Throws.InstanceOf<TextExceededMaximumCharacterLimitUseMultiLine>().With.Message.
+				StartWith("Line has text with characters count 210 but allowed maximum limit is 100"));
 }

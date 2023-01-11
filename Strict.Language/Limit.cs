@@ -11,4 +11,5 @@ public static class Limit
 	public const int ListCharacterCount = 100;
 	public const int MemberCount = 15;
 	public const int MemberCountForEnums = 40;
+	public const int TextCharacterCount = 100;
 }

@@ -16,6 +16,13 @@ public sealed class Text : Value
 	/// </summary>
 	public static Expression? TryParse(Body body, ReadOnlySpan<char> input) =>
 		input.Length >= 2 && input[0] == '"' && input[^1] == '"'
-			? new Text(body.Method, input.Slice(1, input.Length - 2).ToString())
+			? input.Length > Limit.TextCharacterCount + 2
+				? throw new TextExceededMaximumCharacterLimitUseMultiLine(body, input.Length)
+				: new Text(body.Method, input.Slice(1, input.Length - 2).ToString())
 			: null;
+
+	public sealed class TextExceededMaximumCharacterLimitUseMultiLine : ParsingFailed
+	{
+		public TextExceededMaximumCharacterLimitUseMultiLine(Body body, int characterCount) : base(body, "Line has text with characters count " + characterCount + " but allowed maximum limit is " + Limit.TextCharacterCount) { }
+	}
 }
