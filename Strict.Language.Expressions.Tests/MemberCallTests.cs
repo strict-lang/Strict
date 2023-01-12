@@ -192,4 +192,14 @@ public sealed class MemberCallTests : TestExpressions
 		Assert.That(program.Members[0].Name, Is.EqualTo("something"));
 		Assert.That(program.Members[1].Name, Is.EqualTo("somethingDifferent"));
 	}
+
+	[Test]
+	public void MemberNameWithDifferentTypeNamesThanOwnAreNotAllowed() =>
+		Assert.That(() => new Type(type.Package,
+			new TypeLines(nameof(MemberNameWithDifferentTypeNamesThanOwnAreNotAllowed),
+				"has numbers Text",
+				"Run",
+				"\t5")).ParseMembersAndMethods(parser),
+			Throws.InstanceOf<Member.MemberNameWithDifferentTypeNamesThanOwnAreNotAllowed>()
+			.With.Message.Contains("numbers"));
 }

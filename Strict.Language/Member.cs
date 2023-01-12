@@ -8,6 +8,9 @@ public sealed class Member : NamedType
 		Value = value;
 		if (usedMutableKeyword)
 			IsMutable = true;
+		var nameType = definedIn.FindType(Name.MakeFirstLetterUppercase());
+		if (nameType != null && nameType != Type)
+			throw new MemberNameWithDifferentTypeNamesThanOwnAreNotAllowed(definedIn, Name, Type.Name);
 	}
 
 	public Expression? Value { get; set; }
@@ -36,5 +39,11 @@ public sealed class Member : NamedType
 	public sealed class InvalidConstraintExpression : ParsingFailed
 	{
 		public InvalidConstraintExpression(Type type, string memberName, string constraintText) : base(type, 0, $"Constraint: {constraintText} Member: {memberName}") { }
+	}
+
+	public sealed class MemberNameWithDifferentTypeNamesThanOwnAreNotAllowed : ParsingFailed
+	{
+		public MemberNameWithDifferentTypeNamesThanOwnAreNotAllowed(Type type, string nameType,
+			string typeName) : base(type, 0, $"Name {nameType} and type {typeName} are not matching") { }
 	}
 }

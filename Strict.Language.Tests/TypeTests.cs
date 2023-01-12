@@ -360,7 +360,7 @@ public sealed class TypeTests
 	public void CreateTypeUsingConstructorMembers()
 	{
 		new Type(package,
-			new TypeLines("Customer", "has name Text", "has age Number", "Print Text",
+			new TypeLines("Customer", "has text", "has age Number", "Print Text",
 				"\t\"Customer Name: \" + name + \" Age: \" + age")).ParseMembersAndMethods(parser);
 		var createCustomer = new Type(package,
 			new TypeLines(nameof(CreateTypeUsingConstructorMembers), "has log", "Something",
@@ -374,7 +374,7 @@ public sealed class TypeTests
 	public void UsingToMethodForComplexTypeConstructorIsForbidden()
 	{
 		new Type(package,
-			new TypeLines("Customer", "has name Text", "has age Number", "Print Text",
+			new TypeLines("Customer", "has text", "has age Number", "Print Text",
 				"\t\"Customer Name: \" + name + \" Age: \" + age")).ParseMembersAndMethods(parser);
 		var createCustomer = new Type(package,
 			new TypeLines(nameof(CreateTypeUsingConstructorMembers), "has log", "Something",
