@@ -17,9 +17,9 @@ public class MethodExpressionParser : ExpressionParser
 	/// </summary>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public override Expression ParseLineExpression(Body body, ReadOnlySpan<char> line) =>
-		ConstantDeclaration.TryParse(body, line, ConstantDeclaration.Constant) ?? If.TryParse(body, line) ??
+		ConstantDeclaration.TryParse(body, line, ConstantDeclaration.ConstantWithSpaceAtEnd) ?? If.TryParse(body, line) ??
 		For.TryParse(body, line.Trim()) ?? Return.TryParse(body, line) ??
-		ConstantDeclaration.TryParse(body, line, MutableDeclaration.Mutable) ??
+		ConstantDeclaration.TryParse(body, line, MutableDeclaration.MutableWithSpaceAtEnd) ??
 		MutableAssignment.TryParse(body, line) ?? ParseExpression(body, line);
 
 	public override Expression ParseExpression(Body body, ReadOnlySpan<char> input)

@@ -4,18 +4,26 @@ namespace Strict.Language;
 
 public sealed class Parameter : NamedType
 {
-	public Parameter(Type parentType, string name, Expression defaultValue) : base(parentType, name.Replace(Type.Mutable, ""),
+	public Parameter(Type parentType, string name, Expression defaultValue) : base(parentType,
+		IsNameStartsWithMutable(name)
+			? name[Type.Mutable.Length..]
+			: name,
 		defaultValue.ReturnType)
 	{
 		DefaultValue = defaultValue;
 		IsMutable = name.Contains(Type.Mutable, StringComparison.Ordinal);
 	}
 
+	private static bool IsNameStartsWithMutable(string nameAndType) =>
+		nameAndType.StartsWith(Type.Mutable, StringComparison.Ordinal);
+
 	public Expression? DefaultValue { get; }
 
 	public Parameter(Type parentType, string nameAndType) : base(parentType,
-		nameAndType.Replace(Type.Mutable, "")) =>
-		IsMutable = nameAndType.Contains(Type.Mutable, StringComparison.Ordinal);
+		IsNameStartsWithMutable(nameAndType)
+			? nameAndType[Type.Mutable.Length..]
+			: nameAndType) =>
+		IsMutable = IsNameStartsWithMutable(nameAndType);
 
 	public Parameter CloneWithImplementationType(Type newType)
 	{

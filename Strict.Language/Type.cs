@@ -53,8 +53,8 @@ public class Type : Context
 	}
 
 	private static bool HasGenericMember(string line) =>
-		(line.StartsWith(Has, StringComparison.Ordinal) ||
-			line.StartsWith(Mutable, StringComparison.Ordinal)) &&
+		(line.StartsWith(HasWithSpaceAtEnd, StringComparison.Ordinal) ||
+			line.StartsWith(MutableWithSpaceAtEnd, StringComparison.Ordinal)) &&
 		(line.Contains(Base.Generic, StringComparison.Ordinal) ||
 			line.Contains(Base.GenericLowercase, StringComparison.Ordinal));
 
@@ -112,9 +112,9 @@ public class Type : Context
 	private void ParseLineForMembersAndMethods(ExpressionParser parser)
 	{
 		var line = ValidateCurrentLineIsNonEmptyAndTrimmed();
-		if (line.StartsWith(Has, StringComparison.Ordinal))
+		if (line.StartsWith(HasWithSpaceAtEnd, StringComparison.Ordinal))
 			members.Add(GetNewMember(parser));
-		else if (line.StartsWith(Mutable, StringComparison.Ordinal) &&
+		else if (line.StartsWith(MutableWithSpaceAtEnd, StringComparison.Ordinal) &&
 			!(lineNumber + 1 < lines.Length && lines[lineNumber + 1].StartsWith('\t')))
 			members.Add(GetNewMember(parser, true));
 		else
@@ -153,8 +153,8 @@ public class Type : Context
 	private Member GetNewMember(ExpressionParser parser, bool usedMutableKeyword = false)
 	{
 		var member = ParseMember(parser, lines[lineNumber].AsSpan((usedMutableKeyword
-			? Mutable
-			: Has).Length), usedMutableKeyword);
+			? MutableWithSpaceAtEnd
+			: HasWithSpaceAtEnd).Length), usedMutableKeyword);
 		if (members.Any(m => m.Name == member.Name))
 			throw new DuplicateMembersAreNotAllowed(this, lineNumber, member.Name);
 		return member;
@@ -192,7 +192,7 @@ public class Type : Context
 				return new Member(this, nameAndType,
 					GetMemberExpression(parser, nameAndType.MakeFirstLetterUppercase(),
 						remainingLine[(nameAndType.Length + 3)..]), usedMutableKeyword);
-			if (wordAfterName != With)
+			if (wordAfterName != Keyword.With)
 				nameAndType += " " + GetMemberType(nameAndExpression);
 			if (HasConstraints(wordAfterName, ref nameAndExpression))
 				return !nameAndExpression.MoveNext()
@@ -227,16 +227,15 @@ public class Type : Context
 		var equalIndex = remainingLine.IndexOf(EqualCharacter);
 		if (equalIndex > 0)
 		{
-			constraintsSpan = remainingLine[(nameAndType.Length + 1 + With.Length + 1)..(equalIndex - 1)];
+			constraintsSpan = remainingLine[(nameAndType.Length + 1 + Keyword.With.Length + 1)..(equalIndex - 1)];
 			return GetMemberExpression(parser, nameAndType.MakeFirstLetterUppercase(),
 				remainingLine[(equalIndex + 2)..]);
 		}
-		constraintsSpan = remainingLine[(nameAndType.Length + 1 + With.Length + 1)..];
+		constraintsSpan = remainingLine[(nameAndType.Length + 1 + Keyword.With.Length + 1)..];
 		return null;
 	}
 
 	private const char EqualCharacter = '=';
-	private const string With = "with";
 
 	private Expression GetMemberExpression(ExpressionParser parser, string memberName,
 		ReadOnlySpan<char> remainingTextSpan) =>
@@ -260,7 +259,7 @@ public class Type : Context
 		return memberType;
 	}
 
-	private static bool HasConstraints(string wordAfterName, ref SpanSplitEnumerator nameAndExpression) => wordAfterName == With || nameAndExpression.MoveNext() && nameAndExpression.Current.ToString() == With;
+	private static bool HasConstraints(string wordAfterName, ref SpanSplitEnumerator nameAndExpression) => wordAfterName == Keyword.With || nameAndExpression.MoveNext() && nameAndExpression.Current.ToString() == Keyword.With;
 
 	public sealed class MemberMissingConstraintExpression : ParsingFailed
 	{
@@ -290,8 +289,8 @@ public class Type : Context
 			base(type, lineNumber, name) { }
 	}
 
-	public const string Has = "has ";
-	public const string Mutable = "mutable ";
+	public const string HasWithSpaceAtEnd = Keyword.Has + " ";
+	public const string MutableWithSpaceAtEnd = Keyword.Mutable + " ";
 
 	public sealed class MustImplementAllTraitMethodsOrNone : ParsingFailed
 	{

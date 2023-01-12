@@ -21,7 +21,6 @@ public sealed class For : Expression
 	public override int GetHashCode() => Value.GetHashCode();
 	public override string ToString() => $"for {Value}\n\t{Body}";
 	public override bool Equals(Expression? other) => other is For a && Equals(Value, a.Value);
-	private const string ForName = "for";
 	private const string ValueName = "value";
 	private const string IndexName = "index";
 	private const string InName = "in ";
@@ -29,9 +28,9 @@ public sealed class For : Expression
 
 	public static Expression? TryParse(Body body, ReadOnlySpan<char> line)
 	{
-		if (!line.StartsWith(ForName, StringComparison.Ordinal))
+		if (!line.StartsWith(Keyword.For, StringComparison.Ordinal))
 			return null;
-		if (line.Length <= ForName.Length)
+		if (line.Length <= Keyword.For.Length)
 			throw new MissingExpression(body);
 		var innerBody = body.FindCurrentChild();
 		if (innerBody == null)

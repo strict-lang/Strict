@@ -13,6 +13,8 @@ public abstract class NamedType
 			Name = parts.Current.ToString();
 			if (!Name.IsWord())
 				throw new Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers(Name);
+			if (Name.IsKeyword())
+				throw new CannotUseKeywordsAsName(Name);
 			Type = definedIn.GetType(parts.MoveNext()
 				? GetTypeName(nameAndType[(Name.Length + 1)..].ToString())
 				: Name.MakeFirstLetterUppercase());
@@ -28,7 +30,10 @@ public abstract class NamedType
 		}
 	}
 
-	public bool IsMutable { get; protected init; }
+	public sealed class CannotUseKeywordsAsName : Exception
+	{
+		public CannotUseKeywordsAsName(string name) : base(name + " is a keyword and cannot be used as a identifier name. Keywords List: " + Keyword.GetAllKeywords.ToWordList()) { }
+	}
 
 	private static string GetTypeName(string typeName)
 	{
@@ -36,6 +41,8 @@ public abstract class NamedType
 			throw new ListPrefixIsNotAllowedUseImplementationTypeNameInPlural(typeName);
 		return typeName;
 	}
+
+	public bool IsMutable { get; protected init; }
 
 	public sealed class ListPrefixIsNotAllowedUseImplementationTypeNameInPlural : Exception
 	{

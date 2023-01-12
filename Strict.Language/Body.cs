@@ -114,6 +114,8 @@ public sealed class Body : Expression
 
 	public Body AddVariable(string name, Expression value)
 	{
+		if (name.IsKeyword())
+			throw new NamedType.CannotUseKeywordsAsName(name);
 		if (FindVariableValue(name.AsSpan()) != null)
 			throw new ValueIsNotMutableAndCannotBeChanged(this, name);
 		variables ??= new Dictionary<string, Expression>(StringComparer.Ordinal);

@@ -17,7 +17,7 @@ public class MutableDeclaration : ConstantDeclaration
 	}
 
 	public override string ToString() =>
-		Mutable + Name + " = " + Value;
+		MutableWithSpaceAtEnd + Name + " = " + Value;
 
-	internal const string Mutable = "mutable ";
+	internal const string MutableWithSpaceAtEnd = Keyword.Mutable + " ";
 }

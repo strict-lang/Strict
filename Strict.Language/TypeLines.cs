@@ -28,10 +28,10 @@ public class TypeLines
 		// Often there are no members, no need to create a new empty list
 		IList<string> members = Array.Empty<string>();
 		foreach (var line in Lines)
-			if (line.StartsWith(Type.Has, StringComparison.Ordinal))
-				AddMemberType(line[Type.Has.Length..], ref members);
-			else if (line.StartsWith(Type.Mutable, StringComparison.Ordinal))
-				AddMemberType(line[Type.Mutable.Length..], ref members);
+			if (line.StartsWith(Type.HasWithSpaceAtEnd, StringComparison.Ordinal))
+				AddMemberType(line[Type.HasWithSpaceAtEnd.Length..], ref members);
+			else if (line.StartsWith(Type.MutableWithSpaceAtEnd, StringComparison.Ordinal))
+				AddMemberType(line[Type.MutableWithSpaceAtEnd.Length..], ref members);
 			else
 				break;
 		return (IReadOnlyList<string>)members;

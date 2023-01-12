@@ -21,9 +21,9 @@ public class ConstantDeclaration : ConcreteExpression
 	public override int GetHashCode() => Name.GetHashCode() ^ Value.GetHashCode();
 
 	public override string ToString() =>
-		Constant + Name + " = " + Value;
+		ConstantWithSpaceAtEnd + Name + " = " + Value;
 
-	internal const string Constant = "constant ";
+	internal const string ConstantWithSpaceAtEnd = Keyword.Constant + " ";
 
 	public override bool Equals(Expression? other) =>
 		other is ConstantDeclaration a && Equals(Name, a.Name) && Value.Equals(a.Value);
@@ -49,7 +49,7 @@ public class ConstantDeclaration : ConcreteExpression
 		if (!parts.MoveNext() || !parts.MoveNext())
 			throw new MissingAssignmentValueExpression(body);
 		var valueSpan = line[(declarationType.Length + name.Length + 1 + 1 + 1)..];
-		return declarationType == Constant
+		return declarationType == ConstantWithSpaceAtEnd
 			? ParseConstantDeclarationWithValue(body, name, valueSpan)
 			: MutableDeclaration.ParseMutableDeclarationWithValue(body, name, valueSpan);
 	}

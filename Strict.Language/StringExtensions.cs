@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 
 namespace Strict.Language;
 
@@ -21,6 +22,8 @@ public static class StringExtensions
 				return false;
 		return true;
 	}
+
+	public static bool IsKeyword(this string text) => Keyword.GetAllKeywords.Contains(text);
 
 	public static bool IsWordOrWordWithNumberAtEnd(this string text, out int number)
 	{
