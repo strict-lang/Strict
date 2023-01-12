@@ -39,7 +39,8 @@ public sealed class ByteCodeGenerator
 	{
 		for (var parameterIndex = 0; parameterIndex < instance.Method.Parameters.Count;
 			parameterIndex++)
-			if (instance.Method.Parameters[parameterIndex].Type.IsIterator)
+			if (instance.Method.Parameters[parameterIndex].Type is GenericTypeImplementation type &&
+				type.Generic.Name == Base.List)
 				statements.Add(new StoreStatement(
 					new Instance(instance.Method.Parameters[parameterIndex].Type, instance.Arguments),
 					instance.ReturnType.Members[parameterIndex].Name));
@@ -95,8 +96,21 @@ public sealed class ByteCodeGenerator
 
 	private void TryGenerateMutableStatements(Expression expression)
 	{
-		if (expression.IsMutable)
-			GenerateStatementsFromExpression(expression); //TODO? (Expression)mutableExpression.Data);
+		if (expression is MutableDeclaration declaration)
+			GenerateForAssignmentOrDeclaration(declaration.Value, declaration.Name);
+		else if (expression is MutableAssignment assignment)
+			GenerateForAssignmentOrDeclaration(assignment.Value, assignment.Name);
+	}
+
+	private void GenerateForAssignmentOrDeclaration(Expression declarationOrAssignment, string name)
+	{
+		if (declarationOrAssignment is Value declarationOrAssignmentValue)
+			TryGenerateStatementsForAssignmentValue(declarationOrAssignmentValue, name);
+		else
+		{
+			GenerateStatementsFromExpression(declarationOrAssignment);
+			statements.Add(new StoreFromRegisterStatement(registers[nextRegister - 1], name));
+		}
 	}
 
 	private void TryGenerateLoopStatements(Expression expression)
@@ -107,18 +121,9 @@ public sealed class ByteCodeGenerator
 
 	private void TryGenerateAssignmentStatements(Expression expression)
 	{
-		if (expression is not ConstantDeclaration assignmentExpression)
+		if (expression is not ConstantDeclaration assignmentExpression || expression.IsMutable)
 			return;
-		if (assignmentExpression.Value is Value assignmentValue)
-		{
-			TryGenerateStatementsForAssignmentValue(assignmentValue, assignmentExpression.Name);
-		}
-		else
-		{
-			GenerateStatementsFromExpression(assignmentExpression.Value);
-			statements.Add(new StoreFromRegisterStatement(registers[nextRegister - 1],
-				assignmentExpression.Name));
-		}
+		GenerateForAssignmentOrDeclaration(assignmentExpression.Value, assignmentExpression.Name);
 	}
 
 	private void
@@ -267,7 +272,8 @@ public sealed class ByteCodeGenerator
 		if (condition.Instance is Value instanceValue)
 			return LoadConstantForIfConditionLeft(instanceValue);
 		if (condition.Instance is Binary binaryInstance)
-			return GenerateValueBinaryStatements(binaryInstance, GetInstructionBasedOnBinaryOperationName(binaryInstance.Method.Name));
+			return GenerateValueBinaryStatements(binaryInstance,
+				GetInstructionBasedOnBinaryOperationName(binaryInstance.Method.Name));
 		{
 			return LoadVariableForIfConditionLeft(condition);
 		}
