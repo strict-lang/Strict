@@ -6,22 +6,22 @@ public sealed class Parameter : NamedType
 {
 	public Parameter(Type parentType, string name, Expression defaultValue) : base(parentType,
 		IsNameStartsWithMutable(name)
-			? name[Type.Mutable.Length..]
+			? name[Type.MutableWithSpaceAtEnd.Length..]
 			: name,
 		defaultValue.ReturnType)
 	{
 		DefaultValue = defaultValue;
-		IsMutable = name.Contains(Type.Mutable, StringComparison.Ordinal);
+		IsMutable = name.Contains(Type.MutableWithSpaceAtEnd, StringComparison.Ordinal);
 	}
 
 	private static bool IsNameStartsWithMutable(string nameAndType) =>
-		nameAndType.StartsWith(Type.Mutable, StringComparison.Ordinal);
+		nameAndType.StartsWith(Type.MutableWithSpaceAtEnd, StringComparison.Ordinal);
 
 	public Expression? DefaultValue { get; }
 
 	public Parameter(Type parentType, string nameAndType) : base(parentType,
 		IsNameStartsWithMutable(nameAndType)
-			? nameAndType[Type.Mutable.Length..]
+			? nameAndType[Type.MutableWithSpaceAtEnd.Length..]
 			: nameAndType) =>
 		IsMutable = IsNameStartsWithMutable(nameAndType);
 
