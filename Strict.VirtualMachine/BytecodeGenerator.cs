@@ -42,7 +42,7 @@ public sealed class ByteCodeGenerator
 			if (instance.Method.Parameters[parameterIndex].Type is GenericTypeImplementation type &&
 				type.Generic.Name == Base.List)
 				statements.Add(new StoreStatement(
-					new Instance(instance.Method.Parameters[parameterIndex].Type, instance.Arguments),
+					new Instance(instance.Method.Parameters[parameterIndex].Type, instance.Arguments[parameterIndex]),
 					instance.ReturnType.Members[parameterIndex].Name));
 			else
 				InstanceArguments?.Add(instance.ReturnType.Members[parameterIndex].Name,

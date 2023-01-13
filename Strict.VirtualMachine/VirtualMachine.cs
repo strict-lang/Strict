@@ -73,7 +73,7 @@ public sealed class VirtualMachine
 		var value = iterableVariable.Value.ToString();
 		if (iterableVariable.ReturnType?.Name == Base.Text && value != null)
 			variables["value"] = new Instance(Base.Number, value[index].ToString());
-		else if (iterableVariable.ReturnType is { IsIterator: true })
+		else if (iterableVariable.ReturnType is GenericTypeImplementation genericIterable && genericIterable.Generic.Name == Base.List)
 			variables["value"] = new Instance(((List<Expression>)iterableVariable.Value)[index]);
 		else if (iterableVariable.ReturnType?.Name == Base.Number)
 			variables["value"] = new Instance(Base.Number, Convert.ToInt32(iterableVariable.Value) + index);

@@ -2,7 +2,6 @@ using NUnit.Framework;
 
 namespace Strict.VirtualMachine.Tests;
 
-[Ignore("TODO: fix later after language and expressions are good")]
 public sealed class VirtualMachineTests : BaseVirtualMachineTests
 {
 	[SetUp]
@@ -105,7 +104,7 @@ public sealed class VirtualMachineTests : BaseVirtualMachineTests
 		Assert.That(vm.Execute(statements).Returns?.Value, Is.EqualTo(expectedResult));
 	}
 
-	[TestCase("Invertor(1, 2, 3, 4, 5).Invert", "-1-2-3-4-5")]
+	[TestCase("Invertor((1, 2, 3, 4, 5)).Invert", "-1-2-3-4-5")]
 	public void InvertValues(string methodCall, string expectedResult)
 	{
 		var statements = new ByteCodeGenerator(GenerateMethodCallFromSource("Invertor",
