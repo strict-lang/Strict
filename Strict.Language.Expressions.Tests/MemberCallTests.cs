@@ -64,9 +64,9 @@ public sealed class MemberCallTests : TestExpressions
 				ParseMembersAndMethods(parser), Throws.InstanceOf<ParsingFailed>()!);
 
 	[Test]
-	public void NameMustBeAWordWithoutAnySpecialCharactersOrNumbers() =>
+	public void NameMustBeAWordWithoutAnySpecialCharacterOrNumber() =>
 		Assert.That(
-			() => new Type(type.Package, new TypeLines(nameof(NameMustBeAWordWithoutAnySpecialCharactersOrNumbers), "has input1$ = Text(5)")).
+			() => new Type(type.Package, new TypeLines(nameof(NameMustBeAWordWithoutAnySpecialCharacterOrNumber), "has input1$ = Text(5)")).
 				ParseMembersAndMethods(parser),
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.
 				InstanceOf<Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers>());
@@ -164,7 +164,7 @@ public sealed class MemberCallTests : TestExpressions
 			new TypeLines(nameof(BaseTypeMemberCallInDerivedType),
 				"has Range",
 				"Run",
-				"\tconstant a = Range.End + 5")).ParseMembersAndMethods(parser);
+				"\tconstant result = Range.End + 5")).ParseMembersAndMethods(parser);
 		var assignment = (ConstantDeclaration)program.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(((Binary)assignment.Value).Instance,
 			Is.InstanceOf<MemberCall>());
@@ -194,12 +194,22 @@ public sealed class MemberCallTests : TestExpressions
 	}
 
 	[Test]
-	public void MemberNameWithDifferentTypeNamesThanOwnAreNotAllowed() =>
+	public void MemberNameWithDifferentTypeNamesThanOwnNotAllowed() =>
 		Assert.That(() => new Type(type.Package,
-			new TypeLines(nameof(MemberNameWithDifferentTypeNamesThanOwnAreNotAllowed),
-				"has numbers Text",
+			new TypeLines(nameof(MemberNameWithDifferentTypeNamesThanOwnNotAllowed),
+				"has numbers Boolean",
 				"Run",
 				"\t5")).ParseMembersAndMethods(parser),
 			Throws.InstanceOf<Member.MemberNameWithDifferentTypeNamesThanOwnAreNotAllowed>()
 			.With.Message.Contains("numbers"));
+
+	[Test]
+	public void VariableNameCannotHaveDifferentTypeNameThanValue() =>
+		Assert.That(() => new Type(type.Package,
+			new TypeLines(nameof(VariableNameCannotHaveDifferentTypeNameThanValue),
+				"has text",
+				"Run",
+				"\tconstant numbers = \"5\"")).ParseMembersAndMethods(parser).Methods[0].GetBodyAndParseIfNeeded(),
+			Throws.InstanceOf<Body.VariableNameCannotHaveDifferentTypeNameThanValue>()
+			.With.Message.Contains("Variable name numbers denotes different type than its value type Text. Prefer using a different name"));
 }

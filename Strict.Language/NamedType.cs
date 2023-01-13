@@ -28,6 +28,8 @@ public abstract class NamedType
 			if (!Name.IsWord())
 				throw new Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers(Name);
 		}
+		if (!Name.Length.IsWithinLimit())
+			throw new NameLengthIsNotWithinTheAllowedLimit(Name);
 	}
 
 	public sealed class CannotUseKeywordsAsName : Exception
@@ -52,6 +54,11 @@ public abstract class NamedType
 	public sealed class AssignmentWithInitializerTypeShouldNotHaveNameWithType : Exception
 	{
 		public AssignmentWithInitializerTypeShouldNotHaveNameWithType(string name) : base(name) { }
+	}
+
+	public sealed class NameLengthIsNotWithinTheAllowedLimit : Exception
+	{
+		public NameLengthIsNotWithinTheAllowedLimit(string name) : base($"Name {name} length is {name.Length} but allowed limit is between {Limit.NameMinLimit} and {Limit.NameMaxLimit}") { }
 	}
 
 	public string Name { get; }

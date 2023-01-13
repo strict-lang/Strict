@@ -9,7 +9,6 @@ using Strict.Language.Expressions;
 
 namespace Strict.LanguageServer.Tests;
 
-[Ignore("TODO: fix later after language and expressions are good")]
 public sealed class AutoCompletorTests : LanguageServerTests
 {
 	[SetUp]
@@ -27,7 +26,7 @@ public sealed class AutoCompletorTests : LanguageServerTests
 		"has log",
 		"Log(message Text)",
 		"\tlog.")]
-	[TestCase("Length", 2,
+	[TestCase("for", 2,
 		"has range Range",
 		"Bla",
 		"\trange.")]

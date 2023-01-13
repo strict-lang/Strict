@@ -61,10 +61,10 @@ public sealed class MutableTests : TestExpressions
 	}
 
 	[Test]
-	public void MutableVariablesWithSameImplementationTypeShouldUseSameType()
+	public void MutableVariablesUsingSameValueTypeMustBeEqual()
 	{
 		var program = new Type(type.Package,
-			new TypeLines(nameof(MutableVariablesWithSameImplementationTypeShouldUseSameType), "has unused Number",
+			new TypeLines(nameof(MutableVariablesUsingSameValueTypeMustBeEqual), "has unused Number",
 				"UnusedMethod Number",
 				"\tmutable first = 5",
 				"\tmutable second = 6",
@@ -199,10 +199,10 @@ public sealed class MutableTests : TestExpressions
 
 	[TestCase("Mutable", "Mutable(Number)")]
 	[TestCase("Count", "Count")]
-	public void MutableTypesOrImplementsUsageInMembersAreForbidden(string testName, string code) =>
+	public void MutableTypesUsageInMembersAreForbidden(string testName, string code) =>
 		Assert.That(
 			() => new Type(type.Package,
-				new TypeLines(testName + nameof(MutableTypesOrImplementsUsageInMembersAreForbidden),
+				new TypeLines(testName + nameof(MutableTypesUsageInMembersAreForbidden),
 					$"mutable something {code}", "Add(input Count) Number",
 					"\tconstant result = something + input")).ParseMembersAndMethods(parser),
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.InstanceOf<Context.TypeNotFound>());

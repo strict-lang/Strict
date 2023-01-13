@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using static Strict.Language.NamedType;
 
 namespace Strict.Language;
 
@@ -23,6 +24,9 @@ public abstract class Context
 			throw new NameMustBeAWordWithoutAnySpecialCharactersOrNumbers(name);
 		if (this is Package && !name.IsAlphaNumericWithAllowedSpecialCharacters())
 			throw new PackageNameMustBeAWordWithoutSpecialCharacters(name);
+		if (!string.IsNullOrEmpty(name) && !name.Length.IsWithinLimit() &&
+			!name.IsOperatorOrAllowedMethodName())
+			throw new NameLengthIsNotWithinTheAllowedLimit(name);
 		Parent = parent!;
 		Name = name;
 		FullName = string.IsNullOrEmpty(parent?.Name) || parent.Name is nameof(Base)

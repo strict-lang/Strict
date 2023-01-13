@@ -60,4 +60,8 @@ public static class StringExtensions
 	}
 
 	public static string MakeItPlural(this string name) => name + "s";
+
+	public static bool IsOperatorOrAllowedMethodName(this string name) =>
+		name.Length == 1 && name[0].IsSingleCharacterOperator() ||
+		name[0] is 'X' or 'Y' or 'Z' or 'W';
 }

@@ -289,4 +289,3 @@ public sealed class Repositories
 	private const string StrictPackages = nameof(StrictPackages);
 	public static readonly Uri StrictPrefixUri = new("https://github.com/strict-lang/Strict.");
 }
-

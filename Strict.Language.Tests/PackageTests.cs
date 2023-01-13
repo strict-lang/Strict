@@ -133,10 +133,10 @@ public class PackageTests
 	/// Can be used to profile and optimize the GetType performance by doing it many times
 	/// </summary>
 	[Test]
-	public void LoadingTypesOverAndOverWillAlwaysQuicklyReturnTheSame()
+	public void LoadingTypesOverAndOverWillAlwaysQuicklyReturnSame()
 	{
 		var otherMainPackage =
-			new Package(nameof(LoadingTypesOverAndOverWillAlwaysQuicklyReturnTheSame));
+			new Package(nameof(LoadingTypesOverAndOverWillAlwaysQuicklyReturnSame));
 		for (var index = 0; index < 1000; index++)
 			if (otherMainPackage.FindType(mainType.Name, otherMainPackage)!.Name != mainType.Name)
 				throw new AssertionException("FindType=" + //ncrunch: no coverage

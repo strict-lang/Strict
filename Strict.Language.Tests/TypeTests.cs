@@ -431,12 +431,12 @@ public sealed class TypeTests
 	}
 
 	[Test]
-	public void MembersPrivateMethodsShouldNotBeAddedToAvailableMethods()
+	public void AvailableMethodsShouldNotHaveMembersPrivateMethods()
 	{
 		new Type(package,
 			new TypeLines("ProgramWithPublicAndPrivateMethods", "has log", "PublicMethod", "\tlog.Write(\"I am exposed\")", "privateMethod", "\tlog.Write(\"Support privacy\")")).ParseMembersAndMethods(parser);
 		var type = new Type(package,
-			new TypeLines(nameof(MembersPrivateMethodsShouldNotBeAddedToAvailableMethods),
+			new TypeLines(nameof(AvailableMethodsShouldNotHaveMembersPrivateMethods),
 				"has programWithPublicAndPrivateMethods", "run", "\tconstant n = 5"));
 		type.ParseMembersAndMethods(parser);
 		Assert.That(type.AvailableMethods.Keys.Contains("privateMethod"), Is.False);

@@ -116,11 +116,23 @@ public sealed class Body : Expression
 	{
 		if (name.IsKeyword())
 			throw new NamedType.CannotUseKeywordsAsName(name);
+		if (!name.Length.IsWithinLimit())
+			throw new NamedType.NameLengthIsNotWithinTheAllowedLimit(name);
+		var nameType = value.ReturnType.FindType(name.MakeFirstLetterUppercase());
+		if (nameType != null && nameType != value.ReturnType)
+			throw new VariableNameCannotHaveDifferentTypeNameThanValue(this, name, value.ReturnType.Name);
 		if (FindVariableValue(name.AsSpan()) != null)
 			throw new ValueIsNotMutableAndCannotBeChanged(this, name);
 		variables ??= new Dictionary<string, Expression>(StringComparer.Ordinal);
 		variables.Add(name, value);
 		return this;
+	}
+
+	public class VariableNameCannotHaveDifferentTypeNameThanValue : ParsingFailed
+	{
+		public VariableNameCannotHaveDifferentTypeNameThanValue(Body body, string variableNameType,
+			string valueType) : base(body, $"Variable name {variableNameType} " +
+			$"denotes different type than its value type {valueType}. Prefer using a different name") { }
 	}
 
 	public sealed class ValueIsNotMutableAndCannotBeChanged : ParsingFailed

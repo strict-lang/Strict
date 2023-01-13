@@ -298,9 +298,9 @@ public sealed class ListTests : TestExpressions
 			Throws.InstanceOf<InvalidArgumentItIsNotMethodOrListCall>());
 
 	[Test]
-	public void MultiLineListsAllowedOnlyWhenLengthIsMoreThanHundred() =>
+	public void MultiLineListsAllowedOnlyIfLengthIsMoreThanHundred() =>
 		Assert.That(() => new Type(type.Package, new TypeLines(
-					nameof(MultiLineListsAllowedOnlyWhenLengthIsMoreThanHundred),
+					nameof(MultiLineListsAllowedOnlyIfLengthIsMoreThanHundred),
 					// @formatter:off
 					"has log",
 					"Run",

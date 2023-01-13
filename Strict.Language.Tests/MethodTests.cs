@@ -23,11 +23,11 @@ public sealed class MethodTests
 	[Test]
 	public void InvalidMethodParameters() =>
 		Assert.Throws<Method.InvalidMethodParameters>(
-			() => new Method(type, 0, null!, new[] { "a(" }));
+			() => new Method(type, 0, null!, new[] { "ab(" }));
 
 	[Test]
 	public void ParametersMustNotBeEmpty() =>
-		Assert.That(() => new Method(type, 0, null!, new[] { "a()" }),
+		Assert.That(() => new Method(type, 0, null!, new[] { "ab()" }),
 			Throws.InstanceOf<Method.EmptyParametersMustBeRemoved>());
 
 	[TestCase("from(Text)")]

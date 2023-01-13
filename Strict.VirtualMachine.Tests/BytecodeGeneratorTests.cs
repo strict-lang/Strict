@@ -67,12 +67,12 @@ public sealed class ByteCodeGeneratorTests : BaseVirtualMachineTests
 				new Statement[]
 				{
 					new StoreStatement(new Instance(NumberType, 10), "number"),
-					new StoreStatement(new Instance(NumberType, 5), "bla"),
-					new LoadVariableStatement(Register.R0, "bla"),
+					new StoreStatement(new Instance(NumberType, 5), "blaa"),
+					new LoadVariableStatement(Register.R0, "blaa"),
 					new LoadVariableStatement(Register.R1, "number"),
 					new(Instruction.Add, Register.R0, Register.R1, Register.R2),
 					new ReturnStatement(Register.R2)
-				}, new[] { "has number", "SomeFunction Number", "\tconstant bla = 5", "\tbla + number" });
+				}, new[] { "has number", "SomeFunction Number", "\tconstant blaa = 5", "\tblaa + number" });
 			yield return new TestCaseData("SimpleLoopExample(10).GetMultiplicationOfNumbers",
 				"SimpleLoopExample",
 				new Statement[]
