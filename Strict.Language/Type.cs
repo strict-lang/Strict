@@ -486,12 +486,6 @@ public class Type : Context
 	}
 	private Dictionary<string, Type>? cachedAvailableMemberTypes;
 
-	//TODO: Causing stackoverflow
-	//public override string ToString() =>
-	//	base.ToString() + (members.Count > 0
-	//		? " " + nameof(Members) + " " + members.ToWordList()
-	//		: "");
-
 	public override Type? FindType(string name, Context? searchingFrom = null) =>
 		name == Name || name.Contains('.') && name == base.ToString() || name is Other or Outer
 			? this
