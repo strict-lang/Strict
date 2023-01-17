@@ -315,8 +315,8 @@ public sealed class ListTests : TestExpressions
 					"\tsomething"))
 				// @formatter:on
 				.ParseMembersAndMethods(parser).Methods[0].GetBodyAndParseIfNeeded(),
-			Throws.InstanceOf<Type.MultiLineListsAllowedOnlyWhenLengthIsMoreThanHundred>().With.Message.
-				Contains("Current length: 40, Minimum Length for Multi line list expression: 100"));
+			Throws.InstanceOf<Type.MultiLineExpressionsAllowedOnlyWhenLengthIsMoreThanHundred>().With.Message.
+				Contains("Current length: 40, Minimum Length for Multi line expressions: 100"));
 
 	[Test]
 	public void UnterminatedMultiLineListFound() =>

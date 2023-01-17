@@ -36,7 +36,7 @@ public sealed class List : Value
 		if (Values.Count == 0)
 			return ReturnType.Name;
 		var result = Values.ToBrackets();
-		return result.Length > Limit.ListCharacterCount
+		return result.Length > Limit.MultiLineCharacterCount
 			? result.Replace(", ", ",\n\t")
 			: result;
 	}

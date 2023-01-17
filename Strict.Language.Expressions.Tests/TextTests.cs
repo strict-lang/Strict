@@ -1,5 +1,5 @@
 using NUnit.Framework;
-using static Strict.Language.Expressions.Text;
+using Strict.Language.Tests;
 
 namespace Strict.Language.Expressions.Tests;
 
@@ -20,9 +20,30 @@ public sealed class TextTests : TestExpressions
 	[Test]
 	public void TextExceededMaximumCharacterLimitUseMultiLine() =>
 		Assert.That(
-			() => ParseExpression(
-				"\"HiHelloHowAreYouHiHelloHowAreYouHiHelloHowAreYouHiHelloHowAreYouHiHelloHowAreYouHiHelloHowAreYouHi" +
-				"HelloHowAreYouHiHelloHowAreYouHiHelloHowAreYouHiHelloHowAreYouHiHelloHowAreYouHiHelloHowAreYouHiHelloHowAreYou\""),
-			Throws.InstanceOf<TextExceededMaximumCharacterLimitUseMultiLine>().With.Message.
-				StartWith("Line has text with characters count 210 but allowed maximum limit is 100"));
+			() => new Type(new TestPackage(),
+					new TypeLines(nameof(TextExceededMaximumCharacterLimitUseMultiLine), "has number", "Run",
+						"\tconstant result = \"HiHelloHowAreYou\" +", "\t\"HelloHowAreYouHiHello\"")).
+				ParseMembersAndMethods(new MethodExpressionParser()),
+			Throws.InstanceOf<Type.MultiLineExpressionsAllowedOnlyWhenLengthIsMoreThanHundred>().With.
+				Message.StartWith("Current length: 58, Minimum Length for Multi line expressions: 100"));
+
+	[TestCase("Single",
+		"constant result = \"ThisStringShouldGoMoreThanHundredCharactersLongSoThatTheTestCanBePassedThisStringShouldGoMoreThanHundredCharactersLongSoThatTheTestCanBePassed\"",
+		"has number", "Run",
+		"\tconstant result = \"ThisStringShouldGoMoreThanHundredCharactersLongSoThatTheTestCanBePassed\" +",
+		"\t\"ThisStringShouldGoMoreThanHundredCharactersLongSoThatTheTestCanBePassed\"")]
+	[TestCase("Multiple",
+		"constant result = \"ThisStringShouldGoMoreThanHundredSecondLineToMakeItThanHundredCharactersThirdLineToMakeItThanHundredCharactersFourthLine\"",
+		"has number", "Run",
+		"\tconstant result = \"ThisStringShouldGoMoreThanHundred\" +",
+		"\t\"SecondLineToMakeItThanHundredCharacters\" +",
+		"\t\"ThirdLineToMakeItThanHundredCharacters\" +",
+		"\t\"FourthLine\"")]
+	public void
+		ParseMultiLineTextExpressions(string testName, string expectedOutput, params string[] code) =>
+		Assert.That(
+			new Type(new TestPackage(),
+					new TypeLines(nameof(ParseMultiLineTextExpressions) + testName, code)).
+				ParseMembersAndMethods(new MethodExpressionParser()).Methods[0].GetBodyAndParseIfNeeded().
+				ToString(), Is.EqualTo(expectedOutput));
 }

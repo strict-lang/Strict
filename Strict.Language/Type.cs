@@ -419,34 +419,41 @@ public class Type : Context
 		{
 			lineNumber++;
 			if (lines[lineNumber - 1].EndsWith(','))
-				MergeMultiLineListIntoSingleLine();
+				MergeMultiLineListIntoSingleLine(',');
+			else if (lines[lineNumber - 1].EndsWith('+'))
+				MergeMultiLineListIntoSingleLine('+');
 			if (listStartLineNumber != -1 && listEndLineNumber != -1)
 				SetNewLinesAndLineNumbersAfterMerge();
 		}
 	}
 
-	private void MergeMultiLineListIntoSingleLine()
+	private void MergeMultiLineListIntoSingleLine(char endCharacter)
 	{
 		if (listStartLineNumber == -1)
 			listStartLineNumber = lineNumber - 1;
-		lines[listStartLineNumber] += ' ' + lines[lineNumber].TrimStart();
-		if (lines[lineNumber].EndsWith(','))
+		if (endCharacter == ',')
+			lines[listStartLineNumber] += ' ' + lines[lineNumber].TrimStart();
+		else
+			lines[listStartLineNumber] =
+				lines[listStartLineNumber][..^3] + lines[lineNumber].TrimStart()[1..];
+		if (lines[lineNumber].EndsWith(endCharacter))
 			return;
 		listEndLineNumber = lineNumber;
-		if (lines[listStartLineNumber].Length < Limit.ListCharacterCount)
-			throw new MultiLineListsAllowedOnlyWhenLengthIsMoreThanHundred(this,
+		if (lines[listStartLineNumber].Length < Limit.MultiLineCharacterCount)
+			throw new MultiLineExpressionsAllowedOnlyWhenLengthIsMoreThanHundred(this,
 				listStartLineNumber - 1, lines[listStartLineNumber].Length);
 	}
 
 	private int listStartLineNumber = -1;
 	private int listEndLineNumber = -1;
 
-	public sealed class MultiLineListsAllowedOnlyWhenLengthIsMoreThanHundred : ParsingFailed
+	public sealed class MultiLineExpressionsAllowedOnlyWhenLengthIsMoreThanHundred : ParsingFailed
 	{
-		public MultiLineListsAllowedOnlyWhenLengthIsMoreThanHundred(Type type, int lineNumber,
+		public MultiLineExpressionsAllowedOnlyWhenLengthIsMoreThanHundred(Type type, int lineNumber,
 			int length) : base(type, lineNumber,
-			"Current length: " + length +
-			$", Minimum Length for Multi line list expression: {Limit.ListCharacterCount}") { }
+			"Current length: " + length + $", Minimum Length for Multi line expressions: {
+				Limit.MultiLineCharacterCount
+			}") { }
 	}
 
 	private void SetNewLinesAndLineNumbersAfterMerge()
