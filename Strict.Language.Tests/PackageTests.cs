@@ -105,7 +105,7 @@ public class PackageTests
 	}
 
 	[TestCase("Hello-World")]
-	[TestCase("MyPackage2")]
+	[TestCase("MyPackage2022")]
 	[TestCase("Math-Algebra-2")]
 	public void PackageNameCanContainNumbersOrHyphenInMiddleOrEnd(string name) =>
 		Assert.That(() => new Package(mainPackage, name),

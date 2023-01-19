@@ -88,7 +88,7 @@ public class MethodExpressionParser : ExpressionParser
 	{
 		var expression = ParseExpression(body, partToParse);
 		if (expression.ReturnType.Name != Base.Text)
-			throw new ArgumentException("Error must be a text");
+			throw new ArgumentException("Error must be a text but it is " + expression.ReturnType.Name);
 		return new Error(expression);
 	}
 

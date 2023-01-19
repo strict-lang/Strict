@@ -694,9 +694,10 @@ public class Type : Context
 	{
 		get
 		{
-			if (cachedAvailableMethods != null)
+			if (cachedAvailableMethods != null && areMethodsLoaded)
 				return cachedAvailableMethods;
 			cachedAvailableMethods = new Dictionary<string, List<Method>>(StringComparer.Ordinal);
+			areMethodsLoaded = methods.Count > 0;
 			foreach (var method in methods)
 			{
 				if (!method.IsPublic && method.Name != Method.From && !method.Name.AsSpan().IsOperator())
@@ -749,6 +750,7 @@ public class Type : Context
 	}
 
 	private static IReadOnlyDictionary<string, List<Method>>? cachedAnyMethods;
+	private bool areMethodsLoaded;
 
 	public class NoMatchingMethodFound : Exception
 	{

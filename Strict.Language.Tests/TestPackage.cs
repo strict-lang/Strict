@@ -1,3 +1,5 @@
+using Strict.Language.Expressions;
+
 namespace Strict.Language.Tests;
 
 /// <summary>
@@ -7,6 +9,7 @@ public class TestPackage : Package
 {
 	public TestPackage() : base(nameof(TestPackage))
 	{
+		var parser = new MethodExpressionParser();
 		// @formatter:off
 		var types = new[] {
 			new Type(this, new TypeLines(Base.Any, "to Type", "to Text", "is(other) Boolean", "not(other) Boolean")),
@@ -156,8 +159,10 @@ public class TestPackage : Package
 				"\tvalue = value - element")),
 			new Type(this, new TypeLines(Base.Text,
 				"has characters",
-				"from(number)",
-				"\tvalue = Character(number)",
+				"has NewLine = Character(13)",
+				"has Tab = Character(7)",
+				"from",
+				"\tvalue",
 				"Run",
 				"\tvalue is not \"\"",
 				"+(other) Text",
@@ -198,6 +203,6 @@ public class TestPackage : Package
 			new Type(this, new TypeLines(Base.Stacktrace, "has Method", "has FilePath Text", "has Line Number"))
 		};
 		foreach (var type in types)
-			type.ParseMembersAndMethods(null!);
+			type.ParseMembersAndMethods(parser);
 	}
 }

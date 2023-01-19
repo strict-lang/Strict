@@ -76,14 +76,14 @@ public sealed class MemberCallTests : TestExpressions
 	{
 		var assignmentType =
 			new Type(type.Package,
-				new TypeLines(nameof(MemberWithArgumentsInitializer), "has input = Text(5)",
+				new TypeLines(nameof(MemberWithArgumentsInitializer), "has input = Character(5)",
 					"GetInput Text", "\tinput")).ParseMembersAndMethods(parser);
 		Assert.That(assignmentType.Members[0].Name, Is.EqualTo("input"));
 		Assert.That(assignmentType.Members[0].IsPublic, Is.False);
-		Assert.That(assignmentType.Members[0].Type, Is.EqualTo(type.GetType(Base.Text)));
+		Assert.That(assignmentType.Members[0].Type, Is.EqualTo(type.GetType(Base.Character)));
 		Assert.That(assignmentType.Members[0].Value, Is.InstanceOf<MethodCall>());
 		var methodCall = (MethodCall)assignmentType.Members[0].Value!;
-		Assert.That(methodCall.Method.ReturnType.Name, Is.EqualTo(Base.Text));
+		Assert.That(methodCall.Method.ReturnType.Name, Is.EqualTo(Base.Character));
 		Assert.That(methodCall.Arguments[0], Is.EqualTo(new Number(type, 5)));
 	}
 
