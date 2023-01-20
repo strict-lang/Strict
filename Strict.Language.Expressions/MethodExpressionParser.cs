@@ -232,25 +232,46 @@ public class MethodExpressionParser : ExpressionParser
 			body.AddVariable(Base.Value, valueInstance);
 			return valueInstance;
 		}
+		if (input.ToString().IsKeyword())
+			throw new KeywordNotAllowedAsMemberOrMethod(body, input.ToString(), type);
+		//TODO: refactor and cleanup
 		foreach (var parameter in body.Method.Parameters)
 			if (input.Equals(parameter.Name, StringComparison.Ordinal))
 				return new ParameterCall(parameter);
 		var memberCall = TryFindMemberCall(type, instance, input);
+		var inputAsString = input.ToString();
 		if (memberCall != null)
+		{
+			if (instance == null && body.IsFakeBodyForMemberInitialization)
+				throw new CannotAccessMemberBeforeTypeIsParsed(body, inputAsString, type);
 			return memberCall;
+		}
 #if LOG_DETAILS
 		Logger.Info(nameof(TryMemberOrMethodCall) + " found no member in " + body.Method);
 #endif
-		var methodName = input.ToString();
-		var method2 = type.FindMethod(methodName, arguments);
-		if (method2 != null)
-			return new MethodCall(method2, instance, arguments);
+		if (!body.IsFakeBodyForMemberInitialization)
+		{
+			var method2 = type.FindMethod(inputAsString, arguments);
+			if (method2 != null)
+				return new MethodCall(method2, instance, arguments);
+		}
 		if (instance == null)
-			return TryParseFromOrEnum(body, arguments, methodName);
+			return TryParseFromOrEnum(body, arguments, inputAsString);
 #if LOG_DETAILS
-		Logger.Info("ParseNested found no local method in " + body.Method.Type + ": " + methodName);
+		Logger.Info("ParseNested found no local method in " + body.Method.Type + ": " + inputAsString);
 #endif
 		return null;
+	}
+
+	public sealed class CannotAccessMemberBeforeTypeIsParsed : ParsingFailed
+	{
+		public CannotAccessMemberBeforeTypeIsParsed(Body body, string input, Type type) : base(body, input, type) { }
+	}
+
+	public sealed class KeywordNotAllowedAsMemberOrMethod : ParsingFailed
+	{
+		public KeywordNotAllowedAsMemberOrMethod(Body body, string input, Type type) : base(body,
+			input, type) { }
 	}
 
 	private static Expression? TryParseFromOrEnum(Body body, IReadOnlyList<Expression> arguments,

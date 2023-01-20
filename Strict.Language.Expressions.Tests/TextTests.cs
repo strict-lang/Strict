@@ -25,15 +25,15 @@ public sealed class TextTests : TestExpressions
 						"\tconstant result = \"HiHelloHowAreYou\" +", "\t\"HelloHowAreYouHiHello\"")).
 				ParseMembersAndMethods(new MethodExpressionParser()),
 			Throws.InstanceOf<Type.MultiLineExpressionsAllowedOnlyWhenLengthIsMoreThanHundred>().With.
-				Message.StartWith("Current length: 58, Minimum Length for Multi line expressions: 100"));
+				Message.StartWith("Current length: 63, Minimum Length for Multi line expressions: 100"));
 
 	[TestCase("Single",
-		"constant result = \"ThisStringShouldGoMoreThanHundredCharactersLongSoThatTheTestCanBePassedThisStringShouldGoMoreThanHundredCharactersLongSoThatTheTestCanBePassed\"",
+		"constant result = \"ThisStringShouldGoMoreThanHundredCharactersLongSoThatTheTestCanBePassed\" + \"ThisStringShouldGoMoreThanHundredCharactersLongSoThatTheTestCanBePassed\"",
 		"has number", "Run",
 		"\tconstant result = \"ThisStringShouldGoMoreThanHundredCharactersLongSoThatTheTestCanBePassed\" +",
 		"\t\"ThisStringShouldGoMoreThanHundredCharactersLongSoThatTheTestCanBePassed\"")]
 	[TestCase("Multiple",
-		"constant result = \"ThisStringShouldGoMoreThanHundredSecondLineToMakeItThanHundredCharactersThirdLineToMakeItThanHundredCharactersFourthLine\"",
+		"constant result = \"ThisStringShouldGoMoreThanHundred\" + \"SecondLineToMakeItThanHundredCharacters\" + \"ThirdLineToMakeItThanHundredCharacters\" + \"FourthLine\"",
 		"has number", "Run", "\tconstant result = \"ThisStringShouldGoMoreThanHundred\" +",
 		"\t\"SecondLineToMakeItThanHundredCharacters\" +",
 		"\t\"ThirdLineToMakeItThanHundredCharacters\" +", "\t\"FourthLine\"")]
@@ -47,10 +47,24 @@ public sealed class TextTests : TestExpressions
 
 	[TestCase("ParseNewLineTextExpression", "\"FirstLine\" + Text.NewLine + \"ThirdLine\" + Text.NewLine", "has log", "Run Text",
 		"	constant input = \"FirstLine\" + Text.NewLine + \"ThirdLine\" + Text.NewLine")]
-	[TestCase("ParseMultiLineTextExpressionWithNewLine", "\"FirstLine\" + Text.NewLine + \"ThirdLine\" + Text.NewLine + \"Ending This is the continuation of the previous text line\"", "has log", "Run Text",
-		"	constant input = \"FirstLine\" + Text.NewLine + \"ThirdLine\" + Text.NewLine + \"Ending \" +",
+	[TestCase("ParseMultiLineTextExpressionWithNewLine", "\"FirstLine\" + Text.NewLine + \"ThirdLine\" + Text.NewLine + \"Ending\" + \"This is the continuation of the previous text line\"", "has log", "Run Text",
+		"	constant input = \"FirstLine\" + Text.NewLine + \"ThirdLine\" + Text.NewLine + \"Ending\" +",
 		"	\"This is the continuation of the previous text line\"")]
 	public void ParseNewLineTextExpression(string testName, string expected, params string[] code)
+	{
+		var multiLineType = new Type(new TestPackage(),
+				new TypeLines(testName, code)).
+			ParseMembersAndMethods(new MethodExpressionParser());
+		var constantDeclaration =
+			(ConstantDeclaration)multiLineType.Methods[0].GetBodyAndParseIfNeeded();
+		Assert.That(constantDeclaration.Value, Is.InstanceOf<Binary>());
+		Assert.That(constantDeclaration.Value.ToString(), Is.EqualTo(expected));
+	}
+
+	[TestCase("ParseMultiLineTextExpressionWithNewLine", "\"FirstLine\" + Text.NewLine + \"ThirdLine\" + Text.NewLine + \"This is the continuation of the previous text line\"", "has log", "Run Text",
+		"	constant input = \"FirstLine\" + Text.NewLine + \"ThirdLine\" + Text.NewLine +", // ending with new line is the problem in parsing
+		"	\"This is the continuation of the previous text line\"")]
+	public void ParseMultiLineTextEndsWithNewLine(string testName, string expected, params string[] code)
 	{
 		var multiLineType = new Type(new TestPackage(),
 				new TypeLines(testName, code)).

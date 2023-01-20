@@ -143,19 +143,13 @@ public sealed class MemberCallTests : TestExpressions
 	}
 
 	[Test]
-	public void MemberCallUsingAnotherMember()
-	{
-		var program = new Type(type.Package,
-			new TypeLines(nameof(MemberCallUsingAnotherMember),
+	public void MemberCallUsingAnotherMemberIsForbidden() =>
+		Assert.That(() => new Type(type.Package,
+			new TypeLines(nameof(MemberCallUsingAnotherMemberIsForbidden),
 				"has file = File(\"test.txt\")",
 				"has fileDescription = file.Length > 1000 ? \"big file\" else \"small file\"",
 				"Run",
-				"\tconstant a = 5")).ParseMembersAndMethods(parser);
-		Assert.That(program.Members[0].Name, Is.EqualTo("file"));
-		Assert.That(program.Members[1].Name, Is.EqualTo("fileDescription"));
-		Assert.That(program.Members[1].Value?.ToString(),
-			Is.EqualTo("file.Length > 1000 ? \"big file\" else \"small file\""));
-	}
+				"\tconstant a = 5")).ParseMembersAndMethods(parser), Throws.InstanceOf<CannotAccessMemberBeforeTypeIsParsed>());
 
 	[Test]
 	public void BaseTypeMemberCallInDerivedType()

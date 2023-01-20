@@ -42,4 +42,13 @@ public class KeywordTests
 				"has Number",
 				$"Run(mutable {name} Number)",
 				"\t5")).ParseMembersAndMethods(parser), Throws.InstanceOf<ParsingFailed>().With.InnerException.InstanceOf<CannotUseKeywordsAsName>().With.Message.Contains($"{name} is a keyword and cannot be used as a identifier name"));
+
+	[TestCaseSource(nameof(KeywordsList))]
+	public void CannotUseKeywordsAsMemberOrMethodExpressions(string name) =>
+		Assert.That(
+			() => new Type(package,
+				new TypeLines(
+					name.MakeFirstLetterUppercase() + nameof(CannotUseKeywordsAsMethodParameterName),
+					"has input = if", "Run(number)", "\t5")).ParseMembersAndMethods(parser),
+			Throws.InstanceOf<MethodExpressionParser.KeywordNotAllowedAsMemberOrMethod>());
 }

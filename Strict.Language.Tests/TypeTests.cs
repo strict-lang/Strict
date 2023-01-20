@@ -387,10 +387,16 @@ public sealed class TypeTests
 	public void CreateStacktraceTypeUsingMembersInConstructor()
 	{
 		var logger = new Type(package,
-			new TypeLines("Logger", "has log", "has method", "has trace = Stacktrace(method, \"filePath\", 5)", "Log Text",
-				"\tlog.Write(stacktrace to Text)")).ParseMembersAndMethods(parser);
-		Assert.That(logger.Members[2].Type.Name, Is.EqualTo("Stacktrace"));
-		Assert.That(logger.Members[2].Type.Members.Count, Is.EqualTo(3));
+			new TypeLines("Logger",
+				"has log",
+				"has method",
+				"Log Text",
+				"\tlog.Write(stacktrace to Text)",
+				"GetStacktrace Stacktrace",
+				"\tStacktrace(method, \"filePath\", 5)")).ParseMembersAndMethods(parser);
+		var stackTraceMethodReturnType = logger.Methods[1].ReturnType;
+		Assert.That(stackTraceMethodReturnType.Name, Is.EqualTo("Stacktrace"));
+		Assert.That(stackTraceMethodReturnType.Members.Count, Is.EqualTo(3));
 	}
 
 	[Test]

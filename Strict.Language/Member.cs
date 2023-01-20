@@ -29,12 +29,14 @@ public sealed class Member : NamedType
 		for (var index = 0; index < constraintsText.Length; index++)
 		{
 			expressions[index] = parser.ParseExpression(
-				new Body(new Method(Type, 0, parser, new[] { "EmptyBody" })), constraintsText[index]);
+				new Body(new Method(Type, 0, parser, new[] { ConstraintsBody })), constraintsText[index]);
 			if (expressions[index].ReturnType.Name != Base.Boolean)
 				throw new InvalidConstraintExpression(Type, Name, constraintsText[index]);
 		}
 		Constraints = expressions;
 	}
+
+	public const string ConstraintsBody = nameof(ConstraintsBody);
 
 	public sealed class InvalidConstraintExpression : ParsingFailed
 	{

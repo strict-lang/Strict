@@ -239,8 +239,10 @@ public class Type : Context
 
 	private Expression GetMemberExpression(ExpressionParser parser, string memberName,
 		ReadOnlySpan<char> remainingTextSpan) =>
-		parser.ParseExpression(new Body(new Method(this, 0, parser, new[] { "EmptyBody" })),
+		parser.ParseExpression(new Body(new Method(this, 0, parser, new[] { EmptyBody })),
 			GetFromConstructorCallFromUpcastableMemberOrJustEvaluate(memberName, remainingTextSpan));
+
+	public const string EmptyBody = nameof(EmptyBody);
 
 	private ReadOnlySpan<char> GetFromConstructorCallFromUpcastableMemberOrJustEvaluate(
 		string memberName, ReadOnlySpan<char> remainingTextSpan) =>
@@ -431,11 +433,7 @@ public class Type : Context
 	{
 		if (listStartLineNumber == -1)
 			listStartLineNumber = lineNumber - 1;
-		if (endCharacter == ',')
-			lines[listStartLineNumber] += ' ' + lines[lineNumber].TrimStart();
-		else
-			lines[listStartLineNumber] =
-				lines[listStartLineNumber][..^3] + lines[lineNumber].TrimStart()[1..];
+		lines[listStartLineNumber] += ' ' + lines[lineNumber].TrimStart();
 		if (lines[lineNumber].EndsWith(endCharacter))
 			return;
 		listEndLineNumber = lineNumber;
@@ -694,10 +692,9 @@ public class Type : Context
 	{
 		get
 		{
-			if (cachedAvailableMethods != null && areMethodsLoaded)
+			if (cachedAvailableMethods != null)
 				return cachedAvailableMethods;
 			cachedAvailableMethods = new Dictionary<string, List<Method>>(StringComparer.Ordinal);
-			areMethodsLoaded = methods.Count > 0;
 			foreach (var method in methods)
 			{
 				if (!method.IsPublic && method.Name != Method.From && !method.Name.AsSpan().IsOperator())
@@ -750,7 +747,6 @@ public class Type : Context
 	}
 
 	private static IReadOnlyDictionary<string, List<Method>>? cachedAnyMethods;
-	private bool areMethodsLoaded;
 
 	public class NoMatchingMethodFound : Exception
 	{
