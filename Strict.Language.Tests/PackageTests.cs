@@ -119,7 +119,6 @@ public class PackageTests
 		Assert.That(() => new Package(mainPackage, name),
 			Throws.InstanceOf<Context.PackageNameMustBeAWordWithoutSpecialCharacters>());
 
-	[Ignore("TODO: Dictionary type is implemented in Strict.Base causing this failures. Parser support is yet to be added to make these pass")]
 	[Test]
 	public async Task LoadTypesFromOtherPackage()
 	{

@@ -55,7 +55,7 @@ public sealed class MutableAssignment : ConcreteExpression
 			return parameterCall;
 		}
 		default:
-			throw new InvalidAssignmentTarget(body, expression.ToString());
+			throw new InvalidAssignmentTarget(body, expression.ToString()); //ncrunch: no coverage
 		}
 	}
 
@@ -68,6 +68,6 @@ public sealed class MutableAssignment : ConcreteExpression
 
 	public sealed class InvalidAssignmentTarget : ParsingFailed
 	{
-		public InvalidAssignmentTarget(Body body, string message) : base(body, message) { }
+		public InvalidAssignmentTarget(Body body, string message) : base(body, message) { } //ncrunch: no coverage
 	}
 }

@@ -1,5 +1,6 @@
 using NUnit.Framework;
 using Strict.Language.Expressions;
+using static Strict.Language.NamedType;
 
 namespace Strict.Language.Tests;
 
@@ -172,6 +173,12 @@ public sealed class MethodTests
 	}
 
 	[Test]
+	public void TraitMethodParameterCannotHaveDefaultValue() =>
+		Assert.That(
+			() => new Method(type, 0, new MethodExpressionParser(), new[] { "Run(input = \"Hello\")" }),
+			Throws.InstanceOf<Method.DefaultValueCouldNotBeParsedIntoExpression>()!);
+
+	[Test]
 	public void ImmutableMethodParameterValueCannotBeChanged()
 	{
 		var method = new Method(type, 0, new MethodExpressionParser(), new[]
@@ -196,4 +203,11 @@ public sealed class MethodTests
 			() => new Method(type, 0, new MethodExpressionParser(),
 				new[] { "Run(input =)", "	5" }),
 			Throws.InstanceOf<Method.MissingParameterDefaultValue>());
+
+	[Test]
+	public void ParameterWithTypeNameAndInitializerIsForbidden() =>
+		Assert.That(
+			() => new Method(type, 0, new MethodExpressionParser(),
+				new[] { "Run(input Number = 5)", "	5" }),
+			Throws.InstanceOf<AssignmentWithInitializerTypeShouldNotHaveNameWithType>());
 }

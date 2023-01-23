@@ -165,11 +165,13 @@ public sealed class Method : Context
 		if (nameAndDefaultValue.Length < 2)
 			throw new MissingParameterDefaultValue(this, TypeLineNumber + methodLineNumber - 1,
 				nameAndTypeAsString);
-		var defaultValue = ParseExpression(methodBody!, nameAndDefaultValue[1]);
-		if (defaultValue == null)
-			throw new DefaultValueCouldNotBeParsedIntoExpression(this,
-				TypeLineNumber + methodLineNumber - 1, nameAndTypeAsString);
-		return new Parameter(type, nameAndDefaultValue[0], defaultValue);
+		var defaultValue = methodBody != null
+			? ParseExpression(methodBody, nameAndDefaultValue[1])
+			: null;
+		return defaultValue == null
+			? throw new DefaultValueCouldNotBeParsedIntoExpression(this,
+				TypeLineNumber + methodLineNumber - 1, nameAndTypeAsString)
+			: new Parameter(type, nameAndDefaultValue[0], defaultValue);
 	}
 
 	public sealed class MissingParameterDefaultValue : ParsingFailed

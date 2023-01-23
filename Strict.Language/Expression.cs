@@ -25,7 +25,7 @@ public abstract class Expression : IEquatable<Expression>
 	/// expression is actually still immutable, it means everything it calls is also immutable and
 	/// thus it can be evaluated once and will never change its value, a very important optimization.
 	/// </summary>
-	public bool ContainsAnythingMutable { get; protected set; }
+	public bool ContainsAnythingMutable { get; protected set; } //ncrunch: no coverage
 
 	public virtual bool Equals(Expression? other) =>
 		!ReferenceEquals(null, other) &&

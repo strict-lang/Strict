@@ -190,7 +190,7 @@ public class Type : Context
 			var wordAfterName = nameAndExpression.Current.ToString();
 			if (nameAndExpression.Current[0] == EqualCharacter)
 				return new Member(this, nameAndType,
-					GetMemberExpression(parser, nameAndType.MakeFirstLetterUppercase(),
+					GetMemberExpression(parser, nameAndType,
 						remainingLine[(nameAndType.Length + 3)..]), usedMutableKeyword);
 			if (wordAfterName != Keyword.With)
 				nameAndType += " " + GetMemberType(nameAndExpression);
@@ -228,7 +228,7 @@ public class Type : Context
 		if (equalIndex > 0)
 		{
 			constraintsSpan = remainingLine[(nameAndType.Length + 1 + Keyword.With.Length + 1)..(equalIndex - 1)];
-			return GetMemberExpression(parser, nameAndType.MakeFirstLetterUppercase(),
+			return GetMemberExpression(parser, nameAndType,
 				remainingLine[(equalIndex + 2)..]);
 		}
 		constraintsSpan = remainingLine[(nameAndType.Length + 1 + Keyword.With.Length + 1)..];
@@ -245,12 +245,17 @@ public class Type : Context
 	public const string EmptyBody = nameof(EmptyBody);
 
 	private ReadOnlySpan<char> GetFromConstructorCallFromUpcastableMemberOrJustEvaluate(
-		string memberName, ReadOnlySpan<char> remainingTextSpan) =>
-		FindType(memberName) != null && !remainingTextSpan.StartsWith(memberName)
-			? string.Concat(memberName, "(", remainingTextSpan, ")").AsSpan()
-			: remainingTextSpan.StartsWith(Name)
-				? throw new CurrentTypeCannotBeInstantiatedAsMemberType(this, lineNumber, remainingTextSpan.ToString())
-				: remainingTextSpan;
+		string memberName, ReadOnlySpan<char> remainingTextSpan)
+	{
+		var memberNameWithFirstLetterCaps = memberName.MakeFirstLetterUppercase();
+		return FindType(memberNameWithFirstLetterCaps) != null &&
+			!remainingTextSpan.StartsWith(memberNameWithFirstLetterCaps)
+				? string.Concat(memberNameWithFirstLetterCaps, "(", remainingTextSpan, ")").AsSpan()
+				: remainingTextSpan.StartsWith(Name) && !char.IsUpper(memberName[0])
+					? throw new CurrentTypeCannotBeInstantiatedAsMemberType(this, lineNumber,
+						remainingTextSpan.ToString())
+					: remainingTextSpan;
+	}
 
 	public sealed class CurrentTypeCannotBeInstantiatedAsMemberType : ParsingFailed
 	{
@@ -595,7 +600,7 @@ public class Type : Context
 			if (methodParameterType.IsIterator != argumentReturnType.IsIterator && methodParameterType.Name != Base.Any)
 				return false;
 			if (methodParameterType.IsGeneric)
-				throw new GenericTypesCannotBeUsedDirectlyUseImplementation(methodParameterType,
+				throw new GenericTypesCannotBeUsedDirectlyUseImplementation(methodParameterType, //ncrunch: no coverage
 					"(parameter " + index + ") is not usable with argument " +
 					arguments[index].ReturnType + " in " + method);
 			if (!argumentReturnType.IsCompatible(methodParameterType))

@@ -52,8 +52,7 @@ public sealed class Repositories
 			var developmentFolder = StrictDevelopmentFolderPrefix.Replace(nameof(Strict) + ".", packageName);
 			if (Directory.Exists(developmentFolder))
 				return await LoadFromPath(developmentFolder);
-		}
-		//ncrunch: no coverage start
+		} //ncrunch: no coverage start
 		var localPath = Path.Combine(CacheFolder, packageName);
 		if (PreviouslyCheckedDirectories.Contains(localPath))
 			return await LoadFromPath(localPath);

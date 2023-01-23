@@ -234,18 +234,15 @@ public class MethodExpressionParser : ExpressionParser
 		}
 		if (input.ToString().IsKeyword())
 			throw new KeywordNotAllowedAsMemberOrMethod(body, input.ToString(), type);
-		//TODO: refactor and cleanup
 		foreach (var parameter in body.Method.Parameters)
 			if (input.Equals(parameter.Name, StringComparison.Ordinal))
 				return new ParameterCall(parameter);
 		var memberCall = TryFindMemberCall(type, instance, input);
 		var inputAsString = input.ToString();
 		if (memberCall != null)
-		{
-			if (instance == null && body.IsFakeBodyForMemberInitialization)
-				throw new CannotAccessMemberBeforeTypeIsParsed(body, inputAsString, type);
-			return memberCall;
-		}
+			return instance == null && body.IsFakeBodyForMemberInitialization
+				? throw new CannotAccessMemberBeforeTypeIsParsed(body, inputAsString, type)
+				: memberCall;
 #if LOG_DETAILS
 		Logger.Info(nameof(TryMemberOrMethodCall) + " found no member in " + body.Method);
 #endif

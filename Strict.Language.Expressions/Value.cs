@@ -15,6 +15,6 @@ public class Value : ConcreteExpression
 	public Value(Type valueType, object data) : base(valueType) => Data = data;
 	public object Data { get; }
 	public override string ToString() => Data.ToString()!;
-	public override bool Equals(object? other) => Data.Equals(other);
+	public override bool Equals(object? other) => Data.Equals(other); //ncrunch: no coverage
 	public override int GetHashCode() => HashCode.Combine(base.GetHashCode(), Data);
 }
