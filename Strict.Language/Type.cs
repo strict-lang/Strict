@@ -248,7 +248,14 @@ public class Type : Context
 		string memberName, ReadOnlySpan<char> remainingTextSpan) =>
 		FindType(memberName) != null && !remainingTextSpan.StartsWith(memberName)
 			? string.Concat(memberName, "(", remainingTextSpan, ")").AsSpan()
-			: remainingTextSpan;
+			: remainingTextSpan.StartsWith(Name)
+				? throw new CurrentTypeCannotBeInstantiatedAsMemberType(this, lineNumber, remainingTextSpan.ToString())
+				: remainingTextSpan;
+
+	public sealed class CurrentTypeCannotBeInstantiatedAsMemberType : ParsingFailed
+	{
+		public CurrentTypeCannotBeInstantiatedAsMemberType(Type type, int lineNumber, string typeName) : base(type, lineNumber, typeName) { }
+	}
 
 	private static string GetMemberType(SpanSplitEnumerator nameAndExpression)
 	{

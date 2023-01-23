@@ -568,4 +568,19 @@ public sealed class TypeTests
 		var accountant = CreateType("Accountant", "has taxFile File", "has assetFile File", "Calculate Number", "\tvalue");
 		Assert.That(accountant.IsCompatible(package.GetType(Base.File)), Is.False);
 	}
+
+	[Test]
+	public void CurrentTypeCannotBeInstantiatedAsMemberType() =>
+		Assert.That(
+			() => CreateType(nameof(CurrentTypeCannotBeInstantiatedAsMemberType),
+				"has number",
+				"has input = CurrentTypeCannotBeInstantiatedAsMemberType(5)", "Unused", "\t1"),
+			Throws.InstanceOf<Type.CurrentTypeCannotBeInstantiatedAsMemberType>()!);
+
+	[Test]
+	public void MemberNameAsAnotherMemberTypeNameIsForbidden() =>
+		Assert.That(
+			() => CreateType(nameof(MemberNameAsAnotherMemberTypeNameIsForbidden), "has Range",
+				"has input = Range(5, 10)", "Unused", "\t1"),
+			Throws.InstanceOf<MethodExpressionParser.CannotAccessMemberBeforeTypeIsParsed>()!);
 }
