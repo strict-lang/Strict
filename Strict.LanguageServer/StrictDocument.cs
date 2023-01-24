@@ -33,7 +33,7 @@ public sealed class StrictDocument
 		{
 			HandleForMultiLineDeletion(change.Range.Start, change.Range.End);
 			if (change.Text != "")
-				content[change.Range.Start.Line] = content[change.Range.Start.Line].
+				content[change.Range.Start.Line] = content[change.Range.Start.Line]. //ncrunch: no coverage
 					Insert(change.Range.Start.Character, change.Text);
 		}
 		else
@@ -51,9 +51,9 @@ public sealed class StrictDocument
 	private void HandleForDocumentChange(TextDocumentContentChangeEvent change)
 	{
 		if (change.Range == null)
-			return;
+			return; //ncrunch: no coverage
 		if (change.Text.Contains('\n'))
-			content.Add(change.Text.Split('\n')[^1]);
+			content.Add(change.Text.Split('\n')[^1]); //ncrunch: no coverage
 		else if (change.Range.End.Character - change.Range.Start.Character > 0)
 			content[change.Range.Start.Line] = content[change.Range.Start.Line].
 				Remove(change.Range.Start.Character,

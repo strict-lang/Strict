@@ -389,4 +389,16 @@ public sealed class ListTests : TestExpressions
 		Assert.That(expression.ToString(), Is.EqualTo(expected));
 		Assert.That(program.Methods[1].lines.Count, Is.EqualTo(2));
 	}
+
+	[Test]
+	public void ContainsMethodCallOnNumbersList()
+	{
+		var ifExpression = ParseExpression(
+			"if (1, 2, 3).Contains(2)",
+			"\tconstant abc = \"abc\"",
+			"\tlog.Write(abc)") as If;
+		var numbers =
+			((ifExpression?.Condition as MethodCall)?.Instance as List);
+		Assert.That(numbers?.ToString(), Is.EqualTo("(1, 2, 3)"));
+	}
 }

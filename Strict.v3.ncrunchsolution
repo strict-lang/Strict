@@ -11,6 +11,7 @@
       <Value>Strict.Compiler\Strict.Compiler.csproj</Value>
       <Value>Strict.Grammar.Tests\Strict.Grammar.Tests.csproj</Value>
       <Value>Program.cs:Strict.Language.Tests\Strict.Language.Tests.csproj</Value>
+      <Value>Strict.LanguageServer\Strict.LanguageServer.csproj\obj</Value>
     </MetricsExclusionList>
     <SolutionConfigured>True</SolutionConfigured>
   </Settings>

@@ -22,14 +22,14 @@ public sealed class TextDocumentSynchronizer : ITextDocumentSyncHandler
 	public StrictDocument Document { get; }
 	private readonly ILanguageServerFacade languageServer;
 	private readonly Package strictBase;
-	public TextDocumentAttributes GetTextDocumentAttributes(DocumentUri uri) => new(uri, "strict");
+	public TextDocumentAttributes GetTextDocumentAttributes(DocumentUri uri) => new(uri, "strict"); //ncrunch: no coverage
 
 	public Task<Unit> Handle(DidChangeTextDocumentParams request,
 		CancellationToken cancellationToken)
 	{
 		var uri = request.TextDocument.Uri.ToString();
 		if (!Document.Contains(uri))
-			Document.AddOrUpdate(uri, request.ContentChanges.ToArray().Select(x => x.Text).ToArray());
+			Document.AddOrUpdate(uri, request.ContentChanges.ToArray().Select(x => x.Text).ToArray()); //ncrunch: no coverage
 		Document.Update(uri, request.ContentChanges.ToArray());
 		languageServer.Window.LogInfo($"Updated document: {uri}\n{Document.Get(uri)[^1]}");
 		ParseUpdatedCodeAndPublishDiagnostics(request.TextDocument.Uri);
@@ -57,7 +57,7 @@ public sealed class TextDocumentSynchronizer : ITextDocumentSyncHandler
 
 	public Task<Unit> Handle(DidCloseTextDocumentParams request,
 		CancellationToken cancellationToken) =>
-		Unit.Task;
+		Unit.Task; //ncrunch: no coverage
 
 	public Task<Unit>
 		Handle(DidSaveTextDocumentParams request, CancellationToken cancellationToken)
@@ -68,7 +68,7 @@ public sealed class TextDocumentSynchronizer : ITextDocumentSyncHandler
 
 	public TextDocumentChangeRegistrationOptions GetRegistrationOptions(
 		SynchronizationCapability capability, ClientCapabilities clientCapabilities) =>
-		new()
+		new() //ncrunch: no coverage
 		{
 			DocumentSelector = BaseSelectors.StrictDocumentSelector,
 			SyncKind = TextDocumentSyncKind.Incremental
@@ -78,17 +78,17 @@ public sealed class TextDocumentSynchronizer : ITextDocumentSyncHandler
 		IRegistration<TextDocumentSaveRegistrationOptions, SynchronizationCapability>.
 		GetRegistrationOptions(SynchronizationCapability capability,
 			ClientCapabilities clientCapabilities) =>
-		new() { DocumentSelector = BaseSelectors.StrictDocumentSelector, IncludeText = true };
+		new() { DocumentSelector = BaseSelectors.StrictDocumentSelector, IncludeText = true }; //ncrunch: no coverage
 
 	TextDocumentOpenRegistrationOptions
 		IRegistration<TextDocumentOpenRegistrationOptions, SynchronizationCapability>.
 		GetRegistrationOptions(SynchronizationCapability capability,
 			ClientCapabilities clientCapabilities) =>
-		new() { DocumentSelector = BaseSelectors.StrictDocumentSelector };
+		new() { DocumentSelector = BaseSelectors.StrictDocumentSelector }; //ncrunch: no coverage
 
 	TextDocumentCloseRegistrationOptions
 		IRegistration<TextDocumentCloseRegistrationOptions, SynchronizationCapability>.
 		GetRegistrationOptions(SynchronizationCapability capability,
 			ClientCapabilities clientCapabilities) =>
-		new() { DocumentSelector = BaseSelectors.StrictDocumentSelector };
+		new() { DocumentSelector = BaseSelectors.StrictDocumentSelector }; //ncrunch: no coverage
 }

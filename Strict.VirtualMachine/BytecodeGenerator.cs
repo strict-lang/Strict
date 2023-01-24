@@ -162,14 +162,14 @@ public sealed class ByteCodeGenerator
 			return Convert.ToInt32(iterableInstance.Value);
 		if (iterableInstance.ReturnType != null && iterableInstance.ReturnType.IsIterator)
 			return ((IEnumerable<Expression>)iterableInstance.Value).Count();
-		return 0;
+		return 0; //ncrunch: no coverage
 	}
 
 	private void GenerateRestLoopStatements(For forExpression, Instance iterableInstance)
 	{
 		var length = GetLength(iterableInstance);
 		if (length == null)
-			return;
+			return; //ncrunch: no coverage
 		var (registerForIterationCount, registerForIndexReduction) =
 			(AllocateRegister(true), AllocateRegister(true));
 		statements.Add(new LoadConstantStatement(registerForIterationCount,
@@ -267,17 +267,14 @@ public sealed class ByteCodeGenerator
 		return rightRegister;
 	}
 
-	private Register GenerateLeftSideForIfCondition(MethodCall condition)
-	{
-		if (condition.Instance is Value instanceValue)
-			return LoadConstantForIfConditionLeft(instanceValue);
-		if (condition.Instance is Binary binaryInstance)
-			return GenerateValueBinaryStatements(binaryInstance,
-				GetInstructionBasedOnBinaryOperationName(binaryInstance.Method.Name));
+	private Register GenerateLeftSideForIfCondition(MethodCall condition) =>
+		condition.Instance switch
 		{
-			return LoadVariableForIfConditionLeft(condition);
-		}
-	}
+			Value instanceValue => LoadConstantForIfConditionLeft(instanceValue),
+			Binary binaryInstance => GenerateValueBinaryStatements(binaryInstance,
+				GetInstructionBasedOnBinaryOperationName(binaryInstance.Method.Name)),
+			_ => LoadVariableForIfConditionLeft(condition)
+		};
 
 	private Register LoadConstantForIfConditionLeft(Value instanceValue)
 	{

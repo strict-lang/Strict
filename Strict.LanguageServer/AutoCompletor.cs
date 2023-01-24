@@ -130,6 +130,7 @@ public sealed class AutoCompletor : ICompletionHandler
 			InsertText = item.Name, FilterText = item.Name, Label = item.Name, Kind = item.CompletionKind
 		});
 
+	//ncrunch: no coverage start
 	public CompletionRegistrationOptions GetRegistrationOptions(CompletionCapability capability,
 		ClientCapabilities clientCapabilities) =>
 		new()
@@ -138,6 +139,7 @@ public sealed class AutoCompletor : ICompletionHandler
 			DocumentSelector = BaseSelectors.StrictDocumentSelector,
 			ResolveProvider = false
 		};
+	//ncrunch: no coverage end
 
 	private sealed record StrictCompletionItem(string Name, CompletionItemKind CompletionKind);
 }
