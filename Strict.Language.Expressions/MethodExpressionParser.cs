@@ -39,21 +39,8 @@ public class MethodExpressionParser : ExpressionParser
 			throw new ExpressionWithTypeAnyIsNotAllowed(body, input.ToString());
 	}
 
-	private Expression TryParseMethodOrMember(Body body, ReadOnlySpan<char> input)
-	{
-		var postfix = new ShuntingYard(input.ToString());
-		if (postfix.Output.Count == 1)
-			return TryParseMemberOrZeroOrOneArgumentMethodOrNestedCall(body, input) ??
-				ParseTextWithSpacesOrListWithMultipleOrNestedElements(body, input[postfix.Output.Pop()]);
-		if (postfix.Output.Count == 2)
-			return ParseMethodCallWithArguments(body, input, postfix);
-		var binary = Binary.Parse(body, input, postfix.Output);
-		if (postfix.Output.Count == 0)
-			return binary;
-		return ParseInContext(body.Method.Type, body, input[postfix.Output.Peek()],
-				new[] { binary }) ??
-			throw new UnknownExpression(body, input[postfix.Output.Peek()].ToString());
-	}
+	private static bool IsExpressionTypeAny(ReadOnlySpan<char> input) =>
+		input.Equals(Base.Any, StringComparison.Ordinal) || input.StartsWith(Base.Any + "(");
 
 	private Expression TryParseCommon(Body body, ReadOnlySpan<char> input) =>
 		Boolean.TryParse(body, input) ?? Text.TryParse(body, input) ??
@@ -81,15 +68,28 @@ public class MethodExpressionParser : ExpressionParser
 						? If.ParseConditional(body, input)
 						: null;
 
-	private static bool IsExpressionTypeAny(ReadOnlySpan<char> input) =>
-		input.Equals(Base.Any, StringComparison.Ordinal) || input.StartsWith(Base.Any + "(");
-
 	private Error TryParseErrorExpression(Body body, ReadOnlySpan<char> partToParse)
 	{
 		var expression = ParseExpression(body, partToParse);
 		if (expression.ReturnType.Name != Base.Text)
 			throw new ArgumentException("Error must be a text but it is " + expression.ReturnType.Name);
 		return new Error(expression);
+	}
+
+	private Expression TryParseMethodOrMember(Body body, ReadOnlySpan<char> input)
+	{
+		var postfix = new ShuntingYard(input.ToString());
+		if (postfix.Output.Count == 1)
+			return TryParseMemberOrZeroOrOneArgumentMethodOrNestedCall(body, input) ??
+				ParseTextWithSpacesOrListWithMultipleOrNestedElements(body, input[postfix.Output.Pop()]);
+		if (postfix.Output.Count == 2)
+			return ParseMethodCallWithArguments(body, input, postfix);
+		var binary = Binary.Parse(body, input, postfix.Output);
+		if (postfix.Output.Count == 0)
+			return binary;
+		return ParseInContext(body.Method.Type, body, input[postfix.Output.Peek()],
+				new[] { binary }) ??
+			throw new UnknownExpression(body, input[postfix.Output.Peek()].ToString());
 	}
 
 	private Expression ParseMethodCallWithArguments(Body body, ReadOnlySpan<char> input,
@@ -120,7 +120,7 @@ public class MethodExpressionParser : ExpressionParser
 	/// operator (like is, to, +, etc.) or execute some method. For more arguments more complex
 	/// parsing has to be done and we have to invoke ShuntingYard for the argument list.
 	/// </summary>
-	public Expression? TryParseMemberOrZeroOrOneArgumentMethodOrNestedCall(Body body,
+	private Expression? TryParseMemberOrZeroOrOneArgumentMethodOrNestedCall(Body body,
 		ReadOnlySpan<char> input)
 	{
 		var argumentsStart = input.IndexOf('(');

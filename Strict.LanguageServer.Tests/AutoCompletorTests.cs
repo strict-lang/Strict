@@ -30,17 +30,17 @@ public sealed class AutoCompletorTests : LanguageServerTests
 		"has range Range",
 		"Bla",
 		"\trange.")]
-	[TestCase("+", 2,
+	[TestCase("to", 2,
 		"has log",
 		"CheckText(message Text)",
 		"\tmessage.")]
-	[TestCase("+", 4,
+	[TestCase("to", 4,
 		"has log",
 		"SecondMethod Number",
 		"\t5",
 		"FirstMethod(message Text)",
 		"\tmessage.")]
-	[TestCase("+", 3,
+	[TestCase("to", 3,
 		"has text",
 		"VariableCall",
 		"\tconstant something = \"hello\" + text",

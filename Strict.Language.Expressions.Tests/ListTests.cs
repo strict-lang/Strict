@@ -398,7 +398,7 @@ public sealed class ListTests : TestExpressions
 			"\tconstant abc = \"abc\"",
 			"\tlog.Write(abc)") as If;
 		var numbers =
-			((ifExpression?.Condition as MethodCall)?.Instance as List);
+			(ifExpression?.Condition as MethodCall)?.Instance as List;
 		Assert.That(numbers?.ToString(), Is.EqualTo("(1, 2, 3)"));
 	}
 }
