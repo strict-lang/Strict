@@ -85,6 +85,18 @@ public class BaseVirtualMachineTests : TestExpressions
 		"\t\t\tcount = count - 1",
 		"\tresult"
 	};
+	protected static readonly string[] IfAndElseTestCode =
+	{
+		"has number",
+		"IsEven Text",
+		"\tmutable result = \"\"",
+		"\tif number > 10",
+		"\t\tresult = \"Number is more than 10\"",
+		"\t\treturn result",
+		"\telse",
+		"\t\tresult = \"Number is less or equal than 10\"",
+		"\t\treturn result"
+	};
 	protected static readonly Statement[] ExpectedStatementsOfRemoveParanthesesKata =
 	{
 		new StoreStatement(new Instance(TextType, "some(thing)"), "text"),

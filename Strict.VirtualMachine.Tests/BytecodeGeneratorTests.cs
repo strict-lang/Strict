@@ -48,6 +48,25 @@ public sealed class ByteCodeGeneratorTests : BaseVirtualMachineTests
 					"\tAdd(10, 5).Calculate is 15",
 					"\tFirst + Second"
 				});
+			yield return new TestCaseData("AddOne(10, 5).Calculate", "AddOne",
+				new Statement[]
+				{
+					new StoreStatement(new Instance(NumberType, 10), "First"),
+					new StoreStatement(new Instance(NumberType, 5), "Second"),
+					new LoadVariableStatement(Register.R0, "First"),
+					new LoadVariableStatement(Register.R1, "Second"),
+					new(Instruction.Add, Register.R0, Register.R1, Register.R2),
+					new(Instruction.Add, Register.R2, Register.R3, Register.R4),
+					new ReturnStatement(Register.R4)
+				},
+				new[]
+				{
+					"has First Number",
+					"has Second Number",
+					"Calculate Number",
+					"\tAddOne(10, 5).Calculate is 15",
+					"\tFirst + Second + 1"
+				});
 			yield return new TestCaseData("Multiply(10).By(2)", "Multiply",
 				new Statement[]
 				{

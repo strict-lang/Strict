@@ -42,7 +42,8 @@ public sealed class ByteCodeGenerator
 			if (instance.Method.Parameters[parameterIndex].Type is GenericTypeImplementation type &&
 				type.Generic.Name == Base.List)
 				statements.Add(new StoreStatement(
-					new Instance(instance.Method.Parameters[parameterIndex].Type, instance.Arguments[parameterIndex]),
+					new Instance(instance.Method.Parameters[parameterIndex].Type,
+						instance.Arguments[parameterIndex]),
 					instance.ReturnType.Members[parameterIndex].Name));
 			else
 				InstanceArguments?.Add(instance.ReturnType.Members[parameterIndex].Name,
@@ -80,12 +81,19 @@ public sealed class ByteCodeGenerator
 
 	private void GenerateStatementsFromExpression(Expression expression)
 	{
+		TryGenerateBodyStatements(expression);
 		TryGenerateBinaryStatements(expression);
 		TryGenerateIfStatements(expression);
 		TryGenerateAssignmentStatements(expression);
 		TryGenerateLoopStatements(expression);
 		TryGenerateMutableStatements(expression);
 		TryGenerateVariableCallStatement(expression);
+	}
+
+	private void TryGenerateBodyStatements(Expression expression)
+	{
+		if (expression is Body body)
+			GenerateStatements(body.Expressions);
 	}
 
 	private void TryGenerateVariableCallStatement(Expression expression)
@@ -105,7 +113,9 @@ public sealed class ByteCodeGenerator
 	private void GenerateForAssignmentOrDeclaration(Expression declarationOrAssignment, string name)
 	{
 		if (declarationOrAssignment is Value declarationOrAssignmentValue)
+		{
 			TryGenerateStatementsForAssignmentValue(declarationOrAssignmentValue, name);
+		}
 		else
 		{
 			GenerateStatementsFromExpression(declarationOrAssignment);
@@ -205,17 +215,21 @@ public sealed class ByteCodeGenerator
 		GenerateCodeForIfCondition((Binary)ifExpression.Condition);
 		GenerateCodeForThen(ifExpression);
 		statements.Add(new JumpViaIdStatement(Instruction.JumpEnd, idStack.Pop()));
-		if (ifExpression.OptionalElse != null)
-		{
-			idStack.Push(conditionalId);
-			statements.Add(new JumpViaIdStatement(Instruction.JumpToIdIfTrue, conditionalId++));
-			GenerateStatements(new[] { ifExpression.OptionalElse });
-			statements.Add(new JumpViaIdStatement(Instruction.JumpEnd, idStack.Pop()));
-		}
+		if (ifExpression.OptionalElse == null)
+			return;
+		idStack.Push(conditionalId);
+		statements.Add(new JumpViaIdStatement(Instruction.JumpToIdIfTrue, conditionalId++));
+		GenerateStatements(new[] { ifExpression.OptionalElse });
+		statements.Add(new JumpViaIdStatement(Instruction.JumpEnd, idStack.Pop()));
 	}
 
-	private void GenerateCodeForThen(If ifExpression) =>
-		GenerateStatements(new[] { ifExpression.Then });
+	private void GenerateCodeForThen(If ifExpression)
+	{
+		if (ifExpression.Then is Body thenBody)
+			GenerateStatements(thenBody.Expressions);
+		else
+			GenerateStatements(new[] { ifExpression.Then });
+	}
 
 	private void GenerateCodeForBinary(MethodCall binary)
 	{
@@ -234,7 +248,7 @@ public sealed class ByteCodeGenerator
 			BinaryOperator.Minus => Instruction.Subtract,
 			BinaryOperator.Divide => Instruction.Divide,
 			BinaryOperator.Modulate => Instruction.Modulo,
-			_ => throw new NotImplementedException()
+			_ => throw new NotImplementedException() //ncrunch: no coverage
 		};
 
 	private void GenerateCodeForIfCondition(Binary condition)

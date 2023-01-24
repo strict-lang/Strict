@@ -116,7 +116,7 @@ public sealed class AutoCompletor : ICompletionHandler
 
 	private static List<StrictCompletionItem>
 		CreateCompletionItemsForMethods(IEnumerable<Method> methods) =>
-		methods.Select(method => method.Name).
+		methods.Select(method => method.Name).Where(name => name.IsWord()).
 			Select(name => new StrictCompletionItem(name, CompletionItemKind.Method)).ToList();
 
 	private static IEnumerable<StrictCompletionItem>
