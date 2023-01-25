@@ -5,6 +5,7 @@ using Strict.VirtualMachine;
 
 namespace Strict.LanguageServer;
 
+//ncrunch: no coverage start
 public class TestRunner
 {
 	public TestRunner(ILanguageServerFacade languageServer, IEnumerable<Method> methods)
@@ -13,7 +14,6 @@ public class TestRunner
 		Methods = methods;
 	}
 
-	//ncrunch: no coverage start
 	private ILanguageServerFacade LanguageServer { get; }
 	private IEnumerable<Method> Methods { get; }
 	private readonly VirtualMachine.VirtualMachine vm = new();
