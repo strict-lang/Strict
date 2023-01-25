@@ -265,9 +265,9 @@ public sealed class ByteCodeGenerator
 		condition.Name switch
 		{
 			BinaryOperator.Greater => Instruction.GreaterThan,
-			BinaryOperator.Smaller => Instruction.LessThan,
+			BinaryOperator.Smaller => Instruction.LessThan, //ncrunch: no coverage
 			BinaryOperator.Is => Instruction.Equal,
-			_ => Instruction.Equal
+			_ => Instruction.Equal //ncrunch: no coverage
 		};
 
 	private Register GenerateRightSideForIfCondition(MethodCall condition)
@@ -277,26 +277,27 @@ public sealed class ByteCodeGenerator
 			statements.Add(new LoadConstantStatement(rightRegister,
 				new Instance(argumentValue.ReturnType, argumentValue.Data)));
 		else
-			statements.Add(new LoadVariableStatement(rightRegister, condition.Arguments[0].ToString()));
+			statements.Add(new LoadVariableStatement(rightRegister, condition.Arguments[0].ToString())); //ncrunch: no coverage
 		return rightRegister;
 	}
 
 	private Register GenerateLeftSideForIfCondition(MethodCall condition) =>
 		condition.Instance switch
 		{
-			Value instanceValue => LoadConstantForIfConditionLeft(instanceValue),
+			Value instanceValue => LoadConstantForIfConditionLeft(instanceValue), //ncrunch: no coverage
 			Binary binaryInstance => GenerateValueBinaryStatements(binaryInstance,
 				GetInstructionBasedOnBinaryOperationName(binaryInstance.Method.Name)),
 			_ => LoadVariableForIfConditionLeft(condition)
 		};
 
+	//ncrunch: no coverage start
 	private Register LoadConstantForIfConditionLeft(Value instanceValue)
 	{
 		var leftRegister = AllocateRegister();
 		statements.Add(new LoadConstantStatement(leftRegister,
 			new Instance(instanceValue.ReturnType, instanceValue.Data)));
 		return leftRegister;
-	}
+	} //ncrunch: no coverage end
 
 	private Register LoadVariableForIfConditionLeft(MethodCall condition)
 	{

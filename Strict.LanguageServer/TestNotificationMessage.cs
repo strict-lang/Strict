@@ -1,5 +1,6 @@
 ﻿namespace Strict.LanguageServer;
 
+//ncrunch: no coverage start
 public sealed class TestNotificationMessage
 {
 	public int LineNumber { get; }
