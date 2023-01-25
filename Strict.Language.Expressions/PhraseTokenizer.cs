@@ -91,10 +91,10 @@ public sealed class PhraseTokenizer
 					processToken((index - 1)..index);
 				}
 				// ReSharper disable once ComplexConditionExpression
-				else if (input[index - 1] == 's' && input[index..].Length > 4 && input[(index + 1)..(index + 5)] == "not ")
+				else if (input.IsMultiCharacterOperatorWithSpace(index, out var tokenEnd))
 				{
-					processToken(tokenStart..(index + 4));
-					index += 4;
+					processToken(tokenStart..(index + tokenEnd));
+					index += tokenEnd;
 				}
 				else
 					processToken(tokenStart..index);

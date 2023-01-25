@@ -119,6 +119,7 @@ public sealed class VirtualMachineTests : BaseVirtualMachineTests
 			"IfAndElseTest(3).IsEven", IfAndElseTestCode)).Generate();
 		Assert.That(vm.Execute(statements).Returns?.Value, Is.EqualTo("Number is less or equal than 10"));
 	}
+
 	[TestCase("EvenSumCalculator(100).IsEven", 2450, new[]
 	{
 		"has number",

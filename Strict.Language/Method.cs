@@ -47,17 +47,26 @@ public sealed class Method : Context
 			if (firstLine[i] == '(' || firstLine[i] == ' ')
 			{
 				name = firstLine[..i];
-				if (NameIsNotOperator(firstLine))
-					name = firstLine[..(i + 4)];
+				if (IsNameIsNotOperator(firstLine))
+					return firstLine[..(i + 4)].ToString();
+				if (IsNameIsNotInOperator(firstLine))
+					return firstLine[..(i + 7)].ToString();
+				if (IsNameIsInOperator(firstLine))
+					return firstLine[..(i + 3)].ToString();
 				break;
 			}
-		return !name.IsWord() && !name.IsOperator() && !NameIsNotOperator(firstLine)
+		return !name.IsWord() && !name.IsOperator()
 			? throw new NameMustBeAWordWithoutAnySpecialCharactersOrNumbers(name.ToString())
 			: name.ToString();
 	}
 
-	private static bool NameIsNotOperator(ReadOnlySpan<char> input) =>
-		input.StartsWith("is not(", StringComparison.Ordinal);
+	private static bool IsNameIsInOperator(ReadOnlySpan<char> input) => input.StartsWith(BinaryOperator.IsIn + "(", StringComparison.Ordinal);
+
+	private static bool IsNameIsNotOperator(ReadOnlySpan<char> input) =>
+		input.StartsWith(BinaryOperator.IsNot + "(", StringComparison.Ordinal);
+
+	private static bool IsNameIsNotInOperator(ReadOnlySpan<char> input) =>
+		input.StartsWith(BinaryOperator.IsNotIn + "(", StringComparison.Ordinal);
 
 	public int TypeLineNumber { get; }
 	private readonly ExpressionParser parser;

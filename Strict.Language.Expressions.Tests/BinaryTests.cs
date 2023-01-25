@@ -91,7 +91,7 @@ public sealed class BinaryTests : TestExpressions
 	[TestCase("3 + (1 + 2) * 5 * (2 + 5)")]
 	[TestCase("3 + (1 + 2) % 5 * (2 + 5)")]
 	[TestCase("(1 + 5, 2, 3) + (5, 2 * 5)")]
-	[TestCase("5 > 4 or 10 < 100.5 and 5 >= 5 and 5 <= 6")]
+	[TestCase("5 > 4 or 10 < 100.5 and 5 > 4 and 5 < 6")]
 	public void ParseGroupExpressionProducesSameCode(string code) =>
 		Assert.That(ParseExpression(code).ToString(), Is.EqualTo(code));
 

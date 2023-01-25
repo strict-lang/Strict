@@ -64,4 +64,26 @@ public sealed class ShuntingYardTests
 	public void UnterminatedStringInsideBrackets(string input) =>
 		Assert.That(() => new ShuntingYard(input),
 			Throws.InstanceOf<PhraseTokenizer.UnterminatedString>());
+
+	[Test]
+	public void ParseIfWithIsNotInMethod()
+	{
+		const string Input = "if bla is not in (5, 6, 4)";
+		var tokens = new ShuntingYard(Input);
+		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo(BinaryOperator.IsNotIn));
+		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo("(5, 6, 4)"));
+		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo("bla"));
+		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo("if"));
+	}
+
+	[Test]
+	public void ParseIfWithIsInMethod()
+	{
+		const string Input = "if bla is in (5, 6, 4)";
+		var tokens = new ShuntingYard(Input);
+		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo(BinaryOperator.IsIn));
+		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo("(5, 6, 4)"));
+		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo("bla"));
+		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo("if"));
+	}
 }

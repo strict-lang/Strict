@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 
 namespace Strict.Language;
@@ -21,6 +22,8 @@ public static class BinaryOperator
 	public const string Is = "is";
 	public const string In = "in";
 	public const string IsNot = "is not";
+	public const string IsIn = Is + " " + In;
+	public const string IsNotIn = IsNot + " " + In;
 	public const string To = "to";
 	public const string And = "and";
 	public const string Or = "or";
@@ -50,19 +53,54 @@ public static class BinaryOperator
 
 	private static readonly string[] MultiCharacterOperators =
 	{
-		SmallerOrEqual, GreaterOrEqual, Is, IsNot, In, And, Or, Xor, To, UnaryOperator.Not
+		SmallerOrEqual, GreaterOrEqual, Is, IsIn, IsNot, IsNotIn, In, And, Or, Xor, To, UnaryOperator.Not
 	};
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static bool IsMultiCharacterOperator(this ReadOnlySpan<char> name)
 	{
-		if (name.Length is <= 3 or 6)
+		if (name.Length is <= 3 or 5 or 6 or 9)
 			// ReSharper disable once ForCanBeConvertedToForeach
 			for (var index = 0; index < MultiCharacterOperators.Length; index++)
 				if (name.Compare(MultiCharacterOperators[index]))
 					return true;
 		return false;
 	}
+
+	public static bool IsMultiCharacterOperatorWithSpace(this string input, int currentIndex, out int tokenEnd)
+	{
+		tokenEnd = 0;
+		if (input[currentIndex - 1] != 's')
+			return false;
+		if (input.IsNotInOperator(currentIndex))
+		{
+			tokenEnd = 7;
+			return true;
+		}
+		if (input.IsNotOperator(currentIndex))
+		{
+			tokenEnd = 4;
+			return true;
+		}
+		if (input.IsInOperator(currentIndex))
+		{
+			tokenEnd = 3;
+			return true;
+		}
+		return false;
+	}
+
+	private static bool IsNotInOperator(this string input, int currentIndex) =>
+		input[currentIndex..].Length > 7 &&
+		input[(currentIndex - 2)..(currentIndex + 8)] == IsNotIn + " ";
+
+	private static bool IsNotOperator(this string input, int currentIndex) =>
+		input[currentIndex..].Length > 4 &&
+		input[(currentIndex - 2)..(currentIndex + 5)] == IsNot + " ";
+
+	private static bool IsInOperator(this string input, int currentIndex) =>
+		input[currentIndex..].Length > 3 &&
+		input[(currentIndex - 2)..(currentIndex + 4)] == IsIn + " ";
 
 	private static readonly string[] All =
 	{
@@ -111,7 +149,8 @@ public static class BinaryOperator
 								? 4
 								: token.Compare(UnaryOperator.Not)
 									? 3
-									: token.Compare(Is) || token.Compare(IsNot)
+									: token.Compare(Is) || token.Compare(IsIn) || token.Compare(IsNotIn) ||
+									token.Compare(IsNot)
 										? 1
 										: GetPrecedence(token[0]);
 }

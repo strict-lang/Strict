@@ -304,4 +304,16 @@ public sealed class IfTests : TestExpressions
 		Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(),
 			Throws.InstanceOf<Body.ChildBodyReturnTypeMustMatchMethod>());
 	}
+
+	[Test]
+	public void ParseIsNotIn() =>
+		Assert.That(ParseExpression("if bla is not in (5)", "\tlog.Write(\"Hey\")"),
+			Is.EqualTo(new If(CreateBinary(new MemberCall(null, bla), BinaryOperator.IsNotIn, list),
+				GetThen())));
+
+	[Test]
+	public void ParseIsIn() =>
+		Assert.That(ParseExpression("if bla is in (5)", "\tlog.Write(\"Hey\")"),
+			Is.EqualTo(new If(CreateBinary(new MemberCall(null, bla), BinaryOperator.IsIn, list),
+				GetThen())));
 }
