@@ -572,8 +572,7 @@ public sealed class TypeTests
 	[Test]
 	public void CurrentTypeCannotBeInstantiatedAsMemberType() =>
 		Assert.That(
-			() => CreateType(nameof(CurrentTypeCannotBeInstantiatedAsMemberType),
-				"has number",
+			() => CreateType(nameof(CurrentTypeCannotBeInstantiatedAsMemberType), "has number",
 				"has input = CurrentTypeCannotBeInstantiatedAsMemberType(5)", "Unused", "\t1"),
 			Throws.InstanceOf<Type.CurrentTypeCannotBeInstantiatedAsMemberType>()!);
 
@@ -583,4 +582,13 @@ public sealed class TypeTests
 			() => CreateType(nameof(MemberNameAsAnotherMemberTypeNameIsForbidden), "has Range",
 				"has input = Range(5, 10)", "Unused", "\t1"),
 			Throws.InstanceOf<MethodExpressionParser.CannotAccessMemberBeforeTypeIsParsed>()!);
+
+	[Category("Manual")]
+	[Test]
+	public void CheckGetTypeCache()
+	{
+		var cachedType = CreateType("CachedType", "Run");
+		for (var count = 0; count < 5; count++)
+			Assert.That(package.GetType("CachedType"), Is.EqualTo(cachedType));
+	}
 }

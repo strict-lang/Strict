@@ -54,13 +54,24 @@ public abstract class Context
 
 	public Type GetType(string name)
 	{
+		if (cachedTypes != null && cachedTypes.TryGetValue(name, out var type))
+			return type;
+		cachedTypes ??= new Dictionary<string, Type>();
+		var foundType = GetTypeFromPackages(name);
+		cachedTypes.Add(name, foundType);
+		return foundType;
+	}
+
+	private Dictionary<string, Type>? cachedTypes;
+
+	private Type GetTypeFromPackages(string name)
+	{
 		if (name == Name)
 			return (Type)this;
 		if (name.Contains('(') && name.EndsWith(')'))
 			return GetGenericTypeWithArguments(name);
 		if (!name.EndsWith('s'))
-			return (FindFullType(name) ?? FindType(name, this)) ??
-				throw new TypeNotFound(name, FullName);
+			return (FindFullType(name) ?? FindType(name, this)) ?? throw new TypeNotFound(name, FullName);
 		var singularName = name[..^1];
 		if (singularName == Base.Generic)
 			// ReSharper disable once TailRecursiveCall
