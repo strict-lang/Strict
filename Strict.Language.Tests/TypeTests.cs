@@ -573,7 +573,7 @@ public sealed class TypeTests
 	public void CurrentTypeCannotBeInstantiatedAsMemberType() =>
 		Assert.That(
 			() => CreateType(nameof(CurrentTypeCannotBeInstantiatedAsMemberType), "has number",
-				"has input = CurrentTypeCannotBeInstantiatedAsMemberType(5)", "Unused", "\t1"),
+				"has currentType = CurrentTypeCannotBeInstantiatedAsMemberType(5)", "Unused", "\t1"),
 			Throws.InstanceOf<Type.CurrentTypeCannotBeInstantiatedAsMemberType>()!);
 
 	[Test]

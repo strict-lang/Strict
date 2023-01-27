@@ -316,12 +316,12 @@ public class Type : Context
 
 	private void ValidateMethodAndMemberCountLimits()
 	{
-		var memberLimit = IsDatatypeOrEnum
+		var memberLimit = IsEnum
 			? Limit.MemberCountForEnums
 			: Limit.MemberCount;
 		if (members.Count > memberLimit)
 			throw new MemberCountShouldNotExceedLimit(this, memberLimit);
-		if (IsDatatypeOrEnum)
+		if (IsDataType || IsEnum)
 			return;
 		if (methods.Count == 0 && members.Count < 2 && !IsNoneAnyOrBoolean() &&
 			Name != Base.Name)
@@ -330,9 +330,11 @@ public class Type : Context
 			throw new MethodCountMustNotExceedLimit(this);
 	}
 
-	public bool IsDatatypeOrEnum =>
+	public bool IsDataType =>
 		methods.Count == 0 &&
 		(members.Count > 1 || members.Count == 1 && members[0].Value is not null);
+	public bool IsEnum =>
+		methods.Count == 0 && members.Count > 1 && members.All(m => m.Value is not null);
 
 	public sealed class MemberCountShouldNotExceedLimit : ParsingFailed
 	{
@@ -595,7 +597,7 @@ public class Type : Context
 			if (argumentReturnType == methodParameterType || method.IsGeneric || methodParameterType.Name == Base.Any ||
 				IsArgumentImplementationTypeMatchParameterType(argumentReturnType, methodParameterType))
 				continue;
-			if (methodParameterType.IsDatatypeOrEnum && methodParameterType.Members[0].Type == argumentReturnType)
+			if (methodParameterType.IsEnum && methodParameterType.Members[0].Type == argumentReturnType)
 				continue;
 			if (methodParameterType.IsIterator != argumentReturnType.IsIterator && methodParameterType.Name != Base.Any)
 				return false;
@@ -627,7 +629,7 @@ public class Type : Context
 		fromMethod += GetMatchingMemberParametersIfExist(arguments);
 		return fromMethod.Length > 5 && fromMethod.Split(',').Length - 1 == arguments.Count
 			? BuildMethod($"{fromMethod[..^2]})")
-			: IsDatatypeOrEnum
+			: IsDataType
 				? BuildMethod(fromMethod[..^1])
 				: null;
 	}
@@ -779,4 +781,8 @@ public class Type : Context
 			"not match these method(s):\n" + string.Join("\n",
 				allMethods)) { }
 	}
+
+	public bool IsUpcastable(Type otherType) =>
+		IsEnum && otherType.IsEnum && otherType.Members.Any(member =>
+			member.Name.Equals(Name, StringComparison.OrdinalIgnoreCase));
 }

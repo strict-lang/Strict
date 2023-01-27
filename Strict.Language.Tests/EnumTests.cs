@@ -1,4 +1,5 @@
-﻿using NUnit.Framework;
+﻿using System;
+using NUnit.Framework;
 using Strict.Language.Expressions;
 
 namespace Strict.Language.Tests;
@@ -18,23 +19,24 @@ public sealed class EnumTests
 
 	private void CreateInstructionEnumType() =>
 		new Type(package,
-			new TypeLines("Instruction", "has Number", "has Set Number", "has Add Number", "has Subtract Number",
-				"has Multiply Number", "has Divide Number", "has BinaryOperatorsSeparator = 100",
-				"has GreaterThan Number", "has LessThan Number", "has Equal Number", "has NotEqual Number",
-				"has ConditionalSeparator = 200", "has JumpIfTrue Number", "has JumpIfFalse Number",
-				"has JumpIfNotZero Number", "has JumpsSeparator = 300")).ParseMembersAndMethods(parser);
+			new TypeLines("Instruction", "has Set = 1", "has Add = 2", "has Subtract = 3",
+				"has Multiply = 4", "has Divide = 5", "has BinaryOperatorsSeparator = 100",
+				"has GreaterThan = 6", "has LessThan = 7", "has Equal = 8", "has NotEqual = 9",
+				"has ConditionalSeparator = 200", "has JumpIfTrue = 10", "has JumpIfFalse = 11",
+				"has JumpIfNotZero = 12", "has JumpsSeparator = 300")).ParseMembersAndMethods(parser);
 
 	private Package package = null!;
 	private ExpressionParser parser = null!;
 
-	[TestCase(true, "has log", "has number")]
-	[TestCase(true, "has log", "has boolean")]
+	[TestCase(true, "has Set = 1", "has Add = 2")]
+	[TestCase(false, "has log", "has number")]
+	[TestCase(false, "has log", "has boolean")]
 	[TestCase(false, "has log", "Run", "\t5")]
 	public void CheckTypeIsEnum(bool expected, params string[] lines)
 	{
 		var type = new Type(package,
 			new TypeLines(nameof(CheckTypeIsEnum), lines)).ParseMembersAndMethods(parser);
-		Assert.That(type.IsDatatypeOrEnum, Is.EqualTo(expected));
+		Assert.That(type.IsEnum, Is.EqualTo(expected));
 	}
 
 	[Test]
@@ -69,7 +71,7 @@ public sealed class EnumTests
 				new TypeLines(nameof(EnumWithoutValuesUsedAsMemberAndVariable),
 					"has something = Instruction.Add", "Run", "\tconstant myInstruction = Instruction.Set")).
 			ParseMembersAndMethods(parser);
-		Assert.That(consumingType.GetType("Instruction").IsDatatypeOrEnum, Is.True);
+		Assert.That(consumingType.GetType("Instruction").IsEnum, Is.True);
 		Assert.That(((MemberCall)consumingType.Members[0].Value!).Member.Name, Is.EqualTo("Add"));
 		var assignment = (ConstantDeclaration)consumingType.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(assignment.Value, Is.InstanceOf<MemberCall>()!);
@@ -108,10 +110,40 @@ public sealed class EnumTests
 					"CallExecute Number",
 					"\tconstant result = ExecuteInstruction((1, 2), Instruction.Add)")).
 			ParseMembersAndMethods(parser);
-		var _ = (If)consumingType.Methods[0].GetBodyAndParseIfNeeded();
+		consumingType.Methods[0].GetBodyAndParseIfNeeded();
 		var result = (ConstantDeclaration)consumingType.Methods[1].GetBodyAndParseIfNeeded();
 		Assert.That(result.Value, Is.InstanceOf<MethodCall>());
 		Assert.That(((MemberCall)((MethodCall)result.Value).Arguments[1]).Member.Name,
 			Is.EqualTo("Add"));
+	}
+
+	[Test]
+	public void EnumCanHaveMembersWithDifferentTypes()
+	{
+		var type = new Type(package,
+				new TypeLines(nameof(EnumCanHaveMembersWithDifferentTypes),
+					"has One = 1",
+					"has SomeText = \"2\"",
+					"has InputFile = File(\"test.txt\")")).
+			ParseMembersAndMethods(parser);
+		Assert.That(type.IsEnum, Is.EqualTo(true));
+	}
+
+	[Test]
+	public void UseEnumExtensions()
+	{
+		new Type(package,
+				new TypeLines("MoreInstruction",
+					"has instruction = 13",
+					"has BlaDivide = 14",
+					"has BlaBinaryOperatorsSeparator = 15",
+					"has BlaGreaterThan = 16",
+					"has BlaLessThan = 17")).
+			ParseMembersAndMethods(parser);
+		Assert.That(
+			new Type(package,
+					new TypeLines(nameof(UseEnumExtensions), "has log", "UseExtendedEnum(instruction)",
+						"\tconstant result = instruction to MoreInstruction")).ParseMembersAndMethods(parser).
+				Methods[0].GetBodyAndParseIfNeeded(), Is.Not.Null);
 	}
 }
