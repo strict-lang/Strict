@@ -12,8 +12,9 @@ namespace Strict.Language.Expressions;
 /// </summary>
 public class MethodCall : ConcreteExpression
 {
-	public MethodCall(Method method, Expression? instance, IReadOnlyList<Expression> arguments) :
-		base(method.ReturnType)
+	public MethodCall(Method method, Expression? instance, IReadOnlyList<Expression> arguments,
+		Type? toReturnType = null) :
+		base(GetMethodReturnType(method, toReturnType))
 	{
 		if (method.Name == Method.From && instance != null)
 			throw new NotSupportedException("Makes no sense, we don't have an instance yet"); //ncrunch: no coverage
@@ -22,12 +23,17 @@ public class MethodCall : ConcreteExpression
 		Arguments = arguments;
 	}
 
+	private static Type GetMethodReturnType(Method method, Type? toReturnType) =>
+		method.Name == BinaryOperator.To && toReturnType != null
+			? toReturnType
+			: method.ReturnType;
+
 	public Method Method { get; }
 	public Expression? Instance { get; }
 	public IReadOnlyList<Expression> Arguments { get; }
 
-	public MethodCall(Method method, Expression? instance = null) : this(method, instance,
-		Array.Empty<Expression>()) { }
+	public MethodCall(Method method, Expression? instance = null, Type? toReturnType = null) : this(method, instance,
+		Array.Empty<Expression>(), toReturnType) { }
 
 	public override string ToString() =>
 		Instance != null
