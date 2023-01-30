@@ -5,7 +5,7 @@ namespace Strict.Language.Expressions;
 public sealed class To : MethodCall
 {
 	public To(Expression left, Method operatorMethod, Type conversionType) : base(operatorMethod,
-		left) =>
+		left, conversionType) =>
 		ConversionType = conversionType;
 
 	public Type ConversionType { get; }
@@ -21,7 +21,7 @@ public sealed class To : MethodCall
 			throw new ConversionTypeIsIncompatible(body,
 				$"Conversion for {left.ReturnType.Name} and {conversionType.Name} does not exist",
 				conversionType);
-		return new To(left, left.ReturnType.GetMethod(BinaryOperator.To, Array.Empty<Expression>()),
+		return new To(left, method,
 			conversionType);
 	}
 

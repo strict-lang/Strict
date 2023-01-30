@@ -1,5 +1,4 @@
-﻿using System;
-using NUnit.Framework;
+﻿using NUnit.Framework;
 using Strict.Language.Expressions;
 
 namespace Strict.Language.Tests;
@@ -140,10 +139,11 @@ public sealed class EnumTests
 					"has BlaGreaterThan = 16",
 					"has BlaLessThan = 17")).
 			ParseMembersAndMethods(parser);
-		Assert.That(
-			new Type(package,
-					new TypeLines(nameof(UseEnumExtensions), "has log", "UseExtendedEnum(instruction)",
-						"\tconstant result = instruction to MoreInstruction")).ParseMembersAndMethods(parser).
-				Methods[0].GetBodyAndParseIfNeeded(), Is.Not.Null);
+		var body = (Body)new Type(package,
+				new TypeLines(nameof(UseEnumExtensions), "has log", "UseExtendedEnum(instruction) Number",
+					"\tconstant result = instruction to MoreInstruction",
+					"\tresult.BlaDivide")).ParseMembersAndMethods(parser).
+			Methods[0].GetBodyAndParseIfNeeded();
+		Assert.That(body.Expressions[1].ToString(), Is.EqualTo("result.BlaDivide"));
 	}
 }

@@ -45,7 +45,7 @@ public class NumberTests : TestExpressions
 	public void ParseNumberToText()
 	{
 		var methodCall = (MethodCall)ParseExpression("5 to Text");
-		Assert.That(methodCall.ReturnType, Is.EqualTo(type.GetType(Base.Text)));
+		Assert.That(methodCall.ReturnType.Name, Is.EqualTo(Base.Text));
 		Assert.That(methodCall.Instance, Is.EqualTo(new Number(method, 5)));
 	}
 
