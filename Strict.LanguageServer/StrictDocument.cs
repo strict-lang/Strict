@@ -13,6 +13,7 @@ public sealed class StrictDocument
 {
 	private readonly ConcurrentDictionary<DocumentUri, string[]> strictDocuments = new();
 	private List<string> content = new();
+	private readonly VirtualMachine.VirtualMachine vm = new();
 
 	public void Update(DocumentUri uri, TextDocumentContentChangeEvent[] changes)
 	{
@@ -25,10 +26,16 @@ public sealed class StrictDocument
 	// ReSharper disable once ExcessiveIndentation
 	private void UpdateDocument(TextDocumentContentChangeEvent change)
 	{
-		if (change.Range != null && change.Text.StartsWith(Environment.NewLine, StringComparison.Ordinal) && change.Range.Start.Line == change.Range.End.Line)
+		if (change.Range != null &&
+			change.Text.StartsWith(Environment.NewLine, StringComparison.Ordinal) &&
+			change.Range.Start.Line == change.Range.End.Line)
+		{
 			content.Insert(change.Range.Start.Line + 1, change.Text[2..]);
+		}
 		else if (change.Range != null && content.Count - 1 < change.Range.Start.Line)
+		{
 			AddSingleOrMultiLineNewText(change);
+		}
 		else if (change.Range != null && change.Range.Start.Line < change.Range.End.Line)
 		{
 			HandleForMultiLineDeletion(change.Range.Start, change.Range.End);
@@ -37,7 +44,9 @@ public sealed class StrictDocument
 					Insert(change.Range.Start.Character, change.Text);
 		}
 		else
+		{
 			HandleForDocumentChange(change);
+		}
 	}
 
 	private void AddSingleOrMultiLineNewText(TextDocumentContentChangeEvent change)
@@ -74,7 +83,8 @@ public sealed class StrictDocument
 
 	private void RemoveLinesInMiddleAndUpdateStartAndEndLines(Position start, Position end)
 	{
-		content[start.Line] = content[start.Line][..start.Character] + content[end.Line][end.Character..];
+		content[start.Line] =
+			content[start.Line][..start.Character] + content[end.Line][end.Character..];
 		content.RemoveRange(start.Line + 1, end.Line - start.Line);
 	}
 
@@ -102,7 +112,7 @@ public sealed class StrictDocument
 		var diagnostics = ImmutableArray<Diagnostic>.Empty.ToBuilder();
 		try
 		{
-			ParseCurrentFile(package, uri);
+			ParseCurrentFile(package, uri, languageServer);
 		}
 		catch (Exception exception)
 		{
@@ -120,21 +130,25 @@ public sealed class StrictDocument
 		return diagnostics;
 	}
 
-	private void ParseCurrentFile(Package package, DocumentUri uri)
+	private void ParseCurrentFile(Package package, DocumentUri uri, ILanguageServerFacade languageServer)
 	{
 		var folderName = uri.Path.GetFolderName();
 		var subPackage = package.Find(folderName) ?? new Package(package, folderName);
 		var type = subPackage.SynchronizeAndGetType(uri.Path.GetFileName(), content);
 		if (type is { IsTrait: false })
-			ParseTypeMethods(type.Methods);
+		{
+			var methods = ParseTypeMethods(type.Methods);
+			if (methods != null)
+				new TestRunner(languageServer, methods).Run();
+		}
 	}
 
-	private static void ParseTypeMethods(IEnumerable<Method> methods)
+	private static IEnumerable<Method>? ParseTypeMethods(IEnumerable<Method> methods)
 	{
-		foreach (var method in methods)
-			if (!method.IsGeneric)
-				method.GetBodyAndParseIfNeeded();
-	} //ncrunch: no coverage
+		foreach (var method in methods.Where(method => !method.IsGeneric))
+			if (method.GetBodyAndParseIfNeeded() is Body body)
+				yield return body.Method; //ncrunch: no coverage
+	}
 
 	private Range GetErrorTextRange(string errorMessage)
 	{

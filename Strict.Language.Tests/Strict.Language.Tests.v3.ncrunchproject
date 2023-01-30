@@ -1,0 +1,22 @@
+﻿<ProjectConfiguration>
+  <Settings>
+    <IgnoredTests>
+      <NamedTestSelector>
+        <TestName>Strict.Language.Tests.RepositoriesTests.LoadingSameRepositoryAgainUsesCache</TestName>
+      </NamedTestSelector>
+      <NamedTestSelector>
+        <TestName>Strict.Language.Tests.RepositoriesTests.LoadStrictBaseTypes</TestName>
+      </NamedTestSelector>
+      <NamedTestSelector>
+        <TestName>Strict.Language.Tests.RepositoriesTests.LoadStrictBaseTypesHundredTimes</TestName>
+      </NamedTestSelector>
+      <NamedTestSelector>
+        <TestName>Strict.Language.Tests.RepositoriesTests.MakeSureParsingFailedErrorMessagesAreClickable</TestName>
+      </NamedTestSelector>
+      <NamedTestSelector>
+        <TestName>Strict.Language.Tests.PackageTests.LoadTypesFromOtherPackage</TestName>
+      </NamedTestSelector>
+      <AllTestsSelector />
+    </IgnoredTests>
+  </Settings>
+</ProjectConfiguration>
