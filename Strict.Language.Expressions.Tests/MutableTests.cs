@@ -206,4 +206,60 @@ public sealed class MutableTests : TestExpressions
 					$"mutable something {code}", "Add(input Count) Number",
 					"\tconstant result = something + input")).ParseMembersAndMethods(parser),
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.InstanceOf<Context.TypeNotFound>());
+
+	[Test]
+	public void CannotReassignValuesToImmutableMember()
+	{
+		new Type(type.Package,
+				new TypeLines("BaseClever", "mutable Number", "Compute Number", "\t5 + Number")).
+			ParseMembersAndMethods(parser);
+		Assert.That(
+			() => new Type(type.Package,
+					new TypeLines(nameof(CannotReassignValuesToImmutableMember), "has input = BaseClever(3)",
+						"Run", "\tinput.Compute", "\tinput = BaseClever(5)")).ParseMembersAndMethods(parser).
+				Methods[0].GetBodyAndParseIfNeeded(),
+			Throws.InstanceOf<Body.ValueIsNotMutableAndCannotBeChanged>()!);
+	}
+
+	[Test]
+	public void ModifyMutableMemberValueUsingTypeInstance()
+	{
+		new Type(type.Package,
+				new TypeLines("Clever", "mutable Number", "Compute Number", "\t5 + Number")).
+			ParseMembersAndMethods(parser);
+		var cleverConsumerType = new Type(type.Package,
+			new TypeLines(nameof(ModifyMutableMemberValueUsingTypeInstance), "has clever = Clever(3)",
+				"Run", "\tclever.Compute is 8", "\tclever.Number = 5")).ParseMembersAndMethods(parser);
+		cleverConsumerType.
+			Methods[0].GetBodyAndParseIfNeeded();
+		Assert.That(type.GetType("Clever").Members[0].Value?.ToString(), Is.EqualTo("5"));
+	}
+
+	[Test]
+	public void ModifyMutableMembersMultipleTimes()
+	{
+		new Type(type.Package,
+				new TypeLines("Computer", "mutable Number", "Compute Number", "\t5 + Number")).
+			ParseMembersAndMethods(parser);
+		var cleverConsumerType = new Type(type.Package,
+			new TypeLines(nameof(ModifyMutableMemberValueUsingTypeInstance), "has computer = Computer(3)",
+				"Run",
+				"\tconstant bla = 5",
+				"\tmutable blub = Compute",
+				"\tconstant number = bla + 1",
+				"\tmutable swappedBlub = blub",
+				"\tblub = 49",
+				"\tmutable temporary = swappedBlub",
+				"\tswappedBlub = 50",
+				"\ttemporary is 9",
+				"\ttemporary is 10",
+				"Compute Number",
+				"\tcomputer.Number.Increment",
+				"\tcomputer.Compute")).ParseMembersAndMethods(parser);
+		var body = (Body)cleverConsumerType.
+			Methods[0].GetBodyAndParseIfNeeded();
+		Assert.That(body.FindVariableValue("blub")?.ToString(), Is.EqualTo("49"));
+		Assert.That(body.FindVariableValue("swappedBlub")?.ToString(), Is.EqualTo("50"));
+		Assert.That(body.FindVariableValue("temporary")?.ToString(), Is.EqualTo("swappedBlub"));
+	}
 }
