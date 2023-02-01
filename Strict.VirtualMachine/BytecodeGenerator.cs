@@ -32,7 +32,7 @@ public sealed class ByteCodeGenerator
 	{
 		if (InstanceArguments != null)
 			foreach (var argument in InstanceArguments)
-				statements.Add(new StoreStatement(new Instance(argument.Value), argument.Key));
+				statements.Add(new StoreVariableStatement(new Instance(argument.Value), argument.Key));
 	}
 
 	private void AddInstanceMemberVariables(MethodCall instance)
@@ -41,7 +41,7 @@ public sealed class ByteCodeGenerator
 			parameterIndex++)
 			if (instance.Method.Parameters[parameterIndex].Type is GenericTypeImplementation type &&
 				type.Generic.Name == Base.List)
-				statements.Add(new StoreStatement(
+				statements.Add(new StoreVariableStatement(
 					new Instance(instance.Method.Parameters[parameterIndex].Type,
 						instance.Arguments[parameterIndex]),
 					instance.ReturnType.Members[parameterIndex].Name));
@@ -138,7 +138,7 @@ public sealed class ByteCodeGenerator
 
 	private void
 		TryGenerateStatementsForAssignmentValue(Value assignmentValue, string variableName) =>
-		statements.Add(new StoreStatement(
+		statements.Add(new StoreVariableStatement(
 			new Instance(assignmentValue.ReturnType, assignmentValue.Data), variableName));
 
 	private void TryGenerateIfStatements(Expression expression)
@@ -156,9 +156,8 @@ public sealed class ByteCodeGenerator
 	private void GenerateLoopStatements(For forExpression)
 	{
 		var iterableName = forExpression.Value.ToString();
-		var iterableInstance = statements.LastOrDefault(statement =>
-				statement is StoreStatement storeStatement && storeStatement.Identifier == iterableName)?.
-			Instance;
+		var iterableInstance = statements.OfType<StoreVariableStatement>().
+			FirstOrDefault(statement => statement.Identifier == iterableName)?.Instance;
 		if (iterableInstance != null)
 			GenerateRestLoopStatements(forExpression, iterableInstance);
 		FreeRegisters();
@@ -204,9 +203,9 @@ public sealed class ByteCodeGenerator
 	private void GenerateIteratorReductionAndJumpStatementsForLoop(
 		Register registerForIterationCount, Register registerForIndexReduction, int steps)
 	{
-		statements.Add(new Statement(Instruction.Subtract, registerForIterationCount,
+		statements.Add(new BinaryStatement(Instruction.Subtract, registerForIterationCount,
 			registerForIndexReduction, registerForIterationCount));
-		statements.Add(new JumpStatement(Instruction.JumpIfNotZero, -steps - 2,
+		statements.Add(new JumpIfNotZeroStatement(-steps - 2,
 			registerForIterationCount));
 	}
 
@@ -214,13 +213,13 @@ public sealed class ByteCodeGenerator
 	{
 		GenerateCodeForIfCondition((Binary)ifExpression.Condition);
 		GenerateCodeForThen(ifExpression);
-		statements.Add(new JumpViaIdStatement(Instruction.JumpEnd, idStack.Pop()));
+		statements.Add(new JumpToIdStatement(Instruction.JumpEnd, idStack.Pop()));
 		if (ifExpression.OptionalElse == null)
 			return;
 		idStack.Push(conditionalId);
-		statements.Add(new JumpViaIdStatement(Instruction.JumpToIdIfTrue, conditionalId++));
+		statements.Add(new JumpToIdStatement(Instruction.JumpToIdIfTrue, conditionalId++));
 		GenerateStatements(new[] { ifExpression.OptionalElse });
-		statements.Add(new JumpViaIdStatement(Instruction.JumpEnd, idStack.Pop()));
+		statements.Add(new JumpToIdStatement(Instruction.JumpEnd, idStack.Pop()));
 	}
 
 	private void GenerateCodeForThen(If ifExpression)
@@ -255,10 +254,10 @@ public sealed class ByteCodeGenerator
 	{
 		var leftRegister = GenerateLeftSideForIfCondition(condition);
 		var rightRegister = GenerateRightSideForIfCondition(condition);
-		statements.Add(new Statement(GetConditionalInstruction(condition.Method), leftRegister,
+		statements.Add(new BinaryStatement(GetConditionalInstruction(condition.Method), leftRegister,
 			rightRegister));
 		idStack.Push(conditionalId);
-		statements.Add(new JumpViaIdStatement(Instruction.JumpToIdIfFalse, conditionalId++));
+		statements.Add(new JumpToIdStatement(Instruction.JumpToIdIfFalse, conditionalId++));
 	}
 
 	private static Instruction GetConditionalInstruction(Method condition) =>
@@ -277,7 +276,8 @@ public sealed class ByteCodeGenerator
 			statements.Add(new LoadConstantStatement(rightRegister,
 				new Instance(argumentValue.ReturnType, argumentValue.Data)));
 		else
-			statements.Add(new LoadVariableStatement(rightRegister, condition.Arguments[0].ToString())); //ncrunch: no coverage
+			statements.Add(new LoadVariableStatement(rightRegister,
+				condition.Arguments[0].ToString())); //ncrunch: no coverage
 		return rightRegister;
 	}
 
@@ -328,7 +328,7 @@ public sealed class ByteCodeGenerator
 		if (binary.Instance is Binary binaryOp)
 		{
 			var left = GenerateValueBinaryStatements(binaryOp, operationInstruction);
-			statements.Add(new Statement(operationInstruction, left, AllocateRegister(),
+			statements.Add(new BinaryStatement(operationInstruction, left, AllocateRegister(),
 				AllocateRegister()));
 		}
 		else if (binary.Arguments[0] is Binary binaryArg)
@@ -349,7 +349,7 @@ public sealed class ByteCodeGenerator
 		var left = AllocateRegister();
 		if (binary.Instance != null)
 			statements.Add(new LoadVariableStatement(left, binary.Instance.ToString()));
-		statements.Add(new Statement(operationInstruction, left, right, AllocateRegister()));
+		statements.Add(new BinaryStatement(operationInstruction, left, right, AllocateRegister()));
 	}
 
 	private Register GenerateValueBinaryStatements(MethodCall binary,
@@ -365,8 +365,9 @@ public sealed class ByteCodeGenerator
 		if (binary.Arguments[0] is Value argumentsValue)
 			statements.Add(new LoadConstantStatement(rightRegister, new Instance(argumentsValue)));
 		else
-			statements.Add(new LoadVariableStatement(rightRegister, binary.Arguments[0].ToString()));
-		statements.Add(new Statement(operationInstruction, leftRegister, rightRegister,
+			statements.Add(
+				new LoadVariableStatement(rightRegister, binary.Arguments[0].ToString()));
+		statements.Add(new BinaryStatement(operationInstruction, leftRegister, rightRegister,
 			resultRegister));
 		return resultRegister;
 	}

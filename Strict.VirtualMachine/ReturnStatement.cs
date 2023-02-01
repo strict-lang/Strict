@@ -1,3 +1,6 @@
 ﻿namespace Strict.VirtualMachine;
 
-public record ReturnStatement(Register Register) : Statement(Instruction.Return, Register);
+public sealed class ReturnStatement : RegisterStatement
+{
+	public ReturnStatement(Register register) : base(register, Instruction.Return) { }
+}

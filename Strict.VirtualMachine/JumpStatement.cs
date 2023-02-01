@@ -1,3 +1,7 @@
 ﻿namespace Strict.VirtualMachine;
 
-public record JumpStatement(Instruction Instruction, int Steps = default, Register RegisterToCheckForZero = default) : Statement(Instruction);
+public class JumpStatement : Statement
+{
+	protected JumpStatement(Instruction jumpInstruction) => Instruction = jumpInstruction;
+	public override Instruction Instruction { get; }
+}

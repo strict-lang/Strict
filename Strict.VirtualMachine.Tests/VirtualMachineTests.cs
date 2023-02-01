@@ -25,13 +25,13 @@ public sealed class VirtualMachineTests : BaseVirtualMachineTests
 		BuildStatements(IReadOnlyList<object> inputs, Instruction operation) =>
 		new Statement[]
 		{
-			new(Instruction.Set, new Instance(inputs[0] is int
+			new SetStatement(new Instance(inputs[0] is int
 				? NumberType
 				: TextType, inputs[0]), Register.R0),
-			new(Instruction.Set, new Instance(inputs[1] is int
+			new SetStatement(new Instance(inputs[1] is int
 				? NumberType
 				: TextType, inputs[1]), Register.R1),
-			new(operation, Register.R0, Register.R1)
+			new BinaryStatement(operation, Register.R0, Register.R1)
 		};
 
 	[Test]
@@ -44,23 +44,24 @@ public sealed class VirtualMachineTests : BaseVirtualMachineTests
 
 	[Test]
 	public void SetAndAdd() =>
-		Assert.That(vm.Execute(new Statement[]
-		{
-			new LoadConstantStatement(Register.R0, new Instance(NumberType, 10)),
-			new LoadConstantStatement(Register.R1, new Instance(NumberType, 5)),
-			new(Instruction.Add, Register.R0, Register.R1, Register.R2)
-		}).Registers[Register.R2].Value, Is.EqualTo(15));
+		Assert.That(
+			vm.Execute(new Statement[]
+			{
+				new LoadConstantStatement(Register.R0, new Instance(NumberType, 10)),
+				new LoadConstantStatement(Register.R1, new Instance(NumberType, 5)),
+				new BinaryStatement(Instruction.Add, Register.R0, Register.R1, Register.R2)
+			}).Registers[Register.R2].Value, Is.EqualTo(15));
 
 	[Test]
 	public void AddFiveTimes() =>
 		Assert.That(vm.Execute(new Statement[]
 		{
-			new(Instruction.Set, new Instance(NumberType, 5), Register.R0),
-			new(Instruction.Set, new Instance(NumberType, 1), Register.R1),
-			new(Instruction.Set, new Instance(NumberType, 0), Register.R2),
-			new(Instruction.Add, Register.R0, Register.R2, Register.R2), // R2 = R0 + R2
-			new(Instruction.Subtract, Register.R0, Register.R1, Register.R0),
-			new JumpStatement(Instruction.JumpIfNotZero, -3)
+			new SetStatement(new Instance(NumberType, 5), Register.R0),
+			new SetStatement(new Instance(NumberType, 1), Register.R1),
+			new SetStatement(new Instance(NumberType, 0), Register.R2),
+			new BinaryStatement(Instruction.Add, Register.R0, Register.R2, Register.R2), // R2 = R0 + R2
+			new BinaryStatement(Instruction.Subtract, Register.R0, Register.R1, Register.R0),
+			new JumpIfNotZeroStatement(-3, Register.R0)
 		}).Registers[Register.R2].Value, Is.EqualTo(0 + 5 + 4 + 3 + 2 + 1));
 
 	[TestCase("ArithmeticFunction(10, 5).Calculate(\"add\")", 15)]
@@ -79,20 +80,18 @@ public sealed class VirtualMachineTests : BaseVirtualMachineTests
 		Assert.That(
 			vm.Execute(new Statement[]
 			{
-				new StoreStatement(new Instance(NumberType, 10), "number"),
-				new StoreStatement(new Instance(NumberType, 1), "result"),
-				new StoreStatement(new Instance(NumberType, 2), "multiplier"),
+				new StoreVariableStatement(new Instance(NumberType, 10), "number"),
+				new StoreVariableStatement(new Instance(NumberType, 1), "result"),
+				new StoreVariableStatement(new Instance(NumberType, 2), "multiplier"),
 				new LoadConstantStatement(Register.R0, new Instance(NumberType, 10)),
 				new LoadConstantStatement(Register.R1, new Instance(NumberType, 1)),
-				new InitLoopStatement("number"),
-				new LoadVariableStatement(Register.R2, "result"),
+				new InitLoopStatement("number"), new LoadVariableStatement(Register.R2, "result"),
 				new LoadVariableStatement(Register.R3, "multiplier"),
-				new(Instruction.Multiply, Register.R2, Register.R3, Register.R4),
+				new BinaryStatement(Instruction.Multiply, Register.R2, Register.R3, Register.R4),
 				new StoreFromRegisterStatement(Register.R4, "result"),
-				new(Instruction.Subtract, Register.R0, Register.R1, Register.R0),
-				new JumpStatement(Instruction.JumpIfNotZero, -6),
-				new LoadVariableStatement(Register.R5, "result"),
-				new ReturnStatement(Register.R5)
+				new BinaryStatement(Instruction.Subtract, Register.R0, Register.R1, Register.R0),
+				new JumpIfNotZeroStatement(-6, Register.R0),
+				new LoadVariableStatement(Register.R5, "result"), new ReturnStatement(Register.R5)
 			}).Returns?.Value, Is.EqualTo(1024));
 
 	[TestCase("RemoveParentheses(\"some(thing)\").Remove", "some")]
@@ -117,20 +116,18 @@ public sealed class VirtualMachineTests : BaseVirtualMachineTests
 	{
 		var statements = new ByteCodeGenerator(GenerateMethodCallFromSource("IfAndElseTest",
 			"IfAndElseTest(3).IsEven", IfAndElseTestCode)).Generate();
-		Assert.That(vm.Execute(statements).Returns?.Value, Is.EqualTo("Number is less or equal than 10"));
+		Assert.That(vm.Execute(statements).Returns?.Value,
+			Is.EqualTo("Number is less or equal than 10"));
 	}
 
-	[TestCase("EvenSumCalculator(100).IsEven", 2450, new[]
-	{
-		"has number",
-		"IsEven Number",
-		"\tmutable sum = 0",
-		"\tfor number",
-		"\t\tif (index % 2) is 0",
-		"\t\t\tsum = sum + index",
-		"\tsum"
-	})]
-	public void CompileCompositeBinariesInIfCorrectlyWithModulo(string methodCall, int expectedResult, params string[] code)
+	[TestCase("EvenSumCalculator(100).IsEven", 2450,
+		new[]
+		{
+			"has number", "IsEven Number", "\tmutable sum = 0", "\tfor number",
+			"\t\tif (index % 2) is 0", "\t\t\tsum = sum + index", "\tsum"
+		})]
+	public void CompileCompositeBinariesInIfCorrectlyWithModulo(string methodCall,
+		int expectedResult, params string[] code)
 	{
 		var statements = new ByteCodeGenerator(GenerateMethodCallFromSource("EvenSumCalculator",
 			methodCall, code)).Generate();
@@ -142,12 +139,12 @@ public sealed class VirtualMachineTests : BaseVirtualMachineTests
 		Assert.That(
 			vm.Execute(new Statement[]
 			{
-				new(Instruction.Set, new Instance(NumberType, 5), Register.R0),
-				new(Instruction.Set, new Instance(NumberType, 1), Register.R1),
-				new(Instruction.Set, new Instance(NumberType, 10), Register.R2),
-				new(Instruction.LessThan, Register.R2, Register.R0),
-				new JumpStatement(Instruction.JumpIfTrue, 2),
-				new(Instruction.Add, Register.R2, Register.R0, Register.R0)
+				new SetStatement(new Instance(NumberType, 5), Register.R0),
+				new SetStatement(new Instance(NumberType, 1), Register.R1),
+				new SetStatement(new Instance(NumberType, 10), Register.R2),
+				new BinaryStatement(Instruction.LessThan, Register.R2, Register.R0),
+				new JumpIfStatement(Instruction.JumpIfTrue, 2),
+				new BinaryStatement(Instruction.Add, Register.R2, Register.R0, Register.R0)
 			}).Registers[Register.R0].Value, Is.EqualTo(15));
 
 	[TestCase(Instruction.GreaterThan, new[] { 1, 2 }, 2 - 1)]
@@ -155,20 +152,22 @@ public sealed class VirtualMachineTests : BaseVirtualMachineTests
 	[TestCase(Instruction.Equal, new[] { 5, 5 }, 5 + 5)]
 	[TestCase(Instruction.NotEqual, new[] { 5, 5 }, 5 - 5)]
 	public void ConditionalJumpIfAndElse(Instruction conditional, int[] registers, int expected) =>
-		Assert.That(vm.Execute(new Statement[]
-		{
-			new(Instruction.Set, new Instance(NumberType, registers[0]), Register.R0),
-			new(Instruction.Set, new Instance(NumberType, registers[1]), Register.R1),
-			new(conditional, Register.R0, Register.R1),
-			new JumpStatement(Instruction.JumpIfTrue, 2),
-			new(Instruction.Subtract, Register.R1, Register.R0, Register.R0),
-			new JumpStatement(Instruction.JumpIfFalse, 2),
-			new(Instruction.Add, Register.R0, Register.R1, Register.R0)
-		}).Registers[Register.R0].Value, Is.EqualTo(expected));
+		Assert.That(
+			vm.Execute(new Statement[]
+			{
+				new SetStatement(new Instance(NumberType, registers[0]), Register.R0),
+				new SetStatement(new Instance(NumberType, registers[1]), Register.R1),
+				new BinaryStatement(conditional, Register.R0, Register.R1),
+				new JumpIfStatement(Instruction.JumpIfTrue, 2),
+				new BinaryStatement(Instruction.Subtract, Register.R1, Register.R0, Register.R0),
+				new JumpIfStatement(Instruction.JumpIfFalse, 2),
+				new BinaryStatement(Instruction.Add, Register.R0, Register.R1, Register.R0)
+			}).Registers[Register.R0].Value, Is.EqualTo(expected));
 
 	[TestCase(Instruction.Add)]
 	[TestCase(Instruction.GreaterThan)]
 	public void OperandsRequired(Instruction instruction) =>
-		Assert.That(() => vm.Execute(new Statement[] { new(instruction, Register.R0) }),
+		Assert.That(
+			() => vm.Execute(new Statement[] { new BinaryStatement(instruction, Register.R0) }),
 			Throws.InstanceOf<VirtualMachine.OperandsRequired>());
 }

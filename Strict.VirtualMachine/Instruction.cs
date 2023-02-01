@@ -4,7 +4,6 @@ public enum Instruction
 {
 	Set,
 	StoreVariable,
-	StoreConstant,
 	StoreFromRegister,
 	Load,
 	LoadConstant,
@@ -30,3 +29,4 @@ public enum Instruction
 	JumpsSeparator = 400,
 	Return
 }
+

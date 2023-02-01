@@ -44,9 +44,9 @@ public sealed class VirtualMachine
 
 	private bool TryExecuteReturn(Statement statement)
 	{
-		if (statement.Instruction != Instruction.Return)
+		if (statement is not ReturnStatement returnStatement)
 			return false;
-		Returns = Registers[statement.Registers[0]];
+		Returns = Registers[returnStatement.Register];
 		if (!Returns.Value.GetType().IsPrimitive && Returns.Value is not Value)
 			return false;
 		instructionIndex = -2;
@@ -73,49 +73,54 @@ public sealed class VirtualMachine
 		var value = iterableVariable.Value.ToString();
 		if (iterableVariable.ReturnType?.Name == Base.Text && value != null)
 			variables["value"] = new Instance(Base.Number, value[index].ToString());
-		else if (iterableVariable.ReturnType is GenericTypeImplementation genericIterable && genericIterable.Generic.Name == Base.List)
+		else if (iterableVariable.ReturnType is GenericTypeImplementation genericIterable &&
+			genericIterable.Generic.Name == Base.List)
 			variables["value"] = new Instance(((List<Expression>)iterableVariable.Value)[index]);
 		else if (iterableVariable.ReturnType?.Name == Base.Number)
-			variables["value"] = new Instance(Base.Number, Convert.ToInt32(iterableVariable.Value) + index);
+			variables["value"] =
+				new Instance(Base.Number, Convert.ToInt32(iterableVariable.Value) + index);
 	}
 
 	private void TryStoreInstructions(Statement statement)
 	{
 		if (statement.Instruction > Instruction.SetLoadSeparator)
 			return;
-		if (statement.Instruction == Instruction.Set && statement.Instance != null)
-			foreach (var register in statement.Registers)
-				Registers[register] = statement.Instance;
-		else if (statement.Instruction == Instruction.StoreVariable && statement.Instance != null)
-			variables[((StoreStatement)statement).Identifier] = statement.Instance;
-		else if (statement.Instruction == Instruction.StoreFromRegister)
-			variables[((StoreFromRegisterStatement)statement).Identifier] =
-				Registers[statement.Registers[0]];
+		if (statement is SetStatement setStatement)
+			Registers[setStatement.Register] = setStatement.Instance;
+		else if (statement is StoreVariableStatement storeVariableStatement)
+			variables[storeVariableStatement.Identifier] = storeVariableStatement.Instance;
+		else if (statement is StoreFromRegisterStatement storeFromRegisterStatement)
+			variables[storeFromRegisterStatement.Identifier] =
+				Registers[storeFromRegisterStatement.Register];
 	}
 
 	private void TryLoadInstructions(Statement statement)
 	{
-		if (statement.Instruction is Instruction.Load)
-			LoadVariableIntoRegister((LoadVariableStatement)statement);
+		if (statement is LoadVariableStatement loadVariableStatement)
+			LoadVariableIntoRegister(loadVariableStatement);
 		else if (statement is LoadConstantStatement loadConstantStatement)
-			Registers[loadConstantStatement.Register] = loadConstantStatement.ConstantInstance;
+			Registers[loadConstantStatement.Register] = loadConstantStatement.Instance;
 	}
 
-	private void LoadVariableIntoRegister(LoadVariableStatement statement) => Registers[statement.Register] = variables[statement.Identifier];
+	private void LoadVariableIntoRegister(LoadVariableStatement statement) =>
+		Registers[statement.Register] = variables[statement.Identifier];
 
 	private void TryExecute(Statement statement)
 	{
-		var instructionPosition = (int)statement.Instruction;
-		if (instructionPosition is >= (int)Instruction.SetLoadSeparator
-			and < (int)Instruction.BinaryOperatorsSeparator)
-			TryBinaryOperationExecution(statement);
-		else if (instructionPosition is >= 100 and < (int)Instruction.ConditionalSeparator)
-			TryConditionalOperationExecution(statement);
-		else if (instructionPosition is >= 9 and <= (int)Instruction.JumpsSeparator)
-			TryJumpOperation((JumpStatement)statement);
+		if (statement is BinaryStatement binaryStatement)
+		{
+			if (binaryStatement.IsConditional())
+				TryConditionalOperationExecution(binaryStatement);
+			else
+				TryBinaryOperationExecution(binaryStatement);
+		}
+		else if (statement is JumpStatement jumpStatement)
+		{
+			TryJumpOperation(jumpStatement);
+		}
 	}
 
-	private void TryBinaryOperationExecution(Statement statement)
+	private void TryBinaryOperationExecution(BinaryStatement statement)
 	{
 		var (right, left) = GetOperands(statement);
 		Registers[statement.Registers[^1]] = statement.Instruction switch
@@ -141,18 +146,19 @@ public sealed class VirtualMachine
 			return new Instance(right.ReturnType ?? left.ReturnType,
 				Convert.ToDouble(left.Value) + Convert.ToDouble(right.Value));
 		if (leftReturnTypeName == Base.Text && rightReturnTypeName == Base.Text)
-			return new Instance(right.ReturnType ?? left.ReturnType, left.Value.ToString() + right.Value);
+			return new Instance(right.ReturnType ?? left.ReturnType,
+				left.Value.ToString() + right.Value);
 		if (rightReturnTypeName == Base.Text && leftReturnTypeName == Base.Number)
 			return new Instance(right.ReturnType, left.Value.ToString() + right.Value);
 		return new Instance(left.ReturnType, left.Value + right.Value.ToString());
 	}
 
-	private (Instance, Instance) GetOperands(Statement statement) =>
+	private (Instance, Instance) GetOperands(BinaryStatement statement) =>
 		Registers.Count < 2
 			? throw new OperandsRequired()
 			: (Registers[statement.Registers[1]], Registers[statement.Registers[0]]);
 
-	private void TryConditionalOperationExecution(Statement statement)
+	private void TryConditionalOperationExecution(BinaryStatement statement)
 	{
 		var (right, left) = GetOperands(statement);
 		conditionFlag = statement.Instruction switch
@@ -169,15 +175,18 @@ public sealed class VirtualMachine
 	{
 		if (conditionFlag && statement.Instruction is Instruction.JumpIfTrue ||
 			!conditionFlag && statement.Instruction is Instruction.JumpIfFalse ||
-			statement.Instruction is Instruction.JumpIfNotZero &&
-			Convert.ToInt32(Registers[statement.RegisterToCheckForZero].Value) > 0)
-			instructionIndex += Convert.ToInt32(statement.Steps);
-		else if (!conditionFlag && statement.Instruction is Instruction.JumpToIdIfFalse || conditionFlag && statement.Instruction is Instruction.JumpToIdIfTrue)
+			statement is JumpIfNotZeroStatement jumpIfNotZeroStatement &&
+			Convert.ToInt32(Registers[jumpIfNotZeroStatement.Register].Value) > 0)
 		{
-			var id = ((JumpViaIdStatement)statement).Id;
+			instructionIndex += Convert.ToInt32(((JumpIfStatement)statement).Steps);
+		}
+		else if (!conditionFlag && statement.Instruction is Instruction.JumpToIdIfFalse ||
+			conditionFlag && statement.Instruction is Instruction.JumpToIdIfTrue)
+		{
+			var id = ((JumpToIdStatement)statement).Id;
 			var endIndex = statements.IndexOf(statements.First(jumpStatement =>
 				jumpStatement.Instruction is Instruction.JumpEnd &&
-				jumpStatement is JumpViaIdStatement jumpViaId && jumpViaId.Id == id));
+				jumpStatement is JumpToIdStatement jumpViaId && jumpViaId.Id == id));
 			if (endIndex != -1)
 				instructionIndex = endIndex;
 		}
