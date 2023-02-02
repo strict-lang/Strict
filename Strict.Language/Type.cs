@@ -562,22 +562,23 @@ public class Type : Context
 	public const string Extension = ".strict";
 	public Member? FindMember(string name) => Members.FirstOrDefault(member => member.Name == name);
 
-	public Method GetMethod(string methodName, IReadOnlyList<Expression> arguments) =>
-		FindMethod(methodName, arguments) ??
+	public Method GetMethod(string methodName, IReadOnlyList<Expression> arguments, ExpressionParser parser) =>
+		FindMethod(methodName, arguments, parser) ??
 		throw new NoMatchingMethodFound(this, methodName, AvailableMethods);
 
-	public Method? FindMethod(string methodName, IReadOnlyList<Expression> arguments)
+	public Method? FindMethod(string methodName, IReadOnlyList<Expression> arguments,
+		ExpressionParser parser)
 	{
 		if (IsGeneric)
 			throw new GenericTypesCannotBeUsedDirectlyUseImplementation(this,
 				"Type is Generic and cannot be used directly");
 		if (!AvailableMethods.TryGetValue(methodName, out var matchingMethods))
-			return FindAndCreateFromBaseMethod(methodName, arguments);
+			return FindAndCreateFromBaseMethod(methodName, arguments, parser);
 		foreach (var method in matchingMethods)
 			if (method.Parameters.Count == arguments.Count &&
 				IsMethodWithMatchingParameters(arguments, method))
 				return method;
-		return FindAndCreateFromBaseMethod(methodName, arguments) ??
+		return FindAndCreateFromBaseMethod(methodName, arguments, parser) ??
 			throw new ArgumentsDoNotMatchMethodParameters(arguments, matchingMethods);
 	}
 
@@ -621,16 +622,16 @@ public class Type : Context
 		Name == Base.Iterator || members.Any(member => !member.IsPublic && member.Type.IsIterator);
 
 	private Method? FindAndCreateFromBaseMethod(string methodName,
-		IReadOnlyList<Expression> arguments)
+		IReadOnlyList<Expression> arguments, ExpressionParser parser)
 	{
 		if (methodName != Method.From)
 			return null;
 		var fromMethod = "from(";
 		fromMethod += GetMatchingMemberParametersIfExist(arguments);
 		return fromMethod.Length > 5 && fromMethod.Split(',').Length - 1 == arguments.Count
-			? BuildMethod($"{fromMethod[..^2]})")
+			? BuildMethod($"{fromMethod[..^2]})", parser)
 			: IsDataType
-				? BuildMethod(fromMethod[..^1])
+				? BuildMethod(fromMethod[..^1], parser)
 				: null;
 	}
 
@@ -647,18 +648,7 @@ public class Type : Context
 		return parameters;
 	}
 
-	private Method BuildMethod(string fromMethod) => new(this, 0, dummyExpressionParser, new[] { fromMethod });
-	private readonly ExpressionParser dummyExpressionParser = new DummyExpressionParser();
-
-	//ncrunch: no coverage start
-	private sealed class DummyExpressionParser : ExpressionParser
-	{
-		public override Expression ParseLineExpression(Body body, ReadOnlySpan<char> line) => body;
-		public override Expression ParseExpression(Body body, ReadOnlySpan<char> text) => body;
-
-		public override List<Expression> ParseListArguments(Body body, ReadOnlySpan<char> text) =>
-			new();
-	} //ncrunch: no coverage end
+	private Method BuildMethod(string fromMethod, ExpressionParser parser) => new(this, 0, parser, new[] { fromMethod });
 
 	public bool IsCompatible(Type sameOrBaseType) =>
 		this == sameOrBaseType ||

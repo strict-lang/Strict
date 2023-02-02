@@ -82,7 +82,7 @@ public sealed class TypeTests
 	public void NoMatchingMethodFound() =>
 		Assert.That(
 			() => CreateType(nameof(NoMatchingMethodFound), "has log", "Run", "\tconstant a = 5").
-				GetMethod("UnknownMethod", Array.Empty<Expression>()),
+				GetMethod("UnknownMethod", Array.Empty<Expression>(), parser),
 			Throws.InstanceOf<Type.NoMatchingMethodFound>());
 
 	[Test]
@@ -192,7 +192,7 @@ public sealed class TypeTests
 		{
 			new Number(type, 5),
 			new List(null!, new List<Expression> { new Number(type, 6), new Number(type, 7) })
-		});
+		}, parser);
 		Assert.That(result, Is.InstanceOf<Method>());
 		Assert.That(result?.ToString(),
 			Is.EqualTo("Add(first TestPackage.Number, other TestPackage.Numbers) List"));
@@ -209,7 +209,7 @@ public sealed class TypeTests
 				{
 					new Number(type, 6),
 					new List(null!, new List<Expression> { new Number(type, 7), new Number(type, 8) })
-				}), Throws.InstanceOf<Type.GenericTypesCannotBeUsedDirectlyUseImplementation>());
+				}, parser), Throws.InstanceOf<Type.GenericTypesCannotBeUsedDirectlyUseImplementation>());
 	}
 
 	[TestCase(Base.Number, "has number", "Run", "\tmutable result = 2")]
@@ -295,7 +295,7 @@ public sealed class TypeTests
 					new List(null!,
 						new List<Expression> { new Text(type, "Hi"), new Text(type, "Hello") }),
 					new Number(type, 5)
-				})?.ToString(),
+				}, parser)?.ToString(),
 			Is.EqualTo("Add(other TestPackage.Texts, first TestPackage.Generic) List"));
 	}
 
@@ -311,14 +311,14 @@ public sealed class TypeTests
 				new List<Expression>
 				{
 					new Text(type, "hello")
-				})?.ToString(),
+				}, parser)?.ToString(),
 			Is.EqualTo("Write(generic TestPackage.Generic)"));
 		Assert.That(
 			type.FindMethod("Write",
 				new List<Expression>
 				{
 					new Number(type, 5)
-				})?.ToString(),
+				}, parser)?.ToString(),
 			Is.EqualTo("Write(generic TestPackage.Generic)"));
 	}
 
@@ -353,7 +353,7 @@ public sealed class TypeTests
 				new List<Expression>
 				{
 					new List(null!, new List<Expression> { new Text(type, "hello") })
-				}), Is.Not.Null);
+				}, parser), Is.Not.Null);
 	}
 
 	[Test]

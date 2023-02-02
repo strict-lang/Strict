@@ -242,7 +242,7 @@ public sealed class MutableTests : TestExpressions
 				new TypeLines("Computer", "mutable Number", "Compute Number", "\t5 + Number")).
 			ParseMembersAndMethods(parser);
 		var cleverConsumerType = new Type(type.Package,
-			new TypeLines(nameof(ModifyMutableMemberValueUsingTypeInstance), "has computer = Computer(3)",
+			new TypeLines(nameof(ModifyMutableMembersMultipleTimes), "has computer = Computer(3)",
 				"Run",
 				"\tconstant bla = 5",
 				"\tmutable blub = Compute",

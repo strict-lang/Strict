@@ -19,7 +19,7 @@ public sealed class Method : Context
 		if (lines.Count > Limit.MethodLength)
 			throw new MethodLengthMustNotExceedTwelve(this, lines.Count, typeLineNumber);
 		TypeLineNumber = typeLineNumber;
-		this.parser = parser;
+		Parser = parser;
 		this.lines = lines;
 		var restSpan = lines[0].AsSpan(Name.Length);
 		ReturnType = ParseReturnType(type, restSpan);
@@ -69,7 +69,7 @@ public sealed class Method : Context
 		input.StartsWith(BinaryOperator.IsNotIn + "(", StringComparison.Ordinal);
 
 	public int TypeLineNumber { get; }
-	private readonly ExpressionParser parser;
+	public ExpressionParser Parser { get; }
 	internal readonly IReadOnlyList<string> lines;
 	private readonly Body? methodBody;
 
@@ -213,7 +213,7 @@ public sealed class Method : Context
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public Expression ParseLine(Body body, string currentLine)
 	{
-		var expression = parser.ParseLineExpression(body, currentLine.AsSpan(body.Tabs));
+		var expression = Parser.ParseLineExpression(body, currentLine.AsSpan(body.Tabs));
 		if (IsTestExpression(currentLine, expression))
 			Tests.Add(expression);
 		return expression;
@@ -226,11 +226,11 @@ public sealed class Method : Context
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public Expression ParseExpression(Body body, ReadOnlySpan<char> text) =>
-		parser.ParseExpression(body, text);
+		Parser.ParseExpression(body, text);
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public List<Expression> ParseListArguments(Body body, ReadOnlySpan<char> text) =>
-		parser.ParseListArguments(body, text);
+		Parser.ParseListArguments(body, text);
 
 	public const string From = "from";
 

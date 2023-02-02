@@ -52,12 +52,12 @@ public abstract class TestExpressions : MethodExpressionParser
 	}
 
 	protected static MethodCall CreateFromMethodCall(Type fromType, params Expression[] arguments) =>
-		new(fromType.FindMethod(Method.From, arguments)!, null, arguments);
+		new(fromType.FindMethod(Method.From, arguments, new MethodExpressionParser())!, null, arguments);
 
 	protected static Binary CreateBinary(Expression left, string operatorName, Expression right)
 	{
 		var arguments = new[] { right };
-		return new Binary(left, left.ReturnType.GetMethod(operatorName, arguments), arguments);
+		return new Binary(left, left.ReturnType.GetMethod(operatorName, arguments, new MethodExpressionParser()), arguments);
 	}
 
 	protected Binary GetCondition(bool isNot = false) =>

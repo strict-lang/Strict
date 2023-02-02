@@ -111,7 +111,7 @@ public class MethodExpressionParser : ExpressionParser
 				? ParseInContext(body.Method.Type, body, input, Array.Empty<Expression>()) ??
 				throw new InvalidOperatorHere(body, input[methodRange].ToString())
 				: input[argumentsRange].Equals(UnaryOperator.Not, StringComparison.Ordinal)
-					? new Not(body.Method.ParseExpression(body, input[methodRange]))
+					? Not.Parse(body, input, methodRange)
 					: throw new InvalidOperatorHere(body, input[methodRange].ToString());
 	}
 
@@ -248,7 +248,7 @@ public class MethodExpressionParser : ExpressionParser
 #endif
 		if (!body.IsFakeBodyForMemberInitialization)
 		{
-			var method2 = type.FindMethod(inputAsString, arguments);
+			var method2 = type.FindMethod(inputAsString, arguments, body.Method.Parser);
 			if (method2 != null)
 				return new MethodCall(method2, instance, arguments);
 		}
@@ -279,7 +279,7 @@ public class MethodExpressionParser : ExpressionParser
 			? null
 			: IsConstructorUsedWithSameArgumentType(arguments, fromType)
 				? throw new ConstructorForSameTypeArgumentIsNotAllowed(body)
-				: new MethodCall(fromType.GetMethod(Method.From, arguments), null, arguments);
+				: new MethodCall(fromType.GetMethod(Method.From, arguments, body.Method.Parser), null, arguments);
 	}
 
 	private static Expression? TryListCall(Body body, Expression? variable,

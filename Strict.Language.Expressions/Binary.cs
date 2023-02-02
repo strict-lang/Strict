@@ -51,7 +51,7 @@ public sealed class Binary : MethodCall
 		if (operatorToken == BinaryOperator.Multiply && HasIncompatibleDimensions(left, right))
 			throw new ListsHaveDifferentDimensions(body, left + " " + right);
 		var arguments = new[] { right };
-		return new Binary(left, left.ReturnType.GetMethod(operatorToken, arguments), arguments);
+		return new Binary(left, left.ReturnType.GetMethod(operatorToken, arguments, body.Method.Parser), arguments);
 	}
 
 	private static Expression GetUnaryOrBuildNestedBinary(Body body, ReadOnlySpan<char> input,

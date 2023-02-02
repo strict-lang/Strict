@@ -9,8 +9,13 @@ namespace Strict.Language.Expressions;
 /// </summary>
 public sealed class Not : MethodCall
 {
-	public Not(Expression right) : base(
-		right.ReturnType.GetMethod(UnaryOperator.Not, Array.Empty<Expression>()), right) { }
+	private Not(Method method, Expression right) : base(method, right) { }
+
+	public static Not Parse(Body body, ReadOnlySpan<char> input, Range methodRange)
+	{
+		var right = body.Method.ParseExpression(body, input[methodRange]);
+		return new Not(right.ReturnType.GetMethod(UnaryOperator.Not, Array.Empty<Expression>(), body.Method.Parser), right);
+	}
 
 	public override string ToString() => UnaryOperator.Not + " " + Instance!;
 }
