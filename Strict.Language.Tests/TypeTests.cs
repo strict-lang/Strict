@@ -591,4 +591,18 @@ public sealed class TypeTests
 		for (var count = 0; count < 5; count++)
 			Assert.That(package.GetType("CachedType"), Is.EqualTo(cachedType));
 	}
+
+	[Test]
+	public void InitializeInnerTypeMemberUsingOuterTypeConstructor()
+	{
+		var thing = CreateType("Thing", "has character", "SomeThing Number", "\tvalue");
+		var superThing = CreateType("SuperThing", "has thing", "SuperSomeThing Number", "\tvalue");
+		var superThingUser = CreateType("SuperThingUser", "has input = SuperThing(7)",
+			"UseSuperThing Number",
+			"\tinput to Number is \"7\" to Number",
+			"\tinput is \"7\"",
+			"\tinput");
+		superThingUser.Methods[0].GetBodyAndParseIfNeeded();
+		Assert.That(superThingUser.Members[0].Type, Is.EqualTo(thing.GetType(Base.Character)));
+	}
 }
