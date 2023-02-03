@@ -206,4 +206,13 @@ public sealed class MemberCallTests : TestExpressions
 				"\tconstant numbers = \"5\"")).ParseMembersAndMethods(parser).Methods[0].GetBodyAndParseIfNeeded(),
 			Throws.InstanceOf<Body.VariableNameCannotHaveDifferentTypeNameThanValue>()
 			.With.Message.Contains("Variable name numbers denotes different type than its value type Text. Prefer using a different name"));
+
+	[Test]
+	public void CannotAccessMemberInSameTypeBeforeTypeIsParsed() =>
+		Assert.That(() => new Type(type.Package,
+			new TypeLines(nameof(CannotAccessMemberInSameTypeBeforeTypeIsParsed),
+				"has Range",
+				"has something = Range(0, 13)",
+				"Run",
+				"\tconstant a = 5")).ParseMembersAndMethods(parser), Throws.InstanceOf<CannotAccessMemberBeforeTypeIsParsed>());
 }

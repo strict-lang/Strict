@@ -288,8 +288,7 @@ public sealed class ByteCodeGenerator
 			statements.Add(new LoadConstantStatement(rightRegister,
 				new Instance(argumentValue.ReturnType, argumentValue.Data)));
 		else
-			statements.Add(new LoadVariableStatement(rightRegister,
-				condition.Arguments[0].ToString())); //ncrunch: no coverage
+			statements.Add(new LoadVariableStatement(rightRegister, condition.Arguments[0].ToString())); //ncrunch: no coverage
 		return rightRegister;
 	}
 

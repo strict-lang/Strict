@@ -596,7 +596,7 @@ public sealed class TypeTests
 	public void InitializeInnerTypeMemberUsingOuterTypeConstructor()
 	{
 		var thing = CreateType("Thing", "has character", "SomeThing Number", "\tvalue");
-		var superThing = CreateType("SuperThing", "has thing", "SuperSomeThing Number", "\tvalue");
+		CreateType("SuperThing", "has thing", "SuperSomeThing Number", "\tvalue");
 		var superThingUser = CreateType("SuperThingUser", "has input = SuperThing(7)",
 			"UseSuperThing Number",
 			"\tinput to Number is \"7\" to Number",
