@@ -106,7 +106,7 @@ public sealed class ByteCodeGeneratorTests : BaseVirtualMachineTests
 					new BinaryStatement(Instruction.Multiply, Register.R2, Register.R3, Register.R4),
 					new StoreFromRegisterStatement(Register.R4, "result"),
 					new BinaryStatement(Instruction.Subtract, Register.R0, Register.R1, Register.R0),
-					new JumpIfNotZeroStatement (-7, Register.R0),
+					new JumpIfNotZeroStatement(-7, Register.R0),
 					new LoadVariableStatement(Register.R5, "result"),
 					new ReturnStatement(Register.R5)
 				}, SimpleLoopExample);
@@ -123,6 +123,9 @@ public sealed class ByteCodeGeneratorTests : BaseVirtualMachineTests
 			yield return new TestCaseData("Invertor((1, 2, 3, 4)).Invert",
 				"Invertor", ExpectedStatementsOfInvertValueKata,
 				InvertValueKata);
+			yield return new TestCaseData("AddNumbers(2, 5).GetSum",
+				"AddNumbers", ExpectedSimpleMethodCallCode,
+				SimpleMethodCallCode);
 		}
 	}
 	//ncrunch: no coverage end

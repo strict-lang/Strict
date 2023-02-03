@@ -13,20 +13,25 @@ public sealed class ByteCodeGenerator
 	private int nextRegister;
 	private Register previousRegister;
 
+	public ByteCodeGenerator(InvokedMethod method)
+	{
+		foreach (var argument in method.Arguments)
+			statements.Add(new StoreVariableStatement(argument.Value, argument.Key));
+		Expressions = method.Expressions;
+	}
+
 	public ByteCodeGenerator(MethodCall methodCall)
 	{
 		InstanceArguments = new Dictionary<string, Expression>();
-		Method = methodCall.Method;
 		if (methodCall.Instance != null)
 			AddInstanceMemberVariables((MethodCall)methodCall.Instance);
 		AddMethodParameterVariables(methodCall);
 		StoreAndLoadVariables();
-		Expressions = ((Body)Method.GetBodyAndParseIfNeeded()).Expressions;
+		Expressions = ((Body)methodCall.Method.GetBodyAndParseIfNeeded()).Expressions;
 	}
 
 	public IReadOnlyList<Expression> Expressions { get; }
 	private Dictionary<string, Expression>? InstanceArguments { get; }
-	private Method Method { get; }
 
 	private void StoreAndLoadVariables()
 	{
@@ -52,8 +57,9 @@ public sealed class ByteCodeGenerator
 
 	private void AddMethodParameterVariables(MethodCall methodCall)
 	{
-		for (var parameterIndex = 0; parameterIndex < Method.Parameters.Count; parameterIndex++)
-			InstanceArguments?.Add(Method.Parameters[parameterIndex].Name,
+		for (var parameterIndex = 0; parameterIndex < methodCall.Method.Parameters.Count;
+			parameterIndex++)
+			InstanceArguments?.Add(methodCall.Method.Parameters[parameterIndex].Name,
 				methodCall.Arguments[parameterIndex]);
 	}
 
@@ -88,6 +94,13 @@ public sealed class ByteCodeGenerator
 		TryGenerateLoopStatements(expression);
 		TryGenerateMutableStatements(expression);
 		TryGenerateVariableCallStatement(expression);
+		TryGenerateMethodCallStatement(expression);
+	}
+
+	private void TryGenerateMethodCallStatement(Expression expression)
+	{
+		if (expression is not Binary && expression is MethodCall methodCall)
+			statements.Add(new InvokeStatement(methodCall, AllocateRegister()));
 	}
 
 	private void TryGenerateBodyStatements(Expression expression)
@@ -205,8 +218,7 @@ public sealed class ByteCodeGenerator
 	{
 		statements.Add(new BinaryStatement(Instruction.Subtract, registerForIterationCount,
 			registerForIndexReduction, registerForIterationCount));
-		statements.Add(new JumpIfNotZeroStatement(-steps - 2,
-			registerForIterationCount));
+		statements.Add(new JumpIfNotZeroStatement(-steps - 2, registerForIterationCount));
 	}
 
 	private void GenerateIfStatements(If ifExpression)
@@ -365,8 +377,7 @@ public sealed class ByteCodeGenerator
 		if (binary.Arguments[0] is Value argumentsValue)
 			statements.Add(new LoadConstantStatement(rightRegister, new Instance(argumentsValue)));
 		else
-			statements.Add(
-				new LoadVariableStatement(rightRegister, binary.Arguments[0].ToString()));
+			statements.Add(new LoadVariableStatement(rightRegister, binary.Arguments[0].ToString()));
 		statements.Add(new BinaryStatement(operationInstruction, leftRegister, rightRegister,
 			resultRegister));
 		return resultRegister;

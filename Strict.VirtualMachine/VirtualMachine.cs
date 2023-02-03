@@ -39,7 +39,38 @@ public sealed class VirtualMachine
 		TryStoreInstructions(statement);
 		TryLoadInstructions(statement);
 		TryLoopInitInstruction(statement);
+		TryInvokeInstruction(statement);
 		TryExecute(statement);
+	}
+
+	private void TryInvokeInstruction(Statement statement)
+	{
+		if (statement is not InvokeStatement { MethodCall: { } } invokeStatement)
+			return;
+		var arguments = FormArgumentsForMethodCall(invokeStatement);
+		var methodStatements =
+			new ByteCodeGenerator(new InvokedMethod(
+				((Body)invokeStatement.MethodCall.Method.GetBodyAndParseIfNeeded()).Expressions,
+				arguments)).Generate();
+		var instance = Execute(methodStatements).Returns;
+		if (instance != null)
+			Registers[invokeStatement.Register] = instance;
+	}
+
+	private Dictionary<string, Instance> FormArgumentsForMethodCall(InvokeStatement invokeStatement)
+	{
+		var arguments = new Dictionary<string, Instance>();
+		if (invokeStatement.MethodCall == null)
+			return arguments; // ncrunch: no coverage
+		for (var index = 0; index < invokeStatement.MethodCall.Method.Parameters.Count; index++)
+		{
+			var argument = invokeStatement.MethodCall.Arguments[index];
+			var argumentInstance = argument is Value argumentValue
+				? new Instance(argumentValue.ReturnType, argumentValue.Data)
+				: variables[argument.ToString()];
+			arguments.Add(invokeStatement.MethodCall.Method.Parameters[index].Name, argumentInstance);
+		}
+		return arguments;
 	}
 
 	private bool TryExecuteReturn(Statement statement)

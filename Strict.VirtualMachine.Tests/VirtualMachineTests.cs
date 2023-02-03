@@ -1,4 +1,6 @@
 using NUnit.Framework;
+using Strict.Language;
+using Strict.Language.Expressions.Tests;
 
 namespace Strict.VirtualMachine.Tests;
 
@@ -101,6 +103,28 @@ public sealed class VirtualMachineTests : BaseVirtualMachineTests
 		var statements = new ByteCodeGenerator(GenerateMethodCallFromSource("RemoveParentheses",
 			methodCall, RemoveParenthesesKata)).Generate();
 		Assert.That(vm.Execute(statements).Returns?.Value, Is.EqualTo(expectedResult));
+	}
+
+	//ncrunch: no coverage start
+	private static IEnumerable<TestCaseData> methodCallTests
+	{
+		get
+		{
+			yield return new TestCaseData("AddNumbers", "AddNumbers(2, 5).GetSum", SimpleMethodCallCode, 7);
+			yield return new TestCaseData("CallWithConstants", "CallWithConstants(2, 5).GetSum", MethodCallWithConstantValues, 6);
+			yield return new TestCaseData("CallWithoutArguments", "CallWithoutArguments(2, 5).GetSum", MethodCallWithLocalWithNoArguments, 542);
+		}
+	}
+	//ncrunch: no coverage end
+
+	[TestCaseSource(nameof(methodCallTests))]
+	// ReSharper disable once TooManyArguments
+	public void MethodCall(string programName, string methodCall, string[] source, object expected)
+	{
+		var statements =
+			new ByteCodeGenerator(GenerateMethodCallFromSource(programName, methodCall,
+				source)).Generate();
+		Assert.That(vm.Execute(statements).Returns?.Value, Is.EqualTo(expected));
 	}
 
 	[TestCase("Invertor((1, 2, 3, 4, 5)).Invert", "-1-2-3-4-5")]
