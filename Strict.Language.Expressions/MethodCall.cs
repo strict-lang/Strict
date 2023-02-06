@@ -35,6 +35,41 @@ public class MethodCall : ConcreteExpression
 	public MethodCall(Method method, Expression? instance = null, Type? toReturnType = null) : this(method, instance,
 		Array.Empty<Expression>(), toReturnType) { }
 
+	public static Expression? TryParse(Expression? instance, Body body, IReadOnlyList<Expression> arguments,
+		Type type, string inputAsString)
+	{
+		if (body.IsFakeBodyForMemberInitialization)
+			return null;
+		var method = type.FindMethod(inputAsString, arguments, body.Method.Parser);
+		if (method != null)
+			return new MethodCall(method, instance, arguments);
+#if LOG_DETAILS
+		Logger.Info("ParseNested found no local method in " + body.Method.Type + ": " + inputAsString);
+#endif
+		return null;
+	}
+
+	public static Expression? TryParseFromOrEnum(Body body, IReadOnlyList<Expression> arguments,
+		string methodName)
+	{
+		var fromType = body.Method.FindType(methodName);
+		return fromType == null
+			? null
+			: IsConstructorUsedWithSameArgumentType(arguments, fromType)
+				? throw new ConstructorForSameTypeArgumentIsNotAllowed(body)
+				: new MethodCall(fromType.GetMethod(Method.From, arguments, body.Method.Parser), null, arguments);
+	}
+
+	private static bool
+		IsConstructorUsedWithSameArgumentType(IReadOnlyList<Expression> arguments, Type fromType) =>
+		arguments.Count == 1 && (fromType == arguments[0].ReturnType ||
+			arguments[0].ReturnType is GenericTypeImplementation genericType && fromType == genericType.Generic);
+
+	public sealed class ConstructorForSameTypeArgumentIsNotAllowed : ParsingFailed
+	{
+		public ConstructorForSameTypeArgumentIsNotAllowed(Body body) : base(body) { }
+	}
+
 	public override string ToString() =>
 		Instance != null
 			? $"{Instance}.{Method.Name}{Arguments.ToBrackets()}"

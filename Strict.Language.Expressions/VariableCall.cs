@@ -1,4 +1,6 @@
-﻿namespace Strict.Language.Expressions;
+﻿using System;
+
+namespace Strict.Language.Expressions;
 
 public sealed class VariableCall : ConcreteExpression
 {
@@ -6,6 +8,14 @@ public sealed class VariableCall : ConcreteExpression
 	{
 		Name = name;
 		CurrentValue = currentValue;
+	}
+
+	public static Expression? TryParse(Body body, ReadOnlySpan<char> input)
+	{
+		var variableValue = body.FindVariableValue(input);
+		return variableValue != null
+			? new VariableCall(input.ToString(), variableValue)
+			: null;
 	}
 
 	public string Name { get; }

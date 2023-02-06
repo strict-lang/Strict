@@ -123,9 +123,9 @@ public sealed class ListTests : TestExpressions
 	[TestCase("Boolean(true)")]
 	[TestCase("List((1, 2))")]
 	[TestCase("List((\"Hi\", \"There\"))")]
-	public new void ConstructorForSameTypeArgumentIsNotAllowed(string code) =>
+	public void ConstructorForSameTypeArgumentIsNotAllowed(string code) =>
 		Assert.That(() => ParseExpression(code),
-			Throws.InstanceOf<ConstructorForSameTypeArgumentIsNotAllowed>());
+			Throws.InstanceOf<MethodCall.ConstructorForSameTypeArgumentIsNotAllowed>());
 
 	[Test]
 	public void MemberWithListPrefixInTypeIsNotAllowed() =>

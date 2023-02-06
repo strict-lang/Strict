@@ -87,7 +87,7 @@ public class BaseVirtualMachineTests : TestExpressions
 		"\tresult",
 		"SumNumbers(fNumber Number, sNumber Number) Number",
 		"\tconstant result = fNumber + sNumber",
-		"\tresult",
+		"\tresult"
 	};
 	protected static readonly string[] MethodCallWithConstantValues =
 	{
@@ -98,7 +98,7 @@ public class BaseVirtualMachineTests : TestExpressions
 		"\tresult",
 		"SumNumbers(fNumber Number, sNumber Number) Number",
 		"\tconstant result = fNumber + sNumber",
-		"\tresult",
+		"\tresult"
 	};
 	protected static readonly string[] MethodCallWithLocalVariables =
 	{
@@ -111,7 +111,7 @@ public class BaseVirtualMachineTests : TestExpressions
 		"\tresult",
 		"SumNumbers(fNumber Number, sNumber Number) Number",
 		"\tconstant result = fNumber + sNumber",
-		"\tresult",
+		"\tresult"
 	};
 	protected static readonly string[] MethodCallWithLocalWithNoArguments =
 	{
@@ -122,7 +122,7 @@ public class BaseVirtualMachineTests : TestExpressions
 		"\tresult",
 		"SumNumbers Number",
 		"\tconstant result = 10 + 532",
-		"\tresult",
+		"\tresult"
 	};
 	protected static readonly Statement[] ExpectedSimpleMethodCallCode =
 	{
@@ -131,7 +131,7 @@ public class BaseVirtualMachineTests : TestExpressions
 		new InvokeStatement("SumNumbers(firstNumber, secondNumber)", Register.R0),
 		new StoreFromRegisterStatement(Register.R0, "result"),
 		new LoadVariableStatement(Register.R1, "result"),
-		new ReturnStatement(Register.R1),
+		new ReturnStatement(Register.R1)
 	};
 	protected static readonly Statement[] ExpectedStatementsOfRemoveParanthesesKata =
 	{

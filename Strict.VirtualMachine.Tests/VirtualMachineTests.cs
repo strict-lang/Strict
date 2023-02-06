@@ -1,6 +1,4 @@
 using NUnit.Framework;
-using Strict.Language;
-using Strict.Language.Expressions.Tests;
 
 namespace Strict.VirtualMachine.Tests;
 
@@ -106,7 +104,7 @@ public sealed class VirtualMachineTests : BaseVirtualMachineTests
 	}
 
 	//ncrunch: no coverage start
-	private static IEnumerable<TestCaseData> methodCallTests
+	private static IEnumerable<TestCaseData> MethodCallTests
 	{
 		get
 		{
@@ -117,7 +115,7 @@ public sealed class VirtualMachineTests : BaseVirtualMachineTests
 	}
 	//ncrunch: no coverage end
 
-	[TestCaseSource(nameof(methodCallTests))]
+	[TestCaseSource(nameof(MethodCallTests))]
 	// ReSharper disable once TooManyArguments
 	public void MethodCall(string programName, string methodCall, string[] source, object expected)
 	{

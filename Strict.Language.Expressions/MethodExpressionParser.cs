@@ -152,7 +152,6 @@ public class MethodExpressionParser : ExpressionParser
 
 	//https://deltaengine.fogbugz.com/f/cases/26383
 	// ReSharper disable once TooManyArguments
-	// ReSharper disable once MethodTooLong
 	// ReSharper disable once CyclomaticComplexity
 	private Expression? ParseInContext(Context context, Body body, ReadOnlySpan<char> input,
 		IReadOnlyList<Expression> arguments)
@@ -160,104 +159,78 @@ public class MethodExpressionParser : ExpressionParser
 #if LOG_DETAILS
 		Logger.Info(nameof(ParseInContext) + " " + context + ", " + input.ToString());
 #endif
-		if (input.Contains('.'))
+		return input.Contains('.')
+			? ParseNestedExpressionInContext(context, body, input, arguments)
+			: ListCall.TryParse(body, TryVariableOrValueOrParameterOrMemberOrMethodCall(context, null, body, input, arguments),
+				arguments);
+	}
+
+	private Expression? ParseNestedExpressionInContext(Context context, Body body, ReadOnlySpan<char> input,
+		IReadOnlyList<Expression> arguments)
+	{
+		var members = new RangeEnumerator(input, '.', 0);
+		Expression? current = null;
+		while (members.MoveNext())
 		{
-			var members = new RangeEnumerator(input, '.', 0);
-			Expression? current = null;
-			while (members.MoveNext())
+			if (current == null)
 			{
-				if (current == null)
+				current = Text.TryParse(body, input[members.Current]) ??
+					List.TryParseWithMultipleOrNestedElements(body, input[members.Current]);
+				if (current != null)
 				{
-					current = Text.TryParse(body, input[members.Current]) ??
-						List.TryParseWithMultipleOrNestedElements(body, input[members.Current]);
-					if (current != null)
-					{
-						context = current.ReturnType;
-						continue;
-					}
+					context = current.ReturnType;
+					continue;
 				}
-				var expression = input[members.Current].Contains('(')
-					? TryParseMemberOrZeroOrOneArgumentMethodOrNestedCall(body, input[members.Current])
-					: TryMemberOrMethodCall(context, current, body, input[members.Current],
-						// arguments are only needed for the last part
-						members.IsAtEnd
-							? arguments
-							: Array.Empty<Expression>());
-				if (expression == null)
-				{
-					if (input[members.Current].IsOperator())
-						throw new InvalidOperatorHere(body, input[members.Current].ToString());
-					if (input[members.Current].TryParseNumber(out _))
-						throw new NumbersCanNotBeInNestedCalls(body, input[members.Current].ToString());
-					var referenceType = current?.ReturnType ?? body.Method.Type;
-					throw new MemberOrMethodNotFound(body, null, input[members.Current].ToString() +
-						$" in {referenceType}" + (current?.ReturnType != null
-							? ParsingFailed.GetClickableStacktraceLine(current.ReturnType, 0, string.Empty)
-							: string.Empty));
-				}
-				current = expression;
-				context = current.ReturnType;
 			}
-			return TryListCall(body, current, arguments);
+			var expression = input[members.Current].Contains('(')
+				? TryParseMemberOrZeroOrOneArgumentMethodOrNestedCall(body, input[members.Current])
+				: TryVariableOrValueOrParameterOrMemberOrMethodCall(context, current, body, input[members.Current],
+					// arguments are only needed for the last part
+					members.IsAtEnd
+						? arguments
+						: Array.Empty<Expression>());
+			if (expression == null)
+			{
+				if (input[members.Current].IsOperator())
+					throw new InvalidOperatorHere(body, input[members.Current].ToString());
+				if (input[members.Current].TryParseNumber(out _))
+					throw new NumbersCanNotBeInNestedCalls(body, input[members.Current].ToString());
+				var referenceType = current?.ReturnType ?? body.Method.Type;
+				throw new MemberOrMethodNotFound(body, null, input[members.Current].ToString() +
+					$" in {referenceType}" + (current?.ReturnType != null
+						? ParsingFailed.GetClickableStacktraceLine(current.ReturnType, 0, string.Empty)
+						: string.Empty));
+			}
+			current = expression;
+			context = current.ReturnType;
 		}
-		return TryListCall(body, TryMemberOrMethodCall(context, null, body, input, arguments),
-			arguments);
+		return ListCall.TryParse(body, current, arguments);
 	}
 
 	//https://deltaengine.fogbugz.com/f/cases/26383
 	// ReSharper disable once TooManyArguments
-	// ReSharper disable once ExcessiveIndentation
-	// ReSharper disable once MethodTooLong
-	private static Expression? TryMemberOrMethodCall(Context context, Expression? instance,
+	private static Expression? TryVariableOrValueOrParameterOrMemberOrMethodCall(Context context, Expression? instance,
 		Body body, ReadOnlySpan<char> input, IReadOnlyList<Expression> arguments)
 	{
-		if (!input.IsWord() && !input.Contains(' ') && !input.Contains('('))
-		{
-			var typeName = input.ToString();
-			return typeName.IsWordOrWordWithNumberAtEnd(out _)
-				? TryParseFromOrEnum(body, arguments, typeName)
-				: null;
-		}
+		var inputAsString = input.ToString();
+		var type = context as Type ?? body.Method.Type;
 #if LOG_DETAILS
-		Logger.Info(nameof(TryMemberOrMethodCall) + ": " + input.ToString() + " in " + context +
+		Logger.Info(nameof(TryVariableOrValueOrParameterOrMemberOrMethodCall) + ": " + input.ToString() + " in " + context +
 			" with arguments=" + arguments.ToWordList());
 #endif
-		var type = context as Type ?? body.Method.Type;
-		var variableValue = body.FindVariableValue(input);
-		if (variableValue != null)
-			return new VariableCall(input.ToString(), variableValue);
-		if (input.Equals(Base.Value, StringComparison.Ordinal))
-		{
-			var valueInstance = Instance.Parse(body.Method);
-			body.AddVariable(Base.Value, valueInstance);
-			return valueInstance;
-		}
-		if (input.ToString().IsKeyword())
-			throw new KeywordNotAllowedAsMemberOrMethod(body, input.ToString(), type);
-		foreach (var parameter in body.Method.Parameters)
-			if (input.Equals(parameter.Name, StringComparison.Ordinal))
-				return new ParameterCall(parameter);
-		var memberCall = TryFindMemberCall(type, instance, input);
-		var inputAsString = input.ToString();
-		if (memberCall != null)
-			return instance == null && body.IsFakeBodyForMemberInitialization
-				? throw new CannotAccessMemberBeforeTypeIsParsed(body, inputAsString, type)
-				: memberCall;
-#if LOG_DETAILS
-		Logger.Info(nameof(TryMemberOrMethodCall) + " found no member in " + body.Method);
-#endif
-		if (!body.IsFakeBodyForMemberInitialization)
-		{
-			var method2 = type.FindMethod(inputAsString, arguments, body.Method.Parser);
-			if (method2 != null)
-				return new MethodCall(method2, instance, arguments);
-		}
-		if (instance == null)
-			return TryParseFromOrEnum(body, arguments, inputAsString);
-#if LOG_DETAILS
-		Logger.Info("ParseNested found no local method in " + body.Method.Type + ": " + inputAsString);
-#endif
-		return null;
+		return !input.IsWord() && !input.Contains(' ') && !input.Contains('(')
+			? inputAsString.IsWordOrWordWithNumberAtEnd(out _)
+				? MethodCall.TryParseFromOrEnum(body, arguments, inputAsString)
+				: null
+			: (VariableCall.TryParse(body, input) ?? (input.Equals(Base.Value, StringComparison.Ordinal)
+				? Instance.Parse(body, body.Method)
+				: ParameterCall.TryParse(body, input))) ?? (inputAsString.IsKeyword()
+				? throw new KeywordNotAllowedAsMemberOrMethod(body, inputAsString, type)
+				: (MemberCall.TryParse(body, type, instance, input) ??
+					MethodCall.TryParse(instance, body, arguments, type, input.ToString())) ??
+				(instance == null
+					? MethodCall.TryParseFromOrEnum(body, arguments, inputAsString)
+					: null));
 	}
 
 	public sealed class CannotAccessMemberBeforeTypeIsParsed : ParsingFailed
@@ -269,46 +242,6 @@ public class MethodExpressionParser : ExpressionParser
 	{
 		public KeywordNotAllowedAsMemberOrMethod(Body body, string input, Type type) : base(body,
 			input, type) { }
-	}
-
-	private static Expression? TryParseFromOrEnum(Body body, IReadOnlyList<Expression> arguments,
-		string methodName)
-	{
-		var fromType = body.Method.FindType(methodName);
-		return fromType == null
-			? null
-			: IsConstructorUsedWithSameArgumentType(arguments, fromType)
-				? throw new ConstructorForSameTypeArgumentIsNotAllowed(body)
-				: new MethodCall(fromType.GetMethod(Method.From, arguments, body.Method.Parser), null, arguments);
-	}
-
-	private static Expression? TryListCall(Body body, Expression? variable,
-		IReadOnlyList<Expression> arguments) =>
-		variable is null or MethodCall
-			? variable
-			: arguments.Count > 0
-				? variable.ReturnType.IsIterator
-					? new ListCall(variable, arguments[0])
-					: throw new InvalidArgumentItIsNotMethodOrListCall(body, variable, arguments)
-				: variable;
-
-	private static bool
-		IsConstructorUsedWithSameArgumentType(IReadOnlyList<Expression> arguments, Type fromType) =>
-		arguments.Count == 1 && (fromType == arguments[0].ReturnType ||
-			arguments[0].ReturnType is GenericTypeImplementation genericType && fromType == genericType.Generic);
-
-	private static Expression? TryFindMemberCall(Type type, Expression? instance,
-		ReadOnlySpan<char> partToParse)
-	{
-		foreach (var member in type.Members)
-			if (partToParse.Equals(member.Name, StringComparison.Ordinal))
-				return new MemberCall(instance, member);
-		return null;
-	}
-
-	public class ConstructorForSameTypeArgumentIsNotAllowed : ParsingFailed
-	{
-		public ConstructorForSameTypeArgumentIsNotAllowed(Body body) : base(body) { }
 	}
 
 	/// <summary>
