@@ -152,7 +152,6 @@ public class MethodExpressionParser : ExpressionParser
 
 	//https://deltaengine.fogbugz.com/f/cases/26383
 	// ReSharper disable once TooManyArguments
-	// ReSharper disable once CyclomaticComplexity
 	private Expression? ParseInContext(Context context, Body body, ReadOnlySpan<char> input,
 		IReadOnlyList<Expression> arguments)
 	{
@@ -189,23 +188,23 @@ public class MethodExpressionParser : ExpressionParser
 					members.IsAtEnd
 						? arguments
 						: Array.Empty<Expression>());
-			if (expression == null)
-			{
-				if (input[members.Current].IsOperator())
-					throw new InvalidOperatorHere(body, input[members.Current].ToString());
-				if (input[members.Current].TryParseNumber(out _))
-					throw new NumbersCanNotBeInNestedCalls(body, input[members.Current].ToString());
-				var referenceType = current?.ReturnType ?? body.Method.Type;
-				throw new MemberOrMethodNotFound(body, null, input[members.Current].ToString() +
-					$" in {referenceType}" + (current?.ReturnType != null
-						? ParsingFailed.GetClickableStacktraceLine(current.ReturnType, 0, string.Empty)
-						: string.Empty));
-			}
-			current = expression;
+			// ReSharper disable once UnthrowableException
+			current = expression ?? throw CheckErrorTypeAndThrowException(body, input, members, current);
 			context = current.ReturnType;
 		}
 		return ListCall.TryParse(body, current, arguments);
 	}
+
+	private static Exception CheckErrorTypeAndThrowException(Body body, ReadOnlySpan<char> input,
+		RangeEnumerator members, Expression? current) =>
+		input[members.Current].IsOperator()
+			? new InvalidOperatorHere(body, input[members.Current].ToString())
+			: input[members.Current].TryParseNumber(out _)
+				? new NumbersCanNotBeInNestedCalls(body, input[members.Current].ToString())
+				: new MemberOrMethodNotFound(body, null, input[members.Current].ToString() +
+					$" in {current?.ReturnType ?? body.Method.Type}" + (current?.ReturnType != null
+						? ParsingFailed.GetClickableStacktraceLine(current.ReturnType, 0, string.Empty)
+						: string.Empty));
 
 	//https://deltaengine.fogbugz.com/f/cases/26383
 	// ReSharper disable once TooManyArguments
@@ -266,8 +265,6 @@ public class MethodExpressionParser : ExpressionParser
 		return ParseAllElementsFast(body, innerSpan, new RangeEnumerator(innerSpan, ',', 0));
 	}
 
-	//https://deltaengine.fogbugz.com/f/cases/26383
-	// ReSharper disable once MethodTooLong
 	private Stack<Expression> GetListArgumentsUsingPostfixTokens(Body body, ReadOnlySpan<char> innerSpan,
 		ShuntingYard postfix)
 	{
@@ -280,30 +277,36 @@ public class MethodExpressionParser : ExpressionParser
 				ParseMethodCallWithArguments(body, innerSpan,
 					postfix));
 		else
-			do
-			{
-#if LOG_DETAILS
-				Logger.Info("pushing list element " + innerSpan[postfix.Output.Peek()].ToString());
-#endif
-				var span = innerSpan[postfix.Output.Peek()];
-				// Is this a binary expression we have to put into the list (already tokenized and postfixed)
-				try
-				{
-					if (span.Length == 1 && span[0].IsSingleCharacterOperator() ||
-						span.IsMultiCharacterOperator())
-						expressions.Push(Binary.Parse(body, innerSpan, postfix.Output));
-					else
-						expressions.Push(body.Method.ParseExpression(body, innerSpan[postfix.Output.Pop()]));
-				}
-				catch (UnknownExpression ex)
-				{
-					throw new UnknownExpressionForArgument(body,
-						span.ToString() + " is invalid for argument " + expressions.Count + " " + ex.Message);
-				}
-				if (postfix.Output.Count > 0 && innerSpan[postfix.Output.Pop().Start.Value] != ',')
-					throw new ListTokensAreNotSeparatedByComma(body);
-			} while (postfix.Output.Count > 0);
+			ParseBinaryOrNormalExpressionsIntoList(body, innerSpan, postfix, expressions);
 		return expressions;
+	}
+
+	private static void ParseBinaryOrNormalExpressionsIntoList(Body body, ReadOnlySpan<char> innerSpan, ShuntingYard postfix,
+		Stack<Expression> expressions)
+	{
+		do
+		{
+#if LOG_DETAILS
+			Logger.Info("pushing list element " + innerSpan[postfix.Output.Peek()].ToString());
+#endif
+			var span = innerSpan[postfix.Output.Peek()];
+			// Is this a binary expression we have to put into the list (already tokenized and postfixed)
+			try
+			{
+				if (span.Length == 1 && span[0].IsSingleCharacterOperator() ||
+					span.IsMultiCharacterOperator())
+					expressions.Push(Binary.Parse(body, innerSpan, postfix.Output));
+				else
+					expressions.Push(body.Method.ParseExpression(body, innerSpan[postfix.Output.Pop()]));
+			}
+			catch (UnknownExpression ex)
+			{
+				throw new UnknownExpressionForArgument(body,
+					span.ToString() + " is invalid for argument " + expressions.Count + " " + ex.Message);
+			}
+			if (postfix.Output.Count > 0 && innerSpan[postfix.Output.Pop().Start.Value] != ',')
+				throw new ListTokensAreNotSeparatedByComma(body);
+		} while (postfix.Output.Count > 0);
 	}
 
 	private static List<Expression> ParseAllElementsFast(Body body, ReadOnlySpan<char> input,
@@ -332,17 +335,17 @@ public class MethodExpressionParser : ExpressionParser
 		TryParseMemberOrZeroOrOneArgumentMethodOrNestedCall(body, input) ??
 		throw new InvalidSingleTokenExpression(body, input.ToString());
 
-	public sealed class InvalidOperatorHere : ParsingFailed
+	protected sealed class InvalidOperatorHere : ParsingFailed
 	{
 		public InvalidOperatorHere(Body body, string message) : base(body, message) { }
 	}
 
-	public sealed class UnknownExpression : ParsingFailed
+	protected sealed class UnknownExpression : ParsingFailed
 	{
 		public UnknownExpression(Body body, string error = "") : base(body, error) { }
 	}
 
-	public class CannotParseEmptyInput : ParsingFailed
+	protected sealed class CannotParseEmptyInput : ParsingFailed
 	{
 		public CannotParseEmptyInput(Body body) : base(body) { }
 	}
@@ -352,7 +355,7 @@ public class MethodExpressionParser : ExpressionParser
 		public ExpressionWithTypeAnyIsNotAllowed(Body body, string message) : base(body, message) { }
 	}
 
-	public sealed class NumbersCanNotBeInNestedCalls : ParsingFailed
+	protected sealed class NumbersCanNotBeInNestedCalls : ParsingFailed
 	{
 		public NumbersCanNotBeInNestedCalls(Body body, string text) : base(body, text) { }
 	}
@@ -363,12 +366,12 @@ public class MethodExpressionParser : ExpressionParser
 			memberName, memberType) { }
 	}
 
-	public sealed class UnknownExpressionForArgument : ParsingFailed
+	protected sealed class UnknownExpressionForArgument : ParsingFailed
 	{
 		public UnknownExpressionForArgument(Body body, string message) : base(body, message) { }
 	}
 
-	public class ListTokensAreNotSeparatedByComma : ParsingFailed
+	protected sealed class ListTokensAreNotSeparatedByComma : ParsingFailed
 	{
 		public ListTokensAreNotSeparatedByComma(Body body) : base(body) { }
 	}
