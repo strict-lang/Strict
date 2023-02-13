@@ -83,13 +83,11 @@ public sealed class VirtualMachineTests : BaseVirtualMachineTests
 				new StoreVariableStatement(new Instance(NumberType, 10), "number"),
 				new StoreVariableStatement(new Instance(NumberType, 1), "result"),
 				new StoreVariableStatement(new Instance(NumberType, 2), "multiplier"),
-				new LoadConstantStatement(Register.R0, new Instance(NumberType, 10)),
-				new LoadConstantStatement(Register.R1, new Instance(NumberType, 1)),
-				new InitLoopStatement("number"), new LoadVariableStatement(Register.R2, "result"),
+				new LoopBeginStatement("number", Register.R0), new LoadVariableStatement(Register.R2, "result"),
 				new LoadVariableStatement(Register.R3, "multiplier"),
 				new BinaryStatement(Instruction.Multiply, Register.R2, Register.R3, Register.R4),
 				new StoreFromRegisterStatement(Register.R4, "result"),
-				new BinaryStatement(Instruction.Subtract, Register.R0, Register.R1, Register.R0),
+				new IterationEndStatement(Register.R0),
 				new JumpIfNotZeroStatement(-6, Register.R0),
 				new LoadVariableStatement(Register.R5, "result"), new ReturnStatement(Register.R5)
 			}).Returns?.Value, Is.EqualTo(1024));
@@ -111,6 +109,7 @@ public sealed class VirtualMachineTests : BaseVirtualMachineTests
 			yield return new TestCaseData("AddNumbers", "AddNumbers(2, 5).GetSum", SimpleMethodCallCode, 7);
 			yield return new TestCaseData("CallWithConstants", "CallWithConstants(2, 5).GetSum", MethodCallWithConstantValues, 6);
 			yield return new TestCaseData("CallWithoutArguments", "CallWithoutArguments(2, 5).GetSum", MethodCallWithLocalWithNoArguments, 542);
+			yield return new TestCaseData("CurrentlyFailing", "CurrentlyFailing(10).SumEvenNumbers", CurrentlyFailingTest, 20);
 		}
 	}
 	//ncrunch: no coverage end
