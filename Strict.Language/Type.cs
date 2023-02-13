@@ -265,7 +265,7 @@ public class Type : Context
 	private static string GetMemberType(SpanSplitEnumerator nameAndExpression)
 	{
 		var memberType = nameAndExpression.Current.ToString();
-		while (nameAndExpression.Current[^1] == ',')
+		while (memberType.Contains('(') && !memberType.Contains(')'))
 		{
 			nameAndExpression.MoveNext();
 			memberType += " " + nameAndExpression.Current.ToString();

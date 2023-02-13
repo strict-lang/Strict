@@ -62,7 +62,7 @@ public sealed class TextTests : TestExpressions
 	}
 
 	[TestCase("ParseMultiLineTextExpressionWithNewLine", "\"FirstLine\" + Text.NewLine + \"ThirdLine\" + Text.NewLine + \"This is the continuation of the previous text line\"", "has log", "Run Text",
-		"	constant input = \"FirstLine\" + Text.NewLine + \"ThirdLine\" + Text.NewLine +", // ending with new line is the problem in parsing
+		"	constant input = \"FirstLine\" + Text.NewLine + \"ThirdLine\" + Text.NewLine +",
 		"	\"This is the continuation of the previous text line\"")]
 	public void ParseMultiLineTextEndsWithNewLine(string testName, string expected, params string[] code)
 	{

@@ -39,7 +39,7 @@ public abstract class NamedType
 
 	private static string GetTypeName(string typeName)
 	{
-		if (typeName.StartsWith("List(", StringComparison.Ordinal))
+		if (typeName.StartsWith(Base.List + "(", StringComparison.Ordinal) && !typeName.Contains(Context.DoubleOpenBrackets))
 			throw new ListPrefixIsNotAllowedUseImplementationTypeNameInPlural(typeName);
 		return typeName;
 	}

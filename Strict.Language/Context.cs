@@ -68,6 +68,8 @@ public abstract class Context
 	{
 		if (name == Name)
 			return (Type)this;
+		if (name.StartsWith(Base.List + DoubleOpenBrackets, StringComparison.Ordinal))
+			return GetNestedListType(name);
 		if (name.Contains('(') && name.EndsWith(')'))
 			return GetGenericTypeWithArguments(name);
 		if (!name.EndsWith('s'))
@@ -80,6 +82,34 @@ public abstract class Context
 		if (elementType != null)
 			return GetListImplementationType(elementType);
 		return (FindFullType(name) ?? FindType(name, this)) ?? throw new TypeNotFound(name, FullName);
+	}
+
+	internal const string DoubleOpenBrackets = "((";
+
+	private Type GetNestedListType(string fullName)
+	{
+		var list = GetType(Base.List);
+		var (typeName, lines) = GetCombinedTypeNameAndLines(
+			ExtractNamesWithType(fullName));
+		return list.GetGenericImplementation(new Type(list.Package, new TypeLines(typeName, lines)));
+	}
+
+	private static string[] ExtractNamesWithType(string fullName) =>
+		fullName[(Base.List.Length + DoubleOpenBrackets.Length)..^DoubleCloseBrackets.Length].
+			Split(",", StringSplitOptions.TrimEntries);
+
+	private const string DoubleCloseBrackets = "))";
+
+	private static (string, string[]) GetCombinedTypeNameAndLines(IReadOnlyList<string> namesWithType)
+	{
+		var name = "";
+		var lines = new string[namesWithType.Count];
+		for (var index = 0; index < namesWithType.Count; index++)
+		{
+			name += namesWithType[index].Split(' ')[0].MakeFirstLetterUppercase();
+			lines[index] = Type.HasWithSpaceAtEnd + namesWithType[index];
+		}
+		return (name, lines);
 	}
 
 	private Type GetGenericTypeWithArguments(string name)
