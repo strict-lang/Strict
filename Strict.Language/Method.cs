@@ -83,7 +83,7 @@ public sealed class Method : Context
 			IsGeneric = true;
 		var closingBracketIndex = rest.LastIndexOf(')');
 		var lastOpeningBracketIndex = rest.LastIndexOf('(');
-		if (lastOpeningBracketIndex > 2)
+		if (lastOpeningBracketIndex > 2 && rest.IndexOf(')') < lastOpeningBracketIndex)
 			return Type.GetType(rest[(rest.LastIndexOf(' ') + 1)..].ToString());
 		var gotBrackets = closingBracketIndex > 0;
 		return gotBrackets && rest.Length == 2
@@ -123,7 +123,7 @@ public sealed class Method : Context
 		var closingBracketIndex = rest.LastIndexOf(')');
 		var lastOpeningBracketIndex = rest.LastIndexOf('(');
 		// If the type contains brackets, exclude it from the rest for proper parameter parsing
-		if (lastOpeningBracketIndex > 2)
+		if (lastOpeningBracketIndex > 2 && rest.IndexOf(DoubleOpenBrackets) < 0)
 		{
 			var lastSpaceIndex = rest.LastIndexOf(' ');
 			if (lastSpaceIndex > 0)
@@ -136,8 +136,7 @@ public sealed class Method : Context
 
 	private void ParseAndAddParameters(Type type, ReadOnlySpan<char> rest, int closingBracketIndex)
 	{
-		foreach (var nameAndType in rest[1..closingBracketIndex].
-			Split(',', StringSplitOptions.TrimEntries))
+		foreach (var nameAndType in SplitParameters(rest, closingBracketIndex))
 		{
 			if (char.IsUpper(nameAndType[0]))
 				throw new ParametersMustStartWithLowerCase(this);
@@ -151,6 +150,14 @@ public sealed class Method : Context
 		if (parameters.Count > Limit.ParameterCount)
 			throw new MethodParameterCountMustNotExceedThree(this,
 				TypeLineNumber + methodLineNumber - 1);
+	}
+
+	private static SpanSplitEnumerator SplitParameters(ReadOnlySpan<char> rest, int closingBracketIndex)
+	{
+		var parametersSpan = rest[1..closingBracketIndex];
+		return rest.IndexOf(DoubleOpenBrackets) > 0
+			? parametersSpan.Split('-') // TODO: Need to find a better solution to deal with span enumerator
+			: parametersSpan.Split(',', StringSplitOptions.TrimEntries);
 	}
 
 	public sealed class ParametersMustStartWithLowerCase : ParsingFailed

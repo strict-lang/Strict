@@ -91,14 +91,15 @@ public abstract class Context
 		var list = GetType(Base.List);
 		var (typeName, lines) = GetCombinedTypeNameAndLines(
 			ExtractNamesWithType(fullName));
-		return list.GetGenericImplementation(new Type(list.Package, new TypeLines(typeName, lines)));
+		var typeWithOtherTypesAsMembers = new Type(list.Package, new TypeLines(typeName, lines));
+		return list.GetGenericImplementation(typeWithOtherTypesAsMembers);
 	}
 
 	private static string[] ExtractNamesWithType(string fullName) =>
 		fullName[(Base.List.Length + DoubleOpenBrackets.Length)..^DoubleCloseBrackets.Length].
 			Split(",", StringSplitOptions.TrimEntries);
 
-	private const string DoubleCloseBrackets = "))";
+	internal const string DoubleCloseBrackets = "))";
 
 	private static (string, string[]) GetCombinedTypeNameAndLines(IReadOnlyList<string> namesWithType)
 	{
