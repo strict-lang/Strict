@@ -22,24 +22,14 @@ public sealed class ByteCodeGenerator
 
 	public ByteCodeGenerator(MethodCall methodCall)
 	{
-		InstanceArguments = new Dictionary<string, Expression>();
 		if (methodCall.Instance != null)
 			AddInstanceMemberVariables((MethodCall)methodCall.Instance);
 		AddMethodParameterVariables(methodCall);
-		StoreAndLoadVariables();
 		Expressions = ((Body)methodCall.Method.GetBodyAndParseIfNeeded()).Expressions;
 		registry = new Registry();
 	}
 
 	public IReadOnlyList<Expression> Expressions { get; }
-	private Dictionary<string, Expression>? InstanceArguments { get; }
-
-	private void StoreAndLoadVariables()
-	{
-		if (InstanceArguments != null)
-			foreach (var argument in InstanceArguments)
-				statements.Add(new StoreVariableStatement(new Instance(argument.Value), argument.Key));
-	}
 
 	private void AddInstanceMemberVariables(MethodCall instance)
 	{
@@ -52,16 +42,18 @@ public sealed class ByteCodeGenerator
 						instance.Arguments[parameterIndex]),
 					instance.ReturnType.Members[parameterIndex].Name));
 			else
-				InstanceArguments?.Add(instance.ReturnType.Members[parameterIndex].Name,
-					instance.Arguments[parameterIndex]);
+				statements.Add(new StoreVariableStatement(
+					new Instance(instance.Arguments[parameterIndex], true),
+					instance.ReturnType.Members[parameterIndex].Name));
 	}
 
 	private void AddMethodParameterVariables(MethodCall methodCall)
 	{
 		for (var parameterIndex = 0; parameterIndex < methodCall.Method.Parameters.Count;
 			parameterIndex++)
-			InstanceArguments?.Add(methodCall.Method.Parameters[parameterIndex].Name,
-				methodCall.Arguments[parameterIndex]);
+			statements?.Add(new StoreVariableStatement(
+				new Instance(methodCall.Arguments[parameterIndex]),
+				methodCall.Method.Parameters[parameterIndex].Name));
 	}
 
 	public List<Statement> Generate() => GenerateStatements(Expressions);
@@ -169,7 +161,6 @@ public sealed class ByteCodeGenerator
 
 	private void GenerateLoopStatements(For forExpression)
 	{
-		var iterableName = forExpression.Value.ToString();
 		GenerateRestLoopStatements(forExpression);
 		registry.FreeRegisters();
 	}
@@ -177,10 +168,6 @@ public sealed class ByteCodeGenerator
 	private void GenerateRestLoopStatements(For forExpression)
 	{
 		var registerForIterationCount = registry.AllocateRegister(true);
-		//statements.Add(new LoadConstantStatement(registerForIterationCount,
-		//	new Instance(iterableInstance.ReturnType, length)));
-		//statements.Add(new LoadConstantStatement(registerForIndexReduction,
-		//	new Instance(iterableInstance.ReturnType, 1)));
 		var statementCountBeforeLoopStart = statements.Count;
 		statements.Add(new LoopBeginStatement(forExpression.Value.ToString(), registerForIterationCount));
 		GenerateStatementsForLoopBody(forExpression);

@@ -5,16 +5,23 @@ namespace Strict.VirtualMachine;
 
 public sealed class VirtualMachine
 {
-	private readonly Dictionary<string, Instance> variables = new();
+	private Dictionary<string, Instance> variables = new();
 	private bool conditionFlag;
 	private int instructionIndex;
 	private IList<Statement> statements = new List<Statement>();
-	public Dictionary<Register, Instance> Registers { get; } = new();
+	public Dictionary<Register, Instance> Registers { get; set; } = new();
 	public Instance? Returns { get; private set; }
 
 	public VirtualMachine Execute(IList<Statement> allStatements)
 	{
 		Clear();
+		return RunStatements(allStatements);
+	}
+
+	public VirtualMachine Invoke(IList<Statement> allStatements) => RunStatements(allStatements);
+
+	private VirtualMachine RunStatements(IList<Statement> allStatements)
+	{
 		statements = allStatements;
 		for (instructionIndex = 0; instructionIndex != -1 && instructionIndex < allStatements.Count;
 			instructionIndex++)
@@ -29,7 +36,7 @@ public sealed class VirtualMachine
 		statements.Clear();
 		Returns = null;
 		Registers.Clear();
-		//TODO: Need to also clear the variables, right now it will break since variables also holds the members, but this is not the right way.
+		variables.Clear();
 	}
 
 	private void ExecuteStatement(Statement statement)
@@ -60,18 +67,31 @@ public sealed class VirtualMachine
 		if (statement is not InvokeStatement { MethodCall: { } } invokeStatement)
 			return;
 		var arguments = FormArgumentsForMethodCall(invokeStatement);
-		if (invokeStatement.PersistedRegistry != null)
+		if (invokeStatement.PersistedRegistry != null && invokeStatement.MethodCall != null)
 		{
-			var methodStatements =
-				new ByteCodeGenerator(
-					new InvokedMethod(
-						((Body)invokeStatement.MethodCall.Method.GetBodyAndParseIfNeeded()).Expressions,
-						arguments), invokeStatement.PersistedRegistry).Generate();
-			var instance = Execute(methodStatements).Returns;
+			var methodStatements = GetByteCodeFromInvokedMethodCall(
+				((Body)invokeStatement.MethodCall.Method.GetBodyAndParseIfNeeded()).Expressions,
+				invokeStatement.PersistedRegistry, arguments);
+			var instance = RunAndGetResultFromInvokedMethodCall(methodStatements);
 			if (instance != null)
 				Registers[invokeStatement.Register] = instance;
 		}
 	}
+
+	private Instance? RunAndGetResultFromInvokedMethodCall(IList<Statement> methodStatements)
+	{
+		var members =
+			new Dictionary<string, Instance>(variables.Where(variable => variable.Value.IsMember));
+		var instance = new VirtualMachine { Registers = Registers, variables = members }.
+			Invoke(methodStatements).Returns;
+		return instance;
+	}
+
+	private static List<Statement> GetByteCodeFromInvokedMethodCall(
+		IReadOnlyList<Expression> expressions, Registry persistedRegistry,
+		IReadOnlyDictionary<string, Instance> arguments) =>
+		new ByteCodeGenerator(new InvokedMethod(expressions, arguments), persistedRegistry).
+			Generate();
 
 	private Dictionary<string, Instance> FormArgumentsForMethodCall(InvokeStatement invokeStatement)
 	{

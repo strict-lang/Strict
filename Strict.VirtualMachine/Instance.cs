@@ -27,15 +27,17 @@ public sealed class Instance
 		this.typeName = typeName;
 	}
 
-	public Instance(Expression expression)
+	public Instance(Expression expression, bool isMember = false)
 	{
 		ReturnType = expression.ReturnType;
 		if (expression is Value value)
 			Value = value.Data;
 		else
 			Value = new object(); //ncrunch: no coverage
+		IsMember = isMember;
 	}
 
+	public bool IsMember { get; set; }
 	public Type? ReturnType { get; }
 	public string TypeName =>
 		ReturnType == null
