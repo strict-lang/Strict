@@ -401,4 +401,34 @@ public sealed class ListTests : TestExpressions
 			(ifExpression?.Condition as MethodCall)?.Instance as List;
 		Assert.That(numbers?.ToString(), Is.EqualTo("(1, 2, 3)"));
 	}
+
+	[Test]
+	public void MergeFromConstructorParametersIntoListIfMemberMatches()
+	{
+		var program = new Type(type.Package,
+				new TypeLines(
+				// @formatter:off
+					"Vector2",
+					"has numbers with Length is 2",
+					"has One = Vector2(1, 1)",
+					"Length Number",
+					"\tVector2.Length is 0",
+					"\tVector2(3, 4).Length is 5",
+					"\t(X * X + Y * Y).SquareRoot")).
+			ParseMembersAndMethods(parser);
+		Assert.That(program.Members[1].Name, Is.EqualTo("One"));
+		Assert.That(program.Members[1].Type.ToString(), Is.EqualTo("TestPackage.Vector2"));
+	}
+
+	[Test]
+	public void FromConstructorCannotBeCreatedWhenFirstMemberIsNotMatched() =>
+		Assert.That(() => new Type(type.Package, new TypeLines(
+					"CannotCreateFromConstructor",
+					"has One = CannotCreateFromConstructor(1, 1)",
+					"has numbers with Length is 2",
+					"Length Number",
+					"\t(X * X + Y * Y).SquareRoot")).ParseMembersAndMethods(parser),
+			Throws.InstanceOf<ParsingFailed>()!.With.InnerException.
+				InstanceOf<Type.NoMatchingMethodFound>());
+	// @formatter:on
 }

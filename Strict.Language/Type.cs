@@ -628,7 +628,8 @@ public class Type : Context
 			return null;
 		var fromMethod = "from(";
 		fromMethod += GetMatchingMemberParametersIfExist(arguments);
-		return fromMethod.Length > 5 && fromMethod.Split(',').Length - 1 == arguments.Count
+		return fromMethod.Length > 5 && (fromMethod.Split(',').Length - 1 == arguments.Count ||
+			fromMethod.Split(',').Length - 1 == PrivateMembersCount)
 			? BuildMethod($"{fromMethod[..^2]})", parser)
 			: IsDataType
 				? BuildMethod(fromMethod[..^1], parser)
@@ -645,8 +646,22 @@ public class Type : Context
 				parameters += $"{member.Name.MakeFirstLetterLowercase()} {member.Type.Name}, ";
 				argumentIndex++;
 			}
-		return parameters;
+		return parameters == null && arguments.Count > 1 && PrivateMembersCount == 1 &&
+			CanUpcastAllArgumentsToMemberType(arguments, members[0], arguments[0].ReturnType)
+				? FormatMemberAsParameterWithType()
+				: parameters;
 	}
+
+	private int PrivateMembersCount => members.Count(member => !member.IsPublic);
+
+	private static bool CanUpcastAllArgumentsToMemberType(IEnumerable<Expression> arguments,
+		NamedType member, Type firstArgumentReturnType) =>
+		member.Type is GenericTypeImplementation { Generic.Name: Base.List } genericType &&
+		genericType.ImplementationTypes[0] == firstArgumentReturnType &&
+		arguments.All(a => a.ReturnType == firstArgumentReturnType);
+
+	private string FormatMemberAsParameterWithType() =>
+		$"{members[0].Name.MakeFirstLetterLowercase()} {members[0].Type.Name}, ";
 
 	private Method BuildMethod(string fromMethod, ExpressionParser parser) => new(this, 0, parser, new[] { fromMethod });
 
