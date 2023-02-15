@@ -7,4 +7,5 @@ public sealed class JumpIfNotZeroStatement : JumpIfStatement
 		Register = register;
 
 	public Register Register { get; }
+	public override string ToString() => $"{Instruction} {Steps} {Register}";
 }

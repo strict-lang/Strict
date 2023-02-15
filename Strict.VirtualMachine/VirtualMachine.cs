@@ -5,16 +5,23 @@ namespace Strict.VirtualMachine;
 
 public sealed class VirtualMachine
 {
-	private readonly Dictionary<string, Instance> variables = new();
+	private Dictionary<string, Instance> variables = new();
 	private bool conditionFlag;
 	private int instructionIndex;
 	private IList<Statement> statements = new List<Statement>();
-	public Dictionary<Register, Instance> Registers { get; } = new();
+	public Dictionary<Register, Instance> Registers { get; set; } = new();
 	public Instance? Returns { get; private set; }
 
 	public VirtualMachine Execute(IList<Statement> allStatements)
 	{
 		Clear();
+		return RunStatements(allStatements);
+	}
+
+	public VirtualMachine Invoke(IList<Statement> allStatements) => RunStatements(allStatements);
+
+	private VirtualMachine RunStatements(IList<Statement> allStatements)
+	{
 		statements = allStatements;
 		for (instructionIndex = 0; instructionIndex != -1 && instructionIndex < allStatements.Count;
 			instructionIndex++)
@@ -24,12 +31,12 @@ public sealed class VirtualMachine
 
 	private void Clear()
 	{
-		variables.Clear();
 		conditionFlag = false;
 		instructionIndex = 0;
 		statements.Clear();
-		Registers.Clear();
 		Returns = null;
+		Registers.Clear();
+		variables.Clear();
 	}
 
 	private void ExecuteStatement(Statement statement)
@@ -39,8 +46,20 @@ public sealed class VirtualMachine
 		TryStoreInstructions(statement);
 		TryLoadInstructions(statement);
 		TryLoopInitInstruction(statement);
+		TryLoopEndInstruction(statement);
 		TryInvokeInstruction(statement);
 		TryExecute(statement);
+	}
+
+	private void TryLoopEndInstruction(Statement statement)
+	{
+		if (statement is IterationEndStatement loopEnd)
+		{
+			var iterator = Registers[loopEnd.Register];
+			iterator.Value = (int)iterator.Value - 1;
+			if ((int)iterator.Value == 0)
+				iteratorInitialized = false;
+		}
 	}
 
 	private void TryInvokeInstruction(Statement statement)
@@ -48,14 +67,31 @@ public sealed class VirtualMachine
 		if (statement is not InvokeStatement { MethodCall: { } } invokeStatement)
 			return;
 		var arguments = FormArgumentsForMethodCall(invokeStatement);
-		var methodStatements =
-			new ByteCodeGenerator(new InvokedMethod(
+		if (invokeStatement.PersistedRegistry != null && invokeStatement.MethodCall != null)
+		{
+			var methodStatements = GetByteCodeFromInvokedMethodCall(
 				((Body)invokeStatement.MethodCall.Method.GetBodyAndParseIfNeeded()).Expressions,
-				arguments)).Generate();
-		var instance = Execute(methodStatements).Returns;
-		if (instance != null)
-			Registers[invokeStatement.Register] = instance;
+				invokeStatement.PersistedRegistry, arguments);
+			var instance = RunAndGetResultFromInvokedMethodCall(methodStatements);
+			if (instance != null)
+				Registers[invokeStatement.Register] = instance;
+		}
 	}
+
+	private Instance? RunAndGetResultFromInvokedMethodCall(IList<Statement> methodStatements)
+	{
+		var members =
+			new Dictionary<string, Instance>(variables.Where(variable => variable.Value.IsMember));
+		var instance = new VirtualMachine { Registers = Registers, variables = members }.
+			Invoke(methodStatements).Returns;
+		return instance;
+	}
+
+	private static List<Statement> GetByteCodeFromInvokedMethodCall(
+		IReadOnlyList<Expression> expressions, Registry persistedRegistry,
+		IReadOnlyDictionary<string, Instance> arguments) =>
+		new ByteCodeGenerator(new InvokedMethod(expressions, arguments), persistedRegistry).
+			Generate();
 
 	private Dictionary<string, Instance> FormArgumentsForMethodCall(InvokeStatement invokeStatement)
 	{
@@ -84,18 +120,45 @@ public sealed class VirtualMachine
 		return true;
 	}
 
+	private bool iteratorInitialized;
+
 	private void TryLoopInitInstruction(Statement statement)
 	{
-		if (statement is InitLoopStatement initLoopStatement)
-		{
-			if (variables.ContainsKey("index"))
-				variables["index"].Value = Convert.ToInt32(variables["index"].Value) + 1;
-			else
-				variables.Add("index", new Instance(Base.Number, 0));
-			variables.TryGetValue(initLoopStatement.Identifier, out var iterableVariable);
-			if (iterableVariable != null)
-				AlterValueVariable(iterableVariable);
-		}
+		if (statement is not LoopBeginStatement initLoopStatement)
+			return;
+		ProcessLoopIndex();
+		variables.TryGetValue(initLoopStatement.Identifier, out var iterableVariable);
+		if (iterableVariable == null)
+			return;
+		if (!iteratorInitialized)
+			InitializeIterator(initLoopStatement, iterableVariable); //TODO: Get rid of this and figure out something better. (LM)
+		AlterValueVariable(iterableVariable);
+	}
+
+	private void ProcessLoopIndex()
+	{
+		if (variables.ContainsKey("index"))
+			variables["index"].Value = Convert.ToInt32(variables["index"].Value) + 1;
+		else
+			variables.Add("index", new Instance(Base.Number, 0));
+	}
+
+	private void InitializeIterator(LoopBeginStatement initLoopStatement, Instance iterableVariable)
+	{
+		Registers[initLoopStatement.Register] =
+			new Instance(Base.Number, GetLength(iterableVariable));
+		iteratorInitialized = true;
+	}
+
+	private static int GetLength(Instance iterableInstance)
+	{
+		if (iterableInstance.Value is string iterableString)
+			return iterableString.Length;
+		if (iterableInstance.Value is int or double)
+			return Convert.ToInt32(iterableInstance.Value);
+		if (iterableInstance.ReturnType != null && iterableInstance.ReturnType.IsIterator)
+			return ((IEnumerable<Expression>)iterableInstance.Value).Count();
+		return 0; //ncrunch: no coverage
 	}
 
 	private void AlterValueVariable(Instance iterableVariable)
