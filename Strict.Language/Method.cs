@@ -223,6 +223,8 @@ public sealed class Method : Context
 		var expression = Parser.ParseLineExpression(body, currentLine.AsSpan(body.Tabs));
 		if (IsTestExpression(currentLine, expression))
 			Tests.Add(expression);
+		else if (currentLine.Contains(body.Method.Name) && expression.GetType().Name == "MethodCall" && body.ParsingLineNumber == body.Method.Tests.Count + 1 && currentLine != "\tRun")
+			throw new RecursiveCallCausesStackOverflow(body); //TODO: Figure out something better, this is bad (LM)
 		return expression;
 	}
 
@@ -355,4 +357,9 @@ public sealed class Method : Context
 	private bool HasSameParameterTypes(Method method) =>
 		!method.Parameters.Where((parameter, index) =>
 			parameter.Type.Name != Base.Generic && Parameters[index].Type != parameter.Type).Any();
+}
+
+public sealed class RecursiveCallCausesStackOverflow : ParsingFailed
+{
+	public RecursiveCallCausesStackOverflow(Body body) : base(body) { }
 }

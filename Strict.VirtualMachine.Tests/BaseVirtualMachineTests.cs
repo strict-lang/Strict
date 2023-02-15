@@ -89,6 +89,19 @@ public class BaseVirtualMachineTests : TestExpressions
 		"\tconstant result = fNumber + sNumber",
 		"\tresult"
 	};
+	protected static readonly string[] CurrentlyFailingTest =
+	{
+		"has number",
+		"SumEvenNumbers Number",
+		"\tconstant result = ComputeSum",
+		"\tresult",
+		"ComputeSum Number",
+		"\tmutable sum = 0",
+		"\tfor number",
+		"\t\tif (index % 2) is 0",
+		"\t\t\tsum = sum + index",
+		"\tsum"
+	};
 	protected static readonly string[] MethodCallWithConstantValues =
 	{
 		"has firstNumber Number",
@@ -138,38 +151,38 @@ public class BaseVirtualMachineTests : TestExpressions
 		new StoreVariableStatement(new Instance(TextType, "some(thing)"), "text"),
 		new StoreVariableStatement(new Instance(TextType, ""), "result"),
 		new StoreVariableStatement(new Instance(NumberType, 0), "count"),
-		new LoadConstantStatement(Register.R0, new Instance(NumberType, 11)),
-		new LoadConstantStatement(Register.R1, new Instance(NumberType, 1)),
-		new InitLoopStatement("text"), new LoadVariableStatement(Register.R2, "value"),
-		new LoadConstantStatement(Register.R3, new Instance(TextType, "(")),
-		new BinaryStatement(Instruction.Equal, Register.R2, Register.R3),
+		new LoopBeginStatement("text", Register.R0),
+		new LoadVariableStatement(Register.R1, "value"),
+		new LoadConstantStatement(Register.R2, new Instance(TextType, "(")),
+		new BinaryStatement(Instruction.Equal, Register.R1, Register.R2),
 		new JumpToIdStatement(Instruction.JumpToIdIfFalse, 0),
-		new LoadVariableStatement(Register.R4, "count"),
-		new LoadConstantStatement(Register.R5, new Instance(NumberType, 1)),
-		new BinaryStatement(Instruction.Add, Register.R4, Register.R5, Register.R6),
-		new StoreFromRegisterStatement(Register.R6, "count"),
+		new LoadVariableStatement(Register.R3, "count"),
+		new LoadConstantStatement(Register.R4, new Instance(NumberType, 1)),
+		new BinaryStatement(Instruction.Add, Register.R3, Register.R4, Register.R5),
+		new StoreFromRegisterStatement(Register.R5, "count"),
 		new JumpToIdStatement(Instruction.JumpEnd, 0),
-		new LoadVariableStatement(Register.R7, "count"),
-		new LoadConstantStatement(Register.R8, new Instance(TextType, ")")),
-		new BinaryStatement(Instruction.Equal, Register.R7, Register.R8),
-		new JumpToIdStatement(Instruction.JumpToIdIfFalse, 1),
-		new LoadVariableStatement(Register.R9, "result"),
-		new LoadVariableStatement(Register.R2, "value"),
-		new BinaryStatement(Instruction.Add, Register.R9, Register.R2, Register.R3),
-		new StoreFromRegisterStatement(Register.R3, "result"),
-		new JumpToIdStatement(Instruction.JumpEnd, 1),
-		new LoadVariableStatement(Register.R4, "value"),
-		new LoadConstantStatement(Register.R5, new Instance(NumberType, 0)),
-		new BinaryStatement(Instruction.Equal, Register.R4, Register.R5),
-		new JumpToIdStatement(Instruction.JumpToIdIfFalse, 2),
 		new LoadVariableStatement(Register.R6, "count"),
-		new LoadConstantStatement(Register.R7, new Instance(NumberType, 0)),
-		new BinaryStatement(Instruction.Subtract, Register.R6, Register.R7, Register.R8),
-		new StoreFromRegisterStatement(Register.R8, "count"),
+		new LoadConstantStatement(Register.R7, new Instance(TextType, ")")),
+		new BinaryStatement(Instruction.Equal, Register.R6, Register.R7),
+		new JumpToIdStatement(Instruction.JumpToIdIfFalse, 1),
+		new LoadVariableStatement(Register.R8, "result"),
+		new LoadVariableStatement(Register.R9, "value"),
+		new BinaryStatement(Instruction.Add, Register.R8, Register.R9, Register.R1),
+		new StoreFromRegisterStatement(Register.R1, "result"),
+		new JumpToIdStatement(Instruction.JumpEnd, 1),
+		new LoadVariableStatement(Register.R2, "value"),
+		new LoadConstantStatement(Register.R3, new Instance(NumberType, 0)),
+		new BinaryStatement(Instruction.Equal, Register.R2, Register.R3),
+		new JumpToIdStatement(Instruction.JumpToIdIfFalse, 2),
+		new LoadVariableStatement(Register.R4, "count"),
+		new LoadConstantStatement(Register.R5, new Instance(NumberType, 0)),
+		new BinaryStatement(Instruction.Subtract, Register.R4, Register.R5, Register.R6),
+		new StoreFromRegisterStatement(Register.R6, "count"),
 		new JumpToIdStatement(Instruction.JumpEnd, 2),
-		new BinaryStatement(Instruction.Subtract, Register.R0, Register.R1, Register.R0),
+		new IterationEndStatement(Register.R0),
 		new JumpIfNotZeroStatement(-30, Register.R0),
-		new LoadVariableStatement(Register.R9, "result"), new ReturnStatement(Register.R9)
+		new LoadVariableStatement(Register.R7, "result"),
+		new ReturnStatement(Register.R7)
 	};
 	protected static readonly string[] SimpleListDeclarationExample =
 	{
@@ -192,8 +205,11 @@ public class BaseVirtualMachineTests : TestExpressions
 	};
 	protected static readonly string[] InvertValueKata =
 	{
-		"has numbers", "Invert Text", "\tmutable result = \"\"", "\tfor numbers",
-		"\t\tresult = result + (0 - value)", "\tresult"
+		"has numbers", "Invert Text",
+		"\tmutable result = \"\"",
+		"\tfor numbers",
+		"\t\tresult = result + (0 - value)",
+		"\tresult"
 	};
 	protected static readonly Statement[] ExpectedStatementsOfInvertValueKata =
 	{
@@ -208,18 +224,17 @@ public class BaseVirtualMachineTests : TestExpressions
 					new Value(NumberType, 5)
 				}), "numbers"),
 		new StoreVariableStatement(new Instance(TextType, ""), "result"),
-		new LoadConstantStatement(Register.R0, new Instance(NumberType, 4)),
-		new LoadConstantStatement(Register.R1, new Instance(NumberType, 1)),
-		new InitLoopStatement("numbers"),
-		new LoadConstantStatement(Register.R2, new Instance(NumberType, 0)),
-		new LoadVariableStatement(Register.R3, "value"),
+		new LoopBeginStatement("numbers", Register.R0),
+		new LoadConstantStatement(Register.R1, new Instance(NumberType, 0)),
+		new LoadVariableStatement(Register.R2, "value"),
 		new BinaryStatement(Instruction.Subtract, Register.R2, Register.R3, Register.R4),
-		new LoadVariableStatement(Register.R5, "result"),
+		new LoadVariableStatement(Register.R4, "result"),
 		new BinaryStatement(Instruction.Add, Register.R5, Register.R4, Register.R6),
-		new StoreFromRegisterStatement(Register.R6, "result"),
-		new BinaryStatement(Instruction.Subtract, Register.R0, Register.R1, Register.R0),
+		new StoreFromRegisterStatement(Register.R5, "result"),
+		new IterationEndStatement(Register.R0),
 		new JumpIfNotZeroStatement(-9, Register.R0),
-		new LoadVariableStatement(Register.R7, "result"), new ReturnStatement(Register.R7)
+		new LoadVariableStatement(Register.R6, "result"),
+		new ReturnStatement(Register.R6)
 	};
 
 	protected MethodCall GenerateMethodCallFromSource(string programName, string methodCall,

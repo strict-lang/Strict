@@ -217,9 +217,23 @@ public sealed class MethodCallTests : TestExpressions
 				"from(first Number, second Number)",
 				"\tnumbers = (first, second)",
 				"Calculate(text) Number",
-				"\tArithmeticFunction(10, 5).Calculate(\"add\")",
+				"\tArithmeticFunction(10, 5).Calculate(\"add\") is 15",
 				"\t1")).ParseMembersAndMethods(new MethodExpressionParser());
 		program.Methods[1].GetBodyAndParseIfNeeded();
+	}
+
+	[Test]
+	public void RecursiveStackOverflow()
+	{
+		var program = new Type(type.Package,
+			new TypeLines("RecursiveStackOverflow",
+				"has number",
+				"AddFiveWithInput Number",
+				"\tRecursiveStackOverflow(10).AddFiveWithInput is 15",
+				"\tRecursiveStackOverflow(10).AddFiveWithInput",
+				"\tnumber + 5")).ParseMembersAndMethods(new MethodExpressionParser());
+		Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(),
+			Throws.InstanceOf<RecursiveCallCausesStackOverflow>());
 	}
 
 	[Test]

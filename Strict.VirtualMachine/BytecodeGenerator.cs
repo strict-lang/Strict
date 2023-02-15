@@ -10,35 +10,26 @@ public sealed class ByteCodeGenerator
 	private readonly List<Statement> statements = new();
 	private int conditionalId;
 	private readonly Stack<int> idStack = new();
-	private int nextRegister;
-	private Register previousRegister;
+	private readonly Registry registry;
 
-	public ByteCodeGenerator(InvokedMethod method)
+	public ByteCodeGenerator(InvokedMethod method, Registry registry)
 	{
 		foreach (var argument in method.Arguments)
 			statements.Add(new StoreVariableStatement(argument.Value, argument.Key));
 		Expressions = method.Expressions;
+		this.registry = registry;
 	}
 
 	public ByteCodeGenerator(MethodCall methodCall)
 	{
-		InstanceArguments = new Dictionary<string, Expression>();
 		if (methodCall.Instance != null)
 			AddInstanceMemberVariables((MethodCall)methodCall.Instance);
 		AddMethodParameterVariables(methodCall);
-		StoreAndLoadVariables();
 		Expressions = ((Body)methodCall.Method.GetBodyAndParseIfNeeded()).Expressions;
+		registry = new Registry();
 	}
 
 	public IReadOnlyList<Expression> Expressions { get; }
-	private Dictionary<string, Expression>? InstanceArguments { get; }
-
-	private void StoreAndLoadVariables()
-	{
-		if (InstanceArguments != null)
-			foreach (var argument in InstanceArguments)
-				statements.Add(new StoreVariableStatement(new Instance(argument.Value), argument.Key));
-	}
 
 	private void AddInstanceMemberVariables(MethodCall instance)
 	{
@@ -51,16 +42,18 @@ public sealed class ByteCodeGenerator
 						instance.Arguments[parameterIndex]),
 					instance.ReturnType.Members[parameterIndex].Name));
 			else
-				InstanceArguments?.Add(instance.ReturnType.Members[parameterIndex].Name,
-					instance.Arguments[parameterIndex]);
+				statements.Add(new StoreVariableStatement(
+					new Instance(instance.Arguments[parameterIndex], true),
+					instance.ReturnType.Members[parameterIndex].Name));
 	}
 
 	private void AddMethodParameterVariables(MethodCall methodCall)
 	{
 		for (var parameterIndex = 0; parameterIndex < methodCall.Method.Parameters.Count;
 			parameterIndex++)
-			InstanceArguments?.Add(methodCall.Method.Parameters[parameterIndex].Name,
-				methodCall.Arguments[parameterIndex]);
+			statements?.Add(new StoreVariableStatement(
+				new Instance(methodCall.Arguments[parameterIndex]),
+				methodCall.Method.Parameters[parameterIndex].Name));
 	}
 
 	public List<Statement> Generate() => GenerateStatements(Expressions);
@@ -82,7 +75,7 @@ public sealed class ByteCodeGenerator
 			GenerateStatementsFromExpression(returnExpression.Value);
 		else
 			GenerateStatementsFromExpression(expression);
-		statements.Add(new ReturnStatement(previousRegister));
+		statements.Add(new ReturnStatement(registry.PreviousRegister));
 	}
 
 	private void GenerateStatementsFromExpression(Expression expression)
@@ -100,7 +93,7 @@ public sealed class ByteCodeGenerator
 	private void TryGenerateMethodCallStatement(Expression expression)
 	{
 		if (expression is not Binary && expression is MethodCall methodCall)
-			statements.Add(new InvokeStatement(methodCall, AllocateRegister()));
+			statements.Add(new InvokeStatement(methodCall, registry.AllocateRegister(), registry));
 	}
 
 	private void TryGenerateBodyStatements(Expression expression)
@@ -112,7 +105,7 @@ public sealed class ByteCodeGenerator
 	private void TryGenerateVariableCallStatement(Expression expression)
 	{
 		if (expression is VariableCall)
-			statements.Add(new LoadVariableStatement(AllocateRegister(), expression.ToString()));
+			statements.Add(new LoadVariableStatement(registry.AllocateRegister(), expression.ToString()));
 	}
 
 	private void TryGenerateMutableStatements(Expression expression)
@@ -132,7 +125,7 @@ public sealed class ByteCodeGenerator
 		else
 		{
 			GenerateStatementsFromExpression(declarationOrAssignment);
-			statements.Add(new StoreFromRegisterStatement(registers[nextRegister - 1], name));
+			statements.Add(new StoreFromRegisterStatement(registers[registry.NextRegister - 1], name));
 		}
 	}
 
@@ -168,41 +161,18 @@ public sealed class ByteCodeGenerator
 
 	private void GenerateLoopStatements(For forExpression)
 	{
-		var iterableName = forExpression.Value.ToString();
-		var iterableInstance = statements.OfType<StoreVariableStatement>().
-			FirstOrDefault(statement => statement.Identifier == iterableName)?.Instance;
-		if (iterableInstance != null)
-			GenerateRestLoopStatements(forExpression, iterableInstance);
-		FreeRegisters();
+		GenerateRestLoopStatements(forExpression);
+		registry.FreeRegisters();
 	}
 
-	private static int? GetLength(Instance iterableInstance)
+	private void GenerateRestLoopStatements(For forExpression)
 	{
-		if (iterableInstance.Value is string iterableString)
-			return iterableString.Length;
-		if (iterableInstance.Value is int or double)
-			return Convert.ToInt32(iterableInstance.Value);
-		if (iterableInstance.ReturnType != null && iterableInstance.ReturnType.IsIterator)
-			return ((IEnumerable<Expression>)iterableInstance.Value).Count();
-		return 0; //ncrunch: no coverage
-	}
-
-	private void GenerateRestLoopStatements(For forExpression, Instance iterableInstance)
-	{
-		var length = GetLength(iterableInstance);
-		if (length == null)
-			return; //ncrunch: no coverage
-		var (registerForIterationCount, registerForIndexReduction) =
-			(AllocateRegister(true), AllocateRegister(true));
-		statements.Add(new LoadConstantStatement(registerForIterationCount,
-			new Instance(iterableInstance.ReturnType, length)));
-		statements.Add(new LoadConstantStatement(registerForIndexReduction,
-			new Instance(iterableInstance.ReturnType, 1)));
+		var registerForIterationCount = registry.AllocateRegister(true);
 		var statementCountBeforeLoopStart = statements.Count;
-		statements.Add(new InitLoopStatement(forExpression.Value.ToString()));
+		statements.Add(new LoopBeginStatement(forExpression.Value.ToString(), registerForIterationCount));
 		GenerateStatementsForLoopBody(forExpression);
-		GenerateIteratorReductionAndJumpStatementsForLoop(registerForIterationCount,
-			registerForIndexReduction, statements.Count - statementCountBeforeLoopStart);
+		statements.Add(new IterationEndStatement(registerForIterationCount));
+		GenerateIteratorReductionAndJumpStatementsForLoop(registerForIterationCount, statements.Count - statementCountBeforeLoopStart);
 	}
 
 	private void GenerateStatementsForLoopBody(For forExpression)
@@ -214,12 +184,8 @@ public sealed class ByteCodeGenerator
 	}
 
 	private void GenerateIteratorReductionAndJumpStatementsForLoop(
-		Register registerForIterationCount, Register registerForIndexReduction, int steps)
-	{
-		statements.Add(new BinaryStatement(Instruction.Subtract, registerForIterationCount,
-			registerForIndexReduction, registerForIterationCount));
-		statements.Add(new JumpIfNotZeroStatement(-steps - 2, registerForIterationCount));
-	}
+		Register registerForIterationCount, int steps) =>
+		statements.Add(new JumpIfNotZeroStatement(-steps - 1, registerForIterationCount));
 
 	private void GenerateIfStatements(If ifExpression)
 	{
@@ -283,7 +249,7 @@ public sealed class ByteCodeGenerator
 
 	private Register GenerateRightSideForIfCondition(MethodCall condition)
 	{
-		var rightRegister = AllocateRegister();
+		var rightRegister = registry.AllocateRegister();
 		if (condition.Arguments[0] is Value argumentValue)
 			statements.Add(new LoadConstantStatement(rightRegister,
 				new Instance(argumentValue.ReturnType, argumentValue.Data)));
@@ -304,7 +270,7 @@ public sealed class ByteCodeGenerator
 	//ncrunch: no coverage start
 	private Register LoadConstantForIfConditionLeft(Value instanceValue)
 	{
-		var leftRegister = AllocateRegister();
+		var leftRegister = registry.AllocateRegister();
 		statements.Add(new LoadConstantStatement(leftRegister,
 			new Instance(instanceValue.ReturnType, instanceValue.Data)));
 		return leftRegister;
@@ -312,35 +278,19 @@ public sealed class ByteCodeGenerator
 
 	private Register LoadVariableForIfConditionLeft(MethodCall condition)
 	{
-		var leftRegister = AllocateRegister();
+		var leftRegister = registry.AllocateRegister();
 		statements.Add(new LoadVariableStatement(leftRegister,
 			condition.Instance?.ToString() ?? throw new InvalidOperationException()));
 		return leftRegister;
 	}
-
-	private Register AllocateRegister(bool isLocked = false)
-	{
-		if (nextRegister == registers.Length)
-			nextRegister = 0;
-		previousRegister = registers[nextRegister];
-		var currentRegister = registers[nextRegister++];
-		if (lockedRegisters.Contains(currentRegister))
-			currentRegister = AllocateRegister();
-		if (isLocked)
-			lockedRegisters.Add(currentRegister);
-		return currentRegister;
-	}
-
-	private void FreeRegisters() => lockedRegisters.Clear();
-	private readonly List<Register> lockedRegisters = new();
 
 	private void GenerateBinaryStatement(MethodCall binary, Instruction operationInstruction)
 	{
 		if (binary.Instance is Binary binaryOp)
 		{
 			var left = GenerateValueBinaryStatements(binaryOp, operationInstruction);
-			statements.Add(new BinaryStatement(operationInstruction, left, AllocateRegister(),
-				AllocateRegister()));
+			statements.Add(new BinaryStatement(operationInstruction, left, registry.AllocateRegister(),
+				registry.AllocateRegister()));
 		}
 		else if (binary.Arguments[0] is Binary binaryArg)
 		{
@@ -357,17 +307,17 @@ public sealed class ByteCodeGenerator
 	{
 		var right = GenerateValueBinaryStatements(binaryArg,
 			GetInstructionBasedOnBinaryOperationName(binaryArg.Method.Name));
-		var left = AllocateRegister();
+		var left = registry.AllocateRegister();
 		if (binary.Instance != null)
 			statements.Add(new LoadVariableStatement(left, binary.Instance.ToString()));
-		statements.Add(new BinaryStatement(operationInstruction, left, right, AllocateRegister()));
+		statements.Add(new BinaryStatement(operationInstruction, left, right, registry.AllocateRegister()));
 	}
 
 	private Register GenerateValueBinaryStatements(MethodCall binary,
 		Instruction operationInstruction)
 	{
 		var (leftRegister, rightRegister, resultRegister) =
-			(AllocateRegister(), AllocateRegister(), AllocateRegister());
+			(registry.AllocateRegister(), registry.AllocateRegister(), registry.AllocateRegister());
 		if (binary.Instance is Value instanceValue)
 			statements.Add(new LoadConstantStatement(leftRegister, new Instance(instanceValue)));
 		else

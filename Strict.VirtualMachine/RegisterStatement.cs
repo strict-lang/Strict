@@ -10,4 +10,5 @@ public abstract class RegisterStatement : Statement
 
 	public Register Register { get; }
 	public override Instruction Instruction { get; }
+	public override string ToString() => $"{Instruction} {Register}";
 }
