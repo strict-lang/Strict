@@ -139,7 +139,12 @@ public sealed class StrictDocument
 		{
 			var methods = ParseTypeMethods(type.Methods);
 			if (methods != null)
-				new TestRunner(languageServer, methods).Run();
+				// @formatter:off
+				new RunnerService()
+					.AddService(new TestRunner(languageServer,methods))
+					.AddService(new VariableValueEvaluator(languageServer, Get(uri)))
+					.RunAllServices();
+			// @formatter:on
 		}
 	}
 
