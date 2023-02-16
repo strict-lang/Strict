@@ -3,13 +3,18 @@ using Strict.Language.Expressions;
 
 namespace Strict.VirtualMachine;
 
+public class Memory
+{
+	public Dictionary<Register, Instance> Registers { get; set; } = new();
+	public Dictionary<string, Instance> Variables = new();
+
+}
 public sealed class VirtualMachine
 {
-	private Dictionary<string, Instance> variables = new();
+	public Memory Memory { get; set; } = new();
 	private bool conditionFlag;
 	private int instructionIndex;
 	private IList<Statement> statements = new List<Statement>();
-	public Dictionary<Register, Instance> Registers { get; set; } = new();
 	public Instance? Returns { get; private set; }
 
 	public VirtualMachine Execute(IList<Statement> allStatements)
@@ -35,8 +40,8 @@ public sealed class VirtualMachine
 		instructionIndex = 0;
 		statements.Clear();
 		Returns = null;
-		Registers.Clear();
-		variables.Clear();
+		Memory.Registers.Clear();
+		Memory.Variables.Clear();
 	}
 
 	private void ExecuteStatement(Statement statement)
@@ -55,7 +60,7 @@ public sealed class VirtualMachine
 	{
 		if (statement is IterationEndStatement loopEnd)
 		{
-			var iterator = Registers[loopEnd.Register];
+			var iterator = Memory.Registers[loopEnd.Register];
 			iterator.Value = (int)iterator.Value - 1;
 			if ((int)iterator.Value == 0)
 				iteratorInitialized = false;
@@ -74,16 +79,19 @@ public sealed class VirtualMachine
 				invokeStatement.PersistedRegistry, arguments);
 			var instance = RunAndGetResultFromInvokedMethodCall(methodStatements);
 			if (instance != null)
-				Registers[invokeStatement.Register] = instance;
+				Memory.Registers[invokeStatement.Register] = instance;
 		}
 	}
 
 	private Instance? RunAndGetResultFromInvokedMethodCall(IList<Statement> methodStatements)
 	{
 		var members =
-			new Dictionary<string, Instance>(variables.Where(variable => variable.Value.IsMember));
-		var instance = new VirtualMachine { Registers = Registers, variables = members }.
-			Invoke(methodStatements).Returns;
+			new Dictionary<string, Instance>(Memory.Variables.Where(variable => variable.Value.IsMember));
+		var instance =
+			new VirtualMachine
+			{
+				Memory = new Memory { Registers = Memory.Registers, Variables = members }
+			}.Invoke(methodStatements).Returns;
 		return instance;
 	}
 
@@ -103,7 +111,7 @@ public sealed class VirtualMachine
 			var argument = invokeStatement.MethodCall.Arguments[index];
 			var argumentInstance = argument is Value argumentValue
 				? new Instance(argumentValue.ReturnType, argumentValue.Data)
-				: variables[argument.ToString()];
+				: Memory.Variables[argument.ToString()];
 			arguments.Add(invokeStatement.MethodCall.Method.Parameters[index].Name, argumentInstance);
 		}
 		return arguments;
@@ -113,7 +121,7 @@ public sealed class VirtualMachine
 	{
 		if (statement is not ReturnStatement returnStatement)
 			return false;
-		Returns = Registers[returnStatement.Register];
+		Returns = Memory.Registers[returnStatement.Register];
 		if (!Returns.Value.GetType().IsPrimitive && Returns.Value is not Value)
 			return false;
 		instructionIndex = -2;
@@ -127,7 +135,7 @@ public sealed class VirtualMachine
 		if (statement is not LoopBeginStatement initLoopStatement)
 			return;
 		ProcessLoopIndex();
-		variables.TryGetValue(initLoopStatement.Identifier, out var iterableVariable);
+		Memory.Variables.TryGetValue(initLoopStatement.Identifier, out var iterableVariable);
 		if (iterableVariable == null)
 			return;
 		if (!iteratorInitialized)
@@ -137,15 +145,15 @@ public sealed class VirtualMachine
 
 	private void ProcessLoopIndex()
 	{
-		if (variables.ContainsKey("index"))
-			variables["index"].Value = Convert.ToInt32(variables["index"].Value) + 1;
+		if (Memory.Variables.ContainsKey("index"))
+			Memory.Variables["index"].Value = Convert.ToInt32(Memory.Variables["index"].Value) + 1;
 		else
-			variables.Add("index", new Instance(Base.Number, 0));
+			Memory.Variables.Add("index", new Instance(Base.Number, 0));
 	}
 
 	private void InitializeIterator(LoopBeginStatement initLoopStatement, Instance iterableVariable)
 	{
-		Registers[initLoopStatement.Register] =
+		Memory.Registers[initLoopStatement.Register] =
 			new Instance(Base.Number, GetLength(iterableVariable));
 		iteratorInitialized = true;
 	}
@@ -163,15 +171,15 @@ public sealed class VirtualMachine
 
 	private void AlterValueVariable(Instance iterableVariable)
 	{
-		var index = Convert.ToInt32(variables["index"].Value);
+		var index = Convert.ToInt32(Memory.Variables["index"].Value);
 		var value = iterableVariable.Value.ToString();
 		if (iterableVariable.ReturnType?.Name == Base.Text && value != null)
-			variables["value"] = new Instance(Base.Number, value[index].ToString());
+			Memory.Variables["value"] = new Instance(Base.Number, value[index].ToString());
 		else if (iterableVariable.ReturnType is GenericTypeImplementation genericIterable &&
 			genericIterable.Generic.Name == Base.List)
-			variables["value"] = new Instance(((List<Expression>)iterableVariable.Value)[index]);
+			Memory.Variables["value"] = new Instance(((List<Expression>)iterableVariable.Value)[index]);
 		else if (iterableVariable.ReturnType?.Name == Base.Number)
-			variables["value"] =
+			Memory.Variables["value"] =
 				new Instance(Base.Number, Convert.ToInt32(iterableVariable.Value) + index);
 	}
 
@@ -180,12 +188,12 @@ public sealed class VirtualMachine
 		if (statement.Instruction > Instruction.SetLoadSeparator)
 			return;
 		if (statement is SetStatement setStatement)
-			Registers[setStatement.Register] = setStatement.Instance;
+			Memory.Registers[setStatement.Register] = setStatement.Instance;
 		else if (statement is StoreVariableStatement storeVariableStatement)
-			variables[storeVariableStatement.Identifier] = storeVariableStatement.Instance;
+			Memory.Variables[storeVariableStatement.Identifier] = storeVariableStatement.Instance;
 		else if (statement is StoreFromRegisterStatement storeFromRegisterStatement)
-			variables[storeFromRegisterStatement.Identifier] =
-				Registers[storeFromRegisterStatement.Register];
+			Memory.Variables[storeFromRegisterStatement.Identifier] =
+				Memory.Registers[storeFromRegisterStatement.Register];
 	}
 
 	private void TryLoadInstructions(Statement statement)
@@ -193,11 +201,11 @@ public sealed class VirtualMachine
 		if (statement is LoadVariableStatement loadVariableStatement)
 			LoadVariableIntoRegister(loadVariableStatement);
 		else if (statement is LoadConstantStatement loadConstantStatement)
-			Registers[loadConstantStatement.Register] = loadConstantStatement.Instance;
+			Memory.Registers[loadConstantStatement.Register] = loadConstantStatement.Instance;
 	}
 
 	private void LoadVariableIntoRegister(LoadVariableStatement statement) =>
-		Registers[statement.Register] = variables[statement.Identifier];
+		Memory.Registers[statement.Register] = Memory.Variables[statement.Identifier];
 
 	private void TryExecute(Statement statement)
 	{
@@ -217,7 +225,7 @@ public sealed class VirtualMachine
 	private void TryBinaryOperationExecution(BinaryStatement statement)
 	{
 		var (right, left) = GetOperands(statement);
-		Registers[statement.Registers[^1]] = statement.Instruction switch
+		Memory.Registers[statement.Registers[^1]] = statement.Instruction switch
 		{
 			Instruction.Add => GetAdditionResult(left, right),
 			Instruction.Subtract => new Instance(right.ReturnType,
@@ -228,7 +236,7 @@ public sealed class VirtualMachine
 				Convert.ToDouble(left.Value) / Convert.ToDouble(right.Value)),
 			Instruction.Modulo => new Instance(right.ReturnType,
 				Convert.ToDouble(left.Value) % Convert.ToDouble(right.Value)),
-			_ => Registers[statement.Registers[^1]] //ncrunch: no coverage
+			_ => Memory.Registers[statement.Registers[^1]] //ncrunch: no coverage
 		};
 	}
 
@@ -248,9 +256,9 @@ public sealed class VirtualMachine
 	}
 
 	private (Instance, Instance) GetOperands(BinaryStatement statement) =>
-		Registers.Count < 2
+		Memory.Registers.Count < 2
 			? throw new OperandsRequired()
-			: (Registers[statement.Registers[1]], Registers[statement.Registers[0]]);
+			: (Memory.Registers[statement.Registers[1]], Memory.Registers[statement.Registers[0]]);
 
 	private void TryConditionalOperationExecution(BinaryStatement statement)
 	{
@@ -270,7 +278,7 @@ public sealed class VirtualMachine
 		if (conditionFlag && statement.Instruction is Instruction.JumpIfTrue ||
 			!conditionFlag && statement.Instruction is Instruction.JumpIfFalse ||
 			statement is JumpIfNotZeroStatement jumpIfNotZeroStatement &&
-			Convert.ToInt32(Registers[jumpIfNotZeroStatement.Register].Value) > 0)
+			Convert.ToInt32(Memory.Registers[jumpIfNotZeroStatement.Register].Value) > 0)
 		{
 			instructionIndex += Convert.ToInt32(((JumpIfStatement)statement).Steps);
 		}

@@ -18,7 +18,7 @@ public sealed class VirtualMachineTests : BaseVirtualMachineTests
 	[TestCase(Instruction.Add, "510", 5, "10")]
 	[TestCase(Instruction.Add, "510", "5", "10")]
 	public void Execute(Instruction operation, object expected, params object[] inputs) =>
-		Assert.That(vm.Execute(BuildStatements(inputs, operation)).Registers[Register.R1].Value,
+		Assert.That(vm.Execute(BuildStatements(inputs, operation)).Memory.Registers[Register.R1].Value,
 			Is.EqualTo(expected));
 
 	private static Statement[]
@@ -40,7 +40,7 @@ public sealed class VirtualMachineTests : BaseVirtualMachineTests
 			vm.Execute(new Statement[]
 			{
 				new LoadConstantStatement(Register.R0, new Instance(NumberType, 5))
-			}).Registers[Register.R0].Value, Is.EqualTo(5));
+			}).Memory.Registers[Register.R0].Value, Is.EqualTo(5));
 
 	[Test]
 	public void SetAndAdd() =>
@@ -50,7 +50,7 @@ public sealed class VirtualMachineTests : BaseVirtualMachineTests
 				new LoadConstantStatement(Register.R0, new Instance(NumberType, 10)),
 				new LoadConstantStatement(Register.R1, new Instance(NumberType, 5)),
 				new BinaryStatement(Instruction.Add, Register.R0, Register.R1, Register.R2)
-			}).Registers[Register.R2].Value, Is.EqualTo(15));
+			}).Memory.Registers[Register.R2].Value, Is.EqualTo(15));
 
 	[Test]
 	public void AddFiveTimes() =>
@@ -62,7 +62,7 @@ public sealed class VirtualMachineTests : BaseVirtualMachineTests
 			new BinaryStatement(Instruction.Add, Register.R0, Register.R2, Register.R2), // R2 = R0 + R2
 			new BinaryStatement(Instruction.Subtract, Register.R0, Register.R1, Register.R0),
 			new JumpIfNotZeroStatement(-3, Register.R0)
-		}).Registers[Register.R2].Value, Is.EqualTo(0 + 5 + 4 + 3 + 2 + 1));
+		}).Memory.Registers[Register.R2].Value, Is.EqualTo(0 + 5 + 4 + 3 + 2 + 1));
 
 	[TestCase("ArithmeticFunction(10, 5).Calculate(\"add\")", 15)]
 	[TestCase("ArithmeticFunction(10, 5).Calculate(\"subtract\")", 5)]
@@ -166,7 +166,7 @@ public sealed class VirtualMachineTests : BaseVirtualMachineTests
 				new BinaryStatement(Instruction.LessThan, Register.R2, Register.R0),
 				new JumpIfStatement(Instruction.JumpIfTrue, 2),
 				new BinaryStatement(Instruction.Add, Register.R2, Register.R0, Register.R0)
-			}).Registers[Register.R0].Value, Is.EqualTo(15));
+			}).Memory.Registers[Register.R0].Value, Is.EqualTo(15));
 
 	[TestCase(Instruction.GreaterThan, new[] { 1, 2 }, 2 - 1)]
 	[TestCase(Instruction.LessThan, new[] { 1, 2 }, 1 + 2)]
@@ -183,7 +183,7 @@ public sealed class VirtualMachineTests : BaseVirtualMachineTests
 				new BinaryStatement(Instruction.Subtract, Register.R1, Register.R0, Register.R0),
 				new JumpIfStatement(Instruction.JumpIfFalse, 2),
 				new BinaryStatement(Instruction.Add, Register.R0, Register.R1, Register.R0)
-			}).Registers[Register.R0].Value, Is.EqualTo(expected));
+			}).Memory.Registers[Register.R0].Value, Is.EqualTo(expected));
 
 	[TestCase(Instruction.Add)]
 	[TestCase(Instruction.GreaterThan)]

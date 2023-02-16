@@ -6,27 +6,26 @@ using Strict.VirtualMachine;
 namespace Strict.LanguageServer;
 
 //ncrunch: no coverage start
-public class TestRunner
+public sealed class TestRunner : RunnerService, RunnableService
 {
 	public TestRunner(ILanguageServerFacade languageServer, IEnumerable<Method> methods)
 	{
-		LanguageServer = languageServer;
 		Methods = methods;
+		this.languageServer = languageServer;
 	}
 
-	private ILanguageServerFacade LanguageServer { get; }
+	private readonly ILanguageServerFacade languageServer;
 	private IEnumerable<Method> Methods { get; }
-	private readonly VirtualMachine.VirtualMachine vm = new();
 	private const string NotificationName = "testRunnerNotification";
 
-	public void Run()
+	public void Run(VirtualMachine.VirtualMachine vm)
 	{
 		foreach (var test in Methods.SelectMany(method => method.Tests))
-			if (test is MethodCall methodCall && methodCall.Instance != null)
+			if (test is MethodCall { Instance: { } } methodCall)
 			{
 				var output = vm.
 					Execute(new ByteCodeGenerator((MethodCall)methodCall.Instance).Generate()).Returns;
-				LanguageServer.SendNotification(NotificationName, new TestNotificationMessage(
+				languageServer?.SendNotification(NotificationName, new TestNotificationMessage(
 					GetLineNumber(test), Equals(output?.Value, ((Value)methodCall.Arguments[0]).Data)
 						? TestState.Green
 						: TestState.Red));
