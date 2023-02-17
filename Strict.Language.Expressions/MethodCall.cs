@@ -1,5 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Strict.Language.Expressions;
 
@@ -57,7 +60,8 @@ public class MethodCall : ConcreteExpression
 			? null
 			: IsConstructorUsedWithSameArgumentType(arguments, fromType)
 				? throw new ConstructorForSameTypeArgumentIsNotAllowed(body)
-				: new MethodCall(fromType.GetMethod(Method.From, arguments, body.Method.Parser), null, arguments);
+				: TryParseDictionary(fromType, arguments) ?? new MethodCall(
+					fromType.GetMethod(Method.From, arguments, body.Method.Parser), null, arguments);
 	}
 
 	private static bool
@@ -70,6 +74,13 @@ public class MethodCall : ConcreteExpression
 		public ConstructorForSameTypeArgumentIsNotAllowed(Body body) : base(body) { }
 	}
 
+	private static Expression? TryParseDictionary(Type type, IReadOnlyList<Expression> arguments)
+	{
+		if (type.Name == Base.Dictionary && arguments.Count == 2)
+			return new Dictionary(type, arguments[0].ReturnType, arguments[1].ReturnType);
+		return null;
+	}
+
 	public override string ToString() =>
 		Instance != null
 			? $"{Instance}.{Method.Name}{Arguments.ToBrackets()}"
@@ -79,4 +90,17 @@ public class MethodCall : ConcreteExpression
 		Method.Name == Method.From
 			? Method.ReturnType.Name
 			: Method.Name;
+}
+
+public class Dictionary : Value
+{
+	public Dictionary(Type type, Type keyType, Type mappedValueType) : base(type,
+		new Dictionary<Type, Type>())
+	{
+		Key = keyType;
+		MappedValueType = mappedValueType;
+	}
+
+	private Type Key { get; }
+	private Type MappedValueType { get; }
 }

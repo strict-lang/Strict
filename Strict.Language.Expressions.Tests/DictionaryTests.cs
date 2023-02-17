@@ -70,7 +70,6 @@ public sealed class DictionaryTests : TestExpressions
 				"\nAdd(key TestPackage.Text, mappedValue TestPackage.Boolean) Mutable(TestPackage.Dictionary)")!);
 	}
 
-	[Ignore("Make dictionary file parsing work first before using")]
 	[Test]
 	public void CreateDictionaryTypeInstance()
 	{
