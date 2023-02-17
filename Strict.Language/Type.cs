@@ -539,12 +539,23 @@ public class Type : Context
 
 	private GenericTypeImplementation CreateGenericImplementation(string key, IReadOnlyList<Type> implementationTypes)
 	{
-		if (Name != Base.List && Members.Count(m => m.Type.IsGeneric) != implementationTypes.Count)
+		if (Name != Base.List && Members.Count(m => m.Type.IsGeneric) != implementationTypes.Count &&
+			!HasMatchingConstructor(implementationTypes))
 			throw new TypeArgumentsCountDoesNotMatchGenericType(this, implementationTypes);
 		var genericType = new GenericTypeImplementation(this, implementationTypes);
 		cachedGenericTypes!.Add(key, genericType);
 		return genericType;
 	}
+
+	private bool HasMatchingConstructor(IReadOnlyList<Type> implementationTypes) =>
+		FindMethod(Method.From, implementationTypes) != null;
+
+	private Method? FindMethod(string methodName, IReadOnlyList<Type> implementationTypes) =>
+		!AvailableMethods.TryGetValue(methodName, out var matchingMethods)
+			? null
+			: matchingMethods.FirstOrDefault(method =>
+				method.Parameters.Count == implementationTypes.Count &&
+				IsMethodWithMatchingParametersType(method, implementationTypes));
 
 	public GenericTypeImplementation GetGenericImplementation(List<Type> implementationTypes)
 	{
@@ -575,8 +586,8 @@ public class Type : Context
 		if (!AvailableMethods.TryGetValue(methodName, out var matchingMethods))
 			return FindAndCreateFromBaseMethod(methodName, arguments, parser);
 		foreach (var method in matchingMethods)
-			if (method.Parameters.Count == arguments.Count &&
-				IsMethodWithMatchingParameters(arguments, method))
+			if (method.Parameters.Count == arguments.Count && IsMethodWithMatchingParametersType(method,
+				arguments.Select(argument => argument.ReturnType).ToList()))
 				return method;
 		return FindAndCreateFromBaseMethod(methodName, arguments, parser) ??
 			throw new ArgumentsDoNotMatchMethodParameters(arguments, matchingMethods);
@@ -588,13 +599,13 @@ public class Type : Context
 			base(type + " " + extraInformation) { }
 	}
 
-	private static bool IsMethodWithMatchingParameters(IReadOnlyList<Expression> arguments,
-		Method method)
+	private static bool IsMethodWithMatchingParametersType(Method method,
+		IReadOnlyList<Type> argumentReturnTypes)
 	{
 		for (var index = 0; index < method.Parameters.Count; index++)
 		{
 			var methodParameterType = method.Parameters[index].Type;
-			var argumentReturnType = arguments[index].ReturnType;
+			var argumentReturnType = argumentReturnTypes[index];
 			if (argumentReturnType == methodParameterType || method.IsGeneric || methodParameterType.Name == Base.Any ||
 				IsArgumentImplementationTypeMatchParameterType(argumentReturnType, methodParameterType))
 				continue;
@@ -605,7 +616,7 @@ public class Type : Context
 			if (methodParameterType.IsGeneric)
 				throw new GenericTypesCannotBeUsedDirectlyUseImplementation(methodParameterType, //ncrunch: no coverage
 					"(parameter " + index + ") is not usable with argument " +
-					arguments[index].ReturnType + " in " + method);
+					argumentReturnTypes[index] + " in " + method);
 			if (!argumentReturnType.IsCompatible(methodParameterType))
 				return false;
 		}

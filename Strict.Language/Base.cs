@@ -54,4 +54,5 @@ public static class Base
 	public const string Stacktrace = nameof(Stacktrace);
 	public const string Name = nameof(Name);
 	public const string Mutable = nameof(Mutable);
+	public const string Dictionary = nameof(Dictionary);
 }

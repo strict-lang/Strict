@@ -9,10 +9,10 @@ public sealed class DictionaryTests : TestExpressions
 	{
 		var listInListType = new Type(type.Package,
 			new TypeLines(nameof(ParseMultipleTypesInsideAListType),
-				"has keysAndValues List((key Generic, mappedValue Generic))", "UseDictionary",
+				"has keysAndValues List((key Generic, value Generic))", "UseDictionary",
 				"\tconstant result = 5")).ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(listInListType.Members[0].Type.IsIterator, Is.True);
-		Assert.That(listInListType.Members[0].Type.Name, Is.EqualTo("KeyMappedValues"));
+		Assert.That(listInListType.Members[0].Type.Name, Is.EqualTo("KeyValues"));
 	}
 
 	[Test]
@@ -27,19 +27,29 @@ public sealed class DictionaryTests : TestExpressions
 			Is.EqualTo("FirstTypeMappedSecondTypes"));
 	}
 
-	[Ignore("Make dictionary file parsing work first before using")]
 	[Test]
-	public void ParseDictionary() =>
-		Assert.That(ParseExpression("Dictionary(Number, Number)"),
-			Is.EqualTo("Dictionary(Number, Number)"));
+	public void ParseDictionaryType()
+	{
+		var dictionary = new Type(type.Package,
+			new TypeLines(nameof(ParseDictionaryType),
+				"has inputMap Dictionary(Number, Number)", "UseDictionary",
+				"\tinputMap.Add(4, 6)",
+				"\tinputMap")).ParseMembersAndMethods(new MethodExpressionParser());
+		Assert.That(dictionary.Members[0].Type,
+			Is.InstanceOf<GenericTypeImplementation>());
+		Assert.That(dictionary.Members[0].Type.ToString(),
+			Is.EqualTo("TestPackage.Dictionary(TestPackage.Number, TestPackage.Number)"));
+		Assert.That(((GenericTypeImplementation)dictionary.Members[0].Type).ImplementationTypes[1],
+			Is.EqualTo(type.GetType(Base.Number)));
+	}
 
 	[Ignore("Make dictionary file parsing work first before using")]
 	[Test]
-	public void UseDictionaryType() =>
-		Assert.That(
-			() => new Type(type.Package,
-					new TypeLines(nameof(UseDictionaryType), "has log", "UseDictionary",
-						"\tconstant result = Dictionary(Number, Number)")).
-				ParseMembersAndMethods(new MethodExpressionParser()).Methods[0].GetBodyAndParseIfNeeded(),
-			Throws.InstanceOf<Type.GenericTypesCannotBeUsedDirectlyUseImplementation>());
+	public void UseDictionaryType()
+	{
+		var body = new Type(type.Package,
+				new TypeLines(nameof(UseDictionaryType), "has log", "UseDictionary",
+					"\tconstant result = Dictionary(Number, Number)")).
+			ParseMembersAndMethods(new MethodExpressionParser()).Methods[0].GetBodyAndParseIfNeeded();
+	}
 }
