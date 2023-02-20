@@ -1,6 +1,4 @@
-﻿using OmniSharp.Extensions.LanguageServer.Protocol.Server;
-
-namespace Strict.LanguageServer;
+﻿namespace Strict.LanguageServer;
 
 public class RunnerService
 {

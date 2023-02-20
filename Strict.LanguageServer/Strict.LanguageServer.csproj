@@ -11,7 +11,8 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.NETCore.Platforms" Version="7.0.0" />
-    <PackageReference Include="OmniSharp.Extensions.LanguageServer" Version="0.19.7" />
+		<!-- ReSharper disable once VulnerablePackage -->
+		<PackageReference Include="OmniSharp.Extensions.LanguageServer" Version="0.19.7" />
   </ItemGroup>
 
   <ItemGroup>

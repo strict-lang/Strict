@@ -98,6 +98,16 @@ public sealed class DictionaryTests : TestExpressions
 				Message.StartsWith("Dictionary(Number, Text, Number)"));
 
 	[Test]
+	public void CannotAddMismatchingInputTypesToDictionaryInstance() =>
+		Assert.That(
+			() => new Type(type.Package,
+					new TypeLines(nameof(CannotAddMismatchingInputTypesToDictionaryInstance), "has log",
+						"DummyInitialization", "\tconstant studentsRegister = Dictionary(Number, Text)",
+						"\tstudentsRegister.Add(5, true)", "\tlog.Write(studentsRegister)")).
+				ParseMembersAndMethods(new MethodExpressionParser()).Methods[0].GetBodyAndParseIfNeeded(),
+			Throws.InstanceOf<Type.ArgumentsDoNotMatchMethodParameters>());
+
+	[Test]
 	public void CannotCreateDictionaryExpressionWithThreeTypeParameters() =>
 		Assert.That(
 			() => new Dictionary(

@@ -7,8 +7,8 @@ public class Memory
 {
 	public Dictionary<Register, Instance> Registers { get; set; } = new();
 	public Dictionary<string, Instance> Variables = new();
-
 }
+
 public sealed class VirtualMachine
 {
 	public Memory Memory { get; set; } = new();

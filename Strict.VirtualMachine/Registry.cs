@@ -7,7 +7,6 @@ public class Registry
 	private readonly Register[] registers = Enum.GetValues<Register>();
 	private readonly List<Register> lockedRegisters = new();
 
-
 	public Register AllocateRegister(bool isLocked = false)
 	{
 		if (NextRegister == registers.Length)

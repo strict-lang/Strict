@@ -20,7 +20,7 @@ public sealed class VariableValueEvaluator : RunnerService, RunnableService
 		for (var i = 0; i < lines.Length; i++)
 			foreach (var variable in vm.Memory.Variables.Where(variable => lines[i].Contains(variable.Key)))
 				lineValuePair.Add(i, variable.Value.Value.ToString() ?? throw new InvalidOperationException());
-		languageServer?.SendNotification(NotificationName,
+		languageServer.SendNotification(NotificationName,
 			new VariableStateNotificationMessage(lineValuePair));
 	}
 }
