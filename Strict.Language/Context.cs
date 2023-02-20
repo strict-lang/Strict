@@ -73,7 +73,8 @@ public abstract class Context
 		if (name.Contains('(') && name.EndsWith(')'))
 			return GetGenericTypeWithArguments(name);
 		if (!name.EndsWith('s'))
-			return (FindFullType(name) ?? FindType(name, this)) ?? throw new TypeNotFound(name, FullName);
+			return (FindFullType(name) ?? FindType(name, this)) ??
+				throw new TypeNotFound(name, FullName);
 		var singularName = name[..^1];
 		if (singularName == Base.Generic)
 			// ReSharper disable once TailRecursiveCall
