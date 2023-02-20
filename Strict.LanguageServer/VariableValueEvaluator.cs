@@ -18,8 +18,10 @@ public sealed class VariableValueEvaluator : RunnerService, RunnableService
 	{
 		var lineValuePair = new Dictionary<int, string>();
 		for (var i = 0; i < lines.Length; i++)
-			foreach (var variable in vm.Memory.Variables.Where(variable => lines[i].Contains(variable.Key)))
-				lineValuePair.Add(i, variable.Value.Value.ToString() ?? throw new InvalidOperationException());
+			foreach (var variable in vm.Memory.Variables.Where(variable =>
+				lines[i].Contains(variable.Key)))
+				lineValuePair[i] =
+					variable.Value.Value.ToString() ?? throw new InvalidOperationException();
 		languageServer.SendNotification(NotificationName,
 			new VariableStateNotificationMessage(lineValuePair));
 	}
