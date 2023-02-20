@@ -1,4 +1,5 @@
-﻿using NUnit.Framework;
+﻿using System.Collections.Generic;
+using NUnit.Framework;
 
 namespace Strict.Language.Expressions.Tests;
 
@@ -71,12 +72,40 @@ public sealed class DictionaryTests : TestExpressions
 	}
 
 	[Test]
-	public void CreateDictionaryTypeInstance()
+	public void CreateAndValidateDictionaryTypeInstance()
 	{
-		var body = new Type(type.Package,
+		var body = (Body)new Type(type.Package,
 				new TypeLines("SchoolRegister", "has log", "LogStudentsDetails",
 					"\tmutable studentsRegister = Dictionary(Number, Text)",
-					"\tstudentsRegister.Add(1, \"AK\"", "\tlog.Write(studentsRegister)")).
+					"\tstudentsRegister.Add(1, \"AK\")",
+					"\tlog.Write(studentsRegister)")).
 			ParseMembersAndMethods(new MethodExpressionParser()).Methods[0].GetBodyAndParseIfNeeded();
+		Assert.That(((MutableDeclaration)body.Expressions[0]).Value, Is.InstanceOf<Dictionary>()!);
+		var dictionaryExpression = (Dictionary)((MutableDeclaration)body.Expressions[0]).Value;
+		Assert.That(dictionaryExpression.KeyType, Is.EqualTo(type.GetType(Base.Number)));
+		Assert.That(dictionaryExpression.MappedValueType, Is.EqualTo(type.GetType(Base.Text)));
 	}
+
+	[Test]
+	public void DictionaryMustBeInitializedWithTwoTypeParameters() =>
+		Assert.That(
+			() => new Type(type.Package,
+					new TypeLines(nameof(DictionaryMustBeInitializedWithTwoTypeParameters), "has log",
+						"DummyInitialization",
+						"\tmutable studentsRegister = Dictionary(Number, Text, Number)")).
+				ParseMembersAndMethods(new MethodExpressionParser()).Methods[0].GetBodyAndParseIfNeeded(),
+			Throws.InstanceOf<Dictionary.DictionaryMustBeInitializedWithTwoTypeParameters>().With.
+				Message.StartsWith("Dictionary(Number, Text, Number)"));
+
+	[Test]
+	public void CannotCreateDictionaryExpressionWithThreeTypeParameters() =>
+		Assert.That(
+			() => new Dictionary(
+				new List<Type>
+				{
+					type.GetType(Base.Number), type.GetType(Base.Text), type.GetType(Base.Boolean)
+				}, type),
+			Throws.InstanceOf<Dictionary.DictionaryMustBeInitializedWithTwoTypeParameters>().With.
+				Message.StartsWith(
+					"Expected Type Parameters: 2, Given type parameters: 3 and they are TestPackage.Number, TestPackage.Text, TestPackage.Boolean"));
 }

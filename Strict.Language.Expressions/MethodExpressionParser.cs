@@ -80,7 +80,8 @@ public class MethodExpressionParser : ExpressionParser
 	{
 		var postfix = new ShuntingYard(input.ToString());
 		if (postfix.Output.Count == 1)
-			return TryParseMemberOrZeroOrOneArgumentMethodOrNestedCall(body, input) ??
+			return Dictionary.TryParse(body, input) ??
+				TryParseMemberOrZeroOrOneArgumentMethodOrNestedCall(body, input) ??
 				ParseTextWithSpacesOrListWithMultipleOrNestedElements(body, input[postfix.Output.Pop()]);
 		if (postfix.Output.Count == 2)
 			return ParseMethodCallWithArguments(body, input, postfix);
