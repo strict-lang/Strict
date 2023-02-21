@@ -141,16 +141,25 @@ public sealed class VirtualMachineTests : BaseVirtualMachineTests
 			Is.EqualTo("Number is less or equal than 10"));
 	}
 
-	[TestCase("EvenSumCalculator(100).IsEven", 2450,
+	[TestCase("EvenSumCalculator(100).IsEven", 2450, "EvenSumCalculator",
 		new[]
 		{
 			"has number", "IsEven Number", "\tmutable sum = 0", "\tfor number",
 			"\t\tif (index % 2) is 0", "\t\t\tsum = sum + index", "\tsum"
 		})]
+	[TestCase("Something((10, 10, 5)).Length", 3, "Something",
+		new[]
+		{
+			"has Numbers",
+			"Length Boolean",
+			"\tconstant result = Numbers.Length",
+			"\tresult"
+		})]
+	// ReSharper disable once TooManyArguments
 	public void CompileCompositeBinariesInIfCorrectlyWithModulo(string methodCall,
-		int expectedResult, params string[] code)
+		int expectedResult, string methodName,  params string[] code)
 	{
-		var statements = new ByteCodeGenerator(GenerateMethodCallFromSource("EvenSumCalculator",
+		var statements = new ByteCodeGenerator(GenerateMethodCallFromSource(methodName,
 			methodCall, code)).Generate();
 		Assert.That(vm.Execute(statements).Returns?.Value, Is.EqualTo(expectedResult));
 	}
