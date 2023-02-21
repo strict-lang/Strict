@@ -1,0 +1,79 @@
+﻿using Strict.Language;
+using Strict.Language.Expressions;
+using Strict.Language.Tests;
+using static Strict.CodeValidator.MethodValidator;
+using Type = Strict.Language.Type;
+
+namespace Strict.CodeValidator.Tests;
+
+public sealed class MethodValidatorTests
+{
+	[SetUp]
+	public void CreateTypeAndParser()
+	{
+		type = new Type(new TestPackage(), new TypeLines(nameof(MethodValidatorTests), ""));
+		parser = new MethodExpressionParser();
+	}
+
+	private Type type = null!;
+	private ExpressionParser parser = null!;
+
+	[Test]
+	public void UnchangedMutableVariablesShouldError() =>
+		Assert.That(
+			() => new MethodValidator(new[]
+			{
+				new Method(type, 1, parser, new[]
+				{
+					"Run",
+					"\tmutable input = 0",
+					"\tinput + 5"
+				})
+			}).Validate(),
+			Throws.InstanceOf<VariableDeclaredAsMutableButValueNeverChanged>().With.
+				Message.Contains("input"));
+
+	[Test]
+	public void ExceptionShouldOccurOnlyForUnchangedMutableVariable() =>
+		Assert.That(
+			() => new MethodValidator(new[]
+			{
+				new Method(type, 1, parser, new[]
+				{
+					"Run",
+					"\tmutable inputOne = 0",
+					"\tinputOne = 5",
+					"\tmutable inputTwo = 0",
+					"\tinputTwo = 6",
+					"\tmutable inputThree = 0",
+					"\tinputOne + inputTwo + inputThree"
+				})
+			}).Validate(),
+			Throws.InstanceOf<VariableDeclaredAsMutableButValueNeverChanged>().With.
+				Message.Contains("inputThree"));
+
+	[Test]
+	public void ConstantVariablesShouldBeAllowedToPass() =>
+		Assert.DoesNotThrow(() => new MethodValidator(new[]
+		{
+			new Method(type, 1, parser, new[]
+			{
+				"Run",
+				"\tconstant input = 10",
+				"\tinput + 5"
+			})
+		}).Validate());
+
+	[Test]
+	public void MutatedVariablesShouldBeAllowedToPass() =>
+		Assert.DoesNotThrow(() => new MethodValidator(new[]
+		{
+			new Method(type, 1, parser, new[]
+			{
+				"Run",
+				"\tmutable input = 10",
+				"\tinput = 15",
+				"\tinput + 15"
+			})
+		}).Validate());
+}

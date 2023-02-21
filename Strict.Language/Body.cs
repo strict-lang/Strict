@@ -111,7 +111,7 @@ public sealed class Body : Expression
 	/// <summary>
 	/// Dictionaries are slow and eats up a lot of memory, only created when needed.
 	/// </summary>
-	private Dictionary<string, Expression>? variables;
+	public Dictionary<string, Expression>? Variables { get; private set; }
 
 	public Body AddVariable(string name, Expression value)
 	{
@@ -124,8 +124,8 @@ public sealed class Body : Expression
 			throw new VariableNameCannotHaveDifferentTypeNameThanValue(this, name, value.ReturnType.Name);
 		if (FindVariableValue(name.AsSpan()) != null)
 			throw new ValueIsNotMutableAndCannotBeChanged(this, name);
-		variables ??= new Dictionary<string, Expression>(StringComparer.Ordinal);
-		variables.Add(name, value);
+		Variables ??= new Dictionary<string, Expression>(StringComparer.Ordinal);
+		Variables.Add(name, value);
 		return this;
 	}
 
@@ -148,8 +148,8 @@ public sealed class Body : Expression
 			throw new IdentifierNotFound(this, name);
 		if (!variable.IsMutable)
 			throw new ValueIsNotMutableAndCannotBeChanged(this, name);
-		if (variableScopeBody.variables != null)
-			variableScopeBody.variables[name] = value;
+		if (variableScopeBody.Variables != null)
+			variableScopeBody.Variables[name] = value;
 	}
 
 	public sealed class IdentifierNotFound : ParsingFailed
@@ -159,7 +159,7 @@ public sealed class Body : Expression
 
 	private List<string> GetAllVariablesNames()
 	{
-		var allVariables = variables?.Keys.ToList() ?? new List<string>();
+		var allVariables = Variables?.Keys.ToList() ?? new List<string>();
 		if (Parent != null)
 			allVariables.AddRange(Parent.GetAllVariablesNames());
 		return allVariables;
@@ -167,8 +167,8 @@ public sealed class Body : Expression
 
 	public Expression? FindVariableValue(ReadOnlySpan<char> searchFor)
 	{
-		if (variables != null)
-			foreach (var (name, value) in variables)
+		if (Variables != null)
+			foreach (var (name, value) in Variables)
 				if (searchFor.Equals(name, StringComparison.Ordinal))
 					return value;
 		return Parent?.FindVariableValue(searchFor);
@@ -176,8 +176,8 @@ public sealed class Body : Expression
 
 	private Body? FindVariableBody(ReadOnlySpan<char> searchFor)
 	{
-		if (variables != null)
-			foreach (var (name, _) in variables)
+		if (Variables != null)
+			foreach (var (name, _) in Variables)
 				if (searchFor.Equals(name, StringComparison.Ordinal))
 					return this;
 		return Parent?.FindVariableBody(searchFor);
