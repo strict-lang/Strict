@@ -357,6 +357,9 @@ public sealed class Method : Context
 	private bool HasSameParameterTypes(Method method) =>
 		!method.Parameters.Where((parameter, index) =>
 			parameter.Type.Name != Base.Generic && Parameters[index].Type != parameter.Type).Any();
+
+	public int GetParameterUsageCount(string parameterName) =>
+		lines.Count(l => l.Contains(" " + parameterName) || l.Contains("(" + parameterName));
 }
 
 public sealed class RecursiveCallCausesStackOverflow : ParsingFailed

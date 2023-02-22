@@ -76,4 +76,25 @@ public sealed class MethodValidatorTests
 				"\tinput + 15"
 			})
 		}).Validate());
+
+	[TestCase("methodInput", "Run(methodInput Number)", "\t\"Run method executed\"")]
+	[TestCase("second", "Run(first Number, second Text)", "\tconstant result = first + 5",
+		"\t\"Run method executed\"")]
+	public void ValidateUnusedMethodParameter(string expectedOutput, params string[] methodLines) =>
+		Assert.That(
+			() => new MethodValidator(new[] { new Method(type, 1, parser, methodLines) }).Validate(),
+			Throws.InstanceOf<UnusedMethodParameterMustBeRemoved>().With.Message.
+				Contains(expectedOutput));
+
+	[Test]
+	public void ErrorOnlyIfParametersAreUnused() =>
+		Assert.DoesNotThrow(() => new MethodValidator(new[]
+		{
+			new Method(type, 1, parser,
+				new[]
+				{
+					"Run(methodInput Number)",
+					"\t\"Run method executed with input\" + methodInput"
+				})
+		}).Validate());
 }
