@@ -252,6 +252,11 @@ public sealed class VirtualMachine
 				left.Value.ToString() + right.Value);
 		if (rightReturnTypeName == Base.Text && leftReturnTypeName == Base.Number)
 			return new Instance(right.ReturnType, left.Value.ToString() + right.Value);
+		if (leftReturnTypeName.EndsWith('s') || rightReturnTypeName.EndsWith('s'))
+		{
+			//TODO: List addition
+		}
+
 		return new Instance(left.ReturnType, left.Value + right.Value.ToString());
 	}
 

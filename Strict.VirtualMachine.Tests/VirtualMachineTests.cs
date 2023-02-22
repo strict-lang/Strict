@@ -147,17 +147,26 @@ public sealed class VirtualMachineTests : BaseVirtualMachineTests
 			"has number", "IsEven Number", "\tmutable sum = 0", "\tfor number",
 			"\t\tif (index % 2) is 0", "\t\t\tsum = sum + index", "\tsum"
 		})]
-	[TestCase("Something((10, 10, 5)).Length", 3, "Something",
+	[TestCase("EvenSumCalculatorForList((100, 200, 300)).IsEvenList", 2, "EvenSumCalculatorForList",
 		new[]
 		{
-			"has Numbers",
-			"Length Boolean",
-			"\tconstant result = Numbers.Length",
-			"\tresult"
+			"has numbers", "IsEvenList Number", "\tmutable sum = 0", "\tfor numbers",
+			"\t\tif (index % 2) is 0", "\t\t\tsum = sum + index", "\tsum"
+		})]
+	[TestCase("EvenNumberRemover(5).Remove", 2, "EvenNumberRemover",
+		new[]
+		{
+			"has number",
+			"Remove Numbers",
+			"\tmutable myList = (100, 200, 300, 400)",
+			"\tfor myList",
+			"\t\tif (value % 2) is 0",
+			"\t\t\tmyList = myList - value",
+			"\tmyList"
 		})]
 	// ReSharper disable once TooManyArguments
 	public void CompileCompositeBinariesInIfCorrectlyWithModulo(string methodCall,
-		int expectedResult, string methodName,  params string[] code)
+		int expectedResult, string methodName, params string[] code)
 	{
 		var statements = new ByteCodeGenerator(GenerateMethodCallFromSource(methodName,
 			methodCall, code)).Generate();
