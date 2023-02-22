@@ -208,6 +208,7 @@ public sealed class ListTests : TestExpressions
 			new TypeLines(nameof(ListAdditionWithGeneric), "has elements Numbers", "Add(other Numbers) List", "\telements + other.elements")).ParseMembersAndMethods(parser);
 		Assert.That(program.Members[0].Name, Is.EqualTo("elements"));
 		Assert.That(program.Methods[0].ReturnType.Name, Is.EqualTo("List"));
+		Assert.That(program.Members[0].Type.IsIterator, Is.True);
 	}
 
 	[TestCase("Add(input Number) Generics", "NumbersCompatibleWithCount")]

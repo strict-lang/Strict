@@ -1,5 +1,6 @@
 ﻿using Strict.Language;
 using Strict.Language.Expressions;
+using Type = Strict.Language.Type;
 
 namespace Strict.CodeValidator;
 
@@ -15,6 +16,14 @@ public sealed record MethodValidator(IEnumerable<Method> Methods) : Validator
 	{
 		if (method.GetBodyAndParseIfNeeded() is Body body)
 			ValidateUnchangedMutableVariables(body);
+		ValidateUnusedMethodParameters(method);
+	}
+
+	private static void ValidateUnusedMethodParameters(Method method)
+	{
+		foreach (var parameter in method.Parameters)
+			if (method.GetParameterUsageCount(parameter.Name) < 2)
+				throw new UnusedMethodParameterMustBeRemoved(method.Type, parameter.Name);
 	}
 
 	private static void ValidateUnchangedMutableVariables(Body body)
@@ -40,5 +49,10 @@ public sealed record MethodValidator(IEnumerable<Method> Methods) : Validator
 	{
 		public VariableDeclaredAsMutableButValueNeverChanged(Body body, string name) : base(body,
 			name) { }
+	}
+
+	public sealed class UnusedMethodParameterMustBeRemoved : ParsingFailed
+	{
+		public UnusedMethodParameterMustBeRemoved(Type type, string name) : base(type, 0, name) { }
 	}
 }

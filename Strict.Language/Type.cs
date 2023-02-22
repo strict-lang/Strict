@@ -801,4 +801,7 @@ public class Type : Context
 	public bool IsUpcastable(Type otherType) =>
 		IsEnum && otherType.IsEnum && otherType.Members.Any(member =>
 			member.Name.Equals(Name, StringComparison.OrdinalIgnoreCase));
+
+	public int FindMemberUsageCount(string memberName) =>
+		lines.Count(l => l.Contains(" " + memberName) || l.Contains("(" + memberName));
 }
