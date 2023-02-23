@@ -3,12 +3,7 @@ using Strict.Language.Expressions;
 
 namespace Strict.VirtualMachine;
 
-public class Memory
-{
-	public Dictionary<Register, Instance> Registers { get; set; } = new();
-	public Dictionary<string, Instance> Variables = new();
-}
-
+// ReSharper disable once ClassTooBig
 public sealed class VirtualMachine
 {
 	public Memory Memory { get; set; } = new();
@@ -86,7 +81,8 @@ public sealed class VirtualMachine
 	private Instance? RunAndGetResultFromInvokedMethodCall(IList<Statement> methodStatements)
 	{
 		var members =
-			new Dictionary<string, Instance>(Memory.Variables.Where(variable => variable.Value.IsMember));
+			new Dictionary<string, Instance>(
+				Memory.Variables.Where(variable => variable.Value.IsMember));
 		var instance =
 			new VirtualMachine
 			{
@@ -139,7 +135,8 @@ public sealed class VirtualMachine
 		if (iterableVariable == null)
 			return;
 		if (!iteratorInitialized)
-			InitializeIterator(initLoopStatement, iterableVariable); //TODO: Get rid of this and figure out something better. (LM)
+			InitializeIterator(initLoopStatement,
+				iterableVariable); //TODO: Get rid of this and figure out something better. (LM)
 		AlterValueVariable(iterableVariable);
 	}
 
@@ -228,8 +225,7 @@ public sealed class VirtualMachine
 		Memory.Registers[statement.Registers[^1]] = statement.Instruction switch
 		{
 			Instruction.Add => GetAdditionResult(left, right),
-			Instruction.Subtract => new Instance(right.ReturnType,
-				Convert.ToDouble(left.Value) - Convert.ToDouble(right.Value)),
+			Instruction.Subtract => GetSubtractionResult(left, right),
 			Instruction.Multiply => new Instance(right.ReturnType,
 				Convert.ToDouble(left.Value) * Convert.ToDouble(right.Value)),
 			Instruction.Divide => new Instance(right.ReturnType,
@@ -240,6 +236,7 @@ public sealed class VirtualMachine
 		};
 	}
 
+	//TODO: Refactor
 	private static Instance GetAdditionResult(Instance left, Instance right)
 	{
 		var leftReturnTypeName = left.TypeName;
@@ -252,12 +249,43 @@ public sealed class VirtualMachine
 				left.Value.ToString() + right.Value);
 		if (rightReturnTypeName == Base.Text && leftReturnTypeName == Base.Number)
 			return new Instance(right.ReturnType, left.Value.ToString() + right.Value);
-		if (leftReturnTypeName.EndsWith('s') || rightReturnTypeName.EndsWith('s'))
-		{
-			//TODO: List addition
-		}
+		return !leftReturnTypeName.EndsWith('s')
+			? new Instance(left.ReturnType, left.Value + right.Value.ToString())
+			: AddElementToTheListAndGetInstance(left, right);
+	}
 
-		return new Instance(left.ReturnType, left.Value + right.Value.ToString());
+	private static Instance AddElementToTheListAndGetInstance(Instance left, Instance right)
+	{
+		var elements = (List<Expression>)left.Value;
+		if (right.Value is Expression rightExpression)
+		{
+			elements.Add(rightExpression);
+		}
+		else
+		{
+			var rightValue = new Value(elements.First().ReturnType, right.Value);
+			elements.Add(rightValue);
+		}
+		return new Instance(left.ReturnType, elements);
+	}
+
+	private static Instance GetSubtractionResult(Instance left, Instance right)
+	{
+		if (!left.TypeName.EndsWith('s'))
+			return new Instance(left.ReturnType,
+				Convert.ToDouble(left.Value) - Convert.ToDouble(right.Value));
+		var elements = (List<Expression>)left.Value;
+		if (right.Value is Expression rightExpression)
+		{
+			elements.Remove(rightExpression);
+		}
+		else
+		{
+			var indexToRemove =
+				elements.FindIndex(element => ((Value)element).Data.Equals(right.Value));
+			elements.RemoveAt(indexToRemove);
+		}
+		return new Instance(left.ReturnType, elements);
 	}
 
 	private (Instance, Instance) GetOperands(BinaryStatement statement) =>

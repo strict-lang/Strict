@@ -1,4 +1,6 @@
 using NUnit.Framework;
+using Strict.Language;
+using Strict.Language.Expressions;
 
 namespace Strict.VirtualMachine.Tests;
 
@@ -153,24 +155,46 @@ public sealed class VirtualMachineTests : BaseVirtualMachineTests
 			"has numbers", "IsEvenList Number", "\tmutable sum = 0", "\tfor numbers",
 			"\t\tif (index % 2) is 0", "\t\t\tsum = sum + index", "\tsum"
 		})]
-	[TestCase("EvenNumberRemover(5).Remove", 2, "EvenNumberRemover",
-		new[]
-		{
-			"has number",
-			"Remove Numbers",
-			"\tmutable myList = (100, 200, 300, 400)",
-			"\tfor myList",
-			"\t\tif (value % 2) is 0",
-			"\t\t\tmyList = myList - value",
-			"\tmyList"
-		})]
 	// ReSharper disable once TooManyArguments
 	public void CompileCompositeBinariesInIfCorrectlyWithModulo(string methodCall,
-		int expectedResult, string methodName, params string[] code)
+		object expectedResult, string methodName, params string[] code)
 	{
 		var statements = new ByteCodeGenerator(GenerateMethodCallFromSource(methodName,
 			methodCall, code)).Generate();
 		Assert.That(vm.Execute(statements).Returns?.Value, Is.EqualTo(expectedResult));
+	}
+
+	[TestCase("AddToTheList(5).Add", "100 200 300 400 0 1 2 3", "AddToTheList",
+		new[]
+		{
+			"has number",
+			"Add Number",
+			"\tmutable myList = (100, 200, 300, 400)",
+			"\tfor myList",
+			"\t\tif (value % 2) is 0",
+			"\t\t\tmyList = myList + index",
+			"\tmyList"
+		})]
+	[TestCase("RemoveFromTheList(5).Remove", "100 200 300", "RemoveFromTheList",
+		new[]
+		{
+			"has number",
+			"Remove Number",
+			"\tmutable myList = (100, 200, 300, 400)",
+			"\tfor myList",
+			"\t\tif value is 400",
+			"\t\t\tmyList = myList - 400",
+			"\tmyList"
+		})]
+	// ReSharper disable once TooManyArguments
+	public void CompileListBinaryOperations(string methodCall,
+		object expectedResult, string methodName, params string[] code)
+	{
+		var statements = new ByteCodeGenerator(GenerateMethodCallFromSource(methodName,
+			methodCall, code)).Generate();
+		var values = (List<Expression>)vm.Execute(statements).Returns?.Value!;
+		var elements = values.Aggregate("", (current, value) => current + ((Value)value).Data + " ");
+		Assert.That(elements.Trim(), Is.EqualTo(expectedResult));
 	}
 
 	[Test]

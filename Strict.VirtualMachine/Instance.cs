@@ -3,7 +3,7 @@ using Strict.Language.Expressions;
 using Type = Strict.Language.Type;
 
 namespace Strict.VirtualMachine;
-
+//TODO: Change this class so Value is always expression not an object! (LM)
 /// <summary>
 /// The only place where we can have a "static" method call to one of the from methods of a type
 /// before we have a type instance yet, it is the only way to create instances.
