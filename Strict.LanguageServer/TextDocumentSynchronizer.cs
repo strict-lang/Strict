@@ -7,6 +7,7 @@ using OmniSharp.Extensions.LanguageServer.Protocol.Server;
 using OmniSharp.Extensions.LanguageServer.Protocol.Server.Capabilities;
 using OmniSharp.Extensions.LanguageServer.Protocol.Window;
 using Strict.Language;
+using Strict.Language.Expressions;
 
 namespace Strict.LanguageServer;
 
@@ -18,11 +19,12 @@ public sealed class TextDocumentSynchronizer : ITextDocumentSyncHandler
 		Document = document;
 		this.strictBase = strictBase;
 	}
-
+	
 	public StrictDocument Document { get; }
 	private readonly ILanguageServerFacade languageServer;
 	private readonly Package strictBase;
 	public TextDocumentAttributes GetTextDocumentAttributes(DocumentUri uri) => new(uri, "strict"); //ncrunch: no coverage
+
 
 	public Task<Unit> Handle(DidChangeTextDocumentParams request,
 		CancellationToken cancellationToken)
@@ -47,8 +49,12 @@ public sealed class TextDocumentSynchronizer : ITextDocumentSyncHandler
 			Version = 1
 		});
 
+	//private Package? currentPackage;
 	public Task<Unit> Handle(DidOpenTextDocumentParams request, CancellationToken cancellationToken)
 	{
+		//currentPackage ??=
+		//	await new Repositories(new MethodExpressionParser()).LoadFromPath(string.Join("/",
+		//		request.TextDocument.Uri.Path.Split('/')[..^1]));
 		Document.AddOrUpdate(request.TextDocument.Uri, request.TextDocument.Text.Split("\r\n"));
 		Document.InitializeContent(request.TextDocument.Uri);
 		ParseUpdatedCodeAndPublishDiagnostics(request.TextDocument.Uri);

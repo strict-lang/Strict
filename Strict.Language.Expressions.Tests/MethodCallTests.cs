@@ -112,6 +112,7 @@ public sealed class MethodCallTests : TestExpressions
 			Throws.InstanceOf<NoMatchingMethodFound>());
 
 	[TestCase("ComplexMethod((1), 2)")]
+	[TestCase("ComplexMethod((1, 2, 3))")]
 	[TestCase("ComplexMethod((1, 2, 3) + (4, 5), 7)")]
 	[TestCase("ComplexMethod((1, 2, 3) + (4, 5), ComplexMethod((1, 2, 3), 4))")]
 	[TestCase("ComplexMethod((\"1 + 5\", \"5 + 5\"))")]
