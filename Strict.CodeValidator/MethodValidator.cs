@@ -16,14 +16,7 @@ public sealed record MethodValidator(IEnumerable<Method> Methods) : Validator
 	{
 		if (method.GetBodyAndParseIfNeeded() is Body body)
 			ValidateUnchangedMutableVariables(body);
-		ValidateUnusedMethodParameters(method);
-	}
-
-	private static void ValidateUnusedMethodParameters(Method method)
-	{
-		foreach (var parameter in method.Parameters)
-			if (method.GetParameterUsageCount(parameter.Name) < 2)
-				throw new UnusedMethodParameterMustBeRemoved(method.Type, parameter.Name);
+		ValidateMethodParameters(method);
 	}
 
 	private static void ValidateUnchangedMutableVariables(Body body)
@@ -51,8 +44,35 @@ public sealed record MethodValidator(IEnumerable<Method> Methods) : Validator
 			name) { }
 	}
 
+	private static void ValidateMethodParameters(Method method)
+	{
+		foreach (var parameter in method.Parameters)
+		{
+			ValidateUnusedParameter(method, parameter);
+			ValidateUnchangedMutableParameter(method, parameter);
+		}
+	}
+
+	private static void ValidateUnusedParameter(Method method, NamedType parameter)
+	{
+		if (method.GetParameterUsageCount(parameter.Name) < 2)
+			throw new UnusedMethodParameterMustBeRemoved(method.Type, parameter.Name);
+	}
+
 	public sealed class UnusedMethodParameterMustBeRemoved : ParsingFailed
 	{
 		public UnusedMethodParameterMustBeRemoved(Type type, string name) : base(type, 0, name) { }
+	}
+
+	private static void ValidateUnchangedMutableParameter(Method method, Parameter parameter)
+	{
+		if (parameter is { IsMutable: true, DefaultValue: null })
+			throw new ParameterDeclaredAsMutableButValueNeverChanged(method.Type, parameter.Name);
+	}
+
+	public sealed class ParameterDeclaredAsMutableButValueNeverChanged : ParsingFailed
+	{
+		public ParameterDeclaredAsMutableButValueNeverChanged(Type type, string name) : base(type, 0,
+			name) { }
 	}
 }

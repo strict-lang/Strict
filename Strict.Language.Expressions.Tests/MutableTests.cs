@@ -40,6 +40,21 @@ public sealed class MutableTests : TestExpressions
 	}
 
 	[Test]
+	public void EnsureMutableMethodParameterValueIsUpdated()
+	{
+		var program = new Type(type.Package,
+				new TypeLines(nameof(EnsureMutableMethodParameterValueIsUpdated), "has something Number",
+					"Add(mutable input Number) Number",
+					"\tinput = something + input")).
+			ParseMembersAndMethods(parser);
+		Assert.That(program.Methods[0].Parameters[0].IsMutable,
+			Is.True);
+		program.Methods[0].GetBodyAndParseIfNeeded();
+		Assert.That(program.Methods[0].Parameters[0].DefaultValue?.ToString(),
+			Is.EqualTo("something + input"));
+	}
+
+	[Test]
 	public void IncompleteMutableMethodParameter() =>
 		Assert.That(
 			() => new Type(type.Package,

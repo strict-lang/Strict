@@ -97,4 +97,25 @@ public sealed class MethodValidatorTests
 					"\t\"Run method executed with input\" + methodInput"
 				})
 		}).Validate());
+
+	[TestCase("Run(mutable parameter Number)", "\tconstant result = 5 + parameter", "\tresult")]
+	[TestCase("Run(mutable mutatedParameter Number, mutable parameter Number)", "\tmutatedParameter = 5 + parameter", "\tmutatedParameter")]
+	public void UnchangedMutableParametersShouldError(params string[] code) =>
+		Assert.That(() => new MethodValidator(new[] { new Method(type, 1, parser, code) }).Validate(),
+			Throws.InstanceOf<ParameterDeclaredAsMutableButValueNeverChanged>().With.Message.
+				Contains("parameter"));
+
+	[Test]
+	public void MutatedParametersShouldBeAllowed() =>
+		Assert.DoesNotThrow(
+			() => new MethodValidator(new[]
+			{
+				new Method(type, 1, parser,
+					new[]
+					{
+						"Run(mutable parameter Number)",
+						"\tparameter = 5 + parameter",
+						"\t5"
+					})
+			}).Validate());
 }

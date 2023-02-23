@@ -359,7 +359,8 @@ public sealed class Method : Context
 			parameter.Type.Name != Base.Generic && Parameters[index].Type != parameter.Type).Any();
 
 	public int GetParameterUsageCount(string parameterName) =>
-		lines.Count(l => l.Contains(" " + parameterName) || l.Contains("(" + parameterName));
+		lines.Count(l => l.Contains(" " + parameterName) || l.Contains("(" + parameterName) ||
+			l.Contains(parameterName + " "));
 }
 
 public sealed class RecursiveCallCausesStackOverflow : ParsingFailed

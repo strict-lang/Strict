@@ -13,7 +13,7 @@ public sealed class Member : NamedType
 			throw new MemberNameWithDifferentTypeNamesThanOwnAreNotAllowed(definedIn, Name, Type.Name);
 	}
 
-	public Expression? Value { get; set; }
+	public Expression? Value { get; private set; }
 	public bool IsPublic => char.IsUpper(Name[0]);
 	public Expression[]? Constraints { get; private set; }
 
@@ -47,5 +47,12 @@ public sealed class Member : NamedType
 	{
 		public MemberNameWithDifferentTypeNamesThanOwnAreNotAllowed(Type type, string nameType,
 			string typeName) : base(type, 0, $"Name {nameType} and type {typeName} are not matching") { }
+	}
+
+	public void UpdateValue(Expression newExpression, Body bodyForErrorMessage)
+	{
+		if (!IsMutable)
+			throw new Body.ValueIsNotMutableAndCannotBeChanged(bodyForErrorMessage, Name);
+		Value = newExpression;
 	}
 }

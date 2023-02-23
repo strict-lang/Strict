@@ -17,7 +17,7 @@ public sealed class Parameter : NamedType
 	private static bool IsNameStartsWithMutable(string nameAndType) =>
 		nameAndType.StartsWith(Type.MutableWithSpaceAtEnd, StringComparison.Ordinal);
 
-	public Expression? DefaultValue { get; }
+	public Expression? DefaultValue { get; private set; }
 
 	public Parameter(Type parentType, string nameAndType) : base(parentType,
 		IsNameStartsWithMutable(nameAndType)
@@ -32,5 +32,12 @@ public sealed class Parameter : NamedType
 		var clone = (Parameter)MemberwiseClone();
 		clone.Type = newType;
 		return clone;
+	}
+
+	public void UpdateValue(Expression newExpression, Body bodyForErrorMessage)
+	{
+		if (!IsMutable)
+			throw new Body.ValueIsNotMutableAndCannotBeChanged(bodyForErrorMessage, Name);
+		DefaultValue = newExpression;
 	}
 }

@@ -42,16 +42,12 @@ public sealed class MutableAssignment : ConcreteExpression
 			return new MutableAssignment(body, variableCall.Name, newExpression);
 		case MemberCall memberCall:
 		{
-			if (!memberCall.Member.IsMutable)
-				throw new Body.ValueIsNotMutableAndCannotBeChanged(body, memberCall.Member.Name);
-			memberCall.Member.Value = newExpression;
+			memberCall.Member.UpdateValue(newExpression, body);
 			return memberCall;
 		}
 		case ParameterCall parameterCall:
 		{
-			if (!parameterCall.Parameter.IsMutable)
-				throw new Body.ValueIsNotMutableAndCannotBeChanged(body, parameterCall.Parameter.Name);
-			parameterCall.Parameter = new Parameter(body.Method.Type, parameterCall.Parameter.Name, newExpression);
+			parameterCall.Parameter.UpdateValue(newExpression, body);
 			return parameterCall;
 		}
 		default:
