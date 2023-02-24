@@ -236,7 +236,6 @@ public sealed class VirtualMachine
 		};
 	}
 
-	//TODO: Refactor
 	private static Instance GetAdditionResult(Instance left, Instance right)
 	{
 		var leftReturnTypeName = left.TypeName;
@@ -256,11 +255,9 @@ public sealed class VirtualMachine
 
 	private static Instance AddElementToTheListAndGetInstance(Instance left, Instance right)
 	{
-		var elements = (List<Expression>)left.Value;
+		var elements = new List<Expression>((List<Expression>)left.Value);
 		if (right.Value is Expression rightExpression)
-		{
 			elements.Add(rightExpression);
-		}
 		else
 		{
 			var rightValue = new Value(elements.First().ReturnType, right.Value);
@@ -274,11 +271,9 @@ public sealed class VirtualMachine
 		if (!left.TypeName.EndsWith('s'))
 			return new Instance(left.ReturnType,
 				Convert.ToDouble(left.Value) - Convert.ToDouble(right.Value));
-		var elements = (List<Expression>)left.Value;
+		var elements = new List<Expression>((List<Expression>)left.Value);
 		if (right.Value is Expression rightExpression)
-		{
 			elements.Remove(rightExpression);
-		}
 		else
 		{
 			var indexToRemove =

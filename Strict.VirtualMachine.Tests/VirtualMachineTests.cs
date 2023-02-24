@@ -186,6 +186,17 @@ public sealed class VirtualMachineTests : BaseVirtualMachineTests
 			"\t\t\tmyList = myList - 400",
 			"\tmyList"
 		})]
+	[TestCase("RemoveB((\"s\", \"b\", \"s\")).Remove", "s s", "RemoveB",
+		new[]
+		{
+			"has texts",
+			"Remove Text",
+			"\tmutable textlist = texts",
+			"\tfor texts",
+			"\t\tif value is \"b\"",
+			"\t\t\ttextlist = textlist - value",
+			"\ttextlist"
+		})]
 	// ReSharper disable once TooManyArguments
 	public void CompileListBinaryOperations(string methodCall,
 		object expectedResult, string methodName, params string[] code)

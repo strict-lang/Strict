@@ -104,7 +104,7 @@ public sealed class ByteCodeGenerator
 
 	private void TryGenerateVariableCallStatement(Expression expression)
 	{
-		if (expression is VariableCall)
+		if (expression is VariableCall or MemberCall)
 			statements.Add(new LoadVariableStatement(registry.AllocateRegister(), expression.ToString()));
 	}
 
