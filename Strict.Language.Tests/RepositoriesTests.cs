@@ -72,6 +72,20 @@ public class RepositoriesTests
 		Assert.That(program.Members[0].Type.ToString(), Contains.Substring(Base.Number));
 	}
 
+	[Ignore("Fix typeLines first")]
+	[Test]
+	public async Task CheckGenericTypesAreLoadedCorrectlyAfterSorting()
+	{
+		var parser = new MethodExpressionParser();
+		var repositories = new Repositories(parser);
+		var program = new Type(await repositories.LoadStrictPackage(), new TypeLines("ValidProgram", "has texts", "Run Texts", "\t\"Result \" + 5")).
+			ParseMembersAndMethods(parser);
+		program.Methods[0].GetBodyAndParseIfNeeded();
+		Assert.That(program.Members[0].Type.IsIterator, Is.True);
+		Assert.That(program.Members[0].Type.Members.Count, Is.GreaterThan(1));
+		Assert.That(program.Members[0].Type.Methods.Count, Is.GreaterThan(5));
+	}
+
 	/// <summary>
 	/// Each indentation is one depth level lower
 	/// File1 needs File2
