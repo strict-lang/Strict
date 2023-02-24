@@ -423,7 +423,7 @@ public sealed class TypeTests
 	{
 		var text = package.GetType(Base.Text + "s");
 		Assert.That(text.AvailableMethods.Values.Select(methods => methods.Count).Sum(),
-			Is.EqualTo(69));
+			Is.EqualTo(71));
 	}
 
 	[Test]

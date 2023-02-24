@@ -221,4 +221,8 @@ public class Program
 	[Test]
 	public Task RemoveParentheses() =>
 		GenerateCSharpByReadingStrictProgramAndCompareWithOutput(nameof(RemoveParentheses));
+
+	[Test]
+	public Task RemoveDuplicateWords() =>
+		GenerateCSharpByReadingStrictProgramAndCompareWithOutput(nameof(RemoveDuplicateWords));
 }
