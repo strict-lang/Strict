@@ -152,8 +152,12 @@ public sealed class VirtualMachineTests : BaseVirtualMachineTests
 	[TestCase("EvenSumCalculatorForList((100, 200, 300)).IsEvenList", 2, "EvenSumCalculatorForList",
 		new[]
 		{
-			"has numbers", "IsEvenList Number", "\tmutable sum = 0", "\tfor numbers",
-			"\t\tif (index % 2) is 0", "\t\t\tsum = sum + index", "\tsum"
+			"has numbers", "IsEvenList Number",
+			"\tmutable sum = 0",
+			"\tfor numbers",
+			"\t\tif (index % 2) is 0",
+			"\t\t\tsum = sum + index",
+			"\tsum"
 		})]
 	// ReSharper disable once TooManyArguments
 	public void CompileCompositeBinariesInIfCorrectlyWithModulo(string methodCall,
@@ -197,6 +201,17 @@ public sealed class VirtualMachineTests : BaseVirtualMachineTests
 			"\t\t\ttextlist = textlist - value",
 			"\ttextlist"
 		})]
+	[TestCase("RemoveDuplicates((\"s\", \"b\", \"s\")).Remove", "b", "RemoveDuplicates",
+		new[]
+		{
+			"has texts",
+			"Remove Text",
+			"\tmutable textlist = (\"s\")",
+			"\tfor texts",
+			"\t\tif texts.Contains(value) is false",
+			"\t\t\ttextlist = textlist + value",
+			"\ttextlist"
+		})] //TODO: Parsing fails for Contains method, and virtually all methods that contain list (LM/Parsing)
 	// ReSharper disable once TooManyArguments
 	public void CompileListBinaryOperations(string methodCall,
 		object expectedResult, string methodName, params string[] code)

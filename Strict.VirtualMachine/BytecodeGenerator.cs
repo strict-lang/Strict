@@ -258,25 +258,24 @@ public sealed class ByteCodeGenerator
 		return rightRegister;
 	}
 
-	private Register GenerateLeftSideForIfCondition(MethodCall condition) =>
+	private Register GenerateLeftSideForIfCondition(Binary condition) =>
 		condition.Instance switch
 		{
-			Value instanceValue => LoadConstantForIfConditionLeft(instanceValue), //ncrunch: no coverage
 			Binary binaryInstance => GenerateValueBinaryStatements(binaryInstance,
 				GetInstructionBasedOnBinaryOperationName(binaryInstance.Method.Name)),
+			MethodCall => InvokeAndGetStoredRegisterForConditional(condition),
 			_ => LoadVariableForIfConditionLeft(condition)
 		};
 
-	//ncrunch: no coverage start
-	private Register LoadConstantForIfConditionLeft(Value instanceValue)
+	private Register InvokeAndGetStoredRegisterForConditional(Binary condition)
 	{
-		var leftRegister = registry.AllocateRegister();
-		statements.Add(new LoadConstantStatement(leftRegister,
-			new Instance(instanceValue.ReturnType, instanceValue.Data)));
-		return leftRegister;
-	} //ncrunch: no coverage end
+		if (condition.Instance == null)
+			throw new InvalidOperationException(); //ncrunch: no coverage
+		GenerateStatementsFromExpression(condition.Instance);
+		return registry.PreviousRegister;
+	}
 
-	private Register LoadVariableForIfConditionLeft(MethodCall condition)
+	private Register LoadVariableForIfConditionLeft(Binary condition)
 	{
 		var leftRegister = registry.AllocateRegister();
 		statements.Add(new LoadVariableStatement(leftRegister,
