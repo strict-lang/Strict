@@ -33,12 +33,12 @@ public class TypeLinesTests
 	[Test]
 	public void MethodReturnTypeShouldBeExtractedIntoDependentTypes()
 	{
-		var type = new TypeLines(Base.Directory,
+		var typeLines = new TypeLines(Base.Directory,
 			"GetFile Text",
 			"GetFiles Texts",
 			"GetDirectories Texts");
-		Assert.That(type.DependentTypes.Count, Is.EqualTo(2), string.Join(",", type.DependentTypes));
-		Assert.That(type.DependentTypes[0], Is.EqualTo(Base.Text));
-		Assert.That(type.DependentTypes[1], Is.EqualTo(Base.List));
+		Assert.That(typeLines.DependentTypes.Count, Is.EqualTo(2), string.Join(",", typeLines.DependentTypes));
+		Assert.That(typeLines.DependentTypes[0], Is.EqualTo(Base.Text));
+		Assert.That(typeLines.DependentTypes[1], Is.EqualTo(Base.List));
 	}
 }

@@ -226,6 +226,7 @@ public sealed class Repositories
 	{
 		var reversedDependencies = new Stack<TypeLines>();
 		var zeroDegreeQueue = CreateZeroDegreeQueue(inDegree);
+		var dummy = files.Values.Where(t => t.DependentTypes.Contains("Type")).ToList();
 		while (zeroDegreeQueue.Count > 0)
 			if (files.TryGetValue(zeroDegreeQueue.Dequeue(), out var lines))
 			{
@@ -234,7 +235,19 @@ public sealed class Repositories
 					if (--inDegree[vertex] == 0)
 						zeroDegreeQueue.Enqueue(vertex);
 			}
+		if (inDegree.Any(keyValue => keyValue.Value > 0))
+			AddUnresolvedRemainingTypes(files, inDegree, reversedDependencies);
 		return reversedDependencies;
+	}
+
+	private static void AddUnresolvedRemainingTypes(IReadOnlyDictionary<string, TypeLines> files, Dictionary<string, int> inDegree,
+		Stack<TypeLines> reversedDependencies)
+	{
+		foreach (var unresolvedType in inDegree.Where(x => x.Value > 0))
+			if (files.TryGetValue(unresolvedType.Key, out var lines))
+				if (reversedDependencies.All(
+					alreadyAddedType => alreadyAddedType.Name != unresolvedType.Key))
+					reversedDependencies.Push(lines);
 	}
 
 	private static Queue<string> CreateZeroDegreeQueue(Dictionary<string, int> inDegree)

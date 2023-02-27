@@ -29,26 +29,27 @@ public class TypeLines
 		IList<string> dependentTypes = Array.Empty<string>();
 		foreach (var line in Lines)
 			if (line.StartsWith(Type.HasWithSpaceAtEnd, StringComparison.Ordinal))
-				AddMemberType(line[Type.HasWithSpaceAtEnd.Length..], ref dependentTypes);
+				AddDependentType(line[Type.HasWithSpaceAtEnd.Length..], ref dependentTypes);
 			else if (line.StartsWith(Type.MutableWithSpaceAtEnd, StringComparison.Ordinal))
-				AddMemberType(line[Type.MutableWithSpaceAtEnd.Length..], ref dependentTypes);
-			else if (!line.StartsWith('\t')) {
-				int startIndex = 0;
-				if (line.Contains('(')) {
-					startIndex = line.IndexOf('(');
-				}
-				else if (line.Contains(' ')) {
-					startIndex = line.IndexOf(" ");
-				}
-				if (startIndex > 0)
-					AddMemberType(line[startIndex..], ref dependentTypes);
-			}
+				AddDependentType(line[Type.MutableWithSpaceAtEnd.Length..], ref dependentTypes);
+			else if (!line.StartsWith('\t'))
+				AddDependentTypesFromMethodParametersAndReturnType(line, ref dependentTypes);
 			else
 				break;
 		return (IReadOnlyList<string>)dependentTypes;
 	}
 
-	private void AddMemberType(string remainingLine, ref IList<string> dependentTypes)
+	private void AddDependentTypesFromMethodParametersAndReturnType(string line,
+		ref IList<string> dependentTypes)
+	{
+		var startIndex = line.Contains('(')
+			? line.IndexOf('(')
+			: line.IndexOf(' ');
+		if (startIndex > 0)
+			AddDependentType(line[startIndex..], ref dependentTypes);
+	}
+
+	private void AddDependentType(string remainingLine, ref IList<string> dependentTypes)
 	{
 		if (dependentTypes.Count == 0)
 			dependentTypes = new List<string>();
@@ -67,10 +68,13 @@ public class TypeLines
 
 	private void AddIfNotExisting(ICollection<string> dependentTypes, string typeName)
 	{
-		if (typeName.Contains(' '))
+		if (typeName.Contains(Keyword.With))
+			typeName = typeName[..typeName.IndexOf("with", StringComparison.Ordinal)].Trim();
+		else if (typeName.Contains(' '))
 			typeName = typeName.Split(' ')[1];
-		if (!dependentTypes.Contains(typeName) && Name != typeName)
-			dependentTypes.Add(typeName);
+		if (!dependentTypes.Contains(typeName.MakeFirstLetterUppercase()) && Name != typeName &&
+			!typeName.IsKeyword() && typeName != Base.Generic)
+			dependentTypes.Add(typeName.MakeFirstLetterUppercase());
 	}
 
 	public override string ToString() => Name + DependentTypes.ToBrackets();
