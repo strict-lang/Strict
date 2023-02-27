@@ -72,7 +72,6 @@ public class RepositoriesTests
 		Assert.That(program.Members[0].Type.ToString(), Contains.Substring(Base.Number));
 	}
 
-	[Ignore("Fix typeLines first")]
 	[Test]
 	public async Task CheckGenericTypesAreLoadedCorrectlyAfterSorting()
 	{
