@@ -16,51 +16,66 @@ public class TypeLines
 	{
 		Name = name;
 		Lines = lines;
-		MemberTypes = ExtractMemberTypes();
+		DependentTypes = ExtractDependentTypes();
 	}
 
 	public string Name { get; }
 	public string[] Lines { get; }
-	public IReadOnlyList<string> MemberTypes { get; }
+	public IReadOnlyList<string> DependentTypes { get; }
 
-	private IReadOnlyList<string> ExtractMemberTypes()
+	private IReadOnlyList<string> ExtractDependentTypes()
 	{
 		// Often there are no members, no need to create a new empty list
-		IList<string> members = Array.Empty<string>();
+		IList<string> dependentTypes = Array.Empty<string>();
 		foreach (var line in Lines)
 			if (line.StartsWith(Type.HasWithSpaceAtEnd, StringComparison.Ordinal))
-				AddMemberType(line[Type.HasWithSpaceAtEnd.Length..], ref members);
+				AddDependentType(line[Type.HasWithSpaceAtEnd.Length..], ref dependentTypes);
 			else if (line.StartsWith(Type.MutableWithSpaceAtEnd, StringComparison.Ordinal))
-				AddMemberType(line[Type.MutableWithSpaceAtEnd.Length..], ref members);
+				AddDependentType(line[Type.MutableWithSpaceAtEnd.Length..], ref dependentTypes);
+			else if (!line.StartsWith('\t'))
+				AddDependentTypesFromMethodParametersAndReturnType(line, ref dependentTypes);
 			else
 				break;
-		return (IReadOnlyList<string>)members;
+		return (IReadOnlyList<string>)dependentTypes;
 	}
 
-	private void AddMemberType(string remainingLine, ref IList<string> memberTypes)
+	private void AddDependentTypesFromMethodParametersAndReturnType(string line,
+		ref IList<string> dependentTypes)
 	{
-		if (memberTypes.Count == 0)
-			memberTypes = new List<string>();
+		var startIndex = line.Contains('(')
+			? line.IndexOf('(')
+			: line.IndexOf(' ');
+		if (startIndex > 0)
+			AddDependentType(line[startIndex..], ref dependentTypes);
+	}
+
+	private void AddDependentType(string remainingLine, ref IList<string> dependentTypes)
+	{
+		if (dependentTypes.Count == 0)
+			dependentTypes = new List<string>();
 		if (remainingLine.Contains('('))
 			foreach (var part in remainingLine.Split(new[] { '(', ')', ',' },
 				StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
-				AddIfNotExisting(memberTypes, part);
+				AddIfNotExisting(dependentTypes, part);
 		else if (remainingLine.EndsWith('s'))
 		{
-			AddIfNotExisting(memberTypes, Base.List);
-			AddIfNotExisting(memberTypes, remainingLine[..^1].MakeFirstLetterUppercase());
+			AddIfNotExisting(dependentTypes, Base.List);
+			AddIfNotExisting(dependentTypes, remainingLine[..^1].MakeFirstLetterUppercase());
 		}
 		else
-			AddIfNotExisting(memberTypes, remainingLine.MakeFirstLetterUppercase());
+			AddIfNotExisting(dependentTypes, remainingLine.MakeFirstLetterUppercase());
 	}
 
-	private void AddIfNotExisting(ICollection<string> memberTypes, string typeName)
+	private void AddIfNotExisting(ICollection<string> dependentTypes, string typeName)
 	{
-		if (typeName.Contains(' '))
+		if (typeName.Contains(Keyword.With))
+			typeName = typeName[..typeName.IndexOf("with", StringComparison.Ordinal)].Trim();
+		else if (typeName.Contains(' '))
 			typeName = typeName.Split(' ')[1];
-		if (!memberTypes.Contains(typeName) && Name != typeName)
-			memberTypes.Add(typeName);
+		if (!dependentTypes.Contains(typeName.MakeFirstLetterUppercase()) && Name != typeName &&
+			!typeName.IsKeyword() && typeName != Base.Generic)
+			dependentTypes.Add(typeName.MakeFirstLetterUppercase());
 	}
 
-	public override string ToString() => Name + MemberTypes.ToBrackets();
+	public override string ToString() => Name + DependentTypes.ToBrackets();
 }
