@@ -18,6 +18,8 @@ public sealed class ByteCodeGenerator
 			statements.Add(new StoreVariableStatement(argument.Value, argument.Key));
 		Expressions = method.Expressions;
 		this.registry = registry;
+		if (method is InstanceInvokedMethod { InstanceCall: MethodCall instanceMethodCall })
+			AddInstanceMemberVariables(instanceMethodCall);
 	}
 
 	public ByteCodeGenerator(MethodCall methodCall)

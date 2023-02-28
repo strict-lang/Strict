@@ -1,4 +1,5 @@
-﻿using Strict.Language;
+﻿using System.Data;
+using Strict.Language;
 using Strict.Language.Expressions;
 
 namespace Strict.VirtualMachine;
@@ -66,16 +67,11 @@ public sealed class VirtualMachine
 	{
 		if (statement is not InvokeStatement { MethodCall: { } } invokeStatement)
 			return;
-		var arguments = FormArgumentsForMethodCall(invokeStatement);
-		if (invokeStatement.PersistedRegistry != null && invokeStatement.MethodCall != null)
-		{
-			var methodStatements = GetByteCodeFromInvokedMethodCall(
-				((Body)invokeStatement.MethodCall.Method.GetBodyAndParseIfNeeded()).Expressions,
-				invokeStatement.PersistedRegistry, arguments);
-			var instance = RunAndGetResultFromInvokedMethodCall(methodStatements);
-			if (instance != null)
-				Memory.Registers[invokeStatement.Register] = instance;
-		}
+		FormArgumentsForMethodCall(invokeStatement);
+		var methodStatements = GetByteCodeFromInvokedMethodCall(invokeStatement);
+		var instance = RunAndGetResultFromInvokedMethodCall(methodStatements);
+		if (instance != null)
+			Memory.Registers[invokeStatement.Register] = instance;
 	}
 
 	private Instance? RunAndGetResultFromInvokedMethodCall(IList<Statement> methodStatements)
@@ -91,11 +87,23 @@ public sealed class VirtualMachine
 		return instance;
 	}
 
-	private static List<Statement> GetByteCodeFromInvokedMethodCall(
-		IReadOnlyList<Expression> expressions, Registry persistedRegistry,
-		IReadOnlyDictionary<string, Instance> arguments) =>
-		new ByteCodeGenerator(new InvokedMethod(expressions, arguments), persistedRegistry).
-			Generate();
+	private List<Statement> GetByteCodeFromInvokedMethodCall(
+		InvokeStatement invokeStatement)
+	{
+		if (invokeStatement.PersistedRegistry == null || invokeStatement.MethodCall == null)
+			throw new InvalidExpressionException(); //TODO: Cover this line ncrunch: no coverage
+		return invokeStatement.MethodCall.Instance == null
+			? new ByteCodeGenerator(
+					new InvokedMethod(
+						((Body)invokeStatement.MethodCall.Method.GetBodyAndParseIfNeeded()).Expressions,
+						FormArgumentsForMethodCall(invokeStatement)), invokeStatement.PersistedRegistry).
+				Generate()
+			: new ByteCodeGenerator(
+				new InstanceInvokedMethod(
+					((Body)invokeStatement.MethodCall.Method.GetBodyAndParseIfNeeded()).Expressions,
+					FormArgumentsForMethodCall(invokeStatement), invokeStatement.MethodCall.Instance),
+				invokeStatement.PersistedRegistry).Generate();
+	}
 
 	private Dictionary<string, Instance> FormArgumentsForMethodCall(InvokeStatement invokeStatement)
 	{

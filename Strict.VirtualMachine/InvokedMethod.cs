@@ -2,7 +2,7 @@
 
 namespace Strict.VirtualMachine;
 
-public sealed class InvokedMethod
+public class InvokedMethod
 {
 	public InvokedMethod(IReadOnlyList<Expression> expressions, IReadOnlyDictionary<string, Instance> arguments)
 	{
