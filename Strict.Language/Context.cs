@@ -48,7 +48,7 @@ public abstract class Context
 			" ;Allowed characters: Alphabets, Numbers or '-' in the middle or end of the name") { }
 	}
 
-	public Context Parent { get; }
+	public Context Parent { get; protected set; }
 	public string Name { get; }
 	public string FullName { get; }
 

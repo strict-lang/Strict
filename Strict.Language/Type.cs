@@ -701,6 +701,8 @@ public class Type : Context
 				return member.Type;
 		foreach (var member in members)
 		{
+			if (member.Type == this)
+				continue;
 			var subUnionType = member.Type.FindFirstUnionType(elseType);
 			if (subUnionType != null)
 				return subUnionType;

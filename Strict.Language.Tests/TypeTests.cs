@@ -423,7 +423,7 @@ public sealed class TypeTests
 	{
 		var text = package.GetType(Base.Text + "s");
 		Assert.That(text.AvailableMethods.Values.Select(methods => methods.Count).Sum(),
-			Is.EqualTo(71));
+			Is.EqualTo(52));
 	}
 
 	[Test]
@@ -458,7 +458,7 @@ public sealed class TypeTests
 	[TestCase(Base.Number, 1)]
 	[TestCase(Base.Character, 2)]
 	[TestCase(Base.Text, 4)]
-	[TestCase(Base.Error, 10)]
+	[TestCase(Base.Error, 6)]
 	public void ValidateAvailableMemberTypesCount(string name, int expectedCount)
 	{
 		var type = package.GetType(name);

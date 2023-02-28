@@ -337,7 +337,9 @@ public sealed class Method : Context
 			clone.parameters[index] = clone.parameters[index].CloneWithImplementationType(
 				ReplaceWithImplementationOrGenericType(clone.Parameters[index].Type,
 					typeWithImplementation, index));
+		clone.Parent = typeWithImplementation; //TODO: find any alternative way to have method with updated parent?
 		clone.IsGeneric = false;
+		clone.methodBody?.UpdateCurrentAndChildrenMethod(clone);
 		return clone;
 	}
 
@@ -345,7 +347,7 @@ public sealed class Method : Context
 		GenericTypeImplementation typeWithImplementation, int index) =>
 		type.Name == Base.Generic
 			? typeWithImplementation.ImplementationTypes[index] //Number
-			: type.IsGeneric
+			: type.IsGeneric || type.Name == Base.List
 				? typeWithImplementation //ListNumber
 				: type;
 

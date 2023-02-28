@@ -13,7 +13,9 @@ public sealed class GenericTypeImplementation : Type
 		var implementationTypeIndex = 0;
 		foreach (var member in Generic.Members)
 			members.Add(member.Type.IsGeneric
-				? member.CloneWithImplementation(implementationTypes[implementationTypeIndex++])
+				? member.CloneWithImplementation(member.Type.Name == Base.List
+					? this
+					: implementationTypes[implementationTypeIndex++])
 				: member);
 		foreach (var methodsByNames in Generic.AvailableMethods)
 		foreach (var method in methodsByNames.Value)

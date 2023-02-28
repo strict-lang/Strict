@@ -14,6 +14,8 @@ public sealed class MethodCallTests : TestExpressions
 			new[] { "ComplexMethod(numbers, add Number) Number", "\t1" }));
 		((List<Method>)type.Methods).Add(new Method(type, 0, this,
 			new[] { "ComplexMethod(texts) Texts", "\t1" }));
+		((List<Method>)type.Methods).Add(new Method(type, 0, this,
+			new[] { "ComplexMethod(numbers) Texts", "\t1" }));
 	}
 
 	[Test]

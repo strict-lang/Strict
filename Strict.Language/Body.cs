@@ -27,7 +27,7 @@ public sealed class Body : Expression
 		parent?.children.Add(this);
 	}
 
-	public Method Method { get; }
+	public Method Method { get; private set; }
 	public int Tabs { get; }
 	private Body? Parent { get; }
 	public readonly List<Body> children = new();
@@ -200,5 +200,12 @@ public sealed class Body : Expression
 			return child;
 		}
 		return null;
+	}
+
+	public void UpdateCurrentAndChildrenMethod(Method implementationMethod)
+	{
+		Method = implementationMethod;
+		foreach (var child in children)
+			child.UpdateCurrentAndChildrenMethod(implementationMethod);
 	}
 }

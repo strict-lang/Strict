@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using NUnit.Framework;
 
 namespace Strict.Language.Expressions.Tests;
@@ -211,8 +212,8 @@ public sealed class ListTests : TestExpressions
 		Assert.That(program.Members[0].Type.IsIterator, Is.True);
 	}
 
-	[TestCase("Add(input Number) Generics", "NumbersCompatibleWithCount")]
-	[TestCase("Add(input Character) Generics", "NumbersCompatibleWithCharacter")]
+	[TestCase("Add(input Number) Numbers", "NumbersCompatibleWithCount")]
+	[TestCase("Add(input Character) Numbers", "NumbersCompatibleWithCharacter")]
 	public void NumbersCompatibleWithImplementedTypes(string code, string testName)
 	{
 		var program = new Type(type.Package,
@@ -432,4 +433,23 @@ public sealed class ListTests : TestExpressions
 			Throws.InstanceOf<ParsingFailed>()!.With.InnerException.
 				InstanceOf<Type.NoMatchingMethodFound>());
 	// @formatter:on
+
+	[Test]
+	public void MethodsAndMembersOfListShouldHaveImplementationTypeAsParent()
+	{
+		var numbers = type.GetListImplementationType(type.GetType(Base.Number));
+		Assert.That(numbers.Members[1].ToString(),
+			Is.EqualTo("elements TestPackage.Numbers"));
+		Assert.That(numbers.Methods[1].Parent.ToString(),
+			Is.EqualTo("TestPackage.Numbers"));
+	}
+
+	[Test]
+	public void MethodBodyShouldBeUpdatedWithImplementationType()
+	{
+		var texts = type.GetListImplementationType(type.GetType(Base.Text));
+		var containsMethod = texts.Methods.FirstOrDefault(m => m.Name == "Contains");
+		Assert.That(((Body)containsMethod!.GetBodyAndParseIfNeeded()).Method,
+			Is.EqualTo(containsMethod));
+	}
 }

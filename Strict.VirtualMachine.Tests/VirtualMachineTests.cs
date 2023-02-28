@@ -172,7 +172,7 @@ public sealed class VirtualMachineTests : BaseVirtualMachineTests
 		new[]
 		{
 			"has number",
-			"Add Number",
+			"Add Numbers",
 			"\tmutable myList = (100, 200, 300, 400)",
 			"\tfor myList",
 			"\t\tif (value % 2) is 0",
@@ -183,7 +183,7 @@ public sealed class VirtualMachineTests : BaseVirtualMachineTests
 		new[]
 		{
 			"has number",
-			"Remove Number",
+			"Remove Numbers",
 			"\tmutable myList = (100, 200, 300, 400)",
 			"\tfor myList",
 			"\t\tif value is 400",
@@ -194,7 +194,7 @@ public sealed class VirtualMachineTests : BaseVirtualMachineTests
 		new[]
 		{
 			"has texts",
-			"Remove Text",
+			"Remove Texts",
 			"\tmutable textlist = texts",
 			"\tfor texts",
 			"\t\tif value is \"b\"",
@@ -205,14 +205,14 @@ public sealed class VirtualMachineTests : BaseVirtualMachineTests
 		new[]
 		{
 			"has texts",
-			"Remove Text",
-			"\tmutable textlist = (\"s\")",
+			"Remove Texts",
+			"\tmutable textList = (\"s\")",
 			"\tfor texts",
 			"\t\tif texts.Contains(value) is false",
-			"\t\t\ttextlist = textlist + value",
-			"\ttextlist"
-		})] //TODO: Parsing fails for Contains method, and virtually all methods that contain list (LM/Parsing)
-	// ReSharper disable once TooManyArguments
+			"\t\t\ttextList = textList + value",
+			"\ttextList"
+		})] //TODO: Fix it in Virtual machine
+				// ReSharper disable once TooManyArguments
 	public void CompileListBinaryOperations(string methodCall,
 		object expectedResult, string methodName, params string[] code)
 	{
