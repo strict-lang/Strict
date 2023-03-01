@@ -118,4 +118,29 @@ public sealed class MethodValidatorTests
 						"\t5"
 					})
 			}).Validate());
+
+	[Test]
+	public void ListArgumentCanBeAutoParsedWithoutDoubleBrackets()
+	{
+		var typeWithListParameterMethod = new Type(new TestPackage(), new TypeLines(nameof(ListArgumentCanBeAutoParsedWithoutDoubleBrackets),
+			"has log",
+			"CheckInputLengthAndGetResult(numbers) Number",
+			"\tif numbers.Length is 2",
+			"\t\treturn 2",
+			"\t0")).ParseMembersAndMethods(parser);
+		Assert.That(() => new MethodValidator(new[]
+			{
+				new Method(typeWithListParameterMethod, 1, parser, new[]
+				{
+						// @formatter:off
+						"InvokeTestMethod(numbers) Number",
+						"\tif numbers.Length is 2",
+						"\t\treturn 2",
+						"\tCheckInputLengthAndGetResult((1, 2))"
+					// @formatter:on
+				})
+			}).Validate(),
+			Throws.InstanceOf<ListArgumentCanBeAutoParsedWithoutDoubleBrackets>().With.Message.
+				Contains("CheckInputLengthAndGetResult((1, 2))"));
+	}
 }

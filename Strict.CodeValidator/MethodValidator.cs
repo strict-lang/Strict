@@ -15,8 +15,21 @@ public sealed record MethodValidator(IEnumerable<Method> Methods) : Validator
 	private static void Validate(Method method)
 	{
 		if (method.GetBodyAndParseIfNeeded() is Body body)
+		{
 			ValidateUnchangedMutableVariables(body);
+			ValidateMethodCall(body);
+		}
 		ValidateMethodParameters(method);
+	}
+
+	private static void ValidateMethodCall(Body body)
+	{
+		for (var index = body.LineRange.Start.Value; index < body.LineRange.End.Value; index++)
+		{
+			var line = body.GetLine(index);
+			if (line.Contains("((") && line.Contains("))") && line.Count(t => t == '(') < 3)
+				throw new ListArgumentCanBeAutoParsedWithoutDoubleBrackets(body, line);
+		}
 	}
 
 	private static void ValidateUnchangedMutableVariables(Body body)
@@ -74,5 +87,11 @@ public sealed record MethodValidator(IEnumerable<Method> Methods) : Validator
 	{
 		public ParameterDeclaredAsMutableButValueNeverChanged(Type type, string name) : base(type, 0,
 			name) { }
+	}
+
+	public sealed class ListArgumentCanBeAutoParsedWithoutDoubleBrackets : ParsingFailed
+	{
+		public ListArgumentCanBeAutoParsedWithoutDoubleBrackets(Body type, string line) : base(type,
+			line) { }
 	}
 }
