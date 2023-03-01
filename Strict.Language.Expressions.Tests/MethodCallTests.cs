@@ -79,9 +79,9 @@ public sealed class MethodCallTests : TestExpressions
 
 	[Test]
 	public void UnknownExpressionForArgumentException() =>
-		Assert.That(() => ParseExpression("ComplexMethod(5)"),
+		Assert.That(() => ParseExpression("ComplexMethod(true)"),
 			Throws.InstanceOf<ArgumentsDoNotMatchMethodParameters>().With.Message.
-				StartsWith("Argument: 5 "));
+				StartsWith("Argument: true "));
 
 	[Test]
 	public void ListTokensAreNotSeparatedByCommaException() =>

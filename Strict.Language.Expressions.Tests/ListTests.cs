@@ -452,4 +452,30 @@ public sealed class ListTests : TestExpressions
 		Assert.That(((Body)containsMethod!.GetBodyAndParseIfNeeded()).Method,
 			Is.EqualTo(containsMethod));
 	}
+
+	[TestCase("numbers", "1, 2", "Numbers")]
+	[TestCase("booleans", "true, false", "Booleans")]
+	[TestCase("texts", "\"Hi\", \"Hello\"", "Texts")]
+	public void AutoParseArgumentAsListIfMatchingWithMethodParameter(string parameter, string arguments, string expectedList)
+	{
+		// @formatter:off
+		var typeWithTestMethods = new Type(type.Package,
+			new TypeLines("ListArgumentsCanBeAutoParsed" + expectedList,
+				"has log",
+				$"CheckInputLengthAndGetResult({parameter}) Number",
+				"\tif numbers.Length is 2",
+				"\t\treturn 2",
+				"\t0",
+				"InvokeTestMethod(numbers) Number",
+				"\tif numbers.Length is 2",
+				"\t\treturn 2",
+				$"\tCheckInputLengthAndGetResult({arguments})")).ParseMembersAndMethods(parser);
+		// @formatter:on
+		var body = (Body)typeWithTestMethods.Methods[1].GetBodyAndParseIfNeeded();
+		Assert.That(body.Expressions[1], Is.InstanceOf<MethodCall>());
+		var argumentExpression = ((MethodCall)body.Expressions[1]).Arguments[0];
+		Assert.That(argumentExpression, Is.InstanceOf<List>());
+		Assert.That(argumentExpression.ReturnType.ToString(),
+			Is.EqualTo($"TestPackage.{expectedList}"));
+	}
 }

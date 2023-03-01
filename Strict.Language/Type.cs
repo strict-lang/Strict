@@ -586,12 +586,32 @@ public class Type : Context
 		if (!AvailableMethods.TryGetValue(methodName, out var matchingMethods))
 			return FindAndCreateFromBaseMethod(methodName, arguments, parser);
 		foreach (var method in matchingMethods)
+		{
 			if (method.Parameters.Count == arguments.Count && IsMethodWithMatchingParametersType(method,
 				arguments.Select(argument => argument.ReturnType).ToList()))
 				return method;
+			if (method.Parameters.Count == 1 && arguments.Count > 0)
+			{
+				var parameter = method.Parameters[0];
+				if (IsParameterTypeList(parameter) && CanAutoParseArgumentsIntoList(arguments) && IsMethodParameterMatchingWithArgument(arguments,
+					(GenericTypeImplementation)parameter.Type))
+					return method;
+			}
+		}
 		return FindAndCreateFromBaseMethod(methodName, arguments, parser) ??
 			throw new ArgumentsDoNotMatchMethodParameters(arguments, matchingMethods);
 	}
+
+	private static bool IsParameterTypeList(NamedType parameter) =>
+		parameter.Type is GenericTypeImplementation genericType &&
+		genericType.Generic.Name == Base.List;
+
+	private static bool CanAutoParseArgumentsIntoList(IReadOnlyList<Expression> arguments) =>
+		arguments.All(a => a.ReturnType == arguments[0].ReturnType);
+
+	private static bool IsMethodParameterMatchingWithArgument(IReadOnlyList<Expression> arguments,
+		GenericTypeImplementation genericType) =>
+		genericType.ImplementationTypes[0] == arguments[0].ReturnType;
 
 	public class GenericTypesCannotBeUsedDirectlyUseImplementation : Exception
 	{
