@@ -362,7 +362,11 @@ public sealed class Method : Context
 
 	public int GetParameterUsageCount(string parameterName) =>
 		lines.Count(l => l.Contains(" " + parameterName) || l.Contains("(" + parameterName) ||
-			l.Contains(parameterName + " "));
+			l.Contains(parameterName + " ") || l.Contains("\t" + parameterName));
+
+	public int GetVariableUsageCount(string variableName) =>
+		lines.Count(l => l.Contains(" " + variableName) || l.Contains("(" + variableName) ||
+			l.Contains("\t" + variableName));
 }
 
 public sealed class RecursiveCallCausesStackOverflow : ParsingFailed

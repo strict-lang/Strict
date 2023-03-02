@@ -17,19 +17,10 @@ public sealed record MethodValidator(IEnumerable<Method> Methods) : Validator
 		if (method.GetBodyAndParseIfNeeded() is Body body)
 		{
 			ValidateUnchangedMutableVariables(body);
+			ValidateUnusedVariables(body);
 			ValidateMethodCall(body);
 		}
 		ValidateMethodParameters(method);
-	}
-
-	private static void ValidateMethodCall(Body body)
-	{
-		for (var index = body.LineRange.Start.Value; index < body.LineRange.End.Value; index++)
-		{
-			var line = body.GetLine(index);
-			if (line.Contains("((") && line.Contains("))") && line.Count(t => t == '(') < 3)
-				throw new ListArgumentCanBeAutoParsedWithoutDoubleBrackets(body, line);
-		}
 	}
 
 	private static void ValidateUnchangedMutableVariables(Body body)
@@ -57,19 +48,54 @@ public sealed record MethodValidator(IEnumerable<Method> Methods) : Validator
 			name) { }
 	}
 
+	private static void ValidateUnusedVariables(Body body)
+	{
+		if (body.Variables == null)
+			return;
+		foreach (var variable in body.Variables)
+			ValidateUnusedVariable(body.Method, variable.Key);
+	}
+
+	private static void ValidateUnusedVariable(Method method, string name)
+	{
+		if (method.GetVariableUsageCount(name) < 2)
+			throw new UnusedMethodVariableMustBeRemoved(method.Type, name);
+	}
+
+	public sealed class UnusedMethodVariableMustBeRemoved : ParsingFailed
+	{
+		public UnusedMethodVariableMustBeRemoved(Type type, string name) : base(type, 0, name) { }
+	}
+
+	private static void ValidateMethodCall(Body body)
+	{
+		for (var index = body.LineRange.Start.Value; index < body.LineRange.End.Value; index++)
+		{
+			var line = body.GetLine(index);
+			if (line.Contains("((") && line.Contains("))") && line.Count(t => t == '(') < 3)
+				throw new ListArgumentCanBeAutoParsedWithoutDoubleBrackets(body, line);
+		}
+	}
+
+	public sealed class ListArgumentCanBeAutoParsedWithoutDoubleBrackets : ParsingFailed
+	{
+		public ListArgumentCanBeAutoParsedWithoutDoubleBrackets(Body type, string line) : base(type,
+			line) { }
+	}
+
 	private static void ValidateMethodParameters(Method method)
 	{
 		foreach (var parameter in method.Parameters)
 		{
-			ValidateUnusedParameter(method, parameter);
+			ValidateUnusedParameter(method, parameter.Name);
 			ValidateUnchangedMutableParameter(method, parameter);
 		}
 	}
 
-	private static void ValidateUnusedParameter(Method method, NamedType parameter)
+	private static void ValidateUnusedParameter(Method method, string name)
 	{
-		if (method.GetParameterUsageCount(parameter.Name) < 2)
-			throw new UnusedMethodParameterMustBeRemoved(method.Type, parameter.Name);
+		if (method.GetParameterUsageCount(name) < 2)
+			throw new UnusedMethodParameterMustBeRemoved(method.Type, name);
 	}
 
 	public sealed class UnusedMethodParameterMustBeRemoved : ParsingFailed
@@ -87,11 +113,5 @@ public sealed record MethodValidator(IEnumerable<Method> Methods) : Validator
 	{
 		public ParameterDeclaredAsMutableButValueNeverChanged(Type type, string name) : base(type, 0,
 			name) { }
-	}
-
-	public sealed class ListArgumentCanBeAutoParsedWithoutDoubleBrackets : ParsingFailed
-	{
-		public ListArgumentCanBeAutoParsedWithoutDoubleBrackets(Body type, string line) : base(type,
-			line) { }
 	}
 }
