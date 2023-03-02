@@ -5,7 +5,7 @@ namespace Strict.Language.Expressions;
 
 public sealed class MemberCall : ConcreteExpression
 {
-	public MemberCall(Expression? instance, Member member) : base(member.Type)
+	public MemberCall(Expression? instance, Member member) : base(member.Type, member.IsMutable)
 	{
 		Instance = instance;
 		Member = member;

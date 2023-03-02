@@ -4,7 +4,8 @@ namespace Strict.Language.Expressions;
 
 public sealed class ParameterCall : Expression
 {
-	public ParameterCall(Parameter parameter) : base(parameter.Type) => Parameter = parameter;
+	public ParameterCall(Parameter parameter) : base(parameter.Type, parameter.IsMutable) =>
+		Parameter = parameter;
 	public Parameter Parameter { get; internal set; }
 
 	public static Expression? TryParse(Body body, ReadOnlySpan<char> input)

@@ -60,9 +60,10 @@ public sealed class ByteCodeGenerator
 				statements.Add(new StoreVariableStatement(
 					new Instance(instance.Arguments[parameterIndex], true),
 					instance.ReturnType.Members[parameterIndex].Name));
+			if (instance.ReturnType.Members[parameterIndex].Value == null) //TODO: This condition is necessary for now for test synchronization
 			instance.ReturnType.Members[parameterIndex].
 				UpdateValue(instance.Arguments[parameterIndex],
-					new Body(instance.Method)); //TODO: No choice here for now, from method is trait (LM)
+					new Body(instance.Method));
 		}
 	}
 

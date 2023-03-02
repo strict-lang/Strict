@@ -30,6 +30,8 @@ public sealed class MutableAssignment : ConcreteExpression
 		if (!newExpression.ReturnType.IsCompatible(expression.ReturnType))
 			throw new ValueTypeNotMatchingWithAssignmentType(body, expression.ReturnType.Name,
 				newExpression.ReturnType.Name);
+		if (!expression.IsMutable)
+			throw new Body.ValueIsNotMutableAndCannotBeChanged(body, expression.ToString());
 		return UpdateMemberOrVariableValue(body, expression, newExpression);
 	}
 
