@@ -195,28 +195,28 @@ public sealed class VirtualMachineTests : BaseVirtualMachineTests
 		{
 			"has texts",
 			"Remove Texts",
-			"\tmutable textlist = texts",
+			"\tmutable textList = texts",
 			"\tfor texts",
 			"\t\tif value is \"b\"",
-			"\t\t\ttextlist = textlist - value",
-			"\ttextlist"
+			"\t\t\ttextList = textList - value",
+			"\ttextList"
 		})]
 	[TestCase("RemoveDuplicates((\"s\", \"b\", \"s\")).Remove", "b", "RemoveDuplicates",
 		new[]
 		{
 			"has texts",
 			"Remove Texts",
-			"\tmutable textList = (\"s\")",
+			"\tmutable textList = (\"\")",
 			"\tfor texts",
 			"\t\tif texts.Contains(value) is false",
 			"\t\t\ttextList = textList + value",
 			"\ttextList"
 		})] //TODO: Fix it in Virtual machine
-				// ReSharper disable once TooManyArguments
+	// ReSharper disable once TooManyArguments
 	public void CompileListBinaryOperations(string methodCall,
-		object expectedResult, string methodName, params string[] code)
+		object expectedResult, string programName, params string[] code)
 	{
-		var statements = new ByteCodeGenerator(GenerateMethodCallFromSource(methodName,
+		var statements = new ByteCodeGenerator(GenerateMethodCallFromSource(programName,
 			methodCall, code)).Generate();
 		var values = (List<Expression>)vm.Execute(statements).Returns?.Value!;
 		var elements = values.Aggregate("", (current, value) => current + ((Value)value).Data + " ");

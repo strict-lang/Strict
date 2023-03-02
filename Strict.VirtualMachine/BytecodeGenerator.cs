@@ -18,8 +18,12 @@ public sealed class ByteCodeGenerator
 			statements.Add(new StoreVariableStatement(argument.Value, argument.Key));
 		Expressions = method.Expressions;
 		this.registry = registry;
-		if (method is InstanceInvokedMethod { InstanceCall: MethodCall instanceMethodCall })
+		if (method is not InstanceInvokedMethod instanceMethod)
+			return;
+		if (instanceMethod.InstanceCall is MethodCall instanceMethodCall)
 			AddInstanceMemberVariables(instanceMethodCall);
+		else if (instanceMethod.InstanceCall is MemberCall instanceMemberCall)
+			AddMembersFromCaller(instanceMemberCall);
 	}
 
 	public ByteCodeGenerator(MethodCall methodCall)
@@ -33,10 +37,19 @@ public sealed class ByteCodeGenerator
 
 	public IReadOnlyList<Expression> Expressions { get; }
 
+	private void AddMembersFromCaller(MemberCall memberCall)
+	{
+		if (memberCall.Member.Value != null)
+			statements.Add(new StoreVariableStatement(
+				new Instance(memberCall.Member.Type, memberCall.Member.Value),
+				memberCall.ReturnType.Members.First(member => !member.Type.IsTrait).Name));
+	}
+
 	private void AddInstanceMemberVariables(MethodCall instance)
 	{
 		for (var parameterIndex = 0; parameterIndex < instance.Method.Parameters.Count;
 			parameterIndex++)
+		{
 			if (instance.Method.Parameters[parameterIndex].Type is GenericTypeImplementation type &&
 				type.Generic.Name == Base.List)
 				statements.Add(new StoreVariableStatement(
@@ -47,6 +60,10 @@ public sealed class ByteCodeGenerator
 				statements.Add(new StoreVariableStatement(
 					new Instance(instance.Arguments[parameterIndex], true),
 					instance.ReturnType.Members[parameterIndex].Name));
+			instance.ReturnType.Members[parameterIndex].
+				UpdateValue(instance.Arguments[parameterIndex],
+					new Body(instance.Method)); //TODO: No choice here for now, from method is trait (LM)
+		}
 	}
 
 	private void AddMethodParameterVariables(MethodCall methodCall)
