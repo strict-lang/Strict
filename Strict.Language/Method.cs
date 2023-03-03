@@ -203,7 +203,12 @@ public sealed class Method : Context
 
 	public sealed class MethodParameterCountMustNotExceedThree : ParsingFailed
 	{
-		public MethodParameterCountMustNotExceedThree(Method method, int lineNumber) : base(method.Type, lineNumber, $"Method {method.Name} has parameters count {method.Parameters.Count} but limit is {Limit.ParameterCount}") { }
+		public MethodParameterCountMustNotExceedThree(Method method, int lineNumber) : base(method.Type, lineNumber, $"{GetMethodName(method)} has parameters count {method.Parameters.Count} but limit is {Limit.ParameterCount}") { }
+
+		private static string GetMethodName(Method method) =>
+			method.Name == From
+				? "Type " + method.Type.FullName + " constructor method"
+				: "Method " + method.Name;
 	}
 
 	public sealed class InvalidMethodParameters : ParsingFailed

@@ -19,6 +19,7 @@ public sealed record MethodValidator(IEnumerable<Method> Methods) : Validator
 			ValidateUnchangedMutableVariables(body);
 			ValidateUnusedVariables(body);
 			ValidateMethodCall(body);
+			ValidateMethodVariablesHidesAnyTypeMember(body, method.Type.Members);
 		}
 		ValidateMethodParameters(method);
 	}
@@ -83,12 +84,26 @@ public sealed record MethodValidator(IEnumerable<Method> Methods) : Validator
 			line) { }
 	}
 
+	private static void ValidateMethodVariablesHidesAnyTypeMember(Body body,
+		IEnumerable<Member> members)
+	{
+		foreach (var member in members)
+			if (body.Variables != null && body.Variables.ContainsKey(member.Name))
+				throw new VariableHidesMemberUseDifferentName(body, body.Method.Name, member.Name);
+	}
+
+	public class VariableHidesMemberUseDifferentName : ParsingFailed
+	{
+		public VariableHidesMemberUseDifferentName(Body body, string methodName, string variableName) : base(body, $"Method name {methodName}, Variable name {variableName}") { }
+	}
+
 	private static void ValidateMethodParameters(Method method)
 	{
 		foreach (var parameter in method.Parameters)
 		{
 			ValidateUnusedParameter(method, parameter.Name);
 			ValidateUnchangedMutableParameter(method, parameter);
+			ValidateMethodParameterHidesAnyTypeMember(parameter.Name, method);
 		}
 	}
 
@@ -113,5 +128,17 @@ public sealed record MethodValidator(IEnumerable<Method> Methods) : Validator
 	{
 		public ParameterDeclaredAsMutableButValueNeverChanged(Type type, string name) : base(type, 0,
 			name) { }
+	}
+
+	private static void ValidateMethodParameterHidesAnyTypeMember(string parameterName, Method method)
+	{
+		if (method.Type.Members.Any(member => member.Name == parameterName))
+			throw new ParameterHidesMemberUseDifferentName(method.Type, method.Name, parameterName);
+	}
+
+	public sealed class ParameterHidesMemberUseDifferentName : ParsingFailed
+	{
+		public ParameterHidesMemberUseDifferentName(Type type, string methodName, string parameterName)
+			: base(type, 0, $"Method name {methodName}, Parameter name {parameterName}") { }
 	}
 }
