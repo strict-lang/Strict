@@ -35,7 +35,7 @@ public sealed class ByteCodeGenerator
 		registry = new Registry();
 	}
 
-	public IReadOnlyList<Expression> Expressions { get; }
+	private IReadOnlyList<Expression> Expressions { get; }
 
 	private void AddMembersFromCaller(MemberCall memberCall)
 	{
@@ -61,9 +61,9 @@ public sealed class ByteCodeGenerator
 					new Instance(instance.Arguments[parameterIndex], true),
 					instance.ReturnType.Members[parameterIndex].Name));
 			if (instance.ReturnType.Members[parameterIndex].Value == null) //TODO: This condition is necessary for now for test synchronization
-			instance.ReturnType.Members[parameterIndex].
-				UpdateValue(instance.Arguments[parameterIndex],
-					new Body(instance.Method));
+				instance.ReturnType.Members[parameterIndex].
+					UpdateValue(instance.Arguments[parameterIndex],
+						new Body(instance.Method));
 		}
 	}
 
@@ -108,6 +108,14 @@ public sealed class ByteCodeGenerator
 		TryGenerateMutableStatements(expression);
 		TryGenerateVariableCallStatement(expression);
 		TryGenerateMethodCallStatement(expression);
+		TryGenerateValueStatement(expression);
+	}
+
+	private void TryGenerateValueStatement(Expression expression)
+	{
+		if (expression is Value valueExpression)
+			statements.Add(new LoadConstantStatement(registry.AllocateRegister(),
+				new Instance(valueExpression.ReturnType, valueExpression.Data)));
 	}
 
 	private void TryGenerateMethodCallStatement(Expression expression)
@@ -181,19 +189,20 @@ public sealed class ByteCodeGenerator
 
 	private void GenerateLoopStatements(For forExpression)
 	{
-		GenerateRestLoopStatements(forExpression);
-		registry.FreeRegisters();
+		statements.Add(new StoreVariableStatement(new Instance("Number", 0), IndexName));
+		var statementCountBeforeLoopStart = statements.Count;
+		var indexRegister = registry.AllocateRegister();
+		statements.Add(new LoadVariableStatement(indexRegister, IndexName));
+		statements.Add(new LoopBeginStatement(forExpression.Value.ToString(), indexRegister));
+		GenerateStatementsForLoopBody(forExpression);
+		var indexRegisterForJumpStatement = registry.AllocateRegister();
+		statements.Add(new LoadVariableStatement(indexRegisterForJumpStatement, IndexName));
+		statements.Add(new IterationEndStatement(indexRegisterForJumpStatement));
+		GenerateIteratorReductionAndJumpStatementsForLoop(indexRegisterForJumpStatement,
+			statements.Count - statementCountBeforeLoopStart);
 	}
 
-	private void GenerateRestLoopStatements(For forExpression)
-	{
-		var registerForIterationCount = registry.AllocateRegister(true);
-		var statementCountBeforeLoopStart = statements.Count;
-		statements.Add(new LoopBeginStatement(forExpression.Value.ToString(), registerForIterationCount));
-		GenerateStatementsForLoopBody(forExpression);
-		statements.Add(new IterationEndStatement(registerForIterationCount));
-		GenerateIteratorReductionAndJumpStatementsForLoop(registerForIterationCount, statements.Count - statementCountBeforeLoopStart);
-	}
+	private const string IndexName = "index";
 
 	private void GenerateStatementsForLoopBody(For forExpression)
 	{
@@ -204,8 +213,8 @@ public sealed class ByteCodeGenerator
 	}
 
 	private void GenerateIteratorReductionAndJumpStatementsForLoop(
-		Register registerForIterationCount, int steps) =>
-		statements.Add(new JumpIfNotZeroStatement(-steps - 1, registerForIterationCount));
+		Register indexRegister, int steps) =>
+		statements.Add(new JumpIfNotZeroStatement(-steps - 1, indexRegister));
 
 	private void GenerateIfStatements(If ifExpression)
 	{

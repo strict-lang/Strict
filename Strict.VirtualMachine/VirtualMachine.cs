@@ -54,13 +54,8 @@ public sealed class VirtualMachine
 
 	private void TryLoopEndInstruction(Statement statement)
 	{
-		if (statement is IterationEndStatement loopEnd)
-		{
-			var iterator = Memory.Registers[loopEnd.Register];
-			iterator.Value = (int)iterator.Value - 1;
-			if ((int)iterator.Value == 0)
-				iteratorInitialized = false;
-		}
+		if (statement is IterationEndStatement)
+			Memory.Variables["index"].Value = ((int)Memory.Variables["index"].Value) - 1;
 	}
 
 	private void TryInvokeInstruction(Statement statement)
@@ -73,20 +68,6 @@ public sealed class VirtualMachine
 		if (instance != null)
 			Memory.Registers[invokeStatement.Register] = instance;
 	}
-
-	private Instance? RunAndGetResultFromInvokedMethodCall(IList<Statement> methodStatements)
-	{
-		var members =
-			new Dictionary<string, Instance>(
-				Memory.Variables.Where(variable => variable.Value.IsMember));
-		var instance =
-			new VirtualMachine
-			{
-				Memory = new Memory { Registers = Memory.Registers, Variables = members }
-			}.Invoke(methodStatements).Returns;
-		return instance;
-	}
-
 	private List<Statement> GetByteCodeFromInvokedMethodCall(
 		InvokeStatement invokeStatement)
 	{
@@ -104,6 +85,20 @@ public sealed class VirtualMachine
 					FormArgumentsForMethodCall(invokeStatement), invokeStatement.MethodCall.Instance),
 				invokeStatement.PersistedRegistry).Generate();
 	}
+
+	private Instance? RunAndGetResultFromInvokedMethodCall(IList<Statement> methodStatements)
+	{
+		var members =
+			new Dictionary<string, Instance>(
+				Memory.Variables.Where(variable => variable.Value.IsMember));
+		var instance =
+			new VirtualMachine
+			{
+				Memory = new Memory { Registers = Memory.Registers, Variables = members }
+			}.Invoke(methodStatements).Returns;
+		return instance;
+	}
+
 
 	private Dictionary<string, Instance> FormArgumentsForMethodCall(InvokeStatement invokeStatement)
 	{

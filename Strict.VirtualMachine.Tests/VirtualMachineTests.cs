@@ -211,9 +211,9 @@ public sealed class VirtualMachineTests : BaseVirtualMachineTests
 			"\t\tif texts.Contains(value) is false",
 			"\t\t\ttextList = textList + value",
 			"\ttextList"
-		})] //TODO: Fix it in Virtual machine
+		})]
 	// ReSharper disable once TooManyArguments
-	public void CompileListBinaryOperations(string methodCall,
+	public void ExecuteListBinaryOperations(string methodCall,
 		object expectedResult, string programName, params string[] code)
 	{
 		var statements = new ByteCodeGenerator(GenerateMethodCallFromSource(programName,
