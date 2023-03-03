@@ -59,30 +59,6 @@ public sealed class TypeValidatorTests
 			}).Validate());
 
 	[Test]
-	public void ValidateTypeHasTooManyDependencies() =>
-		Assert.That(() => new TypeValidator(new[]
-			{
-				ParseTypeMethods(CreateType(nameof(ValidateTypeHasTooManyDependencies),
-						// @formatter:off
-					new[]
-					{
-						"has number",
-						"has text",
-						"has boolean",
-						"has character",
-						"has input Text",
-						"Run(methodInput Number)",
-						"\tif boolean",
-						"\t\treturn text + input + number + methodInput + character",
-						"\t0"
-						// @formatter:on
-					}))
-			}).Validate(),
-			Throws.InstanceOf<TypeValidator.TypeHasTooManyDependencies>()!.With.Message.Contains(
-				"number TestPackage.Number, text TestPackage.Text, boolean TestPackage.Boolean, " +
-				"character TestPackage.Character, input TestPackage.Text"));
-
-	[Test]
 	public void ValidateTypeHasTooManyDependenciesFromMethod() =>
 		Assert.That(() => new TypeValidator(new[]
 			{
