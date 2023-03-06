@@ -29,7 +29,7 @@ public sealed class List : Value
 			base(body, "List has one or many mismatching types " + string.Join(", ", returnTypes)) { }
 	}
 
-	public List<Expression> Values { get; }
+	public List<Expression> Values { get; private set; }
 
 	public override string ToString()
 	{
@@ -61,8 +61,30 @@ public sealed class List : Value
 				body.Method.ParseListArguments(body, input[1..^1]))
 			: null;
 
-	public class EmptyListNotAllowed : ParsingFailed
+	public sealed class EmptyListNotAllowed : ParsingFailed
 	{
 		public EmptyListNotAllowed(Body body) : base(body, "()") { }
+	}
+
+	public void UpdateValue(Body bodyForErrorMessage, Expression index, Expression newExpression)
+	{
+		if (Values.Count == 0) //TODO: Should do the opposite after method execution updates Values (e.g. list.Add(1) should update this Values expression first before this operation)
+			Values = new List<Expression> { newExpression };
+		if (index is Number number && int.TryParse(number.Data.ToString(), out var indexNumber))
+			if (Values.Count - 1 >= indexNumber)
+				Values[indexNumber] = newExpression;
+			else
+				throw new IndexOutOfRangeInListExpressions(bodyForErrorMessage, indexNumber, Values.Count);
+	}
+
+	public class IndexOutOfRangeInListExpressions : ParsingFailed
+	{
+		public IndexOutOfRangeInListExpressions(Body body, int index, int listExpressionsCount) :
+			base(body,
+				$"Given index {
+					index
+				} is not within the List Expressions count {
+					listExpressionsCount
+				}") { }
 	}
 }

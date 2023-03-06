@@ -478,4 +478,68 @@ public sealed class ListTests : TestExpressions
 		Assert.That(argumentExpression.ReturnType.ToString(),
 			Is.EqualTo($"TestPackage.{expectedList}"));
 	}
+
+	[Test]
+	public void CreateMutableListWithMutableExpressions()
+	{
+		var program = new Type(type.Package,
+				new TypeLines(
+				// @formatter:off
+					nameof(CreateMutableListWithMutableExpressions),
+					"has log",
+					"Add(element Number) Mutable(List)",
+					"\tmutable someList = List(Mutable(Number))",
+					"\tsomeList.Add(1)")).
+			ParseMembersAndMethods(parser);
+		var body = (Body)program.Methods[0].GetBodyAndParseIfNeeded();
+		Assert.That(body.Expressions[0].ToString(), Is.EqualTo("mutable someList = List(TestPackage.Mutable(TestPackage.Number))"));
+	}
+
+	[Test]
+	public void ChangeValueInsideMutableListWithMutableExpressions()
+	{
+		var program = new Type(type.Package,
+				new TypeLines(
+				// @formatter:off
+					nameof(ChangeValueInsideMutableListWithMutableExpressions),
+					"has log",
+					"Update(element Number) Mutable(List)",
+					"\tmutable someList = List(Mutable(Number))",
+					"\tsomeList.Add(1)",
+					"\tsomeList(0) = 5")).
+			ParseMembersAndMethods(parser);
+		var body = (Body)program.Methods[0].GetBodyAndParseIfNeeded();
+		Assert.That(((VariableCall)((ListCall)body.Expressions[2]).List).CurrentValue.ToString(), Is.EqualTo("(5)"));
+	}
+
+	[Test]
+	public void UpdateListExpressionValuesByIndex()
+	{
+		var program = new Type(type.Package,
+				new TypeLines(
+				// @formatter:off
+					nameof(UpdateListExpressionValuesByIndex),
+					"has log",
+					"UpdateListValue(element Number) Number",
+					"\tmutable someList = (9, 8, 7)",
+					"\tsomeList(0) = 5")).
+			ParseMembersAndMethods(parser);
+		var body = (Body)program.Methods[0].GetBodyAndParseIfNeeded();
+		Assert.That(((VariableCall)((ListCall)body.Expressions[1]).List).CurrentValue.ToString(), Is.EqualTo("(5, 8, 7)"));
+	}
+
+	[Test]
+	public void IndexOutOfRangeInListExpressions()
+	{
+		var program = new Type(type.Package,
+				new TypeLines(
+				// @formatter:off
+					nameof(IndexOutOfRangeInListExpressions),
+					"has log",
+					"UpdateNotExistingElement(element Number) Number",
+					"\tmutable someList = (9, 8, 7)",
+					"\tsomeList(3) = 5")).
+			ParseMembersAndMethods(parser);
+		Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(), Throws.InstanceOf<List.IndexOutOfRangeInListExpressions>()!);
+	}
 }

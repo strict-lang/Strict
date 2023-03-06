@@ -52,6 +52,12 @@ public sealed class MutableAssignment : ConcreteExpression
 			parameterCall.Parameter.UpdateValue(newExpression, body);
 			return parameterCall;
 		}
+		case ListCall listCall:
+		{
+			if (listCall.List is VariableCall { CurrentValue: List listExpression })
+				listExpression.UpdateValue(body, listCall.Index, newExpression);
+			return listCall;
+		}
 		default:
 			throw new InvalidAssignmentTarget(body, expression.ToString()); //ncrunch: no coverage
 		}

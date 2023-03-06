@@ -697,9 +697,8 @@ public class Type : Context
 	private Method BuildMethod(string fromMethod, ExpressionParser parser) => new(this, 0, parser, new[] { fromMethod });
 
 	public bool IsCompatible(Type sameOrBaseType) =>
-		this == sameOrBaseType ||
-		HasAnyCompatibleMember(sameOrBaseType) ||
-		CanUpCast(sameOrBaseType);
+		this == sameOrBaseType || HasAnyCompatibleMember(sameOrBaseType) ||
+		CanUpCast(sameOrBaseType) || sameOrBaseType.IsMutableAndHasMatchingImplementation(this);
 
 	private bool HasAnyCompatibleMember(Type sameOrBaseType) =>
 		members.Any(member =>
@@ -709,6 +708,11 @@ public class Type : Context
 	private bool CanUpCast(Type sameOrBaseType) =>
 		sameOrBaseType.Name == Base.Text && Name == Base.Number || sameOrBaseType.IsIterator &&
 		members.Any(member => member.Type == GetType(Base.Number));
+
+	private bool IsMutableAndHasMatchingImplementation(Type argumentType) =>
+		this is GenericTypeImplementation genericTypeImplementation &&
+		genericTypeImplementation.Generic.Name == Base.Mutable &&
+		genericTypeImplementation.ImplementationTypes[0] == argumentType;
 
 	/// <summary>
 	/// When two types are using in a conditional expression, i.e. then and else return types and both

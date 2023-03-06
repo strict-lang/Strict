@@ -61,9 +61,9 @@ public sealed class ByteCodeGenerator
 					new Instance(instance.Arguments[parameterIndex], true),
 					instance.ReturnType.Members[parameterIndex].Name));
 			if (instance.ReturnType.Members[parameterIndex].Value == null) //TODO: This condition is necessary for now for test synchronization
-			instance.ReturnType.Members[parameterIndex].
-				UpdateValue(instance.Arguments[parameterIndex],
-					new Body(instance.Method));
+				instance.ReturnType.Members[parameterIndex].
+					UpdateValue(instance.Arguments[parameterIndex],
+						new Body(instance.Method));
 		}
 	}
 
