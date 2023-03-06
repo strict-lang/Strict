@@ -54,8 +54,15 @@ public sealed class VirtualMachine
 
 	private void TryLoopEndInstruction(Statement statement)
 	{
-		if (statement is IterationEndStatement)
-			Memory.Variables["index"].Value = ((int)Memory.Variables["index"].Value) - 1;
+		if (statement is IterationEndStatement iterationEndStatement)
+		{
+			loopIterationNumber--;
+			if (loopIterationNumber > 0)
+			{
+				instructionIndex -= iterationEndStatement.Steps;
+				Memory.Variables["index"].Value = Convert.ToInt32(Memory.Variables["index"].Value) + 1;
+			}
+		}
 	}
 
 	private void TryInvokeInstruction(Statement statement)
@@ -68,6 +75,7 @@ public sealed class VirtualMachine
 		if (instance != null)
 			Memory.Registers[invokeStatement.Register] = instance;
 	}
+
 	private List<Statement> GetByteCodeFromInvokedMethodCall(
 		InvokeStatement invokeStatement)
 	{
@@ -99,7 +107,6 @@ public sealed class VirtualMachine
 		return instance;
 	}
 
-
 	private Dictionary<string, Instance> FormArgumentsForMethodCall(InvokeStatement invokeStatement)
 	{
 		var arguments = new Dictionary<string, Instance>();
@@ -128,6 +135,7 @@ public sealed class VirtualMachine
 	}
 
 	private bool iteratorInitialized;
+	private int loopIterationNumber;
 
 	private void TryLoopInitInstruction(Statement statement)
 	{
@@ -138,8 +146,7 @@ public sealed class VirtualMachine
 		if (iterableVariable == null)
 			return;
 		if (!iteratorInitialized)
-			InitializeIterator(initLoopStatement,
-				iterableVariable); //TODO: Get rid of this and figure out something better. (LM)
+			InitializeIterator(iterableVariable); //TODO: Get rid of this and figure out something better. (LM)
 		AlterValueVariable(iterableVariable);
 	}
 
@@ -151,10 +158,9 @@ public sealed class VirtualMachine
 			Memory.Variables.Add("index", new Instance(Base.Number, 0));
 	}
 
-	private void InitializeIterator(LoopBeginStatement initLoopStatement, Instance iterableVariable)
+	private void InitializeIterator(Instance iterableVariable)
 	{
-		Memory.Registers[initLoopStatement.Register] =
-			new Instance(Base.Number, GetLength(iterableVariable));
+		loopIterationNumber = GetLength(iterableVariable);
 		iteratorInitialized = true;
 	}
 

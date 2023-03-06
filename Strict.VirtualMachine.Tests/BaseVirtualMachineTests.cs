@@ -151,7 +151,7 @@ public class BaseVirtualMachineTests : TestExpressions
 		new StoreVariableStatement(new Instance(TextType, "some(thing)"), "text"),
 		new StoreVariableStatement(new Instance(TextType, ""), "result"),
 		new StoreVariableStatement(new Instance(NumberType, 0), "count"),
-		new LoopBeginStatement("text", Register.R0),
+		new LoopBeginStatement("text"),
 		new LoadVariableStatement(Register.R1, "value"),
 		new LoadConstantStatement(Register.R2, new Instance(TextType, "(")),
 		new BinaryStatement(Instruction.Equal, Register.R1, Register.R2),
@@ -179,7 +179,7 @@ public class BaseVirtualMachineTests : TestExpressions
 		new BinaryStatement(Instruction.Subtract, Register.R4, Register.R5, Register.R6),
 		new StoreFromRegisterStatement(Register.R6, "count"),
 		new JumpToIdStatement(Instruction.JumpEnd, 2),
-		new IterationEndStatement(Register.R0),
+		new IterationEndStatement(-29),
 		new JumpIfNotZeroStatement(-30, Register.R0),
 		new LoadVariableStatement(Register.R7, "result"),
 		new ReturnStatement(Register.R7)

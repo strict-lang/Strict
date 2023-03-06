@@ -189,20 +189,11 @@ public sealed class ByteCodeGenerator
 
 	private void GenerateLoopStatements(For forExpression)
 	{
-		statements.Add(new StoreVariableStatement(new Instance("Number", 0), IndexName));
 		var statementCountBeforeLoopStart = statements.Count;
-		var indexRegister = registry.AllocateRegister();
-		statements.Add(new LoadVariableStatement(indexRegister, IndexName));
-		statements.Add(new LoopBeginStatement(forExpression.Value.ToString(), indexRegister));
+		statements.Add(new LoopBeginStatement(forExpression.Value.ToString()));
 		GenerateStatementsForLoopBody(forExpression);
-		var indexRegisterForJumpStatement = registry.AllocateRegister();
-		statements.Add(new LoadVariableStatement(indexRegisterForJumpStatement, IndexName));
-		statements.Add(new IterationEndStatement(indexRegisterForJumpStatement));
-		GenerateIteratorReductionAndJumpStatementsForLoop(indexRegisterForJumpStatement,
-			statements.Count - statementCountBeforeLoopStart);
+		statements.Add(new IterationEndStatement(statements.Count - statementCountBeforeLoopStart));
 	}
-
-	private const string IndexName = "index";
 
 	private void GenerateStatementsForLoopBody(For forExpression)
 	{
@@ -211,10 +202,6 @@ public sealed class ByteCodeGenerator
 		else
 			GenerateStatementsFromExpression(forExpression.Body);
 	}
-
-	private void GenerateIteratorReductionAndJumpStatementsForLoop(
-		Register indexRegister, int steps) =>
-		statements.Add(new JumpIfNotZeroStatement(-steps - 1, indexRegister));
 
 	private void GenerateIfStatements(If ifExpression)
 	{

@@ -1,7 +1,8 @@
 ﻿namespace Strict.VirtualMachine;
 
-public sealed class IterationEndStatement : RegisterStatement
+public sealed class IterationEndStatement : Statement
 {
-	public IterationEndStatement(Register register) : base(register, Instruction.IterationEnd) => IteratorRegister = register;
-	public Register IteratorRegister { get; }
+	public IterationEndStatement(int steps) => Steps = steps;
+	public int Steps { get; }
+	public override Instruction Instruction => Instruction.IterationEnd;
 }

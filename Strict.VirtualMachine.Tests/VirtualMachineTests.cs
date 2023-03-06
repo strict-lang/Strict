@@ -85,12 +85,11 @@ public sealed class VirtualMachineTests : BaseVirtualMachineTests
 				new StoreVariableStatement(new Instance(NumberType, 10), "number"),
 				new StoreVariableStatement(new Instance(NumberType, 1), "result"),
 				new StoreVariableStatement(new Instance(NumberType, 2), "multiplier"),
-				new LoopBeginStatement("number", Register.R0), new LoadVariableStatement(Register.R2, "result"),
+				new LoopBeginStatement("number"), new LoadVariableStatement(Register.R2, "result"),
 				new LoadVariableStatement(Register.R3, "multiplier"),
 				new BinaryStatement(Instruction.Multiply, Register.R2, Register.R3, Register.R4),
 				new StoreFromRegisterStatement(Register.R4, "result"),
-				new IterationEndStatement(Register.R0),
-				new JumpIfNotZeroStatement(-6, Register.R0),
+				new IterationEndStatement(5),
 				new LoadVariableStatement(Register.R5, "result"), new ReturnStatement(Register.R5)
 			}).Returns?.Value, Is.EqualTo(1024));
 
