@@ -72,6 +72,21 @@ public class RepositoriesTests
 		Assert.That(program.Members[0].Type.ToString(), Contains.Substring(Base.Number));
 	}
 
+	[Ignore("")]
+	[Test]
+	public async Task LoadStrictImageProcessingTypes()
+	{
+		var parser = new MethodExpressionParser();
+		var repositories = new Repositories(parser);
+		await repositories.LoadStrictPackage();
+		var imageProcessingPackage =
+			await repositories.LoadFromPath(
+				StrictDevelopmentFolder + ".ImageProcessing");
+		var adjustBrightness = imageProcessingPackage?.GetType("AdjustBrightness");
+		Assert.That(adjustBrightness, Is.Not.Null);
+		Assert.That(adjustBrightness?.Methods[0].GetBodyAndParseIfNeeded(), Is.Not.Null);
+	}
+
 	[Test]
 	public async Task CheckGenericTypesAreLoadedCorrectlyAfterSorting()
 	{

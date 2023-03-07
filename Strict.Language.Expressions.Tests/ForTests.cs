@@ -202,4 +202,17 @@ public sealed class ForTests : TestExpressions
 		Assert.That(parsedExpression.Expressions[1], Is.TypeOf(typeof(For)));
 		Assert.That(((For)parsedExpression.Expressions[1]).Value.ToString(), Is.EqualTo("name"));
 	}
+
+	[Test]
+	public void AllowNestedForWithSameIndentation() =>
+		//@formatter.off
+		Assert.That(
+			((For)ParseExpression(
+				"for firstIndex in Range(1, 10)",
+				"for secondIndex in Range(1, 10)",
+				"\tlog.Write(firstIndex)",
+				"\tlog.Write(secondIndex)")).ToString(),
+			Is.EqualTo(
+				"for myIndex in Range(2, 5)\n\tfor secondIndex in Range(1, 10)\n\tlog.Write(firstIndex)\n\tlog.Write(secondIndex)"));
+
 }

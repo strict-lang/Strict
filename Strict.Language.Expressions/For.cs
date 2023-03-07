@@ -34,7 +34,12 @@ public sealed class For : Expression
 			throw new MissingExpression(body);
 		var innerBody = body.FindCurrentChild();
 		if (innerBody == null)
-			throw new MissingInnerBody(body);
+		{
+			if (body.ParsingLineNumber + 1 == body.LineRange.End.Value || !body.GetLine(body.ParsingLineNumber + 1).TrimStart().
+				StartsWith(Keyword.For, StringComparison.Ordinal))
+				throw new MissingInnerBody(body);
+			innerBody = body.GetInnerForAsBody() ?? throw new MissingInnerBody(body);
+		}
 		if (line.Contains(IndexName, StringComparison.Ordinal))
 			throw new IndexIsReserved(body);
 		return ParseFor(body, line, innerBody);

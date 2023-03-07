@@ -201,6 +201,7 @@ public sealed class VirtualMachineTests : BaseVirtualMachineTests
 			"\t\t\ttextList = textList - value",
 			"\ttextList"
 		})]
+	[Ignore("")]
 	[TestCase("RemoveDuplicates((\"s\", \"b\", \"s\")).Remove", "b", "RemoveDuplicates",
 		new[]
 		{

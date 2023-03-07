@@ -56,7 +56,7 @@ public sealed class Body : Expression
 			: this;
 	}
 
-	internal Body SetExpressions(IReadOnlyList<Expression> expressions)
+	public Body SetExpressions(IReadOnlyList<Expression> expressions)
 	{
 		Expressions = expressions;
 		if (Expressions.Count == 0)
@@ -207,5 +207,19 @@ public sealed class Body : Expression
 		Method = implementationMethod;
 		foreach (var child in children)
 			child.UpdateCurrentAndChildrenMethod(implementationMethod);
+	}
+
+	public Body GetInnerForAsBody()
+	{
+		var currentLineNumber = ParsingLineNumber;
+		ParsingLineNumber++;
+		var child = FindCurrentChild();
+		if (child != null)
+		{
+			ParsingLineNumber = currentLineNumber + 1;
+			var innerBody = new Body(Method, Tabs, this) { LineRange = new Range(ParsingLineNumber, child.LineRange.End) };
+			return innerBody;
+		}
+		throw new NotImplementedException();
 	}
 }
