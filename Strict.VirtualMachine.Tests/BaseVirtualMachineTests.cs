@@ -67,9 +67,16 @@ public class BaseVirtualMachineTests : TestExpressions
 	};
 	protected static readonly string[] RemoveParenthesesKata =
 	{
-		"has text", "Remove Text", "\tmutable result = \"\"", "\tmutable count = 0", "\tfor text",
-		"\t\tif value is \"(\"", "\t\t\tcount = count + 1", "\t\tif count is 0",
-		"\t\t\tresult = result + value", "\t\tif value is \")\"", "\t\t\tcount = count - 1",
+		"has text", "Remove Text",
+		"\tmutable result = \"\"",
+		"\tmutable count = 0",
+		"\tfor text",
+		"\t\tif value is \"(\"",
+		"\t\t\tcount = count + 1",
+		"\t\tif count is 0",
+		"\t\t\tresult = result + value",
+		"\t\tif value is \")\"",
+		"\t\t\tcount = count - 1",
 		"\tresult"
 	};
 	protected static readonly string[] IfAndElseTestCode =
@@ -179,7 +186,7 @@ public class BaseVirtualMachineTests : TestExpressions
 		new BinaryStatement(Instruction.Subtract, Register.R4, Register.R5, Register.R6),
 		new StoreFromRegisterStatement(Register.R6, "count"),
 		new JumpToIdStatement(Instruction.JumpEnd, 2),
-		new IterationEndStatement(-29),
+		new IterationEndStatement(29),
 		new JumpIfNotZeroStatement(-30, Register.R0),
 		new LoadVariableStatement(Register.R7, "result"),
 		new ReturnStatement(Register.R7)
@@ -224,17 +231,16 @@ public class BaseVirtualMachineTests : TestExpressions
 					new Value(NumberType, 5)
 				}), "numbers"),
 		new StoreVariableStatement(new Instance(TextType, ""), "result"),
-		new LoopBeginStatement("numbers", Register.R0),
-		new LoadConstantStatement(Register.R1, new Instance(NumberType, 0)),
-		new LoadVariableStatement(Register.R2, "value"),
-		new BinaryStatement(Instruction.Subtract, Register.R2, Register.R3, Register.R4),
-		new LoadVariableStatement(Register.R4, "result"),
-		new BinaryStatement(Instruction.Add, Register.R5, Register.R4, Register.R6),
-		new StoreFromRegisterStatement(Register.R5, "result"),
-		new IterationEndStatement(Register.R0),
-		new JumpIfNotZeroStatement(-9, Register.R0),
-		new LoadVariableStatement(Register.R6, "result"),
-		new ReturnStatement(Register.R6)
+		new LoopBeginStatement("numbers"),
+		new LoadConstantStatement(Register.R0, new Instance(NumberType, 0)),
+		new LoadVariableStatement(Register.R1, "value"),
+		new BinaryStatement(Instruction.Subtract, Register.R0, Register.R1, Register.R2),
+		new LoadVariableStatement(Register.R3, "result"),
+		new BinaryStatement(Instruction.Add, Register.R3, Register.R2, Register.R4),
+		new StoreFromRegisterStatement(Register.R4, "result"),
+		new IterationEndStatement(8),
+		new LoadVariableStatement(Register.R5, "result"),
+		new ReturnStatement(Register.R5)
 	};
 
 	protected MethodCall GenerateMethodCallFromSource(string programName, string methodCall,

@@ -54,15 +54,12 @@ public sealed class VirtualMachine
 
 	private void TryLoopEndInstruction(Statement statement)
 	{
-		if (statement is IterationEndStatement iterationEndStatement)
-		{
-			loopIterationNumber--;
-			if (loopIterationNumber > 0)
-			{
-				instructionIndex -= iterationEndStatement.Steps;
-				Memory.Variables["index"].Value = Convert.ToInt32(Memory.Variables["index"].Value) + 1;
-			}
-		}
+		if (statement is not IterationEndStatement iterationEndStatement)
+			return;
+		loopIterationNumber--;
+		if (loopIterationNumber <= 0)
+			return;
+		instructionIndex -= iterationEndStatement.Steps + 1;
 	}
 
 	private void TryInvokeInstruction(Statement statement)
@@ -180,7 +177,7 @@ public sealed class VirtualMachine
 		var index = Convert.ToInt32(Memory.Variables["index"].Value);
 		var value = iterableVariable.Value.ToString();
 		if (iterableVariable.ReturnType?.Name == Base.Text && value != null)
-			Memory.Variables["value"] = new Instance(Base.Number, value[index].ToString());
+			Memory.Variables["value"] = new Instance(Base.Text, value[index].ToString());
 		else if (iterableVariable.ReturnType is GenericTypeImplementation genericIterable &&
 			genericIterable.Generic.Name == Base.List)
 			Memory.Variables["value"] = new Instance(((List<Expression>)iterableVariable.Value)[index]);
@@ -331,5 +328,5 @@ public sealed class VirtualMachine
 		}
 	}
 
-	public class OperandsRequired : Exception { }
+	public sealed class OperandsRequired : Exception { }
 }
