@@ -32,17 +32,33 @@ public sealed class For : Expression
 			return null;
 		if (line.Length <= Keyword.For.Length)
 			throw new MissingExpression(body);
-		var innerBody = body.FindCurrentChild();
-		if (innerBody == null)
-		{
-			if (body.ParsingLineNumber + 1 == body.LineRange.End.Value || !body.GetLine(body.ParsingLineNumber + 1).TrimStart().
-				StartsWith(Keyword.For, StringComparison.Ordinal))
-				throw new MissingInnerBody(body);
-			innerBody = body.GetInnerForAsBody() ?? throw new MissingInnerBody(body);
-		}
+		var innerBody = body.FindCurrentChild() ??
+			(TryGetInnerForAsBody(body) ?? throw new MissingInnerBody(body));
 		if (line.Contains(IndexName, StringComparison.Ordinal))
 			throw new IndexIsReserved(body);
 		return ParseFor(body, line, innerBody);
+	}
+
+	private static Body? TryGetInnerForAsBody(Body body)
+	{
+		if (IsLastLine(body) || !IsNextLineStartsWithFor(body))
+			return null;
+		var currentLineNumber = body.ParsingLineNumber++;
+		var child = body.FindCurrentChild();
+		return child == null
+			? null
+			: body.GetInnerBodyAndUpdateHierarchy(currentLineNumber, child);
+	}
+
+	private static bool IsLastLine(Body body) => body.ParsingLineNumber + 1 == body.LineRange.End.Value;
+
+	private static bool IsNextLineStartsWithFor(Body body) =>
+		body.GetLine(body.ParsingLineNumber + 1).TrimStart().
+			StartsWith(Keyword.For, StringComparison.Ordinal);
+
+	public sealed class MissingInnerBody : ParsingFailed
+	{
+		public MissingInnerBody(Body body) : base(body) { }
 	}
 
 	private static Expression ParseFor(Body body, ReadOnlySpan<char> line, Body innerBody)
@@ -159,11 +175,6 @@ public sealed class For : Expression
 	public sealed class MissingExpression : ParsingFailed
 	{
 		public MissingExpression(Body body) : base(body) { }
-	}
-
-	public sealed class MissingInnerBody : ParsingFailed
-	{
-		public MissingInnerBody(Body body) : base(body) { }
 	}
 
 	public sealed class IndexIsReserved : ParsingFailed

@@ -205,7 +205,6 @@ public sealed class ForTests : TestExpressions
 
 	[Test]
 	public void AllowNestedForWithSameIndentation() =>
-		//@formatter.off
 		Assert.That(
 			((For)ParseExpression(
 				"for firstIndex in Range(1, 10)",
@@ -213,6 +212,12 @@ public sealed class ForTests : TestExpressions
 				"\tlog.Write(firstIndex)",
 				"\tlog.Write(secondIndex)")).ToString(),
 			Is.EqualTo(
-				"for myIndex in Range(2, 5)\n\tfor secondIndex in Range(1, 10)\n\tlog.Write(firstIndex)\n\tlog.Write(secondIndex)"));
+				"for firstIndex in Range(1, 10)\n\tfor secondIndex in Range(1, 10)\n\tlog.Write(firstIndex)\r\nlog.Write(secondIndex)"));
 
+	[Test]
+	public void MissingBodyInNestedFor() =>
+		Assert.That(() => ParseExpression(
+				"for Range(2, 5)",
+				"for index in Range(1, 10)"),
+			Throws.InstanceOf<For.MissingInnerBody>()!);
 }

@@ -29,7 +29,7 @@ public sealed class Body : Expression
 
 	public Method Method { get; private set; }
 	public int Tabs { get; }
-	private Body? Parent { get; }
+	private Body? Parent { get; set; }
 	public readonly List<Body> children = new();
 	public Range LineRange { get; internal set; }
 	public int ParsingLineNumber { get; set; }
@@ -209,17 +209,15 @@ public sealed class Body : Expression
 			child.UpdateCurrentAndChildrenMethod(implementationMethod);
 	}
 
-	public Body GetInnerForAsBody()
+	public Body GetInnerBodyAndUpdateHierarchy(int currentLineNumber, Body child)
 	{
-		var currentLineNumber = ParsingLineNumber;
-		ParsingLineNumber++;
-		var child = FindCurrentChild();
-		if (child != null)
+		var innerForBody = new Body(Method, Tabs, this)
 		{
-			ParsingLineNumber = currentLineNumber + 1;
-			var innerBody = new Body(Method, Tabs, this) { LineRange = new Range(ParsingLineNumber, child.LineRange.End) };
-			return innerBody;
-		}
-		throw new NotImplementedException();
+			LineRange = new Range(currentLineNumber + 1, child.LineRange.End)
+		};
+		innerForBody.children.Add(child);
+		child.Parent = innerForBody;
+		children.Remove(child);
+		return innerForBody;
 	}
 }
