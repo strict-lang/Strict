@@ -137,7 +137,6 @@ public class Program
 				nameof(InvalidConsoleAppWillGiveUsCompilationError), "lafine=soeu"),
 			Throws.InstanceOf<CSharpCompilationFailed>().And.Message.Contains("The build failed."));
 
-	//[Ignore("Visiting For expressions needs to be supported")]
 	[Test]
 	[Category("Manual")]
 	public void GenerateDirectoryGetFilesProgram()

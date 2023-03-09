@@ -1,4 +1,6 @@
-﻿namespace Strict.Language;
+﻿using System;
+
+namespace Strict.Language;
 
 public sealed class Member : NamedType
 {
@@ -8,6 +10,12 @@ public sealed class Member : NamedType
 		Value = value;
 		if (usedMutableKeyword)
 			IsMutable = true;
+		if (!Type.Name.StartsWith(Name.MakeFirstLetterUppercase(), StringComparison.Ordinal))
+			CheckForNameWithDifferentTypeUsage(definedIn);
+	}
+
+	private void CheckForNameWithDifferentTypeUsage(Type definedIn)
+	{
 		var nameType = definedIn.FindType(Name.MakeFirstLetterUppercase());
 		if (nameType != null && nameType != Type)
 			throw new MemberNameWithDifferentTypeNamesThanOwnAreNotAllowed(definedIn, Name, Type.Name);

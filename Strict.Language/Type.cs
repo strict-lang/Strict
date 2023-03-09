@@ -56,7 +56,8 @@ public class Type : Context
 		(line.StartsWith(HasWithSpaceAtEnd, StringComparison.Ordinal) ||
 			line.StartsWith(MutableWithSpaceAtEnd, StringComparison.Ordinal)) &&
 		(line.Contains(Base.Generic, StringComparison.Ordinal) ||
-			line.Contains(Base.GenericLowercase, StringComparison.Ordinal));
+			line.Contains(Base.GenericLowercase, StringComparison.Ordinal)) ||
+		line.Contains(Base.Iterator + '('); //TODO: Temporary workaround to make Iterator work without generic member
 
 	/// <summary>
 	/// Parsing has to be done OUTSIDE the constructor as we first need all types and inside might not
@@ -540,7 +541,7 @@ public class Type : Context
 	private GenericTypeImplementation CreateGenericImplementation(string key, IReadOnlyList<Type> implementationTypes)
 	{
 		if (Name != Base.List && Members.Count(m => m.Type.IsGeneric) != implementationTypes.Count &&
-			!HasMatchingConstructor(implementationTypes))
+			!HasMatchingConstructor(implementationTypes) && Name != Base.Iterator) //TODO: Temporary workaround to make Iterator work without generic member
 			throw new TypeArgumentsCountDoesNotMatchGenericType(this, implementationTypes);
 		var genericType = new GenericTypeImplementation(this, implementationTypes);
 		cachedGenericTypes!.Add(key, genericType);

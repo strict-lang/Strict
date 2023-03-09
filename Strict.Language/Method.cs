@@ -88,9 +88,9 @@ public sealed class Method : Context
 		var gotBrackets = closingBracketIndex > 0;
 		return gotBrackets && rest.Length == 2
 			? throw new EmptyParametersMustBeRemoved(this)
-			: rest[0] != '(' == gotBrackets || rest.Length < 2
+			: rest.Length < 2
 				? throw new InvalidMethodParameters(this, rest.ToString())
-				: rest[0] == ' ' && !gotBrackets
+				: rest[0] == ' '
 					? type.GetType(rest[1..].ToString())
 					: closingBracketIndex + 2 < rest.Length
 						? Type.GetType(rest[(closingBracketIndex + 2)..].ToString())

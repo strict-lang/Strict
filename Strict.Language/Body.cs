@@ -29,7 +29,7 @@ public sealed class Body : Expression
 
 	public Method Method { get; private set; }
 	public int Tabs { get; }
-	private Body? Parent { get; set; }
+	public Body? Parent { get; private set; }
 	public readonly List<Body> children = new();
 	public Range LineRange { get; internal set; }
 	public int ParsingLineNumber { get; set; }

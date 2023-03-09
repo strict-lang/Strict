@@ -72,7 +72,7 @@ public class RepositoriesTests
 		Assert.That(program.Members[0].Type.ToString(), Contains.Substring(Base.Number));
 	}
 
-	[Ignore("")]
+	[Ignore("Fix parser issues with iterator first")]
 	[Test]
 	public async Task LoadStrictImageProcessingTypes()
 	{
@@ -82,9 +82,9 @@ public class RepositoriesTests
 		var imageProcessingPackage =
 			await repositories.LoadFromPath(
 				StrictDevelopmentFolder + ".ImageProcessing");
-		var adjustBrightness = imageProcessingPackage?.GetType("AdjustBrightness");
+		var adjustBrightness = imageProcessingPackage.GetType("AdjustBrightness");
 		Assert.That(adjustBrightness, Is.Not.Null);
-		Assert.That(adjustBrightness?.Methods[0].GetBodyAndParseIfNeeded(), Is.Not.Null);
+		Assert.That(adjustBrightness.Methods[0].GetBodyAndParseIfNeeded(), Is.Not.Null);
 	}
 
 	[Test]
