@@ -201,7 +201,7 @@ public sealed class VirtualMachineTests : BaseVirtualMachineTests
 			"\t\t\ttextList = textList - value",
 			"\ttextList"
 		})]
-	[Ignore("")]
+	[Ignore("TODO: Luka commit will fix this unit test")]
 	[TestCase("RemoveDuplicates((\"s\", \"b\", \"s\")).Remove", "b", "RemoveDuplicates",
 		new[]
 		{

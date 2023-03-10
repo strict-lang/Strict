@@ -123,7 +123,7 @@ public sealed class Method : Context
 		var closingBracketIndex = rest.LastIndexOf(')');
 		var lastOpeningBracketIndex = rest.LastIndexOf('(');
 		// If the type contains brackets, exclude it from the rest for proper parameter parsing
-		if (lastOpeningBracketIndex > 2 && rest.IndexOf(DoubleOpenBrackets) < 0)
+		if (lastOpeningBracketIndex > 2 && rest.IndexOf(DoubleOpenBrackets) < 0 && rest.IndexOf(DoubleCloseBrackets) < 0)
 		{
 			var lastSpaceIndex = rest.LastIndexOf(' ');
 			if (lastSpaceIndex > 0)
@@ -352,7 +352,7 @@ public sealed class Method : Context
 		GenericTypeImplementation typeWithImplementation, int index) =>
 		type.Name == Base.Generic
 			? typeWithImplementation.ImplementationTypes[index] //Number
-			: type.IsGeneric || type.Name == Base.List
+			: (type.IsGeneric || type.Name == Base.List) && type.Name != Base.Iterator
 				? typeWithImplementation //ListNumber
 				: type;
 

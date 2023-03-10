@@ -47,17 +47,25 @@ public class Type : Context
 	private bool OneOfFirstThreeLinesContainsGeneric()
 	{
 		for (var line = 0; line < lines.Length && line < 3; line++)
+		{
 			if (HasGenericMember(lines[line]))
 				return true;
+			if (HasGenericMethodHeader(lines[line]) && line + 1 < lines.Length &&
+				!lines[line + 1].StartsWith('\t'))
+				return true;
+		}
 		return false;
 	}
+
+	private static bool HasGenericMethodHeader(string line) =>
+		line.Contains(Base.Generic, StringComparison.Ordinal) ||
+		line.Contains(Base.GenericLowercase, StringComparison.Ordinal);
 
 	private static bool HasGenericMember(string line) =>
 		(line.StartsWith(HasWithSpaceAtEnd, StringComparison.Ordinal) ||
 			line.StartsWith(MutableWithSpaceAtEnd, StringComparison.Ordinal)) &&
 		(line.Contains(Base.Generic, StringComparison.Ordinal) ||
-			line.Contains(Base.GenericLowercase, StringComparison.Ordinal)) ||
-		line.Contains(Base.Iterator + '('); //TODO: Temporary workaround to make Iterator work without generic member
+			line.Contains(Base.GenericLowercase, StringComparison.Ordinal));
 
 	/// <summary>
 	/// Parsing has to be done OUTSIDE the constructor as we first need all types and inside might not

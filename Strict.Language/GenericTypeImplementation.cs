@@ -12,7 +12,7 @@ public sealed class GenericTypeImplementation : Type
 		ImplementationTypes = implementationTypes;
 		var implementationTypeIndex = 0;
 		foreach (var member in Generic.Members)
-			members.Add(member.Type.IsGeneric
+			members.Add(member.Type.IsGeneric && member.Type.Name != Base.Iterator
 				? member.CloneWithImplementation(member.Type.Name == Base.List
 					? this
 					: implementationTypes[implementationTypeIndex++])
