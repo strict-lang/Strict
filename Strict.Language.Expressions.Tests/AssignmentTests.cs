@@ -60,10 +60,10 @@ public class AssignmentTests : TestExpressions
 		const string Input = "constant numbers = (1, 2, 3) + 6";
 		var expression = (ConstantDeclaration)ParseExpression(Input);
 		Assert.That(expression.Name, Is.EqualTo("numbers"));
-		Assert.That(expression.ReturnType.Name, Is.EqualTo(Base.Number.MakeItPlural()));
+		Assert.That(expression.ReturnType.Name, Is.EqualTo(Base.Number.Pluralize()));
 		Assert.That(expression.Value, Is.InstanceOf<Binary>());
 		var leftExpression = ((Binary)expression.Value).Instance!;
-		Assert.That(leftExpression.ReturnType.Name, Is.EqualTo(Base.Number.MakeItPlural()));
+		Assert.That(leftExpression.ReturnType.Name, Is.EqualTo(Base.Number.Pluralize()));
 	}
 
 	[Test]

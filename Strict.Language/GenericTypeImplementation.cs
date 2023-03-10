@@ -25,7 +25,7 @@ public sealed class GenericTypeImplementation : Type
 
 	private static string GetTypeName(Type generic, IReadOnlyList<Type> implementationTypes) =>
 		generic.Name == Base.List && !implementationTypes[0].Name.EndsWith(')')
-			? implementationTypes[0].Name.MakeItPlural()
+			? implementationTypes[0].Name.Pluralize()
 			: generic.Name + implementationTypes.ToBrackets();
 
 	public Type Generic { get; }
