@@ -66,19 +66,23 @@ public class RepositoriesTests
 		await repositories.LoadStrictPackage();
 		await repositories.LoadStrictPackage("Math");
 		var examplesPackage = await repositories.LoadStrictPackage("Examples");
-		var program = new Type(examplesPackage, new TypeLines("ValidProgram", "has number", "Run Number", "\tnumber")).
-			ParseMembersAndMethods(parser);
+		var program =
+			new Type(examplesPackage,
+					new TypeLines("ValidProgram", "has number", "Run Number", "\tnumber")).
+				ParseMembersAndMethods(parser);
 		Assert.That(program.Methods[0].ReturnType.ToString(), Contains.Substring(Base.Number));
 		Assert.That(program.Members[0].Type.ToString(), Contains.Substring(Base.Number));
 	}
 
-	[Ignore("Fix parser issues with iterator first")]
+	[Ignore("Fix multiple variables in For expression first")]
 	[Test]
 	public async Task LoadStrictImageProcessingTypes()
 	{
 		var parser = new MethodExpressionParser();
 		var repositories = new Repositories(parser);
 		await repositories.LoadStrictPackage();
+		await repositories.LoadFromPath(
+			StrictDevelopmentFolder + ".Math");
 		var imageProcessingPackage =
 			await repositories.LoadFromPath(
 				StrictDevelopmentFolder + ".ImageProcessing");

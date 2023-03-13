@@ -640,6 +640,8 @@ public class Type : Context
 				continue;
 			if (methodParameterType.IsEnum && methodParameterType.Members[0].Type == argumentReturnType)
 				continue;
+			if (methodParameterType.Name == Base.Iterator && method.Type == argumentReturnType)
+				continue;
 			if (methodParameterType.IsIterator != argumentReturnType.IsIterator && methodParameterType.Name != Base.Any)
 				return false;
 			if (methodParameterType.IsGeneric)
@@ -757,7 +759,7 @@ public class Type : Context
 	{
 		get
 		{
-			if (cachedAvailableMethods != null)
+			if (cachedAvailableMethods is { Count: > 0 })
 				return cachedAvailableMethods;
 			cachedAvailableMethods = new Dictionary<string, List<Method>>(StringComparer.Ordinal);
 			foreach (var method in methods)
@@ -807,6 +809,11 @@ public class Type : Context
 	private void AddAnyMethods()
 	{
 		cachedAnyMethods ??= GetType(Base.Any).AvailableMethods;
+		if (cachedAnyMethods.Count == 0)
+		{
+			cachedAnyMethods = null;
+			return;
+		}
 		foreach (var (methodName, anyMethods) in cachedAnyMethods)
 			AddAvailableMethods(methodName, anyMethods);
 	}

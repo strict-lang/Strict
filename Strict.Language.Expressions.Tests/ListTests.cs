@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
+using Strict.Language.Tests;
 
 namespace Strict.Language.Expressions.Tests;
 
@@ -482,7 +483,7 @@ public sealed class ListTests : TestExpressions
 	[Test]
 	public void CreateMutableListWithMutableExpressions()
 	{
-		var program = new Type(type.Package,
+		var program = new Type(new TestPackage(),
 				new TypeLines(
 				// @formatter:off
 					nameof(CreateMutableListWithMutableExpressions),
@@ -498,7 +499,7 @@ public sealed class ListTests : TestExpressions
 	[Test]
 	public void ChangeValueInsideMutableListWithMutableExpressions()
 	{
-		var program = new Type(type.Package,
+		var program = new Type(new TestPackage(),
 				new TypeLines(
 				// @formatter:off
 					nameof(ChangeValueInsideMutableListWithMutableExpressions),

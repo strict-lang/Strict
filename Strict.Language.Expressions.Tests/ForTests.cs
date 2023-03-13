@@ -45,7 +45,7 @@ public sealed class ForTests : TestExpressions
 	[TestCase("for element in gibberish", "\tlog.Write(element)")]
 	public void UnidentifiedIterable(params string[] lines) =>
 		Assert.That(() => ParseExpression(lines),
-			Throws.InstanceOf<For.UnidentifiedIterable>());
+			Throws.InstanceOf<Body.IdentifierNotFound>());
 
 	[Test]
 	public void DuplicateImplicitIndexInNestedFor() =>
@@ -222,4 +222,29 @@ public sealed class ForTests : TestExpressions
 				"for Range(2, 5)",
 				"for index in Range(1, 10)"),
 			Throws.InstanceOf<For.MissingInnerBody>()!);
+
+	[Test]
+	public void AllowCustomVariablesInFor()
+	{
+		var programType = new Type(type.Package, new TypeLines(nameof(AllowCustomVariablesInFor),
+				// @formatter:off
+				"has log",
+				"LogError(elements Number) Number",
+				"\tfor element in elements",
+				"\t\tlog.Write(element)")).ParseMembersAndMethods(new MethodExpressionParser());
+		var parsedExpression = (For)programType.Methods[0].GetBodyAndParseIfNeeded();
+		Assert.That(parsedExpression.Value.ToString(), Is.EqualTo("element in elements"));
+	}
+
+	[Test]
+	public void AllowMultipleVariablesInFor()
+	{
+		var programType = new Type(type.Package, new TypeLines(nameof(AllowMultipleVariablesInFor),
+				// @formatter:off
+				"has log",
+				"LogError(numbers) Number",
+				"\tfor row, column in numbers",
+				"\t\tlog.Write(column)")).ParseMembersAndMethods(new MethodExpressionParser());
+		Assert.That(programType.Methods[0].GetBodyAndParseIfNeeded(), Is.InstanceOf<For>());
+	}
 }

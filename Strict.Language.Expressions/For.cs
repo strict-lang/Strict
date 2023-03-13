@@ -65,7 +65,7 @@ public sealed class For : Expression
 	{
 		if (!HasIn(line) && line[^1] == ')')
 			return ParseWithImplicitVariable(body, line, innerBody);
-		CheckForUnidentifiedIterable(body, line);
+		//CheckForUnidentifiedIterable(body, line);
 		return ParseWithExplicitVariable(body, line, innerBody);
 	}
 
@@ -77,7 +77,7 @@ public sealed class For : Expression
 		var variableValue = body.FindVariableValue(variableName);
 		if (variableValue is { IsMutable: false } && HasIn(line))
 			throw new ImmutableIterator(body);
-		var forExpression = body.Method.ParseExpression(body, line[4..]);
+		var forExpression = body.Method.ParseExpression(body, GetForExpressionText(line));
 		if (HasIn(line))
 			CheckForIncorrectMatchingTypes(body, variableName, forExpression);
 		else
@@ -88,6 +88,11 @@ public sealed class For : Expression
 		return new For(forExpression, innerBody.Parse());
 	}
 
+	private static ReadOnlySpan<char> GetForExpressionText(ReadOnlySpan<char> line) =>
+		FindIterableName(line).Contains(',')
+			? line[(line.IndexOf(',') + 2)..]
+			: line[4..];
+
 	public sealed class ExpressionTypeIsNotAnIterator : ParsingFailed
 	{
 		public ExpressionTypeIsNotAnIterator(Body body, string typeName, string line) : base(body,
@@ -96,40 +101,52 @@ public sealed class For : Expression
 
 	private static void AddVariableIfDoesNotExist(Body body, ReadOnlySpan<char> line, ReadOnlySpan<char> variableName)
 	{
-		var variableValue = body.FindVariableValue(variableName);
-		if (variableValue != null)
-			return;
-		if (body.Method.Type.FindMember(variableName.ToString()) == null)
+		foreach (var variable in variableName.Split(',', StringSplitOptions.TrimEntries))
 		{
-			variableValue = body.Method.ParseExpression(body, GetVariableExpressionValue(body, line));
+			if (body.FindVariableValue(variable) != null)
+				continue;
+			var iterableName = variable.ToString();
+			if (body.Method.Type.FindMember(iterableName) != null)
+				continue;
+			var variableValue = GetVariableExpression(body, line, iterableName);
 			variableValue.IsMutable = true;
-			body.AddVariable(variableName.ToString(), variableValue);
+			body.AddVariable(iterableName, variableValue);
 		}
 	}
+
+	private static Expression GetVariableExpression(Body body, ReadOnlySpan<char> line, string iterableName)
+	{
+		var variableExpressionValue = GetVariableExpressionValue(body, line, iterableName);
+		return body.Method.ParseExpression(body, variableExpressionValue == iterableName
+			? GetForIteratorText(line) //TODO: Get only single expression instead of List
+			: variableExpressionValue);
+	}
+
+	private static ReadOnlySpan<char> GetForIteratorText(ReadOnlySpan<char> line) =>
+		line.Contains(InName, StringComparison.Ordinal)
+			? line[(line.LastIndexOf(InName) + 3)..]
+			: line[(line.LastIndexOf(' ') + 1)..];
 
 	private static void CheckForIncorrectMatchingTypes(Body body, ReadOnlySpan<char> variableName,
 		Expression forValueExpression)
 	{
-		var mutableValue = body.FindVariableValue(variableName);
-		var iteratorType = GetIteratorType(forValueExpression);
-		if (iteratorType is GenericTypeImplementation { IsIterator: true } genericType)
-			iteratorType = genericType.ImplementationTypes[0];
-		if ((iteratorType.Name != Base.Range || mutableValue?.ReturnType.Name != Base.Number)
-			&& iteratorType.Name != mutableValue?.ReturnType.Name)
-			throw new IteratorTypeDoesNotMatchWithIterable(body);
+		foreach (var variable in variableName.Split(',', StringSplitOptions.TrimEntries))
+		{
+			var mutableValue = body.FindVariableValue(variable);
+			var iteratorType = GetIteratorType(forValueExpression);
+			if (iteratorType is GenericTypeImplementation { IsIterator: true } genericType)
+				iteratorType = genericType.ImplementationTypes[0];
+			if ((iteratorType.Name != Base.Range || mutableValue?.ReturnType.Name != Base.Number) &&
+				iteratorType.Name != mutableValue?.ReturnType.Name && iteratorType.Name != Base.Number) //TODO: remove once variable expression workaround is fixed
+				throw new IteratorTypeDoesNotMatchWithIterable(body, iteratorType.Name,
+					mutableValue?.ReturnType.Name);
+		}
 	}
 
 	private static Type GetIteratorType(Expression forValueExpression) =>
 		forValueExpression is Binary binary
 			? binary.Arguments[0].ReturnType
 			: forValueExpression.ReturnType;
-
-	private static void CheckForUnidentifiedIterable(Body body, ReadOnlySpan<char> line)
-	{
-		if (body.FindVariableValue(FindIterableName(line)) == null &&
-			body.Method.Type.FindMember(FindIterableName(line).ToString()) == null && line[^1] != ')')
-			throw new UnidentifiedIterable(body);
-	}
 
 	private static Expression ParseWithImplicitVariable(Body body, ReadOnlySpan<char> line,
 		Body innerBody)
@@ -148,11 +165,13 @@ public sealed class For : Expression
 		innerBody.AddVariable(ValueName, variableValue);
 	}
 
-	private static string GetVariableExpressionValue(Body body, ReadOnlySpan<char> line)
+	private static string GetVariableExpressionValue(Body body, ReadOnlySpan<char> line, string knownIterableName = "")
 	{
 		if (line.Contains("Range", StringComparison.Ordinal))
 			return $"{GetRangeExpression(line)}.Start";
-		var iterableName = FindIterableName(line);
+		var iterableName = knownIterableName == ""
+			? FindIterableName(line)
+			: knownIterableName;
 		var variable = body.FindVariableValue(iterableName)?.ReturnType ?? body.Method.Type.FindMember(iterableName.ToString())?.Type;
 		var value = iterableName[^1] == ')'
 			? iterableName[1..iterableName.IndexOf(',')].ToString()
@@ -189,7 +208,7 @@ public sealed class For : Expression
 
 	public sealed class UnidentifiedIterable : ParsingFailed
 	{
-		public UnidentifiedIterable(Body body) : base(body) { }
+		public UnidentifiedIterable(Body body, string name) : base(body, name) { }
 	}
 
 	public sealed class ImmutableIterator : ParsingFailed
@@ -199,6 +218,6 @@ public sealed class For : Expression
 
 	public sealed class IteratorTypeDoesNotMatchWithIterable : ParsingFailed
 	{
-		public IteratorTypeDoesNotMatchWithIterable(Body body) : base(body) { }
+		public IteratorTypeDoesNotMatchWithIterable(Body body, string iteratorTypeName, string? variableType) : base(body, $"Iterator type {iteratorTypeName} does not match with {variableType}") { }
 	}
 }
