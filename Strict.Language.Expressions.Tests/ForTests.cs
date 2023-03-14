@@ -223,28 +223,50 @@ public sealed class ForTests : TestExpressions
 				"for index in Range(1, 10)"),
 			Throws.InstanceOf<For.MissingInnerBody>()!);
 
-	[Test]
-	public void AllowCustomVariablesInFor()
+	[TestCase(
+		"WithParameter", "element in (1, 2, 3, 4)",
+		"has log",
+		"LogError Number",
+		"\tfor element in (1, 2, 3, 4)",
+		"\t\tlog.Write(element)")]
+	[TestCase(
+		"WithList", "element in elements",
+		"has log",
+		"LogError(elements Numbers) Number",
+		"\tfor element in elements",
+		"\t\tlog.Write(element)")]
+	[TestCase(
+		"WithListTexts", "element in texts",
+		"has log",
+		"LogError(texts) Number",
+		"\tfor element in texts",
+		"\t\tlog.Write(element)")]
+	public void AllowCustomVariablesInFor(string testName, string expected, params string[] code)
 	{
-		var programType = new Type(type.Package, new TypeLines(nameof(AllowCustomVariablesInFor),
-				// @formatter:off
-				"has log",
-				"LogError(elements Number) Number",
-				"\tfor element in elements",
-				"\t\tlog.Write(element)")).ParseMembersAndMethods(new MethodExpressionParser());
+		var programType =
+			new Type(type.Package, new TypeLines(nameof(AllowCustomVariablesInFor) + testName, code)).
+				ParseMembersAndMethods(new MethodExpressionParser());
 		var parsedExpression = (For)programType.Methods[0].GetBodyAndParseIfNeeded();
-		Assert.That(parsedExpression.Value.ToString(), Is.EqualTo("element in elements"));
+		Assert.That(parsedExpression.Value.ToString(), Is.EqualTo(expected));
 	}
 
-	[Test]
-	public void AllowMultipleVariablesInFor()
-	{
-		var programType = new Type(type.Package, new TypeLines(nameof(AllowMultipleVariablesInFor),
+	[TestCase(
 				// @formatter:off
+				"WithNumbers",
 				"has log",
 				"LogError(numbers) Number",
 				"\tfor row, column in numbers",
-				"\t\tlog.Write(column)")).ParseMembersAndMethods(new MethodExpressionParser());
+				"\t\tlog.Write(column)")]
+		[TestCase(
+			"WithTexts",
+				"has log",
+				"LogError(texts) Number",
+				"\tfor row, column in texts",
+				"\t\tlog.Write(column)")]
+	public void ParseForExpressionWithMultipleVariables(string testName, params string[] code)
+	{
+		var programType = new Type(type.Package, new TypeLines(nameof(ParseForExpressionWithMultipleVariables) + testName, code
+				)).ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(programType.Methods[0].GetBodyAndParseIfNeeded(), Is.InstanceOf<For>());
 	}
 }

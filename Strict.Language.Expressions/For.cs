@@ -88,11 +88,6 @@ public sealed class For : Expression
 		return new For(forExpression, innerBody.Parse());
 	}
 
-	private static ReadOnlySpan<char> GetForExpressionText(ReadOnlySpan<char> line) =>
-		FindIterableName(line).Contains(',')
-			? line[(line.IndexOf(',') + 2)..]
-			: line[4..];
-
 	public sealed class ExpressionTypeIsNotAnIterator : ParsingFailed
 	{
 		public ExpressionTypeIsNotAnIterator(Body body, string typeName, string line) : base(body,
@@ -108,24 +103,32 @@ public sealed class For : Expression
 			var iterableName = variable.ToString();
 			if (body.Method.Type.FindMember(iterableName) != null)
 				continue;
-			var variableValue = GetVariableExpression(body, line, iterableName);
+			var variableValue = GetVariableExpression(body, line);
 			variableValue.IsMutable = true;
 			body.AddVariable(iterableName, variableValue);
 		}
 	}
 
-	private static Expression GetVariableExpression(Body body, ReadOnlySpan<char> line, string iterableName)
+	private static Expression GetVariableExpression(Body body, ReadOnlySpan<char> line)
 	{
-		var variableExpressionValue = GetVariableExpressionValue(body, line, iterableName);
-		return body.Method.ParseExpression(body, variableExpressionValue == iterableName
-			? GetForIteratorText(line) //TODO: Get only single expression instead of List
-			: variableExpressionValue);
+		var forIteratorText = GetForIteratorText(line);
+		var iteratorExpression = body.Method.ParseExpression(body, forIteratorText);
+		return iteratorExpression.ReturnType is GenericTypeImplementation { Generic.Name: Base.List }
+			? body.Method.ParseExpression(body, forIteratorText[^1] == ')'
+				? forIteratorText[1..forIteratorText.IndexOf(',')]
+				: forIteratorText.ToString() + "(0)")
+			: iteratorExpression;
 	}
 
 	private static ReadOnlySpan<char> GetForIteratorText(ReadOnlySpan<char> line) =>
 		line.Contains(InName, StringComparison.Ordinal)
 			? line[(line.LastIndexOf(InName) + 3)..]
 			: line[(line.LastIndexOf(' ') + 1)..];
+
+	private static ReadOnlySpan<char> GetForExpressionText(ReadOnlySpan<char> line) =>
+		FindIterableName(line).Contains(',')
+			? line[(line.IndexOf(',') + 2)..]
+			: line[4..];
 
 	private static void CheckForIncorrectMatchingTypes(Body body, ReadOnlySpan<char> variableName,
 		Expression forValueExpression)
@@ -137,7 +140,7 @@ public sealed class For : Expression
 			if (iteratorType is GenericTypeImplementation { IsIterator: true } genericType)
 				iteratorType = genericType.ImplementationTypes[0];
 			if ((iteratorType.Name != Base.Range || mutableValue?.ReturnType.Name != Base.Number) &&
-				iteratorType.Name != mutableValue?.ReturnType.Name && iteratorType.Name != Base.Number) //TODO: remove once variable expression workaround is fixed
+				iteratorType.Name != mutableValue?.ReturnType.Name)
 				throw new IteratorTypeDoesNotMatchWithIterable(body, iteratorType.Name,
 					mutableValue?.ReturnType.Name);
 		}
@@ -165,19 +168,21 @@ public sealed class For : Expression
 		innerBody.AddVariable(ValueName, variableValue);
 	}
 
-	private static string GetVariableExpressionValue(Body body, ReadOnlySpan<char> line, string knownIterableName = "")
+	private static string GetVariableExpressionValue(Body body, ReadOnlySpan<char> line, ReadOnlySpan<char> knownIterableName = default)
 	{
 		if (line.Contains("Range", StringComparison.Ordinal))
 			return $"{GetRangeExpression(line)}.Start";
-		var iterableName = knownIterableName == ""
+		var iterableName = knownIterableName.IsEmpty
 			? FindIterableName(line)
 			: knownIterableName;
 		var variable = body.FindVariableValue(iterableName)?.ReturnType ?? body.Method.Type.FindMember(iterableName.ToString())?.Type;
-		var value = iterableName[^1] == ')'
-			? iterableName[1..iterableName.IndexOf(',')].ToString()
-			: variable != null && variable.IsIterator
-				? $"{iterableName}(0)"
-				: $"{iterableName}";
+		string value;
+		if (iterableName[^1] == ')')
+			value = iterableName[1..iterableName.IndexOf(',')].ToString();
+		else if (variable != null && variable.IsIterator)
+			value = $"{iterableName}(0)";
+		else
+			value = $"{iterableName}";
 		return value;
 	}
 
@@ -204,11 +209,6 @@ public sealed class For : Expression
 	public sealed class DuplicateImplicitIndex : ParsingFailed
 	{
 		public DuplicateImplicitIndex(Body body) : base(body) { }
-	}
-
-	public sealed class UnidentifiedIterable : ParsingFailed
-	{
-		public UnidentifiedIterable(Body body, string name) : base(body, name) { }
 	}
 
 	public sealed class ImmutableIterator : ParsingFailed
