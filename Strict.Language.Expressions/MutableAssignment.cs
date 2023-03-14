@@ -23,7 +23,7 @@ public sealed class MutableAssignment : ConcreteExpression
 
 	private static Expression TryParseReassignment(Body body, ReadOnlySpan<char> line)
 	{
-		var parts = line.Split();
+		var parts = line.Split('=', StringSplitOptions.TrimEntries);
 		parts.MoveNext();
 		var expression = body.Method.ParseExpression(body, parts.Current);
 		var newExpression = body.Method.ParseExpression(body, line[(parts.Current.Length + 3)..]);
