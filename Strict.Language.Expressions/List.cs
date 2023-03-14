@@ -68,7 +68,7 @@ public sealed class List : Value
 
 	public void UpdateValue(Body bodyForErrorMessage, Expression index, Expression newExpression)
 	{
-		if (Values.Count == 0) //TODO: Should do the opposite after method execution updates Values (e.g. list.Add(1) should update this Values expression first before this operation)
+		if (Values.Count == 0)
 			Values = new List<Expression> { newExpression };
 		if (index is Number number && int.TryParse(number.Data.ToString(), out var indexNumber))
 			if (Values.Count - 1 >= indexNumber)

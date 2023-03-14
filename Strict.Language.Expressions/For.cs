@@ -65,7 +65,6 @@ public sealed class For : Expression
 	{
 		if (!HasIn(line) && line[^1] == ')')
 			return ParseWithImplicitVariable(body, line, innerBody);
-		//CheckForUnidentifiedIterable(body, line);
 		return ParseWithExplicitVariable(body, line, innerBody);
 	}
 
