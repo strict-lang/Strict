@@ -6,9 +6,9 @@ public sealed class InstanceInvokedMethod : InvokedMethod
 {
 	//ncrunch: no coverage start, TODO: missing tests
 	public InstanceInvokedMethod(IReadOnlyList<Expression> expressions,
-		IReadOnlyDictionary<string, Instance> arguments, Expression instanceCall) : base(expressions,
+		IReadOnlyDictionary<string, Instance> arguments, Instance instanceCall) : base(expressions,
 		arguments) =>
 		InstanceCall = instanceCall;
 
-	public Expression InstanceCall { get; }
+	public Instance InstanceCall { get; }
 }

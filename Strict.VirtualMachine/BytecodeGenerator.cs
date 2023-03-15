@@ -20,12 +20,7 @@ public sealed class ByteCodeGenerator
 		this.registry = registry;
 		if (method is not InstanceInvokedMethod instanceMethod)
 			return;
-		//ncrunch: no coverage start, TODO: missing tests
-		if (instanceMethod.InstanceCall is MethodCall instanceMethodCall)
-			AddInstanceMemberVariables(instanceMethodCall);
-		else if (instanceMethod.InstanceCall is MemberCall instanceMemberCall)
-			AddMembersFromCaller(instanceMemberCall);
-		//ncrunch: no coverage end
+		AddMembersFromCaller(instanceMethod.InstanceCall);
 	}
 
 	public ByteCodeGenerator(MethodCall methodCall)
@@ -37,16 +32,14 @@ public sealed class ByteCodeGenerator
 		registry = new Registry();
 	}
 
-	public IReadOnlyList<Expression> Expressions { get; }
+	private IReadOnlyList<Expression> Expressions { get; }
 
-	//ncrunch: no coverage start, TODO: missing tests
-	private void AddMembersFromCaller(MemberCall memberCall)
+	private void AddMembersFromCaller(Instance instance)
 	{
-		if (memberCall.Member.Value != null)
-			statements.Add(new StoreVariableStatement(
-				new Instance(memberCall.Member.Type, memberCall.Member.Value),
-				memberCall.ReturnType.Members.First(member => !member.Type.IsTrait).Name));
-	} //ncrunch: no coverage end
+		if (instance.ReturnType != null)
+			statements.Add(new StoreVariableStatement(instance,
+				instance.ReturnType.Members.First(member => !member.Type.IsTrait).Name));
+	}
 
 	private void AddInstanceMemberVariables(MethodCall instance)
 	{
@@ -111,6 +104,14 @@ public sealed class ByteCodeGenerator
 		TryGenerateMutableStatements(expression);
 		TryGenerateVariableCallStatement(expression);
 		TryGenerateMethodCallStatement(expression);
+		TryGenerateValueStatement(expression);
+	}
+
+	private void TryGenerateValueStatement(Expression expression)
+	{
+		if (expression is Value valueExpression)
+			statements.Add(new LoadConstantStatement(registry.AllocateRegister(),
+				new Instance(valueExpression.ReturnType, valueExpression.Data)));
 	}
 
 	private void TryGenerateMethodCallStatement(Expression expression)
@@ -184,18 +185,10 @@ public sealed class ByteCodeGenerator
 
 	private void GenerateLoopStatements(For forExpression)
 	{
-		GenerateRestLoopStatements(forExpression);
-		registry.FreeRegisters();
-	}
-
-	private void GenerateRestLoopStatements(For forExpression)
-	{
-		var registerForIterationCount = registry.AllocateRegister(true);
 		var statementCountBeforeLoopStart = statements.Count;
-		statements.Add(new LoopBeginStatement(forExpression.Value.ToString(), registerForIterationCount));
+		statements.Add(new LoopBeginStatement(forExpression.Value.ToString()));
 		GenerateStatementsForLoopBody(forExpression);
-		statements.Add(new IterationEndStatement(registerForIterationCount));
-		GenerateIteratorReductionAndJumpStatementsForLoop(registerForIterationCount, statements.Count - statementCountBeforeLoopStart);
+		statements.Add(new IterationEndStatement(statements.Count - statementCountBeforeLoopStart));
 	}
 
 	private void GenerateStatementsForLoopBody(For forExpression)
@@ -205,10 +198,6 @@ public sealed class ByteCodeGenerator
 		else
 			GenerateStatementsFromExpression(forExpression.Body);
 	}
-
-	private void GenerateIteratorReductionAndJumpStatementsForLoop(
-		Register registerForIterationCount, int steps) =>
-		statements.Add(new JumpIfNotZeroStatement(-steps - 1, registerForIterationCount));
 
 	private void GenerateIfStatements(If ifExpression)
 	{

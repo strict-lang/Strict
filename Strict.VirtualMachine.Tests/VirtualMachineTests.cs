@@ -85,12 +85,11 @@ public sealed class VirtualMachineTests : BaseVirtualMachineTests
 				new StoreVariableStatement(new Instance(NumberType, 10), "number"),
 				new StoreVariableStatement(new Instance(NumberType, 1), "result"),
 				new StoreVariableStatement(new Instance(NumberType, 2), "multiplier"),
-				new LoopBeginStatement("number", Register.R0), new LoadVariableStatement(Register.R2, "result"),
+				new LoopBeginStatement("number"), new LoadVariableStatement(Register.R2, "result"),
 				new LoadVariableStatement(Register.R3, "multiplier"),
 				new BinaryStatement(Instruction.Multiply, Register.R2, Register.R3, Register.R4),
 				new StoreFromRegisterStatement(Register.R4, "result"),
-				new IterationEndStatement(Register.R0),
-				new JumpIfNotZeroStatement(-6, Register.R0),
+				new IterationEndStatement(5),
 				new LoadVariableStatement(Register.R5, "result"), new ReturnStatement(Register.R5)
 			}).Returns?.Value, Is.EqualTo(1024));
 
@@ -200,20 +199,19 @@ public sealed class VirtualMachineTests : BaseVirtualMachineTests
 			"\t\t\ttextList = textList - value",
 			"\ttextList"
 		})]
-	[TestCase("RemoveDuplicates((\"s\", \"b\", \"s\")).Remove", "b", "RemoveDuplicates",
+	[TestCase("RemoveDuplicates((\"s\", \"b\", \"s\")).Remove", "s b", "RemoveDuplicates",
 		new[]
 		{
 			"has texts",
 			"Remove Texts",
 			"\tmutable textList = (\"\")",
 			"\tfor texts",
-			"\t\tif texts.Contains(value) is false",
+			"\t\tif textList.Contains(value) is false",
 			"\t\t\ttextList = textList + value",
 			"\ttextList"
 		})]
-	//ncrunch: no coverage start
-	[Ignore("TODO: Luka commit will fix this unit test")] //TODO: Fix it in Virtual machine
-	public void CompileListBinaryOperations(string methodCall,
+	// ReSharper disable once TooManyArguments
+	public void ExecuteListBinaryOperations(string methodCall,
 		object expectedResult, string programName, params string[] code)
 	{
 		var statements = new ByteCodeGenerator(GenerateMethodCallFromSource(programName,
@@ -222,6 +220,26 @@ public sealed class VirtualMachineTests : BaseVirtualMachineTests
 		var elements = values.Aggregate("", (current, value) => current + ((Value)value).Data + " ");
 		Assert.That(elements.Trim(), Is.EqualTo(expectedResult));
 	} //ncrunch: no coverage end
+
+	[TestCase("TestContains((\"s\", \"b\", \"s\")).Contains(\"b\")", "True", "TestContains",
+		new[]
+		{
+			"has elements Texts",
+			"Contains(other Text) Boolean",
+			"\tfor elements",
+			"\t\tif value is other",
+			"\t\t\treturn true",
+			"\tfalse",
+		})]
+	// ReSharper disable once TooManyArguments
+	public void CallCommonMethodCalls(string methodCall, object expectedResult,
+		string programName, params string[] code)
+	{
+		var statements = new ByteCodeGenerator(GenerateMethodCallFromSource(programName,
+			methodCall, code)).Generate();
+		var result = vm.Execute(statements).Returns?.Value!;
+		Assert.That(result.ToString(), Is.EqualTo(expectedResult));
+	}
 
 	[Test]
 	public void ConditionalJump() =>

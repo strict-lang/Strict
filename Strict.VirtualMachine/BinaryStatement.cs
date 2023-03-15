@@ -10,6 +10,7 @@ public sealed class BinaryStatement : Statement
 
 	public Register[] Registers { get; }
 	public override Instruction Instruction { get; }
+	public override string ToString() => $"{Instruction} {Registers}";
 
 	public bool IsConditional() =>
 		Instruction is >= Instruction.BinaryOperatorsSeparator and < Instruction.ConditionalSeparator;
