@@ -1,6 +1,6 @@
-﻿using System.Data;
-using Strict.Language;
+﻿using Strict.Language;
 using Strict.Language.Expressions;
+using System.Data;
 
 namespace Strict.VirtualMachine;
 
