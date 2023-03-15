@@ -2,13 +2,13 @@ using NUnit.Framework;
 
 namespace Strict.Language.Expressions.Tests;
 
-public class AssignmentTests : TestExpressions
+public class ConstantDeclarationTests : TestExpressions
 {
 	[SetUp]
 	public void CreateParserAndPackage()
 	{
 		parser = new MethodExpressionParser();
-		package = new Package(nameof(AssignmentTests));
+		package = new Package(nameof(ConstantDeclarationTests));
 	}
 
 	private ExpressionParser parser = null!;

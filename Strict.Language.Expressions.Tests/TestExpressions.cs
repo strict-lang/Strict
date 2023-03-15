@@ -32,6 +32,18 @@ public abstract class TestExpressions : MethodExpressionParser
 	protected readonly Member bla;
 	protected readonly List list;
 
+	[SetUp]
+	public void SayNoToConsoles()
+	{
+		noConsole = new NoConsoleWriteLineAllowed();
+		noConsole.SetVirtualConsoleWriter();
+	}
+
+	private NoConsoleWriteLineAllowed noConsole = null!;
+
+	[TearDown]
+	public void NoConsoleAllowed() => noConsole.CheckIfConsoleIsEmpty();
+
 	public void ParseAndCheckOutputMatchesInput(string singleLine, Expression expectedExpression) =>
 		ParseAndCheckOutputMatchesInput(new[] { singleLine }, expectedExpression);
 
