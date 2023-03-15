@@ -25,12 +25,12 @@ public sealed class TypeValidatorTests
 				ParseTypeMethods(CreateType(nameof(ValidateUnusedMember),
 					new[]
 					{
-						"has unused Number",
-						"Run(methodInput Number)",
-						"\tconstant result = 5 + methodInput",
-						"\tresult"
+						"has unused Number", "Run(methodInput Number)",
+						"\tconstant result = 5 + methodInput", "\tresult"
 					}))
-			}).Validate(), Throws.InstanceOf<MemberValidator.UnusedMemberMustBeRemoved>()!.With.Message.Contains("unused")!);
+			}).Validate(),
+			Throws.InstanceOf<MemberValidator.UnusedMemberMustBeRemoved>()!.With.Message.
+				Contains("unused")!);
 
 	private static Type ParseTypeMethods(Type type)
 	{
@@ -76,7 +76,8 @@ public sealed class TypeValidatorTests
 				}))
 			}).Validate(),
 			Throws.InstanceOf<Method.MethodParameterCountMustNotExceedThree>()!.With.Message.Contains(
-				"Type TestPackage.ValidateTypeHasTooManyDependenciesFromMethod constructor method has parameters count 4 but limit is 3"));
+				"Type TestPackage.ValidateTypeHasTooManyDependenciesFromMethod constructor method has " +
+				"parameters count 4 but limit is 3"));
 
 	[Test]
 	public void VariableHidesMemberUseDifferentName() =>

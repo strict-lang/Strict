@@ -25,8 +25,8 @@ GetComplicatedSequenceTexts returns Texts
 		 to Text";
 	private readonly ReadOnlyMemory<char> inputMemory = Input.AsMemory();
 
-	[Benchmark]
 	[Test]
+	[Benchmark]
 	public void IsOperatorUsingReadOnlyMemory()
 	{
 		var operatorCounter = 0;
@@ -41,7 +41,7 @@ GetComplicatedSequenceTexts returns Texts
 	}
 
 	//ncrunch: no coverage start
-	[Category("Manual")]
 	[Test]
+	[Category("Manual")]
 	public void BenchmarkIsOperator() => BenchmarkRunner.Run<BinaryOperatorTests>();
 }

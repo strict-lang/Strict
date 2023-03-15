@@ -43,7 +43,7 @@ public sealed class CSharpTypeVisitor : TypeVisitor
 	{
 		if (isImplementingApp)
 			return;
-		baseClasses += (baseClasses.Length > 0
+		baseClasses += (baseClasses.Length > 0 //ncrunch: no coverage, TODO: missing tests
 			? ", "
 			: " : ") + type.Name;
 	}
@@ -75,9 +75,9 @@ public sealed class CSharpTypeVisitor : TypeVisitor
 	{
 		var initializationExpression = "";
 		if (member.Value != null)
-			initializationExpression += " = " + expressionVisitor.Visit(member.Value);
+			initializationExpression += " = " + expressionVisitor.Visit(member.Value); //ncrunch: no coverage, TODO: missing tests
 		if (member.Name == "file")
-			accessModifier += " static";
+			accessModifier += " static"; //ncrunch: no coverage, TODO: missing tests
 		if (string.IsNullOrEmpty(initializationExpression) && member.Type.IsIterator)
 			initializationExpression += $" = new {csharpTypeName}()";
 		return initializationExpression;

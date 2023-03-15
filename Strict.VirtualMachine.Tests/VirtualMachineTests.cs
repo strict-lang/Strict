@@ -113,8 +113,7 @@ public sealed class VirtualMachineTests : BaseVirtualMachineTests
 			yield return new TestCaseData("CallWithoutArguments", "CallWithoutArguments(2, 5).GetSum", MethodCallWithLocalWithNoArguments, 542);
 			yield return new TestCaseData("CurrentlyFailing", "CurrentlyFailing(10).SumEvenNumbers", CurrentlyFailingTest, 20);
 		}
-	}
-	//ncrunch: no coverage end
+	} //ncrunch: no coverage end
 
 	[TestCaseSource(nameof(MethodCallTests))]
 	// ReSharper disable once TooManyArguments
@@ -201,7 +200,6 @@ public sealed class VirtualMachineTests : BaseVirtualMachineTests
 			"\t\t\ttextList = textList - value",
 			"\ttextList"
 		})]
-	[Ignore("TODO: Luka commit will fix this unit test")]
 	[TestCase("RemoveDuplicates((\"s\", \"b\", \"s\")).Remove", "b", "RemoveDuplicates",
 		new[]
 		{
@@ -212,8 +210,9 @@ public sealed class VirtualMachineTests : BaseVirtualMachineTests
 			"\t\tif texts.Contains(value) is false",
 			"\t\t\ttextList = textList + value",
 			"\ttextList"
-		})] //TODO: Fix it in Virtual machine
-	// ReSharper disable once TooManyArguments
+		})]
+	//ncrunch: no coverage start
+	[Ignore("TODO: Luka commit will fix this unit test")] //TODO: Fix it in Virtual machine
 	public void CompileListBinaryOperations(string methodCall,
 		object expectedResult, string programName, params string[] code)
 	{
@@ -222,7 +221,7 @@ public sealed class VirtualMachineTests : BaseVirtualMachineTests
 		var values = (List<Expression>)vm.Execute(statements).Returns?.Value!;
 		var elements = values.Aggregate("", (current, value) => current + ((Value)value).Data + " ");
 		Assert.That(elements.Trim(), Is.EqualTo(expectedResult));
-	}
+	} //ncrunch: no coverage end
 
 	[Test]
 	public void ConditionalJump() =>

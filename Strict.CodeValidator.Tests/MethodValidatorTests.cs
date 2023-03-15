@@ -122,7 +122,8 @@ public sealed class MethodValidatorTests
 		}).Validate());
 
 	[TestCase("Run(mutable parameter Number)", "\tconstant result = 5 + parameter", "\tresult")]
-	[TestCase("Run(mutable mutatedParameter Number, mutable parameter Number)", "\tmutatedParameter = 5 + parameter", "\tmutatedParameter")]
+	[TestCase("Run(mutable mutatedParameter Number, mutable parameter Number)",
+		"\tmutatedParameter = 5 + parameter", "\tmutatedParameter")]
 	public void UnchangedMutableParametersShouldError(params string[] code) =>
 		Assert.That(() => new MethodValidator(new[] { new Method(type, 1, parser, code) }).Validate(),
 			Throws.InstanceOf<ParameterDeclaredAsMutableButValueNeverChanged>().With.Message.
@@ -130,37 +131,29 @@ public sealed class MethodValidatorTests
 
 	[Test]
 	public void MutatedParametersShouldBeAllowed() =>
-		Assert.DoesNotThrow(
-			() => new MethodValidator(new[]
-			{
-				new Method(type, 1, parser,
-					new[]
-					{
-						"Run(mutable parameter Number)",
-						"\tparameter = 5 + parameter",
-						"\t5"
-					})
-			}).Validate());
+		Assert.DoesNotThrow(() => new MethodValidator(new[]
+		{
+			new Method(type, 1, parser,
+				new[] { "Run(mutable parameter Number)", "\tparameter = 5 + parameter", "\t5" })
+		}).Validate());
 
 	[Test]
 	public void ListArgumentCanBeAutoParsedWithoutDoubleBrackets()
 	{
-		var typeWithListParameterMethod = new Type(new TestPackage(), new TypeLines(nameof(ListArgumentCanBeAutoParsedWithoutDoubleBrackets),
-			"has log",
-			"CheckInputLengthAndGetResult(numbers) Number",
-			"\tif numbers.Length is 2",
-			"\t\treturn 2",
-			"\t0")).ParseMembersAndMethods(parser);
+		var typeWithListParameterMethod = new Type(new TestPackage(),
+			new TypeLines(nameof(ListArgumentCanBeAutoParsedWithoutDoubleBrackets), "has log",
+				"CheckInputLengthAndGetResult(numbers) Number", "\tif numbers.Length is 2",
+				"\t\treturn 2", "\t0")).ParseMembersAndMethods(parser);
 		Assert.That(() => new MethodValidator(new[]
 			{
 				new Method(typeWithListParameterMethod, 1, parser, new[]
 				{
-						// @formatter:off
-						"InvokeTestMethod(numbers) Number",
-						"\tif numbers.Length is 2",
-						"\t\treturn 2",
-						"\tCheckInputLengthAndGetResult((1, 2))"
-						// @formatter:on
+				// @formatter:off
+					"InvokeTestMethod(numbers) Number",
+					"\tif numbers.Length is 2",
+					"\t\treturn 2",
+					"\tCheckInputLengthAndGetResult((1, 2))"
+					// @formatter:on
 				})
 			}).Validate(),
 			Throws.InstanceOf<ListArgumentCanBeAutoParsedWithoutDoubleBrackets>().With.Message.

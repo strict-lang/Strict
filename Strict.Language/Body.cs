@@ -45,7 +45,7 @@ public sealed class Body : Expression
 	/// </summary>
 	public Expression Parse()
 	{
-		//https://deltaengine.fogbugz.com/f/cases/25714/
+		//TODO: still has to be done! tests are STILL NOT ENFORCED as required by the language specification! https://deltaengine.fogbugz.com/f/cases/25714/
 		var expressions = new List<Expression>();
 		for (ParsingLineNumber = LineRange.Start.Value; ParsingLineNumber < LineRange.End.Value;
 			ParsingLineNumber++)
@@ -147,7 +147,7 @@ public sealed class Body : Expression
 		var variable = variableScopeBody?.FindVariableValue(name) ??
 			throw new IdentifierNotFound(this, name);
 		if (!variable.IsMutable)
-			throw new ValueIsNotMutableAndCannotBeChanged(this, name);
+			throw new ValueIsNotMutableAndCannotBeChanged(this, name); //ncrunch: no coverage, TODO: missing tests
 		if (variableScopeBody.Variables != null)
 			variableScopeBody.Variables[name] = value;
 	}
@@ -188,7 +188,7 @@ public sealed class Body : Expression
 
 	public Body? FindCurrentChild()
 	{
-		// ReSharper disable once ForCanBeConvertedToForeach
+		// ReSharper disable once ForCanBeConvertedToForeach, don't do as performance is better this way
 		for (var index = 0; index < children.Count; index++)
 		{
 			var child = children[index];

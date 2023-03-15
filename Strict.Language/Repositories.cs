@@ -49,7 +49,8 @@ public sealed class Repositories
 		var packageName = packageUrl.AbsolutePath.Split('/').Last();
 		if (isStrictPackage)
 		{
-			var developmentFolder = StrictDevelopmentFolderPrefix.Replace(nameof(Strict) + ".", packageName);
+			var developmentFolder =
+				StrictDevelopmentFolderPrefix.Replace(nameof(Strict) + ".", packageName);
 			if (Directory.Exists(developmentFolder))
 				return await LoadFromPath(developmentFolder);
 		} //ncrunch: no coverage start
@@ -204,7 +205,7 @@ public sealed class Repositories
 			for (var index = 0; index < file.Value.DependentTypes.Count; index++)
 				if (filesWithMembers.ContainsKey(file.Value.DependentTypes[index]))
 					return true;
-		return false;
+		return false; //ncrunch: no coverage, TODO: missing tests
 	}
 
 	private static Dictionary<string, int> CreateInDegreeGraphMap(Dictionary<string, TypeLines> filesWithImplements)

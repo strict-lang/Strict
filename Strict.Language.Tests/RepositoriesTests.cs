@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Engines;
+using BenchmarkDotNet.Running;
 using NUnit.Framework;
 using Strict.Language.Expressions;
 
@@ -74,6 +75,7 @@ public class RepositoriesTests
 		Assert.That(program.Members[0].Type.ToString(), Contains.Substring(Base.Number));
 	}
 
+	//ncrunch: no coverage start, TODO: fix!
 	[Ignore("Fix multiple variables in For expression first")]
 	[Test]
 	public async Task LoadStrictImageProcessingTypes()
@@ -89,7 +91,7 @@ public class RepositoriesTests
 		var adjustBrightness = imageProcessingPackage.GetType("AdjustBrightness");
 		Assert.That(adjustBrightness, Is.Not.Null);
 		Assert.That(adjustBrightness.Methods[0].GetBodyAndParseIfNeeded(), Is.Not.Null);
-	}
+	} //ncrunch: no coverage end
 
 	[Test]
 	public async Task CheckGenericTypesAreLoadedCorrectlyAfterSorting()
@@ -224,5 +226,9 @@ public class RepositoriesTests
 		for (var iteration = 0; iteration < 100; iteration++)
 			await repos.LoadStrictPackage();
 		//MemoryProfiler.GetSnapshot(nameof(LoadStrictBaseTypesTenTimes) + "10");
-	} //ncrunch: no coverage end
+	}
+
+	[Test]
+	[Category("Manual")]
+	public void BenchmarkIsOperator() => BenchmarkRunner.Run<BinaryOperatorTests>();
 }

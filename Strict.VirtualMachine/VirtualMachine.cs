@@ -141,7 +141,7 @@ public sealed class VirtualMachine
 		ProcessLoopIndex();
 		Memory.Variables.TryGetValue(initLoopStatement.Identifier, out var iterableVariable);
 		if (iterableVariable == null)
-			return;
+			return; //ncrunch: no coverage
 		if (!iteratorInitialized)
 			InitializeIterator(initLoopStatement,
 				iterableVariable); //TODO: Get rid of this and figure out something better. (LM)
@@ -156,7 +156,7 @@ public sealed class VirtualMachine
 			Memory.Variables.Add("index", new Instance(Base.Number, 0));
 	}
 
-	private void InitializeIterator(LoopBeginStatement initLoopStatement, Instance iterableVariable)
+	private void InitializeIterator(RegisterStatement initLoopStatement, Instance iterableVariable)
 	{
 		Memory.Registers[initLoopStatement.Register] =
 			new Instance(Base.Number, GetLength(iterableVariable));
@@ -261,6 +261,7 @@ public sealed class VirtualMachine
 			: AddElementToTheListAndGetInstance(left, right);
 	}
 
+	//ncrunch: no coverage start, TODO: missing tests
 	private static Instance AddElementToTheListAndGetInstance(Instance left, Instance right)
 	{
 		var elements = new List<Expression>((List<Expression>)left.Value);
@@ -289,7 +290,7 @@ public sealed class VirtualMachine
 			elements.RemoveAt(indexToRemove);
 		}
 		return new Instance(left.ReturnType, elements);
-	}
+	} //ncrunch: no coverage end
 
 	private (Instance, Instance) GetOperands(BinaryStatement statement) =>
 		Memory.Registers.Count < 2

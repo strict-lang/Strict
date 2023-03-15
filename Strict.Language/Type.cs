@@ -10,7 +10,7 @@ namespace Strict.Language;
 /// Strict code only contains optionally implement, then has*, then methods*. No empty lines.
 /// There is no typical lexing/scoping/token splitting needed as Strict syntax is very strict.
 /// </summary>
-// ReSharper disable once ClassTooBig
+// ReSharper disable once ClassTooBig, TODO: still needs splitting up as of 2023-03-15
 public class Type : Context
 {
 	public Type(Package package, TypeLines file) : base(package, file.Name)
@@ -268,7 +268,8 @@ public class Type : Context
 
 	public sealed class CurrentTypeCannotBeInstantiatedAsMemberType : ParsingFailed
 	{
-		public CurrentTypeCannotBeInstantiatedAsMemberType(Type type, int lineNumber, string typeName) : base(type, lineNumber, typeName) { }
+		public CurrentTypeCannotBeInstantiatedAsMemberType(Type type, int lineNumber, string typeName)
+			: base(type, lineNumber, typeName) { }
 	}
 
 	private static string GetMemberType(SpanSplitEnumerator nameAndExpression)
@@ -282,7 +283,10 @@ public class Type : Context
 		return memberType;
 	}
 
-	private static bool HasConstraints(string wordAfterName, ref SpanSplitEnumerator nameAndExpression) => wordAfterName == Keyword.With || nameAndExpression.MoveNext() && nameAndExpression.Current.ToString() == Keyword.With;
+	private static bool
+		HasConstraints(string wordAfterName, ref SpanSplitEnumerator nameAndExpression) =>
+		wordAfterName == Keyword.With || nameAndExpression.MoveNext() &&
+		nameAndExpression.Current.ToString() == Keyword.With;
 
 	public sealed class MemberMissingConstraintExpression : ParsingFailed
 	{
@@ -356,7 +360,8 @@ public class Type : Context
 	public sealed class NoMethodsFound : ParsingFailed
 	{
 		public NoMethodsFound(Type type, int lineNumber) : base(type, lineNumber,
-			"Each type must have at least two members (datatypes and enums) or at least one method, otherwise it is useless") { }
+			"Each type must have at least two members (datatypes and enums) or at least one method, " +
+			"otherwise it is useless") { }
 	}
 
 	public Package Package => (Package)Parent;
@@ -372,7 +377,8 @@ public class Type : Context
 		var nonImplementedTraitMethods = trait.Methods.Where(traitMethod =>
 			traitMethod.Name != Method.From &&
 			methods.All(implementedMethod => traitMethod.Name != implementedMethod.Name)).ToList();
-		if (nonImplementedTraitMethods.Count > 0 && nonImplementedTraitMethods.Count != trait.Methods.Count(traitMethod => traitMethod.Name != Method.From))
+		if (nonImplementedTraitMethods.Count > 0 && nonImplementedTraitMethods.Count !=
+			trait.Methods.Count(traitMethod => traitMethod.Name != Method.From))
 			throw new MustImplementAllTraitMethodsOrNone(this, trait.Name, nonImplementedTraitMethods);
 	}
 
@@ -417,14 +423,16 @@ public class Type : Context
 	{
 		public NestingMoreThanFiveLevelsIsNotAllowed(Type type, int lineNumber) : base(type,
 			lineNumber,
-			$"Type {type.Name} has more than {Limit.NestingLevel} levels of nesting in line: {lineNumber + 1}") { }
+			$"Type {type.Name} has more than {Limit.NestingLevel} levels of nesting in line: " +
+			$"{lineNumber + 1}") { }
 	}
 
 	public sealed class CharacterCountMustBeWithinLimit : ParsingFailed
 	{
 		public CharacterCountMustBeWithinLimit(Type type, int lineLength, int lineNumber) :
 			base(type, lineNumber,
-				$"Type {type.Name} has character count {lineLength} in line: {lineNumber + 1} but limit is {Limit.CharacterCount}") { }
+				$"Type {type.Name} has character count {lineLength} in line: {lineNumber + 1} but limit is " +
+				$"{Limit.CharacterCount}") { }
 	}
 
 	public sealed class TypeHasNoMembersAndThusMustBeATraitWithoutMethodBodies : ParsingFailed
@@ -531,7 +539,8 @@ public class Type : Context
 	public GenericTypeImplementation GetGenericImplementation(Type singleImplementationType)
 	{
 		var key = Name + "(" + singleImplementationType.Name + ")";
-		return GetGenericImplementation(key) ?? CreateGenericImplementation(key, new[] { singleImplementationType });
+		return GetGenericImplementation(key) ??
+			CreateGenericImplementation(key, new[] { singleImplementationType });
 	}
 
 	private GenericTypeImplementation? GetGenericImplementation(string key)
@@ -602,8 +611,9 @@ public class Type : Context
 			if (method.Parameters.Count == 1 && arguments.Count > 0)
 			{
 				var parameter = method.Parameters[0];
-				if (IsParameterTypeList(parameter) && CanAutoParseArgumentsIntoList(arguments) && IsMethodParameterMatchingWithArgument(arguments,
-					(GenericTypeImplementation)parameter.Type))
+				if (IsParameterTypeList(parameter) && CanAutoParseArgumentsIntoList(arguments) &&
+					IsMethodParameterMatchingWithArgument(arguments,
+						(GenericTypeImplementation)parameter.Type))
 					return method;
 			}
 		}
@@ -641,7 +651,7 @@ public class Type : Context
 			if (methodParameterType.IsEnum && methodParameterType.Members[0].Type == argumentReturnType)
 				continue;
 			if (methodParameterType.Name == Base.Iterator && method.Type == argumentReturnType)
-				continue;
+				continue; //ncrunch: no coverage, TODO: missing test
 			if (methodParameterType.IsIterator != argumentReturnType.IsIterator && methodParameterType.Name != Base.Any)
 				return false;
 			if (methodParameterType.IsGeneric)
@@ -654,7 +664,11 @@ public class Type : Context
 		return true;
 	}
 
-	private static bool IsArgumentImplementationTypeMatchParameterType(Type argumentReturnType, Type methodParameterType) => argumentReturnType is GenericTypeImplementation argumentGenericType && argumentGenericType.ImplementationTypes.Any(t => t == methodParameterType);
+	private static bool
+		IsArgumentImplementationTypeMatchParameterType(Type argumentType, Type parameterType) =>
+		argumentType is GenericTypeImplementation argumentGenericType &&
+		argumentGenericType.ImplementationTypes.Any(t => t == parameterType);
+
 	/// <summary>
 	/// Any non public member is automatically iteratable if it has Iterator, for example Text.strict
 	/// or Error.strict have public members you have to iterate over yourself.
@@ -810,9 +824,11 @@ public class Type : Context
 	{
 		cachedAnyMethods ??= GetType(Base.Any).AvailableMethods;
 		if (cachedAnyMethods.Count == 0)
+			//ncrunch: no coverage start, TODO: looks like a strange hack, missing tests and probably not needed!
 		{
 			cachedAnyMethods = null;
 			return;
+			//ncrunch: no coverage end
 		}
 		foreach (var (methodName, anyMethods) in cachedAnyMethods)
 			AddAvailableMethods(methodName, anyMethods);
