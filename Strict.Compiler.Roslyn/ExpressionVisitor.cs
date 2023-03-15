@@ -40,14 +40,14 @@ public abstract class ExpressionVisitor
 		expression switch
 		{
 			Body => throw new UseVisitBody(expression),
-			For forExpression => Visit(forExpression),
+			For forExpression => Visit(forExpression), //ncrunch: no coverage, TODO: missing tests
 			ConstantDeclaration assignment => Visit(assignment),
 			Binary binary => Visit(binary),
 			Return returnExpression => Visit(returnExpression),
 			MethodCall call => Visit(call),
 			MemberCall member => Visit(member),
 			Value value => Visit(value),
-			ListCall => expression.ToString().Replace('(', '[').Replace(')', ']'),
+			ListCall => expression.ToString().Replace('(', '[').Replace(')', ']'), //ncrunch: no coverage, TODO: missing tests
 			_ => expression.ToString() //ncrunch: no coverage
 		};
 

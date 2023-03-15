@@ -141,6 +141,6 @@ public sealed class BinaryTests : TestExpressions
 	{
 		var expression = ParseExpression("(\"a\", \"b\") + \"5\"");
 		Assert.That(expression, Is.InstanceOf<Binary>()!);
-		Assert.That(((Binary)expression).ReturnType, Is.EqualTo(type.GetType(Base.Text.MakeItPlural())));
+		Assert.That(((Binary)expression).ReturnType, Is.EqualTo(type.GetType(Base.Text.Pluralize())));
 	}
 }

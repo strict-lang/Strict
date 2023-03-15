@@ -3,7 +3,7 @@ using Strict.Language.Expressions;
 
 namespace Strict.VirtualMachine;
 
-// ReSharper disable once ClassTooBig
+// ReSharper disable once ClassTooBig, TODO: split into multiple classes
 public sealed class ByteCodeGenerator
 {
 	private readonly Register[] registers = Enum.GetValues<Register>();
@@ -275,17 +275,18 @@ public sealed class ByteCodeGenerator
 		{
 			Binary binaryInstance => GenerateValueBinaryStatements(binaryInstance,
 				GetInstructionBasedOnBinaryOperationName(binaryInstance.Method.Name)),
-			MethodCall => InvokeAndGetStoredRegisterForConditional(condition),
+			MethodCall => InvokeAndGetStoredRegisterForConditional(condition), //ncrunch: no coverage, TODO: missing tests
 			_ => LoadVariableForIfConditionLeft(condition)
 		};
 
+	//ncrunch: no coverage start, TODO: missing tests
 	private Register InvokeAndGetStoredRegisterForConditional(Binary condition)
 	{
 		if (condition.Instance == null)
 			throw new InvalidOperationException(); //ncrunch: no coverage
 		GenerateStatementsFromExpression(condition.Instance);
 		return registry.PreviousRegister;
-	}
+	} //ncrunch: no coverage end
 
 	private Register LoadVariableForIfConditionLeft(Binary condition)
 	{

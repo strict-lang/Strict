@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Engines;
+using BenchmarkDotNet.Running;
 using NUnit.Framework;
 using Strict.Language.Expressions;
 
@@ -66,11 +67,31 @@ public class RepositoriesTests
 		await repositories.LoadStrictPackage();
 		await repositories.LoadStrictPackage("Math");
 		var examplesPackage = await repositories.LoadStrictPackage("Examples");
-		var program = new Type(examplesPackage, new TypeLines("ValidProgram", "has number", "Run Number", "\tnumber")).
-			ParseMembersAndMethods(parser);
+		var program =
+			new Type(examplesPackage,
+					new TypeLines("ValidProgram", "has number", "Run Number", "\tnumber")).
+				ParseMembersAndMethods(parser);
 		Assert.That(program.Methods[0].ReturnType.ToString(), Contains.Substring(Base.Number));
 		Assert.That(program.Members[0].Type.ToString(), Contains.Substring(Base.Number));
 	}
+
+	//ncrunch: no coverage start, TODO: fix!
+	[Ignore("Fix multiple variables in For expression first")]
+	[Test]
+	public async Task LoadStrictImageProcessingTypes()
+	{
+		var parser = new MethodExpressionParser();
+		var repositories = new Repositories(parser);
+		await repositories.LoadStrictPackage();
+		await repositories.LoadFromPath(
+			StrictDevelopmentFolder + ".Math");
+		var imageProcessingPackage =
+			await repositories.LoadFromPath(
+				StrictDevelopmentFolder + ".ImageProcessing");
+		var adjustBrightness = imageProcessingPackage.GetType("AdjustBrightness");
+		Assert.That(adjustBrightness, Is.Not.Null);
+		Assert.That(adjustBrightness.Methods[0].GetBodyAndParseIfNeeded(), Is.Not.Null);
+	} //ncrunch: no coverage end
 
 	[Test]
 	public async Task CheckGenericTypesAreLoadedCorrectlyAfterSorting()
@@ -205,5 +226,9 @@ public class RepositoriesTests
 		for (var iteration = 0; iteration < 100; iteration++)
 			await repos.LoadStrictPackage();
 		//MemoryProfiler.GetSnapshot(nameof(LoadStrictBaseTypesTenTimes) + "10");
-	} //ncrunch: no coverage end
+	}
+
+	[Test]
+	[Category("Manual")]
+	public void BenchmarkIsOperator() => BenchmarkRunner.Run<BinaryOperatorTests>();
 }

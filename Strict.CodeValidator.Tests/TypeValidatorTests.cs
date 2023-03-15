@@ -25,12 +25,12 @@ public sealed class TypeValidatorTests
 				ParseTypeMethods(CreateType(nameof(ValidateUnusedMember),
 					new[]
 					{
-						"has unused Number",
-						"Run(methodInput Number)",
-						"\tconstant result = 5 + methodInput",
-						"\tresult"
+						"has unused Number", "Run(methodInput Number)",
+						"\tconstant result = 5 + methodInput", "\tresult"
 					}))
-			}).Validate(), Throws.InstanceOf<MemberValidator.UnusedMemberMustBeRemoved>()!.With.Message.Contains("unused")!);
+			}).Validate(),
+			Throws.InstanceOf<MemberValidator.UnusedMemberMustBeRemoved>()!.With.Message.
+				Contains("unused")!);
 
 	private static Type ParseTypeMethods(Type type)
 	{
@@ -57,4 +57,68 @@ public sealed class TypeValidatorTests
 						"\tresult"
 					}))
 			}).Validate());
+
+	[Test]
+	public void ValidateTypeHasTooManyDependenciesFromMethod() =>
+		Assert.That(() => new TypeValidator(new[]
+			{
+				ParseTypeMethods(CreateType(nameof(ValidateTypeHasTooManyDependenciesFromMethod), new[]
+				{
+						// @formatter:off
+						"has number",
+						"from(number, text, boolean, input Text)",
+						"\tvalue",
+						"Run(methodInput Number)",
+						"\tif boolean",
+						"\t\treturn text + input + number + methodInput + character",
+						"\t0"
+					// @formatter:on
+				}))
+			}).Validate(),
+			Throws.InstanceOf<Method.MethodParameterCountMustNotExceedThree>()!.With.Message.Contains(
+				"Type TestPackage.ValidateTypeHasTooManyDependenciesFromMethod constructor method has " +
+				"parameters count 4 but limit is 3"));
+
+	[Test]
+	public void VariableHidesMemberUseDifferentName() =>
+		Assert.That(() => new TypeValidator(new[]
+			{
+				ParseTypeMethods(CreateType(nameof(VariableHidesMemberUseDifferentName), new[]
+				{
+						// @formatter:off
+						"has input Number",
+						"FirstMethod(methodInput Number) Number",
+						"\tconstant something = 5",
+						"\tmethodInput + something",
+						"SecondMethod(methodInput Number) Number",
+						"\tconstant second = 5",
+						"\tmethodInput + second",
+						"Run(methodInput Number)",
+						"\tconstant input = 5",
+						"\tmethodInput + input"
+					// @formatter:on
+				}))
+			}).Validate(),
+			Throws.InstanceOf<MethodValidator.VariableHidesMemberUseDifferentName>()!.With.Message.
+				Contains("Method name Run, Variable name input"));
+
+	[Test]
+	public void ParameterHidesMemberUseDifferentName() =>
+		Assert.That(() => new TypeValidator(new[]
+			{
+				ParseTypeMethods(CreateType(nameof(VariableHidesMemberUseDifferentName), new[]
+				{
+						// @formatter:off
+						"has input Number",
+						"FirstMethod(input Number) Number",
+						"\tconstant something = 5",
+						"\tinput + something",
+						"SecondMethod(methodInput Number) Number",
+						"\tconstant second = 5",
+						"\tmethodInput + second"
+					// @formatter:on
+				}))
+			}).Validate(),
+			Throws.InstanceOf<MethodValidator.ParameterHidesMemberUseDifferentName>()!.With.Message.
+				Contains("Method name FirstMethod, Parameter name input"));
 }

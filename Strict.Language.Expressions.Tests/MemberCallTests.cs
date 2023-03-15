@@ -66,8 +66,9 @@ public sealed class MemberCallTests : TestExpressions
 	[Test]
 	public void NameMustBeAWordWithoutAnySpecialCharacterOrNumber() =>
 		Assert.That(
-			() => new Type(type.Package, new TypeLines(nameof(NameMustBeAWordWithoutAnySpecialCharacterOrNumber), "has input1$ = Text(5)")).
-				ParseMembersAndMethods(parser),
+			() => new Type(type.Package,
+				new TypeLines(nameof(NameMustBeAWordWithoutAnySpecialCharacterOrNumber),
+					"has input1$ = Text(5)")).ParseMembersAndMethods(parser),
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.
 				InstanceOf<Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers>());
 
@@ -144,12 +145,14 @@ public sealed class MemberCallTests : TestExpressions
 
 	[Test]
 	public void MemberCallUsingAnotherMemberIsForbidden() =>
-		Assert.That(() => new Type(type.Package,
-			new TypeLines(nameof(MemberCallUsingAnotherMemberIsForbidden),
-				"has file = File(\"test.txt\")",
-				"has fileDescription = file.Length > 1000 ? \"big file\" else \"small file\"",
-				"Run",
-				"\tconstant a = 5")).ParseMembersAndMethods(parser), Throws.InstanceOf<CannotAccessMemberBeforeTypeIsParsed>());
+		Assert.That(
+			() => new Type(type.Package,
+				new TypeLines(nameof(MemberCallUsingAnotherMemberIsForbidden),
+					"has file = File(\"test.txt\")",
+					"has fileDescription = file.Length > 1000 ? \"big file\" else \"small file\"",
+					"Run",
+					"\tconstant a = 5")).ParseMembersAndMethods(parser),
+			Throws.InstanceOf<CannotAccessMemberBeforeTypeIsParsed>());
 
 	[Test]
 	public void BaseTypeMemberCallInDerivedType()
@@ -166,12 +169,13 @@ public sealed class MemberCallTests : TestExpressions
 
 	[Test]
 	public void DuplicateMembersAreNotAllowed() =>
-		Assert.That(() => new Type(type.Package,
-			new TypeLines(nameof(DuplicateMembersAreNotAllowed),
-				"has something Number",
-				"has something Number",
-				"Run",
-				"\tconstant a = 5")).ParseMembersAndMethods(parser),
+		Assert.That(
+			() => new Type(type.Package,
+				new TypeLines(nameof(DuplicateMembersAreNotAllowed),
+					"has something Number",
+					"has something Number",
+					"Run",
+					"\tconstant a = 5")).ParseMembersAndMethods(parser),
 			Throws.InstanceOf<Type.DuplicateMembersAreNotAllowed>());
 
 	[Test]
@@ -189,30 +193,37 @@ public sealed class MemberCallTests : TestExpressions
 
 	[Test]
 	public void MemberNameWithDifferentTypeNamesThanOwnNotAllowed() =>
-		Assert.That(() => new Type(type.Package,
-			new TypeLines(nameof(MemberNameWithDifferentTypeNamesThanOwnNotAllowed),
-				"has numbers Boolean",
-				"Run",
-				"\t5")).ParseMembersAndMethods(parser),
-			Throws.InstanceOf<Member.MemberNameWithDifferentTypeNamesThanOwnAreNotAllowed>()
-			.With.Message.Contains("numbers"));
+		Assert.That(
+			() => new Type(type.Package,
+				new TypeLines(nameof(MemberNameWithDifferentTypeNamesThanOwnNotAllowed),
+					"has numbers Boolean",
+					"Run",
+					"\t5")).ParseMembersAndMethods(parser),
+			Throws.InstanceOf<Member.MemberNameWithDifferentTypeNamesThanOwnAreNotAllowed>().With.
+				Message.Contains("numbers"));
 
 	[Test]
 	public void VariableNameCannotHaveDifferentTypeNameThanValue() =>
-		Assert.That(() => new Type(type.Package,
-			new TypeLines(nameof(VariableNameCannotHaveDifferentTypeNameThanValue),
-				"has text",
-				"Run",
-				"\tconstant numbers = \"5\"")).ParseMembersAndMethods(parser).Methods[0].GetBodyAndParseIfNeeded(),
-			Throws.InstanceOf<Body.VariableNameCannotHaveDifferentTypeNameThanValue>()
-			.With.Message.Contains("Variable name numbers denotes different type than its value type Text. Prefer using a different name"));
+		Assert.That(
+			() => new Type(type.Package,
+					new TypeLines(nameof(VariableNameCannotHaveDifferentTypeNameThanValue),
+						"has text",
+						"Run",
+						"\tconstant numbers = \"5\"")).ParseMembersAndMethods(parser).Methods[0].
+				GetBodyAndParseIfNeeded(),
+			Throws.InstanceOf<Body.VariableNameCannotHaveDifferentTypeNameThanValue>().With.Message.
+				Contains("Variable name numbers denotes different type than its value type Text. " +
+					"Prefer using a different name"));
 
 	[Test]
 	public void CannotAccessMemberInSameTypeBeforeTypeIsParsed() =>
-		Assert.That(() => new Type(type.Package,
-			new TypeLines(nameof(CannotAccessMemberInSameTypeBeforeTypeIsParsed),
-				"has Range",
-				"has something = Range(0, 13)",
-				"Run",
-				"\tconstant a = 5")).ParseMembersAndMethods(parser), Throws.InstanceOf<CannotAccessMemberBeforeTypeIsParsed>());
+		Assert.That(
+			() => new Type(type.Package,
+					new TypeLines(nameof(CannotAccessMemberInSameTypeBeforeTypeIsParsed),
+						"has Range",
+						"has something = Range(0, 13)",
+						"Run",
+						"\tconstant a = 5")).
+				ParseMembersAndMethods(parser),
+			Throws.InstanceOf<CannotAccessMemberBeforeTypeIsParsed>());
 }

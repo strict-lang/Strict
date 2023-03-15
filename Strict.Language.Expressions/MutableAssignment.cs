@@ -23,7 +23,7 @@ public sealed class MutableAssignment : ConcreteExpression
 
 	private static Expression TryParseReassignment(Body body, ReadOnlySpan<char> line)
 	{
-		var parts = line.Split();
+		var parts = line.Split('=', StringSplitOptions.TrimEntries);
 		parts.MoveNext();
 		var expression = body.Method.ParseExpression(body, parts.Current);
 		var newExpression = body.Method.ParseExpression(body, line[(parts.Current.Length + 3)..]);
@@ -51,6 +51,12 @@ public sealed class MutableAssignment : ConcreteExpression
 		{
 			parameterCall.Parameter.UpdateValue(newExpression, body);
 			return parameterCall;
+		}
+		case ListCall listCall:
+		{
+			if (listCall.List is VariableCall { CurrentValue: List listExpression })
+				listExpression.UpdateValue(body, listCall.Index, newExpression);
+			return listCall;
 		}
 		default:
 			throw new InvalidAssignmentTarget(body, expression.ToString()); //ncrunch: no coverage

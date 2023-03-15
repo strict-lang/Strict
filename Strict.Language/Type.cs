@@ -10,7 +10,7 @@ namespace Strict.Language;
 /// Strict code only contains optionally implement, then has*, then methods*. No empty lines.
 /// There is no typical lexing/scoping/token splitting needed as Strict syntax is very strict.
 /// </summary>
-// ReSharper disable once ClassTooBig
+// ReSharper disable once ClassTooBig, TODO: still needs splitting up as of 2023-03-15
 public class Type : Context
 {
 	public Type(Package package, TypeLines file) : base(package, file.Name)
@@ -47,10 +47,19 @@ public class Type : Context
 	private bool OneOfFirstThreeLinesContainsGeneric()
 	{
 		for (var line = 0; line < lines.Length && line < 3; line++)
+		{
 			if (HasGenericMember(lines[line]))
 				return true;
+			if (HasGenericMethodHeader(lines[line]) && line + 1 < lines.Length &&
+				!lines[line + 1].StartsWith('\t'))
+				return true;
+		}
 		return false;
 	}
+
+	private static bool HasGenericMethodHeader(string line) =>
+		line.Contains(Base.Generic, StringComparison.Ordinal) ||
+		line.Contains(Base.GenericLowercase, StringComparison.Ordinal);
 
 	private static bool HasGenericMember(string line) =>
 		(line.StartsWith(HasWithSpaceAtEnd, StringComparison.Ordinal) ||
@@ -259,7 +268,8 @@ public class Type : Context
 
 	public sealed class CurrentTypeCannotBeInstantiatedAsMemberType : ParsingFailed
 	{
-		public CurrentTypeCannotBeInstantiatedAsMemberType(Type type, int lineNumber, string typeName) : base(type, lineNumber, typeName) { }
+		public CurrentTypeCannotBeInstantiatedAsMemberType(Type type, int lineNumber, string typeName)
+			: base(type, lineNumber, typeName) { }
 	}
 
 	private static string GetMemberType(SpanSplitEnumerator nameAndExpression)
@@ -273,7 +283,10 @@ public class Type : Context
 		return memberType;
 	}
 
-	private static bool HasConstraints(string wordAfterName, ref SpanSplitEnumerator nameAndExpression) => wordAfterName == Keyword.With || nameAndExpression.MoveNext() && nameAndExpression.Current.ToString() == Keyword.With;
+	private static bool
+		HasConstraints(string wordAfterName, ref SpanSplitEnumerator nameAndExpression) =>
+		wordAfterName == Keyword.With || nameAndExpression.MoveNext() &&
+		nameAndExpression.Current.ToString() == Keyword.With;
 
 	public sealed class MemberMissingConstraintExpression : ParsingFailed
 	{
@@ -347,7 +360,8 @@ public class Type : Context
 	public sealed class NoMethodsFound : ParsingFailed
 	{
 		public NoMethodsFound(Type type, int lineNumber) : base(type, lineNumber,
-			"Each type must have at least two members (datatypes and enums) or at least one method, otherwise it is useless") { }
+			"Each type must have at least two members (datatypes and enums) or at least one method, " +
+			"otherwise it is useless") { }
 	}
 
 	public Package Package => (Package)Parent;
@@ -363,7 +377,8 @@ public class Type : Context
 		var nonImplementedTraitMethods = trait.Methods.Where(traitMethod =>
 			traitMethod.Name != Method.From &&
 			methods.All(implementedMethod => traitMethod.Name != implementedMethod.Name)).ToList();
-		if (nonImplementedTraitMethods.Count > 0 && nonImplementedTraitMethods.Count != trait.Methods.Count(traitMethod => traitMethod.Name != Method.From))
+		if (nonImplementedTraitMethods.Count > 0 && nonImplementedTraitMethods.Count !=
+			trait.Methods.Count(traitMethod => traitMethod.Name != Method.From))
 			throw new MustImplementAllTraitMethodsOrNone(this, trait.Name, nonImplementedTraitMethods);
 	}
 
@@ -408,14 +423,16 @@ public class Type : Context
 	{
 		public NestingMoreThanFiveLevelsIsNotAllowed(Type type, int lineNumber) : base(type,
 			lineNumber,
-			$"Type {type.Name} has more than {Limit.NestingLevel} levels of nesting in line: {lineNumber + 1}") { }
+			$"Type {type.Name} has more than {Limit.NestingLevel} levels of nesting in line: " +
+			$"{lineNumber + 1}") { }
 	}
 
 	public sealed class CharacterCountMustBeWithinLimit : ParsingFailed
 	{
 		public CharacterCountMustBeWithinLimit(Type type, int lineLength, int lineNumber) :
 			base(type, lineNumber,
-				$"Type {type.Name} has character count {lineLength} in line: {lineNumber + 1} but limit is {Limit.CharacterCount}") { }
+				$"Type {type.Name} has character count {lineLength} in line: {lineNumber + 1} but limit is " +
+				$"{Limit.CharacterCount}") { }
 	}
 
 	public sealed class TypeHasNoMembersAndThusMustBeATraitWithoutMethodBodies : ParsingFailed
@@ -522,7 +539,8 @@ public class Type : Context
 	public GenericTypeImplementation GetGenericImplementation(Type singleImplementationType)
 	{
 		var key = Name + "(" + singleImplementationType.Name + ")";
-		return GetGenericImplementation(key) ?? CreateGenericImplementation(key, new[] { singleImplementationType });
+		return GetGenericImplementation(key) ??
+			CreateGenericImplementation(key, new[] { singleImplementationType });
 	}
 
 	private GenericTypeImplementation? GetGenericImplementation(string key)
@@ -540,7 +558,7 @@ public class Type : Context
 	private GenericTypeImplementation CreateGenericImplementation(string key, IReadOnlyList<Type> implementationTypes)
 	{
 		if (Name != Base.List && Members.Count(m => m.Type.IsGeneric) != implementationTypes.Count &&
-			!HasMatchingConstructor(implementationTypes))
+			!HasMatchingConstructor(implementationTypes) && Name != Base.Iterator) //TODO: Temporary workaround to make Iterator work without generic member
 			throw new TypeArgumentsCountDoesNotMatchGenericType(this, implementationTypes);
 		var genericType = new GenericTypeImplementation(this, implementationTypes);
 		cachedGenericTypes!.Add(key, genericType);
@@ -593,8 +611,9 @@ public class Type : Context
 			if (method.Parameters.Count == 1 && arguments.Count > 0)
 			{
 				var parameter = method.Parameters[0];
-				if (IsParameterTypeList(parameter) && CanAutoParseArgumentsIntoList(arguments) && IsMethodParameterMatchingWithArgument(arguments,
-					(GenericTypeImplementation)parameter.Type))
+				if (IsParameterTypeList(parameter) && CanAutoParseArgumentsIntoList(arguments) &&
+					IsMethodParameterMatchingWithArgument(arguments,
+						(GenericTypeImplementation)parameter.Type))
 					return method;
 			}
 		}
@@ -631,6 +650,8 @@ public class Type : Context
 				continue;
 			if (methodParameterType.IsEnum && methodParameterType.Members[0].Type == argumentReturnType)
 				continue;
+			if (methodParameterType.Name == Base.Iterator && method.Type == argumentReturnType)
+				continue; //ncrunch: no coverage, TODO: missing test
 			if (methodParameterType.IsIterator != argumentReturnType.IsIterator && methodParameterType.Name != Base.Any)
 				return false;
 			if (methodParameterType.IsGeneric)
@@ -643,7 +664,11 @@ public class Type : Context
 		return true;
 	}
 
-	private static bool IsArgumentImplementationTypeMatchParameterType(Type argumentReturnType, Type methodParameterType) => argumentReturnType is GenericTypeImplementation argumentGenericType && argumentGenericType.ImplementationTypes.Any(t => t == methodParameterType);
+	private static bool
+		IsArgumentImplementationTypeMatchParameterType(Type argumentType, Type parameterType) =>
+		argumentType is GenericTypeImplementation argumentGenericType &&
+		argumentGenericType.ImplementationTypes.Any(t => t == parameterType);
+
 	/// <summary>
 	/// Any non public member is automatically iteratable if it has Iterator, for example Text.strict
 	/// or Error.strict have public members you have to iterate over yourself.
@@ -697,9 +722,8 @@ public class Type : Context
 	private Method BuildMethod(string fromMethod, ExpressionParser parser) => new(this, 0, parser, new[] { fromMethod });
 
 	public bool IsCompatible(Type sameOrBaseType) =>
-		this == sameOrBaseType ||
-		HasAnyCompatibleMember(sameOrBaseType) ||
-		CanUpCast(sameOrBaseType);
+		this == sameOrBaseType || HasAnyCompatibleMember(sameOrBaseType) ||
+		CanUpCast(sameOrBaseType) || sameOrBaseType.IsMutableAndHasMatchingImplementation(this);
 
 	private bool HasAnyCompatibleMember(Type sameOrBaseType) =>
 		members.Any(member =>
@@ -709,6 +733,11 @@ public class Type : Context
 	private bool CanUpCast(Type sameOrBaseType) =>
 		sameOrBaseType.Name == Base.Text && Name == Base.Number || sameOrBaseType.IsIterator &&
 		members.Any(member => member.Type == GetType(Base.Number));
+
+	private bool IsMutableAndHasMatchingImplementation(Type argumentType) =>
+		this is GenericTypeImplementation genericTypeImplementation &&
+		genericTypeImplementation.Generic.Name == Base.Mutable &&
+		genericTypeImplementation.ImplementationTypes[0] == argumentType;
 
 	/// <summary>
 	/// When two types are using in a conditional expression, i.e. then and else return types and both
@@ -744,7 +773,7 @@ public class Type : Context
 	{
 		get
 		{
-			if (cachedAvailableMethods != null)
+			if (cachedAvailableMethods is { Count: > 0 })
 				return cachedAvailableMethods;
 			cachedAvailableMethods = new Dictionary<string, List<Method>>(StringComparer.Ordinal);
 			foreach (var method in methods)
@@ -794,6 +823,13 @@ public class Type : Context
 	private void AddAnyMethods()
 	{
 		cachedAnyMethods ??= GetType(Base.Any).AvailableMethods;
+		if (cachedAnyMethods.Count == 0)
+			//ncrunch: no coverage start, TODO: looks like a strange hack, missing tests and probably not needed!
+		{
+			cachedAnyMethods = null;
+			return;
+			//ncrunch: no coverage end
+		}
 		foreach (var (methodName, anyMethods) in cachedAnyMethods)
 			AddAvailableMethods(methodName, anyMethods);
 	}

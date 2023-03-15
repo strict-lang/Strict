@@ -415,7 +415,7 @@ public sealed class TypeTests
 	{
 		var range = package.GetType(Base.Range);
 		Assert.That(range.AvailableMethods.Values.Select(methods => methods.Count).Sum(),
-			Is.EqualTo(7));
+			Is.EqualTo(11));
 	}
 
 	[Test]
@@ -423,7 +423,7 @@ public sealed class TypeTests
 	{
 		var text = package.GetType(Base.Text + "s");
 		Assert.That(text.AvailableMethods.Values.Select(methods => methods.Count).Sum(),
-			Is.EqualTo(52));
+			Is.EqualTo(48));
 	}
 
 	[Test]
@@ -583,15 +583,6 @@ public sealed class TypeTests
 				"has input = Range(5, 10)", "Unused", "\t1"),
 			Throws.InstanceOf<MethodExpressionParser.CannotAccessMemberBeforeTypeIsParsed>()!);
 
-	[Category("Manual")]
-	[Test]
-	public void CheckGetTypeCache()
-	{
-		var cachedType = CreateType("CachedType", "Run");
-		for (var count = 0; count < 5; count++)
-			Assert.That(package.GetType("CachedType"), Is.EqualTo(cachedType));
-	}
-
 	[Test]
 	public void InitializeInnerTypeMemberUsingOuterTypeConstructor()
 	{
@@ -604,5 +595,15 @@ public sealed class TypeTests
 			"\tinput");
 		superThingUser.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(superThingUser.Members[0].Type, Is.EqualTo(thing.GetType(Base.Character)));
+	}
+
+	//ncrunch: no coverage start
+	[Test]
+	[Category("Slow")]
+	public void CheckGetTypeCache()
+	{
+		var cachedType = CreateType("CachedType", "Run");
+		for (var count = 0; count < 5; count++)
+			Assert.That(package.GetType("CachedType"), Is.EqualTo(cachedType));
 	}
 }

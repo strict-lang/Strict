@@ -113,8 +113,14 @@ public class MethodExpressionParser : ExpressionParser
 				throw new InvalidOperatorHere(body, input[methodRange].ToString())
 				: input[argumentsRange].Equals(UnaryOperator.Not, StringComparison.Ordinal)
 					? Not.Parse(body, input, methodRange)
-					: throw new InvalidOperatorHere(body, input[methodRange].ToString());
+					: input[0].IsSingleCharacterOperator() && IsContextInForExpression(body)
+						? ParseExpression(body, input[2..])
+						: throw new InvalidOperatorHere(body, input[methodRange].ToString());
 	}
+
+	private static bool IsContextInForExpression(Body body) =>
+		body.Parent != null && body.Parent.GetLine(body.LineRange.Start.Value - 1).TrimStart().
+			StartsWith(Keyword.For, StringComparison.Ordinal);
 
 	/// <summary>
 	/// By far the most common usecase, we call something from another instance, use some binary

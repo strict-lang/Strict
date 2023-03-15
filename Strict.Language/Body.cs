@@ -29,7 +29,7 @@ public sealed class Body : Expression
 
 	public Method Method { get; private set; }
 	public int Tabs { get; }
-	private Body? Parent { get; }
+	public Body? Parent { get; private set; }
 	public readonly List<Body> children = new();
 	public Range LineRange { get; internal set; }
 	public int ParsingLineNumber { get; set; }
@@ -45,7 +45,7 @@ public sealed class Body : Expression
 	/// </summary>
 	public Expression Parse()
 	{
-		//https://deltaengine.fogbugz.com/f/cases/25714/
+		//TODO: still has to be done! tests are STILL NOT ENFORCED as required by the language specification! https://deltaengine.fogbugz.com/f/cases/25714/
 		var expressions = new List<Expression>();
 		for (ParsingLineNumber = LineRange.Start.Value; ParsingLineNumber < LineRange.End.Value;
 			ParsingLineNumber++)
@@ -56,7 +56,7 @@ public sealed class Body : Expression
 			: this;
 	}
 
-	internal Body SetExpressions(IReadOnlyList<Expression> expressions)
+	public Body SetExpressions(IReadOnlyList<Expression> expressions)
 	{
 		Expressions = expressions;
 		if (Expressions.Count == 0)
@@ -147,7 +147,7 @@ public sealed class Body : Expression
 		var variable = variableScopeBody?.FindVariableValue(name) ??
 			throw new IdentifierNotFound(this, name);
 		if (!variable.IsMutable)
-			throw new ValueIsNotMutableAndCannotBeChanged(this, name);
+			throw new ValueIsNotMutableAndCannotBeChanged(this, name); //ncrunch: no coverage, TODO: missing tests
 		if (variableScopeBody.Variables != null)
 			variableScopeBody.Variables[name] = value;
 	}
@@ -188,7 +188,7 @@ public sealed class Body : Expression
 
 	public Body? FindCurrentChild()
 	{
-		// ReSharper disable once ForCanBeConvertedToForeach
+		// ReSharper disable once ForCanBeConvertedToForeach, don't do as performance is better this way
 		for (var index = 0; index < children.Count; index++)
 		{
 			var child = children[index];
@@ -207,5 +207,17 @@ public sealed class Body : Expression
 		Method = implementationMethod;
 		foreach (var child in children)
 			child.UpdateCurrentAndChildrenMethod(implementationMethod);
+	}
+
+	public Body GetInnerBodyAndUpdateHierarchy(int currentLineNumber, Body child)
+	{
+		var innerForBody = new Body(Method, Tabs, this)
+		{
+			LineRange = new Range(currentLineNumber + 1, child.LineRange.End)
+		};
+		innerForBody.children.Add(child);
+		child.Parent = innerForBody;
+		children.Remove(child);
+		return innerForBody;
 	}
 }

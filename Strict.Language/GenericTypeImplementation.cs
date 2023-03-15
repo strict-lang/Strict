@@ -12,7 +12,7 @@ public sealed class GenericTypeImplementation : Type
 		ImplementationTypes = implementationTypes;
 		var implementationTypeIndex = 0;
 		foreach (var member in Generic.Members)
-			members.Add(member.Type.IsGeneric
+			members.Add(member.Type.IsGeneric && member.Type.Name != Base.Iterator
 				? member.CloneWithImplementation(member.Type.Name == Base.List
 					? this
 					: implementationTypes[implementationTypeIndex++])
@@ -24,8 +24,8 @@ public sealed class GenericTypeImplementation : Type
 	}
 
 	private static string GetTypeName(Type generic, IReadOnlyList<Type> implementationTypes) =>
-		generic.Name == Base.List
-			? implementationTypes[0].Name.MakeItPlural()
+		generic.Name == Base.List && !implementationTypes[0].Name.EndsWith(')')
+			? implementationTypes[0].Name.Pluralize()
 			: generic.Name + implementationTypes.ToBrackets();
 
 	public Type Generic { get; }

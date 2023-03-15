@@ -45,7 +45,7 @@ public sealed class ForTests : TestExpressions
 	[TestCase("for element in gibberish", "\tlog.Write(element)")]
 	public void UnidentifiedIterable(params string[] lines) =>
 		Assert.That(() => ParseExpression(lines),
-			Throws.InstanceOf<For.UnidentifiedIterable>());
+			Throws.InstanceOf<Body.IdentifierNotFound>());
 
 	[Test]
 	public void DuplicateImplicitIndexInNestedFor() =>
@@ -201,5 +201,70 @@ public sealed class ForTests : TestExpressions
 		var parsedExpression = (Body)programType.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(parsedExpression.Expressions[1], Is.TypeOf(typeof(For)));
 		Assert.That(((For)parsedExpression.Expressions[1]).Value.ToString(), Is.EqualTo("name"));
+	}
+
+	[Test]
+	public void AllowNestedForWithSameIndentation() =>
+		Assert.That(
+			((For)ParseExpression(
+				"for firstIndex in Range(1, 10)",
+				"for secondIndex in Range(1, 10)",
+				"\tlog.Write(firstIndex)",
+				"\tlog.Write(secondIndex)")).ToString(),
+			Is.EqualTo(
+				"for firstIndex in Range(1, 10)\n\tfor secondIndex in Range(1, 10)\n\tlog.Write(firstIndex)\r\nlog.Write(secondIndex)"));
+
+	[Test]
+	public void MissingBodyInNestedFor() =>
+		Assert.That(() => ParseExpression(
+				"for Range(2, 5)",
+				"for index in Range(1, 10)"),
+			Throws.InstanceOf<For.MissingInnerBody>()!);
+
+	[TestCase(
+		"WithParameter", "element in (1, 2, 3, 4)",
+		"has log",
+		"LogError Number",
+		"\tfor element in (1, 2, 3, 4)",
+		"\t\tlog.Write(element)")]
+	[TestCase(
+		"WithList", "element in elements",
+		"has log",
+		"LogError(elements Numbers) Number",
+		"\tfor element in elements",
+		"\t\tlog.Write(element)")]
+	[TestCase(
+		"WithListTexts", "element in texts",
+		"has log",
+		"LogError(texts) Number",
+		"\tfor element in texts",
+		"\t\tlog.Write(element)")]
+	public void AllowCustomVariablesInFor(string testName, string expected, params string[] code)
+	{
+		var programType =
+			new Type(type.Package, new TypeLines(nameof(AllowCustomVariablesInFor) + testName, code)).
+				ParseMembersAndMethods(new MethodExpressionParser());
+		var parsedExpression = (For)programType.Methods[0].GetBodyAndParseIfNeeded();
+		Assert.That(parsedExpression.Value.ToString(), Is.EqualTo(expected));
+	}
+
+	[TestCase(
+				// @formatter:off
+				"WithNumbers",
+				"has log",
+				"LogError(numbers) Number",
+				"\tfor row, column in numbers",
+				"\t\tlog.Write(column)")]
+		[TestCase(
+			"WithTexts",
+				"has log",
+				"LogError(texts) Number",
+				"\tfor row, column in texts",
+				"\t\tlog.Write(column)")]
+	public void ParseForExpressionWithMultipleVariables(string testName, params string[] code)
+	{
+		var programType = new Type(type.Package, new TypeLines(nameof(ParseForExpressionWithMultipleVariables) + testName, code
+				)).ParseMembersAndMethods(new MethodExpressionParser());
+		Assert.That(programType.Methods[0].GetBodyAndParseIfNeeded(), Is.InstanceOf<For>());
 	}
 }

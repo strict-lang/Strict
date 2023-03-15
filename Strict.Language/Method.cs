@@ -88,9 +88,9 @@ public sealed class Method : Context
 		var gotBrackets = closingBracketIndex > 0;
 		return gotBrackets && rest.Length == 2
 			? throw new EmptyParametersMustBeRemoved(this)
-			: rest[0] != '(' == gotBrackets || rest.Length < 2
+			: rest.Length < 2
 				? throw new InvalidMethodParameters(this, rest.ToString())
-				: rest[0] == ' ' && !gotBrackets
+				: rest[0] == ' '
 					? type.GetType(rest[1..].ToString())
 					: closingBracketIndex + 2 < rest.Length
 						? Type.GetType(rest[(closingBracketIndex + 2)..].ToString())
@@ -123,7 +123,7 @@ public sealed class Method : Context
 		var closingBracketIndex = rest.LastIndexOf(')');
 		var lastOpeningBracketIndex = rest.LastIndexOf('(');
 		// If the type contains brackets, exclude it from the rest for proper parameter parsing
-		if (lastOpeningBracketIndex > 2 && rest.IndexOf(DoubleOpenBrackets) < 0)
+		if (lastOpeningBracketIndex > 2 && rest.IndexOf(DoubleOpenBrackets) < 0 && rest.IndexOf(DoubleCloseBrackets) < 0)
 		{
 			var lastSpaceIndex = rest.LastIndexOf(' ');
 			if (lastSpaceIndex > 0)
@@ -203,7 +203,12 @@ public sealed class Method : Context
 
 	public sealed class MethodParameterCountMustNotExceedThree : ParsingFailed
 	{
-		public MethodParameterCountMustNotExceedThree(Method method, int lineNumber) : base(method.Type, lineNumber, $"Method {method.Name} has parameters count {method.Parameters.Count} but limit is {Limit.ParameterCount}") { }
+		public MethodParameterCountMustNotExceedThree(Method method, int lineNumber) : base(method.Type, lineNumber, $"{GetMethodName(method)} has parameters count {method.Parameters.Count} but limit is {Limit.ParameterCount}") { }
+
+		private static string GetMethodName(Method method) =>
+			method.Name == From
+				? "Type " + method.Type.FullName + " constructor method"
+				: "Method " + method.Name;
 	}
 
 	public sealed class InvalidMethodParameters : ParsingFailed
@@ -347,7 +352,7 @@ public sealed class Method : Context
 		GenericTypeImplementation typeWithImplementation, int index) =>
 		type.Name == Base.Generic
 			? typeWithImplementation.ImplementationTypes[index] //Number
-			: type.IsGeneric || type.Name == Base.List
+			: (type.IsGeneric || type.Name == Base.List) && type.Name != Base.Iterator
 				? typeWithImplementation //ListNumber
 				: type;
 
@@ -362,7 +367,11 @@ public sealed class Method : Context
 
 	public int GetParameterUsageCount(string parameterName) =>
 		lines.Count(l => l.Contains(" " + parameterName) || l.Contains("(" + parameterName) ||
-			l.Contains(parameterName + " "));
+			l.Contains(parameterName + " ") || l.Contains("\t" + parameterName));
+
+	public int GetVariableUsageCount(string variableName) =>
+		lines.Count(l => l.Contains(" " + variableName) || l.Contains("(" + variableName) ||
+			l.Contains("\t" + variableName));
 }
 
 public sealed class RecursiveCallCausesStackOverflow : ParsingFailed

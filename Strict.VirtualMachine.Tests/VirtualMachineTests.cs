@@ -112,8 +112,7 @@ public sealed class VirtualMachineTests : BaseVirtualMachineTests
 			yield return new TestCaseData("CallWithoutArguments", "CallWithoutArguments(2, 5).GetSum", MethodCallWithLocalWithNoArguments, 542);
 			yield return new TestCaseData("CurrentlyFailing", "CurrentlyFailing(10).SumEvenNumbers", CurrentlyFailingTest, 20);
 		}
-	}
-	//ncrunch: no coverage end
+	} //ncrunch: no coverage end
 
 	[TestCaseSource(nameof(MethodCallTests))]
 	// ReSharper disable once TooManyArguments
@@ -220,7 +219,7 @@ public sealed class VirtualMachineTests : BaseVirtualMachineTests
 		var values = (List<Expression>)vm.Execute(statements).Returns?.Value!;
 		var elements = values.Aggregate("", (current, value) => current + ((Value)value).Data + " ");
 		Assert.That(elements.Trim(), Is.EqualTo(expectedResult));
-	}
+	} //ncrunch: no coverage end
 
 	[TestCase("TestContains((\"s\", \"b\", \"s\")).Contains(\"b\")", "True", "TestContains",
 		new[]

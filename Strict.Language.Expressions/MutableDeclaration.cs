@@ -2,14 +2,14 @@
 
 namespace Strict.Language.Expressions;
 
-public class MutableDeclaration : ConstantDeclaration
+public sealed class MutableDeclaration : ConstantDeclaration
 {
 	public MutableDeclaration(Body scope, string name, Expression value) :
 		base(scope, name, value, true) { }
 
 	internal static Expression ParseMutableDeclarationWithValue(Body body, string name, ReadOnlySpan<char> valueSpan)
 	{
-		var value = valueSpan.IsFirstLetterUppercase() && valueSpan.IsPlural()
+		var value = valueSpan.IsFirstLetterUppercase() && (valueSpan.IsPlural() || valueSpan.StartsWith(Base.List + '(' + Base.Mutable, StringComparison.Ordinal))
 			? new List(body.Method.Type.GetType(valueSpan.ToString()))
 			: body.Method.ParseExpression(body, valueSpan);
 		value.IsMutable = true;

@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace Strict.Language;
@@ -59,7 +60,15 @@ public static class StringExtensions
 			: text;
 	}
 
-	public static string MakeItPlural(this string name) => name + "s";
+	public static string Pluralize(this string word) =>
+		word + (word.EndsWith("s", StringComparison.Ordinal) ||
+			word.EndsWith("sh", StringComparison.Ordinal) ||
+			word.EndsWith("ch", StringComparison.Ordinal) ||
+			word.EndsWith("x", StringComparison.Ordinal) || word.EndsWith("z", StringComparison.Ordinal)
+				? word.EndsWith("settings", StringComparison.OrdinalIgnoreCase)
+					? ""
+					: "es"
+				: "s");
 
 	public static bool IsOperatorOrAllowedMethodName(this string name) =>
 		name.Length == 1 && name[0].IsSingleCharacterOperator() ||

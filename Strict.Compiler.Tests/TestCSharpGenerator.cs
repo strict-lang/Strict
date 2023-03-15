@@ -3,10 +3,11 @@ using NUnit.Framework;
 using Strict.Compiler.Roslyn;
 using Strict.Language;
 using Strict.Language.Expressions;
+using Strict.Language.Expressions.Tests;
 
 namespace Strict.Compiler.Tests;
 
-public class TestCSharpGenerator
+public class TestCSharpGenerator : NoConsoleWriteLineAllowed
 {
 	[SetUp]
 	public Task CreateGenerator()

@@ -3,7 +3,7 @@ using static Strict.Language.Expressions.ConstantDeclaration;
 
 namespace Strict.Language.Expressions.Tests;
 
-public sealed class MutableTests : TestExpressions
+public sealed class MutableDeclarationTests : TestExpressions
 {
 	[SetUp]
 	public void CreateParser() => parser = new MethodExpressionParser();

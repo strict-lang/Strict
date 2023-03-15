@@ -6,7 +6,8 @@ public sealed class ParameterCall : Expression
 {
 	public ParameterCall(Parameter parameter) : base(parameter.Type, parameter.IsMutable) =>
 		Parameter = parameter;
-	public Parameter Parameter { get; internal set; }
+
+	public Parameter Parameter { get; }
 
 	public static Expression? TryParse(Body body, ReadOnlySpan<char> input)
 	{

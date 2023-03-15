@@ -17,19 +17,11 @@ public sealed record MethodValidator(IEnumerable<Method> Methods) : Validator
 		if (method.GetBodyAndParseIfNeeded() is Body body)
 		{
 			ValidateUnchangedMutableVariables(body);
+			ValidateUnusedVariables(body);
 			ValidateMethodCall(body);
+			ValidateMethodVariablesHidesAnyTypeMember(body, method.Type.Members);
 		}
 		ValidateMethodParameters(method);
-	}
-
-	private static void ValidateMethodCall(Body body)
-	{
-		for (var index = body.LineRange.Start.Value; index < body.LineRange.End.Value; index++)
-		{
-			var line = body.GetLine(index);
-			if (line.Contains("((") && line.Contains("))") && line.Count(t => t == '(') < 3)
-				throw new ListArgumentCanBeAutoParsedWithoutDoubleBrackets(body, line);
-		}
 	}
 
 	private static void ValidateUnchangedMutableVariables(Body body)
@@ -57,19 +49,68 @@ public sealed record MethodValidator(IEnumerable<Method> Methods) : Validator
 			name) { }
 	}
 
+	private static void ValidateUnusedVariables(Body body)
+	{
+		if (body.Variables == null)
+			return;
+		foreach (var variable in body.Variables)
+			ValidateUnusedVariable(body.Method, variable.Key);
+	}
+
+	private static void ValidateUnusedVariable(Method method, string name)
+	{
+		if (method.GetVariableUsageCount(name) < 2)
+			throw new UnusedMethodVariableMustBeRemoved(method.Type, name);
+	}
+
+	public sealed class UnusedMethodVariableMustBeRemoved : ParsingFailed
+	{
+		public UnusedMethodVariableMustBeRemoved(Type type, string name) : base(type, 0, name) { }
+	}
+
+	private static void ValidateMethodCall(Body body)
+	{
+		for (var index = body.LineRange.Start.Value; index < body.LineRange.End.Value; index++)
+		{
+			var line = body.GetLine(index);
+			if (line.Contains("((") && line.Contains("))") && line.Count(t => t == '(') < 3)
+				throw new ListArgumentCanBeAutoParsedWithoutDoubleBrackets(body, line);
+		}
+	}
+
+	public sealed class ListArgumentCanBeAutoParsedWithoutDoubleBrackets : ParsingFailed
+	{
+		public ListArgumentCanBeAutoParsedWithoutDoubleBrackets(Body type, string line) : base(type,
+			line) { }
+	}
+
+	private static void ValidateMethodVariablesHidesAnyTypeMember(Body body,
+		IEnumerable<Member> members)
+	{
+		foreach (var member in members)
+			if (body.Variables != null && body.Variables.ContainsKey(member.Name))
+				throw new VariableHidesMemberUseDifferentName(body, body.Method.Name, member.Name);
+	}
+
+	public class VariableHidesMemberUseDifferentName : ParsingFailed
+	{
+		public VariableHidesMemberUseDifferentName(Body body, string methodName, string variableName) : base(body, $"Method name {methodName}, Variable name {variableName}") { }
+	}
+
 	private static void ValidateMethodParameters(Method method)
 	{
 		foreach (var parameter in method.Parameters)
 		{
-			ValidateUnusedParameter(method, parameter);
+			ValidateUnusedParameter(method, parameter.Name);
 			ValidateUnchangedMutableParameter(method, parameter);
+			ValidateMethodParameterHidesAnyTypeMember(parameter.Name, method);
 		}
 	}
 
-	private static void ValidateUnusedParameter(Method method, NamedType parameter)
+	private static void ValidateUnusedParameter(Method method, string name)
 	{
-		if (method.GetParameterUsageCount(parameter.Name) < 2)
-			throw new UnusedMethodParameterMustBeRemoved(method.Type, parameter.Name);
+		if (method.GetParameterUsageCount(name) < 2)
+			throw new UnusedMethodParameterMustBeRemoved(method.Type, name);
 	}
 
 	public sealed class UnusedMethodParameterMustBeRemoved : ParsingFailed
@@ -89,9 +130,15 @@ public sealed record MethodValidator(IEnumerable<Method> Methods) : Validator
 			name) { }
 	}
 
-	public sealed class ListArgumentCanBeAutoParsedWithoutDoubleBrackets : ParsingFailed
+	private static void ValidateMethodParameterHidesAnyTypeMember(string parameterName, Method method)
 	{
-		public ListArgumentCanBeAutoParsedWithoutDoubleBrackets(Body type, string line) : base(type,
-			line) { }
+		if (method.Type.Members.Any(member => member.Name == parameterName))
+			throw new ParameterHidesMemberUseDifferentName(method.Type, method.Name, parameterName);
+	}
+
+	public sealed class ParameterHidesMemberUseDifferentName : ParsingFailed
+	{
+		public ParameterHidesMemberUseDifferentName(Type type, string methodName, string parameterName)
+			: base(type, 0, $"Method name {methodName}, Parameter name {parameterName}") { }
 	}
 }
