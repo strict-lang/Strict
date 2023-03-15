@@ -200,14 +200,14 @@ public sealed class VirtualMachineTests : BaseVirtualMachineTests
 			"\t\t\ttextList = textList - value",
 			"\ttextList"
 		})]
-	[TestCase("RemoveDuplicates((\"s\", \"b\", \"s\")).Remove", "b", "RemoveDuplicates",
+	[TestCase("RemoveDuplicates((\"s\", \"b\", \"s\")).Remove", "s b", "RemoveDuplicates",
 		new[]
 		{
 			"has texts",
 			"Remove Texts",
 			"\tmutable textList = (\"\")",
 			"\tfor texts",
-			"\t\tif texts.Contains(value) is false",
+			"\t\tif textList.Contains(value) is false",
 			"\t\t\ttextList = textList + value",
 			"\ttextList"
 		})]
@@ -220,6 +220,26 @@ public sealed class VirtualMachineTests : BaseVirtualMachineTests
 		var values = (List<Expression>)vm.Execute(statements).Returns?.Value!;
 		var elements = values.Aggregate("", (current, value) => current + ((Value)value).Data + " ");
 		Assert.That(elements.Trim(), Is.EqualTo(expectedResult));
+	}
+
+	[TestCase("TestContains((\"s\", \"b\", \"s\")).Contains(\"b\")", "True", "TestContains",
+		new[]
+		{
+			"has elements Texts",
+			"Contains(other Text) Boolean",
+			"\tfor elements",
+			"\t\tif value is other",
+			"\t\t\treturn true",
+			"\tfalse",
+		})]
+	// ReSharper disable once TooManyArguments
+	public void CallCommonMethodCalls(string methodCall, object expectedResult,
+		string programName, params string[] code)
+	{
+		var statements = new ByteCodeGenerator(GenerateMethodCallFromSource(programName,
+			methodCall, code)).Generate();
+		var result = vm.Execute(statements).Returns?.Value!;
+		Assert.That(result.ToString(), Is.EqualTo(expectedResult));
 	}
 
 	[Test]

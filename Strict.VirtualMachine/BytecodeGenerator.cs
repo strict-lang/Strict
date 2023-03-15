@@ -20,10 +20,7 @@ public sealed class ByteCodeGenerator
 		this.registry = registry;
 		if (method is not InstanceInvokedMethod instanceMethod)
 			return;
-		if (instanceMethod.InstanceCall is MethodCall instanceMethodCall)
-			AddInstanceMemberVariables(instanceMethodCall);
-		else if (instanceMethod.InstanceCall is MemberCall instanceMemberCall)
-			AddMembersFromCaller(instanceMemberCall);
+		AddMembersFromCaller(instanceMethod.InstanceCall);
 	}
 
 	public ByteCodeGenerator(MethodCall methodCall)
@@ -37,12 +34,11 @@ public sealed class ByteCodeGenerator
 
 	private IReadOnlyList<Expression> Expressions { get; }
 
-	private void AddMembersFromCaller(MemberCall memberCall)
+	private void AddMembersFromCaller(Instance instance)
 	{
-		if (memberCall.Member.Value != null)
-			statements.Add(new StoreVariableStatement(
-				new Instance(memberCall.Member.Type, memberCall.Member.Value),
-				memberCall.ReturnType.Members.First(member => !member.Type.IsTrait).Name));
+		if (instance.ReturnType != null)
+			statements.Add(new StoreVariableStatement(instance,
+				instance.ReturnType.Members.First(member => !member.Type.IsTrait).Name));
 	}
 
 	private void AddInstanceMemberVariables(MethodCall instance)

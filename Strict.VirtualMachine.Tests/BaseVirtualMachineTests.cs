@@ -62,8 +62,12 @@ public class BaseVirtualMachineTests : TestExpressions
 	};
 	protected static readonly string[] SimpleLoopExample =
 	{
-		"has number", "GetMultiplicationOfNumbers Number", "\tmutable result = 1",
-		"\tconstant multiplier = 2", "\tfor number", "\t\tresult = result * multiplier", "\tresult"
+		"has number", "GetMultiplicationOfNumbers Number",
+		"\tmutable result = 1",
+		"\tconstant multiplier = 2",
+		"\tfor number",
+		"\t\tresult = result * multiplier",
+		"\tresult"
 	};
 	protected static readonly string[] RemoveParenthesesKata =
 	{
@@ -159,37 +163,36 @@ public class BaseVirtualMachineTests : TestExpressions
 		new StoreVariableStatement(new Instance(TextType, ""), "result"),
 		new StoreVariableStatement(new Instance(NumberType, 0), "count"),
 		new LoopBeginStatement("text"),
-		new LoadVariableStatement(Register.R1, "value"),
-		new LoadConstantStatement(Register.R2, new Instance(TextType, "(")),
-		new BinaryStatement(Instruction.Equal, Register.R1, Register.R2),
+		new LoadVariableStatement(Register.R0, "value"),
+		new LoadConstantStatement(Register.R1, new Instance(TextType, "(")),
+		new BinaryStatement(Instruction.Equal, Register.R0, Register.R1),
 		new JumpToIdStatement(Instruction.JumpToIdIfFalse, 0),
-		new LoadVariableStatement(Register.R3, "count"),
-		new LoadConstantStatement(Register.R4, new Instance(NumberType, 1)),
-		new BinaryStatement(Instruction.Add, Register.R3, Register.R4, Register.R5),
-		new StoreFromRegisterStatement(Register.R5, "count"),
+		new LoadVariableStatement(Register.R2, "count"),
+		new LoadConstantStatement(Register.R3, new Instance(NumberType, 1)),
+		new BinaryStatement(Instruction.Add, Register.R2, Register.R3, Register.R4),
+		new StoreFromRegisterStatement(Register.R4, "count"),
 		new JumpToIdStatement(Instruction.JumpEnd, 0),
-		new LoadVariableStatement(Register.R6, "count"),
-		new LoadConstantStatement(Register.R7, new Instance(TextType, ")")),
-		new BinaryStatement(Instruction.Equal, Register.R6, Register.R7),
+		new LoadVariableStatement(Register.R5, "count"),
+		new LoadConstantStatement(Register.R6, new Instance(TextType, ")")),
+		new BinaryStatement(Instruction.Equal, Register.R5, Register.R6),
 		new JumpToIdStatement(Instruction.JumpToIdIfFalse, 1),
-		new LoadVariableStatement(Register.R8, "result"),
-		new LoadVariableStatement(Register.R9, "value"),
-		new BinaryStatement(Instruction.Add, Register.R8, Register.R9, Register.R1),
-		new StoreFromRegisterStatement(Register.R1, "result"),
+		new LoadVariableStatement(Register.R7, "result"),
+		new LoadVariableStatement(Register.R8, "value"),
+		new BinaryStatement(Instruction.Add, Register.R7, Register.R8, Register.R9),
+		new StoreFromRegisterStatement(Register.R9, "result"),
 		new JumpToIdStatement(Instruction.JumpEnd, 1),
-		new LoadVariableStatement(Register.R2, "value"),
-		new LoadConstantStatement(Register.R3, new Instance(NumberType, 0)),
-		new BinaryStatement(Instruction.Equal, Register.R2, Register.R3),
+		new LoadVariableStatement(Register.R0, "value"),
+		new LoadConstantStatement(Register.R1, new Instance(NumberType, 0)),
+		new BinaryStatement(Instruction.Equal, Register.R0, Register.R1),
 		new JumpToIdStatement(Instruction.JumpToIdIfFalse, 2),
-		new LoadVariableStatement(Register.R4, "count"),
-		new LoadConstantStatement(Register.R5, new Instance(NumberType, 0)),
-		new BinaryStatement(Instruction.Subtract, Register.R4, Register.R5, Register.R6),
-		new StoreFromRegisterStatement(Register.R6, "count"),
+		new LoadVariableStatement(Register.R2, "count"),
+		new LoadConstantStatement(Register.R3, new Instance(NumberType, 0)),
+		new BinaryStatement(Instruction.Subtract, Register.R2, Register.R3, Register.R4),
+		new StoreFromRegisterStatement(Register.R4, "count"),
 		new JumpToIdStatement(Instruction.JumpEnd, 2),
 		new IterationEndStatement(29),
-		new JumpIfNotZeroStatement(-30, Register.R0),
-		new LoadVariableStatement(Register.R7, "result"),
-		new ReturnStatement(Register.R7)
+		new LoadVariableStatement(Register.R5, "result"),
+		new ReturnStatement(Register.R5)
 	};
 	protected static readonly string[] SimpleListDeclarationExample =
 	{

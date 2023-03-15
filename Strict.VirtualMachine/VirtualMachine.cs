@@ -66,29 +66,36 @@ public sealed class VirtualMachine
 	{
 		if (statement is not InvokeStatement { MethodCall: { } } invokeStatement)
 			return;
-		FormArgumentsForMethodCall(invokeStatement);
 		var methodStatements = GetByteCodeFromInvokedMethodCall(invokeStatement);
 		var instance = RunAndGetResultFromInvokedMethodCall(methodStatements);
 		if (instance != null)
 			Memory.Registers[invokeStatement.Register] = instance;
 	}
 
-	private List<Statement> GetByteCodeFromInvokedMethodCall(
-		InvokeStatement invokeStatement)
+	private List<Statement> GetByteCodeFromInvokedMethodCall(InvokeStatement invokeStatement)
 	{
 		if (invokeStatement.PersistedRegistry == null || invokeStatement.MethodCall == null)
 			throw new InvalidExpressionException(); //TODO: Cover this line ncrunch: no coverage
-		return invokeStatement.MethodCall.Instance == null
-			? new ByteCodeGenerator(
+		if (invokeStatement.MethodCall.Instance == null)
+			return new ByteCodeGenerator(
 					new InvokedMethod(
 						((Body)invokeStatement.MethodCall.Method.GetBodyAndParseIfNeeded()).Expressions,
 						FormArgumentsForMethodCall(invokeStatement)), invokeStatement.PersistedRegistry).
-				Generate()
-			: new ByteCodeGenerator(
-				new InstanceInvokedMethod(
-					((Body)invokeStatement.MethodCall.Method.GetBodyAndParseIfNeeded()).Expressions,
-					FormArgumentsForMethodCall(invokeStatement), invokeStatement.MethodCall.Instance),
-				invokeStatement.PersistedRegistry).Generate();
+				Generate();
+		var instance = GetVariableInstanceFromMemory(invokeStatement.MethodCall.Instance.ToString());
+		return new ByteCodeGenerator(
+			new InstanceInvokedMethod(
+				((Body)invokeStatement.MethodCall.Method.GetBodyAndParseIfNeeded()).Expressions,
+				FormArgumentsForMethodCall(invokeStatement), instance),
+			invokeStatement.PersistedRegistry).Generate();
+	}
+
+	private Instance GetVariableInstanceFromMemory(string variableIdentifier)
+	{
+		Memory.Variables.TryGetValue(variableIdentifier, out var methodCallInstance);
+		if (methodCallInstance == null)
+			throw new VariableNotFoundInMemory();
+		return methodCallInstance;
 	}
 
 	private Instance? RunAndGetResultFromInvokedMethodCall(IList<Statement> methodStatements)
@@ -329,4 +336,5 @@ public sealed class VirtualMachine
 	}
 
 	public sealed class OperandsRequired : Exception { }
+	private sealed class VariableNotFoundInMemory : Exception { }
 }
