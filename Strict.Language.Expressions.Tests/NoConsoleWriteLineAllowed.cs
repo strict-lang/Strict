@@ -91,9 +91,12 @@ public class NoConsoleWriteLineAllowed
 		if (ConsoleWriter.IsEmpty ||
 			TestContext.CurrentContext.Result.Outcome.Status is TestStatus.Failed)
 			return;
+#if NCRUNCH
 		var textInConsole = ConsoleWriter.GetTextAndClear();
+
 		if (!textInConsole.StartsWith("  Expected: ", StringComparison.Ordinal))
 			throw new ConsoleWriteLineShouldOnlyBeUsedInManualTests(textInConsole);
+#endif
 	}
 
 	public sealed class ConsoleWriteLineShouldOnlyBeUsedInManualTests : Exception

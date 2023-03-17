@@ -98,7 +98,7 @@ public class MethodExpressionParser : ExpressionParser
 	{
 		var argumentsRange = postfix.Output.Pop();
 		var methodRange = postfix.Output.Pop();
-#if LOG_DETAILS
+#if LOG_DETAILS && !NCRUNCH
 		Logger.Info(nameof(ParseMethodCallWithArguments) + ", method=" +
 			input[methodRange].ToString() + " arguments=" + input[argumentsRange].ToString());
 #endif
@@ -162,7 +162,7 @@ public class MethodExpressionParser : ExpressionParser
 	private Expression? ParseInContext(Context context, Body body, ReadOnlySpan<char> input,
 		IReadOnlyList<Expression> arguments)
 	{
-#if LOG_DETAILS
+#if LOG_DETAILS && !NCRUNCH
 		Logger.Info(nameof(ParseInContext) + " " + context + ", " + input.ToString());
 #endif
 		return input.Contains('.')
@@ -220,7 +220,7 @@ public class MethodExpressionParser : ExpressionParser
 	{
 		var inputAsString = input.ToString();
 		var type = context as Type ?? body.Method.Type;
-#if LOG_DETAILS
+#if LOG_DETAILS && !NCRUNCH
 		Logger.Info(nameof(TryVariableOrValueOrParameterOrMemberOrMethodCall) + ": " + input.ToString() + " in " + context +
 			" with arguments=" + arguments.ToWordList());
 #endif
@@ -293,7 +293,7 @@ public class MethodExpressionParser : ExpressionParser
 	{
 		do
 		{
-#if LOG_DETAILS
+#if LOG_DETAILS && !NCRUNCH
 			Logger.Info("pushing list element " + innerSpan[postfix.Output.Peek()].ToString());
 #endif
 			var span = innerSpan[postfix.Output.Peek()];
@@ -330,7 +330,7 @@ public class MethodExpressionParser : ExpressionParser
 				throw new UnknownExpressionForArgument(body,
 					input[element].ToString() + " (argument " + expressions.Count + ")\n" + ex.StackTrace);
 			}
-#if LOG_DETAILS
+#if LOG_DETAILS && !NCRUNCH
 		Logger.Info(nameof(ParseAllElementsFast) + ": " + expressions.ToWordList());
 #endif
 		return expressions;

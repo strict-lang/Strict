@@ -27,7 +27,7 @@ public sealed class PhraseTokenizer
 				throw new InvalidEmptyOrUnmatchedBrackets(input);
 			throw new NotSupportedException("Input should never be this small: " + input);
 		}
-#if LOG_DETAILS
+#if LOG_DETAILS && !NCRUNCH
 		Logger.Info("* " + nameof(PhraseTokenizer) + ": " + input);
 #endif
 		if (part.Length == 0 || part[0] == ' ' || part[^1] == ' ' ||

@@ -45,7 +45,7 @@ public class MethodCall : ConcreteExpression
 			return new MethodCall(method, instance, AreArgumentsAutoParsedAsList(method, arguments)
 				? new List<Expression> { new List(body, (List<Expression>)arguments) }
 				: arguments);
-#if LOG_DETAILS
+#if LOG_DETAILS && !NCRUNCH
 		Logger.Info("ParseNested found no local method in " + body.Method.Type + ": " + inputAsString);
 #endif
 		return null;

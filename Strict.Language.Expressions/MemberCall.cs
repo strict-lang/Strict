@@ -22,7 +22,7 @@ public sealed class MemberCall : ConcreteExpression
 				return instance == null && body.IsFakeBodyForMemberInitialization
 					? throw new CannotAccessMemberBeforeTypeIsParsed(body, partToParse.ToString(), type)
 					: new MemberCall(instance, member);
-#if LOG_DETAILS
+#if LOG_DETAILS && !NCRUNCH
 		Logger.Info(nameof(TryParse) + " found no member in " + body.Method);
 #endif
 		return null;
