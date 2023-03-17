@@ -49,7 +49,7 @@ public sealed class VirtualMachine
 		TryLoopInitInstruction(statement);
 		TryLoopEndInstruction(statement);
 		TryInvokeInstruction(statement);
-		TryExecute(statement);
+		TryExecuteRest(statement);
 	}
 
 	private void TryLoopEndInstruction(Statement statement)
@@ -66,10 +66,22 @@ public sealed class VirtualMachine
 	{
 		if (statement is not InvokeStatement { MethodCall: { } } invokeStatement)
 			return;
+		if (TryInvokeAddMethod(invokeStatement))
+			return;
 		var methodStatements = GetByteCodeFromInvokedMethodCall(invokeStatement);
 		var instance = RunAndGetResultFromInvokedMethodCall(methodStatements);
 		if (instance != null)
 			Memory.Registers[invokeStatement.Register] = instance;
+	}
+
+	private bool TryInvokeAddMethod(InvokeStatement invokeStatement)
+	{
+		if (invokeStatement.MethodCall?.Instance is not { ReturnType: GenericTypeImplementation } ||
+			invokeStatement.MethodCall.Method.Name != "Add")
+			return false;
+		Memory.AddToCollectionVariable(invokeStatement.MethodCall.Instance.ToString(),
+			invokeStatement.MethodCall.Arguments[0]);
+		return true;
 	}
 
 	private List<Statement> GetByteCodeFromInvokedMethodCall(InvokeStatement invokeStatement)
@@ -217,7 +229,7 @@ public sealed class VirtualMachine
 	private void LoadVariableIntoRegister(LoadVariableStatement statement) =>
 		Memory.Registers[statement.Register] = Memory.Variables[statement.Identifier];
 
-	private void TryExecute(Statement statement)
+	private void TryExecuteRest(Statement statement)
 	{
 		if (statement is BinaryStatement binaryStatement)
 		{

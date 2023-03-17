@@ -1,3 +1,5 @@
+using System.Collections;
+using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 using Strict.Language;
 using Strict.Language.Expressions;
@@ -239,6 +241,24 @@ public sealed class VirtualMachineTests : BaseVirtualMachineTests
 			methodCall, code)).Generate();
 		var result = vm.Execute(statements).Returns?.Value!;
 		Assert.That(result.ToString(), Is.EqualTo(expectedResult));
+	}
+
+	[Ignore("In progress, seems that sometimes list can have Value expression and sometimes non-value ones")]
+	[TestCase("ListAdd(5).AddNumberToList",
+		"1 2 3 5",
+		"has number",
+		"AddNumberToList Numbers",
+		"\tmutable numbers = (1, 2, 3)",
+		"\tnumbers.Add(number)",
+		"\tnumbers")]
+	public void ListAdd(string methodCall, string expected, params string[] code)
+	{
+		var statements =
+			new ByteCodeGenerator(
+				GenerateMethodCallFromSource(nameof(ListAdd), methodCall, code)).Generate();
+		var result = ((IEnumerable<Expression>)(vm.Execute(statements).Returns?.Value!)).Aggregate("",
+			(current, value) => current + ((Value)value).Data + " ");
+		Assert.That(result, Is.EqualTo(expected));
 	}
 
 	[Test]

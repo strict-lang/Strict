@@ -93,7 +93,6 @@ public class NoConsoleWriteLineAllowed
 			return;
 #if NCRUNCH
 		var textInConsole = ConsoleWriter.GetTextAndClear();
-
 		if (!textInConsole.StartsWith("  Expected: ", StringComparison.Ordinal))
 			throw new ConsoleWriteLineShouldOnlyBeUsedInManualTests(textInConsole);
 #endif
