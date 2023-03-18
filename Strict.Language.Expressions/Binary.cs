@@ -31,7 +31,6 @@ public sealed class Binary : MethodCall
 			base(body, input.GetTextsFromRanges(postfixTokens).Reverse().ToWordList()) { } //ncrunch: no coverage
 	}
 
-	// ReSharper disable once TooManyArguments
 	private static Expression BuildBinaryExpression(Body body, ReadOnlySpan<char> input,
 		Range operatorTokenRange, Stack<Range> tokens)
 	{
@@ -42,7 +41,6 @@ public sealed class Binary : MethodCall
 			: BuildRegularBinaryExpression(body, input, tokens, operatorToken);
 	}
 
-	// ReSharper disable once TooManyArguments
 	private static Expression BuildRegularBinaryExpression(Body body, ReadOnlySpan<char> input,
 		Stack<Range> tokens, string operatorToken)
 	{

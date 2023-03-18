@@ -29,7 +29,5 @@ public class SigmoidPerformanceTests
 
 	private float output;
 	public const float Input = 0.265f;
-
-	// ReSharper disable once MemberCanBeMadeStatic.Local
-	private void SigmoidGpu(int notImplementedYet) { }
+	private static void SigmoidGpu(int notImplementedYet) { }
 }

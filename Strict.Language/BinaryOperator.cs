@@ -43,7 +43,7 @@ public static class BinaryOperator
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static bool IsMultiCharacterOperator(this string name)
 	{
-		// ReSharper disable once ForCanBeConvertedToForeach
+		// ReSharper disable once ForCanBeConvertedToForeach, not done for performance reasons
 		for (var index = 0; index < MultiCharacterOperators.Length; index++)
 			if (MultiCharacterOperators[index] == name)
 				return true;
@@ -59,7 +59,7 @@ public static class BinaryOperator
 	public static bool IsMultiCharacterOperator(this ReadOnlySpan<char> name)
 	{
 		if (name.Length is <= 3 or 5 or 6 or 9)
-			// ReSharper disable once ForCanBeConvertedToForeach
+			// ReSharper disable once ForCanBeConvertedToForeach, not done for performance reasons
 			for (var index = 0; index < MultiCharacterOperators.Length; index++)
 				if (name.Compare(MultiCharacterOperators[index]))
 					return true;

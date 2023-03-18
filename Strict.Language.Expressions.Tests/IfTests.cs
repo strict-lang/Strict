@@ -3,7 +3,6 @@ using NUnit.Framework;
 
 namespace Strict.Language.Expressions.Tests;
 
-// ReSharper disable once ClassTooBig
 public sealed class IfTests : TestExpressions
 {
 	[Test]

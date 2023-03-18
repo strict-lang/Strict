@@ -77,7 +77,6 @@ public abstract class Context
 				throw new TypeNotFound(name, FullName);
 		var singularName = name[..^1];
 		if (singularName == Base.Generic)
-			// ReSharper disable once TailRecursiveCall
 			return GetType(Base.List);
 		var elementType = FindFullType(singularName) ?? FindType(singularName, this);
 		if (elementType != null)

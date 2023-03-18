@@ -102,7 +102,6 @@ public sealed class PhraseTokenizer
 	internal const char OpenBracket = '(';
 	internal const char CloseBracket = ')';
 
-	// ReSharper disable once CyclomaticComplexity
 	private IReadOnlyList<Range> GetTokensTillMatchingClosingBracket()
 	{
 		if (tokenStart < 0)

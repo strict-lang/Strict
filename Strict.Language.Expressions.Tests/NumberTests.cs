@@ -70,8 +70,6 @@ public class NumberTests : TestExpressions
 	/// IntTryParse								| 30,177.0 us | 734.38 us | 485.75 us |      1 KB |
 	/// DoubleTryParse						| 35,744.1 us | 639.56 us | 423.03 us |      1 KB |
 	/// </summary>
-	// ReSharper disable CyclomaticComplexity
-	// ReSharper disable MethodTooLong
 	[Test]
 	[Category("Manual")]
 	[Benchmark]

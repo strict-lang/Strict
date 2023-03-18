@@ -25,7 +25,7 @@ public class BooleanTests : TestExpressions
 	/// </summary>
 	[Benchmark]
 	[Test]
-	// ReSharper disable MethodTooLong
+	// ReSharper disable MethodTooLong, just testing span here
 	public void SpanIsTrueTextOrIsFalseText()
 	{
 		var case1 = "isOpen is true".AsSpan("isOpen is ".Length);

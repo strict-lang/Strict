@@ -188,7 +188,7 @@ public sealed class Body : Expression
 
 	public Body? FindCurrentChild()
 	{
-		// ReSharper disable once ForCanBeConvertedToForeach, don't do as performance is better this way
+		// ReSharper disable once ForCanBeConvertedToForeach, not done for performance reasons
 		for (var index = 0; index < children.Count; index++)
 		{
 			var child = children[index];

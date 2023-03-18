@@ -10,7 +10,6 @@ namespace Strict.Language;
 /// Strict code only contains optionally implement, then has*, then methods*. No empty lines.
 /// There is no typical lexing/scoping/token splitting needed as Strict syntax is very strict.
 /// </summary>
-// ReSharper disable once ClassTooBig, TODO: still needs splitting up as of 2023-03-15
 public class Type : Context
 {
 	public Type(Package package, TypeLines file) : base(package, file.Name)

@@ -115,7 +115,6 @@ public sealed class VirtualMachineTests : BaseVirtualMachineTests
 	} //ncrunch: no coverage end
 
 	[TestCaseSource(nameof(MethodCallTests))]
-	// ReSharper disable once TooManyArguments
 	public void MethodCall(string programName, string methodCall, string[] source, object expected)
 	{
 		var statements =
@@ -157,7 +156,6 @@ public sealed class VirtualMachineTests : BaseVirtualMachineTests
 			"\t\t\tsum = sum + index",
 			"\tsum"
 		})]
-	// ReSharper disable once TooManyArguments
 	public void CompileCompositeBinariesInIfCorrectlyWithModulo(string methodCall,
 		object expectedResult, string methodName, params string[] code)
 	{
@@ -210,7 +208,6 @@ public sealed class VirtualMachineTests : BaseVirtualMachineTests
 			"\t\t\ttextList = textList + value",
 			"\ttextList"
 		})]
-	// ReSharper disable once TooManyArguments
 	public void ExecuteListBinaryOperations(string methodCall,
 		object expectedResult, string programName, params string[] code)
 	{
@@ -231,7 +228,6 @@ public sealed class VirtualMachineTests : BaseVirtualMachineTests
 			"\t\t\treturn true",
 			"\tfalse"
 		})]
-	// ReSharper disable once TooManyArguments
 	public void CallCommonMethodCalls(string methodCall, object expectedResult,
 		string programName, params string[] code)
 	{

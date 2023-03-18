@@ -4,7 +4,6 @@ using System.Data;
 
 namespace Strict.VirtualMachine;
 
-// ReSharper disable once ClassTooBig
 public sealed class VirtualMachine
 {
 	public Memory Memory { get; set; } = new();

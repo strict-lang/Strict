@@ -8,7 +8,6 @@ using List = Strict.Language.Expressions.List;
 
 namespace Strict.Language.Tests;
 
-// ReSharper disable once ClassTooBig
 public sealed class TypeTests
 {
 	[SetUp]

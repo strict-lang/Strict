@@ -4,7 +4,6 @@ using static Strict.Language.Type;
 
 namespace Strict.Language.Expressions.Tests;
 
-// ReSharper disable once ClassTooBig
 public sealed class MethodCallTests : TestExpressions
 {
 	[SetUp]

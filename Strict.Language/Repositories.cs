@@ -180,7 +180,6 @@ public sealed class Repositories
 		foreach (var filePath in files)
 		{
 			var lines = new TypeLines(Path.GetFileNameWithoutExtension(filePath),
-				// ReSharper disable once MethodHasAsyncOverload, would be way slower with async here
 				File.ReadAllLines(filePath));
 			if (lines.Name != Base.Mutable && lines.DependentTypes.Count > 0)
 				filesWithMembers.Add(lines.Name, lines);
@@ -201,7 +200,7 @@ public sealed class Repositories
 	private static bool GotNestedImplements(Dictionary<string, TypeLines> filesWithMembers)
 	{
 		foreach (var file in filesWithMembers)
-			// ReSharper disable once ForCanBeConvertedToForeach
+			// ReSharper disable once ForCanBeConvertedToForeach, not done for performance reasons
 			for (var index = 0; index < file.Value.DependentTypes.Count; index++)
 				if (filesWithMembers.ContainsKey(file.Value.DependentTypes[index]))
 					return true;

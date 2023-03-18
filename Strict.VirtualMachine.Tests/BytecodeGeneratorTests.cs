@@ -4,6 +4,17 @@ namespace Strict.VirtualMachine.Tests;
 
 public sealed class ByteCodeGeneratorTests : BaseVirtualMachineTests
 {
+	[TestCaseSource(nameof(ByteCodeCases))]
+	public void Generate(string methodCall, string programName, Statement[] expectedByteCode,
+		params string[] code)
+	{
+		var statements =
+			new ByteCodeGenerator(GenerateMethodCallFromSource(programName, methodCall, code)).
+				Generate();
+		Assert.That(statements.ConvertAll(x => x.ToString()),
+			Is.EqualTo(expectedByteCode.ToList().ConvertAll(x => x.ToString())));
+	}
+	
 	//ncrunch: no coverage start
 	private static IEnumerable<TestCaseData> ByteCodeCases
 	{
@@ -125,19 +136,5 @@ public sealed class ByteCodeGeneratorTests : BaseVirtualMachineTests
 				"AddNumbers", ExpectedSimpleMethodCallCode,
 				SimpleMethodCallCode);
 		}
-	}
-	//ncrunch: no coverage end
-
-	// @formatter:on
-	[TestCaseSource(nameof(ByteCodeCases))]
-	// ReSharper disable once TooManyArguments
-	public void Generate(string methodCall, string programName, Statement[] expectedByteCode,
-		params string[] code)
-	{
-		var statements =
-			new ByteCodeGenerator(GenerateMethodCallFromSource(programName, methodCall, code)).
-				Generate();
-		Assert.That(statements.ConvertAll(x => x.ToString()),
-			Is.EqualTo(expectedByteCode.ToList().ConvertAll(x => x.ToString())));
 	}
 }

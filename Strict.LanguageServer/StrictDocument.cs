@@ -23,7 +23,6 @@ public sealed class StrictDocument
 		strictDocuments[uri] = content.ToArray();
 	}
 
-	// ReSharper disable once ExcessiveIndentation
 	private void UpdateDocument(TextDocumentContentChangeEvent change)
 	{
 		if (change.Range != null &&
