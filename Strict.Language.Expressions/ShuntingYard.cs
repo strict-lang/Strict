@@ -18,10 +18,6 @@ public sealed class ShuntingYard
 		ApplyHigherOrEqualPrecedenceOperators();
 		if (Output.Count == 0)
 			throw new NotSupportedException("Nothing found! Should never happen."); //ncrunch: no coverage
-#if LOG_DETAILS && !NCRUNCH
-		Logger.Info("Operators: " + string.Join(", ", operators) + " Output Ranges: " +
-			string.Join(", ", Output.Select(range => range + "=" + input[range])));
-#endif
 	}
 
 	private readonly string input;
@@ -29,25 +25,17 @@ public sealed class ShuntingYard
 	private void PutTokenIntoStacks(Range tokenRange)
 	{
 		var (_, length) = tokenRange.GetOffsetAndLength(input.Length);
-#if LOG_DETAILS && !NCRUNCH
-		Logger.Info(nameof(PutTokenIntoStacks) + ": " + input[tokenRange]);
-#endif
 		if (length == 1)
 			PutSingleCharacterTokenIntoStacks(tokenRange);
-		else
+		else if (input[tokenRange].IsMultiCharacterOperator())
 		{
-			if (input[tokenRange].IsMultiCharacterOperator())
-			{
-				ApplyHigherOrEqualPrecedenceOperators(BinaryOperator.GetPrecedence(input[tokenRange]));
-				operators.Push(tokenRange);
-			}
-			else
-				Output.Push(tokenRange);
+			ApplyHigherOrEqualPrecedenceOperators(BinaryOperator.GetPrecedence(input[tokenRange]));
+			operators.Push(tokenRange);
 		}
+		else
+			Output.Push(tokenRange);
 	}
 
-	// ReSharper disable once ExcessiveIndentation
-	// ReSharper disable once MethodTooLong
 	private void PutSingleCharacterTokenIntoStacks(Range tokenRange)
 	{
 		var firstCharacter = input[tokenRange.Start.Value];

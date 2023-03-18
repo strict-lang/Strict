@@ -80,7 +80,7 @@ public sealed class VirtualMachine
 			invokeStatement.MethodCall.Method.Name != "Add")
 			return false;
 		Memory.AddToCollectionVariable(invokeStatement.MethodCall.Instance.ToString(),
-			invokeStatement.MethodCall.Arguments[0]);
+			(Value)invokeStatement.MethodCall.Arguments[0]);
 		return true;
 	}
 

@@ -1,5 +1,3 @@
-using System.Collections;
-using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 using Strict.Language;
 using Strict.Language.Expressions;
@@ -231,7 +229,7 @@ public sealed class VirtualMachineTests : BaseVirtualMachineTests
 			"\tfor elements",
 			"\t\tif value is other",
 			"\t\t\treturn true",
-			"\tfalse",
+			"\tfalse"
 		})]
 	// ReSharper disable once TooManyArguments
 	public void CallCommonMethodCalls(string methodCall, object expectedResult,
@@ -256,7 +254,7 @@ public sealed class VirtualMachineTests : BaseVirtualMachineTests
 		var statements =
 			new ByteCodeGenerator(
 				GenerateMethodCallFromSource(nameof(ListAdd), methodCall, code)).Generate();
-		var result = ((IEnumerable<Expression>)(vm.Execute(statements).Returns?.Value!)).Aggregate("",
+		var result = ((IEnumerable<Expression>)vm.Execute(statements).Returns?.Value!).Aggregate("",
 			(current, value) => current + ((Value)value).Data + " ");
 		Assert.That(result, Is.EqualTo(expected));
 	}

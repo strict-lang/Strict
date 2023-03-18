@@ -88,8 +88,7 @@ public class MethodExpressionParser : ExpressionParser
 		var binary = Binary.Parse(body, input, postfix.Output);
 		if (postfix.Output.Count == 0)
 			return binary;
-		return ParseInContext(body.Method.Type, body, input[postfix.Output.Peek()],
-				new[] { binary }) ??
+		return ParseInContext(body, input[postfix.Output.Peek()], new[] { binary }) ??
 			throw new UnknownExpression(body, input[postfix.Output.Peek()].ToString());
 	}
 
@@ -98,18 +97,12 @@ public class MethodExpressionParser : ExpressionParser
 	{
 		var argumentsRange = postfix.Output.Pop();
 		var methodRange = postfix.Output.Pop();
-#if LOG_DETAILS && !NCRUNCH
-		Logger.Info(nameof(ParseMethodCallWithArguments) + ", method=" +
-			input[methodRange].ToString() + " arguments=" + input[argumentsRange].ToString());
-#endif
 		return input[argumentsRange.Start.Value] == '('
-			? ParseInContext(body.Method.Type, body, //ncrunch: no coverage
-				input[methodRange],
-				ParseListArguments(body,
-					input[(argumentsRange.Start.Value + 1)..(argumentsRange.End.Value - 1)])) ??
+			? ParseInContext(body, input[methodRange], ParseListArguments(body,
+				input[(argumentsRange.Start.Value + 1)..(argumentsRange.End.Value - 1)])) ??
 			throw new MemberOrMethodNotFound(body, body.Method.Type, input[methodRange].ToString())
 			: input[argumentsRange.Start.Value] == '.'
-				? ParseInContext(body.Method.Type, body, input, Array.Empty<Expression>()) ??
+				? ParseInContext(body, input, Array.Empty<Expression>()) ??
 				throw new InvalidOperatorHere(body, input[methodRange].ToString())
 				: input[argumentsRange].Equals(UnaryOperator.Not, StringComparison.Ordinal)
 					? Not.Parse(body, input, methodRange)
@@ -134,19 +127,18 @@ public class MethodExpressionParser : ExpressionParser
 		var argumentsEnd = input.FindMatchingBracketIndex(argumentsStart);
 		ChangeArgumentStartEndIfNestedMethodCall(input, ref argumentsStart, ref argumentsEnd);
 		return argumentsStart <= 0 || argumentsEnd <= 0 || argumentsEnd < input.Length - 1
-			? ParseInContext(body.Method.Type, body, input, Array.Empty<Expression>())
-			: ParseInContext(body.Method.Type, body, input[..argumentsStart],
+			? ParseInContext(body, input, Array.Empty<Expression>())
+			: ParseInContext(body, input[..argumentsStart],
 				ParseListArguments(body, input[(argumentsStart + 1)..argumentsEnd]));
 	}
 
 	private static void ChangeArgumentStartEndIfNestedMethodCall(ReadOnlySpan<char> input,
 		ref int argumentsStart, ref int argumentsEnd)
 	{
-		if (IsNestedMethodCallWithParentMethodParameter(input, argumentsStart, argumentsEnd))
-		{
-			argumentsStart = input.LastIndexOf('(');
-			argumentsEnd = input.FindMatchingBracketIndex(argumentsStart);
-		}
+		if (!IsNestedMethodCallWithParentMethodParameter(input, argumentsStart, argumentsEnd))
+			return;
+		argumentsStart = input.LastIndexOf('(');
+		argumentsEnd = input.FindMatchingBracketIndex(argumentsStart);
 	}
 
 	private static bool IsNestedMethodCallWithParentMethodParameter(ReadOnlySpan<char> input,
@@ -157,24 +149,19 @@ public class MethodExpressionParser : ExpressionParser
 			input.IndexOf('.') < innerArgumentStart;
 	}
 
-	//https://deltaengine.fogbugz.com/f/cases/26383
-	// ReSharper disable once TooManyArguments
-	private Expression? ParseInContext(Context context, Body body, ReadOnlySpan<char> input,
-		IReadOnlyList<Expression> arguments)
-	{
-#if LOG_DETAILS && !NCRUNCH
-		Logger.Info(nameof(ParseInContext) + " " + context + ", " + input.ToString());
-#endif
-		return input.Contains('.')
-			? ParseNestedExpressionInContext(context, body, input, arguments)
-			: ListCall.TryParse(body, TryVariableOrValueOrParameterOrMemberOrMethodCall(context, null, body, input, arguments),
-				arguments);
-	}
+	private Expression? ParseInContext(Body body, ReadOnlySpan<char> input,
+		IReadOnlyList<Expression> arguments) =>
+		input.Contains('.')
+			? ParseNestedExpressionInContext(body, input, arguments)
+			: ListCall.TryParse(body,
+				TryVariableOrValueOrParameterOrMemberOrMethodCall(body.Method.Type, null, body, input,
+					arguments), arguments);
 
-	private Expression? ParseNestedExpressionInContext(Context context, Body body, ReadOnlySpan<char> input,
-		IReadOnlyList<Expression> arguments)
+	private Expression? ParseNestedExpressionInContext(Body body,
+		ReadOnlySpan<char> input, IReadOnlyList<Expression> arguments)
 	{
 		var members = new RangeEnumerator(input, '.', 0);
+		var context = body.Method.Type;
 		Expression? current = null;
 		while (members.MoveNext())
 		{
@@ -190,13 +177,15 @@ public class MethodExpressionParser : ExpressionParser
 			}
 			var expression = input[members.Current].Contains('(')
 				? TryParseMemberOrZeroOrOneArgumentMethodOrNestedCall(body, input[members.Current])
-				: TryVariableOrValueOrParameterOrMemberOrMethodCall(context, current, body, input[members.Current],
+				: TryVariableOrValueOrParameterOrMemberOrMethodCall(context, current, body,
+					input[members.Current],
 					// arguments are only needed for the last part
 					members.IsAtEnd
 						? arguments
 						: Array.Empty<Expression>());
 			// ReSharper disable once UnthrowableException
-			current = expression ?? throw CheckErrorTypeAndThrowException(body, input, members, current);
+			current = expression ??
+				throw CheckErrorTypeAndThrowException(body, input, members, current);
 			context = current.ReturnType;
 		}
 		return ListCall.TryParse(body, current, arguments);
@@ -213,17 +202,11 @@ public class MethodExpressionParser : ExpressionParser
 						? ParsingFailed.GetClickableStacktraceLine(current.ReturnType, 0, string.Empty)
 						: string.Empty));
 
-	//https://deltaengine.fogbugz.com/f/cases/26383
-	// ReSharper disable once TooManyArguments
 	private static Expression? TryVariableOrValueOrParameterOrMemberOrMethodCall(Context context, Expression? instance,
 		Body body, ReadOnlySpan<char> input, IReadOnlyList<Expression> arguments)
 	{
 		var inputAsString = input.ToString();
 		var type = context as Type ?? body.Method.Type;
-#if LOG_DETAILS && !NCRUNCH
-		Logger.Info(nameof(TryVariableOrValueOrParameterOrMemberOrMethodCall) + ": " + input.ToString() + " in " + context +
-			" with arguments=" + arguments.ToWordList());
-#endif
 		return !input.IsWord() && !input.Contains(' ') && !input.Contains('(')
 			? inputAsString.IsWordOrWordWithNumberAtEnd(out _)
 				? MethodCall.TryParseFromOrEnum(body, arguments, inputAsString)
@@ -293,9 +276,6 @@ public class MethodExpressionParser : ExpressionParser
 	{
 		do
 		{
-#if LOG_DETAILS && !NCRUNCH
-			Logger.Info("pushing list element " + innerSpan[postfix.Output.Peek()].ToString());
-#endif
 			var span = innerSpan[postfix.Output.Peek()];
 			// Is this a binary expression we have to put into the list (already tokenized and postfixed)
 			try
@@ -330,9 +310,6 @@ public class MethodExpressionParser : ExpressionParser
 				throw new UnknownExpressionForArgument(body,
 					input[element].ToString() + " (argument " + expressions.Count + ")\n" + ex.StackTrace);
 			}
-#if LOG_DETAILS && !NCRUNCH
-		Logger.Info(nameof(ParseAllElementsFast) + ": " + expressions.ToWordList());
-#endif
 		return expressions;
 	}
 

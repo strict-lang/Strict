@@ -262,10 +262,6 @@ public sealed class Repositories
 
 	private static ICollection<Type> GetTypesFromSortedFiles(ICollection<Type> types, IEnumerable<TypeLines> sortedFiles, Package package)
 	{
-#if LOG_DETAILS && !NCRUNCH
-		Logger.Info("CreatePackage sortedFiles=" + sortedFiles.ToWordList() + ", types=" +
-			types.ToWordList());
-#endif
 		foreach (var typeLines in sortedFiles)
 			types.Add(new Type(package, typeLines));
 		return types;

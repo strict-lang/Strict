@@ -175,9 +175,6 @@ public sealed class If : Expression
 
 	public static Expression ParseConditional(Body body, ReadOnlySpan<char> input)
 	{
-#if LOG_DETAILS && !NCRUNCH
-		Logger.Info(nameof(ParseConditional) + " " + input.ToString());
-#endif
 		if (input[0] == '(' && input[^1] == ')')
 			input = input[1..^1];
 		var questionMarkIndex = input.IndexOf('?');

@@ -9,8 +9,6 @@ namespace Strict.Language.Expressions;
 /// right part of assignments or method call arguments. Optimized for speed and memory efficiency
 /// (no new), no memory is allocated except for the check if we are in a list or just grouping.
 /// </summary>
-// ReSharper disable MethodTooLong
-// ReSharper disable ExcessiveIndentation
 //ncrunch: no coverage start, for better performance
 public sealed class PhraseTokenizer
 {
@@ -27,9 +25,6 @@ public sealed class PhraseTokenizer
 				throw new InvalidEmptyOrUnmatchedBrackets(input);
 			throw new NotSupportedException("Input should never be this small: " + input);
 		}
-#if LOG_DETAILS && !NCRUNCH
-		Logger.Info("* " + nameof(PhraseTokenizer) + ": " + input);
-#endif
 		if (part.Length == 0 || part[0] == ' ' || part[^1] == ' ' ||
 			part.Contains("  ", StringComparison.Ordinal))
 			throw new InvalidSpacing(input);
@@ -90,7 +85,6 @@ public sealed class PhraseTokenizer
 					processToken(tokenStart..(index - 1));
 					processToken((index - 1)..index);
 				}
-				// ReSharper disable once ComplexConditionExpression
 				else if (input.IsMultiCharacterOperatorWithSpace(index, out var tokenEnd))
 				{
 					processToken(tokenStart..(index + tokenEnd));

@@ -10,9 +10,8 @@ using Strict.Language.Expressions;
 using Strict.LanguageServer;
 using PipeOptions = System.IO.Pipes.PipeOptions;
 
-//ncrunch: no coverage start
 var (input, output) = await CreateAndGetPipeline();
-Console.WriteLine("Connecting...");
+Logger.Info("Connecting...");
 // @formatter:off
  var strictBase = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
 var server = await LanguageServer.From(options =>
@@ -25,7 +24,7 @@ var server = await LanguageServer.From(options =>
 		.WithHandler<AutoCompletor>()
 		.WithHandler<CommandExecutor>()
 		.WithHandler<DocumentHighlighter>());
-Console.WriteLine("Client connected!");
+Logger.Info("Client connected!");
 await server.WaitForExit;
 // @formatter:on
 await Task.WhenAny(Task.Run(async () =>
@@ -36,7 +35,7 @@ await Task.WhenAny(Task.Run(async () =>
 		if (server.ClientSettings.ProcessId.HasValue &&
 			Process.GetProcessById((int)server.ClientSettings.ProcessId.Value).HasExited)
 		{
-			Console.WriteLine("Client disconnected");
+			Logger.Info("Client disconnected");
 			server.ForcefulShutdown();
 			return;
 		}
@@ -57,4 +56,3 @@ static async Task<(PipeReader input, PipeWriter output)> CreateAndGetPipeline()
 	var pipeline = pipe.UsePipe();
 	return (pipeline.Input, pipeline.Output);
 }
-//ncrunch: no coverage end
