@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace Strict.Language.Expressions;
 
@@ -49,12 +48,14 @@ public sealed class ShuntingYard
 			operators.Push(tokenRange);
 		}
 		else
-		{
-			// Comma lists always need to flush, happens when parsing inner elements via ParseListArguments
-			if (firstCharacter == ',')
-				ApplyHigherOrEqualPrecedenceOperators();
-			Output.Push(tokenRange);
-		}
+			FlushCommaList(tokenRange, firstCharacter);
+	}
+
+	private void FlushCommaList(Range tokenRange, char firstCharacter)
+	{ // Comma lists always need to flush, happens when parsing inner elements via ParseListArguments
+		if (firstCharacter == ',')
+			ApplyHigherOrEqualPrecedenceOperators();
+		Output.Push(tokenRange);
 	}
 
 	private readonly Stack<Range> operators = new();

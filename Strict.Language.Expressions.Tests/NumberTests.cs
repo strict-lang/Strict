@@ -35,7 +35,8 @@ public class NumberTests : TestExpressions
 	[TestCase("1e-10")]
 	[TestCase("7.5e+13")]
 	public void ValidNumbers(string input) =>
-		Assert.That(ParseExpression(input), Is.EqualTo(new Number(method, double.Parse(input, CultureInfo.InvariantCulture))));
+		Assert.That(ParseExpression(input),
+			Is.EqualTo(new Number(method, double.Parse(input, CultureInfo.InvariantCulture))));
 
 	[Test]
 	public void ParseTextToNumberUsingFromIsNotAllowed() =>
@@ -73,8 +74,41 @@ public class NumberTests : TestExpressions
 	[Test]
 	[Category("Manual")]
 	[Benchmark]
-	public void SpanTryParseNumber() =>
-		Assert.That(SpanTryParseNumberPart1() + SpanTryParseNumberPart2(), Is.EqualTo(1000000));
+	public void SpanTryParseNumber()
+	{
+		SpanTryParseNumberCase(Case1, 1);
+		SpanTryParseNumberCase(Case2, 7.59);
+		SpanTryParseNumberCase(Case3, 10);
+		SpanTryParseNumberCase(Case4, 0.5);
+		SpanTryParseNumberCase(Case5, -50);
+		SpanTryParseNumberCase(Case6, 2000000102);
+		SpanTryParseNumberCase(Case7, 5045142575);
+		SpanTryParseNumberCase(Case8, 0);
+		SpanTryParseNumberCase(Case9, 7e-100);
+		SpanTryParseNoNumberCase();
+	}
+
+	private static void SpanTryParseNumberCase(string caseText, double expected)
+	{
+		var counter = 0;
+		var caseSpan = caseText.AsSpan();
+		for (var iteration = 0; iteration < NumberOfIterations; iteration++)
+			counter += caseSpan.TryParseNumber(out var result) && result == expected
+				? 1
+				: throw new NotSupportedException(caseText);
+		Assert.That(counter, Is.EqualTo(NumberOfIterations));
+	}
+
+	private static void SpanTryParseNoNumberCase()
+	{
+		var counter = 0;
+		var caseSpan = NoNumberCase.AsSpan();
+		for (var iteration = 0; iteration < NumberOfIterations; iteration++)
+			counter += !caseSpan.TryParseNumber(out _)
+				? 1
+				: throw new NotSupportedException(NoNumberCase);
+		Assert.That(counter, Is.EqualTo(NumberOfIterations));
+	}
 
 	[Test]
 	[Category("Manual")]
@@ -83,10 +117,10 @@ public class NumberTests : TestExpressions
 	{
 		var counter = 0;
 		var case10Span = NoNumberCase.AsSpan();
-		for (var iteration = 0; iteration < 1000000; iteration++)
+		for (var iteration = 0; iteration < NumberOfIterations; iteration++)
 			if (!case10Span.TryParseNumber(out _))
 				counter++;
-		Assert.That(counter, Is.EqualTo(1000000));
+		Assert.That(counter, Is.EqualTo(NumberOfCases * NumberOfIterations));
 	}
 
 	[Test]
@@ -96,189 +130,113 @@ public class NumberTests : TestExpressions
 	{
 		var counter = 0;
 		var case1Span = Case1.AsSpan();
-		for (var iteration = 0; iteration < 1000000; iteration++)
+		for (var iteration = 0; iteration < NumberOfIterations; iteration++)
 			if (case1Span.TryParseNumber(out _))
 				counter++;
-		Assert.That(counter, Is.EqualTo(1000000));
-	}
-
-	private static int SpanTryParseNumberPart1()
-	{
-		var case1Span = Case1.AsSpan();
-		var case2Span = Case2.AsSpan();
-		var case3Span = Case3.AsSpan();
-		var case4Span = Case4.AsSpan();
-		var case5Span = Case5.AsSpan();
-		var counter = 0;
-		for (var iteration = 0; iteration < 100000; iteration++)
-		{
-			if (case1Span.TryParseNumber(out var result1) && result1 == 1)
-				counter++;
-			else
-				throw new NotSupportedException(Case1);
-			if (case2Span.TryParseNumber(out var result2) && result2 == 7.59)
-				counter++;
-			else
-				throw new NotSupportedException(Case2);
-			if (case3Span.TryParseNumber(out var result3) && result3 == 10)
-				counter++;
-			else
-				throw new NotSupportedException(Case3);
-			if (case4Span.TryParseNumber(out var result4) && result4 == 0.5)
-				counter++;
-			else
-				throw new NotSupportedException(Case4);
-			if (case5Span.TryParseNumber(out var result5) && result5 == -50)
-				counter++;
-			else
-				throw new NotSupportedException(Case5);
-		}
-		return counter;
-	}
-
-	private static int SpanTryParseNumberPart2()
-	{
-		var case6Span = Case6.AsSpan();
-		var case7Span = Case7.AsSpan();
-		var case8Span = Case8.AsSpan();
-		var case9Span = Case9.AsSpan();
-		var case10Span = NoNumberCase.AsSpan();
-		var counter = 0;
-		for (var iteration = 0; iteration < 100000; iteration++)
-		{
-			if (case6Span.TryParseNumber(out var result6) && result6 == 2000000102)
-				counter++;
-			else
-				throw new NotSupportedException(Case6);
-			if (case7Span.TryParseNumber(out var result7) && result7 == 5045142575)
-				counter++;
-			else
-				throw new NotSupportedException(Case7);
-			if (case8Span.TryParseNumber(out var result8) && result8 == 0)
-				counter++;
-			else
-				throw new NotSupportedException(Case8);
-			if (case9Span.TryParseNumber(out var result9) && result9 == 7e-100)
-				counter++;
-			else
-				throw new NotSupportedException(Case9);
-			if (!case10Span.TryParseNumber(out _))
-				counter++;
-			else
-				throw new NotSupportedException(NoNumberCase);
-		}
-		return counter;
+		Assert.That(counter, Is.EqualTo(NumberOfCases * NumberOfIterations));
 	}
 
 	private const string NoNumberCase = "text";
 
+	[Test]
 	[Category("Manual")]
 	[Benchmark]
-	[Test]
 	public void IntTryParse()
 	{
 		var counter = 0;
-		for (var iteration = 0; iteration < 100000; iteration++)
-		{
-			if (int.TryParse(Case1, out var result1) && result1 == 1)
-				counter++;
-			else
-				throw new NotSupportedException(Case1);
-			if (!int.TryParse(Case2, out _) && double.TryParse(Case2, out var result2) && result2 == 7.59)
-				counter++;
-			else
-				throw new NotSupportedException(Case2);
-			if (int.TryParse(Case3, out var result3) && result3 == 10)
-				counter++;
-			else
-				throw new NotSupportedException(Case3);
-			if (!int.TryParse(Case4, out _) && double.TryParse(Case4, out var result4) && result4 == 0.5)
-				counter++;
-			else
-				throw new NotSupportedException(Case4);
-			if (int.TryParse(Case5, out var result5) && result5 == -50)
-				counter++;
-			else
-				throw new NotSupportedException(Case5);
-			if (int.TryParse(Case6, out var result6) && result6 == 2000000102)
-				counter++;
-			else
-				throw new NotSupportedException(Case6);
-			if (!int.TryParse(Case7, out _) && double.TryParse(Case7, out var result7) &&
-				result7 == 5045142575)
-				counter++;
-			else
-				throw new NotSupportedException(Case7);
-			if (int.TryParse(Case8.AsSpan(), out var result8) && result8 == 0)
-				counter++;
-			else
-				throw new NotSupportedException(Case8);
-			if (!int.TryParse(Case9, out _) && double.TryParse(Case9, out var result9) &&
-				result9 == 7e-100)
-				counter++;
-			else
-				throw new NotSupportedException(Case9);
-			if (!int.TryParse(NoNumberCase, out _) && !double.TryParse(NoNumberCase, out _))
-				counter++;
-			else
-				throw new NotSupportedException(NoNumberCase);
-		}
-		Assert.That(counter, Is.EqualTo(1000000));
+		for (var iteration = 0; iteration < NumberOfIterations; iteration++)
+			counter += IntTryParseCase1To5() + IntTryParseCase6To10();
+		Assert.That(counter, Is.EqualTo(NumberOfCases * NumberOfIterations));
 	}
 
+	private const int NumberOfCases = 10;
+	private const int NumberOfIterations = 100000;
+
+	private static int IntTryParseCase1To5() =>
+		(int.TryParse(Case1, out var result1) && result1 == 1
+			? 1
+			: throw new NotSupportedException(Case1)) +
+		(!int.TryParse(Case2, out _) &&
+			double.TryParse(Case2, out var result2) && result2 == 7.59
+				? 1
+				: throw new NotSupportedException(Case2)) +
+		(int.TryParse(Case3, out var result3) && result3 == 10
+			? 1
+			: throw new NotSupportedException(Case3)) +
+		(!int.TryParse(Case4, out _) &&
+			double.TryParse(Case4, out var result4) && result4 == 0.5
+				? 1
+				: throw new NotSupportedException(Case4)) +
+		(int.TryParse(Case5, out var result5) && result5 == -50
+			? 1
+			: throw new NotSupportedException(Case5));
+
+	private static int IntTryParseCase6To10() =>
+		(int.TryParse(Case6, out var result6) && result6 == 2000000102
+			? 1
+			: throw new NotSupportedException(Case6)) +
+		(!int.TryParse(Case7, out _) &&
+			double.TryParse(Case7, out var result7) && result7 == 5045142575
+				? 1
+				: throw new NotSupportedException(Case7)) +
+		(int.TryParse(Case8.AsSpan(), out var result8) && result8 == 0
+			? 1
+			: throw new NotSupportedException(Case8)) +
+		(!int.TryParse(Case9, out _) &&
+			double.TryParse(Case9, out var result9) && result9 == 7e-100
+				? 1
+				: throw new NotSupportedException(Case9)) +
+		(!int.TryParse(NoNumberCase, out _) &&
+			!double.TryParse(NoNumberCase, out _)
+				? 1
+				: throw new NotSupportedException(NoNumberCase));
+
+	[Test]
 	[Category("Manual")]
 	[Benchmark]
-	[Test]
 	public void DoubleTryParse()
 	{
 		var counter = 0;
-		for (var iteration = 0; iteration < 100000; iteration++)
-		{
-			if (double.TryParse(Case1, out var result1) && result1 == 1)
-				counter++;
-			else
-				throw new NotSupportedException(Case1);
-			if (double.TryParse(Case2, out var result2) && result2 == 7.59)
-				counter++;
-			else
-				throw new NotSupportedException(Case2);
-			if (double.TryParse(Case3, out var result3) && result3 == 10)
-				counter++;
-			else
-				throw new NotSupportedException(Case3);
-			if (double.TryParse(Case4, out var result4) && result4 == 0.5)
-				counter++;
-			else
-				throw new NotSupportedException(Case4);
-			if (double.TryParse(Case5, out var result5) && result5 == -50)
-				counter++;
-			else
-				throw new NotSupportedException(Case5);
-			if (double.TryParse(Case6, out var result6) && result6 == 2000000102)
-				counter++;
-			else
-				throw new NotSupportedException(Case6);
-			if (double.TryParse(Case7, out var result7) && result7 == 5045142575)
-				counter++;
-			else
-				throw new NotSupportedException(Case7);
-			if (double.TryParse(Case8.AsSpan(), out var result8) && result8 == 0)
-				counter++;
-			else
-				throw new NotSupportedException(Case8);
-			if (double.TryParse(Case9, out var result9) && result9 == 7e-100)
-				counter++;
-			else
-				throw new NotSupportedException(Case9);
-			if (!double.TryParse(NoNumberCase, out _))
-				counter++;
-			else
-				throw new NotSupportedException(NoNumberCase);
-		}
-		Assert.That(counter, Is.EqualTo(1000000));
+		for (var iteration = 0; iteration < NumberOfIterations; iteration++)
+			counter += DoubleTryParseCase1To5() + DoubleTryParseCase6To10();
+		Assert.That(counter, Is.EqualTo(NumberOfCases * NumberOfIterations));
 	}
 
-	[Category("Manual")]
+	private static int DoubleTryParseCase1To5() =>
+		(double.TryParse(Case5, out var result5) && result5 == -50
+			? 1
+			: throw new NotSupportedException(Case5)) +
+		(double.TryParse(Case4, out var result4) && result4 == 0.5
+			? 1
+			: throw new NotSupportedException(Case4)) +
+		(double.TryParse(Case3, out var result3) && result3 == 10
+			? 1
+			: throw new NotSupportedException(Case3)) +
+		(double.TryParse(Case2, out var result2) && result2 == 7.59
+			? 1
+			: throw new NotSupportedException(Case2)) +
+		(double.TryParse(Case1, out var result1) && result1 == 1
+			? 1
+			: throw new NotSupportedException(Case1));
+
+	private static int DoubleTryParseCase6To10() =>
+		(double.TryParse(Case6, out var result6) && result6 == 2000000102
+			? 1
+			: throw new NotSupportedException(Case6)) +
+		(double.TryParse(Case7, out var result7) && result7 == 5045142575
+			? 1
+			: throw new NotSupportedException(Case7)) +
+		(double.TryParse(Case8.AsSpan(), out var result8) && result8 == 0
+			? 1
+			: throw new NotSupportedException(Case8)) +
+		(double.TryParse(Case9, out var result9) && result9 == 7e-100
+			? 1
+			: throw new NotSupportedException(Case9)) +
+		(!double.TryParse(NoNumberCase, out _)
+			? 1
+			: throw new NotSupportedException(NoNumberCase));
+
 	[Test]
+	[Category("Manual")]
 	public void BenchmarkTryParseCompare() => BenchmarkRunner.Run<NumberTests>();
 }

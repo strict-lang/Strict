@@ -5,6 +5,7 @@ namespace Strict.VirtualMachine.Tests;
 public sealed class ByteCodeGeneratorTests : BaseVirtualMachineTests
 {
 	[TestCaseSource(nameof(ByteCodeCases))]
+	// ReSharper disable once TooManyArguments, makes it easier to test with below test cases
 	public void Generate(string methodCall, string programName, Statement[] expectedByteCode,
 		params string[] code)
 	{
@@ -14,7 +15,7 @@ public sealed class ByteCodeGeneratorTests : BaseVirtualMachineTests
 		Assert.That(statements.ConvertAll(x => x.ToString()),
 			Is.EqualTo(expectedByteCode.ToList().ConvertAll(x => x.ToString())));
 	}
-	
+
 	//ncrunch: no coverage start
 	private static IEnumerable<TestCaseData> ByteCodeCases
 	{

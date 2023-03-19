@@ -37,8 +37,7 @@ public sealed class PhraseTokenizer
 
 	public void ProcessEachToken(Action<Range> processToken)
 	{
-		textStart = -1;
-		tokenStart = -1;
+		textStart = tokenStart = -1;
 		for (index = 0; index < input.Length; index++)
 			if (input[index] == '\"')
 				GetSingleTokenTillEndOfText(processToken);
@@ -71,93 +70,122 @@ public sealed class PhraseTokenizer
 	private void ProcessNormalToken(Action<Range> processToken)
 	{
 		if (input[index] == OpenBracket)
-			foreach (var token in GetTokensTillMatchingClosingBracket())
+			foreach (var token in new TokensTillMatchingBracketGrabber(this).GetRanges())
 				processToken(token);
 		else if (input[index] == ' ')
 		{
 			if (tokenStart >= 0)
-			{
-				// If our previous character was a , and not alone we parsed it as one token (outside list
-				// element), it needs to be split into two tokens like for complex cases so processing
-				// elements works in ParseListElements
-				if (index > tokenStart + 1 && input[index - 1] == ',')
-				{
-					processToken(tokenStart..(index - 1));
-					processToken((index - 1)..index);
-				}
-				else if (input.IsMultiCharacterOperatorWithSpace(index, out var tokenEnd))
-				{
-					processToken(tokenStart..(index + tokenEnd));
-					index += tokenEnd;
-				}
-				else
-					processToken(tokenStart..index);
-			}
+				ProcessTokenAfterSpace(processToken);
 			tokenStart = -1;
 		}
 		else if (tokenStart == -1)
 			tokenStart = index;
 	}
 
+	private void ProcessTokenAfterSpace(Action<Range> processToken)
+	{
+		// If our previous character was a , and not alone we parsed it as one token (outside list
+		// element), it needs to be split into two tokens like for complex cases so processing
+		// elements works in ParseListElements
+		if (index > tokenStart + 1 && input[index - 1] == ',')
+		{
+			processToken(tokenStart..(index - 1));
+			processToken((index - 1)..index);
+		}
+		else if (input.IsMultiCharacterOperatorWithSpace(index, out var tokenEnd))
+		{
+			processToken(tokenStart..(index + tokenEnd));
+			index += tokenEnd;
+		}
+		else
+			processToken(tokenStart..index);
+	}
+
 	internal const char OpenBracket = '(';
 	internal const char CloseBracket = ')';
 
-	private IReadOnlyList<Range> GetTokensTillMatchingClosingBracket()
+	/// <summary>
+	/// It is very important to catch everything before the opening bracket as well. However if this
+	/// is a binary expression we want to catch, split the initial range as its own method call.
+	/// </summary>
+	private sealed class TokensTillMatchingBracketGrabber
 	{
-		if (tokenStart < 0)
-			tokenStart = index;
-		// It is very important to catch everything before the opening bracket as well. However if this
-		// is a binary expression we want to catch, split the initial range as its own method call.
-		var result = new List<Range>();
-		if (index > tokenStart)
-			result.Add(tokenStart..index);
-		result.Add(index..(index + 1));
-		tokenStart = index + 1;
-		var foundListSeparator = false;
-		var isInMethodCall = false;
-		var foundNoSpace = true;
-		for (index++; index < input.Length; index++)
-			if (input[index] == '\"')
-				GetSingleTokenTillEndOfText(result.Add);
-			else if (textStart == -1)
-				if (input[index] == CloseBracket)
-				{
-					if (tokenStart >= 0)
-						result.Add(tokenStart..index);
-					tokenStart = -1;
-					result.Add(index..(index + 1));
-					if (index + 1 < input.Length &&
-						input[index + 1] != '.') //To consume Nested member or method call as single token
-						break;
-				}
-				else if (input[index] == ',' || input[index] == '?')
-				{
-					foundListSeparator = true;
-					result.Add(index..(index + 1));
-				}
-				else
-				{
-					if (input[index - 1] == '.')
-						isInMethodCall = true;
-					if (input[index] == ' ')
-						foundNoSpace = false;
-					ProcessNormalToken(result.Add);
-					if (isInMethodCall)
-					{
-						if (index + 1 < input.Length && input[index] == CloseBracket &&
-							input[index + 1] != '.')
-							break;
-						if (MemberOrMethodCallWithNoArguments())
-							break;
-					}
-				}
-		if (textStart != -1)
-			throw new UnterminatedString(input);
-		if (result.Count < 3)
-			throw new InvalidEmptyOrUnmatchedBrackets(input);
-		if (result.Count == 3 || foundListSeparator || foundNoSpace || IsNotBinaryOperation())
-			return MergeAllTokensIntoSingleList(result);
-		return result;
+		public TokensTillMatchingBracketGrabber(PhraseTokenizer tokens)
+		{
+			this.tokens = tokens;
+			if (tokens.tokenStart < 0)
+				tokens.tokenStart = tokens.index;
+			if (tokens.index > tokens.tokenStart)
+				result.Add(tokens.tokenStart..tokens.index);
+			result.Add(tokens.index..(tokens.index + 1));
+			tokens.tokenStart = tokens.index + 1;
+		}
+
+		private readonly PhraseTokenizer tokens;
+		private readonly List<Range> result = new();
+
+		public IReadOnlyList<Range> GetRanges()
+		{
+			for (tokens.index++; tokens.index < tokens.input.Length; tokens.index++)
+				if (FoundLastToken())
+					break;
+			if (tokens.textStart != -1)
+				throw new UnterminatedString(tokens.input);
+			if (result.Count < 3)
+				throw new InvalidEmptyOrUnmatchedBrackets(tokens.input);
+			if (result.Count == 3 || foundListSeparator || !foundSpace ||
+				tokens.IsNotBinaryOperation())
+				return MergeAllTokensIntoSingleList(result);
+			return result;
+		}
+
+		private bool FoundLastToken()
+		{
+			if (tokens.input[tokens.index] == '\"')
+			{
+				tokens.GetSingleTokenTillEndOfText(result.Add);
+				return false;
+			}
+			return tokens.textStart == -1 && (tokens.input[tokens.index] == CloseBracket
+				? HandleCloseBracket()
+				: HandleListSeparator() && HandleMethodCall());
+		}
+
+		private bool HandleCloseBracket()
+		{
+			if (tokens.tokenStart >= 0)
+				result.Add(tokens.tokenStart..tokens.index);
+			tokens.tokenStart = -1;
+			result.Add(tokens.index..(tokens.index + 1));
+			return tokens.index + 1 < tokens.input.Length &&
+				// Consume nested member or method call as single token
+				tokens.input[tokens.index + 1] != '.';
+		}
+
+		private bool HandleListSeparator()
+		{
+			if (tokens.input[tokens.index] != ',' && tokens.input[tokens.index] != '?')
+				return true;
+			foundListSeparator = true;
+			result.Add(tokens.index..(tokens.index + 1));
+			return false;
+		}
+
+		private bool HandleMethodCall()
+		{
+			if (tokens.input[tokens.index - 1] == '.')
+				isInMethodCall = true;
+			if (tokens.input[tokens.index] == ' ')
+				foundSpace = true;
+			tokens.ProcessNormalToken(result.Add);
+			return isInMethodCall && (tokens.index + 1 < tokens.input.Length &&
+				tokens.input[tokens.index] == CloseBracket && tokens.input[tokens.index + 1] != '.' ||
+				tokens.MemberOrMethodCallWithNoArguments());
+		}
+
+		private bool foundListSeparator;
+		private bool isInMethodCall;
+		private bool foundSpace;
 	}
 
 	private bool MemberOrMethodCallWithNoArguments() =>

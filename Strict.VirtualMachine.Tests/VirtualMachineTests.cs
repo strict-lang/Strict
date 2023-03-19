@@ -115,6 +115,7 @@ public sealed class VirtualMachineTests : BaseVirtualMachineTests
 	} //ncrunch: no coverage end
 
 	[TestCaseSource(nameof(MethodCallTests))]
+	// ReSharper disable TooManyArguments, makes below tests easier
 	public void MethodCall(string programName, string methodCall, string[] source, object expected)
 	{
 		var statements =
