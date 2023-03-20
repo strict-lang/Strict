@@ -8,7 +8,7 @@ public sealed class Memory
 	public Dictionary<Register, Instance> Registers { get; init; } = new();
 	public Dictionary<string, Instance> Variables = new();
 
-	public void AddToCollectionVariable(string key, Expression element)
+	public void AddToCollectionVariable(string key, Value element)
 	{
 		Variables.TryGetValue(key, out var collection);
 		if (collection?.Value is List<Expression> listExpression)

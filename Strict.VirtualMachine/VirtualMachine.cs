@@ -6,7 +6,7 @@ namespace Strict.VirtualMachine;
 
 public sealed class VirtualMachine
 {
-	public Memory Memory { get; private init; } = new();
+	public Memory Memory { get; set; } = new();
 	private bool conditionFlag;
 	private int instructionIndex;
 	private IList<Statement> statements = new List<Statement>();
@@ -48,16 +48,7 @@ public sealed class VirtualMachine
 		TryLoopInitInstruction(statement);
 		TryLoopEndInstruction(statement);
 		TryInvokeInstruction(statement);
-		TryWriteToListInstruction(statement);
 		TryExecuteRest(statement);
-	}
-
-	private void TryWriteToListInstruction(Statement statement)
-	{
-		if (statement is not WriteToListStatement writeToListStatement)
-			return;
-		Memory.AddToCollectionVariable(writeToListStatement.Identifier,
-			(Expression)Memory.Registers[writeToListStatement.Register].Value);
 	}
 
 	private void TryLoopEndInstruction(Statement statement)
@@ -74,10 +65,22 @@ public sealed class VirtualMachine
 	{
 		if (statement is not InvokeStatement { MethodCall: { } } invokeStatement)
 			return;
+		if (TryInvokeAddMethod(invokeStatement))
+			return;
 		var methodStatements = GetByteCodeFromInvokedMethodCall(invokeStatement);
 		var instance = RunAndGetResultFromInvokedMethodCall(methodStatements);
 		if (instance != null)
 			Memory.Registers[invokeStatement.Register] = instance;
+	}
+
+	private bool TryInvokeAddMethod(InvokeStatement invokeStatement)
+	{
+		if (invokeStatement.MethodCall?.Instance is not { ReturnType: GenericTypeImplementation } ||
+			invokeStatement.MethodCall.Method.Name != "Add")
+			return false;
+		Memory.AddToCollectionVariable(invokeStatement.MethodCall.Instance.ToString(),
+			(Value)invokeStatement.MethodCall.Arguments[0]);
+		return true;
 	}
 
 	private List<Statement> GetByteCodeFromInvokedMethodCall(InvokeStatement invokeStatement)
@@ -182,9 +185,9 @@ public sealed class VirtualMachine
 			return iterableString.Length;
 		if (iterableInstance.Value is int or double)
 			return Convert.ToInt32(iterableInstance.Value);
-		return iterableInstance.ReturnType is { IsIterator: true }
-			? ((IEnumerable<Expression>)iterableInstance.Value).Count()
-			: 0; //ncrunch: no coverage
+		if (iterableInstance.ReturnType != null && iterableInstance.ReturnType.IsIterator)
+			return ((IEnumerable<Expression>)iterableInstance.Value).Count();
+		return 0; //ncrunch: no coverage
 	}
 
 	private void AlterValueVariable(Instance iterableVariable)
@@ -235,7 +238,9 @@ public sealed class VirtualMachine
 				TryBinaryOperationExecution(binaryStatement);
 		}
 		else if (statement is JumpStatement jumpStatement)
+		{
 			TryJumpOperation(jumpStatement);
+		}
 	}
 
 	private void TryBinaryOperationExecution(BinaryStatement statement)

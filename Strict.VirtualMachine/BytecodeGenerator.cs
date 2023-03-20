@@ -101,7 +101,7 @@ public sealed class ByteCodeGenerator
 		TryGenerateAssignmentStatements(expression);
 		TryGenerateLoopStatements(expression);
 		TryGenerateMutableStatements(expression);
-		TryGenerateVariableOrMemberCallStatement(expression);
+		TryGenerateVariableCallStatement(expression);
 		TryGenerateMethodCallStatement(expression);
 		TryGenerateValueStatement(expression);
 	}
@@ -115,15 +115,7 @@ public sealed class ByteCodeGenerator
 
 	private void TryGenerateMethodCallStatement(Expression expression)
 	{
-		if (expression is Binary || expression is not MethodCall methodCall)
-			return;
-		if (methodCall.Method.Name == "Add" && methodCall.Instance != null)
-		{
-			GenerateStatementsFromExpression(methodCall.Arguments[0]);
-			statements.Add(new WriteToListStatement(registry.PreviousRegister,
-				methodCall.Instance.ToString()));
-		}
-		else
+		if (expression is not Binary && expression is MethodCall methodCall)
 			statements.Add(new InvokeStatement(methodCall, registry.AllocateRegister(), registry));
 	}
 
@@ -133,7 +125,7 @@ public sealed class ByteCodeGenerator
 			GenerateStatements(body.Expressions);
 	}
 
-	private void TryGenerateVariableOrMemberCallStatement(Expression expression)
+	private void TryGenerateVariableCallStatement(Expression expression)
 	{
 		if (expression is VariableCall or MemberCall)
 			statements.Add(new LoadVariableStatement(registry.AllocateRegister(), expression.ToString()));
@@ -149,12 +141,7 @@ public sealed class ByteCodeGenerator
 
 	private void GenerateForAssignmentOrDeclaration(Expression declarationOrAssignment, string name)
 	{
-		if (declarationOrAssignment is List listDeclaration)
-		{
-			statements.Add(new StoreVariableStatement(
-				new Instance(declarationOrAssignment.ReturnType, listDeclaration.Values), name));
-		}
-		else if (declarationOrAssignment is Value declarationOrAssignmentValue)
+		if (declarationOrAssignment is Value declarationOrAssignmentValue)
 		{
 			TryGenerateStatementsForAssignmentValue(declarationOrAssignmentValue, name);
 		}

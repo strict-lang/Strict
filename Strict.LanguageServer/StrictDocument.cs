@@ -28,9 +28,13 @@ public sealed class StrictDocument
 		if (change.Range != null &&
 			change.Text.StartsWith(Environment.NewLine, StringComparison.Ordinal) &&
 			change.Range.Start.Line == change.Range.End.Line)
+		{
 			content.Insert(change.Range.Start.Line + 1, change.Text[2..]);
+		}
 		else if (change.Range != null && content.Count - 1 < change.Range.Start.Line)
+		{
 			AddSingleOrMultiLineNewText(change);
+		}
 		else if (change.Range != null && change.Range.Start.Line < change.Range.End.Line)
 		{
 			HandleForMultiLineDeletion(change.Range.Start, change.Range.End);
@@ -39,7 +43,9 @@ public sealed class StrictDocument
 					Insert(change.Range.Start.Character, change.Text);
 		}
 		else
+		{
 			HandleForDocumentChange(change);
+		}
 	}
 
 	private void AddSingleOrMultiLineNewText(TextDocumentContentChangeEvent change)
