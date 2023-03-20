@@ -34,7 +34,7 @@ public sealed class Instance
 		if (expression is Value value)
 			Value = value.Data;
 		else
-			Value = new object(); //ncrunch: no coverage
+			Value = expression;
 		IsMember = isMember;
 	}
 
