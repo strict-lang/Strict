@@ -124,19 +124,6 @@ public class BaseVirtualMachineTests : TestExpressions
 		"\tconstant result = fNumber + sNumber",
 		"\tresult"
 	};
-	protected static readonly string[] MethodCallWithLocalVariables =
-	{
-		"has firstNumber Number",
-		"has secondNumber Number",
-		"GetSum Number",
-		"\tconstant five = 5",
-		"\tconstant six = 6",
-		"\tconstant result = SumNumbers(five, six)",
-		"\tresult",
-		"SumNumbers(fNumber Number, sNumber Number) Number",
-		"\tconstant result = fNumber + sNumber",
-		"\tresult"
-	};
 	protected static readonly string[] MethodCallWithLocalWithNoArguments =
 	{
 		"has firstNumber Number",
