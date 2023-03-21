@@ -113,6 +113,8 @@ public static class SpanExtensions
 	/// times faster than double.TryParse.
 	/// </summary>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	// ReSharper disable once ExcessiveIndentation
+	// ReSharper disable once MethodTooLong
 	public static bool TryParseNumber(this ReadOnlySpan<char> input, out double number)
 	{
 		if (input[0] == '-')

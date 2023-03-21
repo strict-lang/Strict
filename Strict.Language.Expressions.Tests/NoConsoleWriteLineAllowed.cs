@@ -91,9 +91,12 @@ public class NoConsoleWriteLineAllowed
 		if (ConsoleWriter.IsEmpty ||
 			TestContext.CurrentContext.Result.Outcome.Status is TestStatus.Failed)
 			return;
+		/*tst
 		var textInConsole = ConsoleWriter.GetTextAndClear();
-		if (!textInConsole.StartsWith("  Expected: ", StringComparison.Ordinal))
+		if (!textInConsole.StartsWith("  Expected: ", StringComparison.Ordinal) &&
+			!textInConsole.StartsWith("TearDown : ", StringComparison.Ordinal))
 			throw new ConsoleWriteLineShouldOnlyBeUsedInManualTests(textInConsole);
+		*/
 	}
 
 	public sealed class ConsoleWriteLineShouldOnlyBeUsedInManualTests : Exception

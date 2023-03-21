@@ -255,6 +255,7 @@ public sealed class Method : Context
 	/// </summary>
 	private Body PreParseBody(int parentTabs = 1, Body? parent = null)
 	{
+		Console.WriteLine("PreParseBody "+this);
 		var body = new Body(this, parentTabs, parent);
 		var startLine = methodLineNumber;
 		for (; methodLineNumber < lines.Count; methodLineNumber++)
@@ -319,12 +320,24 @@ public sealed class Method : Context
 			? Type
 			: Type.FindType(name, searchingFrom ?? this);
 
-	public Expression GetBodyAndParseIfNeeded() =>
-		methodBody == null
-			? throw new CannotCallBodyOnTraitMethod()
-			: methodBody.Expressions.Count > 0
-				? methodBody
-				: methodBody.Parse();
+	public Expression GetBodyAndParseIfNeeded()
+	{
+		if (methodBody == null)
+			throw new CannotCallBodyOnTraitMethod();
+		else if (methodBody.Expressions.Count > 0)
+		{
+			Console.WriteLine(methodBody + " existing expressions=" +
+				methodBody.Expressions.ToWordList());
+			return methodBody;
+		}
+		else
+		{
+			if (methodBody.Method != this)
+				throw new NotSupportedException("methodBody is not matching this method anymore " + this);
+			Console.WriteLine(methodBody + " parse");
+			return methodBody.Parse();
+		}
+	}
 
 	public class CannotCallBodyOnTraitMethod : Exception { }
 
@@ -352,7 +365,7 @@ public sealed class Method : Context
 		GenericTypeImplementation typeWithImplementation, int index) =>
 		type.Name == Base.Generic
 			? typeWithImplementation.ImplementationTypes[index] //Number
-			: (type.IsGeneric || type.Name == Base.List) && type.Name != Base.Iterator
+			: (type.IsGeneric || type.Name == Base.List) && type.Name != Base.Iterator //TODO: remove these hacks, needs to work for any generic!
 				? typeWithImplementation //ListNumber
 				: type;
 

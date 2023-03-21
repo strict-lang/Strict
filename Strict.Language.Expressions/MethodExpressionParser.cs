@@ -241,59 +241,68 @@ public class MethodExpressionParser : ExpressionParser
 	public override List<Expression> ParseListArguments(Body body, ReadOnlySpan<char> innerSpan)
 	{
 		if (innerSpan.Contains('(') || innerSpan.Contains('"') && innerSpan.Contains(' '))
-		{
-			if (If.CanTryParseConditional(body, innerSpan))
-				return new List<Expression> { If.ParseConditional(body, innerSpan) };
-			// Similar to TryParseExpression, but we know there is commas separating things!
-			var postfix = new ShuntingYard(innerSpan.ToString());
-			// The postfix data comes in upside down, so use another stack to restore order
-			var expressions = GetListArgumentsUsingPostfixTokens(body, innerSpan, postfix);
-			return new List<Expression>(expressions);
-		}
+			return If.CanTryParseConditional(body, innerSpan)
+				? new List<Expression> { If.ParseConditional(body, innerSpan) }
+				: new ExpressionListParser(this, innerSpan.ToString()).GetAll(body);
 		if (innerSpan.Length == 0)
 			throw new List.EmptyListNotAllowed(body);
 		return ParseAllElementsFast(body, innerSpan, new RangeEnumerator(innerSpan, ',', 0));
 	}
 
-	private Stack<Expression> GetListArgumentsUsingPostfixTokens(Body body, ReadOnlySpan<char> innerSpan,
-		ShuntingYard postfix)
+	/// <summary>
+	/// Similar to TryParseExpression, but we know there is commas separating expressions
+	/// </summary>
+	public class ExpressionListParser
 	{
-		var expressions = new Stack<Expression>();
-		if (postfix.Output.Count == 1)
-			expressions.Push(ParseTextWithSpacesOrListWithMultipleOrNestedElements(body,
-				innerSpan[postfix.Output.Pop()]));
-		else if (postfix.Output.Count == 2)
-			expressions.Push(
-				ParseMethodCallWithArguments(body, innerSpan,
-					postfix));
-		else
-			ParseBinaryOrNormalExpressionsIntoList(body, innerSpan, postfix, expressions);
-		return expressions;
-	}
-
-	private static void ParseBinaryOrNormalExpressionsIntoList(Body body, ReadOnlySpan<char> innerSpan, ShuntingYard postfix,
-		Stack<Expression> expressions)
-	{
-		do
+		public ExpressionListParser(MethodExpressionParser parser, string inner)
 		{
-			var span = innerSpan[postfix.Output.Peek()];
-			// Is this a binary expression we have to put into the list (already tokenized and postfixed)
-			try
+			this.parser = parser;
+			this.inner = inner;
+			postfix = new ShuntingYard(inner);
+		}
+
+		private readonly MethodExpressionParser parser;
+		private readonly string inner;
+		private readonly ShuntingYard postfix;
+
+		/// <summary>
+		/// The postfix data comes in upside down, so use another stack to restore order
+		/// </summary>
+		public List<Expression> GetAll(Body body)
+		{
+			var expressions = new Stack<Expression>();
+			if (postfix.Output.Count == 1)
+				expressions.Push(parser.ParseTextWithSpacesOrListWithMultipleOrNestedElements(body,
+					inner[postfix.Output.Pop()]));
+			else if (postfix.Output.Count == 2)
+				expressions.Push(parser.ParseMethodCallWithArguments(body, inner.AsSpan(), postfix));
+			else
+				ParseBinaryOrNormalExpressionsIntoList(body, expressions);
+			return new List<Expression>(expressions);
+		}
+
+		private void ParseBinaryOrNormalExpressionsIntoList(Body body, Stack<Expression> expressions)
+		{
+			do
 			{
-				if (span.Length == 1 && span[0].IsSingleCharacterOperator() ||
-					span.IsMultiCharacterOperator())
-					expressions.Push(Binary.Parse(body, innerSpan, postfix.Output));
-				else
-					expressions.Push(body.Method.ParseExpression(body, innerSpan[postfix.Output.Pop()]));
-			}
-			catch (UnknownExpression ex)
-			{
-				throw new UnknownExpressionForArgument(body,
-					span.ToString() + " is invalid for argument " + expressions.Count + " " + ex.Message);
-			}
-			if (postfix.Output.Count > 0 && innerSpan[postfix.Output.Pop().Start.Value] != ',')
-				throw new ListTokensAreNotSeparatedByComma(body);
-		} while (postfix.Output.Count > 0);
+				var span = inner[postfix.Output.Peek()];
+				try
+				{
+					// Is this a binary expression we have to put into the list (already tokenized and postfixed)
+					expressions.Push(span.Length == 1 && span[0].IsSingleCharacterOperator() ||
+						span.IsMultiCharacterOperator()
+							? Binary.Parse(body, inner.AsSpan(), postfix.Output)
+							: body.Method.ParseExpression(body, inner[postfix.Output.Pop()]));
+				}
+				catch (UnknownExpression ex)
+				{
+					throw new UnknownExpressionForArgument(body,
+						span.ToString() + " is invalid for argument " + expressions.Count + " " + ex.Message);
+				}
+				if (postfix.Output.Count > 0 && inner[postfix.Output.Pop().Start.Value] != ',')
+					throw new ListTokensAreNotSeparatedByComma(body);
+			} while (postfix.Output.Count > 0);
+		}
 	}
 
 	private static List<Expression> ParseAllElementsFast(Body body, ReadOnlySpan<char> input,

@@ -66,7 +66,9 @@ public abstract class Context
 
 	private Type GetTypeFromPackages(string name)
 	{
-		if (name == Name)
+		if (name == Name || this is Type && ((Type)this).IsGeneric &&
+			name.StartsWith(Name, StringComparison.Ordinal) &&
+			name == Name + GenericImplementationPostfix)
 			return (Type)this;
 		if (name.StartsWith(Base.List + DoubleOpenBrackets, StringComparison.Ordinal))
 			return GetNestedListType(name);
@@ -84,6 +86,7 @@ public abstract class Context
 		return (FindFullType(name) ?? FindType(name, this)) ?? throw new TypeNotFound(name, FullName);
 	}
 
+	private const string GenericImplementationPostfix = "(" + Base.Generic + ")";
 	internal const string DoubleOpenBrackets = "((";
 
 	private Type GetNestedListType(string fullName)
@@ -136,7 +139,7 @@ public abstract class Context
 				mainType.Name
 			} needs these type arguments: {
 				mainType.Members.Where(m => m.Type.IsGeneric).ToList().ToBrackets()
-			}, does not match provided types: {
+			} This does not match provided types: {
 				typeArguments.ToBrackets()
 			}") { }
 	}

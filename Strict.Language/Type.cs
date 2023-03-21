@@ -10,6 +10,7 @@ namespace Strict.Language;
 /// Strict code only contains optionally implement, then has*, then methods*. No empty lines.
 /// There is no typical lexing/scoping/token splitting needed as Strict syntax is very strict.
 /// </summary>
+//TODO: split up into TypeParser, TypeValidator, TypeMemberFinder and TypeMethodFinder and use all of these in this Type class
 public class Type : Context
 {
 	public Type(Package package, TypeLines file) : base(package, file.Name)
@@ -56,15 +57,15 @@ public class Type : Context
 		return false;
 	}
 
-	private static bool HasGenericMethodHeader(string line) =>
-		line.Contains(Base.Generic, StringComparison.Ordinal) ||
-		line.Contains(Base.GenericLowercase, StringComparison.Ordinal);
-
 	private static bool HasGenericMember(string line) =>
 		(line.StartsWith(HasWithSpaceAtEnd, StringComparison.Ordinal) ||
 			line.StartsWith(MutableWithSpaceAtEnd, StringComparison.Ordinal)) &&
 		(line.Contains(Base.Generic, StringComparison.Ordinal) ||
 			line.Contains(Base.GenericLowercase, StringComparison.Ordinal));
+
+	private static bool HasGenericMethodHeader(string line) =>
+		line.Contains(Base.Generic, StringComparison.Ordinal) ||
+		line.Contains(Base.GenericLowercase, StringComparison.Ordinal);
 
 	/// <summary>
 	/// Parsing has to be done OUTSIDE the constructor as we first need all types and inside might not
@@ -537,7 +538,8 @@ public class Type : Context
 
 	public GenericTypeImplementation GetGenericImplementation(Type singleImplementationType)
 	{
-		var key = Name + "(" + singleImplementationType.Name + ")";
+		//TODO: check if this is in fact a single implementation type generic
+		var key = Name + "(" + singleImplementationType.Name + ")"; //TODO: this doesn't seem to be the same key as used when called from Context.GetTypeFromPackages
 		return GetGenericImplementation(key) ??
 			CreateGenericImplementation(key, new[] { singleImplementationType });
 	}
@@ -556,12 +558,49 @@ public class Type : Context
 
 	private GenericTypeImplementation CreateGenericImplementation(string key, IReadOnlyList<Type> implementationTypes)
 	{
-		if (Name != Base.List && Members.Count(m => m.Type.IsGeneric) != implementationTypes.Count &&
-			!HasMatchingConstructor(implementationTypes) && Name != Base.Iterator) //TODO: Temporary workaround to make Iterator work without generic member
+		if (GetUniqueGenericTypeNames().Count != implementationTypes.Count &&
+			!HasMatchingConstructor(implementationTypes))
 			throw new TypeArgumentsCountDoesNotMatchGenericType(this, implementationTypes);
 		var genericType = new GenericTypeImplementation(this, implementationTypes);
 		cachedGenericTypes!.Add(key, genericType);
 		return genericType;
+	}
+
+	//TODO: find these fucked up rules for Iterator and List and generalize them, then find the bug with MethodBody not matching Method it is in, wtf
+	// && Name != Base.Iterator && Name != Base.List && ) //TODO: Temporary workaround to make Iterator work without generic member
+	private IReadOnlyList<string> GetUniqueGenericTypeNames()
+	{
+		//TODO: Easy and most common case is 1 member and that is called "Generic" anyway, check if there are no methods conflicting with differently named "Generic"
+		var genericNames = new List<string>();
+		foreach (var member in Members)
+		{
+			if (member.Type is GenericTypeImplementation genericImplementation) //TODO: never happens?
+			{
+				foreach (var implementationMember in genericImplementation.ImplementationTypes)
+					if (member.Type.IsGeneric)
+						AddGenericName(genericNames, implementationMember.Name);
+			}
+			else if (member.Type.IsIterator)
+				AddGenericName(genericNames, Base.Generic);
+			else if (member.Type.IsGeneric)
+				AddGenericName(genericNames, member.Name);
+			/*TODO: figure out has keysAndValues List((key Generic, mappedValue Generic)) case!
+				genericNames.Add(member.Name);
+					genericNames.Add(implementationMember);
+			if (member.Type.IsIterator)
+			{
+				member.Type.GetListImplementationType()
+					|| member.Type.Name == Base.List)
+				if (member.Type.Name == Base.Iterator)
+					genericNames.Add(Base.Generic);
+				else
+					genericNames.AddRange(member.Type.GetUniqueGenericTypeNames());
+			}
+			else if (member.Type.IsGeneric)
+				genericNames.Add(member.Name);
+			*/
+		}
+		return genericNames;
 	}
 
 	private bool HasMatchingConstructor(IReadOnlyList<Type> implementationTypes) =>
@@ -578,6 +617,12 @@ public class Type : Context
 	{
 		var key = Name + implementationTypes.Select(t => t.Name).ToList().ToBrackets();
 		return GetGenericImplementation(key) ?? CreateGenericImplementation(key, implementationTypes);
+	}
+
+	private void AddGenericName(List<string> genericNames, string typeName)
+	{
+		if (!genericNames.Contains(typeName))
+			genericNames.Add(typeName);
 	}
 
 	public sealed class CannotGetGenericImplementationOnNonGeneric : Exception
