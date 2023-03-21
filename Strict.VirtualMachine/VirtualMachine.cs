@@ -18,7 +18,7 @@ public sealed class VirtualMachine
 		return RunStatements(allStatements);
 	}
 
-	public VirtualMachine Invoke(IList<Statement> allStatements) => RunStatements(allStatements);
+	private VirtualMachine Invoke(IList<Statement> allStatements) => RunStatements(allStatements);
 
 	private VirtualMachine RunStatements(IList<Statement> allStatements)
 	{
@@ -57,7 +57,7 @@ public sealed class VirtualMachine
 		if (statement is not WriteToListStatement writeToListStatement)
 			return;
 		Memory.AddToCollectionVariable(writeToListStatement.Identifier,
-			(Expression)Memory.Registers[writeToListStatement.Register].Value);
+			Memory.Registers[writeToListStatement.Register].Value);
 	}
 
 	private void TryLoopEndInstruction(Statement statement)
@@ -243,8 +243,8 @@ public sealed class VirtualMachine
 		var (right, left) = GetOperands(statement);
 		Memory.Registers[statement.Registers[^1]] = statement.Instruction switch
 		{
-			Instruction.Add => GetAdditionResult(left, right),
-			Instruction.Subtract => GetSubtractionResult(left, right),
+			Instruction.Add => left + right,
+			Instruction.Subtract => left - right,
 			Instruction.Multiply => new Instance(right.ReturnType,
 				Convert.ToDouble(left.Value) * Convert.ToDouble(right.Value)),
 			Instruction.Divide => new Instance(right.ReturnType,
@@ -254,54 +254,6 @@ public sealed class VirtualMachine
 			_ => Memory.Registers[statement.Registers[^1]] //ncrunch: no coverage
 		};
 	}
-
-	private static Instance GetAdditionResult(Instance left, Instance right)
-	{
-		var leftReturnTypeName = left.TypeName;
-		var rightReturnTypeName = right.TypeName;
-		if (leftReturnTypeName == Base.Number && rightReturnTypeName == Base.Number)
-			return new Instance(right.ReturnType ?? left.ReturnType,
-				Convert.ToDouble(left.Value) + Convert.ToDouble(right.Value));
-		if (leftReturnTypeName == Base.Text && rightReturnTypeName == Base.Text)
-			return new Instance(right.ReturnType ?? left.ReturnType,
-				left.Value.ToString() + right.Value);
-		if (rightReturnTypeName == Base.Text && leftReturnTypeName == Base.Number)
-			return new Instance(right.ReturnType, left.Value.ToString() + right.Value);
-		return !leftReturnTypeName.EndsWith('s')
-			? new Instance(left.ReturnType, left.Value + right.Value.ToString())
-			: AddElementToTheListAndGetInstance(left, right);
-	}
-
-	//ncrunch: no coverage start, TODO: missing tests
-	private static Instance AddElementToTheListAndGetInstance(Instance left, Instance right)
-	{
-		var elements = new List<Expression>((List<Expression>)left.Value);
-		if (right.Value is Expression rightExpression)
-			elements.Add(rightExpression);
-		else
-		{
-			var rightValue = new Value(elements.First().ReturnType, right.Value);
-			elements.Add(rightValue);
-		}
-		return new Instance(left.ReturnType, elements);
-	}
-
-	private static Instance GetSubtractionResult(Instance left, Instance right)
-	{
-		if (!left.TypeName.EndsWith('s'))
-			return new Instance(left.ReturnType,
-				Convert.ToDouble(left.Value) - Convert.ToDouble(right.Value));
-		var elements = new List<Expression>((List<Expression>)left.Value);
-		if (right.Value is Expression rightExpression)
-			elements.Remove(rightExpression);
-		else
-		{
-			var indexToRemove =
-				elements.FindIndex(element => ((Value)element).Data.Equals(right.Value));
-			elements.RemoveAt(indexToRemove);
-		}
-		return new Instance(left.ReturnType, elements);
-	} //ncrunch: no coverage end
 
 	private (Instance, Instance) GetOperands(BinaryStatement statement) =>
 		Memory.Registers.Count < 2
@@ -313,8 +265,8 @@ public sealed class VirtualMachine
 		var (right, left) = GetOperands(statement);
 		conditionFlag = statement.Instruction switch
 		{
-			Instruction.GreaterThan => Convert.ToDouble(left.Value) > Convert.ToDouble(right.Value),
-			Instruction.LessThan => Convert.ToDouble(left.Value) < Convert.ToDouble(right.Value),
+			Instruction.GreaterThan => left > right,
+			Instruction.LessThan => left < right,
 			Instruction.Equal => left.Value.Equals(right.Value),
 			Instruction.NotEqual => !left.Value.Equals(right.Value),
 			_ => false //ncrunch: no coverage
