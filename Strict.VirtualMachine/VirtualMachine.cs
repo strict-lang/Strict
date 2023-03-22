@@ -1,6 +1,6 @@
-﻿using Strict.Language;
+﻿using System.Data;
+using Strict.Language;
 using Strict.Language.Expressions;
-using System.Data;
 
 namespace Strict.VirtualMachine;
 
@@ -75,7 +75,16 @@ public sealed class VirtualMachine
 		if (statement is not InvokeStatement { MethodCall: { } } invokeStatement)
 			return;
 		var methodStatements = GetByteCodeFromInvokedMethodCall(invokeStatement);
-		var instance = RunAndGetResultFromInvokedMethodCall(methodStatements);
+		var instance = new VirtualMachine
+		{
+			Memory = new Memory
+			{
+				Registers = Memory.Registers,
+				Variables =
+					new Dictionary<string, Instance>(
+						Memory.Variables.Where(variable => variable.Value.IsMember))
+			}
+		}.Invoke(methodStatements).Returns;
 		if (instance != null)
 			Memory.Registers[invokeStatement.Register] = instance;
 	}
@@ -104,19 +113,6 @@ public sealed class VirtualMachine
 		if (methodCallInstance == null)
 			throw new VariableNotFoundInMemory();
 		return methodCallInstance;
-	}
-
-	private Instance? RunAndGetResultFromInvokedMethodCall(IList<Statement> methodStatements)
-	{
-		var members =
-			new Dictionary<string, Instance>(
-				Memory.Variables.Where(variable => variable.Value.IsMember));
-		var instance =
-			new VirtualMachine
-			{
-				Memory = new Memory { Registers = Memory.Registers, Variables = members }
-			}.Invoke(methodStatements).Returns;
-		return instance;
 	}
 
 	private Dictionary<string, Instance> FormArgumentsForMethodCall(InvokeStatement invokeStatement)
@@ -158,7 +154,8 @@ public sealed class VirtualMachine
 		if (iterableVariable == null)
 			return; //ncrunch: no coverage
 		if (!iteratorInitialized)
-			InitializeIterator(iterableVariable); //TODO: Get rid of this and figure out something better. (LM)
+			InitializeIterator(
+				iterableVariable); //TODO: Get rid of this and figure out something better. (LM)
 		AlterValueVariable(iterableVariable);
 	}
 
@@ -217,13 +214,11 @@ public sealed class VirtualMachine
 	private void TryLoadInstructions(Statement statement)
 	{
 		if (statement is LoadVariableStatement loadVariableStatement)
-			LoadVariableIntoRegister(loadVariableStatement);
+			Memory.Registers[loadVariableStatement.Register] =
+				Memory.Variables[loadVariableStatement.Identifier];
 		else if (statement is LoadConstantStatement loadConstantStatement)
 			Memory.Registers[loadConstantStatement.Register] = loadConstantStatement.Instance;
 	}
-
-	private void LoadVariableIntoRegister(LoadVariableStatement statement) =>
-		Memory.Registers[statement.Register] = Memory.Variables[statement.Identifier];
 
 	private void TryExecuteRest(Statement statement)
 	{

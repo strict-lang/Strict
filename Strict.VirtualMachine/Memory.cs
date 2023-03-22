@@ -10,7 +10,6 @@ public sealed class Memory
 
 	public void AddToCollectionVariable(string key, object element)
 	{
-
 		Variables.TryGetValue(key, out var collection);
 		if (collection?.Value is List<Expression> listExpression)
 			listExpression.Add(ConvertObjectToValueForm(element, listExpression[0]));

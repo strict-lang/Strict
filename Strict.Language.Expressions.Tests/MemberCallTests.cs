@@ -4,14 +4,10 @@ namespace Strict.Language.Expressions.Tests;
 
 public sealed class MemberCallTests : TestExpressions
 {
-	[SetUp]
-	public void CreateParser() => parser = new MethodExpressionParser();
-
-	private ExpressionParser parser = null!;
-
 	[Test]
 	public void UseKnownMember() =>
-		Assert.That(ParseExpression("Type(\"Hello\").Name").ToString(), Is.EqualTo("Type(\"Hello\").Name"));
+		Assert.That(ParseExpression("Type(\"Hello\").Name").ToString(),
+			Is.EqualTo("Type(\"Hello\").Name"));
 
 	[Test]
 	public void UnknownMember() =>
@@ -29,7 +25,8 @@ public sealed class MemberCallTests : TestExpressions
 
 	[Test]
 	public void NumbersCanNotStartNestedCall() =>
-		Assert.That(() => ParseExpression("1.log"), Throws.InstanceOf<NumbersCanNotBeInNestedCalls>());
+		Assert.That(() => ParseExpression("1.log"),
+			Throws.InstanceOf<NumbersCanNotBeInNestedCalls>());
 
 	[Test]
 	public void OperatorsCannotBeInNestedCalls() =>
@@ -42,7 +39,8 @@ public sealed class MemberCallTests : TestExpressions
 
 	[Test]
 	public void NestedMemberIsNotAWord() =>
-		Assert.That(() => ParseExpression("log.5"), Throws.InstanceOf<NumbersCanNotBeInNestedCalls>());
+		Assert.That(() => ParseExpression("log.5"),
+			Throws.InstanceOf<NumbersCanNotBeInNestedCalls>());
 
 	[Test]
 	public void ValidMemberCall() =>
@@ -51,10 +49,13 @@ public sealed class MemberCallTests : TestExpressions
 	[Test]
 	public void MemberWithArgumentsInitializerShouldNotHaveType() =>
 		Assert.That(
-			() => new Type(type.Package, new TypeLines("ConstantDeclaration", "has input Text = Text(5)")).
+			() => new Type(type.Package,
+					new TypeLines("ConstantDeclaration", "has input Text = Text(5)")).
 				ParseMembersAndMethods(parser),
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.
 				InstanceOf<NamedType.AssignmentWithInitializerTypeShouldNotHaveNameWithType>());
+
+	private readonly ExpressionParser parser = new MethodExpressionParser();
 
 	[Test]
 	public void UnknownExpressionInMemberInitializer() =>
@@ -93,8 +94,8 @@ public sealed class MemberCallTests : TestExpressions
 	{
 		var memberCall =
 			new Type(type.Package,
-				new TypeLines(nameof(MemberGetHashCodeAndEquals), "has input = Text(5)",
-					"GetInput Text", "\tinput")).ParseMembersAndMethods(parser);
+				new TypeLines(nameof(MemberGetHashCodeAndEquals), "has input = Text(5)", "GetInput Text",
+					"\tinput")).ParseMembersAndMethods(parser);
 		Assert.That(memberCall.Members[0].GetHashCode(),
 			Is.EqualTo(memberCall.Members[0].Name.GetHashCode()));
 		Assert.That(
