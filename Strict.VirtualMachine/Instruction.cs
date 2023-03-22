@@ -30,6 +30,7 @@ public enum Instruction
 	JumpsSeparator = 400,
 	Invoke,
 	WriteToList,
-	Return
+	WriteToTable,
+	Return,
 }
 

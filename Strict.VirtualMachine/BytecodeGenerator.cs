@@ -5,11 +5,11 @@ namespace Strict.VirtualMachine;
 
 public sealed class ByteCodeGenerator
 {
+	private readonly Stack<int> idStack = new();
 	private readonly Register[] registers = Enum.GetValues<Register>();
+	private readonly Registry registry;
 	private readonly List<Statement> statements = new();
 	private int conditionalId;
-	private readonly Stack<int> idStack = new();
-	private readonly Registry registry;
 
 	public ByteCodeGenerator(InvokedMethod method, Registry registry)
 	{
@@ -57,8 +57,7 @@ public sealed class ByteCodeGenerator
 					instance.ReturnType.Members[parameterIndex].Name));
 			if (instance.ReturnType.Members[parameterIndex].Value == null)
 				instance.ReturnType.Members[parameterIndex].
-					UpdateValue(instance.Arguments[parameterIndex],
-						new Body(instance.Method));
+					UpdateValue(instance.Arguments[parameterIndex], new Body(instance.Method));
 		}
 	}
 
@@ -117,14 +116,37 @@ public sealed class ByteCodeGenerator
 	{
 		if (expression is Binary || expression is not MethodCall methodCall)
 			return;
-		if (methodCall.Method.Name == "Add" && methodCall.Instance != null)
+		if (methodCall.Method.Name == "Add")
 		{
-			GenerateStatementsFromExpression(methodCall.Arguments[0]);
-			statements.Add(new WriteToListStatement(registry.PreviousRegister,
-				methodCall.Instance.ToString()));
+			if (TryGenerateAddForTable(methodCall))
+				return;
+			TryGenerateAddForList(methodCall);
 		}
 		else
+		{
 			statements.Add(new InvokeStatement(methodCall, registry.AllocateRegister(), registry));
+		}
+	}
+
+	private void TryGenerateAddForList(MethodCall methodCall)
+	{
+		if (methodCall.Instance == null)
+			return;
+		GenerateStatementsFromExpression(methodCall.Arguments[0]);
+		statements.Add(new WriteToListStatement(registry.PreviousRegister,
+			methodCall.Instance.ToString()));
+	}
+
+	private bool TryGenerateAddForTable(MethodCall methodCall)
+	{
+		if (methodCall.Arguments.Count != 2 || methodCall.Instance == null)
+			return false;
+		GenerateStatementsFromExpression(methodCall.Arguments[0]);
+		var key = registry.PreviousRegister;
+		GenerateStatementsFromExpression(methodCall.Arguments[1]);
+		var value = registry.PreviousRegister;
+		statements.Add(new WriteToTableStatement(key, value, methodCall.Instance.ToString()));
+		return true;
 	}
 
 	private void TryGenerateBodyStatements(Expression expression)
@@ -136,7 +158,8 @@ public sealed class ByteCodeGenerator
 	private void TryGenerateVariableOrMemberCallStatement(Expression expression)
 	{
 		if (expression is VariableCall or MemberCall)
-			statements.Add(new LoadVariableStatement(registry.AllocateRegister(), expression.ToString()));
+			statements.Add(
+				new LoadVariableStatement(registry.AllocateRegister(), expression.ToString()));
 	}
 
 	private void TryGenerateMutableStatements(Expression expression)
@@ -273,7 +296,8 @@ public sealed class ByteCodeGenerator
 			statements.Add(new LoadConstantStatement(rightRegister,
 				new Instance(argumentValue.ReturnType, argumentValue.Data)));
 		else
-			statements.Add(new LoadVariableStatement(rightRegister, condition.Arguments[0].ToString())); //ncrunch: no coverage
+			statements.Add(new LoadVariableStatement(rightRegister,
+				condition.Arguments[0].ToString())); //ncrunch: no coverage
 		return rightRegister;
 	}
 
@@ -282,7 +306,9 @@ public sealed class ByteCodeGenerator
 		{
 			Binary binaryInstance => GenerateValueBinaryStatements(binaryInstance,
 				GetInstructionBasedOnBinaryOperationName(binaryInstance.Method.Name)),
-			MethodCall => InvokeAndGetStoredRegisterForConditional(condition), //ncrunch: no coverage, TODO: missing tests
+			MethodCall =>
+				InvokeAndGetStoredRegisterForConditional(
+					condition), //ncrunch: no coverage, TODO: missing tests
 			_ => LoadVariableForIfConditionLeft(condition)
 		};
 
@@ -329,14 +355,15 @@ public sealed class ByteCodeGenerator
 		var left = registry.AllocateRegister();
 		if (binary.Instance != null)
 			statements.Add(new LoadVariableStatement(left, binary.Instance.ToString()));
-		statements.Add(new BinaryStatement(operationInstruction, left, right, registry.AllocateRegister()));
+		statements.Add(new BinaryStatement(operationInstruction, left, right,
+			registry.AllocateRegister()));
 	}
 
 	private Register GenerateValueBinaryStatements(MethodCall binary,
 		Instruction operationInstruction)
 	{
-		var (leftRegister, rightRegister, resultRegister) =
-			(registry.AllocateRegister(), registry.AllocateRegister(), registry.AllocateRegister());
+		var (leftRegister, rightRegister, resultRegister) = (registry.AllocateRegister(),
+			registry.AllocateRegister(), registry.AllocateRegister());
 		if (binary.Instance is Value instanceValue)
 			statements.Add(new LoadConstantStatement(leftRegister, new Instance(instanceValue)));
 		else

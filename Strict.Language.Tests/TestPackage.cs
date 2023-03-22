@@ -227,14 +227,13 @@ public class TestPackage : Package
 			new Type(this, new TypeLines(Base.Dictionary,
 				"has keysAndValues List((key Generic, mappedValue Generic))",
 				"from(key Generic, mappedValue Generic)",
-				"\tDictionary(Number, Number).Length is 0",
-				"\tDictionary(Number, Number) is Dictionary(Number, Number)",
-				"\tDictionary(Number, Number) is not Dictionary(Number, Text)",
 				"\tkeysAndValues = List((key, mappedValue))",
 				"Add(key Generic, mappedValue Generic) Mutable(Dictionary)",
-				"\tDictionary((2, 4)).Add(4, 8) is Dictionary((2, 4), (4, 8))",
-				"\tDictionary((1, 1), (2, 2)).Add(3, 3).Length is 3",
-				"\tkeysAndValues.Add((key, mappedValue))"))
+				"\tkeysAndValues.Add((key, mappedValue))",
+				"Get(key Generic) Generic",
+	"\tfor keysAndValues",
+		"\t\tif value(0) is key",
+			"\t\t\treturn value(1)))"))
 		};
 		foreach (var type in types)
 			type.ParseMembersAndMethods(parser);

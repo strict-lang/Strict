@@ -238,21 +238,37 @@ public sealed class VirtualMachineTests : BaseVirtualMachineTests
 		Assert.That(result.ToString(), Is.EqualTo(expectedResult));
 	}
 
-	[TestCase("ListAdd(5).AddNumberToList",
+	[TestCase("CollectionAdd(5).AddNumberToList",
 		"1 2 3 5",
 		"has number",
 		"AddNumberToList Numbers",
 		"\tmutable numbers = (1, 2, 3)",
 		"\tnumbers.Add(number)",
 		"\tnumbers")]
-	public void ListAdd(string methodCall, string expected, params string[] code)
+	public void CollectionAdd(string methodCall, string expected, params string[] code)
 	{
 		var statements =
 			new ByteCodeGenerator(
-				GenerateMethodCallFromSource(nameof(ListAdd), methodCall, code)).Generate();
+				GenerateMethodCallFromSource(nameof(CollectionAdd), methodCall, code)).Generate();
 		var result = ((IEnumerable<Expression>)vm.Execute(statements).Returns?.Value!).Aggregate("",
 			(current, value) => current + ((Value)value).Data + " ");
 		Assert.That(result.TrimEnd(), Is.EqualTo(expected));
+	}
+
+	[TestCase("CollectionAdd(5).AddToDictionary",
+		"5",
+		"has number",
+		"AddToDictionary Number",
+		"\tmutable values = Dictionary(Number, Number)",
+		"\tvalues.Add(1, number)",
+		"\tvalues.Get(1)")]
+	public void DictionaryAdd(string methodCall, string expected, params string[] code)
+	{
+		var statements =
+			new ByteCodeGenerator(
+				GenerateMethodCallFromSource(nameof(CollectionAdd), methodCall, code)).Generate();
+		var result = vm.Execute(statements).Returns?.Value!;
+		Assert.That(result.ToString(), Is.EqualTo(expected));
 	}
 
 	[Test]

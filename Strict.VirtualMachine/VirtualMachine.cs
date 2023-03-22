@@ -1,15 +1,17 @@
-﻿using Strict.Language;
+﻿using System.Data;
+using Strict.Language;
 using Strict.Language.Expressions;
-using System.Data;
 
 namespace Strict.VirtualMachine;
 
 public sealed class VirtualMachine
 {
-	public Memory Memory { get; private init; } = new();
 	private bool conditionFlag;
 	private int instructionIndex;
+	private bool iteratorInitialized;
+	private int loopIterationNumber;
 	private IList<Statement> statements = new List<Statement>();
+	public Memory Memory { get; private init; } = new();
 	public Instance? Returns { get; private set; }
 
 	public VirtualMachine Execute(IList<Statement> allStatements)
@@ -49,7 +51,16 @@ public sealed class VirtualMachine
 		TryLoopEndInstruction(statement);
 		TryInvokeInstruction(statement);
 		TryWriteToListInstruction(statement);
+		TryWriteToTableInstruction(statement);
 		TryExecuteRest(statement);
+	}
+
+	private void TryWriteToTableInstruction(Statement statement)
+	{
+		if (statement is not WriteToTableStatement writeToTableStatement)
+			return;
+		Memory.AddToDictionary(writeToTableStatement.Identifier, Memory.Registers[writeToTableStatement.Key],
+			Memory.Registers[writeToTableStatement.Value]);
 	}
 
 	private void TryWriteToListInstruction(Statement statement)
@@ -146,9 +157,6 @@ public sealed class VirtualMachine
 		return true;
 	}
 
-	private bool iteratorInitialized;
-	private int loopIterationNumber;
-
 	private void TryLoopInitInstruction(Statement statement)
 	{
 		if (statement is not LoopBeginStatement initLoopStatement)
@@ -158,7 +166,8 @@ public sealed class VirtualMachine
 		if (iterableVariable == null)
 			return; //ncrunch: no coverage
 		if (!iteratorInitialized)
-			InitializeIterator(iterableVariable); //TODO: Get rid of this and figure out something better. (LM)
+			InitializeIterator(
+				iterableVariable); //TODO: Get rid of this and figure out something better. (LM)
 		AlterValueVariable(iterableVariable);
 	}
 
@@ -235,7 +244,9 @@ public sealed class VirtualMachine
 				TryBinaryOperationExecution(binaryStatement);
 		}
 		else if (statement is JumpStatement jumpStatement)
+		{
 			TryJumpOperation(jumpStatement);
+		}
 	}
 
 	private void TryBinaryOperationExecution(BinaryStatement statement)
