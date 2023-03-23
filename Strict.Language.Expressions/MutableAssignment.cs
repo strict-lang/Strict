@@ -38,29 +38,25 @@ public sealed class MutableAssignment : ConcreteExpression
 	private static Expression UpdateMemberOrVariableValue(Body body,
 		Expression expression, Expression newExpression)
 	{
-		switch (expression)
-		{
-		case VariableCall variableCall:
+		if (expression is VariableCall variableCall)
 			return new MutableAssignment(body, variableCall.Name, newExpression);
-		case MemberCall memberCall:
+		if (expression is MemberCall memberCall)
 		{
 			memberCall.Member.UpdateValue(newExpression, body);
 			return memberCall;
 		}
-		case ParameterCall parameterCall:
+		if (expression is ParameterCall parameterCall)
 		{
 			parameterCall.Parameter.UpdateValue(newExpression, body);
 			return parameterCall;
 		}
-		case ListCall listCall:
+		if (expression is ListCall listCall)
 		{
 			if (listCall.List is VariableCall { CurrentValue: List listExpression })
 				listExpression.UpdateValue(body, listCall.Index, newExpression);
 			return listCall;
 		}
-		default:
-			throw new InvalidAssignmentTarget(body, expression.ToString()); //ncrunch: no coverage
-		}
+		throw new InvalidAssignmentTarget(body, expression.ToString()); //ncrunch: no coverage
 	}
 
 	public override string ToString() => Name + " = " + Value;
