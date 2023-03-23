@@ -178,7 +178,7 @@ public sealed class For : Expression
 		string value;
 		if (iterableName[^1] == ')')
 			value = iterableName[1..iterableName.IndexOf(',')].ToString();
-		else if (variable != null && variable.IsIterator)
+		else if (variable is { IsIterator: true })
 			value = $"{iterableName}(0)";
 		else
 			value = $"{iterableName}";

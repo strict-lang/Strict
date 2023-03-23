@@ -17,7 +17,7 @@ public abstract class Context
 	protected Context(Context? parent, string name)
 	{
 		var lastLetterNumber = -1;
-		if (parent != null && this is not GenericTypeImplementation &&
+		if (parent is not null && this is not GenericTypeImplementation &&
 			(string.IsNullOrWhiteSpace(name) ||
 				this is not Method && this is not Package && !name.IsWordOrWordWithNumberAtEnd(out lastLetterNumber) ||
 				HasConflictingType(parent, name, lastLetterNumber)))
