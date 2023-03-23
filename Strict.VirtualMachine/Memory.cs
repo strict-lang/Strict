@@ -16,16 +16,15 @@ public sealed class Memory
 			listExpression.Add(ConvertObjectToValueForm(element, listExpression[0]));
 	}
 
-	public void AddToDictionary(string variableKey, object keyToAddTo, object value)
+	public void AddToDictionary(string variableKey, Instance keyToAddTo, Instance value)
 	{
 		Variables.TryGetValue(variableKey, out var collection);
-		if (collection?.Value is not Dictionary<Type, Type> dictionary)
+		if (collection?.Value is not Dictionary<Value, Value> dictionary)
 			return;
-		var keyType = ((Instance)keyToAddTo).ReturnType;
-		var valueType = ((Instance)value).ReturnType;
-		if (keyType == null || valueType == null)
+		if (keyToAddTo.ReturnType == null || value.ReturnType == null)
 			return;
-		dictionary.Add(keyType, valueType);
+		dictionary.Add(new Value(keyToAddTo.ReturnType, keyToAddTo.Value),
+			new Value(value.ReturnType, value.Value));
 	}
 
 	private static Value ConvertObjectToValueForm(object obj, Expression prototype) =>

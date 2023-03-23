@@ -255,14 +255,30 @@ public sealed class VirtualMachineTests : BaseVirtualMachineTests
 		Assert.That(result.TrimEnd(), Is.EqualTo(expected));
 	}
 
+	[Test]
+	public void DictionaryAdd()
+	{
+		string[] code =
+		{
+			"has number",
+			"AddToDictionary Number",
+			"\tmutable values = Dictionary(Number, Number)", "\tvalues.Add(1, number)", "\tnumber"
+		};
+		Assert.That(
+			((Dictionary<Value, Value>)vm.
+				Execute(new ByteCodeGenerator(GenerateMethodCallFromSource(nameof(DictionaryAdd),
+					"DictionaryAdd(5).AddToDictionary", code)).Generate()).Memory.Variables["values"].
+				Value).Count, Is.EqualTo(1));
+	}
+
 	[TestCase("CollectionAdd(5).AddToDictionary",
 		"5",
 		"has number",
 		"AddToDictionary Number",
 		"\tmutable values = Dictionary(Number, Number)",
 		"\tvalues.Add(1, number)",
-		"\tvalues.Get(1)")]
-	public void DictionaryAdd(string methodCall, string expected, params string[] code)
+		"\tvalues.Get(0)")]
+	public void DictionaryGet(string methodCall, string expected, params string[] code)
 	{
 		var statements =
 			new ByteCodeGenerator(

@@ -6,7 +6,7 @@ namespace Strict.Language.Expressions;
 public sealed class Dictionary : Value
 {
 	public Dictionary(IReadOnlyList<Type> types, Type dictionaryImplementationType) : base(dictionaryImplementationType,
-		new Dictionary<Type, Type>())
+		new Dictionary<Value, Value>())
 	{
 		if (types.Count != 2)
 			throw new DictionaryMustBeInitializedWithTwoTypeParameters(dictionaryImplementationType, types);
