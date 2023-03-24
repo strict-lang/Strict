@@ -123,14 +123,16 @@ public sealed class ByteCodeGenerator
 		else
 			TryGenerateForEnum(memberCall);
 	}
-private void TryGenerateForEnum(MemberCall memberCall)
-{
-	if (memberCall.Instance == null || !memberCall.Instance.ReturnType.IsEnum)
-		return;
-	if (memberCall.Member.Value != null)
-		statements.Add(new LoadConstantStatement(registry.AllocateRegister(),
-			new Instance(memberCall.Member.Type, memberCall.Member.Value)));
-}	
+
+	private void TryGenerateForEnum(MemberCall memberCall)
+	{
+		if (memberCall.Instance == null || !memberCall.Instance.ReturnType.IsEnum)
+			return;
+		if (memberCall.Member.Value != null)
+			statements.Add(new LoadConstantStatement(registry.AllocateRegister(),
+				new Instance(memberCall.Member.Type, memberCall.Member.Value)));
+	}
+
 	private void TryGenerateValueStatement(Expression expression)
 	{
 		if (expression is Value valueExpression)
