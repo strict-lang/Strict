@@ -1,6 +1,7 @@
 using NUnit.Framework;
 using Strict.Language;
 using Strict.Language.Expressions;
+using Type = Strict.Language.Type;
 
 namespace Strict.VirtualMachine.Tests;
 
@@ -10,6 +11,22 @@ public sealed class VirtualMachineTests : BaseVirtualMachineTests
 	public void Setup() => vm = new VirtualMachine();
 
 	private VirtualMachine vm = null!;
+
+	private void CreateSampleEnum() =>
+		new Type(type.Package,
+			new TypeLines("Days", "has Monday = 1", "has Tuesday = 2", "has Wednesday = 3",
+				"has Thursday = 4", "has Friday = 5", "has Saturday = 6")).ParseMembersAndMethods(new MethodExpressionParser());
+
+	[Test]
+	public void ReturnEnum()
+	{
+		CreateSampleEnum();
+		var statements = new ByteCodeGenerator(GenerateMethodCallFromSource("WeekDays",
+			"WeekDays(5).GetMonday", "has dummy Number", "GetMonday Number",
+			"\tconstant monday = Days.Monday", "\tmonday")).Generate();
+		var result = vm.Execute(statements).Returns;
+		Assert.That(result!.Value, Is.EqualTo(1));
+	}
 
 	[TestCase(Instruction.Add, 15, 5, 10)]
 	[TestCase(Instruction.Subtract, 5, 8, 3)]

@@ -100,11 +100,37 @@ public sealed class ByteCodeGenerator
 		TryGenerateAssignmentStatements(expression);
 		TryGenerateLoopStatements(expression);
 		TryGenerateMutableStatements(expression);
-		TryGenerateVariableOrMemberCallStatement(expression);
+		TryGenerateMemberCallStatement(expression);
+		TryGenerateVariableCallStatement(expression);
 		TryGenerateMethodCallStatement(expression);
 		TryGenerateValueStatement(expression);
 	}
 
+	private void TryGenerateVariableCallStatement(Expression expression)
+	{
+		if (expression is not VariableCall)
+			return;
+		statements.Add(new LoadVariableStatement(registry.AllocateRegister(), expression.ToString()));
+	}
+
+	private void TryGenerateMemberCallStatement(Expression expression)
+	{
+		if (expression is not MemberCall memberCall)
+			return;
+		if (memberCall.Instance == null)
+			statements.Add(
+				new LoadVariableStatement(registry.AllocateRegister(), expression.ToString()));
+		else
+			TryGenerateForEnum(memberCall);
+	}
+private void TryGenerateForEnum(MemberCall memberCall)
+{
+	if (memberCall.Instance == null || !memberCall.Instance.ReturnType.IsEnum)
+		return;
+	if (memberCall.Member.Value != null)
+		statements.Add(new LoadConstantStatement(registry.AllocateRegister(),
+			new Instance(memberCall.Member.Type, memberCall.Member.Value)));
+}	
 	private void TryGenerateValueStatement(Expression expression)
 	{
 		if (expression is Value valueExpression)
@@ -153,13 +179,6 @@ public sealed class ByteCodeGenerator
 	{
 		if (expression is Body body)
 			GenerateStatements(body.Expressions);
-	}
-
-	private void TryGenerateVariableOrMemberCallStatement(Expression expression)
-	{
-		if (expression is VariableCall or MemberCall)
-			statements.Add(
-				new LoadVariableStatement(registry.AllocateRegister(), expression.ToString()));
 	}
 
 	private void TryGenerateMutableStatements(Expression expression)

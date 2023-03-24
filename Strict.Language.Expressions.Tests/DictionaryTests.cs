@@ -24,7 +24,7 @@ public sealed class DictionaryTests : TestExpressions
 					"has keysAndValues List((key Generic, value Generic))", "Get(key Generic) Generic",
 					"\tfor keysAndValues", "\t\tif value(0) is key", "\t\t\treturn value(1)))")).
 			ParseMembersAndMethods(new MethodExpressionParser());
-		Assert.DoesNotThrow(() => dictionaryType.Methods[0].GetBodyAndParseIfNeeded());
+		Assert.That(() => dictionaryType.Methods[0].GetBodyAndParseIfNeeded(), Throws.Nothing);
 	}
 
 	[Test]
