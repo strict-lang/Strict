@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-
-namespace Strict.Language;
+﻿namespace Strict.Language;
 
 /// <summary>
 /// Optimization to split type parsing into three steps:

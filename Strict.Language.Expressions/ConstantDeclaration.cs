@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Strict.Language.Expressions;
+﻿namespace Strict.Language.Expressions;
 
 /// <summary>
 /// Constant declares a variable in a method, often a fixed value that is optimized away.

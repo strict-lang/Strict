@@ -1,6 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using NUnit.Framework;
 using Strict.Language.Expressions;
 using static Strict.Language.Body;

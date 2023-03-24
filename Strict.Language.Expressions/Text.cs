@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Strict.Language.Expressions;
+﻿namespace Strict.Language.Expressions;
 
 public sealed class Text : Value
 {

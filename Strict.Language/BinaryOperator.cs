@@ -1,5 +1,4 @@
-﻿using System;
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
 
 namespace Strict.Language;
 
@@ -52,7 +51,8 @@ public static class BinaryOperator
 
 	private static readonly string[] MultiCharacterOperators =
 	{
-		SmallerOrEqual, GreaterOrEqual, Is, IsIn, IsNot, IsNotIn, In, And, Or, Xor, To, UnaryOperator.Not
+		SmallerOrEqual, GreaterOrEqual, Is, IsIn, IsNot, IsNotIn, In, And, Or, Xor, To,
+		UnaryOperator.Not
 	};
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -71,22 +71,14 @@ public static class BinaryOperator
 		tokenEnd = 0;
 		if (input[currentIndex - 1] != 's')
 			return false;
-		if (input.IsNotInOperator(currentIndex))
-		{
-			tokenEnd = 7;
-			return true;
-		}
-		if (input.IsNotOperator(currentIndex))
-		{
-			tokenEnd = 4;
-			return true;
-		}
-		if (input.IsInOperator(currentIndex))
-		{
-			tokenEnd = 3;
-			return true;
-		}
-		return false;
+		tokenEnd = input.IsNotInOperator(currentIndex)
+			? 7
+			: input.IsNotOperator(currentIndex)
+				? 4
+				: input.IsInOperator(currentIndex)
+					? 3
+					: 0;
+		return tokenEnd is not 0;
 	}
 
 	private static bool IsNotInOperator(this string input, int currentIndex) =>

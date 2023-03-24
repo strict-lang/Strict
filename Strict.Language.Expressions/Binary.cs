@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-
-namespace Strict.Language.Expressions;
+﻿namespace Strict.Language.Expressions;
 
 public sealed class Binary : MethodCall
 {
@@ -19,10 +15,11 @@ public sealed class Binary : MethodCall
 			? $"({child})"
 			: child.ToString();
 
-	public static Expression Parse(Body body, ReadOnlySpan<char> input, Stack<Range> postfixTokens) =>
+	public static Expression
+		Parse(Body body, ReadOnlySpan<char> input, Stack<Range> postfixTokens) =>
 		postfixTokens.Count < 3
 			? throw new IncompleteTokensForBinaryExpression(body, input, postfixTokens)
-			: BuildBinaryExpression(body, input, postfixTokens.Pop(), postfixTokens);
+			: BuildBinaryExpression(body, input, (postfixTokens.Pop(), postfixTokens));
 
 	public sealed class IncompleteTokensForBinaryExpression : ParsingFailed
 	{
@@ -32,24 +29,24 @@ public sealed class Binary : MethodCall
 	}
 
 	private static Expression BuildBinaryExpression(Body body, ReadOnlySpan<char> input,
-		Range operatorTokenRange, Stack<Range> tokens)
+		(Range operatorToken, Stack<Range> stackTokens) tokens)
 	{
-		var operatorToken = input[operatorTokenRange].ToString();
+		var operatorToken = input[tokens.operatorToken].ToString();
 		return operatorToken == BinaryOperator.To
-			? To.Parse(body, input[tokens.Pop()],
-				GetUnaryOrBuildNestedBinary(body, input, tokens))
-			: BuildRegularBinaryExpression(body, input, tokens, operatorToken);
+			? To.Parse(body, input[tokens.stackTokens.Pop()],
+				GetUnaryOrBuildNestedBinary(body, input, tokens.stackTokens))
+			: BuildRegularBinaryExpression(body, input, (operatorToken, tokens.stackTokens));
 	}
 
 	private static Expression BuildRegularBinaryExpression(Body body, ReadOnlySpan<char> input,
-		Stack<Range> tokens, string operatorToken)
+		(string operatorToken, Stack<Range> stackTokens) tokens)
 	{
-		var right = GetUnaryOrBuildNestedBinary(body, input, tokens);
-		var left = GetUnaryOrBuildNestedBinary(body, input, tokens);
-		if (operatorToken == BinaryOperator.Multiply && HasIncompatibleDimensions(left, right))
+		var right = GetUnaryOrBuildNestedBinary(body, input, tokens.stackTokens);
+		var left = GetUnaryOrBuildNestedBinary(body, input, tokens.stackTokens);
+		if (tokens.operatorToken == BinaryOperator.Multiply && HasIncompatibleDimensions(left, right))
 			throw new ListsHaveDifferentDimensions(body, left + " " + right);
 		var arguments = new[] { right };
-		return new Binary(left, left.ReturnType.GetMethod(operatorToken, arguments, body.Method.Parser), arguments);
+		return new Binary(left, left.ReturnType.GetMethod(tokens.operatorToken, arguments, body.Method.Parser), arguments);
 	}
 
 	private static Expression GetUnaryOrBuildNestedBinary(Body body, ReadOnlySpan<char> input,
@@ -58,7 +55,7 @@ public sealed class Binary : MethodCall
 		var nextTokenRange = tokens.Pop();
 		var expression = input[nextTokenRange.Start.Value].IsSingleCharacterOperator() ||
 			input[nextTokenRange].IsMultiCharacterOperator()
-				? BuildBinaryExpression(body, input, nextTokenRange, tokens)
+				? BuildBinaryExpression(body, input, (nextTokenRange, tokens))
 				: body.Method.ParseExpression(body, input[nextTokenRange]);
 		if (expression.ReturnType.IsGeneric)
 			throw new Type.GenericTypesCannotBeUsedDirectlyUseImplementation(expression.ReturnType, expression.ToString()); //ncrunch: no coverage this line cannot be reached as Type.FindMethod already filters this condition

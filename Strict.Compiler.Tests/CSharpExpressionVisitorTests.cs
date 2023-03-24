@@ -1,10 +1,10 @@
-using System.Linq;
 using NUnit.Framework;
 using Strict.Compiler.Roslyn;
 using Strict.Language;
 using Strict.Language.Expressions;
 using Strict.Language.Expressions.Tests;
 using Strict.Language.Tests;
+using Boolean = Strict.Language.Expressions.Boolean;
 
 namespace Strict.Compiler.Tests;
 

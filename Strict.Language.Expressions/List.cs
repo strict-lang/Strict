@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-
-namespace Strict.Language.Expressions;
+﻿namespace Strict.Language.Expressions;
 
 public sealed class List : Value
 {

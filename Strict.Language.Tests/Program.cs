@@ -1,5 +1,3 @@
-using System.Threading.Tasks;
-
 namespace Strict.Language.Tests;
 
 public static class Program

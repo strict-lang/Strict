@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-
-namespace Strict.Language.Expressions;
+﻿namespace Strict.Language.Expressions;
 
 /// <summary>
 /// Any type of method we can call, this includes normal local method calls, recursions, calls to
@@ -50,14 +47,14 @@ public class MethodCall : ConcreteExpression
 
 	private static bool
 		AreArgumentsAutoParsedAsList(Method method, IReadOnlyCollection<Expression> arguments) =>
-		method.Parameters.Count != arguments.Count && method.Parameters.Count == 1 &&
+		method.Parameters.Count != arguments.Count && method.Parameters.Count is 1 &&
 		arguments.Count > 1;
 
 	public static Expression? TryParseFromOrEnum(Body body, IReadOnlyList<Expression> arguments,
 		string methodName)
 	{
 		var fromType = body.Method.FindType(methodName);
-		return fromType == null
+		return fromType is null
 			? null
 			: IsConstructorUsedWithSameArgumentType(arguments, fromType)
 				? throw new ConstructorForSameTypeArgumentIsNotAllowed(body)
@@ -67,7 +64,7 @@ public class MethodCall : ConcreteExpression
 
 	private static bool
 		IsConstructorUsedWithSameArgumentType(IReadOnlyList<Expression> arguments, Type fromType) =>
-		arguments.Count == 1 && (fromType == arguments[0].ReturnType ||
+		arguments.Count is 1 && (fromType == arguments[0].ReturnType ||
 			arguments[0].ReturnType is GenericTypeImplementation genericType && fromType == genericType.Generic);
 
 	public sealed class ConstructorForSameTypeArgumentIsNotAllowed : ParsingFailed
@@ -76,7 +73,7 @@ public class MethodCall : ConcreteExpression
 	}
 
 	public override string ToString() =>
-		Instance != null
+		Instance is not null
 			? $"{Instance}.{Method.Name}{Arguments.ToBrackets()}"
 			: $"{GetProperMethodName()}{Arguments.ToBrackets()}";
 

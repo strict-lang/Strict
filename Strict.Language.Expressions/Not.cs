@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Strict.Language.Expressions;
+﻿namespace Strict.Language.Expressions;
 
 /// <summary>
 /// Not is the only unary expression that needs an extra space, e.g. 5 is not 6. When using -number

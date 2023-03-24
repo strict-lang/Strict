@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Strict.Language;
+﻿namespace Strict.Language;
 
 /// <summary>
 /// Instead of using one of String or other Split methods here, use this and SpanExtensions to

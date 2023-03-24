@@ -1,7 +1,4 @@
-﻿using System.Collections.Generic;
-using System;
-using System.Linq;
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
 
 [assembly: InternalsVisibleTo("Strict.Language.Expressions.Tests")]
 
@@ -120,9 +117,9 @@ public sealed class Body : Expression
 		if (!name.Length.IsWithinLimit())
 			throw new NamedType.NameLengthIsNotWithinTheAllowedLimit(name);
 		var nameType = value.ReturnType.FindType(name.MakeFirstLetterUppercase());
-		if (nameType != null && nameType != value.ReturnType)
+		if (nameType is not null && nameType != value.ReturnType)
 			throw new VariableNameCannotHaveDifferentTypeNameThanValue(this, name, value.ReturnType.Name);
-		if (FindVariableValue(name.AsSpan()) != null)
+		if (FindVariableValue(name.AsSpan()) is not null)
 			throw new ValueIsNotMutableAndCannotBeChanged(this, name);
 		Variables ??= new Dictionary<string, Expression>(StringComparer.Ordinal);
 		Variables.Add(name, value);

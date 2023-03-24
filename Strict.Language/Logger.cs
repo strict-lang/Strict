@@ -1,6 +1,4 @@
 ﻿#if LOG_DETAILS
-using System;
-
 namespace Strict.Language;
 
 public sealed class Logger

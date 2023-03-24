@@ -1,9 +1,4 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
 using System.IO.Compression;
-using System.Linq;
-using System.Threading.Tasks;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Engines;
 using BenchmarkDotNet.Running;

@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Strict.Language.Expressions;
+﻿namespace Strict.Language.Expressions;
 
 /// <summary>
 /// Parses for loop expressions. Usually loop would have an implicit variable if not explicitly given anything,
@@ -73,8 +71,7 @@ public sealed class For : Expression
 	{
 		var variableName = FindIterableName(line);
 		AddVariableIfDoesNotExist(body, line, variableName);
-		var variableValue = body.FindVariableValue(variableName);
-		if (variableValue is { IsMutable: false } && HasIn(line))
+		if (body.FindVariableValue(variableName) is { IsMutable: false } && HasIn(line))
 			throw new ImmutableIterator(body);
 		var forExpression = body.Method.ParseExpression(body, GetForExpressionText(line));
 		if (HasIn(line))
@@ -175,14 +172,11 @@ public sealed class For : Expression
 			? FindIterableName(line)
 			: knownIterableName;
 		var variable = body.FindVariableValue(iterableName)?.ReturnType ?? body.Method.Type.FindMember(iterableName.ToString())?.Type;
-		string value;
-		if (iterableName[^1] == ')')
-			value = iterableName[1..iterableName.IndexOf(',')].ToString();
-		else if (variable is { IsIterator: true })
-			value = $"{iterableName}(0)";
-		else
-			value = $"{iterableName}";
-		return value;
+		return iterableName[^1] == ')'
+			? iterableName[1..iterableName.IndexOf(',')].ToString()
+			: variable is { IsIterator: true }
+				? $"{iterableName}(0)"
+				: $"{iterableName}";
 	}
 
 	private static ReadOnlySpan<char> GetRangeExpression(ReadOnlySpan<char> line) =>

@@ -1,4 +1,3 @@
-using System;
 using NUnit.Framework;
 using Strict.Language.Tests;
 

@@ -1,11 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.IO.Compression;
-using System.Linq;
-using System.Net.Http;
+﻿using System.IO.Compression;
 using System.Runtime.CompilerServices;
-using System.Threading.Tasks;
 using LazyCache;
 
 [assembly: InternalsVisibleTo("Strict.Compiler.Tests")]
@@ -226,13 +220,12 @@ public sealed class Repositories
 	{
 		var reversedDependencies = new Stack<TypeLines>();
 		var zeroDegreeQueue = CreateZeroDegreeQueue(inDegree);
-		var dummy = files.Values.Where(t => t.DependentTypes.Contains("Type")).ToList();
 		while (zeroDegreeQueue.Count > 0)
 			if (files.TryGetValue(zeroDegreeQueue.Dequeue(), out var lines))
 			{
 				reversedDependencies.Push(lines);
 				foreach (var vertex in lines.DependentTypes)
-					if (--inDegree[vertex] == 0)
+					if (--inDegree[vertex] is 0)
 						zeroDegreeQueue.Enqueue(vertex);
 			}
 		if (inDegree.Any(keyValue => keyValue.Value > 0))
@@ -254,7 +247,7 @@ public sealed class Repositories
 	{
 		var zeroDegreeQueue = new Queue<string>();
 		foreach (var vertex in inDegree)
-			if (vertex.Value == 0)
+			if (vertex.Value is 0)
 				zeroDegreeQueue.Enqueue(vertex.Key);
 		return zeroDegreeQueue;
 	}

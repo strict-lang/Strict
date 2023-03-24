@@ -1,6 +1,5 @@
 ﻿using NUnit.Framework;
 using static Strict.Language.NamedType;
-using System.Collections.Generic;
 using Strict.Language.Expressions;
 
 namespace Strict.Language.Tests;

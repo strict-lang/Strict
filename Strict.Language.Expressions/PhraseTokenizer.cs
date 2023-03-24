@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-
-namespace Strict.Language.Expressions;
+﻿namespace Strict.Language.Expressions;
 
 /// <summary>
 /// Phrases are any expressions containing spaces (if not they are just single expressions and

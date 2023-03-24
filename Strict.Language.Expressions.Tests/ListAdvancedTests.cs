@@ -1,5 +1,4 @@
 using NUnit.Framework;
-using System.Collections.Generic;
 using Strict.Language.Tests;
 
 namespace Strict.Language.Expressions.Tests;

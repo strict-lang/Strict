@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
 
 [assembly: InternalsVisibleTo("Strict.Language.Tests")]
 
@@ -75,7 +72,7 @@ public sealed class Method : Context
 
 	private Type ParseReturnType(Type type, ReadOnlySpan<char> rest)
 	{
-		if (rest.Length == 0)
+		if (rest.Length is 0)
 			return GetEmptyReturnType(type);
 		if (IsReturnTypeAny(rest))
 			throw new MethodReturnTypeAsAnyIsNotAllowed(this, rest.ToString());
@@ -85,12 +82,11 @@ public sealed class Method : Context
 		var lastOpeningBracketIndex = rest.LastIndexOf('(');
 		if (lastOpeningBracketIndex > 2 && rest.IndexOf(')') < lastOpeningBracketIndex)
 			return Type.GetType(rest[(rest.LastIndexOf(' ') + 1)..].ToString());
-		var gotBrackets = closingBracketIndex > 0;
-		return gotBrackets && rest.Length == 2
+		return closingBracketIndex > 0 && rest.Length == 2
 			? throw new EmptyParametersMustBeRemoved(this)
 			: rest.Length < 2
 				? throw new InvalidMethodParameters(this, rest.ToString())
-				: rest[0] == ' '
+				: rest[0] is ' '
 					? type.GetType(rest[1..].ToString())
 					: closingBracketIndex + 2 < rest.Length
 						? Type.GetType(rest[(closingBracketIndex + 2)..].ToString())
@@ -98,12 +94,12 @@ public sealed class Method : Context
 	}
 
 	private Type GetEmptyReturnType(Type type) =>
-		Name == From
+		Name is From
 			? type
 			: type.GetType(Base.None);
 
 	private static bool IsReturnTypeAny(ReadOnlySpan<char> rest) =>
-		rest[0] == ' ' && rest[1..].Equals(Base.Any, StringComparison.Ordinal);
+		rest[0] is ' ' && rest[1..].Equals(Base.Any, StringComparison.Ordinal);
 
 	public sealed class MethodReturnTypeAsAnyIsNotAllowed : ParsingFailed
 	{
@@ -118,7 +114,7 @@ public sealed class Method : Context
 
 	private void ParseParameters(Type type, ReadOnlySpan<char> rest)
 	{
-		if (rest.Length == 0)
+		if (rest.Length is 0)
 			return;
 		var closingBracketIndex = rest.LastIndexOf(')');
 		var lastOpeningBracketIndex = rest.LastIndexOf('(');
@@ -320,7 +316,7 @@ public sealed class Method : Context
 			: Type.FindType(name, searchingFrom ?? this);
 
 	public Expression GetBodyAndParseIfNeeded() =>
-		methodBody == null
+		methodBody is null
 			? throw new CannotCallBodyOnTraitMethod()
 			: methodBody.Expressions.Count > 0
 				? methodBody

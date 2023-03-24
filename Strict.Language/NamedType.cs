@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Strict.Language;
+﻿namespace Strict.Language;
 
 public abstract class NamedType
 {

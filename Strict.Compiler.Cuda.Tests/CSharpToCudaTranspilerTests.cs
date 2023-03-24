@@ -1,9 +1,9 @@
-﻿using System.Threading.Tasks;
-using ManagedCuda;
+﻿using ManagedCuda;
 using ManagedCuda.NVRTC;
 using NUnit.Framework;
 using Strict.Language;
 using Strict.Language.Expressions;
+using Type = Strict.Language.Type;
 
 namespace Strict.Compiler.Cuda.Tests;
 

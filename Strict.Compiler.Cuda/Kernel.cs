@@ -1,6 +1,4 @@
-﻿using System;
-using System.IO;
-using ManagedCuda;
+﻿using ManagedCuda;
 using ManagedCuda.CudaBlas;
 using ManagedCuda.NVRTC;
 

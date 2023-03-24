@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-
-namespace Strict.Language;
+﻿namespace Strict.Language;
 
 /// <summary>
 /// Abstracts the actual expressions and parsing away to the Expressions project.
