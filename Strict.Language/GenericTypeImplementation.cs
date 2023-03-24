@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-
-namespace Strict.Language;
+﻿namespace Strict.Language;
 
 public sealed class GenericTypeImplementation : Type
 {

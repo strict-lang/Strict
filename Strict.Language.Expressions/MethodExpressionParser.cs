@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
 
 namespace Strict.Language.Expressions;
 
@@ -165,11 +163,11 @@ public class MethodExpressionParser : ExpressionParser
 		Expression? current = null;
 		while (members.MoveNext())
 		{
-			if (current == null)
+			if (current is null)
 			{
 				current = Text.TryParse(body, input[members.Current]) ??
 					List.TryParseWithMultipleOrNestedElements(body, input[members.Current]);
-				if (current != null)
+				if (current is not null)
 				{
 					context = current.ReturnType;
 					continue;
@@ -217,7 +215,7 @@ public class MethodExpressionParser : ExpressionParser
 				? throw new KeywordNotAllowedAsMemberOrMethod(body, inputAsString, type)
 				: (MemberCall.TryParse(body, type, instance, input) ??
 					MethodCall.TryParse(instance, body, arguments, type, input.ToString())) ??
-				(instance == null
+				(instance is null
 					? MethodCall.TryParseFromOrEnum(body, arguments, inputAsString)
 					: null));
 	}
@@ -280,7 +278,7 @@ public class MethodExpressionParser : ExpressionParser
 			// Is this a binary expression we have to put into the list (already tokenized and postfixed)
 			try
 			{
-				if (span.Length == 1 && span[0].IsSingleCharacterOperator() ||
+				if (span.Length is 1 && span[0].IsSingleCharacterOperator() ||
 					span.IsMultiCharacterOperator())
 					expressions.Push(Binary.Parse(body, innerSpan, postfix.Output));
 				else

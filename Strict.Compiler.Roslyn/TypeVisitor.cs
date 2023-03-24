@@ -1,4 +1,5 @@
 ﻿using Strict.Language;
+using Type = Strict.Language.Type;
 
 namespace Strict.Compiler.Roslyn;
 

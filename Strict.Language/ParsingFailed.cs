@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Strict.Language;
+﻿namespace Strict.Language;
 
 /// <summary>
 /// Every parsing error with details about the type, line number and method used should use this.

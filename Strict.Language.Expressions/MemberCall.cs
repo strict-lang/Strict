@@ -1,5 +1,4 @@
-﻿using System;
-using static Strict.Language.Expressions.MethodExpressionParser;
+﻿using static Strict.Language.Expressions.MethodExpressionParser;
 
 namespace Strict.Language.Expressions;
 

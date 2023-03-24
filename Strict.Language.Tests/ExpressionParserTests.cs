@@ -1,5 +1,3 @@
-using System;
-using System.Collections.Generic;
 using NUnit.Framework;
 using Strict.Language.Expressions;
 

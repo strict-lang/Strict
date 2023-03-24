@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-
-namespace Strict.Language;
+﻿namespace Strict.Language;
 
 /// <summary>
 /// .strict files contain a type or trait and must be in the correct namespace folder.

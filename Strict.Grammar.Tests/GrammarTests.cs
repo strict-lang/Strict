@@ -1,6 +1,3 @@
-using System;
-using System.IO;
-using System.Linq;
 using Eto.Parse;
 using Eto.Parse.Grammars;
 using NUnit.Framework;

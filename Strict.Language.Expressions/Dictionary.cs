@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-
-namespace Strict.Language.Expressions;
+﻿namespace Strict.Language.Expressions;
 
 public sealed class Dictionary : Value
 {

@@ -25,27 +25,21 @@ public sealed class StrictDocument
 
 	private void UpdateDocument(TextDocumentContentChangeEvent change)
 	{
-		if (change.Range != null &&
+		if (change.Range is not null &&
 			change.Text.StartsWith(Environment.NewLine, StringComparison.Ordinal) &&
 			change.Range.Start.Line == change.Range.End.Line)
-		{
 			content.Insert(change.Range.Start.Line + 1, change.Text[2..]);
-		}
-		else if (change.Range != null && content.Count - 1 < change.Range.Start.Line)
-		{
+		else if (change.Range is not null && content.Count - 1 < change.Range.Start.Line)
 			AddSingleOrMultiLineNewText(change);
-		}
-		else if (change.Range != null && change.Range.Start.Line < change.Range.End.Line)
+		else if (change.Range is not null && change.Range.Start.Line < change.Range.End.Line)
 		{
 			HandleForMultiLineDeletion(change.Range.Start, change.Range.End);
-			if (change.Text != "")
+			if (change.Text is not "")
 				content[change.Range.Start.Line] = content[change.Range.Start.Line]. //ncrunch: no coverage
 					Insert(change.Range.Start.Character, change.Text);
 		}
 		else
-		{
 			HandleForDocumentChange(change);
-		}
 	}
 
 	private void AddSingleOrMultiLineNewText(TextDocumentContentChangeEvent change)
@@ -58,7 +52,7 @@ public sealed class StrictDocument
 
 	private void HandleForDocumentChange(TextDocumentContentChangeEvent change)
 	{
-		if (change.Range == null)
+		if (change.Range is null)
 			return; //ncrunch: no coverage
 		if (change.Text.Contains('\n'))
 			content.Add(change.Text.Split('\n')[^1]); //ncrunch: no coverage
@@ -89,7 +83,7 @@ public sealed class StrictDocument
 
 	private void RemoveLinesTillEndAndUpdateStartLine(Position start, Position end)
 	{
-		content.RemoveRange(start.Character == 0
+		content.RemoveRange(start.Character is 0
 			? start.Line
 			: start.Line + 1, end.Line - start.Line);
 		content[^1] = content[^1][..start.Character];

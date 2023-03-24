@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Strict.Language.Expressions;
+﻿namespace Strict.Language.Expressions;
 
 /// <summary>
 /// If expressions are used for branching, can also be used as an input for any other expression

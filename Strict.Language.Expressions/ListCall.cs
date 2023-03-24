@@ -1,5 +1,4 @@
 ﻿using static Strict.Language.Expressions.MethodExpressionParser;
-using System.Collections.Generic;
 
 namespace Strict.Language.Expressions;
 

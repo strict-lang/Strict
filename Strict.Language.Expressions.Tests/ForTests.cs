@@ -78,21 +78,18 @@ public sealed class ForTests : TestExpressions
 				"\tlog.Write(myIndex)")).Expressions[1]).ToString(),
 			Is.EqualTo("for myIndex in Range(0, 5)\n\tlog.Write(myIndex)"));
 
-	[Test]
-	public void ParseForInExpressionWithCustomVariableName() =>
-		Assert.That(
-			((For)ParseExpression("for myIndex in Range(0, 5)", "\tlog.Write(myIndex)")).ToString(),
-			Is.EqualTo("for myIndex in Range(0, 5)\n\tlog.Write(myIndex)"));
-
-	[Test]
-	public void ParseForListExpression() =>
-		Assert.That(((For)ParseExpression("for (1, 2, 3)", "\tlog.Write(index)")).ToString(),
-			Is.EqualTo("for (1, 2, 3)\n\tlog.Write(index)"));
-
-	[Test]
-	public void ParseForListExpressionWithValue() =>
-		Assert.That(((For)ParseExpression("for (1, 2, 3)", "\tlog.Write(value)")).ToString(),
-			Is.EqualTo("for (1, 2, 3)\n\tlog.Write(value)"));
+	[TestCase("for myIndex in Range(0, 5)", "\tlog.Write(myIndex)",
+		"for myIndex in Range(0, 5)\n\tlog.Write(myIndex)")]
+	[TestCase("for (1, 2, 3)", "\tlog.Write(index)", "for (1, 2, 3)\n\tlog.Write(index)")]
+	[TestCase("for (1, 2, 3)", "\tlog.Write(value)", "for (1, 2, 3)\n\tlog.Write(value)")]
+	[TestCase("for myIndex in Range(2, 5)", "\tlog.Write(myIndex)", "\tfor Range(0, 10)",
+		"\t\tlog.Write(index)",
+		"for myIndex in Range(2, 5)\n\tlog.Write(myIndex)\r\nfor Range(0, 10)\n\tlog.Write(index)")]
+	[TestCase("for firstIndex in Range(1, 10)", "for secondIndex in Range(1, 10)",
+		"\tlog.Write(firstIndex)", "\tlog.Write(secondIndex)",
+		"for firstIndex in Range(1, 10)\n\tfor secondIndex in Range(1, 10)\n\tlog.Write(firstIndex)\r\nlog.Write(secondIndex)")]
+	public void ParseForExpressionWithCustomVariableName(params string[] lines) =>
+		Assert.That(((For)ParseExpression(lines[..^1])).ToString(), Is.EqualTo(lines[^1]));
 
 	[Test]
 	public void ValidIteratorReturnTypeWithValue() =>
@@ -100,44 +97,17 @@ public sealed class ForTests : TestExpressions
 			((VariableCall)((MethodCall)((For)ParseExpression("for (1, 2, 3)", "\tlog.Write(value)")).
 				Body).Arguments[0]).ReturnType.FullName, Is.EqualTo("TestPackage.Number"));
 
-	[Test]
-	public void ParseForListExpressionWithIterableVariable() =>
-		Assert.That(
-			((For)((Body)ParseExpression("constant elements = (1, 2, 3)", "for elements",
-				"\tlog.Write(index)")).Expressions[1]).ToString(),
-			Is.EqualTo("for elements\n\tlog.Write(index)"));
-
-	[Test]
-	public void ParseForListWithExplicitVariable() =>
-		Assert.That(
-			((For)((Body)ParseExpression("mutable element = 0", "for element in (1, 2, 3)",
-				"\tlog.Write(element)")).Expressions[1]).ToString(),
-			Is.EqualTo("for element in (1, 2, 3)\n\tlog.Write(element)"));
-
-	[Test]
-	public void ParseWithNumber() =>
-		Assert.That(
-			((For)((Body)ParseExpression("constant iterationCount = 10", "for iterationCount",
-				"\tlog.Write(index)")).Expressions[1]).ToString(),
-			Is.EqualTo("for iterationCount\n\tlog.Write(index)"));
-
-	[Test]
-	public void ParseNestedFor() =>
-		//@formatter.off
-		Assert.That(
-			((For)ParseExpression("for myIndex in Range(2, 5)",
-				"\tlog.Write(myIndex)",
-				"\tfor Range(0, 10)",
-				"\t\tlog.Write(index)")).ToString(),
-			Is.EqualTo(
-				"for myIndex in Range(2, 5)\n\tlog.Write(myIndex)\r\nfor Range(0, 10)\n\tlog.Write(index)"));
-
-	[Test]
-	public void ParseForWithListOfTexts() =>
-		Assert.That(
-			() => ((For)((Body)ParseExpression("mutable element = \"1\"",
-					"for element in (\"1\", \"2\", \"3\")", "\tlog.Write(element)")).Expressions[1]).
-				ToString(), Is.EqualTo("for element in (\"1\", \"2\", \"3\")\n\tlog.Write(element)"));
+	[TestCase("constant elements = (1, 2, 3)", "for elements", "\tlog.Write(index)",
+		"for elements\n\tlog.Write(index)")]
+	[TestCase("mutable element = 0", "for element in (1, 2, 3)", "\tlog.Write(element)",
+		"for element in (1, 2, 3)\n\tlog.Write(element)")]
+	[TestCase("constant iterationCount = 10", "for iterationCount", "\tlog.Write(index)",
+		"for iterationCount\n\tlog.Write(index)")]
+	[TestCase("mutable element = \"1\"", "for element in (\"1\", \"2\", \"3\")",
+		"\tlog.Write(element)", "for element in (\"1\", \"2\", \"3\")\n\tlog.Write(element)")]
+	public void ParseForListExpressionWithIterableVariable(params string[] lines) =>
+		Assert.That(((For)((Body)ParseExpression(lines[..^1])).Expressions[1]).ToString(),
+			Is.EqualTo(lines[^1]));
 
 	[Test]
 	public void ValidIteratorReturnTypeForRange() =>
@@ -202,17 +172,6 @@ public sealed class ForTests : TestExpressions
 		Assert.That(parsedExpression.Expressions[1], Is.TypeOf(typeof(For)));
 		Assert.That(((For)parsedExpression.Expressions[1]).Value.ToString(), Is.EqualTo("name"));
 	}
-
-	[Test]
-	public void AllowNestedForWithSameIndentation() =>
-		Assert.That(
-			((For)ParseExpression(
-				"for firstIndex in Range(1, 10)",
-				"for secondIndex in Range(1, 10)",
-				"\tlog.Write(firstIndex)",
-				"\tlog.Write(secondIndex)")).ToString(),
-			Is.EqualTo(
-				"for firstIndex in Range(1, 10)\n\tfor secondIndex in Range(1, 10)\n\tlog.Write(firstIndex)\r\nlog.Write(secondIndex)"));
 
 	[Test]
 	public void MissingBodyInNestedFor() =>

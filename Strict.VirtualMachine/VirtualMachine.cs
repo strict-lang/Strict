@@ -25,7 +25,7 @@ public sealed class VirtualMachine
 	private VirtualMachine RunStatements(IList<Statement> allStatements)
 	{
 		statements = allStatements;
-		for (instructionIndex = 0; instructionIndex != -1 && instructionIndex < allStatements.Count;
+		for (instructionIndex = 0; instructionIndex is not -1 && instructionIndex < allStatements.Count;
 			instructionIndex++)
 			ExecuteStatement(allStatements[instructionIndex]);
 		return this;
@@ -196,7 +196,7 @@ public sealed class VirtualMachine
 	{
 		var index = Convert.ToInt32(Memory.Variables["index"].Value);
 		var value = iterableVariable.Value.ToString();
-		if (iterableVariable.ReturnType?.Name == Base.Text && value != null)
+		if (iterableVariable.ReturnType?.Name == Base.Text && value is not null)
 			Memory.Variables["value"] = new Instance(Base.Text, value[index].ToString());
 		else if (iterableVariable.ReturnType is GenericTypeImplementation genericIterable &&
 			genericIterable.Generic.Name == Base.List)
@@ -238,9 +238,7 @@ public sealed class VirtualMachine
 				TryBinaryOperationExecution(binaryStatement);
 		}
 		else if (statement is JumpStatement jumpStatement)
-		{
 			TryJumpOperation(jumpStatement);
-		}
 	}
 
 	private void TryBinaryOperationExecution(BinaryStatement statement)

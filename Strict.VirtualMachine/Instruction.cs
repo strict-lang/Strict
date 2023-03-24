@@ -31,6 +31,6 @@ public enum Instruction
 	Invoke,
 	WriteToList,
 	WriteToTable,
-	Return,
+	Return
 }
 
