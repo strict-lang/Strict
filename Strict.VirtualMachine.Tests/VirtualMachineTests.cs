@@ -17,6 +17,7 @@ public sealed class VirtualMachineTests : BaseVirtualMachineTests
 			new TypeLines("Days", "has Monday = 1", "has Tuesday = 2", "has Wednesday = 3",
 				"has Thursday = 4", "has Friday = 5", "has Saturday = 6")).ParseMembersAndMethods(new MethodExpressionParser());
 
+	[Test]
 	public void ReturnEnum()
 	{
 		CreateSampleEnum();
