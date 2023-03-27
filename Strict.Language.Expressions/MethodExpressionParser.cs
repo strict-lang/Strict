@@ -265,16 +265,17 @@ public class MethodExpressionParser : ExpressionParser
 				ParseMethodCallWithArguments(body, innerSpan,
 					postfix));
 		else
-			ParseBinaryOrNormalExpressionsIntoList(body, innerSpan, postfix, expressions);
+			do
+			{
+				ParseBinaryOrNormalExpressionsIntoList(body, innerSpan, postfix, expressions);
+			} while (postfix.Output.Count > 0);
 		return expressions;
 	}
 
 	private static void ParseBinaryOrNormalExpressionsIntoList(Body body, ReadOnlySpan<char> innerSpan, ShuntingYard postfix,
 		Stack<Expression> expressions)
 	{
-		do
-		{
-			var span = innerSpan[postfix.Output.Peek()];
+		var span = innerSpan[postfix.Output.Peek()];
 			// Is this a binary expression we have to put into the list (already tokenized and postfixed)
 			try
 			{
@@ -291,7 +292,6 @@ public class MethodExpressionParser : ExpressionParser
 			}
 			if (postfix.Output.Count > 0 && innerSpan[postfix.Output.Pop().Start.Value] != ',')
 				throw new ListTokensAreNotSeparatedByComma(body);
-		} while (postfix.Output.Count > 0);
 	}
 
 	private static List<Expression> ParseAllElementsFast(Body body, ReadOnlySpan<char> input,

@@ -1,6 +1,5 @@
 ﻿using Strict.Language;
 using Strict.Language.Expressions;
-using Type = Strict.Language.Type;
 
 namespace Strict.VirtualMachine;
 
@@ -19,9 +18,8 @@ public sealed class Memory
 	public void AddToDictionary(string variableKey, Instance keyToAddTo, Instance value)
 	{
 		Variables.TryGetValue(variableKey, out var collection);
-		if (collection?.Value is not Dictionary<Value, Value> dictionary)
-			return;
-		if (keyToAddTo.ReturnType == null || value.ReturnType == null)
+		if (collection?.Value is not Dictionary<Value, Value> dictionary ||
+			keyToAddTo.ReturnType == null || value.ReturnType == null)
 			return;
 		dictionary.Add(new Value(keyToAddTo.ReturnType, keyToAddTo.Value),
 			new Value(value.ReturnType, value.Value));

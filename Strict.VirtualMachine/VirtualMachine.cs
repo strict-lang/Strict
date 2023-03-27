@@ -20,17 +20,6 @@ public sealed class VirtualMachine
 		return RunStatements(allStatements);
 	}
 
-	private VirtualMachine Invoke(IList<Statement> allStatements) => RunStatements(allStatements);
-
-	private VirtualMachine RunStatements(IList<Statement> allStatements)
-	{
-		statements = allStatements;
-		for (instructionIndex = 0; instructionIndex is not -1 && instructionIndex < allStatements.Count;
-			instructionIndex++)
-			ExecuteStatement(allStatements[instructionIndex]);
-		return this;
-	}
-
 	private void Clear()
 	{
 		conditionFlag = false;
@@ -39,6 +28,15 @@ public sealed class VirtualMachine
 		Returns = null;
 		Memory.Registers.Clear();
 		Memory.Variables.Clear();
+	}
+
+	private VirtualMachine RunStatements(IList<Statement> allStatements)
+	{
+		statements = allStatements;
+		for (instructionIndex = 0; instructionIndex is not -1 && instructionIndex < allStatements.Count;
+			instructionIndex++)
+			ExecuteStatement(allStatements[instructionIndex]);
+		return this;
 	}
 
 	private void ExecuteStatement(Statement statement)
@@ -95,7 +93,7 @@ public sealed class VirtualMachine
 					new Dictionary<string, Instance>(
 						Memory.Variables.Where(variable => variable.Value.IsMember))
 			}
-		}.Invoke(methodStatements).Returns;
+		}.RunStatements(methodStatements).Returns;
 		if (instance != null)
 			Memory.Registers[invokeStatement.Register] = instance;
 	}
@@ -159,11 +157,10 @@ public sealed class VirtualMachine
 			return;
 		ProcessLoopIndex();
 		Memory.Variables.TryGetValue(initLoopStatement.Identifier, out var iterableVariable);
-		if (iterableVariable == null)
+		if (iterableVariable is null)
 			return; //ncrunch: no coverage
 		if (!iteratorInitialized)
-			InitializeIterator(
-				iterableVariable); //TODO: Get rid of this and figure out something better. (LM)
+			InitializeIterator(iterableVariable); //TODO: Get rid of this and figure out something better. (LM)
 		AlterValueVariable(iterableVariable);
 	}
 

@@ -30,31 +30,31 @@ public sealed class MutableAssignment : ConcreteExpression
 				newExpression.ReturnType.Name);
 		if (!expression.IsMutable)
 			throw new Body.ValueIsNotMutableAndCannotBeChanged(body, expression.ToString());
-		return UpdateMemberOrVariableValue(body, expression, newExpression);
+		return expression is VariableCall variableCall
+			? new MutableAssignment(body, variableCall.Name, newExpression)
+			: UpdateMemberOrVariableValue(body, expression, newExpression);
 	}
 
 	private static Expression UpdateMemberOrVariableValue(Body body,
 		Expression expression, Expression newExpression)
 	{
-		if (expression is VariableCall variableCall)
-			return new MutableAssignment(body, variableCall.Name, newExpression);
-		if (expression is MemberCall memberCall)
+		switch (expression)
 		{
+		case MemberCall memberCall:
 			memberCall.Member.UpdateValue(newExpression, body);
 			return memberCall;
-		}
-		if (expression is ParameterCall parameterCall)
-		{
+		case ParameterCall parameterCall:
 			parameterCall.Parameter.UpdateValue(newExpression, body);
 			return parameterCall;
-		}
-		if (expression is ListCall listCall)
+		case ListCall listCall:
 		{
 			if (listCall.List is VariableCall { CurrentValue: List listExpression })
 				listExpression.UpdateValue(body, listCall.Index, newExpression);
 			return listCall;
 		}
-		throw new InvalidAssignmentTarget(body, expression.ToString()); //ncrunch: no coverage
+		default:
+			throw new InvalidAssignmentTarget(body, expression.ToString()); //ncrunch: no coverage
+		}
 	}
 
 	public override string ToString() => Name + " = " + Value;

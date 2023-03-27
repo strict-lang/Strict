@@ -47,7 +47,12 @@ public sealed class Repositories
 				StrictDevelopmentFolderPrefix.Replace(nameof(Strict) + ".", packageName);
 			if (Directory.Exists(developmentFolder))
 				return await LoadFromPath(developmentFolder);
-		} //ncrunch: no coverage start
+		}
+		return await FindOrAddPath(packageUrl, packageName);
+	}
+
+	private async Task<Package> FindOrAddPath(Uri packageUrl, string packageName)
+	{ //ncrunch: no coverage start
 		var localPath = Path.Combine(CacheFolder, packageName);
 		if (PreviouslyCheckedDirectories.Contains(localPath))
 			return await LoadFromPath(localPath);
@@ -186,10 +191,18 @@ public sealed class Repositories
 	/// <summary>
 	/// https://en.wikipedia.org/wiki/Breadth-first_search
 	/// </summary>
-	public IEnumerable<TypeLines> SortFilesByMemberUsage(Dictionary<string, TypeLines> files) =>
-		GotNestedImplements(files)
-			? EmptyDegreeQueueAndGenerateSortedOutput(files, CreateInDegreeGraphMap(files))
-			: files.Values;
+	public IEnumerable<TypeLines> SortFilesByMemberUsage(Dictionary<string, TypeLines> files)
+	{
+		var inDegreeGraphMap = CreateInDegreeGraphMap(files);
+		if (GotNestedImplements(files))
+		{
+			var reversedDependencies = EmptyDegreeQueueAndGenerateSortedOutput(files, inDegreeGraphMap);
+			if (inDegreeGraphMap.Any(keyValue => keyValue.Value > 0))
+				AddUnresolvedRemainingTypes(files, inDegreeGraphMap, reversedDependencies);
+			return reversedDependencies;
+		}
+		return files.Values;
+	}
 
 	private static bool GotNestedImplements(Dictionary<string, TypeLines> filesWithMembers)
 	{
@@ -228,8 +241,6 @@ public sealed class Repositories
 					if (--inDegree[vertex] is 0)
 						zeroDegreeQueue.Enqueue(vertex);
 			}
-		if (inDegree.Any(keyValue => keyValue.Value > 0))
-			AddUnresolvedRemainingTypes(files, inDegree, reversedDependencies);
 		return reversedDependencies;
 	}
 

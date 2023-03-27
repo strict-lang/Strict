@@ -121,6 +121,11 @@ public sealed class Body : Expression
 			throw new VariableNameCannotHaveDifferentTypeNameThanValue(this, name, value.ReturnType.Name);
 		if (FindVariableValue(name.AsSpan()) is not null)
 			throw new ValueIsNotMutableAndCannotBeChanged(this, name);
+		return InitializeOrUpdateVariable(name, value);
+	}
+
+	private Body InitializeOrUpdateVariable(string name, Expression value)
+	{
 		Variables ??= new Dictionary<string, Expression>(StringComparer.Ordinal);
 		Variables.Add(name, value);
 		return this;

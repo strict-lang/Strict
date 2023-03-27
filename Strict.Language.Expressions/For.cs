@@ -61,9 +61,15 @@ public sealed class For : Expression
 
 	private static Expression ParseFor(Body body, ReadOnlySpan<char> line, Body innerBody)
 	{
-		if (!HasIn(line) && line[^1] == ')')
-			return ParseWithImplicitVariable(body, line, innerBody);
-		return ParseWithExplicitVariable(body, line, innerBody);
+		if (HasIn(line) || line[^1] != ')')
+		{
+			var forExpression = ParseWithExplicitVariable(body, line, innerBody);
+			if (!GetIteratorType(forExpression).IsIterator)
+				throw new ExpressionTypeIsNotAnIterator(body, forExpression.ReturnType.Name,
+					line[4..].ToString());
+			return new For(forExpression, innerBody.Parse());
+		}
+		return ParseWithImplicitVariable(body, line, innerBody);
 	}
 
 	private static Expression ParseWithExplicitVariable(Body body,
@@ -78,10 +84,7 @@ public sealed class For : Expression
 			CheckForIncorrectMatchingTypes(body, variableName, forExpression);
 		else
 			AddImplicitVariables(body, line, innerBody);
-		if (!GetIteratorType(forExpression).IsIterator)
-			throw new ExpressionTypeIsNotAnIterator(body, forExpression.ReturnType.Name,
-				line[4..].ToString());
-		return new For(forExpression, innerBody.Parse());
+		return forExpression;
 	}
 
 	public sealed class ExpressionTypeIsNotAnIterator : ParsingFailed

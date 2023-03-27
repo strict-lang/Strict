@@ -19,9 +19,13 @@ public sealed class Method : Context
 		Parser = parser;
 		this.lines = lines;
 		var restSpan = lines[0].AsSpan(Name.Length);
-		ReturnType = ParseReturnType(type, restSpan);
+		ReturnType = restSpan.Length is 0
+			? GetEmptyReturnType(type)
+			: ParseReturnType(type, restSpan);
 		if (lines.Count > 1)
 			methodBody = PreParseBody();
+		if (restSpan.Length is 0)
+			return;
 		ParseParameters(type, restSpan);
 	}
 
@@ -72,8 +76,6 @@ public sealed class Method : Context
 
 	private Type ParseReturnType(Type type, ReadOnlySpan<char> rest)
 	{
-		if (rest.Length is 0)
-			return GetEmptyReturnType(type);
 		if (IsReturnTypeAny(rest))
 			throw new MethodReturnTypeAsAnyIsNotAllowed(this, rest.ToString());
 		if (IsMethodGeneric(rest))
@@ -114,8 +116,6 @@ public sealed class Method : Context
 
 	private void ParseParameters(Type type, ReadOnlySpan<char> rest)
 	{
-		if (rest.Length is 0)
-			return;
 		var closingBracketIndex = rest.LastIndexOf(')');
 		var lastOpeningBracketIndex = rest.LastIndexOf('(');
 		// If the type contains brackets, exclude it from the rest for proper parameter parsing

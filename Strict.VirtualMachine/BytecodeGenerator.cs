@@ -108,9 +108,9 @@ public sealed class ByteCodeGenerator
 
 	private void TryGenerateVariableCallStatement(Expression expression)
 	{
-		if (expression is not VariableCall)
-			return;
-		statements.Add(new LoadVariableStatement(registry.AllocateRegister(), expression.ToString()));
+		if (expression is VariableCall)
+			statements.Add(
+				new LoadVariableStatement(registry.AllocateRegister(), expression.ToString()));
 	}
 
 	private void TryGenerateMemberCallStatement(Expression expression)
@@ -146,23 +146,14 @@ public sealed class ByteCodeGenerator
 			return;
 		if (methodCall.Method.Name == "Add")
 		{
-			if (TryGenerateAddForTable(methodCall))
+			if (TryGenerateAddForTable(methodCall) || methodCall.Instance == null)
 				return;
-			TryGenerateAddForList(methodCall);
+			GenerateStatementsFromExpression(methodCall.Arguments[0]);
+			statements.Add(new WriteToListStatement(registry.PreviousRegister,
+				methodCall.Instance.ToString()));
 		}
 		else
-		{
 			statements.Add(new InvokeStatement(methodCall, registry.AllocateRegister(), registry));
-		}
-	}
-
-	private void TryGenerateAddForList(MethodCall methodCall)
-	{
-		if (methodCall.Instance == null)
-			return;
-		GenerateStatementsFromExpression(methodCall.Arguments[0]);
-		statements.Add(new WriteToListStatement(registry.PreviousRegister,
-			methodCall.Instance.ToString()));
 	}
 
 	private bool TryGenerateAddForTable(MethodCall methodCall)
@@ -274,10 +265,7 @@ public sealed class ByteCodeGenerator
 	private void GenerateCodeForBinary(MethodCall binary)
 	{
 		if (binary.Method.Name != "is")
-		{
-			var instruction = GetInstructionBasedOnBinaryOperationName(binary.Method.Name);
-			GenerateBinaryStatement(binary, instruction);
-		}
+			GenerateBinaryStatement(binary, GetInstructionBasedOnBinaryOperationName(binary.Method.Name));
 	}
 
 	private static Instruction GetInstructionBasedOnBinaryOperationName(string binaryOperator) =>
@@ -353,19 +341,13 @@ public sealed class ByteCodeGenerator
 	private void GenerateBinaryStatement(MethodCall binary, Instruction operationInstruction)
 	{
 		if (binary.Instance is Binary binaryOp)
-		{
-			var left = GenerateValueBinaryStatements(binaryOp, operationInstruction);
-			statements.Add(new BinaryStatement(operationInstruction, left, registry.AllocateRegister(),
-				registry.AllocateRegister()));
-		}
+			statements.Add(new BinaryStatement(operationInstruction,
+				GenerateValueBinaryStatements(binaryOp, operationInstruction),
+				registry.AllocateRegister(), registry.AllocateRegister()));
 		else if (binary.Arguments[0] is Binary binaryArg)
-		{
 			GenerateNestedBinaryStatements(binary, operationInstruction, binaryArg);
-		}
 		else
-		{
 			GenerateValueBinaryStatements(binary, operationInstruction);
-		}
 	}
 
 	private void GenerateNestedBinaryStatements(MethodCall binary, Instruction operationInstruction,

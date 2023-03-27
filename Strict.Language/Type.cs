@@ -616,8 +616,7 @@ public class Type : Context
 	}
 
 	private static bool IsParameterTypeList(NamedType parameter) =>
-		parameter.Type is GenericTypeImplementation genericType &&
-		genericType.Generic.Name == Base.List;
+		parameter.Type is GenericTypeImplementation { Generic.Name: Base.List };
 
 	private static bool CanAutoParseArgumentsIntoList(IReadOnlyList<Expression> arguments) =>
 		arguments.All(a => a.ReturnType == arguments[0].ReturnType);
