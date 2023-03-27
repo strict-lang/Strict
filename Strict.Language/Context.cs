@@ -54,7 +54,13 @@ public abstract class Context
 		if (cachedTypes != null && cachedTypes.TryGetValue(name, out var type))
 			return type;
 		cachedTypes ??= new Dictionary<string, Type>();
-		var foundType = GetTypeFromPackages(name);
+		var foundType = name == Name
+			? (Type)this
+			: name.StartsWith(Base.List + DoubleOpenBrackets, StringComparison.Ordinal)
+				? GetNestedListType(name)
+				: name.Contains('(') && name.EndsWith(')')
+					? GetGenericTypeWithArguments(name)
+					: GetTypeFromPackages(name);
 		cachedTypes.Add(name, foundType);
 		return foundType;
 	}
@@ -63,12 +69,6 @@ public abstract class Context
 
 	private Type GetTypeFromPackages(string name)
 	{
-		if (name == Name)
-			return (Type)this;
-		if (name.StartsWith(Base.List + DoubleOpenBrackets, StringComparison.Ordinal))
-			return GetNestedListType(name);
-		if (name.Contains('(') && name.EndsWith(')'))
-			return GetGenericTypeWithArguments(name);
 		if (!name.EndsWith('s'))
 			return (FindFullType(name) ?? FindType(name, this)) ??
 				throw new TypeNotFound(name, FullName);
