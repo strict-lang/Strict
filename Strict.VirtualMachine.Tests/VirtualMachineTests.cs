@@ -28,6 +28,17 @@ public sealed class VirtualMachineTests : BaseVirtualMachineTests
 		Assert.That(result!.Value, Is.EqualTo(1));
 	}
 
+	[Test]
+	public void EnumIfConditionComparison()
+	{
+		CreateSampleEnum();
+		var statements = new ByteCodeGenerator(GenerateMethodCallFromSource("WeekDays",
+			"WeekDays(5).GetMonday(Days.Monday)", "has dummy Number", "GetMonday(days) Boolean",
+			"\tif days is Days.Monday", "\t\ttrue", "\telse", "\t\tfalse")).Generate();
+		var result = vm.Execute(statements).Returns;
+		Assert.That(result!.Value, Is.EqualTo(1));
+	}
+
 	[TestCase(Instruction.Add, 15, 5, 10)]
 	[TestCase(Instruction.Subtract, 5, 8, 3)]
 	[TestCase(Instruction.Multiply, 4, 2, 2)]

@@ -27,7 +27,10 @@ public sealed class ByteCodeGenerator
 		if (methodCall.Instance != null)
 			AddInstanceMemberVariables((MethodCall)methodCall.Instance);
 		AddMethodParameterVariables(methodCall);
-		Expressions = ((Body)methodCall.Method.GetBodyAndParseIfNeeded()).Expressions;
+		var methodBody = methodCall.Method.GetBodyAndParseIfNeeded();
+		Expressions = methodBody is not Body
+			? new[] { methodBody }
+			: ((Body)methodCall.Method.GetBodyAndParseIfNeeded()).Expressions;
 		registry = new Registry();
 	}
 
