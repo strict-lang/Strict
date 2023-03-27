@@ -263,6 +263,7 @@ public sealed class VirtualMachine
 	private void TryConditionalOperationExecution(BinaryStatement statement)
 	{
 		var (right, left) = GetOperands(statement);
+		NormalizeValues(right, left);
 		conditionFlag = statement.Instruction switch
 		{
 			Instruction.GreaterThan => left > right,
@@ -271,6 +272,17 @@ public sealed class VirtualMachine
 			Instruction.NotEqual => !left.Value.Equals(right.Value),
 			_ => false //ncrunch: no coverage
 		};
+	}
+
+	private static void NormalizeValues(params Instance[] instances)
+	{
+		foreach (var instance in instances)
+		{
+			if (instance.Value is not MemberCall member)
+				continue;
+			if (member.Member.Value != null)
+				instance.Value = member.Member.Value;
+		}
 	}
 
 	private void TryJumpOperation(JumpStatement statement)

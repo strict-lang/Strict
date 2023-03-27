@@ -17,7 +17,6 @@ public sealed class VirtualMachineTests : BaseVirtualMachineTests
 			new TypeLines("Days", "has Monday = 1", "has Tuesday = 2", "has Wednesday = 3",
 				"has Thursday = 4", "has Friday = 5", "has Saturday = 6")).ParseMembersAndMethods(new MethodExpressionParser());
 
-	[Test]
 	public void ReturnEnum()
 	{
 		CreateSampleEnum();
@@ -34,9 +33,9 @@ public sealed class VirtualMachineTests : BaseVirtualMachineTests
 		CreateSampleEnum();
 		var statements = new ByteCodeGenerator(GenerateMethodCallFromSource("WeekDays",
 			"WeekDays(5).GetMonday(Days.Monday)", "has dummy Number", "GetMonday(days) Boolean",
-			"\tif days is Days.Monday", "\t\ttrue", "\telse", "\t\tfalse")).Generate();
+			"\tif days is Days.Monday", "\t\treturn true", "\telse", "\t\treturn false")).Generate();
 		var result = vm.Execute(statements).Returns;
-		Assert.That(result!.Value, Is.EqualTo(1));
+		Assert.That(result!.Value, Is.EqualTo(true));
 	}
 
 	[TestCase(Instruction.Add, 15, 5, 10)]

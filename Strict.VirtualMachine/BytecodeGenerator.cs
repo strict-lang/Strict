@@ -1,5 +1,6 @@
 ﻿using Strict.Language;
 using Strict.Language.Expressions;
+using Type = Strict.Language.Type;
 
 namespace Strict.VirtualMachine;
 
@@ -111,7 +112,7 @@ public sealed class ByteCodeGenerator
 
 	private void TryGenerateVariableCallStatement(Expression expression)
 	{
-		if (expression is VariableCall)
+		if (expression is VariableCall or ParameterCall)
 			statements.Add(
 				new LoadVariableStatement(registry.AllocateRegister(), expression.ToString()));
 	}
@@ -123,17 +124,15 @@ public sealed class ByteCodeGenerator
 		if (memberCall.Instance == null)
 			statements.Add(
 				new LoadVariableStatement(registry.AllocateRegister(), expression.ToString()));
-		else
-			TryGenerateForEnum(memberCall);
+		else if (memberCall.Member.Value != null)
+			TryGenerateForEnum(memberCall.Instance.ReturnType, memberCall.Member.Value);
 	}
 
-	private void TryGenerateForEnum(MemberCall memberCall)
+	private void TryGenerateForEnum(Type type, Expression value)
 	{
-		if (memberCall.Instance == null || !memberCall.Instance.ReturnType.IsEnum)
-			return;
-		if (memberCall.Member.Value != null)
+		if (type.IsEnum)
 			statements.Add(new LoadConstantStatement(registry.AllocateRegister(),
-				new Instance(memberCall.Member.Type, memberCall.Member.Value)));
+				new Instance(type, value)));
 	}
 
 	private void TryGenerateValueStatement(Expression expression)
@@ -156,7 +155,9 @@ public sealed class ByteCodeGenerator
 				methodCall.Instance.ToString()));
 		}
 		else
+		{
 			statements.Add(new InvokeStatement(methodCall, registry.AllocateRegister(), registry));
+		}
 	}
 
 	private bool TryGenerateAddForTable(MethodCall methodCall)
@@ -268,7 +269,8 @@ public sealed class ByteCodeGenerator
 	private void GenerateCodeForBinary(MethodCall binary)
 	{
 		if (binary.Method.Name != "is")
-			GenerateBinaryStatement(binary, GetInstructionBasedOnBinaryOperationName(binary.Method.Name));
+			GenerateBinaryStatement(binary,
+				GetInstructionBasedOnBinaryOperationName(binary.Method.Name));
 	}
 
 	private static Instruction GetInstructionBasedOnBinaryOperationName(string binaryOperator) =>
@@ -303,14 +305,8 @@ public sealed class ByteCodeGenerator
 
 	private Register GenerateRightSideForIfCondition(MethodCall condition)
 	{
-		var rightRegister = registry.AllocateRegister();
-		if (condition.Arguments[0] is Value argumentValue)
-			statements.Add(new LoadConstantStatement(rightRegister,
-				new Instance(argumentValue.ReturnType, argumentValue.Data)));
-		else
-			statements.Add(new LoadVariableStatement(rightRegister,
-				condition.Arguments[0].ToString())); //ncrunch: no coverage
-		return rightRegister;
+		GenerateStatementsFromExpression(condition.Arguments[0]);
+		return registry.PreviousRegister;
 	}
 
 	private Register GenerateLeftSideForIfCondition(Binary condition) =>
@@ -335,10 +331,9 @@ public sealed class ByteCodeGenerator
 
 	private Register LoadVariableForIfConditionLeft(Binary condition)
 	{
-		var leftRegister = registry.AllocateRegister();
-		statements.Add(new LoadVariableStatement(leftRegister,
-			condition.Instance?.ToString() ?? throw new InvalidOperationException()));
-		return leftRegister;
+		if (condition.Instance != null)
+			GenerateStatementsFromExpression(condition.Instance);
+		return registry.PreviousRegister;
 	}
 
 	private void GenerateBinaryStatement(MethodCall binary, Instruction operationInstruction)
