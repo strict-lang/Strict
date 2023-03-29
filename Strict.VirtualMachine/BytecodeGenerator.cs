@@ -100,14 +100,39 @@ public sealed class ByteCodeGenerator
 	{
 		if (new Func<Expression, bool>[]
 			{
-				TryGenerateBodyStatements, TryGenerateBinaryStatements, TryGenerateIfStatements,
-				TryGenerateAssignmentStatements, TryGenerateLoopStatements,
-				TryGenerateMutableStatements, TryGenerateMemberCallStatement,
-				TryGenerateVariableCallStatement, TryGenerateMethodCallStatement,
+				TryGenerateBodyStatements,
+				TryGenerateBinaryStatements,
+				TryGenerateIfStatements,
+				TryGenerateAssignmentStatements,
+				TryGenerateLoopStatements,
+				TryGenerateMutableStatements,
+				TryGenerateMemberCallStatement,
+				TryGenerateToOperatorStatement,
+				TryGenerateVariableCallStatement,
+				TryGenerateMethodCallStatement,
 				TryGenerateValueStatement
 			}.Any(method => method(expression)))
 			return;
 	}
+
+	private bool TryGenerateToOperatorStatement(Expression expression)
+	{
+		if (expression is not To toExpression)
+			return false;
+		if (toExpression.Instance == null)
+			return false;
+		GenerateStatementsFromExpression(toExpression.Instance);
+		statements.Add(new ConversionStatement(registry.PreviousRegister, registry.AllocateRegister(),
+			toExpression.ConversionType, GetInstructionForConversionType(toExpression.ConversionType)));
+		return true;
+	}
+
+	private static Instruction GetInstructionForConversionType(Type conversionType) =>
+		conversionType.Name switch
+		{
+			Base.Text => Instruction.ToText,
+			_ => Instruction.ToNumber
+		};
 
 	private bool TryGenerateVariableCallStatement(Expression expression)
 	{
@@ -372,10 +397,10 @@ public sealed class ByteCodeGenerator
 	}
 
 	private void GenerateNestedBinaryStatements(MethodCall binary, Instruction operationInstruction,
-		Binary binaryArg)
+		Binary binaryArgument)
 	{
-		var right = GenerateValueBinaryStatements(binaryArg,
-			GetInstructionBasedOnBinaryOperationName(binaryArg.Method.Name));
+		var right = GenerateValueBinaryStatements(binaryArgument,
+			GetInstructionBasedOnBinaryOperationName(binaryArgument.Method.Name));
 		var left = registry.AllocateRegister();
 		if (binary.Instance != null)
 			statements.Add(new LoadVariableStatement(left, binary.Instance.ToString()));

@@ -121,6 +121,16 @@ public sealed class VirtualMachineTests : BaseVirtualMachineTests
 				new LoadVariableStatement(Register.R5, "result"), new ReturnStatement(Register.R5)
 			}).Returns?.Value, Is.EqualTo(1024));
 
+	[Test]
+	public void ExecuteToOperator()
+	{
+		var statements = new ByteCodeGenerator(GenerateMethodCallFromSource("NumberConvertor",
+			"NumberConvertor(5).ConvertToText", "has number", "ConvertToText Text",
+			"\tconstant result = 5 to Text", "\tresult")).Generate();
+		Assert.That(vm.Execute(statements).Returns?.Value, Is.EqualTo("5"));
+
+	}
+
 	[TestCase("RemoveParentheses(\"some(thing)\").Remove", "some")]
 	[TestCase("RemoveParentheses(\"(some)thing\").Remove", "thing")]
 	public void RemoveParentheses(string methodCall, string expectedResult)

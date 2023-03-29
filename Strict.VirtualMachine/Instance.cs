@@ -46,6 +46,13 @@ public sealed class Instance
 			: ReturnType.Name;
 	public object Value { get; set; }
 
+	public object GetRawValue()
+	{
+		if (Value is Value value)
+			return value.Data;
+		return Value;
+	}
+
 	public static Instance operator +(Instance left, Instance right)
 	{
 		var leftReturnTypeName = left.TypeName;

@@ -49,8 +49,19 @@ public sealed class VirtualMachine
 		TryLoopEndInstruction(statement);
 		TryInvokeInstruction(statement);
 		TryWriteToListInstruction(statement);
+		TryConversionStatement(statement);
 		TryWriteToTableInstruction(statement);
 		TryExecuteRest(statement);
+	}
+
+	private void TryConversionStatement(Statement statement)
+	{
+		if (statement is not ConversionStatement { Instruction: Instruction.ToText } conversionStatement)
+			return;
+		var instanceToBeConverted = Memory.Registers[conversionStatement.Register].GetRawValue();
+		var converted = new Instance(conversionStatement.ConversionType,
+			instanceToBeConverted.ToString() ?? throw new InvalidOperationException());
+		Memory.Registers[conversionStatement.RegisterToStoreConversion] = converted;
 	}
 
 	private void TryWriteToTableInstruction(Statement statement)

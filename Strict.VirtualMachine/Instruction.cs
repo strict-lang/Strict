@@ -27,10 +27,11 @@ public enum Instruction
 	JumpEnd,
 	JumpToIdIfFalse,
 	JumpToIdIfTrue,
-	JumpsSeparator = 400,
 	Invoke,
 	WriteToList,
 	WriteToTable,
+	ToText,
+	ToNumber,
 	Return
 }
 
