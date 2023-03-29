@@ -98,34 +98,35 @@ public sealed class ByteCodeGenerator
 
 	private void GenerateStatementsFromExpression(Expression expression)
 	{
-		TryGenerateBodyStatements(expression);
-		TryGenerateBinaryStatements(expression);
-		TryGenerateIfStatements(expression);
-		TryGenerateAssignmentStatements(expression);
-		TryGenerateLoopStatements(expression);
-		TryGenerateMutableStatements(expression);
-		TryGenerateMemberCallStatement(expression);
-		TryGenerateVariableCallStatement(expression);
-		TryGenerateMethodCallStatement(expression);
-		TryGenerateValueStatement(expression);
+		if (new Func<Expression, bool>[]
+			{
+				TryGenerateBodyStatements, TryGenerateBinaryStatements, TryGenerateIfStatements,
+				TryGenerateAssignmentStatements, TryGenerateLoopStatements,
+				TryGenerateMutableStatements, TryGenerateMemberCallStatement,
+				TryGenerateVariableCallStatement, TryGenerateMethodCallStatement,
+				TryGenerateValueStatement
+			}.Any(method => method(expression)))
+			return;
 	}
 
-	private void TryGenerateVariableCallStatement(Expression expression)
+	private bool TryGenerateVariableCallStatement(Expression expression)
 	{
-		if (expression is VariableCall or ParameterCall)
-			statements.Add(
-				new LoadVariableStatement(registry.AllocateRegister(), expression.ToString()));
+		if (expression is not (VariableCall or ParameterCall))
+			return false;
+		statements.Add(new LoadVariableStatement(registry.AllocateRegister(), expression.ToString()));
+		return true;
 	}
 
-	private void TryGenerateMemberCallStatement(Expression expression)
+	private bool TryGenerateMemberCallStatement(Expression expression)
 	{
 		if (expression is not MemberCall memberCall)
-			return;
+			return false;
 		if (memberCall.Instance == null)
 			statements.Add(
 				new LoadVariableStatement(registry.AllocateRegister(), expression.ToString()));
 		else if (memberCall.Member.Value != null)
 			TryGenerateForEnum(memberCall.Instance.ReturnType, memberCall.Member.Value);
+		return true;
 	}
 
 	private void TryGenerateForEnum(Type type, Expression value)
@@ -135,29 +136,39 @@ public sealed class ByteCodeGenerator
 				new Instance(type, value)));
 	}
 
-	private void TryGenerateValueStatement(Expression expression)
+	private bool TryGenerateValueStatement(Expression expression)
 	{
-		if (expression is Value valueExpression)
-			statements.Add(new LoadConstantStatement(registry.AllocateRegister(),
-				new Instance(valueExpression.ReturnType, valueExpression.Data)));
+		if (expression is not Value valueExpression)
+			return false;
+		statements.Add(new LoadConstantStatement(registry.AllocateRegister(),
+			new Instance(valueExpression.ReturnType, valueExpression.Data)));
+		return true;
 	}
 
-	private void TryGenerateMethodCallStatement(Expression expression)
+	private bool TryGenerateMethodCallStatement(Expression expression)
 	{
 		if (expression is Binary || expression is not MethodCall methodCall)
-			return;
+			return false;
 		if (methodCall.Method.Name == "Add")
 		{
-			if (TryGenerateAddForTable(methodCall) || methodCall.Instance == null)
-				return;
-			GenerateStatementsFromExpression(methodCall.Arguments[0]);
-			statements.Add(new WriteToListStatement(registry.PreviousRegister,
-				methodCall.Instance.ToString()));
+			if (!GenerateStatementsForAddMethod(methodCall))
+				return false;
 		}
 		else
 		{
 			statements.Add(new InvokeStatement(methodCall, registry.AllocateRegister(), registry));
 		}
+		return true;
+	}
+
+	private bool GenerateStatementsForAddMethod(MethodCall methodCall)
+	{
+		if (TryGenerateAddForTable(methodCall) || methodCall.Instance == null)
+			return false;
+		GenerateStatementsFromExpression(methodCall.Arguments[0]);
+		statements.Add(new WriteToListStatement(registry.PreviousRegister,
+			methodCall.Instance.ToString()));
+		return true;
 	}
 
 	private bool TryGenerateAddForTable(MethodCall methodCall)
@@ -172,18 +183,23 @@ public sealed class ByteCodeGenerator
 		return true;
 	}
 
-	private void TryGenerateBodyStatements(Expression expression)
+	private bool TryGenerateBodyStatements(Expression expression)
 	{
-		if (expression is Body body)
-			GenerateStatements(body.Expressions);
+		if (expression is not Body body)
+			return false;
+		GenerateStatements(body.Expressions);
+		return true;
 	}
 
-	private void TryGenerateMutableStatements(Expression expression)
+	private bool TryGenerateMutableStatements(Expression expression)
 	{
 		if (expression is MutableDeclaration declaration)
 			GenerateForAssignmentOrDeclaration(declaration.Value, declaration.Name);
 		else if (expression is MutableAssignment assignment)
 			GenerateForAssignmentOrDeclaration(assignment.Value, assignment.Name);
+		else
+			return false;
+		return true;
 	}
 
 	private void GenerateForAssignmentOrDeclaration(Expression declarationOrAssignment, string name)
@@ -199,17 +215,20 @@ public sealed class ByteCodeGenerator
 		}
 	}
 
-	private void TryGenerateLoopStatements(Expression expression)
+	private bool TryGenerateLoopStatements(Expression expression)
 	{
-		if (expression is For forExpression)
-			GenerateLoopStatements(forExpression);
+		if (expression is not For forExpression)
+			return false;
+		GenerateLoopStatements(forExpression);
+		return true;
 	}
 
-	private void TryGenerateAssignmentStatements(Expression expression)
+	private bool TryGenerateAssignmentStatements(Expression expression)
 	{
 		if (expression is not ConstantDeclaration assignmentExpression || expression.IsMutable)
-			return;
+			return false;
 		GenerateForAssignmentOrDeclaration(assignmentExpression.Value, assignmentExpression.Name);
+		return true;
 	}
 
 	private void
@@ -217,16 +236,20 @@ public sealed class ByteCodeGenerator
 		statements.Add(new StoreVariableStatement(
 			new Instance(assignmentValue.ReturnType, assignmentValue.Data), variableName));
 
-	private void TryGenerateIfStatements(Expression expression)
+	private bool TryGenerateIfStatements(Expression expression)
 	{
-		if (expression is If ifExpression)
-			GenerateIfStatements(ifExpression);
+		if (expression is not If ifExpression)
+			return false;
+		GenerateIfStatements(ifExpression);
+		return true;
 	}
 
-	private void TryGenerateBinaryStatements(Expression expression)
+	private bool TryGenerateBinaryStatements(Expression expression)
 	{
-		if (expression is Binary binary)
-			GenerateCodeForBinary(binary);
+		if (expression is not Binary binary)
+			return false;
+		GenerateCodeForBinary(binary);
+		return true;
 	}
 
 	private void GenerateLoopStatements(For forExpression)
