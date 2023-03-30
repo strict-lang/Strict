@@ -33,8 +33,8 @@ public sealed class VirtualMachine
 	private VirtualMachine RunStatements(IList<Statement> allStatements)
 	{
 		statements = allStatements;
-		for (instructionIndex = 0; instructionIndex is not -1 && instructionIndex < allStatements.Count;
-			instructionIndex++)
+		for (instructionIndex = 0;
+			instructionIndex is not -1 && instructionIndex < allStatements.Count; instructionIndex++)
 			ExecuteStatement(allStatements[instructionIndex]);
 		return this;
 	}
@@ -56,20 +56,24 @@ public sealed class VirtualMachine
 
 	private void TryConversionStatement(Statement statement)
 	{
-		if (statement is not ConversionStatement { Instruction: Instruction.ToText } conversionStatement)
+		if (statement is not ConversionStatement conversionStatement)
 			return;
 		var instanceToBeConverted = Memory.Registers[conversionStatement.Register].GetRawValue();
-		var converted = new Instance(conversionStatement.ConversionType,
-			instanceToBeConverted.ToString() ?? throw new InvalidOperationException());
-		Memory.Registers[conversionStatement.RegisterToStoreConversion] = converted;
+		if (conversionStatement.ConversionType.Name == Base.Text)
+			Memory.Registers[conversionStatement.RegisterToStoreConversion] = new Instance(
+				conversionStatement.ConversionType,
+				instanceToBeConverted.ToString() ?? throw new InvalidOperationException());
+		else if (conversionStatement.ConversionType.Name == Base.Number)
+			Memory.Registers[conversionStatement.RegisterToStoreConversion] = new Instance(
+				conversionStatement.ConversionType, Convert.ToDecimal(instanceToBeConverted));
 	}
 
 	private void TryWriteToTableInstruction(Statement statement)
 	{
 		if (statement is not WriteToTableStatement writeToTableStatement)
 			return;
-		Memory.AddToDictionary(writeToTableStatement.Identifier, Memory.Registers[writeToTableStatement.Key],
-			Memory.Registers[writeToTableStatement.Value]);
+		Memory.AddToDictionary(writeToTableStatement.Identifier,
+			Memory.Registers[writeToTableStatement.Key], Memory.Registers[writeToTableStatement.Value]);
 	}
 
 	private void TryWriteToListInstruction(Statement statement)
@@ -171,7 +175,8 @@ public sealed class VirtualMachine
 		if (iterableVariable is null)
 			return; //ncrunch: no coverage
 		if (!iteratorInitialized)
-			InitializeIterator(iterableVariable); //TODO: Get rid of this and figure out something better. (LM)
+			InitializeIterator(
+				iterableVariable); //TODO: Get rid of this and figure out something better. (LM)
 		AlterValueVariable(iterableVariable);
 	}
 
@@ -246,7 +251,9 @@ public sealed class VirtualMachine
 				TryBinaryOperationExecution(binaryStatement);
 		}
 		else if (statement is JumpStatement jumpStatement)
+		{
 			TryJumpOperation(jumpStatement);
+		}
 	}
 
 	private void TryBinaryOperationExecution(BinaryStatement statement)

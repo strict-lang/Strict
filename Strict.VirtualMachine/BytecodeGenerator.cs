@@ -98,7 +98,7 @@ public sealed class ByteCodeGenerator
 
 	private void GenerateStatementsFromExpression(Expression expression)
 	{
-		if (new Func<Expression, bool>[]
+		if (new[]
 			{
 				TryGenerateBodyStatements,
 				TryGenerateBinaryStatements,
