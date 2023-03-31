@@ -295,7 +295,7 @@ public sealed class ByteCodeGenerator
 
 	private void GenerateIfStatements(If ifExpression)
 	{
-		GenerateCodeForIfCondition((Binary)ifExpression.Condition);
+		GenerateCodeForIfCondition(ifExpression.Condition);
 		GenerateCodeForThen(ifExpression);
 		statements.Add(new JumpToIdStatement(Instruction.JumpEnd, idStack.Pop()));
 		if (ifExpression.OptionalElse == null)
@@ -332,11 +332,37 @@ public sealed class ByteCodeGenerator
 			_ => throw new NotImplementedException() //ncrunch: no coverage
 		};
 
-	private void GenerateCodeForIfCondition(Binary condition)
+	private void GenerateCodeForIfCondition(Expression condition)
+	{
+		if (condition is Binary binary)
+			GenerateForBinaryIfConditionalExpression(binary);
+		else
+			GenerateForBooleanCallIfCondition(condition);
+	}
+
+	private void GenerateForBooleanCallIfCondition(Expression condition)
+	{
+		GenerateStatementsFromExpression(condition);
+		var instanceCallRegister = registry.PreviousRegister;
+		statements.Add(new SetStatement(new Instance(condition.ReturnType, true),
+			registry.AllocateRegister()));
+		;
+		GenerateInstructionsFromIfCondition(Instruction.Equal, instanceCallRegister,
+			registry.PreviousRegister);
+	}
+
+	private void GenerateForBinaryIfConditionalExpression(Binary condition)
 	{
 		var leftRegister = GenerateLeftSideForIfCondition(condition);
 		var rightRegister = GenerateRightSideForIfCondition(condition);
-		statements.Add(new BinaryStatement(GetConditionalInstruction(condition.Method), leftRegister,
+		GenerateInstructionsFromIfCondition(GetConditionalInstruction(condition.Method), leftRegister,
+			rightRegister);
+	}
+
+	private void GenerateInstructionsFromIfCondition(Instruction conditionInstruction, Register leftRegister,
+		Register rightRegister)
+	{
+		statements.Add(new BinaryStatement(conditionInstruction, leftRegister,
 			rightRegister));
 		idStack.Push(conditionalId);
 		statements.Add(new JumpToIdStatement(Instruction.JumpToIdIfFalse, conditionalId++));
