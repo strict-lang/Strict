@@ -346,7 +346,6 @@ public sealed class ByteCodeGenerator
 		var instanceCallRegister = registry.PreviousRegister;
 		statements.Add(new SetStatement(new Instance(condition.ReturnType, true),
 			registry.AllocateRegister()));
-		;
 		GenerateInstructionsFromIfCondition(Instruction.Equal, instanceCallRegister,
 			registry.PreviousRegister);
 	}
