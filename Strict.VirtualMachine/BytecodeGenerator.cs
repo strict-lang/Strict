@@ -110,9 +110,21 @@ public sealed class ByteCodeGenerator
 				TryGenerateToOperatorStatement,
 				TryGenerateVariableCallStatement,
 				TryGenerateMethodCallStatement,
-				TryGenerateValueStatement
+				TryGenerateValueStatement,
+				TryGenerateListCallStatement
 			}.Any(method => method(expression)))
 			return;
+	}
+
+	private bool TryGenerateListCallStatement(Expression expression)
+	{
+		if (expression is not ListCall listCall)
+			return false;
+		GenerateStatementsFromExpression(listCall.Index);
+		var indexRegister = registry.PreviousRegister;
+		statements.Add(new ListCallStatement(registry.AllocateRegister(), indexRegister,
+			listCall.List.ToString()));
+		return true;
 	}
 
 	private bool TryGenerateToOperatorStatement(Expression expression)

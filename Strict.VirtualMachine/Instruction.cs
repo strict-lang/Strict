@@ -9,6 +9,7 @@ public enum Instruction
 	LoadConstant,
 	LoopBegin,
 	IterationEnd,
+	ListCall,
 	SetLoadSeparator = 100,
 	Add,
 	Subtract,

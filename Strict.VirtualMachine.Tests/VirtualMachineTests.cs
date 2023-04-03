@@ -5,12 +5,12 @@ using Type = Strict.Language.Type;
 
 namespace Strict.VirtualMachine.Tests;
 
-public sealed class VirtualMachineTests : BaseVirtualMachineTests
+public class VirtualMachineTests : BaseVirtualMachineTests
 {
 	[SetUp]
 	public void Setup() => vm = new VirtualMachine();
 
-	private VirtualMachine vm = null!;
+	protected VirtualMachine vm = null!;
 
 	private void CreateSampleEnum() =>
 		new Type(type.Package,
@@ -105,6 +105,14 @@ public sealed class VirtualMachineTests : BaseVirtualMachineTests
 		Assert.That(vm.Execute(statements).Returns?.Value, Is.EqualTo(expectedResult));
 	}
 
+	[Test]
+	public void AccessListByIndex()
+	{
+		var statements = new ByteCodeGenerator(GenerateMethodCallFromSource("AccessList",
+			"AccessList((1, 2, 3, 4, 5)).Get(2)", "has numbers", "Get(index Number) Number",
+			"\tconstant element = numbers(index)", "\telement")).Generate();
+		Assert.That(vm.Execute(statements).Returns?.Value, Is.EqualTo(3));
+	}
 	[Test]
 	public void ReduceButGrowLoopExample() =>
 		Assert.That(
