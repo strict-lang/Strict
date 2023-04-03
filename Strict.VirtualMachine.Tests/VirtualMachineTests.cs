@@ -113,6 +113,16 @@ public class VirtualMachineTests : BaseVirtualMachineTests
 			"\tconstant element = numbers(index)", "\telement")).Generate();
 		Assert.That(vm.Execute(statements).Returns?.Value, Is.EqualTo(3));
 	}
+
+	[Test]
+	public void AccessListByIndexNonNumberType()
+	{
+		var statements = new ByteCodeGenerator(GenerateMethodCallFromSource("AccessList",
+			"AccessList((\"1\", \"2\", \"3\", \"4\", \"5\")).Get(2)", "has texts", "Get(index Number) Text",
+			"\tconstant element = texts(index)", "\telement")).Generate();
+		Assert.That(vm.Execute(statements).Returns?.Value, Is.EqualTo("3"));
+	}
+
 	[Test]
 	public void ReduceButGrowLoopExample() =>
 		Assert.That(
