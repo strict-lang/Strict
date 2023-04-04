@@ -100,18 +100,11 @@ public sealed class ByteCodeGenerator
 	{
 		if (new[]
 			{
-				TryGenerateBodyStatements,
-				TryGenerateBinaryStatements,
-				TryGenerateIfStatements,
-				TryGenerateAssignmentStatements,
-				TryGenerateLoopStatements,
-				TryGenerateMutableStatements,
-				TryGenerateMemberCallStatement,
-				TryGenerateToOperatorStatement,
-				TryGenerateVariableCallStatement,
-				TryGenerateMethodCallStatement,
-				TryGenerateValueStatement,
-				TryGenerateListCallStatement
+				TryGenerateBodyStatements, TryGenerateBinaryStatements, TryGenerateIfStatements,
+				TryGenerateAssignmentStatements, TryGenerateLoopStatements,
+				TryGenerateMutableStatements, TryGenerateMemberCallStatement,
+				TryGenerateToOperatorStatement, TryGenerateVariableCallStatement,
+				TryGenerateMethodCallStatement, TryGenerateValueStatement, TryGenerateListCallStatement
 			}.Any(method => method(expression)))
 			return;
 	}
@@ -186,26 +179,47 @@ public sealed class ByteCodeGenerator
 	{
 		if (expression is Binary || expression is not MethodCall methodCall)
 			return false;
-		if (methodCall.Method.Name == "Add")
-		{
-			if (!GenerateStatementsForAddMethod(methodCall))
-				return false;
-		}
-		else
-		{
-			statements.Add(new InvokeStatement(methodCall, registry.AllocateRegister(), registry));
-		}
+		if (TrytGenerateStatementForCollectionManipulation(methodCall))
+			return true;
+		statements.Add(new InvokeStatement(methodCall, registry.AllocateRegister(), registry));
 		return true;
 	}
 
-	private bool GenerateStatementsForAddMethod(MethodCall methodCall)
+	public bool TrytGenerateStatementForCollectionManipulation(MethodCall methodCall)
+	{
+		switch (methodCall.Method.Name)
+		{
+		case "Add":
+		{
+			GenerateStatementsForAddMethod(methodCall);
+			return true;
+		}
+		case "Remove":
+		{
+			GenerateStatementsForRemoveMethod(methodCall);
+			return true;
+		}
+		default:
+			return false;
+		}
+	}
+
+	private void GenerateStatementsForRemoveMethod(MethodCall methodCall)
+	{
+		if (methodCall.Instance == null)
+			return;
+		GenerateStatementsFromExpression(methodCall.Arguments[0]);
+		statements.Add(new RemoveStatement(methodCall.Instance.ToString(),
+			registry.PreviousRegister));
+	}
+
+	private void GenerateStatementsForAddMethod(MethodCall methodCall)
 	{
 		if (TryGenerateAddForTable(methodCall) || methodCall.Instance == null)
-			return false;
+			return;
 		GenerateStatementsFromExpression(methodCall.Arguments[0]);
 		statements.Add(new WriteToListStatement(registry.PreviousRegister,
 			methodCall.Instance.ToString()));
-		return true;
 	}
 
 	private bool TryGenerateAddForTable(MethodCall methodCall)
@@ -370,11 +384,10 @@ public sealed class ByteCodeGenerator
 			rightRegister);
 	}
 
-	private void GenerateInstructionsFromIfCondition(Instruction conditionInstruction, Register leftRegister,
-		Register rightRegister)
+	private void GenerateInstructionsFromIfCondition(Instruction conditionInstruction,
+		Register leftRegister, Register rightRegister)
 	{
-		statements.Add(new BinaryStatement(conditionInstruction, leftRegister,
-			rightRegister));
+		statements.Add(new BinaryStatement(conditionInstruction, leftRegister, rightRegister));
 		idStack.Push(conditionalId);
 		statements.Add(new JumpToIdStatement(Instruction.JumpToIdIfFalse, conditionalId++));
 	}

@@ -51,17 +51,30 @@ public sealed class VirtualMachine
 		TryWriteToListInstruction(statement);
 		TryConversionStatement(statement);
 		TryWriteToTableInstruction(statement);
+		TryRemoveStatement(statement);
 		TryExecuteListCall(statement);
 		TryExecuteRest(statement);
+	}
+
+	private bool TryRemoveStatement(Statement statement)
+	{
+		if (statement is not RemoveStatement removeStatement)
+			return false;
+		var item = Memory.Registers[removeStatement.Register].GetRawValue();
+		var list = (List<Expression>)Memory.Variables[removeStatement.Identifier].Value;
+		list.RemoveAll(expression => ((Value)expression).Data.Equals(item));
+		return true;
 	}
 
 	private void TryExecuteListCall(Statement statement)
 	{
 		if (statement is not ListCallStatement listCallStatement)
 			return;
-		var indexValue = Convert.ToInt32(Memory.Registers[listCallStatement.IndexValueRegister].GetRawValue());
+		var indexValue =
+			Convert.ToInt32(Memory.Registers[listCallStatement.IndexValueRegister].GetRawValue());
 		var variableListElement =
-			((List<Expression>)Memory.Variables[listCallStatement.Identifier].Value).ElementAt(indexValue);
+			((List<Expression>)Memory.Variables[listCallStatement.Identifier].Value).
+			ElementAt(indexValue);
 		Memory.Registers[listCallStatement.Register] =
 			new Instance(variableListElement.ReturnType, variableListElement);
 	}
