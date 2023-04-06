@@ -104,7 +104,7 @@ public sealed class ByteCodeGenerator
 				TryGenerateAssignmentStatements, TryGenerateLoopStatements,
 				TryGenerateMutableStatements, TryGenerateMemberCallStatement,
 				TryGenerateToOperatorStatement, TryGenerateVariableCallStatement,
-				TryGenerateMethodCallStatement, TryGenerateValueStatement, TryGenerateListCallStatement
+				TryGenerateMethodCallStatement, TryGenerateValueStatement, TryGenerateListCallStatement,
 			}.Any(method => method(expression)))
 			return;
 	}
@@ -209,8 +209,12 @@ public sealed class ByteCodeGenerator
 		if (methodCall.Instance == null)
 			return;
 		GenerateStatementsFromExpression(methodCall.Arguments[0]);
-		statements.Add(new RemoveStatement(methodCall.Instance.ToString(),
-			registry.PreviousRegister));
+		if (methodCall.Instance.ReturnType.Name.EndsWith('s'))
+			statements.Add(new RemoveStatement(methodCall.Instance.ToString(),
+				registry.PreviousRegister));
+		else
+			statements.Add(new RemoveFromTableStatement(registry.PreviousRegister,
+				methodCall.Instance.ToString()));
 	}
 
 	private void GenerateStatementsForAddMethod(MethodCall methodCall)

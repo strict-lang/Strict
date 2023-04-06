@@ -31,6 +31,7 @@ public enum Instruction
 	Invoke,
 	WriteToList,
 	WriteToTable,
+	RemoveFromTable,
 	Remove,
 	ToText,
 	ToNumber,
