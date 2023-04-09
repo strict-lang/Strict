@@ -11,6 +11,7 @@ namespace Strict.Language;
 /// Methods are parsed lazily, which speeds up type and package parsing enormously and
 /// also provides us with all methods in a type usable in any other method if needed.
 /// </summary>
+//TODO: split up
 public sealed class Method : Context
 {
 	public Method(Type type, int typeLineNumber, ExpressionParser parser, IReadOnlyList<string> lines)
@@ -228,7 +229,9 @@ public sealed class Method : Context
 		var expression = Parser.ParseLineExpression(body, currentLine.AsSpan(body.Tabs));
 		if (IsTestExpression(currentLine, expression))
 			Tests.Add(expression);
-		else if (currentLine.Contains(body.Method.Name) && expression.GetType().Name == "MethodCall" && body.ParsingLineNumber == body.Method.Tests.Count + 1 && currentLine != "\tRun")
+		else if (currentLine.Contains(body.Method.Name) &&
+			expression.GetType().Name == "MethodCall" &&
+			body.ParsingLineNumber == body.Method.Tests.Count + 1 && currentLine != "\tRun")
 			throw new RecursiveCallCausesStackOverflow(body); //TODO: Figure out something better, this is bad (LM)
 		return expression;
 	}
@@ -385,9 +388,14 @@ public sealed class Method : Context
 	public int GetVariableUsageCount(string variableName) =>
 		lines.Count(l => l.Contains(" " + variableName) || l.Contains("(" + variableName) ||
 			l.Contains("\t" + variableName));
-}
 
-public sealed class RecursiveCallCausesStackOverflow : ParsingFailed
-{
-	public RecursiveCallCausesStackOverflow(Body body) : base(body) { }
+	/// <summary>
+	/// Checks if another method has the same signature, doesn't matter if it is from this type or
+	/// any parent or child type. Used to avoid methods with the same return types and parameters.
+	/// Slightly different from <see cref="HasEqualSignature"/> which does extra generic checks. TODO: consolidate!
+	/// </summary>
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public bool IsSameMethodNameReturnTypeAndParameters(Method other) =>
+		Name == other.Name && ReturnType == other.ReturnType &&
+		Parameters.SequenceEqual(other.Parameters);
 }

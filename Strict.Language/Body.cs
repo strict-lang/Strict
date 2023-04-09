@@ -51,7 +51,19 @@ public sealed class Body : Expression
 		var expressions = new List<Expression>();
 		for (ParsingLineNumber = LineRange.Start.Value; ParsingLineNumber < LineRange.End.Value;
 			ParsingLineNumber++)
-			expressions.Add(Method.ParseLine(this, CurrentLine));
+			try
+			{
+				expressions.Add(Method.ParseLine(this, CurrentLine));
+			}
+			catch (ParsingFailed)
+			{
+				throw;
+			}
+			catch (Exception ex)
+			{
+				throw new ParsingFailed((Type)Method.Parent, Method.TypeLineNumber + ParsingLineNumber,
+					CurrentLine, ex);
+			}
 		SetExpressions(expressions);
 		return Expressions.Count == 1
 			? Expressions[0]

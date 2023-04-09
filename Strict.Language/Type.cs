@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 
 namespace Strict.Language;
 
@@ -649,9 +650,19 @@ public class Type : Context
 			return FindAndCreateFromBaseMethod(methodName, arguments, parser);
 		foreach (var method in matchingMethods)
 		{
-			if (method.Parameters.Count == arguments.Count && IsMethodWithMatchingParametersType(method,
-				arguments.Select(argument => argument.ReturnType).ToList()))
+			if (method.Parameters.Count == arguments.Count)
+			{
+				//TODO: clean up, optimized this a bit
+				if (arguments.Count == 1)
+				{
+					if (IsMethodParameterMatchingArgument(method, 0, arguments[0].ReturnType))
+						return method;
+				}
+				else if (IsMethodWithMatchingParametersType(method,
+					arguments.Select(argument => argument.ReturnType).ToList()))
 				return method;
+			}
+			//TODO: not sure about this, looks very slow to do on every possible method
 			if (method.Parameters.Count == 1 && arguments.Count > 0)
 			{
 				var parameter = method.Parameters[0];
@@ -662,7 +673,7 @@ public class Type : Context
 			}
 		}
 		return FindAndCreateFromBaseMethod(methodName, arguments, parser) ??
-			throw new ArgumentsDoNotMatchMethodParameters(arguments, matchingMethods);
+			throw new ArgumentsDoNotMatchMethodParameters(arguments, this, matchingMethods);
 	}
 
 	private static bool IsParameterTypeList(NamedType parameter) =>
@@ -682,30 +693,39 @@ public class Type : Context
 			base(type + " " + extraInformation) { }
 	}
 
+	//TODO: got two usages, but they are different and can be optimized each
 	private static bool IsMethodWithMatchingParametersType(Method method,
 		IReadOnlyList<Type> argumentReturnTypes)
 	{
 		for (var index = 0; index < method.Parameters.Count; index++)
-		{
-			var methodParameterType = method.Parameters[index].Type;
-			var argumentReturnType = argumentReturnTypes[index];
-			if (argumentReturnType == methodParameterType || method.IsGeneric || methodParameterType.Name == Base.Any ||
-				IsArgumentImplementationTypeMatchParameterType(argumentReturnType, methodParameterType))
-				continue;
-			if (methodParameterType.IsEnum && methodParameterType.Members[0].Type == argumentReturnType)
-				continue;
-			if (methodParameterType.Name == Base.Iterator && method.Type == argumentReturnType)
-				continue; //ncrunch: no coverage, TODO: missing test
-			if (methodParameterType.IsIterator != argumentReturnType.IsIterator && methodParameterType.Name != Base.Any)
+			if (!IsMethodParameterMatchingArgument(method, index, argumentReturnTypes[index]))
 				return false;
-			if (methodParameterType.IsGeneric)
-				throw new GenericTypesCannotBeUsedDirectlyUseImplementation(methodParameterType, //ncrunch: no coverage
-					"(parameter " + index + ") is not usable with argument " +
-					argumentReturnTypes[index] + " in " + method);
-			if (!argumentReturnType.IsCompatible(methodParameterType))
-				return false;
-		}
 		return true;
+	}
+
+	private static bool IsMethodParameterMatchingArgument(Method method, int index,
+		Type argumentReturnType)
+	{
+		var methodParameterType = method.Parameters[index].Type;
+		if (argumentReturnType == methodParameterType || method.IsGeneric ||
+			methodParameterType.Name == Base.Any ||
+			IsArgumentImplementationTypeMatchParameterType(argumentReturnType, methodParameterType))
+			return true;
+		if (methodParameterType.IsEnum && methodParameterType.Members[0].Type == argumentReturnType)
+			return true;
+		if (methodParameterType.Name == Base.Iterator && method.Type == argumentReturnType)
+			return true;
+		/*TODO: wtf why is this strange hack here?
+		if (methodParameterType.IsIterator != argumentReturnType.IsIterator &&
+			methodParameterType.Name != Base.Any)
+			return false;
+		*/
+		if (methodParameterType.IsGeneric)
+			throw new GenericTypesCannotBeUsedDirectlyUseImplementation(
+				methodParameterType, //ncrunch: no coverage
+				"(parameter " + index + ") is not usable with argument " + argumentReturnType + " in " +
+				method);
+		return argumentReturnType.IsCompatible(methodParameterType);
 	}
 
 	private static bool
@@ -821,14 +841,8 @@ public class Type : Context
 				return cachedAvailableMethods;
 			cachedAvailableMethods = new Dictionary<string, List<Method>>(StringComparer.Ordinal);
 			foreach (var method in methods)
-			{
-				if (!method.IsPublic && method.Name != Method.From && !method.Name.AsSpan().IsOperator())
-					continue;
-				if (cachedAvailableMethods.ContainsKey(method.Name))
-					cachedAvailableMethods[method.Name].Add(method);
-				else
-					cachedAvailableMethods.Add(method.Name, new List<Method> { method });
-			}
+				if (method.IsPublic || method.Name == Method.From || method.Name.AsSpan().IsOperator())
+					AddAvailableMethod(method);
 			foreach (var member in members)
 				if (!member.IsPublic && !IsTraitImplementation(member.Type))
 					AddNonGenericMethods(member.Type);
@@ -837,45 +851,47 @@ public class Type : Context
 			return cachedAvailableMethods;
 		}
 	}
+	private Dictionary<string, List<Method>>? cachedAvailableMethods;
+
+	private void AddAvailableMethod(Method method)
+	{
+		if (cachedAvailableMethods!.ContainsKey(method.Name))
+		{
+			var methodsWithThisName = cachedAvailableMethods[method.Name];
+			foreach (var existingMethod in methodsWithThisName)
+				if (existingMethod.IsSameMethodNameReturnTypeAndParameters(method))
+					return;
+			methodsWithThisName.Add(method);
+		}
+		else
+			cachedAvailableMethods.Add(method.Name, new List<Method> { method });
+	}
 
 	public bool IsTraitImplementation(Type memberType) =>
 		memberType.IsTrait && methods.Count >= memberType.Methods.Count &&
 		memberType.Methods.All(typeMethod =>
 			methods.Any(method => method.HasEqualSignature(typeMethod)));
 
-	private Dictionary<string, List<Method>>? cachedAvailableMethods;
-
 	private void AddNonGenericMethods(Type implementType)
 	{
-		foreach (var (methodName, otherMethods) in implementType.AvailableMethods)
-		{
-			var nonGenericMethods = new List<Method>(implementType.IsGeneric
-				? otherMethods.Where(m => !m.IsGeneric && !m.Parameters.Any(p => p.Type.IsGeneric))
-				: otherMethods);
-			AddAvailableMethods(methodName, nonGenericMethods);
-		}
-	}
-
-	private void AddAvailableMethods(string methodName, List<Method> newMethods)
-	{
-		if (cachedAvailableMethods!.ContainsKey(methodName))
-			cachedAvailableMethods[methodName].AddRange(newMethods);
-		else
-			cachedAvailableMethods.Add(methodName, newMethods);
+		foreach (var (_, otherMethods) in implementType.AvailableMethods)
+			if (implementType.IsGeneric)
+			{
+				foreach (var otherMethod in otherMethods)
+					if (!otherMethod.IsGeneric && !otherMethod.Parameters.Any(p => p.Type.IsGeneric))
+						AddAvailableMethod(otherMethod);
+			}
+			else
+				foreach (var otherMethod in otherMethods)
+					AddAvailableMethod(otherMethod);
 	}
 
 	private void AddAnyMethods()
 	{
 		cachedAnyMethods ??= GetType(Base.Any).AvailableMethods;
-		if (cachedAnyMethods.Count == 0)
-			//ncrunch: no coverage start, TODO: looks like a strange hack, missing tests and probably not needed!
-		{
-			cachedAnyMethods = null;
-			return;
-			//ncrunch: no coverage end
-		}
-		foreach (var (methodName, anyMethods) in cachedAnyMethods)
-			AddAvailableMethods(methodName, anyMethods);
+		foreach (var (_, anyMethods) in cachedAnyMethods)
+		foreach (var anyMethod in anyMethods)
+			AddAvailableMethod(anyMethod);
 	}
 
 	private static IReadOnlyDictionary<string, List<Method>>? cachedAnyMethods;
@@ -889,21 +905,19 @@ public class Type : Context
 
 	public sealed class ArgumentsDoNotMatchMethodParameters : Exception
 	{
-		public ArgumentsDoNotMatchMethodParameters(IReadOnlyList<Expression> arguments,
+		public ArgumentsDoNotMatchMethodParameters(IReadOnlyList<Expression> arguments, Type type,
 			IEnumerable<Method> allMethods) : base((arguments.Count == 0
 				? "No arguments does "
 				: (arguments.Count == 1
 					? "Argument: "
-					: "Arguments: ") + arguments.Select(a => a.ToStringWithType()).ToWordList() +
-				" do ") +
-			"not match these method(s):\n" + string.Join("\n",
-				allMethods)) { }
+					: "Arguments: ") + arguments.Select(a => a.ToStringWithType()).ToWordList() + " do ") +
+			"not match these " + type + " method(s):\n" + string.Join("\n", allMethods)) { }
 	}
 
 	public bool IsUpcastable(Type otherType) =>
 		IsEnum && otherType.IsEnum && otherType.Members.Any(member =>
 			member.Name.Equals(Name, StringComparison.OrdinalIgnoreCase));
 
-	public int FindMemberUsageCount(string memberName) =>
-		lines.Count(l => l.Contains(" " + memberName) || l.Contains("(" + memberName));
+	public int CountMemberUsage(string memberName) =>
+		lines.Count(line => line.Contains(" " + memberName) || line.Contains("(" + memberName));
 }

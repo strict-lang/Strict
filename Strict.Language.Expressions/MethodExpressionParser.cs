@@ -17,8 +17,8 @@ public class MethodExpressionParser : ExpressionParser
 	/// </summary>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public override Expression ParseLineExpression(Body body, ReadOnlySpan<char> line) =>
-		ConstantDeclaration.TryParse(body, line, ConstantDeclaration.ConstantWithSpaceAtEnd) ?? If.TryParse(body, line) ??
-		For.TryParse(body, line.Trim()) ?? Return.TryParse(body, line) ??
+		ConstantDeclaration.TryParse(body, line, ConstantDeclaration.ConstantWithSpaceAtEnd) ??
+		If.TryParse(body, line) ?? For.TryParse(body, line.Trim()) ?? Return.TryParse(body, line) ??
 		ConstantDeclaration.TryParse(body, line, MutableDeclaration.MutableWithSpaceAtEnd) ??
 		MutableAssignment.TryParse(body, line) ?? ParseExpression(body, line);
 
@@ -51,6 +51,7 @@ public class MethodExpressionParser : ExpressionParser
 				? throw new Body.IdentifierNotFound(body, input.ToString())
 				: throw new UnknownExpression(body, input.ToString()));
 
+	//TODO: clean comments up
 	private Expression? TryParseErrorOrTextOrListOrConditionalExpression(Body body, ReadOnlySpan<char> input) =>
 		input.StartsWith("Error ")
 			? TryParseErrorExpression(body, input[6..])
