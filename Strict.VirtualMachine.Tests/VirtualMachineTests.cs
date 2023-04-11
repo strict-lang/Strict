@@ -319,13 +319,13 @@ public class VirtualMachineTests : BaseVirtualMachineTests
 		string[] code =
 		{
 			"has number",
-			"AddToDictionary Number",
+			"RemoveFromDictionary Number",
 			"\tmutable values = Dictionary(Number, Number)", "\tvalues.Add(1, number)", "\tnumber"
 		};
 		Assert.That(
 			((Dictionary<Value, Value>)vm.
 				Execute(new ByteCodeGenerator(GenerateMethodCallFromSource(nameof(DictionaryAdd),
-					"DictionaryAdd(5).AddToDictionary", code)).Generate()).Memory.Variables["values"].
+					"DictionaryAdd(5).RemoveFromDictionary", code)).Generate()).Memory.Variables["values"].
 				Value).Count, Is.EqualTo(1));
 	}
 
@@ -337,6 +337,23 @@ public class VirtualMachineTests : BaseVirtualMachineTests
 		"\tvalues.Add(1, number)",
 		"\tvalues.Get(0)")]
 	public void DictionaryGet(string methodCall, string expected, params string[] code)
+	{
+		var statements =
+			new ByteCodeGenerator(
+				GenerateMethodCallFromSource(nameof(CollectionAdd), methodCall, code)).Generate();
+		var result = vm.Execute(statements).Returns?.Value!;
+		Assert.That(result.ToString(), Is.EqualTo(expected));
+	}
+
+	[TestCase("CollectionAdd(5).AddToDictionary",
+		"5",
+		"has number",
+		"AddToDictionary Number",
+		"\tmutable values = Dictionary(Number, Number)",
+		"\tvalues.Add(1, number)",
+		"\tvalues.Add(2, number + 10)",
+		"\tvalues.Remove(1)")]
+	public void DictionaryRemove(string methodCall, string expected, params string[] code)
 	{
 		var statements =
 			new ByteCodeGenerator(

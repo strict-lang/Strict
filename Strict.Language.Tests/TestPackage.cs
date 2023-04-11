@@ -230,6 +230,8 @@ public class TestPackage : Package
 				"\tkeysAndValues = List((key, mappedValue))",
 				"Add(key Generic, mappedValue Generic) Mutable(Dictionary)",
 				"\tkeysAndValues.Add((key, mappedValue))",
+				"Remove(key Generic) Mutable(Dictionary)",
+				"\tkeysAndValues.Remove(key)",
 				"Get(key Generic) Generic",
 	"\tfor keysAndValues",
 		"\t\tif value(0) is key",

@@ -58,12 +58,19 @@ public sealed class VirtualMachine
 
 	private bool TryRemoveStatement(Statement statement)
 	{
-		if (statement is not RemoveStatement removeStatement)
-			return false;
-		var item = Memory.Registers[removeStatement.Register].GetRawValue();
-		var list = (List<Expression>)Memory.Variables[removeStatement.Identifier].Value;
-		list.RemoveAll(expression => ((Value)expression).Data.Equals(item));
-		return true;
+		if (statement is RemoveStatement removeStatement)
+		{
+			var item = Memory.Registers[removeStatement.Register].GetRawValue();
+			var list = (List<Expression>)Memory.Variables[removeStatement.Identifier].Value;
+			list.RemoveAll(expression => ((Value)expression).Data.Equals(item));
+			return true;
+		}
+		if (statement is RemoveFromTableStatement removeFromTableStatement)
+		{
+			var key = Memory.Registers[removeFromTableStatement.Register].GetRawValue();
+			return true;
+		}
+		return false;
 	}
 
 	private void TryExecuteListCall(Statement statement)
