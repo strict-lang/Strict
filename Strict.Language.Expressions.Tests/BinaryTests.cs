@@ -17,29 +17,31 @@ public sealed class BinaryTests : TestExpressions
 	[Test]
 	public void InvalidLeftNestedExpression() =>
 		Assert.That(() => ParseExpression("bla.Unknown + 5"),
-			Throws.Exception.InstanceOf<MemberOrMethodNotFound>());
+			Throws.InstanceOf<MemberOrMethodNotFound>());
 
 	[Test]
 	public void MissingLeftExpression() =>
 		Assert.That(() => ParseExpression("unknown + 5"),
-			Throws.Exception.InstanceOf<Body.IdentifierNotFound>());
+			Throws.InstanceOf<Body.IdentifierNotFound>());
 
 	[Test]
 	public void MissingRightExpression() =>
 		Assert.That(() => ParseExpression("5 + unknown"),
-			Throws.Exception.InstanceOf<Body.IdentifierNotFound>());
+			Throws.InstanceOf<Body.IdentifierNotFound>());
 
 	[Test]
 	public void ArgumentsDoNotMatchBinaryOperatorParameters() =>
 		Assert.That(() => ParseExpression("5 / \"text\""),
-			Throws.Exception.InstanceOf<ArgumentsDoNotMatchMethodParameters>().With.Message.Contains(
-				"Argument: \"text\" TestPackage.Text do not match these method(s):\n/(other TestPackage.Number) Number"));
+			Throws.Exception.InnerException.With.Message.Contains(
+					"Argument: \"text\" TestPackage.Text do not match these TestPackage.Number method(s):\n" +
+					"/(other TestPackage.Number) Number").And.
+				InstanceOf<ArgumentsDoNotMatchMethodParameters>());
 
 	[Test]
 	public void NoMatchingMethodFound() =>
 		Assert.That(() => ParseExpression("true - \"text\""),
-			Throws.Exception.InstanceOf<NoMatchingMethodFound>().With.Message.Contains(
-				"not found for TestPackage.Boolean, available methods"));
+			Throws.Exception.InnerException.InstanceOf<NoMatchingMethodFound>().With.InnerException.
+				Message.Contains("not found for TestPackage.Boolean, available methods"));
 
 	[Test]
 	public void ConversionTypeNotFound() =>
@@ -57,7 +59,7 @@ public sealed class BinaryTests : TestExpressions
 	[Test]
 	public void InvalidUsageOfToOperator() =>
 		Assert.That(() => ParseExpression("to(Text)"),
-			Throws.InstanceOf<ArgumentsDoNotMatchMethodParameters>());
+			Throws.InnerException.InstanceOf<ArgumentsDoNotMatchMethodParameters>());
 
 	[Test]
 	public void ParseComparison() =>

@@ -66,7 +66,7 @@ public sealed class DictionaryTests : TestExpressions
 				"\tinput.Add(4, \"10\")",
 				"\tinput")).ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(() => dictionary.Methods[0].GetBodyAndParseIfNeeded(),
-			Throws.InstanceOf<Type.ArgumentsDoNotMatchMethodParameters>()!.With.Message.Contains(
+			Throws.InnerException.InstanceOf<Type.ArgumentsDoNotMatchMethodParameters>()!.With.Message.Contains(
 				"Arguments: 4 TestPackage.Number, \"10\" TestPackage.Text do not match these method(s):" +
 				"\nAdd(key TestPackage.Text, mappedValue TestPackage.Boolean) Mutable(TestPackage.Dictionary)")!);
 	}

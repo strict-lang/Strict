@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 
 namespace Strict.Language;
 
@@ -23,6 +22,8 @@ public class Type : Context
 		package.Add(this);
 		lines = file.Lines;
 		IsGeneric = Name == Base.Generic || OneOfFirstThreeLinesContainsGeneric();
+		CreatedBy = "Package: " + package + ", file=" + file + ", StackTrace:\n" +
+			StackTraceExtensions.FormatStackTraceIntoClickableMultilineText(1);
 	}
 
 	public sealed class LinesCountMustNotExceedLimit : ParsingFailed
@@ -44,6 +45,10 @@ public class Type : Context
 	/// list, we need to know the type of the elements), you must them from <see cref="GenericTypeImplementation"/>!
 	/// </summary>
 	public bool IsGeneric { get; }
+	/// <summary>
+	/// For debugging purposes to see where this Type was initially created.
+	/// </summary>
+	public string CreatedBy { get; protected set; }
 
 	private bool OneOfFirstThreeLinesContainsGeneric()
 	{
@@ -90,13 +95,10 @@ public class Type : Context
 	private void ParseAllRemainingLinesIntoMembersAndMethods(ExpressionParser parser)
 	{
 		for (; lineNumber < lines.Length; lineNumber++)
-		{
-			var rememberStartMethodLineNumber = lineNumber;
-			ParseInTryCatchBlock(parser, rememberStartMethodLineNumber);
-		}
+			TryParse(parser, lineNumber);
 	}
 
-	private void ParseInTryCatchBlock(ExpressionParser parser, int rememberStartMethodLineNumber)
+	private void TryParse(ExpressionParser parser, int rememberStartMethodLineNumber)
 	{
 		try
 		{
@@ -185,7 +187,7 @@ public class Type : Context
 		}
 		catch (Exception ex)
 		{
-			throw new ParsingFailed(this, lineNumber, ex.Message, ex);
+			throw new ParsingFailed(this, lineNumber, ex.Message.Split('\n').Take(2).ToWordList("\n"), ex);
 		}
 	}
 
@@ -537,13 +539,14 @@ public class Type : Context
 	/// </summary>
 	public const string Outer = nameof(Outer);
 
-	public GenericTypeImplementation GetGenericImplementation(Type singleImplementationType)
+	public GenericTypeImplementation GetGenericImplementation(params Type[] implementationTypes)
 	{
-		//TODO: check if this is in fact a single implementation type generic
-		var key = Name + "(" + singleImplementationType.Name + ")"; //TODO: this doesn't seem to be the same key as used when called from Context.GetTypeFromPackages
-		return GetGenericImplementation(key) ??
-			CreateGenericImplementation(key, new[] { singleImplementationType });
+		var key = GetImplementationName(implementationTypes);
+		return GetGenericImplementation(key) ?? CreateGenericImplementation(key, implementationTypes);
 	}
+
+	internal string GetImplementationName(IEnumerable<Type> implementationTypes) =>
+		Name + "(" + implementationTypes.Select(t => t.Name).ToWordList() + ")";
 
 	private GenericTypeImplementation? GetGenericImplementation(string key)
 	{
@@ -559,49 +562,12 @@ public class Type : Context
 
 	private GenericTypeImplementation CreateGenericImplementation(string key, IReadOnlyList<Type> implementationTypes)
 	{
-		if (GetUniqueGenericTypeNames().Count != implementationTypes.Count &&
+		if (GetGenericTypeArguments().Count != implementationTypes.Count &&
 			!HasMatchingConstructor(implementationTypes))
 			throw new TypeArgumentsCountDoesNotMatchGenericType(this, implementationTypes);
 		var genericType = new GenericTypeImplementation(this, implementationTypes);
 		cachedGenericTypes!.Add(key, genericType);
 		return genericType;
-	}
-
-	//TODO: find these fucked up rules for Iterator and List and generalize them, then find the bug with MethodBody not matching Method it is in, wtf
-	// && Name != Base.Iterator && Name != Base.List && ) //TODO: Temporary workaround to make Iterator work without generic member
-	private IReadOnlyList<string> GetUniqueGenericTypeNames()
-	{
-		//TODO: Easy and most common case is 1 member and that is called "Generic" anyway, check if there are no methods conflicting with differently named "Generic"
-		var genericNames = new List<string>();
-		foreach (var member in Members)
-		{
-			if (member.Type is GenericTypeImplementation genericImplementation) //TODO: never happens?
-			{
-				foreach (var implementationMember in genericImplementation.ImplementationTypes)
-					if (member.Type.IsGeneric)
-						AddGenericName(genericNames, implementationMember.Name);
-			}
-			else if (member.Type.IsIterator)
-				AddGenericName(genericNames, Base.Generic);
-			else if (member.Type.IsGeneric)
-				AddGenericName(genericNames, member.Name);
-			/*TODO: figure out has keysAndValues List((key Generic, mappedValue Generic)) case!
-				genericNames.Add(member.Name);
-					genericNames.Add(implementationMember);
-			if (member.Type.IsIterator)
-			{
-				member.Type.GetListImplementationType()
-					|| member.Type.Name == Base.List)
-				if (member.Type.Name == Base.Iterator)
-					genericNames.Add(Base.Generic);
-				else
-					genericNames.AddRange(member.Type.GetUniqueGenericTypeNames());
-			}
-			else if (member.Type.IsGeneric)
-				genericNames.Add(member.Name);
-			*/
-		}
-		return genericNames;
 	}
 
 	private bool HasMatchingConstructor(IReadOnlyList<Type> implementationTypes) =>
@@ -613,18 +579,6 @@ public class Type : Context
 			: matchingMethods.FirstOrDefault(method =>
 				method.Parameters.Count == implementationTypes.Count &&
 				IsMethodWithMatchingParametersType(method, implementationTypes));
-
-	public GenericTypeImplementation GetGenericImplementation(List<Type> implementationTypes)
-	{
-		var key = Name + implementationTypes.Select(t => t.Name).ToList().ToBrackets();
-		return GetGenericImplementation(key) ?? CreateGenericImplementation(key, implementationTypes);
-	}
-
-	private void AddGenericName(List<string> genericNames, string typeName)
-	{
-		if (!genericNames.Contains(typeName))
-			genericNames.Add(typeName);
-	}
 
 	public sealed class CannotGetGenericImplementationOnNonGeneric : Exception
 	{
@@ -660,7 +614,7 @@ public class Type : Context
 				}
 				else if (IsMethodWithMatchingParametersType(method,
 					arguments.Select(argument => argument.ReturnType).ToList()))
-				return method;
+					return method;
 			}
 			//TODO: not sure about this, looks very slow to do on every possible method
 			if (method.Parameters.Count == 1 && arguments.Count > 0)
@@ -715,11 +669,6 @@ public class Type : Context
 			return true;
 		if (methodParameterType.Name == Base.Iterator && method.Type == argumentReturnType)
 			return true;
-		/*TODO: wtf why is this strange hack here?
-		if (methodParameterType.IsIterator != argumentReturnType.IsIterator &&
-			methodParameterType.Name != Base.Any)
-			return false;
-		*/
 		if (methodParameterType.IsGeneric)
 			throw new GenericTypesCannotBeUsedDirectlyUseImplementation(
 				methodParameterType, //ncrunch: no coverage
@@ -920,4 +869,118 @@ public class Type : Context
 
 	public int CountMemberUsage(string memberName) =>
 		lines.Count(line => line.Contains(" " + memberName) || line.Contains("(" + memberName));
+
+	public HashSet<NamedType> GetGenericTypeArguments()
+	{
+		if (!IsGeneric)
+			throw new NotSupportedException("This type " + this +
+				" must be generic in order to call this method!");
+		var genericArguments = new HashSet<NamedType>();
+		foreach (var member in Members)
+			if (member.Type.Name == Base.List || member.Type.IsIterator)
+				genericArguments.Add(new Parameter(this, Base.Generic));
+			else if (member.Type.IsGeneric)
+				genericArguments.Add(member);
+		if (genericArguments.Count == 0)
+			throw new InvalidGenericTypeWithoutGenericArguments(this);
+		Console.WriteLine(this + " GetGenericTypeArguments: " + genericArguments.ToWordList());
+		return genericArguments;
+	}
+	
+	/*TODO: cleanup
+		//TODO: we don't like special hacks like these!
+		if (name.StartsWith(Base.List + DoubleOpenBrackets, StringComparison.Ordinal))
+			return GetNestedListType(name);
+	
+	internal const string DoubleOpenBrackets = "((";
+
+	private Type GetNestedListType(string fullName)
+	{
+		var list = GetType(Base.List);
+		var (typeName, lines) = GetCombinedTypeNameAndLines(
+			ExtractNamesWithType(fullName));
+		var typeWithOtherTypesAsMembers = new Type(list.Package, new TypeLines(typeName, lines));
+		return list.GetGenericImplementation(typeWithOtherTypesAsMembers);
+	}
+
+	private static string[] ExtractNamesWithType(string fullName) =>
+		fullName[(Base.List.Length + DoubleOpenBrackets.Length)..^DoubleCloseBrackets.Length].
+			Split(",", StringSplitOptions.TrimEntries);
+
+	internal const string DoubleCloseBrackets = "))";
+
+	private static (string, string[]) GetCombinedTypeNameAndLines(IReadOnlyList<string> namesWithType)
+	{
+		var name = "";
+		var lines = new string[namesWithType.Count];
+		for (var index = 0; index < namesWithType.Count; index++)
+		{
+			name += namesWithType[index].Split(' ')[0].MakeFirstLetterUppercase();
+			lines[index] = Type.HasWithSpaceAtEnd + namesWithType[index];
+		}
+		return (name, lines);
+	}
+
+	public GenericTypeImplementation GetGenericImplementation(List<Type> implementationTypes)
+	{
+		var key = GetImplementationName(implementationTypes);
+		return GetGenericImplementation(key) ?? CreateGenericImplementation(key, implementationTypes);
+	}
+	/*
+	//TODO: why is there 2 ways to generate the type name, why not internally only keep one true way: List(Number), we can probably also remove the strange special rule in Context.FindType:
+		//if (name.StartsWith(Base.List + DoubleOpenBrackets, StringComparison.Ordinal))
+	private static string GetTypeName(Type generic, IReadOnlyList<Type> implementationTypes) =>
+		generic.Name == Base.List && !implementationTypes[0].Name.EndsWith(')')
+			? implementationTypes[0].Name.Pluralize()
+			: generic.Name + implementationTypes.ToBrackets();
+*/
+	/*TODO: find these fucked up rules for Iterator and List and generalize them, then find the bug with MethodBody not matching Method it is in, wtf
+	// && Name != Base.Iterator && Name != Base.List && ) //TODO: Temporary workaround to make Iterator work without generic member
+	private IReadOnlyList<string> GetUniqueGenericTypeNames()//TODO: why are we returning strings, we only need a count!
+	{
+		//TODO: Easy and most common case is 1 member and that is called "Generic" anyway, check if there are no methods conflicting with differently named "Generic"
+		var genericNames = new List<string>();
+		foreach (var member in Members)
+		{
+			if (member.Type is GenericTypeImplementation genericImplementation) //TODO: never happens?
+			{
+				foreach (var implementationMember in genericImplementation.ImplementationTypes)
+					if (member.Type.IsGeneric) //TODO: looks like the same as GetGenericTypeArguments below
+						AddGenericName(genericNames, implementationMember.Name);
+			}
+			else if (member.Type.IsIterator)
+				AddGenericName(genericNames, Base.Generic);
+			else if (member.Type.IsGeneric)
+				AddGenericName(genericNames, member.Name);
+			/*TODO: figure out has keysAndValues List((key Generic, mappedValue Generic)) case!
+				genericNames.Add(member.Name);
+					genericNames.Add(implementationMember);
+			if (member.Type.IsIterator)
+			{
+				member.Type.GetListImplementationType()
+					|| member.Type.Name == Base.List)
+				if (member.Type.Name == Base.Iterator)
+					genericNames.Add(Base.Generic);
+				else
+					genericNames.AddRange(member.Type.GetUniqueGenericTypeNames());
+			}
+			else if (member.Type.IsGeneric)
+				genericNames.Add(member.Name);
+			*
+		}
+		return genericNames; //TODO: why not use GetGenericTypeArguments below?
+	}
+
+	private void AddGenericName(List<string> genericNames, string typeName)
+	{
+		if (!genericNames.Contains(typeName))
+			genericNames.Add(typeName);
+	}*/
+
+	public class InvalidGenericTypeWithoutGenericArguments : Exception
+	{
+		public InvalidGenericTypeWithoutGenericArguments(Type type) : base(
+			"This type is broken and needs to be fixed, check the creation: " + type + ", CreatedBy: " +
+			type.CreatedBy) { }
+	}
 }

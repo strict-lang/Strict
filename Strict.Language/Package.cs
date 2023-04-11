@@ -50,8 +50,8 @@ public class Package : Context
 
 	public string FolderPath { get; }
 	private readonly List<Package> children = new();
-	internal void Add(Type type) => types.Add(type);
-	private readonly List<Type> types = new();
+	internal void Add(Type type) => types.Add(type.Name, type);
+	private readonly Dictionary<string, Type> types = new();
 
 	public Type? FindFullType(string fullName)
 	{
@@ -105,13 +105,10 @@ public class Package : Context
 	private Type? lastType;
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public Type? FindDirectType(string name)
-	{
-		foreach (var t in types)
-			if (t.Name == name)
-				return t;
-		return null;
-	}
+	public Type? FindDirectType(string name) =>
+		types.TryGetValue(name, out var type)
+			? type
+			: null;
 
 	private Type? FindTypeInChildrenPackages(string name, Context? searchingFromPackage)
 	{
@@ -138,5 +135,5 @@ public class Package : Context
 	public Package? Find(string name) =>
 		FindSubPackage(name) ?? RootForPackages.FindSubPackage(name);
 
-	public void Remove(Type type) => types.Remove(type);
+	public void Remove(Type type) => types.Remove(type.Name);
 }

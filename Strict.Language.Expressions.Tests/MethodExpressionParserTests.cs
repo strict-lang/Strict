@@ -65,8 +65,7 @@ public sealed class MethodExpressionParserTests : TestExpressions
 
 	[Test]
 	public void ParseInvalidTestException() =>
-		Assert.That(
-			() => (Body)new Method(type, 0, this,
-					new[] { MethodTests.Run, MethodTests.LetNumber, "\tError number" }).
-				GetBodyAndParseIfNeeded(), Throws.Exception.InstanceOf<ArgumentException>());
+		Assert.That(() => (Body)new Method(type, 0, this,
+				new[] { MethodTests.Run, MethodTests.LetNumber, "\tError number" }).
+			GetBodyAndParseIfNeeded(), Throws.InnerException.InstanceOf<ArgumentException>());
 }

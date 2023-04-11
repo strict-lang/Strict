@@ -124,7 +124,7 @@ public sealed class Method : Context
 		var closingBracketIndex = rest.LastIndexOf(')');
 		var lastOpeningBracketIndex = rest.LastIndexOf('(');
 		// If the type contains brackets, exclude it from the rest for proper parameter parsing
-		if (lastOpeningBracketIndex > 2 && rest.IndexOf(DoubleOpenBrackets) < 0 && rest.IndexOf(DoubleCloseBrackets) < 0)
+		if (lastOpeningBracketIndex > 2)//TODO: clean up:  && rest.IndexOf(DoubleOpenBrackets) < 0 && rest.IndexOf(DoubleCloseBrackets) < 0)
 		{
 			var lastSpaceIndex = rest.LastIndexOf(' ');
 			if (lastSpaceIndex > 0)
@@ -140,7 +140,7 @@ public sealed class Method : Context
 		foreach (var nameAndType in SplitParameters(rest, closingBracketIndex))
 		{
 			if (char.IsUpper(nameAndType[0]))
-				throw new ParametersMustStartWithLowerCase(this);
+				throw new ParametersMustStartWithLowerCase(this, nameAndType.ToString());
 			var nameAndTypeAsString = nameAndType.ToString();
 			if (IsParameterTypeAny(nameAndTypeAsString))
 				throw new ParametersWithTypeAnyIsNotAllowed(this, nameAndTypeAsString);
@@ -156,14 +156,14 @@ public sealed class Method : Context
 	private static SpanSplitEnumerator SplitParameters(ReadOnlySpan<char> rest, int closingBracketIndex)
 	{
 		var parametersSpan = rest[1..closingBracketIndex];
-		return rest.IndexOf(DoubleOpenBrackets) > 0
+		return /*TODO: removed! clean this up! rest.IndexOf(DoubleOpenBrackets) > 0
 			? parametersSpan.Split('-') // TODO: Need to find a better solution to deal with span enumerator
-			: parametersSpan.Split(',', StringSplitOptions.TrimEntries);
+			: */parametersSpan.Split(',', StringSplitOptions.TrimEntries);
 	}
 
 	public sealed class ParametersMustStartWithLowerCase : ParsingFailed
 	{
-		public ParametersMustStartWithLowerCase(Method method) : base(method.Type, 0, "", method.Name) { }
+		public ParametersMustStartWithLowerCase(Method method, string message) : base(method.Type, 0, message, method.Name) { }
 	}
 
 	private static bool IsParameterTypeAny(string nameAndTypeString) =>

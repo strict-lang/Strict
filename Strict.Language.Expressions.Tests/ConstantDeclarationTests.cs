@@ -60,10 +60,10 @@ public class ConstantDeclarationTests : TestExpressions
 		const string Input = "constant numbers = (1, 2, 3) + 6";
 		var expression = (ConstantDeclaration)ParseExpression(Input);
 		Assert.That(expression.Name, Is.EqualTo("numbers"));
-		Assert.That(expression.ReturnType.Name, Is.EqualTo(Base.Number.Pluralize()));
+		Assert.That(expression.ReturnType.Name, Is.EqualTo(Base.List + "(" + Base.Number + ")"));
 		Assert.That(expression.Value, Is.InstanceOf<Binary>());
 		var leftExpression = ((Binary)expression.Value).Instance!;
-		Assert.That(leftExpression.ReturnType.Name, Is.EqualTo(Base.Number.Pluralize()));
+		Assert.That(leftExpression.ReturnType.Name, Is.EqualTo(Base.List + "(" + Base.Number + ")"));
 	}
 
 	[Test]
@@ -81,22 +81,22 @@ public class ConstantDeclarationTests : TestExpressions
 	[Test]
 	public void InvalidNotAssignment() =>
 		Assert.That(() => ParseExpression("constant inverted = not 5"),
-			Throws.InstanceOf<Type.ArgumentsDoNotMatchMethodParameters>());
+			Throws.InnerException.InstanceOf<Type.ArgumentsDoNotMatchMethodParameters>());
 
 	[Test]
 	public void OnlyNotIsValidUnaryOperator() =>
 		Assert.That(() => ParseExpression("constant inverted = + true"),
-			Throws.Exception.InstanceOf<InvalidOperatorHere>());
+			Throws.InstanceOf<InvalidOperatorHere>());
 
 	[Test]
 	public void IncompleteAssignment() =>
 		Assert.That(() => ParseExpression("constant sum = 5 +"),
-			Throws.Exception.InstanceOf<InvalidOperatorHere>());
+			Throws.InstanceOf<InvalidOperatorHere>());
 
 	[Test]
 	public void IdentifierMustBeValidWord() =>
 		Assert.That(() => ParseExpression("constant number5 = 5"),
-			Throws.Exception.InstanceOf<Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers>());
+			Throws.InnerException.InstanceOf<Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers>());
 
 	[Test]
 	public void AssignmentGetHashCode()
@@ -109,17 +109,17 @@ public class ConstantDeclarationTests : TestExpressions
 	[Test]
 	public void LetWithoutVariableNameCannotParse() =>
 		Assert.That(() => ParseExpression("constant 5"),
-			Throws.Exception.InstanceOf<ConstantDeclaration.MissingAssignmentValueExpression>());
+			Throws.InstanceOf<ConstantDeclaration.MissingAssignmentValueExpression>());
 
 	[Test]
 	public void LetWithoutValueCannotParse() =>
 		Assert.That(() => ParseExpression("constant value"),
-			Throws.Exception.InstanceOf<ConstantDeclaration.MissingAssignmentValueExpression>());
+			Throws.InstanceOf<ConstantDeclaration.MissingAssignmentValueExpression>());
 
 	[Test]
 	public void LetWithoutExpressionCannotParse() =>
 		Assert.That(() => ParseExpression("constant value = abc"),
-			Throws.Exception.InstanceOf<Body.IdentifierNotFound>().With.Message.Contain("abc"));
+			Throws.InstanceOf<Body.IdentifierNotFound>().With.Message.Contain("abc"));
 
 	[Test]
 	public void AssignmentWithMethodCall()

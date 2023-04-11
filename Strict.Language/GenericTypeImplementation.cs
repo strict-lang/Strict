@@ -7,8 +7,10 @@ namespace Strict.Language;
 public sealed class GenericTypeImplementation : Type
 {
 	public GenericTypeImplementation(Type generic, IReadOnlyList<Type> implementationTypes) : base(generic.Package,
-		new TypeLines(GetTypeName(generic, implementationTypes), HasWithSpaceAtEnd + generic.Name))
+		new TypeLines(generic.GetImplementationName(implementationTypes), HasWithSpaceAtEnd + generic.Name))
 	{
+		CreatedBy = "Generic: " + generic + ", Implementations: " + implementationTypes.ToWordList() +
+			", " + CreatedBy;
 		Generic = generic;
 		ImplementationTypes = implementationTypes;
 		var implementationTypeIndex = 0;
@@ -30,13 +32,6 @@ public sealed class GenericTypeImplementation : Type
 					methods.Add(method.CloneWithImplementation(this));
 			}
 	}
-
-	//TODO: why is there 2 ways to generate the type name, why not internally only keep one true way: List(Number), we can probably also remove the strange special rule in Context.FindType:
-		//if (name.StartsWith(Base.List + DoubleOpenBrackets, StringComparison.Ordinal))
-	private static string GetTypeName(Type generic, IReadOnlyList<Type> implementationTypes) =>
-		generic.Name == Base.List && !implementationTypes[0].Name.EndsWith(')')
-			? implementationTypes[0].Name.Pluralize()
-			: generic.Name + implementationTypes.ToBrackets();
 
 	public Type Generic { get; }
 	public IReadOnlyList<Type> ImplementationTypes { get; }

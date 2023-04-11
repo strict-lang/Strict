@@ -278,8 +278,7 @@ public sealed class TypeTests
 	[Test]
 	public void CannotGetGenericImplementationOnNonGenericType() =>
 		Assert.That(
-			() => package.GetType(Base.Text).
-				GetGenericImplementation(new List<Type> { package.GetType(Base.Number) }),
+			() => package.GetType(Base.Text).GetGenericImplementation(package.GetType(Base.Number)),
 			Throws.InstanceOf<Type.CannotGetGenericImplementationOnNonGeneric>());
 
 	[Test]

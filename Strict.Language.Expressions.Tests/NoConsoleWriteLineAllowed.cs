@@ -32,7 +32,7 @@ public class NoConsoleWriteLineAllowed
 
 		public static bool IsCategoryManual()
 		{
-			foreach (var frame in new StackTrace().GetFrames())
+			foreach (var frame in EnhancedStackTrace.Current().GetFrames())
 				if (HasAttribute(frame, TestAttribute) &&
 					HasAttribute(frame, NunitFrameworkCategoryAttribute))
 					return GetCategoryName(frame) == ManualCategoryName;
