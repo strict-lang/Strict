@@ -149,7 +149,7 @@ public sealed class Body : Expression
 		var variable = variableScopeBody?.FindVariableValue(name) ??
 			throw new IdentifierNotFound(this, name);
 		if (!variable.IsMutable)
-			throw new ValueIsNotMutableAndCannotBeChanged(this, name); //ncrunch: no coverage, TODO: missing tests
+			throw new ValueIsNotMutableAndCannotBeChanged(this, name);
 		if (variableScopeBody.Variables != null)
 			variableScopeBody.Variables[name] = value;
 	}

@@ -191,6 +191,19 @@ public sealed class MethodTests
 	}
 
 	[Test]
+	public void ImmutableMethodVariablesCannotBeChanged()
+	{
+		var method = new Method(type, 0, new MethodExpressionParser(), new[]
+		{
+			"Run",
+			"	constant input = \"Hi\"",
+			"	input = 5"
+		});
+		Assert.That(() => method.GetBodyAndParseIfNeeded(),
+			Throws.InstanceOf<Body.ValueIsNotMutableAndCannotBeChanged>());
+	}
+
+	[Test]
 	public void ValueTypeNotMatchingWithAssignmentType() =>
 		Assert.That(
 			() => new Method(type, 0, new MethodExpressionParser(),

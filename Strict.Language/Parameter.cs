@@ -35,7 +35,7 @@ public sealed class Parameter : NamedType
 	public void UpdateValue(Expression newExpression, Body bodyForErrorMessage)
 	{
 		if (!IsMutable)
-			throw new Body.ValueIsNotMutableAndCannotBeChanged(bodyForErrorMessage, Name); //ncrunch: no coverage, TODO: missing tests
+			throw new Body.ValueIsNotMutableAndCannotBeChanged(bodyForErrorMessage, Name);
 		DefaultValue = newExpression;
 	}
 }
