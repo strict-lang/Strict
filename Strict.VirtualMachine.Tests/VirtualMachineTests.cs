@@ -256,7 +256,7 @@ public class VirtualMachineTests : BaseVirtualMachineTests
 			"\ttextList.Remove(\"s\")",
 			"\ttextList"
 		})]
-	[TestCase("RemoveDuplicates((\"s\", \"b\", \"s\")).Remove", "s b", "RemoveDuplicates",
+	[TestCase("RemoveDuplicates(\"s\", \"b\", \"s\").Remove", "s b", "RemoveDuplicates",
 		new[]
 		{
 			"has texts",

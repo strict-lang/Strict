@@ -19,7 +19,7 @@ public sealed class DictionaryTests : TestExpressions
 	public void ParseListWithGenericKeyAndValue() =>
 		Assert.That(() => new Type(type.Package,
 				new TypeLines(nameof(ParseListWithGenericKeyAndValue),
-					"has keysAndValues List((key Generic, value Generic))", "Get(key Generic) Generic",
+					"has keysAndValues List(key Generic, value Generic)", "Get(key Generic) Generic",
 					"\tfor keysAndValues", "\t\tif value is key", "\t\t\treturn value(1)))")).
 			ParseMembersAndMethods(new MethodExpressionParser()), Throws.Nothing);
 
@@ -108,7 +108,8 @@ public sealed class DictionaryTests : TestExpressions
 						"DummyInitialization", "\tconstant studentsRegister = Dictionary(Number, Text)",
 						"\tstudentsRegister.Add(5, true)", "\tlog.Write(studentsRegister)")).
 				ParseMembersAndMethods(new MethodExpressionParser()).Methods[0].GetBodyAndParseIfNeeded(),
-			Throws.InstanceOf<Type.ArgumentsDoNotMatchMethodParameters>());
+			Throws.InstanceOf<ParsingFailed>().With.InnerException.
+				InstanceOf<Type.ArgumentsDoNotMatchMethodParameters>());
 
 	[Test]
 	public void CannotCreateDictionaryExpressionWithThreeTypeParameters() =>
