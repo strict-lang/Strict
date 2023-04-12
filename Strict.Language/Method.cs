@@ -124,11 +124,13 @@ public sealed class Method : Context
 		var closingBracketIndex = rest.LastIndexOf(')');
 		var lastOpeningBracketIndex = rest.LastIndexOf('(');
 		// If the type contains brackets, exclude it from the rest for proper parameter parsing
-		if (lastOpeningBracketIndex > 2)//TODO: clean up:  && rest.IndexOf(DoubleOpenBrackets) < 0 && rest.IndexOf(DoubleCloseBrackets) < 0)
+		if (lastOpeningBracketIndex > 2)
 		{
 			var lastSpaceIndex = rest.LastIndexOf(' ');
 			if (lastSpaceIndex > 0)
-				ParseAndAddParameters(type, rest, lastSpaceIndex - 1);
+				ParseAndAddParameters(type, rest, rest[closingBracketIndex - 1] == ')'
+					? closingBracketIndex
+					: lastSpaceIndex - 1);
 			return;
 		}
 		if (closingBracketIndex > 0)
@@ -156,9 +158,9 @@ public sealed class Method : Context
 	private static SpanSplitEnumerator SplitParameters(ReadOnlySpan<char> rest, int closingBracketIndex)
 	{
 		var parametersSpan = rest[1..closingBracketIndex];
-		return /*TODO: removed! clean this up! rest.IndexOf(DoubleOpenBrackets) > 0
-			? parametersSpan.Split('-') // TODO: Need to find a better solution to deal with span enumerator
-			: */parametersSpan.Split(',', StringSplitOptions.TrimEntries);
+		return parametersSpan.Contains('(')
+			? new SpanSplitEnumerator(parametersSpan, char.MaxValue, StringSplitOptions.None)
+			: parametersSpan.Split(',', StringSplitOptions.TrimEntries);
 	}
 
 	public sealed class ParametersMustStartWithLowerCase : ParsingFailed

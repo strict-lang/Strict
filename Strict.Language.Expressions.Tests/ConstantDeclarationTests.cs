@@ -1,4 +1,5 @@
 using NUnit.Framework;
+using Strict.Language.Tests;
 
 namespace Strict.Language.Expressions.Tests;
 
@@ -60,10 +61,12 @@ public class ConstantDeclarationTests : TestExpressions
 		const string Input = "constant numbers = (1, 2, 3) + 6";
 		var expression = (ConstantDeclaration)ParseExpression(Input);
 		Assert.That(expression.Name, Is.EqualTo("numbers"));
-		Assert.That(expression.ReturnType.Name, Is.EqualTo(Base.List + "(" + Base.Number + ")"));
+		Assert.That(expression.ReturnType.Name,
+			Is.EqualTo(Base.List + "(" + nameof(TestPackage) + "." + Base.Number + ")"));
 		Assert.That(expression.Value, Is.InstanceOf<Binary>());
 		var leftExpression = ((Binary)expression.Value).Instance!;
-		Assert.That(leftExpression.ReturnType.Name, Is.EqualTo(Base.List + "(" + Base.Number + ")"));
+		Assert.That(leftExpression.ReturnType.Name,
+			Is.EqualTo(Base.List + "(" + nameof(TestPackage) + "." + Base.Number + ")"));
 	}
 
 	[Test]

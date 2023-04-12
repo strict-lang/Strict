@@ -546,7 +546,10 @@ public class Type : Context
 	}
 
 	internal string GetImplementationName(IEnumerable<Type> implementationTypes) =>
-		Name + "(" + implementationTypes.Select(t => t.Name).ToWordList() + ")";
+		Name + "(" + implementationTypes.ToWordList() + ")";
+
+	internal string GetImplementationName(IEnumerable<NamedType> implementationTypes) =>
+		Name + "(" + implementationTypes.Select(t => t.Name + " " + t.Type).ToWordList() + ")";
 
 	private GenericTypeImplementation? GetGenericImplementation(string key)
 	{
@@ -560,14 +563,20 @@ public class Type : Context
 
 	private Dictionary<string, GenericTypeImplementation>? cachedGenericTypes;
 
+	/// <summary>
+	/// Most often called for List (or the Iterator trait), which we want to optimize for
+	/// </summary>
 	private GenericTypeImplementation CreateGenericImplementation(string key, IReadOnlyList<Type> implementationTypes)
 	{
-		if (GetGenericTypeArguments().Count != implementationTypes.Count &&
-			!HasMatchingConstructor(implementationTypes))
-			throw new TypeArgumentsCountDoesNotMatchGenericType(this, implementationTypes);
-		var genericType = new GenericTypeImplementation(this, implementationTypes);
-		cachedGenericTypes!.Add(key, genericType);
-		return genericType;
+		if (Name is Base.List or Base.Iterator or Base.Mutable && implementationTypes.Count == 1 ||
+			GetGenericTypeArguments().Count == implementationTypes.Count ||
+			HasMatchingConstructor(implementationTypes))
+		{
+			var genericType = new GenericTypeImplementation(this, implementationTypes);
+			cachedGenericTypes!.Add(key, genericType);
+			return genericType;
+		}
+		throw new TypeArgumentsCountDoesNotMatchGenericType(this, implementationTypes);
 	}
 
 	private bool HasMatchingConstructor(IReadOnlyList<Type> implementationTypes) =>
@@ -877,7 +886,10 @@ public class Type : Context
 				" must be generic in order to call this method!");
 		var genericArguments = new HashSet<NamedType>();
 		foreach (var member in Members)
-			if (member.Type.Name == Base.List || member.Type.IsIterator)
+			if (member.Type is GenericType genericType)
+				foreach (var namedType in genericType.GenericImplementations)
+					genericArguments.Add(namedType);
+			else if (member.Type.Name == Base.List || member.Type.IsIterator)
 				genericArguments.Add(new Parameter(this, Base.Generic));
 			else if (member.Type.IsGeneric)
 				genericArguments.Add(member);
@@ -886,7 +898,7 @@ public class Type : Context
 		Console.WriteLine(this + " GetGenericTypeArguments: " + genericArguments.ToWordList());
 		return genericArguments;
 	}
-	
+
 	/*TODO: cleanup
 		//TODO: we don't like special hacks like these!
 		if (name.StartsWith(Base.List + DoubleOpenBrackets, StringComparison.Ordinal))

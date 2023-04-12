@@ -15,13 +15,13 @@ public abstract class Context
 {
 	protected Context(Context? parent, string name)
 	{
-		if (parent != null && this is not GenericTypeImplementation &&
-			(string.IsNullOrWhiteSpace(name) ||
-				IsNotMethodOrPackageAndNotConflictingType(this, parent, name)))
+		var isNotGeneric = this is not GenericType && this is not GenericTypeImplementation;
+		if (isNotGeneric && parent != null && (string.IsNullOrWhiteSpace(name) ||
+			IsNotMethodOrPackageAndNotConflictingType(this, parent, name)))
 			throw new NameMustBeAWordWithoutAnySpecialCharactersOrNumbers(name);
 		if (this is Package && !name.IsAlphaNumericWithAllowedSpecialCharacters())
 			throw new PackageNameMustBeAWordWithoutSpecialCharacters(name);
-		if (!string.IsNullOrEmpty(name) && !name.Length.IsWithinLimit() &&
+		if (isNotGeneric && !string.IsNullOrEmpty(name) && !name.Length.IsWithinLimit() &&
 			!name.IsOperatorOrAllowedMethodName())
 			throw new NameLengthIsNotWithinTheAllowedLimit(name);
 		Parent = parent!;
@@ -102,19 +102,25 @@ public abstract class Context
 		var mainType = GetType(name[..name.IndexOf('(')]);
 		var rest = name[(mainType.Name.Length + 1)..^1];
 		if (rest.Contains("Generic"))
-			return new GenericTypeImplementation(mainType,
-				GetArgumentTypes(rest.Split(',', StringSplitOptions.TrimEntries)));
+			return new GenericType(mainType,
+				GetNamedTypes(mainType, rest.Split(',', StringSplitOptions.TrimEntries)));
 		var argumentTypes = GetArgumentTypes(rest.Split(',', StringSplitOptions.TrimEntries));
 		return mainType.GetGenericImplementation(argumentTypes);
+	}
+	
+	private static NamedType[] GetNamedTypes(Type mainType, IReadOnlyList<string> argumentTypeNames)
+	{
+		var namedTypes = new NamedType[argumentTypeNames.Count];
+		for (var index = 0; index < argumentTypeNames.Count; index++)
+			namedTypes[index] = new Parameter(mainType, argumentTypeNames[index]);
+		return namedTypes;
 	}
 
 	private Type[] GetArgumentTypes(IReadOnlyList<string> argumentTypeNames)
 	{
 		var argumentTypes = new Type[argumentTypeNames.Count];
 		for (var index = 0; index < argumentTypeNames.Count; index++)
-			argumentTypes[index] = argumentTypeNames[index].EndsWith(Base.Generic)
-				? GetType(Base.Generic)
-				: GetType(argumentTypeNames[index]);
+			argumentTypes[index] = GetType(argumentTypeNames[index]);
 		return argumentTypes;
 	}
 
