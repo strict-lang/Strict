@@ -1,4 +1,6 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System;
+using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using static Strict.Language.NamedType;
 
 namespace Strict.Language;
@@ -13,15 +15,13 @@ public abstract class Context
 {
 	protected Context(Context? parent, string name)
 	{
-		var lastLetterNumber = -1;
-		if (parent is not null && this is not GenericTypeImplementation &&
-			(string.IsNullOrWhiteSpace(name) ||
-				this is not Method && this is not Package && !name.IsWordOrWordWithNumberAtEnd(out lastLetterNumber) ||
-				HasConflictingType(parent, name, lastLetterNumber)))
+		var isNotGeneric = this is not GenericType && this is not GenericTypeImplementation;
+		if (isNotGeneric && parent != null && (string.IsNullOrWhiteSpace(name) ||
+			IsNotMethodOrPackageAndNotConflictingType(this, parent, name)))
 			throw new NameMustBeAWordWithoutAnySpecialCharactersOrNumbers(name);
 		if (this is Package && !name.IsAlphaNumericWithAllowedSpecialCharacters())
 			throw new PackageNameMustBeAWordWithoutSpecialCharacters(name);
-		if (!string.IsNullOrEmpty(name) && !name.Length.IsWithinLimit() &&
+		if (isNotGeneric && !string.IsNullOrEmpty(name) && !name.Length.IsWithinLimit() &&
 			!name.IsOperatorOrAllowedMethodName())
 			throw new NameLengthIsNotWithinTheAllowedLimit(name);
 		Parent = parent!;
@@ -31,8 +31,14 @@ public abstract class Context
 			: parent + "." + name;
 	}
 
-	private static bool HasConflictingType(Context context, string name, int number) =>
-		number != -1 && context.FindType(name[..^1]) != null;
+	private static bool IsNotMethodOrPackageAndNotConflictingType(Context context, Context parent,
+		string name)
+	{
+		var lastLetterNumber = -1;
+		return context is not Method && context is not Package &&
+			!name.IsWordOrWordWithNumberAtEnd(out lastLetterNumber) ||
+			lastLetterNumber != -1 && parent.FindType(name[..^1]) != null;
+	}
 
 	public sealed class NameMustBeAWordWithoutAnySpecialCharactersOrNumbers : Exception
 	{
@@ -69,9 +75,23 @@ public abstract class Context
 
 	private Type GetTypeFromPackages(string name)
 	{
-		if (!name.EndsWith('s'))
-			return (FindFullType(name) ?? FindType(name, this)) ??
-				throw new TypeNotFound(name, FullName);
+		if (name == Name || this is Type && ((Type)this).IsGeneric &&
+			name.StartsWith(Name, StringComparison.Ordinal) &&
+			name == Name + GenericImplementationPostfix)
+			return (Type)this;
+		if (name.EndsWith('s'))
+			return GetTypeFromPluralNameAsListWithSingularName(name);
+		if (name.EndsWith(')') && name.Contains('('))
+			return GetGenericTypeWithArguments(name);
+		return (FindFullType(name) ?? FindType(name, this)) ??
+			throw new TypeNotFound(name, FullName);
+	}
+
+	/// <summary>
+	/// Always convert plural name into List(SingularName), e.g. Texts becomes List(Text)
+	/// </summary>
+	private Type GetTypeFromPluralNameAsListWithSingularName(string name)
+	{
 		var singularName = name[..^1];
 		if (singularName == Base.Generic)
 			return GetType(Base.List);
@@ -81,61 +101,41 @@ public abstract class Context
 		return (FindFullType(name) ?? FindType(name, this)) ?? throw new TypeNotFound(name, FullName);
 	}
 
-	internal const string DoubleOpenBrackets = "((";
-
-	private Type GetNestedListType(string fullName)
-	{
-		var list = GetType(Base.List);
-		var (typeName, lines) = GetCombinedTypeNameAndLines(
-			ExtractNamesWithType(fullName));
-		var typeWithOtherTypesAsMembers = new Type(list.Package, new TypeLines(typeName, lines));
-		return list.GetGenericImplementation(typeWithOtherTypesAsMembers);
-	}
-
-	private static string[] ExtractNamesWithType(string fullName) =>
-		fullName[(Base.List.Length + DoubleOpenBrackets.Length)..^DoubleCloseBrackets.Length].
-			Split(",", StringSplitOptions.TrimEntries);
-
-	internal const string DoubleCloseBrackets = "))";
-
-	private static (string, string[]) GetCombinedTypeNameAndLines(IReadOnlyList<string> namesWithType)
-	{
-		var name = "";
-		var lines = new string[namesWithType.Count];
-		for (var index = 0; index < namesWithType.Count; index++)
-		{
-			name += namesWithType[index].Split(' ')[0].MakeFirstLetterUppercase();
-			lines[index] = Type.HasWithSpaceAtEnd + namesWithType[index];
-		}
-		return (name, lines);
-	}
+	private const string GenericImplementationPostfix = "(" + Base.Generic + ")";
 
 	private Type GetGenericTypeWithArguments(string name)
 	{
 		var mainType = GetType(name[..name.IndexOf('(')]);
-		var argumentTypes = GetArgumentTypes(name[(mainType.Name.Length + 1)..^1].
-			Split(',', StringSplitOptions.TrimEntries));
+		var rest = name[(mainType.Name.Length + 1)..^1];
+		if (rest.Contains("Generic"))
+			return new GenericType(mainType,
+				GetNamedTypes(mainType, rest.Split(',', StringSplitOptions.TrimEntries)));
+		var argumentTypes = GetArgumentTypes(rest.Split(',', StringSplitOptions.TrimEntries));
 		return mainType.GetGenericImplementation(argumentTypes);
 	}
-
-	private List<Type> GetArgumentTypes(IEnumerable<string> argumentTypeNames)
+	
+	private static NamedType[] GetNamedTypes(Type mainType, IReadOnlyList<string> argumentTypeNames)
 	{
-		var argumentTypes = new List<Type>();
-		foreach (var argumentTypeName in argumentTypeNames)
-			argumentTypes.Add(GetType(argumentTypeName));
+		var namedTypes = new NamedType[argumentTypeNames.Count];
+		for (var index = 0; index < argumentTypeNames.Count; index++)
+			namedTypes[index] = new Parameter(mainType, argumentTypeNames[index]);
+		return namedTypes;
+	}
+
+	private Type[] GetArgumentTypes(IReadOnlyList<string> argumentTypeNames)
+	{
+		var argumentTypes = new Type[argumentTypeNames.Count];
+		for (var index = 0; index < argumentTypeNames.Count; index++)
+			argumentTypes[index] = GetType(argumentTypeNames[index]);
 		return argumentTypes;
 	}
 
 	public sealed class TypeArgumentsCountDoesNotMatchGenericType : Exception
 	{
 		public TypeArgumentsCountDoesNotMatchGenericType(Type mainType,
-			IReadOnlyCollection<Type> typeArguments) : base($"The generic type {
-				mainType.Name
-			} needs these type arguments: {
-				mainType.Members.Where(m => m.Type.IsGeneric).ToList().ToBrackets()
-			}, does not match provided types: {
-				typeArguments.ToBrackets()
-			}") { }
+			IReadOnlyCollection<Type> typeArguments) : base("The generic type " + mainType +
+			" needs these type arguments: " + mainType.GetGenericTypeArguments().ToBrackets() +
+			", this does not match provided types: " + typeArguments.ToBrackets()) { }
 	}
 
 	public GenericTypeImplementation GetListImplementationType(Type implementation) =>

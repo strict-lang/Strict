@@ -16,14 +16,13 @@ public class BooleanTests : TestExpressions
 	public void ParseFalse() =>
 		ParseAndCheckOutputMatchesInput("false", new Boolean(method, false));
 
-	//ncrunch: no coverage start
 	/// <summary>
 	/// SpanIsTrueTextOrIsFalseText |   160.8 us |  1.64 us |  0.86 us |      1 KB |
 	/// SpanEquals									|   283.7 us | 13.68 us |  9.05 us |      1 KB |
 	/// SpanBooleanTryParse					| 1,730.8 us | 26.90 us | 17.79 us |      1 KB |
 	/// </summary>
-	[Benchmark]
 	[Test]
+	[Benchmark]
 	// ReSharper disable MethodTooLong, just testing span here
 	public void SpanIsTrueTextOrIsFalseText()
 	{
@@ -61,8 +60,8 @@ public class BooleanTests : TestExpressions
 		Assert.That(counter, Is.EqualTo(-100000));
 	}
 
-	[Benchmark]
 	[Test]
+	[Benchmark]
 	public void SpanEquals()
 	{
 		var caseOne = "isOpen is true".AsSpan("isOpen is ".Length);
@@ -97,8 +96,8 @@ public class BooleanTests : TestExpressions
 		Assert.That(counter, Is.EqualTo(-100000));
 	}
 
-	[Benchmark]
 	[Test]
+	[Benchmark]
 	public void SpanBooleanTryParse()
 	{
 		var firstCase = "isOpen is true".AsSpan("isOpen is ".Length);
@@ -148,7 +147,8 @@ public class BooleanTests : TestExpressions
 		Assert.That(counter, Is.EqualTo(-100000));
 	}
 
-	[Category("Manual")]
+	//ncrunch: no coverage start
 	[Test]
+	[Category("Manual")]
 	public void BenchmarkCompare() => BenchmarkRunner.Run<BooleanTests>();
 }

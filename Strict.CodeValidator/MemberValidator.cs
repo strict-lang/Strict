@@ -13,7 +13,7 @@ public sealed record MemberValidator(Type Type) : Validator
 
 	private void ValidateUnusedMember(NamedType member)
 	{
-		if (Type.FindMemberUsageCount(member.Name) < 2)
+		if (Type.CountMemberUsage(member.Name) < 2)
 			throw new UnusedMemberMustBeRemoved(Type, member.Name);
 	}
 

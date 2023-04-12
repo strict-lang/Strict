@@ -42,7 +42,7 @@ public sealed class ListAdvancedTests : TestExpressions
 			ParseMembersAndMethods(parser);
 		Assert.That(program.Members[0].Name, Is.EqualTo("listOne"));
 		var numbersListType = type.GetType(Base.List).
-			GetGenericImplementation(new List<Type> { type.GetType(Base.Number) });
+			GetGenericImplementation(type.GetType(Base.Number));
 		Assert.That(program.Members[0].Type, Is.EqualTo(numbersListType));
 		Assert.That(program.Members[1].Type, Is.EqualTo(numbersListType));
 	}

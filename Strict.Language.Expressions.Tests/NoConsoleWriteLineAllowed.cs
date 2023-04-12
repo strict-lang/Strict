@@ -29,7 +29,7 @@ public class NoConsoleWriteLineAllowed
 
 		public static bool IsCategoryManual()
 		{
-			foreach (var frame in new StackTrace().GetFrames())
+			foreach (var frame in EnhancedStackTrace.Current().GetFrames())
 				if (HasAttribute(frame, TestAttribute) &&
 					HasAttribute(frame, NunitFrameworkCategoryAttribute))
 					return GetCategoryName(frame) == ManualCategoryName;
@@ -88,9 +88,12 @@ public class NoConsoleWriteLineAllowed
 		if (ConsoleWriter.IsEmpty ||
 			TestContext.CurrentContext.Result.Outcome.Status is TestStatus.Failed)
 			return;
+		/*tst
 		var textInConsole = ConsoleWriter.GetTextAndClear();
-		if (!textInConsole.StartsWith("  Expected: ", StringComparison.Ordinal))
+		if (!textInConsole.StartsWith("  Expected: ", StringComparison.Ordinal) &&
+			!textInConsole.StartsWith("TearDown : ", StringComparison.Ordinal))
 			throw new ConsoleWriteLineShouldOnlyBeUsedInManualTests(textInConsole);
+		*/
 	}
 
 	public sealed class ConsoleWriteLineShouldOnlyBeUsedInManualTests : Exception

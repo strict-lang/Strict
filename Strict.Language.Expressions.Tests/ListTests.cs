@@ -1,3 +1,6 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using NUnit.Framework;
 
 namespace Strict.Language.Expressions.Tests;
@@ -176,6 +179,7 @@ public sealed class ListTests : TestExpressions
 	public void MethodsAndMembersOfListShouldHaveImplementationTypeAsParent()
 	{
 		var numbers = type.GetListImplementationType(type.GetType(Base.Number));
+		Console.WriteLine(numbers+" "+numbers.ImplementationTypes[0]+", methods="+numbers.Methods.ToWordList());
 		Assert.That(numbers.Members[1].ToString(),
 			Is.EqualTo("elements TestPackage.Numbers"));
 		Assert.That(numbers.Methods[1].Parent.ToString(),
@@ -187,7 +191,13 @@ public sealed class ListTests : TestExpressions
 	{
 		var texts = type.GetListImplementationType(type.GetType(Base.Text));
 		var containsMethod = texts.Methods.FirstOrDefault(m => m.Name == "Contains");
-		Assert.That(((Body)containsMethod!.GetBodyAndParseIfNeeded()).Method,
-			Is.EqualTo(containsMethod));
+		Console.WriteLine("containsMethod="+containsMethod);
+		Assert.That(containsMethod!.Type, Is.EqualTo(texts));
+		var body = (Body)containsMethod!.GetBodyAndParseIfNeeded();
+		Assert.That(body.Method, Is.EqualTo(containsMethod));
+		Assert.That(body.Method.Type, Is.EqualTo(texts));
+		Console.WriteLine("body: "+body+", expressions="+body.Expressions.ToWordList()+", LineRange="+body.LineRange+", Method="+body.Method+", ReturnType="+body.ReturnType+", Type="+body.Method.Type);
+		Assert.That(body.Method,
+			Is.EqualTo(containsMethod), texts.Methods.ToWordList());
 	}
 }

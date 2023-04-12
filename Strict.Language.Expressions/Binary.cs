@@ -33,9 +33,8 @@ public sealed class Binary : MethodCall
 	{
 		var operatorToken = input[tokens.operatorToken].ToString();
 		return operatorToken == BinaryOperator.To
-			? To.Parse(body, input[tokens.stackTokens.Pop()],
-				GetUnaryOrBuildNestedBinary(body, input, tokens.stackTokens))
-			: BuildRegularBinaryExpression(body, input, (operatorToken, tokens.stackTokens));
+			? To.Parse(body, input[tokens.Pop()], GetUnaryOrBuildNestedBinary(body, input, tokens))
+			: BuildRegularBinaryExpression(body, input, tokens, operatorToken);
 	}
 
 	private static Expression BuildRegularBinaryExpression(Body body, ReadOnlySpan<char> input,
@@ -46,7 +45,8 @@ public sealed class Binary : MethodCall
 		if (tokens.operatorToken == BinaryOperator.Multiply && HasIncompatibleDimensions(left, right))
 			throw new ListsHaveDifferentDimensions(body, left + " " + right);
 		var arguments = new[] { right };
-		return new Binary(left, left.ReturnType.GetMethod(tokens.operatorToken, arguments, body.Method.Parser), arguments);
+		return new Binary(left,
+			left.ReturnType.GetMethod(operatorToken, arguments, body.Method.Parser), arguments);
 	}
 
 	private static Expression GetUnaryOrBuildNestedBinary(Body body, ReadOnlySpan<char> input,
@@ -58,7 +58,10 @@ public sealed class Binary : MethodCall
 				? BuildBinaryExpression(body, input, (nextTokenRange, tokens))
 				: body.Method.ParseExpression(body, input[nextTokenRange]);
 		if (expression.ReturnType.IsGeneric)
-			throw new Type.GenericTypesCannotBeUsedDirectlyUseImplementation(expression.ReturnType, expression.ToString()); //ncrunch: no coverage this line cannot be reached as Type.FindMethod already filters this condition
+			//ncrunch: no coverage start, cannot be reached: Type.FindMethod already filters this condition
+			throw new Type.GenericTypesCannotBeUsedDirectlyUseImplementation(expression.ReturnType,
+				expression.ToString());
+		//ncrunch: no coverage end
 		return expression;
 	}
 

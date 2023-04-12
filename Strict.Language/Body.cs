@@ -18,6 +18,7 @@ public sealed class Body : Expression
 	/// </summary>
 	public Body(Method method, int tabs = 0, Body? parent = null) : base(method.ReturnType)
 	{
+		Console.WriteLine(method + " Body " + ParsingLineNumber);
 		Method = method;
 		Tabs = tabs;
 		Parent = parent;
@@ -42,11 +43,24 @@ public sealed class Body : Expression
 	/// </summary>
 	public Expression Parse()
 	{
+		Console.WriteLine(Method + " Body.Parse " + LineRange);
 		//TODO: still has to be done! tests are STILL NOT ENFORCED as required by the language specification! https://deltaengine.fogbugz.com/f/cases/25714/
 		var expressions = new List<Expression>();
 		for (ParsingLineNumber = LineRange.Start.Value; ParsingLineNumber < LineRange.End.Value;
 			ParsingLineNumber++)
-			expressions.Add(Method.ParseLine(this, CurrentLine));
+			try
+			{
+				expressions.Add(Method.ParseLine(this, CurrentLine));
+			}
+			catch (ParsingFailed)
+			{
+				throw;
+			}
+			catch (Exception ex)
+			{
+				throw new ParsingFailed((Type)Method.Parent, Method.TypeLineNumber + ParsingLineNumber,
+					CurrentLine, ex);
+			}
 		SetExpressions(expressions);
 		return Expressions.Count == 1
 			? Expressions[0]

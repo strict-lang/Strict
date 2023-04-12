@@ -6,7 +6,8 @@ namespace Strict.Language;
 
 public static class StringExtensions
 {
-	public static string ToWordList<T>(this IEnumerable<T> list) => string.Join(", ", list);
+	public static string ToWordList<T>(this IEnumerable<T> list, string separator = ", ") =>
+		string.Join(separator, list);
 
 	public static string ToBrackets<T>(this IReadOnlyCollection<T> list) =>
 		list.Count > 0
@@ -73,4 +74,7 @@ public static class StringExtensions
 	public static bool IsOperatorOrAllowedMethodName(this string name) =>
 		name.Length == 1 && name[0].IsSingleCharacterOperator() ||
 		name[0] is 'X' or 'Y' or 'Z' or 'W';
+
+	public static bool StartsWith(this string name, params string[] partialNames) =>
+		partialNames.Any(x => name.StartsWith(x, StringComparison.InvariantCultureIgnoreCase));
 }

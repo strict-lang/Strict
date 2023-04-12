@@ -8,6 +8,7 @@ namespace Strict.Language;
 /// Methods are parsed lazily, which speeds up type and package parsing enormously and
 /// also provides us with all methods in a type usable in any other method if needed.
 /// </summary>
+//TODO: split up
 public sealed class Method : Context
 {
 	public Method(Type type, int typeLineNumber, ExpressionParser parser, IReadOnlyList<string> lines)
@@ -119,11 +120,13 @@ public sealed class Method : Context
 		var closingBracketIndex = rest.LastIndexOf(')');
 		var lastOpeningBracketIndex = rest.LastIndexOf('(');
 		// If the type contains brackets, exclude it from the rest for proper parameter parsing
-		if (lastOpeningBracketIndex > 2 && rest.IndexOf(DoubleOpenBrackets) < 0 && rest.IndexOf(DoubleCloseBrackets) < 0)
+		if (lastOpeningBracketIndex > 2)
 		{
 			var lastSpaceIndex = rest.LastIndexOf(' ');
 			if (lastSpaceIndex > 0)
-				ParseAndAddParameters(type, rest, lastSpaceIndex - 1);
+				ParseAndAddParameters(type, rest, rest[closingBracketIndex - 1] == ')'
+					? closingBracketIndex
+					: lastSpaceIndex - 1);
 			return;
 		}
 		if (closingBracketIndex > 0)
@@ -135,7 +138,7 @@ public sealed class Method : Context
 		foreach (var nameAndType in SplitParameters(rest, closingBracketIndex))
 		{
 			if (char.IsUpper(nameAndType[0]))
-				throw new ParametersMustStartWithLowerCase(this);
+				throw new ParametersMustStartWithLowerCase(this, nameAndType.ToString());
 			var nameAndTypeAsString = nameAndType.ToString();
 			if (IsParameterTypeAny(nameAndTypeAsString))
 				throw new ParametersWithTypeAnyIsNotAllowed(this, nameAndTypeAsString);
@@ -151,14 +154,14 @@ public sealed class Method : Context
 	private static SpanSplitEnumerator SplitParameters(ReadOnlySpan<char> rest, int closingBracketIndex)
 	{
 		var parametersSpan = rest[1..closingBracketIndex];
-		return rest.IndexOf(DoubleOpenBrackets) > 0
-			? parametersSpan.Split('-') // TODO: Need to find a better solution to deal with span enumerator
+		return parametersSpan.Contains('(')
+			? new SpanSplitEnumerator(parametersSpan, char.MaxValue, StringSplitOptions.None)
 			: parametersSpan.Split(',', StringSplitOptions.TrimEntries);
 	}
 
 	public sealed class ParametersMustStartWithLowerCase : ParsingFailed
 	{
-		public ParametersMustStartWithLowerCase(Method method) : base(method.Type, 0, "", method.Name) { }
+		public ParametersMustStartWithLowerCase(Method method, string message) : base(method.Type, 0, message, method.Name) { }
 	}
 
 	private static bool IsParameterTypeAny(string nameAndTypeString) =>
@@ -224,7 +227,9 @@ public sealed class Method : Context
 		var expression = Parser.ParseLineExpression(body, currentLine.AsSpan(body.Tabs));
 		if (IsTestExpression(currentLine, expression))
 			Tests.Add(expression);
-		else if (currentLine.Contains(body.Method.Name) && expression.GetType().Name == "MethodCall" && body.ParsingLineNumber == body.Method.Tests.Count + 1 && currentLine != "\tRun")
+		else if (currentLine.Contains(body.Method.Name) &&
+			expression.GetType().Name == "MethodCall" &&
+			body.ParsingLineNumber == body.Method.Tests.Count + 1 && currentLine != "\tRun")
 			throw new RecursiveCallCausesStackOverflow(body); //TODO: Figure out something better, this is bad (LM)
 		return expression;
 	}
@@ -251,6 +256,7 @@ public sealed class Method : Context
 	/// </summary>
 	private Body PreParseBody(int parentTabs = 1, Body? parent = null)
 	{
+		Console.WriteLine("PreParseBody "+this);
 		var body = new Body(this, parentTabs, parent);
 		var startLine = methodLineNumber;
 		for (; methodLineNumber < lines.Count; methodLineNumber++)
@@ -315,12 +321,24 @@ public sealed class Method : Context
 			? Type
 			: Type.FindType(name, searchingFrom ?? this);
 
-	public Expression GetBodyAndParseIfNeeded() =>
-		methodBody is null
-			? throw new CannotCallBodyOnTraitMethod()
-			: methodBody.Expressions.Count > 0
-				? methodBody
-				: methodBody.Parse();
+	public Expression GetBodyAndParseIfNeeded()
+	{
+		if (methodBody == null)
+			throw new CannotCallBodyOnTraitMethod();
+		else if (methodBody.Expressions.Count > 0)
+		{
+			Console.WriteLine(methodBody + " existing expressions=" +
+				methodBody.Expressions.ToWordList());
+			return methodBody;
+		}
+		else
+		{
+			if (methodBody.Method != this)
+				throw new NotSupportedException("methodBody is not matching this method anymore " + this);
+			Console.WriteLine(methodBody + " parse");
+			return methodBody.Parse();
+		}
+	}
 
 	public class CannotCallBodyOnTraitMethod : Exception { }
 
@@ -348,7 +366,7 @@ public sealed class Method : Context
 		GenericTypeImplementation typeWithImplementation, int index) =>
 		type.Name == Base.Generic
 			? typeWithImplementation.ImplementationTypes[index] //Number
-			: (type.IsGeneric || type.Name == Base.List) && type.Name != Base.Iterator
+			: (type.IsGeneric || type.Name == Base.List) && type.Name != Base.Iterator //TODO: remove these hacks, needs to work for any generic!
 				? typeWithImplementation //ListNumber
 				: type;
 
@@ -368,9 +386,14 @@ public sealed class Method : Context
 	public int GetVariableUsageCount(string variableName) =>
 		lines.Count(l => l.Contains(" " + variableName) || l.Contains("(" + variableName) ||
 			l.Contains("\t" + variableName));
-}
 
-public sealed class RecursiveCallCausesStackOverflow : ParsingFailed
-{
-	public RecursiveCallCausesStackOverflow(Body body) : base(body) { }
+	/// <summary>
+	/// Checks if another method has the same signature, doesn't matter if it is from this type or
+	/// any parent or child type. Used to avoid methods with the same return types and parameters.
+	/// Slightly different from <see cref="HasEqualSignature"/> which does extra generic checks. TODO: consolidate!
+	/// </summary>
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public bool IsSameMethodNameReturnTypeAndParameters(Method other) =>
+		Name == other.Name && ReturnType == other.ReturnType &&
+		Parameters.SequenceEqual(other.Parameters);
 }
