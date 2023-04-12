@@ -131,7 +131,7 @@ public sealed class PhraseTokenizer
 			if (result.Count < 3)
 				throw new InvalidEmptyOrUnmatchedBrackets(tokens.input);
 			if (result.Count == 3 || foundListSeparator || !foundSpace ||
-				tokens.IsNotBinaryOperation())
+				tokens.input[tokens.index - 1] == ' ' || foundBinaryOperationInMethodCall)
 				return MergeAllTokensIntoSingleList(result);
 			return result;
 		}
@@ -170,26 +170,37 @@ public sealed class PhraseTokenizer
 
 		private bool HandleMethodCall()
 		{
-			if (tokens.input[tokens.index - 1] == '.')
-				isInMethodCall = true;
-			if (tokens.input[tokens.index] == ' ')
-				foundSpace = true;
+			HandleMethodCallStates();
 			tokens.ProcessNormalToken(result.Add);
 			return isInMethodCall && (tokens.index + 1 < tokens.input.Length &&
-				tokens.input[tokens.index] == CloseBracket && tokens.input[tokens.index + 1] != '.' ||
+				tokens.input[tokens.index] == CloseBracket &&
+				(tokens.input[tokens.index + 1] != '.' || foundBinaryOperationInMethodCall) ||
 				tokens.MemberOrMethodCallWithNoArguments());
+		}
+
+		private void HandleMethodCallStates()
+		{
+			if (tokens.input[tokens.index - 1] == '.')
+				isInMethodCall = true;
+			if (tokens.input[tokens.index - 1] == OpenBracket && tokens.index > 2 &&
+				tokens.input[tokens.index - 2] != ' ')
+				foundOpeningBracketForMethodCall = true;
+			if (tokens.input[tokens.index] == ' ')
+				foundSpace = true;
+			if (foundOpeningBracketForMethodCall &&
+				tokens.input[tokens.index].IsSingleCharacterOperator())
+				foundBinaryOperationInMethodCall = true;
 		}
 
 		private bool foundListSeparator;
 		private bool isInMethodCall;
 		private bool foundSpace;
+		private bool foundOpeningBracketForMethodCall;
+		private bool foundBinaryOperationInMethodCall;
 	}
 
 	private bool MemberOrMethodCallWithNoArguments() =>
 		index > 0 && input[index - 1] == ' ' && input[index - 2] != ',';
-
-	private bool IsNotBinaryOperation() =>
-		input[index - 1] == ' ' && input[index] != '*' && input[index] != '+' && input[index] != '-' && input[index] != '/';
 
 	private static Range[] MergeAllTokensIntoSingleList(List<Range> result) =>
 		new[] { result[0].Start..result[^1].End };

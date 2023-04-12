@@ -26,6 +26,9 @@ public sealed class ShuntingYardTests
 	[TestCase("(1, 2, 3) + (3, 4), (4)", "(1, 2, 3), (3, 4), +, ,, (4)")]
 	[TestCase("ArithmeticFunction(10, 5).Calculate(\"add\") is 15", "ArithmeticFunction(10, 5).Calculate(\"add\"), 15, is")]
 	[TestCase("Foo(\"Hello World\")", "Foo(\"Hello World\")")]
+	[TestCase("Foo(5 + 5)", "Foo(5 + 5)")]
+	[TestCase("Colors(Width * 5 + 1)", "Colors(Width * 5 + 1)")]
+	[TestCase("Math.Add(5)", "Math.Add(5)")]
 	public void Parse(string input, string expected)
 	{
 		var tokens = new ShuntingYard(input).Output.Reverse().Select(range => input[range]);

@@ -72,7 +72,7 @@ public sealed class PhraseTokenizerTests
 		var tokens = GetTokens(code);
 		var tokensAsString = string.Join(' ', tokens).Replace("( ", "(").Replace(" )", ")").
 			Replace(" , ", ", ");
-		Assert.That(tokens.Count, Is.EqualTo(expectedTokensCount), tokensAsString);
+		Assert.That(tokens.Count, Is.EqualTo(expectedTokensCount), string.Join(',', tokens));
 		Assert.That(tokensAsString, Is.EqualTo(code));
 	}
 

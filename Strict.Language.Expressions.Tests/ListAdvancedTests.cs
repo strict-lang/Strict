@@ -74,9 +74,9 @@ public sealed class ListAdvancedTests : TestExpressions
 	{
 		var assignment = (ConstantDeclaration)new Type(type.Package,
 				new TypeLines(nameof(NotOperatorInAssignment), "has numbers", "NotOperator",
-					"\tconstant result = ((not true))")).ParseMembersAndMethods(parser).Methods[0].
+					"\tconstant result = not true")).ParseMembersAndMethods(parser).Methods[0].
 			GetBodyAndParseIfNeeded();
-		Assert.That(assignment.ToString(), Is.EqualTo("constant result = (not true)"));
+		Assert.That(assignment.ToString(), Is.EqualTo("constant result = not true"));
 	}
 
 	[Test]
