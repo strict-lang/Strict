@@ -99,7 +99,7 @@ public class Type : Context
 		{
 			ParseLineForMembersAndMethods(parser);
 		}
-		catch (TypeNotFound ex)
+		catch (Context.TypeNotFound ex)
 		{
 			throw new ParsingFailed(this, rememberStartMethodLineNumber, ex.Message, ex);
 		}
@@ -571,7 +571,7 @@ public class Type : Context
 			cachedGenericTypes!.Add(key, genericType);
 			return genericType;
 		}
-		throw new TypeArgumentsCountDoesNotMatchGenericType(this, implementationTypes);
+		throw new Context.TypeArgumentsCountDoesNotMatchGenericType(this, implementationTypes);
 	}
 
 	private bool HasMatchingConstructor(IReadOnlyList<Type> implementationTypes) =>
@@ -596,7 +596,7 @@ public class Type : Context
 
 	public Method GetMethod(string methodName, IReadOnlyList<Expression> arguments, ExpressionParser parser) =>
 		FindMethod(methodName, arguments, parser) ??
-		throw new NoMatchingMethodFound(this, methodName, AvailableMethods);
+		throw new Type.NoMatchingMethodFound(this, methodName, AvailableMethods);
 
 	public Method? FindMethod(string methodName, IReadOnlyList<Expression> arguments,
 		ExpressionParser parser)

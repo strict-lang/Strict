@@ -19,7 +19,7 @@ public sealed class Binary : MethodCall
 		Parse(Body body, ReadOnlySpan<char> input, Stack<Range> postfixTokens) =>
 		postfixTokens.Count < 3
 			? throw new IncompleteTokensForBinaryExpression(body, input, postfixTokens)
-			: BuildBinaryExpression(body, input, (postfixTokens.Pop(), postfixTokens));
+			: BuildBinaryExpression(body, input, postfixTokens.Pop(), postfixTokens);
 
 	public sealed class IncompleteTokensForBinaryExpression : ParsingFailed
 	{
@@ -29,20 +29,20 @@ public sealed class Binary : MethodCall
 	}
 
 	private static Expression BuildBinaryExpression(Body body, ReadOnlySpan<char> input,
-		(Range operatorToken, Stack<Range> stackTokens) tokens)
+		Range operatorTokenRange, Stack<Range> tokens)
 	{
-		var operatorToken = input[tokens.operatorToken].ToString();
+		var operatorToken = input[operatorTokenRange].ToString();
 		return operatorToken == BinaryOperator.To
 			? To.Parse(body, input[tokens.Pop()], GetUnaryOrBuildNestedBinary(body, input, tokens))
 			: BuildRegularBinaryExpression(body, input, tokens, operatorToken);
 	}
 
 	private static Expression BuildRegularBinaryExpression(Body body, ReadOnlySpan<char> input,
-		(string operatorToken, Stack<Range> stackTokens) tokens)
+		Stack<Range> tokens, string operatorToken)
 	{
-		var right = GetUnaryOrBuildNestedBinary(body, input, tokens.stackTokens);
-		var left = GetUnaryOrBuildNestedBinary(body, input, tokens.stackTokens);
-		if (tokens.operatorToken == BinaryOperator.Multiply && HasIncompatibleDimensions(left, right))
+		var right = GetUnaryOrBuildNestedBinary(body, input, tokens);
+		var left = GetUnaryOrBuildNestedBinary(body, input, tokens);
+		if (operatorToken == BinaryOperator.Multiply && HasIncompatibleDimensions(left, right))
 			throw new ListsHaveDifferentDimensions(body, left + " " + right);
 		var arguments = new[] { right };
 		return new Binary(left,
@@ -55,7 +55,7 @@ public sealed class Binary : MethodCall
 		var nextTokenRange = tokens.Pop();
 		var expression = input[nextTokenRange.Start.Value].IsSingleCharacterOperator() ||
 			input[nextTokenRange].IsMultiCharacterOperator()
-				? BuildBinaryExpression(body, input, (nextTokenRange, tokens))
+				? BuildBinaryExpression(body, input, nextTokenRange, tokens)
 				: body.Method.ParseExpression(body, input[nextTokenRange]);
 		if (expression.ReturnType.IsGeneric)
 			//ncrunch: no coverage start, cannot be reached: Type.FindMethod already filters this condition

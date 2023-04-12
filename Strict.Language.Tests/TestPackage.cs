@@ -1,4 +1,6 @@
+using Newtonsoft.Json.Linq;
 using Strict.Language.Expressions;
+using System.Xml.Linq;
 
 namespace Strict.Language.Tests;
 
@@ -156,9 +158,13 @@ public class TestPackage : Package
 			"for Generic",
 			"\tfor elements",
 			"\t\treturn value",
-			"in(iterator) Generic",
-			"\t1 in(5, 6) is 5",
-			"\telement(0)",
+			"in(other) Boolean",
+			"\t3 is in (1, 2, 3)",
+			"\t3 is not in (1, 2)",
+			"\tfor elements",
+			"\t\tif value is other",
+			"\t\t\treturn true",
+			"\tfalse",
 			"Add(element Generic) Mutable(List)",
 			"\t(1, 2).Add(3) is (1, 2, 3)",
 			"\tvalue = value + element",
@@ -222,11 +228,11 @@ public class TestPackage : Package
 			"\tDictionary(Number, Number).Length is 0",
 			"\tDictionary(Number, Number) is Dictionary(Number, Number)",
 			"\tDictionary(Number, Number) is not Dictionary(Number, Text)",
-			"Add(key, mappedValue) Mutable(Dictionary)",
+			"Add(key Generic, mappedValue Generic) Mutable(Dictionary)",
 			"\tDictionary((2, 4)).Add(4, 8) is Dictionary((2, 4), (4, 8))",
 			"\tDictionary((1, 1), (2, 2)).Add(3, 3).Length is 3",
 			"\tkeysAndValues.Add((key, mappedValue))",
-			"Get(key) mappedValue",
+			"Get(key Generic) Generic",
 			"\tfor keysAndValues",
 			"\t\tif value.First is key",
 			"\t\t\treturn value.Last",

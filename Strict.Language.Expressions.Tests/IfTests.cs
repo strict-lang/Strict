@@ -63,12 +63,12 @@ public sealed class IfTests : TestExpressions
 	[Test]
 	public void InvalidSpacingInsteadOfNot() =>
 		Assert.That(() => ParseExpression("if bla is  5", "\tlog.Write(\"Hey\")"),
-			Throws.InstanceOf<PhraseTokenizer.InvalidSpacing>());
+			Throws.InstanceOf<ParsingFailed>().With.InnerException.InstanceOf<PhraseTokenizer.InvalidSpacing>());
 
 	[Test]
 	public void InvalidIsNotUsageOnDifferentType() =>
 		Assert.That(() => ParseExpression("if bla is not \"blu\"", "\tlog.Write(\"Hey\")"),
-			Throws.InstanceOf<Type.ArgumentsDoNotMatchMethodParameters>().With.Message.Contains("blu"));
+			Throws.InstanceOf<ParsingFailed>().With.InnerException.InstanceOf<Type.ArgumentsDoNotMatchMethodParameters>().With.Message.Contains("blu"));
 
 	[Test]
 	public void ParseMissingElseExpression() =>

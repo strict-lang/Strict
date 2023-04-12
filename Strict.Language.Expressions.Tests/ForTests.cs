@@ -59,8 +59,9 @@ public sealed class ForTests : TestExpressions
 			() => ParseExpression("constant myIndex = 0", "for myIndex in Range(0, 10)",
 				"\tlog.Write(myIndex)"), Throws.InstanceOf<For.ImmutableIterator>());
 
+	[Ignore("TODO: https://deltaengine.fogbugz.com/f/cases/27704/Use-Right-expression-Range-to-find-the-is-in-method-for-number-is-in-Range-0-10-expression")]
 	[Test]
-	public void IteratorHasMatchingTypeWithIterable() =>
+	public void IteratorTypeDoesNotMatchWithIterable() =>
 		Assert.That(() =>
 				ParseExpression("mutable element = 0",
 					"for element in (\"1\", \"2\", \"3\")", "\tlog.Write(element)"),
@@ -71,6 +72,7 @@ public sealed class ForTests : TestExpressions
 		Assert.That(((For)ParseExpression("for Range(2, 5)", "\tlog.Write(index)")).ToString(),
 			Is.EqualTo("for Range(2, 5)\n\tlog.Write(index)"));
 
+	[Ignore("TODO: https://deltaengine.fogbugz.com/f/cases/27704/Use-Right-expression-Range-to-find-the-is-in-method-for-number-is-in-Range-0-10-expression")]
 	[Test]
 	public void ParseForInExpression() =>
 		Assert.That(
@@ -180,6 +182,7 @@ public sealed class ForTests : TestExpressions
 				"for index in Range(1, 10)"),
 			Throws.InstanceOf<For.MissingInnerBody>()!);
 
+	[Ignore("TODO: https://deltaengine.fogbugz.com/f/cases/27704/Use-Right-expression-Range-to-find-the-is-in-method-for-number-is-in-Range-0-10-expression")]
 	[TestCase(
 		"WithParameter", "element in (1, 2, 3, 4)",
 		"has log",

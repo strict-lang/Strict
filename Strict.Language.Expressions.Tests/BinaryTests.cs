@@ -59,7 +59,7 @@ public sealed class BinaryTests : TestExpressions
 	[Test]
 	public void InvalidUsageOfToOperator() =>
 		Assert.That(() => ParseExpression("to(Text)"),
-			Throws.InnerException.InstanceOf<ArgumentsDoNotMatchMethodParameters>());
+			Throws.InnerException.InstanceOf<NoMatchingMethodFound>());
 
 	[Test]
 	public void ParseComparison() =>

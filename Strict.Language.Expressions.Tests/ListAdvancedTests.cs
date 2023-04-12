@@ -106,9 +106,9 @@ public sealed class ListAdvancedTests : TestExpressions
 					"CreateMutableList Numbers", "\tmutable result = Numbers", "\tfor numbers",
 					"\t\tresult = result + (0 - value)", "\tresult")).ParseMembersAndMethods(parser).
 			Methods[0].GetBodyAndParseIfNeeded();
-		Assert.That(expression.Expressions[0].ToString(), Is.EqualTo("mutable result = Numbers"));
+		Assert.That(expression.Expressions[0].ToString(), Is.EqualTo("mutable result = List(TestPackage.Number)"));
 		Assert.That(((ConstantDeclaration)expression.Expressions[0]).Value.ReturnType.FullName,
-			Is.EqualTo("TestPackage.Numbers"));
+			Is.EqualTo("TestPackage.List(TestPackage.Number)"));
 	}
 
 	[Test]
@@ -266,14 +266,14 @@ public sealed class ListAdvancedTests : TestExpressions
 				InstanceOf<Type.NoMatchingMethodFound>());
 	// @formatter:on
 
-	[TestCase("numbers", "1, 2", "Numbers")]
-	[TestCase("booleans", "true, false", "Booleans")]
-	[TestCase("texts", "\"Hi\", \"Hello\"", "Texts")]
+	[TestCase("numbers", "1, 2", "List(TestPackage.Number)")]
+	[TestCase("booleans", "true, false", "List(TestPackage.Boolean)")]
+	[TestCase("texts", "\"Hi\", \"Hello\"", "List(TestPackage.Text)")]
 	public void AutoParseArgumentAsListIfMatchingWithMethodParameter(string parameter, string arguments, string expectedList)
 	{
 		// @formatter:off
 		var typeWithTestMethods = new Type(type.Package,
-			new TypeLines("ListArgumentsCanBeAutoParsed" + expectedList,
+			new TypeLines("ListArgumentsCanBeAutoParsed" + parameter,
 				"has log",
 				$"CheckInputLengthAndGetResult({parameter}) Number",
 				"\tif numbers.Length is 2",

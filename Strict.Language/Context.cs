@@ -60,13 +60,7 @@ public abstract class Context
 		if (cachedTypes != null && cachedTypes.TryGetValue(name, out var type))
 			return type;
 		cachedTypes ??= new Dictionary<string, Type>();
-		var foundType = name == Name
-			? (Type)this
-			: name.StartsWith(Base.List + DoubleOpenBrackets, StringComparison.Ordinal)
-				? GetNestedListType(name)
-				: name.Contains('(') && name.EndsWith(')')
-					? GetGenericTypeWithArguments(name)
-					: GetTypeFromPackages(name);
+		var foundType = GetTypeFromPackages(name);
 		cachedTypes.Add(name, foundType);
 		return foundType;
 	}
