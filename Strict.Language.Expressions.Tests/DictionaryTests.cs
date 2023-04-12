@@ -16,15 +16,12 @@ public sealed class DictionaryTests : TestExpressions
 	}
 
 	[Test]
-	public void GetMethod()
-	{
-		var dictionaryType = new Type(type.Package,
-				new TypeLines(nameof(GetMethod),
+	public void ParseListWithGenericKeyAndValue() =>
+		Assert.That(() => new Type(type.Package,
+				new TypeLines(nameof(ParseListWithGenericKeyAndValue),
 					"has keysAndValues List((key Generic, value Generic))", "Get(key Generic) Generic",
-					"\tfor keysAndValues", "\t\tif value(0) is key", "\t\t\treturn value(1)))")).
-			ParseMembersAndMethods(new MethodExpressionParser());
-		Assert.That(() => dictionaryType.Methods[0].GetBodyAndParseIfNeeded(), Throws.Nothing);
-	}
+					"\tfor keysAndValues", "\t\tif value is key", "\t\t\treturn value(1)))")).
+			ParseMembersAndMethods(new MethodExpressionParser()), Throws.Nothing);
 
 	[Test]
 	public void ParseMultipleTypesInsideAListTypeAsParameter()
