@@ -65,7 +65,8 @@ public sealed class ListTests : TestExpressions
 	[TestCase("(1, 2, 3, 4, 5) + (\"hello\") + 4")]
 	public void MismatchingTypeFound(string input) =>
 		Assert.That(() => ParseExpression(input),
-			Throws.InstanceOf<Type.ArgumentsDoNotMatchMethodParameters>()!);
+			Throws.InstanceOf<ParsingFailed>().With.InnerException.
+				InstanceOf<Type.ArgumentsDoNotMatchMethodParameters>()!);
 
 	[TestCase("(1, 2, 3) * (1, 2)")]
 	[TestCase("(1, 2, 3) * (1, 2, 3, 4)")]
@@ -110,7 +111,8 @@ public sealed class ListTests : TestExpressions
 	[Test]
 	public void LeftTypeShouldNotBeChangedUnlessRightIsList() =>
 		Assert.That(() => ParseExpression("5 + (\"1\", \"2\", \"3\", \"4\")"),
-			Throws.InstanceOf<Type.ArgumentsDoNotMatchMethodParameters>());
+			Throws.InstanceOf<ParsingFailed>().With.InnerException.
+				InstanceOf<Type.ArgumentsDoNotMatchMethodParameters>());
 
 	[TestCase("Number(5)")]
 	[TestCase("Text(\"Hi\")")]
@@ -178,9 +180,9 @@ public sealed class ListTests : TestExpressions
 		var numbers = type.GetListImplementationType(type.GetType(Base.Number));
 		Console.WriteLine(numbers+" "+numbers.ImplementationTypes[0]+", methods="+numbers.Methods.ToWordList());
 		Assert.That(numbers.Members[1].ToString(),
-			Is.EqualTo("elements TestPackage.Numbers"));
+			Is.EqualTo("elements TestPackage.List(TestPackage.Number)"));
 		Assert.That(numbers.Methods[1].Parent.ToString(),
-			Is.EqualTo("TestPackage.Numbers"));
+			Is.EqualTo("TestPackage.List(TestPackage.Number)"));
 	}
 
 	[Test]

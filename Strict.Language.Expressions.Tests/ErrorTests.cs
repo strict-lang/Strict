@@ -2,7 +2,6 @@
 
 namespace Strict.Language.Expressions.Tests;
 
-[Ignore("TODO: https://deltaengine.fogbugz.com/f/cases/27704/Use-Right-expression-Range-to-find-the-is-in-method-for-number-is-in-Range-0-10-expression")]
 public sealed class ErrorTests : TestExpressions
 {
 	[Test]
@@ -13,7 +12,7 @@ public sealed class ErrorTests : TestExpressions
 					"has number",
 					"CheckNumberInRangeTen Number",
 					"\tmutable NotANumber = Error",
-					"\tif number is in Range(0, 10)",
+					"\tif number in Range(0, 10)",
 					"\t\treturn number",
 					"\telse",
 					"\t\treturn NotANumber")).

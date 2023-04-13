@@ -1,4 +1,5 @@
 ﻿using System.Runtime.CompilerServices;
+using System.Xml.Linq;
 
 [assembly: InternalsVisibleTo("Strict.Language.Expressions.Tests")]
 
@@ -130,12 +131,22 @@ public sealed class Body : Expression
 			throw new NamedType.CannotUseKeywordsAsName(name);
 		if (!name.Length.IsWithinLimit())
 			throw new NamedType.NameLengthIsNotWithinTheAllowedLimit(name);
-		var nameType = value.ReturnType.FindType(name.MakeFirstLetterUppercase());
-		if (nameType is not null && nameType != value.ReturnType)
-			throw new VariableNameCannotHaveDifferentTypeNameThanValue(this, name, value.ReturnType.Name);
+		CheckForNameWithDifferentTypeUsage(name, value);
 		if (FindVariableValue(name.AsSpan()) is not null)
 			throw new ValueIsNotMutableAndCannotBeChanged(this, name);
 		return InitializeOrUpdateVariable(name, value);
+	}
+
+	private void CheckForNameWithDifferentTypeUsage(string name, Expression value)
+	{
+		try
+		{
+			var nameType = value.ReturnType.GetType(name.MakeFirstLetterUppercase());
+			if (nameType != null && nameType != value.ReturnType)
+				throw new VariableNameCannotHaveDifferentTypeNameThanValue(this, name,
+					value.ReturnType.Name);
+		}
+		catch (Context.TypeNotFound) { }
 	}
 
 	private Body InitializeOrUpdateVariable(string name, Expression value)

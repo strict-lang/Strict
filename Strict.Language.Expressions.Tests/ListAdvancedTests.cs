@@ -3,35 +3,13 @@ using Strict.Language.Tests;
 
 namespace Strict.Language.Expressions.Tests;
 
+// ReSharper disable once TestFileNameWarning
 public sealed class ListAdvancedTests : TestExpressions
 {
 	[SetUp]
 	public void CreateParser() => parser = new MethodExpressionParser();
 
 	private MethodExpressionParser parser = null!;
-
-	[Test]
-	public void MemberWithListPrefixInTypeIsNotAllowed() =>
-		Assert.That(
-			() => new Type(type.Package,
-				new TypeLines(nameof(MemberWithListPrefixInTypeIsNotAllowed), "has elements List(Number)",
-					"has something Number", "AddSomethingWithListLength Number",
-					"\telements.Length + something")).ParseMembersAndMethods(parser),
-			Throws.InstanceOf<ParsingFailed>().With.InnerException.
-				InstanceOf<NamedType.ListPrefixIsNotAllowedUseImplementationTypeNameInPlural>()!.With.
-				Message.Contains(
-					"List should not be used as prefix for List(Number) instead use Numbers"));
-
-	[Test]
-	public void MethodParameterWithListPrefixInTypeIsNotAllowed() =>
-		Assert.That(
-			() => new Type(type.Package,
-					new TypeLines(nameof(MethodParameterWithListPrefixInTypeIsNotAllowed), "has log",
-						"AddNumberToTexts(input List(Text), number) List(Text)", "\tinput + number")).
-				ParseMembersAndMethods(parser),
-			Throws.InstanceOf<ParsingFailed>().With.InnerException.
-				InstanceOf<NamedType.ListPrefixIsNotAllowedUseImplementationTypeNameInPlural>()!.With.
-				Message.Contains("List should not be used as prefix for List(Text) instead use Texts"));
 
 	[Test]
 	public void ListGenericLengthAddition()
@@ -132,7 +110,8 @@ public sealed class ListAdvancedTests : TestExpressions
 						"has unused Log",
 						"MutableWithNumber Number", "\tconstant result = Mutable(Number)", "\tresult")).
 				ParseMembersAndMethods(parser).Methods[0].GetBodyAndParseIfNeeded(),
-			Throws.InstanceOf<Type.NoMatchingMethodFound>());
+			Throws.InstanceOf<ParsingFailed>().With.InnerException.
+				InstanceOf<Type.NoMatchingMethodFound>());
 
 	[Test]
 	public void CheckIfInvalidArgumentIsNotMethodOrListCall() =>
