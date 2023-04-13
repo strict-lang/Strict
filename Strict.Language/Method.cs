@@ -154,7 +154,7 @@ public sealed class Method : Context
 	private static SpanSplitEnumerator SplitParameters(ReadOnlySpan<char> rest, int closingBracketIndex)
 	{
 		var parametersSpan = rest[1..closingBracketIndex];
-		return parametersSpan.Contains('(')
+		return parametersSpan.Contains('(') && !parametersSpan.Contains(',')
 			? new SpanSplitEnumerator(parametersSpan, char.MaxValue, StringSplitOptions.None)
 			: parametersSpan.Split(',', StringSplitOptions.TrimEntries);
 	}

@@ -29,9 +29,8 @@ public sealed class ListAdvancedTests : TestExpressions
 					new TypeLines(nameof(MethodParameterWithListPrefixInTypeIsNotAllowed), "has log",
 						"AddNumberToTexts(input List(Text), number) List(Text)", "\tinput + number")).
 				ParseMembersAndMethods(parser),
-			Throws.InstanceOf<ParsingFailed>().With.InnerException.
-				InstanceOf<NamedType.ListPrefixIsNotAllowedUseImplementationTypeNameInPlural>()!.With.
-				Message.Contains("List should not be used as prefix for List(Text) instead use Texts"));
+			Throws.InstanceOf<ParsingFailed>().With.Message.
+				Contains("List should not be used as prefix for List(Text) instead use Texts"));
 
 	[Test]
 	public void ListGenericLengthAddition()
