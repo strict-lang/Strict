@@ -112,11 +112,13 @@ public sealed class For : Expression
 	{
 		var forIteratorText = GetForIteratorText(line);
 		var iteratorExpression = body.Method.ParseExpression(body, forIteratorText);
-		return iteratorExpression.ReturnType is GenericTypeImplementation { Generic.Name: Base.List }
-			? body.Method.ParseExpression(body, forIteratorText[^1] == ')'
-				? forIteratorText[1..forIteratorText.IndexOf(',')]
-				: forIteratorText.ToString() + "(0)")
-			: iteratorExpression;
+		return iteratorExpression is MethodCall { ReturnType.Name: Base.Range } methodCall
+			? methodCall.Arguments[0]
+			: iteratorExpression.ReturnType is GenericTypeImplementation { Generic.Name: Base.List }
+				? body.Method.ParseExpression(body, forIteratorText[^1] == ')'
+					? forIteratorText[1..forIteratorText.IndexOf(',')]
+					: forIteratorText.ToString() + "(0)")
+				: iteratorExpression;
 	}
 
 	private static ReadOnlySpan<char> GetForIteratorText(ReadOnlySpan<char> line) =>
