@@ -64,7 +64,7 @@ public sealed class For : Expression
 		if (HasIn(line) || line[^1] != ')')
 		{
 			var forExpression = ParseWithExplicitVariable(body, line, innerBody);
-			if (!GetIteratorType(forExpression).IsIterator)
+			if (!GetIteratorType(forExpression).IsIterator && forExpression.ReturnType.Name != Base.Number)
 				throw new ExpressionTypeIsNotAnIterator(body, forExpression.ReturnType.Name,
 					line[4..].ToString());
 			return new For(forExpression, innerBody.Parse());

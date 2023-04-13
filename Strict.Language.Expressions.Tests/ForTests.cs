@@ -104,6 +104,8 @@ public sealed class ForTests : TestExpressions
 		"for element in (1, 2, 3)\n\tlog.Write(element)")]
 	[TestCase("constant iterationCount = 10", "for iterationCount", "\tlog.Write(index)",
 		"for iterationCount\n\tlog.Write(index)")]
+	[TestCase("constant dummy = 0","for 10", "\tlog.Write(index)",
+		"for 10\n\tlog.Write(index)")]
 	[TestCase("mutable element = \"1\"", "for element in (\"1\", \"2\", \"3\")",
 		"\tlog.Write(element)", "for element in (\"1\", \"2\", \"3\")\n\tlog.Write(element)")]
 	public void ParseForListExpressionWithIterableVariable(params string[] lines) =>
