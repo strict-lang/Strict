@@ -72,7 +72,7 @@ public sealed class Instance
 
 	public static Instance operator -(Instance left, Instance right)
 	{
-		if (!left.TypeName.EndsWith('s'))
+		if (!left.TypeName.StartsWith("List", StringComparison.Ordinal))
 			return new Instance(left.ReturnType,
 				Convert.ToDouble(left.Value) - Convert.ToDouble(right.Value));
 		var elements = new List<Expression>((List<Expression>)left.Value);
