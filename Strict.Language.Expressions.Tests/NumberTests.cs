@@ -40,7 +40,7 @@ public class NumberTests : TestExpressions
 	[Test]
 	public void ParseTextToNumberUsingFromIsNotAllowed() =>
 		Assert.That(() => ParseExpression("Number(\"5\")"),
-			Throws.InstanceOf<Type.NoMatchingMethodFound>());
+			Throws.InstanceOf<ParsingFailed>().With.InnerException.InstanceOf<Type.NoMatchingMethodFound>());
 
 	[Test]
 	public void ParseNumberToText()

@@ -28,9 +28,9 @@ public sealed class If : Expression
 	/// type. If that is not possible there is a compilation error here.
 	/// </summary>
 	private static Type GetMatchingType(Type thenType, Type? elseType, Body? bodyForErrorMessage) =>
-		elseType == null || elseType.IsCompatible(thenType)
+		elseType == null || elseType.IsCompatible(thenType) || elseType.Name == Base.Error
 			? thenType
-			: thenType.IsCompatible(elseType)
+			: thenType.IsCompatible(elseType) || thenType.Name == Base.Error
 				? elseType
 				: thenType.FindFirstUnionType(elseType) ??
 				throw new ReturnTypeOfThenAndElseMustHaveMatchingType(

@@ -35,14 +35,15 @@ public sealed class MethodCallTests : TestExpressions
 	[Test]
 	public void ParseWithMissingArgument() =>
 		Assert.That(() => ParseExpression("log.Write"),
-			Throws.InstanceOf<ArgumentsDoNotMatchMethodParameters>().With.Message.StartsWith(
-				"No arguments does not match these method(s):\nWrite(generic TestPackage.Generic)"));
+			Throws.InstanceOf<ParsingFailed>().With.InnerException.
+				InstanceOf<ArgumentsDoNotMatchMethodParameters>().With.Message.Contains("log.Write"));
 
 	[Test]
 	public void ParseWithTooManyArguments() =>
 		Assert.That(() => ParseExpression("log.Write(1, 2)"),
-			Throws.InstanceOf<ArgumentsDoNotMatchMethodParameters>().With.Message.
-				StartsWith("Arguments: 1 TestPackage.Number, 2 TestPackage.Number do not match"));
+			Throws.InstanceOf<ParsingFailed>().With.InnerException.
+				InstanceOf<ArgumentsDoNotMatchMethodParameters>().With.Message.
+				Contains("log.Write(1, 2)"));
 
 	[Test]
 	public void ParseWithInvalidExpressionArguments() =>
@@ -63,7 +64,8 @@ public sealed class MethodCallTests : TestExpressions
 	[Test]
 	public void ArgumentsDoNotMatchMethodParameters() =>
 		Assert.That(() => ParseExpression("Character(\"Hi\")"),
-			Throws.InstanceOf<ArgumentsDoNotMatchMethodParameters>());
+			Throws.InstanceOf<ParsingFailed>().With.InnerException.
+				InstanceOf<ArgumentsDoNotMatchMethodParameters>());
 
 	[Test]
 	public void ParseCallWithUnknownMemberCallArgument() =>
@@ -78,8 +80,9 @@ public sealed class MethodCallTests : TestExpressions
 	[Test]
 	public void UnknownExpressionForArgumentException() =>
 		Assert.That(() => ParseExpression("ComplexMethod(true)"),
-			Throws.InstanceOf<ArgumentsDoNotMatchMethodParameters>().With.Message.
-				StartsWith("Argument: true "));
+			Throws.InstanceOf<ParsingFailed>().With.InnerException.
+				InstanceOf<ArgumentsDoNotMatchMethodParameters>().With.Message.
+				Contains("ComplexMethod(true)"));
 
 	[Test]
 	public void ListTokensAreNotSeparatedByCommaException() =>
@@ -109,7 +112,7 @@ public sealed class MethodCallTests : TestExpressions
 	[Test]
 	public void FromExampleFailsOnImproperParameters() =>
 		Assert.That(() => ParseExpression("Range(1, 2, 3, 4)"),
-			Throws.InstanceOf<NoMatchingMethodFound>());
+			Throws.InstanceOf<ParsingFailed>().With.InnerException.InstanceOf<NoMatchingMethodFound>());
 
 	[TestCase("ComplexMethod((1), 2)")]
 	[TestCase("ComplexMethod((1, 2, 3))")]

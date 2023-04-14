@@ -1,5 +1,4 @@
 ﻿using System.Runtime.CompilerServices;
-using System.Xml.Linq;
 
 [assembly: InternalsVisibleTo("Strict.Language.Expressions.Tests")]
 

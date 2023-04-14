@@ -72,7 +72,8 @@ public sealed class MutableDeclarationTests : TestExpressions
 					"\tconstant result = input + something")).
 			ParseMembersAndMethods(parser);
 		Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(),
-			Throws.InstanceOf<Type.ArgumentsDoNotMatchMethodParameters>());
+			Throws.InstanceOf<ParsingFailed>().With.InnerException.
+				InstanceOf<Type.ArgumentsDoNotMatchMethodParameters>());
 	}
 
 	[Test]
@@ -192,7 +193,8 @@ public sealed class MutableDeclarationTests : TestExpressions
 					"\tresult")).
 			ParseMembersAndMethods(parser);
 		Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(),
-			Throws.InstanceOf<Type.GenericTypesCannotBeUsedDirectlyUseImplementation>()!);
+			Throws.InstanceOf<ParsingFailed>().With.InnerException.
+				InstanceOf<Type.GenericTypesCannotBeUsedDirectlyUseImplementation>()!);
 	}
 
 	[Test]

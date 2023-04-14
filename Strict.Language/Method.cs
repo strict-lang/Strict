@@ -154,10 +154,13 @@ public sealed class Method : Context
 	private static SpanSplitEnumerator SplitParameters(ReadOnlySpan<char> rest, int closingBracketIndex)
 	{
 		var parametersSpan = rest[1..closingBracketIndex];
-		return parametersSpan.Contains('(') && !parametersSpan.Contains(',')
+		return parametersSpan.Contains('(') && (!parametersSpan.Contains(',') || IsCommaInsideBrackets(parametersSpan))
 			? new SpanSplitEnumerator(parametersSpan, char.MaxValue, StringSplitOptions.None)
 			: parametersSpan.Split(',', StringSplitOptions.TrimEntries);
 	}
+
+	private static bool IsCommaInsideBrackets(ReadOnlySpan<char> parametersSpan) =>
+		parametersSpan.IndexOf(')') > parametersSpan.IndexOf(',');
 
 	public sealed class ParametersMustStartWithLowerCase : ParsingFailed
 	{
