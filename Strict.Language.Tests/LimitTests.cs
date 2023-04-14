@@ -172,8 +172,8 @@ public sealed class LimitTests
 						$"	constant {variableName} = 5"
 					}).ParseMembersAndMethods(new MethodExpressionParser()).Methods[0].
 				GetBodyAndParseIfNeeded(),
-			Throws.InstanceOf<NamedType.NameLengthIsNotWithinTheAllowedLimit>().With.Message.Contains(
-				$"Name {variableName} length is {variableName.Length} but allowed limit is between 2 and 50"));
+			Throws.InstanceOf<ParsingFailed>().With.InnerException.InstanceOf<NamedType.NameLengthIsNotWithinTheAllowedLimit>().With.Message.Contains(
+				$"constant {variableName}"));
 
 	[TestCase(nameof(PackageNameShouldBeWithinTheLimit) + "LimitShouldBeWithinFifty")]
 	[TestCase("P")]

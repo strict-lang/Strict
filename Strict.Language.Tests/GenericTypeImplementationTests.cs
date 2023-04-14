@@ -36,7 +36,7 @@ public sealed class GenericTypeImplementationTests
 					"\tconstant result = something.Compare")).ParseMembersAndMethods(parser),
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.
 				InstanceOf<Context.TypeArgumentsCountDoesNotMatchGenericType>().With.Message.Contains(
-					"The generic type Comparer needs these type arguments: (FirstTypes TestPackage.List, SecondType TestPackage.Generic), does not match provided types: (TestPackage.Text)"));
+					"The generic type TestPackage.Comparer needs these type arguments: (Generic TestPackage.Generic, SecondType TestPackage.Generic), this does not match provided types: (TestPackage.Text)"));
 
 	[Test]
 	public void GenericTypeWithMultipleImplementations()

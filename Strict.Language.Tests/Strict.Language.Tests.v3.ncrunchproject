@@ -1,7 +1,9 @@
 ﻿<ProjectConfiguration>
   <Settings>
     <IgnoredTests>
-      <AllTestsSelector />
+      <NamedTestSelector>
+        <TestName>Strict.Language.Tests.TypeTests.InitializeInnerTypeMemberUsingOuterTypeConstructor</TestName>
+      </NamedTestSelector>
     </IgnoredTests>
   </Settings>
 </ProjectConfiguration>

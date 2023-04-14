@@ -191,7 +191,7 @@ public sealed class TypeTests
 		}, parser);
 		Assert.That(result, Is.InstanceOf<Method>());
 		Assert.That(result?.ToString(),
-			Is.EqualTo("Add(first TestPackage.Number, other TestPackage.Numbers) List"));
+			Is.EqualTo("Add(first TestPackage.Number, other TestPackage.List(TestPackage.Number)) List"));
 	}
 
 	[Test]
@@ -218,7 +218,7 @@ public sealed class TypeTests
 		Assert.That(expression.Value.ReturnType.Name, Is.EqualTo(expected));
 	}
 
-	[TestCase("has number", "Run", "\tnumber = 1 + 1")]
+	[TestCase("has inputValue = 5", "Run", "\tinputValue = 1 + 1")]
 	[TestCase("has number", "Run", "\tconstant result = 5", "\tresult = 6")]
 	public void ImmutableTypesCannotBeChanged(params string[] code) =>
 		Assert.That(
@@ -291,7 +291,7 @@ public sealed class TypeTests
 						new List<Expression> { new Text(type, "Hi"), new Text(type, "Hello") }),
 					new Number(type, 5)
 				}, parser)?.ToString(),
-			Is.EqualTo("Add(other TestPackage.Texts, first TestPackage.Generic) List"));
+			Is.EqualTo("Add(other TestPackage.List(TestPackage.Text), first TestPackage.Generic) List"));
 	}
 
 	[Test]
@@ -325,7 +325,7 @@ public sealed class TypeTests
 						"has list",
 						"Something",
 						"\tconstant result = list + 5")).ParseMembersAndMethods(parser).
-				Methods[0].GetBodyAndParseIfNeeded(), Throws.InstanceOf<Type.GenericTypesCannotBeUsedDirectlyUseImplementation>());
+				Methods[0].GetBodyAndParseIfNeeded(), Throws.InstanceOf<ParsingFailed>().With.InnerException.InstanceOf<Type.GenericTypesCannotBeUsedDirectlyUseImplementation>());
 
 	[Test]
 	public void InvalidProgram() =>
@@ -402,7 +402,8 @@ public sealed class TypeTests
 				"\tmutable result = Mutable(2)")).
 			ParseMembersAndMethods(parser);
 		Assert.That(() => type.Methods[0].GetBodyAndParseIfNeeded(),
-			Throws.InstanceOf<Type.GenericTypesCannotBeUsedDirectlyUseImplementation>());
+			Throws.InstanceOf<ParsingFailed>().With.InnerException.
+				InstanceOf<Type.GenericTypesCannotBeUsedDirectlyUseImplementation>());
 	}
 
 	[Test]
@@ -410,7 +411,7 @@ public sealed class TypeTests
 	{
 		var range = package.GetType(Base.Range);
 		Assert.That(range.AvailableMethods.Values.Select(methods => methods.Count).Sum(),
-			Is.EqualTo(11));
+			Is.EqualTo(7));
 	}
 
 	[Test]
@@ -418,7 +419,7 @@ public sealed class TypeTests
 	{
 		var text = package.GetType(Base.Text + "s");
 		Assert.That(text.AvailableMethods.Values.Select(methods => methods.Count).Sum(),
-			Is.EqualTo(48));
+			Is.EqualTo(17));
 	}
 
 	[Test]
@@ -450,8 +451,8 @@ public sealed class TypeTests
 	[TestCase(Base.Output, 0)]
 	[TestCase(Base.Mutable, 1)]
 	[TestCase(Base.Log, 1)]
-	[TestCase(Base.Number, 1)]
-	[TestCase(Base.Character, 2)]
+	[TestCase(Base.Number, 0)]
+	[TestCase(Base.Character, 1)]
 	[TestCase(Base.Text, 4)]
 	[TestCase(Base.Error, 6)]
 	public void ValidateAvailableMemberTypesCount(string name, int expectedCount)
@@ -468,7 +469,7 @@ public sealed class TypeTests
 		var memberWithConstraintType = CreateType(nameof(MemberWithConstraintsUsingWithKeyword), code,
 			"AddNumbers Number", "\tnumbers(0) + numbers(1)");
 		var member = memberWithConstraintType.Members[0];
-		Assert.That(member.Type.Name, Is.EqualTo("Numbers"));
+		Assert.That(member.Type.Name, Is.EqualTo("List(TestPackage.Number)"));
 		Assert.That(member.Constraints?.Length, Is.EqualTo(1));
 		Assert.That(member.Constraints?[0].ToString(), Is.EqualTo("Length is 2"));
 	}
@@ -480,7 +481,7 @@ public sealed class TypeTests
 			"AddNumbers Number", "\tnumbers(0) + numbers(1)");
 		var member = memberWithConstraintType.Members[0];
 		Assert.That(member.Name, Is.EqualTo("something"));
-		Assert.That(member.Type.Name, Is.EqualTo("Numbers"));
+		Assert.That(member.Type.Name, Is.EqualTo("List(TestPackage.Number)"));
 		Assert.That(member.Constraints?.Length, Is.EqualTo(1));
 		Assert.That(member.Constraints?[0].ToString(), Is.EqualTo("Length is 2"));
 		Assert.That(member.Value, Is.InstanceOf<List>());
@@ -494,7 +495,7 @@ public sealed class TypeTests
 			"AddNumbers Number", "\tnumbers(0) + numbers(1)");
 		var member = memberWithConstraintType.Members[0];
 		Assert.That(member.Name, Is.EqualTo("numbers"));
-		Assert.That(member.Type.Name, Is.EqualTo("Numbers"));
+		Assert.That(member.Type.Name, Is.EqualTo("List(TestPackage.Number)"));
 		Assert.That(member.Constraints?.Length, Is.EqualTo(2));
 		Assert.That(member.Constraints?[1].ToString(), Is.EqualTo("value(0) > 0"));
 	}

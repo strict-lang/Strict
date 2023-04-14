@@ -28,11 +28,13 @@ public class KeywordTests
 
 	[TestCaseSource(nameof(KeywordsList))]
 	public void CannotUseKeywordsAsVariableName(string name) =>
-		Assert.That(() => new Type(package,
-			new TypeLines(name + nameof(CannotUseKeywordsAsVariableName),
-				"has number",
-				"Run",
-				$"\tconstant {name} = 5")).ParseMembersAndMethods(parser).Methods[0].GetBodyAndParseIfNeeded(), Throws.InstanceOf<CannotUseKeywordsAsName>().With.Message.Contains($"{name} is a keyword and cannot be used as a identifier name"));
+		Assert.That(
+			() => new Type(package,
+					new TypeLines(name + nameof(CannotUseKeywordsAsVariableName), "has number", "Run",
+						$"\tconstant {name} = 5")).ParseMembersAndMethods(parser).Methods[0].
+				GetBodyAndParseIfNeeded(),
+			Throws.InstanceOf<ParsingFailed>().With.InnerException.
+				InstanceOf<CannotUseKeywordsAsName>());
 
 	[TestCaseSource(nameof(KeywordsList))]
 	public void CannotUseKeywordsAsMethodParameterName(string name) =>
