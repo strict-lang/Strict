@@ -238,8 +238,8 @@ public class TestPackage : Package
 			"\tkeysAndValues.Add((key, mappedValue))",
 			"Get(key Generic) Generic",
 			"\tfor keysAndValues",
-			"\t\tif value.First is key",
-			"\t\t\treturn value.Last",
+			"\t\tif value(0) is key",
+			"\t\t\treturn value(1)",
 			"\tError(\"Key \" + key + \" not found\")"));
 		// @formatter:on
 		foreach (var type in new[]

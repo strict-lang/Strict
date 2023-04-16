@@ -49,8 +49,10 @@ public sealed class ByteCodeGenerator
 		for (var parameterIndex = 0; parameterIndex < instance.Method.Parameters.Count;
 			parameterIndex++)
 		{
-			if (instance.Method.Parameters[parameterIndex].Type is GenericTypeImplementation type &&
-				type.Generic.Name == Base.List)
+			if (instance.Method.Parameters[parameterIndex].Type is GenericTypeImplementation
+				{
+					Generic.Name: Base.List
+				})
 				statements.Add(new StoreVariableStatement(
 					new Instance(instance.Method.Parameters[parameterIndex].Type,
 						instance.Arguments[parameterIndex]),

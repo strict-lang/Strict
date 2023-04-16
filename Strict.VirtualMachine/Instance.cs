@@ -65,7 +65,7 @@ public sealed class Instance
 				left.Value.ToString() + right.Value);
 		if (rightReturnTypeName == Base.Text && leftReturnTypeName == Base.Number)
 			return new Instance(right.ReturnType, left.Value.ToString() + right.Value);
-		return !leftReturnTypeName.EndsWith('s')
+		return left.ReturnType is GenericTypeImplementation { Name: Base.List }
 			? new Instance(left.ReturnType, left.Value + right.Value.ToString())
 			: AddElementToTheListAndGetInstance(left, right);
 	}

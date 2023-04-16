@@ -256,7 +256,7 @@ public class VirtualMachineTests : BaseVirtualMachineTests
 			"\ttextList.Remove(\"s\")",
 			"\ttextList"
 		})]
-	[TestCase("RemoveDuplicates(\"s\", \"b\", \"s\").Remove", "s b", "RemoveDuplicates",
+	[TestCase("RemoveDuplicates((\"s\", \"b\", \"s\")).Remove", "s b", "RemoveDuplicates",
 		new[]
 		{
 			"has texts",
@@ -352,7 +352,8 @@ public class VirtualMachineTests : BaseVirtualMachineTests
 		"\tmutable values = Dictionary(Number, Number)",
 		"\tvalues.Add(1, number)",
 		"\tvalues.Add(2, number + 10)",
-		"\tvalues.Remove(1)")]
+		"\tvalues.Remove(1)",
+		"\tvalues.Get(0)")]
 	public void DictionaryRemove(string methodCall, string expected, params string[] code)
 	{
 		var statements =
