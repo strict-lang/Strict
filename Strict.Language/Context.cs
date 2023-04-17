@@ -105,7 +105,7 @@ public abstract class Context
 		var argumentTypes = GetArgumentTypes(rest.Split(',', StringSplitOptions.TrimEntries));
 		return mainType.GetGenericImplementation(argumentTypes);
 	}
-	
+
 	private static NamedType[] GetNamedTypes(Type mainType, IReadOnlyList<string> argumentTypeNames)
 	{
 		var namedTypes = new NamedType[argumentTypeNames.Count];

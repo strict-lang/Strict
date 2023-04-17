@@ -587,7 +587,7 @@ public sealed class TypeTests
 		var superThingUser = CreateType("SuperThingUser", "has input = SuperThing(7)",
 			"UseSuperThing Number",
 			"\tinput to Number is \"7\" to Number",
-			"\tinput is \"7\"",
+			"\tinput is 7",
 			"\tinput");
 		superThingUser.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(superThingUser.Members[0].Type, Is.EqualTo(thing.GetType(Base.Character)));

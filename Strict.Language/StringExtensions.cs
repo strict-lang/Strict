@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-
-namespace Strict.Language;
+﻿namespace Strict.Language;
 
 public static class StringExtensions
 {

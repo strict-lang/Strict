@@ -86,7 +86,8 @@ public class NoConsoleWriteLineAllowed
 	public void CheckIfConsoleIsEmpty()
 	{
 		if (ConsoleWriter.IsEmpty ||
-			TestContext.CurrentContext.Result.Outcome.Status is TestStatus.Failed)
+				TestContext.CurrentContext.Result.Outcome.Status is TestStatus.Failed)
+			// ReSharper disable once RedundantJumpStatement
 			return;
 		/*tst
 		var textInConsole = ConsoleWriter.GetTextAndClear();

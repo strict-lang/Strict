@@ -101,13 +101,14 @@ public sealed class ByteCodeGenerator
 	private void GenerateStatementsFromExpression(Expression expression)
 	{
 		if (new[]
-			{
-				TryGenerateBodyStatements, TryGenerateBinaryStatements, TryGenerateIfStatements,
-				TryGenerateAssignmentStatements, TryGenerateLoopStatements,
-				TryGenerateMutableStatements, TryGenerateMemberCallStatement,
-				TryGenerateToOperatorStatement, TryGenerateVariableCallStatement,
-				TryGenerateMethodCallStatement, TryGenerateValueStatement, TryGenerateListCallStatement,
-			}.Any(method => method(expression)))
+				{
+					TryGenerateBodyStatements, TryGenerateBinaryStatements, TryGenerateIfStatements,
+					TryGenerateAssignmentStatements, TryGenerateLoopStatements,
+					TryGenerateMutableStatements, TryGenerateMemberCallStatement,
+					TryGenerateToOperatorStatement, TryGenerateVariableCallStatement,
+					TryGenerateMethodCallStatement, TryGenerateValueStatement, TryGenerateListCallStatement
+				}.Any(method => method(expression)))
+			// ReSharper disable once RedundantJumpStatement
 			return;
 	}
 

@@ -296,7 +296,7 @@ public class MethodExpressionParser : ExpressionParser
 				catch (UnknownExpression ex)
 				{
 					throw new UnknownExpressionForArgument(body,
-						span.ToString() + " is invalid for argument " + expressions.Count + " " + ex.Message);
+						span + " is invalid for argument " + expressions.Count + " " + ex.Message);
 				}
 				if (postfix.Output.Count > 0 && inner[postfix.Output.Pop().Start.Value] != ',')
 					throw new ListTokensAreNotSeparatedByComma(body);

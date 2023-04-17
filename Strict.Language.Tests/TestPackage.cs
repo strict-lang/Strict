@@ -1,6 +1,4 @@
-using Newtonsoft.Json.Linq;
 using Strict.Language.Expressions;
-using System.Xml.Linq;
 
 namespace Strict.Language.Tests;
 
@@ -97,6 +95,9 @@ public class TestPackage : Package
 		var character = new Type(this, new TypeLines(Base.Character,
 			"has number",
 			"from",
+			"\tCharacter(7) is \"7\"",
+			"\tCharacter(0) + number",
+			"from(number)",
 			"\tCharacter(7) is \"7\"",
 			"\tCharacter(0) + number",
 			"to Number",

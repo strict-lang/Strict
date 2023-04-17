@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-
-namespace Strict.Language;
+﻿namespace Strict.Language;
 
 /// <summary>
 /// Extends a generic type with more generic details, this is NOT an implementation yet, e.g.

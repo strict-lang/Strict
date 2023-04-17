@@ -1,4 +1,5 @@
 ﻿using Type = Strict.Language.Type;
+
 namespace Strict.VirtualMachine;
 
 public sealed class ConversionStatement : RegisterStatement
