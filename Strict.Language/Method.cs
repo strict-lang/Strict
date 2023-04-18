@@ -25,9 +25,8 @@ public sealed class Method : Context
 			: ParseReturnType(type, restSpan);
 		if (lines.Count > 1)
 			methodBody = PreParseBody();
-		if (restSpan.Length is 0)
-			return;
-		ParseParameters(type, restSpan);
+		if (restSpan.Length is not 0)
+			ParseParameters(type, restSpan);
 	}
 
 	public sealed class MethodLengthMustNotExceedTwelve : ParsingFailed
@@ -337,7 +336,18 @@ public sealed class Method : Context
 		if (methodBody.Method != this)
 			throw new NotSupportedException("methodBody is not matching this method anymore " + this);
 		Console.WriteLine(methodBody + " parse");
-		return methodBody.Parse();
+		var expression = methodBody.Parse();
+		if (Tests.Count < 1 && !IsTestPackage())
+			throw new MethodMustHaveAtLeastOneTest(Type, Name, TypeLineNumber);
+		return expression;
+	}
+
+	private bool IsTestPackage() => Type.Package.Name == "TestPackage" || Name == "Run";
+
+	public sealed class MethodMustHaveAtLeastOneTest : ParsingFailed
+	{
+		public MethodMustHaveAtLeastOneTest(Type type, string name, int typeLineNumber) : base(type,
+			typeLineNumber, name) { }
 	}
 
 	public class CannotCallBodyOnTraitMethod : Exception { }

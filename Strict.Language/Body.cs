@@ -44,7 +44,6 @@ public sealed class Body : Expression
 	public Expression Parse()
 	{
 		Console.WriteLine(Method + " Body.Parse " + LineRange);
-		//TODO: still has to be done! tests are STILL NOT ENFORCED as required by the language specification! https://deltaengine.fogbugz.com/f/cases/25714/
 		var expressions = new List<Expression>();
 		for (ParsingLineNumber = LineRange.Start.Value; ParsingLineNumber < LineRange.End.Value;
 			ParsingLineNumber++)

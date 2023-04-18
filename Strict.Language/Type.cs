@@ -596,7 +596,7 @@ public class Type : Context
 
 	public Method GetMethod(string methodName, IReadOnlyList<Expression> arguments, ExpressionParser parser) =>
 		FindMethod(methodName, arguments, parser) ??
-		throw new Type.NoMatchingMethodFound(this, methodName, AvailableMethods);
+		throw new NoMatchingMethodFound(this, methodName, AvailableMethods);
 
 	public Method? FindMethod(string methodName, IReadOnlyList<Expression> arguments,
 		ExpressionParser parser)

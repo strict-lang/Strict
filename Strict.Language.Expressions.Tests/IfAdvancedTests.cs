@@ -89,6 +89,7 @@ public sealed class IfAdvancedTests : TestExpressions
 				// @formatter:off
 				"has log",
 				"InvalidRun Number",
+				"	InvalidRun is 6",
 				"	if 5 is 5",
 				"		constant file = File(\"test.txt\")",
 				"		return Character(5)",
@@ -104,7 +105,7 @@ public sealed class IfAdvancedTests : TestExpressions
 			new TypeLines(nameof(MultiLineThenAndElseWithMatchingMethodReturnType),
 				// @formatter:off
 				"has log",
-				"ValidRun Text",
+				"Run Text",
 				"	if 5 is 5",
 				"		constant file = File(\"test.txt\")",
 				"		return \"Hello\"",
@@ -142,7 +143,7 @@ public sealed class IfAdvancedTests : TestExpressions
 			new TypeLines(nameof(ValidMultipleElseIf),
 				// @formatter:off
 				"has log",
-				"ValidRun Text",
+				"Run Text",
 				"	if 5 is 5",
 				"		return \"Hello\"",
 				"	else if 6 is 6",

@@ -1,5 +1,6 @@
 using NUnit.Framework;
 using Strict.Language.Expressions;
+using static Strict.Language.Method;
 using static Strict.Language.NamedType;
 
 namespace Strict.Language.Tests;
@@ -223,4 +224,21 @@ public sealed class MethodTests
 			() => new Method(type, 0, new MethodExpressionParser(),
 				new[] { "Run(input Number = 5)", "	5" }),
 			Throws.InstanceOf<AssignmentWithInitializerTypeShouldNotHaveNameWithType>());
+
+	[Test]
+	public void MethodMustHaveAtLeastOneTest() =>
+		Assert.That(
+			() => new Method(
+					new Type(new Package(nameof(MethodMustHaveAtLeastOneTest)), new MockRunTypeLines()), 0,
+					new MethodExpressionParser(), new[] { "NoTestMethod Number", "	5" }).
+				GetBodyAndParseIfNeeded(), Throws.InstanceOf<MethodMustHaveAtLeastOneTest>());
+
+	[Test]
+	public void MethodWithTestsAreAllowed()
+	{
+		var methodWithTestsType = new Type(new Package(new TestPackage(), nameof(MethodWithTestsAreAllowed)), new TypeLines(nameof(MethodWithTestsAreAllowed),
+			"has log", "MethodWithTestsAreAllowed Number", "\tMethodWithTestsAreAllowed is 5", "\t5"));
+		methodWithTestsType.ParseMembersAndMethods(new MethodExpressionParser());
+		Assert.That(() => methodWithTestsType.Methods[0].GetBodyAndParseIfNeeded(), Throws.Nothing);
+	}
 }
