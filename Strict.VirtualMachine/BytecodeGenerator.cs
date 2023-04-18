@@ -421,18 +421,17 @@ public sealed class ByteCodeGenerator
 				GetInstructionBasedOnBinaryOperationName(binaryInstance.Method.Name)),
 			MethodCall =>
 				InvokeAndGetStoredRegisterForConditional(
-					condition), //ncrunch: no coverage, TODO: missing tests
+					condition),
 			_ => LoadVariableForIfConditionLeft(condition)
 		};
 
-	//ncrunch: no coverage start, TODO: missing tests
 	private Register InvokeAndGetStoredRegisterForConditional(Binary condition)
 	{
 		if (condition.Instance == null)
 			throw new InvalidOperationException(); //ncrunch: no coverage
 		GenerateStatementsFromExpression(condition.Instance);
 		return registry.PreviousRegister;
-	} //ncrunch: no coverage end
+	}
 
 	private Register LoadVariableForIfConditionLeft(Binary condition)
 	{

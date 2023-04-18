@@ -12,7 +12,7 @@ public sealed class InvokeStatement : RegisterStatement
 		PersistedRegistry = persistedRegistry;
 	}
 
-	//ncrunch: no coverage start, TODO: missing tests
+	//ncrunch: no coverage start, For tests only
 	public InvokeStatement(string methodCall, Register register) :
 		base(register, Instruction.Invoke) =>
 		MethodCallText = methodCall;

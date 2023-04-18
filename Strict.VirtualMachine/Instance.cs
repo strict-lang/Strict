@@ -4,7 +4,6 @@ using Type = Strict.Language.Type;
 
 namespace Strict.VirtualMachine;
 
-//TODO: Change this class so Value is always expression not an object! (LM)
 /// <summary>
 ///   The only place where we can have a "static" method call to one of the from methods of a type
 ///   before we have a type instance yet, it is the only way to create instances.
@@ -108,17 +107,8 @@ public sealed class Instance
 	private static Instance AddElementToTheListAndGetInstance(Instance left, Instance right)
 	{
 		var elements = new List<Expression>((List<Expression>)left.Value);
-		//TODO: Cover the tests for this case or delete (LM) ncrunch: no coverage start
-		if (right.Value is Expression rightExpression)
-		{
-			elements.Add(rightExpression);
-		}
-		//ncrunch: no coverage end
-		else
-		{
-			var rightValue = new Value(elements.First().ReturnType, right.Value);
-			elements.Add(rightValue);
-		}
+		var rightValue = new Value(elements.First().ReturnType, right.Value);
+		elements.Add(rightValue);
 		return new Instance(left.ReturnType, elements);
 	}
 

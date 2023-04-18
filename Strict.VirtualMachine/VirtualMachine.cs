@@ -1,5 +1,4 @@
-﻿using System.Data;
-using Strict.Language;
+﻿using Strict.Language;
 using Strict.Language.Expressions;
 
 namespace Strict.VirtualMachine;
@@ -65,7 +64,9 @@ public sealed class VirtualMachine
 			list.RemoveAll(expression => ((Value)expression).Data.Equals(item));
 		}
 		else if (statement is RemoveFromTableStatement removeFromTableStatement)
+		{
 			Memory.Registers[removeFromTableStatement.Register].GetRawValue();
+		}
 	}
 
 	private void TryExecuteListCall(Statement statement)
@@ -142,20 +143,19 @@ public sealed class VirtualMachine
 
 	private List<Statement> GetByteCodeFromInvokedMethodCall(InvokeStatement invokeStatement)
 	{
-		if (invokeStatement.PersistedRegistry == null || invokeStatement.MethodCall == null)
-			throw new InvalidExpressionException(); //TODO: Cover this line ncrunch: no coverage
-		if (invokeStatement.MethodCall.Instance == null)
+		if (invokeStatement.MethodCall?.Instance == null &&
+			invokeStatement.MethodCall?.Method != null && invokeStatement.PersistedRegistry != null)
 			return new ByteCodeGenerator(
 					new InvokedMethod(
 						((Body)invokeStatement.MethodCall.Method.GetBodyAndParseIfNeeded()).Expressions,
 						FormArgumentsForMethodCall(invokeStatement)), invokeStatement.PersistedRegistry).
 				Generate();
-		var instance = GetVariableInstanceFromMemory(invokeStatement.MethodCall.Instance.ToString());
+		var instance = GetVariableInstanceFromMemory(invokeStatement.MethodCall?.Instance?.ToString() ?? throw new InvalidOperationException());
 		return new ByteCodeGenerator(
 			new InstanceInvokedMethod(
 				((Body)invokeStatement.MethodCall.Method.GetBodyAndParseIfNeeded()).Expressions,
 				FormArgumentsForMethodCall(invokeStatement), instance),
-			invokeStatement.PersistedRegistry).Generate();
+			invokeStatement.PersistedRegistry ?? throw new InvalidOperationException()).Generate();
 	}
 
 	private Instance GetVariableInstanceFromMemory(string variableIdentifier)
@@ -203,7 +203,7 @@ public sealed class VirtualMachine
 			return; //ncrunch: no coverage
 		if (!iteratorInitialized)
 			InitializeIterator(
-				iterableVariable); //TODO: Get rid of this and figure out something better. (LM)
+				iterableVariable);
 		AlterValueVariable(iterableVariable);
 	}
 
