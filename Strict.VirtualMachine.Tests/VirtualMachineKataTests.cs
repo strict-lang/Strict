@@ -8,7 +8,7 @@ public class VirtualMachineTestsKata : VirtualMachineTests
 	public void BestTimeToBuyStocksKata()
 	{
 		var statements = new ByteCodeGenerator(GenerateMethodCallFromSource("Stock",
-			"Stock((7, 1, 5, 3, 6, 4)).MaxProfit", "has prices Numbers", "MaxProfit Number",
+			"Stock(7, 1, 5, 3, 6, 4).MaxProfit", "has prices Numbers", "MaxProfit Number",
 			"\tmutable min = 999", //Need to implement int.MaxValue
 			"\tmutable max = 0", "\tfor prices", "\t\tif value < min", "\t\t\tmin = value",
 			"\t\telse if value - min > max", "\t\t\tmax = value - min", "\tmax")).Generate();
@@ -24,7 +24,7 @@ public class VirtualMachineTestsKata : VirtualMachineTests
 		Assert.That(vm.Execute(statements).Returns?.Value, Is.EqualTo(expectedResult));
 	}
 
-	[TestCase("Invertor((1, 2, 3, 4, 5)).Invert", "-1-2-3-4-5")]
+	[TestCase("Invertor(1, 2, 3, 4, 5).Invert", "-1-2-3-4-5")]
 	public void InvertValues(string methodCall, string expectedResult)
 	{
 		var statements = new ByteCodeGenerator(GenerateMethodCallFromSource("Invertor",
@@ -36,7 +36,7 @@ public class VirtualMachineTestsKata : VirtualMachineTests
 	public void CountingSheepKata()
 	{
 		var statements = new ByteCodeGenerator(GenerateMethodCallFromSource("SheepCounter",
-			"SheepCounter((true, true, true, false, true, true, true, true, true, false, true, false, true, false, false, true, true, true, true, true, false, false, true, true)).Count",
+			"SheepCounter(true, true, true, false, true, true, true, true, true, false, true, false, true, false, false, true, true, true, true, true, false, false, true, true).Count",
 			"has sheep Booleans", "Count Number", "\tmutable result = 0",
 			"\tfor sheep", "\t\tif value", "\t\t\tresult = result + 1", "\tresult")).Generate();
 		Assert.That(vm.Execute(statements).Returns!.Value, Is.EqualTo(17));

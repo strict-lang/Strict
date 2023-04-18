@@ -55,19 +55,29 @@ public sealed class Instance
 
 	public static Instance operator +(Instance left, Instance right)
 	{
+		if (!left.TypeName.StartsWith(Base.List, StringComparison.Ordinal))
+			return HandleTextTypeConversionForBinaryOperations(left, right, BinaryOperator.Plus);
+		return left.ReturnType is GenericTypeImplementation { Name: Base.List }
+			? new Instance(left.ReturnType, left.Value + right.Value.ToString())
+			: AddElementToTheListAndGetInstance(left, right);
+	}
+
+	private static Instance HandleTextTypeConversionForBinaryOperations(Instance left,
+		Instance right, string binaryOperator)
+	{
 		var leftReturnTypeName = left.TypeName;
 		var rightReturnTypeName = right.TypeName;
 		if (leftReturnTypeName == Base.Number && rightReturnTypeName == Base.Number)
 			return new Instance(right.ReturnType ?? left.ReturnType,
-				Convert.ToDouble(left.Value) + Convert.ToDouble(right.Value));
+				binaryOperator == BinaryOperator.Plus
+					? Convert.ToDouble(left.Value) + Convert.ToDouble(right.Value)
+					: Convert.ToDouble(left.Value) - Convert.ToDouble(right.Value));
 		if (leftReturnTypeName == Base.Text && rightReturnTypeName == Base.Text)
 			return new Instance(right.ReturnType ?? left.ReturnType,
 				left.Value.ToString() + right.Value);
 		if (rightReturnTypeName == Base.Text && leftReturnTypeName == Base.Number)
 			return new Instance(right.ReturnType, left.Value.ToString() + right.Value);
-		return left.ReturnType is GenericTypeImplementation { Name: Base.List }
-			? new Instance(left.ReturnType, left.Value + right.Value.ToString())
-			: AddElementToTheListAndGetInstance(left, right);
+		return new Instance(left.ReturnType, left.Value + right.Value.ToString());
 	}
 
 	public static Instance operator -(Instance left, Instance right)
@@ -77,7 +87,9 @@ public sealed class Instance
 				Convert.ToDouble(left.Value) - Convert.ToDouble(right.Value));
 		var elements = new List<Expression>((List<Expression>)left.Value);
 		if (right.Value is Expression rightExpression)
+		{
 			elements.Remove(rightExpression);
+		}
 		else
 		{
 			var indexToRemove =

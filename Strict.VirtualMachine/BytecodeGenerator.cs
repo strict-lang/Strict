@@ -55,7 +55,7 @@ public sealed class ByteCodeGenerator
 				})
 				statements.Add(new StoreVariableStatement(
 					new Instance(instance.Method.Parameters[parameterIndex].Type,
-						instance.Arguments[parameterIndex]),
+						instance.Arguments),
 					instance.ReturnType.Members[parameterIndex].Name));
 			else
 				statements.Add(new StoreVariableStatement(
@@ -182,13 +182,13 @@ public sealed class ByteCodeGenerator
 	{
 		if (expression is Binary || expression is not MethodCall methodCall)
 			return false;
-		if (TrytGenerateStatementForCollectionManipulation(methodCall))
+		if (TryGenerateStatementForCollectionManipulation(methodCall))
 			return true;
 		statements.Add(new InvokeStatement(methodCall, registry.AllocateRegister(), registry));
 		return true;
 	}
 
-	public bool TrytGenerateStatementForCollectionManipulation(MethodCall methodCall)
+	public bool TryGenerateStatementForCollectionManipulation(MethodCall methodCall)
 	{
 		switch (methodCall.Method.Name)
 		{
@@ -212,7 +212,7 @@ public sealed class ByteCodeGenerator
 		if (methodCall.Instance == null)
 			return;
 		GenerateStatementsFromExpression(methodCall.Arguments[0]);
-		if (methodCall.Instance.ReturnType.Name.EndsWith('s'))
+		if (methodCall.Instance.ReturnType is GenericTypeImplementation { Generic.Name: Base.List })
 			statements.Add(new RemoveStatement(methodCall.Instance.ToString(),
 				registry.PreviousRegister));
 		else

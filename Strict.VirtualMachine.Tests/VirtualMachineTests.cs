@@ -109,7 +109,7 @@ public class VirtualMachineTests : BaseVirtualMachineTests
 	public void AccessListByIndex()
 	{
 		var statements = new ByteCodeGenerator(GenerateMethodCallFromSource("AccessList",
-			"AccessList((1, 2, 3, 4, 5)).Get(2)", "has numbers", "Get(index Number) Number",
+			"AccessList(1, 2, 3, 4, 5).Get(2)", "has numbers", "Get(index Number) Number",
 			"\tconstant element = numbers(index)", "\telement")).Generate();
 		Assert.That(vm.Execute(statements).Returns?.Value, Is.EqualTo(3));
 	}
@@ -118,7 +118,7 @@ public class VirtualMachineTests : BaseVirtualMachineTests
 	public void AccessListByIndexNonNumberType()
 	{
 		var statements = new ByteCodeGenerator(GenerateMethodCallFromSource("AccessList",
-			"AccessList((\"1\", \"2\", \"3\", \"4\", \"5\")).Get(2)", "has texts", "Get(index Number) Text",
+			"AccessList(\"1\", \"2\", \"3\", \"4\", \"5\").Get(2)", "has texts", "Get(index Number) Text",
 			"\tconstant element = texts(index)", "\telement")).Generate();
 		Assert.That(vm.Execute(statements).Returns?.Value, Is.EqualTo("3"));
 	}
@@ -187,7 +187,7 @@ public class VirtualMachineTests : BaseVirtualMachineTests
 			"has number", "IsEven Number", "\tmutable sum = 0", "\tfor number",
 			"\t\tif (index % 2) is 0", "\t\t\tsum = sum + index", "\tsum"
 		})]
-	[TestCase("EvenSumCalculatorForList((100, 200, 300)).IsEvenList", 2, "EvenSumCalculatorForList",
+	[TestCase("EvenSumCalculatorForList(100, 200, 300).IsEvenList", 2, "EvenSumCalculatorForList",
 		new[]
 		{
 			"has numbers", "IsEvenList Number",
@@ -227,7 +227,7 @@ public class VirtualMachineTests : BaseVirtualMachineTests
 			"\t\t\tmyList = myList - 400",
 			"\tmyList"
 		})]
-	[TestCase("RemoveB((\"s\", \"b\", \"s\")).Remove", "s s", "RemoveB",
+	[TestCase("RemoveB(\"s\", \"b\", \"s\").Remove", "s s", "RemoveB",
 		new[]
 		{
 			"has texts",
@@ -238,7 +238,7 @@ public class VirtualMachineTests : BaseVirtualMachineTests
 			"\t\t\ttextList = textList - value",
 			"\ttextList"
 		})]
-	[TestCase("ListRemove((\"s\", \"b\", \"s\")).Remove", "s s", "ListRemove",
+	[TestCase("ListRemove(\"s\", \"b\", \"s\").Remove", "s s", "ListRemove",
 		new[]
 		{
 			"has texts",
@@ -247,7 +247,7 @@ public class VirtualMachineTests : BaseVirtualMachineTests
 			"\ttextList.Remove(\"b\")",
 			"\ttextList"
 		})]
-	[TestCase("ListRemoveMultiple((\"s\", \"b\", \"s\")).Remove", "b", "ListRemoveMultiple",
+	[TestCase("ListRemoveMultiple(\"s\", \"b\", \"s\").Remove", "b", "ListRemoveMultiple",
 		new[]
 		{
 			"has texts",
@@ -256,7 +256,7 @@ public class VirtualMachineTests : BaseVirtualMachineTests
 			"\ttextList.Remove(\"s\")",
 			"\ttextList"
 		})]
-	[TestCase("RemoveDuplicates((\"s\", \"b\", \"s\")).Remove", "s b", "RemoveDuplicates",
+	[TestCase("RemoveDuplicates(\"s\", \"b\", \"s\").Remove", "s b", "RemoveDuplicates",
 		new[]
 		{
 			"has texts",
@@ -277,7 +277,7 @@ public class VirtualMachineTests : BaseVirtualMachineTests
 		Assert.That(elements.Trim(), Is.EqualTo(expectedResult));
 	} //ncrunch: no coverage end
 
-	[TestCase("TestContains((\"s\", \"b\", \"s\")).Contains(\"b\")", "True", "TestContains",
+	[TestCase("TestContains(\"s\", \"b\", \"s\").Contains(\"b\")", "True", "TestContains",
 		new[]
 		{
 			"has elements Texts",

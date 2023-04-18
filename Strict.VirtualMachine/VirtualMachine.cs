@@ -123,7 +123,7 @@ public sealed class VirtualMachine
 
 	private void TryInvokeInstruction(Statement statement)
 	{
-		if (statement is not InvokeStatement { MethodCall: { } } invokeStatement)
+		if (statement is not InvokeStatement { MethodCall: not null } invokeStatement)
 			return;
 		var methodStatements = GetByteCodeFromInvokedMethodCall(invokeStatement);
 		var instance = new VirtualMachine
