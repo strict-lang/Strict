@@ -579,6 +579,15 @@ public sealed class TypeTests
 				"has input = Range(5, 10)", "Unused", "\t1"),
 			Throws.InstanceOf<MethodExpressionParser.CannotAccessMemberBeforeTypeIsParsed>()!);
 
+	[TestCase(Base.Number, false)]
+	[TestCase(Base.Number + "s", true)]
+	[TestCase(Base.Character, false)]
+	[TestCase(Base.Character + "s", true)]
+	[TestCase(Base.Text, true)]
+	[TestCase(Base.Text + "s", true)]
+	[TestCase(Base.Boolean, false)]
+	public void ValidateIsIterator(string name, bool expected) => Assert.That(package.GetType(name).IsIterator, Is.EqualTo(expected));
+
 	[Test]
 	public void InitializeInnerTypeMemberUsingOuterTypeConstructor()
 	{

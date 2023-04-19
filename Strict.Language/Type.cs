@@ -690,8 +690,33 @@ public class Type : Context
 	/// or Error.strict have public members you have to iterate over yourself.
 	/// If there are two private iterators, then pick the first member automatically
 	/// </summary>
-	public bool IsIterator =>
-		Name == Base.Iterator || members.Any(member => !member.IsPublic && member.Type.IsIterator);
+	public bool IsIterator => Name == Base.Iterator || HasAnyIteratorMember();
+
+	private bool HasAnyIteratorMember()
+	{
+		if (cachedIteratorResult != null)
+			return cachedIteratorResult.Value;
+		cachedIteratorResult = ExecuteIsIteratorCheck();
+		return (bool)cachedIteratorResult;
+	}
+
+	private bool ExecuteIsIteratorCheck()
+	{
+		foreach (var member in members)
+		{
+			if (cachedEvaluatedMemberTypes.TryGetValue(member.Type.Name, out var result))
+				return result;
+			var isIterator = !member.IsPublic && member.Type.IsIterator;
+			cachedEvaluatedMemberTypes.Add(member.Type.Name, isIterator);
+			if (isIterator)
+				return true;
+		}
+		return false;
+	}
+
+	private bool? cachedIteratorResult;
+	private Dictionary<string, bool> cachedEvaluatedMemberTypes = new();
+
 
 	private Method? FindAndCreateFromBaseMethod(string methodName,
 		IReadOnlyList<Expression> arguments, ExpressionParser parser)

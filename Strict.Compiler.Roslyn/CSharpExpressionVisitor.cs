@@ -44,8 +44,8 @@ public class CSharpExpressionVisitor : ExpressionVisitor
 			Base.None => "void",
 			Base.Number => "int",
 			Base.Text => "string",
-			Base.Boolean => "bool", //ncrunch: no coverage, TODO: missing tests
-			"File" => "FileStream", //ncrunch: no coverage, TODO: missing tests
+			Base.Boolean => "bool",
+			"File" => "FileStream",
 			_ => type.Name
 		};
 	}
@@ -63,13 +63,8 @@ public class CSharpExpressionVisitor : ExpressionVisitor
 			_ => methodName
 		};
 
-	protected override string Visit(ConstantDeclaration constantDeclaration)
-	{
-		var value = Visit(constantDeclaration.Value);
-		if (value.StartsWith("Mutable ", StringComparison.OrdinalIgnoreCase))
-			value = "Mutable(" + value["Mutable ".Length..] + ")"; //ncrunch: no coverage, TODO: missing tests, also what is this, everything in c# is mutable, why would we need this?
-		return "var " + constantDeclaration.Name + " = " + value;
-	}
+	protected override string Visit(ConstantDeclaration constantDeclaration) =>
+		"var " + constantDeclaration.Name + " = " + Visit(constantDeclaration.Value);
 
 	protected override string Visit(Return returnExpression) =>
 		"return " + Visit(returnExpression.Value);

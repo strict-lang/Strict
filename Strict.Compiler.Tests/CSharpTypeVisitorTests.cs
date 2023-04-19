@@ -29,16 +29,18 @@ public sealed class CSharpTypeVisitorTests : TestCSharpGenerator
 			visitor.FileContent);
 	}
 
-	[Test]
-	public void GenerateInterface()
+	[TestCase("number", "int")]
+	[TestCase("boolean", "bool")]
+	[TestCase("file", "FileStream")]
+	public void GenerateInterface(string parameter, string expectedType)
 	{
 		var interfaceType =
-			new Type(package, new TypeLines(Computer, "Compute(number)")).ParseMembersAndMethods(parser);
+			new Type(package, new TypeLines(Computer, $"Compute({parameter})")).ParseMembersAndMethods(parser);
 		var visitor = new CSharpTypeVisitor(interfaceType);
 		Assert.That(visitor.Name, Is.EqualTo(Computer));
 		Assert.That(visitor.FileContent, Contains.Substring("public interface " + Computer));
 		Assert.That(visitor.FileContent,
-			Contains.Substring("\tvoid Compute(int number);" + Environment.NewLine));
+			Contains.Substring($"\tvoid Compute({expectedType} {parameter});" + Environment.NewLine));
 	}
 
 	private const string Computer = "Computer";
@@ -80,7 +82,7 @@ public sealed class CSharpTypeVisitorTests : TestCSharpGenerator
 	{
 		var interfaceType =
 			new Type(package,
-					new TypeLines(Computer, "has number", "has log", "Run", "\tlog.Write(number)")).
+					new TypeLines(Computer, "has inputValue = 5", "has log", "Run", "\tlog.Write(inputValue)")).
 				ParseMembersAndMethods(parser);
 		var visitor = new CSharpTypeVisitor(interfaceType);
 		Assert.That(visitor.Name, Is.EqualTo(Computer));
@@ -125,7 +127,7 @@ public sealed class CSharpTypeVisitorTests : TestCSharpGenerator
 		Assert.That(
 			new CSharpTypeVisitor(
 				new Type(package,
-					new TypeLines(Computer, "has log", "Run", "\tconstant random = \"test\"",
+					new TypeLines(Computer, "has log", "has file", "Run", "\tconstant random = \"test\"",
 						"\tlog.Write(random)")).ParseMembersAndMethods(parser)).FileContent,
 			Contains.Substring("\tConsole.WriteLine(random);"));
 

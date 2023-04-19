@@ -72,9 +72,9 @@ public sealed class CSharpTypeVisitor : TypeVisitor
 	{
 		var initializationExpression = "";
 		if (member.Value != null)
-			initializationExpression += " = " + expressionVisitor.Visit(member.Value); //ncrunch: no coverage, TODO: missing tests
+			initializationExpression += " = " + expressionVisitor.Visit(member.Value);
 		if (member.Name == "file")
-			accessModifier += " static"; //ncrunch: no coverage, TODO: missing tests
+			accessModifier += " static";
 		if (string.IsNullOrEmpty(initializationExpression) && member.Type.IsIterator)
 			initializationExpression += $" = new {csharpTypeName}()";
 		return initializationExpression;
