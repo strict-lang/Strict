@@ -49,21 +49,15 @@ public class MethodExpressionParser : ExpressionParser
 				? throw new Body.IdentifierNotFound(body, input.ToString())
 				: throw new UnknownExpression(body, input.ToString()));
 
-	//TODO: clean comments up
-	private Expression? TryParseErrorOrTextOrListOrConditionalExpression(Body body, ReadOnlySpan<char> input) =>
+	private Expression? TryParseErrorOrTextOrListOrConditionalExpression(Body body,
+		ReadOnlySpan<char> input) =>
 		input.StartsWith("Error ")
 			? TryParseErrorExpression(body, input[6..])
-			:
-			// If this is just a simple text string, there is no need to invoke ShuntingYard
-			input[0] == '"' && input[^1] == '"' && input.Count('"') == 2
+			: input[0] == '"' && input[^1] == '"' && input.Count('"') == 2
 				? new Text(body.Method, input.Slice(1, input.Length - 2).ToString())
-				:
-				// If this is just a simple list, no need to invoke ShuntingYard yet, grab each list element
-				input[0] == '(' && input[^1] == ')' && input.Contains(',') && input.Count('(') == 1
+				: input[0] == '(' && input[^1] == ')' && input.Contains(',') && input.Count('(') == 1
 					? new List(body, body.Method.ParseListArguments(body, input[1..^1]))
-					:
-					// Conditionals are only supported here and can't be nested
-					If.CanTryParseConditional(body, input)
+					: If.CanTryParseConditional(body, input)
 						? If.ParseConditional(body, input)
 						: null;
 

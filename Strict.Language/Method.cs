@@ -153,13 +153,13 @@ public sealed class Method : Context
 	private static SpanSplitEnumerator SplitParameters(ReadOnlySpan<char> rest, int closingBracketIndex)
 	{
 		var parametersSpan = rest[1..closingBracketIndex];
-		return parametersSpan.Contains('(') && (!parametersSpan.Contains(',') || IsCommaInsideBrackets(parametersSpan))
+		return parametersSpan.Contains('(') && (!parametersSpan.Contains(',') || IsCommaInsideBrackets(parametersSpan, parametersSpan.IndexOf(',')))
 			? new SpanSplitEnumerator(parametersSpan, char.MaxValue, StringSplitOptions.None)
 			: parametersSpan.Split(',', StringSplitOptions.TrimEntries);
 	}
 
-	private static bool IsCommaInsideBrackets(ReadOnlySpan<char> parametersSpan) =>
-		parametersSpan.IndexOf(')') > parametersSpan.IndexOf(',');
+	private static bool IsCommaInsideBrackets(ReadOnlySpan<char> parametersSpan, int commaIndex) =>
+		parametersSpan.IndexOf(')') > commaIndex && parametersSpan.LastIndexOf('(') < commaIndex;
 
 	public sealed class ParametersMustStartWithLowerCase : ParsingFailed
 	{
@@ -376,7 +376,7 @@ public sealed class Method : Context
 		GenericTypeImplementation typeWithImplementation, int index) =>
 		type.Name == Base.Generic
 			? typeWithImplementation.ImplementationTypes[index] //Number
-			: (type.IsGeneric || type.Name == Base.List) && type.Name != Base.Iterator //TODO: remove these hacks, needs to work for any generic!
+			: type.IsGeneric
 				? typeWithImplementation //ListNumber
 				: type;
 
