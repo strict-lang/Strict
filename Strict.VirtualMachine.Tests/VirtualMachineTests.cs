@@ -335,7 +335,7 @@ public class VirtualMachineTests : BaseVirtualMachineTests
 		"AddToDictionary Number",
 		"\tmutable values = Dictionary(Number, Number)",
 		"\tvalues.Add(1, number)",
-		"\tvalues.Get(0)")]
+		"\tvalues.Get(1)")]
 	public void DictionaryGet(string methodCall, string expected, params string[] code)
 	{
 		var statements =
