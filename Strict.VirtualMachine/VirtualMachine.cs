@@ -126,6 +126,8 @@ public sealed class VirtualMachine
 	{
 		if (statement is not InvokeStatement { MethodCall: not null } invokeStatement)
 			return;
+		if (GetValueByKeyForDictionaryAndStoreInRegister(invokeStatement))
+			return;
 		var methodStatements = GetByteCodeFromInvokedMethodCall(invokeStatement);
 		var instance = new VirtualMachine
 		{
@@ -139,6 +141,23 @@ public sealed class VirtualMachine
 		}.RunStatements(methodStatements).Returns;
 		if (instance != null)
 			Memory.Registers[invokeStatement.Register] = instance;
+	}
+
+	private bool GetValueByKeyForDictionaryAndStoreInRegister(InvokeStatement invokeStatement)
+	{
+		if (invokeStatement.MethodCall?.Method.Name != "Get" ||
+			invokeStatement.MethodCall.Instance?.ReturnType is not GenericTypeImplementation
+			{
+				Generic.Name: Base.Dictionary
+			})
+			return false;
+		var key = (Value)invokeStatement.MethodCall.Arguments[0];
+		var dictionary = Memory.Variables[invokeStatement.MethodCall.Instance.ToString()].Value;
+		var value = ((Dictionary<Value, Value>)dictionary).
+			FirstOrDefault(element => element.Key.Data.Equals(key.Data)).Value;
+		if (value != null)
+			Memory.Registers[invokeStatement.Register] = new Instance(value.ReturnType, value);
+		return true;
 	}
 
 	private List<Statement> GetByteCodeFromInvokedMethodCall(InvokeStatement invokeStatement)
@@ -238,8 +257,7 @@ public sealed class VirtualMachine
 		var value = iterableVariable.Value.ToString();
 		if (iterableVariable.ReturnType?.Name == Base.Text && value is not null)
 			Memory.Variables["value"] = new Instance(Base.Text, value[index].ToString());
-		else if (iterableVariable.ReturnType is GenericTypeImplementation genericIterable &&
-			genericIterable.Generic.Name == Base.List)
+		else if (iterableVariable.ReturnType is GenericTypeImplementation { Generic.Name: Base.List })
 			Memory.Variables["value"] = new Instance(((List<Expression>)iterableVariable.Value)[index]);
 		else if (iterableVariable.ReturnType?.Name == Base.Number)
 			Memory.Variables["value"] =
