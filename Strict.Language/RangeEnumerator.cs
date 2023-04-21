@@ -28,7 +28,7 @@ public ref struct RangeEnumerator
 		if (IsAtEnd)
 			return false;
 		for (var index = offset; index < input.Length; index++)
-			if (input[index] == splitter)
+			if (input[index] == splitter && IsNotFoundInsideBrackets(index))
 				return GetWordBeforeSplitter(index);
 		if (removeLeadingSpace && input[offset] == ' ')
 			offset++;
@@ -37,6 +37,7 @@ public ref struct RangeEnumerator
 		return true;
 	}
 
+	private bool IsNotFoundInsideBrackets(int index) => !input[..index].Contains('(') || input[..index].Contains(')');
 	public readonly bool IsAtEnd => offset >= input.Length;
 
 	private bool GetWordBeforeSplitter(int index)

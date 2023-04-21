@@ -100,6 +100,8 @@ public sealed class ForTests : TestExpressions
 
 	[TestCase("constant elements = (1, 2, 3)", "for elements", "\tlog.Write(index)",
 		"for elements\n\tlog.Write(index)")]
+	[TestCase("constant elements = (1, 2, 3)", "for Range(0, elements.Length)", "\tlog.Write(index)",
+		"for Range(0, elements.Length)\n\tlog.Write(index)")]
 	[TestCase("mutable element = 0", "for element in (1, 2, 3)", "\tlog.Write(element)",
 		"for element in (1, 2, 3)\n\tlog.Write(element)")]
 	[TestCase("constant iterationCount = 10", "for iterationCount", "\tlog.Write(index)",

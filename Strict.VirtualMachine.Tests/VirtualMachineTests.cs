@@ -308,10 +308,13 @@ public class VirtualMachineTests : BaseVirtualMachineTests
 		var statements =
 			new ByteCodeGenerator(
 				GenerateMethodCallFromSource(nameof(CollectionAdd), methodCall, code)).Generate();
-		var result = ((IEnumerable<Expression>)vm.Execute(statements).Returns?.Value!).Aggregate("",
-			(current, value) => current + ((Value)value).Data + " ");
+		var result = ExpressionListToSpaceSeparatedString(statements);
 		Assert.That(result.TrimEnd(), Is.EqualTo(expected));
 	}
+
+	private string ExpressionListToSpaceSeparatedString(IList<Statement> statements) =>
+		((IEnumerable<Expression>)vm.Execute(statements).Returns?.Value!).Aggregate("",
+			(current, value) => current + ((Value)value).Data + " ");
 
 	[Test]
 	public void DictionaryAdd()
@@ -368,13 +371,26 @@ public class VirtualMachineTests : BaseVirtualMachineTests
 	{
 		var source = new[]
 		{
-			"has number", "GetAll List(Number)", "\tfor number", "\t\tvalue"
+			"has number", "GetAll Number", "\tfor number", "\t\tvalue"
 		};
 		var statements = new ByteCodeGenerator(GenerateMethodCallFromSource(nameof(ReturnWithinALoop),
 			"ReturnWithinALoop(5).GetAll", source)).Generate();
-
 		Assert.That(() => vm.Execute(statements).Returns?.Value, Is.EqualTo(5));
 	}
+
+	[Test]
+	public void ReverseWithRange()
+	{
+		var source = new[]
+		{
+			"has numbers", "Reverse Numbers", "\tmutable result = Numbers", "\tfor Range(numbers.Length, 0)",
+			"\t\tresult.Add(numbers(index))", "\tresult"
+		};
+		var statements = new ByteCodeGenerator(GenerateMethodCallFromSource(nameof(ReverseWithRange),
+			"ReverseWithRange(1, 2, 3).Reverse", source)).Generate();
+		Assert.That(() => ExpressionListToSpaceSeparatedString(statements), Is.EqualTo("3 2 1"));
+	}
+
 	[Test]
 	public void ConditionalJump() =>
 		Assert.That(
