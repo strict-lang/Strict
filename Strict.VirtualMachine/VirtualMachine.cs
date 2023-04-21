@@ -261,7 +261,7 @@ public sealed class VirtualMachine
 			Memory.Variables["value"] = new Instance(((List<Expression>)iterableVariable.Value)[index]);
 		else if (iterableVariable.ReturnType?.Name == Base.Number)
 			Memory.Variables["value"] =
-				new Instance(Base.Number, Convert.ToInt32(iterableVariable.Value) + index);
+				new Instance(Base.Number, index + 1);
 	}
 
 	private void TryStoreInstructions(Statement statement)

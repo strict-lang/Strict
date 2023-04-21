@@ -89,7 +89,7 @@ public class VirtualMachineTests : BaseVirtualMachineTests
 			new SetStatement(new Instance(NumberType, 5), Register.R0),
 			new SetStatement(new Instance(NumberType, 1), Register.R1),
 			new SetStatement(new Instance(NumberType, 0), Register.R2),
-			new BinaryStatement(Instruction.Add, Register.R0, Register.R2, Register.R2), // R2 = R0 + R2
+			new BinaryStatement(Instruction.Add, Register.R0, Register.R2, Register.R2),
 			new BinaryStatement(Instruction.Subtract, Register.R0, Register.R1, Register.R0),
 			new JumpIfNotZeroStatement(-3, Register.R0)
 		}).Memory.Registers[Register.R2].Value, Is.EqualTo(0 + 5 + 4 + 3 + 2 + 1));
@@ -353,7 +353,7 @@ public class VirtualMachineTests : BaseVirtualMachineTests
 		"\tvalues.Add(1, number)",
 		"\tvalues.Add(2, number + 10)",
 		"\tvalues.Remove(1)",
-		"\tvalues.Get(0)")]
+		"\tvalues.Get(1)")]
 	public void DictionaryRemove(string methodCall, string expected, params string[] code)
 	{
 		var statements =
@@ -363,6 +363,18 @@ public class VirtualMachineTests : BaseVirtualMachineTests
 		Assert.That(result.ToString(), Is.EqualTo(expected));
 	}
 
+	[Test]
+	public void ReturnWithinALoop()
+	{
+		var source = new[]
+		{
+			"has number", "GetAll List(Number)", "\tfor number", "\t\tvalue"
+		};
+		var statements = new ByteCodeGenerator(GenerateMethodCallFromSource(nameof(ReturnWithinALoop),
+			"ReturnWithinALoop(5).GetAll", source)).Generate();
+
+		Assert.That(() => vm.Execute(statements).Returns?.Value, Is.EqualTo(5));
+	}
 	[Test]
 	public void ConditionalJump() =>
 		Assert.That(
