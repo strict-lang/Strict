@@ -241,4 +241,26 @@ public sealed class MethodTests
 		methodWithTestsType.ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(() => methodWithTestsType.Methods[0].GetBodyAndParseIfNeeded(), Throws.Nothing);
 	}
+
+	[Test]
+	public void ParseMethodWithMultipleReturnType()
+	{
+		var methodWithTestsType = new Type(
+			new Package(new TestPackage(), nameof(ParseMethodWithMultipleReturnType)), new TypeLines(
+				"Processor",
+			// @formatter:off
+			"has progress Number",
+			"IsJobDone Boolean or Text",
+			"\tProcessor(100).IsJobDone is true",
+			"\tProcessor(78).IsJobDone is false",
+			"\tProcessor(0).IsJobDone is \"Work not started yet\"",
+			"\tif progress is 100",
+			"\t\treturn true",
+			"\tif progress > 0",
+			"\t\treturn false",
+			"\tWork not started yet"));
+			// @formatter:on
+		methodWithTestsType.ParseMembersAndMethods(new MethodExpressionParser());
+		Assert.That(() => methodWithTestsType.Methods[0].GetBodyAndParseIfNeeded(), Throws.Nothing);
+	}
 }
