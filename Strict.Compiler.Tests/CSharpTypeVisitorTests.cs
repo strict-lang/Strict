@@ -46,9 +46,6 @@ public sealed class CSharpTypeVisitorTests : TestCSharpGenerator
 	private const string Computer = "Computer";
 
 	[Test]
-	[Ignore("TODO: this is broken: RecursiveCallCausesStackOverflow : \tsystem.WriteLine(\"Read\")")]
-	//ncrunch: no coverage start
-	//TODO: fix test
 	public void GenerateTypeThatImplementsMultipleTraits()
 	{
 		var program = new Type(package, new TypeLines(
@@ -58,24 +55,28 @@ public sealed class CSharpTypeVisitorTests : TestCSharpGenerator
 				"has Output",
 				"has system",
 				"Read Text",
-				"\tsystem.WriteLine(\"Read\")",
-				"\t\"\"",
-				"Write(generic)",
-				"\tsystem.WriteLine(\"Write\")")).
+				"\tsystem.WriteLine(\"implementing system trait\")",
+				"\tRead is \"Read successfully\"",
+				"\t\"Read successfully\"",
+				"Write(generic) Boolean",
+				"\tWrite(5) is true",
+				"\tconstant stringBuilder = \"printed successfully\"",
+				"\ttrue")).
 			// @formatter.on
 			ParseMembersAndMethods(parser);
 		var visitor = new CSharpTypeVisitor(program);
 		AssertProgramClass(visitor);
 		Assert.That(visitor.FileContent, Contains.Substring(@"	public string Read()
 	{
-		Console.WriteLine(""Read"");
-		"""";
-	}"));
-		Assert.That(visitor.FileContent, Contains.Substring(@"	public void Write(Generic generic)
+		Console.WriteLine(""implementing system trait"");
+	"));
+		Assert.That(visitor.FileContent, Contains.Substring(@"	public bool Write(Generic generic)
 	{
-		Console.WriteLine(""Write"");
+		Write(5) == true;
+		var stringBuilder = ""printed successfully"";
+		true;
 	}"));
-	} //ncrunch: no coverage end
+	}
 
 	[Test]
 	public void Import()
@@ -93,9 +94,6 @@ public sealed class CSharpTypeVisitorTests : TestCSharpGenerator
 	}
 
 	[Test]
-	[Ignore("TODO: fix: ParsingFailed : Argument: \"test.txt\" Text do not match these method(s)")]
-	//ncrunch: no coverage start
-	//TODO: fix test
 	public void MemberInitializer()
 	{
 		var program =
@@ -106,13 +104,13 @@ public sealed class CSharpTypeVisitorTests : TestCSharpGenerator
 		var visitor = new CSharpTypeVisitor(program);
 		Assert.That(visitor.Name, Is.EqualTo(Computer));
 		Assert.That(visitor.FileContent, Contains.Substring("public class " + Computer));
-		Assert.That(visitor.FileContent, Contains.Substring("\tprivate int number;"));
+		Assert.That(visitor.FileContent, Contains.Substring("\tprivate int number"));
 		Assert.That(visitor.FileContent,
 			Contains.Substring(
-				"\tprivate static FileStream file = new FileStream(\"test.txt\", FileMode.OpenOrCreate);"));
+				"\tprivate static FileStream file = new File(\"test.txt\", FileMode.OpenOrCreate);"));
 		Assert.That(visitor.FileContent,
 			Contains.Substring("\tpublic void Run()" + Environment.NewLine));
-	} //ncrunch: no coverage end
+	}
 
 	[Test]
 	public void LocalMemberNotFound() =>
@@ -132,35 +130,27 @@ public sealed class CSharpTypeVisitorTests : TestCSharpGenerator
 			Contains.Substring("\tConsole.WriteLine(random);"));
 
 	[TestCase(@"	constant file = File(""test.txt"")
-	file.Write(number)", "\tvar file = new FileStream(\"test.txt\", FileMode.OpenOrCreate);")]
+	file.Write(number)", "\tvar file = new File(\"test.txt\", FileMode.OpenOrCreate);")]
 	[TestCase(@"	File(""test"").Write(number)",
-		"\tnew FileStream(\"test\", FileMode.OpenOrCreate).Write(number);")]
-	[Ignore("TODO: fix")]
-	//ncrunch: no coverage start
-	//TODO: fix test
+		"\tnew File(\"test\", FileMode.OpenOrCreate).Write(number);")]
 	public void InitializeValueUsingConstructorInsideMethod(string code, string expected) =>
 		Assert.That(new CSharpTypeVisitor(new Type(package, new TypeLines(Computer, (@"has number
 Run
 " + code).Split(Environment.NewLine))).ParseMembersAndMethods(parser)).FileContent,
 			Contains.Substring(expected));
-	//ncrunch: no coverage end
 
-	[TestCase("l + m", "l + m")]
-	[TestCase("l - m", "l - m")]
-	[TestCase("l * m", "l * m")]
-	[Ignore("TODO: fix")]
-	//ncrunch: no coverage start
-	//TODO: fix test
+	[TestCase("ll + mm", "ll + mm")]
+	[TestCase("ll - mm", "ll - mm")]
+	[TestCase("ll * mm", "ll * mm")]
 	public void ListsBinaryOperation(string code, string expected) =>
 		Assert.That(new CSharpTypeVisitor(new Type(new TestPackage(), new TypeLines(Computer, @$"has log
 Run
-	constant l = (1, 2) + (3, 4)
-	constant m = (5, 6)
-	constant r = {
+	constant ll = (1, 2) + (3, 4)
+	constant mm = (5, 6)
+	constant rr = {
 		code
 	}".Split(Environment.NewLine))).ParseMembersAndMethods(parser)).FileContent,
-			Contains.Substring($"\tvar r = {expected};"));
-	//ncrunch: no coverage end
+			Contains.Substring($"\tvar rr = {expected};"));
 
 	[Test]
 	public void GenerateListTypeProgram()
@@ -175,35 +165,28 @@ Run
 	}
 
 	[Test]
-	[Ignore("TODO: fix")]
-	//ncrunch: no coverage start
-	//TODO: fix test
 	public void GenerateNestedBodyProgram()
 	{
 		var program = new Type(package, new TypeLines(
 				// @formatter.off
-				"Program",
-				"has system",
-				"NestedMethod Number",
-				"	if 5 is 5",
-				"		if 5 is not 6",
-				"			constant a = 5",
-				"		else",
-				"			constant b = 5")).
+				"Program", "has system", "NestedMethod Number", "	NestedMethod is 5", "	if 5 is 5",
+				"		if 5 is not 6", "			constant aa = 5", "		else", "			constant bb = 5")).
 			// @formatter.on
 			ParseMembersAndMethods(parser);
-		Assert.That(new CSharpTypeVisitor(program).FileContent, Contains.Substring(@"namespace SourceGeneratorTests;
+		Assert.That(new CSharpTypeVisitor(program).FileContent, Contains.Substring(
+			@"namespace SourceGeneratorTests;
 
 public class Program
 {
 	private System system;
 	public int NestedMethod()
 	{
-	if (5 == 5)
-		if (5 is not 6)
-			var a = 5;
-		else
-			var b = 5;
+		NestedMethod() == 5;
+		if (5 == 5)
+			if (5 is not 6)
+				var aa = 5;
+			else
+				var bb = 5;
 	}
 }"));
 	}

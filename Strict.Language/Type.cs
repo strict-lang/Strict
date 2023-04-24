@@ -764,16 +764,23 @@ public class Type : Context
 
 	public bool IsCompatible(Type sameOrBaseType) =>
 		this == sameOrBaseType || HasAnyCompatibleMember(sameOrBaseType) ||
-		CanUpCast(sameOrBaseType) || sameOrBaseType.IsMutableAndHasMatchingImplementation(this);
+		CanUpCast(sameOrBaseType) || sameOrBaseType.IsMutableAndHasMatchingImplementation(this) || CanUpCastCurrentTypeToOther(sameOrBaseType);
+
+	private bool CanUpCastCurrentTypeToOther(Type sameOrBaseType) =>
+		sameOrBaseType.members.Count == 1 && sameOrBaseType.methods.Count == 0 && sameOrBaseType.members[0].Type == this &&
+		ValidateMemberConstraints(sameOrBaseType.members[0].Constraints);
+
+	private static bool ValidateMemberConstraints(IReadOnlyCollection<Expression>? constraints) =>
+		true; // TODO: figure out how to evaluate constraints at this point
 
 	private bool HasAnyCompatibleMember(Type sameOrBaseType) =>
 		members.Any(member =>
 			member.Type == sameOrBaseType && members.Count(m => m.Type == member.Type) == 1);
 
-	// Created a case https://deltaengine.fogbugz.com/f/cases/27017
 	private bool CanUpCast(Type sameOrBaseType) =>
 		sameOrBaseType.Name == Base.Text && Name == Base.Number || sameOrBaseType.IsIterator &&
 		members.Any(member => member.Type == GetType(Base.Number));
+
 
 	private bool IsMutableAndHasMatchingImplementation(Type argumentType) =>
 		this is GenericTypeImplementation genericTypeImplementation &&
@@ -917,96 +924,6 @@ public class Type : Context
 		Console.WriteLine(this + " GetGenericTypeArguments: " + genericArguments.ToWordList());
 		return genericArguments;
 	}
-
-	/*TODO: cleanup
-		//TODO: we don't like special hacks like these!
-		if (name.StartsWith(Base.List + DoubleOpenBrackets, StringComparison.Ordinal))
-			return GetNestedListType(name);
-	
-	internal const string DoubleOpenBrackets = "((";
-
-	private Type GetNestedListType(string fullName)
-	{
-		var list = GetType(Base.List);
-		var (typeName, lines) = GetCombinedTypeNameAndLines(
-			ExtractNamesWithType(fullName));
-		var typeWithOtherTypesAsMembers = new Type(list.Package, new TypeLines(typeName, lines));
-		return list.GetGenericImplementation(typeWithOtherTypesAsMembers);
-	}
-
-	private static string[] ExtractNamesWithType(string fullName) =>
-		fullName[(Base.List.Length + DoubleOpenBrackets.Length)..^DoubleCloseBrackets.Length].
-			Split(",", StringSplitOptions.TrimEntries);
-
-	internal const string DoubleCloseBrackets = "))";
-
-	private static (string, string[]) GetCombinedTypeNameAndLines(IReadOnlyList<string> namesWithType)
-	{
-		var name = "";
-		var lines = new string[namesWithType.Count];
-		for (var index = 0; index < namesWithType.Count; index++)
-		{
-			name += namesWithType[index].Split(' ')[0].MakeFirstLetterUppercase();
-			lines[index] = Type.HasWithSpaceAtEnd + namesWithType[index];
-		}
-		return (name, lines);
-	}
-
-	public GenericTypeImplementation GetGenericImplementation(List<Type> implementationTypes)
-	{
-		var key = GetImplementationName(implementationTypes);
-		return GetGenericImplementation(key) ?? CreateGenericImplementation(key, implementationTypes);
-	}
-	/*
-	//TODO: why is there 2 ways to generate the type name, why not internally only keep one true way: List(Number), we can probably also remove the strange special rule in Context.FindType:
-		//if (name.StartsWith(Base.List + DoubleOpenBrackets, StringComparison.Ordinal))
-	private static string GetTypeName(Type generic, IReadOnlyList<Type> implementationTypes) =>
-		generic.Name == Base.List && !implementationTypes[0].Name.EndsWith(')')
-			? implementationTypes[0].Name.Pluralize()
-			: generic.Name + implementationTypes.ToBrackets();
-*/
-	/*TODO: find these fucked up rules for Iterator and List and generalize them, then find the bug with MethodBody not matching Method it is in, wtf
-	// && Name != Base.Iterator && Name != Base.List && ) //TODO: Temporary workaround to make Iterator work without generic member
-	private IReadOnlyList<string> GetUniqueGenericTypeNames()//TODO: why are we returning strings, we only need a count!
-	{
-		//TODO: Easy and most common case is 1 member and that is called "Generic" anyway, check if there are no methods conflicting with differently named "Generic"
-		var genericNames = new List<string>();
-		foreach (var member in Members)
-		{
-			if (member.Type is GenericTypeImplementation genericImplementation) //TODO: never happens?
-			{
-				foreach (var implementationMember in genericImplementation.ImplementationTypes)
-					if (member.Type.IsGeneric) //TODO: looks like the same as GetGenericTypeArguments below
-						AddGenericName(genericNames, implementationMember.Name);
-			}
-			else if (member.Type.IsIterator)
-				AddGenericName(genericNames, Base.Generic);
-			else if (member.Type.IsGeneric)
-				AddGenericName(genericNames, member.Name);
-			/*TODO: figure out has keysAndValues List((key Generic, mappedValue Generic)) case!
-				genericNames.Add(member.Name);
-					genericNames.Add(implementationMember);
-			if (member.Type.IsIterator)
-			{
-				member.Type.GetListImplementationType()
-					|| member.Type.Name == Base.List)
-				if (member.Type.Name == Base.Iterator)
-					genericNames.Add(Base.Generic);
-				else
-					genericNames.AddRange(member.Type.GetUniqueGenericTypeNames());
-			}
-			else if (member.Type.IsGeneric)
-				genericNames.Add(member.Name);
-			*
-		}
-		return genericNames; //TODO: why not use GetGenericTypeArguments below?
-	}
-
-	private void AddGenericName(List<string> genericNames, string typeName)
-	{
-		if (!genericNames.Contains(typeName))
-			genericNames.Add(typeName);
-	}*/
 
 	public class InvalidGenericTypeWithoutGenericArguments : Exception
 	{
