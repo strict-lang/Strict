@@ -217,7 +217,7 @@ public sealed class VirtualMachine
 		if (statement is not LoopBeginStatement initLoopStatement)
 			return;
 		ProcessLoopIndex();
-		Memory.Variables.TryGetValue(initLoopStatement.Identifier, out var iterableVariable);
+		Memory.Registers.TryGetValue(initLoopStatement.Register, out var iterableVariable);
 		if (iterableVariable is null)
 			return; //ncrunch: no coverage
 		if (!iteratorInitialized)

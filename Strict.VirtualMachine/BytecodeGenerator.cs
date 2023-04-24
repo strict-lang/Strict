@@ -313,7 +313,8 @@ public sealed class ByteCodeGenerator
 	private void GenerateLoopStatements(For forExpression)
 	{
 		var statementCountBeforeLoopStart = statements.Count;
-		statements.Add(new LoopBeginStatement(forExpression.Value.ToString()));
+		GenerateStatementsFromExpression(forExpression.Value);
+		statements.Add(new LoopBeginStatement(registry.PreviousRegister));
 		GenerateStatementsForLoopBody(forExpression);
 		statements.Add(new IterationEndStatement(statements.Count - statementCountBeforeLoopStart));
 	}

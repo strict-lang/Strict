@@ -1,8 +1,6 @@
 ﻿namespace Strict.VirtualMachine;
 
-public sealed class LoopBeginStatement : Statement
+public sealed class LoopBeginStatement : RegisterStatement
 {
-	public LoopBeginStatement(string identifier) => Identifier = identifier;
-	public string Identifier { get; }
-	public override Instruction Instruction => Instruction.LoopBegin;
+	public LoopBeginStatement(Register register) : base(register, Instruction.LoopBegin) { }
 }
