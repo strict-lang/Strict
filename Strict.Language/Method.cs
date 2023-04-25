@@ -84,16 +84,25 @@ public sealed class Method : Context
 		var lastOpeningBracketIndex = rest.LastIndexOf('(');
 		if (lastOpeningBracketIndex > 2 && rest.IndexOf(')') < lastOpeningBracketIndex)
 			return Type.GetType(rest[(rest.LastIndexOf(' ') + 1)..].ToString());
+		var hasMultipleReturnTypes = rest.Contains(" or ", StringComparison.Ordinal);
 		return closingBracketIndex > 0 && rest.Length == 2
 			? throw new EmptyParametersMustBeRemoved(this)
 			: rest.Length < 2
 				? throw new InvalidMethodParameters(this, rest.ToString())
 				: rest[0] is ' '
-					? type.GetType(rest[1..].ToString())
+					? hasMultipleReturnTypes
+						? ParseMultipleReturnTypes(rest[1..].ToString())
+						: type.GetType(rest[1..].ToString())
 					: closingBracketIndex + 2 < rest.Length
-						? Type.GetType(rest[(closingBracketIndex + 2)..].ToString())
+						? hasMultipleReturnTypes
+							? ParseMultipleReturnTypes(rest[(closingBracketIndex + 2)..].ToString())
+							: Type.GetType(rest[(closingBracketIndex + 2)..].ToString())
 						: GetEmptyReturnType(type);
 	}
+
+	private Type ParseMultipleReturnTypes(string typeNames) =>
+		new OneOfType(Type, typeNames.Split(" or ", StringSplitOptions.TrimEntries).
+			Select(typeName => Type.GetType(typeName)).ToList());
 
 	private Type GetEmptyReturnType(Type type) =>
 		Name is From
