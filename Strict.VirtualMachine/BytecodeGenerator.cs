@@ -313,10 +313,25 @@ public sealed class ByteCodeGenerator
 	private void GenerateLoopStatements(For forExpression)
 	{
 		var statementCountBeforeLoopStart = statements.Count;
-		GenerateStatementsFromExpression(forExpression.Value);
-		statements.Add(new LoopBeginStatement(registry.PreviousRegister));
+		if (forExpression.Value is MethodCall rangeExpression &&
+			forExpression.Value.ReturnType.Name == Base.Range && rangeExpression.Method.Name == "from")
+			GenerateStatementForLoopRangeInstruction(rangeExpression);
+		else
+		{
+			GenerateStatementsFromExpression(forExpression.Value);
+			statements.Add(new LoopBeginStatement(registry.PreviousRegister));
+		}
 		GenerateStatementsForLoopBody(forExpression);
 		statements.Add(new IterationEndStatement(statements.Count - statementCountBeforeLoopStart));
+	}
+
+	private void GenerateStatementForLoopRangeInstruction(MethodCall rangeExpression)
+	{
+		GenerateStatementsFromExpression(rangeExpression.Arguments[0]);
+		var startIndexRegister = registry.PreviousRegister;
+		GenerateStatementsFromExpression(rangeExpression.Arguments[1]);
+		var endIndexRegister = registry.PreviousRegister;
+		statements.Add(new LoopBeginStatementRange(startIndexRegister, endIndexRegister));
 	}
 
 	private void GenerateStatementsForLoopBody(For forExpression)

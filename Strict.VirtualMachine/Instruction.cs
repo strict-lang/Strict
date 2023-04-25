@@ -8,6 +8,7 @@ public enum Instruction
 	Load,
 	LoadConstant,
 	LoopBegin,
+	LoopBeginRange,
 	IterationEnd,
 	ListCall,
 	SetLoadSeparator = 100,
