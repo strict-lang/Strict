@@ -45,6 +45,7 @@ public sealed class VirtualMachine
 		TryStoreInstructions(statement);
 		TryLoadInstructions(statement);
 		TryLoopInitInstruction(statement);
+		TryLoopRangeInitInstruction(statement);
 		TryLoopEndInstruction(statement);
 		TryInvokeInstruction(statement);
 		TryWriteToListInstruction(statement);
@@ -216,7 +217,7 @@ public sealed class VirtualMachine
 	{
 		if (statement is not LoopBeginStatement initLoopStatement)
 			return;
-		ProcessLoopIndex();
+		ProcessLoopIndex(initLoopStatement);
 		Memory.Registers.TryGetValue(initLoopStatement.Register, out var iterableVariable);
 		if (iterableVariable is null)
 			return; //ncrunch: no coverage
@@ -226,7 +227,22 @@ public sealed class VirtualMachine
 		AlterValueVariable(iterableVariable);
 	}
 
-	private void ProcessLoopIndex()
+	private void TryLoopRangeInitInstruction(Statement statement)
+	{
+		if (statement is not LoopBeginStatementRange initLoopStatement)
+			return;
+		if (Memory.Variables.ContainsKey("index"))
+			Memory.Variables["index"].Value = Convert.ToInt32(Memory.Variables["index"].Value) + 1;
+		else
+			Memory.Variables.Add("index", Memory.Registers[initLoopStatement.StartIndex]);
+		Memory.Variables["value"] = Memory.Variables["index"];
+		if (!iteratorInitialized)
+			InitializeIterator(Memory.Registers[initLoopStatement.EndIndex] -
+				Memory.Registers[initLoopStatement.StartIndex]);
+
+	}
+
+	private void ProcessLoopIndex(LoopBeginStatement statement)
 	{
 		if (Memory.Variables.ContainsKey("index"))
 			Memory.Variables["index"].Value = Convert.ToInt32(Memory.Variables["index"].Value) + 1;
@@ -239,6 +255,7 @@ public sealed class VirtualMachine
 		loopIterationNumber = GetLength(iterableVariable);
 		iteratorInitialized = true;
 	}
+
 
 	private static int GetLength(Instance iterableInstance)
 	{
