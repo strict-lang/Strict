@@ -217,7 +217,7 @@ public sealed class VirtualMachine
 	{
 		if (statement is not LoopBeginStatement initLoopStatement)
 			return;
-		ProcessLoopIndex(initLoopStatement);
+		ProcessLoopIndex();
 		Memory.Registers.TryGetValue(initLoopStatement.Register, out var iterableVariable);
 		if (iterableVariable is null)
 			return; //ncrunch: no coverage
@@ -239,10 +239,9 @@ public sealed class VirtualMachine
 		if (!iteratorInitialized)
 			InitializeIterator(Memory.Registers[initLoopStatement.EndIndex] -
 				Memory.Registers[initLoopStatement.StartIndex]);
-
 	}
 
-	private void ProcessLoopIndex(LoopBeginStatement statement)
+	private void ProcessLoopIndex()
 	{
 		if (Memory.Variables.ContainsKey("index"))
 			Memory.Variables["index"].Value = Convert.ToInt32(Memory.Variables["index"].Value) + 1;
@@ -255,7 +254,6 @@ public sealed class VirtualMachine
 		loopIterationNumber = GetLength(iterableVariable);
 		iteratorInitialized = true;
 	}
-
 
 	private static int GetLength(Instance iterableInstance)
 	{
