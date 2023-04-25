@@ -571,7 +571,7 @@ public class Type : Context
 			cachedGenericTypes!.Add(key, genericType);
 			return genericType;
 		}
-		throw new Context.TypeArgumentsCountDoesNotMatchGenericType(this, implementationTypes);
+		throw new TypeArgumentsCountDoesNotMatchGenericType(this, implementationTypes);
 	}
 
 	private bool HasMatchingConstructor(IReadOnlyList<Type> implementationTypes) =>
@@ -764,7 +764,10 @@ public class Type : Context
 
 	public bool IsCompatible(Type sameOrBaseType) =>
 		this == sameOrBaseType || HasAnyCompatibleMember(sameOrBaseType) ||
-		CanUpCast(sameOrBaseType) || sameOrBaseType.IsMutableAndHasMatchingImplementation(this) || CanUpCastCurrentTypeToOther(sameOrBaseType);
+		CanUpCast(sameOrBaseType) || sameOrBaseType.IsMutableAndHasMatchingImplementation(this) || CanUpCastCurrentTypeToOther(sameOrBaseType) || IsCompatibleOneOfType(sameOrBaseType);
+
+	private bool IsCompatibleOneOfType(Type sameOrBaseType) =>
+		sameOrBaseType is OneOfType oneOfType && oneOfType.Types.Any(IsCompatible);
 
 	private bool CanUpCastCurrentTypeToOther(Type sameOrBaseType) =>
 		sameOrBaseType.members.Count == 1 && sameOrBaseType.methods.Count == 0 && sameOrBaseType.members[0].Type == this &&

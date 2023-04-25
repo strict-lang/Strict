@@ -245,7 +245,7 @@ public sealed class MethodTests
 	[Test]
 	public void ParseMethodWithMultipleReturnType()
 	{
-		var methodWithTestsType = new Type(
+		var multipleReturnTypeMethod = new Type(
 			new Package(new TestPackage(), nameof(ParseMethodWithMultipleReturnType)), new TypeLines(
 				"Processor",
 			// @formatter:off
@@ -258,9 +258,64 @@ public sealed class MethodTests
 			"\t\treturn true",
 			"\tif progress > 0",
 			"\t\treturn false",
-			"\tWork not started yet"));
+			"\t\"Work not started yet\""));
 			// @formatter:on
-		methodWithTestsType.ParseMembersAndMethods(new MethodExpressionParser());
-		Assert.That(() => methodWithTestsType.Methods[0].GetBodyAndParseIfNeeded(), Throws.Nothing);
+		multipleReturnTypeMethod.ParseMembersAndMethods(new MethodExpressionParser());
+		Assert.That(() => multipleReturnTypeMethod.Methods[0].GetBodyAndParseIfNeeded(), Throws.Nothing);
+		Assert.That(multipleReturnTypeMethod.Methods[0].ReturnType, Is.InstanceOf<OneOfType>());
+		Assert.That(multipleReturnTypeMethod.Methods[0].ReturnType.Name, Is.EqualTo("BooleanOrText"));
+	}
+
+	[Test]
+	public void ParseMethodWithParametersAndMultipleReturnType()
+	{
+		var multipleReturnTypeMethod = new Type(
+			new Package(new TestPackage(), nameof(ParseMethodWithParametersAndMultipleReturnType)), new TypeLines(
+				"Processor",
+			// @formatter:off
+			"has progress Number",
+			"IsJobDone(number, text) Boolean or Text",
+			"\tProcessor(100).IsJobDone(1, \"hi\") is true",
+			"\tProcessor(78).IsJobDone(1, \"hi\") is false",
+			"\tProcessor(0).IsJobDone(1, \"hi\") is \"Work not started yet\"",
+			"\tif progress is 100",
+			"\t\treturn true",
+			"\tif progress > 0",
+			"\t\treturn false",
+			"\t\"Work not started yet\""));
+			// @formatter:on
+		multipleReturnTypeMethod.ParseMembersAndMethods(new MethodExpressionParser());
+		Assert.That(() => multipleReturnTypeMethod.Methods[0].GetBodyAndParseIfNeeded(), Throws.Nothing);
+	}
+
+	[Test]
+	public void MethodCallWithMultipleReturnTypes()
+	{
+		var multipleReturnTypeMethod = new Type(
+			new Package(new TestPackage(), nameof(MethodCallWithMultipleReturnTypes)), new TypeLines(
+				"Processor",
+			// @formatter:off
+			"has progress Number",
+			"IsJobDone Boolean or Text",
+			"\tProcessor(100).IsJobDone is true",
+			"\tProcessor(78).IsJobDone is false",
+			"\tProcessor(0).IsJobDone is \"Work not started yet\"",
+			"\tif progress is 100",
+			"\t\treturn true",
+			"\tif progress > 0",
+			"\t\treturn false",
+			"\t\"Work not started yet\"",
+			"Run",
+			"\tconstant result = IsJobDone",
+			"\tif result",
+			"\t\t\"Successfully processed\"",
+			"\telse if result is \"Work not started yet\"",
+			"\t\treturn Error",
+			"\telse",
+			"\t\t\"Job is in progress\""));
+			// @formatter:on
+		multipleReturnTypeMethod.ParseMembersAndMethods(new MethodExpressionParser());
+		Assert.That(() => multipleReturnTypeMethod.Methods[0].GetBodyAndParseIfNeeded(), Throws.Nothing);
+		Assert.That(() => multipleReturnTypeMethod.Methods[1].GetBodyAndParseIfNeeded(), Throws.Nothing);
 	}
 }
