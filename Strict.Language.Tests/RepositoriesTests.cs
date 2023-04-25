@@ -71,7 +71,7 @@ public class RepositoriesTests
 	}
 
 	//ncrunch: no coverage start, TODO: fix!
-	//[Ignore("Fix multiple variables in For expression first")]
+	[Ignore("Fix multiple variables in For expression first")]
 	[Test]
 	public async Task LoadStrictImageProcessingTypes()
 	{

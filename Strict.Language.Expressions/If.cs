@@ -107,9 +107,10 @@ public sealed class If : Expression
 	private static Expression GetConditionExpression(Body body, ReadOnlySpan<char> line)
 	{
 		var condition = body.Method.ParseExpression(body, line);
-		if (condition.ReturnType.Name != Base.Boolean)
-			throw new InvalidCondition(body, condition.ReturnType);
-		return condition;
+		var booleanType = condition.ReturnType.GetType(Base.Boolean);
+		if (condition.ReturnType == booleanType || booleanType.IsCompatible(condition.ReturnType))
+			return condition;
+		throw new InvalidCondition(body, condition.ReturnType);
 	}
 
 	public sealed class InvalidCondition : ParsingFailed
