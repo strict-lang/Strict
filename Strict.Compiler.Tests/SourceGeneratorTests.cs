@@ -187,17 +187,16 @@ public class Program
 	public Task Fibonacci() =>
 		GenerateCSharpByReadingStrictProgramAndCompareWithOutput(nameof(Fibonacci));
 
-	[Ignore("this test will work once for loop is working")]
+	[Ignore("TODO: Now failing at index out of range with GetVariableExpression")]
 	[Test]
 	public Task ReverseList() =>
 		GenerateCSharpByReadingStrictProgramAndCompareWithOutput(nameof(ReverseList));
 
-	[Ignore("Is Not operator working in this example")]
 	[Test]
 	public Task RemoveExclamation() =>
 		GenerateCSharpByReadingStrictProgramAndCompareWithOutput(nameof(RemoveExclamation));
 
-	[Ignore("Fix: Register type does not have + method (Number methods)")]
+	[Ignore("TODO: Number is not matching with number error")]
 	[Test]
 	public async Task ExecuteOperation()
 	{

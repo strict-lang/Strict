@@ -124,7 +124,9 @@ public sealed class For : Expression
 	private static ReadOnlySpan<char> GetForIteratorText(ReadOnlySpan<char> line) =>
 		line.Contains(InName, StringComparison.Ordinal)
 			? line[(line.LastIndexOf(InName) + 3)..]
-			: line[(line.LastIndexOf(' ') + 1)..];
+			: line.Contains("(", StringComparison.Ordinal) && line.IndexOf('(') > line.IndexOf(' ')
+				? line[(line.IndexOf(' ') + 1)..]
+				: line[(line.LastIndexOf(' ') + 1)..];
 
 	private static ReadOnlySpan<char> GetForExpressionText(ReadOnlySpan<char> line) =>
 		FindIterableName(line).Contains(',')

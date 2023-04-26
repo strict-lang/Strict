@@ -29,6 +29,24 @@ public sealed class CSharpTypeVisitorTests : TestCSharpGenerator
 			visitor.FileContent);
 	}
 
+	[Test]
+	public void GenerateAppWithImplementingAnotherType()
+	{
+		new Type(package,
+				new TypeLines("BaseProgram", "Run")).
+			ParseMembersAndMethods(parser);
+		var program = new Type(package,
+			new TypeLines("DerivedProgram", "has BaseProgram", "has log", "Run",
+				"\tlog.Write(\"Hello World\")")).ParseMembersAndMethods(parser);
+		var visitor = new CSharpTypeVisitor(program);
+		Assert.That(visitor.Name, Is.EqualTo("DerivedProgram"));
+		Assert.That(visitor.FileContent, Contains.Substring("public class DerivedProgram : BaseProgram"));
+		Assert.That(visitor.FileContent,
+			Contains.Substring("\tpublic void Run()" + Environment.NewLine + "\t{"));
+		Assert.That(visitor.FileContent,
+			Contains.Substring("\t\tConsole.WriteLine(\"Hello World\");"));
+	}
+
 	[TestCase("number", "int")]
 	[TestCase("boolean", "bool")]
 	[TestCase("file", "FileStream")]

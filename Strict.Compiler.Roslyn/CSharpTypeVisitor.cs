@@ -40,7 +40,7 @@ public sealed class CSharpTypeVisitor : TypeVisitor
 	{
 		if (isImplementingApp)
 			return;
-		baseClasses += (baseClasses.Length > 0 //ncrunch: no coverage, TODO: missing tests
+		baseClasses += (baseClasses.Length > 0
 			? ", "
 			: " : ") + type.Name;
 	}

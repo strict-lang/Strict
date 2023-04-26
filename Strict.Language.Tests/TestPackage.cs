@@ -91,7 +91,13 @@ public class TestPackage : Package
 			"\tfor",
 			"\t\t+ value",
 			"for Number",
-			"\tStart"));
+			"\tStart",
+			"Reverse Range",
+			"\tRange(0, 5).Reverse is Range(4, -1)",
+			"\tRange(1, 4).Reverse is Range(3, 0)",
+			"\tRange(10, 5).Reverse is Range(6, 11)",
+			"\tRange(-5, -10).Reverse is Range(-9, -4)",
+			"\tLength > 0 ? Range(ExclusiveEnd - 1 , Start - 1)\telse Range(ExclusiveEnd + 1, Start + 1)"));
 		var character = new Type(this, new TypeLines(Base.Character,
 			"has number",
 			"from",
@@ -208,7 +214,11 @@ public class TestPackage : Package
 			"is(other) Boolean",
 			"\t\"Hey\" is \"Hey\" is true",
 			"\t\"Hi\" is \"Hey\" is false",
-			"\tvalue is other"));
+			"\tvalue is other",
+			"is not(other) Boolean",
+			"\t\"A\" is not \"B\"",
+			"\t\"Hi\" is not \"hi\"",
+			"\tvalue is not other"));
 		var baseType = new Type(this, new TypeLines(Base.Type, "has Name",
 			"has Package Text",
 			"to Text",

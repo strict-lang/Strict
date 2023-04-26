@@ -411,7 +411,7 @@ public sealed class TypeTests
 	{
 		var range = package.GetType(Base.Range);
 		Assert.That(range.AvailableMethods.Values.Select(methods => methods.Count).Sum(),
-			Is.EqualTo(7));
+			Is.EqualTo(8));
 	}
 
 	[Test]
