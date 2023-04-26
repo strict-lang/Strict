@@ -5,6 +5,7 @@ using Strict.Language.Expressions;
 using Strict.Language.Expressions.Tests;
 using Strict.Language.Tests;
 using Boolean = Strict.Language.Expressions.Boolean;
+using List = Strict.Language.Expressions.List;
 
 namespace Strict.Compiler.Tests;
 
@@ -40,6 +41,15 @@ public sealed class CSharpExpressionVisitorTests : TestExpressions
 		Assert.That(
 			visitor.Visit(new MemberCall(new MemberCall(null, member),
 				member.Type.Members.First(m => m.Name == "output"))), Is.EqualTo("log.output"));
+
+	[Test]
+	public void GenerateListCall() =>
+		Assert.That(
+			visitor.Visit(new ListCall(
+				new VariableCall("numbers",
+					new List((Body)methodWithBody.GetBodyAndParseIfNeeded(),
+						new List<Expression>() { new Number(type, 0) })), new Number(type, 0))),
+			Is.EqualTo("numbers[0]"));
 
 	[Test]
 	public void GenerateMethodCall() =>

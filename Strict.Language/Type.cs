@@ -875,6 +875,8 @@ public class Type : Context
 
 	private void AddAnyMethods()
 	{
+		if (cachedAnyMethods is { Count: 0 })
+			cachedAnyMethods = null;
 		cachedAnyMethods ??= GetType(Base.Any).AvailableMethods;
 		foreach (var (_, anyMethods) in cachedAnyMethods)
 		foreach (var anyMethod in anyMethods)
