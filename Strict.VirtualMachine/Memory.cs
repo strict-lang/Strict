@@ -12,7 +12,7 @@ public sealed class Memory
 	{
 		Variables.TryGetValue(key, out var collection);
 		if (collection?.Value is List<Expression> listExpression)
-			listExpression.Add(ConvertObjectToValueForm(element, listExpression[0]));
+			listExpression.Add(listExpression.Count > 0 ? ConvertObjectToValueForm(element, listExpression[0]) : ConvertToValueFormWhenListIsEmpty(collection, element));
 	}
 
 	public void AddToDictionary(string variableKey, Instance keyToAddTo, Instance value)
@@ -27,4 +27,8 @@ public sealed class Memory
 
 	private static Value ConvertObjectToValueForm(object obj, Expression prototype) =>
 		new(prototype.ReturnType, obj);
+	private static Value ConvertToValueFormWhenListIsEmpty(Instance collection, object element) =>
+		collection.ReturnType is not GenericTypeImplementation genericImplementationType
+			? throw new InvalidOperationException()
+			: new Value(genericImplementationType.ImplementationTypes[0], element);
 }

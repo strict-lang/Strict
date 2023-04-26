@@ -1,5 +1,6 @@
 ﻿using Strict.Language;
 using Strict.Language.Expressions;
+using System.Collections.Generic;
 using Type = Strict.Language.Type;
 
 namespace Strict.VirtualMachine;
@@ -292,7 +293,7 @@ public sealed class ByteCodeGenerator
 	private void
 		TryGenerateStatementsForAssignmentValue(Value assignmentValue, string variableName) =>
 		statements.Add(new StoreVariableStatement(
-			new Instance(assignmentValue.ReturnType, assignmentValue.Data), variableName));
+			new Instance(assignmentValue.ReturnType, assignmentValue.Data.GetType().IsArray ? ((IEnumerable<Expression>)assignmentValue.Data).ToList() : assignmentValue.Data), variableName));
 
 	private bool TryGenerateIfStatements(Expression expression)
 	{
@@ -483,19 +484,14 @@ public sealed class ByteCodeGenerator
 	private Register GenerateValueBinaryStatements(MethodCall binary,
 		Instruction operationInstruction)
 	{
-		var (leftRegister, rightRegister, resultRegister) = (registry.AllocateRegister(),
-			registry.AllocateRegister(), registry.AllocateRegister());
-		if (binary.Instance is Value instanceValue)
-			statements.Add(new LoadConstantStatement(leftRegister, new Instance(instanceValue)));
-		else
-			statements.Add(new LoadVariableStatement(leftRegister,
-				binary.Instance?.ToString() ?? throw new InstanceNameNotFound()));
-		if (binary.Arguments[0] is Value argumentsValue)
-			statements.Add(new LoadConstantStatement(rightRegister, new Instance(argumentsValue)));
-		else
-			statements.Add(new LoadVariableStatement(rightRegister, binary.Arguments[0].ToString()));
-		statements.Add(new BinaryStatement(operationInstruction, leftRegister, rightRegister,
-			resultRegister));
+		if(binary.Instance == null)
+			throw new InstanceNameNotFound(); //ncrunch: no coverage
+		GenerateStatementsFromExpression(binary.Instance);
+		var leftValue = registry.PreviousRegister;
+		GenerateStatementsFromExpression(binary.Arguments[0]);
+		var rightValue = registry.PreviousRegister;
+		var resultRegister = registry.AllocateRegister();
+		statements.Add(new BinaryStatement(operationInstruction, leftValue, rightValue, resultRegister));
 		return resultRegister;
 	}
 

@@ -384,7 +384,7 @@ public class VirtualMachineTests : BaseVirtualMachineTests
 	{
 		var source = new[]
 		{
-			"has numbers", "Reverse Numbers", "\tmutable result = Numbers", "\tfor Range(numbers.Length, 0)",
+			"has numbers", "Reverse Numbers", "\tmutable result = Numbers", "\tconstant len = numbers.Length - 1", "\tfor Range(len, 0)",
 			"\t\tresult.Add(numbers(index))", "\tresult"
 		};
 		var statements = new ByteCodeGenerator(GenerateMethodCallFromSource(nameof(ReverseWithRange),
