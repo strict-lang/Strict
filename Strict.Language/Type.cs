@@ -690,7 +690,7 @@ public class Type : Context
 	/// or Error.strict have public members you have to iterate over yourself.
 	/// If there are two private iterators, then pick the first member automatically
 	/// </summary>
-	public bool IsIterator => Name == Base.Iterator || HasAnyIteratorMember();
+	public bool IsIterator => Name == Base.Iterator || Name.StartsWith(Base.Iterator + "(", StringComparison.Ordinal) || HasAnyIteratorMember();
 
 	private bool HasAnyIteratorMember()
 	{
