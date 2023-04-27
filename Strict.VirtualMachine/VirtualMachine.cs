@@ -229,18 +229,17 @@ public sealed class VirtualMachine
 
 	private void TryLoopRangeInitInstruction(Statement statement)
 	{
-		if (statement is not LoopBeginStatementRange initLoopStatement)
+		if (statement is not LoopRangeBeginStatement loopRangeStatement)
 			return;
 		if (Memory.Variables.ContainsKey("index"))
-			Memory.Variables["index"].Value = Convert.ToInt32(Memory.Variables["index"].Value) + 1;
+			Memory.Variables["index"].Value = Convert.ToInt32(Memory.Variables["index"].Value) + (IsRangeDecreasing(loopRangeStatement) ? -1 : 1);
 		else
-			Memory.Variables.Add("index", Memory.Registers[initLoopStatement.StartIndex]);
+			Memory.Variables.Add("index", Memory.Registers[loopRangeStatement.StartIndex]);
 		Memory.Variables["value"] = Memory.Variables["index"];
 		if (!iteratorInitialized)
-			InitializeIterator(Memory.Registers[initLoopStatement.EndIndex] -
-				Memory.Registers[initLoopStatement.StartIndex]);
+			InitializeRangeIterator(loopRangeStatement);
 	}
-
+	private bool IsRangeDecreasing(LoopRangeBeginStatement loopRangeStatement) => Memory.Registers[loopRangeStatement.EndIndex] < Memory.Registers[loopRangeStatement.StartIndex];
 	private void ProcessLoopIndex()
 	{
 		if (Memory.Variables.ContainsKey("index"))
@@ -252,6 +251,14 @@ public sealed class VirtualMachine
 	private void InitializeIterator(Instance iterableVariable)
 	{
 		loopIterationNumber = GetLength(iterableVariable);
+		iteratorInitialized = true;
+	}
+
+		private void InitializeRangeIterator(LoopRangeBeginStatement loopRangeBeginStatement)
+	{
+		var startIndex = Convert.ToInt32(Memory.Registers[loopRangeBeginStatement.StartIndex].Value);
+		var endIndex = Convert.ToInt32(Memory.Registers[loopRangeBeginStatement.EndIndex].Value);
+		loopIterationNumber = (IsRangeDecreasing(loopRangeBeginStatement) ? startIndex - endIndex : endIndex - startIndex) + 1;
 		iteratorInitialized = true;
 	}
 

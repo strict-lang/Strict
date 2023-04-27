@@ -1,8 +1,8 @@
 ﻿namespace Strict.VirtualMachine;
 
-public sealed class LoopBeginStatementRange : Statement
+public sealed class LoopRangeBeginStatement : Statement
 {
-	public LoopBeginStatementRange(Register startIndex, Register endIndex)
+	public LoopRangeBeginStatement(Register startIndex, Register endIndex)
 	{
 		StartIndex = startIndex;
 		EndIndex = endIndex;

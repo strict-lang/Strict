@@ -389,7 +389,7 @@ public class VirtualMachineTests : BaseVirtualMachineTests
 		};
 		var statements = new ByteCodeGenerator(GenerateMethodCallFromSource(nameof(ReverseWithRange),
 			"ReverseWithRange(1, 2, 3).Reverse", source)).Generate();
-		Assert.That(() => ExpressionListToSpaceSeparatedString(statements), Is.EqualTo("3 2 1"));
+		Assert.That(() => ExpressionListToSpaceSeparatedString(statements), Is.EqualTo("3 2 1 "));
 	}
 
 	[Test]

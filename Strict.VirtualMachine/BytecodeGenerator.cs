@@ -332,7 +332,7 @@ public sealed class ByteCodeGenerator
 		var startIndexRegister = registry.PreviousRegister;
 		GenerateStatementsFromExpression(rangeExpression.Arguments[1]);
 		var endIndexRegister = registry.PreviousRegister;
-		statements.Add(new LoopBeginStatementRange(startIndexRegister, endIndexRegister));
+		statements.Add(new LoopRangeBeginStatement(startIndexRegister, endIndexRegister));
 	}
 
 	private void GenerateStatementsForLoopBody(For forExpression)
