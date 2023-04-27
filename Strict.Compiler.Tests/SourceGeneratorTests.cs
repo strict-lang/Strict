@@ -150,9 +150,9 @@ public class Program
 	public Task ArithmeticFunction() =>
 		GenerateCSharpByReadingStrictProgramAndCompareWithOutput(nameof(ArithmeticFunction));
 
-	public async Task GenerateCSharpByReadingStrictProgramAndCompareWithOutput(string programName)
+	public async Task GenerateCSharpByReadingStrictProgramAndCompareWithOutput(string programName, Package? package = null)
 	{
-		var program = await ReadStrictFileAndCreateType(programName);
+		var program = await ReadStrictFileAndCreateType(programName, package);
 		program.Methods[0].GetBodyAndParseIfNeeded();
 		var generatedCode = generator.Generate(program).ToString()!;
 		Assert.That(generatedCode,
@@ -161,8 +161,8 @@ public class Program
 					$"Output/{programName}.cs")))), generatedCode);
 	}
 
-	private async Task<Type> ReadStrictFileAndCreateType(string programName) =>
-		new Type(new TestPackage(),
+	private async Task<Type> ReadStrictFileAndCreateType(string programName, Package? package = null) =>
+		new Type(package != null ? package : new TestPackage(),
 			new TypeLines(programName,
 				await File.ReadAllLinesAsync(Path.Combine(await GetExampleFolder(),
 					$"{programName}.strict")))).ParseMembersAndMethods(parser);
@@ -187,7 +187,6 @@ public class Program
 	public Task Fibonacci() =>
 		GenerateCSharpByReadingStrictProgramAndCompareWithOutput(nameof(Fibonacci));
 
-	[Ignore("TODO: Now failing at index out of range with GetVariableExpression")]
 	[Test]
 	public Task ReverseList() =>
 		GenerateCSharpByReadingStrictProgramAndCompareWithOutput(nameof(ReverseList));
@@ -196,14 +195,14 @@ public class Program
 	public Task RemoveExclamation() =>
 		GenerateCSharpByReadingStrictProgramAndCompareWithOutput(nameof(RemoveExclamation));
 
-	[Ignore("TODO: Number is not matching with number error")]
 	[Test]
 	public async Task ExecuteOperation()
 	{
-		await ReadStrictFileAndCreateType("Register");
-		await ReadStrictFileAndCreateType("Instruction");
-		await ReadStrictFileAndCreateType("Statement");
-		await GenerateCSharpByReadingStrictProgramAndCompareWithOutput(nameof(ExecuteOperation));
+		var testPackage = new TestPackage();
+		await ReadStrictFileAndCreateType("Register", testPackage);
+		await ReadStrictFileAndCreateType("Instruction", testPackage);
+		await ReadStrictFileAndCreateType("Statement", testPackage);
+		await GenerateCSharpByReadingStrictProgramAndCompareWithOutput(nameof(ExecuteOperation), testPackage);
 	}
 
 	[Test]

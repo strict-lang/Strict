@@ -113,13 +113,20 @@ public sealed class For : Expression
 		var forIteratorText = GetForIteratorText(line);
 		var iteratorExpression = body.Method.ParseExpression(body, forIteratorText);
 		return iteratorExpression is MethodCall { ReturnType.Name: Base.Range } methodCall
-			? methodCall.Arguments[0]
+			? GetVariableFromRange(iteratorExpression, methodCall)
 			: iteratorExpression.ReturnType is GenericTypeImplementation { Generic.Name: Base.List }
 				? body.Method.ParseExpression(body, forIteratorText[^1] == ')'
 					? forIteratorText[1..forIteratorText.IndexOf(',')]
 					: forIteratorText.ToString() + "(0)")
 				: iteratorExpression;
 	}
+
+	private static Expression GetVariableFromRange(Expression iteratorExpression, MethodCall methodCall) =>
+		methodCall.Arguments.Count > 0
+			? methodCall.Arguments[0]
+			: methodCall.Instance != null && methodCall.Instance is MethodCall { ReturnType.Name: Base.Range } innerMethodCall && innerMethodCall.Arguments.Count > 0
+			? innerMethodCall.Arguments[0]
+			: iteratorExpression;
 
 	private static ReadOnlySpan<char> GetForIteratorText(ReadOnlySpan<char> line) =>
 		line.Contains(InName, StringComparison.Ordinal)
@@ -128,8 +135,7 @@ public sealed class For : Expression
 				? line[(line.IndexOf(' ') + 1)..]
 				: line[(line.LastIndexOf(' ') + 1)..];
 
-	private static ReadOnlySpan<char> GetForExpressionText(ReadOnlySpan<char> line) =>
-		FindIterableName(line).Contains(',')
+	private static ReadOnlySpan<char> GetForExpressionText(ReadOnlySpan<char> line) => FindIterableName(line).Contains(',') && line.Contains("in", StringComparison.Ordinal)
 			? line[(line.IndexOf(',') + 2)..]
 			: line[4..];
 
@@ -187,7 +193,7 @@ public sealed class For : Expression
 	}
 
 	private static ReadOnlySpan<char> GetRangeExpression(ReadOnlySpan<char> line) =>
-		line[line.LastIndexOf('R')..(line.LastIndexOf(')') + 1)];
+		line[line.LastIndexOf("Range")..(line.LastIndexOf(')') + 1)];
 
 	private static ReadOnlySpan<char> FindIterableName(ReadOnlySpan<char> line) =>
 		line.Contains(InName, StringComparison.Ordinal)
