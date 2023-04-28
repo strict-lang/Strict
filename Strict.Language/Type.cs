@@ -19,6 +19,8 @@ public class Type : Context
 		IsGeneric = Name == Base.Generic || OneOfFirstThreeLinesContainsGeneric();
 		CreatedBy = "Package: " + package + ", file=" + file + ", StackTrace:\n" +
 			StackTraceExtensions.FormatStackTraceIntoClickableMultilineText(1);
+		typeMethodFinder = new TypeMethodFinder(this);
+		typeParser = new TypeParser(this, lines);
 	}
 
 	public sealed class LinesCountMustNotExceedLimit : ParsingFailed
@@ -33,8 +35,7 @@ public class Type : Context
 			name + " in package: " + package) { }
 	}
 
-	private string[] lines;
-	private int lineNumber;
+	private readonly string[] lines;
 	/// <summary>
 	/// Generic types cannot be used directly as we don't know the implementation to be used (e.g. a
 	/// list, we need to know the type of the elements), you must them from <see cref="GenericTypeImplementation"/>!
@@ -44,6 +45,8 @@ public class Type : Context
 	/// For debugging purposes to see where this Type was initially created.
 	/// </summary>
 	public string CreatedBy { get; protected set; }
+	private readonly TypeMethodFinder typeMethodFinder;
+	private readonly TypeParser typeParser;
 
 	private bool OneOfFirstThreeLinesContainsGeneric()
 	{
@@ -64,6 +67,10 @@ public class Type : Context
 		(line.Contains(Base.Generic, StringComparison.Ordinal) ||
 			line.Contains(Base.GenericLowercase, StringComparison.Ordinal));
 
+	public const string HasWithSpaceAtEnd = Keyword.Has + " ";
+	public const string MutableWithSpaceAtEnd = Keyword.Mutable + " ";
+	public const string EmptyBody = nameof(EmptyBody);
+
 	private static bool HasGenericMethodHeader(string line) =>
 		line.Contains(Base.Generic, StringComparison.Ordinal) ||
 		line.Contains(Base.GenericLowercase, StringComparison.Ordinal);
@@ -74,7 +81,8 @@ public class Type : Context
 	/// </summary>
 	public Type ParseMembersAndMethods(ExpressionParser parser)
 	{
-		ParseAllRemainingLinesIntoMembersAndMethods(parser);
+		typeParser.ParseMembersAndMethods(parser);
+		lineNumber = typeParser.LineNumber;
 		ValidateMethodAndMemberCountLimits();
 		// ReSharper disable once ForCanBeConvertedToForeach, for performance reasons:
 		// https://codeblog.jonskeet.uk/2009/01/29/for-vs-foreach-on-arrays-and-lists/
@@ -87,238 +95,8 @@ public class Type : Context
 		return this;
 	}
 
-	private void ParseAllRemainingLinesIntoMembersAndMethods(ExpressionParser parser)
-	{
-		for (; lineNumber < lines.Length; lineNumber++)
-			TryParse(parser, lineNumber);
-	}
-
-	private void TryParse(ExpressionParser parser, int rememberStartMethodLineNumber)
-	{
-		try
-		{
-			ParseLineForMembersAndMethods(parser);
-		}
-		catch (Context.TypeNotFound ex)
-		{
-			throw new ParsingFailed(this, rememberStartMethodLineNumber, ex.Message, ex);
-		}
-		catch (ParsingFailed)
-		{
-			throw;
-		}
-		catch (Exception ex)
-		{
-			throw new ParsingFailed(this, rememberStartMethodLineNumber,
-				string.IsNullOrEmpty(ex.Message)
-					? ex.GetType().Name
-					: ex.Message, ex);
-		}
-	}
-
-	private void ParseLineForMembersAndMethods(ExpressionParser parser)
-	{
-		var line = ValidateCurrentLineIsNonEmptyAndTrimmed();
-		if (line.StartsWith(HasWithSpaceAtEnd, StringComparison.Ordinal))
-			members.Add(GetNewMember(parser));
-		else if (line.StartsWith(MutableWithSpaceAtEnd, StringComparison.Ordinal) &&
-			!(lineNumber + 1 < lines.Length && lines[lineNumber + 1].StartsWith('\t')))
-			members.Add(GetNewMember(parser, true));
-		else
-			methods.Add(new Method(this, lineNumber, parser, GetAllMethodLines()));
-	}
-
-	private string ValidateCurrentLineIsNonEmptyAndTrimmed()
-	{
-		var line = lines[lineNumber];
-		if (line.Length == 0)
-			throw new EmptyLineIsNotAllowed(this, lineNumber);
-		if (char.IsWhiteSpace(line[0]))
-			throw new ExtraWhitespacesFoundAtBeginningOfLine(this, lineNumber, line);
-		if (char.IsWhiteSpace(line[^1]))
-			throw new ExtraWhitespacesFoundAtEndOfLine(this, lineNumber, line);
-		return line;
-	}
-
-	public sealed class ExtraWhitespacesFoundAtBeginningOfLine : ParsingFailed
-	{
-		public ExtraWhitespacesFoundAtBeginningOfLine(Type type, int lineNumber, string message,
-			string method = "") : base(type, lineNumber, message, method) { }
-	}
-
-	public sealed class ExtraWhitespacesFoundAtEndOfLine : ParsingFailed
-	{
-		public ExtraWhitespacesFoundAtEndOfLine(Type type, int lineNumber, string message,
-			string method = "") : base(type, lineNumber, message, method) { }
-	}
-
-	public sealed class EmptyLineIsNotAllowed : ParsingFailed
-	{
-		public EmptyLineIsNotAllowed(Type type, int lineNumber) : base(type, lineNumber) { }
-	}
-
-	private Member GetNewMember(ExpressionParser parser, bool usedMutableKeyword = false)
-	{
-		var member = ParseMember(parser, lines[lineNumber].AsSpan((usedMutableKeyword
-			? MutableWithSpaceAtEnd
-			: HasWithSpaceAtEnd).Length), usedMutableKeyword);
-		if (members.Any(m => m.Name == member.Name))
-			throw new DuplicateMembersAreNotAllowed(this, lineNumber, member.Name);
-		return member;
-	}
-
-	private Member ParseMember(ExpressionParser parser, ReadOnlySpan<char> remainingLine,
-		bool usedMutableKeyword)
-	{
-		if (methods.Count > 0)
-			throw new MembersMustComeBeforeMethods(this, lineNumber, remainingLine.ToString());
-		try
-		{
-			return TryParseMember(parser, remainingLine, usedMutableKeyword);
-		}
-		catch (ParsingFailed)
-		{
-			throw;
-		}
-		catch (Exception ex)
-		{
-			throw new ParsingFailed(this, lineNumber, ex.Message.Split('\n').Take(2).ToWordList("\n"), ex);
-		}
-	}
-
-	private Member TryParseMember(ExpressionParser parser, ReadOnlySpan<char> remainingLine,
-		bool usedMutableKeyword)
-	{
-		var nameAndExpression = remainingLine.Split();
-		nameAndExpression.MoveNext();
-		var nameAndType = nameAndExpression.Current.ToString();
-		if (nameAndExpression.MoveNext())
-		{
-			var wordAfterName = nameAndExpression.Current.ToString();
-			if (nameAndExpression.Current[0] == EqualCharacter)
-				return new Member(this, nameAndType,
-					GetMemberExpression(parser, nameAndType,
-						remainingLine[(nameAndType.Length + 3)..]), usedMutableKeyword);
-			if (wordAfterName != Keyword.With)
-				nameAndType += " " + GetMemberType(nameAndExpression);
-			if (HasConstraints(wordAfterName, ref nameAndExpression))
-				return !nameAndExpression.MoveNext()
-					? throw new MemberMissingConstraintExpression(this, lineNumber, nameAndType)
-					: IsMemberTypeAny(nameAndType, nameAndExpression)
-						? throw new MemberWithTypeAnyIsNotAllowed(this, lineNumber, nameAndType)
-						: GetMemberWithConstraints(parser, remainingLine, usedMutableKeyword, nameAndType);
-			if (nameAndExpression.Current[0] == EqualCharacter)
-				throw new NamedType.AssignmentWithInitializerTypeShouldNotHaveNameWithType(nameAndType);
-		}
-		return IsMemberTypeAny(nameAndType, nameAndExpression)
-			? throw new MemberWithTypeAnyIsNotAllowed(this, lineNumber, nameAndType)
-			: new Member(this, nameAndType, null, usedMutableKeyword);
-	}
-
-	private Member GetMemberWithConstraints(ExpressionParser parser, ReadOnlySpan<char> remainingLine,
-		bool usedMutableKeyword, string nameAndType)
-	{
-		var member = new Member(this, nameAndType,
-			ExtractConstraintsSpanAndValueExpression(parser, remainingLine, nameAndType,
-				out var constraintsSpan), usedMutableKeyword);
-		if (!constraintsSpan.IsEmpty)
-			member.ParseConstraints(parser,
-				constraintsSpan.ToString().Split(BinaryOperator.And, StringSplitOptions.TrimEntries));
-		return member;
-	}
-
-	protected Expression? ExtractConstraintsSpanAndValueExpression(ExpressionParser parser,
-		ReadOnlySpan<char> remainingLine, string nameAndType,
-		out ReadOnlySpan<char> constraintsSpan)
-	{
-		var equalIndex = remainingLine.IndexOf(EqualCharacter);
-		if (equalIndex > 0)
-		{
-			constraintsSpan = remainingLine[(nameAndType.Length + 1 + Keyword.With.Length + 1)..(equalIndex - 1)];
-			return GetMemberExpression(parser, nameAndType,
-				remainingLine[(equalIndex + 2)..]);
-		}
-		constraintsSpan = remainingLine[(nameAndType.Length + 1 + Keyword.With.Length + 1)..];
-		return null;
-	}
-
-	private const char EqualCharacter = '=';
-
-	private Expression GetMemberExpression(ExpressionParser parser, string memberName,
-		ReadOnlySpan<char> remainingTextSpan) =>
-		parser.ParseExpression(new Body(new Method(this, 0, parser, new[] { EmptyBody })),
-			GetFromConstructorCallFromUpcastableMemberOrJustEvaluate(memberName, remainingTextSpan));
-
-	public const string EmptyBody = nameof(EmptyBody);
-
-	private ReadOnlySpan<char> GetFromConstructorCallFromUpcastableMemberOrJustEvaluate(
-		string memberName, ReadOnlySpan<char> remainingTextSpan)
-	{
-		var memberNameWithFirstLetterCaps = memberName.MakeFirstLetterUppercase();
-		return FindType(memberNameWithFirstLetterCaps) != null &&
-			!remainingTextSpan.StartsWith(memberNameWithFirstLetterCaps)
-				? string.Concat(memberNameWithFirstLetterCaps, "(", remainingTextSpan, ")").AsSpan()
-				: remainingTextSpan.StartsWith(Name) && !char.IsUpper(memberName[0])
-					? throw new CurrentTypeCannotBeInstantiatedAsMemberType(this, lineNumber,
-						remainingTextSpan.ToString())
-					: remainingTextSpan;
-	}
-
-	public sealed class CurrentTypeCannotBeInstantiatedAsMemberType : ParsingFailed
-	{
-		public CurrentTypeCannotBeInstantiatedAsMemberType(Type type, int lineNumber, string typeName)
-			: base(type, lineNumber, typeName) { }
-	}
-
-	private static string GetMemberType(SpanSplitEnumerator nameAndExpression)
-	{
-		var memberType = nameAndExpression.Current.ToString();
-		while (memberType.Contains('(') && !memberType.Contains(')'))
-		{
-			nameAndExpression.MoveNext();
-			memberType += " " + nameAndExpression.Current.ToString();
-		}
-		return memberType;
-	}
-
-	private static bool
-		HasConstraints(string wordAfterName, ref SpanSplitEnumerator nameAndExpression) =>
-		wordAfterName == Keyword.With || nameAndExpression.MoveNext() &&
-		nameAndExpression.Current.ToString() == Keyword.With;
-
-	public sealed class MemberMissingConstraintExpression : ParsingFailed
-	{
-		public MemberMissingConstraintExpression(Type type, int lineNumber, string memberName) : base(
-			type, lineNumber, memberName) { }
-	}
-
-	private static bool
-		IsMemberTypeAny(string nameAndType, SpanSplitEnumerator nameAndExpression) =>
-		nameAndType == Base.AnyLowercase ||
-		nameAndExpression.Current.Equals(Base.Any, StringComparison.Ordinal);
-
-	public sealed class MemberWithTypeAnyIsNotAllowed : ParsingFailed
-	{
-		public MemberWithTypeAnyIsNotAllowed(Type type, int lineNumber, string name) : base(type, lineNumber, name) { }
-	}
-
-	public sealed class MembersMustComeBeforeMethods : ParsingFailed
-	{
-		public MembersMustComeBeforeMethods(Type type, int lineNumber, string line) : base(type,
-			lineNumber, line) { }
-	}
-
-	public sealed class DuplicateMembersAreNotAllowed : ParsingFailed
-	{
-		public DuplicateMembersAreNotAllowed(Type type, int lineNumber, string name) :
-			base(type, lineNumber, name) { }
-	}
-
-	public const string HasWithSpaceAtEnd = Keyword.Has + " ";
-	public const string MutableWithSpaceAtEnd = Keyword.Mutable + " ";
-
-	public sealed class MustImplementAllTraitMethodsOrNone : ParsingFailed
-	{
+	private int lineNumber;
+	public sealed class MustImplementAllTraitMethodsOrNone : ParsingFailed {
 		public MustImplementAllTraitMethodsOrNone(Type type, string traitName,
 			IEnumerable<Method> missingTraitMethods) :
 			base(type, type.lineNumber,
@@ -380,127 +158,9 @@ public class Type : Context
 			throw new MustImplementAllTraitMethodsOrNone(this, trait.Name, nonImplementedTraitMethods);
 	}
 
-	private string[] GetAllMethodLines()
-	{
-		if (IsTrait && IsNextLineValidMethodBody())
-			throw new TypeHasNoMembersAndThusMustBeATraitWithoutMethodBodies(this);
-		if (!IsTrait && !IsNextLineValidMethodBody())
-			throw new MethodMustBeImplementedInNonTrait(this, lines[lineNumber]);
-		var methodLineNumber = lineNumber;
-		IncrementLineNumberTillMethodEnd();
-		return listStartLineNumber != -1
-			? throw new UnterminatedMultiLineListFound(this, listStartLineNumber - 1,
-				lines[listStartLineNumber])
-			: lines[methodLineNumber..(lineNumber + 1)];
-	}
-
-	private bool IsNextLineValidMethodBody()
-	{
-		if (lineNumber + 1 >= lines.Length)
-			return false;
-		var line = lines[lineNumber + 1];
-		ValidateNestingAndLineCharacterCountLimit(line);
-		if (line.StartsWith('\t'))
-			return true;
-		if (line.Length != line.TrimStart().Length)
-			throw new ExtraWhitespacesFoundAtBeginningOfLine(this, lineNumber, line);
-		return false;
-	}
-
-	private void ValidateNestingAndLineCharacterCountLimit(string line)
-	{
-		if (line.StartsWith(SixTabs, StringComparison.Ordinal))
-			throw new NestingMoreThanFiveLevelsIsNotAllowed(this, lineNumber + 1);
-		if (line.Length > Limit.CharacterCount)
-			throw new CharacterCountMustBeWithinLimit(this, line.Length, lineNumber + 1);
-	}
-
-	private const string SixTabs = "\t\t\t\t\t\t";
-
-	public sealed class NestingMoreThanFiveLevelsIsNotAllowed : ParsingFailed
-	{
-		public NestingMoreThanFiveLevelsIsNotAllowed(Type type, int lineNumber) : base(type,
-			lineNumber,
-			$"Type {type.Name} has more than {Limit.NestingLevel} levels of nesting in line: " +
-			$"{lineNumber + 1}") { }
-	}
-
-	public sealed class CharacterCountMustBeWithinLimit : ParsingFailed
-	{
-		public CharacterCountMustBeWithinLimit(Type type, int lineLength, int lineNumber) :
-			base(type, lineNumber,
-				$"Type {type.Name} has character count {lineLength} in line: {lineNumber + 1} but limit is " +
-				$"{Limit.CharacterCount}") { }
-	}
-
-	public sealed class TypeHasNoMembersAndThusMustBeATraitWithoutMethodBodies : ParsingFailed
-	{
-		public TypeHasNoMembersAndThusMustBeATraitWithoutMethodBodies(Type type) : base(type, 0) { }
-	}
-
-	public sealed class MethodMustBeImplementedInNonTrait : ParsingFailed
-	{
-		public MethodMustBeImplementedInNonTrait(Type type, string definitionLine) : base(type,
-			type.lineNumber, definitionLine) { }
-	}
-
-	private void IncrementLineNumberTillMethodEnd()
-	{
-		while (IsNextLineValidMethodBody())
-		{
-			lineNumber++;
-			if (lines[lineNumber - 1].EndsWith(','))
-				MergeMultiLineListIntoSingleLine(',');
-			else if (lines[lineNumber - 1].EndsWith('+'))
-				MergeMultiLineListIntoSingleLine('+');
-			if (listStartLineNumber != -1 && listEndLineNumber != -1)
-				SetNewLinesAndLineNumbersAfterMerge();
-		}
-	}
-
-	private void MergeMultiLineListIntoSingleLine(char endCharacter)
-	{
-		if (listStartLineNumber == -1)
-			listStartLineNumber = lineNumber - 1;
-		lines[listStartLineNumber] += ' ' + lines[lineNumber].TrimStart();
-		if (lines[lineNumber].EndsWith(endCharacter))
-			return;
-		listEndLineNumber = lineNumber;
-		if (lines[listStartLineNumber].Length < Limit.MultiLineCharacterCount)
-			throw new MultiLineExpressionsAllowedOnlyWhenLengthIsMoreThanHundred(this,
-				listStartLineNumber - 1, lines[listStartLineNumber].Length);
-	}
-
-	private int listStartLineNumber = -1;
-	private int listEndLineNumber = -1;
-
-	public sealed class MultiLineExpressionsAllowedOnlyWhenLengthIsMoreThanHundred : ParsingFailed
-	{
-		public MultiLineExpressionsAllowedOnlyWhenLengthIsMoreThanHundred(Type type, int lineNumber,
-			int length) : base(type, lineNumber,
-			"Current length: " + length + $", Minimum Length for Multi line expressions: {
-				Limit.MultiLineCharacterCount
-			}") { }
-	}
-
-	private void SetNewLinesAndLineNumbersAfterMerge()
-	{
-		var newLines = new List<string>(lines[..(listStartLineNumber + 1)]);
-		newLines.AddRange(lines[(listEndLineNumber + 1)..]);
-		lines = newLines.ToArray();
-		lineNumber = listStartLineNumber;
-		listStartLineNumber = -1;
-		listEndLineNumber = -1;
-	}
-
-	public sealed class UnterminatedMultiLineListFound : ParsingFailed
-	{
-		public UnterminatedMultiLineListFound(Type type, int lineNumber, string line) : base(type, lineNumber, line) { }
-	}
-
-	public IReadOnlyList<Member> Members => members;
+	public List<Member> Members => members;
 	protected readonly List<Member> members = new();
-	public IReadOnlyList<Method> Methods => methods;
+	public List<Method> Methods => methods;
 	protected readonly List<Method> methods = new();
 	public bool IsTrait => Members.Count == 0 && Name != Base.Number && Name != Base.Boolean;
 	public Dictionary<string, Type> AvailableMemberTypes
@@ -575,14 +235,7 @@ public class Type : Context
 	}
 
 	private bool HasMatchingConstructor(IReadOnlyList<Type> implementationTypes) =>
-		FindMethod(Method.From, implementationTypes) != null;
-
-	private Method? FindMethod(string methodName, IReadOnlyList<Type> implementationTypes) =>
-		!AvailableMethods.TryGetValue(methodName, out var matchingMethods)
-			? null
-			: matchingMethods.FirstOrDefault(method =>
-				method.Parameters.Count == implementationTypes.Count &&
-				IsMethodWithMatchingParametersType(method, implementationTypes));
+		typeMethodFinder.FindMethod(Method.From, implementationTypes) != null;
 
 	public sealed class CannotGetGenericImplementationOnNonGeneric : Exception
 	{
@@ -594,96 +247,18 @@ public class Type : Context
 	public const string Extension = ".strict";
 	public Member? FindMember(string name) => Members.FirstOrDefault(member => member.Name == name);
 
-	public Method GetMethod(string methodName, IReadOnlyList<Expression> arguments, ExpressionParser parser) =>
-		FindMethod(methodName, arguments, parser) ??
-		throw new NoMatchingMethodFound(this, methodName, AvailableMethods);
-
 	public Method? FindMethod(string methodName, IReadOnlyList<Expression> arguments,
-		ExpressionParser parser)
-	{
-		if (IsGeneric)
-			throw new GenericTypesCannotBeUsedDirectlyUseImplementation(this,
-				"Type is Generic and cannot be used directly");
-		if (!AvailableMethods.TryGetValue(methodName, out var matchingMethods))
-			return FindAndCreateFromBaseMethod(methodName, arguments, parser);
-		foreach (var method in matchingMethods)
-		{
-			if (method.Parameters.Count == arguments.Count)
-			{
-				//TODO: clean up, optimized this a bit
-				if (arguments.Count == 1)
-				{
-					if (IsMethodParameterMatchingArgument(method, 0, arguments[0].ReturnType))
-						return method;
-				}
-				else if (IsMethodWithMatchingParametersType(method,
-					arguments.Select(argument => argument.ReturnType).ToList()))
-					return method;
-			}
-			//TODO: not sure about this, looks very slow to do on every possible method
-			if (method.Parameters.Count == 1 && arguments.Count > 0)
-			{
-				var parameter = method.Parameters[0];
-				if (IsParameterTypeList(parameter) && CanAutoParseArgumentsIntoList(arguments) &&
-					IsMethodParameterMatchingWithArgument(arguments,
-						(GenericTypeImplementation)parameter.Type))
-					return method;
-			}
-		}
-		return FindAndCreateFromBaseMethod(methodName, arguments, parser) ??
-			throw new ArgumentsDoNotMatchMethodParameters(arguments, this, matchingMethods);
-	}
+		ExpressionParser parser) =>
+		typeMethodFinder.FindMethod(methodName, arguments, parser);
 
-	private static bool IsParameterTypeList(NamedType parameter) =>
-		parameter.Type is GenericTypeImplementation { Generic.Name: Base.List };
+	public Method GetMethod(string methodName, IReadOnlyList<Expression> arguments,
+		ExpressionParser parser) =>
+		typeMethodFinder.GetMethod(methodName, arguments, parser);
 
-	private static bool CanAutoParseArgumentsIntoList(IReadOnlyList<Expression> arguments) =>
-		arguments.All(a => a.ReturnType == arguments[0].ReturnType);
-
-	private static bool IsMethodParameterMatchingWithArgument(IReadOnlyList<Expression> arguments,
-		GenericTypeImplementation genericType) =>
-		genericType.ImplementationTypes[0] == arguments[0].ReturnType;
-
-	public class GenericTypesCannotBeUsedDirectlyUseImplementation : Exception
-	{
+	public class GenericTypesCannotBeUsedDirectlyUseImplementation : Exception {
 		public GenericTypesCannotBeUsedDirectlyUseImplementation(Type type, string extraInformation) :
 			base(type + " " + extraInformation) { }
 	}
-
-	//TODO: got two usages, but they are different and can be optimized each
-	private static bool IsMethodWithMatchingParametersType(Method method,
-		IReadOnlyList<Type> argumentReturnTypes)
-	{
-		for (var index = 0; index < method.Parameters.Count; index++)
-			if (!IsMethodParameterMatchingArgument(method, index, argumentReturnTypes[index]))
-				return false;
-		return true;
-	}
-
-	private static bool IsMethodParameterMatchingArgument(Method method, int index,
-		Type argumentReturnType)
-	{
-		var methodParameterType = method.Parameters[index].Type;
-		if (argumentReturnType == methodParameterType || method.IsGeneric ||
-			methodParameterType.Name == Base.Any ||
-			IsArgumentImplementationTypeMatchParameterType(argumentReturnType, methodParameterType))
-			return true;
-		if (methodParameterType.IsEnum && methodParameterType.Members[0].Type == argumentReturnType)
-			return true;
-		if (methodParameterType.Name == Base.Iterator && method.Type == argumentReturnType)
-			return true;
-		if (methodParameterType.IsGeneric)
-			throw new GenericTypesCannotBeUsedDirectlyUseImplementation(
-				methodParameterType, //ncrunch: no coverage
-				"(parameter " + index + ") is not usable with argument " + argumentReturnType + " in " +
-				method);
-		return argumentReturnType.IsCompatible(methodParameterType);
-	}
-
-	private static bool
-		IsArgumentImplementationTypeMatchParameterType(Type argumentType, Type parameterType) =>
-		argumentType is GenericTypeImplementation argumentGenericType &&
-		argumentGenericType.ImplementationTypes.Any(t => t == parameterType);
 
 	/// <summary>
 	/// Any non public member is automatically iteratable if it has Iterator, for example Text.strict
@@ -715,52 +290,7 @@ public class Type : Context
 	}
 
 	private bool? cachedIteratorResult;
-	private Dictionary<string, bool> cachedEvaluatedMemberTypes = new();
-
-
-	private Method? FindAndCreateFromBaseMethod(string methodName,
-		IReadOnlyList<Expression> arguments, ExpressionParser parser)
-	{
-		if (methodName != Method.From)
-			return null;
-		var fromMethod = "from(";
-		fromMethod += GetMatchingMemberParametersIfExist(arguments);
-		return fromMethod.Length > 5 && (fromMethod.Split(',').Length - 1 == arguments.Count ||
-			fromMethod.Split(',').Length - 1 == PrivateMembersCount)
-			? BuildMethod($"{fromMethod[..^2]})", parser)
-			: IsDataType
-				? BuildMethod(fromMethod[..^1], parser)
-				: null;
-	}
-
-	private string? GetMatchingMemberParametersIfExist(IReadOnlyList<Expression> arguments)
-	{
-		var argumentIndex = 0;
-		string? parameters = null;
-		foreach (var member in members)
-			if (arguments.Count > argumentIndex && member.Type == arguments[argumentIndex].ReturnType)
-			{
-				parameters += $"{member.Name.MakeFirstLetterLowercase()} {member.Type.Name}, ";
-				argumentIndex++;
-			}
-		return parameters == null && arguments.Count > 1 && PrivateMembersCount == 1 &&
-			CanUpcastAllArgumentsToMemberType(arguments, members[0], arguments[0].ReturnType)
-				? FormatMemberAsParameterWithType()
-				: parameters;
-	}
-
-	private int PrivateMembersCount => members.Count(member => !member.IsPublic);
-
-	private static bool CanUpcastAllArgumentsToMemberType(IEnumerable<Expression> arguments,
-		NamedType member, Type firstArgumentReturnType) =>
-		member.Type is GenericTypeImplementation { Generic.Name: Base.List } genericType &&
-		genericType.ImplementationTypes[0] == firstArgumentReturnType &&
-		arguments.All(a => a.ReturnType == firstArgumentReturnType);
-
-	private string FormatMemberAsParameterWithType() =>
-		$"{members[0].Name.MakeFirstLetterLowercase()} {members[0].Type.Name}, ";
-
-	private Method BuildMethod(string fromMethod, ExpressionParser parser) => new(this, 0, parser, new[] { fromMethod });
+	private readonly Dictionary<string, bool> cachedEvaluatedMemberTypes = new();
 
 	public bool IsCompatible(Type sameOrBaseType) =>
 		this == sameOrBaseType || HasAnyCompatibleMember(sameOrBaseType) ||
@@ -784,8 +314,7 @@ public class Type : Context
 		sameOrBaseType.Name == Base.Text && Name == Base.Number || sameOrBaseType.IsIterator &&
 		members.Any(member => member.Type == GetType(Base.Number));
 
-
-	private bool IsMutableAndHasMatchingImplementation(Type argumentType) =>
+	internal bool IsMutableAndHasMatchingImplementation(Type argumentType) =>
 		this is GenericTypeImplementation genericTypeImplementation &&
 		genericTypeImplementation.Generic.Name == Base.Mutable &&
 		genericTypeImplementation.ImplementationTypes[0] == argumentType;
@@ -935,5 +464,10 @@ public class Type : Context
 		public InvalidGenericTypeWithoutGenericArguments(Type type) : base(
 			"This type is broken and needs to be fixed, check the creation: " + type + ", CreatedBy: " +
 			type.CreatedBy) { }
+	}
+
+	public sealed class TypeHasNoMembersAndThusMustBeATraitWithoutMethodBodies : ParsingFailed
+	{
+		public TypeHasNoMembersAndThusMustBeATraitWithoutMethodBodies(Type type) : base(type, 0) { }
 	}
 }

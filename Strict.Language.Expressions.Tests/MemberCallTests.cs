@@ -177,7 +177,7 @@ public sealed class MemberCallTests : TestExpressions
 					"has something Number",
 					"Run",
 					"\tconstant a = 5")).ParseMembersAndMethods(parser),
-			Throws.InstanceOf<Type.DuplicateMembersAreNotAllowed>());
+			Throws.InstanceOf<TypeParser.DuplicateMembersAreNotAllowed>());
 
 	[Test]
 	public void MembersWithDifferentNamesAreAllowed()

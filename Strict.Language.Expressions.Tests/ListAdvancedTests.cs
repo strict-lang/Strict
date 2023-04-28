@@ -140,7 +140,7 @@ public sealed class ListAdvancedTests : TestExpressions
 					"\tsomething"))
 				// @formatter:on
 				.ParseMembersAndMethods(parser).Methods[0].GetBodyAndParseIfNeeded(),
-			Throws.InstanceOf<Type.MultiLineExpressionsAllowedOnlyWhenLengthIsMoreThanHundred>().With.Message.
+			Throws.InstanceOf<TypeParser.MultiLineExpressionsAllowedOnlyWhenLengthIsMoreThanHundred>().With.Message.
 				Contains("Current length: 40, Minimum Length for Multi line expressions: 100"));
 
 	[Test]
@@ -157,7 +157,7 @@ public sealed class ListAdvancedTests : TestExpressions
 					"\tsomething"))
 				// @formatter:on
 				.ParseMembersAndMethods(parser).Methods[0].GetBodyAndParseIfNeeded(),
-			Throws.InstanceOf<Type.UnterminatedMultiLineListFound>().With.Message.
+			Throws.InstanceOf<TypeParser.UnterminatedMultiLineListFound>().With.Message.
 				StartWith("\tconstant result = (1, 2, 3, 4,"));
 
 	// @formatter:off

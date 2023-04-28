@@ -36,7 +36,7 @@ public sealed class IfTests : TestExpressions
 	[Test]
 	public void ParseInvalidSpaceAfterElseIsNotAllowed() =>
 		Assert.That(() => ParseExpression("else "),
-			Throws.InstanceOf<Type.ExtraWhitespacesFoundAtEndOfLine>());
+			Throws.InstanceOf<TypeParser.ExtraWhitespacesFoundAtEndOfLine>());
 
 	[Test]
 	public void ParseJustElseIsNotAllowed() =>

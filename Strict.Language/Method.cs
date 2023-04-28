@@ -282,7 +282,7 @@ public sealed class Method : Context
 	private bool CheckBodyLine(string line, Body body)
 	{
 		if (line.Length == 0)
-			throw new Type.EmptyLineIsNotAllowed(Type, TypeLineNumber + methodLineNumber);
+			throw new TypeParser.EmptyLineIsNotAllowed(Type, TypeLineNumber + methodLineNumber);
 		var tabs = GetTabs(line);
 		if (tabs > body.Tabs)
 			PreParseBody(tabs, body);
@@ -306,9 +306,9 @@ public sealed class Method : Context
 		if (tabs is 0 or > 3)
 			throw new InvalidIndentation(Type, lineNumber, line, Name);
 		if (char.IsWhiteSpace(line[tabs]))
-			throw new Type.ExtraWhitespacesFoundAtBeginningOfLine(Type, lineNumber, line, Name);
+			throw new TypeParser.ExtraWhitespacesFoundAtBeginningOfLine(Type, lineNumber, line, Name);
 		if (char.IsWhiteSpace(line[^1]))
-			throw new Type.ExtraWhitespacesFoundAtEndOfLine(Type, lineNumber, line, Name);
+			throw new TypeParser.ExtraWhitespacesFoundAtEndOfLine(Type, lineNumber, line, Name);
 	}
 
 	public sealed class InvalidIndentation : ParsingFailed

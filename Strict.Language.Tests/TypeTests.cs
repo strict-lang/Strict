@@ -29,17 +29,17 @@ public sealed class TypeTests
 	[Test]
 	public void EmptyLineIsNotAllowed() =>
 		Assert.That(() => CreateType(Base.HashCode, ""),
-			Throws.InstanceOf<Type.EmptyLineIsNotAllowed>().With.Message.Contains("line 1"));
+			Throws.InstanceOf<TypeParser.EmptyLineIsNotAllowed>().With.Message.Contains("line 1"));
 
 	[Test]
 	public void WhitespacesAreNotAllowed()
 	{
 		Assert.That(() => CreateType("Whitespace", " "),
-			Throws.InstanceOf<Type.ExtraWhitespacesFoundAtBeginningOfLine>());
+			Throws.InstanceOf<TypeParser.ExtraWhitespacesFoundAtBeginningOfLine>());
 		Assert.That(() => CreateType("Program", " has App"),
-			Throws.InstanceOf<Type.ExtraWhitespacesFoundAtBeginningOfLine>());
+			Throws.InstanceOf<TypeParser.ExtraWhitespacesFoundAtBeginningOfLine>());
 		Assert.That(() => CreateType(Base.HashCode, "has\t"),
-			Throws.InstanceOf<Type.ExtraWhitespacesFoundAtEndOfLine>());
+			Throws.InstanceOf<TypeParser.ExtraWhitespacesFoundAtEndOfLine>());
 	}
 
 	[Test]
@@ -72,7 +72,7 @@ public sealed class TypeTests
 	public void ExtraWhitespacesFoundAtBeginningOfLine() =>
 		Assert.That(
 			() => CreateType(nameof(ExtraWhitespacesFoundAtBeginningOfLine), "has log", "Run",
-				" constant a = 5"), Throws.InstanceOf<Type.ExtraWhitespacesFoundAtBeginningOfLine>());
+				" constant a = 5"), Throws.InstanceOf<TypeParser.ExtraWhitespacesFoundAtBeginningOfLine>());
 
 	[Test]
 	public void NoMatchingMethodFound() =>
@@ -90,7 +90,7 @@ public sealed class TypeTests
 	[TestCase("has random Any")]
 	public void MemberWithTypeAnyIsNotAllowed(string line) =>
 		Assert.That(() => CreateType("Program", line),
-			Throws.InstanceOf<Type.MemberWithTypeAnyIsNotAllowed>());
+			Throws.InstanceOf<TypeParser.MemberWithTypeAnyIsNotAllowed>());
 
 	[TestCase("has log", "Run", "\tconstant result = Any")]
 	[TestCase("has log", "Run", "\tconstant result = Any(5)")]
@@ -117,7 +117,7 @@ public sealed class TypeTests
 	[Test]
 	public void MembersMustComeBeforeMethods() =>
 		Assert.That(() => CreateType("Program", "Run", "has log"),
-			Throws.InstanceOf<Type.MembersMustComeBeforeMethods>());
+			Throws.InstanceOf<TypeParser.MembersMustComeBeforeMethods>());
 
 	[Test]
 	public void SimpleApp() =>
@@ -167,7 +167,7 @@ public sealed class TypeTests
 		Assert.That(() => CreateType("Program",
 				"has App",
 				"Run"),
-			Throws.InstanceOf<Type.MethodMustBeImplementedInNonTrait>());
+			Throws.InstanceOf<TypeParser.MethodMustBeImplementedInNonTrait>());
 	// @formatter:on
 
 	[Test]
@@ -512,7 +512,7 @@ public sealed class TypeTests
 		Assert.That(
 			() => CreateType(nameof(MissingConstraintExpression),
 				"mutable numbers with", "AddNumbers Number", "\tnumbers(0) + numbers(1)"),
-			Throws.InstanceOf<Type.MemberMissingConstraintExpression>());
+			Throws.InstanceOf<TypeParser.MemberMissingConstraintExpression>());
 
 	[Test]
 	public void TypeNameCanHaveOneNumberAtEnd()
@@ -570,7 +570,7 @@ public sealed class TypeTests
 		Assert.That(
 			() => CreateType(nameof(CurrentTypeCannotBeInstantiatedAsMemberType), "has number",
 				"has currentType = CurrentTypeCannotBeInstantiatedAsMemberType(5)", "Unused", "\t1"),
-			Throws.InstanceOf<Type.CurrentTypeCannotBeInstantiatedAsMemberType>()!);
+			Throws.InstanceOf<TypeParser.CurrentTypeCannotBeInstantiatedAsMemberType>()!);
 
 	[Test]
 	public void MemberNameAsAnotherMemberTypeNameIsForbidden() =>

@@ -90,7 +90,7 @@ public sealed class LimitTests
 				"					if 9 is 9",
 				"						log.Write(5)" // @formatter:on
 			}).ParseMembersAndMethods(new MethodExpressionParser()),
-			Throws.InstanceOf<Type.NestingMoreThanFiveLevelsIsNotAllowed>().With.Message.Contains(
+			Throws.InstanceOf<TypeParser.NestingMoreThanFiveLevelsIsNotAllowed>().With.Message.Contains(
 				$"Type NestingMoreThanFiveLevelsIsNotAllowed has more than {
 					Limit.NestingLevel
 				} levels of nesting in line: 8"));
@@ -105,7 +105,7 @@ public sealed class LimitTests
 					"CalculateCompleteLevelCount(numberOfCans Number, levelCount Number) Number",
 					"	constant remainingCans = numberOfCans - (levelCount * levelCount)remainingCans < ((levelCount + 1) * (levelCount + 1)) ? levelCount else CalculateCompleteLevelCount(remainingCans, levelCount + 1)"
 				}).ParseMembersAndMethods(new MethodExpressionParser()),
-			Throws.InstanceOf<Type.CharacterCountMustBeWithinLimit>().With.Message.Contains("Type " +
+			Throws.InstanceOf<TypeParser.CharacterCountMustBeWithinLimit>().With.Message.Contains("Type " +
 				nameof(CharacterCountMustBeWithinLimit) +
 				" has character count 196 in line: 4 but limit is " + Limit.CharacterCount));
 
