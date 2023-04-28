@@ -19,6 +19,7 @@ public class Type : Context
 		IsGeneric = Name == Base.Generic || OneOfFirstThreeLinesContainsGeneric();
 		CreatedBy = "Package: " + package + ", file=" + file + ", StackTrace:\n" +
 			StackTraceExtensions.FormatStackTraceIntoClickableMultilineText(1);
+		typeMethodFinder = new TypeMethodFinder(this);
 	}
 
 	public sealed class LinesCountMustNotExceedLimit : ParsingFailed
@@ -44,6 +45,7 @@ public class Type : Context
 	/// For debugging purposes to see where this Type was initially created.
 	/// </summary>
 	public string CreatedBy { get; protected set; }
+	private readonly TypeMethodFinder typeMethodFinder;
 
 	private bool OneOfFirstThreeLinesContainsGeneric()
 	{
@@ -575,14 +577,7 @@ public class Type : Context
 	}
 
 	private bool HasMatchingConstructor(IReadOnlyList<Type> implementationTypes) =>
-		FindMethod(Method.From, implementationTypes) != null;
-
-	private Method? FindMethod(string methodName, IReadOnlyList<Type> implementationTypes) =>
-		!AvailableMethods.TryGetValue(methodName, out var matchingMethods)
-			? null
-			: matchingMethods.FirstOrDefault(method =>
-				method.Parameters.Count == implementationTypes.Count &&
-				IsMethodWithMatchingParametersType(method, implementationTypes));
+		typeMethodFinder.FindMethod(Method.From, implementationTypes) != null;
 
 	public sealed class CannotGetGenericImplementationOnNonGeneric : Exception
 	{
@@ -594,96 +589,18 @@ public class Type : Context
 	public const string Extension = ".strict";
 	public Member? FindMember(string name) => Members.FirstOrDefault(member => member.Name == name);
 
-	public Method GetMethod(string methodName, IReadOnlyList<Expression> arguments, ExpressionParser parser) =>
-		FindMethod(methodName, arguments, parser) ??
-		throw new NoMatchingMethodFound(this, methodName, AvailableMethods);
-
 	public Method? FindMethod(string methodName, IReadOnlyList<Expression> arguments,
-		ExpressionParser parser)
-	{
-		if (IsGeneric)
-			throw new GenericTypesCannotBeUsedDirectlyUseImplementation(this,
-				"Type is Generic and cannot be used directly");
-		if (!AvailableMethods.TryGetValue(methodName, out var matchingMethods))
-			return FindAndCreateFromBaseMethod(methodName, arguments, parser);
-		foreach (var method in matchingMethods)
-		{
-			if (method.Parameters.Count == arguments.Count)
-			{
-				//TODO: clean up, optimized this a bit
-				if (arguments.Count == 1)
-				{
-					if (IsMethodParameterMatchingArgument(method, 0, arguments[0].ReturnType))
-						return method;
-				}
-				else if (IsMethodWithMatchingParametersType(method,
-					arguments.Select(argument => argument.ReturnType).ToList()))
-					return method;
-			}
-			//TODO: not sure about this, looks very slow to do on every possible method
-			if (method.Parameters.Count == 1 && arguments.Count > 0)
-			{
-				var parameter = method.Parameters[0];
-				if (IsParameterTypeList(parameter) && CanAutoParseArgumentsIntoList(arguments) &&
-					IsMethodParameterMatchingWithArgument(arguments,
-						(GenericTypeImplementation)parameter.Type))
-					return method;
-			}
-		}
-		return FindAndCreateFromBaseMethod(methodName, arguments, parser) ??
-			throw new ArgumentsDoNotMatchMethodParameters(arguments, this, matchingMethods);
-	}
+		ExpressionParser parser) =>
+		typeMethodFinder.FindMethod(methodName, arguments, parser);
 
-	private static bool IsParameterTypeList(NamedType parameter) =>
-		parameter.Type is GenericTypeImplementation { Generic.Name: Base.List };
-
-	private static bool CanAutoParseArgumentsIntoList(IReadOnlyList<Expression> arguments) =>
-		arguments.All(a => a.ReturnType == arguments[0].ReturnType);
-
-	private static bool IsMethodParameterMatchingWithArgument(IReadOnlyList<Expression> arguments,
-		GenericTypeImplementation genericType) =>
-		genericType.ImplementationTypes[0] == arguments[0].ReturnType;
-
-	public class GenericTypesCannotBeUsedDirectlyUseImplementation : Exception
-	{
+	public Method GetMethod(string methodName, IReadOnlyList<Expression> arguments,
+		ExpressionParser parser) =>
+		typeMethodFinder.GetMethod(methodName, arguments, parser);
+	
+	public class GenericTypesCannotBeUsedDirectlyUseImplementation : Exception {
 		public GenericTypesCannotBeUsedDirectlyUseImplementation(Type type, string extraInformation) :
 			base(type + " " + extraInformation) { }
 	}
-
-	//TODO: got two usages, but they are different and can be optimized each
-	private static bool IsMethodWithMatchingParametersType(Method method,
-		IReadOnlyList<Type> argumentReturnTypes)
-	{
-		for (var index = 0; index < method.Parameters.Count; index++)
-			if (!IsMethodParameterMatchingArgument(method, index, argumentReturnTypes[index]))
-				return false;
-		return true;
-	}
-
-	private static bool IsMethodParameterMatchingArgument(Method method, int index,
-		Type argumentReturnType)
-	{
-		var methodParameterType = method.Parameters[index].Type;
-		if (argumentReturnType == methodParameterType || method.IsGeneric ||
-			methodParameterType.Name == Base.Any ||
-			IsArgumentImplementationTypeMatchParameterType(argumentReturnType, methodParameterType))
-			return true;
-		if (methodParameterType.IsEnum && methodParameterType.Members[0].Type == argumentReturnType)
-			return true;
-		if (methodParameterType.Name == Base.Iterator && method.Type == argumentReturnType)
-			return true;
-		if (methodParameterType.IsGeneric)
-			throw new GenericTypesCannotBeUsedDirectlyUseImplementation(
-				methodParameterType, //ncrunch: no coverage
-				"(parameter " + index + ") is not usable with argument " + argumentReturnType + " in " +
-				method);
-		return argumentReturnType.IsCompatible(methodParameterType);
-	}
-
-	private static bool
-		IsArgumentImplementationTypeMatchParameterType(Type argumentType, Type parameterType) =>
-		argumentType is GenericTypeImplementation argumentGenericType &&
-		argumentGenericType.ImplementationTypes.Any(t => t == parameterType);
 
 	/// <summary>
 	/// Any non public member is automatically iteratable if it has Iterator, for example Text.strict
@@ -715,52 +632,7 @@ public class Type : Context
 	}
 
 	private bool? cachedIteratorResult;
-	private Dictionary<string, bool> cachedEvaluatedMemberTypes = new();
-
-
-	private Method? FindAndCreateFromBaseMethod(string methodName,
-		IReadOnlyList<Expression> arguments, ExpressionParser parser)
-	{
-		if (methodName != Method.From)
-			return null;
-		var fromMethod = "from(";
-		fromMethod += GetMatchingMemberParametersIfExist(arguments);
-		return fromMethod.Length > 5 && (fromMethod.Split(',').Length - 1 == arguments.Count ||
-			fromMethod.Split(',').Length - 1 == PrivateMembersCount)
-			? BuildMethod($"{fromMethod[..^2]})", parser)
-			: IsDataType
-				? BuildMethod(fromMethod[..^1], parser)
-				: null;
-	}
-
-	private string? GetMatchingMemberParametersIfExist(IReadOnlyList<Expression> arguments)
-	{
-		var argumentIndex = 0;
-		string? parameters = null;
-		foreach (var member in members)
-			if (arguments.Count > argumentIndex && member.Type == arguments[argumentIndex].ReturnType)
-			{
-				parameters += $"{member.Name.MakeFirstLetterLowercase()} {member.Type.Name}, ";
-				argumentIndex++;
-			}
-		return parameters == null && arguments.Count > 1 && PrivateMembersCount == 1 &&
-			CanUpcastAllArgumentsToMemberType(arguments, members[0], arguments[0].ReturnType)
-				? FormatMemberAsParameterWithType()
-				: parameters;
-	}
-
-	private int PrivateMembersCount => members.Count(member => !member.IsPublic);
-
-	private static bool CanUpcastAllArgumentsToMemberType(IEnumerable<Expression> arguments,
-		NamedType member, Type firstArgumentReturnType) =>
-		member.Type is GenericTypeImplementation { Generic.Name: Base.List } genericType &&
-		genericType.ImplementationTypes[0] == firstArgumentReturnType &&
-		arguments.All(a => a.ReturnType == firstArgumentReturnType);
-
-	private string FormatMemberAsParameterWithType() =>
-		$"{members[0].Name.MakeFirstLetterLowercase()} {members[0].Type.Name}, ";
-
-	private Method BuildMethod(string fromMethod, ExpressionParser parser) => new(this, 0, parser, new[] { fromMethod });
+	private readonly Dictionary<string, bool> cachedEvaluatedMemberTypes = new();
 
 	public bool IsCompatible(Type sameOrBaseType) =>
 		this == sameOrBaseType || HasAnyCompatibleMember(sameOrBaseType) ||
@@ -784,8 +656,7 @@ public class Type : Context
 		sameOrBaseType.Name == Base.Text && Name == Base.Number || sameOrBaseType.IsIterator &&
 		members.Any(member => member.Type == GetType(Base.Number));
 
-
-	private bool IsMutableAndHasMatchingImplementation(Type argumentType) =>
+	internal bool IsMutableAndHasMatchingImplementation(Type argumentType) =>
 		this is GenericTypeImplementation genericTypeImplementation &&
 		genericTypeImplementation.Generic.Name == Base.Mutable &&
 		genericTypeImplementation.ImplementationTypes[0] == argumentType;
