@@ -1,6 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
-using System.Xml.Linq;
-using static Strict.Language.Type;
+﻿using static Strict.Language.Type;
 
 namespace Strict.Language;
 

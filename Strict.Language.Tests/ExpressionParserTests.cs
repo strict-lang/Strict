@@ -58,7 +58,7 @@ public class ExpressionParserTests : ExpressionParser
 	[Test]
 	public void EmptyLineIsNotValidInMethods() =>
 		Assert.That(() => new Method(type, 0, this, new[] { "Run", "" }),
-			Throws.InstanceOf<Type.EmptyLineIsNotAllowed>());
+			Throws.InstanceOf<TypeParser.EmptyLineIsNotAllowed>());
 
 	[Test]
 	public void NoIndentationIsNotValidInMethods() =>
@@ -73,12 +73,12 @@ public class ExpressionParserTests : ExpressionParser
 	[Test]
 	public void ExtraWhitespacesAtBeginningOfLineAreNotAllowed() =>
 		Assert.That(() => new Method(type, 0, this, new[] { "Run", "\t constant abc = 3" }),
-			Throws.InstanceOf<Type.ExtraWhitespacesFoundAtBeginningOfLine>());
+			Throws.InstanceOf<TypeParser.ExtraWhitespacesFoundAtBeginningOfLine>());
 
 	[Test]
 	public void ExtraWhitespacesAtEndOfLineAreNotAllowed() =>
 		Assert.That(() => new Method(type, 0, this, new[] { "Run", "\tconstant abc = 3 " }),
-			Throws.InstanceOf<Type.ExtraWhitespacesFoundAtEndOfLine>());
+			Throws.InstanceOf<TypeParser.ExtraWhitespacesFoundAtEndOfLine>());
 
 	[Test]
 	public void GetSingleLine()
