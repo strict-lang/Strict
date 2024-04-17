@@ -24,7 +24,7 @@ public sealed class TextTests : TestExpressions
 					new TypeLines(nameof(TextExceededMaximumCharacterLimitUseMultiLine), "has number", "Run",
 						"\tconstant result = \"HiHelloHowAreYou\" +", "\t\"HelloHowAreYouHiHello\"")).
 				ParseMembersAndMethods(new MethodExpressionParser()),
-			Throws.InstanceOf<Type.MultiLineExpressionsAllowedOnlyWhenLengthIsMoreThanHundred>().With.
+			Throws.InstanceOf<TypeParser.MultiLineExpressionsAllowedOnlyWhenLengthIsMoreThanHundred>().With.
 				Message.StartWith("Current length: 63, Minimum Length for Multi line expressions: 100"));
 
 	[TestCase("Single",
