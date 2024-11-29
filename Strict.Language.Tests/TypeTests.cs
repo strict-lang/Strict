@@ -112,7 +112,7 @@ public sealed class TypeTests
 	[Test]
 	public void MethodReturnTypeAsAnyIsNotAllowed() =>
 		Assert.That(() => CreateType("Program", "has log", "Run Any", "\tconstant result = 5"),
-			Throws.InstanceOf<Method.MethodReturnTypeAsAnyIsNotAllowed>()!);
+			Throws.InstanceOf<Method.MethodReturnTypeAsAnyIsNotAllowed>());
 
 	[Test]
 	public void MembersMustComeBeforeMethods() =>
@@ -570,14 +570,14 @@ public sealed class TypeTests
 		Assert.That(
 			() => CreateType(nameof(CurrentTypeCannotBeInstantiatedAsMemberType), "has number",
 				"has currentType = CurrentTypeCannotBeInstantiatedAsMemberType(5)", "Unused", "\t1"),
-			Throws.InstanceOf<TypeParser.CurrentTypeCannotBeInstantiatedAsMemberType>()!);
+			Throws.InstanceOf<TypeParser.CurrentTypeCannotBeInstantiatedAsMemberType>());
 
 	[Test]
 	public void MemberNameAsAnotherMemberTypeNameIsForbidden() =>
 		Assert.That(
 			() => CreateType(nameof(MemberNameAsAnotherMemberTypeNameIsForbidden), "has Range",
 				"has input = Range(5, 10)", "Unused", "\t1"),
-			Throws.InstanceOf<MethodExpressionParser.CannotAccessMemberBeforeTypeIsParsed>()!);
+			Throws.InstanceOf<MethodExpressionParser.CannotAccessMemberBeforeTypeIsParsed>());
 
 	[TestCase(Base.Number, false)]
 	[TestCase(Base.Number + "s", true)]

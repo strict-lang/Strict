@@ -41,7 +41,7 @@ public sealed class IfTests : TestExpressions
 	[Test]
 	public void ParseJustElseIsNotAllowed() =>
 		Assert.That(() => ParseExpression("else"),
-			Throws.InstanceOf<If.UnexpectedElse>().With.Message.Contains(@"at Run in "));
+			Throws.InstanceOf<If.UnexpectedElse>().With.Message.Contains("at Run in "));
 
 	[Test]
 	public void ParseIncompleteThen() =>

@@ -121,12 +121,16 @@ public sealed class For : Expression
 				: iteratorExpression;
 	}
 
-	private static Expression GetVariableFromRange(Expression iteratorExpression, MethodCall methodCall) =>
+	private static Expression GetVariableFromRange(Expression iteratorExpression,
+		MethodCall methodCall) =>
 		methodCall.Arguments.Count > 0
 			? methodCall.Arguments[0]
-			: methodCall.Instance != null && methodCall.Instance is MethodCall { ReturnType.Name: Base.Range } innerMethodCall && innerMethodCall.Arguments.Count > 0
-			? innerMethodCall.Arguments[0]
-			: iteratorExpression;
+			: methodCall.Instance is MethodCall
+			{
+				ReturnType.Name: Base.Range, Arguments.Count: > 0
+			} innerMethodCall
+				? innerMethodCall.Arguments[0]
+				: iteratorExpression;
 
 	private static ReadOnlySpan<char> GetForIteratorText(ReadOnlySpan<char> line) =>
 		line.Contains(InName, StringComparison.Ordinal)
@@ -135,7 +139,8 @@ public sealed class For : Expression
 				? line[(line.IndexOf(' ') + 1)..]
 				: line[(line.LastIndexOf(' ') + 1)..];
 
-	private static ReadOnlySpan<char> GetForExpressionText(ReadOnlySpan<char> line) => FindIterableName(line).Contains(',') && line.Contains("in", StringComparison.Ordinal)
+	private static ReadOnlySpan<char> GetForExpressionText(ReadOnlySpan<char> line) =>
+		FindIterableName(line).Contains(',') && line.Contains("in", StringComparison.Ordinal)
 			? line[(line.IndexOf(',') + 2)..]
 			: line[4..];
 

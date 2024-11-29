@@ -48,14 +48,15 @@ public sealed class CSharpExpressionVisitorTests : TestExpressions
 			visitor.Visit(new ListCall(
 				new VariableCall("numbers",
 					new List((Body)methodWithBody.GetBodyAndParseIfNeeded(),
-						new List<Expression>() { new Number(type, 0) })), new Number(type, 0))),
+						new List<Expression> { new Number(type, 0) })), new Number(type, 0))),
 			Is.EqualTo("numbers[0]"));
 
 	[Test]
 	public void GenerateMethodCall() =>
-		Assert.That(
-			visitor.Visit(new MethodCall(member.Type.Methods[0], new MemberCall(null, member),
-				new Expression[] { new Text(type, "Hi") })), Is.EqualTo("Console.WriteLine(\"Hi\")"));
+		Assert.That(visitor.Visit(new MethodCall(member.Type.Methods[0], new MemberCall(null, member),
+		[
+			new Text(type, "Hi")
+		])), Is.EqualTo("Console.WriteLine(\"Hi\")"));
 
 	[Test]
 	public void GenerateNumber() =>

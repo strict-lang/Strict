@@ -142,7 +142,7 @@ public sealed class BinaryTests : TestExpressions
 	public void HasMatchingLeftAndRightExpressionTypes()
 	{
 		var expression = ParseExpression("(\"a\", \"b\") + \"5\"");
-		Assert.That(expression, Is.InstanceOf<Binary>()!);
+		Assert.That(expression, Is.InstanceOf<Binary>());
 		Assert.That(((Binary)expression).ReturnType, Is.EqualTo(type.GetType(Base.Text.Pluralize())));
 	}
 }

@@ -1,6 +1,5 @@
 ﻿using Strict.Language;
 using Strict.Language.Expressions;
-using System.Collections.Generic;
 using Type = Strict.Language.Type;
 
 namespace Strict.VirtualMachine;
@@ -292,8 +291,10 @@ public sealed class ByteCodeGenerator
 
 	private void
 		TryGenerateStatementsForAssignmentValue(Value assignmentValue, string variableName) =>
-		statements.Add(new StoreVariableStatement(
-			new Instance(assignmentValue.ReturnType, assignmentValue.Data.GetType().IsArray ? ((IEnumerable<Expression>)assignmentValue.Data).ToList() : assignmentValue.Data), variableName));
+		statements.Add(new StoreVariableStatement(new Instance(assignmentValue.ReturnType,
+			assignmentValue.Data.GetType().IsArray
+				? ((IEnumerable<Expression>)assignmentValue.Data).ToList()
+				: assignmentValue.Data), variableName));
 
 	private bool TryGenerateIfStatements(Expression expression)
 	{
@@ -484,7 +485,7 @@ public sealed class ByteCodeGenerator
 	private Register GenerateValueBinaryStatements(MethodCall binary,
 		Instruction operationInstruction)
 	{
-		if(binary.Instance == null)
+		if (binary.Instance == null)
 			throw new InstanceNameNotFound(); //ncrunch: no coverage
 		GenerateStatementsFromExpression(binary.Instance);
 		var leftValue = registry.PreviousRegister;

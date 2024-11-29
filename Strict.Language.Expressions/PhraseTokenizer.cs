@@ -175,7 +175,7 @@ public sealed class PhraseTokenizer
 			return isInMethodCall && (tokens.index + 1 < tokens.input.Length &&
 				tokens.input[tokens.index] == CloseBracket &&
 				(tokens.input[tokens.index + 1] != '.' || foundBinaryOperationInMethodCall) ||
-				(tokens.MemberOrMethodCallWithNoArguments() && !foundBinaryOperationInMethodCall));
+				tokens.MemberOrMethodCallWithNoArguments() && !foundBinaryOperationInMethodCall);
 		}
 
 		private void HandleMethodCallStates()

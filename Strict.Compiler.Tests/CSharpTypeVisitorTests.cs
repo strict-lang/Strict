@@ -136,7 +136,7 @@ public sealed class CSharpTypeVisitorTests : TestCSharpGenerator
 			() => new CSharpTypeVisitor(
 				new Type(package,
 					new TypeLines(Computer, "has log", "Run", "\tconstant random = log.unknown")).ParseMembersAndMethods(parser)),
-			Throws.InstanceOf<MethodExpressionParser.MemberOrMethodNotFound>()!);
+			Throws.InstanceOf<MethodExpressionParser.MemberOrMethodNotFound>());
 
 	[Test]
 	public void AccessLocalVariableAfterDeclaration() =>

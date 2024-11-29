@@ -62,7 +62,7 @@ public sealed class MemberCallTests : TestExpressions
 		Assert.That(
 			() => new Type(type.Package,
 					new TypeLines(nameof(UnknownExpressionInMemberInitializer), "has input Text = random")).
-				ParseMembersAndMethods(parser), Throws.InstanceOf<ParsingFailed>()!);
+				ParseMembersAndMethods(parser), Throws.InstanceOf<ParsingFailed>());
 
 	[Test]
 	public void NameMustBeAWordWithoutAnySpecialCharacterOrNumber() =>

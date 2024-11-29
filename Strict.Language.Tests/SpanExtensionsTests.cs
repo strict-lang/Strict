@@ -70,8 +70,8 @@ GetComplicatedSequenceTexts returns Texts
 		Assert.That(index, Is.EqualTo(expectedWords.Length));
 	}
 
-	[TestCase(@"1, 2")]
-	[TestCase(@"word, number, 123")]
+	[TestCase("1, 2")]
+	[TestCase("word, number, 123")]
 	public void SplitWordsByComma(string input)
 	{
 		var index = 0;

@@ -29,7 +29,7 @@ public class CSharpToCudaTranspiler
 		if (!parameterText.Contains("Width"))
 		{
 			parameterText += ", const int count";
-			output = "first[idx] " + GetOperator(expression) + @" second[idx]";
+			output = "first[idx] " + GetOperator(expression) + " second[idx]";
 		}
 		else
 		{

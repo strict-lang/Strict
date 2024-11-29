@@ -7,18 +7,20 @@ public abstract class TestExpressions : MethodExpressionParser
 {
 	protected TestExpressions()
 	{
-		type = new Type(new TestPackage(), new TypeLines("dummy", "Run")).ParseMembersAndMethods(this);
+		type = new Type(new TestPackage(), new TypeLines("dummy", "Run")).
+			ParseMembersAndMethods(this);
 		boolean = type.GetType(Base.Boolean);
 		member = new Member(type, "log", null);
-		((List<Member>)type.Members).Add(member);
-		method = new Method(type, 0, this, new[] { MethodTests.Run });
-		methodWithBody = new Method(type, 0, this,
-			new[] { MethodTests.Run, "\tconstant variable = 5", "\tvariable + 5" });
-		((List<Method>)type.Methods).AddRange(new List<Method> { method, methodWithBody });
+		type.Members.Add(member);
+		method = new Method(type, 0, this, [MethodTests.Run]);
+		methodWithBody = new Method(type, 0, this, [
+			MethodTests.Run, "\tconstant variable = 5", "\tvariable + 5"
+		]);
+		type.Methods.AddRange(new List<Method> { method, methodWithBody });
 		number = new Number(type, 5);
-		list = new List(new Body(method), new List<Expression> { new Number(type, 5) });
+		list = new List(new Body(method), [new Number(type, 5)]);
 		bla = new Member(type, "bla", number);
-		((List<Member>)type.Members).Add(bla);
+		type.Members.Add(bla);
 	}
 
 	protected readonly Type type;
@@ -43,7 +45,7 @@ public abstract class TestExpressions : MethodExpressionParser
 	public void NoConsoleAllowed() => noConsole.CheckIfConsoleIsEmpty();
 
 	public void ParseAndCheckOutputMatchesInput(string singleLine, Expression expectedExpression) =>
-		ParseAndCheckOutputMatchesInput(new[] { singleLine }, expectedExpression);
+		ParseAndCheckOutputMatchesInput([singleLine], expectedExpression);
 
 	public void ParseAndCheckOutputMatchesInput(string[] lines, Expression expectedExpression)
 	{

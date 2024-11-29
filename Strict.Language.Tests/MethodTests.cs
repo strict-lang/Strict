@@ -177,7 +177,7 @@ public sealed class MethodTests
 	public void TraitMethodParameterCannotHaveDefaultValue() =>
 		Assert.That(
 			() => new Method(type, 0, new MethodExpressionParser(), new[] { "Run(input = \"Hello\")" }),
-			Throws.InstanceOf<Method.DefaultValueCouldNotBeParsedIntoExpression>()!);
+			Throws.InstanceOf<Method.DefaultValueCouldNotBeParsedIntoExpression>());
 
 	[Test]
 	public void ImmutableMethodParameterValueCannotBeChanged()

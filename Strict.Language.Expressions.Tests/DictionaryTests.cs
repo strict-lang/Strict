@@ -42,7 +42,7 @@ public sealed class DictionaryTests : TestExpressions
 				new TypeLines(nameof(ParseDictionaryType), "has inputMap Dictionary(Number, Number)",
 					"UseDictionary", "\tinputMap.Add(4, 6)", "\tinputMap")).
 			ParseMembersAndMethods(new MethodExpressionParser());
-		Assert.That(dictionary.Members[0].Type, Is.InstanceOf<GenericTypeImplementation>()!);
+		Assert.That(dictionary.Members[0].Type, Is.InstanceOf<GenericTypeImplementation>());
 		Assert.That(dictionary.Members[0].Type.ToString(),
 			Is.EqualTo("TestPackage.Dictionary(TestPackage.Number, TestPackage.Number)"));
 		Assert.That(((GenericTypeImplementation)dictionary.Members[0].Type).ImplementationTypes[1],
@@ -70,9 +70,9 @@ public sealed class DictionaryTests : TestExpressions
 				"has input Dictionary(Text, Boolean)", "UseDictionary", "\tinput.Add(4, \"10\")",
 				"\tinput")).ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(() => dictionary.Methods[0].GetBodyAndParseIfNeeded(),
-			Throws.InnerException.InstanceOf<Type.ArgumentsDoNotMatchMethodParameters>()!.With.InnerException.Message.Contains(
+			Throws.InnerException.InstanceOf<Type.ArgumentsDoNotMatchMethodParameters>().With.InnerException.Message.Contains(
 				"Arguments: 4 TestPackage.Number, \"10\" TestPackage.Text do not match these TestPackage.Dictionary(TestPackage.Text, TestPackage.Boolean) method(s):" +
-				"\nAdd(key TestPackage.Text, mappedValue TestPackage.Boolean) Mutable(TestPackage.Dictionary)")!);
+				"\nAdd(key TestPackage.Text, mappedValue TestPackage.Boolean) Mutable(TestPackage.Dictionary)"));
 	}
 
 	[Test]
@@ -83,7 +83,7 @@ public sealed class DictionaryTests : TestExpressions
 					"\tmutable studentsRegister = Dictionary(Number, Text)",
 					"\tstudentsRegister.Add(1, \"AK\")", "\tlog.Write(studentsRegister)")).
 			ParseMembersAndMethods(new MethodExpressionParser()).Methods[0].GetBodyAndParseIfNeeded();
-		Assert.That(((MutableDeclaration)body.Expressions[0]).Value, Is.InstanceOf<Dictionary>()!);
+		Assert.That(((MutableDeclaration)body.Expressions[0]).Value, Is.InstanceOf<Dictionary>());
 		var dictionaryExpression = (Dictionary)((MutableDeclaration)body.Expressions[0]).Value;
 		Assert.That(dictionaryExpression.KeyType, Is.EqualTo(type.GetType(Base.Number)));
 		Assert.That(dictionaryExpression.MappedValueType, Is.EqualTo(type.GetType(Base.Text)));

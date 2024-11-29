@@ -95,7 +95,7 @@ public class PackageTests
 	[Test]
 	public void ContextNameMustNotContainSpecialCharactersOrNumbers()
 	{
-		Assert.That(() => new Type(mainPackage, new TypeLines("MyClass123", Array.Empty<string>())),
+		Assert.That(() => new Type(mainPackage, new TypeLines("MyClass123")),
 			Throws.InstanceOf<Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers>());
 		Assert.That(() => new Package(mainPackage, "$%"),
 			Throws.InstanceOf<

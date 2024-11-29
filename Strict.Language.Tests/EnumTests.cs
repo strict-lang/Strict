@@ -45,7 +45,7 @@ public sealed class EnumTests
 			new TypeLines(nameof(UseEnumWithoutConstructor), "has log",
 				"Run", "\tconstant url = Connection.Google")).ParseMembersAndMethods(parser);
 		var assignment = (ConstantDeclaration)consumingType.Methods[0].GetBodyAndParseIfNeeded();
-		Assert.That(assignment.Value, Is.InstanceOf<MemberCall>()!);
+		Assert.That(assignment.Value, Is.InstanceOf<MemberCall>());
 		var member = ((MemberCall)assignment.Value).Member;
 		Assert.That(member.Name, Is.EqualTo("Google"));
 		Assert.That(member.Type.Name, Is.EqualTo("Text"));
@@ -73,7 +73,7 @@ public sealed class EnumTests
 		Assert.That(consumingType.GetType("Instruction").IsEnum, Is.True);
 		Assert.That(((MemberCall)consumingType.Members[0].Value!).Member.Name, Is.EqualTo("Add"));
 		var assignment = (ConstantDeclaration)consumingType.Methods[0].GetBodyAndParseIfNeeded();
-		Assert.That(assignment.Value, Is.InstanceOf<MemberCall>()!);
+		Assert.That(assignment.Value, Is.InstanceOf<MemberCall>());
 		var member = ((MemberCall)assignment.Value).Member;
 		Assert.That(member.Name, Is.EqualTo("Set"));
 		Assert.That(member.Type.Name, Is.EqualTo("Number"));

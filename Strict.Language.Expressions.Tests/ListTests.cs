@@ -6,7 +6,7 @@ public sealed class ListTests : TestExpressions
 {
 	[Test]
 	public void EmptyListNotAllowed() =>
-		Assert.That(() => ParseExpression("()"), Throws.InstanceOf<List.EmptyListNotAllowed>()!);
+		Assert.That(() => ParseExpression("()"), Throws.InstanceOf<List.EmptyListNotAllowed>());
 
 	[TestCase("(1)", 1)]
 	[TestCase("(5.23)", 5.23)]
@@ -66,13 +66,13 @@ public sealed class ListTests : TestExpressions
 	public void MismatchingTypeFound(string input) =>
 		Assert.That(() => ParseExpression(input),
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.
-				InstanceOf<Type.ArgumentsDoNotMatchMethodParameters>()!);
+				InstanceOf<Type.ArgumentsDoNotMatchMethodParameters>());
 
 	[TestCase("(1, 2, 3) * (1, 2)")]
 	[TestCase("(1, 2, 3) * (1, 2, 3, 4)")]
 	public void ListsHaveDifferentDimensionsIsNotAllowed(string input) =>
 		Assert.That(() => ParseExpression(input),
-			Throws.InstanceOf<Binary.ListsHaveDifferentDimensions>()!);
+			Throws.InstanceOf<Binary.ListsHaveDifferentDimensions>());
 
 	[TestCase("(1, 2, 3, 4, 5) + (6, 7, 8)", "1, 2, 3, 4, 5", "+", "6, 7, 8")]
 	[TestCase("(1, 2, 3, 4, 5) - (6, 7, 8)", "1, 2, 3, 4, 5", "-", "6, 7, 8")]
@@ -102,7 +102,7 @@ public sealed class ListTests : TestExpressions
 	{
 		const string Code = "(\"1\", \"2\", \"3\", \"4\") + 5";
 		var parsedExpression = ParseExpression(Code);
-		Assert.That(parsedExpression, Is.InstanceOf<Binary>()!);
+		Assert.That(parsedExpression, Is.InstanceOf<Binary>());
 		Assert.That(parsedExpression.ToString(), Is.EqualTo(Code));
 		Assert.That(((Binary)parsedExpression).ReturnType,
 			Is.EqualTo(type.GetType(Base.Text.Pluralize())));

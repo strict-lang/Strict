@@ -8,12 +8,11 @@ public sealed class MethodCallTests : TestExpressions
 	[SetUp]
 	public void AddComplexMethods()
 	{
-		((List<Method>)type.Methods).Add(new Method(type, 0, this,
-			new[] { "ComplexMethod(numbers, add Number) Number", "\t1" }));
-		((List<Method>)type.Methods).Add(new Method(type, 0, this,
-			new[] { "ComplexMethod(texts) Texts", "\t1" }));
-		((List<Method>)type.Methods).Add(new Method(type, 0, this,
-			new[] { "ComplexMethod(numbers) Texts", "\t1" }));
+		type.Methods.Add(new Method(type, 0, this, [
+			"ComplexMethod(numbers, add Number) Number", "\t1"
+		]));
+		type.Methods.Add(new Method(type, 0, this, ["ComplexMethod(texts) Texts", "\t1"]));
+		type.Methods.Add(new Method(type, 0, this, ["ComplexMethod(numbers) Texts", "\t1"]));
 	}
 
 	[Test]
@@ -22,15 +21,16 @@ public sealed class MethodCallTests : TestExpressions
 
 	[Test]
 	public void ParseCallWithArgument() =>
-		ParseAndCheckOutputMatchesInput("log.Write(bla)",
-			new MethodCall(member.Type.Methods[0], new MemberCall(null, member),
-				new[] { new MemberCall(null, bla) }));
+		ParseAndCheckOutputMatchesInput("log.Write(bla)", new MethodCall(member.Type.Methods[0],
+			new MemberCall(null, member), [
+				new MemberCall(null, bla)
+			]));
 
 	[Test]
 	public void ParseCallWithTextArgument() =>
 		ParseAndCheckOutputMatchesInput("log.Write(\"Hi\")",
 			new MethodCall(member.Type.Methods[0], new MemberCall(null, member),
-				new[] { new Text(type, "Hi") }));
+				[new Text(type, "Hi")]));
 
 	[Test]
 	public void ParseWithMissingArgument() =>

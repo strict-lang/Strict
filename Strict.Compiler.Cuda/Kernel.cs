@@ -53,7 +53,7 @@ public class Kernel : IDisposable
 
 	private static void GeneratePtxOutputFile(CudaRuntimeCompiler rtc)
 	{ //we could consume right away, this could be done in for caching or in the background for next usage
-		using var file = new StreamWriter(@"VectorAdd.ptx");
+		using var file = new StreamWriter("VectorAdd.ptx");
 		file.Write(rtc.GetPTXAsString());
 	}
 }

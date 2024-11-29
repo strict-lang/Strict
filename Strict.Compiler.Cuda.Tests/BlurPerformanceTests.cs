@@ -40,7 +40,7 @@ public class BlurPerformanceTests
 	private void LoadImage()
 	{
 		var bitmap =
-			new Bitmap(@"TexturedMeshTests.RenderTexturedBoxPlaneAndSphereWithImage.approved.png");
+			new Bitmap("TexturedMeshTests.RenderTexturedBoxPlaneAndSphereWithImage.approved.png");
 		width = bitmap.Width;
 		height = bitmap.Height;
 		var data = bitmap.LockBits(new Rectangle(0, 0, bitmap.Width, bitmap.Height),

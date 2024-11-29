@@ -96,12 +96,10 @@ public class Type : Context
 	}
 
 	private int lineNumber;
-	public sealed class MustImplementAllTraitMethodsOrNone : ParsingFailed {
-		public MustImplementAllTraitMethodsOrNone(Type type, string traitName,
-			IEnumerable<Method> missingTraitMethods) :
-			base(type, type.lineNumber,
-				"Trait Type:" + traitName + " Missing methods: " + string.Join(", ", missingTraitMethods)) { }
-	}
+
+	public sealed class MustImplementAllTraitMethodsOrNone(Type type, string traitName,
+		IEnumerable<Method> missingTraitMethods) : ParsingFailed(type, type.lineNumber,
+		"Trait Type:" + traitName + " Missing methods: " + string.Join(", ", missingTraitMethods));
 
 	private void ValidateMethodAndMemberCountLimits()
 	{
@@ -255,10 +253,8 @@ public class Type : Context
 		ExpressionParser parser) =>
 		typeMethodFinder.GetMethod(methodName, arguments, parser);
 
-	public class GenericTypesCannotBeUsedDirectlyUseImplementation : Exception {
-		public GenericTypesCannotBeUsedDirectlyUseImplementation(Type type, string extraInformation) :
-			base(type + " " + extraInformation) { }
-	}
+	public class GenericTypesCannotBeUsedDirectlyUseImplementation(Type type,
+		string extraInformation) : Exception(type + " " + extraInformation);
 
 	/// <summary>
 	/// Any non public member is automatically iteratable if it has Iterator, for example Text.strict
@@ -303,6 +299,7 @@ public class Type : Context
 		sameOrBaseType.members.Count == 1 && sameOrBaseType.methods.Count == 0 && sameOrBaseType.members[0].Type == this &&
 		ValidateMemberConstraints(sameOrBaseType.members[0].Constraints);
 
+	// ReSharper disable once UnusedParameter.Local
 	private static bool ValidateMemberConstraints(IReadOnlyCollection<Expression>? constraints) =>
 		true; // TODO: figure out how to evaluate constraints at this point
 

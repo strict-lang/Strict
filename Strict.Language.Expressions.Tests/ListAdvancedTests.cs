@@ -64,7 +64,7 @@ public sealed class ListAdvancedTests : TestExpressions
 					new TypeLines(nameof(UnknownExpressionForArgumentInList), "has log",
 						"UnknownExpression",
 						"\tconstant result = ((1, 2), 9gfhy5)")).ParseMembersAndMethods(parser).Methods[0].
-				GetBodyAndParseIfNeeded(), Throws.InstanceOf<UnknownExpressionForArgument>()!);
+				GetBodyAndParseIfNeeded(), Throws.InstanceOf<UnknownExpressionForArgument>());
 
 	[Test]
 	public void AccessListElementsByIndex()
@@ -241,7 +241,7 @@ public sealed class ListAdvancedTests : TestExpressions
 				"has numbers with Length is 2",
 				"Length Number",
 				"\t(X * X + Y * Y).SquareRoot")).ParseMembersAndMethods(parser),
-			Throws.InstanceOf<ParsingFailed>()!.With.InnerException.
+			Throws.InstanceOf<ParsingFailed>().With.InnerException.
 				InstanceOf<Type.NoMatchingMethodFound>());
 	// @formatter:on
 
@@ -332,6 +332,6 @@ public sealed class ListAdvancedTests : TestExpressions
 					"\tmutable someList = (9, 8, 7)",
 					"\tsomeList(3) = 5")).
 			ParseMembersAndMethods(parser);
-		Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(), Throws.InstanceOf<List.IndexOutOfRangeInListExpressions>()!);
+		Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(), Throws.InstanceOf<List.IndexOutOfRangeInListExpressions>());
 	}
 }

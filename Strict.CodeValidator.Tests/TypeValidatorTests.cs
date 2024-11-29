@@ -29,8 +29,8 @@ public sealed class TypeValidatorTests
 						"\tconstant result = 5 + methodInput", "\tresult"
 					}))
 			}).Validate(),
-			Throws.InstanceOf<MemberValidator.UnusedMemberMustBeRemoved>()!.With.Message.
-				Contains("unused")!);
+			Throws.InstanceOf<MemberValidator.UnusedMemberMustBeRemoved>().With.Message.
+				Contains("unused"));
 
 	private static Type ParseTypeMethods(Type type)
 	{
@@ -75,7 +75,7 @@ public sealed class TypeValidatorTests
 					// @formatter:on
 				}))
 			}).Validate(),
-			Throws.InstanceOf<Method.MethodParameterCountMustNotExceedThree>()!.With.Message.Contains(
+			Throws.InstanceOf<Method.MethodParameterCountMustNotExceedThree>().With.Message.Contains(
 				"Type TestPackage.ValidateTypeHasTooManyDependenciesFromMethod constructor method has " +
 				"parameters count 4 but limit is 3"));
 
@@ -99,7 +99,7 @@ public sealed class TypeValidatorTests
 					// @formatter:on
 				}))
 			}).Validate(),
-			Throws.InstanceOf<MethodValidator.VariableHidesMemberUseDifferentName>()!.With.Message.
+			Throws.InstanceOf<MethodValidator.VariableHidesMemberUseDifferentName>().With.Message.
 				Contains("Method name Run, Variable name input"));
 
 	[Test]
@@ -119,6 +119,6 @@ public sealed class TypeValidatorTests
 					// @formatter:on
 				}))
 			}).Validate(),
-			Throws.InstanceOf<MethodValidator.ParameterHidesMemberUseDifferentName>()!.With.Message.
+			Throws.InstanceOf<MethodValidator.ParameterHidesMemberUseDifferentName>().With.Message.
 				Contains("Method name FirstMethod, Parameter name input"));
 }

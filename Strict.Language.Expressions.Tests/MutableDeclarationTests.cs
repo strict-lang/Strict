@@ -194,7 +194,7 @@ public sealed class MutableDeclarationTests : TestExpressions
 			ParseMembersAndMethods(parser);
 		Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(),
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.
-				InstanceOf<Type.GenericTypesCannotBeUsedDirectlyUseImplementation>()!);
+				InstanceOf<Type.GenericTypesCannotBeUsedDirectlyUseImplementation>());
 	}
 
 	[Test]
@@ -235,7 +235,7 @@ public sealed class MutableDeclarationTests : TestExpressions
 					new TypeLines(nameof(CannotReassignValuesToImmutableMember), "has input = BaseClever(3)",
 						"Run", "\tinput.Compute", "\tinput = BaseClever(5)")).ParseMembersAndMethods(parser).
 				Methods[0].GetBodyAndParseIfNeeded(),
-			Throws.InstanceOf<Body.ValueIsNotMutableAndCannotBeChanged>()!);
+			Throws.InstanceOf<Body.ValueIsNotMutableAndCannotBeChanged>());
 	}
 
 	[Test]

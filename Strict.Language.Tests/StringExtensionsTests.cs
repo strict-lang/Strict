@@ -34,7 +34,7 @@ public sealed class StringExtensionsTests
 	[TestCase("ranDomStringG.7")]
 	public void NotWithNumberAtEnd(string text) =>
 		Assert.That(text.IsWordOrWordWithNumberAtEnd(out var number),
-			Is.False.And.Matches<bool>(_ => number is -1 or 0)!);
+			Is.False.And.Matches<bool>(_ => number is -1 or 0));
 
 	[TestCase("Hello-World")]
 	[TestCase("Kata-Examples-001")]

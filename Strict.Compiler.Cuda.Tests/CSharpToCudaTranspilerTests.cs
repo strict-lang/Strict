@@ -26,7 +26,7 @@ public class CSharpToCudaTranspilerTests
 	[Test]
 	public void MissingReturnStatement() =>
 		Assert.That(() => GetParsedCSharpType(nameof(MissingReturnStatement)),
-			Throws.InstanceOf<MissingReturnStatement>()!);
+			Throws.InstanceOf<MissingReturnStatement>());
 
 	[Test]
 	public void ParseAddNumbers()

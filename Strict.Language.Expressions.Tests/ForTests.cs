@@ -183,7 +183,7 @@ public sealed class ForTests : TestExpressions
 		Assert.That(() => ParseExpression(
 				"for Range(2, 5)",
 				"for index in Range(1, 10)"),
-			Throws.InstanceOf<For.MissingInnerBody>()!);
+			Throws.InstanceOf<For.MissingInnerBody>());
 
 	[TestCase(
 		"WithParameter", "element in (1, 2, 3, 4)",

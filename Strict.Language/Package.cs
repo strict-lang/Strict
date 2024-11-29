@@ -21,7 +21,7 @@ public class Package : Context
 	{
 		public Root() : base(null, string.Empty) =>
 			cachedFoundTypes.Add(Base.None,
-				new Type(this, new TypeLines(Base.None, Array.Empty<string>())));
+				new Type(this, new TypeLines(Base.None)));
 
 		public override Type? FindType(string name, Context? searchingFrom = null) =>
 			cachedFoundTypes.TryGetValue(name, out var previouslyFoundType)

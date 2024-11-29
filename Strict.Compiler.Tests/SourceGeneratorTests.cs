@@ -150,9 +150,10 @@ public class Program
 	public Task ArithmeticFunction() =>
 		GenerateCSharpByReadingStrictProgramAndCompareWithOutput(nameof(ArithmeticFunction));
 
-	public async Task GenerateCSharpByReadingStrictProgramAndCompareWithOutput(string programName, Package? package = null)
+	public async Task GenerateCSharpByReadingStrictProgramAndCompareWithOutput(string programName,
+		Package? overridePackage = null)
 	{
-		var program = await ReadStrictFileAndCreateType(programName, package);
+		var program = await ReadStrictFileAndCreateType(programName, overridePackage);
 		program.Methods[0].GetBodyAndParseIfNeeded();
 		var generatedCode = generator.Generate(program).ToString()!;
 		Assert.That(generatedCode,
@@ -161,8 +162,9 @@ public class Program
 					$"Output/{programName}.cs")))), generatedCode);
 	}
 
-	private async Task<Type> ReadStrictFileAndCreateType(string programName, Package? package = null) =>
-		new Type(package != null ? package : new TestPackage(),
+	private async Task<Type>
+		ReadStrictFileAndCreateType(string programName, Package? overridePackage = null) =>
+		new Type(overridePackage ?? new TestPackage(),
 			new TypeLines(programName,
 				await File.ReadAllLinesAsync(Path.Combine(await GetExampleFolder(),
 					$"{programName}.strict")))).ParseMembersAndMethods(parser);
