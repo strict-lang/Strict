@@ -31,7 +31,7 @@ public class CommandExecutor : IExecuteCommandHandler
 	Task<Unit> IRequestHandler<ExecuteCommandParams, Unit>.Handle(
 		ExecuteCommandParams request, CancellationToken cancellationToken)
 	{
-		var methodCall = request.Arguments?[0]["label"].ToString();
+		var methodCall = request.Arguments?[0]["label"]?.ToString() ?? null;
 		var documentUri =
 			DocumentUri.From(request.Arguments?[1].ToString() ?? throw new PathCanNotBeEmpty());
 		var folderName = documentUri.Path.GetFolderName();
