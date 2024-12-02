@@ -71,7 +71,7 @@ public sealed class TextDocumentSynchronizer : ITextDocumentSyncHandler
 	}
 
 	public TextDocumentChangeRegistrationOptions GetRegistrationOptions(
-		SynchronizationCapability capability, ClientCapabilities clientCapabilities) =>
+		TextSynchronizationCapability capability, ClientCapabilities clientCapabilities) =>
 		new() //ncrunch: no coverage
 		{
 			DocumentSelector = BaseSelectors.StrictDocumentSelector,
@@ -79,20 +79,20 @@ public sealed class TextDocumentSynchronizer : ITextDocumentSyncHandler
 		};
 
 	TextDocumentSaveRegistrationOptions
-		IRegistration<TextDocumentSaveRegistrationOptions, SynchronizationCapability>.
-		GetRegistrationOptions(SynchronizationCapability capability,
+		IRegistration<TextDocumentSaveRegistrationOptions, TextSynchronizationCapability>.
+		GetRegistrationOptions(TextSynchronizationCapability capability,
 			ClientCapabilities clientCapabilities) =>
 		new() { DocumentSelector = BaseSelectors.StrictDocumentSelector, IncludeText = true }; //ncrunch: no coverage
 
 	TextDocumentOpenRegistrationOptions
-		IRegistration<TextDocumentOpenRegistrationOptions, SynchronizationCapability>.
-		GetRegistrationOptions(SynchronizationCapability capability,
+		IRegistration<TextDocumentOpenRegistrationOptions, TextSynchronizationCapability>.
+		GetRegistrationOptions(TextSynchronizationCapability capability,
 			ClientCapabilities clientCapabilities) =>
 		new() { DocumentSelector = BaseSelectors.StrictDocumentSelector }; //ncrunch: no coverage
 
 	TextDocumentCloseRegistrationOptions
-		IRegistration<TextDocumentCloseRegistrationOptions, SynchronizationCapability>.
-		GetRegistrationOptions(SynchronizationCapability capability,
+		IRegistration<TextDocumentCloseRegistrationOptions, TextSynchronizationCapability>.
+		GetRegistrationOptions(TextSynchronizationCapability capability,
 			ClientCapabilities clientCapabilities) =>
 		new() { DocumentSelector = BaseSelectors.StrictDocumentSelector }; //ncrunch: no coverage
 }
