@@ -14,22 +14,22 @@ public sealed class MethodTests
 
 	[Test]
 	public void MustMustHaveAValidName() =>
-		Assert.That(() => new Method(type, 0, null!, new[] { "5(text)" }),
+		Assert.That(() => new Method(type, 0, null!, ["5(text)"]),
 			Throws.InstanceOf<Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers>());
 
 	[Test]
 	public void ReturnTypeMustBeBeLast() =>
-		Assert.That(() => new Method(type, 0, null!, new[] { "Texts GetFiles" }),
+		Assert.That(() => new Method(type, 0, null!, ["Texts GetFiles"]),
 			Throws.InstanceOf<Context.TypeNotFound>());
 
 	[Test]
 	public void InvalidMethodParameters() =>
 		Assert.Throws<Method.InvalidMethodParameters>(
-			() => new Method(type, 0, null!, new[] { "ab(" }));
+			() => new Method(type, 0, null!, ["ab("]));
 
 	[Test]
 	public void ParametersMustNotBeEmpty() =>
-		Assert.That(() => new Method(type, 0, null!, new[] { "ab()" }),
+		Assert.That(() => new Method(type, 0, null!, ["ab()"]),
 			Throws.InstanceOf<Method.EmptyParametersMustBeRemoved>());
 
 	[TestCase("from(Text)")]
@@ -37,13 +37,13 @@ public sealed class MethodTests
 	[TestCase("from(Start Number, End Number)")]
 	[TestCase("from(start Number, End Number)")]
 	public void UpperCaseParameterWithNoTypeSpecificationIsNotAllowed(string method) =>
-		Assert.That(() => new Method(type, 0, null!, new[] { method }),
+		Assert.That(() => new Method(type, 0, null!, [method]),
 			Throws.InstanceOf<Method.ParametersMustStartWithLowerCase>());
 
 	[Test]
 	public void ParseDefinition()
 	{
-		var method = new Method(type, 0, null!, new[] { Run });
+		var method = new Method(type, 0, null!, [Run]);
 		Assert.That(method.Name, Is.EqualTo(Run));
 		Assert.That(method.Parameters, Is.Empty);
 		Assert.That(method.ReturnType, Is.EqualTo(type.GetType(Base.None)));
@@ -53,7 +53,7 @@ public sealed class MethodTests
 	[Test]
 	public void ParseFrom()
 	{
-		var method = new Method(type, 0, null!, new[] { "from(number)" });
+		var method = new Method(type, 0, null!, ["from(number)"]);
 		Assert.That(method.Name, Is.EqualTo("from"));
 		Assert.That(method.Parameters, Has.Count.EqualTo(1), method.Parameters.ToWordList());
 		Assert.That(method.Parameters[0].Type, Is.EqualTo(type.GetType("Number")));
@@ -73,13 +73,13 @@ public sealed class MethodTests
 	}
 
 	public static readonly string[] NestedMethodLines =
-	{
+	[
 		"IsBlaFive Boolean",
 		LetNumber,
 		"	if bla is 5",
 		"		return true",
 		"	false"
-	};
+	];
 	public const string LetNumber = "	constant number = 5";
 	public const string LetOther = "	constant other = 3";
 	public const string LetErrorMessage = "\tconstant errorMessage = \"some error\"";
@@ -96,11 +96,10 @@ public sealed class MethodTests
 	[Test]
 	public void AccessValidMethodParametersInMethodBody()
 	{
-		var method = new Method(type, 0, new MethodExpressionParser(), new[]
-		{
+		var method = new Method(type, 0, new MethodExpressionParser(), [
 			"Run(variable Text)",
 			"	constant result = variable + \"5\""
-		});
+		]);
 		Assert.That(method.Name, Is.EqualTo(Run));
 		Assert.That(method.Parameters, Has.Count.EqualTo(1));
 		var binary = (Binary)((ConstantDeclaration)method.GetBodyAndParseIfNeeded()).Value;
@@ -112,27 +111,24 @@ public sealed class MethodTests
 	[TestCase("Run(number, input Generic, generic)")]
 	[TestCase("Run(number) Generic")]
 	public void GenericMethods(string methodHeader) =>
-		Assert.That(new Method(type, 0, new MethodExpressionParser(), new[]
-		{
+		Assert.That(new Method(type, 0, new MethodExpressionParser(), [
 			methodHeader
-		}).IsGeneric, Is.True);
+		]).IsGeneric, Is.True);
 
 	[TestCase("Run(text) Number")]
 	[TestCase("Run(variable Number, input Text) Boolean")]
 	public void NonGenericMethods(string methodHeader) =>
-		Assert.That(new Method(type, 0, new MethodExpressionParser(), new[]
-		{
+		Assert.That(new Method(type, 0, new MethodExpressionParser(), [
 			methodHeader
-		}).IsGeneric, Is.False);
+		]).IsGeneric, Is.False);
 
 	[Test]
 	public void CloningWithSameParameterType()
 	{
-		var method = new Method(type, 0, new MethodExpressionParser(), new[]
-		{
+		var method = new Method(type, 0, new MethodExpressionParser(), [
 			"Run(variable Text)",
 			"	\"5\""
-		});
+		]);
 		Assert.That(method.Parameters[0].CloneWithImplementationType(type.GetType(Base.Text)), Is.EqualTo(method.Parameters[0]));
 	}
 
@@ -165,28 +161,26 @@ public sealed class MethodTests
 	[Test]
 	public void MethodParameterWithDefaultValue()
 	{
-		var method = new Method(type, 0, new MethodExpressionParser(), new[]
-		{
+		var method = new Method(type, 0, new MethodExpressionParser(), [
 			"Run(input = \"Hello\")",
 			"	\"5\""
-		});
+		]);
 		Assert.That(method.Parameters[0].DefaultValue, Is.EqualTo(new Text(type, "Hello")));
 	}
 
 	[Test]
 	public void TraitMethodParameterCannotHaveDefaultValue() =>
 		Assert.That(
-			() => new Method(type, 0, new MethodExpressionParser(), new[] { "Run(input = \"Hello\")" }),
+			() => new Method(type, 0, new MethodExpressionParser(), ["Run(input = \"Hello\")"]),
 			Throws.InstanceOf<Method.DefaultValueCouldNotBeParsedIntoExpression>());
 
 	[Test]
 	public void ImmutableMethodParameterValueCannotBeChanged()
 	{
-		var method = new Method(type, 0, new MethodExpressionParser(), new[]
-		{
+		var method = new Method(type, 0, new MethodExpressionParser(), [
 			"Run(input = \"Hello\")",
 			"	input = \"Hi\""
-		});
+		]);
 		Assert.That(() => method.GetBodyAndParseIfNeeded(),
 			Throws.InstanceOf<Body.ValueIsNotMutableAndCannotBeChanged>());
 	}
@@ -194,12 +188,11 @@ public sealed class MethodTests
 	[Test]
 	public void ImmutableMethodVariablesCannotBeChanged()
 	{
-		var method = new Method(type, 0, new MethodExpressionParser(), new[]
-		{
+		var method = new Method(type, 0, new MethodExpressionParser(), [
 			"Run",
 			"	constant random = \"Hi\"",
 			"	random = 5"
-		});
+		]);
 		Assert.That(() => method.GetBodyAndParseIfNeeded(),
 			Throws.InstanceOf<Body.ValueIsNotMutableAndCannotBeChanged>());
 	}
@@ -207,22 +200,20 @@ public sealed class MethodTests
 	[Test]
 	public void ValueTypeNotMatchingWithAssignmentType() =>
 		Assert.That(
-			() => new Method(type, 0, new MethodExpressionParser(),
-				new[] { "Run(mutable input = 0)", "	input = \"5\"" }).GetBodyAndParseIfNeeded(),
+			() => new Method(type, 0, new MethodExpressionParser(), ["Run(mutable input = 0)", "	input = \"5\""
+			]).GetBodyAndParseIfNeeded(),
 			Throws.InstanceOf<MutableAssignment.ValueTypeNotMatchingWithAssignmentType>());
 
 	[Test]
 	public void MissingParameterDefaultValue() =>
 		Assert.That(
-			() => new Method(type, 0, new MethodExpressionParser(),
-				new[] { "Run(input =)", "	5" }),
+			() => new Method(type, 0, new MethodExpressionParser(), ["Run(input =)", "	5"]),
 			Throws.InstanceOf<Method.MissingParameterDefaultValue>());
 
 	[Test]
 	public void ParameterWithTypeNameAndInitializerIsForbidden() =>
 		Assert.That(
-			() => new Method(type, 0, new MethodExpressionParser(),
-				new[] { "Run(input Number = 5)", "	5" }),
+			() => new Method(type, 0, new MethodExpressionParser(), ["Run(input Number = 5)", "	5"]),
 			Throws.InstanceOf<AssignmentWithInitializerTypeShouldNotHaveNameWithType>());
 
 	[Test]
@@ -230,7 +221,7 @@ public sealed class MethodTests
 		Assert.That(
 			() => new Method(
 					new Type(new Package(nameof(MethodMustHaveAtLeastOneTest)), new MockRunTypeLines()), 0,
-					new MethodExpressionParser(), new[] { "NoTestMethod Number", "	5" }).
+					new MethodExpressionParser(), ["NoTestMethod Number", "	5"]).
 				GetBodyAndParseIfNeeded(), Throws.InstanceOf<MethodMustHaveAtLeastOneTest>());
 
 	[Test]

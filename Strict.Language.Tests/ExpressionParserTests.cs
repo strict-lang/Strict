@@ -21,11 +21,7 @@ public class ExpressionParserTests : ExpressionParser
 	}
 
 	private bool parseWasCalled;
-
-	public class TestExpression : Expression
-	{
-		public TestExpression(Type returnType) : base(returnType) { }
-	}
+	public class TestExpression(Type returnType) : Expression(returnType);
 
 	public override Expression ParseLineExpression(Body body, ReadOnlySpan<char> line)
 	{
@@ -57,33 +53,33 @@ public class ExpressionParserTests : ExpressionParser
 
 	[Test]
 	public void EmptyLineIsNotValidInMethods() =>
-		Assert.That(() => new Method(type, 0, this, new[] { "Run", "" }),
+		Assert.That(() => new Method(type, 0, this, ["Run", ""]),
 			Throws.InstanceOf<TypeParser.EmptyLineIsNotAllowed>());
 
 	[Test]
 	public void NoIndentationIsNotValidInMethods() =>
-		Assert.That(() => new Method(type, 0, this, new[] { "Run", "abc" }),
+		Assert.That(() => new Method(type, 0, this, ["Run", "abc"]),
 			Throws.InstanceOf<Method.InvalidIndentation>());
 
 	[Test]
 	public void TooMuchIndentationIsNotValidInMethods() =>
-		Assert.That(() => new Method(type, 0, this, new[] { "Run", new string('\t', 4) }),
+		Assert.That(() => new Method(type, 0, this, ["Run", new string('\t', 4)]),
 			Throws.InstanceOf<Method.InvalidIndentation>());
 
 	[Test]
 	public void ExtraWhitespacesAtBeginningOfLineAreNotAllowed() =>
-		Assert.That(() => new Method(type, 0, this, new[] { "Run", "\t constant abc = 3" }),
+		Assert.That(() => new Method(type, 0, this, ["Run", "\t constant abc = 3"]),
 			Throws.InstanceOf<TypeParser.ExtraWhitespacesFoundAtBeginningOfLine>());
 
 	[Test]
 	public void ExtraWhitespacesAtEndOfLineAreNotAllowed() =>
-		Assert.That(() => new Method(type, 0, this, new[] { "Run", "\tconstant abc = 3 " }),
+		Assert.That(() => new Method(type, 0, this, ["Run", "\tconstant abc = 3 "]),
 			Throws.InstanceOf<TypeParser.ExtraWhitespacesFoundAtEndOfLine>());
 
 	[Test]
 	public void GetSingleLine()
 	{
-		var method = new Method(type, 0, this, new[] { "Run", MethodTests.LetNumber });
+		var method = new Method(type, 0, this, ["Run", MethodTests.LetNumber]);
 		Assert.That(method.lines, Has.Length.EqualTo(2));
 		Assert.That(method.lines[0], Is.EqualTo("Run"));
 		Assert.That(method.lines[1], Is.EqualTo(MethodTests.LetNumber));
@@ -92,8 +88,7 @@ public class ExpressionParserTests : ExpressionParser
 	[Test]
 	public void GetMultipleLines()
 	{
-		var method = new Method(type, 0, this,
-			new[] { "Run", MethodTests.LetNumber, MethodTests.LetOther });
+		var method = new Method(type, 0, this, ["Run", MethodTests.LetNumber, MethodTests.LetOther]);
 		Assert.That(method.lines, Has.Length.EqualTo(3));
 		Assert.That(method.lines[1], Is.EqualTo(MethodTests.LetNumber));
 		Assert.That(method.lines[2], Is.EqualTo(MethodTests.LetOther));

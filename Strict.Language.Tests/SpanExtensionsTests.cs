@@ -87,7 +87,7 @@ GetComplicatedSequenceTexts returns Texts
 	[TestCase("aksbdkasbd\nsadnakjsdnk")]
 	public void SplitLines(string input)
 	{
-		var expectedLines = input.Split(new[] { Environment.NewLine, "\n" }, StringSplitOptions.None);
+		var expectedLines = input.Split([Environment.NewLine, "\n"], StringSplitOptions.None);
 		var index = 0;
 		foreach (var wordSpan in input.AsSpan().SplitLines())
 		{
@@ -110,21 +110,21 @@ GetComplicatedSequenceTexts returns Texts
 	[TestCase("*")]
 	[TestCase("is")]
 	public void AnyOperator(string input) =>
-		Assert.That(input.AsSpan().Any(new[] { "+", "-", "*", "is" }), Is.True);
+		Assert.That(input.AsSpan().Any(["+", "-", "*", "is"]), Is.True);
 
 	[TestCase("is+")]
 	public void NotAnyOperator(string input) =>
-		Assert.That(input.AsSpan().Any(new[] { "+", "-", "*", "is" }), Is.False);
+		Assert.That(input.AsSpan().Any(["+", "-", "*", "is"]), Is.False);
 
 	[TestCase("5 * 6")]
 	[TestCase("1 + 2")]
 	[TestCase(@"""hello"" is Text")]
 	public void ContainsOperator(string input) =>
-		Assert.That(input.AsSpan().Contains(new[] { "+", "-", "*", "is" }), Is.True);
+		Assert.That(input.AsSpan().Contains(["+", "-", "*", "is"]), Is.True);
 
 	[TestCase(@"""hello"" is Text")]
 	public void NotContainsOperator(string input) =>
-		Assert.That(input.AsSpan().Contains(new[] { "+", "-", "*" }), Is.False);
+		Assert.That(input.AsSpan().Contains(["+", "-", "*"]), Is.False);
 
 	[TestCase(@"""hello"" is Text")]
 	public void Count(string input) =>

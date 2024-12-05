@@ -10,15 +10,13 @@ public sealed class GenericTypeImplementationTests
 	{
 		parser = new MethodExpressionParser();
 		package = new TestPackage();
-		CreateType("Comparer",
-			new[]
-			{
-				"has FirstTypes Generics",
+		CreateType("Comparer", [
+			"has FirstTypes Generics",
 				"has SecondType Generic",
 				"Compare",
 				"\tfirstType is secondType"
-			});
-		CreateType("CustomType", new[] { "from(first Generic, second Generic)" });
+		]);
+		CreateType("CustomType", ["from(first Generic, second Generic)"]);
 	}
 
 	private ExpressionParser parser = null!;

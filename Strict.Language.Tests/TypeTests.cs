@@ -78,7 +78,7 @@ public sealed class TypeTests
 	public void NoMatchingMethodFound() =>
 		Assert.That(
 			() => CreateType(nameof(NoMatchingMethodFound), "has log", "Run", "\tconstant a = 5").
-				GetMethod("UnknownMethod", Array.Empty<Expression>(), parser),
+				GetMethod("UnknownMethod", [], parser),
 			Throws.InstanceOf<Type.NoMatchingMethodFound>());
 
 	[Test]
@@ -184,11 +184,11 @@ public sealed class TypeTests
 	{
 		var type = CreateType(nameof(CanUpCastNumberWithList), "has log",
 			"Add(first Number, other Numbers) List", "\tfirst + other");
-		var result = type.FindMethod("Add", new List<Expression>
-		{
+		var result = type.FindMethod("Add",
+		[
 			new Number(type, 5),
-			new List(null!, new List<Expression> { new Number(type, 6), new Number(type, 7) })
-		}, parser);
+			new List(null!, [new Number(type, 6), new Number(type, 7)])
+		], parser);
 		Assert.That(result, Is.InstanceOf<Method>());
 		Assert.That(result?.ToString(),
 			Is.EqualTo("Add(first TestPackage.Number, other TestPackage.List(TestPackage.Number)) List"));
@@ -201,11 +201,8 @@ public sealed class TypeTests
 			"AddGeneric(first Generic, other List) List", "\tfirst + other");
 		Assert.That(
 			() => type.FindMethod("AddGeneric",
-				new List<Expression>
-				{
-					new Number(type, 6),
-					new List(null!, new List<Expression> { new Number(type, 7), new Number(type, 8) })
-				}, parser), Throws.InstanceOf<Type.GenericTypesCannotBeUsedDirectlyUseImplementation>());
+				[new Number(type, 6), new List(null!, [new Number(type, 7), new Number(type, 8)])],
+				parser), Throws.InstanceOf<Type.GenericTypesCannotBeUsedDirectlyUseImplementation>());
 	}
 
 	[TestCase(Base.Number, "has number", "Run", "\tmutable result = 2")]
@@ -285,13 +282,10 @@ public sealed class TypeTests
 			"Add(other Texts, first Generic) List", "\tother + first");
 		Assert.That(
 			type.FindMethod("Add",
-				new List<Expression>
-				{
-					new List(null!,
-						new List<Expression> { new Text(type, "Hi"), new Text(type, "Hello") }),
-					new Number(type, 5)
-				}, parser)?.ToString(),
-			Is.EqualTo("Add(other TestPackage.List(TestPackage.Text), first TestPackage.Generic) List"));
+				[new List(null!, [new Text(type, "Hi"), new Text(type, "Hello")]), new Number(type, 5)],
+				parser)?.ToString(),
+			Is.EqualTo(
+				"Add(other TestPackage.List(TestPackage.Text), first TestPackage.Generic) List"));
 	}
 
 	[Test]
@@ -301,19 +295,9 @@ public sealed class TypeTests
 			"has Output",
 			"has log",
 			"Write(generic)", "\tlog.Write(generic)");
-		Assert.That(
-			type.FindMethod("Write",
-				new List<Expression>
-				{
-					new Text(type, "hello")
-				}, parser)?.ToString(),
+		Assert.That(type.FindMethod("Write", [new Text(type, "hello")], parser)?.ToString(),
 			Is.EqualTo("Write(generic TestPackage.Generic)"));
-		Assert.That(
-			type.FindMethod("Write",
-				new List<Expression>
-				{
-					new Number(type, 5)
-				}, parser)?.ToString(),
+		Assert.That(type.FindMethod("Write", [new Number(type, 5)], parser)?.ToString(),
 			Is.EqualTo("Write(generic TestPackage.Generic)"));
 	}
 
@@ -344,11 +328,8 @@ public sealed class TypeTests
 			new TypeLines(nameof(InvalidProgram), "has log", "Something(input Generics)",
 				"\tconstant result = input + 5")).ParseMembersAndMethods(parser);
 		Assert.That(
-			type.FindMethod("Something",
-				new List<Expression>
-				{
-					new List(null!, new List<Expression> { new Text(type, "hello") })
-				}, parser), Is.Not.Null);
+			type.FindMethod("Something", [new List(null!, [new Text(type, "hello")])], parser),
+			Is.Not.Null);
 	}
 
 	[Test]

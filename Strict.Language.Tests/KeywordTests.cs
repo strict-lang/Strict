@@ -24,7 +24,10 @@ public class KeywordTests
 				"Run",
 				"\t5")).ParseMembersAndMethods(new MethodExpressionParser()), Throws.InstanceOf<ParsingFailed>().With.InnerException.InstanceOf<CannotUseKeywordsAsName>().With.Message.Contains($"{name} is a keyword and cannot be used as a identifier name"));
 
-	private static readonly IEnumerable<string> KeywordsList = new[] { "has", "mutable", "constant", "if", "else", "for", "with", "return" }; //ncrunch: no coverage
+	private static readonly IEnumerable<string> KeywordsList =
+	[
+		"has", "mutable", "constant", "if", "else", "for", "with", "return"
+	];
 
 	[TestCaseSource(nameof(KeywordsList))]
 	public void CannotUseKeywordsAsVariableName(string name) =>

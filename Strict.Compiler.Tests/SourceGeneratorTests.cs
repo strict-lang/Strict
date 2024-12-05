@@ -119,12 +119,10 @@ public class Program
 		return process.StandardOutput.ReadToEnd();
 	}
 
-	public sealed class CSharpCompilationFailed : Exception
-	{
-		public CSharpCompilationFailed(string error, string actualText, string generatedCode) : base(
-			error + Environment.NewLine + actualText + Environment.NewLine + nameof(generatedCode) +
-			":" + Environment.NewLine + generatedCode) { }
-	}
+	public sealed class
+		CSharpCompilationFailed(string error, string actualText, string generatedCode) : Exception(
+		error + Environment.NewLine + actualText + Environment.NewLine + nameof(generatedCode) + ":" +
+		Environment.NewLine + generatedCode);
 
 	[Test]
 	[Category("Slow")]
