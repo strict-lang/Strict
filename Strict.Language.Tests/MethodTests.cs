@@ -199,8 +199,8 @@ public sealed class MethodTests
 
 	[Test]
 	public void ValueTypeNotMatchingWithAssignmentType() =>
-		Assert.That(
-			() => new Method(type, 0, new MethodExpressionParser(), ["Run(mutable input = 0)", "	input = \"5\""
+		Assert.That(() => new Method(type, 0, new MethodExpressionParser(), [
+				"Run(mutable input = 0)", "	input = \"5\""
 			]).GetBodyAndParseIfNeeded(),
 			Throws.InstanceOf<MutableAssignment.ValueTypeNotMatchingWithAssignmentType>());
 

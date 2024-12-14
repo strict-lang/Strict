@@ -50,7 +50,7 @@ static void ConfigureServices(IServiceCollection services, Package strictBase)
 
 static async Task<(PipeReader input, PipeWriter output)> CreateAndGetPipeline()
 {
-	var pipe = new NamedPipeServerStream(@"Strict.LanguageServer", PipeDirection.InOut, 1,
+	var pipe = new NamedPipeServerStream("Strict.LanguageServer", PipeDirection.InOut, 1,
 		PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
 	await pipe.WaitForConnectionAsync();
 	var pipeline = pipe.UsePipe();

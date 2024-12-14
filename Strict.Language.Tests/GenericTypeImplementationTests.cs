@@ -12,9 +12,9 @@ public sealed class GenericTypeImplementationTests
 		package = new TestPackage();
 		CreateType("Comparer", [
 			"has FirstTypes Generics",
-				"has SecondType Generic",
-				"Compare",
-				"\tfirstType is secondType"
+			"has SecondType Generic",
+			"Compare",
+			"\tfirstType is secondType"
 		]);
 		CreateType("CustomType", ["from(first Generic, second Generic)"]);
 	}
@@ -34,7 +34,9 @@ public sealed class GenericTypeImplementationTests
 					"\tconstant result = something.Compare")).ParseMembersAndMethods(parser),
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.
 				InstanceOf<Context.TypeArgumentsCountDoesNotMatchGenericType>().With.Message.Contains(
-					"The generic type TestPackage.Comparer needs these type arguments: (Generic TestPackage.Generic, SecondType TestPackage.Generic), this does not match provided types: (TestPackage.Text)"));
+					"The generic type TestPackage.Comparer needs these type arguments: (Generic TestPackage." +
+					"Generic, SecondType TestPackage.Generic), this does not match provided types: (TestPackage." +
+					"Text)"));
 
 	[Test]
 	public void GenericTypeWithMultipleImplementations()
@@ -44,7 +46,8 @@ public sealed class GenericTypeImplementationTests
 				"has something Comparer(Text, Number)",
 				"Invoke",
 				"\tconstant result = something.Compare")).ParseMembersAndMethods(new MethodExpressionParser());
-		Assert.That(usingGenericType.Members[0].Type.Name, Is.EqualTo("Comparer(TestPackage.Text, TestPackage.Number)"));
+		Assert.That(usingGenericType.Members[0].Type.Name,
+			Is.EqualTo("Comparer(TestPackage.Text, TestPackage.Number)"));
 	}
 
 	[Test]

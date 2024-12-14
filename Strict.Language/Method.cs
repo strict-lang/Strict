@@ -61,7 +61,8 @@ public sealed class Method : Context
 			: name.ToString();
 	}
 
-	private static bool IsNameIsInOperator(ReadOnlySpan<char> input) => input.StartsWith(BinaryOperator.IsIn + "(", StringComparison.Ordinal);
+	private static bool IsNameIsInOperator(ReadOnlySpan<char> input) =>
+		input.StartsWith(BinaryOperator.IsIn + "(", StringComparison.Ordinal);
 
 	private static bool IsNameIsNotOperator(ReadOnlySpan<char> input) =>
 		input.StartsWith(BinaryOperator.IsNot + "(", StringComparison.Ordinal);
@@ -202,7 +203,8 @@ public sealed class Method : Context
 
 	public sealed class MissingParameterDefaultValue : ParsingFailed
 	{
-		public MissingParameterDefaultValue(Method method, int lineNumber, string nameAndType) : base(method.Type, lineNumber, nameAndType) { }
+		public MissingParameterDefaultValue(Method method, int lineNumber, string nameAndType) : base(
+			method.Type, lineNumber, nameAndType) { }
 	}
 
 	public sealed class DefaultValueCouldNotBeParsedIntoExpression : ParsingFailed
@@ -213,7 +215,15 @@ public sealed class Method : Context
 
 	public sealed class MethodParameterCountMustNotExceedThree : ParsingFailed
 	{
-		public MethodParameterCountMustNotExceedThree(Method method, int lineNumber) : base(method.Type, lineNumber, $"{GetMethodName(method)} has parameters count {method.Parameters.Count} but limit is {Limit.ParameterCount}") { }
+		public MethodParameterCountMustNotExceedThree(Method method, int lineNumber) : base(
+			method.Type, lineNumber,
+			$"{
+				GetMethodName(method)
+			} has parameters count {
+				method.Parameters.Count
+			} but limit is {
+				Limit.ParameterCount
+			}") { }
 
 		private static string GetMethodName(Method method) =>
 			method.Name == From

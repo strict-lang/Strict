@@ -93,14 +93,15 @@ public sealed class LimitTests
 
 	[Test]
 	public void CharacterCountMustBeWithinLimit() =>
-		Assert.That(
-			() => CreateType(nameof(CharacterCountMustBeWithinLimit), [
+		Assert.That(() => CreateType(nameof(CharacterCountMustBeWithinLimit), [
 				"has bonus Number", "has price Number",
-					"CalculateCompleteLevelCount(numberOfCans Number, levelCount Number) Number",
-					"	constant remainingCans = numberOfCans - (levelCount * levelCount)remainingCans < ((levelCount + 1) * (levelCount + 1)) ? levelCount else CalculateCompleteLevelCount(remainingCans, levelCount + 1)"
+				"CalculateCompleteLevelCount(numberOfCans Number, levelCount Number) Number",
+				"	constant remainingCans = numberOfCans - (levelCount * levelCount)remainingCans < " +
+				"((levelCount + 1) * (levelCount + 1)) ? levelCount else CalculateCompleteLevelCount(" +
+				"remainingCans, levelCount + 1)"
 			]).ParseMembersAndMethods(new MethodExpressionParser()),
-			Throws.InstanceOf<TypeParser.CharacterCountMustBeWithinLimit>().With.Message.Contains("Type " +
-				nameof(CharacterCountMustBeWithinLimit) +
+			Throws.InstanceOf<TypeParser.CharacterCountMustBeWithinLimit>().With.Message.Contains(
+				"Type " + nameof(CharacterCountMustBeWithinLimit) +
 				" has character count 196 in line: 4 but limit is " + Limit.CharacterCount));
 
 	[Test]
@@ -159,13 +160,12 @@ public sealed class LimitTests
 	[TestCase("v")]
 	public void VariableNameShouldNotExceedTheLimit(string variableName) =>
 		Assert.That(
-			() => CreateType(nameof(VariableNameShouldNotExceedTheLimit), [
-					"has number", "Run",
-						$"	constant {variableName} = 5"
-				]).ParseMembersAndMethods(new MethodExpressionParser()).Methods[0].
-				GetBodyAndParseIfNeeded(),
-			Throws.InstanceOf<ParsingFailed>().With.InnerException.InstanceOf<NamedType.NameLengthIsNotWithinTheAllowedLimit>().With.Message.Contains(
-				$"constant {variableName}"));
+			() => CreateType(nameof(VariableNameShouldNotExceedTheLimit),
+					["has number", "Run", $"	constant {variableName} = 5"]).
+				ParseMembersAndMethods(new MethodExpressionParser()).Methods[0].GetBodyAndParseIfNeeded(),
+			Throws.InstanceOf<ParsingFailed>().With.InnerException.
+				InstanceOf<NamedType.NameLengthIsNotWithinTheAllowedLimit>().With.Message.
+				Contains($"constant {variableName}"));
 
 	[TestCase(nameof(PackageNameShouldBeWithinTheLimit) + "LimitShouldBeWithinFifty")]
 	[TestCase("P")]
@@ -177,10 +177,9 @@ public sealed class LimitTests
 	[TestCase("MethodNameWithLengthGreaterThanFiftyExceedsLimitAndIsNotAllowed")]
 	[TestCase("M")]
 	public void MethodNameShouldNotExceedTheLimit(string methodName) =>
-		Assert.That(
-			() => CreateType(nameof(MethodNameShouldNotExceedTheLimit), ["has number", methodName, "	constant number = 5"
-				]).
-				ParseMembersAndMethods(new MethodExpressionParser()),
+		Assert.That(() => CreateType(nameof(MethodNameShouldNotExceedTheLimit), [
+				"has number", methodName, "	constant number = 5"
+			]).ParseMembersAndMethods(new MethodExpressionParser()),
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.
 				InstanceOf<NamedType.NameLengthIsNotWithinTheAllowedLimit>().With.Message.Contains(
 					$"Name {
