@@ -11,7 +11,6 @@ internal class TypeMethodFinder
 		!Type.AvailableMethods.TryGetValue(methodName, out var matchingMethods)
 			? null
 			: matchingMethods.FirstOrDefault(method =>
-				method.Parameters.Count == implementationTypes.Count &&
 				IsMethodWithMatchingParametersType(method, implementationTypes));
 
 	public Method GetMethod(string methodName, IReadOnlyList<Expression> arguments, ExpressionParser parser) =>
@@ -26,48 +25,42 @@ internal class TypeMethodFinder
 				"Type is Generic and cannot be used directly");
 		if (!Type.AvailableMethods.TryGetValue(methodName, out var matchingMethods))
 			return FindAndCreateFromBaseMethod(methodName, arguments, parser);
+		var typesOfArguments = //
+			new Lazy<IReadOnlyList<Type>>(() =>
+				arguments.Select(argument => argument.ReturnType).ToList());
+		var commonTypeOfArguments = //
+			new Lazy<Type?>(() => //
+				typesOfArguments.Value.Distinct().SingleOrDefault());
 		foreach (var method in matchingMethods)
 		{
-			if (method.Parameters.Count == arguments.Count)
-			{
-				//TODO: clean up, optimized this a bit
-				if (arguments.Count == 1)
-				{
-					if (IsMethodParameterMatchingArgument(method, 0, arguments[0].ReturnType))
-						return method;
-				}
-				else if (IsMethodWithMatchingParametersType(method,
-					arguments.Select(argument => argument.ReturnType).ToList()))
-					return method;
-			}
-			//TODO: not sure about this, looks very slow to do on every possible method
-			if (method.Parameters.Count == 1 && arguments.Count > 0)
-			{
-				var parameter = method.Parameters[0];
-				if (IsParameterTypeList(parameter) && CanAutoParseArgumentsIntoList(arguments) &&
-					IsMethodParameterMatchingWithArgument(arguments,
-						(GenericTypeImplementation)parameter.Type))
-					return method;
-			}
+			if (IsMethodWithMatchingParametersType(method, typesOfArguments.Value))
+				return method;
+			if (commonTypeOfArguments.Value != null && commonTypeOfArguments.Value ==
+				GetListElementTypeIfHasSingleParameter(method))
+				return method;
 		}
 		return FindAndCreateFromBaseMethod(methodName, arguments, parser) ??
 			throw new ArgumentsDoNotMatchMethodParameters(arguments, Type, matchingMethods);
 	}
 
-	private static bool IsParameterTypeList(NamedType parameter) =>
-		parameter.Type is GenericTypeImplementation { Generic.Name: Base.List };
+	private static Type? GetListElementTypeIfHasSingleParameter(Method method) =>
+		method.Parameters is
+		[
+			{
+				Type: GenericTypeImplementation
+				{
+					Generic.Name: Base.List
+				} parameterType
+			}
+		]
+			? parameterType.ImplementationTypes[0]
+			: null;
 
-	private static bool CanAutoParseArgumentsIntoList(IReadOnlyList<Expression> arguments) =>
-		arguments.All(a => a.ReturnType == arguments[0].ReturnType);
-
-	private static bool IsMethodParameterMatchingWithArgument(IReadOnlyList<Expression> arguments,
-		GenericTypeImplementation genericType) =>
-		genericType.ImplementationTypes[0] == arguments[0].ReturnType;
-
-	//TODO: got two usages, but they are different and can be optimized each
 	private static bool IsMethodWithMatchingParametersType(Method method,
 		IReadOnlyList<Type> argumentReturnTypes)
 	{
+		if (method.Parameters.Count != argumentReturnTypes.Count)
+			return false;
 		for (var index = 0; index < method.Parameters.Count; index++)
 			if (!IsMethodParameterMatchingArgument(method, index, argumentReturnTypes[index]))
 				return false;
@@ -104,10 +97,12 @@ internal class TypeMethodFinder
 	{
 		if (methodName != Method.From)
 			return null;
-		var fromMethod = "from(";
-		fromMethod += GetMatchingMemberParametersIfExist(arguments);
-		return fromMethod.Length > 5 && (fromMethod.Split(',').Length - 1 == arguments.Count ||
-			fromMethod.Split(',').Length - 1 == PrivateMembersCount)
+		var matchingMemberParameters = GetMatchingMemberParametersIfExist(arguments);
+		if (string.IsNullOrEmpty(matchingMemberParameters))
+			return null;
+		var fromMethod = "from(" + matchingMemberParameters;
+		var length = matchingMemberParameters.Split(',').Length - 1;
+		return (length == arguments.Count || length == PrivateMembersCount)
 			? BuildMethod($"{fromMethod[..^2]})", parser)
 			: Type.IsDataType
 				? BuildMethod(fromMethod[..^1], parser)
