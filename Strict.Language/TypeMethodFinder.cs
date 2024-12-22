@@ -142,5 +142,5 @@ internal class TypeMethodFinder
 		$"{Type.Members[0].Name.MakeFirstLetterLowercase()} {Type.Members[0].Type.Name}, ";
 
 	private Method BuildMethod(string fromMethod, ExpressionParser parser) =>
-		new(Type, 0, parser, new[] { fromMethod });
+		new(Type, 0, parser, [fromMethod]);
 }
