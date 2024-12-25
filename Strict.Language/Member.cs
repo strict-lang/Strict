@@ -14,13 +14,9 @@ public sealed class Member : NamedType
 
 	private void CheckForNameWithDifferentTypeUsage(Type definedIn)
 	{
-		try
-		{
-			var nameType = definedIn.GetType(Name.MakeFirstLetterUppercase());
-			if (nameType != null && nameType != Type)
-				throw new MemberNameWithDifferentTypeNamesThanOwnAreNotAllowed(definedIn, Name, Type.Name);
-		}
-		catch (Context.TypeNotFound) { }
+		var nameType = definedIn.TryGetType(Name.MakeFirstLetterUppercase());
+		if (nameType != null && nameType != Type)
+			throw new MemberNameWithDifferentTypeNamesThanOwnAreNotAllowed(definedIn, Name, Type.Name);
 	}
 
 	public Expression? Value { get; private set; }

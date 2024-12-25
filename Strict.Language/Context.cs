@@ -1,4 +1,5 @@
 ﻿using System.Runtime.CompilerServices;
+using LazyCache;
 using static Strict.Language.NamedType;
 
 namespace Strict.Language;
@@ -52,37 +53,28 @@ public abstract class Context
 	public Context Parent { get; protected set; }
 	public string Name { get; }
 	public string FullName { get; }
+	public Type GetType(string name) => TryGetType(name) ?? throw new TypeNotFound(name, FullName);
 
-	public Type GetType(string name)
-	{
-		if (cachedTypes != null && cachedTypes.TryGetValue(name, out var type))
-			return type;
-		cachedTypes ??= new Dictionary<string, Type>();
-		var foundType = GetTypeFromPackages(name);
-		cachedTypes.Add(name, foundType);
-		return foundType;
-	}
+	internal Type? TryGetType(string name) =>
+		types.GetOrAdd<Type?>(name, _ =>
+		{
+			if (name == Name || this is Type && ((Type)this).IsGeneric &&
+				name.StartsWith(Name, StringComparison.Ordinal) &&
+				name == Name + GenericImplementationPostfix)
+				return (Type)this;
+			if (name.EndsWith('s'))
+				return TryGetTypeFromPluralNameAsListWithSingularName(name);
+			if (name.EndsWith(')') && name.Contains('('))
+				return GetGenericTypeWithArguments(name);
+			return FindFullType(name) ?? FindType(name, this);
+		});
 
-	private Dictionary<string, Type>? cachedTypes;
-
-	private Type GetTypeFromPackages(string name)
-	{
-		if (name == Name || this is Type && ((Type)this).IsGeneric &&
-			name.StartsWith(Name, StringComparison.Ordinal) &&
-			name == Name + GenericImplementationPostfix)
-			return (Type)this;
-		if (name.EndsWith('s'))
-			return GetTypeFromPluralNameAsListWithSingularName(name);
-		if (name.EndsWith(')') && name.Contains('('))
-			return GetGenericTypeWithArguments(name);
-		return (FindFullType(name) ?? FindType(name, this)) ??
-			throw new TypeNotFound(name, FullName);
-	}
+	private readonly IAppCache types = new CachingService();
 
 	/// <summary>
 	/// Always convert plural name into List(SingularName), e.g. Texts becomes List(Text)
 	/// </summary>
-	private Type GetTypeFromPluralNameAsListWithSingularName(string name)
+	private Type? TryGetTypeFromPluralNameAsListWithSingularName(string name)
 	{
 		var singularName = name[..^1];
 		if (singularName == Base.Generic)
@@ -90,7 +82,7 @@ public abstract class Context
 		var elementType = FindFullType(singularName) ?? FindType(singularName, this);
 		if (elementType != null)
 			return GetListImplementationType(elementType);
-		return (FindFullType(name) ?? FindType(name, this)) ?? throw new TypeNotFound(name, FullName);
+		return FindFullType(name) ?? FindType(name, this);
 	}
 
 	private const string GenericImplementationPostfix = "(" + Base.Generic + ")";
