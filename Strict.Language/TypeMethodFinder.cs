@@ -31,7 +31,16 @@ internal class TypeMethodFinder
 				arguments.Select(argument => argument.ReturnType).ToList());
 		var commonTypeOfArguments = //
 			new Lazy<Type?>(() => //
-				typesOfArguments.Value.Distinct().SingleOrDefault());
+			{
+				Type? result = null;
+				foreach (var type in typesOfArguments.Value.Distinct())
+				{
+					if (result != null)
+						return null;
+					result = type;
+				}
+				return result;
+			});
 		foreach (var method in matchingMethods)
 		{
 			if (IsMethodWithMatchingParametersType(method, typesOfArguments.Value))
