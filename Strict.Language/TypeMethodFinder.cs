@@ -13,7 +13,8 @@ internal class TypeMethodFinder
 			: matchingMethods.FirstOrDefault(method =>
 				IsMethodWithMatchingParametersType(method, implementationTypes));
 
-	public Method GetMethod(string methodName, IReadOnlyList<Expression> arguments, ExpressionParser parser) =>
+	public Method GetMethod(string methodName, IReadOnlyList<Expression> arguments,
+		ExpressionParser parser) =>
 		FindMethod(methodName, arguments, parser) ??
 		throw new NoMatchingMethodFound(Type, methodName, Type.AvailableMethods);
 
@@ -102,7 +103,7 @@ internal class TypeMethodFinder
 			return null;
 		var fromMethod = "from(" + matchingMemberParameters;
 		var length = matchingMemberParameters.Split(',').Length - 1;
-		return (length == arguments.Count || length == PrivateMembersCount)
+		return length == arguments.Count || length == PrivateMembersCount
 			? BuildMethod($"{fromMethod[..^2]})", parser)
 			: Type.IsDataType
 				? BuildMethod(fromMethod[..^1], parser)
