@@ -12,23 +12,26 @@ public sealed class DictionaryTests : TestExpressions
 				"has keysAndValues List(key Generic, value Generic)", "UseDictionary",
 				"\tconstant result = 5")).ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(listInListType.Members[0].Type.IsIterator, Is.True);
-		Assert.That(listInListType.Members[0].Type.Name, Is.EqualTo("List(key TestPackage.Generic, value TestPackage.Generic)"));
+		Assert.That(listInListType.Members[0].Type.Name,
+			Is.EqualTo("List(key TestPackage.Generic, value TestPackage.Generic)"));
 	}
 
 	[Test]
 	public void ParseListWithGenericKeyAndValue() =>
-		Assert.That(() => new Type(type.Package,
-				new TypeLines(nameof(ParseListWithGenericKeyAndValue),
-					"has keysAndValues List(key Generic, value Generic)", "Get(key Generic) Generic",
-					"\tfor keysAndValues", "\t\tif value is key", "\t\t\treturn value(1)))")).
-			ParseMembersAndMethods(new MethodExpressionParser()), Throws.Nothing);
+		Assert.That(
+			() => new Type(type.Package,
+					new TypeLines(nameof(ParseListWithGenericKeyAndValue),
+						"has keysAndValues List(key Generic, value Generic)", "Get(key Generic) Generic",
+						"\tfor keysAndValues", "\t\tif value is key", "\t\t\treturn value(1)))")).
+				ParseMembersAndMethods(new MethodExpressionParser()), Throws.Nothing);
 
 	[Test]
 	public void ParseMultipleTypesInsideAListTypeAsParameter()
 	{
 		var listInListType = new Type(type.Package,
 			new TypeLines(nameof(ParseMultipleTypesInsideAListTypeAsParameter),
-				"has keysAndValues Generic", "UseDictionary(keyValues List(firstType Generic, mappedSecondType Generic))",
+				"has keysAndValues Generic",
+				"UseDictionary(keyValues List(firstType Generic, mappedSecondType Generic))",
 				"\tconstant result = 5")).ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(listInListType.Methods[0].Parameters[0].Type.IsIterator, Is.True);
 		Assert.That(listInListType.Methods[0].Parameters[0].Type.Name,
@@ -70,9 +73,10 @@ public sealed class DictionaryTests : TestExpressions
 				"has input Dictionary(Text, Boolean)", "UseDictionary", "\tinput.Add(4, \"10\")",
 				"\tinput")).ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(() => dictionary.Methods[0].GetBodyAndParseIfNeeded(),
-			Throws.InnerException.InstanceOf<Type.ArgumentsDoNotMatchMethodParameters>().With.InnerException.Message.Contains(
-				"Arguments: 4 TestPackage.Number, \"10\" TestPackage.Text do not match these TestPackage.Dictionary(TestPackage.Text, TestPackage.Boolean) method(s):" +
-				"\nAdd(key TestPackage.Text, mappedValue TestPackage.Boolean) Mutable(TestPackage.Dictionary)"));
+			Throws.InnerException.InstanceOf<Type.ArgumentsDoNotMatchMethodParameters>().With.
+				InnerException.Message.Contains(
+					"Arguments: 4 TestPackage.Number, \"10\" TestPackage.Text do not match these TestPackage.Dictionary(TestPackage.Text, TestPackage.Boolean) method(s):" +
+					"\nAdd(key TestPackage.Text, mappedValue TestPackage.Boolean) Mutable(TestPackage.Dictionary)"));
 	}
 
 	[Test]
@@ -122,4 +126,5 @@ public sealed class DictionaryTests : TestExpressions
 			Throws.InstanceOf<Dictionary.DictionaryMustBeInitializedWithTwoTypeParameters>().With.
 				Message.StartsWith(
 					"Expected Type Parameters: 2, Given type parameters: 3 and they are TestPackage.Number, TestPackage.Text, TestPackage.Boolean"));
+
 }
