@@ -30,17 +30,7 @@ internal class TypeMethodFinder
 			new Lazy<IReadOnlyList<Type>>(() =>
 				arguments.Select(argument => argument.ReturnType).ToList());
 		var commonTypeOfArguments = //
-			new Lazy<Type?>(() => //
-			{
-				Type? result = null;
-				foreach (var type in typesOfArguments.Value.Distinct())
-				{
-					if (result != null)
-						return null;
-					result = type;
-				}
-				return result;
-			});
+			new Lazy<Type?>(() => GetSingleOrDefaultIfNotSingle(typesOfArguments.Value.Distinct()));
 		foreach (var method in matchingMethods)
 		{
 			if (IsMethodWithMatchingParametersType(method, typesOfArguments.Value))
@@ -51,6 +41,24 @@ internal class TypeMethodFinder
 		}
 		return FindAndCreateFromBaseMethod(methodName, arguments, parser) ??
 			throw new ArgumentsDoNotMatchMethodParameters(arguments, Type, matchingMethods);
+	}
+
+	/// <summary>
+	/// if <see cref="list"/> contains exactly one item it returns this item
+	/// </summary>
+	/// <typeparam name="T"></typeparam>
+	/// <param name="list"></param>
+	/// <returns>if <see cref="list"/> contains exactly one item it returns this item, otherwise it returns the default value</returns>
+	private static T? GetSingleOrDefaultIfNotSingle<T>(IEnumerable<T> list)
+	{
+		T? result = default;
+		foreach (var item in list)
+		{
+			if (!ReferenceEquals(result, default))
+				return default;
+			result = item;
+		}
+		return result;
 	}
 
 	private static Type? GetListElementTypeIfHasSingleParameter(Method method) =>
