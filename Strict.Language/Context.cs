@@ -1,5 +1,5 @@
-﻿using System.Runtime.CompilerServices;
-using LazyCache;
+﻿using LazyCache;
+using System.Runtime.CompilerServices;
 using static Strict.Language.NamedType;
 
 namespace Strict.Language;
@@ -55,8 +55,18 @@ public abstract class Context
 	public string FullName { get; }
 	public Type GetType(string name) => TryGetType(name) ?? throw new TypeNotFound(name, FullName);
 
-	internal Type? TryGetType(string name) =>
-		types.GetOrAdd<Type?>(name, _ =>
+	internal Type? TryGetType(string name)
+	{
+		lock (types)
+		{
+			if (types.TryGetValue(name, out var type))
+				return type;
+			var result = GuessTypeFromName();
+			types[name] = result;
+			return result;
+		}
+
+		Type? GuessTypeFromName()
 		{
 			if (name == Name || this is Type && ((Type)this).IsGeneric &&
 				name.StartsWith(Name, StringComparison.Ordinal) &&
@@ -67,9 +77,10 @@ public abstract class Context
 			if (name.EndsWith(')') && name.Contains('('))
 				return GetGenericTypeWithArguments(name);
 			return FindFullType(name) ?? FindType(name, this);
-		});
+		}
+	}
 
-	private readonly IAppCache types = new CachingService();
+	private readonly IDictionary<string, Type?> types = new Dictionary<string, Type?>();
 
 	/// <summary>
 	/// Always convert plural name into List(SingularName), e.g. Texts becomes List(Text)
