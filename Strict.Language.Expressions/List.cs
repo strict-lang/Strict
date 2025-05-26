@@ -19,11 +19,9 @@ public sealed class List : Value
 			: returnTypes.FirstOrDefault(t => returnTypes[0].Members.Any(m => m.Type == t)) ??
 			throw new ListElementsMustHaveMatchingType(bodyForErrorMessage, returnTypes);
 
-	public sealed class ListElementsMustHaveMatchingType : ParsingFailed
-	{
-		public ListElementsMustHaveMatchingType(Body body, IEnumerable<Type> returnTypes) :
-			base(body, "List has one or many mismatching types " + string.Join(", ", returnTypes)) { }
-	}
+	public sealed class ListElementsMustHaveMatchingType(Body body, IEnumerable<Type> returnTypes)
+		: ParsingFailed(body,
+			"List has one or many mismatching types " + string.Join(", ", returnTypes));
 
 	public List<Expression> Values { get; private set; }
 
@@ -57,10 +55,7 @@ public sealed class List : Value
 				body.Method.ParseListArguments(body, input[1..^1]))
 			: null;
 
-	public sealed class EmptyListNotAllowed : ParsingFailed
-	{
-		public EmptyListNotAllowed(Body body) : base(body, "()") { }
-	}
+	public sealed class EmptyListNotAllowed(Body body) : ParsingFailed(body, "()");
 
 	public void UpdateValue(Body bodyForErrorMessage, Expression index, Expression newExpression)
 	{
@@ -73,14 +68,7 @@ public sealed class List : Value
 				throw new IndexOutOfRangeInListExpressions(bodyForErrorMessage, indexNumber, Values.Count);
 	}
 
-	public class IndexOutOfRangeInListExpressions : ParsingFailed
-	{
-		public IndexOutOfRangeInListExpressions(Body body, int index, int listExpressionsCount) :
-			base(body,
-				$"Given index {
-					index
-				} is not within the List Expressions count {
-					listExpressionsCount
-				}") { }
-	}
+	public class IndexOutOfRangeInListExpressions(Body body, int index, int listExpressionsCount)
+		: ParsingFailed(body,
+			$"Given index {index} is not within the List Expressions count {listExpressionsCount}");
 }

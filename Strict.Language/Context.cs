@@ -1,5 +1,4 @@
-﻿using LazyCache;
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
 using static Strict.Language.NamedType;
 
 namespace Strict.Language;
@@ -39,16 +38,12 @@ public abstract class Context
 			lastLetterNumber != -1 && parent.FindType(name[..^1]) != null;
 	}
 
-	public sealed class NameMustBeAWordWithoutAnySpecialCharactersOrNumbers : Exception
-	{
-		public NameMustBeAWordWithoutAnySpecialCharactersOrNumbers(string name) : base(name) { }
-	}
+	public sealed class NameMustBeAWordWithoutAnySpecialCharactersOrNumbers(string name)
+		: Exception(name);
 
-	public sealed class PackageNameMustBeAWordWithoutSpecialCharacters : Exception
-	{
-		public PackageNameMustBeAWordWithoutSpecialCharacters(string name) : base("Name " + name +
-			" ;Allowed characters: Alphabets, Numbers or '-' in the middle or end of the name") { }
-	}
+	public sealed class PackageNameMustBeAWordWithoutSpecialCharacters(string name) : Exception(
+		"Name " + name +
+		" ;Allowed characters: Alphabets, Numbers or '-' in the middle or end of the name");
 
 	public Context Parent { get; protected set; }
 	public string Name { get; }
@@ -83,7 +78,7 @@ public abstract class Context
 	private readonly IDictionary<string, Type?> types = new Dictionary<string, Type?>();
 
 	/// <summary>
-	/// Always convert plural name into List(SingularName), e.g. Texts becomes List(Text)
+	/// Always convert plural name into List(SingularName), e.g., Texts becomes List(Text)
 	/// </summary>
 	private Type? TryGetTypeFromPluralNameAsListWithSingularName(string name)
 	{
@@ -125,13 +120,10 @@ public abstract class Context
 		return argumentTypes;
 	}
 
-	public sealed class TypeArgumentsCountDoesNotMatchGenericType : Exception
-	{
-		public TypeArgumentsCountDoesNotMatchGenericType(Type mainType,
-			IReadOnlyCollection<Type> typeArguments) : base("The generic type " + mainType +
-			" needs these type arguments: " + mainType.GetGenericTypeArguments().ToBrackets() +
-			", this does not match provided types: " + typeArguments.ToBrackets()) { }
-	}
+	public sealed class TypeArgumentsCountDoesNotMatchGenericType(Type mainType,
+		IReadOnlyCollection<Type> typeArguments) : Exception("The generic type " + mainType +
+		" needs these type arguments: " + mainType.GetGenericTypeArguments().ToBrackets() +
+		", this does not match provided types: " + typeArguments.ToBrackets());
 
 	public GenericTypeImplementation GetListImplementationType(Type implementation) =>
 		GetType(Base.List).GetGenericImplementation(implementation);
@@ -154,11 +146,8 @@ public abstract class Context
 				: package
 			: Parent.GetPackage();
 
-	public sealed class TypeNotFound : Exception
-	{
-		public TypeNotFound(string typeName, string contextFullName) : base(
-			$"{typeName} not found in {contextFullName}") { }
-	}
+	public sealed class TypeNotFound(string typeName, string contextFullName)
+		: Exception($"{typeName} not found in {contextFullName}");
 
 	public abstract Type? FindType(string name, Context? searchingFrom = null);
 }

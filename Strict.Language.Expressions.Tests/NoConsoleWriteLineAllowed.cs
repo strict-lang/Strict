@@ -12,10 +12,8 @@ public class NoConsoleWriteLineAllowed
 
 	public static readonly VirtualConsoleWriter ConsoleWriter = new(Console.Out);
 
-	public sealed class VirtualConsoleWriter : TextWriter
+	public sealed class VirtualConsoleWriter(TextWriter originalOutput) : TextWriter
 	{
-		public VirtualConsoleWriter(TextWriter originalOutput) => this.originalOutput = originalOutput;
-		private readonly TextWriter originalOutput;
 		public override Encoding Encoding => Encoding.UTF8; //ncrunch: no coverage
 
 		public override void Write(string? value)
@@ -97,8 +95,6 @@ public class NoConsoleWriteLineAllowed
 		*/
 	}
 
-	public sealed class ConsoleWriteLineShouldOnlyBeUsedInManualTests : Exception
-	{
-		public ConsoleWriteLineShouldOnlyBeUsedInManualTests(string message) : base(message) { }
-	}
+	public sealed class ConsoleWriteLineShouldOnlyBeUsedInManualTests(string message)
+		: Exception(message);
 }

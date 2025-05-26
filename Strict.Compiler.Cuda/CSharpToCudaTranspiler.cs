@@ -4,16 +4,10 @@ using Type = Strict.Language.Type;
 
 namespace Strict.Compiler.Cuda;
 
-public class CSharpToCudaTranspiler
+public class CSharpToCudaTranspiler(Package strictBase)
 {
-	public CSharpToCudaTranspiler(Package strictBase)
-	{
-		package = new Package(strictBase, nameof(CSharpToCudaTranspiler));
-		parser = new CSharpType.CSharpExpressionParser();
-	}
-
-	private readonly Package package;
-	private readonly CSharpType.CSharpExpressionParser parser;
+	private readonly Package package = new(strictBase, nameof(CSharpToCudaTranspiler));
+	private readonly CSharpType.CSharpExpressionParser parser = new();
 
 	public string Convert(string filePath)
 	{

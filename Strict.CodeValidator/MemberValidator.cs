@@ -17,8 +17,6 @@ public sealed record MemberValidator(Type Type) : Validator
 			throw new UnusedMemberMustBeRemoved(Type, member.Name);
 	}
 
-	public sealed class UnusedMemberMustBeRemoved : ParsingFailed
-	{
-		public UnusedMemberMustBeRemoved(Type type, string memberName) : base(type, 0, memberName) { }
-	}
+	public sealed class UnusedMemberMustBeRemoved(Type type, string memberName)
+		: ParsingFailed(type, 0, memberName);
 }

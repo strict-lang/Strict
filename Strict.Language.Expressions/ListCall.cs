@@ -2,19 +2,13 @@
 
 namespace Strict.Language.Expressions;
 
-public sealed class ListCall : ConcreteExpression
+public sealed class ListCall(Expression list, Expression index) : ConcreteExpression(
+	list.ReturnType is GenericTypeImplementation listReturnType
+		? listReturnType.ImplementationTypes[0]
+		: list.ReturnType, list.IsMutable)
 {
-	public ListCall(Expression list, Expression index) : base(
-		list.ReturnType is GenericTypeImplementation listReturnType
-			? listReturnType.ImplementationTypes[0]
-			: list.ReturnType, list.IsMutable)
-	{
-		List = list;
-		Index = index;
-	}
-
-	public Expression List { get; }
-	public Expression Index { get; }
+	public Expression List { get; } = list;
+	public Expression Index { get; } = index;
 
 	public static Expression? TryParse(Body body, Expression? variable,
 		IReadOnlyList<Expression> arguments) =>

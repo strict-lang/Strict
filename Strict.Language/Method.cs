@@ -29,12 +29,10 @@ public sealed class Method : Context
 			ParseParameters(type, restSpan);
 	}
 
-	public sealed class MethodLengthMustNotExceedTwelve : ParsingFailed
-	{
-		public MethodLengthMustNotExceedTwelve(Method method, int linesCount, int lineNumber) : base(
-			method.Type, lineNumber,
-			$"Method {method.Name} has {linesCount} lines but limit is {Limit.MethodLength}") { }
-	}
+	public sealed class
+		MethodLengthMustNotExceedTwelve(Method method, int linesCount, int lineNumber)
+		: ParsingFailed(method.Type, lineNumber,
+			$"Method {method.Name} has {linesCount} lines but limit is {Limit.MethodLength}");
 
 	/// <summary>
 	/// Simple lexer to just parse the method definition and get all used names and types. Method code
@@ -113,10 +111,8 @@ public sealed class Method : Context
 	private static bool IsReturnTypeAny(ReadOnlySpan<char> rest) =>
 		rest[0] is ' ' && rest[1..].Equals(Base.Any, StringComparison.Ordinal);
 
-	public sealed class MethodReturnTypeAsAnyIsNotAllowed : ParsingFailed
-	{
-		public MethodReturnTypeAsAnyIsNotAllowed(Method method, string name) : base(method.Type, 0, name) { }
-	}
+	public sealed class MethodReturnTypeAsAnyIsNotAllowed(Method method, string name)
+		: ParsingFailed(method.Type, 0, name);
 
 	private static bool IsMethodGeneric(ReadOnlySpan<char> headerLine) =>
 		headerLine.Contains(Base.Generic, StringComparison.Ordinal) ||
@@ -171,19 +167,15 @@ public sealed class Method : Context
 	private static bool IsCommaInsideBrackets(ReadOnlySpan<char> parametersSpan, int commaIndex) =>
 		parametersSpan.IndexOf(')') > commaIndex && parametersSpan.LastIndexOf('(') < commaIndex;
 
-	public sealed class ParametersMustStartWithLowerCase : ParsingFailed
-	{
-		public ParametersMustStartWithLowerCase(Method method, string message) : base(method.Type, 0, message, method.Name) { }
-	}
+	public sealed class ParametersMustStartWithLowerCase(Method method, string message)
+		: ParsingFailed(method.Type, 0, message, method.Name);
 
 	private static bool IsParameterTypeAny(string nameAndTypeString) =>
 		nameAndTypeString == Base.Any.MakeFirstLetterLowercase() ||
 		nameAndTypeString.Contains(" Any");
 
-	public sealed class ParametersWithTypeAnyIsNotAllowed : ParsingFailed
-	{
-		public ParametersWithTypeAnyIsNotAllowed(Method method, string name) : base(method.Type, 0, name) { }
-	}
+	public sealed class ParametersWithTypeAnyIsNotAllowed(Method method, string name)
+		: ParsingFailed(method.Type, 0, name);
 
 	private Parameter GetParameterByExtractingNameAndDefaultValue(Type type,
 		string nameAndTypeAsString)
@@ -201,46 +193,36 @@ public sealed class Method : Context
 			: new Parameter(type, nameAndDefaultValue[0], defaultValue);
 	}
 
-	public sealed class MissingParameterDefaultValue : ParsingFailed
-	{
-		public MissingParameterDefaultValue(Method method, int lineNumber, string nameAndType) : base(
-			method.Type, lineNumber, nameAndType) { }
-	}
+	public sealed class MissingParameterDefaultValue(Method method,
+		int lineNumber,
+		string nameAndType) : ParsingFailed(method.Type, lineNumber, nameAndType);
 
-	public sealed class DefaultValueCouldNotBeParsedIntoExpression : ParsingFailed
-	{
-		public DefaultValueCouldNotBeParsedIntoExpression(Method method, int lineNumber,
-			string defaultValueExpression) : base(method.Type, lineNumber, defaultValueExpression) { }
-	}
+	public sealed class DefaultValueCouldNotBeParsedIntoExpression(Method method,
+		int lineNumber,
+		string defaultValueExpression)
+		: ParsingFailed(method.Type, lineNumber, defaultValueExpression);
 
-	public sealed class MethodParameterCountMustNotExceedThree : ParsingFailed
-	{
-		public MethodParameterCountMustNotExceedThree(Method method, int lineNumber) : base(
-			method.Type, lineNumber,
+	public sealed class MethodParameterCountMustNotExceedThree(Method method, int lineNumber)
+		: ParsingFailed(method.Type, lineNumber,
 			$"{
 				GetMethodName(method)
 			} has parameters count {
 				method.Parameters.Count
 			} but limit is {
 				Limit.ParameterCount
-			}") { }
-
+			}")
+	{
 		private static string GetMethodName(Method method) =>
 			method.Name == From
 				? "Type " + method.Type.FullName + " constructor method"
 				: "Method " + method.Name;
 	}
 
-	public sealed class InvalidMethodParameters : ParsingFailed
-	{
-		public InvalidMethodParameters(Method method, string rest) : base(method.Type, 0, rest,
-			method.Name) { }
-	}
+	public sealed class InvalidMethodParameters(Method method, string rest)
+		: ParsingFailed(method.Type, 0, rest, method.Name);
 
-	public sealed class EmptyParametersMustBeRemoved : ParsingFailed
-	{
-		public EmptyParametersMustBeRemoved(Method method) : base(method.Type, 0, "", method.Name) { }
-	}
+	public sealed class EmptyParametersMustBeRemoved(Method method)
+		: ParsingFailed(method.Type, 0, "", method.Name);
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public Expression ParseLine(Body body, string currentLine)
@@ -321,11 +303,8 @@ public sealed class Method : Context
 			throw new TypeParser.ExtraWhitespacesFoundAtEndOfLine(Type, lineNumber, line, Name);
 	}
 
-	public sealed class InvalidIndentation : ParsingFailed
-	{
-		public InvalidIndentation(Type type, int lineNumber, string line, string method) : base(type,
-			lineNumber, method, line) { }
-	}
+	public sealed class InvalidIndentation(Type type, int lineNumber, string line, string method)
+		: ParsingFailed(type, lineNumber, method, line);
 
 	private bool IsCurrentLineInBodyScope(int bodyTabs) =>
 		methodLineNumber < lines.Count && GetTabs(lines[methodLineNumber]) != bodyTabs;
@@ -363,11 +342,8 @@ public sealed class Method : Context
 
 	private bool IsTestPackage() => Type.Package.Name == "TestPackage" || Name == "Run";
 
-	public sealed class MethodMustHaveAtLeastOneTest : ParsingFailed
-	{
-		public MethodMustHaveAtLeastOneTest(Type type, string name, int typeLineNumber) : base(type,
-			typeLineNumber, name) { }
-	}
+	public sealed class MethodMustHaveAtLeastOneTest(Type type, string name, int typeLineNumber)
+		: ParsingFailed(type, typeLineNumber, name);
 
 	public class CannotCallBodyOnTraitMethod : Exception { }
 

@@ -1,13 +1,7 @@
 ﻿namespace Strict.VirtualMachine;
 
-public abstract class InstanceStatement : Statement
+public abstract class InstanceStatement(Instance instance, Instruction instruction) : Statement
 {
-	protected InstanceStatement(Instance instance, Instruction instruction)
-	{
-		Instance = instance;
-		Instruction = instruction;
-	}
-
-	public Instance Instance { get; }
-	public override Instruction Instruction { get; }
+	public Instance Instance { get; } = instance;
+	public override Instruction Instruction { get; } = instruction;
 }

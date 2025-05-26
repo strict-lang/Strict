@@ -44,16 +44,15 @@ public sealed class Member : NamedType
 
 	public const string ConstraintsBody = nameof(ConstraintsBody);
 
-	public sealed class InvalidConstraintExpression : ParsingFailed
-	{
-		public InvalidConstraintExpression(Type type, string memberName, string constraintText) : base(type, 0, $"Constraint: {constraintText} Member: {memberName}") { }
-	}
+	public sealed class
+		InvalidConstraintExpression(Type type, string memberName, string constraintText)
+		: ParsingFailed(type, 0, $"Constraint: {constraintText} Member: {memberName}");
 
-	public sealed class MemberNameWithDifferentTypeNamesThanOwnAreNotAllowed : ParsingFailed
-	{
-		public MemberNameWithDifferentTypeNamesThanOwnAreNotAllowed(Type type, string nameType,
-			string typeName) : base(type, 0, $"Name {nameType} and type {typeName} are not matching") { }
-	}
+	public sealed class
+		MemberNameWithDifferentTypeNamesThanOwnAreNotAllowed(Type type,
+			string nameType,
+			string typeName)
+		: ParsingFailed(type, 0, $"Name {nameType} and type {typeName} are not matching");
 
 	public void UpdateValue(Expression newExpression, Body bodyForErrorMessage)
 	{

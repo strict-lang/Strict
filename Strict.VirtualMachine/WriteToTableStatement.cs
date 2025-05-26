@@ -1,16 +1,10 @@
 ﻿namespace Strict.VirtualMachine;
 
-public sealed class WriteToTableStatement : Statement
+public sealed class WriteToTableStatement(Register key, Register value, string identifier)
+	: Statement
 {
-	public WriteToTableStatement(Register key, Register value, string identifier)
-	{
-		Key = key;
-		Value = value;
-		Identifier = identifier;
-	}
-
-	public Register Key { get; }
-	public Register Value { get; }
-	public string Identifier { get; }
+	public Register Key { get; } = key;
+	public Register Value { get; } = value;
+	public string Identifier { get; } = identifier;
 	public override Instruction Instruction => Instruction.WriteToTable;
 }

@@ -1,8 +1,7 @@
 ﻿namespace Strict.LanguageServer;
 
-public sealed class VariableStateNotificationMessage
+public sealed class VariableStateNotificationMessage(Dictionary<int, string> lineTextPair)
 {
-	public VariableStateNotificationMessage(Dictionary<int, string> lineTextPair) => LineTextPair = lineTextPair;
 	//ncrunch: no coverage start, TODO: missing tests
-	public Dictionary<int, string> LineTextPair { get; }
+	public Dictionary<int, string> LineTextPair { get; } = lineTextPair;
 }

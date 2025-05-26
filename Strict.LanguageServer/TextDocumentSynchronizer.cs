@@ -10,18 +10,11 @@ using Strict.Language;
 
 namespace Strict.LanguageServer;
 
-public sealed class TextDocumentSynchronizer : ITextDocumentSyncHandler
+public sealed class TextDocumentSynchronizer(ILanguageServerFacade languageServer,
+	StrictDocument document,
+	Package strictBase) : ITextDocumentSyncHandler
 {
-	public TextDocumentSynchronizer(ILanguageServerFacade languageServer, StrictDocument document, Package strictBase)
-	{
-		this.languageServer = languageServer;
-		Document = document;
-		this.strictBase = strictBase;
-	}
-
-	public StrictDocument Document { get; }
-	private readonly ILanguageServerFacade languageServer;
-	private readonly Package strictBase;
+	public StrictDocument Document { get; } = document;
 	public TextDocumentAttributes GetTextDocumentAttributes(DocumentUri uri) => new(uri, "strict"); //ncrunch: no coverage
 
 	public Task<Unit> Handle(DidChangeTextDocumentParams request,

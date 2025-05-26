@@ -6,14 +6,14 @@ namespace Strict.Language;
 
 /// <summary>
 /// Every method body is just an expression, which might contain multiple expressions, which are
-/// all executed and then the final result is returned (all previous expressions must succeed).
+/// all executed, and then the final result is returned (all previous expressions must succeed).
 /// Method parameters are in this context and can be used by any of the expressions nested here.
 /// </summary>
 public sealed class Body : Expression
 {
 	/// <summary>
-	/// At construction time we only now the method we are in the if there is a parent Body we are in.
-	/// While parsing each of the expressions we need to check for variables as defined below. This
+	/// At construction time, we only know the method we are in, if there is a parent Body we are in.
+	/// While parsing each of the expressions, we need to check for variables as defined below. This
 	/// means the expressions list can't be done yet and needs this object to exist for scope parsing
 	/// </summary>
 	public Body(Method method, int tabs = 0, Body? parent = null) : base(method.ReturnType)
@@ -90,7 +90,7 @@ public sealed class Body : Expression
 		ParsingLineNumber > 0 && ParsingLineNumber < LineRange.End.Value &&
 		!CurrentLine.StartsWith("\t\t", StringComparison.Ordinal);
 
-	public IReadOnlyList<Expression> Expressions { get; private set; } = Array.Empty<Expression>();
+	public IReadOnlyList<Expression> Expressions { get; private set; } = [];
 
 	/// <summary>
 	/// We don't have access to the specific expressions here, so we need to do GetType().Name checks
@@ -101,23 +101,17 @@ public sealed class Body : Expression
 		lastExpression.ReturnType.Name == Base.Error ||
 		lastExpression.ReturnType.IsCompatible(parentType);
 
-	public sealed class ChildBodyReturnTypeMustMatchMethod : ParsingFailed
-	{
-		public ChildBodyReturnTypeMustMatchMethod(Body body, Type childReturnType) : base(body,
+	public sealed class ChildBodyReturnTypeMustMatchMethod(Body body, Type childReturnType)
+		: ParsingFailed(body,
 			$"Child body return type: {childReturnType} is not matching with Parent return type:" + $" {
 				(body.Parent == null
 					? body.Method.ReturnType
 					: body.Parent.ReturnType)
 			} in method line: {
 				body.ParsingLineNumber
-			}") { }
-	}
+			}");
 
-	public sealed class ReturnAsLastExpressionIsNotNeeded : ParsingFailed
-	{
-		public ReturnAsLastExpressionIsNotNeeded(Body body) : base(body) { }
-	}
-
+	public sealed class ReturnAsLastExpressionIsNotNeeded(Body body) : ParsingFailed(body);
 	/// <summary>
 	/// Dictionaries are slow and eats up a lot of memory, only created when needed.
 	/// </summary>
@@ -150,17 +144,16 @@ public sealed class Body : Expression
 		return this;
 	}
 
-	public class VariableNameCannotHaveDifferentTypeNameThanValue : ParsingFailed
-	{
-		public VariableNameCannotHaveDifferentTypeNameThanValue(Body body, string variableNameType,
-			string valueType) : base(body, $"Variable name {variableNameType} " +
-			$"denotes different type than its value type {valueType}. Prefer using a different name") { }
-	}
+	public class
+		VariableNameCannotHaveDifferentTypeNameThanValue(Body body,
+			string variableNameType,
+			string valueType) : ParsingFailed(body,
+		$"Variable name {variableNameType} " + $"denotes different type than its value type {
+			valueType
+		}. Prefer using a different name");
 
-	public sealed class ValueIsNotMutableAndCannotBeChanged : ParsingFailed
-	{
-		public ValueIsNotMutableAndCannotBeChanged(Body body, string name) : base(body, name) { }
-	}
+	public sealed class ValueIsNotMutableAndCannotBeChanged(Body body, string name)
+		: ParsingFailed(body, name);
 
 	public void UpdateVariable(string name, Expression value)
 	{
@@ -173,10 +166,8 @@ public sealed class Body : Expression
 			variableScopeBody.Variables[name] = value;
 	}
 
-	public sealed class IdentifierNotFound : ParsingFailed
-	{
-		public IdentifierNotFound(Body body, string name) : base(body, name + ", Variables in scope: " + body.GetAllVariablesNames().ToWordList()) { }
-	}
+	public sealed class IdentifierNotFound(Body body, string name) : ParsingFailed(body,
+		name + ", Variables in scope: " + body.GetAllVariablesNames().ToWordList());
 
 	private List<string> GetAllVariablesNames()
 	{

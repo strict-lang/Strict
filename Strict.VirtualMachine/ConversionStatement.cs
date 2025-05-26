@@ -2,15 +2,11 @@
 
 namespace Strict.VirtualMachine;
 
-public sealed class ConversionStatement : RegisterStatement
+public sealed class ConversionStatement(Register storedValueRegister,
+	Register registerToStoreConversion,
+	Type conversionType,
+	Instruction instruction) : RegisterStatement(storedValueRegister, instruction)
 {
-	public ConversionStatement(Register storedValueRegister, Register registerToStoreConversion,
-		Type conversionType, Instruction instruction) : base(storedValueRegister, instruction)
-	{
-		RegisterToStoreConversion = registerToStoreConversion;
-		ConversionType = conversionType;
-	}
-
-	public Type ConversionType { get; }
-	public Register RegisterToStoreConversion { get; }
+	public Type ConversionType { get; } = conversionType;
+	public Register RegisterToStoreConversion { get; } = registerToStoreConversion;
 }

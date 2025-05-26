@@ -1,10 +1,8 @@
 ﻿namespace Strict.Language.Expressions;
 
-public sealed class Binary : MethodCall
+public sealed class Binary(Expression left, Method operatorMethod, Expression[] right)
+	: MethodCall(operatorMethod, left, right)
 {
-	public Binary(Expression left, Method operatorMethod, Expression[] right) :
-		base(operatorMethod, left, right) { }
-
 	public override string ToString() =>
 		AddNestedBracketsIfNeeded(Instance!) + " " + Method.Name + " " +
 		AddNestedBracketsIfNeeded(Arguments[0]);
@@ -21,11 +19,12 @@ public sealed class Binary : MethodCall
 			? throw new IncompleteTokensForBinaryExpression(body, input, postfixTokens)
 			: BuildBinaryExpression(body, input, postfixTokens.Pop(), postfixTokens);
 
-	public sealed class IncompleteTokensForBinaryExpression : ParsingFailed
+	public sealed class IncompleteTokensForBinaryExpression(Body body,
+		ReadOnlySpan<char> input,
+		IEnumerable<Range> postfixTokens) : ParsingFailed(body,
+		input.GetTextsFromRanges(postfixTokens).Reverse().ToWordList())
 	{
-		public IncompleteTokensForBinaryExpression(Body body, ReadOnlySpan<char> input,
-			IEnumerable<Range> postfixTokens) :
-			base(body, input.GetTextsFromRanges(postfixTokens).Reverse().ToWordList()) { } //ncrunch: no coverage
+		//ncrunch: no coverage
 	}
 
 	private static Expression BuildBinaryExpression(Body body, ReadOnlySpan<char> input,
@@ -70,8 +69,6 @@ public sealed class Binary : MethodCall
 		left is List leftList && right is List rightList &&
 		leftList.Values.Count != rightList.Values.Count;
 
-	public sealed class ListsHaveDifferentDimensions : ParsingFailed
-	{
-		public ListsHaveDifferentDimensions(Body body, string error) : base(body, error) { }
-	}
+	public sealed class ListsHaveDifferentDimensions(Body body, string error)
+		: ParsingFailed(body, error);
 }

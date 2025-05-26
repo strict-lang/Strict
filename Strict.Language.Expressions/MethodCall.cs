@@ -67,10 +67,8 @@ public class MethodCall : ConcreteExpression
 		arguments.Count is 1 && (fromType == arguments[0].ReturnType ||
 			arguments[0].ReturnType is GenericTypeImplementation genericType && fromType == genericType.Generic);
 
-	public sealed class ConstructorForSameTypeArgumentIsNotAllowed : ParsingFailed
-	{
-		public ConstructorForSameTypeArgumentIsNotAllowed(Body body) : base(body) { }
-	}
+	public sealed class ConstructorForSameTypeArgumentIsNotAllowed(Body body)
+		: ParsingFailed(body);
 
 	public override string ToString() =>
 		Instance is not null

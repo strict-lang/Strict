@@ -112,11 +112,8 @@ public sealed class Repositories
 		TryMoveOrCopyWhenDeletionDidNotFullyWork(targetPath, masterDirectory);
 	}
 
-	public sealed class NoMasterFolderFoundFromPackage : Exception
-	{
-		public NoMasterFolderFoundFromPackage(string packageName, string localZip) : base(
-			packageName + ", localZip: " + localZip) { }
-	}
+	public sealed class NoMasterFolderFoundFromPackage(string packageName, string localZip)
+		: Exception(packageName + ", localZip: " + localZip);
 
 	private static void TryMoveOrCopyWhenDeletionDidNotFullyWork(string targetPath,
 		string masterDirectory)
@@ -166,11 +163,8 @@ public sealed class Repositories
 	}
 
 	//ncrunch: no coverage start
-	public sealed class NoFilesAllowedInStrictFolderNeedsToBeInASubFolder : Exception
-	{
-		public NoFilesAllowedInStrictFolderNeedsToBeInASubFolder(IEnumerable<string> files) : base(
-			files.ToWordList()) { }
-	} //ncrunch: no coverage end
+	public sealed class NoFilesAllowedInStrictFolderNeedsToBeInASubFolder(IEnumerable<string> files)
+		: Exception(files.ToWordList()); //ncrunch: no coverage end
 
 	private ICollection<Type> GetTypes(IReadOnlyCollection<string> files, Package package)
 	{

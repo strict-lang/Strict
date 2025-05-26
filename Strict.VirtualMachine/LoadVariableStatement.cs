@@ -1,11 +1,8 @@
 ﻿namespace Strict.VirtualMachine;
 
-public sealed class LoadVariableStatement : RegisterStatement
+public sealed class LoadVariableStatement(Register register, string identifier)
+	: RegisterStatement(register, Instruction.Load)
 {
-	public string Identifier { get; }
-
-	public LoadVariableStatement(Register register, string identifier) : base(register, Instruction.Load) =>
-		Identifier = identifier;
-
+	public string Identifier { get; } = identifier;
 	public override string ToString() => $"{Instruction} {Register} {Identifier}";
 }

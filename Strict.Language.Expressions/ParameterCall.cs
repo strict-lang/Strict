@@ -1,11 +1,9 @@
 ﻿namespace Strict.Language.Expressions;
 
-public sealed class ParameterCall : Expression
+public sealed class ParameterCall(Parameter parameter)
+	: Expression(parameter.Type, parameter.IsMutable)
 {
-	public ParameterCall(Parameter parameter) : base(parameter.Type, parameter.IsMutable) =>
-		Parameter = parameter;
-
-	public Parameter Parameter { get; }
+	public Parameter Parameter { get; } = parameter;
 
 	public static Expression? TryParse(Body body, ReadOnlySpan<char> input)
 	{

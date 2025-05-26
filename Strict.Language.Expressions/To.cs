@@ -1,12 +1,9 @@
 ﻿namespace Strict.Language.Expressions;
 
-public sealed class To : MethodCall
+public sealed class To(Expression left, Method operatorMethod, Type conversionType)
+	: MethodCall(operatorMethod, left, conversionType)
 {
-	public To(Expression left, Method operatorMethod, Type conversionType) : base(operatorMethod,
-		left, conversionType) =>
-		ConversionType = conversionType;
-
-	public Type ConversionType { get; }
+	public Type ConversionType { get; } = conversionType;
 	public override string ToString() => $"{Instance} {Method.Name} {ConversionType.Name}";
 
 	public static Expression Parse(Body body, ReadOnlySpan<char> text, Expression left)
@@ -23,13 +20,8 @@ public sealed class To : MethodCall
 			conversionType);
 	}
 
-	public sealed class ConversionTypeNotFound : ParsingFailed
-	{
-		public ConversionTypeNotFound(Body body) : base(body) { }
-	}
+	public sealed class ConversionTypeNotFound(Body body) : ParsingFailed(body);
 
-	public sealed class ConversionTypeIsIncompatible : ParsingFailed
-	{
-		public ConversionTypeIsIncompatible(Body body, string message, Type type) : base(body, message, type) { }
-	}
+	public sealed class ConversionTypeIsIncompatible(Body body, string message, Type type)
+		: ParsingFailed(body, message, type);
 }

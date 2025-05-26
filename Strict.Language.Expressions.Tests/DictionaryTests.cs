@@ -125,6 +125,6 @@ public sealed class DictionaryTests : TestExpressions
 				}, type),
 			Throws.InstanceOf<Dictionary.DictionaryMustBeInitializedWithTwoTypeParameters>().With.
 				Message.StartsWith(
-					"Expected Type Parameters: 2, Given type parameters: 3 and they are TestPackage.Number, TestPackage.Text, TestPackage.Boolean"));
-
+					"Expected Type Parameters: 2, Given type parameters: 3 and they are " +
+					"TestPackage.Number, TestPackage.Text, TestPackage.Boolean"));
 }

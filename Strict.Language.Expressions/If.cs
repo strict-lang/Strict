@@ -4,17 +4,12 @@
 /// If expressions are used for branching, can also be used as an input for any other expression
 /// like method arguments, other conditions, etc. like conditional operators.
 /// </summary>
-public sealed class If : Expression
+public sealed class If(Expression condition,
+	Expression then,
+	Expression? optionalElse = null,
+	Body? bodyForErrorMessage = null)
+	: Expression(CheckExpressionAndGetMatchingType(then, optionalElse, bodyForErrorMessage))
 {
-	public If(Expression condition, Expression then, Expression? optionalElse = null,
-		Body? bodyForErrorMessage = null) : base(CheckExpressionAndGetMatchingType(then,
-		optionalElse, bodyForErrorMessage))
-	{
-		Condition = condition;
-		Then = then;
-		OptionalElse = optionalElse;
-	}
-
 	private static Type CheckExpressionAndGetMatchingType(Expression then, Expression? optionalElse,
 		Body? bodyForErrorMessage) =>
 		then is ConstantDeclaration || optionalElse is ConstantDeclaration
@@ -36,21 +31,19 @@ public sealed class If : Expression
 				throw new ReturnTypeOfThenAndElseMustHaveMatchingType(
 					bodyForErrorMessage ?? new Body(thenType.Methods[0]), thenType, elseType);
 
-	public class ReturnTypeOfThenAndElseMustHaveMatchingType : ParsingFailed
-	{
-		public ReturnTypeOfThenAndElseMustHaveMatchingType(Body body, Type thenReturnType,
-			Type optionalElseReturnType) : base(body,
-			"The Then type: " + thenReturnType + " is not same as the Else type: " +
-			optionalElseReturnType) { }
-	}
+	public class ReturnTypeOfThenAndElseMustHaveMatchingType(Body body,
+		Type thenReturnType,
+		Type optionalElseReturnType) : ParsingFailed(body,
+		"The Then type: " + thenReturnType + " is not same as the Else type: " +
+		optionalElseReturnType);
 
-	public Expression Condition { get; }
-	public Expression Then { get; }
+	public Expression Condition { get; } = condition;
+	public Expression Then { get; } = then;
 	/// <summary>
 	/// Rarely used as most of the time Then will return and anything after is automatically the else
 	/// (else is not allowed then). For multiple if/else or when not returning else might be useful.
 	/// </summary>
-	public Expression? OptionalElse { get; }
+	public Expression? OptionalElse { get; } = optionalElse;
 
 	public override int GetHashCode() =>
 		Condition.GetHashCode() ^ Then.GetHashCode() ^ (OptionalElse?.GetHashCode() ?? 0);
@@ -82,15 +75,8 @@ public sealed class If : Expression
 					? TryParseIf(body, line)
 					: null;
 
-	public sealed class MissingCondition : ParsingFailed
-	{
-		public MissingCondition(Body body) : base(body) { }
-	}
-
-	public sealed class UnexpectedElse : ParsingFailed
-	{
-		public UnexpectedElse(Body body) : base(body) { }
-	}
+	public sealed class MissingCondition(Body body) : ParsingFailed(body);
+	public sealed class UnexpectedElse(Body body) : ParsingFailed(body);
 
 	private static Expression TryParseIf(Body body, ReadOnlySpan<char> line)
 	{
@@ -113,18 +99,12 @@ public sealed class If : Expression
 		throw new InvalidCondition(body, condition.ReturnType);
 	}
 
-	public sealed class InvalidCondition : ParsingFailed
-	{
-		public InvalidCondition(Body body, Type? conditionReturnType = null) : base(body,
-			conditionReturnType != null
-				? body.Method.FullName + "\n Return type " + conditionReturnType + " is not " + Base.Boolean
-				: null) { }
-	}
+	public sealed class InvalidCondition(Body body, Type? conditionReturnType = null)
+		: ParsingFailed(body, conditionReturnType != null
+			? body.Method.FullName + "\n Return type " + conditionReturnType + " is not " + Base.Boolean
+			: null);
 
-	public sealed class MissingThen : ParsingFailed
-	{
-		public MissingThen(Body body) : base(body) { }
-	}
+	public sealed class MissingThen(Body body) : ParsingFailed(body);
 
 	private static bool HasRemainingBody(Body body) =>
 		body.ParsingLineNumber + 1 < body.LineRange.End.Value;
@@ -167,10 +147,7 @@ public sealed class If : Expression
 		firstBracket == -1 || firstBracket > questionMarkIndex || input.IndexOf(')') < questionMarkIndex ||
 		firstBracket == 0 && input[^1] == ')';
 
-	public sealed class ConditionalExpressionsCannotBeNested : ParsingFailed
-	{
-		public ConditionalExpressionsCannotBeNested(Body body) : base(body) { }
-	}
+	public sealed class ConditionalExpressionsCannotBeNested(Body body) : ParsingFailed(body);
 
 	public static Expression ParseConditional(Body body, ReadOnlySpan<char> input)
 	{
@@ -186,8 +163,5 @@ public sealed class If : Expression
 			body.Method.ParseExpression(body, input[(questionMarkIndex + 2)..elseIndex]), body.Method.ParseExpression(body, input[(elseIndex + 6)..]));
 	}
 
-	public sealed class MissingElseExpression : ParsingFailed
-	{
-		public MissingElseExpression(Body body) : base(body) { }
-	}
+	public sealed class MissingElseExpression(Body body) : ParsingFailed(body);
 }

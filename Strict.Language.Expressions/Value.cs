@@ -8,10 +8,9 @@
 /// <see cref="ConstantDeclaration"/> or indirectly as parts of a <see cref="Binary"/> expression.
 /// For generic values like <see cref="List"/> the Data contains the generic type used.
 /// </summary>
-public class Value : ConcreteExpression
+public class Value(Type valueType, object data) : ConcreteExpression(valueType)
 {
-	public Value(Type valueType, object data) : base(valueType) => Data = data;
-	public object Data { get; }
+	public object Data { get; } = data;
 	public override string ToString() => Data.ToString()!;
 	public override bool Equals(object? other) => Data.Equals(other); //ncrunch: no coverage
 	public override int GetHashCode() => HashCode.Combine(base.GetHashCode(), Data);

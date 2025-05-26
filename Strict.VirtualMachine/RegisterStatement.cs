@@ -1,14 +1,8 @@
 ﻿namespace Strict.VirtualMachine;
 
-public abstract class RegisterStatement : Statement
+public abstract class RegisterStatement(Register register, Instruction instruction) : Statement
 {
-	protected RegisterStatement(Register register, Instruction instruction)
-	{
-		Register = register;
-		Instruction = instruction;
-	}
-
-	public Register Register { get; }
-	public override Instruction Instruction { get; }
+	public Register Register { get; } = register;
+	public override Instruction Instruction { get; } = instruction;
 	public override string ToString() => $"{Instruction} {Register}";
 }

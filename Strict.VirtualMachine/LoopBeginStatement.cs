@@ -1,6 +1,4 @@
 ﻿namespace Strict.VirtualMachine;
 
-public sealed class LoopBeginStatement : RegisterStatement
-{
-	public LoopBeginStatement(Register register) : base(register, Instruction.LoopBegin) { }
-}
+public sealed class LoopBeginStatement(Register register)
+	: RegisterStatement(register, Instruction.LoopBegin);

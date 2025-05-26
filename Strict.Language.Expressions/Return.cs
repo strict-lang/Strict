@@ -1,9 +1,8 @@
 ﻿namespace Strict.Language.Expressions;
 
-public sealed class Return : Expression
+public sealed class Return(Expression value) : Expression(value.ReturnType)
 {
-	public Return(Expression value) : base(value.ReturnType) => Value = value;
-	public Expression Value { get; }
+	public Expression Value { get; } = value;
 	public override int GetHashCode() => Value.GetHashCode();
 	public override string ToString() => Keyword.Return + " " + Value;
 	public override bool Equals(Expression? other) => other is Return a && Equals(Value, a.Value); //ncrunch: no coverage
@@ -15,8 +14,5 @@ public sealed class Return : Expression
 				: body.Method.ParseExpression(body, line[7..]))
 			: null;
 
-	public sealed class MissingExpression : ParsingFailed
-	{
-		public MissingExpression(Body body) : base(body) { }
-	}
+	public sealed class MissingExpression(Body body) : ParsingFailed(body);
 }

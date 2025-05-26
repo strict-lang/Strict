@@ -1,6 +1,3 @@
 ﻿namespace Strict.Language;
 
-public sealed class RecursiveCallCausesStackOverflow : ParsingFailed
-{
-	public RecursiveCallCausesStackOverflow(Body body) : base(body) { }
-}
+public sealed class RecursiveCallCausesStackOverflow(Body body) : ParsingFailed(body);

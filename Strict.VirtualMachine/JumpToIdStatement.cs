@@ -1,9 +1,7 @@
 ﻿namespace Strict.VirtualMachine;
 
-public sealed class JumpToIdStatement : JumpStatement
+public sealed class JumpToIdStatement(Instruction jumpInstruction, int id)
+	: JumpStatement(jumpInstruction)
 {
-	public JumpToIdStatement(Instruction jumpInstruction, int id) : base(jumpInstruction) =>
-		Id = id;
-
-	public int Id { get; }
+	public int Id { get; } = id;
 }
