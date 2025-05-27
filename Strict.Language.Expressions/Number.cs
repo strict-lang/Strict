@@ -2,9 +2,9 @@
 
 namespace Strict.Language.Expressions;
 
-public sealed class Number : Value
+public sealed class Number(Context context, double value)
+	: Value(context.GetType(Base.Number), value)
 {
-	public Number(Context context, double value) : base(context.GetType(Base.Number), value) { }
 	public override string ToString() => ((double)Data).ToString(CultureInfo.InvariantCulture);
 
 	public override bool Equals(Expression? other) =>

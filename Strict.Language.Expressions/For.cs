@@ -54,10 +54,7 @@ public sealed class For : Expression
 		body.GetLine(body.ParsingLineNumber + 1).TrimStart().
 			StartsWith(Keyword.For, StringComparison.Ordinal);
 
-	public sealed class MissingInnerBody : ParsingFailed
-	{
-		public MissingInnerBody(Body body) : base(body) { }
-	}
+	public sealed class MissingInnerBody(Body body) : ParsingFailed(body);
 
 	private static Expression ParseFor(Body body, ReadOnlySpan<char> line, Body innerBody)
 	{
@@ -87,11 +84,8 @@ public sealed class For : Expression
 		return forExpression;
 	}
 
-	public sealed class ExpressionTypeIsNotAnIterator : ParsingFailed
-	{
-		public ExpressionTypeIsNotAnIterator(Body body, string typeName, string line) : base(body,
-			$"Type {typeName} in line " + line) { }
-	}
+	public sealed class ExpressionTypeIsNotAnIterator(Body body, string typeName, string line)
+		: ParsingFailed(body, $"Type {typeName} in line " + line);
 
 	private static void AddVariableIfDoesNotExist(Body body, ReadOnlySpan<char> line, ReadOnlySpan<char> variableName)
 	{
@@ -207,28 +201,17 @@ public sealed class For : Expression
 				? line[(line.IndexOf(' ') + 1)..line.IndexOf('.')]
 				: line[(line.IndexOf(' ') + 1)..];
 
-	public sealed class MissingExpression : ParsingFailed
-	{
-		public MissingExpression(Body body) : base(body) { }
-	}
+	public sealed class MissingExpression(Body body) : ParsingFailed(body);
 
-	public sealed class IndexIsReserved : ParsingFailed
-	{
-		public IndexIsReserved(Body body) : base(body) { }
-	}
+	public sealed class IndexIsReserved(Body body) : ParsingFailed(body);
 
-	public sealed class DuplicateImplicitIndex : ParsingFailed
-	{
-		public DuplicateImplicitIndex(Body body) : base(body) { }
-	}
+	public sealed class DuplicateImplicitIndex(Body body) : ParsingFailed(body);
 
-	public sealed class ImmutableIterator : ParsingFailed
-	{
-		public ImmutableIterator(Body body) : base(body) { }
-	}
+	public sealed class ImmutableIterator(Body body) : ParsingFailed(body);
 
-	public sealed class IteratorTypeDoesNotMatchWithIterable : ParsingFailed
-	{
-		public IteratorTypeDoesNotMatchWithIterable(Body body, string iteratorTypeName, string? variableType) : base(body, $"Iterator type {iteratorTypeName} does not match with {variableType}") { }
-	}
+	public sealed class IteratorTypeDoesNotMatchWithIterable(
+		Body body,
+		string iteratorTypeName,
+		string? variableType) : ParsingFailed(body,
+		$"Iterator type {iteratorTypeName} does not match with {variableType}");
 }

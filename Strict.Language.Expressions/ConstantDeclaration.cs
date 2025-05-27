@@ -59,8 +59,5 @@ public class ConstantDeclaration : ConcreteExpression
 		return new ConstantDeclaration(body, name, value);
 	}
 
-	public sealed class MissingAssignmentValueExpression : ParsingFailed
-	{
-		public MissingAssignmentValueExpression(Body body) : base(body) { }
-	}
+	public sealed class MissingAssignmentValueExpression(Body body) : ParsingFailed(body);
 }

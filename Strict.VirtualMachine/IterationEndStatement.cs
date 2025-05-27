@@ -1,8 +1,7 @@
 ﻿namespace Strict.VirtualMachine;
 
-public sealed class IterationEndStatement : Statement
+public sealed class IterationEndStatement(int steps) : Statement
 {
-	public IterationEndStatement(int steps) => Steps = steps;
-	public int Steps { get; }
+	public int Steps { get; } = steps;
 	public override Instruction Instruction => Instruction.IterationEnd;
 }

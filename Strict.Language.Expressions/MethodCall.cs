@@ -29,9 +29,10 @@ public class MethodCall : ConcreteExpression
 	public Expression? Instance { get; }
 	public IReadOnlyList<Expression> Arguments { get; }
 
-	public MethodCall(Method method, Expression? instance = null, Type? toReturnType = null) : this(method, instance,
-		Array.Empty<Expression>(), toReturnType) { }
+	public MethodCall(Method method, Expression? instance = null, Type? toReturnType = null) : this(
+		method, instance, [], toReturnType) { }
 
+	// ReSharper disable once TooManyArguments
 	public static Expression? TryParse(Expression? instance, Body body, IReadOnlyList<Expression> arguments,
 		Type type, string inputAsString)
 	{
@@ -40,7 +41,7 @@ public class MethodCall : ConcreteExpression
 		var method = type.FindMethod(inputAsString, arguments, body.Method.Parser);
 		if (method != null)
 			return new MethodCall(method, instance, AreArgumentsAutoParsedAsList(method, arguments)
-				? new List<Expression> { new List(body, (List<Expression>)arguments) }
+				? [new List(body, (List<Expression>)arguments)]
 				: arguments);
 		return null;
 	}
@@ -67,10 +68,8 @@ public class MethodCall : ConcreteExpression
 		arguments.Count is 1 && (fromType == arguments[0].ReturnType ||
 			arguments[0].ReturnType is GenericTypeImplementation genericType && fromType == genericType.Generic);
 
-	public sealed class ConstructorForSameTypeArgumentIsNotAllowed : ParsingFailed
-	{
-		public ConstructorForSameTypeArgumentIsNotAllowed(Body body) : base(body) { }
-	}
+	public sealed class ConstructorForSameTypeArgumentIsNotAllowed(Body body)
+		: ParsingFailed(body);
 
 	public override string ToString() =>
 		Instance is not null

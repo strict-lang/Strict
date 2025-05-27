@@ -1,10 +1,8 @@
 ﻿namespace Strict.Language.Expressions;
 
-public sealed class Binary : MethodCall
+public sealed class Binary(Expression left, Method operatorMethod, Expression[] right)
+	: MethodCall(operatorMethod, left, right)
 {
-	public Binary(Expression left, Method operatorMethod, Expression[] right) :
-		base(operatorMethod, left, right) { }
-
 	public override string ToString() =>
 		AddNestedBracketsIfNeeded(Instance!) + " " + Method.Name + " " +
 		AddNestedBracketsIfNeeded(Arguments[0]);
@@ -21,13 +19,13 @@ public sealed class Binary : MethodCall
 			? throw new IncompleteTokensForBinaryExpression(body, input, postfixTokens)
 			: BuildBinaryExpression(body, input, postfixTokens.Pop(), postfixTokens);
 
-	public sealed class IncompleteTokensForBinaryExpression : ParsingFailed
-	{
-		public IncompleteTokensForBinaryExpression(Body body, ReadOnlySpan<char> input,
-			IEnumerable<Range> postfixTokens) :
-			base(body, input.GetTextsFromRanges(postfixTokens).Reverse().ToWordList()) { } //ncrunch: no coverage
-	}
+	public sealed class IncompleteTokensForBinaryExpression(
+		Body body,
+		ReadOnlySpan<char> input,
+		IEnumerable<Range> postfixTokens) : ParsingFailed(body,
+		input.GetTextsFromRanges(postfixTokens).Reverse().ToWordList()) { }
 
+	// ReSharper disable once TooManyArguments
 	private static Expression BuildBinaryExpression(Body body, ReadOnlySpan<char> input,
 		Range operatorTokenRange, Stack<Range> tokens)
 	{
@@ -37,7 +35,8 @@ public sealed class Binary : MethodCall
 			: BuildRegularBinaryExpression(body, input, tokens, operatorToken);
 	}
 
-	private static Expression BuildRegularBinaryExpression(Body body, ReadOnlySpan<char> input,
+	// ReSharper disable once TooManyArguments
+	private static Binary BuildRegularBinaryExpression(Body body, ReadOnlySpan<char> input,
 		Stack<Range> tokens, string operatorToken)
 	{
 		var right = GetUnaryOrBuildNestedBinary(body, input, tokens);
@@ -46,7 +45,7 @@ public sealed class Binary : MethodCall
 			throw new ListsHaveDifferentDimensions(body, left + " " + right);
 		var arguments = new[] { right };
 		return new Binary(left, operatorToken == "in"
-			? right.ReturnType.GetMethod(operatorToken, new[] { left }, body.Method.Parser)
+			? right.ReturnType.GetMethod(operatorToken, [left], body.Method.Parser)
 			: left.ReturnType.GetMethod(operatorToken, arguments, body.Method.Parser), arguments);
 	}
 
@@ -70,8 +69,6 @@ public sealed class Binary : MethodCall
 		left is List leftList && right is List rightList &&
 		leftList.Values.Count != rightList.Values.Count;
 
-	public sealed class ListsHaveDifferentDimensions : ParsingFailed
-	{
-		public ListsHaveDifferentDimensions(Body body, string error) : base(body, error) { }
-	}
+	public sealed class ListsHaveDifferentDimensions(Body body, string error)
+		: ParsingFailed(body, error);
 }

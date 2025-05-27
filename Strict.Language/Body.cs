@@ -101,22 +101,17 @@ public sealed class Body : Expression
 		lastExpression.ReturnType.Name == Base.Error ||
 		lastExpression.ReturnType.IsCompatible(parentType);
 
-	public sealed class ChildBodyReturnTypeMustMatchMethod : ParsingFailed
-	{
-		public ChildBodyReturnTypeMustMatchMethod(Body body, Type childReturnType) : base(body,
+	public sealed class ChildBodyReturnTypeMustMatchMethod(Body body, Type childReturnType)
+		: ParsingFailed(body,
 			$"Child body return type: {childReturnType} is not matching with Parent return type:" + $" {
 				(body.Parent == null
 					? body.Method.ReturnType
 					: body.Parent.ReturnType)
 			} in method line: {
 				body.ParsingLineNumber
-			}") { }
-	}
+			}");
 
-	public sealed class ReturnAsLastExpressionIsNotNeeded : ParsingFailed
-	{
-		public ReturnAsLastExpressionIsNotNeeded(Body body) : base(body) { }
-	}
+	public sealed class ReturnAsLastExpressionIsNotNeeded(Body body) : ParsingFailed(body);
 
 	/// <summary>
 	/// Dictionaries are slow and eats up a lot of memory, only created when needed.
@@ -172,10 +167,8 @@ public sealed class Body : Expression
 			variableScopeBody.Variables[name] = value;
 	}
 
-	public sealed class IdentifierNotFound : ParsingFailed
-	{
-		public IdentifierNotFound(Body body, string name) : base(body, name + ", Variables in scope: " + body.GetAllVariablesNames().ToWordList()) { }
-	}
+	public sealed class IdentifierNotFound(Body body, string name) : ParsingFailed(body,
+		name + ", Variables in scope: " + body.GetAllVariablesNames().ToWordList());
 
 	private List<string> GetAllVariablesNames()
 	{

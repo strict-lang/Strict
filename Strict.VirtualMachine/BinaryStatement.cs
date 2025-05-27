@@ -1,15 +1,10 @@
 ﻿namespace Strict.VirtualMachine;
 
-public sealed class BinaryStatement : Statement
+public sealed class BinaryStatement(Instruction instruction, params Register[] registers)
+	: Statement
 {
-	public BinaryStatement(Instruction instruction, params Register[] registers)
-	{
-		Instruction = instruction;
-		Registers = registers;
-	}
-
-	public Register[] Registers { get; }
-	public override Instruction Instruction { get; }
+	public Register[] Registers { get; } = registers;
+	public override Instruction Instruction { get; } = instruction;
 	public override string ToString() => $"{Instruction} {Registers}";
 
 	public bool IsConditional() =>

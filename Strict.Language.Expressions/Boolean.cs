@@ -2,9 +2,9 @@
 
 namespace Strict.Language.Expressions;
 
-public sealed class Boolean : Value
+public sealed class Boolean(Context context, bool value)
+	: Value(context.GetType(Base.Boolean), value)
 {
-	public Boolean(Context context, bool value) : base(context.GetType(Base.Boolean), value) { }
 	public override string ToString() => base.ToString().ToLower();
 
 	public override bool Equals(Expression? other) =>

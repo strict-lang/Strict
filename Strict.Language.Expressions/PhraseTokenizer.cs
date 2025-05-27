@@ -205,18 +205,9 @@ public sealed class PhraseTokenizer
 	private static Range[] MergeAllTokensIntoSingleList(List<Range> result) =>
 		new[] { result[0].Start..result[^1].End };
 
-	public sealed class UnterminatedString : Exception
-	{
-		public UnterminatedString(string input) : base(input) { }
-	}
+	public sealed class UnterminatedString(string input) : Exception(input);
 
-	public class InvalidSpacing : Exception
-	{
-		public InvalidSpacing(string input) : base(input) { }
-	}
+	public class InvalidSpacing(string input) : Exception(input);
 
-	public class InvalidEmptyOrUnmatchedBrackets : Exception
-	{
-		public InvalidEmptyOrUnmatchedBrackets(string input) : base(input) { }
-	}
+	public class InvalidEmptyOrUnmatchedBrackets(string input) : Exception(input);
 }

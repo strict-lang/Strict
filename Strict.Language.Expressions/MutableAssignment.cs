@@ -57,13 +57,15 @@ public sealed class MutableAssignment : ConcreteExpression
 
 	public override string ToString() => Name + " = " + Value;
 
-	public sealed class ValueTypeNotMatchingWithAssignmentType : ParsingFailed
-	{
-		public ValueTypeNotMatchingWithAssignmentType(Body body, string currentValueType, string newValueType) : base(body, $"Cannot assign {newValueType} value type to {currentValueType} member or variable") { }
-	}
+	public sealed class ValueTypeNotMatchingWithAssignmentType(
+		Body body,
+		string currentValueType,
+		string newValueType) : ParsingFailed(body,
+		$"Cannot assign {newValueType} value type to {currentValueType} member or variable");
 
-	public sealed class InvalidAssignmentTarget : ParsingFailed
+	public sealed class InvalidAssignmentTarget(Body body, string message)
+		: ParsingFailed(body, message)
 	{
-		public InvalidAssignmentTarget(Body body, string message) : base(body, message) { } //ncrunch: no coverage
+		//ncrunch: no coverage
 	}
 }

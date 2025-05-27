@@ -1,10 +1,7 @@
 ﻿namespace Strict.VirtualMachine;
 
-public sealed class LoadConstantStatement : RegisterStatement
+public sealed class LoadConstantStatement(Register register, Instance instance)
+	: RegisterStatement(register, Instruction.LoadConstant)
 {
-	public Instance Instance { get; }
-
-	public LoadConstantStatement(Register register, Instance instance) : base(register,
-		Instruction.LoadConstant) =>
-		Instance = instance;
+	public Instance Instance { get; } = instance;
 }

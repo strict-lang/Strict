@@ -2,17 +2,13 @@
 
 namespace Strict.Language.Expressions;
 
-public sealed class MemberCall : ConcreteExpression
+public sealed class MemberCall(Expression? instance, Member member)
+	: ConcreteExpression(member.Type, member.IsMutable)
 {
-	public MemberCall(Expression? instance, Member member) : base(member.Type, member.IsMutable)
-	{
-		Instance = instance;
-		Member = member;
-	}
+	public Expression? Instance { get; } = instance;
+	public Member Member { get; } = member;
 
-	public Expression? Instance { get; }
-	public Member Member { get; }
-
+	// ReSharper disable once TooManyArguments
 	public static Expression? TryParse(Body body, Type type, Expression? instance,
 		ReadOnlySpan<char> partToParse)
 	{

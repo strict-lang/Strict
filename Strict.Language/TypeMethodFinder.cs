@@ -2,10 +2,9 @@
 
 namespace Strict.Language;
 
-internal class TypeMethodFinder
+internal class TypeMethodFinder(Type type)
 {
-	public TypeMethodFinder(Type type) => Type = type;
-	public Type Type { get; }
+	public Type Type { get; } = type;
 
 	public Method? FindMethod(string methodName, IReadOnlyList<Type> implementationTypes) =>
 		!Type.AvailableMethods.TryGetValue(methodName, out var matchingMethods)

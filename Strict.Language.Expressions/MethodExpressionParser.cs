@@ -184,6 +184,7 @@ public class MethodExpressionParser : ExpressionParser
 		return ListCall.TryParse(body, current, arguments);
 	}
 
+	// ReSharper disable once TooManyArguments
 	private static Exception CheckErrorTypeAndThrowException(Body body, ReadOnlySpan<char> input,
 		RangeEnumerator members, Expression? current) =>
 		input[members.Current].IsOperator()
@@ -195,6 +196,7 @@ public class MethodExpressionParser : ExpressionParser
 						? ParsingFailed.GetClickableStacktraceLine(current.ReturnType, 0, string.Empty)
 						: string.Empty));
 
+	// ReSharper disable once TooManyArguments
 	private static Expression? TryVariableOrValueOrParameterOrMemberOrMethodCall(Context context, Expression? instance,
 		Body body, ReadOnlySpan<char> input, IReadOnlyList<Expression> arguments)
 	{
@@ -215,16 +217,11 @@ public class MethodExpressionParser : ExpressionParser
 					: null));
 	}
 
-	public sealed class CannotAccessMemberBeforeTypeIsParsed : ParsingFailed
-	{
-		public CannotAccessMemberBeforeTypeIsParsed(Body body, string input, Type type) : base(body, input, type) { }
-	}
+	public sealed class CannotAccessMemberBeforeTypeIsParsed(Body body, string input, Type type)
+		: ParsingFailed(body, input, type);
 
-	public sealed class KeywordNotAllowedAsMemberOrMethod : ParsingFailed
-	{
-		public KeywordNotAllowedAsMemberOrMethod(Body body, string input, Type type) : base(body,
-			input, type) { }
-	}
+	public sealed class KeywordNotAllowedAsMemberOrMethod(Body body, string input, Type type)
+		: ParsingFailed(body, input, type);
 
 	/// <summary>
 	/// Figures out if there are any bracket groups or if there is binary expression action going on.
@@ -245,18 +242,9 @@ public class MethodExpressionParser : ExpressionParser
 	/// <summary>
 	/// Similar to TryParseExpression, but we know there is commas separating expressions
 	/// </summary>
-	public class ExpressionListParser
+	public class ExpressionListParser(MethodExpressionParser parser, string inner)
 	{
-		public ExpressionListParser(MethodExpressionParser parser, string inner)
-		{
-			this.parser = parser;
-			this.inner = inner;
-			postfix = new ShuntingYard(inner);
-		}
-
-		private readonly MethodExpressionParser parser;
-		private readonly string inner;
-		private readonly ShuntingYard postfix;
+		private readonly ShuntingYard postfix = new(inner);
 
 		/// <summary>
 		/// The postfix data comes in upside down, so use another stack to restore order
@@ -321,56 +309,37 @@ public class MethodExpressionParser : ExpressionParser
 		TryParseMemberOrZeroOrOneArgumentMethodOrNestedCall(body, input) ??
 		throw new InvalidSingleTokenExpression(body, input.ToString());
 
-	protected sealed class InvalidOperatorHere : ParsingFailed
+	protected sealed class InvalidOperatorHere(Body body, string message)
+		: ParsingFailed(body, message);
+
+	protected sealed class UnknownExpression(Body body, string error = "")
+		: ParsingFailed(body, error);
+
+	protected sealed class CannotParseEmptyInput(Body body) : ParsingFailed(body);
+
+	public sealed class ExpressionWithTypeAnyIsNotAllowed(Body body, string message)
+		: ParsingFailed(body, message);
+
+	protected sealed class NumbersCanNotBeInNestedCalls(Body body, string text)
+		: ParsingFailed(body, text);
+
+	public sealed class MemberOrMethodNotFound(Body body, Type? memberType, string memberName)
+		: ParsingFailed(body, memberName, memberType);
+
+	protected sealed class UnknownExpressionForArgument(Body body, string message)
+		: ParsingFailed(body, message);
+
+	protected sealed class ListTokensAreNotSeparatedByComma(Body body) : ParsingFailed(body);
+
+	private sealed class InvalidSingleTokenExpression(Body body, string message)
+		: ParsingFailed(body, message)
 	{
-		public InvalidOperatorHere(Body body, string message) : base(body, message) { }
+		//ncrunch: no coverage
 	}
 
-	protected sealed class UnknownExpression : ParsingFailed
-	{
-		public UnknownExpression(Body body, string error = "") : base(body, error) { }
-	}
-
-	protected sealed class CannotParseEmptyInput : ParsingFailed
-	{
-		public CannotParseEmptyInput(Body body) : base(body) { }
-	}
-
-	public sealed class ExpressionWithTypeAnyIsNotAllowed : ParsingFailed
-	{
-		public ExpressionWithTypeAnyIsNotAllowed(Body body, string message) : base(body, message) { }
-	}
-
-	protected sealed class NumbersCanNotBeInNestedCalls : ParsingFailed
-	{
-		public NumbersCanNotBeInNestedCalls(Body body, string text) : base(body, text) { }
-	}
-
-	public sealed class MemberOrMethodNotFound : ParsingFailed
-	{
-		public MemberOrMethodNotFound(Body body, Type? memberType, string memberName) : base(body,
-			memberName, memberType) { }
-	}
-
-	protected sealed class UnknownExpressionForArgument : ParsingFailed
-	{
-		public UnknownExpressionForArgument(Body body, string message) : base(body, message) { }
-	}
-
-	protected sealed class ListTokensAreNotSeparatedByComma : ParsingFailed
-	{
-		public ListTokensAreNotSeparatedByComma(Body body) : base(body) { }
-	}
-
-	private sealed class InvalidSingleTokenExpression : ParsingFailed
-	{
-		public InvalidSingleTokenExpression(Body body, string message) : base(body, message) { } //ncrunch: no coverage
-	}
-
-	public sealed class InvalidArgumentItIsNotMethodOrListCall : ParsingFailed
-	{
-		public InvalidArgumentItIsNotMethodOrListCall(Body body, Expression variable,
-			IEnumerable<Expression> arguments) : base(body, arguments.ToWordList(),
-			variable.ReturnType) { }
-	}
+	public sealed class InvalidArgumentItIsNotMethodOrListCall(
+		Body body,
+		Expression variable,
+		IEnumerable<Expression> arguments)
+		: ParsingFailed(body, arguments.ToWordList(), variable.ReturnType);
 }

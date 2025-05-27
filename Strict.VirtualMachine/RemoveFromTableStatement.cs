@@ -1,10 +1,7 @@
 ﻿namespace Strict.VirtualMachine;
 
-public class RemoveFromTableStatement : RegisterStatement
+public class RemoveFromTableStatement(Register key, string identifier) : RegisterStatement(key,
+	Instruction.RemoveFromTable)
 {
-	public RemoveFromTableStatement(Register key, string identifier) : base(key,
-		Instruction.RemoveFromTable) =>
-		Identifier = identifier;
-
-	public string Identifier { get; }
+	public string Identifier { get; } = identifier;
 }

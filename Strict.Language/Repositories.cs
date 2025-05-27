@@ -7,18 +7,18 @@ using LazyCache;
 namespace Strict.Language;
 
 /// <summary>
-/// Loads packages from url (like github) and caches it to disc for the current and subsequent
+/// Loads packages from url (like GitHub) and caches it to disc for the current and subsequent
 /// runs. Next time Repositories is created, we will check for outdated cache and delete the zip
 /// files to allow redownloading fresh files. All locally cached packages and all types in them
 /// are always available for any .strict file in the Editor. If a type is not found,
-/// packages.strict.dev is asked if we can get a url (used here to load).
+/// packages.strict.dev is asked if we can get an url (used here to load).
 /// </summary>
 /// <remarks>Everything in here is async, you can easily load many packages in parallel</remarks>
 public sealed class Repositories
 {
 	/// <summary>
 	/// Gets rid of any cached zip files (keeps the actual files for use) older than 1h, which will
-	/// allow redownloading from github to get any changes, while still staying fast in local runs
+	/// allow redownloading from GitHub to get any changes, while still staying fast in local runs
 	/// when there are usually no changes happening.
 	/// </summary>
 	public Repositories(ExpressionParser parser)
@@ -112,11 +112,8 @@ public sealed class Repositories
 		TryMoveOrCopyWhenDeletionDidNotFullyWork(targetPath, masterDirectory);
 	}
 
-	public sealed class NoMasterFolderFoundFromPackage : Exception
-	{
-		public NoMasterFolderFoundFromPackage(string packageName, string localZip) : base(
-			packageName + ", localZip: " + localZip) { }
-	}
+	public sealed class NoMasterFolderFoundFromPackage(string packageName, string localZip)
+		: Exception(packageName + ", localZip: " + localZip);
 
 	private static void TryMoveOrCopyWhenDeletionDidNotFullyWork(string targetPath,
 		string masterDirectory)
@@ -166,11 +163,8 @@ public sealed class Repositories
 	}
 
 	//ncrunch: no coverage start
-	public sealed class NoFilesAllowedInStrictFolderNeedsToBeInASubFolder : Exception
-	{
-		public NoFilesAllowedInStrictFolderNeedsToBeInASubFolder(IEnumerable<string> files) : base(
-			files.ToWordList()) { }
-	} //ncrunch: no coverage end
+	public sealed class NoFilesAllowedInStrictFolderNeedsToBeInASubFolder(IEnumerable<string> files)
+		: Exception(files.ToWordList()); //ncrunch: no coverage end
 
 	private ICollection<Type> GetTypes(IReadOnlyCollection<string> files, Package package)
 	{

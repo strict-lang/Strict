@@ -117,28 +117,19 @@ public class Type : Context
 	public bool IsEnum =>
 		methods.Count == 0 && members.Count > 1 && members.All(m => m.Value is not null);
 
-	public sealed class MemberCountShouldNotExceedLimit : ParsingFailed
-	{
-		public MemberCountShouldNotExceedLimit(Type type, int limit) : base(type, 0,
-			$"{type.Name} type has {type.members.Count} members, max: {limit}") { }
-	}
+	public sealed class MemberCountShouldNotExceedLimit(Type type, int limit) : ParsingFailed(type,
+		0, $"{type.Name} type has {type.members.Count} members, max: {limit}");
 
 	private bool IsNoneAnyOrBoolean() => Name is Base.None or Base.Any or Base.Boolean or Base.Mutable;
 
-	public sealed class NoMethodsFound : ParsingFailed
-	{
-		public NoMethodsFound(Type type, int lineNumber) : base(type, lineNumber,
-			"Each type must have at least two members (datatypes and enums) or at least one method, " +
-			"otherwise it is useless") { }
-	}
+	public sealed class NoMethodsFound(Type type, int lineNumber) : ParsingFailed(type, lineNumber,
+		"Each type must have at least two members (datatypes and enums) or at least one method, " +
+		"otherwise it is useless");
 
 	public Package Package => (Package)Parent;
 
-	public sealed class MethodCountMustNotExceedLimit : ParsingFailed
-	{
-		public MethodCountMustNotExceedLimit(Type type) : base(type, 0,
-			$"Type {type.Name} has method count {type.methods.Count} but limit is {Limit.MethodCount}") { }
-	}
+	public sealed class MethodCountMustNotExceedLimit(Type type) : ParsingFailed(type, 0,
+		$"Type {type.Name} has method count {type.methods.Count} but limit is {Limit.MethodCount}");
 
 	private void CheckIfTraitIsImplementedFullyOrNone(Type trait)
 	{
@@ -229,11 +220,8 @@ public class Type : Context
 	private bool HasMatchingConstructor(IReadOnlyList<Type> implementationTypes) =>
 		typeMethodFinder.FindMethod(Method.From, implementationTypes) != null;
 
-	public sealed class CannotGetGenericImplementationOnNonGeneric : Exception
-	{
-		public CannotGetGenericImplementationOnNonGeneric(string name, string key) :
-			base("Type: " + name + ", Generic Implementation: " + key) { }
-	}
+	public sealed class CannotGetGenericImplementationOnNonGeneric(string name, string key)
+		: Exception("Type: " + name + ", Generic Implementation: " + key);
 
 	public string FilePath => Path.Combine(Package.FolderPath, Name) + Extension;
 	public const string Extension = ".strict";
@@ -405,23 +393,21 @@ public class Type : Context
 
 	private static IReadOnlyDictionary<string, List<Method>>? cachedAnyMethods;
 
-	public class NoMatchingMethodFound : Exception
-	{
-		public NoMatchingMethodFound(Type type, string methodName,
-			IReadOnlyDictionary<string, List<Method>> availableMethods) : base(methodName +
-			" not found for " + type + ", available methods: " + availableMethods.Keys.ToWordList()) { }
-	}
+	public class NoMatchingMethodFound(
+		Type type,
+		string methodName,
+		IReadOnlyDictionary<string, List<Method>> availableMethods) : Exception(methodName +
+		" not found for " + type + ", available methods: " + availableMethods.Keys.ToWordList());
 
-	public sealed class ArgumentsDoNotMatchMethodParameters : Exception
-	{
-		public ArgumentsDoNotMatchMethodParameters(IReadOnlyList<Expression> arguments, Type type,
-			IEnumerable<Method> allMethods) : base((arguments.Count == 0
-				? "No arguments does "
-				: (arguments.Count == 1
-					? "Argument: "
-					: "Arguments: ") + arguments.Select(a => a.ToStringWithType()).ToWordList() + " do ") +
-			"not match these " + type + " method(s):\n" + string.Join("\n", allMethods)) { }
-	}
+	public sealed class ArgumentsDoNotMatchMethodParameters(
+		IReadOnlyList<Expression> arguments,
+		Type type,
+		IEnumerable<Method> allMethods) : Exception((arguments.Count == 0
+			? "No arguments does "
+			: (arguments.Count == 1
+				? "Argument: "
+				: "Arguments: ") + arguments.Select(a => a.ToStringWithType()).ToWordList() + " do ") +
+		"not match these " + type + " method(s):\n" + string.Join("\n", allMethods));
 
 	public bool IsUpcastable(Type otherType) =>
 		IsEnum && otherType.IsEnum && otherType.Members.Any(member =>
@@ -450,15 +436,10 @@ public class Type : Context
 		return genericArguments;
 	}
 
-	public class InvalidGenericTypeWithoutGenericArguments : Exception
-	{
-		public InvalidGenericTypeWithoutGenericArguments(Type type) : base(
-			"This type is broken and needs to be fixed, check the creation: " + type + ", CreatedBy: " +
-			type.CreatedBy) { }
-	}
+	public class InvalidGenericTypeWithoutGenericArguments(Type type) : Exception(
+		"This type is broken and needs to be fixed, check the creation: " + type + ", CreatedBy: " +
+		type.CreatedBy);
 
-	public sealed class TypeHasNoMembersAndThusMustBeATraitWithoutMethodBodies : ParsingFailed
-	{
-		public TypeHasNoMembersAndThusMustBeATraitWithoutMethodBodies(Type type) : base(type, 0) { }
-	}
+	public sealed class TypeHasNoMembersAndThusMustBeATraitWithoutMethodBodies(Type type)
+		: ParsingFailed(type, 0);
 }

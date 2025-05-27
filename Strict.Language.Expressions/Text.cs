@@ -1,8 +1,7 @@
 ﻿namespace Strict.Language.Expressions;
 
-public sealed class Text : Value
+public sealed class Text(Context context, string value) : Value(context.GetType(Base.Text), value)
 {
-	public Text(Context context, string value) : base(context.GetType(Base.Text), value) { }
 	public override string ToString() => "\"" + Data + "\"";
 
 	public override bool Equals(Expression? other) =>

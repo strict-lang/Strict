@@ -2,17 +2,10 @@
 
 namespace Strict.LanguageServer;
 
-public sealed class VariableValueEvaluator : RunnerService, RunnableService
+public sealed class VariableValueEvaluator(ILanguageServerFacade languageServer, string[] lines)
+	: RunnerService, RunnableService
 {
 	private const string NotificationName = "valueEvaluationNotification";
-	private readonly ILanguageServerFacade languageServer;
-	private readonly string[] lines;
-
-	public VariableValueEvaluator(ILanguageServerFacade languageServer, string[] lines)
-	{
-		this.languageServer = languageServer;
-		this.lines = lines;
-	}
 
 	public void Run(VirtualMachine.VirtualMachine vm)
 	{

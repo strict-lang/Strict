@@ -30,27 +30,31 @@ public abstract class NamedType
 			throw new NameLengthIsNotWithinTheAllowedLimit(Name);
 	}
 
-	public sealed class CannotUseKeywordsAsName : Exception
-	{
-		public CannotUseKeywordsAsName(string name) : base(name + " is a keyword and cannot be used as a identifier name. Keywords List: " + Keyword.GetAllKeywords.ToWordList()) { }
-	}
+	public sealed class CannotUseKeywordsAsName(string name) : Exception(name +
+		" is a keyword and cannot be used as a identifier name. Keywords List: " +
+		Keyword.GetAllKeywords.ToWordList());
 
 	public bool IsMutable { get; protected init; }
 
-	public sealed class ListPrefixIsNotAllowedUseImplementationTypeNameInPlural : Exception
-	{
-		public ListPrefixIsNotAllowedUseImplementationTypeNameInPlural(string typeName) : base($"List should not be used as prefix for {typeName} instead use {typeName.GetTextInsideBrackets()}s") { }
-	}
+	public sealed class ListPrefixIsNotAllowedUseImplementationTypeNameInPlural(string typeName)
+		: Exception($"List should not be used as prefix for {
+			typeName
+		} instead use {
+			typeName.GetTextInsideBrackets()
+		}s");
 
-	public sealed class AssignmentWithInitializerTypeShouldNotHaveNameWithType : Exception
-	{
-		public AssignmentWithInitializerTypeShouldNotHaveNameWithType(string name) : base(name) { }
-	}
+	public sealed class AssignmentWithInitializerTypeShouldNotHaveNameWithType(string name)
+		: Exception(name);
 
-	public sealed class NameLengthIsNotWithinTheAllowedLimit : Exception
-	{
-		public NameLengthIsNotWithinTheAllowedLimit(string name) : base($"Name {name} length is {name.Length} but allowed limit is between {Limit.NameMinLimit} and {Limit.NameMaxLimit}") { }
-	}
+	public sealed class NameLengthIsNotWithinTheAllowedLimit(string name) : Exception($"Name {
+		name
+	} length is {
+		name.Length
+	} but allowed limit is between {
+		Limit.NameMinLimit
+	} and {
+		Limit.NameMaxLimit
+	}");
 
 	public string Name { get; }
 	public Type Type { get; protected set; }

@@ -1,11 +1,8 @@
 ﻿namespace Strict.VirtualMachine;
 
-public sealed class JumpIfNotZeroStatement : JumpIfStatement
+public sealed class JumpIfNotZeroStatement(int steps, Register register)
+	: JumpIfStatement(Instruction.JumpIfNotZero, steps)
 {
-	public JumpIfNotZeroStatement(int steps, Register register) : base(Instruction.JumpIfNotZero,
-		steps) =>
-		Register = register;
-
-	public Register Register { get; }
+	public Register Register { get; } = register;
 	public override string ToString() => $"{Instruction} {Steps} {Register}";
 }

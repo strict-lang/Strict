@@ -80,7 +80,7 @@ public class ExpressionParserTests : ExpressionParser
 	public void GetSingleLine()
 	{
 		var method = new Method(type, 0, this, ["Run", MethodTests.LetNumber]);
-		Assert.That(method.lines, Has.Length.EqualTo(2));
+		Assert.That(method.lines, Has.Count.EqualTo(2));
 		Assert.That(method.lines[0], Is.EqualTo("Run"));
 		Assert.That(method.lines[1], Is.EqualTo(MethodTests.LetNumber));
 	}
@@ -89,7 +89,7 @@ public class ExpressionParserTests : ExpressionParser
 	public void GetMultipleLines()
 	{
 		var method = new Method(type, 0, this, ["Run", MethodTests.LetNumber, MethodTests.LetOther]);
-		Assert.That(method.lines, Has.Length.EqualTo(3));
+		Assert.That(method.lines, Has.Count.EqualTo(3));
 		Assert.That(method.lines[1], Is.EqualTo(MethodTests.LetNumber));
 		Assert.That(method.lines[2], Is.EqualTo(MethodTests.LetOther));
 	}

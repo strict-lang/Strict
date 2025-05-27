@@ -12,21 +12,13 @@ using Strict.VirtualMachine;
 namespace Strict.LanguageServer;
 //ncrunch: no coverage start
 
-public class CommandExecutor : IExecuteCommandHandler
+public class CommandExecutor(
+	ILanguageServerFacade languageServer,
+	StrictDocument document,
+	Package package) : IExecuteCommandHandler
 {
 	private readonly VirtualMachine.VirtualMachine vm = new();
 	private const string CommandName = "strict-vscode-client.run";
-	private readonly StrictDocument document;
-	private readonly ILanguageServerFacade languageServer;
-	private readonly Package package;
-
-	public CommandExecutor(ILanguageServerFacade languageServer, StrictDocument document,
-		Package package)
-	{
-		this.document = document;
-		this.languageServer = languageServer;
-		this.package = package;
-	}
 
 	Task<Unit> IRequestHandler<ExecuteCommandParams, Unit>.Handle(
 		ExecuteCommandParams request, CancellationToken cancellationToken)

@@ -6,16 +6,10 @@
 /// There are no statements in Strict, every line in a method is an expression, every other
 /// line in a .strict file is either implement, has or a method definition.
 /// </summary>
-public abstract class Expression : IEquatable<Expression>
+public abstract class Expression(Type returnType, bool isMutable = false) : IEquatable<Expression>
 {
-	protected Expression(Type returnType, bool isMutable = false)
-	{
-		ReturnType = returnType;
-		IsMutable = isMutable;
-	}
-
-	public Type ReturnType { get; }
-	public bool IsMutable { get; set; }
+	public Type ReturnType { get; } = returnType;
+	public bool IsMutable { get; set; } = isMutable;
 	/// <summary>
 	/// By default all expressions should be immutable in Strict. However, many times some part of the
 	/// code will actually change something, thus making that expression AND anything that calls it

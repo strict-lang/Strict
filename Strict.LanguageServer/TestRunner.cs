@@ -6,16 +6,10 @@ using Strict.VirtualMachine;
 namespace Strict.LanguageServer;
 
 //ncrunch: no coverage start
-public sealed class TestRunner : RunnerService, RunnableService
+public sealed class TestRunner(ILanguageServerFacade languageServer, IEnumerable<Method> methods)
+	: RunnerService, RunnableService
 {
-	public TestRunner(ILanguageServerFacade languageServer, IEnumerable<Method> methods)
-	{
-		Methods = methods;
-		this.languageServer = languageServer;
-	}
-
-	private readonly ILanguageServerFacade languageServer;
-	private IEnumerable<Method> Methods { get; }
+	private IEnumerable<Method> Methods { get; } = methods;
 	private const string NotificationName = "testRunnerNotification";
 
 	public void Run(VirtualMachine.VirtualMachine vm)

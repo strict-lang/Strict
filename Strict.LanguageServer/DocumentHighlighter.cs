@@ -6,13 +6,9 @@ using Range = OmniSharp.Extensions.LanguageServer.Protocol.Models.Range;
 namespace Strict.LanguageServer;
 
 //ncrunch: no coverage start
-public class DocumentHighlighter : IDocumentHighlightHandler
+public class DocumentHighlighter(TextDocumentSynchronizer documentSynchronizer)
+	: IDocumentHighlightHandler
 {
-	private readonly TextDocumentSynchronizer documentSynchronizer;
-
-	public DocumentHighlighter(TextDocumentSynchronizer documentSynchronizer) =>
-		this.documentSynchronizer = documentSynchronizer;
-
 	public async Task<DocumentHighlightContainer?> Handle(DocumentHighlightParams request, CancellationToken cancellationToken)
 	{
 		await Task.Yield();

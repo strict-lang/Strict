@@ -47,10 +47,7 @@ public abstract class ExpressionVisitor
 			_ => expression.ToString() //ncrunch: no coverage
 		};
 
-	public sealed class UseVisitBody : Exception
-	{
-		public UseVisitBody(Expression expression) : base(expression.ToString()) { }
-	}
+	public sealed class UseVisitBody(Expression expression) : Exception(expression.ToString());
 
 	protected abstract string Visit(ConstantDeclaration constantDeclaration);
 

@@ -1,15 +1,8 @@
 ﻿namespace Strict.Language;
 
-public sealed class TypeParser
+public sealed class TypeParser(Type type, string[] lines)
 {
-	public TypeParser(Type type, string[] lines)
-	{
-		this.type = type;
-		this.lines = lines;
-	}
-
-	private readonly Type type;
-	private string[] lines;
+	private string[] lines = lines;
 
 	public void ParseMembersAndMethods(ExpressionParser parser)
 	{
@@ -66,22 +59,20 @@ public sealed class TypeParser
 		return line;
 	}
 
-	public sealed class ExtraWhitespacesFoundAtBeginningOfLine : ParsingFailed
-	{
-		public ExtraWhitespacesFoundAtBeginningOfLine(Type type, int lineNumber, string message,
-			string method = "") : base(type, lineNumber, message, method) { }
-	}
+	public sealed class ExtraWhitespacesFoundAtBeginningOfLine(
+		Type type,
+		int lineNumber,
+		string message,
+		string method = "") : ParsingFailed(type, lineNumber, message, method);
 
-	public sealed class ExtraWhitespacesFoundAtEndOfLine : ParsingFailed
-	{
-		public ExtraWhitespacesFoundAtEndOfLine(Type type, int lineNumber, string message,
-			string method = "") : base(type, lineNumber, message, method) { }
-	}
+	public sealed class ExtraWhitespacesFoundAtEndOfLine(
+		Type type,
+		int lineNumber,
+		string message,
+		string method = "") : ParsingFailed(type, lineNumber, message, method);
 
-	public sealed class EmptyLineIsNotAllowed : ParsingFailed
-	{
-		public EmptyLineIsNotAllowed(Type type, int lineNumber) : base(type, lineNumber) { }
-	}
+	public sealed class EmptyLineIsNotAllowed(Type type, int lineNumber)
+		: ParsingFailed(type, lineNumber);
 
 	private Member GetNewMember(ExpressionParser parser, bool usedMutableKeyword = false)
 	{
@@ -188,11 +179,10 @@ public sealed class TypeParser
 					: remainingTextSpan;
 	}
 
-	public sealed class CurrentTypeCannotBeInstantiatedAsMemberType : ParsingFailed
-	{
-		public CurrentTypeCannotBeInstantiatedAsMemberType(Type type, int lineNumber, string typeName)
-			: base(type, lineNumber, typeName) { }
-	}
+	public sealed class CurrentTypeCannotBeInstantiatedAsMemberType(
+		Type type,
+		int lineNumber,
+		string typeName) : ParsingFailed(type, lineNumber, typeName);
 
 	private static string GetMemberType(SpanSplitEnumerator nameAndExpression)
 	{
@@ -210,33 +200,24 @@ public sealed class TypeParser
 		wordAfterName == Keyword.With || nameAndExpression.MoveNext() &&
 		nameAndExpression.Current.ToString() == Keyword.With;
 
-	public sealed class MemberMissingConstraintExpression : ParsingFailed
-	{
-		public MemberMissingConstraintExpression(Type type, int lineNumber, string memberName) : base(
-			type, lineNumber, memberName) { }
-	}
+	public sealed class MemberMissingConstraintExpression(
+		Type type,
+		int lineNumber,
+		string memberName) : ParsingFailed(type, lineNumber, memberName);
 
 	private static bool
 		IsMemberTypeAny(string nameAndType, SpanSplitEnumerator nameAndExpression) =>
 		nameAndType == Base.AnyLowercase ||
 		nameAndExpression.Current.Equals(Base.Any, StringComparison.Ordinal);
 
-	public sealed class MemberWithTypeAnyIsNotAllowed : ParsingFailed
-	{
-		public MemberWithTypeAnyIsNotAllowed(Type type, int lineNumber, string name) : base(type, lineNumber, name) { }
-	}
+	public sealed class MemberWithTypeAnyIsNotAllowed(Type type, int lineNumber, string name)
+		: ParsingFailed(type, lineNumber, name);
 
-	public sealed class MembersMustComeBeforeMethods : ParsingFailed
-	{
-		public MembersMustComeBeforeMethods(Type type, int lineNumber, string line) : base(type,
-			lineNumber, line) { }
-	}
+	public sealed class MembersMustComeBeforeMethods(Type type, int lineNumber, string line)
+		: ParsingFailed(type, lineNumber, line);
 
-	public sealed class DuplicateMembersAreNotAllowed : ParsingFailed
-	{
-		public DuplicateMembersAreNotAllowed(Type type, int lineNumber, string name) :
-			base(type, lineNumber, name) { }
-	}
+	public sealed class DuplicateMembersAreNotAllowed(Type type, int lineNumber, string name)
+		: ParsingFailed(type, lineNumber, name);
 
 	private string[] GetAllMethodLines()
 	{
@@ -275,27 +256,25 @@ public sealed class TypeParser
 
 	private const string SixTabs = "\t\t\t\t\t\t";
 
-	public sealed class NestingMoreThanFiveLevelsIsNotAllowed : ParsingFailed
-	{
-		public NestingMoreThanFiveLevelsIsNotAllowed(Type type, int lineNumber) : base(type,
-			lineNumber,
+	public sealed class NestingMoreThanFiveLevelsIsNotAllowed(Type type, int lineNumber)
+		: ParsingFailed(type, lineNumber,
 			$"Type {type.Name} has more than {Limit.NestingLevel} levels of nesting in line: " +
-			$"{lineNumber + 1}") { }
-	}
+			$"{lineNumber + 1}");
 
-	public sealed class CharacterCountMustBeWithinLimit : ParsingFailed
-	{
-		public CharacterCountMustBeWithinLimit(Type type, int lineLength, int lineNumber) :
-			base(type, lineNumber,
-				$"Type {type.Name} has character count {lineLength} in line: {lineNumber + 1} but limit is " +
-				$"{Limit.CharacterCount}") { }
-	}
+	public sealed class CharacterCountMustBeWithinLimit(Type type, int lineLength, int lineNumber)
+		: ParsingFailed(type, lineNumber,
+			$"Type {
+				type.Name
+			} has character count {
+				lineLength
+			} in line: {
+				lineNumber + 1
+			} but limit is " + $"{Limit.CharacterCount}");
 
-	public sealed class MethodMustBeImplementedInNonTrait : ParsingFailed
-	{
-		public MethodMustBeImplementedInNonTrait(Type type, string definitionLine, int lineNumber) :
-			base(type, lineNumber, definitionLine) { }
-	}
+	public sealed class MethodMustBeImplementedInNonTrait(
+		Type type,
+		string definitionLine,
+		int lineNumber) : ParsingFailed(type, lineNumber, definitionLine);
 
 	private void IncrementLineNumberTillMethodEnd()
 	{
@@ -327,14 +306,14 @@ public sealed class TypeParser
 	private int listStartLineNumber = -1;
 	private int listEndLineNumber = -1;
 
-	public sealed class MultiLineExpressionsAllowedOnlyWhenLengthIsMoreThanHundred : ParsingFailed
-	{
-		public MultiLineExpressionsAllowedOnlyWhenLengthIsMoreThanHundred(Type type, int lineNumber,
-			int length) : base(type, lineNumber,
-			"Current length: " + length + $", Minimum Length for Multi line expressions: {
-				Limit.MultiLineCharacterCount
-			}") { }
-	}
+	public sealed class
+		MultiLineExpressionsAllowedOnlyWhenLengthIsMoreThanHundred(
+			Type type,
+			int lineNumber,
+			int length) : ParsingFailed(type, lineNumber,
+		"Current length: " + length + $", Minimum Length for Multi line expressions: {
+			Limit.MultiLineCharacterCount
+		}");
 
 	private void SetNewLinesAndLineNumbersAfterMerge()
 	{
@@ -346,8 +325,6 @@ public sealed class TypeParser
 		listEndLineNumber = -1;
 	}
 
-	public sealed class UnterminatedMultiLineListFound : ParsingFailed
-	{
-		public UnterminatedMultiLineListFound(Type type, int lineNumber, string line) : base(type, lineNumber, line) { }
-	}
+	public sealed class UnterminatedMultiLineListFound(Type type, int lineNumber, string line)
+		: ParsingFailed(type, lineNumber, line);
 }

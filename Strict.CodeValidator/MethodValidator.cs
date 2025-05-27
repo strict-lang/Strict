@@ -43,11 +43,8 @@ public sealed record MethodValidator(IEnumerable<Method> Methods) : Validator
 		KeyValuePair<string, Expression> mutableVariable) =>
 		mutableDeclarations.FirstOrDefault(m => m.Name == mutableVariable.Key)?.Value;
 
-	public sealed class VariableDeclaredAsMutableButValueNeverChanged : ParsingFailed
-	{
-		public VariableDeclaredAsMutableButValueNeverChanged(Body body, string name) : base(body,
-			name) { }
-	}
+	public sealed class VariableDeclaredAsMutableButValueNeverChanged(Body body, string name)
+		: ParsingFailed(body, name);
 
 	private static void ValidateUnusedVariables(Body body)
 	{
@@ -63,10 +60,8 @@ public sealed record MethodValidator(IEnumerable<Method> Methods) : Validator
 			throw new UnusedMethodVariableMustBeRemoved(method.Type, name);
 	}
 
-	public sealed class UnusedMethodVariableMustBeRemoved : ParsingFailed
-	{
-		public UnusedMethodVariableMustBeRemoved(Type type, string name) : base(type, 0, name) { }
-	}
+	public sealed class UnusedMethodVariableMustBeRemoved(Type type, string name)
+		: ParsingFailed(type, 0, name);
 
 	private static void ValidateMethodCall(Body body)
 	{
@@ -78,11 +73,8 @@ public sealed record MethodValidator(IEnumerable<Method> Methods) : Validator
 		}
 	}
 
-	public sealed class ListArgumentCanBeAutoParsedWithoutDoubleBrackets : ParsingFailed
-	{
-		public ListArgumentCanBeAutoParsedWithoutDoubleBrackets(Body type, string line) : base(type,
-			line) { }
-	}
+	public sealed class ListArgumentCanBeAutoParsedWithoutDoubleBrackets(Body type, string line)
+		: ParsingFailed(type, line);
 
 	private static void ValidateMethodVariablesHidesAnyTypeMember(Body body,
 		IEnumerable<Member> members)
@@ -92,10 +84,11 @@ public sealed record MethodValidator(IEnumerable<Method> Methods) : Validator
 				throw new VariableHidesMemberUseDifferentName(body, body.Method.Name, member.Name);
 	}
 
-	public class VariableHidesMemberUseDifferentName : ParsingFailed
-	{
-		public VariableHidesMemberUseDifferentName(Body body, string methodName, string variableName) : base(body, $"Method name {methodName}, Variable name {variableName}") { }
-	}
+	public class VariableHidesMemberUseDifferentName(
+		Body body,
+		string methodName,
+		string variableName)
+		: ParsingFailed(body, $"Method name {methodName}, Variable name {variableName}");
 
 	private static void ValidateMethodParameters(Method method)
 	{
@@ -113,10 +106,8 @@ public sealed record MethodValidator(IEnumerable<Method> Methods) : Validator
 			throw new UnusedMethodParameterMustBeRemoved(method.Type, name);
 	}
 
-	public sealed class UnusedMethodParameterMustBeRemoved : ParsingFailed
-	{
-		public UnusedMethodParameterMustBeRemoved(Type type, string name) : base(type, 0, name) { }
-	}
+	public sealed class UnusedMethodParameterMustBeRemoved(Type type, string name)
+		: ParsingFailed(type, 0, name);
 
 	private static void ValidateUnchangedMutableParameter(Method method, Parameter parameter)
 	{
@@ -124,11 +115,8 @@ public sealed record MethodValidator(IEnumerable<Method> Methods) : Validator
 			throw new ParameterDeclaredAsMutableButValueNeverChanged(method.Type, parameter.Name);
 	}
 
-	public sealed class ParameterDeclaredAsMutableButValueNeverChanged : ParsingFailed
-	{
-		public ParameterDeclaredAsMutableButValueNeverChanged(Type type, string name) : base(type, 0,
-			name) { }
-	}
+	public sealed class ParameterDeclaredAsMutableButValueNeverChanged(Type type, string name)
+		: ParsingFailed(type, 0, name);
 
 	private static void ValidateMethodParameterHidesAnyTypeMember(string parameterName, Method method)
 	{
@@ -136,9 +124,9 @@ public sealed record MethodValidator(IEnumerable<Method> Methods) : Validator
 			throw new ParameterHidesMemberUseDifferentName(method.Type, method.Name, parameterName);
 	}
 
-	public sealed class ParameterHidesMemberUseDifferentName : ParsingFailed
-	{
-		public ParameterHidesMemberUseDifferentName(Type type, string methodName, string parameterName)
-			: base(type, 0, $"Method name {methodName}, Parameter name {parameterName}") { }
-	}
+	public sealed class ParameterHidesMemberUseDifferentName(
+		Type type,
+		string methodName,
+		string parameterName)
+		: ParsingFailed(type, 0, $"Method name {methodName}, Parameter name {parameterName}");
 }

@@ -1,9 +1,7 @@
 ﻿namespace Strict.VirtualMachine;
 
-public sealed class SetStatement : InstanceStatement
+public sealed class SetStatement(Instance instance, Register register)
+	: InstanceStatement(instance, Instruction.Set)
 {
-	public SetStatement(Instance instance, Register register) : base(instance, Instruction.Set) =>
-		Register = register;
-
-	public Register Register { get; }
+	public Register Register { get; } = register;
 }

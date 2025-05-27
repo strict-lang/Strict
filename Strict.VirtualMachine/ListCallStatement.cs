@@ -1,14 +1,8 @@
 ﻿namespace Strict.VirtualMachine;
 
-public class ListCallStatement : RegisterStatement
+public class ListCallStatement(Register register, Register indexValueRegister, string identifier)
+	: RegisterStatement(register, Instruction.ListCall)
 {
-	public ListCallStatement(Register register, Register indexValueRegister, string identifier) :
-		base(register, Instruction.ListCall)
-	{
-		Identifier = identifier;
-		IndexValueRegister = indexValueRegister;
-	}
-
-	public Register IndexValueRegister { get; }
-	public string Identifier { get; }
+	public Register IndexValueRegister { get; } = indexValueRegister;
+	public string Identifier { get; } = identifier;
 }

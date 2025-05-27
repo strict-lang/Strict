@@ -1,18 +1,12 @@
 ﻿namespace Strict.Language;
 
-public ref struct SpanSplitEnumerator
+public ref struct SpanSplitEnumerator(
+	ReadOnlySpan<char> input,
+	char splitter,
+	StringSplitOptions options)
 {
 	//ncrunch: no coverage start, for performance reasons disabled here
-	public SpanSplitEnumerator(ReadOnlySpan<char> input, char splitter, StringSplitOptions options)
-	{
-		this.input = input;
-		this.splitter = splitter;
-		this.options = options;
-	}
-
-	private readonly ReadOnlySpan<char> input;
-	private readonly char splitter;
-	private readonly StringSplitOptions options;
+	private readonly ReadOnlySpan<char> input = input;
 	private int offset = 0;
 	public ReadOnlySpan<char> Current { get; private set; } = default;
 	public readonly SpanSplitEnumerator GetEnumerator() => this;
@@ -44,15 +38,9 @@ public ref struct SpanSplitEnumerator
 		return true;
 	}
 
-	public sealed class InvalidConsecutiveSplitter : Exception
-	{
-		public InvalidConsecutiveSplitter(string input, int index) : base("Input=" +
-			input + ", index=" + index) { }
-	}
+	public sealed class InvalidConsecutiveSplitter(string input, int index)
+		: Exception("Input=" + input + ", index=" + index);
 
-	public sealed class EmptyEntryNotAllowedAtTheEnd : Exception
-	{
-		public EmptyEntryNotAllowedAtTheEnd(string input, int index) : base("Input=" +
-			input + ", index=" + index) { }
-	}
+	public sealed class EmptyEntryNotAllowedAtTheEnd(string input, int index)
+		: Exception("Input=" + input + ", index=" + index);
 }

@@ -1,10 +1,7 @@
 ﻿namespace Strict.VirtualMachine;
 
-public class RemoveStatement : RegisterStatement
+public class RemoveStatement(string identifier, Register register)
+	: RegisterStatement(register, Instruction.Remove)
 {
-	public RemoveStatement(string identifier, Register register) : base(register,
-		Instruction.Remove) =>
-		Identifier = identifier;
-
-	public string Identifier { get; }
+	public string Identifier { get; } = identifier;
 }

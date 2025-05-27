@@ -1,10 +1,7 @@
 ﻿namespace Strict.VirtualMachine;
 
-public sealed class WriteToListStatement : RegisterStatement
+public sealed class WriteToListStatement(Register register, string identifier)
+	: RegisterStatement(register, Instruction.WriteToList)
 {
-	public string Identifier { get; }
-
-	public WriteToListStatement(Register register, string identifier) : base(register,
-		Instruction.WriteToList) =>
-		Identifier = identifier;
+	public string Identifier { get; } = identifier;
 }

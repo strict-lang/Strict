@@ -1,9 +1,7 @@
 ﻿namespace Strict.VirtualMachine;
 
-public class JumpIfStatement : JumpStatement
+public class JumpIfStatement(Instruction jumpInstruction, int steps)
+	: JumpStatement(jumpInstruction)
 {
-	public JumpIfStatement(Instruction jumpInstruction, int steps) : base(jumpInstruction) =>
-		Steps = steps;
-
-	public int Steps { get; }
+	public int Steps { get; } = steps;
 }
