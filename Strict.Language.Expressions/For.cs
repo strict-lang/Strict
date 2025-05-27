@@ -3,7 +3,7 @@
 /// <summary>
 /// Parses for loop expressions. Usually loop would have an implicit variable if not explicitly given anything,
 /// so the variable is parsed with the first value of the iterable,
-/// e.g for list the first element of the list or for range from 0
+/// e.g. for list the first element of the list or for range from 0
 /// If explicit variable is given, the variable is added in the body, similarly to implicit index/value variables.
 /// </summary>
 public sealed class For : Expression
@@ -202,16 +202,11 @@ public sealed class For : Expression
 				: line[(line.IndexOf(' ') + 1)..];
 
 	public sealed class MissingExpression(Body body) : ParsingFailed(body);
-
 	public sealed class IndexIsReserved(Body body) : ParsingFailed(body);
-
 	public sealed class DuplicateImplicitIndex(Body body) : ParsingFailed(body);
-
 	public sealed class ImmutableIterator(Body body) : ParsingFailed(body);
 
-	public sealed class IteratorTypeDoesNotMatchWithIterable(
-		Body body,
-		string iteratorTypeName,
-		string? variableType) : ParsingFailed(body,
+	public sealed class IteratorTypeDoesNotMatchWithIterable(Body body,
+		string iteratorTypeName, string? variableType) : ParsingFailed(body,
 		$"Iterator type {iteratorTypeName} does not match with {variableType}");
 }

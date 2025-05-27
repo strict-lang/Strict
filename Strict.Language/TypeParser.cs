@@ -59,17 +59,8 @@ public sealed class TypeParser(Type type, string[] lines)
 		return line;
 	}
 
-	public sealed class ExtraWhitespacesFoundAtBeginningOfLine(
-		Type type,
-		int lineNumber,
-		string message,
-		string method = "") : ParsingFailed(type, lineNumber, message, method);
-
-	public sealed class ExtraWhitespacesFoundAtEndOfLine(
-		Type type,
-		int lineNumber,
-		string message,
-		string method = "") : ParsingFailed(type, lineNumber, message, method);
+	public sealed class ExtraWhitespacesFoundAtBeginningOfLine(Type type, int lineNumber,
+		string message, string method = "") : ParsingFailed(type, lineNumber, message, method);
 
 	public sealed class EmptyLineIsNotAllowed(Type type, int lineNumber)
 		: ParsingFailed(type, lineNumber);
@@ -179,10 +170,8 @@ public sealed class TypeParser(Type type, string[] lines)
 					: remainingTextSpan;
 	}
 
-	public sealed class CurrentTypeCannotBeInstantiatedAsMemberType(
-		Type type,
-		int lineNumber,
-		string typeName) : ParsingFailed(type, lineNumber, typeName);
+	public sealed class CurrentTypeCannotBeInstantiatedAsMemberType(Type type,
+		int lineNumber, string typeName) : ParsingFailed(type, lineNumber, typeName);
 
 	private static string GetMemberType(SpanSplitEnumerator nameAndExpression)
 	{
@@ -200,9 +189,7 @@ public sealed class TypeParser(Type type, string[] lines)
 		wordAfterName == Keyword.With || nameAndExpression.MoveNext() &&
 		nameAndExpression.Current.ToString() == Keyword.With;
 
-	public sealed class MemberMissingConstraintExpression(
-		Type type,
-		int lineNumber,
+	public sealed class MemberMissingConstraintExpression(Type type, int lineNumber,
 		string memberName) : ParsingFailed(type, lineNumber, memberName);
 
 	private static bool
@@ -271,9 +258,7 @@ public sealed class TypeParser(Type type, string[] lines)
 				lineNumber + 1
 			} but limit is " + $"{Limit.CharacterCount}");
 
-	public sealed class MethodMustBeImplementedInNonTrait(
-		Type type,
-		string definitionLine,
+	public sealed class MethodMustBeImplementedInNonTrait(Type type, string definitionLine,
 		int lineNumber) : ParsingFailed(type, lineNumber, definitionLine);
 
 	private void IncrementLineNumberTillMethodEnd()
@@ -306,11 +291,8 @@ public sealed class TypeParser(Type type, string[] lines)
 	private int listStartLineNumber = -1;
 	private int listEndLineNumber = -1;
 
-	public sealed class
-		MultiLineExpressionsAllowedOnlyWhenLengthIsMoreThanHundred(
-			Type type,
-			int lineNumber,
-			int length) : ParsingFailed(type, lineNumber,
+	public sealed class MultiLineExpressionsAllowedOnlyWhenLengthIsMoreThanHundred(Type type,
+		int lineNumber, int length) : ParsingFailed(type, lineNumber,
 		"Current length: " + length + $", Minimum Length for Multi line expressions: {
 			Limit.MultiLineCharacterCount
 		}");

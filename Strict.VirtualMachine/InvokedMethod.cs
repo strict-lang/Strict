@@ -2,8 +2,7 @@
 
 namespace Strict.VirtualMachine;
 
-public class InvokedMethod(
-	IReadOnlyList<Expression> expressions,
+public class InvokedMethod(IReadOnlyList<Expression> expressions,
 	IReadOnlyDictionary<string, Instance> arguments)
 {
 	public IReadOnlyList<Expression> Expressions { get; } = expressions;

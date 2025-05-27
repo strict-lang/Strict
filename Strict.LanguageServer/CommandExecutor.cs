@@ -10,12 +10,10 @@ using Strict.Language.Expressions;
 using Strict.VirtualMachine;
 
 namespace Strict.LanguageServer;
-//ncrunch: no coverage start
 
-public class CommandExecutor(
-	ILanguageServerFacade languageServer,
-	StrictDocument document,
-	Package package) : IExecuteCommandHandler
+//ncrunch: no coverage start
+public class CommandExecutor(ILanguageServerFacade languageServer,
+	StrictDocument document, Package package) : IExecuteCommandHandler
 {
 	private readonly VirtualMachine.VirtualMachine vm = new();
 	private const string CommandName = "strict-vscode-client.run";

@@ -84,10 +84,8 @@ public sealed record MethodValidator(IEnumerable<Method> Methods) : Validator
 				throw new VariableHidesMemberUseDifferentName(body, body.Method.Name, member.Name);
 	}
 
-	public class VariableHidesMemberUseDifferentName(
-		Body body,
-		string methodName,
-		string variableName)
+	public class
+		VariableHidesMemberUseDifferentName(Body body, string methodName, string variableName)
 		: ParsingFailed(body, $"Method name {methodName}, Variable name {variableName}");
 
 	private static void ValidateMethodParameters(Method method)
@@ -124,9 +122,7 @@ public sealed record MethodValidator(IEnumerable<Method> Methods) : Validator
 			throw new ParameterHidesMemberUseDifferentName(method.Type, method.Name, parameterName);
 	}
 
-	public sealed class ParameterHidesMemberUseDifferentName(
-		Type type,
-		string methodName,
-		string parameterName)
+	public sealed class
+		ParameterHidesMemberUseDifferentName(Type type, string methodName, string parameterName)
 		: ParsingFailed(type, 0, $"Method name {methodName}, Parameter name {parameterName}");
 }

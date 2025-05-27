@@ -2,8 +2,7 @@
 
 public class RunnerService
 {
-	public RunnerService() => VmInstance = new VirtualMachine.VirtualMachine();
-	private VirtualMachine.VirtualMachine VmInstance { get; }
+	private VirtualMachine.VirtualMachine VmInstance { get; } = new();
 	private readonly List<RunnableService> services = new();
 
 	public RunnerService AddService(RunnableService runnableService)

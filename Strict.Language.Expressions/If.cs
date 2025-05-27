@@ -4,10 +4,7 @@
 /// If expressions are used for branching, can also be used as an input for any other expression
 /// like method arguments, other conditions, etc. like conditional operators.
 /// </summary>
-public sealed class If(
-	Expression condition,
-	Expression then,
-	Expression? optionalElse = null,
+public sealed class If(Expression condition, Expression then,	Expression? optionalElse = null,
 	Body? bodyForErrorMessage = null)
 	: Expression(CheckExpressionAndGetMatchingType(then, optionalElse, bodyForErrorMessage))
 {
@@ -32,10 +29,8 @@ public sealed class If(
 				throw new ReturnTypeOfThenAndElseMustHaveMatchingType(
 					bodyForErrorMessage ?? new Body(thenType.Methods[0]), thenType, elseType);
 
-	public class ReturnTypeOfThenAndElseMustHaveMatchingType(
-		Body body,
-		Type thenReturnType,
-		Type optionalElseReturnType) : ParsingFailed(body,
+	public class ReturnTypeOfThenAndElseMustHaveMatchingType(Body body,
+		Type thenReturnType, Type optionalElseReturnType) : ParsingFailed(body,
 		"The Then type: " + thenReturnType + " is not same as the Else type: " +
 		optionalElseReturnType);
 

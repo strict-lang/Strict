@@ -19,11 +19,9 @@ public sealed class Binary(Expression left, Method operatorMethod, Expression[] 
 			? throw new IncompleteTokensForBinaryExpression(body, input, postfixTokens)
 			: BuildBinaryExpression(body, input, postfixTokens.Pop(), postfixTokens);
 
-	public sealed class IncompleteTokensForBinaryExpression(
-		Body body,
-		ReadOnlySpan<char> input,
-		IEnumerable<Range> postfixTokens) : ParsingFailed(body,
-		input.GetTextsFromRanges(postfixTokens).Reverse().ToWordList()) { }
+	public sealed class IncompleteTokensForBinaryExpression(Body body,
+		ReadOnlySpan<char> input,	IEnumerable<Range> postfixTokens) : ParsingFailed(body,
+		input.GetTextsFromRanges(postfixTokens).Reverse().ToWordList());
 
 	// ReSharper disable once TooManyArguments
 	private static Expression BuildBinaryExpression(Body body, ReadOnlySpan<char> input,

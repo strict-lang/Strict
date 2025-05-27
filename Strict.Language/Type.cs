@@ -393,16 +393,12 @@ public class Type : Context
 
 	private static IReadOnlyDictionary<string, List<Method>>? cachedAnyMethods;
 
-	public class NoMatchingMethodFound(
-		Type type,
-		string methodName,
+	public class NoMatchingMethodFound(Type type, string methodName,
 		IReadOnlyDictionary<string, List<Method>> availableMethods) : Exception(methodName +
 		" not found for " + type + ", available methods: " + availableMethods.Keys.ToWordList());
 
-	public sealed class ArgumentsDoNotMatchMethodParameters(
-		IReadOnlyList<Expression> arguments,
-		Type type,
-		IEnumerable<Method> allMethods) : Exception((arguments.Count == 0
+	public sealed class ArgumentsDoNotMatchMethodParameters(IReadOnlyList<Expression> arguments,
+		Type type, IEnumerable<Method> allMethods) : Exception((arguments.Count == 0
 			? "No arguments does "
 			: (arguments.Count == 1
 				? "Argument: "

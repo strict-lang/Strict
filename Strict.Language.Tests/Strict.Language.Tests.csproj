@@ -8,6 +8,7 @@
 		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 		<WarningsAsErrors />
 		<StartupObject>Strict.Language.Tests.Program</StartupObject>
+		<LangVersion>default</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>

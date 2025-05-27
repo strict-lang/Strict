@@ -16,15 +16,15 @@ public static class Base
 	public const string Any = nameof(Any);
 	public const string AnyLowercase = "any";
 	/// <summary>
-	/// Most basic type, can only be true or false, any statement must either be None or return a
+	/// Most basic type: can only be true or false, any statement must either be None or return a
 	/// Boolean (anything else is a compiler error). Any statement returning false (like a failing
 	/// test) will also immediately cause an error at runtime or in the Editor via SCrunch.
 	/// </summary>
 	public const string Boolean = nameof(Boolean);
 	/// <summary>
-	/// Can be any floating point or integer number (think byte, short, int, long, float or double in
-	/// other languages), but also can be a decimal or BigInteger, the compiler can decide and
-	/// optimize this away to anything that makes sense in the current context.
+	/// Can be any floating point or integer number (think byte, short, int, long, float or double
+	/// in other languages). Also, it can be a decimal or BigInteger, the compiler can decide and
+	/// optimize this away into anything that makes sense in the current context.
 	/// </summary>
 	public const string Number = nameof(Number);
 	public const string Character = nameof(Character);

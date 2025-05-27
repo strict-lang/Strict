@@ -48,7 +48,6 @@ public abstract class ExpressionVisitor
 		};
 
 	public sealed class UseVisitBody(Expression expression) : Exception(expression.ToString());
-
 	protected abstract string Visit(ConstantDeclaration constantDeclaration);
 
 	protected string Visit(Binary binary) =>

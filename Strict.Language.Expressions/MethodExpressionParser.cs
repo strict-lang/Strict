@@ -332,14 +332,9 @@ public class MethodExpressionParser : ExpressionParser
 	protected sealed class ListTokensAreNotSeparatedByComma(Body body) : ParsingFailed(body);
 
 	private sealed class InvalidSingleTokenExpression(Body body, string message)
-		: ParsingFailed(body, message)
-	{
-		//ncrunch: no coverage
-	}
+		: ParsingFailed(body, message);
 
-	public sealed class InvalidArgumentItIsNotMethodOrListCall(
-		Body body,
-		Expression variable,
-		IEnumerable<Expression> arguments)
+	public sealed class InvalidArgumentItIsNotMethodOrListCall(Body body,
+		Expression variable, IEnumerable<Expression> arguments)
 		: ParsingFailed(body, arguments.ToWordList(), variable.ReturnType);
 }

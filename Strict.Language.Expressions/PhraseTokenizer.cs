@@ -206,8 +206,6 @@ public sealed class PhraseTokenizer
 		new[] { result[0].Start..result[^1].End };
 
 	public sealed class UnterminatedString(string input) : Exception(input);
-
-	public class InvalidSpacing(string input) : Exception(input);
-
+	public sealed class InvalidSpacing(string input) : Exception(input);
 	public class InvalidEmptyOrUnmatchedBrackets(string input) : Exception(input);
 }

@@ -193,16 +193,12 @@ public sealed class Method : Context
 			: new Parameter(type, nameAndDefaultValue[0], defaultValue);
 	}
 
-	public sealed class MissingParameterDefaultValue : ParsingFailed
-	{
-		public MissingParameterDefaultValue(Method method, int lineNumber, string nameAndType) : base(
-			method.Type, lineNumber, nameAndType) { }
-	}
-
-	public sealed class DefaultValueCouldNotBeParsedIntoExpression(
-		Method method,
+	public sealed class MissingParameterDefaultValue(Method method,
 		int lineNumber,
-		string defaultValueExpression)
+		string nameAndType) : ParsingFailed(method.Type, lineNumber, nameAndType);
+
+	public sealed class DefaultValueCouldNotBeParsedIntoExpression(Method method,
+		int lineNumber,	string defaultValueExpression)
 		: ParsingFailed(method.Type, lineNumber, defaultValueExpression);
 
 	public sealed class MethodParameterCountMustNotExceedThree(Method method, int lineNumber)

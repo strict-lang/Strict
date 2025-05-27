@@ -1,8 +1,6 @@
 ﻿namespace Strict.Language;
 
-public ref struct SpanSplitEnumerator(
-	ReadOnlySpan<char> input,
-	char splitter,
+public ref struct SpanSplitEnumerator(ReadOnlySpan<char> input,	char splitter,
 	StringSplitOptions options)
 {
 	//ncrunch: no coverage start, for performance reasons disabled here
