@@ -68,8 +68,8 @@ public class Package : Context
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	private static bool IsPrivateName(string name) => char.IsLower(name[0]);
 
-	public sealed class FullNameMustContainPackageAndTypeNames : Exception { }
-	public sealed class PrivateTypesAreOnlyAvailableInItsPackage : Exception { }
+	public sealed class FullNameMustContainPackageAndTypeNames : Exception;
+	public sealed class PrivateTypesAreOnlyAvailableInItsPackage : Exception;
 
 	/// <summary>
 	/// The following picture shows the typical search steps and optimizations done. It is different

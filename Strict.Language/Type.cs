@@ -23,17 +23,11 @@ public class Type : Context
 		typeParser = new TypeParser(this, lines);
 	}
 
-	public sealed class LinesCountMustNotExceedLimit : ParsingFailed
-	{
-		public LinesCountMustNotExceedLimit(Type type, int lineCount) : base(type, 0,
-			$"Type {type.Name} has lines count {lineCount} but limit is {Limit.LineCount}") { }
-	}
+	public sealed class LinesCountMustNotExceedLimit(Type type, int lineCount) : ParsingFailed(type,
+		0, $"Type {type.Name} has lines count {lineCount} but limit is {Limit.LineCount}");
 
-	public sealed class TypeAlreadyExistsInPackage : Exception
-	{
-		public TypeAlreadyExistsInPackage(string name, Package package) : base(
-			name + " in package: " + package) { }
-	}
+	public sealed class TypeAlreadyExistsInPackage(string name, Package package)
+		: Exception(name + " in package: " + package);
 
 	private readonly string[] lines;
 	/// <summary>

@@ -150,17 +150,16 @@ public sealed class Body : Expression
 		return this;
 	}
 
-	public class VariableNameCannotHaveDifferentTypeNameThanValue : ParsingFailed
-	{
-		public VariableNameCannotHaveDifferentTypeNameThanValue(Body body, string variableNameType,
-			string valueType) : base(body, $"Variable name {variableNameType} " +
-			$"denotes different type than its value type {valueType}. Prefer using a different name") { }
-	}
+	public class VariableNameCannotHaveDifferentTypeNameThanValue(
+		Body body,
+		string variableNameType,
+		string valueType) : ParsingFailed(body,
+		$"Variable name {variableNameType} " + $"denotes different type than its value type {
+			valueType
+		}. Prefer using a different name");
 
-	public sealed class ValueIsNotMutableAndCannotBeChanged : ParsingFailed
-	{
-		public ValueIsNotMutableAndCannotBeChanged(Body body, string name) : base(body, name) { }
-	}
+	public sealed class ValueIsNotMutableAndCannotBeChanged(Body body, string name)
+		: ParsingFailed(body, name);
 
 	public void UpdateVariable(string name, Expression value)
 	{

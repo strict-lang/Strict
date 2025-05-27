@@ -18,6 +18,7 @@ internal class TypeMethodFinder
 		FindMethod(methodName, arguments, parser) ??
 		throw new NoMatchingMethodFound(Type, methodName, Type.AvailableMethods);
 
+	//TODO: method too long
 	public Method? FindMethod(string methodName, IReadOnlyList<Expression> arguments,
 		ExpressionParser parser)
 	{
@@ -26,11 +27,12 @@ internal class TypeMethodFinder
 				"Type is Generic and cannot be used directly");
 		if (!Type.AvailableMethods.TryGetValue(methodName, out var matchingMethods))
 			return FindAndCreateFromBaseMethod(methodName, arguments, parser);
-		var typesOfArguments = //
+		var typesOfArguments =
 			new Lazy<IReadOnlyList<Type>>(() =>
 				arguments.Select(argument => argument.ReturnType).ToList());
-		var commonTypeOfArguments = //
-			new Lazy<Type?>(() => //
+		//TODO: explain what this does, put it into a method name, we don't want to use multiple different types of arguments here
+		var commonTypeOfArguments =
+			new Lazy<Type?>(() =>
 			{
 				Type? result = null;
 				foreach (var type in typesOfArguments.Value.Distinct())

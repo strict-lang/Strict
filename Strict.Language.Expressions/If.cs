@@ -24,7 +24,7 @@ public sealed class If : Expression
 	/// <summary>
 	/// The return type of the whole if expression must be a type compatible to both what the then
 	/// expression and the else expression return (if used). This is a common problem in static
-	/// programming languages and we can fix it here by evaluating both types and find a common base
+	/// programming languages, and we can fix it here by evaluating both types and find a common base
 	/// type. If that is not possible there is a compilation error here.
 	/// </summary>
 	private static Type GetMatchingType(Type thenType, Type? elseType, Body? bodyForErrorMessage) =>
@@ -36,13 +36,12 @@ public sealed class If : Expression
 				throw new ReturnTypeOfThenAndElseMustHaveMatchingType(
 					bodyForErrorMessage ?? new Body(thenType.Methods[0]), thenType, elseType);
 
-	public class ReturnTypeOfThenAndElseMustHaveMatchingType : ParsingFailed
-	{
-		public ReturnTypeOfThenAndElseMustHaveMatchingType(Body body, Type thenReturnType,
-			Type optionalElseReturnType) : base(body,
-			"The Then type: " + thenReturnType + " is not same as the Else type: " +
-			optionalElseReturnType) { }
-	}
+	public class ReturnTypeOfThenAndElseMustHaveMatchingType(
+		Body body,
+		Type thenReturnType,
+		Type optionalElseReturnType) : ParsingFailed(body,
+		"The Then type: " + thenReturnType + " is not same as the Else type: " +
+		optionalElseReturnType);
 
 	public Expression Condition { get; }
 	public Expression Then { get; }
@@ -82,15 +81,8 @@ public sealed class If : Expression
 					? TryParseIf(body, line)
 					: null;
 
-	public sealed class MissingCondition : ParsingFailed
-	{
-		public MissingCondition(Body body) : base(body) { }
-	}
-
-	public sealed class UnexpectedElse : ParsingFailed
-	{
-		public UnexpectedElse(Body body) : base(body) { }
-	}
+	public sealed class MissingCondition(Body body) : ParsingFailed(body);
+	public sealed class UnexpectedElse(Body body) : ParsingFailed(body);
 
 	private static Expression TryParseIf(Body body, ReadOnlySpan<char> line)
 	{
@@ -113,13 +105,10 @@ public sealed class If : Expression
 		throw new InvalidCondition(body, condition.ReturnType);
 	}
 
-	public sealed class InvalidCondition : ParsingFailed
-	{
-		public InvalidCondition(Body body, Type? conditionReturnType = null) : base(body,
-			conditionReturnType != null
-				? body.Method.FullName + "\n Return type " + conditionReturnType + " is not " + Base.Boolean
-				: null) { }
-	}
+	public sealed class InvalidCondition(Body body, Type? conditionReturnType = null)
+		: ParsingFailed(body, conditionReturnType != null
+			? body.Method.FullName + "\n Return type " + conditionReturnType + " is not " + Base.Boolean
+			: null);
 
 	public sealed class MissingThen : ParsingFailed
 	{
@@ -167,10 +156,7 @@ public sealed class If : Expression
 		firstBracket == -1 || firstBracket > questionMarkIndex || input.IndexOf(')') < questionMarkIndex ||
 		firstBracket == 0 && input[^1] == ')';
 
-	public sealed class ConditionalExpressionsCannotBeNested : ParsingFailed
-	{
-		public ConditionalExpressionsCannotBeNested(Body body) : base(body) { }
-	}
+	public sealed class ConditionalExpressionsCannotBeNested(Body body) : ParsingFailed(body);
 
 	public static Expression ParseConditional(Body body, ReadOnlySpan<char> input)
 	{
