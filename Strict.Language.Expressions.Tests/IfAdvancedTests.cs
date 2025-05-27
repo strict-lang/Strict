@@ -10,8 +10,7 @@ public sealed class IfAdvancedTests : TestExpressions
 			Is.EqualTo(new If(GetCondition(), GetThen())));
 
 	private MethodCall GetThen() =>
-		new(member.Type.Methods[0], new MemberCall(null, member),
-			new Expression[] { new Text(type, "Hey") });
+		new(member.Type.Methods[0], new MemberCall(null, member), [new Text(type, "Hey")]);
 
 	[Test]
 	public void ParseIfNot() =>

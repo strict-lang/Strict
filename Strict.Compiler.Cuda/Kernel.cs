@@ -40,7 +40,7 @@ public class Kernel : IDisposable
 			// see http://docs.nvidia.com/cuda/nvrtc/index.html for usage and options
 			//https://arnon.dk/matching-sm-architectures-arch-and-gencode-for-various-nvidia-cards/
 			//nvcc .\vectorAdd.cu -use_fast_math -ptx -m 64 -arch compute_61 -code sm_61 -o .\vectorAdd.ptx
-			rtc.Compile(new[] { "--gpu-architecture=compute_61" });
+			rtc.Compile(["--gpu-architecture=compute_61"]);
 			result = nvrtcResult.Success;
 		}
 		catch (NVRTCException ex)

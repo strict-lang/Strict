@@ -106,7 +106,7 @@ public class CSharpType : Type
 				returnStatement = line.Trim().Replace(";", "");
 			else
 			{
-				var parts = line.Trim().Split(new[] { ' ', '(', ')', ',' }, StringSplitOptions.RemoveEmptyEntries);
+				var parts = line.Trim().Split([' ', '(', ')', ','], StringSplitOptions.RemoveEmptyEntries);
 				if (parts[1] == "float")
 					returnType = " returns Number";
 				methodName = parts[2];
@@ -115,8 +115,8 @@ public class CSharpType : Type
 		}
 		if (returnStatement == "")
 			throw new MissingReturnStatement();
-		var method = new Method(this, 0, new CSharpExpressionParser(),
-			new[] { methodName + parameters.ToBrackets() + returnType, "\t" + returnStatement });
+		var method = new Method(this, 0, new CSharpExpressionParser(), [methodName + parameters.ToBrackets() + returnType, "\t" + returnStatement
+		]);
 		methods.Add(method);
 	}
 
@@ -128,10 +128,9 @@ public class CSharpType : Type
 	{
 		for (var index = 3; index < parts.Count; index += 2)
 			if (parts[index] == "DepthImage")
-				parameters.AddRange(new[]
-				{
+				parameters.AddRange([
 					"input Number", "Width Number", "Height Number", "initialDepth Number"
-				});
+				]);
 			else if (parts[index] != "float")
 				throw new NotSupportedException(parts[index + 1]);
 			else

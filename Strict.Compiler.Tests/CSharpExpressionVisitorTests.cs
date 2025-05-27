@@ -47,8 +47,7 @@ public sealed class CSharpExpressionVisitorTests : TestExpressions
 		Assert.That(
 			visitor.Visit(new ListCall(
 				new VariableCall("numbers",
-					new List((Body)methodWithBody.GetBodyAndParseIfNeeded(),
-						new List<Expression> { new Number(type, 0) })), new Number(type, 0))),
+					new List((Body)methodWithBody.GetBodyAndParseIfNeeded(), [new Number(type, 0)])), new Number(type, 0))),
 			Is.EqualTo("numbers[0]"));
 
 	[Test]
@@ -99,15 +98,14 @@ public sealed class CSharpExpressionVisitorTests : TestExpressions
 	public void GenerateIfElse()
 	{
 		var multilineMethod = new Method(type, 0, this,
-			new[]
-			{
+			[
 				"IsBlaFive Boolean",
 				"	constant value = 5",
 				"	if value is 5",
 				"		return true",
 				"	else",
 				"		return false"
-			});
+			]);
 		Assert.That(visitor.VisitBody(multilineMethod.GetBodyAndParseIfNeeded()),
 			Is.EqualTo(new[]
 			{

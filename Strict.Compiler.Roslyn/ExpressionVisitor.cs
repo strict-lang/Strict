@@ -14,7 +14,7 @@ public abstract class ExpressionVisitor
 			Body body => VisitBody(body),
 			If ifExpression => VisitIf(ifExpression),
 			For forExpression => VisitFor(forExpression),
-			_ => new[] { Visit(expression) + ";" }
+			_ => [Visit(expression) + ";"]
 		};
 
 	protected abstract IReadOnlyList<string> VisitBody(Body body);

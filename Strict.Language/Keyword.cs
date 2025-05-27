@@ -11,7 +11,7 @@ public static class Keyword
 	public const string With = "with";
 	public const string Return = "return";
 	public static readonly string[] GetAllKeywords =
-	{
+	[
 		Has, Mutable, Constant, If, Else, For, With, Return
-	};
+	];
 }

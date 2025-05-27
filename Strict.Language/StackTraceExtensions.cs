@@ -20,7 +20,7 @@ public static class StackTraceExtensions
 		method.DeclaringType.Assembly.GetName().Name!.StartsWith("nCrunch", StringComparison.Ordinal);
 
 	private static readonly string[] MethodNamesToExclude =
-	{
+	[
 		"DeltaEngine.Resolvers.", "DeltaEngine.Networking", "DeltaEngine.Content.ContentFileLoader",
 		"DeltaEngine.Content.ContentDeserializer",
 		"DeltaEngine.Mocks.Resolvers.TestWithMocksOrVisually", "System.Action",
@@ -30,7 +30,7 @@ public static class StackTraceExtensions
 		"MS.Internal.", "NUnit.Core.", "xUnit.", "JetBrains.ReSharper.", "nCrunch.", "Autofac.",
 		"System.Reactive", "lambda_method", "System.Collections", "System.ThrowHelper",
 		"System.Linq", "MongoDB"
-	};
+	];
 
 	private static string GetMethodWithParameters(MethodBase? method) =>
 		method is null

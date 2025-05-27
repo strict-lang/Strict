@@ -23,15 +23,14 @@ public sealed class IfTests : TestExpressions
 
 	[Test]
 	public void ReturnTypeOfThenAndElseIsNumberAndCharacterIsValid() =>
-		Assert.That(new Method(type, 0, this, new[]
-		{
+		Assert.That(new Method(type, 0, this, [
 					// @formatter:off
 					"ReturnMethod Number",
 					"	if bla is 5",
 					"		return Character(5)",
 					"	else",
 					"		return 5"
-				}).GetBodyAndParseIfNeeded().ReturnType, Is.EqualTo(type.GetType(Base.Number)));
+				]).GetBodyAndParseIfNeeded().ReturnType, Is.EqualTo(type.GetType(Base.Number)));
 
 	[Test]
 	public void ParseInvalidSpaceAfterElseIsNotAllowed() =>

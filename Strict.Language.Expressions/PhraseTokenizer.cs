@@ -119,7 +119,7 @@ public sealed class PhraseTokenizer
 		}
 
 		private readonly PhraseTokenizer tokens;
-		private readonly List<Range> result = new();
+		private readonly List<Range> result = [];
 
 		public IReadOnlyList<Range> GetRanges()
 		{
@@ -202,8 +202,8 @@ public sealed class PhraseTokenizer
 	private bool MemberOrMethodCallWithNoArguments() =>
 		index > 0 && input[index - 1] == ' ' && input[index - 2] != ',';
 
-	private static Range[] MergeAllTokensIntoSingleList(List<Range> result) =>
-		new[] { result[0].Start..result[^1].End };
+	private static Range[] MergeAllTokensIntoSingleList(List<Range> result) => [result[0].Start..result[^1].End
+	];
 
 	public sealed class UnterminatedString(string input) : Exception(input);
 	public sealed class InvalidSpacing(string input) : Exception(input);

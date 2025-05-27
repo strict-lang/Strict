@@ -20,15 +20,12 @@ public sealed class TypeValidatorTests
 	[Test]
 	public void ValidateUnusedMember() =>
 		Assert.That(
-			() => new TypeValidator(new[]
-			{
-				ParseTypeMethods(CreateType(nameof(ValidateUnusedMember),
-					new[]
-					{
-						"has unused Number", "Run(methodInput Number)",
+			() => new TypeValidator([
+				ParseTypeMethods(CreateType(nameof(ValidateUnusedMember), [
+					"has unused Number", "Run(methodInput Number)",
 						"\tconstant result = 5 + methodInput", "\tresult"
-					}))
-			}).Validate(),
+				]))
+			]).Validate(),
 			Throws.InstanceOf<MemberValidator.UnusedMemberMustBeRemoved>().With.Message.
 				Contains("unused"));
 
@@ -46,24 +43,19 @@ public sealed class TypeValidatorTests
 	[Test]
 	public void ProperlyUsedMemberShouldBeAllowed() =>
 		Assert.DoesNotThrow(
-			() => new TypeValidator(new[]
-			{
-				ParseTypeMethods(CreateType(nameof(ProperlyUsedMemberShouldBeAllowed),
-					new[]
-					{
-						"has usedMember Number",
+			() => new TypeValidator([
+				ParseTypeMethods(CreateType(nameof(ProperlyUsedMemberShouldBeAllowed), [
+					"has usedMember Number",
 						"Run(methodInput Number)",
 						"\tconstant result = usedMember + methodInput",
 						"\tresult"
-					}))
-			}).Validate());
+				]))
+			]).Validate());
 
 	[Test]
 	public void ValidateTypeHasTooManyDependenciesFromMethod() =>
-		Assert.That(() => new TypeValidator(new[]
-			{
-				ParseTypeMethods(CreateType(nameof(ValidateTypeHasTooManyDependenciesFromMethod), new[]
-				{
+		Assert.That(() => new TypeValidator([
+				ParseTypeMethods(CreateType(nameof(ValidateTypeHasTooManyDependenciesFromMethod), [
 						// @formatter:off
 						"has number",
 						"from(number, text, boolean, input Text)",
@@ -73,18 +65,16 @@ public sealed class TypeValidatorTests
 						"\t\treturn text + input + number + methodInput + character",
 						"\t0"
 					// @formatter:on
-				}))
-			}).Validate(),
+				]))
+			]).Validate(),
 			Throws.InstanceOf<Method.MethodParameterCountMustNotExceedThree>().With.Message.Contains(
 				"Type TestPackage.ValidateTypeHasTooManyDependenciesFromMethod constructor method has " +
 				"parameters count 4 but limit is 3"));
 
 	[Test]
 	public void VariableHidesMemberUseDifferentName() =>
-		Assert.That(() => new TypeValidator(new[]
-			{
-				ParseTypeMethods(CreateType(nameof(VariableHidesMemberUseDifferentName), new[]
-				{
+		Assert.That(() => new TypeValidator([
+				ParseTypeMethods(CreateType(nameof(VariableHidesMemberUseDifferentName), [
 						// @formatter:off
 						"has input Number",
 						"FirstMethod(methodInput Number) Number",
@@ -97,17 +87,15 @@ public sealed class TypeValidatorTests
 						"\tconstant input = 5",
 						"\tmethodInput + input"
 					// @formatter:on
-				}))
-			}).Validate(),
+				]))
+			]).Validate(),
 			Throws.InstanceOf<MethodValidator.VariableHidesMemberUseDifferentName>().With.Message.
 				Contains("Method name Run, Variable name input"));
 
 	[Test]
 	public void ParameterHidesMemberUseDifferentName() =>
-		Assert.That(() => new TypeValidator(new[]
-			{
-				ParseTypeMethods(CreateType(nameof(VariableHidesMemberUseDifferentName), new[]
-				{
+		Assert.That(() => new TypeValidator([
+				ParseTypeMethods(CreateType(nameof(VariableHidesMemberUseDifferentName), [
 						// @formatter:off
 						"has input Number",
 						"FirstMethod(input Number) Number",
@@ -117,8 +105,8 @@ public sealed class TypeValidatorTests
 						"\tconstant second = 5",
 						"\tmethodInput + second"
 					// @formatter:on
-				}))
-			}).Validate(),
+				]))
+			]).Validate(),
 			Throws.InstanceOf<MethodValidator.ParameterHidesMemberUseDifferentName>().With.Message.
 				Contains("Method name FirstMethod, Parameter name input"));
 }

@@ -24,45 +24,38 @@ public sealed class MethodValidatorTests
 		"\tconstant secondIsUnused = input + 5", "\tfirst + \"Run method executed\"")]
 	public void ValidateUnusedMethodVariables(string expectedOutput, params string[] methodLines) =>
 		Assert.That(
-			() => new MethodValidator(new[] { new Method(type, 1, parser, methodLines) }).Validate(),
+			() => new MethodValidator([new Method(type, 1, parser, methodLines)]).Validate(),
 			Throws.InstanceOf<UnusedMethodVariableMustBeRemoved>().With.Message.
 				Contains(expectedOutput));
 
 	[Test]
 	public void ErrorOnlyIfVariablesAreUnused() =>
-		Assert.DoesNotThrow(() => new MethodValidator(new[]
-		{
-			new Method(type, 1, parser,
-				new[]
-				{
-					"Run(methodInput Number)",
+		Assert.DoesNotThrow(() => new MethodValidator([
+			new Method(type, 1, parser, [
+				"Run(methodInput Number)",
 					"\tconstant result = 5 + 15 + methodInput",
 					"\t\"Run method executed with input\" + result"
-				})
-		}).Validate());
+			])
+		]).Validate());
 
 	[Test]
 	public void UnchangedMutableVariablesShouldError() =>
 		Assert.That(
-			() => new MethodValidator(new[]
-			{
-				new Method(type, 1, parser, new[]
-				{
+			() => new MethodValidator([
+				new Method(type, 1, parser, [
 					"Run",
 					"\tmutable input = 0",
 					"\tinput + 5"
-				})
-			}).Validate(),
+				])
+			]).Validate(),
 			Throws.InstanceOf<VariableDeclaredAsMutableButValueNeverChanged>().With.
 				Message.Contains("input"));
 
 	[Test]
 	public void ExceptionShouldOccurOnlyForUnchangedMutableVariable() =>
 		Assert.That(
-			() => new MethodValidator(new[]
-			{
-				new Method(type, 1, parser, new[]
-				{
+			() => new MethodValidator([
+				new Method(type, 1, parser, [
 					"Run",
 					"\tmutable inputOne = 0",
 					"\tinputOne = 5",
@@ -70,72 +63,64 @@ public sealed class MethodValidatorTests
 					"\tinputTwo = 6",
 					"\tmutable inputThree = 0",
 					"\tinputOne + inputTwo + inputThree"
-				})
-			}).Validate(),
+				])
+			]).Validate(),
 			Throws.InstanceOf<VariableDeclaredAsMutableButValueNeverChanged>().With.
 				Message.Contains("inputThree"));
 
 	[Test]
 	public void ConstantVariablesShouldBeAllowedToPass() =>
-		Assert.DoesNotThrow(() => new MethodValidator(new[]
-		{
-			new Method(type, 1, parser, new[]
-			{
+		Assert.DoesNotThrow(() => new MethodValidator([
+			new Method(type, 1, parser, [
 				"Run",
 				"\tconstant input = 10",
 				"\tinput + 5"
-			})
-		}).Validate());
+			])
+		]).Validate());
 
 	[Test]
 	public void MutatedVariablesShouldBeAllowedToPass() =>
-		Assert.DoesNotThrow(() => new MethodValidator(new[]
-		{
-			new Method(type, 1, parser, new[]
-			{
+		Assert.DoesNotThrow(() => new MethodValidator([
+			new Method(type, 1, parser, [
 				"Run",
 				"\tmutable input = 10",
 				"\tinput = 15",
 				"\tinput + 15"
-			})
-		}).Validate());
+			])
+		]).Validate());
 
 	[TestCase("methodInput", "Run(methodInput Number)", "\t\"Run method executed\"")]
 	[TestCase("second", "Run(first Number, second Text)", "\tconstant result = first + 5",
 		"\t\"Run method executed\" + result")]
 	public void ValidateUnusedMethodParameter(string expectedOutput, params string[] methodLines) =>
 		Assert.That(
-			() => new MethodValidator(new[] { new Method(type, 1, parser, methodLines) }).Validate(),
+			() => new MethodValidator([new Method(type, 1, parser, methodLines)]).Validate(),
 			Throws.InstanceOf<UnusedMethodParameterMustBeRemoved>().With.Message.
 				Contains(expectedOutput));
 
 	[Test]
 	public void ErrorOnlyIfParametersAreUnused() =>
-		Assert.DoesNotThrow(() => new MethodValidator(new[]
-		{
-			new Method(type, 1, parser,
-				new[]
-				{
-					"Run(methodInput Number)",
+		Assert.DoesNotThrow(() => new MethodValidator([
+			new Method(type, 1, parser, [
+				"Run(methodInput Number)",
 					"\t\"Run method executed with input\" + methodInput"
-				})
-		}).Validate());
+			])
+		]).Validate());
 
 	[TestCase("Run(mutable parameter Number)", "\tconstant result = 5 + parameter", "\tresult")]
 	[TestCase("Run(mutable mutatedParameter Number, mutable parameter Number)",
 		"\tmutatedParameter = 5 + parameter", "\tmutatedParameter")]
 	public void UnchangedMutableParametersShouldError(params string[] code) =>
-		Assert.That(() => new MethodValidator(new[] { new Method(type, 1, parser, code) }).Validate(),
+		Assert.That(() => new MethodValidator([new Method(type, 1, parser, code)]).Validate(),
 			Throws.InstanceOf<ParameterDeclaredAsMutableButValueNeverChanged>().With.Message.
 				Contains("parameter"));
 
 	[Test]
 	public void MutatedParametersShouldBeAllowed() =>
-		Assert.DoesNotThrow(() => new MethodValidator(new[]
-		{
-			new Method(type, 1, parser,
-				new[] { "Run(mutable parameter Number)", "\tparameter = 5 + parameter", "\t5" })
-		}).Validate());
+		Assert.DoesNotThrow(() => new MethodValidator([
+			new Method(type, 1, parser, ["Run(mutable parameter Number)", "\tparameter = 5 + parameter", "\t5"
+			])
+		]).Validate());
 
 	[Test]
 	public void ListArgumentCanBeAutoParsedWithoutDoubleBrackets()
@@ -144,18 +129,16 @@ public sealed class MethodValidatorTests
 			new TypeLines(nameof(ListArgumentCanBeAutoParsedWithoutDoubleBrackets), "has log",
 				"CheckInputLengthAndGetResult(numbers) Number", "\tif numbers.Length is 2",
 				"\t\treturn 2", "\t0")).ParseMembersAndMethods(parser);
-		Assert.That(() => new MethodValidator(new[]
-			{
-				new Method(typeWithListParameterMethod, 1, parser, new[]
-				{
+		Assert.That(() => new MethodValidator([
+				new Method(typeWithListParameterMethod, 1, parser, [
 				// @formatter:off
 					"InvokeTestMethod(numbers) Number",
 					"\tif numbers.Length is 2",
 					"\t\treturn 2",
 					"\tCheckInputLengthAndGetResult((1, 2))"
 					// @formatter:on
-				})
-			}).Validate(),
+				])
+			]).Validate(),
 			Throws.InstanceOf<ListArgumentCanBeAutoParsedWithoutDoubleBrackets>().With.Message.
 				Contains("CheckInputLengthAndGetResult((1, 2))"));
 	}

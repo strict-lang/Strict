@@ -239,7 +239,8 @@ public class TestPackage : Package
 		var name = new Type(this, new TypeLines(Base.Name, "has text"));
 		var error = new Type(this, new TypeLines(Base.Error, "has Text", "has Stacktraces"));
 		var method = new Type(this, new TypeLines(Base.Method, "has Name", "has Type"));
-		var stacktrace = new Type(this, new TypeLines(Base.Stacktrace, "has Method", "has FilePath Text", "has Line Number"));
+		var stacktrace = new Type(this, new TypeLines(Base.Stacktrace,
+			"has Method", "has FilePath Text", "has Line Number"));
 		var dictionary = new Type(this, new TypeLines(Base.Dictionary,
 			"has keysAndValues List(key Generic, mappedValue Generic)",
 			"from",

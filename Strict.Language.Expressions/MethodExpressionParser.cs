@@ -9,7 +9,7 @@ namespace Strict.Language.Expressions;
 public class MethodExpressionParser : ExpressionParser
 {
 	/// <summary>
-	/// Slightly slower version that checks high level expressions that can only occur at the line
+	/// Slightly slower version that checks high-level expressions that can only occur at the line
 	/// level like let, if, for (those will increase methodLineNumber as well) and return.
 	/// Every other expression can be nested and can appear anywhere.
 	/// </summary>
@@ -81,7 +81,7 @@ public class MethodExpressionParser : ExpressionParser
 		var binary = Binary.Parse(body, input, postfix.Output);
 		if (postfix.Output.Count == 0)
 			return binary;
-		return ParseInContext(body, input[postfix.Output.Peek()], new[] { binary }) ??
+		return ParseInContext(body, input[postfix.Output.Peek()], [binary]) ??
 			throw new UnknownExpression(body, input[postfix.Output.Peek()].ToString());
 	}
 
@@ -95,7 +95,7 @@ public class MethodExpressionParser : ExpressionParser
 				input[(argumentsRange.Start.Value + 1)..(argumentsRange.End.Value - 1)])) ??
 			throw new MemberOrMethodNotFound(body, body.Method.Type, input[methodRange].ToString())
 			: input[argumentsRange.Start.Value] == '.'
-				? ParseInContext(body, input, Array.Empty<Expression>()) ??
+				? ParseInContext(body, input, []) ??
 				throw new InvalidOperatorHere(body, input[methodRange].ToString())
 				: input[argumentsRange].Equals(UnaryOperator.Not, StringComparison.Ordinal)
 					? Not.Parse(body, input, methodRange)
@@ -109,9 +109,9 @@ public class MethodExpressionParser : ExpressionParser
 			StartsWith(Keyword.For, StringComparison.Ordinal);
 
 	/// <summary>
-	/// By far the most common usecase, we call something from another instance, use some binary
+	/// By far the most common use-case, we call something from another instance, use some binary
 	/// operator (like is, to, +, etc.) or execute some method. For more arguments more complex
-	/// parsing has to be done and we have to invoke ShuntingYard for the argument list.
+	/// parsing has to be done, and we have to invoke ShuntingYard for the argument list.
 	/// </summary>
 	private Expression? TryParseMemberOrZeroOrOneArgumentMethodOrNestedCall(Body body,
 		ReadOnlySpan<char> input)
@@ -120,7 +120,7 @@ public class MethodExpressionParser : ExpressionParser
 		var argumentsEnd = input.FindMatchingBracketIndex(argumentsStart);
 		ChangeArgumentStartEndIfNestedMethodCall(input, ref argumentsStart, ref argumentsEnd);
 		return argumentsStart <= 0 || argumentsEnd <= 0 || argumentsEnd < input.Length - 1
-			? ParseInContext(body, input, Array.Empty<Expression>())
+			? ParseInContext(body, input, [])
 			: ParseInContext(body, input[..argumentsStart],
 				ParseListArguments(body, input[(argumentsStart + 1)..argumentsEnd]));
 	}
@@ -175,7 +175,7 @@ public class MethodExpressionParser : ExpressionParser
 					// arguments are only needed for the last part
 					members.IsAtEnd
 						? arguments
-						: Array.Empty<Expression>());
+						: []);
 			// ReSharper disable once UnthrowableException
 			current = expression ??
 				throw CheckErrorTypeAndThrowException(body, input, members, current);
@@ -224,7 +224,7 @@ public class MethodExpressionParser : ExpressionParser
 		: ParsingFailed(body, input, type);
 
 	/// <summary>
-	/// Figures out if there are any bracket groups or if there is binary expression action going on.
+	/// Figures out if there are any bracket groups or if there is a binary expression going on.
 	/// Could also contain strings, we don't know. Most of the time it will just be a bunch of values.
 	/// <see cref="ShuntingYard" /> will only parse till the next comma, has to call this till the end.
 	/// </summary>
@@ -232,7 +232,7 @@ public class MethodExpressionParser : ExpressionParser
 	{
 		if (innerSpan.Contains('(') || innerSpan.Contains('"') && innerSpan.Contains(' '))
 			return If.CanTryParseConditional(body, innerSpan)
-				? new List<Expression> { If.ParseConditional(body, innerSpan) }
+				? [If.ParseConditional(body, innerSpan)]
 				: new ExpressionListParser(this, innerSpan.ToString()).GetAll(body);
 		if (innerSpan.Length == 0)
 			throw new List.EmptyListNotAllowed(body);
@@ -240,7 +240,7 @@ public class MethodExpressionParser : ExpressionParser
 	}
 
 	/// <summary>
-	/// Similar to TryParseExpression, but we know there is commas separating expressions
+	/// Similar to TryParseExpression, but we know there are commas separating expressions
 	/// </summary>
 	public class ExpressionListParser(MethodExpressionParser parser, string inner)
 	{
@@ -259,7 +259,7 @@ public class MethodExpressionParser : ExpressionParser
 				expressions.Push(parser.ParseMethodCallWithArguments(body, inner.AsSpan(), postfix));
 			else
 				ParseBinaryOrNormalExpressionsIntoList(body, expressions);
-			return new List<Expression>(expressions);
+			return [..expressions];
 		}
 
 		private void ParseBinaryOrNormalExpressionsIntoList(Body body, Stack<Expression> expressions)
@@ -269,7 +269,7 @@ public class MethodExpressionParser : ExpressionParser
 				var span = inner[postfix.Output.Peek()];
 				try
 				{
-					// Is this a binary expression we have to put into the list (already tokenized and postfixed)
+					// Is this a binary expression we have to put into the list (tokenized and postfixed)?
 					expressions.Push(span.Length == 1 && span[0].IsSingleCharacterOperator() ||
 						span.IsMultiCharacterOperator()
 							? Binary.Parse(body, inner.AsSpan(), postfix.Output)

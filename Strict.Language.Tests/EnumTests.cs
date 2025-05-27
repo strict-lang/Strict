@@ -13,16 +13,13 @@ public sealed class EnumTests
 		new Type(package,
 			new TypeLines("Connection", "has Google = \"https://google.com\"",
 				"has Microsoft = \"https://microsoft.com\"")).ParseMembersAndMethods(parser);
-		CreateInstructionEnumType();
-	}
-
-	private void CreateInstructionEnumType() =>
 		new Type(package,
 			new TypeLines("Instruction", "has Set = 1", "has Add = 2", "has Subtract = 3",
 				"has Multiply = 4", "has Divide = 5", "has BinaryOperatorsSeparator = 100",
 				"has GreaterThan = 6", "has LessThan = 7", "has Equal = 8", "has NotEqual = 9",
 				"has ConditionalSeparator = 200", "has JumpIfTrue = 10", "has JumpIfFalse = 11",
 				"has JumpIfNotZero = 12", "has JumpsSeparator = 300")).ParseMembersAndMethods(parser);
+	}
 
 	private Package package = null!;
 	private ExpressionParser parser = null!;

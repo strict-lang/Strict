@@ -9,7 +9,7 @@ public sealed class ByteCodeGenerator
 	private readonly Stack<int> idStack = new();
 	private readonly Register[] registers = Enum.GetValues<Register>();
 	private readonly Registry registry;
-	private readonly List<Statement> statements = new();
+	private readonly List<Statement> statements = [];
 	private int conditionalId;
 
 	public ByteCodeGenerator(InvokedMethod method, Registry registry)
@@ -353,7 +353,7 @@ public sealed class ByteCodeGenerator
 			return;
 		idStack.Push(conditionalId);
 		statements.Add(new JumpToIdStatement(Instruction.JumpToIdIfTrue, conditionalId++));
-		GenerateStatements(new[] { ifExpression.OptionalElse });
+		GenerateStatements([ifExpression.OptionalElse]);
 		statements.Add(new JumpToIdStatement(Instruction.JumpEnd, idStack.Pop()));
 	}
 
@@ -362,7 +362,7 @@ public sealed class ByteCodeGenerator
 		if (ifExpression.Then is Body thenBody)
 			GenerateStatements(thenBody.Expressions);
 		else
-			GenerateStatements(new[] { ifExpression.Then });
+			GenerateStatements([ifExpression.Then]);
 	}
 
 	private void GenerateCodeForBinary(MethodCall binary)

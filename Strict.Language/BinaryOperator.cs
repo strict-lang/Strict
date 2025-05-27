@@ -50,10 +50,10 @@ public static class BinaryOperator
 	}
 
 	private static readonly string[] MultiCharacterOperators =
-	{
+	[
 		SmallerOrEqual, GreaterOrEqual, Is, IsIn, IsNot, IsNotIn, In, And, Or, Xor, To,
 		UnaryOperator.Not
-	};
+	];
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static bool IsMultiCharacterOperator(this ReadOnlySpan<char> name)
@@ -94,17 +94,17 @@ public static class BinaryOperator
 		input[(currentIndex - 2)..(currentIndex + 4)] == IsIn + " ";
 
 	private static readonly string[] All =
-	{
+	[
 		Plus, Minus, Multiply, Divide, Modulate, Smaller, Greater, SmallerOrEqual, GreaterOrEqual,
 		Is, IsNot, In, And, Or, Xor, To
-	};
-	private static readonly string[] Arithmetic = { Plus, Minus, Multiply, Divide, Modulate };
+	];
+	private static readonly string[] Arithmetic = [Plus, Minus, Multiply, Divide, Modulate];
 	private static readonly string[] Comparison =
-	{
+	[
 		Is, Smaller, Greater, SmallerOrEqual, GreaterOrEqual
-	};
-	private static readonly string[] Logical = { And, Or, Xor };
-	private static readonly string[] Conversions = { To };
+	];
+	private static readonly string[] Logical = [And, Or, Xor];
+	private static readonly string[] Conversions = [To];
 
 	/// <summary>
 	/// Example: 1+2*3%4 to Text is "1" becomes: ((1+(2*(3%4))) to Text) is "1"

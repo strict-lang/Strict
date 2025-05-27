@@ -13,7 +13,7 @@ public class BaseVirtualMachineTests : TestExpressions
 	protected static readonly Type TextType = new TestPackage().FindType(Base.Text)!;
 	protected static readonly Type ListType = new TestPackage().FindType(Base.List)!;
 	protected static readonly string[] ArithmeticFunctionExample =
-	{
+	[
 		"has First Number", "has Second Number", "Calculate(operation Text) Number",
 		"\tArithmeticFunction(10, 5).Calculate(\"add\") is 15",
 		"\tArithmeticFunction(10, 5).Calculate(\"subtract\") is 5",
@@ -21,9 +21,9 @@ public class BaseVirtualMachineTests : TestExpressions
 		"\t\treturn First + Second", "\tif operation is \"subtract\"", "\t\treturn First - Second",
 		"\tif operation is \"multiply\"", "\t\treturn First * Second",
 		"\tif operation is \"divide\"", "\t\treturn First / Second"
-	};
+	];
 	protected static readonly Statement[] ExpectedStatementsOfArithmeticFunctionExample =
-	{
+	[
 		new StoreVariableStatement(new Instance(NumberType, 10), "First"),
 		new StoreVariableStatement(new Instance(NumberType, 5), "Second"),
 		new StoreVariableStatement(new Instance(TextType, "add"), "operation"),
@@ -59,18 +59,18 @@ public class BaseVirtualMachineTests : TestExpressions
 		new LoadVariableStatement(Register.R8, "Second"),
 		new BinaryStatement(Instruction.Divide, Register.R7, Register.R8, Register.R9),
 		new ReturnStatement(Register.R9), new JumpToIdStatement(Instruction.JumpEnd, 3)
-	};
+	];
 	protected static readonly string[] SimpleLoopExample =
-	{
+	[
 		"has number", "GetMultiplicationOfNumbers Number",
 		"\tmutable result = 1",
 		"\tconstant multiplier = 2",
 		"\tfor number",
 		"\t\tresult = result * multiplier",
 		"\tresult"
-	};
+	];
 	protected static readonly string[] RemoveParenthesesKata =
-	{
+	[
 		"has text", "Remove Text",
 		"\tmutable result = \"\"",
 		"\tmutable count = 0",
@@ -82,15 +82,15 @@ public class BaseVirtualMachineTests : TestExpressions
 		"\t\tif value is \")\"",
 		"\t\t\tcount = count - 1",
 		"\tresult"
-	};
+	];
 	protected static readonly string[] IfAndElseTestCode =
-	{
+	[
 		"has number", "IsEven Text", "\tmutable result = \"\"", "\tif number > 10",
 		"\t\tresult = \"Number is more than 10\"", "\t\treturn result", "\telse",
 		"\t\tresult = \"Number is less or equal than 10\"", "\t\treturn result"
-	};
+	];
 	protected static readonly string[] SimpleMethodCallCode =
-	{
+	[
 		"has firstNumber Number",
 		"has secondNumber Number",
 		"GetSum Number",
@@ -99,9 +99,9 @@ public class BaseVirtualMachineTests : TestExpressions
 		"SumNumbers(fNumber Number, sNumber Number) Number",
 		"\tconstant result = fNumber + sNumber",
 		"\tresult"
-	};
+	];
 	protected static readonly string[] CurrentlyFailingTest =
-	{
+	[
 		"has number",
 		"SumEvenNumbers Number",
 		"\tconstant result = ComputeSum",
@@ -112,9 +112,9 @@ public class BaseVirtualMachineTests : TestExpressions
 		"\t\tif (index % 2) is 0",
 		"\t\t\tsum = sum + index",
 		"\tsum"
-	};
+	];
 	protected static readonly string[] MethodCallWithConstantValues =
-	{
+	[
 		"has firstNumber Number",
 		"has secondNumber Number",
 		"GetSum Number",
@@ -123,9 +123,9 @@ public class BaseVirtualMachineTests : TestExpressions
 		"SumNumbers(fNumber Number, sNumber Number) Number",
 		"\tconstant result = fNumber + sNumber",
 		"\tresult"
-	};
+	];
 	protected static readonly string[] MethodCallWithLocalVariables =
-	{
+	[
 		"has firstNumber Number",
 		"has secondNumber Number",
 		"GetSum Number",
@@ -136,9 +136,9 @@ public class BaseVirtualMachineTests : TestExpressions
 		"SumNumbers(fNumber Number, sNumber Number) Number",
 		"\tconstant result = fNumber + sNumber",
 		"\tresult"
-	};
+	];
 	protected static readonly string[] MethodCallWithLocalWithNoArguments =
-	{
+	[
 		"has firstNumber Number",
 		"has secondNumber Number",
 		"GetSum Number",
@@ -147,18 +147,18 @@ public class BaseVirtualMachineTests : TestExpressions
 		"SumNumbers Number",
 		"\tconstant result = 10 + 532",
 		"\tresult"
-	};
+	];
 	protected static readonly Statement[] ExpectedSimpleMethodCallCode =
-	{
+	[
 		new StoreVariableStatement(new Instance(NumberType, 2), "firstNumber"),
 		new StoreVariableStatement(new Instance(NumberType, 5), "secondNumber"),
 		new InvokeStatement("SumNumbers(firstNumber, secondNumber)", Register.R0),
 		new StoreFromRegisterStatement(Register.R0, "result"),
 		new LoadVariableStatement(Register.R1, "result"),
 		new ReturnStatement(Register.R1)
-	};
+	];
 	protected static readonly Statement[] ExpectedStatementsOfRemoveParanthesesKata =
-	{
+	[
 		new StoreVariableStatement(new Instance(TextType, "some(thing)"), "text"),
 		new StoreVariableStatement(new Instance(TextType, ""), "result"),
 		new StoreVariableStatement(new Instance(NumberType, 0), "count"),
@@ -194,13 +194,13 @@ public class BaseVirtualMachineTests : TestExpressions
 		new IterationEndStatement(29),
 		new LoadVariableStatement(Register.R6, "result"),
 		new ReturnStatement(Register.R6)
-	};
+	];
 	protected static readonly string[] SimpleListDeclarationExample =
-	{
+	[
 		"has number", "Declare Numbers", "\tconstant myList = (1, 2, 3, 4 ,5)", "\tmyList"
-	};
+	];
 	protected static readonly Statement[] ExpectedStatementsOfSimpleListDeclaration =
-	{
+	[
 		new StoreVariableStatement(new Instance(NumberType, 5), "number"),
 		new StoreVariableStatement(
 			new Instance(ListType,
@@ -213,17 +213,17 @@ public class BaseVirtualMachineTests : TestExpressions
 					new Value(NumberType, 5)
 				}), "myList"),
 		new LoadVariableStatement(Register.R0, "myList"), new ReturnStatement(Register.R0)
-	};
+	];
 	protected static readonly string[] InvertValueKata =
-	{
+	[
 		"has numbers", "Invert Text",
 		"\tmutable result = \"\"",
 		"\tfor numbers",
 		"\t\tresult = result + (0 - value)",
 		"\tresult"
-	};
+	];
 	protected static readonly Statement[] ExpectedStatementsOfInvertValueKata =
-	{
+	[
 		new StoreVariableStatement(
 			new Instance(ListType,
 				new List<Expression>
@@ -246,7 +246,7 @@ public class BaseVirtualMachineTests : TestExpressions
 		new IterationEndStatement(8),
 		new LoadVariableStatement(Register.R6, "result"),
 		new ReturnStatement(Register.R6)
-	};
+	];
 
 	protected MethodCall GenerateMethodCallFromSource(string programName, string methodCall,
 		params string[] source)

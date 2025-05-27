@@ -67,7 +67,7 @@ public class BlurPerformanceTests
 
 	private int width;
 	private int height;
-	private byte[] image = Array.Empty<byte>();
+	private byte[] image = [];
 	private const int BlurIterations = 200;
 
 	public void CompileKernel()
@@ -106,7 +106,7 @@ public class BlurPerformanceTests
 		//https://arnon.dk/matching-sm-architectures-arch-and-gencode-for-various-nvidia-cards/
 		//nvcc .\vectorAdd.cu -use_fast_math -ptx -m 64 -arch compute_61 -code sm_61 -o .\vectorAdd.ptx
 		//https://docs.nvidia.com/cuda/nvrtc/index.html#group__options
-		rtc.Compile(new[] { "--gpu-architecture=compute_" + shaderModelVersion });
+		rtc.Compile(["--gpu-architecture=compute_" + shaderModelVersion]);
 		Console.WriteLine("Cuda compile log: " + rtc.GetLogAsString());
 		const int DeviceID = 0;
 		var ctx = new CudaContext(DeviceID);

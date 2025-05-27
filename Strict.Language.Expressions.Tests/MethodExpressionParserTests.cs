@@ -13,7 +13,7 @@ public sealed class MethodExpressionParserTests : TestExpressions
 	[Test]
 	public void ParseSingleLine()
 	{
-		var body = new Method(type, 0, this, new[] { MethodTests.Run, MethodTests.LetNumber }).
+		var body = new Method(type, 0, this, [MethodTests.Run, MethodTests.LetNumber]).
 			GetBodyAndParseIfNeeded();
 		Assert.That(body.ReturnType, Is.EqualTo(type.FindType(Base.Number)));
 		Assert.That(body, Is.TypeOf<ConstantDeclaration>());
@@ -25,8 +25,8 @@ public sealed class MethodExpressionParserTests : TestExpressions
 	public void ParseMultipleLines()
 	{
 		var body =
-			(Body)new Method(type, 0, this,
-					new[] { MethodTests.Run, MethodTests.LetNumber, MethodTests.LetOther }).
+			(Body)new Method(type, 0, this, [MethodTests.Run, MethodTests.LetNumber, MethodTests.LetOther
+				]).
 				GetBodyAndParseIfNeeded();
 		Assert.That(body.Expressions, Has.Count.EqualTo(2));
 		Assert.That(body.Expressions[0].ToString(), Is.EqualTo(MethodTests.LetNumber[1..]));
@@ -53,8 +53,8 @@ public sealed class MethodExpressionParserTests : TestExpressions
 	[TestCase("\tError \"error occurred: \" + errorMessage + \"at line\" + \"5\"")]
 	public void ParseErrorExpression(string errorExpression)
 	{
-		var body = (Body)new Method(type, 0, this,
-				new[] { MethodTests.Run, MethodTests.LetErrorMessage, errorExpression }).
+		var body = (Body)new Method(type, 0, this, [MethodTests.Run, MethodTests.LetErrorMessage, errorExpression
+			]).
 			GetBodyAndParseIfNeeded();
 		Assert.That(body.ReturnType, Is.EqualTo(type.FindType(Base.None)));
 		Assert.That(body.Expressions, Has.Count.EqualTo(2));
@@ -64,7 +64,7 @@ public sealed class MethodExpressionParserTests : TestExpressions
 
 	[Test]
 	public void ParseInvalidTestException() =>
-		Assert.That(() => (Body)new Method(type, 0, this,
-				new[] { MethodTests.Run, MethodTests.LetNumber, "\tError number" }).
+		Assert.That(() => (Body)new Method(type, 0, this, [MethodTests.Run, MethodTests.LetNumber, "\tError number"
+			]).
 			GetBodyAndParseIfNeeded(), Throws.InnerException.InstanceOf<ArgumentException>());
 }

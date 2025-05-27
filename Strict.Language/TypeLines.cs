@@ -23,7 +23,7 @@ public class TypeLines
 	private IReadOnlyList<string> ExtractDependentTypes()
 	{
 		// Often there are no members, no need to create a new empty list
-		IList<string> dependentTypes = Array.Empty<string>();
+		IList<string> dependentTypes = [];
 		foreach (var line in Lines)
 			if (line.StartsWith(Type.HasWithSpaceAtEnd, StringComparison.Ordinal))
 				AddDependentType(line[Type.HasWithSpaceAtEnd.Length..], ref dependentTypes);
@@ -51,7 +51,7 @@ public class TypeLines
 		if (dependentTypes.Count == 0)
 			dependentTypes = new List<string>();
 		if (remainingLine.Contains('('))
-			foreach (var part in remainingLine.Split(new[] { '(', ')', ',' },
+			foreach (var part in remainingLine.Split(['(', ')', ','],
 				StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
 				AddIfNotExisting(dependentTypes, part);
 		else if (remainingLine.EndsWith('s'))

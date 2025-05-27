@@ -2,7 +2,7 @@
 
 /// <summary>
 /// .strict files contain a type or trait and must be in the correct namespace folder.
-/// Strict code only contains optionally implement, then has*, then methods*. No empty lines.
+/// Strict code only contains optional implement, then has*, then methods*. No empty lines.
 /// There is no typical lexing/scoping/token splitting needed as Strict syntax is very strict.
 /// </summary>
 //TODO: split up into TypeParser, TypeValidator, TypeMemberFinder and TypeMethodFinder and use all of these in this Type class
@@ -31,14 +31,15 @@ public class Type : Context
 
 	private readonly string[] lines;
 	/// <summary>
-	/// Generic types cannot be used directly as we don't know the implementation to be used (e.g. a
-	/// list, we need to know the type of the elements), you must them from <see cref="GenericTypeImplementation"/>!
+	/// Generic types cannot be used directly as we don't know the implementation to be used (e.g.,
+	/// a list, we need to know the type of the elements), you must them from
+	/// <see cref="GenericTypeImplementation"/>!
 	/// </summary>
 	public bool IsGeneric { get; }
 	/// <summary>
 	/// For debugging purposes to see where this Type was initially created.
 	/// </summary>
-	public string CreatedBy { get; protected set; }
+	public string CreatedBy { get; protected init; }
 	private readonly TypeMethodFinder typeMethodFinder;
 	private readonly TypeParser typeParser;
 
@@ -113,7 +114,7 @@ public class Type : Context
 
 	public bool IsDataType =>
 		methods.Count == 0 &&
-		(members.Count > 1 || members.Count == 1 && members[0].Value is not null);
+		(members.Count > 1 || members is [{ Value: not null }]);
 	public bool IsEnum =>
 		methods.Count == 0 && members.Count > 1 && members.All(m => m.Value is not null);
 
@@ -142,9 +143,9 @@ public class Type : Context
 	}
 
 	public List<Member> Members => members;
-	protected readonly List<Member> members = new();
+	protected readonly List<Member> members = [];
 	public List<Method> Methods => methods;
-	protected readonly List<Method> methods = new();
+	protected readonly List<Method> methods = [];
 	public bool IsTrait => Members.Count == 0 && Name != Base.Number && Name != Base.Boolean;
 	public Dictionary<string, Type> AvailableMemberTypes
 	{
@@ -194,9 +195,7 @@ public class Type : Context
 		if (!IsGeneric)
 			throw new CannotGetGenericImplementationOnNonGeneric(Name, key);
 		cachedGenericTypes ??= new Dictionary<string, GenericTypeImplementation>(StringComparer.Ordinal);
-		return cachedGenericTypes.TryGetValue(key, out var genericType)
-			? genericType
-			: null;
+		return cachedGenericTypes.GetValueOrDefault(key);
 	}
 
 	private Dictionary<string, GenericTypeImplementation>? cachedGenericTypes;
@@ -239,8 +238,8 @@ public class Type : Context
 		string extraInformation) : Exception(type + " " + extraInformation);
 
 	/// <summary>
-	/// Any non public member is automatically iteratable if it has Iterator, for example Text.strict
-	/// or Error.strict have public members you have to iterate over yourself.
+	/// Any non-public member is automatically iteratable if it has Iterator, for example,
+	/// Text.strict or Error.strict have public members you have to iterate over yourself.
 	/// If there are two private iterators, then pick the first member automatically
 	/// </summary>
 	public bool IsIterator => Name == Base.Iterator || Name.StartsWith(Base.Iterator + "(", StringComparison.Ordinal) || HasAnyIteratorMember();
@@ -259,7 +258,7 @@ public class Type : Context
 		{
 			if (cachedEvaluatedMemberTypes.TryGetValue(member.Type.Name, out var result))
 				return result;
-			var isIterator = !member.IsPublic && member.Type.IsIterator;
+			var isIterator = member is { IsPublic: false, Type.IsIterator: true };
 			cachedEvaluatedMemberTypes.Add(member.Type.Name, isIterator);
 			if (isIterator)
 				return true;
@@ -294,13 +293,12 @@ public class Type : Context
 		members.Any(member => member.Type == GetType(Base.Number));
 
 	internal bool IsMutableAndHasMatchingImplementation(Type argumentType) =>
-		this is GenericTypeImplementation genericTypeImplementation &&
-		genericTypeImplementation.Generic.Name == Base.Mutable &&
+		this is GenericTypeImplementation { Generic.Name: Base.Mutable } genericTypeImplementation &&
 		genericTypeImplementation.ImplementationTypes[0] == argumentType;
 
 	/// <summary>
-	/// When two types are using in a conditional expression, i.e. then and else return types and both
-	/// are not based on each other, find the common base type that works for both.
+	/// When two types are using in a conditional expression, i.e., then and else return types and
+	/// both are not based on each other, find the common base type that works for both.
 	/// </summary>
 	public Type? FindFirstUnionType(Type elseType)
 	{
@@ -359,7 +357,7 @@ public class Type : Context
 			methodsWithThisName.Add(method);
 		}
 		else
-			cachedAvailableMethods.Add(method.Name, new List<Method> { method });
+			cachedAvailableMethods.Add(method.Name, [method]);
 	}
 
 	public bool IsTraitImplementation(Type memberType) =>
@@ -393,7 +391,7 @@ public class Type : Context
 
 	private static IReadOnlyDictionary<string, List<Method>>? cachedAnyMethods;
 
-	public class NoMatchingMethodFound(Type type, string methodName,
+	public sealed class NoMatchingMethodFound(Type type, string methodName,
 		IReadOnlyDictionary<string, List<Method>> availableMethods) : Exception(methodName +
 		" not found for " + type + ", available methods: " + availableMethods.Keys.ToWordList());
 
@@ -432,7 +430,7 @@ public class Type : Context
 		return genericArguments;
 	}
 
-	public class InvalidGenericTypeWithoutGenericArguments(Type type) : Exception(
+	public sealed class InvalidGenericTypeWithoutGenericArguments(Type type) : Exception(
 		"This type is broken and needs to be fixed, check the creation: " + type + ", CreatedBy: " +
 		type.CreatedBy);
 

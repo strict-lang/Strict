@@ -12,7 +12,7 @@ public sealed class ListTests : TestExpressions
 	[TestCase("(5.23)", 5.23)]
 	public void ParseSingleElementLists(string input, double expectedElement) =>
 		ParseAndCheckOutputMatchesInput(input,
-			new List(new Body(method), new List<Expression> { new Number(method, expectedElement) }));
+			new List(new Body(method), [new Number(method, expectedElement)]));
 
 	[TestCase("(\"1\", 2)")]
 	[TestCase("(1, 2.5, \"5\")")]
@@ -57,7 +57,7 @@ public sealed class ListTests : TestExpressions
 	[Test]
 	public void ParseLists() =>
 		ParseAndCheckOutputMatchesInput("((1, 3), (2, 4))",
-			new List(new Body(method), GetListExpressions(new[] { "(1, 3)", "(2, 4)" })));
+			new List(new Body(method), GetListExpressions(["(1, 3)", "(2, 4)"])));
 
 	[TestCase("(1, 2, 3, 4, 5) + \"4\"")]
 	[TestCase("(1, 2, 3, 4, 5) + (\"hello\")")]
@@ -141,14 +141,13 @@ public sealed class ListTests : TestExpressions
 	[Test]
 	public void ParseNestedLists() =>
 		ParseAndCheckOutputMatchesInput("((1, 2, 3) + (3, 4), (4))",
-			new List(new Body(method),
-				new List<Expression>
-				{
-					CreateBinary(new List(new Body(method), GetListExpressions("1, 2, 3".Split(", "))),
-						BinaryOperator.Plus,
-						new List(new Body(method), GetListExpressions("3, 4".Split(", ")))),
-					new List(new Body(method), GetListExpressions("4".Split(", ")))
-				}));
+			new List(new Body(method), [
+				CreateBinary(new List(new Body(method), GetListExpressions("1, 2, 3".Split(", "))),
+					BinaryOperator.Plus,
+					new List(new Body(method), GetListExpressions("3, 4".Split(", ")))),
+
+				new List(new Body(method), GetListExpressions("4".Split(", ")))
+			]));
 
 	[Test]
 	public void ParseComplexLists() =>
@@ -156,11 +155,10 @@ public sealed class ListTests : TestExpressions
 			"((\"Hello, World\", \"Yoyo (it is my secret + 1)\"), (\"4\")) + (\"7\")",
 			CreateBinary(
 				new List(new Body(method),
-					GetListExpressions(new[]
-					{
+					GetListExpressions([
 						"(\"Hello, World\", \"Yoyo (it is my secret + 1)\"), (\"4\")"
-					})), BinaryOperator.Plus,
-				new List(new Body(method), new List<Expression> { new Text(method, "7") })));
+					])), BinaryOperator.Plus,
+				new List(new Body(method), [new Text(method, "7")])));
 
 	[Test]
 	public void ContainsMethodCallOnNumbersList()

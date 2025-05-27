@@ -17,7 +17,6 @@ internal class TypeMethodFinder(Type type)
 		FindMethod(methodName, arguments, parser) ??
 		throw new NoMatchingMethodFound(Type, methodName, Type.AvailableMethods);
 
-	//TODO: method too long
 	public Method? FindMethod(string methodName, IReadOnlyList<Expression> arguments,
 		ExpressionParser parser)
 	{
@@ -26,51 +25,26 @@ internal class TypeMethodFinder(Type type)
 				"Type is Generic and cannot be used directly");
 		if (!Type.AvailableMethods.TryGetValue(methodName, out var matchingMethods))
 			return FindAndCreateFromBaseMethod(methodName, arguments, parser);
-		var typesOfArguments =
-			new Lazy<IReadOnlyList<Type>>(() =>
-				arguments.Select(argument => argument.ReturnType).ToList());
-		//TODO: explain what this does, put it into a method name, we don't want to use multiple different types of arguments here
-		//old code had problems, this fixed it, but can be simplified: var commonTypeOfArguments = new Lazy<Type?>(() => TrySingle(typesOfArguments.Value.Distinct()));
-		var commonTypeOfArguments =		
-			new Lazy<Type?>(() =>
-			{
-				Type? result = null;
-				foreach (var type in typesOfArguments.Value.Distinct())
-				{
-					if (result != null)
-						return null;
-					result = type;
-				}
-				return result;
-			});
+		var typesOfArguments = arguments.Select(argument => argument.ReturnType).ToList();
+		var commonTypeOfArguments = TryGetSingleElementType(typesOfArguments);
 		foreach (var method in matchingMethods)
-		{
-			if (IsMethodWithMatchingParametersType(method, typesOfArguments.Value))
+			if (IsMethodWithMatchingParametersType(method, typesOfArguments) ||
+				commonTypeOfArguments != null &&
+				commonTypeOfArguments == GetListElementTypeIfHasSingleParameter(method))
 				return method;
-			if (commonTypeOfArguments.Value != null && commonTypeOfArguments.Value ==
-				GetListElementTypeIfHasSingleParameter(method))
-				return method;
-		}
 		return FindAndCreateFromBaseMethod(methodName, arguments, parser) ??
 			throw new ArgumentsDoNotMatchMethodParameters(arguments, Type, matchingMethods);
 	}
 
-	/// <summary>
-	/// if <see cref="list"/> contains exactly one item it returns this item
-	/// </summary>
-	/// <typeparam name="T"></typeparam>
-	/// <param name="list"></param>
-	/// <returns>if <see cref="list"/> contains exactly one item it returns this item, otherwise it returns the default value</returns>
-	private static T? TrySingle<T>(IEnumerable<T> list)
+	private static T? TryGetSingleElementType<T>(IEnumerable<T> argumentTypes) where T : class
 	{
-		T? result = default;
-		foreach (var item in list)
-		{
-			if (!ReferenceEquals(result, default))
-				return default;
-			result = item;
-		}
-		return result;
+		T? firstType = null;
+		foreach (var type in argumentTypes)
+			if (firstType == null)
+				firstType = type;
+			else if (firstType != type)
+				return null;
+		return firstType;
 	}
 
 	private static Type? GetListElementTypeIfHasSingleParameter(Method method) =>

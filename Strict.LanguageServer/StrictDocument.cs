@@ -12,7 +12,7 @@ namespace Strict.LanguageServer;
 public sealed class StrictDocument
 {
 	private readonly ConcurrentDictionary<DocumentUri, string[]> strictDocuments = new();
-	private List<string> content = new();
+	private List<string> content = [];
 	private readonly VirtualMachine.VirtualMachine vm = new();
 
 	public void Update(DocumentUri uri, TextDocumentContentChangeEvent[] changes)
@@ -97,7 +97,7 @@ public sealed class StrictDocument
 	public string[] Get(DocumentUri uri) =>
 		strictDocuments.TryGetValue(uri, out var code)
 			? code
-			: new[] { "" };
+			: [""];
 
 	public IEnumerable<Diagnostic> GetDiagnostics(Package package, DocumentUri uri,
 		ILanguageServerFacade languageServer)

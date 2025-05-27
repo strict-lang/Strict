@@ -112,7 +112,6 @@ public sealed class Body : Expression
 			}");
 
 	public sealed class ReturnAsLastExpressionIsNotNeeded(Body body) : ParsingFailed(body);
-	public sealed class ReturnAsLastExpressionIsNotNeeded(Body body) : ParsingFailed(body);
 	/// <summary>
 	/// Dictionaries are slow and eats up a lot of memory, only created when needed.
 	/// </summary>

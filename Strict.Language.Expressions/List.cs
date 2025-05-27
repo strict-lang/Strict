@@ -9,7 +9,7 @@ public sealed class List : Value
 		Values = values;
 
 	public List(Type type) : base(type, Array.Empty<Expression>()) =>
-		Values = new List<Expression>();
+		Values = [];
 
 	private static Type
 		GetCommonBaseType(IReadOnlyList<Type> returnTypes, Body bodyForErrorMessage) =>
@@ -43,11 +43,7 @@ public sealed class List : Value
 			? null
 			: input.Length == 2
 				? throw new EmptyListNotAllowed(body)
-				: new List(body,
-					new List<Expression>
-					{
-						body.Method.ParseExpression(body, input[1..^1])
-					});
+				: new List(body, [body.Method.ParseExpression(body, input[1..^1])]);
 
 	public static Expression? TryParseWithMultipleOrNestedElements(Body body, ReadOnlySpan<char> input) =>
 		input.Length > 2 && input[0] == '(' && input[^1] == ')'
@@ -60,7 +56,7 @@ public sealed class List : Value
 	public void UpdateValue(Body bodyForErrorMessage, Expression index, Expression newExpression)
 	{
 		if (Values.Count == 0)
-			Values = new List<Expression> { newExpression };
+			Values = [newExpression];
 		if (index is Number number && int.TryParse(number.Data.ToString(), out var indexNumber))
 			if (Values.Count - 1 >= indexNumber)
 				Values[indexNumber] = newExpression;

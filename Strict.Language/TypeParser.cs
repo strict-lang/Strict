@@ -59,11 +59,14 @@ public sealed class TypeParser(Type type, string[] lines)
 		return line;
 	}
 
+	public sealed class EmptyLineIsNotAllowed(Type type, int lineNumber)
+		: ParsingFailed(type, lineNumber);
+
 	public sealed class ExtraWhitespacesFoundAtBeginningOfLine(Type type, int lineNumber,
 		string message, string method = "") : ParsingFailed(type, lineNumber, message, method);
 
-	public sealed class EmptyLineIsNotAllowed(Type type, int lineNumber)
-		: ParsingFailed(type, lineNumber);
+	public sealed class ExtraWhitespacesFoundAtEndOfLine(Type type, int lineNumber,
+		string message, string method = "") : ParsingFailed(type, lineNumber, message, method);
 
 	private Member GetNewMember(ExpressionParser parser, bool usedMutableKeyword = false)
 	{
@@ -154,7 +157,7 @@ public sealed class TypeParser(Type type, string[] lines)
 
 	private Expression GetMemberExpression(ExpressionParser parser, string memberName,
 		ReadOnlySpan<char> remainingTextSpan) =>
-		parser.ParseExpression(new Body(new Method(type, 0, parser, new[] { Type.EmptyBody })),
+		parser.ParseExpression(new Body(new Method(type, 0, parser, [Type.EmptyBody])),
 			GetFromConstructorCallFromUpcastableMemberOrJustEvaluate(memberName, remainingTextSpan));
 
 	private ReadOnlySpan<char> GetFromConstructorCallFromUpcastableMemberOrJustEvaluate(
