@@ -1,3 +1,9 @@
 ﻿<ProjectConfiguration>
-  <Settings />
+  <Settings>
+    <IgnoredTests>
+      <NamedTestSelector>
+        <TestName>Strict.Language.Tests.RepositoriesTests.LoadStrictExamplesPackageAndUseBasePackageTypes</TestName>
+      </NamedTestSelector>
+    </IgnoredTests>
+  </Settings>
 </ProjectConfiguration>

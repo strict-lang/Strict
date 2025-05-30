@@ -1,8 +1,8 @@
 name = strict
 file_extensions[] = strict;
 
-__KEYWORD_CONTROL \= ((if|else|for|to|from|in|has|is|do|stream)(?!([a-zA-Z]+[a-zA-Z0-9_]*)))
-__KEYWORD_OTHER \= ((implement|import|has|return|returns|stream|catch|let)(?!([a-zA-Z]+[a-zA-Z0-9_]*)))
+__KEYWORD_CONTROL \= ((if|else|for|to|from|in|is)(?!([a-zA-Z]+[a-zA-Z0-9_]*)))
+__KEYWORD_OTHER \= ((has|mutable|constant|return)(?!([a-zA-Z]+[a-zA-Z0-9_]*)))
 __KEYWORD_OPERATORS \= (is|not|and|or|xor)
 __OPERATORS \= ([\{\}.+|\-()<>\[\]!=%*,:/]+)
 __IDENTIFIER \= ([a-zA-Z]+[a-zA-Z0-9_]*)
@@ -71,7 +71,7 @@ styles [] {
       color = pink
       textmate_scope = entity.name.function
    }
-   
+
    .AmbigousMethodId : style {
      color = white
      textmate_scope = identifier
@@ -116,7 +116,7 @@ styles [] {
       color = orange
       textmate_scope = keyword.operator
    }
-   
+
    .KeywordOperator : style {
       color = orange
       textmate_scope = keyword.operator
@@ -132,22 +132,22 @@ styles [] {
       background_color = red
       textmate_scope = invalid
    }
-   
+
    .StringInterpolationField : style {
      color = white
      textmate_scope = meta.interpolation
    }
-   
+
    .StringInterpolationPunctuation : style {
      color = blue
      textmate_scope = meta.interpolation
    }
-   
+
    .StringInterpolationPunctuationBegin : style {
      color = blue
      textmate_scope = punctuation.section.interpolation.begin
    }
-   
+
    .StringInterpolationPunctuationEnd : style {
      color = blue
      textmate_scope = punctuation.section.interpolation.end
@@ -160,8 +160,7 @@ contexts [] {
       : include "MethodDeclaration";
       : include "FactoryDeclaration";
       : include "Throws";
-      
-      : include "LetBinding";
+      : include "MutableOrConstant";
       : include "Code";
    }
 
@@ -187,7 +186,7 @@ contexts [] {
          }
       }
    }
-   
+
    ClassSpecific : context {
      : pattern {
        regex \= (implement)(\s+)$${__TYPE_NAME}
@@ -254,7 +253,7 @@ contexts [] {
             styles [] = .Punctuation;
          }
          : include "ParameterList";
-      }   
+      }
       : inline_push {
          regex \= (method)(\s+)$${__IDENTIFIER}(\s*)(\()
          styles [] = .keyword_declaration, .None, .NameOfFunction, .None, .Punctuation;
@@ -263,8 +262,8 @@ contexts [] {
             styles [] = .Punctuation;
          }
          : include "ParameterList";
-      } 
-      
+      }
+
       : pattern {
          regex \= (returns)(\s*)$${__TYPE_NAME}
          styles []= .keyword_declaration, .None, .NameOfType;
@@ -308,19 +307,19 @@ contexts [] {
       }
    }
 
-   LetBinding : context {
+   MutableOrConstant : context {
       : pattern {
-        regex \= (let|use)(\s+)$${__IDENTIFIER}(\s+)(\=)
+        regex \= (mutable|constant)(\s+)$${__IDENTIFIER}(\s+)(\=)
         styles []= .keyword_declaration, .None, .NameOfVariable, .None, .Punctuation;
       }
       : pattern {
         regex \= (has)(\s+)$${__IDENTIFIER}(\s+)$${__TYPE_NAME}
         styles []= .keyword_declaration, .None, .NameOfVariable, .None, .NameOfType;
-      } 
+      }
       : pattern {
         regex \= (has)(\s+)$${__IDENTIFIER}
         styles []= .keyword_declaration, .None, .NameOfVariable;
-      } 
+      }
       : pattern {
         regex \= (has)
         styles []= .keyword_declaration;
@@ -328,7 +327,7 @@ contexts [] {
    }
 
    Expressions : context {
-      : include "LetBinding";
+      : include "MutableOrConstant";
       : include "CreateExpression";
       : include "Keyword";
       : include "MethodCall";
@@ -337,12 +336,12 @@ contexts [] {
         regex \= $${__IDENTIFIER}(\s+)(\:)
         styles []= .NameOfLabel, .None, .Punctuation;
       }
-      
+
       : pattern {
          regex \= (\.)$${__IDENTIFIER}
          styles []= .Accessor, .NameOfMember;
       }
-      
+
       : include "ExpressionList";
       : include "Operator";
       : include "Assignment";
@@ -489,7 +488,7 @@ contexts [] {
              styles []= .StringInterpolationPunctuationEnd;
            }
            : include "Expressions";
-         } 
+         }
          : pattern {
             regex \= (\\(?:\\|"))
             styles [] = .TextLiteral;

@@ -13,9 +13,13 @@ internal class TypeMethodFinder(Type type)
 				IsMethodWithMatchingParametersType(method, implementationTypes));
 
 	public Method GetMethod(string methodName, IReadOnlyList<Expression> arguments,
-		ExpressionParser parser) =>
-		FindMethod(methodName, arguments, parser) ??
-		throw new NoMatchingMethodFound(Type, methodName, Type.AvailableMethods);
+		ExpressionParser parser)
+	{
+		var method = FindMethod(methodName, arguments, parser);
+		if (method == null)
+			throw new NoMatchingMethodFound(Type, methodName, Type.AvailableMethods);
+		return method;
+	}
 
 	public Method? FindMethod(string methodName, IReadOnlyList<Expression> arguments,
 		ExpressionParser parser)

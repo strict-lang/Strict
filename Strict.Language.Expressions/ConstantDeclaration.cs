@@ -33,7 +33,7 @@ public class ConstantDeclaration : ConcreteExpression
 			: null;
 
 	/// <summary>
-	/// Highly optimized parsing of assignments, skips over the let, grabs the name of the local
+	/// Highly optimized parsing of assignments, skips over the mutable, grabs the name of the local
 	/// variable, then skips over the space, equal and space characters and parses the rest, e.g.
 	/// constant hello = "hello" + " " + "world"
 	///					 ^ ^       ^ ^   ^ ^       END, using TryParseExpression with Range(12, 35)

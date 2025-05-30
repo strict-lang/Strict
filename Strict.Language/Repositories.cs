@@ -288,9 +288,9 @@ public sealed class Repositories
 	private static bool IsValidCodeDirectory(string directory) =>
 		Path.GetFileName(directory).IsWord();
 
-	public const string StrictDevelopmentFolderPrefix = @"C:\codeo\GitHub\strict-lang\Strict.";
+	public const string StrictDevelopmentFolderPrefix = @"C:\code\GitHub\strict-lang\Strict.";
 	private static string CacheFolder =>
-		Path.Combine( //ncrunch: no coverage, only downloaded and cached on non development machines
+		Path.Combine( //ncrunch: no coverage, only downloaded and cached on non-development machines
 			Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), StrictPackages);
 	private const string StrictPackages = nameof(StrictPackages);
 	public static readonly Uri StrictPrefixUri = new("https://github.com/strict-lang/Strict.");

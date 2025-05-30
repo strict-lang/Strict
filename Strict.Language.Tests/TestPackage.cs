@@ -108,7 +108,7 @@ public class TestPackage : Package
 			"\tCharacter(0) + number",
 			"to Number",
 			"\tCharacter(\"3\") to Number is 3",
-			"\tmutable notANumber = Error",
+			"\tmutable notANumber Error",
 			"\tCharacter(\"A\") to Number is notANumber",
 			"\tconstant result = value - Character(0)",
 			"\tresult is in Range(0, 10) ? result else notANumber(value)"));

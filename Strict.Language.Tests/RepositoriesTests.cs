@@ -55,6 +55,7 @@ public class RepositoriesTests
 	}
 
 	[Test]
+	[Category("Slow")]
 	public async Task LoadStrictExamplesPackageAndUseBasePackageTypes()
 	{
 		var parser = new MethodExpressionParser();
@@ -76,11 +77,9 @@ public class RepositoriesTests
 		var parser = new MethodExpressionParser();
 		var repositories = new Repositories(parser);
 		await repositories.LoadStrictPackage();
-		await repositories.LoadFromPath(
-			StrictDevelopmentFolder + ".Math");
+		await repositories.LoadFromPath(StrictDevelopmentFolder + ".Math");
 		var imageProcessingPackage =
-			await repositories.LoadFromPath(
-				StrictDevelopmentFolder + ".ImageProcessing");
+			await repositories.LoadFromPath(StrictDevelopmentFolder + ".ImageProcessing");
 		var adjustBrightness = imageProcessingPackage.GetType("AdjustBrightness");
 		Assert.That(adjustBrightness, Is.Not.Null);
 		Assert.That(adjustBrightness.Methods[0].GetBodyAndParseIfNeeded(), Is.Not.Null);

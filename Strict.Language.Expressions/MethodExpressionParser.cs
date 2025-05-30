@@ -10,7 +10,7 @@ public class MethodExpressionParser : ExpressionParser
 {
 	/// <summary>
 	/// Slightly slower version that checks high-level expressions that can only occur at the line
-	/// level like let, if, for (those will increase methodLineNumber as well) and return.
+	/// level like mutable, if, for (those will increase methodLineNumber as well) and return.
 	/// Every other expression can be nested and can appear anywhere.
 	/// </summary>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
