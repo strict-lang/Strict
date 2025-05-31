@@ -1,10 +1,10 @@
 ﻿namespace Strict.Language.Expressions;
 
 /// <summary>
-/// Parses for loop expressions. Usually loop would have an implicit variable if not explicitly given anything,
-/// so the variable is parsed with the first value of the iterable,
-/// e.g. for list the first element of the list or for range from 0
-/// If explicit variable is given, the variable is added in the body, similarly to implicit index/value variables.
+/// Parses for loop expressions. Usually loop would have an implicit variable if not explicitly
+/// given anything, so the variable is parsed with the first value of the iterable.
+/// E.g., for a list the first element of the list or for range from 0. If an explicit variable is
+/// given, the variable is added in the body, similarly to implicit index/value variables.
 /// </summary>
 public sealed class For : Expression
 {
@@ -89,6 +89,10 @@ public sealed class For : Expression
 
 	private static void AddVariableIfDoesNotExist(Body body, ReadOnlySpan<char> line, ReadOnlySpan<char> variableName)
 	{
+		Expression? variableValue = null;
+		var variableIndex = variableName.Contains(',')
+			? 0
+			: -1;
 		foreach (var variable in variableName.Split(',', StringSplitOptions.TrimEntries))
 		{
 			if (body.FindVariableValue(variable) != null)
@@ -96,9 +100,25 @@ public sealed class For : Expression
 			var iterableName = variable.ToString();
 			if (body.Method.Type.FindMember(iterableName) != null)
 				continue;
-			var variableValue = GetVariableExpression(body, line);
-			variableValue.IsMutable = true;
-			body.AddVariable(iterableName, variableValue);
+			variableValue ??= GetVariableExpression(body, line);
+			if (variableIndex >= 0)
+			{
+				var variableIteratorType = GetIteratorType(variableValue);
+				if (!variableIteratorType.IsIterator)
+					throw new ExpressionTypeIsNotAnIterator(body, variableIteratorType.Name,
+						line.ToString());
+				var memberCall = new MemberCall(variableValue, variableIteratorType.Members[variableIndex])
+				{
+					IsMutable = true
+				};
+				body.AddVariable(iterableName, memberCall);
+				variableIndex++;
+			}
+			else
+			{
+				variableValue.IsMutable = true;
+				body.AddVariable(iterableName, variableValue);
+			}
 		}
 	}
 
@@ -106,13 +126,13 @@ public sealed class For : Expression
 	{
 		var forIteratorText = GetForIteratorText(line);
 		var iteratorExpression = body.Method.ParseExpression(body, forIteratorText);
-		return iteratorExpression is MethodCall { ReturnType.Name: Base.Range } methodCall
-			? GetVariableFromRange(iteratorExpression, methodCall)
-			: iteratorExpression.ReturnType is GenericTypeImplementation { Generic.Name: Base.List }
-				? body.Method.ParseExpression(body, forIteratorText[^1] == ')'
-					? forIteratorText[1..forIteratorText.IndexOf(',')]
-					: forIteratorText.ToString() + "(0)")
-				: iteratorExpression;
+		if (iteratorExpression is MethodCall { ReturnType.Name: Base.Range } methodCall)
+			return GetVariableFromRange(iteratorExpression, methodCall);
+		if (iteratorExpression.ReturnType is GenericTypeImplementation { Generic.Name: Base.List })
+			return body.Method.ParseExpression(body, forIteratorText[^1] == ')'
+				? forIteratorText[1..forIteratorText.IndexOf(',')]
+				: forIteratorText.ToString() + "(0)");
+		return iteratorExpression;
 	}
 
 	private static Expression GetVariableFromRange(Expression iteratorExpression,
@@ -171,19 +191,22 @@ public sealed class For : Expression
 	private static void AddImplicitVariables(Body body, ReadOnlySpan<char> line, Body innerBody)
 	{
 		innerBody.AddVariable(IndexName, new Number(body.Method, 0));
-		var variableValue = innerBody.Method.ParseExpression(innerBody, GetVariableExpressionValue(body, line));
+		var variableValue =
+			innerBody.Method.ParseExpression(innerBody, GetVariableExpressionValue(body, line));
 		variableValue.IsMutable = true;
 		innerBody.AddVariable(ValueName, variableValue);
 	}
 
-	private static string GetVariableExpressionValue(Body body, ReadOnlySpan<char> line, ReadOnlySpan<char> knownIterableName = default)
+	private static string GetVariableExpressionValue(Body body, ReadOnlySpan<char> line,
+		ReadOnlySpan<char> knownIterableName = default)
 	{
 		if (line.Contains("Range", StringComparison.Ordinal))
 			return $"{GetRangeExpression(line)}.Start";
 		var iterableName = knownIterableName.IsEmpty
 			? FindIterableName(line)
 			: knownIterableName;
-		var variable = body.FindVariableValue(iterableName)?.ReturnType ?? body.Method.Type.FindMember(iterableName.ToString())?.Type;
+		var variable = body.FindVariableValue(iterableName)?.ReturnType ??
+			body.Method.Type.FindMember(iterableName.ToString())?.Type;
 		return iterableName[^1] == ')'
 			? iterableName[1..iterableName.IndexOf(',')].ToString()
 			: variable is { IsIterator: true }

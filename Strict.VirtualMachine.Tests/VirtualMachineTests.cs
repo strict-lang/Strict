@@ -56,12 +56,12 @@ public class VirtualMachineTests : BaseVirtualMachineTests
 		BuildStatements(IReadOnlyList<object> inputs, Instruction operation) =>
 	[
 		new SetStatement(new Instance(inputs[0] is int
-				? NumberType
-				: TextType, inputs[0]), Register.R0),
-			new SetStatement(new Instance(inputs[1] is int
-				? NumberType
-				: TextType, inputs[1]), Register.R1),
-			new BinaryStatement(operation, Register.R0, Register.R1)
+			? NumberType
+			: TextType, inputs[0]), Register.R0),
+		new SetStatement(new Instance(inputs[1] is int
+			? NumberType
+			: TextType, inputs[1]), Register.R1),
+		new BinaryStatement(operation, Register.R0, Register.R1)
 	];
 
 	[Test]

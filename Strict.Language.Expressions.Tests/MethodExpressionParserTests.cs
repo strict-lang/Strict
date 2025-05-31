@@ -24,10 +24,9 @@ public sealed class MethodExpressionParserTests : TestExpressions
 	[Test]
 	public void ParseMultipleLines()
 	{
-		var body =
-			(Body)new Method(type, 0, this, [MethodTests.Run, MethodTests.LetNumber, MethodTests.LetOther
-				]).
-				GetBodyAndParseIfNeeded();
+		var body = (Body)new Method(type, 0, this, [
+			MethodTests.Run, MethodTests.LetNumber, MethodTests.LetOther
+		]).GetBodyAndParseIfNeeded();
 		Assert.That(body.Expressions, Has.Count.EqualTo(2));
 		Assert.That(body.Expressions[0].ToString(), Is.EqualTo(MethodTests.LetNumber[1..]));
 		Assert.That(body.Expressions[1].ToString(), Is.EqualTo(MethodTests.LetOther[1..]));
@@ -53,9 +52,9 @@ public sealed class MethodExpressionParserTests : TestExpressions
 	[TestCase("\tError \"error occurred: \" + errorMessage + \"at line\" + \"5\"")]
 	public void ParseErrorExpression(string errorExpression)
 	{
-		var body = (Body)new Method(type, 0, this, [MethodTests.Run, MethodTests.LetErrorMessage, errorExpression
-			]).
-			GetBodyAndParseIfNeeded();
+		var body = (Body)new Method(type, 0, this, [
+			MethodTests.Run, MethodTests.LetErrorMessage, errorExpression
+		]).GetBodyAndParseIfNeeded();
 		Assert.That(body.ReturnType, Is.EqualTo(type.FindType(Base.None)));
 		Assert.That(body.Expressions, Has.Count.EqualTo(2));
 		Assert.That(body.Expressions[0].ReturnType.Name, Is.EqualTo(Base.Text));
@@ -64,7 +63,7 @@ public sealed class MethodExpressionParserTests : TestExpressions
 
 	[Test]
 	public void ParseInvalidTestException() =>
-		Assert.That(() => (Body)new Method(type, 0, this, [MethodTests.Run, MethodTests.LetNumber, "\tError number"
-			]).
-			GetBodyAndParseIfNeeded(), Throws.InnerException.InstanceOf<ArgumentException>());
+		Assert.That(() => (Body)new Method(type, 0, this, [
+			MethodTests.Run, MethodTests.LetNumber, "\tError number"
+		]).GetBodyAndParseIfNeeded(), Throws.InnerException.InstanceOf<ArgumentException>());
 }

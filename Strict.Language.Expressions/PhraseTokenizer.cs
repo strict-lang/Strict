@@ -1,8 +1,8 @@
 ﻿namespace Strict.Language.Expressions;
 
 /// <summary>
-/// Phrases are any expressions containing spaces (if not they are just single expressions and
-/// don't need any tokenizing). They could come from a full line of code, conditions of ifs,
+/// Phrases are any expressions containing spaces (if not, they are just single expressions and
+/// don't need any tokenizing). They could come from a full line of code, conditions of ifs, the
 /// right part of assignments or method call arguments. Optimized for speed and memory efficiency
 /// (no new), no memory is allocated except for the check if we are in a list or just grouping.
 /// </summary>
@@ -51,7 +51,7 @@ public sealed class PhraseTokenizer
 		if (textStart == -1)
 			textStart = index;
 		else if (index + 1 < input.Length && input[index + 1] == '\"')
-			index++; // next character is still a text (double quote), continue text
+			index++; // the next character is still a text (double quote), continue text
 		else
 		{
 			processToken(textStart..(index + 1));
@@ -81,8 +81,8 @@ public sealed class PhraseTokenizer
 
 	private void ProcessTokenAfterSpace(Action<Range> processToken)
 	{
-		// If our previous character was a , and not alone we parsed it as one token (outside list
-		// element), it needs to be split into two tokens like for complex cases so processing
+		// If our previous character was a space, and not alone, we parsed it as one token (outside
+		// a list element); it needs to be split into two tokens like for complex cases so processing
 		// elements works in ParseListElements
 		if (index > tokenStart + 1 && input[index - 1] == ',')
 		{
@@ -102,8 +102,8 @@ public sealed class PhraseTokenizer
 	internal const char CloseBracket = ')';
 
 	/// <summary>
-	/// It is very important to catch everything before the opening bracket as well. However if this
-	/// is a binary expression we want to catch, split the initial range as its own method call.
+	/// It is very important to catch everything before the opening bracket as well. However, if
+	/// this is a binary expression we want to catch, split the initial range as its own method call.
 	/// </summary>
 	private sealed class TokensTillMatchingBracketGrabber
 	{
@@ -155,7 +155,7 @@ public sealed class PhraseTokenizer
 			tokens.tokenStart = -1;
 			result.Add(tokens.index..(tokens.index + 1));
 			return tokens.index + 1 < tokens.input.Length &&
-				// Consume nested member or method call as single token
+				// Consume a nested member or method call as a single token
 				tokens.input[tokens.index + 1] != '.';
 		}
 
@@ -202,7 +202,9 @@ public sealed class PhraseTokenizer
 	private bool MemberOrMethodCallWithNoArguments() =>
 		index > 0 && input[index - 1] == ' ' && input[index - 2] != ',';
 
-	private static Range[] MergeAllTokensIntoSingleList(List<Range> result) => [result[0].Start..result[^1].End
+	private static Range[] MergeAllTokensIntoSingleList(List<Range> result) =>
+	[
+		result[0].Start..result[^1].End
 	];
 
 	public sealed class UnterminatedString(string input) : Exception(input);

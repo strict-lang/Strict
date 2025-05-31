@@ -19,11 +19,10 @@ public sealed class TypeValidatorTests
 
 	[Test]
 	public void ValidateUnusedMember() =>
-		Assert.That(
-			() => new TypeValidator([
+		Assert.That(() => new TypeValidator([
 				ParseTypeMethods(CreateType(nameof(ValidateUnusedMember), [
 					"has unused Number", "Run(methodInput Number)",
-						"\tconstant result = 5 + methodInput", "\tresult"
+					"\tconstant result = 5 + methodInput", "\tresult"
 				]))
 			]).Validate(),
 			Throws.InstanceOf<MemberValidator.UnusedMemberMustBeRemoved>().With.Message.
@@ -42,15 +41,14 @@ public sealed class TypeValidatorTests
 
 	[Test]
 	public void ProperlyUsedMemberShouldBeAllowed() =>
-		Assert.DoesNotThrow(
-			() => new TypeValidator([
-				ParseTypeMethods(CreateType(nameof(ProperlyUsedMemberShouldBeAllowed), [
-					"has usedMember Number",
-						"Run(methodInput Number)",
-						"\tconstant result = usedMember + methodInput",
-						"\tresult"
-				]))
-			]).Validate());
+		Assert.DoesNotThrow(() => new TypeValidator([
+			ParseTypeMethods(CreateType(nameof(ProperlyUsedMemberShouldBeAllowed), [
+				"has usedMember Number",
+				"Run(methodInput Number)",
+				"\tconstant result = usedMember + methodInput",
+				"\tresult"
+			]))
+		]).Validate());
 
 	[Test]
 	public void ValidateTypeHasTooManyDependenciesFromMethod() =>

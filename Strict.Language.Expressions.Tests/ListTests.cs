@@ -140,14 +140,11 @@ public sealed class ListTests : TestExpressions
 
 	[Test]
 	public void ParseNestedLists() =>
-		ParseAndCheckOutputMatchesInput("((1, 2, 3) + (3, 4), (4))",
-			new List(new Body(method), [
-				CreateBinary(new List(new Body(method), GetListExpressions("1, 2, 3".Split(", "))),
-					BinaryOperator.Plus,
-					new List(new Body(method), GetListExpressions("3, 4".Split(", ")))),
-
-				new List(new Body(method), GetListExpressions("4".Split(", ")))
-			]));
+		ParseAndCheckOutputMatchesInput("((1, 2, 3) + (3, 4), (4))", new List(new Body(method), [
+			CreateBinary(new List(new Body(method), GetListExpressions("1, 2, 3".Split(", "))),
+				BinaryOperator.Plus, new List(new Body(method), GetListExpressions("3, 4".Split(", ")))),
+			new List(new Body(method), GetListExpressions("4".Split(", ")))
+		]));
 
 	[Test]
 	public void ParseComplexLists() =>

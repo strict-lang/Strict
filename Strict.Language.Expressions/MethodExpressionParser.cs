@@ -10,7 +10,7 @@ public class MethodExpressionParser : ExpressionParser
 {
 	/// <summary>
 	/// Slightly slower version that checks high-level expressions that can only occur at the line
-	/// level like mutable, if, for (those will increase methodLineNumber as well) and return.
+	/// level like mutable, if, for (those increase methodLineNumber as well) and return.
 	/// Every other expression can be nested and can appear anywhere.
 	/// </summary>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -176,7 +176,6 @@ public class MethodExpressionParser : ExpressionParser
 					members.IsAtEnd
 						? arguments
 						: []);
-			// ReSharper disable once UnthrowableException
 			current = expression ??
 				throw CheckErrorTypeAndThrowException(body, input, members, current);
 			context = current.ReturnType;

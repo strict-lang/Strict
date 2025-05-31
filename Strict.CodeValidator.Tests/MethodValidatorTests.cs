@@ -33,8 +33,8 @@ public sealed class MethodValidatorTests
 		Assert.DoesNotThrow(() => new MethodValidator([
 			new Method(type, 1, parser, [
 				"Run(methodInput Number)",
-					"\tconstant result = 5 + 15 + methodInput",
-					"\t\"Run method executed with input\" + result"
+				"\tconstant result = 5 + 15 + methodInput",
+				"\t\"Run method executed with input\" + result"
 			])
 		]).Validate());
 
@@ -103,7 +103,7 @@ public sealed class MethodValidatorTests
 		Assert.DoesNotThrow(() => new MethodValidator([
 			new Method(type, 1, parser, [
 				"Run(methodInput Number)",
-					"\t\"Run method executed with input\" + methodInput"
+				"\t\"Run method executed with input\" + methodInput"
 			])
 		]).Validate());
 
@@ -118,7 +118,8 @@ public sealed class MethodValidatorTests
 	[Test]
 	public void MutatedParametersShouldBeAllowed() =>
 		Assert.DoesNotThrow(() => new MethodValidator([
-			new Method(type, 1, parser, ["Run(mutable parameter Number)", "\tparameter = 5 + parameter", "\t5"
+			new Method(type, 1, parser, [
+				"Run(mutable parameter Number)", "\tparameter = 5 + parameter", "\t5"
 			])
 		]).Validate());
 

@@ -12,7 +12,7 @@ public class TestPackage : Package
 		var parser = new MethodExpressionParser();
 		// @formatter:off
 		var any = new Type(this, new TypeLines(Base.Any,
-			"to Type", "to Text", "is(other) Boolean", "not(other) Boolean"));
+			"from", "to Type", "to Text", "is(other) Boolean", "not(other) Boolean"));
 		var boolean = new Type(this, new TypeLines(Base.Boolean,
 			"not Boolean",
 			"\tvalue ? false else true",
@@ -108,7 +108,7 @@ public class TestPackage : Package
 			"\tCharacter(0) + number",
 			"to Number",
 			"\tCharacter(\"3\") to Number is 3",
-			"\tmutable notANumber Error",
+			"\tconstant notANumber = Error",
 			"\tCharacter(\"A\") to Number is notANumber",
 			"\tconstant result = value - Character(0)",
 			"\tresult is in Range(0, 10) ? result else notANumber(value)"));

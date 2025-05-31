@@ -110,7 +110,6 @@ public class NumberTests : TestExpressions
 	}
 
 	[Test]
-	[Category("Manual")]
 	[Benchmark]
 	public void SpanTextTryParseNumber()
 	{
@@ -119,11 +118,10 @@ public class NumberTests : TestExpressions
 		for (var iteration = 0; iteration < NumberOfIterations; iteration++)
 			if (!case10Span.TryParseNumber(out _))
 				counter++;
-		Assert.That(counter, Is.EqualTo(NumberOfCases * NumberOfIterations));
+		Assert.That(counter, Is.EqualTo(NumberOfIterations));
 	}
 
 	[Test]
-	[Category("Manual")]
 	[Benchmark]
 	public void SpanSimpleTryParseNumber()
 	{
@@ -132,13 +130,12 @@ public class NumberTests : TestExpressions
 		for (var iteration = 0; iteration < NumberOfIterations; iteration++)
 			if (case1Span.TryParseNumber(out _))
 				counter++;
-		Assert.That(counter, Is.EqualTo(NumberOfCases * NumberOfIterations));
+		Assert.That(counter, Is.EqualTo(NumberOfIterations));
 	}
 
 	private const string NoNumberCase = "text";
 
 	[Test]
-	[Category("Manual")]
 	[Benchmark]
 	public void IntTryParse()
 	{
@@ -191,7 +188,6 @@ public class NumberTests : TestExpressions
 				: throw new NotSupportedException(NoNumberCase));
 
 	[Test]
-	[Category("Manual")]
 	[Benchmark]
 	public void DoubleTryParse()
 	{

@@ -3,8 +3,8 @@
 /// <summary>
 /// Optimization to split type parsing into three steps:
 /// Step 1 is to just load the file lines (or mock it) and inspect the member lines only.
-/// Step 2 is to sort by dependencies and create each of the types
-/// Step 3 is to actually resolve each of the types members and members (which can be in a
+/// Step 2 is to sort by dependencies and create each of the types.
+/// Step 3 is to actually resolve each of the type members and members (which can be in a
 /// different order as well, methods are also evaluated lazily and not at parsing time)
 /// </summary>
 public class TypeLines
@@ -14,15 +14,30 @@ public class TypeLines
 		Name = name;
 		Lines = lines;
 		DependentTypes = ExtractDependentTypes();
+#if DEBUG
+		// Some sanity checks to make sure the Any base type used everywhere isn't broken
+		if (Name != Base.Any)
+			return;
+		AnyMustImplement(0, Method.From);
+		AnyMustImplement(1, "to " + Base.Type);
+		AnyMustImplement(2, "to " + Base.Text);
+#endif
+	}
+#if DEBUG
+	private void AnyMustImplement(int line, string name)
+	{
+		if (Lines[line] != name)
+			throw new AnyStrictMustImplement(name);
 	}
 
+	private sealed class AnyStrictMustImplement(string name) : Exception(name);
+#endif
 	public string Name { get; }
 	public string[] Lines { get; }
 	public IReadOnlyList<string> DependentTypes { get; }
 
 	private IReadOnlyList<string> ExtractDependentTypes()
 	{
-		// Often there are no members, no need to create a new empty list
 		IList<string> dependentTypes = [];
 		foreach (var line in Lines)
 			if (line.StartsWith(Type.HasWithSpaceAtEnd, StringComparison.Ordinal))

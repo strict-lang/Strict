@@ -28,15 +28,14 @@ public sealed class ReturnTests : TestExpressions
 	[Test]
 	public void ParseReturnNumber() =>
 		Assert.That(new Method(type, 0, this, [
-				"ReturnParse Number",
-					"	if true",
-					"		return 33",
-					"	0"
-			]).GetBodyAndParseIfNeeded(),
-			Is.EqualTo(new Body(method).SetExpressions([
-				new If(new Boolean(method, true), new Return(new Number(method, 33))),
-				new Number(method, 0)
-			])));
+			"ReturnParse Number",
+			"	if true",
+			"		return 33",
+			"	0"
+		]).GetBodyAndParseIfNeeded(), Is.EqualTo(new Body(method).SetExpressions([
+			new If(new Boolean(method, true), new Return(new Number(method, 33))),
+			new Number(method, 0)
+		])));
 
 	[Test]
 	public void ReturnGetHashCode()

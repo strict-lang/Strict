@@ -5,7 +5,7 @@
 /// any of our implement base types (instance is null in all of those cases), calls to other types
 /// (either From(type) or instance method calls, there are no static methods) or any operator
 /// <see cref="Binary"/> or <see cref="Not"/> unary call (which are all normal methods as well).
-/// Like MemberCall has the same syntax when parent instance is used: Type.Method
+/// Like MemberCall has the same syntax when the parent instance is used: Type.Method
 /// </summary>
 public class MethodCall : ConcreteExpression
 {
@@ -14,11 +14,13 @@ public class MethodCall : ConcreteExpression
 		base(GetMethodReturnType(method, toReturnType))
 	{
 		if (method.Name == Method.From && instance != null)
-			throw new NotSupportedException("Makes no sense, we don't have an instance yet"); //ncrunch: no coverage
+			throw new CannotCallFromConstructorWithExistingInstance();
 		Instance = instance;
 		Method = method;
 		Arguments = arguments;
 	}
+
+	public sealed class CannotCallFromConstructorWithExistingInstance : Exception;
 
 	private static Type GetMethodReturnType(Method method, Type? toReturnType) =>
 		method.Name == BinaryOperator.To && toReturnType != null

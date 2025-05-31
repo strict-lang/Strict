@@ -72,6 +72,7 @@ public class RepositoriesTests
 	}
 
 	[Test]
+	[Category("Slow")]
 	public async Task LoadStrictImageProcessingTypes()
 	{
 		var parser = new MethodExpressionParser();

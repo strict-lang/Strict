@@ -11,17 +11,17 @@ public sealed class ErrorTests : TestExpressions
 				new TypeLines(nameof(ParseErrorExpression),
 					"has number",
 					"CheckNumberInRangeTen Number",
-					"\tmutable NotANumber = Error",
+					"\tconstant notANumber = Error",
 					"\tif number in Range(0, 10)",
 					"\t\treturn number",
 					"\telse",
-					"\t\treturn NotANumber")).
+					"\t\treturn notANumber")).
 			ParseMembersAndMethods(new MethodExpressionParser());
 		var parsedExpression = (Body)programType.Methods[0].GetBodyAndParseIfNeeded();
-		Assert.That(((MutableDeclaration)parsedExpression.Expressions[0]).Value.ReturnType,
+		Assert.That(((ConstantDeclaration)parsedExpression.Expressions[0]).Value.ReturnType,
 			Is.EqualTo(type.GetType(Base.Error)));
 		Assert.That(((If)parsedExpression.Expressions[1]).OptionalElse?.ToString(),
-			Is.EqualTo("return NotANumber"));
+			Is.EqualTo("return notANumber"));
 	}
 
 	[Test]
@@ -30,7 +30,7 @@ public sealed class ErrorTests : TestExpressions
 		var programType = new Type(type.Package,
 				new TypeLines(nameof(TypeLevelErrorExpression),
 					"has number",
-					"mutable NotANumber = Error",
+					"constant NotANumber Error",
 					"CheckNumberInRangeTen Number",
 					"\tif number in Range(0, 10)",
 					"\t\treturn number",

@@ -105,16 +105,14 @@ public class Type : Context
 			throw new MemberCountShouldNotExceedLimit(this, memberLimit);
 		if (IsDataType || IsEnum)
 			return;
-		if (methods.Count == 0 && members.Count < 2 && !IsNoneAnyOrBoolean() &&
-			Name != Base.Name)
+		if (methods.Count == 0 && members.Count < 2 && !IsNoneAnyOrBoolean() && Name != Base.Name)
 			throw new NoMethodsFound(this, lineNumber);
 		if (methods.Count > Limit.MethodCount && Package.Name != nameof(Base))
 			throw new MethodCountMustNotExceedLimit(this);
 	}
 
 	public bool IsDataType =>
-		methods.Count == 0 &&
-		(members.Count > 1 || members is [{ Value: not null }]);
+		methods.Count == 0 && (members.Count > 1 || members is [{ Value: not null }]);
 	public bool IsEnum =>
 		methods.Count == 0 && members.Count > 1 && members.All(m => m.Value is not null);
 
@@ -203,7 +201,8 @@ public class Type : Context
 	/// <summary>
 	/// Most often called for List (or the Iterator trait), which we want to optimize for
 	/// </summary>
-	private GenericTypeImplementation CreateGenericImplementation(string key, IReadOnlyList<Type> implementationTypes)
+	private GenericTypeImplementation CreateGenericImplementation(string key,
+		IReadOnlyList<Type> implementationTypes)
 	{
 		if (Name is Base.List or Base.Iterator or Base.Mutable && implementationTypes.Count == 1 ||
 			GetGenericTypeArguments().Count == implementationTypes.Count ||
@@ -238,11 +237,13 @@ public class Type : Context
 		string extraInformation) : Exception(type + " " + extraInformation);
 
 	/// <summary>
-	/// Any non-public member is automatically iteratable if it has Iterator, for example,
+	/// Any non-public member is automatically iterable if it has Iterator, for example,
 	/// Text.strict or Error.strict have public members you have to iterate over yourself.
 	/// If there are two private iterators, then pick the first member automatically
 	/// </summary>
-	public bool IsIterator => Name == Base.Iterator || Name.StartsWith(Base.Iterator + "(", StringComparison.Ordinal) || HasAnyIteratorMember();
+	public bool IsIterator =>
+		Name == Base.Iterator || Name.StartsWith(Base.Iterator + "(", StringComparison.Ordinal) ||
+		HasAnyIteratorMember();
 
 	private bool HasAnyIteratorMember()
 	{
@@ -271,13 +272,15 @@ public class Type : Context
 
 	public bool IsCompatible(Type sameOrBaseType) =>
 		this == sameOrBaseType || HasAnyCompatibleMember(sameOrBaseType) ||
-		CanUpCast(sameOrBaseType) || sameOrBaseType.IsMutableAndHasMatchingImplementation(this) || CanUpCastCurrentTypeToOther(sameOrBaseType) || IsCompatibleOneOfType(sameOrBaseType);
+		CanUpCast(sameOrBaseType) || sameOrBaseType.IsMutableAndHasMatchingImplementation(this) ||
+		CanUpCastCurrentTypeToOther(sameOrBaseType) || IsCompatibleOneOfType(sameOrBaseType);
 
 	private bool IsCompatibleOneOfType(Type sameOrBaseType) =>
 		sameOrBaseType is OneOfType oneOfType && oneOfType.Types.Any(IsCompatible);
 
 	private bool CanUpCastCurrentTypeToOther(Type sameOrBaseType) =>
-		sameOrBaseType.members.Count == 1 && sameOrBaseType.methods.Count == 0 && sameOrBaseType.members[0].Type == this &&
+		sameOrBaseType.members.Count == 1 && sameOrBaseType.methods.Count == 0 &&
+		sameOrBaseType.members[0].Type == this &&
 		ValidateMemberConstraints(sameOrBaseType.members[0].Constraints);
 
 	// ReSharper disable once UnusedParameter.Local
@@ -348,6 +351,9 @@ public class Type : Context
 
 	private void AddAvailableMethod(Method method)
 	{
+		// From constructor methods should return the type we are in, not the base type (like Any)
+		if (method.Name == Method.From && method.Type != this)
+			method = method.CloneFrom(this);
 		if (cachedAvailableMethods!.ContainsKey(method.Name))
 		{
 			var methodsWithThisName = cachedAvailableMethods[method.Name];

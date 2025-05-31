@@ -35,7 +35,7 @@ public sealed class Body : Expression
 	public bool IsFakeBodyForMemberInitialization => Method.Name == Type.EmptyBody;
 
 	/// <summary>
-	/// Called when actually needed and code needs to run, usually triggered by
+	/// Called when actually needed, and code needs to run, usually triggered by
 	/// Method.GetBodyAndParseIfNeeded and child bodies inside. After parsing all expressions in this
 	/// body, we will validate them all here. If there are multiple expressions, this body is
 	/// returned, otherwise just a single expression is directly returned and the body is discarded.

@@ -70,7 +70,7 @@ public class CSharpType : Type
 {
 	public class CSharpExpressionParser : MethodExpressionParser
 	{
-		/*this is a hack anyways
+		/*this is a hack anyway
 		public override BlockExpression ParseMethodBody(Method method)
 		{
 			if (method.bodyLines.Last().Text.Contains("depth"))
@@ -115,7 +115,8 @@ public class CSharpType : Type
 		}
 		if (returnStatement == "")
 			throw new MissingReturnStatement();
-		var method = new Method(this, 0, new CSharpExpressionParser(), [methodName + parameters.ToBrackets() + returnType, "\t" + returnStatement
+		var method = new Method(this, 0, new CSharpExpressionParser(), [
+			methodName + parameters.ToBrackets() + returnType, "\t" + returnStatement
 		]);
 		methods.Add(method);
 	}

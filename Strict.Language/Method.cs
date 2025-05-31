@@ -8,7 +8,6 @@ namespace Strict.Language;
 /// Methods are parsed lazily, which speeds up type and package parsing enormously and
 /// also provides us with all methods in a type usable in any other method if needed.
 /// </summary>
-//TODO: split up
 public sealed class Method : Context
 {
 	public Method(Type type, int typeLineNumber, ExpressionParser parser, IReadOnlyList<string> lines)
@@ -36,7 +35,7 @@ public sealed class Method : Context
 
 	/// <summary>
 	/// Simple lexer to just parse the method definition and get all used names and types. Method code
-	/// itself is parsed only on demand (when GetBodyAndParseIfNeeded is called) in are more complex
+	/// itself is parsed only on demand (when GetBodyAndParseIfNeeded is called) in a more complex
 	/// way (Shunting yard/BNF/etc.) and slower. Examples: Run, Run(number), Run returns Text
 	/// </summary>
 	private static string GetName(ReadOnlySpan<char> firstLine)
@@ -213,7 +212,7 @@ public sealed class Method : Context
 	{
 		private static string GetMethodName(Method method) =>
 			method.Name == From
-				? "Type " + method.Type.FullName + " constructor method"
+				? "Type " + method.Type.FullName + " " + From + " constructor method"
 				: "Method " + method.Name;
 	}
 
@@ -232,7 +231,7 @@ public sealed class Method : Context
 		else if (currentLine.Contains(body.Method.Name) &&
 			expression.GetType().Name == "MethodCall" &&
 			body.ParsingLineNumber == body.Method.Tests.Count + 1 && currentLine != "\tRun")
-			throw new RecursiveCallCausesStackOverflow(body); //TODO: Figure out something better, this is bad (LM)
+			throw new RecursiveCallCausesStackOverflow(body);
 		return expression;
 	}
 
@@ -351,6 +350,14 @@ public sealed class Method : Context
 			? ""
 			: " " + ReturnType.Name);
 
+	public Method CloneFrom(Type concreteType)
+	{
+		var clone = (Method)MemberwiseClone();
+		clone.ReturnType = concreteType;
+		clone.methodBody?.UpdateCurrentAndChildrenMethod(clone);
+		return clone;
+	}
+
 	public Method CloneWithImplementation(GenericTypeImplementation typeWithImplementation)
 	{
 		var clone = (Method)MemberwiseClone();
@@ -369,9 +376,9 @@ public sealed class Method : Context
 	private static Type ReplaceWithImplementationOrGenericType(Type type,
 		GenericTypeImplementation typeWithImplementation, int index) =>
 		type.Name == Base.Generic
-			? typeWithImplementation.ImplementationTypes[index] //Number
+			? typeWithImplementation.ImplementationTypes[index] // like Number
 			: type.IsGeneric
-				? typeWithImplementation //ListNumber
+				? typeWithImplementation // like List(Number)
 				: type;
 
 	public bool HasEqualSignature(Method method) =>
@@ -394,7 +401,7 @@ public sealed class Method : Context
 	/// <summary>
 	/// Checks if another method has the same signature, doesn't matter if it is from this type or
 	/// any parent or child type. Used to avoid methods with the same return types and parameters.
-	/// Slightly different from <see cref="HasEqualSignature"/> which does extra generic checks. TODO: consolidate!
+	/// Slightly different from <see cref="HasEqualSignature"/> which does extra generic checks.
 	/// </summary>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public bool IsSameMethodNameReturnTypeAndParameters(Method other) =>
