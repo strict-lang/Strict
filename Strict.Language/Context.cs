@@ -78,7 +78,7 @@ public abstract class Context
 	private readonly IDictionary<string, Type?> types = new Dictionary<string, Type?>();
 
 	/// <summary>
-	/// Always convert plural name into List(SingularName), e.g., Texts becomes List(Text)
+	/// Always convert a plural name into List(SingularName), e.g., Texts becomes List(Text)
 	/// </summary>
 	private Type? TryGetTypeFromPluralNameAsListWithSingularName(string name)
 	{
@@ -97,10 +97,14 @@ public abstract class Context
 	{
 		var mainType = GetType(name[..name.IndexOf('(')]);
 		var rest = name[(mainType.Name.Length + 1)..^1];
+		var arguments = rest.Split(',', StringSplitOptions.TrimEntries);
 		if (rest.Contains("Generic"))
-			return new GenericType(mainType,
-				GetNamedTypes(mainType, rest.Split(',', StringSplitOptions.TrimEntries)));
-		var argumentTypes = GetArgumentTypes(rest.Split(',', StringSplitOptions.TrimEntries));
+		{
+			var namedTypes = GetNamedTypes(mainType, arguments);
+			return mainType.Package.FindDirectType(mainType.GetImplementationName(namedTypes)) ??
+				new GenericType(mainType, namedTypes);
+		}
+		var argumentTypes = GetArgumentTypes(arguments);
 		return mainType.GetGenericImplementation(argumentTypes);
 	}
 

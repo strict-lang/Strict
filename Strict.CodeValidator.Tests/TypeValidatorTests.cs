@@ -66,8 +66,8 @@ public sealed class TypeValidatorTests
 				]))
 			]).Validate(),
 			Throws.InstanceOf<Method.MethodParameterCountMustNotExceedThree>().With.Message.Contains(
-				"Type TestPackage.ValidateTypeHasTooManyDependenciesFromMethod constructor method has " +
-				"parameters count 4 but limit is 3"));
+				"Type TestPackage.ValidateTypeHasTooManyDependenciesFromMethod from constructor method " +
+				"has parameters count 4 but limit is 3"));
 
 	[Test]
 	public void VariableHidesMemberUseDifferentName() =>

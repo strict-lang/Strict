@@ -1,7 +1,7 @@
 ﻿namespace Strict.Language;
 
 /// <summary>
-/// Extends a generic type with more generic details, this is NOT an implementation yet, e.g.
+/// Extends a generic type with more generic details, this is NOT an implementation yet. E.g.,
 /// List(Generic, Generic) extends the List generic type to use two generic tuple types and force
 /// implementation on that.
 /// </summary>

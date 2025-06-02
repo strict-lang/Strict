@@ -1,7 +1,28 @@
-﻿namespace Strict.Language;
+﻿using System.Collections;
+
+namespace Strict.Language;
 
 public static class StringExtensions
 {
+	public static string ToWordList<T1, T2>(this IReadOnlyDictionary<T1, T2> list,
+		string separator = "; ") where T2 : notnull
+	{
+		var result = new List<string>();
+		foreach (var entry in list)
+		{
+			var value = "";
+			if (entry.Value is IEnumerable values)
+				foreach (var valueEntry in values)
+					value += (value != ""
+						? ", "
+						: "") + valueEntry;
+			else
+				value = entry.Value.ToString();
+			result.Add(entry.Key + "=" + value);
+		}
+		return result.ToWordList(separator);
+	}
+
 	public static string ToWordList<T>(this IEnumerable<T> list, string separator = ", ") =>
 		string.Join(separator, list);
 

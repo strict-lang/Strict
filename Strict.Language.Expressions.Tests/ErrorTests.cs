@@ -30,7 +30,7 @@ public sealed class ErrorTests : TestExpressions
 		var programType = new Type(type.Package,
 				new TypeLines(nameof(TypeLevelErrorExpression),
 					"has number",
-					"constant NotANumber Error",
+					"has NotANumber = Error",
 					"CheckNumberInRangeTen Number",
 					"\tif number in Range(0, 10)",
 					"\t\treturn number",

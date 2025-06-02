@@ -425,8 +425,10 @@ public sealed class TypeTests
 		Assert.That(type.AvailableMethods.Keys.Contains("privateMethod"), Is.False);
 		Assert.That(type.AvailableMethods.Keys.Contains("PublicMethod"), Is.True);
 		Assert.That(
-			type.AvailableMethods.Values.Select(methodsList => methodsList).Any(methods =>
-				methods.Any(method => !method.IsPublic && !method.Name.AsSpan().IsOperator())), Is.False);
+			type.AvailableMethods.Values.Any(methods =>
+				methods.Any(method => !method.IsPublic && !method.Name.AsSpan().IsOperator())), Is.False,
+			// If this fails, check by debugging each private method and see if IsOperator returns true
+			type.AvailableMethods.ToWordList());
 	}
 
 	[TestCase(Base.Output, 0)]
