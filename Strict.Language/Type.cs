@@ -273,7 +273,8 @@ public class Type : Context
 	public bool IsCompatible(Type sameOrBaseType) =>
 		this == sameOrBaseType || HasAnyCompatibleMember(sameOrBaseType) ||
 		CanUpCast(sameOrBaseType) || sameOrBaseType.IsMutableAndHasMatchingImplementation(this) ||
-		CanUpCastCurrentTypeToOther(sameOrBaseType) || IsCompatibleOneOfType(sameOrBaseType);
+		CanUpCastCurrentTypeToOther(sameOrBaseType) || IsCompatibleOneOfType(sameOrBaseType) ||
+		Members.Any(m => m.Type.IsCompatible(sameOrBaseType));
 
 	private bool IsCompatibleOneOfType(Type sameOrBaseType) =>
 		sameOrBaseType is OneOfType oneOfType && oneOfType.Types.Any(IsCompatible);

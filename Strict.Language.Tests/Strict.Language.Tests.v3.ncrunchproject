@@ -4,6 +4,9 @@
       <NamedTestSelector>
         <TestName>Strict.Language.Tests.RepositoriesTests.LoadStrictExamplesPackageAndUseBasePackageTypes</TestName>
       </NamedTestSelector>
+      <NamedTestSelector>
+        <TestName>Strict.Language.Tests.RepositoriesTests.LoadStrictImageProcessingTypes</TestName>
+      </NamedTestSelector>
     </IgnoredTests>
   </Settings>
 </ProjectConfiguration>

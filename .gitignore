@@ -125,3 +125,4 @@ ipch/
 *.vsp
 *.vspx
 *.sap
+/Strict_NCrunchResults

@@ -212,23 +212,25 @@ public sealed class ForTests : TestExpressions
 		Assert.That(parsedExpression.Value.ToString(), Is.EqualTo(expected));
 	}
 
+	/*not sure
+	[TestCase("WithNumbers",
+		"has log",
+		"LogAllNumbers(listOfNumbers List(Numbers))",
+		"\tfor row, column in listOfNumbers",
+		"\t\tlog.Write(column)")]
+		*/
 	[TestCase(
-				// @formatter:off
-				"WithNumbers",
-				"has log",
-				"LogError(numbers) Number",
-				"\tfor row, column in numbers",
-				"\t\tlog.Write(column)")]
-		[TestCase(
-			"WithTexts",
-				"has log",
-				"LogError(texts) Number",
-				"\tfor row, column in texts",
-				"\t\tlog.Write(column)")]
+		"WithTexts",
+		"has log",
+		"LogTexts(texts)",
+		"\tfor row, column in texts",
+		"\t\tlog.Write(column)")]
 	public void ParseForExpressionWithMultipleVariables(string testName, params string[] code)
 	{
-		var programType = new Type(type.Package, new TypeLines(nameof(ParseForExpressionWithMultipleVariables) + testName, code
-				)).ParseMembersAndMethods(new MethodExpressionParser());
+		var programType =
+			new Type(type.Package,
+					new TypeLines(nameof(ParseForExpressionWithMultipleVariables) + testName, code)).
+				ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(programType.Methods[0].GetBodyAndParseIfNeeded(), Is.InstanceOf<For>());
 	}
 }

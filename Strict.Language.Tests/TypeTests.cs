@@ -582,7 +582,7 @@ public sealed class TypeTests
 			"\tinput is 7",
 			"\tinput");
 		superThingUser.Methods[0].GetBodyAndParseIfNeeded();
-		Assert.That(superThingUser.Members[0].Type, Is.EqualTo(thing.GetType(Base.Character)));
+		Assert.That(superThingUser.Members[0].Type, Is.EqualTo(package.GetType("SuperThing")));
 	}
 
 	//ncrunch: no coverage start

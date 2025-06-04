@@ -163,14 +163,15 @@ public sealed class For : Expression
 	{
 		foreach (var variable in variableName.Split(',', StringSplitOptions.TrimEntries))
 		{
-			var mutableValue = body.FindVariableValue(variable);
+			var mutableValue = body.FindVariableValue(variable)!;
 			var iteratorType = GetIteratorType(forValueExpression);
 			if (iteratorType is GenericTypeImplementation { IsIterator: true } genericType)
 				iteratorType = genericType.ImplementationTypes[0];
-			if ((iteratorType.Name != Base.Range || mutableValue?.ReturnType.Name != Base.Number) &&
-				iteratorType.Name != mutableValue?.ReturnType.Name)
-				throw new IteratorTypeDoesNotMatchWithIterable(body, iteratorType.Name,
-					mutableValue?.ReturnType.Name);
+			if ((iteratorType.Name != Base.Range || mutableValue.ReturnType.Name != Base.Number) &&
+				iteratorType.Name != mutableValue.ReturnType.Name &&
+				!iteratorType.IsCompatible(mutableValue.ReturnType))
+				throw new IteratorTypeDoesNotMatchWithIterable(body, iteratorType.Name, variable,
+					mutableValue.ReturnType.Name);
 		}
 	}
 
@@ -229,7 +230,7 @@ public sealed class For : Expression
 	public sealed class DuplicateImplicitIndex(Body body) : ParsingFailed(body);
 	public sealed class ImmutableIterator(Body body) : ParsingFailed(body);
 
-	public sealed class IteratorTypeDoesNotMatchWithIterable(Body body,
-		string iteratorTypeName, string? variableType) : ParsingFailed(body,
-		$"Iterator type {iteratorTypeName} does not match with {variableType}");
+	public sealed class IteratorTypeDoesNotMatchWithIterable(Body body, string iteratorTypeName,
+		ReadOnlySpan<char> variable, string? variableType) : ParsingFailed(body,
+		$"Iterator {variable} type {iteratorTypeName} does not match with {variableType}");
 }

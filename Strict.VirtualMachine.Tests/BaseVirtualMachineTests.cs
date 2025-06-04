@@ -157,7 +157,7 @@ public class BaseVirtualMachineTests : TestExpressions
 		new LoadVariableStatement(Register.R1, "result"),
 		new ReturnStatement(Register.R1)
 	];
-	protected static readonly Statement[] ExpectedStatementsOfRemoveParanthesesKata =
+	protected static readonly Statement[] ExpectedStatementsOfRemoveParenthesesKata =
 	[
 		new StoreVariableStatement(new Instance(TextType, "some(thing)"), "text"),
 		new StoreVariableStatement(new Instance(TextType, ""), "result"),

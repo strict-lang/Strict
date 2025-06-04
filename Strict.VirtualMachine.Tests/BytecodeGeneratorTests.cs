@@ -123,7 +123,7 @@ public sealed class ByteCodeGeneratorTests : BaseVirtualMachineTests
 				}, SimpleLoopExample);
 			yield return new TestCaseData("RemoveParentheses(\"some(thing)\").Remove",
 				"RemoveParentheses",
-				ExpectedStatementsOfRemoveParanthesesKata,
+				ExpectedStatementsOfRemoveParenthesesKata,
 				RemoveParenthesesKata);
 			yield return new TestCaseData("ArithmeticFunction(10, 5).Calculate(\"add\")",
 				"ArithmeticFunction", ExpectedStatementsOfArithmeticFunctionExample,

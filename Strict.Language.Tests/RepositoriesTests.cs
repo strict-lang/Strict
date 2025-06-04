@@ -179,8 +179,8 @@ public class RepositoriesTests
 
 	/// <summary>
 	/// Zip file loading makes a difference (4-5 times faster), but otherwise there is close to zero
-	/// impact how we load the files, parallel or not, async is only 10-20% faster and not important.
-	/// File.ReadAllLinesAsync is by far the slowest way (2-3x slower) to load files.
+	/// impact on how we load the files, parallel or not, async is only 10-20% faster and not
+	/// important. File.ReadAllLinesAsync is by far the slowest way (2-3x slower) to load files.
 	/// </summary>
 	[Test]
 	[Category("Slow")]
