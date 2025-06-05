@@ -5,7 +5,6 @@
 /// Strict code only contains optional implement, then has*, then methods*. No empty lines.
 /// There is no typical lexing/scoping/token splitting needed as Strict syntax is very strict.
 /// </summary>
-//TODO: split up into TypeParser, TypeValidator, TypeMemberFinder and TypeMethodFinder and use all of these in this Type class
 public class Type : Context
 {
 	public Type(Package package, TypeLines file) : base(package, file.Name)
@@ -17,8 +16,7 @@ public class Type : Context
 		package.Add(this);
 		lines = file.Lines;
 		IsGeneric = Name == Base.Generic || OneOfFirstThreeLinesContainsGeneric();
-		CreatedBy = "Package: " + package + ", file=" + file + ", StackTrace:\n" +
-			StackTraceExtensions.FormatStackTraceIntoClickableMultilineText(1);
+		CreatedBy = "Package: " + package + ", file=" + file; //TODO: this is way too slow, eats up almost 45s on NCrunch alone: + ", StackTrace:\n" + StackTraceExtensions.FormatStackTraceIntoClickableMultilineText(1);
 		typeMethodFinder = new TypeMethodFinder(this);
 		typeParser = new TypeParser(this, lines);
 	}
@@ -270,14 +268,15 @@ public class Type : Context
 	private bool? cachedIteratorResult;
 	private readonly Dictionary<string, bool> cachedEvaluatedMemberTypes = new();
 
-	public bool IsCompatible(Type sameOrBaseType) =>
+	public bool IsCompatible(Type sameOrBaseType, int maxDepth = 2) =>
 		this == sameOrBaseType || HasAnyCompatibleMember(sameOrBaseType) ||
 		CanUpCast(sameOrBaseType) || sameOrBaseType.IsMutableAndHasMatchingImplementation(this) ||
 		CanUpCastCurrentTypeToOther(sameOrBaseType) || IsCompatibleOneOfType(sameOrBaseType) ||
-		Members.Any(m => m.Type.IsCompatible(sameOrBaseType));
+		IsEnum && members[0].Type.IsCompatible(sameOrBaseType) ||
+		maxDepth >= 0 && Members.Count(m => m.Type.IsCompatible(sameOrBaseType, maxDepth - 1)) == 1;
 
 	private bool IsCompatibleOneOfType(Type sameOrBaseType) =>
-		sameOrBaseType is OneOfType oneOfType && oneOfType.Types.Any(IsCompatible);
+		sameOrBaseType is OneOfType oneOfType && oneOfType.Types.Any(t => IsCompatible(t));
 
 	private bool CanUpCastCurrentTypeToOther(Type sameOrBaseType) =>
 		sameOrBaseType.members.Count == 1 && sameOrBaseType.methods.Count == 0 &&

@@ -392,7 +392,7 @@ public sealed class TypeTests
 	{
 		var range = package.GetType(Base.Range);
 		Assert.That(range.AvailableMethods.Values.Select(methods => methods.Count).Sum(),
-			Is.EqualTo(8));
+			Is.EqualTo(9));
 	}
 
 	[Test]
@@ -400,7 +400,7 @@ public sealed class TypeTests
 	{
 		var text = package.GetType(Base.Text + "s");
 		Assert.That(text.AvailableMethods.Values.Select(methods => methods.Count).Sum(),
-			Is.EqualTo(17));
+			Is.EqualTo(18));
 	}
 
 	[Test]
@@ -532,6 +532,8 @@ public sealed class TypeTests
 		var redApple = CreateType("RedApple", "has apple", "Color Text", "\tvalue.Color");
 		Assert.That(apple.IsCompatible(redApple), Is.False);
 		Assert.That(redApple.IsCompatible(apple), Is.True);
+		Assert.That(redApple.IsCompatible(package.GetType(Base.Text)), Is.True);
+		Assert.That(redApple.IsCompatible(package.GetType(Base.Number)), Is.False);
 	}
 
 	[Test]

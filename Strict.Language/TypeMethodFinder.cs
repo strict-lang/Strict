@@ -28,7 +28,7 @@ internal class TypeMethodFinder(Type type)
 			throw new GenericTypesCannotBeUsedDirectlyUseImplementation(Type,
 				"Type is Generic and cannot be used directly");
 		if (!Type.AvailableMethods.TryGetValue(methodName, out var matchingMethods))
-			return FindAndCreateFromBaseMethod(methodName, arguments, parser);
+			return null;//not longer needed: FindAndCreateFromBaseMethod(methodName, arguments, parser);
 		var typesOfArguments = arguments.Select(argument => argument.ReturnType).ToList();
 		var commonTypeOfArguments = TryGetSingleElementType(typesOfArguments);
 		foreach (var method in matchingMethods)
@@ -36,8 +36,8 @@ internal class TypeMethodFinder(Type type)
 				commonTypeOfArguments != null &&
 				commonTypeOfArguments == GetListElementTypeIfHasSingleParameter(method))
 				return method;
-		return FindAndCreateFromBaseMethod(methodName, arguments, parser) ??
-			throw new ArgumentsDoNotMatchMethodParameters(arguments, Type, matchingMethods);
+		//return FindAndCreateFromBaseMethod(methodName, arguments, parser) ??
+		throw new ArgumentsDoNotMatchMethodParameters(arguments, Type, matchingMethods);
 	}
 
 	private static T? TryGetSingleElementType<T>(IEnumerable<T> argumentTypes) where T : class
@@ -67,6 +67,9 @@ internal class TypeMethodFinder(Type type)
 	private static bool IsMethodWithMatchingParametersType(Method method,
 		IReadOnlyList<Type> argumentReturnTypes)
 	{
+		if (method is { Name: Method.From, Parameters.Count: 0 } &&
+			argumentReturnTypes.Count == 1 && method.ReturnType.IsCompatible(argumentReturnTypes[0]))
+			return true;
 		if (method.Parameters.Count != argumentReturnTypes.Count)
 			return false;
 		for (var index = 0; index < method.Parameters.Count; index++)
@@ -83,9 +86,10 @@ internal class TypeMethodFinder(Type type)
 			methodParameterType.Name == Base.Any ||
 			IsArgumentImplementationTypeMatchParameterType(argumentReturnType, methodParameterType))
 			return true;
-		if (methodParameterType.IsEnum && methodParameterType.Members[0].Type == argumentReturnType)
+		if (methodParameterType.IsEnum &&
+			methodParameterType.Members[0].Type.IsCompatible(argumentReturnType))
 			return true;
-		if (methodParameterType.Name == Base.Iterator && method.Type == argumentReturnType)
+		if (methodParameterType.Name == Base.Iterator && method.Type.IsCompatible(argumentReturnType))
 			return true;
 		if (methodParameterType.IsGeneric)
 			throw new GenericTypesCannotBeUsedDirectlyUseImplementation(
@@ -99,7 +103,7 @@ internal class TypeMethodFinder(Type type)
 		IsArgumentImplementationTypeMatchParameterType(Type argumentType, Type parameterType) =>
 		argumentType is GenericTypeImplementation argumentGenericType &&
 		argumentGenericType.ImplementationTypes.Any(t => t == parameterType);
-
+/*this should not be done dynamically, at parsing time we should have the the from methods created already and they should be found and used here!
 	private Method? FindAndCreateFromBaseMethod(string methodName,
 		IReadOnlyList<Expression> arguments, ExpressionParser parser)
 	{
@@ -146,4 +150,5 @@ internal class TypeMethodFinder(Type type)
 
 	private Method BuildMethod(string fromMethod, ExpressionParser parser) =>
 		new(Type, 0, parser, [fromMethod]);
+*/
 }
