@@ -36,8 +36,7 @@ public sealed class TypeValidatorTests
 	}
 
 	private Type CreateType(string typeName, string[] code) =>
-		new Type(package, new TypeLines(typeName,
-			code)).ParseMembersAndMethods(parser);
+		new Type(package, new TypeLines(typeName, code)).ParseMembersAndMethods(parser);
 
 	[Test]
 	public void ProperlyUsedMemberShouldBeAllowed() =>

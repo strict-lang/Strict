@@ -339,11 +339,15 @@ public class Type : Context
 			foreach (var method in methods)
 				if (method.IsPublic || method.Name == Method.From || method.Name.AsSpan().IsOperator())
 					AddAvailableMethod(method);
-			foreach (var member in members)
-				if (!member.IsPublic && !IsTraitImplementation(member.Type))
-					AddNonGenericMethods(member.Type);
-			if (Name != Base.Any)
-				AddAnyMethods();
+			if (Name == Base.Any)
+				return cachedAvailableMethods;
+			if (members.Count == 1)
+				foreach (var member in members)
+					if (!member.IsPublic && !IsTraitImplementation(member.Type))
+						AddNonGenericMethods(member.Type);
+			if (members.Count > 0 && !members[0].Type.IsGeneric)
+				AddFromConstructorWithMembersAsArguments();
+			AddAnyMethods();
 			return cachedAvailableMethods;
 		}
 	}
@@ -364,6 +368,25 @@ public class Type : Context
 		}
 		else
 			cachedAvailableMethods.Add(method.Name, [method]);
+	}
+
+	private void AddFromConstructorWithMembersAsArguments() =>
+		AddAvailableMethod(new Method(this, 0, methods.Count > 0
+			? methods[0].Parser
+			: GetType(Base.Any).methods[0].Parser, ["from(" + CreateFromMethodParameters() + ")"]));
+
+	private string? CreateFromMethodParameters()
+	{
+		var parameters = "";
+		foreach (var member in members)
+			if (!member.Type.IsGeneric)
+				parameters += (parameters == ""
+					? ""
+					: ", ") + member.Name.MakeFirstLetterLowercase() + (member.Name.ToLowerInvariant() ==
+					member.Type.Name.ToLowerInvariant()
+						? ""
+						: " " + member.Type.Name);
+		return parameters;
 	}
 
 	public bool IsTraitImplementation(Type memberType) =>
@@ -390,9 +413,10 @@ public class Type : Context
 		if (cachedAnyMethods is { Count: 0 })
 			cachedAnyMethods = null;
 		cachedAnyMethods ??= GetType(Base.Any).AvailableMethods;
-		foreach (var (_, anyMethods) in cachedAnyMethods)
-		foreach (var anyMethod in anyMethods)
-			AddAvailableMethod(anyMethod);
+		if (!IsGeneric)
+			foreach (var (_, anyMethods) in cachedAnyMethods)
+			foreach (var anyMethod in anyMethods)
+				AddAvailableMethod(anyMethod);
 	}
 
 	private static IReadOnlyDictionary<string, List<Method>>? cachedAnyMethods;

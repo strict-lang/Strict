@@ -353,6 +353,7 @@ public sealed class Method : Context
 	public Method CloneFrom(Type concreteType)
 	{
 		var clone = (Method)MemberwiseClone();
+		clone.Parent = concreteType;
 		clone.ReturnType = concreteType;
 		clone.methodBody?.UpdateCurrentAndChildrenMethod(clone);
 		return clone;

@@ -100,9 +100,6 @@ public class TestPackage : Package
 			"\tLength > 0 ? Range(ExclusiveEnd - 1 , Start - 1)\telse Range(ExclusiveEnd + 1, Start + 1)"));
 		var character = new Type(this, new TypeLines(Base.Character,
 			"has number",
-			"from",
-			"\tCharacter(7) is \"7\"",
-			"\tCharacter(0) + number",
 			"from(number)",
 			"\tCharacter(7) is \"7\"",
 			"\tCharacter(0) + number",
@@ -195,8 +192,6 @@ public class TestPackage : Package
 			"has NewLine = Character(13)",
 			"has Tab = Character(7)",
 			"from(number)",
-			"\tvalue",
-			"from",
 			"\tvalue",
 			"Run",
 			"\tvalue is not \"\"",
