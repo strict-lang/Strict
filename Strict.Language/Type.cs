@@ -109,8 +109,14 @@ public class Type : Context
 			throw new MethodCountMustNotExceedLimit(this);
 	}
 
+	/// <summary>
+	/// Data types have no methods and just some data. Number, Text, and most Base types are not
+	/// data types as they have functionality (which makes sense), only types higher up that only
+	/// have data (like Color, which has 4 Numbers) are actually pure Data types!
+	/// </summary>
 	public bool IsDataType =>
-		methods.Count == 0 && (members.Count > 1 || members is [{ Value: not null }]);
+		methods.Count == 0 && (members.Count > 1 || members is [{ Value: not null }]) ||
+		Name == Base.Number;
 	public bool IsEnum =>
 		methods.Count == 0 && members.Count > 1 && members.All(m => m.Value is not null);
 
@@ -235,7 +241,8 @@ public class Type : Context
 	/// <summary>
 	/// Any non-public member is automatically iterable if it has Iterator, for example,
 	/// Text.strict or Error.strict have public members you have to iterate over yourself.
-	/// If there are two private iterators, then pick the first member automatically
+	/// If there are two private iterators, then pick the first member automatically.
+	/// Any number is also iteratable, most iterators are just List(ofSomeType)
 	/// </summary>
 	public bool IsIterator =>
 		Name == Base.Iterator || Name.StartsWith(Base.Iterator + "(", StringComparison.Ordinal) ||
@@ -343,7 +350,7 @@ public class Type : Context
 			// public members (e.g., Type.Name), constants (e.g., has Tab = Character(7)) and if we
 			// have implemented a trait here anyway (then all the methods are already implemented).
 			foreach (var member in Members.Where(m =>
-				!m.IsPublic && m.Value == null && !IsTraitImplementation(m.Type)))
+				m is { IsPublic: false, Value: null } && !IsTraitImplementation(m.Type)))
 				AddNonGenericMethods(member.Type);
 			if (members.Count > 0 && !members[0].Type.IsGeneric)
 				AddFromConstructorWithMembersAsArguments();
@@ -382,12 +389,16 @@ public class Type : Context
 		var parameters = "";
 		foreach (var member in members)
 			if (!member.Type.IsGeneric)
-				parameters += (parameters == ""
-					? ""
-					: ", ") + member.Name.MakeFirstLetterLowercase() + (member.Name.EndsWith('s') &&
-					member.Type.IsIterator
+				parameters +=
+					(parameters == ""
 						? ""
-						: " " + member.Type.Name);
+						: ", ") +
+					member.Name.MakeFirstLetterLowercase() +
+					(member.Value != null
+						? " = " + member.Value
+						: member.Type.Name == Base.List
+							? ""
+							: " " + member.Type.Name);
 		return parameters;
 	}
 
@@ -468,4 +479,12 @@ public class Type : Context
 
 	public sealed class TypeHasNoMembersAndThusMustBeATraitWithoutMethodBodies(Type type)
 		: ParsingFailed(type, 0);
+
+	/// <summary>
+	/// Helper for method parameters default values, which don't have a methodBody to parse, but
+	/// we still need some basic parsing to assign default values.
+	/// </summary>
+	public Expression GetMemberExpression(ExpressionParser parser, string memberName,
+		string remainingTextSpan) =>
+		typeParser.GetMemberExpression(parser, memberName, remainingTextSpan);
 }

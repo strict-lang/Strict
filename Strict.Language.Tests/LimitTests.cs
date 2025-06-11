@@ -42,13 +42,13 @@ public sealed class LimitTests
 	}
 
 	[Test]
-	public void MethodParameterCountMustNotExceedThree() =>
-		Assert.That(() => CreateType(nameof(MethodParameterCountMustNotExceedThree), [
-				"has log", "Run(first Number, second Number, third Number, fourth Number)",
+	public void MethodParameterCountMustNotExceedLimit() =>
+		Assert.That(() => CreateType(nameof(MethodParameterCountMustNotExceedLimit), [
+				"has log", "Run(first Number, second Number, third Number, fourth Number, fifth Number)",
 				"\tlog.Write(5)"
 			]).ParseMembersAndMethods(new MethodExpressionParser()),
-			Throws.InstanceOf<Method.MethodParameterCountMustNotExceedThree>().With.Message.
-				Contains($"Method Run has parameters count 4 but limit is {Limit.ParameterCount}"));
+			Throws.InstanceOf<Method.MethodParameterCountMustNotExceedLimit>().With.Message.
+				Contains($"Method Run has parameters count 5 but limit is {Limit.ParameterCount}"));
 
 	[Test]
 	public void MethodCountMustNotExceedFifteen() =>

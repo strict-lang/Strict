@@ -15,7 +15,8 @@ public sealed class EnumTests
 				"has Microsoft = \"https://microsoft.com\"")).ParseMembersAndMethods(parser);
 		new Type(package,
 			//TODO: would be cool if numbers are automatically set (but then the question is how do we know what they are?) so by default they should match the line number and if you want something else, you just assign them yourself!
-			new TypeLines("Instruction", "has Set = 1", "has Add = 2", "has Subtract = 3",
+			//TODO: change all to constant!
+			new TypeLines("Instruction", "constant Set = 1", "has Add = 2", "has Subtract = 3",
 				"has Multiply = 4", "has Divide = 5", "has BinaryOperatorsSeparator = 100",
 				"has GreaterThan = 6", "has LessThan = 7", "has Equal = 8", "has NotEqual = 9",
 				"has ConditionalSeparator = 200", "has JumpIfTrue = 10", "has JumpIfFalse = 11",

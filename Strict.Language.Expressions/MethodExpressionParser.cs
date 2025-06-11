@@ -82,7 +82,8 @@ public class MethodExpressionParser : ExpressionParser
 		if (postfix.Output.Count == 0)
 			return binary;
 		return ParseInContext(body, input[postfix.Output.Peek()], [binary]) ??
-			throw new UnknownExpression(body, input[postfix.Output.Peek()].ToString());
+			throw new UnknownExpression(body,
+				input[postfix.Output.Peek()].ToString() + " in " + input.ToString());
 	}
 
 	private Expression ParseMethodCallWithArguments(Body body, ReadOnlySpan<char> input,

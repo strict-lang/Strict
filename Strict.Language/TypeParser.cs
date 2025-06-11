@@ -135,16 +135,8 @@ public sealed class TypeParser(Type type, string[] lines)
 			ExtractConstraintsSpanAndValueExpression(parser, remainingLine, nameAndType,
 				out var constraintsSpan), usedMutableKeyword);
 		if (!constraintsSpan.IsEmpty)
-			try
-			{
-				member.ParseConstraints(parser,
-					constraintsSpan.ToString().Split(BinaryOperator.And, StringSplitOptions.TrimEntries));
-			}
-			catch (Exception ex)
-			{
-				throw new ConstraintException(
-					"member: " + nameAndType + ", constraint: " + constraintsSpan.ToString(), ex);
-			}
+			member.ParseConstraints(parser,
+				constraintsSpan.ToString().Split(BinaryOperator.And, StringSplitOptions.TrimEntries));
 		return member;
 	}
 
@@ -165,7 +157,7 @@ public sealed class TypeParser(Type type, string[] lines)
 
 	private const char EqualCharacter = '=';
 
-	private Expression GetMemberExpression(ExpressionParser parser, string memberName,
+	internal Expression GetMemberExpression(ExpressionParser parser, string memberName,
 		ReadOnlySpan<char> remainingTextSpan) =>
 		parser.ParseExpression(new Body(new Method(type, 0, parser, [Type.EmptyBody])),
 			GetFromConstructorCallFromUpcastableMemberOrJustEvaluate(memberName, remainingTextSpan));

@@ -79,9 +79,14 @@ public sealed class Method : Context
 		if (IsMethodGeneric(rest))
 			IsGeneric = true;
 		var closingBracketIndex = rest.LastIndexOf(')');
+		while (closingBracketIndex > 1 && rest[closingBracketIndex - 1] == ')')
+			closingBracketIndex--;
+		/*I am very confused about this, if there is a ) bracket before the last opening one, we search for the last space and cut that off and use that as our return type? what?
+		 e.g. (newLine = Character(13)) would return Character(13)), which crashes at the 13) number
 		var lastOpeningBracketIndex = rest.LastIndexOf('(');
 		if (lastOpeningBracketIndex > 2 && rest.IndexOf(')') < lastOpeningBracketIndex)
 			return Type.GetType(rest[(rest.LastIndexOf(' ') + 1)..].ToString());
+		 */
 		var hasMultipleReturnTypes = rest.Contains(" or ", StringComparison.Ordinal);
 		return closingBracketIndex > 0 && rest.Length == 2
 			? throw new EmptyParametersMustBeRemoved(this)
@@ -147,11 +152,11 @@ public sealed class Method : Context
 			if (IsParameterTypeAny(nameAndTypeAsString))
 				throw new ParametersWithTypeAnyIsNotAllowed(this, nameAndTypeAsString);
 			parameters.Add(nameAndTypeAsString.Contains('=')
-				? GetParameterByExtractingNameAndDefaultValue(type, nameAndTypeAsString)
+				? GetParameterByExtractingNameAndDefaultValue(type, nameAndTypeAsString, Parser)
 				: new Parameter(type, nameAndTypeAsString));
 		}
 		if (parameters.Count > Limit.ParameterCount)
-			throw new MethodParameterCountMustNotExceedThree(this,
+			throw new MethodParameterCountMustNotExceedLimit(this,
 				TypeLineNumber + methodLineNumber - 1);
 	}
 
@@ -177,7 +182,7 @@ public sealed class Method : Context
 		: ParsingFailed(method.Type, 0, name);
 
 	private Parameter GetParameterByExtractingNameAndDefaultValue(Type type,
-		string nameAndTypeAsString)
+		string nameAndTypeAsString, ExpressionParser parser)
 	{
 		var nameAndDefaultValue = nameAndTypeAsString.Split(" = ");
 		if (nameAndDefaultValue.Length < 2)
@@ -185,22 +190,21 @@ public sealed class Method : Context
 				nameAndTypeAsString);
 		var defaultValue = methodBody != null
 			? ParseExpression(methodBody, nameAndDefaultValue[1])
-			: null;
+			: type.GetMemberExpression(parser, nameAndDefaultValue[0], nameAndDefaultValue[1]);
 		return defaultValue == null
 			? throw new DefaultValueCouldNotBeParsedIntoExpression(this,
 				TypeLineNumber + methodLineNumber - 1, nameAndTypeAsString)
 			: new Parameter(type, nameAndDefaultValue[0], defaultValue);
 	}
 
-	public sealed class MissingParameterDefaultValue(Method method,
-		int lineNumber,
+	public sealed class MissingParameterDefaultValue(Method method, int lineNumber,
 		string nameAndType) : ParsingFailed(method.Type, lineNumber, nameAndType);
 
 	public sealed class DefaultValueCouldNotBeParsedIntoExpression(Method method,
 		int lineNumber,	string defaultValueExpression)
 		: ParsingFailed(method.Type, lineNumber, defaultValueExpression);
 
-	public sealed class MethodParameterCountMustNotExceedThree(Method method, int lineNumber)
+	public sealed class MethodParameterCountMustNotExceedLimit(Method method, int lineNumber)
 		: ParsingFailed(method.Type, lineNumber,
 			$"{
 				GetMethodName(method)
@@ -257,7 +261,7 @@ public sealed class Method : Context
 	/// </summary>
 	private Body PreParseBody(int parentTabs = 1, Body? parent = null)
 	{
-		Console.WriteLine("PreParseBody " + this);
+		//tst: Console.WriteLine("PreParseBody " + this);
 		var body = new Body(this, parentTabs, parent);
 		var startLine = methodLineNumber;
 		for (; methodLineNumber < lines.Count; methodLineNumber++)

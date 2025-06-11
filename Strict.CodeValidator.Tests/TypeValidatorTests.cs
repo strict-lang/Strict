@@ -64,7 +64,7 @@ public sealed class TypeValidatorTests
 					// @formatter:on
 				]))
 			]).Validate(),
-			Throws.InstanceOf<Method.MethodParameterCountMustNotExceedThree>().With.Message.Contains(
+			Throws.InstanceOf<Method.MethodParameterCountMustNotExceedLimit>().With.Message.Contains(
 				"Type TestPackage.ValidateTypeHasTooManyDependenciesFromMethod from constructor method " +
 				"has parameters count 4 but limit is 3"));
 

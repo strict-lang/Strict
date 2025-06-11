@@ -18,7 +18,7 @@ public sealed class Body : Expression
 	/// </summary>
 	public Body(Method method, int tabs = 0, Body? parent = null) : base(method.ReturnType)
 	{
-		Console.WriteLine(method + " Body " + ParsingLineNumber);
+		//tst: Console.WriteLine(method + " Body " + ParsingLineNumber);
 		Method = method;
 		Tabs = tabs;
 		Parent = parent;
@@ -43,7 +43,7 @@ public sealed class Body : Expression
 	/// </summary>
 	public Expression Parse()
 	{
-		Console.WriteLine(Method + " Body.Parse " + LineRange); //tst
+		//tst: Console.WriteLine(Method + " Body.Parse " + LineRange);
 		var expressions = new List<Expression>();
 		for (ParsingLineNumber = LineRange.Start.Value; ParsingLineNumber < LineRange.End.Value;
 			ParsingLineNumber++)
