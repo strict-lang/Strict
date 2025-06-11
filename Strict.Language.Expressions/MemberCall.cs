@@ -17,7 +17,18 @@ public sealed class MemberCall(Expression? instance, Member member)
 				return instance == null && body.IsFakeBodyForMemberInitialization
 					? throw new CannotAccessMemberBeforeTypeIsParsed(body, partToParse.ToString(), type)
 					: new MemberCall(instance, member);
-		return null;
+		return body.Method.Name == Member.ConstraintsBody
+			? FindContainingMethodTypeMemberForConstraints(body, instance, partToParse.ToString())
+			: null;
+	}
+
+	private static MemberCall? FindContainingMethodTypeMemberForConstraints(Body body,
+		Expression? instance, string searchFor)
+	{
+		var member = body.Method.Type.FindMember(searchFor.ToString());
+		return member != null
+			? new MemberCall(instance, member)
+			: null;
 	}
 
 	public override string ToString() =>

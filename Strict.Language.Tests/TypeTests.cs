@@ -78,7 +78,7 @@ public sealed class TypeTests
 	public void NoMatchingMethodFound() =>
 		Assert.That(
 			() => CreateType(nameof(NoMatchingMethodFound), "has log", "Run", "\tconstant a = 5").
-				GetMethod("UnknownMethod", [], parser),
+				GetMethod("UnknownMethod", []),
 			Throws.InstanceOf<Type.NoMatchingMethodFound>());
 
 	[Test]
@@ -188,7 +188,7 @@ public sealed class TypeTests
 		[
 			new Number(type, 5),
 			new List(null!, [new Number(type, 6), new Number(type, 7)])
-		], parser);
+		]);
 		Assert.That(result, Is.InstanceOf<Method>());
 		Assert.That(result?.ToString(),
 			Is.EqualTo("Add(first TestPackage.Number, other TestPackage.List(TestPackage.Number)) List"));
@@ -197,12 +197,12 @@ public sealed class TypeTests
 	[Test]
 	public void GenericTypesCannotBeUsedDirectlyUseImplementation()
 	{
-		var type = CreateType(nameof(GenericTypesCannotBeUsedDirectlyUseImplementation), "has generic",
-			"AddGeneric(first Generic, other List) List", "\tfirst + other");
+		var type = CreateType(nameof(GenericTypesCannotBeUsedDirectlyUseImplementation),
+			"has generic", "AddGeneric(first Generic, other List) List", "\tfirst + other");
 		Assert.That(
 			() => type.FindMethod("AddGeneric",
-				[new Number(type, 6), new List(null!, [new Number(type, 7), new Number(type, 8)])],
-				parser), Throws.InstanceOf<Type.GenericTypesCannotBeUsedDirectlyUseImplementation>());
+				[new Number(type, 6), new List(null!, [new Number(type, 7), new Number(type, 8)])]),
+			Throws.InstanceOf<Type.GenericTypesCannotBeUsedDirectlyUseImplementation>());
 	}
 
 	[TestCase(Base.Number, "has number", "Run", "\tmutable result = 2")]
@@ -282,8 +282,10 @@ public sealed class TypeTests
 			"Add(other Texts, first Generic) List", "\tother + first");
 		Assert.That(
 			type.FindMethod("Add",
-				[new List(null!, [new Text(type, "Hi"), new Text(type, "Hello")]), new Number(type, 5)],
-				parser)?.ToString(),
+				[
+					new List(null!, [new Text(type, "Hi"), new Text(type, "Hello")]), new Number(type, 5)
+				])?.
+				ToString(),
 			Is.EqualTo(
 				"Add(other TestPackage.List(TestPackage.Text), first TestPackage.Generic) List"));
 	}
@@ -295,9 +297,9 @@ public sealed class TypeTests
 			"has Output",
 			"has log",
 			"Write(generic)", "\tlog.Write(generic)");
-		Assert.That(type.FindMethod("Write", [new Text(type, "hello")], parser)?.ToString(),
+		Assert.That(type.FindMethod("Write", [new Text(type, "hello")])?.ToString(),
 			Is.EqualTo("Write(generic TestPackage.Generic)"));
-		Assert.That(type.FindMethod("Write", [new Number(type, 5)], parser)?.ToString(),
+		Assert.That(type.FindMethod("Write", [new Number(type, 5)])?.ToString(),
 			Is.EqualTo("Write(generic TestPackage.Generic)"));
 	}
 
@@ -305,11 +307,11 @@ public sealed class TypeTests
 	public void NonGenericExpressionCannotBeGeneric() =>
 		Assert.That(
 			() => new Type(package,
-					new TypeLines(nameof(NonGenericExpressionCannotBeGeneric),
-						"has list",
-						"Something",
-						"\tconstant result = list + 5")).ParseMembersAndMethods(parser).
-				Methods[0].GetBodyAndParseIfNeeded(), Throws.InstanceOf<ParsingFailed>().With.InnerException.InstanceOf<Type.GenericTypesCannotBeUsedDirectlyUseImplementation>());
+					new TypeLines(nameof(NonGenericExpressionCannotBeGeneric), "has list", "Something",
+						"\tconstant result = list + 5")).ParseMembersAndMethods(parser).Methods[0].
+				GetBodyAndParseIfNeeded(),
+			Throws.InstanceOf<ParsingFailed>().With.InnerException.
+				InstanceOf<Type.GenericTypesCannotBeUsedDirectlyUseImplementation>());
 
 	[Test]
 	public void InvalidProgram() =>
@@ -327,8 +329,7 @@ public sealed class TypeTests
 		var type = new Type(package,
 			new TypeLines(nameof(InvalidProgram), "has log", "Something(input Generics)",
 				"\tconstant result = input + 5")).ParseMembersAndMethods(parser);
-		Assert.That(
-			type.FindMethod("Something", [new List(null!, [new Text(type, "hello")])], parser),
+		Assert.That(type.FindMethod("Something", [new List(null!, [new Text(type, "hello")])]),
 			Is.Not.Null);
 	}
 
@@ -576,7 +577,7 @@ public sealed class TypeTests
 	[Test]
 	public void InitializeInnerTypeMemberUsingOuterTypeConstructor()
 	{
-		var thing = CreateType("Thing", "has character", "SomeThing Number", "\tvalue");
+		CreateType("Thing", "has character", "SomeThing Number", "\tvalue");
 		CreateType("SuperThing", "has thing", "SuperSomeThing Number", "\tvalue");
 		var superThingUser = CreateType("SuperThingUser", "has input = SuperThing(7)",
 			"UseSuperThing Number",

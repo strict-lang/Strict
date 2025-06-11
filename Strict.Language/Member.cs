@@ -2,8 +2,8 @@
 
 public sealed class Member : NamedType
 {
-	public Member(Type definedIn, string nameAndType, Expression? value, bool usedMutableKeyword = false) : base(definedIn,
-		nameAndType, value?.ReturnType)
+	public Member(Type definedIn, string nameAndType, Expression? value,
+		bool usedMutableKeyword = false) : base(definedIn, nameAndType, value?.ReturnType)
 	{
 		Value = value;
 		if (usedMutableKeyword)

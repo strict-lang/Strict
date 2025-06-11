@@ -11,7 +11,7 @@ public sealed class To(Expression left, Method operatorMethod, Type conversionTy
 		var conversionType = body.ReturnType.FindType(text.ToString());
 		if (conversionType == null)
 			throw new ConversionTypeNotFound(body);
-		var method = left.ReturnType.GetMethod(BinaryOperator.To, [], body.Method.Parser);
+		var method = left.ReturnType.GetMethod(BinaryOperator.To, []);
 		if (method.ReturnType.Name != conversionType.Name && !left.ReturnType.IsUpcastable(conversionType))
 			throw new ConversionTypeIsIncompatible(body,
 				$"Conversion for {left.ReturnType.Name} and {conversionType.Name} does not exist",

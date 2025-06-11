@@ -1,4 +1,6 @@
-﻿namespace Strict.Language;
+﻿using System.Data;
+
+namespace Strict.Language;
 
 public sealed class TypeParser(Type type, string[] lines)
 {
@@ -133,8 +135,16 @@ public sealed class TypeParser(Type type, string[] lines)
 			ExtractConstraintsSpanAndValueExpression(parser, remainingLine, nameAndType,
 				out var constraintsSpan), usedMutableKeyword);
 		if (!constraintsSpan.IsEmpty)
-			member.ParseConstraints(parser,
-				constraintsSpan.ToString().Split(BinaryOperator.And, StringSplitOptions.TrimEntries));
+			try
+			{
+				member.ParseConstraints(parser,
+					constraintsSpan.ToString().Split(BinaryOperator.And, StringSplitOptions.TrimEntries));
+			}
+			catch (Exception ex)
+			{
+				throw new ConstraintException(
+					"member: " + nameAndType + ", constraint: " + constraintsSpan.ToString(), ex);
+			}
 		return member;
 	}
 

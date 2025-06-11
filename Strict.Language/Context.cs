@@ -1,4 +1,5 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using static Strict.Language.NamedType;
 
 namespace Strict.Language;
@@ -9,6 +10,7 @@ namespace Strict.Language;
 /// is available. The high-level context knows all types, low-level scope in methods is managed via
 /// <see cref="Body"/> (which is every MethodBody, If.Then, If.Else or For).
 /// </summary>
+[DebuggerDisplay("{ToString()}")]
 public abstract class Context
 {
 	protected Context(Context? parent, string name)

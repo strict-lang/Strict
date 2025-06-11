@@ -43,8 +43,8 @@ public sealed class Binary(Expression left, Method operatorMethod, Expression[] 
 			throw new ListsHaveDifferentDimensions(body, left + " " + right);
 		var arguments = new[] { right };
 		return new Binary(left, operatorToken == "in"
-			? right.ReturnType.GetMethod(operatorToken, [left], body.Method.Parser)
-			: left.ReturnType.GetMethod(operatorToken, arguments, body.Method.Parser), arguments);
+			? right.ReturnType.GetMethod(operatorToken, [left])
+			: left.ReturnType.GetMethod(operatorToken, arguments), arguments);
 	}
 
 	private static Expression GetUnaryOrBuildNestedBinary(Body body, ReadOnlySpan<char> input,

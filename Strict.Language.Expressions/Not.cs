@@ -12,7 +12,7 @@ public sealed class Not : MethodCall
 	public static Not Parse(Body body, ReadOnlySpan<char> input, Range methodRange)
 	{
 		var right = body.Method.ParseExpression(body, input[methodRange]);
-		return new Not(right.ReturnType.GetMethod(UnaryOperator.Not, [], body.Method.Parser), right);
+		return new Not(right.ReturnType.GetMethod(UnaryOperator.Not, []), right);
 	}
 
 	public override string ToString() => UnaryOperator.Not + " " + Instance!;

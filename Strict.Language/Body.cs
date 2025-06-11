@@ -43,7 +43,7 @@ public sealed class Body : Expression
 	/// </summary>
 	public Expression Parse()
 	{
-		Console.WriteLine(Method + " Body.Parse " + LineRange);
+		Console.WriteLine(Method + " Body.Parse " + LineRange); //tst
 		var expressions = new List<Expression>();
 		for (ParsingLineNumber = LineRange.Start.Value; ParsingLineNumber < LineRange.End.Value;
 			ParsingLineNumber++)

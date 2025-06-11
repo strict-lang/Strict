@@ -12,17 +12,15 @@ internal class TypeMethodFinder(Type type)
 			: matchingMethods.FirstOrDefault(method =>
 				IsMethodWithMatchingParametersType(method, implementationTypes));
 
-	public Method GetMethod(string methodName, IReadOnlyList<Expression> arguments,
-		ExpressionParser parser)
+	public Method GetMethod(string methodName, IReadOnlyList<Expression> arguments)
 	{
-		var method = FindMethod(methodName, arguments, parser);
+		var method = FindMethod(methodName, arguments);
 		if (method == null)
 			throw new NoMatchingMethodFound(Type, methodName, Type.AvailableMethods);
 		return method;
 	}
 
-	public Method? FindMethod(string methodName, IReadOnlyList<Expression> arguments,
-		ExpressionParser parser)
+	public Method? FindMethod(string methodName, IReadOnlyList<Expression> arguments)
 	{
 		if (Type.IsGeneric)
 			throw new GenericTypesCannotBeUsedDirectlyUseImplementation(Type,

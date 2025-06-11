@@ -223,13 +223,11 @@ public class Type : Context
 	public const string Extension = ".strict";
 	public Member? FindMember(string name) => Members.FirstOrDefault(member => member.Name == name);
 
-	public Method? FindMethod(string methodName, IReadOnlyList<Expression> arguments,
-		ExpressionParser parser) =>
-		typeMethodFinder.FindMethod(methodName, arguments, parser);
+	public Method? FindMethod(string methodName, IReadOnlyList<Expression> arguments) =>
+		typeMethodFinder.FindMethod(methodName, arguments);
 
-	public Method GetMethod(string methodName, IReadOnlyList<Expression> arguments,
-		ExpressionParser parser) =>
-		typeMethodFinder.GetMethod(methodName, arguments, parser);
+	public Method GetMethod(string methodName, IReadOnlyList<Expression> arguments) =>
+		typeMethodFinder.GetMethod(methodName, arguments);
 
 	public class GenericTypesCannotBeUsedDirectlyUseImplementation(Type type,
 		string extraInformation) : Exception(type + " " + extraInformation);
@@ -341,10 +339,12 @@ public class Type : Context
 					AddAvailableMethod(method);
 			if (Name == Base.Any)
 				return cachedAvailableMethods;
-			if (members.Count == 1)
-				foreach (var member in members)
-					if (!member.IsPublic && !IsTraitImplementation(member.Type))
-						AddNonGenericMethods(member.Type);
+			// Types are composed in Strict, we want users to be able to use base methods but exclude
+			// public members (e.g., Type.Name), constants (e.g., has Tab = Character(7)) and if we
+			// have implemented a trait here anyway (then all the methods are already implemented).
+			foreach (var member in Members.Where(m =>
+				!m.IsPublic && m.Value == null && !IsTraitImplementation(m.Type)))
+				AddNonGenericMethods(member.Type);
 			if (members.Count > 0 && !members[0].Type.IsGeneric)
 				AddFromConstructorWithMembersAsArguments();
 			AddAnyMethods();
@@ -375,15 +375,17 @@ public class Type : Context
 			? methods[0].Parser
 			: GetType(Base.Any).methods[0].Parser, ["from(" + CreateFromMethodParameters() + ")"]));
 
-	private string? CreateFromMethodParameters()
+	private string CreateFromMethodParameters()
 	{
+		if (IsEnum)
+			return "number";
 		var parameters = "";
 		foreach (var member in members)
 			if (!member.Type.IsGeneric)
 				parameters += (parameters == ""
 					? ""
-					: ", ") + member.Name.MakeFirstLetterLowercase() + (member.Name.ToLowerInvariant() ==
-					member.Type.Name.ToLowerInvariant()
+					: ", ") + member.Name.MakeFirstLetterLowercase() + (member.Name.EndsWith('s') &&
+					member.Type.IsIterator
 						? ""
 						: " " + member.Type.Name);
 		return parameters;

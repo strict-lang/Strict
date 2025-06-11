@@ -135,12 +135,12 @@ public sealed class Repositories
 				Directory.GetFiles(packagePath, "*" + Type.Extension)));
 
 	/// <summary>
-	/// Initially we need to create just empty types and then after they all have been created
+	/// Initially we need to create just empty types, and then after they all have been created,
 	/// we will fill and load them, otherwise we could not use types within the package context.
 	/// </summary>
 	private async Task<Package> CreatePackageFromFiles(string packagePath,
 		IReadOnlyCollection<string> files, Package? parent = null) =>
-		// Main folder can be empty, other folders must contain at least one file to create a package
+		// The main folder can be empty, other folders must contain at least one file to create a package
 		parent != null && files.Count == 0
 			? parent
 			: await CreatePackage(packagePath, files, parent);

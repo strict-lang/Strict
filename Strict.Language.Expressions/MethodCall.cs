@@ -40,7 +40,7 @@ public class MethodCall : ConcreteExpression
 	{
 		if (body.IsFakeBodyForMemberInitialization)
 			return null;
-		var method = type.FindMethod(inputAsString, arguments, body.Method.Parser);
+		var method = type.FindMethod(inputAsString, arguments);
 		if (method != null)
 			return new MethodCall(method, instance, AreArgumentsAutoParsedAsList(method, arguments)
 				? [new List(body, (List<Expression>)arguments)]
@@ -61,8 +61,7 @@ public class MethodCall : ConcreteExpression
 			? null
 			: IsConstructorUsedWithSameArgumentType(arguments, fromType)
 				? throw new ConstructorForSameTypeArgumentIsNotAllowed(body)
-				: new MethodCall(fromType.GetMethod(Method.From, arguments, body.Method.Parser), null,
-					arguments);
+				: new MethodCall(fromType.GetMethod(Method.From, arguments), null, arguments);
 	}
 
 	private static bool
