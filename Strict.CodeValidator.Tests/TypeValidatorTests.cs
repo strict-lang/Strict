@@ -55,7 +55,7 @@ public sealed class TypeValidatorTests
 				ParseTypeMethods(CreateType(nameof(ValidateTypeHasTooManyDependenciesFromMethod), [
 						// @formatter:off
 						"has number",
-						"from(number, text, boolean, input Text)",
+						"from(number, text, boolean, input Text, another Number)",
 						"\tvalue",
 						"Run(methodInput Number)",
 						"\tif boolean",
@@ -66,7 +66,7 @@ public sealed class TypeValidatorTests
 			]).Validate(),
 			Throws.InstanceOf<Method.MethodParameterCountMustNotExceedLimit>().With.Message.Contains(
 				"Type TestPackage.ValidateTypeHasTooManyDependenciesFromMethod from constructor method " +
-				"has parameters count 4 but limit is 3"));
+				"has parameters count 5 but limit is 4"));
 
 	[Test]
 	public void VariableHidesMemberUseDifferentName() =>

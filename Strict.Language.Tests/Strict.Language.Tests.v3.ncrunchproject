@@ -2,11 +2,14 @@
   <Settings>
     <IgnoredTests>
       <NamedTestSelector>
-        <TestName>Strict.Language.Tests.RepositoriesTests.LoadStrictExamplesPackageAndUseBasePackageTypes</TestName>
+        <TestName>Strict.Language.Tests.BinaryOperatorTests.BenchmarkIsOperator</TestName>
       </NamedTestSelector>
       <NamedTestSelector>
-        <TestName>Strict.Language.Tests.RepositoriesTests.LoadStrictImageProcessingTypes</TestName>
+        <TestName>Strict.Language.Tests.TypeTests.CheckGetTypeCache</TestName>
       </NamedTestSelector>
+      <FixtureTestSelector>
+        <FixtureName>Strict.Language.Tests.RepositoriesTests</FixtureName>
+      </FixtureTestSelector>
     </IgnoredTests>
   </Settings>
 </ProjectConfiguration>

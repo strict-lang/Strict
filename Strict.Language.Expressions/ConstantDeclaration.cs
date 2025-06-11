@@ -5,7 +5,8 @@
 /// </summary>
 public class ConstantDeclaration : ConcreteExpression
 {
-	public ConstantDeclaration(Body scope, string name, Expression value, bool isMutable = false) : base(value.ReturnType, isMutable)
+	public ConstantDeclaration(Body scope, string name, Expression value, bool isMutable = false) :
+		base(value.ReturnType, isMutable)
 	{
 		if (!name.IsWord())
 			throw new Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers(name);

@@ -36,6 +36,7 @@ public abstract class NamedType
 		Keyword.GetAllKeywords.ToWordList());
 
 	public bool IsMutable { get; protected init; }
+	public bool IsConstant { get; protected init; }
 
 	public sealed class ListPrefixIsNotAllowedUseImplementationTypeNameInPlural(string typeName)
 		: Exception($"List should not be used as prefix for {

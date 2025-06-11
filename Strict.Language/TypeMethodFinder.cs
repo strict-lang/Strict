@@ -26,7 +26,7 @@ internal class TypeMethodFinder(Type type)
 			throw new GenericTypesCannotBeUsedDirectlyUseImplementation(Type,
 				"Type is Generic and cannot be used directly");
 		if (!Type.AvailableMethods.TryGetValue(methodName, out var matchingMethods))
-			return null;//not longer needed: FindAndCreateFromBaseMethod(methodName, arguments, parser);
+			return null;
 		var typesOfArguments = arguments.Select(argument => argument.ReturnType).ToList();
 		var commonTypeOfArguments = TryGetSingleElementType(typesOfArguments);
 		foreach (var method in matchingMethods)
@@ -34,7 +34,6 @@ internal class TypeMethodFinder(Type type)
 				commonTypeOfArguments != null &&
 				commonTypeOfArguments == GetListElementTypeIfHasSingleParameter(method))
 				return method;
-		//return FindAndCreateFromBaseMethod(methodName, arguments, parser) ??
 		throw new ArgumentsDoNotMatchMethodParameters(arguments, Type, matchingMethods);
 	}
 
@@ -101,52 +100,4 @@ internal class TypeMethodFinder(Type type)
 		IsArgumentImplementationTypeMatchParameterType(Type argumentType, Type parameterType) =>
 		argumentType is GenericTypeImplementation argumentGenericType &&
 		argumentGenericType.ImplementationTypes.Any(t => t == parameterType);
-/*this should not be done dynamically, at parsing time we should have the the from methods created already and they should be found and used here!
-	private Method? FindAndCreateFromBaseMethod(string methodName,
-		IReadOnlyList<Expression> arguments, ExpressionParser parser)
-	{
-		if (methodName != Method.From)
-			return null;
-		var matchingMemberParameters = GetMatchingMemberParametersIfExist(arguments);
-		if (string.IsNullOrEmpty(matchingMemberParameters))
-			return null;
-		var fromMethod = "from(" + matchingMemberParameters;
-		var length = matchingMemberParameters.Split(',').Length - 1;
-		return length == arguments.Count || length == PrivateMembersCount
-			? BuildMethod($"{fromMethod[..^2]})", parser)
-			: Type.IsDataType
-				? BuildMethod(fromMethod[..^1], parser)
-				: null;
-	}
-
-	private string? GetMatchingMemberParametersIfExist(IReadOnlyList<Expression> arguments)
-	{
-		var argumentIndex = 0;
-		string? parameters = null;
-		foreach (var member in Type.Members)
-			if (arguments.Count > argumentIndex && member.Type == arguments[argumentIndex].ReturnType)
-			{
-				parameters += $"{member.Name.MakeFirstLetterLowercase()} {member.Type.Name}, ";
-				argumentIndex++;
-			}
-		return parameters == null && arguments.Count > 1 && PrivateMembersCount == 1 &&
-			CanUpcastAllArgumentsToMemberType(arguments, Type.Members[0], arguments[0].ReturnType)
-				? FormatMemberAsParameterWithType()
-				: parameters;
-	}
-
-	private int PrivateMembersCount => Type.Members.Count(member => !member.IsPublic);
-
-	private static bool CanUpcastAllArgumentsToMemberType(IEnumerable<Expression> arguments,
-		NamedType member, Type firstArgumentReturnType) =>
-		member.Type is GenericTypeImplementation { Generic.Name: Base.List } genericType &&
-		genericType.ImplementationTypes[0] == firstArgumentReturnType &&
-		arguments.All(a => a.ReturnType == firstArgumentReturnType);
-
-	private string FormatMemberAsParameterWithType() =>
-		$"{Type.Members[0].Name.MakeFirstLetterLowercase()} {Type.Members[0].Type.Name}, ";
-
-	private Method BuildMethod(string fromMethod, ExpressionParser parser) =>
-		new(Type, 0, parser, [fromMethod]);
-*/
 }

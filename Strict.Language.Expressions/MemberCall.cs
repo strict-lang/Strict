@@ -8,7 +8,6 @@ public sealed class MemberCall(Expression? instance, Member member)
 	public Expression? Instance { get; } = instance;
 	public Member Member { get; } = member;
 
-	// ReSharper disable once TooManyArguments
 	public static Expression? TryParse(Body body, Type type, Expression? instance,
 		ReadOnlySpan<char> partToParse)
 	{
@@ -25,7 +24,7 @@ public sealed class MemberCall(Expression? instance, Member member)
 	private static MemberCall? FindContainingMethodTypeMemberForConstraints(Body body,
 		Expression? instance, string searchFor)
 	{
-		var member = body.Method.Type.FindMember(searchFor.ToString());
+		var member = body.Method.Type.FindMember(searchFor);
 		return member != null
 			? new MemberCall(instance, member)
 			: null;

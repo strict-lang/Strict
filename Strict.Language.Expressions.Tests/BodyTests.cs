@@ -115,15 +115,15 @@ public sealed class BodyTests : TestExpressions
 	{
 		var program = new Type(new Package(nameof(ChildBodyReturnsFromThreeTabsToOneDirectly)),
 			new TypeLines(nameof(ChildBodyReturnsFromThreeTabsToOneDirectly),
-                // @formatter:off
-                "has log",
-                "Run",
-                "\tconstant number = 5",
-                "\tfor Range(1, number)",
-                "\t\tif index is number",
-                "\t\t\tconstant current = index",
-                "\t\t\treturn current",
-                "\tnumber")).ParseMembersAndMethods(new MethodExpressionParser());
+      // @formatter:off
+      "has log",
+      "Run",
+      "\tconstant number = 5",
+      "\tfor Range(1, number)",
+      "\t\tif index is number",
+      "\t\t\tconstant current = index",
+      "\t\t\treturn current",
+      "\tnumber")).ParseMembersAndMethods(new MethodExpressionParser());
 		// @formatter:on
 		var body = (Body)program.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(body.Tabs, Is.EqualTo(1));

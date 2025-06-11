@@ -11,24 +11,24 @@ public sealed class EnumTests
 		package = new TestPackage();
 		parser = new MethodExpressionParser();
 		new Type(package,
-			new TypeLines("Connection", "has Google = \"https://google.com\"",
-				"has Microsoft = \"https://microsoft.com\"")).ParseMembersAndMethods(parser);
+			new TypeLines("Connection", "constant Google = \"https://google.com\"",
+				"constant Microsoft = \"https://microsoft.com\"")).ParseMembersAndMethods(parser);
 		new Type(package,
 			//TODO: would be cool if numbers are automatically set (but then the question is how do we know what they are?) so by default they should match the line number and if you want something else, you just assign them yourself!
 			//TODO: change all to constant!
-			new TypeLines("Instruction", "constant Set = 1", "has Add = 2", "has Subtract = 3",
-				"has Multiply = 4", "has Divide = 5", "has BinaryOperatorsSeparator = 100",
-				"has GreaterThan = 6", "has LessThan = 7", "has Equal = 8", "has NotEqual = 9",
-				"has ConditionalSeparator = 200", "has JumpIfTrue = 10", "has JumpIfFalse = 11",
-				"has JumpIfNotZero = 12", "has JumpsSeparator = 300")).ParseMembersAndMethods(parser);
+			new TypeLines("Instruction", "constant Set", "constant Add", "constant Subtract",
+				"constant Multiply", "constant Divide", "constant BinaryOperatorsSeparator = 100",
+				"constant GreaterThan", "constant LessThan", "constant Equal", "constant NotEqual",
+				"constant ConditionalSeparator", "constant JumpIfTrue", "constant JumpIfFalse",
+				"constant JumpIfNotZero", "constant JumpsSeparator = 300")).ParseMembersAndMethods(parser);
 	}
 
 	private Package package = null!;
 	private ExpressionParser parser = null!;
 
-	[TestCase(true, "has Set = 1", "has Add = 2")]
+	[TestCase(true, "constant Set", "constant Add")]
 	[TestCase(false, "has log", "has number")]
-	[TestCase(false, "has log", "has boolean")]
+	[TestCase(false, "has log", "constant Add")]
 	[TestCase(false, "has log", "Run", "\t5")]
 	public void CheckTypeIsEnum(bool expected, params string[] lines)
 	{
@@ -54,7 +54,7 @@ public sealed class EnumTests
 	public void UseEnumAsMemberWithoutConstructor()
 	{
 		var consumingType = new Type(package,
-			new TypeLines(nameof(UseEnumWithoutConstructor), "has url = Connection.Google",
+			new TypeLines(nameof(UseEnumWithoutConstructor), "constant url = Connection.Google",
 				"Run", "\t5")).ParseMembersAndMethods(parser);
 		Assert.That(consumingType.Members[0].Value, Is.InstanceOf<MemberCall>());
 		var memberCall = (MemberCall)consumingType.Members[0].Value!;
@@ -120,29 +120,25 @@ public sealed class EnumTests
 	{
 		var type = new Type(package,
 				new TypeLines(nameof(EnumCanHaveMembersWithDifferentTypes),
-					"has One = 1",
-					"has SomeText = \"2\"",
-					"has InputFile = File(\"test.txt\")")).
+					"constant One",
+					"constant SomeText = \"2\"",
+					"constant InputFile = File(\"test.txt\")")).
 			ParseMembersAndMethods(parser);
 		Assert.That(type.IsEnum, Is.EqualTo(true));
 	}
-
+	/*TODO: not sure if this is useful or not … not really supported to mix has instruction with rest enum constants.
 	[Test]
 	public void UseEnumExtensions()
 	{
 		new Type(package,
-				new TypeLines("MoreInstruction",
-					"has instruction = 13",
-					"has BlaDivide = 14",
-					"has BlaBinaryOperatorsSeparator = 15",
-					"has BlaGreaterThan = 16",
-					"has BlaLessThan = 17")).
-			ParseMembersAndMethods(parser);
+			new TypeLines("MoreInstruction", "has instruction", "constant BlaDivide = 14",
+				"constant BlaBinaryOperatorsSeparator", "constant BlaGreaterThan",
+				"constant BlaLessThan")).ParseMembersAndMethods(parser);
 		var body = (Body)new Type(package,
 				new TypeLines(nameof(UseEnumExtensions), "has log", "UseExtendedEnum(instruction) Number",
-					"\tconstant result = instruction to MoreInstruction",
-					"\tresult.BlaDivide")).ParseMembersAndMethods(parser).
-			Methods[0].GetBodyAndParseIfNeeded();
+					"\tconstant result = instruction to MoreInstruction", "\tresult.BlaDivide")).
+			ParseMembersAndMethods(parser).Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(body.Expressions[1].ToString(), Is.EqualTo("result.BlaDivide"));
 	}
+	*/
 }

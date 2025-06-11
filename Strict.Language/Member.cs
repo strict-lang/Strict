@@ -3,14 +3,23 @@
 public sealed class Member : NamedType
 {
 	public Member(Type definedIn, string nameAndType, Expression? value,
-		bool usedMutableKeyword = false) : base(definedIn, nameAndType, value?.ReturnType)
+		string usedKeyword = Keyword.Has) : base(definedIn, nameAndType, value?.ReturnType)
 	{
 		Value = value;
-		if (usedMutableKeyword)
+		if (usedKeyword == Keyword.Mutable)
 			IsMutable = true;
+		else if (usedKeyword == Keyword.Constant)
+		{
+			IsConstant = true;
+			if (value == null)
+				throw new MissingConstantValue(definedIn, nameAndType);
+		}
 		if (!Type.Name.StartsWith(Name.MakeFirstLetterUppercase(), StringComparison.Ordinal))
 			CheckForNameWithDifferentTypeUsage(definedIn);
 	}
+
+	public sealed class MissingConstantValue(Type definedIn, string nameAndType)
+		: ParsingFailed(definedIn, 0, nameAndType);
 
 	private void CheckForNameWithDifferentTypeUsage(Type definedIn)
 	{
@@ -24,10 +33,14 @@ public sealed class Member : NamedType
 	public Expression[]? Constraints { get; private set; }
 
 	public Member CloneWithImplementation(Type implementationType) =>
-		new(Name, implementationType, IsMutable);
+		new(Name, implementationType, IsMutable, IsConstant);
 
-	private Member(string name, Type newType, bool isMutable) : base(newType, name, newType) =>
+	private Member(string name, Type newType, bool isMutable, bool isConstant) : base(newType, name,
+		newType)
+	{
 		IsMutable = isMutable;
+		IsConstant = isConstant;
+	}
 
 	public void ParseConstraints(ExpressionParser parser, string[] constraintsText)
 	{
@@ -58,4 +71,11 @@ public sealed class Member : NamedType
 			throw new Body.ValueIsNotMutableAndCannotBeChanged(bodyForErrorMessage, Name);
 		Value = newExpression;
 	}
+
+	public override string ToString() =>
+		(IsMutable
+			? Type.MutableWithSpaceAtEnd
+			: IsConstant
+				? Type.ConstantWithSpaceAtEnd
+				: "") + base.ToString();
 }

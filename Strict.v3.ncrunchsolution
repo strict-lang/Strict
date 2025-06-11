@@ -1,15 +1,7 @@
 ﻿<SolutionConfiguration>
   <Settings>
     <AllowParallelTestExecution>True</AllowParallelTestExecution>
-    <DefaultTestTimeout>5000</DefaultTestTimeout>
     <EnableRDI>True</EnableRDI>
-    <InstrumentationMode>Optimised</InstrumentationMode>
-    <MetricsExclusionList>
-      <Value>Strict.Compiler.Cuda\Strict.Compiler.Cuda.csproj</Value>
-      <Value>Strict.Compiler.Cuda.Tests\Strict.Compiler.Cuda.Tests.csproj</Value>
-      <Value>Program.cs:Strict.Language.Tests\Strict.Language.Tests.csproj</Value>
-      <Value>Strict.LanguageServer\Strict.LanguageServer.csproj\obj</Value>
-    </MetricsExclusionList>
     <RdiConfigured>True</RdiConfigured>
     <SolutionConfigured>True</SolutionConfigured>
   </Settings>

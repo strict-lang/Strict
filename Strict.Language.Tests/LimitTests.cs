@@ -119,7 +119,7 @@ public sealed class LimitTests
 		var lines = new string[count];
 		var random = new Random();
 		for (var index = 0; index < count; index++)
-			lines[index] = "has " + GetRandomMemberName(random, 6) + " = 1";
+			lines[index] = "constant " + GetRandomMemberName(random, 6);
 		return lines;
 	}
 

@@ -6,7 +6,6 @@
 		<Nullable>enable</Nullable>
 		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 		<WarningsAsErrors />
-		<!-- ReSharper disable once UnknownProperty -->
 		<DefineConstants>$(DefineConstants)TRACE;LOG_DETAILS</DefineConstants>
 		<LangVersion>default</LangVersion>
 	</PropertyGroup>

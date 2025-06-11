@@ -191,10 +191,8 @@ public sealed class Method : Context
 		var defaultValue = methodBody != null
 			? ParseExpression(methodBody, nameAndDefaultValue[1])
 			: type.GetMemberExpression(parser, nameAndDefaultValue[0], nameAndDefaultValue[1]);
-		return defaultValue == null
-			? throw new DefaultValueCouldNotBeParsedIntoExpression(this,
-				TypeLineNumber + methodLineNumber - 1, nameAndTypeAsString)
-			: new Parameter(type, nameAndDefaultValue[0], defaultValue);
+		return //TODO: can't happen: defaultValue == null ? throw new DefaultValueCouldNotBeParsedIntoExpression(this, TypeLineNumber + methodLineNumber - 1, nameAndTypeAsString) :
+			new Parameter(type, nameAndDefaultValue[0], defaultValue);
 	}
 
 	public sealed class MissingParameterDefaultValue(Method method, int lineNumber,

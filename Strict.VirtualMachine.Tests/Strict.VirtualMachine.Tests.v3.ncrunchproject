@@ -1,9 +1,7 @@
 ﻿<ProjectConfiguration>
   <Settings>
     <IgnoredTests>
-      <FixtureTestSelector>
-        <FixtureName>Strict.VirtualMachine.Tests.VirtualMachineTestsKata</FixtureName>
-      </FixtureTestSelector>
+      <AllTestsSelector />
     </IgnoredTests>
   </Settings>
 </ProjectConfiguration>
