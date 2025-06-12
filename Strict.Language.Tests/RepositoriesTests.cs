@@ -216,11 +216,16 @@ public class RepositoriesTests
 	[Benchmark]
 	public async Task LoadStrictBaseTypesHundredTimes()
 	{
-		//await repos.LoadStrictPackage();
-		//MemoryProfiler.GetSnapshot(nameof(LoadStrictBaseTypesTenTimes) + " once");
+#if MEMORY_PROFILER
+		await repos.LoadStrictPackage();
+		// Requires Jetbrains.Profiler.Windows.Api.MemoryProfiler
+		MemoryProfiler.GetSnapshot(nameof(LoadStrictBaseTypesHundredTimes) + " once");
+#endif
 		for (var iteration = 0; iteration < 100; iteration++)
 			await repos.LoadStrictPackage();
-		//MemoryProfiler.GetSnapshot(nameof(LoadStrictBaseTypesTenTimes) + "10");
+#if MEMORY_PROFILER
+		MemoryProfiler.GetSnapshot(nameof(LoadStrictBaseTypesHundredTimes) + " 100 more times");
+#endif
 	}
 
 	[Test]

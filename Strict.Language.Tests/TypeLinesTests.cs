@@ -37,7 +37,8 @@ public class TypeLinesTests
 			"GetFile Text",
 			"GetFiles Texts",
 			"GetDirectories Texts");
-		Assert.That(typeLines.DependentTypes.Count, Is.EqualTo(2), string.Join(",", typeLines.DependentTypes));
+		Assert.That(typeLines.DependentTypes.Count, Is.EqualTo(2),
+			string.Join(",", typeLines.DependentTypes));
 		Assert.That(typeLines.DependentTypes[0], Is.EqualTo(Base.Text));
 		Assert.That(typeLines.DependentTypes[1], Is.EqualTo(Base.List));
 	}
