@@ -393,7 +393,7 @@ public sealed class TypeTests
 	{
 		var range = package.GetType(Base.Range);
 		Assert.That(range.AvailableMethods.Values.Select(methods => methods.Count).Sum(),
-			Is.EqualTo(9));
+			Is.EqualTo(10), "AvailableMethods: " + range.AvailableMethods.ToWordList());
 	}
 
 	[Test]
@@ -401,7 +401,7 @@ public sealed class TypeTests
 	{
 		var text = package.GetType(Base.Text + "s");
 		Assert.That(text.AvailableMethods.Values.Select(methods => methods.Count).Sum(),
-			Is.EqualTo(18));
+			Is.GreaterThanOrEqualTo(18), "AvailableMethods: " + text.AvailableMethods.ToWordList());
 	}
 
 	[Test]

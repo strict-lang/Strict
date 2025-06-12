@@ -353,7 +353,7 @@ public class Type : Context
 			foreach (var member in Members.Where(m =>
 				m is { IsPublic: false, Value: null } && !IsTraitImplementation(m.Type)))
 				AddNonGenericMethods(member.Type);
-			if (members.Count > 0 && !members[0].Type.IsGeneric)
+			if (members.Count > 0 && members.Any(m => !m.Type.IsGeneric))
 				AddFromConstructorWithMembersAsArguments();
 			AddAnyMethods();
 			return cachedAvailableMethods;
