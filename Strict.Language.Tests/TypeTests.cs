@@ -393,7 +393,7 @@ public sealed class TypeTests
 	{
 		var range = package.GetType(Base.Range);
 		Assert.That(range.AvailableMethods.Values.Select(methods => methods.Count).Sum(),
-			Is.EqualTo(10), "AvailableMethods: " + range.AvailableMethods.ToWordList());
+			Is.EqualTo(9), "AvailableMethods: " + range.AvailableMethods.ToWordList());
 	}
 
 	[Test]

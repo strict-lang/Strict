@@ -135,7 +135,7 @@ public sealed class Method : Context
 			if (lastSpaceIndex > 0)
 				ParseAndAddParameters(type, rest, rest[closingBracketIndex - 1] == ')'
 					? closingBracketIndex
-					: lastSpaceIndex - 1);
+					: lastSpaceIndex);
 			return;
 		}
 		if (closingBracketIndex > 0)
@@ -326,14 +326,14 @@ public sealed class Method : Context
 		if (methodBody == null)
 			throw new CannotCallBodyOnTraitMethod();
 		if (methodBody.Expressions.Count > 0)
-		{
-			Console.WriteLine(methodBody + " existing expressions=" +
-				methodBody.Expressions.ToWordList());
+			//tst: {
+			//tst:	Console.WriteLine(methodBody + " existing expressions=" +
+			//tst:		methodBody.Expressions.ToWordList());
 			return methodBody;
-		}
+			//tst: }
 		if (methodBody.Method != this)
 			throw new NotSupportedException("methodBody is not matching this method anymore " + this);
-		Console.WriteLine(methodBody + " parse");
+		//tst: Console.WriteLine(methodBody + " parse");
 		var expression = methodBody.Parse();
 		if (Tests.Count < 1 && !IsTestPackage())
 			throw new MethodMustHaveAtLeastOneTest(Type, Name, TypeLineNumber);

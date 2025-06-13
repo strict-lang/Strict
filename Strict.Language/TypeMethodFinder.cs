@@ -34,6 +34,11 @@ internal class TypeMethodFinder(Type type)
 				commonTypeOfArguments != null &&
 				commonTypeOfArguments == GetListElementTypeIfHasSingleParameter(method))
 				return method;
+		// Error can be returned without giving a text or stacktrace, we will add it automatically
+		if (methodName == Method.From && matchingMethods.Count == 1 && Type.Name == Base.Error ||
+			// Same for enums, no need to create from number, we could just use one of the constants
+			Type.IsEnum)
+			return matchingMethods[0];
 		throw new ArgumentsDoNotMatchMethodParameters(arguments, Type, matchingMethods);
 	}
 
@@ -62,38 +67,39 @@ internal class TypeMethodFinder(Type type)
 			: null;
 
 	private static bool IsMethodWithMatchingParametersType(Method method,
-		IReadOnlyList<Type> argumentReturnTypes)
+		IReadOnlyList<Type> typesOfArguments)
 	{
 		if (method is { Name: Method.From, Parameters.Count: 0 } &&
-			argumentReturnTypes.Count == 1 && method.ReturnType.IsCompatible(argumentReturnTypes[0]))
+			typesOfArguments.Count == 1 && method.ReturnType.IsCompatible(typesOfArguments[0]))
 			return true;
-		if (method.Parameters.Count != argumentReturnTypes.Count)
+		if (typesOfArguments.Count > method.Parameters.Count || typesOfArguments.Count <
+			method.Parameters.Count(p => p.DefaultValue == null))
 			return false;
-		for (var index = 0; index < method.Parameters.Count; index++)
-			if (!IsMethodParameterMatchingArgument(method, index, argumentReturnTypes[index]))
+		for (var index = 0; index < typesOfArguments.Count; index++)
+			if (!IsMethodParameterMatchingArgument(method, index, typesOfArguments[index]))
 				return false;
 		return true;
 	}
 
 	private static bool IsMethodParameterMatchingArgument(Method method, int index,
-		Type argumentReturnType)
+		Type argumentType)
 	{
 		var methodParameterType = method.Parameters[index].Type;
-		if (argumentReturnType == methodParameterType || method.IsGeneric ||
+		if (argumentType == methodParameterType || method.IsGeneric ||
 			methodParameterType.Name == Base.Any ||
-			IsArgumentImplementationTypeMatchParameterType(argumentReturnType, methodParameterType))
+			IsArgumentImplementationTypeMatchParameterType(argumentType, methodParameterType))
 			return true;
 		if (methodParameterType.IsEnum &&
-			methodParameterType.Members[0].Type.IsCompatible(argumentReturnType))
+			methodParameterType.Members[0].Type.IsCompatible(argumentType))
 			return true;
-		if (methodParameterType.Name == Base.Iterator && method.Type.IsCompatible(argumentReturnType))
+		if (methodParameterType.Name == Base.Iterator && method.Type.IsCompatible(argumentType))
 			return true;
 		if (methodParameterType.IsGeneric)
 			throw new GenericTypesCannotBeUsedDirectlyUseImplementation(
 				methodParameterType, //ncrunch: no coverage
-				"(parameter " + index + ") is not usable with argument " + argumentReturnType + " in " +
+				"(parameter " + index + ") is not usable with argument " + argumentType + " in " +
 				method);
-		return argumentReturnType.IsCompatible(methodParameterType);
+		return methodParameterType.IsCompatible(argumentType);
 	}
 
 	private static bool
