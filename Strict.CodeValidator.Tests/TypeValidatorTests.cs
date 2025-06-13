@@ -53,14 +53,14 @@ public sealed class TypeValidatorTests
 	public void ValidateTypeHasTooManyDependenciesFromMethod() =>
 		Assert.That(() => new TypeValidator([
 				ParseTypeMethods(CreateType(nameof(ValidateTypeHasTooManyDependenciesFromMethod), [
-						// @formatter:off
-						"has number",
-						"from(number, text, boolean, input Text, another Number)",
-						"\tvalue",
-						"Run(methodInput Number)",
-						"\tif boolean",
-						"\t\treturn text + input + number + methodInput + character",
-						"\t0"
+					// @formatter:off
+					"has number",
+					"from(number, text, boolean, input Text, another Number)",
+					"\tvalue",
+					"Run(methodInput Number)",
+					"\tif boolean",
+					"\t\treturn text + input + number + methodInput + character",
+					"\t0"
 					// @formatter:on
 				]))
 			]).Validate(),
@@ -72,17 +72,17 @@ public sealed class TypeValidatorTests
 	public void VariableHidesMemberUseDifferentName() =>
 		Assert.That(() => new TypeValidator([
 				ParseTypeMethods(CreateType(nameof(VariableHidesMemberUseDifferentName), [
-						// @formatter:off
-						"has input Number",
-						"FirstMethod(methodInput Number) Number",
-						"\tconstant something = 5",
-						"\tmethodInput + something",
-						"SecondMethod(methodInput Number) Number",
-						"\tconstant second = 5",
-						"\tmethodInput + second",
-						"Run(methodInput Number)",
-						"\tconstant input = 5",
-						"\tmethodInput + input"
+					// @formatter:off
+					"has input Number",
+					"FirstMethod(methodInput Number) Number",
+					"\tconstant something = 5",
+					"\tmethodInput + something",
+					"SecondMethod(methodInput Number) Number",
+					"\tconstant second = 5",
+					"\tmethodInput + second",
+					"Run(methodInput Number)",
+					"\tconstant input = 5",
+					"\tmethodInput + input"
 					// @formatter:on
 				]))
 			]).Validate(),
@@ -93,14 +93,14 @@ public sealed class TypeValidatorTests
 	public void ParameterHidesMemberUseDifferentName() =>
 		Assert.That(() => new TypeValidator([
 				ParseTypeMethods(CreateType(nameof(VariableHidesMemberUseDifferentName), [
-						// @formatter:off
-						"has input Number",
-						"FirstMethod(input Number) Number",
-						"\tconstant something = 5",
-						"\tinput + something",
-						"SecondMethod(methodInput Number) Number",
-						"\tconstant second = 5",
-						"\tmethodInput + second"
+					// @formatter:off
+					"has input Number",
+					"FirstMethod(input Number) Number",
+					"\tconstant something = 5",
+					"\tinput + something",
+					"SecondMethod(methodInput Number) Number",
+					"\tconstant second = 5",
+					"\tmethodInput + second"
 					// @formatter:on
 				]))
 			]).Validate(),

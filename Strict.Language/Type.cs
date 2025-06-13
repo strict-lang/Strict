@@ -471,7 +471,7 @@ public class Type : Context
 				genericArguments.Add(member);
 		if (genericArguments.Count == 0)
 			throw new InvalidGenericTypeWithoutGenericArguments(this);
-		Console.WriteLine(this + " GetGenericTypeArguments: " + genericArguments.ToWordList());
+		//Console.WriteLine(this + " GetGenericTypeArguments: " + genericArguments.ToWordList());
 		return genericArguments;
 	}
 
