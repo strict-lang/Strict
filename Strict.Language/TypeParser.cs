@@ -10,7 +10,7 @@ public sealed class TypeParser(Type type, string[] lines)
 			TryParse(parser, LineNumber);
 	}
 
-	public int LineNumber { get; private set; }
+	internal int LineNumber; //slower, especially in debug: { get; private set; }
 
 	private void TryParse(ExpressionParser parser, int rememberStartMethodLineNumber)
 	{

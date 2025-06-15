@@ -126,3 +126,5 @@ ipch/
 *.vspx
 *.sap
 /Strict_NCrunchResults
+/.NCrunch_Strict
+Base.zip

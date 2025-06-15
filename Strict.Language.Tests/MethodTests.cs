@@ -24,13 +24,13 @@ public sealed class MethodTests
 
 	[Test]
 	public void InvalidMethodParameters() =>
-		Assert.Throws<Method.InvalidMethodParameters>(
+		Assert.Throws<InvalidMethodParameters>(
 			() => new Method(type, 0, null!, ["ab("]));
 
 	[Test]
 	public void ParametersMustNotBeEmpty() =>
 		Assert.That(() => new Method(type, 0, null!, ["ab()"]),
-			Throws.InstanceOf<Method.EmptyParametersMustBeRemoved>());
+			Throws.InstanceOf<EmptyParametersMustBeRemoved>());
 
 	[TestCase("from(Text)")]
 	[TestCase("from(Number)")]
@@ -38,7 +38,7 @@ public sealed class MethodTests
 	[TestCase("from(start Number, End Number)")]
 	public void UpperCaseParameterWithNoTypeSpecificationIsNotAllowed(string method) =>
 		Assert.That(() => new Method(type, 0, null!, [method]),
-			Throws.InstanceOf<Method.ParametersMustStartWithLowerCase>());
+			Throws.InstanceOf<ParametersMustStartWithLowerCase>());
 
 	[Test]
 	public void ParseDefinition()
@@ -90,7 +90,7 @@ public sealed class MethodTests
 		var appTrait =
 			new Type(type.Package, new TypeLines("DummyApp", "Run")).ParseMembersAndMethods(null!);
 		Assert.That(() => appTrait.Methods[0].GetBodyAndParseIfNeeded(),
-			Throws.InstanceOf<Method.CannotCallBodyOnTraitMethod>());
+			Throws.InstanceOf<CannotCallBodyOnTraitMethod>());
 	}
 
 	[Test]
@@ -159,6 +159,19 @@ public sealed class MethodTests
 	}
 
 	[Test]
+	public void MethodParameterWithGenericTypeImplementations()
+	{
+		var method = new Method(type, 0, new MethodExpressionParser(), [
+			"Run(iterator Iterator(Text), index Number)",
+			"	\"5\""
+		]);
+		Assert.That(method.Parameters[0].Name, Is.EqualTo("iterator"));
+		Assert.That(method.Parameters[0].Type, Is.EqualTo(type.GetType("Iterator(Text)")));
+		Assert.That(method.Parameters[1].Name, Is.EqualTo("index"));
+		Assert.That(method.Parameters[1].Type, Is.EqualTo(type.GetType(Base.Number)));
+	}
+
+	[Test]
 	public void MethodParameterWithDefaultValue()
 	{
 		var method = new Method(type, 0, new MethodExpressionParser(), [
@@ -168,13 +181,6 @@ public sealed class MethodTests
 		Assert.That(method.Parameters[0].DefaultValue, Is.EqualTo(new Text(type, "Hello")));
 	}
 
-	/*TODO: can't happen
-	[Test]
-	public void TraitMethodParameterCannotHaveDefaultValue() =>
-		Assert.That(
-			() => new Method(type, 0, new MethodExpressionParser(), ["Run(input = \"Hello\")"]),
-			Throws.InstanceOf<DefaultValueCouldNotBeParsedIntoExpression>());
-	*/
 	[Test]
 	public void ImmutableMethodParameterValueCannotBeChanged()
 	{
@@ -209,7 +215,7 @@ public sealed class MethodTests
 	public void MissingParameterDefaultValue() =>
 		Assert.That(
 			() => new Method(type, 0, new MethodExpressionParser(), ["Run(input =)", "	5"]),
-			Throws.InstanceOf<Method.MissingParameterDefaultValue>());
+			Throws.InstanceOf<MissingParameterDefaultValue>());
 
 	[Test]
 	public void ParameterWithTypeNameAndInitializerIsForbidden() =>
@@ -221,15 +227,17 @@ public sealed class MethodTests
 	public void MethodMustHaveAtLeastOneTest() =>
 		Assert.That(
 			() => new Method(
-					new Type(new Package(nameof(MethodMustHaveAtLeastOneTest)), new MockRunTypeLines()), 0,
-					new MethodExpressionParser(), ["NoTestMethod Number", "	5"]).
-				GetBodyAndParseIfNeeded(), Throws.InstanceOf<MethodMustHaveAtLeastOneTest>());
+				new Type(new Package(nameof(MethodMustHaveAtLeastOneTest)), new MockRunTypeLines()), 0,
+				new MethodExpressionParser(), ["NoTestMethod Number", "	5"]).GetBodyAndParseIfNeeded(),
+			Throws.InstanceOf<MethodMustHaveAtLeastOneTest>());
 
 	[Test]
 	public void MethodWithTestsAreAllowed()
 	{
-		var methodWithTestsType = new Type(new Package(new TestPackage(), nameof(MethodWithTestsAreAllowed)), new TypeLines(nameof(MethodWithTestsAreAllowed),
-			"has log", "MethodWithTestsAreAllowed Number", "\tMethodWithTestsAreAllowed is 5", "\t5"));
+		var methodWithTestsType = new Type(
+			new Package(new TestPackage(), nameof(MethodWithTestsAreAllowed)),
+			new TypeLines(nameof(MethodWithTestsAreAllowed), "has log",
+				"MethodWithTestsAreAllowed Number", "\tMethodWithTestsAreAllowed is 5", "\t5"));
 		methodWithTestsType.ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(() => methodWithTestsType.Methods[0].GetBodyAndParseIfNeeded(), Throws.Nothing);
 	}

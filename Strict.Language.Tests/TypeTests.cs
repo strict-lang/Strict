@@ -261,8 +261,8 @@ public sealed class TypeTests
 		Assert.That(listType.Members[0].Type, Is.EqualTo(package.GetType(Base.Iterator)));
 		var getNumbersBody = new Type(package,
 				new TypeLines(nameof(MakeSureGenericTypeIsProperlyGenerated), "has numbers",
-				 "GetNumbers Numbers", "\tnumbers")).ParseMembersAndMethods(parser).
-			Methods[0].GetBodyAndParseIfNeeded();
+					"GetNumbers Numbers", "\tnumbers")).ParseMembersAndMethods(parser).Methods[0].
+			GetBodyAndParseIfNeeded();
 		var numbersType = package.GetListImplementationType(package.GetType(Base.Number));
 		Assert.That(getNumbersBody.ReturnType, Is.EqualTo(numbersType));
 		Assert.That(numbersType.Generic, Is.EqualTo(package.GetType(Base.List)));

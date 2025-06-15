@@ -19,13 +19,27 @@ public sealed class Method : Context
 		Parser = parser;
 		this.lines = lines;
 		var restSpan = lines[0].AsSpan(Name.Length);
-		ReturnType = restSpan.Length is 0
+		if (restSpan.StartsWith("()"))
+			throw new EmptyParametersMustBeRemoved(this);
+		if (restSpan.Length == 1)
+			throw new InvalidMethodParameters(this, restSpan.ToString());
+		if (IsMethodGeneric(restSpan))
+			IsGeneric = true;
+		var closingBracketIndex = restSpan.LastIndexOf(") ");
+		var returnTypeSpan = closingBracketIndex > 0
+			? restSpan[(closingBracketIndex + 2)..]
+			: restSpan.Length > 0 && restSpan[0] == ' '
+				? restSpan[1..]
+				: [];
+		ReturnType = returnTypeSpan.Length is 0
 			? GetEmptyReturnType(type)
-			: ParseReturnType(type, restSpan);
+			: ParseReturnType(type, returnTypeSpan.ToString());
 		if (lines.Count > 1)
 			methodBody = PreParseBody();
-		if (restSpan.Length is not 0)
-			ParseParameters(type, restSpan);
+		if (restSpan.Length > 2 && restSpan[0] == '(' && closingBracketIndex < 0)
+			closingBracketIndex = restSpan.LastIndexOf(")");
+		if (closingBracketIndex > 0)
+			ParseParameters(type, restSpan[1..closingBracketIndex]);
 	}
 
 	public sealed class
@@ -72,35 +86,14 @@ public sealed class Method : Context
 	internal readonly IReadOnlyList<string> lines;
 	private readonly Body? methodBody;
 
-	private Type ParseReturnType(Type type, ReadOnlySpan<char> rest)
+	private Type ParseReturnType(Context type, string returnTypeText)
 	{
-		if (IsReturnTypeAny(rest))
-			throw new MethodReturnTypeAsAnyIsNotAllowed(this, rest.ToString());
-		if (IsMethodGeneric(rest))
-			IsGeneric = true;
-		var closingBracketIndex = rest.LastIndexOf(')');
-		while (closingBracketIndex > 1 && rest[closingBracketIndex - 1] == ')')
-			closingBracketIndex--;
-		/*I am very confused about this, if there is a ) bracket before the last opening one, we search for the last space and cut that off and use that as our return type? what?
-		 e.g. (newLine = Character(13)) would return Character(13)), which crashes at the 13) number
-		var lastOpeningBracketIndex = rest.LastIndexOf('(');
-		if (lastOpeningBracketIndex > 2 && rest.IndexOf(')') < lastOpeningBracketIndex)
-			return Type.GetType(rest[(rest.LastIndexOf(' ') + 1)..].ToString());
-		 */
-		var hasMultipleReturnTypes = rest.Contains(" or ", StringComparison.Ordinal);
-		return closingBracketIndex > 0 && rest.Length == 2
-			? throw new EmptyParametersMustBeRemoved(this)
-			: rest.Length < 2
-				? throw new InvalidMethodParameters(this, rest.ToString())
-				: rest[0] is ' '
-					? hasMultipleReturnTypes
-						? ParseMultipleReturnTypes(rest[1..].ToString())
-						: type.GetType(rest[1..].ToString())
-					: closingBracketIndex + 2 < rest.Length
-						? hasMultipleReturnTypes
-							? ParseMultipleReturnTypes(rest[(closingBracketIndex + 2)..].ToString())
-							: Type.GetType(rest[(closingBracketIndex + 2)..].ToString())
-						: GetEmptyReturnType(type);
+		if (returnTypeText == Base.Any)
+			throw new MethodReturnTypeAsAnyIsNotAllowed(this, returnTypeText);
+		var hasMultipleReturnTypes = returnTypeText.Contains(" or ", StringComparison.Ordinal);
+		return hasMultipleReturnTypes
+			? ParseMultipleReturnTypes(returnTypeText)
+			: type.GetType(returnTypeText);
 	}
 
 	private Type ParseMultipleReturnTypes(string typeNames) =>
@@ -112,9 +105,6 @@ public sealed class Method : Context
 			? type
 			: type.GetType(Base.None);
 
-	private static bool IsReturnTypeAny(ReadOnlySpan<char> rest) =>
-		rest[0] is ' ' && rest[1..].Equals(Base.Any, StringComparison.Ordinal);
-
 	public sealed class MethodReturnTypeAsAnyIsNotAllowed(Method method, string name)
 		: ParsingFailed(method.Type, 0, name);
 
@@ -124,27 +114,9 @@ public sealed class Method : Context
 
 	public bool IsGeneric { get; private set; }
 
-	private void ParseParameters(Type type, ReadOnlySpan<char> rest)
+	private void ParseParameters(Type type, ReadOnlySpan<char> parametersSpan)
 	{
-		var closingBracketIndex = rest.LastIndexOf(')');
-		var lastOpeningBracketIndex = rest.LastIndexOf('(');
-		// If the type contains brackets, exclude it from the rest for proper parameter parsing
-		if (lastOpeningBracketIndex > 2)
-		{
-			var lastSpaceIndex = rest.LastIndexOf(' ');
-			if (lastSpaceIndex > 0)
-				ParseAndAddParameters(type, rest, rest[closingBracketIndex - 1] == ')'
-					? closingBracketIndex
-					: lastSpaceIndex);
-			return;
-		}
-		if (closingBracketIndex > 0)
-			ParseAndAddParameters(type, rest, closingBracketIndex);
-	}
-
-	private void ParseAndAddParameters(Type type, ReadOnlySpan<char> rest, int closingBracketIndex)
-	{
-		foreach (var nameAndType in SplitParameters(rest, closingBracketIndex))
+		foreach (var nameAndType in SplitParameters(parametersSpan))
 		{
 			if (char.IsUpper(nameAndType[0]))
 				throw new ParametersMustStartWithLowerCase(this, nameAndType.ToString());
@@ -160,13 +132,11 @@ public sealed class Method : Context
 				TypeLineNumber + methodLineNumber - 1);
 	}
 
-	private static SpanSplitEnumerator SplitParameters(ReadOnlySpan<char> rest, int closingBracketIndex)
-	{
-		var parametersSpan = rest[1..closingBracketIndex];
-		return parametersSpan.Contains('(') && (!parametersSpan.Contains(',') || IsCommaInsideBrackets(parametersSpan, parametersSpan.IndexOf(',')))
+	private static SpanSplitEnumerator SplitParameters(ReadOnlySpan<char> parametersSpan) =>
+		parametersSpan.Contains('(') && (!parametersSpan.Contains(',') ||
+			IsCommaInsideBrackets(parametersSpan, parametersSpan.IndexOf(',')))
 			? new SpanSplitEnumerator(parametersSpan, char.MaxValue, StringSplitOptions.None)
 			: parametersSpan.Split(',', StringSplitOptions.TrimEntries);
-	}
 
 	private static bool IsCommaInsideBrackets(ReadOnlySpan<char> parametersSpan, int commaIndex) =>
 		parametersSpan.IndexOf(')') > commaIndex && parametersSpan.LastIndexOf('(') < commaIndex;
@@ -285,8 +255,9 @@ public sealed class Method : Context
 	private static int GetTabs(string line)
 	{
 		var tabs = 0;
-		foreach (var t in line)
-			if (t == '\t')
+		// ReSharper disable once ForCanBeConvertedToForeach, would consume too much memory!
+		for (var index = 0; index < line.Length; index++)
+			if (line[index] == '\t')
 				tabs++;
 			else
 				break;

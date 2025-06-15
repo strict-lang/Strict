@@ -10,7 +10,7 @@ namespace Strict.Language;
 /// is available. The high-level context knows all types, low-level scope in methods is managed via
 /// <see cref="Body"/> (which is every MethodBody, If.Then, If.Else or For).
 /// </summary>
-[DebuggerDisplay("{ToString()}")]
+[DebuggerDisplay("{FullName}")]
 public abstract class Context
 {
 	protected Context(Context? parent, string name)
