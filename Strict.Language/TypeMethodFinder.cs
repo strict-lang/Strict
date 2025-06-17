@@ -71,7 +71,7 @@ internal class TypeMethodFinder(Type type)
 	{
 		//TODO: we can probably just cache the result, no way to go through this every time if the parameters passed in are already correct, which should always be the case anyway!
 		if (method is { Name: Method.From, Parameters.Count: 0 } &&
-			typesOfArguments.Count == 1 && method.ReturnType.IsCompatible(typesOfArguments[0]))
+			typesOfArguments.Count == 1 && method.ReturnType.IsSameOrCanBeUsedAs(typesOfArguments[0]))
 			return true;
 		if (typesOfArguments.Count > method.Parameters.Count || typesOfArguments.Count <
 			method.Parameters.Count(p => p.DefaultValue == null))
@@ -90,14 +90,14 @@ internal class TypeMethodFinder(Type type)
 			IsArgumentImplementationTypeMatchParameterType(argumentType, methodParameterType))
 			return true;
 		if (methodParameterType.IsEnum &&
-			methodParameterType.Members[0].Type.IsCompatible(argumentType))
+			methodParameterType.Members[0].Type.IsSameOrCanBeUsedAs(argumentType))
 			return true;
-		if (methodParameterType.Name == Base.Iterator && method.Type.IsCompatible(argumentType))
+		if (methodParameterType.Name == Base.Iterator && method.Type.IsSameOrCanBeUsedAs(argumentType))
 			return true;
 		if (methodParameterType.IsGeneric)
 			throw new GenericTypesCannotBeUsedDirectlyUseImplementation(methodParameterType,
 				"(parameter " + index + ") is not usable with argument " + argumentType + " in " + method);
-		return argumentType.IsCompatible(methodParameterType);
+		return methodParameterType.IsSameOrCanBeUsedAs(argumentType);
 	}
 
 	private static bool

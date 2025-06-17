@@ -99,7 +99,7 @@ public sealed class Body : Expression
 		ChildHasMatchingMethodReturnType(Type parentType, Expression lastExpression) =>
 		lastExpression.GetType().Name == Base.ConstantDeclaration && parentType.Name == Base.None ||
 		lastExpression.ReturnType.Name == Base.Error ||
-		lastExpression.ReturnType.IsCompatible(parentType);
+		lastExpression.ReturnType.IsSameOrCanBeUsedAs(parentType);
 
 	public sealed class ChildBodyReturnTypeMustMatchMethod(Body body, Type childReturnType)
 		: ParsingFailed(body,

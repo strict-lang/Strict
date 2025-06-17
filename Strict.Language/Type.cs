@@ -275,46 +275,44 @@ public class Type : Context
 	private readonly Dictionary<string, bool> cachedEvaluatedMemberTypes = new();
 
 	/// <summary>
-	/// Checks if OUR type can be converted to the sameOrBaseType, be careful how this is called as a
-	/// Number can be converted to a Text automatically, but not the otherway around. For example:
+	/// Checks if OUR type can be converted to the sameOrUpcastableType and be used as such. Be careful
+	/// how this is called as a Number can be upcasted and converted to a Text automatically, but not
+	/// the other way around. For example:
 	/// "My age is: " + 5 is true
 	/// 1 / "something" is false (crashes with ArgumentsDoNotMatchMethodParameters)
 	/// 1 / "5" to Number is true again as we converted ourselves and would have caught any problems
 	/// </summary>
-	public bool IsCompatible(Type sameOrBaseType, int maxDepth = 2) =>
-		this == sameOrBaseType || HasAnyCompatibleMember(sameOrBaseType) ||
-		CanUpCast(sameOrBaseType) || sameOrBaseType.IsMutableAndHasMatchingImplementation(this) ||
-		CanUpCastCurrentTypeToOther(sameOrBaseType) || IsCompatibleOneOfType(sameOrBaseType) ||
-		IsEnum && members[0].Type.IsCompatible(sameOrBaseType) ||
-		maxDepth >= 0 && Members.Count(m => m.Type.IsCompatible(sameOrBaseType, maxDepth - 1)) == 1;
+	public bool IsSameOrCanBeUsedAs(Type sameOrUsableType, int maxDepth = 2)
+	{
+		if (this == sameOrUsableType)
+			return true;
+		if (Name == Base.Number && (sameOrUsableType.Name == Base.Text ||
+			sameOrUsableType.CanUseNumberAsEnumOrNumbersIterator()))
+			return true;
+		if (members.Count(m => m.Type == sameOrUsableType) == 1)
+			return true;
+		if (IsMutableAndHasMatchingInnerType(sameOrUsableType))
+			return true;
+		if (IsCompatibleOneOfType(sameOrUsableType))
+			return true;
+		if (IsEnum && members[0].Type.IsSameOrCanBeUsedAs(sameOrUsableType))
+			return true;
+		return maxDepth >= 0 && Members.Count(m =>
+			m.Type.IsSameOrCanBeUsedAs(sameOrUsableType, maxDepth - 1)) == 1;
+	}
 
-	private bool IsCompatibleOneOfType(Type sameOrBaseType) =>
-		sameOrBaseType is OneOfType oneOfType && oneOfType.Types.Any(t => IsCompatible(t));
+	private bool CanUseNumberAsEnumOrNumbersIterator() =>
+		IsIterator && members.Any(member => member.Type == GetType(Base.Number));
 
-	private bool CanUpCastCurrentTypeToOther(Type sameOrBaseType) =>
-		sameOrBaseType.members.Count == 1 && sameOrBaseType.methods.Count == 0 &&
-		sameOrBaseType.members[0].Type == this &&
-		ValidateMemberConstraints(sameOrBaseType.members[0].Constraints);
+	internal bool IsMutableAndHasMatchingInnerType(Type argumentType) =>
+		this is GenericTypeImplementation { Generic.Name: Base.Mutable } genericTypeImplementation &&
+		genericTypeImplementation.ImplementationTypes[0].IsSameOrCanBeUsedAs(argumentType);
 
-	// ReSharper disable once UnusedParameter.Local
 	private static bool ValidateMemberConstraints(IReadOnlyCollection<Expression>? constraints) =>
 		true; // TODO: figure out how to evaluate constraints at this point
 
-	private bool HasAnyCompatibleMember(Type sameOrBaseType) =>
-		sameOrBaseType.members.Any(member =>
-			member.Type == this && sameOrBaseType.members.Count(m => m.Type == member.Type) == 1);
-
-	/// <summary>
-	/// Allow upcasting a number to a text, but not the other way around. Iterators and enums can be
-	/// upcast too as long as they are Numbers (enums with Text can only stay Text constants).
-	/// </summary>
-	private bool CanUpCast(Type sameOrBaseType) =>
-		Name == Base.Number && sameOrBaseType.Name == Base.Text || sameOrBaseType.IsIterator &&
-		members.Any(member => member.Type == GetType(Base.Number));
-
-	internal bool IsMutableAndHasMatchingImplementation(Type argumentType) =>
-		this is GenericTypeImplementation { Generic.Name: Base.Mutable } genericTypeImplementation &&
-		genericTypeImplementation.ImplementationTypes[0] == argumentType;
+	private bool IsCompatibleOneOfType(Type sameOrBaseType) =>
+		sameOrBaseType is OneOfType oneOfType && oneOfType.Types.Any(t => IsSameOrCanBeUsedAs(t));
 
 	/// <summary>
 	/// When two types are using in a conditional expression, i.e., then and else return types and

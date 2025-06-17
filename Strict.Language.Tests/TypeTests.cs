@@ -53,8 +53,10 @@ public sealed class TypeTests
 
 	[Test]
 	public void GetUnknownTypeWillCrash() =>
-		Assert.That(() => package.GetType(Base.Computation),
+		Assert.That(() => package.GetType(UnknownComputation),
 			Throws.InstanceOf<Context.TypeNotFound>());
+
+	private const string UnknownComputation = nameof(UnknownComputation);
 
 	[TestCase("has invalidType")]
 	[TestCase("has log", "Run InvalidType", "\tconstant a = 5")]
@@ -506,24 +508,24 @@ public sealed class TypeTests
 		Assert.That(() => vector2.Name, Is.EqualTo("Vector2"));
 	}
 
+	/// <summary>
+	/// Types are not allowed to start with numbers or non letter characters. If they end with a
+	/// number, there must be no other type that already occupies that name without a number.
+	/// </summary>
 	[TestCase("2Vector")]
 	[TestCase("Vector22")]
 	[TestCase("Matrix0")]
 	[TestCase("Matrix1")]
 	public void InvalidTypeNames(string typeName) =>
 		Assert.That(() => CreateType(typeName, "has numbers", "Unused Number", "\t1"),
-			Throws.
-				InstanceOf<
-					Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers>());
+			Throws.InstanceOf<Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers>());
 
 	[Test]
 	public void NumberInTheEndIsNotAllowedIfTypeWithoutNumberExists()
 	{
 		CreateType("Matrix", "has numbers", "Unused Number", "\t1");
 		Assert.That(() => CreateType("Matrix2", "has numbers", "Unused Number", "\t1"),
-			Throws.
-				InstanceOf<
-					Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers>());
+			Throws.InstanceOf<Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers>());
 	}
 
 	[Test]
@@ -531,25 +533,53 @@ public sealed class TypeTests
 	{
 		var apple = CreateType("Apple", "has name", "Quantity Number", "\tvalue.Length");
 		var redApple = CreateType("RedApple", "has apple", "Color Text", "\tvalue.Color");
-		Assert.That(apple.IsCompatible(redApple), Is.False);
-		Assert.That(redApple.IsCompatible(apple), Is.True);
-		Assert.That(redApple.IsCompatible(package.GetType(Base.Text)), Is.True);
-		Assert.That(redApple.IsCompatible(package.GetType(Base.Number)), Is.False);
+		Assert.That(apple.IsSameOrCanBeUsedAs(redApple), Is.False);
+		Assert.That(redApple.IsSameOrCanBeUsedAs(apple), Is.True);
+		Assert.That(redApple.IsSameOrCanBeUsedAs(package.GetType(Base.Text)), Is.True);
+		Assert.That(redApple.IsSameOrCanBeUsedAs(package.GetType(Base.Number)), Is.False);
 	}
 
 	[Test]
 	public void LoggerIsCompatibleWithFile()
 	{
 		var logger = CreateType("Logger", "has source File", "Log Number", "\tvalue");
-		Assert.That(logger.IsCompatible(package.GetType(Base.File)), Is.True);
+		Assert.That(logger.IsSameOrCanBeUsedAs(package.GetType(Base.File)), Is.True);
 	}
 
 	[Test]
 	public void AccountantIsNotCompatibleWithFile()
 	{
 		var accountant = CreateType("Accountant", "has taxFile File", "has assetFile File", "Calculate Number", "\tvalue");
-		Assert.That(accountant.IsCompatible(package.GetType(Base.File)), Is.False);
+		Assert.That(accountant.IsSameOrCanBeUsedAs(package.GetType(Base.File)), Is.False);
 	}
+
+	[Test]
+	public void NumberCanBeUsedAsText() =>
+		Assert.That(package.GetType(Base.Number).IsSameOrCanBeUsedAs(package.GetType(Base.Text)),
+			Is.True);
+
+	[Test]
+	public void IsMutableAndHasMatchingInnerType()
+	{
+		Assert.That(CreateMutableType(Base.Number).IsSameOrCanBeUsedAs(package.GetType(Base.Number)),
+			Is.True);
+		Assert.That(CreateMutableType(Base.Number).IsSameOrCanBeUsedAs(package.GetType(Base.Text)),
+			Is.True);
+		Assert.That(CreateMutableType(Base.Text).IsSameOrCanBeUsedAs(package.GetType(Base.Number)),
+			Is.False);
+	}
+
+	private Type CreateMutableType(string typeName) =>
+		package.GetType(Base.Mutable).GetGenericImplementation(package.GetType(typeName));
+
+	[Test]
+	public void EnumCanBeUsedAsNumber()
+	{
+		var instructionType = new Type(package,
+			new TypeLines("Instruction", "constant Set", "constant Add")).ParseMembersAndMethods(parser);
+		Assert.That(instructionType.IsSameOrCanBeUsedAs(package.GetType(Base.Number)), Is.True);
+	}
+
 
 	[Test]
 	public void CurrentTypeCannotBeInstantiatedAsMemberType() =>
@@ -572,7 +602,8 @@ public sealed class TypeTests
 	[TestCase(Base.Text, true)]
 	[TestCase(Base.Text + "s", true)]
 	[TestCase(Base.Boolean, false)]
-	public void ValidateIsIterator(string name, bool expected) => Assert.That(package.GetType(name).IsIterator, Is.EqualTo(expected));
+	public void ValidateIsIterator(string name, bool expected) =>
+		Assert.That(package.GetType(name).IsIterator, Is.EqualTo(expected));
 
 	[Test]
 	public void InitializeInnerTypeMemberUsingOuterTypeConstructor()

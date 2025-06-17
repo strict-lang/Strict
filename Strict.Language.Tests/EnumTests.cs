@@ -14,8 +14,6 @@ public sealed class EnumTests
 			new TypeLines("Connection", "constant Google = \"https://google.com\"",
 				"constant Microsoft = \"https://microsoft.com\"")).ParseMembersAndMethods(parser);
 		new Type(package,
-			//TODO: would be cool if numbers are automatically set (but then the question is how do we know what they are?) so by default they should match the line number and if you want something else, you just assign them yourself!
-			//TODO: change all to constant!
 			new TypeLines("Instruction", "constant Set", "constant Add", "constant Subtract",
 				"constant Multiply", "constant Divide", "constant BinaryOperatorsSeparator = 100",
 				"constant GreaterThan", "constant LessThan", "constant Equal", "constant NotEqual",
