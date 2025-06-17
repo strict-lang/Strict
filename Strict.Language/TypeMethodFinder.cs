@@ -69,6 +69,7 @@ internal class TypeMethodFinder(Type type)
 	private static bool IsMethodWithMatchingParametersType(Method method,
 		IReadOnlyList<Type> typesOfArguments)
 	{
+		//TODO: we can probably just cache the result, no way to go through this every time if the parameters passed in are already correct, which should always be the case anyway!
 		if (method is { Name: Method.From, Parameters.Count: 0 } &&
 			typesOfArguments.Count == 1 && method.ReturnType.IsCompatible(typesOfArguments[0]))
 			return true;
@@ -81,8 +82,7 @@ internal class TypeMethodFinder(Type type)
 		return true;
 	}
 
-	private static bool IsMethodParameterMatchingArgument(Method method, int index,
-		Type argumentType)
+	private static bool IsMethodParameterMatchingArgument(Method method, int index, Type argumentType)
 	{
 		var methodParameterType = method.Parameters[index].Type;
 		if (argumentType == methodParameterType || method.IsGeneric ||
@@ -95,11 +95,9 @@ internal class TypeMethodFinder(Type type)
 		if (methodParameterType.Name == Base.Iterator && method.Type.IsCompatible(argumentType))
 			return true;
 		if (methodParameterType.IsGeneric)
-			throw new GenericTypesCannotBeUsedDirectlyUseImplementation(
-				methodParameterType, //ncrunch: no coverage
-				"(parameter " + index + ") is not usable with argument " + argumentType + " in " +
-				method);
-		return methodParameterType.IsCompatible(argumentType);
+			throw new GenericTypesCannotBeUsedDirectlyUseImplementation(methodParameterType,
+				"(parameter " + index + ") is not usable with argument " + argumentType + " in " + method);
+		return argumentType.IsCompatible(methodParameterType);
 	}
 
 	private static bool

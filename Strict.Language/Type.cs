@@ -274,6 +274,13 @@ public class Type : Context
 	private bool? cachedIteratorResult;
 	private readonly Dictionary<string, bool> cachedEvaluatedMemberTypes = new();
 
+	/// <summary>
+	/// Checks if OUR type can be converted to the sameOrBaseType, be careful how this is called as a
+	/// Number can be converted to a Text automatically, but not the otherway around. For example:
+	/// "My age is: " + 5 is true
+	/// 1 / "something" is false (crashes with ArgumentsDoNotMatchMethodParameters)
+	/// 1 / "5" to Number is true again as we converted ourselves and would have caught any problems
+	/// </summary>
 	public bool IsCompatible(Type sameOrBaseType, int maxDepth = 2) =>
 		this == sameOrBaseType || HasAnyCompatibleMember(sameOrBaseType) ||
 		CanUpCast(sameOrBaseType) || sameOrBaseType.IsMutableAndHasMatchingImplementation(this) ||
@@ -294,11 +301,15 @@ public class Type : Context
 		true; // TODO: figure out how to evaluate constraints at this point
 
 	private bool HasAnyCompatibleMember(Type sameOrBaseType) =>
-		members.Any(member =>
-			member.Type == sameOrBaseType && members.Count(m => m.Type == member.Type) == 1);
+		sameOrBaseType.members.Any(member =>
+			member.Type == this && sameOrBaseType.members.Count(m => m.Type == member.Type) == 1);
 
+	/// <summary>
+	/// Allow upcasting a number to a text, but not the other way around. Iterators and enums can be
+	/// upcast too as long as they are Numbers (enums with Text can only stay Text constants).
+	/// </summary>
 	private bool CanUpCast(Type sameOrBaseType) =>
-		sameOrBaseType.Name == Base.Text && Name == Base.Number || sameOrBaseType.IsIterator &&
+		Name == Base.Number && sameOrBaseType.Name == Base.Text || sameOrBaseType.IsIterator &&
 		members.Any(member => member.Type == GetType(Base.Number));
 
 	internal bool IsMutableAndHasMatchingImplementation(Type argumentType) =>

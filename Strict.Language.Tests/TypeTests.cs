@@ -579,11 +579,11 @@ public sealed class TypeTests
 	{
 		CreateType("Thing", "has character", "SomeThing Number", "\tvalue");
 		CreateType("SuperThing", "has thing", "SuperSomeThing Number", "\tvalue");
-		var superThingUser = CreateType("SuperThingUser", "has input = SuperThing(7)",
+		var superThingUser = CreateType("SuperThingUser", "has superThing = SuperThing(7)",
 			"UseSuperThing Number",
-			"\tinput to Number is \"7\" to Number",
-			"\tinput is 7",
-			"\tinput");
+			"\tsuperThing to Number is \"7\" to Number",
+			"\tsuperThing is 7",
+			"\tsuperThing");
 		superThingUser.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(superThingUser.Members[0].Type, Is.EqualTo(package.GetType("SuperThing")));
 	}

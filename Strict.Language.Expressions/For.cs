@@ -69,11 +69,11 @@ public sealed class For : Expression
 		return ParseWithImplicitVariable(body, line, innerBody);
 	}
 
-	private static Expression ParseWithExplicitVariable(Body body,
-		ReadOnlySpan<char> line, Body innerBody)
+	private static Expression ParseWithExplicitVariable(Body body, ReadOnlySpan<char> line,
+		Body innerBody)
 	{
 		var variableName = FindIterableName(line);
-		AddVariableIfDoesNotExist(body, line, variableName);
+		AddVariablesIfTheyDoNotExistYet(body, line, variableName);
 		if (body.FindVariableValue(variableName) is { IsMutable: false } && HasIn(line))
 			throw new ImmutableIterator(body);
 		var forExpression = body.Method.ParseExpression(body, GetForExpressionText(line));
@@ -87,9 +87,8 @@ public sealed class For : Expression
 	public sealed class ExpressionTypeIsNotAnIterator(Body body, string typeName, string line)
 		: ParsingFailed(body, $"Type {typeName} in line " + line);
 
-	private static void AddVariableIfDoesNotExist(Body body, ReadOnlySpan<char> line, ReadOnlySpan<char> variableName)
+	private static void AddVariablesIfTheyDoNotExistYet(Body body, ReadOnlySpan<char> line, ReadOnlySpan<char> variableName)
 	{
-		Expression? variableValue = null;
 		var variableIndex = variableName.Contains(',')
 			? 0
 			: -1;
@@ -100,39 +99,59 @@ public sealed class For : Expression
 			var iterableName = variable.ToString();
 			if (body.Method.Type.FindMember(iterableName) != null)
 				continue;
-			variableValue ??= GetVariableExpression(body, line);
+			body.AddVariable(iterableName, GetVariableExpression(body, line, variableName, variableIndex));
 			if (variableIndex >= 0)
+				variableIndex++;
+		}
+	}
+
+	private static Expression GetVariableExpression(Body body, ReadOnlySpan<char> line, ReadOnlySpan<char> variableName, int variableIndex)
+	{
+		var forIteratorText = GetForIteratorText(line);
+		var iteratorExpression = body.Method.ParseExpression(body, forIteratorText);
+		if (iteratorExpression is MethodCall { ReturnType.Name: Base.Range } methodCall)
+			return MakeMutable(GetVariableFromRange(iteratorExpression, methodCall));
+		if (iteratorExpression.ReturnType is GenericTypeImplementation { Generic.Name: Base.List })
+		{
+			if (variableIndex < 0)
 			{
-				var variableIteratorType = GetIteratorType(variableValue);
-				if (!variableIteratorType.IsIterator)
-					throw new ExpressionTypeIsNotAnIterator(body, variableIteratorType.Name,
-						line.ToString());
+				var firstValue = body.Method.ParseExpression(body, forIteratorText[^1] == ')'
+					? forIteratorText[1..forIteratorText.IndexOf(',')]
+					: forIteratorText.ToString() + "(0)");
+				return new MemberCall(firstValue, GetIteratorType(firstValue).Members[0])
+				{
+					IsMutable = true
+				};
+			}
+			else
+			{
+				throw new NotSupportedException("yo");
+			}
+			/*
+			throw new IteratorTypeDoesNotMatchWithIterable(body, Base.List, variableName, null);
+				)
+			var variableIteratorType = GetIteratorType(variableValue);
+			
+			if (!iteratorExpression.ReturnType.IsIterator)
+				throw new ExpressionTypeIsNotAnIterator(body, iteratorExpression.ToString(), line.ToString());
 				var memberCall = new MemberCall(variableValue, variableIteratorType.Members[variableIndex])
 				{
 					IsMutable = true
 				};
 				body.AddVariable(iterableName, memberCall);
-				variableIndex++;
-			}
-			else
-			{
-				variableValue.IsMutable = true;
-				body.AddVariable(iterableName, variableValue);
-			}
-		}
-	}
-
-	private static Expression GetVariableExpression(Body body, ReadOnlySpan<char> line)
-	{
-		var forIteratorText = GetForIteratorText(line);
-		var iteratorExpression = body.Method.ParseExpression(body, forIteratorText);
-		if (iteratorExpression is MethodCall { ReturnType.Name: Base.Range } methodCall)
-			return GetVariableFromRange(iteratorExpression, methodCall);
-		if (iteratorExpression.ReturnType is GenericTypeImplementation { Generic.Name: Base.List })
-			return body.Method.ParseExpression(body, forIteratorText[^1] == ')'
+			//This is very wrong, we need to match this to our variables!
+			var variableValue = body.Method.ParseExpression(body, forIteratorText[^1] == ')'
 				? forIteratorText[1..forIteratorText.IndexOf(',')]
 				: forIteratorText.ToString() + "(0)");
-		return iteratorExpression;
+			*/
+		}
+		return MakeMutable(iteratorExpression);
+	}
+
+	private static Expression MakeMutable(Expression expression)
+	{
+		expression.IsMutable = true;
+		return expression;
 	}
 
 	private static Expression GetVariableFromRange(Expression iteratorExpression,

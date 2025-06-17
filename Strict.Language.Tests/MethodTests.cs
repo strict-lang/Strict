@@ -198,7 +198,7 @@ public sealed class MethodTests
 		var method = new Method(type, 0, new MethodExpressionParser(), [
 			"Run",
 			"	constant random = \"Hi\"",
-			"	random = 5"
+			"	random = \"Ho\""
 		]);
 		Assert.That(() => method.GetBodyAndParseIfNeeded(),
 			Throws.InstanceOf<Body.ValueIsNotMutableAndCannotBeChanged>());
