@@ -61,14 +61,17 @@ public sealed class TextTests : TestExpressions
 		Assert.That(constantDeclaration.Value.ToString(), Is.EqualTo(expected));
 	}
 
-	[TestCase("ParseMultiLineTextExpressionWithNewLine", "\"FirstLine\" + Text.NewLine + \"ThirdLine\" + Text.NewLine + \"This is the continuation of the previous text line\"", "has log", "Run Text",
+	[TestCase("ParseMultiLineTextExpressionWithNewLine",
+		"\"FirstLine\" + Text.NewLine + \"ThirdLine\" + Text.NewLine + \"This is the continuation of the previous text line\"",
+		"has log", "Run Text",
 		"	constant input = \"FirstLine\" + Text.NewLine + \"ThirdLine\" + Text.NewLine +",
 		"	\"This is the continuation of the previous text line\"")]
-	public void ParseMultiLineTextEndsWithNewLine(string testName, string expected, params string[] code)
+	public void ParseMultiLineTextEndsWithNewLine(string testName, string expected,
+		params string[] code)
 	{
-		var multiLineType = new Type(new TestPackage(),
-				new TypeLines(testName, code)).
-			ParseMembersAndMethods(new MethodExpressionParser());
+		var multiLineType =
+			new Type(new TestPackage(), new TypeLines(testName, code)).ParseMembersAndMethods(
+				new MethodExpressionParser());
 		var constantDeclaration =
 			(ConstantDeclaration)multiLineType.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(constantDeclaration.Value, Is.InstanceOf<Binary>());

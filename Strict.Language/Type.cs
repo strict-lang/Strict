@@ -275,19 +275,12 @@ public class Type : Context
 	private readonly Dictionary<string, bool> cachedEvaluatedMemberTypes = new();
 
 	/// <summary>
-	/// Checks if OUR type can be converted to the sameOrUpcastableType and be used as such. Be careful
-	/// how this is called as a Number can be upcasted and converted to a Text automatically, but not
-	/// the other way around. For example:
-	/// "My age is: " + 5 is true
-	/// 1 / "something" is false (crashes with ArgumentsDoNotMatchMethodParameters)
-	/// 1 / "5" to Number is true again as we converted ourselves and would have caught any problems
+	/// Can OUR type be converted to sameOrUpcastableType and be used as such? Be careful how this is
+	/// called. A derived RedApple can be used as the base class Apple, but not the other way around.
 	/// </summary>
 	public bool IsSameOrCanBeUsedAs(Type sameOrUsableType, int maxDepth = 2)
 	{
 		if (this == sameOrUsableType)
-			return true;
-		if (Name == Base.Number && (sameOrUsableType.Name == Base.Text ||
-			sameOrUsableType.CanUseNumberAsEnumOrNumbersIterator()))
 			return true;
 		if (members.Count(m => m.Type == sameOrUsableType) == 1)
 			return true;
@@ -301,15 +294,9 @@ public class Type : Context
 			m.Type.IsSameOrCanBeUsedAs(sameOrUsableType, maxDepth - 1)) == 1;
 	}
 
-	private bool CanUseNumberAsEnumOrNumbersIterator() =>
-		IsIterator && members.Any(member => member.Type == GetType(Base.Number));
-
 	internal bool IsMutableAndHasMatchingInnerType(Type argumentType) =>
 		this is GenericTypeImplementation { Generic.Name: Base.Mutable } genericTypeImplementation &&
 		genericTypeImplementation.ImplementationTypes[0].IsSameOrCanBeUsedAs(argumentType);
-
-	private static bool ValidateMemberConstraints(IReadOnlyCollection<Expression>? constraints) =>
-		true; // TODO: figure out how to evaluate constraints at this point
 
 	private bool IsCompatibleOneOfType(Type sameOrBaseType) =>
 		sameOrBaseType is OneOfType oneOfType && oneOfType.Types.Any(t => IsSameOrCanBeUsedAs(t));

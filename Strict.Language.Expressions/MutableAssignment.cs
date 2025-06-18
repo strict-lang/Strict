@@ -25,7 +25,7 @@ public sealed class MutableAssignment : ConcreteExpression
 		parts.MoveNext();
 		var expression = body.Method.ParseExpression(body, parts.Current);
 		var newExpression = body.Method.ParseExpression(body, line[(parts.Current.Length + 3)..]);
-		if (!newExpression.ReturnType.IsSameOrCanBeUsedAs(expression.ReturnType))
+		if (!expression.ReturnType.IsSameOrCanBeUsedAs(newExpression.ReturnType))
 			throw new ValueTypeNotMatchingWithAssignmentType(body, expression.ReturnType.Name,
 				newExpression.ReturnType.Name);
 		return expression is VariableCall variableCall

@@ -39,6 +39,9 @@ internal class TypeMethodFinder(Type type)
 			// Error can be returned without giving a text or stacktrace, we will add it automatically
 			if (Type.Name == Base.Error)
 				return matchingMethods[0];
+			// Type can fill in Package automatically (but you need to give the name)
+			if (Type.Name == Base.Type && arguments.Count == 1)
+				return matchingMethods[0];
 			// If this is a from constructor, we can call the methodParameterType constructor to pass
 			// along the argument and make it work if it wasn't matching yet.
 			if (matchingMethods[0].Parameters.Count == 1 &&

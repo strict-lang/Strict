@@ -554,16 +554,9 @@ public sealed class TypeTests
 	}
 
 	[Test]
-	public void NumberCanBeUsedAsText() =>
-		Assert.That(package.GetType(Base.Number).IsSameOrCanBeUsedAs(package.GetType(Base.Text)),
-			Is.True);
-
-	[Test]
 	public void IsMutableAndHasMatchingInnerType()
 	{
 		Assert.That(CreateMutableType(Base.Number).IsSameOrCanBeUsedAs(package.GetType(Base.Number)),
-			Is.True);
-		Assert.That(CreateMutableType(Base.Number).IsSameOrCanBeUsedAs(package.GetType(Base.Text)),
 			Is.True);
 		Assert.That(CreateMutableType(Base.Text).IsSameOrCanBeUsedAs(package.GetType(Base.Number)),
 			Is.False);
@@ -579,7 +572,6 @@ public sealed class TypeTests
 			new TypeLines("Instruction", "constant Set", "constant Add")).ParseMembersAndMethods(parser);
 		Assert.That(instructionType.IsSameOrCanBeUsedAs(package.GetType(Base.Number)), Is.True);
 	}
-
 
 	[Test]
 	public void CurrentTypeCannotBeInstantiatedAsMemberType() =>
