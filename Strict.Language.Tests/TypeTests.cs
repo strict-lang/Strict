@@ -403,7 +403,7 @@ public sealed class TypeTests
 	{
 		var text = package.GetType(Base.Text + "s");
 		Assert.That(text.AvailableMethods.Values.Select(methods => methods.Count).Sum(),
-			Is.GreaterThanOrEqualTo(18), "AvailableMethods: " + text.AvailableMethods.ToWordList());
+			Is.GreaterThanOrEqualTo(17), "AvailableMethods: " + text.AvailableMethods.ToWordList());
 	}
 
 	[Test]

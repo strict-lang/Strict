@@ -34,10 +34,19 @@ internal class TypeMethodFinder(Type type)
 				commonTypeOfArguments != null &&
 				commonTypeOfArguments == GetListElementTypeIfHasSingleParameter(method))
 				return method;
-		// Error can be returned without giving a text or stacktrace, we will add it automatically
-		if (methodName == Method.From && matchingMethods.Count == 1 && Type.Name == Base.Error ||
-			// Same for enums, no need to create from number, we could just use one of the constants
-			Type.IsEnum)
+		if (methodName == Method.From && matchingMethods.Count == 1)
+		{
+			// Error can be returned without giving a text or stacktrace, we will add it automatically
+			if (Type.Name == Base.Error)
+				return matchingMethods[0];
+			// If this is a from constructor, we can call the methodParameterType constructor to pass
+			// along the argument and make it work if it wasn't matching yet.
+			if (matchingMethods[0].Parameters.Count == 1 &&
+				matchingMethods[0].Parameters[0].Type.FindMethod(Method.From, arguments) != null)
+				return matchingMethods[0];
+		}
+		// Same for enums, no need to create from number, we could just use one of the constants
+		if (Type.IsEnum)
 			return matchingMethods[0];
 		throw new ArgumentsDoNotMatchMethodParameters(arguments, Type, matchingMethods);
 	}
@@ -97,7 +106,7 @@ internal class TypeMethodFinder(Type type)
 		if (methodParameterType.IsGeneric)
 			throw new GenericTypesCannotBeUsedDirectlyUseImplementation(methodParameterType,
 				"(parameter " + index + ") is not usable with argument " + argumentType + " in " + method);
-		return methodParameterType.IsSameOrCanBeUsedAs(argumentType);
+		return argumentType.IsSameOrCanBeUsedAs(methodParameterType);
 	}
 
 	private static bool

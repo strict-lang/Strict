@@ -22,7 +22,9 @@ public sealed class For : Expression
 	private const string ValueName = "value";
 	private const string IndexName = "index";
 	private const string InName = "in ";
-	private static bool HasIn(ReadOnlySpan<char> line) => line.Contains(InName, StringComparison.Ordinal);
+
+	private static bool HasIn(ReadOnlySpan<char> line) =>
+		line.Contains(InName, StringComparison.Ordinal);
 
 	public static Expression? TryParse(Body body, ReadOnlySpan<char> line)
 	{
@@ -33,7 +35,7 @@ public sealed class For : Expression
 		var innerBody = body.FindCurrentChild() ??
 			(TryGetInnerForAsBody(body) ?? throw new MissingInnerBody(body));
 		if (line.Contains(IndexName, StringComparison.Ordinal))
-			throw new IndexIsReserved(body);
+			throw new IndexIsReservedDoNotUseItExplicitly(body);
 		return ParseFor(body, line, innerBody);
 	}
 
@@ -96,10 +98,10 @@ public sealed class For : Expression
 		{
 			if (body.FindVariableValue(variable) != null)
 				continue;
-			var iterableName = variable.ToString();
-			if (body.Method.Type.FindMember(iterableName) != null)
+			var name = variable.ToString();
+			if (body.Method.Type.FindMember(name) != null)
 				continue;
-			body.AddVariable(iterableName, GetVariableExpression(body, line, variableName, variableIndex));
+			body.AddVariable(name, GetVariableExpression(body, line, variableName, variableIndex));
 			if (variableIndex >= 0)
 				variableIndex++;
 		}
@@ -113,37 +115,15 @@ public sealed class For : Expression
 			return MakeMutable(GetVariableFromRange(iteratorExpression, methodCall));
 		if (iteratorExpression.ReturnType is GenericTypeImplementation { Generic.Name: Base.List })
 		{
-			if (variableIndex < 0)
-			{
-				var firstValue = body.Method.ParseExpression(body, forIteratorText[^1] == ')'
-					? forIteratorText[1..forIteratorText.IndexOf(',')]
-					: forIteratorText.ToString() + "(0)");
-				return new MemberCall(firstValue, GetIteratorType(firstValue).Members[0])
-				{
-					IsMutable = true
-				};
-			}
-			else
-			{
-				throw new NotSupportedException("yo");
-			}
-			/*
-			throw new IteratorTypeDoesNotMatchWithIterable(body, Base.List, variableName, null);
-				)
-			var variableIteratorType = GetIteratorType(variableValue);
-			
-			if (!iteratorExpression.ReturnType.IsIterator)
-				throw new ExpressionTypeIsNotAnIterator(body, iteratorExpression.ToString(), line.ToString());
-				var memberCall = new MemberCall(variableValue, variableIteratorType.Members[variableIndex])
-				{
-					IsMutable = true
-				};
-				body.AddVariable(iterableName, memberCall);
-			//This is very wrong, we need to match this to our variables!
-			var variableValue = body.Method.ParseExpression(body, forIteratorText[^1] == ')'
+			var firstValue = body.Method.ParseExpression(body, forIteratorText[^1] == ')'
 				? forIteratorText[1..forIteratorText.IndexOf(',')]
 				: forIteratorText.ToString() + "(0)");
-			*/
+			if (variableIndex <= 0)
+				return MakeMutable(firstValue);
+			var innerFirstValue = body.Method.ParseExpression(body, firstValue + "(0)");
+			if (variableIndex > 1)
+				throw new NotSupportedException("More than 2 for variables are not supported yet");
+			return MakeMutable(innerFirstValue);
 		}
 		return MakeMutable(iteratorExpression);
 	}
@@ -173,24 +153,28 @@ public sealed class For : Expression
 				: line[(line.LastIndexOf(' ') + 1)..];
 
 	private static ReadOnlySpan<char> GetForExpressionText(ReadOnlySpan<char> line) =>
-		FindIterableName(line).Contains(',') && line.Contains("in", StringComparison.Ordinal)
-			? line[(line.IndexOf(',') + 2)..]
+		FindIterableName(line).Contains(',') && line.Contains(InName, StringComparison.Ordinal)
+			// Currently only the first expression is evaluated, the other one would fail
+			? line[4..line.IndexOf(',')].ToString() + line[(line.IndexOf(InName) - 1)..].ToString()
 			: line[4..];
 
 	private static void CheckForIncorrectMatchingTypes(Body body, ReadOnlySpan<char> variableName,
 		Expression forValueExpression)
 	{
+		var implementationDepth = 1;
 		foreach (var variable in variableName.Split(',', StringSplitOptions.TrimEntries))
 		{
 			var mutableValue = body.FindVariableValue(variable)!;
 			var iteratorType = GetIteratorType(forValueExpression);
-			if (iteratorType is GenericTypeImplementation { IsIterator: true } genericType)
-				iteratorType = genericType.ImplementationTypes[0];
+			for (var depth = 0; depth < implementationDepth; depth++)
+				if (iteratorType is GenericTypeImplementation { IsIterator: true } genericType)
+					iteratorType = genericType.ImplementationTypes[0];
 			if ((iteratorType.Name != Base.Range || mutableValue.ReturnType.Name != Base.Number) &&
 				iteratorType.Name != mutableValue.ReturnType.Name &&
 				!iteratorType.IsSameOrCanBeUsedAs(mutableValue.ReturnType))
 				throw new IteratorTypeDoesNotMatchWithIterable(body, iteratorType.Name, variable,
 					mutableValue.ReturnType.Name);
+			implementationDepth++;
 		}
 	}
 
@@ -245,7 +229,7 @@ public sealed class For : Expression
 				: line[(line.IndexOf(' ') + 1)..];
 
 	public sealed class MissingExpression(Body body) : ParsingFailed(body);
-	public sealed class IndexIsReserved(Body body) : ParsingFailed(body);
+	public sealed class IndexIsReservedDoNotUseItExplicitly(Body body) : ParsingFailed(body);
 	public sealed class DuplicateImplicitIndex(Body body) : ParsingFailed(body);
 	public sealed class ImmutableIterator(Body body) : ParsingFailed(body);
 

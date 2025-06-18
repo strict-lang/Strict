@@ -120,10 +120,10 @@ public class MethodExpressionParser : ExpressionParser
 		var argumentsStart = input.IndexOf('(');
 		var argumentsEnd = input.FindMatchingBracketIndex(argumentsStart);
 		ChangeArgumentStartEndIfNestedMethodCall(input, ref argumentsStart, ref argumentsEnd);
-		return argumentsStart <= 0 || argumentsEnd <= 0 || argumentsEnd < input.Length - 1
-			? ParseInContext(body, input, [])
-			: ParseInContext(body, input[..argumentsStart],
-				ParseListArguments(body, input[(argumentsStart + 1)..argumentsEnd]));
+		if (argumentsStart <= 0 || argumentsEnd <= 0 || argumentsEnd < input.Length - 1)
+			return ParseInContext(body, input, []);
+		return ParseInContext(body, input[..argumentsStart],
+			ParseListArguments(body, input[(argumentsStart + 1)..argumentsEnd]));
 	}
 
 	private static void ChangeArgumentStartEndIfNestedMethodCall(ReadOnlySpan<char> input,
@@ -197,24 +197,34 @@ public class MethodExpressionParser : ExpressionParser
 						: string.Empty));
 
 	// ReSharper disable once TooManyArguments
-	private static Expression? TryVariableOrValueOrParameterOrMemberOrMethodCall(Context context, Expression? instance,
+	private Expression? TryVariableOrValueOrParameterOrMemberOrMethodCall(Context context, Expression? instance,
 		Body body, ReadOnlySpan<char> input, IReadOnlyList<Expression> arguments)
 	{
 		var inputAsString = input.ToString();
 		var type = context as Type ?? body.Method.Type;
-		return !input.IsWord() && !input.Contains(' ') && !input.Contains('(')
-			? inputAsString.IsWordOrWordWithNumberAtEnd(out _)
+		if (!input.IsWord() && !input.Contains(' ') && !input.Contains('('))
+			return inputAsString.IsWordOrWordWithNumberAtEnd(out _)
 				? MethodCall.TryParseFromOrEnum(body, arguments, inputAsString)
-				: null
-			: (VariableCall.TryParse(body, input) ?? (input.Equals(Base.Value, StringComparison.Ordinal)
+				: null;
+		var call = VariableCall.TryParse(body, input);
+		if (call == null)
+			call = input.Equals(Base.Value, StringComparison.Ordinal)
 				? Instance.Parse(body, body.Method)
-				: ParameterCall.TryParse(body, input))) ?? (inputAsString.IsKeyword()
-				? throw new KeywordNotAllowedAsMemberOrMethod(body, inputAsString, type)
-				: (MemberCall.TryParse(body, type, instance, input) ??
-					MethodCall.TryParse(instance, body, arguments, type, input.ToString())) ??
-				(instance is null
-					? MethodCall.TryParseFromOrEnum(body, arguments, inputAsString)
-					: null));
+				: ParameterCall.TryParse(body, input);
+		if (call != null)
+			return call;
+		if (inputAsString.IsKeyword())
+			throw new KeywordNotAllowedAsMemberOrMethod(body, inputAsString, type);
+		var parse = MemberCall.TryParse(body, type, instance, input);
+		if (parse == null)
+			parse = MethodCall.TryParse(instance, body, arguments, type, input.ToString());
+		if (parse == null && instance is null)
+			parse = MethodCall.TryParseFromOrEnum(body, arguments, inputAsString);
+		if (parse != null)
+			return parse;
+		if (input.EndsWith(')'))
+			return TryParseMemberOrZeroOrOneArgumentMethodOrNestedCall(body, input);
+		return null;
 	}
 
 	public sealed class CannotAccessMemberBeforeTypeIsParsed(Body body, string input, Type type)

@@ -39,7 +39,7 @@ public sealed class ForTests : TestExpressions
 	[Test]
 	public void IndexIsReserved() =>
 		Assert.That(() => ParseExpression("for index in Range(0, 5)", "\tlog.Write(index)"),
-			Throws.InstanceOf<For.IndexIsReserved>());
+			Throws.InstanceOf<For.IndexIsReservedDoNotUseItExplicitly>());
 
 	[TestCase("for gibberish", "\tlog.Write(\"Hi\")")]
 	[TestCase("for element in gibberish", "\tlog.Write(element)")]
@@ -157,9 +157,9 @@ public sealed class ForTests : TestExpressions
 	public void IterateErrorTypeMembers(string forExpressionText, string testName)
 	{
 		var programType = new Type(type.Package,
-				new TypeLines(testName, "has number", "LogError Number", "\tconstant error = Error \"Process Failed\"",
-					$"\tfor {forExpressionText}", "\t\tvalue")).
-			ParseMembersAndMethods(new MethodExpressionParser());
+			new TypeLines(testName, "has number", "LogError Number",
+				"\tconstant error = Error \"Process Failed\"", $"\tfor {forExpressionText}",
+				"\t\tvalue")).ParseMembersAndMethods(new MethodExpressionParser());
 		var parsedExpression = (Body)programType.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(parsedExpression.Expressions[1], Is.TypeOf(typeof(For)));
 		Assert.That(((For)parsedExpression.Expressions[1]).Value.ToString(),
@@ -170,8 +170,8 @@ public sealed class ForTests : TestExpressions
 	public void IterateNameType()
 	{
 		var programType = new Type(type.Package,
-				new TypeLines(nameof(IterateNameType), "has number", "LogError Number", "\tconstant name = Name(\"Strict\")",
-					"\tfor name", "\t\tvalue")).
+				new TypeLines(nameof(IterateNameType), "has number", "LogError Number",
+					"\tconstant name = Name(\"Strict\")", "\tfor name", "\t\tvalue")).
 			ParseMembersAndMethods(new MethodExpressionParser());
 		var parsedExpression = (Body)programType.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(parsedExpression.Expressions[1], Is.TypeOf(typeof(For)));
@@ -212,13 +212,11 @@ public sealed class ForTests : TestExpressions
 		Assert.That(parsedExpression.Value.ToString(), Is.EqualTo(expected));
 	}
 
-	/*not sure
 	[TestCase("WithNumbers",
 		"has log",
 		"LogAllNumbers(listOfNumbers List(Numbers))",
 		"\tfor row, column in listOfNumbers",
 		"\t\tlog.Write(column)")]
-		*/
 	[TestCase(
 		"WithTexts",
 		"has log",
