@@ -111,7 +111,7 @@ public sealed class ListAdvancedTests : TestExpressions
 						"MutableWithNumber Number", "\tconstant result = Mutable(Number)", "\tresult")).
 				ParseMembersAndMethods(parser).Methods[0].GetBodyAndParseIfNeeded(),
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.
-				InstanceOf<Type.NoMatchingMethodFound>());
+				InstanceOf<Type.GenericTypesCannotBeUsedDirectlyUseImplementation>());
 
 	[Test]
 	public void CheckIfInvalidArgumentIsNotMethodOrListCall() =>

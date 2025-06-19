@@ -19,6 +19,7 @@ public sealed class Method : Context
 		Parser = parser;
 		this.lines = lines;
 		var restSpan = lines[0].AsSpan(Name.Length);
+		//TODO: measure how much time is wasted at parsing time on error checking and skip it on known good code if it was parsed before and worked (and nothing has changed obviously)
 		if (restSpan.StartsWith("()"))
 			throw new EmptyParametersMustBeRemoved(this);
 		if (restSpan.Length == 1)
@@ -40,6 +41,9 @@ public sealed class Method : Context
 			closingBracketIndex = restSpan.LastIndexOf(")");
 		if (closingBracketIndex > 0)
 			ParseParameters(type, restSpan[1..closingBracketIndex]);
+		//tst:
+		if (Name == "Contains")
+		Console.WriteLine(Parent+"."+this+"("+Parameters.ToWordList()+") created methodBody: " +methodBody);
 	}
 
 	public sealed class
@@ -229,7 +233,6 @@ public sealed class Method : Context
 	/// </summary>
 	private Body PreParseBody(int parentTabs = 1, Body? parent = null)
 	{
-		//tst: Console.WriteLine("PreParseBody " + this);
 		var body = new Body(this, parentTabs, parent);
 		var startLine = methodLineNumber;
 		for (; methodLineNumber < lines.Count; methodLineNumber++)
@@ -303,7 +306,9 @@ public sealed class Method : Context
 			return methodBody;
 			//tst: }
 		if (methodBody.Method != this)
-			throw new NotSupportedException("methodBody is not matching this method anymore " + this);
+			//TODO: still happens for one test: MethodBodyShouldBeUpdatedWithImplementationType
+			throw new NotSupportedException(methodBody.Method + " methodBody=" + methodBody +
+				" is not matching this method anymore " + this);
 		//tst: Console.WriteLine(methodBody + " parse");
 		var expression = methodBody.Parse();
 		if (Tests.Count < 1 && !IsTestPackage())
@@ -328,6 +333,7 @@ public sealed class Method : Context
 		var clone = (Method)MemberwiseClone();
 		clone.Parent = concreteType;
 		clone.ReturnType = concreteType;
+//TODO: boeseli2 found
 		clone.methodBody?.UpdateCurrentAndChildrenMethod(clone);
 		return clone;
 	}
@@ -343,6 +349,7 @@ public sealed class Method : Context
 					typeWithImplementation, index));
 		clone.Parent = typeWithImplementation; //TODO: find any alternative way to have method with updated parent?
 		clone.IsGeneric = false;
+//TODO: boeseli1 found
 		clone.methodBody?.UpdateCurrentAndChildrenMethod(clone);
 		return clone;
 	}

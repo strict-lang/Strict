@@ -189,8 +189,8 @@ public class TestPackage : Package
 			"\tcount"));
 		var text = new Type(this, new TypeLines(Base.Text,
 			"has characters",
-			"has NewLine = Character(13)",
-			"has Tab = Character(7)",
+			"constant NewLine = Character(13)",
+			"constant Tab = Character(7)",
 			"from(number)",
 			"\tvalue",
 			"Run",

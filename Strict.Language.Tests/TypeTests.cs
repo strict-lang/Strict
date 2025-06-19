@@ -381,10 +381,10 @@ public sealed class TypeTests
 	[Test]
 	public void MutableTypesOrImplementsShouldNotBeUsedDirectly()
 	{
-		var type = new Type(package, new TypeLines(nameof(MutableTypesOrImplementsShouldNotBeUsedDirectly), "has number",
-				"Run",
-				"\tmutable result = Mutable(2)")).
-			ParseMembersAndMethods(parser);
+		var type =
+			new Type(package,
+				new TypeLines(nameof(MutableTypesOrImplementsShouldNotBeUsedDirectly), "has number",
+					"Run", "\tmutable result = Mutable(2)")).ParseMembersAndMethods(parser);
 		Assert.That(() => type.Methods[0].GetBodyAndParseIfNeeded(),
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.
 				InstanceOf<Type.GenericTypesCannotBeUsedDirectlyUseImplementation>());
@@ -395,7 +395,7 @@ public sealed class TypeTests
 	{
 		var range = package.GetType(Base.Range);
 		Assert.That(range.AvailableMethods.Values.Select(methods => methods.Count).Sum(),
-			Is.EqualTo(9), "AvailableMethods: " + range.AvailableMethods.ToWordList());
+			Is.EqualTo(10), "AvailableMethods: " + range.AvailableMethods.ToWordList());
 	}
 
 	[Test]
@@ -403,7 +403,7 @@ public sealed class TypeTests
 	{
 		var text = package.GetType(Base.Text + "s");
 		Assert.That(text.AvailableMethods.Values.Select(methods => methods.Count).Sum(),
-			Is.GreaterThanOrEqualTo(17), "AvailableMethods: " + text.AvailableMethods.ToWordList());
+			Is.GreaterThanOrEqualTo(18), "AvailableMethods: " + text.AvailableMethods.ToWordList());
 	}
 
 	[Test]

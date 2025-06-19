@@ -362,13 +362,7 @@ public class Type : Context
 	{
 		// From constructor methods should return the type we are in, not the base type (like Any)
 		if (method.Name == Method.From && method.Type != this)
-		{
-			// If we already have a from constructor and members that need initialization (which is how we
-			// got here, a member was without value), do not add the default from constructor from Any!
-			if (method.Parameters.Count == 0 && cachedAvailableMethods!.ContainsKey(method.Name))
-				return;
 			method = method.CloneFrom(this);
-		}
 		if (cachedAvailableMethods!.ContainsKey(method.Name))
 		{
 			var methodsWithThisName = cachedAvailableMethods[method.Name];

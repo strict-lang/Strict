@@ -222,7 +222,7 @@ public class MethodExpressionParser : ExpressionParser
 			parse = MethodCall.TryParseFromOrEnum(body, arguments, inputAsString);
 		if (parse != null)
 			return parse;
-		if (input.EndsWith(')'))
+		if (arguments.Count > 0 && input.EndsWith(')'))
 			return TryParseMemberOrZeroOrOneArgumentMethodOrNestedCall(body, input);
 		return null;
 	}

@@ -100,7 +100,7 @@ public sealed class ListTests : TestExpressions
 	[Test]
 	public void LeftTypeShouldNotBeChanged()
 	{
-		const string Code = "(\"1\", \"2\", \"3\", \"4\") + 5";
+		const string Code = "(\"1\", \"2\", \"3\", \"4\") + \"5\"";
 		var parsedExpression = ParseExpression(Code);
 		Assert.That(parsedExpression, Is.InstanceOf<Binary>());
 		Assert.That(parsedExpression.ToString(), Is.EqualTo(Code));
@@ -184,15 +184,18 @@ public sealed class ListTests : TestExpressions
 	public void MethodBodyShouldBeUpdatedWithImplementationType()
 	{
 		var texts = type.GetListImplementationType(type.GetType(Base.Text));
-		var containsMethod = texts.Methods.FirstOrDefault(m => m.Name == "Contains");
+		var containsMethod = texts.Methods.FirstOrDefault(m =>
+			m.Name == "Contains" && m.Parameters[0].Type.Name == Base.Text);
 		Console.WriteLine("containsMethod=" + containsMethod);
 		Assert.That(containsMethod!.Type, Is.EqualTo(texts));
+		Assert.That(containsMethod.Parameters[0].Type.Name, Is.EqualTo(Base.Text));
 		var body = (Body)containsMethod.GetBodyAndParseIfNeeded();
 		Assert.That(body.Method, Is.EqualTo(containsMethod));
 		Assert.That(body.Method.Type, Is.EqualTo(texts));
+		Assert.That(body.Method.Parameters[0].Type.Name, Is.EqualTo(Base.Text));
 		Console.WriteLine("body: " + body + ", expressions=" + body.Expressions.ToWordList() +
 			", LineRange=" + body.LineRange + ", Method=" + body.Method + ", ReturnType=" +
 			body.ReturnType + ", Type=" + body.Method.Type);
 		Assert.That(body.Method, Is.EqualTo(containsMethod), texts.Methods.ToWordList());
 	}
-}
+} 

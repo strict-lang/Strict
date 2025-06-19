@@ -112,7 +112,7 @@ public sealed class MethodCallTests : TestExpressions
 	[Test]
 	public void FromExampleFailsOnImproperParameters() =>
 		Assert.That(() => ParseExpression("Range(1, 2, 3, 4)"),
-			Throws.InstanceOf<ParsingFailed>().With.InnerException.InstanceOf<NoMatchingMethodFound>());
+			Throws.InstanceOf<ParsingFailed>().With.InnerException.InstanceOf<ArgumentsDoNotMatchMethodParameters>());
 
 	[TestCase("ComplexMethod((1), 2)")]
 	[TestCase("ComplexMethod((1, 2, 3))")]

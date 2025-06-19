@@ -23,8 +23,9 @@ internal class TypeMethodFinder(Type type)
 	public Method? FindMethod(string methodName, IReadOnlyList<Expression> arguments)
 	{
 		if (Type.IsGeneric)
-			throw new GenericTypesCannotBeUsedDirectlyUseImplementation(Type,
-				"Type is Generic and cannot be used directly");
+			throw new GenericTypesCannotBeUsedDirectlyUseImplementation(Type, Type.Name == Base.Mutable
+				? Base.Mutable + " must be used via keyword, not manually constructed!"
+				: "Type is Generic and cannot be used directly");
 		if (!Type.AvailableMethods.TryGetValue(methodName, out var matchingMethods))
 			return null;
 		var typesOfArguments = arguments.Select(argument => argument.ReturnType).ToList();
