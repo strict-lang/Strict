@@ -362,7 +362,7 @@ public class Type : Context
 	{
 		// From constructor methods should return the type we are in, not the base type (like Any)
 		if (method.Name == Method.From && method.Type != this)
-			method = method.CloneFrom(this);
+			method = new Method(method, this);
 		if (cachedAvailableMethods!.ContainsKey(method.Name))
 		{
 			var methodsWithThisName = cachedAvailableMethods[method.Name];

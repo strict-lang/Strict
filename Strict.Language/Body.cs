@@ -99,6 +99,7 @@ public sealed class Body : Expression
 		ChildHasMatchingMethodReturnType(Type parentType, Expression lastExpression) =>
 		lastExpression.GetType().Name == Base.ConstantDeclaration && parentType.Name == Base.None ||
 		lastExpression.ReturnType.Name == Base.Error ||
+		lastExpression.GetType().Name == Base.MutableAssignment ||
 		lastExpression.ReturnType.IsSameOrCanBeUsedAs(parentType);
 
 	public sealed class ChildBodyReturnTypeMustMatchMethod(Body body, Type childReturnType)
@@ -212,11 +213,23 @@ public sealed class Body : Expression
 		return null;
 	}
 
-	public void UpdateCurrentAndChildrenMethod(Method implementationMethod)
+	/// <summary>
+	/// When cloning methods we have to be careful to also clone the body and update it and all
+	/// children bodies to link to the new cloned method (and not longer the original method,
+	/// like the base from method or generic method).
+	/// </summary>
+	public Body CloneAndUpdateMethod(Method newClonedMethod)
 	{
-		Method = implementationMethod;
+		var clone = (Body)MemberwiseClone();
+		clone.UpdateCurrentAndChildrenMethod(newClonedMethod);
+		return clone;
+	}
+
+	private void UpdateCurrentAndChildrenMethod(Method newClonedMethod)
+	{
+		Method = newClonedMethod;
 		foreach (var child in children)
-			child.UpdateCurrentAndChildrenMethod(implementationMethod);
+			child.UpdateCurrentAndChildrenMethod(newClonedMethod);
 	}
 
 	public Body GetInnerBodyAndUpdateHierarchy(int currentLineNumber, Body child)

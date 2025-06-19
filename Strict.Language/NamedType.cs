@@ -38,6 +38,7 @@ public abstract class NamedType
 	public bool IsMutable { get; protected init; }
 	public bool IsConstant { get; protected init; }
 
+	//TODO: remove if unused, or add test
 	public sealed class ListPrefixIsNotAllowedUseImplementationTypeNameInPlural(string typeName)
 		: Exception($"List should not be used as prefix for {
 			typeName

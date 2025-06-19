@@ -2,17 +2,22 @@
 
 public sealed class MutableAssignment : ConcreteExpression
 {
-	private MutableAssignment(Body scope, string name, Expression value) :
-		base(value.ReturnType, true)
+	private MutableAssignment(Body scope, string variableName, Expression newValue, Expression oldValue) :
+		base(newValue.ReturnType, true)
 	{
-		Name = name;
-		Value = value;
-		value.IsMutable = true;
-		scope.UpdateVariable(name, value);
+		if (oldValue is { IsMutable: false })
+			throw new Body.ValueIsNotMutableAndCannotBeChanged(scope, oldValue.ToString());
+		Name = variableName;
+		newValue.IsMutable = true;
+		Value = newValue;
+		OldValue = oldValue;
+		if (Name != "")
+			scope.UpdateVariable(Name, newValue);
 	}
 
 	public string Name { get; }
 	public Expression Value { get; }
+	public Expression OldValue { get; }
 
 	public static Expression? TryParse(Body body, ReadOnlySpan<char> line) =>
 		line.Contains(" = ", StringComparison.Ordinal)
@@ -28,11 +33,13 @@ public sealed class MutableAssignment : ConcreteExpression
 		if (!expression.ReturnType.IsSameOrCanBeUsedAs(newExpression.ReturnType))
 			throw new ValueTypeNotMatchingWithAssignmentType(body, expression.ReturnType.Name,
 				newExpression.ReturnType.Name);
-		return expression is VariableCall variableCall
-			? new MutableAssignment(body, variableCall.Name, newExpression)
-			: UpdateMemberOrVariableValue(body, expression, newExpression);
+		return new MutableAssignment(body, expression is VariableCall variableCall
+			? variableCall.Name
+			: "", newExpression, expression);
 	}
 
+	//TODO: this is a bit strange, why would we update the value here already, we are still parsing,
+	//this should be done every time running the method, not now
 	private static Expression UpdateMemberOrVariableValue(Body body,
 		Expression expression, Expression newExpression)
 	{

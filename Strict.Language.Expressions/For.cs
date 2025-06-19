@@ -101,13 +101,13 @@ public sealed class For : Expression
 			var name = variable.ToString();
 			if (body.Method.Type.FindMember(name) != null)
 				continue;
-			body.AddVariable(name, GetVariableExpression(body, line, variableName, variableIndex));
+			body.AddVariable(name, GetVariableExpression(body, line, variableIndex));
 			if (variableIndex >= 0)
 				variableIndex++;
 		}
 	}
 
-	private static Expression GetVariableExpression(Body body, ReadOnlySpan<char> line, ReadOnlySpan<char> variableName, int variableIndex)
+	private static Expression GetVariableExpression(Body body, ReadOnlySpan<char> line, int variableIndex)
 	{
 		var forIteratorText = GetForIteratorText(line);
 		var iteratorExpression = body.Method.ParseExpression(body, forIteratorText);

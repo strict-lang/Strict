@@ -41,9 +41,12 @@ public sealed class GenericTypeImplementation : Type
 				var foundMethodAlready = false;
 				foreach (var existingMethod in methods)
 					if (existingMethod.IsSameMethodNameReturnTypeAndParameters(method))
+					{
 						foundMethodAlready = true;
+						break;
+					}
 				if (!foundMethodAlready)
-					methods.Add(method.CloneWithImplementation(this));
+					methods.Add(new Method(method, this));
 			}
 	}
 }

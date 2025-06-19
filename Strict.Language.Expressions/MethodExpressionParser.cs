@@ -206,18 +206,16 @@ public class MethodExpressionParser : ExpressionParser
 			return inputAsString.IsWordOrWordWithNumberAtEnd(out _)
 				? MethodCall.TryParseFromOrEnum(body, arguments, inputAsString)
 				: null;
-		var call = VariableCall.TryParse(body, input);
-		if (call == null)
-			call = input.Equals(Base.Value, StringComparison.Ordinal)
+		var call = VariableCall.TryParse(body, input) ??
+			(input.Equals(Base.Value, StringComparison.Ordinal)
 				? Instance.Parse(body, body.Method)
-				: ParameterCall.TryParse(body, input);
+				: ParameterCall.TryParse(body, input));
 		if (call != null)
 			return call;
 		if (inputAsString.IsKeyword())
 			throw new KeywordNotAllowedAsMemberOrMethod(body, inputAsString, type);
-		var parse = MemberCall.TryParse(body, type, instance, input);
-		if (parse == null)
-			parse = MethodCall.TryParse(instance, body, arguments, type, input.ToString());
+		var parse = MemberCall.TryParse(body, type, instance, input) ??
+			MethodCall.TryParse(instance, body, arguments, type, input.ToString());
 		if (parse == null && instance is null)
 			parse = MethodCall.TryParseFromOrEnum(body, arguments, inputAsString);
 		if (parse != null)

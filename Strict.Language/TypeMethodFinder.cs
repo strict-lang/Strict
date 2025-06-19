@@ -50,7 +50,8 @@ internal class TypeMethodFinder(Type type)
 				return matchingMethods[0];
 		}
 		// Same for enums, no need to create from number, we could just use one of the constants
-		if (Type.IsEnum)
+		// Also allow using numbers for any method that accepts Text as we have Text.From(number)
+		if (Type.IsEnum || Type.Name == Base.Text && arguments is [{ ReturnType.Name: Base.Number }])
 			return matchingMethods[0];
 		throw new ArgumentsDoNotMatchMethodParameters(arguments, Type, matchingMethods);
 	}
@@ -82,7 +83,7 @@ internal class TypeMethodFinder(Type type)
 	private static bool IsMethodWithMatchingParametersType(Method method,
 		IReadOnlyList<Type> typesOfArguments)
 	{
-		//TODO: we can probably just cache the result, no way to go through this every time if the parameters passed in are already correct, which should always be the case anyway!
+		//TODO: we can probably just cache the result, no need to go through this every time if the parameters passed in are already correct, which should always be the case anyway!
 		if (method is { Name: Method.From, Parameters.Count: 0 } &&
 			typesOfArguments.Count == 1 && method.ReturnType.IsSameOrCanBeUsedAs(typesOfArguments[0]))
 			return true;
@@ -98,6 +99,8 @@ internal class TypeMethodFinder(Type type)
 	private static bool IsMethodParameterMatchingArgument(Method method, int index, Type argumentType)
 	{
 		var methodParameterType = method.Parameters[index].Type;
+		if (methodParameterType is GenericTypeImplementation { Generic.Name: Base.Mutable } mutableType)
+			methodParameterType = mutableType.ImplementationTypes[0];
 		if (argumentType == methodParameterType || method.IsGeneric ||
 			methodParameterType.Name == Base.Any ||
 			IsArgumentImplementationTypeMatchParameterType(argumentType, methodParameterType))

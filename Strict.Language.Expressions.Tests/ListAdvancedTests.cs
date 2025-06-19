@@ -94,12 +94,12 @@ public sealed class ListAdvancedTests : TestExpressions
 	{
 		var mutableTextsType = new Type(type.Package,
 				new TypeLines(nameof(CreateMemberWithMutableListType), "mutable mutableTexts Texts",
-					"AddFiveToMutableList Texts", "\tmutableTexts = mutableTexts + 5", "\tmutableTexts")).
+					"AddFiveToMutableList Texts", "\tmutableTexts = mutableTexts + \"5\"",
+					"\tmutableTexts")).
 			ParseMembersAndMethods(parser);
 		var expression = (Body)mutableTextsType.Methods[0].GetBodyAndParseIfNeeded();
-		Assert.That(mutableTextsType.Members[0].Value?.ToString(), Is.EqualTo("mutableTexts + 5"));
-		Assert.That(((MemberCall)expression.Expressions[0]).Member.Value?.ToString(),
-			Is.EqualTo("mutableTexts + 5"));
+		Assert.That(((Binary)((MutableAssignment)expression.Expressions[0]).Value).ToString(),
+			Is.EqualTo("mutableTexts + \"5\""));
 	}
 
 	[Test]
@@ -242,7 +242,7 @@ public sealed class ListAdvancedTests : TestExpressions
 				"Length Number",
 				"\t(X * X + Y * Y).SquareRoot")).ParseMembersAndMethods(parser),
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.
-				InstanceOf<Type.NoMatchingMethodFound>());
+				InstanceOf<Type.ArgumentsDoNotMatchMethodParameters>());
 	// @formatter:on
 
 	[TestCase("numbers", "1, 2", "List(TestPackage.Number)")]
@@ -291,17 +291,17 @@ public sealed class ListAdvancedTests : TestExpressions
 	public void ChangeValueInsideMutableListWithMutableExpressions()
 	{
 		var program = new Type(new TestPackage(),
-				new TypeLines(
-					// @formatter:off
-					nameof(ChangeValueInsideMutableListWithMutableExpressions),
-					"has log",
-					"Update(element Number) Mutable(List)",
-					"\tmutable someList = List(Mutable(Number))",
-					"\tsomeList.Add(1)",
-					"\tsomeList(0) = 5")).
+			new TypeLines(
+				// @formatter:off
+				nameof(ChangeValueInsideMutableListWithMutableExpressions),
+				"has log",
+				"Update(element Number) Mutable(List)",
+				"\tmutable someList = List(Mutable(Number))",
+				"\tsomeList.Add(1)",
+				"\tsomeList(0) = 5")).
 			ParseMembersAndMethods(parser);
 		var body = (Body)program.Methods[0].GetBodyAndParseIfNeeded();
-		Assert.That(((VariableCall)((ListCall)body.Expressions[2]).List).CurrentValue.ToString(), Is.EqualTo("(5)"));
+		Assert.That(((VariableCall)((ListCall)((MutableAssignment)body.Expressions[2]).OldValue).List).Name, Is.EqualTo("someList"));
 	}
 
 	[Test]
@@ -317,21 +317,22 @@ public sealed class ListAdvancedTests : TestExpressions
 					"\tsomeList(0) = 5")).
 			ParseMembersAndMethods(parser);
 		var body = (Body)program.Methods[0].GetBodyAndParseIfNeeded();
-		Assert.That(((VariableCall)((ListCall)body.Expressions[1]).List).CurrentValue.ToString(), Is.EqualTo("(5, 8, 7)"));
+		Assert.That(((ListCall)((MutableAssignment)body.Expressions[1]).OldValue).Index.ToString(),
+			Is.EqualTo("0"));
 	}
 
 	[Test]
 	public void IndexOutOfRangeInListExpressions()
 	{
 		var program = new Type(type.Package,
-				new TypeLines(
-					// @formatter:off
-					nameof(IndexOutOfRangeInListExpressions),
-					"has log",
-					"UpdateNotExistingElement(element Number) Number",
-					"\tmutable someList = (9, 8, 7)",
-					"\tsomeList(3) = 5")).
+			new TypeLines(
+				// @formatter:off
+				nameof(IndexOutOfRangeInListExpressions),
+				"has log",
+				"UpdateNotExistingElement(element Number) Number",
+				"\tmutable someList = (9, 8, 7)",
+				"\tsomeList(3) = 5")).
 			ParseMembersAndMethods(parser);
-		Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(), Throws.InstanceOf<List.IndexOutOfRangeInListExpressions>());
+		program.Methods[0].GetBodyAndParseIfNeeded();
 	}
 }

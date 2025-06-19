@@ -41,9 +41,6 @@ public sealed class Method : Context
 			closingBracketIndex = restSpan.LastIndexOf(")");
 		if (closingBracketIndex > 0)
 			ParseParameters(type, restSpan[1..closingBracketIndex]);
-		//tst:
-		if (Name == "Contains")
-		Console.WriteLine(Parent+"."+this+"("+Parameters.ToWordList()+") created methodBody: " +methodBody);
 	}
 
 	public sealed class
@@ -116,7 +113,7 @@ public sealed class Method : Context
 		headerLine.Contains(Base.Generic, StringComparison.Ordinal) ||
 		headerLine.Contains(Base.Generic.MakeFirstLetterLowercase(), StringComparison.Ordinal);
 
-	public bool IsGeneric { get; private set; }
+	public bool IsGeneric { get; }
 
 	private void ParseParameters(Type type, ReadOnlySpan<char> parametersSpan)
 	{
@@ -197,6 +194,48 @@ public sealed class Method : Context
 
 	public sealed class EmptyParametersMustBeRemoved(Method method)
 		: ParsingFailed(method.Type, 0, "", method.Name);
+
+	internal Method(Method cloneFrom, Type newReturnType)
+		: base(cloneFrom.Type, cloneFrom.Name)
+	{
+		TypeLineNumber = cloneFrom.TypeLineNumber;
+		Parser = cloneFrom.Parser;
+		lines = cloneFrom.lines;
+		IsGeneric = cloneFrom.IsGeneric;
+		ReturnType = newReturnType;
+		if (cloneFrom.methodBody != null)
+			methodBody = cloneFrom.methodBody.CloneAndUpdateMethod(this);
+		parameters = cloneFrom.parameters;
+		Tests = cloneFrom.Tests;
+		lines = cloneFrom.lines;
+	}
+
+	internal Method(Method cloneFrom, GenericTypeImplementation typeWithImplementation)
+		: base(typeWithImplementation, cloneFrom.Name)
+	{
+		TypeLineNumber = cloneFrom.TypeLineNumber;
+		Parser = cloneFrom.Parser;
+		lines = cloneFrom.lines;
+		IsGeneric = false;
+		ReturnType = ReplaceWithImplementationOrGenericType(cloneFrom.ReturnType, typeWithImplementation, 0);
+		parameters = new List<Parameter>(cloneFrom.parameters);
+		for (var index = 0; index < parameters.Count; index++)
+			parameters[index] = cloneFrom.parameters[index].CloneWithImplementationType(
+				ReplaceWithImplementationOrGenericType(cloneFrom.Parameters[index].Type,
+					typeWithImplementation, index));
+		if (cloneFrom.methodBody != null)
+			methodBody = cloneFrom.methodBody.CloneAndUpdateMethod(this);
+		Tests = cloneFrom.Tests;
+		lines = cloneFrom.lines;
+	}
+
+	private static Type ReplaceWithImplementationOrGenericType(Type type,
+		GenericTypeImplementation typeWithImplementation, int index) =>
+		type.Name == Base.Generic
+			? typeWithImplementation.ImplementationTypes[index] // like Number
+			: type.IsGeneric
+				? typeWithImplementation // like List(Number)
+				: type;
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public Expression ParseLine(Body body, string currentLine)
@@ -285,8 +324,8 @@ public sealed class Method : Context
 
 	public Type Type => (Type)Parent;
 	public IReadOnlyList<Parameter> Parameters => parameters;
-	private List<Parameter> parameters = new();
-	public Type ReturnType { get; private set; }
+	private readonly List<Parameter> parameters = new();
+	public Type ReturnType { get; }
 	public bool IsPublic => char.IsUpper(Name[0]);
 	public List<Expression> Tests { get; } = new();
 
@@ -300,16 +339,7 @@ public sealed class Method : Context
 		if (methodBody == null)
 			throw new CannotCallBodyOnTraitMethod();
 		if (methodBody.Expressions.Count > 0)
-			//tst: {
-			//tst:	Console.WriteLine(methodBody + " existing expressions=" +
-			//tst:		methodBody.Expressions.ToWordList());
-			return methodBody;
-			//tst: }
-		if (methodBody.Method != this)
-			//TODO: still happens for one test: MethodBodyShouldBeUpdatedWithImplementationType
-			throw new NotSupportedException(methodBody.Method + " methodBody=" + methodBody +
-				" is not matching this method anymore " + this);
-		//tst: Console.WriteLine(methodBody + " parse");
+			return methodBody; //TODO: currently we only parse once, check if this is ever reachable
 		var expression = methodBody.Parse();
 		if (Tests.Count < 1 && !IsTestPackage())
 			throw new MethodMustHaveAtLeastOneTest(Type, Name, TypeLineNumber);
@@ -327,40 +357,6 @@ public sealed class Method : Context
 		Name + parameters.ToBrackets() + (ReturnType.Name == Base.None
 			? ""
 			: " " + ReturnType.Name);
-
-	public Method CloneFrom(Type concreteType)
-	{
-		var clone = (Method)MemberwiseClone();
-		clone.Parent = concreteType;
-		clone.ReturnType = concreteType;
-//TODO: boeseli2 found
-		clone.methodBody?.UpdateCurrentAndChildrenMethod(clone);
-		return clone;
-	}
-
-	public Method CloneWithImplementation(GenericTypeImplementation typeWithImplementation)
-	{
-		var clone = (Method)MemberwiseClone();
-		clone.ReturnType = ReplaceWithImplementationOrGenericType(clone.ReturnType, typeWithImplementation, 0);
-		clone.parameters = new List<Parameter>(parameters);
-		for (var index = 0; index < clone.Parameters.Count; index++)
-			clone.parameters[index] = clone.parameters[index].CloneWithImplementationType(
-				ReplaceWithImplementationOrGenericType(clone.Parameters[index].Type,
-					typeWithImplementation, index));
-		clone.Parent = typeWithImplementation; //TODO: find any alternative way to have method with updated parent?
-		clone.IsGeneric = false;
-//TODO: boeseli1 found
-		clone.methodBody?.UpdateCurrentAndChildrenMethod(clone);
-		return clone;
-	}
-
-	private static Type ReplaceWithImplementationOrGenericType(Type type,
-		GenericTypeImplementation typeWithImplementation, int index) =>
-		type.Name == Base.Generic
-			? typeWithImplementation.ImplementationTypes[index] // like Number
-			: type.IsGeneric
-				? typeWithImplementation // like List(Number)
-				: type;
 
 	public bool HasEqualSignature(Method method) =>
 		Name == method.Name && Parameters.Count == method.Parameters.Count &&
@@ -385,7 +381,14 @@ public sealed class Method : Context
 	/// Slightly different from <see cref="HasEqualSignature"/> which does extra generic checks.
 	/// </summary>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public bool IsSameMethodNameReturnTypeAndParameters(Method other) =>
-		Name == other.Name && ReturnType == other.ReturnType &&
-		Parameters.SequenceEqual(other.Parameters);
+	public bool IsSameMethodNameReturnTypeAndParameters(Method other)
+	{
+		if (Name != other.Name || ReturnType != other.ReturnType ||
+			parameters.Count != other.Parameters.Count)
+			return false;
+		for (var index = 0; index < parameters.Count; index++)
+			if (parameters[index].Type != other.Parameters[index].Type)
+				return false;
+		return true;
+	}
 }
