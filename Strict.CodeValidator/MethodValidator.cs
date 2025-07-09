@@ -48,10 +48,9 @@ public sealed record MethodValidator(IEnumerable<Method> Methods) : Validator
 
 	private static void ValidateUnusedVariables(Body body)
 	{
-		if (body.Variables == null)
-			return;
-		foreach (var variable in body.Variables)
-			ValidateUnusedVariable(body.Method, variable.Key);
+		if (body.Variables != null)
+			foreach (var variable in body.Variables)
+				ValidateUnusedVariable(body.Method, variable.Key);
 	}
 
 	private static void ValidateUnusedVariable(Method method, string name)
@@ -109,7 +108,8 @@ public sealed record MethodValidator(IEnumerable<Method> Methods) : Validator
 
 	private static void ValidateUnchangedMutableParameter(Method method, Parameter parameter)
 	{
-		if (parameter is { IsMutable: true, DefaultValue: null })
+		if (parameter is { IsMutable: true } &&
+			new MutableAssignmentVisitor(parameter).Visit(method.GetBodyAndParseIfNeeded()) is null)
 			throw new ParameterDeclaredAsMutableButValueNeverChanged(method.Type, parameter.Name);
 	}
 

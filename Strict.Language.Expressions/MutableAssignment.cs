@@ -2,17 +2,16 @@
 
 public sealed class MutableAssignment : ConcreteExpression
 {
-	private MutableAssignment(Body scope, string variableName, Expression newValue, Expression oldValue) :
+	private MutableAssignment(Body scope, string variableOrParameterName, Expression newValue, Expression oldValue) :
 		base(newValue.ReturnType, true)
 	{
 		if (oldValue is { IsMutable: false })
 			throw new Body.ValueIsNotMutableAndCannotBeChanged(scope, oldValue.ToString());
-		Name = variableName;
+		Name = variableOrParameterName;
 		newValue.IsMutable = true;
 		Value = newValue;
 		OldValue = oldValue;
-		if (Name != "")
-			scope.UpdateVariable(Name, newValue);
+		scope.UpdateVariableOrParameter(Name, newValue);
 	}
 
 	public string Name { get; }
@@ -33,9 +32,12 @@ public sealed class MutableAssignment : ConcreteExpression
 		if (!expression.ReturnType.IsSameOrCanBeUsedAs(newExpression.ReturnType))
 			throw new ValueTypeNotMatchingWithAssignmentType(body, expression.ReturnType.Name,
 				newExpression.ReturnType.Name);
-		return new MutableAssignment(body, expression is VariableCall variableCall
-			? variableCall.Name
-			: "", newExpression, expression);
+		return new MutableAssignment(body, expression switch
+		{
+			VariableCall variableCall => variableCall.Name,
+			ParameterCall parameterCall => parameterCall.Parameter.Name,
+			_ => throw new InvalidAssignmentTarget(body, expression.ToStringWithType())
+		}, newExpression, expression);
 	}
 
 	//TODO: this is a bit strange, why would we update the value here already, we are still parsing,

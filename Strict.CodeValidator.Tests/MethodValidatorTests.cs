@@ -108,8 +108,8 @@ public sealed class MethodValidatorTests
 		]).Validate());
 
 	[TestCase("Run(mutable parameter Number)", "\tconstant result = 5 + parameter", "\tresult")]
-	[TestCase("Run(mutable mutatedParameter Number, mutable parameter Number)",
-		"\tmutatedParameter = 5 + parameter", "\tmutatedParameter")]
+	[TestCase("Run(mutable otherMutatedParameter Number, mutable parameter Number)",
+		"\totherMutatedParameter = 5 + parameter", "\totherMutatedParameter")]
 	public void UnchangedMutableParametersShouldError(params string[] code) =>
 		Assert.That(() => new MethodValidator([new Method(type, 1, parser, code)]).Validate(),
 			Throws.InstanceOf<ParameterDeclaredAsMutableButValueNeverChanged>().With.Message.

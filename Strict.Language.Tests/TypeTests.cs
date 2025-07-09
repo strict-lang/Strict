@@ -221,7 +221,8 @@ public sealed class TypeTests
 	[TestCase("has number", "Run", "\tconstant result = 5", "\tresult = 6")]
 	public void ImmutableTypesCannotBeChanged(params string[] code) =>
 		Assert.That(
-			() => new Type(package, new TypeLines(nameof(ImmutableTypesCannotBeChanged), code)).ParseMembersAndMethods(parser).Methods[0].GetBodyAndParseIfNeeded(),
+			() => new Type(package, new TypeLines(nameof(ImmutableTypesCannotBeChanged), code)).
+				ParseMembersAndMethods(parser).Methods[0].GetBodyAndParseIfNeeded(),
 			Throws.InstanceOf<ValueIsNotMutableAndCannotBeChanged>());
 
 	[TestCase("mutable canBeModified = 0", "Run", "\tcanBeModified = 5")]

@@ -154,8 +154,16 @@ public sealed class Body : Expression
 	public sealed class ValueIsNotMutableAndCannotBeChanged(Body body, string name)
 		: ParsingFailed(body, name);
 
-	public void UpdateVariable(string name, Expression value)
+	public void UpdateVariableOrParameter(string name, Expression value)
 	{
+		foreach (var parameter in Method.Parameters)
+			if (parameter.Name == name)
+			{
+				if (!parameter.IsMutable)
+					throw new ValueIsNotMutableAndCannotBeChanged(this, name);
+				parameter.UpdateValue(value, this);
+				return;
+			}
 		var variableScopeBody = FindVariableBody(name);
 		var variable = variableScopeBody?.FindVariableValue(name) ??
 			throw new IdentifierNotFound(this, name);
