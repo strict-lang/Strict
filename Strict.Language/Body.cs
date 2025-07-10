@@ -1,4 +1,5 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System.Diagnostics;
+using System.Runtime.CompilerServices;
 
 [assembly: InternalsVisibleTo("Strict.Language.Expressions.Tests")]
 
@@ -53,10 +54,12 @@ public sealed class Body : Expression
 			}
 			catch (ParsingFailed)
 			{
+				StartDebuggerInDebugModeIfNotAttached();
 				throw;
 			}
 			catch (Exception ex)
 			{
+				StartDebuggerInDebugModeIfNotAttached();
 				throw new ParsingFailed((Type)Method.Parent, Method.TypeLineNumber + ParsingLineNumber,
 					CurrentLine, ex);
 			}
@@ -65,6 +68,26 @@ public sealed class Body : Expression
 			? Expressions[0]
 			: this;
 	}
+
+	private static void StartDebuggerInDebugModeIfNotAttached()
+	{
+#if DEBUG
+		if (!Debugger.IsAttached && !StartedFromNCrunch)
+			Debugger.Launch(); //ncrunch: no coverage
+#endif
+	}
+
+	public static bool StartedFromNCrunch
+	{
+		get
+		{
+			if (wasStartedFromNCrunch is not null)
+				return wasStartedFromNCrunch.Value;
+			wasStartedFromNCrunch = Environment.GetEnvironmentVariable("NCrunch") == "1";
+			return wasStartedFromNCrunch.Value;
+		}
+	}
+	private static bool? wasStartedFromNCrunch;
 
 	public Body SetExpressions(IReadOnlyList<Expression> expressions)
 	{
@@ -127,7 +150,7 @@ public sealed class Body : Expression
 		CheckForNameWithDifferentTypeUsage(name, value);
 		if (FindVariableValue(name.AsSpan()) is not null)
 			throw new ValueIsNotMutableAndCannotBeChanged(this, name);
-		return InitializeOrUpdateVariable(name, value);
+		return AddVariableToDictionary(name, value);
 	}
 
 	private void CheckForNameWithDifferentTypeUsage(string name, Expression value)
@@ -138,7 +161,7 @@ public sealed class Body : Expression
 				value.ReturnType.Name);
 	}
 
-	private Body InitializeOrUpdateVariable(string name, Expression value)
+	private Body AddVariableToDictionary(string name, Expression value)
 	{
 		Variables ??= new Dictionary<string, Expression>(StringComparer.Ordinal);
 		Variables.Add(name, value);
@@ -251,4 +274,25 @@ public sealed class Body : Expression
 		children.Remove(child);
 		return innerForBody;
 	}
+
+	/*TODO: remove, we should know at creation time and not create it wrong first and then fix it afterwards
+	public override Expression CloneMutable()
+	{
+		var clone = (Body)MemberwiseClone();
+		clone.IsMutable = true;
+		return clone;
+	}
+
+	   /// <summary>
+	   /// Makes any expression mutable. Just returns it if it is already mutable. However, if the
+	   /// expression is not mutable, but is now needed in a mutable context (for loop, assigned to a
+	   /// mutable variable, etc.) it needs to be cloned and made Mutable, we cannot change the original
+	   /// expression to be mutable (that code must stay unaffected).
+	   /// </summary>
+	   private static Expression MakeMutable(Expression expression) =>
+	   	expression.IsMutable
+	   		? expression
+	   		: expression.CloneMutable();
+
+	*/
 }

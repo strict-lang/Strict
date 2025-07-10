@@ -8,6 +8,7 @@ public sealed class ListCall(Expression list, Expression index) : ConcreteExpres
 		: list.ReturnType, list.IsMutable)
 {
 	public Expression List { get; } = list;
+	//TODO: also do a IndexOutOfRangeInListExpressions check if List has known fixed length!
 	public Expression Index { get; } = index;
 
 	public static Expression? TryParse(Body body, Expression? variable,

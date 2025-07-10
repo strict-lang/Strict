@@ -43,7 +43,7 @@ public class MethodCall : ConcreteExpression
 		var method = type.FindMethod(inputAsString, arguments);
 		if (method != null)
 			return new MethodCall(method, instance, AreArgumentsAutoParsedAsList(method, arguments)
-				? [new List(body, (List<Expression>)arguments)]
+				? [new List(body, (List<Expression>)arguments, false)]
 				: arguments);
 		return null;
 	}

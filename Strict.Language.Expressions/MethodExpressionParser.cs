@@ -15,17 +15,17 @@ public class MethodExpressionParser : ExpressionParser
 	/// </summary>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public override Expression ParseLineExpression(Body body, ReadOnlySpan<char> line) =>
-		ConstantDeclaration.TryParse(body, line, ConstantDeclaration.ConstantWithSpaceAtEnd) ??
-		If.TryParse(body, line) ?? For.TryParse(body, line.Trim()) ?? Return.TryParse(body, line) ??
-		ConstantDeclaration.TryParse(body, line, MutableDeclaration.MutableWithSpaceAtEnd) ??
-		MutableAssignment.TryParse(body, line) ?? ParseExpression(body, line);
+		ConstantDeclaration.TryParse(body, line) ?? If.TryParse(body, line) ??
+		For.TryParse(body, line.Trim()) ?? Return.TryParse(body, line) ??
+		MutableDeclaration.TryParse(body, line) ??
+		MutableAssignment.TryParse(body, line) ?? ParseExpression(body, line, false);
 
-	public override Expression ParseExpression(Body body, ReadOnlySpan<char> input)
+	public override Expression ParseExpression(Body body, ReadOnlySpan<char> input, bool makeMutable)
 	{
 		CheckIfEmptyOrAny(body, input);
 		return input.Length < 3 || !input.Contains(' ') && !input.Contains(',')
-			? TryParseCommon(body, input)
-			: TryParseErrorOrTextOrListOrConditionalExpression(body, input) ??
+			? TryParseCommon(body, input, makeMutable)
+			: TryParseErrorOrTextOrListOrConditionalExpression(body, input, makeMutable) ??
 			TryParseMethodOrMember(body, input);
 	}
 
@@ -40,9 +40,9 @@ public class MethodExpressionParser : ExpressionParser
 	private static bool IsExpressionTypeAny(ReadOnlySpan<char> input) =>
 		input.Equals(Base.Any, StringComparison.Ordinal) || input.StartsWith(Base.Any + "(");
 
-	private Expression TryParseCommon(Body body, ReadOnlySpan<char> input) =>
+	private Expression TryParseCommon(Body body, ReadOnlySpan<char> input, bool makeMutable) =>
 		Boolean.TryParse(body, input) ?? Text.TryParse(body, input) ??
-		List.TryParseWithSingleElement(body, input) ?? Number.TryParse(body, input) ??
+		List.TryParseWithSingleElement(body, input, makeMutable) ?? Number.TryParse(body, input) ??
 		TryParseMemberOrZeroOrOneArgumentMethodOrNestedCall(body, input) ?? (input.IsOperator()
 			? throw new InvalidOperatorHere(body, input.ToString())
 			: input.IsWord()
@@ -50,20 +50,20 @@ public class MethodExpressionParser : ExpressionParser
 				: throw new UnknownExpression(body, input.ToString()));
 
 	private Expression? TryParseErrorOrTextOrListOrConditionalExpression(Body body,
-		ReadOnlySpan<char> input) =>
+		ReadOnlySpan<char> input, bool makeMutable) =>
 		input.StartsWith("Error ")
 			? TryParseErrorExpression(body, input[6..])
 			: input[0] == '"' && input[^1] == '"' && input.Count('"') == 2
 				? new Text(body.Method, input.Slice(1, input.Length - 2).ToString())
 				: input[0] == '(' && input[^1] == ')' && input.Contains(',') && input.Count('(') == 1
-					? new List(body, body.Method.ParseListArguments(body, input[1..^1]))
+					? new List(body, body.Method.ParseListArguments(body, input[1..^1]), makeMutable)
 					: If.CanTryParseConditional(body, input)
 						? If.ParseConditional(body, input)
 						: null;
 
 	private Error TryParseErrorExpression(Body body, ReadOnlySpan<char> partToParse)
 	{
-		var expression = ParseExpression(body, partToParse);
+		var expression = ParseExpression(body, partToParse, false);
 		if (expression.ReturnType.Name != Base.Text)
 			throw new ArgumentException("Error must be a text but it is " + expression.ReturnType.Name);
 		return new Error(expression);
@@ -101,7 +101,7 @@ public class MethodExpressionParser : ExpressionParser
 				: input[argumentsRange].Equals(UnaryOperator.Not, StringComparison.Ordinal)
 					? Not.Parse(body, input, methodRange)
 					: input[0].IsSingleCharacterOperator() && IsContextInForExpression(body)
-						? ParseExpression(body, input[2..])
+						? ParseExpression(body, input[2..], false)
 						: throw new InvalidOperatorHere(body, input[methodRange].ToString());
 	}
 
@@ -162,7 +162,7 @@ public class MethodExpressionParser : ExpressionParser
 			if (current is null)
 			{
 				current = Text.TryParse(body, input[members.Current]) ??
-					List.TryParseWithMultipleOrNestedElements(body, input[members.Current]);
+					List.TryParseWithMultipleOrNestedElements(body, input[members.Current], false);
 				if (current is not null)
 				{
 					context = current.ReturnType;
@@ -281,7 +281,7 @@ public class MethodExpressionParser : ExpressionParser
 					expressions.Push(span.Length == 1 && span[0].IsSingleCharacterOperator() ||
 						span.IsMultiCharacterOperator()
 							? Binary.Parse(body, inner.AsSpan(), postfix.Output)
-							: body.Method.ParseExpression(body, inner[postfix.Output.Pop()]));
+							: body.Method.ParseExpression(body, inner[postfix.Output.Pop()], false));
 				}
 				catch (UnknownExpression ex)
 				{
@@ -301,7 +301,7 @@ public class MethodExpressionParser : ExpressionParser
 		foreach (var element in elements)
 			try
 			{
-				expressions.Add(body.Method.ParseExpression(body, input[element]));
+				expressions.Add(body.Method.ParseExpression(body, input[element], false));
 			}
 			catch (UnknownExpression ex)
 			{
@@ -313,7 +313,7 @@ public class MethodExpressionParser : ExpressionParser
 
 	private Expression
 		ParseTextWithSpacesOrListWithMultipleOrNestedElements(Body body, ReadOnlySpan<char> input) =>
-		Text.TryParse(body, input) ?? List.TryParseWithMultipleOrNestedElements(body, input) ??
+		Text.TryParse(body, input) ?? List.TryParseWithMultipleOrNestedElements(body, input, false) ??
 		TryParseMemberOrZeroOrOneArgumentMethodOrNestedCall(body, input) ??
 		throw new InvalidSingleTokenExpression(body, input.ToString());
 

@@ -24,10 +24,9 @@ public class ConstantDeclaration : ConcreteExpression
 	public override bool Equals(Expression? other) =>
 		other is ConstantDeclaration a && Equals(Name, a.Name) && Value.Equals(a.Value);
 
-	public static Expression? TryParse(Body body, ReadOnlySpan<char> line,
-		string declarationType) =>
-		line.StartsWith(declarationType, StringComparison.Ordinal)
-			? TryParseDeclaration(body, line, declarationType)
+	public static Expression? TryParse(Body body, ReadOnlySpan<char> line) =>
+		line.StartsWith(ConstantWithSpaceAtEnd, StringComparison.Ordinal)
+			? TryParseDeclaration(body, line, ConstantWithSpaceAtEnd)
 			: null;
 
 	/// <summary>
@@ -36,7 +35,7 @@ public class ConstantDeclaration : ConcreteExpression
 	/// constant hello = "hello" + " " + "world"
 	///					 ^ ^       ^ ^   ^ ^       END, using TryParseExpression with Range(12, 35)
 	/// </summary>
-	private static Expression TryParseDeclaration(Body body, ReadOnlySpan<char> line,
+	protected static Expression TryParseDeclaration(Body body, ReadOnlySpan<char> line,
 		string declarationType)
 	{
 		var parts = line[declarationType.Length..].Split();
@@ -51,11 +50,8 @@ public class ConstantDeclaration : ConcreteExpression
 	}
 
 	private static Expression ParseConstantDeclarationWithValue(Body body, string name,
-		ReadOnlySpan<char> valueSpan)
-	{
-		var value = body.Method.ParseExpression(body, valueSpan);
-		return new ConstantDeclaration(body, name, value);
-	}
+		ReadOnlySpan<char> valueSpan) =>
+		new ConstantDeclaration(body, name, body.Method.ParseExpression(body, valueSpan, false));
 
 	public sealed class MissingAssignmentValueExpression(Body body) : ParsingFailed(body);
 }

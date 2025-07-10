@@ -42,7 +42,7 @@ public sealed class Binary(Expression left, Method operatorMethod, Expression[] 
 		if (operatorToken == BinaryOperator.Multiply && HasIncompatibleDimensions(left, right))
 			throw new ListsHaveDifferentDimensions(body, left + " " + right);
 		var arguments = new[] { right };
-		return new Binary(left, operatorToken == "in"
+		return new Binary(left, operatorToken == BinaryOperator.In
 			? right.ReturnType.GetMethod(operatorToken, [left])
 			: left.ReturnType.GetMethod(operatorToken, arguments), arguments);
 	}
@@ -54,7 +54,7 @@ public sealed class Binary(Expression left, Method operatorMethod, Expression[] 
 		var expression = input[nextTokenRange.Start.Value].IsSingleCharacterOperator() ||
 			input[nextTokenRange].IsMultiCharacterOperator()
 				? BuildBinaryExpression(body, input, nextTokenRange, tokens)
-				: body.Method.ParseExpression(body, input[nextTokenRange]);
+				: body.Method.ParseExpression(body, input[nextTokenRange], false);
 		if (expression.ReturnType.IsGeneric)
 			//ncrunch: no coverage start, cannot be reached: Type.FindMethod already filters this condition
 			throw new Type.GenericTypesCannotBeUsedDirectlyUseImplementation(expression.ReturnType,

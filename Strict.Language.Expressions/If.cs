@@ -89,7 +89,7 @@ public sealed class If(Expression condition, Expression then,	Expression? option
 
 	private static Expression GetConditionExpression(Body body, ReadOnlySpan<char> line)
 	{
-		var condition = body.Method.ParseExpression(body, line);
+		var condition = body.Method.ParseExpression(body, line, false);
 		var booleanType = condition.ReturnType.GetType(Base.Boolean);
 		if (condition.ReturnType == booleanType || booleanType.IsSameOrCanBeUsedAs(condition.ReturnType))
 			return condition;
@@ -157,7 +157,7 @@ public sealed class If(Expression condition, Expression then,	Expression? option
 		if (elseIndex <= 5)
 			throw new MissingElseExpression(body);
 		return new If(GetConditionExpression(body, input[..(questionMarkIndex - 1)]),
-			body.Method.ParseExpression(body, input[(questionMarkIndex + 2)..elseIndex]), body.Method.ParseExpression(body, input[(elseIndex + 6)..]));
+			body.Method.ParseExpression(body, input[(questionMarkIndex + 2)..elseIndex], false), body.Method.ParseExpression(body, input[(elseIndex + 6)..], false));
 	}
 
 	public sealed class MissingElseExpression(Body body) : ParsingFailed(body);

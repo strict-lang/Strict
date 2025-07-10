@@ -30,11 +30,11 @@ public class ExpressionParserTests : ExpressionParser
 	}
 
 	//ncrunch: no coverage start, not the focus here
-	public override Expression ParseExpression(Body body, ReadOnlySpan<char> text)
+	public override Expression ParseExpression(Body body, ReadOnlySpan<char> text, bool isMutable)
 	{
 		if (type == null!)
 			CreateType();
-		return new Value(type!.GetType(Base.Boolean), int.TryParse(text, out _));
+		return new Value(type!.GetType(Base.Boolean), int.TryParse(text, out _), isMutable);
 	}
 
 	public override List<Expression> ParseListArguments(Body body, ReadOnlySpan<char> text) => null!;

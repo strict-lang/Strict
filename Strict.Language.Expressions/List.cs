@@ -2,13 +2,13 @@
 
 public sealed class List : Value
 {
-	public List(Body bodyForErrorMessage, List<Expression> values) : base(
-		values[0].ReturnType.GetListImplementationType(GetCommonBaseType(values.Select(v => v.ReturnType).ToList(),
-			bodyForErrorMessage)),
-		values) =>
+	public List(Body bodyForErrorMessage, List<Expression> values, bool isMutable) : base(
+		values[0].ReturnType.GetListImplementationType(
+			GetCommonBaseType(values.Select(v => v.ReturnType).ToList(), bodyForErrorMessage)),
+		values, isMutable) =>
 		Values = values;
 
-	public List(Type type) : base(type, Array.Empty<Expression>()) =>
+	public List(Type type) : base(type, Array.Empty<Expression>(), true) =>
 		Values = [];
 
 	private static Type
@@ -23,7 +23,7 @@ public sealed class List : Value
 		: ParsingFailed(body,
 			"List has one or many mismatching types " + string.Join(", ", returnTypes));
 
-	public List<Expression> Values { get; private set; }
+	public List<Expression> Values { get; }
 
 	public override string ToString()
 	{
@@ -38,21 +38,22 @@ public sealed class List : Value
 	/// <summary>
 	/// Since there was no space found we can check much quicker what is inside the list
 	/// </summary>
-	public static Expression? TryParseWithSingleElement(Body body, ReadOnlySpan<char> input) =>
+	public static Expression? TryParseWithSingleElement(Body body, ReadOnlySpan<char> input, bool makeMutable) =>
 		input.Length < 2 || input[0] != '(' || input[^1] != ')'
 			? null
 			: input.Length == 2
 				? throw new EmptyListNotAllowed(body)
-				: new List(body, [body.Method.ParseExpression(body, input[1..^1])]);
+				: new List(body, [body.Method.ParseExpression(body, input[1..^1], false)], makeMutable);
 
-	public static Expression? TryParseWithMultipleOrNestedElements(Body body, ReadOnlySpan<char> input) =>
+	public static Expression? TryParseWithMultipleOrNestedElements(Body body,
+		ReadOnlySpan<char> input, bool makeMutable) =>
 		input.Length > 2 && input[0] == '(' && input[^1] == ')'
-			? new List(body,
-				body.Method.ParseListArguments(body, input[1..^1]))
+			? new List(body, body.Method.ParseListArguments(body, input[1..^1]), makeMutable)
 			: null;
 
 	public sealed class EmptyListNotAllowed(Body body) : ParsingFailed(body, "()");
 
+	/*not allowed! expression tree must stay immutable, maybe we can still do a IndexOutOfRangeInListExpressions check TODO
 	public void UpdateValue(Body bodyForErrorMessage, Expression index, Expression newExpression)
 	{
 		if (Values.Count == 0)
@@ -67,4 +68,5 @@ public sealed class List : Value
 	public class IndexOutOfRangeInListExpressions(Body body, int index, int listExpressionsCount)
 		: ParsingFailed(body,
 			$"Given index {index} is not within the List Expressions count {listExpressionsCount}");
+	*/
 }

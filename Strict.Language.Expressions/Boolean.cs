@@ -2,6 +2,9 @@
 
 namespace Strict.Language.Expressions;
 
+/// <summary>
+/// Constant boolean that appears anywhere in the parsed code, simply "true" or "false"
+/// </summary>
 public sealed class Boolean(Context context, bool value)
 	: Value(context.GetType(Base.Boolean), value)
 {

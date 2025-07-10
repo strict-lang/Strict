@@ -160,7 +160,7 @@ public sealed class Method : Context
 			throw new MissingParameterDefaultValue(this, TypeLineNumber + methodLineNumber - 1,
 				nameAndTypeAsString);
 		var defaultValue = methodBody != null
-			? ParseExpression(methodBody, nameAndDefaultValue[1])
+			? ParseExpression(methodBody, nameAndDefaultValue[1], false)
 			: type.GetMemberExpression(parser, nameAndDefaultValue[0], nameAndDefaultValue[1]);
 		return //TODO: can't happen: defaultValue == null ? throw new DefaultValueCouldNotBeParsedIntoExpression(this, TypeLineNumber + methodLineNumber - 1, nameAndTypeAsString) :
 			new Parameter(type, nameAndDefaultValue[0], defaultValue);
@@ -256,8 +256,8 @@ public sealed class Method : Context
 		!currentLine.Contains("?") && expression.ReturnType.Name == Base.Boolean;
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public Expression ParseExpression(Body body, ReadOnlySpan<char> text) =>
-		Parser.ParseExpression(body, text);
+	public Expression ParseExpression(Body body, ReadOnlySpan<char> text, bool makeMutable) =>
+		Parser.ParseExpression(body, text, makeMutable);
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public List<Expression> ParseListArguments(Body body, ReadOnlySpan<char> text) =>

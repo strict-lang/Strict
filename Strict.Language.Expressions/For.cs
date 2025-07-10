@@ -78,7 +78,7 @@ public sealed class For : Expression
 		AddVariablesIfTheyDoNotExistYet(body, line, variableName);
 		if (body.FindVariableValue(variableName) is { IsMutable: false } && HasIn(line))
 			throw new ImmutableIterator(body);
-		var forExpression = body.Method.ParseExpression(body, GetForExpressionText(line));
+		var forExpression = body.Method.ParseExpression(body, GetForExpressionText(line), false);
 		if (HasIn(line))
 			CheckForIncorrectMatchingTypes(body, variableName, forExpression);
 		else
@@ -110,28 +110,22 @@ public sealed class For : Expression
 	private static Expression GetVariableExpression(Body body, ReadOnlySpan<char> line, int variableIndex)
 	{
 		var forIteratorText = GetForIteratorText(line);
-		var iteratorExpression = body.Method.ParseExpression(body, forIteratorText);
+		var iteratorExpression = body.Method.ParseExpression(body, forIteratorText, true);
 		if (iteratorExpression is MethodCall { ReturnType.Name: Base.Range } methodCall)
-			return MakeMutable(GetVariableFromRange(iteratorExpression, methodCall));
+			return GetVariableFromRange(iteratorExpression, methodCall);
 		if (iteratorExpression.ReturnType is GenericTypeImplementation { Generic.Name: Base.List })
 		{
 			var firstValue = body.Method.ParseExpression(body, forIteratorText[^1] == ')'
 				? forIteratorText[1..forIteratorText.IndexOf(',')]
-				: forIteratorText.ToString() + "(0)");
+				: forIteratorText.ToString() + "(0)", true);
 			if (variableIndex <= 0)
-				return MakeMutable(firstValue);
-			var innerFirstValue = body.Method.ParseExpression(body, firstValue + "(0)");
+				return firstValue;
+			var innerFirstValue = body.Method.ParseExpression(body, firstValue + "(0)", true);
 			if (variableIndex > 1)
 				throw new NotSupportedException("More than 2 for variables are not supported yet");
-			return MakeMutable(innerFirstValue);
+			return innerFirstValue;
 		}
-		return MakeMutable(iteratorExpression);
-	}
-
-	private static Expression MakeMutable(Expression expression)
-	{
-		expression.IsMutable = true;
-		return expression;
+		return iteratorExpression;
 	}
 
 	private static Expression GetVariableFromRange(Expression iteratorExpression,
@@ -189,16 +183,14 @@ public sealed class For : Expression
 		if (body.FindVariableValue(IndexName) != null)
 			throw new DuplicateImplicitIndex(body);
 		AddImplicitVariables(body, line, innerBody);
-		return new For(body.Method.ParseExpression(body, line[4..]), innerBody.Parse());
+		return new For(body.Method.ParseExpression(body, line[4..], true), innerBody.Parse());
 	}
 
 	private static void AddImplicitVariables(Body body, ReadOnlySpan<char> line, Body innerBody)
 	{
 		innerBody.AddVariable(IndexName, new Number(body.Method, 0));
-		var variableValue =
-			innerBody.Method.ParseExpression(innerBody, GetVariableExpressionValue(body, line));
-		variableValue.IsMutable = true;
-		innerBody.AddVariable(ValueName, variableValue);
+		innerBody.AddVariable(ValueName,
+			innerBody.Method.ParseExpression(innerBody, GetVariableExpressionValue(body, line), true));
 	}
 
 	private static string GetVariableExpressionValue(Body body, ReadOnlySpan<char> line,

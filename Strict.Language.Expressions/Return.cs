@@ -11,7 +11,7 @@ public sealed class Return(Expression value) : Expression(value.ReturnType)
 		line.StartsWith(Keyword.Return, StringComparison.Ordinal)
 			? new Return(line.Length <= Keyword.Return.Length
 				? throw new MissingExpression(body)
-				: body.Method.ParseExpression(body, line[7..]))
+				: body.Method.ParseExpression(body, line[7..], false))
 			: null;
 
 	public sealed class MissingExpression(Body body) : ParsingFailed(body);
