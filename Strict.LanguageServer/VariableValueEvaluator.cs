@@ -1,4 +1,5 @@
 ﻿using OmniSharp.Extensions.LanguageServer.Protocol.Server;
+using Strict.Runtime;
 
 namespace Strict.LanguageServer;
 
@@ -7,7 +8,7 @@ public sealed class VariableValueEvaluator(ILanguageServerFacade languageServer,
 {
 	private const string NotificationName = "valueEvaluationNotification";
 
-	public void Run(VirtualMachine.VirtualMachine vm)
+	public void Run(VirtualMachine vm)
 	{
 		var lineValuePair = new Dictionary<int, string>();
 		for (var i = 0; i < lines.Length; i++)

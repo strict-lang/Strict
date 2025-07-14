@@ -2,16 +2,16 @@
 
 public sealed class Member : NamedType
 {
-	public Member(Type definedIn, string nameAndType, Expression? value,
-		string usedKeyword = Keyword.Has) : base(definedIn, nameAndType, value?.ReturnType)
+	public Member(Type definedIn, string nameAndType, Expression? initialValue,
+		string usedKeyword = Keyword.Has) : base(definedIn, nameAndType, initialValue?.ReturnType)
 	{
-		Value = value;
+		InitialValue = initialValue;
 		if (usedKeyword == Keyword.Mutable)
 			IsMutable = true;
 		else if (usedKeyword == Keyword.Constant)
 		{
 			IsConstant = true;
-			if (value == null)
+			if (initialValue == null)
 				throw new MissingConstantValue(definedIn, nameAndType);
 		}
 		if (!Type.Name.StartsWith(Name.MakeFirstLetterUppercase(), StringComparison.Ordinal))
@@ -28,7 +28,7 @@ public sealed class Member : NamedType
 			throw new MemberNameWithDifferentTypeNamesThanOwnAreNotAllowed(definedIn, Name, Type.Name);
 	}
 
-	public Expression? Value { get; private set; }
+	public Expression? InitialValue { get; }
 	public bool IsPublic => char.IsUpper(Name[0]);
 	public Expression[]? Constraints { get; private set; }
 
@@ -65,12 +65,17 @@ public sealed class Member : NamedType
 		string nameType, string typeName)
 		: ParsingFailed(type, 0, $"Name {nameType} and type {typeName} are not matching");
 
-	public void UpdateValue(Expression newExpression, Body bodyForErrorMessage)
+	public void CheckIfWeCouldUpdateValue(Expression newExpression, Body bodyForErrorMessage)
 	{
-		if (!IsMutable && Value != null)
+		if (!IsMutable)
 			throw new Body.ValueIsNotMutableAndCannotBeChanged(bodyForErrorMessage, Name);
-		Value = newExpression;
+		if (!newExpression.ReturnType.IsSameOrCanBeUsedAs(Type))
+			throw new NewExpressionDoesNotMatchMemberType(bodyForErrorMessage, newExpression, this);
 	}
+
+	public class NewExpressionDoesNotMatchMemberType(Body body, Expression newExpression,
+		Member member) : ParsingFailed(body, newExpression.ToStringWithType() +
+		" cannot be assigned to " + member, member.Type);
 
 	public override string ToString() =>
 		(IsMutable

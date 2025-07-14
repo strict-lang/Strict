@@ -1,17 +1,17 @@
 using NUnit.Framework;
+using Strict.Expressions;
 using Strict.Language;
-using Strict.Language.Expressions;
 using Type = Strict.Language.Type;
 
-namespace Strict.VirtualMachine.Tests;
+namespace Strict.Runtime.Tests;
 
 [Ignore("TODO: fix later")]
 public class VirtualMachineTests : BaseVirtualMachineTests
 {
 	[SetUp]
-	public void Setup() => vm = new VirtualMachine();
+	public void Setup() => vm = new Runtime.VirtualMachine();
 
-	protected VirtualMachine vm = null!;
+	protected Runtime.VirtualMachine vm = null!;
 
 	private void CreateSampleEnum() =>
 		new Type(type.Package,
@@ -421,5 +421,5 @@ public class VirtualMachineTests : BaseVirtualMachineTests
 	public void OperandsRequired(Instruction instruction) =>
 		Assert.That(
 			() => vm.Execute([new BinaryStatement(instruction, Register.R0)]),
-			Throws.InstanceOf<VirtualMachine.OperandsRequired>());
+			Throws.InstanceOf<Runtime.VirtualMachine.OperandsRequired>());
 }

@@ -3,7 +3,7 @@ using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Engines;
 using BenchmarkDotNet.Running;
 using NUnit.Framework;
-using Strict.Language.Expressions;
+using Strict.Expressions;
 
 namespace Strict.Language.Tests;
 

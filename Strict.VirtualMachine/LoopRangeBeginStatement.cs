@@ -1,4 +1,4 @@
-﻿namespace Strict.VirtualMachine;
+﻿namespace Strict.Runtime;
 
 public sealed class LoopRangeBeginStatement(Register startIndex, Register endIndex) : Statement
 {

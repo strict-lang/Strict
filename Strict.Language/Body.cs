@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
-[assembly: InternalsVisibleTo("Strict.Language.Expressions.Tests")]
+[assembly: InternalsVisibleTo("Strict.Expressions.Tests")]
 
 namespace Strict.Language;
 
@@ -17,9 +17,9 @@ public sealed class Body : Expression
 	/// While parsing each of the expressions, we need to check for variables as defined below. This
 	/// means the expressions list can't be done yet and needs this object to exist for scope parsing
 	/// </summary>
+	[Log]
 	public Body(Method method, int tabs = 0, Body? parent = null) : base(method.ReturnType)
 	{
-		//tst: Console.WriteLine(method + " Body " + ParsingLineNumber);
 		Method = method;
 		Tabs = tabs;
 		Parent = parent;
@@ -42,9 +42,9 @@ public sealed class Body : Expression
 	/// returned, otherwise just a single expression is directly returned and the body is discarded.
 	/// The last expression return type must match our (method or caller) return type.
 	/// </summary>
+	[Log]
 	public Expression Parse()
 	{
-		//tst: Console.WriteLine(Method + " Body.Parse " + LineRange);
 		var expressions = new List<Expression>();
 		for (ParsingLineNumber = LineRange.Start.Value; ParsingLineNumber < LineRange.End.Value;
 			ParsingLineNumber++)
@@ -136,21 +136,20 @@ public sealed class Body : Expression
 			}");
 
 	public sealed class ReturnAsLastExpressionIsNotNeeded(Body body) : ParsingFailed(body);
-	/// <summary>
-	/// Dictionaries are slow and eats up a lot of memory, only created when needed.
-	/// </summary>
-	public Dictionary<string, Expression>? Variables { get; private set; }
+	public List<Variable>? Variables { get; private set; }
 
-	public Body AddVariable(string name, Expression value)
+	public Body AddVariable(string name, Expression value, bool isMutable)
 	{
 		if (name.IsKeyword())
 			throw new NamedType.CannotUseKeywordsAsName(name);
 		if (!name.Length.IsWithinLimit())
 			throw new NamedType.NameLengthIsNotWithinTheAllowedLimit(name);
 		CheckForNameWithDifferentTypeUsage(name, value);
-		if (FindVariableValue(name.AsSpan()) is not null)
-			throw new ValueIsNotMutableAndCannotBeChanged(this, name);
-		return AddVariableToDictionary(name, value);
+		var oldVariable = FindVariable(name.AsSpan());
+		if (oldVariable is not null)
+			throw new VariableNameIsAlreadyInUse(this, oldVariable, value);
+		(Variables ??= new List<Variable>()).Add(new Variable(name, isMutable, value, this));
+		return this;
 	}
 
 	private void CheckForNameWithDifferentTypeUsage(string name, Expression value)
@@ -161,12 +160,13 @@ public sealed class Body : Expression
 				value.ReturnType.Name);
 	}
 
-	private Body AddVariableToDictionary(string name, Expression value)
-	{
-		Variables ??= new Dictionary<string, Expression>(StringComparer.Ordinal);
-		Variables.Add(name, value);
-		return this;
-	}
+	public class VariableNameIsAlreadyInUse(Body body, Variable oldVariable, Expression newValue)
+		: ParsingFailed(body,
+			$"Variable {
+				oldVariable
+			} was already declared before and cannot be re-declared here with: {
+				newValue
+			}");
 
 	public class VariableNameCannotHaveDifferentTypeNameThanValue(Body body,
 		string variableNameType, string valueType) : ParsingFailed(body,
@@ -177,52 +177,42 @@ public sealed class Body : Expression
 	public sealed class ValueIsNotMutableAndCannotBeChanged(Body body, string name)
 		: ParsingFailed(body, name);
 
-	public void UpdateVariableOrParameter(string name, Expression value)
+	public void CheckIfWeCouldUpdateMutableParameterOrVariable(string name, Expression value)
 	{
+		foreach (var member in Method.Type.Members)
+			if (member.Name == name)
+			{
+				member.CheckIfWeCouldUpdateValue(value, this);
+				return;
+			}
 		foreach (var parameter in Method.Parameters)
 			if (parameter.Name == name)
 			{
-				if (!parameter.IsMutable)
-					throw new ValueIsNotMutableAndCannotBeChanged(this, name);
-				parameter.UpdateValue(value, this);
+				parameter.CheckIfWeCouldUpdateValue(value, this);
 				return;
 			}
-		var variableScopeBody = FindVariableBody(name);
-		var variable = variableScopeBody?.FindVariableValue(name) ??
-			throw new IdentifierNotFound(this, name);
-		if (!variable.IsMutable)
-			throw new ValueIsNotMutableAndCannotBeChanged(this, name);
-		if (variableScopeBody.Variables != null)
-			variableScopeBody.Variables[name] = value;
+		var variable = FindVariable(name) ?? throw new IdentifierNotFound(this, name);
+		variable.CheckIfWeCouldUpdateValue(value);
 	}
 
 	public sealed class IdentifierNotFound(Body body, string name) : ParsingFailed(body,
-		name + ", Variables in scope: " + body.GetAllVariablesNames().ToWordList());
+		name + ", Variables in scope: " + body.GetAllVariables().ToWordList());
 
-	private List<string> GetAllVariablesNames()
+	private List<Variable> GetAllVariables()
 	{
-		var allVariables = Variables?.Keys.ToList() ?? new List<string>();
+		var allVariables = Variables ?? new List<Variable>();
 		if (Parent != null)
-			allVariables.AddRange(Parent.GetAllVariablesNames());
+			allVariables.AddRange(Parent.GetAllVariables());
 		return allVariables;
 	}
 
-	public Expression? FindVariableValue(ReadOnlySpan<char> searchFor)
+	public Variable? FindVariable(ReadOnlySpan<char> searchFor)
 	{
 		if (Variables != null)
-			foreach (var (name, value) in Variables)
-				if (searchFor.Equals(name, StringComparison.Ordinal))
-					return value;
-		return Parent?.FindVariableValue(searchFor);
-	}
-
-	private Body? FindVariableBody(ReadOnlySpan<char> searchFor)
-	{
-		if (Variables != null)
-			foreach (var (name, _) in Variables)
-				if (searchFor.Equals(name, StringComparison.Ordinal))
-					return this;
-		return Parent?.FindVariableBody(searchFor);
+			foreach (var variable in Variables)
+				if (searchFor.Equals(variable.Name, StringComparison.Ordinal))
+					return variable;
+		return Parent?.FindVariable(searchFor);
 	}
 
 	public override string ToString() => string.Join(Environment.NewLine, Expressions);
@@ -274,25 +264,4 @@ public sealed class Body : Expression
 		children.Remove(child);
 		return innerForBody;
 	}
-
-	/*TODO: remove, we should know at creation time and not create it wrong first and then fix it afterwards
-	public override Expression CloneMutable()
-	{
-		var clone = (Body)MemberwiseClone();
-		clone.IsMutable = true;
-		return clone;
-	}
-
-	   /// <summary>
-	   /// Makes any expression mutable. Just returns it if it is already mutable. However, if the
-	   /// expression is not mutable, but is now needed in a mutable context (for loop, assigned to a
-	   /// mutable variable, etc.) it needs to be cloned and made Mutable, we cannot change the original
-	   /// expression to be mutable (that code must stay unaffected).
-	   /// </summary>
-	   private static Expression MakeMutable(Expression expression) =>
-	   	expression.IsMutable
-	   		? expression
-	   		: expression.CloneMutable();
-
-	*/
 }

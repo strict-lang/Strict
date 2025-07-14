@@ -1,5 +1,5 @@
 using NUnit.Framework;
-using Strict.Language.Expressions;
+using Strict.Expressions;
 using static Strict.Language.Method;
 using static Strict.Language.NamedType;
 
@@ -209,7 +209,7 @@ public sealed class MethodTests
 		Assert.That(() => new Method(type, 0, new MethodExpressionParser(), [
 				"Run(mutable input = 0)", "	input = \"5\""
 			]).GetBodyAndParseIfNeeded(),
-			Throws.InstanceOf<MutableAssignment.ValueTypeNotMatchingWithAssignmentType>());
+			Throws.InstanceOf<MutableReassignment.ValueTypeNotMatchingWithAssignmentType>());
 
 	[Test]
 	public void MissingParameterDefaultValue() =>

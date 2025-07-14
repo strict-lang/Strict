@@ -8,9 +8,8 @@
 public sealed class GenericType : Type
 {
 	public GenericType(Type generic, IReadOnlyList<NamedType> genericImplementations) :
-		base(generic.Package,
-			new TypeLines(generic.GetImplementationName(genericImplementations),
-				HasWithSpaceAtEnd + generic.Name))
+		base(generic.Package, new TypeLines(generic.GetImplementationName(genericImplementations),
+			HasWithSpaceAtEnd + generic.Name))
 	{
 		CreatedBy = "Generic: " + generic + ", GenericImplementations: " + genericImplementations.ToWordList() +
 			", " + CreatedBy;

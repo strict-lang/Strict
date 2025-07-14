@@ -115,7 +115,8 @@ public static class BinaryOperator
 	public static int GetPrecedence(char tokenFirstCharacter) =>
 		tokenFirstCharacter switch
 		{
-			',' => 0, // ncrunch: no coverage always has to flush everything out; ',' cannot be reached because this method is called only for operators
+			',' => 0, // ncrunch: no coverage always has to flush everything out; ',' cannot be reached
+             // because this method is called only for operators
 			'+' => 11, // unary '-' and 'not' operators have precendence 10
 			'-' => 11,
 			'%' => 12,

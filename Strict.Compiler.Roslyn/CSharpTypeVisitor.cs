@@ -71,8 +71,8 @@ public sealed class CSharpTypeVisitor : TypeVisitor
 		ref string accessModifier)
 	{
 		var initializationExpression = "";
-		if (member.Value != null)
-			initializationExpression += " = " + expressionVisitor.Visit(member.Value);
+		if (member.InitialValue != null)
+			initializationExpression += " = " + expressionVisitor.Visit(member.InitialValue);
 		if (member.Name == "file")
 			accessModifier += " static";
 		if (string.IsNullOrEmpty(initializationExpression) && member.Type.IsIterator)

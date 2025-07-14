@@ -1,6 +1,8 @@
-﻿namespace Strict.LanguageServer;
+﻿using Strict.Runtime;
+
+namespace Strict.LanguageServer;
 
 public interface RunnableService
 {
-	public void Run(VirtualMachine.VirtualMachine vm);
+	public void Run(VirtualMachine vm);
 }

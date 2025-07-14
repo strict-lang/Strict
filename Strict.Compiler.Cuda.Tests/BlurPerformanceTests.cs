@@ -3,6 +3,7 @@ using System.Drawing.Imaging;
 using ManagedCuda;
 using ManagedCuda.NVRTC;
 using NUnit.Framework;
+using Strict.Language;
 
 namespace Strict.Compiler.Cuda.Tests;
 
@@ -91,7 +92,6 @@ public class BlurPerformanceTests
 			// Use max capabilities on actual hardware we have at runtime
 			var computeVersion = CudaContext.GetDeviceComputeCapability(0);
 			var shaderModelVersion = "" + computeVersion.Major + computeVersion.Minor;
-			Console.WriteLine("ShaderModelVersion=" + shaderModelVersion);
 			Compile(rtc, shaderModelVersion);
 		}
 		catch (NVRTCException)
@@ -101,6 +101,7 @@ public class BlurPerformanceTests
 		}
 	}
 
+	[Log]
 	private void Compile(CudaRuntimeCompiler rtc, string shaderModelVersion)
 	{ // see http://docs.nvidia.com/cuda/nvrtc/index.html for usage and options
 		//https://arnon.dk/matching-sm-architectures-arch-and-gencode-for-various-nvidia-cards/

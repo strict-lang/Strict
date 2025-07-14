@@ -10,7 +10,6 @@ public abstract class ConcreteExpression : Expression
 	protected ConcreteExpression(Type returnType, bool isMutable = false) : base(returnType, isMutable)
 	{
 		if (returnType.IsGeneric)
-			throw new Type.GenericTypesCannotBeUsedDirectlyUseImplementation(returnType,
-				GetType().Name);
+			throw new Type.GenericTypesCannotBeUsedDirectlyUseImplementation(returnType, GetType().Name);
 	}
 }

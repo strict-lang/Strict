@@ -19,7 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Strict.Language.Expressions\Strict.Language.Expressions.csproj" />
+    <ProjectReference Include="..\Strict.Expressions\Strict.Expressions.csproj" />
     <ProjectReference Include="..\Strict.Language\Strict.Language.csproj" />
   </ItemGroup>
 

@@ -1,4 +1,4 @@
-﻿using Strict.Language.Expressions;
+﻿using Strict.Expressions;
 using Strict.Language;
 using Type = Strict.Language.Type;
 

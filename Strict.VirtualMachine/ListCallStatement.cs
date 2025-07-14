@@ -1,4 +1,4 @@
-﻿namespace Strict.VirtualMachine;
+﻿namespace Strict.Runtime;
 
 public class ListCallStatement(Register register, Register indexValueRegister, string identifier)
 	: RegisterStatement(register, Instruction.ListCall)

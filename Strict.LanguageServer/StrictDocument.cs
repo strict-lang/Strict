@@ -5,6 +5,7 @@ using OmniSharp.Extensions.LanguageServer.Protocol.Models;
 using OmniSharp.Extensions.LanguageServer.Protocol.Server;
 using OmniSharp.Extensions.LanguageServer.Protocol.Window;
 using Strict.Language;
+using Strict.Runtime;
 using Range = OmniSharp.Extensions.LanguageServer.Protocol.Models.Range;
 
 namespace Strict.LanguageServer;
@@ -13,7 +14,7 @@ public sealed class StrictDocument
 {
 	private readonly ConcurrentDictionary<DocumentUri, string[]> strictDocuments = new();
 	private List<string> content = [];
-	private readonly VirtualMachine.VirtualMachine vm = new();
+	private readonly VirtualMachine vm = new();
 
 	public void Update(DocumentUri uri, TextDocumentContentChangeEvent[] changes)
 	{

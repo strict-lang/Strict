@@ -1,7 +1,7 @@
 using NUnit.Framework;
 using Strict.Compiler.Roslyn;
 using Strict.Language;
-using Strict.Language.Expressions;
+using Strict.Expressions;
 using Strict.Language.Tests;
 using Type = Strict.Language.Type;
 

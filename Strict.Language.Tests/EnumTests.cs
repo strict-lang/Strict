@@ -1,5 +1,5 @@
 ﻿using NUnit.Framework;
-using Strict.Language.Expressions;
+using Strict.Expressions;
 
 namespace Strict.Language.Tests;
 
@@ -54,8 +54,8 @@ public sealed class EnumTests
 		var consumingType = new Type(package,
 			new TypeLines(nameof(UseEnumWithoutConstructor), "constant url = Connection.Google",
 				"Run", "\t5")).ParseMembersAndMethods(parser);
-		Assert.That(consumingType.Members[0].Value, Is.InstanceOf<MemberCall>());
-		var memberCall = (MemberCall)consumingType.Members[0].Value!;
+		Assert.That(consumingType.Members[0].InitialValue, Is.InstanceOf<MemberCall>());
+		var memberCall = (MemberCall)consumingType.Members[0].InitialValue!;
 		Assert.That(memberCall.Member.Name, Is.EqualTo("Google"));
 		Assert.That(consumingType.Members[0].Type.Name, Is.EqualTo("Text"));
 	}
@@ -68,7 +68,7 @@ public sealed class EnumTests
 					"has something = Instruction.Add", "Run", "\tconstant myInstruction = Instruction.Set")).
 			ParseMembersAndMethods(parser);
 		Assert.That(consumingType.GetType("Instruction").IsEnum, Is.True);
-		Assert.That(((MemberCall)consumingType.Members[0].Value!).Member.Name, Is.EqualTo("Add"));
+		Assert.That(((MemberCall)consumingType.Members[0].InitialValue!).Member.Name, Is.EqualTo("Add"));
 		var assignment = (ConstantDeclaration)consumingType.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(assignment.Value, Is.InstanceOf<MemberCall>());
 		var member = ((MemberCall)assignment.Value).Member;
@@ -90,7 +90,7 @@ public sealed class EnumTests
 		Assert.That(ifExpression.Condition.ReturnType.Name, Is.EqualTo(Base.Boolean));
 		var binary = (Binary)ifExpression.Condition;
 		Assert.That(((MemberCall)binary.Arguments[0]).Member.Name, Is.EqualTo("Add"));
-		Assert.That(((MemberCall)((MemberCall)binary.Instance!).Member.Value!).Member.Name,
+		Assert.That(((MemberCall)((MemberCall)binary.Instance!).Member.InitialValue!).Member.Name,
 			Is.EqualTo("Add"));
 	}
 

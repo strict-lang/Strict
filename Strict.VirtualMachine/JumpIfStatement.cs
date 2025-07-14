@@ -1,4 +1,4 @@
-﻿namespace Strict.VirtualMachine;
+﻿namespace Strict.Runtime;
 
 public class JumpIfStatement(Instruction jumpInstruction, int steps)
 	: JumpStatement(jumpInstruction)

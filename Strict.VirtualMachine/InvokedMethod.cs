@@ -1,6 +1,6 @@
 ﻿using Strict.Language;
 
-namespace Strict.VirtualMachine;
+namespace Strict.Runtime;
 
 public class InvokedMethod(IReadOnlyList<Expression> expressions,
 	IReadOnlyDictionary<string, Instance> arguments)

@@ -19,8 +19,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Strict.Compiler.Roslyn\Strict.Compiler.Roslyn.csproj" />
-    <ProjectReference Include="..\Strict.Language.Expressions.Tests\Strict.Language.Expressions.Tests.csproj" />
-    <ProjectReference Include="..\Strict.Language.Expressions\Strict.Language.Expressions.csproj" />
+    <ProjectReference Include="..\Strict.Expressions.Tests\Strict.Expressions.Tests.csproj" />
+    <ProjectReference Include="..\Strict.Expressions\Strict.Expressions.csproj" />
     <ProjectReference Include="..\Strict.Language\Strict.Language.csproj" />
   </ItemGroup>
 

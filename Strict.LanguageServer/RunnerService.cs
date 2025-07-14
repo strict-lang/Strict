@@ -1,8 +1,10 @@
-﻿namespace Strict.LanguageServer;
+﻿using Strict.Runtime;
+
+namespace Strict.LanguageServer;
 
 public class RunnerService
 {
-	private VirtualMachine.VirtualMachine VmInstance { get; } = new();
+	private VirtualMachine VmInstance { get; } = new();
 	private readonly List<RunnableService> services = new();
 
 	public RunnerService AddService(RunnableService runnableService)

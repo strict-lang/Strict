@@ -1,6 +1,6 @@
 ﻿using Type = Strict.Language.Type;
 
-namespace Strict.VirtualMachine;
+namespace Strict.Runtime;
 
 public sealed class ConversionStatement(Register storedValueRegister,
 	Register registerToStoreConversion, Type conversionType, Instruction instruction) :

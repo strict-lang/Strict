@@ -1,8 +1,8 @@
-﻿using Strict.Language;
-using Strict.Language.Expressions;
+﻿using Strict.Expressions;
+using Strict.Language;
 using Type = Strict.Language.Type;
 
-namespace Strict.VirtualMachine;
+namespace Strict.Runtime;
 
 public sealed class ByteCodeGenerator
 {
@@ -61,9 +61,9 @@ public sealed class ByteCodeGenerator
 				statements.Add(new StoreVariableStatement(
 					new Instance(instance.Arguments[parameterIndex], true),
 					instance.ReturnType.Members[parameterIndex].Name));
-			if (instance.ReturnType.Members[parameterIndex].Value == null)
+			if (instance.ReturnType.Members[parameterIndex].InitialValue == null)
 				instance.ReturnType.Members[parameterIndex].
-					UpdateValue(instance.Arguments[parameterIndex], new Body(instance.Method));
+					CheckIfWeCouldUpdateValue(instance.Arguments[parameterIndex], new Body(instance.Method));
 		}
 	}
 
@@ -157,8 +157,8 @@ public sealed class ByteCodeGenerator
 		if (memberCall.Instance == null)
 			statements.Add(
 				new LoadVariableStatement(registry.AllocateRegister(), expression.ToString()));
-		else if (memberCall.Member.Value != null)
-			TryGenerateForEnum(memberCall.Instance.ReturnType, memberCall.Member.Value);
+		else if (memberCall.Member.InitialValue != null)
+			TryGenerateForEnum(memberCall.Instance.ReturnType, memberCall.Member.InitialValue);
 		return true;
 	}
 
@@ -253,7 +253,7 @@ public sealed class ByteCodeGenerator
 	{
 		if (expression is MutableDeclaration declaration)
 			GenerateForAssignmentOrDeclaration(declaration.Value, declaration.Name);
-		else if (expression is MutableAssignment assignment)
+		else if (expression is MutableReassignment assignment)
 			GenerateForAssignmentOrDeclaration(assignment.Value, assignment.Name);
 		else
 			return false;

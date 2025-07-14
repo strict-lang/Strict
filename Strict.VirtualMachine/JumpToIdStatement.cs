@@ -1,4 +1,4 @@
-﻿namespace Strict.VirtualMachine;
+﻿namespace Strict.Runtime;
 
 public sealed class JumpToIdStatement(Instruction jumpInstruction, int id)
 	: JumpStatement(jumpInstruction)

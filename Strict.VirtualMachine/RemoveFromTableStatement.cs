@@ -1,4 +1,4 @@
-﻿namespace Strict.VirtualMachine;
+﻿namespace Strict.Runtime;
 
 public class RemoveFromTableStatement(Register key, string identifier) : RegisterStatement(key,
 	Instruction.RemoveFromTable)

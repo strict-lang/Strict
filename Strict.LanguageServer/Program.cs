@@ -6,12 +6,11 @@ using Microsoft.Extensions.Logging;
 using Nerdbank.Streams;
 using OmniSharp.Extensions.LanguageServer.Server;
 using Strict.Language;
-using Strict.Language.Expressions;
+using Strict.Expressions;
 using Strict.LanguageServer;
 using PipeOptions = System.IO.Pipes.PipeOptions;
 
 var (input, output) = await CreateAndGetPipeline();
-Logger.Info("Connecting...");
 // @formatter:off
  var strictBase = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
 var server = await LanguageServer.From(options =>
@@ -24,7 +23,6 @@ var server = await LanguageServer.From(options =>
 		.WithHandler<AutoCompletor>()
 		.WithHandler<CommandExecutor>()
 		.WithHandler<DocumentHighlighter>());
-Logger.Info("Client connected!");
 await server.WaitForExit;
 // @formatter:on
 await Task.WhenAny(Task.Run(async () =>
@@ -35,7 +33,6 @@ await Task.WhenAny(Task.Run(async () =>
 		if (server.ClientSettings.ProcessId.HasValue &&
 			Process.GetProcessById((int)server.ClientSettings.ProcessId.Value).HasExited)
 		{
-			Logger.Info("Client disconnected");
 			server.ForcefulShutdown();
 			return;
 		}

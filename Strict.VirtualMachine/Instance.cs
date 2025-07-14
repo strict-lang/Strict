@@ -1,8 +1,8 @@
-﻿using Strict.Language;
-using Strict.Language.Expressions;
+﻿using Strict.Expressions;
+using Strict.Language;
 using Type = Strict.Language.Type;
 
-namespace Strict.VirtualMachine;
+namespace Strict.Runtime;
 
 /// <summary>
 ///   The only place where we can have a "static" method call to one of the from methods of a type

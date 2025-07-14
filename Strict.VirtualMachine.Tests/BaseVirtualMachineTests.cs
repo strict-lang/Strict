@@ -1,10 +1,10 @@
-﻿using Strict.Language;
-using Strict.Language.Expressions;
-using Strict.Language.Expressions.Tests;
+﻿using Strict.Expressions;
+using Strict.Expressions.Tests;
+using Strict.Language;
 using Strict.Language.Tests;
 using Type = Strict.Language.Type;
 
-namespace Strict.VirtualMachine.Tests;
+namespace Strict.Runtime.Tests;
 
 public class BaseVirtualMachineTests : TestExpressions
 {

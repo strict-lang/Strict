@@ -35,7 +35,15 @@ public abstract class NamedType
 		" is a keyword and cannot be used as a identifier name. Keywords List: " +
 		Keyword.GetAllKeywords.ToWordList());
 
+	/// <summary>
+	/// Most things should NOT be mutable, this is mostly for optimizations like going through for loops
+	/// </summary>
 	public bool IsMutable { get; protected init; }
+	/// <summary>
+	/// While members of types are usually not mutable and cannot be reassigned, it doesn't make them
+	/// pure constant values. When a type is created, non-constant members can be injected or created in
+	/// the from-constructor. Constant members are just there (like static/const in other languages).
+	/// </summary>
 	public bool IsConstant { get; protected init; }
 
 	//TODO: remove if unused, or add test

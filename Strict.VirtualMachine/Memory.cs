@@ -1,7 +1,7 @@
-﻿using Strict.Language;
-using Strict.Language.Expressions;
+﻿using Strict.Expressions;
+using Strict.Language;
 
-namespace Strict.VirtualMachine;
+namespace Strict.Runtime;
 
 public sealed class Memory
 {

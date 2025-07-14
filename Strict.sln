@@ -23,9 +23,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Strict.Compiler.Roslyn", "S
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Strict.Compiler.Tests", "Strict.Compiler.Tests\Strict.Compiler.Tests.csproj", "{E80EB301-EAC7-47ED-801C-DA4D775F7D6F}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Strict.Language.Expressions", "Strict.Language.Expressions\Strict.Language.Expressions.csproj", "{392902F7-F537-4384-920C-7BAE554A05B6}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Strict.Expressions", "Strict.Expressions\Strict.Expressions.csproj", "{392902F7-F537-4384-920C-7BAE554A05B6}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Strict.Language.Expressions.Tests", "Strict.Language.Expressions.Tests\Strict.Language.Expressions.Tests.csproj", "{2BE244F7-6429-47E9-890D-86F0B915A77C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Strict.Expressions.Tests", "Strict.Expressions.Tests\Strict.Expressions.Tests.csproj", "{2BE244F7-6429-47E9-890D-86F0B915A77C}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Strict.Compiler.Cuda", "Strict.Compiler.Cuda\Strict.Compiler.Cuda.csproj", "{91923749-602B-4E43-9291-EB01C74385D1}"
 EndProject
@@ -41,17 +41,27 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Grammar", "Grammar", "{B3D7
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Strict.Grammar.Tests", "Strict.Grammar.Tests\Strict.Grammar.Tests.csproj", "{D5C4A512-DDBE-4460-AFE9-25C510405F9D}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Strict.VirtualMachine", "Strict.VirtualMachine\Strict.VirtualMachine.csproj", "{B7ABF5AE-ABAD-4DB3-BA52-25A90D8527EC}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Strict.Runtime", "Strict.VirtualMachine\Strict.Runtime.csproj", "{B7ABF5AE-ABAD-4DB3-BA52-25A90D8527EC}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Strict.VirtualMachine.Tests", "Strict.VirtualMachine.Tests\Strict.VirtualMachine.Tests.csproj", "{5E6881F6-E27F-4D99-8A29-10E39468CDB6}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Strict.Runtime.Tests", "Strict.VirtualMachine.Tests\Strict.Runtime.Tests.csproj", "{5E6881F6-E27F-4D99-8A29-10E39468CDB6}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Strict.LanguageServer", "Strict.LanguageServer\Strict.LanguageServer.csproj", "{FF9E14D4-F3B5-4A95-92D2-C77D37269D8C}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Strict.LanguageServer.Tests", "Strict.LanguageServer.Tests\Strict.LanguageServer.Tests.csproj", "{BC6C366A-0DBB-44EA-9DBA-C6A528EA1EAE}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Strict.CodeValidator", "Strict.CodeValidator\Strict.CodeValidator.csproj", "{BA945DFC-7FB7-4B04-A12B-D44CEC7FDB3A}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Strict.Validators", "Strict.Validators\Strict.Validators.csproj", "{BA945DFC-7FB7-4B04-A12B-D44CEC7FDB3A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Strict.CodeValidator.Tests", "Strict.CodeValidator.Tests\Strict.CodeValidator.Tests.csproj", "{B3129836-F56F-44BE-B5DA-A1373CBD289A}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Strict.Validators.Tests", "Strict.Validators.Tests\Strict.Validators.Tests.csproj", "{B3129836-F56F-44BE-B5DA-A1373CBD289A}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "_unused", "_unused", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Strict.Optimizers", "Strict.Optimizers\Strict.Optimizers.csproj", "{11915F6B-9E61-4959-97F9-53775D62CDEA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Strict.Optimizers.Tests", "Strict.Optimizers.Tests\Strict.Optimizers.Tests.csproj", "{2DE25CCD-CE7D-4296-9D27-8C52858DE629}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Strict.TestRunner", "Strict.TestRunner\Strict.TestRunner.csproj", "{F83E515F-5BBB-4EB9-95EC-F48D58F72F3E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Strict.TestRunner.Tests", "Strict.TestRunner.Tests\Strict.TestRunner.Tests.csproj", "{6F6625F9-8270-451A-8250-76045DCD6A5A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -123,9 +133,35 @@ Global
 		{B3129836-F56F-44BE-B5DA-A1373CBD289A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B3129836-F56F-44BE-B5DA-A1373CBD289A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B3129836-F56F-44BE-B5DA-A1373CBD289A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{11915F6B-9E61-4959-97F9-53775D62CDEA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{11915F6B-9E61-4959-97F9-53775D62CDEA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{11915F6B-9E61-4959-97F9-53775D62CDEA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{11915F6B-9E61-4959-97F9-53775D62CDEA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2DE25CCD-CE7D-4296-9D27-8C52858DE629}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2DE25CCD-CE7D-4296-9D27-8C52858DE629}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2DE25CCD-CE7D-4296-9D27-8C52858DE629}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2DE25CCD-CE7D-4296-9D27-8C52858DE629}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F83E515F-5BBB-4EB9-95EC-F48D58F72F3E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F83E515F-5BBB-4EB9-95EC-F48D58F72F3E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F83E515F-5BBB-4EB9-95EC-F48D58F72F3E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F83E515F-5BBB-4EB9-95EC-F48D58F72F3E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6F6625F9-8270-451A-8250-76045DCD6A5A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6F6625F9-8270-451A-8250-76045DCD6A5A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6F6625F9-8270-451A-8250-76045DCD6A5A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6F6625F9-8270-451A-8250-76045DCD6A5A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{D9E14E41-8F3C-4B92-B773-227871A96F96} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
+		{00DC0E82-9C6A-45D2-A292-EFD3900FC96C} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
+		{E80EB301-EAC7-47ED-801C-DA4D775F7D6F} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
+		{91923749-602B-4E43-9291-EB01C74385D1} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
+		{BB69FB3C-BFAD-42F1-BA4B-88A9C720A815} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
+		{D5C4A512-DDBE-4460-AFE9-25C510405F9D} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
+		{FF9E14D4-F3B5-4A95-92D2-C77D37269D8C} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
+		{BC6C366A-0DBB-44EA-9DBA-C6A528EA1EAE} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {DEA35D12-F095-424A-8A50-6D7EBE08D917}

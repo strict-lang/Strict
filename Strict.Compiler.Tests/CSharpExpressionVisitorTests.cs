@@ -1,11 +1,11 @@
 using NUnit.Framework;
 using Strict.Compiler.Roslyn;
 using Strict.Language;
-using Strict.Language.Expressions;
-using Strict.Language.Expressions.Tests;
+using Strict.Expressions;
+using Strict.Expressions.Tests;
 using Strict.Language.Tests;
-using Boolean = Strict.Language.Expressions.Boolean;
-using List = Strict.Language.Expressions.List;
+using Boolean = Strict.Expressions.Boolean;
+using List = Strict.Expressions.List;
 
 namespace Strict.Compiler.Tests;
 
@@ -43,12 +43,13 @@ public sealed class CSharpExpressionVisitorTests : TestExpressions
 				member.Type.Members.First(m => m.Name == "output"))), Is.EqualTo("log.output"));
 
 	[Test]
-	public void GenerateListCall() =>
-		Assert.That(
-			visitor.Visit(new ListCall(
-				new VariableCall("numbers",
-					new List((Body)methodWithBody.GetBodyAndParseIfNeeded(), [new Number(type, 0)])), new Number(type, 0))),
+	public void GenerateListCall()
+	{
+		var body = (Body)methodWithBody.GetBodyAndParseIfNeeded();
+		var variable = new Variable("numbers", false, new List(body, [new Number(type, 0)]), body);
+		Assert.That(visitor.Visit(new ListCall(variable.InitialValue, new Number(type, 0))),
 			Is.EqualTo("numbers[0]"));
+	}
 
 	[Test]
 	public void GenerateMethodCall() =>

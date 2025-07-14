@@ -2,7 +2,7 @@
 using OmniSharp.Extensions.LanguageServer.Protocol;
 using OmniSharp.Extensions.LanguageServer.Protocol.Models;
 using Strict.Language;
-using Strict.Language.Expressions;
+using Strict.Expressions;
 
 namespace Strict.LanguageServer.Tests;
 

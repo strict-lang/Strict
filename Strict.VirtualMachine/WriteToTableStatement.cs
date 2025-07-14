@@ -1,4 +1,4 @@
-﻿namespace Strict.VirtualMachine;
+﻿namespace Strict.Runtime;
 
 public sealed class WriteToTableStatement(Register key, Register value, string identifier)
 	: Statement

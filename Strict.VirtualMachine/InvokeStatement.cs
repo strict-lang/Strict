@@ -1,6 +1,6 @@
-﻿using Strict.Language.Expressions;
+﻿using Strict.Expressions;
 
-namespace Strict.VirtualMachine;
+namespace Strict.Runtime;
 
 public sealed class InvokeStatement : RegisterStatement
 {

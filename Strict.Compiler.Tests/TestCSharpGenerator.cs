@@ -1,8 +1,8 @@
 using NUnit.Framework;
 using Strict.Compiler.Roslyn;
 using Strict.Language;
-using Strict.Language.Expressions;
-using Strict.Language.Expressions.Tests;
+using Strict.Expressions;
+using Strict.Expressions.Tests;
 using Type = Strict.Language.Type;
 
 namespace Strict.Compiler.Tests;

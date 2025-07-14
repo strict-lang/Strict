@@ -116,7 +116,7 @@ public class Type : Context
 	/// have data (like Color, which has 4 Numbers) are actually pure Data types!
 	/// </summary>
 	public bool IsDataType =>
-		methods.Count == 0 && (members.Count > 1 || members is [{ Value: not null }]) ||
+		methods.Count == 0 && (members.Count > 1 || members is [{ InitialValue: not null }]) ||
 		Name == Base.Number;
 	public bool IsEnum =>
 		methods.Count == 0 && members.Count > 1 && members.All(m => m.IsConstant);
@@ -347,7 +347,7 @@ public class Type : Context
 			// public members (e.g., Type.Name), constants (e.g., constant Tab = Character(7)) and if we
 			// have implemented a trait here anyway (then all the methods are already implemented).
 			foreach (var member in Members.Where(m =>
-				m is { IsPublic: false, Value: null } && !IsTraitImplementation(m.Type)))
+				m is { IsPublic: false, InitialValue: null } && !IsTraitImplementation(m.Type)))
 				AddNonGenericMethods(member.Type);
 			if (members.Count > 0 && members.Any(m => !m.Type.IsGeneric))
 				AddFromConstructorWithMembersAsArguments();
@@ -392,8 +392,8 @@ public class Type : Context
 						? ""
 						: ", ") +
 					member.Name.MakeFirstLetterLowercase() +
-					(member.Value != null
-						? " = " + member.Value
+					(member.InitialValue != null
+						? " = " + member.InitialValue
 						: member.Type.Name == Base.List
 							? ""
 							: " " + member.Type.Name);
@@ -452,6 +452,7 @@ public class Type : Context
 	public int CountMemberUsage(string memberName) =>
 		lines.Count(line => line.Contains(" " + memberName) || line.Contains("(" + memberName));
 
+	[Log]
 	public HashSet<NamedType> GetGenericTypeArguments()
 	{
 		if (!IsGeneric)
@@ -468,7 +469,6 @@ public class Type : Context
 				genericArguments.Add(member);
 		if (genericArguments.Count == 0)
 			throw new InvalidGenericTypeWithoutGenericArguments(this);
-		//tst: Console.WriteLine(this + " GetGenericTypeArguments: " + genericArguments.ToWordList());
 		return genericArguments;
 	}
 

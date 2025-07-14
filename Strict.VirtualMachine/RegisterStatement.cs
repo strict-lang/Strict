@@ -1,4 +1,4 @@
-﻿namespace Strict.VirtualMachine;
+﻿namespace Strict.Runtime;
 
 public abstract class RegisterStatement(Register register, Instruction instruction) : Statement
 {

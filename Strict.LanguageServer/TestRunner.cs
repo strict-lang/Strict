@@ -1,7 +1,7 @@
 ﻿using OmniSharp.Extensions.LanguageServer.Protocol.Server;
 using Strict.Language;
-using Strict.Language.Expressions;
-using Strict.VirtualMachine;
+using Strict.Expressions;
+using Strict.Runtime;
 
 namespace Strict.LanguageServer;
 
@@ -12,7 +12,7 @@ public sealed class TestRunner(ILanguageServerFacade languageServer, IEnumerable
 	private IEnumerable<Method> Methods { get; } = methods;
 	private const string NotificationName = "testRunnerNotification";
 
-	public void Run(VirtualMachine.VirtualMachine vm)
+	public void Run(VirtualMachine vm)
 	{
 		foreach (var test in Methods.SelectMany(method => method.Tests))
 			if (test is MethodCall { Instance: { } } methodCall)

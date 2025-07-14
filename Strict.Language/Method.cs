@@ -256,7 +256,7 @@ public sealed class Method : Context
 		!currentLine.Contains("?") && expression.ReturnType.Name == Base.Boolean;
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public Expression ParseExpression(Body body, ReadOnlySpan<char> text, bool makeMutable) =>
+	public Expression ParseExpression(Body body, ReadOnlySpan<char> text, bool makeMutable = false) =>
 		Parser.ParseExpression(body, text, makeMutable);
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -371,6 +371,9 @@ public sealed class Method : Context
 		lines.Count(l => l.Contains(" " + parameterName) || l.Contains("(" + parameterName) ||
 			l.Contains(parameterName + " ") || l.Contains("\t" + parameterName));
 
+	/// <summary>
+	/// Very low level check if a variableName can be found in the raw text of this method lines.
+	/// </summary>
 	public int GetVariableUsageCount(string variableName) =>
 		lines.Count(l => l.Contains(" " + variableName) || l.Contains("(" + variableName) ||
 			l.Contains("\t" + variableName));

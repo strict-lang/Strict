@@ -1,4 +1,4 @@
-﻿namespace Strict.VirtualMachine;
+﻿namespace Strict.Runtime;
 
 public sealed class JumpIfNotZeroStatement(int steps, Register register)
 	: JumpIfStatement(Instruction.JumpIfNotZero, steps)

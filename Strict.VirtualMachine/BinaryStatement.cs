@@ -1,4 +1,4 @@
-﻿namespace Strict.VirtualMachine;
+﻿namespace Strict.Runtime;
 
 public sealed class BinaryStatement(Instruction instruction, params Register[] registers)
 	: Statement

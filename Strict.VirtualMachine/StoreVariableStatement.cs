@@ -1,4 +1,4 @@
-﻿namespace Strict.VirtualMachine;
+﻿namespace Strict.Runtime;
 
 public sealed class StoreVariableStatement(Instance instance, string identifier)
 	: InstanceStatement(instance, Instruction.StoreVariable)

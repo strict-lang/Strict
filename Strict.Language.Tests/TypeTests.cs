@@ -1,7 +1,7 @@
 using NUnit.Framework;
-using Strict.Language.Expressions;
+using Strict.Expressions;
 using static Strict.Language.Body;
-using List = Strict.Language.Expressions.List;
+using List = Strict.Expressions.List;
 
 namespace Strict.Language.Tests;
 
@@ -232,20 +232,19 @@ public sealed class TypeTests
 		var type = new Type(package, new TypeLines(nameof(MutableMemberTypesCanBeChanged), code)).
 			ParseMembersAndMethods(parser);
 		type.Methods[0].GetBodyAndParseIfNeeded();
-		//this is very strange, why would the value change without calling Run:
-		//Assert.That(type.Members[0].Value, Is.EqualTo(new Number(type, 5)));
+		Assert.That(type.Members[0].InitialValue, Is.EqualTo(new Number(type, 0)));
 	}
 
 	[Test]
-	public void MutableVariableCanBeChanged()
+	public void MutableVariableCanBeChangedButNotChangeAtParseTime()
 	{
-		var type = new Type(package, new TypeLines(nameof(MutableVariableCanBeChanged), "has number",
+		var type = new Type(package, new TypeLines(nameof(MutableVariableCanBeChangedButNotChangeAtParseTime), "has number",
 				"Run",
 				"\tmutable result = 2",
 				"\tresult = 5")).
 			ParseMembersAndMethods(parser);
 		var body = (Body)type.Methods[0].GetBodyAndParseIfNeeded();
-		Assert.That(body.FindVariableValue("result")!.ToString(), Is.EqualTo("5"));
+		Assert.That(body.FindVariable("result")!.InitialValue.ToString(), Is.EqualTo("2"));
 	}
 
 	[Test]
@@ -255,7 +254,7 @@ public sealed class TypeTests
 					new TypeLines(nameof(ValueTypeNotMatchingWithAssignmentType), "has log", "Run",
 						"\tlog.Write(5) = 6")).ParseMembersAndMethods(parser).Methods[0].
 				GetBodyAndParseIfNeeded(),
-			Throws.InstanceOf<MutableAssignment.ValueTypeNotMatchingWithAssignmentType>());
+			Throws.InstanceOf<MutableReassignment.ValueTypeNotMatchingWithAssignmentType>());
 
 	[Test]
 	public void MakeSureGenericTypeIsProperlyGenerated()
@@ -472,8 +471,8 @@ public sealed class TypeTests
 		Assert.That(member.Type.Name, Is.EqualTo("List(TestPackage.Number)"));
 		Assert.That(member.Constraints?.Length, Is.EqualTo(1));
 		Assert.That(member.Constraints?[0].ToString(), Is.EqualTo("Length is 2"));
-		Assert.That(member.Value, Is.InstanceOf<List>());
-		Assert.That(member.Value?.ToString(), Is.EqualTo("(1, 2)"));
+		Assert.That(member.InitialValue, Is.InstanceOf<List>());
+		Assert.That(member.InitialValue?.ToString(), Is.EqualTo("(1, 2)"));
 	}
 
 	[Test]

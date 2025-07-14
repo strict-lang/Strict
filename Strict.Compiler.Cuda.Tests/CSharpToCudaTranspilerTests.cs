@@ -2,7 +2,7 @@
 using ManagedCuda.NVRTC;
 using NUnit.Framework;
 using Strict.Language;
-using Strict.Language.Expressions;
+using Strict.Expressions;
 using Type = Strict.Language.Type;
 
 namespace Strict.Compiler.Cuda.Tests;

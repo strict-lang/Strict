@@ -6,8 +6,8 @@ using OmniSharp.Extensions.LanguageServer.Protocol.Server;
 using OmniSharp.Extensions.LanguageServer.Protocol.Window;
 using OmniSharp.Extensions.LanguageServer.Protocol.Workspace;
 using Strict.Language;
-using Strict.Language.Expressions;
-using Strict.VirtualMachine;
+using Strict.Expressions;
+using Strict.Runtime;
 
 namespace Strict.LanguageServer;
 
@@ -15,7 +15,7 @@ namespace Strict.LanguageServer;
 public class CommandExecutor(ILanguageServerFacade languageServer,
 	StrictDocument document, Package package) : IExecuteCommandHandler
 {
-	private readonly VirtualMachine.VirtualMachine vm = new();
+	private readonly VirtualMachine vm = new();
 	private const string CommandName = "strict-vscode-client.run";
 
 	Task<Unit> IRequestHandler<ExecuteCommandParams, Unit>.Handle(

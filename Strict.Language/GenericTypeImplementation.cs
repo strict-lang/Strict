@@ -3,8 +3,7 @@
 public sealed class GenericTypeImplementation : Type
 {
 	public GenericTypeImplementation(Type generic, IReadOnlyList<Type> implementationTypes) : base(
-		generic.Package,
-		new TypeLines(generic.GetImplementationName(implementationTypes),
+		generic.Package, new TypeLines(generic.GetImplementationName(implementationTypes),
 			HasWithSpaceAtEnd + generic.Name))
 	{
 		CreatedBy = "Generic: " + generic + ", Implementations: " + implementationTypes.ToWordList() +

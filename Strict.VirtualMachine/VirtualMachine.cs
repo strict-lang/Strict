@@ -1,7 +1,7 @@
-﻿using Strict.Language;
-using Strict.Language.Expressions;
+﻿using Strict.Expressions;
+using Strict.Language;
 
-namespace Strict.VirtualMachine;
+namespace Strict.Runtime;
 
 public sealed class VirtualMachine
 {
@@ -374,8 +374,8 @@ public sealed class VirtualMachine
 		{
 			if (instance.Value is not MemberCall member)
 				continue;
-			if (member.Member.Value != null)
-				instance.Value = member.Member.Value;
+			if (member.Member.InitialValue != null)
+				instance.Value = member.Member.InitialValue;
 		}
 	}
 

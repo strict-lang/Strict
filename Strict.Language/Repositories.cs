@@ -11,7 +11,7 @@ namespace Strict.Language;
 /// runs. Next time Repositories is created, we will check for outdated cache and delete the zip
 /// files to allow redownloading fresh files. All locally cached packages and all types in them
 /// are always available for any .strict file in the Editor. If a type is not found,
-/// packages.strict.dev is asked if we can get an url (used here to load).
+/// packages.strict.dev is asked if we can get a url (used here to load).
 /// </summary>
 /// <remarks>Everything in here is async, you can easily load many packages in parallel</remarks>
 public sealed class Repositories
@@ -54,9 +54,8 @@ public sealed class Repositories
 	private async Task<Package> FindOrAddPath(Uri packageUrl, string packageName)
 	{ //ncrunch: no coverage start
 		var localPath = Path.Combine(CacheFolder, packageName);
-		if (PreviouslyCheckedDirectories.Contains(localPath))
+		if (!PreviouslyCheckedDirectories.Add(localPath))
 			return await LoadFromPath(localPath);
-		PreviouslyCheckedDirectories.Add(localPath);
 		if (!Directory.Exists(localPath))
 			localPath = await DownloadAndExtractRepository(packageUrl, packageName);
 		return await LoadFromPath(localPath);
@@ -213,8 +212,7 @@ public sealed class Repositories
 		var inDegree = new Dictionary<string, int>(StringComparer.Ordinal);
 		foreach (var kvp in filesWithImplements)
 		{
-			if (!inDegree.ContainsKey(kvp.Key))
-				inDegree.Add(kvp.Key, 0);
+			inDegree.TryAdd(kvp.Key, 0);
 			foreach (var edge in kvp.Value.DependentTypes)
 				if (!inDegree.TryAdd(edge, 1))
 					inDegree[edge]++;
