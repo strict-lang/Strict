@@ -30,7 +30,7 @@ public class ExpressionParserTests : ExpressionParser
 	}
 
 	//ncrunch: no coverage start, not the focus here
-	public override Expression ParseExpression(Body body, ReadOnlySpan<char> text, bool isMutable)
+	public override Expression ParseExpression(Body body, ReadOnlySpan<char> text, bool isMutable = false)
 	{
 		if (type == null!)
 			CreateType();

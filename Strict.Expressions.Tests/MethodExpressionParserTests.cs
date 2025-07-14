@@ -8,7 +8,7 @@ public sealed class MethodExpressionParserTests : TestExpressions
 {
 	[Test]
 	public void CannotParseEmptyInputException() =>
-		Assert.That(() => new MethodExpressionParser().ParseExpression(new Body(method), "", false),
+		Assert.That(() => new MethodExpressionParser().ParseExpression(new Body(method), ""),
 			Throws.InstanceOf<CannotParseEmptyInput>());
 
 	[Test]

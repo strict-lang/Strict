@@ -53,7 +53,7 @@ public class ConstantDeclaration : ConcreteExpression
 
 	private static Expression ParseConstantDeclarationWithValue(Body body, string name,
 		ReadOnlySpan<char> valueSpan) =>
-		new ConstantDeclaration(body, name, body.Method.ParseExpression(body, valueSpan, false));
+		new ConstantDeclaration(body, name, body.Method.ParseExpression(body, valueSpan));
 
 	public sealed class MissingAssignmentValueExpression(Body body) : ParsingFailed(body);
 }

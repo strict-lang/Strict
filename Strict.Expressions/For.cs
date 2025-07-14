@@ -81,7 +81,7 @@ public sealed class For : Expression
 		AddVariablesIfTheyDoNotExistYet(body, line, variableName);
 		if (body.FindVariable(variableName) is { IsMutable: false } && HasIn(line))
 			throw new ImmutableIterator(variableName.ToString(), body);
-		var forExpression = body.Method.ParseExpression(body, GetForExpressionText(line), false);
+		var forExpression = body.Method.ParseExpression(body, GetForExpressionText(line));
 		if (HasIn(line))
 			CheckForIncorrectMatchingTypes(body, variableName, forExpression);
 		else

@@ -284,7 +284,7 @@ public class MethodExpressionParser : ExpressionParser
 					expressions.Push(span.Length == 1 && span[0].IsSingleCharacterOperator() ||
 						span.IsMultiCharacterOperator()
 							? Binary.Parse(body, inner.AsSpan(), postfix.Output)
-							: body.Method.ParseExpression(body, inner[postfix.Output.Pop()], false));
+							: body.Method.ParseExpression(body, inner[postfix.Output.Pop()]));
 				}
 				catch (UnknownExpression ex)
 				{
@@ -304,7 +304,7 @@ public class MethodExpressionParser : ExpressionParser
 		foreach (var element in elements)
 			try
 			{
-				expressions.Add(body.Method.ParseExpression(body, input[element], false));
+				expressions.Add(body.Method.ParseExpression(body, input[element]));
 			}
 			catch (UnknownExpression ex)
 			{

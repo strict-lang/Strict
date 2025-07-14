@@ -1,7 +1,3 @@
-﻿namespace Strict.TestRunner
-{
-	public class Class1
-	{
+﻿namespace Strict.TestRunner;
 
-	}
-}
+public class Class1;

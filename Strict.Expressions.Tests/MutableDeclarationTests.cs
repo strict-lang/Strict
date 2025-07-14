@@ -248,7 +248,7 @@ public sealed class MutableDeclarationTests : TestExpressions
 			new TypeLines(nameof(ModifyMutableMemberValueUsingTypeInstance), "has clever = Clever(3)",
 				"Run", "\tclever.Compute is 8", "\tclever.Number = 5")).ParseMembersAndMethods(parser);
 		cleverConsumerType.Methods[0].GetBodyAndParseIfNeeded();
-		Assert.That(type.GetType("Clever").Members[0].InitialValue?.ToString(), Is.EqualTo("3"));
+		Assert.That(type.GetType("Clever").Members[0].InitialValue, Is.Null);
 	}
 
 	[Test]

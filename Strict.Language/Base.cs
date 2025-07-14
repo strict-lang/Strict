@@ -48,7 +48,7 @@ public static class Base
 	public const string Directory = nameof(Directory);
 	public const string Run = nameof(Run);
 	public const string ConstantDeclaration = nameof(ConstantDeclaration);
-	public const string MutableAssignment = nameof(MutableAssignment);
+	public const string MutableReassignment = nameof(MutableReassignment);
 	public const string Value = "value";
 	public const string Output = nameof(Output);
 	public const string Stacktrace = nameof(Stacktrace);

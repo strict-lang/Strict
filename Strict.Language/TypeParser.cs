@@ -166,8 +166,7 @@ public sealed class TypeParser(Type type, string[] lines)
 	internal Expression GetMemberExpression(ExpressionParser parser, string memberName,
 		ReadOnlySpan<char> remainingTextSpan) =>
 		parser.ParseExpression(new Body(new Method(type, 0, parser, [Type.EmptyBody])),
-			GetFromConstructorCallFromUpcastableMemberOrJustEvaluate(memberName, remainingTextSpan),
-			false);
+			GetFromConstructorCallFromUpcastableMemberOrJustEvaluate(memberName, remainingTextSpan));
 
 	private ReadOnlySpan<char> GetFromConstructorCallFromUpcastableMemberOrJustEvaluate(
 		string memberName, ReadOnlySpan<char> remainingTextSpan)

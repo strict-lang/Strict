@@ -297,13 +297,14 @@ public sealed class ListAdvancedTests : TestExpressions
 				// @formatter:off
 				nameof(ChangeValueInsideMutableListWithMutableExpressions),
 				"has log",
-				"Update(element Number) Mutable(List)",
+				"Update(element Number) List(Mutable(Number))",
 				"\tmutable someList = List(Mutable(Number))",
 				"\tsomeList.Add(1)",
-				"\tsomeList(0) = 5")).
+				"\tsomeList(0) = 5",
+				"\tsomeList")).
 			ParseMembersAndMethods(parser);
 		var body = (Body)program.Methods[0].GetBodyAndParseIfNeeded();
-		Assert.That(((VariableCall)((ListCall)((MutableReassignment)body.Expressions[2]).OldValue).List).
+		Assert.That(((VariableCall)((ListCall)((MutableReassignment)body.Expressions[2]).Target).List).
 			Variable.Name, Is.EqualTo("someList"));
 	}
 
@@ -320,7 +321,7 @@ public sealed class ListAdvancedTests : TestExpressions
 					"\tsomeList(0) = 5")).
 			ParseMembersAndMethods(parser);
 		var body = (Body)program.Methods[0].GetBodyAndParseIfNeeded();
-		Assert.That(((ListCall)((MutableReassignment)body.Expressions[1]).OldValue).Index.ToString(),
+		Assert.That(((ListCall)((MutableReassignment)body.Expressions[1]).Target).Index.ToString(),
 			Is.EqualTo("0"));
 	}
 

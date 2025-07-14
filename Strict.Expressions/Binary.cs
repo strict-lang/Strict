@@ -57,7 +57,7 @@ public sealed class Binary(Expression left, Method operatorMethod, Expression[] 
 		var expression = input[nextTokenRange.Start.Value].IsSingleCharacterOperator() ||
 			input[nextTokenRange].IsMultiCharacterOperator()
 				? BuildBinaryExpression(body, input, nextTokenRange, tokens)
-				: body.Method.ParseExpression(body, input[nextTokenRange], false);
+				: body.Method.ParseExpression(body, input[nextTokenRange]);
 		if (expression.ReturnType.IsGeneric)
 			//ncrunch: no coverage start, cannot be reached: Type.FindMethod already filters this condition
 			throw new Type.GenericTypesCannotBeUsedDirectlyUseImplementation(expression.ReturnType,

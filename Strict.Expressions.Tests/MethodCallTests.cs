@@ -107,7 +107,7 @@ public sealed class MethodCallTests : TestExpressions
 		var expression = ParseExpression("mutable variable = 7");
 		Assert.That(type.GetType(Base.Mutable).Methods.Count, Is.EqualTo(0));
 		Assert.That(expression is MutableDeclaration, Is.True);
-		Assert.That(((MutableDeclaration)expression).Value.IsMutable, Is.True);
+		Assert.That(((MutableDeclaration)expression).IsMutable, Is.True);
 	}
 
 	[Test]

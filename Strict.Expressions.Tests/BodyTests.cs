@@ -103,14 +103,15 @@ public sealed class BodyTests : TestExpressions
 	[Test]
 	public void DuplicateVariableNameFound() =>
 		Assert.That(() => ParseExpression("if bla is 5", "\tconstant abc = 5", "\tconstant abc = 5"),
-			Throws.InstanceOf<Body.ValueIsNotMutableAndCannotBeChanged>().With.Message.StartsWith("abc"));
+			Throws.InstanceOf<Body.VariableNameIsAlreadyInUse>().With.Message.StartsWith("Variable abc"));
 
 	[Test]
 	public void DuplicateVariableInLowerScopeIsNotAllowed() =>
 		Assert.That(
 			() => ParseExpression("if bla is 5", "\tconstant outerScope = \"abc\"", "\tif bla is 5.0",
 				"\t\tconstant outerScope = 5"),
-			Throws.InstanceOf<Body.ValueIsNotMutableAndCannotBeChanged>().With.Message.StartsWith("outerScope"));
+			Throws.InstanceOf<Body.VariableNameIsAlreadyInUse>().With.Message.
+				StartsWith("Variable outerScope"));
 
 	[Test]
 	public void ChildBodyReturnsFromThreeTabsToOneDirectly()

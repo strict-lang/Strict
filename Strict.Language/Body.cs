@@ -101,7 +101,7 @@ public sealed class Body : Expression
 			!ChildHasMatchingMethodReturnType(Parent == null
 				? Method.ReturnType
 				: Parent.ReturnType, lastExpression))
-			throw new ChildBodyReturnTypeMustMatchMethod(this, lastExpression.ReturnType);
+			throw new ChildBodyReturnTypeMustMatchMethod(this, lastExpression);
 		return !isLastExpressionReturn
 			? this
 			: Parent != null
@@ -122,12 +122,15 @@ public sealed class Body : Expression
 		ChildHasMatchingMethodReturnType(Type parentType, Expression lastExpression) =>
 		lastExpression.GetType().Name == Base.ConstantDeclaration && parentType.Name == Base.None ||
 		lastExpression.ReturnType.Name == Base.Error ||
-		lastExpression.GetType().Name == Base.MutableAssignment ||
 		lastExpression.ReturnType.IsSameOrCanBeUsedAs(parentType);
 
-	public sealed class ChildBodyReturnTypeMustMatchMethod(Body body, Type childReturnType)
+	public sealed class ChildBodyReturnTypeMustMatchMethod(Body body, Expression lastExpression)
 		: ParsingFailed(body,
-			$"Child body return type: {childReturnType} is not matching with Parent return type:" + $" {
+			$"Last expression {
+				lastExpression
+			} return type: {
+				lastExpression.ReturnType
+			} is not matching with expected method return type:" + $" {
 				(body.Parent == null
 					? body.Method.ReturnType
 					: body.Parent.ReturnType)
@@ -177,9 +180,9 @@ public sealed class Body : Expression
 	public sealed class ValueIsNotMutableAndCannotBeChanged(Body body, string name)
 		: ParsingFailed(body, name);
 
-	public void CheckIfWeCouldUpdateMutableParameterOrVariable(string name, Expression value)
+	public void CheckIfWeCouldUpdateMutableParameterOrVariable(Type contextType, string name, Expression value)
 	{
-		foreach (var member in Method.Type.Members)
+		foreach (var member in contextType.Members)
 			if (member.Name == name)
 			{
 				member.CheckIfWeCouldUpdateValue(value, this);

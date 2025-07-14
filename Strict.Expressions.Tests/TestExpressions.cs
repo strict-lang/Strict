@@ -20,7 +20,7 @@ public abstract class TestExpressions : MethodExpressionParser
 		]);
 		type.Methods.AddRange(new List<Method> { method, methodWithBody });
 		number = new Number(type, 5);
-		list = new List(new Body(method), [new Number(type, 5)], false);
+		list = new List(new Body(method), [new Number(type, 5)]);
 		bla = new Member(type, "bla", number);
 		type.Members.Add(bla);
 	}

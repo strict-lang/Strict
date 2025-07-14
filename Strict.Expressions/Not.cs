@@ -13,7 +13,7 @@ public sealed class Not : MethodCall
 
 	public static Not Parse(Body body, ReadOnlySpan<char> input, Range methodRange)
 	{
-		var right = body.Method.ParseExpression(body, input[methodRange], false);
+		var right = body.Method.ParseExpression(body, input[methodRange]);
 		return new Not(right.ReturnType.GetMethod(UnaryOperator.Not, []), right);
 	}
 

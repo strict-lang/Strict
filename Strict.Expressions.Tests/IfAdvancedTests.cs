@@ -62,7 +62,10 @@ public sealed class IfAdvancedTests : TestExpressions
 				"	if 5 is 5",
 				"		constant file = File(\"test.txt\")",
 				"		return \"5\"")).ParseMembersAndMethods(new MethodExpressionParser());
-		Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(), Throws.InstanceOf<Body.ChildBodyReturnTypeMustMatchMethod>().With.Message.Contains("Child body return type: TestPackage.Text is not matching with Parent return type: TestPackage.Number in method line: 3"));
+		Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(),
+			Throws.InstanceOf<Body.ChildBodyReturnTypeMustMatchMethod>().With.Message.Contains(
+				"Last expression return \"5\" return type: TestPackage.Text is not matching with expected " +
+				"method return type: TestPackage.Number in method line: 3"));
 	}
 
 	[Test]
@@ -79,7 +82,10 @@ public sealed class IfAdvancedTests : TestExpressions
 			"	else",
 			"		return true")).ParseMembersAndMethods(new MethodExpressionParser());
 		// @formatter:on
-		Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(), Throws.InstanceOf<Body.ChildBodyReturnTypeMustMatchMethod>().With.Message.Contains("Child body return type: TestPackage.Boolean is not matching with Parent return type: TestPackage.Text in method line: 5"));
+		Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(),
+			Throws.InstanceOf<Body.ChildBodyReturnTypeMustMatchMethod>().With.Message.Contains(
+				"Last expression return true return type: TestPackage.Boolean is not matching with expected " +
+				"method return type: TestPackage.Text in method line: 5"));
 	}
 
 	[Test]
@@ -96,7 +102,9 @@ public sealed class IfAdvancedTests : TestExpressions
 				"		return Character(5)",
 				"	6")).ParseMembersAndMethods(new MethodExpressionParser());
 		// @formatter:on
-		Assert.That(((Body)program.Methods[0].GetBodyAndParseIfNeeded()).children[0].ReturnType.ToString(), Is.EqualTo("TestPackage.Number"));
+		Assert.That(
+			((Body)program.Methods[0].GetBodyAndParseIfNeeded()).children[0].ReturnType.ToString(),
+			Is.EqualTo("TestPackage.Number"));
 	}
 
 	[Test]

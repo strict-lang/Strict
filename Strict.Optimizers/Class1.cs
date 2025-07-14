@@ -1,7 +1,3 @@
-﻿namespace Strict.Optimizers
-{
-	public class Class1
-	{
+﻿namespace Strict.Optimizers;
 
-	}
-}
+public class Class1;

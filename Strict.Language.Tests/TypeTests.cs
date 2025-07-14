@@ -189,7 +189,7 @@ public sealed class TypeTests
 		var result = type.FindMethod("Add",
 		[
 			new Number(type, 5),
-			new List(null!, [new Number(type, 6), new Number(type, 7)], false)
+			new List(null!, [new Number(type, 6), new Number(type, 7)])
 		]);
 		Assert.That(result, Is.InstanceOf<Method>());
 		Assert.That(result?.ToString(),
@@ -203,7 +203,7 @@ public sealed class TypeTests
 			"has generic", "AddGeneric(first Generic, other List) List", "\tfirst + other");
 		Assert.That(
 			() => type.FindMethod("AddGeneric",
-				[new Number(type, 6), new List(null!, [new Number(type, 7), new Number(type, 8)], false)]),
+				[new Number(type, 6), new List(null!, [new Number(type, 7), new Number(type, 8)])]),
 			Throws.InstanceOf<Type.GenericTypesCannotBeUsedDirectlyUseImplementation>());
 	}
 
@@ -286,7 +286,7 @@ public sealed class TypeTests
 		Assert.That(
 			type.FindMethod("Add",
 				[
-					new List(null!, [new Text(type, "Hi"), new Text(type, "Hello")], false), new Number(type, 5)
+					new List(null!, [new Text(type, "Hi"), new Text(type, "Hello")]), new Number(type, 5)
 				])?.
 				ToString(),
 			Is.EqualTo(
@@ -332,7 +332,7 @@ public sealed class TypeTests
 		var type = new Type(package,
 			new TypeLines(nameof(InvalidProgram), "has log", "Something(input Generics)",
 				"\tconstant result = input + 5")).ParseMembersAndMethods(parser);
-		Assert.That(type.FindMethod("Something", [new List(null!, [new Text(type, "hello")], false)]),
+		Assert.That(type.FindMethod("Something", [new List(null!, [new Text(type, "hello")])]),
 			Is.Not.Null);
 	}
 
