@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿#if DEBUG && LOGGING_ENABLED
+using System.Diagnostics;
 using System.Reflection;
 using MethodDecorator.Fody.Interfaces;
 
@@ -43,3 +44,9 @@ public class LogAttribute : Attribute, IMethodDecorator
 	public void OnExit() { }
 	public void OnException(Exception exception) { }
 }
+#else
+namespace Strict.Language;
+
+[AttributeUsage(AttributeTargets.Method | AttributeTargets.Constructor)]
+public class LogAttribute : Attribute;
+#endif

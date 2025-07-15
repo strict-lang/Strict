@@ -136,4 +136,16 @@ public sealed class BodyTests : TestExpressions
 		Assert.That(body.children[0].LineRange, Is.EqualTo(3..6));
 		Assert.That(body.children[0].children[0].LineRange, Is.EqualTo(4..6));
 	}
+
+	[Test]
+	public void CannotUpdateNonMutableVariable() =>
+		Assert.That(
+			() => new Variable("yo", false, number, new Body(method)).CheckIfWeCouldUpdateValue(number),
+			Throws.InstanceOf<Body.ValueIsNotMutableAndCannotBeChanged>());
+
+	[Test]
+	public void CannotUpdateNumberToList() =>
+		Assert.That(
+			() => new Variable("yo", true, number, new Body(method)).CheckIfWeCouldUpdateValue(list),
+			Throws.InstanceOf<Variable.NewExpressionDoesNotMatchVariableType>());
 }

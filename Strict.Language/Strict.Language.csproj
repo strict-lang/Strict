@@ -6,18 +6,22 @@
 		<Nullable>enable</Nullable>
 		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 		<WarningsAsErrors />
+		<LoggingEnabled>false</LoggingEnabled>
 		<DefineConstants>$(DefineConstants)TRACE</DefineConstants>
 		<LangVersion>default</LangVersion>
   </PropertyGroup>
 
-	<PropertyGroup Condition="'$(Configuration)'=='Release'">
-		<FodyEnable>false</FodyEnable>
+	<PropertyGroup Condition="'$(LoggingEnabled)' == 'true'">
+		<DefineConstants>$(DefineConstants);LOGGING_ENABLED</DefineConstants>
 	</PropertyGroup>
+
+	<ItemGroup Condition="'$(Configuration)'=='Debug' and '$(LoggingEnabled)' == 'true'">
+		<PackageReference Include="MethodDecorator.Fody" Version="1.1.1" />
+	</ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Ben.Demystifier" Version="0.4.1" />
     <PackageReference Include="LazyCache" Version="2.4.0" />
-    <PackageReference Include="MethodDecorator.Fody" Version="1.1.1" />
   </ItemGroup>
 
 </Project>

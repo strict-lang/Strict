@@ -5,6 +5,9 @@ using NUnit.Framework.Interfaces;
 
 namespace Strict.Expressions.Tests;
 
+/// <summary>
+/// Derive from this or just create an instance in your base tests class like TestExpressions
+/// </summary>
 public class NoConsoleWriteLineAllowed
 {
 	[SetUp]
@@ -84,17 +87,26 @@ public class NoConsoleWriteLineAllowed
 	public void CheckIfConsoleIsEmpty()
 	{
 		if (ConsoleWriter.IsEmpty ||
-				TestContext.CurrentContext.Result.Outcome.Status is TestStatus.Failed)
-			// ReSharper disable once RedundantJumpStatement
+			TestContext.CurrentContext.Result.Outcome.Status is TestStatus.Failed)
 			return;
-		/*tst
 		var textInConsole = ConsoleWriter.GetTextAndClear();
 		if (!textInConsole.StartsWith("  Expected: ", StringComparison.Ordinal) &&
 			!textInConsole.StartsWith("TearDown : ", StringComparison.Ordinal))
 			throw new ConsoleWriteLineShouldOnlyBeUsedInManualTests(textInConsole);
-		*/
 	}
 
 	public sealed class ConsoleWriteLineShouldOnlyBeUsedInManualTests(string message)
 		: Exception(message);
+
+	[Test]
+	public void ConsoleWriteLineIsNotAllowed()
+	{
+		Console.WriteLine("yo");
+		Assert.That(CheckIfConsoleIsEmpty,
+			Throws.InstanceOf<ConsoleWriteLineShouldOnlyBeUsedInManualTests>());
+	}
+
+	[Test]
+	[Category("Manual")]
+	public void ManualTestsCanWriteToConsole() => Console.WriteLine("allowed");
 }
