@@ -43,12 +43,12 @@ public sealed class TypeTests
 
 	[Test]
 	public void TypeParsersMustStartWithMember() =>
-		Assert.That(() => CreateType(Base.HashCode, "Run", "\tlog.WriteLine"),
+		Assert.That(() => CreateType(Base.HashCode, "Run", "\tlogger.Log"),
 			Throws.InstanceOf<Type.TypeHasNoMembersAndThusMustBeATraitWithoutMethodBodies>());
 
 	[Test]
 	public void JustMembersAreAllowed() =>
-		Assert.That(CreateType(Base.HashCode, "has log", "mutable counter Number").Members.Count, Is.EqualTo(2));
+		Assert.That(CreateType(Base.HashCode, "has logger", "mutable counter Number").Members.Count, Is.EqualTo(2));
 
 	[Test]
 	public void GetUnknownTypeWillCrash() =>
@@ -58,7 +58,7 @@ public sealed class TypeTests
 	private const string UnknownComputation = nameof(UnknownComputation);
 
 	[TestCase("has invalidType")]
-	[TestCase("has log", "Run InvalidType", "\tconstant a = 5")]
+	[TestCase("has logger", "Run InvalidType", "\tconstant a = 5")]
 	public void TypeNotFound(params string[] lines) =>
 		Assert.That(() => CreateType(Base.HashCode, lines),
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.InstanceOf<Context.TypeNotFound>());
@@ -72,13 +72,13 @@ public sealed class TypeTests
 	[Test]
 	public void ExtraWhitespacesFoundAtBeginningOfLine() =>
 		Assert.That(
-			() => CreateType(nameof(ExtraWhitespacesFoundAtBeginningOfLine), "has log", "Run",
+			() => CreateType(nameof(ExtraWhitespacesFoundAtBeginningOfLine), "has logger", "Run",
 				" constant a = 5"), Throws.InstanceOf<TypeParser.ExtraWhitespacesFoundAtBeginningOfLine>());
 
 	[Test]
 	public void NoMatchingMethodFound() =>
 		Assert.That(
-			() => CreateType(nameof(NoMatchingMethodFound), "has log", "Run", "\tconstant a = 5").
+			() => CreateType(nameof(NoMatchingMethodFound), "has logger", "Run", "\tconstant a = 5").
 				GetMethod("UnknownMethod", []),
 			Throws.InstanceOf<Type.NoMatchingMethodFound>());
 
@@ -93,9 +93,9 @@ public sealed class TypeTests
 		Assert.That(() => CreateType("Program", line),
 			Throws.InstanceOf<TypeParser.MemberWithTypeAnyIsNotAllowed>());
 
-	[TestCase("has log", "Run", "\tconstant result = Any")]
-	[TestCase("has log", "Run", "\tconstant result = Any(5)")]
-	[TestCase("has log", "Run", "\tconstant result = 5 + Any(5)")]
+	[TestCase("has logger", "Run", "\tconstant result = Any")]
+	[TestCase("has logger", "Run", "\tconstant result = Any(5)")]
+	[TestCase("has logger", "Run", "\tconstant result = 5 + Any(5)")]
 	public void VariableWithTypeAnyIsNotAllowed(params string[] lines)
 	{
 		var type = new Type(package, new TypeLines(nameof(VariableWithTypeAnyIsNotAllowed), lines)).ParseMembersAndMethods(parser);
@@ -104,20 +104,20 @@ public sealed class TypeTests
 				Contains("Any"));
 	}
 
-	[TestCase("has log", "Run(any)", "\tconstant result = 5")]
-	[TestCase("has log", "Run(input Any)", "\tconstant result = 5")]
+	[TestCase("has logger", "Run(any)", "\tconstant result = 5")]
+	[TestCase("has logger", "Run(input Any)", "\tconstant result = 5")]
 	public void MethodParameterWithTypeAnyIsNotAllowed(params string[] lines) =>
 		Assert.That(() => CreateType("Program", lines),
 			Throws.InstanceOf<Method.ParametersWithTypeAnyIsNotAllowed>());
 
 	[Test]
 	public void MethodReturnTypeAsAnyIsNotAllowed() =>
-		Assert.That(() => CreateType("Program", "has log", "Run Any", "\tconstant result = 5"),
+		Assert.That(() => CreateType("Program", "has logger", "Run Any", "\tconstant result = 5"),
 			Throws.InstanceOf<Method.MethodReturnTypeAsAnyIsNotAllowed>());
 
 	[Test]
 	public void MembersMustComeBeforeMethods() =>
-		Assert.That(() => CreateType("Program", "Run", "has log"),
+		Assert.That(() => CreateType("Program", "Run", "has logger"),
 			Throws.InstanceOf<TypeParser.MembersMustComeBeforeMethods>());
 
 	[Test]
@@ -125,14 +125,14 @@ public sealed class TypeTests
 		// @formatter:off
 		CheckApp(CreateType("Program",
 			"has App",
-			"has log",
+			"has logger",
 			"Run",
-			"\tlog.Write(\"Hello World!\")"));
+			"\tlogger.Log(\"Hello World!\")"));
 
 	private static void CheckApp(Type program)
 	{
 		Assert.That(program.Members[0].Type.Name, Is.EqualTo(Base.App));
-		Assert.That(program.Members[1].Name, Is.EqualTo("log"));
+		Assert.That(program.Members[1].Name, Is.EqualTo("logger"));
 		Assert.That(program.Methods[0].Name, Is.EqualTo("Run"));
 		Assert.That(program.IsTrait, Is.False);
 	}
@@ -141,10 +141,10 @@ public sealed class TypeTests
 	public void AnotherApp() =>
 		CheckApp(CreateType("Program",
 			"has App",
-			"has log",
+			"has logger",
 			"Run",
 			"\tfor number in Range(0, 10)",
-			"\t\tlog.Write(\"Counting: \" + number)"));
+			"\t\tlogger.Log(\"Counting: \" + number)"));
 
 	[Test]
 	public void NotImplementingAnyTraitMethodsAreAllowed() =>
@@ -224,8 +224,8 @@ public sealed class TypeTests
 	public void ValueTypeNotMatchingWithAssignmentType() =>
 		Assert.That(
 			() => new Type(package,
-					new TypeLines(nameof(ValueTypeNotMatchingWithAssignmentType), "has log", "Run",
-						"\tlog.Write(5) = 6")).ParseMembersAndMethods(parser).Methods[0].
+					new TypeLines(nameof(ValueTypeNotMatchingWithAssignmentType), "has logger", "Run",
+						"\tlogger.Log(5) = 6")).ParseMembersAndMethods(parser).Methods[0].
 				GetBodyAndParseIfNeeded(),
 			Throws.InstanceOf<MutableReassignment.ValueTypeNotMatchingWithAssignmentType>());
 
@@ -269,9 +269,9 @@ public sealed class TypeTests
 					"\tconstant result = list + 5")).ParseMembersAndMethods(null!),
 			Throws.InstanceOf<ParsingFailed>());
 
-	[TestCase(Base.Output, 0)]
+	[TestCase(Base.TextWriter, 0)]
 	[TestCase(Base.Mutable, 1)]
-	[TestCase(Base.Log, 1)]
+	[TestCase(Base.Logger, 1)]
 	[TestCase(Base.Number, 0)]
 	[TestCase(Base.Character, 1)]
 	[TestCase(Base.Text, 4)]
@@ -377,10 +377,11 @@ public sealed class TypeTests
 	}
 
 	[Test]
-	public void LoggerIsCompatibleWithFile()
+	public void FileLoggerIsCompatibleWithFileAndLogger()
 	{
-		var logger = CreateType("Logger", "has source File", "Log Number", "\tvalue");
+		var logger = CreateType("FileLogger", "has source File", "has logger", "Log Number", "\tvalue");
 		Assert.That(logger.IsSameOrCanBeUsedAs(package.GetType(Base.File)), Is.True);
+		Assert.That(logger.IsSameOrCanBeUsedAs(package.GetType(Base.Logger)), Is.True);
 	}
 
 	[Test]

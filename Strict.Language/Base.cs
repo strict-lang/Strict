@@ -40,7 +40,7 @@ public static class Base
 	public const string List = nameof(List);
 	public const string Type = nameof(Type);
 	public const string Method = nameof(Method);
-	public const string Log = nameof(Log);
+	public const string Logger = nameof(Logger);
 	public const string App = nameof(App);
 	public const string System = nameof(System);
 	public const string File = nameof(File);
@@ -49,8 +49,9 @@ public static class Base
 	public const string Run = nameof(Run);
 	public const string ConstantDeclaration = nameof(ConstantDeclaration);
 	public const string MutableReassignment = nameof(MutableReassignment);
-	public const string Value = "value";
-	public const string Output = nameof(Output);
+	public const string ValueLowercase = "value";
+	public const string TextWriter = nameof(TextWriter);
+	public const string TextReader = nameof(TextReader);
 	public const string Stacktrace = nameof(Stacktrace);
 	public const string Name = nameof(Name);
 	public const string Mutable = nameof(Mutable);

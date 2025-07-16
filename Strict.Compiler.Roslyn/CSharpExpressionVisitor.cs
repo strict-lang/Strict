@@ -76,7 +76,7 @@ public class CSharpExpressionVisitor : ExpressionVisitor
 			: ".") + (methodCall.Method.Name == "Read" && methodCall.Instance?.ToString() == "file"
 			? "ReadToEnd"
 			: methodCall.Method.Name == "Write" &&
-			methodCall.Instance?.ReturnType.Name is Base.Log or Base.System
+			methodCall.Instance?.ReturnType.Name is Base.Logger or Base.System
 				? "WriteLine"
 				: methodCall.Method.Name == Method.From
 					? methodCall.Method.Type.Name
@@ -99,7 +99,7 @@ public class CSharpExpressionVisitor : ExpressionVisitor
 			: "");
 
 	protected override string Visit(MemberCall memberCall) =>
-		memberCall.Member.Type.Name is Base.Log or Base.System
+		memberCall.Member.Type.Name is Base.Logger or Base.System
 			? "Console"
 			: memberCall.Instance != null
 				? memberCall.Instance + "." + memberCall.Member.Name

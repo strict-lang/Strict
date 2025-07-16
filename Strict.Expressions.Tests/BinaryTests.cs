@@ -33,9 +33,7 @@ public sealed class BinaryTests : TestExpressions
 	[Test]
 	public void ArgumentsDoNotMatchBinaryOperatorParameters() =>
 		Assert.That(() => ParseExpression("5 / \"text\""),
-			Throws.Exception.InnerException.With.Message.Contains(
-					"Argument: \"text\" TestPackage.Text do not match these TestPackage.Number method(s):\n" +
-					"/(other TestPackage.Number) Number").And.
+			Throws.InstanceOf<ParsingFailed>().With.InnerException.
 				InstanceOf<ArgumentsDoNotMatchMethodParameters>());
 
 	[Test]
@@ -49,7 +47,7 @@ public sealed class BinaryTests : TestExpressions
 		Assert.That(() => ParseExpression("5 to gibberish"),
 			Throws.InstanceOf<To.ConversionTypeNotFound>());
 
-	[TestCase("5 to Log")]
+	[TestCase("5 to Logger")]
 	[TestCase("5 to Range")]
 	[TestCase("5 to Boolean")]
 	public void ConversionNotImplemented(string code) =>

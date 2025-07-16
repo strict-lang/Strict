@@ -126,7 +126,7 @@ public sealed class MethodValidatorTests
 	public void ListArgumentCanBeAutoParsedWithoutDoubleBrackets()
 	{
 		var typeWithListParameterMethod = new Type(new TestPackage(),
-			new TypeLines(nameof(ListArgumentCanBeAutoParsedWithoutDoubleBrackets), "has log",
+			new TypeLines(nameof(ListArgumentCanBeAutoParsedWithoutDoubleBrackets), "has logger",
 				"CheckInputLengthAndGetResult(numbers) Number", "\tif numbers.Length is 2",
 				"\t\treturn 2", "\t0")).ParseMembersAndMethods(parser);
 		Assert.That(() => new MethodValidator([

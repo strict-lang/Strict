@@ -61,8 +61,8 @@ public sealed class ShuntingYardTests
 		Assert.That(Input[postfix.Output.Pop()], Is.EqualTo("if"));
 	}
 
-	[TestCase("log.Write(\"Hello)")]
-	[TestCase("log.Write(\"Hello\"\")")]
+	[TestCase("logger.Log(\"Hello)")]
+	[TestCase("logger.Log(\"Hello\"\")")]
 	[TestCase("(1\")")]
 	[TestCase("(\"Hel\"lo\")")]
 	public void UnterminatedStringInsideBrackets(string input) =>

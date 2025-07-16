@@ -22,44 +22,44 @@ public sealed class MethodCallTests : TestExpressions
 
 	[Test]
 	public void ParseCallWithArgument() =>
-		ParseAndCheckOutputMatchesInput("log.Write(bla)", new MethodCall(member.Type.Methods[0],
+		ParseAndCheckOutputMatchesInput("logger.Log(bla)", new MethodCall(member.Type.Methods[0],
 			new MemberCall(null, member), [
 				new MemberCall(null, bla)
 			]));
 
 	[Test]
 	public void ParseCallWithTextArgument() =>
-		ParseAndCheckOutputMatchesInput("log.Write(\"Hi\")",
+		ParseAndCheckOutputMatchesInput("logger.Log(\"Hi\")",
 			new MethodCall(member.Type.Methods[0], new MemberCall(null, member),
 				[new Text(type, "Hi")]));
 
 	[Test]
 	public void ParseWithMissingArgument() =>
-		Assert.That(() => ParseExpression("log.Write"),
+		Assert.That(() => ParseExpression("logger.Write"),
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.
-				InstanceOf<Type.ArgumentsDoNotMatchMethodParameters>().With.Message.Contains("log.Write"));
+				InstanceOf<Type.ArgumentsDoNotMatchMethodParameters>().With.Message.Contains("logger.Write"));
 
 	[Test]
 	public void ParseWithTooManyArguments() =>
-		Assert.That(() => ParseExpression("log.Write(1, 2)"),
+		Assert.That(() => ParseExpression("logger.Log(1, 2)"),
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.
 				InstanceOf<Type.ArgumentsDoNotMatchMethodParameters>().With.Message.
-				Contains("log.Write(1, 2)"));
+				Contains("logger.Log(1, 2)"));
 
 	[Test]
 	public void ParseWithInvalidExpressionArguments() =>
-		Assert.That(() => ParseExpression("log.Write(g9y53)"),
+		Assert.That(() => ParseExpression("logger.Log(g9y53)"),
 			Throws.InstanceOf<UnknownExpressionForArgument>().With.Message.
 				StartsWith("g9y53 (argument 0)"));
 
 	[Test]
 	public void EmptyBracketsAreNotAllowed() =>
-		Assert.That(() => ParseExpression("log.NotExisting()"),
+		Assert.That(() => ParseExpression("logger.NotExisting()"),
 			Throws.InstanceOf<List.EmptyListNotAllowed>());
 
 	[Test]
 	public void MethodNotFound() =>
-		Assert.That(() => ParseExpression("log.NotExisting"),
+		Assert.That(() => ParseExpression("logger.NotExisting"),
 			Throws.InstanceOf<MemberOrMethodNotFound>());
 
 	[Test]
@@ -70,9 +70,9 @@ public sealed class MethodCallTests : TestExpressions
 
 	[Test]
 	public void ParseCallWithUnknownMemberCallArgument() =>
-		Assert.That(() => ParseExpression("log.Write(log.unknown)"),
+		Assert.That(() => ParseExpression("logger.Log(logger.unknown)"),
 			Throws.InstanceOf<MemberOrMethodNotFound>().With.Message.
-				StartsWith("unknown in TestPackage.Log"));
+				StartsWith("unknown in TestPackage.Logger"));
 
 	[Test]
 	public void MethodCallMembersMustBeWords() =>
@@ -132,7 +132,7 @@ public sealed class MethodCallTests : TestExpressions
 	{
 		var program = new Type(type.Package, new TypeLines(
 				nameof(ValueMustHaveCorrectType),
-				"has log",
+				"has logger",
 				"has Number",
 				$"Dummy(dummy Number) {nameof(ValueMustHaveCorrectType)}",
 				"\tconstant result = value",
@@ -148,7 +148,7 @@ public sealed class MethodCallTests : TestExpressions
 	{
 		var program = new Type(type.Package, new TypeLines(
 				nameof(CanAccessThePropertiesOfValue),
-				"has log",
+				"has logger",
 				"has Number",
 				"has myMember Text",
 				"Dummy(dummy Number) Text",
@@ -189,7 +189,7 @@ public sealed class MethodCallTests : TestExpressions
 				"\tvalue")).ParseMembersAndMethods(new MethodExpressionParser());
 		var program = new Type(type.Package,
 			new TypeLines(nameof(TypeImplementsGenericTypeWithLength),
-				"has log", //unused member should be removed later when we allow class without members
+				"has logger", //unused member should be removed later when we allow class without members
 				"GetLengthSquare(type HasLength) Number",
 				"\ttype.Length * type.Length",
 				"Dummy",
@@ -205,7 +205,7 @@ public sealed class MethodCallTests : TestExpressions
 	{
 		var program = new Type(type.Package,
 			new TypeLines(nameof(MutableCanUseChildMethods),
-				"has log",
+				"has logger",
 				"Dummy Number",
 				"\tconstant mutableNumber = 5",
 				"\tmutableNumber + 10")).ParseMembersAndMethods(new MethodExpressionParser());
@@ -245,7 +245,7 @@ public sealed class MethodCallTests : TestExpressions
 	public void NestedMethodCall()
 	{
 		var program = new Type(type.Package,
-				new TypeLines(nameof(NestedMethodCall), "has log", "Run",
+				new TypeLines(nameof(NestedMethodCall), "has logger", "Run",
 					"\tFile(\"fileName\").Write(\"someText\")", "\ttrue")).
 			ParseMembersAndMethods(new MethodExpressionParser());
 		var body = (Body)program.Methods[0].GetBodyAndParseIfNeeded();
@@ -261,7 +261,7 @@ public sealed class MethodCallTests : TestExpressions
 	{
 		var program = new Type(type.Package,
 				new TypeLines(nameof(MethodCallAsMethodParameter),
-					"has log",
+					"has logger",
 					"AppendFiveWithInput(number) Number",
 					"\tAppendFiveWithInput(AppendFiveWithInput(5)) is 15",
 					"\tnumber + 5")).
@@ -278,7 +278,7 @@ public sealed class MethodCallTests : TestExpressions
 	{
 		new Type(type.Package,
 				new TypeLines(nameof(TypeCanBeAutoInitialized),
-					"has log",
+					"has logger",
 					"AddFiveWithInput(number) Number",
 					"\tAddFiveWithInput(AddFiveWithInput(5)) is 15",
 					"\tnumber + 5")).
@@ -307,7 +307,7 @@ public sealed class MethodCallTests : TestExpressions
 			ParseMembersAndMethods(new MethodExpressionParser());
 		var consumer = new Type(type.Package,
 				new TypeLines("ConsumingType",
-					"has log",
+					"has logger",
 					"GetResult(number) Number",
 					"\tGetResult(10) is 15",
 					"\tconstant instance = TypeCannotBeAutoInitialized(number)",

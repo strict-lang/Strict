@@ -220,17 +220,18 @@ public class TestPackage : Package
 			"\tto Text is \"Strict.Base.Type\"",
 			"\tPackage + \".\" + Name"));
 		var generic = new Type(this, new TypeLines(Base.Generic, "from(type)"));
-		var log = new Type(this, new TypeLines(Base.Log,
-			"has output",
-			"Write(generic)",
-			"\tSystem.WriteLine(generic)"));
+		var logger = new Type(this, new TypeLines(Base.Logger,
+			"has textWriter",
+			"Log(text)",
+			"\ttextWriter.Write(text)"));
 		var file = new Type(this, new TypeLines(Base.File,
 			"from(text)",
 			"Read Text",
 			"Write(text)",
 			"Delete",
 			"Length Number"));
-		var output = new Type(this, new TypeLines(Base.Output, "Write(generic)"));
+		var textWriter = new Type(this, new TypeLines(Base.TextWriter, "Write(text)"));
+		var textReader = new Type(this, new TypeLines(Base.TextReader, "Read Text"));
 		var name = new Type(this, new TypeLines(Base.Name, "has text"));
 		var error = new Type(this, new TypeLines(Base.Error, "has Text", "has Stacktraces"));
 		var method = new Type(this, new TypeLines(Base.Method, "has Name", "has Type"));
@@ -254,8 +255,8 @@ public class TestPackage : Package
 		// @formatter:on
 		foreach (var type in new[]
 			{
-				any, boolean, hasLength, number, range, character, mutable, iterator, list, text,
-				baseType, generic, log, file, output, name, error, method, stacktrace, dictionary
+				any, boolean, hasLength, number, range, character, mutable, iterator, list, text, baseType,
+				generic, logger, file, textWriter, textReader, name, error, method, stacktrace, dictionary
 			})
 			type.ParseMembersAndMethods(parser);
 	}

@@ -146,8 +146,7 @@ public sealed class Method : Context
 		: ParsingFailed(method.Type, 0, message, method.Name);
 
 	private static bool IsParameterTypeAny(string nameAndTypeString) =>
-		nameAndTypeString == Base.Any.MakeFirstLetterLowercase() ||
-		nameAndTypeString.Contains(" Any");
+		nameAndTypeString == Base.AnyLowercase || nameAndTypeString.Contains(" " + Base.Any);
 
 	public sealed class ParametersWithTypeAnyIsNotAllowed(Method method, string name)
 		: ParsingFailed(method.Type, 0, name);
@@ -330,7 +329,7 @@ public sealed class Method : Context
 	public List<Expression> Tests { get; } = new();
 
 	public override Type? FindType(string name, Context? searchingFrom = null) =>
-		name == Base.Value
+		name == Base.ValueLowercase
 			? Type
 			: Type.FindType(name, searchingFrom ?? this);
 

@@ -12,7 +12,7 @@ public abstract class TestExpressions : MethodExpressionParser
 		type = new Type(new TestPackage(), new TypeLines("dummy", "Run")).
 			ParseMembersAndMethods(this);
 		boolean = type.GetType(Base.Boolean);
-		member = new Member(type, "log", null);
+		member = new Member(type, "logger", null);
 		type.Members.Add(member);
 		method = new Method(type, 0, this, [MethodTests.Run]);
 		methodWithBody = new Method(type, 0, this, [

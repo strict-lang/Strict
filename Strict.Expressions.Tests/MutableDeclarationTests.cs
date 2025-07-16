@@ -104,7 +104,7 @@ public sealed class MutableDeclarationTests : TestExpressions
 	public void MutableVariableInstanceUsingSpace()
 	{
 		var program = new Type(type.Package,
-				new TypeLines(nameof(MutableVariableInstanceUsingSpace), "has log",
+				new TypeLines(nameof(MutableVariableInstanceUsingSpace), "has logger",
 					"Add(input Number) Number",
 					"\tmutable result = 5",
 					"\tresult = result + input")).
@@ -117,7 +117,7 @@ public sealed class MutableDeclarationTests : TestExpressions
 	public void MissingMutableArgument() =>
 		Assert.That(
 			() => new Type(type.Package,
-					new TypeLines(nameof(MissingMutableArgument), "has log", "Add(input Number) Number",
+					new TypeLines(nameof(MissingMutableArgument), "has logger", "Add(input Number) Number",
 						"\tconstant result =", "\tresult = result + input")).
 				ParseMembersAndMethods(parser).
 				Methods[0].GetBodyAndParseIfNeeded(),
@@ -128,7 +128,7 @@ public sealed class MutableDeclarationTests : TestExpressions
 	public void MutableTypeWithListArgumentIsAllowed(string code, string returnType, string testName)
 	{
 		var program = new Type(type.Package,
-				new TypeLines(testName, "has log",
+				new TypeLines(testName, "has logger",
 					$"Add(input Number) {returnType}",
 					$"\tmutable result = {code}",
 					"\tresult = result + input",

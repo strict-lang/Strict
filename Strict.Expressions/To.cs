@@ -13,7 +13,7 @@ public sealed class To(Expression left, Method operatorMethod, Type conversionTy
 	{
 		var conversionType = body.ReturnType.FindType(text.ToString());
 		if (conversionType == null)
-			throw new ConversionTypeNotFound(body);
+			throw new ConversionTypeNotFound(body, text.ToString());
 		var method = left.ReturnType.GetMethod(BinaryOperator.To, []);
 		if (method.ReturnType.Name != conversionType.Name && !left.ReturnType.IsUpcastable(conversionType))
 			throw new ConversionTypeIsIncompatible(body,
@@ -23,7 +23,8 @@ public sealed class To(Expression left, Method operatorMethod, Type conversionTy
 			conversionType);
 	}
 
-	public sealed class ConversionTypeNotFound(Body body) : ParsingFailed(body);
+	public sealed class ConversionTypeNotFound(Body body, string typeName)
+		: ParsingFailed(body, typeName);
 
 	public sealed class ConversionTypeIsIncompatible(Body body, string message, Type type)
 		: ParsingFailed(body, message, type);

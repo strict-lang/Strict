@@ -210,7 +210,7 @@ public class MethodExpressionParser : ExpressionParser
 				? MethodCall.TryParseFromOrEnum(body, arguments, inputAsString)
 				: null;
 		var call = VariableCall.TryParse(body, input) ??
-			(input.Equals(Base.Value, StringComparison.Ordinal)
+			(input.Equals(Base.ValueLowercase, StringComparison.Ordinal)
 				? Instance.Parse(body, body.Method)
 				: ParameterCall.TryParse(body, input));
 		if (call != null)

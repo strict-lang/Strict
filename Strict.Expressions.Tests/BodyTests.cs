@@ -21,12 +21,12 @@ public sealed class BodyTests : TestExpressions
 
 	[Test]
 	public void CannotUseVariableFromLowerScope() =>
-		Assert.That(() => ParseExpression("if bla is 5", "\tconstant abc = \"abc\"", "log.Write(abc)"),
+		Assert.That(() => ParseExpression("if bla is 5", "\tconstant abc = \"abc\"", "logger.Log(abc)"),
 			Throws.InstanceOf<Body.IdentifierNotFound>().With.Message.StartWith("abc"));
 
 	[Test]
 	public void UnknownVariable() =>
-		Assert.That(() => ParseExpression("if bla is 5", "\tlog.Write(unknownVariable)"),
+		Assert.That(() => ParseExpression("if bla is 5", "\tlogger.Log(unknownVariable)"),
 			Throws.InstanceOf<Body.IdentifierNotFound>().With.Message.StartWith("unknownVariable"));
 
 	[Test]
@@ -35,11 +35,11 @@ public sealed class BodyTests : TestExpressions
 		var program = new Type(new Package(nameof(CannotAccessAnotherMethodVariable)),
 			new TypeLines(nameof(CannotAccessAnotherMethodVariable),
 				// @formatter:off
-				"has log",
+				"has logger",
 				"Run",
 				"\tconstant number = 5",
 				"Add",
-				"\tlog.Write(number)")).ParseMembersAndMethods(new MethodExpressionParser());
+				"\tlogger.Log(number)")).ParseMembersAndMethods(new MethodExpressionParser());
 		// @formatter:on
 		Assert.That(
 			() => program.Methods[1].GetBodyAndParseIfNeeded(),
@@ -48,7 +48,7 @@ public sealed class BodyTests : TestExpressions
 
 	[Test]
 	public void IfHasDifferentScopeThanMethod() =>
-		Assert.That(ParseExpression("if bla is 5", "\tconstant abc = \"abc\"", "\tlog.Write(abc)"),
+		Assert.That(ParseExpression("if bla is 5", "\tconstant abc = \"abc\"", "\tlogger.Log(abc)"),
 			Is.EqualTo(new If(GetCondition(), CreateThenBlock())));
 
 	private Expression CreateThenBlock()
@@ -69,9 +69,9 @@ public sealed class BodyTests : TestExpressions
 				// @formatter:off
 				"if bla is 5",
 				"\tconstant ifText = \"in if\"",
-				"\tlog.Write(ifText)",
+				"\tlogger.Log(ifText)",
 				"else",
-				"\tlog.Write(ifText)"),
+				"\tlogger.Log(ifText)"),
 				// @formatter:on
 			Throws.InstanceOf<Body.IdentifierNotFound>().With.Message.StartWith("ifText"));
 
@@ -80,7 +80,7 @@ public sealed class BodyTests : TestExpressions
 		Assert.That(() => ParseExpression(
 				"if bla is 5",
 				"constant abc = \"abc\"",
-				"\tlog.Write(abc)"),
+				"\tlogger.Log(abc)"),
 			Throws.InstanceOf<If.MissingThen>());
 
 	[Test]
@@ -94,7 +94,7 @@ public sealed class BodyTests : TestExpressions
 		var ifExpression = ParseExpression(
 			"if bla is 5",
 			"\tconstant abc = \"abc\"",
-			"\tlog.Write(abc)") as If;
+			"\tlogger.Log(abc)") as If;
 		var variableCall =
 			((ifExpression?.Then as Body)?.Expressions[1] as MethodCall)?.Arguments[0] as VariableCall;
 		Assert.That(variableCall?.Variable.InitialValue.ToString(), Is.EqualTo("\"abc\""));
@@ -119,7 +119,7 @@ public sealed class BodyTests : TestExpressions
 		var program = new Type(new Package(nameof(ChildBodyReturnsFromThreeTabsToOneDirectly)),
 			new TypeLines(nameof(ChildBodyReturnsFromThreeTabsToOneDirectly),
       // @formatter:off
-      "has log",
+      "has logger",
       "Run",
       "\tconstant number = 5",
       "\tfor Range(1, number)",

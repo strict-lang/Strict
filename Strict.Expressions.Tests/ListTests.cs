@@ -165,7 +165,7 @@ public sealed class ListTests : TestExpressions
 		var ifExpression = ParseExpression(
 			"if (1, 2, 3).Contains(2)",
 			"\tconstant abc = \"abc\"",
-			"\tlog.Write(abc)") as If;
+			"\tlogger.Log(abc)") as If;
 		var numbers =
 			(ifExpression?.Condition as MethodCall)?.Instance as List;
 		Assert.That(numbers?.ToString(), Is.EqualTo("(1, 2, 3)"));

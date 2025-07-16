@@ -25,9 +25,9 @@ public sealed class EnumTests
 	private ExpressionParser parser = null!;
 
 	[TestCase(true, "constant Set", "constant Add")]
-	[TestCase(false, "has log", "has number")]
-	[TestCase(false, "has log", "constant Add")]
-	[TestCase(false, "has log", "Run", "\t5")]
+	[TestCase(false, "has logger", "has number")]
+	[TestCase(false, "has logger", "constant Add")]
+	[TestCase(false, "has logger", "Run", "\t5")]
 	public void CheckTypeIsEnum(bool expected, params string[] lines)
 	{
 		var type = new Type(package,
@@ -39,7 +39,7 @@ public sealed class EnumTests
 	public void UseEnumWithoutConstructor()
 	{
 		var consumingType = new Type(package,
-			new TypeLines(nameof(UseEnumWithoutConstructor), "has log",
+			new TypeLines(nameof(UseEnumWithoutConstructor), "has logger",
 				"Run", "\tconstant url = Connection.Google")).ParseMembersAndMethods(parser);
 		var assignment = (ConstantDeclaration)consumingType.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(assignment.Value, Is.InstanceOf<MemberCall>());
@@ -99,7 +99,7 @@ public sealed class EnumTests
 	{
 		var consumingType = new Type(package,
 				new TypeLines(nameof(UseEnumAsMethodParameters),
-					"has log",
+					"has logger",
 					"ExecuteInstruction(numbers, instruction) Number",
 					"\tif instruction is Instruction.Add",
 					"\t\treturn numbers(0) + numbers(1)",
@@ -133,7 +133,7 @@ public sealed class EnumTests
 				"constant BlaBinaryOperatorsSeparator", "constant BlaGreaterThan",
 				"constant BlaLessThan")).ParseMembersAndMethods(parser);
 		var body = (Body)new Type(package,
-				new TypeLines(nameof(UseEnumExtensions), "has log", "UseExtendedEnum(instruction) Number",
+				new TypeLines(nameof(UseEnumExtensions), "has logger", "UseExtendedEnum(instruction) Number",
 					"\tconstant result = instruction to MoreInstruction", "\tresult.BlaDivide")).
 			ParseMembersAndMethods(parser).Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(body.Expressions[1].ToString(), Is.EqualTo("result.BlaDivide"));

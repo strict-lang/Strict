@@ -14,11 +14,11 @@ public class TypeLinesTests
 	}
 
 	[Test]
-	public void OutputShouldBeUppercase()
+	public void TextWriterShouldBeUppercase()
 	{
-		var type = new TypeLines(Base.Log, "has output");
+		var type = new TypeLines(Base.Logger, "has textWriter");
 		Assert.That(type.DependentTypes.Count, Is.EqualTo(1));
-		Assert.That(type.DependentTypes[0], Is.EqualTo(Base.Output));
+		Assert.That(type.DependentTypes[0], Is.EqualTo(Base.TextWriter));
 	}
 
 	[Test]

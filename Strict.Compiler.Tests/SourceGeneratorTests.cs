@@ -49,11 +49,11 @@ public class Program
 			"has file = \"" + TemporaryFile + "\"", // component because its initialized
 			"has output", //
 			"has file", // means implementation? should error
-			"has log",
+			"has logger",
 			"Run2",
 			"\tfile.Write(\"Hello\")",
 			"\toutput.Write(5)",
-			"\tlog.Write(6)",
+			"\tlogger.Log(6)",
 			"\tfileSystem.Write(5)")).ParseMembersAndMethods(parser);
 		var generatedCode = generator.Generate(program).ToString()!;
 		Assert.That(GenerateNewConsoleAppAndReturnOutput(ProjectFolder, generatedCode), Is.EqualTo(""));
@@ -71,7 +71,7 @@ public class Program
 		if (!Directory.Exists(ProjectFolder))
 			Directory.CreateDirectory(ProjectFolder);
 		File.WriteAllText(Path.Combine(ProjectFolder, TestTxt), ExpectedText);
-		var program = new Type(package, new TypeLines(nameof(GenerateFileReadProgram), "has App", "has file = \"" + TestTxt + "\"", "has log", "Run", "\tlog.Write(file.Read)")).ParseMembersAndMethods(parser);
+		var program = new Type(package, new TypeLines(nameof(GenerateFileReadProgram), "has App", "has file = \"" + TestTxt + "\"", "has logger", "Run", "\tlogger.Log(file.Read)")).ParseMembersAndMethods(parser);
 		var generatedCode = generator.Generate(program).ToString()!;
 		Assert.That(GenerateNewConsoleAppAndReturnOutput(ProjectFolder, generatedCode),
 			Is.EqualTo(ExpectedText + Environment.NewLine));
@@ -138,7 +138,7 @@ public class Program
 	public void GenerateDirectoryGetFilesProgram()
 	{
 		var program = new Type(package, new TypeLines(nameof(GenerateDirectoryGetFilesProgram),
-			"has App", "has log", "has directory = \".\"", "Run", "\tfor directory.GetFiles", "\t\tlog.Write(value)")).ParseMembersAndMethods(parser);
+			"has App", "has logger", "has directory = \".\"", "Run", "\tfor directory.GetFiles", "\t\tlogger.Log(value)")).ParseMembersAndMethods(parser);
 		var generatedCode = generator.Generate(program).ToString()!;
 		Assert.That(GenerateNewConsoleAppAndReturnOutput(ProjectFolder, generatedCode),
 			Is.EqualTo("Program.cs" + Environment.NewLine));

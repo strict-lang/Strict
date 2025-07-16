@@ -15,8 +15,8 @@ public sealed class LimitTests
 	public void MethodLengthMustNotExceedTwelve() =>
 		Assert.That(
 			() => CreateType(nameof(MethodLengthMustNotExceedTwelve),
-				CreateProgramWithDuplicateLines(["has log", "Run(first Number, second Number)"],
-					12, "\tlog.Write(5)")).ParseMembersAndMethods(new MethodExpressionParser()),
+				CreateProgramWithDuplicateLines(["has logger", "Run(first Number, second Number)"],
+					12, "\tlogger.Log(5)")).ParseMembersAndMethods(new MethodExpressionParser()),
 			Throws.InstanceOf<Method.MethodLengthMustNotExceedTwelve>().With.Message.
 				Contains($"Method Run has 13 lines but limit is {Limit.MethodLength}"));
 
@@ -44,8 +44,8 @@ public sealed class LimitTests
 	[Test]
 	public void MethodParameterCountMustNotExceedLimit() =>
 		Assert.That(() => CreateType(nameof(MethodParameterCountMustNotExceedLimit), [
-				"has log", "Run(first Number, second Number, third Number, fourth Number, fifth Number)",
-				"\tlog.Write(5)"
+				"has logger", "Run(first Number, second Number, third Number, fourth Number, fifth Number)",
+				"\tlogger.Log(5)"
 			]).ParseMembersAndMethods(new MethodExpressionParser()),
 			Throws.InstanceOf<Method.MethodParameterCountMustNotExceedLimit>().With.Message.
 				Contains($"Method Run has parameters count 5 but limit is {Limit.ParameterCount}"));
@@ -54,7 +54,7 @@ public sealed class LimitTests
 	public void MethodCountMustNotExceedFifteen() =>
 		Assert.That(
 			() => CreateType(nameof(MethodCountMustNotExceedFifteen),
-					CreateProgramWithDuplicateLines(["has log"], 16,
+					CreateProgramWithDuplicateLines(["has logger"], 16,
 						"Run(first Number, second Number)", "\tfirst")).
 				ParseMembersAndMethods(new MethodExpressionParser()),
 			Throws.InstanceOf<Type.MethodCountMustNotExceedLimit>().With.Message.Contains(
@@ -66,7 +66,7 @@ public sealed class LimitTests
 	public void LinesCountMustNotExceedTwoHundredFiftySix() =>
 		Assert.That(
 			() => CreateType(nameof(LinesCountMustNotExceedTwoHundredFiftySix),
-					CreateDuplicateLines(257, "has log").ToArray()).
+					CreateDuplicateLines(257, "has logger").ToArray()).
 				ParseMembersAndMethods(new MethodExpressionParser()),
 			Throws.InstanceOf<Type.LinesCountMustNotExceedLimit>().With.Message.Contains(
 				$"Type LinesCountMustNotExceedTwoHundredFiftySix has lines count 257 but limit is {
@@ -77,14 +77,14 @@ public sealed class LimitTests
 	public void NestingMoreThanFiveLevelsIsNotAllowed() =>
 		Assert.That(() => CreateType(nameof(NestingMoreThanFiveLevelsIsNotAllowed), [
 				// @formatter:off
-				"has log",
+				"has logger",
 				"Run",
 				"	if 5 is 5",
 				"		if 6 is 6",
 				"			if 7 is 7",
 				"				if 8 is 8",
 				"					if 9 is 9",
-				"						log.Write(5)" // @formatter:on
+				"						logger.Log(5)" // @formatter:on
 			]).ParseMembersAndMethods(new MethodExpressionParser()),
 			Throws.InstanceOf<TypeParser.NestingMoreThanFiveLevelsIsNotAllowed>().With.Message.Contains(
 				$"Type NestingMoreThanFiveLevelsIsNotAllowed has more than {

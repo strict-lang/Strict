@@ -8,9 +8,9 @@ public class Instance(Type type) : Expression(type)
 	public static Expression Parse(Body body, Method method)
 	{
 		var valueInstance = new Instance((Type)method.Parent);
-		body.AddVariable(Base.Value, valueInstance, false);
+		body.AddVariable(Base.ValueLowercase, valueInstance, false);
 		return valueInstance;
 	}
 
-	public override string ToString() => Base.Value;
+	public override string ToString() => Base.ValueLowercase;
 }

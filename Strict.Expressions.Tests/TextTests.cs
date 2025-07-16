@@ -47,9 +47,9 @@ public sealed class TextTests : TestExpressions
 				ParseMembersAndMethods(new MethodExpressionParser()).Methods[0].GetBodyAndParseIfNeeded().
 				ToString(), Is.EqualTo(expectedOutput));
 
-	[TestCase("ParseNewLineTextExpression", "\"FirstLine\" + Text.NewLine + \"ThirdLine\" + Text.NewLine", "has log", "Run Text",
+	[TestCase("ParseNewLineTextExpression", "\"FirstLine\" + Text.NewLine + \"ThirdLine\" + Text.NewLine", "has logger", "Run Text",
 		"	constant input = \"FirstLine\" + Text.NewLine + \"ThirdLine\" + Text.NewLine")]
-	[TestCase("ParseMultiLineTextExpressionWithNewLine", "\"FirstLine\" + Text.NewLine + \"ThirdLine\" + Text.NewLine + \"Ending\" + \"This is the continuation of the previous text line\"", "has log", "Run Text",
+	[TestCase("ParseMultiLineTextExpressionWithNewLine", "\"FirstLine\" + Text.NewLine + \"ThirdLine\" + Text.NewLine + \"Ending\" + \"This is the continuation of the previous text line\"", "has logger", "Run Text",
 		"	constant input = \"FirstLine\" + Text.NewLine + \"ThirdLine\" + Text.NewLine + \"Ending\" +",
 		"	\"This is the continuation of the previous text line\"")]
 	public void ParseNewLineTextExpression(string testName, string expected, params string[] code)
@@ -65,7 +65,7 @@ public sealed class TextTests : TestExpressions
 
 	[TestCase("ParseMultiLineTextExpressionWithNewLine",
 		"\"FirstLine\" + Text.NewLine + \"ThirdLine\" + Text.NewLine + \"This is the continuation of the previous text line\"",
-		"has log", "Run Text",
+		"has logger", "Run Text",
 		"	constant input = \"FirstLine\" + Text.NewLine + \"ThirdLine\" + Text.NewLine +",
 		"	\"This is the continuation of the previous text line\"")]
 	public void ParseMultiLineTextEndsWithNewLine(string testName, string expected,

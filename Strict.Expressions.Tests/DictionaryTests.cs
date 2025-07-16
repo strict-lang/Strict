@@ -85,9 +85,9 @@ public sealed class DictionaryTests : TestExpressions
 	public void CreateAndValidateDictionaryTypeInstance()
 	{
 		var body = (Body)new Type(type.Package,
-				new TypeLines("SchoolRegister", "has log", "LogStudentsDetails",
+				new TypeLines("SchoolRegister", "has logger", "LogStudentsDetails",
 					"\tmutable studentsRegister = Dictionary(Number, Text)",
-					"\tstudentsRegister.Add(1, \"AK\")", "\tlog.Write(studentsRegister)")).
+					"\tstudentsRegister.Add(1, \"AK\")", "\tlogger.Log(studentsRegister)")).
 			ParseMembersAndMethods(new MethodExpressionParser()).Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(((MutableDeclaration)body.Expressions[0]).Value, Is.InstanceOf<Dictionary>());
 		var dictionaryExpression = (Dictionary)((MutableDeclaration)body.Expressions[0]).Value;
@@ -99,7 +99,7 @@ public sealed class DictionaryTests : TestExpressions
 	public void DictionaryMustBeInitializedWithTwoTypeParameters() =>
 		Assert.That(
 			() => new Type(type.Package,
-					new TypeLines(nameof(DictionaryMustBeInitializedWithTwoTypeParameters), "has log",
+					new TypeLines(nameof(DictionaryMustBeInitializedWithTwoTypeParameters), "has logger",
 						"DummyInitialization",
 						"\tmutable studentsRegister = Dictionary(Number, Text, Number)")).
 				ParseMembersAndMethods(new MethodExpressionParser()).Methods[0].GetBodyAndParseIfNeeded(),
@@ -110,9 +110,9 @@ public sealed class DictionaryTests : TestExpressions
 	public void CannotAddMismatchingInputTypesToDictionaryInstance() =>
 		Assert.That(
 			() => new Type(type.Package,
-					new TypeLines(nameof(CannotAddMismatchingInputTypesToDictionaryInstance), "has log",
+					new TypeLines(nameof(CannotAddMismatchingInputTypesToDictionaryInstance), "has logger",
 						"DummyInitialization", "\tconstant studentsRegister = Dictionary(Number, Text)",
-						"\tstudentsRegister.Add(5, true)", "\tlog.Write(studentsRegister)")).
+						"\tstudentsRegister.Add(5, true)", "\tlogger.Log(studentsRegister)")).
 				ParseMembersAndMethods(new MethodExpressionParser()).Methods[0].GetBodyAndParseIfNeeded(),
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.
 				InstanceOf<Type.ArgumentsDoNotMatchMethodParameters>());

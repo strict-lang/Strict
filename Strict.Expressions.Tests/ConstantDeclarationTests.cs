@@ -132,7 +132,7 @@ public class ConstantDeclarationTests : TestExpressions
 		// @formatter:off
 		var program = new Type(package,
 			new TypeLines(nameof(AssignmentWithMethodCall),
-				"has log",
+				"has logger",
 				"MethodToCall Text",
 				"\t\"Hello World\"",
 		"Run",
@@ -147,7 +147,7 @@ public class ConstantDeclarationTests : TestExpressions
 	{
 		var program = new Type(type.Package,
 			new TypeLines(nameof(LocalMethodCallShouldHaveCorrectReturnType),
-				"has log",
+				"has logger",
 				"LocalMethod Text",
 				"\t\"Hello World\"",
 		"Run",
@@ -159,7 +159,7 @@ public class ConstantDeclarationTests : TestExpressions
 	public void LetAssignmentWithConstructorCall() =>
 		Assert.That(
 			((ConstantDeclaration)new Type(package,
-					new TypeLines(nameof(LetAssignmentWithConstructorCall), "has log",
+					new TypeLines(nameof(LetAssignmentWithConstructorCall), "has logger",
 						"Run",
 						"\tconstant file = File(\"test.txt\")")).ParseMembersAndMethods(parser).Methods[0].
 				GetBodyAndParseIfNeeded()).Value.ToString(), Is.EqualTo("File(\"test.txt\")"));

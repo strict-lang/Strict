@@ -58,17 +58,17 @@ public sealed class IfTests : TestExpressions
 	[TestCase("nott")]
 	[TestCase("note")]
 	public void InvalidNotKeyword(string invalidKeyword) =>
-		Assert.That(() => ParseExpression($"if bla is {invalidKeyword} 5", "\tlog.Write(\"Hey\")"),
+		Assert.That(() => ParseExpression($"if bla is {invalidKeyword} 5", "\tlogger.Log(\"Hey\")"),
 			Throws.InstanceOf<Body.IdentifierNotFound>().With.Message.StartsWith(invalidKeyword));
 
 	[Test]
 	public void InvalidSpacingInsteadOfNot() =>
-		Assert.That(() => ParseExpression("if bla is  5", "\tlog.Write(\"Hey\")"),
+		Assert.That(() => ParseExpression("if bla is  5", "\tlogger.Log(\"Hey\")"),
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.InstanceOf<PhraseTokenizer.InvalidSpacing>());
 
 	[Test]
 	public void InvalidIsNotUsageOnDifferentType() =>
-		Assert.That(() => ParseExpression("if bla is not \"blu\"", "\tlog.Write(\"Hey\")"),
+		Assert.That(() => ParseExpression("if bla is not \"blu\"", "\tlogger.Log(\"Hey\")"),
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.InstanceOf<Type.ArgumentsDoNotMatchMethodParameters>().With.Message.Contains("blu"));
 
 	[Test]

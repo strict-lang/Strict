@@ -19,14 +19,14 @@ public sealed class ForTests : TestExpressions
 	public void VariableOutOfScope() =>
 		Assert.That(
 			() => ParseExpression("for Range(2, 5)", "\tconstant num = 5", "for Range(0, 10)",
-				"\tlog.Write(num)"),
+				"\tlogger.Log(num)"),
 			Throws.InstanceOf<Body.IdentifierNotFound>().With.Message.StartWith("num"));
 
 	[Test]
 	public void Equals()
 	{
-		var first = ParseExpression("for Range(2, 5)", "\tlog.Write(\"Hi\")");
-		var second = ParseExpression("for Range(2, 5)", "\tlog.Write(\"Hi\")");
+		var first = ParseExpression("for Range(2, 5)", "\tlogger.Log(\"Hi\")");
+		var second = ParseExpression("for Range(2, 5)", "\tlogger.Log(\"Hi\")");
 		Assert.That(first, Is.InstanceOf<For>());
 		Assert.That(first.Equals(second), Is.True);
 	}
@@ -34,17 +34,17 @@ public sealed class ForTests : TestExpressions
 	[Test]
 	public void MatchingHashCode()
 	{
-		var forExpression = (For)ParseExpression("for Range(2, 5)", "\tlog.Write(index)");
+		var forExpression = (For)ParseExpression("for Range(2, 5)", "\tlogger.Log(index)");
 		Assert.That(forExpression.GetHashCode(), Is.EqualTo(forExpression.Value.GetHashCode()));
 	}
 
 	[Test]
 	public void IndexIsReserved() =>
-		Assert.That(() => ParseExpression("for index in Range(0, 5)", "\tlog.Write(index)"),
+		Assert.That(() => ParseExpression("for index in Range(0, 5)", "\tlogger.Log(index)"),
 			Throws.InstanceOf<For.IndexIsReservedDoNotUseItExplicitly>());
 
-	[TestCase("for gibberish", "\tlog.Write(\"Hi\")")]
-	[TestCase("for element in gibberish", "\tlog.Write(element)")]
+	[TestCase("for gibberish", "\tlogger.Log(\"Hi\")")]
+	[TestCase("for element in gibberish", "\tlogger.Log(element)")]
 	public void UnidentifiedIterable(params string[] lines) =>
 		Assert.That(() => ParseExpression(lines),
 			Throws.InstanceOf<Body.IdentifierNotFound>());
@@ -59,37 +59,37 @@ public sealed class ForTests : TestExpressions
 	public void ImmutableVariableNotAllowedToBeAnIterator() =>
 		Assert.That(
 			() => ParseExpression("constant myIndex = 0", "for myIndex in Range(0, 10)",
-				"\tlog.Write(myIndex)"), Throws.InstanceOf<For.ImmutableIterator>());
+				"\tlogger.Log(myIndex)"), Throws.InstanceOf<For.ImmutableIterator>());
 
 	[Test]
 	public void IteratorTypeDoesNotMatchWithIterable() =>
 		Assert.That(
 			() => ParseExpression("mutable element = 0", "for element in (\"1\", \"2\", \"3\")",
-				"\tlog.Write(element)"),
+				"\tlogger.Log(element)"),
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.
 				InstanceOf<Type.ArgumentsDoNotMatchMethodParameters>());
 
 	[Test]
 	public void ParseForRangeExpression() =>
-		Assert.That(((For)ParseExpression("for Range(2, 5)", "\tlog.Write(index)")).ToString(),
+		Assert.That(((For)ParseExpression("for Range(2, 5)", "\tlogger.Log(index)")).ToString(),
 			Is.EqualTo("for Range(2, 5)\n\tlog.Write(index)"));
 
 	[Test]
 	public void ParseForInExpression() =>
 		Assert.That(
 			((For)((Body)ParseExpression("mutable myIndex = 0", "for myIndex in Range(0, 5)",
-				"\tlog.Write(myIndex)")).Expressions[1]).ToString(),
+				"\tlogger.Log(myIndex)")).Expressions[1]).ToString(),
 			Is.EqualTo("for myIndex in Range(0, 5)\n\tlog.Write(myIndex)"));
 
-	[TestCase("for myIndex in Range(0, 5)", "\tlog.Write(myIndex)",
+	[TestCase("for myIndex in Range(0, 5)", "\tlogger.Log(myIndex)",
 		"for myIndex in Range(0, 5)\n\tlog.Write(myIndex)")]
-	[TestCase("for (1, 2, 3)", "\tlog.Write(index)", "for (1, 2, 3)\n\tlog.Write(index)")]
-	[TestCase("for (1, 2, 3)", "\tlog.Write(value)", "for (1, 2, 3)\n\tlog.Write(value)")]
-	[TestCase("for myIndex in Range(2, 5)", "\tlog.Write(myIndex)", "\tfor Range(0, 10)",
+	[TestCase("for (1, 2, 3)", "\tlogger.Log(index)", "for (1, 2, 3)\n\tlog.Write(index)")]
+	[TestCase("for (1, 2, 3)", "\tlogger.Log(value)", "for (1, 2, 3)\n\tlog.Write(value)")]
+	[TestCase("for myIndex in Range(2, 5)", "\tlogger.Log(myIndex)", "\tfor Range(0, 10)",
 		"\t\tlog.Write(index)",
 		"for myIndex in Range(2, 5)\n\tlog.Write(myIndex)\r\nfor Range(0, 10)\n\tlog.Write(index)")]
 	[TestCase("for firstIndex in Range(1, 10)", "for secondIndex in Range(1, 10)",
-		"\tlog.Write(firstIndex)", "\tlog.Write(secondIndex)",
+		"\tlogger.Log(firstIndex)", "\tlogger.Log(secondIndex)",
 		"for firstIndex in Range(1, 10)\n\tfor secondIndex in Range(1, 10)\n\tlog.Write(firstIndex)\r\nlog.Write(secondIndex)")]
 	public void ParseForExpressionWithCustomVariableName(params string[] lines) =>
 		Assert.That(((For)ParseExpression(lines[..^1])).ToString(), Is.EqualTo(lines[^1]));
@@ -97,21 +97,21 @@ public sealed class ForTests : TestExpressions
 	[Test]
 	public void ValidIteratorReturnTypeWithValue() =>
 		Assert.That(
-			((VariableCall)((MethodCall)((For)ParseExpression("for (1, 2, 3)", "\tlog.Write(value)")).
+			((VariableCall)((MethodCall)((For)ParseExpression("for (1, 2, 3)", "\tlogger.Log(value)")).
 				Body).Arguments[0]).ReturnType.FullName, Is.EqualTo("TestPackage.Number"));
 
-	[TestCase("constant elements = (1, 2, 3)", "for elements", "\tlog.Write(index)",
+	[TestCase("constant elements = (1, 2, 3)", "for elements", "\tlogger.Log(index)",
 		"for elements\n\tlog.Write(index)")]
-	[TestCase("constant elements = (1, 2, 3)", "for Range(0, elements.Length)", "\tlog.Write(index)",
+	[TestCase("constant elements = (1, 2, 3)", "for Range(0, elements.Length)", "\tlogger.Log(index)",
 		"for Range(0, elements.Length)\n\tlog.Write(index)")]
-	[TestCase("mutable element = 0", "for element in (1, 2, 3)", "\tlog.Write(element)",
+	[TestCase("mutable element = 0", "for element in (1, 2, 3)", "\tlogger.Log(element)",
 		"for element in (1, 2, 3)\n\tlog.Write(element)")]
-	[TestCase("constant iterationCount = 10", "for iterationCount", "\tlog.Write(index)",
+	[TestCase("constant iterationCount = 10", "for iterationCount", "\tlogger.Log(index)",
 		"for iterationCount\n\tlog.Write(index)")]
-	[TestCase("constant dummy = 0", "for 10", "\tlog.Write(index)",
+	[TestCase("constant dummy = 0", "for 10", "\tlogger.Log(index)",
 		"for 10\n\tlog.Write(index)")]
 	[TestCase("mutable element = \"1\"", "for element in (\"1\", \"2\", \"3\")",
-		"\tlog.Write(element)", "for element in (\"1\", \"2\", \"3\")\n\tlog.Write(element)")]
+		"\tlogger.Log(element)", "for element in (\"1\", \"2\", \"3\")\n\tlog.Write(element)")]
 	public void ParseForListExpressionWithIterableVariable(params string[] lines) =>
 		Assert.That(((For)((Body)ParseExpression(lines[..^1])).Expressions[1]).ToString(),
 			Is.EqualTo(lines[^1]));
@@ -119,14 +119,14 @@ public sealed class ForTests : TestExpressions
 	[Test]
 	public void ValidIteratorReturnTypeForRange() =>
 		Assert.That(
-			((MethodCall)((For)ParseExpression("for Range(0, 10)", "\tlog.Write(index)")).Body).
+			((MethodCall)((For)ParseExpression("for Range(0, 10)", "\tlogger.Log(index)")).Body).
 			Arguments[0].ReturnType.Name == Base.Number);
 
 	[Test]
 	public void ValidIteratorReturnTypeTextForList() =>
 		Assert.That(
 			((VariableCall)((MethodCall)((For)((Body)ParseExpression("mutable element = \"1\"",
-					"for element in (\"1\", \"2\", \"3\")", "\tlog.Write(element)")).Expressions[1]).Body).
+					"for element in (\"1\", \"2\", \"3\")", "\tlogger.Log(element)")).Expressions[1]).Body).
 				Arguments[0]).Variable.Type.Name == Base.Text);
 
 	[Test]
@@ -189,19 +189,19 @@ public sealed class ForTests : TestExpressions
 
 	[TestCase(
 		"WithParameter", "element in (1, 2, 3, 4)",
-		"has log",
+		"has logger",
 		"LogError Number",
 		"\tfor element in (1, 2, 3, 4)",
 		"\t\tlog.Write(element)")]
 	[TestCase(
 		"WithList", "element in elements",
-		"has log",
+		"has logger",
 		"LogError(elements Numbers) Number",
 		"\tfor element in elements",
 		"\t\tlog.Write(element)")]
 	[TestCase(
 		"WithListTexts", "element in texts",
-		"has log",
+		"has logger",
 		"LogError(texts) Number",
 		"\tfor element in texts",
 		"\t\tlog.Write(element)")]
@@ -215,13 +215,13 @@ public sealed class ForTests : TestExpressions
 	}
 
 	[TestCase("WithNumbers",
-		"has log",
+		"has logger",
 		"LogAllNumbers(listOfNumbers List(Numbers))",
 		"\tfor row, column in listOfNumbers",
 		"\t\tlog.Write(column)")]
 	[TestCase(
 		"WithTexts",
-		"has log",
+		"has logger",
 		"LogTexts(texts)",
 		"\tfor row, column in texts",
 		"\t\tlog.Write(column)")]

@@ -23,7 +23,7 @@ public sealed class TypeMethodFinderTests
 	[Test]
 	public void CanUpCastNumberWithList()
 	{
-		var type = CreateType(nameof(CanUpCastNumberWithList), "has log",
+		var type = CreateType(nameof(CanUpCastNumberWithList), "has logger",
 			"Add(first Number, other Numbers) List", "\tfirst + other");
 		var result = type.FindMethod("Add",
 		[
@@ -49,7 +49,7 @@ public sealed class TypeMethodFinderTests
 	[Test]
 	public void UsingGenericMethodIsAllowed()
 	{
-		var type = CreateType(nameof(CanUpCastNumberWithList), "has log",
+		var type = CreateType(nameof(CanUpCastNumberWithList), "has logger",
 			"Add(other Texts, first Generic) List", "\tother + first");
 		Assert.That(
 			type.FindMethod("Add",
@@ -65,9 +65,8 @@ public sealed class TypeMethodFinderTests
 	public void GenericMethodShouldAcceptAllInputTypes()
 	{
 		var type = CreateType(nameof(GenericMethodShouldAcceptAllInputTypes),
-			"has Output",
-			"has log",
-			"Write(generic)", "\tlog.Write(generic)");
+			"has logger",
+			"Write(generic)", "\tlogger.Log(generic)");
 		Assert.That(type.FindMethod("Write", [new Text(type, "hello")])?.ToString(),
 			Is.EqualTo("Write(generic TestPackage.Generic)"));
 		Assert.That(type.FindMethod("Write", [new Number(type, 5)])?.ToString(),
@@ -78,7 +77,7 @@ public sealed class TypeMethodFinderTests
 	public void MethodParameterCanBeGeneric()
 	{
 		var type = new Type(package,
-			new TypeLines(nameof(MethodParameterCanBeGeneric), "has log", "Something(input Generics)",
+			new TypeLines(nameof(MethodParameterCanBeGeneric), "has logger", "Something(input Generics)",
 				"\tconstant result = input + 5")).ParseMembersAndMethods(parser);
 		Assert.That(type.FindMethod("Something", [new List(null!, [new Text(type, "hello")])]),
 			Is.Not.Null);
@@ -91,7 +90,7 @@ public sealed class TypeMethodFinderTests
 			new TypeLines("Customer", "has text", "has age Number", "Print Text",
 				"\t\"Customer Name: \" + name + \" Age: \" + age")).ParseMembersAndMethods(parser);
 		var createCustomer = new Type(package,
-			new TypeLines(nameof(CreateTypeUsingConstructorMembers), "has log", "Something",
+			new TypeLines(nameof(CreateTypeUsingConstructorMembers), "has logger", "Something",
 				"\tconstant customer = Customer(\"Murali\", 28)")).ParseMembersAndMethods(parser);
 		var assignment = (ConstantDeclaration)createCustomer.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(assignment.Value.ReturnType.Name, Is.EqualTo("Customer"));
@@ -105,7 +104,7 @@ public sealed class TypeMethodFinderTests
 			new TypeLines("Customer", "has text", "has age Number", "Print Text",
 				"\t\"Customer Name: \" + name + \" Age: \" + age")).ParseMembersAndMethods(parser);
 		var createCustomer = new Type(package,
-			new TypeLines(nameof(CreateTypeUsingConstructorMembers), "has log", "Something",
+			new TypeLines(nameof(CreateTypeUsingConstructorMembers), "has logger", "Something",
 				"\tconstant customer = (\"Murali\", 28) to Customer")).ParseMembersAndMethods(parser);
 		Assert.That(() => createCustomer.Methods[0].GetBodyAndParseIfNeeded(),
 			Throws.InstanceOf<List.ListElementsMustHaveMatchingType>());
@@ -115,11 +114,11 @@ public sealed class TypeMethodFinderTests
 	public void CreateStacktraceTypeUsingMembersInConstructor()
 	{
 		var logger = new Type(package,
-			new TypeLines("Logger",
-				"has log",
+			new TypeLines("MethodLogger",
+				"has logger",
 				"has method",
-				"Log Text",
-				"\tlog.Write(stacktrace to Text)",
+				"Log",
+				"\tlogger.Log(stacktrace to Text)",
 				"GetStacktrace Stacktrace",
 				"\tStacktrace(method, \"filePath\", 5)")).ParseMembersAndMethods(parser);
 		var stackTraceMethodReturnType = logger.Methods[1].ReturnType;
@@ -159,7 +158,7 @@ public sealed class TypeMethodFinderTests
 	public void PrivateMethodsShouldNotBeAddedToAvailableMethods()
 	{
 		var type = new Type(package, new TypeLines(nameof(PrivateMethodsShouldNotBeAddedToAvailableMethods),
-			"has output", "run", "\tconstant n = 5"));
+			"has textWriter", "run", "\tconstant n = 5"));
 		type.ParseMembersAndMethods(parser);
 		Assert.That(type.Methods.Count, Is.EqualTo(1));
 		Assert.That(type.AvailableMethods.Keys.Contains("run"), Is.False);
@@ -169,7 +168,7 @@ public sealed class TypeMethodFinderTests
 	public void AvailableMethodsShouldNotHaveMembersPrivateMethods()
 	{
 		new Type(package,
-			new TypeLines("ProgramWithPublicAndPrivateMethods", "has log", "PublicMethod", "\tlog.Write(\"I am exposed\")", "privateMethod", "\tlog.Write(\"Support privacy\")")).ParseMembersAndMethods(parser);
+			new TypeLines("ProgramWithPublicAndPrivateMethods", "has logger", "PublicMethod", "\tlogger.Log(\"I am exposed\")", "privateMethod", "\tlogger.Log(\"Support privacy\")")).ParseMembersAndMethods(parser);
 		var type = new Type(package,
 			new TypeLines(nameof(AvailableMethodsShouldNotHaveMembersPrivateMethods),
 				"has programWithPublicAndPrivateMethods", "run", "\tconstant n = 5"));

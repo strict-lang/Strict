@@ -137,7 +137,7 @@ public sealed class MethodTests
 	{
 		var customType = new Type(new TestPackage(),
 			new TypeLines(nameof(SplitTestExpressions),
-				"has log",
+				"has logger",
 				"AddFive(variable Text) Text",
 				"	AddFive(\"5\") is \"55\"",
 				"	AddFive(\"6\") is \"65\"",
@@ -151,7 +151,7 @@ public sealed class MethodTests
 	{
 		var customType = new Type(new TestPackage(),
 			new TypeLines(nameof(SplitTestExpressions),
-				"has log",
+				"has logger",
 				"ConditionalExpressionIsNotTest Boolean",
 				"	5 is 5 ? true else false")).ParseMembersAndMethods(new MethodExpressionParser());
 		customType.Methods[0].GetBodyAndParseIfNeeded();
@@ -236,7 +236,7 @@ public sealed class MethodTests
 	{
 		var methodWithTestsType = new Type(
 			new Package(new TestPackage(), nameof(MethodWithTestsAreAllowed)),
-			new TypeLines(nameof(MethodWithTestsAreAllowed), "has log",
+			new TypeLines(nameof(MethodWithTestsAreAllowed), "has logger",
 				"MethodWithTestsAreAllowed Number", "\tMethodWithTestsAreAllowed is 5", "\t5"));
 		methodWithTestsType.ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(() => methodWithTestsType.Methods[0].GetBodyAndParseIfNeeded(), Throws.Nothing);

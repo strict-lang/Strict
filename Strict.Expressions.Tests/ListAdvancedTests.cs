@@ -43,7 +43,7 @@ public sealed class ListAdvancedTests : TestExpressions
 	public void NumbersCompatibleWithImplementedTypes(string code, string testName)
 	{
 		var program = new Type(type.Package,
-				new TypeLines(testName, "has log", code, "\tconstant result = (1, 2, 3, input)")).
+				new TypeLines(testName, "has logger", code, "\tconstant result = (1, 2, 3, input)")).
 			ParseMembersAndMethods(parser);
 		Assert.That(program.Methods[0].GetBodyAndParseIfNeeded().ReturnType,
 			Is.EqualTo(program.GetListImplementationType(type.GetType(Base.Number))));
@@ -63,7 +63,7 @@ public sealed class ListAdvancedTests : TestExpressions
 	public void UnknownExpressionForArgumentInList() =>
 		Assert.That(
 			() => new Type(type.Package,
-					new TypeLines(nameof(UnknownExpressionForArgumentInList), "has log",
+					new TypeLines(nameof(UnknownExpressionForArgumentInList), "has logger",
 						"UnknownExpression",
 						"\tconstant result = ((1, 2), 9gfhy5)")).ParseMembersAndMethods(parser).Methods[0].
 				GetBodyAndParseIfNeeded(), Throws.InstanceOf<UnknownExpressionForArgument>());
@@ -129,7 +129,7 @@ public sealed class ListAdvancedTests : TestExpressions
 		Assert.That(() => new Type(type.Package, new TypeLines(
 					nameof(MultiLineListsAllowedOnlyIfLengthIsMoreThanHundred),
 					// @formatter:off
-					"has log",
+					"has logger",
 					"Run",
 					"\tconstant result = (1,",
 					"\t2,",
@@ -149,7 +149,7 @@ public sealed class ListAdvancedTests : TestExpressions
 	public void UnterminatedMultiLineListFound() =>
 		Assert.That(() => new Type(type.Package, new TypeLines(nameof(UnterminatedMultiLineListFound),
 					// @formatter:off
-					"has log",
+					"has logger",
 					"Run",
 					"\tconstant result = (1,",
 					"\t2,",
@@ -190,7 +190,7 @@ public sealed class ListAdvancedTests : TestExpressions
 		"\n\t\"somethingsomethingsomethingsomething\","+
 		"\n\t\"somethingsomethingsomethingsomething\","+
 		"\n\t\"somethingsomethingsomethingsomething\")",
-		"has log",
+		"has logger",
 		"Run Numbers",
 		"\t(\"somethingsomethingsomething + 5\",",
 		"\t\"somethingsomethingsomethingsomething\",",
@@ -255,7 +255,7 @@ public sealed class ListAdvancedTests : TestExpressions
 		// @formatter:off
 		var typeWithTestMethods = new Type(type.Package,
 			new TypeLines("ListArgumentsCanBeAutoParsed" + parameter,
-				"has log",
+				"has logger",
 				$"CheckInputLengthAndGetResult({parameter}) Number",
 				"\tif numbers.Length is 2",
 				"\t\treturn 2",
@@ -280,7 +280,7 @@ public sealed class ListAdvancedTests : TestExpressions
 				new TypeLines(
 					// @formatter:off
 					nameof(CreateMutableListWithMutableExpressions),
-					"has log",
+					"has logger",
 					"Add(element Number) Mutable(List)",
 					"\tmutable someList = List(Mutable(Number))",
 					"\tsomeList.Add(1)")).
@@ -296,7 +296,7 @@ public sealed class ListAdvancedTests : TestExpressions
 			new TypeLines(
 				// @formatter:off
 				nameof(ChangeValueInsideMutableListWithMutableExpressions),
-				"has log",
+				"has logger",
 				"Update(element Number) List(Mutable(Number))",
 				"\tmutable someList = List(Mutable(Number))",
 				"\tsomeList.Add(1)",
@@ -315,7 +315,7 @@ public sealed class ListAdvancedTests : TestExpressions
 				new TypeLines(
 					// @formatter:off
 					nameof(UpdateListExpressionValuesByIndex),
-					"has log",
+					"has logger",
 					"UpdateListValue(element Number) Number",
 					"\tmutable someList = (9, 8, 7)",
 					"\tsomeList(0) = 5")).
@@ -332,7 +332,7 @@ public sealed class ListAdvancedTests : TestExpressions
 			new TypeLines(
 				// @formatter:off
 				nameof(IndexOutOfRangeInListExpressions),
-				"has log",
+				"has logger",
 				"UpdateNotExistingElement(element Number) Number",
 				"\tmutable someList = (9, 8, 7)",
 				"\tsomeList(3) = 5")).

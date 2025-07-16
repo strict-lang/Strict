@@ -36,8 +36,8 @@ public sealed class CSharpTypeVisitorTests : TestCSharpGenerator
 				new TypeLines("BaseProgram", "Run")).
 			ParseMembersAndMethods(parser);
 		var program = new Type(package,
-			new TypeLines("DerivedProgram", "has BaseProgram", "has log", "Run",
-				"\tlog.Write(\"Hello World\")")).ParseMembersAndMethods(parser);
+			new TypeLines("DerivedProgram", "has BaseProgram", "has logger", "Run",
+				"\tlogger.Log(\"Hello World\")")).ParseMembersAndMethods(parser);
 		var visitor = new CSharpTypeVisitor(program);
 		Assert.That(visitor.Name, Is.EqualTo("DerivedProgram"));
 		Assert.That(visitor.FileContent, Contains.Substring("public class DerivedProgram : BaseProgram"));
@@ -101,7 +101,7 @@ public sealed class CSharpTypeVisitorTests : TestCSharpGenerator
 	{
 		var interfaceType =
 			new Type(package,
-					new TypeLines(Computer, "has inputValue = 5", "has log", "Run", "\tlog.Write(inputValue)")).
+					new TypeLines(Computer, "has inputValue = 5", "has logger", "Run", "\tlogger.Log(inputValue)")).
 				ParseMembersAndMethods(parser);
 		var visitor = new CSharpTypeVisitor(interfaceType);
 		Assert.That(visitor.Name, Is.EqualTo(Computer));
@@ -135,7 +135,7 @@ public sealed class CSharpTypeVisitorTests : TestCSharpGenerator
 		Assert.That(
 			() => new CSharpTypeVisitor(
 				new Type(package,
-					new TypeLines(Computer, "has log", "Run", "\tconstant random = log.unknown")).ParseMembersAndMethods(parser)),
+					new TypeLines(Computer, "has logger", "Run", "\tconstant random = logger.unknown")).ParseMembersAndMethods(parser)),
 			Throws.InstanceOf<MethodExpressionParser.MemberOrMethodNotFound>());
 
 	[Test]
@@ -143,8 +143,8 @@ public sealed class CSharpTypeVisitorTests : TestCSharpGenerator
 		Assert.That(
 			new CSharpTypeVisitor(
 				new Type(package,
-					new TypeLines(Computer, "has log", "has file", "Run", "\tconstant random = \"test\"",
-						"\tlog.Write(random)")).ParseMembersAndMethods(parser)).FileContent,
+					new TypeLines(Computer, "has logger", "has file", "Run", "\tconstant random = \"test\"",
+						"\tlogger.Log(random)")).ParseMembersAndMethods(parser)).FileContent,
 			Contains.Substring("\tConsole.WriteLine(random);"));
 
 	[TestCase(@"	constant file = File(""test.txt"")
@@ -161,7 +161,7 @@ Run
 	[TestCase("ll - mm", "ll - mm")]
 	[TestCase("ll * mm", "ll * mm")]
 	public void ListsBinaryOperation(string code, string expected) =>
-		Assert.That(new CSharpTypeVisitor(new Type(new TestPackage(), new TypeLines(Computer, @$"has log
+		Assert.That(new CSharpTypeVisitor(new Type(new TestPackage(), new TypeLines(Computer, @$"has logger
 Run
 	constant ll = (1, 2) + (3, 4)
 	constant mm = (5, 6)

@@ -24,7 +24,7 @@ public class TestCSharpGenerator : NoConsoleWriteLineAllowed
 
 	protected Type CreateHelloWorldProgramType() =>
 		new Type(package,
-				new TypeLines("Program", "has App", "has log", "Run",
-					"\tlog.Write(\"Hello World\")")).
+				new TypeLines("Program", "has App", "has logger", "Run",
+					"\tlogger.Log(\"Hello World\")")).
 			ParseMembersAndMethods(parser);
 }
