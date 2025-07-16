@@ -44,4 +44,19 @@ public sealed class ErrorTests : TestExpressions
 			Is.EqualTo(type.GetType(Base.Error)));
 		Assert.That(ifExpression.OptionalElse?.ToString(), Is.EqualTo("return NotANumber"));
 	}
+
+	[Test]
+	public void ErrorTextAndStacktraceIsFilledAutomatically()
+	{
+		var programType = new Type(type.Package,
+				new TypeLines(nameof(ErrorTextAndStacktraceIsFilledAutomatically),
+					"has number",
+					"Run",
+					"\tError")).
+			ParseMembersAndMethods(new MethodExpressionParser());
+		var returnExpression = (MethodCall)programType.Methods[0].GetBodyAndParseIfNeeded();
+		Assert.That(returnExpression.Arguments, Has.Count.EqualTo(2));
+		Assert.That(returnExpression.Arguments[0].ToString(), Is.EqualTo(""));
+		Assert.That(returnExpression.Arguments[1].ToString(), Is.EqualTo("	at Run in ErrorTextAndStacktraceIsFilledAutomatically.strict:line 3"));
+	}
 }

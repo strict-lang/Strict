@@ -6,11 +6,10 @@ internal class TypeMethodFinder(Type type)
 {
 	public Type Type { get; } = type;
 
-	public Method? FindMethod(string methodName, IReadOnlyList<Type> implementationTypes) =>
-		!Type.AvailableMethods.TryGetValue(methodName, out var matchingMethods)
+	public Method? FindFromMethodImplementation(IReadOnlyList<Type> implementationTypes) =>
+		!Type.AvailableMethods.TryGetValue(Method.From, out var methods)
 			? null
-			: matchingMethods.FirstOrDefault(method =>
-				IsMethodWithMatchingParametersType(method, implementationTypes));
+			: methods.FirstOrDefault(m => IsMethodWithMatchingParametersType(m, implementationTypes));
 
 	public Method GetMethod(string methodName, IReadOnlyList<Expression> arguments)
 	{
@@ -35,20 +34,11 @@ internal class TypeMethodFinder(Type type)
 				commonTypeOfArguments != null &&
 				commonTypeOfArguments == GetListElementTypeIfHasSingleParameter(method))
 				return method;
-		if (methodName == Method.From && matchingMethods.Count == 1)
-		{
-			// Error can be returned without giving a text or stacktrace, we will add it automatically
-			if (Type.Name == Base.Error)
-				return matchingMethods[0];
-			// Type can fill in Package automatically (but you need to give the name)
-			if (Type.Name == Base.Type && arguments.Count == 1)
-				return matchingMethods[0];
-			// If this is a from constructor, we can call the methodParameterType constructor to pass
-			// along the argument and make it work if it wasn't matching yet.
-			if (matchingMethods[0].Parameters.Count == 1 &&
-				matchingMethods[0].Parameters[0].Type.FindMethod(Method.From, arguments) != null)
-				return matchingMethods[0];
-		}
+		// If this is a from constructor, we can call the methodParameterType constructor to pass
+		// along the argument and make it work if it wasn't matching yet.
+		if (matchingMethods[0].Parameters.Count == 1 &&
+			matchingMethods[0].Parameters[0].Type.FindMethod(Method.From, arguments) != null)
+			return matchingMethods[0];
 		// Same for enums, no need to create from number, we could just use one of the constants
 		// Also allow using numbers for any method that accepts Text as we have Text.From(number)
 		if (Type.IsEnum || Type.Name == Base.Text && arguments is [{ ReturnType.Name: Base.Number }])

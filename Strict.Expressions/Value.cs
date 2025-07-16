@@ -15,7 +15,12 @@ public class Value(Type valueType, object data, bool isMutable = false)
 	: ConcreteExpression(valueType, isMutable)
 {
 	public object Data { get; } = data;
-	public override string ToString() => Data.ToString()!;
+
+	public override string ToString() =>
+		Data is string
+			? "\"" + Data + "\""
+			: Data.ToString()!;
+
 	public override bool Equals(object? other) => Data.Equals(other); //ncrunch: no coverage
 	public override int GetHashCode() => HashCode.Combine(base.GetHashCode(), Data);
 }

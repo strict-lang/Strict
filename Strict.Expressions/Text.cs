@@ -4,8 +4,6 @@ namespace Strict.Expressions;
 
 public sealed class Text(Context context, string value) : Value(context.GetType(Base.Text), value)
 {
-	public override string ToString() => "\"" + Data + "\"";
-
 	public override bool Equals(Expression? other) =>
 		other is Value v && (string)Data == (string)v.Data;
 

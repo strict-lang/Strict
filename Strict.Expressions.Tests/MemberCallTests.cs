@@ -9,7 +9,7 @@ public sealed class MemberCallTests : TestExpressions
 	[Test]
 	public void UseKnownMember() =>
 		Assert.That(ParseExpression("Type(\"Hello\").Name").ToString(),
-			Is.EqualTo("Type(\"Hello\").Name"));
+			Is.EqualTo("Type(\"Hello\", \"TestPackage\").Name"));
 
 	[Test]
 	public void UnknownMember() =>

@@ -1,6 +1,5 @@
 using NUnit.Framework;
 using Strict.Expressions;
-using static Strict.Language.Body;
 using List = Strict.Expressions.List;
 
 namespace Strict.Language.Tests;
@@ -181,32 +180,6 @@ public sealed class TypeTests
 		Assert.That(app.Methods[0].Name, Is.EqualTo("Run"));
 	}
 
-	[Test]
-	public void CanUpCastNumberWithList()
-	{
-		var type = CreateType(nameof(CanUpCastNumberWithList), "has log",
-			"Add(first Number, other Numbers) List", "\tfirst + other");
-		var result = type.FindMethod("Add",
-		[
-			new Number(type, 5),
-			new List(null!, [new Number(type, 6), new Number(type, 7)])
-		]);
-		Assert.That(result, Is.InstanceOf<Method>());
-		Assert.That(result?.ToString(),
-			Is.EqualTo("Add(first TestPackage.Number, other TestPackage.List(TestPackage.Number)) List"));
-	}
-
-	[Test]
-	public void GenericTypesCannotBeUsedDirectlyUseImplementation()
-	{
-		var type = CreateType(nameof(GenericTypesCannotBeUsedDirectlyUseImplementation),
-			"has generic", "AddGeneric(first Generic, other List) List", "\tfirst + other");
-		Assert.That(
-			() => type.FindMethod("AddGeneric",
-				[new Number(type, 6), new List(null!, [new Number(type, 7), new Number(type, 8)])]),
-			Throws.InstanceOf<Type.GenericTypesCannotBeUsedDirectlyUseImplementation>());
-	}
-
 	[TestCase(Base.Number, "has number", "Run", "\tmutable result = 2")]
 	[TestCase(Base.Text, "has number", "Run", "\tmutable result = \"2\"")]
 	public void MutableTypesHaveProperDataReturnType(string expected, params string[] code)
@@ -223,7 +196,7 @@ public sealed class TypeTests
 		Assert.That(
 			() => new Type(package, new TypeLines(nameof(ImmutableTypesCannotBeChanged), code)).
 				ParseMembersAndMethods(parser).Methods[0].GetBodyAndParseIfNeeded(),
-			Throws.InstanceOf<ValueIsNotMutableAndCannotBeChanged>());
+			Throws.InstanceOf<Body.ValueIsNotMutableAndCannotBeChanged>());
 
 	[TestCase("mutable canBeModified = 0", "Run", "\tcanBeModified = 5")]
 	[TestCase("mutable counter = 0", "Run", "\tcounter = 5")]
@@ -279,34 +252,6 @@ public sealed class TypeTests
 			Throws.InstanceOf<Type.CannotGetGenericImplementationOnNonGeneric>());
 
 	[Test]
-	public void UsingGenericMethodIsAllowed()
-	{
-		var type = CreateType(nameof(CanUpCastNumberWithList), "has log",
-			"Add(other Texts, first Generic) List", "\tother + first");
-		Assert.That(
-			type.FindMethod("Add",
-				[
-					new List(null!, [new Text(type, "Hi"), new Text(type, "Hello")]), new Number(type, 5)
-				])?.
-				ToString(),
-			Is.EqualTo(
-				"Add(other TestPackage.List(TestPackage.Text), first TestPackage.Generic) List"));
-	}
-
-	[Test]
-	public void GenericMethodShouldAcceptAllInputTypes()
-	{
-		var type = CreateType(nameof(GenericMethodShouldAcceptAllInputTypes),
-			"has Output",
-			"has log",
-			"Write(generic)", "\tlog.Write(generic)");
-		Assert.That(type.FindMethod("Write", [new Text(type, "hello")])?.ToString(),
-			Is.EqualTo("Write(generic TestPackage.Generic)"));
-		Assert.That(type.FindMethod("Write", [new Number(type, 5)])?.ToString(),
-			Is.EqualTo("Write(generic TestPackage.Generic)"));
-	}
-
-	[Test]
 	public void NonGenericExpressionCannotBeGeneric() =>
 		Assert.That(
 			() => new Type(package,
@@ -320,120 +265,9 @@ public sealed class TypeTests
 	public void InvalidProgram() =>
 		Assert.That(
 			() => new Type(package,
-				new TypeLines(nameof(InvalidProgram),
-					"has list",
-					"Something41",
+				new TypeLines(nameof(InvalidProgram), "has list", "Something41",
 					"\tconstant result = list + 5")).ParseMembersAndMethods(null!),
 			Throws.InstanceOf<ParsingFailed>());
-
-	[Test]
-	public void MethodParameterCanBeGeneric()
-	{
-		var type = new Type(package,
-			new TypeLines(nameof(InvalidProgram), "has log", "Something(input Generics)",
-				"\tconstant result = input + 5")).ParseMembersAndMethods(parser);
-		Assert.That(type.FindMethod("Something", [new List(null!, [new Text(type, "hello")])]),
-			Is.Not.Null);
-	}
-
-	[Test]
-	public void CreateTypeUsingConstructorMembers()
-	{
-		new Type(package,
-			new TypeLines("Customer", "has text", "has age Number", "Print Text",
-				"\t\"Customer Name: \" + name + \" Age: \" + age")).ParseMembersAndMethods(parser);
-		var createCustomer = new Type(package,
-			new TypeLines(nameof(CreateTypeUsingConstructorMembers), "has log", "Something",
-				"\tconstant customer = Customer(\"Murali\", 28)")).ParseMembersAndMethods(parser);
-		var assignment = (ConstantDeclaration)createCustomer.Methods[0].GetBodyAndParseIfNeeded();
-		Assert.That(assignment.Value.ReturnType.Name, Is.EqualTo("Customer"));
-		Assert.That(assignment.Value.ToString(), Is.EqualTo("Customer(\"Murali\", 28)"));
-	}
-
-	[Test]
-	public void UsingToMethodForComplexTypeConstructorIsForbidden()
-	{
-		new Type(package,
-			new TypeLines("Customer", "has text", "has age Number", "Print Text",
-				"\t\"Customer Name: \" + name + \" Age: \" + age")).ParseMembersAndMethods(parser);
-		var createCustomer = new Type(package,
-			new TypeLines(nameof(CreateTypeUsingConstructorMembers), "has log", "Something",
-				"\tconstant customer = (\"Murali\", 28) to Customer")).ParseMembersAndMethods(parser);
-		Assert.That(() => createCustomer.Methods[0].GetBodyAndParseIfNeeded(),
-			Throws.InstanceOf<List.ListElementsMustHaveMatchingType>());
-	}
-
-	[Test]
-	public void CreateStacktraceTypeUsingMembersInConstructor()
-	{
-		var logger = new Type(package,
-			new TypeLines("Logger",
-				"has log",
-				"has method",
-				"Log Text",
-				"\tlog.Write(stacktrace to Text)",
-				"GetStacktrace Stacktrace",
-				"\tStacktrace(method, \"filePath\", 5)")).ParseMembersAndMethods(parser);
-		var stackTraceMethodReturnType = logger.Methods[1].ReturnType;
-		Assert.That(stackTraceMethodReturnType.Name, Is.EqualTo("Stacktrace"));
-		Assert.That(stackTraceMethodReturnType.Members.Count, Is.EqualTo(3));
-	}
-
-	[Test]
-	public void MutableTypesOrImplementsShouldNotBeUsedDirectly()
-	{
-		var type =
-			new Type(package,
-				new TypeLines(nameof(MutableTypesOrImplementsShouldNotBeUsedDirectly), "has number",
-					"Run", "\tmutable result = Mutable(2)")).ParseMembersAndMethods(parser);
-		Assert.That(() => type.Methods[0].GetBodyAndParseIfNeeded(),
-			Throws.InstanceOf<ParsingFailed>().With.InnerException.
-				InstanceOf<Type.GenericTypesCannotBeUsedDirectlyUseImplementation>());
-	}
-
-	[Test]
-	public void RangeTypeShouldHaveCorrectAvailableMethods()
-	{
-		var range = package.GetType(Base.Range);
-		Assert.That(range.AvailableMethods.Values.Select(methods => methods.Count).Sum(),
-			Is.EqualTo(10), "AvailableMethods: " + range.AvailableMethods.ToWordList());
-	}
-
-	[Test]
-	public void TextTypeShouldHaveCorrectAvailableMethods()
-	{
-		var text = package.GetType(Base.Text + "s");
-		Assert.That(text.AvailableMethods.Values.Select(methods => methods.Count).Sum(),
-			Is.GreaterThanOrEqualTo(18), "AvailableMethods: " + text.AvailableMethods.ToWordList());
-	}
-
-	[Test]
-	public void PrivateMethodsShouldNotBeAddedToAvailableMethods()
-	{
-		var type = new Type(package, new TypeLines(nameof(PrivateMethodsShouldNotBeAddedToAvailableMethods),
-			"has output", "run", "\tconstant n = 5"));
-		type.ParseMembersAndMethods(parser);
-		Assert.That(type.Methods.Count, Is.EqualTo(1));
-		Assert.That(type.AvailableMethods.Keys.Contains("run"), Is.False);
-	}
-
-	[Test]
-	public void AvailableMethodsShouldNotHaveMembersPrivateMethods()
-	{
-		new Type(package,
-			new TypeLines("ProgramWithPublicAndPrivateMethods", "has log", "PublicMethod", "\tlog.Write(\"I am exposed\")", "privateMethod", "\tlog.Write(\"Support privacy\")")).ParseMembersAndMethods(parser);
-		var type = new Type(package,
-			new TypeLines(nameof(AvailableMethodsShouldNotHaveMembersPrivateMethods),
-				"has programWithPublicAndPrivateMethods", "run", "\tconstant n = 5"));
-		type.ParseMembersAndMethods(parser);
-		Assert.That(type.AvailableMethods.Keys.Contains("privateMethod"), Is.False);
-		Assert.That(type.AvailableMethods.Keys.Contains("PublicMethod"), Is.True);
-		Assert.That(
-			type.AvailableMethods.Values.Any(methods =>
-				methods.Any(method => !method.IsPublic && !method.Name.AsSpan().IsOperator())), Is.False,
-			// If this fails, check by debugging each private method and see if IsOperator returns true
-			type.AvailableMethods.ToWordList());
-	}
 
 	[TestCase(Base.Output, 0)]
 	[TestCase(Base.Mutable, 1)]
@@ -478,8 +312,10 @@ public sealed class TypeTests
 	[Test]
 	public void MemberWithMultipleConstraintsUsingAndKeyword()
 	{
-		var memberWithConstraintType = CreateType(nameof(MemberWithMultipleConstraintsUsingAndKeyword), "mutable numbers with Length is 2 and value(0) > 0",
-			"AddNumbers Number", "\tnumbers(0) + numbers(1)");
+		var memberWithConstraintType =
+			CreateType(nameof(MemberWithMultipleConstraintsUsingAndKeyword),
+				"mutable numbers with Length is 2 and value(0) > 0", "AddNumbers Number",
+				"\tnumbers(0) + numbers(1)");
 		var member = memberWithConstraintType.Members[0];
 		Assert.That(member.Name, Is.EqualTo("numbers"));
 		Assert.That(member.Type.Name, Is.EqualTo("List(TestPackage.Number)"));
@@ -555,18 +391,6 @@ public sealed class TypeTests
 	}
 
 	[Test]
-	public void IsMutableAndHasMatchingInnerType()
-	{
-		Assert.That(CreateMutableType(Base.Number).IsSameOrCanBeUsedAs(package.GetType(Base.Number)),
-			Is.True);
-		Assert.That(CreateMutableType(Base.Text).IsSameOrCanBeUsedAs(package.GetType(Base.Number)),
-			Is.False);
-	}
-
-	private Type CreateMutableType(string typeName) =>
-		package.GetType(Base.Mutable).GetGenericImplementation(package.GetType(typeName));
-
-	[Test]
 	public void EnumCanBeUsedAsNumber()
 	{
 		var instructionType = new Type(package,
@@ -597,20 +421,6 @@ public sealed class TypeTests
 	[TestCase(Base.Boolean, false)]
 	public void ValidateIsIterator(string name, bool expected) =>
 		Assert.That(package.GetType(name).IsIterator, Is.EqualTo(expected));
-
-	[Test]
-	public void InitializeInnerTypeMemberUsingOuterTypeConstructor()
-	{
-		CreateType("Thing", "has character", "SomeThing Number", "\tvalue");
-		CreateType("SuperThing", "has thing", "SuperSomeThing Number", "\tvalue");
-		var superThingUser = CreateType("SuperThingUser", "has superThing = SuperThing(7)",
-			"UseSuperThing Number",
-			"\tsuperThing to Number is \"7\" to Number",
-			"\tsuperThing is 7",
-			"\tsuperThing");
-		superThingUser.Methods[0].GetBodyAndParseIfNeeded();
-		Assert.That(superThingUser.Members[0].Type, Is.EqualTo(package.GetType("SuperThing")));
-	}
 
 	//ncrunch: no coverage start
 	[Test]

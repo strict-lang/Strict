@@ -221,7 +221,7 @@ public class Type : Context
 	}
 
 	private bool HasMatchingConstructor(IReadOnlyList<Type> implementationTypes) =>
-		typeMethodFinder.FindMethod(Method.From, implementationTypes) != null;
+		typeMethodFinder.FindFromMethodImplementation(implementationTypes) != null;
 
 	public sealed class CannotGetGenericImplementationOnNonGeneric(string name, string key)
 		: Exception("Type: " + name + ", Generic Implementation: " + key);
@@ -362,7 +362,12 @@ public class Type : Context
 	{
 		// From constructor methods should return the type we are in, not the base type (like Any)
 		if (method.Name == Method.From && method.Type != this)
+		{
+			// If we already have a from constructor, do not add a default one from any base type (Any)
+			if (cachedAvailableMethods!.ContainsKey(Method.From))
+				return;
 			method = new Method(method, this);
+		}
 		if (cachedAvailableMethods!.ContainsKey(method.Name))
 		{
 			var methodsWithThisName = cachedAvailableMethods[method.Name];

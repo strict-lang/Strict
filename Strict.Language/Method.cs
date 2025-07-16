@@ -196,7 +196,7 @@ public sealed class Method : Context
 		: ParsingFailed(method.Type, 0, "", method.Name);
 
 	internal Method(Method cloneFrom, Type newReturnType)
-		: base(cloneFrom.Type, cloneFrom.Name)
+		: base(newReturnType, cloneFrom.Name)
 	{
 		TypeLineNumber = cloneFrom.TypeLineNumber;
 		Parser = cloneFrom.Parser;
