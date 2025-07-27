@@ -171,7 +171,7 @@ public sealed class For : Expression
 					iteratorType = genericType.ImplementationTypes[0];
 			if ((iteratorType.Name != Base.Range || mutableValue.Type.Name != Base.Number) &&
 				iteratorType.Name != mutableValue.Type.Name &&
-				!iteratorType.IsSameOrCanBeUsedAs(mutableValue.Type))
+				!iteratorType.IsSameOrCanBeUsedAs(mutableValue.Type, false))
 				throw new IteratorTypeDoesNotMatchWithIterable(body, iteratorType.Name, variable,
 					mutableValue.Type.Name);
 			implementationDepth++;

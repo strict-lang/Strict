@@ -133,6 +133,7 @@ public sealed class Method : Context
 				TypeLineNumber + methodLineNumber - 1);
 	}
 
+	//TODO: this fails for nested brackets in arguments like "DoSomething(List(List(Number)) = ((1, 2)))"
 	private static SpanSplitEnumerator SplitParameters(ReadOnlySpan<char> parametersSpan) =>
 		parametersSpan.Contains('(') && (!parametersSpan.Contains(',') ||
 			IsCommaInsideBrackets(parametersSpan, parametersSpan.IndexOf(',')))
@@ -161,16 +162,11 @@ public sealed class Method : Context
 		var defaultValue = methodBody != null
 			? ParseExpression(methodBody, nameAndDefaultValue[1])
 			: type.GetMemberExpression(parser, nameAndDefaultValue[0], nameAndDefaultValue[1]);
-		return //TODO: can't happen: defaultValue == null ? throw new DefaultValueCouldNotBeParsedIntoExpression(this, TypeLineNumber + methodLineNumber - 1, nameAndTypeAsString) :
-			new Parameter(type, nameAndDefaultValue[0], defaultValue);
+		return new Parameter(type, nameAndDefaultValue[0], defaultValue);
 	}
 
 	public sealed class MissingParameterDefaultValue(Method method, int lineNumber,
 		string nameAndType) : ParsingFailed(method.Type, lineNumber, nameAndType);
-
-	public sealed class DefaultValueCouldNotBeParsedIntoExpression(Method method,
-		int lineNumber,	string defaultValueExpression)
-		: ParsingFailed(method.Type, lineNumber, defaultValueExpression);
 
 	public sealed class MethodParameterCountMustNotExceedLimit(Method method, int lineNumber)
 		: ParsingFailed(method.Type, lineNumber,

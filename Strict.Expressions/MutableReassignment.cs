@@ -41,7 +41,7 @@ public sealed class MutableReassignment : ConcreteExpression
 		parts.MoveNext();
 		var expression = body.Method.ParseExpression(body, parts.Current, true);
 		var newExpression = body.Method.ParseExpression(body, line[(parts.Current.Length + 3)..]);
-		if (!expression.ReturnType.IsSameOrCanBeUsedAs(newExpression.ReturnType))
+		if (!newExpression.ReturnType.IsSameOrCanBeUsedAs(expression.ReturnType, false))
 			throw new ValueTypeNotMatchingWithAssignmentType(body, expression.ReturnType.Name,
 				newExpression.ReturnType.Name);
 		return new MutableReassignment(body, expression, newExpression);

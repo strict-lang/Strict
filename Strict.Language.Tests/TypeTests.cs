@@ -225,7 +225,7 @@ public sealed class TypeTests
 		Assert.That(
 			() => new Type(package,
 					new TypeLines(nameof(ValueTypeNotMatchingWithAssignmentType), "has logger", "Run",
-						"\tlogger.Log(5) = 6")).ParseMembersAndMethods(parser).Methods[0].
+						"\tlogger.Log(\"Hi\") = 6")).ParseMembersAndMethods(parser).Methods[0].
 				GetBodyAndParseIfNeeded(),
 			Throws.InstanceOf<MutableReassignment.ValueTypeNotMatchingWithAssignmentType>());
 

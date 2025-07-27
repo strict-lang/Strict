@@ -32,8 +32,8 @@ public sealed class ErrorTests : TestExpressions
 		var programType = new Type(type.Package,
 				new TypeLines(nameof(TypeLevelErrorExpression),
 					"has number",
-					"has NotANumber = Error",
-					"CheckNumberInRangeTen Number",
+					"constant NotANumber = Error",
+					"CheckIfNumberIsInRangeTen Number",
 					"\tif number in Range(0, 10)",
 					"\t\treturn number",
 					"\telse",
@@ -56,7 +56,8 @@ public sealed class ErrorTests : TestExpressions
 			ParseMembersAndMethods(new MethodExpressionParser());
 		var returnExpression = (MethodCall)programType.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(returnExpression.Arguments, Has.Count.EqualTo(2));
-		Assert.That(returnExpression.Arguments[0].ToString(), Is.EqualTo(""));
-		Assert.That(returnExpression.Arguments[1].ToString(), Is.EqualTo("	at Run in ErrorTextAndStacktraceIsFilledAutomatically.strict:line 3"));
+		Assert.That(returnExpression.Arguments[0].ToString(), Is.EqualTo("\"Run\""));
+		Assert.That(returnExpression.Arguments[1].ReturnType,
+			Is.EqualTo(type.GetListImplementationType(type.GetType(Base.Stacktrace))));
 	}
 }

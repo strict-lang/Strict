@@ -109,7 +109,7 @@ public sealed class ListAdvancedTests : TestExpressions
 		Assert.That(
 			() => new Type(type.Package,
 					new TypeLines(nameof(OnlyListTypeIsAllowedAsMutableExpressionArgument),
-						"has unused Log",
+						"has unused Logger",
 						"MutableWithNumber Number", "\tconstant result = Mutable(Number)", "\tresult")).
 				ParseMembersAndMethods(parser).Methods[0].GetBodyAndParseIfNeeded(),
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.

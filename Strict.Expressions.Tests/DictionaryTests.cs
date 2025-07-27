@@ -111,8 +111,8 @@ public sealed class DictionaryTests : TestExpressions
 		Assert.That(
 			() => new Type(type.Package,
 					new TypeLines(nameof(CannotAddMismatchingInputTypesToDictionaryInstance), "has logger",
-						"DummyInitialization", "\tconstant studentsRegister = Dictionary(Number, Text)",
-						"\tstudentsRegister.Add(5, true)", "\tlogger.Log(studentsRegister)")).
+						"DummyInitialization", "\tconstant studentsRegister = Dictionary(Number, Boolean)",
+						"\tstudentsRegister.Add(5, \"hi\")", "\tlogger.Log(studentsRegister)")).
 				ParseMembersAndMethods(new MethodExpressionParser()).Methods[0].GetBodyAndParseIfNeeded(),
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.
 				InstanceOf<Type.ArgumentsDoNotMatchMethodParameters>());

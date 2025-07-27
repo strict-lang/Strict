@@ -57,7 +57,7 @@ public sealed class BodyTests : TestExpressions
 		var expressions = new Expression[2];
 		expressions[0] = new ConstantDeclaration(body, "abc", new Text(method, "abc"));
 		var arguments = new Expression[] { new VariableCall(body.FindVariable("abc")!) };
-		expressions[1] = new MethodCall(member.Type.GetMethod("Write", arguments),
+		expressions[1] = new MethodCall(member.Type.GetMethod("Log", arguments),
 			new MemberCall(null, member), arguments);
 		body.SetExpressions(expressions);
 		return body;

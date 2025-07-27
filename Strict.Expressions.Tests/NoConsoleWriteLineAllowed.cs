@@ -90,7 +90,8 @@ public class NoConsoleWriteLineAllowed
 			TestContext.CurrentContext.Result.Outcome.Status is TestStatus.Failed)
 			return;
 		var textInConsole = ConsoleWriter.GetTextAndClear();
-		if (!textInConsole.StartsWith("  Expected: ", StringComparison.Ordinal) &&
+		if (!textInConsole.StartsWith("[Strict]", StringComparison.Ordinal) &&
+			!textInConsole.StartsWith("  Expected: ", StringComparison.Ordinal) &&
 			!textInConsole.StartsWith("TearDown : ", StringComparison.Ordinal))
 			throw new ConsoleWriteLineShouldOnlyBeUsedInManualTests(textInConsole);
 	}

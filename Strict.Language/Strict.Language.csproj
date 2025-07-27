@@ -6,7 +6,7 @@
 		<Nullable>enable</Nullable>
 		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 		<WarningsAsErrors />
-		<LoggingEnabled>false</LoggingEnabled>
+		<LoggingEnabled>true</LoggingEnabled>
 		<DefineConstants>$(DefineConstants)TRACE</DefineConstants>
 		<LangVersion>default</LangVersion>
   </PropertyGroup>

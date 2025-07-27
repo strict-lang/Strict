@@ -278,21 +278,31 @@ public class Type : Context
 	/// Can OUR type be converted to sameOrUpcastableType and be used as such? Be careful how this is
 	/// called. A derived RedApple can be used as the base class Apple, but not the other way around.
 	/// </summary>
-	public bool IsSameOrCanBeUsedAs(Type sameOrUsableType, int maxDepth = 2)
+	public bool IsSameOrCanBeUsedAs(Type sameOrUsableType, bool allowImplicitConversion = true,
+		int maxDepth = 2)
 	{
-		if (this == sameOrUsableType)
+		if (this == sameOrUsableType || sameOrUsableType.Name == Base.Any)
 			return true;
 		if (members.Count(m => m.Type == sameOrUsableType) == 1)
 			return true;
-		if (IsMutableAndHasMatchingInnerType(sameOrUsableType))
+		if (IsMutableAndHasMatchingInnerType(sameOrUsableType) ||
+			sameOrUsableType.IsMutableAndHasMatchingInnerType(this))
+			return true;
+		if (allowImplicitConversion && IsImplicitToConversion(sameOrUsableType))
 			return true;
 		if (IsCompatibleOneOfType(sameOrUsableType))
 			return true;
 		if (IsEnum && members[0].Type.IsSameOrCanBeUsedAs(sameOrUsableType))
 			return true;
 		return maxDepth >= 0 && Members.Count(m =>
-			m.Type.IsSameOrCanBeUsedAs(sameOrUsableType, maxDepth - 1)) == 1;
+			m.Type.IsSameOrCanBeUsedAs(sameOrUsableType, allowImplicitConversion, maxDepth - 1)) == 1;
 	}
+
+	/// <summary>
+	/// Only allow implicit conversions as defined in Any.strict (to Text, to Type, to HashCode)
+	/// </summary>
+	private static bool IsImplicitToConversion(Context targetType) =>
+		targetType.Name is Base.Text or Base.Type or Base.HashCode;
 
 	internal bool IsMutableAndHasMatchingInnerType(Type argumentType) =>
 		this is GenericTypeImplementation { Generic.Name: Base.Mutable } genericTypeImplementation &&
@@ -349,7 +359,7 @@ public class Type : Context
 			foreach (var member in Members.Where(m =>
 				m is { IsPublic: false, InitialValue: null } && !IsTraitImplementation(m.Type)))
 				AddNonGenericMethods(member.Type);
-			if (members.Count > 0 && members.Any(m => !m.Type.IsGeneric))
+			if (members.Count > 0 && members.Any(m => !m.Type.IsGeneric && !m.IsConstant))
 				AddFromConstructorWithMembersAsArguments();
 			AddAnyMethods();
 			return cachedAvailableMethods;
@@ -391,7 +401,7 @@ public class Type : Context
 			return "number";
 		var parameters = "";
 		foreach (var member in members)
-			if (!member.Type.IsGeneric)
+			if (!member.Type.IsGeneric && !member.IsConstant)
 				parameters +=
 					(parameters == ""
 						? ""

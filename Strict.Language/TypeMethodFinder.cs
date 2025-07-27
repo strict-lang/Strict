@@ -36,7 +36,7 @@ internal class TypeMethodFinder(Type type)
 				return method;
 		// If this is a from constructor, we can call the methodParameterType constructor to pass
 		// along the argument and make it work if it wasn't matching yet.
-		if (matchingMethods[0].Parameters.Count == 1 &&
+		if (methodName == Method.From && matchingMethods[0].Parameters.Count == 1 &&
 			matchingMethods[0].Parameters[0].Type.FindMethod(Method.From, arguments) != null)
 			return matchingMethods[0];
 		// Same for enums, no need to create from number, we could just use one of the constants
@@ -74,8 +74,8 @@ internal class TypeMethodFinder(Type type)
 		IReadOnlyList<Type> typesOfArguments)
 	{
 		//TODO: we can probably just cache the result, no need to go through this every time if the parameters passed in are already correct, which should always be the case anyway!
-		if (method is { Name: Method.From, Parameters.Count: 0 } &&
-			typesOfArguments.Count == 1 && method.ReturnType.IsSameOrCanBeUsedAs(typesOfArguments[0]))
+		if (method is { Name: Method.From, Parameters.Count: 0 } && typesOfArguments.Count == 1 &&
+			method.ReturnType.IsSameOrCanBeUsedAs(typesOfArguments[0], false))
 			return true;
 		if (typesOfArguments.Count > method.Parameters.Count || typesOfArguments.Count <
 			method.Parameters.Count(p => p.DefaultValue == null))
@@ -92,7 +92,6 @@ internal class TypeMethodFinder(Type type)
 		if (methodParameterType is GenericTypeImplementation { Generic.Name: Base.Mutable } mutableType)
 			methodParameterType = mutableType.ImplementationTypes[0];
 		if (argumentType == methodParameterType || method.IsGeneric ||
-			methodParameterType.Name == Base.Any ||
 			IsArgumentImplementationTypeMatchParameterType(argumentType, methodParameterType))
 			return true;
 		if (methodParameterType.IsEnum &&

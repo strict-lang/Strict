@@ -217,4 +217,15 @@ public sealed class TypeMethodFinderTests
 				"has custom Comparer(Number)", "UnusedMethod Number", "\t5"));
 		comparerImplementation.ParseMembersAndMethods(new MethodExpressionParser());
 	}
+
+	[Test]
+	public void NumberCanBePassedInAsText()
+	{
+		var type = CreateType(nameof(NumberCanBePassedInAsText), "has logger",
+			"Run", "\tlogger.Log(5)");
+		var method = type.FindMethod("Run", []);
+		Assert.That(method, Is.Not.Null);
+		var call = (MethodCall)method!.GetBodyAndParseIfNeeded();
+		Assert.That(call.ToString(), Is.EqualTo("logger.Log(5)"));
+	}
 }

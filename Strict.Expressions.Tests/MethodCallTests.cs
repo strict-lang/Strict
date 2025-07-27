@@ -185,6 +185,8 @@ public sealed class MethodCallTests : TestExpressions
 			new TypeLines("HasLengthImplementation",
 				"has HasLength",
 				"has boolean",
+				"from(boolean)",
+				"\tboolean = boolean",
 				"Length Number",
 				"\tvalue")).ParseMembersAndMethods(new MethodExpressionParser());
 		var program = new Type(type.Package,
@@ -196,8 +198,8 @@ public sealed class MethodCallTests : TestExpressions
 				"\tconstant countOfFive = HasLengthImplementation(true)",
 				"\tconstant lengthSquare = GetLengthSquare(countOfFive)")).ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(program.Methods[1].GetBodyAndParseIfNeeded().ToString(),
-			Is.EqualTo(
-				"constant countOfFive = HasLengthImplementation(true)\r\nconstant lengthSquare = GetLengthSquare(countOfFive)"));
+			Is.EqualTo("constant countOfFive = HasLengthImplementation(true)\r\n" +
+				"constant lengthSquare = GetLengthSquare(countOfFive)"));
 	}
 
 	[Test]

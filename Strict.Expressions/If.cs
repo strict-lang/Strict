@@ -24,9 +24,9 @@ public sealed class If(Expression condition, Expression then,	Expression? option
 	/// type. If that is not possible there is a compilation error here.
 	/// </summary>
 	private static Type GetMatchingType(Type thenType, Type? elseType, Body? bodyForErrorMessage) =>
-		elseType == null || elseType.IsSameOrCanBeUsedAs(thenType) || elseType.Name == Base.Error
+		elseType == null || elseType.IsSameOrCanBeUsedAs(thenType, false) || elseType.Name == Base.Error
 			? thenType
-			: thenType.IsSameOrCanBeUsedAs(elseType) || thenType.Name == Base.Error
+			: thenType.IsSameOrCanBeUsedAs(elseType, false) || thenType.Name == Base.Error
 				? elseType
 				: thenType.FindFirstUnionType(elseType) ??
 				throw new ReturnTypeOfThenAndElseMustHaveMatchingType(
@@ -94,7 +94,7 @@ public sealed class If(Expression condition, Expression then,	Expression? option
 	{
 		var condition = body.Method.ParseExpression(body, line);
 		var booleanType = condition.ReturnType.GetType(Base.Boolean);
-		if (condition.ReturnType == booleanType || booleanType.IsSameOrCanBeUsedAs(condition.ReturnType))
+		if (condition.ReturnType == booleanType || booleanType.IsSameOrCanBeUsedAs(condition.ReturnType, false))
 			return condition;
 		throw new InvalidCondition(body, condition.ReturnType);
 	}

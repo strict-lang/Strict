@@ -52,7 +52,7 @@ public sealed class ForTests : TestExpressions
 	[Test]
 	public void DuplicateImplicitIndexInNestedFor() =>
 		Assert.That(
-			() => ParseExpression("for Range(2, 5)", "\tfor Range(0, 10)", "\t\tlog.Write(index)"),
+			() => ParseExpression("for Range(2, 5)", "\tfor Range(0, 10)", "\t\tlogger.Log(index)"),
 			Throws.InstanceOf<For.DuplicateImplicitIndex>());
 
 	[Test]
@@ -72,25 +72,25 @@ public sealed class ForTests : TestExpressions
 	[Test]
 	public void ParseForRangeExpression() =>
 		Assert.That(((For)ParseExpression("for Range(2, 5)", "\tlogger.Log(index)")).ToString(),
-			Is.EqualTo("for Range(2, 5)\n\tlog.Write(index)"));
+			Is.EqualTo("for Range(2, 5)\n\tlogger.Log(index)"));
 
 	[Test]
 	public void ParseForInExpression() =>
 		Assert.That(
 			((For)((Body)ParseExpression("mutable myIndex = 0", "for myIndex in Range(0, 5)",
 				"\tlogger.Log(myIndex)")).Expressions[1]).ToString(),
-			Is.EqualTo("for myIndex in Range(0, 5)\n\tlog.Write(myIndex)"));
+			Is.EqualTo("for myIndex in Range(0, 5)\n\tlogger.Log(myIndex)"));
 
 	[TestCase("for myIndex in Range(0, 5)", "\tlogger.Log(myIndex)",
-		"for myIndex in Range(0, 5)\n\tlog.Write(myIndex)")]
-	[TestCase("for (1, 2, 3)", "\tlogger.Log(index)", "for (1, 2, 3)\n\tlog.Write(index)")]
-	[TestCase("for (1, 2, 3)", "\tlogger.Log(value)", "for (1, 2, 3)\n\tlog.Write(value)")]
+		"for myIndex in Range(0, 5)\n\tlogger.Log(myIndex)")]
+	[TestCase("for (1, 2, 3)", "\tlogger.Log(index)", "for (1, 2, 3)\n\tlogger.Log(index)")]
+	[TestCase("for (1, 2, 3)", "\tlogger.Log(value)", "for (1, 2, 3)\n\tlogger.Log(value)")]
 	[TestCase("for myIndex in Range(2, 5)", "\tlogger.Log(myIndex)", "\tfor Range(0, 10)",
-		"\t\tlog.Write(index)",
-		"for myIndex in Range(2, 5)\n\tlog.Write(myIndex)\r\nfor Range(0, 10)\n\tlog.Write(index)")]
+		"\t\tlogger.Log(index)",
+		"for myIndex in Range(2, 5)\n\tlogger.Log(myIndex)\r\nfor Range(0, 10)\n\tlogger.Log(index)")]
 	[TestCase("for firstIndex in Range(1, 10)", "for secondIndex in Range(1, 10)",
 		"\tlogger.Log(firstIndex)", "\tlogger.Log(secondIndex)",
-		"for firstIndex in Range(1, 10)\n\tfor secondIndex in Range(1, 10)\n\tlog.Write(firstIndex)\r\nlog.Write(secondIndex)")]
+		"for firstIndex in Range(1, 10)\n\tfor secondIndex in Range(1, 10)\n\tlogger.Log(firstIndex)\r\nlogger.Log(secondIndex)")]
 	public void ParseForExpressionWithCustomVariableName(params string[] lines) =>
 		Assert.That(((For)ParseExpression(lines[..^1])).ToString(), Is.EqualTo(lines[^1]));
 
@@ -101,17 +101,17 @@ public sealed class ForTests : TestExpressions
 				Body).Arguments[0]).ReturnType.FullName, Is.EqualTo("TestPackage.Number"));
 
 	[TestCase("constant elements = (1, 2, 3)", "for elements", "\tlogger.Log(index)",
-		"for elements\n\tlog.Write(index)")]
+		"for elements\n\tlogger.Log(index)")]
 	[TestCase("constant elements = (1, 2, 3)", "for Range(0, elements.Length)", "\tlogger.Log(index)",
-		"for Range(0, elements.Length)\n\tlog.Write(index)")]
+		"for Range(0, elements.Length)\n\tlogger.Log(index)")]
 	[TestCase("mutable element = 0", "for element in (1, 2, 3)", "\tlogger.Log(element)",
-		"for element in (1, 2, 3)\n\tlog.Write(element)")]
+		"for element in (1, 2, 3)\n\tlogger.Log(element)")]
 	[TestCase("constant iterationCount = 10", "for iterationCount", "\tlogger.Log(index)",
-		"for iterationCount\n\tlog.Write(index)")]
+		"for iterationCount\n\tlogger.Log(index)")]
 	[TestCase("constant dummy = 0", "for 10", "\tlogger.Log(index)",
-		"for 10\n\tlog.Write(index)")]
+		"for 10\n\tlogger.Log(index)")]
 	[TestCase("mutable element = \"1\"", "for element in (\"1\", \"2\", \"3\")",
-		"\tlogger.Log(element)", "for element in (\"1\", \"2\", \"3\")\n\tlog.Write(element)")]
+		"\tlogger.Log(element)", "for element in (\"1\", \"2\", \"3\")\n\tlogger.Log(element)")]
 	public void ParseForListExpressionWithIterableVariable(params string[] lines) =>
 		Assert.That(((For)((Body)ParseExpression(lines[..^1])).Expressions[1]).ToString(),
 			Is.EqualTo(lines[^1]));
@@ -147,7 +147,7 @@ public sealed class ForTests : TestExpressions
 	public void ErrorExpressionIsNotAnIterator()
 	{
 		var programType = new Type(type.Package,
-				new TypeLines(nameof(ErrorExpressionIsNotAnIterator), "has number", "LogError Number", "\tconstant error = Error \"Process Failed\"",
+				new TypeLines(nameof(ErrorExpressionIsNotAnIterator), "has number", "LogError Number", "\tconstant error = Error(\"Process Failed\")",
 					"\tfor error", "\t\tvalue")).
 			ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(() => programType.Methods[0].GetBodyAndParseIfNeeded(),
@@ -160,7 +160,7 @@ public sealed class ForTests : TestExpressions
 	{
 		var programType = new Type(type.Package,
 			new TypeLines(testName, "has number", "LogError Number",
-				"\tconstant error = Error \"Process Failed\"", $"\tfor {forExpressionText}",
+				"\tconstant error = Error(\"Process Failed\")", $"\tfor {forExpressionText}",
 				"\t\tvalue")).ParseMembersAndMethods(new MethodExpressionParser());
 		var parsedExpression = (Body)programType.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(parsedExpression.Expressions[1], Is.TypeOf(typeof(For)));
@@ -192,19 +192,19 @@ public sealed class ForTests : TestExpressions
 		"has logger",
 		"LogError Number",
 		"\tfor element in (1, 2, 3, 4)",
-		"\t\tlog.Write(element)")]
+		"\t\tlogger.Log(element)")]
 	[TestCase(
 		"WithList", "element in elements",
 		"has logger",
 		"LogError(elements Numbers) Number",
 		"\tfor element in elements",
-		"\t\tlog.Write(element)")]
+		"\t\tlogger.Log(element)")]
 	[TestCase(
 		"WithListTexts", "element in texts",
 		"has logger",
 		"LogError(texts) Number",
 		"\tfor element in texts",
-		"\t\tlog.Write(element)")]
+		"\t\tlogger.Log(element)")]
 	public void AllowCustomVariablesInFor(string testName, string expected, params string[] code)
 	{
 		var programType =
@@ -218,13 +218,13 @@ public sealed class ForTests : TestExpressions
 		"has logger",
 		"LogAllNumbers(listOfNumbers List(Numbers))",
 		"\tfor row, column in listOfNumbers",
-		"\t\tlog.Write(column)")]
+		"\t\tlogger.Log(column)")]
 	[TestCase(
 		"WithTexts",
 		"has logger",
 		"LogTexts(texts)",
 		"\tfor row, column in texts",
-		"\t\tlog.Write(column)")]
+		"\t\tlogger.Log(column)")]
 	public void ParseForExpressionWithMultipleVariables(string testName, params string[] code)
 	{
 		var programType =

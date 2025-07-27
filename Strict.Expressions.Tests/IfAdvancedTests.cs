@@ -1,5 +1,6 @@
 using NUnit.Framework;
 using Strict.Language;
+using static Strict.Expressions.If;
 using Type = Strict.Language.Type;
 
 namespace Strict.Expressions.Tests;
@@ -75,17 +76,17 @@ public sealed class IfAdvancedTests : TestExpressions
 			nameof(ReturnTypeOfElseMustMatchMethodReturnType),
 			// @formatter:off
 			"has logger",
-			"InvalidRun Text",
+			"InvalidRun Number",
+			"	InvalidRun is Number",
 			"	if 5 is 5",
 			"		constant file = File(\"test.txt\")",
 			"		return \"Hello\"",
-			"	else",
-			"		return true")).ParseMembersAndMethods(new MethodExpressionParser());
+			"	6")).ParseMembersAndMethods(new MethodExpressionParser());
 		// @formatter:on
 		Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(),
 			Throws.InstanceOf<Body.ChildBodyReturnTypeMustMatchMethod>().With.Message.Contains(
-				"Last expression return true return type: TestPackage.Boolean is not matching with expected " +
-				"method return type: TestPackage.Text in method line: 5"));
+				"Last expression return \"Hello\" return type: TestPackage.Text is not matching with " +
+				"expected method return type: TestPackage.Number in method line: 4"));
 	}
 
 	[Test]
@@ -213,7 +214,7 @@ public sealed class IfAdvancedTests : TestExpressions
 			"	\"don't matter\"")).ParseMembersAndMethods(new MethodExpressionParser());
 		// @formatter:on
 		Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(),
-			Throws.InstanceOf<Body.ChildBodyReturnTypeMustMatchMethod>());
+			Throws.InstanceOf<ReturnTypeOfThenAndElseMustHaveMatchingType>());
 	}
 
 	[Test]
