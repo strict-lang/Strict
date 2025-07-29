@@ -99,4 +99,15 @@ public sealed class StringExtensionsTests
 	[TestCase("0")]
 	public void NotOperatorOrAllowedMethodName(string text) =>
 		Assert.That(text.IsOperatorOrAllowedMethodName(), Is.False);
+
+	[Test]
+	public void StartsWith()
+	{
+		Assert.That(StringExtensions.StartsWith("Hi there, what's up?", "Hi"), Is.True);
+		Assert.That(StringExtensions.StartsWith("Hi there, what's up?", "what"), Is.False);
+		Assert.That(StringExtensions.StartsWith("bcdeuf", "bc"), Is.True);
+		Assert.That(StringExtensions.StartsWith("bcdeuf", "abc"), Is.False);
+		Assert.That("Hi there, what's up?".StartsWith("Hi", "there", "what"), Is.True);
+		Assert.That("Hi there, what's up?".StartsWith("she", "there", "what"), Is.False);
+	}
 }

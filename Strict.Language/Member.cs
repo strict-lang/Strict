@@ -9,17 +9,10 @@ public sealed class Member : NamedType
 		if (usedKeyword == Keyword.Mutable)
 			IsMutable = true;
 		else if (usedKeyword == Keyword.Constant)
-		{
 			IsConstant = true;
-			if (initialValue == null)
-				throw new MissingConstantValue(definedIn, nameAndType);
-		}
 		if (!Type.Name.StartsWith(Name.MakeFirstLetterUppercase(), StringComparison.Ordinal))
 			CheckForNameWithDifferentTypeUsage(definedIn);
 	}
-
-	public sealed class MissingConstantValue(Type definedIn, string nameAndType)
-		: ParsingFailed(definedIn, 0, nameAndType);
 
 	private void CheckForNameWithDifferentTypeUsage(Type definedIn)
 	{

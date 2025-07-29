@@ -267,7 +267,7 @@ public class MethodExpressionParser : ExpressionParser
 				expressions.Push(parser.ParseTextWithSpacesOrListWithMultipleOrNestedElements(body,
 					inner[postfix.Output.Pop()]));
 			else if (postfix.Output.Count == 2)
-				expressions.Push(parser.ParseMethodCallWithArguments(body, inner.AsSpan(), postfix));
+				expressions.Push(parser.ParseMethodCallWithArguments(body, inner.AsSpan(), postfix)); //ncrunch: no coverage
 			else
 				ParseBinaryOrNormalExpressionsIntoList(body, expressions);
 			return [..expressions];
@@ -343,7 +343,7 @@ public class MethodExpressionParser : ExpressionParser
 	protected sealed class ListTokensAreNotSeparatedByComma(Body body) : ParsingFailed(body);
 
 	private sealed class InvalidSingleTokenExpression(Body body, string message)
-		: ParsingFailed(body, message);
+		: ParsingFailed(body, message); //ncrunch: no coverage
 
 	public sealed class InvalidArgumentItIsNotMethodOrListCall(Body body,
 		Expression variable, IEnumerable<Expression> arguments)

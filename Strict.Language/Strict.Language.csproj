@@ -6,14 +6,9 @@
 		<Nullable>enable</Nullable>
 		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 		<WarningsAsErrors />
-		<LoggingEnabled>true</LoggingEnabled>
-		<DefineConstants>$(DefineConstants)TRACE</DefineConstants>
+		<LoggingEnabled>false</LoggingEnabled>
 		<LangVersion>default</LangVersion>
   </PropertyGroup>
-
-	<PropertyGroup Condition="'$(LoggingEnabled)' == 'true'">
-		<DefineConstants>$(DefineConstants);LOGGING_ENABLED</DefineConstants>
-	</PropertyGroup>
 
 	<ItemGroup Condition="'$(Configuration)'=='Debug' and '$(LoggingEnabled)' == 'true'">
 		<PackageReference Include="MethodDecorator.Fody" Version="1.1.1" />

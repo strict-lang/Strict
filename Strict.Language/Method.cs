@@ -199,7 +199,7 @@ public sealed class Method : Context
 		IsGeneric = cloneFrom.IsGeneric;
 		ReturnType = newReturnType;
 		if (cloneFrom.methodBody != null)
-			methodBody = cloneFrom.methodBody.CloneAndUpdateMethod(this);
+			methodBody = cloneFrom.methodBody.CloneAndUpdateMethod(this); //ncrunch: no coverage
 		parameters = cloneFrom.parameters;
 		Tests = cloneFrom.Tests;
 		lines = cloneFrom.lines;

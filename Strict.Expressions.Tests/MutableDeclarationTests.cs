@@ -88,6 +88,7 @@ public sealed class MutableDeclarationTests : TestExpressions
 		var body = (Body)program.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(body.Expressions[0].IsMutable, Is.True);
 		Assert.That(body.Expressions[0].ReturnType, Is.EqualTo(body.Expressions[1].ReturnType));
+		Assert.That(body.ContainsAnythingMutable, Is.True);
 	}
 
 	[TestCase("AssignNumberToTextType", "mutable something Number", "TryChangeMutableDataType Text",
@@ -212,6 +213,7 @@ public sealed class MutableDeclarationTests : TestExpressions
 		program.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(program.Members[0].IsMutable, Is.True);
 		Assert.That(program.Members[0].InitialValue?.ToString(), Is.EqualTo("0"));
+		Assert.That(program.Methods[0].GetBodyAndParseIfNeeded().ContainsAnythingMutable, Is.True);
 	}
 
 	[TestCase("Mutable", "Mutable(Number)")]
@@ -277,5 +279,39 @@ public sealed class MutableDeclarationTests : TestExpressions
 		Assert.That(body.FindVariable("blub")?.InitialValue.ToString(), Is.EqualTo("Compute"));
 		Assert.That(body.FindVariable("swappedBlub")?.InitialValue.ToString(), Is.EqualTo("blub"));
 		Assert.That(body.FindVariable("temporary")?.InitialValue.ToString(), Is.EqualTo("swappedBlub"));
+	}
+
+	[Test]
+	public void NewExpressionDoesNotMatchMemberType()
+	{
+		var dummyType =
+			new Type(type.Package,
+					new TypeLines("Dummy", "mutable Number", "Run", "\tNumber = 3", "\tNumber = 5")).
+				ParseMembersAndMethods(parser);
+		var badType = new Type(type.Package,
+			new TypeLines(nameof(NewExpressionDoesNotMatchMemberType), "mutable Number",
+				"Compute Number", "\tNumber = \"Hi\"")).ParseMembersAndMethods(parser);
+		Assert.That(() => badType.Methods[0].GetBodyAndParseIfNeeded(),
+			Throws.InstanceOf<MutableReassignment.ValueTypeNotMatchingWithAssignmentType>());
+		Assert.That(
+			() => badType.Members[0].CheckIfWeCouldUpdateValue(new Text(badType, "Hi"),
+				(Body)dummyType.Methods[0].GetBodyAndParseIfNeeded()),
+			Throws.InstanceOf<Member.NewExpressionDoesNotMatchMemberType>());
+	}
+
+	[Test]
+	public void CannotReassignNonMutableMember()
+	{
+		var dummyType =
+			new Type(type.Package,
+				new TypeLines("DummyAgain", "mutable Number", "Run",
+					"\tNumber = 3", "\tNumber = 5")).ParseMembersAndMethods(parser);
+		var badType = new Type(type.Package,
+			new TypeLines(nameof(CannotReassignNonMutableMember), "constant something = 7",
+				"Compute Number", "\tsomething = 3")).ParseMembersAndMethods(parser);
+		Assert.That(
+			() => badType.Members[0].CheckIfWeCouldUpdateValue(new Number(badType, 9),
+				(Body)dummyType.Methods[0].GetBodyAndParseIfNeeded()),
+			Throws.InstanceOf<Body.ValueIsNotMutableAndCannotBeChanged>());
 	}
 }

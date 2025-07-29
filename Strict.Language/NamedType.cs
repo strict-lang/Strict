@@ -46,14 +46,6 @@ public abstract class NamedType
 	/// </summary>
 	public bool IsConstant { get; protected init; }
 
-	//TODO: remove if unused, or add test
-	public sealed class ListPrefixIsNotAllowedUseImplementationTypeNameInPlural(string typeName)
-		: Exception($"List should not be used as prefix for {
-			typeName
-		} instead use {
-			typeName.GetTextInsideBrackets()
-		}s");
-
 	public sealed class AssignmentWithInitializerTypeShouldNotHaveNameWithType(string name)
 		: Exception(name);
 

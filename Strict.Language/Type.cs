@@ -119,7 +119,7 @@ public class Type : Context
 		methods.Count == 0 && (members.Count > 1 || members is [{ InitialValue: not null }]) ||
 		Name == Base.Number;
 	public bool IsEnum =>
-		methods.Count == 0 && members.Count > 1 && members.All(m => m.IsConstant);
+		methods.Count == 0 && members.Count > 1 && members.All(m => m.IsConstant || m.Type.IsEnum);
 
 	public sealed class MemberCountShouldNotExceedLimit(Type type, int limit) : ParsingFailed(type,
 		0, $"{type.Name} type has {type.members.Count} members, max: {limit}");
@@ -262,7 +262,7 @@ public class Type : Context
 		foreach (var member in members)
 		{
 			if (cachedEvaluatedMemberTypes.TryGetValue(member.Type.Name, out var result))
-				return result;
+				return result; //ncrunch: no coverage
 			var isIterator = member is { IsPublic: false, Type.IsIterator: true };
 			cachedEvaluatedMemberTypes.Add(member.Type.Name, isIterator);
 			if (isIterator)
@@ -319,21 +319,21 @@ public class Type : Context
 	{
 		foreach (var member in members)
 			if (elseType.members.Any(otherMember => otherMember.Type == member.Type))
-				return member.Type;
+				return member.Type; //ncrunch: no coverage
 		foreach (var member in members)
 		{
 			if (member.Type == this)
 				continue;
 			var subUnionType = member.Type.FindFirstUnionType(elseType);
 			if (subUnionType != null)
-				return subUnionType;
+				return subUnionType; //ncrunch: no coverage
 		}
 		foreach (var otherMember in elseType.members)
-		{
+		{ //ncrunch: no coverage start
 			var otherSubUnionType = otherMember.Type.FindFirstUnionType(this);
 			if (otherSubUnionType != null)
 				return otherSubUnionType;
-		}
+		} //ncrunch: no coverage end
 		return null;
 	}
 
@@ -397,8 +397,6 @@ public class Type : Context
 
 	private string CreateFromMethodParameters()
 	{
-		if (IsEnum)
-			return "number";
 		var parameters = "";
 		foreach (var member in members)
 			if (!member.Type.IsGeneric && !member.IsConstant)
@@ -437,8 +435,6 @@ public class Type : Context
 
 	private void AddAnyMethods()
 	{
-		if (cachedAnyMethods is { Count: 0 })
-			cachedAnyMethods = null;
 		cachedAnyMethods ??= GetType(Base.Any).AvailableMethods;
 		if (!IsGeneric)
 			foreach (var (_, anyMethods) in cachedAnyMethods)
@@ -471,8 +467,7 @@ public class Type : Context
 	public HashSet<NamedType> GetGenericTypeArguments()
 	{
 		if (!IsGeneric)
-			throw new NotSupportedException("This type " + this +
-				" must be generic in order to call this method!");
+			throw new TypeMustBeGenericToCallThis(this); //ncrunch: no coverage
 		var genericArguments = new HashSet<NamedType>();
 		foreach (var member in Members)
 			if (member.Type is GenericType genericType)
@@ -483,13 +478,17 @@ public class Type : Context
 			else if (member.Type.IsGeneric)
 				genericArguments.Add(member);
 		if (genericArguments.Count == 0)
-			throw new InvalidGenericTypeWithoutGenericArguments(this);
+			throw new InvalidGenericTypeWithoutGenericArguments(this); //ncrunch: no coverage
 		return genericArguments;
 	}
+
+	//ncrunch: no coverage start
+	public class TypeMustBeGenericToCallThis(Type type) : Exception(type.FullName);
 
 	public sealed class InvalidGenericTypeWithoutGenericArguments(Type type) : Exception(
 		"This type is broken and needs to be fixed, check the creation: " + type + ", CreatedBy: " +
 		type.CreatedBy);
+	//ncrunch: no coverage end
 
 	public sealed class TypeHasNoMembersAndThusMustBeATraitWithoutMethodBodies(Type type)
 		: ParsingFailed(type, 0);

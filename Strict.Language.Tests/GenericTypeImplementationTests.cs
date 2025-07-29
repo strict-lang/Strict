@@ -48,6 +48,8 @@ public sealed class GenericTypeImplementationTests
 				"\tconstant result = something.Compare")).ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(usingGenericType.Members[0].Type.Name,
 			Is.EqualTo("Comparer(TestPackage.Text, TestPackage.Number)"));
+		var genericComparer = ((GenericTypeImplementation)usingGenericType.Members[0].Type).Generic;
+		Assert.That(genericComparer.Name, Is.EqualTo("Comparer"));
 	}
 
 	[Test]

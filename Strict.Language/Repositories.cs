@@ -47,8 +47,8 @@ public sealed class Repositories
 				StrictDevelopmentFolderPrefix.Replace(nameof(Strict) + ".", packageName);
 			if (Directory.Exists(developmentFolder))
 				return await LoadFromPath(developmentFolder);
-		}
-		return await FindOrAddPath(packageUrl, packageName);
+		} //ncrunch: no coverage
+		return await FindOrAddPath(packageUrl, packageName); //ncrunch: no coverage
 	}
 
 	private async Task<Package> FindOrAddPath(Uri packageUrl, string packageName)
@@ -59,8 +59,7 @@ public sealed class Repositories
 		if (!Directory.Exists(localPath))
 			localPath = await DownloadAndExtractRepository(packageUrl, packageName);
 		return await LoadFromPath(localPath);
-		//ncrunch: no coverage end
-	}
+	} //ncrunch: no coverage end
 
 	public Task<Package> LoadStrictPackage(string packagePostfixName = nameof(Base)) =>
 		LoadFromUrl(new Uri(StrictPrefixUri.AbsoluteUri + packagePostfixName));
@@ -194,7 +193,7 @@ public sealed class Repositories
 				AddUnresolvedRemainingTypes(files, inDegreeGraphMap, reversedDependencies);
 			return reversedDependencies;
 		}
-		return files.Values;
+		return files.Values; //ncrunch: no coverage
 	}
 
 	private static bool GotNestedImplements(Dictionary<string, TypeLines> filesWithMembers)
@@ -274,7 +273,7 @@ public sealed class Repositories
 		var tasks = new List<Task>();
 		foreach (var directory in subDirectories)
 			if (IsValidCodeDirectory(directory))
-				tasks.Add(CreatePackageFromFiles(directory,
+				tasks.Add(CreatePackageFromFiles(directory, //ncrunch: no coverage
 					Directory.GetFiles(directory, "*" + Type.Extension), package));
 		return tasks;
 	}

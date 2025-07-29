@@ -34,7 +34,7 @@ public class NoConsoleWriteLineAllowed
 				if (HasAttribute(frame, TestAttribute) &&
 					HasAttribute(frame, NunitFrameworkCategoryAttribute))
 					return GetCategoryName(frame) == ManualCategoryName;
-			return false;
+			return false; //ncrunch: no coverage
 		}
 
 		public static bool HasAttribute(StackFrame frame, string name)
@@ -100,6 +100,7 @@ public class NoConsoleWriteLineAllowed
 		: Exception(message);
 
 	[Test]
+	[Category("NotManual")]
 	public void ConsoleWriteLineIsNotAllowed()
 	{
 		Console.WriteLine("yo");
@@ -107,6 +108,7 @@ public class NoConsoleWriteLineAllowed
 			Throws.InstanceOf<ConsoleWriteLineShouldOnlyBeUsedInManualTests>());
 	}
 
+	//ncrunch: no coverage start
 	[Test]
 	[Category("Manual")]
 	public void ManualTestsCanWriteToConsole() => Console.WriteLine("allowed");

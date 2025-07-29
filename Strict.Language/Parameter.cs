@@ -35,6 +35,7 @@ public sealed class Parameter : NamedType
 	public void CheckIfWeCouldUpdateValue(Expression newExpression, Body bodyForErrorMessage)
 	{
 		if (!IsMutable)
+			//ncrunch: no coverage start
 			throw new Body.ValueIsNotMutableAndCannotBeChanged(bodyForErrorMessage, Name);
 		if (!newExpression.ReturnType.IsSameOrCanBeUsedAs(Type))
 			throw new NewExpressionDoesNotMatchParameterType(bodyForErrorMessage, newExpression, this);

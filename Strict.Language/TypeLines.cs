@@ -27,10 +27,10 @@ public class TypeLines
 	private void AnyMustImplement(int line, string name)
 	{
 		if (Lines[line] != name)
-			throw new AnyStrictMustImplement(name);
+			throw new AnyStrictMustImplement(name); //ncrunch: no coverage
 	}
 
-	private sealed class AnyStrictMustImplement(string name) : Exception(name);
+	private sealed class AnyStrictMustImplement(string name) : Exception(name); //ncrunch: no coverage
 #endif
 	public string Name { get; }
 	public string[] Lines { get; }

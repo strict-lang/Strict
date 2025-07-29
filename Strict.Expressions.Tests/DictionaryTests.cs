@@ -16,6 +16,8 @@ public sealed class DictionaryTests : TestExpressions
 		Assert.That(listInListType.Members[0].Type.IsIterator, Is.True);
 		Assert.That(listInListType.Members[0].Type.Name,
 			Is.EqualTo("List(key TestPackage.Generic, value TestPackage.Generic)"));
+		var genericType = (GenericType)listInListType.Members[0].Type;
+		Assert.That(genericType.Generic.Name, Is.EqualTo("List"));
 	}
 
 	[Test]

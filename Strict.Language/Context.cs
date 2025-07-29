@@ -69,6 +69,8 @@ public abstract class Context
 				name.StartsWith(Name, StringComparison.Ordinal) &&
 				name == Name + GenericImplementationPostfix)
 				return (Type)this;
+			if (name.StartsWith("List", StringComparison.Ordinal) && name.Length > 4 && name[4] != '(')
+				throw new ListPrefixIsNotAllowedUseImplementationTypeNameInPlural(name);
 			if (name.EndsWith('s'))
 				return TryGetTypeFromPluralNameAsListWithSingularName(name);
 			if (name.EndsWith(')') && name.Contains('('))
@@ -78,6 +80,13 @@ public abstract class Context
 	}
 
 	private readonly IDictionary<string, Type?> types = new Dictionary<string, Type?>();
+
+	public sealed class ListPrefixIsNotAllowedUseImplementationTypeNameInPlural(string typeName)
+		: Exception($"List should not be used as prefix for {
+			typeName
+		} instead use {
+			typeName.Replace("List", "").GetTextInsideBrackets().Pluralize()
+		}");
 
 	/// <summary>
 	/// Always convert a plural name into List(SingularName), e.g., Texts becomes List(Text)

@@ -54,6 +54,7 @@ public class RepositoriesTests
 			Throws.InstanceOf<ParsingFailed>().With.Message.Contains(@"Base\Invalid.strict:line 1"));
 	}
 
+	//ncrunch: no coverage start
 	[Test]
 	[Category("Slow")]
 	public async Task LoadStrictExamplesPackageAndUseBasePackageTypes()
@@ -85,6 +86,7 @@ public class RepositoriesTests
 		Assert.That(adjustBrightness, Is.Not.Null);
 		Assert.That(adjustBrightness.Methods[0].GetBodyAndParseIfNeeded(), Is.Not.Null);
 	}
+	//ncrunch: no coverage end
 
 	[Test]
 	public async Task CheckGenericTypesAreLoadedCorrectlyAfterSorting()

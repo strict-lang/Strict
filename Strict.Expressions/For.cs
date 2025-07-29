@@ -128,7 +128,7 @@ public sealed class For : Expression
 				return firstValue;
 			var innerFirstValue = body.Method.ParseExpression(body, firstValue + "(0)", true);
 			if (variableIndex > 1)
-				throw new NotSupportedException("More than 2 for variables are not supported yet");
+				throw new NotSupportedException("More than 2 for variables are not supported yet"); //ncrunch: no coverage
 			return innerFirstValue;
 		}
 		return iteratorExpression;
@@ -172,7 +172,7 @@ public sealed class For : Expression
 			if ((iteratorType.Name != Base.Range || mutableValue.Type.Name != Base.Number) &&
 				iteratorType.Name != mutableValue.Type.Name &&
 				!iteratorType.IsSameOrCanBeUsedAs(mutableValue.Type, false))
-				throw new IteratorTypeDoesNotMatchWithIterable(body, iteratorType.Name, variable,
+				throw new IteratorTypeDoesNotMatchWithIterable(body, iteratorType.Name, variable, //ncrunch: no coverage
 					mutableValue.Type.Name);
 			implementationDepth++;
 		}
@@ -234,6 +234,7 @@ public sealed class For : Expression
 	public sealed class ImmutableIterator(string iteratorVariableName, Body body)
 		: ParsingFailed(body, iteratorVariableName);
 
+	//ncrunch: no coverage start
 	public sealed class IteratorTypeDoesNotMatchWithIterable(Body body, string iteratorTypeName,
 		ReadOnlySpan<char> variable, string? variableType) : ParsingFailed(body,
 		$"Iterator {variable} type {iteratorTypeName} does not match with {variableType}");

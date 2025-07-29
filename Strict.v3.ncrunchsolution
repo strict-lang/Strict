@@ -7,6 +7,12 @@
       <Value>Strict.VirtualMachine\Strict.Runtime.csproj</Value>
       <Value>Strict.LanguageServer.Tests\Strict.LanguageServer.Tests.csproj</Value>
       <Value>Strict.LanguageServer\Strict.LanguageServer.csproj</Value>
+      <Value>Strict.Compiler\Strict.Compiler.csproj</Value>
+      <Value>Strict.Compiler.Cuda\Strict.Compiler.Cuda.csproj</Value>
+      <Value>Strict.Compiler.Cuda.Tests\Strict.Compiler.Cuda.Tests.csproj</Value>
+      <Value>Strict.Compiler.Roslyn\Strict.Compiler.Roslyn.csproj</Value>
+      <Value>Strict.Compiler.Tests\Strict.Compiler.Tests.csproj</Value>
+      <Value>Program.cs:Strict.Language.Tests\Strict.Language.Tests.csproj</Value>
     </MetricsExclusionList>
     <RdiConfigured>True</RdiConfigured>
     <SolutionConfigured>True</SolutionConfigured>

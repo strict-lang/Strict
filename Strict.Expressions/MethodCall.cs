@@ -17,7 +17,7 @@ public class MethodCall : ConcreteExpression
 		base(GetMethodReturnType(method, toReturnType))
 	{
 		if (method.Name == Method.From && instance != null)
-			throw new CannotCallFromConstructorWithExistingInstance();
+			throw new CannotCallFromConstructorWithExistingInstance(); //ncrunch: no coverage
 		Instance = instance;
 		Method = method;
 		Arguments = arguments;

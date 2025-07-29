@@ -23,7 +23,7 @@ public sealed class Binary(Expression left, Method operatorMethod, Expression[] 
 			: BuildBinaryExpression(body, input, postfixTokens.Pop(), postfixTokens);
 
 	public sealed class IncompleteTokensForBinaryExpression(Body body,
-		ReadOnlySpan<char> input,	IEnumerable<Range> postfixTokens) : ParsingFailed(body,
+		ReadOnlySpan<char> input,	IEnumerable<Range> postfixTokens) : ParsingFailed(body, //ncrunch: no coverage
 		input.GetTextsFromRanges(postfixTokens).Reverse().ToWordList());
 
 	// ReSharper disable once TooManyArguments

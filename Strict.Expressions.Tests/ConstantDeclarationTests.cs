@@ -1,6 +1,7 @@
 using NUnit.Framework;
 using Strict.Language;
 using Strict.Language.Tests;
+using static Strict.Expressions.ConstantDeclaration;
 using Type = Strict.Language.Type;
 
 namespace Strict.Expressions.Tests;
@@ -16,6 +17,11 @@ public class ConstantDeclarationTests : TestExpressions
 
 	private ExpressionParser parser = null!;
 	private Package package = null!;
+
+	[Test]
+	public void MissingConstantValue() =>
+		Assert.That(() => ParseExpression("constant number"),
+			Throws.InstanceOf<MissingAssignmentValueExpression>());
 
 	[Test]
 	public void ParseNumber()

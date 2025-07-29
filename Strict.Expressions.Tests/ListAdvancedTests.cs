@@ -14,13 +14,20 @@ public sealed class ListAdvancedTests : TestExpressions
 	private MethodExpressionParser parser = null!;
 
 	[Test]
+	public void ListPrefixIsNotAllowed() =>
+		Assert.That(
+			() => new Type(type.Package,
+					new TypeLines(nameof(ListPrefixIsNotAllowed), "has listOne Numbers")).
+				ParseMembersAndMethods(parser),
+			Throws.InnerException.InstanceOf<Context.ListPrefixIsNotAllowedUseImplementationTypeNameInPlural>());
+
+	[Test]
 	public void ListGenericLengthAddition()
 	{
 		var program = new Type(type.Package,
-				new TypeLines(nameof(ListGenericLengthAddition), "has listOne Numbers",
-					"has listTwo Numbers", "AddListLength Number", "\tlistOne.Length + listTwo.Length")).
-			ParseMembersAndMethods(parser);
-		Assert.That(program.Members[0].Name, Is.EqualTo("listOne"));
+			new TypeLines(nameof(ListGenericLengthAddition), "has ones Numbers", "has twos Numbers",
+				"AddListLength Number", "\tones.Length + twos.Length")).ParseMembersAndMethods(parser);
+		Assert.That(program.Members[0].Name, Is.EqualTo("ones"));
 		var numbersListType = type.GetType(Base.List).
 			GetGenericImplementation(type.GetType(Base.Number));
 		Assert.That(program.Members[0].Type, Is.EqualTo(numbersListType));

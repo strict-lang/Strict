@@ -124,7 +124,7 @@ public sealed class EnumTests
 			ParseMembersAndMethods(parser);
 		Assert.That(type.IsEnum, Is.EqualTo(true));
 	}
-	/*TODO: not sure if this is useful or not … not really supported to mix has instruction with rest enum constants.
+
 	[Test]
 	public void UseEnumExtensions()
 	{
@@ -138,5 +138,17 @@ public sealed class EnumTests
 			ParseMembersAndMethods(parser).Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(body.Expressions[1].ToString(), Is.EqualTo("result.BlaDivide"));
 	}
-	*/
+
+	[Test]
+	public void EnumConstantsCanBeUsedDirectly()
+	{
+		var type =
+			new Type(package,
+				new TypeLines(nameof(EnumConstantsCanBeUsedDirectly), "has instruction", "Run",
+					"\tInstruction.Multiply is not instruction")).ParseMembersAndMethods(parser);
+		var method = type.FindMethod("Run", []);
+		Assert.That(method, Is.Not.Null);
+		var call = (MethodCall)method!.GetBodyAndParseIfNeeded();
+		Assert.That(call.ToString(), Is.EqualTo("Instruction.Multiply is not instruction"));
+	}
 }

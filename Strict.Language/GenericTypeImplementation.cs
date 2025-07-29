@@ -23,7 +23,7 @@ public sealed class GenericTypeImplementation : Type
 		foreach (var member in Generic.Members)
 			members.Add(
 				member.Type.IsGeneric &&
-				member.Type.Name != Base.Iterator //TODO: remove all these Iterator and List hacks!
+				member.Type.Name != Base.Iterator
 					? member.CloneWithImplementation(member.Type.Name == Base.List
 						? this
 						: ImplementationTypes[implementationTypeIndex++])
@@ -40,10 +40,10 @@ public sealed class GenericTypeImplementation : Type
 				var foundMethodAlready = false;
 				foreach (var existingMethod in methods)
 					if (existingMethod.IsSameMethodNameReturnTypeAndParameters(method))
-					{
+					{ //ncrunch: no coverage start, no usecase yet
 						foundMethodAlready = true;
 						break;
-					}
+					} //ncrunch: no coverage end
 				if (!foundMethodAlready)
 					methods.Add(new Method(method, this));
 			}

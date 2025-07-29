@@ -39,10 +39,6 @@ internal class TypeMethodFinder(Type type)
 		if (methodName == Method.From && matchingMethods[0].Parameters.Count == 1 &&
 			matchingMethods[0].Parameters[0].Type.FindMethod(Method.From, arguments) != null)
 			return matchingMethods[0];
-		// Same for enums, no need to create from number, we could just use one of the constants
-		// Also allow using numbers for any method that accepts Text as we have Text.From(number)
-		if (Type.IsEnum || Type.Name == Base.Text && arguments is [{ ReturnType.Name: Base.Number }])
-			return matchingMethods[0];
 		throw new ArgumentsDoNotMatchMethodParameters(arguments, Type, matchingMethods);
 	}
 
@@ -76,7 +72,7 @@ internal class TypeMethodFinder(Type type)
 		//TODO: we can probably just cache the result, no need to go through this every time if the parameters passed in are already correct, which should always be the case anyway!
 		if (method is { Name: Method.From, Parameters.Count: 0 } && typesOfArguments.Count == 1 &&
 			method.ReturnType.IsSameOrCanBeUsedAs(typesOfArguments[0], false))
-			return true;
+			return true; //ncrunch: no coverage
 		if (typesOfArguments.Count > method.Parameters.Count || typesOfArguments.Count <
 			method.Parameters.Count(p => p.DefaultValue == null))
 			return false;
@@ -98,9 +94,9 @@ internal class TypeMethodFinder(Type type)
 			methodParameterType.Members[0].Type.IsSameOrCanBeUsedAs(argumentType))
 			return true;
 		if (methodParameterType.Name == Base.Iterator && method.Type.IsSameOrCanBeUsedAs(argumentType))
-			return true;
+			return true; //ncrunch: no coverage
 		if (methodParameterType.IsGeneric)
-			throw new GenericTypesCannotBeUsedDirectlyUseImplementation(methodParameterType,
+			throw new GenericTypesCannotBeUsedDirectlyUseImplementation(methodParameterType, //ncrunch: no coverage
 				"(parameter " + index + ") is not usable with argument " + argumentType + " in " + method);
 		return argumentType.IsSameOrCanBeUsedAs(methodParameterType);
 	}
