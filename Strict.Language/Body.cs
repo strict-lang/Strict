@@ -72,11 +72,13 @@ public sealed class Body : Expression
 	private static void StartDebuggerInDebugModeIfNotAttached()
 	{
 #if DEBUG
-		if (!Debugger.IsAttached && !StartedFromNCrunch)
+		if (!Debugger.IsAttached && !StartedFromNCrunch && !StartedFromDotnetTestConsole &&
+			!StartedFromReSharper)
 			Debugger.Launch(); //ncrunch: no coverage
 #endif
 	}
 
+	//ncrunch: no coverage start
 	public static bool StartedFromNCrunch
 	{
 		get
@@ -88,6 +90,22 @@ public sealed class Body : Expression
 		}
 	}
 	private static bool? wasStartedFromNCrunch;
+	private static bool StartedFromDotnetTestConsole
+	{
+		get
+		{
+			if (wasStartedFromDotnetTestConsole is not null)
+				return wasStartedFromDotnetTestConsole.Value;
+			wasStartedFromDotnetTestConsole = AppDomain.CurrentDomain.FriendlyName.ToLower().
+				StartsWith("test", StringComparison.Ordinal);
+			return wasStartedFromDotnetTestConsole.Value;
+		}
+	}
+	private static bool? wasStartedFromDotnetTestConsole;
+	public static bool StartedFromReSharper =>
+		AppDomain.CurrentDomain.FriendlyName.ToLower().
+			StartsWith("resharpertest", StringComparison.Ordinal);
+	//ncrunch: no coverage end
 
 	public Body SetExpressions(IReadOnlyList<Expression> expressions)
 	{
@@ -95,10 +113,10 @@ public sealed class Body : Expression
 		if (Expressions.Count == 0)
 			throw new SpanExtensions.EmptyInputIsNotAllowed();
 		ParsingLineNumber--;
-		var isLastExpressionReturn = Expressions[^1].GetType().Name == Base.Return;
 		var lastExpression = Expressions[^1];
+		var isLastExpressionReturn = lastExpression.GetType().Name == Base.Return;
 		if ((isLastExpressionReturn || IsMethodReturn()) && Method.Name != Base.Run &&
-			!ChildHasMatchingMethodReturnType(Parent == null
+			Method.Name != Method.From && !ChildHasMatchingMethodReturnType(Parent == null
 				? Method.ReturnType
 				: Parent.ReturnType, lastExpression))
 			throw new ChildBodyReturnTypeMustMatchMethod(this, lastExpression);

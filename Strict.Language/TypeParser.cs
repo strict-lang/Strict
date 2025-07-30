@@ -65,7 +65,8 @@ public sealed class TypeParser(Type type, string[] lines)
 		: ParsingFailed(type, lineNumber);
 
 	public sealed class ExtraWhitespacesFoundAtBeginningOfLine(Type type, int lineNumber,
-		string message, string method = "") : ParsingFailed(type, lineNumber, message, method);
+		string message, string method = "") : ParsingFailed(type, lineNumber,
+		message + " (strict always requires tab for indentation)", method);
 
 	public sealed class ExtraWhitespacesFoundAtEndOfLine(Type type, int lineNumber,
 		string message, string method = "") : ParsingFailed(type, lineNumber, message, method);
