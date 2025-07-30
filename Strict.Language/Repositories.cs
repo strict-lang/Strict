@@ -203,7 +203,7 @@ public sealed class Repositories
 			for (var index = 0; index < file.Value.DependentTypes.Count; index++)
 				if (filesWithMembers.ContainsKey(file.Value.DependentTypes[index]))
 					return true;
-		return false; //ncrunch: no coverage, TODO: missing tests
+		return false; //ncrunch: no coverage
 	}
 
 	private static Dictionary<string, int> CreateInDegreeGraphMap(Dictionary<string, TypeLines> filesWithImplements)

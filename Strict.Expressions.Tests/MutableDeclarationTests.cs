@@ -314,4 +314,13 @@ public sealed class MutableDeclarationTests : TestExpressions
 				(Body)dummyType.Methods[0].GetBodyAndParseIfNeeded()),
 			Throws.InstanceOf<Body.ValueIsNotMutableAndCannotBeChanged>());
 	}
+
+	[Test]
+	public void NotAllowedToReassignMethodCall() =>
+		Assert.That(
+			() => new Type(type.Package,
+					new TypeLines(nameof(NotAllowedToReassignMethodCall), "mutable Number",
+						"MutableCall Mutable(Number)", "\tMutableCall = Number", "\tNumber = 5")).
+				ParseMembersAndMethods(parser).Methods[0].GetBodyAndParseIfNeeded(),
+			Throws.InstanceOf<Body.ValueIsNotMutableAndCannotBeChanged>());
 }

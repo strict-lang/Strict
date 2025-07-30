@@ -17,7 +17,6 @@ public abstract class Expression(Type returnType, bool isMutable = false) : IEqu
 	/// expression is actually still immutable, it means everything it calls is also immutable, and
 	/// thus it can be evaluated once and will never change its value, a very important optimization.
 	/// </summary>
-	//TODO: seems like this still needs to be used! add tests
 	public bool ContainsAnythingMutable
 	{
 		get

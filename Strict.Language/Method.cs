@@ -19,7 +19,6 @@ public sealed class Method : Context
 		Parser = parser;
 		this.lines = lines;
 		var restSpan = lines[0].AsSpan(Name.Length);
-		//TODO: measure how much time is wasted at parsing time on error checking and skip it on known good code if it was parsed before and worked (and nothing has changed obviously)
 		if (restSpan.StartsWith("()"))
 			throw new EmptyParametersMustBeRemoved(this);
 		if (restSpan.Length == 1)
@@ -133,7 +132,6 @@ public sealed class Method : Context
 				TypeLineNumber + methodLineNumber - 1);
 	}
 
-	//TODO: this fails for nested brackets in arguments like "DoSomething(List(List(Number)) = ((1, 2)))"
 	private static SpanSplitEnumerator SplitParameters(ReadOnlySpan<char> parametersSpan) =>
 		parametersSpan.Contains('(') && (!parametersSpan.Contains(',') ||
 			IsCommaInsideBrackets(parametersSpan, parametersSpan.IndexOf(',')))
@@ -334,7 +332,7 @@ public sealed class Method : Context
 		if (methodBody == null)
 			throw new CannotCallBodyOnTraitMethod();
 		if (methodBody.Expressions.Count > 0)
-			return methodBody; //TODO: currently we only parse once, check if this is ever reachable
+			return methodBody;
 		var expression = methodBody.Parse();
 		if (Tests.Count < 1 && !IsTestPackage())
 			throw new MethodMustHaveAtLeastOneTest(Type, Name, TypeLineNumber);

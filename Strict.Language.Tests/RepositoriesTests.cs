@@ -98,14 +98,6 @@ public class RepositoriesTests
 					new TypeLines("ValidProgram", "has texts", "Run Texts", "\t\"Result \" + 5")).
 				ParseMembersAndMethods(parser);
 		program.Methods[0].GetBodyAndParseIfNeeded();
-		/*TODO: fails only sometimes with:
-		 Strict.Language.ParsingFailed : 	"Result " + 5
-		    at ValidProgram in Base\ValidProgram.strict:line 3
-		   ----> Strict.Language.Context+TypeNotFound : Tab not found in Text
-		    at Strict.Language.Body.Parse() in C:\code\GitHub\strict-lang\Strict\Strict.Language\Body.cs:line 60
-		    at Strict.Language.Method.GetBodyAndParseIfNeeded() in C:\code\GitHub\strict-lang\Strict\Strict.Language\Method.cs:line 337
-		    at Strict.Language.Tests.RepositoriesTests.CheckGenericTypesAreLoadedCorrectlyAfterSorting() in C:\code\GitHub\strict-lang\Strict\Strict.Language.Tests\RepositoriesTests.cs:line 98
-		*/
 		Assert.That(program.Members[0].Type.IsIterator, Is.True);
 		Assert.That(program.Members[0].Type.Members.Count, Is.GreaterThan(1));
 		Assert.That(program.Members[0].Type.Methods.Count, Is.GreaterThan(5));

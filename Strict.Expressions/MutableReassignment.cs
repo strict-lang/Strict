@@ -13,8 +13,7 @@ public sealed class MutableReassignment : ConcreteExpression
 			VariableCall variableCall => variableCall.Variable.Name,
 			ParameterCall parameterCall => parameterCall.Parameter.Name,
 			MemberCall memberCall => memberCall.Member.Name,
-			ListCall listCall => listCall.ToString(),
-			_ => throw new InvalidAssignmentTarget(scope, target) //ncrunch: no coverage
+			_ => target.ToString()
 		};
 		Target = target;
 		Value = newValue;
@@ -26,9 +25,6 @@ public sealed class MutableReassignment : ConcreteExpression
 	public string Name { get; }
 	public Expression Target { get; }
 	public Expression Value { get; }
-
-	public sealed class InvalidAssignmentTarget(Body body, Expression expression)
-		: ParsingFailed(body, expression.ToStringWithType() + " " + expression.GetType().Name); //ncrunch: no coverage
 
 	public static Expression? TryParse(Body body, ReadOnlySpan<char> line) =>
 		line.Contains(" = ", StringComparison.Ordinal)

@@ -69,7 +69,6 @@ internal class TypeMethodFinder(Type type)
 	private static bool IsMethodWithMatchingParametersType(Method method,
 		IReadOnlyList<Type> typesOfArguments)
 	{
-		//TODO: we can probably just cache the result, no need to go through this every time if the parameters passed in are already correct, which should always be the case anyway!
 		if (method is { Name: Method.From, Parameters.Count: 0 } && typesOfArguments.Count == 1 &&
 			method.ReturnType.IsSameOrCanBeUsedAs(typesOfArguments[0], false))
 			return true; //ncrunch: no coverage

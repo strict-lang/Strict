@@ -1,11 +1,12 @@
 ﻿namespace Strict.Language;
 
-public ref struct SpanSplitEnumerator(ReadOnlySpan<char> input,	char splitter,
+public ref struct SpanSplitEnumerator(ReadOnlySpan<char> input, char splitter,
 	StringSplitOptions options)
 {
 	//ncrunch: no coverage start, for performance reasons disabled here
 	private readonly ReadOnlySpan<char> input = input;
 	private int offset = 0;
+	private int bracketDepth = 0;
 	public ReadOnlySpan<char> Current { get; private set; } = default;
 	public readonly SpanSplitEnumerator GetEnumerator() => this;
 
@@ -13,14 +14,28 @@ public ref struct SpanSplitEnumerator(ReadOnlySpan<char> input,	char splitter,
 	{
 		if (offset >= input.Length)
 			return false;
-		for (var index = offset; index < input.Length; index++)
-			if (input[index] == splitter)
-				return GetWordBeforeSplitter(index);
+		var wordBeforeSplitter = GetWordBeforeSplitterAndTrackBrackets();
+		if (wordBeforeSplitter != null)
+			return wordBeforeSplitter.Value;
 		Current = options == StringSplitOptions.TrimEntries
 			? input[offset..].Trim()
 			: input[offset..];
 		offset = input.Length;
 		return true;
+	}
+
+	private bool? GetWordBeforeSplitterAndTrackBrackets()
+	{
+		for (var index = offset; index < input.Length; index++)
+		{
+			if (input[index] == '(')
+				bracketDepth++;
+			else if (input[index] == ')')
+				bracketDepth--;
+			else if (input[index] == splitter && (splitter != ',' || bracketDepth == 0))
+				return GetWordBeforeSplitter(index);
+		}
+		return null;
 	}
 
 	private bool GetWordBeforeSplitter(int index)
