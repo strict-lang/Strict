@@ -156,14 +156,14 @@ public class NumberTests : TestExpressions
 			? 1
 			: throw new NotSupportedException(Case1)) +
 		(!int.TryParse(Case2, out _) &&
-			double.TryParse(Case2, out var result2) && result2 == 7.59
+			double.TryParse(Case2, NumberFormatInfo.InvariantInfo, out var result2) && result2 == 7.59
 				? 1
 				: throw new NotSupportedException(Case2)) +
 		(int.TryParse(Case3, out var result3) && result3 == 10
 			? 1
 			: throw new NotSupportedException(Case3)) +
 		(!int.TryParse(Case4, out _) &&
-			double.TryParse(Case4, out var result4) && result4 == 0.5
+			double.TryParse(Case4, NumberFormatInfo.InvariantInfo, out var result4) && result4 == 0.5
 				? 1
 				: throw new NotSupportedException(Case4)) +
 		(int.TryParse(Case5, out var result5) && result5 == -50
@@ -201,19 +201,19 @@ public class NumberTests : TestExpressions
 	}
 
 	private static int DoubleTryParseCase1To5() =>
-		(double.TryParse(Case5, out var result5) && result5 == -50
+		(double.TryParse(Case5, NumberFormatInfo.InvariantInfo, out var result5) && result5 == -50
 			? 1
 			: throw new NotSupportedException(Case5)) +
-		(double.TryParse(Case4, out var result4) && result4 == 0.5
+		(double.TryParse(Case4, NumberFormatInfo.InvariantInfo, out var result4) && result4 == 0.5
 			? 1
 			: throw new NotSupportedException(Case4)) +
-		(double.TryParse(Case3, out var result3) && result3 == 10
+		(double.TryParse(Case3, NumberFormatInfo.InvariantInfo, out var result3) && result3 == 10
 			? 1
 			: throw new NotSupportedException(Case3)) +
-		(double.TryParse(Case2, out var result2) && result2 == 7.59
+		(double.TryParse(Case2, NumberFormatInfo.InvariantInfo, out var result2) && result2 == 7.59
 			? 1
 			: throw new NotSupportedException(Case2)) +
-		(double.TryParse(Case1, out var result1) && result1 == 1
+		(double.TryParse(Case1, NumberFormatInfo.InvariantInfo, out var result1) && result1 == 1
 			? 1
 			: throw new NotSupportedException(Case1));
 
