@@ -1,12 +1,12 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System.Collections;
+using System.Runtime.CompilerServices;
 
 namespace Strict.Language;
 
-/// <inheritdoc />
 /// <summary>
 /// In C# or Java called namespace or package as well, in Strict this is any code folder.
 /// </summary>
-public class Package : Context
+public class Package : Context, IEnumerable<Type>
 {
 	public Package(string packagePath) : this(RootForPackages, packagePath) { }
 	private static readonly Root RootForPackages = new();
@@ -133,4 +133,6 @@ public class Package : Context
 		FindSubPackage(name) ?? RootForPackages.FindSubPackage(name);
 
 	public void Remove(Type type) => types.Remove(type.Name);
+	public IEnumerator<Type> GetEnumerator() => types.Values.GetEnumerator();
+	IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 }

@@ -1,5 +1,3 @@
-using NUnit.Framework;
-
 namespace Strict.Language.Tests;
 
 public class PackageTests

@@ -1,8 +1,3 @@
-using NUnit.Framework;
-using Strict.Expressions;
-using static Strict.Language.Method;
-using static Strict.Language.NamedType;
-
 namespace Strict.Language.Tests;
 
 public sealed class MethodTests
@@ -24,13 +19,13 @@ public sealed class MethodTests
 
 	[Test]
 	public void InvalidMethodParameters() =>
-		Assert.Throws<InvalidMethodParameters>(
+		Assert.Throws<Method.InvalidMethodParameters>(
 			() => new Method(type, 0, null!, ["ab("]));
 
 	[Test]
 	public void ParametersMustNotBeEmpty() =>
 		Assert.That(() => new Method(type, 0, null!, ["ab()"]),
-			Throws.InstanceOf<EmptyParametersMustBeRemoved>());
+			Throws.InstanceOf<Method.EmptyParametersMustBeRemoved>());
 
 	[TestCase("from(Text)")]
 	[TestCase("from(Number)")]
@@ -38,7 +33,7 @@ public sealed class MethodTests
 	[TestCase("from(start Number, End Number)")]
 	public void UpperCaseParameterWithNoTypeSpecificationIsNotAllowed(string method) =>
 		Assert.That(() => new Method(type, 0, null!, [method]),
-			Throws.InstanceOf<ParametersMustStartWithLowerCase>());
+			Throws.InstanceOf<Method.ParametersMustStartWithLowerCase>());
 
 	[Test]
 	public void ParseDefinition()
@@ -90,7 +85,7 @@ public sealed class MethodTests
 		var appTrait =
 			new Type(type.Package, new TypeLines("DummyApp", "Run")).ParseMembersAndMethods(null!);
 		Assert.That(() => appTrait.Methods[0].GetBodyAndParseIfNeeded(),
-			Throws.InstanceOf<CannotCallBodyOnTraitMethod>());
+			Throws.InstanceOf<Method.CannotCallBodyOnTraitMethod>());
 	}
 
 	[Test]
@@ -215,13 +210,13 @@ public sealed class MethodTests
 	public void MissingParameterDefaultValue() =>
 		Assert.That(
 			() => new Method(type, 0, new MethodExpressionParser(), ["Run(input =)", "	5"]),
-			Throws.InstanceOf<MissingParameterDefaultValue>());
+			Throws.InstanceOf<Method.MissingParameterDefaultValue>());
 
 	[Test]
 	public void ParameterWithTypeNameAndInitializerIsForbidden() =>
 		Assert.That(
 			() => new Method(type, 0, new MethodExpressionParser(), ["Run(input Number = 5)", "	5"]),
-			Throws.InstanceOf<AssignmentWithInitializerTypeShouldNotHaveNameWithType>());
+			Throws.InstanceOf<NamedType.AssignmentWithInitializerTypeShouldNotHaveNameWithType>());
 
 	[Test]
 	public void MethodMustHaveAtLeastOneTest() =>
@@ -229,7 +224,7 @@ public sealed class MethodTests
 			() => new Method(
 				new Type(new Package(nameof(MethodMustHaveAtLeastOneTest)), new MockRunTypeLines()), 0,
 				new MethodExpressionParser(), ["NoTestMethod Number", "	5"]).GetBodyAndParseIfNeeded(),
-			Throws.InstanceOf<MethodMustHaveAtLeastOneTest>());
+			Throws.InstanceOf<Method.MethodMustHaveAtLeastOneTest>());
 
 	[Test]
 	public void MethodWithTestsAreAllowed()

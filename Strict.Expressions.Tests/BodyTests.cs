@@ -1,8 +1,4 @@
-﻿using NUnit.Framework;
-using Strict.Language;
-using Type = Strict.Language.Type;
-
-namespace Strict.Expressions.Tests;
+﻿namespace Strict.Expressions.Tests;
 
 public sealed class BodyTests : TestExpressions
 {

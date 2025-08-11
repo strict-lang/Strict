@@ -1,7 +1,4 @@
-﻿using NUnit.Framework;
-using Strict.Language;
-
-namespace Strict.Expressions.Tests;
+﻿namespace Strict.Expressions.Tests;
 
 public sealed class ShuntingYardTests
 {

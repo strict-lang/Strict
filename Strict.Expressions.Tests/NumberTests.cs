@@ -2,9 +2,6 @@ using System.Globalization;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Engines;
 using BenchmarkDotNet.Running;
-using NUnit.Framework;
-using Strict.Language;
-using Type = Strict.Language.Type;
 
 namespace Strict.Expressions.Tests;
 

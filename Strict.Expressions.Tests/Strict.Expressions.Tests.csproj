@@ -21,4 +21,9 @@
     <ProjectReference Include="..\Strict.Language.Tests\Strict.Language.Tests.csproj" />
   </ItemGroup>
 
+	<ItemGroup>
+		<Using Include="NUnit.Framework" />
+		<Using Include="Strict.Language" />
+	</ItemGroup>
+
 </Project>

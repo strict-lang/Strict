@@ -1,6 +1,5 @@
 ﻿using System.Diagnostics;
 using System.Text;
-using NUnit.Framework;
 using NUnit.Framework.Interfaces;
 
 namespace Strict.Expressions.Tests;

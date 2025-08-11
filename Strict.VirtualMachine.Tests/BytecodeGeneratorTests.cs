@@ -1,6 +1,4 @@
-﻿using NUnit.Framework;
-
-namespace Strict.Runtime.Tests;
+﻿namespace Strict.Runtime.Tests;
 
 public sealed class ByteCodeGeneratorTests : BaseVirtualMachineTests
 {

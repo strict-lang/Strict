@@ -1,7 +1,4 @@
-using NUnit.Framework;
-using Strict.Language;
 using Strict.Language.Tests;
-using Type = Strict.Language.Type;
 
 namespace Strict.Expressions.Tests;
 

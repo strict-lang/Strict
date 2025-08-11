@@ -30,4 +30,11 @@
     <ProjectReference Include="..\Strict.Validators\Strict.Validators.csproj" />
   </ItemGroup>
 
+	<ItemGroup>
+		<Using Include="NUnit.Framework" />
+		<Using Include="Strict.Expressions" />
+		<Using Include="Strict.Language" />
+		<Using Include="Strict.Language.Tests" />
+	</ItemGroup>
+
 </Project>

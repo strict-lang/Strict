@@ -1,9 +1,10 @@
+#if TODO //when visitors are fixed!
 using Strict.Language;
 using Strict.Expressions;
 
 namespace Strict.Validators;
 
-public sealed record ConstantFoldingValidator(IEnumerable<Method> Methods) : Validator
+public sealed record ExpressionOptimizer(IEnumerable<Method> Methods) : Validator
 {
 	public void Validate()
 	{
@@ -82,3 +83,4 @@ public sealed record ConstantFoldingValidator(IEnumerable<Method> Methods) : Val
 
 	public sealed class ImpossibleConstantCast : Exception;
 }
+#endif

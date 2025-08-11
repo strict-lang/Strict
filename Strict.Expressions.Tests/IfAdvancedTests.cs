@@ -1,8 +1,3 @@
-using NUnit.Framework;
-using Strict.Language;
-using static Strict.Expressions.If;
-using Type = Strict.Language.Type;
-
 namespace Strict.Expressions.Tests;
 
 public sealed class IfAdvancedTests : TestExpressions
@@ -214,7 +209,7 @@ public sealed class IfAdvancedTests : TestExpressions
 			"	\"don't matter\"")).ParseMembersAndMethods(new MethodExpressionParser());
 		// @formatter:on
 		Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(),
-			Throws.InstanceOf<ReturnTypeOfThenAndElseMustHaveMatchingType>());
+			Throws.InstanceOf<If.ReturnTypeOfThenAndElseMustHaveMatchingType>());
 	}
 
 	[Test]

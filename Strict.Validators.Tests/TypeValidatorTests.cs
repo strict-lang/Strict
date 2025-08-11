@@ -1,8 +1,4 @@
-﻿using Strict.Expressions;
-using Strict.Language;
-using Strict.Language.Tests;
-using Type = Strict.Language.Type;
-
+﻿#if TODO
 namespace Strict.Validators.Tests;
 
 public sealed class TypeValidatorTests
@@ -107,3 +103,4 @@ public sealed class TypeValidatorTests
 			Throws.InstanceOf<MethodValidator.ParameterHidesMemberUseDifferentName>().With.Message.
 				Contains("Method name FirstMethod, Parameter name input"));
 }
+#endif

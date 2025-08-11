@@ -1,8 +1,3 @@
-using NUnit.Framework;
-using Strict.Expressions;
-using Strict.Language;
-using Type = Strict.Language.Type;
-
 namespace Strict.Runtime.Tests;
 
 [Ignore("TODO: fix later")]

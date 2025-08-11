@@ -1,6 +1,4 @@
-﻿using NUnit.Framework;
-
-namespace Strict.Expressions.Tests;
+﻿namespace Strict.Expressions.Tests;
 
 public sealed class ListCallTests : TestExpressions
 {

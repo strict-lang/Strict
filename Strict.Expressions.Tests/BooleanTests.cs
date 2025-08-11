@@ -1,8 +1,6 @@
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Engines;
 using BenchmarkDotNet.Running;
-using NUnit.Framework;
-using Strict.Language;
 
 namespace Strict.Expressions.Tests;
 

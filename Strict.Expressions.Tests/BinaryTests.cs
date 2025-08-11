@@ -1,6 +1,4 @@
-using NUnit.Framework;
-using Strict.Language;
-using static Strict.Language.Type;
+global using Type = Strict.Language.Type;
 
 namespace Strict.Expressions.Tests;
 
@@ -34,12 +32,12 @@ public sealed class BinaryTests : TestExpressions
 	public void ArgumentsDoNotMatchBinaryOperatorParameters() =>
 		Assert.That(() => ParseExpression("5 / \"text\""),
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.
-				InstanceOf<ArgumentsDoNotMatchMethodParameters>());
+				InstanceOf<Type.ArgumentsDoNotMatchMethodParameters>());
 
 	[Test]
 	public void NoMatchingMethodFound() =>
 		Assert.That(() => ParseExpression("true - \"text\""),
-			Throws.Exception.InnerException.InstanceOf<NoMatchingMethodFound>().With.InnerException.
+			Throws.Exception.InnerException.InstanceOf<Type.NoMatchingMethodFound>().With.InnerException.
 				Message.Contains("not found for TestPackage.Boolean, available methods"));
 
 	[Test]
@@ -58,7 +56,7 @@ public sealed class BinaryTests : TestExpressions
 	[Test]
 	public void InvalidUsageOfToOperator() =>
 		Assert.That(() => ParseExpression("to(Text)"),
-			Throws.InnerException.InstanceOf<ArgumentsDoNotMatchMethodParameters>());
+			Throws.InnerException.InstanceOf<Type.ArgumentsDoNotMatchMethodParameters>());
 
 	[Test]
 	public void ParseComparison() =>

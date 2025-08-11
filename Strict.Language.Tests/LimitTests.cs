@@ -1,6 +1,4 @@
 ﻿using System.Text;
-using NUnit.Framework;
-using Strict.Expressions;
 
 namespace Strict.Language.Tests;
 

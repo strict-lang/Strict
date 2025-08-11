@@ -1,5 +1,3 @@
-using NUnit.Framework;
-using Strict.Expressions;
 using List = Strict.Expressions.List;
 
 namespace Strict.Language.Tests;

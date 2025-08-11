@@ -1,5 +1,3 @@
-using Strict.Expressions;
-
 namespace Strict.Language.Tests;
 
 /// <summary>

@@ -23,4 +23,9 @@
     <ProjectReference Include="..\Strict.Language\Strict.Language.csproj" />
   </ItemGroup>
 
+	<ItemGroup>
+		<Using Include="NUnit.Framework" />
+		<Using Include="Strict.Expressions" />
+	</ItemGroup>
+
 </Project>

@@ -23,4 +23,11 @@
 		<ProjectReference Include="..\Strict.VirtualMachine\Strict.Runtime.csproj" />
 	</ItemGroup>
 
+	<ItemGroup>
+		<Using Include="NUnit.Framework" />
+		<Using Include="Strict.Language" />
+		<Using Include="Strict.Language.Tests" />
+		<Using Include="Strict.Expressions" />
+		<Using Include="Strict.Expressions.Tests" />
+	</ItemGroup>
 </Project>

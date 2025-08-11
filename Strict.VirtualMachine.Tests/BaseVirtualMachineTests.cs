@@ -1,8 +1,4 @@
-﻿using Strict.Expressions;
-using Strict.Expressions.Tests;
-using Strict.Language;
-using Strict.Language.Tests;
-using Type = Strict.Language.Type;
+﻿global using Type = Strict.Language.Type;
 
 namespace Strict.Runtime.Tests;
 

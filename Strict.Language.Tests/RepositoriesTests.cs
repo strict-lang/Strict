@@ -2,8 +2,6 @@ using System.IO.Compression;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Engines;
 using BenchmarkDotNet.Running;
-using NUnit.Framework;
-using Strict.Expressions;
 
 namespace Strict.Language.Tests;
 

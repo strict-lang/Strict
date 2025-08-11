@@ -1,8 +1,4 @@
-using NUnit.Framework;
-using Strict.Language;
 using Strict.Language.Tests;
-using static Strict.Expressions.ConstantDeclaration;
-using Type = Strict.Language.Type;
 
 namespace Strict.Expressions.Tests;
 
@@ -21,7 +17,7 @@ public class ConstantDeclarationTests : TestExpressions
 	[Test]
 	public void MissingConstantValue() =>
 		Assert.That(() => ParseExpression("constant number"),
-			Throws.InstanceOf<MissingAssignmentValueExpression>());
+			Throws.InstanceOf<ConstantDeclaration.MissingAssignmentValueExpression>());
 
 	[Test]
 	public void ParseNumber()

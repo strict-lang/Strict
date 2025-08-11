@@ -1,7 +1,4 @@
-﻿using NUnit.Framework;
-using Strict.Expressions;
-
-namespace Strict.Language.Tests;
+﻿namespace Strict.Language.Tests;
 
 public sealed class EnumTests
 {
