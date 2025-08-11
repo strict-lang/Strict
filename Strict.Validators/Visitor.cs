@@ -13,21 +13,21 @@ namespace Strict.Validators;
 /// </summary>
 public abstract class Visitor
 {
-	public virtual void Visit(Package package, object? context = null)
+	public void Visit(Package package, object? context = null)
 	{
 		foreach (var type in package)
 			Visit(type, context);
 	}
 
-	public virtual void Visit(Type type, object? context = null)
+	public void Visit(Type type, object? context = null)
 	{
 		foreach (var member in type.Members)
 			TryVisitExpression(member.InitialValue, context);
 		foreach (var method in type.Methods)
-			Visit(method, context);
+			Visit(method, context: context);
 	}
 
-	public virtual void Visit(Method method, object? context = null, bool forceParsingBody = false)
+	public void Visit(Method method, bool forceParsingBody = false, object? context = null)
 	{
 		foreach (var parameter in method.Parameters)
 			TryVisitExpression(parameter.DefaultValue, context);
@@ -46,7 +46,7 @@ public abstract class Visitor
 				Visit(childExpression, context);
 	}
 
-	public virtual void Visit(Expression expression, object? context = null)
+	public void Visit(Expression expression, object? context = null)
 	{
 		if (expression is Body body)
 			VisitBody(body, context);

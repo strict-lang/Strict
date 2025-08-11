@@ -12,22 +12,22 @@ public sealed class MethodExpressionParserTests : TestExpressions
 	[Test]
 	public void ParseSingleLine()
 	{
-		var body = new Method(type, 0, this, [MethodTests.Run, MethodTests.LetNumber]).
+		var body = new Method(type, 0, this, [MethodTests.Run, MethodTests.ConstantNumber]).
 			GetBodyAndParseIfNeeded();
 		Assert.That(body.ReturnType, Is.EqualTo(type.FindType(Base.Number)));
 		Assert.That(body, Is.TypeOf<ConstantDeclaration>());
 		Assert.That(body.ReturnType, Is.EqualTo(number.ReturnType));
-		Assert.That(body.ToString(), Is.EqualTo(MethodTests.LetNumber[1..]));
+		Assert.That(body.ToString(), Is.EqualTo(MethodTests.ConstantNumber[1..]));
 	}
 
 	[Test]
 	public void ParseMultipleLines()
 	{
 		var body = (Body)new Method(type, 0, this, [
-			MethodTests.Run, MethodTests.LetNumber, MethodTests.LetOther
+			MethodTests.Run, MethodTests.ConstantNumber, MethodTests.LetOther
 		]).GetBodyAndParseIfNeeded();
 		Assert.That(body.Expressions, Has.Count.EqualTo(2));
-		Assert.That(body.Expressions[0].ToString(), Is.EqualTo(MethodTests.LetNumber[1..]));
+		Assert.That(body.Expressions[0].ToString(), Is.EqualTo(MethodTests.ConstantNumber[1..]));
 		Assert.That(body.Expressions[1].ToString(), Is.EqualTo(MethodTests.LetOther[1..]));
 	}
 
@@ -37,7 +37,7 @@ public sealed class MethodExpressionParserTests : TestExpressions
 		var body = (Body)new Method(type, 0, this, MethodTests.NestedMethodLines).
 			GetBodyAndParseIfNeeded();
 		Assert.That(body.Expressions, Has.Count.EqualTo(3));
-		Assert.That(body.Expressions[0].ToString(), Is.EqualTo(MethodTests.LetNumber[1..]));
+		Assert.That(body.Expressions[0].ToString(), Is.EqualTo(MethodTests.ConstantNumber[1..]));
 		Assert.That(body.Expressions[1].ToString(),
 			Is.EqualTo(MethodTests.NestedMethodLines[2][1..] + "\r\n" +
 				MethodTests.NestedMethodLines[3][1..]));
@@ -63,6 +63,6 @@ public sealed class MethodExpressionParserTests : TestExpressions
 	[Test]
 	public void ParseInvalidTestException() =>
 		Assert.That(() => (Body)new Method(type, 0, this, [
-			MethodTests.Run, MethodTests.LetNumber, "\tError number"
+			MethodTests.Run, MethodTests.ConstantNumber, "\tError number"
 		]).GetBodyAndParseIfNeeded(), Throws.InnerException.InstanceOf<ArgumentException>());
 }

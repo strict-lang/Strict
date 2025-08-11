@@ -76,18 +76,18 @@ public class ExpressionParserTests : ExpressionParser
 	[Test]
 	public void GetSingleLine()
 	{
-		var method = new Method(type, 0, this, ["Run", MethodTests.LetNumber]);
+		var method = new Method(type, 0, this, ["Run", MethodTests.ConstantNumber]);
 		Assert.That(method.lines, Has.Count.EqualTo(2));
 		Assert.That(method.lines[0], Is.EqualTo("Run"));
-		Assert.That(method.lines[1], Is.EqualTo(MethodTests.LetNumber));
+		Assert.That(method.lines[1], Is.EqualTo(MethodTests.ConstantNumber));
 	}
 
 	[Test]
 	public void GetMultipleLines()
 	{
-		var method = new Method(type, 0, this, ["Run", MethodTests.LetNumber, MethodTests.LetOther]);
+		var method = new Method(type, 0, this, ["Run", MethodTests.ConstantNumber, MethodTests.LetOther]);
 		Assert.That(method.lines, Has.Count.EqualTo(3));
-		Assert.That(method.lines[1], Is.EqualTo(MethodTests.LetNumber));
+		Assert.That(method.lines[1], Is.EqualTo(MethodTests.ConstantNumber));
 		Assert.That(method.lines[2], Is.EqualTo(MethodTests.LetOther));
 	}
 
@@ -96,7 +96,7 @@ public class ExpressionParserTests : ExpressionParser
 	{
 		var method = new Method(type, 0, this, MethodTests.NestedMethodLines);
 		Assert.That(method.lines, Has.Length.EqualTo(5));
-		Assert.That(method.lines[1], Is.EqualTo(MethodTests.LetNumber));
+		Assert.That(method.lines[1], Is.EqualTo(MethodTests.ConstantNumber));
 		Assert.That(method.lines[2], Is.EqualTo("	if bla is 5"));
 		Assert.That(method.lines[3], Is.EqualTo("		return true"));
 		Assert.That(method.lines[4], Is.EqualTo("	false"));

@@ -6,11 +6,11 @@ public sealed class TypeParser(Type type, string[] lines)
 
 	public void ParseMembersAndMethods(ExpressionParser parser)
 	{
-		for (; LineNumber < lines.Length; LineNumber++)
+		for (LineNumber = 0; LineNumber < lines.Length; LineNumber++)
 			TryParse(parser, LineNumber);
 	}
 
-	internal int LineNumber; //slower, especially in debug: { get; private set; }
+	internal int LineNumber = -1; //slower, especially in debug: { get; private set; }
 
 	private void TryParse(ExpressionParser parser, int rememberStartMethodLineNumber)
 	{

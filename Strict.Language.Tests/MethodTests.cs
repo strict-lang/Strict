@@ -3,9 +3,14 @@ namespace Strict.Language.Tests;
 public sealed class MethodTests
 {
 	[SetUp]
-	public void CreateType() => type = new Type(new TestPackage(), new MockRunTypeLines());
+	public void CreateType()
+	{
+		type = new Type(new TestPackage(), new MockRunTypeLines());
+		parser = new MethodExpressionParser();
+	}
 
 	private Type type = null!;
+	private MethodExpressionParser parser = null!;
 
 	[Test]
 	public void MustMustHaveAValidName() =>
@@ -70,12 +75,12 @@ public sealed class MethodTests
 	public static readonly string[] NestedMethodLines =
 	[
 		"IsBlaFive Boolean",
-		LetNumber,
+		ConstantNumber,
 		"	if bla is 5",
 		"		return true",
 		"	false"
 	];
-	public const string LetNumber = "	constant number = 5";
+	public const string ConstantNumber = "	constant number = 5";
 	public const string LetOther = "	constant other = 3";
 	public const string LetErrorMessage = "\tconstant errorMessage = \"some error\"";
 
@@ -91,7 +96,7 @@ public sealed class MethodTests
 	[Test]
 	public void AccessValidMethodParametersInMethodBody()
 	{
-		var method = new Method(type, 0, new MethodExpressionParser(), [
+		var method = new Method(type, 0, parser, [
 			"Run(variable Text)",
 			"	constant result = variable + \"5\""
 		]);
@@ -106,25 +111,19 @@ public sealed class MethodTests
 	[TestCase("Run(number, input Generic, generic)")]
 	[TestCase("Run(number) Generic")]
 	public void GenericMethods(string methodHeader) =>
-		Assert.That(new Method(type, 0, new MethodExpressionParser(), [
-			methodHeader
-		]).IsGeneric, Is.True);
+		Assert.That(new Method(type, 0, parser, [methodHeader]).IsGeneric, Is.True);
 
 	[TestCase("Run(text) Number")]
 	[TestCase("Run(variable Number, input Text) Boolean")]
 	public void NonGenericMethods(string methodHeader) =>
-		Assert.That(new Method(type, 0, new MethodExpressionParser(), [
-			methodHeader
-		]).IsGeneric, Is.False);
+		Assert.That(new Method(type, 0, parser, [methodHeader]).IsGeneric, Is.False);
 
 	[Test]
 	public void CloningWithSameParameterType()
 	{
-		var method = new Method(type, 0, new MethodExpressionParser(), [
-			"Run(variable Text)",
-			"	\"5\""
-		]);
-		Assert.That(method.Parameters[0].CloneWithImplementationType(type.GetType(Base.Text)), Is.EqualTo(method.Parameters[0]));
+		var method = new Method(type, 0, parser, ["Run(variable Text)", "	\"5\""]);
+		Assert.That(method.Parameters[0].CloneWithImplementationType(type.GetType(Base.Text)),
+			Is.EqualTo(method.Parameters[0]));
 	}
 
 	[Test]
@@ -136,7 +135,7 @@ public sealed class MethodTests
 				"AddFive(variable Text) Text",
 				"	AddFive(\"5\") is \"55\"",
 				"	AddFive(\"6\") is \"65\"",
-				"	variable + \"5\"")).ParseMembersAndMethods(new MethodExpressionParser());
+				"	variable + \"5\"")).ParseMembersAndMethods(parser);
 		customType.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(customType.Methods[0].Tests.Count, Is.EqualTo(2));
 	}
@@ -148,7 +147,7 @@ public sealed class MethodTests
 			new TypeLines(nameof(SplitTestExpressions),
 				"has logger",
 				"ConditionalExpressionIsNotTest Boolean",
-				"	5 is 5 ? true else false")).ParseMembersAndMethods(new MethodExpressionParser());
+				"	5 is 5 ? true else false")).ParseMembersAndMethods(parser);
 		customType.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(customType.Methods[0].Tests.Count, Is.EqualTo(0));
 	}
@@ -156,10 +155,8 @@ public sealed class MethodTests
 	[Test]
 	public void MethodParameterWithGenericTypeImplementations()
 	{
-		var method = new Method(type, 0, new MethodExpressionParser(), [
-			"Run(iterator Iterator(Text), index Number)",
-			"	\"5\""
-		]);
+		var method = new Method(type, 0, parser,
+			["Run(iterator Iterator(Text), index Number)", "	\"5\""]);
 		Assert.That(method.Parameters[0].Name, Is.EqualTo("iterator"));
 		Assert.That(method.Parameters[0].Type, Is.EqualTo(type.GetType("Iterator(Text)")));
 		Assert.That(method.Parameters[1].Name, Is.EqualTo("index"));
@@ -169,20 +166,14 @@ public sealed class MethodTests
 	[Test]
 	public void MethodParameterWithDefaultValue()
 	{
-		var method = new Method(type, 0, new MethodExpressionParser(), [
-			"Run(input = \"Hello\")",
-			"	\"5\""
-		]);
+		var method = new Method(type, 0, parser, ["Run(input = \"Hello\")", "	\"5\""]);
 		Assert.That(method.Parameters[0].DefaultValue, Is.EqualTo(new Text(type, "Hello")));
 	}
 
 	[Test]
 	public void ImmutableMethodParameterValueCannotBeChanged()
 	{
-		var method = new Method(type, 0, new MethodExpressionParser(), [
-			"Run(input = \"Hello\")",
-			"	input = \"Hi\""
-		]);
+		var method = new Method(type, 0, parser, ["Run(input = \"Hello\")", "	input = \"Hi\""]);
 		Assert.That(() => method.GetBodyAndParseIfNeeded(),
 			Throws.InstanceOf<Body.ValueIsNotMutableAndCannotBeChanged>());
 	}
@@ -190,32 +181,29 @@ public sealed class MethodTests
 	[Test]
 	public void ImmutableMethodVariablesCannotBeChanged()
 	{
-		var method = new Method(type, 0, new MethodExpressionParser(), [
-			"Run",
-			"	constant random = \"Hi\"",
-			"	random = \"Ho\""
-		]);
+		var method = new Method(type, 0, parser,
+			["Run", "	constant random = \"Hi\"", "	random = \"Ho\""]);
 		Assert.That(() => method.GetBodyAndParseIfNeeded(),
 			Throws.InstanceOf<Body.ValueIsNotMutableAndCannotBeChanged>());
 	}
 
 	[Test]
 	public void ValueTypeNotMatchingWithAssignmentType() =>
-		Assert.That(() => new Method(type, 0, new MethodExpressionParser(), [
-				"Run(mutable input = 0)", "	input = \"5\""
-			]).GetBodyAndParseIfNeeded(),
+		Assert.That(
+			() => new Method(type, 0, parser, ["Run(mutable input = 0)", "	input = \"5\""]).
+				GetBodyAndParseIfNeeded(),
 			Throws.InstanceOf<MutableReassignment.ValueTypeNotMatchingWithAssignmentType>());
 
 	[Test]
 	public void MissingParameterDefaultValue() =>
 		Assert.That(
-			() => new Method(type, 0, new MethodExpressionParser(), ["Run(input =)", "	5"]),
+			() => new Method(type, 0, parser, ["Run(input =)", "	5"]),
 			Throws.InstanceOf<Method.MissingParameterDefaultValue>());
 
 	[Test]
 	public void ParameterWithTypeNameAndInitializerIsForbidden() =>
 		Assert.That(
-			() => new Method(type, 0, new MethodExpressionParser(), ["Run(input Number = 5)", "	5"]),
+			() => new Method(type, 0, parser, ["Run(input Number = 5)", "	5"]),
 			Throws.InstanceOf<NamedType.AssignmentWithInitializerTypeShouldNotHaveNameWithType>());
 
 	[Test]
@@ -223,7 +211,7 @@ public sealed class MethodTests
 		Assert.That(
 			() => new Method(
 				new Type(new Package(nameof(MethodMustHaveAtLeastOneTest)), new MockRunTypeLines()), 0,
-				new MethodExpressionParser(), ["NoTestMethod Number", "	5"]).GetBodyAndParseIfNeeded(),
+				parser, ["NoTestMethod Number", "	5"]).GetBodyAndParseIfNeeded(),
 			Throws.InstanceOf<Method.MethodMustHaveAtLeastOneTest>());
 
 	[Test]
@@ -233,7 +221,7 @@ public sealed class MethodTests
 			new Package(new TestPackage(), nameof(MethodWithTestsAreAllowed)),
 			new TypeLines(nameof(MethodWithTestsAreAllowed), "has logger",
 				"MethodWithTestsAreAllowed Number", "\tMethodWithTestsAreAllowed is 5", "\t5"));
-		methodWithTestsType.ParseMembersAndMethods(new MethodExpressionParser());
+		methodWithTestsType.ParseMembersAndMethods(parser);
 		Assert.That(() => methodWithTestsType.Methods[0].GetBodyAndParseIfNeeded(), Throws.Nothing);
 	}
 
@@ -255,7 +243,7 @@ public sealed class MethodTests
 			"\t\treturn false",
 			"\t\"Work not started yet\""));
 			// @formatter:on
-		multipleReturnTypeMethod.ParseMembersAndMethods(new MethodExpressionParser());
+		multipleReturnTypeMethod.ParseMembersAndMethods(parser);
 		Assert.That(() => multipleReturnTypeMethod.Methods[0].GetBodyAndParseIfNeeded(), Throws.Nothing);
 		Assert.That(multipleReturnTypeMethod.Methods[0].ReturnType, Is.InstanceOf<OneOfType>());
 		Assert.That(multipleReturnTypeMethod.Methods[0].ReturnType.Name, Is.EqualTo("BooleanOrText"));
@@ -265,8 +253,8 @@ public sealed class MethodTests
 	public void ParseMethodWithParametersAndMultipleReturnType()
 	{
 		var multipleReturnTypeMethod = new Type(
-			new Package(new TestPackage(), nameof(ParseMethodWithParametersAndMultipleReturnType)), new TypeLines(
-				"Processor",
+			new Package(new TestPackage(), nameof(ParseMethodWithParametersAndMultipleReturnType)),
+			new TypeLines("Processor",
 			// @formatter:off
 			"has progress Number",
 			"IsJobDone(number, text) Boolean or Text",
@@ -279,7 +267,7 @@ public sealed class MethodTests
 			"\t\treturn false",
 			"\t\"Work not started yet\""));
 			// @formatter:on
-		multipleReturnTypeMethod.ParseMembersAndMethods(new MethodExpressionParser());
+		multipleReturnTypeMethod.ParseMembersAndMethods(parser);
 		Assert.That(() => multipleReturnTypeMethod.Methods[0].GetBodyAndParseIfNeeded(), Throws.Nothing);
 	}
 
@@ -309,7 +297,7 @@ public sealed class MethodTests
 			"\telse",
 			"\t\t\"Job is in progress\""));
 			// @formatter:on
-		multipleReturnTypeMethod.ParseMembersAndMethods(new MethodExpressionParser());
+		multipleReturnTypeMethod.ParseMembersAndMethods(parser);
 		Assert.That(() => multipleReturnTypeMethod.Methods[0].GetBodyAndParseIfNeeded(), Throws.Nothing);
 		Assert.That(() => multipleReturnTypeMethod.Methods[1].GetBodyAndParseIfNeeded(), Throws.Nothing);
 	}

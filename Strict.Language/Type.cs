@@ -75,24 +75,25 @@ public class Type : Context
 	/// </summary>
 	public Type ParseMembersAndMethods(ExpressionParser parser)
 	{
+		if (typeParser.LineNumber >= 0)
+			throw new TypeWasAlreadyParsed(this);
 		typeParser.ParseMembersAndMethods(parser);
-		lineNumber = typeParser.LineNumber;
 		ValidateMethodAndMemberCountLimits();
 		// ReSharper disable once ForCanBeConvertedToForeach, for performance reasons:
 		// https://codeblog.jonskeet.uk/2009/01/29/for-vs-foreach-on-arrays-and-lists/
 		for (var index = 0; index < members.Count; index++)
 		{
 			var trait = members[index].Type;
-			if (trait.IsTrait)
+			if (trait.typeParser.LineNumber > 0 && trait.IsTrait)
 				CheckIfTraitIsImplementedFullyOrNone(trait);
 		}
 		return this;
 	}
 
-	private int lineNumber;
+	public class TypeWasAlreadyParsed(Type type) : Exception(type.ToString());
 
 	public sealed class MustImplementAllTraitMethodsOrNone(Type type, string traitName,
-		IEnumerable<Method> missingTraitMethods) : ParsingFailed(type, type.lineNumber,
+		IEnumerable<Method> missingTraitMethods) : ParsingFailed(type, type.typeParser.LineNumber,
 		"Trait Type:" + traitName + " Missing methods: " + string.Join(", ", missingTraitMethods));
 
 	private void ValidateMethodAndMemberCountLimits()
@@ -105,7 +106,7 @@ public class Type : Context
 		if (IsDataType || IsEnum)
 			return;
 		if (methods.Count == 0 && members.Count < 2 && !IsNoneAnyOrBoolean() && Name != Base.Name)
-			throw new NoMethodsFound(this, lineNumber);
+			throw new NoMethodsFound(this, typeParser.LineNumber);
 		if (methods.Count > Limit.MethodCount && Package.Name != nameof(Base))
 			throw new MethodCountMustNotExceedLimit(this);
 	}
@@ -116,10 +117,22 @@ public class Type : Context
 	/// have data (like Color, which has 4 Numbers) are actually pure Data types!
 	/// </summary>
 	public bool IsDataType =>
-		methods.Count == 0 && (members.Count > 1 || members is [{ InitialValue: not null }]) ||
-		Name == Base.Number;
+		CheckIfParsed() && methods.Count == 0 &&
+		(members.Count > 1 || members is [{ InitialValue: not null }]) || Name == Base.Number;
+
+	private bool CheckIfParsed()
+	{
+		if (lines.Length > 1 && typeParser.LineNumber == -1)
+			throw new TypeIsNotParsedCallParseMembersAndMethods(this);
+		return true;
+	}
+
+	private sealed class TypeIsNotParsedCallParseMembersAndMethods(Type type)
+		: Exception(type.ToString());
+
 	public bool IsEnum =>
-		methods.Count == 0 && members.Count > 1 && members.All(m => m.IsConstant || m.Type.IsEnum);
+		CheckIfParsed() && methods.Count == 0 && members.Count > 1 &&
+		members.All(m => m.IsConstant || m.Type.IsEnum);
 
 	public sealed class MemberCountShouldNotExceedLimit(Type type, int limit) : ParsingFailed(type,
 		0, $"{type.Name} type has {type.members.Count} members, max: {limit}");
@@ -149,12 +162,13 @@ public class Type : Context
 	protected readonly List<Member> members = [];
 	public List<Method> Methods => methods;
 	protected readonly List<Method> methods = [];
-	public bool IsTrait => Members.Count == 0 && Name != Base.Number && Name != Base.Boolean;
+	public bool IsTrait =>
+		Name != Base.Number && Name != Base.Boolean && CheckIfParsed() && Members.Count == 0;
 	public Dictionary<string, Type> AvailableMemberTypes
 	{
 		get
 		{
-			if (cachedAvailableMemberTypes != null)
+			if (CheckIfParsed() && cachedAvailableMemberTypes != null)
 				return cachedAvailableMemberTypes;
 			cachedAvailableMemberTypes = new Dictionary<string, Type>();
 			foreach (var member in members)
@@ -228,7 +242,12 @@ public class Type : Context
 
 	public string FilePath => Path.Combine(Package.FolderPath, Name) + Extension;
 	public const string Extension = ".strict";
-	public Member? FindMember(string name) => Members.FirstOrDefault(member => member.Name == name);
+
+	public Member? FindMember(string name)
+	{
+		CheckIfParsed();
+		return Members.FirstOrDefault(member => member.Name == name);
+	}
 
 	public Method? FindMethod(string methodName, IReadOnlyList<Expression> arguments) =>
 		typeMethodFinder.FindMethod(methodName, arguments);
@@ -259,6 +278,7 @@ public class Type : Context
 
 	private bool ExecuteIsIteratorCheck()
 	{
+		CheckIfParsed();
 		foreach (var member in members)
 		{
 			if (cachedEvaluatedMemberTypes.TryGetValue(member.Type.Name, out var result))
@@ -483,7 +503,7 @@ public class Type : Context
 	}
 
 	//ncrunch: no coverage start
-	public class TypeMustBeGenericToCallThis(Type type) : Exception(type.FullName);
+	public sealed class TypeMustBeGenericToCallThis(Type type) : Exception(type.FullName);
 
 	public sealed class InvalidGenericTypeWithoutGenericArguments(Type type) : Exception(
 		"This type is broken and needs to be fixed, check the creation: " + type + ", CreatedBy: " +

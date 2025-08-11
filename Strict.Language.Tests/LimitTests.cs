@@ -5,25 +5,29 @@ namespace Strict.Language.Tests;
 public sealed class LimitTests
 {
 	[SetUp]
-	public void CreatePackage() => package = new TestPackage();
+	public void CreatePackage()
+	{
+		package = new TestPackage();
+		parser = new MethodExpressionParser();
+	}
 
 	private Package package = null!;
+	private MethodExpressionParser parser = null!;
 
 	[Test]
 	public void MethodLengthMustNotExceedTwelve() =>
 		Assert.That(
 			() => CreateType(nameof(MethodLengthMustNotExceedTwelve),
-				CreateProgramWithDuplicateLines(["has logger", "Run(first Number, second Number)"],
-					12, "\tlogger.Log(5)")).ParseMembersAndMethods(new MethodExpressionParser()),
+				CreateProgramWithDuplicateLines(["has logger", "Run(first Number, second Number)"], 12,
+					"\tlogger.Log(5)")).ParseMembersAndMethods(parser),
 			Throws.InstanceOf<Method.MethodLengthMustNotExceedTwelve>().With.Message.
 				Contains($"Method Run has 13 lines but limit is {Limit.MethodLength}"));
 
 	private Type CreateType(string name, string[] lines) =>
-		new Type(package, new TypeLines(name, lines)).ParseMembersAndMethods(
-			new MethodExpressionParser());
+		new Type(package, new TypeLines(name, lines)).ParseMembersAndMethods(parser);
 
-	private static string[] CreateProgramWithDuplicateLines(string[] defaultLines,
-		int count, params string[] linesToDuplicate)
+	private static string[] CreateProgramWithDuplicateLines(string[] defaultLines, int count,
+		params string[] linesToDuplicate)
 	{
 		var program = new string[defaultLines.Length + count * linesToDuplicate.Length];
 		defaultLines.CopyTo(program, 0);
@@ -42,9 +46,10 @@ public sealed class LimitTests
 	[Test]
 	public void MethodParameterCountMustNotExceedLimit() =>
 		Assert.That(() => CreateType(nameof(MethodParameterCountMustNotExceedLimit), [
-				"has logger", "Run(first Number, second Number, third Number, fourth Number, fifth Number)",
+				"has logger",
+				"Run(first Number, second Number, third Number, fourth Number, fifth Number)",
 				"\tlogger.Log(5)"
-			]).ParseMembersAndMethods(new MethodExpressionParser()),
+			]).ParseMembersAndMethods(parser),
 			Throws.InstanceOf<Method.MethodParameterCountMustNotExceedLimit>().With.Message.
 				Contains($"Method Run has parameters count 5 but limit is {Limit.ParameterCount}"));
 
@@ -52,9 +57,8 @@ public sealed class LimitTests
 	public void MethodCountMustNotExceedFifteen() =>
 		Assert.That(
 			() => CreateType(nameof(MethodCountMustNotExceedFifteen),
-					CreateProgramWithDuplicateLines(["has logger"], 16,
-						"Run(first Number, second Number)", "\tfirst")).
-				ParseMembersAndMethods(new MethodExpressionParser()),
+				CreateProgramWithDuplicateLines(["has logger"], 16, "Run(first Number, second Number)",
+					"\tfirst")).ParseMembersAndMethods(parser),
 			Throws.InstanceOf<Type.MethodCountMustNotExceedLimit>().With.Message.Contains(
 				$"Type MethodCountMustNotExceedFifteen has method count 16 but limit is {
 					Limit.MethodCount
@@ -64,8 +68,7 @@ public sealed class LimitTests
 	public void LinesCountMustNotExceedTwoHundredFiftySix() =>
 		Assert.That(
 			() => CreateType(nameof(LinesCountMustNotExceedTwoHundredFiftySix),
-					CreateDuplicateLines(257, "has logger").ToArray()).
-				ParseMembersAndMethods(new MethodExpressionParser()),
+				CreateDuplicateLines(257, "has logger").ToArray()).ParseMembersAndMethods(parser),
 			Throws.InstanceOf<Type.LinesCountMustNotExceedLimit>().With.Message.Contains(
 				$"Type LinesCountMustNotExceedTwoHundredFiftySix has lines count 257 but limit is {
 					Limit.LineCount
@@ -83,7 +86,7 @@ public sealed class LimitTests
 				"				if 8 is 8",
 				"					if 9 is 9",
 				"						logger.Log(5)" // @formatter:on
-			]).ParseMembersAndMethods(new MethodExpressionParser()),
+			]).ParseMembersAndMethods(parser),
 			Throws.InstanceOf<TypeParser.NestingMoreThanFiveLevelsIsNotAllowed>().With.Message.Contains(
 				$"Type NestingMoreThanFiveLevelsIsNotAllowed has more than {
 					Limit.NestingLevel
@@ -97,7 +100,7 @@ public sealed class LimitTests
 				"	constant remainingCans = numberOfCans - (levelCount * levelCount)remainingCans < " +
 				"((levelCount + 1) * (levelCount + 1)) ? levelCount else CalculateCompleteLevelCount(" +
 				"remainingCans, levelCount + 1)"
-			]).ParseMembersAndMethods(new MethodExpressionParser()),
+			]).ParseMembersAndMethods(parser),
 			Throws.InstanceOf<TypeParser.CharacterCountMustBeWithinLimit>().With.Message.Contains(
 				"Type " + nameof(CharacterCountMustBeWithinLimit) +
 				" has character count 196 in line: 4 but limit is " + Limit.CharacterCount));
@@ -106,8 +109,7 @@ public sealed class LimitTests
 	public void MemberCountShouldNotExceedLimit() =>
 		Assert.That(
 			() => CreateType(nameof(MemberCountShouldNotExceedLimit),
-					CreateRandomMemberLines(Limit.MemberCountForEnums + 1)).
-				ParseMembersAndMethods(new MethodExpressionParser()),
+				CreateRandomMemberLines(Limit.MemberCountForEnums + 1)).ParseMembersAndMethods(parser),
 			Throws.InstanceOf<Type.MemberCountShouldNotExceedLimit>().With.Message.Contains(
 				nameof(Type.MemberCountShouldNotExceedLimit) + " type has " +
 				(Limit.MemberCountForEnums + 1) + " members, max: " + Limit.MemberCountForEnums));
@@ -140,30 +142,40 @@ public sealed class LimitTests
 			params string[] code) =>
 		Assert.That(
 			() => CreateType(testName + nameof(NameShouldBeWithinTheLimit), code).
-				ParseMembersAndMethods(new MethodExpressionParser()),
+				ParseMembersAndMethods(parser),
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.
-				InstanceOf<NamedType.NameLengthIsNotWithinTheAllowedLimit>().With.Message.Contains($"Name {memberOrParameterName} " +
-					$"length is {memberOrParameterName.Length} but allowed limit is between 2 and 50"));
+				InstanceOf<NamedType.NameLengthIsNotWithinTheAllowedLimit>().With.Message.Contains(
+					$"Name {memberOrParameterName} " + $"length is {
+						memberOrParameterName.Length
+					} but allowed limit is between 2 and 50"));
 
 	[TestCase("TypeNameWithLengthGreaterThanFiftyIsNotAllowedUseWithinLimit")]
 	[TestCase("T")]
 	public void TypeNameShouldNotExceedTheLimit(string typeName) =>
 		Assert.That(
-			() => CreateType(typeName, ["has number", "Run", "\t5"]).
-				ParseMembersAndMethods(new MethodExpressionParser()),
+			() => CreateType(typeName, ["has number", "Run", "\t5"]).ParseMembersAndMethods(parser),
 			Throws.InstanceOf<NamedType.NameLengthIsNotWithinTheAllowedLimit>().With.Message.Contains(
 				$"Name {typeName} length is {typeName.Length} but allowed limit is between 2 and 50"));
 
-	[TestCase("variablesNameWithLengthGreaterThanFiftyAreNotAllowed")]
-	[TestCase("v")]
-	public void VariableNameShouldNotExceedTheLimit(string variableName) =>
+	[Test]
+	public void VariableNameShouldNotExceedTheLimit() =>
 		Assert.That(
 			() => CreateType(nameof(VariableNameShouldNotExceedTheLimit),
-					["has number", "Run", $"	constant {variableName} = 5"]).
-				ParseMembersAndMethods(new MethodExpressionParser()).Methods[0].GetBodyAndParseIfNeeded(),
+			[
+				"has number", "Run", "\tconstant variablesNameWithLengthGreaterThanFiftyAreNotAllowed = 5"
+			]).Methods[0].GetBodyAndParseIfNeeded(),
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.
 				InstanceOf<NamedType.NameLengthIsNotWithinTheAllowedLimit>().With.Message.
-				Contains($"constant {variableName}"));
+				Contains("constant variablesNameWithLengthGreaterThanFiftyAreNotAllowed"));
+
+	[Test]
+	public void VariableNameShouldNotBeBelowTheLimit() =>
+		Assert.That(
+			() => CreateType(nameof(VariableNameShouldNotBeBelowTheLimit),
+				["has number", "Run", "\tconstant v = 5"]).Methods[0].GetBodyAndParseIfNeeded(),
+			Throws.InstanceOf<ParsingFailed>().With.InnerException.
+				InstanceOf<NamedType.NameLengthIsNotWithinTheAllowedLimit>().With.Message.
+				Contains("constant v"));
 
 	[TestCase(nameof(PackageNameShouldBeWithinTheLimit) + "LimitShouldBeWithinFifty")]
 	[TestCase("P")]
@@ -177,7 +189,7 @@ public sealed class LimitTests
 	public void MethodNameShouldNotExceedTheLimit(string methodName) =>
 		Assert.That(() => CreateType(nameof(MethodNameShouldNotExceedTheLimit), [
 				"has number", methodName, "	constant number = 5"
-			]).ParseMembersAndMethods(new MethodExpressionParser()),
+			]).ParseMembersAndMethods(parser),
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.
 				InstanceOf<NamedType.NameLengthIsNotWithinTheAllowedLimit>().With.Message.Contains(
 					$"Name {

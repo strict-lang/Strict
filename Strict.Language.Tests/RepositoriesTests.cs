@@ -107,7 +107,7 @@ public class RepositoriesTests
 	///  File2 needs File3 and Number
 	///   File3 needs File4
 	///    File4 needs File5 and File6
-	///			 File5 needs Number
+	///			File5 needs Number
 	/// File6 needs File5
 	/// </summary>
 	[Test]
