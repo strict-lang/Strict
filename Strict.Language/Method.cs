@@ -85,7 +85,7 @@ public sealed class Method : Context
 	public ExpressionParser Parser { get; }
 	internal readonly IReadOnlyList<string> lines;
 	private readonly Body? methodBody;
-	public bool WasParsedAlready => methodBody != null;
+	public bool WasParsedAlready => methodBody is { Expressions.Count: > 0 };
 
 	private Type ParseReturnType(Context type, string returnTypeText)
 	{

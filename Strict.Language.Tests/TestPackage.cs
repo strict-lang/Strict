@@ -194,7 +194,7 @@ public class TestPackage : Package
 			"Run",
 			"\tvalue is not \"\"",
 			"+(other) Text",
-			"\treturn value",
+			"\tvalue + other",
 			"digits(number) Numbers",
 			"\tif floor(number / 10) is 0",
 			"\t\treturn (number % 10)",

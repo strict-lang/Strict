@@ -7,13 +7,19 @@
 /// </summary>
 public class ParsingFailed : Exception
 {
-	protected ParsingFailed(Type type, int fileLineNumber, string message = "", string method = "") :
-		base(message + GetClickableStacktraceLine(type, fileLineNumber, method)) { }
+	protected ParsingFailed(Type type, int fileLineNumber, string message = "", string method = "")
+		: base(message + GetClickableStacktraceLine(type, fileLineNumber == 0 && type.LineNumber > 0
+			? type.LineNumber - 1
+			: fileLineNumber, method)) { }
 
 	public static string GetClickableStacktraceLine(Type type, int fileLineNumber, string method) =>
 		"\n   at " + (method == ""
 			? type
-			: method) + " in " + type.FilePath + ":line " + (fileLineNumber + 1);
+			: method) + " in " + type.FilePath + ":line " + (fileLineNumber + 1) + "\n" +
+		// ReSharper disable once ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract
+		(fileLineNumber > 0 && type.Lines != null && fileLineNumber < type.Lines.Length
+			? type.Lines[fileLineNumber]
+			: "");
 
 	public ParsingFailed(Type type, int fileLineNumber, string message, Exception inner) : base(
 		message + GetClickableStacktraceLine(type, fileLineNumber, ""), inner) { }

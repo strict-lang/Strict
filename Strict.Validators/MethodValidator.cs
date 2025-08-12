@@ -100,12 +100,12 @@ public sealed class MethodValidator : Visitor
 
 	private static void ValidateUnusedParameter(Method method, string name)
 	{
-		if (method.GetParameterUsageCount(name) < 2)
-			throw new UnusedMethodParameterMustBeRemoved(method.Type, name);
+		if (method.Name != Method.From && !method.Type.IsTrait && method.GetParameterUsageCount(name) < 2)
+			throw new UnusedMethodParameterMustBeRemoved(method, name);
 	}
 
-	public sealed class UnusedMethodParameterMustBeRemoved(Type type, string name)
-		: ParsingFailed(type, 0, name);
+	public sealed class UnusedMethodParameterMustBeRemoved(Method method, string name)
+		: ParsingFailed(method.Type, method.TypeLineNumber, name);
 
 	private static void ValidateUnchangedMutableParameter(Method method, Parameter parameter, object? context)
 	{
@@ -119,7 +119,7 @@ public sealed class MethodValidator : Visitor
 
 	private static void ValidateMethodParameterHidesAnyTypeMember(string parameterName, Method method)
 	{
-		if (method.Type.Members.Any(member => member.Name == parameterName))
+		if (method.Name != Method.From && method.Type.Members.Any(member => member.Name == parameterName))
 			throw new ParameterHidesMemberUseDifferentName(method.Type, method.Name, parameterName);
 	}
 

@@ -22,6 +22,8 @@ public abstract class Visitor
 
 	public void Visit(Type type, object? context = null)
 	{
+		if (type.Name == Base.Any)
+			return;
 		foreach (var member in type.Members)
 			TryVisit(member.InitialValue, context);
 		foreach (var method in type.Methods)

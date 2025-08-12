@@ -129,4 +129,7 @@ public sealed class MethodValidatorTests
 			Throws.InstanceOf<MethodValidator.ListArgumentCanBeAutoParsedWithoutDoubleBrackets>().With.
 				Message.Contains("CheckInputLengthAndGetResult((1, 2))"));
 	}
+
+	[Test]
+	public void CheckPackage() => Assert.That(() => validator.Visit(type.Package), Throws.Nothing);
 }
