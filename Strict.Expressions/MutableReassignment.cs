@@ -4,7 +4,8 @@ namespace Strict.Expressions;
 
 public sealed class MutableReassignment : ConcreteExpression
 {
-	private MutableReassignment(Body scope, Expression target, Expression newValue) : base(newValue.ReturnType, true)
+	private MutableReassignment(Body scope, Expression target, Expression newValue) : base(
+		newValue.ReturnType, true)
 	{
 		if (target is { IsMutable: false } && scope.Method.Name != Method.From)
 			throw new Body.ValueIsNotMutableAndCannotBeChanged(scope, target.ToString());

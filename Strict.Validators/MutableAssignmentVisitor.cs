@@ -9,7 +9,6 @@ namespace Strict.Validators;
 /// </summary>
 public sealed class MutableAssignmentVisitor(NamedType typeToSearchFor) : Visitor
 {
-	private readonly List<MutableReassignment> foundAssignments = new();
 	
 	protected override void HandleExpression(Expression expression)
 	{

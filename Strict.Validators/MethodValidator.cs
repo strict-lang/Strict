@@ -24,16 +24,24 @@ public sealed class MethodValidator : Visitor
 			base.VisitBody(expression, context);
 			return;
 		}
-		var usedVariables = new HashSet<string>();
-		base.VisitBody(expression, usedVariables);
-		ValidateUnusedVariables(body, usedVariables);
+		context ??= new VariableUsages();
+		base.VisitBody(expression, context);
+		ValidateUnusedVariables(body, context);
 		ValidateMethodVariablesHidesAnyTypeMember(body, body.Method.Type.Members);
 	}
 
-	private static void ValidateUnusedVariables(Body body, IReadOnlySet<string> usedVariables)
+	private sealed class VariableUsages
 	{
+		public readonly HashSet<string> used = new();
+		public readonly HashSet<string> reassignedMutables = new();
+	}
+
+	private static void ValidateUnusedVariables(Body body, object? context)
+	{
+		if (context is not VariableUsages variables)
+			return;
 		foreach (var variable in body.Variables!)
-			if (!usedVariables.Contains(variable.Name))
+			if (!variables.used.Contains(variable.Name))
 				throw new UnusedMethodVariableMustBeRemoved(body.Method.Type, variable.Name);
 		var mutableReassignments = body.Expressions.OfType<MutableReassignment>().ToList();
 		foreach (var mutableVariable in body.Variables.Where(variable => variable.IsMutable))
@@ -53,12 +61,14 @@ public sealed class MethodValidator : Visitor
 
 	protected override void VisitExpression(Expression expression, object? context)
 	{
-		if (context is not HashSet<string> usedVariables)
+		if (context is not VariableUsages variables)
 			return;
-		if (expression is VariableCall variableCall)
-			usedVariables.Add(variableCall.Variable.Name);
+		if (expression is ParameterCall parameterCall)
+			variables.used.Add(parameterCall.Parameter.Name);
+		else if (expression is VariableCall variableCall)
+			variables.used.Add(variableCall.Variable.Name);
 		else if (expression is MutableReassignment reassignment)
-			usedVariables.Add(reassignment.Name);
+			variables.reassignedMutables.Add(reassignment.Name);
 	}
 
 	public sealed class ListArgumentCanBeAutoParsedWithoutDoubleBrackets(Body body, string line)
@@ -75,12 +85,15 @@ public sealed class MethodValidator : Visitor
 	public class VariableHidesMemberUseDifferentName(Body body, string methodName, string variableName)
 		: ParsingFailed(body, $"Method name {methodName}, Variable name {variableName}");
 
-	private static void ValidateMethodParameters(Method method)
+	public override void Visit(Method method, bool forceParsingBody = false, object? context = null)
 	{
+		if (method.Parameters.Any(p => p.IsMutable))
+			context ??= new VariableUsages();
+		base.Visit(method, forceParsingBody, context);
 		foreach (var parameter in method.Parameters)
 		{
 			ValidateUnusedParameter(method, parameter.Name);
-			ValidateUnchangedMutableParameter(method, parameter);
+			ValidateUnchangedMutableParameter(method, parameter, context);
 			ValidateMethodParameterHidesAnyTypeMember(parameter.Name, method);
 		}
 	}
@@ -94,13 +107,11 @@ public sealed class MethodValidator : Visitor
 	public sealed class UnusedMethodParameterMustBeRemoved(Type type, string name)
 		: ParsingFailed(type, 0, name);
 
-	private static void ValidateUnchangedMutableParameter(Method method, Parameter parameter)
+	private static void ValidateUnchangedMutableParameter(Method method, Parameter parameter, object? context)
 	{
-#if TODO
-		if (parameter is { IsMutable: true } &&
-			new MutableAssignmentVisitor(parameter).Visit(method.GetBodyAndParseIfNeeded()) is null)
+		if (context is VariableUsages variables && parameter is { IsMutable: true } &&
+			!variables.reassignedMutables.Contains(parameter.Name))
 			throw new ParameterDeclaredAsMutableButValueNeverChanged(method.Type, parameter.Name);
-#endif
 	}
 
 	public sealed class ParameterDeclaredAsMutableButValueNeverChanged(Type type, string name)
