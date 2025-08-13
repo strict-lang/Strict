@@ -21,7 +21,7 @@ public sealed class ExpressionOptimizerTests
 			"\tconstant folded = \"5\" to Number",
 			"\tfolded + 1"
 		]);
-		Assert.DoesNotThrow(() => new ExpressionOptimizer([method]).Validate());
+		Assert.That(() => new ExpressionOptimizer([method]).Validate(), Throws.Nothing);
 	}
 
 	[Test]
@@ -44,7 +44,7 @@ public sealed class ExpressionOptimizerTests
 			"\tconstant b = a + 3",
 			"\tb * 2"
 		]);
-		Assert.DoesNotThrow(() => new ExpressionOptimizer([method]).Validate());
+		Assert.That(() => new ExpressionOptimizer([method]).Validate(), Throws.Nothing);
 	}
 
 	[Test]
@@ -58,7 +58,7 @@ public sealed class ExpressionOptimizerTests
 		var validator = new ExpressionOptimizer([method]);
 		validator.Validate();
 		// No runtime state should be changed, so running again should not throw
-		Assert.DoesNotThrow(() => validator.Validate());
+		Assert.That(() => validator.Validate(), Throws.Nothing);
 	}
 }
 #endif

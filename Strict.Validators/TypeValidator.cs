@@ -1,69 +1,143 @@
-﻿#if TODO //mostly retarded und useless here, remove most except the last method
+﻿using Strict.Expressions;
 using Strict.Language;
 using Type = Strict.Language.Type;
 
 namespace Strict.Validators;
 
-/// <summary>
-/// Validator that can work with packages, individual types, or collections of types
-/// </summary>
-public sealed class TypeValidator : Validator
+public sealed class TypeValidator : Visitor
 {
-	private readonly IEnumerable<Type>? types;
-	private readonly Package? package;
-	private readonly Type? singleType;
-
-	public TypeValidator(IEnumerable<Type> types)
+	public override void Visit(Type type, object? context = null)
 	{
-		this.types = types;
+		if (!type.IsDataType)
+			foreach (var member in type.Members)
+				if (!IsReservedName(member.Name) && !member.IsPublic && type.CountMemberUsage(member.Name) < 2)
+					throw new UnusedMemberMustBeRemoved(type, member.Name);
+		base.Visit(type, context);
 	}
 
-	public TypeValidator(Package package)
-	{
-		this.package = package;
-	}
+	private static bool IsReservedName(string name) =>
+		name is Base.ValueLowercase or "iterator" or "elements" or Base.GenericLowercase;
 
-	public TypeValidator(Type type)
-	{
-		singleType = type;
-	}
+	public sealed class UnusedMemberMustBeRemoved(Type type, string memberName)
+		: ParsingFailed(type, 0, memberName);
 
-	public void Validate()
+	public override void VisitBody(Expression expression, object? context = null)
 	{
-		if (package != null)
+		if (expression is not Body body)
 		{
-			var visitor = new TypeValidationVisitor();
-			visitor.VisitPackage(package);
+			base.VisitBody(expression, context);
+			return;
 		}
-		else if (singleType != null)
+		for (var index = body.LineRange.Start.Value; index < body.LineRange.End.Value; index++)
 		{
-			var visitor = new TypeValidationVisitor();
-			visitor.VisitType(singleType);
+			var line = body.GetLine(index);
+			if (line.Contains("((") && line.Contains("))") && line.Count(t => t == '(') < 3)
+				throw new ListArgumentCanBeAutoParsedWithoutDoubleBrackets(body, line);
 		}
-		else if (types != null)
+		if (body.Variables is null)
 		{
-			foreach (var type in types)
-			{
-				var visitor = new TypeValidationVisitor();
-				visitor.VisitType(type);
-			}
+			base.VisitBody(expression, context);
+			return;
+		}
+		context ??= new VariableUsages();
+		base.VisitBody(expression, context);
+		ValidateUnusedVariables(body, context);
+		ValidateMethodVariablesHidesAnyTypeMember(body, body.Method.Type.Members);
+	}
+
+	private sealed class VariableUsages
+	{
+		public readonly HashSet<string> used = new();
+		public readonly HashSet<string> reassignedMutables = new();
+	}
+
+	private static void ValidateUnusedVariables(Body body, object? context)
+	{
+		if (context is not VariableUsages variables)
+			return;
+		foreach (var variable in body.Variables!)
+			if (!variables.used.Contains(variable.Name))
+				throw new UnusedMethodVariableMustBeRemoved(body.Method.Type, variable.Name);
+		var mutableReassignments = body.Expressions.OfType<MutableReassignment>().ToList();
+		foreach (var mutableVariable in body.Variables.Where(variable => variable.IsMutable))
+			if (IsVariableValueUnchanged(mutableVariable, mutableReassignments))
+				throw new VariableDeclaredAsMutableButValueNeverChanged(body, mutableVariable);
+	}
+
+	public sealed class UnusedMethodVariableMustBeRemoved(Type type, string name)
+		: ParsingFailed(type, 0, name);
+
+	private static bool IsVariableValueUnchanged(Variable mutableVariable,
+		IEnumerable<MutableReassignment> mutableReassignments) =>
+		mutableReassignments.FirstOrDefault(m => m.Name == mutableVariable.Name) == null;
+
+	public sealed class VariableDeclaredAsMutableButValueNeverChanged(Body body, Variable variable)
+		: ParsingFailed(body, variable.Name);
+
+	protected override void VisitExpression(Expression expression, object? context)
+	{
+		if (context is not VariableUsages variables)
+			return;
+		if (expression is ParameterCall parameterCall)
+			variables.used.Add(parameterCall.Parameter.Name);
+		else if (expression is VariableCall variableCall)
+			variables.used.Add(variableCall.Variable.Name);
+		else if (expression is MutableReassignment reassignment)
+			variables.reassignedMutables.Add(reassignment.Name);
+	}
+
+	public sealed class ListArgumentCanBeAutoParsedWithoutDoubleBrackets(Body body, string line)
+		: ParsingFailed(body, line);
+
+	private static void ValidateMethodVariablesHidesAnyTypeMember(Body body,
+		IEnumerable<Member> members)
+	{
+		foreach (var member in members)
+			if (body.Variables != null && body.FindVariable(member.Name) != null)
+				throw new VariableHidesMemberUseDifferentName(body, body.Method.Name, member.Name);
+	}
+
+	public class VariableHidesMemberUseDifferentName(Body body, string methodName, string variableName)
+		: ParsingFailed(body, $"Method name {methodName}, Variable name {variableName}");
+
+	public override void Visit(Method method, bool forceParsingBody = false, object? context = null)
+	{
+		if (method.Parameters.Any(p => p.IsMutable))
+			context ??= new VariableUsages();
+		base.Visit(method, forceParsingBody, context);
+		foreach (var parameter in method.Parameters)
+		{
+			ValidateUnusedParameter(method, parameter.Name);
+			ValidateUnchangedMutableParameter(method, parameter, context);
+			ValidateMethodParameterHidesAnyTypeMember(parameter.Name, method);
 		}
 	}
 
-	/// <summary>
-	/// Visitor that performs type-level validation using the visitor pattern
-	/// </summary>
-	private sealed class TypeValidationVisitor : Visitor
+	private static void ValidateUnusedParameter(Method method, string name)
 	{
-		public override void VisitType(Type type)
-		{
-			// Validate the type using sub-validators
-			new MethodValidator(type.Methods).Validate();
-			new MemberValidator(type).Validate();
-			
-			// Continue with standard traversal
-			base.VisitType(type);
-		}
+		if (method.Name != Method.From && !method.Type.IsTrait && method.GetParameterUsageCount(name) < 2)
+			throw new UnusedMethodParameterMustBeRemoved(method, name);
 	}
+
+	public sealed class UnusedMethodParameterMustBeRemoved(Method method, string name)
+		: ParsingFailed(method.Type, method.TypeLineNumber, name);
+
+	private static void ValidateUnchangedMutableParameter(Method method, Parameter parameter, object? context)
+	{
+		if (context is VariableUsages variables && parameter is { IsMutable: true } &&
+			!variables.reassignedMutables.Contains(parameter.Name))
+			throw new ParameterDeclaredAsMutableButValueNeverChanged(method.Type, parameter.Name);
+	}
+
+	public sealed class ParameterDeclaredAsMutableButValueNeverChanged(Type type, string name)
+		: ParsingFailed(type, 0, name);
+
+	private static void ValidateMethodParameterHidesAnyTypeMember(string parameterName, Method method)
+	{
+		if (method.Name != Method.From && method.Type.Members.Any(member => member.Name == parameterName))
+			throw new ParameterHidesMemberUseDifferentName(method.Type, method.Name, parameterName);
+	}
+
+	public sealed class ParameterHidesMemberUseDifferentName(Type type, string methodName, string parameterName)
+		: ParsingFailed(type, 0, $"Method name {methodName}, Parameter name {parameterName}");
 }
-#endif

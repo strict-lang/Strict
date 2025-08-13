@@ -118,7 +118,8 @@ public class Type : Context
 	/// </summary>
 	public bool IsDataType =>
 		CheckIfParsed() && methods.Count == 0 &&
-		(members.Count > 1 || members is [{ InitialValue: not null }]) || Name == Base.Number;
+		(members.Count > 1 || members is [{ InitialValue: not null }]) || Name == Base.Number ||
+		Name == Base.Name;
 
 	private bool CheckIfParsed()
 	{
@@ -482,7 +483,8 @@ public class Type : Context
 			member.Name.Equals(Name, StringComparison.OrdinalIgnoreCase));
 
 	public int CountMemberUsage(string memberName) =>
-		Lines.Count(line => line.Contains(" " + memberName) || line.Contains("(" + memberName));
+		Lines.Count(line => line.Contains(' ' + memberName) || line.Contains('\t' + memberName) ||
+			line.Contains('(' + memberName));
 
 	[Log]
 	public HashSet<NamedType> GetGenericTypeArguments()

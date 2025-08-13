@@ -20,7 +20,7 @@ public abstract class Visitor
 			Visit(type, context);
 	}
 
-	public void Visit(Type type, object? context = null)
+	public virtual void Visit(Type type, object? context = null)
 	{
 		if (type.Name == Base.Any)
 			return;
