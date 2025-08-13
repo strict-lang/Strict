@@ -1,4 +1,3 @@
-#if TODO
 namespace Strict.Validators.Tests;
 
 public sealed class ExpressionOptimizerTests
@@ -6,13 +5,15 @@ public sealed class ExpressionOptimizerTests
 	[SetUp]
 	public void Setup()
 	{
-		type = new Type(new TestPackage(), new TypeLines(nameof(ExpressionOptimizerTests), ""));
+		type = new Type(new TestPackage(),
+			new TypeLines(nameof(ExpressionOptimizerTests), "has logger", "Run", "\tlogger.Log(5)"));
 		parser = new MethodExpressionParser();
+		type.ParseMembersAndMethods(parser);
 	}
 
 	private Type type = null!;
 	private ExpressionParser parser = null!;
-
+	/*TODO
 	[Test]
 	public void ConstantFolding_StringToNumber_Success()
 	{
@@ -60,5 +61,5 @@ public sealed class ExpressionOptimizerTests
 		// No runtime state should be changed, so running again should not throw
 		Assert.That(() => validator.Validate(), Throws.Nothing);
 	}
+	*/
 }
-#endif

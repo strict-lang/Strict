@@ -21,13 +21,8 @@ public sealed class TypeValidator : Visitor
 	public sealed class UnusedMemberMustBeRemoved(Type type, string memberName)
 		: ParsingFailed(type, 0, memberName);
 
-	public override void VisitBody(Expression expression, object? context = null)
+	protected override void Visit(Body body, object? context = null)
 	{
-		if (expression is not Body body)
-		{
-			base.VisitBody(expression, context);
-			return;
-		}
 		for (var index = body.LineRange.Start.Value; index < body.LineRange.End.Value; index++)
 		{
 			var line = body.GetLine(index);
@@ -36,11 +31,11 @@ public sealed class TypeValidator : Visitor
 		}
 		if (body.Variables is null)
 		{
-			base.VisitBody(expression, context);
+			base.Visit(body, context);
 			return;
 		}
 		context ??= new VariableUsages();
-		base.VisitBody(expression, context);
+		base.Visit(body, context);
 		ValidateUnusedVariables(body, context);
 		ValidateMethodVariablesHidesAnyTypeMember(body, body.Method.Type.Members);
 	}

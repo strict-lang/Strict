@@ -25,7 +25,7 @@ public abstract class Visitor
 		if (type.Name == Base.Any)
 			return;
 		foreach (var member in type.Members)
-			TryVisit(member.InitialValue, context);
+			Visit(member.InitialValue, context);
 		foreach (var method in type.Methods)
 			Visit(method, context: context);
 	}
@@ -33,35 +33,38 @@ public abstract class Visitor
 	public virtual void Visit(Method method, bool forceParsingBody = false, object? context = null)
 	{
 		foreach (var parameter in method.Parameters)
-			TryVisit(parameter.DefaultValue, context);
+			Visit(parameter.DefaultValue, context);
 		if (method.Type.IsTrait)
 			return;
 		if (forceParsingBody || method.WasParsedAlready)
-			VisitBody(method.GetBodyAndParseIfNeeded(), context);
+			TryVisitBody(method.GetBodyAndParseIfNeeded(), context);
 		else
-			method.BodyParsed += body => VisitBody(body, context);
+			method.BodyParsed += body => TryVisitBody(body, context);
 	}
 
-	public virtual void VisitBody(Expression expression, object? context = null)
+	private void TryVisitBody(Expression expression, object? context = null)
 	{
 		if (expression is Body body)
-			foreach (var childExpression in body.Expressions)
-				Visit(childExpression, context);
+			Visit(body, context);
+		else
+			VisitExpression(expression, context);
 	}
 
-	private void TryVisit(Expression? expression, object? context)
+	protected virtual void Visit(Body body, object? context = null)
 	{
-		if (expression != null)
-			Visit(expression, context);
+		foreach (var childExpression in body.Expressions)
+			Visit(childExpression, context);
 	}
 
-	public void Visit(Expression expression, object? context = null)
+	public void Visit(Expression? expression, object? context = null)
 	{
+		if (expression == null)
+			return;
 		if (expression is Body body)
-			VisitBody(body, context);
+			Visit(body, context);
 		else if (expression is Binary binary)
 		{
-			TryVisit(binary.Instance, context);
+			Visit(binary.Instance, context);
 			Visit(binary.Arguments, context);
 		}
 		else if (expression is ConstantDeclaration declaration)

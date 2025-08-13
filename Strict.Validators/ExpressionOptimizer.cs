@@ -1,48 +1,28 @@
-#if TODO //when visitors are fixed!
-using Strict.Language;
 using Strict.Expressions;
+using Strict.Language;
 
 namespace Strict.Validators;
 
-public sealed record ExpressionOptimizer(IEnumerable<Method> Methods) : Validator
+public sealed class ExpressionOptimizer : Visitor
 {
-	public void Validate()
+	protected override void VisitExpression(Expression expression, object? context)
 	{
-		foreach (var method in Methods)
-			Validate(method);
-	}
-
-	private static void Validate(Method method)
-	{
-		var body = method.GetBodyAndParseIfNeeded() as Body;
-		if (body == null)
+		if (context is not Dictionary<string, object?> constants)
 			return;
-		var constants = new Dictionary<string, object?>();
-		ValidateBody(body, constants);
-	}
-
-	private static void ValidateBody(Body body, Dictionary<string, object?> constants)
-	{
-		foreach (var expr in body.Expressions)
+		if (expression is ConstantDeclaration constant)
 		{
-			if (expr is ConstantDeclaration constant)
+			var value = TryEvaluate(constant.Value, constants);
+			constants[constant.Name] = value;
+			if (constant.Value is To toExpr)
 			{
-				var value = TryEvaluate(constant.Value, constants);
-				constants[constant.Name] = value;
-				if (constant.Value is To toExpr)
-				{
-					if (value is null)
-						throw new ImpossibleConstantCast();
-				}
-			}
-			else if (expr is Body childBody)
-			{
-				ValidateBody(childBody, new Dictionary<string, object?>(constants));
+				if (value is null)
+					throw new ImpossibleConstantCast();
 			}
 		}
 	}
 
-	private static object? TryEvaluate(Expression expr, Dictionary<string, object?> constants)
+	/*this seems to be nonsense gibberish, has to be checked		*/
+	private object? TryEvaluate(Expression expr, Dictionary<string, object?> constants)
 	{
 		// Handle Number, Text, Boolean
 		if (expr is Value v)
@@ -81,6 +61,11 @@ public sealed record ExpressionOptimizer(IEnumerable<Method> Methods) : Validato
 		return null;
 	}
 
+	protected override void Visit(Body body, object? context = null)
+	{
+		context ??= new Dictionary<string, object?>();
+		base.Visit(body, context);
+	}
+
 	public sealed class ImpossibleConstantCast : Exception;
 }
-#endif
