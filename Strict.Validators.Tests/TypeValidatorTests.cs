@@ -11,11 +11,12 @@ public sealed class TypeValidatorTests
 			new TypeLines(nameof(TypeValidatorTests), "has logger", "Run", "\tlogger.Log(5)"));
 		parser = new MethodExpressionParser();
 		type.ParseMembersAndMethods(parser);
+		validator = new TypeValidator();
 	}
 
 	private Type type = null!;
 	private ExpressionParser parser = null!;
-	private readonly TypeValidator validator = new();
+	private TypeValidator validator = null!;
 
 	[TestCase("unused", "Run", "\tconstant unused = \"something never used\"",
 		"\t\"Run method executed\"")]

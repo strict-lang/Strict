@@ -1,11 +1,8 @@
-using Strict.Expressions;
-using Strict.Language;
-
 namespace Strict.Validators;
 
 public sealed class ExpressionOptimizer : Visitor
 {
-	protected override void VisitExpression(Expression expression, object? context)
+	protected override void VisitSingleExpression(Expression expression, object? context)
 	{
 		if (context is not Dictionary<string, object?> constants)
 			return;

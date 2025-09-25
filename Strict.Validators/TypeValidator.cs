@@ -1,6 +1,4 @@
-﻿using Strict.Expressions;
-using Strict.Language;
-using Type = Strict.Language.Type;
+﻿using Type = Strict.Language.Type;
 
 namespace Strict.Validators;
 
@@ -69,7 +67,7 @@ public sealed class TypeValidator : Visitor
 	public sealed class VariableDeclaredAsMutableButValueNeverChanged(Body body, Variable variable)
 		: ParsingFailed(body, variable.Name);
 
-	protected override void VisitExpression(Expression expression, object? context)
+	protected override void VisitSingleExpression(Expression expression, object? context)
 	{
 		if (context is not VariableUsages variables)
 			return;

@@ -1,6 +1,4 @@
-﻿using Strict.Expressions;
-using Strict.Language;
-using Type = Strict.Language.Type;
+﻿using Type = Strict.Language.Type;
 
 namespace Strict.Validators;
 
@@ -25,7 +23,10 @@ public abstract class Visitor
 		if (type.Name == Base.Any)
 			return;
 		foreach (var member in type.Members)
-			Visit(member.InitialValue, context);
+			if (member.InitialValue != null)
+			{
+				var updatedExpression = Visit(member.InitialValue, context);
+				if (upda)
 		foreach (var method in type.Methods)
 			Visit(method, context: context);
 	}
@@ -47,7 +48,7 @@ public abstract class Visitor
 		if (expression is Body body)
 			Visit(body, context);
 		else
-			VisitExpression(expression, context);
+			VisitSingleExpression(expression, context);
 	}
 
 	protected virtual void Visit(Body body, object? context = null)
@@ -72,11 +73,11 @@ public abstract class Visitor
 			Visit(declaration.Value, context);
 		else if (expression is MutableReassignment reassignment)
 		{
-			VisitExpression(reassignment, context);
+			VisitSingleExpression(reassignment, context);
 			Visit(reassignment.Value, context);
 		}
 		else
-			VisitExpression(expression, context);
+			VisitSingleExpression(expression, context);
 	}
 
 	private void Visit(IEnumerable<Expression> expressions, object? context)
@@ -85,5 +86,5 @@ public abstract class Visitor
 			Visit(expression, context);
 	}
 
-	protected abstract void VisitExpression(Expression expression, object? context);
+	protected abstract void VisitSingleExpression(Expression expression, object? context);
 }

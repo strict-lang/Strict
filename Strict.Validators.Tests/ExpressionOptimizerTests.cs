@@ -9,11 +9,13 @@ public sealed class ExpressionOptimizerTests
 			new TypeLines(nameof(ExpressionOptimizerTests), "has logger", "Run", "\tlogger.Log(5)"));
 		parser = new MethodExpressionParser();
 		type.ParseMembersAndMethods(parser);
+		optimizer = new ExpressionOptimizer();
 	}
 
 	private Type type = null!;
 	private ExpressionParser parser = null!;
-	/*TODO
+	private ExpressionOptimizer optimizer = null!;
+
 	[Test]
 	public void ConstantFolding_StringToNumber_Success()
 	{
@@ -22,7 +24,7 @@ public sealed class ExpressionOptimizerTests
 			"\tconstant folded = \"5\" to Number",
 			"\tfolded + 1"
 		]);
-		Assert.That(() => new ExpressionOptimizer([method]).Validate(), Throws.Nothing);
+		Assert.That(() => optimizer.Visit(method), Throws.Nothing);
 	}
 
 	[Test]
