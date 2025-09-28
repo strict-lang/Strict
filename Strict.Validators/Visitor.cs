@@ -1,4 +1,5 @@
-﻿using Type = Strict.Language.Type;
+﻿using Strict.Language;
+using Type = Strict.Language.Type;
 
 namespace Strict.Validators;
 
@@ -25,7 +26,7 @@ public abstract class Visitor
 		foreach (var member in type.Members)
 			if (member.InitialValue != null)
 			{
-				var updatedExpression = Visit(member.InitialValue, context);
+				var updatedExpression = Visit(member.InitialValue, null!, context);
 				//TODO: if (upda)
 			}
 		foreach (var method in type.Methods)
@@ -35,7 +36,7 @@ public abstract class Visitor
 	public virtual void Visit(Method method, bool forceParsingBody = false, object? context = null)
 	{
 		foreach (var parameter in method.Parameters)
-			Visit(parameter.DefaultValue, context);
+			Visit(parameter.DefaultValue, null!, context);
 		if (method.Type.IsTrait)
 			return;
 		if (forceParsingBody || method.WasParsedAlready)
@@ -65,7 +66,7 @@ public abstract class Visitor
 		for (var i = 0; i < body.Expressions.Count; i++)
 		{
 			var current = body.Expressions[i];
-			var replaced = Visit(current, context);
+			var replaced = Visit(current, body, context);
 			// If an expression changed, create rewritten and copy previous untouched elements
 			if (!ReferenceEquals(replaced, current))
 			{
@@ -82,23 +83,29 @@ public abstract class Visitor
 			body.SetExpressions(rewritten);
 	}
 
-	protected virtual Expression? Visit(Expression? expression, object? context = null)
+	protected virtual Expression? Visit(Expression? expression, Body body, object? context = null)
 	{
 		if (expression == null)
 			return expression;
-		if (expression is Body body)
-			Visit(body, context);
+		if (expression is Body innerBody)
+			Visit(innerBody, context);
 		else if (expression is Binary binary)
 		{
-			Visit(binary.Instance, context);
-			Visit(binary.Arguments, context);
+			Visit(binary.Instance, body, context);
+			Visit(binary.Arguments, body, context);
 		}
 		else if (expression is ConstantDeclaration declaration)
-			// ReSharper disable TailRecursiveCall
-			Visit(declaration.Value, context);
+		{
+			var newValue = Visit(declaration.Value, body, context)!;
+			if (!ReferenceEquals(newValue, declaration.Value))
+			{
+				body.FindVariable(declaration.Name)!.InitialValue = newValue;
+				declaration.SetValue(newValue);
+			}
+		}
 		else if (expression is MutableReassignment reassignment)
 		{
-			Visit(reassignment.Value, context);
+			Visit(reassignment.Value, body, context);
 			return VisitExpression(reassignment, context);
 		}
 		else
@@ -106,10 +113,10 @@ public abstract class Visitor
 		return expression;
 	}
 
-	private void Visit(IEnumerable<Expression> expressions, object? context)
+	private void Visit(IEnumerable<Expression> expressions, Body body, object? context)
 	{
 		foreach (var expression in expressions)
-			Visit(expression, context);
+			Visit(expression, body, context);
 	}
 
 	protected abstract Expression VisitExpression(Expression expression, object? context);

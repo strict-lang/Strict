@@ -18,8 +18,10 @@ public class ConstantDeclaration : ConcreteExpression
 	}
 
 	public string Name { get; }
-	public Expression Value { get; }
+	public Expression Value { get; private set; }
 	public override bool IsConstant => Value.IsConstant && !IsMutable;
+
+	// ReSharper disable once NonReadonlyMemberInGetHashCode
 	public override int GetHashCode() => Name.GetHashCode() ^ Value.GetHashCode();
 	public override string ToString() => ConstantWithSpaceAtEnd + Name + " = " + Value;
 	internal const string ConstantWithSpaceAtEnd = Keyword.Constant + " ";
@@ -57,4 +59,5 @@ public class ConstantDeclaration : ConcreteExpression
 		new ConstantDeclaration(body, name, body.Method.ParseExpression(body, valueSpan));
 
 	public sealed class MissingAssignmentValueExpression(Body body) : ParsingFailed(body);
+	public void SetValue(Expression newValue) => Value = newValue;
 }

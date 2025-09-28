@@ -334,7 +334,9 @@ public sealed class Method : Context
 		if (methodBody == null)
 			throw new CannotCallBodyOnTraitMethod();
 		if (methodBody.Expressions.Count > 0)
-			return methodBody;
+			return methodBody.Expressions.Count == 1
+				? methodBody.Expressions[0]
+				: methodBody;
 		var expression = methodBody.Parse();
 		if (Tests.Count < 1 && !IsTestPackage())
 			throw new MethodMustHaveAtLeastOneTest(Type, Name, TypeLineNumber);

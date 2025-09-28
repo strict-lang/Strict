@@ -7,7 +7,7 @@ public sealed class To(Expression left, Method operatorMethod, Type conversionTy
 	: MethodCall(operatorMethod, left, conversionType)
 {
 	public Type ConversionType { get; } = conversionType;
-	public override bool IsConstant => Instance!.IsConstant ;
+	public override bool IsConstant => Instance!.IsConstant;
 	public override string ToString() => $"{Instance} {Method.Name} {ConversionType.Name}";
 
 	public static Expression Parse(Body body, ReadOnlySpan<char> text, Expression left)

@@ -29,7 +29,7 @@ public sealed class ConstantCollapserTests
 		new ConstantUsagesOptimizer().Visit(method, true);
 		var methodExpression = method.GetBodyAndParseIfNeeded();
 		Assert.That(methodExpression, Is.InstanceOf<Number>());
-		Assert.That(((Number)methodExpression).Data, Is.EqualTo(5));
+		Assert.That(((Number)methodExpression).Data, Is.EqualTo(6));
 	}
 
 	/*TODO

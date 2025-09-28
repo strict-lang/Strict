@@ -14,7 +14,8 @@ public class ExpressionParserTests : ExpressionParser
 		Assert.That(parseWasCalled, Is.False);
 		Assert.That(type.Methods[0].GetBodyAndParseIfNeeded(), Is.InstanceOf<Expression>());
 		Assert.That(parseWasCalled, Is.True);
-		Assert.That(type.Methods[0].GetBodyAndParseIfNeeded().ReturnType, Is.EqualTo(type.Methods[0].ReturnType));
+		Assert.That(type.Methods[0].GetBodyAndParseIfNeeded().ReturnType,
+			Is.EqualTo(type.Methods[0].ReturnType));
 	}
 
 	private bool parseWasCalled;
@@ -27,7 +28,7 @@ public class ExpressionParserTests : ExpressionParser
 	public override Expression ParseLineExpression(Body body, ReadOnlySpan<char> line)
 	{
 		parseWasCalled = true;
-		return new Number(body.Method, 1);
+		return new MethodCall(body.Method);
 	}
 
 	//ncrunch: no coverage start, not the focus here

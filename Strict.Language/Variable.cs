@@ -8,7 +8,7 @@ public sealed class Variable(string name, bool isMutable, Expression initialValu
 {
 	public string Name { get; } = name;
 	public bool IsMutable { get; } = isMutable;
-	public Expression InitialValue { get; } = initialValue;
+	public Expression InitialValue { get; internal set; } = initialValue;
 	public Body CreatedInScope { get; } = createdInScope;
 	public Type Type => InitialValue.ReturnType;
 
