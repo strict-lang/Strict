@@ -6,6 +6,7 @@ public sealed class ParameterCall(Parameter parameter)
 	: Expression(parameter.Type, parameter.IsMutable)
 {
 	public Parameter Parameter { get; } = parameter;
+	public override bool IsConstant => Parameter.IsConstant;
 
 	public static Expression? TryParse(Body body, ReadOnlySpan<char> input)
 	{

@@ -236,6 +236,7 @@ public sealed class Body : Expression
 		return Parent?.FindVariable(searchFor);
 	}
 
+	public override bool IsConstant => Expressions.All(e => e.IsConstant);
 	public override string ToString() => string.Join(Environment.NewLine, Expressions);
 	public string GetLine(int lineNumber) => Method.lines[lineNumber];
 

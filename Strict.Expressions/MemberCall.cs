@@ -32,6 +32,8 @@ public sealed class MemberCall(Expression? instance, Member member)
 			: null;
 	}
 
+	public override bool IsConstant => (Instance?.IsConstant ?? true) && Member.IsConstant;
+
 	public override string ToString() =>
 		Instance != null
 			? $"{Instance}.{Member.Name}"

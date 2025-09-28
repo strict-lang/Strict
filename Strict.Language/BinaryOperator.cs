@@ -37,7 +37,8 @@ public static class BinaryOperator
 	public static bool IsSingleCharacterOperator(this char tokenFirstCharacter) =>
 		AnySingleCharacterOperator.Contains(tokenFirstCharacter);
 
-	private const string AnySingleCharacterOperator = Plus + Minus + Multiply + Divide + Modulate + Smaller + Greater + Power;
+	private const string AnySingleCharacterOperator =
+		Plus + Minus + Multiply + Divide + Modulate + Smaller + Greater + Power;
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static bool IsMultiCharacterOperator(this string name)

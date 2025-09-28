@@ -21,6 +21,7 @@ public sealed class For : Expression
 	public Expression Body { get; }
 	public override int GetHashCode() => Value.GetHashCode();
 	public override string ToString() => $"for {Value}\n\t{Body}";
+	public override bool IsConstant => Value.IsConstant && Body.IsConstant;
 	public override bool Equals(Expression? other) => other is For a && Equals(Value, a.Value);
 	private const string ValueName = "value";
 	private const string IndexName = "index";

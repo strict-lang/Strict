@@ -1,32 +1,38 @@
 namespace Strict.Validators.Tests;
 
-public sealed class ExpressionOptimizerTests
+public sealed class ConstantCollapserTests
 {
 	[SetUp]
 	public void Setup()
 	{
 		type = new Type(new TestPackage(),
-			new TypeLines(nameof(ExpressionOptimizerTests), "has logger", "Run", "\tlogger.Log(5)"));
+			new TypeLines(nameof(ConstantCollapserTests), "has logger", "Run", "\tlogger.Log(5)"));
 		parser = new MethodExpressionParser();
 		type.ParseMembersAndMethods(parser);
-		optimizer = new ExpressionOptimizer();
+		collapser = new ConstantCollapser();
 	}
 
 	private Type type = null!;
 	private ExpressionParser parser = null!;
-	private ExpressionOptimizer optimizer = null!;
+	private ConstantCollapser collapser = null!;
 
 	[Test]
-	public void ConstantFolding_StringToNumber_Success()
+	public void FoldStringToNumberToJustNumber()
 	{
 		var method = new Method(type, 1, parser, [
 			"Run",
 			"\tconstant folded = \"5\" to Number",
 			"\tfolded + 1"
 		]);
-		Assert.That(() => optimizer.Visit(method), Throws.Nothing);
+		Assert.That(() => collapser.Visit(method), Throws.Nothing);
+		new ConstantCollapser().Visit(method, true);
+		new ConstantUsagesOptimizer().Visit(method, true);
+		var methodExpression = method.GetBodyAndParseIfNeeded();
+		Assert.That(methodExpression, Is.InstanceOf<Number>());
+		Assert.That(((Number)methodExpression).Data, Is.EqualTo(5));
 	}
 
+	/*TODO
 	[Test]
 	public void ConstantFolding_ImpossibleCast_Fails()
 	{

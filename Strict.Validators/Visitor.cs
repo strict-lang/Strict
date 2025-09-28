@@ -26,7 +26,8 @@ public abstract class Visitor
 			if (member.InitialValue != null)
 			{
 				var updatedExpression = Visit(member.InitialValue, context);
-				if (upda)
+				//TODO: if (upda)
+			}
 		foreach (var method in type.Methods)
 			Visit(method, context: context);
 	}
@@ -38,29 +39,53 @@ public abstract class Visitor
 		if (method.Type.IsTrait)
 			return;
 		if (forceParsingBody || method.WasParsedAlready)
-			TryVisitBody(method.GetBodyAndParseIfNeeded(), context);
+			TryVisitBody(method.GetBodyAndParseIfNeeded(), method, context);
 		else
-			method.BodyParsed += body => TryVisitBody(body, context);
+			method.BodyParsed += body => TryVisitBody(body, method, context);
 	}
 
-	private void TryVisitBody(Expression expression, object? context = null)
+	private void TryVisitBody(Expression expression, Method method, object? context = null)
 	{
 		if (expression is Body body)
 			Visit(body, context);
 		else
-			VisitSingleExpression(expression, context);
+		{
+			var replaced = VisitExpression(expression, context);
+			if (!ReferenceEquals(replaced, expression))
+				method.SetBodySingleExpression(replaced);
+		}
 	}
 
+	/// <summary>
+	/// Rewrite body expressions only when needed; avoid allocations if nothing changed.
+	/// </summary>
 	protected virtual void Visit(Body body, object? context = null)
 	{
-		foreach (var childExpression in body.Expressions)
-			Visit(childExpression, context);
+		List<Expression>? rewritten = null;
+		for (var i = 0; i < body.Expressions.Count; i++)
+		{
+			var current = body.Expressions[i];
+			var replaced = Visit(current, context);
+			// If an expression changed, create rewritten and copy previous untouched elements
+			if (!ReferenceEquals(replaced, current))
+			{
+				rewritten ??= new List<Expression>(body.Expressions.Count);
+				if (rewritten.Count == 0)
+					for (var j = 0; j < i; j++)
+						rewritten.Add(body.Expressions[j]);
+				rewritten.Add(replaced!);
+			}
+			else
+				rewritten?.Add(current);
+		}
+		if (rewritten != null)
+			body.SetExpressions(rewritten);
 	}
 
-	public void Visit(Expression? expression, object? context = null)
+	protected virtual Expression? Visit(Expression? expression, object? context = null)
 	{
 		if (expression == null)
-			return;
+			return expression;
 		if (expression is Body body)
 			Visit(body, context);
 		else if (expression is Binary binary)
@@ -73,11 +98,12 @@ public abstract class Visitor
 			Visit(declaration.Value, context);
 		else if (expression is MutableReassignment reassignment)
 		{
-			VisitSingleExpression(reassignment, context);
 			Visit(reassignment.Value, context);
+			return VisitExpression(reassignment, context);
 		}
 		else
-			VisitSingleExpression(expression, context);
+			return VisitExpression(expression, context);
+		return expression;
 	}
 
 	private void Visit(IEnumerable<Expression> expressions, object? context)
@@ -86,5 +112,5 @@ public abstract class Visitor
 			Visit(expression, context);
 	}
 
-	protected abstract void VisitSingleExpression(Expression expression, object? context);
+	protected abstract Expression VisitExpression(Expression expression, object? context);
 }

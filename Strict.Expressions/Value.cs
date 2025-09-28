@@ -21,6 +21,7 @@ public class Value(Type valueType, object data, bool isMutable = false)
 			? "\"" + Data + "\""
 			: Data.ToString()!;
 
+	public override bool IsConstant => true;
 	public override bool Equals(object? other) => Data.Equals(other); //ncrunch: no coverage
 	public override int GetHashCode() => HashCode.Combine(base.GetHashCode(), Data);
 }

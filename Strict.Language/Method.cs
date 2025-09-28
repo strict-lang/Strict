@@ -1,6 +1,7 @@
 ﻿using System.Runtime.CompilerServices;
 
 [assembly: InternalsVisibleTo("Strict.Language.Tests")]
+[assembly: InternalsVisibleTo("Strict.Validators")]
 
 namespace Strict.Language;
 
@@ -340,6 +341,14 @@ public sealed class Method : Context
 		BodyParsed?.Invoke(expression);
 		return expression;
 	}
+
+	/// <summary>
+	/// Needed when rewriting method body to a single expression, or creating a new Body from Visitor.
+	/// </summary>
+	internal void SetBodySingleExpression(Expression expression) =>
+		methodBody!.SetExpressions(expression is Body body
+			? body.Expressions
+			: [expression]);
 
 	public event Action<Expression>? BodyParsed;
 	private bool IsTestPackage() => Type.Package.Name == "TestPackage" || Name == "Run";

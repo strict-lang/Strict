@@ -12,5 +12,6 @@ public class Instance(Type type) : Expression(type)
 		return valueInstance;
 	}
 
+	public override bool IsConstant => true;
 	public override string ToString() => Base.ValueLowercase;
 }

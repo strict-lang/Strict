@@ -18,4 +18,5 @@ public sealed class Not : MethodCall
 	}
 
 	public override string ToString() => UnaryOperator.Not + " " + Instance!;
+	public override bool IsConstant => Instance!.IsConstant;
 }

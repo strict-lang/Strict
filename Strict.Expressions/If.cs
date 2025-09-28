@@ -62,6 +62,8 @@ public sealed class If(Expression condition, Expression then,	Expression? option
 					: OptionalElse)
 				: "");
 
+	public override bool IsConstant => Condition.IsConstant && Then.IsConstant && (OptionalElse?.IsConstant ?? true);
+
 	public override bool Equals(Expression? other) =>
 		other is If a && Equals(Condition, a.Condition) && Then.Equals(a.Then) &&
 		(OptionalElse?.Equals(a.OptionalElse) ?? a.OptionalElse == null);

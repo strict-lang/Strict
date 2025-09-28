@@ -15,4 +15,5 @@ public sealed class VariableCall(Variable variable)
 
 	public Variable Variable { get; } = variable;
 	public override string ToString() => Variable.Name;
+	public override bool IsConstant => Variable.InitialValue.IsConstant && !Variable.IsMutable;
 }

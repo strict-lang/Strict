@@ -33,6 +33,8 @@ public class MethodCall : ConcreteExpression
 	public Method Method { get; }
 	public Expression? Instance { get; }
 	public IReadOnlyList<Expression> Arguments { get; }
+	public override bool IsConstant =>
+		(Instance?.IsConstant ?? true) && Arguments.All(a => a.IsConstant);
 
 	public MethodCall(Method method, Expression? instance = null, Type? toReturnType = null) : this(
 		method, instance, [], toReturnType) { }

@@ -26,6 +26,7 @@ public sealed class List : Value
 		: ParsingFailed(body, "List has one or many mismatching types " + string.Join(", ", returnTypes));
 
 	public List<Expression> Values { get; }
+	public override bool IsConstant => Values.All(v => v.IsConstant);
 
 	public override string ToString()
 	{

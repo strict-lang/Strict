@@ -66,9 +66,9 @@ public class MethodExpressionParser : ExpressionParser
 	private Error TryParseErrorExpression(Body body, ReadOnlySpan<char> partToParse)
 	{
 		var expression = ParseExpression(body, partToParse);
-		if (expression.ReturnType.Name != Base.Text)
-			throw new ArgumentException("Error must be a text but it is " + expression.ReturnType.Name);
-		return new Error(expression);
+		return expression.ReturnType.Name != Base.Text
+			? throw new ArgumentException("Error must be a text but it is " + expression.ReturnType.Name)
+			: new Error(expression);
 	}
 
 	private Expression TryParseMethodOrMember(Body body, ReadOnlySpan<char> input)

@@ -2,6 +2,10 @@
 
 namespace Strict.Validators;
 
+/// <summary>
+/// Checks if any variable is unused, if a mutable variable is never changed or if a method
+/// parameter hides a member variable, all of which are not allowed and will cause an error.
+/// </summary>
 public sealed class TypeValidator : Visitor
 {
 	public override void Visit(Type type, object? context = null)
@@ -67,16 +71,17 @@ public sealed class TypeValidator : Visitor
 	public sealed class VariableDeclaredAsMutableButValueNeverChanged(Body body, Variable variable)
 		: ParsingFailed(body, variable.Name);
 
-	protected override void VisitSingleExpression(Expression expression, object? context)
+	protected override Expression VisitExpression(Expression expression, object? context)
 	{
 		if (context is not VariableUsages variables)
-			return;
+			return expression;
 		if (expression is ParameterCall parameterCall)
 			variables.used.Add(parameterCall.Parameter.Name);
 		else if (expression is VariableCall variableCall)
 			variables.used.Add(variableCall.Variable.Name);
 		else if (expression is MutableReassignment reassignment)
 			variables.reassignedMutables.Add(reassignment.Name);
+		return expression;
 	}
 
 	public sealed class ListArgumentCanBeAutoParsedWithoutDoubleBrackets(Body body, string line)

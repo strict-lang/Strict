@@ -1,8 +1,30 @@
 namespace Strict.Validators;
 
-public sealed class ExpressionOptimizer : Visitor
+/// <summary>
+/// Reduces constant expressions, e.g. "5" to Number can just be 5. Or any binary expression like
+/// 2 + 3 can be reduced to 5 as long as both sides are constant. This is done recursively. After
+/// this <see cref="ConstantCollapser"/> will take this a step further and collapse all usages.
+/// </summary>
+public sealed class ConstantUsagesOptimizer : Visitor
 {
-	protected override void VisitSingleExpression(Expression expression, object? context)
+	protected override void Visit(Body body, object? context = null)
+	{
+		context ??= new Dictionary<string, object?>();
+		base.Visit(body, context);
+	}
+
+	protected override Expression VisitExpression(Expression expression, object? context)
+	{
+		if (context is not Dictionary<string, object?> constants)
+			return expression;
+		//TODO: finish this up!
+		//if (expression.IsConstant)
+		//	constants.Add();
+		return expression;
+	}
+
+	/*TODO
+	public override void Visit(Expression? expression, object? context = null)
 	{
 		if (context is not Dictionary<string, object?> constants)
 			return;
@@ -18,7 +40,7 @@ public sealed class ExpressionOptimizer : Visitor
 		}
 	}
 
-	/*this seems to be nonsense gibberish, has to be checked		*/
+	/*this seems to be nonsense gibberish, has to be checked		*
 	private object? TryEvaluate(Expression expr, Dictionary<string, object?> constants)
 	{
 		// Handle Number, Text, Boolean
@@ -50,19 +72,12 @@ public sealed class ExpressionOptimizer : Visitor
 		{
 			var leftVal = TryEvaluate(to.Instance!, constants);
 			if (to.ConversionType.Name == "Number" && leftVal is string s)
-				return double.TryParse(s, out var num)
-					? num
-					: null;
+				return double.Parse(s);
 			return leftVal;
 		}
 		return null;
 	}
 
-	protected override void Visit(Body body, object? context = null)
-	{
-		context ??= new Dictionary<string, object?>();
-		base.Visit(body, context);
-	}
-
 	public sealed class ImpossibleConstantCast : Exception;
+	*/
 }

@@ -44,6 +44,7 @@ public sealed class MutableReassignment : ConcreteExpression
 		return new MutableReassignment(body, expression, newExpression);
 	}
 
+	public override bool IsConstant => false;
 	public override string ToString() => Name + " = " + Value;
 
 	public sealed class ValueTypeNotMatchingWithAssignmentType(Body body,

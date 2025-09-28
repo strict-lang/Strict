@@ -30,6 +30,7 @@ public abstract class Expression(Type returnType, bool isMutable = false) : IEqu
 			return false;
 		}
 	}
+	public abstract bool IsConstant { get; }
 
 	public virtual bool Equals(Expression? other) =>
 		!ReferenceEquals(null, other) &&

@@ -19,6 +19,7 @@ public class ConstantDeclaration : ConcreteExpression
 
 	public string Name { get; }
 	public Expression Value { get; }
+	public override bool IsConstant => Value.IsConstant && !IsMutable;
 	public override int GetHashCode() => Name.GetHashCode() ^ Value.GetHashCode();
 	public override string ToString() => ConstantWithSpaceAtEnd + Name + " = " + Value;
 	internal const string ConstantWithSpaceAtEnd = Keyword.Constant + " ";

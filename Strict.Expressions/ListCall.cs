@@ -89,5 +89,6 @@ public sealed class ListCall(Expression list, Expression index) : ConcreteExpres
 		Expression constraint) : ParsingFailed(body, $"Index {index} is not allowed based on the " +
 		$"constraint on the {list} definition: {constraint}.", list.ReturnType);
 
+	public override bool IsConstant => List.IsConstant && Index.IsConstant;
 	public override string ToString() => $"{List}({Index})";
 }
