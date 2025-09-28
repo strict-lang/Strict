@@ -1,3 +1,5 @@
+using Boolean = Strict.Expressions.Boolean;
+
 namespace Strict.Validators.Tests;
 
 public sealed class ConstantCollapserTests
@@ -17,19 +19,38 @@ public sealed class ConstantCollapserTests
 	private ConstantCollapser collapser = null!;
 
 	[Test]
-	public void FoldStringToNumberToJustNumber()
+	public void FoldTextToNumberToJustNumber()
 	{
 		var method = new Method(type, 1, parser, [
 			"Run",
 			"\tconstant folded = \"5\" to Number",
 			"\tfolded + 1"
 		]);
-		Assert.That(() => collapser.Visit(method), Throws.Nothing);
-		new ConstantCollapser().Visit(method, true);
-		new ConstantUsagesOptimizer().Visit(method, true);
-		var methodExpression = method.GetBodyAndParseIfNeeded();
-		Assert.That(methodExpression, Is.InstanceOf<Number>());
-		Assert.That(((Number)methodExpression).Data, Is.EqualTo(6));
+		collapser.Visit(method, true);
+		Assert.That(((Number)method.GetBodyAndParseIfNeeded()).Data, Is.EqualTo(6));
+	}
+
+	[Test]
+	public void FoldNumberToTextToJustText()
+	{
+		var method = new Method(type, 1, parser, [
+			"Run",
+			"\tconstant folded = 5 to Text",
+			"\tfolded + \"yo\""
+		]);
+		collapser.Visit(method, true);
+		Assert.That(((Text)method.GetBodyAndParseIfNeeded()).Data, Is.EqualTo("5yo"));
+	}
+
+	[Test]
+	public void FoldBooleans()
+	{
+		var method = new Method(type, 1, parser, [
+			"Run",
+			"\ttrue or false and true",
+		]);
+		collapser.Visit(method, true);
+		Assert.That(((Boolean)method.GetBodyAndParseIfNeeded()).Data, Is.EqualTo(true));
 	}
 
 	/*TODO
