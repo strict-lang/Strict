@@ -6,29 +6,40 @@ public sealed class GenericTypeImplementationTests
 	public void CreateParserAndComparerType()
 	{
 		parser = new MethodExpressionParser();
-		package = new TestPackage();
-		CreateType("Comparer", [
+		comparerType = CreateType("Comparer", [
 			"has FirstTypes Generics",
 			"has SecondType Generic",
 			"Compare",
 			"\tfirstType is secondType"
 		]);
-		CreateType("CustomType", ["from(first Generic, second Generic)"]);
+		customType = CreateType("CustomType", ["from(first Generic, second Generic)"]);
 	}
 
 	private ExpressionParser parser = null!;
-	public Package package = null!;
+	private Type comparerType = null!;
+	private Type customType = null!;
 
-	private void CreateType(string name, string[] lines) =>
-		new Type(package,
+	private Type CreateType(string name, string[] lines) =>
+		new Type(TestPackage.Instance,
 			new TypeLines(name, lines)).ParseMembersAndMethods(parser);
+
+	[TearDown]
+	public void TearDown()
+	{
+		TestPackage.Instance.Remove(comparerType);
+		TestPackage.Instance.Remove(customType);
+	}
 
 	[Test]
 	public void TypeArgumentsDoNotMatchGenericTypeConstructor() =>
 		Assert.That(
-			() => new Type(package,
-				new TypeLines("SimpleProgram", "has something Comparer(Text)", "Invoke",
-					"\tconstant result = something.Compare")).ParseMembersAndMethods(parser),
+			() =>
+			{
+				using var type = new Type(TestPackage.Instance,
+					new TypeLines("SimpleProgram", "has something Comparer(Text)", "Invoke",
+						"\tconstant result = something.Compare"));
+				return type.ParseMembersAndMethods(parser);
+			},
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.
 				InstanceOf<Context.TypeArgumentsCountDoesNotMatchGenericType>().With.Message.Contains(
 					"The generic type TestPackage.Comparer needs these type arguments: (Generic TestPackage." +
@@ -38,7 +49,7 @@ public sealed class GenericTypeImplementationTests
 	[Test]
 	public void GenericTypeWithMultipleImplementations()
 	{
-		var usingGenericType = new Type(package,
+		var usingGenericType = new Type(TestPackage.Instance,
 			new TypeLines("SimpleProgram",
 				"has something Comparer(Text, Number)",
 				"Invoke",
@@ -52,7 +63,7 @@ public sealed class GenericTypeImplementationTests
 	[Test]
 	public void CannotGetGenericImplementationOnNonGeneric() =>
 		Assert.That(
-			() => new Type(package,
+			() => new Type(TestPackage.Instance,
 					new TypeLines(nameof(CannotGetGenericImplementationOnNonGeneric),
 						"has custom Boolean(Number, Text)")).
 				ParseMembersAndMethods(new MethodExpressionParser()),
@@ -62,7 +73,7 @@ public sealed class GenericTypeImplementationTests
 	[Test]
 	public void TypeArgumentsDoNotMatchGenericType() =>
 		Assert.That(
-			() => new Type(package,
+			() => new Type(TestPackage.Instance,
 					new TypeLines(nameof(TypeArgumentsDoNotMatchGenericType),
 						"has custom Comparer(Number)", "UnusedMethod Number", "\t5")).
 				ParseMembersAndMethods(new MethodExpressionParser()),

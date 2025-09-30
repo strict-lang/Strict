@@ -282,7 +282,7 @@ public sealed class ListAdvancedTests : TestExpressions
 	[Test]
 	public void CreateMutableListWithMutableExpressions()
 	{
-		var program = new Type(new TestPackage(), new TypeLines(
+		var program = new Type(TestPackage.Instance, new TypeLines(
 					// @formatter:off
 					nameof(CreateMutableListWithMutableExpressions),
 					"has logger",
@@ -297,7 +297,7 @@ public sealed class ListAdvancedTests : TestExpressions
 	[Test]
 	public void ChangeValueInsideMutableListWithMutableExpressions()
 	{
-		var program = new Type(new TestPackage(),
+		var program = new Type(TestPackage.Instance,
 			new TypeLines(nameof(ChangeValueInsideMutableListWithMutableExpressions),
 				"has logger",
 				"Update(element Number) List(Mutable(Number))",

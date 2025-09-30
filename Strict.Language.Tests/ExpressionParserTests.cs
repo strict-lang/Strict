@@ -4,9 +4,12 @@ public class ExpressionParserTests : ExpressionParser
 {
 	[SetUp]
 	public void CreateType() =>
-		type = new Type(new TestPackage(), new MockRunTypeLines()).ParseMembersAndMethods(this);
+		type = new Type(TestPackage.Instance, new MockRunTypeLines()).ParseMembersAndMethods(this);
 
 	private Type type = null!;
+
+	[TearDown]
+	public void TearDown() => TestPackage.Instance.Remove(type);
 
 	[Test]
 	public void ParsingHappensAfterCallingGetBodyAndParseIfNeeded()

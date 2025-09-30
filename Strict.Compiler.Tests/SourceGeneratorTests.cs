@@ -163,7 +163,7 @@ public class Program
 
 	private async Task<Type>
 		ReadStrictFileAndCreateType(string programName, Package? overridePackage = null) =>
-		new Type(overridePackage ?? new TestPackage(),
+		new Type(overridePackage ?? TestPackage.Instance,
 			new TypeLines(programName,
 				await File.ReadAllLinesAsync(Path.Combine(await GetExampleFolder(),
 					$"{programName}.strict")))).ParseMembersAndMethods(parser);
@@ -199,11 +199,11 @@ public class Program
 	[Test]
 	public async Task ExecuteOperation()
 	{
-		var testPackage = new TestPackage();
-		await ReadStrictFileAndCreateType("Register", testPackage);
-		await ReadStrictFileAndCreateType("Instruction", testPackage);
-		await ReadStrictFileAndCreateType("Statement", testPackage);
-		await GenerateCSharpByReadingStrictProgramAndCompareWithOutput(nameof(ExecuteOperation), testPackage);
+		await ReadStrictFileAndCreateType("Register", TestPackage.Instance);
+		await ReadStrictFileAndCreateType("Instruction", TestPackage.Instance);
+		await ReadStrictFileAndCreateType("Statement", TestPackage.Instance);
+		await GenerateCSharpByReadingStrictProgramAndCompareWithOutput(nameof(ExecuteOperation),
+			TestPackage.Instance);
 	}
 
 	[Test]

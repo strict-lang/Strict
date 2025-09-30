@@ -5,9 +5,9 @@ public class PackageTests
 	[SetUp]
 	public void CreateContexts()
 	{
-		mainPackage = new Package(nameof(TestPackage));
+		mainPackage = new Package(nameof(PackageTests));
 		mainType = new Type(mainPackage, new TypeLines("Yolo", "Run"));
-		subPackage = new Package(mainPackage, nameof(PackageTests));
+		subPackage = new Package(mainPackage, nameof(subPackage));
 		privateSubType = new Type(subPackage, new TypeLines("secret", "Run"));
 		publicSubType = new Type(subPackage, new TypeLines("FindMe", "Run"));
 	}
@@ -17,6 +17,9 @@ public class PackageTests
 	private Package subPackage = null!;
 	private Type privateSubType = null!;
 	private Type publicSubType = null!;
+
+	[TearDown]
+	public void TearDown() => ((Package)mainPackage.Parent).Remove(mainPackage);
 
 	[Test]
 	public void NoneIsAlwaysKnown()
@@ -42,14 +45,14 @@ public class PackageTests
 	[Test]
 	public void GetFullNames()
 	{
-		Assert.That(mainPackage.ToString(), Is.EqualTo(nameof(TestPackage)));
-		Assert.That(mainType.ToString(), Is.EqualTo(nameof(TestPackage) + "." + mainType.Name));
+		Assert.That(mainPackage.ToString(), Is.EqualTo(nameof(PackageTests)));
+		Assert.That(mainType.ToString(), Is.EqualTo(nameof(PackageTests) + "." + mainType.Name));
 		Assert.That(subPackage.ToString(),
-			Is.EqualTo(nameof(TestPackage) + "." + nameof(PackageTests)));
+			Is.EqualTo(nameof(PackageTests) + "." + nameof(subPackage)));
 		Assert.That(privateSubType.ToString(),
-			Is.EqualTo(nameof(TestPackage) + "." + nameof(PackageTests) + "." + privateSubType.Name));
+			Is.EqualTo(nameof(PackageTests) + "." + nameof(subPackage) + "." + privateSubType.Name));
 		Assert.That(publicSubType.ToString(),
-			Is.EqualTo(nameof(TestPackage) + "." + nameof(PackageTests) + "." + publicSubType.Name));
+			Is.EqualTo(nameof(PackageTests) + "." + nameof(subPackage) + "." + publicSubType.Name));
 	}
 
 	[Test]

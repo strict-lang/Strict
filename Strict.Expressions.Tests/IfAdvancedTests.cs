@@ -51,7 +51,7 @@ public sealed class IfAdvancedTests : TestExpressions
 	[Test]
 	public void ReturnTypeOfThenMustMatchMethodReturnType()
 	{
-		var program = new Type(new Package(nameof(IfTests)),
+		var program = new Type(Package,
 			new TypeLines(nameof(ReturnTypeOfThenMustMatchMethodReturnType),
 				"has logger",
 				"InvalidRun Number",
@@ -64,10 +64,12 @@ public sealed class IfAdvancedTests : TestExpressions
 				"method return type: TestPackage.Number in method line: 3"));
 	}
 
+	private static readonly Package Package = new(nameof(IfTests));
+
 	[Test]
 	public void ReturnTypeOfElseMustMatchMethodReturnType()
 	{
-		var program = new Type(new Package(nameof(IfTests)), new TypeLines(
+		var program = new Type(Package, new TypeLines(
 			nameof(ReturnTypeOfElseMustMatchMethodReturnType),
 			// @formatter:off
 			"has logger",
@@ -87,7 +89,7 @@ public sealed class IfAdvancedTests : TestExpressions
 	[Test]
 	public void ThenReturnsImplementedTypeOfMethodReturnType()
 	{
-		var program = new Type(new Package(nameof(IfTests)),
+		var program = new Type(Package,
 			new TypeLines(nameof(ThenReturnsImplementedTypeOfMethodReturnType),
 				// @formatter:off
 				"has logger",
@@ -106,7 +108,7 @@ public sealed class IfAdvancedTests : TestExpressions
 	[Test]
 	public void MultiLineThenAndElseWithMatchingMethodReturnType()
 	{
-		var program = new Type(new Package(nameof(IfTests)),
+		var program = new Type(Package,
 			new TypeLines(nameof(MultiLineThenAndElseWithMatchingMethodReturnType),
 				// @formatter:off
 				"has logger",
@@ -144,7 +146,7 @@ public sealed class IfAdvancedTests : TestExpressions
 	[Test]
 	public void ValidMultipleElseIf()
 	{
-		var program = new Type(new Package(nameof(IfTests)),
+		var program = new Type(Package,
 			new TypeLines(nameof(ValidMultipleElseIf),
 				// @formatter:off
 				"has logger",
@@ -177,7 +179,7 @@ public sealed class IfAdvancedTests : TestExpressions
 	[Test]
 	public void ElseIfMissingThen()
 	{
-		var program = new Type(new Package(nameof(IfTests)),
+		var program = new Type(Package,
 			new TypeLines(nameof(ElseIfMissingThen),
 				// @formatter:off
 				"has logger",
@@ -196,7 +198,7 @@ public sealed class IfAdvancedTests : TestExpressions
 	[Test]
 	public void MultiLineElseWithMismatchingReturnType()
 	{
-		var program = new Type(new Package(nameof(IfTests)), new TypeLines(
+		var program = new Type(Package, new TypeLines(
 			nameof(MultiLineElseWithMismatchingReturnType),
 			// @formatter:off
 			"has logger",

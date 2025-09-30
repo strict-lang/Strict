@@ -5,12 +5,11 @@ public sealed class EnumTests
 	[SetUp]
 	public void CreatePackageAndParser()
 	{
-		package = new TestPackage();
 		parser = new MethodExpressionParser();
-		new Type(package,
+		connectionType = new Type(TestPackage.Instance,
 			new TypeLines("Connection", "constant Google = \"https://google.com\"",
 				"constant Microsoft = \"https://microsoft.com\"")).ParseMembersAndMethods(parser);
-		new Type(package,
+		instructionType = new Type(TestPackage.Instance,
 			new TypeLines("Instruction", "constant Set", "constant Add", "constant Subtract",
 				"constant Multiply", "constant Divide", "constant BinaryOperatorsSeparator = 100",
 				"constant GreaterThan", "constant LessThan", "constant Equal", "constant NotEqual",
@@ -18,8 +17,16 @@ public sealed class EnumTests
 				"constant JumpIfNotZero", "constant JumpsSeparator = 300")).ParseMembersAndMethods(parser);
 	}
 
-	private Package package = null!;
 	private ExpressionParser parser = null!;
+	private Type connectionType = null!;
+	private Type instructionType = null!;
+
+	[TearDown]
+	public void TearDown()
+	{
+		TestPackage.Instance.Remove(connectionType);
+		TestPackage.Instance.Remove(instructionType);
+	}
 
 	[TestCase(true, "constant Set", "constant Add")]
 	[TestCase(false, "has logger", "has number")]
@@ -27,7 +34,7 @@ public sealed class EnumTests
 	[TestCase(false, "has logger", "Run", "\t5")]
 	public void CheckTypeIsEnum(bool expected, params string[] lines)
 	{
-		var type = new Type(package,
+		using var type = new Type(TestPackage.Instance,
 			new TypeLines(nameof(CheckTypeIsEnum), lines)).ParseMembersAndMethods(parser);
 		Assert.That(type.IsEnum, Is.EqualTo(expected));
 	}
@@ -35,7 +42,7 @@ public sealed class EnumTests
 	[Test]
 	public void UseEnumWithoutConstructor()
 	{
-		var consumingType = new Type(package,
+		var consumingType = new Type(TestPackage.Instance,
 			new TypeLines(nameof(UseEnumWithoutConstructor), "has logger",
 				"Run", "\tconstant url = Connection.Google")).ParseMembersAndMethods(parser);
 		var assignment = (ConstantDeclaration)consumingType.Methods[0].GetBodyAndParseIfNeeded();
@@ -48,8 +55,8 @@ public sealed class EnumTests
 	[Test]
 	public void UseEnumAsMemberWithoutConstructor()
 	{
-		var consumingType = new Type(package,
-			new TypeLines(nameof(UseEnumWithoutConstructor), "constant url = Connection.Google",
+		var consumingType = new Type(TestPackage.Instance,
+			new TypeLines(nameof(UseEnumAsMemberWithoutConstructor), "constant url = Connection.Google",
 				"Run", "\t5")).ParseMembersAndMethods(parser);
 		Assert.That(consumingType.Members[0].InitialValue, Is.InstanceOf<MemberCall>());
 		var memberCall = (MemberCall)consumingType.Members[0].InitialValue!;
@@ -60,7 +67,7 @@ public sealed class EnumTests
 	[Test]
 	public void EnumWithoutValuesUsedAsMemberAndVariable()
 	{
-		var consumingType = new Type(package,
+		var consumingType = new Type(TestPackage.Instance,
 				new TypeLines(nameof(EnumWithoutValuesUsedAsMemberAndVariable),
 					"has something = Instruction.Add", "Run", "\tconstant myInstruction = Instruction.Set")).
 			ParseMembersAndMethods(parser);
@@ -76,7 +83,7 @@ public sealed class EnumTests
 	[Test]
 	public void CompareEnums()
 	{
-		var consumingType = new Type(package,
+		var consumingType = new Type(TestPackage.Instance,
 				new TypeLines(nameof(CompareEnums),
 					"has receivedInstruction = Instruction.Add",
 					"ExecuteInstruction(numbers) Number",
@@ -94,7 +101,7 @@ public sealed class EnumTests
 	[Test]
 	public void UseEnumAsMethodParameters()
 	{
-		var consumingType = new Type(package,
+		var consumingType = new Type(TestPackage.Instance,
 				new TypeLines(nameof(UseEnumAsMethodParameters),
 					"has logger",
 					"ExecuteInstruction(numbers, instruction) Number",
@@ -113,7 +120,7 @@ public sealed class EnumTests
 	[Test]
 	public void EnumCanHaveMembersWithDifferentTypes()
 	{
-		var type = new Type(package,
+		var type = new Type(TestPackage.Instance,
 				new TypeLines(nameof(EnumCanHaveMembersWithDifferentTypes),
 					"constant One",
 					"constant SomeText = \"2\"",
@@ -125,11 +132,11 @@ public sealed class EnumTests
 	[Test]
 	public void UseEnumExtensions()
 	{
-		new Type(package,
+		new Type(TestPackage.Instance,
 			new TypeLines("MoreInstruction", "has instruction", "constant BlaDivide = 14",
 				"constant BlaBinaryOperatorsSeparator", "constant BlaGreaterThan",
 				"constant BlaLessThan")).ParseMembersAndMethods(parser);
-		var body = (Body)new Type(package,
+		var body = (Body)new Type(TestPackage.Instance,
 				new TypeLines(nameof(UseEnumExtensions), "has logger", "UseExtendedEnum(instruction) Number",
 					"\tconstant result = instruction to MoreInstruction", "\tresult.BlaDivide")).
 			ParseMembersAndMethods(parser).Methods[0].GetBodyAndParseIfNeeded();
@@ -140,7 +147,7 @@ public sealed class EnumTests
 	public void EnumConstantsCanBeUsedDirectly()
 	{
 		var type =
-			new Type(package,
+			new Type(TestPackage.Instance,
 				new TypeLines(nameof(EnumConstantsCanBeUsedDirectly), "has instruction", "Run",
 					"\tInstruction.Multiply is not instruction")).ParseMembersAndMethods(parser);
 		var method = type.FindMethod("Run", []);

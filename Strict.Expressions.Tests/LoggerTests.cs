@@ -7,10 +7,9 @@ public sealed class LoggerTests
 	[Test]
 	public void PrintHelloWorld()
 	{
-		var package = new TestPackage();
-		new Type(package, new TypeLines(Base.App, "Run"));
+		new Type(TestPackage.Instance, new TypeLines(Base.App, "Run"));
 		var type =
-			new Type(package,
+			new Type(TestPackage.Instance,
 					new TypeLines("Program", "has App", "has logger", "Run", "\tlogger.Log(\"Hello\")")).
 				ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(Run(type.Methods[0]), Is.EqualTo("Hello"));

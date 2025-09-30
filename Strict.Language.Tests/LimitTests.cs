@@ -5,13 +5,8 @@ namespace Strict.Language.Tests;
 public sealed class LimitTests
 {
 	[SetUp]
-	public void CreatePackage()
-	{
-		package = new TestPackage();
-		parser = new MethodExpressionParser();
-	}
+	public void CreatePackage() => parser = new MethodExpressionParser();
 
-	private Package package = null!;
 	private MethodExpressionParser parser = null!;
 
 	[Test]
@@ -24,7 +19,7 @@ public sealed class LimitTests
 				Contains($"Method Run has 13 lines but limit is {Limit.MethodLength}"));
 
 	private Type CreateType(string name, string[] lines) =>
-		new Type(package, new TypeLines(name, lines)).ParseMembersAndMethods(parser);
+		new Type(TestPackage.Instance, new TypeLines(name, lines)).ParseMembersAndMethods(parser);
 
 	private static string[] CreateProgramWithDuplicateLines(string[] defaultLines, int count,
 		params string[] linesToDuplicate)
@@ -187,7 +182,7 @@ public sealed class LimitTests
 	[TestCase("MethodNameWithLengthGreaterThanFiftyExceedsLimitAndIsNotAllowed")]
 	[TestCase("M")]
 	public void MethodNameShouldNotExceedTheLimit(string methodName) =>
-		Assert.That(() => CreateType(nameof(MethodNameShouldNotExceedTheLimit), [
+		Assert.That(() => CreateType(nameof(MethodNameShouldNotExceedTheLimit) + methodName.Last(), [
 				"has number", methodName, "	constant number = 5"
 			]).ParseMembersAndMethods(parser),
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.

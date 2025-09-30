@@ -161,7 +161,8 @@ Run
 	[TestCase("ll - mm", "ll - mm")]
 	[TestCase("ll * mm", "ll * mm")]
 	public void ListsBinaryOperation(string code, string expected) =>
-		Assert.That(new CSharpTypeVisitor(new Type(new TestPackage(), new TypeLines(Computer, @$"has logger
+		Assert.That(new CSharpTypeVisitor(new Type(TestPackage.Instance, new TypeLines(Computer,
+				@$"has logger
 Run
 	constant ll = (1, 2) + (3, 4)
 	constant mm = (5, 6)
@@ -174,7 +175,7 @@ Run
 	public void GenerateListTypeProgram()
 	{
 		var program =
-			new Type(new TestPackage(),
+			new Type(TestPackage.Instance,
 				new TypeLines("Program", "has numbers", "TestListsMethod Numbers",
 					"\t(1, 2, 3) + 5", "\tnumbers")).ParseMembersAndMethods(parser);
 		var visitor = new CSharpTypeVisitor(program);

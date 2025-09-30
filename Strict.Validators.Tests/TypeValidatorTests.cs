@@ -7,7 +7,7 @@ public sealed class TypeValidatorTests
 	[SetUp]
 	public void CreateTypeAndParser()
 	{
-		type = new Type(new TestPackage(),
+		type = new Type(TestPackage.Instance,
 			new TypeLines(nameof(TypeValidatorTests), "has logger", "Run", "\tlogger.Log(5)"));
 		parser = new MethodExpressionParser();
 		type.ParseMembersAndMethods(parser);
@@ -17,6 +17,9 @@ public sealed class TypeValidatorTests
 	private Type type = null!;
 	private ExpressionParser parser = null!;
 	private TypeValidator validator = null!;
+
+	[TearDown]
+	public void TearDown() => TestPackage.Instance.Remove(type);
 
 	[TestCase("unused", "Run", "\tconstant unused = \"something never used\"",
 		"\t\"Run method executed\"")]
@@ -115,7 +118,7 @@ public sealed class TypeValidatorTests
 	[Test]
 	public void ListArgumentCanBeAutoParsedWithoutDoubleBrackets()
 	{
-		var typeWithListParameterMethod = new Type(new TestPackage(),
+		var typeWithListParameterMethod = new Type(TestPackage.Instance,
 			new TypeLines(nameof(ListArgumentCanBeAutoParsedWithoutDoubleBrackets), "has logger",
 				"CheckInputLengthAndGetResult(numbers) Number", "\tif numbers.Length is 2",
 				"\t\treturn 2", "\t0")).ParseMembersAndMethods(parser);
@@ -170,7 +173,7 @@ public sealed class TypeValidatorTests
 	public void VariableHidesMemberUseDifferentName() =>
 		Assert.That(() =>
 			{
-				var typeWithInputMember = CreateType(nameof(VariableHidesMemberUseDifferentName), [
+				using var typeWithInputMember = CreateType(nameof(VariableHidesMemberUseDifferentName), [
 					"has input Number",
 					"FirstMethod(methodInput Number) Number",
 					"\tconstant something = 5",
@@ -190,7 +193,7 @@ public sealed class TypeValidatorTests
 
 	[Test]
 	public void ParameterHidesMemberUseDifferentName() =>
-		Assert.That(() => validator.Visit(CreateType(nameof(VariableHidesMemberUseDifferentName), [
+		Assert.That(() => validator.Visit(CreateType(nameof(ParameterHidesMemberUseDifferentName), [
 				"has input Number",
 				"FirstMethod(input Number) Number",
 				"\tconstant something = 5",

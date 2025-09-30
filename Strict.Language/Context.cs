@@ -47,7 +47,7 @@ public abstract class Context
 		"Name " + name +
 		" ;Allowed characters: Alphabets, Numbers or '-' in the middle or end of the name");
 
-	public Context Parent { get; protected set; }
+	public Context Parent { get; }
 	public string Name { get; }
 	public string FullName { get; }
 	public Type GetType(string name) => TryGetType(name) ?? throw new TypeNotFound(name, FullName);

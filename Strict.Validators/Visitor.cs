@@ -51,9 +51,9 @@ public abstract class Visitor
 			Visit(body, context);
 		else
 		{
-			var replaced = VisitExpression(expression, context);
+			var replaced = Visit(expression, null, context);
 			if (!ReferenceEquals(replaced, expression))
-				method.SetBodySingleExpression(replaced);
+				method.SetBodySingleExpression(replaced!);
 		}
 	}
 
@@ -83,7 +83,7 @@ public abstract class Visitor
 			body.SetExpressions(rewritten);
 	}
 
-	protected virtual Expression? Visit(Expression? expression, Body body, object? context = null)
+	protected virtual Expression? Visit(Expression? expression, Body? body, object? context = null)
 	{
 		if (expression == null)
 			return expression;
@@ -97,7 +97,7 @@ public abstract class Visitor
 		else if (expression is ConstantDeclaration declaration)
 		{
 			var newValue = Visit(declaration.Value, body, context)!;
-			if (!ReferenceEquals(newValue, declaration.Value))
+			if (!ReferenceEquals(newValue, declaration.Value) && body != null)
 			{
 				body.FindVariable(declaration.Name)!.InitialValue = newValue;
 				declaration.SetValue(newValue);
@@ -113,7 +113,7 @@ public abstract class Visitor
 		return expression;
 	}
 
-	private void Visit(IEnumerable<Expression> expressions, Body body, object? context)
+	private void Visit(IEnumerable<Expression> expressions, Body? body, object? context)
 	{
 		foreach (var expression in expressions)
 			Visit(expression, body, context);

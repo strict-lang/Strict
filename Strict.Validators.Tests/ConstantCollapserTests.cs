@@ -7,7 +7,7 @@ public sealed class ConstantCollapserTests
 	[SetUp]
 	public void Setup()
 	{
-		type = new Type(new TestPackage(),
+		type = new Type(TestPackage.Instance,
 			new TypeLines(nameof(ConstantCollapserTests), "has logger", "Run", "\tlogger.Log(5)"));
 		parser = new MethodExpressionParser();
 		type.ParseMembersAndMethods(parser);
@@ -17,6 +17,9 @@ public sealed class ConstantCollapserTests
 	private Type type = null!;
 	private ExpressionParser parser = null!;
 	private ConstantCollapser collapser = null!;
+
+	[TearDown]
+	public void TearDown() => TestPackage.Instance.Remove(type);
 
 	[Test]
 	public void FoldTextToNumberToJustNumber()

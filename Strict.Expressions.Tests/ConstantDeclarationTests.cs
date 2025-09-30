@@ -5,14 +5,10 @@ namespace Strict.Expressions.Tests;
 public class ConstantDeclarationTests : TestExpressions
 {
 	[SetUp]
-	public void CreateParserAndPackage()
-	{
-		parser = new MethodExpressionParser();
-		package = new Package(nameof(ConstantDeclarationTests));
-	}
+	public void CreateParserAndPackage() => parser = new MethodExpressionParser();
 
 	private ExpressionParser parser = null!;
-	private Package package = null!;
+	private static readonly Package Package = new(nameof(ConstantDeclarationTests));
 
 	[Test]
 	public void MissingConstantValue() =>
@@ -132,7 +128,7 @@ public class ConstantDeclarationTests : TestExpressions
 	public void AssignmentWithMethodCall()
 	{
 		// @formatter:off
-		var program = new Type(package,
+		var program = new Type(Package,
 			new TypeLines(nameof(AssignmentWithMethodCall),
 				"has logger",
 				"MethodToCall Text",
@@ -160,7 +156,7 @@ public class ConstantDeclarationTests : TestExpressions
 	[Test]
 	public void LetAssignmentWithConstructorCall() =>
 		Assert.That(
-			((ConstantDeclaration)new Type(package,
+			((ConstantDeclaration)new Type(Package,
 					new TypeLines(nameof(LetAssignmentWithConstructorCall), "has logger",
 						"Run",
 						"\tconstant file = File(\"test.txt\")")).ParseMembersAndMethods(parser).Methods[0].

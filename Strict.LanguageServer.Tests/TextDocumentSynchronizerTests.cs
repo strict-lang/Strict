@@ -1,6 +1,7 @@
 using NUnit.Framework;
 using OmniSharp.Extensions.LanguageServer.Protocol;
 using OmniSharp.Extensions.LanguageServer.Protocol.Models;
+using Strict.Language.Tests;
 using Range = OmniSharp.Extensions.LanguageServer.Protocol.Models.Range;
 
 namespace Strict.LanguageServer.Tests;
@@ -66,7 +67,7 @@ public sealed class TextDocumentSynchronizerTests : LanguageServerTests
 				TextDocument = new OptionalVersionedTextDocumentIdentifier { Uri = URI },
 				ContentChanges = new Container<TextDocumentContentChangeEvent>(
 					new TextDocumentContentChangeEvent { Range = range, Text = text })
-			}, new CancellationToken());
+			}, CancellationToken.None);
 		Assert.That(textDocumentHandler.Document.Get(URI), Is.EqualTo(expected));
 	}
 
@@ -79,7 +80,7 @@ public sealed class TextDocumentSynchronizerTests : LanguageServerTests
 				TextDocument = new OptionalVersionedTextDocumentIdentifier { Uri = MultiLineURI },
 				ContentChanges = new Container<TextDocumentContentChangeEvent>(
 					new TextDocumentContentChangeEvent { Range = range, Text = text })
-			}, new CancellationToken());
+			}, CancellationToken.None);
 		Assert.That(textDocumentHandler.Document.Get(MultiLineURI), Is.EqualTo(expected));
 	}
 
@@ -90,8 +91,8 @@ public sealed class TextDocumentSynchronizerTests : LanguageServerTests
 			new DidSaveTextDocumentParams
 			{
 				TextDocument = new OptionalVersionedTextDocumentIdentifier { Uri = MultiLineURI }
-			}, new CancellationToken());
-		var subPackage = testPackage.FindSubPackage(MultiLineURI.Path.GetFolderName());
+			}, CancellationToken.None);
+		var subPackage = TestPackage.Instance.FindSubPackage(MultiLineURI.Path.GetFolderName());
 		Assert.That(subPackage, Is.Not.Null);
 		Assert.That(subPackage?.GetType(MultiLineURI.Path.GetFileName()), Is.Not.Null);
 	}
@@ -103,8 +104,8 @@ public sealed class TextDocumentSynchronizerTests : LanguageServerTests
 			new DidOpenTextDocumentParams
 			{
 				TextDocument = new TextDocumentItem { Uri = MultiLineURI, Text = text }
-			}, new CancellationToken());
-		var subPackage = testPackage.FindSubPackage(MultiLineURI.Path.GetFolderName());
+			}, CancellationToken.None);
+		var subPackage = TestPackage.Instance.FindSubPackage(MultiLineURI.Path.GetFolderName());
 		Assert.That(subPackage, Is.Not.Null);
 		Assert.That(subPackage?.GetType(MultiLineURI.Path.GetFileName()), Is.Not.Null);
 	}

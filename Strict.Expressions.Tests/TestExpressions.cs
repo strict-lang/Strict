@@ -6,7 +6,7 @@ public abstract class TestExpressions : MethodExpressionParser
 {
 	protected TestExpressions()
 	{
-		type = new Type(new TestPackage(), new TypeLines("dummy", "Run")).
+		type = new Type(TestPackage.Instance, new TypeLines("dummy", "Run")).
 			ParseMembersAndMethods(this);
 		boolean = type.GetType(Base.Boolean);
 		member = new Member(type, "logger", null);
@@ -41,7 +41,11 @@ public abstract class TestExpressions : MethodExpressionParser
 	private NoConsoleWriteLineAllowed noConsole = null!;
 
 	[TearDown]
-	public void NoConsoleAllowed() => noConsole.CheckIfConsoleIsEmpty();
+	public void NoConsoleAllowed()
+	{
+		TestPackage.Instance.Remove(type);
+		noConsole.CheckIfConsoleIsEmpty();
+	}
 
 	public void ParseAndCheckOutputMatchesInput(string singleLine, Expression expectedExpression) =>
 		ParseAndCheckOutputMatchesInput([singleLine], expectedExpression);

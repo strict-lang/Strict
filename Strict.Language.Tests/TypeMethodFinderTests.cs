@@ -7,21 +7,23 @@ public sealed class TypeMethodFinderTests
 	[SetUp]
 	public void CreatePackage()
 	{
-		package = new TestPackage();
 		parser = new MethodExpressionParser();
-		CreateType(Base.App, "Run");
+		appType = CreateType(Base.App, "Run");
 	}
 
 	private Type CreateType(string name, params string[] lines) =>
-		new Type(package, new TypeLines(name, lines)).ParseMembersAndMethods(parser);
+		new Type(TestPackage.Instance, new TypeLines(name, lines)).ParseMembersAndMethods(parser);
 
-	public Package package = null!;
 	public ExpressionParser parser = null!;
+	private Type appType = null!;
+
+	[TearDown]
+	public void TearDown() => TestPackage.Instance.Remove(appType);
 
 	[Test]
 	public void CanUpCastNumberWithList()
 	{
-		var type = CreateType(nameof(CanUpCastNumberWithList), "has logger",
+		using var type = CreateType(nameof(CanUpCastNumberWithList), "has logger",
 			"Add(first Number, other Numbers) List", "\tfirst + other");
 		var result = type.FindMethod("Add",
 		[
@@ -36,7 +38,7 @@ public sealed class TypeMethodFinderTests
 	[Test]
 	public void GenericTypesCannotBeUsedDirectlyUseImplementation()
 	{
-		var type = CreateType(nameof(GenericTypesCannotBeUsedDirectlyUseImplementation),
+		using var type = CreateType(nameof(GenericTypesCannotBeUsedDirectlyUseImplementation),
 			"has generic", "AddGeneric(first Generic, other List) List", "\tfirst + other");
 		Assert.That(
 			() => type.FindMethod("AddGeneric",
@@ -47,7 +49,7 @@ public sealed class TypeMethodFinderTests
 	[Test]
 	public void UsingGenericMethodIsAllowed()
 	{
-		var type = CreateType(nameof(CanUpCastNumberWithList), "has logger",
+		using var type = CreateType(nameof(UsingGenericMethodIsAllowed), "has logger",
 			"Add(other Texts, first Generic) List", "\tother + first");
 		Assert.That(
 			type.FindMethod("Add",
@@ -74,7 +76,7 @@ public sealed class TypeMethodFinderTests
 	[Test]
 	public void MethodParameterCanBeGeneric()
 	{
-		var type = new Type(package,
+		var type = new Type(TestPackage.Instance,
 			new TypeLines(nameof(MethodParameterCanBeGeneric), "has logger", "Something(input Generics)",
 				"\tconstant result = input + 5")).ParseMembersAndMethods(parser);
 		Assert.That(type.FindMethod("Something", [new List(null!, [new Text(type, "hello")])]),
@@ -84,10 +86,10 @@ public sealed class TypeMethodFinderTests
 	[Test]
 	public void CreateTypeUsingConstructorMembers()
 	{
-		new Type(package,
+		new Type(TestPackage.Instance,
 			new TypeLines("Customer", "has text", "has age Number", "Print Text",
 				"\t\"Customer Name: \" + name + \" Age: \" + age")).ParseMembersAndMethods(parser);
-		var createCustomer = new Type(package,
+		var createCustomer = new Type(TestPackage.Instance,
 			new TypeLines(nameof(CreateTypeUsingConstructorMembers), "has logger", "Something",
 				"\tconstant customer = Customer(\"Murali\", 28)")).ParseMembersAndMethods(parser);
 		var assignment = (ConstantDeclaration)createCustomer.Methods[0].GetBodyAndParseIfNeeded();
@@ -98,10 +100,10 @@ public sealed class TypeMethodFinderTests
 	[Test]
 	public void UsingToMethodForComplexTypeConstructorIsForbidden()
 	{
-		new Type(package,
+		new Type(TestPackage.Instance,
 			new TypeLines("Customer", "has text", "has age Number", "Print Text",
 				"\t\"Customer Name: \" + name + \" Age: \" + age")).ParseMembersAndMethods(parser);
-		var createCustomer = new Type(package,
+		var createCustomer = new Type(TestPackage.Instance,
 			new TypeLines(nameof(CreateTypeUsingConstructorMembers), "has logger", "Something",
 				"\tconstant customer = (\"Murali\", 28) to Customer")).ParseMembersAndMethods(parser);
 		Assert.That(() => createCustomer.Methods[0].GetBodyAndParseIfNeeded(),
@@ -111,7 +113,7 @@ public sealed class TypeMethodFinderTests
 	[Test]
 	public void CreateStacktraceTypeUsingMembersInConstructor()
 	{
-		var logger = new Type(package,
+		var logger = new Type(TestPackage.Instance,
 			new TypeLines("MethodLogger",
 				"has logger",
 				"has method",
@@ -128,7 +130,7 @@ public sealed class TypeMethodFinderTests
 	public void MutableTypesOrImplementsShouldNotBeUsedDirectly()
 	{
 		var type =
-			new Type(package,
+			new Type(TestPackage.Instance,
 				new TypeLines(nameof(MutableTypesOrImplementsShouldNotBeUsedDirectly), "has number",
 					"Run", "\tmutable result = Mutable(2)")).ParseMembersAndMethods(parser);
 		Assert.That(() => type.Methods[0].GetBodyAndParseIfNeeded(),
@@ -139,7 +141,7 @@ public sealed class TypeMethodFinderTests
 	[Test]
 	public void RangeTypeShouldHaveCorrectAvailableMethods()
 	{
-		var range = package.GetType(Base.Range);
+		var range = TestPackage.Instance.GetType(Base.Range);
 		Assert.That(range.AvailableMethods.Values.Select(methods => methods.Count).Sum(),
 			Is.EqualTo(9), "AvailableMethods: " + range.AvailableMethods.ToWordList());
 	}
@@ -147,7 +149,7 @@ public sealed class TypeMethodFinderTests
 	[Test]
 	public void TextTypeShouldHaveCorrectAvailableMethods()
 	{
-		var text = package.GetType(Base.Text + "s");
+		var text = TestPackage.Instance.GetType(Base.Text + "s");
 		Assert.That(text.AvailableMethods.Values.Select(methods => methods.Count).Sum(),
 			Is.GreaterThanOrEqualTo(18), "AvailableMethods: " + text.AvailableMethods.ToWordList());
 	}
@@ -155,7 +157,7 @@ public sealed class TypeMethodFinderTests
 	[Test]
 	public void PrivateMethodsShouldNotBeAddedToAvailableMethods()
 	{
-		var type = new Type(package, new TypeLines(nameof(PrivateMethodsShouldNotBeAddedToAvailableMethods),
+		var type = new Type(TestPackage.Instance, new TypeLines(nameof(PrivateMethodsShouldNotBeAddedToAvailableMethods),
 			"has textWriter", "run", "\tconstant n = 5"));
 		type.ParseMembersAndMethods(parser);
 		Assert.That(type.Methods.Count, Is.EqualTo(1));
@@ -165,9 +167,9 @@ public sealed class TypeMethodFinderTests
 	[Test]
 	public void AvailableMethodsShouldNotHaveMembersPrivateMethods()
 	{
-		new Type(package,
+		new Type(TestPackage.Instance,
 			new TypeLines("ProgramWithPublicAndPrivateMethods", "has logger", "PublicMethod", "\tlogger.Log(\"I am exposed\")", "privateMethod", "\tlogger.Log(\"Support privacy\")")).ParseMembersAndMethods(parser);
-		var type = new Type(package,
+		var type = new Type(TestPackage.Instance,
 			new TypeLines(nameof(AvailableMethodsShouldNotHaveMembersPrivateMethods),
 				"has programWithPublicAndPrivateMethods", "run", "\tconstant n = 5"));
 		type.ParseMembersAndMethods(parser);
@@ -183,13 +185,14 @@ public sealed class TypeMethodFinderTests
 	[Test]
 	public void IsMutableAndHasMatchingInnerType()
 	{
-		var number = package.GetType(Base.Number);
+		var number = TestPackage.Instance.GetType(Base.Number);
 		Assert.That(CreateMutableType(Base.Number).IsSameOrCanBeUsedAs(number), Is.True);
 		Assert.That(CreateMutableType(Base.Text).IsSameOrCanBeUsedAs(number), Is.False);
 	}
 
-	private Type CreateMutableType(string typeName) =>
-		package.GetType(Base.Mutable).GetGenericImplementation(package.GetType(typeName));
+	private static Type CreateMutableType(string typeName) =>
+		TestPackage.Instance.GetType(Base.Mutable).
+			GetGenericImplementation(TestPackage.Instance.GetType(typeName));
 
 	[Test]
 	public void InitializeInnerTypeMemberUsingOuterTypeConstructor()
@@ -202,7 +205,7 @@ public sealed class TypeMethodFinderTests
 			"\tsuperThing is 7",
 			"\tsuperThing");
 		superThingUser.Methods[0].GetBodyAndParseIfNeeded();
-		Assert.That(superThingUser.Members[0].Type, Is.EqualTo(package.GetType("SuperThing")));
+		Assert.That(superThingUser.Members[0].Type, Is.EqualTo(TestPackage.Instance.GetType("SuperThing")));
 	}
 
 	[Test]
@@ -210,7 +213,7 @@ public sealed class TypeMethodFinderTests
 	{
 		CreateType("Comparer", "has FirstTypes Generics", "has SecondType Generic",
 			"from(number)", "\tComparer(number, number)", "Compare", "\tfirstType is secondType");
-		var comparerImplementation = new Type(package,
+		var comparerImplementation = new Type(TestPackage.Instance,
 			new TypeLines(nameof(GetGenericImplementationCanUseCustomFromMethod),
 				"has custom Comparer(Number)", "UnusedMethod Number", "\t5"));
 		comparerImplementation.ParseMembersAndMethods(new MethodExpressionParser());

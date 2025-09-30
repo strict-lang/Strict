@@ -5,18 +5,21 @@ namespace Strict.Language.Tests;
 public sealed class TypeTests
 {
 	[SetUp]
-	public void CreatePackage()
+	public void CreateParser()
 	{
-		package = new TestPackage();
 		parser = new MethodExpressionParser();
-		CreateType(Base.App, "Run");
+		appType = CreateType(Base.App, "Run");
 	}
 
 	private Type CreateType(string name, params string[] lines) =>
 		new Type(package, new TypeLines(name, lines)).ParseMembersAndMethods(parser);
 
-	public Package package = null!;
+	private readonly Package package = TestPackage.Instance;
 	public ExpressionParser parser = null!;
+	private Type appType = null!;
+
+	[TearDown]
+	public void TearDown() => TestPackage.Instance.Remove(appType);
 
 	[Test]
 	public void AddingTheSameNameIsNotAllowed() =>
@@ -25,7 +28,10 @@ public sealed class TypeTests
 
 	[Test]
 	public void EmptyLineIsNotAllowed() =>
-		Assert.That(() => CreateType(Base.HashCode, ""),
+		Assert.That(() =>
+			{
+				using var _ = CreateType(nameof(EmptyLineIsNotAllowed), "");
+			},
 			Throws.InstanceOf<TypeParser.EmptyLineIsNotAllowed>().With.Message.Contains("line 1"));
 
 	[Test]
@@ -33,24 +39,28 @@ public sealed class TypeTests
 	{
 		Assert.That(() => CreateType("Whitespace", " "),
 			Throws.InstanceOf<TypeParser.ExtraWhitespacesFoundAtBeginningOfLine>());
-		Assert.That(() => CreateType("Program", " has App"),
+		Assert.That(() => CreateType("ProgramWhitespace", " has App"),
 			Throws.InstanceOf<TypeParser.ExtraWhitespacesFoundAtBeginningOfLine>());
-		Assert.That(() => CreateType(Base.HashCode, "has\t"),
+		Assert.That(() => CreateType("TabWhitespace", "has\t"),
 			Throws.InstanceOf<TypeParser.ExtraWhitespacesFoundAtEndOfLine>());
 	}
 
 	[Test]
 	public void TypeParsersMustStartWithMember() =>
-		Assert.That(() => CreateType(Base.HashCode, "Run", "\tlogger.Log"),
+		Assert.That(() => CreateType(nameof(TypeParsersMustStartWithMember), "Run", "\tlogger.Log"),
 			Throws.InstanceOf<Type.TypeHasNoMembersAndThusMustBeATraitWithoutMethodBodies>());
 
 	[Test]
-	public void JustMembersAreAllowed() =>
-		Assert.That(CreateType(Base.HashCode, "has logger", "mutable counter Number").Members.Count, Is.EqualTo(2));
+	public void JustMembersAreAllowed()
+	{
+		using var type = CreateType(nameof(JustMembersAreAllowed), "has logger",
+			"mutable counter Number");
+		Assert.That(type.Members.Count, Is.EqualTo(2));
+	}
 
 	[Test]
 	public void GetUnknownTypeWillCrash() =>
-		Assert.That(() => package.GetType(UnknownComputation),
+		Assert.That(() => TestPackage.Instance.GetType(UnknownComputation),
 			Throws.InstanceOf<Context.TypeNotFound>());
 
 	private const string UnknownComputation = nameof(UnknownComputation);
@@ -58,7 +68,10 @@ public sealed class TypeTests
 	[TestCase("has invalidType")]
 	[TestCase("has logger", "Run InvalidType", "\tconstant a = 5")]
 	public void TypeNotFound(params string[] lines) =>
-		Assert.That(() => CreateType(Base.HashCode, lines),
+		Assert.That(() =>
+			{
+				using var _ = CreateType(nameof(TypeNotFound) + lines[0][5], lines);
+			},
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.InstanceOf<Context.TypeNotFound>());
 
 	[Test]
@@ -88,7 +101,7 @@ public sealed class TypeTests
 	[TestCase("has any")]
 	[TestCase("has random Any")]
 	public void MemberWithTypeAnyIsNotAllowed(string line) =>
-		Assert.That(() => CreateType("Program", line),
+		Assert.That(() => CreateType(nameof(MemberWithTypeAnyIsNotAllowed) + line[5], line),
 			Throws.InstanceOf<TypeParser.MemberWithTypeAnyIsNotAllowed>());
 
 	[TestCase("has logger", "Run", "\tconstant result = Any")]
@@ -96,7 +109,7 @@ public sealed class TypeTests
 	[TestCase("has logger", "Run", "\tconstant result = 5 + Any(5)")]
 	public void VariableWithTypeAnyIsNotAllowed(params string[] lines)
 	{
-		var type = new Type(package, new TypeLines(nameof(VariableWithTypeAnyIsNotAllowed), lines)).ParseMembersAndMethods(parser);
+		using var type = new Type(package, new TypeLines(nameof(VariableWithTypeAnyIsNotAllowed), lines)).ParseMembersAndMethods(parser);
 		Assert.That(() => type.Methods[0].GetBodyAndParseIfNeeded(),
 			Throws.InstanceOf<MethodExpressionParser.ExpressionWithTypeAnyIsNotAllowed>().With.Message.
 				Contains("Any"));
@@ -105,23 +118,27 @@ public sealed class TypeTests
 	[TestCase("has logger", "Run(any)", "\tconstant result = 5")]
 	[TestCase("has logger", "Run(input Any)", "\tconstant result = 5")]
 	public void MethodParameterWithTypeAnyIsNotAllowed(params string[] lines) =>
-		Assert.That(() => CreateType("Program", lines),
+		Assert.That(() =>
+			{
+				using var _ = CreateType(nameof(MethodParameterWithTypeAnyIsNotAllowed), lines);
+			},
 			Throws.InstanceOf<Method.ParametersWithTypeAnyIsNotAllowed>());
 
 	[Test]
 	public void MethodReturnTypeAsAnyIsNotAllowed() =>
-		Assert.That(() => CreateType("Program", "has logger", "Run Any", "\tconstant result = 5"),
-			Throws.InstanceOf<Method.MethodReturnTypeAsAnyIsNotAllowed>());
+		Assert.That(
+			() => CreateType(nameof(MethodReturnTypeAsAnyIsNotAllowed), "has logger", "Run Any",
+				"\tconstant result = 5"), Throws.InstanceOf<Method.MethodReturnTypeAsAnyIsNotAllowed>());
 
 	[Test]
 	public void MembersMustComeBeforeMethods() =>
-		Assert.That(() => CreateType("Program", "Run", "has logger"),
+		Assert.That(() => CreateType(nameof(MembersMustComeBeforeMethods), "Run", "has logger"),
 			Throws.InstanceOf<TypeParser.MembersMustComeBeforeMethods>());
 
 	[Test]
 	public void SimpleApp() =>
 		// @formatter:off
-		CheckApp(CreateType("Program",
+		CheckApp(CreateType(nameof(SimpleApp),
 			"has App",
 			"has logger",
 			"Run",
@@ -137,7 +154,7 @@ public sealed class TypeTests
 
 	[Test]
 	public void AnotherApp() =>
-		CheckApp(CreateType("Program",
+		CheckApp(CreateType(nameof(AnotherApp),
 			"has App",
 			"has logger",
 			"Run",
@@ -146,7 +163,7 @@ public sealed class TypeTests
 
 	[Test]
 	public void NotImplementingAnyTraitMethodsAreAllowed() =>
-		Assert.That(() => CreateType("Program",
+		Assert.That(() => CreateType(nameof(NotImplementingAnyTraitMethodsAreAllowed),
 				"has App",
 				"add(number)",
 				"\treturn one + 1"), Is.Not.Null);
@@ -163,7 +180,7 @@ public sealed class TypeTests
 
 	[Test]
 	public void TraitMethodsMustBeImplemented() =>
-		Assert.That(() => CreateType("Program",
+		Assert.That(() => CreateType(nameof(TraitMethodsMustBeImplemented),
 				"has App",
 				"Run"),
 			Throws.InstanceOf<TypeParser.MethodMustBeImplementedInNonTrait>());
@@ -172,9 +189,9 @@ public sealed class TypeTests
 	[Test]
 	public void Trait()
 	{
-		var app = CreateType("DummyApp", "Run");
+		var app = CreateType(nameof(Trait) + "DummyApp", "Run");
 		Assert.That(app.IsTrait, Is.True);
-		Assert.That(app.Name, Is.EqualTo("DummyApp"));
+		Assert.That(app.Name, Is.EqualTo(nameof(Trait) + "DummyApp"));
 		Assert.That(app.Methods[0].Name, Is.EqualTo("Run"));
 	}
 
@@ -182,9 +199,10 @@ public sealed class TypeTests
 	[TestCase(Base.Text, "has number", "Run", "\tmutable result = \"2\"")]
 	public void MutableTypesHaveProperDataReturnType(string expected, params string[] code)
 	{
-		var expression = (ConstantDeclaration)
-			new Type(package, new TypeLines(nameof(MutableTypesHaveProperDataReturnType), code)).
-				ParseMembersAndMethods(parser).Methods[0].GetBodyAndParseIfNeeded();
+		using var type = new Type(package, new TypeLines(nameof(MutableTypesHaveProperDataReturnType), code));
+		var expression =
+			(ConstantDeclaration)type.ParseMembersAndMethods(parser).Methods[0].
+				GetBodyAndParseIfNeeded();
 		Assert.That(expression.Value.ReturnType.Name, Is.EqualTo(expected));
 	}
 
@@ -192,8 +210,11 @@ public sealed class TypeTests
 	[TestCase("has number", "Run", "\tconstant result = 5", "\tresult = 6")]
 	public void ImmutableTypesCannotBeChanged(params string[] code) =>
 		Assert.That(
-			() => new Type(package, new TypeLines(nameof(ImmutableTypesCannotBeChanged), code)).
-				ParseMembersAndMethods(parser).Methods[0].GetBodyAndParseIfNeeded(),
+			() =>
+			{
+				using var type = new Type(package, new TypeLines(nameof(ImmutableTypesCannotBeChanged), code));
+				return type.ParseMembersAndMethods(parser).Methods[0].GetBodyAndParseIfNeeded();
+			},
 			Throws.InstanceOf<Body.ValueIsNotMutableAndCannotBeChanged>());
 
 	[TestCase("mutable canBeModified = 0", "Run", "\tcanBeModified = 5")]
@@ -392,7 +413,7 @@ public sealed class TypeTests
 	[Test]
 	public void EnumCanBeUsedAsNumber()
 	{
-		var instructionType = new Type(package,
+		using var instructionType = new Type(package,
 			new TypeLines("Instruction", "constant Set", "constant Add")).ParseMembersAndMethods(parser);
 		Assert.That(instructionType.IsSameOrCanBeUsedAs(package.GetType(Base.Number)), Is.True);
 	}

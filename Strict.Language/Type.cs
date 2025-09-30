@@ -5,7 +5,7 @@
 /// Strict code only contains optional implement, then has*, then methods*. No empty lines.
 /// There is no typical lexing/scoping/token splitting needed as Strict syntax is very strict.
 /// </summary>
-public class Type : Context
+public class Type : Context, IDisposable
 {
 	public Type(Package package, TypeLines file) : base(package, file.Name)
 	{
@@ -523,4 +523,6 @@ public class Type : Context
 	public Expression GetMemberExpression(ExpressionParser parser, string memberName,
 		string remainingTextSpan) =>
 		typeParser.GetMemberExpression(parser, memberName, remainingTextSpan);
+
+	public void Dispose() => ((Package)Parent).Remove(this);
 }

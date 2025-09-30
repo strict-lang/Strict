@@ -19,7 +19,7 @@ public sealed class TextTests : TestExpressions
 	[Test]
 	public void TextExceededMaximumCharacterLimitUseMultiLine() =>
 		Assert.That(
-			() => new Type(new TestPackage(),
+			() => new Type(TestPackage.Instance,
 					new TypeLines(nameof(TextExceededMaximumCharacterLimitUseMultiLine), "has number", "Run",
 						"\tconstant result = \"HiHelloHowAreYou\" +", "\t\"HelloHowAreYouHiHello\"")).
 				ParseMembersAndMethods(new MethodExpressionParser()),
@@ -39,7 +39,7 @@ public sealed class TextTests : TestExpressions
 	public void
 		ParseMultiLineTextExpressions(string testName, string expectedOutput, params string[] code) =>
 		Assert.That(
-			new Type(new TestPackage(),
+			new Type(TestPackage.Instance,
 					new TypeLines(nameof(ParseMultiLineTextExpressions) + testName, code)).
 				ParseMembersAndMethods(new MethodExpressionParser()).Methods[0].GetBodyAndParseIfNeeded().
 				ToString(), Is.EqualTo(expectedOutput));
@@ -51,7 +51,7 @@ public sealed class TextTests : TestExpressions
 		"	\"This is the continuation of the previous text line\"")]
 	public void ParseNewLineTextExpression(string testName, string expected, params string[] code)
 	{
-		var multiLineType = new Type(new TestPackage(),
+		using var multiLineType = new Type(TestPackage.Instance,
 				new TypeLines(testName, code)).
 			ParseMembersAndMethods(new MethodExpressionParser());
 		var constantDeclaration =
@@ -68,8 +68,8 @@ public sealed class TextTests : TestExpressions
 	public void ParseMultiLineTextEndsWithNewLine(string testName, string expected,
 		params string[] code)
 	{
-		var multiLineType =
-			new Type(new TestPackage(), new TypeLines(testName, code)).ParseMembersAndMethods(
+		using var multiLineType =
+			new Type(TestPackage.Instance, new TypeLines(testName, code)).ParseMembersAndMethods(
 				new MethodExpressionParser());
 		var constantDeclaration =
 			(ConstantDeclaration)multiLineType.Methods[0].GetBodyAndParseIfNeeded();

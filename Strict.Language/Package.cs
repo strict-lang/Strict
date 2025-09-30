@@ -42,8 +42,17 @@ public class Package : Context, IEnumerable<Type>
 		Path.GetFileName(packagePath))
 	{
 		FolderPath = packagePath;
-		parentPackage?.children.Add(this);
+		if (parentPackage == null)
+			return;
+		if (parentPackage.children.Any(existingPackage => existingPackage.Name == Name))
+			throw new PackageAlreadyExists(Name, parentPackage);
+		parentPackage.children.Add(this);
 	}
+
+	public class PackageAlreadyExists(string name, Package parentPackage) : Exception(name +
+		" in " + (parentPackage.Name == ""
+			? nameof(Root)
+			: "parent package " + parentPackage));
 
 	public string FolderPath { get; }
 	private readonly List<Package> children = new();
@@ -132,7 +141,13 @@ public class Package : Context, IEnumerable<Type>
 	public Package? Find(string name) =>
 		FindSubPackage(name) ?? RootForPackages.FindSubPackage(name);
 
-	public void Remove(Type type) => types.Remove(type.Name);
+	public void Remove(Type? type)
+	{
+		if (type != null)
+			types.Remove(type.Name);
+	}
+
+	public void Remove(Package package) => children.Remove(package);
 	public IEnumerator<Type> GetEnumerator() => types.Values.GetEnumerator();
 	IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 }

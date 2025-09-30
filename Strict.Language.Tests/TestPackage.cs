@@ -5,7 +5,9 @@ namespace Strict.Language.Tests;
 /// </summary>
 public class TestPackage : Package
 {
-	public TestPackage() : base(nameof(TestPackage))
+	public static readonly Package Instance = new TestPackage();
+
+	private TestPackage() : base(nameof(TestPackage))
 	{
 		var parser = new MethodExpressionParser();
 		// @formatter:off

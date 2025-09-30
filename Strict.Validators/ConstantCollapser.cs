@@ -1,4 +1,5 @@
-﻿using System.Globalization;
+﻿using Strict.Expressions;
+using System.Globalization;
 using Boolean = Strict.Expressions.Boolean;
 
 namespace Strict.Validators;
@@ -37,7 +38,7 @@ public sealed class ConstantCollapser : Visitor
 		return rewritten;
 	}
 
-	protected override Expression? Visit(Expression? expression, Body body, object? context = null)
+	protected override Expression? Visit(Expression? expression, Body? body, object? context = null)
 	{
 		var processedExpression = base.Visit(expression, body, context);
 		if (expression is Binary binary)
@@ -66,6 +67,10 @@ public sealed class ConstantCollapser : Visitor
 	private static Expression? TryCollapseBinaryExpression(Expression left, Expression right,
 		Context method)
 	{
+		if (left is Binary leftBinary)
+			left = TryCollapseBinaryExpression(leftBinary.Instance!, leftBinary.Arguments[0], leftBinary.Method) ?? left;
+		if (right is Binary rightBinary)
+			right = TryCollapseBinaryExpression(rightBinary.Instance!, rightBinary.Arguments[0], rightBinary.Method) ?? right;
 		var leftNumber = left as Number;
 		var rightNumber = right as Number;
 		if (method.Name == BinaryOperator.Plus)
@@ -80,10 +85,10 @@ public sealed class ConstantCollapser : Visitor
 				return new Text(method, (string)leftText.Data + rightNumber.Data);
 			if (leftNumber != null && rightText != null)
 				return new Text(method, (double)leftNumber.Data + (string)rightText.Data);
-			if (leftText != null && right is Boolean rightBoolean)
-				return new Text(method, (string)leftText.Data + rightBoolean.Data);
-			if (left is Boolean leftBoolean && rightText != null)
-				return new Text(method, leftBoolean.Data + (string)rightText.Data);
+			if (leftText != null && right is Boolean rightBool)
+				return new Text(method, (string)leftText.Data + rightBool.Data);
+			if (left is Boolean leftBool && rightText != null)
+				return new Text(method, leftBool.Data + (string)rightText.Data);
 		}
 		else if (method.Name == BinaryOperator.Minus && leftNumber != null && rightNumber != null)
 			return new Number(method, (double)leftNumber.Data - (double)rightNumber.Data);
@@ -91,6 +96,13 @@ public sealed class ConstantCollapser : Visitor
 			return new Number(method, (double)leftNumber.Data * (double)rightNumber.Data);
 		else if (method.Name == BinaryOperator.Divide && leftNumber != null && rightNumber != null)
 			return new Number(method, (double)leftNumber.Data / (double)rightNumber.Data);
+		if (left is Boolean leftBoolean && right is Boolean rightBoolean)
+		{
+			if (method.Name == BinaryOperator.And)
+				return new Boolean(method, (bool)leftBoolean.Data && (bool)rightBoolean.Data);
+			if (method.Name == BinaryOperator.Or)
+				return new Boolean(method, (bool)leftBoolean.Data || (bool)rightBoolean.Data);
+		}
 		return null;
 	}
 

@@ -5,12 +5,15 @@ public sealed class MethodTests
 	[SetUp]
 	public void CreateType()
 	{
-		type = new Type(new TestPackage(), new MockRunTypeLines());
+		type = new Type(TestPackage.Instance, new MockRunTypeLines());
 		parser = new MethodExpressionParser();
 	}
 
 	private Type type = null!;
 	private MethodExpressionParser parser = null!;
+
+	[TearDown]
+	public void TearDown() => TestPackage.Instance.Remove(type);
 
 	[Test]
 	public void MustMustHaveAValidName() =>
@@ -129,7 +132,7 @@ public sealed class MethodTests
 	[Test]
 	public void SplitTestExpressions()
 	{
-		var customType = new Type(new TestPackage(),
+		var customType = new Type(TestPackage.Instance,
 			new TypeLines(nameof(SplitTestExpressions),
 				"has logger",
 				"AddFive(variable Text) Text",
@@ -143,8 +146,8 @@ public sealed class MethodTests
 	[Test]
 	public void ConditionalExpressionIsNotTest()
 	{
-		var customType = new Type(new TestPackage(),
-			new TypeLines(nameof(SplitTestExpressions),
+		var customType = new Type(TestPackage.Instance,
+			new TypeLines(nameof(ConditionalExpressionIsNotTest),
 				"has logger",
 				"ConditionalExpressionIsNotTest Boolean",
 				"	5 is 5 ? true else false")).ParseMembersAndMethods(parser);
@@ -218,7 +221,7 @@ public sealed class MethodTests
 	public void MethodWithTestsAreAllowed()
 	{
 		var methodWithTestsType = new Type(
-			new Package(new TestPackage(), nameof(MethodWithTestsAreAllowed)),
+			new Package(TestPackage.Instance, nameof(MethodWithTestsAreAllowed)),
 			new TypeLines(nameof(MethodWithTestsAreAllowed), "has logger",
 				"MethodWithTestsAreAllowed Number", "\tMethodWithTestsAreAllowed is 5", "\t5"));
 		methodWithTestsType.ParseMembersAndMethods(parser);
@@ -229,7 +232,7 @@ public sealed class MethodTests
 	public void ParseMethodWithMultipleReturnType()
 	{
 		var multipleReturnTypeMethod = new Type(
-			new Package(new TestPackage(), nameof(ParseMethodWithMultipleReturnType)), new TypeLines(
+			new Package(TestPackage.Instance, nameof(ParseMethodWithMultipleReturnType)), new TypeLines(
 				"Processor",
 			// @formatter:off
 			"has progress Number",
@@ -253,7 +256,7 @@ public sealed class MethodTests
 	public void ParseMethodWithParametersAndMultipleReturnType()
 	{
 		var multipleReturnTypeMethod = new Type(
-			new Package(new TestPackage(), nameof(ParseMethodWithParametersAndMultipleReturnType)),
+			new Package(TestPackage.Instance, nameof(ParseMethodWithParametersAndMultipleReturnType)),
 			new TypeLines("Processor",
 			// @formatter:off
 			"has progress Number",
@@ -275,7 +278,7 @@ public sealed class MethodTests
 	public void MethodCallWithMultipleReturnTypes()
 	{
 		var multipleReturnTypeMethod = new Type(
-			new Package(new TestPackage(), nameof(MethodCallWithMultipleReturnTypes)), new TypeLines(
+			new Package(TestPackage.Instance, nameof(MethodCallWithMultipleReturnTypes)), new TypeLines(
 				"Processor",
 			// @formatter:off
 			"has progress Number",
