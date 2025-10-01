@@ -19,7 +19,7 @@ public sealed class TypeValidatorTests
 	private TypeValidator validator = null!;
 
 	[TearDown]
-	public void TearDown() => TestPackage.Instance.Remove(type);
+	public void TearDown() => type.Dispose();
 
 	[TestCase("unused", "Run", "\tconstant unused = \"something never used\"",
 		"\t\"Run method executed\"")]

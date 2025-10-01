@@ -147,7 +147,7 @@ public class Package : Context, IEnumerable<Type>
 			types.Remove(type.Name);
 	}
 
-	public void Remove(Package package) => children.Remove(package);
+	internal void Remove(Package package) => children.Remove(package);
 	public IEnumerator<Type> GetEnumerator() => types.Values.GetEnumerator();
 	IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 }

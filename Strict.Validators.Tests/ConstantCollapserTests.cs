@@ -19,7 +19,7 @@ public sealed class ConstantCollapserTests
 	private ConstantCollapser collapser = null!;
 
 	[TearDown]
-	public void TearDown() => TestPackage.Instance.Remove(type);
+	public void TearDown() => type.Dispose();
 
 	[Test]
 	public void FoldTextToNumberToJustNumber()
@@ -56,42 +56,27 @@ public sealed class ConstantCollapserTests
 		Assert.That(((Boolean)method.GetBodyAndParseIfNeeded()).Data, Is.EqualTo(true));
 	}
 
-	/*TODO
 	[Test]
-	public void ConstantFolding_ImpossibleCast_Fails()
+	public void ConstantFoldWithImpossibleCastFails()
 	{
 		var method = new Method(type, 1, parser, [
 			"Run",
 			"\tconstant folded = \"abc\" to Number",
 			"\tfolded + 1"
 		]);
-		Assert.Throws<ExpressionOptimizer.ImpossibleConstantCast>(() => new ExpressionOptimizer([method]).Validate());
+		Assert.Throws<FormatException>(() => collapser.Visit(method, true));
 	}
 
 	[Test]
-	public void SimplePropagation_ConstantPropagation_Success()
+	public void MultipleNestedConstantsGetFoldedToo()
 	{
 		var method = new Method(type, 1, parser, [
 			"Run",
-			"\tconstant a = 2",
-			"\tconstant b = a + 3",
-			"\tb * 2"
+			"\tconstant first = 2",
+			"\tconstant second = first + 3",
+			"\tsecond * 2"
 		]);
-		Assert.That(() => new ExpressionOptimizer([method]).Validate(), Throws.Nothing);
+		collapser.Visit(method, true);
+		Assert.That(((Number)method.GetBodyAndParseIfNeeded()).Data, Is.EqualTo(10));
 	}
-
-	[Test]
-	public void ValidatorIsStateless_DoesNotTouchRuntime()
-	{
-		var method = new Method(type, 1, parser, [
-			"Run",
-			"\tconstant a = 1",
-			"\ta + 1"
-		]);
-		var validator = new ExpressionOptimizer([method]);
-		validator.Validate();
-		// No runtime state should be changed, so running again should not throw
-		Assert.That(() => validator.Validate(), Throws.Nothing);
-	}
-	*/
 }
