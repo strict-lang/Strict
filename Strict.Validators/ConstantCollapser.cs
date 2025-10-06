@@ -1,5 +1,6 @@
 ﻿using System.Globalization;
 using Boolean = Strict.Expressions.Boolean;
+using Type = Strict.Language.Type;
 
 namespace Strict.Validators;
 
@@ -10,6 +11,16 @@ namespace Strict.Validators;
 /// </summary>
 public sealed class ConstantCollapser : Visitor
 {
+	protected override void Visit(Member member, object? context = null)
+	{
+		base.Visit(member, context);
+		if (member.InitialValue is { IsConstant: true } && !member.IsConstant)
+			throw new UseConstantHere(member.Type,
+				member.Type.FindLineNumber(Type.HasWithSpaceAtEnd + member.Name));
+	}
+
+	public class UseConstantHere(Type type, int lineNumber) : ParsingFailed(type, lineNumber);
+
 	protected override void Visit(Body body, object? context = null)
 	{
 		base.Visit(body, context);
@@ -39,15 +50,19 @@ public sealed class ConstantCollapser : Visitor
 
 	protected override Expression? Visit(Expression? expression, Body? body, object? context = null)
 	{
-		var processedExpression = base.Visit(expression, body, context);
+		expression = base.Visit(expression, body, context);
 		if (expression is Binary binary)
 		{
 			var left = binary.Instance!;
 			if (left is VariableCall { Variable.InitialValue.IsConstant: true } leftCall)
 				left = leftCall.Variable.InitialValue;
+			if (left is MemberCall { Member.InitialValue.IsConstant: true } leftMember)
+				left = leftMember.Member.InitialValue;
 			var right = binary.Arguments[0];
 			if (right is VariableCall { Variable.InitialValue.IsConstant: true } rightCall)
 				right = rightCall.Variable.InitialValue;
+			if (right is MemberCall { Member.InitialValue.IsConstant: true } rightMember)
+				right = rightMember.Member.InitialValue;
 			var collapsedExpression = TryCollapseBinaryExpression(left, right, binary.Method);
 			if (collapsedExpression != null)
 				return collapsedExpression;
@@ -57,7 +72,7 @@ public sealed class ConstantCollapser : Visitor
 				return new Binary(left, left.ReturnType.GetMethod(binary.Method.Name, arguments), arguments);
 			}
 		}
-		return processedExpression;
+		return expression;
 	}
 
 	/// <summary>
@@ -116,8 +131,10 @@ public sealed class ConstantCollapser : Visitor
 				return new Number(to.Method.Type, double.Parse(text));
 			if (to.ConversionType.Name == Base.Text && value?.Data is double number)
 				return new Text(to.Method.Type, number.ToString(CultureInfo.InvariantCulture));
-			throw new NotSupportedException("TODO");
+			throw new UnsupportedToExpression(to.ToStringWithType());
 		}
 		return expression;
 	}
+
+	public class UnsupportedToExpression(string toStringWithType) : Exception(toStringWithType);
 }

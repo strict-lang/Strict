@@ -65,7 +65,9 @@ public class MethodCall : ConcreteExpression
 		return fromType is null
 			? null
 			: IsConstructorUsedWithSameArgumentType(arguments, fromType)
-				? throw new ConstructorForSameTypeArgumentIsNotAllowed(body)
+				? body.IsFakeBodyForMemberInitialization && arguments.Count == 1
+					? arguments[0]
+					: throw new ConstructorForSameTypeArgumentIsNotAllowed(body)
 				: CreateFromMethodCall(body, fromType, arguments);
 	}
 

@@ -9,7 +9,7 @@ public class ExpressionParserTests : ExpressionParser
 	private Type type = null!;
 
 	[TearDown]
-	public void TearDown() => TestPackage.Instance.Remove(type);
+	public void TearDown() => type.Dispose();
 
 	[Test]
 	public void ParsingHappensAfterCallingGetBodyAndParseIfNeeded()

@@ -13,7 +13,7 @@ public sealed class MethodTests
 	private MethodExpressionParser parser = null!;
 
 	[TearDown]
-	public void TearDown() => TestPackage.Instance.Remove(type);
+	public void TearDown() => type.Dispose();
 
 	[Test]
 	public void MustMustHaveAValidName() =>
@@ -212,15 +212,19 @@ public sealed class MethodTests
 	[Test]
 	public void MethodMustHaveAtLeastOneTest() =>
 		Assert.That(
-			() => new Method(
-				new Type(new Package(nameof(MethodMustHaveAtLeastOneTest)), new MockRunTypeLines()), 0,
-				parser, ["NoTestMethod Number", "	5"]).GetBodyAndParseIfNeeded(),
+			() =>
+			{
+				using var mockType = new Type(new Package(nameof(MethodMustHaveAtLeastOneTest)),
+					new MockRunTypeLines());
+				return new Method(mockType, 0, parser, ["NoTestMethod Number", "	5"]).
+					GetBodyAndParseIfNeeded();
+			},
 			Throws.InstanceOf<Method.MethodMustHaveAtLeastOneTest>());
 
 	[Test]
 	public void MethodWithTestsAreAllowed()
 	{
-		var methodWithTestsType = new Type(
+		using var methodWithTestsType = new Type(
 			new Package(TestPackage.Instance, nameof(MethodWithTestsAreAllowed)),
 			new TypeLines(nameof(MethodWithTestsAreAllowed), "has logger",
 				"MethodWithTestsAreAllowed Number", "\tMethodWithTestsAreAllowed is 5", "\t5"));
@@ -231,7 +235,7 @@ public sealed class MethodTests
 	[Test]
 	public void ParseMethodWithMultipleReturnType()
 	{
-		var multipleReturnTypeMethod = new Type(
+		using var multipleReturnTypeMethod = new Type(
 			new Package(TestPackage.Instance, nameof(ParseMethodWithMultipleReturnType)), new TypeLines(
 				"Processor",
 			// @formatter:off
@@ -255,7 +259,7 @@ public sealed class MethodTests
 	[Test]
 	public void ParseMethodWithParametersAndMultipleReturnType()
 	{
-		var multipleReturnTypeMethod = new Type(
+		using var multipleReturnTypeMethod = new Type(
 			new Package(TestPackage.Instance, nameof(ParseMethodWithParametersAndMultipleReturnType)),
 			new TypeLines("Processor",
 			// @formatter:off
@@ -277,7 +281,7 @@ public sealed class MethodTests
 	[Test]
 	public void MethodCallWithMultipleReturnTypes()
 	{
-		var multipleReturnTypeMethod = new Type(
+		using var multipleReturnTypeMethod = new Type(
 			new Package(TestPackage.Instance, nameof(MethodCallWithMultipleReturnTypes)), new TypeLines(
 				"Processor",
 			// @formatter:off

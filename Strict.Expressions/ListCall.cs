@@ -17,8 +17,10 @@ public sealed class ListCall(Expression list, Expression index) : ConcreteExpres
 			: arguments.Count > 0
 				? variable.ReturnType.IsIterator
 					? CreateListCallAndCheckIndexBounds(body, variable, arguments[0])
-					: throw new MethodExpressionParser.InvalidArgumentItIsNotMethodOrListCall(body, variable,
-						arguments)
+					: body.IsFakeBodyForMemberInitialization && arguments.Count == 1
+						? arguments[0]
+						: throw new MethodExpressionParser.InvalidArgumentItIsNotMethodOrListCall(body,
+							variable, arguments)
 				: variable;
 
 	private static ListCall CreateListCallAndCheckIndexBounds(Body body, Expression listVariable,

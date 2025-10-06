@@ -1,4 +1,4 @@
-﻿using Strict.Language;
+﻿using System;
 using Type = Strict.Language.Type;
 
 namespace Strict.Validators;
@@ -24,19 +24,18 @@ public abstract class Visitor
 		if (type.Name == Base.Any)
 			return;
 		foreach (var member in type.Members)
-			if (member.InitialValue != null)
-			{
-				var updatedExpression = Visit(member.InitialValue, null!, context);
-				//TODO: if (upda)
-			}
+			Visit(member, context);
 		foreach (var method in type.Methods)
 			Visit(method, context: context);
 	}
 
+	protected virtual void Visit(Member member, object? context = null) =>
+		member.InitialValue = Visit(member.InitialValue, null!, context);
+
 	public virtual void Visit(Method method, bool forceParsingBody = false, object? context = null)
 	{
 		foreach (var parameter in method.Parameters)
-			Visit(parameter.DefaultValue, null!, context);
+			parameter.DefaultValue = Visit(parameter.DefaultValue, null!, context);
 		if (method.Type.IsTrait)
 			return;
 		if (forceParsingBody || method.WasParsedAlready)
@@ -45,16 +44,17 @@ public abstract class Visitor
 			method.BodyParsed += body => TryVisitBody(body, method, context);
 	}
 
-	private void TryVisitBody(Expression expression, Method method, object? context = null)
+	private Expression TryVisitBody(Expression expression, Method method, object? context = null)
 	{
 		if (expression is Body body)
-			Visit(body, context);
-		else
 		{
-			var replaced = Visit(expression, null, context);
-			if (!ReferenceEquals(replaced, expression))
-				method.SetBodySingleExpression(replaced!);
+			Visit(body, context);
+			return body;
 		}
+		var replaced = Visit(expression, null, context)!;
+		if (!ReferenceEquals(replaced, expression))
+			method.SetBodySingleExpression(replaced!);
+		return replaced;
 	}
 
 	/// <summary>
@@ -91,8 +91,11 @@ public abstract class Visitor
 			Visit(innerBody, context);
 		else if (expression is Binary binary)
 		{
-			Visit(binary.Instance, body, context);
-			Visit(binary.Arguments, body, context);
+			var changedInstance = Visit(binary.Instance, body, context)!;
+			var rewrittenArgument = Visit(binary.Arguments[0], body, context)!;
+			if (!ReferenceEquals(changedInstance, binary.Instance) ||
+				!ReferenceEquals(rewrittenArgument, binary.Arguments[0]))
+				return new Binary(changedInstance, binary.Method, [rewrittenArgument]);
 		}
 		else if (expression is ConstantDeclaration declaration)
 		{
@@ -111,12 +114,6 @@ public abstract class Visitor
 		else
 			return VisitExpression(expression, context);
 		return expression;
-	}
-
-	private void Visit(IEnumerable<Expression> expressions, Body? body, object? context)
-	{
-		foreach (var expression in expressions)
-			Visit(expression, body, context);
 	}
 
 	protected abstract Expression VisitExpression(Expression expression, object? context);

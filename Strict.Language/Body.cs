@@ -33,7 +33,7 @@ public sealed class Body : Expression
 	public Range LineRange { get; internal set; }
 	public int ParsingLineNumber { get; set; }
 	internal string CurrentLine => Method.lines[ParsingLineNumber];
-	public bool IsFakeBodyForMemberInitialization => Method.Name == Type.EmptyBody;
+	public bool IsFakeBodyForMemberInitialization => Method.Name == nameof(TypeParser.GetMemberExpression);
 
 	/// <summary>
 	/// Called when actually needed, and code needs to run, usually triggered by

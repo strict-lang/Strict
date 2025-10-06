@@ -340,8 +340,7 @@ public sealed class Method : Context
 		var expression = methodBody.Parse();
 		if (Tests.Count < 1 && !IsTestPackage())
 			throw new MethodMustHaveAtLeastOneTest(Type, Name, TypeLineNumber);
-		BodyParsed?.Invoke(expression);
-		return expression;
+		return BodyParsed?.Invoke(expression) ?? expression;
 	}
 
 	/// <summary>
@@ -352,7 +351,7 @@ public sealed class Method : Context
 			? body.Expressions
 			: [expression]);
 
-	public event Action<Expression>? BodyParsed;
+	public event Func<Expression, Expression>? BodyParsed;
 	private bool IsTestPackage() => Type.Package.Name == "TestPackage" || Name == "Run";
 
 	public sealed class MethodMustHaveAtLeastOneTest(Type type, string name, int typeLineNumber)

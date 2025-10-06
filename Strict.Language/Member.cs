@@ -21,7 +21,7 @@ public sealed class Member : NamedType
 			throw new MemberNameWithDifferentTypeNamesThanOwnAreNotAllowed(definedIn, Name, Type.Name);
 	}
 
-	public Expression? InitialValue { get; }
+	public Expression? InitialValue { get; internal set; }
 	public bool IsPublic => char.IsUpper(Name[0]);
 	public Expression[]? Constraints { get; private set; }
 

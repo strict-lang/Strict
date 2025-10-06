@@ -15,7 +15,7 @@ public sealed class Parameter : NamedType
 	private static bool IsNameStartsWithMutable(string nameAndType) =>
 		nameAndType.StartsWith(Type.MutableWithSpaceAtEnd, StringComparison.Ordinal);
 
-	public Expression? DefaultValue { get; }
+	public Expression? DefaultValue { get; internal set; }
 
 	public Parameter(Type parentType, string nameAndType) : base(parentType,
 		IsNameStartsWithMutable(nameAndType)

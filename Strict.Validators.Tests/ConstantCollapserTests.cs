@@ -22,6 +22,17 @@ public sealed class ConstantCollapserTests
 	public void TearDown() => type.Dispose();
 
 	[Test]
+	public void ComplainWhenAConstantIsUsedInANormalMember()
+	{
+		using var simpleType = new Type(TestPackage.Instance,
+			new TypeLines(nameof(FoldMemberInitialValueExpressions),
+				"has number = 17 + 4", "Run", "\tnumber"));
+		simpleType.ParseMembersAndMethods(parser);
+		Assert.That(() => collapser.Visit(simpleType, true),
+			Throws.InstanceOf<ConstantCollapser.UseConstantHere>());
+	}
+
+	[Test]
 	public void FoldTextToNumberToJustNumber()
 	{
 		var method = new Method(type, 1, parser, [
@@ -78,5 +89,30 @@ public sealed class ConstantCollapserTests
 		]);
 		collapser.Visit(method, true);
 		Assert.That(((Number)method.GetBodyAndParseIfNeeded()).Data, Is.EqualTo(10));
+	}
+
+	[Test]
+	public void FoldMemberInitialValueExpressions()
+	{
+		using var simpleType = new Type(TestPackage.Instance,
+			new TypeLines(nameof(FoldMemberInitialValueExpressions),
+				"constant number = 17 + 4", "Run", "\tnumber"));
+		simpleType.ParseMembersAndMethods(parser);
+		collapser.Visit(simpleType, true);
+		Assert.That(((Number)simpleType.Members[0].InitialValue!).Data, Is.EqualTo(21));
+	}
+
+	[Test]
+	public void FoldParameterDefaultValueExpressions()
+	{
+		using var simpleType = new Type(TestPackage.Instance,
+			new TypeLines(nameof(FoldParameterDefaultValueExpressions), "constant number = 1",
+				"AddSomething(first Number, add = 17 + 4)", "\tfirst + add", "Run",
+				"\tnumber + number * 2"));
+		simpleType.ParseMembersAndMethods(parser);
+		collapser.Visit(simpleType, true);
+		Assert.That(((Number)(simpleType.Methods[0].Parameters[1].DefaultValue!)).Data,
+			Is.EqualTo(21));
+		Assert.That(((Number)simpleType.Methods[^1].GetBodyAndParseIfNeeded()).Data, Is.EqualTo(3));
 	}
 }

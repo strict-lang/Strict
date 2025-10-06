@@ -20,14 +20,13 @@ public sealed class GenericTypeImplementationTests
 	private Type customType = null!;
 
 	private Type CreateType(string name, string[] lines) =>
-		new Type(TestPackage.Instance,
-			new TypeLines(name, lines)).ParseMembersAndMethods(parser);
+		new Type(TestPackage.Instance, new TypeLines(name, lines)).ParseMembersAndMethods(parser);
 
 	[TearDown]
 	public void TearDown()
 	{
-		TestPackage.Instance.Remove(comparerType);
-		TestPackage.Instance.Remove(customType);
+		comparerType.Dispose();
+		customType.Dispose();
 	}
 
 	[Test]
@@ -39,7 +38,7 @@ public sealed class GenericTypeImplementationTests
 					new TypeLines("SimpleProgram", "has something Comparer(Text)", "Invoke",
 						"\tconstant result = something.Compare"));
 				return type.ParseMembersAndMethods(parser);
-			},
+			}, //ncrunch: no coverage
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.
 				InstanceOf<Context.TypeArgumentsCountDoesNotMatchGenericType>().With.Message.Contains(
 					"The generic type TestPackage.Comparer needs these type arguments: (Generic TestPackage." +
@@ -49,7 +48,7 @@ public sealed class GenericTypeImplementationTests
 	[Test]
 	public void GenericTypeWithMultipleImplementations()
 	{
-		var usingGenericType = new Type(TestPackage.Instance,
+		using var usingGenericType = new Type(TestPackage.Instance,
 			new TypeLines("SimpleProgram",
 				"has something Comparer(Text, Number)",
 				"Invoke",
@@ -63,20 +62,26 @@ public sealed class GenericTypeImplementationTests
 	[Test]
 	public void CannotGetGenericImplementationOnNonGeneric() =>
 		Assert.That(
-			() => new Type(TestPackage.Instance,
+			() =>
+			{
+				using var type = new Type(TestPackage.Instance,
 					new TypeLines(nameof(CannotGetGenericImplementationOnNonGeneric),
-						"has custom Boolean(Number, Text)")).
-				ParseMembersAndMethods(new MethodExpressionParser()),
+						"has custom Boolean(Number, Text)"));
+				return type.ParseMembersAndMethods(new MethodExpressionParser());
+			}, //ncrunch: no coverage
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.
 				InstanceOf<Type.CannotGetGenericImplementationOnNonGeneric>());
 
 	[Test]
 	public void TypeArgumentsDoNotMatchGenericType() =>
 		Assert.That(
-			() => new Type(TestPackage.Instance,
-					new TypeLines(nameof(TypeArgumentsDoNotMatchGenericType),
-						"has custom Comparer(Number)", "UnusedMethod Number", "\t5")).
-				ParseMembersAndMethods(new MethodExpressionParser()),
+			() =>
+			{
+				using var type = new Type(TestPackage.Instance,
+					new TypeLines(nameof(TypeArgumentsDoNotMatchGenericType), "has custom Comparer(Number)",
+						"UnusedMethod Number", "\t5"));
+				return type.ParseMembersAndMethods(new MethodExpressionParser());
+			}, //ncrunch: no coverage
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.
 				InstanceOf<Context.TypeArgumentsCountDoesNotMatchGenericType>());
 }

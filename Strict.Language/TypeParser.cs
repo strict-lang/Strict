@@ -20,14 +20,17 @@ public sealed class TypeParser(Type type, string[] lines)
 		}
 		catch (Context.TypeNotFound ex)
 		{
+			type.Dispose();
 			throw new ParsingFailed(type, rememberStartMethodLineNumber, ex.Message, ex);
 		}
 		catch (ParsingFailed)
 		{
+			type.Dispose();
 			throw;
 		}
 		catch (Exception ex)
 		{
+			type.Dispose();
 			throw new ParsingFailed(type, rememberStartMethodLineNumber,
 				string.IsNullOrEmpty(ex.Message)
 					? ex.GetType().Name
@@ -166,7 +169,7 @@ public sealed class TypeParser(Type type, string[] lines)
 
 	internal Expression GetMemberExpression(ExpressionParser parser, string memberName,
 		ReadOnlySpan<char> remainingTextSpan) =>
-		parser.ParseExpression(new Body(new Method(type, 0, parser, [Type.EmptyBody])),
+		parser.ParseExpression(new Body(new Method(type, 0, parser, [nameof(GetMemberExpression)])),
 			GetFromConstructorCallFromUpcastableMemberOrJustEvaluate(memberName, remainingTextSpan));
 
 	private ReadOnlySpan<char> GetFromConstructorCallFromUpcastableMemberOrJustEvaluate(

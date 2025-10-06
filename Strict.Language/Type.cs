@@ -63,7 +63,6 @@ public class Type : Context, IDisposable
 	public const string HasWithSpaceAtEnd = Keyword.Has + " ";
 	public const string MutableWithSpaceAtEnd = Keyword.Mutable + " ";
 	public const string ConstantWithSpaceAtEnd = Keyword.Constant + " ";
-	public const string EmptyBody = nameof(EmptyBody);
 
 	private static bool HasGenericMethodHeader(string line) =>
 		line.Contains(Base.Generic, StringComparison.Ordinal) ||
@@ -525,4 +524,12 @@ public class Type : Context, IDisposable
 		typeParser.GetMemberExpression(parser, memberName, remainingTextSpan);
 
 	public void Dispose() => ((Package)Parent).Remove(this);
+
+	public int FindLineNumber(string firstLineThatContains)
+	{
+		for (var lineNumber = 0; lineNumber < Lines.Length; lineNumber++)
+			if (Lines[lineNumber].Contains(firstLineThatContains))
+				return lineNumber;
+		return -1;
+	}
 }

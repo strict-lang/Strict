@@ -19,7 +19,7 @@ public sealed class TypeTests
 	private Type appType = null!;
 
 	[TearDown]
-	public void TearDown() => TestPackage.Instance.Remove(appType);
+	public void TearDown() => appType.Dispose();
 
 	[Test]
 	public void AddingTheSameNameIsNotAllowed() =>
@@ -214,14 +214,14 @@ public sealed class TypeTests
 			{
 				using var type = new Type(package, new TypeLines(nameof(ImmutableTypesCannotBeChanged), code));
 				return type.ParseMembersAndMethods(parser).Methods[0].GetBodyAndParseIfNeeded();
-			},
+			}, //ncrunch: no coverage
 			Throws.InstanceOf<Body.ValueIsNotMutableAndCannotBeChanged>());
 
 	[TestCase("mutable canBeModified = 0", "Run", "\tcanBeModified = 5")]
 	[TestCase("mutable counter = 0", "Run", "\tcounter = 5")]
 	public void MutableMemberTypesCanBeChanged(params string[] code)
 	{
-		var type = new Type(package, new TypeLines(nameof(MutableMemberTypesCanBeChanged), code)).
+		using var type = new Type(package, new TypeLines(nameof(MutableMemberTypesCanBeChanged), code)).
 			ParseMembersAndMethods(parser);
 		type.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(type.Members[0].InitialValue, Is.EqualTo(new Number(type, 0)));
@@ -230,7 +230,7 @@ public sealed class TypeTests
 	[Test]
 	public void MutableVariableCanBeChangedButNotChangeAtParseTime()
 	{
-		var type = new Type(package, new TypeLines(nameof(MutableVariableCanBeChangedButNotChangeAtParseTime), "has number",
+		using var type = new Type(package, new TypeLines(nameof(MutableVariableCanBeChangedButNotChangeAtParseTime), "has number",
 				"Run",
 				"\tmutable result = 2",
 				"\tresult = 5")).
@@ -254,9 +254,10 @@ public sealed class TypeTests
 		var listType = package.GetType(Base.List);
 		Assert.That(listType.IsGeneric, Is.True);
 		Assert.That(listType.Members[0].Type, Is.EqualTo(package.GetType(Base.Iterator)));
-		var getNumbersBody = new Type(package,
-				new TypeLines(nameof(MakeSureGenericTypeIsProperlyGenerated), "has numbers",
-					"GetNumbers Numbers", "\tnumbers")).ParseMembersAndMethods(parser).Methods[0].
+		using var type = new Type(package,
+			new TypeLines(nameof(MakeSureGenericTypeIsProperlyGenerated), "has numbers",
+				"GetNumbers Numbers", "\tnumbers"));
+		var getNumbersBody = type.ParseMembersAndMethods(parser).Methods[0].
 			GetBodyAndParseIfNeeded();
 		var numbersType = package.GetListImplementationType(package.GetType(Base.Number));
 		Assert.That(getNumbersBody.ReturnType, Is.EqualTo(numbersType));
@@ -306,8 +307,8 @@ public sealed class TypeTests
 	[TestCase("has something Numbers with Length is 2")]
 	public void MemberWithConstraintsUsingWithKeyword(string code)
 	{
-		var memberWithConstraintType = CreateType(nameof(MemberWithConstraintsUsingWithKeyword), code,
-			"AddNumbers Number", "\tnumbers(0) + numbers(1)");
+		using var memberWithConstraintType = CreateType(nameof(MemberWithConstraintsUsingWithKeyword),
+			code, "AddNumbers Number", "\tnumbers(0) + numbers(1)");
 		var member = memberWithConstraintType.Members[0];
 		Assert.That(member.Type.Name, Is.EqualTo("List(TestPackage.Number)"));
 		Assert.That(member.Constraints?.Length, Is.EqualTo(1));
@@ -317,7 +318,7 @@ public sealed class TypeTests
 	[Test]
 	public void MutableMemberWithConstraintsUsingWithKeyword()
 	{
-		var memberWithConstraintType = CreateType(nameof(MutableMemberWithConstraintsUsingWithKeyword), "mutable something with Length is 2 = (1, 2)",
+		using var memberWithConstraintType = CreateType(nameof(MutableMemberWithConstraintsUsingWithKeyword), "mutable something with Length is 2 = (1, 2)",
 			"AddNumbers Number", "\tnumbers(0) + numbers(1)");
 		var member = memberWithConstraintType.Members[0];
 		Assert.That(member.Name, Is.EqualTo("something"));
@@ -331,7 +332,7 @@ public sealed class TypeTests
 	[Test]
 	public void MemberWithMultipleConstraintsUsingAndKeyword()
 	{
-		var memberWithConstraintType =
+		using var memberWithConstraintType =
 			CreateType(nameof(MemberWithMultipleConstraintsUsingAndKeyword),
 				"mutable numbers with Length is 2 and value(0) > 0", "AddNumbers Number",
 				"\tnumbers(0) + numbers(1)");
@@ -359,7 +360,7 @@ public sealed class TypeTests
 	[Test]
 	public void TypeNameCanHaveOneNumberAtEnd()
 	{
-		var vector2 = CreateType("Vector2", "has numbers", "AddNumbers Number",
+		using var vector2 = CreateType("Vector2", "has numbers", "AddNumbers Number",
 			"\tnumbers(0) + numbers(1)");
 		Assert.That(() => vector2.Name, Is.EqualTo("Vector2"));
 	}
@@ -379,7 +380,7 @@ public sealed class TypeTests
 	[Test]
 	public void NumberInTheEndIsNotAllowedIfTypeWithoutNumberExists()
 	{
-		CreateType("Matrix", "has numbers", "Unused Number", "\t1");
+		using var _ = CreateType("Matrix", "has numbers", "Unused Number", "\t1");
 		Assert.That(() => CreateType("Matrix2", "has numbers", "Unused Number", "\t1"),
 			Throws.InstanceOf<Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers>());
 	}
@@ -387,8 +388,8 @@ public sealed class TypeTests
 	[Test]
 	public void AppleTypeCompatibilityCheck()
 	{
-		var apple = CreateType("Apple", "has name", "Quantity Number", "\tvalue.Length");
-		var redApple = CreateType("RedApple", "has apple", "Color Text", "\tvalue.Color");
+		using var apple = CreateType("Apple", "has name", "Quantity Number", "\tvalue.Length");
+		using var redApple = CreateType("RedApple", "has apple", "Color Text", "\tvalue.Color");
 		Assert.That(apple.IsSameOrCanBeUsedAs(redApple), Is.False);
 		Assert.That(redApple.IsSameOrCanBeUsedAs(apple), Is.True);
 		Assert.That(redApple.IsSameOrCanBeUsedAs(package.GetType(Base.Text)), Is.True);
@@ -398,7 +399,8 @@ public sealed class TypeTests
 	[Test]
 	public void FileLoggerIsCompatibleWithFileAndLogger()
 	{
-		var logger = CreateType("FileLogger", "has source File", "has logger", "Log Number", "\tvalue");
+		using var logger = CreateType("FileLogger", "has source File", "has logger", "Log Number",
+			"\tvalue");
 		Assert.That(logger.IsSameOrCanBeUsedAs(package.GetType(Base.File)), Is.True);
 		Assert.That(logger.IsSameOrCanBeUsedAs(package.GetType(Base.Logger)), Is.True);
 	}
@@ -406,7 +408,7 @@ public sealed class TypeTests
 	[Test]
 	public void AccountantIsNotCompatibleWithFile()
 	{
-		var accountant = CreateType("Accountant", "has taxFile File", "has assetFile File", "Calculate Number", "\tvalue");
+		using var accountant = CreateType("Accountant", "has taxFile File", "has assetFile File", "Calculate Number", "\tvalue");
 		Assert.That(accountant.IsSameOrCanBeUsedAs(package.GetType(Base.File)), Is.False);
 	}
 
@@ -447,7 +449,7 @@ public sealed class TypeTests
 	[Category("Slow")]
 	public void CheckGetTypeCache()
 	{
-		var cachedType = CreateType("CachedType", "Run");
+		using var cachedType = CreateType("CachedType", "Run");
 		for (var count = 0; count < 5; count++)
 			Assert.That(package.GetType("CachedType"), Is.EqualTo(cachedType));
 	}
