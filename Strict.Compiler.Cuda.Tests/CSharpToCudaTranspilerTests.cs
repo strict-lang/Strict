@@ -18,6 +18,9 @@ public class CSharpToCudaTranspilerTests
 
 	private CSharpToCudaTranspiler transpiler = null!;
 
+	[TearDown]
+	public void DisposeTranspiler() => transpiler.Dispose();
+
 	[TestCase("")]
 	public void EmptyInputWillNotWork(string input) =>
 		Assert.That(() => transpiler.Convert(input),

@@ -9,12 +9,24 @@ namespace Strict.Language.Tests;
 [SimpleJob(RunStrategy.Throughput, warmupCount: 1, iterationCount: 10)]
 public class RepositoriesTests
 {
+	[SetUp]
+	public void CreateRepositories()
+	{
+		parser = new ExpressionParserTests();
+		parser.CreateType();
+		repos = new Repositories(parser);
+	}
+
+	private Repositories repos = null!;
+	private ExpressionParserTests parser = null!;
+
+	[TearDown]
+	public void DisposeParserType() => parser.TearDown();
+
 	[Test]
 	public void InvalidPathWontWork() =>
 		Assert.ThrowsAsync<DirectoryNotFoundException>(() =>
 			repos.LoadFromPath(nameof(InvalidPathWontWork)));
-
-	private readonly Repositories repos = new(new ExpressionParserTests());
 
 	[Test]
 	public void LoadingNonGithubPackageWontWork() =>
@@ -24,7 +36,7 @@ public class RepositoriesTests
 	[Test]
 	public async Task LoadStrictBaseTypes()
 	{
-		var basePackage = await repos.LoadStrictPackage();
+		using var basePackage = await repos.LoadStrictPackage();
 		Assert.That(basePackage.FindDirectType(Base.Any), Is.Not.Null);
 		Assert.That(basePackage.FindDirectType(Base.Number), Is.Not.Null);
 		Assert.That(basePackage.FindDirectType(Base.App), Is.Not.Null);
@@ -39,14 +51,15 @@ public class RepositoriesTests
 		await Task.WhenAll(tasks);
 		foreach (var task in tasks)
 			Assert.That(task.Result, Is.EqualTo(tasks[0].Result));
+		tasks[0].Result.Dispose();
 	}
 
 	[Test]
 	public async Task MakeSureParsingFailedErrorMessagesAreClickable()
 	{
-		var parser = new MethodExpressionParser();
-		var strictPackage = await new Repositories(parser).LoadStrictPackage();
+		using var strictPackage = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
 		Assert.That(
+			// ReSharper disable once AccessToDisposedClosure
 			() => new Type(strictPackage,
 				new TypeLines("Invalid", "has 1")).ParseMembersAndMethods(null!),
 			Throws.InstanceOf<ParsingFailed>().With.Message.Contains(@"Base\Invalid.strict:line 1"));
@@ -57,12 +70,10 @@ public class RepositoriesTests
 	[Category("Slow")]
 	public async Task LoadStrictExamplesPackageAndUseBasePackageTypes()
 	{
-		var parser = new MethodExpressionParser();
-		var repositories = new Repositories(parser);
-		await repositories.LoadStrictPackage();
-		await repositories.LoadStrictPackage("Math");
-		var examplesPackage = await repositories.LoadStrictPackage("Examples");
-		var program =
+		using var basePackage = await repos.LoadStrictPackage();
+		using var mathPackage = await repos.LoadStrictPackage("Math");
+		using var examplesPackage = await repos.LoadStrictPackage("Examples");
+		using var program =
 			new Type(examplesPackage,
 					new TypeLines("ValidProgram", "has number", "Run Number", "\tnumber")).
 				ParseMembersAndMethods(parser);
@@ -74,25 +85,20 @@ public class RepositoriesTests
 	[Category("Slow")]
 	public async Task LoadStrictImageProcessingTypes()
 	{
-		var parser = new MethodExpressionParser();
-		var repositories = new Repositories(parser);
-		await repositories.LoadStrictPackage();
-		await repositories.LoadFromPath(StrictDevelopmentFolder + ".Math");
-		var imageProcessingPackage =
-			await repositories.LoadFromPath(StrictDevelopmentFolder + ".ImageProcessing");
+		using var basePackage = await repos.LoadStrictPackage();
+		using var mathPackage = await repos.LoadFromPath(StrictDevelopmentFolder + ".Math");
+		using var imageProcessingPackage =
+			await repos.LoadFromPath(StrictDevelopmentFolder + ".ImageProcessing");
 		var adjustBrightness = imageProcessingPackage.GetType("AdjustBrightness");
 		Assert.That(adjustBrightness, Is.Not.Null);
 		Assert.That(adjustBrightness.Methods[0].GetBodyAndParseIfNeeded(), Is.Not.Null);
-	}
-	//ncrunch: no coverage end
+	} //ncrunch: no coverage end
 
 	[Test]
 	public async Task CheckGenericTypesAreLoadedCorrectlyAfterSorting()
 	{
-		var parser = new MethodExpressionParser();
-		var repositories = new Repositories(parser);
-		var program =
-			new Type(await repositories.LoadStrictPackage(),
+		using var program =
+			new Type(await repos.LoadStrictPackage(),
 					new TypeLines("ValidProgram", "has texts", "Run Texts", "\t\"Result \" + 5")).
 				ParseMembersAndMethods(parser);
 		program.Methods[0].GetBodyAndParseIfNeeded();
@@ -142,8 +148,7 @@ public class RepositoriesTests
 	[Test]
 	public void NoFilesAllowedInStrictFolderNeedsToBeInASubFolder()
 	{
-		var strictFilePath = Path.Combine(StrictDevelopmentFolder,
-			"UnitTestForCoverage.strict");
+		var strictFilePath = Path.Combine(StrictDevelopmentFolder, "UnitTestForCoverage.strict");
 		File.Create(strictFilePath).Close();
 		Assert.That(() => repos.LoadFromPath(StrictDevelopmentFolder),
 			Throws.InstanceOf<Repositories.NoFilesAllowedInStrictFolderNeedsToBeInASubFolder>());

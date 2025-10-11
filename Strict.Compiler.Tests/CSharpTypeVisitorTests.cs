@@ -12,7 +12,7 @@ public sealed class CSharpTypeVisitorTests : TestCSharpGenerator
 	[Test]
 	public void GenerateHelloWorldApp()
 	{
-		var program = CreateHelloWorldProgramType();
+		using var program = CreateHelloWorldProgramType();
 		var visitor = new CSharpTypeVisitor(program);
 		AssertProgramClass(visitor);
 		Assert.That(visitor.FileContent,
@@ -32,10 +32,10 @@ public sealed class CSharpTypeVisitorTests : TestCSharpGenerator
 	[Test]
 	public void GenerateAppWithImplementingAnotherType()
 	{
-		new Type(package,
+		using var _ = new Type(package,
 				new TypeLines("BaseProgram", "Run")).
 			ParseMembersAndMethods(parser);
-		var program = new Type(package,
+		using var program = new Type(package,
 			new TypeLines("DerivedProgram", "has BaseProgram", "has logger", "Run",
 				"\tlogger.Log(\"Hello World\")")).ParseMembersAndMethods(parser);
 		var visitor = new CSharpTypeVisitor(program);
@@ -52,7 +52,7 @@ public sealed class CSharpTypeVisitorTests : TestCSharpGenerator
 	[TestCase("file", "FileStream")]
 	public void GenerateInterface(string parameter, string expectedType)
 	{
-		var interfaceType =
+		using var interfaceType =
 			new Type(package, new TypeLines(Computer, $"Compute({parameter})")).ParseMembersAndMethods(parser);
 		var visitor = new CSharpTypeVisitor(interfaceType);
 		Assert.That(visitor.Name, Is.EqualTo(Computer));
@@ -66,7 +66,7 @@ public sealed class CSharpTypeVisitorTests : TestCSharpGenerator
 	[Test]
 	public void GenerateTypeThatImplementsMultipleTraits()
 	{
-		var program = new Type(package, new TypeLines(
+		using var program = new Type(package, new TypeLines(
 				// @formatter.off
 				"Program",
 				"has Input",

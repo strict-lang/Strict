@@ -13,7 +13,11 @@ namespace Strict.Language;
 [DebuggerDisplay("{FullName}")]
 public abstract class Context
 {
-	protected Context(Context? parent, string name)
+	protected Context(Context? parent, string name
+#if DEBUG
+		, string callerFilePath, int callerLineNumber, string callerMemberName
+#endif
+	)
 	{
 		var isNotGeneric = this is not GenericType && this is not GenericTypeImplementation;
 		if (isNotGeneric && parent != null && (string.IsNullOrWhiteSpace(name) ||
@@ -26,10 +30,21 @@ public abstract class Context
 			throw new NameLengthIsNotWithinTheAllowedLimit(name);
 		Parent = parent!;
 		Name = name;
+#if DEBUG
+		this.callerFilePath = callerFilePath;
+		this.callerLineNumber = callerLineNumber;
+		this.callerMemberName = callerMemberName;
+#endif
 		FullName = string.IsNullOrEmpty(parent?.Name) || parent.Name is nameof(Base)
 			? name
 			: parent + "." + name;
 	}
+
+#if DEBUG
+	protected readonly string callerFilePath;
+	protected readonly int callerLineNumber;
+	protected readonly string callerMemberName;
+#endif
 
 	private static bool IsNotMethodOrPackageAndNotConflictingType(Context context, Context parent,
 		string name)
@@ -50,7 +65,9 @@ public abstract class Context
 	public Context Parent { get; }
 	public string Name { get; }
 	public string FullName { get; }
-	public Type GetType(string name) => TryGetType(name) ?? throw new TypeNotFound(name, FullName);
+
+	// ReSharper disable once InconsistentlySynchronizedField
+	public Type GetType(string name) => TryGetType(name) ?? throw new TypeNotFound(name, FullName, types.Keys.ToWordList());
 
 	internal Type? TryGetType(string name)
 	{
@@ -161,8 +178,8 @@ public abstract class Context
 				: package
 			: Parent.GetPackage();
 
-	public sealed class TypeNotFound(string typeName, string contextFullName)
-		: Exception($"{typeName} not found in {contextFullName}");
+	public sealed class TypeNotFound(string typeName, string contextFullName, string contextTypes)
+		: Exception($"{typeName} not found in {contextFullName}, available types: " + contextTypes);
 
 	public abstract Type? FindType(string name, Context? searchingFrom = null);
 }

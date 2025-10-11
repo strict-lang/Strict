@@ -35,7 +35,12 @@ public sealed class Repositories
 	private readonly IAppCache cacheService;
 	private readonly ExpressionParser parser;
 
-	public async Task<Package> LoadFromUrl(Uri packageUrl)
+	public async Task<Package> LoadFromUrl(Uri packageUrl
+#if DEBUG
+		, [CallerFilePath] string callerFilePath = "", [CallerLineNumber] int callerLineNumber = 0,
+		[CallerMemberName] string callerMemberName = ""
+#endif
+	)
 	{
 		var isStrictPackage = packageUrl.AbsoluteUri.StartsWith(StrictPrefixUri.AbsoluteUri, StringComparison.Ordinal);
 		if (!isStrictPackage && (packageUrl.Host != "github.com" || string.IsNullOrEmpty(packageUrl.AbsolutePath)))
@@ -46,7 +51,12 @@ public sealed class Repositories
 			var developmentFolder =
 				StrictDevelopmentFolderPrefix.Replace(nameof(Strict) + ".", packageName);
 			if (Directory.Exists(developmentFolder))
-				return await LoadFromPath(developmentFolder);
+				return await LoadFromPath(developmentFolder
+#if DEBUG
+					// ReSharper disable ExplicitCallerInfoArgument
+					, callerFilePath, callerLineNumber, callerMemberName
+#endif
+				);
 		} //ncrunch: no coverage
 		return await FindOrAddPath(packageUrl, packageName); //ncrunch: no coverage
 	}
@@ -61,10 +71,16 @@ public sealed class Repositories
 		return await LoadFromPath(localPath);
 	} //ncrunch: no coverage end
 
-	public Task<Package> LoadStrictPackage(string packagePostfixName = nameof(Base)) =>
-		LoadFromUrl(new Uri(StrictPrefixUri.AbsoluteUri + packagePostfixName));
+	public Task<Package> LoadStrictPackage(string packagePostfixName = nameof(Base)
+#if DEBUG
+		, [CallerFilePath] string callerFilePath = "", [CallerLineNumber] int callerLineNumber = 0,
+		[CallerMemberName] string callerMemberName = ""
+#endif
+	) =>
+		LoadFromUrl(new Uri(StrictPrefixUri.AbsoluteUri + packagePostfixName), callerFilePath,
+			callerLineNumber, callerMemberName);
 
-	public sealed class OnlyGithubDotComUrlsAreAllowedForNow : Exception { }
+	public sealed class OnlyGithubDotComUrlsAreAllowedForNow : Exception;
 	//ncrunch: no coverage start, only called once per session and only if not on development machine
 	private static readonly HashSet<string> PreviouslyCheckedDirectories = new();
 
@@ -127,36 +143,58 @@ public sealed class Repositories
 		}
 	} //ncrunch: no coverage end
 
-	public Task<Package> LoadFromPath(string packagePath) =>
+	public Task<Package> LoadFromPath(string packagePath
+#if DEBUG
+		, [CallerFilePath] string callerFilePath = "", [CallerLineNumber] int callerLineNumber = 0,
+		[CallerMemberName] string callerMemberName = ""
+#endif
+	) =>
 		cacheService.GetOrAddAsync(packagePath,
 			_ => CreatePackageFromFiles(packagePath,
-				Directory.GetFiles(packagePath, "*" + Type.Extension)));
+				// ReSharper disable ExplicitCallerInfoArgument
+				Directory.GetFiles(packagePath, "*" + Type.Extension), null, callerFilePath,
+				callerLineNumber, callerMemberName));
 
 	/// <summary>
 	/// Initially we need to create just empty types, and then after they all have been created,
 	/// we will fill and load them, otherwise we could not use types within the package context.
 	/// </summary>
 	private async Task<Package> CreatePackageFromFiles(string packagePath,
-		IReadOnlyCollection<string> files, Package? parent = null) =>
-		// The main folder can be empty, other folders must contain at least one file to create a package
-		parent != null && files.Count == 0
-			? parent
-			: await CreatePackage(packagePath, files, parent);
-
-	private async Task<Package> CreatePackage(string packagePath, IReadOnlyCollection<string> files,
-		Package? parent)
+		IReadOnlyCollection<string> files,
+#if DEBUG
+		Package? parent = null, [CallerFilePath] string callerFilePath = "",
+		[CallerLineNumber] int callerLineNumber = 0, [CallerMemberName] string callerMemberName = "")
+#else
+		Package? parent = null)
+#endif
 	{
+		// The main folder can be empty, other folders must contain at least one file to create a package
+		if (parent != null && files.Count == 0)
+			return parent;
+#if DEBUG
+		var package = parent != null
+			// ReSharper disable ExplicitCallerInfoArgument
+			? new Package(parent, packagePath, callerFilePath, callerLineNumber, callerMemberName)
+			: new Package(packagePath.Contains('.')
+				? packagePath.Split('.')[1]
+				: packagePath, callerFilePath, callerLineNumber, callerMemberName);
+#else
 		var package = parent != null
 			? new Package(parent, packagePath)
 			: new Package(packagePath.Contains('.')
 				? packagePath.Split('.')[1]
 				: packagePath);
+#endif
 		if (package.Name == nameof(Strict) && files.Count > 0)
-			throw new NoFilesAllowedInStrictFolderNeedsToBeInASubFolder(files); //ncrunch: no coverage covered in a manual test
+			throw new NoFilesAllowedInStrictFolderNeedsToBeInASubFolder(files); //ncrunch: no coverage
 		var types = GetTypes(files, package);
 		foreach (var type in types)
 			type.ParseMembersAndMethods(parser);
-		await GetSubDirectoriesAndParse(packagePath, package);
+		await GetSubDirectoriesAndParse(packagePath, package
+#if DEBUG
+			, callerFilePath, callerLineNumber, callerMemberName
+#endif
+		);
 		return package;
 	}
 
@@ -206,7 +244,8 @@ public sealed class Repositories
 		return false; //ncrunch: no coverage
 	}
 
-	private static Dictionary<string, int> CreateInDegreeGraphMap(Dictionary<string, TypeLines> filesWithImplements)
+	private static Dictionary<string, int> CreateInDegreeGraphMap(
+		Dictionary<string, TypeLines> filesWithImplements)
 	{
 		var inDegree = new Dictionary<string, int>(StringComparer.Ordinal);
 		foreach (var kvp in filesWithImplements)
@@ -219,8 +258,8 @@ public sealed class Repositories
 		return inDegree;
 	}
 
-	private static Stack<TypeLines> EmptyDegreeQueueAndGenerateSortedOutput(IReadOnlyDictionary<string, TypeLines> files,
-		Dictionary<string, int> inDegree)
+	private static Stack<TypeLines> EmptyDegreeQueueAndGenerateSortedOutput(
+		IReadOnlyDictionary<string, TypeLines> files, Dictionary<string, int> inDegree)
 	{
 		var reversedDependencies = new Stack<TypeLines>();
 		var zeroDegreeQueue = CreateZeroDegreeQueue(inDegree);
@@ -235,8 +274,8 @@ public sealed class Repositories
 		return reversedDependencies;
 	}
 
-	private static void AddUnresolvedRemainingTypes(IReadOnlyDictionary<string, TypeLines> files, Dictionary<string, int> inDegree,
-		Stack<TypeLines> reversedDependencies)
+	private static void AddUnresolvedRemainingTypes(IReadOnlyDictionary<string, TypeLines> files,
+		Dictionary<string, int> inDegree, Stack<TypeLines> reversedDependencies)
 	{
 		foreach (var unresolvedType in inDegree.Where(x => x.Value > 0))
 			if (files.TryGetValue(unresolvedType.Key, out var lines))
@@ -254,27 +293,44 @@ public sealed class Repositories
 		return zeroDegreeQueue;
 	}
 
-	private static ICollection<Type> GetTypesFromSortedFiles(ICollection<Type> types, IEnumerable<TypeLines> sortedFiles, Package package)
+	private static ICollection<Type> GetTypesFromSortedFiles(ICollection<Type> types,
+		IEnumerable<TypeLines> sortedFiles, Package package)
 	{
 		foreach (var typeLines in sortedFiles)
 			types.Add(new Type(package, typeLines));
 		return types;
 	}
 
-	private async Task GetSubDirectoriesAndParse(string packagePath, Package package)
+	private async Task GetSubDirectoriesAndParse(string packagePath, Package package
+#if DEBUG
+		, string callerFilePath, int callerLineNumber, string callerMemberName
+#endif
+	)
 	{
 		var subDirectories = Directory.GetDirectories(packagePath);
 		if (subDirectories.Length > 0)
-			await Task.WhenAll(ParseAllSubFolders(subDirectories, package));
+			await Task.WhenAll(ParseAllSubFolders(subDirectories, package
+#if DEBUG
+				, callerFilePath, callerLineNumber, callerMemberName
+#endif
+			));
 	}
 
-	private List<Task> ParseAllSubFolders(IEnumerable<string> subDirectories, Package package)
+	private List<Task> ParseAllSubFolders(IEnumerable<string> subDirectories, Package package
+#if DEBUG
+		, string callerFilePath, int callerLineNumber, string callerMemberName
+#endif
+	)
 	{
 		var tasks = new List<Task>();
 		foreach (var directory in subDirectories)
 			if (IsValidCodeDirectory(directory))
 				tasks.Add(CreatePackageFromFiles(directory, //ncrunch: no coverage
-					Directory.GetFiles(directory, "*" + Type.Extension), package));
+					Directory.GetFiles(directory, "*" + Type.Extension), package
+#if DEBUG
+					, callerFilePath, callerLineNumber, callerMemberName
+#endif
+				));
 		return tasks;
 	}
 

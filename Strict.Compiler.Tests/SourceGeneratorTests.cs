@@ -25,7 +25,7 @@ public interface DummyApp
 	[Test]
 	public void GenerateCSharpClass()
 	{
-		var program = CreateHelloWorldProgramType();
+		using var program = CreateHelloWorldProgramType();
 		var file = generator.Generate(program);
 		Assert.That(file.ToString(), Is.EqualTo(@"namespace SourceGeneratorTests;
 
@@ -44,7 +44,7 @@ public class Program
 	[Category("Slow")]
 	public void CreateFileAndWriteIntoIt()
 	{
-		var program = new Type(package, new TypeLines(nameof(CreateFileAndWriteIntoIt),
+		using var program = new Type(package, new TypeLines(nameof(CreateFileAndWriteIntoIt),
 			"has App", // App has run funtion so its used as a trait with implementation
 			"has file = \"" + TemporaryFile + "\"", // component because its initialized
 			"has output", //
@@ -71,7 +71,11 @@ public class Program
 		if (!Directory.Exists(ProjectFolder))
 			Directory.CreateDirectory(ProjectFolder);
 		File.WriteAllText(Path.Combine(ProjectFolder, TestTxt), ExpectedText);
-		var program = new Type(package, new TypeLines(nameof(GenerateFileReadProgram), "has App", "has file = \"" + TestTxt + "\"", "has logger", "Run", "\tlogger.Log(file.Read)")).ParseMembersAndMethods(parser);
+		using var program =
+			new Type(package,
+					new TypeLines(nameof(GenerateFileReadProgram), "has App",
+						"has file = \"" + TestTxt + "\"", "has logger", "Run", "\tlogger.Log(file.Read)")).
+				ParseMembersAndMethods(parser);
 		var generatedCode = generator.Generate(program).ToString()!;
 		Assert.That(GenerateNewConsoleAppAndReturnOutput(ProjectFolder, generatedCode),
 			Is.EqualTo(ExpectedText + Environment.NewLine));
@@ -137,7 +141,7 @@ public class Program
 	[Category("Manual")]
 	public void GenerateDirectoryGetFilesProgram()
 	{
-		var program = new Type(package, new TypeLines(nameof(GenerateDirectoryGetFilesProgram),
+		using var program = new Type(package, new TypeLines(nameof(GenerateDirectoryGetFilesProgram),
 			"has App", "has logger", "has directory = \".\"", "Run", "\tfor directory.GetFiles", "\t\tlogger.Log(value)")).ParseMembersAndMethods(parser);
 		var generatedCode = generator.Generate(program).ToString()!;
 		Assert.That(GenerateNewConsoleAppAndReturnOutput(ProjectFolder, generatedCode),
@@ -152,7 +156,7 @@ public class Program
 	public async Task GenerateCSharpByReadingStrictProgramAndCompareWithOutput(string programName,
 		Package? overridePackage = null)
 	{
-		var program = await ReadStrictFileAndCreateType(programName, overridePackage);
+		using var program = await ReadStrictFileAndCreateType(programName, overridePackage);
 		program.Methods[0].GetBodyAndParseIfNeeded();
 		var generatedCode = generator.Generate(program).ToString()!;
 		Assert.That(generatedCode,
@@ -199,9 +203,9 @@ public class Program
 	[Test]
 	public async Task ExecuteOperation()
 	{
-		await ReadStrictFileAndCreateType("Register", TestPackage.Instance);
-		await ReadStrictFileAndCreateType("Instruction", TestPackage.Instance);
-		await ReadStrictFileAndCreateType("Statement", TestPackage.Instance);
+		using var register = await ReadStrictFileAndCreateType("Register", TestPackage.Instance);
+		using var instruction = await ReadStrictFileAndCreateType("Instruction", TestPackage.Instance);
+		using var statement = await ReadStrictFileAndCreateType("Statement", TestPackage.Instance);
 		await GenerateCSharpByReadingStrictProgramAndCompareWithOutput(nameof(ExecuteOperation),
 			TestPackage.Instance);
 	}
@@ -209,7 +213,7 @@ public class Program
 	[Test]
 	public async Task LinkedListAnalyzer()
 	{
-		await ReadStrictFileAndCreateType("Node");
+		using var _ = await ReadStrictFileAndCreateType("Node");
 		await GenerateCSharpByReadingStrictProgramAndCompareWithOutput(nameof(LinkedListAnalyzer));
 	}
 

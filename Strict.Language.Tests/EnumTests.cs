@@ -45,7 +45,7 @@ public sealed class EnumTests
 		var consumingType = new Type(TestPackage.Instance,
 			new TypeLines(nameof(UseEnumWithoutConstructor), "has logger",
 				"Run", "\tconstant url = Connection.Google")).ParseMembersAndMethods(parser);
-		var assignment = (ConstantDeclaration)consumingType.Methods[0].GetBodyAndParseIfNeeded();
+		var assignment = (ConstantDeclaration)consumingType.Methods[^1].GetBodyAndParseIfNeeded();
 		Assert.That(assignment.Value, Is.InstanceOf<MemberCall>());
 		var member = ((MemberCall)assignment.Value).Member;
 		Assert.That(member.Name, Is.EqualTo("Google"));

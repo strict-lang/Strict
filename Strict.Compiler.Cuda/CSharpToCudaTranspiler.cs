@@ -4,7 +4,7 @@ using Type = Strict.Language.Type;
 
 namespace Strict.Compiler.Cuda;
 
-public class CSharpToCudaTranspiler(Package strictBase)
+public class CSharpToCudaTranspiler(Package strictBase) : IDisposable
 {
 	private readonly Package package = new(strictBase, nameof(CSharpToCudaTranspiler));
 	private readonly CSharpType.CSharpExpressionParser parser = new();
@@ -63,7 +63,13 @@ public class CSharpToCudaTranspiler(Package strictBase)
 			? throw new InvalidCode()
 			: new CSharpType(package, filePath).ParseMembersAndMethods(parser);
 
-	public class InvalidCode : Exception { }
+	public class InvalidCode : Exception;
+
+	public void Dispose()
+	{
+		package.Dispose();
+		strictBase.Dispose();
+	}
 }
 
 public class CSharpType : Type
@@ -138,5 +144,3 @@ public class CSharpType : Type
 				parameters.Add(parts[index + 1] + " Number");
 	}
 }
-
-public sealed class MissingReturnStatement : Exception { }

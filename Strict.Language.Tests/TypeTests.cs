@@ -110,6 +110,7 @@ public sealed class TypeTests
 	public void VariableWithTypeAnyIsNotAllowed(params string[] lines)
 	{
 		using var type = new Type(package, new TypeLines(nameof(VariableWithTypeAnyIsNotAllowed), lines)).ParseMembersAndMethods(parser);
+		// ReSharper disable once AccessToDisposedClosure
 		Assert.That(() => type.Methods[0].GetBodyAndParseIfNeeded(),
 			Throws.InstanceOf<MethodExpressionParser.ExpressionWithTypeAnyIsNotAllowed>().With.Message.
 				Contains("Any"));
@@ -318,8 +319,10 @@ public sealed class TypeTests
 	[Test]
 	public void MutableMemberWithConstraintsUsingWithKeyword()
 	{
-		using var memberWithConstraintType = CreateType(nameof(MutableMemberWithConstraintsUsingWithKeyword), "mutable something with Length is 2 = (1, 2)",
-			"AddNumbers Number", "\tnumbers(0) + numbers(1)");
+		using var memberWithConstraintType =
+			CreateType(nameof(MutableMemberWithConstraintsUsingWithKeyword),
+				"mutable something with Length is 2 = (1, 2)", "AddNumbers Number",
+				"\tnumbers(0) + numbers(1)");
 		var member = memberWithConstraintType.Members[0];
 		Assert.That(member.Name, Is.EqualTo("something"));
 		Assert.That(member.Type.Name, Is.EqualTo("List(TestPackage.Number)"));
@@ -362,6 +365,7 @@ public sealed class TypeTests
 	{
 		using var vector2 = CreateType("Vector2", "has numbers", "AddNumbers Number",
 			"\tnumbers(0) + numbers(1)");
+		// ReSharper disable once AccessToDisposedClosure
 		Assert.That(() => vector2.Name, Is.EqualTo("Vector2"));
 	}
 

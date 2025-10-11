@@ -229,6 +229,7 @@ public sealed class MethodTests
 			new TypeLines(nameof(MethodWithTestsAreAllowed), "has logger",
 				"MethodWithTestsAreAllowed Number", "\tMethodWithTestsAreAllowed is 5", "\t5"));
 		methodWithTestsType.ParseMembersAndMethods(parser);
+		// ReSharper disable AccessToDisposedClosure
 		Assert.That(() => methodWithTestsType.Methods[0].GetBodyAndParseIfNeeded(), Throws.Nothing);
 	}
 
@@ -251,6 +252,7 @@ public sealed class MethodTests
 			"\t\"Work not started yet\""));
 			// @formatter:on
 		multipleReturnTypeMethod.ParseMembersAndMethods(parser);
+		// ReSharper disable once AccessToDisposedClosure
 		Assert.That(() => multipleReturnTypeMethod.Methods[0].GetBodyAndParseIfNeeded(), Throws.Nothing);
 		Assert.That(multipleReturnTypeMethod.Methods[0].ReturnType, Is.InstanceOf<OneOfType>());
 		Assert.That(multipleReturnTypeMethod.Methods[0].ReturnType.Name, Is.EqualTo("BooleanOrText"));

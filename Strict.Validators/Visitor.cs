@@ -1,5 +1,4 @@
-﻿using System;
-using Type = Strict.Language.Type;
+﻿using Type = Strict.Language.Type;
 
 namespace Strict.Validators;
 
@@ -53,7 +52,7 @@ public abstract class Visitor
 		}
 		var replaced = Visit(expression, null, context)!;
 		if (!ReferenceEquals(replaced, expression))
-			method.SetBodySingleExpression(replaced!);
+			method.SetBodySingleExpression(replaced);
 		return replaced;
 	}
 

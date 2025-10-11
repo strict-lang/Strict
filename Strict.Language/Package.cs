@@ -6,9 +6,17 @@ namespace Strict.Language;
 /// <summary>
 /// In C# or Java called namespace or package as well, in Strict this is any code folder.
 /// </summary>
-public class Package : Context, IEnumerable<Type>
+public class Package : Context, IEnumerable<Type>, IDisposable
 {
+#if DEBUG
+	public Package(string packagePath, [CallerFilePath] string callerFilePath = "",
+		[CallerLineNumber] int callerLineNumber = 0,
+		[CallerMemberName] string callerMemberName = "") : this(RootForPackages, packagePath,
+		// ReSharper disable ExplicitCallerInfoArgument
+		callerFilePath, callerLineNumber, callerMemberName) { }
+#else
 	public Package(string packagePath) : this(RootForPackages, packagePath) { }
+#endif
 	private static readonly Root RootForPackages = new();
 
 	/// <summary>
@@ -19,9 +27,14 @@ public class Package : Context, IEnumerable<Type>
 	/// </summary>
 	private sealed class Root : Package
 	{
+#if DEBUG
+		public Root([CallerFilePath] string callerFilePath = "", [CallerLineNumber] int callerLineNumber = 0,
+			[CallerMemberName] string callerMemberName = "") : base(null, string.Empty, callerFilePath,
+			callerLineNumber, callerMemberName) =>
+#else
 		public Root() : base(null, string.Empty) =>
-			cachedFoundTypes.Add(Base.None,
-				new Type(this, new TypeLines(Base.None)));
+#endif
+			cachedFoundTypes.Add(Base.None, new Type(this, new TypeLines(Base.None)));
 
 		public override Type? FindType(string name, Context? searchingFrom = null) =>
 			cachedFoundTypes.TryGetValue(name, out var previouslyFoundType)
@@ -38,21 +51,29 @@ public class Package : Context, IEnumerable<Type>
 		private readonly Dictionary<string, Type> cachedFoundTypes = new(StringComparer.Ordinal);
 	}
 
-	public Package(Package? parentPackage, string packagePath) : base(parentPackage,
-		Path.GetFileName(packagePath))
+	public Package(Package? parentPackage, string packagePath, [CallerFilePath] string callerFilePath = "",
+		[CallerLineNumber] int callerLineNumber = 0,
+		[CallerMemberName] string callerMemberName = "") : base(parentPackage,
+		Path.GetFileName(packagePath), callerFilePath, callerLineNumber, callerMemberName)
 	{
 		FolderPath = packagePath;
 		if (parentPackage == null)
 			return;
-		if (parentPackage.children.Any(existingPackage => existingPackage.Name == Name))
-			throw new PackageAlreadyExists(Name, parentPackage);
+		var existing = parentPackage.children.FirstOrDefault(existingPackage => existingPackage.Name == Name);
+		if (existing != null)
+			throw new PackageAlreadyExists(Name, parentPackage, existing);
 		parentPackage.children.Add(this);
 	}
 
-	public class PackageAlreadyExists(string name, Package parentPackage) : Exception(name +
-		" in " + (parentPackage.Name == ""
-			? nameof(Root)
-			: "parent package " + parentPackage));
+	public class PackageAlreadyExists(string name, Package parentPackage, Package existing)
+		: Exception(name + " in " + (parentPackage.Name == ""
+				? nameof(Root)
+				: "parent package " + parentPackage)
+#if DEBUG
+			+ ", existing package created by " + existing.callerFilePath + ":" +
+			existing.callerLineNumber + " from method " + existing.callerMemberName
+#endif
+		);
 
 	public string FolderPath { get; }
 	private readonly List<Package> children = new();
@@ -111,10 +132,7 @@ public class Package : Context, IEnumerable<Type>
 	private Type? lastType;
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public Type? FindDirectType(string name) =>
-		types.TryGetValue(name, out var type)
-			? type
-			: null;
+	public Type? FindDirectType(string name) => types.GetValueOrDefault(name);
 
 	private Type? FindTypeInChildrenPackages(string name, Context? searchingFromPackage)
 	{
@@ -149,5 +167,8 @@ public class Package : Context, IEnumerable<Type>
 
 	internal void Remove(Package package) => children.Remove(package);
 	public IEnumerator<Type> GetEnumerator() => types.Values.GetEnumerator();
-	IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+	IEnumerator IEnumerable.GetEnumerator() => GetEnumerator(); //ncrunch: no coverage
+
+	// ReSharper disable once ConditionalAccessQualifierIsNonNullableAccordingToAPIContract
+	public void Dispose() => ((Package)Parent)?.Remove(this);
 }

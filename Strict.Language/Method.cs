@@ -11,8 +11,15 @@ namespace Strict.Language;
 /// </summary>
 public sealed class Method : Context
 {
+#if DEBUG
+	public Method(Type type, int typeLineNumber, ExpressionParser parser,
+		IReadOnlyList<string> lines, [CallerFilePath] string callerFilePath = "",
+		[CallerLineNumber] int callerLineNumber = 0, [CallerMemberName] string callerMemberName = "")
+		: base(type, GetName(lines[0]), callerFilePath, callerLineNumber, callerMemberName)
+#else
 	public Method(Type type, int typeLineNumber, ExpressionParser parser, IReadOnlyList<string> lines)
 		: base(type, GetName(lines[0]))
+#endif
 	{
 		if (lines.Count > Limit.MethodLength)
 			throw new MethodLengthMustNotExceedTwelve(this, lines.Count, typeLineNumber);
@@ -191,7 +198,11 @@ public sealed class Method : Context
 		: ParsingFailed(method.Type, 0, "", method.Name);
 
 	internal Method(Method cloneFrom, Type newReturnType)
-		: base(newReturnType, cloneFrom.Name)
+		: base(newReturnType, cloneFrom.Name
+#if DEBUG
+			, cloneFrom.callerFilePath, cloneFrom.callerLineNumber, cloneFrom.callerMemberName
+#endif
+		)
 	{
 		TypeLineNumber = cloneFrom.TypeLineNumber;
 		Parser = cloneFrom.Parser;
@@ -206,7 +217,11 @@ public sealed class Method : Context
 	}
 
 	internal Method(Method cloneFrom, GenericTypeImplementation typeWithImplementation)
-		: base(typeWithImplementation, cloneFrom.Name)
+		: base(typeWithImplementation, cloneFrom.Name
+#if DEBUG
+			, cloneFrom.callerFilePath, cloneFrom.callerLineNumber, cloneFrom.callerMemberName
+#endif
+		)
 	{
 		TypeLineNumber = cloneFrom.TypeLineNumber;
 		Parser = cloneFrom.Parser;
@@ -357,7 +372,7 @@ public sealed class Method : Context
 	public sealed class MethodMustHaveAtLeastOneTest(Type type, string name, int typeLineNumber)
 		: ParsingFailed(type, typeLineNumber, name);
 
-	public class CannotCallBodyOnTraitMethod : Exception { }
+	public class CannotCallBodyOnTraitMethod : Exception;
 
 	public override string ToString() =>
 		Name + parameters.ToBrackets() + (ReturnType.Name == Base.None

@@ -151,7 +151,7 @@ public sealed class TypeMethodFinderTests
 	{
 		var text = TestPackage.Instance.GetType(Base.Text + "s");
 		Assert.That(text.AvailableMethods.Values.Select(methods => methods.Count).Sum(),
-			Is.GreaterThanOrEqualTo(18), "AvailableMethods: " + text.AvailableMethods.ToWordList());
+			Is.GreaterThanOrEqualTo(18), "AvailableMethods: " + text.AvailableMethods.ToWordList("\n"));
 	}
 
 	[Test]

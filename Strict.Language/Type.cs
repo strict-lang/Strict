@@ -1,4 +1,6 @@
-﻿namespace Strict.Language;
+﻿using System.Runtime.CompilerServices;
+
+namespace Strict.Language;
 
 /// <summary>
 /// .strict files contain a type or trait and must be in the correct namespace folder.
@@ -7,12 +9,20 @@
 /// </summary>
 public class Type : Context, IDisposable
 {
+#if DEBUG
+	public Type(Package package, TypeLines file, [CallerFilePath] string callerFilePath = "",
+		[CallerLineNumber] int callerLineNumber = 0,
+		[CallerMemberName] string callerMemberName = "") : base(package, file.Name, callerFilePath,
+		callerLineNumber, callerMemberName)
+#else
 	public Type(Package package, TypeLines file) : base(package, file.Name)
+#endif
 	{
 		if (file.Lines.Length > Limit.LineCount)
 			throw new LinesCountMustNotExceedLimit(this, file.Lines.Length);
-		if (package.FindDirectType(Name) != null)
-			throw new TypeAlreadyExistsInPackage(Name, package);
+		var existingType = package.FindDirectType(Name);
+		if (existingType != null)
+			throw new TypeAlreadyExistsInPackage(Name, package, existingType);
 		package.Add(this);
 		Lines = file.Lines;
 		IsGeneric = Name == Base.Generic || OneOfFirstThreeLinesContainsGeneric();
@@ -24,8 +34,13 @@ public class Type : Context, IDisposable
 	public sealed class LinesCountMustNotExceedLimit(Type type, int lineCount) : ParsingFailed(type,
 		lineCount, $"Type {type.Name} has lines count {lineCount} but limit is {Limit.LineCount}");
 
-	public sealed class TypeAlreadyExistsInPackage(string name, Package package)
-		: Exception(name + " in package: " + package);
+	public sealed class TypeAlreadyExistsInPackage(string name, Package package, Type existingType)
+		: Exception(name + " in package: " + package
+#if DEBUG
+			+ ", existing type created by " + existingType.callerFilePath + ":" +
+			existingType.callerLineNumber + " from method " + existingType.callerMemberName
+#endif
+		);
 
 	internal string[] Lines { get; }
 	/// <summary>

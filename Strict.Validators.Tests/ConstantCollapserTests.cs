@@ -28,6 +28,7 @@ public sealed class ConstantCollapserTests
 			new TypeLines(nameof(FoldMemberInitialValueExpressions),
 				"has number = 17 + 4", "Run", "\tnumber"));
 		simpleType.ParseMembersAndMethods(parser);
+		// ReSharper disable once AccessToDisposedClosure
 		Assert.That(() => collapser.Visit(simpleType, true),
 			Throws.InstanceOf<ConstantCollapser.UseConstantHere>());
 	}
@@ -61,7 +62,7 @@ public sealed class ConstantCollapserTests
 	{
 		var method = new Method(type, 1, parser, [
 			"Run",
-			"\ttrue or false and true",
+			"\ttrue or false and true"
 		]);
 		collapser.Visit(method, true);
 		Assert.That(((Boolean)method.GetBodyAndParseIfNeeded()).Data, Is.EqualTo(true));
