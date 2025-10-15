@@ -25,6 +25,7 @@ internal class TypeMethodFinder(Type type)
 			throw new GenericTypesCannotBeUsedDirectlyUseImplementation(Type, Type.Name == Base.Mutable
 				? Base.Mutable + " must be used via keyword, not manually constructed!"
 				: "Type is Generic and cannot be used directly");
+//TODO: while parsing this is no good, it creates AvailableMethods and methods is still empty, we should only do this is type parsing is done and we have a proper list of methods (or none for traits, but it is not a problem there)		
 		if (!Type.AvailableMethods.TryGetValue(methodName, out var matchingMethods))
 			return null;
 		var typesOfArguments = arguments.Select(argument => argument.ReturnType).ToList();

@@ -7,9 +7,10 @@ namespace Strict.HighLevelRuntime.Tests;
 
 public sealed class ExecutorTests
 {
-	private static Type CreateType(string name, params string[] lines) =>
-		new Type(TestPackage.Instance, new TypeLines(name, lines)).ParseMembersAndMethods(
-			new MethodExpressionParser());
+	[SetUp]
+	public void CreateExecutor() => executor = new Executor(TestPackage.Instance);
+
+	private Executor executor = null!;
 
 	[Test]
 	public void EvaluateValueAndVariableAndParameterCalls()
@@ -19,13 +20,16 @@ public sealed class ExecutorTests
 			"Add(first Number, second Number) Number",
 			"\tlast = first + second");
 		var method = t.Methods.Single(m => m.Name == "Add");
-		var exec = new Executor(TestPackage.Instance);
-		var a = new ValueInstance(TestPackage.Instance.FindType(Base.Number)!, 5);
-		var b = new ValueInstance(TestPackage.Instance.FindType(Base.Number)!, 7);
-		var result = exec.Execute(method, null, [a, b]);
+		var first = new ValueInstance(TestPackage.Instance.FindType(Base.Number)!, 5);
+		var second = new ValueInstance(TestPackage.Instance.FindType(Base.Number)!, 7);
+		var result = executor.Execute(method, null, [first, second]);
 		Assert.That(result.ReturnType.Name, Is.EqualTo(Base.Number));
 		Assert.That(Convert.ToDouble(result.Value), Is.EqualTo(12));
 	}
+
+	private static Type CreateType(string name, params string[] lines) =>
+		new Type(TestPackage.Instance, new TypeLines(name, lines)).ParseMembersAndMethods(
+			new MethodExpressionParser());
 
 	[Test]
 	public void EvaluateAllArithmeticOperators()
@@ -42,21 +46,20 @@ public sealed class ExecutorTests
 			"\tfirst / second",
 			"Mod(first Number, second Number) Number",
 			"\tfirst % second");
-		var exec = new Executor(TestPackage.Instance);
 		static ValueInstance N(double x) => new(TestPackage.Instance.FindType(Base.Number)!, x);
-		Assert.That(Convert.ToDouble(exec.Execute(t.Methods.Single(m => m.Name == "Plus"), null, [
+		Assert.That(Convert.ToDouble(executor.Execute(t.Methods.Single(m => m.Name == "Plus"), null, [
 			N(2), N(3)
 		]).Value), Is.EqualTo(5));
-		Assert.That(Convert.ToDouble(exec.Execute(t.Methods.Single(m => m.Name == "Minus"), null, [
+		Assert.That(Convert.ToDouble(executor.Execute(t.Methods.Single(m => m.Name == "Minus"), null, [
 			N(8), N(3)
 		]).Value), Is.EqualTo(5));
-		Assert.That(Convert.ToDouble(exec.Execute(t.Methods.Single(m => m.Name == "Mul"), null, [
+		Assert.That(Convert.ToDouble(executor.Execute(t.Methods.Single(m => m.Name == "Mul"), null, [
 			N(6), N(7)
 		]).Value), Is.EqualTo(42));
-		Assert.That(Convert.ToDouble(exec.Execute(t.Methods.Single(m => m.Name == "Div"), null, [
+		Assert.That(Convert.ToDouble(executor.Execute(t.Methods.Single(m => m.Name == "Div"), null, [
 			N(8), N(2)
 		]).Value), Is.EqualTo(4));
-		Assert.That(Convert.ToDouble(exec.Execute(t.Methods.Single(m => m.Name == "Mod"), null, [
+		Assert.That(Convert.ToDouble(executor.Execute(t.Methods.Single(m => m.Name == "Mod"), null, [
 			N(8), N(3)
 		]).Value), Is.EqualTo(2));
 	}
@@ -71,14 +74,15 @@ public sealed class ExecutorTests
 			"Lt(first Number, second Number) Boolean",
 			"\tfirst < second",
 			"Eq(first Number, second Number) Boolean",
-			"\tfirst is second"
-		);
-		var exec = new Executor(TestPackage.Instance);
+			"\tfirst is second");
 		var num = TestPackage.Instance.FindType(Base.Number)!;
 		ValueInstance N(double x) => new(num, x);
-		Assert.That(exec.Execute(t.Methods.Single(m => m.Name == "Gt"), null, [N(5), N(3)]).Value, Is.EqualTo(true));
-		Assert.That(exec.Execute(t.Methods.Single(m => m.Name == "Lt"), null, [N(2), N(3)]).Value, Is.EqualTo(true));
-		Assert.That(exec.Execute(t.Methods.Single(m => m.Name == "Eq"), null, [N(3), N(3)]).Value, Is.EqualTo(true));
+		Assert.That(executor.Execute(t.Methods.Single(m => m.Name == "Gt"), null, [N(5), N(3)]).Value,
+			Is.EqualTo(true));
+		Assert.That(executor.Execute(t.Methods.Single(m => m.Name == "Lt"), null, [N(2), N(3)]).Value,
+			Is.EqualTo(true));
+		Assert.That(executor.Execute(t.Methods.Single(m => m.Name == "Eq"), null, [N(3), N(3)]).Value,
+			Is.EqualTo(true));
 	}
 
 	[Test]
@@ -92,8 +96,7 @@ public sealed class ExecutorTests
 			"\t0"
 		);
 		var method = t.Methods.Single(m => m.Name == "IfTrue");
-		var exec = new Executor(TestPackage.Instance);
-		var result = exec.Execute(method, null, []);
+		var result = executor.Execute(method, null, []);
 		Assert.That(Convert.ToDouble(result.Value), Is.EqualTo(33));
 	}
 
@@ -108,8 +111,7 @@ public sealed class ExecutorTests
 			"\t42"
 		);
 		var method = t.Methods.Single(m => m.Name == "IfFalse");
-		var exec = new Executor(TestPackage.Instance);
-		var result = exec.Execute(method, null, []);
+		var result = executor.Execute(method, null, []);
 		Assert.That(Convert.ToDouble(result.Value), Is.EqualTo(42));
 	}
 
@@ -122,10 +124,8 @@ public sealed class ExecutorTests
 			"\tCharacter.Tab"
 		);
 		var method = t.Methods.Single(m => m.Name == "GetTab");
-		var exec = new Executor(TestPackage.Instance);
-		var result = exec.Execute(method, null, []);
+		var result = executor.Execute(method, null, []);
 		Assert.That(result.ReturnType.Name, Is.EqualTo(Base.Character));
-		// Ensure value came from initial value of the member (Character(7))
-		Assert.That(result.Value, Is.Not.Null);
+		Assert.That(result.Value, Is.EqualTo(7));
 	}
 }
