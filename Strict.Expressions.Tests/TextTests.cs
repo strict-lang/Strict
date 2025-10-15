@@ -44,10 +44,10 @@ public sealed class TextTests : TestExpressions
 				ParseMembersAndMethods(new MethodExpressionParser()).Methods[0].GetBodyAndParseIfNeeded().
 				ToString(), Is.EqualTo(expectedOutput));
 
-	[TestCase("ParseNewLineTextExpression", "\"FirstLine\" + Text.NewLine + \"ThirdLine\" + Text.NewLine", "has logger", "Run Text",
-		"	constant input = \"FirstLine\" + Text.NewLine + \"ThirdLine\" + Text.NewLine")]
-	[TestCase("ParseMultiLineTextExpressionWithNewLine", "\"FirstLine\" + Text.NewLine + \"ThirdLine\" + Text.NewLine + \"Ending\" + \"This is the continuation of the previous text line\"", "has logger", "Run Text",
-		"	constant input = \"FirstLine\" + Text.NewLine + \"ThirdLine\" + Text.NewLine + \"Ending\" +",
+	[TestCase("ParseNewLineTextExpression", "\"FirstLine\" + Character.NewLine + \"ThirdLine\" + Character.NewLine", "has logger", "Run Text",
+		"	constant input = \"FirstLine\" + Character.NewLine + \"ThirdLine\" + Character.NewLine")]
+	[TestCase("ParseMultiLineTextExpressionWithNewLine", "\"FirstLine\" + Character.NewLine + \"ThirdLine\" + Character.NewLine + \"Ending\" + \"This is the continuation of the previous text line\"", "has logger", "Run Text",
+		"	constant input = \"FirstLine\" + Character.NewLine + \"ThirdLine\" + Character.NewLine + \"Ending\" +",
 		"	\"This is the continuation of the previous text line\"")]
 	public void ParseNewLineTextExpression(string testName, string expected, params string[] code)
 	{
@@ -61,9 +61,9 @@ public sealed class TextTests : TestExpressions
 	}
 
 	[TestCase("ParseMultiLineTextExpressionWithNewLine",
-		"\"FirstLine\" + Text.NewLine + \"ThirdLine\" + Text.NewLine + \"This is the continuation of the previous text line\"",
+		"\"FirstLine\" + Character.NewLine + \"ThirdLine\" + Character.NewLine + \"This is the continuation of the previous text line\"",
 		"has logger", "Run Text",
-		"	constant input = \"FirstLine\" + Text.NewLine + \"ThirdLine\" + Text.NewLine +",
+		"	constant input = \"FirstLine\" + Character.NewLine + \"ThirdLine\" + Character.NewLine +",
 		"	\"This is the continuation of the previous text line\"")]
 	public void ParseMultiLineTextEndsWithNewLine(string testName, string expected,
 		params string[] code)

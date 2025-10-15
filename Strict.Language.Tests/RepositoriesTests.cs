@@ -58,10 +58,11 @@ public class RepositoriesTests
 	public async Task MakeSureParsingFailedErrorMessagesAreClickable()
 	{
 		using var strictPackage = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
-		Assert.That(
-			// ReSharper disable once AccessToDisposedClosure
-			() => new Type(strictPackage,
-				new TypeLines("Invalid", "has 1")).ParseMembersAndMethods(null!),
+		Assert.That(() =>
+			{
+				using var _ = new Type(strictPackage, new TypeLines("Invalid", "has 1")).
+					ParseMembersAndMethods(null!);
+			},
 			Throws.InstanceOf<ParsingFailed>().With.Message.Contains(@"Base\Invalid.strict:line 1"));
 	}
 

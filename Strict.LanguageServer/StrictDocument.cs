@@ -14,7 +14,7 @@ public sealed class StrictDocument
 {
 	private readonly ConcurrentDictionary<DocumentUri, string[]> strictDocuments = new();
 	private List<string> content = [];
-	private readonly VirtualMachine vm = new();
+	private readonly BytecodeInterpreter vm = new();
 
 	public void Update(DocumentUri uri, TextDocumentContentChangeEvent[] changes)
 	{

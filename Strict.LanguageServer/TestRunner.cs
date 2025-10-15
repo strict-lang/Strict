@@ -12,7 +12,7 @@ public sealed class TestRunner(ILanguageServerFacade languageServer, IEnumerable
 	private IEnumerable<Method> Methods { get; } = methods;
 	private const string NotificationName = "testRunnerNotification";
 
-	public void Run(VirtualMachine vm)
+	public void Run(BytecodeInterpreter vm)
 	{
 		foreach (var test in Methods.SelectMany(method => method.Tests))
 			if (test is MethodCall { Instance: { } } methodCall)

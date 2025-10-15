@@ -47,7 +47,7 @@ public sealed class CSharpExpressionVisitorTests : TestExpressions
 	{
 		var body = (Body)methodWithBody.GetBodyAndParseIfNeeded();
 		var variable = new Variable("numbers", false, new List(body, [new Number(type, 0)]), body);
-		Assert.That(visitor.Visit(new ListCall(variable.InitialValue, new Number(type, 0))),
+		Assert.That(visitor.Visit(new ListCallStatement(variable.InitialValue, new Number(type, 0))),
 			Is.EqualTo("numbers[0]"));
 	}
 

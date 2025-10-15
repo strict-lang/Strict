@@ -5,13 +5,11 @@ using Type = Strict.Language.Type;
 namespace Strict.Runtime;
 
 /// <summary>
-///   The only place where we can have a "static" method call to one of the from methods of a type
-///   before we have a type instance yet, it is the only way to create instances.
+/// The only place where we can have a "static" method call to one of the from methods of a type
+/// before we have a type instance yet, it is the only way to create instances.
 /// </summary>
 public sealed class Instance
 {
-	private readonly string typeName = string.Empty;
-
 	public Instance(Type? type, object value)
 	{
 		ReturnType = type;
@@ -26,6 +24,8 @@ public sealed class Instance
 		Value = value;
 		this.typeName = typeName;
 	}
+
+	private readonly string typeName = string.Empty;
 
 	public Instance(Expression expression, bool isMember = false)
 	{
@@ -86,9 +86,7 @@ public sealed class Instance
 				Convert.ToDouble(left.Value) - Convert.ToDouble(right.Value));
 		var elements = new List<Expression>((List<Expression>)left.Value);
 		if (right.Value is Expression rightExpression)
-		{
 			elements.Remove(rightExpression);
-		}
 		else
 		{
 			var indexToRemove =

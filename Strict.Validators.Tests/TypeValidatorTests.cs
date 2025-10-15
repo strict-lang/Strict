@@ -118,7 +118,7 @@ public sealed class TypeValidatorTests
 	[Test]
 	public void ListArgumentCanBeAutoParsedWithoutDoubleBrackets()
 	{
-		var typeWithListParameterMethod = new Type(TestPackage.Instance,
+		using var typeWithListParameterMethod = new Type(TestPackage.Instance,
 			new TypeLines(nameof(ListArgumentCanBeAutoParsedWithoutDoubleBrackets), "has logger",
 				"CheckInputLengthAndGetResult(numbers) Number", "\tif numbers.Length is 2",
 				"\t\treturn 2", "\t0")).ParseMembersAndMethods(parser);

@@ -149,7 +149,7 @@ public class MethodExpressionParser : ExpressionParser
 		IReadOnlyList<Expression> arguments) =>
 		input.Contains('.')
 			? ParseNestedExpressionInContext(body, input, arguments)
-			: ListCall.TryParse(body,
+			: ListCallStatement.TryParse(body,
 				TryVariableOrValueOrParameterOrMemberOrMethodCall(body.Method.Type, null, body, input,
 					arguments), arguments);
 
@@ -183,7 +183,7 @@ public class MethodExpressionParser : ExpressionParser
 				throw CheckErrorTypeAndThrowException(body, input, members, current);
 			context = current.ReturnType;
 		}
-		return ListCall.TryParse(body, current, arguments);
+		return ListCallStatement.TryParse(body, current, arguments);
 	}
 
 	// ReSharper disable once TooManyArguments

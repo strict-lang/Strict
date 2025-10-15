@@ -294,9 +294,9 @@ public sealed class TypeTests
 	[TestCase(Base.Mutable, 1)]
 	[TestCase(Base.Logger, 1)]
 	[TestCase(Base.Number, 0)]
-	[TestCase(Base.Character, 1)]
-	[TestCase(Base.Text, 4)]
-	[TestCase(Base.Error, 6)]
+	[TestCase(Base.Character, 2)]
+	[TestCase(Base.Text, 2)]
+	[TestCase(Base.Error, 4)]
 	public void ValidateAvailableMemberTypesCount(string name, int expectedCount)
 	{
 		var type = package.GetType(name);

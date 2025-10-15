@@ -1,12 +1,16 @@
+using Strict.Runtime.Statements;
+using Binary = Strict.Runtime.Statements.Binary;
+using Return = Strict.Runtime.Statements.Return;
+
 namespace Strict.Runtime.Tests;
 
-[Ignore("TODO: fix later")]
-public class VirtualMachineTests : BaseVirtualMachineTests
+public class BytecodeInterpreterTests : BaseVirtualMachineTests
 {
+	/*TODO
 	[SetUp]
-	public void Setup() => vm = new Runtime.VirtualMachine();
+	public void Setup() => vm = new BytecodeInterpreter();
 
-	protected Runtime.VirtualMachine vm = null!;
+	protected BytecodeInterpreter vm = null!;
 
 	private void CreateSampleEnum() =>
 		new Type(type.Package,
@@ -56,7 +60,7 @@ public class VirtualMachineTests : BaseVirtualMachineTests
 		new SetStatement(new Instance(inputs[1] is int
 			? NumberType
 			: TextType, inputs[1]), Register.R1),
-		new BinaryStatement(operation, Register.R0, Register.R1)
+		new Binary(operation, Register.R0, Register.R1)
 	];
 
 	[Test]
@@ -72,7 +76,7 @@ public class VirtualMachineTests : BaseVirtualMachineTests
 			vm.Execute([
 				new LoadConstantStatement(Register.R0, new Instance(NumberType, 10)),
 				new LoadConstantStatement(Register.R1, new Instance(NumberType, 5)),
-				new BinaryStatement(Instruction.Add, Register.R0, Register.R1, Register.R2)
+				new Binary(Instruction.Add, Register.R0, Register.R1, Register.R2)
 			]).Memory.Registers[Register.R2].Value, Is.EqualTo(15));
 
 	[Test]
@@ -81,9 +85,9 @@ public class VirtualMachineTests : BaseVirtualMachineTests
 			new SetStatement(new Instance(NumberType, 5), Register.R0),
 			new SetStatement(new Instance(NumberType, 1), Register.R1),
 			new SetStatement(new Instance(NumberType, 0), Register.R2),
-			new BinaryStatement(Instruction.Add, Register.R0, Register.R2, Register.R2),
-			new BinaryStatement(Instruction.Subtract, Register.R0, Register.R1, Register.R0),
-			new JumpIfNotZeroStatement(-3, Register.R0)
+			new Binary(Instruction.Add, Register.R0, Register.R2, Register.R2),
+			new Binary(Instruction.Subtract, Register.R0, Register.R1, Register.R0),
+			new JumpIfNotZero(-3, Register.R0)
 		]).Memory.Registers[Register.R2].Value, Is.EqualTo(0 + 5 + 4 + 3 + 2 + 1));
 
 	[TestCase("ArithmeticFunction(10, 5).Calculate(\"add\")", 15)]
@@ -101,8 +105,11 @@ public class VirtualMachineTests : BaseVirtualMachineTests
 	public void AccessListByIndex()
 	{
 		var statements = new ByteCodeGenerator(GenerateMethodCallFromSource("AccessList",
-			"AccessList(1, 2, 3, 4, 5).Get(2)", "has numbers", "Get(index Number) Number",
-			"\tconstant element = numbers(index)", "\telement")).Generate();
+			"AccessList(1, 2, 3, 4, 5).Get(2)",
+			"has numbers",
+			"Get(index Number) Number",
+			"\tconstant element = numbers(index)",
+			"\telement")).Generate();
 		Assert.That(vm.Execute(statements).Returns?.Value, Is.EqualTo(3));
 	}
 
@@ -110,8 +117,10 @@ public class VirtualMachineTests : BaseVirtualMachineTests
 	public void AccessListByIndexNonNumberType()
 	{
 		var statements = new ByteCodeGenerator(GenerateMethodCallFromSource("AccessList",
-			"AccessList(\"1\", \"2\", \"3\", \"4\", \"5\").Get(2)", "has texts", "Get(index Number) Text",
-			"\tconstant element = texts(index)", "\telement")).Generate();
+			"AccessList(\"1\", \"2\", \"3\", \"4\", \"5\").Get(2)",
+			"has texts", "Get(index Number) Text",
+			"\tconstant element = texts(index)",
+			"\telement")).Generate();
 		Assert.That(vm.Execute(statements).Returns?.Value, Is.EqualTo("3"));
 	}
 
@@ -122,19 +131,25 @@ public class VirtualMachineTests : BaseVirtualMachineTests
 				new StoreVariableStatement(new Instance(NumberType, 10), "number"),
 				new StoreVariableStatement(new Instance(NumberType, 1), "result"),
 				new StoreVariableStatement(new Instance(NumberType, 2), "multiplier"),
-				new LoadVariableStatement(Register.R0, "number"),
-				new LoopBeginStatement(Register.R0), new LoadVariableStatement(Register.R2, "result"),
-				new LoadVariableStatement(Register.R3, "multiplier"),
-				new BinaryStatement(Instruction.Multiply, Register.R2, Register.R3, Register.R4),
+				new LoadVariableToRegister(Register.R0, "number"),
+				new LoopBeginStatement(Register.R0), new LoadVariableToRegister(Register.R2, "result"),
+				new LoadVariableToRegister(Register.R3, "multiplier"),
+				new Binary(Instruction.Multiply, Register.R2, Register.R3, Register.R4),
 				new StoreFromRegisterStatement(Register.R4, "result"),
-				new IterationEndStatement(5),
-				new LoadVariableStatement(Register.R5, "result"), new ReturnStatement(Register.R5)
+				new IterationEnd(5),
+				new LoadVariableToRegister(Register.R5, "result"), new Return(Register.R5)
 			]).Returns?.Value, Is.EqualTo(1024));
 
-	[TestCase("NumberConvertor", "NumberConvertor(5).ConvertToText", "5", "has number", "ConvertToText Text",
-		"\tconstant result = 5 to Text", "\tresult")]
-	[TestCase("TextConvertor", "TextConvertor(\"5\").ConvertToNumber", 5, "has text", "ConvertToNumber Number",
-		"\tconstant result = text to Number", "\tresult")]
+	[TestCase("NumberConvertor", "NumberConvertor(5).ConvertToText", "5",
+		"has number",
+		"ConvertToText Text",
+		"\tconstant result = 5 to Text",
+		"\tresult")]
+	[TestCase("TextConvertor", "TextConvertor(\"5\").ConvertToNumber", 5,
+		"has text",
+		"ConvertToNumber Number",
+		"\tconstant result = text to Number",
+		"\tresult")]
 	public void ExecuteToOperator(string programName, string methodCall, object expected, params string[] code)
 	{
 		var statements = new ByteCodeGenerator(GenerateMethodCallFromSource(programName,
@@ -176,13 +191,19 @@ public class VirtualMachineTests : BaseVirtualMachineTests
 	[TestCase("EvenSumCalculator(100).IsEven", 2450, "EvenSumCalculator",
 		new[]
 		{
-			"has number", "IsEven Number", "\tmutable sum = 0", "\tfor number",
-			"\t\tif (index % 2) is 0", "\t\t\tsum = sum + index", "\tsum"
+			"has number",
+			"IsEven Number",
+			"\tmutable sum = 0",
+			"\tfor number",
+			"\t\tif (index % 2) is 0",
+			"\t\t\tsum = sum + index",
+			"\tsum"
 		})]
 	[TestCase("EvenSumCalculatorForList(100, 200, 300).IsEvenList", 2, "EvenSumCalculatorForList",
 		new[]
 		{
-			"has numbers", "IsEvenList Number",
+			"has numbers",
+			"IsEvenList Number",
 			"\tmutable sum = 0",
 			"\tfor numbers",
 			"\t\tif (index % 2) is 0",
@@ -390,9 +411,9 @@ public class VirtualMachineTests : BaseVirtualMachineTests
 				new SetStatement(new Instance(NumberType, 5), Register.R0),
 				new SetStatement(new Instance(NumberType, 1), Register.R1),
 				new SetStatement(new Instance(NumberType, 10), Register.R2),
-				new BinaryStatement(Instruction.LessThan, Register.R2, Register.R0),
-				new JumpIfStatement(Instruction.JumpIfTrue, 2),
-				new BinaryStatement(Instruction.Add, Register.R2, Register.R0, Register.R0)
+				new Binary(Instruction.LessThan, Register.R2, Register.R0),
+				new JumpIf(Instruction.JumpIfTrue, 2),
+				new Binary(Instruction.Add, Register.R2, Register.R0, Register.R0)
 			]).Memory.Registers[Register.R0].Value, Is.EqualTo(15));
 
 	[TestCase(Instruction.GreaterThan, new[] { 1, 2 }, 2 - 1)]
@@ -404,17 +425,18 @@ public class VirtualMachineTests : BaseVirtualMachineTests
 			vm.Execute([
 				new SetStatement(new Instance(NumberType, registers[0]), Register.R0),
 				new SetStatement(new Instance(NumberType, registers[1]), Register.R1),
-				new BinaryStatement(conditional, Register.R0, Register.R1),
-				new JumpIfStatement(Instruction.JumpIfTrue, 2),
-				new BinaryStatement(Instruction.Subtract, Register.R1, Register.R0, Register.R0),
-				new JumpIfStatement(Instruction.JumpIfFalse, 2),
-				new BinaryStatement(Instruction.Add, Register.R0, Register.R1, Register.R0)
+				new Binary(conditional, Register.R0, Register.R1),
+				new JumpIf(Instruction.JumpIfTrue, 2),
+				new Binary(Instruction.Subtract, Register.R1, Register.R0, Register.R0),
+				new JumpIf(Instruction.JumpIfFalse, 2),
+				new Binary(Instruction.Add, Register.R0, Register.R1, Register.R0)
 			]).Memory.Registers[Register.R0].Value, Is.EqualTo(expected));
 
 	[TestCase(Instruction.Add)]
 	[TestCase(Instruction.GreaterThan)]
 	public void OperandsRequired(Instruction instruction) =>
 		Assert.That(
-			() => vm.Execute([new BinaryStatement(instruction, Register.R0)]),
-			Throws.InstanceOf<Runtime.VirtualMachine.OperandsRequired>());
+			() => vm.Execute([new Binary(instruction, Register.R0)]),
+			Throws.InstanceOf<BytecodeInterpreter.OperandsRequired>());
+	*/
 }

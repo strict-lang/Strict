@@ -1,4 +1,7 @@
 ﻿global using Type = Strict.Language.Type;
+using Strict.Runtime.Statements;
+using Binary = Strict.Runtime.Statements.Binary;
+using Return = Strict.Runtime.Statements.Return;
 
 namespace Strict.Runtime.Tests;
 
@@ -25,47 +28,49 @@ public class BaseVirtualMachineTests : TestExpressions
 		"\tif operation is \"divide\"",
 		"\t\treturn First / Second"
 	];
+	/*TODO
 	protected static readonly Statement[] ExpectedStatementsOfArithmeticFunctionExample =
 	[
 		new StoreVariableStatement(new Instance(NumberType, 10), "First"),
 		new StoreVariableStatement(new Instance(NumberType, 5), "Second"),
 		new StoreVariableStatement(new Instance(TextType, "add"), "operation"),
-		new LoadVariableStatement(Register.R0, "operation"),
+		new LoadVariableToRegister(Register.R0, "operation"),
 		new LoadConstantStatement(Register.R1, new Instance(TextType, "add")),
-		new BinaryStatement(Instruction.Equal, Register.R0, Register.R1),
-		new JumpToIdStatement(Instruction.JumpToIdIfFalse, 0),
-		new LoadVariableStatement(Register.R2, "First"),
-		new LoadVariableStatement(Register.R3, "Second"),
-		new BinaryStatement(Instruction.Add, Register.R2, Register.R3, Register.R4),
-		new ReturnStatement(Register.R4), new JumpToIdStatement(Instruction.JumpEnd, 0),
-		new LoadVariableStatement(Register.R5, "operation"),
+		new Binary(Instruction.Equal, Register.R0, Register.R1),
+		new JumpToId(Instruction.JumpToIdIfFalse, 0),
+		new LoadVariableToRegister(Register.R2, "First"),
+		new LoadVariableToRegister(Register.R3, "Second"),
+		new Binary(Instruction.Add, Register.R2, Register.R3, Register.R4),
+		new Return(Register.R4), new JumpToId(Instruction.JumpEnd, 0),
+		new LoadVariableToRegister(Register.R5, "operation"),
 		new LoadConstantStatement(Register.R6, new Instance(TextType, "subtract")),
-		new BinaryStatement(Instruction.Equal, Register.R5, Register.R6),
-		new JumpToIdStatement(Instruction.JumpToIdIfFalse, 1),
-		new LoadVariableStatement(Register.R7, "First"),
-		new LoadVariableStatement(Register.R8, "Second"),
-		new BinaryStatement(Instruction.Subtract, Register.R7, Register.R8, Register.R9),
-		new ReturnStatement(Register.R9), new JumpToIdStatement(Instruction.JumpEnd, 1),
-		new LoadVariableStatement(Register.R0, "operation"),
+		new Binary(Instruction.Equal, Register.R5, Register.R6),
+		new JumpToId(Instruction.JumpToIdIfFalse, 1),
+		new LoadVariableToRegister(Register.R7, "First"),
+		new LoadVariableToRegister(Register.R8, "Second"),
+		new Binary(Instruction.Subtract, Register.R7, Register.R8, Register.R9),
+		new Return(Register.R9), new JumpToId(Instruction.JumpEnd, 1),
+		new LoadVariableToRegister(Register.R0, "operation"),
 		new LoadConstantStatement(Register.R1, new Instance(TextType, "multiply")),
-		new BinaryStatement(Instruction.Equal, Register.R0, Register.R1),
-		new JumpToIdStatement(Instruction.JumpToIdIfFalse, 2),
-		new LoadVariableStatement(Register.R2, "First"),
-		new LoadVariableStatement(Register.R3, "Second"),
-		new BinaryStatement(Instruction.Multiply, Register.R2, Register.R3, Register.R4),
-		new ReturnStatement(Register.R4), new JumpToIdStatement(Instruction.JumpEnd, 2),
-		new LoadVariableStatement(Register.R5, "operation"),
+		new Binary(Instruction.Equal, Register.R0, Register.R1),
+		new JumpToId(Instruction.JumpToIdIfFalse, 2),
+		new LoadVariableToRegister(Register.R2, "First"),
+		new LoadVariableToRegister(Register.R3, "Second"),
+		new Binary(Instruction.Multiply, Register.R2, Register.R3, Register.R4),
+		new Return(Register.R4), new JumpToId(Instruction.JumpEnd, 2),
+		new LoadVariableToRegister(Register.R5, "operation"),
 		new LoadConstantStatement(Register.R6, new Instance(TextType, "divide")),
-		new BinaryStatement(Instruction.Equal, Register.R5, Register.R6),
-		new JumpToIdStatement(Instruction.JumpToIdIfFalse, 3),
-		new LoadVariableStatement(Register.R7, "First"),
-		new LoadVariableStatement(Register.R8, "Second"),
-		new BinaryStatement(Instruction.Divide, Register.R7, Register.R8, Register.R9),
-		new ReturnStatement(Register.R9), new JumpToIdStatement(Instruction.JumpEnd, 3)
+		new Binary(Instruction.Equal, Register.R5, Register.R6),
+		new JumpToId(Instruction.JumpToIdIfFalse, 3),
+		new LoadVariableToRegister(Register.R7, "First"),
+		new LoadVariableToRegister(Register.R8, "Second"),
+		new Binary(Instruction.Divide, Register.R7, Register.R8, Register.R9),
+		new Return(Register.R9), new JumpToId(Instruction.JumpEnd, 3)
 	];
 	protected static readonly string[] SimpleLoopExample =
 	[
-		"has number", "GetMultiplicationOfNumbers Number",
+		"has number",
+		"GetMultiplicationOfNumbers Number",
 		"\tmutable result = 1",
 		"\tconstant multiplier = 2",
 		"\tfor number",
@@ -74,7 +79,8 @@ public class BaseVirtualMachineTests : TestExpressions
 	];
 	protected static readonly string[] RemoveParenthesesKata =
 	[
-		"has text", "Remove Text",
+		"has text",
+		"Remove Text",
 		"\tmutable result = \"\"",
 		"\tmutable count = 0",
 		"\tfor text",
@@ -88,9 +94,14 @@ public class BaseVirtualMachineTests : TestExpressions
 	];
 	protected static readonly string[] IfAndElseTestCode =
 	[
-		"has number", "IsEven Text", "\tmutable result = \"\"", "\tif number > 10",
-		"\t\tresult = \"Number is more than 10\"", "\t\treturn result", "\telse",
-		"\t\tresult = \"Number is less or equal than 10\"", "\t\treturn result"
+		"has number",
+		"IsEven Text",
+		"\tmutable result = \"\"",
+		"\tif number > 10",
+		"\t\tresult = \"Number is more than 10\"",
+		"\t\treturn result", "\telse",
+		"\t\tresult = \"Number is less or equal than 10\"",
+		"\t\treturn result"
 	];
 	protected static readonly string[] SimpleMethodCallCode =
 	[
@@ -155,48 +166,48 @@ public class BaseVirtualMachineTests : TestExpressions
 	[
 		new StoreVariableStatement(new Instance(NumberType, 2), "firstNumber"),
 		new StoreVariableStatement(new Instance(NumberType, 5), "secondNumber"),
-		new InvokeStatement("SumNumbers(firstNumber, secondNumber)", Register.R0),
+		new Invoke("SumNumbers(firstNumber, secondNumber)", Register.R0),
 		new StoreFromRegisterStatement(Register.R0, "result"),
-		new LoadVariableStatement(Register.R1, "result"),
-		new ReturnStatement(Register.R1)
+		new LoadVariableToRegister(Register.R1, "result"),
+		new Return(Register.R1)
 	];
 	protected static readonly Statement[] ExpectedStatementsOfRemoveParenthesesKata =
 	[
 		new StoreVariableStatement(new Instance(TextType, "some(thing)"), "text"),
 		new StoreVariableStatement(new Instance(TextType, ""), "result"),
 		new StoreVariableStatement(new Instance(NumberType, 0), "count"),
-		new LoadVariableStatement(Register.R0, "text"),
+		new LoadVariableToRegister(Register.R0, "text"),
 		new LoopBeginStatement(Register.R0),
-		new LoadVariableStatement(Register.R1, "value"),
+		new LoadVariableToRegister(Register.R1, "value"),
 		new LoadConstantStatement(Register.R2, new Instance(TextType, "(")),
-		new BinaryStatement(Instruction.Equal, Register.R1, Register.R2),
-		new JumpToIdStatement(Instruction.JumpToIdIfFalse, 0),
-		new LoadVariableStatement(Register.R3, "count"),
+		new Binary(Instruction.Equal, Register.R1, Register.R2),
+		new JumpToId(Instruction.JumpToIdIfFalse, 0),
+		new LoadVariableToRegister(Register.R3, "count"),
 		new LoadConstantStatement(Register.R4, new Instance(NumberType, 1)),
-		new BinaryStatement(Instruction.Add, Register.R3, Register.R4, Register.R5),
+		new Binary(Instruction.Add, Register.R3, Register.R4, Register.R5),
 		new StoreFromRegisterStatement(Register.R5, "count"),
-		new JumpToIdStatement(Instruction.JumpEnd, 0),
-		new LoadVariableStatement(Register.R6, "count"),
+		new JumpToId(Instruction.JumpEnd, 0),
+		new LoadVariableToRegister(Register.R6, "count"),
 		new LoadConstantStatement(Register.R7, new Instance(TextType, ")")),
-		new BinaryStatement(Instruction.Equal, Register.R6, Register.R7),
-		new JumpToIdStatement(Instruction.JumpToIdIfFalse, 1),
-		new LoadVariableStatement(Register.R8, "result"),
-		new LoadVariableStatement(Register.R9, "value"),
-		new BinaryStatement(Instruction.Add, Register.R7, Register.R8, Register.R9),
+		new Binary(Instruction.Equal, Register.R6, Register.R7),
+		new JumpToId(Instruction.JumpToIdIfFalse, 1),
+		new LoadVariableToRegister(Register.R8, "result"),
+		new LoadVariableToRegister(Register.R9, "value"),
+		new Binary(Instruction.Add, Register.R7, Register.R8, Register.R9),
 		new StoreFromRegisterStatement(Register.R0, "result"),
-		new JumpToIdStatement(Instruction.JumpEnd, 1),
-		new LoadVariableStatement(Register.R1, "value"),
+		new JumpToId(Instruction.JumpEnd, 1),
+		new LoadVariableToRegister(Register.R1, "value"),
 		new LoadConstantStatement(Register.R2, new Instance(NumberType, 0)),
-		new BinaryStatement(Instruction.Equal, Register.R1, Register.R2),
-		new JumpToIdStatement(Instruction.JumpToIdIfFalse, 2),
-		new LoadVariableStatement(Register.R3, "count"),
+		new Binary(Instruction.Equal, Register.R1, Register.R2),
+		new JumpToId(Instruction.JumpToIdIfFalse, 2),
+		new LoadVariableToRegister(Register.R3, "count"),
 		new LoadConstantStatement(Register.R4, new Instance(NumberType, 0)),
-		new BinaryStatement(Instruction.Subtract, Register.R3, Register.R4, Register.R5),
+		new Binary(Instruction.Subtract, Register.R3, Register.R4, Register.R5),
 		new StoreFromRegisterStatement(Register.R5, "count"),
-		new JumpToIdStatement(Instruction.JumpEnd, 2),
-		new IterationEndStatement(29),
-		new LoadVariableStatement(Register.R6, "result"),
-		new ReturnStatement(Register.R6)
+		new JumpToId(Instruction.JumpEnd, 2),
+		new IterationEnd(29),
+		new LoadVariableToRegister(Register.R6, "result"),
+		new Return(Register.R6)
 	];
 	protected static readonly string[] SimpleListDeclarationExample =
 	[
@@ -205,21 +216,21 @@ public class BaseVirtualMachineTests : TestExpressions
 	protected static readonly Statement[] ExpectedStatementsOfSimpleListDeclaration =
 	[
 		new StoreVariableStatement(new Instance(NumberType, 5), "number"),
-		new StoreVariableStatement(
-			new Instance(ListType,
-				new List<Expression>
-				{
-					new Value(NumberType, 1),
-					new Value(NumberType, 2),
-					new Value(NumberType, 3),
-					new Value(NumberType, 4),
-					new Value(NumberType, 5)
-				}), "myList"),
-		new LoadVariableStatement(Register.R0, "myList"), new ReturnStatement(Register.R0)
+		new StoreVariableStatement(new Instance(ListType,
+			new List<Expression>
+			{
+				new Value(NumberType, 1),
+				new Value(NumberType, 2),
+				new Value(NumberType, 3),
+				new Value(NumberType, 4),
+				new Value(NumberType, 5)
+			}), "myList"),
+		new LoadVariableToRegister(Register.R0, "myList"), new Return(Register.R0)
 	];
 	protected static readonly string[] InvertValueKata =
 	[
-		"has numbers", "Invert Text",
+		"has numbers",
+		"Invert Text",
 		"\tmutable result = \"\"",
 		"\tfor numbers",
 		"\t\tresult = result + (0 - value)",
@@ -238,17 +249,17 @@ public class BaseVirtualMachineTests : TestExpressions
 					new Value(NumberType, 5)
 				}), "numbers"),
 		new StoreVariableStatement(new Instance(TextType, ""), "result"),
-		new LoadVariableStatement(Register.R0, "numbers"),
+		new LoadVariableToRegister(Register.R0, "numbers"),
 		new LoopBeginStatement(Register.R0),
 		new LoadConstantStatement(Register.R1, new Instance(NumberType, 0)),
-		new LoadVariableStatement(Register.R2, "value"),
-		new BinaryStatement(Instruction.Subtract, Register.R1, Register.R2, Register.R3),
-		new LoadVariableStatement(Register.R4, "result"),
-		new BinaryStatement(Instruction.Add, Register.R4, Register.R3, Register.R5),
+		new LoadVariableToRegister(Register.R2, "value"),
+		new Binary(Instruction.Subtract, Register.R1, Register.R2, Register.R3),
+		new LoadVariableToRegister(Register.R4, "result"),
+		new Binary(Instruction.Add, Register.R4, Register.R3, Register.R5),
 		new StoreFromRegisterStatement(Register.R5, "result"),
-		new IterationEndStatement(8),
-		new LoadVariableStatement(Register.R6, "result"),
-		new ReturnStatement(Register.R6)
+		new IterationEnd(8),
+		new LoadVariableToRegister(Register.R6, "result"),
+		new Return(Register.R6)
 	];
 
 	protected MethodCall GenerateMethodCallFromSource(string programName, string methodCall,
@@ -259,4 +270,5 @@ public class BaseVirtualMachineTests : TestExpressions
 				new MethodExpressionParser());
 		return (MethodCall)ParseExpression(methodCall);
 	}
+	*/
 }

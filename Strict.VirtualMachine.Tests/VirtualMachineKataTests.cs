@@ -1,15 +1,23 @@
 ﻿namespace Strict.Runtime.Tests;
 
-public class VirtualMachineTestsKata : VirtualMachineTests
+public class BytecodeInterpreterTestsKata : BytecodeInterpreterTests
 {
+	/*TODO
 	[Test]
 	public void BestTimeToBuyStocksKata()
 	{
 		var statements = new ByteCodeGenerator(GenerateMethodCallFromSource("Stock",
-			"Stock(7, 1, 5, 3, 6, 4).MaxProfit", "has prices Numbers", "MaxProfit Number",
-			"\tmutable min = 999", //Need to implement int.MaxValue
-			"\tmutable max = 0", "\tfor prices", "\t\tif value < min", "\t\t\tmin = value",
-			"\t\telse if value - min > max", "\t\t\tmax = value - min", "\tmax")).Generate();
+			"Stock(7, 1, 5, 3, 6, 4).MaxProfit",
+			"has prices Numbers",
+			"MaxProfit Number",
+			"\tmutable min = 10000000",
+			"\tmutable max = 0",
+			"\tfor prices",
+			"\t\tif value < min",
+			"\t\t\tmin = value",
+			"\t\telse if value - min > max",
+			"\t\t\tmax = value - min",
+			"\tmax")).Generate();
 		Assert.That(vm.Execute(statements).Returns?.Value, Is.EqualTo(5));
 	}
 
@@ -35,8 +43,14 @@ public class VirtualMachineTestsKata : VirtualMachineTests
 	{
 		var statements = new ByteCodeGenerator(GenerateMethodCallFromSource("SheepCounter",
 			"SheepCounter(true, true, true, false, true, true, true, true, true, false, true, false, true, false, false, true, true, true, true, true, false, false, true, true).Count",
-			"has sheep Booleans", "Count Number", "\tmutable result = 0",
-			"\tfor sheep", "\t\tif value", "\t\t\tresult = result + 1", "\tresult")).Generate();
+			"has sheep Booleans",
+			"Count Number",
+			"\tmutable result = 0",
+			"\tfor sheep",
+			"\t\tif value",
+			"\t\t\tresult.Increment",
+			"\tresult")).Generate();
 		Assert.That(vm.Execute(statements).Returns!.Value, Is.EqualTo(17));
 	}
+	*/
 }

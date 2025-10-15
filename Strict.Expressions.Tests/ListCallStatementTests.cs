@@ -1,6 +1,6 @@
 ﻿namespace Strict.Expressions.Tests;
 
-public sealed class ListCallTests : TestExpressions
+public sealed class ListCallStatementTests : TestExpressions
 {
 	[TestCase("constant numbers = (1, 2, 3)", "numbers(0)")]
 	[TestCase("constant texts = (\"something\", \"someOtherThing\")", "texts(1)")]

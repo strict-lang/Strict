@@ -307,7 +307,7 @@ public sealed class ListAdvancedTests : TestExpressions
 				"\tsomeList")).
 			ParseMembersAndMethods(parser);
 		var body = (Body)program.Methods[0].GetBodyAndParseIfNeeded();
-		Assert.That(((VariableCall)((ListCall)((MutableReassignment)body.Expressions[2]).Target).List).
+		Assert.That(((VariableCall)((ListCallStatement)((MutableReassignment)body.Expressions[2]).Target).List).
 			Variable.Name, Is.EqualTo("someList"));
 	}
 
@@ -321,7 +321,7 @@ public sealed class ListAdvancedTests : TestExpressions
 				"\tmutable someList = List(Mutable(Number))",
 				"\tsomeList(-1) = 1")).
 			ParseMembersAndMethods(parser);
-		Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(), Throws.InstanceOf<ListCall.NegativeIndexIsNeverAllowed>());
+		Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(), Throws.InstanceOf<ListCallStatement.NegativeIndexIsNeverAllowed>());
 	}
 
 	[Test]
@@ -335,7 +335,7 @@ public sealed class ListAdvancedTests : TestExpressions
 				"\tsomeList(0) = 5")).
 			ParseMembersAndMethods(parser);
 		var body = (Body)program.Methods[0].GetBodyAndParseIfNeeded();
-		Assert.That(((ListCall)((MutableReassignment)body.Expressions[1]).Target).Index.ToString(),
+		Assert.That(((ListCallStatement)((MutableReassignment)body.Expressions[1]).Target).Index.ToString(),
 			Is.EqualTo("0"));
 	}
 
@@ -349,7 +349,7 @@ public sealed class ListAdvancedTests : TestExpressions
 				"\tmutable someList = (9, 8, 7)",
 				"\tsomeList(3) = 5")).
 			ParseMembersAndMethods(parser);
-		Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(), Throws.InstanceOf<ListCall.IndexAboveConstantListLength>());
+		Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(), Throws.InstanceOf<ListCallStatement.IndexAboveConstantListLength>());
 	}
 
 	[Test]
@@ -361,7 +361,7 @@ public sealed class ListAdvancedTests : TestExpressions
 				"from",
 				"\tnumbers(3) = 5")).
 			ParseMembersAndMethods(parser);
-		Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(), Throws.InstanceOf<ListCall.IndexViolatesListConstraint>());
+		Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(), Throws.InstanceOf<ListCallStatement.IndexViolatesListConstraint>());
 	}
 
 	[Test]
@@ -374,7 +374,7 @@ public sealed class ListAdvancedTests : TestExpressions
 				"\tconstant notValid = 5",
 				"\tnumbers(notValid) = 5")).
 			ParseMembersAndMethods(parser);
-		Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(), Throws.InstanceOf<ListCall.IndexViolatesListConstraint>());
+		Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(), Throws.InstanceOf<ListCallStatement.IndexViolatesListConstraint>());
 	}
 
 	[Test]
@@ -387,7 +387,7 @@ public sealed class ListAdvancedTests : TestExpressions
 				"from",
 				"\tnumbers(invalidIndex) = 5")).
 			ParseMembersAndMethods(parser);
-		Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(), Throws.InstanceOf<ListCall.IndexViolatesListConstraint>());
+		Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(), Throws.InstanceOf<ListCallStatement.IndexViolatesListConstraint>());
 	}
 
 	[Test]

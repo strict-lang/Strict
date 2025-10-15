@@ -329,7 +329,7 @@ public class Type : Context, IDisposable
 			return true;
 		if (IsEnum && members[0].Type.IsSameOrCanBeUsedAs(sameOrUsableType))
 			return true;
-		return maxDepth >= 0 && Members.Count(m =>
+		return maxDepth >= 0 && Members.Count(m => !m.IsConstant &&
 			m.Type.IsSameOrCanBeUsedAs(sameOrUsableType, allowImplicitConversion, maxDepth - 1)) == 1;
 	}
 
@@ -394,7 +394,8 @@ public class Type : Context, IDisposable
 			foreach (var member in Members.Where(m =>
 				m is { IsPublic: false, InitialValue: null } && !IsTraitImplementation(m.Type)))
 				AddNonGenericMethods(member.Type);
-			if (members.Count > 0 && members.Any(m => !m.Type.IsGeneric && !m.IsConstant))
+			if (members.Count > 0 && members.Any(m => !m.Type.IsGeneric && !m.IsConstant) &&
+				methods.All(m => m.Name != Method.From))
 				AddFromConstructorWithMembersAsArguments();
 			AddAnyMethods();
 			return cachedAvailableMethods;
@@ -514,9 +515,9 @@ public class Type : Context, IDisposable
 				genericArguments.Add(new Parameter(this, Base.Generic));
 			else if (member.Type.IsGeneric)
 				genericArguments.Add(member);
-		if (genericArguments.Count == 0)
-			throw new InvalidGenericTypeWithoutGenericArguments(this); //ncrunch: no coverage
-		return genericArguments;
+		return genericArguments.Count == 0
+			? throw new InvalidGenericTypeWithoutGenericArguments(this)
+			: genericArguments;
 	}
 
 	//ncrunch: no coverage start

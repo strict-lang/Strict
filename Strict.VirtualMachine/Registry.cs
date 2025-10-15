@@ -11,7 +11,6 @@ public sealed class Registry
 		if (NextRegister == registers.Length)
 			NextRegister = 0;
 		PreviousRegister = registers[NextRegister];
-		var currentRegister = registers[NextRegister++];
-		return currentRegister;
+		return registers[NextRegister++];
 	}
 }

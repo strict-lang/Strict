@@ -8,7 +8,7 @@ public sealed class VariableValueEvaluator(ILanguageServerFacade languageServer,
 {
 	private const string NotificationName = "valueEvaluationNotification";
 
-	public void Run(VirtualMachine vm)
+	public void Run(BytecodeInterpreter vm)
 	{
 		var lineValuePair = new Dictionary<int, string>();
 		for (var i = 0; i < lines.Length; i++)

@@ -347,7 +347,7 @@ public sealed class Method : Context
 	public Expression GetBodyAndParseIfNeeded()
 	{
 		if (methodBody == null)
-			throw new CannotCallBodyOnTraitMethod();
+			throw new CannotCallBodyOnTraitMethod(Type, Name);
 		if (methodBody.Expressions.Count > 0)
 			return methodBody.Expressions.Count == 1
 				? methodBody.Expressions[0]
@@ -372,7 +372,7 @@ public sealed class Method : Context
 	public sealed class MethodMustHaveAtLeastOneTest(Type type, string name, int typeLineNumber)
 		: ParsingFailed(type, typeLineNumber, name);
 
-	public class CannotCallBodyOnTraitMethod : Exception;
+	public class CannotCallBodyOnTraitMethod(Type type, string name) : Exception(type + "." + name);
 
 	public override string ToString() =>
 		Name + parameters.ToBrackets() + (ReturnType.Name == Base.None

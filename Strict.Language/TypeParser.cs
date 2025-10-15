@@ -1,4 +1,6 @@
-﻿namespace Strict.Language;
+﻿using System.Globalization;
+
+namespace Strict.Language;
 
 public sealed class TypeParser(Type type, string[] lines)
 {
@@ -10,7 +12,7 @@ public sealed class TypeParser(Type type, string[] lines)
 			TryParse(parser, LineNumber);
 	}
 
-	internal int LineNumber = -1; //slower, especially in debug: { get; private set; }
+	internal int LineNumber = -1; //property is slower, especially in debug: { get; private set; }
 
 	private void TryParse(ExpressionParser parser, int rememberStartMethodLineNumber)
 	{
@@ -49,19 +51,249 @@ public sealed class TypeParser(Type type, string[] lines)
 		else if (line.StartsWith(Type.ConstantWithSpaceAtEnd, StringComparison.Ordinal))
 			type.Members.Add(GetNewMember(parser, Keyword.Constant));
 		else
-			type.Methods.Add(new Method(type, LineNumber, parser, GetAllMethodLines()));
+		{
+			var methodLines = GetAllMethodLines();
+			DetectTrivialEndlessRecursionInFrom(methodLines);
+			DetectSelfRecursionWithSameArguments(methodLines);
+			DetectHugeConstantRange(methodLines);
+			type.Methods.Add(new Method(type, LineNumber, parser, methodLines));
+		}
 	}
+
+	/// <summary>
+	/// If a from(...) method contains a same-type constructor call like TypeName(constant) and the
+	/// call's argument does not reference any parameter, it will just recursively call itself
+	/// forever (e.g., Character.from used Character(0), which would forever call itself).
+	/// </summary>
+	private void DetectTrivialEndlessRecursionInFrom(IReadOnlyList<string> methodLines)
+	{
+		if (methodLines.Count == 0)
+			return;
+		var signature = methodLines[0];
+		var openParen = signature.IndexOf('(');
+		if (openParen <= 0)
+			return;
+		var methodName = signature[..openParen];
+		if (!methodName.Equals("from", StringComparison.Ordinal))
+			return;
+		// Collect parameter names from signature: from(name Type, other Type) ...
+		var closeParen = signature.IndexOf(')', openParen + 1);
+		var paramNames = new HashSet<string>(StringComparer.Ordinal);
+		if (closeParen > openParen + 1)
+		{
+			var inside = signature[(openParen + 1)..closeParen];
+			foreach (var param in inside.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
+			{
+				// param format is "name Type" or just "name"
+				var parts = param.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+				if (parts.Length > 0)
+					paramNames.Add(parts[0]);
+			}
+		}
+		var typeCtorPrefix = type.Name + "(";
+		// Inspect body lines (all subsequent lines), skip inline tests (contain " is ")
+		for (var i = 1; i < methodLines.Count; i++)
+		{
+			var bodyLine = methodLines[i];
+			if (!bodyLine.StartsWith('\t'))
+				continue;
+			if (bodyLine.Contains(" is ", StringComparison.Ordinal))
+				continue;
+			var idx = bodyLine.IndexOf(typeCtorPrefix, StringComparison.Ordinal);
+			if (idx < 0)
+				continue;
+
+			// Extract argument inside TypeName(...)
+			var startArgs = idx + typeCtorPrefix.Length;
+			var endArgs = bodyLine.IndexOf(')', startArgs);
+			if (endArgs <= startArgs)
+				continue;
+			var argText = bodyLine[startArgs..endArgs];
+
+			// If argText does not contain any parameter name, it's a constant/self call -> flag
+			var usesAnyParam = paramNames.Any(p => argText.Contains(p, StringComparison.Ordinal));
+			if (!usesAnyParam)
+				throw new TrivialEndlessSelfConstructionDetected(type, LineNumber, bodyLine.Trim());
+		}
+	}
+
+	/// <summary>
+	/// General rule for any method: calling ourselves with the same parameter list (e.g., Foo(a, b))
+	/// is a guaranteed endless recursion.
+	/// </summary>
+	private void DetectSelfRecursionWithSameArguments(IReadOnlyList<string> methodLines)
+	{
+		if (methodLines.Count == 0 || type.Name == Base.System)
+			return;
+		var signature = methodLines[0];
+		var openParen = signature.IndexOf('(');
+		if (openParen <= 0)
+			return;
+		var closeParen = signature.IndexOf(')', openParen + 1);
+		if (closeParen <= openParen)
+			return;
+		var methodName = signature[..openParen].Trim();
+
+		// Extract parameter names from signature in order
+		var paramNames = new List<string>();
+		var inside = signature[(openParen + 1)..closeParen];
+		foreach (var param in inside.Split(',',
+			StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
+		{
+			var parts = param.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+			if (parts.Length > 0)
+				paramNames.Add(parts[0]);
+		}
+		if (paramNames.Count == 0)
+			return;
+
+		// Helpers
+		static bool IsWordChar(char c) => char.IsLetterOrDigit(c) || c == '_';
+
+		bool ArgsEqualParams(string argText)
+		{
+			var argNames = argText.Split(',',
+				StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+			if (argNames.Length != paramNames.Count)
+				return false;
+			for (var i = 0; i < argNames.Length; i++)
+				if (!argNames[i].Equals(paramNames[i], StringComparison.Ordinal))
+					return false;
+			return true;
+		}
+
+		for (var i = 1; i < methodLines.Count; i++)
+		{
+			var bodyLine = methodLines[i];
+			if (!bodyLine.StartsWith('\t'))
+				continue;
+			if (bodyLine.Contains(" is ", StringComparison.Ordinal)) // skip inline tests
+				continue;
+			// 1) Dot calls: receiver.Method(...)
+			var searchStart = 0;
+			var dotPattern = "." + methodName + "(";
+			while (true)
+			{
+				var dotIdx = bodyLine.IndexOf(dotPattern, searchStart, StringComparison.Ordinal);
+				if (dotIdx < 0)
+					break;
+				// Extract receiver token before the dot
+				var receiverEnd = dotIdx - 1;
+				var receiverStart = receiverEnd;
+				while (receiverStart >= 0 && IsWordChar(bodyLine[receiverStart]))
+					receiverStart--;
+				receiverStart++;
+				var receiver = receiverStart <= receiverEnd
+					? bodyLine.Substring(receiverStart, receiverEnd - receiverStart + 1)
+					: string.Empty;
+				// Only treat as recursion if calling this.Method(...) or TypeName.Method(...)
+				if (receiver.Equals("this", StringComparison.Ordinal) ||
+					receiver.Equals(type.Name, StringComparison.Ordinal))
+				{
+					var argsStart = dotIdx + dotPattern.Length - 1; // position at '('
+					var argsEnd = bodyLine.IndexOf(')', argsStart + 1);
+					if (argsEnd > argsStart)
+					{
+						var argText = bodyLine[(argsStart + 1)..argsEnd];
+						if (ArgsEqualParams(argText))
+							throw new SelfRecursiveCallWithSameArgumentsDetected(type, LineNumber,
+								bodyLine.Trim());
+					}
+				}
+				searchStart = dotIdx + dotPattern.Length;
+			}
+			// 2) Direct calls: Method(...)
+			searchStart = 0;
+			var directPattern = methodName + "(";
+			while (true)
+			{
+				var directIdx = bodyLine.IndexOf(directPattern, searchStart, StringComparison.Ordinal);
+				if (directIdx < 0)
+					break;
+
+				// Ensure it's not part of an identifier or a member call (preceded by '.' or word char)
+				var prevCharIdx = directIdx - 1;
+				if (prevCharIdx >= 0)
+				{
+					var prev = bodyLine[prevCharIdx];
+					if (prev == '.' || IsWordChar(prev))
+					{
+						searchStart = directIdx + directPattern.Length;
+						continue;
+					}
+				}
+				var argsStartDirect = directIdx + directPattern.Length - 1; // at '('
+				var argsEndDirect = bodyLine.IndexOf(')', argsStartDirect + 1);
+				if (argsEndDirect > argsStartDirect)
+				{
+					var argText = bodyLine[(argsStartDirect + 1)..argsEndDirect];
+					if (ArgsEqualParams(argText))
+						throw new SelfRecursiveCallWithSameArgumentsDetected(type, LineNumber,
+							bodyLine.Trim());
+				}
+				searchStart = directIdx + directPattern.Length;
+			}
+		}
+	}
+
+	/// <summary>
+	/// Prevent obviously gigantic constant ranges like 1 billion, no need for that in Strict.
+	/// </summary>
+	private void DetectHugeConstantRange(IReadOnlyList<string> methodLines)
+	{
+		const long MaximumRangeAllowed = 1_000_000_000L;
+		for (var i = 1; i < methodLines.Count; i++)
+		{
+			var bodyLine = methodLines[i];
+			if (!bodyLine.StartsWith('\t'))
+				continue;
+			if (bodyLine.Contains(" is ", StringComparison.Ordinal)) // skip inline tests
+				continue;
+			var idx = bodyLine.IndexOf("Range(", StringComparison.Ordinal);
+			if (idx < 0)
+				continue;
+			var startArgs = idx + "Range(".Length;
+			var endArgs = bodyLine.IndexOf(')', startArgs);
+			if (endArgs <= startArgs)
+				continue;
+			var args = bodyLine[startArgs..endArgs].Split(',',
+				StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+			if (args.Length != 2)
+				continue;
+			if (long.TryParse(args[0], NumberStyles.Integer, CultureInfo.InvariantCulture,
+					out var start) && long.TryParse(args[1], NumberStyles.Integer,
+					CultureInfo.InvariantCulture, out var end))
+			{
+				var span = Math.Abs(end - start);
+				if (span > MaximumRangeAllowed)
+					throw new HugeConstantRangeNotAllowed(type, LineNumber, bodyLine.Trim(), span,
+						MaximumRangeAllowed);
+			}
+		}
+	}
+
+	public sealed class TrivialEndlessSelfConstructionDetected(Type type, int lineNumber, string line)
+		: ParsingFailed(type, lineNumber,
+			"Endless recursion via self-constructor call in from: " + line);
+
+	public sealed class SelfRecursiveCallWithSameArgumentsDetected(Type type, int lineNumber,
+		string line) : ParsingFailed(type, lineNumber,
+		"Self-recursive call with same arguments detected: " + line);
+
+	public sealed class HugeConstantRangeNotAllowed(Type type, int lineNumber, string line,
+		long span, long limit) : ParsingFailed(type, lineNumber,
+		$"Range size {span} exceeds limit {limit}: " + line);
 
 	private string ValidateCurrentLineIsNonEmptyAndTrimmed()
 	{
 		var line = lines[LineNumber];
 		if (line.Length == 0)
 			throw new EmptyLineIsNotAllowed(type, LineNumber);
-		if (char.IsWhiteSpace(line[0]))
-			throw new ExtraWhitespacesFoundAtBeginningOfLine(type, LineNumber, line);
-		if (char.IsWhiteSpace(line[^1]))
-			throw new ExtraWhitespacesFoundAtEndOfLine(type, LineNumber, line);
-		return line;
+		return char.IsWhiteSpace(line[0])
+			? throw new ExtraWhitespacesFoundAtBeginningOfLine(type, LineNumber, line)
+			: char.IsWhiteSpace(line[^1])
+				? throw new ExtraWhitespacesFoundAtEndOfLine(type, LineNumber, line)
+				: line;
 	}
 
 	public sealed class EmptyLineIsNotAllowed(Type type, int lineNumber)
@@ -78,9 +310,9 @@ public sealed class TypeParser(Type type, string[] lines)
 	{
 		var member = ParseMember(parser, lines[LineNumber].AsSpan(usedKeyword.Length + 1),
 			usedKeyword);
-		if (type.Members.Any(m => m.Name == member.Name))
-			throw new DuplicateMembersAreNotAllowed(type, LineNumber, member.Name);
-		return member;
+		return type.Members.Any(m => m.Name == member.Name)
+			? throw new DuplicateMembersAreNotAllowed(type, LineNumber, member.Name)
+			: member;
 	}
 
 	private Member ParseMember(ExpressionParser parser, ReadOnlySpan<char> remainingLine,
@@ -243,9 +475,9 @@ public sealed class TypeParser(Type type, string[] lines)
 		ValidateNestingAndLineCharacterCountLimit(line);
 		if (line.StartsWith('\t'))
 			return true;
-		if (line.Length != line.TrimStart().Length)
-			throw new ExtraWhitespacesFoundAtBeginningOfLine(type, LineNumber, line);
-		return false;
+		return line.Length != line.TrimStart().Length
+			? throw new ExtraWhitespacesFoundAtBeginningOfLine(type, LineNumber, line)
+			: false;
 	}
 
 	private void ValidateNestingAndLineCharacterCountLimit(string line)
@@ -307,10 +539,8 @@ public sealed class TypeParser(Type type, string[] lines)
 	private int listEndLineNumber = -1;
 
 	public sealed class MultiLineExpressionsAllowedOnlyWhenLengthIsMoreThanHundred(Type type,
-		int lineNumber, int length) : ParsingFailed(type, lineNumber,
-		"Current length: " + length + $", Minimum Length for Multi line expressions: {
-			Limit.MultiLineCharacterCount
-		}");
+		int lineNumber, int length) : ParsingFailed(type, lineNumber, "Current length: " + length +
+		$", Minimum Length for Multi line expressions: {Limit.MultiLineCharacterCount}");
 
 	private void SetNewLinesAndLineNumbersAfterMerge()
 	{

@@ -16,10 +16,15 @@ public sealed class To(Expression left, Method operatorMethod, Type conversionTy
 		if (conversionType == null)
 			throw new ConversionTypeNotFound(body, text.ToString());
 		var method = left.ReturnType.GetMethod(BinaryOperator.To, []);
-		if (method.ReturnType.Name != conversionType.Name && !left.ReturnType.IsUpcastable(conversionType))
+		if (method.ReturnType.Name != conversionType.Name &&
+			!left.ReturnType.IsUpcastable(conversionType) &&
+			!left.ReturnType.IsSameOrCanBeUsedAs(conversionType))
 			throw new ConversionTypeIsIncompatible(body,
-				$"Conversion for {left.ReturnType.Name} and {conversionType.Name} does not exist",
-				conversionType);
+				$"Conversion for {
+					left.ReturnType.Name
+				} to {
+					conversionType.Name
+				} does not exist and no member is compatible", conversionType);
 		return new To(left, method, conversionType);
 	}
 

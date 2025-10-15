@@ -15,7 +15,7 @@ namespace Strict.LanguageServer;
 public class CommandExecutor(ILanguageServerFacade languageServer,
 	StrictDocument document, Package package) : IExecuteCommandHandler
 {
-	private readonly VirtualMachine vm = new();
+	private readonly BytecodeInterpreter vm = new();
 	private const string CommandName = "strict-vscode-client.run";
 
 	Task<Unit> IRequestHandler<ExecuteCommandParams, Unit>.Handle(

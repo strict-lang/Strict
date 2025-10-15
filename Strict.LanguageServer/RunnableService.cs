@@ -4,5 +4,5 @@ namespace Strict.LanguageServer;
 
 public interface RunnableService
 {
-	public void Run(VirtualMachine vm);
+	public void Run(BytecodeInterpreter vm);
 }

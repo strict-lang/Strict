@@ -100,14 +100,17 @@ public class TestPackage : Package
 			"\tLength > 0 ? Range(ExclusiveEnd - 1 , Start - 1)\telse Range(ExclusiveEnd + 1, Start + 1)"));
 		var character = new Type(this, new TypeLines(Base.Character,
 			"has number",
+			"constant zeroCharacter = 48",
+			"constant NewLine = Character(13)",
+			"constant Tab = Character(7)",
 			"from(number)",
 			"\tCharacter(7) is \"7\"",
-			"\tCharacter(0) + number",
+			"\tzeroCharacter + number",
 			"to Number",
 			"\tCharacter(\"3\") to Number is 3",
 			"\tconstant notANumber = Error",
 			"\tCharacter(\"A\") to Number is notANumber",
-			"\tconstant result = value - Character(0)",
+			"\tconstant result = value - zeroCharacter",
 			"\tresult is in Range(0, 10) ? result else notANumber(value)"));
 		var mutable = new Type(this, new TypeLines(Base.Mutable,
 			"has generic"));
@@ -189,8 +192,6 @@ public class TestPackage : Package
 			"\tcount"));
 		var text = new Type(this, new TypeLines(Base.Text,
 			"has characters",
-			"constant NewLine = Character(13)",
-			"constant Tab = Character(7)",
 			"from(number)",
 			"\tvalue",
 			"Run",

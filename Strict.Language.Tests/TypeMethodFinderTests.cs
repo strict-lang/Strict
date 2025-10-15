@@ -213,7 +213,7 @@ public sealed class TypeMethodFinderTests
 	{
 		using var _ = CreateType("Comparer", "has FirstTypes Generics", "has SecondType Generic",
 			"from(number)", "\tComparer(number, number)", "Compare", "\tfirstType is secondType");
-		var comparerImplementation = new Type(TestPackage.Instance,
+		using var comparerImplementation = new Type(TestPackage.Instance,
 			new TypeLines(nameof(GetGenericImplementationCanUseCustomFromMethod),
 				"has custom Comparer(Number)", "UnusedMethod Number", "\t5"));
 		comparerImplementation.ParseMembersAndMethods(new MethodExpressionParser());
