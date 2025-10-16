@@ -12,6 +12,12 @@ public static class Keyword
 	/// </summary>
 	public const string Constant = "constant";
 	/// <summary>
+	/// Whenever a non-constant value is used in a calculation or assignment we can't use constant as
+	/// it is unknown at parsing time what this value would be (coming from has member, from argument
+	/// or another non-constant variable). Here "let" is used similar to has type members.
+	/// </summary>
+	public const string Let = "let";
+	/// <summary>
 	/// By far the rarest usage of members in a type or inside methods to have changable values,
 	/// mostly important for optimizations and done implicitly like the mutable index for loops.
 	/// </summary>
@@ -23,6 +29,6 @@ public static class Keyword
 	public const string Return = "return";
 	public static readonly string[] GetAllKeywords =
 	[
-		Has, Constant, Mutable, If, Else, For, With, Return
+		Has, Constant, Let, Mutable, If, Else, For, With, Return
 	];
 }

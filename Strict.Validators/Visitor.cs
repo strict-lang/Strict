@@ -96,7 +96,7 @@ public abstract class Visitor
 				!ReferenceEquals(rewrittenArgument, binary.Arguments[0]))
 				return new Binary(changedInstance, binary.Method, [rewrittenArgument]);
 		}
-		else if (expression is ConstantDeclaration declaration)
+		else if (expression is Declaration declaration)
 		{
 			var newValue = Visit(declaration.Value, body, context)!;
 			if (!ReferenceEquals(newValue, declaration.Value) && body != null)

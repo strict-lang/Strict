@@ -67,7 +67,8 @@ public abstract class Context
 	public string FullName { get; }
 
 	// ReSharper disable once InconsistentlySynchronizedField
-	public Type GetType(string name) => TryGetType(name) ?? throw new TypeNotFound(name, FullName, types.Keys.ToWordList());
+	public Type GetType(string name) =>
+		TryGetType(name) ?? throw new TypeNotFound(name, FullName, types.Keys.ToWordList());
 
 	internal Type? TryGetType(string name)
 	{

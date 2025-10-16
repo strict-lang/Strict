@@ -13,7 +13,7 @@ public sealed class If(Expression condition, Expression then,	Expression? option
 {
 	private static Type CheckExpressionAndGetMatchingType(Expression then, Expression? optionalElse,
 		Body? bodyForErrorMessage) =>
-		then is ConstantDeclaration || optionalElse is ConstantDeclaration
+		then is Declaration || optionalElse is Declaration
 			? then.ReturnType
 			: GetMatchingType(then.ReturnType, optionalElse?.ReturnType, bodyForErrorMessage);
 

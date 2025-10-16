@@ -15,7 +15,7 @@ public sealed class MethodExpressionParserTests : TestExpressions
 		var body = new Method(type, 0, this, [MethodTests.Run, MethodTests.ConstantNumber]).
 			GetBodyAndParseIfNeeded();
 		Assert.That(body.ReturnType, Is.EqualTo(type.FindType(Base.Number)));
-		Assert.That(body, Is.TypeOf<ConstantDeclaration>());
+		Assert.That(body, Is.TypeOf<Declaration>());
 		Assert.That(body.ReturnType, Is.EqualTo(number.ReturnType));
 		Assert.That(body.ToString(), Is.EqualTo(MethodTests.ConstantNumber[1..]));
 	}
@@ -24,11 +24,11 @@ public sealed class MethodExpressionParserTests : TestExpressions
 	public void ParseMultipleLines()
 	{
 		var body = (Body)new Method(type, 0, this, [
-			MethodTests.Run, MethodTests.ConstantNumber, MethodTests.LetOther
+			MethodTests.Run, MethodTests.ConstantNumber, MethodTests.ConstantOther
 		]).GetBodyAndParseIfNeeded();
 		Assert.That(body.Expressions, Has.Count.EqualTo(2));
 		Assert.That(body.Expressions[0].ToString(), Is.EqualTo(MethodTests.ConstantNumber[1..]));
-		Assert.That(body.Expressions[1].ToString(), Is.EqualTo(MethodTests.LetOther[1..]));
+		Assert.That(body.Expressions[1].ToString(), Is.EqualTo(MethodTests.ConstantOther[1..]));
 	}
 
 	[Test]
@@ -52,7 +52,7 @@ public sealed class MethodExpressionParserTests : TestExpressions
 	public void ParseErrorExpression(string errorExpression)
 	{
 		var body = (Body)new Method(type, 0, this, [
-			MethodTests.Run, MethodTests.LetErrorMessage, errorExpression
+			MethodTests.Run, MethodTests.ConstantErrorMessage, errorExpression
 		]).GetBodyAndParseIfNeeded();
 		Assert.That(body.ReturnType, Is.EqualTo(type.FindType(Base.None)));
 		Assert.That(body.Expressions, Has.Count.EqualTo(2));

@@ -45,7 +45,7 @@ public sealed class EnumTests
 		var consumingType = new Type(TestPackage.Instance,
 			new TypeLines(nameof(UseEnumWithoutConstructor), "has logger",
 				"Run", "\tconstant url = Connection.Google")).ParseMembersAndMethods(parser);
-		var assignment = (ConstantDeclaration)consumingType.Methods[^1].GetBodyAndParseIfNeeded();
+		var assignment = (Declaration)consumingType.Methods[^1].GetBodyAndParseIfNeeded();
 		Assert.That(assignment.Value, Is.InstanceOf<MemberCall>());
 		var member = ((MemberCall)assignment.Value).Member;
 		Assert.That(member.Name, Is.EqualTo("Google"));
@@ -73,7 +73,7 @@ public sealed class EnumTests
 			ParseMembersAndMethods(parser);
 		Assert.That(consumingType.GetType("Instruction").IsEnum, Is.True);
 		Assert.That(((MemberCall)consumingType.Members[0].InitialValue!).Member.Name, Is.EqualTo("Add"));
-		var assignment = (ConstantDeclaration)consumingType.Methods[0].GetBodyAndParseIfNeeded();
+		var assignment = (Declaration)consumingType.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(assignment.Value, Is.InstanceOf<MemberCall>());
 		var member = ((MemberCall)assignment.Value).Member;
 		Assert.That(member.Name, Is.EqualTo("Set"));
@@ -111,7 +111,7 @@ public sealed class EnumTests
 					"\tconstant result = ExecuteInstruction((1, 2), Instruction.Add)")).
 			ParseMembersAndMethods(parser);
 		consumingType.Methods[0].GetBodyAndParseIfNeeded();
-		var result = (ConstantDeclaration)consumingType.Methods[1].GetBodyAndParseIfNeeded();
+		var result = (Declaration)consumingType.Methods[1].GetBodyAndParseIfNeeded();
 		Assert.That(result.Value, Is.InstanceOf<MethodCall>());
 		Assert.That(((MemberCall)((MethodCall)result.Value).Arguments[1]).Member.Name,
 			Is.EqualTo("Add"));
@@ -138,7 +138,7 @@ public sealed class EnumTests
 				"constant BlaLessThan")).ParseMembersAndMethods(parser);
 		var body = (Body)new Type(TestPackage.Instance,
 				new TypeLines(nameof(UseEnumExtensions), "has logger", "UseExtendedEnum(instruction) Number",
-					"\tconstant result = instruction to MoreInstruction", "\tresult.BlaDivide")).
+					"\tlet result = instruction to MoreInstruction", "\tresult.BlaDivide")).
 			ParseMembersAndMethods(parser).Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(body.Expressions[1].ToString(), Is.EqualTo("result.BlaDivide"));
 	}

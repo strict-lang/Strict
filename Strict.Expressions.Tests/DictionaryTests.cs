@@ -87,8 +87,8 @@ public sealed class DictionaryTests : TestExpressions
 					"\tmutable studentsRegister = Dictionary(Number, Text)",
 					"\tstudentsRegister.Add(1, \"AK\")", "\tlogger.Log(studentsRegister)")).
 			ParseMembersAndMethods(new MethodExpressionParser()).Methods[0].GetBodyAndParseIfNeeded();
-		Assert.That(((MutableDeclaration)body.Expressions[0]).Value, Is.InstanceOf<Dictionary>());
-		var dictionaryExpression = (Dictionary)((MutableDeclaration)body.Expressions[0]).Value;
+		Assert.That(((Declaration)body.Expressions[0]).Value, Is.InstanceOf<Dictionary>());
+		var dictionaryExpression = (Dictionary)((Declaration)body.Expressions[0]).Value;
 		Assert.That(dictionaryExpression.KeyType, Is.EqualTo(type.GetType(Base.Number)));
 		Assert.That(dictionaryExpression.MappedValueType, Is.EqualTo(type.GetType(Base.Text)));
 	}

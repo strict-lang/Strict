@@ -283,7 +283,7 @@ public sealed class ByteCodeGenerator
 
 	private bool TryGenerateAssignmentStatements(Expression expression)
 	{
-		if (expression is not ConstantDeclaration assignmentExpression || expression.IsMutable)
+		if (expression is not Declaration assignmentExpression || expression.IsMutable)
 			return false;
 		GenerateForAssignmentOrDeclaration(assignmentExpression.Value, assignmentExpression.Name);
 		return true;

@@ -63,8 +63,8 @@ public class CSharpExpressionVisitor : ExpressionVisitor
 			_ => methodName
 		};
 
-	protected override string Visit(ConstantDeclaration constantDeclaration) =>
-		"var " + constantDeclaration.Name + " = " + Visit(constantDeclaration.Value);
+	protected override string Visit(Declaration declaration) =>
+		"var " + declaration.Name + " = " + Visit(declaration.Value);
 
 	protected override string Visit(Return returnExpression) =>
 		"return " + Visit(returnExpression.Value);

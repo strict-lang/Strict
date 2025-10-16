@@ -16,7 +16,7 @@ public sealed class ErrorTests : TestExpressions
 					"\t\treturn notANumber")).
 			ParseMembersAndMethods(new MethodExpressionParser());
 		var parsedExpression = (Body)programType.Methods[0].GetBodyAndParseIfNeeded();
-		Assert.That(((ConstantDeclaration)parsedExpression.Expressions[0]).Value.ReturnType,
+		Assert.That(((Declaration)parsedExpression.Expressions[0]).Value.ReturnType,
 			Is.EqualTo(type.GetType(Base.Error)));
 		Assert.That(((If)parsedExpression.Expressions[1]).OptionalElse?.ToString(),
 			Is.EqualTo("return notANumber"));

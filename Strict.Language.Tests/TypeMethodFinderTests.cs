@@ -92,7 +92,7 @@ public sealed class TypeMethodFinderTests
 		using var createCustomer = new Type(TestPackage.Instance,
 			new TypeLines(nameof(CreateTypeUsingConstructorMembers), "has logger", "Something",
 				"\tconstant customer = Customer(\"Murali\", 28)")).ParseMembersAndMethods(parser);
-		var assignment = (ConstantDeclaration)createCustomer.Methods[0].GetBodyAndParseIfNeeded();
+		var assignment = (Declaration)createCustomer.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(assignment.Value.ReturnType.Name, Is.EqualTo("Customer"));
 		Assert.That(assignment.Value.ToString(), Is.EqualTo("Customer(\"Murali\", 28)"));
 	}

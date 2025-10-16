@@ -196,14 +196,13 @@ public sealed class TypeTests
 		Assert.That(app.Methods[0].Name, Is.EqualTo("Run"));
 	}
 
-	[TestCase(Base.Number, "has number", "Run", "\tmutable result = 2")]
-	[TestCase(Base.Text, "has number", "Run", "\tmutable result = \"2\"")]
+	[TestCase(Base.Number, "has number", "Run", "\tmutable result = 2", "\tresult = result + 2")]
+	[TestCase(Base.Text, "has number", "Run", "\tmutable result = \"2\"", "\tresult = result + \"!\"")]
 	public void MutableTypesHaveProperDataReturnType(string expected, params string[] code)
 	{
 		using var type = new Type(package, new TypeLines(nameof(MutableTypesHaveProperDataReturnType), code));
-		var expression =
-			(ConstantDeclaration)type.ParseMembersAndMethods(parser).Methods[0].
-				GetBodyAndParseIfNeeded();
+		var body = (Body)type.ParseMembersAndMethods(parser).Methods[0].GetBodyAndParseIfNeeded();
+		var expression = (Declaration)body.Expressions[0];
 		Assert.That(expression.Value.ReturnType.Name, Is.EqualTo(expected));
 	}
 

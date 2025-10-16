@@ -48,7 +48,7 @@ public sealed class MemberCallTests : TestExpressions
 	public void MemberWithArgumentsInitializerShouldNotHaveType() =>
 		Assert.That(
 			() => new Type(type.Package,
-					new TypeLines("ConstantDeclaration", "has input Text = Text(5)")).
+					new TypeLines("Declaration", "has input Text = Text(5)")).
 				ParseMembersAndMethods(parser),
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.
 				InstanceOf<NamedType.AssignmentWithInitializerTypeShouldNotHaveNameWithType>());
@@ -161,7 +161,7 @@ public sealed class MemberCallTests : TestExpressions
 				"has Range",
 				"Run",
 				"\tconstant result = Range.End + 5")).ParseMembersAndMethods(parser);
-		var assignment = (ConstantDeclaration)program.Methods[0].GetBodyAndParseIfNeeded();
+		var assignment = (Declaration)program.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(((Binary)assignment.Value).Instance,
 			Is.InstanceOf<MemberCall>());
 	}

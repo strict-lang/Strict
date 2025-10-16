@@ -37,7 +37,7 @@ public abstract class ExpressionVisitor
 		expression switch
 		{
 			Body => throw new UseVisitBody(expression),
-			ConstantDeclaration assignment => Visit(assignment),
+			Declaration assignment => Visit(assignment),
 			Binary binary => Visit(binary),
 			Return returnExpression => Visit(returnExpression),
 			MethodCall call => Visit(call),
@@ -48,7 +48,7 @@ public abstract class ExpressionVisitor
 		};
 
 	public sealed class UseVisitBody(Expression expression) : Exception(expression.ToString());
-	protected abstract string Visit(ConstantDeclaration constantDeclaration);
+	protected abstract string Visit(Declaration declaration);
 
 	protected string Visit(Binary binary) =>
 		Visit(binary.Instance!) + " " + GetBinaryOperator(binary.Method.Name) + " " + Visit(binary.Arguments[0]);

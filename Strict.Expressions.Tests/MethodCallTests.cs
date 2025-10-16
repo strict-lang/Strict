@@ -102,8 +102,8 @@ public sealed class MethodCallTests : TestExpressions
 	{
 		var expression = ParseExpression("mutable variable = 7");
 		Assert.That(type.GetType(Base.Mutable).Methods.Count, Is.EqualTo(0));
-		Assert.That(expression is MutableDeclaration, Is.True);
-		Assert.That(((MutableDeclaration)expression).IsMutable, Is.True);
+		Assert.That(expression is Declaration, Is.True);
+		Assert.That(((Declaration)expression).IsMutable, Is.True);
 	}
 
 	[Test]
@@ -170,7 +170,7 @@ public sealed class MethodCallTests : TestExpressions
 				programName,
 				code)).
 			ParseMembersAndMethods(new MethodExpressionParser());
-		var assignment = (ConstantDeclaration)program.Methods[0].GetBodyAndParseIfNeeded();
+		var assignment = (Declaration)program.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(((MethodCall)assignment.Value).Method.Parameters[0].Name, Is.EqualTo(expected));
 	}
 
@@ -312,6 +312,6 @@ public sealed class MethodCallTests : TestExpressions
 					"\tinstance.AddFiveWithInput")).
 			ParseMembersAndMethods(new MethodExpressionParser());
 		var body = (Body)consumer.Methods[0].GetBodyAndParseIfNeeded();
-		Assert.That(((ConstantDeclaration)body.Expressions[1]).Value.ReturnType.Name, Is.EqualTo("TypeCannotBeAutoInitialized"));
+		Assert.That(((Declaration)body.Expressions[1]).Value.ReturnType.Name, Is.EqualTo("TypeCannotBeAutoInitialized"));
 	}
 }

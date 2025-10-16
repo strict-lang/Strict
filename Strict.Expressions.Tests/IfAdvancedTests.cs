@@ -29,8 +29,8 @@ public sealed class IfAdvancedTests : TestExpressions
 	public void ValidConditionalExpressions(string code)
 	{
 		var expression = ParseExpression(code);
-		Assert.That(expression, Is.InstanceOf<ConstantDeclaration>());
-		var assignment = expression as ConstantDeclaration;
+		Assert.That(expression, Is.InstanceOf<Declaration>());
+		var assignment = expression as Declaration;
 		Assert.That(assignment?.Value, Is.InstanceOf<If>().Or.InstanceOf<Binary>());
 	}
 

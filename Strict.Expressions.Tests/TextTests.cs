@@ -55,7 +55,7 @@ public sealed class TextTests : TestExpressions
 				new TypeLines(testName, code)).
 			ParseMembersAndMethods(new MethodExpressionParser());
 		var constantDeclaration =
-			(ConstantDeclaration)multiLineType.Methods[0].GetBodyAndParseIfNeeded();
+			(Declaration)multiLineType.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(constantDeclaration.Value, Is.InstanceOf<Binary>());
 		Assert.That(constantDeclaration.Value.ToString(), Is.EqualTo(expected));
 	}
@@ -72,7 +72,7 @@ public sealed class TextTests : TestExpressions
 			new Type(TestPackage.Instance, new TypeLines(testName, code)).ParseMembersAndMethods(
 				new MethodExpressionParser());
 		var constantDeclaration =
-			(ConstantDeclaration)multiLineType.Methods[0].GetBodyAndParseIfNeeded();
+			(Declaration)multiLineType.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(constantDeclaration.Value, Is.InstanceOf<Binary>());
 		Assert.That(constantDeclaration.Value.ToString(), Is.EqualTo(expected));
 	}

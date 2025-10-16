@@ -17,9 +17,8 @@ public class MethodExpressionParser : ExpressionParser
 	/// </summary>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public override Expression ParseLineExpression(Body body, ReadOnlySpan<char> line) =>
-		ConstantDeclaration.TryParse(body, line) ?? If.TryParse(body, line) ??
+		Declaration.TryParse(body, line) ?? If.TryParse(body, line) ??
 		For.TryParse(body, line.Trim()) ?? Return.TryParse(body, line) ??
-		MutableDeclaration.TryParse(body, line) ??
 		MutableReassignment.TryParse(body, line) ?? ParseExpression(body, line);
 
 	public override Expression ParseExpression(Body body, ReadOnlySpan<char> input, bool makeMutable = false)
@@ -249,6 +248,18 @@ public class MethodExpressionParser : ExpressionParser
 			throw new List.EmptyListNotAllowed(body);
 		return ParseAllElementsFast(body, innerSpan, new RangeEnumerator(innerSpan, ',', 0));
 	}
+
+	public override bool IsVariableMutated(Body body, string variableName)
+	{
+		foreach (var expression in body.Expressions)
+			if (IsMutationOfVariable(expression, variableName) || expression is Body childBody &&
+				IsVariableMutated(childBody, variableName))
+				return true;
+		return false;
+	}
+
+	private static bool IsMutationOfVariable(Expression expression, string variableName) =>
+		expression is MutableReassignment reassignment && reassignment.Name == variableName;
 
 	/// <summary>
 	/// Similar to TryParseExpression, but we know there are commas separating expressions

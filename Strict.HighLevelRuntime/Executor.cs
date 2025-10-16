@@ -47,7 +47,7 @@ public sealed class Executor(Package basePackage, bool evaluateInlineTests = fal
 			If iff => EvaluateIf(iff, context),
 			Return r => EvaluateReturn(r, context),
 			MethodCall call => EvaluateMethodCall(call, context),
-			ConstantDeclaration c => EvaluateAndAssign(c.Name, c.Value, context),
+			Declaration c => EvaluateAndAssign(c.Name, c.Value, context),
 			MutableReassignment a => EvaluateAndAssign(a.Name, a.Value, context),
 			_ => throw new NotSupportedException($"Expression not supported yet: {expr.GetType().Name}")
 		};
@@ -69,7 +69,7 @@ public sealed class Executor(Package basePackage, bool evaluateInlineTests = fal
 					continue;
 				last = e switch
 				{
-					ConstantDeclaration c => EvaluateAndAssign(c.Name, c.Value, ctx),
+					Declaration c => EvaluateAndAssign(c.Name, c.Value, ctx),
 					MutableReassignment a => EvaluateAndAssign(a.Name, a.Value, ctx),
 					_ => Evaluate(e, ctx)
 				};
@@ -89,7 +89,7 @@ public sealed class Executor(Package basePackage, bool evaluateInlineTests = fal
 		e.ReturnType.Name == Base.Boolean &&
 		e is not If &&
 		e is not Return &&
-		e is not ConstantDeclaration &&
+		e is not Declaration &&
 		e is not MutableReassignment;
 
 	private ValueInstance EvaluateAndAssign(string name, Expression value, ExecutionContext ctx) =>

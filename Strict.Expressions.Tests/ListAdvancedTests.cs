@@ -57,7 +57,7 @@ public sealed class ListAdvancedTests : TestExpressions
 	[Test]
 	public void NotOperatorInAssignment()
 	{
-		var assignment = (ConstantDeclaration)new Type(type.Package,
+		var assignment = (Declaration)new Type(type.Package,
 				new TypeLines(nameof(NotOperatorInAssignment), "has numbers", "NotOperator",
 					"\tconstant result = not true")).ParseMembersAndMethods(parser).Methods[0].
 			GetBodyAndParseIfNeeded();
@@ -93,7 +93,7 @@ public sealed class ListAdvancedTests : TestExpressions
 			Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(expression.Expressions[0].ToString(),
 			Is.EqualTo("mutable result = List(TestPackage.Number)"));
-		Assert.That(((ConstantDeclaration)expression.Expressions[0]).Value.ReturnType.FullName,
+		Assert.That(((Declaration)expression.Expressions[0]).Value.ReturnType.FullName,
 			Is.EqualTo("TestPackage.List(TestPackage.Number)"));
 	}
 

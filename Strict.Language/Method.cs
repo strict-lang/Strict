@@ -1,4 +1,6 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System.Linq.Expressions;
+using System.Reflection;
+using System.Runtime.CompilerServices;
 
 [assembly: InternalsVisibleTo("Strict.Language.Tests")]
 [assembly: InternalsVisibleTo("Strict.Validators")]
@@ -353,10 +355,19 @@ public sealed class Method : Context
 				? methodBody.Expressions[0]
 				: methodBody;
 		var expression = methodBody.Parse();
+		if (methodBody.Variables != null)
+			foreach (var variable in methodBody.Variables)
+				if (variable is { IsMutable: true, InitialValue.IsConstant: true } &&
+					!Parser.IsVariableMutated(methodBody, variable.Name))
+					throw new MutableUsesConstantValue(methodBody, variable.Name, variable.InitialValue);
 		if (Tests.Count < 1 && !IsTestPackage())
 			throw new MethodMustHaveAtLeastOneTest(Type, Name, TypeLineNumber);
 		return BodyParsed?.Invoke(expression) ?? expression;
 	}
+
+	public sealed class MutableUsesConstantValue(Body body, string name, Expression value)
+		: ParsingFailed(body,
+			$"Mutable declaration uses constant value, use constant instead: constant {name} = {value}");
 
 	/// <summary>
 	/// Needed when rewriting method body to a single expression, or creating a new Body from Visitor.
@@ -395,7 +406,7 @@ public sealed class Method : Context
 	/// <summary>
 	/// Very low level check if a variableName can be found in the raw text of this method lines.
 	/// </summary>
-	public int GetVariableUsageCount(string variableName) =>
+	public int GetVariableUsageCount(string variableName) => //TODO: use this!
 		lines.Count(l => l.Contains(" " + variableName) || l.Contains("(" + variableName) ||
 			l.Contains("\t" + variableName));
 

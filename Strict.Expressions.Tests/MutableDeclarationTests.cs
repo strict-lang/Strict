@@ -107,7 +107,7 @@ public sealed class MutableDeclarationTests : TestExpressions
 					"\tresult = result + input")).
 			ParseMembersAndMethods(parser);
 		var body = (Body)program.Methods[0].GetBodyAndParseIfNeeded();
-		Assert.That(((ConstantDeclaration)body.Expressions[0]).Value.ToString(), Is.EqualTo("5"));
+		Assert.That(((Declaration)body.Expressions[0]).Value.ToString(), Is.EqualTo("5"));
 	}
 
 	[Test]
@@ -118,7 +118,7 @@ public sealed class MutableDeclarationTests : TestExpressions
 						"\tconstant result =", "\tresult = result + input")).
 				ParseMembersAndMethods(parser).
 				Methods[0].GetBodyAndParseIfNeeded(),
-			Throws.InstanceOf<ConstantDeclaration.MissingAssignmentValueExpression>());
+			Throws.InstanceOf<Declaration.MissingAssignmentValueExpression>());
 
 	[TestCase("(1, 2, 3)", "Numbers", "MutableTypeWithListArgumentIsAllowed")]
 	[TestCase("Range(1, 10).Start", "Number", "MutableTypeWithNestedCallShouldUseBrackets")]
@@ -132,7 +132,7 @@ public sealed class MutableDeclarationTests : TestExpressions
 					"\tresult")).
 			ParseMembersAndMethods(parser);
 		var body = (Body)program.Methods[0].GetBodyAndParseIfNeeded();
-		Assert.That(((ConstantDeclaration)body.Expressions[0]).Value.ToString(),
+		Assert.That(((Declaration)body.Expressions[0]).Value.ToString(),
 			Is.EqualTo(code));
 	}
 
@@ -164,7 +164,7 @@ public sealed class MutableDeclarationTests : TestExpressions
 					"\tcounter")).
 			ParseMembersAndMethods(parser);
 		Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(),
-			Throws.InstanceOf<ConstantDeclaration.MissingAssignmentValueExpression>());
+			Throws.InstanceOf<Declaration.MissingAssignmentValueExpression>());
 	}
 
 	[Test]

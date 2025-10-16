@@ -30,7 +30,7 @@ public class TestPackage : Package
 		var hasLength = new Type(this, new TypeLines("HasLength","Length Number"));
 		var number = new Type(this, new TypeLines(Base.Number,
 			"to Character",
-			"\tmutable canOnlyConvertSingleDigit = Error",
+			"\tconstant canOnlyConvertSingleDigit = Error",
 			"\tvalue is in Range(0, 10) ? Character(Character.zeroCharacter + value) else canOnlyConvertSingleDigit(value)",
 			"is not(other) Boolean",
 			"\t1 is not 3",

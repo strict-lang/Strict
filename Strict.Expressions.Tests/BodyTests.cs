@@ -51,7 +51,7 @@ public sealed class BodyTests : TestExpressions
 	{
 		var body = new Body(method);
 		var expressions = new Expression[2];
-		expressions[0] = new ConstantDeclaration(body, "abc", new Text(method, "abc"));
+		expressions[0] = new Declaration(body, "abc", new Text(method, "abc"));
 		var arguments = new Expression[] { new VariableCall(body.FindVariable("abc")!) };
 		expressions[1] = new MethodCall(member.Type.GetMethod("Log", arguments),
 			new MemberCall(null, member), arguments);
@@ -120,7 +120,7 @@ public sealed class BodyTests : TestExpressions
       "\tconstant number = 5",
       "\tfor Range(1, number)",
       "\t\tif index is number",
-      "\t\t\tconstant current = index",
+      "\t\t\tlet current = index",
       "\t\t\treturn current",
       "\tnumber")).ParseMembersAndMethods(new MethodExpressionParser());
 		// @formatter:on
