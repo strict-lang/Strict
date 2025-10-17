@@ -126,8 +126,8 @@ public class PackageTests
 		{
 			expressionParser.CreateType();
 			using var strictPackage = await new Repositories(expressionParser).LoadStrictPackage();
-			Assert.That(mainPackage.GetType(Base.App),
-				Is.EqualTo(strictPackage.GetType(Base.App)).Or.EqualTo(subPackage.GetType(Base.App)));
+			Assert.That(mainPackage.GetType(Base.Number),
+				Is.EqualTo(strictPackage.GetType(Base.Number)).Or.EqualTo(subPackage.GetType(Base.Number)));
 			Assert.That(mainPackage.GetType(Base.Character),
 				Is.Not.EqualTo(mainPackage.GetType(Base.App)));
 		}

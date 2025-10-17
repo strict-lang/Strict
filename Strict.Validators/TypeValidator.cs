@@ -71,7 +71,7 @@ public sealed class TypeValidator : Visitor
 	public sealed class VariableDeclaredAsMutableButValueNeverChanged(Body body, Variable variable)
 		: ParsingFailed(body, variable.Name);
 
-	protected override Expression VisitExpression(Expression expression, object? context)
+	protected override Expression? Visit(Expression? expression, Body? body, object? context = null)
 	{
 		if (context is not VariableUsages variables)
 			return expression;

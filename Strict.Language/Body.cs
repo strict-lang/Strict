@@ -115,10 +115,11 @@ public sealed class Body : Expression
 		ParsingLineNumber--;
 		var lastExpression = Expressions[^1];
 		var isLastExpressionReturn = lastExpression.GetType().Name == Base.Return;
-		if ((isLastExpressionReturn || IsMethodReturn()) && Method.Name != Base.Run &&
-			Method.Name != Method.From && !ChildHasMatchingMethodReturnType(Parent == null
-				? Method.ReturnType
-				: Parent.ReturnType, lastExpression))
+		if (Method.ReturnType.Name != Base.None && (isLastExpressionReturn || IsMethodReturn()) &&
+			Method.Name != Base.Run && Method.Name != Method.From && !ChildHasMatchingMethodReturnType(
+				Parent == null
+					? Method.ReturnType
+					: Parent.ReturnType, lastExpression))
 			throw new ChildBodyReturnTypeMustMatchMethod(this, lastExpression);
 		return !isLastExpressionReturn
 			? this

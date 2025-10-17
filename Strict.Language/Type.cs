@@ -382,8 +382,6 @@ public class Type : Context, IDisposable
 		{
 			if (cachedAvailableMethods is { Count: > 0 })
 				return cachedAvailableMethods;
-			if (members.Count == 0 && methods.Count == 0)
-				throw new TypeIsNotParsedCallParseMembersAndMethods(this);
 			cachedAvailableMethods = new Dictionary<string, List<Method>>(StringComparer.Ordinal);
 			foreach (var method in methods)
 				if (method.IsPublic || method.Name == Method.From || method.Name.AsSpan().IsOperator())
@@ -398,7 +396,9 @@ public class Type : Context, IDisposable
 				AddNonGenericMethods(member.Type);
 			if (members.Count > 0 && members.Any(m => !m.Type.IsGeneric && !m.IsConstant) &&
 				methods.All(m => m.Name != Method.From))
-				AddFromConstructorWithMembersAsArguments(methods[0].Parser);
+				AddFromConstructorWithMembersAsArguments(methods.Count > 0
+					? methods[0].Parser
+					: GetType(Base.Any).AvailableMethods.First().Value[0].Parser);
 			AddAnyMethods();
 			return cachedAvailableMethods;
 		}

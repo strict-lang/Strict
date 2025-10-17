@@ -252,9 +252,27 @@ public class MethodExpressionParser : ExpressionParser
 	public override bool IsVariableMutated(Body body, string variableName)
 	{
 		foreach (var expression in body.Expressions)
-			if (IsMutationOfVariable(expression, variableName) || expression is Body childBody &&
-				IsVariableMutated(childBody, variableName))
+		{
+			if (IsMutationOfVariable(expression, variableName))
 				return true;
+			if (expression is Body childBody && IsVariableMutated(childBody, variableName))
+				return true;
+			if (expression is If ifExpression)
+			{
+				if (IsMutationOfVariable(ifExpression.Then, variableName) ||
+					ifExpression.Then is Body thenBody && IsVariableMutated(thenBody, variableName))
+					return true;
+				if (ifExpression.OptionalElse != null &&
+					(IsMutationOfVariable(ifExpression.OptionalElse, variableName) ||
+						ifExpression.OptionalElse is Body elseBody &&
+						IsVariableMutated(elseBody, variableName)))
+					return true;
+			}
+			if (expression is For forExpression &&
+				(IsMutationOfVariable(forExpression.Body, variableName) ||
+					forExpression.Body is Body forBody && IsVariableMutated(forBody, variableName)))
+				return true;
+		}
 		return false;
 	}
 

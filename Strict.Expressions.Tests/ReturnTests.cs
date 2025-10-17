@@ -12,9 +12,15 @@ public sealed class ReturnTests : TestExpressions
 			Throws.InstanceOf<Body.ReturnAsLastExpressionIsNotNeeded>());
 
 	[Test]
+	public void ReturnTypeWillAutomaticallyBeCastedUpIfPossible() =>
+		Assert.That(
+			() => new Method(type, 0, this, ["ReturnText Text", "\t5"]).GetBodyAndParseIfNeeded(),
+			Throws.Nothing);
+
+	[Test]
 	public void ReturnTypeMustExistIfMethodReturnsSomething() =>
 		Assert.That(
-			() => new Method(type, 0, this, ["ReturnNumber", "\t5"]).GetBodyAndParseIfNeeded(),
+			() => new Method(type, 0, this, ["ReturnBoolean Boolean", "\t5"]).GetBodyAndParseIfNeeded(),
 			Throws.InstanceOf<Body.ChildBodyReturnTypeMustMatchMethod>());
 
 	[Test]

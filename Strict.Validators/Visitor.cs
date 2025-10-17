@@ -88,7 +88,7 @@ public abstract class Visitor
 			return expression;
 		if (expression is Body innerBody)
 			Visit(innerBody, context);
-		else if (expression is Binary binary)
+		if (expression is Binary binary)
 		{
 			var changedInstance = Visit(binary.Instance, body, context)!;
 			var rewrittenArgument = Visit(binary.Arguments[0], body, context)!;
@@ -96,7 +96,7 @@ public abstract class Visitor
 				!ReferenceEquals(rewrittenArgument, binary.Arguments[0]))
 				return new Binary(changedInstance, binary.Method, [rewrittenArgument]);
 		}
-		else if (expression is Declaration declaration)
+		if (expression is Declaration declaration)
 		{
 			var newValue = Visit(declaration.Value, body, context)!;
 			if (!ReferenceEquals(newValue, declaration.Value) && body != null)
@@ -106,14 +106,31 @@ public abstract class Visitor
 			}
 		}
 		else if (expression is MutableReassignment reassignment)
-		{
 			Visit(reassignment.Value, body, context);
-			return VisitExpression(reassignment, context);
+		else if (expression is For forExpression)
+		{
+			Visit(forExpression.Value, body, context);
+			Visit(forExpression.Body, body, context);
 		}
-		else
-			return VisitExpression(expression, context);
+		else if (expression is If ifExpression)
+		{
+			Visit(ifExpression.Condition, body, context);
+			Visit(ifExpression.Then, body, context);
+			Visit(ifExpression.OptionalElse, body, context);
+		}
+		else if (expression is ListCallStatement listCall)
+		{
+			Visit(listCall.List, body, context);
+			Visit(listCall.Index, body, context);
+		}
+		else if (expression is MemberCall memberCall)
+			Visit(memberCall.Instance, body, context);
+		else if (expression is MethodCall methodCall)
+		{
+			Visit(methodCall.Instance, body, context);
+			foreach (var argument in methodCall.Arguments)
+				Visit(argument, body, context);
+		}
 		return expression;
 	}
-
-	protected abstract Expression VisitExpression(Expression expression, object? context);
 }

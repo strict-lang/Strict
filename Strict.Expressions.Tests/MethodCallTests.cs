@@ -100,7 +100,8 @@ public sealed class MethodCallTests : TestExpressions
 	[Test]
 	public void MakeSureMutableTypeMethodsAreNotModified()
 	{
-		var expression = ParseExpression("mutable variable = 7");
+		var body = (Body)ParseExpression("mutable variable = 7", "variable = variable + 1");
+		var expression = body.Expressions[0];
 		Assert.That(type.GetType(Base.Mutable).Methods.Count, Is.EqualTo(0));
 		Assert.That(expression is Declaration, Is.True);
 		Assert.That(((Declaration)expression).IsMutable, Is.True);
@@ -148,7 +149,7 @@ public sealed class MethodCallTests : TestExpressions
 				"has Number",
 				"has myMember Text",
 				"Dummy(dummy Number) Text",
-				"\tconstant result = value.myMember",
+				"\tlet result = value.myMember",
 				"\tresult")).
 			ParseMembersAndMethods(new MethodExpressionParser());
 		var body = (Body)program.Methods[0].GetBodyAndParseIfNeeded();
@@ -308,7 +309,7 @@ public sealed class MethodCallTests : TestExpressions
 					"has logger",
 					"GetResult(number) Number",
 					"\tGetResult(10) is 15",
-					"\tconstant instance = TypeCannotBeAutoInitialized(number)",
+					"\tlet instance = TypeCannotBeAutoInitialized(number)",
 					"\tinstance.AddFiveWithInput")).
 			ParseMembersAndMethods(new MethodExpressionParser());
 		var body = (Body)consumer.Methods[0].GetBodyAndParseIfNeeded();

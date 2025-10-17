@@ -51,6 +51,8 @@ public sealed class ConstantCollapser : Visitor
 	protected override Expression? Visit(Expression? expression, Body? body, object? context = null)
 	{
 		expression = base.Visit(expression, body, context);
+		if (expression == null)
+			return expression;
 		if (expression is Binary binary)
 		{
 			var left = binary.Instance!;
@@ -72,8 +74,21 @@ public sealed class ConstantCollapser : Visitor
 				return new Binary(left, left.ReturnType.GetMethod(binary.Method.Name, arguments), arguments);
 			}
 		}
+		if (!expression.IsConstant)
+			return expression;
+		if (expression is To to)
+		{
+			var value = to.Instance as Value;
+			if (to.ConversionType.Name == Base.Number && value?.Data is string text)
+				return new Number(to.Method.Type, double.Parse(text));
+			if (to.ConversionType.Name == Base.Text && value?.Data is double number)
+				return new Text(to.Method.Type, number.ToString(CultureInfo.InvariantCulture));
+			throw new UnsupportedToExpression(to.ToStringWithType());
+		}
 		return expression;
 	}
+
+	public class UnsupportedToExpression(string toStringWithType) : Exception(toStringWithType);
 
 	/// <summary>
 	/// Would be nice if all of these are evaluated via actual strict code!
@@ -119,22 +134,4 @@ public sealed class ConstantCollapser : Visitor
 		}
 		return null;
 	}
-
-	protected override Expression VisitExpression(Expression expression, object? context)
-	{
-		if (!expression.IsConstant)
-			return expression;
-		if (expression is To to)
-		{
-			var value = to.Instance as Value;
-			if (to.ConversionType.Name == Base.Number && value?.Data is string text)
-				return new Number(to.Method.Type, double.Parse(text));
-			if (to.ConversionType.Name == Base.Text && value?.Data is double number)
-				return new Text(to.Method.Type, number.ToString(CultureInfo.InvariantCulture));
-			throw new UnsupportedToExpression(to.ToStringWithType());
-		}
-		return expression;
-	}
-
-	public class UnsupportedToExpression(string toStringWithType) : Exception(toStringWithType);
 }

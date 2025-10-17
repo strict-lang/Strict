@@ -25,7 +25,7 @@ public class ExpressionParserTests : ExpressionParser
 
 	public class TestExpression(Type returnType) : Expression(returnType)
 	{
-		public override bool IsConstant => false;
+		public override bool IsConstant => false; //ncrunch: no coverage
 	}
 
 	public override Expression ParseLineExpression(Body body, ReadOnlySpan<char> line)

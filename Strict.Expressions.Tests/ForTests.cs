@@ -129,8 +129,12 @@ public sealed class ForTests : TestExpressions
 	public void ValidLoopProgram()
 	{
 		using var programType = new Type(type.Package,
-				new TypeLines(Base.App, "has number", "CountNumber Number", "\tmutable result = 1",
-					"\tfor Range(0, number)", "\t\tresult = result + 1", "\tresult")).
+				new TypeLines(Base.App, "has number",
+					"CountNumber Number",
+					"\tmutable result = 1",
+					"\tfor Range(0, number)",
+					"\t\tresult = result + 1",
+					"\tresult")).
 			ParseMembersAndMethods(new MethodExpressionParser());
 		var parsedExpression = (Body)programType.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(parsedExpression.ReturnType.Name, Is.EqualTo(Base.Number));
