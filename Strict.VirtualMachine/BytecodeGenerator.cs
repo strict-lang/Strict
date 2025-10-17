@@ -97,7 +97,7 @@ public sealed class ByteCodeGenerator
 		statements.Add(new Return(registry.PreviousRegister));
 	}
 
-	private void GenerateStatementsFromExpression(Expression expression){}
+	private void GenerateStatementsFromExpression(Expression expression) { }
 	/*TODO
 	   private readonly Stack<int> idStack = new();
 	   private readonly Register[] registers = Enum.GetValues<Register>();

@@ -2,10 +2,9 @@
 
 public sealed class Member : NamedType
 {
-	public Member(Type definedIn, string nameAndType, Expression? initialValue,
-		string usedKeyword = Keyword.Has) : base(definedIn, nameAndType, initialValue?.ReturnType)
+	public Member(Type definedIn, string nameAndType, Type? initialValueType,
+		string usedKeyword = Keyword.Has) : base(definedIn, nameAndType, initialValueType)
 	{
-		InitialValue = initialValue;
 		if (usedKeyword == Keyword.Mutable)
 			IsMutable = true;
 		else if (usedKeyword == Keyword.Constant)

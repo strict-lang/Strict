@@ -382,6 +382,8 @@ public class Type : Context, IDisposable
 		{
 			if (cachedAvailableMethods is { Count: > 0 })
 				return cachedAvailableMethods;
+			if (members.Count == 0 && methods.Count == 0)
+				throw new TypeIsNotParsedCallParseMembersAndMethods(this);
 			cachedAvailableMethods = new Dictionary<string, List<Method>>(StringComparer.Ordinal);
 			foreach (var method in methods)
 				if (method.IsPublic || method.Name == Method.From || method.Name.AsSpan().IsOperator())
@@ -396,7 +398,7 @@ public class Type : Context, IDisposable
 				AddNonGenericMethods(member.Type);
 			if (members.Count > 0 && members.Any(m => !m.Type.IsGeneric && !m.IsConstant) &&
 				methods.All(m => m.Name != Method.From))
-				AddFromConstructorWithMembersAsArguments();
+				AddFromConstructorWithMembersAsArguments(methods[0].Parser);
 			AddAnyMethods();
 			return cachedAvailableMethods;
 		}
@@ -427,10 +429,9 @@ public class Type : Context, IDisposable
 			cachedAvailableMethods.Add(method.Name, [method]);
 	}
 
-	private void AddFromConstructorWithMembersAsArguments() =>
-		AddAvailableMethod(new Method(this, 0, methods.Count > 0
-			? methods[0].Parser
-			: GetType(Base.Any).methods[0].Parser, ["from(" + CreateFromMethodParameters() + ")"]));
+	private void AddFromConstructorWithMembersAsArguments(ExpressionParser parser) =>
+		AddAvailableMethod(
+			new Method(this, 0, parser, ["from(" + CreateFromMethodParameters() + ")"]));
 
 	private string CreateFromMethodParameters()
 	{

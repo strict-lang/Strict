@@ -97,8 +97,11 @@ public sealed class MemberCallTests : TestExpressions
 		Assert.That(memberCall.Members[0].GetHashCode(),
 			Is.EqualTo(memberCall.Members[0].Name.GetHashCode()));
 		Assert.That(
-			memberCall.Members[0].Equals(new Member(memberCall, "input", new Text(memberCall, "5"))),
-			Is.True);
+			memberCall.Members[0].
+				Equals(new Member(memberCall, "input", memberCall)
+				{
+					InitialValue = new Text(memberCall, "5")
+				}), Is.True);
 	}
 
 	[Test]

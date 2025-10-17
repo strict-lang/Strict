@@ -110,7 +110,7 @@ public class TestPackage : Package
 			"\tCharacter(\"3\") to Number is 3",
 			"\tconstant notANumber = Error",
 			"\tCharacter(\"A\") to Number is notANumber",
-			"\tconstant result = value - zeroCharacter",
+			"\tconstant result = number - zeroCharacter",
 			"\tresult is in Range(0, 10) ? result else notANumber(value)"));
 		var mutable = new Type(this, new TypeLines(Base.Mutable,
 			"has generic"));
