@@ -430,8 +430,10 @@ public class Type : Context, IDisposable
 	}
 
 	private void AddFromConstructorWithMembersAsArguments(ExpressionParser parser) =>
-		AddAvailableMethod(
-			new Method(this, 0, parser, ["from(" + CreateFromMethodParameters() + ")"]));
+		AddAvailableMethod(new Method(this, 0, parser, [
+			"from(" + CreateFromMethodParameters() + ")",
+			"\tvalue"
+		]));
 
 	private string CreateFromMethodParameters()
 	{

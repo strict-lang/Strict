@@ -51,7 +51,7 @@ public sealed class ListAdvancedTests : TestExpressions
 	public void NumbersCompatibleWithImplementedTypes(string code, string testName)
 	{
 		using var program = new Type(type.Package,
-				new TypeLines(testName, "has logger", code, "\tconstant result = (1, 2, 3, input)")).
+				new TypeLines(testName, "has logger", code, "\tlet result = (1, 2, 3, input)")).
 			ParseMembersAndMethods(parser);
 		Assert.That(program.Methods[0].GetBodyAndParseIfNeeded().ReturnType,
 			Is.EqualTo(program.GetListImplementationType(type.GetType(Base.Number))));
@@ -254,7 +254,7 @@ public sealed class ListAdvancedTests : TestExpressions
 			// @formatter:off
 			"Vector2",
 			"has numbers with Length is 2",
-			"has One = Vector2(1, 1)",
+			"constant One = Vector2(1, 1)",
 			"Length Number",
 			"\tVector2.Length is 0",
 			"\tVector2(3, 4).Length is 5",
@@ -269,7 +269,7 @@ public sealed class ListAdvancedTests : TestExpressions
 			{
 				using var _ = new Type(type.Package, new TypeLines(
 					"CannotCreateFromConstructor",
-					"has One = CannotCreateFromConstructor(1, 1)",
+					"constant One = CannotCreateFromConstructor(1)",
 					"has numbers with Length is 2",
 					"Length Number",
 					"\t(X * X + Y * Y).SquareRoot")).ParseMembersAndMethods(parser);

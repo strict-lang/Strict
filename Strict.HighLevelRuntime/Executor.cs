@@ -49,6 +49,7 @@ public sealed class Executor(Package basePackage, bool evaluateInlineTests = fal
 			MethodCall call => EvaluateMethodCall(call, context),
 			Declaration c => EvaluateAndAssign(c.Name, c.Value, context),
 			MutableReassignment a => EvaluateAndAssign(a.Name, a.Value, context),
+			Instance i => new ValueInstance(i.ReturnType, context.Variables.First().Value.Value),
 			_ => throw new NotSupportedException($"Expression not supported yet: {expr.GetType().Name}")
 		};
 

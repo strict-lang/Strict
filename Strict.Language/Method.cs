@@ -1,6 +1,4 @@
-﻿using System.Linq.Expressions;
-using System.Reflection;
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
 
 [assembly: InternalsVisibleTo("Strict.Language.Tests")]
 [assembly: InternalsVisibleTo("Strict.Validators")]

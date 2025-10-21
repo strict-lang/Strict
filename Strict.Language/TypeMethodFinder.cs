@@ -21,7 +21,6 @@ internal class TypeMethodFinder(Type type)
 			throw new GenericTypesCannotBeUsedDirectlyUseImplementation(Type, Type.Name == Base.Mutable
 				? Base.Mutable + " must be used via keyword, not manually constructed!"
 				: "Type is Generic and cannot be used directly");
-//TODO: while parsing this is no good, it creates AvailableMethods and methods is still empty, we should only do this is type parsing is done and we have a proper list of methods (or none for traits, but it is not a problem there)
 		if (!Type.AvailableMethods.TryGetValue(methodName, out var matchingMethods))
 			return null;
 		var typesOfArguments = arguments.Select(argument => argument.ReturnType).ToList();
@@ -29,13 +28,18 @@ internal class TypeMethodFinder(Type type)
 		foreach (var method in matchingMethods)
 			if (IsMethodWithMatchingParametersType(method, typesOfArguments) ||
 				commonTypeOfArguments != null &&
-				commonTypeOfArguments == GetListElementTypeIfHasSingleParameter(method))
+				commonTypeOfArguments == GetListElementTypeIfHasSingleParameter(method, arguments.Count))
 				return method;
 		// If this is a from constructor, we can call the methodParameterType constructor to pass
 		// along the argument and make it work if it wasn't matching yet.
-		if (methodName == Method.From && matchingMethods[0].Parameters.Count == 1 &&
-			matchingMethods[0].Parameters[0].Type.FindMethod(Method.From, arguments) != null)
-			return matchingMethods[0];
+		if (methodName == Method.From && matchingMethods[0].Parameters.Count == 1)
+		{
+			var innerFromMethod =
+				matchingMethods[0].Parameters[0].Type.FindMethod(Method.From, arguments);
+			if (innerFromMethod != null &&
+				IsFromConstructorWithMatchingConstraints(matchingMethods[0], arguments.Count))
+				return matchingMethods[0];
+		}
 		throw new ArgumentsDoNotMatchMethodParameters(arguments, Type, matchingMethods);
 	}
 
@@ -50,7 +54,8 @@ internal class TypeMethodFinder(Type type)
 		return firstType;
 	}
 
-	private static Type? GetListElementTypeIfHasSingleParameter(Method method) =>
+	private static Type? GetListElementTypeIfHasSingleParameter(Method method,
+		int numberOfArguments) =>
 		method.Parameters is
 		[
 			{
@@ -59,9 +64,18 @@ internal class TypeMethodFinder(Type type)
 					Generic.Name: Base.List
 				} parameterType
 			}
-		]
+		] && IsFromConstructorWithMatchingConstraints(method, numberOfArguments)
 			? parameterType.ImplementationTypes[0]
 			: null;
+
+	private static bool IsFromConstructorWithMatchingConstraints(Method method, int numberOfArguments)
+	{
+		if (method.Name != Method.From)
+			return true;
+		var member = method.Type.Members.FirstOrDefault(m => !m.IsConstant && m.Type.Name != Base.Iterator);
+		return member?.Constraints == null ||
+			member.Constraints[0].ToString().Contains("Length is " + numberOfArguments); //TODO: do actual evaluation of constraint
+	}
 
 	private static bool IsMethodWithMatchingParametersType(Method method,
 		IReadOnlyList<Type> typesOfArguments)
@@ -86,7 +100,7 @@ internal class TypeMethodFinder(Type type)
 		if (argumentType == methodParameterType || method.IsGeneric ||
 			IsArgumentImplementationTypeMatchParameterType(argumentType, methodParameterType))
 			return true;
-		if (methodParameterType.IsEnum &&
+		if (methodParameterType.Name != Base.Text && methodParameterType.IsEnum &&
 			methodParameterType.Members[0].Type.IsSameOrCanBeUsedAs(argumentType))
 			return true;
 		if (methodParameterType.Name == Base.Iterator && method.Type.IsSameOrCanBeUsedAs(argumentType))

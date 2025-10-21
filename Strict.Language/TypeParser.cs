@@ -11,8 +11,25 @@ public sealed class TypeParser(Type type, string[] lines)
 		for (LineNumber = 0; LineNumber < lines.Length; LineNumber++)
 			TryParse(parser, LineNumber);
 		if (rememberToInitializeMemberInitialValues != null)
-			foreach (var pair in rememberToInitializeMemberInitialValues)
-				pair.Key.InitialValue = GetMemberExpression(parser, pair.Key.Name, pair.Value);
+		{
+			try
+			{
+				foreach (var pair in rememberToInitializeMemberInitialValues)
+					pair.Key.InitialValue = GetMemberExpression(parser, pair.Key.Name, pair.Value);
+			}
+			catch (ParsingFailed)
+			{
+				type.Dispose();
+				throw;
+			}
+			catch (Exception ex)
+			{
+				type.Dispose();
+				throw new ParsingFailed(type, 0, string.IsNullOrEmpty(ex.Message)
+					? ex.GetType().Name
+					: ex.Message, ex);
+			}
+		}
 	}
 
 	internal int LineNumber = -1; //property is slower, especially in debug: { get; private set; }

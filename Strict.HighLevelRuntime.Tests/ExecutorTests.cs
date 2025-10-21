@@ -12,7 +12,7 @@ public sealed class ExecutorTests
 
 	private Executor executor = null!;
 
-	[Test, Ignore("TODO")]
+	[Test]
 	public void EvaluateValueAndVariableAndParameterCalls()
 	{
 		using var t = CreateType("Calc",
@@ -115,7 +115,7 @@ public sealed class ExecutorTests
 		Assert.That(Convert.ToDouble(result.Value), Is.EqualTo(42));
 	}
 
-	[Test, Ignore("TODO")]
+	[Test]
 	public void EvaluateMemberCallFromStaticConstant()
 	{
 		using var t = CreateType("UseTab",
