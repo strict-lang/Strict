@@ -18,7 +18,7 @@ public abstract class TestExpressions : MethodExpressionParser
 		type.Methods.AddRange(new List<Method> { method, methodWithBody });
 		number = new Number(type, 5);
 		list = new List(new Body(method), [number]);
-		bla = new Member(type, "bla", type) { InitialValue = number };
+		bla = new Member(type, "bla", type.GetType(Base.Number)) { InitialValue = number };
 		type.Members.Add(bla);
 	}
 

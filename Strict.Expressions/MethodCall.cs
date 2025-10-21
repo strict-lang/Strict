@@ -14,7 +14,7 @@ public class MethodCall : ConcreteExpression
 {
 	public MethodCall(Method method, Expression? instance, IReadOnlyList<Expression> arguments,
 		Type? toReturnType = null) :
-		base(GetMethodReturnType(method, toReturnType))
+		base(GetMethodReturnType(method, toReturnType), method.ReturnType.IsMutable)
 	{
 		if (method.Name == Method.From && instance != null)
 			throw new CannotCallFromConstructorWithExistingInstance(); //ncrunch: no coverage

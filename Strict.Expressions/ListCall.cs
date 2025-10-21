@@ -2,7 +2,7 @@
 
 namespace Strict.Expressions;
 
-public sealed class ListCallStatement(Expression list, Expression index) : ConcreteExpression(
+public sealed class ListCall(Expression list, Expression index) : ConcreteExpression(
 	list.ReturnType is GenericTypeImplementation listReturnType
 		? listReturnType.ImplementationTypes[0]
 		: list.ReturnType, list.IsMutable)
@@ -23,12 +23,12 @@ public sealed class ListCallStatement(Expression list, Expression index) : Concr
 							variable, arguments)
 				: variable;
 
-	private static ListCallStatement CreateListCallAndCheckIndexBounds(Body body, Expression listVariable,
+	private static ListCall CreateListCallAndCheckIndexBounds(Body body, Expression listVariable,
 		Expression index)
 	{
 		var indexValue = GetIndexValue(index);
 		if (indexValue == null)
-			return new ListCallStatement(listVariable, index);
+			return new ListCall(listVariable, index);
 		if (indexValue < 0)
 			throw new NegativeIndexIsNeverAllowed(body, listVariable);
 		List? specifiedList = null;
@@ -38,7 +38,7 @@ public sealed class ListCallStatement(Expression list, Expression index) : Concr
 			specifiedList = variableCall.Variable.InitialValue as List;
 		if (specifiedList is { Values.Count: > 0 } && indexValue >= specifiedList.Values.Count)
 			throw new IndexAboveConstantListLength(body, (int)indexValue, specifiedList);
-		return new ListCallStatement(listVariable, index);
+		return new ListCall(listVariable, index);
 	}
 
 	private static int? GetIndexValue(Expression index)

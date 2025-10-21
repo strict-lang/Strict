@@ -47,9 +47,12 @@ public sealed class MemberCallTests : TestExpressions
 	[Test]
 	public void MemberWithArgumentsInitializerShouldNotHaveType() =>
 		Assert.That(
-			() => new Type(type.Package,
-					new TypeLines("Declaration", "has input Text = Text(5)")).
-				ParseMembersAndMethods(parser),
+			() =>
+			{
+				using var _ =
+					new Type(type.Package, new TypeLines("Declaration", "has input Text = Text(5)")).
+						ParseMembersAndMethods(parser);
+			},
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.
 				InstanceOf<NamedType.AssignmentWithInitializerTypeShouldNotHaveNameWithType>());
 
@@ -58,26 +61,32 @@ public sealed class MemberCallTests : TestExpressions
 	[Test]
 	public void UnknownExpressionInMemberInitializer() =>
 		Assert.That(
-			() => new Type(type.Package,
-					new TypeLines(nameof(UnknownExpressionInMemberInitializer), "has input Text = random")).
-				ParseMembersAndMethods(parser), Throws.InstanceOf<ParsingFailed>());
+			() =>
+			{
+				using var _ = new Type(type.Package,
+						new TypeLines(nameof(UnknownExpressionInMemberInitializer),
+							"has input Text = random")).
+					ParseMembersAndMethods(parser);
+			}, Throws.InstanceOf<ParsingFailed>());
 
 	[Test]
 	public void NameMustBeAWordWithoutAnySpecialCharacterOrNumber() =>
 		Assert.That(
-			() => new Type(type.Package,
-				new TypeLines(nameof(NameMustBeAWordWithoutAnySpecialCharacterOrNumber),
-					"has input1$ = Text(5)")).ParseMembersAndMethods(parser),
+			() =>
+			{
+				using var _ = new Type(type.Package,
+					new TypeLines(nameof(NameMustBeAWordWithoutAnySpecialCharacterOrNumber),
+						"has input1$ = Text(5)")).ParseMembersAndMethods(parser);
+			},
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.
 				InstanceOf<Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers>());
 
 	[Test]
 	public void MemberWithArgumentsInitializer()
 	{
-		var assignmentType =
-			new Type(type.Package,
-				new TypeLines(nameof(MemberWithArgumentsInitializer), "has input = Character(5)",
-					"GetInput Text", "\tinput")).ParseMembersAndMethods(parser);
+		using var assignmentType = new Type(type.Package,
+			new TypeLines(nameof(MemberWithArgumentsInitializer), "has input = Character(5)",
+				"GetInput Text", "\tinput")).ParseMembersAndMethods(parser);
 		Assert.That(assignmentType.Members[0].Name, Is.EqualTo("input"));
 		Assert.That(assignmentType.Members[0].IsPublic, Is.False);
 		Assert.That(assignmentType.Members[0].Type, Is.EqualTo(type.GetType(Base.Character)));
@@ -90,7 +99,7 @@ public sealed class MemberCallTests : TestExpressions
 	[Test]
 	public void MemberGetHashCodeAndEquals()
 	{
-		var memberCall =
+		using var memberCall =
 			new Type(type.Package,
 				new TypeLines(nameof(MemberGetHashCodeAndEquals), "has input = Text(5)", "GetInput Text",
 					"\tinput")).ParseMembersAndMethods(parser);
@@ -108,7 +117,7 @@ public sealed class MemberCallTests : TestExpressions
 	public void MemberWithBinaryExpression()
 	{
 		// @formatter:off
-		var assignmentType =
+		using var assignmentType =
 			new Type(type.Package,
 					new TypeLines(nameof(MemberWithBinaryExpression),
 						"has combinedNumber = 3 + 5",
@@ -125,7 +134,7 @@ public sealed class MemberCallTests : TestExpressions
 	[Test]
 	public void FromConstructorCall()
 	{
-		var program = new Type(type.Package,
+		using var program = new Type(type.Package,
 			new TypeLines(nameof(FromConstructorCall),
 				"has file = File(\"test.txt\")",
 				"Run",
@@ -137,7 +146,7 @@ public sealed class MemberCallTests : TestExpressions
 	[Test]
 	public void FromConstructorCallUsingMemberName()
 	{
-		var program = new Type(type.Package,
+		using var program = new Type(type.Package,
 			new TypeLines(nameof(FromConstructorCallUsingMemberName),
 				"has file = \"test.txt\"",
 				"Run",
@@ -148,22 +157,25 @@ public sealed class MemberCallTests : TestExpressions
 	[Test]
 	public void MemberCallUsingAnotherMemberIsForbidden() =>
 		Assert.That(
-			() => new Type(type.Package,
-				new TypeLines(nameof(MemberCallUsingAnotherMemberIsForbidden),
+			() =>
+			{
+				using var _ = new Type(type.Package,
+					new TypeLines(nameof(MemberCallUsingAnotherMemberIsForbidden),
 					"has file = File(\"test.txt\")",
 					"has fileDescription = file.Length > 1000 ? \"big file\" else \"small file\"",
 					"Run",
-					"\tconstant a = 5")).ParseMembersAndMethods(parser),
+					"\tconstant a = 5")).ParseMembersAndMethods(parser);
+			},
 			Throws.InstanceOf<CannotAccessMemberBeforeTypeIsParsed>());
 
 	[Test]
 	public void BaseTypeMemberCallInDerivedType()
 	{
-		var program = new Type(type.Package,
+		using var program = new Type(type.Package,
 			new TypeLines(nameof(BaseTypeMemberCallInDerivedType),
 				"has Range",
 				"Run",
-				"\tconstant result = Range.End + 5")).ParseMembersAndMethods(parser);
+				"\tlet result = Range.End + 5")).ParseMembersAndMethods(parser);
 		var assignment = (Declaration)program.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(((Binary)assignment.Value).Instance,
 			Is.InstanceOf<MemberCall>());
@@ -172,18 +184,20 @@ public sealed class MemberCallTests : TestExpressions
 	[Test]
 	public void DuplicateMembersAreNotAllowed() =>
 		Assert.That(
-			() => new Type(type.Package,
-				new TypeLines(nameof(DuplicateMembersAreNotAllowed),
+			() =>
+			{
+				using var _ = new Type(type.Package, new TypeLines(nameof(DuplicateMembersAreNotAllowed),
 					"has something Number",
 					"has something Number",
 					"Run",
-					"\tconstant a = 5")).ParseMembersAndMethods(parser),
+					"\tconstant a = 5")).ParseMembersAndMethods(parser);
+			},
 			Throws.InstanceOf<TypeParser.DuplicateMembersAreNotAllowed>());
 
 	[Test]
 	public void MembersWithDifferentNamesAreAllowed()
 	{
-		var program = new Type(type.Package,
+		using var program = new Type(type.Package,
 			new TypeLines(nameof(MembersWithDifferentNamesAreAllowed),
 				"has something Number",
 				"has somethingDifferent Number",
@@ -196,23 +210,29 @@ public sealed class MemberCallTests : TestExpressions
 	[Test]
 	public void MemberNameWithDifferentTypeNamesThanOwnNotAllowed() =>
 		Assert.That(
-			() => new Type(type.Package,
+			() =>
+			{
+				using var _ = new Type(type.Package,
 				new TypeLines(nameof(MemberNameWithDifferentTypeNamesThanOwnNotAllowed),
 					"has numbers Boolean",
 					"Run",
-					"\t5")).ParseMembersAndMethods(parser),
+					"\t5")).ParseMembersAndMethods(parser);
+			},
 			Throws.InstanceOf<Member.MemberNameWithDifferentTypeNamesThanOwnAreNotAllowed>().With.
 				Message.Contains("numbers"));
 
 	[Test]
 	public void VariableNameCannotHaveDifferentTypeNameThanValue() =>
 		Assert.That(
-			() => new Type(type.Package,
+			() =>
+			{
+				using var dummy = new Type(type.Package,
 					new TypeLines(nameof(VariableNameCannotHaveDifferentTypeNameThanValue),
 						"has text",
 						"Run",
-						"\tconstant numbers = \"5\"")).ParseMembersAndMethods(parser).Methods[0].
-				GetBodyAndParseIfNeeded(),
+						"\tconstant numbers = \"5\"")).ParseMembersAndMethods(parser);
+				dummy.Methods[0].GetBodyAndParseIfNeeded();
+			},
 			Throws.InstanceOf<Body.VariableNameCannotHaveDifferentTypeNameThanValue>().With.Message.
 				Contains("Variable name numbers denotes different type than its value type Text. " +
 					"Prefer using a different name"));
@@ -220,12 +240,14 @@ public sealed class MemberCallTests : TestExpressions
 	[Test]
 	public void CannotAccessMemberInSameTypeBeforeTypeIsParsed() =>
 		Assert.That(
-			() => new Type(type.Package,
+			() =>
+			{
+				using var _ = new Type(type.Package,
 					new TypeLines(nameof(CannotAccessMemberInSameTypeBeforeTypeIsParsed),
 						"has Range",
 						"has something = Range(0, 13)",
 						"Run",
-						"\tconstant a = 5")).
-				ParseMembersAndMethods(parser),
+						"\tconstant a = 5")).ParseMembersAndMethods(parser);
+			},
 			Throws.InstanceOf<CannotAccessMemberBeforeTypeIsParsed>());
 }

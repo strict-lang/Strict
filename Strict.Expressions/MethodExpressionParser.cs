@@ -148,7 +148,7 @@ public class MethodExpressionParser : ExpressionParser
 		IReadOnlyList<Expression> arguments) =>
 		input.Contains('.')
 			? ParseNestedExpressionInContext(body, input, arguments)
-			: ListCallStatement.TryParse(body,
+			: ListCall.TryParse(body,
 				TryVariableOrValueOrParameterOrMemberOrMethodCall(body.Method.Type, null, body, input,
 					arguments), arguments);
 
@@ -182,7 +182,7 @@ public class MethodExpressionParser : ExpressionParser
 				throw CheckErrorTypeAndThrowException(body, input, members, current);
 			context = current.ReturnType;
 		}
-		return ListCallStatement.TryParse(body, current, arguments);
+		return ListCall.TryParse(body, current, arguments);
 	}
 
 	// ReSharper disable once TooManyArguments
@@ -270,14 +270,25 @@ public class MethodExpressionParser : ExpressionParser
 			}
 			if (expression is For forExpression &&
 				(IsMutationOfVariable(forExpression.Body, variableName) ||
-					forExpression.Body is Body forBody && IsVariableMutated(forBody, variableName)))
+					forExpression.Value is Value forValue && forValue.Data.ToString() == variableName ||
+					forExpression.Value is Binary { Instance: VariableCall forVariableCall } &&
+					forVariableCall.Variable.Name == variableName || forExpression.Body is Body forBody &&
+					IsVariableMutated(forBody, variableName)))
+				return true;
+			if (expression is MethodCall { Instance: VariableCall variableCall, IsMutable: true } &&
+				variableCall.Variable.Name == variableName)
+				return true;
+			if (expression is ListCall { List: VariableCall listVariableCall } &&
+				listVariableCall.Variable.Name == variableName)
 				return true;
 		}
 		return false;
 	}
 
 	private static bool IsMutationOfVariable(Expression expression, string variableName) =>
-		expression is MutableReassignment reassignment && reassignment.Name == variableName;
+		expression is MutableReassignment reassignment && (reassignment.Name == variableName ||
+			reassignment.Target is ListCall { List: VariableCall listCall } &&
+			listCall.Variable.Name == variableName);
 
 	/// <summary>
 	/// Similar to TryParseExpression, but we know there are commas separating expressions

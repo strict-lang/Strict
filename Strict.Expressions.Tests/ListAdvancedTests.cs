@@ -13,16 +13,19 @@ public sealed class ListAdvancedTests : TestExpressions
 	[Test]
 	public void ListPrefixIsNotAllowed() =>
 		Assert.That(
-			() => new Type(type.Package,
-					new TypeLines(nameof(ListPrefixIsNotAllowed), "has listOne Numbers")).
-				ParseMembersAndMethods(parser),
+			() =>
+			{
+				using var _ = new Type(type.Package,
+						new TypeLines(nameof(ListPrefixIsNotAllowed), "has listOne Numbers")).
+					ParseMembersAndMethods(parser);
+			},
 			Throws.InnerException.
 				InstanceOf<Context.ListPrefixIsNotAllowedUseImplementationTypeNameInPlural>());
 
 	[Test]
 	public void ListGenericLengthAddition()
 	{
-		var program = new Type(type.Package,
+		using var program = new Type(type.Package,
 			new TypeLines(nameof(ListGenericLengthAddition), "has ones Numbers", "has twos Numbers",
 				"AddListLength Number", "\tones.Length + twos.Length")).ParseMembersAndMethods(parser);
 		Assert.That(program.Members[0].Name, Is.EqualTo("ones"));
@@ -35,7 +38,7 @@ public sealed class ListAdvancedTests : TestExpressions
 	[Test]
 	public void ListAdditionWithGeneric()
 	{
-		var program = new Type(type.Package,
+		using var program = new Type(type.Package,
 			new TypeLines(nameof(ListAdditionWithGeneric), "has elements Numbers",
 				"Add(other Numbers) List", "\telements + other.elements")).ParseMembersAndMethods(parser);
 		Assert.That(program.Members[0].Name, Is.EqualTo("elements"));
@@ -47,7 +50,7 @@ public sealed class ListAdvancedTests : TestExpressions
 	[TestCase("Add(input Character) Numbers", "NumbersCompatibleWithCharacter")]
 	public void NumbersCompatibleWithImplementedTypes(string code, string testName)
 	{
-		var program = new Type(type.Package,
+		using var program = new Type(type.Package,
 				new TypeLines(testName, "has logger", code, "\tconstant result = (1, 2, 3, input)")).
 			ParseMembersAndMethods(parser);
 		Assert.That(program.Methods[0].GetBodyAndParseIfNeeded().ReturnType,
@@ -57,39 +60,44 @@ public sealed class ListAdvancedTests : TestExpressions
 	[Test]
 	public void NotOperatorInAssignment()
 	{
-		var assignment = (Declaration)new Type(type.Package,
-				new TypeLines(nameof(NotOperatorInAssignment), "has numbers", "NotOperator",
-					"\tconstant result = not true")).ParseMembersAndMethods(parser).Methods[0].
-			GetBodyAndParseIfNeeded();
+		using var typeWithAssignment = new Type(type.Package,
+			new TypeLines(nameof(NotOperatorInAssignment), "has numbers", "NotOperator",
+				"\tconstant result = not true")).ParseMembersAndMethods(parser);
+		var assignment = (Declaration)typeWithAssignment.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(assignment.ToString(), Is.EqualTo("constant result = not true"));
 	}
 
 	[Test]
 	public void UnknownExpressionForArgumentInList() =>
 		Assert.That(
-			() => new Type(type.Package,
-					new TypeLines(nameof(UnknownExpressionForArgumentInList), "has logger",
-						"UnknownExpression", "\tconstant result = ((1, 2), 9gfhy5)")).
-				ParseMembersAndMethods(parser).Methods[0].GetBodyAndParseIfNeeded(),
+			() =>
+			{
+				using var dummy = new Type(type.Package,
+						new TypeLines(nameof(UnknownExpressionForArgumentInList), "has logger",
+							"UnknownExpression", "\tconstant result = ((1, 2), 9gfhy5)")).
+					ParseMembersAndMethods(parser);
+				dummy.Methods[0].GetBodyAndParseIfNeeded();
+			},
 			Throws.InstanceOf<UnknownExpressionForArgument>());
 
 	[Test]
 	public void AccessListElementsByIndex()
 	{
-		var expression = new Type(type.Package,
-				new TypeLines(nameof(AccessListElementsByIndex), "has numbers",
-					"AccessZeroIndexElement Number", "\tnumbers(0)")).ParseMembersAndMethods(parser).
-			Methods[0].GetBodyAndParseIfNeeded();
+		using var typeWithAccess = new Type(type.Package,
+			new TypeLines(nameof(AccessListElementsByIndex), "has numbers",
+				"AccessZeroIndexElement Number", "\tnumbers(0)")).ParseMembersAndMethods(parser);
+		var expression = typeWithAccess.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(expression.ToString(), Is.EqualTo("numbers(0)"));
 	}
 
 	[Test]
 	public void AllowMutableListWithEmptyExpressions()
 	{
-		var expression = (Body)new Type(type.Package,
-				new TypeLines(nameof(AllowMutableListWithEmptyExpressions), "has numbers",
-					"CreateMutableList Numbers", "\tmutable result = Numbers", "\tfor numbers",
-					"\t\tresult = result + (0 - value)", "\tresult")).ParseMembersAndMethods(parser).
+		using var typeWithMutableList = new Type(type.Package,
+			new TypeLines(nameof(AllowMutableListWithEmptyExpressions), "has numbers",
+				"CreateMutableList Numbers", "\tmutable result = Numbers", "\tfor numbers",
+				"\t\tresult = result + (0 - value)", "\tresult")).ParseMembersAndMethods(parser);
+		var expression = (Body)typeWithMutableList.
 			Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(expression.Expressions[0].ToString(),
 			Is.EqualTo("mutable result = List(TestPackage.Number)"));
@@ -100,7 +108,7 @@ public sealed class ListAdvancedTests : TestExpressions
 	[Test]
 	public void CreateMemberWithMutableListType()
 	{
-		var mutableTextsType = new Type(type.Package,
+		using var mutableTextsType = new Type(type.Package,
 				new TypeLines(nameof(CreateMemberWithMutableListType), "mutable mutableTexts Texts",
 					"AddFiveToMutableList Texts", "\tmutableTexts = mutableTexts + \"5\"",
 					"\tmutableTexts")).
@@ -113,26 +121,36 @@ public sealed class ListAdvancedTests : TestExpressions
 	[Test]
 	public void OnlyListTypeIsAllowedAsMutableExpressionArgument() =>
 		Assert.That(
-			() => new Type(type.Package,
-				new TypeLines(nameof(OnlyListTypeIsAllowedAsMutableExpressionArgument),
-					"has unused Logger", "MutableWithNumber Number", "\tconstant result = Mutable(Number)",
-					"\tresult")).ParseMembersAndMethods(parser).Methods[0].GetBodyAndParseIfNeeded(),
+			() =>
+			{
+				using var dummy = new Type(type.Package,
+					new TypeLines(nameof(OnlyListTypeIsAllowedAsMutableExpressionArgument),
+						"has unused Logger", "MutableWithNumber Number",
+						"\tconstant result = Mutable(Number)", "\tresult")).ParseMembersAndMethods(parser);
+				dummy.Methods[0].GetBodyAndParseIfNeeded();
+			},
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.
 				InstanceOf<Type.GenericTypesCannotBeUsedDirectlyUseImplementation>());
 
 	[Test]
 	public void CheckIfInvalidArgumentIsNotMethodOrListCall() =>
 		Assert.That(
-			() => new Type(type.Package,
-				new TypeLines(nameof(CheckIfInvalidArgumentIsNotMethodOrListCall), "has booleans",
-					"AccessZeroIndexElement Boolean", "\tconstant firstValue = booleans(0)",
-					"\tfirstValue(0)")).ParseMembersAndMethods(parser).Methods[0].GetBodyAndParseIfNeeded(),
+			() =>
+			{
+				using var dummy = new Type(type.Package,
+					new TypeLines(nameof(CheckIfInvalidArgumentIsNotMethodOrListCall), "has booleans",
+						"AccessZeroIndexElement Boolean", "\tlet firstValue = booleans(0)",
+						"\tfirstValue(0)")).ParseMembersAndMethods(parser);
+				dummy.Methods[0].GetBodyAndParseIfNeeded();
+			},
 			Throws.InstanceOf<InvalidArgumentItIsNotMethodOrListCall>());
 
 	[Test]
 	public void MultiLineListsAllowedOnlyIfLengthIsMoreThanHundred() =>
-		Assert.That(() => new Type(type.Package, new TypeLines(
-					nameof(MultiLineListsAllowedOnlyIfLengthIsMoreThanHundred),
+		Assert.That(() =>
+			{
+				using var dummy = new Type(type.Package, new TypeLines(
+						nameof(MultiLineListsAllowedOnlyIfLengthIsMoreThanHundred),
 					// @formatter:off
 					"has logger",
 					"Run",
@@ -145,15 +163,19 @@ public sealed class ListAdvancedTests : TestExpressions
 					"\t7)",
 					"ExtraMethodNotCalled",
 					"\tsomething"))
-				// @formatter:on
-				.ParseMembersAndMethods(parser).Methods[0].GetBodyAndParseIfNeeded(),
+					// @formatter:on
+					.ParseMembersAndMethods(parser);
+				dummy.Methods[0].GetBodyAndParseIfNeeded();
+			},
 			Throws.InstanceOf<TypeParser.MultiLineExpressionsAllowedOnlyWhenLengthIsMoreThanHundred>().
 				With.Message.
 				Contains("Current length: 40, Minimum Length for Multi line expressions: 100"));
 
 	[Test]
 	public void UnterminatedMultiLineListFound() =>
-		Assert.That(() => new Type(type.Package, new TypeLines(nameof(UnterminatedMultiLineListFound),
+		Assert.That(() =>
+			{
+				using var dummy = new Type(type.Package, new TypeLines(nameof(UnterminatedMultiLineListFound),
 					// @formatter:off
 					"has logger",
 					"Run",
@@ -163,8 +185,10 @@ public sealed class ListAdvancedTests : TestExpressions
 					"\t4,",
 					"ExtraMethodNotCalled",
 					"\tsomething"))
-				// @formatter:on
-				.ParseMembersAndMethods(parser).Methods[0].GetBodyAndParseIfNeeded(),
+					// @formatter:on
+					.ParseMembersAndMethods(parser);
+				dummy.Methods[0].GetBodyAndParseIfNeeded();
+			},
 			Throws.InstanceOf<TypeParser.UnterminatedMultiLineListFound>().With.Message.
 				StartWith("\tconstant result = (1, 2, 3, 4,"));
 
@@ -215,7 +239,7 @@ public sealed class ListAdvancedTests : TestExpressions
 	public void ParseMultiLineExpressionAndPrintSameAsInput(string testName, string expected,
 		params string[] code)
 	{
-		var program =
+		using var program =
 			new Type(type.Package, new TypeLines(testName, code)).ParseMembersAndMethods(parser);
 		var expression = program.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(expression, Is.InstanceOf<List>());
@@ -226,28 +250,30 @@ public sealed class ListAdvancedTests : TestExpressions
 	[Test]
 	public void MergeFromConstructorParametersIntoListIfMemberMatches()
 	{
-		var program = new Type(type.Package, new TypeLines(
-					// @formatter:off
-					"Vector2",
-					"has numbers with Length is 2",
-					"has One = Vector2(1, 1)",
-					"Length Number",
-					"\tVector2.Length is 0",
-					"\tVector2(3, 4).Length is 5",
-					"\t(X * X + Y * Y).SquareRoot")).
-			ParseMembersAndMethods(parser);
+		using var program = new Type(type.Package, new TypeLines(
+			// @formatter:off
+			"Vector2",
+			"has numbers with Length is 2",
+			"has One = Vector2(1, 1)",
+			"Length Number",
+			"\tVector2.Length is 0",
+			"\tVector2(3, 4).Length is 5",
+			"\t(X * X + Y * Y).SquareRoot")).ParseMembersAndMethods(parser);
 		Assert.That(program.Members[1].Name, Is.EqualTo("One"));
 		Assert.That(program.Members[1].Type.ToString(), Is.EqualTo("TestPackage.Vector2"));
 	}
 
 	[Test]
 	public void FromConstructorCannotBeCreatedWhenFirstMemberIsNotMatched() =>
-		Assert.That(() => new Type(type.Package, new TypeLines(
-				"CannotCreateFromConstructor",
-				"has One = CannotCreateFromConstructor(1, 1)",
-				"has numbers with Length is 2",
-				"Length Number",
-				"\t(X * X + Y * Y).SquareRoot")).ParseMembersAndMethods(parser),
+		Assert.That(() =>
+			{
+				using var _ = new Type(type.Package, new TypeLines(
+					"CannotCreateFromConstructor",
+					"has One = CannotCreateFromConstructor(1, 1)",
+					"has numbers with Length is 2",
+					"Length Number",
+					"\t(X * X + Y * Y).SquareRoot")).ParseMembersAndMethods(parser);
+			},
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.
 				InstanceOf<Type.ArgumentsDoNotMatchMethodParameters>());
 	// @formatter:on
@@ -259,7 +285,7 @@ public sealed class ListAdvancedTests : TestExpressions
 		string arguments, string expectedList)
 	{
 		// @formatter:off
-		var typeWithTestMethods = new Type(type.Package,
+		using var typeWithTestMethods = new Type(type.Package,
 			new TypeLines("ListArgumentsCanBeAutoParsed" + parameter,
 				"has logger",
 				$"CheckInputLengthAndGetResult({parameter}) Number",
@@ -282,7 +308,7 @@ public sealed class ListAdvancedTests : TestExpressions
 	[Test]
 	public void CreateMutableListWithMutableExpressions()
 	{
-		var program = new Type(TestPackage.Instance, new TypeLines(
+		using var program = new Type(TestPackage.Instance, new TypeLines(
 					// @formatter:off
 					nameof(CreateMutableListWithMutableExpressions),
 					"has logger",
@@ -297,7 +323,7 @@ public sealed class ListAdvancedTests : TestExpressions
 	[Test]
 	public void ChangeValueInsideMutableListWithMutableExpressions()
 	{
-		var program = new Type(TestPackage.Instance,
+		using var program = new Type(TestPackage.Instance,
 			new TypeLines(nameof(ChangeValueInsideMutableListWithMutableExpressions),
 				"has logger",
 				"Update(element Number) List(Mutable(Number))",
@@ -307,27 +333,27 @@ public sealed class ListAdvancedTests : TestExpressions
 				"\tsomeList")).
 			ParseMembersAndMethods(parser);
 		var body = (Body)program.Methods[0].GetBodyAndParseIfNeeded();
-		Assert.That(((VariableCall)((ListCallStatement)((MutableReassignment)body.Expressions[2]).Target).List).
+		Assert.That(((VariableCall)((ListCall)((MutableReassignment)body.Expressions[2]).Target).List).
 			Variable.Name, Is.EqualTo("someList"));
 	}
 
 	[Test]
 	public void NegativeIndexIsNeverAllowed()
 	{
-		var program = new Type(type.Package,
+		using var program = new Type(type.Package,
 			new TypeLines(nameof(NegativeIndexIsNeverAllowed),
 				"has logger",
 				"UpdateNotExistingElement(element Number) Number",
 				"\tmutable someList = List(Mutable(Number))",
 				"\tsomeList(-1) = 1")).
 			ParseMembersAndMethods(parser);
-		Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(), Throws.InstanceOf<ListCallStatement.NegativeIndexIsNeverAllowed>());
+		Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(), Throws.InstanceOf<ListCall.NegativeIndexIsNeverAllowed>());
 	}
 
 	[Test]
 	public void UpdateListExpressionValuesByIndex()
 	{
-		var program = new Type(type.Package,
+		using var program = new Type(type.Package,
 			new TypeLines(nameof(UpdateListExpressionValuesByIndex),
 				"has logger",
 				"UpdateListValue(element Number) Number",
@@ -335,65 +361,65 @@ public sealed class ListAdvancedTests : TestExpressions
 				"\tsomeList(0) = 5")).
 			ParseMembersAndMethods(parser);
 		var body = (Body)program.Methods[0].GetBodyAndParseIfNeeded();
-		Assert.That(((ListCallStatement)((MutableReassignment)body.Expressions[1]).Target).Index.ToString(),
+		Assert.That(((ListCall)((MutableReassignment)body.Expressions[1]).Target).Index.ToString(),
 			Is.EqualTo("0"));
 	}
 
 	[Test]
 	public void IndexAboveConstantListLength()
 	{
-		var program = new Type(type.Package,
+		using var program = new Type(type.Package,
 			new TypeLines(nameof(IndexAboveConstantListLength),
 				"has logger",
 				"UpdateNotExistingElement(element Number) Number",
 				"\tmutable someList = (9, 8, 7)",
 				"\tsomeList(3) = 5")).
 			ParseMembersAndMethods(parser);
-		Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(), Throws.InstanceOf<ListCallStatement.IndexAboveConstantListLength>());
+		Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(), Throws.InstanceOf<ListCall.IndexAboveConstantListLength>());
 	}
 
 	[Test]
 	public void IndexViolatesListConstraint()
 	{
-		var program = new Type(type.Package,
+		using var program = new Type(type.Package,
 			new TypeLines(nameof(IndexViolatesListConstraint),
 				"has numbers with Length is 2",
 				"from",
 				"\tnumbers(3) = 5")).
 			ParseMembersAndMethods(parser);
-		Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(), Throws.InstanceOf<ListCallStatement.IndexViolatesListConstraint>());
+		Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(), Throws.InstanceOf<ListCall.IndexViolatesListConstraint>());
 	}
 
 	[Test]
 	public void IndexCheckEvenWorkWhenIndexIsConstant()
 	{
-		var program = new Type(type.Package,
+		using var program = new Type(type.Package,
 			new TypeLines(nameof(IndexCheckEvenWorkWhenIndexIsConstant),
 				"has numbers with Length is 2",
 				"from",
 				"\tconstant notValid = 5",
 				"\tnumbers(notValid) = 5")).
 			ParseMembersAndMethods(parser);
-		Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(), Throws.InstanceOf<ListCallStatement.IndexViolatesListConstraint>());
+		Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(), Throws.InstanceOf<ListCall.IndexViolatesListConstraint>());
 	}
 
 	[Test]
 	public void IndexCheckAlsoWorksForMemberCalls()
 	{
-		var program = new Type(type.Package,
+		using var program = new Type(type.Package,
 			new TypeLines(nameof(IndexCheckAlsoWorksForMemberCalls),
 				"has numbers with Length is 2",
 				"constant invalidIndex = 3",
 				"from",
 				"\tnumbers(invalidIndex) = 5")).
 			ParseMembersAndMethods(parser);
-		Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(), Throws.InstanceOf<ListCallStatement.IndexViolatesListConstraint>());
+		Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(), Throws.InstanceOf<ListCall.IndexViolatesListConstraint>());
 	}
 
 	[Test]
 	public void IndexCannotBeCheckedOnADynamicCall()
 	{
-		var program = new Type(type.Package,
+		using var program = new Type(type.Package,
 			new TypeLines(nameof(IndexCannotBeCheckedOnADynamicCall),
 				"has numbers with Length is 2",
 				"from(number)",

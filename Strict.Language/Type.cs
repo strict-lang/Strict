@@ -540,6 +540,8 @@ public class Type : Context, IDisposable
 		string remainingTextSpan) =>
 		typeParser.GetMemberExpression(parser, memberName, remainingTextSpan);
 
+	public bool IsMutable =>
+		Name == Base.Mutable || this is GenericTypeImplementation { Generic.Name: Base.Mutable };
 	public void Dispose() => ((Package)Parent).Remove(this);
 
 	public int FindLineNumber(string firstLineThatContains)

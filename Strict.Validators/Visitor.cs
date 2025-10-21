@@ -118,7 +118,7 @@ public abstract class Visitor
 			Visit(ifExpression.Then, body, context);
 			Visit(ifExpression.OptionalElse, body, context);
 		}
-		else if (expression is ListCallStatement listCall)
+		else if (expression is ListCall listCall)
 		{
 			Visit(listCall.List, body, context);
 			Visit(listCall.Index, body, context);

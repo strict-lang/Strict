@@ -309,5 +309,5 @@ public sealed class MutableDeclarationTests : TestExpressions
 						"MutableCall Mutable(Number)", "\tMutableCall = Number", "\tNumber = 5"));
 				dummy.ParseMembersAndMethods(parser).Methods[0].GetBodyAndParseIfNeeded();
 			},
-			Throws.InstanceOf<Body.ValueIsNotMutableAndCannotBeChanged>());
+			Throws.InstanceOf<Body.IdentifierNotFound>());
 }
