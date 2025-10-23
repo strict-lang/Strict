@@ -91,10 +91,13 @@ public static class SpanExtensions
 	public static bool IsWord(this ReadOnlySpan<char> input)
 	{
 		foreach (var c in input)
-			if (c is (< 'A' or > 'Z') and (< 'a' or > 'z'))
+			if (IsLetter(c))
 				return false;
 		return true;
 	}
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static bool IsLetter(this char c) => c is (< 'A' or > 'Z') and (< 'a' or > 'z');
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static bool IsTrueText(this ReadOnlySpan<char> input) =>

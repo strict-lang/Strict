@@ -11,24 +11,27 @@ public sealed class TypeParser(Type type, string[] lines)
 		for (LineNumber = 0; LineNumber < lines.Length; LineNumber++)
 			TryParse(parser, LineNumber);
 		if (rememberToInitializeMemberInitialValues != null)
+			TryInitializeMemberInitialValues(parser);
+	}
+
+	private void TryInitializeMemberInitialValues(ExpressionParser parser)
+	{
+		try
 		{
-			try
-			{
-				foreach (var pair in rememberToInitializeMemberInitialValues)
-					pair.Key.InitialValue = GetMemberExpression(parser, pair.Key.Name, pair.Value);
-			}
-			catch (ParsingFailed)
-			{
-				type.Dispose();
-				throw;
-			}
-			catch (Exception ex)
-			{
-				type.Dispose();
-				throw new ParsingFailed(type, 0, string.IsNullOrEmpty(ex.Message)
-					? ex.GetType().Name
-					: ex.Message, ex);
-			}
+			foreach (var pair in rememberToInitializeMemberInitialValues!)
+				pair.Key.InitialValue = GetMemberExpression(parser, pair.Key.Name, pair.Value);
+		}
+		catch (ParsingFailed)
+		{
+			type.Dispose();
+			throw;
+		}
+		catch (Exception ex)
+		{
+			type.Dispose();
+			throw new ParsingFailed(type, 0, string.IsNullOrEmpty(ex.Message)
+				? ex.GetType().Name
+				: ex.Message, ex);
 		}
 	}
 
@@ -96,7 +99,35 @@ public sealed class TypeParser(Type type, string[] lines)
 		var methodName = signature[..openParen];
 		if (!methodName.Equals("from", StringComparison.Ordinal))
 			return;
-		// Collect parameter names from signature: from(name Type, other Type) ...
+		var paramNames = CollectParameterNamesFromSignature(signature, openParen);
+		// Inspect body lines (all subsequent lines), skip inline tests (contain " is ")
+		for (var i = 1; i < methodLines.Count; i++)
+		{
+			var line = methodLines[i];
+			if (IsNonTestMethodLine(line))
+				continue;
+			var typeCtorPrefix = type.Name + "(";
+			var idx = line.IndexOf(typeCtorPrefix, StringComparison.Ordinal);
+			if (idx < 0)
+				continue;
+			// Extract argument inside TypeName(...)
+			var startArgs = idx + typeCtorPrefix.Length;
+			var endArgs = line.IndexOf(')', startArgs);
+			if (endArgs <= startArgs)
+				continue;
+			var argText = line[startArgs..endArgs];
+			// If argText does not contain any parameter name, it's a constant/self call -> flag
+			var usesAnyParam = paramNames.Any(p => argText.Contains(p, StringComparison.Ordinal));
+			if (!usesAnyParam)
+				throw new TrivialEndlessSelfConstructionDetected(type, LineNumber, line.Trim());
+		}
+	}
+
+	private static bool IsNonTestMethodLine(string line) =>
+		!line.StartsWith('\t') || line.Contains(" is ", StringComparison.Ordinal);
+
+	private static HashSet<string> CollectParameterNamesFromSignature(string signature, int openParen)
+	{
 		var closeParen = signature.IndexOf(')', openParen + 1);
 		var paramNames = new HashSet<string>(StringComparer.Ordinal);
 		if (closeParen > openParen + 1)
@@ -110,31 +141,7 @@ public sealed class TypeParser(Type type, string[] lines)
 					paramNames.Add(parts[0]);
 			}
 		}
-		var typeCtorPrefix = type.Name + "(";
-		// Inspect body lines (all subsequent lines), skip inline tests (contain " is ")
-		for (var i = 1; i < methodLines.Count; i++)
-		{
-			var bodyLine = methodLines[i];
-			if (!bodyLine.StartsWith('\t'))
-				continue;
-			if (bodyLine.Contains(" is ", StringComparison.Ordinal))
-				continue;
-			var idx = bodyLine.IndexOf(typeCtorPrefix, StringComparison.Ordinal);
-			if (idx < 0)
-				continue;
-
-			// Extract argument inside TypeName(...)
-			var startArgs = idx + typeCtorPrefix.Length;
-			var endArgs = bodyLine.IndexOf(')', startArgs);
-			if (endArgs <= startArgs)
-				continue;
-			var argText = bodyLine[startArgs..endArgs];
-
-			// If argText does not contain any parameter name, it's a constant/self call -> flag
-			var usesAnyParam = paramNames.Any(p => argText.Contains(p, StringComparison.Ordinal));
-			if (!usesAnyParam)
-				throw new TrivialEndlessSelfConstructionDetected(type, LineNumber, bodyLine.Trim());
-		}
+		return paramNames;
 	}
 
 	/// <summary>
@@ -147,13 +154,10 @@ public sealed class TypeParser(Type type, string[] lines)
 			return;
 		var signature = methodLines[0];
 		var openParen = signature.IndexOf('(');
-		if (openParen <= 0)
-			return;
 		var closeParen = signature.IndexOf(')', openParen + 1);
-		if (closeParen <= openParen)
+		if (openParen <= 0 || closeParen <= openParen)
 			return;
 		var methodName = signature[..openParen].Trim();
-
 		// Extract parameter names from signature in order
 		var paramNames = new List<string>();
 		var inside = signature[(openParen + 1)..closeParen];
@@ -166,9 +170,6 @@ public sealed class TypeParser(Type type, string[] lines)
 		}
 		if (paramNames.Count == 0)
 			return;
-
-		// Helpers
-		static bool IsWordChar(char c) => char.IsLetterOrDigit(c) || c == '_';
 
 		bool ArgsEqualParams(string argText)
 		{
@@ -184,40 +185,38 @@ public sealed class TypeParser(Type type, string[] lines)
 
 		for (var i = 1; i < methodLines.Count; i++)
 		{
-			var bodyLine = methodLines[i];
-			if (!bodyLine.StartsWith('\t'))
-				continue;
-			if (bodyLine.Contains(" is ", StringComparison.Ordinal)) // skip inline tests
+			var line = methodLines[i];
+			if (IsNonTestMethodLine(line))
 				continue;
 			// 1) Dot calls: receiver.Method(...)
 			var searchStart = 0;
 			var dotPattern = "." + methodName + "(";
 			while (true)
 			{
-				var dotIdx = bodyLine.IndexOf(dotPattern, searchStart, StringComparison.Ordinal);
+				var dotIdx = line.IndexOf(dotPattern, searchStart, StringComparison.Ordinal);
 				if (dotIdx < 0)
 					break;
 				// Extract receiver token before the dot
 				var receiverEnd = dotIdx - 1;
 				var receiverStart = receiverEnd;
-				while (receiverStart >= 0 && IsWordChar(bodyLine[receiverStart]))
+				while (receiverStart >= 0 && line[receiverStart].IsLetter())
 					receiverStart--;
 				receiverStart++;
 				var receiver = receiverStart <= receiverEnd
-					? bodyLine.Substring(receiverStart, receiverEnd - receiverStart + 1)
+					? line.Substring(receiverStart, receiverEnd - receiverStart + 1)
 					: string.Empty;
 				// Only treat as recursion if calling this.Method(...) or TypeName.Method(...)
 				if (receiver.Equals("this", StringComparison.Ordinal) ||
 					receiver.Equals(type.Name, StringComparison.Ordinal))
 				{
 					var argsStart = dotIdx + dotPattern.Length - 1; // position at '('
-					var argsEnd = bodyLine.IndexOf(')', argsStart + 1);
+					var argsEnd = line.IndexOf(')', argsStart + 1);
 					if (argsEnd > argsStart)
 					{
-						var argText = bodyLine[(argsStart + 1)..argsEnd];
+						var argText = line[(argsStart + 1)..argsEnd];
 						if (ArgsEqualParams(argText))
 							throw new SelfRecursiveCallWithSameArgumentsDetected(type, LineNumber,
-								bodyLine.Trim());
+								line.Trim());
 					}
 				}
 				searchStart = dotIdx + dotPattern.Length;
@@ -227,29 +226,28 @@ public sealed class TypeParser(Type type, string[] lines)
 			var directPattern = methodName + "(";
 			while (true)
 			{
-				var directIdx = bodyLine.IndexOf(directPattern, searchStart, StringComparison.Ordinal);
+				var directIdx = line.IndexOf(directPattern, searchStart, StringComparison.Ordinal);
 				if (directIdx < 0)
 					break;
-
 				// Ensure it's not part of an identifier or a member call (preceded by '.' or word char)
 				var prevCharIdx = directIdx - 1;
 				if (prevCharIdx >= 0)
 				{
-					var prev = bodyLine[prevCharIdx];
-					if (prev == '.' || IsWordChar(prev))
+					var prev = line[prevCharIdx];
+					if (prev == '.' || prev.IsLetter())
 					{
 						searchStart = directIdx + directPattern.Length;
 						continue;
 					}
 				}
 				var argsStartDirect = directIdx + directPattern.Length - 1; // at '('
-				var argsEndDirect = bodyLine.IndexOf(')', argsStartDirect + 1);
+				var argsEndDirect = line.IndexOf(')', argsStartDirect + 1);
 				if (argsEndDirect > argsStartDirect)
 				{
-					var argText = bodyLine[(argsStartDirect + 1)..argsEndDirect];
+					var argText = line[(argsStartDirect + 1)..argsEndDirect];
 					if (ArgsEqualParams(argText))
 						throw new SelfRecursiveCallWithSameArgumentsDetected(type, LineNumber,
-							bodyLine.Trim());
+							line.Trim());
 				}
 				searchStart = directIdx + directPattern.Length;
 			}
@@ -264,19 +262,13 @@ public sealed class TypeParser(Type type, string[] lines)
 		const long MaximumRangeAllowed = 1_000_000_000L;
 		for (var i = 1; i < methodLines.Count; i++)
 		{
-			var bodyLine = methodLines[i];
-			if (!bodyLine.StartsWith('\t'))
-				continue;
-			if (bodyLine.Contains(" is ", StringComparison.Ordinal)) // skip inline tests
-				continue;
-			var idx = bodyLine.IndexOf("Range(", StringComparison.Ordinal);
-			if (idx < 0)
+			var line = methodLines[i];
+			var idx = line.IndexOf("Range(", StringComparison.Ordinal);
+			if (IsNonTestMethodLine(line) || idx < 0)
 				continue;
 			var startArgs = idx + "Range(".Length;
-			var endArgs = bodyLine.IndexOf(')', startArgs);
-			if (endArgs <= startArgs)
-				continue;
-			var args = bodyLine[startArgs..endArgs].Split(',',
+			var endArgs = line.IndexOf(')', startArgs);
+			var args = line[startArgs..endArgs].Split(',',
 				StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
 			if (args.Length != 2)
 				continue;
@@ -286,7 +278,7 @@ public sealed class TypeParser(Type type, string[] lines)
 			{
 				var span = Math.Abs(end - start);
 				if (span > MaximumRangeAllowed)
-					throw new HugeConstantRangeNotAllowed(type, LineNumber, bodyLine.Trim(), span,
+					throw new HugeConstantRangeNotAllowed(type, LineNumber, line.Trim(), span,
 						MaximumRangeAllowed);
 			}
 		}
