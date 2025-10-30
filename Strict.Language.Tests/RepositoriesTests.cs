@@ -62,7 +62,7 @@ public class RepositoriesTests
 			{
 				using var _ = new Type(strictPackage, new TypeLines("Invalid", "has 1")).
 					ParseMembersAndMethods(null!);
-			},
+			}, //ncrunch: no coverage
 			Throws.InstanceOf<ParsingFailed>().With.Message.Contains(@"Base\Invalid.strict:line 1"));
 	}
 

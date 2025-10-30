@@ -158,7 +158,15 @@ public sealed class TypeParser(Type type, string[] lines)
 		if (openParen <= 0 || closeParen <= openParen)
 			return;
 		var methodName = signature[..openParen].Trim();
-		// Extract parameter names from signature in order
+		var paramNames = GetParameterNames(signature, openParen, closeParen);
+		if (paramNames.Count != 0)
+			for (var i = 1; i < methodLines.Count; i++)
+				if (!IsNonTestMethodLine(methodLines[i]))
+					SearchForMethodCalls(methodName, methodLines[i], paramNames);
+	}
+
+	private static List<string> GetParameterNames(string signature, int openParen, int closeParen)
+	{
 		var paramNames = new List<string>();
 		var inside = signature[(openParen + 1)..closeParen];
 		foreach (var param in inside.Split(',',
@@ -168,90 +176,89 @@ public sealed class TypeParser(Type type, string[] lines)
 			if (parts.Length > 0)
 				paramNames.Add(parts[0]);
 		}
-		if (paramNames.Count == 0)
-			return;
+		return paramNames;
+	}
 
-		bool ArgsEqualParams(string argText)
+	private void SearchForMethodCalls(string methodName, string line, IReadOnlyList<string> paramNames)
+	{
+		var searchStart = 0;
+		var directPattern = methodName + "(";
+		while (true)
 		{
-			var argNames = argText.Split(',',
-				StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
-			if (argNames.Length != paramNames.Count)
+			var directIdx = line.IndexOf(directPattern, searchStart, StringComparison.Ordinal);
+			if (directIdx < 0)
+				break;
+			// Ensure it's not part of an identifier or a member call (preceded by '.' or word char)
+			var prevCharIdx = directIdx - 1;
+			if (prevCharIdx >= 0)
+			{
+				var prev = line[prevCharIdx];
+				if (prev == '.' || prev.IsLetter())
+				{
+					searchStart = directIdx + directPattern.Length;
+					continue;
+				}
+			}
+			var argsStartDirect = directIdx + directPattern.Length - 1; // at '('
+			var argsEndDirect = line.IndexOf(')', argsStartDirect + 1);
+			if (argsEndDirect > argsStartDirect)
+			{
+				var argText = line[(argsStartDirect + 1)..argsEndDirect];
+				if (AreParametersEqual(argText, paramNames))
+					throw new SelfRecursiveCallWithSameArgumentsDetected(type, LineNumber, line.Trim());
+			}
+			searchStart = directIdx + directPattern.Length;
+		}
+		SearchForMemberMethodCalls(methodName, line, paramNames);
+	}
+
+	private static bool AreParametersEqual(string argText, IReadOnlyList<string> paramNames)
+	{
+		var argNames = argText.Split(',',
+			StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+		if (argNames.Length != paramNames.Count)
+			return false;
+		for (var i = 0; i < argNames.Length; i++)
+			if (!argNames[i].Equals(paramNames[i], StringComparison.Ordinal))
 				return false;
-			for (var i = 0; i < argNames.Length; i++)
-				if (!argNames[i].Equals(paramNames[i], StringComparison.Ordinal))
-					return false;
-			return true;
-		}
+		return true;
+	}
 
-		for (var i = 1; i < methodLines.Count; i++)
+	private void SearchForMemberMethodCalls(string methodName, string line, IReadOnlyList<string> paramNames)
+	{
+		var searchStart = 0;
+		var dotPattern = "." + methodName + "(";
+		while (true)
 		{
-			var line = methodLines[i];
-			if (IsNonTestMethodLine(line))
-				continue;
-			// 1) Dot calls: receiver.Method(...)
-			var searchStart = 0;
-			var dotPattern = "." + methodName + "(";
-			while (true)
-			{
-				var dotIdx = line.IndexOf(dotPattern, searchStart, StringComparison.Ordinal);
-				if (dotIdx < 0)
-					break;
-				// Extract receiver token before the dot
-				var receiverEnd = dotIdx - 1;
-				var receiverStart = receiverEnd;
-				while (receiverStart >= 0 && line[receiverStart].IsLetter())
-					receiverStart--;
-				receiverStart++;
-				var receiver = receiverStart <= receiverEnd
-					? line.Substring(receiverStart, receiverEnd - receiverStart + 1)
-					: string.Empty;
-				// Only treat as recursion if calling this.Method(...) or TypeName.Method(...)
-				if (receiver.Equals("this", StringComparison.Ordinal) ||
-					receiver.Equals(type.Name, StringComparison.Ordinal))
-				{
-					var argsStart = dotIdx + dotPattern.Length - 1; // position at '('
-					var argsEnd = line.IndexOf(')', argsStart + 1);
-					if (argsEnd > argsStart)
-					{
-						var argText = line[(argsStart + 1)..argsEnd];
-						if (ArgsEqualParams(argText))
-							throw new SelfRecursiveCallWithSameArgumentsDetected(type, LineNumber,
-								line.Trim());
-					}
-				}
-				searchStart = dotIdx + dotPattern.Length;
-			}
-			// 2) Direct calls: Method(...)
-			searchStart = 0;
-			var directPattern = methodName + "(";
-			while (true)
-			{
-				var directIdx = line.IndexOf(directPattern, searchStart, StringComparison.Ordinal);
-				if (directIdx < 0)
-					break;
-				// Ensure it's not part of an identifier or a member call (preceded by '.' or word char)
-				var prevCharIdx = directIdx - 1;
-				if (prevCharIdx >= 0)
-				{
-					var prev = line[prevCharIdx];
-					if (prev == '.' || prev.IsLetter())
-					{
-						searchStart = directIdx + directPattern.Length;
-						continue;
-					}
-				}
-				var argsStartDirect = directIdx + directPattern.Length - 1; // at '('
-				var argsEndDirect = line.IndexOf(')', argsStartDirect + 1);
-				if (argsEndDirect > argsStartDirect)
-				{
-					var argText = line[(argsStartDirect + 1)..argsEndDirect];
-					if (ArgsEqualParams(argText))
-						throw new SelfRecursiveCallWithSameArgumentsDetected(type, LineNumber,
-							line.Trim());
-				}
-				searchStart = directIdx + directPattern.Length;
-			}
+			var dotIdx = line.IndexOf(dotPattern, searchStart, StringComparison.Ordinal);
+			if (dotIdx < 0)
+				break;
+			var receiverEnd = dotIdx - 1;
+			var receiverStart = receiverEnd;
+			while (receiverStart >= 0 && line[receiverStart].IsLetter())
+				receiverStart--;
+			receiverStart++;
+			var receiver = receiverStart <= receiverEnd
+				? line.Substring(receiverStart, receiverEnd - receiverStart + 1)
+				: string.Empty;
+			// Only treat as recursion if calling this.Method(...) or TypeName.Method(...)
+			if (receiver.Equals("this", StringComparison.Ordinal) ||
+				receiver.Equals(type.Name, StringComparison.Ordinal))
+				CheckRecursionCallingThisMethod(line, paramNames, dotIdx, dotPattern);
+			searchStart = dotIdx + dotPattern.Length;
 		}
+	}
+
+	private void CheckRecursionCallingThisMethod(string line, IReadOnlyList<string> paramNames,
+		int dotIdx, string dotPattern)
+	{
+		var argsStart = dotIdx + dotPattern.Length - 1;
+		var argsEnd = line.IndexOf(')', argsStart + 1);
+		if (argsEnd <= argsStart)
+			return;
+		var argText = line[(argsStart + 1)..argsEnd];
+		if (AreParametersEqual(argText, paramNames))
+			throw new SelfRecursiveCallWithSameArgumentsDetected(type, LineNumber, line.Trim());
 	}
 
 	/// <summary>

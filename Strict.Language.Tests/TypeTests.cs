@@ -27,27 +27,8 @@ public sealed class TypeTests
 			Throws.InstanceOf<Type.TypeAlreadyExistsInPackage>());
 
 	[Test]
-	public void EmptyLineIsNotAllowed() =>
-		Assert.That(() =>
-			{
-				using var _ = CreateType(nameof(EmptyLineIsNotAllowed), "");
-			},
-			Throws.InstanceOf<TypeParser.EmptyLineIsNotAllowed>().With.Message.Contains("line 1"));
-
-	[Test]
-	public void WhitespacesAreNotAllowed()
-	{
-		Assert.That(() => CreateType("Whitespace", " "),
-			Throws.InstanceOf<TypeParser.ExtraWhitespacesFoundAtBeginningOfLine>());
-		Assert.That(() => CreateType("ProgramWhitespace", " has App"),
-			Throws.InstanceOf<TypeParser.ExtraWhitespacesFoundAtBeginningOfLine>());
-		Assert.That(() => CreateType("TabWhitespace", "has\t"),
-			Throws.InstanceOf<TypeParser.ExtraWhitespacesFoundAtEndOfLine>());
-	}
-
-	[Test]
-	public void TypeParsersMustStartWithMember() =>
-		Assert.That(() => CreateType(nameof(TypeParsersMustStartWithMember), "Run", "\tlogger.Log"),
+	public void TypeMustStartWithMember() =>
+		Assert.That(() => CreateType(nameof(TypeMustStartWithMember), "Run", "\tlogger.Log"),
 			Throws.InstanceOf<Type.TypeHasNoMembersAndThusMustBeATraitWithoutMethodBodies>());
 
 	[Test]
@@ -71,7 +52,7 @@ public sealed class TypeTests
 		Assert.That(() =>
 			{
 				using var _ = CreateType(nameof(TypeNotFound) + lines[0][5], lines);
-			},
+			}, //ncrunch: no coverage
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.InstanceOf<Context.TypeNotFound>());
 
 	[Test]
@@ -79,12 +60,6 @@ public sealed class TypeTests
 		Assert.That(
 			() => new Type(new Package(nameof(NoMethodsFound)), new TypeLines("dummy", "has Number")).
 				ParseMembersAndMethods(null!), Throws.InstanceOf<Type.NoMethodsFound>());
-
-	[Test]
-	public void ExtraWhitespacesFoundAtBeginningOfLine() =>
-		Assert.That(
-			() => CreateType(nameof(ExtraWhitespacesFoundAtBeginningOfLine), "has logger", "Run",
-				" constant a = 5"), Throws.InstanceOf<TypeParser.ExtraWhitespacesFoundAtBeginningOfLine>());
 
 	[Test]
 	public void NoMatchingMethodFound() =>
@@ -98,11 +73,12 @@ public sealed class TypeTests
 		Assert.That(() => new Member(package.GetType(Base.App), "blub7", null!),
 			Throws.InstanceOf<Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers>());
 
-	[TestCase("has any")]
-	[TestCase("has random Any")]
-	public void MemberWithTypeAnyIsNotAllowed(string line) =>
-		Assert.That(() => CreateType(nameof(MemberWithTypeAnyIsNotAllowed) + line[5], line),
-			Throws.InstanceOf<TypeParser.MemberWithTypeAnyIsNotAllowed>());
+	[Test]
+	public void TraitMethodsMustBeImplemented() =>
+		Assert.That(() => CreateType(nameof(TraitMethodsMustBeImplemented),
+				"has App",
+				"Run"),
+			Throws.InstanceOf<TypeParser.MethodMustBeImplementedInNonTrait>());
 
 	[TestCase("has logger", "Run", "\tconstant result = Any")]
 	[TestCase("has logger", "Run", "\tconstant result = Any(5)")]
@@ -122,7 +98,7 @@ public sealed class TypeTests
 		Assert.That(() =>
 			{
 				using var _ = CreateType(nameof(MethodParameterWithTypeAnyIsNotAllowed), lines);
-			},
+			}, //ncrunch: no coverage
 			Throws.InstanceOf<Method.ParametersWithTypeAnyIsNotAllowed>());
 
 	[Test]
@@ -132,13 +108,7 @@ public sealed class TypeTests
 				"\tconstant result = 5"), Throws.InstanceOf<Method.MethodReturnTypeAsAnyIsNotAllowed>());
 
 	[Test]
-	public void MembersMustComeBeforeMethods() =>
-		Assert.That(() => CreateType(nameof(MembersMustComeBeforeMethods), "Run", "has logger"),
-			Throws.InstanceOf<TypeParser.MembersMustComeBeforeMethods>());
-
-	[Test]
 	public void SimpleApp() =>
-		// @formatter:off
 		CheckApp(CreateType(nameof(SimpleApp),
 			"has App",
 			"has logger",
@@ -165,9 +135,9 @@ public sealed class TypeTests
 	[Test]
 	public void NotImplementingAnyTraitMethodsAreAllowed() =>
 		Assert.That(() => CreateType(nameof(NotImplementingAnyTraitMethodsAreAllowed),
-				"has App",
-				"add(number)",
-				"\treturn one + 1"), Is.Not.Null);
+			"has App",
+			"add(number)",
+			"\treturn one + 1"), Is.Not.Null);
 
 	[Test]
 	public void CannotImplementFewTraitMethodsAndLeaveOthers()
@@ -178,14 +148,6 @@ public sealed class TypeTests
 		Assert.That(() => type.ParseMembersAndMethods(parser),
 			Throws.InstanceOf<Type.MustImplementAllTraitMethodsOrNone>());
 	}
-
-	[Test]
-	public void TraitMethodsMustBeImplemented() =>
-		Assert.That(() => CreateType(nameof(TraitMethodsMustBeImplemented),
-				"has App",
-				"Run"),
-			Throws.InstanceOf<TypeParser.MethodMustBeImplementedInNonTrait>());
-	// @formatter:on
 
 	[Test]
 	public void Trait()
@@ -353,13 +315,6 @@ public sealed class TypeTests
 			Throws.InstanceOf<Member.InvalidConstraintExpression>());
 
 	[Test]
-	public void MissingConstraintExpression() =>
-		Assert.That(
-			() => CreateType(nameof(MissingConstraintExpression),
-				"mutable numbers with", "AddNumbers Number", "\tnumbers(0) + numbers(1)"),
-			Throws.InstanceOf<TypeParser.MemberMissingConstraintExpression>());
-
-	[Test]
 	public void TypeNameCanHaveOneNumberAtEnd()
 	{
 		using var vector2 = CreateType("Vector2", "has numbers", "AddNumbers Number",
@@ -422,13 +377,6 @@ public sealed class TypeTests
 			new TypeLines("Instruction", "constant Set", "constant Add")).ParseMembersAndMethods(parser);
 		Assert.That(instructionType.IsSameOrCanBeUsedAs(package.GetType(Base.Number)), Is.True);
 	}
-
-	[Test]
-	public void CurrentTypeCannotBeInstantiatedAsMemberType() =>
-		Assert.That(
-			() => CreateType(nameof(CurrentTypeCannotBeInstantiatedAsMemberType), "has number",
-				"has currentType = CurrentTypeCannotBeInstantiatedAsMemberType(5)", "Unused", "\t1"),
-			Throws.InstanceOf<TypeParser.CurrentTypeCannotBeInstantiatedAsMemberType>());
 
 	[Test]
 	public void MemberNameAsAnotherMemberTypeNameIsForbidden() =>

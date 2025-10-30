@@ -218,7 +218,7 @@ public sealed class MethodTests
 					new MockRunTypeLines());
 				return new Method(mockType, 0, parser, ["NoTestMethod Number", "	5"]).
 					GetBodyAndParseIfNeeded();
-			},
+			}, //ncrunch: no coverage
 			Throws.InstanceOf<Method.MethodMustHaveAtLeastOneTest>());
 
 	[Test]
