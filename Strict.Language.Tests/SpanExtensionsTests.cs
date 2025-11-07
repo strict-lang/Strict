@@ -127,4 +127,20 @@ GetComplicatedSequenceTexts returns Texts
 	[TestCase(@"""hello"" is Text")]
 	public void Count(string input) =>
 		Assert.That(input.AsSpan().Count('\"'), Is.EqualTo(2));
+
+	[TestCase("word", true)]
+	[TestCase("someNumber", true)]
+	[TestCase(" ", false)]
+	[TestCase("5", false)]
+	[TestCase(".", false)]
+	public void IsWord(string text, bool expected) =>
+		Assert.That(text.AsSpan().IsWord(), Is.EqualTo(expected));
+
+	[TestCase('a', true)]
+	[TestCase('Z', true)]
+	[TestCase('5', false)]
+	[TestCase('.', false)]
+	[TestCase(' ', false)]
+	public void IsLetter(char c, bool expected) =>
+		Assert.That(c.IsLetter(), Is.EqualTo(expected));
 }

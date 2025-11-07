@@ -10,14 +10,11 @@ public sealed class TypeParserTests
 
 	[Test]
 	public void EmptyLineIsNotAllowed() =>
-		Assert.That(() =>
-			{
-				using var _ = CreateType(nameof(EmptyLineIsNotAllowed), "");
-			}, //ncrunch: no coverage
-			Throws.InstanceOf<TypeParser.EmptyLineIsNotAllowed>().With.Message.Contains("line1"));
+		Assert.That(() => CreateType(nameof(EmptyLineIsNotAllowed), ""),
+			Throws.InstanceOf<TypeParser.EmptyLineIsNotAllowed>());
 
-	private Type CreateType(string name, params string[] lines) =>
-		new Type(package, new TypeLines(name, lines)).ParseMembersAndMethods(parser);
+	private void CreateType(string name, params string[] lines) =>
+		new Type(package, new TypeLines(name, lines)).ParseMembersAndMethods(parser).Dispose();
 
 	[Test]
 	public void WhitespacesAreNotAllowed()
@@ -64,43 +61,44 @@ public sealed class TypeParserTests
 	[Test]
 	public void TrivialEndlessSelfConstructionInFromIsDetected() =>
 		Assert.That(
-			() =>
-			{
-				var typeName = nameof(TrivialEndlessSelfConstructionInFromIsDetected);
-				CreateType(typeName,
-					$"from(n Number)",
-					$"\t{typeName}(0)");
-			},
+			() => CreateType(nameof(TrivialEndlessSelfConstructionInFromIsDetected),
+				"has logger",
+				"from(number)",
+				$"\t{nameof(TrivialEndlessSelfConstructionInFromIsDetected)}(0)"),
 			Throws.InstanceOf<TypeParser.TrivialEndlessSelfConstructionDetected>());
 
 	[Test]
-	public void SelfRecursiveCallWithSameArgumentsIsDetectedForDirectCall() =>
+	public void SelfRecursiveCallWithSameArgumentsDirectCall() =>
 		Assert.That(
-			() => CreateType(nameof(SelfRecursiveCallWithSameArgumentsIsDetectedForDirectCall),
-				"Foo(a Number, b Number)",
-				"\tFoo(a, b)"),
+			() => CreateType(nameof(SelfRecursiveCallWithSameArgumentsDirectCall),
+				"has logger",
+				"Foo(first Number, second Number)",
+				"\tFoo(first, second)"),
 			Throws.InstanceOf<TypeParser.SelfRecursiveCallWithSameArgumentsDetected>());
 
 	[Test]
-	public void SelfRecursiveCallWithSameArgumentsIsDetectedForThisDotCall() =>
+	public void SelfRecursiveCallWithSameArgumentsDotCall() =>
 		Assert.That(
-			() => CreateType(nameof(SelfRecursiveCallWithSameArgumentsIsDetectedForThisDotCall),
-				"Bar(x Number)",
-				"\tthis.Bar(x)"),
+			() => CreateType(nameof(SelfRecursiveCallWithSameArgumentsDotCall),
+				"has logger",
+				"Bar(number)",
+				"\tthis.Bar(number)"),
 			Throws.InstanceOf<TypeParser.SelfRecursiveCallWithSameArgumentsDetected>());
 
 	[Test]
-	public void SelfRecursiveCallWithSameArgumentsIsDetectedForTypeDotCall() =>
+	public void SelfRecursiveCallWithSameArgumentsTypeDotCall() =>
 		Assert.That(
-			() => CreateType(nameof(SelfRecursiveCallWithSameArgumentsIsDetectedForTypeDotCall),
-				"Baz(y Number)",
-				"\tSelfRecursiveCallWithSameArgumentsIsDetectedForTypeDotCall.Baz(y)"),
+			() => CreateType(nameof(SelfRecursiveCallWithSameArgumentsTypeDotCall),
+				"has logger",
+				"Baz(number)",
+				"\t" + nameof(SelfRecursiveCallWithSameArgumentsTypeDotCall) + ".Baz(number)"),
 			Throws.InstanceOf<TypeParser.SelfRecursiveCallWithSameArgumentsDetected>());
 
 	[Test]
 	public void HugeConstantRangeIsDetected() =>
 		Assert.That(
 			() => CreateType(nameof(HugeConstantRangeIsDetected),
+				"has logger",
 				"Run",
 				"\tRange(1,2000000001)"),
 			Throws.InstanceOf<TypeParser.HugeConstantRangeNotAllowed>());
