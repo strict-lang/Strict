@@ -12,7 +12,8 @@ public sealed class TypeValidator : Visitor
 	{
 		if (!type.IsDataType)
 			foreach (var member in type.Members)
-				if (!IsReservedName(member.Name) && !member.IsPublic && type.CountMemberUsage(member.Name) < 2)
+				if (!IsReservedName(member.Name) && !member.IsPublic &&
+					type.CountMemberUsage(member.Name) < 2)
 					throw new UnusedMemberMustBeRemoved(type, member.Name);
 		base.Visit(type, context);
 	}

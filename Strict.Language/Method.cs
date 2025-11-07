@@ -353,6 +353,8 @@ public sealed class Method : Context
 				? methodBody.Expressions[0]
 				: methodBody;
 		var expression = methodBody.Parse();
+		if (expression.GetType().Name == Base.Declaration)
+			throw new DeclarationIsNeverUsedAndMustBeRemoved(Type, TypeLineNumber, expression);
 		if (methodBody.Variables != null)
 			foreach (var variable in methodBody.Variables)
 				if (variable is { IsMutable: true, InitialValue.IsConstant: true } &&
@@ -362,6 +364,9 @@ public sealed class Method : Context
 			throw new MethodMustHaveAtLeastOneTest(Type, Name, TypeLineNumber);
 		return BodyParsed?.Invoke(expression) ?? expression;
 	}
+
+	public sealed class DeclarationIsNeverUsedAndMustBeRemoved(Type type, int lineNumber,
+		Expression expression) : ParsingFailed(type, lineNumber, expression.ToString());
 
 	public sealed class MutableUsesConstantValue(Body body, string name, Expression value)
 		: ParsingFailed(body,

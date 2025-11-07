@@ -47,7 +47,7 @@ public static class Base
 	public const string Return = nameof(Return);
 	public const string Directory = nameof(Directory);
 	public const string Run = nameof(Run);
-	public const string ConstantDeclaration = nameof(ConstantDeclaration);
+	public const string Declaration = nameof(Declaration);
 	public const string MutableReassignment = nameof(MutableReassignment);
 	public const string ValueLowercase = "value";
 	public const string TextWriter = nameof(TextWriter);

@@ -1,6 +1,6 @@
 ﻿namespace Strict.Expressions.Tests;
 
-public sealed class MutableDeclarationTests : TestExpressions
+public sealed class MutableReassignmentTests : TestExpressions
 {
 	[SetUp]
 	public void CreateParser() => parser = new MethodExpressionParser();
@@ -53,7 +53,7 @@ public sealed class MutableDeclarationTests : TestExpressions
 					new TypeLines(nameof(IncompleteMutableMethodParameter), "has something Number",
 						"Add(mutable input) Number", "\tinput = something + input"));
 				dummy.ParseMembersAndMethods(parser);
-			},
+			}, //ncrunch: no coverage
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.InstanceOf<Context.TypeNotFound>());
 
 	[Test]
@@ -95,7 +95,7 @@ public sealed class MutableDeclarationTests : TestExpressions
 			{
 				using var dummyType = new Type(type.Package, new TypeLines(testName, code));
 				dummyType.ParseMembersAndMethods(parser).Methods[0].GetBodyAndParseIfNeeded();
-			},
+			}, //ncrunch: no coverage
 			Throws.InstanceOf<MutableReassignment.ValueTypeNotMatchingWithAssignmentType>());
 
 	[Test]
@@ -118,7 +118,7 @@ public sealed class MutableDeclarationTests : TestExpressions
 					new TypeLines(nameof(MissingMutableArgument), "has logger", "Add(input Number) Number",
 						"\tconstant result =", "\tresult = result + input"));
 				dummy.ParseMembersAndMethods(parser).Methods[0].GetBodyAndParseIfNeeded();
-			},
+			}, //ncrunch: no coverage
 			Throws.InstanceOf<Declaration.MissingAssignmentValueExpression>());
 
 	[TestCase("(1, 2, 3)", "Numbers", "MutableTypeWithListArgumentIsAllowed")]
@@ -132,6 +132,7 @@ public sealed class MutableDeclarationTests : TestExpressions
 		var body = (Body)program.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(((Declaration)body.Expressions[0]).Value.ToString(),
 			Is.EqualTo(code));
+		Assert.That(body.Expressions[^1].IsConstant, Is.False);
 	}
 
 	[Test]
@@ -210,7 +211,7 @@ public sealed class MutableDeclarationTests : TestExpressions
 						$"mutable something {code}", "Add(input Count) Number",
 						"\tconstant result = something + input"));
 				dummy.ParseMembersAndMethods(parser);
-			},
+			}, //ncrunch: no coverage
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.InstanceOf<Context.TypeNotFound>());
 
 	[Test]
@@ -226,7 +227,7 @@ public sealed class MutableDeclarationTests : TestExpressions
 					new TypeLines(nameof(CannotReassignValuesToImmutableMember),
 						"has input = BaseClever(3)", "Run", "\tinput.Compute", "\tinput = BaseClever(5)"));
 				innerDummy.ParseMembersAndMethods(parser).Methods[0].GetBodyAndParseIfNeeded();
-			},
+			}, //ncrunch: no coverage
 			Throws.InstanceOf<Body.ValueIsNotMutableAndCannotBeChanged>());
 	}
 
@@ -308,6 +309,6 @@ public sealed class MutableDeclarationTests : TestExpressions
 					new TypeLines(nameof(NotAllowedToReassignMethodCall), "mutable Number",
 						"MutableCall Mutable(Number)", "\tMutableCall = Number", "\tNumber = 5"));
 				dummy.ParseMembersAndMethods(parser).Methods[0].GetBodyAndParseIfNeeded();
-			},
+			}, //ncrunch: no coverage
 			Throws.InstanceOf<Body.IdentifierNotFound>());
 }

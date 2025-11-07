@@ -110,12 +110,10 @@ public sealed class ListAdvancedTests : TestExpressions
 	{
 		using var mutableTextsType = new Type(type.Package,
 				new TypeLines(nameof(CreateMemberWithMutableListType), "mutable mutableTexts Texts",
-					"AddFiveToMutableList Texts", "\tmutableTexts = mutableTexts + \"5\"",
-					"\tmutableTexts")).
+					"AddFiveToMutableList Texts", "\tmutableTexts = mutableTexts + \"5\"")).
 			ParseMembersAndMethods(parser);
-		var expression = (Body)mutableTextsType.Methods[0].GetBodyAndParseIfNeeded();
-		Assert.That(((Binary)((MutableReassignment)expression.Expressions[0]).Value).ToString(),
-			Is.EqualTo("mutableTexts + \"5\""));
+		var expression = (MutableReassignment)mutableTextsType.Methods[0].GetBodyAndParseIfNeeded();
+		Assert.That(((Binary)expression.Value).ToString(), Is.EqualTo("mutableTexts + \"5\""));
 	}
 
 	[Test]

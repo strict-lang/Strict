@@ -139,7 +139,7 @@ public sealed class Body : Expression
 	/// </summary>
 	private static bool
 		ChildHasMatchingMethodReturnType(Type parentType, Expression lastExpression) =>
-		lastExpression.GetType().Name == Base.ConstantDeclaration && parentType.Name == Base.None ||
+		lastExpression.GetType().Name == Base.Declaration && parentType.Name == Base.None ||
 		lastExpression.ReturnType.Name == Base.Error ||
 		lastExpression.ReturnType.IsSameOrCanBeUsedAs(parentType);
 

@@ -79,6 +79,7 @@ public sealed class TypeParser(Type type, string[] lines)
 			DetectTrivialEndlessRecursionInFrom(methodLines);
 			DetectSelfRecursionWithSameArguments(methodLines);
 			DetectHugeConstantRange(methodLines);
+			DetectRedundantReturn(methodLines);
 			type.Methods.Add(new Method(type, LineNumber, parser, methodLines));
 		}
 	}
@@ -91,7 +92,7 @@ public sealed class TypeParser(Type type, string[] lines)
 	private void DetectTrivialEndlessRecursionInFrom(IReadOnlyList<string> methodLines)
 	{
 		if (methodLines.Count == 0)
-			return;
+			return; //ncrunch: no coverage
 		var signature = methodLines[0];
 		var openParen = signature.IndexOf('(');
 		if (openParen <= 0)
@@ -114,7 +115,7 @@ public sealed class TypeParser(Type type, string[] lines)
 			var startArgs = idx + typeCtorPrefix.Length;
 			var endArgs = line.IndexOf(')', startArgs);
 			if (endArgs <= startArgs)
-				continue;
+				continue; //ncrunch: no coverage
 			var argText = line[startArgs..endArgs];
 			// If argText does not contain any parameter name, it's a constant/self call -> flag
 			var usesAnyParam = paramNames.Any(p => argText.Contains(p, StringComparison.Ordinal));
@@ -217,7 +218,7 @@ public sealed class TypeParser(Type type, string[] lines)
 		var argNames = argText.Split(',',
 			StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
 		if (argNames.Length != paramNames.Count)
-			return false;
+			return false; //ncrunch: no coverage
 		for (var i = 0; i < argNames.Length; i++)
 			if (!argNames[i].Equals(paramNames[i], StringComparison.Ordinal))
 				return false;
@@ -254,12 +255,13 @@ public sealed class TypeParser(Type type, string[] lines)
 	{
 		var argsStart = dotIdx + dotPattern.Length - 1;
 		var argsEnd = line.IndexOf(')', argsStart + 1);
-		if (argsEnd <= argsStart)
-			return;
-		var argText = line[(argsStart + 1)..argsEnd];
-		if (AreParametersEqual(argText, paramNames))
-			throw new SelfRecursiveCallWithSameArgumentsDetected(type, LineNumber, line.Trim());
-	}
+		if (argsEnd > argsStart)
+		{
+			var argText = line[(argsStart + 1)..argsEnd];
+			if (AreParametersEqual(argText, paramNames))
+				throw new SelfRecursiveCallWithSameArgumentsDetected(type, LineNumber, line.Trim());
+		} //ncrunch: no coverage
+	} //ncrunch: no coverage
 
 	/// <summary>
 	/// Prevent obviously gigantic constant ranges like 1 billion, no need for that in Strict.
@@ -277,9 +279,8 @@ public sealed class TypeParser(Type type, string[] lines)
 			var endArgs = line.IndexOf(')', startArgs);
 			var args = line[startArgs..endArgs].Split(',',
 				StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
-			if (args.Length != 2)
-				continue;
-			if (long.TryParse(args[0], NumberStyles.Integer, CultureInfo.InvariantCulture,
+			if (args.Length == 2 &&
+				long.TryParse(args[0], NumberStyles.Integer, CultureInfo.InvariantCulture,
 					out var start) && long.TryParse(args[1], NumberStyles.Integer,
 					CultureInfo.InvariantCulture, out var end))
 			{
@@ -287,7 +288,7 @@ public sealed class TypeParser(Type type, string[] lines)
 				if (span > MaximumRangeAllowed)
 					throw new HugeConstantRangeNotAllowed(type, LineNumber, line.Trim(), span,
 						MaximumRangeAllowed);
-			}
+			} //ncrunch: no coverage
 		}
 	}
 
@@ -302,6 +303,26 @@ public sealed class TypeParser(Type type, string[] lines)
 	public sealed class HugeConstantRangeNotAllowed(Type type, int lineNumber, string line,
 		long span, long limit) : ParsingFailed(type, lineNumber,
 		$"Range size {span} exceeds limit {limit}: " + line);
+
+	private void DetectRedundantReturn(IReadOnlyList<string> lines)
+	{
+		if (lines.Count < 3)
+			return;
+		var prevAssignmentIndex = lines[^2].IndexOf(" = ", StringComparison.Ordinal);
+		if (prevAssignmentIndex <= 0)
+			return;
+		var left = lines[^2][1..prevAssignmentIndex];
+		var right = lines[^2][(prevAssignmentIndex + 3)..];
+		var variableName = left.Split(' ', StringSplitOptions.RemoveEmptyEntries).LastOrDefault();
+		if (!string.IsNullOrEmpty(variableName) &&
+			(string.Equals(lines[^1].TrimStart(), variableName, StringComparison.Ordinal) ||
+				string.Equals(lines[^1].TrimStart(), right, StringComparison.Ordinal)))
+			throw new RedundantReturnThePreviousLineContainsTheReturnValueAlready(type, LineNumber, lines[^2], variableName);
+	}
+
+	public sealed class RedundantReturnThePreviousLineContainsTheReturnValueAlready(
+		Type type, int lineNumber, string prevLine, string variableName) :
+		ParsingFailed(type, lineNumber, prevLine, variableName);
 
 	private string ValidateCurrentLineIsNonEmptyAndTrimmed()
 	{
@@ -417,7 +438,7 @@ public sealed class TypeParser(Type type, string[] lines)
 		if (constantValue.StartsWith('\"'))
 			return type.GetType(Base.Text);
 		if (constantValue is "true" || constantValue is "false")
-			return type.GetType(Base.Boolean);
+			return type.GetType(Base.Boolean); //ncrunch: no coverage
 		return constantValue.TryParseNumber(out _)
 			? type.GetType(Base.Number)
 			: GetMemberExpression(parser, nameAndType, constantValue).ReturnType;

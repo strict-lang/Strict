@@ -47,4 +47,13 @@ public sealed class ReturnTests : TestExpressions
 		var returnExpression = new Return(new Number(method, 33));
 		Assert.That(returnExpression.GetHashCode(), Is.EqualTo(returnExpression.Value.GetHashCode()));
 	}
+
+	[Test]
+	public void Equals()
+	{
+		var returnOne = new Return(new Number(method, 1));
+		Assert.That(returnOne.IsConstant, Is.True);
+		Assert.That(returnOne.Equals(new Return(new Number(method, 2))), Is.False);
+		Assert.That(returnOne.Equals(returnOne), Is.True);
+	}
 }

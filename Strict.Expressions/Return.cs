@@ -8,7 +8,7 @@ public sealed class Return(Expression value) : Expression(value.ReturnType)
 	public override bool IsConstant => Value.IsConstant;
 	public override int GetHashCode() => Value.GetHashCode();
 	public override string ToString() => Keyword.Return + " " + Value;
-	public override bool Equals(Expression? other) => other is Return a && Equals(Value, a.Value);
+	public override bool Equals(Expression? other) => other is Return a && Value.Equals(a.Value);
 
 	public static Expression? TryParse(Body body, ReadOnlySpan<char> line) =>
 		line.StartsWith(Keyword.Return, StringComparison.Ordinal)

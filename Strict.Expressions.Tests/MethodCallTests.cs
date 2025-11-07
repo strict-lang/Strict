@@ -150,7 +150,7 @@ public sealed class MethodCallTests : TestExpressions
 				"has myMember Text",
 				"Dummy(dummy Number) Text",
 				"\tlet result = value.myMember",
-				"\tresult")).
+				"\tresult + \"dummy\"")).
 			ParseMembersAndMethods(new MethodExpressionParser());
 		var body = (Body)program.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(body.FindVariable("value")?.Type, Is.EqualTo(program));

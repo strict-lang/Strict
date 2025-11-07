@@ -61,12 +61,12 @@ public class Package : Context, IEnumerable<Type>, IDisposable
 			return;
 		var existing = parentPackage.children.FirstOrDefault(existingPackage => existingPackage.Name == Name);
 		if (existing != null)
-			throw new PackageAlreadyExists(Name, parentPackage, existing);
+			throw new PackageAlreadyExists(Name, parentPackage, existing); //ncrunch: no coverage
 		parentPackage.children.Add(this);
 	}
 
 	public class PackageAlreadyExists(string name, Package parentPackage, Package existing)
-		: Exception(name + " in " + (parentPackage.Name == ""
+		: Exception(name + " in " + (parentPackage.Name == "" //ncrunch: no coverage
 				? nameof(Root)
 				: "parent package " + parentPackage)
 #if DEBUG
@@ -166,7 +166,7 @@ public class Package : Context, IEnumerable<Type>, IDisposable
 	}
 
 	internal void Remove(Package package) => children.Remove(package);
-	public IEnumerator<Type> GetEnumerator() => types.Values.GetEnumerator();
+	public IEnumerator<Type> GetEnumerator() => types.Values.GetEnumerator(); //ncrunch: no coverage
 	IEnumerator IEnumerable.GetEnumerator() => GetEnumerator(); //ncrunch: no coverage
 
 	// ReSharper disable once ConditionalAccessQualifierIsNonNullableAccordingToAPIContract

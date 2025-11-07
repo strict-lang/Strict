@@ -90,7 +90,7 @@ public class Type : Context, IDisposable
 	public Type ParseMembersAndMethods(ExpressionParser parser)
 	{
 		if (typeParser.LineNumber >= 0)
-			throw new TypeWasAlreadyParsed(this);
+			throw new TypeWasAlreadyParsed(this); //ncrunch: no coverage
 		typeParser.ParseMembersAndMethods(parser);
 		ValidateMethodAndMemberCountLimits();
 		// ReSharper disable once ForCanBeConvertedToForeach, for performance reasons:
@@ -104,7 +104,7 @@ public class Type : Context, IDisposable
 		return this;
 	}
 
-	public class TypeWasAlreadyParsed(Type type) : Exception(type.ToString());
+	public class TypeWasAlreadyParsed(Type type) : Exception(type.ToString()); //ncrunch: no coverage
 
 	public sealed class MustImplementAllTraitMethodsOrNone(Type type, string traitName,
 		IEnumerable<Method> missingTraitMethods) : ParsingFailed(type, type.typeParser.LineNumber,
@@ -138,12 +138,12 @@ public class Type : Context, IDisposable
 	private bool CheckIfParsed()
 	{
 		if (Lines.Length > 1 && typeParser.LineNumber == -1)
-			throw new TypeIsNotParsedCallParseMembersAndMethods(this);
+			throw new TypeIsNotParsedCallParseMembersAndMethods(this); //ncrunch: no coverage
 		return true;
 	}
 
 	private sealed class TypeIsNotParsedCallParseMembersAndMethods(Type type)
-		: Exception(type.ToString());
+		: Exception(type.ToString()); //ncrunch: no coverage
 
 	public bool IsEnum =>
 		CheckIfParsed() && methods.Count == 0 && members.Count > 1 &&

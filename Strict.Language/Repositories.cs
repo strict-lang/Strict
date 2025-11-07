@@ -170,7 +170,7 @@ public sealed class Repositories
 	{
 		// The main folder can be empty, other folders must contain at least one file to create a package
 		if (parent != null && files.Count == 0)
-			return parent;
+			return parent; //ncrunch: no coverage
 #if DEBUG
 		var package = parent != null
 			// ReSharper disable ExplicitCallerInfoArgument
