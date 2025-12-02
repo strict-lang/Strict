@@ -18,37 +18,39 @@ public class DeclarationTests : TestExpressions
 	[Test]
 	public void ParseNumber()
 	{
-		var assignment = (Declaration)ParseExpression("constant number = 5");
+		var body = (Body)ParseExpression("constant number = 5", "number");
+		var assignment = (Declaration)body.Expressions[0];
 		Assert.That(assignment, Is.EqualTo(new Declaration(new Body(method), nameof(number), number)));
 		Assert.That(assignment.Value.ReturnType, Is.EqualTo(number.ReturnType));
 		Assert.That(((Number)assignment.Value).ToString(), Is.EqualTo("5"));
+		Assert.That(body.Expressions[1], Is.InstanceOf<VariableCall>());  // Verifies usage
 	}
 
 	[Test]
 	public void ParseText()
 	{
-		const string Input = "constant value = \"Hey\"";
-		var expression = (Declaration)ParseExpression(Input);
+		var body = (Body)ParseExpression("constant value = \"Hey\"", "value");
+		var expression = (Declaration)body.Expressions[0];
 		Assert.That(expression.Name, Is.EqualTo("value"));
 		Assert.That(expression.Value.ToString(), Is.EqualTo("\"Hey\""));
-		Assert.That(expression.ToString(), Is.EqualTo(Input));
+		Assert.That(body.Expressions[1], Is.InstanceOf<VariableCall>());
 	}
 
 	[Test]
 	public void AssignmentToString()
 	{
-		const string Input = "constant sum = 5 + 3";
-		var expression = (Declaration)ParseExpression(Input);
+		var body = (Body)ParseExpression("constant sum = 5 + 3", "sum");
+		var expression = (Declaration)body.Expressions[0];
 		Assert.That(expression.Name, Is.EqualTo("sum"));
 		Assert.That(expression.Value.ToString(), Is.EqualTo("5 + 3"));
-		Assert.That(expression.ToString(), Is.EqualTo(Input));
+		Assert.That(expression.ToString(), Is.EqualTo("constant sum = 5 + 3"));
 	}
 
 	[Test]
 	public void AssignmentWithNestedBinary()
 	{
-		const string Input = "constant result = ((5 + 3) * 2 - 5) / 6";
-		var expression = (Declaration)ParseExpression(Input);
+		var body = (Body)ParseExpression("constant result = ((5 + 3) * 2 - 5) / 6", "result");
+		var expression = (Declaration)body.Expressions[0];
 		Assert.That(expression.Name, Is.EqualTo("result"));
 		Assert.That(expression.Value, Is.InstanceOf<Binary>());
 		var rightExpression = (Number)((Binary)expression.Value).Arguments[0];
@@ -58,8 +60,8 @@ public class DeclarationTests : TestExpressions
 	[Test]
 	public void AssignmentWithListAddition()
 	{
-		const string Input = "constant numbers = (1, 2, 3) + 6";
-		var expression = (Declaration)ParseExpression(Input);
+		var body = (Body)ParseExpression("constant numbers = (1, 2, 3) + 6", "numbers");
+		var expression = (Declaration)body.Expressions[0];
 		Assert.That(expression.Name, Is.EqualTo("numbers"));
 		Assert.That(expression.ReturnType.Name,
 			Is.EqualTo(Base.List + "(" + nameof(TestPackage) + "." + Base.Number + ")"));
@@ -72,8 +74,8 @@ public class DeclarationTests : TestExpressions
 	[Test]
 	public void NotAssignment()
 	{
-		const string Input = "constant inverted = not true";
-		var expression = (Declaration)ParseExpression(Input);
+		var body = (Body)ParseExpression("constant inverted = not true", "inverted");
+		var expression = (Declaration)body.Expressions[0];
 		Assert.That(expression.Name, Is.EqualTo("inverted"));
 		Assert.That(expression.Value, Is.InstanceOf<Not>());
 		Assert.That(expression.Value.ToString(), Is.EqualTo("not true"));
@@ -104,7 +106,8 @@ public class DeclarationTests : TestExpressions
 	[Test]
 	public void AssignmentGetHashCode()
 	{
-		var assignment = (Declaration)ParseExpression("constant value = 1");
+		var body = (Body)ParseExpression("constant value = 1", "value");
+		var assignment = (Declaration)body.Expressions[0];
 		Assert.That(assignment.GetHashCode(),
 			Is.EqualTo(assignment.Name.GetHashCode() ^ assignment.Value.GetHashCode()));
 	}
@@ -133,11 +136,12 @@ public class DeclarationTests : TestExpressions
 				"has logger",
 				"MethodToCall Text",
 				"\t\"Hello World\"",
-		"Run",
-				"\tconstant result = MethodToCall")).ParseMembersAndMethods(parser);
+				"Run",
+				"\tconstant result = MethodToCall",
+				"\tresult is Text")).ParseMembersAndMethods(parser);
 		Assert.That(program.Methods[0].ToString(), Is.EqualTo("MethodToCall Text"));
-		Assert.That(program.Methods[1].GetBodyAndParseIfNeeded().ToString(),
-			Is.EqualTo("constant result = MethodToCall"));
+		var body = (Body)program.Methods[1].GetBodyAndParseIfNeeded();
+		Assert.That(body.Expressions[0].ToString(), Is.EqualTo("constant result = MethodToCall"));
 	}
 
 	[Test]
@@ -148,7 +152,7 @@ public class DeclarationTests : TestExpressions
 				"has logger",
 				"LocalMethod Text",
 				"\t\"Hello World\"",
-		"Run",
+				"Run",
 				"\t\"Random Text\"")).ParseMembersAndMethods(parser);
 		Assert.That(program.Methods[0].ReturnType.Name, Is.EqualTo(Base.Text));
 	}
@@ -156,9 +160,10 @@ public class DeclarationTests : TestExpressions
 	[Test]
 	public void LetAssignmentWithConstructorCall() =>
 		Assert.That(
-			((Declaration)new Type(Package,
+			((Declaration)((Body)new Type(Package,
 					new TypeLines(nameof(LetAssignmentWithConstructorCall), "has logger",
 						"Run",
-						"\tconstant file = File(\"test.txt\")")).ParseMembersAndMethods(parser).Methods[0].
-				GetBodyAndParseIfNeeded()).Value.ToString(), Is.EqualTo("File(\"test.txt\")"));
+						"\tconstant file = File(\"test.txt\")",
+						"\tfile is File")).ParseMembersAndMethods(parser).Methods[0].
+				GetBodyAndParseIfNeeded()).Expressions[0]).Value.ToString(), Is.EqualTo("File(\"test.txt\")"));
 }
