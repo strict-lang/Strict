@@ -43,9 +43,9 @@ public sealed class IfAdvancedTests : TestExpressions
 	[TestCase("logger.Log(true ? \"Yes\" + \"text\" else \"No\")")]
 	[TestCase("logger.Log(\"Result\" + (true ? \"Yes\" else \"No\"))")]
 	[TestCase("logger.Log((true ? \"Yes\" else \"No\") + \"Result\")")]
-	[TestCase("constant something = 5 is 5 ? false else true")]
+	[TestCase("constant something = 5 is 5 ? false else true", "something")]
 	[TestCase("6 is 5 ? true else false")]
-	public void ConditionalExpressionsAsPartOfOtherExpression(string code) =>
+	public void ConditionalExpressionsAsPartOfOtherExpression(params string[] code) =>
 		Assert.That(ParseExpression(code).ToString(), Is.EqualTo(code));
 
 	[Test]

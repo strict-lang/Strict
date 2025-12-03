@@ -91,10 +91,11 @@ public sealed class TypeMethodFinderTests
 				"\t\"Customer Name: \" + name + \" Age: \" + age")).ParseMembersAndMethods(parser);
 		using var createCustomer = new Type(TestPackage.Instance,
 			new TypeLines(nameof(CreateTypeUsingConstructorMembers), "has logger", "Something",
-				"\tconstant customer = Customer(\"Murali\", 28)")).ParseMembersAndMethods(parser);
-		var assignment = (Declaration)createCustomer.Methods[0].GetBodyAndParseIfNeeded();
+				"\tconstant customer = Customer(\"Ben\", 28)", "\tcustomer is Customer")).ParseMembersAndMethods(parser);
+		var body = (Body)createCustomer.Methods[0].GetBodyAndParseIfNeeded();
+		var assignment = (Declaration)body.Expressions[0];
 		Assert.That(assignment.Value.ReturnType.Name, Is.EqualTo("Customer"));
-		Assert.That(assignment.Value.ToString(), Is.EqualTo("Customer(\"Murali\", 28)"));
+		Assert.That(assignment.Value.ToString(), Is.EqualTo("Customer(\"Ben\", 28)"));
 	}
 
 	[Test]
@@ -105,7 +106,7 @@ public sealed class TypeMethodFinderTests
 				"\t\"Customer Name: \" + name + \" Age: \" + age")).ParseMembersAndMethods(parser);
 		using var createCustomer = new Type(TestPackage.Instance,
 			new TypeLines(nameof(CreateTypeUsingConstructorMembers), "has logger", "Something",
-				"\tconstant customer = (\"Murali\", 28) to Customer")).ParseMembersAndMethods(parser);
+				"\tconstant customer = (\"Ben\", 28) to Customer")).ParseMembersAndMethods(parser);
 		// ReSharper disable once AccessToDisposedClosure
 		Assert.That(() => createCustomer.Methods[0].GetBodyAndParseIfNeeded(),
 			Throws.InstanceOf<List.ListElementsMustHaveMatchingType>());

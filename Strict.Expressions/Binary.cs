@@ -40,7 +40,8 @@ public sealed class Binary(Expression left, Method operatorMethod, Expression[] 
 	private static Binary BuildRegularBinaryExpression(Body body, ReadOnlySpan<char> input,
 		Stack<Range> tokens, string operatorToken)
 	{
-		var right = GetUnaryOrBuildNestedBinary(body, input, tokens);
+		var right = GetUnaryOrBuildNestedBinary(body, input, tokens,
+			operatorToken is BinaryOperator.Is or BinaryOperator.IsNot);
 		var left = GetUnaryOrBuildNestedBinary(body, input, tokens);
 		if (operatorToken == BinaryOperator.Multiply && HasIncompatibleDimensions(left, right))
 			throw new ListsHaveDifferentDimensions(body, left + " " + right);
@@ -51,13 +52,15 @@ public sealed class Binary(Expression left, Method operatorMethod, Expression[] 
 	}
 
 	private static Expression GetUnaryOrBuildNestedBinary(Body body, ReadOnlySpan<char> input,
-		Stack<Range> tokens)
+		Stack<Range> tokens, bool checkRightForIsTypeComparison = false)
 	{
 		var nextTokenRange = tokens.Pop();
 		var expression = input[nextTokenRange.Start.Value].IsSingleCharacterOperator() ||
 			input[nextTokenRange].IsMultiCharacterOperator()
 				? BuildBinaryExpression(body, input, nextTokenRange, tokens)
-				: body.Method.ParseExpression(body, input[nextTokenRange]);
+				: checkRightForIsTypeComparison
+					? TypeComparison.Parse(body, input, nextTokenRange)
+					: body.Method.ParseExpression(body, input[nextTokenRange]);
 		if (expression.ReturnType.IsGeneric)
 			//ncrunch: no coverage start, cannot be reached: Type.FindMethod already filters this condition
 			throw new Type.GenericTypesCannotBeUsedDirectlyUseImplementation(expression.ReturnType,
