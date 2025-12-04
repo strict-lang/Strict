@@ -39,8 +39,9 @@ public sealed class TypeValidator : Visitor
 		}
 		context ??= new VariableUsages();
 		base.Visit(body, context);
-		ValidateUnusedVariables(body, context);
+		// Check name hiding first to provide a clearer, more specific error than unused-variable
 		ValidateMethodVariablesHidesAnyTypeMember(body, body.Method.Type.Members);
+		ValidateUnusedVariables(body, context);
 	}
 
 	private sealed class VariableUsages

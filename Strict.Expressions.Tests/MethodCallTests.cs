@@ -133,7 +133,7 @@ public sealed class MethodCallTests : TestExpressions
 				"has Number",
 				$"Dummy(dummy Number) {nameof(ValueMustHaveCorrectType)}",
 				"\tconstant result = value",
-				"\tresult is "+nameof(ValueMustHaveCorrectType),
+				"\tresult is " + nameof(ValueMustHaveCorrectType),
 				"\tresult")).
 			ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(

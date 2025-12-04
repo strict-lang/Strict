@@ -92,9 +92,9 @@ public class Program
 			CreateFolderOnceByCreatingDotnetProject(folder, generatedCode);
 		File.WriteAllText(Path.Combine(folder, "Program.cs"), generatedCode);
 		var actualText = RunDotnetAndReturnOutput(folder, "run", out var error);
-		if (error.Length > 0)
-			throw new CSharpCompilationFailed(error, actualText, generatedCode);
-		return actualText;
+		return error.Length > 0
+			? throw new CSharpCompilationFailed(error, actualText, generatedCode)
+			: actualText;
 	}
 
 	private static void CreateFolderOnceByCreatingDotnetProject(string folder, string generatedCode)

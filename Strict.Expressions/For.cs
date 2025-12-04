@@ -37,10 +37,10 @@ public sealed class For : Expression
 		if (line.Length <= Keyword.For.Length)
 			throw new MissingExpression(body);
 		var innerBody = body.FindCurrentChild() ??
-			(TryGetInnerForAsBody(body) ?? throw new MissingInnerBody(body));
-		if (line.Contains(IndexName, StringComparison.Ordinal))
-			throw new IndexIsReservedDoNotUseItExplicitly(body);
-		return ParseFor(body, line, innerBody);
+			TryGetInnerForAsBody(body) ?? throw new MissingInnerBody(body);
+		return line.Contains(IndexName, StringComparison.Ordinal)
+			? throw new IndexIsReservedDoNotUseItExplicitly(body)
+			: ParseFor(body, line, innerBody);
 	}
 
 	private static Body? TryGetInnerForAsBody(Body body)
@@ -128,9 +128,9 @@ public sealed class For : Expression
 			if (variableIndex <= 0)
 				return firstValue;
 			var innerFirstValue = body.Method.ParseExpression(body, firstValue + "(0)", true);
-			if (variableIndex > 1)
-				throw new NotSupportedException("More than 2 for variables are not supported yet"); //ncrunch: no coverage
-			return innerFirstValue;
+			return variableIndex > 1
+				? throw new NotSupportedException("More than 2 for variables are not supported yet") //ncrunch: no coverage
+				: innerFirstValue;
 		}
 		return iteratorExpression;
 	}

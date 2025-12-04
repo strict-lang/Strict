@@ -20,10 +20,12 @@ public sealed class TypeComparison(Type returnType, Type targetType)
 	/// </summary>
 	public static Expression Parse(Body body, ReadOnlySpan<char> input, Range nextTokenRange)
 	{
-		var text = input[nextTokenRange].ToString();
-		var foundType = body.ReturnType.FindType(text);
-		if (foundType != null)
-			return new TypeComparison(body.Method.GetType(Base.Type), foundType);
-		return body.Method.ParseExpression(body, input[nextTokenRange]);
+		var foundType = char.IsUpper(input[nextTokenRange.Start]) &&
+			input[nextTokenRange.End.Value - 1].IsLetter()
+				? body.ReturnType.FindType(input[nextTokenRange].ToString())
+				: null;
+		return foundType != null
+			? new TypeComparison(body.Method.GetType(Base.Type), foundType)
+			: body.Method.ParseExpression(body, input[nextTokenRange]);
 	}
 }

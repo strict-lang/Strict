@@ -112,7 +112,7 @@ public sealed class ConstantCollapserTests
 				"\tnumber + number * 2"));
 		simpleType.ParseMembersAndMethods(parser);
 		collapser.Visit(simpleType, true);
-		Assert.That(((Number)(simpleType.Methods[0].Parameters[1].DefaultValue!)).Data,
+		Assert.That(((Number)simpleType.Methods[0].Parameters[1].DefaultValue!).Data,
 			Is.EqualTo(21));
 		Assert.That(((Number)simpleType.Methods[^1].GetBodyAndParseIfNeeded()).Data, Is.EqualTo(3));
 	}

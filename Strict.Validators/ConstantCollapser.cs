@@ -6,8 +6,8 @@ namespace Strict.Validators;
 
 /// <summary>
 /// Reduces constant expressions, e.g. "5" to Number can just be 5. Or any binary expression like
-/// 2 + 3 can be reduced to 5 as long as both sides are constant. This is done recursively and all
-/// usages will be replaced by the constant and folded further until no more constants exist.
+/// 2 + 3 can be reduced to 5 as long as both sides are constant. This is done recursively, and
+/// all usages will be replaced by the constant and folded further until no more constants exist.
 /// </summary>
 public sealed class ConstantCollapser : Visitor
 {

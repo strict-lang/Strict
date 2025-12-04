@@ -244,9 +244,9 @@ public class MethodExpressionParser : ExpressionParser
 			return If.CanTryParseConditional(body, innerSpan)
 				? [If.ParseConditional(body, innerSpan)]
 				: new ExpressionListParser(this, innerSpan.ToString()).GetAll(body);
-		if (innerSpan.Length == 0)
-			throw new List.EmptyListNotAllowed(body);
-		return ParseAllElementsFast(body, innerSpan, new RangeEnumerator(innerSpan, ',', 0));
+		return innerSpan.Length == 0
+			? throw new List.EmptyListNotAllowed(body)
+			: ParseAllElementsFast(body, innerSpan, new RangeEnumerator(innerSpan, ',', 0));
 	}
 
 	public override bool IsVariableMutated(Body body, string variableName)

@@ -29,9 +29,9 @@ public sealed class Dictionary : Value
 		foreach (var typeText in input[(Base.Dictionary.Length + 1)..^1].
 			Split(',', StringSplitOptions.TrimEntries))
 			types.Add(body.Method.GetType(typeText.ToString()));
-		if (types.Count != 2)
-			throw new DictionaryMustBeInitializedWithTwoTypeParameters(body, input.ToString());
-		return types;
+		return types.Count != 2
+			? throw new DictionaryMustBeInitializedWithTwoTypeParameters(body, input.ToString())
+			: types;
 	}
 
 	public sealed class DictionaryMustBeInitializedWithTwoTypeParameters : ParsingFailed

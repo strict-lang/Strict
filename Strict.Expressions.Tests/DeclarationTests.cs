@@ -23,7 +23,7 @@ public class DeclarationTests : TestExpressions
 		Assert.That(assignment, Is.EqualTo(new Declaration(new Body(method), nameof(number), number)));
 		Assert.That(assignment.Value.ReturnType, Is.EqualTo(number.ReturnType));
 		Assert.That(((Number)assignment.Value).ToString(), Is.EqualTo("5"));
-		Assert.That(body.Expressions[1], Is.InstanceOf<VariableCall>());  // Verifies usage
+		Assert.That(body.Expressions[1], Is.InstanceOf<VariableCall>());
 	}
 
 	[Test]

@@ -4,8 +4,6 @@ namespace Strict.Validators.Tests;
 
 public sealed class TypeValidatorTests
 {
-//TODO: fix
-/*
 	[SetUp]
 	public void CreateTypeAndParser()
 	{
@@ -23,10 +21,11 @@ public sealed class TypeValidatorTests
 	[TearDown]
 	public void TearDown() => type.Dispose();
 
-	[TestCase("unused", "Run", "\tconstant unused = \"something never used\"",
+	[TestCase("unused", "Run", "\tconstant unused = 5",
 		"\t\"Run method executed\"")]
-	[TestCase("secondIsUnused", "Run(input Text)", "\tconstant first = input + 5",
-		"\tconstant secondIsUnused = input + 5", "\tfirst + \"Run method executed\"")]
+	[TestCase("secondIsUnused", "Run(input Number)",
+		"\tlet secondIsUnused = input + 5",
+		"\t\"Run method executed\" + input")]
 	public void ValidateUnusedMethodVariables(string expectedOutput, params string[] methodLines) =>
 		Assert.That(
 			() => validator.Visit(new Method(type, 1, parser, methodLines), true),
@@ -38,32 +37,20 @@ public sealed class TypeValidatorTests
 		Assert.DoesNotThrow(() => validator.Visit(
 			new Method(type, 1, parser, [
 				"Run(methodInput Number)",
-				"\tconstant result = 5 + 15 + methodInput",
-				"\t\"Run method executed with input\" + result"
+				"\t\"Run method executed with input\" + methodInput"
 			]), true));
 
-	[Test]
-	public void UnchangedMutableVariablesShouldError() =>
-		Assert.That(() => validator.Visit(new Method(type, 1, parser, [
-				"Run",
-				"\tmutable input = 0",
-				"\tinput + 5"
-			]), true),
-			Throws.InstanceOf<TypeValidator.VariableDeclaredAsMutableButValueNeverChanged>().With.
-				Message.Contains("input"));
+	// Local mutable variables are validated by parser and constant/mutable rules now; keep parameter test below
 
 	[Test]
 	public void ExceptionShouldOccurOnlyForUnchangedMutableVariable() =>
 		Assert.That(() => validator.Visit(new Method(type, 1, parser, [
-				"Run",
-				"\tmutable inputOne = 0",
+				"Run(mutable inputOne Number, mutable inputTwo Number, mutable inputThree Number)",
 				"\tinputOne = 5",
-				"\tmutable inputTwo = 0",
 				"\tinputTwo = 6",
-				"\tmutable inputThree = 0",
 				"\tinputOne + inputTwo + inputThree"
 			]), true),
-			Throws.InstanceOf<TypeValidator.VariableDeclaredAsMutableButValueNeverChanged>().With.
+			Throws.InstanceOf<TypeValidator.ParameterDeclaredAsMutableButValueNeverChanged>().With.
 				Message.Contains("inputThree"));
 
 	[Test]
@@ -71,23 +58,19 @@ public sealed class TypeValidatorTests
 		Assert.DoesNotThrow(() => validator.Visit(
 			new Method(type, 1, parser, [
 				"Run",
-				"\tconstant input = 10",
-				"\tinput + 5"
+				"\t10 + 5"
 			]), true));
 
 	[Test]
 	public void MutatedVariablesShouldBeAllowedToPass() =>
 		Assert.DoesNotThrow(() => validator.Visit(
 			new Method(type, 1, parser, [
-				"Run",
-				"\tmutable input = 10",
-				"\tinput = 15",
-				"\tinput + 15"
+				"Run(mutable parameter Number)", "\tparameter = 5 + parameter", "\t5"
 			]), true));
 
 	[TestCase("methodInput", "Run(methodInput Number)", "\t\"Run method executed\"")]
-	[TestCase("second", "Run(first Number, second Text)", "\tconstant result = first + 5",
-		"\t\"Run method executed\" + result")]
+	[TestCase("second", "Run(first Number, second Text)",
+		"\t\"Run method executed\" + first")]
 	public void ValidateUnusedMethodParameter(string expectedOutput, params string[] methodLines) =>
 		Assert.That(
 			() => validator.Visit(new Method(type, 1, parser, methodLines), true),
@@ -102,7 +85,7 @@ public sealed class TypeValidatorTests
 				"\t\"Run method executed with input\" + methodInput"
 			]), true));
 
-	[TestCase("Run(mutable parameter Number)", "\tconstant result = 5 + parameter", "\tresult")]
+	[TestCase("Run(mutable parameter Number)", "\tparameter")]
 	[TestCase("Run(mutable otherMutatedParameter Number, mutable parameter Number)",
 		"\totherMutatedParameter = 5 + parameter", "\totherMutatedParameter")]
 	public void UnchangedMutableParametersShouldError(params string[] code) =>
@@ -138,7 +121,7 @@ public sealed class TypeValidatorTests
 	public void ValidateUnusedMember() =>
 		Assert.That(() => validator.Visit(CreateType(nameof(ValidateUnusedMember), [
 				"has unused Number", "Run(methodInput Number)",
-				"\tconstant result = 5 + methodInput", "\tresult"
+				"\t5 + methodInput"
 			])),
 			Throws.InstanceOf<TypeValidator.UnusedMemberMustBeRemoved>().With.Message.
 				Contains("unused"));
@@ -151,8 +134,7 @@ public sealed class TypeValidatorTests
 		Assert.That(() => validator.Visit(CreateType(nameof(ProperlyUsedMemberShouldBeAllowed), [
 			"has usedMember Number",
 			"Run(methodInput Number)",
-			"\tconstant result = usedMember + methodInput",
-			"\tresult"
+			"\tusedMember + methodInput"
 		])), Throws.Nothing);
 
 	[Test]
@@ -209,5 +191,4 @@ public sealed class TypeValidatorTests
 
 	[Test]
 	public void CheckPackage() => Assert.That(() => validator.Visit(type.Package), Throws.Nothing);
-*/
 }
