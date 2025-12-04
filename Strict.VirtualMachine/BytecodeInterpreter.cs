@@ -1,7 +1,5 @@
-﻿using Strict.Expressions;
-using Strict.Language;
+﻿using System.Diagnostics;
 using Strict.Runtime.Statements;
-using Return = Strict.Runtime.Statements.Return;
 
 namespace Strict.Runtime;
 
@@ -42,6 +40,7 @@ public sealed class BytecodeInterpreter
 	{
 		if (conditionFlag) //dummy
 			return;
+		Debug.Assert(statement != null);
 	}
 	/*TODO
 	   private bool iteratorInitialized;

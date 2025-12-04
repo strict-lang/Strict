@@ -118,11 +118,11 @@ GetComplicatedSequenceTexts returns Texts
 	[TestCase("1 + 2")]
 	[TestCase(@"""hello"" is Text")]
 	public void ContainsOperator(string input) =>
-		Assert.That(input.AsSpan().Contains(["+", "-", "*", "is"]), Is.True);
+		Assert.That(input.AsSpan().ContainsAnyItem(["+", "-", "*", "is"]), Is.True);
 
 	[TestCase(@"""hello"" is Text")]
 	public void NotContainsOperator(string input) =>
-		Assert.That(input.AsSpan().Contains(["+", "-", "*"]), Is.False);
+		Assert.That(input.AsSpan().ContainsAnyItem(["+", "-", "*"]), Is.False);
 
 	[TestCase(@"""hello"" is Text")]
 	public void Count(string input) =>

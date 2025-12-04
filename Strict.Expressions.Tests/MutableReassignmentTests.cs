@@ -12,7 +12,7 @@ public sealed class MutableReassignmentTests : TestExpressions
 	{
 		using var program = new Type(type.Package,
 			new TypeLines(nameof(MutableMemberConstructorWithType), "mutable something Number",
-				"Add(input Number) Number", "\tlet result = something + input"));
+				"Add(input Number) Number", "\tsomething + input"));
 		program.ParseMembersAndMethods(parser);
 		Assert.That(program.Members[0].IsMutable, Is.True);
 		Assert.That(program.Methods[0].GetBodyAndParseIfNeeded().ReturnType,
@@ -127,7 +127,7 @@ public sealed class MutableReassignmentTests : TestExpressions
 	{
 		using var program = new Type(type.Package,
 			new TypeLines(testName, "has logger", $"Add(input Number) {returnType}",
-				$"\tmutable result = {code}", "\tresult = result + input", "\tresult"));
+				$"\tmutable result = {code}", "\tresult = result + input"));
 		program.ParseMembersAndMethods(parser);
 		var body = (Body)program.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(((Declaration)body.Expressions[0]).Value.ToString(),
@@ -167,7 +167,7 @@ public sealed class MutableReassignmentTests : TestExpressions
 		using var program = new Type(type.Package,
 			new TypeLines(nameof(DirectUsageOfMutableTypesOrImplementsAreForbidden),
 				"has unused Character", "DummyCount(limit Number) Number",
-				"\tconstant result = Mutable(5)", "\tresult"));
+				"\tconstant result = Mutable(5)", "\tresult + 1"));
 		program.ParseMembersAndMethods(parser);
 		Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(),
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.InstanceOf<Type.GenericTypesCannotBeUsedDirectlyUseImplementation>());
@@ -179,7 +179,7 @@ public sealed class MutableReassignmentTests : TestExpressions
 		using var program = new Type(type.Package,
 			new TypeLines(nameof(GenericTypesCannotBeUsedDirectlyUseImplementation),
 				"has unused Character", "DummyCount Number", "\tconstant result = List(5, 5)",
-				"\tresult"));
+				"\tresult(0)"));
 		program.ParseMembersAndMethods(parser);
 		Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(),
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.

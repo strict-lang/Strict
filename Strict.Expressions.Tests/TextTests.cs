@@ -30,40 +30,42 @@ public sealed class TextTests : TestExpressions
 		"constant result = \"ThisStringShouldGoMoreThanHundredCharactersLongSoThatTheTestCanBePassed\" + \"ThisStringShouldGoMoreThanHundredCharactersLongSoThatTheTestCanBePassed\"",
 		"has number", "Run",
 		"\tconstant result = \"ThisStringShouldGoMoreThanHundredCharactersLongSoThatTheTestCanBePassed\" +",
-		"\t\"ThisStringShouldGoMoreThanHundredCharactersLongSoThatTheTestCanBePassed\"")]
+		"\t\"ThisStringShouldGoMoreThanHundredCharactersLongSoThatTheTestCanBePassed\"",
+		"\tresult is Text")]
 	[TestCase("Multiple",
 		"constant result = \"ThisStringShouldGoMoreThanHundred\" + \"SecondLineToMakeItThanHundredCharacters\" + \"ThirdLineToMakeItThanHundredCharacters\" + \"FourthLine\"",
 		"has number", "Run", "\tconstant result = \"ThisStringShouldGoMoreThanHundred\" +",
 		"\t\"SecondLineToMakeItThanHundredCharacters\" +",
-		"\t\"ThirdLineToMakeItThanHundredCharacters\" +", "\t\"FourthLine\"")]
+		"\t\"ThirdLineToMakeItThanHundredCharacters\" +", "\t\"FourthLine\"",
+		"\tresult is Text")]
 	public void
-		ParseMultiLineTextExpressions(string testName, string expectedOutput, params string[] code) =>
+		ParseMultiLineTextExpressions(string testName, string expectedOutput,
+			params string[] code) =>
 		Assert.That(
-			new Type(TestPackage.Instance,
+			((Body)new Type(TestPackage.Instance,
 					new TypeLines(nameof(ParseMultiLineTextExpressions) + testName, code)).
-				ParseMembersAndMethods(new MethodExpressionParser()).Methods[0].GetBodyAndParseIfNeeded().
-				ToString(), Is.EqualTo(expectedOutput));
+				ParseMembersAndMethods(new MethodExpressionParser()).Methods[0].
+				GetBodyAndParseIfNeeded()).Expressions[0].ToString(),
+			Is.EqualTo(expectedOutput));
 
 	[TestCase("ParseNewLineTextExpression", "\"FirstLine\" + Character.NewLine + \"ThirdLine\" + Character.NewLine", "has logger", "Run Text",
-		"	constant input = \"FirstLine\" + Character.NewLine + \"ThirdLine\" + Character.NewLine")]
+		"	\"FirstLine\" + Character.NewLine + \"ThirdLine\" + Character.NewLine")]
 	[TestCase("ParseMultiLineTextExpressionWithNewLine", "\"FirstLine\" + Character.NewLine + \"ThirdLine\" + Character.NewLine + \"Ending\" + \"This is the continuation of the previous text line\"", "has logger", "Run Text",
-		"	constant input = \"FirstLine\" + Character.NewLine + \"ThirdLine\" + Character.NewLine + \"Ending\" +",
+		"	\"FirstLine\" + Character.NewLine + \"ThirdLine\" + Character.NewLine + \"Ending\" +",
 		"	\"This is the continuation of the previous text line\"")]
 	public void ParseNewLineTextExpression(string testName, string expected, params string[] code)
 	{
 		using var multiLineType = new Type(TestPackage.Instance,
 				new TypeLines(testName, code)).
 			ParseMembersAndMethods(new MethodExpressionParser());
-		var constantDeclaration =
-			(Declaration)multiLineType.Methods[0].GetBodyAndParseIfNeeded();
-		Assert.That(constantDeclaration.Value, Is.InstanceOf<Binary>());
-		Assert.That(constantDeclaration.Value.ToString(), Is.EqualTo(expected));
+		var binary = (Binary)multiLineType.Methods[0].GetBodyAndParseIfNeeded();
+		Assert.That(binary.ToString(), Is.EqualTo(expected));
 	}
 
 	[TestCase("ParseMultiLineTextExpressionWithNewLine",
 		"\"FirstLine\" + Character.NewLine + \"ThirdLine\" + Character.NewLine + \"This is the continuation of the previous text line\"",
 		"has logger", "Run Text",
-		"	constant input = \"FirstLine\" + Character.NewLine + \"ThirdLine\" + Character.NewLine +",
+		"	\"FirstLine\" + Character.NewLine + \"ThirdLine\" + Character.NewLine +",
 		"	\"This is the continuation of the previous text line\"")]
 	public void ParseMultiLineTextEndsWithNewLine(string testName, string expected,
 		params string[] code)
@@ -71,9 +73,7 @@ public sealed class TextTests : TestExpressions
 		using var multiLineType =
 			new Type(TestPackage.Instance, new TypeLines(testName, code)).ParseMembersAndMethods(
 				new MethodExpressionParser());
-		var constantDeclaration =
-			(Declaration)multiLineType.Methods[0].GetBodyAndParseIfNeeded();
-		Assert.That(constantDeclaration.Value, Is.InstanceOf<Binary>());
-		Assert.That(constantDeclaration.Value.ToString(), Is.EqualTo(expected));
+		var constantDeclaration = (Binary)multiLineType.Methods[0].GetBodyAndParseIfNeeded();
+		Assert.That(constantDeclaration.ToString(), Is.EqualTo(expected));
 	}
 }

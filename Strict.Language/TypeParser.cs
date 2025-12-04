@@ -304,20 +304,20 @@ public sealed class TypeParser(Type type, string[] lines)
 		long span, long limit) : ParsingFailed(type, lineNumber,
 		$"Range size {span} exceeds limit {limit}: " + line);
 
-	private void DetectRedundantReturn(IReadOnlyList<string> lines)
+	private void DetectRedundantReturn(IReadOnlyList<string> checkLines)
 	{
-		if (lines.Count < 3)
+		if (checkLines.Count < 3)
 			return;
-		var prevAssignmentIndex = lines[^2].IndexOf(" = ", StringComparison.Ordinal);
+		var prevAssignmentIndex = checkLines[^2].IndexOf(" = ", StringComparison.Ordinal);
 		if (prevAssignmentIndex <= 0)
 			return;
-		var left = lines[^2][1..prevAssignmentIndex];
-		var right = lines[^2][(prevAssignmentIndex + 3)..];
+		var left = checkLines[^2][1..prevAssignmentIndex];
+		var right = checkLines[^2][(prevAssignmentIndex + 3)..];
 		var variableName = left.Split(' ', StringSplitOptions.RemoveEmptyEntries).LastOrDefault();
 		if (!string.IsNullOrEmpty(variableName) &&
-			(string.Equals(lines[^1].TrimStart(), variableName, StringComparison.Ordinal) ||
-				string.Equals(lines[^1].TrimStart(), right, StringComparison.Ordinal)))
-			throw new RedundantReturnThePreviousLineContainsTheReturnValueAlready(type, LineNumber, lines[^2], variableName);
+			(string.Equals(checkLines[^1].TrimStart(), variableName, StringComparison.Ordinal) ||
+				string.Equals(checkLines[^1].TrimStart(), right, StringComparison.Ordinal)))
+			throw new RedundantReturnThePreviousLineContainsTheReturnValueAlready(type, LineNumber, checkLines[^2], variableName);
 	}
 
 	public sealed class RedundantReturnThePreviousLineContainsTheReturnValueAlready(
@@ -444,7 +444,7 @@ public sealed class TypeParser(Type type, string[] lines)
 			: GetMemberExpression(parser, nameAndType, constantValue).ReturnType;
 	}
 
-	private Dictionary<Member, string>? rememberToInitializeMemberInitialValues = null;
+	private Dictionary<Member, string>? rememberToInitializeMemberInitialValues;
 
 	private Member GetMemberWithConstraints(ExpressionParser parser, ReadOnlySpan<char> remainingLine,
 		string usedKeyword, string nameAndType)

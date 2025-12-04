@@ -175,10 +175,11 @@ public sealed class MemberCallTests : TestExpressions
 			new TypeLines(nameof(BaseTypeMemberCallInDerivedType),
 				"has Range",
 				"Run",
-				"\tlet result = Range.End + 5")).ParseMembersAndMethods(parser);
-		var assignment = (Declaration)program.Methods[0].GetBodyAndParseIfNeeded();
-		Assert.That(((Binary)assignment.Value).Instance,
-			Is.InstanceOf<MemberCall>());
+				"\tlet result = Range.End + 5",
+				"\tresult is Number")).ParseMembersAndMethods(parser);
+		var body = (Body)program.Methods[0].GetBodyAndParseIfNeeded();
+		var assignment = (Declaration)body.Expressions[0];
+		Assert.That(((Binary)assignment.Value).Instance,Is.InstanceOf<MemberCall>());
 	}
 
 	[Test]

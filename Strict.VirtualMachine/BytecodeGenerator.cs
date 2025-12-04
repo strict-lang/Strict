@@ -1,9 +1,8 @@
-﻿using Strict.Expressions;
+﻿using System.Diagnostics;
+using Strict.Expressions;
 using Strict.Language;
 using Strict.Runtime.Statements;
-using Binary = Strict.Expressions.Binary;
 using Return = Strict.Runtime.Statements.Return;
-using Type = Strict.Language.Type;
 
 namespace Strict.Runtime;
 
@@ -97,11 +96,15 @@ public sealed class ByteCodeGenerator
 		statements.Add(new Return(registry.PreviousRegister));
 	}
 
-	private void GenerateStatementsFromExpression(Expression expression) { }
+	private void GenerateStatementsFromExpression(Expression expression)
+	{
+		Debug.Assert(expression != null);
+		Debug.Assert(expression != null);
+	}
 	/*TODO
-	   private readonly Stack<int> idStack = new();
-	   private readonly Register[] registers = Enum.GetValues<Register>();
-	   private int conditionalId;
+		private readonly Stack<int> idStack = new();
+		private readonly Register[] registers = Enum.GetValues<Register>();
+		private int conditionalId;
 	private void GenerateStatementsFromExpression(Expression expression)
 	{
 		TryGenerateBodyStatements(expression) ?? TryGenerateBinaryStatements(expression) ??

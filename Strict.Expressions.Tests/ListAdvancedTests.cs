@@ -51,7 +51,7 @@ public sealed class ListAdvancedTests : TestExpressions
 	public void NumbersCompatibleWithImplementedTypes(string code, string testName)
 	{
 		using var program = new Type(type.Package,
-				new TypeLines(testName, "has logger", code, "\tlet result = (1, 2, 3, input)")).
+				new TypeLines(testName, "has logger", code, "\t(1, 2, 3, input)")).
 			ParseMembersAndMethods(parser);
 		Assert.That(program.Methods[0].GetBodyAndParseIfNeeded().ReturnType,
 			Is.EqualTo(program.GetListImplementationType(type.GetType(Base.Number))));
@@ -62,8 +62,8 @@ public sealed class ListAdvancedTests : TestExpressions
 	{
 		using var typeWithAssignment = new Type(type.Package,
 			new TypeLines(nameof(NotOperatorInAssignment), "has numbers", "NotOperator",
-				"\tconstant result = not true")).ParseMembersAndMethods(parser);
-		var assignment = (Declaration)typeWithAssignment.Methods[0].GetBodyAndParseIfNeeded();
+				"\tconstant result = not true", "\tresult is false")).ParseMembersAndMethods(parser);
+		var assignment = ((Body)typeWithAssignment.Methods[0].GetBodyAndParseIfNeeded()).Expressions[0];
 		Assert.That(assignment.ToString(), Is.EqualTo("constant result = not true"));
 	}
 
@@ -77,7 +77,7 @@ public sealed class ListAdvancedTests : TestExpressions
 							"UnknownExpression", "\tconstant result = ((1, 2), 9gfhy5)")).
 					ParseMembersAndMethods(parser);
 				dummy.Methods[0].GetBodyAndParseIfNeeded();
-			},
+			}, //ncrunch: no coverage
 			Throws.InstanceOf<UnknownExpressionForArgument>());
 
 	[Test]
@@ -124,9 +124,9 @@ public sealed class ListAdvancedTests : TestExpressions
 				using var dummy = new Type(type.Package,
 					new TypeLines(nameof(OnlyListTypeIsAllowedAsMutableExpressionArgument),
 						"has unused Logger", "MutableWithNumber Number",
-						"\tconstant result = Mutable(Number)", "\tresult")).ParseMembersAndMethods(parser);
+						"\tconstant result = Mutable(Number)", "\tresult + 1")).ParseMembersAndMethods(parser);
 				dummy.Methods[0].GetBodyAndParseIfNeeded();
-			},
+			}, //ncrunch: no coverage
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.
 				InstanceOf<Type.GenericTypesCannotBeUsedDirectlyUseImplementation>());
 
@@ -140,7 +140,7 @@ public sealed class ListAdvancedTests : TestExpressions
 						"AccessZeroIndexElement Boolean", "\tlet firstValue = booleans(0)",
 						"\tfirstValue(0)")).ParseMembersAndMethods(parser);
 				dummy.Methods[0].GetBodyAndParseIfNeeded();
-			},
+			}, //ncrunch: no coverage
 			Throws.InstanceOf<InvalidArgumentItIsNotMethodOrListCall>());
 
 	[Test]

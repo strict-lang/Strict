@@ -28,10 +28,9 @@ public sealed class IfAdvancedTests : TestExpressions
 	[TestCase("constant result = 5 is not 4 ? (1, 2) else (3, 4)")]
 	public void ValidConditionalExpressions(string code)
 	{
-		var expression = ParseExpression(code);
-		Assert.That(expression, Is.InstanceOf<Declaration>());
-		var assignment = expression as Declaration;
-		Assert.That(assignment?.Value, Is.InstanceOf<If>().Or.InstanceOf<Binary>());
+		var body = (Body)ParseExpression(code, "result is Number");
+		var assignment = (Declaration)body.Expressions[0];
+		Assert.That(assignment.Value, Is.InstanceOf<If>().Or.InstanceOf<Binary>());
 	}
 
 	[Test]
@@ -43,9 +42,9 @@ public sealed class IfAdvancedTests : TestExpressions
 	[TestCase("logger.Log(true ? \"Yes\" + \"text\" else \"No\")")]
 	[TestCase("logger.Log(\"Result\" + (true ? \"Yes\" else \"No\"))")]
 	[TestCase("logger.Log((true ? \"Yes\" else \"No\") + \"Result\")")]
-	[TestCase("constant something = 5 is 5 ? false else true", "something")]
+	[TestCase("5 is 5 ? false else true")]
 	[TestCase("6 is 5 ? true else false")]
-	public void ConditionalExpressionsAsPartOfOtherExpression(params string[] code) =>
+	public void ConditionalExpressionsAsPartOfOtherExpression(string code) =>
 		Assert.That(ParseExpression(code).ToString(), Is.EqualTo(code));
 
 	[Test]

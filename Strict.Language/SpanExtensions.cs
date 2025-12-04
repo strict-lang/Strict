@@ -69,7 +69,7 @@ public static class SpanExtensions
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static bool Contains(this ReadOnlySpan<char> input, IEnumerable<string> items)
+	public static bool ContainsAnyItem(this ReadOnlySpan<char> input, IEnumerable<string> items)
 	{
 		foreach (var item in items)
 			if (input.IndexOf(item.AsSpan()) >= 0)

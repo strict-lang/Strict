@@ -12,12 +12,13 @@ public sealed class MethodExpressionParserTests : TestExpressions
 	[Test]
 	public void ParseSingleLine()
 	{
-		var body = new Method(type, 0, this, [MethodTests.Run, MethodTests.ConstantNumber]).
-			GetBodyAndParseIfNeeded();
-		Assert.That(body.ReturnType, Is.EqualTo(type.FindType(Base.Number)));
-		Assert.That(body, Is.TypeOf<Declaration>());
-		Assert.That(body.ReturnType, Is.EqualTo(number.ReturnType));
-		Assert.That(body.ToString(), Is.EqualTo(MethodTests.ConstantNumber[1..]));
+		var body =
+			(Body)new Method(type, 0, this,
+					[MethodTests.Run, MethodTests.ConstantNumber, "\tnumber is Number"]).
+				GetBodyAndParseIfNeeded();
+		var declaration = (Declaration)body.Expressions[0];
+		Assert.That(declaration.ReturnType, Is.EqualTo(type.FindType(Base.Number)));
+		Assert.That(declaration.ToString(), Is.EqualTo(MethodTests.ConstantNumber[1..]));
 	}
 
 	[Test]

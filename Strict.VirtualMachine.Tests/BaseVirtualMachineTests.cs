@@ -1,7 +1,4 @@
 ﻿global using Type = Strict.Language.Type;
-using Strict.Runtime.Statements;
-using Binary = Strict.Runtime.Statements.Binary;
-using Return = Strict.Runtime.Statements.Return;
 
 namespace Strict.Runtime.Tests;
 

@@ -43,9 +43,11 @@ public sealed class EnumTests
 	public void UseEnumWithoutConstructor()
 	{
 		var consumingType = new Type(TestPackage.Instance,
-			new TypeLines(nameof(UseEnumWithoutConstructor), "has logger",
-				"Run", "\tconstant url = Connection.Google")).ParseMembersAndMethods(parser);
-		var assignment = (Declaration)consumingType.Methods[^1].GetBodyAndParseIfNeeded();
+				new TypeLines(nameof(UseEnumWithoutConstructor), "has logger", "Run",
+					"\tconstant url = Connection.Google", "\turl is Connection")).
+			ParseMembersAndMethods(parser);
+		var body = (Body)consumingType.Methods[^1].GetBodyAndParseIfNeeded();
+		var assignment = (Declaration)body.Expressions[0];
 		Assert.That(assignment.Value, Is.InstanceOf<MemberCall>());
 		var member = ((MemberCall)assignment.Value).Member;
 		Assert.That(member.Name, Is.EqualTo("Google"));
@@ -68,12 +70,14 @@ public sealed class EnumTests
 	public void EnumWithoutValuesUsedAsMemberAndVariable()
 	{
 		var consumingType = new Type(TestPackage.Instance,
-				new TypeLines(nameof(EnumWithoutValuesUsedAsMemberAndVariable),
-					"has something = Instruction.Add", "Run", "\tconstant myInstruction = Instruction.Set")).
-			ParseMembersAndMethods(parser);
+			new TypeLines(nameof(EnumWithoutValuesUsedAsMemberAndVariable),
+				"has something = Instruction.Add", "Run",
+				"\tconstant myInstruction = Instruction.Set",
+				"\tmyInstruction is Instruction")).ParseMembersAndMethods(parser);
 		Assert.That(consumingType.GetType("Instruction").IsEnum, Is.True);
 		Assert.That(((MemberCall)consumingType.Members[0].InitialValue!).Member.Name, Is.EqualTo("Add"));
-		var assignment = (Declaration)consumingType.Methods[0].GetBodyAndParseIfNeeded();
+		var body = (Body)consumingType.Methods[0].GetBodyAndParseIfNeeded();
+		var assignment = (Declaration)body.Expressions[0];
 		Assert.That(assignment.Value, Is.InstanceOf<MemberCall>());
 		var member = ((MemberCall)assignment.Value).Member;
 		Assert.That(member.Name, Is.EqualTo("Set"));
@@ -108,13 +112,11 @@ public sealed class EnumTests
 					"\tif instruction is Instruction.Add",
 					"\t\treturn numbers(0) + numbers(1)",
 					"CallExecute Number",
-					"\tconstant result = ExecuteInstruction((1, 2), Instruction.Add)")).
+					"\tExecuteInstruction((1, 2), Instruction.Add)")).
 			ParseMembersAndMethods(parser);
 		consumingType.Methods[0].GetBodyAndParseIfNeeded();
-		var result = (Declaration)consumingType.Methods[1].GetBodyAndParseIfNeeded();
-		Assert.That(result.Value, Is.InstanceOf<MethodCall>());
-		Assert.That(((MemberCall)((MethodCall)result.Value).Arguments[1]).Member.Name,
-			Is.EqualTo("Add"));
+		var result = (MethodCall)consumingType.Methods[1].GetBodyAndParseIfNeeded();
+		Assert.That(((MemberCall)result.Arguments[1]).Member.Name, Is.EqualTo("Add"));
 	}
 
 	[Test]

@@ -133,6 +133,7 @@ public sealed class MethodCallTests : TestExpressions
 				"has Number",
 				$"Dummy(dummy Number) {nameof(ValueMustHaveCorrectType)}",
 				"\tconstant result = value",
+				"\tresult is "+nameof(ValueMustHaveCorrectType),
 				"\tresult")).
 			ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(
@@ -160,18 +161,21 @@ public sealed class MethodCallTests : TestExpressions
 	[TestCase("ProgramWithHas", "numbers",
 		"has numbers",
 		"Dummy",
-		"\tconstant instanceWithNumbers = ProgramWithHas((1, 2, 3))")]
+		"\tconstant instanceWithNumbers = ProgramWithHas((1, 2, 3))",
+		"\tinstanceWithNumbers is ProgramWithHas")]
 	[TestCase("ProgramWithPublicMember",
 		"texts", "has Texts",
 		"Dummy",
-		"\tconstant instanceWithTexts = ProgramWithPublicMember((\"1\", \"2\", \"3\"))")]
+		"\tconstant instanceWithTexts = ProgramWithPublicMember((\"1\", \"2\", \"3\"))",
+		"\tinstanceWithTexts is ProgramWithPublicMember")]
 	public void ParseConstructorCallWithList(string programName, string expected, params string[] code)
 	{
 		var program = new Type(type.Package, new TypeLines(
 				programName,
 				code)).
 			ParseMembersAndMethods(new MethodExpressionParser());
-		var assignment = (Declaration)program.Methods[0].GetBodyAndParseIfNeeded();
+		var assignment =
+			(Declaration)((Body)program.Methods[0].GetBodyAndParseIfNeeded()).Expressions[0];
 		Assert.That(((MethodCall)assignment.Value).Method.Parameters[0].Name, Is.EqualTo(expected));
 	}
 

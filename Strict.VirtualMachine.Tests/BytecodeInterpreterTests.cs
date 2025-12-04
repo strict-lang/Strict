@@ -1,7 +1,3 @@
-using Strict.Runtime.Statements;
-using Binary = Strict.Runtime.Statements.Binary;
-using Return = Strict.Runtime.Statements.Return;
-
 namespace Strict.Runtime.Tests;
 
 public class BytecodeInterpreterTests : BaseVirtualMachineTests
