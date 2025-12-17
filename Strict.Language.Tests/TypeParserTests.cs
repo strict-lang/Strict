@@ -102,4 +102,18 @@ public sealed class TypeParserTests
 				"Run",
 				"\tRange(1,2000000001)"),
 			Throws.InstanceOf<TypeParser.HugeConstantRangeNotAllowed>());
+
+	[Test]
+	public void RedundantReturnPreviousLineContainsValueAlready() =>
+		Assert.That(
+			() => CreateType(nameof(RedundantReturnPreviousLineContainsValueAlready), "has logger",
+				"Run", "\tconstant number = 5", "\tnumber"),
+			Throws.InstanceOf<TypeParser.RedundantReturnPreviousLineContainsValueAlready>());
+
+	[Test]
+	public void ReturnAsLastExpressionIsNotNeeded() =>
+		Assert.That(
+			() => CreateType(nameof(ReturnAsLastExpressionIsNotNeeded), "has logger",
+				"Run", "\treturn true"),
+			Throws.InstanceOf<Body.ReturnAsLastExpressionIsNotNeeded>());
 }

@@ -137,7 +137,7 @@ public sealed class TypeTests
 		Assert.That(() => CreateType(nameof(NotImplementingAnyTraitMethodsAreAllowed),
 			"has App",
 			"add(number)",
-			"\treturn one + 1"), Is.Not.Null);
+			"\tone + 1"), Is.Not.Null);
 
 	[Test]
 	public void CannotImplementFewTraitMethodsAndLeaveOthers()
@@ -394,6 +394,11 @@ public sealed class TypeTests
 	[TestCase(Base.Boolean, false)]
 	public void ValidateIsIterator(string name, bool expected) =>
 		Assert.That(package.GetType(name).IsIterator, Is.EqualTo(expected));
+
+	[Test]
+	public void FindLineNumber() =>
+		Assert.That(package.GetType(Base.Number).FindLineNumber("is in(other) Boolean"),
+			Is.EqualTo(14));
 
 	//ncrunch: no coverage start
 	[Test]

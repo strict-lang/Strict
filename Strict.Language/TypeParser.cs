@@ -79,8 +79,9 @@ public sealed class TypeParser(Type type, string[] lines)
 			DetectTrivialEndlessRecursionInFrom(methodLines);
 			DetectSelfRecursionWithSameArguments(methodLines);
 			DetectHugeConstantRange(methodLines);
-			DetectRedundantReturn(methodLines);
-			type.Methods.Add(new Method(type, LineNumber, parser, methodLines));
+			var method = new Method(type, LineNumber, parser, methodLines);
+			DetectRedundantReturn(methodLines, method);
+			type.Methods.Add(method);
 		}
 	}
 
@@ -304,8 +305,10 @@ public sealed class TypeParser(Type type, string[] lines)
 		long span, long limit) : ParsingFailed(type, lineNumber,
 		$"Range size {span} exceeds limit {limit}: " + line);
 
-	private void DetectRedundantReturn(IReadOnlyList<string> checkLines)
+	private void DetectRedundantReturn(IReadOnlyList<string> checkLines, Method method)
 	{
+		if (checkLines[^1].StartsWith("\treturn ", StringComparison.Ordinal))
+			throw new Body.ReturnAsLastExpressionIsNotNeeded(new Body(method));
 		if (checkLines.Count < 3)
 			return;
 		var prevAssignmentIndex = checkLines[^2].IndexOf(" = ", StringComparison.Ordinal);
@@ -317,12 +320,12 @@ public sealed class TypeParser(Type type, string[] lines)
 		if (!string.IsNullOrEmpty(variableName) &&
 			(string.Equals(checkLines[^1].TrimStart(), variableName, StringComparison.Ordinal) ||
 				string.Equals(checkLines[^1].TrimStart(), right, StringComparison.Ordinal)))
-			throw new RedundantReturnThePreviousLineContainsTheReturnValueAlready(type, LineNumber, checkLines[^2], variableName);
+			throw new RedundantReturnPreviousLineContainsValueAlready(type, LineNumber, checkLines[^2],
+				variableName);
 	}
 
-	public sealed class RedundantReturnThePreviousLineContainsTheReturnValueAlready(
-		Type type, int lineNumber, string prevLine, string variableName) :
-		ParsingFailed(type, lineNumber, prevLine, variableName);
+	public sealed class RedundantReturnPreviousLineContainsValueAlready(Type type, int lineNumber,
+		string prevLine, string variableName) : ParsingFailed(type, lineNumber, prevLine, variableName);
 
 	private string ValidateCurrentLineIsNonEmptyAndTrimmed()
 	{

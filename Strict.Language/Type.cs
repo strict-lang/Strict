@@ -540,7 +540,7 @@ public class Type : Context, IDisposable
 	/// </summary>
 	public Expression GetMemberExpression(ExpressionParser parser, string memberName,
 		string remainingTextSpan) =>
-		typeParser.GetMemberExpression(parser, memberName, remainingTextSpan);
+		typeParser.GetMemberExpression(parser, memberName, remainingTextSpan); //ncrunch: no coverage
 
 	public bool IsMutable =>
 		Name == Base.Mutable || this is GenericTypeImplementation { Generic.Name: Base.Mutable };
