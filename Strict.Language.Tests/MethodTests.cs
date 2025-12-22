@@ -231,7 +231,6 @@ public sealed class MethodTests
 			new TypeLines(nameof(MethodWithTestsAreAllowed), "has logger",
 				"MethodWithTestsAreAllowed Number", "\tMethodWithTestsAreAllowed is 5", "\t5"));
 		methodWithTestsType.ParseMembersAndMethods(parser);
-		// ReSharper disable AccessToDisposedClosure
 		Assert.That(() => methodWithTestsType.Methods[0].GetBodyAndParseIfNeeded(), Throws.Nothing);
 	}
 
@@ -254,7 +253,6 @@ public sealed class MethodTests
 			"\t\"Work not started yet\""));
 			// @formatter:on
 		multipleReturnTypeMethod.ParseMembersAndMethods(parser);
-		// ReSharper disable once AccessToDisposedClosure
 		Assert.That(() => multipleReturnTypeMethod.Methods[0].GetBodyAndParseIfNeeded(), Throws.Nothing);
 		Assert.That(multipleReturnTypeMethod.Methods[0].ReturnType, Is.InstanceOf<OneOfType>());
 		Assert.That(multipleReturnTypeMethod.Methods[0].ReturnType.Name, Is.EqualTo("BooleanOrText"));
@@ -312,4 +310,32 @@ public sealed class MethodTests
 		Assert.That(() => multipleReturnTypeMethod.Methods[0].GetBodyAndParseIfNeeded(), Throws.Nothing);
 		Assert.That(() => multipleReturnTypeMethod.Methods[1].GetBodyAndParseIfNeeded(), Throws.Nothing);
 	}
+
+	[Test]
+	public void DeclarationIsNeverUsedAndMustBeRemoved()
+	{
+		using var typeToCheck = new Type(TestPackage.Instance,
+			new TypeLines(nameof(DeclarationIsNeverUsedAndMustBeRemoved), "has logger",
+				"MethodWithTestsAreAllowed Number", "\tconstant unused = 5"));
+		typeToCheck.ParseMembersAndMethods(parser);
+		Assert.That(() => typeToCheck.Methods[0].GetBodyAndParseIfNeeded(),
+			Throws.InstanceOf<Method.DeclarationIsNeverUsedAndMustBeRemoved>());
+	}
+
+	[Test]
+	public void MutableUsesConstantValue()
+	{
+		using var typeToCheck = new Type(TestPackage.Instance,
+			new TypeLines(nameof(MutableUsesConstantValue), "has logger",
+				"MethodWithTestsAreAllowed Number", "\tmutable unused = 5", "\t6"));
+		typeToCheck.ParseMembersAndMethods(parser);
+		Assert.That(() => typeToCheck.Methods[0].GetBodyAndParseIfNeeded(),
+			Throws.InstanceOf<Method.MutableUsesConstantValue>());
+	}
+
+	[Test]
+	public void GetVariableUsageCount() =>
+		Assert.That(
+			TestPackage.Instance.GetType(Base.Character).AvailableMethods["to"][0].
+				GetVariableUsageCount("notANumber"), Is.EqualTo(3));
 }

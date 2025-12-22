@@ -13,7 +13,7 @@ namespace Strict.Language;
 public sealed class Body : Expression
 {
 	/// <summary>
-	/// At construction time, we only know the method we are in, if there is a parent Body we are in.
+	/// At construction time, we only know the method we are in if there is a parent Body we are in.
 	/// While parsing each of the expressions, we need to check for variables as defined below. This
 	/// means the expressions list can't be done yet and needs this object to exist for scope parsing
 	/// </summary>
@@ -39,7 +39,7 @@ public sealed class Body : Expression
 	/// Called when actually needed, and code needs to run, usually triggered by
 	/// Method.GetBodyAndParseIfNeeded and child bodies inside. After parsing all expressions in this
 	/// body, we will validate them all here. If there are multiple expressions, this body is
-	/// returned, otherwise just a single expression is directly returned and the body is discarded.
+	/// returned, otherwise just a single expression is directly returned, and the body is discarded.
 	/// The last expression return type must match our (method or caller) return type.
 	/// </summary>
 	[Log]
@@ -258,9 +258,9 @@ public sealed class Body : Expression
 	}
 
 	/// <summary>
-	/// When cloning methods we have to be careful to also clone the body and update it and all
-	/// children bodies to link to the new cloned method (and not longer the original method,
-	/// like the base from method or generic method).
+	/// When cloning methods, we have to be careful to also clone the body and update it and all
+	/// children bodies to link to the new cloned method and not longer the original method.
+	/// Like the base from-method or generic method.
 	/// </summary>
 	public Body CloneAndUpdateMethod(Method newClonedMethod)
 	{

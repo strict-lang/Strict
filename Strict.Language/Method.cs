@@ -409,7 +409,7 @@ public sealed class Method : Context
 	/// <summary>
 	/// Very low level check if a variableName can be found in the raw text of this method lines.
 	/// </summary>
-	public int GetVariableUsageCount(string variableName) => //TODO: use this!
+	public int GetVariableUsageCount(string variableName) =>
 		lines.Count(l => l.Contains(" " + variableName) || l.Contains("(" + variableName) ||
 			l.Contains("\t" + variableName));
 

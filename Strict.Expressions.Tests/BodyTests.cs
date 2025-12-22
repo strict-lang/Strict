@@ -43,6 +43,19 @@ public sealed class BodyTests : TestExpressions
 	}
 
 	[Test]
+	public void IsConstant()
+	{
+		var program = new Type(new Package(nameof(IsConstant)),
+			new TypeLines(nameof(IsConstant),
+				// @formatter:off
+				"has logger",
+				"Run",
+				"\tconstant number = 5",
+				"\tlogger.Log(number + number)")).ParseMembersAndMethods(new MethodExpressionParser());
+		Assert.That(program.Methods[0].GetBodyAndParseIfNeeded().IsConstant, Is.False);
+	}
+
+	[Test]
 	public void IfHasDifferentScopeThanMethod() =>
 		Assert.That(ParseExpression("if bla is 5", "\tconstant abc = \"abc\"", "\tlogger.Log(abc)"),
 			Is.EqualTo(new If(GetCondition(), CreateThenBlock())));
