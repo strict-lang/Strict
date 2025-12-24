@@ -20,8 +20,8 @@ public sealed class If(Expression condition, Expression then,	Expression? option
 	/// <summary>
 	/// The return type of the whole if expression must be a type compatible to both what the then
 	/// expression and the else expression return (if used). This is a common problem in static
-	/// programming languages, and we can fix it here by evaluating both types and find a common base
-	/// type. If that is not possible there is a compilation error here.
+	/// programming languages, and we can fix it here by evaluating both types and finding a common
+	/// base type. If that is not possible, there is a compilation error here.
 	/// </summary>
 	private static Type GetMatchingType(Type thenType, Type? elseType, Body? bodyForErrorMessage) =>
 		elseType == null || elseType.IsSameOrCanBeUsedAs(thenType, false) || elseType.Name == Base.Error
@@ -40,8 +40,8 @@ public sealed class If(Expression condition, Expression then,	Expression? option
 	public Expression Condition { get; } = condition;
 	public Expression Then { get; } = then;
 	/// <summary>
-	/// Rarely used as most of the time Then will return and anything after is automatically the else
-	/// (else is not allowed then). For multiple if/else or when not returning else might be useful.
+	/// Rarely used as most of the time Then will return, and anything after is automatically the
+	/// else (no else needed). For multiple if/else or when not returning else might be useful.
 	/// </summary>
 	public Expression? OptionalElse { get; } = optionalElse;
 

@@ -45,11 +45,11 @@ public sealed class MethodExpressionParserTests : TestExpressions
 		Assert.That(body.Expressions[2].ToString(), Is.EqualTo("false"));
 	}
 
-	[TestCase("\tError errorMessage")]
-	[TestCase("\tError \"error occurred\"")]
-	[TestCase("\tError \"error occurred: \" + errorMessage")]
-	[TestCase("\tError \"error occurred: \" + errorMessage + \"at line\"")]
-	[TestCase("\tError \"error occurred: \" + errorMessage + \"at line\" + \"5\"")]
+	[TestCase("\tError(errorMessage)")]
+	[TestCase("\tError(\"error occurred\")")]
+	[TestCase("\tError(\"error occurred: \" + errorMessage)")]
+	[TestCase("\tError(\"error occurred: \" + errorMessage + \"at line\")")]
+	[TestCase("\tError(\"error occurred: \" + errorMessage + \"at line\" + \"5\")")]
 	public void ParseErrorExpression(string errorExpression)
 	{
 		var body = (Body)new Method(type, 0, this, [
@@ -58,12 +58,93 @@ public sealed class MethodExpressionParserTests : TestExpressions
 		Assert.That(body.ReturnType, Is.EqualTo(type.FindType(Base.None)));
 		Assert.That(body.Expressions, Has.Count.EqualTo(2));
 		Assert.That(body.Expressions[0].ReturnType.Name, Is.EqualTo(Base.Text));
-		Assert.That(body.Expressions[1], Is.TypeOf<Error>());
+		Assert.That(body.Expressions[1], Is.TypeOf<MethodCall>());
 	}
 
 	[Test]
-	public void ParseInvalidTestException() =>
-		Assert.That(() => (Body)new Method(type, 0, this, [
-			MethodTests.Run, MethodTests.ConstantNumber, "\tError number"
-		]).GetBodyAndParseIfNeeded(), Throws.InnerException.InstanceOf<ArgumentException>());
+	public void IsVariableMutatedInNestedBody()
+	{
+		var body = (Body)new Method(type, 0, this, [
+			MethodTests.Run,
+			"\tmutable result = 0",
+			"\tfor Range(0, 10)",
+			"\t\tresult = result + 1",
+			"\tresult"
+		]).GetBodyAndParseIfNeeded();
+		Assert.That(body.Method.Parser.IsVariableMutated(body, "result"), Is.True);
+	}
+
+	[Test]
+	public void IsVariableMutatedInIfThen()
+	{
+		var body = (Body)new Method(type, 0, this, [
+			MethodTests.Run,
+			"\tconstant number = 5",
+			"\tmutable result = 0",
+			"\tif number is 5",
+			"\t\tresult = 1",
+			"\tresult"
+		]).GetBodyAndParseIfNeeded();
+		Assert.That(body.Method.Parser.IsVariableMutated(body, "result"), Is.True);
+	}
+
+	[Test]
+	public void IsVariableMutatedInIfElse()
+	{
+		var body = (Body)new Method(type, 0, this, [
+			MethodTests.Run,
+			"\tconstant number = 5",
+			"\tmutable result = 0",
+			"\tif number is 5",
+			"\t\treturn 1",
+			"\telse",
+			"\t\tresult = 2",
+			"\tresult"
+		]).GetBodyAndParseIfNeeded();
+		Assert.That(body.Method.Parser.IsVariableMutated(body, "result"), Is.True);
+	}
+
+	[Test]
+	public void IsVariableMutatedInNestedIfBody()
+	{
+		var body = (Body)new Method(type, 0, this, [
+			MethodTests.Run,
+			"\tconstant number = 5",
+			"\tmutable result = 0",
+			"\tif number is 5",
+			"\t\tif true",
+			"\t\t\tresult = 1",
+			"\tresult"
+		]).GetBodyAndParseIfNeeded();
+		Assert.That(body.Method.Parser.IsVariableMutated(body, "result"), Is.True);
+	}
+
+	[Test]
+	public void IsVariableMutatedInNestedElseBody()
+	{
+		var body = (Body)new Method(type, 0, this, [
+			MethodTests.Run,
+			"\tconstant number = 5",
+			"\tmutable result = 0",
+			"\tif number is 5",
+			"\t\treturn 1",
+			"\telse",
+			"\t\tif true",
+			"\t\t\tresult = 2",
+			"\tresult"
+		]).GetBodyAndParseIfNeeded();
+		Assert.That(body.Method.Parser.IsVariableMutated(body, "result"), Is.True);
+	}
+
+	[Test]
+	public void IsVariableMutatedInListCall()
+	{
+		var body = (Body)new Method(type, 0, this, [
+			MethodTests.Run,
+			"\tmutable result = (1, 2)",
+			"\tresult(0) = 0",
+			"\tresult"
+		]).GetBodyAndParseIfNeeded();
+		Assert.That(body.Method.Parser.IsVariableMutated(body, "result"), Is.True);
+	}
 }

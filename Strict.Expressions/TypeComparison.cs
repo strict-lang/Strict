@@ -16,7 +16,7 @@ public sealed class TypeComparison(Type returnType, Type targetType)
 
 	/// <summary>
 	/// If the given input represents a known type, returns a TypeComparison expression carrying
-	/// that type (with ReturnType = Base.Type). Otherwise, falls back to normal expression parsing.
+	/// that type (with ReturnType = Base.Type). Otherwise, fall back to normal expression parsing.
 	/// </summary>
 	public static Expression Parse(Body body, ReadOnlySpan<char> input, Range nextTokenRange)
 	{

@@ -52,7 +52,7 @@ public sealed class MemberCallTests : TestExpressions
 				using var _ =
 					new Type(type.Package, new TypeLines("Declaration", "has input Text = Text(5)")).
 						ParseMembersAndMethods(parser);
-			},
+			}, //ncrunch: no coverage
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.
 				InstanceOf<NamedType.AssignmentWithInitializerTypeShouldNotHaveNameWithType>());
 
@@ -67,7 +67,8 @@ public sealed class MemberCallTests : TestExpressions
 						new TypeLines(nameof(UnknownExpressionInMemberInitializer),
 							"has input Text = random")).
 					ParseMembersAndMethods(parser);
-			}, Throws.InstanceOf<ParsingFailed>());
+			}, //ncrunch: no coverage
+			Throws.InstanceOf<ParsingFailed>());
 
 	[Test]
 	public void NameMustBeAWordWithoutAnySpecialCharacterOrNumber() =>
@@ -77,7 +78,7 @@ public sealed class MemberCallTests : TestExpressions
 				using var _ = new Type(type.Package,
 					new TypeLines(nameof(NameMustBeAWordWithoutAnySpecialCharacterOrNumber),
 						"has input1$ = Text(5)")).ParseMembersAndMethods(parser);
-			},
+			}, //ncrunch: no coverage
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.
 				InstanceOf<Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers>());
 
@@ -165,7 +166,7 @@ public sealed class MemberCallTests : TestExpressions
 					"has fileDescription = file.Length > 1000 ? \"big file\" else \"small file\"",
 					"Run",
 					"\tconstant a = 5")).ParseMembersAndMethods(parser);
-			},
+			}, //ncrunch: no coverage
 			Throws.InstanceOf<CannotAccessMemberBeforeTypeIsParsed>());
 
 	[Test]
@@ -180,6 +181,8 @@ public sealed class MemberCallTests : TestExpressions
 		var body = (Body)program.Methods[0].GetBodyAndParseIfNeeded();
 		var assignment = (Declaration)body.Expressions[0];
 		Assert.That(((Binary)assignment.Value).Instance,Is.InstanceOf<MemberCall>());
+		var comparison = (TypeComparison)((Binary)body.Expressions[1]).Arguments[0];
+		Assert.That(comparison.IsConstant, Is.True);
 	}
 
 	[Test]
@@ -192,7 +195,7 @@ public sealed class MemberCallTests : TestExpressions
 					"has something Number",
 					"Run",
 					"\tconstant a = 5")).ParseMembersAndMethods(parser);
-			},
+			}, //ncrunch: no coverage
 			Throws.InstanceOf<TypeParser.DuplicateMembersAreNotAllowed>());
 
 	[Test]
@@ -218,7 +221,7 @@ public sealed class MemberCallTests : TestExpressions
 					"has numbers Boolean",
 					"Run",
 					"\t5")).ParseMembersAndMethods(parser);
-			},
+			}, //ncrunch: no coverage
 			Throws.InstanceOf<Member.MemberNameWithDifferentTypeNamesThanOwnAreNotAllowed>().With.
 				Message.Contains("numbers"));
 
@@ -233,7 +236,7 @@ public sealed class MemberCallTests : TestExpressions
 						"Run",
 						"\tconstant numbers = \"5\"")).ParseMembersAndMethods(parser);
 				dummy.Methods[0].GetBodyAndParseIfNeeded();
-			},
+			}, //ncrunch: no coverage
 			Throws.InstanceOf<Body.VariableNameCannotHaveDifferentTypeNameThanValue>().With.Message.
 				Contains("Variable name numbers denotes different type than its value type Text. " +
 					"Prefer using a different name"));
@@ -249,6 +252,6 @@ public sealed class MemberCallTests : TestExpressions
 						"has something = Range(0, 13)",
 						"Run",
 						"\tconstant a = 5")).ParseMembersAndMethods(parser);
-			},
+			}, //ncrunch: no coverage
 			Throws.InstanceOf<CannotAccessMemberBeforeTypeIsParsed>());
 }

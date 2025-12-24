@@ -31,6 +31,7 @@ public sealed class ForTests : TestExpressions
 	public void MatchingHashCode()
 	{
 		var forExpression = (For)ParseExpression("for Range(2, 5)", "\tlogger.Log(index)");
+		Assert.That(forExpression.IsConstant, Is.False);
 		Assert.That(forExpression.GetHashCode(), Is.EqualTo(forExpression.Value.GetHashCode()));
 	}
 

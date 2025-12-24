@@ -50,25 +50,16 @@ public class MethodExpressionParser : ExpressionParser
 				? throw new Body.IdentifierNotFound(body, input.ToString())
 				: throw new UnknownExpression(body, input.ToString()));
 
-	private Expression? TryParseErrorOrTextOrListOrConditionalExpression(Body body,
+	private static Expression? TryParseErrorOrTextOrListOrConditionalExpression(Body body,
 		ReadOnlySpan<char> input, bool makeMutable) =>
-		input.StartsWith("Error ")
-			? TryParseErrorExpression(body, input[6..])
-			: input[0] == '"' && input[^1] == '"' && MemoryExtensions.Count(input, '"') == 2
-				? new Text(body.Method, input.Slice(1, input.Length - 2).ToString())
-				: input[0] == '(' && input[^1] == ')' && input.Contains(',') && MemoryExtensions.Count(input, '(') == 1
-					? new List(body, body.Method.ParseListArguments(body, input[1..^1]), makeMutable)
-					: If.CanTryParseConditional(body, input)
-						? If.ParseConditional(body, input)
-						: null;
-
-	private Error TryParseErrorExpression(Body body, ReadOnlySpan<char> partToParse)
-	{
-		var expression = ParseExpression(body, partToParse);
-		return expression.ReturnType.Name != Base.Text
-			? throw new ArgumentException("Error must be a text but it is " + expression.ReturnType.Name)
-			: new Error(expression);
-	}
+		input[0] == '"' && input[^1] == '"' && MemoryExtensions.Count(input, '"') == 2
+			? new Text(body.Method, input.Slice(1, input.Length - 2).ToString())
+			: input[0] == '(' && input[^1] == ')' && input.Contains(',') &&
+			MemoryExtensions.Count(input, '(') == 1
+				? new List(body, body.Method.ParseListArguments(body, input[1..^1]), makeMutable)
+				: If.CanTryParseConditional(body, input)
+					? If.ParseConditional(body, input)
+					: null;
 
 	private Expression TryParseMethodOrMember(Body body, ReadOnlySpan<char> input)
 	{
@@ -112,7 +103,7 @@ public class MethodExpressionParser : ExpressionParser
 
 	/// <summary>
 	/// By far the most common use-case, we call something from another instance, use some binary
-	/// operator (like is, to, +, etc.) or execute some method. For more arguments more complex
+	/// operator (like "is, to, +", etc.) or execute some method. For more arguments more complex
 	/// parsing has to be done, and we have to invoke ShuntingYard for the argument list.
 	/// </summary>
 	private Expression? TryParseMemberOrZeroOrOneArgumentMethodOrNestedCall(Body body,
@@ -253,21 +244,10 @@ public class MethodExpressionParser : ExpressionParser
 	{
 		foreach (var expression in body.Expressions)
 		{
-			if (IsMutationOfVariable(expression, variableName))
+			if (IsMutationOfVariable(expression, variableName) ||
+				expression is Body childBody && IsVariableMutated(childBody, variableName) ||
+				expression is If ifExpression && CheckForVariableMutationInIf(variableName, ifExpression))
 				return true;
-			if (expression is Body childBody && IsVariableMutated(childBody, variableName))
-				return true;
-			if (expression is If ifExpression)
-			{
-				if (IsMutationOfVariable(ifExpression.Then, variableName) ||
-					ifExpression.Then is Body thenBody && IsVariableMutated(thenBody, variableName))
-					return true;
-				if (ifExpression.OptionalElse != null &&
-					(IsMutationOfVariable(ifExpression.OptionalElse, variableName) ||
-						ifExpression.OptionalElse is Body elseBody &&
-						IsVariableMutated(elseBody, variableName)))
-					return true;
-			}
 			if (expression is For forExpression &&
 				(IsMutationOfVariable(forExpression.Body, variableName) ||
 					forExpression.Value is Value forValue && forValue.Data.ToString() == variableName ||
@@ -278,9 +258,6 @@ public class MethodExpressionParser : ExpressionParser
 			if (expression is MethodCall { Instance: VariableCall variableCall, IsMutable: true } &&
 				variableCall.Variable.Name == variableName)
 				return true;
-			if (expression is ListCall { List: VariableCall listVariableCall } &&
-				listVariableCall.Variable.Name == variableName)
-				return true;
 		}
 		return false;
 	}
@@ -289,6 +266,19 @@ public class MethodExpressionParser : ExpressionParser
 		expression is MutableReassignment reassignment && (reassignment.Name == variableName ||
 			reassignment.Target is ListCall { List: VariableCall listCall } &&
 			listCall.Variable.Name == variableName);
+
+	private bool CheckForVariableMutationInIf(string variableName, If ifExpression)
+	{
+		if (IsMutationOfVariable(ifExpression.Then, variableName) ||
+			ifExpression.Then is Body thenBody && IsVariableMutated(thenBody, variableName) ||
+			ifExpression.Then is If ifBody && CheckForVariableMutationInIf(variableName, ifBody))
+			return true;
+		return ifExpression.OptionalElse != null &&
+			(IsMutationOfVariable(ifExpression.OptionalElse, variableName) ||
+				ifExpression.OptionalElse is Body elseBody && IsVariableMutated(elseBody, variableName) ||
+				ifExpression.OptionalElse is If elseIfBody &&
+				CheckForVariableMutationInIf(variableName, elseIfBody));
+	}
 
 	/// <summary>
 	/// Similar to TryParseExpression, but we know there are commas separating expressions

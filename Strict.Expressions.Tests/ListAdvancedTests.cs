@@ -18,7 +18,7 @@ public sealed class ListAdvancedTests : TestExpressions
 				using var _ = new Type(type.Package,
 						new TypeLines(nameof(ListPrefixIsNotAllowed), "has listOne Numbers")).
 					ParseMembersAndMethods(parser);
-			},
+			}, //ncrunch: no coverage
 			Throws.InnerException.
 				InstanceOf<Context.ListPrefixIsNotAllowedUseImplementationTypeNameInPlural>());
 
@@ -163,8 +163,7 @@ public sealed class ListAdvancedTests : TestExpressions
 					"\tsomething"))
 					// @formatter:on
 					.ParseMembersAndMethods(parser);
-				dummy.Methods[0].GetBodyAndParseIfNeeded();
-			},
+			}, //ncrunch: no coverage
 			Throws.InstanceOf<TypeParser.MultiLineExpressionsAllowedOnlyWhenLengthIsMoreThanHundred>().
 				With.Message.
 				Contains("Current length: 40, Minimum Length for Multi line expressions: 100"));
@@ -185,8 +184,7 @@ public sealed class ListAdvancedTests : TestExpressions
 					"\tsomething"))
 					// @formatter:on
 					.ParseMembersAndMethods(parser);
-				dummy.Methods[0].GetBodyAndParseIfNeeded();
-			},
+			}, //ncrunch: no coverage
 			Throws.InstanceOf<TypeParser.UnterminatedMultiLineListFound>().With.Message.
 				StartWith("\tconstant result = (1, 2, 3, 4,"));
 
@@ -271,7 +269,7 @@ public sealed class ListAdvancedTests : TestExpressions
 					"has numbers with Length is 2",
 					"Length Number",
 					"\t(X * X + Y * Y).SquareRoot")).ParseMembersAndMethods(parser);
-			},
+			}, //ncrunch: no coverage
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.
 				InstanceOf<Type.ArgumentsDoNotMatchMethodParameters>());
 	// @formatter:on

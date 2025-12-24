@@ -166,4 +166,24 @@ public class DeclarationTests : TestExpressions
 						"\tconstant file = File(\"test.txt\")",
 						"\tfile is File")).ParseMembersAndMethods(parser).Methods[0].
 				GetBodyAndParseIfNeeded()).Expressions[0]).Value.ToString(), Is.EqualTo("File(\"test.txt\")"));
+
+	[Test]
+	public void LetUsesConstantValue() =>
+		Assert.That(() => ParseExpression("let number = 5"),
+			Throws.InstanceOf<Declaration.LetUsesConstantValue>().With.Message.Contain(
+				"Let declaration uses only constant value, use constant instead: constant number = 5"));
+
+	[Test]
+	public void ConstantUsesNonConstantValue() =>
+		Assert.That(() =>
+		{
+			var program = new Type(Package,
+				new TypeLines(nameof(ConstantUsesNonConstantValue),
+					"has number",
+					"Run",
+					"\tconstant result = number + 1")).ParseMembersAndMethods(parser);
+			program.Methods[0].GetBodyAndParseIfNeeded();
+		}, //ncrunch: no coverage
+			Throws.InstanceOf<Declaration.ConstantUsesNonConstantValue>().With.Message.Contain(
+			"Constant declaration uses non-constant value, use let instead: let result = number + 1"));
 }
