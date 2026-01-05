@@ -5,31 +5,43 @@ using Type = Strict.Language.Type;
 
 namespace Strict.HighLevelRuntime;
 
-public sealed class Executor(Package basePackage, bool evaluateInlineTests = false)
+public sealed class Executor(Package basePackage, bool evaluateInlineTests = true)
 {
-	// Evaluate inline tests at top-level only (outermost call), avoid recursion
-	private readonly bool evaluateInlineTests = evaluateInlineTests;
-	private int inlineTestDepth;
-
 	public ValueInstance Execute(Method method, ValueInstance? instance,
 		IReadOnlyList<ValueInstance> args)
 	{
+		if (evaluateInlineTests && !validatedMethods.Contains(method))
+		{
+			validatedMethods.Add(method);
+			Execute(method, instance, args, true);
+		}
+		return Execute(method, instance, args, false);
+	}
+
+	private readonly HashSet<Method> validatedMethods = [];
+
+	private ValueInstance Execute(Method method, ValueInstance? instance,
+		IReadOnlyList<ValueInstance> args, bool runInlineTests)
+	{
+		if (args.Count > method.Parameters.Count)
+			throw new TooManyArguments(args[method.Parameters.Count].ToString(), args, method);
 		var context = new ExecutionContext { This = instance };
 		for (var i = 0; i < method.Parameters.Count; i++)
 		{
 			var param = method.Parameters[i];
 			var arg = i < args.Count
 				? args[i]
-				: throw new ArgumentException("Missing argument: " + param.Name);
+				: param.DefaultValue != null
+					? Evaluate(param.DefaultValue, context)
+					: throw new MissingArgument(param.Name, args, method);
 			context.Set(param.Name, arg);
 		}
 		try
 		{
-			var bodyExpr = method.GetBodyAndParseIfNeeded();
-			var result = bodyExpr is Body body
-				? EvaluateBody(body, context, isTopLevel: true)
-				: Evaluate(bodyExpr, context);
-			return result;
+			var body = method.GetBodyAndParseIfNeeded();
+			return body is Body bodyExpression
+				? EvaluateBody(bodyExpression, context, runInlineTests)
+				: Evaluate(body, context);
 		}
 		catch (ReturnSignal ret)
 		{
@@ -37,10 +49,18 @@ public sealed class Executor(Package basePackage, bool evaluateInlineTests = fal
 		}
 	}
 
+	public class TooManyArguments(string argument, IReadOnlyList<ValueInstance> args, Method method)
+		: Exception(argument + ", given arguments: " + args.ToWordList() + ", method " +
+			method.Name + " requires these parameters: " + method.Parameters.ToWordList());
+
+	public class MissingArgument(string paramName, IReadOnlyList<ValueInstance> args, Method method)
+		: Exception(paramName + ", given arguments: " + args.ToWordList() + ", method " +
+			method.Name + " requires these parameters: " + method.Parameters.ToWordList());
+
 	public ValueInstance Evaluate(Expression expr, ExecutionContext context) =>
 		expr switch
 		{
-			Body body => EvaluateBody(body, context, isTopLevel: false),
+			Body body => EvaluateBody(body, context, false),
 			Value v => new ValueInstance(v.ReturnType, v.Data),
 			ParameterCall or VariableCall => context.Get(expr.ToString()),
 			MemberCall m => EvaluateMember(m, context),
@@ -50,42 +70,48 @@ public sealed class Executor(Package basePackage, bool evaluateInlineTests = fal
 			Declaration c => EvaluateAndAssign(c.Name, c.Value, context),
 			MutableReassignment a => EvaluateAndAssign(a.Name, a.Value, context),
 			Instance i => new ValueInstance(i.ReturnType, context.Variables.First().Value.Value),
-			_ => throw new NotSupportedException($"Expression not supported yet: {expr.GetType().Name}")
+			_ => //ncrunch: no coverage start
+				throw new NotSupportedException($"Expression not supported yet: {expr.GetType().Name}")
+			//ncrunch: no coverage end
 		};
 
-	private ValueInstance EvaluateBody(Body body, ExecutionContext ctx, bool isTopLevel)
+	private ValueInstance EvaluateBody(Body body, ExecutionContext ctx, bool runInlineTests)
 	{
 		ValueInstance last =
 			new((ctx.This?.ReturnType.Package ?? body.Method.Type.Package).FindType(Base.None)!, null);
-		var shouldRunInlineTestsNow = evaluateInlineTests && inlineTestDepth == 0 && isTopLevel;
-		if (shouldRunInlineTestsNow)
+		if (runInlineTests)
 			inlineTestDepth++;
 		try
 		{
 			foreach (var e in body.Expressions)
-			{
 				// Skip inline tests by default to avoid infinite recursion
-				if (!shouldRunInlineTestsNow &&
-					IsStandaloneInlineTest(e))
-					continue;
-				last = e switch
+				if (runInlineTests || !IsStandaloneInlineTest(e))
 				{
-					Declaration c => EvaluateAndAssign(c.Name, c.Value, ctx),
-					MutableReassignment a => EvaluateAndAssign(a.Name, a.Value, ctx),
-					_ => Evaluate(e, ctx)
-				};
-			}
+					last = Evaluate(e, ctx);
+					if (runInlineTests && IsStandaloneInlineTest(e) && !ToBool(last))
+						throw new InlineTestFailed(e, last);
+				}
 			return last;
 		}
 		finally
 		{
-			if (shouldRunInlineTestsNow)
+			if (runInlineTests)
 				inlineTestDepth--;
 		}
 	}
 
-	// An inline test is typically a standalone boolean expression at the method top level,
-	// not part of control flow or assignment.
+	public sealed class InlineTestFailed(Expression line, ValueInstance result)
+		: Exception($"{line} failed, result was {result}");
+
+	/// <summary>
+	/// Evaluate inline tests at top-level only (outermost call), avoid recursion
+	/// </summary>
+	private int inlineTestDepth;
+
+	/// <summary>
+	/// An inline test is typically a standalone boolean expression at the method top level,
+	/// not part of a control flow or assignment expression.
+	/// </summary>
 	private static bool IsStandaloneInlineTest(Expression e) =>
 		e.ReturnType.Name == Base.Boolean &&
 		e is not If &&
@@ -99,18 +125,12 @@ public sealed class Executor(Package basePackage, bool evaluateInlineTests = fal
 	private ValueInstance EvaluateReturn(Return r, ExecutionContext ctx) =>
 		throw new ReturnSignal(Evaluate(r.Value, ctx));
 
-	private ValueInstance EvaluateIf(If iff, ExecutionContext ctx)
-	{
-		var cond = Evaluate(iff.Condition, ctx);
-		var isTrue = ToBool(cond);
-		if (isTrue)
-			return iff.Then is Body thenBody
-				? EvaluateBody(thenBody, ctx, isTopLevel: false)
-				: Evaluate(iff.Then, ctx);
-		return iff.OptionalElse != null
-			? Evaluate(iff.OptionalElse, ctx)
-			: new ValueInstance(ctx.This?.ReturnType ?? iff.ReturnType, null);
-	}
+	private ValueInstance EvaluateIf(If iff, ExecutionContext ctx) =>
+		ToBool(Evaluate(iff.Condition, ctx))
+			? Evaluate(iff.Then, ctx)
+			: iff.OptionalElse != null
+				? Evaluate(iff.OptionalElse, ctx)
+				: new ValueInstance(ctx.This?.ReturnType ?? iff.ReturnType, null);
 
 	private ValueInstance EvaluateMember(MemberCall member, ExecutionContext ctx) =>
 		member.Instance == null

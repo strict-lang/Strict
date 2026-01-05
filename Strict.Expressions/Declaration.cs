@@ -3,9 +3,9 @@
 namespace Strict.Expressions;
 
 /// <summary>
-/// Constant, let or mutable declaration in a method, often constant fixed value that is optimized
-/// away. Very rarely should be mutable as this can't be optimized away so well, "let" is fine as
-/// it is immutable after declaration.
+/// Constant, let, or mutable declaration in a method, often constant fixed value that is
+/// optimized away. Very rarely should be mutable as this can't be optimized away so well, "let"
+/// is fine as it is immutable after declaration.
 /// </summary>
 public class Declaration : ConcreteExpression
 {

@@ -8,17 +8,56 @@ namespace Strict.HighLevelRuntime.Tests;
 public sealed class ExecutorTests
 {
 	[SetUp]
-	public void CreateExecutor() => executor = new Executor(TestPackage.Instance);
+	public void CreateExecutor() => executor = new Executor(TestPackage.Instance, false);
 
 	private Executor executor = null!;
 
 	[Test]
+	public void MissingArgument()
+	{
+		using var t = CreateCalcType();
+		var method = t.Methods.Single(m => m.Name == "Add");
+		Assert.That(() => executor.Execute(method, null, []),
+			Throws.TypeOf<Executor.MissingArgument>().With.Message.StartsWith("first"));
+	}
+
+	private static Type CreateCalcType() =>
+		CreateType("Calc",
+			"mutable last Number",
+			"Add(first Number, second = 1) Number",
+			"\tAdd(1) is 2",
+			"\tlast = first + second");
+
+	private static Type CreateType(string name, params string[] lines) =>
+		new Type(TestPackage.Instance, new TypeLines(name, lines)).ParseMembersAndMethods(
+			new MethodExpressionParser());
+
+	[Test]
+	public void UseDefaultValue()
+	{
+		using var t = CreateCalcType();
+		var method = t.Methods.Single(m => m.Name == "Add");
+		var result = executor.Execute(method, null,
+			[new ValueInstance(TestPackage.Instance.FindType(Base.Number)!, 5)]);
+		Assert.That(Convert.ToDouble(result.Value), Is.EqualTo(6));
+	}
+
+	[Test]
+	public void TooManyArguments()
+	{
+		using var t = CreateCalcType();
+		var method = t.Methods.Single(m => m.Name == "Add");
+		Assert.That(() => executor.Execute(method, null, [
+			new ValueInstance(TestPackage.Instance.FindType(Base.Number)!, 1),
+			new ValueInstance(TestPackage.Instance.FindType(Base.Number)!, 2),
+			new ValueInstance(TestPackage.Instance.FindType(Base.Number)!, 3)
+		]), Throws.InstanceOf<Executor.TooManyArguments>().With.Message.StartsWith("Number:3"));
+	}
+
+	[Test]
 	public void EvaluateValueAndVariableAndParameterCalls()
 	{
-		using var t = CreateType("Calc",
-			"mutable last Number",
-			"Add(first Number, second Number) Number",
-			"\tlast = first + second");
+		using var t = CreateCalcType();
 		var method = t.Methods.Single(m => m.Name == "Add");
 		var first = new ValueInstance(TestPackage.Instance.FindType(Base.Number)!, 5);
 		var second = new ValueInstance(TestPackage.Instance.FindType(Base.Number)!, 7);
@@ -27,9 +66,19 @@ public sealed class ExecutorTests
 		Assert.That(Convert.ToDouble(result.Value), Is.EqualTo(12));
 	}
 
-	private static Type CreateType(string name, params string[] lines) =>
-		new Type(TestPackage.Instance, new TypeLines(name, lines)).ParseMembersAndMethods(
-			new MethodExpressionParser());
+	[Test]
+	public void EvaluateDeclaration()
+	{
+		using var t = CreateType("Calc",
+			"mutable last Number",
+			"AddFive(number) Number",
+			"\tconstant five = 5",
+			"\tnumber + five");
+		var method = t.Methods.Single(m => m.Name == "AddFive");
+		var number = new ValueInstance(TestPackage.Instance.FindType(Base.Number)!, 5);
+		var result = executor.Execute(method, null, [number]);
+		Assert.That(Convert.ToDouble(result.Value), Is.EqualTo(10));
+	}
 
 	[Test]
 	public void EvaluateAllArithmeticOperators()

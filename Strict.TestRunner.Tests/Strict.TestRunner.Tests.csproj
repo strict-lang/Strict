@@ -20,4 +20,9 @@
     <Using Include="NUnit.Framework" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Strict.Language.Tests\Strict.Language.Tests.csproj" />
+    <ProjectReference Include="..\Strict.TestRunner\Strict.TestRunner.csproj" />
+  </ItemGroup>
+
 </Project>
