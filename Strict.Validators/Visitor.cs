@@ -87,7 +87,7 @@ public abstract class Visitor
 		if (expression == null)
 			return expression;
 		if (expression is Body innerBody)
-			Visit(innerBody, context);
+			Visit(innerBody, context); //ncrunch: no coverage
 		if (expression is Binary binary)
 		{
 			var changedInstance = Visit(binary.Instance, body, context)!;

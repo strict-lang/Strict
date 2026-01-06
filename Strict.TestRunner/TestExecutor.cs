@@ -4,7 +4,7 @@ using Type = Strict.Language.Type;
 
 namespace Strict.TestRunner;
 
-public sealed class TestExecutor(Package basePackage)
+public sealed class TestExecutor(Package basePackage)//TODO: not needed, can just be the normal Executor
 {
 	private readonly Executor executor = new(basePackage, true);
 

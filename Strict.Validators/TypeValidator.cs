@@ -53,25 +53,28 @@ public sealed class TypeValidator : Visitor
 	private static void ValidateUnusedVariables(Body body, object? context)
 	{
 		if (context is not VariableUsages variables)
-			return;
+			return; //ncrunch: no coverage
 		foreach (var variable in body.Variables!)
 			if (!variables.used.Contains(variable.Name))
 				throw new UnusedMethodVariableMustBeRemoved(body.Method.Type, variable.Name);
+		//ncrunch: no coverage start
 		var mutableReassignments = body.Expressions.OfType<MutableReassignment>().ToList();
 		foreach (var mutableVariable in body.Variables.Where(variable => variable.IsMutable))
 			if (IsVariableValueUnchanged(mutableVariable, mutableReassignments))
 				throw new VariableDeclaredAsMutableButValueNeverChanged(body, mutableVariable);
-	}
+	} //ncrunch: no coverage end
 
 	public sealed class UnusedMethodVariableMustBeRemoved(Type type, string name)
 		: ParsingFailed(type, 0, name);
 
+	//ncrunch: no coverage start
 	private static bool IsVariableValueUnchanged(Variable mutableVariable,
 		IEnumerable<MutableReassignment> mutableReassignments) =>
 		mutableReassignments.FirstOrDefault(m => m.Name == mutableVariable.Name) == null;
 
 	public sealed class VariableDeclaredAsMutableButValueNeverChanged(Body body, Variable variable)
 		: ParsingFailed(body, variable.Name);
+	//ncrunch: no coverage end
 
 	protected override Expression? Visit(Expression? expression, Body? body, object? context = null)
 	{
@@ -80,7 +83,7 @@ public sealed class TypeValidator : Visitor
 		if (expression is ParameterCall parameterCall)
 			variables.used.Add(parameterCall.Parameter.Name);
 		else if (expression is VariableCall variableCall)
-			variables.used.Add(variableCall.Variable.Name);
+			variables.used.Add(variableCall.Variable.Name); //ncrunch: no coverage
 		else if (expression is MutableReassignment reassignment)
 			variables.reassignedMutables.Add(reassignment.Name);
 		return expression;

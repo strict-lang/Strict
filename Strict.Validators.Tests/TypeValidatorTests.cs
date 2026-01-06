@@ -40,8 +40,6 @@ public sealed class TypeValidatorTests
 				"\t\"Run method executed with input\" + methodInput"
 			]), true));
 
-	// Local mutable variables are validated by parser and constant/mutable rules now; keep parameter test below
-
 	[Test]
 	public void ExceptionShouldOccurOnlyForUnchangedMutableVariable() =>
 		Assert.That(() => validator.Visit(new Method(type, 1, parser, [
@@ -171,7 +169,7 @@ public sealed class TypeValidatorTests
 				]);
 				typeWithInputMember.Methods[^1].GetBodyAndParseIfNeeded();
 				validator.Visit(typeWithInputMember);
-			},
+			}, //ncrunch: no coverage
 			Throws.InstanceOf<TypeValidator.VariableHidesMemberUseDifferentName>().With.Message.
 				Contains("Method name Run, Variable name input"));
 

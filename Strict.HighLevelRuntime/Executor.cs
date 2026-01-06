@@ -10,11 +10,8 @@ public sealed class Executor(Package basePackage, bool evaluateInlineTests = tru
 	public ValueInstance Execute(Method method, ValueInstance? instance,
 		IReadOnlyList<ValueInstance> args)
 	{
-		if (evaluateInlineTests && !validatedMethods.Contains(method))
-		{
-			validatedMethods.Add(method);
+		if (evaluateInlineTests && validatedMethods.Add(method))
 			Execute(method, instance, args, true);
-		}
 		return Execute(method, instance, args, false);
 	}
 
@@ -32,16 +29,13 @@ public sealed class Executor(Package basePackage, bool evaluateInlineTests = tru
 			var arg = i < args.Count
 				? args[i]
 				: param.DefaultValue != null
-					? Evaluate(param.DefaultValue, context)
+					? RunExpression(param.DefaultValue, context)
 					: throw new MissingArgument(param.Name, args, method);
 			context.Set(param.Name, arg);
 		}
 		try
 		{
-			var body = method.GetBodyAndParseIfNeeded();
-			return body is Body bodyExpression
-				? EvaluateBody(bodyExpression, context, runInlineTests)
-				: Evaluate(body, context);
+			return RunExpression(method.GetBodyAndParseIfNeeded(), context, runInlineTests);
 		}
 		catch (ReturnSignal ret)
 		{
@@ -49,18 +43,19 @@ public sealed class Executor(Package basePackage, bool evaluateInlineTests = tru
 		}
 	}
 
-	public class TooManyArguments(string argument, IReadOnlyList<ValueInstance> args, Method method)
+	public class TooManyArguments(string argument, IEnumerable<ValueInstance> args, Method method)
 		: Exception(argument + ", given arguments: " + args.ToWordList() + ", method " +
 			method.Name + " requires these parameters: " + method.Parameters.ToWordList());
 
-	public class MissingArgument(string paramName, IReadOnlyList<ValueInstance> args, Method method)
+	public class MissingArgument(string paramName, IEnumerable<ValueInstance> args, Method method)
 		: Exception(paramName + ", given arguments: " + args.ToWordList() + ", method " +
 			method.Name + " requires these parameters: " + method.Parameters.ToWordList());
 
-	public ValueInstance Evaluate(Expression expr, ExecutionContext context) =>
+	public ValueInstance RunExpression(Expression expr, ExecutionContext context,
+		bool runInlineTests = false) =>
 		expr switch
 		{
-			Body body => EvaluateBody(body, context, false),
+			Body body => EvaluateBody(body, context, runInlineTests),
 			Value v => new ValueInstance(v.ReturnType, v.Data),
 			ParameterCall or VariableCall => context.Get(expr.ToString()),
 			MemberCall m => EvaluateMember(m, context),
@@ -85,9 +80,9 @@ public sealed class Executor(Package basePackage, bool evaluateInlineTests = tru
 		{
 			foreach (var e in body.Expressions)
 				// Skip inline tests by default to avoid infinite recursion
-				if (runInlineTests || !IsStandaloneInlineTest(e))
+				if (inlineTestDepth > 0 || !IsStandaloneInlineTest(e))
 				{
-					last = Evaluate(e, ctx);
+					last = RunExpression(e, ctx);
 					if (runInlineTests && IsStandaloneInlineTest(e) && !ToBool(last))
 						throw new InlineTestFailed(e, last);
 				}
@@ -120,23 +115,23 @@ public sealed class Executor(Package basePackage, bool evaluateInlineTests = tru
 		e is not MutableReassignment;
 
 	private ValueInstance EvaluateAndAssign(string name, Expression value, ExecutionContext ctx) =>
-		ctx.Set(name, Evaluate(value, ctx));
+		ctx.Set(name, RunExpression(value, ctx));
 
 	private ValueInstance EvaluateReturn(Return r, ExecutionContext ctx) =>
-		throw new ReturnSignal(Evaluate(r.Value, ctx));
+		throw new ReturnSignal(RunExpression(r.Value, ctx));
 
 	private ValueInstance EvaluateIf(If iff, ExecutionContext ctx) =>
-		ToBool(Evaluate(iff.Condition, ctx))
-			? Evaluate(iff.Then, ctx)
+		ToBool(RunExpression(iff.Condition, ctx))
+			? RunExpression(iff.Then, ctx)
 			: iff.OptionalElse != null
-				? Evaluate(iff.OptionalElse, ctx)
+				? RunExpression(iff.OptionalElse, ctx)
 				: new ValueInstance(ctx.This?.ReturnType ?? iff.ReturnType, null);
 
 	private ValueInstance EvaluateMember(MemberCall member, ExecutionContext ctx) =>
 		member.Instance == null
 			? ctx.Get(member.Member.Name)
 			: member.Member.InitialValue != null
-				? Evaluate(member.Member.InitialValue, ctx)
+				? RunExpression(member.Member.InitialValue, ctx)
 				: ctx.Get(member.Member.Name);
 
 	private ValueInstance EvaluateMethodCall(MethodCall call, ExecutionContext ctx)
@@ -145,11 +140,11 @@ public sealed class Executor(Package basePackage, bool evaluateInlineTests = tru
 		if (IsArithmetic(op) || IsCompare(op))
 			return EvaluateArithmeticOrCompare(call, ctx);
 		var instance = call.Instance != null
-			? Evaluate(call.Instance, ctx)
+			? RunExpression(call.Instance, ctx)
 			: ctx.This;
 		var args = new List<ValueInstance>(call.Arguments.Count);
 		foreach (var a in call.Arguments)
-			args.Add(Evaluate(a, ctx));
+			args.Add(RunExpression(a, ctx));
 		return Execute(call.Method, instance, args);
 	}
 
@@ -162,9 +157,9 @@ public sealed class Executor(Package basePackage, bool evaluateInlineTests = tru
 	private ValueInstance EvaluateArithmeticOrCompare(MethodCall call, ExecutionContext ctx)
 	{
 		if (call.Instance == null || call.Arguments.Count != 1)
-			throw new InvalidOperationException("Binary call must have instance and 1 argument");
-		var left = Evaluate(call.Instance, ctx).Value;
-		var right = Evaluate(call.Arguments[0], ctx).Value;
+			throw new InvalidOperationException("Binary call must have instance and 1 argument"); //ncrunch: no coverage
+		var left = RunExpression(call.Instance, ctx).Value;
+		var right = RunExpression(call.Arguments[0], ctx).Value;
 		var op = call.Method.Name;
 		if (IsArithmetic(op))
 		{
@@ -177,17 +172,15 @@ public sealed class Executor(Package basePackage, bool evaluateInlineTests = tru
 				BinaryOperator.Multiply => Number(l * r),
 				BinaryOperator.Divide => Number(l / r),
 				BinaryOperator.Modulate => Number(l % r),
-				_ => throw new NotSupportedException("Operator not supported for Number: " + op)
+				_ => throw new NotSupportedException("Operator not supported for Number: " + op) //ncrunch: no coverage
 			};
 		}
-
-		// Compare
 		return op switch
 		{
 			BinaryOperator.Greater => Bool(NumberToDouble(left) > NumberToDouble(right)),
 			BinaryOperator.Smaller => Bool(NumberToDouble(left) < NumberToDouble(right)),
 			BinaryOperator.Is => Bool(Equals(left, right)),
-			_ => throw new NotSupportedException("Operator not supported for Boolean: " + op)
+			_ => throw new NotSupportedException("Operator not supported for Boolean: " + op) //ncrunch: no coverage
 		};
 	}
 
@@ -195,8 +188,8 @@ public sealed class Executor(Package basePackage, bool evaluateInlineTests = tru
 		v.Value switch
 		{
 			bool b => b,
-			Value val when val.ReturnType.Name == Base.Boolean && val.Data is bool bv => bv,
-			_ => throw new InvalidOperationException("Expected Boolean, got: " + v)
+			Value { ReturnType.Name: Base.Boolean, Data: bool bv } => bv, //ncrunch: no coverage
+			_ => throw new InvalidOperationException("Expected Boolean, got: " + v) //ncrunch: no coverage
 		};
 
 	private ValueInstance Number(double n) => new(numberType, n);

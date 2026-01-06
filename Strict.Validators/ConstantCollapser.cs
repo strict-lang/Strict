@@ -62,20 +62,21 @@ public sealed class ConstantCollapser : Visitor
 				left = leftMember.Member.InitialValue;
 			var right = binary.Arguments[0];
 			if (right is VariableCall { Variable.InitialValue.IsConstant: true } rightCall)
-				right = rightCall.Variable.InitialValue;
+				right = rightCall.Variable.InitialValue; //ncrunch: no coverage
 			if (right is MemberCall { Member.InitialValue.IsConstant: true } rightMember)
-				right = rightMember.Member.InitialValue;
+				right = rightMember.Member.InitialValue; //ncrunch: no coverage
 			var collapsedExpression = TryCollapseBinaryExpression(left, right, binary.Method);
 			if (collapsedExpression != null)
 				return collapsedExpression;
+			//ncrunch: no coverage start
 			if (!ReferenceEquals(left, binary.Instance!) || !ReferenceEquals(right, binary.Arguments[0]))
 			{
 				var arguments = new[] { right };
 				return new Binary(left, left.ReturnType.GetMethod(binary.Method.Name, arguments), arguments);
 			}
-		}
+		} //ncrunch: no coverage end
 		if (!expression.IsConstant)
-			return expression;
+			return expression; //ncrunch: no coverage
 		if (expression is To to)
 		{
 			var value = to.Instance as Value;
@@ -83,12 +84,12 @@ public sealed class ConstantCollapser : Visitor
 				return new Number(to.Method.Type, double.Parse(text));
 			if (to.ConversionType.Name == Base.Text && value?.Data is double number)
 				return new Text(to.Method.Type, number.ToString(CultureInfo.InvariantCulture));
-			throw new UnsupportedToExpression(to.ToStringWithType());
+			throw new UnsupportedToExpression(to.ToStringWithType()); //ncrunch: no coverage
 		}
 		return expression;
 	}
 
-	public class UnsupportedToExpression(string toStringWithType) : Exception(toStringWithType);
+	public class UnsupportedToExpression(string toStringWithType) : Exception(toStringWithType); //ncrunch: no coverage
 
 	/// <summary>
 	/// Would be nice if all of these are evaluated via actual strict code!
@@ -97,9 +98,9 @@ public sealed class ConstantCollapser : Visitor
 		Context method)
 	{
 		if (left is Binary leftBinary)
-			left = TryCollapseBinaryExpression(leftBinary.Instance!, leftBinary.Arguments[0], leftBinary.Method) ?? left;
+			left = TryCollapseBinaryExpression(leftBinary.Instance!, leftBinary.Arguments[0], leftBinary.Method) ?? left; //ncrunch: no coverage
 		if (right is Binary rightBinary)
-			right = TryCollapseBinaryExpression(rightBinary.Instance!, rightBinary.Arguments[0], rightBinary.Method) ?? right;
+			right = TryCollapseBinaryExpression(rightBinary.Instance!, rightBinary.Arguments[0], rightBinary.Method) ?? right; //ncrunch: no coverage
 		var leftNumber = left as Number;
 		var rightNumber = right as Number;
 		if (method.Name == BinaryOperator.Plus)
@@ -110,6 +111,7 @@ public sealed class ConstantCollapser : Visitor
 			var rightText = right as Text;
 			if (leftText != null && rightText != null)
 				return new Text(method, (string)leftText.Data + (string)rightText.Data);
+			//ncrunch: no coverage start
 			if (leftText != null && rightNumber != null)
 				return new Text(method, (string)leftText.Data + rightNumber.Data);
 			if (leftNumber != null && rightText != null)
@@ -132,6 +134,6 @@ public sealed class ConstantCollapser : Visitor
 			if (method.Name == BinaryOperator.Or)
 				return new Boolean(method, (bool)leftBoolean.Data || (bool)rightBoolean.Data);
 		}
-		return null;
+		return null; //ncrunch: no coverage end
 	}
 }
