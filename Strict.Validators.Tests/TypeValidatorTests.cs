@@ -175,15 +175,19 @@ public sealed class TypeValidatorTests
 
 	[Test]
 	public void ParameterHidesMemberUseDifferentName() =>
-		Assert.That(() => validator.Visit(CreateType(nameof(ParameterHidesMemberUseDifferentName), [
-				"has input Number",
-				"FirstMethod(input Number) Number",
-				"\tconstant something = 5",
-				"\tinput + something",
-				"SecondMethod(methodInput Number) Number",
-				"\tconstant second = 5",
-				"\tmethodInput + second"
-			])),
+		Assert.That(() =>
+			{
+				using var t = CreateType(nameof(ParameterHidesMemberUseDifferentName), [
+					"has input Number",
+					"FirstMethod(input Number) Number",
+					"\tconstant something = 5",
+					"\tinput + something",
+					"SecondMethod(methodInput Number) Number",
+					"\tconstant second = 5",
+					"\tmethodInput + second"
+				]);
+				validator.Visit(t);
+			}, //ncrunch: no coverage
 			Throws.InstanceOf<TypeValidator.ParameterHidesMemberUseDifferentName>().With.Message.
 				Contains("Method name FirstMethod, Parameter name input"));
 
