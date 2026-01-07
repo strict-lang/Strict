@@ -13,8 +13,8 @@ namespace Strict.Expressions;
 public class MethodCall : ConcreteExpression
 {
 	public MethodCall(Method method, Expression? instance, IReadOnlyList<Expression> arguments,
-		Type? toReturnType = null) :
-		base(GetMethodReturnType(method, toReturnType), method.ReturnType.IsMutable)
+		Type? toReturnType = null, int lineNumber = 0) :
+		base(GetMethodReturnType(method, toReturnType), lineNumber, method.ReturnType.IsMutable)
 	{
 		if (method.Name == Method.From && instance != null)
 			throw new CannotCallFromConstructorWithExistingInstance(); //ncrunch: no coverage
@@ -36,8 +36,8 @@ public class MethodCall : ConcreteExpression
 	public override bool IsConstant =>
 		(Instance?.IsConstant ?? true) && Arguments.All(a => a.IsConstant);
 
-	public MethodCall(Method method, Expression? instance = null, Type? toReturnType = null) : this(
-		method, instance, [], toReturnType) { }
+	public MethodCall(Method method, Expression? instance = null, Type? toReturnType = null,
+		int lineNumber = 0) : this(method, instance, [], toReturnType, lineNumber) { }
 
 	// ReSharper disable once TooManyArguments
 	public static Expression? TryParse(Expression? instance, Body body, IReadOnlyList<Expression> arguments,
@@ -49,7 +49,7 @@ public class MethodCall : ConcreteExpression
 		if (method != null)
 			return new MethodCall(method, instance, AreArgumentsAutoParsedAsList(method, arguments)
 				? [new List(body, (List<Expression>)arguments)]
-				: arguments);
+				: arguments, null, body.Method.TypeLineNumber + body.ParsingLineNumber);
 		return null;
 	}
 
@@ -75,7 +75,7 @@ public class MethodCall : ConcreteExpression
 		IReadOnlyList<Expression> arguments)
 	{
 		arguments = FillInMissingFromMethodArguments(body, fromType, arguments);
-		return new MethodCall(fromType.GetMethod(Method.From, arguments), null, arguments);
+		return new MethodCall(fromType.GetMethod(Method.From, arguments), null, arguments, null, body.Method.TypeLineNumber + body.ParsingLineNumber);
 	}
 
 	private static IReadOnlyList<Expression> FillInMissingFromMethodArguments(Body body, Type fromType,

@@ -7,8 +7,8 @@ namespace Strict.Expressions;
 /// Represents a right-hand side of an 'is'/'is not' comparison when the RHS is a type name.
 /// This allows parsing 'customer is Customer' as a type check instead of trying to instantiate.
 /// </summary>
-public sealed class TypeComparison(Type returnType, Type targetType)
-	: ConcreteExpression(returnType)
+public sealed class TypeComparison(Type returnType, Type targetType, int lineNumber = 0)
+	: ConcreteExpression(returnType, lineNumber)
 {
 	public Type TargetType { get; } = targetType;
 	public override bool IsConstant => true;
@@ -25,7 +25,7 @@ public sealed class TypeComparison(Type returnType, Type targetType)
 				? body.ReturnType.FindType(input[nextTokenRange].ToString())
 				: null;
 		return foundType != null
-			? new TypeComparison(body.Method.GetType(Base.Type), foundType)
+			? new TypeComparison(body.Method.GetType(Base.Type), foundType, body.Method.TypeLineNumber + body.ParsingLineNumber)
 			: body.Method.ParseExpression(body, input[nextTokenRange]);
 	}
 }

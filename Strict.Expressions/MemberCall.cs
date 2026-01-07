@@ -4,8 +4,8 @@ using Type = Strict.Language.Type;
 
 namespace Strict.Expressions;
 
-public sealed class MemberCall(Expression? instance, Member member)
-	: ConcreteExpression(member.Type, member.IsMutable)
+public sealed class MemberCall(Expression? instance, Member member, int lineNumber = 0)
+	: ConcreteExpression(member.Type, lineNumber, member.IsMutable)
 {
 	public Expression? Instance { get; } = instance;
 	public Member Member { get; } = member;
@@ -17,7 +17,7 @@ public sealed class MemberCall(Expression? instance, Member member)
 			if (partToParse.Equals(member.Name, StringComparison.Ordinal))
 				return instance == null && body.IsFakeBodyForMemberInitialization
 					? throw new CannotAccessMemberBeforeTypeIsParsed(body, partToParse.ToString(), type)
-					: new MemberCall(instance, member);
+					: new MemberCall(instance, member, body.Method.TypeLineNumber + body.ParsingLineNumber);
 		return body.Method.Name == Member.ConstraintsBody
 			? FindContainingMethodTypeMemberForConstraints(body, instance, partToParse.ToString())
 			: null;
@@ -28,7 +28,7 @@ public sealed class MemberCall(Expression? instance, Member member)
 	{
 		var member = body.Method.Type.FindMember(searchFor);
 		return member != null
-			? new MemberCall(instance, member)
+			? new MemberCall(instance, member, body.Method.TypeLineNumber + body.ParsingLineNumber)
 			: null;
 	}
 

@@ -18,7 +18,8 @@ public sealed class Body : Expression
 	/// means the expressions list can't be done yet and needs this object to exist for scope parsing
 	/// </summary>
 	[Log]
-	public Body(Method method, int tabs = 0, Body? parent = null) : base(method.ReturnType)
+	public Body(Method method, int tabs = 0, Body? parent = null) : base(method.ReturnType,
+		method.TypeLineNumber + method.lines.Count)
 	{
 		Method = method;
 		Tabs = tabs;

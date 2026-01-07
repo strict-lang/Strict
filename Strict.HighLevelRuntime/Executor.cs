@@ -96,7 +96,10 @@ public sealed class Executor(Package basePackage, bool evaluateInlineTests = tru
 	}
 
 	public sealed class InlineTestFailed(Expression line, ValueInstance result)
-		: Exception($"{line} failed, result was {result}");
+		: Exception($"{line} failed, result was {result}")
+	{
+		public Expression Line { get; } = line;
+	}
 
 	/// <summary>
 	/// Evaluate inline tests at top-level only (outermost call), avoid recursion

@@ -11,7 +11,7 @@ namespace Strict.Expressions;
 /// </summary>
 public sealed class For : Expression
 {
-	private For(Expression value, Expression body) : base(value.ReturnType)
+	public For(Expression value, Expression body, int lineNumber) : base(value.ReturnType, lineNumber)
 	{
 		Value = value;
 		Body = body;
@@ -70,7 +70,7 @@ public sealed class For : Expression
 			if (!GetIteratorType(forExpression).IsIterator && forExpression.ReturnType.Name != Base.Number)
 				throw new ExpressionTypeIsNotAnIterator(body, forExpression.ReturnType.Name,
 					line[4..].ToString());
-			return new For(forExpression, innerBody.Parse());
+			return new For(forExpression, innerBody.Parse(), body.Method.TypeLineNumber + body.ParsingLineNumber);
 		}
 		return ParseWithImplicitVariable(body, line, innerBody);
 	}
@@ -117,17 +117,17 @@ public sealed class For : Expression
 	private static Expression GetVariableExpression(Body body, ReadOnlySpan<char> line, int variableIndex)
 	{
 		var forIteratorText = GetForIteratorText(line);
-		var iteratorExpression = body.Method.ParseExpression(body, forIteratorText, true);
+		var iteratorExpression = body.Method.ParseExpression(body, forIteratorText, body.ParsingLineNumber, true);
 		if (iteratorExpression is MethodCall { ReturnType.Name: Base.Range } methodCall)
 			return GetVariableFromRange(iteratorExpression, methodCall);
 		if (iteratorExpression.ReturnType is GenericTypeImplementation { Generic.Name: Base.List })
 		{
 			var firstValue = body.Method.ParseExpression(body, forIteratorText[^1] == ')'
 				? forIteratorText[1..forIteratorText.IndexOf(',')]
-				: forIteratorText.ToString() + "(0)", true);
+				: forIteratorText.ToString() + "(0)", body.ParsingLineNumber, true);
 			if (variableIndex <= 0)
 				return firstValue;
-			var innerFirstValue = body.Method.ParseExpression(body, firstValue + "(0)", true);
+			var innerFirstValue = body.Method.ParseExpression(body, firstValue + "(0)", body.ParsingLineNumber, true);
 			return variableIndex > 1
 				? throw new NotSupportedException("More than 2 for variables are not supported yet") //ncrunch: no coverage
 				: innerFirstValue;
@@ -190,15 +190,16 @@ public sealed class For : Expression
 		if (body.FindVariable(IndexName) != null)
 			throw new DuplicateImplicitIndex(body);
 		AddImplicitVariables(body, line, innerBody);
-		return new For(body.Method.ParseExpression(body, line[4..], true), innerBody.Parse());
+		return new For(body.Method.ParseExpression(body, line[4..], body.ParsingLineNumber, true),
+			innerBody.Parse(), body.ParsingLineNumber);
 	}
 
 	private static void AddImplicitVariables(Body body, ReadOnlySpan<char> line, Body innerBody)
 	{
 		innerBody.AddVariable(IndexName, new Number(body.Method, 0), true);
 		innerBody.AddVariable(ValueName,
-			innerBody.Method.ParseExpression(innerBody, GetVariableExpressionValue(body, line), true),
-			true);
+			innerBody.Method.ParseExpression(innerBody, GetVariableExpressionValue(body, line),
+				body.ParsingLineNumber, true), true);
 	}
 
 	private static string GetVariableExpressionValue(Body body, ReadOnlySpan<char> line,

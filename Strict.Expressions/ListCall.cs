@@ -5,7 +5,7 @@ namespace Strict.Expressions;
 public sealed class ListCall(Expression list, Expression index) : ConcreteExpression(
 	list.ReturnType is GenericTypeImplementation listReturnType
 		? listReturnType.ImplementationTypes[0]
-		: list.ReturnType, list.IsMutable)
+		: list.ReturnType, list.LineNumber, list.IsMutable)
 {
 	public Expression List { get; } = list;
 	public Expression Index { get; } = index;

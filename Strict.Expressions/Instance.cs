@@ -3,11 +3,11 @@ using Type = Strict.Language.Type;
 
 namespace Strict.Expressions;
 
-public class Instance(Type type) : Expression(type)
+public class Instance(Type type, int lineNumber = 0) : Expression(type, lineNumber)
 {
 	public static Expression Parse(Body body, Method method)
 	{
-		var valueInstance = new Instance((Type)method.Parent);
+		var valueInstance = new Instance((Type)method.Parent, body.Method.TypeLineNumber + body.ParsingLineNumber);
 		body.AddVariable(Base.ValueLowercase, valueInstance, false);
 		return valueInstance;
 	}

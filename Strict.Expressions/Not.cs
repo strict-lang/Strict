@@ -9,7 +9,7 @@ namespace Strict.Expressions;
 /// </summary>
 public sealed class Not : MethodCall
 {
-	private Not(Method method, Expression right) : base(method, right) { }
+	private Not(Method method, Expression right) : base(method, right, [], null, right.LineNumber) { }
 
 	public static Not Parse(Body body, ReadOnlySpan<char> input, Range methodRange)
 	{

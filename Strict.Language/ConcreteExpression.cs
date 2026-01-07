@@ -7,7 +7,7 @@
 /// </summary>
 public abstract class ConcreteExpression : Expression
 {
-	protected ConcreteExpression(Type returnType, bool isMutable = false) : base(returnType, isMutable)
+	protected ConcreteExpression(Type returnType, int lineNumber = 0, bool isMutable = false) : base(returnType, lineNumber, isMutable)
 	{
 		if (returnType.IsGeneric)
 			throw new Type.GenericTypesCannotBeUsedDirectlyUseImplementation(returnType, GetType().Name);

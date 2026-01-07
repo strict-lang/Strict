@@ -22,11 +22,8 @@ public sealed class ExecutorTests
 	}
 
 	private static Type CreateCalcType() =>
-		CreateType("Calc",
-			"mutable last Number",
-			"Add(first Number, second = 1) Number",
-			"\tAdd(1) is 2",
-			"\tlast = first + second");
+		CreateType("Calc", "mutable last Number", "Add(first Number, second = 1) Number",
+			"\tAdd(1) is 2", "\tlast = first + second");
 
 	private static Type CreateType(string name, params string[] lines) =>
 		new Type(TestPackage.Instance, new TypeLines(name, lines)).ParseMembersAndMethods(
@@ -69,11 +66,8 @@ public sealed class ExecutorTests
 	[Test]
 	public void EvaluateDeclaration()
 	{
-		using var t = CreateType("Calc",
-			"mutable last Number",
-			"AddFive(number) Number",
-			"\tconstant five = 5",
-			"\tnumber + five");
+		using var t = CreateType("Calc", "mutable last Number", "AddFive(number) Number",
+			"\tconstant five = 5", "\tnumber + five");
 		var method = t.Methods.Single(m => m.Name == "AddFive");
 		var number = new ValueInstance(TestPackage.Instance.FindType(Base.Number)!, 5);
 		var result = executor.Execute(method, null, [number]);
@@ -83,23 +77,18 @@ public sealed class ExecutorTests
 	[Test]
 	public void EvaluateAllArithmeticOperators()
 	{
-		using var t = CreateType("Ops",
-			"mutable last Number",
-			"Plus(first Number, second Number) Number",
-			"\tfirst + second",
-			"Minus(first Number, second Number) Number",
-			"\tfirst - second",
-			"Mul(first Number, second Number) Number",
-			"\tfirst * second",
-			"Div(first Number, second Number) Number",
-			"\tfirst / second",
-			"Mod(first Number, second Number) Number",
-			"\tfirst % second");
+		using var t = CreateType("Ops", "mutable last Number",
+			"Plus(first Number, second Number) Number", "\tfirst + second",
+			"Minus(first Number, second Number) Number", "\tfirst - second",
+			"Mul(first Number, second Number) Number", "\tfirst * second",
+			"Div(first Number, second Number) Number", "\tfirst / second",
+			"Mod(first Number, second Number) Number", "\tfirst % second");
 		static ValueInstance N(double x) => new(TestPackage.Instance.FindType(Base.Number)!, x);
 		Assert.That(Convert.ToDouble(executor.Execute(t.Methods.Single(m => m.Name == "Plus"), null, [
 			N(2), N(3)
 		]).Value), Is.EqualTo(5));
-		Assert.That(Convert.ToDouble(executor.Execute(t.Methods.Single(m => m.Name == "Minus"), null, [
+		Assert.That(Convert.ToDouble(executor.Execute(t.Methods.Single(m => m.Name == "Minus"), null,
+		[
 			N(8), N(3)
 		]).Value), Is.EqualTo(5));
 		Assert.That(Convert.ToDouble(executor.Execute(t.Methods.Single(m => m.Name == "Mul"), null, [
@@ -116,14 +105,10 @@ public sealed class ExecutorTests
 	[Test]
 	public void EvaluateAllComparisonOperators()
 	{
-		using var t = CreateType("Cmp",
-			"mutable last Number",
-			"Gt(first Number, second Number) Boolean",
-			"\tfirst > second",
-			"Lt(first Number, second Number) Boolean",
-			"\tfirst < second",
-			"Eq(first Number, second Number) Boolean",
-			"\tfirst is second");
+		using var t = CreateType("Cmp", "mutable last Number",
+			"Gt(first Number, second Number) Boolean", "\tfirst > second",
+			"Lt(first Number, second Number) Boolean", "\tfirst < second",
+			"Eq(first Number, second Number) Boolean", "\tfirst is second");
 		var num = TestPackage.Instance.FindType(Base.Number)!;
 		ValueInstance N(double x) => new(num, x);
 		Assert.That(executor.Execute(t.Methods.Single(m => m.Name == "Gt"), null, [N(5), N(3)]).Value,
@@ -137,13 +122,8 @@ public sealed class ExecutorTests
 	[Test]
 	public void EvaluateIfTrueThenReturn()
 	{
-		using var t = CreateType("Cond",
-			"mutable last Number",
-			"IfTrue Number",
-			"\tif true",
-			"\t\treturn 33",
-			"\t0"
-		);
+		using var t = CreateType("Cond", "mutable last Number", "IfTrue Number", "\tif true",
+			"\t\treturn 33", "\t0");
 		var method = t.Methods.Single(m => m.Name == "IfTrue");
 		var result = executor.Execute(method, null, []);
 		Assert.That(Convert.ToDouble(result.Value), Is.EqualTo(33));
@@ -152,13 +132,8 @@ public sealed class ExecutorTests
 	[Test]
 	public void EvaluateIfFalseFallsThrough()
 	{
-		using var t = CreateType("Cond",
-			"mutable last Number",
-			"IfFalse Number",
-			"\tif false",
-			"\t\treturn 99",
-			"\t42"
-		);
+		using var t = CreateType("Cond", "mutable last Number", "IfFalse Number", "\tif false",
+			"\t\treturn 99", "\t42");
 		var method = t.Methods.Single(m => m.Name == "IfFalse");
 		var result = executor.Execute(method, null, []);
 		Assert.That(Convert.ToDouble(result.Value), Is.EqualTo(42));
@@ -167,11 +142,8 @@ public sealed class ExecutorTests
 	[Test]
 	public void EvaluateMemberCallFromStaticConstant()
 	{
-		using var t = CreateType("UseTab",
-			"mutable last Number",
-			"GetTab Character",
-			"\tCharacter.Tab"
-		);
+		using var t = CreateType("UseTab", "mutable last Number", "GetTab Character",
+			"\tCharacter.Tab");
 		var method = t.Methods.Single(m => m.Name == "GetTab");
 		var result = executor.Execute(method, null, []);
 		Assert.That(result.ReturnType.Name, Is.EqualTo(Base.Character));

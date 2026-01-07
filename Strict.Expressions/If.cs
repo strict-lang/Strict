@@ -7,9 +7,9 @@ namespace Strict.Expressions;
 /// If expressions are used for branching, can also be used as an input for any other expression
 /// like method arguments, other conditions, etc. like conditional operators.
 /// </summary>
-public sealed class If(Expression condition, Expression then,	Expression? optionalElse = null,
-	Body? bodyForErrorMessage = null)
-	: Expression(CheckExpressionAndGetMatchingType(then, optionalElse, bodyForErrorMessage))
+public sealed class If(Expression condition, Expression then, int lineNumber = 0,
+	Expression? optionalElse = null, Body? bodyForErrorMessage = null)
+	: Expression(CheckExpressionAndGetMatchingType(then, optionalElse, bodyForErrorMessage), lineNumber)
 {
 	private static Type CheckExpressionAndGetMatchingType(Expression then, Expression? optionalElse,
 		Body? bodyForErrorMessage) =>
@@ -87,7 +87,7 @@ public sealed class If(Expression condition, Expression then,	Expression? option
 		if (thenBody == null)
 			throw new MissingThen(body);
 		var then = thenBody.Parse();
-		return new If(condition, then, HasRemainingBody(body)
+		return new If(condition, then, body.Method.TypeLineNumber + body.ParsingLineNumber, HasRemainingBody(body)
 			? CreateElseIfOrElse(body, body.GetLine(body.ParsingLineNumber + 1).AsSpan(body.Tabs))
 			: null, body);
 	}
@@ -162,7 +162,9 @@ public sealed class If(Expression condition, Expression then,	Expression? option
 		if (elseIndex <= 5)
 			throw new MissingElseExpression(body);
 		return new If(GetConditionExpression(body, input[..(questionMarkIndex - 1)]),
-			body.Method.ParseExpression(body, input[(questionMarkIndex + 2)..elseIndex]), body.Method.ParseExpression(body, input[(elseIndex + 6)..]));
+			body.Method.ParseExpression(body, input[(questionMarkIndex + 2)..elseIndex]),
+			body.Method.TypeLineNumber + body.ParsingLineNumber,
+			body.Method.ParseExpression(body, input[(elseIndex + 6)..]));
 	}
 
 	public sealed class MissingElseExpression(Body body) : ParsingFailed(body);

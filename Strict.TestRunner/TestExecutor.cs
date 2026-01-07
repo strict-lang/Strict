@@ -4,35 +4,23 @@ using Type = Strict.Language.Type;
 
 namespace Strict.TestRunner;
 
-public sealed class TestExecutor(Package basePackage)//TODO: not needed, can just be the normal Executor
+public sealed class TestExecutor(Package basePackage)
 {
-	private readonly Executor executor = new(basePackage, true);
+	private readonly Executor executor = new(basePackage);
 
-	public bool RunMethod(Method method)
+	public void RunTests(Type type)
 	{
-		try
-		{
-			executor.Execute(method, null, []);
-			return true;
-		}
-		catch (Exception)
-		{
-			return false;
-		}
+		foreach (var method in type.Methods)
+			try
+			{
+				executor.Execute(method, null, []);
+			}
+			catch (Executor.InlineTestFailed ex)
+			{
+				throw new TestFailed(method, ex);
+			}
 	}
 
-	public bool RunTests(Method method)
-	{
-		try
-		{
-			executor.Execute(method, null, []);
-			return true;
-		}
-		catch (Exception)
-		{
-			return false;
-		}
-	}
-
-	public bool RunTests(Type type) => type.Methods.All(RunTests);
+	public sealed class TestFailed(Method method, Executor.InlineTestFailed ex)
+		: Exception($"Test {method.Name} failed in {method.Type.Name} at line {ex.Line.LineNumber}: {ex.Message}");
 }

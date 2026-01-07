@@ -18,7 +18,7 @@ public sealed class IfAdvancedTests : TestExpressions
 	[Test]
 	public void ParseIfElse() =>
 		Assert.That(ParseExpression("if bla is 5", "\tlogger.Log(\"Hey\")", "else", "\tRun"),
-			Is.EqualTo(new If(GetCondition(), GetThen(), new MethodCall(method))).And.Not.
+			Is.EqualTo(new If(GetCondition(), GetThen(), 0, new MethodCall(method))).And.Not.
 				EqualTo(new If(GetCondition(), GetThen())));
 
 	[TestCase("constant result = true ? true else false")]
@@ -128,7 +128,7 @@ public sealed class IfAdvancedTests : TestExpressions
 	[Test]
 	public void ParseElseIf() =>
 		Assert.That(ParseExpression("if bla is 5", "\tlogger.Log(\"Hey\")", "else if bla is 5", "\tlogger.Log(\"Hey\")"),
-			Is.EqualTo(new If(GetCondition(), GetThen(), new If(GetCondition(), GetThen()))));
+			Is.EqualTo(new If(GetCondition(), GetThen(), 0, new If(GetCondition(), GetThen()))));
 
 	[TestCase("else if bla is 6")]
 	[TestCase("else if")]

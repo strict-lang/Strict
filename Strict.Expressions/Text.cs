@@ -2,7 +2,7 @@
 
 namespace Strict.Expressions;
 
-public sealed class Text(Context context, string value) : Value(context.GetType(Base.Text), value)
+public sealed class Text(Context context, string value, int lineNumber = 0) : Value(context.GetType(Base.Text), value, lineNumber)
 {
 	public override bool Equals(Expression? other) =>
 		other is Value v && (string)Data == (string)v.Data;
@@ -14,6 +14,6 @@ public sealed class Text(Context context, string value) : Value(context.GetType(
 	/// </summary>
 	public static Expression? TryParse(Body body, ReadOnlySpan<char> input) =>
 		input.Length >= 2 && input[0] == '"' && input[^1] == '"'
-			? new Text(body.Method, input.Slice(1, input.Length - 2).ToString())
+			? new Text(body.Method, input.Slice(1, input.Length - 2).ToString(), body.Method.TypeLineNumber + body.ParsingLineNumber)
 			: null;
 }

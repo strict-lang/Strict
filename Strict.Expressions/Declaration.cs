@@ -10,7 +10,7 @@ namespace Strict.Expressions;
 public class Declaration : ConcreteExpression
 {
 	public Declaration(Body scope, string name, Expression value, bool isMutable = false) :
-		base(value.ReturnType, isMutable)
+		base(value.ReturnType, value.LineNumber, isMutable)
 	{
 		if (!name.IsWord())
 			throw new Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers(name);
@@ -81,7 +81,7 @@ public class Declaration : ConcreteExpression
 		var value = valueSpan.IsFirstLetterUppercase() && (valueSpan.IsPlural() ||
 			valueSpan.StartsWith(Base.List + '(' + Base.Mutable, StringComparison.Ordinal))
 			? new List(body.Method.Type.GetType(valueSpan.ToString()))
-			: body.Method.ParseExpression(body, valueSpan, true);
+			: body.Method.ParseExpression(body, valueSpan, body.ParsingLineNumber, true);
 		return new Declaration(body, name, value, true);
 	}
 

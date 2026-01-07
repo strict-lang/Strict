@@ -2,14 +2,14 @@
 
 namespace Strict.Expressions;
 
-public sealed class VariableCall(Variable variable)
-	: ConcreteExpression(variable.Type, variable.IsMutable)
+public sealed class VariableCall(Variable variable, int lineNumber = 0)
+	: ConcreteExpression(variable.Type, lineNumber, variable.IsMutable)
 {
 	public static Expression? TryParse(Body body, ReadOnlySpan<char> input)
 	{
 		var variable = body.FindVariable(input);
 		return variable != null
-			? new VariableCall(variable)
+			? new VariableCall(variable, body.Method.TypeLineNumber + body.ParsingLineNumber)
 			: null;
 	}
 

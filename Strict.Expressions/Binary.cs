@@ -4,7 +4,7 @@ using Type = Strict.Language.Type;
 namespace Strict.Expressions;
 
 public sealed class Binary(Expression left, Method operatorMethod, Expression[] right)
-	: MethodCall(operatorMethod, left, right)
+	: MethodCall(operatorMethod, left, right, null, left.LineNumber)
 {
 	public override string ToString() =>
 		AddNestedBracketsIfNeeded(Instance!) + " " + Method.Name + " " +

@@ -11,8 +11,8 @@ namespace Strict.Expressions;
 /// <see cref="Declaration"/> or indirectly as parts of a <see cref="Binary"/> expression.
 /// For generic values like <see cref="List"/> the Data contains the generic type used.
 /// </summary>
-public class Value(Type valueType, object data, bool isMutable = false)
-	: ConcreteExpression(valueType, isMutable)
+public class Value(Type valueType, object data, int lineNumber = 0, bool isMutable = false)
+	: ConcreteExpression(valueType, lineNumber, isMutable)
 {
 	public object Data { get; } = data;
 

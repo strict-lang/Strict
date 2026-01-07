@@ -9,7 +9,10 @@
 public abstract class ExpressionParser
 {
 	public abstract Expression ParseLineExpression(Body body, ReadOnlySpan<char> line);
-	public abstract Expression ParseExpression(Body body, ReadOnlySpan<char> text, bool makeMutable = false);
+
+	public abstract Expression ParseExpression(Body body, ReadOnlySpan<char> text,
+		int lineNumber = 0, bool makeMutable = false);
+
 	public abstract List<Expression> ParseListArguments(Body body, ReadOnlySpan<char> text);
 	public abstract bool IsVariableMutated(Body body, string variableName);
 }

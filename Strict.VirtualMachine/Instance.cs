@@ -96,11 +96,15 @@ public sealed class Instance
 		return new Instance(left.ReturnType, elements);
 	}
 
-	public static bool operator >(Instance left, Instance right) =>
-		Convert.ToDouble(left.Value) > Convert.ToDouble(right.Value);
+	public static bool operator >(Instance left, Instance right)
+	{
+		return Convert.ToDouble(left.Value) > Convert.ToDouble(right.Value);
+	}
 
-	public static bool operator <(Instance left, Instance right) =>
-		Convert.ToDouble(left.Value) < Convert.ToDouble(right.Value);
+	public static bool operator <(Instance left, Instance right)
+	{
+		return Convert.ToDouble(left.Value) < Convert.ToDouble(right.Value);
+	}
 
 	private static Instance AddElementToTheListAndGetInstance(Instance left, Instance right)
 	{

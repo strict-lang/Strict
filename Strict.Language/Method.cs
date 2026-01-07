@@ -266,8 +266,9 @@ public sealed class Method : Context
 		!currentLine.Contains("?") && expression.ReturnType.Name == Base.Boolean;
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public Expression ParseExpression(Body body, ReadOnlySpan<char> text, bool makeMutable = false) =>
-		Parser.ParseExpression(body, text, makeMutable);
+	public Expression ParseExpression(Body body, ReadOnlySpan<char> text, int lineNumber = 0,
+		bool makeMutable = false) =>
+		Parser.ParseExpression(body, text, lineNumber, makeMutable);
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public List<Expression> ParseListArguments(Body body, ReadOnlySpan<char> text) =>

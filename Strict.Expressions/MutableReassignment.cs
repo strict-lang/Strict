@@ -5,7 +5,7 @@ namespace Strict.Expressions;
 public sealed class MutableReassignment : ConcreteExpression
 {
 	private MutableReassignment(Body scope, Expression target, Expression newValue) : base(
-		newValue.ReturnType, true)
+		newValue.ReturnType, newValue.LineNumber, true)
 	{
 		if (target is { IsMutable: false } && scope.Method.Name != Method.From)
 			throw new Body.ValueIsNotMutableAndCannotBeChanged(scope, target.ToString());
@@ -36,7 +36,7 @@ public sealed class MutableReassignment : ConcreteExpression
 	{
 		var parts = line.Split('=', StringSplitOptions.TrimEntries);
 		parts.MoveNext();
-		var expression = body.Method.ParseExpression(body, parts.Current, true);
+		var expression = body.Method.ParseExpression(body, parts.Current, body.ParsingLineNumber, true);
 		var newExpression = body.Method.ParseExpression(body, line[(parts.Current.Length + 3)..]);
 		if (!newExpression.ReturnType.IsSameOrCanBeUsedAs(expression.ReturnType, false))
 			throw new ValueTypeNotMatchingWithAssignmentType(body, expression.ReturnType.Name,

@@ -2,7 +2,8 @@
 
 namespace Strict.Expressions;
 
-public sealed class Return(Expression value) : Expression(value.ReturnType)
+public sealed class Return(Expression value, int lineNumber = 0)
+	: Expression(value.ReturnType, lineNumber)
 {
 	public Expression Value { get; } = value;
 	public override bool IsConstant => Value.IsConstant;
@@ -13,8 +14,9 @@ public sealed class Return(Expression value) : Expression(value.ReturnType)
 	public static Expression? TryParse(Body body, ReadOnlySpan<char> line) =>
 		line.StartsWith(Keyword.Return, StringComparison.Ordinal)
 			? new Return(line.Length <= Keyword.Return.Length
-				? throw new MissingExpression(body)
-				: body.Method.ParseExpression(body, line[7..]))
+					? throw new MissingExpression(body)
+					: body.Method.ParseExpression(body, line[7..]),
+				body.Method.TypeLineNumber + body.ParsingLineNumber)
 			: null;
 
 	public sealed class MissingExpression(Body body) : ParsingFailed(body);
