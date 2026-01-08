@@ -16,7 +16,7 @@ public sealed class Return(Expression value, int lineNumber = 0)
 			? new Return(line.Length <= Keyword.Return.Length
 					? throw new MissingExpression(body)
 					: body.Method.ParseExpression(body, line[7..]),
-				body.Method.TypeLineNumber + body.ParsingLineNumber)
+				body.CurrentFileLineNumber)
 			: null;
 
 	public sealed class MissingExpression(Body body) : ParsingFailed(body);

@@ -12,7 +12,7 @@ public sealed class ParameterCall(Parameter parameter, int lineNumber = 0)
 	{
 		foreach (var parameter in body.Method.Parameters)
 			if (input.Equals(parameter.Name, StringComparison.Ordinal))
-				return new ParameterCall(parameter, body.Method.TypeLineNumber + body.ParsingLineNumber);
+				return new ParameterCall(parameter, body.CurrentFileLineNumber);
 		return null;
 	}
 

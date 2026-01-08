@@ -15,6 +15,7 @@ public class TestPackage : Package
 			"from", "to Type", "to Text", "is(other) Boolean", "not(other) Boolean"));
 		var boolean = new Type(this, new TypeLines(Base.Boolean,
 			"not Boolean",
+			"\tnot true is false",
 			"\tvalue ? false else true",
 			"is(other) Boolean",
 			"\tvalue is other",
@@ -23,10 +24,7 @@ public class TestPackage : Package
 			"or(other) Boolean",
 			"\tvalue or other ? false else true",
 			"xor(other) Boolean",
-			"\t(value and other) or (not value and not other) ? false else true",
-			"not Boolean",
-			"\tnot true is false",
-			"\tvalue ? false else true"));
+			"\t(value and other) or (not value and not other) ? false else true"));
 		var hasLength = new Type(this, new TypeLines("HasLength","Length Number"));
 		var number = new Type(this, new TypeLines(Base.Number,
 			"to Character",

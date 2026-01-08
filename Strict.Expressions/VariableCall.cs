@@ -9,7 +9,7 @@ public sealed class VariableCall(Variable variable, int lineNumber = 0)
 	{
 		var variable = body.FindVariable(input);
 		return variable != null
-			? new VariableCall(variable, body.Method.TypeLineNumber + body.ParsingLineNumber)
+			? new VariableCall(variable, body.CurrentFileLineNumber)
 			: null;
 	}
 

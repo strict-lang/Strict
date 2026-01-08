@@ -1,4 +1,5 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System.Diagnostics;
+using System.Runtime.CompilerServices;
 
 namespace Strict.Language;
 
@@ -539,8 +540,8 @@ public class Type : Context, IDisposable
 	/// we still need some basic parsing to assign default values.
 	/// </summary>
 	public Expression GetMemberExpression(ExpressionParser parser, string memberName,
-		string remainingTextSpan) =>
-		typeParser.GetMemberExpression(parser, memberName, remainingTextSpan); //ncrunch: no coverage
+		string remainingTextSpan, int typeLineNumber) =>
+		typeParser.GetMemberExpression(parser, memberName, remainingTextSpan, typeLineNumber);
 
 	public bool IsMutable =>
 		Name == Base.Mutable || this is GenericTypeImplementation { Generic.Name: Base.Mutable };

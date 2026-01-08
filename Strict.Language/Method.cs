@@ -168,7 +168,8 @@ public sealed class Method : Context
 				nameAndTypeAsString);
 		var defaultValue = methodBody != null
 			? ParseExpression(methodBody, nameAndDefaultValue[1])
-			: type.GetMemberExpression(parser, nameAndDefaultValue[0], nameAndDefaultValue[1]);
+			: type.GetMemberExpression(parser, nameAndDefaultValue[0], nameAndDefaultValue[1],
+				TypeLineNumber);
 		return new Parameter(type, nameAndDefaultValue[0], defaultValue);
 	}
 
@@ -266,9 +267,9 @@ public sealed class Method : Context
 		!currentLine.Contains("?") && expression.ReturnType.Name == Base.Boolean;
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public Expression ParseExpression(Body body, ReadOnlySpan<char> text, int lineNumber = 0,
-		bool makeMutable = false) =>
-		Parser.ParseExpression(body, text, lineNumber, makeMutable);
+	public Expression
+		ParseExpression(Body body, ReadOnlySpan<char> text, bool makeMutable = false) =>
+		Parser.ParseExpression(body, text, makeMutable);
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public List<Expression> ParseListArguments(Body body, ReadOnlySpan<char> text) =>
@@ -277,7 +278,7 @@ public sealed class Method : Context
 	public const string From = "from";
 
 	/// <summary>
-	/// Skips the first method declaration line, then counts and removes the tabs from each line.
+	/// Skips the first method declaration line, then counts, and removes the tabs from each line.
 	/// Also groups all expressions on the same tabs level into bodies. In case a body has only
 	/// a single line (which is most often the case), that only expression is used directly.
 	/// </summary>
@@ -339,6 +340,7 @@ public sealed class Method : Context
 	public Type ReturnType { get; }
 	public bool IsPublic => char.IsUpper(Name[0]);
 	public List<Expression> Tests { get; } = new();
+	public bool IsTrait => methodBody == null;
 
 	public override Type? FindType(string name, Context? searchingFrom = null) =>
 		name == Base.ValueLowercase
@@ -408,7 +410,7 @@ public sealed class Method : Context
 			l.Contains(parameterName + " ") || l.Contains("\t" + parameterName));
 
 	/// <summary>
-	/// Very low level check if a variableName can be found in the raw text of this method lines.
+	/// Very low level check if a variableName can be found in the raw text in these method lines.
 	/// </summary>
 	public int GetVariableUsageCount(string variableName) =>
 		lines.Count(l => l.Contains(" " + variableName) || l.Contains("(" + variableName) ||

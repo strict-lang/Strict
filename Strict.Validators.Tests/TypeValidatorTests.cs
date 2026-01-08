@@ -117,10 +117,14 @@ public sealed class TypeValidatorTests
 
 	[Test]
 	public void ValidateUnusedMember() =>
-		Assert.That(() => validator.Visit(CreateType(nameof(ValidateUnusedMember), [
-				"has unused Number", "Run(methodInput Number)",
-				"\t5 + methodInput"
-			])),
+		Assert.That(() =>
+			{
+				using var typeWithUnusedMember = CreateType(nameof(ValidateUnusedMember), [
+					"has unused Number", "Run(methodInput Number)",
+					"\t5 + methodInput"
+				]);
+				validator.Visit(typeWithUnusedMember);
+			}, //ncrunch: no coverage
 			Throws.InstanceOf<TypeValidator.UnusedMemberMustBeRemoved>().With.Message.
 				Contains("unused"));
 

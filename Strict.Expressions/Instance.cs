@@ -7,7 +7,7 @@ public class Instance(Type type, int lineNumber = 0) : Expression(type, lineNumb
 {
 	public static Expression Parse(Body body, Method method)
 	{
-		var valueInstance = new Instance((Type)method.Parent, body.Method.TypeLineNumber + body.ParsingLineNumber);
+		var valueInstance = new Instance((Type)method.Parent, body.CurrentFileLineNumber);
 		body.AddVariable(Base.ValueLowercase, valueInstance, false);
 		return valueInstance;
 	}

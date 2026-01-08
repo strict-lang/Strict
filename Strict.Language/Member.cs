@@ -2,9 +2,10 @@
 
 public sealed class Member : NamedType
 {
-	public Member(Type definedIn, string nameAndType, Type? initialValueType,
+	public Member(Type definedIn, string nameAndType, Type? initialValueType, int lineNumber = 0,
 		string usedKeyword = Keyword.Has) : base(definedIn, nameAndType, initialValueType)
 	{
+		LineNumber = lineNumber;
 		if (usedKeyword == Keyword.Mutable)
 			IsMutable = true;
 		else if (usedKeyword == Keyword.Constant)
@@ -21,6 +22,7 @@ public sealed class Member : NamedType
 	}
 
 	public Expression? InitialValue { get; internal set; }
+	public int LineNumber { get; }
 	public bool IsPublic => char.IsUpper(Name[0]);
 	public Expression[]? Constraints { get; private set; }
 

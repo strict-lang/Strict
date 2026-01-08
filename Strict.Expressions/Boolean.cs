@@ -17,8 +17,8 @@ public sealed class Boolean(Context context, bool value, int lineNumber = 0)
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static Expression? TryParse(Body body, ReadOnlySpan<char> line) =>
 		line.IsTrueText()
-			? new Boolean(body.Method, true, body.Method.TypeLineNumber + body.ParsingLineNumber)
+			? new Boolean(body.Method, true, body.CurrentFileLineNumber)
 			: line.IsFalseText()
-				? new Boolean(body.Method, false, body.Method.TypeLineNumber + body.ParsingLineNumber)
+				? new Boolean(body.Method, false, body.CurrentFileLineNumber)
 				: null;
 }

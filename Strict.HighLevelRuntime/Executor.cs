@@ -12,6 +12,7 @@ public sealed class Executor(Package basePackage, bool evaluateInlineTests = tru
 	{
 		if (evaluateInlineTests && validatedMethods.Add(method))
 			Execute(method, instance, args, true);
+		//TODO: only execute test logic from TestExecutor, not the non test code (unless we have an instance from one of the test lines)
 		return Execute(method, instance, args, false);
 	}
 
@@ -22,7 +23,7 @@ public sealed class Executor(Package basePackage, bool evaluateInlineTests = tru
 	{
 		if (args.Count > method.Parameters.Count)
 			throw new TooManyArguments(args[method.Parameters.Count].ToString(), args, method);
-		var context = new ExecutionContext { This = instance };
+		var context = new ExecutionContext(method.Type) { This = instance };
 		for (var i = 0; i < method.Parameters.Count; i++)
 		{
 			var param = method.Parameters[i];
@@ -64,11 +65,17 @@ public sealed class Executor(Package basePackage, bool evaluateInlineTests = tru
 			MethodCall call => EvaluateMethodCall(call, context),
 			Declaration c => EvaluateAndAssign(c.Name, c.Value, context),
 			MutableReassignment a => EvaluateAndAssign(a.Name, a.Value, context),
-			Instance i => new ValueInstance(i.ReturnType, context.Variables.First().Value.Value),
+			Instance i => new ValueInstance(i.ReturnType, context.Variables.Count > 0
+				? context.Variables.First().Value.Value
+				: context.This != null
+					? context.This.Value
+					: throw new NoInstanceGiven(expr, context.Type)),
 			_ => //ncrunch: no coverage start
-				throw new NotSupportedException($"Expression not supported yet: {expr.GetType().Name}")
+				throw new NotSupportedException($"Expression not supported yet: {expr.GetType().Name} in {context.Type}")
 			//ncrunch: no coverage end
 		};
+
+	public class NoInstanceGiven(Expression expr, Type type) : Exception(expr + " in " + type);
 
 	private ValueInstance EvaluateBody(Body body, ExecutionContext ctx, bool runInlineTests)
 	{
@@ -79,13 +86,17 @@ public sealed class Executor(Package basePackage, bool evaluateInlineTests = tru
 		try
 		{
 			foreach (var e in body.Expressions)
-				// Skip inline tests by default to avoid infinite recursion
-				if (inlineTestDepth > 0 || !IsStandaloneInlineTest(e))
-				{
-					last = RunExpression(e, ctx);
-					if (runInlineTests && IsStandaloneInlineTest(e) && !ToBool(last))
-						throw new InlineTestFailed(e, last);
-				}
+			{
+				var isTest = IsStandaloneInlineTest(e);
+				// When validating (runInlineTests is true), skip the implementation logic lines.
+				// These lines will be tested anyway when a test line calls this method.
+				// When executing normally (runInlineTests is false), skip the test lines.
+				if (isTest == !runInlineTests)
+					continue;
+				last = RunExpression(e, ctx);
+				if (runInlineTests && isTest && !ToBool(last))
+					throw new TestFailed(body.Method, e, last);
+			}
 			return last;
 		}
 		finally
@@ -95,11 +106,9 @@ public sealed class Executor(Package basePackage, bool evaluateInlineTests = tru
 		}
 	}
 
-	public sealed class InlineTestFailed(Expression line, ValueInstance result)
-		: Exception($"{line} failed, result was {result}")
-	{
-		public Expression Line { get; } = line;
-	}
+	public sealed class TestFailed(Method method, Expression expression, ValueInstance result)
+		: Exception($"\"{method.Name}\" method failed: {expression}, result: {result} in" +
+			Environment.NewLine + $"{method.Type.FilePath}:line {expression.LineNumber + 1}");
 
 	/// <summary>
 	/// Evaluate inline tests at top-level only (outermost call), avoid recursion
@@ -142,6 +151,8 @@ public sealed class Executor(Package basePackage, bool evaluateInlineTests = tru
 		var op = call.Method.Name;
 		if (IsArithmetic(op) || IsCompare(op))
 			return EvaluateArithmeticOrCompare(call, ctx);
+		// If the call has an instance (like 'not true'), evaluate it.
+		// Otherwise, if we are already inside an instance method, use 'ctx.This'.
 		var instance = call.Instance != null
 			? RunExpression(call.Instance, ctx)
 			: ctx.This;
@@ -152,7 +163,8 @@ public sealed class Executor(Package basePackage, bool evaluateInlineTests = tru
 	}
 
 	private static bool IsArithmetic(string name) =>
-		name is BinaryOperator.Plus or BinaryOperator.Minus or BinaryOperator.Multiply or BinaryOperator.Divide or BinaryOperator.Modulate;
+		name is BinaryOperator.Plus or BinaryOperator.Minus or BinaryOperator.Multiply
+			or BinaryOperator.Divide or BinaryOperator.Modulate;
 
 	private static bool IsCompare(string name) =>
 		name is BinaryOperator.Greater or BinaryOperator.Smaller or BinaryOperator.Is;

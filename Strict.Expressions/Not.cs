@@ -3,9 +3,9 @@
 namespace Strict.Expressions;
 
 /// <summary>
-/// Not is the only unary expression that needs an extra space, e.g. 5 is not 6. When using -number
-/// it will fail to find this as an identifier and check if one of the supported unary one letter
-/// expression was used and will do the minus operation directly there.
+/// Not is the only unary expression that needs an extra space, e.g., 5 is not 6. When using
+/// -number, it will fail to find this as an identifier and check if one of the supported unary
+/// one-letter expressions was used and will do the minus operation directly there.
 /// </summary>
 public sealed class Not : MethodCall
 {

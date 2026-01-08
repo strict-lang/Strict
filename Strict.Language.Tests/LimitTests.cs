@@ -50,10 +50,19 @@ public sealed class LimitTests
 
 	[Test]
 	public void MethodCountMustNotExceedFifteen() =>
-		Assert.That(
-			() => CreateType(nameof(MethodCountMustNotExceedFifteen),
-				CreateProgramWithDuplicateLines(["has logger"], 16, "Run(first Number, second Number)",
-					"\tfirst")).ParseMembersAndMethods(parser),
+		Assert.That(() => CreateType(nameof(MethodCountMustNotExceedFifteen), [
+				"has logger", "RunFirst", "\tlogger.Log(5)", "RunSecond", "\tlogger.Log(5)", "RunThird",
+				"\tlogger.Log(5)", "RunForth", "\tlogger.Log(5)", "RunFifth", "\tlogger.Log(5)",
+				"RunSixth",
+				"\tlogger.Log(5)",
+				"RunSeventh", "\tlogger.Log(5)", "RunEight", "\tlogger.Log(5)", "RunNine",
+				"\tlogger.Log(5)", "RunTen", "\tlogger.Log(5)", "RunEleven", "\tlogger.Log(5)",
+				"RunTwelve",
+				"\tlogger.Log(5)", "RunThirteen",
+				"\tlogger.Log(5)", "RunFourteen", "\tlogger.Log(5)", "RunFifteen", "\tlogger.Log(5)",
+				"RunSixteen",
+				"\tlogger.Log(5)"
+			]).ParseMembersAndMethods(parser),
 			Throws.InstanceOf<Type.MethodCountMustNotExceedLimit>().With.Message.Contains(
 				$"Type MethodCountMustNotExceedFifteen has method count 16 but limit is {
 					Limit.MethodCount

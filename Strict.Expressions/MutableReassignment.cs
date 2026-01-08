@@ -36,7 +36,7 @@ public sealed class MutableReassignment : ConcreteExpression
 	{
 		var parts = line.Split('=', StringSplitOptions.TrimEntries);
 		parts.MoveNext();
-		var expression = body.Method.ParseExpression(body, parts.Current, body.ParsingLineNumber, true);
+		var expression = body.Method.ParseExpression(body, parts.Current, true);
 		var newExpression = body.Method.ParseExpression(body, line[(parts.Current.Length + 3)..]);
 		if (!newExpression.ReturnType.IsSameOrCanBeUsedAs(expression.ReturnType, false))
 			throw new ValueTypeNotMatchingWithAssignmentType(body, expression.ReturnType.Name,

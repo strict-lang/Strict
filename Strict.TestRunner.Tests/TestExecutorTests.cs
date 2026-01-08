@@ -1,4 +1,5 @@
 ﻿using Strict.Expressions;
+using Strict.HighLevelRuntime;
 using Strict.Language;
 using Strict.Language.Tests;
 using Type = Strict.Language.Type;
@@ -13,34 +14,36 @@ public sealed class TestExecutorTests
 	private TestExecutor executor = null!;
 
 	[Test]
-	public void RunExampleTest()
+	public void RunMethod()
 	{
-		var type = new Type(TestPackage.Instance,
-			new TypeLines(nameof(RunExampleTest),
+		using var type = new Type(TestPackage.Instance,
+			new TypeLines(nameof(RunMethod),
 				"has number",
 				"Run Number",
 				"	5 is 5",
 				"	10")).ParseMembersAndMethods(new MethodExpressionParser());
-		Assert.That(executor.RunMethod(type.Methods.First(m => m.Name == "Run")), Is.True);
+		executor.RunMethod(type.Methods.First(m => m.Name == "Run"));
 	}
 
 	[Test]
-	public void RunExampleTestFails()
+	public void RunMethodWithFailingTest()
 	{
-		var type = new Type(TestPackage.Instance,
-			new TypeLines(nameof(RunExampleTestFails),
+		using var type = new Type(TestPackage.Instance,
+			new TypeLines(nameof(RunMethodWithFailingTest),
 				"has number",
 				"Run Number",
 				"	5 is 6",
 				"	10")).ParseMembersAndMethods(new MethodExpressionParser());
-		Assert.That(executor.RunMethod(type.Methods.First(m => m.Name == "Run")), Is.False);
+		Assert.That(() => executor.RunMethod(type.Methods.First(m => m.Name == "Run")),
+			Throws.InstanceOf<Executor.TestFailed>().With.Message.
+				StartsWith("\"Run\" method failed: 5 is 6, result: False"));
 	}
 
 	[Test]
-	public void RunTestsForType()
+	public void RunAllTestsInType()
 	{
-		var type = new Type(TestPackage.Instance,
-			new TypeLines(nameof(RunTestsForType),
+		using var type = new Type(TestPackage.Instance,
+			new TypeLines(nameof(RunAllTestsInType),
 				"has number",
 				"Run Number",
 				"	5 is 5",
@@ -48,14 +51,14 @@ public sealed class TestExecutorTests
 				"Other Number",
 				"	2 is 2",
 				"	5")).ParseMembersAndMethods(new MethodExpressionParser());
-		Assert.That(executor.RunTests(type), Is.True);
+		executor.RunAllTestsInType(type);
 	}
 
 	[Test]
-	public void RunTestsForTypeFails()
+	public void RunAllTestsInTypeWithFailure()
 	{
-		var type = new Type(TestPackage.Instance,
-			new TypeLines(nameof(RunTestsForTypeFails),
+		using var type = new Type(TestPackage.Instance,
+			new TypeLines(nameof(RunAllTestsInTypeWithFailure),
 				"has number",
 				"Run Number",
 				"	5 is 5",
@@ -63,6 +66,11 @@ public sealed class TestExecutorTests
 				"Other Number",
 				"	2 is 3",
 				"	5")).ParseMembersAndMethods(new MethodExpressionParser());
-		Assert.That(executor.RunTests(type), Is.False);
+		Assert.That(() => executor.RunAllTestsInType(type),
+			Throws.InstanceOf<Executor.TestFailed>().With.Message.
+				StartsWith("\"Other\" method failed: 2 is 3, result: False"));
 	}
+
+	[Test]
+	public void RunAllTestsInPackage() => executor.RunAllTestsInPackage(TestPackage.Instance);
 }

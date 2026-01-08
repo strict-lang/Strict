@@ -22,7 +22,7 @@ public class MethodExpressionParser : ExpressionParser
 		MutableReassignment.TryParse(body, line) ?? ParseExpression(body, line);
 
 	public override Expression ParseExpression(Body body, ReadOnlySpan<char> input,
-		int lineNumber = 0, bool makeMutable = false)
+		bool makeMutable = false)
 	{
 		CheckIfEmptyOrAny(body, input);
 		return input.Length < 3 || !input.Contains(' ') && !input.Contains(',')

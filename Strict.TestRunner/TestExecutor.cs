@@ -4,23 +4,27 @@ using Type = Strict.Language.Type;
 
 namespace Strict.TestRunner;
 
+/// <summary>
+/// All methods have to have tests, and those are executed automatically after parsing. However, if
+/// we don't call some code, it is not parsed, executed, or tested at all. This forces execution
+/// of every method in every type to run all included tests to find out if anything is not working.
+/// </summary>
 public sealed class TestExecutor(Package basePackage)
 {
 	private readonly Executor executor = new(basePackage);
 
-	public void RunTests(Type type)
+	public void RunAllTestsInPackage(Package package)
 	{
-		foreach (var method in type.Methods)
-			try
-			{
-				executor.Execute(method, null, []);
-			}
-			catch (Executor.InlineTestFailed ex)
-			{
-				throw new TestFailed(method, ex);
-			}
+		foreach (var type in package)
+			RunAllTestsInType(type);
 	}
 
-	public sealed class TestFailed(Method method, Executor.InlineTestFailed ex)
-		: Exception($"Test {method.Name} failed in {method.Type.Name} at line {ex.Line.LineNumber}: {ex.Message}");
+	public void RunAllTestsInType(Type type)
+	{
+		foreach (var method in type.Methods)
+			if (!method.IsTrait)
+				RunMethod(method);
+	}
+
+	public void RunMethod(Method method) => executor.Execute(method, null, []);
 }

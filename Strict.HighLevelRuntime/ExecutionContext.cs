@@ -1,7 +1,10 @@
+using Type = Strict.Language.Type;
+
 namespace Strict.HighLevelRuntime;
 
-public sealed class ExecutionContext
+public sealed class ExecutionContext(Type type)
 {
+	public Type Type { get; } = type;
 	public ExecutionContext? Parent { get; init; }
 	public ValueInstance? This { get; init; }
 	public Dictionary<string, ValueInstance> Variables { get; } = new(StringComparer.Ordinal);

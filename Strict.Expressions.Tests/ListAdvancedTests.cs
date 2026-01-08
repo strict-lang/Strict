@@ -74,7 +74,7 @@ public sealed class ListAdvancedTests : TestExpressions
 			{
 				using var dummy = new Type(type.Package,
 						new TypeLines(nameof(UnknownExpressionForArgumentInList), "has logger",
-							"UnknownExpression", "\tconstant result = ((1, 2), 9gfhy5)")).
+							"UnknownExpression", "\tconstant result = ((1, 2), 9gf5)")).
 					ParseMembersAndMethods(parser);
 				dummy.Methods[0].GetBodyAndParseIfNeeded();
 			}, //ncrunch: no coverage

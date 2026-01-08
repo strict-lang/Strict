@@ -33,7 +33,9 @@ public sealed class Binary(Expression left, Method operatorMethod, Expression[] 
 		var operatorToken = input[operatorTokenRange].ToString();
 		return operatorToken == BinaryOperator.To
 			? To.Parse(body, input[tokens.Pop()], GetUnaryOrBuildNestedBinary(body, input, tokens))
-			: BuildRegularBinaryExpression(body, input, tokens, operatorToken);
+			: operatorToken == UnaryOperator.Not
+				? Not.Parse(body, input, tokens.Pop())
+				: BuildRegularBinaryExpression(body, input, tokens, operatorToken);
 	}
 
 	// ReSharper disable once TooManyArguments

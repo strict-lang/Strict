@@ -31,10 +31,6 @@ public sealed class Body : Expression
 	public int Tabs { get; }
 	public Body? Parent { get; private set; }
 	public readonly List<Body> children = new();
-	public Range LineRange { get; internal set; }
-	public int ParsingLineNumber { get; set; }
-	internal string CurrentLine => Method.lines[ParsingLineNumber];
-	public bool IsFakeBodyForMemberInitialization => Method.Name == nameof(TypeParser.GetMemberExpression);
 
 	/// <summary>
 	/// Called when actually needed, and code needs to run, usually triggered by
@@ -61,14 +57,20 @@ public sealed class Body : Expression
 			catch (Exception ex)
 			{
 				StartDebuggerInDebugModeIfNotAttached();
-				throw new ParsingFailed((Type)Method.Parent, Method.TypeLineNumber + ParsingLineNumber,
-					CurrentLine, ex);
+				throw new ParsingFailed((Type)Method.Parent, CurrentFileLineNumber, CurrentLine, ex);
 			}
 		SetExpressions(expressions);
 		return Expressions.Count == 1
 			? Expressions[0]
 			: this;
 	}
+
+	public Range LineRange { get; internal set; }
+	public int ParsingLineNumber { get; set; }
+	internal string CurrentLine => Method.lines[ParsingLineNumber];
+	public int CurrentFileLineNumber => Method.TypeLineNumber + ParsingLineNumber;
+	public bool IsFakeBodyForMemberInitialization =>
+		Method.Name == nameof(TypeParser.GetMemberExpression);
 
 	private static void StartDebuggerInDebugModeIfNotAttached()
 	{

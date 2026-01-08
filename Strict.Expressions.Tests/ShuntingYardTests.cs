@@ -28,6 +28,9 @@ public sealed class ShuntingYardTests
 	[TestCase("Colors(Width * 5 + 1)", "Colors(Width * 5 + 1)")]
 	[TestCase("Colors(Width * number.Length + 1)", "Colors(Width * number.Length + 1)")]
 	[TestCase("Math.Add(5)", "Math.Add(5)")]
+	[TestCase("not true is false", "true, not, false, is")]
+	[TestCase("-5 * 2", "-5, 2, *")]
+	[TestCase("-(5 * 2)", "5, 2, *, -")]
 	public void Parse(string input, string expected)
 	{
 		var tokens = new ShuntingYard(input).Output.Reverse().Select(range => input[range]);

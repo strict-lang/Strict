@@ -13,6 +13,6 @@ public sealed class Number(Context context, double value, int lineNumber = 0)
 
 	public static Expression? TryParse(Body body, ReadOnlySpan<char> line) =>
 		line.TryParseNumber(out var number)
-			? new Number(body.Method, number, body.Method.TypeLineNumber + body.ParsingLineNumber)
+			? new Number(body.Method, number, body.CurrentFileLineNumber)
 			: null;
 }

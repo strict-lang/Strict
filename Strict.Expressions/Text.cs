@@ -14,6 +14,6 @@ public sealed class Text(Context context, string value, int lineNumber = 0) : Va
 	/// </summary>
 	public static Expression? TryParse(Body body, ReadOnlySpan<char> input) =>
 		input.Length >= 2 && input[0] == '"' && input[^1] == '"'
-			? new Text(body.Method, input.Slice(1, input.Length - 2).ToString(), body.Method.TypeLineNumber + body.ParsingLineNumber)
+			? new Text(body.Method, input.Slice(1, input.Length - 2).ToString(), body.CurrentFileLineNumber)
 			: null;
 }

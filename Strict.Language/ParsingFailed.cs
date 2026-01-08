@@ -25,7 +25,7 @@ public class ParsingFailed : Exception
 		message + GetClickableStacktraceLine(type, fileLineNumber, ""), inner) { }
 
 	protected ParsingFailed(Body body, string? message = null, Type? referencingOtherType = null) :
-		this(body.Method.Type, body.Method.TypeLineNumber + body.ParsingLineNumber,
+		this(body.Method.Type, body.CurrentFileLineNumber,
 			(string.IsNullOrEmpty(message)
 				? body.CurrentLine
 				: message) + (referencingOtherType != null

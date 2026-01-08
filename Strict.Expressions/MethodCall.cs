@@ -49,7 +49,7 @@ public class MethodCall : ConcreteExpression
 		if (method != null)
 			return new MethodCall(method, instance, AreArgumentsAutoParsedAsList(method, arguments)
 				? [new List(body, (List<Expression>)arguments)]
-				: arguments, null, body.Method.TypeLineNumber + body.ParsingLineNumber);
+				: arguments, null, body.CurrentFileLineNumber);
 		return null;
 	}
 
@@ -75,7 +75,8 @@ public class MethodCall : ConcreteExpression
 		IReadOnlyList<Expression> arguments)
 	{
 		arguments = FillInMissingFromMethodArguments(body, fromType, arguments);
-		return new MethodCall(fromType.GetMethod(Method.From, arguments), null, arguments, null, body.Method.TypeLineNumber + body.ParsingLineNumber);
+		return new MethodCall(fromType.GetMethod(Method.From, arguments), null, arguments, null,
+			body.CurrentFileLineNumber);
 	}
 
 	private static IReadOnlyList<Expression> FillInMissingFromMethodArguments(Body body, Type fromType,
@@ -110,9 +111,9 @@ public class MethodCall : ConcreteExpression
 			body.Method.GetListImplementationType(body.Method.GetType(listElementTypeName)), arguments);
 
 	private static IReadOnlyList<Expression> CreateStacktraces(Body body) =>
-		[CreateStacktrace(body, body.ParsingLineNumber)];
+		[CreateStacktrace(body)];
 
-	private static Expression CreateStacktrace(Body body, int bodyParsingLineNumber) =>
+	private static Expression CreateStacktrace(Body body) =>
 		CreateFromMethodCall(body, body.Method.GetType(Base.Stacktrace), [
 			CreateFromMethodCall(body, body.Method.GetType(Base.Method), [
 				new Value(body.Method.GetType(Base.Name), body.Method.Name),
@@ -120,7 +121,7 @@ public class MethodCall : ConcreteExpression
 					[new Text(body.Method, body.Method.Type.Name)])
 			]),
 			new Text(body.Method, body.Method.Type.FilePath),
-			new Number(body.Method, bodyParsingLineNumber)
+			new Number(body.Method, body.ParsingLineNumber)
 		]);
 
 	private static bool

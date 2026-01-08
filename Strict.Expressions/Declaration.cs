@@ -81,7 +81,7 @@ public class Declaration : ConcreteExpression
 		var value = valueSpan.IsFirstLetterUppercase() && (valueSpan.IsPlural() ||
 			valueSpan.StartsWith(Base.List + '(' + Base.Mutable, StringComparison.Ordinal))
 			? new List(body.Method.Type.GetType(valueSpan.ToString()))
-			: body.Method.ParseExpression(body, valueSpan, body.ParsingLineNumber, true);
+			: body.Method.ParseExpression(body, valueSpan, true);
 		return new Declaration(body, name, value, true);
 	}
 

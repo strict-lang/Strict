@@ -87,7 +87,7 @@ public sealed class If(Expression condition, Expression then, int lineNumber = 0
 		if (thenBody == null)
 			throw new MissingThen(body);
 		var then = thenBody.Parse();
-		return new If(condition, then, body.Method.TypeLineNumber + body.ParsingLineNumber, HasRemainingBody(body)
+		return new If(condition, then, body.CurrentFileLineNumber, HasRemainingBody(body)
 			? CreateElseIfOrElse(body, body.GetLine(body.ParsingLineNumber + 1).AsSpan(body.Tabs))
 			: null, body);
 	}
@@ -163,7 +163,7 @@ public sealed class If(Expression condition, Expression then, int lineNumber = 0
 			throw new MissingElseExpression(body);
 		return new If(GetConditionExpression(body, input[..(questionMarkIndex - 1)]),
 			body.Method.ParseExpression(body, input[(questionMarkIndex + 2)..elseIndex]),
-			body.Method.TypeLineNumber + body.ParsingLineNumber,
+			body.CurrentFileLineNumber,
 			body.Method.ParseExpression(body, input[(elseIndex + 6)..]));
 	}
 

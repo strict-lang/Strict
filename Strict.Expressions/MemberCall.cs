@@ -17,7 +17,7 @@ public sealed class MemberCall(Expression? instance, Member member, int lineNumb
 			if (partToParse.Equals(member.Name, StringComparison.Ordinal))
 				return instance == null && body.IsFakeBodyForMemberInitialization
 					? throw new CannotAccessMemberBeforeTypeIsParsed(body, partToParse.ToString(), type)
-					: new MemberCall(instance, member, body.Method.TypeLineNumber + body.ParsingLineNumber);
+					: new MemberCall(instance, member, body.CurrentFileLineNumber);
 		return body.Method.Name == Member.ConstraintsBody
 			? FindContainingMethodTypeMemberForConstraints(body, instance, partToParse.ToString())
 			: null;
@@ -28,7 +28,7 @@ public sealed class MemberCall(Expression? instance, Member member, int lineNumb
 	{
 		var member = body.Method.Type.FindMember(searchFor);
 		return member != null
-			? new MemberCall(instance, member, body.Method.TypeLineNumber + body.ParsingLineNumber)
+			? new MemberCall(instance, member, body.CurrentFileLineNumber)
 			: null;
 	}
 
