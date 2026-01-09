@@ -8,7 +8,8 @@ namespace Strict.HighLevelRuntime.Tests;
 public sealed class ExecutorTests
 {
 	[SetUp]
-	public void CreateExecutor() => executor = new Executor(TestPackage.Instance, false);
+	public void CreateExecutor() =>
+		executor = new Executor(TestPackage.Instance, TestBehavior.Disabled);
 
 	private Executor executor = null!;
 

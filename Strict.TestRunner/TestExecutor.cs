@@ -11,7 +11,7 @@ namespace Strict.TestRunner;
 /// </summary>
 public sealed class TestExecutor(Package basePackage)
 {
-	private readonly Executor executor = new(basePackage);
+	private readonly Executor executor = new(basePackage, TestBehavior.TestRunner);
 
 	public void RunAllTestsInPackage(Package package)
 	{
