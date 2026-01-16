@@ -29,6 +29,15 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 	{
 		if (args.Count > method.Parameters.Count)
 			throw new TooManyArguments(args[method.Parameters.Count].ToString(), args, method);
+		// If we are in a from constructor, create the instance here
+		if (method.Name == Method.From)
+		{
+			if (instance != null)
+				throw new MethodCall.CannotCallFromConstructorWithExistingInstance();
+			instance = new ValueInstance(method.Type, args.Count > 0
+				? args[0].Value
+				: null);
+		}
 		var context = new ExecutionContext(method.Type) { This = instance };
 		if (!runOnlyTests)
 			for (var i = 0; i < method.Parameters.Count; i++)
@@ -43,7 +52,11 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 			}
 		try
 		{
-			return RunExpression(method.GetBodyAndParseIfNeeded(), context, runOnlyTests);
+			var body = method.GetBodyAndParseIfNeeded();
+			//TODO: now everything fails, but all we do is have this extra check
+			if (body is not Body && runOnlyTests)
+				return new ValueInstance(method.ReturnType, true);
+			return RunExpression(body, context, runOnlyTests);
 		}
 		catch (ReturnSignal ret)
 		{
@@ -164,11 +177,17 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 				: new ValueInstance(ctx.This?.ReturnType ?? iff.ReturnType, null);
 
 	private ValueInstance EvaluateMember(MemberCall member, ExecutionContext ctx) =>
-		member.Instance == null
-			? ctx.Get(member.Member.Name)
-			: member.Member.InitialValue != null
-				? RunExpression(member.Member.InitialValue, ctx)
-				: ctx.Get(member.Member.Name);
+		ctx.Type.Members.Contains(member.Member) && ctx.This == null
+			? throw new UnableToCallMemberWithoutInstance(member, ctx)
+			: ctx.This?.Value is Dictionary<string, object?> dict &&
+			dict.TryGetValue(member.Member.Name, out var value)
+				? new ValueInstance(member.ReturnType, value)
+				: member.Member.InitialValue != null
+					? RunExpression(member.Member.InitialValue, ctx)
+					: ctx.Get(member.Member.Name);
+
+	public class UnableToCallMemberWithoutInstance(MemberCall member, ExecutionContext ctx)
+		: Exception(member + ", context " + ctx);
 
 	private ValueInstance EvaluateMethodCall(MethodCall call, ExecutionContext ctx)
 	{
