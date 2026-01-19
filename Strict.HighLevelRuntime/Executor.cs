@@ -52,10 +52,23 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 			}
 		try
 		{
-			var body = method.GetBodyAndParseIfNeeded();
-			//TODO: now everything fails, but all we do is have this extra check
-			if (body is not Body && runOnlyTests)
+			// For test validation, check if method is simple before attempting to parse
+			// This avoids parsing errors when instance members are accessed but no instance exists
+			if (runOnlyTests && IsSimpleSingleLineMethod(method))
 				return new ValueInstance(method.ReturnType, true);
+			Expression body;
+			try
+			{
+				body = method.GetBodyAndParseIfNeeded();
+			}
+			catch (Exception inner) when (runOnlyTests)
+			{
+				throw new MethodRequiresTest(method, method.lines.ToWordList("\n") + "\n" + inner);
+			}
+			if (body is not Body && runOnlyTests)
+				return IsSimpleExpressionWithLessThanThreeSubExpressions(body)
+					? new ValueInstance(method.ReturnType, true)
+					: throw new MethodRequiresTest(method, body.ToString());
 			return RunExpression(body, context, runOnlyTests);
 		}
 		catch (ReturnSignal ret)
@@ -63,6 +76,10 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 			return ret.Value;
 		}
 		catch (TestFailed)
+		{
+			throw;
+		}
+		catch (MethodRequiresTest)
 		{
 			throw;
 		}
@@ -91,7 +108,10 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 		{
 			Body body => EvaluateBody(body, context, runOnlyTests),
 			Value v => new ValueInstance(v.ReturnType, v.Data),
-			ParameterCall or VariableCall => context.Get(expr.ToString()),
+			ParameterCall or VariableCall => expr.ToString() == Base.ValueLowercase &&
+				context.This != null
+					? context.This
+					: context.Get(expr.ToString()),
 			MemberCall m => EvaluateMember(m, context),
 			If iff => EvaluateIf(iff, context),
 			Return r => EvaluateReturn(r, context),
@@ -135,7 +155,7 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 					throw new TestFailed(body.Method, e, last);
 			}
 			if (runOnlyTests && last.Value == null)
-				throw new NoTestPresentInMethod(body.Method);
+				throw new MethodRequiresTest(body.Method, body.ToString());
 			return last;
 		}
 		finally
@@ -145,8 +165,60 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 		}
 	}
 
-	public class NoTestPresentInMethod(Method method) : Exception(method + " has no test lines, " +
-		"which is not allowed in Strict. Every single method must start with at least one test!");
+	/// <summary>
+	/// Check if a method is simple enough to not require tests by analyzing its raw text.
+	/// This is done BEFORE parsing to avoid errors when no instance is available.
+	/// We need to attempt to parse if the method might be simple, otherwise we can't validate it.
+	/// This method returns true only for trivially simple cases that definitely don't need tests.
+	/// </summary>
+	private static bool IsSimpleSingleLineMethod(Method method)
+	{
+		if (method.lines.Count != 2)
+			return false;
+		var bodyLine = method.lines[1].Trim();
+		// Count method calls - these usually add complexity
+		var hasMethodCalls = bodyLine.Contains('(') && !bodyLine.StartsWith('(');
+		if (hasMethodCalls)
+			return false;
+		// Count conditionals and operators
+		var questionMarkCount = bodyLine.Count(c => c == '?');
+		var operatorCount = bodyLine.Split(' ').Count(w => w is "and" or "or" or "not" or "is");
+		// Simple cases: no conditionals and at most 1 operator (e.g., "value", "value is other")
+		// Or: 1 conditional with a simple condition and simple branches (e.g., "value ? true else false")
+		return questionMarkCount == 0 && operatorCount <= 1 ||
+			questionMarkCount == 1 && operatorCount <= 2;
+	}
+
+	/// <summary>
+	/// Simple expressions like "value is other" or "value" don't need tests as they are
+	/// essentially getters or trivial delegations. Complex expressions need tests.
+	/// </summary>
+	private static bool IsSimpleExpressionWithLessThanThreeSubExpressions(Expression expr) =>
+		CountExpressionComplexity(expr) <= MaxSimpleExpressionComplexity;
+
+	private const int MaxSimpleExpressionComplexity = 3;
+
+	private static int CountExpressionComplexity(Expression expr) =>
+		expr switch
+		{
+			Binary => 1,
+			Not n => 1 + CountExpressionComplexity(n.Instance!),
+			MethodCall m => 1 + (m.Instance != null
+				? CountExpressionComplexity(m.Instance)
+				: 0) + m.Arguments.Sum(CountExpressionComplexity),
+			If i => CountExpressionComplexity(i.Condition) + CountExpressionComplexity(i.Then) +
+				(i.OptionalElse != null
+					? CountExpressionComplexity(i.OptionalElse)
+					: 0),
+			_ => 1
+		};
+
+	public class MethodRequiresTest(Method method, string body) : ParsingFailed(method.Type,
+		method.TypeLineNumber, $"Method {method.Name}\n{body}")
+	{
+		public MethodRequiresTest(Method method, Body body) : this(method, body+
+			$" ({{CountExpressionComplexity(body)}} expressions)") { }
+	}
 
 	public sealed class TestFailed(Method method, Expression expression, ValueInstance result)
 		: Exception($"\"{method.Name}\" method failed: {expression}, result: {result} in" +
@@ -192,8 +264,8 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 	private ValueInstance EvaluateMethodCall(MethodCall call, ExecutionContext ctx)
 	{
 		var op = call.Method.Name;
-		if (IsArithmetic(op) || IsCompare(op))
-			return EvaluateArithmeticOrCompare(call, ctx);
+		if (IsArithmetic(op) || IsCompare(op) || IsLogical(op))
+			return EvaluateArithmeticOrCompareOrLogical(call, ctx);
 		// If the call has an instance (like 'not true'), evaluate it.
 		// Otherwise, if we are already inside an instance method, use 'ctx.This'.
 		var instance = call.Instance != null
@@ -212,14 +284,17 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 	private static bool IsCompare(string name) =>
 		name is BinaryOperator.Greater or BinaryOperator.Smaller or BinaryOperator.Is;
 
-	private ValueInstance EvaluateArithmeticOrCompare(MethodCall call, ExecutionContext ctx)
+	private static bool IsLogical(string name) =>
+		name is BinaryOperator.And or BinaryOperator.Or or UnaryOperator.Not;
+
+	private ValueInstance EvaluateArithmeticOrCompareOrLogical(MethodCall call, ExecutionContext ctx)
 	{
 		if (call.Instance == null || call.Arguments.Count != 1)
 			throw new InvalidOperationException("Binary call must have instance and 1 argument"); //ncrunch: no coverage
 		var left = RunExpression(call.Instance, ctx).Value;
 		var right = RunExpression(call.Arguments[0], ctx).Value;
 		var op = call.Method.Name;
-		if (IsArithmetic(op))
+		if (IsArithmetic(op) || IsCompare(op))
 		{
 			var l = NumberToDouble(left);
 			var r = NumberToDouble(right);
@@ -244,8 +319,8 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 		};
 	}
 
-	public class ComparisonsToNullAreNotAllowed(Type type, object? left, object? right)
-		: ParsingFailed(type, type.LineNumber, $"{left} is {right}");
+	private ValueInstance Bool(bool b) => new(boolType, b);
+	private readonly Type boolType = basePackage.FindType(Base.Boolean)!;
 
 	private static bool ToBool(ValueInstance v) =>
 		v.Value switch
@@ -255,10 +330,11 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 			_ => throw new InvalidOperationException("Expected Boolean, got: " + v) //ncrunch: no coverage
 		};
 
+	public class ComparisonsToNullAreNotAllowed(Type type, object? left, object? right)
+		: ParsingFailed(type, type.LineNumber, $"{left} is {right}");
+
 	private ValueInstance Number(double n) => new(numberType, n);
 	private readonly Type numberType = basePackage.FindType(Base.Number)!;
-	private ValueInstance Bool(bool b) => new(boolType, b);
-	private readonly Type boolType = basePackage.FindType(Base.Boolean)!;
 
 	private static double NumberToDouble(object? n) =>
 		Convert.ToDouble(n, CultureInfo.InvariantCulture);

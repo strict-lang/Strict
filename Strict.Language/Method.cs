@@ -2,6 +2,7 @@
 
 [assembly: InternalsVisibleTo("Strict.Language.Tests")]
 [assembly: InternalsVisibleTo("Strict.Validators")]
+[assembly: InternalsVisibleTo("Strict.HighLevelRuntime")]
 
 namespace Strict.Language;
 
