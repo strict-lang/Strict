@@ -52,7 +52,7 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 			}
 		try
 		{
-			// For test validation, check if method is simple before attempting to parse
+			// For test validation, check if the method is simple before attempting to parse
 			// This avoids parsing errors when instance members are accessed but no instance exists
 			if (runOnlyTests && IsSimpleSingleLineMethod(method))
 				return new ValueInstance(method.ReturnType, true);
@@ -63,7 +63,8 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 			}
 			catch (Exception inner) when (runOnlyTests)
 			{
-				throw new MethodRequiresTest(method, method.lines.ToWordList("\n") + "\n" + inner);
+				throw new MethodRequiresTest(method,
+					"Test execution failed with:\n" + method.lines.ToWordList("\n") + "\n" + inner);
 			}
 			if (body is not Body && runOnlyTests)
 				return IsSimpleExpressionWithLessThanThreeSubExpressions(body)
@@ -95,7 +96,7 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 			" requires these parameters: " + method.Parameters.ToWordList());
 
 	public class MethodExecutionFailed(Method method, ExecutionContext context, Exception inner)
-		: ParsingFailed(method.Type, method.TypeLineNumber, context.ToString()!, inner);
+		: ParsingFailed(method.Type, method.TypeLineNumber, context.ToString(), inner);
 
 	public class MissingArgument(string paramName, IEnumerable<ValueInstance> args, Method method)
 		: ParsingFailed(method.Type, method.TypeLineNumber,
@@ -115,6 +116,8 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 			MemberCall m => EvaluateMember(m, context),
 			If iff => EvaluateIf(iff, context),
 			Return r => EvaluateReturn(r, context),
+			To t => EvaluateTo(t, context),
+			Not n => EvaluateNot(n, context),
 			MethodCall call => EvaluateMethodCall(call, context),
 			Declaration c => EvaluateAndAssign(c.Name, c.Value, context),
 			MutableReassignment a => EvaluateAndAssign(a.Name, a.Value, context),
@@ -214,7 +217,7 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 		};
 
 	public class MethodRequiresTest(Method method, string body) : ParsingFailed(method.Type,
-		method.TypeLineNumber, $"Method {method.Name}\n{body}")
+		method.TypeLineNumber, $"Method {method.Parent.FullName}.{method.Name}\n{body}")
 	{
 		public MethodRequiresTest(Method method, Body body) : this(method, body+
 			$" ({{CountExpressionComplexity(body)}} expressions)") { }
@@ -248,6 +251,19 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 				? RunExpression(iff.OptionalElse, ctx)
 				: new ValueInstance(ctx.This?.ReturnType ?? iff.ReturnType, null);
 
+	private ValueInstance EvaluateTo(To to, ExecutionContext ctx)
+	{
+		var left = RunExpression(to.Instance!, ctx).Value;
+		if (to.ConversionType.Name == Base.Text)
+			return new ValueInstance(to.ConversionType, left?.ToString() ?? "");
+		if (to.ConversionType.Name == Base.Number)
+			return new ValueInstance(to.ConversionType, NumberToDouble(left));
+		throw new NotSupportedException("Conversion to " + to.ConversionType.Name + " not supported");
+	}
+
+	private ValueInstance EvaluateNot(Not not, ExecutionContext ctx) =>
+		Bool(!ToBool(RunExpression(not.Instance!, ctx)));
+
 	private ValueInstance EvaluateMember(MemberCall member, ExecutionContext ctx) =>
 		ctx.Type.Members.Contains(member.Member) && ctx.This == null
 			? throw new UnableToCallMemberWithoutInstance(member, ctx)
@@ -279,13 +295,14 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 
 	private static bool IsArithmetic(string name) =>
 		name is BinaryOperator.Plus or BinaryOperator.Minus or BinaryOperator.Multiply
-			or BinaryOperator.Divide or BinaryOperator.Modulate;
+			or BinaryOperator.Divide or BinaryOperator.Modulate or BinaryOperator.Power;
 
 	private static bool IsCompare(string name) =>
-		name is BinaryOperator.Greater or BinaryOperator.Smaller or BinaryOperator.Is;
+		name is BinaryOperator.Greater or BinaryOperator.Smaller or BinaryOperator.Is
+			or BinaryOperator.GreaterOrEqual or BinaryOperator.SmallerOrEqual or BinaryOperator.IsNot;
 
 	private static bool IsLogical(string name) =>
-		name is BinaryOperator.And or BinaryOperator.Or or UnaryOperator.Not;
+		name is BinaryOperator.And or BinaryOperator.Or or BinaryOperator.Xor or UnaryOperator.Not;
 
 	private ValueInstance EvaluateArithmeticOrCompareOrLogical(MethodCall call, ExecutionContext ctx)
 	{
@@ -294,7 +311,7 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 		var left = RunExpression(call.Instance, ctx).Value;
 		var right = RunExpression(call.Arguments[0], ctx).Value;
 		var op = call.Method.Name;
-		if (IsArithmetic(op) || IsCompare(op))
+		if (IsArithmetic(op))
 		{
 			var l = NumberToDouble(left);
 			var r = NumberToDouble(right);
@@ -305,27 +322,48 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 				BinaryOperator.Multiply => Number(l * r),
 				BinaryOperator.Divide => Number(l / r),
 				BinaryOperator.Modulate => Number(l % r),
+				BinaryOperator.Power => Number(Math.Pow(l, r)),
 				_ => throw new NotSupportedException("Operator not supported for Number: " + op) //ncrunch: no coverage
+			};
+		}
+		if (IsCompare(op))
+		{
+			if (op is BinaryOperator.Is or BinaryOperator.IsNot)
+				return op is BinaryOperator.Is
+					? Bool(Equals(left, right) || (left == null || right == null
+						? throw new ComparisonsToNullAreNotAllowed(ctx.Type, left, right)
+						: false))
+					: Bool(!Equals(left, right) || (left == null || right == null
+						? throw new ComparisonsToNullAreNotAllowed(ctx.Type, left, right)
+						: false));
+			var l = NumberToDouble(left);
+			var r = NumberToDouble(right);
+			return op switch
+			{
+				BinaryOperator.Greater => Bool(l > r),
+				BinaryOperator.Smaller => Bool(l < r),
+				BinaryOperator.GreaterOrEqual => Bool(l >= r),
+				BinaryOperator.SmallerOrEqual => Bool(l <= r),
+				_ => throw new NotSupportedException("Operator not supported for Compare: " + op) //ncrunch: no coverage
 			};
 		}
 		return op switch
 		{
-			BinaryOperator.Greater => Bool(NumberToDouble(left) > NumberToDouble(right)),
-			BinaryOperator.Smaller => Bool(NumberToDouble(left) < NumberToDouble(right)),
-			BinaryOperator.Is => Bool(Equals(left, right) || (left == null || right == null
-				? throw new ComparisonsToNullAreNotAllowed(ctx.Type, left, right)
-				: false)),
-			_ => throw new NotSupportedException("Operator not supported for Boolean: " + op) //ncrunch: no coverage
+			BinaryOperator.And => Bool(ToBool(left) && ToBool(right)),
+			BinaryOperator.Or => Bool(ToBool(left) || ToBool(right)),
+			BinaryOperator.Xor => Bool(ToBool(left) ^ ToBool(right)),
+			_ => throw new NotSupportedException("Operator not supported for Logical: " + op) //ncrunch: no coverage
 		};
 	}
 
 	private ValueInstance Bool(bool b) => new(boolType, b);
 	private readonly Type boolType = basePackage.FindType(Base.Boolean)!;
 
-	private static bool ToBool(ValueInstance v) =>
-		v.Value switch
+	private static bool ToBool(object? v) =>
+		v switch
 		{
 			bool b => b,
+			ValueInstance vi => ToBool(vi.Value),
 			Value { ReturnType.Name: Base.Boolean, Data: bool bv } => bv, //ncrunch: no coverage
 			_ => throw new InvalidOperationException("Expected Boolean, got: " + v) //ncrunch: no coverage
 		};

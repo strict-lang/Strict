@@ -324,7 +324,7 @@ public sealed class TypeTests
 	}
 
 	/// <summary>
-	/// Types are not allowed to start with numbers or non letter characters. If they end with a
+	/// Types are not allowed to start with numbers or non-letter characters. If they end with a
 	/// number, there must be no other type that already occupies that name without a number.
 	/// </summary>
 	[TestCase("2Vector")]
@@ -398,7 +398,7 @@ public sealed class TypeTests
 	[Test]
 	public void FindLineNumber() =>
 		Assert.That(package.GetType(Base.Number).FindLineNumber("is in(other) Boolean"),
-			Is.EqualTo(14));
+			Is.EqualTo(16));
 
 	//ncrunch: no coverage start
 	[Test]

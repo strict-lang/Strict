@@ -83,7 +83,8 @@ public sealed class ExecutorTests
 			"Minus(first Number, second Number) Number", "\tfirst - second",
 			"Mul(first Number, second Number) Number", "\tfirst * second",
 			"Div(first Number, second Number) Number", "\tfirst / second",
-			"Mod(first Number, second Number) Number", "\tfirst % second");
+			"Mod(first Number, second Number) Number", "\tfirst % second",
+			"Pow(first Number, second Number) Number", "\tfirst ^ second");
 		static ValueInstance N(double x) => new(TestPackage.Instance.FindType(Base.Number)!, x);
 		Assert.That(Convert.ToDouble(executor.Execute(t.Methods.Single(m => m.Name == "Plus"), null, [
 			N(2), N(3)
@@ -101,6 +102,9 @@ public sealed class ExecutorTests
 		Assert.That(Convert.ToDouble(executor.Execute(t.Methods.Single(m => m.Name == "Mod"), null, [
 			N(8), N(3)
 		]).Value), Is.EqualTo(2));
+		Assert.That(Convert.ToDouble(executor.Execute(t.Methods.Single(m => m.Name == "Pow"), null, [
+			N(2), N(3)
+		]).Value), Is.EqualTo(8));
 	}
 
 	[Test]
@@ -109,14 +113,53 @@ public sealed class ExecutorTests
 		using var t = CreateType(nameof(EvaluateAllComparisonOperators), "mutable last Number",
 			"Gt(first Number, second Number) Boolean", "\tfirst > second",
 			"Lt(first Number, second Number) Boolean", "\tfirst < second",
-			"Eq(first Number, second Number) Boolean", "\tfirst is second");
+			"Gte(first Number, second Number) Boolean", "\tfirst >= second",
+			"Lte(first Number, second Number) Boolean", "\tfirst <= second",
+			"Eq(first Number, second Number) Boolean", "\tfirst is second",
+			"Neq(first Number, second Number) Boolean", "\tfirst is not second");
 		var num = TestPackage.Instance.FindType(Base.Number)!;
 		ValueInstance N(double x) => new(num, x);
 		Assert.That(executor.Execute(t.Methods.Single(m => m.Name == "Gt"), null, [N(5), N(3)]).Value,
 			Is.EqualTo(true));
 		Assert.That(executor.Execute(t.Methods.Single(m => m.Name == "Lt"), null, [N(2), N(3)]).Value,
 			Is.EqualTo(true));
+		Assert.That(executor.Execute(t.Methods.Single(m => m.Name == "Gte"), null, [N(5), N(3)]).Value,
+			Is.EqualTo(true));
+		Assert.That(executor.Execute(t.Methods.Single(m => m.Name == "Gte"), null, [N(5), N(5)]).Value,
+			Is.EqualTo(true));
+		Assert.That(executor.Execute(t.Methods.Single(m => m.Name == "Lte"), null, [N(2), N(3)]).Value,
+			Is.EqualTo(true));
+		Assert.That(executor.Execute(t.Methods.Single(m => m.Name == "Lte"), null, [N(3), N(3)]).Value,
+			Is.EqualTo(true));
 		Assert.That(executor.Execute(t.Methods.Single(m => m.Name == "Eq"), null, [N(3), N(3)]).Value,
+			Is.EqualTo(true));
+		Assert.That(executor.Execute(t.Methods.Single(m => m.Name == "Neq"), null, [N(3), N(4)]).Value,
+			Is.EqualTo(true));
+	}
+
+	[Test]
+	public void EvaluateAllLogicalOperators()
+	{
+		using var t = CreateType(nameof(EvaluateAllLogicalOperators), "has unused Boolean",
+			"And(first Boolean, second Boolean) Boolean", "\tfirst and second",
+			"Or(first Boolean, second Boolean) Boolean", "\tfirst or second",
+			"Xor(first Boolean, second Boolean) Boolean", "\tfirst xor second",
+			"Not(first Boolean) Boolean", "\tnot first");
+		var boolType = TestPackage.Instance.FindType(Base.Boolean)!;
+		ValueInstance B(bool x) => new(boolType, x);
+		Assert.That(executor.Execute(t.Methods.Single(m => m.Name == "And"), null, [B(true), B(true)]).Value,
+			Is.EqualTo(true));
+		Assert.That(executor.Execute(t.Methods.Single(m => m.Name == "And"), null, [B(true), B(false)]).Value,
+			Is.EqualTo(false));
+		Assert.That(executor.Execute(t.Methods.Single(m => m.Name == "Or"), null, [B(true), B(false)]).Value,
+			Is.EqualTo(true));
+		Assert.That(executor.Execute(t.Methods.Single(m => m.Name == "Or"), null, [B(false), B(false)]).Value,
+			Is.EqualTo(false));
+		Assert.That(executor.Execute(t.Methods.Single(m => m.Name == "Xor"), null, [B(true), B(false)]).Value,
+			Is.EqualTo(true));
+		Assert.That(executor.Execute(t.Methods.Single(m => m.Name == "Xor"), null, [B(true), B(true)]).Value,
+			Is.EqualTo(false));
+		Assert.That(executor.Execute(t.Methods.Single(m => m.Name == "Not"), null, [B(false)]).Value,
 			Is.EqualTo(true));
 	}
 
@@ -128,6 +171,46 @@ public sealed class ExecutorTests
 		var method = t.Methods.Single(m => m.Name == "IfTrue");
 		var result = executor.Execute(method, null, []);
 		Assert.That(Convert.ToDouble(result.Value), Is.EqualTo(33));
+	}
+
+	[Test]
+	public void EvaluateIsInEnumerableRange()
+	{
+		using var t = CreateType(nameof(EvaluateIsInEnumerableRange), "has number",
+			"IsInRange(range Range) Boolean", "\tnumber is in range");
+		var numberType = TestPackage.Instance.FindType(Base.Number)!;
+		var rangeType = TestPackage.Instance.FindType(Base.Range)!;
+		var rangeInstance = new ValueInstance(rangeType, new Dictionary<string, object?>
+		{
+			{ "Start", 1.0 },
+			{ "End", 10.0 }
+		});
+		var result = executor.Execute(t.Methods.Single(m => m.Name == "IsInRange"),
+			new ValueInstance(t, 7.0), [rangeInstance]);
+		Assert.That(result.Value, Is.EqualTo(true));
+		result = executor.Execute(t.Methods.Single(m => m.Name == "IsInRange"),
+			new ValueInstance(t, 11.0), [rangeInstance]);
+		Assert.That(result.Value, Is.EqualTo(false));
+	}
+
+	[Test]
+	public void EvaluateIsNotInEnumerableRange()
+	{
+		using var t = CreateType(nameof(EvaluateIsNotInEnumerableRange), "has number",
+			"IsNotInRange(range Range) Boolean", "\tnumber is not in range");
+		var numberType = TestPackage.Instance.FindType(Base.Number)!;
+		var rangeType = TestPackage.Instance.FindType(Base.Range)!;
+		var rangeInstance = new ValueInstance(rangeType, new Dictionary<string, object?>
+		{
+			{ "Start", 1.0 },
+			{ "End", 10.0 }
+		});
+		var result = executor.Execute(t.Methods.Single(m => m.Name == "IsNotInRange"),
+			new ValueInstance(t, 11.0), [rangeInstance]);
+		Assert.That(result.Value, Is.EqualTo(true));
+		result = executor.Execute(t.Methods.Single(m => m.Name == "IsNotInRange"),
+			new ValueInstance(t, 7.0), [rangeInstance]);
+		Assert.That(result.Value, Is.EqualTo(false));
 	}
 
 	[Test]
@@ -160,5 +243,18 @@ public sealed class ExecutorTests
 		var result = executor.Execute(method,
 			new ValueInstance(t, new Dictionary<string, object?> { { "last", false } }), []);
 		Assert.That(Convert.ToBoolean(result.Value), Is.EqualTo(true));
+	}
+	[Test]
+	public void EvaluateToTextAndNumber()
+	{
+		using var t = CreateType(nameof(EvaluateToTextAndNumber), "has number",
+			"GetText Text", "\tnumber to Text",
+			"GetNumber Number", "\t(number to Text) to Number");
+		var numberType = TestPackage.Instance.FindType(Base.Number)!;
+		var instance = new ValueInstance(t, new Dictionary<string, object?> { { "number", 5 } });
+		Assert.That(executor.Execute(t.Methods.Single(m => m.Name == "GetText"), instance, []).Value,
+			Is.EqualTo("5"));
+		Assert.That(Convert.ToDouble(executor.Execute(t.Methods.Single(m => m.Name == "GetNumber"), instance, []).Value),
+			Is.EqualTo(5));
 	}
 }
