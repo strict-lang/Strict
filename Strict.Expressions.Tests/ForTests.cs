@@ -32,7 +32,7 @@ public sealed class ForTests : TestExpressions
 	{
 		var forExpression = (For)ParseExpression("for Range(2, 5)", "\tlogger.Log(index)");
 		Assert.That(forExpression.IsConstant, Is.False);
-		Assert.That(forExpression.GetHashCode(), Is.EqualTo(forExpression.Value.GetHashCode()));
+		Assert.That(forExpression.GetHashCode(), Is.EqualTo(forExpression.Iterator.GetHashCode()));
 	}
 
 	[Test]
@@ -140,7 +140,7 @@ public sealed class ForTests : TestExpressions
 		var parsedExpression = (Body)programType.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(parsedExpression.ReturnType.Name, Is.EqualTo(Base.Number));
 		Assert.That(parsedExpression.Expressions[1], Is.TypeOf(typeof(For)));
-		Assert.That(((For)parsedExpression.Expressions[1]).Value.ToString(),
+		Assert.That(((For)parsedExpression.Expressions[1]).Iterator.ToString(),
 			Is.EqualTo("Range(0, number)"));
 	}
 
@@ -165,7 +165,7 @@ public sealed class ForTests : TestExpressions
 				"\t\tvalue")).ParseMembersAndMethods(new MethodExpressionParser());
 		var parsedExpression = (Body)programType.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(parsedExpression.Expressions[1], Is.TypeOf(typeof(For)));
-		Assert.That(((For)parsedExpression.Expressions[1]).Value.ToString(),
+		Assert.That(((For)parsedExpression.Expressions[1]).Iterator.ToString(),
 			Is.EqualTo(forExpressionText));
 	}
 
@@ -178,7 +178,7 @@ public sealed class ForTests : TestExpressions
 			ParseMembersAndMethods(new MethodExpressionParser());
 		var parsedExpression = (Body)programType.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(parsedExpression.Expressions[1], Is.TypeOf(typeof(For)));
-		Assert.That(((For)parsedExpression.Expressions[1]).Value.ToString(), Is.EqualTo("name"));
+		Assert.That(((For)parsedExpression.Expressions[1]).Iterator.ToString(), Is.EqualTo("name"));
 	}
 
 	[Test]
@@ -212,26 +212,27 @@ public sealed class ForTests : TestExpressions
 			new Type(type.Package, new TypeLines(nameof(AllowCustomVariablesInFor) + testName, code)).
 				ParseMembersAndMethods(new MethodExpressionParser());
 		var parsedExpression = (For)programType.Methods[0].GetBodyAndParseIfNeeded();
-		Assert.That(parsedExpression.Value.ToString(), Is.EqualTo(expected));
+		Assert.That(parsedExpression.Iterator.ToString(), Is.EqualTo(expected));
 	}
 
-	[TestCase("WithNumbers",
+	[TestCase("WithNumbers", "row, column in listOfNumbers",
 		"has logger",
 		"LogAllNumbers(listOfNumbers List(Numbers))",
 		"\tfor row, column in listOfNumbers",
 		"\t\tlogger.Log(column)")]
 	[TestCase(
-		"WithTexts",
+		"WithTexts", "row, column in texts",
 		"has logger",
 		"LogTexts(texts)",
 		"\tfor row, column in texts",
 		"\t\tlogger.Log(column)")]
-	public void ParseForExpressionWithMultipleVariables(string testName, params string[] code)
+	public void ParseForExpressionWithMultipleVariables(string testName, string expected, params string[] code)
 	{
 		var programType =
 			new Type(type.Package,
 					new TypeLines(nameof(ParseForExpressionWithMultipleVariables) + testName, code)).
 				ParseMembersAndMethods(new MethodExpressionParser());
-		Assert.That(programType.Methods[0].GetBodyAndParseIfNeeded(), Is.InstanceOf<For>());
+		var parsedExpression = (For)programType.Methods[0].GetBodyAndParseIfNeeded();
+		Assert.That(parsedExpression.Iterator.ToString(), Is.EqualTo(expected));
 	}
 }

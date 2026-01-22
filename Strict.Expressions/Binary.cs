@@ -7,8 +7,10 @@ public sealed class Binary(Expression left, Method operatorMethod, Expression[] 
 	: MethodCall(operatorMethod, left, right, null, left.LineNumber)
 {
 	public override string ToString() =>
-		AddNestedBracketsIfNeeded(Instance!) + " " + Method.Name + " " +
-		AddNestedBracketsIfNeeded(Arguments[0]);
+		AddNestedBracketsIfNeeded(Instance!) + " " +
+		(Method.Name is UnaryOperator.Not or BinaryOperator.In
+			? "is "
+			: "") + Method.Name + " " + AddNestedBracketsIfNeeded(Arguments[0]);
 
 	private string AddNestedBracketsIfNeeded(Expression child) =>
 		child is Binary childBinary && BinaryOperator.GetPrecedence(childBinary.Method.Name) <
@@ -35,6 +37,12 @@ public sealed class Binary(Expression left, Method operatorMethod, Expression[] 
 			BinaryOperator.To => To.Parse(body, input[tokens.Pop()],
 				GetUnaryOrBuildNestedBinary(body, input, tokens)),
 			UnaryOperator.Not => Not.Parse(body, input, tokens.Pop()),
+			BinaryOperator.Is => input[tokens.Peek()] switch
+			{
+				UnaryOperator.Not => BuildRegularBinaryExpression(body, input, tokens, input[tokens.Pop()].ToString()),
+				BinaryOperator.In => BuildRegularBinaryExpression(body, input, tokens, input[tokens.Pop()].ToString()),
+				_ => BuildRegularBinaryExpression(body, input, tokens, operatorToken)
+			},
 			_ => BuildRegularBinaryExpression(body, input, tokens, operatorToken)
 		};
 	}

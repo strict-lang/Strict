@@ -109,7 +109,7 @@ public abstract class Visitor
 			Visit(reassignment.Value, body, context);
 		else if (expression is For forExpression)
 		{
-			Visit(forExpression.Value, body, context);
+			Visit(forExpression.Iterator, body, context);
 			Visit(forExpression.Body, body, context);
 		}
 		else if (expression is If ifExpression)

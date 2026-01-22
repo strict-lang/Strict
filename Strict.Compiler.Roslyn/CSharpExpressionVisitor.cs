@@ -112,7 +112,7 @@ public class CSharpExpressionVisitor : ExpressionVisitor
 
 	protected override IReadOnlyList<string> VisitFor(For forExpression)
 	{
-		var block = new List<string> { "foreach (var index in " + Visit(forExpression.Value) + ")" };
+		var block = new List<string> { "foreach (var index in " + Visit(forExpression.Iterator) + ")" };
 		block.AddRange(Indent(VisitBody(forExpression.Body)));
 		return block;
 	}

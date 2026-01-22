@@ -227,8 +227,8 @@ public class MethodExpressionParser : ExpressionParser
 
 	/// <summary>
 	/// Figures out if there are any bracket groups or if there is a binary expression going on.
-	/// Could also contain strings, we don't know. Most of the time it will just be a bunch of values.
-	/// <see cref="ShuntingYard" /> will only parse till the next comma, has to call this till the end.
+	/// Could also contain strings, we don't know. Most of the time it will just be some values.
+	/// <see cref="ShuntingYard" /> will parse till the next comma, has to call this till the end.
 	/// </summary>
 	public override List<Expression> ParseListArguments(Body body, ReadOnlySpan<char> innerSpan)
 	{
@@ -251,8 +251,8 @@ public class MethodExpressionParser : ExpressionParser
 				return true;
 			if (expression is For forExpression &&
 				(IsMutationOfVariable(forExpression.Body, variableName) ||
-					forExpression.Value is Value forValue && forValue.Data.ToString() == variableName ||
-					forExpression.Value is Binary { Instance: VariableCall forVariableCall } &&
+					forExpression.Iterator is Value forValue && forValue.Data.ToString() == variableName ||
+					forExpression.Iterator is Binary { Instance: VariableCall forVariableCall } &&
 					forVariableCall.Variable.Name == variableName || forExpression.Body is Body forBody &&
 					IsVariableMutated(forBody, variableName)))
 				return true;
