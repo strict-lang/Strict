@@ -1,3 +1,5 @@
+using Strict.Language.Tests;
+
 namespace Strict.Expressions.Tests;
 
 public sealed class IfAdvancedTests : TestExpressions
@@ -216,12 +218,12 @@ public sealed class IfAdvancedTests : TestExpressions
 	[Test]
 	public void ParseIsNotIn() =>
 		Assert.That(ParseExpression("if bla is not in (5)", "\tlogger.Log(\"Hey\")"),
-			Is.EqualTo(new If(CreateBinary(new MemberCall(null, bla), BinaryOperator.IsNotIn, list),
+			Is.EqualTo(new If(CreateNot(CreateBinary(list, BinaryOperator.In, new MemberCall(null, bla))),
 				GetThen())));
 
 	[Test]
 	public void ParseIsIn() =>
 		Assert.That(ParseExpression("if bla is in (5)", "\tlogger.Log(\"Hey\")"),
-			Is.EqualTo(new If(CreateBinary(new MemberCall(null, bla), BinaryOperator.IsIn, list),
+			Is.EqualTo(new If(CreateBinary(list, BinaryOperator.In, new MemberCall(null, bla)),
 				GetThen())));
 }

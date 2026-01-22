@@ -64,7 +64,8 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 			catch (Exception inner) when (runOnlyTests)
 			{
 				throw new MethodRequiresTest(method,
-					"Test execution failed with:\n" + method.lines.ToWordList("\n") + "\n" + inner);
+					$"Test execution failed: {method.Parent.FullName}.{method.Name}\n" +
+					method.lines.ToWordList("\n") + "\n" + inner);
 			}
 			if (body is not Body && runOnlyTests)
 				return IsSimpleExpressionWithLessThanThreeSubExpressions(body)
@@ -158,7 +159,7 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 					throw new TestFailed(body.Method, e, last);
 			}
 			if (runOnlyTests && last.Value == null)
-				throw new MethodRequiresTest(body.Method, body.ToString());
+				throw new MethodRequiresTest(body.Method, body);
 			return last;
 		}
 		finally
@@ -217,10 +218,12 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 		};
 
 	public class MethodRequiresTest(Method method, string body) : ParsingFailed(method.Type,
-		method.TypeLineNumber, $"Method {method.Parent.FullName}.{method.Name}\n{body}")
+		method.TypeLineNumber, body.StartsWith("Test execution failed", StringComparison.Ordinal)
+			? body
+			: $"Method {method.Parent.FullName}.{method.Name}\n{body}")
 	{
-		public MethodRequiresTest(Method method, Body body) : this(method, body+
-			$" ({{CountExpressionComplexity(body)}} expressions)") { }
+		public MethodRequiresTest(Method method, Body body) : this(method,
+			body + " ({CountExpressionComplexity(body)} expressions)") { }
 	}
 
 	public sealed class TestFailed(Method method, Expression expression, ValueInstance result)
@@ -299,7 +302,7 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 
 	private static bool IsCompare(string name) =>
 		name is BinaryOperator.Greater or BinaryOperator.Smaller or BinaryOperator.Is
-			or BinaryOperator.GreaterOrEqual or BinaryOperator.SmallerOrEqual or BinaryOperator.IsNot;
+			or BinaryOperator.GreaterOrEqual or BinaryOperator.SmallerOrEqual or UnaryOperator.Not;
 
 	private static bool IsLogical(string name) =>
 		name is BinaryOperator.And or BinaryOperator.Or or BinaryOperator.Xor or UnaryOperator.Not;
@@ -328,7 +331,7 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 		}
 		if (IsCompare(op))
 		{
-			if (op is BinaryOperator.Is or BinaryOperator.IsNot)
+			if (op is BinaryOperator.Is or UnaryOperator.Not) //Operator.IsNot)
 				return op is BinaryOperator.Is
 					? Bool(Equals(left, right) || (left == null || right == null
 						? throw new ComparisonsToNullAreNotAllowed(ctx.Type, left, right)

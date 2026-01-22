@@ -77,6 +77,9 @@ public abstract class TestExpressions : MethodExpressionParser
 
 	protected Binary GetCondition(bool isNot = false) =>
 		CreateBinary(new MemberCall(null, bla), isNot
-			? BinaryOperator.IsNot
+			? UnaryOperator.Not
 			: BinaryOperator.Is, number);
+
+	protected Not CreateNot(Expression right) =>
+		new(TestPackage.Instance.GetType(Base.Boolean).GetMethod(UnaryOperator.Not, []), right);
 }

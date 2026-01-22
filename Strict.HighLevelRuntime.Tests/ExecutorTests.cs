@@ -198,7 +198,6 @@ public sealed class ExecutorTests
 	{
 		using var t = CreateType(nameof(EvaluateIsNotInEnumerableRange), "has number",
 			"IsNotInRange(range Range) Boolean", "\tnumber is not in range");
-		var numberType = TestPackage.Instance.FindType(Base.Number)!;
 		var rangeType = TestPackage.Instance.FindType(Base.Range)!;
 		var rangeInstance = new ValueInstance(rangeType, new Dictionary<string, object?>
 		{

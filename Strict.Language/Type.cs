@@ -375,7 +375,7 @@ public class Type : Context, IDisposable
 
 	/// <summary>
 	/// Builds dictionary the first time we use it to access any method of this type or any of the
-	/// member types recursively (if not there yet). Filtering has to be done by <see cref="FindMethod"/>
+	/// member types recursively (if not there yet). Filtering is done by <see cref="FindMethod"/>
 	/// </summary>
 	public IReadOnlyDictionary<string, List<Method>> AvailableMethods
 	{
@@ -486,8 +486,8 @@ public class Type : Context, IDisposable
 	private static IReadOnlyDictionary<string, List<Method>>? cachedAnyMethods;
 
 	public sealed class NoMatchingMethodFound(Type type, string methodName,
-		IReadOnlyDictionary<string, List<Method>> availableMethods) : Exception(methodName +
-		" not found for " + type + ", available methods: " + availableMethods.Keys.ToWordList());
+		IReadOnlyDictionary<string, List<Method>> availableMethods) : Exception("\"" + methodName +
+		"\" not found for " + type + ", available methods: " + availableMethods.Keys.ToWordList());
 
 	public sealed class ArgumentsDoNotMatchMethodParameters(IReadOnlyList<Expression> arguments,
 		Type type, IEnumerable<Method> allMethods) : Exception((arguments.Count == 0

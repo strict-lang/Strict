@@ -26,16 +26,17 @@ public sealed class Binary(Expression left, Method operatorMethod, Expression[] 
 		ReadOnlySpan<char> input,	IEnumerable<Range> postfixTokens) : ParsingFailed(body, //ncrunch: no coverage
 		input.GetTextsFromRanges(postfixTokens).Reverse().ToWordList());
 
-	// ReSharper disable once TooManyArguments
 	private static Expression BuildBinaryExpression(Body body, ReadOnlySpan<char> input,
 		Range operatorTokenRange, Stack<Range> tokens)
 	{
 		var operatorToken = input[operatorTokenRange].ToString();
-		return operatorToken == BinaryOperator.To
-			? To.Parse(body, input[tokens.Pop()], GetUnaryOrBuildNestedBinary(body, input, tokens))
-			: operatorToken == UnaryOperator.Not
-				? Not.Parse(body, input, tokens.Pop())
-				: BuildRegularBinaryExpression(body, input, tokens, operatorToken);
+		return operatorToken switch
+		{
+			BinaryOperator.To => To.Parse(body, input[tokens.Pop()],
+				GetUnaryOrBuildNestedBinary(body, input, tokens)),
+			UnaryOperator.Not => Not.Parse(body, input, tokens.Pop()),
+			_ => BuildRegularBinaryExpression(body, input, tokens, operatorToken)
+		};
 	}
 
 	// ReSharper disable once TooManyArguments
@@ -43,14 +44,17 @@ public sealed class Binary(Expression left, Method operatorMethod, Expression[] 
 		Stack<Range> tokens, string operatorToken)
 	{
 		var right = GetUnaryOrBuildNestedBinary(body, input, tokens,
-			operatorToken is BinaryOperator.Is or BinaryOperator.IsNot);
+			operatorToken is BinaryOperator.Is or UnaryOperator.Not);//TODO: BinaryOperator.IsNot);
 		var left = GetUnaryOrBuildNestedBinary(body, input, tokens);
 		if (operatorToken == BinaryOperator.Multiply && HasIncompatibleDimensions(left, right))
 			throw new ListsHaveDifferentDimensions(body, left + " " + right);
 		var arguments = new[] { right };
-		return new Binary(left, operatorToken == BinaryOperator.In
-			? right.ReturnType.GetMethod(operatorToken, [left])
-			: left.ReturnType.GetMethod(operatorToken, arguments), arguments);
+		//TODO: if (operatorToken == BinaryOperator.IsNot)
+		//	operatorToken = UnaryOperator.Not;
+		return new Binary(left,
+			operatorToken is BinaryOperator.In //TODO: or BinaryOperator.IsIn
+				? right.ReturnType.GetMethod(BinaryOperator.In, [left])
+				: left.ReturnType.GetMethod(operatorToken, arguments), arguments);
 	}
 
 	private static Expression GetUnaryOrBuildNestedBinary(Body body, ReadOnlySpan<char> input,

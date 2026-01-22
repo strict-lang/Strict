@@ -91,11 +91,13 @@ public sealed class PhraseTokenizer
 			processToken(tokenStart..(index - 1));
 			processToken((index - 1)..index);
 		}
+		/*TODO: remove, but we still need to handle "is not, is in, is not in"
 		else if (input.IsMultiCharacterOperatorWithSpace(index, out var tokenEnd))
 		{
 			processToken(tokenStart..(index + tokenEnd));
 			index += tokenEnd;
 		}
+		*/
 		else
 			processToken(tokenStart..index);
 	}

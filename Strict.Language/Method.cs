@@ -57,9 +57,9 @@ public sealed class Method : Context
 			$"Method {method.Name} has {linesCount} lines but limit is {Limit.MethodLength}");
 
 	/// <summary>
-	/// Simple lexer to just parse the method definition and get all used names and types. Method code
-	/// itself is parsed only on demand (when GetBodyAndParseIfNeeded is called) in a more complex
-	/// way (Shunting yard/BNF/etc.) and slower. Examples: Run, Run(number), Run returns Text
+	/// Simple lexer to just parse the method definition and get all used names and types. Method
+	/// code itself is parsed only on demand (when GetBodyAndParseIfNeeded is called) in a more
+	/// complex way (Shunting yard/BNF/etc.) and slower. Examples: Run, Run(number), Run returns Text
 	/// </summary>
 	private static string GetName(ReadOnlySpan<char> firstLine)
 	{
@@ -68,27 +68,12 @@ public sealed class Method : Context
 			if (firstLine[i] == '(' || firstLine[i] == ' ')
 			{
 				name = firstLine[..i];
-				if (IsNameIsNotOperator(firstLine))
-					return firstLine[..(i + 4)].ToString();
-				if (IsNameIsNotInOperator(firstLine))
-					return firstLine[..(i + 7)].ToString();
-				if (IsNameIsInOperator(firstLine))
-					return firstLine[..(i + 3)].ToString();
 				break;
 			}
 		return !name.IsWord() && !name.IsOperator()
 			? throw new NameMustBeAWordWithoutAnySpecialCharactersOrNumbers(name.ToString())
 			: name.ToString();
 	}
-
-	private static bool IsNameIsInOperator(ReadOnlySpan<char> input) =>
-		input.StartsWith(BinaryOperator.IsIn + "(", StringComparison.Ordinal);
-
-	private static bool IsNameIsNotOperator(ReadOnlySpan<char> input) =>
-		input.StartsWith(BinaryOperator.IsNot + "(", StringComparison.Ordinal);
-
-	private static bool IsNameIsNotInOperator(ReadOnlySpan<char> input) =>
-		input.StartsWith(BinaryOperator.IsNotIn + "(", StringComparison.Ordinal);
 
 	public int TypeLineNumber { get; }
 	public ExpressionParser Parser { get; }

@@ -42,7 +42,7 @@ public sealed class ShuntingYardTests
 	{
 		const string Input = "if bla is not 5";
 		var tokens = new ShuntingYard(Input);
-		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo(BinaryOperator.IsNot));
+		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo(UnaryOperator.Not));
 		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo("5"));
 		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo("bla"));
 		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo("if"));
@@ -53,7 +53,7 @@ public sealed class ShuntingYardTests
 	{
 		const string Input = "if bla is not (bla - 25)";
 		var postfix = new ShuntingYard(Input);
-		Assert.That(Input[postfix.Output.Pop()], Is.EqualTo(BinaryOperator.IsNot));
+		Assert.That(Input[postfix.Output.Pop()], Is.EqualTo(UnaryOperator.Not));
 		Assert.That(Input[postfix.Output.Pop()], Is.EqualTo(BinaryOperator.Minus));
 		Assert.That(Input[postfix.Output.Pop()], Is.EqualTo("25"));
 		Assert.That(Input[postfix.Output.Pop()], Is.EqualTo("bla"));
@@ -74,7 +74,8 @@ public sealed class ShuntingYardTests
 	{
 		const string Input = "if bla is not in (5, 6, 4)";
 		var tokens = new ShuntingYard(Input);
-		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo(BinaryOperator.IsNotIn));
+		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo(UnaryOperator.Not));
+		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo(BinaryOperator.In));
 		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo("(5, 6, 4)"));
 		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo("bla"));
 		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo("if"));
@@ -85,7 +86,7 @@ public sealed class ShuntingYardTests
 	{
 		const string Input = "if bla is in (5, 6, 4)";
 		var tokens = new ShuntingYard(Input);
-		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo(BinaryOperator.IsIn));
+		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo(BinaryOperator.In));
 		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo("(5, 6, 4)"));
 		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo("bla"));
 		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo("if"));

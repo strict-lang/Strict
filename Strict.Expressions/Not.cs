@@ -7,10 +7,9 @@ namespace Strict.Expressions;
 /// -number, it will fail to find this as an identifier and check if one of the supported unary
 /// one-letter expressions was used and will do the minus operation directly there.
 /// </summary>
-public sealed class Not : MethodCall
+public sealed class Not(Method method, Expression right)
+	: MethodCall(method, right, [], null, right.LineNumber)
 {
-	private Not(Method method, Expression right) : base(method, right, [], null, right.LineNumber) { }
-
 	public static Not Parse(Body body, ReadOnlySpan<char> input, Range methodRange)
 	{
 		var right = body.Method.ParseExpression(body, input[methodRange]);

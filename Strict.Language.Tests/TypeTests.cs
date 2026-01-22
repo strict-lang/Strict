@@ -398,7 +398,7 @@ public sealed class TypeTests
 	[Test]
 	public void FindLineNumber() =>
 		Assert.That(package.GetType(Base.Number).FindLineNumber("to Text"),
-			Is.EqualTo(32));
+			Is.EqualTo(28));
 
 	//ncrunch: no coverage start
 	[Test]
