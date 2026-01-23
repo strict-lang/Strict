@@ -18,11 +18,13 @@ public sealed class ShuntingYardTests
 	[TestCase("((a, b) + (c, d)) * 2", "(a, b), (c, d), +, 2, *")]
 	[TestCase("((a, (b * e)) + (c, d)) * 2", "(a, (b * e)), (c, d), +, 2, *")]
 	[TestCase("(\"Hello\", \"World\")", "(\"Hello\", \"World\")")]
-	[TestCase("(\"Hello World\", \"Hi World\", \"5 + 4 + 5\")", "(\"Hello World\", \"Hi World\", \"5 + 4 + 5\")")]
+	[TestCase("(\"Hello World\", \"Hi World\", \"5 + 4 + 5\")",
+		"(\"Hello World\", \"Hi World\", \"5 + 4 + 5\")")]
 	[TestCase("1, 2, 3, 4, 5", "1, ,, 2, ,, 3, ,, 4, ,, 5")]
 	[TestCase("\"Hi\", \" there\"", "\"Hi\", ,, \" there\"")]
 	[TestCase("(1, 2, 3) + (3, 4), (4)", "(1, 2, 3), (3, 4), +, ,, (4)")]
-	[TestCase("ArithmeticFunction(10, 5).Calculate(\"add\") is 15", "ArithmeticFunction(10, 5).Calculate(\"add\"), 15, is")]
+	[TestCase("ArithmeticFunction(10, 5).Calculate(\"add\") is 15",
+		"ArithmeticFunction(10, 5).Calculate(\"add\"), 15, is")]
 	[TestCase("Foo(\"Hello World\")", "Foo(\"Hello World\")")]
 	[TestCase("Foo(5 + 5)", "Foo(5 + 5)")]
 	[TestCase("Colors(Width * 5 + 1)", "Colors(Width * 5 + 1)")]
@@ -31,34 +33,35 @@ public sealed class ShuntingYardTests
 	[TestCase("not true is false", "true, not, false, is")]
 	[TestCase("-5 * 2", "-5, 2, *")]
 	[TestCase("-(5 * 2)", "5, 2, *, -")]
-	public void Parse(string input, string expected)
-	{
-		var tokens = new ShuntingYard(input).Output.Reverse().Select(range => input[range]);
-		Assert.That(string.Join(", ", tokens), Is.EqualTo(expected));
-	}
+	public void Parse(string input, string expected) =>
+		Assert.That(
+			string.Join(", ",
+				new ShuntingYard(input).Output.Reverse().Select(range => input[range])),
+			Is.EqualTo(expected));
 
 	[Test]
-	public void ParseIfWithIsNot()
+	public void ParseIsNot()
 	{
-		const string Input = "if bla is not 5";
+		const string Input = "bla is not 5";
 		var tokens = new ShuntingYard(Input);
-		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo(UnaryOperator.Not));
+		var tokensText = string.Join(", ", tokens.Output.Select(range => Input[range]));
+		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo(UnaryOperator.Not), tokensText);
+		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo(BinaryOperator.Is));
 		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo("5"));
 		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo("bla"));
-		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo("if"));
 	}
 
 	[Test]
 	public void ParseIsNotWithMultipleProceedings()
 	{
-		const string Input = "if bla is not (bla - 25)";
-		var postfix = new ShuntingYard(Input);
-		Assert.That(Input[postfix.Output.Pop()], Is.EqualTo(UnaryOperator.Not));
-		Assert.That(Input[postfix.Output.Pop()], Is.EqualTo(BinaryOperator.Minus));
-		Assert.That(Input[postfix.Output.Pop()], Is.EqualTo("25"));
-		Assert.That(Input[postfix.Output.Pop()], Is.EqualTo("bla"));
-		Assert.That(Input[postfix.Output.Pop()], Is.EqualTo("bla"));
-		Assert.That(Input[postfix.Output.Pop()], Is.EqualTo("if"));
+		const string Input = "bla is not (bla - 25)";
+		var tokens = new ShuntingYard(Input);
+		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo(UnaryOperator.Not));
+		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo(BinaryOperator.Is));
+		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo(BinaryOperator.Minus));
+		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo("25"));
+		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo("bla"));
+		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo("bla"));
 	}
 
 	[TestCase("logger.Log(\"Hello)")]
@@ -70,25 +73,34 @@ public sealed class ShuntingYardTests
 			Throws.InstanceOf<PhraseTokenizer.UnterminatedString>());
 
 	[Test]
-	public void ParseIfWithIsNotInMethod()
+	public void ParseIsNotIn()
 	{
-		const string Input = "if bla is not in (5, 6, 4)";
+		const string Input = "\" \" is not in value";
+		var tokens = new ShuntingYard(Input);
+		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo(UnaryOperator.Not));
+		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo(BinaryOperator.In));
+		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo(Base.ValueLowercase));
+		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo("\" \""));
+	}
+
+	[Test]
+	public void ParseIsNotInMethod()
+	{
+		const string Input = "bla is not in (5, 6, 4)";
 		var tokens = new ShuntingYard(Input);
 		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo(UnaryOperator.Not));
 		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo(BinaryOperator.In));
 		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo("(5, 6, 4)"));
 		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo("bla"));
-		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo("if"));
 	}
 
 	[Test]
-	public void ParseIfWithIsInMethod()
+	public void ParseInMethod()
 	{
-		const string Input = "if bla is in (5, 6, 4)";
+		const string Input = "bla is in (5, 6, 4)";
 		var tokens = new ShuntingYard(Input);
 		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo(BinaryOperator.In));
 		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo("(5, 6, 4)"));
 		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo("bla"));
-		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo("if"));
 	}
 }

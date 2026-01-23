@@ -37,14 +37,36 @@ public sealed class Binary(Expression left, Method operatorMethod, Expression[] 
 			BinaryOperator.To => To.Parse(body, input[tokens.Pop()],
 				GetUnaryOrBuildNestedBinary(body, input, tokens)),
 			UnaryOperator.Not => Not.Parse(body, input, tokens.Pop()),
-			BinaryOperator.Is => input[tokens.Peek()] switch
-			{
-				UnaryOperator.Not => BuildRegularBinaryExpression(body, input, tokens, input[tokens.Pop()].ToString()),
-				BinaryOperator.In => BuildRegularBinaryExpression(body, input, tokens, input[tokens.Pop()].ToString()),
-				_ => BuildRegularBinaryExpression(body, input, tokens, operatorToken)
-			},
+			BinaryOperator.Is => BuildIsExpression(body, input, tokens, operatorToken),
 			_ => BuildRegularBinaryExpression(body, input, tokens, operatorToken)
 		};
+	}
+
+	/// <summary>
+	/// Handles special cases like "is in", "is not in", "is not". The "is" here is not
+	/// important and stripped, it is not a BinaryExpression itself, the last word is.
+	/// </summary>
+	private static Expression BuildIsExpression(Body body, ReadOnlySpan<char> input,
+		Stack<Range> tokens, string operatorToken)
+	{
+		switch (input[tokens.Peek()])
+		{
+		case UnaryOperator.Not:
+			operatorToken = input[tokens.Pop()].ToString();
+			if (input[tokens.Peek()] == BinaryOperator.In)
+			{
+				var inExpression = BuildRegularBinaryExpression(body, input, tokens,
+					input[tokens.Pop()].ToString());
+				return new Not(inExpression.ReturnType.GetMethod(UnaryOperator.Not, []),
+					inExpression);
+			}
+			return BuildRegularBinaryExpression(body, input, tokens, operatorToken);
+		case BinaryOperator.In:
+			return BuildRegularBinaryExpression(body, input, tokens,
+				input[tokens.Pop()].ToString());
+		default:
+			return BuildRegularBinaryExpression(body, input, tokens, operatorToken);
+		}
 	}
 
 	// ReSharper disable once TooManyArguments

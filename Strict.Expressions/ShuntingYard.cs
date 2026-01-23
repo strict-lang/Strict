@@ -68,6 +68,20 @@ public sealed class ShuntingYard
 				Output.Push(operators.Pop());
 			else
 				return;
+		// If "is not" or "is not in" was parsed, flip them to make BinaryExpression parsing easier
+		if (Output.Count > 0 && input[Output.Peek()] == BinaryOperator.Is)
+		{
+			var isRange = Output.Pop();
+			if (input[Output.Peek()] == UnaryOperator.Not)
+			{
+				var notRange = Output.Pop();
+				if (input[Output.Peek()] != BinaryOperator.In)
+					Output.Push(isRange);
+				Output.Push(notRange);
+			}
+			else if (input[Output.Peek()] != BinaryOperator.In)
+				Output.Push(isRange);
+		}
 	}
 
 	private bool IsOpeningBracket(int precedence)

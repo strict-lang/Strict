@@ -151,9 +151,10 @@ public static class BinaryOperator
 							? 5
 							: token.Compare(Or)
 								? 4
+								// "is not" and "is not in" will be flipped after we have all tokens
 								: token.Compare(UnaryOperator.Not)
 									? 3
-									: token.Compare(Is) //TODO: || token.Compare(IsIn) || token.Compare(IsNotIn) || token.Compare(IsNot)
+									: token.Compare(Is)
 										? 1
 										: GetPrecedence(token[0]);
 }
