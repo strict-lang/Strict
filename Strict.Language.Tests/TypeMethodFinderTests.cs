@@ -144,7 +144,7 @@ public sealed class TypeMethodFinderTests
 	{
 		var range = TestPackage.Instance.GetType(Base.Range);
 		Assert.That(range.AvailableMethods.Values.Select(methods => methods.Count).Sum(),
-			Is.EqualTo(9), "AvailableMethods: " + range.AvailableMethods.ToWordList());
+			Is.EqualTo(8), "AvailableMethods: " + range.AvailableMethods.ToWordList());
 	}
 
 	[Test]

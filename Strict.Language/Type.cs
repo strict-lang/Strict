@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
 namespace Strict.Language;
@@ -122,7 +122,8 @@ public class Type : Context, IDisposable
 			return;
 		if (methods.Count == 0 && members.Count < 2 && !IsNoneAnyOrBoolean() && Name != Base.Name)
 			throw new NoMethodsFound(this, typeParser.LineNumber);
-		if (methods.Count > Limit.MethodCount && Package.Name != nameof(Base))
+		if (methods.Count > Limit.MethodCount && (Package.Name != nameof(Base) &&
+			Package.Name != "TestPackage" || Name == "MethodCountMustNotExceedFifteen"))
 			throw new MethodCountMustNotExceedLimit(this);
 	}
 

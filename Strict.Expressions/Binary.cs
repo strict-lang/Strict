@@ -1,4 +1,4 @@
-﻿using Strict.Language;
+using Strict.Language;
 using Type = Strict.Language.Type;
 
 namespace Strict.Expressions;
@@ -7,10 +7,12 @@ public sealed class Binary(Expression left, Method operatorMethod, Expression[] 
 	: MethodCall(operatorMethod, left, right, null, left.LineNumber)
 {
 	public override string ToString() =>
-		AddNestedBracketsIfNeeded(Instance!) + " " +
-		(Method.Name is UnaryOperator.Not or BinaryOperator.In
-			? "is "
-			: "") + Method.Name + " " + AddNestedBracketsIfNeeded(Arguments[0]);
+		// For "in" we have to swap left and right (in is always implemented in the Iterator)
+		Method.Name is BinaryOperator.In
+			? AddNestedBracketsIfNeeded(Arguments[0]) + " is in " + AddNestedBracketsIfNeeded(Instance!)
+			: AddNestedBracketsIfNeeded(Instance!) + " " + (Method.Name is UnaryOperator.Not
+				? "is "
+				: "") + Method.Name + " " + AddNestedBracketsIfNeeded(Arguments[0]);
 
 	private string AddNestedBracketsIfNeeded(Expression child) =>
 		child is Binary childBinary && BinaryOperator.GetPrecedence(childBinary.Method.Name) <
@@ -36,10 +38,16 @@ public sealed class Binary(Expression left, Method operatorMethod, Expression[] 
 		{
 			BinaryOperator.To => To.Parse(body, input[tokens.Pop()],
 				GetUnaryOrBuildNestedBinary(body, input, tokens)),
-			UnaryOperator.Not => Not.Parse(body, input, tokens.Pop()),
+			UnaryOperator.Not => BuildNotBinaryExpression(body, input, tokens),
 			BinaryOperator.Is => BuildIsExpression(body, input, tokens, operatorToken),
 			_ => BuildRegularBinaryExpression(body, input, tokens, operatorToken)
 		};
+	}
+
+	private static Expression BuildNotBinaryExpression(Body body, ReadOnlySpan<char> input, Stack<Range> tokens)
+	{
+		var isExpression = BuildIsExpression(body, input, tokens, input[tokens.Pop()].ToString());
+		return new Not(isExpression.ReturnType.GetMethod(UnaryOperator.Not, []), isExpression);
 	}
 
 	/// <summary>
@@ -74,17 +82,13 @@ public sealed class Binary(Expression left, Method operatorMethod, Expression[] 
 		Stack<Range> tokens, string operatorToken)
 	{
 		var right = GetUnaryOrBuildNestedBinary(body, input, tokens,
-			operatorToken is BinaryOperator.Is or UnaryOperator.Not);//TODO: BinaryOperator.IsNot);
+			operatorToken is BinaryOperator.Is or UnaryOperator.Not);
 		var left = GetUnaryOrBuildNestedBinary(body, input, tokens);
 		if (operatorToken == BinaryOperator.Multiply && HasIncompatibleDimensions(left, right))
 			throw new ListsHaveDifferentDimensions(body, left + " " + right);
-		var arguments = new[] { right };
-		//TODO: if (operatorToken == BinaryOperator.IsNot)
-		//	operatorToken = UnaryOperator.Not;
-		return new Binary(left,
-			operatorToken is BinaryOperator.In //TODO: or BinaryOperator.IsIn
-				? right.ReturnType.GetMethod(BinaryOperator.In, [left])
-				: left.ReturnType.GetMethod(operatorToken, arguments), arguments);
+		return operatorToken is BinaryOperator.In
+			? new Binary(right, right.ReturnType.GetMethod(BinaryOperator.In, [left]), [left])
+			: new Binary(left, left.ReturnType.GetMethod(operatorToken, [right]), [right]);
 	}
 
 	private static Expression GetUnaryOrBuildNestedBinary(Body body, ReadOnlySpan<char> input,

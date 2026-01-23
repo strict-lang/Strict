@@ -24,7 +24,7 @@ public sealed class IfTests : TestExpressions
 		Assert.That(new Method(type, 0, this, [
 					// @formatter:off
 					"ReturnMethod Number",
-					"	if bla is 5",
+					"	if five is 5",
 					"		return Character(5)",
 					"	else",
 					"		return 5"
@@ -42,11 +42,11 @@ public sealed class IfTests : TestExpressions
 
 	[Test]
 	public void ParseIncompleteThen() =>
-		Assert.That(() => ParseExpression("if bla is 5"), Throws.InstanceOf<If.MissingThen>());
+		Assert.That(() => ParseExpression("if five is 5"), Throws.InstanceOf<If.MissingThen>());
 
 	[Test]
 	public void MissingThen() =>
-		Assert.That(() => ParseExpression("if bla is 5", "Run"), Throws.InstanceOf<If.MissingThen>());
+		Assert.That(() => ParseExpression("if five is 5", "Run"), Throws.InstanceOf<If.MissingThen>());
 
 	[TestCase("n")]
 	[TestCase("no")]
@@ -54,29 +54,29 @@ public sealed class IfTests : TestExpressions
 	[TestCase("nott")]
 	[TestCase("note")]
 	public void InvalidNotKeyword(string invalidKeyword) =>
-		Assert.That(() => ParseExpression($"if bla is {invalidKeyword} 5", "\tlogger.Log(\"Hey\")"),
+		Assert.That(() => ParseExpression($"if five is {invalidKeyword} 5", "\tlogger.Log(\"Hey\")"),
 			Throws.InstanceOf<Body.IdentifierNotFound>().With.Message.StartsWith(invalidKeyword));
 
 	[Test]
 	public void InvalidSpacingInsteadOfNot() =>
-		Assert.That(() => ParseExpression("if bla is  5", "\tlogger.Log(\"Hey\")"),
+		Assert.That(() => ParseExpression("if five is  5", "\tlogger.Log(\"Hey\")"),
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.InstanceOf<PhraseTokenizer.InvalidSpacing>());
 
 	[Test]
 	public void InvalidIsNotUsageOnDifferentType() =>
-		Assert.That(() => ParseExpression("if bla is not \"blu\"", "\tlogger.Log(\"Hey\")"),
+		Assert.That(() => ParseExpression("if five is not \"blu\"", "\tlogger.Log(\"Hey\")"),
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.InstanceOf<Type.ArgumentsDoNotMatchMethodParameters>().With.Message.Contains("blu"));
 
 	[Test]
 	public void ParseMissingElseExpression() =>
-		Assert.That(() => ParseExpression("if bla is 5", "\tRun", "else"),
+		Assert.That(() => ParseExpression("if five is 5", "\tRun", "else"),
 			Throws.InstanceOf<If.MissingElseExpression>().With.Message.
 				Contains(@"TestPackage\dummy.strict:line 4"));
 
 	[Test]
 	public void ReturnGetHashCode()
 	{
-		var ifExpression = (If)ParseExpression("if bla is 5", "\tRun");
+		var ifExpression = (If)ParseExpression("if five is 5", "\tRun");
 		Assert.That(ifExpression.GetHashCode(),
 			Is.EqualTo(ifExpression.Condition.GetHashCode() ^ ifExpression.Then.GetHashCode()));
 	}

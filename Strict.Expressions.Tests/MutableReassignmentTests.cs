@@ -252,7 +252,7 @@ public sealed class MutableReassignmentTests : TestExpressions
 		computer.ParseMembersAndMethods(parser);
 		using var cleverConsumerType = new Type(type.Package,
 			new TypeLines(nameof(ModifyMutableMembersMultipleTimes), "has computer = Computer(3)",
-				"Run", "\tconstant bla = 5", "\tmutable blub = Compute", "\tconstant number = bla + 1",
+				"Run", "\tconstant five = 5", "\tmutable blub = Compute", "\tconstant number = five + 1",
 				"\tmutable swappedBlub = blub", "\tblub = 49", "\tmutable temporary = swappedBlub",
 				"\tswappedBlub = 50", "\ttemporary is 9", "\ttemporary is 10", "Compute Number",
 				"\tcomputer.Number.Increment", "\tcomputer.Compute"));

@@ -1,4 +1,4 @@
-﻿using Strict.Language;
+using Strict.Language;
 
 namespace Strict.Expressions;
 
@@ -16,6 +16,14 @@ public sealed class Not(Method method, Expression right)
 		return new Not(right.ReturnType.GetMethod(UnaryOperator.Not, []), right);
 	}
 
-	public override string ToString() => UnaryOperator.Not + " " + Instance!;
+	public override string ToString() =>
+		Instance is Binary binary
+			? binary.Method.Name == BinaryOperator.Is
+				? binary.Instance + " is not " + binary.Arguments[0]
+				: binary.Method.Name == BinaryOperator.In
+					? binary.Arguments[0] + " is not in " + binary.Instance
+					: UnaryOperator.Not + " " + Instance!
+			: UnaryOperator.Not + " " + Instance!;
+
 	public override bool IsConstant => Instance!.IsConstant;
 }

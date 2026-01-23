@@ -69,7 +69,7 @@ public sealed class MethodTests
 	public void ParseWithReturnType()
 	{
 		var method = new Method(type, 0, null!, NestedMethodLines);
-		Assert.That(method.Name, Is.EqualTo("IsBlaFive"));
+		Assert.That(method.Name, Is.EqualTo("IsFiveFive"));
 		Assert.That(method.Parameters, Is.Empty);
 		Assert.That(method.ReturnType, Is.EqualTo(type.GetType(Base.Boolean)));
 		Assert.That(method.ToString(), Is.EqualTo(NestedMethodLines[0]));
@@ -77,9 +77,9 @@ public sealed class MethodTests
 
 	public static readonly string[] NestedMethodLines =
 	[
-		"IsBlaFive Boolean",
+		"IsFiveFive Boolean",
 		ConstantNumber,
-		"	if bla is 5",
+		"	if five is 5",
 		"		return true",
 		"	false"
 	];
@@ -253,7 +253,7 @@ public sealed class MethodTests
 			"\t\"Work not started yet\""));
 			// @formatter:on
 		multipleReturnTypeMethod.ParseMembersAndMethods(parser);
-		Assert.That(() => multipleReturnTypeMethod.Methods[0].GetBodyAndParseIfNeeded(), Throws.Nothing);
+		multipleReturnTypeMethod.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(multipleReturnTypeMethod.Methods[0].ReturnType, Is.InstanceOf<OneOfType>());
 		Assert.That(multipleReturnTypeMethod.Methods[0].ReturnType.Name, Is.EqualTo("BooleanOrText"));
 	}
@@ -277,8 +277,7 @@ public sealed class MethodTests
 			"\t\"Work not started yet\""));
 			// @formatter:on
 		multipleReturnTypeMethod.ParseMembersAndMethods(parser);
-		Assert.That(() => multipleReturnTypeMethod.Methods[0].GetBodyAndParseIfNeeded(),
-			Throws.Nothing);
+		multipleReturnTypeMethod.Methods[0].GetBodyAndParseIfNeeded();
 	}
 
 	[Test]

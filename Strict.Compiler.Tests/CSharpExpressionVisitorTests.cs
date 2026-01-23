@@ -24,12 +24,12 @@ public sealed class CSharpExpressionVisitorTests : TestExpressions
 	[Test]
 	public void GenerateAssignment() =>
 		Assert.That(
-			visitor.Visit(new Declaration((Body)methodWithBody.GetBodyAndParseIfNeeded(), nameof(number),
-				number)), Is.EqualTo("var number = 5"));
+			visitor.Visit(new Declaration((Body)methodWithBody.GetBodyAndParseIfNeeded(), nameof(numberFive),
+				numberFive)), Is.EqualTo("var number = 5"));
 
 	[Test]
 	public void GenerateBinary() =>
-		Assert.That(visitor.Visit(CreateBinary(number, BinaryOperator.Plus, number)),
+		Assert.That(visitor.Visit(CreateBinary(numberFive, BinaryOperator.Plus, numberFive)),
 			Is.EqualTo("5 + 5"));
 
 	[Test]
@@ -89,7 +89,7 @@ public sealed class CSharpExpressionVisitorTests : TestExpressions
 		{
 			// @formatter:off
 			"	var number = 5;",
-			"	if (bla == 5)",
+			"	if (five == 5)",
 			"		return true;",
 			"	false;"
 		}));
@@ -100,7 +100,7 @@ public sealed class CSharpExpressionVisitorTests : TestExpressions
 	{
 		var multilineMethod = new Method(type, 0, this,
 			[
-				"IsBlaFive Boolean",
+				"IsFiveFive Boolean",
 				"	constant value = 5",
 				"	if value is 5",
 				"		return true",

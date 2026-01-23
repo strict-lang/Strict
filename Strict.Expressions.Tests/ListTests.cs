@@ -159,11 +159,10 @@ public sealed class ListTests : TestExpressions
 	public void ContainsMethodCallOnNumbersList()
 	{
 		var ifExpression = ParseExpression(
-			"if (1, 2, 3).Contains(2)",
+			"if 2 is in (1, 2, 3)",
 			"\tconstant abc = \"abc\"",
 			"\tlogger.Log(abc)") as If;
-		var numbers =
-			(ifExpression?.Condition as MethodCall)?.Instance as List;
+		var numbers = (ifExpression?.Condition as MethodCall)?.Instance as List;
 		Assert.That(numbers?.ToString(), Is.EqualTo("(1, 2, 3)"));
 	}
 

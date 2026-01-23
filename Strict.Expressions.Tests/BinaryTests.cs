@@ -6,16 +6,16 @@ public sealed class BinaryTests : TestExpressions
 {
 	[Test]
 	public void ParseBinary() =>
-		ParseAndCheckOutputMatchesInput("5 + 5", CreateBinary(number, BinaryOperator.Plus, number));
+		ParseAndCheckOutputMatchesInput("5 + 5", CreateBinary(numberFive, BinaryOperator.Plus, numberFive));
 
 	[Test]
 	public void AddFiveToNumber() =>
-		ParseAndCheckOutputMatchesInput("bla + 5",
-			CreateBinary(new MemberCall(null, bla), BinaryOperator.Plus, number));
+		ParseAndCheckOutputMatchesInput("five + 5",
+			CreateBinary(new MemberCall(null, five), BinaryOperator.Plus, numberFive));
 
 	[Test]
 	public void InvalidLeftNestedExpression() =>
-		Assert.That(() => ParseExpression("bla.Unknown + 5"),
+		Assert.That(() => ParseExpression("five.Unknown + 5"),
 			Throws.InstanceOf<MemberOrMethodNotFound>());
 
 	[Test]
@@ -60,8 +60,8 @@ public sealed class BinaryTests : TestExpressions
 
 	[Test]
 	public void ParseComparison() =>
-		ParseAndCheckOutputMatchesInput("bla is 5",
-			CreateBinary(new MemberCall(null, bla), BinaryOperator.Is, number));
+		ParseAndCheckOutputMatchesInput("five is 5",
+			CreateBinary(new MemberCall(null, five), BinaryOperator.Is, numberFive));
 
 	[Test]
 	public void NestedBinary() =>
@@ -101,7 +101,7 @@ public sealed class BinaryTests : TestExpressions
 	[Test]
 	public void ParsePowerWithMultiplyOperator() =>
 		ParseAndCheckOutputMatchesInput("(5 * 2) ^ 2",
-			CreateBinary(CreateBinary(number, BinaryOperator.Multiply, new Number(type, 2)),
+			CreateBinary(CreateBinary(numberFive, BinaryOperator.Multiply, new Number(type, 2)),
 				BinaryOperator.Power, new Number(type, 2)));
 
 	[Test]

@@ -1,12 +1,10 @@
-using Strict.Language.Tests;
-
 namespace Strict.Expressions.Tests;
 
 public sealed class IfAdvancedTests : TestExpressions
 {
 	[Test]
 	public void ParseIf() =>
-		Assert.That(ParseExpression("if bla is 5", "\tlogger.Log(\"Hey\")"),
+		Assert.That(ParseExpression("if five is 5", "\tlogger.Log(\"Hey\")"),
 			Is.EqualTo(new If(GetCondition(), GetThen())));
 
 	private MethodCall GetThen() =>
@@ -14,12 +12,12 @@ public sealed class IfAdvancedTests : TestExpressions
 
 	[Test]
 	public void ParseIfNot() =>
-		Assert.That(ParseExpression("if bla is not 5", "\tlogger.Log(\"Hey\")"),
+		Assert.That(ParseExpression("if five is not 5", "\tlogger.Log(\"Hey\")"),
 			Is.EqualTo(new If(GetCondition(true), GetThen())));
 
 	[Test]
 	public void ParseIfElse() =>
-		Assert.That(ParseExpression("if bla is 5", "\tlogger.Log(\"Hey\")", "else", "\tRun"),
+		Assert.That(ParseExpression("if five is 5", "\tlogger.Log(\"Hey\")", "else", "\tRun"),
 			Is.EqualTo(new If(GetCondition(), GetThen(), 0, new MethodCall(method))).And.Not.
 				EqualTo(new If(GetCondition(), GetThen())));
 
@@ -129,19 +127,19 @@ public sealed class IfAdvancedTests : TestExpressions
 
 	[Test]
 	public void ParseElseIf() =>
-		Assert.That(ParseExpression("if bla is 5", "\tlogger.Log(\"Hey\")", "else if bla is 5", "\tlogger.Log(\"Hey\")"),
+		Assert.That(ParseExpression("if five is 5", "\tlogger.Log(\"Hey\")", "else if five is 5", "\tlogger.Log(\"Hey\")"),
 			Is.EqualTo(new If(GetCondition(), GetThen(), 0, new If(GetCondition(), GetThen()))));
 
-	[TestCase("else if bla is 6")]
+	[TestCase("else if five is 6")]
 	[TestCase("else if")]
-	[TestCase("if bla is 5", "\tlogger.Log(\"Hey\")", "else if")]
+	[TestCase("if five is 5", "\tlogger.Log(\"Hey\")", "else if")]
 	public void UnexpectedElseIf(params string[] code) =>
 		Assert.That(() => ParseExpression(code),
 			Throws.InstanceOf<If.UnexpectedElse>());
 
 	[Test]
 	public void ElseIfWithoutThen() =>
-		Assert.That(() => ParseExpression("if bla is 5", "\tlogger.Log(\"Hey\")", "else if bla is 5"),
+		Assert.That(() => ParseExpression("if five is 5", "\tlogger.Log(\"Hey\")", "else if five is 5"),
 			Throws.InstanceOf<If.MissingThen>());
 
 	[Test]
@@ -217,13 +215,13 @@ public sealed class IfAdvancedTests : TestExpressions
 
 	[Test]
 	public void ParseIsNotIn() =>
-		Assert.That(ParseExpression("if bla is not in (5)", "\tlogger.Log(\"Hey\")"),
-			Is.EqualTo(new If(CreateNot(CreateBinary(list, BinaryOperator.In, new MemberCall(null, bla))),
+		Assert.That(ParseExpression("if five is not in (5)", "\tlogger.Log(\"Hey\")"),
+			Is.EqualTo(new If(CreateNot(CreateBinary(list, BinaryOperator.In, new MemberCall(null, five))),
 				GetThen())));
 
 	[Test]
 	public void ParseIsIn() =>
-		Assert.That(ParseExpression("if bla is in (5)", "\tlogger.Log(\"Hey\")"),
-			Is.EqualTo(new If(CreateBinary(list, BinaryOperator.In, new MemberCall(null, bla)),
+		Assert.That(ParseExpression("if five is in (5)", "\tlogger.Log(\"Hey\")"),
+			Is.EqualTo(new If(CreateBinary(list, BinaryOperator.In, new MemberCall(null, five)),
 				GetThen())));
 }

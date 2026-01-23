@@ -104,7 +104,7 @@ public class ExpressionParserTests : ExpressionParser
 		var method = new Method(type, 0, this, MethodTests.NestedMethodLines);
 		Assert.That(method.lines, Has.Length.EqualTo(5));
 		Assert.That(method.lines[1], Is.EqualTo(MethodTests.ConstantNumber));
-		Assert.That(method.lines[2], Is.EqualTo("	if bla is 5"));
+		Assert.That(method.lines[2], Is.EqualTo("	if five is 5"));
 		Assert.That(method.lines[3], Is.EqualTo("		return true"));
 		Assert.That(method.lines[4], Is.EqualTo("	false"));
 	}

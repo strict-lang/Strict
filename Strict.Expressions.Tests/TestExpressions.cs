@@ -16,10 +16,10 @@ public abstract class TestExpressions : MethodExpressionParser
 			MethodTests.Run, "\tconstant variable = 5", "\tvariable + 5"
 		]);
 		type.Methods.AddRange(new List<Method> { method, methodWithBody });
-		number = new Number(type, 5);
-		list = new List(new Body(method), [number]);
-		bla = new Member(type, "bla", type.GetType(Base.Number)) { InitialValue = number };
-		type.Members.Add(bla);
+		numberFive = new Number(type, 5);
+		list = new List(new Body(method), [numberFive]);
+		five = new Member(type, "five", type.GetType(Base.Number)) { InitialValue = numberFive };
+		type.Members.Add(five);
 	}
 
 	protected readonly Type type;
@@ -27,8 +27,8 @@ public abstract class TestExpressions : MethodExpressionParser
 	protected readonly Member member;
 	protected readonly Method method;
 	protected readonly Method methodWithBody;
-	protected readonly Number number;
-	protected readonly Member bla;
+	protected readonly Number numberFive;
+	protected readonly Member five;
 	protected readonly List list;
 
 	[SetUp]
@@ -75,10 +75,14 @@ public abstract class TestExpressions : MethodExpressionParser
 		return new Binary(left, left.ReturnType.GetMethod(operatorName, arguments), arguments);
 	}
 
-	protected Binary GetCondition(bool isNot = false) =>
-		CreateBinary(new MemberCall(null, bla), isNot
-			? UnaryOperator.Not
-			: BinaryOperator.Is, number);
+	protected Expression GetCondition(bool isNot = false)
+	{
+		var isExpression = CreateBinary(new MemberCall(null, five), BinaryOperator.Is, numberFive);
+		return isNot
+			? new Not(TestPackage.Instance.GetType(Base.Boolean).GetMethod(UnaryOperator.Not, []),
+				isExpression)
+			: isExpression;
+	}
 
 	protected Not CreateNot(Expression right) =>
 		new(TestPackage.Instance.GetType(Base.Boolean).GetMethod(UnaryOperator.Not, []), right);

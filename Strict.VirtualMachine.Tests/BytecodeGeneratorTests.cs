@@ -22,8 +22,8 @@ public sealed class ByteCodeGeneratorTests : BaseVirtualMachineTests
 			yield return new TestCaseData("Test(5).Assign", "Test", new Statement[]
 				{
 					new StoreVariableStatement(new Instance(NumberType, 5), "number"),
-					new StoreVariableStatement(new Instance(NumberType, 5), "bla"),
-					new LoadVariableToRegister(Register.R0, "bla"),
+					new StoreVariableStatement(new Instance(NumberType, 5), "five"),
+					new LoadVariableToRegister(Register.R0, "five"),
 					new LoadConstantStatement(Register.R1, new Instance(NumberType, 5)),
 					new Binary(Instruction.Add, Register.R0, Register.R1, Register.R2),
 					new StoreFromRegisterStatement(Register.R2, "something"),
@@ -36,8 +36,8 @@ public sealed class ByteCodeGeneratorTests : BaseVirtualMachineTests
 				{
 					"has number",
 					"Assign Number",
-					"\tconstant bla = 5",
-					"\tconstant something = bla + 5",
+					"\tconstant five = 5",
+					"\tconstant something = five + 5",
 					"\tsomething + 10"
 				});
 			yield return new TestCaseData("Add(10, 5).Calculate", "Add",

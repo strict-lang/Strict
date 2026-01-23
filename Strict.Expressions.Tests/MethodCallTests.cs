@@ -18,9 +18,9 @@ public sealed class MethodCallTests : TestExpressions
 
 	[Test]
 	public void ParseCallWithArgument() =>
-		ParseAndCheckOutputMatchesInput("logger.Log(bla)", new MethodCall(member.Type.Methods[0],
+		ParseAndCheckOutputMatchesInput("logger.Log(five)", new MethodCall(member.Type.Methods[0],
 			new MemberCall(null, member), [
-				new MemberCall(null, bla)
+				new MemberCall(null, five)
 			]));
 
 	[Test]

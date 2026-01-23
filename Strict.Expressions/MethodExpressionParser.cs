@@ -1,4 +1,5 @@
-﻿using System.Runtime.CompilerServices;
+using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using Strict.Language;
 using Type = Strict.Language.Type;
 
@@ -64,7 +65,8 @@ public class MethodExpressionParser : ExpressionParser
 
 	private Expression TryParseMethodOrMember(Body body, ReadOnlySpan<char> input)
 	{
-		var postfix = new ShuntingYard(input.ToString());
+		var inputText = input.ToString();
+		var postfix = new ShuntingYard(inputText);
 		if (postfix.Output.Count == 1)
 			return Dictionary.TryParse(body, input) ??
 				TryParseMemberOrZeroOrOneArgumentMethodOrNestedCall(body, input) ??
@@ -73,10 +75,14 @@ public class MethodExpressionParser : ExpressionParser
 			return ParseMethodCallWithArguments(body, input, postfix);
 		var binary = Binary.Parse(body, input, postfix.Output);
 		if (postfix.Output.Count == 0)
+		{
+			Debug.Assert(inputText == binary.ToString(),
+				"Generated binary expression: " + binary + " doesn't match inputText: " + inputText);
 			return binary;
+		}
 		return ParseInContext(body, input[postfix.Output.Peek()], [binary]) ??
 			throw new UnknownExpression(body,
-				input[postfix.Output.Peek()].ToString() + " in " + input.ToString());
+				input[postfix.Output.Peek()].ToString() + " in " + inputText);
 	}
 
 	private Expression ParseMethodCallWithArguments(Body body, ReadOnlySpan<char> input,

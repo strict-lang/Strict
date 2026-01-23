@@ -18,10 +18,10 @@ public class DeclarationTests : TestExpressions
 	[Test]
 	public void ParseNumber()
 	{
-		var body = (Body)ParseExpression("constant number = 5", "number");
+		var body = (Body)ParseExpression("constant numberFive = 5", "numberFive");
 		var assignment = (Declaration)body.Expressions[0];
-		Assert.That(assignment, Is.EqualTo(new Declaration(new Body(method), nameof(number), number)));
-		Assert.That(assignment.Value.ReturnType, Is.EqualTo(number.ReturnType));
+		Assert.That(assignment, Is.EqualTo(new Declaration(new Body(method), nameof(numberFive), numberFive)));
+		Assert.That(assignment.Value.ReturnType, Is.EqualTo(numberFive.ReturnType));
 		Assert.That(((Number)assignment.Value).ToString(), Is.EqualTo("5"));
 		Assert.That(body.Expressions[1], Is.InstanceOf<VariableCall>());
 	}
@@ -86,7 +86,7 @@ public class DeclarationTests : TestExpressions
 	[Test]
 	public void InvalidNotAssignment() =>
 		Assert.That(() => ParseExpression("constant inverted = not 5"),
-			Throws.InnerException.InstanceOf<Type.ArgumentsDoNotMatchMethodParameters>());
+			Throws.InnerException.InstanceOf<Type.NoMatchingMethodFound>());
 
 	[Test]
 	public void OnlyNotIsValidUnaryOperator() =>

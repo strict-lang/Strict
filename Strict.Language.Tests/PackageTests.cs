@@ -127,7 +127,8 @@ public class PackageTests
 			expressionParser.CreateType();
 			using var strictPackage = await new Repositories(expressionParser).LoadStrictPackage();
 			Assert.That(mainPackage.GetType(Base.Number),
-				Is.EqualTo(strictPackage.GetType(Base.Number)).Or.EqualTo(subPackage.GetType(Base.Number)));
+				Is.EqualTo(strictPackage.GetType(Base.Number)).Or.
+					EqualTo(subPackage.GetType(Base.Number)));
 			Assert.That(mainPackage.GetType(Base.Character),
 				Is.Not.EqualTo(mainPackage.FindType(Base.App)));
 		}
@@ -148,7 +149,6 @@ public class PackageTests
 		for (var index = 0; index < 1000; index++)
 			if (otherMainPackage.FindType(mainType.Name, otherMainPackage)!.Name != mainType.Name)
 				throw new AssertionException("FindType=" + //ncrunch: no coverage
-					otherMainPackage.FindType(mainType.Name, otherMainPackage) + " didn't find " +
-					mainType);
+					otherMainPackage.FindType(mainType.Name, otherMainPackage) + " didn't find " + mainType);
 	}
 }

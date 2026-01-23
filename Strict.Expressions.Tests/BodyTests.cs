@@ -17,12 +17,12 @@ public sealed class BodyTests : TestExpressions
 
 	[Test]
 	public void CannotUseVariableFromLowerScope() =>
-		Assert.That(() => ParseExpression("if bla is 5", "\tconstant abc = \"abc\"", "logger.Log(abc)"),
+		Assert.That(() => ParseExpression("if five is 5", "\tconstant abc = \"abc\"", "logger.Log(abc)"),
 			Throws.InstanceOf<Body.IdentifierNotFound>().With.Message.StartWith("abc"));
 
 	[Test]
 	public void UnknownVariable() =>
-		Assert.That(() => ParseExpression("if bla is 5", "\tlogger.Log(unknownVariable)"),
+		Assert.That(() => ParseExpression("if five is 5", "\tlogger.Log(unknownVariable)"),
 			Throws.InstanceOf<Body.IdentifierNotFound>().With.Message.StartWith("unknownVariable"));
 
 	[Test]
@@ -57,7 +57,7 @@ public sealed class BodyTests : TestExpressions
 
 	[Test]
 	public void IfHasDifferentScopeThanMethod() =>
-		Assert.That(ParseExpression("if bla is 5", "\tconstant abc = \"abc\"", "\tlogger.Log(abc)"),
+		Assert.That(ParseExpression("if five is 5", "\tconstant abc = \"abc\"", "\tlogger.Log(abc)"),
 			Is.EqualTo(new If(GetCondition(), CreateThenBlock())));
 
 	private Expression CreateThenBlock()
@@ -76,7 +76,7 @@ public sealed class BodyTests : TestExpressions
 	public void IfAndElseHaveTheirOwnScopes() =>
 		Assert.That(() => ParseExpression(
 				// @formatter:off
-				"if bla is 5",
+				"if five is 5",
 				"\tconstant ifText = \"in if\"",
 				"\tlogger.Log(ifText)",
 				"else",
@@ -87,7 +87,7 @@ public sealed class BodyTests : TestExpressions
 	[Test]
 	public void MissingThenDueToIncorrectChildBodyStart() =>
 		Assert.That(() => ParseExpression(
-				"if bla is 5",
+				"if five is 5",
 				"constant abc = \"abc\"",
 				"\tlogger.Log(abc)"),
 			Throws.InstanceOf<If.MissingThen>());
@@ -101,7 +101,7 @@ public sealed class BodyTests : TestExpressions
 	public void CheckVariableCallCurrentValue()
 	{
 		var ifExpression = ParseExpression(
-			"if bla is 5",
+			"if five is 5",
 			"\tconstant abc = \"abc\"",
 			"\tlogger.Log(abc)") as If;
 		var variableCall =
@@ -111,13 +111,13 @@ public sealed class BodyTests : TestExpressions
 
 	[Test]
 	public void DuplicateVariableNameFound() =>
-		Assert.That(() => ParseExpression("if bla is 5", "\tconstant abc = 5", "\tconstant abc = 5"),
+		Assert.That(() => ParseExpression("if five is 5", "\tconstant abc = 5", "\tconstant abc = 5"),
 			Throws.InstanceOf<Body.VariableNameIsAlreadyInUse>().With.Message.StartsWith("Variable abc"));
 
 	[Test]
 	public void DuplicateVariableInLowerScopeIsNotAllowed() =>
 		Assert.That(
-			() => ParseExpression("if bla is 5", "\tconstant outerScope = \"abc\"", "\tif bla is 5.0",
+			() => ParseExpression("if five is 5", "\tconstant outerScope = \"abc\"", "\tif five is 5.0",
 				"\t\tconstant outerScope = 5"),
 			Throws.InstanceOf<Body.VariableNameIsAlreadyInUse>().With.Message.
 				StartsWith("Variable outerScope"));
@@ -149,12 +149,12 @@ public sealed class BodyTests : TestExpressions
 	[Test]
 	public void CannotUpdateNonMutableVariable() =>
 		Assert.That(
-			() => new Variable("yo", false, number, new Body(method)).CheckIfWeCouldUpdateValue(number),
+			() => new Variable("yo", false, numberFive, new Body(method)).CheckIfWeCouldUpdateValue(numberFive),
 			Throws.InstanceOf<Body.ValueIsNotMutableAndCannotBeChanged>());
 
 	[Test]
 	public void CannotUpdateNumberToList() =>
 		Assert.That(
-			() => new Variable("yo", true, number, new Body(method)).CheckIfWeCouldUpdateValue(list),
+			() => new Variable("yo", true, numberFive, new Body(method)).CheckIfWeCouldUpdateValue(list),
 			Throws.InstanceOf<Variable.NewExpressionDoesNotMatchVariableType>());
 }

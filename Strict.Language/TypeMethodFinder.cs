@@ -1,4 +1,4 @@
-﻿using static Strict.Language.Type;
+using static Strict.Language.Type;
 
 namespace Strict.Language;
 
@@ -26,9 +26,13 @@ internal class TypeMethodFinder(Type type)
 		var typesOfArguments = arguments.Select(argument => argument.ReturnType).ToList();
 		var commonTypeOfArguments = TryGetSingleElementType(typesOfArguments);
 		foreach (var method in matchingMethods)
-			if (IsMethodWithMatchingParametersType(method, typesOfArguments) ||
-				commonTypeOfArguments != null &&
-				commonTypeOfArguments == GetListElementTypeIfHasSingleParameter(method, arguments.Count))
+			// Don't check trait methods, but allow Run for tests and from constructors
+			if ((!method.IsTrait || method.Name == Base.Run || method.Name == Method.From ||
+					// Also is type checks are ok and some types are not implemented, but done at the runtime!
+					commonTypeOfArguments?.Name == Base.Type || Type.Name == Base.File) &&
+				IsMethodWithMatchingParametersType(method, typesOfArguments) ||
+				commonTypeOfArguments != null && commonTypeOfArguments ==
+				GetListElementTypeIfHasSingleParameter(method, arguments.Count))
 				return method;
 		// If this is a from constructor, we can call the methodParameterType constructor to pass
 		// along the argument and make it work if it wasn't matching yet.
