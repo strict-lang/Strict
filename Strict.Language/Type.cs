@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
 namespace Strict.Language;
@@ -546,6 +545,10 @@ public class Type : Context, IDisposable
 
 	public bool IsMutable =>
 		Name == Base.Mutable || this is GenericTypeImplementation { Generic.Name: Base.Mutable };
+	/// <summary>
+	/// Is this a boolean or if OneOfType, is one of the types a boolean? Used to check for tests
+	/// </summary>
+	public virtual bool IsBoolean => Name == Base.Boolean;
 	public void Dispose() => ((Package)Parent).Remove(this);
 
 	public int FindLineNumber(string firstLineThatContains)

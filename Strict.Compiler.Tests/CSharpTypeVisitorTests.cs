@@ -77,7 +77,7 @@ public sealed class CSharpTypeVisitorTests : TestCSharpGenerator
 				"\tRead is \"Read successfully\"",
 				"\t\"Read successfully\"",
 				"Write(generic) Boolean",
-				"\tWrite(5) is true",
+				"\tWrite(5)",
 				"\tconstant stringBuilder = \"printed successfully\"",
 				"\ttrue")).
 			// @formatter.on

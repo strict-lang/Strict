@@ -243,7 +243,7 @@ public sealed class MethodTests
 			// @formatter:off
 			"has progress Number",
 			"IsJobDone Boolean or Text",
-			"\tProcessor(100).IsJobDone is true",
+			"\tProcessor(100).IsJobDone",
 			"\tProcessor(78).IsJobDone is false",
 			"\tProcessor(0).IsJobDone is \"Work not started yet\"",
 			"\tif progress is 100",
@@ -267,7 +267,7 @@ public sealed class MethodTests
 			// @formatter:off
 			"has progress Number",
 			"IsJobDone(number, text) Boolean or Text",
-			"\tProcessor(100).IsJobDone(1, \"hi\") is true",
+			"\tProcessor(100).IsJobDone(1, \"hi\")",
 			"\tProcessor(78).IsJobDone(1, \"hi\") is false",
 			"\tProcessor(0).IsJobDone(1, \"hi\") is \"Work not started yet\"",
 			"\tif progress is 100",
@@ -289,7 +289,7 @@ public sealed class MethodTests
 			// @formatter:off
 			"has progress Number",
 			"IsJobDone Boolean or Text",
-			"\tProcessor(100).IsJobDone is true",
+			"\tProcessor(100).IsJobDone",
 			"\tProcessor(78).IsJobDone is false",
 			"\tProcessor(0).IsJobDone is \"Work not started yet\"",
 			"\tif progress is 100",

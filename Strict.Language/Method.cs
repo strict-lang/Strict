@@ -1,4 +1,4 @@
-﻿using System.Runtime.CompilerServices;
+using System.Runtime.CompilerServices;
 
 [assembly: InternalsVisibleTo("Strict.Language.Tests")]
 [assembly: InternalsVisibleTo("Strict.Validators")]
@@ -238,7 +238,7 @@ public sealed class Method : Context
 	public Expression ParseLine(Body body, string currentLine)
 	{
 		var expression = Parser.ParseLineExpression(body, currentLine.AsSpan(body.Tabs));
-		if (IsTestExpression(currentLine, expression))
+		if (IsTestExpression(body, currentLine, expression))
 			Tests.Add(expression);
 		else if (currentLine.Contains(body.Method.Name) &&
 			expression.GetType().Name == "MethodCall" &&
@@ -247,10 +247,12 @@ public sealed class Method : Context
 		return expression;
 	}
 
-	private static bool IsTestExpression(string currentLine, Expression expression) =>
-		currentLine.Contains($" {BinaryOperator.Is} ") &&
+	private static bool IsTestExpression(Body body, string currentLine, Expression expression) =>
+		(currentLine.Contains($" {BinaryOperator.Is} ") ||
+			expression.GetType().Name == "MethodCall" &&
+			body.ParsingLineNumber == body.Method.Tests.Count + 1) &&
 		!currentLine.Trim().StartsWith("if", StringComparison.Ordinal) &&
-		!currentLine.Contains("?") && expression.ReturnType.Name == Base.Boolean;
+		!currentLine.Contains("?") && expression.ReturnType.IsBoolean;
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public Expression

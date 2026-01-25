@@ -1,4 +1,4 @@
-﻿namespace Strict.Language;
+namespace Strict.Language;
 
 public sealed class OneOfType(Type definedInType, IReadOnlyList<Type> types) : Type(
 	definedInType.Package,
@@ -13,4 +13,5 @@ public sealed class OneOfType(Type definedInType, IReadOnlyList<Type> types) : T
 	}
 
 	public IReadOnlyList<Type> Types { get; } = types;
+	public override bool IsBoolean => Types.Any(t => t.IsBoolean);
 }
