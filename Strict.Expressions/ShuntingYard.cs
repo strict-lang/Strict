@@ -1,4 +1,4 @@
-﻿using Strict.Language;
+using Strict.Language;
 
 namespace Strict.Expressions;
 
@@ -65,23 +65,29 @@ public sealed class ShuntingYard
 		while (operators.Count > 0)
 			if (!IsOpeningBracket(precedence) &&
 				BinaryOperator.GetPrecedence(input[operators.Peek()].AsSpan()) >= precedence)
-				Output.Push(operators.Pop());
+				AddOperatorToOutput();
 			else
 				return;
+	}
+
+	private void AddOperatorToOutput()
+	{
+		var newOperator = operators.Pop();
 		// If "is not" or "is not in" was parsed, flip them to make BinaryExpression parsing easier
-		if (Output.Count > 0 && input[Output.Peek()] == BinaryOperator.Is)
+		if (input[newOperator] == BinaryOperator.Is)
 		{
-			var isRange = Output.Pop();
 			if (input[Output.Peek()] == UnaryOperator.Not)
 			{
 				var notRange = Output.Pop();
 				if (input[Output.Peek()] != BinaryOperator.In)
-					Output.Push(isRange);
+					Output.Push(newOperator);
 				Output.Push(notRange);
 			}
 			else if (input[Output.Peek()] != BinaryOperator.In)
-				Output.Push(isRange);
+				Output.Push(newOperator);
 		}
+		else
+			Output.Push(newOperator);
 	}
 
 	private bool IsOpeningBracket(int precedence)

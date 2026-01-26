@@ -44,6 +44,9 @@ public sealed class Binary(Expression left, Method operatorMethod, Expression[] 
 		};
 	}
 
+	private sealed class MissingIsForInOperator(Body body, ReadOnlySpan<char> input)
+		: ParsingFailed(body, input.ToString());
+
 	private static Expression BuildNotBinaryExpression(Body body, ReadOnlySpan<char> input, Stack<Range> tokens)
 	{
 		var isExpression = BuildIsExpression(body, input, tokens, input[tokens.Pop()].ToString());

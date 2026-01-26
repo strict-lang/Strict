@@ -1,4 +1,4 @@
-﻿using System.Runtime.CompilerServices;
+using System.Runtime.CompilerServices;
 
 namespace Strict.Language;
 
@@ -23,16 +23,6 @@ public static class BinaryOperator
 	public const string And = "and";
 	public const string Or = "or";
 	public const string Xor = "xor";
-	/*maybe should be avoided and parsing should handle this!
-	/// <summary>
-	/// These are combinations of the above operators that often happen, easier to parse directly.
-	/// Method names are always single names (not and in here), the "is" is parsed, but not needed
-	/// to find the method. The "is not in" just calls the in method and inverts the result.
-	/// </summary>
-	public const string IsNot = "is not";
-	public const string IsIn = Is + " " + In;
-	public const string IsNotIn = IsNot + " " + In;
-	*/
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static bool IsOperator(this ReadOnlySpan<char> name) =>
@@ -59,7 +49,7 @@ public static class BinaryOperator
 
 	private static readonly string[] MultiCharacterOperators =
 	[
-		SmallerOrEqual, GreaterOrEqual, Is, In, And, Or, Xor, To, UnaryOperator.Not //, IsIn, IsNot, IsNotIn
+		SmallerOrEqual, GreaterOrEqual, Is, In, And, Or, Xor, To, UnaryOperator.Not
 	];
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -75,36 +65,6 @@ public static class BinaryOperator
 		return false;
 	}
 
-/*TODO
-	extension(string input)
-	{
-		public bool IsMultiCharacterOperatorWithSpace(int currentIndex, out int tokenEnd)
-		{
-			tokenEnd = 0;
-			if (input[currentIndex - 1] != 's')
-				return false;
-			tokenEnd = input.IsNotInOperator(currentIndex)
-				? 7
-				: input.IsNotOperator(currentIndex)
-					? 4
-					: input.IsInOperator(currentIndex)
-						? 3
-						: 0;
-			return tokenEnd is not 0;
-		}
-		private bool IsNotInOperator(int currentIndex) =>
-			input[currentIndex..].Length > 7 &&
-			input[(currentIndex - 2)..(currentIndex + 8)] == IsNotIn + " ";
-
-		private bool IsNotOperator(int currentIndex) =>
-			input[currentIndex..].Length > 4 &&
-			input[(currentIndex - 2)..(currentIndex + 5)] == IsNot + " ";
-
-		private bool IsInOperator(int currentIndex) =>
-			input[currentIndex..].Length > 3 &&
-			input[(currentIndex - 2)..(currentIndex + 4)] == IsIn + " ";
-	}
-*/
 	private static readonly string[] All =
 	[
 		Plus, Minus, Multiply, Divide, Modulate, Smaller, Greater, SmallerOrEqual, GreaterOrEqual,

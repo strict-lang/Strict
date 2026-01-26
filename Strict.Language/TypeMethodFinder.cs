@@ -9,7 +9,8 @@ internal class TypeMethodFinder(Type type)
 	public Method? FindFromMethodImplementation(IReadOnlyList<Type> implementationTypes) =>
 		!Type.AvailableMethods.TryGetValue(Method.From, out var methods)
 			? null
-			: methods.FirstOrDefault(m => IsMethodWithMatchingParametersType(m, implementationTypes));
+			: methods.FirstOrDefault(m => IsMethodWithMatchingParametersType(m, implementationTypes,
+				TryGetSingleElementType(implementationTypes)));
 
 	public Method GetMethod(string methodName, IReadOnlyList<Expression> arguments) =>
 		FindMethod(methodName, arguments) ??
@@ -21,16 +22,40 @@ internal class TypeMethodFinder(Type type)
 			throw new GenericTypesCannotBeUsedDirectlyUseImplementation(Type, Type.Name == Base.Mutable
 				? Base.Mutable + " must be used via keyword, not manually constructed!"
 				: "Type is Generic and cannot be used directly");
+		return Type is OneOfType
+			? FindMethodWithOneOfType(methodName, arguments)
+			: FindMethodWithType(methodName, arguments);
+	}
+
+	private Method? FindMethodWithOneOfType(string methodName, IReadOnlyList<Expression> arguments)
+	{
+		ArgumentsDoNotMatchMethodParameters? lastArgumentsMismatchException = null;
+		foreach (var subType in ((OneOfType)Type).Types)
+		{
+			try
+			{
+				var foundSubTypeMethod = subType.FindMethod(methodName, arguments);
+				if (foundSubTypeMethod != null)
+					return foundSubTypeMethod;
+			}
+			catch (ArgumentsDoNotMatchMethodParameters argumentsMismatch)
+			{
+				lastArgumentsMismatchException = argumentsMismatch;
+			}
+		}
+		return lastArgumentsMismatchException != null
+			? throw lastArgumentsMismatchException
+			: null;
+	}
+
+	private Method? FindMethodWithType(string methodName, IReadOnlyList<Expression> arguments)
+	{
 		if (!Type.AvailableMethods.TryGetValue(methodName, out var matchingMethods))
 			return null;
 		var typesOfArguments = arguments.Select(argument => argument.ReturnType).ToList();
 		var commonTypeOfArguments = TryGetSingleElementType(typesOfArguments);
 		foreach (var method in matchingMethods)
-			// Don't check trait methods, but allow Run for tests and from constructors
-			if ((!method.IsTrait || method.Name == Base.Run || method.Name == Method.From ||
-					// Also is type checks are ok and some types are not implemented, but done at the runtime!
-					commonTypeOfArguments?.Name == Base.Type || Type.Name == Base.File) &&
-				IsMethodWithMatchingParametersType(method, typesOfArguments) ||
+			if (IsMethodWithMatchingParametersType(method, typesOfArguments, commonTypeOfArguments) ||
 				commonTypeOfArguments != null && commonTypeOfArguments ==
 				GetListElementTypeIfHasSingleParameter(method, arguments.Count))
 				return method;
@@ -82,8 +107,17 @@ internal class TypeMethodFinder(Type type)
 	}
 
 	private static bool IsMethodWithMatchingParametersType(Method method,
-		IReadOnlyList<Type> typesOfArguments)
+		IReadOnlyList<Type> typesOfArguments, Type? commonTypeOfArguments)
 	{
+		// Don't check trait methods, but allow Run for tests and from constructors
+		if (method.IsTrait && method.Name != Base.Run && method.Name != Method.From &&
+			// Also is type checks are ok and some types are not implemented, but done at the runtime!
+			commonTypeOfArguments?.Name != Base.Type && method.Parent.Name != Base.File &&
+			// Casting to types must be allowed as well (is always a trait, never implemented)
+			(method.Name != BinaryOperator.To || method.ReturnType.Name != Base.Type) &&
+			// Enum number values can always be compared
+			(method.Name != BinaryOperator.Is || commonTypeOfArguments?.Name != Base.Number))
+			return false;
 		if (method is { Name: Method.From, Parameters.Count: 0 } && typesOfArguments.Count == 1 &&
 			method.ReturnType.IsSameOrCanBeUsedAs(typesOfArguments[0], false))
 			return true; //ncrunch: no coverage

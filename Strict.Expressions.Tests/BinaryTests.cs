@@ -6,7 +6,8 @@ public sealed class BinaryTests : TestExpressions
 {
 	[Test]
 	public void ParseBinary() =>
-		ParseAndCheckOutputMatchesInput("5 + 5", CreateBinary(numberFive, BinaryOperator.Plus, numberFive));
+		ParseAndCheckOutputMatchesInput("5 + 5",
+			CreateBinary(numberFive, BinaryOperator.Plus, numberFive));
 
 	[Test]
 	public void AddFiveToNumber() =>

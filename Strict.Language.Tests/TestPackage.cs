@@ -76,7 +76,7 @@ public class TestPackage : Package
 			"\t3 is in Range(1, 4)",
 			"\t5 is not in Range(1, 4)",
 			"\t0 is not in Range(1, 4)",
-			"\tnumber >= Start and number <= End",
+			"\tnumber >= Start and number <= ExclusiveEnd",
 			"Sum",
 			"\tRange(2, 5).Sum is 2 + 3 + 4",
 			"\tRange(42, 45).Sum is 42 + 43 + 44",

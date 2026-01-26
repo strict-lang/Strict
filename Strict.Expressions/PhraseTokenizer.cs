@@ -1,4 +1,4 @@
-﻿using Strict.Language;
+using Strict.Language;
 
 namespace Strict.Expressions;
 
@@ -29,9 +29,16 @@ public sealed class PhraseTokenizer
 			throw new InvalidSpacing(input);
 		if (part.Contains("()", StringComparison.Ordinal))
 			throw new InvalidEmptyOrUnmatchedBrackets(input);
+		// If just "in" was passed, check if it was preceded by an "is" or "is not" (or be in for)
+		if (part.Contains(" in ", StringComparison.Ordinal) &&
+			!part.Contains("for ", StringComparison.Ordinal) &&
+			!part.Contains(" is in ", StringComparison.Ordinal) &&
+			!part.Contains(" is not in ", StringComparison.Ordinal))
+			throw new InMustAlwaysBePrecededByIsOrIsNot(input);
 		this.input = input;
 	}
 
+	public sealed class InMustAlwaysBePrecededByIsOrIsNot(string input) : Exception(input);
 	private readonly string input;
 
 	public void ProcessEachToken(Action<Range> processToken)
@@ -91,13 +98,6 @@ public sealed class PhraseTokenizer
 			processToken(tokenStart..(index - 1));
 			processToken((index - 1)..index);
 		}
-		/*TODO: remove, but we still need to handle "is not, is in, is not in"
-		else if (input.IsMultiCharacterOperatorWithSpace(index, out var tokenEnd))
-		{
-			processToken(tokenStart..(index + tokenEnd));
-			index += tokenEnd;
-		}
-		*/
 		else
 			processToken(tokenStart..index);
 	}

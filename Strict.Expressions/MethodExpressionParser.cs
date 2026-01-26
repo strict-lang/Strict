@@ -75,15 +75,20 @@ public class MethodExpressionParser : ExpressionParser
 			return ParseMethodCallWithArguments(body, input, postfix);
 		var binary = Binary.Parse(body, input, postfix.Output);
 		if (postfix.Output.Count == 0)
-		{
-			Debug.Assert(inputText == binary.ToString(),
-				"Generated binary expression: " + binary + " doesn't match inputText: " + inputText);
-			return binary;
-		}
+			return
+#if DEBUG
+				inputText != binary.ToString()
+					? throw new GeneratedBinaryExpressionDoesNotMatchInputExactly(body, binary, inputText)
+					:
+#endif
+					binary;
 		return ParseInContext(body, input[postfix.Output.Peek()], [binary]) ??
 			throw new UnknownExpression(body,
 				input[postfix.Output.Peek()].ToString() + " in " + inputText);
 	}
+
+	private sealed class GeneratedBinaryExpressionDoesNotMatchInputExactly(Body body,
+		Expression binary, string inputText) : ParsingFailed(body, binary + ", inputText=" + inputText);
 
 	private Expression ParseMethodCallWithArguments(Body body, ReadOnlySpan<char> input,
 		ShuntingYard postfix)
@@ -183,7 +188,6 @@ public class MethodExpressionParser : ExpressionParser
 		return ListCall.TryParse(body, current, arguments);
 	}
 
-	// ReSharper disable once TooManyArguments
 	private static Exception CheckErrorTypeAndThrowException(Body body, ReadOnlySpan<char> input,
 		RangeEnumerator members, Expression? current) =>
 		input[members.Current].IsOperator()
@@ -197,8 +201,7 @@ public class MethodExpressionParser : ExpressionParser
 
 	// ReSharper disable once TooManyArguments
 	private Expression? TryVariableOrValueOrParameterOrMemberOrMethodCall(Context context,
-		Expression? instance, Body body, ReadOnlySpan<char> input,
-		IReadOnlyList<Expression> arguments)
+		Expression? instance, Body body, ReadOnlySpan<char> input, IReadOnlyList<Expression> arguments)
 	{
 		var inputAsString = input.ToString();
 		var type = context as Type ?? body.Method.Type;

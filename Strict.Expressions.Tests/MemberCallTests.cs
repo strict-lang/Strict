@@ -176,7 +176,7 @@ public sealed class MemberCallTests : TestExpressions
 			new TypeLines(nameof(BaseTypeMemberCallInDerivedType),
 				"has Range",
 				"Run",
-				"\tlet result = Range.End + 5",
+				"\tlet result = Range.ExclusiveEnd + 5",
 				"\tresult is Number")).ParseMembersAndMethods(parser);
 		var body = (Body)program.Methods[0].GetBodyAndParseIfNeeded();
 		var assignment = (Declaration)body.Expressions[0];

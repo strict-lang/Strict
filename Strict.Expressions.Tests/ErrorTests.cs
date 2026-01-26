@@ -1,4 +1,4 @@
-﻿namespace Strict.Expressions.Tests;
+namespace Strict.Expressions.Tests;
 
 public sealed class ErrorTests : TestExpressions
 {
@@ -10,7 +10,7 @@ public sealed class ErrorTests : TestExpressions
 					"has number",
 					"CheckNumberInRangeTen Number",
 					"\tconstant notANumber = Error",
-					"\tif number in Range(0, 10)",
+					"\tif number is in Range(0, 10)",
 					"\t\treturn number",
 					"\telse",
 					"\t\treturn notANumber")).
@@ -30,7 +30,7 @@ public sealed class ErrorTests : TestExpressions
 					"has number",
 					"constant NotANumber = Error",
 					"CheckIfNumberIsInRangeTen Number",
-					"\tif number in Range(0, 10)",
+					"\tif number is in Range(0, 10)",
 					"\t\treturn number",
 					"\telse",
 					"\t\treturn NotANumber")).

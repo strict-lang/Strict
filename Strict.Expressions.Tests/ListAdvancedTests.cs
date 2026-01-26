@@ -96,9 +96,8 @@ public sealed class ListAdvancedTests : TestExpressions
 		using var typeWithMutableList = new Type(type.Package,
 			new TypeLines(nameof(AllowMutableListWithEmptyExpressions), "has numbers",
 				"CreateMutableList Numbers", "\tmutable result = Numbers", "\tfor numbers",
-				"\t\tresult = result + (0 - value)", "\tresult")).ParseMembersAndMethods(parser);
-		var expression = (Body)typeWithMutableList.
-			Methods[0].GetBodyAndParseIfNeeded();
+				"\t\tresult = result - value", "\tresult")).ParseMembersAndMethods(parser);
+		var expression = (Body)typeWithMutableList.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(expression.Expressions[0].ToString(),
 			Is.EqualTo("mutable result = List(TestPackage.Number)"));
 		Assert.That(((Declaration)expression.Expressions[0]).Value.ReturnType.FullName,

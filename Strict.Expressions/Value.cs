@@ -1,4 +1,4 @@
-﻿using Strict.Language;
+using Strict.Language;
 using Type = Strict.Language.Type;
 
 namespace Strict.Expressions;
@@ -19,7 +19,9 @@ public class Value(Type valueType, object data, int lineNumber = 0, bool isMutab
 	public override string ToString() =>
 		Data is string
 			? "\"" + Data + "\""
-			: Data.ToString()!;
+			: Data is double doubleData
+				? doubleData.ToString("0.0")
+				: Data.ToString()!;
 
 	public override bool IsConstant => true;
 	public override bool Equals(object? other) => Data.Equals(other); //ncrunch: no coverage

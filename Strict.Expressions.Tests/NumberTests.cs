@@ -36,6 +36,16 @@ public class NumberTests : TestExpressions
 		Assert.That(ParseExpression(input),
 			Is.EqualTo(new Number(method, double.Parse(input, CultureInfo.InvariantCulture))));
 
+	private const string Case1 = "1";
+	private const string Case2 = "7.59";
+	private const string Case3 = "10";
+	private const string Case4 = "0.5";
+	private const string Case5 = "-50";
+	private const string Case6 = "2000000102";
+	private const string Case7 = "5045142575";
+	private const string Case8 = "0";
+	private const string Case9 = "7e-100";
+
 	[Test]
 	public void ParseTextToNumberUsingFromIsNotAllowed() =>
 		Assert.That(() => ParseExpression("Number(\"5\")"),
@@ -50,15 +60,13 @@ public class NumberTests : TestExpressions
 		Assert.That(methodCall.Instance, Is.EqualTo(new Number(method, 5)));
 	}
 
-	private const string Case1 = "1";
-	private const string Case2 = "7.59";
-	private const string Case3 = "10";
-	private const string Case4 = "0.5";
-	private const string Case5 = "-50";
-	private const string Case6 = "2000000102";
-	private const string Case7 = "5045142575";
-	private const string Case8 = "0";
-	private const string Case9 = "7e-100";
+	[TestCase(Case1)]
+	[TestCase(Case2)]
+	[TestCase(Case3)]
+	[TestCase(Case4)]
+	[TestCase(Case7)]
+	public void ParsingNumberShouldAlwaysResultInTheSameOutputText(string input) =>
+		Assert.That(ParseExpression(input).ToString(), Is.EqualTo(input));
 
 	//ncrunch: no coverage start
 	/// <summary>
