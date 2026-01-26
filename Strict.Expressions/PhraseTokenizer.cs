@@ -29,16 +29,9 @@ public sealed class PhraseTokenizer
 			throw new InvalidSpacing(input);
 		if (part.Contains("()", StringComparison.Ordinal))
 			throw new InvalidEmptyOrUnmatchedBrackets(input);
-		// If just "in" was passed, check if it was preceded by an "is" or "is not" (or be in for)
-		if (part.Contains(" in ", StringComparison.Ordinal) &&
-			!part.Contains("for ", StringComparison.Ordinal) &&
-			!part.Contains(" is in ", StringComparison.Ordinal) &&
-			!part.Contains(" is not in ", StringComparison.Ordinal))
-			throw new InMustAlwaysBePrecededByIsOrIsNot(input);
 		this.input = input;
 	}
 
-	public sealed class InMustAlwaysBePrecededByIsOrIsNot(string input) : Exception(input);
 	private readonly string input;
 
 	public void ProcessEachToken(Action<Range> processToken)

@@ -1,4 +1,4 @@
-﻿using Strict.Language;
+using Strict.Language;
 using Type = Strict.Language.Type;
 
 namespace Strict.Expressions;
@@ -129,8 +129,7 @@ public class MethodCall : ConcreteExpression
 		arguments.Count is 1 && (fromType == arguments[0].ReturnType ||
 			arguments[0].ReturnType is GenericTypeImplementation genericType && fromType == genericType.Generic);
 
-	public sealed class ConstructorForSameTypeArgumentIsNotAllowed(Body body)
-		: ParsingFailed(body);
+	public sealed class ConstructorForSameTypeArgumentIsNotAllowed(Body body) : ParsingFailed(body);
 
 	public override string ToString() =>
 		Instance is not null

@@ -1,3 +1,5 @@
+using static Strict.Expressions.For;
+
 namespace Strict.Expressions.Tests;
 
 public sealed class ForTests : TestExpressions
@@ -63,8 +65,8 @@ public sealed class ForTests : TestExpressions
 		Assert.That(
 			() => ParseExpression("mutable element = 0", "for element in (\"1\", \"2\", \"3\")",
 				"\tlogger.Log(element)"),
-			Throws.InstanceOf<ParsingFailed>().With.InnerException.
-				InstanceOf<Type.ArgumentsDoNotMatchMethodParameters>());
+			Throws.InstanceOf<IteratorTypeDoesNotMatchWithIterable>().With.Message.Contains(
+				"Iterator element type Text does not match with Number"));
 
 	[Test]
 	public void ParseForRangeExpression() =>

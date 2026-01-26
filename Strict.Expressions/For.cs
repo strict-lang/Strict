@@ -1,4 +1,4 @@
-﻿using Strict.Language;
+using Strict.Language;
 using Type = Strict.Language.Type;
 
 namespace Strict.Expressions;
@@ -72,7 +72,9 @@ public sealed class For(Expression[] customVariables, Expression iterator, Expre
 		var variables = AddVariablesIfTheyDoNotExistYet(body, line, variableName);
 		if (body.FindVariable(variableName) is { IsMutable: false } && HasIn(line))
 			throw new ImmutableIterator(variableName.ToString(), body);
-		var forExpression = body.Method.ParseExpression(body, GetForExpressionText(line));
+		var forExpression = body.Method.ParseExpression(body, HasIn(line)
+			? GetForIteratorText(line)
+			: GetForExpressionText(line));
 		if (HasIn(line))
 			CheckForIncorrectMatchingTypes(body, variableName, forExpression);
 		else

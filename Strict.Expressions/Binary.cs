@@ -33,6 +33,11 @@ public sealed class Binary(Expression left, Method operatorMethod, Expression[] 
 	private static Expression BuildBinaryExpression(Body body, ReadOnlySpan<char> input,
 		Range operatorTokenRange, Stack<Range> tokens)
 	{
+		// If just "in" was passed, check if it was preceded by an "is" or "is not" (or be in for)
+		if (input.Contains(" in ", StringComparison.Ordinal) &&
+			!input.Contains(" is in ", StringComparison.Ordinal) &&
+			!input.Contains(" is not in ", StringComparison.Ordinal))
+			throw new InMustAlwaysBePrecededByIsOrIsNot(input.ToString());
 		var operatorToken = input[operatorTokenRange].ToString();
 		return operatorToken switch
 		{
@@ -44,8 +49,7 @@ public sealed class Binary(Expression left, Method operatorMethod, Expression[] 
 		};
 	}
 
-	private sealed class MissingIsForInOperator(Body body, ReadOnlySpan<char> input)
-		: ParsingFailed(body, input.ToString());
+	public sealed class InMustAlwaysBePrecededByIsOrIsNot(string input) : Exception(input);
 
 	private static Expression BuildNotBinaryExpression(Body body, ReadOnlySpan<char> input, Stack<Range> tokens)
 	{

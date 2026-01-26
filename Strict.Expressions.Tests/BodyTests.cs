@@ -1,4 +1,4 @@
-﻿namespace Strict.Expressions.Tests;
+namespace Strict.Expressions.Tests;
 
 public sealed class BodyTests : TestExpressions
 {
@@ -117,7 +117,7 @@ public sealed class BodyTests : TestExpressions
 	[Test]
 	public void DuplicateVariableInLowerScopeIsNotAllowed() =>
 		Assert.That(
-			() => ParseExpression("if five is 5", "\tconstant outerScope = \"abc\"", "\tif five is 5.0",
+			() => ParseExpression("if five is 5", "\tconstant outerScope = \"abc\"", "\tif five is 5",
 				"\t\tconstant outerScope = 5"),
 			Throws.InstanceOf<Body.VariableNameIsAlreadyInUse>().With.Message.
 				StartsWith("Variable outerScope"));
