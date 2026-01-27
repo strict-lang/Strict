@@ -262,7 +262,7 @@ public sealed class TypeTests
 	{
 		var type = package.GetType(name);
 		Assert.That(type.AvailableMemberTypes.Count, Is.EqualTo(expectedCount),
-			type.AvailableMemberTypes.ToWordList());
+			type.AvailableMemberTypes.DictionaryToWordList());
 	}
 
 	[TestCase("has numbers with Length is 2")]

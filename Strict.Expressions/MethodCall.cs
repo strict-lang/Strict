@@ -40,8 +40,8 @@ public class MethodCall : ConcreteExpression
 		int lineNumber = 0) : this(method, instance, [], toReturnType, lineNumber) { }
 
 	// ReSharper disable once TooManyArguments
-	public static Expression? TryParse(Expression? instance, Body body, IReadOnlyList<Expression> arguments,
-		Type type, string inputAsString)
+	public static Expression? TryParse(Expression? instance, Body body,
+		IReadOnlyList<Expression> arguments, Type type, string inputAsString)
 	{
 		if (body.IsFakeBodyForMemberInitialization)
 			return null;

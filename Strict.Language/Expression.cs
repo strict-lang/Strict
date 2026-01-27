@@ -1,5 +1,3 @@
-using System.Diagnostics;
-
 namespace Strict.Language;
 
 /// <summary>
@@ -15,9 +13,9 @@ public abstract class Expression(Type returnType, int lineNumber = 0, bool isMut
 	public int LineNumber { get; } = lineNumber;
 	public bool IsMutable { get; } = isMutable;
 	/// <summary>
-	/// By default, all expressions should be immutable in Strict. However, many times some part of the
-	/// code will actually change something, thus making that expression AND anything that calls it
-	/// mutable. Think of it as a virus that spreads all the way up. However, if a high-level
+	/// By default, all expressions should be immutable in Strict. However, many times some part of
+	/// the code will actually change something, thus making that expression AND anything that calls
+	/// it mutable. Think of it as a virus that spreads all the way up. However, if a high-level
 	/// expression is actually still immutable, it means everything it calls is also immutable, and
 	/// thus it can be evaluated once and will never change its value, a very important optimization.
 	/// </summary>

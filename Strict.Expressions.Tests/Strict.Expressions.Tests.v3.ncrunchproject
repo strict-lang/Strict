@@ -1,9 +1,0 @@
-﻿<ProjectConfiguration>
-  <Settings>
-    <IgnoredTests>
-      <NamedTestSelector>
-        <TestName>Strict.Expressions.Tests.NoConsoleWriteLineAllowed.ManualTestsCanWriteToConsole</TestName>
-      </NamedTestSelector>
-    </IgnoredTests>
-  </Settings>
-</ProjectConfiguration>

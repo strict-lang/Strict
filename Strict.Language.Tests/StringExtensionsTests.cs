@@ -1,4 +1,4 @@
-﻿namespace Strict.Language.Tests;
+namespace Strict.Language.Tests;
 
 public sealed class StringExtensionsTests
 {
@@ -105,7 +105,7 @@ public sealed class StringExtensionsTests
 		Assert.That(StringExtensions.StartsWith("Hi there, what's up?", "what"), Is.False);
 		Assert.That(StringExtensions.StartsWith("bcdeuf", "bc"), Is.True);
 		Assert.That(StringExtensions.StartsWith("bcdeuf", "abc"), Is.False);
-		Assert.That("Hi there, what's up?".StartsWith("Hi", "there", "what"), Is.True);
-		Assert.That("Hi there, what's up?".StartsWith("she", "there", "what"), Is.False);
+		Assert.That(StringExtensions.StartsWith("Hi there, what's up?", "Hi", "there", "what"), Is.True);
+		Assert.That(StringExtensions.StartsWith("Hi there, what's up?", "she", "there", "what"), Is.False);
 	}
 }

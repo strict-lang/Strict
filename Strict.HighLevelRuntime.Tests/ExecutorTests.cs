@@ -178,7 +178,6 @@ public sealed class ExecutorTests
 	{
 		using var t = CreateType(nameof(EvaluateIsInEnumerableRange), "has number",
 			"IsInRange(range Range) Boolean", "\tnumber is in range");
-		var numberType = TestPackage.Instance.FindType(Base.Number)!;
 		var rangeType = TestPackage.Instance.FindType(Base.Range)!;
 		var rangeInstance = new ValueInstance(rangeType, new Dictionary<string, object?>
 		{
@@ -186,7 +185,9 @@ public sealed class ExecutorTests
 			{ "End", 10.0 }
 		});
 		var result = executor.Execute(t.Methods.Single(m => m.Name == "IsInRange"),
-			new ValueInstance(t, 7.0), [rangeInstance]);
+			new ValueInstance(t, 7.0),
+				//both work: new Dictionary<string, ValueInstance> { { "number", new ValueInstance(numberType, 7.0) } }),
+				[rangeInstance]);
 		Assert.That(result.Value, Is.EqualTo(true));
 		result = executor.Execute(t.Methods.Single(m => m.Name == "IsInRange"),
 			new ValueInstance(t, 11.0), [rangeInstance]);
