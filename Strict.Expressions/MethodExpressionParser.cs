@@ -260,7 +260,7 @@ public class MethodExpressionParser : ExpressionParser
 				return true;
 			if (expression is For forExpression &&
 				(IsMutationOfVariable(forExpression.Body, variableName) ||
-					forExpression.Iterator is Value forValue && forValue.Data.ToString() == variableName ||
+					forExpression.CustomVariables.Any(v => v.ContainsAnythingMutable) ||
 					forExpression.Iterator is Binary { Instance: VariableCall forVariableCall } &&
 					forVariableCall.Variable.Name == variableName || forExpression.Body is Body forBody &&
 					IsVariableMutated(forBody, variableName)))

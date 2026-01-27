@@ -137,19 +137,17 @@ public sealed class ForTests : TestExpressions
 					"\tfor Range(0, number)",
 					"\t\t1")).
 			ParseMembersAndMethods(new MethodExpressionParser());
-		var parsedExpression = (Body)programType.Methods[0].GetBodyAndParseIfNeeded();
-		Assert.That(parsedExpression.ReturnType.Name, Is.EqualTo(Base.Number));
-		Assert.That(parsedExpression.Expressions[1], Is.TypeOf(typeof(For)));
-		Assert.That(((For)parsedExpression.Expressions[1]).Iterator.ToString(),
-			Is.EqualTo("Range(0, number)"));
+		var parsedExpression = (For)programType.Methods[0].GetBodyAndParseIfNeeded();
+		Assert.That(parsedExpression.ReturnType.Name, Is.EqualTo(Base.Range));
+		Assert.That(parsedExpression.Iterator.ToString(), Is.EqualTo("Range(0, number)"));
 	}
 
 	[Test]
 	public void ErrorExpressionIsNotAnIterator()
 	{
 		var programType = new Type(type.Package,
-				new TypeLines(nameof(ErrorExpressionIsNotAnIterator), "has number", "LogError Number", "\tconstant error = Error(\"Process Failed\")",
-					"\tfor error", "\t\tvalue")).
+				new TypeLines(nameof(ErrorExpressionIsNotAnIterator), "has number", "LogError Number",
+					"\tconstant error = Error(\"Process Failed\")", "\tfor error", "\t\tvalue")).
 			ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(() => programType.Methods[0].GetBodyAndParseIfNeeded(),
 			Throws.InstanceOf<For.ExpressionTypeIsNotAnIterator>());
@@ -189,19 +187,19 @@ public sealed class ForTests : TestExpressions
 			Throws.InstanceOf<For.MissingInnerBody>());
 
 	[TestCase(
-		"WithParameter", "element in (1, 2, 3, 4)",
+		"WithParameter", "for element in (1, 2, 3, 4)",
 		"has logger",
 		"LogError Number",
 		"\tfor element in (1, 2, 3, 4)",
 		"\t\tlogger.Log(element)")]
 	[TestCase(
-		"WithList", "element in elements",
+		"WithList", "for element in elements",
 		"has logger",
 		"LogError(elements Numbers) Number",
 		"\tfor element in elements",
 		"\t\tlogger.Log(element)")]
 	[TestCase(
-		"WithListTexts", "element in texts",
+		"WithListTexts", "for element in texts",
 		"has logger",
 		"LogError(texts) Number",
 		"\tfor element in texts",
@@ -212,16 +210,16 @@ public sealed class ForTests : TestExpressions
 			new Type(type.Package, new TypeLines(nameof(AllowCustomVariablesInFor) + testName, code)).
 				ParseMembersAndMethods(new MethodExpressionParser());
 		var parsedExpression = (For)programType.Methods[0].GetBodyAndParseIfNeeded();
-		Assert.That(parsedExpression.Iterator.ToString(), Is.EqualTo(expected));
+		Assert.That(parsedExpression.ToString(), Does.StartWith(expected));
 	}
 
-	[TestCase("WithNumbers", "row, column in listOfNumbers",
+	[TestCase("WithNumbers", "for row, column in listOfNumbers",
 		"has logger",
 		"LogAllNumbers(listOfNumbers List(Numbers))",
 		"\tfor row, column in listOfNumbers",
 		"\t\tlogger.Log(column)")]
 	[TestCase(
-		"WithTexts", "row, column in texts",
+		"WithTexts", "for row, column in texts",
 		"has logger",
 		"LogTexts(texts)",
 		"\tfor row, column in texts",
@@ -233,6 +231,6 @@ public sealed class ForTests : TestExpressions
 					new TypeLines(nameof(ParseForExpressionWithMultipleVariables) + testName, code)).
 				ParseMembersAndMethods(new MethodExpressionParser());
 		var parsedExpression = (For)programType.Methods[0].GetBodyAndParseIfNeeded();
-		Assert.That(parsedExpression.Iterator.ToString(), Is.EqualTo(expected));
+		Assert.That(parsedExpression.ToString(), Does.StartWith(expected));
 	}
 }

@@ -1,4 +1,4 @@
-﻿namespace Strict.Language;
+namespace Strict.Language;
 
 /// <summary>
 /// Simple helper to give us all the names of common base types often used like Number and Boolean
@@ -50,6 +50,7 @@ public static class Base
 	public const string Declaration = nameof(Declaration);
 	public const string MutableReassignment = nameof(MutableReassignment);
 	public const string ValueLowercase = "value";
+	public const string IndexLowercase = "index";
 	public const string TextWriter = nameof(TextWriter);
 	public const string TextReader = nameof(TextReader);
 	public const string Stacktrace = nameof(Stacktrace);
