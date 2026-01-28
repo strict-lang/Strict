@@ -1,3 +1,5 @@
+using System.Collections;
+
 namespace Strict.Language.Tests;
 
 public sealed class StringExtensionsTests
@@ -107,5 +109,22 @@ public sealed class StringExtensionsTests
 		Assert.That(StringExtensions.StartsWith("bcdeuf", "abc"), Is.False);
 		Assert.That(StringExtensions.StartsWith("Hi there, what's up?", "Hi", "there", "what"), Is.True);
 		Assert.That(StringExtensions.StartsWith("Hi there, what's up?", "she", "there", "what"), Is.False);
+	}
+
+	[Test]
+	public void ToWordList()
+	{
+		Assert.That(new List<string> { "hi", "there" }.ToWordList(), Is.EqualTo("hi, there"));
+		Assert.That(new[] { 1, 2, 3 }.ToWordList(), Is.EqualTo("1, 2, 3"));
+		Assert.That(new Dictionary<string, object?> { { "number", 5 }, { "values", new[] { 0, 1, 2 } } }.
+			DictionaryToWordList(), Is.EqualTo("number=5; values=0, 1, 2"));
+		IDictionary dict = new Hashtable
+		{
+			{ "name", "Kata" },
+			{ "ids", new List<int> { 1, 2, 3 } }
+		};
+		Assert.That(dict.DictionaryToWordList(), Is.EqualTo("name=Kata; ids=1, 2, 3"));
+		IEnumerable values = new ArrayList { "apple", "banana", "cherry" };
+		Assert.That(values.EnumerableToWordList(), Is.EqualTo("apple, banana, cherry"));
 	}
 }

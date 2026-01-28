@@ -1,4 +1,4 @@
-﻿namespace Strict.Language;
+namespace Strict.Language;
 
 /// <summary>
 /// Every parsing error with details about the type, line number and method used should use this.
@@ -21,8 +21,8 @@ public class ParsingFailed : Exception
 			? type.Lines[fileLineNumber]
 			: "");
 
-	public ParsingFailed(Type type, int fileLineNumber, string message, Exception inner) : base(
-		message + GetClickableStacktraceLine(type, fileLineNumber, ""), inner) { }
+	public ParsingFailed(Type type, int fileLineNumber, string message, Exception? inner) :
+		base(message + GetClickableStacktraceLine(type, fileLineNumber, ""), inner) { }
 
 	protected ParsingFailed(Body body, string? message = null, Type? referencingOtherType = null) :
 		this(body.Method.Type, body.CurrentFileLineNumber,

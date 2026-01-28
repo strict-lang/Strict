@@ -203,7 +203,7 @@ public sealed class ExecutorTests
 		var rangeInstance = new ValueInstance(rangeType, new Dictionary<string, object?>
 		{
 			{ "Start", 1.0 },
-			{ "End", 10.0 }
+			{ "End", 10.0 } //TODO: this should throw with a proper error message that this is not compatible with Range, which requires a Start and ExclusiveEnd
 		});
 		var result = executor.Execute(t.Methods.Single(m => m.Name == "IsNotInRange"),
 			new ValueInstance(t, 11.0), [rangeInstance]);
@@ -249,12 +249,14 @@ public sealed class ExecutorTests
 	{
 		using var t = CreateType(nameof(EvaluateToTextAndNumber), "has number",
 			"GetText Text", "\tnumber to Text",
-			"GetNumber Number", "\t(number to Text) to Number");
+			"GetNumber Number", "\tnumber to Text to Number");
 		var numberType = TestPackage.Instance.FindType(Base.Number)!;
 		var instance = new ValueInstance(t, new Dictionary<string, object?> { { "number", 5 } });
 		Assert.That(executor.Execute(t.Methods.Single(m => m.Name == "GetText"), instance, []).Value,
 			Is.EqualTo("5"));
-		Assert.That(Convert.ToDouble(executor.Execute(t.Methods.Single(m => m.Name == "GetNumber"), instance, []).Value),
+		Assert.That(
+			Convert.ToDouble(executor.
+				Execute(t.Methods.Single(m => m.Name == "GetNumber"), instance, []).Value),
 			Is.EqualTo(5));
 	}
 }

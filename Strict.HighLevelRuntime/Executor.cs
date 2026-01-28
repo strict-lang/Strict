@@ -27,8 +27,17 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 	private ValueInstance Execute(Method method, ValueInstance? instance,
 		IReadOnlyList<ValueInstance> args, bool runOnlyTests)
 	{
+		if (instance != null && instance.ReturnType != method.Parent)
+			throw new CannotCallMethodWithWrongInstance(method, instance);
 		if (args.Count > method.Parameters.Count)
-			throw new TooManyArguments(args[method.Parameters.Count].ToString(), args, method);
+			throw new TooManyArguments(method, args[method.Parameters.Count].ToString(), args);
+		for (var index = 0; index < args.Count; index++)
+		{
+			if (args[index].ReturnType != method.Parameters[index].Type)
+				throw new ArgumentDoesNotMapToMethodParameters(method,
+					"Method parameter " + index + " " + method.Parameters[index] +
+					" cannot be assigned from argument " + args[index]);
+		}
 		// If we are in a from constructor, create the instance here
 		if (method.Name == Method.From)
 		{
@@ -47,7 +56,7 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 					? args[i]
 					: param.DefaultValue != null
 						? RunExpression(param.DefaultValue, context)
-						: throw new MissingArgument(param.Name, args, method);
+						: throw new MissingArgument(method, param.Name, args);
 				context.Set(param.Name, arg);
 			}
 		try
@@ -91,16 +100,22 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 		}
 	}
 
-	public class TooManyArguments(string argument, IEnumerable<ValueInstance> args, Method method)
-		: ParsingFailed(method.Type, method.TypeLineNumber,
+	public sealed class CannotCallMethodWithWrongInstance(Method method, ValueInstance instance)
+		: ExecutionFailed(method, instance.ToString());
+
+	public sealed class TooManyArguments(Method method, string argument, IEnumerable<ValueInstance> args)
+		: ExecutionFailed(method,
 			argument + ", given arguments: " + args.ToWordList() + ", method " + method.Name +
 			" requires these parameters: " + method.Parameters.ToWordList());
 
-	public class MethodExecutionFailed(Method method, ExecutionContext context, Exception inner)
-		: ParsingFailed(method.Type, method.TypeLineNumber, context.ToString(), inner);
+	public sealed class ArgumentDoesNotMapToMethodParameters(Method method, string message)
+		: ExecutionFailed(method, message);
 
-	public class MissingArgument(string paramName, IEnumerable<ValueInstance> args, Method method)
-		: ParsingFailed(method.Type, method.TypeLineNumber,
+	public sealed class MethodExecutionFailed(Method method, ExecutionContext context, Exception inner)
+		: ExecutionFailed(method, context.ToString(), inner);
+
+	public sealed class MissingArgument(Method method, string paramName, IEnumerable<ValueInstance> args)
+		: ExecutionFailed(method,
 			paramName + ", given arguments: " + args.ToWordList() + ", method " + method.Name +
 			" requires these parameters: " + method.Parameters.ToWordList());
 
@@ -136,7 +151,7 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 				? context.This.Value
 				: throw new NoInstanceGiven(expr, context.Type));
 
-	public class NoInstanceGiven(Expression expr, Type type) : Exception(expr + " in " + type);
+	public sealed class NoInstanceGiven(Expression expr, Type type) : Exception(expr + " in " + type);
 
 	private ValueInstance EvaluateBody(Body body, ExecutionContext ctx, bool runOnlyTests)
 	{
@@ -217,8 +232,8 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 			_ => 1
 		};
 
-	public class MethodRequiresTest(Method method, string body) : ParsingFailed(method.Type,
-		method.TypeLineNumber, body.StartsWith("Test execution failed", StringComparison.Ordinal)
+	public class MethodRequiresTest(Method method, string body) : ExecutionFailed(method,
+		body.StartsWith("Test execution failed", StringComparison.Ordinal)
 			? body
 			: $"Method {method.Parent.FullName}.{method.Name}\n{body}")
 	{
@@ -227,7 +242,7 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 	}
 
 	public sealed class TestFailed(Method method, Expression expression, ValueInstance result)
-		: Exception($"\"{method.Name}\" method failed: {expression}, result: {result} in" +
+		: ExecutionFailed(method, $"\"{method.Name}\" method failed: {expression}, result: {result} in" +
 			Environment.NewLine + $"{method.Type.FilePath}:line {expression.LineNumber + 1}");
 
 	/// <summary>
@@ -331,13 +346,13 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 		}
 		if (IsCompare(op))
 		{
-			if (op is BinaryOperator.Is or UnaryOperator.Not) //Operator.IsNot)
+			if (op is BinaryOperator.Is or UnaryOperator.Not)
 				return op is BinaryOperator.Is
 					? Bool(Equals(left, right) || (left == null || right == null
-						? throw new ComparisonsToNullAreNotAllowed(ctx.Type, left, right)
+						? throw new ComparisonsToNullAreNotAllowed(call.Method, left, right)
 						: false))
 					: Bool(!Equals(left, right) || (left == null || right == null
-						? throw new ComparisonsToNullAreNotAllowed(ctx.Type, left, right)
+						? throw new ComparisonsToNullAreNotAllowed(call.Method, left, right)
 						: false));
 			var l = NumberToDouble(left);
 			var r = NumberToDouble(right);
@@ -371,8 +386,8 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 			_ => throw new InvalidOperationException("Expected Boolean, got: " + v) //ncrunch: no coverage
 		};
 
-	public class ComparisonsToNullAreNotAllowed(Type type, object? left, object? right)
-		: ParsingFailed(type, type.LineNumber, $"{left} is {right}");
+	public sealed class ComparisonsToNullAreNotAllowed(Method method, object? left, object? right)
+		: ExecutionFailed(method, $"{left} is {right}");
 
 	private ValueInstance Number(double n) => new(numberType, n);
 	private readonly Type numberType = basePackage.FindType(Base.Number)!;

@@ -12,11 +12,11 @@ public sealed class ValueInstance(Type returnType, object? value)
 	public override string ToString() =>
 		ReturnType.Name == Base.Boolean
 			? $"{Value}"
-			: ReturnType.IsIterator
-				? (Value is IDictionary valueDictionary
-					? valueDictionary.DictionaryToWordList()
-					: Value is IEnumerable valueEnumerable
-						? valueEnumerable.EnumerableToWordList()
-						: $"Unknown Iterator: {Value}")
-				: $"{ReturnType.Name}:{Value}";
+			: Value is IDictionary valueDictionary
+				? valueDictionary.DictionaryToWordList()
+				: Value is IEnumerable valueEnumerable
+					? valueEnumerable.EnumerableToWordList()
+					: ReturnType.IsIterator
+						? $"Unknown Iterator {ReturnType.Name}: {Value}"
+						: $"{ReturnType.Name}:{Value}";
 }
