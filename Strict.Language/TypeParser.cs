@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 
 namespace Strict.Language;
 
@@ -113,7 +113,7 @@ public sealed class TypeParser(Type type, string[] lines)
 		if (openParen <= 0)
 			return;
 		var methodName = signature[..openParen];
-		if (!methodName.Equals("from", StringComparison.Ordinal))
+		if (!methodName.Equals(Method.From, StringComparison.Ordinal))
 			return;
 		var paramNames = CollectParameterNamesFromSignature(signature, openParen);
 		// Inspect body lines (all following lines), skip inline tests (containing "is")

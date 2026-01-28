@@ -182,12 +182,10 @@ public sealed class ExecutorTests
 		var rangeInstance = new ValueInstance(rangeType, new Dictionary<string, object?>
 		{
 			{ "Start", 1.0 },
-			{ "End", 10.0 }
+			{ "ExclusiveEnd", 10.0 }
 		});
 		var result = executor.Execute(t.Methods.Single(m => m.Name == "IsInRange"),
-			new ValueInstance(t, 7.0),
-				//both work: new Dictionary<string, ValueInstance> { { "number", new ValueInstance(numberType, 7.0) } }),
-				[rangeInstance]);
+			new ValueInstance(t, 7.0), [rangeInstance]);
 		Assert.That(result.Value, Is.EqualTo(true));
 		result = executor.Execute(t.Methods.Single(m => m.Name == "IsInRange"),
 			new ValueInstance(t, 11.0), [rangeInstance]);
@@ -203,7 +201,7 @@ public sealed class ExecutorTests
 		var rangeInstance = new ValueInstance(rangeType, new Dictionary<string, object?>
 		{
 			{ "Start", 1.0 },
-			{ "End", 10.0 } //TODO: this should throw with a proper error message that this is not compatible with Range, which requires a Start and ExclusiveEnd
+			{ "ExclusiveEnd", 10.0 }
 		});
 		var result = executor.Execute(t.Methods.Single(m => m.Name == "IsNotInRange"),
 			new ValueInstance(t, 11.0), [rangeInstance]);

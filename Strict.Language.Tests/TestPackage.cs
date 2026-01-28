@@ -26,7 +26,7 @@ public class TestPackage : Package
 			"xor(other) Boolean",
 			"\ttrue xor false",
 			"\tfalse xor false is false",
-			"\t(value and other) or ((not value) and (not other)) ? false else true"));
+			"\tvalue and other or (not value) and (not other) ? false else true"));
 		var hasLength = new Type(this, new TypeLines("HasLength","Length Number"));
 		var number = new Type(this, new TypeLines(Base.Number,
 			"to Character",

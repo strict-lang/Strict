@@ -1,4 +1,4 @@
-﻿namespace Strict.Expressions.Tests;
+namespace Strict.Expressions.Tests;
 
 public sealed class ShuntingYardTests
 {
@@ -102,5 +102,26 @@ public sealed class ShuntingYardTests
 		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo(BinaryOperator.In));
 		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo("(5, 6, 4)"));
 		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo("five"));
+	}
+
+	[Test]
+	public void ParseComplexBinaryCheck()
+	{
+		const string Input = "value and other or (not value) and (not other)";
+		//same: const string Input = "(value and other) or ((not value) and (not other))";
+		var tokens = new ShuntingYard(Input);
+		// Overall or
+		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo(BinaryOperator.Or));
+		// Right side and
+		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo(BinaryOperator.And));
+		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo(UnaryOperator.Not));
+		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo("other"));
+		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo(UnaryOperator.Not));
+		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo("value"));
+		// Left side and
+		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo(BinaryOperator.And));
+		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo("other"));
+		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo("value"));
+		Assert.That(tokens.Output, Has.Count.EqualTo(0));
 	}
 }

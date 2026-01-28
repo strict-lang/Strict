@@ -32,12 +32,10 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 		if (args.Count > method.Parameters.Count)
 			throw new TooManyArguments(method, args[method.Parameters.Count].ToString(), args);
 		for (var index = 0; index < args.Count; index++)
-		{
-			if (args[index].ReturnType != method.Parameters[index].Type)
+			if (!args[index].ReturnType.IsSameOrCanBeUsedAs(method.Parameters[index].Type))
 				throw new ArgumentDoesNotMapToMethodParameters(method,
-					"Method parameter " + index + " " + method.Parameters[index] +
+					"Method parameter " + method.Parameters[index].ToStringWithInnerMembers() +
 					" cannot be assigned from argument " + args[index]);
-		}
 		// If we are in a from constructor, create the instance here
 		if (method.Name == Method.From)
 		{
@@ -91,6 +89,10 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 			throw;
 		}
 		catch (MethodRequiresTest)
+		{
+			throw;
+		}
+		catch (ExecutionFailed)
 		{
 			throw;
 		}

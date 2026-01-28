@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using Strict.Expressions;
 using Strict.Language;
 using Strict.Runtime.Statements;
@@ -319,7 +319,7 @@ public sealed class ByteCodeGenerator
 	{
 		var statementCountBeforeLoopStart = statements.Count;
 		if (forExpression.Value is MethodCall rangeExpression &&
-			forExpression.Value.ReturnType.Name == Base.Range && rangeExpression.Method.Name == "from")
+			forExpression.Value.ReturnType.Name == Base.Range && rangeExpression.Method.Name == Method.From)
 			GenerateStatementForLoopRangeInstruction(rangeExpression);
 		else
 		{

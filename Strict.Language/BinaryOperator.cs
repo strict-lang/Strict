@@ -47,6 +47,9 @@ public static class BinaryOperator
 		return false;
 	}
 
+	public static bool IsNot(this ReadOnlySpan<char> token) =>
+		token.Length == 3 && token.Compare(UnaryOperator.Not);
+
 	private static readonly string[] MultiCharacterOperators =
 	[
 		SmallerOrEqual, GreaterOrEqual, Is, In, And, Or, Xor, To, UnaryOperator.Not
@@ -55,7 +58,7 @@ public static class BinaryOperator
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static bool IsMultiCharacterOperator(this ReadOnlySpan<char> name)
 	{
-		if (name.Length == 4 && name.Compare("from"))
+		if (name.Length == 4 && name.Compare(Method.From))
 			return true;
 		if (name.Length is 2 or 3 or 5 or 6 or 9)
 			// ReSharper disable once ForCanBeConvertedToForeach, not done for performance reasons
@@ -95,7 +98,7 @@ public static class BinaryOperator
 			'^' => 14,
 			'<' => 7,
 			'>' => 7,
-			_ => throw new NotSupportedException(tokenFirstCharacter.ToString()) //ncrunch: no coverage
+			_ => int.MaxValue
 		};
 
 	public static int GetPrecedence(ReadOnlySpan<char> token) =>

@@ -230,4 +230,12 @@ public sealed class TypeMethodFinderTests
 		var call = (MethodCall)method!.GetBodyAndParseIfNeeded();
 		Assert.That(call.ToString(), Is.EqualTo("logger.Log(5)"));
 	}
+
+	[Test]
+	public void SingleCharacterTextIsAlwaysValidAsCharacter()
+	{
+		using var type = CreateType(nameof(SingleCharacterTextIsAlwaysValidAsCharacter), "has logger",
+			"Run", "\t5 to Character is \"5\"");
+		type.GetMethod("Run", []).GetBodyAndParseIfNeeded();
+	}
 }

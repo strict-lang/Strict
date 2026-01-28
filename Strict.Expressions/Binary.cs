@@ -1,3 +1,4 @@
+//#define LOG_OPERATORS_PARSING
 using Strict.Language;
 using Type = Strict.Language.Type;
 
@@ -15,16 +16,22 @@ public sealed class Binary(Expression left, Method operatorMethod, Expression[] 
 				: "") + Method.Name + " " + AddNestedBracketsIfNeeded(Arguments[0]);
 
 	private string AddNestedBracketsIfNeeded(Expression child) =>
-		child is Binary childBinary && BinaryOperator.GetPrecedence(childBinary.Method.Name) <
+		child is MethodCall binaryOrUnary && BinaryOperator.GetPrecedence(binaryOrUnary.Method.Name) <
 		BinaryOperator.GetPrecedence(Method.Name) || child is If
 			? $"({child})"
 			: child.ToString();
 
 	public static Expression
-		Parse(Body body, ReadOnlySpan<char> input, Stack<Range> postfixTokens) =>
-		postfixTokens.Count < 3
+		Parse(Body body, ReadOnlySpan<char> input, Stack<Range> postfixTokens)
+	{
+#if LOG_OPERATORS_PARSING
+		Console.WriteLine();
+		Console.WriteLine("Binary.Parse " + input.ToString() + ", postfixTokens=" + postfixTokens.Count);
+#endif
+		return postfixTokens.Count < 3
 			? throw new IncompleteTokensForBinaryExpression(body, input, postfixTokens)
 			: BuildBinaryExpression(body, input, postfixTokens.Pop(), postfixTokens);
+	}
 
 	public sealed class IncompleteTokensForBinaryExpression(Body body,
 		ReadOnlySpan<char> input,	IEnumerable<Range> postfixTokens) : ParsingFailed(body, //ncrunch: no coverage
@@ -39,6 +46,10 @@ public sealed class Binary(Expression left, Method operatorMethod, Expression[] 
 			!input.Contains(" is not in ", StringComparison.Ordinal))
 			throw new InMustAlwaysBePrecededByIsOrIsNot(input.ToString());
 		var operatorToken = input[operatorTokenRange].ToString();
+#if LOG_OPERATORS_PARSING
+		Console.WriteLine("BuildBinaryExpression operator=" + operatorToken + ", remaining tokens=" +
+			tokens.Count);
+#endif
 		return operatorToken switch
 		{
 			BinaryOperator.To => To.Parse(body, input[tokens.Pop()],
@@ -53,8 +64,14 @@ public sealed class Binary(Expression left, Method operatorMethod, Expression[] 
 
 	private static Expression BuildNotBinaryExpression(Body body, ReadOnlySpan<char> input, Stack<Range> tokens)
 	{
-		var isExpression = BuildIsExpression(body, input, tokens, input[tokens.Pop()].ToString());
-		return new Not(isExpression.ReturnType.GetMethod(UnaryOperator.Not, []), isExpression);
+		var isExpression = tokens.Count == 1
+			? GetUnaryOrBuildNestedBinary(body, input, tokens)
+			: BuildIsExpression(body, input, tokens, input[tokens.Pop()].ToString());
+#if LOG_OPERATORS_PARSING
+		Console.WriteLine("BuildNotBinaryExpression isExpression=" + isExpression +
+			", remaining tokens=" + tokens.Count);
+#endif
+		return BuildNot(isExpression);
 	}
 
 	/// <summary>
@@ -64,18 +81,17 @@ public sealed class Binary(Expression left, Method operatorMethod, Expression[] 
 	private static Expression BuildIsExpression(Body body, ReadOnlySpan<char> input,
 		Stack<Range> tokens, string operatorToken)
 	{
+#if LOG_OPERATORS_PARSING
+		Console.WriteLine("BuildIsExpression operatorToken=" + operatorToken + ", next token=" +
+			input[tokens.Peek()].ToString() + ", remaining tokens=" + tokens.Count);
+#endif
 		switch (input[tokens.Peek()])
 		{
 		case UnaryOperator.Not:
-			operatorToken = input[tokens.Pop()].ToString();
-			if (input[tokens.Peek()] == BinaryOperator.In)
-			{
-				var inExpression = BuildRegularBinaryExpression(body, input, tokens,
-					input[tokens.Pop()].ToString());
-				return new Not(inExpression.ReturnType.GetMethod(UnaryOperator.Not, []),
-					inExpression);
-			}
-			return BuildRegularBinaryExpression(body, input, tokens, operatorToken);
+			tokens.Pop();
+			return BuildNot(input[tokens.Peek()] == BinaryOperator.In
+				? BuildRegularBinaryExpression(body, input, tokens, input[tokens.Pop()].ToString())
+				: GetUnaryOrBuildNestedBinary(body, input, tokens));
 		case BinaryOperator.In:
 			return BuildRegularBinaryExpression(body, input, tokens,
 				input[tokens.Pop()].ToString());
@@ -88,9 +104,26 @@ public sealed class Binary(Expression left, Method operatorMethod, Expression[] 
 	private static Binary BuildRegularBinaryExpression(Body body, ReadOnlySpan<char> input,
 		Stack<Range> tokens, string operatorToken)
 	{
+#if LOG_OPERATORS_PARSING
+		Console.WriteLine("BuildRegularBinaryExpression operatorToken=" + operatorToken + ", next token=" +
+			input[tokens.Peek()].ToString() + ", remaining tokens=" + tokens.Count);
+#endif
+		if (operatorToken == UnaryOperator.Not)
+			throw new NotSupportedException("Should be called as a unary: " + input.ToString() +
+				", operator=" + operatorToken);
 		var right = GetUnaryOrBuildNestedBinary(body, input, tokens,
-			operatorToken is BinaryOperator.Is or UnaryOperator.Not);
+			operatorToken is BinaryOperator.Is);
+#if LOG_OPERATORS_PARSING
+		Console.WriteLine("BuildRegularBinaryExpression right=" + right + ", next token=" +
+			input[tokens.Peek()].ToString() + ", remaining tokens=" + tokens.Count);
+#endif
 		var left = GetUnaryOrBuildNestedBinary(body, input, tokens);
+#if LOG_OPERATORS_PARSING
+		Console.WriteLine("BuildRegularBinaryExpression left=" + left + ", next token=" +
+			(tokens.Count > 0
+				? input[tokens.Peek()].ToString()
+				: "<empty>") + ", remaining tokens=" + tokens.Count);
+#endif
 		if (operatorToken == BinaryOperator.Multiply && HasIncompatibleDimensions(left, right))
 			throw new ListsHaveDifferentDimensions(body, left + " " + right);
 		return operatorToken is BinaryOperator.In
@@ -102,7 +135,13 @@ public sealed class Binary(Expression left, Method operatorMethod, Expression[] 
 		Stack<Range> tokens, bool checkRightForIsTypeComparison = false)
 	{
 		var nextTokenRange = tokens.Pop();
-		var expression = input[nextTokenRange.Start.Value].IsSingleCharacterOperator() ||
+#if LOG_OPERATORS_PARSING
+		Console.WriteLine("GetUnaryOrBuildNestedBinary token=" +
+			input[nextTokenRange].ToString() + ", remaining tokens=" + tokens.Count);
+#endif
+		var expression = input[nextTokenRange].IsNot()
+			? BuildNot(GetUnaryOrBuildNestedBinary(body, input, tokens, checkRightForIsTypeComparison))
+			: input[nextTokenRange.Start.Value].IsSingleCharacterOperator() ||
 			input[nextTokenRange].IsMultiCharacterOperator()
 				? BuildBinaryExpression(body, input, nextTokenRange, tokens)
 				: checkRightForIsTypeComparison
@@ -115,6 +154,9 @@ public sealed class Binary(Expression left, Method operatorMethod, Expression[] 
 		//ncrunch: no coverage end
 		return expression;
 	}
+
+	private static Expression BuildNot(Expression expression) =>
+		new Not(expression.ReturnType.GetMethod(UnaryOperator.Not, []), expression);
 
 	private static bool HasIncompatibleDimensions(Expression left, Expression right) =>
 		left is List leftList && right is List rightList &&

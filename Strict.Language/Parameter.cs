@@ -1,4 +1,4 @@
-﻿namespace Strict.Language;
+namespace Strict.Language;
 
 public sealed class Parameter : NamedType
 {
@@ -44,4 +44,6 @@ public sealed class Parameter : NamedType
 	public class NewExpressionDoesNotMatchParameterType(Body body, Expression newExpression,
 		Parameter parameter) : ParsingFailed(body, newExpression.ToStringWithType() +
 		" cannot be assigned to " + parameter, parameter.Type);
+
+	public string ToStringWithInnerMembers() => Name + " " + Type + " " + Type.Members.ToBrackets();
 }

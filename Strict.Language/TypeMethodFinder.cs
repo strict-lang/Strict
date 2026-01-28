@@ -1,3 +1,4 @@
+using System.Reflection;
 using static Strict.Language.Type;
 
 namespace Strict.Language;
@@ -59,6 +60,13 @@ internal class TypeMethodFinder(Type type)
 				commonTypeOfArguments != null && commonTypeOfArguments ==
 				GetListElementTypeIfHasSingleParameter(method, arguments.Count))
 				return method;
+		// Single character text can always be used as a character (thus number)
+		if (arguments.Count == 1 && matchingMethods.Count > 0 &&
+			matchingMethods[0].Parameters.Count > 0 &&
+			matchingMethods[0].Parameters[0].Type.Name is Base.Number or Base.Character &&
+			arguments[0].ReturnType.Name == Base.Text && arguments[0].IsConstant &&
+			arguments[0].GetType().Name == "Text" && GetTextValue(arguments[0]).Length == 1)
+			return matchingMethods[0];
 		// If this is a from constructor, we can call the methodParameterType constructor to pass
 		// along the argument and make it work if it wasn't matching yet.
 		if (methodName == Method.From && matchingMethods[0].Parameters.Count == 1)
@@ -71,6 +79,10 @@ internal class TypeMethodFinder(Type type)
 		}
 		throw new ArgumentsDoNotMatchMethodParameters(arguments, Type, matchingMethods);
 	}
+
+	private static string GetTextValue(Expression argument) =>
+		argument.GetType().GetProperty("Data", BindingFlags.Instance | BindingFlags.Public)?.
+			GetValue(argument)?.ToString() ?? "";
 
 	private static T? TryGetSingleElementType<T>(IEnumerable<T> argumentTypes) where T : class
 	{

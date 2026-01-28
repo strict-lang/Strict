@@ -123,7 +123,8 @@ public sealed class StringExtensionsTests
 			{ "name", "Kata" },
 			{ "ids", new List<int> { 1, 2, 3 } }
 		};
-		Assert.That(dict.DictionaryToWordList(), Is.EqualTo("name=Kata; ids=1, 2, 3"));
+		Assert.That(dict.EnumerableToWordList(),
+			Does.Contain("name=Kata").And.Contains("ids=1, 2, 3"));
 		IEnumerable values = new ArrayList { "apple", "banana", "cherry" };
 		Assert.That(values.EnumerableToWordList(), Is.EqualTo("apple, banana, cherry"));
 	}

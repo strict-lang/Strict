@@ -4,7 +4,28 @@ namespace Strict.Language;
 
 public static class StringExtensions
 {
-	public static string DictionaryToWordList(this IDictionary list, string separator = "; ")
+	public static string ToBrackets<T>(this IReadOnlyCollection<T> list) =>
+		list.Count > 0
+			? "(" + list.ToWordList() + ")"
+			: "";
+
+	public static string ToWordList<T>(this IEnumerable<T> list, string separator = ", ") =>
+		list is IDictionary<string, object?> dictionary
+			? dictionary.DictionaryToWordList(separator)
+			: string.Join(separator, list);
+
+	public static string DictionaryToWordList<TKey, TValue>(this IDictionary<TKey, TValue> list,
+		string separator = "; ")
+	{
+		var result = new List<string>();
+		foreach (var pair in list)
+			result.Add(pair.Key + "=" + (pair.Value is IEnumerable values
+				? values.EnumerableToWordList()
+				: pair.Value?.ToString()));
+		return result.ToWordList(separator);
+	}
+
+	public static string IDictionaryToWordList(this IDictionary list, string separator = "; ")
 	{
 		var enumerator = list.GetEnumerator();
 		using var disposeEnumerator = enumerator as IDisposable;
@@ -17,15 +38,11 @@ public static class StringExtensions
 	}
 
 	public static string EnumerableToWordList(this IEnumerable values, string separator = ", ") =>
-		values as string ?? values.Cast<object?>().ToWordList(separator);
-
-	public static string ToWordList<T>(this IEnumerable<T> list, string separator = ", ") =>
-		string.Join(separator, list);
-
-	public static string ToBrackets<T>(this IReadOnlyCollection<T> list) =>
-		list.Count > 0
-			? "(" + list.ToWordList() + ")"
-			: "";
+		values is IDictionary<string, object?> valuesDictionary
+			? valuesDictionary.DictionaryToWordList()
+			: values is IDictionary valuesIDictionary
+				? valuesIDictionary.IDictionaryToWordList()
+				: values as string ?? values.Cast<object?>().ToWordList(separator);
 
 	extension(string text)
 	{
