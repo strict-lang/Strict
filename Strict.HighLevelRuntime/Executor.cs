@@ -169,7 +169,7 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 				// When validating (runInlineTests is true), skip the implementation logic lines.
 				// These lines will be tested anyway when a test line calls this method.
 				// When executing normally (runInlineTests is false), skip the test lines.
-				if (isTest == !runOnlyTests)
+				if (isTest == !runOnlyTests && e is not Declaration && e is not MutableReassignment)
 					continue;
 				last = RunExpression(e, ctx);
 				if (runOnlyTests && isTest && !ToBool(last))
@@ -278,6 +278,8 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 			return new ValueInstance(to.ConversionType, left?.ToString() ?? "");
 		if (to.ConversionType.Name == Base.Number)
 			return new ValueInstance(to.ConversionType, NumberToDouble(left));
+		if (to.ConversionType.Name == Base.Character)
+			return new ValueInstance(to.ConversionType, left + "");
 		throw new NotSupportedException("Conversion to " + to.ConversionType.Name + " not supported");
 	}
 

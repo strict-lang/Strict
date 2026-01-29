@@ -53,6 +53,8 @@ internal class TypeMethodFinder(Type type)
 	{
 		if (!Type.AvailableMethods.TryGetValue(methodName, out var matchingMethods))
 			return null;
+		if (arguments.Count == 1 && arguments[0].ReturnType.Name == Base.Error)
+			return matchingMethods[0];
 		var typesOfArguments = arguments.Select(argument => argument.ReturnType).ToList();
 		var commonTypeOfArguments = TryGetSingleElementType(typesOfArguments);
 		foreach (var method in matchingMethods)

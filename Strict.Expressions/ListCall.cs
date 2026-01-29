@@ -1,4 +1,4 @@
-﻿using Strict.Language;
+using Strict.Language;
 
 namespace Strict.Expressions;
 
@@ -12,7 +12,7 @@ public sealed class ListCall(Expression list, Expression index) : ConcreteExpres
 
 	public static Expression? TryParse(Body body, Expression? variable,
 		IReadOnlyList<Expression> arguments) =>
-		variable is null or MethodCall
+		variable is null or MethodCall || variable.ReturnType.Name == Base.Error
 			? variable
 			: arguments.Count > 0
 				? variable.ReturnType.IsIterator

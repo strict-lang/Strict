@@ -242,6 +242,7 @@ public sealed class ExecutorTests
 			new ValueInstance(t, new Dictionary<string, object?> { { "last", false } }), []);
 		Assert.That(Convert.ToBoolean(result.Value), Is.EqualTo(true));
 	}
+
 	[Test]
 	public void EvaluateToTextAndNumber()
 	{
@@ -256,5 +257,14 @@ public sealed class ExecutorTests
 			Convert.ToDouble(executor.
 				Execute(t.Methods.Single(m => m.Name == "GetNumber"), instance, []).Value),
 			Is.EqualTo(5));
+	}
+
+	[Test]
+	public void ToCharacterComparison()
+	{
+		using var t = CreateType(nameof(ToCharacterComparison), "has number",
+			"Compare", "\t5 to Character is \"5\"");
+		Assert.That(executor.Execute(t.Methods.Single(m => m.Name == "Compare"), null, []).Value,
+			Is.EqualTo(true));
 	}
 }
