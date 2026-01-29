@@ -179,6 +179,12 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 				throw new MethodRequiresTest(body.Method, body);
 			return last;
 		}
+		catch (ExecutionFailed ex)
+		{
+			throw new ExecutionFailed(body.Method,
+				"Failed in \"" + body.Method.Type.FullName + "." + body.Method.Name + "\":" +
+				Environment.NewLine + body.Expressions.ToWordList(Environment.NewLine), ex);
+		}
 		finally
 		{
 			if (runOnlyTests)

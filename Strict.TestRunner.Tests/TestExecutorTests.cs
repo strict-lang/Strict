@@ -1,4 +1,4 @@
-﻿using Strict.Expressions;
+using Strict.Expressions;
 using Strict.HighLevelRuntime;
 using Strict.Language;
 using Strict.Language.Tests;
@@ -35,7 +35,7 @@ public sealed class TestExecutorTests
 				"	5 is 6",
 				"	10")).ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(() => executor.RunMethod(type.Methods.First(m => m.Name == "Run")),
-			Throws.InstanceOf<Executor.TestFailed>().With.Message.
+			Throws.InstanceOf<ExecutionFailed>().With.InnerException.With.Message.
 				StartsWith("\"Run\" method failed: 5 is 6, result: False"));
 	}
 
@@ -67,8 +67,19 @@ public sealed class TestExecutorTests
 				"	2 is 3",
 				"	5")).ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(() => executor.RunAllTestsInType(type),
-			Throws.InstanceOf<Executor.TestFailed>().With.Message.
-				StartsWith("\"Other\" method failed: 2 is 3, result: False"));
+			Throws.InstanceOf<ExecutionFailed>().With.InnerException.With.Message.
+				Contains("\"Other\" method failed: 2 is 3, result: False"));
+	}
+
+	[Test]
+	public void RunErrorComparison()
+	{
+		using var type = new Type(TestPackage.Instance,
+				new TypeLines(nameof(RunErrorComparison), "has number", "Run",
+					"	constant canOnlyConvertSingleDigit = Error",
+					"	13 to Character is canOnlyConvertSingleDigit")).
+			ParseMembersAndMethods(new MethodExpressionParser());
+		executor.RunAllTestsInType(type);
 	}
 
 	[Test]
