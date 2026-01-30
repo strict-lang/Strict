@@ -89,7 +89,7 @@ public class MethodCall : ConcreteExpression
 				arguments.Count == 1
 					? arguments[0]
 					: new Text(body.Method, fromType.Name == Base.Error
-						? body.Method.Name
+						? body.CurrentDeclarationNameForErrorText ?? body.Method.Name
 						: fromType.Name),
 				CreateListFromMethodCall(body, Base.Stacktrace, CreateStacktraces(body))
 			];

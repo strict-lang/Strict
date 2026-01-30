@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
 [assembly: InternalsVisibleTo("Strict.Expressions.Tests")]
@@ -31,6 +31,11 @@ public sealed class Body : Expression
 	public int Tabs { get; }
 	public Body? Parent { get; private set; }
 	public readonly List<Body> children = new();
+	/// <summary>
+	/// If an Error is decleared, remember the name of the constant variable declared to use as the
+	/// Error.Text itself. When showing the error it outputs clearly what went wrong where.
+	/// </summary>
+	public string? CurrentDeclarationNameForErrorText { get; set; }
 
 	/// <summary>
 	/// Called when actually needed, and code needs to run, usually triggered by

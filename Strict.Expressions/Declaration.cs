@@ -1,4 +1,4 @@
-﻿using Strict.Language;
+using Strict.Language;
 
 namespace Strict.Expressions;
 
@@ -63,10 +63,12 @@ public class Declaration : ConcreteExpression
 		var name = parts.Current.ToString();
 		if (!parts.MoveNext() || !parts.MoveNext())
 			throw new MissingAssignmentValueExpression(body);
+		body.CurrentDeclarationNameForErrorText = name;
 		var valueSpan = line[(declarationType.Length + name.Length + 1 + 1 + 1)..];
 		if (declarationType == MutableWithSpaceAtEnd)
 			return CreateMutableDeclaration(body, valueSpan, name);
 		var value = body.Method.ParseExpression(body, valueSpan);
+		body.CurrentDeclarationNameForErrorText = null;
 		var isActuallyConstant = IsExpressionFullyConstant(value);
 		if (declarationType == LetWithSpaceAtEnd && isActuallyConstant)
 			throw new LetUsesConstantValue(body, name, value);
