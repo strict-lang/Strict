@@ -28,7 +28,6 @@ public static class Base
 	/// </summary>
 	public const string Number = nameof(Number);
 	public const string Character = nameof(Character);
-	public const string Count = nameof(Count);
 	public const string HashCode = nameof(HashCode);
 	public const string Range = nameof(Range);
 	public const string Text = nameof(Text);

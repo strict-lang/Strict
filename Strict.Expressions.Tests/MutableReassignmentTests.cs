@@ -1,4 +1,4 @@
-﻿namespace Strict.Expressions.Tests;
+namespace Strict.Expressions.Tests;
 
 public sealed class MutableReassignmentTests : TestExpressions
 {
@@ -178,7 +178,7 @@ public sealed class MutableReassignmentTests : TestExpressions
 	{
 		using var program = new Type(type.Package,
 			new TypeLines(nameof(GenericTypesCannotBeUsedDirectlyUseImplementation),
-				"has unused Character", "DummyCount Number", "\tconstant result = List(5, 5)",
+				"has unused Character", "DummyCount Number", "\tconstant result = List",
 				"\tresult(0)"));
 		program.ParseMembersAndMethods(parser);
 		Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(),

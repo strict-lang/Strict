@@ -32,7 +32,8 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 		if (args.Count > method.Parameters.Count)
 			throw new TooManyArguments(method, args[method.Parameters.Count].ToString(), args);
 		for (var index = 0; index < args.Count; index++)
-			if (!args[index].ReturnType.IsSameOrCanBeUsedAs(method.Parameters[index].Type))
+			if (!args[index].ReturnType.IsSameOrCanBeUsedAs(method.Parameters[index].Type) &&
+				!method.Parameters[index].Type.IsIterator)
 				throw new ArgumentDoesNotMapToMethodParameters(method,
 					"Method parameter " + method.Parameters[index].ToStringWithInnerMembers() +
 					" cannot be assigned from argument " + args[index]);
@@ -41,9 +42,11 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 		{
 			if (instance != null)
 				throw new MethodCall.CannotCallFromConstructorWithExistingInstance();
-			instance = new ValueInstance(method.Type, args.Count > 0
-				? args[0].Value
-				: null);
+			instance = new ValueInstance(method.Type, args.Count == 0
+				? null
+				: args.Count == 1 && method.Type.IsSameOrCanBeUsedAs(args[0].ReturnType)
+					? args[0].Value
+					: ConvertFromArgumentsToDictionary(method, args));
 		}
 		var context = new ExecutionContext(method.Type) { This = instance };
 		if (!runOnlyTests)
@@ -101,6 +104,36 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 			throw new MethodExecutionFailed(method, context, ex);
 		}
 	}
+
+	private static IDictionary<string, object?> ConvertFromArgumentsToDictionary(Method fromMethod,
+		IReadOnlyList<ValueInstance> args)
+	{
+		var type = fromMethod.Type;
+		if (args.Count > fromMethod.Parameters.Count)
+			throw new TooManyArgumentsForTypeMembersInFromConstructor(type, args);
+		var result = new Dictionary<string, object?>(StringComparer.Ordinal);
+		for (var index = 0; index < args.Count; index++)
+		{
+			var parameter = fromMethod.Parameters[index];
+			if (!args[index].ReturnType.IsSameOrCanBeUsedAs(parameter.Type) && !parameter.Type.IsIterator)
+				throw new InvalidTypeForArgument(type, args, index);
+			result.Add(GetMemberName(type, parameter.Name), args[index].Value);
+		}
+		return result;
+	}
+
+	private static string GetMemberName(Type type, string parameterName) =>
+		parameterName.Length > 0
+			? char.ToUpperInvariant(parameterName[0]) + parameterName[1..]
+			: parameterName;
+
+	public sealed class TooManyArgumentsForTypeMembersInFromConstructor(Type type,
+		IEnumerable<ValueInstance> args) : ExecutionFailed(type,
+		"args=" + args.ToWordList() + ", type=" + type + " Members=" + type.Members.ToWordList());
+
+	public sealed class InvalidTypeForArgument(Type type, IReadOnlyList<ValueInstance> args,
+		int index) : ExecutionFailed(type, args[index] + " at index=" + index +
+		" does not match type=" + type + " Member=" + type.Members[index]);
 
 	public sealed class CannotCallMethodWithWrongInstance(Method method, ValueInstance instance)
 		: ExecutionFailed(method, instance.ToString());
@@ -275,7 +308,7 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 			? RunExpression(iff.Then, ctx)
 			: iff.OptionalElse != null
 				? RunExpression(iff.OptionalElse, ctx)
-				: new ValueInstance(ctx.This?.ReturnType ?? iff.ReturnType, null);
+				: Bool(true);
 
 	private ValueInstance EvaluateTo(To to, ExecutionContext ctx)
 	{
@@ -285,7 +318,7 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 		if (to.ConversionType.Name == Base.Number)
 			return new ValueInstance(to.ConversionType, NumberToDouble(left));
 		if (to.ConversionType.Name == Base.Character)
-			return new ValueInstance(to.ConversionType, left + "");
+			return new ValueInstance(to.ConversionType, (int)(left + "")[0]);
 		throw new NotSupportedException("Conversion to " + to.ConversionType.Name + " not supported");
 	}
 
@@ -357,13 +390,22 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 		if (IsCompare(op))
 		{
 			if (op is BinaryOperator.Is or UnaryOperator.Not)
+			{
+				if (left == null || right == null)
+					throw new ComparisonsToNullAreNotAllowed(call.Method, left, right);
+				//TODO: support conversions needed for Character, maybe Number <-> Text
+				if (call.Instance.ReturnType.Name == Base.Character && right is string rightText)
+					right = (int)rightText[0];
+				if (call.Instance.ReturnType.Name == Base.Text && right is int rightInt)
+					right = rightInt + "";
+				//TODO: support comparison of derived types (Name <-> Text, etc.)
+				//TODO: if is operator only defines (other), both left and right must match type, if not error out here
+				//TODO: think about containing types, probably should not be is supported, but can be converted and then compared (e.g. File to Text is "some.txt"
+				//TODO: use is operator of type if it is defined for non Number, non Text!
 				return op is BinaryOperator.Is
-					? Bool(Equals(left, right) || (left == null || right == null
-						? throw new ComparisonsToNullAreNotAllowed(call.Method, left, right)
-						: false))
-					: Bool(!Equals(left, right) || (left == null || right == null
-						? throw new ComparisonsToNullAreNotAllowed(call.Method, left, right)
-						: false));
+					? Bool(Equals(left, right))
+					: Bool(!Equals(left, right));
+			}
 			var l = NumberToDouble(left);
 			var r = NumberToDouble(right);
 			return op switch

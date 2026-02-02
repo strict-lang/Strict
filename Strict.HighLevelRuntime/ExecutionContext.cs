@@ -13,11 +13,28 @@ public sealed class ExecutionContext(Type type)
 	public ValueInstance Get(string name) =>
 		Variables.TryGetValue(name, out var v)
 			? v
-			: Parent?.Get(name) ?? (This?.Value is IReadOnlyDictionary<string, ValueInstance> members
-				? members.TryGetValue(name, out var member)
-					? member
-					: throw new VariableOrMemberNotFound(name, This)
-				: This) ?? throw new VariableNotFound(name);
+			: Parent?.Get(name) ?? GetFromThisOrThrow(name);
+
+	private ValueInstance GetFromThisOrThrow(string name)
+	{
+		if (This == null)
+			throw new VariableNotFound(name);
+		if (This.Value is IDictionary<string, object?> rawMembers)
+		{
+			if (!rawMembers.TryGetValue(name, out var rawValue))
+				throw new VariableOrMemberNotFound(name, This);
+			var memberType = Type.FindMember(name)?.Type;
+			return memberType != null
+				? new ValueInstance(memberType, rawValue)
+				: throw new VariableOrMemberNotFound(name, This);
+		}
+		if (name == Base.ValueLowercase)
+			return This;
+		var implicitMember = Type.Members.FirstOrDefault(m => !m.IsConstant && m.Type.Name != Base.Iterator);
+		if (implicitMember != null && implicitMember.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
+			return new ValueInstance(implicitMember.Type, This.Value);
+		throw new VariableOrMemberNotFound(name, This);
+	}
 
 	public ValueInstance Set(string name, ValueInstance value) => Variables[name] = value;
 

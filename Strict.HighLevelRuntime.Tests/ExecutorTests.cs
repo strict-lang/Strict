@@ -204,10 +204,10 @@ public sealed class ExecutorTests
 			{ "ExclusiveEnd", 10.0 }
 		});
 		var result = executor.Execute(t.Methods.Single(m => m.Name == "IsNotInRange"),
-			new ValueInstance(t, 11.0), [rangeInstance]);
+			new ValueInstance(t, 11), [rangeInstance]);
 		Assert.That(result.Value, Is.EqualTo(true));
 		result = executor.Execute(t.Methods.Single(m => m.Name == "IsNotInRange"),
-			new ValueInstance(t, 7.0), [rangeInstance]);
+			new ValueInstance(t, 7), [rangeInstance]);
 		Assert.That(result.Value, Is.EqualTo(false));
 	}
 
@@ -249,8 +249,7 @@ public sealed class ExecutorTests
 		using var t = CreateType(nameof(EvaluateToTextAndNumber), "has number",
 			"GetText Text", "\tnumber to Text",
 			"GetNumber Number", "\tnumber to Text to Number");
-		var numberType = TestPackage.Instance.FindType(Base.Number)!;
-		var instance = new ValueInstance(t, new Dictionary<string, object?> { { "number", 5 } });
+		var instance = new ValueInstance(t, 5);
 		Assert.That(executor.Execute(t.Methods.Single(m => m.Name == "GetText"), instance, []).Value,
 			Is.EqualTo("5"));
 		Assert.That(

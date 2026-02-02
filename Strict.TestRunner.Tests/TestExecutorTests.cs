@@ -72,6 +72,17 @@ public sealed class TestExecutorTests
 	}
 
 	[Test]
+	public void RunListCreation()
+	{
+		using var type = new Type(TestPackage.Instance,
+				new TypeLines(nameof(RunListCreation), "has number", "Run",
+					"	constant numberList = List(5)",
+					"	numberList(0) is number")).
+			ParseMembersAndMethods(new MethodExpressionParser());
+		executor.RunAllTestsInType(type);
+	}
+
+	[Test]
 	public void RunErrorComparison()
 	{
 		using var type = new Type(TestPackage.Instance,

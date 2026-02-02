@@ -74,6 +74,8 @@ public class MethodCall : ConcreteExpression
 	private static Expression CreateFromMethodCall(Body body, Type fromType,
 		IReadOnlyList<Expression> arguments)
 	{
+		if (fromType.Name == Base.List && fromType.IsGeneric && arguments.Count > 0)
+			fromType = fromType.GetGenericImplementation(arguments[0].ReturnType);
 		arguments = FillInMissingFromMethodArguments(body, fromType, arguments);
 		return new MethodCall(fromType.GetMethod(Method.From, arguments), null, arguments, null,
 			body.CurrentFileLineNumber);
