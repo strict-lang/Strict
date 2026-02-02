@@ -340,4 +340,14 @@ public sealed class MethodTests
 		Assert.That(
 			TestPackage.Instance.GetType(Base.Character).AvailableMethods["to"][0].
 				GetVariableUsageCount("notANumber"), Is.EqualTo(3));
+
+	[Test]
+	public void ReverseRange()
+	{
+		using var typeToCheck = new Type(TestPackage.Instance,
+			new TypeLines(nameof(ReverseRange), "has logger",
+				"Run", "\tRange(-5, -10).Reverse is Range(-9, -4)"));
+		typeToCheck.ParseMembersAndMethods(parser);
+		typeToCheck.Methods[0].GetBodyAndParseIfNeeded();
+	}
 }

@@ -79,8 +79,26 @@ internal class TypeMethodFinder(Type type)
 				IsFromConstructorWithMatchingConstraints(matchingMethods[0], arguments.Count))
 				return matchingMethods[0];
 		}
+		/*is this needed?
+		if (IsAnyIsComparison(methodName, arguments, matchingMethods))
+			return matchingMethods[0];
+		*/
 		throw new ArgumentsDoNotMatchMethodParameters(arguments, Type, matchingMethods);
 	}
+
+	/*probably not needed
+	/// <summary>
+	/// Allow `is`/`is not` comparisons against Any even if the argument is not literally Any.
+	/// This is used by data types like Range in TestPackage where equality is defined as `is(other Any)`.
+	/// </summary>
+	private static bool IsAnyIsComparison(string methodName, IReadOnlyList<Expression> arguments,
+		IReadOnlyList<Method> matchingMethods) =>
+		methodName is BinaryOperator.Is or UnaryOperator.Not &&
+		arguments.Count == 1 &&
+		matchingMethods.Count > 0 &&
+		matchingMethods[0].Parameters.Count == 1 &&
+		matchingMethods[0].Parameters[0].Type.Name == Base.Any;
+	*/
 
 	private static string GetTextValue(Expression argument) =>
 		argument.GetType().GetProperty("Data", BindingFlags.Instance | BindingFlags.Public)?.

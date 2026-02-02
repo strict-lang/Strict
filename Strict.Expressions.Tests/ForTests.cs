@@ -7,11 +7,11 @@ public sealed class ForTests : TestExpressions
 	[Test]
 	public void MissingBody() =>
 		Assert.That(() => ParseExpression("for Range(2, 5)"),
-			Throws.InstanceOf<For.MissingInnerBody>());
+			Throws.InstanceOf<MissingInnerBody>());
 
 	[Test]
 	public void MissingExpression() =>
-		Assert.That(() => ParseExpression("for"), Throws.InstanceOf<For.MissingExpression>());
+		Assert.That(() => ParseExpression("for"), Throws.InstanceOf<MissingInnerBody>());
 
 	[Test]
 	public void VariableOutOfScope() =>

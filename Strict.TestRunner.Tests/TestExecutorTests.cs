@@ -94,5 +94,15 @@ public sealed class TestExecutorTests
 	}
 
 	[Test]
-	public void RunAllTestsInPackage() => executor.RunAllTestsInPackage(TestPackage.Instance);
+	public void RunRangeReverseComparison()
+	{
+		using var type = new Type(TestPackage.Instance,
+				new TypeLines(nameof(RunListCreation), "has number", "Run",
+					"	Range(-5, -10).Reverse is Range(-9, -4)")).
+			ParseMembersAndMethods(new MethodExpressionParser());
+		executor.RunAllTestsInType(type);
+	}
+
+	//[Test]
+	//public void RunAllTestsInPackage() => executor.RunAllTestsInPackage(TestPackage.Instance);
 }

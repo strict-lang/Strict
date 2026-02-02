@@ -31,7 +31,7 @@ public sealed class For(Expression[] customVariables, Expression iterator, Expre
 		if (!line.StartsWith(Keyword.For, StringComparison.Ordinal))
 			return null;
 		if (line.Length <= Keyword.For.Length)
-			throw new MissingExpression(body);
+			return ParseForImplicitIteratorOfThis(body);
 		var innerBody = body.FindCurrentChild() ??
 			TryGetInnerForAsBody(body) ?? throw new MissingInnerBody(body);
 		return line.Contains(Base.IndexLowercase, StringComparison.Ordinal)
@@ -39,7 +39,14 @@ public sealed class For(Expression[] customVariables, Expression iterator, Expre
 			: ParseFor(body, line, innerBody);
 	}
 
-	public sealed class MissingExpression(Body body) : ParsingFailed(body);
+	private static Expression ParseForImplicitIteratorOfThis(Body body)
+	{
+		var innerBody = body.FindCurrentChild() ??
+			TryGetInnerForAsBody(body) ?? throw new MissingInnerBody(body);
+		return new For([], new Instance(body.Method.Type, body.CurrentFileLineNumber), innerBody.Parse(),
+			body.CurrentFileLineNumber);
+	}
+
 	public sealed class IndexIsReservedDoNotUseItExplicitly(Body body) : ParsingFailed(body);
 
 	private static Body? TryGetInnerForAsBody(Body body)
