@@ -103,6 +103,6 @@ public sealed class TestExecutorTests
 		executor.RunAllTestsInType(type);
 	}
 
-	//[Test]
-	//public void RunAllTestsInPackage() => executor.RunAllTestsInPackage(TestPackage.Instance);
+	[Test]
+	public void RunAllTestsInPackage() => executor.RunAllTestsInPackage(TestPackage.Instance);
 }

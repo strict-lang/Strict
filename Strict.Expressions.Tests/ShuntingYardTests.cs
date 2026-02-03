@@ -131,7 +131,7 @@ public sealed class ShuntingYardTests
 		const string Input = "Range(-5, -10).Reverse is Range(-9, -4)";
 		var tokens = new ShuntingYard(Input);
 		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo(BinaryOperator.Is));
-		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo("Range(-5, -10).Reverse"));
 		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo("Range(-9, -4)"));
+		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo("Range(-5, -10).Reverse"));
 	}
 }

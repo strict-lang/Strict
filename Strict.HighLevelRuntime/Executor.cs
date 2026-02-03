@@ -65,7 +65,7 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 			// For test validation, check if the method is simple before attempting to parse
 			// This avoids parsing errors when instance members are accessed but no instance exists
 			if (runOnlyTests && IsSimpleSingleLineMethod(method))
-				return new ValueInstance(method.ReturnType, true);
+				return Bool(true);
 			Expression body;
 			try
 			{
@@ -79,7 +79,7 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 			}
 			if (body is not Body && runOnlyTests)
 				return IsSimpleExpressionWithLessThanThreeSubExpressions(body)
-					? new ValueInstance(method.ReturnType, true)
+					? Bool(true)
 					: throw new MethodRequiresTest(method, body.ToString());
 			return RunExpression(body, context, runOnlyTests);
 		}
@@ -206,6 +206,7 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 					continue;
 				last = RunExpression(e, ctx);
 				if (runOnlyTests && isTest && !ToBool(last))
+					//TODO: we need to show the stacktrace from an Error inside Strict!
 					throw new TestFailed(body.Method, e, last);
 			}
 			if (runOnlyTests && last.Value == null)

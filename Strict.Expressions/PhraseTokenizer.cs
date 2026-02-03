@@ -150,10 +150,23 @@ public sealed class PhraseTokenizer
 			if (tokens.tokenStart >= 0)
 				result.Add(tokens.tokenStart..tokens.index);
 			tokens.tokenStart = -1;
+			// Consume a nested member or method call as a single token
+			if (tokens.index + 1 < tokens.input.Length && tokens.input[tokens.index + 1] == '.')
+			{
+				var additionalBrackets = 0;
+				while (tokens.index + 1 < tokens.input.Length)
+				{
+					if (tokens.input[tokens.index + 1] == OpenBracket)
+						additionalBrackets++;
+					else if (tokens.input[tokens.index + 1] == CloseBracket)
+						additionalBrackets--;
+					else if (tokens.input[tokens.index + 1] == ' ' && additionalBrackets == 0)
+						break;
+					tokens.index++;
+				}
+			}
 			result.Add(tokens.index..(tokens.index + 1));
-			return tokens.index + 1 < tokens.input.Length &&
-				// Consume a nested member or method call as a single token
-				tokens.input[tokens.index + 1] != '.';
+			return true;
 		}
 
 		private bool HandleListSeparator()
