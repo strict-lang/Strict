@@ -13,7 +13,7 @@ namespace Strict.Expressions;
 public class MethodCall : ConcreteExpression
 {
 	public MethodCall(Method method, Expression? instance, IReadOnlyList<Expression> arguments,
-		Type? toReturnType = null, int lineNumber = 0) :
+		Type? toReturnType = null, int lineNumber = 0, bool isErrorWithoutArguments = false) :
 		base(GetMethodReturnType(method, toReturnType), lineNumber, method.ReturnType.IsMutable)
 	{
 		if (method.Name == Method.From && instance != null)
@@ -21,6 +21,7 @@ public class MethodCall : ConcreteExpression
 		Instance = instance;
 		Method = method;
 		Arguments = arguments;
+		this.isErrorWithoutArguments = isErrorWithoutArguments;
 	}
 
 	public sealed class CannotCallFromConstructorWithExistingInstance : Exception;
@@ -33,6 +34,7 @@ public class MethodCall : ConcreteExpression
 	public Method Method { get; }
 	public Expression? Instance { get; }
 	public IReadOnlyList<Expression> Arguments { get; }
+	private readonly bool isErrorWithoutArguments;
 	public override bool IsConstant =>
 		(Instance?.IsConstant ?? true) && Arguments.All(a => a.IsConstant);
 
@@ -76,9 +78,10 @@ public class MethodCall : ConcreteExpression
 	{
 		if (fromType.Name == Base.List && fromType.IsGeneric && arguments.Count > 0)
 			fromType = fromType.GetGenericImplementation(arguments[0].ReturnType);
+		var isErrorWithoutArguments = fromType.Name == Base.Error && arguments.Count == 0;
 		arguments = FillInMissingFromMethodArguments(body, fromType, arguments);
 		return new MethodCall(fromType.GetMethod(Method.From, arguments), null, arguments, null,
-			body.CurrentFileLineNumber);
+			body.CurrentFileLineNumber, isErrorWithoutArguments);
 	}
 
 	private static IReadOnlyList<Expression> FillInMissingFromMethodArguments(Body body, Type fromType,
@@ -136,7 +139,11 @@ public class MethodCall : ConcreteExpression
 	public override string ToString() =>
 		Instance is not null
 			? $"{Instance}.{Method.Name}{Arguments.ToBrackets()}"
-			: $"{GetProperMethodName()}{Arguments.ToBrackets()}";
+			: ReturnType.Name == Base.Error
+				? Base.Error + (isErrorWithoutArguments
+					? ""
+					: Arguments.ToBrackets())
+				: $"{GetProperMethodName()}{Arguments.ToBrackets()}";
 
 	private string GetProperMethodName() =>
 		Method.Name == Method.From

@@ -266,4 +266,14 @@ public sealed class ExecutorTests
 		Assert.That(executor.Execute(t.Methods.Single(m => m.Name == "Compare"), null, []).Value,
 			Is.EqualTo(true));
 	}
+
+	[Test]
+	public void MultilineMethodRequiresTests()
+	{
+		using var t = CreateType(nameof(MultilineMethodRequiresTests), "has number", "GetText Text",
+			"\tif number is 0", "\t\treturn \"\"", "\tnumber to Text");
+		var instance = new ValueInstance(t, 5);
+		Assert.That(executor.Execute(t.Methods.Single(m => m.Name == "GetText"), instance, []).Value,
+			Is.EqualTo("5"));
+	}
 }

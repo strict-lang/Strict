@@ -97,12 +97,36 @@ public sealed class TestExecutorTests
 	public void RunRangeReverseComparison()
 	{
 		using var type = new Type(TestPackage.Instance,
-				new TypeLines(nameof(RunListCreation), "has number", "Run",
+				new TypeLines(nameof(RunRangeReverseComparison), "has number", "Run",
 					"	Range(-5, -10).Reverse is Range(-9, -4)")).
 			ParseMembersAndMethods(new MethodExpressionParser());
 		executor.RunAllTestsInType(type);
 	}
 
 	[Test]
-	public void RunAllTestsInPackage() => executor.RunAllTestsInPackage(TestPackage.Instance);
+	public void RunNumberToCharacterBody()
+	{
+		using var type = new Type(TestPackage.Instance,
+				new TypeLines(nameof(RunNumberToCharacterBody), "has number",
+					// @formatter:off
+					"to Character",
+					"\t5 to Character is \"5\"",
+					"\tconstant canOnlyConvertSingleDigit = Error",
+					"\t13 to Character is canOnlyConvertSingleDigit",
+					"\tvalue is in Range(0, 10) ? Character(Character.zeroCharacter + value) else canOnlyConvertSingleDigit(value)")).
+			ParseMembersAndMethods(new MethodExpressionParser());
+		Assert.That(type.Methods[0].GetBodyAndParseIfNeeded().ToString(),
+			Is.EqualTo(new[]
+			{
+				"5 to Character is \"5\"",
+				"constant canOnlyConvertSingleDigit = Error",
+				"13 to Character is canOnlyConvertSingleDigit",
+				"value is in Range(0, 10) ? Character(Character.zeroCharacter + value) else canOnlyConvertSingleDigit(value)"
+				// @formatter:on
+			}.ToWordList(Environment.NewLine)));
+		executor.RunAllTestsInType(type);
+	}
+
+	//TODO: [Test]
+	//public void RunAllTestsInPackage() => executor.RunAllTestsInPackage(TestPackage.Instance);
 }

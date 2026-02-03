@@ -1,4 +1,4 @@
-﻿using Strict.Language;
+using Strict.Language;
 using Type = Strict.Language.Type;
 
 namespace Strict.Expressions;
@@ -49,8 +49,9 @@ public sealed class If(Expression condition, Expression then, int lineNumber = 0
 		Condition.GetHashCode() ^ Then.GetHashCode() ^ (OptionalElse?.GetHashCode() ?? 0);
 
 	public override string ToString() =>
-		OptionalElse != null && Then.ReturnType == OptionalElse.ReturnType && Then is not Body &&
-		OptionalElse is not Body && OptionalElse is not If
+		OptionalElse != null && (OptionalElse.ReturnType.IsSameOrCanBeUsedAs(Then.ReturnType) ||
+			Then.ReturnType.Name == Base.Error || OptionalElse.ReturnType.Name == Base.Error) &&
+		Then is not Body && OptionalElse is not Body && OptionalElse is not If
 			? Condition + " ? " + Then + " else " + OptionalElse
 			: "if " + Condition + Environment.NewLine + "\t" + (Then is Body thenBody
 				? string.Join(Environment.NewLine + "\t", thenBody.Expressions)

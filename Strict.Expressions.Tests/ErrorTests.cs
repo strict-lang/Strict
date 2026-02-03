@@ -20,6 +20,7 @@ public sealed class ErrorTests : TestExpressions
 		Assert.That(declaration.ReturnType, Is.EqualTo(type.GetType(Base.Error)));
 		Assert.That(((If)parsedExpression.Expressions[1]).OptionalElse?.ToString(),
 			Is.EqualTo("return notANumber"));
+		Assert.That(declaration.ToString(), Is.EqualTo("Error"));
 	}
 
 	[Test]
@@ -55,5 +56,18 @@ public sealed class ErrorTests : TestExpressions
 		Assert.That(returnExpression.Arguments[0].ToString(), Is.EqualTo("\"Run\""));
 		Assert.That(returnExpression.Arguments[1].ReturnType,
 			Is.EqualTo(type.GetListImplementationType(type.GetType(Base.Stacktrace))));
+	}
+
+	[Test]
+	public void ErrorCanAddDetails()
+	{
+		var programType = new Type(type.Package,
+				new TypeLines(nameof(ErrorCanAddDetails), "has number", "Run",
+					"\tconstant someError = Error", "\tsomeError(number)")).
+			ParseMembersAndMethods(new MethodExpressionParser());
+		var body = (Body)programType.Methods[0].GetBodyAndParseIfNeeded();
+		Assert.That(body.Expressions[0], Is.InstanceOf<Declaration>());
+		var methodCall = (MethodCall)body.Expressions[1];
+		Assert.That(methodCall.Arguments[0].ToString(), Is.EqualTo("number"));
 	}
 }
