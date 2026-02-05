@@ -1,4 +1,4 @@
-﻿namespace Strict.Language.Tests;
+namespace Strict.Language.Tests;
 
 public sealed class GenericTypeImplementationTests
 {
@@ -84,4 +84,29 @@ public sealed class GenericTypeImplementationTests
 			}, //ncrunch: no coverage
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.
 				InstanceOf<Context.TypeArgumentsCountDoesNotMatchGenericType>());
+
+	[Test]
+	public void GenericTypeFromConstructorInitializesAllMembers()
+	{
+		using var type = new Type(TestPackage.Instance,
+				new TypeLines(nameof(GenericTypeFromConstructorInitializesAllMembers),
+					"has customError Error", "Run", "\tcustomError(5)")).
+			ParseMembersAndMethods(new MethodExpressionParser());
+		var runMethodBody = type.Methods.Find(m => m.Name == "Run")!.GetBodyAndParseIfNeeded();
+		var methodCall = (MethodCall)runMethodBody;
+		Assert.That(methodCall.Method.Name, Is.EqualTo(Method.From));
+		Assert.That(methodCall.Instance, Is.Null);
+		Assert.That(methodCall.Arguments, Has.Count.EqualTo(2));
+		Assert.That(methodCall.Method.Type, Is.InstanceOf<GenericTypeImplementation>());
+		var customErrorType = (GenericTypeImplementation)methodCall.Method.Type;
+		Assert.That(customErrorType.Generic.Name, Is.EqualTo(Base.ErrorWithValue));
+		Assert.That(customErrorType.Members, Has.Count.EqualTo(2));
+		Assert.That(customErrorType.Members[0].Name, Is.EqualTo("Error"));
+		Assert.That(customErrorType.Members[0].Type.Name, Is.EqualTo(Base.Error));
+		Assert.That(customErrorType.Members[1].Name, Is.EqualTo("Value"));
+		Assert.That(customErrorType.Members[1].Type.Name, Is.EqualTo(Base.Number));
+		Assert.That(customErrorType.AvailableMethods, Has.Count.GreaterThan(1));
+		Assert.That(customErrorType.AvailableMethods[Method.From][0].Parameters, Has.Count.EqualTo(2),
+			customErrorType.ToString());
+	}
 }

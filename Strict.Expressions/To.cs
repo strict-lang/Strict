@@ -1,10 +1,10 @@
-﻿using Strict.Language;
+using Strict.Language;
 using Type = Strict.Language.Type;
 
 namespace Strict.Expressions;
 
 public sealed class To(Expression left, Method operatorMethod, Type conversionType)
-	: MethodCall(operatorMethod, left, conversionType)
+	: MethodCall(operatorMethod, left, [], conversionType)
 {
 	public Type ConversionType { get; } = conversionType;
 	public override bool IsConstant => Instance!.IsConstant;

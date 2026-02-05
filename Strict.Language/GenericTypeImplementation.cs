@@ -1,4 +1,4 @@
-﻿namespace Strict.Language;
+namespace Strict.Language;
 
 public sealed class GenericTypeImplementation : Type
 {
@@ -30,12 +30,12 @@ public sealed class GenericTypeImplementation : Type
 					: member);
 	}
 
-	// ReSharper disable once ExcessiveIndentation
 	private void ImplementMethods()
 	{
 		foreach (var methodsByNames in Generic.AvailableMethods)
 		foreach (var method in methodsByNames.Value)
-			if (method.IsPublic || method.Name.AsSpan().IsOperator())
+			// Do not copy from constructor (might be different with generics now implemented)
+			if (method.Name != Method.From && (method.IsPublic || method.Name.AsSpan().IsOperator()))
 			{
 				var foundMethodAlready = false;
 				foreach (var existingMethod in methods)

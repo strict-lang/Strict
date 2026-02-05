@@ -12,16 +12,15 @@ namespace Strict.Expressions;
 /// </summary>
 public class MethodCall : ConcreteExpression
 {
-	public MethodCall(Method method, Expression? instance, IReadOnlyList<Expression> arguments,
-		Type? toReturnType = null, int lineNumber = 0, bool isErrorWithoutArguments = false) :
+	public MethodCall(Method method, Expression? instance = null, IReadOnlyList<Expression>? arguments = null,
+		Type? toReturnType = null, int lineNumber = 0) :
 		base(GetMethodReturnType(method, toReturnType), lineNumber, method.ReturnType.IsMutable)
 	{
 		if (method.Name == Method.From && instance != null)
 			throw new CannotCallFromConstructorWithExistingInstance(); //ncrunch: no coverage
 		Instance = instance;
 		Method = method;
-		Arguments = arguments;
-		this.isErrorWithoutArguments = isErrorWithoutArguments;
+		Arguments = arguments ?? [];
 	}
 
 	public sealed class CannotCallFromConstructorWithExistingInstance : Exception;
@@ -34,12 +33,8 @@ public class MethodCall : ConcreteExpression
 	public Method Method { get; }
 	public Expression? Instance { get; }
 	public IReadOnlyList<Expression> Arguments { get; }
-	private readonly bool isErrorWithoutArguments;
 	public override bool IsConstant =>
 		(Instance?.IsConstant ?? true) && Arguments.All(a => a.IsConstant);
-
-	public MethodCall(Method method, Expression? instance = null, Type? toReturnType = null,
-		int lineNumber = 0) : this(method, instance, [], toReturnType, lineNumber) { }
 
 	// ReSharper disable once TooManyArguments
 	public static Expression? TryParse(Expression? instance, Body body,
@@ -73,41 +68,47 @@ public class MethodCall : ConcreteExpression
 				: CreateFromMethodCall(body, fromType, arguments);
 	}
 
-	private static Expression CreateFromMethodCall(Body body, Type fromType,
-		IReadOnlyList<Expression> arguments)
+	internal static Expression CreateFromMethodCall(Body body, Type fromType,
+		IReadOnlyList<Expression> arguments, Expression? basedOnErrorVariable = null)
 	{
 		if (fromType.Name == Base.List && fromType.IsGeneric && arguments.Count > 0)
 			fromType = fromType.GetGenericImplementation(arguments[0].ReturnType);
-		var isErrorWithoutArguments = fromType.Name == Base.Error && arguments.Count == 0;
-		arguments = FillInMissingFromMethodArguments(body, fromType, arguments);
-		return new MethodCall(fromType.GetMethod(Method.From, arguments), null, arguments, null,
-			body.CurrentFileLineNumber, isErrorWithoutArguments);
-	}
-
-	private static IReadOnlyList<Expression> FillInMissingFromMethodArguments(Body body, Type fromType,
-		IReadOnlyList<Expression> arguments)
-	{
-		// For Error fill in the remaining (Text and Stacktraces) arguments if missing
-		if (fromType.IsSameOrCanBeUsedAs(fromType.GetType(Base.Error)) && arguments.Count < 2)
-			return
-			[
-				arguments.Count == 1
-					? arguments[0]
-					: new Text(body.Method, fromType.Name == Base.Error
-						? body.CurrentDeclarationNameForErrorText ?? body.Method.Name
-						: fromType.Name),
-				CreateListFromMethodCall(body, Base.Stacktrace, CreateStacktraces(body))
-			];
+		// For Error always fill in Name and Stacktraces and use ErrorWithValue if argument is given
+		if (fromType.IsSameOrCanBeUsedAs(fromType.GetType(Base.Error)))
+		{
+			if (arguments.Count == 0)
+				arguments =
+				[
+					new Value(body.Method.GetType(Base.Name), basedOnErrorVariable?.ToString() ??
+						(fromType.Name == Base.Error
+							? body.CurrentDeclarationNameForErrorText ?? body.Method.Name
+							: fromType.Name)),
+					CreateListFromMethodCall(body, Base.Stacktrace, CreateStacktraces(body))
+				];
+			else if (arguments.Count > 1)
+				throw new Type.ArgumentsDoNotMatchMethodParameters(arguments, fromType, fromType.Methods);
+			else
+			{
+				arguments =
+				[
+					basedOnErrorVariable ?? CreateFromMethodCall(body, fromType, []),
+					arguments[0]
+				];
+				fromType = fromType.GetType(Base.ErrorWithValue).
+					GetGenericImplementation(arguments[1].ReturnType);
+			}
+		}
 		// Type can fill in Package automatically (but you need to give the name)
-		if (fromType.Name == Base.Type && arguments.Count == 1)
-			return
+		else if (fromType.Name == Base.Type && arguments.Count == 1)
+			arguments =
 			[
 				arguments[0].ReturnType.Name == Base.Text
 					? new Value(body.Method.GetType(Base.Name), ((Value)arguments[0]).Data)
 					: arguments[0],
 				new Text(body.Method, body.Method.Type.Package.FullName)
 			];
-		return arguments;
+		return new MethodCall(fromType.GetMethod(Method.From, arguments), null, arguments, null,
+			body.CurrentFileLineNumber);
 	}
 
 	private static Expression CreateListFromMethodCall(Body body, string listElementTypeName,
@@ -139,11 +140,11 @@ public class MethodCall : ConcreteExpression
 	public override string ToString() =>
 		Instance is not null
 			? $"{Instance}.{Method.Name}{Arguments.ToBrackets()}"
-			: ReturnType.Name == Base.Error
-				? Base.Error + (isErrorWithoutArguments
-					? ""
-					: Arguments.ToBrackets())
-				: $"{GetProperMethodName()}{Arguments.ToBrackets()}";
+			: ReturnType is GenericTypeImplementation genericType && genericType.Generic.Name == Base.ErrorWithValue
+				? Arguments[0] + "(" + Arguments[1] + ")"
+				: ReturnType.Name == Base.Error
+					? Base.Error
+					: $"{GetProperMethodName()}{Arguments.ToBrackets()}";
 
 	private string GetProperMethodName() =>
 		Method.Name == Method.From

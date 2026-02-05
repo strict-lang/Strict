@@ -65,6 +65,7 @@ public sealed class ValueInstance
 					throw new UnableToAssignMemberToType(assignMember, valueDictionary, ReturnType);
 		}
 		else
+		//TODO: RunNumberToCharacterBody still fails here, we need to allow Errors to be thrown and compared
 			throw new InvalidTypeValue(ReturnType, Value);
 	}
 

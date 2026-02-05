@@ -257,7 +257,7 @@ public sealed class TypeTests
 	[TestCase(Base.Number, 0)]
 	[TestCase(Base.Character, 2)]
 	[TestCase(Base.Text, 2)]
-	[TestCase(Base.Error, 4)]
+	[TestCase(Base.Error, 5)]
 	public void ValidateAvailableMemberTypesCount(string name, int expectedCount)
 	{
 		var type = package.GetType(name);

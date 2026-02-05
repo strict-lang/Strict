@@ -12,11 +12,11 @@ public sealed class ListCall(Expression list, Expression index) : ConcreteExpres
 
 	public static Expression? TryParse(Body body, Expression? variable,
 		IReadOnlyList<Expression> arguments) =>
-		variable is not null && arguments.Count > 0
+		variable is not null and not MethodCall && arguments.Count > 0
 			? variable.ReturnType.IsIterator
 				? CreateListCallAndCheckIndexBounds(body, variable, arguments[0])
-				: variable.ReturnType.Name == Base.Error
-					? MethodCall.TryParse(null, body, arguments, variable.ReturnType, variable.ToString())
+				: variable.ReturnType.IsError
+					? MethodCall.CreateFromMethodCall(body, variable.ReturnType, arguments, variable)
 					: body.IsFakeBodyForMemberInitialization && arguments.Count == 1
 						? arguments[0]
 						: throw new MethodExpressionParser.InvalidArgumentItIsNotMethodOrListCall(body,

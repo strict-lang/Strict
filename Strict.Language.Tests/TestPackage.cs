@@ -212,7 +212,9 @@ public class TestPackage : Package
 		var textWriter = new Type(this, new TypeLines(Base.TextWriter, "Write(text)"));
 		var textReader = new Type(this, new TypeLines(Base.TextReader, "Read Text"));
 		var name = new Type(this, new TypeLines(Base.Name, "has text"));
-		var error = new Type(this, new TypeLines(Base.Error, "has Text", "has Stacktraces"));
+		var error = new Type(this, new TypeLines(Base.Error, "has Name", "has Stacktraces"));
+		var errorWithValue = new Type(this, new TypeLines(Base.ErrorWithValue, "has Error",
+			"has Value Generic"));
 		var method = new Type(this, new TypeLines(Base.Method, "has Name", "has Type"));
 		var stacktrace = new Type(this, new TypeLines(Base.Stacktrace,
 			"has Method", "has FilePath Text", "has Line Number"));
@@ -235,7 +237,8 @@ public class TestPackage : Package
 		foreach (var type in new[]
 			{
 				any, boolean, hasLength, number, range, character, mutable, iterator, list, text, baseType,
-				generic, logger, file, textWriter, textReader, name, error, method, stacktrace, dictionary
+				generic, logger, file, textWriter, textReader, name, error, errorWithValue, method, stacktrace,
+				dictionary
 			})
 			type.ParseMembersAndMethods(parser);
 	}

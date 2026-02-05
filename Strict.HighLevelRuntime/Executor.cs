@@ -313,6 +313,8 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 
 	private ValueInstance EvaluateTo(To to, ExecutionContext ctx)
 	{
+		if (!to.Method.IsTrait)
+			return EvaluateMethodCall(to, ctx);
 		var left = RunExpression(to.Instance!, ctx).Value;
 		if (to.ConversionType.Name == Base.Text)
 			return new ValueInstance(to.ConversionType, left?.ToString() ?? "");
@@ -348,7 +350,9 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 		// Otherwise, if we are already inside an instance method, use 'ctx.This'.
 		var instance = call.Instance != null
 			? RunExpression(call.Instance, ctx)
-			: ctx.This;
+			: call.Method.Name != Method.From
+				? ctx.This
+				: null;
 		var args = new List<ValueInstance>(call.Arguments.Count);
 		foreach (var a in call.Arguments)
 			args.Add(RunExpression(a, ctx));

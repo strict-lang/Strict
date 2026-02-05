@@ -53,7 +53,7 @@ internal class TypeMethodFinder(Type type)
 	{
 		if (!Type.AvailableMethods.TryGetValue(methodName, out var matchingMethods))
 			return null;
-		if (arguments.Count == 1 && arguments[0].ReturnType.Name == Base.Error)
+		if (arguments.Count == 2 && arguments[0].ReturnType.IsError)
 			return matchingMethods[0];
 		var typesOfArguments = arguments.Select(argument => argument.ReturnType).ToList();
 		var commonTypeOfArguments = TryGetSingleElementType(typesOfArguments);
@@ -90,10 +90,8 @@ internal class TypeMethodFinder(Type type)
 	/// </summary>
 	private static bool IsAnyIsComparison(string methodName, IReadOnlyList<Expression> arguments,
 		IReadOnlyList<Method> matchingMethods) =>
-		methodName is BinaryOperator.Is or UnaryOperator.Not &&
-		arguments.Count == 1 &&
-		matchingMethods.Count > 0 &&
-		matchingMethods[0].Parameters is [{ Type.Name: Base.Any }];
+		methodName is BinaryOperator.Is or UnaryOperator.Not && arguments.Count == 1 &&
+		matchingMethods.Any(m => m.Parameters is [{ Type.Name: Base.Any }]);
 
 	private static string GetTextValue(Expression argument) =>
 		argument.GetType().GetProperty("Data", BindingFlags.Instance | BindingFlags.Public)?.

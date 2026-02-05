@@ -24,9 +24,9 @@ public sealed class If(Expression condition, Expression then, int lineNumber = 0
 	/// base type. If that is not possible, there is a compilation error here.
 	/// </summary>
 	private static Type GetMatchingType(Type thenType, Type? elseType, Body? bodyForErrorMessage) =>
-		elseType == null || elseType.IsSameOrCanBeUsedAs(thenType, false) || elseType.Name == Base.Error
+		elseType == null || elseType.IsSameOrCanBeUsedAs(thenType, false) || elseType.IsError
 			? thenType
-			: thenType.IsSameOrCanBeUsedAs(elseType, false) || thenType.Name == Base.Error
+			: thenType.IsSameOrCanBeUsedAs(elseType, false) || thenType.IsError
 				? elseType
 				: thenType.FindFirstUnionType(elseType) ??
 				throw new ReturnTypeOfThenAndElseMustHaveMatchingType(
@@ -50,7 +50,7 @@ public sealed class If(Expression condition, Expression then, int lineNumber = 0
 
 	public override string ToString() =>
 		OptionalElse != null && (OptionalElse.ReturnType.IsSameOrCanBeUsedAs(Then.ReturnType) ||
-			Then.ReturnType.Name == Base.Error || OptionalElse.ReturnType.Name == Base.Error) &&
+			Then.ReturnType.IsError || OptionalElse.ReturnType.IsError) &&
 		Then is not Body && OptionalElse is not Body && OptionalElse is not If
 			? Condition + " ? " + Then + " else " + OptionalElse
 			: "if " + Condition + Environment.NewLine + "\t" + (Then is Body thenBody

@@ -184,18 +184,17 @@ public class Type : Context, IDisposable
 	{
 		get
 		{
-			if (CheckIfParsed() && cachedAvailableMemberTypes != null)
-				return cachedAvailableMemberTypes;
-			cachedAvailableMemberTypes = new Dictionary<string, Type>();
+			if (CheckIfParsed() && field != null)
+				return field;
+			field = new Dictionary<string, Type>();
 			foreach (var member in members)
-				if (cachedAvailableMemberTypes.TryAdd(member.Type.Name, member.Type))
+				if (field.TryAdd(member.Type.Name, member.Type))
 					foreach (var (availableMemberName, availableMemberType) in member.Type.
 						AvailableMemberTypes)
-						cachedAvailableMemberTypes.TryAdd(availableMemberName, availableMemberType);
-			return cachedAvailableMemberTypes;
+						field.TryAdd(availableMemberName, availableMemberType);
+			return field;
 		}
 	}
-	private Dictionary<string, Type>? cachedAvailableMemberTypes;
 
 	public override Type? FindType(string name, Context? searchingFrom = null) =>
 		name == Name || name.Contains('.') && name == base.ToString() || name is Other or Outer
@@ -353,23 +352,27 @@ public class Type : Context, IDisposable
 	/// </summary>
 	public Type? FindFirstUnionType(Type elseType)
 	{
+		if (elseType.IsError)
+			return this;
+		if (IsError)
+			return elseType;
 		foreach (var member in members)
 			if (elseType.members.Any(otherMember => otherMember.Type == member.Type))
-				return member.Type; //ncrunch: no coverage
+				return member.Type;
 		foreach (var member in members)
 		{
 			if (member.Type == this)
 				continue;
 			var subUnionType = member.Type.FindFirstUnionType(elseType);
 			if (subUnionType != null)
-				return subUnionType; //ncrunch: no coverage
+				return subUnionType;
 		}
 		foreach (var otherMember in elseType.members)
-		{ //ncrunch: no coverage start
+		{
 			var otherSubUnionType = otherMember.Type.FindFirstUnionType(this);
 			if (otherSubUnionType != null)
 				return otherSubUnionType;
-		} //ncrunch: no coverage end
+		}
 		return null;
 	}
 
@@ -430,7 +433,7 @@ public class Type : Context, IDisposable
 			cachedAvailableMethods.Add(method.Name, [method]);
 	}
 
-	private void AddFromConstructorWithMembersAsArguments(ExpressionParser parser) =>
+	protected void AddFromConstructorWithMembersAsArguments(ExpressionParser parser) =>
 		AddAvailableMethod(new Method(this, 0, parser, [
 			"from(" + CreateFromMethodParameters() + ")",
 			"\tvalue"
@@ -549,6 +552,9 @@ public class Type : Context, IDisposable
 	/// Is this a boolean or if OneOfType, is one of the types a boolean? Used to check for tests
 	/// </summary>
 	public virtual bool IsBoolean => Name == Base.Boolean;
+	public bool IsError =>
+		Name is Base.Error or Base.ErrorWithValue || this is GenericTypeImplementation genericType &&
+		genericType.Generic.Name == Base.ErrorWithValue;
 	public void Dispose() => ((Package)Parent).Remove(this);
 
 	public int FindLineNumber(string firstLineThatContains)

@@ -32,6 +32,7 @@ public static class Base
 	public const string Range = nameof(Range);
 	public const string Text = nameof(Text);
 	public const string Error = nameof(Error);
+	public const string ErrorWithValue = nameof(ErrorWithValue);
 	public const string For = nameof(For);
 	public const string Generic = nameof(Generic);
 	public const string GenericLowercase = "generic";
