@@ -14,35 +14,47 @@ public static class StringExtensions
 			? dictionary.DictionaryToWordList(separator)
 			: string.Join(separator, list);
 
+	public static string EnumerableToWordList(this IEnumerable values, string separator = ", ",
+		bool outputTypes = false) =>
+		values switch
+		{
+			IDictionary<string, object?> dict => dict.DictionaryToWordList(outputTypes: outputTypes),
+			IDictionary iDictionary => iDictionary.IDictionaryToWordList(outputTypes: outputTypes),
+			_ => values as string ?? values.Cast<object?>().ToWordList(separator)
+		};
+
 	public static string DictionaryToWordList<TKey, TValue>(this IDictionary<TKey, TValue> list,
-		string separator = "; ")
+		string separator = "; ", string keyValueSeparator = "=", bool outputTypes = false)
+		where TKey : notnull
 	{
 		var result = new List<string>();
 		foreach (var pair in list)
-			result.Add(pair.Key + "=" + (pair.Value is IEnumerable values
-				? values.EnumerableToWordList()
-				: pair.Value?.ToString()));
+			result.Add(pair.Key + (outputTypes && pair.Key is not string
+				? " (" + pair.Key.GetType().Name + ")"
+				: "") + keyValueSeparator + (pair.Value is IEnumerable values
+				? values.EnumerableToWordList(outputTypes: outputTypes)
+				: pair.Value + (outputTypes && pair.Value is not string && pair.Value is not int &&
+					pair.Value is not double && pair.Value is not bool &&
+					pair.Value?.GetType().Name != "ValueInstance"
+						? " (" + pair.Value?.GetType().Name + ")"
+						: "")));
 		return result.ToWordList(separator);
 	}
 
-	public static string IDictionaryToWordList(this IDictionary list, string separator = "; ")
+	public static string IDictionaryToWordList(this IDictionary list, string separator = "; ",
+		bool outputTypes = false)
 	{
 		var enumerator = list.GetEnumerator();
 		using var disposeEnumerator = enumerator as IDisposable;
 		var result = new List<string>();
 		while (enumerator.MoveNext())
 			result.Add(enumerator.Key + "=" + (enumerator.Value is IEnumerable values
-				? values.EnumerableToWordList()
-				: enumerator.Value?.ToString()));
+				? values.EnumerableToWordList(outputTypes: outputTypes)
+				: enumerator.Value + (outputTypes
+					? " (" + enumerator.Value?.GetType().Name + ")"
+					: "")));
 		return result.ToWordList(separator);
 	}
-
-	public static string EnumerableToWordList(this IEnumerable values, string separator = ", ") =>
-		values is IDictionary<string, object?> valuesDictionary
-			? valuesDictionary.DictionaryToWordList()
-			: values is IDictionary valuesIDictionary
-				? valuesIDictionary.IDictionaryToWordList()
-				: values as string ?? values.Cast<object?>().ToWordList(separator);
 
 	extension(string text)
 	{

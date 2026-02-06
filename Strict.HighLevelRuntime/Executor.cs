@@ -233,14 +233,16 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 				// When validating (runInlineTests is true), skip the implementation logic lines.
 				// These lines will be tested anyway when a test line calls this method.
 				// When executing normally (runInlineTests is false), skip the test lines.
-				if (isTest == !runOnlyTests && e is not Declaration && e is not MutableReassignment)
+				if (isTest == !runOnlyTests && e is not Declaration && e is not MutableReassignment ||
+					runOnlyTests && e is Declaration &&
+					body.Method.Type.Members.Any(m => !m.IsConstant && e.ToString().Contains(m.Name)))
 					continue;
 				last = RunExpression(e, ctx);
 				if (runOnlyTests && isTest && !ToBool(last))
 					//TODO: we need to show the stacktrace from an Error inside Strict!
 					throw new TestFailed(body.Method, e, last, GetTestFailureDetails(e, ctx));
 			}
-			if (runOnlyTests && last.Value == null)
+			if (runOnlyTests && last.Value == null && body.Method.Name != Base.Run)
 				throw new MethodRequiresTest(body.Method, body);
 			return last;
 		}
@@ -498,9 +500,13 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 
 	private ValueInstance EvaluateTo(To to, ExecutionContext ctx)
 	{
+		var left = RunExpression(to.Instance!, ctx).Value;
+		if (to.Instance!.ReturnType.Name == Base.Text && to.ConversionType.Name == Base.Number &&
+			left is string textValue)
+			return new ValueInstance(to.ConversionType,
+				double.Parse(textValue, CultureInfo.InvariantCulture));
 		if (!to.Method.IsTrait && to.Method.Type.Name != Base.Number)
 			return EvaluateMethodCall(to, ctx);
-		var left = RunExpression(to.Instance!, ctx).Value;
 		if (to.ConversionType.Name == Base.Text)
 			return new ValueInstance(to.ConversionType, left?.ToString() ?? "");
 		if (to.ConversionType.Name == Base.Number)

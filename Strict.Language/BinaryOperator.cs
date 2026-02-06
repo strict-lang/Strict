@@ -103,7 +103,7 @@ public static class BinaryOperator
 
 	public static int GetPrecedence(ReadOnlySpan<char> token) =>
 		token.Compare(To)
-			? 8
+			? 10
 			: token.Compare(In)
 				? 9
 				: token.Compare(SmallerOrEqual) || token.Compare(GreaterOrEqual)

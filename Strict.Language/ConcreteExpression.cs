@@ -1,4 +1,4 @@
-﻿namespace Strict.Language;
+namespace Strict.Language;
 
 /// <summary>
 /// Checks if the type used in a Declaration, MethodCall, MemberCall, ListCall is actually valid
@@ -10,7 +10,6 @@ public abstract class ConcreteExpression : Expression
 		: base(returnType, lineNumber, isMutable)
 	{
 		if (returnType.IsGeneric)
-			throw new Type.GenericTypesCannotBeUsedDirectlyUseImplementation(returnType,
-				GetType().Name);
+			throw new Type.GenericTypesCannotBeUsedDirectlyUseImplementation(returnType, GetType().Name);
 	}
 }

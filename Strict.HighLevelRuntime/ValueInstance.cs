@@ -77,14 +77,14 @@ public sealed class ValueInstance
 
 	public sealed class InvalidTypeValue(Type returnType, object? value) : ExecutionFailed(
 		returnType, (value is IEnumerable valueEnumerable
-			? valueEnumerable.EnumerableToWordList()
+			? valueEnumerable.EnumerableToWordList(", ", true)
 			: value + "") + " (" + value?.GetType() + ") for " + returnType.Name);
 
 	public override string ToString() =>
 		ReturnType.Name == Base.Boolean
 			? $"{Value}"
 			: Value is IEnumerable valueEnumerable
-				? valueEnumerable.EnumerableToWordList()
+				? $"{ReturnType.Name}: " + valueEnumerable.EnumerableToWordList(", ", true)
 				: ReturnType.IsIterator
 					? $"Unknown Iterator {ReturnType.Name}: {Value}"
 					: $"{ReturnType.Name}:{Value}";

@@ -121,9 +121,12 @@ public sealed class For(Expression[] customVariables, Expression iterator, Expre
 	private static void AddImplicitVariables(Body body, ReadOnlySpan<char> line, Body innerBody)
 	{
 		innerBody.AddVariable(Base.IndexLowercase, new Number(body.Method, 0), true);
-		innerBody.AddVariable(Base.ValueLowercase,
-			innerBody.Method.ParseExpression(innerBody, GetVariableExpressionValue(body, line), true),
-			true);
+		var valueExpression = innerBody.Method.ParseExpression(innerBody,
+			GetVariableExpressionValue(body, line), true);
+		if (valueExpression.ReturnType is GenericTypeImplementation { Generic.Name: Base.List } ||
+			valueExpression.ReturnType.Name == Base.List)
+			valueExpression = new ListCall(valueExpression, new Number(body.Method, 0));
+		innerBody.AddVariable(Base.ValueLowercase, valueExpression, true);
 	}
 
 	private static string GetVariableExpressionValue(Body body, ReadOnlySpan<char> line,

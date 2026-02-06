@@ -44,6 +44,7 @@ public sealed class ExecutionContext(Type type)
 	public sealed class VariableNotFound(string name) : Exception($"Variable '{name}' not found");
 
 	public override string ToString() =>
-		nameof(ExecutionContext) + " Type=" + Type.Name + ", This=" + This + ", Variables=" +
-		Variables.DictionaryToWordList();
+		nameof(ExecutionContext) + " Type=" + Type.Name + ", This=" + This + ", Variables:" +
+		Environment.NewLine + "  " +
+		Variables.DictionaryToWordList(Environment.NewLine + "  ", " ", true);
 }

@@ -152,5 +152,25 @@ public sealed class TestExecutorTests
 	}
 
 	[Test]
+	public void RunListLength()
+	{
+		using var type = new Type(TestPackage.Instance,
+				new TypeLines(nameof(RunNumberToCharacterBody), "has numbers",
+					// @formatter:off
+					"Length Number",
+					"\tfor numbers",
+					"\t\t1")).
+			ParseMembersAndMethods(new MethodExpressionParser());
+		Assert.That(type.Methods[0].GetBodyAndParseIfNeeded().ToString(),
+			Is.EqualTo(new[]
+			{
+				"for numbers",
+				"\t1"
+				// @formatter:on
+			}.ToWordList(Environment.NewLine)));
+		executor.RunAllTestsInType(type);
+	}
+
+	[Test]
 	public void RunAllTestsInPackage() => executor.RunAllTestsInPackage(TestPackage.Instance);
 }
