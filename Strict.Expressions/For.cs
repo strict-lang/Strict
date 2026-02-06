@@ -16,7 +16,9 @@ public sealed class For(Expression[] customVariables, Expression iterator, Expre
 	public Expression Iterator { get; } = iterator;
 	public Expression Body { get; } = body;
 	public override int GetHashCode() => Iterator.GetHashCode();
-	public override string ToString() => $"for {InCustomVariables()}{Iterator}\n\t{Body}";
+
+	public override string ToString() =>
+		$"for {InCustomVariables()}{Iterator}" + Environment.NewLine + "\t" + Body;
 
 	private string InCustomVariables() =>
 		CustomVariables.Length > 0

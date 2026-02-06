@@ -1,4 +1,4 @@
-﻿using Strict.HighLevelRuntime;
+using Strict.HighLevelRuntime;
 using Strict.Language;
 using Type = Strict.Language.Type;
 

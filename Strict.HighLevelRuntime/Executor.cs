@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Globalization;
 using Strict.Expressions;
 using Strict.Language;
@@ -33,20 +34,18 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 			throw new TooManyArguments(method, args[method.Parameters.Count].ToString(), args);
 		for (var index = 0; index < args.Count; index++)
 			if (!args[index].ReturnType.IsSameOrCanBeUsedAs(method.Parameters[index].Type) &&
-				!method.Parameters[index].Type.IsIterator)
+				!method.Parameters[index].Type.IsIterator &&
+				!IsSingleCharacterTextArgument(method.Parameters[index].Type, args[index]))
 				throw new ArgumentDoesNotMapToMethodParameters(method,
-					"Method parameter " + method.Parameters[index].ToStringWithInnerMembers() +
-					" cannot be assigned from argument " + args[index]);
+					"Method \"" + method + "\" parameter " + index + ": " +
+					method.Parameters[index].ToStringWithInnerMembers() +
+					" cannot be assigned from argument " + args[index] + " " + args[index].ReturnType);
 		// If we are in a from constructor, create the instance here
 		if (method.Name == Method.From)
 		{
 			if (instance != null)
 				throw new MethodCall.CannotCallFromConstructorWithExistingInstance();
-			instance = new ValueInstance(method.Type, args.Count == 0
-				? null
-				: args.Count == 1 && method.Type.IsSameOrCanBeUsedAs(args[0].ReturnType)
-					? args[0].Value
-					: ConvertFromArgumentsToDictionary(method, args));
+			instance = new ValueInstance(method.Type, GetFromConstructorValue(method, args));
 		}
 		var context = new ExecutionContext(method.Type) { This = instance };
 		if (!runOnlyTests)
@@ -115,14 +114,45 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 		for (var index = 0; index < args.Count; index++)
 		{
 			var parameter = fromMethod.Parameters[index];
-			if (!args[index].ReturnType.IsSameOrCanBeUsedAs(parameter.Type) && !parameter.Type.IsIterator)
+			if (!args[index].ReturnType.IsSameOrCanBeUsedAs(parameter.Type) &&
+				!parameter.Type.IsIterator &&
+				!IsSingleCharacterTextArgument(parameter.Type, args[index]))
 				throw new InvalidTypeForArgument(type, args, index);
-			result.Add(GetMemberName(type, parameter.Name), args[index].Value);
+			result.Add(GetMemberName(parameter.Name),
+				TryConvertSingleCharacterText(parameter.Type, args[index]));
 		}
 		return result;
 	}
 
-	private static string GetMemberName(Type type, string parameterName) =>
+	private static object? GetFromConstructorValue(Method method, IReadOnlyList<ValueInstance> args)
+	{
+		if (args.Count == 0)
+			return null;
+		if (args.Count == 1)
+		{
+			var arg = args[0];
+			if (method.Type.Name == Base.Character && IsSingleCharacterTextArgument(method.Type, arg))
+				return (int)((string)arg.Value!)[0];
+			if (method.Type.IsSameOrCanBeUsedAs(arg.ReturnType) &&
+				!IsSingleCharacterTextArgument(method.Type, arg))
+				return arg.Value;
+		}
+		return ConvertFromArgumentsToDictionary(method, args);
+	}
+
+	private static object? TryConvertSingleCharacterText(Type targetType, ValueInstance value)
+	{
+		if (value.ReturnType.Name == Base.Text && value.Value is string text && text.Length == 1 &&
+			targetType.Name is Base.Number or Base.Character)
+			return (int)text[0];
+		return value.Value;
+	}
+
+	private static bool IsSingleCharacterTextArgument(Type targetType, ValueInstance value) =>
+		value.ReturnType.Name == Base.Text && value.Value is string text && text.Length == 1 &&
+		targetType.Name is Base.Number or Base.Character;
+
+	private static string GetMemberName(string parameterName) =>
 		parameterName.Length > 0
 			? char.ToUpperInvariant(parameterName[0]) + parameterName[1..]
 			: parameterName;
@@ -166,6 +196,7 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 					: context.Get(expr.ToString()),
 			MemberCall m => EvaluateMember(m, context),
 			If iff => EvaluateIf(iff, context),
+			For f => EvaluateFor(f, context),
 			Return r => EvaluateReturn(r, context),
 			To t => EvaluateTo(t, context),
 			Not n => EvaluateNot(n, context),
@@ -207,7 +238,7 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 				last = RunExpression(e, ctx);
 				if (runOnlyTests && isTest && !ToBool(last))
 					//TODO: we need to show the stacktrace from an Error inside Strict!
-					throw new TestFailed(body.Method, e, last);
+					throw new TestFailed(body.Method, e, last, GetTestFailureDetails(e, ctx));
 			}
 			if (runOnlyTests && last.Value == null)
 				throw new MethodRequiresTest(body.Method, body);
@@ -283,8 +314,10 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 			body + " ({CountExpressionComplexity(body)} expressions)") { }
 	}
 
-	public sealed class TestFailed(Method method, Expression expression, ValueInstance result)
-		: ExecutionFailed(method, $"\"{method.Name}\" method failed: {expression}, result: {result} in" +
+	public sealed class TestFailed(Method method, Expression expression, ValueInstance result,
+		string details)
+		: ExecutionFailed(method, $"\"{method.Name}\" method failed: {expression}, result: {result}" +
+			(details.Length > 0 ? $", evaluated: {details}" : "") + " in" +
 			Environment.NewLine + $"{method.Type.FilePath}:line {expression.LineNumber + 1}");
 
 	/// <summary>
@@ -297,6 +330,24 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 		e is not Return &&
 		e is not Declaration &&
 		e is not MutableReassignment;
+
+	private string GetTestFailureDetails(Expression expression, ExecutionContext ctx)
+	{
+		if (expression is Binary { Method.Name: BinaryOperator.Is, Instance: not null } binary &&
+			binary.Arguments.Count == 1)
+			return GetBinaryComparisonDetails(binary, ctx, BinaryOperator.Is);
+		if (expression is Not { Instance: Binary { Method.Name: BinaryOperator.Is } notBinary } &&
+			notBinary.Arguments.Count == 1)
+			return GetBinaryComparisonDetails(notBinary, ctx, "is not");
+		return string.Empty;
+	}
+
+	private string GetBinaryComparisonDetails(Binary binary, ExecutionContext ctx, string op)
+	{
+		var left = RunExpression(binary.Instance!, ctx);
+		var right = RunExpression(binary.Arguments[0], ctx);
+		return $"{left} {op} {right}";
+	}
 
 	private ValueInstance EvaluateAndAssign(string name, Expression value, ExecutionContext ctx) =>
 		ctx.Set(name, RunExpression(value, ctx));
@@ -311,8 +362,144 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 				? RunExpression(iff.OptionalElse, ctx)
 				: Bool(true);
 
+	private ValueInstance EvaluateFor(For f, ExecutionContext ctx)
+	{
+		var iterator = RunExpression(f.Iterator, ctx);
+		var values = GetForValues(iterator);
+		if (iterator.ReturnType.Name == Base.Range)
+			return Number(values.Sum(NumberToDouble));
+		double numberResult = 0;
+		var shouldSum = !IsListIterator(iterator.ReturnType);
+		var results = new List<object?>(values.Count);
+		for (var index = 0; index < values.Count; index++)
+		{
+			var loopContext = new ExecutionContext(ctx.Type) { This = ctx.This, Parent = ctx };
+			loopContext.Set(Base.IndexLowercase, new ValueInstance(numberType, index));
+			loopContext.Set(Base.ValueLowercase, new ValueInstance(GetForValueType(iterator), values[index]));
+			foreach (var customVariable in f.CustomVariables)
+				if (customVariable is VariableCall variableCall)
+					loopContext.Set(variableCall.Variable.Name,
+						new ValueInstance(variableCall.ReturnType, values[index]));
+			var result = RunExpression(f.Body, loopContext);
+			if (shouldSum && result.Value is IConvertible)
+				numberResult += NumberToDouble(result.Value);
+			else
+			{
+				shouldSum = false;
+				results.Add(result.Value);
+			}
+		}
+		if (!shouldSum && !IsListIterator(iterator.ReturnType) && TrySumResults(results, out var sum))
+			return Number(sum);
+		return shouldSum
+			? Number(numberResult)
+			: new ValueInstance(listType, results);
+	}
+
+	private static bool TrySumResults(IReadOnlyList<object?> results, out double sum)
+	{
+		sum = 0;
+		for (var i = 0; i < results.Count; i++)
+		{
+			var value = results[i] is ValueInstance instance
+				? instance.Value
+				: results[i];
+			if (value is not IConvertible)
+				return false;
+			sum += NumberToDouble(value);
+		}
+		return true;
+	}
+
+	private static IReadOnlyList<object?> GetForValues(ValueInstance iterator) =>
+		iterator.Value switch
+		{
+			IDictionary<string, object?> dict when iterator.ReturnType.Name == Base.Range =>
+				GetRangeValues(dict),
+			IList list => list.Cast<object?>().ToList(),
+			int count => Enumerable.Range(0, count).Cast<object?>().ToList(),
+			double countDouble => Enumerable.Range(0, (int)countDouble).Cast<object?>().ToList(),
+			_ => throw new NotSupportedException("Iterator not supported: " + iterator.ReturnType.Name)
+		};
+
+	private static IReadOnlyList<object?> GetRangeValues(IDictionary<string, object?> dict)
+	{
+		var start = Convert.ToInt32(dict["Start"]);
+		var end = Convert.ToInt32(dict["ExclusiveEnd"]);
+		var range = new List<object?>();
+		for (var i = start; i < end; i++)
+			range.Add((double)i);
+		return range;
+	}
+
+	private Type GetForValueType(ValueInstance iterator) =>
+		iterator.ReturnType is GenericTypeImplementation { Generic.Name: Base.List } listType
+			? listType.ImplementationTypes[0]
+			: numberType;
+
+	private static bool IsListIterator(Type type) =>
+		type.Name == Base.List || type is GenericTypeImplementation { Generic.Name: Base.List };
+
+	private static bool IsValueOnlyForBody(Expression body) =>
+		body is VariableCall { Variable.Name: Base.ValueLowercase } ||
+		body is Body { Expressions.Count: 1 } forBody &&
+			IsValueOnlyForBody(forBody.Expressions[0]);
+
+	private static bool AreInstancesEqual(ValueInstance left, ValueInstance right)
+	{
+		if (!left.ReturnType.IsSameOrCanBeUsedAs(right.ReturnType) &&
+			!right.ReturnType.IsSameOrCanBeUsedAs(left.ReturnType))
+			return false;
+		return AreValuesEqual(left.Value, right.Value);
+	}
+
+	private static bool AreValuesEqual(object? left, object? right)
+	{
+		if (ReferenceEquals(left, right))
+			return true;
+		left = left is ValueInstance leftInstance ? leftInstance.Value : left;
+		right = right is ValueInstance rightInstance ? rightInstance.Value : right;
+		if (left is IDictionary leftDict && right is IDictionary rightDict)
+			return AreDictionariesEqual(leftDict, rightDict);
+		if (left is IList leftList && right is IList rightList)
+			return AreListsEqual(leftList, rightList);
+		if (IsNumeric(left) && IsNumeric(right))
+			return NumberToDouble(left) == NumberToDouble(right);
+		return Equals(left, right);
+	}
+
+	private static bool AreListsEqual(IList left, IList right)
+	{
+		if (left.Count != right.Count)
+			return false;
+		for (var i = 0; i < left.Count; i++)
+			if (!AreValuesEqual(left[i], right[i]))
+				return false;
+		return true;
+	}
+
+	private static bool AreDictionariesEqual(IDictionary left, IDictionary right)
+	{
+		if (left.Count != right.Count)
+			return false;
+		foreach (DictionaryEntry entry in left)
+		{
+			if (!right.Contains(entry.Key))
+				return false;
+			if (!AreValuesEqual(entry.Value, right[entry.Key]))
+				return false;
+		}
+		return true;
+	}
+
+	private static bool IsNumeric(object? value) =>
+		value is sbyte or byte or short or ushort or int or uint or long or ulong or float or double
+			or decimal;
+
 	private ValueInstance EvaluateTo(To to, ExecutionContext ctx)
 	{
+		if (!to.Method.IsTrait && to.Method.Type.Name != Base.Number)
+			return EvaluateMethodCall(to, ctx);
 		var left = RunExpression(to.Instance!, ctx).Value;
 		if (to.ConversionType.Name == Base.Text)
 			return new ValueInstance(to.ConversionType, left?.ToString() ?? "");
@@ -408,16 +595,23 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 				}
 				//TODO: support conversions needed for Character, maybe Number <-> Text
 				if (call.Instance.ReturnType.Name == Base.Character && right is string rightText)
+				{
 					right = (int)rightText[0];
+					rightInstance = new ValueInstance(call.Instance.ReturnType, right);
+				}
 				if (call.Instance.ReturnType.Name == Base.Text && right is int rightInt)
+				{
 					right = rightInt + "";
+					rightInstance = new ValueInstance(call.Instance.ReturnType, right);
+				}
 				//TODO: support comparison of derived types (Name <-> Text, etc.)
 				//TODO: if is operator only defines (other), both left and right must match type, if not error out here
 				//TODO: think about containing types, probably should not be is supported, but can be converted and then compared (e.g. File to Text is "some.txt"
 				//TODO: use is operator of type if it is defined for non Number, non Text!
+				var equals = AreInstancesEqual(leftInstance, rightInstance);
 				return op is BinaryOperator.Is
-					? Bool(Equals(left, right))
-					: Bool(!Equals(left, right));
+					? Bool(equals)
+					: Bool(!equals);
 			}
 			var l = NumberToDouble(left);
 			var r = NumberToDouble(right);
@@ -441,6 +635,7 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 
 	private ValueInstance Bool(bool b) => new(boolType, b);
 	private readonly Type boolType = basePackage.FindType(Base.Boolean)!;
+	private readonly Type listType = basePackage.FindType(Base.List)!;
 
 	private static bool ToBool(object? v) =>
 		v switch

@@ -89,7 +89,7 @@ public class TestPackage : Package
 			"\tRange(1, 4).Reverse is Range(3, 0)",
 			"\tRange(10, 5).Reverse is Range(6, 11)",
 			"\tRange(-5, -10).Reverse is Range(-9, -4)",
-			"\tLength > 0 ? Range(ExclusiveEnd - 1 , Start - 1) else Range(ExclusiveEnd + 1, Start + 1)"));
+			"\tLength > 0 ? Range(ExclusiveEnd - 1, Start - 1) else Range(ExclusiveEnd + 1, Start + 1)"));
 		var character = new Type(this, new TypeLines(Base.Character,
 			"has number",
 			"constant zeroCharacter = 48",
@@ -99,7 +99,7 @@ public class TestPackage : Package
 			"\tCharacter(\"3\") to Number is 3",
 			"\tconstant notANumber = Error",
 			"\tCharacter(\"A\") to Number is notANumber",
-			"\tconstant result = number - zeroCharacter",
+			"\tlet result = number - zeroCharacter",
 			"\tresult is in Range(0, 10) ? result else notANumber(value)"));
 		var mutable = new Type(this, new TypeLines(Base.Mutable,
 			"has generic"));
@@ -173,7 +173,12 @@ public class TestPackage : Package
 			"\t(\"Hi\", \"Hello\", \"Hi\").Count(\"Hi\") is 2",
 			"\tfor elements",
 			"\t\tif element is value",
-			"\t\t\t1"));
+			"\t\t\t1",
+			"Reverse List",
+			"\t(1, 2, 3).Reverse is (3, 2, 1)",
+			"\t(5, 10, 5).Reverse is (5, 10, 5)",
+			"\tfor Range(0, value.Length).Reverse",
+			"\t\touter.value(index)"));
 		var text = new Type(this, new TypeLines(Base.Text,
 			"has characters",
 			"from(number)",

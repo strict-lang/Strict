@@ -71,25 +71,25 @@ public sealed class ForTests : TestExpressions
 	[Test]
 	public void ParseForRangeExpression() =>
 		Assert.That(((For)ParseExpression("for Range(2, 5)", "\tlogger.Log(index)")).ToString(),
-			Is.EqualTo("for Range(2, 5)\n\tlogger.Log(index)"));
+			Is.EqualTo("for Range(2, 5)" + Environment.NewLine + "\tlogger.Log(index)"));
 
 	[Test]
 	public void ParseForInExpression() =>
 		Assert.That(
 			((For)((Body)ParseExpression("mutable myIndex = 0", "for myIndex in Range(0, 5)",
 				"\tlogger.Log(myIndex)")).Expressions[1]).ToString(),
-			Is.EqualTo("for myIndex in Range(0, 5)\n\tlogger.Log(myIndex)"));
+			Is.EqualTo("for myIndex in Range(0, 5)\r\n\tlogger.Log(myIndex)"));
 
 	[TestCase("for myIndex in Range(0, 5)", "\tlogger.Log(myIndex)",
-		"for myIndex in Range(0, 5)\n\tlogger.Log(myIndex)")]
-	[TestCase("for (1, 2, 3)", "\tlogger.Log(index)", "for (1, 2, 3)\n\tlogger.Log(index)")]
-	[TestCase("for (1, 2, 3)", "\tlogger.Log(value)", "for (1, 2, 3)\n\tlogger.Log(value)")]
+		"for myIndex in Range(0, 5)\r\n\tlogger.Log(myIndex)")]
+	[TestCase("for (1, 2, 3)", "\tlogger.Log(index)", "for (1, 2, 3)\r\n\tlogger.Log(index)")]
+	[TestCase("for (1, 2, 3)", "\tlogger.Log(value)", "for (1, 2, 3)\r\n\tlogger.Log(value)")]
 	[TestCase("for myIndex in Range(2, 5)", "\tlogger.Log(myIndex)", "\tfor Range(0, 10)",
 		"\t\tlogger.Log(index)",
-		"for myIndex in Range(2, 5)\n\tlogger.Log(myIndex)\r\nfor Range(0, 10)\n\tlogger.Log(index)")]
+		"for myIndex in Range(2, 5)\r\n\tlogger.Log(myIndex)\r\nfor Range(0, 10)\r\n\tlogger.Log(index)")]
 	[TestCase("for firstIndex in Range(1, 10)", "for secondIndex in Range(1, 10)",
 		"\tlogger.Log(firstIndex)", "\tlogger.Log(secondIndex)",
-		"for firstIndex in Range(1, 10)\n\tfor secondIndex in Range(1, 10)\n\tlogger.Log(firstIndex)\r\nlogger.Log(secondIndex)")]
+		"for firstIndex in Range(1, 10)\r\n\tfor secondIndex in Range(1, 10)\r\n\tlogger.Log(firstIndex)\r\nlogger.Log(secondIndex)")]
 	public void ParseForExpressionWithCustomVariableName(params string[] lines) =>
 		Assert.That(((For)ParseExpression(lines[..^1])).ToString(), Is.EqualTo(lines[^1]));
 
@@ -100,17 +100,17 @@ public sealed class ForTests : TestExpressions
 				Body).Arguments[0]).ReturnType.FullName, Is.EqualTo("TestPackage.Number"));
 
 	[TestCase("constant elements = (1, 2, 3)", "for elements", "\tlogger.Log(index)",
-		"for elements\n\tlogger.Log(index)")]
+		"for elements\r\n\tlogger.Log(index)")]
 	[TestCase("constant elements = (1, 2, 3)", "for Range(0, elements.Length)", "\tlogger.Log(index)",
-		"for Range(0, elements.Length)\n\tlogger.Log(index)")]
+		"for Range(0, elements.Length)\r\n\tlogger.Log(index)")]
 	[TestCase("mutable element = 0", "for element in (1, 2, 3)", "\tlogger.Log(element)",
-		"for element in (1, 2, 3)\n\tlogger.Log(element)")]
+		"for element in (1, 2, 3)\r\n\tlogger.Log(element)")]
 	[TestCase("constant iterationCount = 10", "for iterationCount", "\tlogger.Log(index)",
-		"for iterationCount\n\tlogger.Log(index)")]
+		"for iterationCount\r\n\tlogger.Log(index)")]
 	[TestCase("constant dummy = 0", "for 10", "\tlogger.Log(index)",
-		"for 10\n\tlogger.Log(index)")]
+		"for 10\r\n\tlogger.Log(index)")]
 	[TestCase("mutable element = \"1\"", "for element in (\"1\", \"2\", \"3\")",
-		"\tlogger.Log(element)", "for element in (\"1\", \"2\", \"3\")\n\tlogger.Log(element)")]
+		"\tlogger.Log(element)", "for element in (\"1\", \"2\", \"3\")\r\n\tlogger.Log(element)")]
 	public void ParseForListExpressionWithIterableVariable(params string[] lines) =>
 		Assert.That(((For)((Body)ParseExpression(lines[..^1])).Expressions[1]).ToString(),
 			Is.EqualTo(lines[^1]));

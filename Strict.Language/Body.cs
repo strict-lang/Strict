@@ -174,9 +174,9 @@ public sealed class Body : Expression
 		if (!name.Length.IsWithinLimit())
 			throw new NamedType.NameLengthIsNotWithinTheAllowedLimit(name);
 		CheckForNameWithDifferentTypeUsage(name, value);
-		var oldVariable = FindVariable(name.AsSpan());
-		if (oldVariable is not null)
-			throw new VariableNameIsAlreadyInUse(this, oldVariable, value);
+		if (name != Base.IndexLowercase && name != Base.ValueLowercase &&
+			FindVariable(name.AsSpan()) is not null)
+			throw new VariableNameIsAlreadyInUse(this, FindVariable(name.AsSpan())!, value);
 		(Variables ??= new List<Variable>()).Add(new Variable(name, isMutable, value, this));
 		return this;
 	}

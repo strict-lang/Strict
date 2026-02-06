@@ -127,6 +127,30 @@ public sealed class TestExecutorTests
 		executor.RunAllTestsInType(type);
 	}
 
-	//TODO: [Test]
-	//public void RunAllTestsInPackage() => executor.RunAllTestsInPackage(TestPackage.Instance);
+	[Test]
+	public void RunRangeSum()
+	{
+		using var type = new Type(TestPackage.Instance,
+				new TypeLines(nameof(RunNumberToCharacterBody), "has number",
+					// @formatter:off
+					"SumRange(range) Number",
+					"\tSumRange(Range(2, 5)) is 2 + 3 + 4",
+					"\tSumRange(Range(42, 45)) is 42 + 43 + 44",
+					"\tfor range",
+					"\t\tvalue")).
+			ParseMembersAndMethods(new MethodExpressionParser());
+		Assert.That(type.Methods[0].GetBodyAndParseIfNeeded().ToString(),
+			Is.EqualTo(new[]
+			{
+				"SumRange(Range(2, 5)) is 2 + 3 + 4",
+				"SumRange(Range(42, 45)) is 42 + 43 + 44",
+				"for range",
+				"\tvalue"
+				// @formatter:on
+			}.ToWordList(Environment.NewLine)));
+		executor.RunAllTestsInType(type);
+	}
+
+	[Test]
+	public void RunAllTestsInPackage() => executor.RunAllTestsInPackage(TestPackage.Instance);
 }

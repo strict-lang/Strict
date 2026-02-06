@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Runtime.CompilerServices;
 
 namespace Strict.Language;
@@ -166,8 +166,8 @@ public class Package : Context, IEnumerable<Type>, IDisposable
 	}
 
 	internal void Remove(Package package) => children.Remove(package);
-	public IEnumerator<Type> GetEnumerator() => types.Values.GetEnumerator(); //ncrunch: no coverage
-	IEnumerator IEnumerable.GetEnumerator() => GetEnumerator(); //ncrunch: no coverage
+	public IEnumerator<Type> GetEnumerator() => new List<Type>(types.Values).GetEnumerator();
+	IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
 	// ReSharper disable once ConditionalAccessQualifierIsNonNullableAccordingToAPIContract
 	public void Dispose() => ((Package)Parent)?.Remove(this);

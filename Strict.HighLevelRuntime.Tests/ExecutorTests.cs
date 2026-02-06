@@ -244,6 +244,15 @@ public sealed class ExecutorTests
 	}
 
 	[Test]
+	public void EvaluateRangeEquality()
+	{
+		using var t = CreateType(nameof(EvaluateRangeEquality), "has number", "Compare Boolean",
+			"\tRange(0, 5) is Range(0, 5)");
+		var result = executor.Execute(t.Methods.Single(m => m.Name == "Compare"), null, []);
+		Assert.That(result.Value, Is.EqualTo(true));
+	}
+
+	[Test]
 	public void EvaluateToTextAndNumber()
 	{
 		using var t = CreateType(nameof(EvaluateToTextAndNumber), "has number",
@@ -266,6 +275,7 @@ public sealed class ExecutorTests
 		Assert.That(executor.Execute(t.Methods.Single(m => m.Name == "Compare"), null, []).Value,
 			Is.EqualTo(true));
 	}
+
 
 	[Test]
 	public void MultilineMethodRequiresTests()
