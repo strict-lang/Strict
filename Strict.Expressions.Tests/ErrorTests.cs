@@ -68,6 +68,7 @@ public sealed class ErrorTests : TestExpressions
 		var body = (Body)programType.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(body.Expressions[0], Is.InstanceOf<Declaration>());
 		var methodCall = (MethodCall)body.Expressions[1];
-		Assert.That(methodCall.Arguments[0].ToString(), Is.EqualTo("number"));
+		Assert.That(methodCall.Arguments[0].ToString(), Is.EqualTo("someError"));
+		Assert.That(methodCall.Arguments[1].ToString(), Is.EqualTo("number"));
 	}
 }

@@ -64,8 +64,7 @@ public sealed class ValueInstance
 				if (ReturnType.Members.All(m => !m.Name.Equals(assignMember.Key, StringComparison.OrdinalIgnoreCase)))
 					throw new UnableToAssignMemberToType(assignMember, valueDictionary, ReturnType);
 		}
-		else
-		//TODO: RunNumberToCharacterBody still fails here, we need to allow Errors to be thrown and compared
+		else if (!ReturnType.IsSameOrCanBeUsedAs(ReturnType.GetType(Base.Error)))
 			throw new InvalidTypeValue(ReturnType, Value);
 	}
 

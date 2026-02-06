@@ -212,7 +212,8 @@ public class TestPackage : Package
 		var textWriter = new Type(this, new TypeLines(Base.TextWriter, "Write(text)"));
 		var textReader = new Type(this, new TypeLines(Base.TextReader, "Read Text"));
 		var name = new Type(this, new TypeLines(Base.Name, "has text"));
-		var error = new Type(this, new TypeLines(Base.Error, "has Name", "has Stacktraces"));
+		var error = new Type(this, new TypeLines(Base.Error, "has Name", "has Stacktraces",
+			"Text Text", "\tName to Text"));
 		var errorWithValue = new Type(this, new TypeLines(Base.ErrorWithValue, "has Error",
 			"has Value Generic"));
 		var method = new Type(this, new TypeLines(Base.Method, "has Name", "has Type"));

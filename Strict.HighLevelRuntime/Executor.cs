@@ -313,16 +313,14 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 
 	private ValueInstance EvaluateTo(To to, ExecutionContext ctx)
 	{
-		if (!to.Method.IsTrait)
-			return EvaluateMethodCall(to, ctx);
 		var left = RunExpression(to.Instance!, ctx).Value;
 		if (to.ConversionType.Name == Base.Text)
 			return new ValueInstance(to.ConversionType, left?.ToString() ?? "");
 		if (to.ConversionType.Name == Base.Number)
 			return new ValueInstance(to.ConversionType, NumberToDouble(left));
-		if (to.ConversionType.Name == Base.Character)
-			return new ValueInstance(to.ConversionType, (int)(left + "")[0]);
-		throw new NotSupportedException("Conversion to " + to.ConversionType.Name + " not supported");
+		if (!to.Method.IsTrait)
+			return EvaluateMethodCall(to, ctx);
+		throw new NotSupportedException("Conversion to " + to.ConversionType.Name + " not supported"); //ncrunch: no coverage
 	}
 
 	private ValueInstance EvaluateNot(Not not, ExecutionContext ctx) =>
@@ -374,8 +372,10 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 	{
 		if (call.Instance == null || call.Arguments.Count != 1)
 			throw new InvalidOperationException("Binary call must have instance and 1 argument"); //ncrunch: no coverage
-		var left = RunExpression(call.Instance, ctx).Value;
-		var right = RunExpression(call.Arguments[0], ctx).Value;
+		var leftInstance = RunExpression(call.Instance, ctx);
+		var rightInstance = RunExpression(call.Arguments[0], ctx);
+		var left = leftInstance.Value;
+		var right = rightInstance.Value;
 		var op = call.Method.Name;
 		if (IsArithmetic(op))
 		{
@@ -398,6 +398,14 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 			{
 				if (left == null || right == null)
 					throw new ComparisonsToNullAreNotAllowed(call.Method, left, right);
+				// Error comparison: allow ErrorWithValue to match Error and compare specific error types
+				if (rightInstance.ReturnType.IsError)
+				{
+					var matches = rightInstance.ReturnType.Name == Base.Error
+						? leftInstance.ReturnType.IsError
+						: leftInstance.ReturnType.IsSameOrCanBeUsedAs(rightInstance.ReturnType);
+					return op is BinaryOperator.Is ? Bool(matches) : Bool(!matches);
+				}
 				//TODO: support conversions needed for Character, maybe Number <-> Text
 				if (call.Instance.ReturnType.Name == Base.Character && right is string rightText)
 					right = (int)rightText[0];

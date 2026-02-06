@@ -1,5 +1,6 @@
 using System.Reflection;
 using static Strict.Language.Type;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Strict.Language;
 
@@ -11,7 +12,7 @@ internal class TypeMethodFinder(Type type)
 		!Type.AvailableMethods.TryGetValue(Method.From, out var methods)
 			? null
 			: methods.FirstOrDefault(m => IsMethodWithMatchingParametersType(m, implementationTypes,
-				TryGetSingleElementType(implementationTypes)));
+				TryGetSingleElementType(implementationTypes), Type));
 
 	public Method GetMethod(string methodName, IReadOnlyList<Expression> arguments) =>
 		FindMethod(methodName, arguments) ??
@@ -58,7 +59,7 @@ internal class TypeMethodFinder(Type type)
 		var typesOfArguments = arguments.Select(argument => argument.ReturnType).ToList();
 		var commonTypeOfArguments = TryGetSingleElementType(typesOfArguments);
 		foreach (var method in matchingMethods)
-			if (IsMethodWithMatchingParametersType(method, typesOfArguments, commonTypeOfArguments) ||
+			if (IsMethodWithMatchingParametersType(method, typesOfArguments, commonTypeOfArguments, Type) ||
 				commonTypeOfArguments != null && commonTypeOfArguments ==
 				GetListElementTypeIfHasSingleParameter(method, arguments.Count))
 				return method;
@@ -79,19 +80,8 @@ internal class TypeMethodFinder(Type type)
 				IsFromConstructorWithMatchingConstraints(matchingMethods[0], arguments.Count))
 				return matchingMethods[0];
 		}
-		if (IsAnyIsComparison(methodName, arguments, matchingMethods))
-			return matchingMethods[0];
 		throw new ArgumentsDoNotMatchMethodParameters(arguments, Type, matchingMethods);
 	}
-
-	/// <summary>
-	/// Allow `is`/`is not` comparisons against Any even if the argument is not literally Any.
-	/// This is used by data types like Range in TestPackage where equality is defined as `is(other Any)`.
-	/// </summary>
-	private static bool IsAnyIsComparison(string methodName, IReadOnlyList<Expression> arguments,
-		IReadOnlyList<Method> matchingMethods) =>
-		methodName is BinaryOperator.Is or UnaryOperator.Not && arguments.Count == 1 &&
-		matchingMethods.Any(m => m.Parameters is [{ Type.Name: Base.Any }]);
 
 	private static string GetTextValue(Expression argument) =>
 		argument.GetType().GetProperty("Data", BindingFlags.Instance | BindingFlags.Public)?.
@@ -132,8 +122,14 @@ internal class TypeMethodFinder(Type type)
 	}
 
 	private static bool IsMethodWithMatchingParametersType(Method method,
-		IReadOnlyList<Type> typesOfArguments, Type? commonTypeOfArguments)
+		IReadOnlyList<Type> typesOfArguments, Type? commonTypeOfArguments, Type currentType)
 	{
+		// Allow `is`/`is not` comparisons against our own type (Range is Range), those are mostly not
+		// implemented. Also, always allow comparison against Errors for error checking.
+		if (method.Name is BinaryOperator.Is or UnaryOperator.Not && method.Parameters.Count > 0 &&
+			method.Parameters[0].Type.Name == Base.Any && (commonTypeOfArguments == currentType ||
+				commonTypeOfArguments?.Name == Base.Error))
+			return true;
 		// Don't check trait methods, but allow Run for tests and from constructors
 		if (method.IsTrait && method.Name != Base.Run && method.Name != Method.From &&
 			// Also is type checks are ok and some types are not implemented, but done at the runtime!

@@ -87,11 +87,29 @@ public class MethodCall : ConcreteExpression
 				];
 			else if (arguments.Count > 1)
 				throw new Type.ArgumentsDoNotMatchMethodParameters(arguments, fromType, fromType.Methods);
+			else if (basedOnErrorVariable != null)
+			{
+				arguments =
+				[
+					basedOnErrorVariable,
+					arguments[0]
+				];
+				fromType = fromType.GetType(Base.ErrorWithValue).
+					GetGenericImplementation(arguments[1].ReturnType);
+			}
+			else if (arguments[0] is Value { ReturnType.Name: Base.Text } textValue)
+			{
+				arguments =
+				[
+					new Value(body.Method.GetType(Base.Name), textValue.Data?.ToString() ?? ""),
+					CreateListFromMethodCall(body, Base.Stacktrace, CreateStacktraces(body))
+				];
+			}
 			else
 			{
 				arguments =
 				[
-					basedOnErrorVariable ?? CreateFromMethodCall(body, fromType, []),
+					CreateFromMethodCall(body, fromType, []),
 					arguments[0]
 				];
 				fromType = fromType.GetType(Base.ErrorWithValue).
