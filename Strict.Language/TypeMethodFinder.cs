@@ -1,6 +1,5 @@
 using System.Reflection;
 using static Strict.Language.Type;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Strict.Language;
 

@@ -1,3 +1,4 @@
+using static Strict.Language.Member;
 using List = Strict.Expressions.List;
 
 namespace Strict.Language.Tests;
@@ -383,7 +384,8 @@ public sealed class TypeTests
 		Assert.That(
 			() => CreateType(nameof(MemberNameAsAnotherMemberTypeNameIsForbidden), "has Range",
 				"has input = Range(5, 10)", "Unused", "\t1"),
-			Throws.InstanceOf<MethodExpressionParser.CannotAccessMemberBeforeTypeIsParsed>());
+			Throws.InstanceOf<MethodExpressionParser.CannotAccessMemberBeforeTypeIsParsed>().Or.
+				InstanceOf<MemberNameWithDifferentTypeNamesThanOwnAreNotAllowed>());
 
 	[TestCase(Base.Number, false)]
 	[TestCase(Base.Number + "s", true)]

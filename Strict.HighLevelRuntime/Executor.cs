@@ -47,7 +47,7 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 				throw new MethodCall.CannotCallFromConstructorWithExistingInstance();
 			instance = new ValueInstance(method.Type, GetFromConstructorValue(method, args));
 		}
-		var context = new ExecutionContext(method.Type) { This = instance };
+		var context = new ExecutionContext(method.Type, method) { This = instance };
 		if (!runOnlyTests)
 			for (var i = 0; i < method.Parameters.Count; i++)
 			{
@@ -68,7 +68,7 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 			Expression body;
 			try
 			{
-				body = method.GetBodyAndParseIfNeeded();
+				body = method.GetBodyAndParseIfNeeded(runOnlyTests && method.Type.IsGeneric);
 			}
 			catch (Exception inner) when (runOnlyTests)
 			{
@@ -127,7 +127,9 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 	private static object? GetFromConstructorValue(Method method, IReadOnlyList<ValueInstance> args)
 	{
 		if (args.Count == 0)
-			return null;
+			return method.Type.Name == Base.Text
+				? ""
+				: null;
 		if (args.Count == 1)
 		{
 			var arg = args[0];
@@ -239,12 +241,13 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 					continue;
 				last = RunExpression(e, ctx);
 				if (runOnlyTests && isTest && !ToBool(last))
-					//TODO: we need to show the stacktrace from an Error inside Strict!
 					throw new TestFailed(body.Method, e, last, GetTestFailureDetails(e, ctx));
 			}
 			if (runOnlyTests && last.Value == null && body.Method.Name != Base.Run)
 				throw new MethodRequiresTest(body.Method, body);
-			return last;
+			return runOnlyTests || last.ReturnType.IsError || body.Method.ReturnType == last.ReturnType
+				? last
+				: throw new ReturnTypeMustMatchMethod(body, last);
 		}
 		catch (ExecutionFailed ex)
 		{
@@ -258,6 +261,10 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 				inlineTestDepth--;
 		}
 	}
+
+	public sealed class ReturnTypeMustMatchMethod(Body body, ValueInstance last) : ExecutionFailed(
+		body.Method, "Return value " + last + " does not match method " + body.Method.Name +
+		" ReturnType=" + body.Method.ReturnType);
 
 	/// <summary>
 	/// Check if a method is simple enough to not require tests by analyzing its raw text.
@@ -317,10 +324,11 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 	}
 
 	public sealed class TestFailed(Method method, Expression expression, ValueInstance result,
-		string details)
-		: ExecutionFailed(method, $"\"{method.Name}\" method failed: {expression}, result: {result}" +
-			(details.Length > 0 ? $", evaluated: {details}" : "") + " in" +
-			Environment.NewLine + $"{method.Type.FilePath}:line {expression.LineNumber + 1}");
+		string details) : ExecutionFailed(method,
+		$"\"{method.Name}\" method failed: {expression}, result: {result}" + (details.Length > 0
+			? $", evaluated: {details}"
+			: "") + " in" + Environment.NewLine +
+		$"{method.Type.FilePath}:line {expression.LineNumber + 1}");
 
 	/// <summary>
 	/// An inline test is typically a standalone boolean expression at the method top level,
@@ -371,11 +379,12 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 		if (iterator.ReturnType.Name == Base.Range)
 			return Number(values.Sum(NumberToDouble));
 		double numberResult = 0;
-		var shouldSum = !IsListIterator(iterator.ReturnType);
+		var shouldSum = IsListIterator(iterator.ReturnType) &&
+			ctx.Method.ReturnType.Name == Base.Number;
 		var results = new List<object?>(values.Count);
 		for (var index = 0; index < values.Count; index++)
 		{
-			var loopContext = new ExecutionContext(ctx.Type) { This = ctx.This, Parent = ctx };
+			var loopContext = new ExecutionContext(ctx.Type, ctx.Method) { This = ctx.This, Parent = ctx };
 			loopContext.Set(Base.IndexLowercase, new ValueInstance(numberType, index));
 			loopContext.Set(Base.ValueLowercase, new ValueInstance(GetForValueType(iterator), values[index]));
 			foreach (var customVariable in f.CustomVariables)
@@ -391,26 +400,9 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 				results.Add(result.Value);
 			}
 		}
-		if (!shouldSum && !IsListIterator(iterator.ReturnType) && TrySumResults(results, out var sum))
-			return Number(sum);
 		return shouldSum
 			? Number(numberResult)
 			: new ValueInstance(listType, results);
-	}
-
-	private static bool TrySumResults(IReadOnlyList<object?> results, out double sum)
-	{
-		sum = 0;
-		for (var i = 0; i < results.Count; i++)
-		{
-			var value = results[i] is ValueInstance instance
-				? instance.Value
-				: results[i];
-			if (value is not IConvertible)
-				return false;
-			sum += NumberToDouble(value);
-		}
-		return true;
 	}
 
 	private static IReadOnlyList<object?> GetForValues(ValueInstance iterator) =>
@@ -435,8 +427,8 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 	}
 
 	private Type GetForValueType(ValueInstance iterator) =>
-		iterator.ReturnType is GenericTypeImplementation { Generic.Name: Base.List } listType
-			? listType.ImplementationTypes[0]
+		iterator.ReturnType is GenericTypeImplementation { Generic.Name: Base.List } list
+			? list.ImplementationTypes[0]
 			: numberType;
 
 	private static bool IsListIterator(Type type) =>
@@ -444,8 +436,7 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 
 	private static bool IsValueOnlyForBody(Expression body) =>
 		body is VariableCall { Variable.Name: Base.ValueLowercase } ||
-		body is Body { Expressions.Count: 1 } forBody &&
-			IsValueOnlyForBody(forBody.Expressions[0]);
+		body is Body { Expressions.Count: 1 } forBody && IsValueOnlyForBody(forBody.Expressions[0]);
 
 	private static bool AreInstancesEqual(ValueInstance left, ValueInstance right)
 	{
@@ -572,6 +563,8 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 		var op = call.Method.Name;
 		if (IsArithmetic(op))
 		{
+			//TODO: these are just shortcuts for Number operators, but we don't actually execute them
+			//TODO: in any case, for non datatypes we need to call the operators, only allow this for Boolean, Number, Text, rest should be called!
 			var l = NumberToDouble(left);
 			var r = NumberToDouble(right);
 			return op switch

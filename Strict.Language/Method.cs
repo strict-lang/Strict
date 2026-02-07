@@ -335,10 +335,12 @@ public sealed class Method : Context
 			? Type
 			: Type.FindType(name, searchingFrom ?? this);
 
-	public Expression GetBodyAndParseIfNeeded()
+	public Expression GetBodyAndParseIfNeeded(bool parseTestsOnlyForGeneric = false)
 	{
 		if (methodBody == null)
 			throw new CannotCallBodyOnTraitMethod(Type, Name);
+		if (parseTestsOnlyForGeneric && Type.IsGeneric)
+			return ParseTestsOnlyForGeneric();
 		if (methodBody.Expressions.Count > 0)
 			return methodBody.Expressions.Count == 1
 				? methodBody.Expressions[0]
@@ -354,6 +356,76 @@ public sealed class Method : Context
 		if (Tests.Count < 1 && !IsTestPackage())
 			throw new MethodMustHaveAtLeastOneTest(Type, Name, TypeLineNumber);
 		return BodyParsed?.Invoke(expression) ?? expression;
+	}
+
+	private Expression ParseTestsOnlyForGeneric()
+	{
+		if (methodBody == null)
+			throw new CannotCallBodyOnTraitMethod(Type, Name);
+		if (methodBody.Expressions.Count > 0)
+			return methodBody.Expressions.Count == 1
+				? methodBody.Expressions[0]
+				: methodBody;
+		var expressions = new List<Expression>();
+		for (var index = 1; index < lines.Count; index++)
+		{
+			var line = lines[index];
+			methodBody.ParsingLineNumber = index;
+			if (IsDeclarationLine(line))
+			{
+				var declaration = Parser.ParseLineExpression(methodBody,
+					line.AsSpan(methodBody.Tabs));
+				expressions.Add(declaration);
+				continue;
+			}
+			if (!IsPotentialTestLine(line) || IsControlFlowLine(line))
+				continue;
+			var expression = Parser.ParseLineExpression(methodBody, line.AsSpan(methodBody.Tabs));
+			if (IsStandaloneInlineTestExpression(expression))
+			{
+				Tests.Add(expression);
+				expressions.Add(expression);
+			}
+		}
+		if (Tests.Count < 1 && !IsTestPackage())
+			throw new MethodMustHaveAtLeastOneTest(Type, Name, TypeLineNumber);
+		expressions.Add(new PlaceholderExpression(ReturnType));
+		methodBody.SetExpressions(expressions);
+		return methodBody;
+	}
+
+	private static bool IsPotentialTestLine(string line) =>
+		line.Contains($" {BinaryOperator.Is} ", StringComparison.Ordinal) &&
+		!line.Contains("?");
+
+	private static bool IsDeclarationLine(string line)
+	{
+		var trimmed = line.TrimStart();
+		return trimmed.StartsWith(Keyword.Constant + " ", StringComparison.Ordinal) ||
+			trimmed.StartsWith(Keyword.Let + " ", StringComparison.Ordinal) ||
+			trimmed.StartsWith(Keyword.Mutable + " ", StringComparison.Ordinal);
+	}
+
+	private static bool IsControlFlowLine(string line)
+	{
+		var trimmed = line.TrimStart();
+		return trimmed.StartsWith("if ", StringComparison.Ordinal) ||
+			trimmed.StartsWith("for ", StringComparison.Ordinal) ||
+			trimmed.StartsWith("return ", StringComparison.Ordinal);
+	}
+
+	private static bool IsStandaloneInlineTestExpression(Expression expression) =>
+		expression.ReturnType.Name == Base.Boolean &&
+		expression.GetType().Name is not "If" &&
+		expression.GetType().Name is not Base.Return &&
+		expression.GetType().Name is not Base.Declaration &&
+		expression.GetType().Name is not Base.MutableReassignment;
+
+	private sealed class PlaceholderExpression(Type returnType)
+		: Expression(returnType)
+	{
+		public override bool IsConstant => true;
+		public override string ToString() => ReturnType.Name;
 	}
 
 	public sealed class DeclarationIsNeverUsedAndMustBeRemoved(Type type, int lineNumber,

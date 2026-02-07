@@ -1,5 +1,6 @@
 using Strict.Language;
 using System.Collections;
+using Strict.Expressions;
 using Type = Strict.Language.Type;
 
 namespace Strict.HighLevelRuntime;
@@ -9,7 +10,9 @@ public sealed class ValueInstance
 	public ValueInstance(Type returnType, object? value)
 	{
 		ReturnType = returnType;
-		Value = value;
+		Value = value is Value expressionValue
+			? expressionValue.Data
+			: value;
 		if (ReturnType.IsMutable)
 			throw new InvalidTypeValue(ReturnType, Value);
 		if (ReturnType.Name == Base.None)
@@ -47,14 +50,11 @@ public sealed class ValueInstance
 			if (Value is not double && Value is not int)
 				throw new InvalidTypeValue(ReturnType, Value);
 		}
-		else if (ReturnType.Name == Base.Dictionary)
+		else if (ReturnType.Name == Base.List || ReturnType.Name == Base.Dictionary ||
+			ReturnType is GenericTypeImplementation { Generic.Name: Base.List } ||
+			ReturnType is GenericTypeImplementation { Generic.Name: Base.Dictionary })
 		{
-			if (Value is not IDictionary)
-				throw new InvalidTypeValue(ReturnType, Value);
-		}
-		else if (ReturnType.Name == Base.List)
-		{
-			if (Value is not IList)
+			if (Value is not IList && Value is not IDictionary)
 				throw new InvalidTypeValue(ReturnType, Value);
 		}
 		else if (Value is IDictionary<string, object?> valueDictionary)

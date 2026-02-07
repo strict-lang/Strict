@@ -1,16 +1,20 @@
 using Strict.Language;
 using Strict.Language.Tests;
+using Type = Strict.Language.Type;
 
 namespace Strict.HighLevelRuntime.Tests;
 
 public sealed class ExecutionContextTests
 {
+	[SetUp]
+	public void CreateType() => num = TestPackage.Instance.FindType(Base.Number)!;
+
+	private Type num = null!;
+
 	[Test]
 	public void SetAndGetVariable()
 	{
-		var pkg = TestPackage.Instance;
-		var num = pkg.FindType(Base.Number)!;
-		var ctx = new ExecutionContext(num);
+		var ctx = new ExecutionContext(num, num.Methods[0]);
 		var val = new ValueInstance(num, 123);
 		ctx.Set("answer", val);
 		Assert.That(ctx.Get("answer"), Is.SameAs(val));
@@ -19,10 +23,8 @@ public sealed class ExecutionContextTests
 	[Test]
 	public void ParentLookupWorks()
 	{
-		var pkg = TestPackage.Instance;
-		var num = pkg.FindType(Base.Number)!;
-		var parent = new ExecutionContext(num);
-		var child = new ExecutionContext(num) { Parent = parent };
+		var parent = new ExecutionContext(num, num.Methods[0]);
+		var child = new ExecutionContext(num, num.Methods[0]) { Parent = parent };
 		parent.Set("x", new ValueInstance(num, 5));
 		Assert.That(child.Get("x").Value, Is.EqualTo(5));
 	}
@@ -30,6 +32,6 @@ public sealed class ExecutionContextTests
 	[Test]
 	public void GetUnknownVariableThrows() =>
 		Assert.That(
-			() => new ExecutionContext(TestPackage.Instance.FindType(Base.Number)!).Get("unknown"),
+			() => new ExecutionContext(num, num.Methods[0]).Get("unknown"),
 			Throws.TypeOf<ExecutionContext.VariableNotFound>());
 }

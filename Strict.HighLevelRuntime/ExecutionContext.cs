@@ -3,9 +3,10 @@ using Type = Strict.Language.Type;
 
 namespace Strict.HighLevelRuntime;
 
-public sealed class ExecutionContext(Type type)
+public sealed class ExecutionContext(Type type, Method method)
 {
 	public Type Type { get; } = type;
+	public Method Method { get; } = method;
 	public ExecutionContext? Parent { get; init; }
 	public ValueInstance? This { get; init; }
 	public Dictionary<string, ValueInstance> Variables { get; } = new(StringComparer.Ordinal);
