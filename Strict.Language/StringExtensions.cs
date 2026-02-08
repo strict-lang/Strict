@@ -4,8 +4,8 @@ namespace Strict.Language;
 
 public static class StringExtensions
 {
-	public static string ToBrackets<T>(this IReadOnlyCollection<T> list) =>
-		list.Count > 0
+	public static string ToBrackets<T>(this IEnumerable<T> list) =>
+		list.Any()
 			? "(" + list.ToWordList() + ")"
 			: "";
 

@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using static Strict.Language.NamedType;
 
@@ -160,6 +160,9 @@ public abstract class Context
 
 	public GenericTypeImplementation GetListImplementationType(Type implementation) =>
 		GetType(Base.List).GetGenericImplementation(implementation);
+
+	public GenericTypeImplementation GetDictionaryImplementationType(Type keyType, Type valueType) =>
+		GetType(Base.Dictionary).GetGenericImplementation(keyType, valueType);
 
 	private Type? FindFullType(string name) =>
 		name.Contains('.')

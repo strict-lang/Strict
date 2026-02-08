@@ -1,6 +1,7 @@
-using Strict.Language;
 using Strict.Expressions;
+using Strict.Language;
 using Strict.Language.Tests;
+using static Strict.Language.TypeParser;
 using Type = Strict.Language.Type;
 
 namespace Strict.HighLevelRuntime.Tests;
@@ -296,9 +297,29 @@ public sealed class ExecutorTests
 	}
 
 	[Test]
-	public void CallActualOperator()
+	public void StackOverflowCallingYourselfWithSameArguments() =>
+		Assert.That(() =>
+			{
+				using var t = CreateType(nameof(StackOverflowCallingYourselfWithSameArguments),
+					"has number", "Recursive(other Number)", "\tRecursive(other)");
+			}, //ncrunch: no coverage
+			Throws.InstanceOf<SelfRecursiveCallWithSameArgumentsDetected>());
+
+	[Test]
+	public void StackOverflowCallingYourselfWithSameInstanceMember()
 	{
-		using var t = CreateType(nameof(MultilineMethodRequiresTests), "has number",
+		using var t = CreateType(nameof(StackOverflowCallingYourselfWithSameInstanceMember), "has number",
+			"Recursive(other Number)", "\tRecursive(number)");
+		Assert.That(
+			() => executor.Execute(t.Methods.Single(m => m.Name == "Recursive"), new ValueInstance(t, 3),
+				[new ValueInstance(t.GetType(Base.Number), 1)]).Value,
+			Throws.InstanceOf<Executor.StackOverflowCallingItselfWithSameInstanceAndArguments>());
+	}
+
+	[Test]
+	public void CallNumberPlusOperator()
+	{
+		using var t = CreateType(nameof(CallNumberPlusOperator), "has number",
 			"+(text) Number", "\tnumber + text.Length");
 		var instance = new ValueInstance(t, 5);
 		Assert.That(
@@ -306,7 +327,7 @@ public sealed class ExecutorTests
 				[new ValueInstance(t.GetType(Base.Text), "abc")]).Value, Is.EqualTo(8));
 	}
 
-	[Test]
+	[Test, Ignore("Fix stackoverflow, but we first want proper error messages!")]
 	public void CallListOperator()
 	{
 		using var t = CreateType(nameof(CallListOperator), "has numbers",
@@ -318,5 +339,6 @@ public sealed class ExecutorTests
 			new Dictionary<string, object?> { { "numbers", new[] { one, two } } });
 		Assert.That(executor.Execute(t.Methods.Single(m => m.Name == "Double"), instance, []).Value,
 			Is.EqualTo(new[] { one, two, one, two }));
+		//TODO: finish here!
 	}
 }

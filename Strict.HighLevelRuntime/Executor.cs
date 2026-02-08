@@ -9,13 +9,13 @@ namespace Strict.HighLevelRuntime;
 public sealed class Executor(Package basePackage, TestBehavior behavior = TestBehavior.OnFirstRun)
 {
 	public ValueInstance Execute(Method method, ValueInstance? instance,
-		IReadOnlyList<ValueInstance> args)
+		IReadOnlyList<ValueInstance> args, ExecutionContext? parentContext = null)
 	{
 		ValueInstance? returnValue = null;
 		if (inlineTestDepth == 0 && behavior != TestBehavior.Disabled && validatedMethods.Add(method))
-			returnValue = Execute(method, instance, args, true);
+			returnValue = Execute(method, instance, args, parentContext, true);
 		if (inlineTestDepth > 0 || behavior != TestBehavior.TestRunner)
-			returnValue = Execute(method, instance, args, false);
+			returnValue = Execute(method, instance, args, parentContext, false);
 		return returnValue ?? new ValueInstance(method.ReturnType, null);
 	}
 
@@ -26,7 +26,7 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 	private readonly HashSet<Method> validatedMethods = [];
 
 	private ValueInstance Execute(Method method, ValueInstance? instance,
-		IReadOnlyList<ValueInstance> args, bool runOnlyTests)
+		IReadOnlyList<ValueInstance> args, ExecutionContext? parentContext, bool runOnlyTests)
 	{
 		if (instance != null && !instance.ReturnType.IsSameOrCanBeUsedAs(method.Type))
 			throw new CannotCallMethodWithWrongInstance(method, instance);
@@ -47,7 +47,10 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 				throw new MethodCall.CannotCallFromConstructorWithExistingInstance();
 			instance = new ValueInstance(method.Type, GetFromConstructorValue(method, args));
 		}
-		var context = new ExecutionContext(method.Type, method) { This = instance };
+		if (parentContext != null && parentContext.Method == method && parentContext.This == instance)//TODO: check if all arguments also match && parentContext.)
+			throw new StackOverflowCallingItselfWithSameInstanceAndArguments(method, instance, args, parentContext);
+			//TODO: finish here!
+		var context = new ExecutionContext(method.Type, method) { This = instance, Parent = parentContext };
 		if (!runOnlyTests)
 			for (var i = 0; i < method.Parameters.Count; i++)
 			{
@@ -103,6 +106,11 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 			throw new MethodExecutionFailed(method, context, ex);
 		}
 	}
+
+	public sealed class StackOverflowCallingItselfWithSameInstanceAndArguments(Method method,
+		ValueInstance? instance, IEnumerable<ValueInstance> args, ExecutionContext parentContext)
+		: ExecutionFailed(method, "Parent context=" + parentContext + ", Instance=" + instance +
+			", arguments=" + args.ToWordList());
 
 	private static IDictionary<string, object?> ConvertFromArgumentsToDictionary(Method fromMethod,
 		IReadOnlyList<ValueInstance> args)
@@ -516,12 +524,12 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 		Bool(!ToBool(RunExpression(not.Instance!, ctx)));
 
 	private ValueInstance EvaluateMember(MemberCall member, ExecutionContext ctx) =>
-		ctx.Type.Members.Contains(member.Member) && ctx.This == null
+		ctx.This == null && ctx.Type.Members.Contains(member.Member)
 			? throw new UnableToCallMemberWithoutInstance(member, ctx)
 			: ctx.This?.Value is Dictionary<string, object?> dict &&
 			dict.TryGetValue(member.Member.Name, out var value)
 				? new ValueInstance(member.ReturnType, value)
-				: member.Member.InitialValue != null
+				: member.Member.InitialValue != null && member.IsConstant
 					? RunExpression(member.Member.InitialValue, ctx)
 					: ctx.Get(member.Member.Name);
 
@@ -543,7 +551,7 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 		var args = new List<ValueInstance>(call.Arguments.Count);
 		foreach (var a in call.Arguments)
 			args.Add(RunExpression(a, ctx));
-		return Execute(call.Method, instance, args);
+		return Execute(call.Method, instance, args, ctx);
 	}
 
 	private static bool IsArithmetic(string name) =>
@@ -649,7 +657,7 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 		var args = new List<ValueInstance>(call.Arguments.Count);
 		foreach (var a in call.Arguments)
 			args.Add(RunExpression(a, ctx));
-		return Execute(call.Method, instance, args);
+		return Execute(call.Method, instance, args, ctx);
 	}
 
 	private ValueInstance Bool(bool b) => new(boolType, b);

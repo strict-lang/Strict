@@ -241,7 +241,7 @@ public sealed class MethodCallTests : TestExpressions
 				"\tRecursiveStackOverflow(10).AddFiveWithInput",
 				"\tnumber + 5")).ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(),
-			Throws.InstanceOf<RecursiveCallCausesStackOverflow>());
+			Throws.InstanceOf<Method.RecursiveCallCausesStackOverflow>());
 	}
 
 	[Test]

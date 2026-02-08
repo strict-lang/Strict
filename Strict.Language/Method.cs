@@ -240,12 +240,17 @@ public sealed class Method : Context
 		var expression = Parser.ParseLineExpression(body, currentLine.AsSpan(body.Tabs));
 		if (IsTestExpression(body, currentLine, expression))
 			Tests.Add(expression);
-		else if (currentLine.Contains(body.Method.Name) &&
+		// Checks for obvious recursive calls with same arguments at the last line (non-test method),
+		// this won't catch most recursive calls, see Executor for most other cases.
+		else if (currentLine.Contains(body.Method.Name +
+				body.Method.parameters.Select(p => p.Name).ToBrackets()) &&
 			expression.GetType().Name == "MethodCall" &&
 			body.ParsingLineNumber == body.Method.Tests.Count + 1 && currentLine != "\tRun")
 			throw new RecursiveCallCausesStackOverflow(body);
 		return expression;
 	}
+
+	public sealed class RecursiveCallCausesStackOverflow(Body body) : ParsingFailed(body);
 
 	private static bool IsTestExpression(Body body, string currentLine, Expression expression) =>
 		(currentLine.Contains($" {BinaryOperator.Is} ") ||
