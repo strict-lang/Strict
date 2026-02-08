@@ -276,7 +276,6 @@ public sealed class ExecutorTests
 			Is.EqualTo(true));
 	}
 
-
 	[Test]
 	public void MultilineMethodRequiresTests()
 	{
@@ -285,5 +284,39 @@ public sealed class ExecutorTests
 		var instance = new ValueInstance(t, 5);
 		Assert.That(executor.Execute(t.Methods.Single(m => m.Name == "GetText"), instance, []).Value,
 			Is.EqualTo("5"));
+	}
+
+	[Test]
+	public void CompareNumberToText()
+	{
+		using var t = CreateType(nameof(ToCharacterComparison), "has number",
+			"Compare", "\t\"5\" is 5");
+		Assert.That(executor.Execute(t.Methods.Single(m => m.Name == "Compare"), null, []).Value,
+			Is.EqualTo(false));
+	}
+
+	[Test]
+	public void CallActualOperator()
+	{
+		using var t = CreateType(nameof(MultilineMethodRequiresTests), "has number",
+			"+(text) Number", "\tnumber + text.Length");
+		var instance = new ValueInstance(t, 5);
+		Assert.That(
+			executor.Execute(t.Methods.Single(m => m.Name == BinaryOperator.Plus), instance,
+				[new ValueInstance(t.GetType(Base.Text), "abc")]).Value, Is.EqualTo(8));
+	}
+
+	[Test]
+	public void CallListOperator()
+	{
+		using var t = CreateType(nameof(CallListOperator), "has numbers",
+			"Double Numbers", "\tnumbers + numbers");
+		var numberType = t.GetType(Base.Number);
+		var one = new ValueInstance(numberType, 1);
+		var two = new ValueInstance(numberType, 2);
+		var instance = new ValueInstance(t,
+			new Dictionary<string, object?> { { "numbers", new[] { one, two } } });
+		Assert.That(executor.Execute(t.Methods.Single(m => m.Name == "Double"), instance, []).Value,
+			Is.EqualTo(new[] { one, two, one, two }));
 	}
 }

@@ -41,20 +41,20 @@ public sealed class ValueInstance
 		{
 			if (Value is double valueDouble)
 				Value = (int)valueDouble;
-			if (Value is not int)
-				throw new InvalidTypeValue(ReturnType, Value);
-		}
-		else if (ReturnType.Name == Base.Number || ReturnType.Members.Count == 1 &&
-			ReturnType.IsSameOrCanBeUsedAs(ReturnType.GetType(Base.Number)))
-		{
-			if (Value is not double && Value is not int)
+			if (Value is not char && Value is not int)
 				throw new InvalidTypeValue(ReturnType, Value);
 		}
 		else if (ReturnType.Name == Base.List || ReturnType.Name == Base.Dictionary ||
 			ReturnType is GenericTypeImplementation { Generic.Name: Base.List } ||
 			ReturnType is GenericTypeImplementation { Generic.Name: Base.Dictionary })
 		{
-			if (Value is not IList && Value is not IDictionary)
+			if (Value is not IList && Value is not IDictionary && Value is not string)
+				throw new InvalidTypeValue(ReturnType, Value);
+		}
+		else if (ReturnType.Name == Base.Number || ReturnType.Members.Count == 1 &&
+			ReturnType.IsSameOrCanBeUsedAs(ReturnType.GetType(Base.Number)))
+		{
+			if (Value is not double && Value is not int)
 				throw new InvalidTypeValue(ReturnType, Value);
 		}
 		else if (Value is IDictionary<string, object?> valueDictionary)

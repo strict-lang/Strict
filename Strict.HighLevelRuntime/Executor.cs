@@ -28,7 +28,7 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 	private ValueInstance Execute(Method method, ValueInstance? instance,
 		IReadOnlyList<ValueInstance> args, bool runOnlyTests)
 	{
-		if (instance != null && instance.ReturnType != method.Parent)
+		if (instance != null && !instance.ReturnType.IsSameOrCanBeUsedAs(method.Type))
 			throw new CannotCallMethodWithWrongInstance(method, instance);
 		if (args.Count > method.Parameters.Count)
 			throw new TooManyArguments(method, args[method.Parameters.Count].ToString(), args);
@@ -413,6 +413,7 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 			IList list => list.Cast<object?>().ToList(),
 			int count => Enumerable.Range(0, count).Cast<object?>().ToList(),
 			double countDouble => Enumerable.Range(0, (int)countDouble).Cast<object?>().ToList(),
+			string text => text.ToCharArray().Cast<object?>().ToList(),
 			_ => throw new NotSupportedException("Iterator not supported: " + iterator.ReturnType.Name)
 		};
 
@@ -450,8 +451,12 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 	{
 		if (ReferenceEquals(left, right))
 			return true;
-		left = left is ValueInstance leftInstance ? leftInstance.Value : left;
-		right = right is ValueInstance rightInstance ? rightInstance.Value : right;
+		left = left is ValueInstance leftInstance
+			? leftInstance.Value
+			: left;
+		right = right is ValueInstance rightInstance
+			? rightInstance.Value
+			: right;
 		if (left is IDictionary leftDict && right is IDictionary rightDict)
 			return AreDictionariesEqual(leftDict, rightDict);
 		if (left is IList leftList && right is IList rightList)
@@ -565,18 +570,23 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 		{
 			//TODO: these are just shortcuts for Number operators, but we don't actually execute them
 			//TODO: in any case, for non datatypes we need to call the operators, only allow this for Boolean, Number, Text, rest should be called!
-			var l = NumberToDouble(left);
-			var r = NumberToDouble(right);
-			return op switch
+			if (leftInstance.ReturnType.Name == Base.Number &&
+				rightInstance.ReturnType.Name == Base.Number)
 			{
-				BinaryOperator.Plus => Number(l + r),
-				BinaryOperator.Minus => Number(l - r),
-				BinaryOperator.Multiply => Number(l * r),
-				BinaryOperator.Divide => Number(l / r),
-				BinaryOperator.Modulate => Number(l % r),
-				BinaryOperator.Power => Number(Math.Pow(l, r)),
-				_ => throw new NotSupportedException("Operator not supported for Number: " + op) //ncrunch: no coverage
-			};
+				var l = NumberToDouble(left);
+				var r = NumberToDouble(right);
+				return op switch
+				{
+					BinaryOperator.Plus => Number(l + r),
+					BinaryOperator.Minus => Number(l - r),
+					BinaryOperator.Multiply => Number(l * r),
+					BinaryOperator.Divide => Number(l / r),
+					BinaryOperator.Modulate => Number(l % r),
+					BinaryOperator.Power => Number(Math.Pow(l, r)),
+					_ => ExecuteMethodCall(call, leftInstance, ctx)
+				};
+			}
+			return ExecuteMethodCall(call, leftInstance, ctx);
 		}
 		if (IsCompare(op))
 		{
@@ -590,7 +600,9 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 					var matches = rightInstance.ReturnType.Name == Base.Error
 						? leftInstance.ReturnType.IsError
 						: leftInstance.ReturnType.IsSameOrCanBeUsedAs(rightInstance.ReturnType);
-					return op is BinaryOperator.Is ? Bool(matches) : Bool(!matches);
+					return op is BinaryOperator.Is
+						? Bool(matches)
+						: Bool(!matches);
 				}
 				//TODO: support conversions needed for Character, maybe Number <-> Text
 				if (call.Instance.ReturnType.Name == Base.Character && right is string rightText)
@@ -620,7 +632,7 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 				BinaryOperator.Smaller => Bool(l < r),
 				BinaryOperator.GreaterOrEqual => Bool(l >= r),
 				BinaryOperator.SmallerOrEqual => Bool(l <= r),
-				_ => throw new NotSupportedException("Operator not supported for Compare: " + op) //ncrunch: no coverage
+				_ => ExecuteMethodCall(call, leftInstance, ctx)
 			};
 		}
 		return op switch
@@ -628,8 +640,16 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 			BinaryOperator.And => Bool(ToBool(left) && ToBool(right)),
 			BinaryOperator.Or => Bool(ToBool(left) || ToBool(right)),
 			BinaryOperator.Xor => Bool(ToBool(left) ^ ToBool(right)),
-			_ => throw new NotSupportedException("Operator not supported for Logical: " + op) //ncrunch: no coverage
+			_ => ExecuteMethodCall(call, leftInstance, ctx)
 		};
+	}
+
+	private ValueInstance ExecuteMethodCall(MethodCall call, ValueInstance instance, ExecutionContext ctx)
+	{
+		var args = new List<ValueInstance>(call.Arguments.Count);
+		foreach (var a in call.Arguments)
+			args.Add(RunExpression(a, ctx));
+		return Execute(call.Method, instance, args);
 	}
 
 	private ValueInstance Bool(bool b) => new(boolType, b);
