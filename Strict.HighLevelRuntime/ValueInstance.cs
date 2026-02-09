@@ -89,54 +89,10 @@ public sealed class ValueInstance : IEquatable<ValueInstance>
 					? $"Unknown Iterator {ReturnType.Name}: {Value}"
 					: $"{ReturnType.Name}:{Value}";
 
-	public bool Equals(ValueInstance? other)
-	{
-		if (ReferenceEquals(this, other))
-			return true;
-		if (other is null)
-			return false;
-		if (other.ReturnType.IsSameOrCanBeUsedAs(ReturnType))
-		{
-			if (Value is IList valueList && other.Value is IList otherValueList)
-				return AreListValuesSame(valueList, otherValueList);
-			if (Value is IDictionary valueDict && other.Value is IDictionary otherValueDict)
-				return AreDictionariesSame(valueDict, otherValueDict);
-			return Equals(Value, other.Value);
-		}
-		return false;
-	}
-
-	private static bool AreListValuesSame(IList valueList, IList otherValueList)
-	{
-		if (valueList.Count != otherValueList.Count)
-			return false;
-		for (var i = 0; i < valueList.Count; i++)
-			if (valueList[i] is ValueInstance memberInstance &&
-				otherValueList[i] is ValueInstance otherMemberInstance)
-			{
-				if (!memberInstance.Equals(otherMemberInstance))
-					return false;
-			}
-			else if (!valueList[i]!.Equals(otherValueList[i]))
-				return false;
-		return true;
-	}
-
-	private static bool AreDictionariesSame(IDictionary valueDict, IDictionary otherValueDict)
-	{
-		if (valueDict.Count != otherValueDict.Count)
-			return false;
-		foreach (var key in valueDict.Keys)
-			if (valueDict[key] is ValueInstance memberInstance &&
-				otherValueDict[key] is ValueInstance otherMemberInstance)
-			{
-				if (!memberInstance.Equals(otherMemberInstance))
-					return false;
-			}
-			else if (!otherValueDict.Contains(key) || !valueDict[key]!.Equals(otherValueDict[key]))
-				return false;
-		return true;
-	}
+	public bool Equals(ValueInstance? other) =>
+		ReferenceEquals(this, other) || other is not null &&
+		other.ReturnType.IsSameOrCanBeUsedAs(ReturnType) &&
+		EqualsExtensions.AreEqual(Value, other.Value);
 
 	public override bool Equals(object? obj) =>
 		ReferenceEquals(this, obj) || obj is ValueInstance other && Equals(other);

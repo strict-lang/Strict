@@ -68,6 +68,13 @@ public class NumberTests : TestExpressions
 	public void ParsingNumberShouldAlwaysResultInTheSameOutputText(string input) =>
 		Assert.That(ParseExpression(input).ToString(), Is.EqualTo(input));
 
+	[Test]
+	public void CompareNumber()
+	{
+		Assert.That(ParseExpression(Case3), Is.EqualTo(ParseExpression(Case3)));
+		Assert.That(ParseExpression(Case3), Is.EqualTo(new Number(type, 10)));
+	}
+
 	//ncrunch: no coverage start
 	/// <summary>
 	/// All benchmarks ran 1 million iterations, so normal usecase of numbers is 1 billion's of a

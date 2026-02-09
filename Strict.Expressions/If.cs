@@ -66,8 +66,8 @@ public sealed class If(Expression condition, Expression then, int lineNumber = 0
 	public override bool IsConstant => Condition.IsConstant && Then.IsConstant && (OptionalElse?.IsConstant ?? true);
 
 	public override bool Equals(Expression? other) =>
-		other is If a && Equals(Condition, a.Condition) && Then.Equals(a.Then) &&
-		(OptionalElse?.Equals(a.OptionalElse) ?? a.OptionalElse == null);
+		other is If otherIf && Condition.Equals(otherIf.Condition) && Then.Equals(otherIf.Then) &&
+		(OptionalElse?.Equals(otherIf.OptionalElse) ?? otherIf.OptionalElse == null);
 
 	public static Expression? TryParse(Body body, ReadOnlySpan<char> line) =>
 		line.Equals("if", StringComparison.Ordinal)

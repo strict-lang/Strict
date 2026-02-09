@@ -24,6 +24,9 @@ public class Value(Type valueType, object data, int lineNumber = 0, bool isMutab
 				: Data.ToString()!;
 
 	public override bool IsConstant => true;
-	public override bool Equals(object? other) => Data.Equals(other); //ncrunch: no coverage
+
+	public override bool Equals(Expression? other) =>
+		other is Value v && EqualsExtensions.AreEqual(Data, v.Data);
+
 	public override int GetHashCode() => HashCode.Combine(base.GetHashCode(), Data);
 }

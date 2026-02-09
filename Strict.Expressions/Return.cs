@@ -1,4 +1,4 @@
-﻿using Strict.Language;
+using Strict.Language;
 
 namespace Strict.Expressions;
 
@@ -9,7 +9,7 @@ public sealed class Return(Expression value, int lineNumber = 0)
 	public override bool IsConstant => Value.IsConstant;
 	public override int GetHashCode() => Value.GetHashCode();
 	public override string ToString() => Keyword.Return + " " + Value;
-	public override bool Equals(Expression? other) => other is Return a && Value.Equals(a.Value);
+	public override bool Equals(Expression? other) => other is Return r && Value.Equals(r.Value);
 
 	public static Expression? TryParse(Body body, ReadOnlySpan<char> line) =>
 		line.StartsWith(Keyword.Return, StringComparison.Ordinal)

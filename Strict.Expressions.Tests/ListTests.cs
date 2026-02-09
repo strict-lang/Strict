@@ -6,6 +6,11 @@ public sealed class ListTests : TestExpressions
 	public void EmptyListNotAllowed() =>
 		Assert.That(() => ParseExpression("()"), Throws.InstanceOf<List.EmptyListNotAllowed>());
 
+	[Test]
+	public void CompareList() =>
+		Assert.That(new List(new Body(method), GetListExpressions(["\"1\"", "\"2\""])),
+			Is.EqualTo(new List(new Body(method), GetListExpressions(["\"1\"", "\"2\""]))));
+
 	[TestCase("(1)", 1)]
 	[TestCase("(5.23)", 5.23)]
 	public void ParseSingleElementLists(string input, double expectedElement) =>

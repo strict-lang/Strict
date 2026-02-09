@@ -47,9 +47,11 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 				throw new MethodCall.CannotCallFromConstructorWithExistingInstance();
 			instance = new ValueInstance(method.Type, GetFromConstructorValue(method, args));
 		}
-		if (parentContext != null && parentContext.Method == method && parentContext.This == instance)//TODO: check if all arguments also match && parentContext.)
-			throw new StackOverflowCallingItselfWithSameInstanceAndArguments(method, instance, args, parentContext);
-			//TODO: finish here!
+		if (parentContext != null && parentContext.Method == method &&
+			(parentContext.This?.Equals(instance) ?? instance == null) &&
+			DoArgumentsMatch(method, args, parentContext.Variables))
+			throw new StackOverflowCallingItselfWithSameInstanceAndArguments(method, instance, args,
+				parentContext);
 		var context = new ExecutionContext(method.Type, method) { This = instance, Parent = parentContext };
 		if (!runOnlyTests)
 			for (var i = 0; i < method.Parameters.Count; i++)
@@ -105,6 +107,16 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 		{
 			throw new MethodExecutionFailed(method, context, ex);
 		}
+	}
+
+	private static bool DoArgumentsMatch(Method method, IReadOnlyList<ValueInstance> args,
+		IReadOnlyDictionary<string, ValueInstance> parentContextVariables)
+	{
+		for (var index = 0; index < args.Count; index++)
+			if (!parentContextVariables.TryGetValue(method.Parameters[index].Name,
+					out var previousArgumentValue) || !args[index].Equals(previousArgumentValue))
+				return false;
+		return true;
 	}
 
 	public sealed class StackOverflowCallingItselfWithSameInstanceAndArguments(Method method,
@@ -385,7 +397,7 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 		var iterator = RunExpression(f.Iterator, ctx);
 		var values = GetForValues(iterator);
 		if (iterator.ReturnType.Name == Base.Range)
-			return Number(values.Sum(NumberToDouble));
+			return Number(values.Sum(EqualsExtensions.NumberToDouble));
 		double numberResult = 0;
 		var shouldSum = IsListIterator(iterator.ReturnType) &&
 			ctx.Method.ReturnType.Name == Base.Number;
@@ -401,7 +413,7 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 						new ValueInstance(variableCall.ReturnType, values[index]));
 			var result = RunExpression(f.Body, loopContext);
 			if (shouldSum && result.Value is IConvertible)
-				numberResult += NumberToDouble(result.Value);
+				numberResult += EqualsExtensions.NumberToDouble(result.Value);
 			else
 			{
 				shouldSum = false;
@@ -443,65 +455,6 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 	private static bool IsListIterator(Type type) =>
 		type.Name == Base.List || type is GenericTypeImplementation { Generic.Name: Base.List };
 
-	private static bool IsValueOnlyForBody(Expression body) =>
-		body is VariableCall { Variable.Name: Base.ValueLowercase } ||
-		body is Body { Expressions.Count: 1 } forBody && IsValueOnlyForBody(forBody.Expressions[0]);
-
-	private static bool AreInstancesEqual(ValueInstance left, ValueInstance right)
-	{
-		if (!left.ReturnType.IsSameOrCanBeUsedAs(right.ReturnType) &&
-			!right.ReturnType.IsSameOrCanBeUsedAs(left.ReturnType))
-			return false;
-		return AreValuesEqual(left.Value, right.Value);
-	}
-
-	private static bool AreValuesEqual(object? left, object? right)
-	{
-		if (ReferenceEquals(left, right))
-			return true;
-		left = left is ValueInstance leftInstance
-			? leftInstance.Value
-			: left;
-		right = right is ValueInstance rightInstance
-			? rightInstance.Value
-			: right;
-		if (left is IDictionary leftDict && right is IDictionary rightDict)
-			return AreDictionariesEqual(leftDict, rightDict);
-		if (left is IList leftList && right is IList rightList)
-			return AreListsEqual(leftList, rightList);
-		if (IsNumeric(left) && IsNumeric(right))
-			return NumberToDouble(left) == NumberToDouble(right);
-		return Equals(left, right);
-	}
-
-	private static bool AreListsEqual(IList left, IList right)
-	{
-		if (left.Count != right.Count)
-			return false;
-		for (var i = 0; i < left.Count; i++)
-			if (!AreValuesEqual(left[i], right[i]))
-				return false;
-		return true;
-	}
-
-	private static bool AreDictionariesEqual(IDictionary left, IDictionary right)
-	{
-		if (left.Count != right.Count)
-			return false;
-		foreach (DictionaryEntry entry in left)
-		{
-			if (!right.Contains(entry.Key))
-				return false;
-			if (!AreValuesEqual(entry.Value, right[entry.Key]))
-				return false;
-		}
-		return true;
-	}
-
-	private static bool IsNumeric(object? value) =>
-		value is sbyte or byte or short or ushort or int or uint or long or ulong or float or double
-			or decimal;
-
 	private ValueInstance EvaluateTo(To to, ExecutionContext ctx)
 	{
 		var left = RunExpression(to.Instance!, ctx).Value;
@@ -514,10 +467,10 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 		if (to.ConversionType.Name == Base.Text)
 			return new ValueInstance(to.ConversionType, left?.ToString() ?? "");
 		if (to.ConversionType.Name == Base.Number)
-			return new ValueInstance(to.ConversionType, NumberToDouble(left));
-		if (!to.Method.IsTrait)
-			return EvaluateMethodCall(to, ctx);
-		throw new NotSupportedException("Conversion to " + to.ConversionType.Name + " not supported"); //ncrunch: no coverage
+			return new ValueInstance(to.ConversionType, EqualsExtensions.NumberToDouble(left));
+		return !to.Method.IsTrait
+			? EvaluateMethodCall(to, ctx)
+			: throw new NotSupportedException("Conversion to " + to.ConversionType.Name + " not supported");
 	}
 
 	private ValueInstance EvaluateNot(Not not, ExecutionContext ctx) =>
@@ -541,8 +494,7 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 		var op = call.Method.Name;
 		if (IsArithmetic(op) || IsCompare(op) || IsLogical(op))
 			return EvaluateArithmeticOrCompareOrLogical(call, ctx);
-		// If the call has an instance (like 'not true'), evaluate it.
-		// Otherwise, if we are already inside an instance method, use 'ctx.This'.
+		// If the instance is an expression (like 'not true'), evaluate that, otherwise use context
 		var instance = call.Instance != null
 			? RunExpression(call.Instance, ctx)
 			: call.Method.Name != Method.From
@@ -578,11 +530,10 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 		{
 			//TODO: these are just shortcuts for Number operators, but we don't actually execute them
 			//TODO: in any case, for non datatypes we need to call the operators, only allow this for Boolean, Number, Text, rest should be called!
-			if (leftInstance.ReturnType.Name == Base.Number &&
-				rightInstance.ReturnType.Name == Base.Number)
+			if (leftInstance.ReturnType.Name == Base.Number && rightInstance.ReturnType.Name == Base.Number)
 			{
-				var l = NumberToDouble(left);
-				var r = NumberToDouble(right);
+				var l = EqualsExtensions.NumberToDouble(left);
+				var r = EqualsExtensions.NumberToDouble(right);
 				return op switch
 				{
 					BinaryOperator.Plus => Number(l + r),
@@ -594,6 +545,26 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 					_ => ExecuteMethodCall(call, leftInstance, ctx)
 				};
 			}
+			if (leftInstance.ReturnType.Name == Base.Text && rightInstance.ReturnType.Name == Base.Text)
+			{
+				return op == BinaryOperator.Plus
+					? new ValueInstance(leftInstance.ReturnType, (string)left! + (string)right!)
+					: throw new NotSupportedException("Only + operator is supported for Text, got: " + op);
+			}
+			if (leftInstance.ReturnType.IsIterator && rightInstance.ReturnType.IsIterator)
+			{
+				if (left is not IList leftList || right is not IList rightList)
+					throw new InvalidOperationException("Expected lists for iterator operation, other " +
+						"iterators are not yet supported: left=" + left + ", right=" + right);
+				return op switch
+				{
+					BinaryOperator.Plus => CombineLists(ctx.Method, leftInstance.ReturnType, leftList, rightList),
+					BinaryOperator.Minus => SubtractLists(leftInstance.ReturnType, leftList, rightList),
+					BinaryOperator.Multiply => MultiplyLists(leftInstance.ReturnType, leftList, rightList),
+					_ => throw new NotSupportedException("Only +, -, * operators are supported for Lists, got: " + op)
+				};
+			}
+			//TODO: also support list+element and list-element and list*number and list/number after adding tests for those ...
 			return ExecuteMethodCall(call, leftInstance, ctx);
 		}
 		if (IsCompare(op))
@@ -623,17 +594,13 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 					right = rightInt + "";
 					rightInstance = new ValueInstance(call.Instance.ReturnType, right);
 				}
-				//TODO: support comparison of derived types (Name <-> Text, etc.)
-				//TODO: if is operator only defines (other), both left and right must match type, if not error out here
-				//TODO: think about containing types, probably should not be is supported, but can be converted and then compared (e.g. File to Text is "some.txt"
-				//TODO: use is operator of type if it is defined for non Number, non Text!
-				var equals = AreInstancesEqual(leftInstance, rightInstance);
+				var equals = leftInstance.Equals(rightInstance);
 				return op is BinaryOperator.Is
 					? Bool(equals)
 					: Bool(!equals);
 			}
-			var l = NumberToDouble(left);
-			var r = NumberToDouble(right);
+			var l = EqualsExtensions.NumberToDouble(left);
+			var r = EqualsExtensions.NumberToDouble(right);
 			return op switch
 			{
 				BinaryOperator.Greater => Bool(l > r),
@@ -650,6 +617,44 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 			BinaryOperator.Xor => Bool(ToBool(left) ^ ToBool(right)),
 			_ => ExecuteMethodCall(call, leftInstance, ctx)
 		};
+	}
+
+	private static ValueInstance CombineLists(Method method, Type listType, ICollection leftList, ICollection rightList)
+	{
+		var combined = new List<object?>(leftList.Count + rightList.Count);
+		var isLeftText = listType is GenericTypeImplementation { Generic.Name: Base.List } list &&
+			list.ImplementationTypes[0].Name == Base.Text;
+		foreach (var item in leftList)
+			combined.Add(item);
+		foreach (var item in rightList)
+			combined.Add(isLeftText && item is Number itemNumber
+				? new Text(method, itemNumber.ToString())
+				: item);
+		return new ValueInstance(listType, combined);
+	}
+
+	private static ValueInstance SubtractLists(Type listType, IEnumerable leftList, IEnumerable rightList)
+	{
+		var remainder = new List<object?>();
+		foreach (var item in leftList)
+			remainder.Add(item);
+		foreach (var item in rightList)
+			remainder.Remove(item);
+		return new ValueInstance(listType, remainder);
+	}
+
+	private static ValueInstance MultiplyLists(Type listType, IList leftList, IList rightList)
+	{
+		var result = new List<object?>();
+		for (var index = 0; index < leftList.Count; index++)
+		{
+			var leftItem = (double)leftList[index]!;
+			var rightItem = index < rightList.Count
+				? (double)rightList[index]!
+				: 1.0f;
+			result.Add(leftItem * rightItem);
+		}
+		return new ValueInstance(listType, result);
 	}
 
 	private ValueInstance ExecuteMethodCall(MethodCall call, ValueInstance instance, ExecutionContext ctx)
@@ -669,8 +674,8 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 		{
 			bool b => b,
 			ValueInstance vi => ToBool(vi.Value),
-			Value { ReturnType.Name: Base.Boolean, Data: bool bv } => bv, //ncrunch: no coverage
-			_ => throw new InvalidOperationException("Expected Boolean, got: " + v) //ncrunch: no coverage
+			Value { ReturnType.Name: Base.Boolean, Data: bool bv } => bv,
+			_ => throw new InvalidOperationException("Expected Boolean, got: " + v)
 		};
 
 	public sealed class ComparisonsToNullAreNotAllowed(Method method, object? left, object? right)
@@ -678,9 +683,6 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 
 	private ValueInstance Number(double n) => new(numberType, n);
 	private readonly Type numberType = basePackage.FindType(Base.Number)!;
-
-	private static double NumberToDouble(object? n) =>
-		Convert.ToDouble(n, CultureInfo.InvariantCulture);
 
 	private sealed class ReturnSignal(ValueInstance value) : Exception
 	{

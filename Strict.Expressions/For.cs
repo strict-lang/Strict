@@ -26,7 +26,10 @@ public sealed class For(Expression[] customVariables, Expression iterator, Expre
 			: "";
 
 	public override bool IsConstant => Iterator.IsConstant && Body.IsConstant;
-	public override bool Equals(Expression? other) => other is For a && Equals(Iterator, a.Iterator);
+
+	public override bool Equals(Expression? other) =>
+		other is For forExpression && Iterator.Equals(forExpression.Iterator) &&
+		Body.Equals(forExpression.Body);
 
 	public static Expression? TryParse(Body body, ReadOnlySpan<char> line)
 	{

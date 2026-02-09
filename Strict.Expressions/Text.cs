@@ -1,12 +1,9 @@
-﻿using Strict.Language;
+using Strict.Language;
 
 namespace Strict.Expressions;
 
 public sealed class Text(Context context, string value, int lineNumber = 0) : Value(context.GetType(Base.Text), value, lineNumber)
 {
-	public override bool Equals(Expression? other) =>
-		other is Value v && (string)Data == (string)v.Data;
-
 	/// <summary>
 	/// Text must start and end with a double quote, only called for input that does not contain any
 	/// spaces, or if there are spaces (like "Hello World"), they are already split via
