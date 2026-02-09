@@ -1,7 +1,6 @@
 using Strict.Expressions;
 using Strict.Language;
 using Strict.Language.Tests;
-using static Strict.Language.TypeParser;
 using Type = Strict.Language.Type;
 
 namespace Strict.HighLevelRuntime.Tests;
@@ -9,10 +8,16 @@ namespace Strict.HighLevelRuntime.Tests;
 public sealed class ExecutorTests
 {
 	[SetUp]
-	public void CreateExecutor() =>
+	public void CreateExecutor()
+	{
 		executor = new Executor(TestPackage.Instance, TestBehavior.Disabled);
+		one = new ValueInstance(TestPackage.Instance.GetType(Base.Number), 1);
+		two = new ValueInstance(TestPackage.Instance.GetType(Base.Number), 2);
+	}
 
 	private Executor executor = null!;
+	private ValueInstance one = null!;
+	private ValueInstance two = null!;
 
 	[Test]
 	public void MissingArgument()
@@ -303,7 +308,7 @@ public sealed class ExecutorTests
 				using var t = CreateType(nameof(StackOverflowCallingYourselfWithSameArguments),
 					"has number", "Recursive(other Number)", "\tRecursive(other)");
 			}, //ncrunch: no coverage
-			Throws.InstanceOf<SelfRecursiveCallWithSameArgumentsDetected>());
+			Throws.InstanceOf<TypeParser.SelfRecursiveCallWithSameArgumentsDetected>());
 
 	[Test]
 	public void StackOverflowCallingYourselfWithSameInstanceMember()
@@ -327,18 +332,60 @@ public sealed class ExecutorTests
 				[new ValueInstance(t.GetType(Base.Text), "abc")]).Value, Is.EqualTo(8));
 	}
 
-	[Test, Ignore("Fix stackoverflow, but we first want proper error messages!")]
+	[Test]
 	public void CallListOperator()
 	{
 		using var t = CreateType(nameof(CallListOperator), "has numbers",
 			"Double Numbers", "\tnumbers + numbers");
-		var numberType = t.GetType(Base.Number);
-		var one = new ValueInstance(numberType, 1);
-		var two = new ValueInstance(numberType, 2);
-		var instance = new ValueInstance(t,
-			new Dictionary<string, object?> { { "numbers", new[] { one, two } } });
-		Assert.That(executor.Execute(t.Methods.Single(m => m.Name == "Double"), instance, []).Value,
+		Assert.That(
+			executor.Execute(t.Methods.Single(m => m.Name == "Double"), CreateNumbers(t), []).Value,
 			Is.EqualTo(new[] { one, two, one, two }));
-		//TODO: finish here!
+	}
+
+	private ValueInstance CreateNumbers(Type t) =>
+		new(t, new Dictionary<string, object?> { { "numbers", new[] { one, two } } });
+
+	[Test]
+	public void AddNumberToList()
+	{
+		using var t = CreateType(nameof(AddNumberToList), "has numbers",
+			"AddOne Numbers", "\tnumbers + 1");
+		Assert.That(
+			executor.Execute(t.Methods.Single(m => m.Name == "AddOne"), CreateNumbers(t), []).Value,
+			Is.EqualTo(new[] { one, two, one }));
+	}
+
+	[Test]
+	public void RemoveNumberFromList()
+	{
+		using var t = CreateType(nameof(AddNumberToList), "has numbers",
+			"RemoveOne Numbers", "\tnumbers - 1");
+		Assert.That(
+			executor.Execute(t.Methods.Single(m => m.Name == "RemoveOne"), CreateNumbers(t), []).Value,
+			Is.EqualTo(new[] { two }));
+	}
+
+	[Test]
+	public void MultiplyList()
+	{
+		using var t = CreateType(nameof(MultiplyList), "has numbers",
+			"Multiply Numbers", "\tnumbers * 2");
+		Assert.That(
+			executor.Execute(t.Methods.Single(m => m.Name == "Multiply"), CreateNumbers(t), []).Value,
+			Is.EqualTo(new[] { two, new ValueInstance(t.GetType(Base.Number), 4) }));
+	}
+
+	[Test]
+	public void DivideList()
+	{
+		using var t = CreateType(nameof(DivideList), "has numbers",
+			"Divide Numbers", "\tnumbers / 10");
+		Assert.That(
+			executor.Execute(t.Methods.Single(m => m.Name == "Divide"), CreateNumbers(t), []).Value,
+			Is.EqualTo(new[]
+			{
+				new ValueInstance(t.GetType(Base.Number), 0.1),
+				new ValueInstance(t.GetType(Base.Number), 0.2)
+			}));
 	}
 }

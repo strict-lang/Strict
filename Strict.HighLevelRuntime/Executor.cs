@@ -210,6 +210,7 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 		bool runOnlyTests = false) =>
 		expr switch
 		{
+			//TODO: this class has grown too big, separate out these different evaluators into own classes
 			Body body => EvaluateBody(body, context, runOnlyTests),
 			Value v => new ValueInstance(v.ReturnType, v.Data),
 			ParameterCall or VariableCall => expr.ToString() == Base.ValueLowercase &&
@@ -561,10 +562,24 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 					BinaryOperator.Plus => CombineLists(ctx.Method, leftInstance.ReturnType, leftList, rightList),
 					BinaryOperator.Minus => SubtractLists(leftInstance.ReturnType, leftList, rightList),
 					BinaryOperator.Multiply => MultiplyLists(leftInstance.ReturnType, leftList, rightList),
-					_ => throw new NotSupportedException("Only +, -, * operators are supported for Lists, got: " + op)
+					BinaryOperator.Divide => DivideLists(leftInstance.ReturnType, leftList, rightList),
+					_ => throw new NotSupportedException("Only +, -, *, / operators are supported for Lists, got: " + op)
 				};
 			}
-			//TODO: also support list+element and list-element and list*number and list/number after adding tests for those ...
+			if (leftInstance.ReturnType.IsIterator && rightInstance.ReturnType.Name == Base.Number)
+			{
+				if (left is not IList leftList || right is not double rightNumber)
+					throw new InvalidOperationException("Expected list and number for iterator operation, " +
+						"other iterators are not yet supported: left=" + left + ", right=" + right);
+				return op switch
+				{
+					BinaryOperator.Plus => AddToList(ctx.Method, leftList, rightInstance, rightNumber),
+					BinaryOperator.Minus => RemoveFromList(leftList, rightNumber),
+					BinaryOperator.Multiply => MultiplyList(leftList, rightNumber),
+					BinaryOperator.Divide => DivideList(leftList, rightNumber),
+					_ => throw new NotSupportedException("Only +, -, *, / operators are supported for List and Number, got: " + op)
+				};
+			}
 			return ExecuteMethodCall(call, leftInstance, ctx);
 		}
 		if (IsCompare(op))
@@ -654,6 +669,64 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 				: 1.0f;
 			result.Add(leftItem * rightItem);
 		}
+		return new ValueInstance(listType, result);
+	}
+
+	private static ValueInstance DivideLists(Type listType, IList leftList, IList rightList)
+	{
+		var result = new List<object?>();
+		for (var index = 0; index < leftList.Count; index++)
+		{
+			var leftItem = (double)leftList[index]!;
+			var rightItem = index < rightList.Count
+				? (double)rightList[index]!
+				: 1.0f;
+			if (rightItem == 0)
+				rightItem = 1;
+			result.Add(leftItem / rightItem);
+		}
+		return new ValueInstance(listType, result);
+	}
+
+	private ValueInstance AddToList(Method method, IList leftList, ValueInstance right, double rightNumber)
+	{
+		var combined = new List<object?>(leftList.Count + 1);
+		var isLeftText = listType is GenericTypeImplementation { Generic.Name: Base.List } list &&
+			list.ImplementationTypes[0].Name == Base.Text;
+		foreach (var item in leftList)
+			combined.Add(item);
+		combined.Add(isLeftText
+			? new ValueInstance(method.GetType(Base.Text), rightNumber.ToString(CultureInfo.InvariantCulture))
+			: right);
+		return new ValueInstance(listType, combined);
+	}
+
+	private ValueInstance RemoveFromList(IList leftList, double rightNumber)
+	{
+		var result = new List<object?>();
+		foreach (var item in leftList)
+			if (item is ValueInstance number && EqualsExtensions.NumberToDouble(number.Value) != rightNumber)
+				result.Add(item);
+		return new ValueInstance(listType, result);
+	}
+
+	private ValueInstance MultiplyList(IList leftList, double rightNumber)
+	{
+		var result = new List<object?>(leftList.Count);
+		foreach (var item in leftList)
+			result.Add(item is ValueInstance number
+				? new ValueInstance(number.ReturnType, EqualsExtensions.NumberToDouble(number.Value) * rightNumber)
+				: throw new NotSupportedException("Cannot MultiplyList item " + item + " with " + rightNumber));
+		return new ValueInstance(listType, result);
+	}
+
+	private ValueInstance DivideList(IList leftList, double rightNumber)
+	{
+		var result = new List<object?>(leftList.Count);
+		foreach (var item in leftList)
+			result.Add(item is ValueInstance number
+				? new ValueInstance(number.ReturnType, EqualsExtensions.NumberToDouble(number.Value) / rightNumber)
+				: throw new NotSupportedException("Cannot DivideList item " + item + " with " + rightNumber));
 		return new ValueInstance(listType, result);
 	}
 
