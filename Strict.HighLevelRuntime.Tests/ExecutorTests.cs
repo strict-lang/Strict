@@ -352,7 +352,7 @@ public sealed class ExecutorTests
 			"AddOne Numbers", "\tnumbers + 1");
 		Assert.That(
 			executor.Execute(t.Methods.Single(m => m.Name == "AddOne"), CreateNumbers(t), []).Value,
-			Is.EqualTo(new[] { one, two, one }));
+			Is.EqualTo(new List<object?> { one, two, one }));
 	}
 
 	[Test]
@@ -387,5 +387,17 @@ public sealed class ExecutorTests
 				new ValueInstance(t.GetType(Base.Number), 0.1),
 				new ValueInstance(t.GetType(Base.Number), 0.2)
 			}));
+	}
+
+	[TestCase("(1, 2, 3) * (1, 2)")]
+	[TestCase("(1, 2, 3) * (1, 2, 3, 4)")]
+	public void ListsHaveDifferentDimensionsIsNotAllowed(string input)
+	{
+		using var t = CreateType(nameof(ListsHaveDifferentDimensionsIsNotAllowed), "has number",
+			"Run", "\t" + input);
+		var error = executor.Execute(t.Methods[0], null, []);
+		Assert.That(error.ReturnType.Name, Is.EqualTo(Base.Error));
+		Assert.That(error.FindInnerValue(Base.Name),
+			Is.EqualTo(Executor.ListsHaveDifferentDimensions));
 	}
 }

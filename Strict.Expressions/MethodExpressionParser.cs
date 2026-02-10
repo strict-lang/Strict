@@ -217,6 +217,14 @@ public class MethodExpressionParser : ExpressionParser
 			return call;
 		if (inputAsString.IsKeyword())
 			throw new KeywordNotAllowedAsMemberOrMethod(body, inputAsString, type);
+		// If inside a generic type that cannot be used directly, we still might have a declaration or
+		// Enum usage. This won't use the outer generic type, but might be needed for tests (e.g. Error)
+		if (instance is null && type.IsGeneric && inputAsString.IsWordOrWordWithNumberAtEnd(out _))
+		{
+			var fromOrEnum = MethodCall.TryParseFromOrEnum(body, arguments, inputAsString);
+			if (fromOrEnum != null)
+				return fromOrEnum;
+		}
 		var parse = MemberCall.TryParse(body, type, instance, input) ??
 			MethodCall.TryParse(instance, body, arguments, type, input.ToString());
 		if (parse == null && instance is null)

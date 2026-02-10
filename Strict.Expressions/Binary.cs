@@ -100,7 +100,6 @@ public sealed class Binary(Expression left, Method operatorMethod, Expression[] 
 		}
 	}
 
-	// ReSharper disable once TooManyArguments
 	private static Binary BuildRegularBinaryExpression(Body body, ReadOnlySpan<char> input,
 		Stack<Range> tokens, string operatorToken)
 	{
@@ -124,8 +123,7 @@ public sealed class Binary(Expression left, Method operatorMethod, Expression[] 
 				? input[tokens.Peek()].ToString()
 				: "<empty>") + ", remaining tokens=" + tokens.Count);
 #endif
-		if (operatorToken == BinaryOperator.Multiply && HasIncompatibleDimensions(left, right))
-			throw new ListsHaveDifferentDimensions(body, left + " " + right);
+		// Any incompatibility is checked at runtime when the Executor runs on this
 		return operatorToken is BinaryOperator.In
 			? new Binary(right, right.ReturnType.GetMethod(BinaryOperator.In, [left]), [left])
 			: new Binary(left, left.ReturnType.GetMethod(operatorToken, [right]), [right]);
@@ -157,10 +155,6 @@ public sealed class Binary(Expression left, Method operatorMethod, Expression[] 
 
 	private static Expression BuildNot(Expression expression) =>
 		new Not(expression.ReturnType.GetMethod(UnaryOperator.Not, []), expression);
-
-	private static bool HasIncompatibleDimensions(Expression left, Expression right) =>
-		left is List leftList && right is List rightList &&
-		leftList.Values.Count != rightList.Values.Count;
 
 	public sealed class ListsHaveDifferentDimensions(Body body, string error)
 		: ParsingFailed(body, error);

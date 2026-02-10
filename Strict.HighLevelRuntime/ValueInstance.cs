@@ -98,4 +98,12 @@ public sealed class ValueInstance : IEquatable<ValueInstance>
 		ReferenceEquals(this, obj) || obj is ValueInstance other && Equals(other);
 
 	public override int GetHashCode() => HashCode.Combine(ReturnType, Value);
+
+	public object? FindInnerValue(string name)
+	{
+		if (Value is IDictionary<string, object?> valueDictionary)
+			if (valueDictionary.TryGetValue(name, out var value))
+				return value;
+		return null;
+	}
 }

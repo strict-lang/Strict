@@ -20,6 +20,10 @@ public static class EqualsExtensions
 			return true;
 		if (value is null || other is null)
 			return false;
+		// If one side is an Expression and the other is not, something horribly went wrong!
+		if (value is Expression && other is not Expression ||
+			value is not Expression && other is Expression)
+			throw new NotAllowedToCompareExpressionToNonExpressions(value, other);
 		if (value is IList valueList && other is IList otherValueList)
 			return AreListsEqual(valueList, otherValueList);
 		if (value is IDictionary valueDict && other is IDictionary otherValueDict)
@@ -28,6 +32,10 @@ public static class EqualsExtensions
 			return NumberToDouble(value) == NumberToDouble(other);
 		return value.Equals(other);
 	}
+
+	public class NotAllowedToCompareExpressionToNonExpressions(object value, object other)
+		: Exception("value=" + value + " (" + value.GetType() + "), other=" + other + " (" +
+			other.GetType() + ")");
 
 	private static bool AreListsEqual(IList left, IList right)
 	{

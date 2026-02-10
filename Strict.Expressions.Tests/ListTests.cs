@@ -71,12 +71,6 @@ public sealed class ListTests : TestExpressions
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.
 				InstanceOf<Type.ArgumentsDoNotMatchMethodParameters>());
 
-	[TestCase("(1, 2, 3) * (1, 2)")]
-	[TestCase("(1, 2, 3) * (1, 2, 3, 4)")]
-	public void ListsHaveDifferentDimensionsIsNotAllowed(string input) =>
-		Assert.That(() => ParseExpression(input),
-			Throws.InstanceOf<Binary.ListsHaveDifferentDimensions>());
-
 	[TestCase("(1, 2, 3, 4, 5) + (6, 7, 8)", "1, 2, 3, 4, 5", "+", "6, 7, 8")]
 	[TestCase("(1, 2, 3, 4, 5) - (6, 7, 8)", "1, 2, 3, 4, 5", "-", "6, 7, 8")]
 	[TestCase("(1, 2, 3, 4, 5) is (1, 2, 3, 4, 5)", "1, 2, 3, 4, 5", "is", "1, 2, 3, 4, 5")]
@@ -195,4 +189,10 @@ public sealed class ListTests : TestExpressions
 		Assert.That(body.Method.Parameters[0].Type.Name, Is.EqualTo(Base.Text));
 		Assert.That(body.Method, Is.EqualTo(containsMethod), texts.Methods.ToWordList());
 	}
+
+	[Test]
+	public void CompareLists() =>
+		Assert.That(
+			EqualsExtensions.AreEqual(new List<Number> { new(type, 2), new(type, 3) },
+				new List<Number> { new(type, 2), new(type, 3) }), Is.True);
 }

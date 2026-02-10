@@ -1,7 +1,7 @@
-using System.Collections;
-using System.Globalization;
 using Strict.Expressions;
 using Strict.Language;
+using System.Collections;
+using System.Globalization;
 using Type = Strict.Language.Type;
 
 namespace Strict.HighLevelRuntime;
@@ -557,6 +557,9 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 				if (left is not IList leftList || right is not IList rightList)
 					throw new InvalidOperationException("Expected lists for iterator operation, other " +
 						"iterators are not yet supported: left=" + left + ", right=" + right);
+				if (op is BinaryOperator.Multiply or BinaryOperator.Divide &&
+					leftList.Count != rightList.Count)
+					return Error(ListsHaveDifferentDimensions, ctx, call);
 				return op switch
 				{
 					BinaryOperator.Plus => CombineLists(ctx.Method, leftInstance.ReturnType, leftList, rightList),
@@ -573,10 +576,10 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 						"other iterators are not yet supported: left=" + left + ", right=" + right);
 				return op switch
 				{
-					BinaryOperator.Plus => AddToList(ctx.Method, leftList, rightInstance, rightNumber),
-					BinaryOperator.Minus => RemoveFromList(leftList, rightNumber),
-					BinaryOperator.Multiply => MultiplyList(leftList, rightNumber),
-					BinaryOperator.Divide => DivideList(leftList, rightNumber),
+					BinaryOperator.Plus => AddToList(leftInstance.ReturnType, leftList, rightInstance, rightNumber),
+					BinaryOperator.Minus => RemoveFromList(leftInstance.ReturnType, leftList, rightNumber),
+					BinaryOperator.Multiply => MultiplyList(leftInstance.ReturnType, leftList, rightNumber),
+					BinaryOperator.Divide => DivideList(leftInstance.ReturnType, leftList, rightNumber),
 					_ => throw new NotSupportedException("Only +, -, *, / operators are supported for List and Number, got: " + op)
 				};
 			}
@@ -658,76 +661,91 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 		return new ValueInstance(listType, remainder);
 	}
 
-	private static ValueInstance MultiplyLists(Type listType, IList leftList, IList rightList)
+	private static ValueInstance MultiplyLists(Type leftListType, IList leftList, IList rightList)
 	{
 		var result = new List<object?>();
 		for (var index = 0; index < leftList.Count; index++)
-		{
-			var leftItem = (double)leftList[index]!;
-			var rightItem = index < rightList.Count
-				? (double)rightList[index]!
-				: 1.0f;
-			result.Add(leftItem * rightItem);
-		}
-		return new ValueInstance(listType, result);
+			result.Add(new Number(leftListType, GetNumber(leftList[index]) * GetNumber(rightList[index])));
+		return new ValueInstance(leftListType, result);
 	}
 
-	private static ValueInstance DivideLists(Type listType, IList leftList, IList rightList)
+	private static double GetNumber(object? expressionOrNumber)
+	{
+		if (expressionOrNumber is Number number)
+			return (double)number.Data;
+		return EqualsExtensions.NumberToDouble(expressionOrNumber);
+	}
+
+	private static ValueInstance DivideLists(Type leftListType, IList leftList, IList rightList)
 	{
 		var result = new List<object?>();
 		for (var index = 0; index < leftList.Count; index++)
-		{
-			var leftItem = (double)leftList[index]!;
-			var rightItem = index < rightList.Count
-				? (double)rightList[index]!
-				: 1.0f;
-			if (rightItem == 0)
-				rightItem = 1;
-			result.Add(leftItem / rightItem);
-		}
-		return new ValueInstance(listType, result);
+			result.Add(new Number(leftListType, GetNumber(leftList[index]) / GetNumber(rightList[index])));
+		return new ValueInstance(leftListType, result);
 	}
 
-	private ValueInstance AddToList(Method method, IList leftList, ValueInstance right, double rightNumber)
+	private static ValueInstance AddToList(Type leftListType, IList leftList, ValueInstance right, double rightNumber)
 	{
 		var combined = new List<object?>(leftList.Count + 1);
-		var isLeftText = listType is GenericTypeImplementation { Generic.Name: Base.List } list &&
+		var isLeftText = leftListType is GenericTypeImplementation { Generic.Name: Base.List } list &&
 			list.ImplementationTypes[0].Name == Base.Text;
 		foreach (var item in leftList)
 			combined.Add(item);
 		combined.Add(isLeftText
-			? new ValueInstance(method.GetType(Base.Text), rightNumber.ToString(CultureInfo.InvariantCulture))
-			: right);
-		return new ValueInstance(listType, combined);
+			? new Text(leftListType, rightNumber.ToString(CultureInfo.InvariantCulture))
+			: combined.Count > 0 && combined[0] is ValueInstance
+				? right
+				: new Number(leftListType, rightNumber));
+		return new ValueInstance(leftListType, combined);
 	}
 
-	private ValueInstance RemoveFromList(IList leftList, double rightNumber)
+	private static ValueInstance RemoveFromList(Type leftListType, IList leftList,
+		double rightNumber)
 	{
 		var result = new List<object?>();
 		foreach (var item in leftList)
-			if (item is ValueInstance number && EqualsExtensions.NumberToDouble(number.Value) != rightNumber)
-				result.Add(item);
-		return new ValueInstance(listType, result);
+		{
+			if (item is ValueInstance number &&
+				EqualsExtensions.NumberToDouble(number.Value) == rightNumber)
+				continue;
+			if (item is Value numberExpression &&
+				EqualsExtensions.NumberToDouble(numberExpression.Data) == rightNumber)
+				continue;
+			result.Add(item);
+		}
+		return new ValueInstance(leftListType, result);
 	}
 
-	private ValueInstance MultiplyList(IList leftList, double rightNumber)
+	private static ValueInstance MultiplyList(Type leftListType, IList leftList, double rightNumber)
 	{
 		var result = new List<object?>(leftList.Count);
 		foreach (var item in leftList)
-			result.Add(item is ValueInstance number
-				? new ValueInstance(number.ReturnType, EqualsExtensions.NumberToDouble(number.Value) * rightNumber)
-				: throw new NotSupportedException("Cannot MultiplyList item " + item + " with " + rightNumber));
-		return new ValueInstance(listType, result);
+			result.Add(item switch
+			{
+				ValueInstance number => new ValueInstance(number.ReturnType,
+					EqualsExtensions.NumberToDouble(number.Value) * rightNumber),
+				Value numberExpression => new Number(leftListType,
+					EqualsExtensions.NumberToDouble(numberExpression.Data) * rightNumber),
+				_ => throw new NotSupportedException("Cannot MultiplyList item " + item + " with " +
+					rightNumber)
+			});
+		return new ValueInstance(leftListType, result);
 	}
 
-	private ValueInstance DivideList(IList leftList, double rightNumber)
+	private static ValueInstance DivideList(Type leftListType, IList leftList, double rightNumber)
 	{
 		var result = new List<object?>(leftList.Count);
 		foreach (var item in leftList)
-			result.Add(item is ValueInstance number
-				? new ValueInstance(number.ReturnType, EqualsExtensions.NumberToDouble(number.Value) / rightNumber)
-				: throw new NotSupportedException("Cannot DivideList item " + item + " with " + rightNumber));
-		return new ValueInstance(listType, result);
+			result.Add(item switch
+			{
+				ValueInstance number => new ValueInstance(number.ReturnType,
+					EqualsExtensions.NumberToDouble(number.Value) / rightNumber),
+				Value numberExpression => new Number(leftListType,
+					EqualsExtensions.NumberToDouble(numberExpression.Data) / rightNumber),
+				_ => throw new NotSupportedException("Cannot DivideList item " + item + " with " +
+					rightNumber)
+			});
+		return new ValueInstance(leftListType, result);
 	}
 
 	private ValueInstance ExecuteMethodCall(MethodCall call, ValueInstance instance, ExecutionContext ctx)
@@ -741,6 +759,66 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 	private ValueInstance Bool(bool b) => new(boolType, b);
 	private readonly Type boolType = basePackage.FindType(Base.Boolean)!;
 	private readonly Type listType = basePackage.FindType(Base.List)!;
+	private readonly Type errorType = basePackage.FindType(Base.Error)!;
+	private readonly Type stacktraceType = basePackage.FindType(Base.Stacktrace)!;
+	private readonly Type methodType = basePackage.FindType(Base.Method)!;
+	private readonly Type typeType = basePackage.FindType(Base.Type)!;
+	public const string ListsHaveDifferentDimensions = "listsHaveDifferentDimensions";
+
+	private ValueInstance Error(string name, ExecutionContext ctx, Expression? source = null)
+	{
+		var stacktraceList = new List<object?> { CreateStacktrace(ctx, source) };
+		var errorMembers = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+		foreach (var member in errorType.Members)
+			errorMembers[member.Name] = member.Type.Name switch
+			{
+				Base.Name or Base.Text => name,
+				_ when member.Type.Name == Base.List ||
+					member.Type is GenericTypeImplementation { Generic.Name: Base.List } => stacktraceList,
+				_ => throw new NotSupportedException("Error member not supported: " + member)
+			};
+		return new ValueInstance(errorType, errorMembers);
+	}
+
+	private Dictionary<string, object?> CreateStacktrace(ExecutionContext ctx, Expression? source)
+	{
+		var members = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+		foreach (var member in stacktraceType.Members)
+			members[member.Name] = member.Type.Name switch
+			{
+				Base.Method => CreateMethodValue(ctx.Method),
+				Base.Text or Base.Name => ctx.Method.Type.FilePath,
+				Base.Number => (double)(source?.LineNumber ?? ctx.Method.TypeLineNumber),
+				_ => throw new NotSupportedException("Stacktrace member not supported: " + member)
+			};
+		return members;
+	}
+
+	private Dictionary<string, object?> CreateMethodValue(Method method)
+	{
+		var values = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+		foreach (var member in methodType.Members)
+			values[member.Name] = member.Type.Name switch
+			{
+				Base.Name or Base.Text => method.Name,
+				Base.Type => CreateTypeValue(method.Type),
+				_ => throw new NotSupportedException("Method member not supported: " + member)
+			};
+		return values;
+	}
+
+	private Dictionary<string, object?> CreateTypeValue(Type type)
+	{
+		var values = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+		foreach (var member in typeType.Members)
+			values[member.Name] = member.Type.Name switch
+			{
+				Base.Name => type.Name,
+				Base.Text => type.Package.FullName,
+				_ => throw new NotSupportedException("Type member not supported: " + member)
+			};
+		return values;
+	}
 
 	private static bool ToBool(object? v) =>
 		v switch
