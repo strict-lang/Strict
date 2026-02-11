@@ -137,25 +137,17 @@ public sealed class Binary(Expression left, Method operatorMethod, Expression[] 
 		Console.WriteLine("GetUnaryOrBuildNestedBinary token=" +
 			input[nextTokenRange].ToString() + ", remaining tokens=" + tokens.Count);
 #endif
-		var expression = input[nextTokenRange].IsNot()
+		return input[nextTokenRange].IsNot()
 			? BuildNot(GetUnaryOrBuildNestedBinary(body, input, tokens, checkRightForIsTypeComparison))
-			: input[nextTokenRange.Start.Value].IsSingleCharacterOperator() ||
+			: nextTokenRange.End.Value == nextTokenRange.Start.Value + 1 &&
+			input[nextTokenRange.Start.Value].IsSingleCharacterOperator() ||
 			input[nextTokenRange].IsMultiCharacterOperator()
 				? BuildBinaryExpression(body, input, nextTokenRange, tokens)
 				: checkRightForIsTypeComparison
 					? TypeComparison.Parse(body, input, nextTokenRange)
 					: body.Method.ParseExpression(body, input[nextTokenRange]);
-		if (expression.ReturnType.IsGeneric)
-			//ncrunch: no coverage start, cannot be reached: Type.FindMethod already filters this condition
-			throw new Type.GenericTypesCannotBeUsedDirectlyUseImplementation(expression.ReturnType,
-				expression.ToString());
-		//ncrunch: no coverage end
-		return expression;
 	}
 
 	private static Expression BuildNot(Expression expression) =>
 		new Not(expression.ReturnType.GetMethod(UnaryOperator.Not, []), expression);
-
-	public sealed class ListsHaveDifferentDimensions(Body body, string error)
-		: ParsingFailed(body, error);
 }

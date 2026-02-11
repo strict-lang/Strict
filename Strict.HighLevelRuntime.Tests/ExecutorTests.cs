@@ -400,4 +400,17 @@ public sealed class ExecutorTests
 		Assert.That(error.FindInnerValue(Base.Name),
 			Is.EqualTo(Executor.ListsHaveDifferentDimensions));
 	}
+
+	[Test]
+	public void RunListIn()
+	{
+		using var type = new Type(TestPackage.Instance,
+				new TypeLines(nameof(RunListIn), "has number",
+					// @formatter:off
+					"Run Boolean",
+					"\t\"d\" is not in (\"a\", \"b\", \"c\")",
+					"\t\"b\" is in (\"a\", \"b\", \"c\")")).
+			ParseMembersAndMethods(new MethodExpressionParser());
+		Assert.That(executor.Execute(type.Methods[0], null, []).Value, Is.EqualTo(true));
+	}
 }

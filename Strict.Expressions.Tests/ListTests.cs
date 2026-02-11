@@ -1,3 +1,6 @@
+using Iced.Intel;
+using System.Reflection.Metadata;
+
 namespace Strict.Expressions.Tests;
 
 public sealed class ListTests : TestExpressions
@@ -195,4 +198,9 @@ public sealed class ListTests : TestExpressions
 		Assert.That(
 			EqualsExtensions.AreEqual(new List<Number> { new(type, 2), new(type, 3) },
 				new List<Number> { new(type, 2), new(type, 3) }), Is.True);
+
+	[Test]
+	public void Index() =>
+		Assert.That(ParseExpression("(1, 2, 3).Index(9) is -1").ReturnType,
+			Is.EqualTo(type.GetType(Base.Boolean)));
 }

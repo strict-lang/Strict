@@ -39,9 +39,9 @@ public sealed class ValueInstance : IEquatable<ValueInstance>
 		}
 		else if (ReturnType.Name is Base.Character or Base.HashCode)
 		{
-			if (Value is double valueDouble)
-				Value = (int)valueDouble;
-			if (Value is not char && Value is not int)
+			if (Value is double doubleValue)
+				Value = (int)doubleValue;
+			if (Value is not int)
 				throw new InvalidTypeValue(ReturnType, Value);
 		}
 		else if (ReturnType.Name == Base.List || ReturnType.Name == Base.Dictionary ||
@@ -106,4 +106,34 @@ public sealed class ValueInstance : IEquatable<ValueInstance>
 				return value;
 		return null;
 	}
+
+	public Range GetRange()
+	{
+		if (Value is IDictionary<string, object?> valueDictionary)
+			return new Range(Convert.ToInt32(valueDictionary["Start"]),
+				Convert.ToInt32(valueDictionary["ExclusiveEnd"]));
+		throw new IteratorNotSupported(this);
+	}
+
+	public class IteratorNotSupported(ValueInstance instance)
+		: ExecutionFailed(instance.ReturnType, instance.ToString());
+
+	public Index GetIteratorLength() =>
+		Value switch
+		{
+			IList list => list.Count,
+			int count => count,
+			double countDouble => (int)countDouble,
+			string text => text.Length,
+			_ => throw new IteratorNotSupported(this)
+		};
+
+	public object? GetIteratorValue(int index) =>
+		ReturnType.Name is Base.Number or Base.Range
+			? index
+			: Value is string
+				? (int)((string)Value!)[index]
+				: Value is IList list
+					? list[index]
+					: throw new IteratorNotSupported(this);
 }

@@ -400,24 +400,18 @@ public sealed class Method : Context
 	}
 
 	private static bool IsPotentialTestLine(string line) =>
-		line.Contains($" {BinaryOperator.Is} ", StringComparison.Ordinal) &&
-		!line.Contains("?");
+		line.Contains($" {BinaryOperator.Is} ", StringComparison.Ordinal) && !line.Contains("?");
 
-	private static bool IsDeclarationLine(string line)
-	{
-		var trimmed = line.TrimStart();
-		return trimmed.StartsWith(Keyword.Constant + " ", StringComparison.Ordinal) ||
-			trimmed.StartsWith(Keyword.Let + " ", StringComparison.Ordinal) ||
-			trimmed.StartsWith(Keyword.Mutable + " ", StringComparison.Ordinal);
-	}
+	private static bool IsDeclarationLine(string line) =>
+		line.StartsWith("\t" + Keyword.Constant + " ", StringComparison.Ordinal) ||
+		line.StartsWith("\t" + Keyword.Let + " ", StringComparison.Ordinal) ||
+		line.StartsWith("\t" + Keyword.Mutable + " ", StringComparison.Ordinal);
 
-	private static bool IsControlFlowLine(string line)
-	{
-		var trimmed = line.TrimStart();
-		return trimmed.StartsWith("if ", StringComparison.Ordinal) ||
-			trimmed.StartsWith("for ", StringComparison.Ordinal) ||
-			trimmed.StartsWith("return ", StringComparison.Ordinal);
-	}
+	private static bool IsControlFlowLine(string line) =>
+		line.StartsWith("\tif ", StringComparison.Ordinal) ||
+		line.StartsWith("\tfor ", StringComparison.Ordinal) ||
+		line.StartsWith("\treturn ", StringComparison.Ordinal) ||
+		line.StartsWith("\t\t", StringComparison.Ordinal);
 
 	private static bool IsStandaloneInlineTestExpression(Expression expression) =>
 		expression.ReturnType.Name == Base.Boolean &&

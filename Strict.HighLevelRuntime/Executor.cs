@@ -2,6 +2,8 @@ using Strict.Expressions;
 using Strict.Language;
 using System.Collections;
 using System.Globalization;
+using System.Xml.Linq;
+using static Strict.HighLevelRuntime.ExecutionContext;
 using Type = Strict.Language.Type;
 
 namespace Strict.HighLevelRuntime;
@@ -46,6 +48,8 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 			if (instance != null)
 				throw new MethodCall.CannotCallFromConstructorWithExistingInstance();
 			instance = new ValueInstance(method.Type, GetFromConstructorValue(method, args));
+			if (method.lines.Last() == "\tvalue")
+				return instance;
 		}
 		if (parentContext != null && parentContext.Method == method &&
 			(parentContext.This?.Equals(instance) ?? instance == null) &&
@@ -213,10 +217,7 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 			//TODO: this class has grown too big, separate out these different evaluators into own classes
 			Body body => EvaluateBody(body, context, runOnlyTests),
 			Value v => new ValueInstance(v.ReturnType, v.Data),
-			ParameterCall or VariableCall => expr.ToString() == Base.ValueLowercase &&
-				context.This != null
-					? context.This
-					: context.Get(expr.ToString()),
+			ParameterCall or VariableCall => EvaluateVariable(expr.ToString(), context),
 			MemberCall m => EvaluateMember(m, context),
 			If iff => EvaluateIf(iff, context),
 			For f => EvaluateFor(f, context),
@@ -226,21 +227,17 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 			MethodCall call => EvaluateMethodCall(call, context),
 			Declaration c => EvaluateAndAssign(c.Name, c.Value, context),
 			MutableReassignment a => EvaluateAndAssign(a.Name, a.Value, context),
-			Instance i => ExtractValue(i.ReturnType, expr, context),
-			_ => //ncrunch: no coverage start
-				throw new NotSupportedException($"Expression not supported yet: {expr.GetType().Name} " +
-					$"in {context.Type}")
-			//ncrunch: no coverage end
+			Instance => EvaluateVariable(Base.ValueLowercase, context),
+			_ => throw new ExpressionNotSupported(expr, context) //ncrunch: no coverage
 		};
 
-	private static ValueInstance ExtractValue(Type type, Expression expr, ExecutionContext context) =>
-		new(type, context.Variables.ContainsKey(Base.ValueLowercase)
-			? context.Variables[Base.ValueLowercase].Value
-			: context.This != null
-				? context.This.Value
-				: throw new NoInstanceGiven(expr, context.Type));
+	public class ExpressionNotSupported(Expression expr, ExecutionContext context)
+		: ExecutionFailed(context.Type, expr.GetType().Name);
 
-	public sealed class NoInstanceGiven(Expression expr, Type type) : Exception(expr + " in " + type);
+	private static ValueInstance EvaluateVariable(string name, ExecutionContext context) =>
+		context.Find(name) ?? (name == Base.ValueLowercase
+			? context.This
+			: null) ?? throw new VariableNotFound(name, context.Type, context.This);
 
 	private ValueInstance EvaluateBody(Body body, ExecutionContext ctx, bool runOnlyTests)
 	{
@@ -264,11 +261,14 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 				if (runOnlyTests && isTest && !ToBool(last))
 					throw new TestFailed(body.Method, e, last, GetTestFailureDetails(e, ctx));
 			}
-			if (runOnlyTests && last.Value == null && body.Method.Name != Base.Run)
+			if (runOnlyTests && last.Value == null && body.Method.Name != Base.Run &&
+				body.Expressions.Count > 1)
 				throw new MethodRequiresTest(body.Method, body);
 			return runOnlyTests || last.ReturnType.IsError || body.Method.ReturnType == last.ReturnType
 				? last
-				: throw new ReturnTypeMustMatchMethod(body, last);
+				: body.Method.ReturnType.Name == Base.Character && last.ReturnType.Name == Base.Number
+					? new ValueInstance(body.Method.ReturnType, last.Value)
+					: throw new ReturnTypeMustMatchMethod(body, last);
 		}
 		catch (ExecutionFailed ex)
 		{
@@ -396,65 +396,55 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 	private ValueInstance EvaluateFor(For f, ExecutionContext ctx)
 	{
 		var iterator = RunExpression(f.Iterator, ctx);
-		var values = GetForValues(iterator);
-		if (iterator.ReturnType.Name == Base.Range)
-			return Number(values.Sum(EqualsExtensions.NumberToDouble));
-		double numberResult = 0;
-		var shouldSum = IsListIterator(iterator.ReturnType) &&
-			ctx.Method.ReturnType.Name == Base.Number;
-		var results = new List<object?>(values.Count);
-		for (var index = 0; index < values.Count; index++)
+		var loopRange = iterator.ReturnType.Name == Base.Range
+			? iterator.GetRange()
+			: new Range(0, iterator.GetIteratorLength());
+		var results = new List<ValueInstance>();
+		var itemType = GetForValueType(iterator);
+		for (var index = loopRange.Start.Value; index < loopRange.End.Value; index++)
 		{
 			var loopContext = new ExecutionContext(ctx.Type, ctx.Method) { This = ctx.This, Parent = ctx };
 			loopContext.Set(Base.IndexLowercase, new ValueInstance(numberType, index));
-			loopContext.Set(Base.ValueLowercase, new ValueInstance(GetForValueType(iterator), values[index]));
+			var value = iterator.GetIteratorValue(index);
+			loopContext.Set(Base.ValueLowercase, new ValueInstance(itemType, value));
 			foreach (var customVariable in f.CustomVariables)
 				if (customVariable is VariableCall variableCall)
 					loopContext.Set(variableCall.Variable.Name,
-						new ValueInstance(variableCall.ReturnType, values[index]));
-			var result = RunExpression(f.Body, loopContext);
-			if (shouldSum && result.Value is IConvertible)
-				numberResult += EqualsExtensions.NumberToDouble(result.Value);
-			else
-			{
-				shouldSum = false;
-				results.Add(result.Value);
-			}
+						new ValueInstance(variableCall.ReturnType, value));
+			//TODO: if this is a return, for loop should be aborted, we found the result!
+			results.Add(RunExpression(f.Body, loopContext));
 		}
-		return shouldSum
-			? Number(numberResult)
-			: new ValueInstance(listType, results);
+		return ShouldConsolidateForResult(results, ctx) ?? new ValueInstance(results.Count == 0
+			? iterator.ReturnType
+			: genericListType.GetGenericImplementation(results[0].ReturnType), results);
 	}
 
-	private static IReadOnlyList<object?> GetForValues(ValueInstance iterator) =>
-		iterator.Value switch
-		{
-			IDictionary<string, object?> dict when iterator.ReturnType.Name == Base.Range =>
-				GetRangeValues(dict),
-			IList list => list.Cast<object?>().ToList(),
-			int count => Enumerable.Range(0, count).Cast<object?>().ToList(),
-			double countDouble => Enumerable.Range(0, (int)countDouble).Cast<object?>().ToList(),
-			string text => text.ToCharArray().Cast<object?>().ToList(),
-			_ => throw new NotSupportedException("Iterator not supported: " + iterator.ReturnType.Name)
-		};
-
-	private static IReadOnlyList<object?> GetRangeValues(IDictionary<string, object?> dict)
+	private static ValueInstance? ShouldConsolidateForResult(List<ValueInstance> results, ExecutionContext ctx)
 	{
-		var start = Convert.ToInt32(dict["Start"]);
-		var end = Convert.ToInt32(dict["ExclusiveEnd"]);
-		var range = new List<object?>();
-		for (var i = start; i < end; i++)
-			range.Add((double)i);
-		return range;
+		if (ctx.Method.ReturnType.Name == Base.Number)
+			return new ValueInstance(ctx.Method.ReturnType,
+				results.Sum(value => EqualsExtensions.NumberToDouble(value.Value)));
+		if (ctx.Method.ReturnType.Name == Base.Text)
+		{
+			var text = "";
+			foreach (var value in results)
+				text += value.ReturnType.Name switch
+				{
+					Base.Number or Base.Character => (int)EqualsExtensions.NumberToDouble(value.Value),
+					Base.Text => ((string)value.Value!)[0],
+					_ => throw new NotSupportedException("Can't append to text: " + value)
+				};
+			return new ValueInstance(ctx.Method.ReturnType, text);
+		}
+		if (ctx.Method.ReturnType.Name == Base.Boolean)
+			return new ValueInstance(ctx.Method.ReturnType, results.Any(value => value.Value is true));
+		return null;
 	}
 
 	private Type GetForValueType(ValueInstance iterator) =>
 		iterator.ReturnType is GenericTypeImplementation { Generic.Name: Base.List } list
 			? list.ImplementationTypes[0]
 			: numberType;
-
-	private static bool IsListIterator(Type type) =>
-		type.Name == Base.List || type is GenericTypeImplementation { Generic.Name: Base.List };
 
 	private ValueInstance EvaluateTo(To to, ExecutionContext ctx)
 	{
@@ -758,7 +748,7 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 
 	private ValueInstance Bool(bool b) => new(boolType, b);
 	private readonly Type boolType = basePackage.FindType(Base.Boolean)!;
-	private readonly Type listType = basePackage.FindType(Base.List)!;
+	private readonly Type genericListType = basePackage.FindType(Base.List)!;
 	private readonly Type errorType = basePackage.FindType(Base.Error)!;
 	private readonly Type stacktraceType = basePackage.FindType(Base.Stacktrace)!;
 	private readonly Type methodType = basePackage.FindType(Base.Method)!;
