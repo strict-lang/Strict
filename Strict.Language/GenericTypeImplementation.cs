@@ -4,7 +4,7 @@ public sealed class GenericTypeImplementation : Type
 {
 	public GenericTypeImplementation(Type generic, IReadOnlyList<Type> implementationTypes) : base(
 		generic.Package, new TypeLines(generic.GetImplementationName(implementationTypes),
-			HasWithSpaceAtEnd + generic.Name))
+			CreateHasLines(generic, implementationTypes)))
 	{
 		CreatedBy = "Generic: " + generic + ", Implementations: " + implementationTypes.ToWordList() +
 			", " + CreatedBy;
@@ -13,6 +13,11 @@ public sealed class GenericTypeImplementation : Type
 		ImplementMembers();
 		ImplementMethods();
 	}
+
+	private static string[] CreateHasLines(Type generic, IReadOnlyList<Type> implementationTypes) =>
+		generic.IsMutable && implementationTypes[0].IsGeneric
+			? [HasWithSpaceAtEnd + generic.Name, HasWithSpaceAtEnd + Base.Generic]
+			: [HasWithSpaceAtEnd + generic.Name];
 
 	public Type Generic { get; }
 	public IReadOnlyList<Type> ImplementationTypes { get; }

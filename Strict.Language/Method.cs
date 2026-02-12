@@ -226,13 +226,40 @@ public sealed class Method : Context
 		lines = cloneFrom.lines;
 	}
 
+	/// <summary>
+	/// Nested generic implementations (like Mutable(List)) keep their outer type while substituting
+	/// the implemented list type. This makes Add(Type) return Mutable(List(Number)) as expected.
+	/// </summary>
 	private static Type ReplaceWithImplementationOrGenericType(Type type,
-		GenericTypeImplementation typeWithImplementation, int index) =>
-		type.Name == Base.Generic
-			? typeWithImplementation.ImplementationTypes[index] // like Number
-			: type.IsGeneric
-				? typeWithImplementation // like List(Number)
-				: type;
+		GenericTypeImplementation typeWithImplementation, int index)
+	{
+		if (type.Name == Base.Generic)
+			return typeWithImplementation.ImplementationTypes[index];
+		if (type is GenericTypeImplementation genericImplementation)
+		{
+			var updatedImplementationTypes =
+				new Type[genericImplementation.ImplementationTypes.Count];
+			var hasChanges = false;
+			for (var implementationIndex = 0;
+				implementationIndex < updatedImplementationTypes.Length; implementationIndex++)
+			{
+				var implementationType = genericImplementation.ImplementationTypes[implementationIndex];
+				var updatedType = implementationType.Name == Base.Generic
+					? typeWithImplementation.ImplementationTypes[index]
+					: implementationType == typeWithImplementation.Generic
+						? typeWithImplementation
+						: implementationType;
+				updatedImplementationTypes[implementationIndex] = updatedType;
+				if (!ReferenceEquals(updatedType, implementationType))
+					hasChanges = true;
+			}
+			if (hasChanges)
+				return genericImplementation.Generic.GetGenericImplementation(updatedImplementationTypes);
+		}
+		return type.IsGeneric && type == typeWithImplementation.Generic
+			? typeWithImplementation
+			: type;
+	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public Expression ParseLine(Body body, string currentLine)

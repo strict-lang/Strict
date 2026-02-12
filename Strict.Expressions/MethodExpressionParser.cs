@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Strict.Language;
 using Type = Strict.Language.Type;

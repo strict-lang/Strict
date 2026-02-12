@@ -176,11 +176,21 @@ public sealed class TestExecutorTests
 	{
 		using var type = new Type(TestPackage.Instance,
 				new TypeLines(nameof(RunNumberToCharacterBody), "has number",
-					// @formatter:off
 					"Run",
 					"\t(1, 2, 3) + (4, 5) is (1, 2, 3, 4, 5)",
 					"\t(\"Hello\", \"World\") + (1, 2) is (\"Hello\", \"World\", \"1\", \"2\")")).
 			ParseMembersAndMethods(new MethodExpressionParser());
+		executor.RunAllTestsInType(type);
+	}
+
+	[Test]
+	public void RunMutableListCompare()
+	{
+		using var type = new Type(TestPackage.Instance,
+			new TypeLines(nameof(RunNumberToCharacterBody), "has number", "Run",
+				"\t(1, 2).Add(3) is (1, 2, 3)")).ParseMembersAndMethods(new MethodExpressionParser());
+		Assert.That(type.Methods[0].GetBodyAndParseIfNeeded().ToString(),
+			Is.EqualTo("(1, 2).Add(3) is (1, 2, 3)"));
 		executor.RunAllTestsInType(type);
 	}
 

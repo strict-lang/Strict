@@ -77,7 +77,7 @@ public sealed class DictionaryTests : TestExpressions
 			Throws.InnerException.InstanceOf<Type.ArgumentsDoNotMatchMethodParameters>().With.
 				InnerException.Message.Contains(
 					"Arguments: 4 TestPackage.Number, \"10\" TestPackage.Text do not match these TestPackage.Dictionary(TestPackage.Text, TestPackage.Boolean) method(s):" +
-					"\nAdd(key TestPackage.Text, mappedValue TestPackage.Boolean) Mutable(TestPackage.Dictionary)"));
+					"\nAdd(key TestPackage.Text, mappedValue TestPackage.Boolean) Mutable(TestPackage.Dictionary(TestPackage.Text, TestPackage.Boolean))"));
 	}
 
 	[Test]

@@ -59,13 +59,9 @@ public class Type : Context, IDisposable
 	private bool OneOfFirstThreeLinesContainsGeneric()
 	{
 		for (var line = 0; line < Lines.Length && line < 3; line++)
-		{
-			if (HasGenericMember(Lines[line]))
+			if (HasGenericMember(Lines[line]) || HasGenericMethodHeader(Lines[line]) &&
+				line + 1 < Lines.Length && !Lines[line + 1].StartsWith('\t'))
 				return true;
-			if (HasGenericMethodHeader(Lines[line]) && line + 1 < Lines.Length &&
-				!Lines[line + 1].StartsWith('\t'))
-				return true;
-		}
 		return false;
 	}
 
@@ -138,7 +134,7 @@ public class Type : Context, IDisposable
 
 	private bool CheckIfParsed()
 	{
-		if (Lines.Length > 1 && typeParser.LineNumber == -1)
+		if (!IsGeneric && Lines.Length > 1 && typeParser.LineNumber == -1)
 			throw new TypeIsNotParsedCallParseMembersAndMethods(this); //ncrunch: no coverage
 		return true;
 	}

@@ -33,6 +33,18 @@ public sealed class MutableReassignmentTests : TestExpressions
 	}
 
 	[Test]
+	public void MutableListType()
+	{
+		using var program = new Type(type.Package,
+			new TypeLines(nameof(MutableListType), "has numbers",
+				"Run Mutable(List(Number))", "\tnumbers.Add(5)"));
+		program.ParseMembersAndMethods(parser);
+		Assert.That(program.Methods[0].GetBodyAndParseIfNeeded().ReturnType,
+			Is.EqualTo(type.GetType(Base.Mutable).
+				GetGenericImplementation(type.GetListImplementationType(type.GetType(Base.Number)))));
+	}
+
+	[Test]
 	public void EnsureMutableMethodParameterValueIsUpdated()
 	{
 		using var program = new Type(type.Package,
