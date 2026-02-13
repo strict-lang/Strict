@@ -2,7 +2,6 @@ using Strict.Expressions;
 using Strict.Language;
 using System.Collections;
 using System.Globalization;
-using System.Xml.Linq;
 using static Strict.HighLevelRuntime.ExecutionContext;
 using Type = Strict.Language.Type;
 
@@ -268,7 +267,11 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 				? last
 				: body.Method.ReturnType.Name == Base.Character && last.ReturnType.Name == Base.Number
 					? new ValueInstance(body.Method.ReturnType, last.Value)
-					: throw new ReturnTypeMustMatchMethod(body, last);
+					// If the method requires a mutable return type and the result so far is not, make it!
+					: body.Method.ReturnType.IsMutable && !last.ReturnType.IsMutable && last.ReturnType ==
+					((GenericTypeImplementation)body.Method.ReturnType).ImplementationTypes[0]
+						? new ValueInstance(body.Method.ReturnType, last.Value)
+						: throw new ReturnTypeMustMatchMethod(body, last);
 		}
 		catch (ExecutionFailed ex)
 		{
@@ -362,23 +365,17 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 		e is not Declaration &&
 		e is not MutableReassignment;
 
-	private string GetTestFailureDetails(Expression expression, ExecutionContext ctx)
-	{
-		if (expression is Binary { Method.Name: BinaryOperator.Is, Instance: not null } binary &&
-			binary.Arguments.Count == 1)
-			return GetBinaryComparisonDetails(binary, ctx, BinaryOperator.Is);
-		if (expression is Not { Instance: Binary { Method.Name: BinaryOperator.Is } notBinary } &&
-			notBinary.Arguments.Count == 1)
-			return GetBinaryComparisonDetails(notBinary, ctx, "is not");
-		return string.Empty;
-	}
+	private string GetTestFailureDetails(Expression expression, ExecutionContext ctx) =>
+		expression is Binary { Method.Name: BinaryOperator.Is, Instance: not null } binary &&
+		binary.Arguments.Count == 1
+			? GetBinaryComparisonDetails(binary, ctx, BinaryOperator.Is)
+			: expression is Not { Instance: Binary { Method.Name: BinaryOperator.Is } notBinary } &&
+			notBinary.Arguments.Count == 1
+				? GetBinaryComparisonDetails(notBinary, ctx, "is not")
+				: string.Empty;
 
-	private string GetBinaryComparisonDetails(Binary binary, ExecutionContext ctx, string op)
-	{
-		var left = RunExpression(binary.Instance!, ctx);
-		var right = RunExpression(binary.Arguments[0], ctx);
-		return $"{left} {op} {right}";
-	}
+	private string GetBinaryComparisonDetails(Binary binary, ExecutionContext ctx, string op) =>
+		RunExpression(binary.Instance!, ctx) + " " + op + " " + RunExpression(binary.Arguments[0], ctx);
 
 	private ValueInstance EvaluateAndAssign(string name, Expression value, ExecutionContext ctx) =>
 		ctx.Set(name, RunExpression(value, ctx));
@@ -391,7 +388,7 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 			? RunExpression(iff.Then, ctx)
 			: iff.OptionalElse != null
 				? RunExpression(iff.OptionalElse, ctx)
-				: Bool(true);
+				: None();
 
 	private ValueInstance EvaluateFor(For f, ExecutionContext ctx)
 	{
@@ -411,8 +408,11 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 				if (customVariable is VariableCall variableCall)
 					loopContext.Set(variableCall.Variable.Name,
 						new ValueInstance(variableCall.ReturnType, value));
-			//TODO: if this is a return, for loop should be aborted, we found the result!
-			results.Add(RunExpression(f.Body, loopContext));
+			//TODO: if this is a return, for loop should be aborted, we found the result! TODO: we need a test for this first!
+			var itemResult = RunExpression(f.Body, loopContext);
+			// If there was no result (if did not evaluate), no need to add anything
+			if (itemResult.ReturnType.Name != Base.None)
+				results.Add(itemResult);
 		}
 		return ShouldConsolidateForResult(results, ctx) ?? new ValueInstance(results.Count == 0
 			? iterator.ReturnType
@@ -746,6 +746,8 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 		return Execute(call.Method, instance, args, ctx);
 	}
 
+	private ValueInstance None() => new(noneType, null);
+	private readonly Type noneType = basePackage.FindType(Base.None)!;
 	private ValueInstance Bool(bool b) => new(boolType, b);
 	private readonly Type boolType = basePackage.FindType(Base.Boolean)!;
 	private readonly Type genericListType = basePackage.FindType(Base.List)!;

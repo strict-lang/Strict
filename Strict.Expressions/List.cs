@@ -1,4 +1,4 @@
-﻿using Strict.Language;
+using Strict.Language;
 using Type = Strict.Language.Type;
 
 namespace Strict.Expressions;
@@ -11,7 +11,8 @@ public sealed class List : Value
 		values, values[0].LineNumber, isMutable) =>
 		Values = values;
 
-	public List(Type type, int lineNumber = 0) : base(type, Array.Empty<Expression>(), lineNumber, true) =>
+	public List(Type type, int lineNumber = 0) : base(type, Array.Empty<Expression>(), lineNumber,
+		true) =>
 		Values = [];
 
 	private static Type

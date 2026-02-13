@@ -13,62 +13,67 @@ public sealed class ValueInstance : IEquatable<ValueInstance>
 		Value = value is Value expressionValue
 			? expressionValue.Data
 			: value;
-		if (ReturnType.IsMutable)
-			throw new InvalidTypeValue(ReturnType, Value);
-		if (ReturnType.Name == Base.None)
+		CheckIfValueMatchesReturnType(ReturnType.IsMutable
+			? ((GenericTypeImplementation)ReturnType).ImplementationTypes[0]
+			: ReturnType);
+	}
+
+	public Type ReturnType { get; }
+	public object? Value { get; set; }
+
+	private void CheckIfValueMatchesReturnType(Type type)
+	{
+		if (type.Name == Base.None)
 		{
 			if (Value is not null)
-				throw new InvalidTypeValue(ReturnType, Value);
+				throw new InvalidTypeValue(type, Value);
 		}
 		else if (Value is null)
-			throw new InvalidTypeValue(ReturnType, Value);
-		else if (ReturnType.IsBoolean)
+			throw new InvalidTypeValue(type, Value);
+		else if (type.IsBoolean)
 		{
 			if (Value is not bool)
-				throw new InvalidTypeValue(ReturnType, Value);
+				throw new InvalidTypeValue(type, Value);
 		}
-		else if (ReturnType.IsEnum)
+		else if (type.IsEnum)
 		{
 			if (Value is not int && Value is not string)
-				throw new InvalidTypeValue(ReturnType, Value);
+				throw new InvalidTypeValue(type, Value);
 		}
-		else if (ReturnType.Name is Base.Text or Base.Name)
+		else if (type.Name is Base.Text or Base.Name)
 		{
 			if (Value is not string)
-				throw new InvalidTypeValue(ReturnType, Value);
+				throw new InvalidTypeValue(type, Value);
 		}
-		else if (ReturnType.Name is Base.Character or Base.HashCode)
+		else if (type.Name is Base.Character or Base.HashCode)
 		{
 			if (Value is double doubleValue)
 				Value = (int)doubleValue;
 			if (Value is not int)
-				throw new InvalidTypeValue(ReturnType, Value);
+				throw new InvalidTypeValue(type, Value);
 		}
-		else if (ReturnType.Name == Base.List || ReturnType.Name == Base.Dictionary ||
-			ReturnType is GenericTypeImplementation { Generic.Name: Base.List } ||
-			ReturnType is GenericTypeImplementation { Generic.Name: Base.Dictionary })
+		else if (type.Name == Base.List || type.Name == Base.Dictionary ||
+			type is GenericTypeImplementation { Generic.Name: Base.List } ||
+			type is GenericTypeImplementation { Generic.Name: Base.Dictionary })
 		{
 			if (Value is not IList && Value is not IDictionary && Value is not string)
-				throw new InvalidTypeValue(ReturnType, Value);
+				throw new InvalidTypeValue(type, Value);
 		}
-		else if (ReturnType.Name == Base.Number || ReturnType.Members.Count == 1 &&
-			ReturnType.IsSameOrCanBeUsedAs(ReturnType.GetType(Base.Number)))
+		else if (type.Name == Base.Number || type.Members.Count == 1 &&
+			type.IsSameOrCanBeUsedAs(type.GetType(Base.Number)))
 		{
 			if (Value is not double && Value is not int)
-				throw new InvalidTypeValue(ReturnType, Value);
+				throw new InvalidTypeValue(type, Value);
 		}
 		else if (Value is IDictionary<string, object?> valueDictionary)
 		{
 			foreach (var assignMember in valueDictionary)
-				if (ReturnType.Members.All(m => !m.Name.Equals(assignMember.Key, StringComparison.OrdinalIgnoreCase)))
-					throw new UnableToAssignMemberToType(assignMember, valueDictionary, ReturnType);
+				if (type.Members.All(m => !m.Name.Equals(assignMember.Key, StringComparison.OrdinalIgnoreCase)))
+					throw new UnableToAssignMemberToType(assignMember, valueDictionary, type);
 		}
-		else if (!ReturnType.IsSameOrCanBeUsedAs(ReturnType.GetType(Base.Error)))
-			throw new InvalidTypeValue(ReturnType, Value);
+		else if (!type.IsSameOrCanBeUsedAs(type.GetType(Base.Error)))
+			throw new InvalidTypeValue(type, Value);
 	}
-
-	public Type ReturnType { get; }
-	public object? Value { get; }
 
 	public sealed class UnableToAssignMemberToType(KeyValuePair<string, object?> member,
 		IDictionary<string, object?> values, Type returnType) : ExecutionFailed(returnType,

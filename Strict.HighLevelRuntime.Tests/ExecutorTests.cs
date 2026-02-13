@@ -406,11 +406,33 @@ public sealed class ExecutorTests
 	{
 		using var type = new Type(TestPackage.Instance,
 				new TypeLines(nameof(RunListIn), "has number",
-					// @formatter:off
 					"Run Boolean",
 					"\t\"d\" is not in (\"a\", \"b\", \"c\")",
 					"\t\"b\" is in (\"a\", \"b\", \"c\")")).
 			ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(executor.Execute(type.Methods[0], null, []).Value, Is.EqualTo(true));
+	}
+
+	[Test]
+	public void RunListCount()
+	{
+		using var type = new Type(TestPackage.Instance,
+				new TypeLines(nameof(RunListCount), "has number",
+					"GetCount Number",
+					"\t(1, 2).Count(1)")).
+			ParseMembersAndMethods(new MethodExpressionParser());
+		Assert.That(executor.Execute(type.Methods[0], null, []).Value, Is.EqualTo(1));
+	}
+
+	[Test]
+	public void RunListReverse()
+	{
+		using var type = new Type(TestPackage.Instance,
+				new TypeLines(nameof(RunListCount), "has number",
+					"GetReverse List(Number)",
+					"\t(1, 2).Reverse")).
+			ParseMembersAndMethods(new MethodExpressionParser());
+		Assert.That(executor.Execute(type.Methods[0], null, []).Value,
+			Is.EqualTo(new[] { 2.0, 1.0 }));
 	}
 }
