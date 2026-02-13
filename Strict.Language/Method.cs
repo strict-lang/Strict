@@ -140,7 +140,7 @@ public sealed class Method : Context
 		: ParsingFailed(method.Type, 0, message, method.Name);
 
 	private static bool IsParameterTypeAny(string nameAndTypeString) =>
-		nameAndTypeString == Base.AnyLowercase || nameAndTypeString.Contains(" " + Base.Any);
+		nameAndTypeString == Type.AnyLowercase || nameAndTypeString.Contains(" " + Base.Any);
 
 	public sealed class ParametersWithTypeAnyIsNotAllowed(Method method, string name)
 		: ParsingFailed(method.Type, 0, name);
@@ -363,7 +363,7 @@ public sealed class Method : Context
 	public bool IsTrait => methodBody == null;
 
 	public override Type? FindType(string name, Context? searchingFrom = null) =>
-		name == Base.ValueLowercase
+		name == Type.ValueLowercase
 			? Type
 			: Type.FindType(name, searchingFrom ?? this);
 
@@ -517,5 +517,14 @@ public sealed class Method : Context
 			if (parameters[index].Type != other.Parameters[index].Type)
 				return false;
 		return true;
+	}
+
+	public string[] GetLines(Range innerBodyRange)
+	{
+		var result = new string[innerBodyRange.End.Value - innerBodyRange.Start.Value];
+		for (var lineNumber = innerBodyRange.Start.Value; lineNumber < innerBodyRange.End.Value;
+			lineNumber++)
+			result[lineNumber - innerBodyRange.Start.Value] = lines[lineNumber][1..];
+		return result;
 	}
 }

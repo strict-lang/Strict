@@ -541,7 +541,7 @@ public sealed class TypeParser(Type type, string[] lines)
 
 	private static bool
 		IsMemberTypeAny(string nameAndType, SpanSplitEnumerator nameAndExpression) =>
-		nameAndType == Base.AnyLowercase ||
+		nameAndType == Type.AnyLowercase ||
 		nameAndExpression.Current.Equals(Base.Any, StringComparison.Ordinal);
 
 	public sealed class MemberWithTypeAnyIsNotAllowed(Type type, int lineNumber, string name)

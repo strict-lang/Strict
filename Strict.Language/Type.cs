@@ -69,7 +69,7 @@ public class Type : Context, IDisposable
 		(line.StartsWith(HasWithSpaceAtEnd, StringComparison.Ordinal) ||
 			line.StartsWith(MutableWithSpaceAtEnd, StringComparison.Ordinal)) &&
 		(line.Contains(Base.Generic, StringComparison.Ordinal) ||
-			line.Contains(Base.GenericLowercase, StringComparison.Ordinal));
+			line.Contains(GenericLowercase, StringComparison.Ordinal));
 
 	public const string HasWithSpaceAtEnd = Keyword.Has + " ";
 	public const string MutableWithSpaceAtEnd = Keyword.Mutable + " ";
@@ -77,7 +77,7 @@ public class Type : Context, IDisposable
 
 	private static bool HasGenericMethodHeader(string line) =>
 		line.Contains(Base.Generic, StringComparison.Ordinal) ||
-		line.Contains(Base.GenericLowercase, StringComparison.Ordinal);
+		line.Contains(GenericLowercase, StringComparison.Ordinal);
 
 	/// <summary>
 	/// Parsing has to be done OUTSIDE the constructor as we first need all types and inside might not
@@ -198,6 +198,15 @@ public class Type : Context, IDisposable
 			: Package.FindType(name, searchingFrom ?? this);
 
 	/// <summary>
+	/// Only internally used, cannot be specified as member, parameter or variable. Everything is Any.
+	/// </summary>
+	public const string AnyLowercase = "any";
+	public const string GenericLowercase = "generic";
+	public const string IteratorLowercase = "iterator";
+	public const string ElementsLowercase = "elements";
+	public const string ValueLowercase = "value";
+	public const string IndexLowercase = "index";
+	/// <summary>
 	/// Easy way to get another instance of the class type we are currently in.
 	/// </summary>
 	public const string Other = nameof(Other);
@@ -205,6 +214,7 @@ public class Type : Context, IDisposable
 	/// In a for loop a different "value" is used, this way we can still get to the outer instance.
 	/// </summary>
 	public const string Outer = nameof(Outer);
+	public const string OuterLowercase = "outer";
 
 	public GenericTypeImplementation GetGenericImplementation(params Type[] implementationTypes)
 	{

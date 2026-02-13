@@ -1,4 +1,4 @@
-﻿using Strict.Language;
+using Strict.Language;
 using Type = Strict.Language.Type;
 
 namespace Strict.Expressions;
@@ -8,10 +8,10 @@ public class Instance(Type type, int lineNumber = 0) : Expression(type, lineNumb
 	public static Expression Parse(Body body, Method method)
 	{
 		var valueInstance = new Instance((Type)method.Parent, body.CurrentFileLineNumber);
-		body.AddVariable(Base.ValueLowercase, valueInstance, false);
+		body.AddVariable(Type.ValueLowercase, valueInstance, false);
 		return valueInstance;
 	}
 
 	public override bool IsConstant => true;
-	public override string ToString() => Base.ValueLowercase;
+	public override string ToString() => Type.ValueLowercase;
 }

@@ -200,7 +200,8 @@ public class MethodExpressionParser : ExpressionParser
 
 	// ReSharper disable once TooManyArguments
 	private Expression? TryVariableOrValueOrParameterOrMemberOrMethodCall(Context context,
-		Expression? instance, Body body, ReadOnlySpan<char> input, IReadOnlyList<Expression> arguments)
+		Expression? instance, Body body, ReadOnlySpan<char> input,
+		IReadOnlyList<Expression> arguments)
 	{
 		var inputAsString = input.ToString();
 		var type = context as Type ?? body.Method.Type;
@@ -208,8 +209,13 @@ public class MethodExpressionParser : ExpressionParser
 			return inputAsString.IsWordOrWordWithNumberAtEnd(out _)
 				? MethodCall.TryParseFromOrEnum(body, arguments, inputAsString)
 				: null;
+		if (input.Equals(Type.Outer.MakeFirstLetterLowercase(), StringComparison.Ordinal))
+			return new VariableCall(
+				new Variable(Type.Outer.MakeFirstLetterLowercase(), false,
+					new Instance(body.Method.Type, body.CurrentFileLineNumber), body),
+				body.CurrentFileLineNumber);
 		var call = VariableCall.TryParse(body, input) ??
-			(input.Equals(Base.ValueLowercase, StringComparison.Ordinal)
+			(input.Equals(Type.ValueLowercase, StringComparison.Ordinal)
 				? Instance.Parse(body, body.Method)
 				: ParameterCall.TryParse(body, input));
 		if (call != null)

@@ -16,6 +16,8 @@ public sealed class ExecutionContext(Type type, Method method)
 
 	public ValueInstance? Find(string name)
 	{
+		if (name == Type.OuterLowercase)
+			return Parent?.This;
 		if (Variables.TryGetValue(name, out var v))
 			return v;
 		if (This != null)
@@ -27,7 +29,7 @@ public sealed class ExecutionContext(Type type, Method method)
 				if (memberType != null)
 					return new ValueInstance(memberType, rawValue);
 			}
-			if (name == Base.ValueLowercase)
+			if (name == Type.ValueLowercase)
 				return This;
 			var implicitMember =
 				Type.Members.FirstOrDefault(m => !m.IsConstant && m.Type.Name != Base.Iterator);

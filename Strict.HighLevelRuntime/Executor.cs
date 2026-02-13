@@ -218,6 +218,7 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 			Value v => new ValueInstance(v.ReturnType, v.Data),
 			ParameterCall or VariableCall => EvaluateVariable(expr.ToString(), context),
 			MemberCall m => EvaluateMember(m, context),
+			ListCall listCall => EvaluateListCall(listCall, context),
 			If iff => EvaluateIf(iff, context),
 			For f => EvaluateFor(f, context),
 			Return r => EvaluateReturn(r, context),
@@ -226,7 +227,7 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 			MethodCall call => EvaluateMethodCall(call, context),
 			Declaration c => EvaluateAndAssign(c.Name, c.Value, context),
 			MutableReassignment a => EvaluateAndAssign(a.Name, a.Value, context),
-			Instance => EvaluateVariable(Base.ValueLowercase, context),
+			Instance => EvaluateVariable(Type.ValueLowercase, context),
 			_ => throw new ExpressionNotSupported(expr, context) //ncrunch: no coverage
 		};
 
@@ -234,7 +235,7 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 		: ExecutionFailed(context.Type, expr.GetType().Name);
 
 	private static ValueInstance EvaluateVariable(string name, ExecutionContext context) =>
-		context.Find(name) ?? (name == Base.ValueLowercase
+		context.Find(name) ?? (name == Type.ValueLowercase
 			? context.This
 			: null) ?? throw new VariableNotFound(name, context.Type, context.This);
 
@@ -393,30 +394,52 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 	private ValueInstance EvaluateFor(For f, ExecutionContext ctx)
 	{
 		var iterator = RunExpression(f.Iterator, ctx);
-		var loopRange = iterator.ReturnType.Name == Base.Range
-			? iterator.GetRange()
-			: new Range(0, iterator.GetIteratorLength());
 		var results = new List<ValueInstance>();
 		var itemType = GetForValueType(iterator);
-		for (var index = loopRange.Start.Value; index < loopRange.End.Value; index++)
+		//TODO: this is a bit strange and a regression, this worked fine before and didn't need extra handling, sure we need reverse loop support, but this is 3 loops doing the same thing and way too many parameters ..
+		if (iterator.ReturnType.Name == Base.Range &&
+			iterator.Value is IDictionary<string, object?> rangeValues &&
+			rangeValues.TryGetValue("Start", out var startValue) &&
+			rangeValues.TryGetValue("ExclusiveEnd", out var endValue))
 		{
-			var loopContext = new ExecutionContext(ctx.Type, ctx.Method) { This = ctx.This, Parent = ctx };
-			loopContext.Set(Base.IndexLowercase, new ValueInstance(numberType, index));
-			var value = iterator.GetIteratorValue(index);
-			loopContext.Set(Base.ValueLowercase, new ValueInstance(itemType, value));
-			foreach (var customVariable in f.CustomVariables)
-				if (customVariable is VariableCall variableCall)
-					loopContext.Set(variableCall.Variable.Name,
-						new ValueInstance(variableCall.ReturnType, value));
-			//TODO: if this is a return, for loop should be aborted, we found the result! TODO: we need a test for this first!
-			var itemResult = RunExpression(f.Body, loopContext);
-			// If there was no result (if did not evaluate), no need to add anything
-			if (itemResult.ReturnType.Name != Base.None)
-				results.Add(itemResult);
+			var start = Convert.ToInt32(startValue);
+			var end = Convert.ToInt32(endValue);
+			if (start <= end)
+				for (var index = start; index < end; index++)
+					ExecuteForIteration(f, ctx, iterator, results, itemType, index);
+			else
+				for (var index = start; index > end; index--)
+					ExecuteForIteration(f, ctx, iterator, results, itemType, index);
+		}
+		else
+		{
+			var loopRange = iterator.ReturnType.Name == Base.Range
+				? iterator.GetRange()
+				: new Range(0, iterator.GetIteratorLength());
+			for (var index = loopRange.Start.Value; index < loopRange.End.Value; index++)
+				ExecuteForIteration(f, ctx, iterator, results, itemType, index);
 		}
 		return ShouldConsolidateForResult(results, ctx) ?? new ValueInstance(results.Count == 0
 			? iterator.ReturnType
 			: genericListType.GetGenericImplementation(results[0].ReturnType), results);
+	}
+
+	private void ExecuteForIteration(For f, ExecutionContext ctx, ValueInstance iterator,
+		ICollection<ValueInstance> results, Type itemType, int index)
+	{
+		var loopContext = new ExecutionContext(ctx.Type, ctx.Method) { This = ctx.This, Parent = ctx };
+		loopContext.Set(Type.IndexLowercase, new ValueInstance(numberType, index));
+		var value = iterator.GetIteratorValue(index);
+		loopContext.Set(Type.ValueLowercase, new ValueInstance(itemType, value));
+		foreach (var customVariable in f.CustomVariables)
+			if (customVariable is VariableCall variableCall)
+				loopContext.Set(variableCall.Variable.Name,
+					new ValueInstance(variableCall.ReturnType, value));
+		//TODO: if this is a return, for loop should be aborted, we found the result! TODO: we need a test for this first!
+		var itemResult = RunExpression(f.Body, loopContext);
+		// If there was no result (if did not evaluate), no need to add anything
+		if (itemResult.ReturnType.Name != Base.None)
+			results.Add(itemResult);
 	}
 
 	private static ValueInstance? ShouldConsolidateForResult(List<ValueInstance> results, ExecutionContext ctx)
@@ -476,6 +499,22 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 				: member.Member.InitialValue != null && member.IsConstant
 					? RunExpression(member.Member.InitialValue, ctx)
 					: ctx.Get(member.Member.Name);
+
+	private ValueInstance EvaluateListCall(ListCall call, ExecutionContext ctx)
+	{
+		var listInstance = RunExpression(call.List, ctx);
+		var indexValue = RunExpression(call.Index, ctx);
+		var index = Convert.ToInt32(EqualsExtensions.NumberToDouble(indexValue.Value));
+		if (listInstance.Value is IList list)
+			return list[index] as ValueInstance ?? new ValueInstance(call.ReturnType, list[index]);
+		if (listInstance.Value is IDictionary<string, object?> members &&
+			(members.TryGetValue("Elements", out var elements) ||
+				members.TryGetValue("elements", out elements)) && elements is IList memberList)
+			return memberList[index] as ValueInstance ?? new ValueInstance(call.ReturnType, memberList[index]);
+		if (listInstance.Value is string text)
+			return new ValueInstance(call.ReturnType, (int)text[index]);
+		throw new InvalidOperationException("List call can only be used on iterators, got: " + listInstance); //TODO: proper exception
+	}
 
 	public class UnableToCallMemberWithoutInstance(MemberCall member, ExecutionContext ctx)
 		: Exception(member + ", context " + ctx);

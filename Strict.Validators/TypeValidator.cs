@@ -1,4 +1,4 @@
-﻿using Type = Strict.Language.Type;
+using Type = Strict.Language.Type;
 
 namespace Strict.Validators;
 
@@ -19,7 +19,8 @@ public sealed class TypeValidator : Visitor
 	}
 
 	private static bool IsReservedName(string name) =>
-		name is Base.ValueLowercase or "iterator" or "elements" or Base.GenericLowercase;
+		name is Type.ValueLowercase or Type.IteratorLowercase or Type.ElementsLowercase
+			or Type.GenericLowercase;
 
 	public sealed class UnusedMemberMustBeRemoved(Type type, string memberName)
 		: ParsingFailed(type, 0, memberName);

@@ -175,7 +175,7 @@ public sealed class Body : Expression
 			throw new NamedType.NameLengthIsNotWithinTheAllowedLimit(name);
 		if (!value.ToString().StartsWith(Base.Error, StringComparison.InvariantCulture))
 			CheckForNameWithDifferentTypeUsage(name, value);
-		if (name != Base.IndexLowercase && name != Base.ValueLowercase &&
+		if (name != Type.IndexLowercase && name != Type.ValueLowercase &&
 			FindVariable(name.AsSpan()) is not null)
 			throw new VariableNameIsAlreadyInUse(this, FindVariable(name.AsSpan())!, value);
 		(Variables ??= new List<Variable>()).Add(new Variable(name, isMutable, value, this));

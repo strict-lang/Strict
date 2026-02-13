@@ -433,6 +433,10 @@ public sealed class ExecutorTests
 					"\t(1, 2).Reverse")).
 			ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(executor.Execute(type.Methods[0], null, []).Value,
-			Is.EqualTo(new[] { 2.0, 1.0 }));
+			Is.EqualTo(new List<ValueInstance>
+			{
+				new(type.GetType(Base.Number), 2.0),
+				new(type.GetType(Base.Number), 1.0)
+			}));
 	}
 }

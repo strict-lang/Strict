@@ -39,7 +39,7 @@ public sealed class For(Expression[] customVariables, Expression iterator, Expre
 			return ParseForImplicitIteratorOfThis(body);
 		var innerBody = body.FindCurrentChild() ??
 			TryGetInnerForAsBody(body) ?? throw new MissingInnerBody(body);
-		return line.Contains(Base.IndexLowercase, StringComparison.Ordinal)
+		return line.Contains(Type.IndexLowercase, StringComparison.Ordinal)
 			? throw new IndexIsReservedDoNotUseItExplicitly(body)
 			: ParseFor(body, line, innerBody);
 	}
@@ -94,9 +94,11 @@ public sealed class For(Expression[] customVariables, Expression iterator, Expre
 				line[4..].ToString());
 		var forExpression = new For(variables, iterator, innerBody.Parse(), body.CurrentFileLineNumber);
 #if DEBUG
-		var generatedLine = forExpression.ToString().Split('\n', StringSplitOptions.TrimEntries)[0];
-		if (line.ToString() != generatedLine)
-			throw new GeneratedForExpressionDoesNotMatchInputExactly(body, forExpression, line.ToString());
+		var originalLines = line.ToString() + Environment.NewLine +
+			body.Method.GetLines(innerBody.LineRange).ToWordList(Environment.NewLine);
+		var generatedLines = forExpression.ToString();
+		if (generatedLines != originalLines)
+			throw new GeneratedForExpressionDoesNotMatchInputExactly(body, forExpression, originalLines);
 #endif
 		return forExpression;
 	}
@@ -107,12 +109,14 @@ public sealed class For(Expression[] customVariables, Expression iterator, Expre
 	private const string InWithSpaces = " in ";
 
 	private sealed class GeneratedForExpressionDoesNotMatchInputExactly(Body body,
-		Expression forExpression, string line) : ParsingFailed(body, forExpression + ", line=" + line);
+		Expression forExpression, string line) : ParsingFailed(body,
+		"\n" + forExpression.ToString().Replace("\t", "  ") + "\nOriginal lines:\n" +
+		line.Replace("\t", "  "));
 
 	private static Expression ParseWithImplicitVariable(Body body, ReadOnlySpan<char> line,
 		Body innerBody)
 	{
-		if (body.FindVariable(Base.IndexLowercase) != null)
+		if (body.FindVariable(Type.IndexLowercase) != null)
 			throw new DuplicateImplicitIndex(body);
 		AddImplicitVariables(body, line, innerBody);
 		return new For([], body.Method.ParseExpression(body, line[4..], true), innerBody.Parse(),
@@ -123,13 +127,13 @@ public sealed class For(Expression[] customVariables, Expression iterator, Expre
 
 	private static void AddImplicitVariables(Body body, ReadOnlySpan<char> line, Body innerBody)
 	{
-		innerBody.AddVariable(Base.IndexLowercase, new Number(body.Method, 0), true);
+		innerBody.AddVariable(Type.IndexLowercase, new Number(body.Method, 0), true);
 		var valueExpression = innerBody.Method.ParseExpression(innerBody,
 			GetVariableExpressionValue(body, line), true);
 		if (valueExpression.ReturnType is GenericTypeImplementation { Generic.Name: Base.List } ||
 			valueExpression.ReturnType.Name == Base.List)
 			valueExpression = new ListCall(valueExpression, new Number(body.Method, 0));
-		innerBody.AddVariable(Base.ValueLowercase, valueExpression, true);
+		innerBody.AddVariable(Type.ValueLowercase, valueExpression, true);
 	}
 
 	private static string GetVariableExpressionValue(Body body, ReadOnlySpan<char> line,
@@ -178,7 +182,7 @@ public sealed class For(Expression[] customVariables, Expression iterator, Expre
 			if (body.Method.Type.FindMember(name) != null ||
 				body.Method.Parameters.FirstOrDefault(p => p.Name == name) != null)
 			{
-				var instanceVariable = body.FindVariable(Base.ValueLowercase);
+				var instanceVariable = body.FindVariable(Type.ValueLowercase);
 				variables.Add(new MemberCall(instanceVariable != null
 					? new VariableCall(instanceVariable)
 					: null, body.Method.Type.FindMember(name)!));

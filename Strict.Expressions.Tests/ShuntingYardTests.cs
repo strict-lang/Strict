@@ -1,3 +1,5 @@
+using System.Reflection.Metadata;
+
 namespace Strict.Expressions.Tests;
 
 public sealed class ShuntingYardTests
@@ -79,7 +81,7 @@ public sealed class ShuntingYardTests
 		var tokens = new ShuntingYard(Input);
 		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo(UnaryOperator.Not));
 		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo(BinaryOperator.In));
-		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo(Base.ValueLowercase));
+		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo(Type.ValueLowercase));
 		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo("\" \""));
 	}
 
