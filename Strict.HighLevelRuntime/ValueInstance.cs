@@ -56,7 +56,9 @@ public sealed class ValueInstance : IEquatable<ValueInstance>
 			type is GenericTypeImplementation { Generic.Name: Base.List } ||
 			type is GenericTypeImplementation { Generic.Name: Base.Dictionary })
 		{
-			if (Value is not IList && Value is not IDictionary && Value is not string)
+			if (Value is IList<Expression>)
+				throw new InvalidTypeValue(type, Value);
+			if (Value is not IList and not IDictionary and not string)
 				throw new InvalidTypeValue(type, Value);
 		}
 		else if (type.Name == Base.Number || type.Members.Count == 1 &&

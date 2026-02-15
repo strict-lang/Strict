@@ -215,7 +215,8 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 		{
 			//TODO: this class has grown too big, separate out these different evaluators into own classes
 			Body body => EvaluateBody(body, context, runOnlyTests),
-			Value v => new ValueInstance(v.ReturnType, v.Data),
+			Value v => v.Data as ValueInstance ??
+				new ValueInstance(v.ReturnType, EvaluateValueData(v.Data, context)),
 			ParameterCall or VariableCall => EvaluateVariable(expr.ToString(), context),
 			MemberCall m => EvaluateMember(m, context),
 			ListCall listCall => EvaluateListCall(listCall, context),
@@ -229,6 +230,14 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 			MutableReassignment a => EvaluateAndAssign(a.Name, a.Value, context),
 			Instance => EvaluateVariable(Type.ValueLowercase, context),
 			_ => throw new ExpressionNotSupported(expr, context) //ncrunch: no coverage
+		};
+
+	private object EvaluateValueData(object valueData, ExecutionContext context) =>
+		valueData switch
+		{
+			Expression valueExpression => RunExpression(valueExpression, context),
+			IList<Expression> list => list.Select(e => RunExpression(e, context)).ToList(),
+			_ => valueData
 		};
 
 	public class ExpressionNotSupported(Expression expr, ExecutionContext context)
@@ -430,7 +439,7 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 		var loopContext = new ExecutionContext(ctx.Type, ctx.Method) { This = ctx.This, Parent = ctx };
 		loopContext.Set(Type.IndexLowercase, new ValueInstance(numberType, index));
 		var value = iterator.GetIteratorValue(index);
-		loopContext.Set(Type.ValueLowercase, new ValueInstance(itemType, value));
+		loopContext.Set(Type.ValueLowercase, value as ValueInstance ?? new ValueInstance(itemType, value));
 		foreach (var customVariable in f.CustomVariables)
 			if (customVariable is VariableCall variableCall)
 				loopContext.Set(variableCall.Variable.Name,
@@ -498,7 +507,9 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 				? new ValueInstance(member.ReturnType, value)
 				: member.Member.InitialValue != null && member.IsConstant
 					? RunExpression(member.Member.InitialValue, ctx)
-					: ctx.Get(member.Member.Name);
+					: member.Instance is VariableCall { Variable.Name: Type.OuterLowercase }
+						? ctx.Parent!.Get(member.Member.Name)
+						: ctx.Get(member.Member.Name);
 
 	private ValueInstance EvaluateListCall(ListCall call, ExecutionContext ctx)
 	{

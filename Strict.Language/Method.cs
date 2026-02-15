@@ -519,12 +519,12 @@ public sealed class Method : Context
 		return true;
 	}
 
-	public string[] GetLines(Range innerBodyRange)
+	public string[] GetLinesAndStripTabs(Range innerBodyRange, Body bodyForTabs)
 	{
 		var result = new string[innerBodyRange.End.Value - innerBodyRange.Start.Value];
 		for (var lineNumber = innerBodyRange.Start.Value; lineNumber < innerBodyRange.End.Value;
 			lineNumber++)
-			result[lineNumber - innerBodyRange.Start.Value] = lines[lineNumber][1..];
+			result[lineNumber - innerBodyRange.Start.Value] = lines[lineNumber][bodyForTabs.Tabs..];
 		return result;
 	}
 }

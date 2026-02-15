@@ -84,14 +84,30 @@ public sealed class ForTests : TestExpressions
 		"for myIndex in Range(0, 5)\r\n\tlogger.Log(myIndex)")]
 	[TestCase("for (1, 2, 3)", "\tlogger.Log(index)", "for (1, 2, 3)\r\n\tlogger.Log(index)")]
 	[TestCase("for (1, 2, 3)", "\tlogger.Log(value)", "for (1, 2, 3)\r\n\tlogger.Log(value)")]
-	[TestCase("for myIndex in Range(2, 5)", "\tlogger.Log(myIndex)", "\tfor Range(0, 10)",
+	[TestCase("for myIndex in Range(2, 5)",
+		"\tlogger.Log(myIndex)",
+		"\tfor Range(0, 10)",
 		"\t\tlogger.Log(index)",
-		"for myIndex in Range(2, 5)\r\n\tlogger.Log(myIndex)\r\nfor Range(0, 10)\r\n\tlogger.Log(index)")]
-	[TestCase("for firstIndex in Range(1, 10)", "for secondIndex in Range(1, 10)",
-		"\tlogger.Log(firstIndex)", "\tlogger.Log(secondIndex)",
-		"for firstIndex in Range(1, 10)\r\n\tfor secondIndex in Range(1, 10)\r\n\tlogger.Log(firstIndex)\r\nlogger.Log(secondIndex)")]
+		"for myIndex in Range(2, 5)\r\n" +
+		"\tlogger.Log(myIndex)\r\n" +
+		"\tfor Range(0, 10)\r\n" +
+		"\t\tlogger.Log(index)")]
+	[TestCase("for firstIndex in Range(1, 10)",
+		"\tfor secondIndex in Range(1, 10)",
+		"\t\tlogger.Log(firstIndex)",
+		"\t\tlogger.Log(secondIndex)",
+		"for firstIndex in Range(1, 10)\r\n" +
+		"\tfor secondIndex in Range(1, 10)\r\n" +
+		"\t\tlogger.Log(firstIndex)\r\n" +
+		"\t\tlogger.Log(secondIndex)")]
 	public void ParseForExpressionWithCustomVariableName(params string[] lines) =>
 		Assert.That(((For)ParseExpression(lines[..^1])).ToString(), Is.EqualTo(lines[^1]));
+
+	[Test]
+	public void NestedIfInForIsIndented() =>
+		Assert.That(
+			((For)ParseExpression("for Range(0, 2)", "\tif five is 5", "\t\tlogger.Log(\"Hey\")")).
+			ToString(), Is.EqualTo("for Range(0, 2)\r\n\tif five is 5\r\n\t\tlogger.Log(\"Hey\")"));
 
 	[Test]
 	public void ValidIteratorReturnTypeWithValue() =>

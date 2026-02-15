@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using static Strict.Language.Method;
 
 [assembly: InternalsVisibleTo("Strict.Expressions.Tests")]
 
@@ -175,8 +176,8 @@ public sealed class Body : Expression
 			throw new NamedType.NameLengthIsNotWithinTheAllowedLimit(name);
 		if (!value.ToString().StartsWith(Base.Error, StringComparison.InvariantCulture))
 			CheckForNameWithDifferentTypeUsage(name, value);
-		if (name != Type.IndexLowercase && name != Type.ValueLowercase &&
-			FindVariable(name.AsSpan()) is not null)
+		if (FindVariable(name.AsSpan(), name != Type.IndexLowercase && name != Type.ValueLowercase) is
+			not null)
 			throw new VariableNameIsAlreadyInUse(this, FindVariable(name.AsSpan())!, value);
 		(Variables ??= new List<Variable>()).Add(new Variable(name, isMutable, value, this));
 		return this;
@@ -191,18 +192,13 @@ public sealed class Body : Expression
 	}
 
 	public class VariableNameIsAlreadyInUse(Body body, Variable oldVariable, Expression newValue)
-		: ParsingFailed(body,
-			$"Variable {
-				oldVariable
-			} was already declared before and cannot be re-declared here with: {
-				newValue
-			}");
+		: ParsingFailed(body, $"Variable {oldVariable} was already declared before and cannot be " +
+			$"re-declared here with: {newValue}");
 
 	public class VariableNameCannotHaveDifferentTypeNameThanValue(Body body,
 		string variableNameType, string valueType) : ParsingFailed(body,
-		$"Variable name {variableNameType} " + $"denotes different type than its value type {
-			valueType
-		}. Prefer using a different name");
+		$"Variable name {variableNameType} " + $"denotes different type than its value type " +
+		$"{valueType}. Prefer using a different name");
 
 	public sealed class ValueIsNotMutableAndCannotBeChanged(Body body, string name)
 		: ParsingFailed(body, name);
@@ -236,13 +232,15 @@ public sealed class Body : Expression
 		return allVariables;
 	}
 
-	public Variable? FindVariable(ReadOnlySpan<char> searchFor)
+	public Variable? FindVariable(ReadOnlySpan<char> searchFor, bool searchParents = true)
 	{
 		if (Variables != null)
 			foreach (var variable in Variables)
 				if (searchFor.Equals(variable.Name, StringComparison.Ordinal))
 					return variable;
-		return Parent?.FindVariable(searchFor);
+		return searchParents
+			? Parent?.FindVariable(searchFor)
+			: null;
 	}
 
 	public override bool IsConstant => Expressions.All(e => e.IsConstant);
@@ -260,6 +258,8 @@ public sealed class Body : Expression
 			if (child.LineRange.Start.Value > ParsingLineNumber + 1)
 				break;
 			ParsingLineNumber += child.LineRange.End.Value - child.LineRange.Start.Value;
+			// Make sure we are in the right method for generic implementations
+			child.Method = Method;
 			return child;
 		}
 		return null;

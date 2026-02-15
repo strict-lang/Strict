@@ -203,23 +203,37 @@ public class MethodExpressionParser : ExpressionParser
 		Expression? instance, Body body, ReadOnlySpan<char> input,
 		IReadOnlyList<Expression> arguments)
 	{
-		var inputAsString = input.ToString();
+		var inputAsString = input.ToString(); //TODO: would be better to keep as ReadOnlySpan, change methods called!
 		var type = context as Type ?? body.Method.Type;
 		if (!input.IsWord() && !input.Contains(' ') && !input.Contains('('))
 			return inputAsString.IsWordOrWordWithNumberAtEnd(out _)
 				? MethodCall.TryParseFromOrEnum(body, arguments, inputAsString)
 				: null;
-		if (input.Equals(Type.Outer.MakeFirstLetterLowercase(), StringComparison.Ordinal))
+		if (input.Equals(Type.OuterLowercase, StringComparison.Ordinal))
 			return new VariableCall(
-				new Variable(Type.Outer.MakeFirstLetterLowercase(), false,
+				new Variable(Type.OuterLowercase, false,
 					new Instance(body.Method.Type, body.CurrentFileLineNumber), body),
 				body.CurrentFileLineNumber);
-		var call = VariableCall.TryParse(body, input) ??
-			(input.Equals(Type.ValueLowercase, StringComparison.Ordinal)
-				? Instance.Parse(body, body.Method)
-				: ParameterCall.TryParse(body, input));
-		if (call != null)
-			return call;
+		if (instance is VariableCall { Variable.Name: Type.OuterLowercase })
+		{
+			var call = VariableCall.TryParse(body.Parent!, input) ??
+				(input.Equals(Type.ValueLowercase, StringComparison.Ordinal)
+					? Instance.Parse(body.Parent!, body.Method)
+					: ParameterCall.TryParse(body, input));
+			if (call != null)
+				return new MemberCall(instance,
+					new Member(body.ReturnType, Type.ValueLowercase, call.ReturnType),
+					body.CurrentFileLineNumber);
+		}
+		else
+		{
+			var call = VariableCall.TryParse(body, input) ??
+				(input.Equals(Type.ValueLowercase, StringComparison.Ordinal)
+					? Instance.Parse(body, body.Method)
+					: ParameterCall.TryParse(body, input));
+			if (call != null)
+				return call;
+		}
 		if (inputAsString.IsKeyword())
 			throw new KeywordNotAllowedAsMemberOrMethod(body, inputAsString, type);
 		// If inside a generic type that cannot be used directly, we still might have a declaration or

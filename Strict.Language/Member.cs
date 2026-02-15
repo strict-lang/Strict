@@ -1,4 +1,4 @@
-﻿namespace Strict.Language;
+namespace Strict.Language;
 
 public sealed class Member : NamedType
 {
@@ -10,7 +10,8 @@ public sealed class Member : NamedType
 			IsMutable = true;
 		else if (usedKeyword == Keyword.Constant)
 			IsConstant = true;
-		if (!Type.Name.StartsWith(Name.MakeFirstLetterUppercase(), StringComparison.Ordinal))
+		if (Name != Type.ValueLowercase &&
+			!Type.Name.StartsWith(Name.MakeFirstLetterUppercase(), StringComparison.Ordinal))
 			CheckForNameWithDifferentTypeUsage(definedIn);
 	}
 

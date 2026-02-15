@@ -18,7 +18,7 @@ public sealed class For(Expression[] customVariables, Expression iterator, Expre
 	public override int GetHashCode() => Iterator.GetHashCode();
 
 	public override string ToString() =>
-		$"for {InCustomVariables()}{Iterator}" + Environment.NewLine + "\t" + Body;
+		$"for {InCustomVariables()}{Iterator}" + Environment.NewLine + IndentExpression(Body);
 
 	private string InCustomVariables() =>
 		CustomVariables.Length > 0
@@ -95,7 +95,7 @@ public sealed class For(Expression[] customVariables, Expression iterator, Expre
 		var forExpression = new For(variables, iterator, innerBody.Parse(), body.CurrentFileLineNumber);
 #if DEBUG
 		var originalLines = line.ToString() + Environment.NewLine +
-			body.Method.GetLines(innerBody.LineRange).ToWordList(Environment.NewLine);
+			body.Method.GetLinesAndStripTabs(innerBody.LineRange, body).ToWordList(Environment.NewLine);
 		var generatedLines = forExpression.ToString();
 		if (generatedLines != originalLines)
 			throw new GeneratedForExpressionDoesNotMatchInputExactly(body, forExpression, originalLines);
@@ -127,8 +127,11 @@ public sealed class For(Expression[] customVariables, Expression iterator, Expre
 
 	private static void AddImplicitVariables(Body body, ReadOnlySpan<char> line, Body innerBody)
 	{
+		if (innerBody.FindVariable(Type.IndexLowercase) != null &&
+			innerBody.FindVariable(Type.ValueLowercase) != null)
+			return;
 		innerBody.AddVariable(Type.IndexLowercase, new Number(body.Method, 0), true);
-		var valueExpression = innerBody.Method.ParseExpression(innerBody,
+		var valueExpression = body.Method.ParseExpression(body,
 			GetVariableExpressionValue(body, line), true);
 		if (valueExpression.ReturnType is GenericTypeImplementation { Generic.Name: Base.List } ||
 			valueExpression.ReturnType.Name == Base.List)

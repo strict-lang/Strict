@@ -1,3 +1,5 @@
+using System;
+
 namespace Strict.Language;
 
 /// <summary>
@@ -44,6 +46,9 @@ public abstract class Expression(Type returnType, int lineNumber = 0, bool isMut
 
 	public override int GetHashCode() => ToString().GetHashCode();
 	public override string ToString() => base.ToString() + " " + ReturnType;
+
+	protected static string IndentExpression(Expression expression) =>
+		'\t' + expression.ToString().Replace(Environment.NewLine, Environment.NewLine + '\t');
 
 	public string ToStringWithType()
 	{

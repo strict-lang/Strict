@@ -50,20 +50,17 @@ public sealed class If(Expression condition, Expression then, int lineNumber = 0
 
 	public override string ToString() =>
 		OptionalElse != null && (OptionalElse.ReturnType.IsSameOrCanBeUsedAs(Then.ReturnType) ||
-			Then.ReturnType.IsError || OptionalElse.ReturnType.IsError) &&
-		Then is not Body && OptionalElse is not Body && OptionalElse is not If
+			Then.ReturnType.IsError || OptionalElse.ReturnType.IsError) && Then is not Body &&
+		OptionalElse is not Body && OptionalElse is not If
 			? Condition + " ? " + Then + " else " + OptionalElse
-			: "if " + Condition + Environment.NewLine + "\t" + (Then is Body thenBody
-				? string.Join(Environment.NewLine + "\t", thenBody.Expressions)
-				: Then) + (OptionalElse != null
-				? Environment.NewLine + "else" + (OptionalElse is If
-					? " "
-					: Environment.NewLine + "\t") + (OptionalElse is Body elseBody
-					? string.Join(Environment.NewLine + "\t", elseBody.Expressions)
-					: OptionalElse)
+			: "if " + Condition + Environment.NewLine + IndentExpression(Then) + (OptionalElse != null
+				? OptionalElse is If
+					? Environment.NewLine + "else " + OptionalElse
+					: Environment.NewLine + "else" + Environment.NewLine + IndentExpression(OptionalElse)
 				: "");
 
-	public override bool IsConstant => Condition.IsConstant && Then.IsConstant && (OptionalElse?.IsConstant ?? true);
+	public override bool IsConstant =>
+		Condition.IsConstant && Then.IsConstant && (OptionalElse?.IsConstant ?? true);
 
 	public override bool Equals(Expression? other) =>
 		other is If otherIf && Condition.Equals(otherIf.Condition) && Then.Equals(otherIf.Then) &&

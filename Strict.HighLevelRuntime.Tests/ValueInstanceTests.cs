@@ -42,6 +42,14 @@ public sealed class ValueInstanceTests
 	}
 
 	[Test]
+	public void ListWithExpressionsThrows()
+	{
+		var listType = TestPackage.Instance.GetListImplementationType(numberType);
+		var expressions = new Expression[] { new Value(numberType, 1) };
+		Assert.Throws<ValueInstance.InvalidTypeValue>(() => new ValueInstance(listType, expressions));
+	}
+
+	[Test]
 	public void CompareDictionaries()
 	{
 		var list = new ValueInstance(

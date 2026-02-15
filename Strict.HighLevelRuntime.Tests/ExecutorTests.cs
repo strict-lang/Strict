@@ -439,4 +439,18 @@ public sealed class ExecutorTests
 				new(type.GetType(Base.Number), 1.0)
 			}));
 	}
+
+	/// <summary>
+	/// For EqualsExtensions.AreEqual it is important that both sides of List values are the same.
+	/// </summary>
+	[Test]
+	public void ListExpressionIsBecomesListOfValueInstances()
+	{
+		using var type = new Type(TestPackage.Instance,
+				new TypeLines(nameof(ListExpressionIsBecomesListOfValueInstances), "has number",
+					"CompareLists",
+					"\t(1, 2).Reverse is (2, 1)")).
+			ParseMembersAndMethods(new MethodExpressionParser());
+		executor.Execute(type.Methods[0], null, []);
+	}
 }
