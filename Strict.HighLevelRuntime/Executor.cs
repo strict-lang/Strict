@@ -594,15 +594,15 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 			}
 			if (leftInstance.ReturnType.IsIterator && rightInstance.ReturnType.IsIterator)
 			{
-				if (left is not IList leftList || right is not IList rightList)
-					throw new InvalidOperationException("Expected lists for iterator operation, other " +
-						"iterators are not yet supported: left=" + left + ", right=" + right);
+				if (left is not IList<ValueInstance> leftList || right is not IList<ValueInstance> rightList)
+					throw new InvalidOperationException("Expected List<ValueInstance> for iterator operation, " +
+						"other iterators are not yet supported: left=" + left + ", right=" + right);
 				if (op is BinaryOperator.Multiply or BinaryOperator.Divide &&
 					leftList.Count != rightList.Count)
 					return Error(ListsHaveDifferentDimensions, ctx, call);
 				return op switch
 				{
-					BinaryOperator.Plus => CombineLists(ctx.Method, leftInstance.ReturnType, leftList, rightList),
+					BinaryOperator.Plus => CombineLists(leftInstance.ReturnType, leftList, rightList),
 					BinaryOperator.Minus => SubtractLists(leftInstance.ReturnType, leftList, rightList),
 					BinaryOperator.Multiply => MultiplyLists(leftInstance.ReturnType, leftList, rightList),
 					BinaryOperator.Divide => DivideLists(leftInstance.ReturnType, leftList, rightList),
@@ -611,17 +611,22 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 			}
 			if (leftInstance.ReturnType.IsIterator && rightInstance.ReturnType.Name == Base.Number)
 			{
-				if (left is not IList leftList || right is not double rightNumber)
-					throw new InvalidOperationException("Expected list and number for iterator operation, " +
-						"other iterators are not yet supported: left=" + left + ", right=" + right);
-				return op switch
-				{
-					BinaryOperator.Plus => AddToList(leftInstance.ReturnType, leftList, rightInstance, rightNumber),
-					BinaryOperator.Minus => RemoveFromList(leftInstance.ReturnType, leftList, rightNumber),
-					BinaryOperator.Multiply => MultiplyList(leftInstance.ReturnType, leftList, rightNumber),
-					BinaryOperator.Divide => DivideList(leftInstance.ReturnType, leftList, rightNumber),
-					_ => throw new NotSupportedException("Only +, -, *, / operators are supported for List and Number, got: " + op)
-				};
+				if (left is not IList<ValueInstance> leftList)
+					throw new InvalidOperationException("Expected left list for iterator operation " + op +
+						": left=" + left + ", right=" + right);
+				if (op == BinaryOperator.Plus)
+					return AddToList(leftInstance.ReturnType, leftList, rightInstance);
+				if (op == BinaryOperator.Minus)
+					return RemoveFromList(leftInstance.ReturnType, leftList, rightInstance);
+				if (right is not double rightNumber)
+					throw new InvalidOperationException("Expected right number for iterator operation " +
+						op + ": left=" + left + ", right=" + right);
+				if (op == BinaryOperator.Multiply)
+					return MultiplyList(leftInstance.ReturnType, leftList, rightNumber);
+				if (op == BinaryOperator.Divide)
+					return DivideList(leftInstance.ReturnType, leftList, rightNumber);
+				throw new NotSupportedException(
+					"Only +, -, *, / operators are supported for List and Number, got: " + op);
 			}
 			return ExecuteMethodCall(call, leftInstance, ctx);
 		}
@@ -677,23 +682,25 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 		};
 	}
 
-	private static ValueInstance CombineLists(Method method, Type listType, ICollection leftList, ICollection rightList)
+	private static ValueInstance CombineLists(Type listType,
+		ICollection<ValueInstance> leftList, ICollection<ValueInstance> rightList)
 	{
-		var combined = new List<object?>(leftList.Count + rightList.Count);
+		var combined = new List<ValueInstance>(leftList.Count + rightList.Count);
 		var isLeftText = listType is GenericTypeImplementation { Generic.Name: Base.List } list &&
 			list.ImplementationTypes[0].Name == Base.Text;
 		foreach (var item in leftList)
 			combined.Add(item);
 		foreach (var item in rightList)
-			combined.Add(isLeftText && item is Number itemNumber
-				? new Text(method, itemNumber.ToString())
+			combined.Add(isLeftText && item.ReturnType.Name != Base.Text
+				? new ValueInstance(listType.GetType(Base.Text), item.Value?.ToString())
 				: item);
 		return new ValueInstance(listType, combined);
 	}
 
-	private static ValueInstance SubtractLists(Type listType, IEnumerable leftList, IEnumerable rightList)
+	private static ValueInstance SubtractLists(Type listType,
+		IEnumerable<ValueInstance> leftList, IEnumerable<ValueInstance> rightList)
 	{
-		var remainder = new List<object?>();
+		var remainder = new List<ValueInstance>();
 		foreach (var item in leftList)
 			remainder.Add(item);
 		foreach (var item in rightList)
@@ -701,90 +708,66 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 		return new ValueInstance(listType, remainder);
 	}
 
-	private static ValueInstance MultiplyLists(Type leftListType, IList leftList, IList rightList)
+	private static ValueInstance MultiplyLists(Type leftListType, IList<ValueInstance> leftList, IList<ValueInstance> rightList)
 	{
-		var result = new List<object?>();
+		var result = new List<ValueInstance>();
 		for (var index = 0; index < leftList.Count; index++)
-			result.Add(new Number(leftListType, GetNumber(leftList[index]) * GetNumber(rightList[index])));
+			result.Add(new ValueInstance(leftListType.GetType(Base.Number),
+				EqualsExtensions.NumberToDouble(leftList[index].Value) *
+				EqualsExtensions.NumberToDouble(rightList[index].Value)));
 		return new ValueInstance(leftListType, result);
 	}
 
-	private static double GetNumber(object? expressionOrNumber)
+	private static ValueInstance DivideLists(Type leftListType, IList<ValueInstance> leftList, IList<ValueInstance> rightList)
 	{
-		if (expressionOrNumber is Number number)
-			return (double)number.Data;
-		return EqualsExtensions.NumberToDouble(expressionOrNumber);
-	}
-
-	private static ValueInstance DivideLists(Type leftListType, IList leftList, IList rightList)
-	{
-		var result = new List<object?>();
+		var result = new List<ValueInstance>();
 		for (var index = 0; index < leftList.Count; index++)
-			result.Add(new Number(leftListType, GetNumber(leftList[index]) / GetNumber(rightList[index])));
+			result.Add(new ValueInstance(leftListType.GetType(Base.Number),
+				EqualsExtensions.NumberToDouble(leftList[index].Value) /
+				EqualsExtensions.NumberToDouble(rightList[index].Value)));
 		return new ValueInstance(leftListType, result);
 	}
 
-	private static ValueInstance AddToList(Type leftListType, IList leftList, ValueInstance right, double rightNumber)
+	private static ValueInstance AddToList(Type leftListType, IList<ValueInstance> leftList, ValueInstance right)
 	{
-		var combined = new List<object?>(leftList.Count + 1);
+		var combined = new List<ValueInstance>(leftList.Count + 1);
 		var isLeftText = leftListType is GenericTypeImplementation { Generic.Name: Base.List } list &&
 			list.ImplementationTypes[0].Name == Base.Text;
 		foreach (var item in leftList)
 			combined.Add(item);
-		combined.Add(isLeftText
-			? new Text(leftListType, rightNumber.ToString(CultureInfo.InvariantCulture))
-			: combined.Count > 0 && combined[0] is ValueInstance
-				? right
-				: new Number(leftListType, rightNumber));
+		combined.Add(isLeftText && right.ReturnType.Name != Base.Text
+			? new ValueInstance(leftListType.GetType(Base.Text), right.Value?.ToString())
+			: right);
 		return new ValueInstance(leftListType, combined);
 	}
 
-	private static ValueInstance RemoveFromList(Type leftListType, IList leftList,
+	private static ValueInstance RemoveFromList(Type leftListType, IList<ValueInstance> leftList,
+		ValueInstance right)
+	{
+		var result = new List<ValueInstance>();
+		foreach (var item in leftList)
+			if (!item.Equals(right))
+				result.Add(item);
+		return new ValueInstance(leftListType, result);
+	}
+
+	private static ValueInstance MultiplyList(Type leftListType, ICollection<ValueInstance> leftList,
 		double rightNumber)
 	{
-		var result = new List<object?>();
+		var result = new List<ValueInstance>(leftList.Count);
 		foreach (var item in leftList)
-		{
-			if (item is ValueInstance number &&
-				EqualsExtensions.NumberToDouble(number.Value) == rightNumber)
-				continue;
-			if (item is Value numberExpression &&
-				EqualsExtensions.NumberToDouble(numberExpression.Data) == rightNumber)
-				continue;
-			result.Add(item);
-		}
+			result.Add(new ValueInstance(item.ReturnType,
+				EqualsExtensions.NumberToDouble(item.Value) * rightNumber));
 		return new ValueInstance(leftListType, result);
 	}
 
-	private static ValueInstance MultiplyList(Type leftListType, IList leftList, double rightNumber)
+	private static ValueInstance DivideList(Type leftListType, ICollection<ValueInstance> leftList,
+		double rightNumber)
 	{
 		var result = new List<object?>(leftList.Count);
 		foreach (var item in leftList)
-			result.Add(item switch
-			{
-				ValueInstance number => new ValueInstance(number.ReturnType,
-					EqualsExtensions.NumberToDouble(number.Value) * rightNumber),
-				Value numberExpression => new Number(leftListType,
-					EqualsExtensions.NumberToDouble(numberExpression.Data) * rightNumber),
-				_ => throw new NotSupportedException("Cannot MultiplyList item " + item + " with " +
-					rightNumber)
-			});
-		return new ValueInstance(leftListType, result);
-	}
-
-	private static ValueInstance DivideList(Type leftListType, IList leftList, double rightNumber)
-	{
-		var result = new List<object?>(leftList.Count);
-		foreach (var item in leftList)
-			result.Add(item switch
-			{
-				ValueInstance number => new ValueInstance(number.ReturnType,
-					EqualsExtensions.NumberToDouble(number.Value) / rightNumber),
-				Value numberExpression => new Number(leftListType,
-					EqualsExtensions.NumberToDouble(numberExpression.Data) / rightNumber),
-				_ => throw new NotSupportedException("Cannot DivideList item " + item + " with " +
-					rightNumber)
-			});
+			result.Add(new ValueInstance(item.ReturnType,
+				EqualsExtensions.NumberToDouble(item.Value) / rightNumber));
 		return new ValueInstance(leftListType, result);
 	}
 

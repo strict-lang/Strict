@@ -9,10 +9,10 @@ public sealed class ValueInstance : IEquatable<ValueInstance>
 {
 	public ValueInstance(Type returnType, object? value)
 	{
+		if (value is Expression)
+			throw new InvalidTypeValue(returnType, Value);
 		ReturnType = returnType;
-		Value = value is Value expressionValue
-			? expressionValue.Data
-			: value;
+		Value = value;
 		CheckIfValueMatchesReturnType(ReturnType.IsMutable
 			? ((GenericTypeImplementation)ReturnType).ImplementationTypes[0]
 			: ReturnType);
@@ -83,9 +83,12 @@ public sealed class ValueInstance : IEquatable<ValueInstance>
 		returnType + " " + returnType.Members.ToBrackets());
 
 	public sealed class InvalidTypeValue(Type returnType, object? value) : ExecutionFailed(
-		returnType, (value is IEnumerable valueEnumerable
-			? valueEnumerable.EnumerableToWordList(", ", true)
-			: value + "") + " (" + value?.GetType() + ") for " + returnType.Name);
+		returnType, (value switch
+		{
+			Expression => "Expression " + value + " needs to be evaluated!",
+			IEnumerable valueEnumerable => valueEnumerable.EnumerableToWordList(", ", true),
+			_ => value + ""
+		}) + " (" + value?.GetType() + ") for " + returnType.Name);
 
 	public override string ToString() =>
 		ReturnType.Name == Base.Boolean

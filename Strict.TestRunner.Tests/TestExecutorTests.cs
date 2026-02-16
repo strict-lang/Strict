@@ -176,10 +176,15 @@ public sealed class TestExecutorTests
 	{
 		using var type = new Type(TestPackage.Instance,
 				new TypeLines(nameof(RunNumberToCharacterBody), "has number",
-					"Run",
+					"Run Number",
 					"\t(1, 2, 3) + (4, 5) is (1, 2, 3, 4, 5)",
-					"\t(\"Hello\", \"World\") + (1, 2) is (\"Hello\", \"World\", \"1\", \"2\")")).
+					"\t(\"Hello\", \"World\") + (1, 2) is (\"Hello\", \"World\", \"1\", \"2\")",
+					"\tnumber")).
 			ParseMembersAndMethods(new MethodExpressionParser());
+		Assert.That(type.Methods[0].GetBodyAndParseIfNeeded().ToString(),
+			Is.EqualTo("(1, 2, 3) + (4, 5) is (1, 2, 3, 4, 5)" + Environment.NewLine +
+				"(\"Hello\", \"World\") + (1, 2) is (\"Hello\", \"World\", \"1\", \"2\")" +
+				Environment.NewLine + "number"));
 		executor.RunAllTestsInType(type);
 	}
 
