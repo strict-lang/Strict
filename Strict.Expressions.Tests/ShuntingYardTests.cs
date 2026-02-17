@@ -1,5 +1,3 @@
-using System.Reflection.Metadata;
-
 namespace Strict.Expressions.Tests;
 
 public sealed class ShuntingYardTests
@@ -135,5 +133,27 @@ public sealed class ShuntingYardTests
 		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo(BinaryOperator.Is));
 		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo("Range(-9, -4)"));
 		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo("Range(-5, -10).Reverse"));
+	}
+
+	[Test]
+	public void ParseReverseRangeCallNeedsToBeSplitFirst()
+	{
+		const string Input = "Range(1, 2).Reverse";
+		var tokens = new ShuntingYard(Input);
+		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo(Input));
+	}
+
+	[Test]
+	public void ParseBinaryExpressionMethodCall()
+	{
+		const string Input = "(10 / 2).Floor";
+		var tokens = new ShuntingYard(Input);
+		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo(Input));
+		/*probably not
+		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo(BinaryOperator.Divide));
+		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo("2"));
+		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo("10"));
+		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo("Floor"));
+		//*/
 	}
 }

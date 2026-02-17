@@ -125,7 +125,7 @@ public sealed class Body : Expression
 		var lastExpression = Expressions[^1];
 		var isLastExpressionReturn = lastExpression.GetType().Name == Base.Return;
 		if (Method.ReturnType.Name != Base.None && (isLastExpressionReturn || IsMethodReturn()) &&
-			Method.Name != Base.Run && Method.Name != Method.From && !ChildHasMatchingMethodReturnType(
+			Method.Name != Base.Run && Method.Name != From && !ChildHasMatchingMethodReturnType(
 				Parent == null
 					? Method.ReturnType
 					: Parent.ReturnType, lastExpression))
@@ -149,7 +149,11 @@ public sealed class Body : Expression
 	private static bool
 		ChildHasMatchingMethodReturnType(Type parentType, Expression lastExpression) =>
 		lastExpression.GetType().Name == Base.Declaration && parentType.Name == Base.None ||
-		lastExpression.ReturnType.IsError || lastExpression.ReturnType.IsSameOrCanBeUsedAs(parentType);
+		lastExpression.ReturnType.IsError ||
+		lastExpression.ReturnType.IsSameOrCanBeUsedAs(parentType) ||
+		// Allow automatically converting an item to a list if the method requires a list
+		parentType.IsIterator && parentType.GetListImplementationType(lastExpression.ReturnType) ==
+		parentType;
 
 	public sealed class ChildBodyReturnTypeMustMatchMethod(Body body, Expression lastExpression)
 		: ParsingFailed(body,

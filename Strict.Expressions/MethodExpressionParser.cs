@@ -1,5 +1,6 @@
-using System.Runtime.CompilerServices;
 using Strict.Language;
+using System.Reflection;
+using System.Runtime.CompilerServices;
 using Type = Strict.Language.Type;
 
 namespace Strict.Expressions;
@@ -164,8 +165,15 @@ public class MethodExpressionParser : ExpressionParser
 		{
 			if (current is null)
 			{
-				current = Text.TryParse(body, input[members.Current]) ??
-					List.TryParseWithMultipleOrNestedElements(body, input[members.Current], false);
+				var inputText = input[members.Current];
+				if (inputText.Length >= 3 && inputText[0] == PhraseTokenizer.OpenBracket)
+				{
+					var postfix = new ShuntingYard(inputText.ToString());
+					if (postfix.Output.Count >= 3)
+						current = Binary.Parse(body, input, postfix.Output);
+				}
+				current ??= Text.TryParse(body, inputText) ??
+					List.TryParseWithMultipleOrNestedElements(body, inputText, false);
 				if (current is not null)
 				{
 					context = current.ReturnType;

@@ -1,4 +1,4 @@
-﻿using Strict.Language;
+using Strict.Language;
 using static Strict.Expressions.MethodExpressionParser;
 using Type = Strict.Language.Type;
 

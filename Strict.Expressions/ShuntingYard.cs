@@ -51,7 +51,8 @@ public sealed class ShuntingYard
 	}
 
 	private void FlushCommaList(Range tokenRange, char firstCharacter)
-	{ // Comma lists always need to flush, happens when parsing inner elements via ParseListArguments
+	{
+		// Comma lists always need to flush, happens when parsing inner elements via ParseListArguments
 		if (firstCharacter == ',')
 			ApplyHigherOrEqualPrecedenceOperators();
 		Output.Push(tokenRange);

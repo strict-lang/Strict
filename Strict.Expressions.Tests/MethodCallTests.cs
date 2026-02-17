@@ -30,6 +30,10 @@ public sealed class MethodCallTests : TestExpressions
 				[new Text(type, "Hi")]));
 
 	[Test]
+	public void ParseCallWithBinaryArgument() =>
+		Assert.That(ParseExpression("(10 / 2).Floor").ToString(), Is.EqualTo("(10 / 2).Floor"));
+
+	[Test]
 	public void ParseWithMissingArgument() =>
 		Assert.That(() => ParseExpression("logger.Write"),
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.

@@ -149,10 +149,11 @@ public sealed class PhraseTokenizer
 		{
 			if (tokens.tokenStart >= 0)
 				result.Add(tokens.tokenStart..tokens.index);
-			tokens.tokenStart = -1;
+			tokens.tokenStart = tokens.index;
 			// Consume a nested member or method call as a single token
 			if (tokens.index + 1 < tokens.input.Length && tokens.input[tokens.index + 1] == '.')
 			{
+				foundBinaryOperationInMethodCall = true;
 				var additionalBrackets = 0;
 				while (tokens.index + 1 < tokens.input.Length)
 				{
@@ -165,7 +166,8 @@ public sealed class PhraseTokenizer
 					tokens.index++;
 				}
 			}
-			result.Add(tokens.index..(tokens.index + 1));
+			result.Add(tokens.tokenStart..(tokens.index + 1));
+			tokens.tokenStart = -1;
 			return true;
 		}
 

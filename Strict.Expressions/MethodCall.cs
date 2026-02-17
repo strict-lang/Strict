@@ -101,7 +101,7 @@ public class MethodCall : ConcreteExpression
 			{
 				arguments =
 				[
-					new Value(body.Method.GetType(Base.Name), textValue.Data?.ToString() ?? ""),
+					new Value(body.Method.GetType(Base.Name), textValue.Data.ToString() ?? ""),
 					CreateListFromMethodCall(body, Base.Stacktrace, CreateStacktraces(body))
 				];
 			}
@@ -157,8 +157,10 @@ public class MethodCall : ConcreteExpression
 
 	public override string ToString() =>
 		Instance is not null
-			? $"{Instance}.{Method.Name}{Arguments.ToBrackets()}"
-			: ReturnType is GenericTypeImplementation genericType && genericType.Generic.Name == Base.ErrorWithValue
+			? (Instance is Binary
+				? $"({Instance})"
+				: $"{Instance}") + $".{Method.Name}{Arguments.ToBrackets()}"
+			: ReturnType is GenericTypeImplementation { Generic.Name: Base.ErrorWithValue }
 				? Arguments[0] + "(" + Arguments[1] + ")"
 				: ReturnType.Name == Base.Error
 					? Base.Error

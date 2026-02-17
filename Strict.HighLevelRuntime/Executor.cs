@@ -682,8 +682,8 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 		};
 	}
 
-	private static ValueInstance CombineLists(Type listType,
-		ICollection<ValueInstance> leftList, ICollection<ValueInstance> rightList)
+	private static ValueInstance CombineLists(Type listType, ICollection<ValueInstance> leftList,
+		ICollection<ValueInstance> rightList)
 	{
 		var combined = new List<ValueInstance>(leftList.Count + rightList.Count);
 		var isLeftText = listType is GenericTypeImplementation { Generic.Name: Base.List } list &&
@@ -708,7 +708,8 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 		return new ValueInstance(listType, remainder);
 	}
 
-	private static ValueInstance MultiplyLists(Type leftListType, IList<ValueInstance> leftList, IList<ValueInstance> rightList)
+	private static ValueInstance MultiplyLists(Type leftListType, IList<ValueInstance> leftList,
+		IList<ValueInstance> rightList)
 	{
 		var result = new List<ValueInstance>();
 		for (var index = 0; index < leftList.Count; index++)
@@ -718,7 +719,8 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 		return new ValueInstance(leftListType, result);
 	}
 
-	private static ValueInstance DivideLists(Type leftListType, IList<ValueInstance> leftList, IList<ValueInstance> rightList)
+	private static ValueInstance DivideLists(Type leftListType, IList<ValueInstance> leftList,
+		IList<ValueInstance> rightList)
 	{
 		var result = new List<ValueInstance>();
 		for (var index = 0; index < leftList.Count; index++)
@@ -728,7 +730,8 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 		return new ValueInstance(leftListType, result);
 	}
 
-	private static ValueInstance AddToList(Type leftListType, IList<ValueInstance> leftList, ValueInstance right)
+	private static ValueInstance AddToList(Type leftListType, ICollection<ValueInstance> leftList,
+		ValueInstance right)
 	{
 		var combined = new List<ValueInstance>(leftList.Count + 1);
 		var isLeftText = leftListType is GenericTypeImplementation { Generic.Name: Base.List } list &&
@@ -736,13 +739,22 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 		foreach (var item in leftList)
 			combined.Add(item);
 		combined.Add(isLeftText && right.ReturnType.Name != Base.Text
-			? new ValueInstance(leftListType.GetType(Base.Text), right.Value?.ToString())
+			? new ValueInstance(leftListType.GetType(Base.Text), ConvertToText(right.Value))
 			: right);
 		return new ValueInstance(leftListType, combined);
 	}
 
-	private static ValueInstance RemoveFromList(Type leftListType, IList<ValueInstance> leftList,
-		ValueInstance right)
+	private static string ConvertToText(object? value) =>
+		value switch
+		{
+			string text => text,
+			double number => number.ToString(CultureInfo.InvariantCulture),
+			int number => number.ToString(CultureInfo.InvariantCulture),
+			_ => value?.ToString() ?? string.Empty
+		};
+
+	private static ValueInstance RemoveFromList(Type leftListType,
+		IEnumerable<ValueInstance> leftList, ValueInstance right)
 	{
 		var result = new List<ValueInstance>();
 		foreach (var item in leftList)
