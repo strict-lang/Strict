@@ -453,4 +453,16 @@ public sealed class ExecutorTests
 			ParseMembersAndMethods(new MethodExpressionParser());
 		executor.Execute(type.Methods[0], null, []);
 	}
+
+	[Test]
+	public void ConvertCharacterToNumberAndMultiply()
+	{
+		using var type = new Type(TestPackage.Instance,
+				new TypeLines(nameof(ConvertCharacterToNumberAndMultiply), "has character",
+					"Convert(number)", "\tcharacter to Number * 10 ^ number")).
+			ParseMembersAndMethods(new MethodExpressionParser());
+		Assert.That(
+			executor.Execute(type.Methods[0], new ValueInstance(type, '5'),
+				[new ValueInstance(type.GetType(Base.Number), 3)]).Value, Is.EqualTo(5 * 1000));
+	}
 }

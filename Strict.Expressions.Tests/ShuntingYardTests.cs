@@ -144,16 +144,24 @@ public sealed class ShuntingYardTests
 	}
 
 	[Test]
-	public void ParseBinaryExpressionMethodCall()
+	public void ParseBinaryExpressionMethodCallNeedsToBeSplitFirst()
 	{
 		const string Input = "(10 / 2).Floor";
 		var tokens = new ShuntingYard(Input);
 		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo(Input));
-		/*probably not
-		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo(BinaryOperator.Divide));
-		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo("2"));
+	}
+
+	[Test]
+	public void CharacterToNumberAndMultiply()
+	{
+		const string Input = "value to Number * index ^ 10";
+		var tokens = new ShuntingYard(Input);
+		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo(BinaryOperator.Multiply));
+		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo(BinaryOperator.Power));
 		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo("10"));
-		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo("Floor"));
-		//*/
+		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo("index"));
+		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo(BinaryOperator.To));
+		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo("Number"));
+		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo("value"));
 	}
 }

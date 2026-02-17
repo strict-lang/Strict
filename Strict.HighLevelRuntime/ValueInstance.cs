@@ -45,11 +45,12 @@ public sealed class ValueInstance : IEquatable<ValueInstance>
 			if (Value is not string)
 				throw new InvalidTypeValue(type, Value);
 		}
-		else if (type.Name is Base.Character or Base.HashCode)
+		else if (type.Name is Base.Character or Base.HashCode || type.Members.Count == 1 &&
+			type.IsSameOrCanBeUsedAs(type.GetType(Base.Character)))
 		{
 			if (Value is double doubleValue)
 				Value = (int)doubleValue;
-			if (Value is not int)
+			if (Value is not char && Value is not int)
 				throw new InvalidTypeValue(type, Value);
 		}
 		else if (type.Name == Base.List || type.Name == Base.Dictionary ||
@@ -64,7 +65,9 @@ public sealed class ValueInstance : IEquatable<ValueInstance>
 		else if (type.Name == Base.Number || type.Members.Count == 1 &&
 			type.IsSameOrCanBeUsedAs(type.GetType(Base.Number)))
 		{
-			if (Value is not double && Value is not int)
+			if (Value is char charValue)
+				Value = (int)charValue;
+			else if (Value is not double && Value is not int)
 				throw new InvalidTypeValue(type, Value);
 		}
 		else if (Value is IDictionary<string, object?> valueDictionary)
@@ -85,6 +88,7 @@ public sealed class ValueInstance : IEquatable<ValueInstance>
 	public sealed class InvalidTypeValue(Type returnType, object? value) : ExecutionFailed(
 		returnType, (value switch
 		{
+			null => "null",
 			Expression => "Expression " + value + " needs to be evaluated!",
 			IEnumerable valueEnumerable => valueEnumerable.EnumerableToWordList(", ", true),
 			_ => value + ""

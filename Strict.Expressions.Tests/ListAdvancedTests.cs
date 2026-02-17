@@ -99,9 +99,9 @@ public sealed class ListAdvancedTests : TestExpressions
 				"\t\tresult = result - value", "\tresult")).ParseMembersAndMethods(parser);
 		var expression = (Body)typeWithMutableList.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(expression.Expressions[0].ToString(),
-			Is.EqualTo("mutable result = List(TestPackage.Number)"));
+			Is.EqualTo("mutable result = List(Number)"));
 		Assert.That(((Declaration)expression.Expressions[0]).Value.ReturnType.FullName,
-			Is.EqualTo("TestPackage.List(TestPackage.Number)"));
+			Is.EqualTo("TestPackage.List(Number)"));
 	}
 
 	[Test]
@@ -268,14 +268,14 @@ public sealed class ListAdvancedTests : TestExpressions
 					"has numbers with Length is 2",
 					"Length Number",
 					"\t(X * X + Y * Y).SquareRoot")).ParseMembersAndMethods(parser);
+					// @formatter:on
 			}, //ncrunch: no coverage
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.
 				InstanceOf<Type.ArgumentsDoNotMatchMethodParameters>());
-	// @formatter:on
 
-	[TestCase("numbers", "1, 2", "List(TestPackage.Number)")]
-	[TestCase("booleans", "true, false", "List(TestPackage.Boolean)")]
-	[TestCase("texts", "\"Hi\", \"Hello\"", "List(TestPackage.Text)")]
+	[TestCase("numbers", "1, 2", "List(Number)")]
+	[TestCase("booleans", "true, false", "List(Boolean)")]
+	[TestCase("texts", "\"Hi\", \"Hello\"", "List(Text)")]
 	public void AutoParseArgumentAsListIfMatchingWithMethodParameter(string parameter,
 		string arguments, string expectedList)
 	{
@@ -297,7 +297,7 @@ public sealed class ListAdvancedTests : TestExpressions
 		var argumentExpression = ((MethodCall)body.Expressions[1]).Arguments[0];
 		Assert.That(argumentExpression, Is.InstanceOf<List>());
 		Assert.That(argumentExpression.ReturnType.ToString(),
-			Is.EqualTo($"TestPackage.{expectedList}"));
+			Is.EqualTo("TestPackage." + expectedList));
 	}
 
 	[Test]
@@ -312,7 +312,7 @@ public sealed class ListAdvancedTests : TestExpressions
 					"\tsomeList.Add(1)")).
 			ParseMembersAndMethods(parser);
 		var body = (Body)program.Methods[0].GetBodyAndParseIfNeeded();
-		Assert.That(body.Expressions[0].ToString(), Is.EqualTo("mutable someList = List(TestPackage.Mutable(TestPackage.Number))"));
+		Assert.That(body.Expressions[0].ToString(), Is.EqualTo("mutable someList = List(Mutable(Number))"));
 	}
 
 	[Test]

@@ -75,13 +75,12 @@ public class MethodExpressionParser : ExpressionParser
 			return ParseMethodCallWithArguments(body, input, postfix);
 		var binary = Binary.Parse(body, input, postfix.Output);
 		if (postfix.Output.Count == 0)
-			return
 #if DEBUG
-				inputText != binary.ToString()
-					? throw new GeneratedBinaryExpressionDoesNotMatchInputExactly(body, binary, inputText)
-					:
+			if (inputText != binary.ToString())
+				throw new GeneratedBinaryExpressionDoesNotMatchInputExactly(body, binary, inputText);
+			else
 #endif
-					binary;
+				return binary;
 		return ParseInContext(body, input[postfix.Output.Peek()], [binary]) ??
 			throw new UnknownExpression(body,
 				input[postfix.Output.Peek()].ToString() + " in " + inputText);
@@ -126,8 +125,18 @@ public class MethodExpressionParser : ExpressionParser
 		ChangeArgumentStartEndIfNestedMethodCall(input, ref argumentsStart, ref argumentsEnd);
 		if (argumentsStart <= 0 || argumentsEnd <= 0 || argumentsEnd < input.Length - 1)
 			return ParseInContext(body, input, []);
-		return ParseInContext(body, input[..argumentsStart],
-			ParseListArguments(body, input[(argumentsStart + 1)..argumentsEnd]));
+		var argumentsText = input[(argumentsStart + 1)..argumentsEnd];
+		// If our arguments are types, we might have ended up from a generic constructor like
+		// Dictionary(Number, Number) here, construct the type and return that method!
+		if (body.Method.Type.IsGeneric && body.Method.Name == Method.From &&
+			argumentsText.ToString().Split(", ").Length ==
+			body.ReturnType.GetGenericTypeArguments().Count)
+		{
+			var fromType = body.Method.Type.GetGenericImplementation(argumentsText.ToString().
+				Split(", ").Select(t => body.Method.Type.GetType(t)).ToArray());
+			return MethodCall.CreateFromMethodCall(body, fromType, []);
+		}
+		return ParseInContext(body, input[..argumentsStart], ParseListArguments(body, argumentsText));
 	}
 
 	private static void ChangeArgumentStartEndIfNestedMethodCall(ReadOnlySpan<char> input,
@@ -149,7 +158,7 @@ public class MethodExpressionParser : ExpressionParser
 
 	private Expression? ParseInContext(Body body, ReadOnlySpan<char> input,
 		IReadOnlyList<Expression> arguments) =>
-   ContainsMemberSeparatorOutsideBrackets(input)
+		ContainsMemberSeparatorOutsideBrackets(input)
 			? ParseNestedExpressionInContext(body, input, arguments)
 			: ListCall.TryParse(body,
 				TryVariableOrValueOrParameterOrMemberOrMethodCall(body.Method.Type, null, body, input,

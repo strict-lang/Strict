@@ -48,7 +48,7 @@ public sealed class DictionaryTests : TestExpressions
 			ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(dictionary.Members[0].Type, Is.InstanceOf<GenericTypeImplementation>());
 		Assert.That(dictionary.Members[0].Type.ToString(),
-			Is.EqualTo("TestPackage.Dictionary(TestPackage.Number, TestPackage.Number)"));
+			Is.EqualTo("TestPackage.Dictionary(Number, Number)"));
 		Assert.That(((GenericTypeImplementation)dictionary.Members[0].Type).ImplementationTypes[1],
 			Is.EqualTo(type.GetType(Base.Number)));
 	}
@@ -63,7 +63,7 @@ public sealed class DictionaryTests : TestExpressions
 			ParseMembersAndMethods(new MethodExpressionParser());
 		dictionary.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(dictionary.Members[0].Type.ToString(),
-			Is.EqualTo("TestPackage.Dictionary(TestPackage.Text, TestPackage.Boolean)"));
+			Is.EqualTo("TestPackage.Dictionary(Text, Boolean)"));
 	}
 
 	[Test]
@@ -76,8 +76,8 @@ public sealed class DictionaryTests : TestExpressions
 		Assert.That(() => dictionary.Methods[0].GetBodyAndParseIfNeeded(),
 			Throws.InnerException.InstanceOf<Type.ArgumentsDoNotMatchMethodParameters>().With.
 				InnerException.Message.Contains(
-					"Arguments: 4 TestPackage.Number, \"10\" TestPackage.Text do not match these TestPackage.Dictionary(TestPackage.Text, TestPackage.Boolean) method(s):" +
-					"\nAdd(key TestPackage.Text, mappedValue TestPackage.Boolean) Mutable(TestPackage.Dictionary(TestPackage.Text, TestPackage.Boolean))"));
+					"Arguments: 4 TestPackage.Number, \"10\" TestPackage.Text do not match these TestPackage.Dictionary(Text, Boolean) method(s):" +
+					"\nAdd(key TestPackage.Text, mappedValue TestPackage.Boolean) Mutable(Dictionary(Text, Boolean))"));
 	}
 
 	[Test]

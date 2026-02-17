@@ -129,18 +129,9 @@ internal class TypeMethodFinder(Type type)
 			method.Parameters[0].Type.Name == Base.Any && (commonTypeOfArguments == currentType ||
 				commonTypeOfArguments?.Name == Base.Error))
 			return true;
-		// Don't check trait methods, but allow Run for tests and from constructors
-		if (method.IsTrait && method.Name != Base.Run && method.Name != Method.From &&
-			// Also is type checks are ok and some types are not implemented, but done at the runtime!
-			commonTypeOfArguments?.Name != Base.Type && method.Parent.Name != Base.File &&
-			// Casting to types must be allowed as well (is always a trait, never implemented)
-			(method.Name != BinaryOperator.To || method.ReturnType.Name != Base.Type) &&
-			// Enum number values can always be compared
-			(method.Name != BinaryOperator.Is || commonTypeOfArguments?.Name != Base.Number))
-			return false;
 		if (method is { Name: Method.From, Parameters.Count: 0 } && typesOfArguments.Count == 1 &&
 			method.ReturnType.IsSameOrCanBeUsedAs(typesOfArguments[0], false))
-			return true; //ncrunch: no coverage
+			return true;
 		if (typesOfArguments.Count > method.Parameters.Count || typesOfArguments.Count <
 			method.Parameters.Count(p => p.DefaultValue == null))
 			return false;

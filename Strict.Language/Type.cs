@@ -223,7 +223,7 @@ public class Type : Context, IDisposable
 	}
 
 	internal string GetImplementationName(IEnumerable<Type> implementationTypes) =>
-		Name + "(" + implementationTypes.ToWordList() + ")";
+		Name + "(" + implementationTypes.Select(t => t.Name).ToWordList() + ")";
 
 	internal string GetImplementationName(IEnumerable<NamedType> implementationTypes) =>
 		Name + "(" + implementationTypes.Select(t => t.Name + " " + t.Type).ToWordList() + ")";

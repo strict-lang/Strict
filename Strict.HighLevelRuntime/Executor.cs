@@ -41,8 +41,8 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 					"Method \"" + method + "\" parameter " + index + ": " +
 					method.Parameters[index].ToStringWithInnerMembers() +
 					" cannot be assigned from argument " + args[index] + " " + args[index].ReturnType);
-		// If we are in a from constructor, create the instance here
-		if (method.Name == Method.From)
+		// If we are in a from constructor, create the instance here (but only for concrete types)
+		if (method.Name == Method.From && !method.Type.IsGeneric)
 		{
 			if (instance != null)
 				throw new MethodCall.CannotCallFromConstructorWithExistingInstance();
@@ -564,116 +564,135 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 			throw new InvalidOperationException("Binary call must have instance and 1 argument"); //ncrunch: no coverage
 		var leftInstance = RunExpression(call.Instance, ctx);
 		var rightInstance = RunExpression(call.Arguments[0], ctx);
+		return IsArithmetic(call.Method.Name)
+			? ExecuteArithmeticOperation(call, ctx, leftInstance, rightInstance)
+			: IsCompare(call.Method.Name)
+				? ExecuteComparisonOperation(call, ctx, leftInstance, rightInstance)
+				: ExecuteBinaryOperation(call, ctx, leftInstance, rightInstance);
+	}
+
+	private ValueInstance ExecuteArithmeticOperation(MethodCall call, ExecutionContext ctx,
+		ValueInstance leftInstance, ValueInstance rightInstance)
+	{
+		var op = call.Method.Name;
 		var left = leftInstance.Value;
 		var right = rightInstance.Value;
-		var op = call.Method.Name;
-		if (IsArithmetic(op))
+		//TODO: these are just shortcuts for Number operators, but we don't actually execute them
+		//TODO: in any case, for non datatypes we need to call the operators, only allow this for Boolean, Number, Text, rest should be called!
+		if (leftInstance.ReturnType.Name == Base.Number && rightInstance.ReturnType.Name == Base.Number)
 		{
-			//TODO: these are just shortcuts for Number operators, but we don't actually execute them
-			//TODO: in any case, for non datatypes we need to call the operators, only allow this for Boolean, Number, Text, rest should be called!
-			if (leftInstance.ReturnType.Name == Base.Number && rightInstance.ReturnType.Name == Base.Number)
-			{
-				var l = EqualsExtensions.NumberToDouble(left);
-				var r = EqualsExtensions.NumberToDouble(right);
-				return op switch
-				{
-					BinaryOperator.Plus => Number(l + r),
-					BinaryOperator.Minus => Number(l - r),
-					BinaryOperator.Multiply => Number(l * r),
-					BinaryOperator.Divide => Number(l / r),
-					BinaryOperator.Modulate => Number(l % r),
-					BinaryOperator.Power => Number(Math.Pow(l, r)),
-					_ => ExecuteMethodCall(call, leftInstance, ctx)
-				};
-			}
-			if (leftInstance.ReturnType.Name == Base.Text && rightInstance.ReturnType.Name == Base.Text)
-			{
-				return op == BinaryOperator.Plus
-					? new ValueInstance(leftInstance.ReturnType, (string)left! + (string)right!)
-					: throw new NotSupportedException("Only + operator is supported for Text, got: " + op);
-			}
-			if (leftInstance.ReturnType.IsIterator && rightInstance.ReturnType.IsIterator)
-			{
-				if (left is not IList<ValueInstance> leftList || right is not IList<ValueInstance> rightList)
-					throw new InvalidOperationException("Expected List<ValueInstance> for iterator operation, " +
-						"other iterators are not yet supported: left=" + left + ", right=" + right);
-				if (op is BinaryOperator.Multiply or BinaryOperator.Divide &&
-					leftList.Count != rightList.Count)
-					return Error(ListsHaveDifferentDimensions, ctx, call);
-				return op switch
-				{
-					BinaryOperator.Plus => CombineLists(leftInstance.ReturnType, leftList, rightList),
-					BinaryOperator.Minus => SubtractLists(leftInstance.ReturnType, leftList, rightList),
-					BinaryOperator.Multiply => MultiplyLists(leftInstance.ReturnType, leftList, rightList),
-					BinaryOperator.Divide => DivideLists(leftInstance.ReturnType, leftList, rightList),
-					_ => throw new NotSupportedException("Only +, -, *, / operators are supported for Lists, got: " + op)
-				};
-			}
-			if (leftInstance.ReturnType.IsIterator && rightInstance.ReturnType.Name == Base.Number)
-			{
-				if (left is not IList<ValueInstance> leftList)
-					throw new InvalidOperationException("Expected left list for iterator operation " + op +
-						": left=" + left + ", right=" + right);
-				if (op == BinaryOperator.Plus)
-					return AddToList(leftInstance.ReturnType, leftList, rightInstance);
-				if (op == BinaryOperator.Minus)
-					return RemoveFromList(leftInstance.ReturnType, leftList, rightInstance);
-				if (right is not double rightNumber)
-					throw new InvalidOperationException("Expected right number for iterator operation " +
-						op + ": left=" + left + ", right=" + right);
-				if (op == BinaryOperator.Multiply)
-					return MultiplyList(leftInstance.ReturnType, leftList, rightNumber);
-				if (op == BinaryOperator.Divide)
-					return DivideList(leftInstance.ReturnType, leftList, rightNumber);
-				throw new NotSupportedException(
-					"Only +, -, *, / operators are supported for List and Number, got: " + op);
-			}
-			return ExecuteMethodCall(call, leftInstance, ctx);
-		}
-		if (IsCompare(op))
-		{
-			if (op is BinaryOperator.Is or UnaryOperator.Not)
-			{
-				if (left == null || right == null)
-					throw new ComparisonsToNullAreNotAllowed(call.Method, left, right);
-				// Error comparison: allow ErrorWithValue to match Error and compare specific error types
-				if (rightInstance.ReturnType.IsError)
-				{
-					var matches = rightInstance.ReturnType.Name == Base.Error
-						? leftInstance.ReturnType.IsError
-						: leftInstance.ReturnType.IsSameOrCanBeUsedAs(rightInstance.ReturnType);
-					return op is BinaryOperator.Is
-						? Bool(matches)
-						: Bool(!matches);
-				}
-				//TODO: support conversions needed for Character, maybe Number <-> Text
-				if (call.Instance.ReturnType.Name == Base.Character && right is string rightText)
-				{
-					right = (int)rightText[0];
-					rightInstance = new ValueInstance(call.Instance.ReturnType, right);
-				}
-				if (call.Instance.ReturnType.Name == Base.Text && right is int rightInt)
-				{
-					right = rightInt + "";
-					rightInstance = new ValueInstance(call.Instance.ReturnType, right);
-				}
-				var equals = leftInstance.Equals(rightInstance);
-				return op is BinaryOperator.Is
-					? Bool(equals)
-					: Bool(!equals);
-			}
 			var l = EqualsExtensions.NumberToDouble(left);
 			var r = EqualsExtensions.NumberToDouble(right);
 			return op switch
 			{
-				BinaryOperator.Greater => Bool(l > r),
-				BinaryOperator.Smaller => Bool(l < r),
-				BinaryOperator.GreaterOrEqual => Bool(l >= r),
-				BinaryOperator.SmallerOrEqual => Bool(l <= r),
+				BinaryOperator.Plus => Number(l + r),
+				BinaryOperator.Minus => Number(l - r),
+				BinaryOperator.Multiply => Number(l * r),
+				BinaryOperator.Divide => Number(l / r),
+				BinaryOperator.Modulate => Number(l % r),
+				BinaryOperator.Power => Number(Math.Pow(l, r)),
 				_ => ExecuteMethodCall(call, leftInstance, ctx)
 			};
 		}
+		if (leftInstance.ReturnType.Name == Base.Text && rightInstance.ReturnType.Name == Base.Text)
+		{
+			return op == BinaryOperator.Plus
+				? new ValueInstance(leftInstance.ReturnType, (string)left! + (string)right!)
+				: throw new NotSupportedException("Only + operator is supported for Text, got: " + op);
+		}
+		if (leftInstance.ReturnType.IsIterator && rightInstance.ReturnType.IsIterator)
+		{
+			if (left is not IList<ValueInstance> leftList || right is not IList<ValueInstance> rightList)
+				throw new InvalidOperationException("Expected List<ValueInstance> for iterator operation, " +
+					"other iterators are not yet supported: left=" + left + ", right=" + right);
+			if (op is BinaryOperator.Multiply or BinaryOperator.Divide &&
+				leftList.Count != rightList.Count)
+				return Error(ListsHaveDifferentDimensions, ctx, call);
+			return op switch
+			{
+				BinaryOperator.Plus => CombineLists(leftInstance.ReturnType, leftList, rightList),
+				BinaryOperator.Minus => SubtractLists(leftInstance.ReturnType, leftList, rightList),
+				BinaryOperator.Multiply => MultiplyLists(leftInstance.ReturnType, leftList, rightList),
+				BinaryOperator.Divide => DivideLists(leftInstance.ReturnType, leftList, rightList),
+				_ => throw new NotSupportedException("Only +, -, *, / operators are supported for Lists, got: " + op)
+			};
+		}
+		if (leftInstance.ReturnType.IsIterator && rightInstance.ReturnType.Name == Base.Number)
+		{
+			if (left is not IList<ValueInstance> leftList)
+				throw new InvalidOperationException("Expected left list for iterator operation " + op +
+					": left=" + left + ", right=" + right);
+			if (op == BinaryOperator.Plus)
+				return AddToList(leftInstance.ReturnType, leftList, rightInstance);
+			if (op == BinaryOperator.Minus)
+				return RemoveFromList(leftInstance.ReturnType, leftList, rightInstance);
+			if (right is not double rightNumber)
+				throw new InvalidOperationException("Expected right number for iterator operation " +
+					op + ": left=" + left + ", right=" + right);
+			if (op == BinaryOperator.Multiply)
+				return MultiplyList(leftInstance.ReturnType, leftList, rightNumber);
+			if (op == BinaryOperator.Divide)
+				return DivideList(leftInstance.ReturnType, leftList, rightNumber);
+			throw new NotSupportedException(
+				"Only +, -, *, / operators are supported for List and Number, got: " + op);
+		}
+		return ExecuteMethodCall(call, leftInstance, ctx);
+	}
+
+	private ValueInstance ExecuteComparisonOperation(MethodCall call, ExecutionContext ctx,
+		ValueInstance leftInstance, ValueInstance rightInstance)
+	{
+		var op = call.Method.Name;
+		var left = leftInstance.Value;
+		var right = rightInstance.Value;
+		if (op is BinaryOperator.Is or UnaryOperator.Not)
+		{
+			if (left == null || right == null)
+				throw new ComparisonsToNullAreNotAllowed(call.Method, left, right);
+			// Error comparison: allow ErrorWithValue to match Error and compare specific error types
+			if (rightInstance.ReturnType.IsError)
+			{
+				var matches = rightInstance.ReturnType.Name == Base.Error
+					? leftInstance.ReturnType.IsError
+					: leftInstance.ReturnType.IsSameOrCanBeUsedAs(rightInstance.ReturnType);
+				return op is BinaryOperator.Is
+					? Bool(matches)
+					: Bool(!matches);
+			}
+			//TODO: support conversions needed for Character, maybe Number <-> Text
+			if (call.Instance!.ReturnType.Name == Base.Character && right is string rightText)
+			{
+				right = (int)rightText[0];
+				rightInstance = new ValueInstance(call.Instance.ReturnType, right);
+			}
+			if (call.Instance.ReturnType.Name == Base.Text && right is int rightInt)
+			{
+				right = rightInt + "";
+				rightInstance = new ValueInstance(call.Instance.ReturnType, right);
+			}
+			var equals = leftInstance.Equals(rightInstance);
+			return op is BinaryOperator.Is
+				? Bool(equals)
+				: Bool(!equals);
+		}
+		var l = EqualsExtensions.NumberToDouble(left);
+		var r = EqualsExtensions.NumberToDouble(right);
 		return op switch
+		{
+			BinaryOperator.Greater => Bool(l > r),
+			BinaryOperator.Smaller => Bool(l < r),
+			BinaryOperator.GreaterOrEqual => Bool(l >= r),
+			BinaryOperator.SmallerOrEqual => Bool(l <= r),
+			_ => ExecuteMethodCall(call, leftInstance, ctx)
+		};
+	}
+
+	private ValueInstance ExecuteBinaryOperation(MethodCall call, ExecutionContext ctx,
+		ValueInstance leftInstance, ValueInstance rightInstance)
+	{
+		var left = leftInstance.Value;
+		var right = rightInstance.Value;
+		return call.Method.Name switch
 		{
 			BinaryOperator.And => Bool(ToBool(left) && ToBool(right)),
 			BinaryOperator.Or => Bool(ToBool(left) || ToBool(right)),

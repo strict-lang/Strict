@@ -90,7 +90,7 @@ public static class BinaryOperator
 		{
 			',' => 0, // ncrunch: no coverage always has to flush everything out; ',' cannot be reached
              // because this method is called only for operators
-			'+' => 11, // unary '-' and 'not' operators have precedence 10
+			'+' => 11, // unary '-' and 'not' operators have lower precedence (3)
 			'-' => 11,
 			'%' => 12,
 			'*' => 13,
@@ -102,8 +102,9 @@ public static class BinaryOperator
 		};
 
 	public static int GetPrecedence(ReadOnlySpan<char> token) =>
+		// "to" needs to be higher than all the other operators as it needs to convert first
 		token.Compare(To)
-			? 10
+			? 20
 			: token.Compare(In)
 				? 9
 				: token.Compare(SmallerOrEqual) || token.Compare(GreaterOrEqual)

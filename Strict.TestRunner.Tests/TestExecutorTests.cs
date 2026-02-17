@@ -200,5 +200,16 @@ public sealed class TestExecutorTests
 	}
 
 	[Test]
+	public void RunTextCompare()
+	{
+		using var type = new Type(TestPackage.Instance,
+			new TypeLines(nameof(RunNumberToCharacterBody), "has number", "Run",
+				"\t\"Hey\" is \"Hey\"",
+				"\t\"Hi\" is not \"Hey\"",
+				"\tnumber")).ParseMembersAndMethods(new MethodExpressionParser());
+		executor.RunAllTestsInType(type);
+	}
+
+	[Test]
 	public void RunAllTestsInPackage() => executor.RunAllTestsInPackage(TestPackage.Instance);
 }

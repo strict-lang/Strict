@@ -32,7 +32,7 @@ public sealed class TypeMethodFinderTests
 		]);
 		Assert.That(result, Is.InstanceOf<Method>());
 		Assert.That(result?.ToString(),
-			Is.EqualTo("Add(first TestPackage.Number, other TestPackage.List(TestPackage.Number)) List"));
+			Is.EqualTo("Add(first TestPackage.Number, other TestPackage.List(Number)) List"));
 	}
 
 	[Test]
@@ -58,7 +58,7 @@ public sealed class TypeMethodFinderTests
 				])?.
 				ToString(),
 			Is.EqualTo(
-				"Add(other TestPackage.List(TestPackage.Text), first TestPackage.Generic) List"));
+				"Add(other TestPackage.List(Text), first TestPackage.Generic) List"));
 	}
 
 	[Test]

@@ -63,9 +63,9 @@ public sealed class IfTests : TestExpressions
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.InstanceOf<PhraseTokenizer.InvalidSpacing>());
 
 	[Test]
-	public void InvalidIsNotUsageOnDifferentType() =>
+	public void ValidIsNotUsageOnDifferentType() =>
 		Assert.That(() => ParseExpression("if five is not \"blu\"", "\tlogger.Log(\"Hey\")"),
-			Throws.InstanceOf<ParsingFailed>().With.InnerException.InstanceOf<Type.ArgumentsDoNotMatchMethodParameters>().With.Message.Contains("blu"));
+			Throws.Nothing);
 
 	[Test]
 	public void ParseMissingElseExpression() =>

@@ -198,16 +198,16 @@ public class TestPackage : Package
 			"\t\treturn digits((number / 10).Floor) + number % 10",
 			"to Number",
 			"\t\"3\" to Number is 3",
+			"\t\"12\" to Number is 12",
 			"\tfor characters.Reverse",
-			"\t\tvalue to Number * index ^ 10",
+			"\t\tvalue to Number * 10 ^ index",
 			"is(other) Boolean",
 			"\t\"Hey\" is \"Hey\"",
-			"\t\"Hi\" is not \"Hey\" is false",
+			"\t\"Hi\" is not \"Hey\"",
 			"\tvalue is other"));
 		var baseType = new Type(this, new TypeLines(Base.Type, "has Name",
 			"has Package Text",
 			"to Text",
-			"\tto Text is \"Strict.Base.Type\"",
 			"\tPackage + \".\" + Name"));
 		var generic = new Type(this, new TypeLines(Base.Generic, "from(type)"));
 		var logger = new Type(this, new TypeLines(Base.Logger,

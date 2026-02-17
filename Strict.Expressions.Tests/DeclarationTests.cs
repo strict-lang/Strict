@@ -64,11 +64,11 @@ public class DeclarationTests : TestExpressions
 		var expression = (Declaration)body.Expressions[0];
 		Assert.That(expression.Name, Is.EqualTo("numbers"));
 		Assert.That(expression.ReturnType.Name,
-			Is.EqualTo(Base.List + "(" + nameof(TestPackage) + "." + Base.Number + ")"));
+			Is.EqualTo(Base.List + "(" + Base.Number + ")"));
 		Assert.That(expression.Value, Is.InstanceOf<Binary>());
 		var leftExpression = ((Binary)expression.Value).Instance!;
 		Assert.That(leftExpression.ReturnType.Name,
-			Is.EqualTo(Base.List + "(" + nameof(TestPackage) + "." + Base.Number + ")"));
+			Is.EqualTo(Base.List + "(" + Base.Number + ")"));
 	}
 
 	[Test]

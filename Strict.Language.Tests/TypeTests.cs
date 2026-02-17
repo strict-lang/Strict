@@ -273,7 +273,7 @@ public sealed class TypeTests
 		using var memberWithConstraintType = CreateType(nameof(MemberWithConstraintsUsingWithKeyword),
 			code, "AddNumbers Number", "\tnumbers(0) + numbers(1)");
 		var member = memberWithConstraintType.Members[0];
-		Assert.That(member.Type.Name, Is.EqualTo("List(TestPackage.Number)"));
+		Assert.That(member.Type.Name, Is.EqualTo("List(Number)"));
 		Assert.That(member.Constraints?.Length, Is.EqualTo(1));
 		Assert.That(member.Constraints?[0].ToString(), Is.EqualTo("Length is 2"));
 	}
@@ -287,7 +287,7 @@ public sealed class TypeTests
 				"\tnumbers(0) + numbers(1)");
 		var member = memberWithConstraintType.Members[0];
 		Assert.That(member.Name, Is.EqualTo("something"));
-		Assert.That(member.Type.Name, Is.EqualTo("List(TestPackage.Number)"));
+		Assert.That(member.Type.Name, Is.EqualTo("List(Number)"));
 		Assert.That(member.Constraints?.Length, Is.EqualTo(1));
 		Assert.That(member.Constraints?[0].ToString(), Is.EqualTo("Length is 2"));
 		Assert.That(member.InitialValue, Is.InstanceOf<List>());
@@ -303,7 +303,7 @@ public sealed class TypeTests
 				"\tnumbers(0) + numbers(1)");
 		var member = memberWithConstraintType.Members[0];
 		Assert.That(member.Name, Is.EqualTo("numbers"));
-		Assert.That(member.Type.Name, Is.EqualTo("List(TestPackage.Number)"));
+		Assert.That(member.Type.Name, Is.EqualTo("List(Number)"));
 		Assert.That(member.Constraints?.Length, Is.EqualTo(2));
 		Assert.That(member.Constraints?[1].ToString(), Is.EqualTo("value(0) > 0"));
 	}
