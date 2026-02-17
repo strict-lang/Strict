@@ -149,11 +149,39 @@ public class MethodExpressionParser : ExpressionParser
 
 	private Expression? ParseInContext(Body body, ReadOnlySpan<char> input,
 		IReadOnlyList<Expression> arguments) =>
-		input.Contains('.')
+   ContainsMemberSeparatorOutsideBrackets(input)
 			? ParseNestedExpressionInContext(body, input, arguments)
 			: ListCall.TryParse(body,
 				TryVariableOrValueOrParameterOrMemberOrMethodCall(body.Method.Type, null, body, input,
 					arguments), arguments);
+
+	private static bool ContainsMemberSeparatorOutsideBrackets(ReadOnlySpan<char> input)
+	{
+		var bracketCount = 0;
+		var inText = false;
+		for (var index = 0; index < input.Length; index++)
+		{
+			var current = input[index];
+			if (current == '"')
+				inText = !inText;
+			if (inText)
+				continue;
+			switch (current)
+			{
+			case '(':
+				bracketCount++;
+				break;
+			case ')':
+				bracketCount--;
+				break;
+			case '.':
+				if (bracketCount == 0)
+					return true;
+				break;
+			}
+		}
+		return false;
+	}
 
 	private Expression? ParseNestedExpressionInContext(Body body,
 		ReadOnlySpan<char> input, IReadOnlyList<Expression> arguments)

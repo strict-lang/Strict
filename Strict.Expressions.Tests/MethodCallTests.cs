@@ -34,6 +34,20 @@ public sealed class MethodCallTests : TestExpressions
 		Assert.That(ParseExpression("(10 / 2).Floor").ToString(), Is.EqualTo("(10 / 2).Floor"));
 
 	[Test]
+	public void ParseCallWithMemberAccessInNestedArgument()
+	{
+		var digitsMethod = new Method(type, 0, this, [
+			"digits(number) Number",
+			"\tdigits((number / 10).Floor) + number % 10"
+		]);
+		type.Methods.Add(digitsMethod);
+    var binary = (Binary)digitsMethod.GetBodyAndParseIfNeeded();
+		var methodCall = (MethodCall)binary.Instance!;
+		Assert.That(methodCall.Method.Name, Is.EqualTo("digits"));
+		Assert.That(methodCall.Arguments[0].ToString(), Is.EqualTo("(number / 10).Floor"));
+	}
+
+	[Test]
 	public void ParseWithMissingArgument() =>
 		Assert.That(() => ParseExpression("logger.Write"),
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.

@@ -1,4 +1,4 @@
-﻿namespace Strict.Language;
+namespace Strict.Language;
 
 /// <summary>
 /// Instead of using one of String or other Split methods here, use this and SpanExtensions to
@@ -27,9 +27,17 @@ public ref struct RangeEnumerator
 	{
 		if (IsAtEnd)
 			return false;
+		var bracketCount = 0;
 		for (var index = offset; index < input.Length; index++)
-			if (input[index] == splitter && IsNotFoundInsideBrackets(index))
+		{
+			var current = input[index];
+			if (current == '(')
+				bracketCount++;
+			else if (current == ')')
+				bracketCount--;
+			if (current == splitter && bracketCount == 0)
 				return GetWordBeforeSplitter(index);
+		}
 		if (removeLeadingSpace && input[offset] == ' ')
 			offset++;
 		Current = (outerStart + offset)..(outerStart + input.Length);
@@ -37,7 +45,6 @@ public ref struct RangeEnumerator
 		return true;
 	}
 
-	private bool IsNotFoundInsideBrackets(int index) => !input[..index].Contains('(') || input[..index].Contains(')');
 	public readonly bool IsAtEnd => offset >= input.Length;
 
 	private bool GetWordBeforeSplitter(int index)

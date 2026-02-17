@@ -135,7 +135,7 @@ public sealed class PhraseTokenizer
 
 		private bool FoundLastToken()
 		{
-			if (tokens.input[tokens.index] == '\"')
+			if (tokens.input[tokens.index] == '"')
 			{
 				tokens.GetSingleTokenTillEndOfText(result.Add);
 				return false;
@@ -157,11 +157,16 @@ public sealed class PhraseTokenizer
 				var additionalBrackets = 0;
 				while (tokens.index + 1 < tokens.input.Length)
 				{
-					if (tokens.input[tokens.index + 1] == OpenBracket)
+          var nextCharacter = tokens.input[tokens.index + 1];
+					if (nextCharacter == OpenBracket)
 						additionalBrackets++;
-					else if (tokens.input[tokens.index + 1] == CloseBracket)
+					else if (nextCharacter == CloseBracket)
+					{
+						if (additionalBrackets == 0)
+							break;
 						additionalBrackets--;
-					else if (tokens.input[tokens.index + 1] == ' ' && additionalBrackets == 0)
+					}
+					else if (nextCharacter == ' ' && additionalBrackets == 0)
 						break;
 					tokens.index++;
 				}

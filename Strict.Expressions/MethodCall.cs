@@ -42,12 +42,40 @@ public class MethodCall : ConcreteExpression
 	{
 		if (body.IsFakeBodyForMemberInitialization)
 			return null;
-		var method = type.FindMethod(inputAsString, arguments);
+   var method = type.FindMethod(inputAsString, arguments) ??
+			(instance == null && type == body.Method.Type
+				? FindPrivateMethod(type, inputAsString, arguments)
+				: null);
 		if (method != null)
 			return new MethodCall(method, instance, AreArgumentsAutoParsedAsList(method, arguments)
 				? [new List(body, (List<Expression>)arguments)]
 				: arguments, null, body.CurrentFileLineNumber);
 		return null;
+	}
+
+	private static Method? FindPrivateMethod(Type type, string methodName,
+		IReadOnlyList<Expression> arguments)
+	{
+		foreach (var candidate in type.Methods)
+			if (candidate.Name == methodName && AreArgumentsCompatible(candidate, arguments))
+				return candidate;
+		return null;
+	}
+
+	private static bool AreArgumentsCompatible(Method method, IReadOnlyList<Expression> arguments)
+	{
+		if (arguments.Count > method.Parameters.Count || arguments.Count <
+			method.Parameters.Count(p => p.DefaultValue == null))
+			return false;
+		for (var index = 0; index < arguments.Count; index++)
+		{
+			var parameterType = method.Parameters[index].Type;
+			if (parameterType is GenericTypeImplementation { Generic.Name: Base.Mutable } mutableType)
+				parameterType = mutableType.ImplementationTypes[0];
+			if (!arguments[index].ReturnType.IsSameOrCanBeUsedAs(parameterType))
+				return false;
+		}
+		return true;
 	}
 
 	private static bool

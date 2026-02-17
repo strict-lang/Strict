@@ -362,6 +362,11 @@ public class Type : Context, IDisposable
 			return this;
 		if (IsError)
 			return elseType;
+		// Allow number and iterators for return types
+		if (Name == Base.Number && elseType.IsIterator)
+			return elseType;
+		if (elseType.Name == Base.Number && IsIterator)
+			return this;
 		foreach (var member in members)
 			if (elseType.members.Any(otherMember => otherMember.Type == member.Type))
 				return member.Type;
