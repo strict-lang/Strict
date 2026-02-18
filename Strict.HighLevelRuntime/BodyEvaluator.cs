@@ -27,26 +27,13 @@ internal sealed class BodyEvaluator(Executor executor)
 			if (runOnlyTests && last.Value == null && body.Method.Name != Base.Run &&
 				body.Expressions.Count > 1)
 				throw new Executor.MethodRequiresTest(body.Method, body);
-			return runOnlyTests || last.ReturnType.IsError || body.Method.ReturnType == last.ReturnType
-				? last
-				: body.Method.ReturnType.Name == Base.Character && last.ReturnType.Name == Base.Number
-					? new ValueInstance(body.Method.ReturnType, last.Value)
-					: body.Method.ReturnType.IsMutable &&
-					ctx.This?.ReturnType is GenericTypeImplementation { Generic.Name: Base.Dictionary } &&
-					last.ReturnType is GenericTypeImplementation { Generic.Name: Base.List }
-						or GenericTypeImplementation
-						{
-							Generic.Name: Base.Mutable,
-							ImplementationTypes:
-							[
-								GenericTypeImplementation { Generic.Name: Base.List }
-							]
-						}
-						? new ValueInstance(body.Method.ReturnType, ctx.This.Value)
-						: body.Method.ReturnType.IsMutable && !last.ReturnType.IsMutable && last.ReturnType ==
-						((GenericTypeImplementation)body.Method.ReturnType).ImplementationTypes[0]
-							? new ValueInstance(body.Method.ReturnType, last.Value)
-							: throw new Executor.ReturnTypeMustMatchMethod(body, last);
+			if (runOnlyTests || last.ReturnType.IsError || body.Method.ReturnType == last.ReturnType)
+				return last;
+			if (body.Method.ReturnType.IsMutable && !last.ReturnType.IsMutable &&
+				last.ReturnType == ((GenericTypeImplementation)body.Method.ReturnType).
+				ImplementationTypes[0])
+				return new ValueInstance(body.Method.ReturnType, last.Value);
+			throw new Executor.ReturnTypeMustMatchMethod(body, last);
 		}
 		catch (ExecutionFailed ex)
 		{

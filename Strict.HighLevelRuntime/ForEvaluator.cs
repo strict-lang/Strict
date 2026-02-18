@@ -1,25 +1,11 @@
 using Strict.Expressions;
 using Strict.Language;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using Type = Strict.Language.Type;
 
 namespace Strict.HighLevelRuntime;
 
-internal sealed class ForEvaluator
+internal sealed class ForEvaluator(Executor executor)
 {
-	private readonly Executor executor;
-	private readonly Type numberType;
-	private readonly Type genericListType;
-
-	public ForEvaluator(Executor executor)
-	{
-		this.executor = executor;
-		numberType = executor.NumberType;
-		genericListType = executor.GenericListType;
-	}
-
 	public ValueInstance Evaluate(For f, ExecutionContext ctx)
 	{
 		var iterator = executor.RunExpression(f.Iterator, ctx);
@@ -48,24 +34,24 @@ internal sealed class ForEvaluator
 				ExecuteForIteration(f, ctx, iterator, results, itemType, index);
 		}
 		return ShouldConsolidateForResult(results, ctx) ?? new ValueInstance(results.Count == 0
-			? iterator.ReturnType
-			: genericListType.GetGenericImplementation(results[0].ReturnType), results);
+				? iterator.ReturnType
+				: iterator.ReturnType.GetType(Base.List).GetGenericImplementation(results[0].ReturnType),
+			results);
 	}
 
 	private void ExecuteForIteration(For f, ExecutionContext ctx, ValueInstance iterator,
 		ICollection<ValueInstance> results, Type itemType, int index)
 	{
-		var loopContext =
-			new ExecutionContext(ctx.Type, ctx.Method) { This = ctx.This, Parent = ctx };
-		loopContext.Set(Type.IndexLowercase, new ValueInstance(numberType, index));
+		var loop = new ExecutionContext(ctx.Type, ctx.Method) { This = ctx.This, Parent = ctx };
+		loop.Set(Type.IndexLowercase, new ValueInstance(itemType.GetType(Base.Number), index));
 		var value = iterator.GetIteratorValue(index);
-		loopContext.Set(Type.ValueLowercase,
+		loop.Set(Type.ValueLowercase,
 			value as ValueInstance ?? new ValueInstance(itemType, value));
 		foreach (var customVariable in f.CustomVariables)
 			if (customVariable is VariableCall variableCall)
-				loopContext.Set(variableCall.Variable.Name,
+				loop.Set(variableCall.Variable.Name,
 					new ValueInstance(variableCall.ReturnType, value));
-		var itemResult = executor.RunExpression(f.Body, loopContext);
+		var itemResult = executor.RunExpression(f.Body, loop);
 		if (itemResult.ReturnType.Name != Base.None)
 			results.Add(itemResult);
 	}
@@ -88,13 +74,13 @@ internal sealed class ForEvaluator
 				};
 			return new ValueInstance(ctx.Method.ReturnType, text);
 		}
-		if (ctx.Method.ReturnType.Name == Base.Boolean)
-			return new ValueInstance(ctx.Method.ReturnType, results.Any(value => value.Value is true));
-		return null;
+		return ctx.Method.ReturnType.Name == Base.Boolean
+			? new ValueInstance(ctx.Method.ReturnType, results.Any(value => value.Value is true))
+			: null;
 	}
 
-	private Type GetForValueType(ValueInstance iterator) =>
+	private static Type GetForValueType(ValueInstance iterator) =>
 		iterator.ReturnType is GenericTypeImplementation { Generic.Name: Base.List } list
 			? list.ImplementationTypes[0]
-			: numberType;
+			: iterator.ReturnType.GetType(Base.Number);
 }

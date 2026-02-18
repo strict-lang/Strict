@@ -9,9 +9,9 @@ namespace Strict.TestRunner;
 /// we don't call some code, it is not parsed, executed, or tested at all. This forces execution
 /// of every method in every type to run all included tests to find out if anything is not working.
 /// </summary>
-public sealed class TestExecutor(Package basePackage)
+public sealed class TestExecutor
 {
-	private readonly Executor executor = new(basePackage, TestBehavior.TestRunner);
+	private readonly Executor executor = new(TestBehavior.TestRunner);
 
 	public void RunAllTestsInPackage(Package package)
 	{

@@ -1,6 +1,5 @@
 using Strict.Expressions;
 using Strict.Language;
-using System;
 using System.Globalization;
 
 namespace Strict.HighLevelRuntime;

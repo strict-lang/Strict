@@ -1,19 +1,17 @@
 using Strict.Expressions;
 using Strict.Language;
 using System.Collections;
-using System.Collections.Generic;
-using static Strict.HighLevelRuntime.ExecutionContext;
 using Type = Strict.Language.Type;
 
 namespace Strict.HighLevelRuntime;
 
-public sealed class Executor(Package basePackage, TestBehavior behavior = TestBehavior.OnFirstRun)
+public sealed class Executor(TestBehavior behavior = TestBehavior.OnFirstRun)
 {
 	public ValueInstance Execute(Method method, ValueInstance? instance,
 		IReadOnlyList<ValueInstance> args, ExecutionContext? parentContext = null)
 	{
 		ValueInstance? returnValue = null;
-    if (inlineTestDepth == 0 && behavior != TestBehavior.Disabled &&
+		if (inlineTestDepth == 0 && behavior != TestBehavior.Disabled &&
 			(behavior == TestBehavior.TestRunner || validatedMethods.Add(method)))
 			returnValue = Execute(method, instance, args, parentContext, true);
 		if (inlineTestDepth > 0 || behavior != TestBehavior.TestRunner)
@@ -26,22 +24,11 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 	/// </summary>
 	private int inlineTestDepth;
 	private readonly HashSet<Method> validatedMethods = [];
-	private BodyEvaluator? bodyEvaluator;
-	private IfEvaluator? ifEvaluator;
-	private ForEvaluator? forEvaluator;
-	private MethodCallEvaluator? methodCallEvaluator;
-	private ListCallEvaluator? listCallEvaluator;
-	private MemberCallEvaluator? memberCallEvaluator;
-	private ToEvaluator? toEvaluator;
-	private BodyEvaluator BodyEvaluator => bodyEvaluator ??= new BodyEvaluator(this);
-	private IfEvaluator IfEvaluator => ifEvaluator ??= new IfEvaluator(this);
-	private ForEvaluator ForEvaluator => forEvaluator ??= new ForEvaluator(this);
-	private MethodCallEvaluator MethodCallEvaluator =>
-		methodCallEvaluator ??= new MethodCallEvaluator(this);
-	private ListCallEvaluator ListCallEvaluator => listCallEvaluator ??= new ListCallEvaluator(this);
-	private MemberCallEvaluator MemberCallEvaluator =>
-		memberCallEvaluator ??= new MemberCallEvaluator(this);
-	private ToEvaluator ToEvaluator => toEvaluator ??= new ToEvaluator(this);
+	private BodyEvaluator BodyEvaluator => field ??= new BodyEvaluator(this);
+	private IfEvaluator IfEvaluator => field ??= new IfEvaluator(this);
+	private ForEvaluator ForEvaluator => field ??= new ForEvaluator(this);
+	private MethodCallEvaluator MethodCallEvaluator => field ??= new MethodCallEvaluator(this);
+	private ToEvaluator ToEvaluator => field ??= new ToEvaluator(this);
 
 	private ValueInstance Execute(Method method, ValueInstance? instance,
 		IReadOnlyList<ValueInstance> args, ExecutionContext? parentContext, bool runOnlyTests)
@@ -91,7 +78,7 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 			// For test validation, check if the method is simple before attempting to parse
 			// This avoids parsing errors when instance members are accessed but no instance exists
 			if (runOnlyTests && IsSimpleSingleLineMethod(method))
-				return Bool(true);
+				return Bool(method.ReturnType, true);
 			Expression body;
 			try
 			{
@@ -105,7 +92,7 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 			}
 			if (body is not Body && runOnlyTests)
 				return IsSimpleExpressionWithLessThanThreeSubExpressions(body)
-					? Bool(true)
+					? Bool(body.ReturnType, true)
 					: throw new MethodRequiresTest(method, body.ToString());
 			var result = RunExpression(body, context, runOnlyTests);
 			return !runOnlyTests && !method.ReturnType.IsMutable && result.ReturnType.IsMutable &&
@@ -136,6 +123,8 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 		}
 	}
 
+	internal static ValueInstance Bool(Context any, bool b) => new(any.GetType(Base.Boolean), b);
+
 	private static bool DoArgumentsMatch(Method method, IReadOnlyList<ValueInstance> args,
 		IReadOnlyDictionary<string, ValueInstance> parentContextVariables)
 	{
@@ -146,13 +135,10 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 		return true;
 	}
 
-	public sealed class StackOverflowCallingItselfWithSameInstanceAndArguments(
-		Method method,
-		ValueInstance? instance,
-		IEnumerable<ValueInstance> args,
-		ExecutionContext parentContext) : ExecutionFailed(method,
-		"Parent context=" + parentContext + ", Instance=" + instance + ", arguments=" +
-		args.ToWordList());
+	public sealed class StackOverflowCallingItselfWithSameInstanceAndArguments(Method method,
+		ValueInstance? instance, IEnumerable<ValueInstance> args, ExecutionContext parentContext)
+		: ExecutionFailed(method, "Parent context=" + parentContext + ", Instance=" + instance +
+			", arguments=" + args.ToWordList());
 
 	private static IDictionary<string, object?> ConvertFromArgumentsToDictionary(Method fromMethod,
 		IReadOnlyList<ValueInstance> args)
@@ -181,13 +167,10 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 			return method.Type.Name == Base.Text
 				? ""
 				: TryCreateEmptyCollectionForType(method.Type);
-     if (method.Type is GenericTypeImplementation { Generic.Name: Base.Dictionary } &&
+		if (method.Type is GenericTypeImplementation { Generic.Name: Base.Dictionary } &&
 			args.Count == 1 && args[0].ReturnType.IsIterator)
-		{
-     return args[0].Value is IDictionary dictionary
-				? dictionary
-				: BuildDictionaryFromPairs(args[0].Value as IList ?? Array.Empty<object?>());
-		}
+			return args[0].Value as IDictionary ??
+				BuildDictionaryFromPairs(args[0].Value as IList ?? Array.Empty<object?>());
 		if (args.Count == 1)
 		{
 			var arg = args[0];
@@ -203,9 +186,7 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 	private static object? TryCreateEmptyCollectionForType(Type type)
 	{
 		if (type is GenericTypeImplementation { Generic.Name: Base.Dictionary })
-		{
-      return new Dictionary<object, object?>();
-		}
+			return new Dictionary<object, object?>();
 		return null;
 	}
 
@@ -283,19 +264,17 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 		bool runOnlyTests = false) =>
 		expr switch
 		{
-			//TODO: this class has grown too big, separate out these different evaluators into own classes
-     Body body => BodyEvaluator.Evaluate(body, context, runOnlyTests),
-     Value v => v.Data as ValueInstance ??
-				CreateValueInstance(v.ReturnType, v.Data, context),
+			Body body => BodyEvaluator.Evaluate(body, context, runOnlyTests),
+			Value v => v.Data as ValueInstance ?? CreateValueInstance(v.ReturnType, v.Data, context),
 			ParameterCall or VariableCall => EvaluateVariable(expr.ToString(), context),
-     MemberCall m => MemberCallEvaluator.Evaluate(m, context),
-			ListCall listCall => ListCallEvaluator.Evaluate(listCall, context),
+			MemberCall m => EvaluateMemberCall(m, context),
+			ListCall listCall => MethodCallEvaluator.EvaluateListCall(listCall, context),
 			If iff => IfEvaluator.Evaluate(iff, context),
 			For f => ForEvaluator.Evaluate(f, context),
 			Return r => EvaluateReturn(r, context),
-     To t => ToEvaluator.Evaluate(t, context),
+			To t => ToEvaluator.Evaluate(t, context),
 			Not n => EvaluateNot(n, context),
-     MethodCall call => EvaluateMethodCall(call, context),
+			MethodCall call => EvaluateMethodCall(call, context),
 			Declaration c => EvaluateAndAssign(c.Name, c.Value, context),
 			MutableReassignment a => EvaluateAndAssign(a.Name, a.Value, context),
 			Instance => EvaluateVariable(Type.ValueLowercase, context),
@@ -370,12 +349,26 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 			: value;
 
 	public class ExpressionNotSupported(Expression expr, ExecutionContext context)
-		: ExecutionFailed(context.Type, expr.GetType().Name);
+		: ExecutionFailed(context.Type, expr.GetType().Name); //ncrunch: no coverage
 
 	private static ValueInstance EvaluateVariable(string name, ExecutionContext context) =>
 		context.Find(name) ?? (name == Type.ValueLowercase
 			? context.This
-			: null) ?? throw new VariableNotFound(name, context.Type, context.This);
+			: null) ?? throw new ExecutionContext.VariableNotFound(name, context.Type, context.This);
+
+	public ValueInstance EvaluateMemberCall(MemberCall member, ExecutionContext ctx)
+	{
+		if (ctx.This == null && ctx.Type.Members.Contains(member.Member))
+			throw new UnableToCallMemberWithoutInstance(member, ctx);
+		if (ctx.This?.Value is Dictionary<string, object?> dict &&
+			dict.TryGetValue(member.Member.Name, out var value))
+			return new ValueInstance(member.ReturnType, value);
+		if (member.Member.InitialValue != null && member.IsConstant)
+			return RunExpression(member.Member.InitialValue, ctx);
+		return member.Instance is VariableCall { Variable.Name: Type.OuterLowercase }
+			? ctx.Parent!.Get(member.Member.Name)
+			: ctx.Get(member.Member.Name);
+	}
 
 	internal void IncrementInlineTestDepth() => inlineTestDepth++;
 	internal void DecrementInlineTestDepth() => inlineTestDepth--;
@@ -470,30 +463,12 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 		throw new ReturnSignal(RunExpression(r.Value, ctx));
 
 	private ValueInstance EvaluateNot(Not not, ExecutionContext ctx) =>
-		Bool(!ToBool(RunExpression(not.Instance!, ctx)));
+		Bool(not.ReturnType, !ToBool(RunExpression(not.Instance!, ctx)));
 
 	public class UnableToCallMemberWithoutInstance(MemberCall member, ExecutionContext ctx)
 		: Exception(member + ", context " + ctx);
 
-  internal ValueInstance None() => new(noneType, null);
-	private readonly Type noneType = basePackage.FindType(Base.None)!;
- internal ValueInstance Bool(bool b) => new(boolType, b);
-	private readonly Type boolType = basePackage.FindType(Base.Boolean)!;
-	private readonly Type genericListType = basePackage.FindType(Base.List)!;
-	private readonly Type errorType = basePackage.FindType(Base.Error)!;
-	private readonly Type stacktraceType = basePackage.FindType(Base.Stacktrace)!;
-	private readonly Type methodType = basePackage.FindType(Base.Method)!;
-	private readonly Type typeType = basePackage.FindType(Base.Type)!;
-	public const string ListsHaveDifferentDimensions = "listsHaveDifferentDimensions";
-	internal Type BoolType => boolType;
-	internal Type NumberType => numberType;
-	internal Type GenericListType => genericListType;
-	internal Type ErrorType => errorType;
-	internal Type StacktraceType => stacktraceType;
-	internal Type MethodType => methodType;
-	internal Type TypeType => typeType;
-
-  internal static bool ToBool(object? v) =>
+	internal static bool ToBool(object? v) =>
 		v switch
 		{
 			bool b => b,
@@ -505,9 +480,7 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 	public sealed class ComparisonsToNullAreNotAllowed(Method method, object? left, object? right)
 		: ExecutionFailed(method, $"{left} is {right}");
 
- internal ValueInstance Number(double n) => new(numberType, n);
-	private readonly Type numberType = basePackage.FindType(Base.Number)!;
-
+	//internal Type GenericListType { get; } = basePackage.FindType(Base.List)!;
 	private sealed class ReturnSignal(ValueInstance value) : Exception
 	{
 		public ValueInstance Value { get; } = value;

@@ -1,35 +1,29 @@
 using Strict.Expressions;
 using Strict.Language;
-using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
 using Type = Strict.Language.Type;
 
 namespace Strict.HighLevelRuntime;
 
-internal sealed class MethodCallEvaluator
+public sealed class MethodCallEvaluator(Executor executor)
 {
-	private readonly Executor executor;
-	private readonly Type boolType;
-	private readonly Type numberType;
-	private readonly Type genericListType;
-	private readonly Type errorType;
-	private readonly Type stacktraceType;
-	private readonly Type methodType;
-	private readonly Type typeType;
-
-	public MethodCallEvaluator(Executor executor)
+	public ValueInstance EvaluateListCall(ListCall call, ExecutionContext ctx)
 	{
-		this.executor = executor;
-		boolType = executor.BoolType;
-		numberType = executor.NumberType;
-		genericListType = executor.GenericListType;
-		errorType = executor.ErrorType;
-		stacktraceType = executor.StacktraceType;
-		methodType = executor.MethodType;
-		typeType = executor.TypeType;
+		var listInstance = executor.RunExpression(call.List, ctx);
+		var indexValue = executor.RunExpression(call.Index, ctx);
+		var index = Convert.ToInt32(EqualsExtensions.NumberToDouble(indexValue.Value));
+		if (listInstance.Value is IList list)
+			return list[index] as ValueInstance ?? new ValueInstance(call.ReturnType, list[index]);
+		if (listInstance.Value is IDictionary<string, object?> members &&
+			(members.TryGetValue("Elements", out var elements) ||
+				members.TryGetValue("elements", out elements)) && elements is IList memberList)
+			return memberList[index] as ValueInstance ??
+				new ValueInstance(call.ReturnType, memberList[index]);
+		if (listInstance.Value is string text)
+			return new ValueInstance(call.ReturnType, (int)text[index]);
+		throw new InvalidOperationException("List call can only be used on iterators, got: " +
+			listInstance);
 	}
 
 	public ValueInstance Evaluate(MethodCall call, ExecutionContext ctx)
@@ -45,26 +39,25 @@ internal sealed class MethodCallEvaluator
 		var args = new List<ValueInstance>(call.Arguments.Count);
 		foreach (var a in call.Arguments)
 			args.Add(executor.RunExpression(a, ctx));
-
-   if (instance != null && instance.ReturnType is GenericTypeImplementation { Generic.Name: Base.Dictionary } &&
-			instance.Value is IDictionary dictionaryValues && args.Count > 0 && call.Method.Name == "Add")
+		if (instance is not
+			{
+				ReturnType: GenericTypeImplementation { Generic.Name: Base.Dictionary },
+				Value: IDictionary dictionaryValues
+			} || args.Count <= 0 || call.Method.Name != "Add")
+			return executor.Execute(call.Method, instance, args, ctx);
+		if (args.Count == 2)
 		{
-      if (args.Count == 2)
-			{
-        var addKey = args[0].Value ??
-					throw new InvalidOperationException("Dictionary key cannot be null");
-				dictionaryValues[addKey] = args[1].Value;
-				return instance;
-			}
-      if (TryGetPairValues(args[0], out var key, out var value))
-			{
-        var nonNullKey = key ??
-					throw new InvalidOperationException("Dictionary key cannot be null");
-				dictionaryValues[nonNullKey] = value;
-				return instance;
-			}
+			var addKey = args[0].Value ??
+				throw new InvalidOperationException("Dictionary key cannot be null");
+			dictionaryValues[addKey] = args[1].Value;
+			return instance;
 		}
-		return executor.Execute(call.Method, instance, args, ctx);
+		if (!TryGetPairValues(args[0], out var key, out var value))
+			return executor.Execute(call.Method, instance, args, ctx);
+		var nonNullKey = key ??
+			throw new InvalidOperationException("Dictionary key cannot be null");
+		dictionaryValues[nonNullKey] = value;
+		return instance;
 	}
 
 	private static bool IsArithmetic(string name) =>
@@ -82,8 +75,7 @@ internal sealed class MethodCallEvaluator
 		ExecutionContext ctx)
 	{
 		if (call.Instance == null || call.Arguments.Count != 1)
-			throw new InvalidOperationException(
-				"Binary call must have instance and 1 argument");
+			throw new InvalidOperationException("Binary call must have instance and 1 argument");
 		var leftInstance = executor.RunExpression(call.Instance, ctx);
 		var rightInstance = executor.RunExpression(call.Arguments[0], ctx);
 		return IsArithmetic(call.Method.Name)
@@ -106,12 +98,12 @@ internal sealed class MethodCallEvaluator
 			var r = EqualsExtensions.NumberToDouble(right);
 			return op switch
 			{
-				BinaryOperator.Plus => executor.Number(l + r),
-				BinaryOperator.Minus => executor.Number(l - r),
-				BinaryOperator.Multiply => executor.Number(l * r),
-				BinaryOperator.Divide => executor.Number(l / r),
-				BinaryOperator.Modulate => executor.Number(l % r),
-				BinaryOperator.Power => executor.Number(Math.Pow(l, r)),
+				BinaryOperator.Plus => Number(call.Method, l + r),
+				BinaryOperator.Minus => Number(call.Method, l - r),
+				BinaryOperator.Multiply => Number(call.Method, l * r),
+				BinaryOperator.Divide => Number(call.Method, l / r),
+				BinaryOperator.Modulate => Number(call.Method, l % r),
+				BinaryOperator.Power => Number(call.Method, Math.Pow(l, r)),
 				_ => ExecuteMethodCall(call, leftInstance, ctx)
 			};
 		}
@@ -130,7 +122,7 @@ internal sealed class MethodCallEvaluator
 					"other iterators are not yet supported: left=" + left + ", right=" + right);
 			if (op is BinaryOperator.Multiply or BinaryOperator.Divide &&
 				leftList.Count != rightList.Count)
-				return Error(Executor.ListsHaveDifferentDimensions, ctx, call);
+				return Error(ListsHaveDifferentDimensions, ctx, call);
 			return op switch
 			{
 				BinaryOperator.Plus => CombineLists(leftInstance.ReturnType, leftList, rightList),
@@ -163,6 +155,9 @@ internal sealed class MethodCallEvaluator
 		return ExecuteMethodCall(call, leftInstance, ctx);
 	}
 
+	private static ValueInstance Number(Context any, double n) => new(any.GetType(Base.Number), n);
+	public const string ListsHaveDifferentDimensions = "listsHaveDifferentDimensions";
+
 	private ValueInstance ExecuteComparisonOperation(MethodCall call, ExecutionContext ctx,
 		ValueInstance leftInstance, ValueInstance rightInstance)
 	{
@@ -179,8 +174,8 @@ internal sealed class MethodCallEvaluator
 					? leftInstance.ReturnType.IsError
 					: leftInstance.ReturnType.IsSameOrCanBeUsedAs(rightInstance.ReturnType);
 				return op is BinaryOperator.Is
-					? executor.Bool(matches)
-					: executor.Bool(!matches);
+					? Executor.Bool(call.Method, matches)
+					: Executor.Bool(call.Method, !matches);
 			}
 			if (call.Instance!.ReturnType.Name == Base.Character && right is string rightText)
 			{
@@ -193,18 +188,18 @@ internal sealed class MethodCallEvaluator
 				rightInstance = new ValueInstance(call.Instance.ReturnType, right);
 			}
 			var equals = leftInstance.Equals(rightInstance);
-			return op is BinaryOperator.Is
-				? executor.Bool(equals)
-				: executor.Bool(!equals);
+			return Executor.Bool(call.Method, op is BinaryOperator.Is
+				? equals
+				: !equals);
 		}
 		var l = EqualsExtensions.NumberToDouble(left);
 		var r = EqualsExtensions.NumberToDouble(right);
 		return op switch
 		{
-			BinaryOperator.Greater => executor.Bool(l > r),
-			BinaryOperator.Smaller => executor.Bool(l < r),
-			BinaryOperator.GreaterOrEqual => executor.Bool(l >= r),
-			BinaryOperator.SmallerOrEqual => executor.Bool(l <= r),
+			BinaryOperator.Greater => Executor.Bool(call.Method, l > r),
+			BinaryOperator.Smaller => Executor.Bool(call.Method, l < r),
+			BinaryOperator.GreaterOrEqual => Executor.Bool(call.Method, l >= r),
+			BinaryOperator.SmallerOrEqual => Executor.Bool(call.Method, l <= r),
 			_ => ExecuteMethodCall(call, leftInstance, ctx)
 		};
 	}
@@ -216,9 +211,9 @@ internal sealed class MethodCallEvaluator
 		var right = rightInstance.Value;
 		return call.Method.Name switch
 		{
-			BinaryOperator.And => executor.Bool(Executor.ToBool(left) && Executor.ToBool(right)),
-			BinaryOperator.Or => executor.Bool(Executor.ToBool(left) || Executor.ToBool(right)),
-			BinaryOperator.Xor => executor.Bool(Executor.ToBool(left) ^ Executor.ToBool(right)),
+			BinaryOperator.And => Executor.Bool(call.Method, Executor.ToBool(left) && Executor.ToBool(right)),
+			BinaryOperator.Or => Executor.Bool(call.Method, Executor.ToBool(left) || Executor.ToBool(right)),
+			BinaryOperator.Xor => Executor.Bool(call.Method, Executor.ToBool(left) ^ Executor.ToBool(right)),
 			_ => ExecuteMethodCall(call, leftInstance, ctx)
 		};
 	}
@@ -333,10 +328,11 @@ internal sealed class MethodCallEvaluator
 		return executor.Execute(call.Method, instance, args, ctx);
 	}
 
-	private ValueInstance Error(string name, ExecutionContext ctx, Expression? source = null)
+	private static ValueInstance Error(string name, ExecutionContext ctx, Expression? source = null)
 	{
 		var stacktraceList = new List<object?> { CreateStacktrace(ctx, source) };
 		var errorMembers = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+		var errorType = ctx.Method.GetType(Base.Error);
 		foreach (var member in errorType.Members)
 			errorMembers[member.Name] = member.Type.Name switch
 			{
@@ -350,9 +346,11 @@ internal sealed class MethodCallEvaluator
 		return new ValueInstance(errorType, errorMembers);
 	}
 
-	private Dictionary<string, object?> CreateStacktrace(ExecutionContext ctx, Expression? source)
+	private static Dictionary<string, object?> CreateStacktrace(ExecutionContext ctx,
+		Expression? source)
 	{
 		var members = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+		var stacktraceType = ctx.Method.GetType(Base.Stacktrace);
 		foreach (var member in stacktraceType.Members)
 			members[member.Name] = member.Type.Name switch
 			{
@@ -364,9 +362,10 @@ internal sealed class MethodCallEvaluator
 		return members;
 	}
 
-	private Dictionary<string, object?> CreateMethodValue(Method method)
+	private static Dictionary<string, object?> CreateMethodValue(Method method)
 	{
 		var values = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+		var methodType = method.GetType(Base.Method);
 		foreach (var member in methodType.Members)
 			values[member.Name] = member.Type.Name switch
 			{
@@ -377,9 +376,10 @@ internal sealed class MethodCallEvaluator
 		return values;
 	}
 
-	private Dictionary<string, object?> CreateTypeValue(Type type)
+	private static Dictionary<string, object?> CreateTypeValue(Type type)
 	{
 		var values = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+		var typeType = type.GetType(Base.Type);
 		foreach (var member in typeType.Members)
 			values[member.Name] = member.Type.Name switch
 			{
@@ -401,8 +401,12 @@ internal sealed class MethodCallEvaluator
 		};
 		if (pairList == null || pairList.Count < 2)
 			return false;
-		key = pairList[0] is ValueInstance keyInstance ? keyInstance.Value : pairList[0];
-		value = pairList[1] is ValueInstance valueInstance ? valueInstance.Value : pairList[1];
+		key = pairList[0] is ValueInstance keyInstance
+			? keyInstance.Value
+			: pairList[0];
+		value = pairList[1] is ValueInstance valueInstance
+			? valueInstance.Value
+			: pairList[1];
 		return true;
 	}
 }

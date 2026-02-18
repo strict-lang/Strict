@@ -1,4 +1,5 @@
 using Strict.Expressions;
+using Strict.Language;
 
 namespace Strict.HighLevelRuntime;
 
@@ -9,5 +10,5 @@ internal sealed class IfEvaluator(Executor executor)
 			? executor.RunExpression(iff.Then, ctx)
 			: iff.OptionalElse != null
 				? executor.RunExpression(iff.OptionalElse, ctx)
-				: executor.None();
+				: new ValueInstance(iff.ReturnType.GetType(Base.None), null);
 }

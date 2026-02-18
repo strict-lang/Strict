@@ -9,7 +9,7 @@ namespace Strict.TestRunner.Tests;
 public sealed class TestExecutorTests
 {
 	[SetUp]
-	public void Setup() => executor = new TestExecutor(TestPackage.Instance);
+	public void Setup() => executor = new TestExecutor();
 
 	private TestExecutor executor = null!;
 
