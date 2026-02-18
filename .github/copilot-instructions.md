@@ -3,6 +3,8 @@
 ## Project Guidelines
 - In Strict, type instance equality should check type compatibility and then compare member values (including list/dictionary members) rather than reference equality.
 - Aim for a proper root-cause fix rather than a quick workaround or “duct-taping.”
+- Apply Limit.cs rules with a ~2x multiplier for C#. Classes should ideally be between 100-400 lines, but classes above 500 lines should be split for better maintainability.
+- When splitting `Executor.cs`, keep high-level methods there (Execute, exceptions, DoArgumentsMatch, stackoverflow detection, arguments/instances/parameters handling, RunExpression), and move expression evaluators into separate classes unless they are single-line/simple.
 
 # Test-Driven Development (TDD)
 
@@ -30,7 +32,6 @@ Write the test first. Watch it fail. Write minimal code to pass.
 Thinking "skip TDD just this once"? Stop. That's rationalization.
 
 ## The Iron Law
-
 ```
 NO PRODUCTION CODE WITHOUT A FAILING TEST FIRST
 ```
@@ -363,10 +364,9 @@ When adding mocks or test utilities, read @testing-anti-patterns.md to avoid com
 - Mocking without understanding dependencies
 
 ## Final Rule
-
 ```
 Production code → test exists and failed first
 Otherwise → not TDD
 ```
 
-No exceptions without your human partner's permission.
+No exceptions without your human partner's permission.No exceptions without your human partner's permission.

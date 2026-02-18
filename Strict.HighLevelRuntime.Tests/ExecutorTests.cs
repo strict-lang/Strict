@@ -99,9 +99,28 @@ public sealed class ExecutorTests
 		var method = t.Methods.Single(m => m.Name == "Run");
 		var result = executor.Execute(method, null, []);
 		Assert.That(result.ReturnType.Name, Is.EqualTo("Dictionary(Number, Number)"));
-		var members = (Dictionary<string, object?>)result.Value!;
-		var listMemberName = result.ReturnType.Members[0].Name;
-		Assert.That(((System.Collections.IList)members[listMemberName]!).Count, Is.EqualTo(2));
+   var values = (System.Collections.IDictionary)result.Value!;
+		Assert.That(values.Count, Is.EqualTo(2));
+   var keys = values.Keys.Cast<object?>().ToList();
+		Assert.That(keys.Select(EqualsExtensions.NumberToDouble), Does.Contain(2));
+		Assert.That(keys.Select(EqualsExtensions.NumberToDouble), Does.Contain(4));
+	}
+
+	[Test]
+	public void DictionaryValuesAreStoredInARealDictionary()
+	{
+		using var t = CreateType(nameof(DictionaryValuesAreStoredInARealDictionary), "has number",
+      "Run Dictionary(Number, Number)", "\tDictionary((1, 2)).Add(3, 4)");
+		var method = t.Methods.Single(m => m.Name == "Run");
+		var result = executor.Execute(method, null, []);
+		var values = (System.Collections.IDictionary)result.Value!;
+    var keys = values.Keys.Cast<object?>().ToList();
+		Assert.That(keys.Select(EqualsExtensions.NumberToDouble), Does.Contain(1));
+		Assert.That(keys.Select(EqualsExtensions.NumberToDouble), Does.Contain(3));
+		var key1 = keys.First(key => EqualsExtensions.NumberToDouble(key) == 1);
+		var key3 = keys.First(key => EqualsExtensions.NumberToDouble(key) == 3);
+		Assert.That(Convert.ToDouble(values[key1]), Is.EqualTo(2));
+		Assert.That(Convert.ToDouble(values[key3]), Is.EqualTo(4));
 	}
 
 	[Test]
@@ -313,6 +332,18 @@ public sealed class ExecutorTests
 		var instance = new ValueInstance(t, 5);
 		Assert.That(executor.Execute(t.Methods.Single(m => m.Name == "GetText"), instance, []).Value,
 			Is.EqualTo("5"));
+	}
+
+	[Test]
+	public void MethodWithoutTestsThrowsMethodRequiresTestDuringValidation()
+	{
+    using var t = CreateType("NoTestsNeedValidation",
+      "has number", "Compute Number", "\tif true", "\t\treturn 1", "\t2");
+		var method = t.Methods.Single(m => m.Name == "Compute");
+		var validatingExecutor = new Executor(TestPackage.Instance);
+   var ex = Assert.Throws<ExecutionFailed>(() =>
+			validatingExecutor.Execute(method, null, []));
+		Assert.That(ex!.InnerException, Is.InstanceOf<Executor.MethodRequiresTest>());
 	}
 
 	[Test]
