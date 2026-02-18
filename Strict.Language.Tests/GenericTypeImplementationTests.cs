@@ -109,4 +109,15 @@ public sealed class GenericTypeImplementationTests
 		Assert.That(customErrorType.AvailableMethods[Method.From][0].Parameters, Has.Count.EqualTo(2),
 			customErrorType.ToString());
 	}
+
+	[Test]
+	public void DictionaryImplementationUsesListMemberType()
+	{
+		var number = TestPackage.Instance.GetType(Base.Number);
+		var dictionary = TestPackage.Instance.GetType(Base.Dictionary).
+			GetGenericImplementation(number, number);
+		var listMember = dictionary.Members[0].Type;
+		Assert.That(listMember, Is.InstanceOf<GenericTypeImplementation>());
+		Assert.That(((GenericTypeImplementation)listMember).Generic.Name, Is.EqualTo(Base.List));
+	}
 }

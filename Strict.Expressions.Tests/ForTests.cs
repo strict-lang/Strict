@@ -74,6 +74,20 @@ public sealed class ForTests : TestExpressions
 			Is.EqualTo("for Range(2, 5)" + Environment.NewLine + "\tlogger.Log(index)"));
 
 	[Test]
+	public void ParseForDictionaryElementsExpression()
+	{
+   var number = type.GetType(Base.Number);
+		var dictionary = type.GetType(Base.Dictionary).GetGenericImplementation(number, number);
+		var method = new Method(dictionary, 0, new MethodExpressionParser(), [
+			"Run Number",
+			"\tfor elements",
+			"\t\t1"
+		]);
+		Assert.That(method.GetBodyAndParseIfNeeded().ToString(),
+			Is.EqualTo("for elements\r\n\t1"));
+	}
+
+	[Test]
 	public void ParseForInExpression() =>
 		Assert.That(
 			((For)((Body)ParseExpression("mutable myIndex = 0", "for myIndex in Range(0, 5)",

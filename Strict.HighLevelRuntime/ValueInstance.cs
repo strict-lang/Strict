@@ -55,7 +55,9 @@ public sealed class ValueInstance : IEquatable<ValueInstance>
 		}
 		else if (type.Name == Base.List || type.Name == Base.Dictionary ||
 			type is GenericTypeImplementation { Generic.Name: Base.List } ||
-			type is GenericTypeImplementation { Generic.Name: Base.Dictionary })
+      type is GenericTypeImplementation { Generic.Name: Base.Dictionary } ||
+			type is GenericType { Generic.Name: Base.List } ||
+			type is GenericType { Generic.Name: Base.Dictionary })
 		{
 			if (Value is IList<Expression>)
 				throw new InvalidTypeValue(type, Value);

@@ -50,6 +50,13 @@ public sealed class ValueInstanceTests
 	}
 
 	[Test]
+	public void GenericListTypeAcceptsValueInstances()
+	{
+		var listType = TestPackage.Instance.GetType("List(key Generic, mappedValue Generic)");
+		Assert.That(new ValueInstance(listType, new List<ValueInstance>()), Is.Not.Null);
+	}
+
+	[Test]
 	public void CompareDictionaries()
 	{
 		var list = new ValueInstance(

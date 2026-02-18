@@ -82,6 +82,29 @@ public sealed class ExecutorTests
 	}
 
 	[Test]
+	public void DictionaryTypeExpressionHasLengthZero()
+	{
+		using var t = CreateType(nameof(DictionaryTypeExpressionHasLengthZero), "has number",
+			"Run Number", "\tDictionary(Number, Number).Length");
+		var method = t.Methods.Single(m => m.Name == "Run");
+		var result = executor.Execute(method, null, []);
+		Assert.That(Convert.ToDouble(result.Value), Is.EqualTo(0));
+	}
+
+	[Test]
+	public void DictionaryAddReturnsDictionaryInstance()
+	{
+		using var t = CreateType(nameof(DictionaryAddReturnsDictionaryInstance), "has number",
+			"Run Dictionary(Number, Number)", "\tDictionary((2, 4)).Add(4, 8)");
+		var method = t.Methods.Single(m => m.Name == "Run");
+		var result = executor.Execute(method, null, []);
+		Assert.That(result.ReturnType.Name, Is.EqualTo("Dictionary(Number, Number)"));
+		var members = (Dictionary<string, object?>)result.Value!;
+		var listMemberName = result.ReturnType.Members[0].Name;
+		Assert.That(((System.Collections.IList)members[listMemberName]!).Count, Is.EqualTo(2));
+	}
+
+	[Test]
 	public void EvaluateAllArithmeticOperators()
 	{
 		using var t = CreateType(nameof(EvaluateAllArithmeticOperators), "mutable last Number",

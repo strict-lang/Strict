@@ -155,8 +155,12 @@ internal class TypeMethodFinder(Type type)
 		if (methodParameterType.Name == Base.Iterator && method.Type.IsSameOrCanBeUsedAs(argumentType))
 			return true; //ncrunch: no coverage
 		if (methodParameterType.IsGeneric)
-			throw new GenericTypesCannotBeUsedDirectlyUseImplementation(methodParameterType, //ncrunch: no coverage
-				"(parameter " + index + ") is not usable with argument " + argumentType + " in " + method);
+   {
+			if (argumentType.IsGeneric)
+				throw new GenericTypesCannotBeUsedDirectlyUseImplementation(methodParameterType, //ncrunch: no coverage
+					"(parameter " + index + ") is not usable with argument " + argumentType + " in " + method);
+			return false;
+		}
 		return argumentType.IsSameOrCanBeUsedAs(methodParameterType);
 	}
 

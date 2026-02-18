@@ -101,6 +101,37 @@ public class MethodCall : ConcreteExpression
 	{
 		if (fromType.Name == Base.List && fromType.IsGeneric && arguments.Count > 0)
 			fromType = fromType.GetGenericImplementation(arguments[0].ReturnType);
+    if (fromType.Name == Base.Mutable && fromType.IsGeneric && arguments.Count == 1 &&
+			arguments[0].ReturnType is not GenericTypeImplementation { Generic.Name: Base.List })
+			throw new Type.GenericTypesCannotBeUsedDirectlyUseImplementation(fromType,
+				Base.Mutable + " must be used with a List implementation");
+    if (fromType is GenericTypeImplementation { Generic.Name: Base.Mutable } mutableImpl &&
+			mutableImpl.ImplementationTypes[0] is not GenericTypeImplementation
+			{
+				Generic.Name: Base.List
+			})
+			throw new Type.GenericTypesCannotBeUsedDirectlyUseImplementation(mutableImpl,
+				Base.Mutable + " must be used with a List implementation");
+   if (fromType.Name == Base.Dictionary && fromType.IsGeneric)
+		{
+      if (arguments.Count > 1)
+				fromType = arguments[0] is List { Values.Count: 2 } firstPair
+					? fromType.GetGenericImplementation(firstPair.Values[0].ReturnType,
+						firstPair.Values[1].ReturnType)
+					: fromType.GetGenericImplementation(arguments[0].ReturnType,
+						arguments[1].ReturnType);
+			else if (arguments.Count > 0 && arguments[0] is List { Values.Count: 2 } pair)
+				fromType = fromType.GetGenericImplementation(pair.Values[0].ReturnType,
+					pair.Values[1].ReturnType);
+		}
+		if ((fromType.Name == Base.Dictionary ||
+			fromType is GenericTypeImplementation { Generic.Name: Base.Dictionary }) &&
+      arguments.Count > 1)
+			arguments = [new List(body, arguments.ToList())];
+		else if ((fromType.Name == Base.Dictionary ||
+			fromType is GenericTypeImplementation { Generic.Name: Base.Dictionary }) &&
+			arguments.Count == 1 && arguments[0] is List { Values.Count: 2 } singlePair)
+			arguments = [new List(body, [singlePair])];
 		// For Error always fill in Name and Stacktraces and use ErrorWithValue if argument is given
 		if (fromType.IsSameOrCanBeUsedAs(fromType.GetType(Base.Error)))
 		{
@@ -184,7 +215,7 @@ public class MethodCall : ConcreteExpression
 	public sealed class ConstructorForSameTypeArgumentIsNotAllowed(Body body) : ParsingFailed(body);
 
 	public override string ToString() =>
-		Instance is not null
+    Instance is not null
 			? (Instance is Binary
 				? $"({Instance})"
 				: $"{Instance}") + $".{Method.Name}{Arguments.ToBrackets()}"
@@ -192,7 +223,22 @@ public class MethodCall : ConcreteExpression
 				? Arguments[0] + "(" + Arguments[1] + ")"
 				: ReturnType.Name == Base.Error
 					? Base.Error
-					: $"{GetProperMethodName()}{Arguments.ToBrackets()}";
+         : Method.Name == Method.From &&
+						ReturnType is GenericTypeImplementation { Generic.Name: Base.Dictionary }
+							? FormatDictionaryConstructor()
+							: $"{GetProperMethodName()}{Arguments.ToBrackets()}";
+
+	private string FormatDictionaryConstructor()
+	{
+		if (Arguments.Count == 1 && Arguments[0] is List list)
+		{
+			var argumentText = list.Values.All(value => value is List)
+				? list.Values.ToBrackets()
+				: $"({list})";
+			return Base.Dictionary + argumentText;
+		}
+		return Base.Dictionary + Arguments.ToBrackets();
+	}
 
 	private string GetProperMethodName() =>
 		Method.Name == Method.From

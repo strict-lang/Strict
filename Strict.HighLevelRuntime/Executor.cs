@@ -13,7 +13,8 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 		IReadOnlyList<ValueInstance> args, ExecutionContext? parentContext = null)
 	{
 		ValueInstance? returnValue = null;
-		if (inlineTestDepth == 0 && behavior != TestBehavior.Disabled && validatedMethods.Add(method))
+    if (inlineTestDepth == 0 && behavior != TestBehavior.Disabled &&
+			(behavior == TestBehavior.TestRunner || validatedMethods.Add(method)))
 			returnValue = Execute(method, instance, args, parentContext, true);
 		if (inlineTestDepth > 0 || behavior != TestBehavior.TestRunner)
 			returnValue = Execute(method, instance, args, parentContext, false);
@@ -47,7 +48,7 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 			if (instance != null)
 				throw new MethodCall.CannotCallFromConstructorWithExistingInstance();
 			instance = new ValueInstance(method.Type, GetFromConstructorValue(method, args));
-			if (method.lines.Last() == "\tvalue")
+			if (method.lines.Last() == "\tvalue" || IsTestOnlyFromMethod(method))
 				return instance;
 		}
 		if (parentContext != null && parentContext.Method == method &&
@@ -55,7 +56,8 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 			DoArgumentsMatch(method, args, parentContext.Variables))
 			throw new StackOverflowCallingItselfWithSameInstanceAndArguments(method, instance, args,
 				parentContext);
-		var context = new ExecutionContext(method.Type, method) { This = instance, Parent = parentContext };
+		var context =
+			new ExecutionContext(method.Type, method) { This = instance, Parent = parentContext };
 		if (!runOnlyTests)
 			for (var i = 0; i < method.Parameters.Count; i++)
 			{
@@ -67,6 +69,7 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 						: throw new MissingArgument(method, param.Name, args);
 				context.Set(param.Name, arg);
 			}
+		AddDictionaryElementsAlias(context, instance);
 		try
 		{
 			// For test validation, check if the method is simple before attempting to parse
@@ -88,7 +91,12 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 				return IsSimpleExpressionWithLessThanThreeSubExpressions(body)
 					? Bool(true)
 					: throw new MethodRequiresTest(method, body.ToString());
-			return RunExpression(body, context, runOnlyTests);
+			var result = RunExpression(body, context, runOnlyTests);
+			return !runOnlyTests && !method.ReturnType.IsMutable && result.ReturnType.IsMutable &&
+				((GenericTypeImplementation)result.ReturnType).ImplementationTypes[0].
+				IsSameOrCanBeUsedAs(method.ReturnType)
+					? new ValueInstance(method.ReturnType, result.Value)
+					: result;
 		}
 		catch (ReturnSignal ret)
 		{
@@ -122,10 +130,13 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 		return true;
 	}
 
-	public sealed class StackOverflowCallingItselfWithSameInstanceAndArguments(Method method,
-		ValueInstance? instance, IEnumerable<ValueInstance> args, ExecutionContext parentContext)
-		: ExecutionFailed(method, "Parent context=" + parentContext + ", Instance=" + instance +
-			", arguments=" + args.ToWordList());
+	public sealed class StackOverflowCallingItselfWithSameInstanceAndArguments(
+		Method method,
+		ValueInstance? instance,
+		IEnumerable<ValueInstance> args,
+		ExecutionContext parentContext) : ExecutionFailed(method,
+		"Parent context=" + parentContext + ", Instance=" + instance + ", arguments=" +
+		args.ToWordList());
 
 	private static IDictionary<string, object?> ConvertFromArgumentsToDictionary(Method fromMethod,
 		IReadOnlyList<ValueInstance> args)
@@ -138,11 +149,12 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 		{
 			var parameter = fromMethod.Parameters[index];
 			if (!args[index].ReturnType.IsSameOrCanBeUsedAs(parameter.Type) &&
-				!parameter.Type.IsIterator &&
-				!IsSingleCharacterTextArgument(parameter.Type, args[index]))
+				!parameter.Type.IsIterator && !IsSingleCharacterTextArgument(parameter.Type, args[index]))
 				throw new InvalidTypeForArgument(type, args, index);
-			result.Add(GetMemberName(parameter.Name),
-				TryConvertSingleCharacterText(parameter.Type, args[index]));
+			var memberName = type.Members.FirstOrDefault(member =>
+					member.Name.Equals(parameter.Name, StringComparison.OrdinalIgnoreCase))?.Name ??
+				GetMemberName(parameter.Name);
+			result.Add(memberName, TryConvertSingleCharacterText(parameter.Type, args[index]));
 		}
 		return result;
 	}
@@ -152,7 +164,18 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 		if (args.Count == 0)
 			return method.Type.Name == Base.Text
 				? ""
-				: null;
+				: TryCreateEmptyCollectionForType(method.Type);
+    if (method.Type is GenericTypeImplementation { Generic.Name: Base.Dictionary } &&
+			args.Count == 1 && args[0].ReturnType.IsIterator)
+		{
+			var listMemberName = method.Type.Members.FirstOrDefault(member =>
+				member.Type is GenericTypeImplementation { Generic.Name: Base.List } ||
+				member.Type.Name == Base.List)?.Name ?? Type.ElementsLowercase;
+			return new Dictionary<string, object?>(StringComparer.Ordinal)
+			{
+				[listMemberName] = args[0].Value
+			};
+		}
 		if (args.Count == 1)
 		{
 			var arg = args[0];
@@ -163,6 +186,39 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 				return arg.Value;
 		}
 		return ConvertFromArgumentsToDictionary(method, args);
+	}
+
+	private static object? TryCreateEmptyCollectionForType(Type type)
+	{
+		if (type is GenericTypeImplementation { Generic.Name: Base.Dictionary })
+		{
+			var listMember = type.Members.FirstOrDefault(member =>
+				member.Type is GenericTypeImplementation { Generic.Name: Base.List } ||
+				member.Type.Name == Base.List);
+			return new Dictionary<string, object?>(StringComparer.Ordinal)
+			{
+				[listMember?.Name ?? Type.ElementsLowercase] = new List<ValueInstance>()
+			};
+		}
+		return null;
+	}
+
+	private static void AddDictionaryElementsAlias(ExecutionContext context,
+		ValueInstance? instance)
+	{
+		if (instance?.ReturnType is not GenericTypeImplementation { Generic.Name: Base.Dictionary })
+			return;
+		if (instance.Value is not IDictionary<string, object?> rawMembers ||
+			context.Variables.ContainsKey(Type.ElementsLowercase))
+			return;
+		var listValue = rawMembers.TryGetValue("elements", out var elementsValue)
+			? elementsValue
+			: rawMembers.TryGetValue(Type.ElementsLowercase, out var keyValues)
+				? keyValues
+				: rawMembers.Values.FirstOrDefault();
+		if (listValue != null)
+			context.Set(Type.ElementsLowercase,
+				new ValueInstance(instance.ReturnType.GetType(Base.List), listValue));
 	}
 
 	private static object? TryConvertSingleCharacterText(Type targetType, ValueInstance value)
@@ -182,18 +238,23 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 			? char.ToUpperInvariant(parameterName[0]) + parameterName[1..]
 			: parameterName;
 
-	public sealed class TooManyArgumentsForTypeMembersInFromConstructor(Type type,
+	public sealed class TooManyArgumentsForTypeMembersInFromConstructor(
+		Type type,
 		IEnumerable<ValueInstance> args) : ExecutionFailed(type,
 		"args=" + args.ToWordList() + ", type=" + type + " Members=" + type.Members.ToWordList());
 
-	public sealed class InvalidTypeForArgument(Type type, IReadOnlyList<ValueInstance> args,
-		int index) : ExecutionFailed(type, args[index] + " at index=" + index +
-		" does not match type=" + type + " Member=" + type.Members[index]);
+	public sealed class InvalidTypeForArgument(
+		Type type,
+		IReadOnlyList<ValueInstance> args,
+		int index) : ExecutionFailed(type,
+		args[index] + " at index=" + index + " does not match type=" + type + " Member=" +
+		type.Members[index]);
 
 	public sealed class CannotCallMethodWithWrongInstance(Method method, ValueInstance instance)
 		: ExecutionFailed(method, instance.ToString());
 
-	public sealed class TooManyArguments(Method method, string argument, IEnumerable<ValueInstance> args)
+	public sealed class
+		TooManyArguments(Method method, string argument, IEnumerable<ValueInstance> args)
 		: ExecutionFailed(method,
 			argument + ", given arguments: " + args.ToWordList() + ", method " + method.Name +
 			" requires these parameters: " + method.Parameters.ToWordList());
@@ -201,10 +262,13 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 	public sealed class ArgumentDoesNotMapToMethodParameters(Method method, string message)
 		: ExecutionFailed(method, message);
 
-	public sealed class MethodExecutionFailed(Method method, ExecutionContext context, Exception inner)
-		: ExecutionFailed(method, context.ToString(), inner);
+	public sealed class MethodExecutionFailed(
+		Method method,
+		ExecutionContext context,
+		Exception inner) : ExecutionFailed(method, context.ToString(), inner);
 
-	public sealed class MissingArgument(Method method, string paramName, IEnumerable<ValueInstance> args)
+	public sealed class
+		MissingArgument(Method method, string paramName, IEnumerable<ValueInstance> args)
 		: ExecutionFailed(method,
 			paramName + ", given arguments: " + args.ToWordList() + ", method " + method.Name +
 			" requires these parameters: " + method.Parameters.ToWordList());
@@ -277,11 +341,23 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 				? last
 				: body.Method.ReturnType.Name == Base.Character && last.ReturnType.Name == Base.Number
 					? new ValueInstance(body.Method.ReturnType, last.Value)
-					// If the method requires a mutable return type and the result so far is not, make it!
-					: body.Method.ReturnType.IsMutable && !last.ReturnType.IsMutable && last.ReturnType ==
-					((GenericTypeImplementation)body.Method.ReturnType).ImplementationTypes[0]
-						? new ValueInstance(body.Method.ReturnType, last.Value)
-						: throw new ReturnTypeMustMatchMethod(body, last);
+					: body.Method.ReturnType.IsMutable &&
+					ctx.This?.ReturnType is GenericTypeImplementation { Generic.Name: Base.Dictionary } &&
+					last.ReturnType is GenericTypeImplementation { Generic.Name: Base.List }
+						or GenericTypeImplementation
+						{
+							Generic.Name: Base.Mutable,
+							ImplementationTypes:
+							[
+								GenericTypeImplementation { Generic.Name: Base.List }
+							]
+						}
+						? new ValueInstance(body.Method.ReturnType, ctx.This.Value)
+						// If the method requires a mutable return type and the result so far is not, make it!
+						: body.Method.ReturnType.IsMutable && !last.ReturnType.IsMutable && last.ReturnType ==
+						((GenericTypeImplementation)body.Method.ReturnType).ImplementationTypes[0]
+							? new ValueInstance(body.Method.ReturnType, last.Value)
+							: throw new ReturnTypeMustMatchMethod(body, last);
 		}
 		catch (ExecutionFailed ex)
 		{
@@ -297,8 +373,18 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 	}
 
 	public sealed class ReturnTypeMustMatchMethod(Body body, ValueInstance last) : ExecutionFailed(
-		body.Method, "Return value " + last + " does not match method " + body.Method.Name +
-		" ReturnType=" + body.Method.ReturnType);
+		body.Method,
+		"Return value " + last + " does not match method " + body.Method.Name + " ReturnType=" +
+		body.Method.ReturnType);
+
+	/// <summary>
+	/// A from method is test-only when all body lines are test assertions and there is no
+	/// implementation line. Such from methods create a default instance without any computation.
+	/// </summary>
+	private static bool IsTestOnlyFromMethod(Method method) =>
+		method.lines.Count > 1 && Enumerable.Range(1, method.lines.Count - 1).All(i =>
+			method.lines[i].Contains(" is ", StringComparison.Ordinal) &&
+			!method.lines[i].Contains("?"));
 
 	/// <summary>
 	/// Check if a method is simple enough to not require tests by analyzing its raw text.
@@ -357,7 +443,10 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 			body + " ({CountExpressionComplexity(body)} expressions)") { }
 	}
 
-	public sealed class TestFailed(Method method, Expression expression, ValueInstance result,
+	public sealed class TestFailed(
+		Method method,
+		Expression expression,
+		ValueInstance result,
 		string details) : ExecutionFailed(method,
 		$"\"{method.Name}\" method failed: {expression}, result: {result}" + (details.Length > 0
 			? $", evaluated: {details}"
@@ -369,10 +458,7 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 	/// not part of a control flow or assignment expression.
 	/// </summary>
 	private static bool IsStandaloneInlineTest(Expression e) =>
-		e.ReturnType.Name == Base.Boolean &&
-		e is not If &&
-		e is not Return &&
-		e is not Declaration &&
+		e.ReturnType.Name == Base.Boolean && e is not If && e is not Return && e is not Declaration &&
 		e is not MutableReassignment;
 
 	private string GetTestFailureDetails(Expression expression, ExecutionContext ctx) =>
@@ -385,7 +471,8 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 				: string.Empty;
 
 	private string GetBinaryComparisonDetails(Binary binary, ExecutionContext ctx, string op) =>
-		RunExpression(binary.Instance!, ctx) + " " + op + " " + RunExpression(binary.Arguments[0], ctx);
+		RunExpression(binary.Instance!, ctx) + " " + op + " " +
+		RunExpression(binary.Arguments[0], ctx);
 
 	private ValueInstance EvaluateAndAssign(string name, Expression value, ExecutionContext ctx) =>
 		ctx.Set(name, RunExpression(value, ctx));
@@ -436,10 +523,12 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 	private void ExecuteForIteration(For f, ExecutionContext ctx, ValueInstance iterator,
 		ICollection<ValueInstance> results, Type itemType, int index)
 	{
-		var loopContext = new ExecutionContext(ctx.Type, ctx.Method) { This = ctx.This, Parent = ctx };
+		var loopContext =
+			new ExecutionContext(ctx.Type, ctx.Method) { This = ctx.This, Parent = ctx };
 		loopContext.Set(Type.IndexLowercase, new ValueInstance(numberType, index));
 		var value = iterator.GetIteratorValue(index);
-		loopContext.Set(Type.ValueLowercase, value as ValueInstance ?? new ValueInstance(itemType, value));
+		loopContext.Set(Type.ValueLowercase,
+			value as ValueInstance ?? new ValueInstance(itemType, value));
 		foreach (var customVariable in f.CustomVariables)
 			if (customVariable is VariableCall variableCall)
 				loopContext.Set(variableCall.Variable.Name,
@@ -451,7 +540,8 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 			results.Add(itemResult);
 	}
 
-	private static ValueInstance? ShouldConsolidateForResult(List<ValueInstance> results, ExecutionContext ctx)
+	private static ValueInstance? ShouldConsolidateForResult(List<ValueInstance> results,
+		ExecutionContext ctx)
 	{
 		if (ctx.Method.ReturnType.Name == Base.Number)
 			return new ValueInstance(ctx.Method.ReturnType,
@@ -493,7 +583,8 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 			return new ValueInstance(to.ConversionType, EqualsExtensions.NumberToDouble(left));
 		return !to.Method.IsTrait
 			? EvaluateMethodCall(to, ctx)
-			: throw new NotSupportedException("Conversion to " + to.ConversionType.Name + " not supported");
+			: throw new NotSupportedException("Conversion to " + to.ConversionType.Name +
+				" not supported");
 	}
 
 	private ValueInstance EvaluateNot(Not not, ExecutionContext ctx) =>
@@ -521,10 +612,12 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 		if (listInstance.Value is IDictionary<string, object?> members &&
 			(members.TryGetValue("Elements", out var elements) ||
 				members.TryGetValue("elements", out elements)) && elements is IList memberList)
-			return memberList[index] as ValueInstance ?? new ValueInstance(call.ReturnType, memberList[index]);
+			return memberList[index] as ValueInstance ??
+				new ValueInstance(call.ReturnType, memberList[index]);
 		if (listInstance.Value is string text)
 			return new ValueInstance(call.ReturnType, (int)text[index]);
-		throw new InvalidOperationException("List call can only be used on iterators, got: " + listInstance); //TODO: proper exception
+		throw new InvalidOperationException("List call can only be used on iterators, got: " +
+			listInstance); //TODO: proper exception
 	}
 
 	public class UnableToCallMemberWithoutInstance(MemberCall member, ExecutionContext ctx)
@@ -542,8 +635,43 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 				? ctx.This
 				: null;
 		var args = new List<ValueInstance>(call.Arguments.Count);
-		foreach (var a in call.Arguments)
+   foreach (var a in call.Arguments)
 			args.Add(RunExpression(a, ctx));
+
+		// Special-case: mutate Dictionary instance members when calling Add so the runtime
+		// representation (a List of ValueInstance elements) is updated with a ValueInstance
+		// wrapping the provided pair. This avoids type-mismatches when the argument value is
+		// an IList<ValueInstance> (the tuple) and the underlying list expects ValueInstance.
+		if (instance != null && instance.ReturnType is GenericTypeImplementation { Generic.Name: Base.Dictionary }
+			&& instance.Value is IDictionary<string, object?> members && args.Count > 0 && call.Method.Name == "Add")
+		{
+			var listMemberName = instance.ReturnType.Members.FirstOrDefault(member =>
+				member.Type is GenericTypeImplementation { Generic.Name: Base.List } ||
+				member.Type.Name == Base.List)?.Name ?? Type.ElementsLowercase;
+			if (members.TryGetValue(listMemberName, out var listObj) && listObj is IList list)
+			{
+       // element type is the pair List(...) inside the dictionary member list
+				var listMemberType = instance.ReturnType.Members.FirstOrDefault(member =>
+					member.Type is GenericTypeImplementation { Generic.Name: Base.List } ||
+					member.Type.Name == Base.List)?.Type ?? instance.ReturnType.GetType(Base.List);
+				var elementType = listMemberType is GenericTypeImplementation { Generic.Name: Base.List } listType
+					? listType.ImplementationTypes[0]
+					: listMemberType;
+				if (args.Count == 2)
+				{
+					list.Add(new ValueInstance(elementType, new List<ValueInstance> { args[0], args[1] }));
+					return instance;
+				}
+				var pairArg = args[0];
+				if (pairArg.ReturnType.IsSameOrCanBeUsedAs(elementType))
+				{
+					list.Add(pairArg);
+					return instance;
+				}
+				list.Add(new ValueInstance(elementType, pairArg.Value));
+				return instance;
+			}
+		}
 		return Execute(call.Method, instance, args, ctx);
 	}
 
@@ -558,10 +686,12 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 	private static bool IsLogical(string name) =>
 		name is BinaryOperator.And or BinaryOperator.Or or BinaryOperator.Xor or UnaryOperator.Not;
 
-	private ValueInstance EvaluateArithmeticOrCompareOrLogical(MethodCall call, ExecutionContext ctx)
+	private ValueInstance EvaluateArithmeticOrCompareOrLogical(MethodCall call,
+		ExecutionContext ctx)
 	{
 		if (call.Instance == null || call.Arguments.Count != 1)
-			throw new InvalidOperationException("Binary call must have instance and 1 argument"); //ncrunch: no coverage
+			throw new InvalidOperationException(
+				"Binary call must have instance and 1 argument"); //ncrunch: no coverage
 		var leftInstance = RunExpression(call.Instance, ctx);
 		var rightInstance = RunExpression(call.Arguments[0], ctx);
 		return IsArithmetic(call.Method.Name)
@@ -579,7 +709,8 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 		var right = rightInstance.Value;
 		//TODO: these are just shortcuts for Number operators, but we don't actually execute them
 		//TODO: in any case, for non datatypes we need to call the operators, only allow this for Boolean, Number, Text, rest should be called!
-		if (leftInstance.ReturnType.Name == Base.Number && rightInstance.ReturnType.Name == Base.Number)
+		if (leftInstance.ReturnType.Name == Base.Number &&
+			rightInstance.ReturnType.Name == Base.Number)
 		{
 			var l = EqualsExtensions.NumberToDouble(left);
 			var r = EqualsExtensions.NumberToDouble(right);
@@ -602,8 +733,10 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 		}
 		if (leftInstance.ReturnType.IsIterator && rightInstance.ReturnType.IsIterator)
 		{
-			if (left is not IList<ValueInstance> leftList || right is not IList<ValueInstance> rightList)
-				throw new InvalidOperationException("Expected List<ValueInstance> for iterator operation, " +
+			if (left is not IList<ValueInstance> leftList ||
+				right is not IList<ValueInstance> rightList)
+				throw new InvalidOperationException(
+					"Expected List<ValueInstance> for iterator operation, " +
 					"other iterators are not yet supported: left=" + left + ", right=" + right);
 			if (op is BinaryOperator.Multiply or BinaryOperator.Divide &&
 				leftList.Count != rightList.Count)
@@ -614,7 +747,8 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 				BinaryOperator.Minus => SubtractLists(leftInstance.ReturnType, leftList, rightList),
 				BinaryOperator.Multiply => MultiplyLists(leftInstance.ReturnType, leftList, rightList),
 				BinaryOperator.Divide => DivideLists(leftInstance.ReturnType, leftList, rightList),
-				_ => throw new NotSupportedException("Only +, -, *, / operators are supported for Lists, got: " + op)
+				_ => throw new NotSupportedException(
+					"Only +, -, *, / operators are supported for Lists, got: " + op)
 			};
 		}
 		if (leftInstance.ReturnType.IsIterator && rightInstance.ReturnType.Name == Base.Number)
@@ -627,8 +761,8 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 			if (op == BinaryOperator.Minus)
 				return RemoveFromList(leftInstance.ReturnType, leftList, rightInstance);
 			if (right is not double rightNumber)
-				throw new InvalidOperationException("Expected right number for iterator operation " +
-					op + ": left=" + left + ", right=" + right);
+				throw new InvalidOperationException("Expected right number for iterator operation " + op +
+					": left=" + left + ", right=" + right);
 			if (op == BinaryOperator.Multiply)
 				return MultiplyList(leftInstance.ReturnType, leftList, rightNumber);
 			if (op == BinaryOperator.Divide)
@@ -716,8 +850,8 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 		return new ValueInstance(listType, combined);
 	}
 
-	private static ValueInstance SubtractLists(Type listType,
-		IEnumerable<ValueInstance> leftList, IEnumerable<ValueInstance> rightList)
+	private static ValueInstance SubtractLists(Type listType, IEnumerable<ValueInstance> leftList,
+		IEnumerable<ValueInstance> rightList)
 	{
 		var remainder = new List<ValueInstance>();
 		foreach (var item in leftList)
@@ -782,8 +916,8 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 		return new ValueInstance(leftListType, result);
 	}
 
-	private static ValueInstance MultiplyList(Type leftListType, ICollection<ValueInstance> leftList,
-		double rightNumber)
+	private static ValueInstance MultiplyList(Type leftListType,
+		ICollection<ValueInstance> leftList, double rightNumber)
 	{
 		var result = new List<ValueInstance>(leftList.Count);
 		foreach (var item in leftList)
@@ -802,7 +936,8 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 		return new ValueInstance(leftListType, result);
 	}
 
-	private ValueInstance ExecuteMethodCall(MethodCall call, ValueInstance instance, ExecutionContext ctx)
+	private ValueInstance ExecuteMethodCall(MethodCall call, ValueInstance instance,
+		ExecutionContext ctx)
 	{
 		var args = new List<ValueInstance>(call.Arguments.Count);
 		foreach (var a in call.Arguments)
@@ -829,8 +964,10 @@ public sealed class Executor(Package basePackage, TestBehavior behavior = TestBe
 			errorMembers[member.Name] = member.Type.Name switch
 			{
 				Base.Name or Base.Text => name,
-				_ when member.Type.Name == Base.List ||
-					member.Type is GenericTypeImplementation { Generic.Name: Base.List } => stacktraceList,
+				_ when member.Type.Name == Base.List || member.Type is GenericTypeImplementation
+				{
+					Generic.Name: Base.List
+				} => stacktraceList,
 				_ => throw new NotSupportedException("Error member not supported: " + member)
 			};
 		return new ValueInstance(errorType, errorMembers);

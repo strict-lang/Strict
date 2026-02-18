@@ -410,11 +410,17 @@ public class Type : Context, IDisposable
 				m is { IsPublic: false, InitialValue: null } && !IsTraitImplementation(m.Type)))
 				AddNonGenericMethods(member.Type);
 			if (members.Count > 0 && members.Any(m => !m.Type.IsGeneric && !m.IsConstant) &&
-				methods.All(m => m.Name != Method.From))
-				AddFromConstructorWithMembersAsArguments(methods.Count > 0
-					? methods[0].Parser
-					: GetType(Base.Any).AvailableMethods.First().Value[0].Parser);
-			AddAnyMethods();
+					methods.All(m => m.Name != Method.From))
+					AddFromConstructorWithMembersAsArguments(methods.Count > 0
+						? methods[0].Parser
+						: GetType(Base.Any).AvailableMethods.First().Value[0].Parser);
+				if (this is GenericTypeImplementation dictImpl &&
+					dictImpl.Generic.Name == Base.Dictionary &&
+					dictImpl.Generic.AvailableMethods.TryGetValue(Method.From, out var genericFromMethods) &&
+					cachedAvailableMethods!.TryGetValue(Method.From, out var existingFromMethods))
+					foreach (var fromMethod in genericFromMethods)
+						existingFromMethods.Add(new Method(fromMethod, dictImpl));
+				AddAnyMethods();
 			return cachedAvailableMethods;
 		}
 	}
@@ -566,6 +572,8 @@ public class Type : Context, IDisposable
 	public bool IsError =>
 		Name is Base.Error or Base.ErrorWithValue || this is GenericTypeImplementation genericType &&
 		genericType.Generic.Name == Base.ErrorWithValue;
+	public bool IsDictionary =>
+		this is GenericTypeImplementation genericType && genericType.Generic.Name == Base.Dictionary;
 	public void Dispose() => ((Package)Parent).Remove(this);
 
 	public int FindLineNumber(string firstLineThatContains)

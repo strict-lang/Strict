@@ -156,6 +156,16 @@ public sealed class TypeMethodFinderTests
 	}
 
 	[Test]
+	public void DictionaryIsComparisonShouldNotThrow()
+	{
+		var number = TestPackage.Instance.GetType(Base.Number);
+		var dictionary = TestPackage.Instance.GetType(Base.Dictionary).
+			GetGenericImplementation(number, number);
+		Assert.That(dictionary.FindMethod(BinaryOperator.Is, [new Instance(dictionary)]),
+			Is.Not.Null);
+	}
+
+	[Test]
 	public void PrivateMethodsShouldNotBeAddedToAvailableMethods()
 	{
 		using var type = new Type(TestPackage.Instance, new TypeLines(nameof(PrivateMethodsShouldNotBeAddedToAvailableMethods),

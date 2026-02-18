@@ -26,13 +26,32 @@ public sealed class GenericTypeImplementation : Type
 	{
 		var implementationTypeIndex = 0;
 		foreach (var member in Generic.Members)
-			members.Add(
-				member.Type.IsGeneric &&
+      members.Add((member.Type.IsGeneric || member.Type is GenericType) &&
 				member.Type.Name != Base.Iterator
-					? member.CloneWithImplementation(member.Type.Name == Base.List
-						? this
-						: ImplementationTypes[implementationTypeIndex++])
+					? member.CloneWithImplementation(
+						GetImplementedMemberType(member.Type, ref implementationTypeIndex))
 					: member);
+	}
+
+	private Type GetImplementedMemberType(Type memberType, ref int implementationTypeIndex)
+	{
+		if (memberType is GenericType genericType)
+		{
+     if (genericType.Generic.Name == Base.List &&
+				genericType.GenericImplementations.Count > 1)
+			{
+				var innerListType = genericType.Generic.GetGenericImplementation(ImplementationTypes[0]);
+				return genericType.Generic.GetGenericImplementation(innerListType);
+			}
+			var implementationCount = genericType.GenericImplementations.Count;
+			var types = new Type[implementationCount];
+			for (var index = 0; index < implementationCount; index++)
+				types[index] = ImplementationTypes[index];
+			return genericType.Generic.GetGenericImplementation(types);
+		}
+		return memberType.Name == Base.List
+			? this
+			: ImplementationTypes[implementationTypeIndex++];
 	}
 
 	private void ImplementMethods()

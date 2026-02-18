@@ -374,9 +374,13 @@ public sealed class Method : Context
 		if (parseTestsOnlyForGeneric && Type.IsGeneric)
 			return ParseTestsOnlyForGeneric();
 		if (methodBody.Expressions.Count > 0)
-			return methodBody.Expressions.Count == 1
-				? methodBody.Expressions[0]
-				: methodBody;
+      return !parseTestsOnlyForGeneric &&
+				methodBody.Expressions.Any(expression =>
+					expression.GetType().Name == "PlaceholderExpression")
+				? methodBody.Parse()
+				: methodBody.Expressions.Count == 1
+					? methodBody.Expressions[0]
+					: methodBody;
 		var expression = methodBody.Parse();
 		if (expression.GetType().Name == Base.Declaration)
 			throw new DeclarationIsNeverUsedAndMustBeRemoved(Type, TypeLineNumber, expression);

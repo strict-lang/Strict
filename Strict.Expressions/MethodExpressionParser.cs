@@ -128,13 +128,17 @@ public class MethodExpressionParser : ExpressionParser
 		var argumentsText = input[(argumentsStart + 1)..argumentsEnd];
 		// If our arguments are types, we might have ended up from a generic constructor like
 		// Dictionary(Number, Number) here, construct the type and return that method!
-		if (body.Method.Type.IsGeneric && body.Method.Name == Method.From &&
-			argumentsText.ToString().Split(", ").Length ==
-			body.ReturnType.GetGenericTypeArguments().Count)
+		var resolvedType = body.Method.FindType(input[..argumentsStart].ToString());
+		if (resolvedType is { IsGeneric: true })
 		{
-			var fromType = body.Method.Type.GetGenericImplementation(argumentsText.ToString().
-				Split(", ").Select(t => body.Method.Type.GetType(t)).ToArray());
-			return MethodCall.CreateFromMethodCall(body, fromType, []);
+			var typeArgNames = argumentsText.ToString().Split(", ");
+			if (typeArgNames.Length == resolvedType.GetGenericTypeArguments().Count &&
+				typeArgNames.All(n => body.Method.FindType(n) != null))
+			{
+				var fromType = resolvedType.GetGenericImplementation(
+					typeArgNames.Select(t => body.Method.Type.GetType(t)).ToArray());
+				return MethodCall.CreateFromMethodCall(body, fromType, []);
+			}
 		}
 		return ParseInContext(body, input[..argumentsStart], ParseListArguments(body, argumentsText));
 	}
@@ -168,26 +172,18 @@ public class MethodExpressionParser : ExpressionParser
 	{
 		var bracketCount = 0;
 		var inText = false;
-		for (var index = 0; index < input.Length; index++)
+		foreach (var current in input)
 		{
-			var current = input[index];
 			if (current == '"')
 				inText = !inText;
 			if (inText)
 				continue;
-			switch (current)
-			{
-			case '(':
+			if (current == '(')
 				bracketCount++;
-				break;
-			case ')':
+			else if (current == ')')
 				bracketCount--;
-				break;
-			case '.':
-				if (bracketCount == 0)
-					return true;
-				break;
-			}
+			else if (current == '.' && bracketCount == 0)
+				return true;
 		}
 		return false;
 	}
@@ -209,8 +205,9 @@ public class MethodExpressionParser : ExpressionParser
 					if (postfix.Output.Count >= 3)
 						current = Binary.Parse(body, input, postfix.Output);
 				}
-				current ??= Text.TryParse(body, inputText) ??
-					List.TryParseWithMultipleOrNestedElements(body, inputText, false);
+     current ??= Text.TryParse(body, inputText) ??
+				List.TryParseWithMultipleOrNestedElements(body, inputText, false) ??
+				Dictionary.TryParse(body, inputText);
 				if (current is not null)
 				{
 					context = current.ReturnType;
@@ -218,18 +215,34 @@ public class MethodExpressionParser : ExpressionParser
 				}
 			}
 			var expression = input[members.Current].Contains('(')
-				? TryParseMemberOrZeroOrOneArgumentMethodOrNestedCall(body, input[members.Current])
-				: TryVariableOrValueOrParameterOrMemberOrMethodCall(context, current, body,
-					input[members.Current],
-					// arguments are only needed for the last part
-					members.IsAtEnd
-						? arguments
-						: []);
+					? current != null
+						? ParseMethodCallOnContext(body, input[members.Current], context, current)
+						: TryParseMemberOrZeroOrOneArgumentMethodOrNestedCall(body, input[members.Current])
+					: TryVariableOrValueOrParameterOrMemberOrMethodCall(context, current, body,
+						input[members.Current],
+						// arguments are only needed for the last part
+						members.IsAtEnd
+							? arguments
+							: []);
 			current = expression ??
 				throw CheckErrorTypeAndThrowException(body, input, members, current);
 			context = current.ReturnType;
 		}
 		return ListCall.TryParse(body, current, arguments);
+	}
+
+	private Expression? ParseMethodCallOnContext(Body body, ReadOnlySpan<char> input,
+		Type context, Expression current)
+	{
+		var argStart = input.IndexOf('(');
+		var argEnd = input.FindMatchingBracketIndex(argStart);
+		if (argStart <= 0 || argEnd <= 0)
+			return TryVariableOrValueOrParameterOrMemberOrMethodCall(context, current, body, input, []);
+		var args = argEnd > argStart + 1
+			? ParseListArguments(body, input[(argStart + 1)..argEnd])
+			: (IReadOnlyList<Expression>)[];
+		return TryVariableOrValueOrParameterOrMemberOrMethodCall(context, current, body,
+			input[..argStart], args);
 	}
 
 	private static Exception CheckErrorTypeAndThrowException(Body body, ReadOnlySpan<char> input,
@@ -278,6 +291,24 @@ public class MethodExpressionParser : ExpressionParser
 					: ParameterCall.TryParse(body, input));
 			if (call != null)
 				return call;
+		}
+   if (input.Equals(Type.ElementsLowercase, StringComparison.Ordinal) &&
+			type is GenericTypeImplementation { Generic.Name: Base.Dictionary })
+		{
+			var listMember = type.Members.FirstOrDefault(member =>
+				member.Type.Name.StartsWith(Base.List, StringComparison.Ordinal));
+     if (listMember != null)
+			{
+				var keyword = listMember.IsConstant
+					? Keyword.Constant
+					: listMember.IsMutable
+						? Keyword.Mutable
+						: Keyword.Has;
+				var aliasMember = new Member(type,
+					$"{Type.ElementsLowercase} {listMember.Type.Name}", null,
+					listMember.LineNumber, keyword);
+				return new MemberCall(instance, aliasMember, body.CurrentFileLineNumber);
+			}
 		}
 		if (inputAsString.IsKeyword())
 			throw new KeywordNotAllowedAsMemberOrMethod(body, inputAsString, type);

@@ -211,5 +211,15 @@ public sealed class TestExecutorTests
 	}
 
 	[Test]
+	public void CompareMutableList()
+	{
+		using var type = new Type(TestPackage.Instance,
+				new TypeLines(nameof(RunNumberToCharacterBody), "has number", "Run",
+					"\t(1, 2).Add(3) is (1, 2, 3)", "\tnumber")).
+			ParseMembersAndMethods(new MethodExpressionParser());
+		executor.RunAllTestsInType(type);
+	}
+
+	[Test]
 	public void RunAllTestsInPackage() => executor.RunAllTestsInPackage(TestPackage.Instance);
 }

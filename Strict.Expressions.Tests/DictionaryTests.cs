@@ -54,6 +54,46 @@ public sealed class DictionaryTests : TestExpressions
 	}
 
 	[Test]
+	public void DictionaryTupleConstructorParsesAsMethodCall()
+	{
+   using var dictionary = new Type(type.Package,
+				new TypeLines(nameof(DictionaryTupleConstructorParsesAsMethodCall),
+					"has number",
+					"Run Dictionary(Number, Number)",
+					"\tDictionary((2, 4))")).
+			ParseMembersAndMethods(new MethodExpressionParser());
+		var expression = dictionary.Methods[0].GetBodyAndParseIfNeeded();
+		Assert.That(expression, Is.InstanceOf<MethodCall>());
+		Assert.That(expression.ReturnType.Name, Is.EqualTo("Dictionary(Number, Number)"));
+	}
+
+	[Test]
+ public void DictionaryConstructorWithMultiplePairsKeepsText()
+	{
+		using var dictionary = new Type(type.Package,
+        new TypeLines(nameof(DictionaryConstructorWithMultiplePairsKeepsText),
+					"has number",
+					"Run Dictionary(Number, Number)",
+					"\tDictionary((2, 4), (4, 8))")).
+			ParseMembersAndMethods(new MethodExpressionParser());
+		Assert.That(dictionary.Methods[0].GetBodyAndParseIfNeeded().ToString(),
+			Is.EqualTo("Dictionary((2, 4), (4, 8))"));
+	}
+
+	[Test]
+	public void DictionaryTypeExpressionInMemberCallKeepsText()
+	{
+		using var dictionary = new Type(type.Package,
+				new TypeLines(nameof(DictionaryTypeExpressionInMemberCallKeepsText),
+					"has number",
+					"Run Boolean",
+					"\tDictionary(Number, Number).Length is 0")).
+			ParseMembersAndMethods(new MethodExpressionParser());
+		Assert.That(dictionary.Methods[0].GetBodyAndParseIfNeeded().ToString(),
+			Is.EqualTo("Dictionary(Number, Number).Length is 0"));
+	}
+
+	[Test]
 	public void ParseDictionaryWithMixedInputTypes()
 	{
 		using var dictionary = new Type(type.Package,
@@ -93,6 +133,15 @@ public sealed class DictionaryTests : TestExpressions
 		var dictionaryExpression = (Dictionary)((Declaration)body.Expressions[0]).Value;
 		Assert.That(dictionaryExpression.KeyType, Is.EqualTo(type.GetType(Base.Number)));
 		Assert.That(dictionaryExpression.MappedValueType, Is.EqualTo(type.GetType(Base.Text)));
+	}
+
+	[Test]
+	public void DictionaryExpressionToStringUsesTypeName()
+	{
+		var number = type.GetType(Base.Number);
+		var dictionaryType = type.GetType(Base.Dictionary).GetGenericImplementation(number, number);
+		Assert.That(new Dictionary([number, number], dictionaryType).ToString(),
+			Is.EqualTo("Dictionary(Number, Number)"));
 	}
 
 	[Test]

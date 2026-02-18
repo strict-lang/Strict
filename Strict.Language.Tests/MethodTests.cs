@@ -138,11 +138,27 @@ public sealed class MethodTests
 			new TypeLines(nameof(SplitTestExpressions),
 				"has logger",
 				"AddFive(variable Text) Text",
-				"	AddFive(\"5\") is \"55\"",
-				"	AddFive(\"6\") is \"65\"",
-				"	variable + \"5\"")).ParseMembersAndMethods(parser);
+				"\tAddFive(\"5\") is \"55\"",
+				"\tAddFive(\"6\") is \"65\"",
+				"\tvariable + \"5\"")).ParseMembersAndMethods(parser);
 		customType.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(customType.Methods[0].Tests.Count, Is.EqualTo(2));
+	}
+
+	[Test]
+	public void ParseTestsOnlyForGenericShouldReparseFullBody()
+	{
+		var customType = new Type(TestPackage.Instance,
+			new TypeLines(nameof(ParseTestsOnlyForGenericShouldReparseFullBody),
+				"has generic",
+				"Length Number",
+				"\t(1, 2).Length is 2",
+				"\t1")).ParseMembersAndMethods(parser);
+		customType.Methods[0].GetBodyAndParseIfNeeded(true);
+		var expression = customType.Methods[0].GetBodyAndParseIfNeeded();
+		var body = expression as Body;
+		Assert.That(body != null && body.Expressions.Any(e =>
+			e.GetType().Name == "PlaceholderExpression"), Is.False);
 	}
 
 	[Test]
