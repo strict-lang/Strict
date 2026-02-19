@@ -56,6 +56,24 @@ public static class StringExtensions
 		return result.ToWordList(separator);
 	}
 
+	public static bool IsWordOrWordWithNumberAtEnd(this ReadOnlySpan<char> text, out int number)
+	{
+		number = -1;
+		for (var index = 0; index < text.Length; index++)
+			if (!char.IsAsciiLetter(text[index]))
+				return index == text.Length - 1 && int.TryParse(text[index].ToString(), out number) &&
+					number is > 1 and < 10;
+		return true;
+	}
+
+	public static bool IsKeyword(this ReadOnlySpan<char> text)
+	{
+		foreach (var keyword in Keyword.GetAllKeywords)
+			if (keyword.Compare(text))
+				return true;
+		return false;
+	}
+
 	extension(string text)
 	{
 		/// <summary>
@@ -66,18 +84,6 @@ public static class StringExtensions
 			foreach (var c in text)
 				if (!char.IsAsciiLetter(c))
 					return false;
-			return true;
-		}
-
-		public bool IsKeyword() => Keyword.GetAllKeywords.Contains(text);
-
-		public bool IsWordOrWordWithNumberAtEnd(out int number)
-		{
-			number = -1;
-			for (var index = 0; index < text.Length; index++)
-				if (!char.IsAsciiLetter(text[index]))
-					return index == text.Length - 1 && int.TryParse(text[index].ToString(), out number) &&
-						number is > 1 and < 10;
 			return true;
 		}
 

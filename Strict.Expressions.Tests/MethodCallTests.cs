@@ -34,6 +34,40 @@ public sealed class MethodCallTests : TestExpressions
 		Assert.That(ParseExpression("(10 / 2).Floor").ToString(), Is.EqualTo("(10 / 2).Floor"));
 
 	[Test]
+	public void PrivateMethodWithTooManyArgumentsIsNotMatched()
+	{
+		type.Methods.Add(new Method(type, 0, this, ["hidden(number) Number", "\t1"]));
+		Assert.That(() => ParseExpression("hidden(1, 2)"),
+     Throws.InstanceOf<ParsingFailed>());
+	}
+
+	[Test]
+	public void PrivateMethodWithTooFewArgumentsIsNotMatched()
+	{
+		type.Methods.Add(new Method(type, 0, this,
+			["hiddenWithTwo(number, other Number) Number", "\t1"]));
+		Assert.That(() => ParseExpression("hiddenWithTwo(1)"),
+     Throws.InstanceOf<ParsingFailed>());
+	}
+
+	[Test]
+	public void PrivateMethodWithWrongArgumentTypeIsNotMatched()
+	{
+		type.Methods.Add(new Method(type, 0, this, ["hiddenText(number) Number", "\t1"]));
+		Assert.That(() => ParseExpression("hiddenText(\"text\")"),
+     Throws.InstanceOf<ParsingFailed>());
+	}
+
+	[Test]
+	public void PrivateMethodWithMutableParameterRejectsNonListArgument()
+	{
+		type.Methods.Add(new Method(type, 0, this,
+			["hiddenMutable(mutableList Mutable(List)) Number", "\t1"]));
+		Assert.That(() => ParseExpression("hiddenMutable(1)"),
+			Throws.InstanceOf<ParsingFailed>());
+	}
+
+	[Test]
 	public void ParseCallWithMemberAccessInNestedArgument()
 	{
 		var digitsMethod = new Method(type, 0, this, [

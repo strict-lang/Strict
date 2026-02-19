@@ -261,11 +261,10 @@ public class MethodExpressionParser : ExpressionParser
 		Expression? instance, Body body, ReadOnlySpan<char> input,
 		IReadOnlyList<Expression> arguments)
 	{
-		var inputAsString = input.ToString(); //TODO: would be better to keep as ReadOnlySpan, change methods called!
 		var type = context as Type ?? body.Method.Type;
 		if (!input.IsWord() && !input.Contains(' ') && !input.Contains('('))
-			return inputAsString.IsWordOrWordWithNumberAtEnd(out _)
-				? MethodCall.TryParseFromOrEnum(body, arguments, inputAsString)
+			return input.IsWordOrWordWithNumberAtEnd(out _)
+				? MethodCall.TryParseFromOrEnum(body, arguments, input.ToString())
 				: null;
 		if (input.Equals(Type.OuterLowercase, StringComparison.Ordinal))
 			return new VariableCall(
@@ -310,20 +309,20 @@ public class MethodExpressionParser : ExpressionParser
 				return new MemberCall(instance, aliasMember, body.CurrentFileLineNumber);
 			}
 		}
-		if (inputAsString.IsKeyword())
-			throw new KeywordNotAllowedAsMemberOrMethod(body, inputAsString, type);
+		if (input.IsKeyword())
+			throw new KeywordNotAllowedAsMemberOrMethod(body, input.ToString(), type);
 		// If inside a generic type that cannot be used directly, we still might have a declaration or
 		// Enum usage. This won't use the outer generic type, but might be needed for tests (e.g. Error)
-		if (instance is null && type.IsGeneric && inputAsString.IsWordOrWordWithNumberAtEnd(out _))
+		if (instance is null && type.IsGeneric && input.IsWordOrWordWithNumberAtEnd(out _))
 		{
-			var fromOrEnum = MethodCall.TryParseFromOrEnum(body, arguments, inputAsString);
+			var fromOrEnum = MethodCall.TryParseFromOrEnum(body, arguments, input.ToString());
 			if (fromOrEnum != null)
 				return fromOrEnum;
 		}
 		var parse = MemberCall.TryParse(body, type, instance, input) ??
 			MethodCall.TryParse(instance, body, arguments, type, input.ToString());
 		if (parse == null && instance is null)
-			parse = MethodCall.TryParseFromOrEnum(body, arguments, inputAsString);
+			parse = MethodCall.TryParseFromOrEnum(body, arguments, input.ToString());
 		if (parse != null)
 			return parse;
 		if (arguments.Count > 0 && input.EndsWith(')'))
