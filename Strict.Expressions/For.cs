@@ -115,14 +115,10 @@ public sealed class For(Expression[] customVariables, Expression iterator, Expre
 	private static Expression ParseWithImplicitVariable(Body body, ReadOnlySpan<char> line,
 		Body innerBody)
 	{
-		if (body.FindVariable(Type.IndexLowercase) != null)
-			throw new DuplicateImplicitIndex(body);
 		AddImplicitVariables(body, line, innerBody);
 		return new For([], body.Method.ParseExpression(body, line[4..], true), innerBody.Parse(),
 			body.CurrentFileLineNumber);
 	}
-
-	public sealed class DuplicateImplicitIndex(Body body) : ParsingFailed(body);
 
 	private static void AddImplicitVariables(Body body, ReadOnlySpan<char> line, Body innerBody)
 	{

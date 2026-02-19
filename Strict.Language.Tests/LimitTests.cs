@@ -17,7 +17,7 @@ public sealed class LimitTests
 				using var _ = CreateType(nameof(MethodLengthMustNotExceedTwelve),
 					CreateProgramWithDuplicateLines(["has logger", "Run(first Number, second Number)"], 12,
 						"\tlogger.Log(5)")).ParseMembersAndMethods(parser);
-			},
+			}, //ncrunch: no coverage
 			Throws.InstanceOf<Method.MethodLengthMustNotExceedTwelve>().With.Message.
 				Contains($"Method Run has 13 lines but limit is {Limit.MethodLength}"));
 
@@ -76,7 +76,7 @@ public sealed class LimitTests
 					"RunSixteen", "\tlogger.Log(16)"
 					// @formatter:on
 				]);
-			},
+			}, //ncrunch: no coverage
 			Throws.InstanceOf<Type.MethodCountMustNotExceedLimit>().With.Message.Contains(
 				$"Type MethodCountMustNotExceedFifteen has method count 16 but limit is {
 					Limit.MethodCount
@@ -89,7 +89,7 @@ public sealed class LimitTests
 			{
 				using var _ = CreateType(nameof(LinesCountMustNotExceedTwoHundredFiftySix),
 					CreateDuplicateLines(257, "has logger").ToArray()).ParseMembersAndMethods(parser);
-			},
+			}, //ncrunch: no coverage
 			Throws.InstanceOf<Type.LinesCountMustNotExceedLimit>().With.Message.Contains(
 				$"Type LinesCountMustNotExceedTwoHundredFiftySix has lines count 257 but limit is {
 					Limit.LineCount
@@ -110,7 +110,7 @@ public sealed class LimitTests
 				"					if 9 is 9",
 				"						logger.Log(5)" // @formatter:on
 				]).ParseMembersAndMethods(parser);
-			},
+			}, //ncrunch: no coverage
 			Throws.InstanceOf<TypeParser.NestingMoreThanFiveLevelsIsNotAllowed>().With.Message.Contains(
 				$"Type NestingMoreThanFiveLevelsIsNotAllowed has more than {
 					Limit.NestingLevel
@@ -127,7 +127,7 @@ public sealed class LimitTests
 					"((levelCount + 1) * (levelCount + 1)) ? levelCount else CalculateCompleteLevelCount(" +
 					"remainingCans, levelCount + 1)"
 				]).ParseMembersAndMethods(parser);
-			},
+			}, //ncrunch: no coverage
 			Throws.InstanceOf<TypeParser.CharacterCountMustBeWithinLimit>().With.Message.Contains(
 				"Type " + nameof(CharacterCountMustBeWithinLimit) +
 				" has character count 196 in line: 4 but limit is " + Limit.CharacterCount));
@@ -139,7 +139,7 @@ public sealed class LimitTests
 			{
 				using var _ = CreateType(nameof(MemberCountShouldNotExceedLimit),
 					CreateRandomMemberLines(Limit.MemberCountForEnums + 1)).ParseMembersAndMethods(parser);
-			},
+			}, //ncrunch: no coverage
 			Throws.InstanceOf<Type.MemberCountShouldNotExceedLimit>().With.Message.Contains(
 				nameof(Type.MemberCountShouldNotExceedLimit) + " type has " +
 				(Limit.MemberCountForEnums + 1) + " members, max: " + Limit.MemberCountForEnums));
@@ -175,7 +175,7 @@ public sealed class LimitTests
 			{
 				using var _ = CreateType(testName + nameof(NameShouldBeWithinTheLimit), code).
 					ParseMembersAndMethods(parser);
-			},
+			}, //ncrunch: no coverage
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.
 				InstanceOf<NamedType.NameLengthIsNotWithinTheAllowedLimit>().With.Message.Contains(
 					$"Name {memberOrParameterName} " + $"length is {
@@ -189,7 +189,7 @@ public sealed class LimitTests
 			() =>
 			{
 				using var _ = CreateType(typeName, ["has number", "Run", "\t5"]).ParseMembersAndMethods(parser);
-			},
+			}, //ncrunch: no coverage
 			Throws.InstanceOf<NamedType.NameLengthIsNotWithinTheAllowedLimit>().With.Message.Contains(
 				$"Name {typeName} length is {typeName.Length} but allowed limit is between 2 and 50"));
 
@@ -203,7 +203,7 @@ public sealed class LimitTests
 					"\tconstant variablesNameWithLengthGreaterThanFiftyAreNotAllowed = 5"
 				]);
 				type.Methods[0].GetBodyAndParseIfNeeded();
-			},
+			}, //ncrunch: no coverage
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.
 				InstanceOf<NamedType.NameLengthIsNotWithinTheAllowedLimit>().With.Message.
 				Contains("constant variablesNameWithLengthGreaterThanFiftyAreNotAllowed"));
@@ -216,7 +216,7 @@ public sealed class LimitTests
 				using var type = CreateType(nameof(VariableNameShouldNotBeBelowTheLimit),
 					["has number", "Run", "\tconstant v = 5"]);
 				return type.Methods[0].GetBodyAndParseIfNeeded();
-			},
+			}, //ncrunch: no coverage
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.
 				InstanceOf<NamedType.NameLengthIsNotWithinTheAllowedLimit>().With.Message.
 				Contains("constant v"));
@@ -236,7 +236,7 @@ public sealed class LimitTests
 				using var _ = CreateType(nameof(MethodNameShouldNotExceedTheLimit) + methodName.Last(), [
 					"has number", methodName, "	constant number = 5"
 				]).ParseMembersAndMethods(parser);
-			},
+			}, //ncrunch: no coverage
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.
 				InstanceOf<NamedType.NameLengthIsNotWithinTheAllowedLimit>().With.Message.Contains(
 					$"Name {

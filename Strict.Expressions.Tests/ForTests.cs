@@ -54,12 +54,6 @@ public sealed class ForTests : TestExpressions
 			Throws.InstanceOf<Body.IdentifierNotFound>());
 
 	[Test]
-	public void DuplicateImplicitIndexInNestedFor() =>
-		Assert.That(
-			() => ParseExpression("for Range(2, 5)", "\tfor Range(0, 10)", "\t\tlogger.Log(index)"),
-			Throws.InstanceOf<For.DuplicateImplicitIndex>());
-
-	[Test]
 	public void ImmutableVariableNotAllowedToBeAnIterator() =>
 		Assert.That(
 			() => ParseExpression("constant myIndex = 0", "for myIndex in Range(0, 10)",
@@ -76,7 +70,7 @@ public sealed class ForTests : TestExpressions
 	[Test]
 	public void ForVariableUsesNonListIteratorValue()
 	{
-    var programType = new Type(type.Package,
+		var programType = new Type(type.Package,
 				new TypeLines(nameof(ForVariableUsesNonListIteratorValue), "has logger",
 					"LogCount(count Number) Number",
 					"\tfor element in count",
@@ -89,6 +83,14 @@ public sealed class ForTests : TestExpressions
 		Assert.That(((Body)forExpression.Body).FindVariable("element")?.Type.Name,
 			Is.EqualTo(Base.Number));
 	}
+
+	[Test]
+	public void ParseNestedForExpression() =>
+		Assert.That(
+			((For)ParseExpression("for Range(1, 3)", "\tfor Range(1, 3)",
+				"\t\tlogger.Log(index + outer.index)")).ToString(),
+			Is.EqualTo("for Range(1, 3)" + Environment.NewLine + "\tfor range(1, 3)" +
+				Environment.NewLine + "\t\tlogger.Log(index + outer.index)"));
 
 	[Test]
 	public void ParseForRangeExpression() =>

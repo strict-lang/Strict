@@ -167,7 +167,7 @@ public class Package : Context, IEnumerable<Type>, IDisposable
 
 	internal void Remove(Package package) => children.Remove(package);
 	public IEnumerator<Type> GetEnumerator() => new List<Type>(types.Values).GetEnumerator();
-	IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+	IEnumerator IEnumerable.GetEnumerator() => GetEnumerator(); //ncrunch: no coverage
 
 	// ReSharper disable once ConditionalAccessQualifierIsNonNullableAccordingToAPIContract
 	public void Dispose() => ((Package)Parent)?.Remove(this);

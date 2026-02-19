@@ -9,33 +9,18 @@ namespace Strict.Language;
 /// </summary>
 public static class EqualsExtensions
 {
-	//TODO: support comparison of derived types (Name <-> Text, etc.)
-	//TODO: if is operator only defines (other), both left and right must match type, if not error out here
-	//TODO: think about containing types, probably should not be is supported, but can be converted and then compared (e.g. File to Text is "some.txt"
-	//TODO: use is operator of type if it is defined for non Number, non Text!
-
 	public static bool AreEqual(object? value, object? other)
 	{
 		if (ReferenceEquals(value, other))
 			return true;
-		if (value is null || other is null)
-			return false;
-		// If one side is an Expression and the other is not, something horribly went wrong!
-		if (value is Expression && other is not Expression ||
-			value is not Expression && other is Expression)
-			throw new NotAllowedToCompareExpressionToNonExpressions(value, other);
 		if (value is IList valueList && other is IList otherValueList)
 			return AreListsEqual(valueList, otherValueList);
 		if (value is IDictionary valueDict && other is IDictionary otherValueDict)
 			return AreDictionariesEqual(valueDict, otherValueDict);
 		if (IsNumeric(value) && IsNumeric(other))
 			return NumberToDouble(value) == NumberToDouble(other);
-		return value.Equals(other);
+		return value?.Equals(other) ?? false;
 	}
-
-	public class NotAllowedToCompareExpressionToNonExpressions(object value, object other)
-		: Exception("value=" + value + " (" + value.GetType() + "), other=" + other + " (" +
-			other.GetType() + ")");
 
 	private static bool AreListsEqual(IList left, IList right)
 	{

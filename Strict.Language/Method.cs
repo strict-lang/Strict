@@ -152,10 +152,12 @@ public sealed class Method : Context
 		if (nameAndDefaultValue.Length < 2)
 			throw new MissingParameterDefaultValue(this, TypeLineNumber + methodLineNumber - 1,
 				nameAndTypeAsString);
-		var defaultValue = methodBody != null
-			? ParseExpression(methodBody, nameAndDefaultValue[1])
-			: type.GetMemberExpression(parser, nameAndDefaultValue[0], nameAndDefaultValue[1],
-				TypeLineNumber);
+		Expression defaultValue;
+		if (methodBody != null)
+			defaultValue = ParseExpression(methodBody, nameAndDefaultValue[1]);
+		else
+			defaultValue = type.GetMemberExpression(parser, nameAndDefaultValue[0],
+				nameAndDefaultValue[1], TypeLineNumber);
 		return new Parameter(type, nameAndDefaultValue[0], defaultValue);
 	}
 
@@ -374,9 +376,8 @@ public sealed class Method : Context
 		if (parseTestsOnlyForGeneric && Type.IsGeneric)
 			return ParseTestsOnlyForGeneric();
 		if (methodBody.Expressions.Count > 0)
-      return !parseTestsOnlyForGeneric &&
-				methodBody.Expressions.Any(expression =>
-					expression.GetType().Name == "PlaceholderExpression")
+			return !parseTestsOnlyForGeneric && methodBody.Expressions.Any(expression =>
+				expression.GetType().Name == "PlaceholderExpression")
 				? methodBody.Parse()
 				: methodBody.Expressions.Count == 1
 					? methodBody.Expressions[0]
@@ -397,7 +398,7 @@ public sealed class Method : Context
 	private Expression ParseTestsOnlyForGeneric()
 	{
 		if (methodBody == null)
-			throw new CannotCallBodyOnTraitMethod(Type, Name);
+			throw new CannotCallBodyOnTraitMethod(Type, Name); //ncrunch: no coverage
 		if (methodBody.Expressions.Count > 0)
 			return methodBody.Expressions.Count == 1
 				? methodBody.Expressions[0]
@@ -424,7 +425,7 @@ public sealed class Method : Context
 			}
 		}
 		if (Tests.Count < 1 && !IsTestPackage())
-			throw new MethodMustHaveAtLeastOneTest(Type, Name, TypeLineNumber);
+			throw new MethodMustHaveAtLeastOneTest(Type, Name, TypeLineNumber); //ncrunch: no coverage
 		expressions.Add(new PlaceholderExpression(ReturnType));
 		methodBody.SetExpressions(expressions);
 		return methodBody;
@@ -454,7 +455,7 @@ public sealed class Method : Context
 	private sealed class PlaceholderExpression(Type returnType)
 		: Expression(returnType)
 	{
-		public override bool IsConstant => true;
+		public override bool IsConstant => true; //ncrunch: no coverage
 		public override string ToString() => ReturnType.Name;
 	}
 

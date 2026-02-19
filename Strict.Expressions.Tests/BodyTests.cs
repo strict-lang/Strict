@@ -110,6 +110,15 @@ public sealed class BodyTests : TestExpressions
 	}
 
 	[Test]
+	public void GetInnerBodyAndUpdateHierarchyMovesChild()
+	{
+		var parentBody = new Body(method) { LineRange = new Range(0, 3) };
+		var childBody = new Body(method, 1, parentBody) { LineRange = new Range(2, 3) };
+		var innerBody = parentBody.GetInnerBodyAndUpdateHierarchy(1, childBody);
+		Assert.That(childBody.Parent, Is.EqualTo(innerBody));
+	}
+
+	[Test]
 	public void DuplicateVariableNameFound() =>
 		Assert.That(() => ParseExpression("if five is 5", "\tconstant abc = 5", "\tconstant abc = 5"),
 			Throws.InstanceOf<Body.VariableNameIsAlreadyInUse>().With.Message.StartsWith("Variable abc"));

@@ -1,5 +1,4 @@
 using Strict.Language;
-using System.Reflection;
 using System.Runtime.CompilerServices;
 using Type = Strict.Language.Type;
 
@@ -77,7 +76,7 @@ public class MethodExpressionParser : ExpressionParser
 		if (postfix.Output.Count == 0)
 #if DEBUG
 			if (inputText != binary.ToString())
-				throw new GeneratedBinaryExpressionDoesNotMatchInputExactly(body, binary, inputText);
+				throw new GeneratedBinaryExpressionDoesNotMatchInputExactly(body, binary, inputText); //ncrunch: no coverage
 			else
 #endif
 				return binary;
@@ -87,7 +86,7 @@ public class MethodExpressionParser : ExpressionParser
 	}
 
 	private sealed class GeneratedBinaryExpressionDoesNotMatchInputExactly(Body body,
-		Expression binary, string inputText) : ParsingFailed(body, binary + ", inputText=" + inputText);
+		Expression binary, string inputText) : ParsingFailed(body, binary + ", inputText=" + inputText); //ncrunch: no coverage
 
 	private Expression ParseMethodCallWithArguments(Body body, ReadOnlySpan<char> input,
 		ShuntingYard postfix)
@@ -205,9 +204,9 @@ public class MethodExpressionParser : ExpressionParser
 					if (postfix.Output.Count >= 3)
 						current = Binary.Parse(body, input, postfix.Output);
 				}
-     current ??= Text.TryParse(body, inputText) ??
-				List.TryParseWithMultipleOrNestedElements(body, inputText, false) ??
-				Dictionary.TryParse(body, inputText);
+				current ??= Text.TryParse(body, inputText) ??
+					List.TryParseWithMultipleOrNestedElements(body, inputText, false) ??
+					Dictionary.TryParse(body, inputText);
 				if (current is not null)
 				{
 					context = current.ReturnType;
@@ -215,15 +214,14 @@ public class MethodExpressionParser : ExpressionParser
 				}
 			}
 			var expression = input[members.Current].Contains('(')
-					? current != null
-						? ParseMethodCallOnContext(body, input[members.Current], context, current)
-						: TryParseMemberOrZeroOrOneArgumentMethodOrNestedCall(body, input[members.Current])
-					: TryVariableOrValueOrParameterOrMemberOrMethodCall(context, current, body,
-						input[members.Current],
-						// arguments are only needed for the last part
-						members.IsAtEnd
-							? arguments
-							: []);
+				? current != null
+					? ParseMethodCallOnContext(body, input[members.Current], context, current)
+					: TryParseMemberOrZeroOrOneArgumentMethodOrNestedCall(body, input[members.Current])
+				: TryVariableOrValueOrParameterOrMemberOrMethodCall(context, current, body,
+					input[members.Current],
+					members.IsAtEnd
+						? arguments
+						: []);
 			current = expression ??
 				throw CheckErrorTypeAndThrowException(body, input, members, current);
 			context = current.ReturnType;
@@ -232,12 +230,10 @@ public class MethodExpressionParser : ExpressionParser
 	}
 
 	private Expression? ParseMethodCallOnContext(Body body, ReadOnlySpan<char> input,
-		Type context, Expression current)
+		Context context, Expression current)
 	{
 		var argStart = input.IndexOf('(');
 		var argEnd = input.FindMatchingBracketIndex(argStart);
-		if (argStart <= 0 || argEnd <= 0)
-			return TryVariableOrValueOrParameterOrMemberOrMethodCall(context, current, body, input, []);
 		var args = argEnd > argStart + 1
 			? ParseListArguments(body, input[(argStart + 1)..argEnd])
 			: (IReadOnlyList<Expression>)[];
@@ -262,63 +258,20 @@ public class MethodExpressionParser : ExpressionParser
 		IReadOnlyList<Expression> arguments)
 	{
 		var type = context as Type ?? body.Method.Type;
-		if (!input.IsWord() && !input.Contains(' ') && !input.Contains('('))
-			return input.IsWordOrWordWithNumberAtEnd(out _)
-				? MethodCall.TryParseFromOrEnum(body, arguments, input.ToString())
-				: null;
-		if (input.Equals(Type.OuterLowercase, StringComparison.Ordinal))
-			return new VariableCall(
-				new Variable(Type.OuterLowercase, false,
-					new Instance(body.Method.Type, body.CurrentFileLineNumber), body),
-				body.CurrentFileLineNumber);
-		if (instance is VariableCall { Variable.Name: Type.OuterLowercase })
-		{
-			var call = VariableCall.TryParse(body.Parent!, input) ??
-				(input.Equals(Type.ValueLowercase, StringComparison.Ordinal)
-					? Instance.Parse(body.Parent!, body.Method)
-					: ParameterCall.TryParse(body, input));
-			if (call != null)
-				return new MemberCall(instance,
-					new Member(body.ReturnType, Type.ValueLowercase, call.ReturnType),
-					body.CurrentFileLineNumber);
-		}
-		else
-		{
-			var call = VariableCall.TryParse(body, input) ??
-				(input.Equals(Type.ValueLowercase, StringComparison.Ordinal)
-					? Instance.Parse(body, body.Method)
-					: ParameterCall.TryParse(body, input));
-			if (call != null)
-				return call;
-		}
-   if (input.Equals(Type.ElementsLowercase, StringComparison.Ordinal) &&
-			type is GenericTypeImplementation { Generic.Name: Base.Dictionary })
-		{
-			var listMember = type.Members.FirstOrDefault(member =>
-				member.Type.Name.StartsWith(Base.List, StringComparison.Ordinal));
-     if (listMember != null)
-			{
-				var keyword = listMember.IsConstant
-					? Keyword.Constant
-					: listMember.IsMutable
-						? Keyword.Mutable
-						: Keyword.Has;
-				var aliasMember = new Member(type,
-					$"{Type.ElementsLowercase} {listMember.Type.Name}", null,
-					listMember.LineNumber, keyword);
-				return new MemberCall(instance, aliasMember, body.CurrentFileLineNumber);
-			}
-		}
+		return !input.IsWord() && !input.Contains(' ') && !input.Contains('(')
+			? TryParseStandaloneToken(body, arguments, input)
+			: TryParseOuterVariable(body, input, instance) ??
+			TryParseLocalVariableOrParameter(body, input) ??
+			TryParseDictionaryElementsAlias(body, type, instance, input) ??
+			TryParseGenericTypeEnum(body, type, instance, arguments, input) ??
+			TryParseMemberOrMethodCall(instance, body, input, arguments, type);
+	}
+
+	private Expression? TryParseMemberOrMethodCall(Expression? instance, Body body,
+		ReadOnlySpan<char> input, IReadOnlyList<Expression> arguments, Type type)
+	{
 		if (input.IsKeyword())
 			throw new KeywordNotAllowedAsMemberOrMethod(body, input.ToString(), type);
-		// If inside a generic type that cannot be used directly, we still might have a declaration or
-		// Enum usage. This won't use the outer generic type, but might be needed for tests (e.g. Error)
-		if (instance is null && type.IsGeneric && input.IsWordOrWordWithNumberAtEnd(out _))
-		{
-			var fromOrEnum = MethodCall.TryParseFromOrEnum(body, arguments, input.ToString());
-			if (fromOrEnum != null)
-				return fromOrEnum;
-		}
 		var parse = MemberCall.TryParse(body, type, instance, input) ??
 			MethodCall.TryParse(instance, body, arguments, type, input.ToString());
 		if (parse == null && instance is null)
@@ -329,6 +282,69 @@ public class MethodExpressionParser : ExpressionParser
 			return TryParseMemberOrZeroOrOneArgumentMethodOrNestedCall(body, input);
 		return null;
 	}
+
+	private static Expression? TryParseStandaloneToken(Body body,
+		IReadOnlyList<Expression> arguments, ReadOnlySpan<char> input) =>
+		input.IsWordOrWordWithNumberAtEnd(out _)
+			? MethodCall.TryParseFromOrEnum(body, arguments, input.ToString())
+			: null;
+
+	private static Expression? TryParseOuterVariable(Body body, ReadOnlySpan<char> input,
+		Expression? instance)
+	{
+		if (input.Equals(Type.OuterLowercase, StringComparison.Ordinal))
+			return new VariableCall(
+				new Variable(Type.OuterLowercase, false,
+					new Instance(body.Method.Type, body.CurrentFileLineNumber), body),
+				body.CurrentFileLineNumber);
+		if (instance is not VariableCall { Variable.Name: Type.OuterLowercase })
+			return null;
+		var call = VariableCall.TryParse(body.Parent!, input) ??
+			(input.Equals(Type.ValueLowercase, StringComparison.Ordinal)
+				? Instance.Parse(body.Parent!, body.Method)
+				: ParameterCall.TryParse(body, input));
+		return call == null
+			? null
+			: new MemberCall(instance,
+				new Member(body.ReturnType, Type.ValueLowercase, call.ReturnType),
+				body.CurrentFileLineNumber);
+	}
+
+	private static Expression? TryParseLocalVariableOrParameter(Body body, ReadOnlySpan<char> input) =>
+		VariableCall.TryParse(body, input) ??
+		(input.Equals(Type.ValueLowercase, StringComparison.Ordinal)
+			? Instance.Parse(body, body.Method)
+			: ParameterCall.TryParse(body, input));
+
+	private static Expression? TryParseDictionaryElementsAlias(Body body, Type type,
+		Expression? instance, ReadOnlySpan<char> input)
+	{
+		if (!input.Equals(Type.ElementsLowercase, StringComparison.Ordinal) ||
+			type is not GenericTypeImplementation { Generic.Name: Base.Dictionary })
+			return null;
+		var listMember = type.Members.FirstOrDefault(member =>
+			member.Type.Name.StartsWith(Base.List, StringComparison.Ordinal));
+		if (listMember == null)
+			return null; //ncrunch: no coverage
+		var keyword = listMember.IsConstant
+			? Keyword.Constant
+			: listMember.IsMutable
+				? Keyword.Mutable
+				: Keyword.Has;
+		var aliasMember = new Member(type, $"{Type.ElementsLowercase} {listMember.Type.Name}", null,
+			listMember.LineNumber, keyword);
+		return new MemberCall(instance, aliasMember, body.CurrentFileLineNumber);
+	}
+
+	/// <summary>
+	/// If inside a generic type that cannot be used directly, we still might have a declaration or
+	/// Enum usage. This won't use the outer generic type, but might be needed for tests (e.g. Error)
+	/// </summary>
+	private static Expression? TryParseGenericTypeEnum(Body body, Type type, Expression? instance,
+		IReadOnlyList<Expression> arguments, ReadOnlySpan<char> input) =>
+		instance is null && type.IsGeneric && input.IsWordOrWordWithNumberAtEnd(out _)
+			? MethodCall.TryParseFromOrEnum(body, arguments, input.ToString())
+			: null;
 
 	public sealed class CannotAccessMemberBeforeTypeIsParsed(Body body, string input, Type type)
 		: ParsingFailed(body, input, type);
