@@ -42,6 +42,11 @@ public sealed class ForTests : TestExpressions
 		Assert.That(() => ParseExpression("for index in Range(0, 5)", "\tlogger.Log(index)"),
 			Throws.InstanceOf<For.IndexIsReservedDoNotUseItExplicitly>());
 
+	[Test]
+	public void ForVariableMatchingMemberIsNotAddedAsVariable() =>
+		Assert.That(() => ParseExpression("for five in (1, 2, 3)", "\tlogger.Log(five)"),
+			Throws.InstanceOf<Body.IdentifierNotFound>());
+
 	[TestCase("for gibberish", "\tlogger.Log(\"Hi\")")]
 	[TestCase("for element in gibberish", "\tlogger.Log(element)")]
 	public void UnidentifiedIterable(params string[] lines) =>
@@ -69,6 +74,23 @@ public sealed class ForTests : TestExpressions
 				"Iterator element type Text does not match with Number"));
 
 	[Test]
+	public void ForVariableUsesNonListIteratorValue()
+	{
+    var programType = new Type(type.Package,
+				new TypeLines(nameof(ForVariableUsesNonListIteratorValue), "has logger",
+					"LogCount(count Number) Number",
+					"\tfor element in count",
+					"\t\tlogger.Log(element)",
+					"\t\telement",
+					"\tcount")).
+			ParseMembersAndMethods(new MethodExpressionParser());
+		var body = (Body)programType.Methods[0].GetBodyAndParseIfNeeded();
+		var forExpression = (For)body.Expressions[0];
+		Assert.That(((Body)forExpression.Body).FindVariable("element")?.Type.Name,
+			Is.EqualTo(Base.Number));
+	}
+
+	[Test]
 	public void ParseForRangeExpression() =>
 		Assert.That(((For)ParseExpression("for Range(2, 5)", "\tlogger.Log(index)")).ToString(),
 			Is.EqualTo("for Range(2, 5)" + Environment.NewLine + "\tlogger.Log(index)"));
@@ -76,14 +98,14 @@ public sealed class ForTests : TestExpressions
 	[Test]
 	public void ParseForDictionaryElementsExpression()
 	{
-   var number = type.GetType(Base.Number);
+		var number = type.GetType(Base.Number);
 		var dictionary = type.GetType(Base.Dictionary).GetGenericImplementation(number, number);
-		var method = new Method(dictionary, 0, new MethodExpressionParser(), [
+		var runMethod = new Method(dictionary, 0, new MethodExpressionParser(), [
 			"Run Number",
 			"\tfor elements",
 			"\t\t1"
 		]);
-		Assert.That(method.GetBodyAndParseIfNeeded().ToString(),
+		Assert.That(runMethod.GetBodyAndParseIfNeeded().ToString(),
 			Is.EqualTo("for elements\r\n\t1"));
 	}
 

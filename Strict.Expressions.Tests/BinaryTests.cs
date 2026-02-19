@@ -46,6 +46,12 @@ public sealed class BinaryTests : TestExpressions
 		Assert.That(() => ParseExpression("5 to gibberish"),
 			Throws.InstanceOf<To.ConversionTypeNotFound>());
 
+	[Test]
+	public void InOperatorRequiresIs() =>
+		Assert.That(() => ParseExpression("1 in 2"),
+     Throws.TypeOf<ParsingFailed>().With.InnerException.
+				TypeOf<Binary.InMustAlwaysBePrecededByIsOrIsNot>());
+
 	[TestCase("5 to Logger")]
 	[TestCase("5 to Range")]
 	[TestCase("5 to Boolean")]

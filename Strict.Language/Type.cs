@@ -570,10 +570,8 @@ public class Type : Context, IDisposable
 	/// </summary>
 	public virtual bool IsBoolean => Name == Base.Boolean;
 	public bool IsError =>
-		Name is Base.Error or Base.ErrorWithValue || this is GenericTypeImplementation genericType &&
-		genericType.Generic.Name == Base.ErrorWithValue;
-	public bool IsDictionary =>
-		this is GenericTypeImplementation genericType && genericType.Generic.Name == Base.Dictionary;
+		Name is Base.Error || this is GenericTypeImplementation { Generic.Name: Base.ErrorWithValue };
+	public bool IsDictionary => this is GenericTypeImplementation { Generic.Name: Base.Dictionary };
 	public void Dispose() => ((Package)Parent).Remove(this);
 
 	public int FindLineNumber(string firstLineThatContains)

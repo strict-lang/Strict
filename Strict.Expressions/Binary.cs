@@ -1,6 +1,5 @@
 //#define LOG_OPERATORS_PARSING
 using Strict.Language;
-using Type = Strict.Language.Type;
 
 namespace Strict.Expressions;
 
@@ -33,8 +32,8 @@ public sealed class Binary(Expression left, Method operatorMethod, Expression[] 
 			: BuildBinaryExpression(body, input, postfixTokens.Pop(), postfixTokens);
 	}
 
-	public sealed class IncompleteTokensForBinaryExpression(Body body,
-		ReadOnlySpan<char> input,	IEnumerable<Range> postfixTokens) : ParsingFailed(body, //ncrunch: no coverage
+	public sealed class IncompleteTokensForBinaryExpression(Body body, ReadOnlySpan<char> input,
+		IEnumerable<Range> postfixTokens) : ParsingFailed(body, //ncrunch: no coverage
 		input.GetTextsFromRanges(postfixTokens).Reverse().ToWordList());
 
 	private static Expression BuildBinaryExpression(Body body, ReadOnlySpan<char> input,
@@ -55,50 +54,17 @@ public sealed class Binary(Expression left, Method operatorMethod, Expression[] 
 			BinaryOperator.To => To.Parse(body, input[tokens.Pop()],
 				GetUnaryOrBuildNestedBinary(body, input, tokens)),
 			UnaryOperator.Not => BuildNotBinaryExpression(body, input, tokens),
-			BinaryOperator.Is => BuildIsExpression(body, input, tokens, operatorToken),
 			_ => BuildRegularBinaryExpression(body, input, tokens, operatorToken)
 		};
 	}
 
 	public sealed class InMustAlwaysBePrecededByIsOrIsNot(string input) : Exception(input);
 
-	private static Expression BuildNotBinaryExpression(Body body, ReadOnlySpan<char> input, Stack<Range> tokens)
-	{
-		var isExpression = tokens.Count == 1
+	private static Expression BuildNotBinaryExpression(Body body, ReadOnlySpan<char> input,
+		Stack<Range> tokens) =>
+		BuildNot(tokens.Count == 1
 			? GetUnaryOrBuildNestedBinary(body, input, tokens)
-			: BuildIsExpression(body, input, tokens, input[tokens.Pop()].ToString());
-#if LOG_OPERATORS_PARSING
-		Console.WriteLine("BuildNotBinaryExpression isExpression=" + isExpression +
-			", remaining tokens=" + tokens.Count);
-#endif
-		return BuildNot(isExpression);
-	}
-
-	/// <summary>
-	/// Handles special cases like "is in", "is not in", "is not". The "is" here is not
-	/// important and stripped, it is not a BinaryExpression itself, the last word is.
-	/// </summary>
-	private static Expression BuildIsExpression(Body body, ReadOnlySpan<char> input,
-		Stack<Range> tokens, string operatorToken)
-	{
-#if LOG_OPERATORS_PARSING
-		Console.WriteLine("BuildIsExpression operatorToken=" + operatorToken + ", next token=" +
-			input[tokens.Peek()].ToString() + ", remaining tokens=" + tokens.Count);
-#endif
-		switch (input[tokens.Peek()])
-		{
-		case UnaryOperator.Not:
-			tokens.Pop();
-			return BuildNot(input[tokens.Peek()] == BinaryOperator.In
-				? BuildRegularBinaryExpression(body, input, tokens, input[tokens.Pop()].ToString())
-				: GetUnaryOrBuildNestedBinary(body, input, tokens));
-		case BinaryOperator.In:
-			return BuildRegularBinaryExpression(body, input, tokens,
-				input[tokens.Pop()].ToString());
-		default:
-			return BuildRegularBinaryExpression(body, input, tokens, operatorToken);
-		}
-	}
+			: BuildRegularBinaryExpression(body, input, tokens, input[tokens.Pop()].ToString()));
 
 	private static Binary BuildRegularBinaryExpression(Body body, ReadOnlySpan<char> input,
 		Stack<Range> tokens, string operatorToken)
@@ -107,9 +73,6 @@ public sealed class Binary(Expression left, Method operatorMethod, Expression[] 
 		Console.WriteLine("BuildRegularBinaryExpression operatorToken=" + operatorToken + ", next token=" +
 			input[tokens.Peek()].ToString() + ", remaining tokens=" + tokens.Count);
 #endif
-		if (operatorToken == UnaryOperator.Not)
-			throw new NotSupportedException("Should be called as a unary: " + input.ToString() +
-				", operator=" + operatorToken);
 		var right = GetUnaryOrBuildNestedBinary(body, input, tokens,
 			operatorToken is BinaryOperator.Is);
 #if LOG_OPERATORS_PARSING

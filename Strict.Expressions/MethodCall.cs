@@ -42,15 +42,15 @@ public class MethodCall : ConcreteExpression
 	{
 		if (body.IsFakeBodyForMemberInitialization)
 			return null;
-   var method = type.FindMethod(inputAsString, arguments) ??
+		var method = type.FindMethod(inputAsString, arguments) ??
 			(instance == null && type == body.Method.Type
 				? FindPrivateMethod(type, inputAsString, arguments)
 				: null);
-		if (method != null)
-			return new MethodCall(method, instance, AreArgumentsAutoParsedAsList(method, arguments)
-				? [new List(body, (List<Expression>)arguments)]
-				: arguments, null, body.CurrentFileLineNumber);
-		return null;
+		if (method == null)
+			return null;
+		return new MethodCall(method, instance, AreArgumentsAutoParsedAsList(method, arguments)
+			? [new List(body, (List<Expression>)arguments)]
+			: arguments, null, body.CurrentFileLineNumber);
 	}
 
 	private static Method? FindPrivateMethod(Type type, string methodName,
@@ -99,94 +99,108 @@ public class MethodCall : ConcreteExpression
 	internal static Expression CreateFromMethodCall(Body body, Type fromType,
 		IReadOnlyList<Expression> arguments, Expression? basedOnErrorVariable = null)
 	{
+		fromType = NormalizeListAndDictionaryImplementation(fromType, arguments);
+		ValidateMutableImplementation(fromType, arguments);
+		arguments = NormalizeDictionaryArguments(body, fromType, arguments);
+		arguments = NormalizeErrorArguments(body, ref fromType, arguments, basedOnErrorVariable);
+		arguments = NormalizeTypeArguments(body, fromType, arguments);
+		return new MethodCall(fromType.GetMethod(Method.From, arguments), null, arguments, null,
+			body.CurrentFileLineNumber);
+	}
+
+	private static Type NormalizeListAndDictionaryImplementation(Type fromType,
+		IReadOnlyList<Expression> arguments)
+	{
 		if (fromType.Name == Base.List && fromType.IsGeneric && arguments.Count > 0)
-			fromType = fromType.GetGenericImplementation(arguments[0].ReturnType);
-    if (fromType.Name == Base.Mutable && fromType.IsGeneric && arguments.Count == 1 &&
-			arguments[0].ReturnType is not GenericTypeImplementation { Generic.Name: Base.List })
+			return fromType.GetGenericImplementation(arguments[0].ReturnType);
+		if (fromType.Name != Base.Dictionary || !fromType.IsGeneric)
+			return fromType;
+		if (arguments.Count > 1)
+			return arguments[0] is List { Values.Count: 2 } firstPair
+				? fromType.GetGenericImplementation(firstPair.Values[0].ReturnType,
+					firstPair.Values[1].ReturnType)
+				: fromType.GetGenericImplementation(arguments[0].ReturnType, arguments[1].ReturnType);
+		if (arguments.Count > 0 && arguments[0] is List { Values.Count: 2 } pair)
+			return fromType.GetGenericImplementation(pair.Values[0].ReturnType,
+				pair.Values[1].ReturnType);
+		return fromType; //ncrunch: no coverage
+	}
+
+	private static void ValidateMutableImplementation(Type fromType, IReadOnlyList<Expression> args)
+	{
+		if (fromType.Name == Base.Mutable && fromType.IsGeneric && args.Count == 1 &&
+			args[0].ReturnType is not GenericTypeImplementation { Generic.Name: Base.List })
 			throw new Type.GenericTypesCannotBeUsedDirectlyUseImplementation(fromType,
 				Base.Mutable + " must be used with a List implementation");
-    if (fromType is GenericTypeImplementation { Generic.Name: Base.Mutable } mutableImpl &&
+		if (fromType is GenericTypeImplementation { Generic.Name: Base.Mutable } mutableImpl &&
 			mutableImpl.ImplementationTypes[0] is not GenericTypeImplementation
 			{
 				Generic.Name: Base.List
 			})
 			throw new Type.GenericTypesCannotBeUsedDirectlyUseImplementation(mutableImpl,
 				Base.Mutable + " must be used with a List implementation");
-   if (fromType.Name == Base.Dictionary && fromType.IsGeneric)
-		{
-      if (arguments.Count > 1)
-				fromType = arguments[0] is List { Values.Count: 2 } firstPair
-					? fromType.GetGenericImplementation(firstPair.Values[0].ReturnType,
-						firstPair.Values[1].ReturnType)
-					: fromType.GetGenericImplementation(arguments[0].ReturnType,
-						arguments[1].ReturnType);
-			else if (arguments.Count > 0 && arguments[0] is List { Values.Count: 2 } pair)
-				fromType = fromType.GetGenericImplementation(pair.Values[0].ReturnType,
-					pair.Values[1].ReturnType);
-		}
-		if ((fromType.Name == Base.Dictionary ||
-			fromType is GenericTypeImplementation { Generic.Name: Base.Dictionary }) &&
-      arguments.Count > 1)
-			arguments = [new List(body, arguments.ToList())];
-		else if ((fromType.Name == Base.Dictionary ||
-			fromType is GenericTypeImplementation { Generic.Name: Base.Dictionary }) &&
-			arguments.Count == 1 && arguments[0] is List { Values.Count: 2 } singlePair)
-			arguments = [new List(body, [singlePair])];
-		// For Error always fill in Name and Stacktraces and use ErrorWithValue if argument is given
-		if (fromType.IsSameOrCanBeUsedAs(fromType.GetType(Base.Error)))
-		{
-			if (arguments.Count == 0)
-				arguments =
-				[
-					new Value(body.Method.GetType(Base.Name), basedOnErrorVariable?.ToString() ??
-						(fromType.Name == Base.Error
-							? body.CurrentDeclarationNameForErrorText ?? body.Method.Name
-							: fromType.Name)),
-					CreateListFromMethodCall(body, Base.Stacktrace, CreateStacktraces(body))
-				];
-			else if (arguments.Count > 1)
-				throw new Type.ArgumentsDoNotMatchMethodParameters(arguments, fromType, fromType.Methods);
-			else if (basedOnErrorVariable != null)
-			{
-				arguments =
-				[
-					basedOnErrorVariable,
-					arguments[0]
-				];
-				fromType = fromType.GetType(Base.ErrorWithValue).
-					GetGenericImplementation(arguments[1].ReturnType);
-			}
-			else if (arguments[0] is Value { ReturnType.Name: Base.Text } textValue)
-			{
-				arguments =
-				[
-					new Value(body.Method.GetType(Base.Name), textValue.Data.ToString() ?? ""),
-					CreateListFromMethodCall(body, Base.Stacktrace, CreateStacktraces(body))
-				];
-			}
-			else
-			{
-				arguments =
-				[
-					CreateFromMethodCall(body, fromType, []),
-					arguments[0]
-				];
-				fromType = fromType.GetType(Base.ErrorWithValue).
-					GetGenericImplementation(arguments[1].ReturnType);
-			}
-		}
-		// Type can fill in Package automatically (but you need to give the name)
-		else if (fromType.Name == Base.Type && arguments.Count == 1)
-			arguments =
+	}
+
+	private static IReadOnlyList<Expression> NormalizeDictionaryArguments(Body body, Type fromType,
+		IReadOnlyList<Expression> arguments)
+	{
+		if (!fromType.IsDictionary)
+			return arguments;
+		if (arguments.Count > 1)
+			return [new List(body, arguments.ToList())];
+		return arguments.Count == 1 && arguments[0] is List { Values.Count: 2 } singlePair
+			? [new List(body, [singlePair])]
+			: arguments;
+	}
+
+	private static IReadOnlyList<Expression> NormalizeErrorArguments(Body body, ref Type fromType,
+		IReadOnlyList<Expression> arguments, Expression? basedOnErrorVariable)
+	{
+		if (!fromType.IsSameOrCanBeUsedAs(fromType.GetType(Base.Error)))
+			return arguments;
+		if (arguments.Count == 0)
+			return
 			[
+				new Value(body.Method.GetType(Base.Name), basedOnErrorVariable?.ToString() ??
+					(fromType.Name == Base.Error
+						? body.CurrentDeclarationNameForErrorText ?? body.Method.Name
+						: fromType.Name)),
+				CreateListFromMethodCall(body, Base.Stacktrace, CreateStacktraces(body))
+			];
+		if (arguments.Count > 1)
+			throw new Type.ArgumentsDoNotMatchMethodParameters(arguments, fromType, fromType.Methods); //ncrunch: no coverage
+		if (basedOnErrorVariable != null)
+		{
+			fromType = fromType.GetType(Base.ErrorWithValue).
+				GetGenericImplementation(arguments[0].ReturnType);
+			return [basedOnErrorVariable, arguments[0]];
+		}
+		if (arguments[0] is Value { ReturnType.Name: Base.Text } textValue)
+			return
+			[
+				new Value(body.Method.GetType(Base.Name), textValue.Data.ToString() ?? ""),
+				CreateListFromMethodCall(body, Base.Stacktrace, CreateStacktraces(body))
+			];
+		arguments =
+		[
+			CreateFromMethodCall(body, fromType, []),
+			arguments[0]
+		];
+		fromType = fromType.GetType(Base.ErrorWithValue).
+			GetGenericImplementation(arguments[1].ReturnType);
+		return arguments;
+	}
+
+	private static IReadOnlyList<Expression> NormalizeTypeArguments(Body body, Type fromType,
+		IReadOnlyList<Expression> arguments) =>
+		fromType.Name == Base.Type && arguments.Count == 1
+			? [
 				arguments[0].ReturnType.Name == Base.Text
 					? new Value(body.Method.GetType(Base.Name), ((Value)arguments[0]).Data)
 					: arguments[0],
 				new Text(body.Method, body.Method.Type.Package.FullName)
-			];
-		return new MethodCall(fromType.GetMethod(Method.From, arguments), null, arguments, null,
-			body.CurrentFileLineNumber);
-	}
+			]
+			: arguments;
 
 	private static Expression CreateListFromMethodCall(Body body, string listElementTypeName,
 		IReadOnlyList<Expression> arguments) =>
@@ -215,7 +229,7 @@ public class MethodCall : ConcreteExpression
 	public sealed class ConstructorForSameTypeArgumentIsNotAllowed(Body body) : ParsingFailed(body);
 
 	public override string ToString() =>
-    Instance is not null
+		Instance is not null
 			? (Instance is Binary
 				? $"({Instance})"
 				: $"{Instance}") + $".{Method.Name}{Arguments.ToBrackets()}"
@@ -223,22 +237,17 @@ public class MethodCall : ConcreteExpression
 				? Arguments[0] + "(" + Arguments[1] + ")"
 				: ReturnType.Name == Base.Error
 					? Base.Error
-         : Method.Name == Method.From &&
-						ReturnType is GenericTypeImplementation { Generic.Name: Base.Dictionary }
-							? FormatDictionaryConstructor()
-							: $"{GetProperMethodName()}{Arguments.ToBrackets()}";
+					: Method.Name == Method.From &&
+					ReturnType is GenericTypeImplementation { Generic.Name: Base.Dictionary }
+						? FormatDictionaryConstructor()
+						: $"{GetProperMethodName()}{Arguments.ToBrackets()}";
 
-	private string FormatDictionaryConstructor()
-	{
-		if (Arguments.Count == 1 && Arguments[0] is List list)
-		{
-			var argumentText = list.Values.All(value => value is List)
+	private string FormatDictionaryConstructor() =>
+		Arguments.Count == 1 && Arguments[0] is List list
+			? Base.Dictionary + (list.Values.All(value => value is List)
 				? list.Values.ToBrackets()
-				: $"({list})";
-			return Base.Dictionary + argumentText;
-		}
-		return Base.Dictionary + Arguments.ToBrackets();
-	}
+				: $"({list})")
+			: throw new NotSupportedException("Invalid Dictionary arguments: " + Arguments.ToBrackets());
 
 	private string GetProperMethodName() =>
 		Method.Name == Method.From

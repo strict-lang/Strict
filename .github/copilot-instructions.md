@@ -6,9 +6,9 @@
 - Apply Limit.cs rules with a ~2x multiplier for C#. Classes should ideally be between 100-400 lines, but classes above 500 lines should be split for better maintainability.
 - When splitting `Executor.cs`, keep high-level methods there (Execute, exceptions, DoArgumentsMatch, stackoverflow detection, arguments/instances/parameters handling, RunExpression), and move expression evaluators into separate classes unless they are single-line/simple.
 
-# Test-Driven Development (TDD)
+## Test-Driven Development (TDD)
 
-## Overview
+### Overview
 
 Write the test first. Watch it fail. Write minimal code to pass.
 
@@ -16,7 +16,7 @@ Write the test first. Watch it fail. Write minimal code to pass.
 
 **Violating the letter of the rules is violating the spirit of the rules.**
 
-## When to Use
+### When to Use
 
 **Always:**
 - New features
@@ -31,7 +31,7 @@ Write the test first. Watch it fail. Write minimal code to pass.
 
 Thinking "skip TDD just this once"? Stop. That's rationalization.
 
-## The Iron Law
+### The Iron Law
 ```
 NO PRODUCTION CODE WITHOUT A FAILING TEST FIRST
 ```
@@ -46,8 +46,7 @@ Write code before the test? Delete it. Start over.
 
 Implement fresh from tests. Period.
 
-## Red-Green-Refactor
-
+### Red-Green-Refactor
 ```dot
 digraph tdd_cycle {
     rankdir=LR;
@@ -70,7 +69,7 @@ digraph tdd_cycle {
 }
 ```
 
-### RED - Write Failing Test
+#### RED - Write Failing Test
 
 Write one minimal test showing what should happen.
 
@@ -112,7 +111,7 @@ Vague name, tests mock not code
 - Clear name
 - Real code (no mocks unless unavoidable)
 
-### Verify RED - Watch It Fail
+#### Verify RED - Watch It Fail
 
 **MANDATORY. Never skip.**
 
@@ -129,7 +128,7 @@ Confirm:
 
 **Test errors?** Fix error, re-run until it fails correctly.
 
-### GREEN - Minimal Code
+#### GREEN - Minimal Code
 
 Write simplest code to pass the test.
 
@@ -167,7 +166,7 @@ Over-engineered
 
 Don't add features, refactor other code, or "improve" beyond the test.
 
-### Verify GREEN - Watch It Pass
+#### Verify GREEN - Watch It Pass
 
 **MANDATORY.**
 
@@ -184,7 +183,7 @@ Confirm:
 
 **Other tests fail?** Fix now.
 
-### REFACTOR - Clean Up
+#### REFACTOR - Clean Up
 
 After green only:
 - Remove duplication
@@ -192,6 +191,8 @@ After green only:
 - Extract helpers
 
 Keep tests green. Don't add behavior.
+
+Refactoring can proceed without adding new tests when existing coverage is already green; new tests are only needed for red/green/yellow cycle when adding/changing behavior.
 
 ### Repeat
 
@@ -369,4 +370,4 @@ Production code → test exists and failed first
 Otherwise → not TDD
 ```
 
-No exceptions without your human partner's permission.No exceptions without your human partner's permission.
+No exceptions without your human partner's permission.

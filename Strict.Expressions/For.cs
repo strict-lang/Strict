@@ -98,7 +98,7 @@ public sealed class For(Expression[] customVariables, Expression iterator, Expre
 			body.Method.GetLinesAndStripTabs(innerBody.LineRange, body).ToWordList(Environment.NewLine);
 		var generatedLines = forExpression.ToString();
 		if (generatedLines != originalLines)
-			throw new GeneratedForExpressionDoesNotMatchInputExactly(body, forExpression, originalLines);
+			throw new GeneratedForExpressionDoesNotMatchInputExactly(body, forExpression, originalLines); //ncrunch: no coverage
 #endif
 		return forExpression;
 	}
@@ -108,10 +108,9 @@ public sealed class For(Expression[] customVariables, Expression iterator, Expre
 
 	private const string InWithSpaces = " in ";
 
-	private sealed class GeneratedForExpressionDoesNotMatchInputExactly(Body body,
-		Expression forExpression, string line) : ParsingFailed(body,
-		"\n" + forExpression.ToString().Replace("\t", "  ") + "\nOriginal lines:\n" +
-		line.Replace("\t", "  "));
+	private sealed class GeneratedForExpressionDoesNotMatchInputExactly(Body body, Expression @for,
+		string line) : ParsingFailed(body, "\n" + //ncrunch: no coverage
+		@for.ToString().Replace("\t", "  ") + "\nOriginal lines:\n" + line.Replace("\t", "  "));
 
 	private static Expression ParseWithImplicitVariable(Body body, ReadOnlySpan<char> line,
 		Body innerBody)
@@ -274,7 +273,6 @@ public sealed class For(Expression[] customVariables, Expression iterator, Expre
 	public sealed class ImmutableIterator(string iteratorVariableName, Body body)
 		: ParsingFailed(body, iteratorVariableName);
 
-	//ncrunch: no coverage start
 	public sealed class IteratorTypeDoesNotMatchWithIterable(Body body, string iteratorTypeName,
 		ReadOnlySpan<char> variable, string? variableType) : ParsingFailed(body,
 		$"Iterator {variable} type {iteratorTypeName} does not match with {variableType}");

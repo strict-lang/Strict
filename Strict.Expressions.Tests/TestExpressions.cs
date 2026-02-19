@@ -8,7 +8,7 @@ public abstract class TestExpressions : MethodExpressionParser
 	{
 		type = new Type(TestPackage.Instance, new TypeLines("dummy", "Run")).
 			ParseMembersAndMethods(this);
-		boolean = type.GetType(Base.Boolean);
+		type.GetType(Base.Boolean);
 		member = new Member(type, "logger", null);
 		type.Members.Add(member);
 		method = new Method(type, 0, this, [MethodTests.Run]);
@@ -23,7 +23,6 @@ public abstract class TestExpressions : MethodExpressionParser
 	}
 
 	protected readonly Type type;
-	protected readonly Type boolean;
 	protected readonly Member member;
 	protected readonly Method method;
 	protected readonly Method methodWithBody;
