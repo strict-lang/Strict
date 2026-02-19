@@ -89,7 +89,7 @@ public sealed class ForTests : TestExpressions
 		Assert.That(
 			((For)ParseExpression("for Range(1, 3)", "\tfor Range(1, 3)",
 				"\t\tlogger.Log(index + outer.index)")).ToString(),
-			Is.EqualTo("for Range(1, 3)" + Environment.NewLine + "\tfor range(1, 3)" +
+			Is.EqualTo("for Range(1, 3)" + Environment.NewLine + "\tfor Range(1, 3)" +
 				Environment.NewLine + "\t\tlogger.Log(index + outer.index)"));
 
 	[Test]

@@ -306,7 +306,7 @@ public class MethodExpressionParser : ExpressionParser
 		return call == null
 			? null
 			: new MemberCall(instance,
-				new Member(body.ReturnType, Type.ValueLowercase, call.ReturnType),
+        new Member(body.ReturnType, input.ToString(), call.ReturnType),
 				body.CurrentFileLineNumber);
 	}
 

@@ -152,12 +152,10 @@ public sealed class Method : Context
 		if (nameAndDefaultValue.Length < 2)
 			throw new MissingParameterDefaultValue(this, TypeLineNumber + methodLineNumber - 1,
 				nameAndTypeAsString);
-		Expression defaultValue;
-		if (methodBody != null)
-			defaultValue = ParseExpression(methodBody, nameAndDefaultValue[1]);
-		else
-			defaultValue = type.GetMemberExpression(parser, nameAndDefaultValue[0],
-				nameAndDefaultValue[1], TypeLineNumber);
+		var defaultValue = methodBody != null
+			? ParseExpression(methodBody, nameAndDefaultValue[1])
+			: type.GetMemberExpression(parser, nameAndDefaultValue[0], nameAndDefaultValue[1],
+				TypeLineNumber);
 		return new Parameter(type, nameAndDefaultValue[0], defaultValue);
 	}
 

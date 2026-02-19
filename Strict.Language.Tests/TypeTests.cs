@@ -402,6 +402,54 @@ public sealed class TypeTests
 		Assert.That(package.GetType(Base.Number).FindLineNumber("to Text"),
 			Is.EqualTo(28));
 
+	[Test]
+	public void FindFirstUnionTypeReturnsThisWhenElseTypeIsError()
+	{
+		var errorType = package.GetType(Base.Error);
+		Assert.That(appType.FindFirstUnionType(errorType), Is.EqualTo(appType));
+	}
+
+	[Test]
+	public void FindFirstUnionTypeReturnsElseTypeWhenCurrentTypeIsError()
+	{
+		var errorType = package.GetType(Base.Error);
+		var textType = package.GetType(Base.Text);
+		Assert.That(errorType.FindFirstUnionType(textType), Is.EqualTo(textType));
+	}
+
+	[Test]
+	public void FindFirstUnionTypeReturnsIteratorWhenElseTypeIsNumber()
+	{
+		var iteratorType = package.GetType(Base.List);
+		var numberType = package.GetType(Base.Number);
+		Assert.That(iteratorType.FindFirstUnionType(numberType), Is.EqualTo(iteratorType));
+	}
+
+	[Test]
+	public void FindFirstUnionTypeReturnsSharedMemberType()
+	{
+		using var firstType = CreateType(nameof(FindFirstUnionTypeReturnsSharedMemberType) + "First",
+			"has number", "Run", "\t1");
+		using var secondType = CreateType(nameof(FindFirstUnionTypeReturnsSharedMemberType) + "Second",
+			"has number", "Run", "\t1");
+		Assert.That(firstType.FindFirstUnionType(secondType),
+			Is.EqualTo(package.GetType(Base.Number)));
+	}
+
+	[Test]
+	public void FindFirstUnionTypeReturnsUnionFromTypeMember()
+	{
+		using var traitType = CreateType("UnionTrait", "Run");
+		using var memberType = CreateType("UnionMember",
+			"has unionTrait " + traitType.Name, "Run", "\t1");
+		using var firstType = CreateType("UnionFirst",
+			"has unionTrait " + traitType.Name, "Run", "\t1");
+		using var secondType = CreateType("UnionSecond",
+			"has unionMember " + memberType.Name, "Run", "\t1");
+		Assert.That(firstType.FindFirstUnionType(secondType), Is.EqualTo(traitType));
+		Assert.That(secondType.FindFirstUnionType(firstType), Is.EqualTo(traitType));
+	}
+
 	//ncrunch: no coverage start
 	[Test]
 	[Category("Slow")]

@@ -30,23 +30,13 @@ internal class TypeMethodFinder(Type type)
 
 	private Method? FindMethodWithOneOfType(string methodName, IReadOnlyList<Expression> arguments)
 	{
-		ArgumentsDoNotMatchMethodParameters? lastArgumentsMismatchException = null;
 		foreach (var subType in ((OneOfType)Type).Types)
 		{
-			try
-			{
-				var foundSubTypeMethod = subType.FindMethod(methodName, arguments);
-				if (foundSubTypeMethod != null)
-					return foundSubTypeMethod;
-			}
-			catch (ArgumentsDoNotMatchMethodParameters argumentsMismatch)
-			{
-				lastArgumentsMismatchException = argumentsMismatch;
-			}
-		}
-		return lastArgumentsMismatchException != null
-			? throw lastArgumentsMismatchException
-			: null;
+			var foundSubTypeMethod = subType.FindMethod(methodName, arguments);
+			if (foundSubTypeMethod != null)
+				return foundSubTypeMethod;
+		} //ncrunch: no coverage
+		return null; //ncrunch: no coverage
 	}
 
 	private Method? FindMethodWithType(string methodName, IReadOnlyList<Expression> arguments)
@@ -131,7 +121,7 @@ internal class TypeMethodFinder(Type type)
 			return true;
 		if (method is { Name: Method.From, Parameters.Count: 0 } && typesOfArguments.Count == 1 &&
 			method.ReturnType.IsSameOrCanBeUsedAs(typesOfArguments[0], false))
-			return true;
+			return true; //ncrunch: no coverage
 		if (typesOfArguments.Count > method.Parameters.Count || typesOfArguments.Count <
 			method.Parameters.Count(p => p.DefaultValue == null))
 			return false;

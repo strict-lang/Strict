@@ -89,15 +89,15 @@ public sealed class TypeParser(Type type, string[] lines)
 				m.Name == method.Name && m.ReturnType == method.ReturnType && m.Parameters.
 					Select(p => p.Type).SequenceEqual(method.Parameters.Select(p => p.Type)));
 			if (existingMethod != null)
-				throw new MethodWithSameNameAndParameterCountAlreadyExists(type, methodFirstLineNumber,
-					method, existingMethod);
+				throw new MethodWithSameNameAndParameterCountAlreadyExists(type, //ncrunch: no coverage
+					methodFirstLineNumber, method, existingMethod);
 			type.Methods.Add(method);
 		}
 	}
 
 	public sealed class MethodWithSameNameAndParameterCountAlreadyExists(Type type,
 		int lineNumber, Method method, Method existingMethod)
-		: ParsingFailed(type, lineNumber, method.ToString(), existingMethod.ToString());
+		: ParsingFailed(type, lineNumber, method.ToString(), existingMethod.ToString()); //ncrunch: no coverage
 
 	/// <summary>
 	/// If a from(...) method contains a same-type constructor call like TypeName(constant) and the

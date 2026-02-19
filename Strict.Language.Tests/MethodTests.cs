@@ -192,6 +192,13 @@ public sealed class MethodTests
 	}
 
 	[Test]
+	public void MethodParameterDefaultValueForTraitMethod()
+	{
+		var method = new Method(type, 0, parser, ["Run(input = \"Hello\")"]);
+		Assert.That(method.Parameters[0].DefaultValue, Is.EqualTo(new Text(type, "Hello")));
+	}
+
+	[Test]
 	public void ImmutableMethodParameterValueCannotBeChanged()
 	{
 		var method = new Method(type, 0, parser, ["Run(input = \"Hello\")", "	input = \"Hi\""]);

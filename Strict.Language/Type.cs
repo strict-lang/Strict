@@ -410,17 +410,17 @@ public class Type : Context, IDisposable
 				m is { IsPublic: false, InitialValue: null } && !IsTraitImplementation(m.Type)))
 				AddNonGenericMethods(member.Type);
 			if (members.Count > 0 && members.Any(m => !m.Type.IsGeneric && !m.IsConstant) &&
-					methods.All(m => m.Name != Method.From))
-					AddFromConstructorWithMembersAsArguments(methods.Count > 0
-						? methods[0].Parser
-						: GetType(Base.Any).AvailableMethods.First().Value[0].Parser);
-				if (this is GenericTypeImplementation dictImpl &&
-					dictImpl.Generic.Name == Base.Dictionary &&
-					dictImpl.Generic.AvailableMethods.TryGetValue(Method.From, out var genericFromMethods) &&
-					cachedAvailableMethods!.TryGetValue(Method.From, out var existingFromMethods))
-					foreach (var fromMethod in genericFromMethods)
-						existingFromMethods.Add(new Method(fromMethod, dictImpl));
-				AddAnyMethods();
+				methods.All(m => m.Name != Method.From))
+				AddFromConstructorWithMembersAsArguments(methods.Count > 0
+					? methods[0].Parser
+					: GetType(Base.Any).AvailableMethods.First().Value[0].Parser);
+			if (this is GenericTypeImplementation dictImpl &&
+				dictImpl.Generic.Name == Base.Dictionary &&
+				dictImpl.Generic.AvailableMethods.TryGetValue(Method.From, out var genericFromMethods) &&
+				cachedAvailableMethods!.TryGetValue(Method.From, out var existingFromMethods))
+				foreach (var fromMethod in genericFromMethods)
+					existingFromMethods.Add(new Method(fromMethod, dictImpl));
+			AddAnyMethods();
 			return cachedAvailableMethods;
 		}
 	}
@@ -559,7 +559,7 @@ public class Type : Context, IDisposable
 	/// Helper for method parameters default values, which don't have a methodBody to parse, but
 	/// we still need some basic parsing to assign default values.
 	/// </summary>
-	public Expression GetMemberExpression(ExpressionParser parser, string memberName,
+	internal Expression GetMemberExpression(ExpressionParser parser, string memberName,
 		string remainingTextSpan, int typeLineNumber) =>
 		typeParser.GetMemberExpression(parser, memberName, remainingTextSpan, typeLineNumber);
 
