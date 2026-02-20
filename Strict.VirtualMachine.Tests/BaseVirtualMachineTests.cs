@@ -190,7 +190,7 @@ public class BaseVirtualMachineTests : TestExpressions
 		new Binary(Instruction.Subtract, Register.R13, Register.R14, Register.R15),
 		new StoreFromRegisterStatement(Register.R15, "count"),
 		new JumpToId(Instruction.JumpEnd, 2),
-		new IterationEnd(29),
+		new LoopEndStatement(29),
 		new LoadVariableToRegister(Register.R0, "result"),
 		new Return(Register.R0)
 	];
@@ -238,13 +238,12 @@ public class BaseVirtualMachineTests : TestExpressions
 		new LoadVariableToRegister(Register.R1, "result"),
 		new LoadConstantStatement(Register.R2, new Instance(TextType, "-")),
 		new Binary(Instruction.Add, Register.R1, Register.R2, Register.R3),
-		new LoadVariableToRegister(Register.R4, "value"),
-		new Conversion(Register.R4, Register.R5, TextType, Instruction.ToText),
-		new Binary(Instruction.Add, Register.R3, Register.R5, Register.R6),
-		new StoreFromRegisterStatement(Register.R6, "result"),
-		new IterationEnd(9),
-		new LoadVariableToRegister(Register.R7, "result"),
-		new Return(Register.R7)
+		new Invoke("value to Text", Register.R4),
+		new Binary(Instruction.Add, Register.R3, Register.R4, Register.R5),
+		new StoreFromRegisterStatement(Register.R5, "result"),
+		new LoopEndStatement(8),
+		new LoadVariableToRegister(Register.R6, "result"),
+		new Return(Register.R6)
 	];
 
 	protected MethodCall GenerateMethodCallFromSource(string programName, string methodCall,

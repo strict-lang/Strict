@@ -2,18 +2,12 @@ using Strict.Expressions;
 
 namespace Strict.Runtime.Statements;
 
-public sealed class Invoke : RegisterStatement
+public sealed class Invoke(MethodCall method, Register register, Registry persistedRegistry)
+	: RegisterStatement(Instruction.Invoke, register)
 {
-	public Invoke(MethodCall method, Register register, Registry persistedRegistry)
-		: base(Instruction.Invoke, register)
-	{
-		Method = method;
-		PersistedRegistry = persistedRegistry;
-	}
-
 	// Used for test comparisons only (ToString gives same result as the full constructor)
-	public Invoke(string _, Register register) : base(Instruction.Invoke, register) { }
+	public Invoke(string _, Register register) : this(null!, register, null!) { }
 
-	public MethodCall? Method { get; }
-	public Registry? PersistedRegistry { get; }
+	public MethodCall? Method { get; } = method;
+	public Registry? PersistedRegistry { get; } = persistedRegistry;
 }

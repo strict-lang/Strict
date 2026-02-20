@@ -12,6 +12,9 @@ public sealed class BytecodeInterpreter
 	public BytecodeInterpreter Execute(IList<Statement> allStatements)
 	{
 		Clear();
+		// Reset loop state that lives on LoopBeginStatement objects
+		foreach (var loopBegin in allStatements.OfType<LoopBeginStatement>())
+			loopBegin.Reset();
 		return RunStatements(allStatements);
 	}
 
@@ -19,8 +22,6 @@ public sealed class BytecodeInterpreter
 	{
 		conditionFlag = false;
 		instructionIndex = 0;
-		iteratorInitialized = false;
-		loopIterationNumber = 0;
 		statements.Clear();
 		Returns = null;
 		Memory.Registers.Clear();
@@ -29,8 +30,6 @@ public sealed class BytecodeInterpreter
 
 	private bool conditionFlag;
 	private int instructionIndex;
-	private bool iteratorInitialized;
-	private int loopIterationNumber;
 	private IList<Statement> statements = new List<Statement>();
 	public Instance? Returns { get; private set; }
 	// ReSharper disable once AutoPropertyCanBeMadeGetOnly.Local
@@ -53,11 +52,9 @@ public sealed class BytecodeInterpreter
 		TryStoreInstructions(statement);
 		TryLoadInstructions(statement);
 		TryLoopInitInstruction(statement);
-		TryLoopRangeInitInstruction(statement);
 		TryLoopEndInstruction(statement);
 		TryInvokeInstruction(statement);
 		TryWriteToListInstruction(statement);
-		TryConversionStatement(statement);
 		TryWriteToTableInstruction(statement);
 		TryRemoveStatement(statement);
 		TryExecuteListCall(statement);
@@ -95,20 +92,6 @@ public sealed class BytecodeInterpreter
 			new Instance(variableListElement.ReturnType, variableListElement);
 	}
 
-	private void TryConversionStatement(Statement statement)
-	{
-		if (statement is not Conversion conversionStatement)
-			return;
-		var instanceToBeConverted = Memory.Registers[conversionStatement.Register].GetRawValue();
-		if (conversionStatement.ConversionType.Name == Base.Text)
-			Memory.Registers[conversionStatement.RegisterToStoreConversion] = new Instance(
-				conversionStatement.ConversionType,
-				instanceToBeConverted.ToString() ?? throw new InvalidOperationException());
-		else if (conversionStatement.ConversionType.Name == Base.Number)
-			Memory.Registers[conversionStatement.RegisterToStoreConversion] = new Instance(
-				conversionStatement.ConversionType, Convert.ToDecimal(instanceToBeConverted));
-	}
-
 	private void TryWriteToTableInstruction(Statement statement)
 	{
 		if (statement is not WriteToTableStatement writeToTableStatement)
@@ -127,12 +110,14 @@ public sealed class BytecodeInterpreter
 
 	private void TryLoopEndInstruction(Statement statement)
 	{
-		if (statement is not IterationEnd iterationEndStatement)
+		if (statement is not LoopEndStatement loopEndStatement)
 			return;
-		loopIterationNumber--;
-		if (loopIterationNumber <= 0)
+		// Find the most recently started loop by scanning backward
+		var loopBegin = statements.Take(instructionIndex).OfType<LoopBeginStatement>().Last();
+		loopBegin.LoopCount--;
+		if (loopBegin.LoopCount <= 0)
 			return;
-		instructionIndex -= iterationEndStatement.Steps + 1;
+		instructionIndex -= loopEndStatement.Steps + 1;
 	}
 
 	private void TryInvokeInstruction(Statement statement)
@@ -140,6 +125,8 @@ public sealed class BytecodeInterpreter
 		if (statement is not Invoke { Method: not null } invokeStatement)
 			return;
 		if (TryCreateEmptyDictionaryInstance(invokeStatement))
+			return;
+		if (TryHandleToConversion(invokeStatement))
 			return;
 		if (GetValueByKeyForDictionaryAndStoreInRegister(invokeStatement))
 			return;
@@ -156,6 +143,29 @@ public sealed class BytecodeInterpreter
 		}.RunStatements(methodStatements).Returns;
 		if (instance != null)
 			Memory.Registers[invokeStatement.Register] = instance;
+	}
+
+	/// <summary>Handles `value to Text` and `value to Number` method calls via the `To` expression.</summary>
+	private bool TryHandleToConversion(Invoke invoke)
+	{
+		if (invoke.Method?.Method.Name != BinaryOperator.To)
+			return false;
+		var instanceExpr = invoke.Method.Instance ?? throw new InvalidOperationException();
+		object rawValue;
+		if (instanceExpr is Value constValue)
+			rawValue = constValue.Data;
+		else if (Memory.Variables.TryGetValue(instanceExpr.ToString(), out var varValue))
+			rawValue = varValue.GetRawValue()!;
+		else
+			throw new InvalidOperationException();
+		var conversionType = invoke.Method.ReturnType;
+		if (conversionType.Name == Base.Text)
+			Memory.Registers[invoke.Register] = new Instance(conversionType,
+				rawValue?.ToString() ?? "");
+		else if (conversionType.Name == Base.Number)
+			Memory.Registers[invoke.Register] = new Instance(conversionType,
+				Convert.ToDecimal(rawValue));
+		return true;
 	}
 
 	private bool TryCreateEmptyDictionaryInstance(Invoke invoke)
@@ -251,60 +261,50 @@ public sealed class BytecodeInterpreter
 
 	private void TryLoopInitInstruction(Statement statement)
 	{
-		if (statement is not LoopBeginStatement initLoopStatement)
+		if (statement is not LoopBeginStatement loopBeginStatement)
 			return;
-		ProcessLoopIndex();
-		Memory.Registers.TryGetValue(initLoopStatement.Register, out var iterableVariable);
-		if (iterableVariable is null)
-			return; //ncrunch: no coverage
-		if (!iteratorInitialized)
-			InitializeIterator(
-				iterableVariable);
-		AlterValueVariable(iterableVariable);
-	}
-
-	private void TryLoopRangeInitInstruction(Statement statement)
-	{
-		if (statement is not LoopRangeBeginStatement loopRangeStatement)
-			return;
-		if (Memory.Variables.ContainsKey("index"))
-			Memory.Variables["index"].Value = Convert.ToInt32(Memory.Variables["index"].Value) +
-				(IsRangeDecreasing(loopRangeStatement)
-					? -1
-					: 1);
+		if (loopBeginStatement.IsRange)
+			ProcessRangeLoopIteration(loopBeginStatement);
 		else
-			Memory.Variables.Add("index", Memory.Registers[loopRangeStatement.StartIndex]);
-		Memory.Variables["value"] = Memory.Variables["index"];
-		if (!iteratorInitialized)
-			InitializeRangeIterator(loopRangeStatement);
+			ProcessCollectionLoopIteration(loopBeginStatement);
 	}
 
-	private bool IsRangeDecreasing(LoopRangeBeginStatement loopRangeStatement) =>
-		Memory.Registers[loopRangeStatement.EndIndex] <
-		Memory.Registers[loopRangeStatement.StartIndex];
-
-	private void ProcessLoopIndex()
+	private void ProcessCollectionLoopIteration(LoopBeginStatement loopBeginStatement)
 	{
 		if (Memory.Variables.ContainsKey("index"))
 			Memory.Variables["index"].Value = Convert.ToInt32(Memory.Variables["index"].Value) + 1;
 		else
 			Memory.Variables.Add("index", new Instance(Base.Number, 0));
+		Memory.Registers.TryGetValue(loopBeginStatement.Register, out var iterableVariable);
+		if (iterableVariable is null)
+			return; //ncrunch: no coverage
+		if (!loopBeginStatement.IsInitialized)
+		{
+			loopBeginStatement.LoopCount = GetLength(iterableVariable);
+			loopBeginStatement.IsInitialized = true;
+		}
+		AlterValueVariable(iterableVariable);
 	}
 
-	private void InitializeIterator(Instance iterableVariable)
+	private void ProcessRangeLoopIteration(LoopBeginStatement loopBeginStatement)
 	{
-		loopIterationNumber = GetLength(iterableVariable);
-		iteratorInitialized = true;
-	}
-
-	private void InitializeRangeIterator(LoopRangeBeginStatement loopRangeBeginStatement)
-	{
-		var startIndex = Convert.ToInt32(Memory.Registers[loopRangeBeginStatement.StartIndex].Value);
-		var endIndex = Convert.ToInt32(Memory.Registers[loopRangeBeginStatement.EndIndex].Value);
-		loopIterationNumber = (IsRangeDecreasing(loopRangeBeginStatement)
-			? startIndex - endIndex
-			: endIndex - startIndex) + 1;
-		iteratorInitialized = true;
+		var isDecreasing = Memory.Registers[loopBeginStatement.EndIndex!.Value] <
+			Memory.Registers[loopBeginStatement.Register];
+		if (Memory.Variables.ContainsKey("index"))
+			Memory.Variables["index"].Value = Convert.ToInt32(Memory.Variables["index"].Value) +
+				(isDecreasing ? -1 : 1);
+		else
+			Memory.Variables.Add("index", Memory.Registers[loopBeginStatement.Register]);
+		Memory.Variables["value"] = Memory.Variables["index"];
+		if (!loopBeginStatement.IsInitialized)
+		{
+			var startIndex = Convert.ToInt32(Memory.Registers[loopBeginStatement.Register].Value);
+			var endIndex = Convert.ToInt32(Memory.Registers[loopBeginStatement.EndIndex.Value].Value);
+			loopBeginStatement.LoopCount = (isDecreasing
+				? startIndex - endIndex
+				: endIndex - startIndex) + 1;
+			loopBeginStatement.IsInitialized = true;
+		}
 	}
 
 	private static int GetLength(Instance iterableInstance)

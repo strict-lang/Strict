@@ -1,6 +1,6 @@
 namespace Strict.Runtime.Statements;
 
-public sealed class IterationEnd(int steps) : Statement(Instruction.IterationEnd)
+public sealed class LoopEndStatement(int steps) : Statement(Instruction.LoopEnd)
 {
 	public int Steps { get; } = steps;
 }

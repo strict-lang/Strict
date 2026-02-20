@@ -115,7 +115,7 @@ public sealed class ByteCodeGeneratorTests : BaseVirtualMachineTests
 					new LoadVariableToRegister(Register.R2, "multiplier"),
 					new Binary(Instruction.Multiply, Register.R1, Register.R2, Register.R3),
 					new StoreFromRegisterStatement(Register.R3, "result"),
-					new IterationEnd(7),
+					new LoopEndStatement(7),
 					new LoadVariableToRegister(Register.R4, "result"),
 					new Return(Register.R4)
 				}, SimpleLoopExample);

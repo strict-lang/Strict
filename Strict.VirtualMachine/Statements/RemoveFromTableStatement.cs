@@ -1,7 +1,7 @@
 namespace Strict.Runtime.Statements;
 
 public sealed class RemoveFromTableStatement(Register key, string identifier)
-	: RegisterStatement(Instruction.RemoveFromTable, key)
+	: RegisterStatement(Instruction.Invoke, key)
 {
 	public string Identifier { get; } = identifier;
 }

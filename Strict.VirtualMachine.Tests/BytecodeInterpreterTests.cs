@@ -135,7 +135,7 @@ public class BytecodeInterpreterTests : BaseVirtualMachineTests
 				new LoadVariableToRegister(Register.R3, "multiplier"),
 				new Binary(Instruction.Multiply, Register.R2, Register.R3, Register.R4),
 				new StoreFromRegisterStatement(Register.R4, "result"),
-				new IterationEnd(5),
+				new LoopEndStatement(5),
 				new LoadVariableToRegister(Register.R5, "result"), new Return(Register.R5)
 			]).Returns?.Value, Is.EqualTo(1024));
 

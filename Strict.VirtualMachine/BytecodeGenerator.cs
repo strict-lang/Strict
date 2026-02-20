@@ -126,22 +126,11 @@ public sealed class ByteCodeGenerator
 
 	private bool? TryGenerateToOperatorStatement(Expression expression)
 	{
-		if (expression is not To toExpression)
+		if (expression is not To)
 			return null;
-		if (toExpression.Instance == null)
-			return null;
-		GenerateStatementsFromExpression(toExpression.Instance);
-		statements.Add(new Conversion(registry.PreviousRegister, registry.AllocateRegister(),
-			toExpression.ConversionType, GetInstructionForConversionType(toExpression.ConversionType)));
-		return true;
+		// To is a MethodCall - generate as Invoke (interpreter handles conversion)
+		return TryGenerateMethodCallStatement(expression);
 	}
-
-	private static Instruction GetInstructionForConversionType(Type conversionType) =>
-		conversionType.Name switch
-		{
-			Base.Text => Instruction.ToText,
-			_ => Instruction.ToNumber
-		};
 
 	private bool? TryGenerateVariableCallStatement(Expression expression)
 	{
@@ -321,23 +310,23 @@ public sealed class ByteCodeGenerator
 		var statementCountBeforeLoopStart = statements.Count;
 		if (forExpression.Iterator is MethodCall rangeExpression &&
 			forExpression.Iterator.ReturnType.Name == Base.Range && rangeExpression.Method.Name == Method.From)
-			GenerateStatementForLoopRangeInstruction(rangeExpression);
+			GenerateStatementForRangeLoopInstruction(rangeExpression);
 		else
 		{
 			GenerateStatementsFromExpression(forExpression.Iterator);
 			statements.Add(new LoopBeginStatement(registry.PreviousRegister));
 		}
 		GenerateStatementsForLoopBody(forExpression);
-		statements.Add(new IterationEnd(statements.Count - statementCountBeforeLoopStart));
+		statements.Add(new LoopEndStatement(statements.Count - statementCountBeforeLoopStart));
 	}
 
-	private void GenerateStatementForLoopRangeInstruction(MethodCall rangeExpression)
+	private void GenerateStatementForRangeLoopInstruction(MethodCall rangeExpression)
 	{
 		GenerateStatementsFromExpression(rangeExpression.Arguments[0]);
 		var startIndexRegister = registry.PreviousRegister;
 		GenerateStatementsFromExpression(rangeExpression.Arguments[1]);
 		var endIndexRegister = registry.PreviousRegister;
-		statements.Add(new LoopRangeBeginStatement(startIndexRegister, endIndexRegister));
+		statements.Add(new LoopBeginStatement(startIndexRegister, endIndexRegister));
 	}
 
 	private void GenerateStatementsForLoopBody(For forExpression)
