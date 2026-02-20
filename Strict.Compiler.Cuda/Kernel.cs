@@ -1,6 +1,4 @@
-﻿using System;
-using System.IO;
-using ManagedCuda;
+﻿using ManagedCuda;
 using ManagedCuda.CudaBlas;
 using ManagedCuda.NVRTC;
 
@@ -8,8 +6,7 @@ namespace Strict.Compiler.Cuda;
 
 public class Kernel : IDisposable
 {
-	public Kernel() => Context = new CudaContext(0);
-	public CudaContext Context { get; }
+	public CudaContext Context { get; } = new(0);
 	public CudaBlas Handle => handle ??= new();
 	private CudaBlas? handle;
 
@@ -43,7 +40,7 @@ public class Kernel : IDisposable
 			// see http://docs.nvidia.com/cuda/nvrtc/index.html for usage and options
 			//https://arnon.dk/matching-sm-architectures-arch-and-gencode-for-various-nvidia-cards/
 			//nvcc .\vectorAdd.cu -use_fast_math -ptx -m 64 -arch compute_61 -code sm_61 -o .\vectorAdd.ptx
-			rtc.Compile(new[] { "--gpu-architecture=compute_61" });
+			rtc.Compile(["--gpu-architecture=compute_61"]);
 			result = nvrtcResult.Success;
 		}
 		catch (NVRTCException ex)
@@ -55,7 +52,7 @@ public class Kernel : IDisposable
 
 	private static void GeneratePtxOutputFile(CudaRuntimeCompiler rtc)
 	{ //we could consume right away, this could be done in for caching or in the background for next usage
-		using var file = new StreamWriter(@"VectorAdd.ptx");
+		using var file = new StreamWriter("VectorAdd.ptx");
 		file.Write(rtc.GetPTXAsString());
 	}
 }

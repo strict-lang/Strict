@@ -1,39 +1,40 @@
-﻿using NUnit.Framework;
-using Strict.Language.Expressions;
-
-namespace Strict.Language.Tests;
+﻿namespace Strict.Language.Tests;
 
 public sealed class EnumTests
 {
 	[SetUp]
 	public void CreatePackageAndParser()
 	{
-		package = new TestPackage();
 		parser = new MethodExpressionParser();
-		new Type(package,
-			new TypeLines("Connection", "has Google = \"https://google.com\"",
-				"has Microsoft = \"https://microsoft.com\"")).ParseMembersAndMethods(parser);
-		CreateInstructionEnumType();
+		connectionType = new Type(TestPackage.Instance,
+			new TypeLines("Connection", "constant Google = \"https://google.com\"",
+				"constant Microsoft = \"https://microsoft.com\"")).ParseMembersAndMethods(parser);
+		instructionType = new Type(TestPackage.Instance,
+			new TypeLines("Instruction", "constant Set", "constant Add", "constant Subtract",
+				"constant Multiply", "constant Divide", "constant BinaryOperatorsSeparator = 100",
+				"constant GreaterThan", "constant LessThan", "constant Equal", "constant NotEqual",
+				"constant ConditionalSeparator", "constant JumpIfTrue", "constant JumpIfFalse",
+				"constant JumpIfNotZero", "constant JumpsSeparator = 300")).ParseMembersAndMethods(parser);
 	}
 
-	private void CreateInstructionEnumType() =>
-		new Type(package,
-			new TypeLines("Instruction", "has Set = 1", "has Add = 2", "has Subtract = 3",
-				"has Multiply = 4", "has Divide = 5", "has BinaryOperatorsSeparator = 100",
-				"has GreaterThan = 6", "has LessThan = 7", "has Equal = 8", "has NotEqual = 9",
-				"has ConditionalSeparator = 200", "has JumpIfTrue = 10", "has JumpIfFalse = 11",
-				"has JumpIfNotZero = 12", "has JumpsSeparator = 300")).ParseMembersAndMethods(parser);
-
-	private Package package = null!;
 	private ExpressionParser parser = null!;
+	private Type connectionType = null!;
+	private Type instructionType = null!;
 
-	[TestCase(true, "has Set = 1", "has Add = 2")]
-	[TestCase(false, "has log", "has number")]
-	[TestCase(false, "has log", "has boolean")]
-	[TestCase(false, "has log", "Run", "\t5")]
+	[TearDown]
+	public void TearDown()
+	{
+		TestPackage.Instance.Remove(connectionType);
+		TestPackage.Instance.Remove(instructionType);
+	}
+
+	[TestCase(true, "constant Set", "constant Add")]
+	[TestCase(false, "has logger", "has number")]
+	[TestCase(false, "has logger", "constant Add")]
+	[TestCase(false, "has logger", "Run", "\t5")]
 	public void CheckTypeIsEnum(bool expected, params string[] lines)
 	{
-		var type = new Type(package,
+		using var type = new Type(TestPackage.Instance,
 			new TypeLines(nameof(CheckTypeIsEnum), lines)).ParseMembersAndMethods(parser);
 		Assert.That(type.IsEnum, Is.EqualTo(expected));
 	}
@@ -41,11 +42,13 @@ public sealed class EnumTests
 	[Test]
 	public void UseEnumWithoutConstructor()
 	{
-		var consumingType = new Type(package,
-			new TypeLines(nameof(UseEnumWithoutConstructor), "has log",
-				"Run", "\tconstant url = Connection.Google")).ParseMembersAndMethods(parser);
-		var assignment = (ConstantDeclaration)consumingType.Methods[0].GetBodyAndParseIfNeeded();
-		Assert.That(assignment.Value, Is.InstanceOf<MemberCall>()!);
+		var consumingType = new Type(TestPackage.Instance,
+				new TypeLines(nameof(UseEnumWithoutConstructor), "has logger", "Run",
+					"\tconstant url = Connection.Google", "\turl is Connection")).
+			ParseMembersAndMethods(parser);
+		var body = (Body)consumingType.Methods[^1].GetBodyAndParseIfNeeded();
+		var assignment = (Declaration)body.Expressions[0];
+		Assert.That(assignment.Value, Is.InstanceOf<MemberCall>());
 		var member = ((MemberCall)assignment.Value).Member;
 		Assert.That(member.Name, Is.EqualTo("Google"));
 		Assert.That(member.Type.Name, Is.EqualTo("Text"));
@@ -54,11 +57,11 @@ public sealed class EnumTests
 	[Test]
 	public void UseEnumAsMemberWithoutConstructor()
 	{
-		var consumingType = new Type(package,
-			new TypeLines(nameof(UseEnumWithoutConstructor), "has url = Connection.Google",
+		var consumingType = new Type(TestPackage.Instance,
+			new TypeLines(nameof(UseEnumAsMemberWithoutConstructor), "constant url = Connection.Google",
 				"Run", "\t5")).ParseMembersAndMethods(parser);
-		Assert.That(consumingType.Members[0].Value, Is.InstanceOf<MemberCall>());
-		var memberCall = (MemberCall)consumingType.Members[0].Value!;
+		Assert.That(consumingType.Members[0].InitialValue, Is.InstanceOf<MemberCall>());
+		var memberCall = (MemberCall)consumingType.Members[0].InitialValue!;
 		Assert.That(memberCall.Member.Name, Is.EqualTo("Google"));
 		Assert.That(consumingType.Members[0].Type.Name, Is.EqualTo("Text"));
 	}
@@ -66,14 +69,16 @@ public sealed class EnumTests
 	[Test]
 	public void EnumWithoutValuesUsedAsMemberAndVariable()
 	{
-		var consumingType = new Type(package,
-				new TypeLines(nameof(EnumWithoutValuesUsedAsMemberAndVariable),
-					"has something = Instruction.Add", "Run", "\tconstant myInstruction = Instruction.Set")).
-			ParseMembersAndMethods(parser);
+		var consumingType = new Type(TestPackage.Instance,
+			new TypeLines(nameof(EnumWithoutValuesUsedAsMemberAndVariable),
+				"has something = Instruction.Add", "Run",
+				"\tconstant myInstruction = Instruction.Set",
+				"\tmyInstruction is Instruction")).ParseMembersAndMethods(parser);
 		Assert.That(consumingType.GetType("Instruction").IsEnum, Is.True);
-		Assert.That(((MemberCall)consumingType.Members[0].Value!).Member.Name, Is.EqualTo("Add"));
-		var assignment = (ConstantDeclaration)consumingType.Methods[0].GetBodyAndParseIfNeeded();
-		Assert.That(assignment.Value, Is.InstanceOf<MemberCall>()!);
+		Assert.That(((MemberCall)consumingType.Members[0].InitialValue!).Member.Name, Is.EqualTo("Add"));
+		var body = (Body)consumingType.Methods[0].GetBodyAndParseIfNeeded();
+		var assignment = (Declaration)body.Expressions[0];
+		Assert.That(assignment.Value, Is.InstanceOf<MemberCall>());
 		var member = ((MemberCall)assignment.Value).Member;
 		Assert.That(member.Name, Is.EqualTo("Set"));
 		Assert.That(member.Type.Name, Is.EqualTo("Number"));
@@ -82,7 +87,7 @@ public sealed class EnumTests
 	[Test]
 	public void CompareEnums()
 	{
-		var consumingType = new Type(package,
+		var consumingType = new Type(TestPackage.Instance,
 				new TypeLines(nameof(CompareEnums),
 					"has receivedInstruction = Instruction.Add",
 					"ExecuteInstruction(numbers) Number",
@@ -93,37 +98,35 @@ public sealed class EnumTests
 		Assert.That(ifExpression.Condition.ReturnType.Name, Is.EqualTo(Base.Boolean));
 		var binary = (Binary)ifExpression.Condition;
 		Assert.That(((MemberCall)binary.Arguments[0]).Member.Name, Is.EqualTo("Add"));
-		Assert.That(((MemberCall)((MemberCall)binary.Instance!).Member.Value!).Member.Name,
+		Assert.That(((MemberCall)((MemberCall)binary.Instance!).Member.InitialValue!).Member.Name,
 			Is.EqualTo("Add"));
 	}
 
 	[Test]
 	public void UseEnumAsMethodParameters()
 	{
-		var consumingType = new Type(package,
+		var consumingType = new Type(TestPackage.Instance,
 				new TypeLines(nameof(UseEnumAsMethodParameters),
-					"has log",
+					"has logger",
 					"ExecuteInstruction(numbers, instruction) Number",
 					"\tif instruction is Instruction.Add",
 					"\t\treturn numbers(0) + numbers(1)",
 					"CallExecute Number",
-					"\tconstant result = ExecuteInstruction((1, 2), Instruction.Add)")).
+					"\tExecuteInstruction((1, 2), Instruction.Add)")).
 			ParseMembersAndMethods(parser);
 		consumingType.Methods[0].GetBodyAndParseIfNeeded();
-		var result = (ConstantDeclaration)consumingType.Methods[1].GetBodyAndParseIfNeeded();
-		Assert.That(result.Value, Is.InstanceOf<MethodCall>());
-		Assert.That(((MemberCall)((MethodCall)result.Value).Arguments[1]).Member.Name,
-			Is.EqualTo("Add"));
+		var result = (MethodCall)consumingType.Methods[1].GetBodyAndParseIfNeeded();
+		Assert.That(((MemberCall)result.Arguments[1]).Member.Name, Is.EqualTo("Add"));
 	}
 
 	[Test]
 	public void EnumCanHaveMembersWithDifferentTypes()
 	{
-		var type = new Type(package,
+		var type = new Type(TestPackage.Instance,
 				new TypeLines(nameof(EnumCanHaveMembersWithDifferentTypes),
-					"has One = 1",
-					"has SomeText = \"2\"",
-					"has InputFile = File(\"test.txt\")")).
+					"constant One",
+					"constant SomeText = \"2\"",
+					"constant InputFile = File(\"test.txt\")")).
 			ParseMembersAndMethods(parser);
 		Assert.That(type.IsEnum, Is.EqualTo(true));
 	}
@@ -131,19 +134,27 @@ public sealed class EnumTests
 	[Test]
 	public void UseEnumExtensions()
 	{
-		new Type(package,
-				new TypeLines("MoreInstruction",
-					"has instruction = 13",
-					"has BlaDivide = 14",
-					"has BlaBinaryOperatorsSeparator = 15",
-					"has BlaGreaterThan = 16",
-					"has BlaLessThan = 17")).
-			ParseMembersAndMethods(parser);
-		var body = (Body)new Type(package,
-				new TypeLines(nameof(UseEnumExtensions), "has log", "UseExtendedEnum(instruction) Number",
-					"\tconstant result = instruction to MoreInstruction",
-					"\tresult.BlaDivide")).ParseMembersAndMethods(parser).
-			Methods[0].GetBodyAndParseIfNeeded();
+		new Type(TestPackage.Instance,
+			new TypeLines("MoreInstruction", "has instruction", "constant BlaDivide = 14",
+				"constant BlaBinaryOperatorsSeparator", "constant BlaGreaterThan",
+				"constant BlaLessThan")).ParseMembersAndMethods(parser);
+		var body = (Body)new Type(TestPackage.Instance,
+				new TypeLines(nameof(UseEnumExtensions), "has logger", "UseExtendedEnum(instruction) Number",
+					"\tlet result = instruction to MoreInstruction", "\tresult.BlaDivide")).
+			ParseMembersAndMethods(parser).Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(body.Expressions[1].ToString(), Is.EqualTo("result.BlaDivide"));
+	}
+
+	[Test]
+	public void EnumConstantsCanBeUsedDirectly()
+	{
+		var type =
+			new Type(TestPackage.Instance,
+				new TypeLines(nameof(EnumConstantsCanBeUsedDirectly), "has instruction", "Run",
+					"\tInstruction.Multiply is not instruction")).ParseMembersAndMethods(parser);
+		var method = type.FindMethod("Run", []);
+		Assert.That(method, Is.Not.Null);
+		var call = (MethodCall)method!.GetBodyAndParseIfNeeded();
+		Assert.That(call.ToString(), Is.EqualTo("Instruction.Multiply is not instruction"));
 	}
 }

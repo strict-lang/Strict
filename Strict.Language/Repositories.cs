@@ -1,11 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.IO.Compression;
-using System.Linq;
-using System.Net.Http;
+﻿using System.IO.Compression;
 using System.Runtime.CompilerServices;
-using System.Threading.Tasks;
 using LazyCache;
 
 [assembly: InternalsVisibleTo("Strict.Compiler.Tests")]
@@ -13,7 +7,7 @@ using LazyCache;
 namespace Strict.Language;
 
 /// <summary>
-/// Loads packages from url (like github) and caches it to disc for the current and subsequent
+/// Loads packages from url (like GitHub) and caches it to disc for the current and subsequent
 /// runs. Next time Repositories is created, we will check for outdated cache and delete the zip
 /// files to allow redownloading fresh files. All locally cached packages and all types in them
 /// are always available for any .strict file in the Editor. If a type is not found,
@@ -24,7 +18,7 @@ public sealed class Repositories
 {
 	/// <summary>
 	/// Gets rid of any cached zip files (keeps the actual files for use) older than 1h, which will
-	/// allow redownloading from github to get any changes, while still staying fast in local runs
+	/// allow redownloading from GitHub to get any changes, while still staying fast in local runs
 	/// when there are usually no changes happening.
 	/// </summary>
 	public Repositories(ExpressionParser parser)
@@ -41,7 +35,12 @@ public sealed class Repositories
 	private readonly IAppCache cacheService;
 	private readonly ExpressionParser parser;
 
-	public async Task<Package> LoadFromUrl(Uri packageUrl)
+	public async Task<Package> LoadFromUrl(Uri packageUrl
+#if DEBUG
+		, [CallerFilePath] string callerFilePath = "", [CallerLineNumber] int callerLineNumber = 0,
+		[CallerMemberName] string callerMemberName = ""
+#endif
+	)
 	{
 		var isStrictPackage = packageUrl.AbsoluteUri.StartsWith(StrictPrefixUri.AbsoluteUri, StringComparison.Ordinal);
 		if (!isStrictPackage && (packageUrl.Host != "github.com" || string.IsNullOrEmpty(packageUrl.AbsolutePath)))
@@ -49,24 +48,39 @@ public sealed class Repositories
 		var packageName = packageUrl.AbsolutePath.Split('/').Last();
 		if (isStrictPackage)
 		{
-			var developmentFolder = StrictDevelopmentFolderPrefix.Replace(nameof(Strict) + ".", packageName);
+			var developmentFolder =
+				StrictDevelopmentFolderPrefix.Replace(nameof(Strict) + ".", packageName);
 			if (Directory.Exists(developmentFolder))
-				return await LoadFromPath(developmentFolder);
-		} //ncrunch: no coverage start
+				return await LoadFromPath(developmentFolder
+#if DEBUG
+					// ReSharper disable ExplicitCallerInfoArgument
+					, callerFilePath, callerLineNumber, callerMemberName
+#endif
+				);
+		} //ncrunch: no coverage
+		return await FindOrAddPath(packageUrl, packageName); //ncrunch: no coverage
+	}
+
+	private async Task<Package> FindOrAddPath(Uri packageUrl, string packageName)
+	{ //ncrunch: no coverage start
 		var localPath = Path.Combine(CacheFolder, packageName);
-		if (PreviouslyCheckedDirectories.Contains(localPath))
+		if (!PreviouslyCheckedDirectories.Add(localPath))
 			return await LoadFromPath(localPath);
-		PreviouslyCheckedDirectories.Add(localPath);
 		if (!Directory.Exists(localPath))
 			localPath = await DownloadAndExtractRepository(packageUrl, packageName);
 		return await LoadFromPath(localPath);
-		//ncrunch: no coverage end
-	}
+	} //ncrunch: no coverage end
 
-	public Task<Package> LoadStrictPackage(string packagePostfixName = nameof(Base)) =>
-		LoadFromUrl(new Uri(StrictPrefixUri.AbsoluteUri + packagePostfixName));
+	public Task<Package> LoadStrictPackage(string packagePostfixName = nameof(Base)
+#if DEBUG
+		, [CallerFilePath] string callerFilePath = "", [CallerLineNumber] int callerLineNumber = 0,
+		[CallerMemberName] string callerMemberName = ""
+#endif
+	) =>
+		LoadFromUrl(new Uri(StrictPrefixUri.AbsoluteUri + packagePostfixName), callerFilePath,
+			callerLineNumber, callerMemberName);
 
-	public sealed class OnlyGithubDotComUrlsAreAllowedForNow : Exception { }
+	public sealed class OnlyGithubDotComUrlsAreAllowedForNow : Exception;
 	//ncrunch: no coverage start, only called once per session and only if not on development machine
 	private static readonly HashSet<string> PreviouslyCheckedDirectories = new();
 
@@ -112,11 +126,8 @@ public sealed class Repositories
 		TryMoveOrCopyWhenDeletionDidNotFullyWork(targetPath, masterDirectory);
 	}
 
-	public sealed class NoMasterFolderFoundFromPackage : Exception
-	{
-		public NoMasterFolderFoundFromPackage(string packageName, string localZip) : base(
-			packageName + ", localZip: " + localZip) { }
-	}
+	public sealed class NoMasterFolderFoundFromPackage(string packageName, string localZip)
+		: Exception(packageName + ", localZip: " + localZip);
 
 	private static void TryMoveOrCopyWhenDeletionDidNotFullyWork(string targetPath,
 		string masterDirectory)
@@ -132,45 +143,64 @@ public sealed class Repositories
 		}
 	} //ncrunch: no coverage end
 
-	public Task<Package> LoadFromPath(string packagePath) =>
+	public Task<Package> LoadFromPath(string packagePath
+#if DEBUG
+		, [CallerFilePath] string callerFilePath = "", [CallerLineNumber] int callerLineNumber = 0,
+		[CallerMemberName] string callerMemberName = ""
+#endif
+	) =>
 		cacheService.GetOrAddAsync(packagePath,
 			_ => CreatePackageFromFiles(packagePath,
-				Directory.GetFiles(packagePath, "*" + Type.Extension)));
+				// ReSharper disable ExplicitCallerInfoArgument
+				Directory.GetFiles(packagePath, "*" + Type.Extension), null, callerFilePath,
+				callerLineNumber, callerMemberName));
 
 	/// <summary>
-	/// Initially we need to create just empty types and then after they all have been created
+	/// Initially we need to create just empty types, and then after they all have been created,
 	/// we will fill and load them, otherwise we could not use types within the package context.
 	/// </summary>
 	private async Task<Package> CreatePackageFromFiles(string packagePath,
-		IReadOnlyCollection<string> files, Package? parent = null) =>
-		// Main folder can be empty, other folders must contain at least one file to create a package
-		parent != null && files.Count == 0
-			? parent
-			: await CreatePackage(packagePath, files, parent);
-
-	private async Task<Package> CreatePackage(string packagePath, IReadOnlyCollection<string> files,
-		Package? parent)
+		IReadOnlyCollection<string> files,
+#if DEBUG
+		Package? parent = null, [CallerFilePath] string callerFilePath = "",
+		[CallerLineNumber] int callerLineNumber = 0, [CallerMemberName] string callerMemberName = "")
+#else
+		Package? parent = null)
+#endif
 	{
+		// The main folder can be empty, other folders must contain at least one file to create a package
+		if (parent != null && files.Count == 0)
+			return parent; //ncrunch: no coverage
+#if DEBUG
+		var package = parent != null
+			// ReSharper disable ExplicitCallerInfoArgument
+			? new Package(parent, packagePath, callerFilePath, callerLineNumber, callerMemberName)
+			: new Package(packagePath.Contains('.')
+				? packagePath.Split('.')[1]
+				: packagePath, callerFilePath, callerLineNumber, callerMemberName);
+#else
 		var package = parent != null
 			? new Package(parent, packagePath)
 			: new Package(packagePath.Contains('.')
 				? packagePath.Split('.')[1]
 				: packagePath);
+#endif
 		if (package.Name == nameof(Strict) && files.Count > 0)
-			throw new NoFilesAllowedInStrictFolderNeedsToBeInASubFolder(files); //ncrunch: no coverage covered in a manual test
+			throw new NoFilesAllowedInStrictFolderNeedsToBeInASubFolder(files); //ncrunch: no coverage
 		var types = GetTypes(files, package);
 		foreach (var type in types)
 			type.ParseMembersAndMethods(parser);
-		await GetSubDirectoriesAndParse(packagePath, package);
+		await GetSubDirectoriesAndParse(packagePath, package
+#if DEBUG
+			, callerFilePath, callerLineNumber, callerMemberName
+#endif
+		);
 		return package;
 	}
 
 	//ncrunch: no coverage start
-	public sealed class NoFilesAllowedInStrictFolderNeedsToBeInASubFolder : Exception
-	{
-		public NoFilesAllowedInStrictFolderNeedsToBeInASubFolder(IEnumerable<string> files) : base(
-			files.ToWordList()) { }
-	} //ncrunch: no coverage end
+	public sealed class NoFilesAllowedInStrictFolderNeedsToBeInASubFolder(IEnumerable<string> files)
+		: Exception(files.ToWordList()); //ncrunch: no coverage end
 
 	private ICollection<Type> GetTypes(IReadOnlyCollection<string> files, Package package)
 	{
@@ -179,9 +209,8 @@ public sealed class Repositories
 		foreach (var filePath in files)
 		{
 			var lines = new TypeLines(Path.GetFileNameWithoutExtension(filePath),
-				// ReSharper disable once MethodHasAsyncOverload, would be way slower with async here
 				File.ReadAllLines(filePath));
-			if (lines.Name != Base.Mutable && lines.MemberTypes.Count > 0)
+			if (lines.Name != Base.Mutable && lines.DependentTypes.Count > 0)
 				filesWithMembers.Add(lines.Name, lines);
 			else
 				types.Add(new Type(package, lines));
@@ -192,37 +221,45 @@ public sealed class Repositories
 	/// <summary>
 	/// https://en.wikipedia.org/wiki/Breadth-first_search
 	/// </summary>
-	public IEnumerable<TypeLines> SortFilesByMemberUsage(Dictionary<string, TypeLines> files) =>
-		GotNestedImplements(files)
-			? EmptyDegreeQueueAndGenerateSortedOutput(files, CreateInDegreeGraphMap(files))
-			: files.Values;
+	public IEnumerable<TypeLines> SortFilesByMemberUsage(Dictionary<string, TypeLines> files)
+	{
+		var inDegreeGraphMap = CreateInDegreeGraphMap(files);
+		if (GotNestedImplements(files))
+		{
+			var reversedDependencies = EmptyDegreeQueueAndGenerateSortedOutput(files, inDegreeGraphMap);
+			if (inDegreeGraphMap.Any(keyValue => keyValue.Value > 0))
+				AddUnresolvedRemainingTypes(files, inDegreeGraphMap, reversedDependencies);
+			return reversedDependencies;
+		}
+		return files.Values; //ncrunch: no coverage
+	}
 
 	private static bool GotNestedImplements(Dictionary<string, TypeLines> filesWithMembers)
 	{
 		foreach (var file in filesWithMembers)
-			// ReSharper disable once ForCanBeConvertedToForeach
-			for (var index = 0; index < file.Value.MemberTypes.Count; index++)
-				if (filesWithMembers.ContainsKey(file.Value.MemberTypes[index]))
+			// ReSharper disable once ForCanBeConvertedToForeach, not done for performance reasons
+			for (var index = 0; index < file.Value.DependentTypes.Count; index++)
+				if (filesWithMembers.ContainsKey(file.Value.DependentTypes[index]))
 					return true;
-		return false;
+		return false; //ncrunch: no coverage
 	}
 
-	private static Dictionary<string, int> CreateInDegreeGraphMap(Dictionary<string, TypeLines> filesWithImplements)
+	private static Dictionary<string, int> CreateInDegreeGraphMap(
+		Dictionary<string, TypeLines> filesWithImplements)
 	{
 		var inDegree = new Dictionary<string, int>(StringComparer.Ordinal);
 		foreach (var kvp in filesWithImplements)
 		{
-			if (!inDegree.ContainsKey(kvp.Key))
-				inDegree.Add(kvp.Key, 0);
-			foreach (var edge in kvp.Value.MemberTypes)
+			inDegree.TryAdd(kvp.Key, 0);
+			foreach (var edge in kvp.Value.DependentTypes)
 				if (!inDegree.TryAdd(edge, 1))
 					inDegree[edge]++;
 		}
 		return inDegree;
 	}
 
-	private static Stack<TypeLines> EmptyDegreeQueueAndGenerateSortedOutput(IReadOnlyDictionary<string, TypeLines> files,
-		Dictionary<string, int> inDegree)
+	private static Stack<TypeLines> EmptyDegreeQueueAndGenerateSortedOutput(
+		IReadOnlyDictionary<string, TypeLines> files, Dictionary<string, int> inDegree)
 	{
 		var reversedDependencies = new Stack<TypeLines>();
 		var zeroDegreeQueue = CreateZeroDegreeQueue(inDegree);
@@ -230,47 +267,70 @@ public sealed class Repositories
 			if (files.TryGetValue(zeroDegreeQueue.Dequeue(), out var lines))
 			{
 				reversedDependencies.Push(lines);
-				foreach (var vertex in lines.MemberTypes)
-					if (--inDegree[vertex] == 0)
+				foreach (var vertex in lines.DependentTypes)
+					if (--inDegree[vertex] is 0)
 						zeroDegreeQueue.Enqueue(vertex);
 			}
 		return reversedDependencies;
+	}
+
+	private static void AddUnresolvedRemainingTypes(IReadOnlyDictionary<string, TypeLines> files,
+		Dictionary<string, int> inDegree, Stack<TypeLines> reversedDependencies)
+	{
+		foreach (var unresolvedType in inDegree.Where(x => x.Value > 0))
+			if (files.TryGetValue(unresolvedType.Key, out var lines))
+				if (reversedDependencies.All(
+					alreadyAddedType => alreadyAddedType.Name != unresolvedType.Key))
+					reversedDependencies.Push(lines);
 	}
 
 	private static Queue<string> CreateZeroDegreeQueue(Dictionary<string, int> inDegree)
 	{
 		var zeroDegreeQueue = new Queue<string>();
 		foreach (var vertex in inDegree)
-			if (vertex.Value == 0)
+			if (vertex.Value is 0)
 				zeroDegreeQueue.Enqueue(vertex.Key);
 		return zeroDegreeQueue;
 	}
 
-	private static ICollection<Type> GetTypesFromSortedFiles(ICollection<Type> types, IEnumerable<TypeLines> sortedFiles, Package package)
+	private static ICollection<Type> GetTypesFromSortedFiles(ICollection<Type> types,
+		IEnumerable<TypeLines> sortedFiles, Package package)
 	{
-#if LOG_DETAILS
-		Logger.Info("CreatePackage sortedFiles=" + sortedFiles.ToWordList() + ", types=" +
-			types.ToWordList());
-#endif
 		foreach (var typeLines in sortedFiles)
 			types.Add(new Type(package, typeLines));
 		return types;
 	}
 
-	private async Task GetSubDirectoriesAndParse(string packagePath, Package package)
+	private async Task GetSubDirectoriesAndParse(string packagePath, Package package
+#if DEBUG
+		, string callerFilePath, int callerLineNumber, string callerMemberName
+#endif
+	)
 	{
 		var subDirectories = Directory.GetDirectories(packagePath);
 		if (subDirectories.Length > 0)
-			await Task.WhenAll(ParseAllSubFolders(subDirectories, package));
+			await Task.WhenAll(ParseAllSubFolders(subDirectories, package
+#if DEBUG
+				, callerFilePath, callerLineNumber, callerMemberName
+#endif
+			));
 	}
 
-	private List<Task> ParseAllSubFolders(IEnumerable<string> subDirectories, Package package)
+	private List<Task> ParseAllSubFolders(IEnumerable<string> subDirectories, Package package
+#if DEBUG
+		, string callerFilePath, int callerLineNumber, string callerMemberName
+#endif
+	)
 	{
 		var tasks = new List<Task>();
 		foreach (var directory in subDirectories)
 			if (IsValidCodeDirectory(directory))
-				tasks.Add(CreatePackageFromFiles(directory,
-					Directory.GetFiles(directory, "*" + Type.Extension), package));
+				tasks.Add(CreatePackageFromFiles(directory, //ncrunch: no coverage
+					Directory.GetFiles(directory, "*" + Type.Extension), package
+#if DEBUG
+					, callerFilePath, callerLineNumber, callerMemberName
+#endif
+				));
 		return tasks;
 	}
 
@@ -283,7 +343,7 @@ public sealed class Repositories
 
 	public const string StrictDevelopmentFolderPrefix = @"C:\code\GitHub\strict-lang\Strict.";
 	private static string CacheFolder =>
-		Path.Combine( //ncrunch: no coverage, only downloaded and cached on non development machines
+		Path.Combine( //ncrunch: no coverage, only downloaded and cached on non-development machines
 			Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), StrictPackages);
 	private const string StrictPackages = nameof(StrictPackages);
 	public static readonly Uri StrictPrefixUri = new("https://github.com/strict-lang/Strict.");

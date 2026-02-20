@@ -1,23 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using Strict.Language;
-using Strict.Language.Expressions;
+﻿using Strict.Language;
+using Strict.Expressions;
 using Type = Strict.Language.Type;
 
 namespace Strict.Compiler.Cuda;
 
-public class CSharpToCudaTranspiler
+public class CSharpToCudaTranspiler(Package strictBase) : IDisposable
 {
-	public CSharpToCudaTranspiler(Package strictBase)
-	{
-		package = new Package(strictBase, nameof(CSharpToCudaTranspiler));
-		parser = new CSharpType.CSharpExpressionParser();
-	}
-
-	private readonly Package package;
-	private readonly CSharpType.CSharpExpressionParser parser;
+	private readonly Package package = new(strictBase, nameof(CSharpToCudaTranspiler));
+	private readonly CSharpType.CSharpExpressionParser parser = new();
 
 	public string Convert(string filePath)
 	{
@@ -33,7 +23,7 @@ public class CSharpToCudaTranspiler
 		if (!parameterText.Contains("Width"))
 		{
 			parameterText += ", const int count";
-			output = "first[idx] " + GetOperator(expression) + @" second[idx]";
+			output = "first[idx] " + GetOperator(expression) + " second[idx]";
 		}
 		else
 		{
@@ -73,14 +63,20 @@ public class CSharpToCudaTranspiler
 			? throw new InvalidCode()
 			: new CSharpType(package, filePath).ParseMembersAndMethods(parser);
 
-	public class InvalidCode : Exception { }
+	public class InvalidCode : Exception;
+
+	public void Dispose()
+	{
+		package.Dispose();
+		strictBase.Dispose();
+	}
 }
 
 public class CSharpType : Type
 {
 	public class CSharpExpressionParser : MethodExpressionParser
 	{
-		/*this is a hack anyways
+		/*this is a hack anyway
 		public override BlockExpression ParseMethodBody(Method method)
 		{
 			if (method.bodyLines.Last().Text.Contains("depth"))
@@ -116,7 +112,7 @@ public class CSharpType : Type
 				returnStatement = line.Trim().Replace(";", "");
 			else
 			{
-				var parts = line.Trim().Split(new[] { ' ', '(', ')', ',' }, StringSplitOptions.RemoveEmptyEntries);
+				var parts = line.Trim().Split([' ', '(', ')', ','], StringSplitOptions.RemoveEmptyEntries);
 				if (parts[1] == "float")
 					returnType = " returns Number";
 				methodName = parts[2];
@@ -125,8 +121,9 @@ public class CSharpType : Type
 		}
 		if (returnStatement == "")
 			throw new MissingReturnStatement();
-		var method = new Method(this, 0, new CSharpExpressionParser(),
-			new[] { methodName + parameters.ToBrackets() + returnType, "\t" + returnStatement });
+		var method = new Method(this, 0, new CSharpExpressionParser(), [
+			methodName + parameters.ToBrackets() + returnType, "\t" + returnStatement
+		]);
 		methods.Add(method);
 	}
 
@@ -138,15 +135,12 @@ public class CSharpType : Type
 	{
 		for (var index = 3; index < parts.Count; index += 2)
 			if (parts[index] == "DepthImage")
-				parameters.AddRange(new[]
-				{
+				parameters.AddRange([
 					"input Number", "Width Number", "Height Number", "initialDepth Number"
-				});
+				]);
 			else if (parts[index] != "float")
 				throw new NotSupportedException(parts[index + 1]);
 			else
 				parameters.Add(parts[index + 1] + " Number");
 	}
 }
-
-public sealed class MissingReturnStatement : Exception { }

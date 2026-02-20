@@ -1,5 +1,3 @@
-﻿using System;
-
 namespace Strict.Language;
 
 public sealed class Parameter : NamedType
@@ -17,7 +15,7 @@ public sealed class Parameter : NamedType
 	private static bool IsNameStartsWithMutable(string nameAndType) =>
 		nameAndType.StartsWith(Type.MutableWithSpaceAtEnd, StringComparison.Ordinal);
 
-	public Expression? DefaultValue { get; }
+	public Expression? DefaultValue { get; internal set; }
 
 	public Parameter(Type parentType, string nameAndType) : base(parentType,
 		IsNameStartsWithMutable(nameAndType)
@@ -33,4 +31,19 @@ public sealed class Parameter : NamedType
 		clone.Type = newType;
 		return clone;
 	}
+
+	public void CheckIfWeCouldUpdateValue(Expression newExpression, Body bodyForErrorMessage)
+	{
+		if (!IsMutable)
+			//ncrunch: no coverage start
+			throw new Body.ValueIsNotMutableAndCannotBeChanged(bodyForErrorMessage, Name);
+		if (!newExpression.ReturnType.IsSameOrCanBeUsedAs(Type))
+			throw new NewExpressionDoesNotMatchParameterType(bodyForErrorMessage, newExpression, this);
+	}
+
+	public class NewExpressionDoesNotMatchParameterType(Body body, Expression newExpression,
+		Parameter parameter) : ParsingFailed(body, newExpression.ToStringWithType() +
+		" cannot be assigned to " + parameter, parameter.Type);
+
+	public string ToStringWithInnerMembers() => Name + " " + Type + " " + Type.Members.ToBrackets();
 }

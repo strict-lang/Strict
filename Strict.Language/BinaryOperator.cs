@@ -1,4 +1,3 @@
-﻿using System;
 using System.Runtime.CompilerServices;
 
 namespace Strict.Language;
@@ -20,9 +19,6 @@ public static class BinaryOperator
 	public const string GreaterOrEqual = ">=";
 	public const string Is = "is";
 	public const string In = "in";
-	public const string IsNot = "is not";
-	public const string IsIn = Is + " " + In;
-	public const string IsNotIn = IsNot + " " + In;
 	public const string To = "to";
 	public const string And = "and";
 	public const string Or = "or";
@@ -31,88 +27,59 @@ public static class BinaryOperator
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static bool IsOperator(this ReadOnlySpan<char> name) =>
 		name.Length == 1
-			? IsSingleCharacterOperator(name[0])
-			: IsMultiCharacterOperator(name);
+			? name[0].IsSingleCharacterOperator()
+			: name.IsMultiCharacterOperator();
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static bool IsSingleCharacterOperator(this char tokenFirstCharacter) =>
 		AnySingleCharacterOperator.Contains(tokenFirstCharacter);
 
-	private const string AnySingleCharacterOperator = Plus + Minus + Multiply + Divide + Modulate + Smaller + Greater + Power;
+	private const string AnySingleCharacterOperator =
+		Plus + Minus + Multiply + Divide + Modulate + Smaller + Greater + Power;
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static bool IsMultiCharacterOperator(this string name)
 	{
-		// ReSharper disable once ForCanBeConvertedToForeach
+		// ReSharper disable once ForCanBeConvertedToForeach, not done for performance reasons
 		for (var index = 0; index < MultiCharacterOperators.Length; index++)
 			if (MultiCharacterOperators[index] == name)
 				return true;
 		return false;
 	}
 
+	public static bool IsNot(this ReadOnlySpan<char> token) =>
+		token.Length == 3 && token.Compare(UnaryOperator.Not);
+
 	private static readonly string[] MultiCharacterOperators =
-	{
-		SmallerOrEqual, GreaterOrEqual, Is, IsIn, IsNot, IsNotIn, In, And, Or, Xor, To, UnaryOperator.Not
-	};
+	[
+		SmallerOrEqual, GreaterOrEqual, Is, In, And, Or, Xor, To, UnaryOperator.Not
+	];
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static bool IsMultiCharacterOperator(this ReadOnlySpan<char> name)
 	{
-		if (name.Length is <= 3 or 5 or 6 or 9)
-			// ReSharper disable once ForCanBeConvertedToForeach
+		if (name.Length == 4 && name.Compare(Method.From))
+			return true;
+		if (name.Length is 2 or 3 or 5 or 6 or 9)
+			// ReSharper disable once ForCanBeConvertedToForeach, not done for performance reasons
 			for (var index = 0; index < MultiCharacterOperators.Length; index++)
 				if (name.Compare(MultiCharacterOperators[index]))
 					return true;
 		return false;
 	}
 
-	public static bool IsMultiCharacterOperatorWithSpace(this string input, int currentIndex, out int tokenEnd)
-	{
-		tokenEnd = 0;
-		if (input[currentIndex - 1] != 's')
-			return false;
-		if (input.IsNotInOperator(currentIndex))
-		{
-			tokenEnd = 7;
-			return true;
-		}
-		if (input.IsNotOperator(currentIndex))
-		{
-			tokenEnd = 4;
-			return true;
-		}
-		if (input.IsInOperator(currentIndex))
-		{
-			tokenEnd = 3;
-			return true;
-		}
-		return false;
-	}
-
-	private static bool IsNotInOperator(this string input, int currentIndex) =>
-		input[currentIndex..].Length > 7 &&
-		input[(currentIndex - 2)..(currentIndex + 8)] == IsNotIn + " ";
-
-	private static bool IsNotOperator(this string input, int currentIndex) =>
-		input[currentIndex..].Length > 4 &&
-		input[(currentIndex - 2)..(currentIndex + 5)] == IsNot + " ";
-
-	private static bool IsInOperator(this string input, int currentIndex) =>
-		input[currentIndex..].Length > 3 &&
-		input[(currentIndex - 2)..(currentIndex + 4)] == IsIn + " ";
-
 	private static readonly string[] All =
-	{
+	[
 		Plus, Minus, Multiply, Divide, Modulate, Smaller, Greater, SmallerOrEqual, GreaterOrEqual,
-		Is, IsNot, In, And, Or, Xor, To
-	};
-	private static readonly string[] Arithmetic = { Plus, Minus, Multiply, Divide, Modulate };
+		Is, In, And, Or, Xor, To
+	];
+	private static readonly string[] Arithmetic = [Plus, Minus, Multiply, Divide, Modulate];
 	private static readonly string[] Comparison =
-	{
+	[
 		Is, Smaller, Greater, SmallerOrEqual, GreaterOrEqual
-	};
-	private static readonly string[] Logical = { And, Or, Xor };
-	private static readonly string[] Conversions = { To };
+	];
+	private static readonly string[] Logical = [And, Or, Xor];
+	private static readonly string[] Conversions = [To];
 
 	/// <summary>
 	/// Example: 1+2*3%4 to Text is "1" becomes: ((1+(2*(3%4))) to Text) is "1"
@@ -121,8 +88,9 @@ public static class BinaryOperator
 	public static int GetPrecedence(char tokenFirstCharacter) =>
 		tokenFirstCharacter switch
 		{
-			',' => 0, // ncrunch: no coverage always has to flush everything out; ',' cannot be reached because this method is called only for operators
-			'+' => 11, // unary '-' and 'not' operators have precendence 10
+			',' => 0, // ncrunch: no coverage always has to flush everything out; ',' cannot be reached
+             // because this method is called only for operators
+			'+' => 11, // unary '-' and 'not' operators have lower precedence (3)
 			'-' => 11,
 			'%' => 12,
 			'*' => 13,
@@ -130,12 +98,13 @@ public static class BinaryOperator
 			'^' => 14,
 			'<' => 7,
 			'>' => 7,
-			_ => throw new NotSupportedException(tokenFirstCharacter.ToString()) //ncrunch: no coverage
+			_ => int.MaxValue
 		};
 
 	public static int GetPrecedence(ReadOnlySpan<char> token) =>
+		// "to" needs to be higher than all the other operators as it needs to convert first
 		token.Compare(To)
-			? 8
+			? 20
 			: token.Compare(In)
 				? 9
 				: token.Compare(SmallerOrEqual) || token.Compare(GreaterOrEqual)
@@ -146,10 +115,10 @@ public static class BinaryOperator
 							? 5
 							: token.Compare(Or)
 								? 4
+								// "is not" and "is not in" will be flipped after we have all tokens
 								: token.Compare(UnaryOperator.Not)
 									? 3
-									: token.Compare(Is) || token.Compare(IsIn) || token.Compare(IsNotIn) ||
-									token.Compare(IsNot)
+									: token.Compare(Is)
 										? 1
 										: GetPrecedence(token[0]);
 }

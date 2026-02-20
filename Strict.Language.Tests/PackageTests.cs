@@ -1,7 +1,3 @@
-using System;
-using System.Threading.Tasks;
-using NUnit.Framework;
-
 namespace Strict.Language.Tests;
 
 public class PackageTests
@@ -9,9 +5,9 @@ public class PackageTests
 	[SetUp]
 	public void CreateContexts()
 	{
-		mainPackage = new Package(nameof(TestPackage));
+		mainPackage = new Package(nameof(PackageTests));
 		mainType = new Type(mainPackage, new TypeLines("Yolo", "Run"));
-		subPackage = new Package(mainPackage, nameof(PackageTests));
+		subPackage = new Package(mainPackage, nameof(subPackage));
 		privateSubType = new Type(subPackage, new TypeLines("secret", "Run"));
 		publicSubType = new Type(subPackage, new TypeLines("FindMe", "Run"));
 	}
@@ -21,6 +17,9 @@ public class PackageTests
 	private Package subPackage = null!;
 	private Type privateSubType = null!;
 	private Type publicSubType = null!;
+
+	[TearDown]
+	public void TearDown() => ((Package)mainPackage.Parent).Remove(mainPackage);
 
 	[Test]
 	public void NoneIsAlwaysKnown()
@@ -46,14 +45,14 @@ public class PackageTests
 	[Test]
 	public void GetFullNames()
 	{
-		Assert.That(mainPackage.ToString(), Is.EqualTo(nameof(TestPackage)));
-		Assert.That(mainType.ToString(), Is.EqualTo(nameof(TestPackage) + "." + mainType.Name));
+		Assert.That(mainPackage.ToString(), Is.EqualTo(nameof(PackageTests)));
+		Assert.That(mainType.ToString(), Is.EqualTo(nameof(PackageTests) + "." + mainType.Name));
 		Assert.That(subPackage.ToString(),
-			Is.EqualTo(nameof(TestPackage) + "." + nameof(PackageTests)));
+			Is.EqualTo(nameof(PackageTests) + "." + nameof(subPackage)));
 		Assert.That(privateSubType.ToString(),
-			Is.EqualTo(nameof(TestPackage) + "." + nameof(PackageTests) + "." + privateSubType.Name));
+			Is.EqualTo(nameof(PackageTests) + "." + nameof(subPackage) + "." + privateSubType.Name));
 		Assert.That(publicSubType.ToString(),
-			Is.EqualTo(nameof(TestPackage) + "." + nameof(PackageTests) + "." + publicSubType.Name));
+			Is.EqualTo(nameof(PackageTests) + "." + nameof(subPackage) + "." + publicSubType.Name));
 	}
 
 	[Test]
@@ -97,7 +96,7 @@ public class PackageTests
 	[Test]
 	public void ContextNameMustNotContainSpecialCharactersOrNumbers()
 	{
-		Assert.That(() => new Type(mainPackage, new TypeLines("MyClass123", Array.Empty<string>())),
+		Assert.That(() => new Type(mainPackage, new TypeLines("MyClass123")),
 			Throws.InstanceOf<Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers>());
 		Assert.That(() => new Package(mainPackage, "$%"),
 			Throws.InstanceOf<
@@ -122,11 +121,21 @@ public class PackageTests
 	[Test]
 	public async Task LoadTypesFromOtherPackage()
 	{
-		var strictPackage = await new Repositories(new ExpressionParserTests()).LoadStrictPackage();
-		Assert.That(mainPackage.GetType(Base.App),
-			Is.EqualTo(strictPackage.GetType(Base.App)).Or.EqualTo(subPackage.GetType(Base.App)));
-		Assert.That(mainPackage.GetType(Base.Character),
-			Is.Not.EqualTo(mainPackage.GetType(Base.App)));
+		var expressionParser = new ExpressionParserTests();
+		try
+		{
+			expressionParser.CreateType();
+			using var strictPackage = await new Repositories(expressionParser).LoadStrictPackage();
+			Assert.That(mainPackage.GetType(Base.Number),
+				Is.EqualTo(strictPackage.GetType(Base.Number)).Or.
+					EqualTo(subPackage.GetType(Base.Number)));
+			Assert.That(mainPackage.GetType(Base.Character),
+				Is.Not.EqualTo(mainPackage.FindType(Base.App)));
+		}
+		finally
+		{
+			expressionParser.TearDown();
+		}
 	}
 
 	/// <summary>
@@ -140,7 +149,6 @@ public class PackageTests
 		for (var index = 0; index < 1000; index++)
 			if (otherMainPackage.FindType(mainType.Name, otherMainPackage)!.Name != mainType.Name)
 				throw new AssertionException("FindType=" + //ncrunch: no coverage
-					otherMainPackage.FindType(mainType.Name, otherMainPackage) + " didn't find " +
-					mainType);
+					otherMainPackage.FindType(mainType.Name, otherMainPackage) + " didn't find " + mainType);
 	}
 }

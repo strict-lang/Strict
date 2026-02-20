@@ -1,8 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using Strict.Language;
-using Strict.Language.Expressions;
+﻿using Strict.Language;
+using Strict.Expressions;
 
 namespace Strict.Compiler.Roslyn;
 
@@ -17,7 +14,7 @@ public abstract class ExpressionVisitor
 			Body body => VisitBody(body),
 			If ifExpression => VisitIf(ifExpression),
 			For forExpression => VisitFor(forExpression),
-			_ => new[] { Visit(expression) + ";" }
+			_ => [Visit(expression) + ";"]
 		};
 
 	protected abstract IReadOnlyList<string> VisitBody(Body body);
@@ -40,8 +37,7 @@ public abstract class ExpressionVisitor
 		expression switch
 		{
 			Body => throw new UseVisitBody(expression),
-			For forExpression => Visit(forExpression),
-			ConstantDeclaration assignment => Visit(assignment),
+			Declaration assignment => Visit(assignment),
 			Binary binary => Visit(binary),
 			Return returnExpression => Visit(returnExpression),
 			MethodCall call => Visit(call),
@@ -51,12 +47,8 @@ public abstract class ExpressionVisitor
 			_ => expression.ToString() //ncrunch: no coverage
 		};
 
-	public sealed class UseVisitBody : Exception
-	{
-		public UseVisitBody(Expression expression) : base(expression.ToString()) { }
-	}
-
-	protected abstract string Visit(ConstantDeclaration constantDeclaration);
+	public sealed class UseVisitBody(Expression expression) : Exception(expression.ToString());
+	protected abstract string Visit(Declaration declaration);
 
 	protected string Visit(Binary binary) =>
 		Visit(binary.Instance!) + " " + GetBinaryOperator(binary.Method.Name) + " " + Visit(binary.Arguments[0]);

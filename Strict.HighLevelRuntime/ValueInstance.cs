@@ -1,0 +1,150 @@
+using Strict.Language;
+using System.Collections;
+using Type = Strict.Language.Type;
+
+namespace Strict.HighLevelRuntime;
+
+public sealed class ValueInstance : IEquatable<ValueInstance>
+{
+	public ValueInstance(Type returnType, object? value)
+	{
+		if (value is Expression)
+			throw new InvalidTypeValue(returnType, Value); //ncrunch: no coverage
+		ReturnType = returnType;
+		Value = CheckIfValueMatchesReturnType(ReturnType.IsMutable
+			? ((GenericTypeImplementation)ReturnType).ImplementationTypes[0]
+			: ReturnType, value);
+	}
+
+	public Type ReturnType { get; }
+	public object? Value { get; }
+
+	private static object? CheckIfValueMatchesReturnType(Type type, object? value)
+	{
+		if (type.Name == Base.None)
+		{
+			if (value is not null)
+				throw new InvalidTypeValue(type, value);
+		}
+		else if (value is null)
+			throw new InvalidTypeValue(type, value);
+		else if (type.IsBoolean)
+		{
+			if (value is not bool)
+				throw new InvalidTypeValue(type, value);
+		}
+		else if (type.IsEnum)
+		{
+			if (value is not int && value is not string)
+				throw new InvalidTypeValue(type, value);
+		}
+		else if (type.Name is Base.Text or Base.Name)
+		{
+			if (value is not string)
+				throw new InvalidTypeValue(type, value);
+		}
+		else if (type.Name is Base.Character or Base.HashCode || type.Members.Count == 1 &&
+			type.IsSameOrCanBeUsedAs(type.GetType(Base.Character)))
+		{
+			if (value is double doubleValue)
+				return (int)doubleValue;
+			if (value is not char && value is not int)
+				throw new InvalidTypeValue(type, value);
+		}
+		else if (type.Name == Base.List || type.Name == Base.Dictionary ||
+			type is GenericTypeImplementation { Generic.Name: Base.List } ||
+			type is GenericTypeImplementation { Generic.Name: Base.Dictionary } ||
+			type is GenericType { Generic.Name: Base.List } || type is GenericType
+			{
+				Generic.Name: Base.Dictionary
+			})
+		{
+			if (value is IList<Expression>)
+				throw new InvalidTypeValue(type, value);
+			if (value is not IList and not IDictionary and not string)
+				throw new InvalidTypeValue(type, value);
+		}
+		else if (type.Name == Base.Number || type.Members.Count == 1 &&
+			type.IsSameOrCanBeUsedAs(type.GetType(Base.Number)))
+		{
+			if (value is char charValue)
+				return (int)charValue;
+			if (value is not double && value is not int)
+				throw new InvalidTypeValue(type, value);
+		}
+		else if (value is IDictionary<string, object?> valueDictionary)
+		{
+			foreach (var assignMember in valueDictionary)
+				if (type.Members.All(m =>
+					!m.Name.Equals(assignMember.Key, StringComparison.OrdinalIgnoreCase)))
+					throw new UnableToAssignMemberToType(assignMember, valueDictionary, type);
+		}
+		else if (!type.IsSameOrCanBeUsedAs(type.GetType(Base.Error)))
+			throw new InvalidTypeValue(type, value);
+		return value;
+	}
+
+	public sealed class UnableToAssignMemberToType(KeyValuePair<string, object?> member,
+		IDictionary<string, object?> values,
+		Type returnType) : ExecutionFailed(returnType,
+		"Can't assign member " + member + " (of " + values.DictionaryToWordList() + ") to " +
+		returnType + " " + returnType.Members.ToBrackets());
+
+	public sealed class InvalidTypeValue(Type returnType, object? value) : ExecutionFailed(returnType,
+		value switch //ncrunch: no coverage
+		{
+			null => "null",
+			Expression => "Expression " + value + " needs to be evaluated!", //ncrunch: no coverage
+			IEnumerable valueEnumerable => valueEnumerable.EnumerableToWordList(", ", true),
+			_ => value + ""
+		} + " (" + value?.GetType() + ") for " + returnType.Name);
+
+	public override string ToString() =>
+		ReturnType.Name == Base.Boolean
+			? $"{Value}"
+			: Value is IEnumerable valueEnumerable
+				? $"{ReturnType.Name}: " + valueEnumerable.EnumerableToWordList(", ", true)
+				: ReturnType.IsIterator
+					? $"Unknown Iterator {ReturnType.Name}: {Value}"
+					: $"{ReturnType.Name}:{Value}";
+
+	public bool Equals(ValueInstance? other) =>
+		ReferenceEquals(this, other) || other is not null &&
+		other.ReturnType.IsSameOrCanBeUsedAs(ReturnType) &&
+		EqualsExtensions.AreEqual(Value, other.Value);
+
+	public override bool Equals(object? obj) =>
+		ReferenceEquals(this, obj) || obj is ValueInstance other && Equals(other);
+
+	public override int GetHashCode() => HashCode.Combine(ReturnType, Value);
+
+	public object? FindInnerValue(string name)
+	{
+		if (Value is IDictionary<string, object?> valueDictionary)
+			if (valueDictionary.TryGetValue(name, out var value))
+				return value;
+		return null; //ncrunch: no coverage
+	}
+
+	public Index GetIteratorLength() =>
+		Value switch
+		{
+			IList list => list.Count,
+			int count => count, //ncrunch: no coverage, in Strict numbers are double
+			double countDouble => (int)countDouble,
+			string text => text.Length,
+			_ => throw new IteratorNotSupported(this)
+		};
+
+	public class IteratorNotSupported(ValueInstance instance)
+		: ExecutionFailed(instance.ReturnType, instance.ToString());
+
+	public object? GetIteratorValue(int index) =>
+		ReturnType.Name is Base.Number or Base.Range
+			? index
+			: Value is string
+				? (int)((string)Value!)[index]
+				: Value is IList list
+					? list[index]
+					: throw new IteratorNotSupported(this);
+}

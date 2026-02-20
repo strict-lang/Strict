@@ -1,10 +1,11 @@
-using System.Linq;
 using NUnit.Framework;
 using Strict.Compiler.Roslyn;
 using Strict.Language;
-using Strict.Language.Expressions;
-using Strict.Language.Expressions.Tests;
+using Strict.Expressions;
+using Strict.Expressions.Tests;
 using Strict.Language.Tests;
+using Boolean = Strict.Expressions.Boolean;
+using List = Strict.Expressions.List;
 
 namespace Strict.Compiler.Tests;
 
@@ -23,12 +24,12 @@ public sealed class CSharpExpressionVisitorTests : TestExpressions
 	[Test]
 	public void GenerateAssignment() =>
 		Assert.That(
-			visitor.Visit(new ConstantDeclaration((Body)methodWithBody.GetBodyAndParseIfNeeded(), nameof(number),
-				number)), Is.EqualTo("var number = 5"));
+			visitor.Visit(new Declaration((Body)methodWithBody.GetBodyAndParseIfNeeded(), nameof(numberFive),
+				numberFive)), Is.EqualTo("var number = 5"));
 
 	[Test]
 	public void GenerateBinary() =>
-		Assert.That(visitor.Visit(CreateBinary(number, BinaryOperator.Plus, number)),
+		Assert.That(visitor.Visit(CreateBinary(numberFive, BinaryOperator.Plus, numberFive)),
 			Is.EqualTo("5 + 5"));
 
 	[Test]
@@ -39,13 +40,23 @@ public sealed class CSharpExpressionVisitorTests : TestExpressions
 	public void GenerateMemberCall() =>
 		Assert.That(
 			visitor.Visit(new MemberCall(new MemberCall(null, member),
-				member.Type.Members.First(m => m.Name == "output"))), Is.EqualTo("log.output"));
+				member.Type.Members.First(m => m.Name == "textWriter"))), Is.EqualTo("logger.textWriter"));
+
+	[Test]
+	public void GenerateListCall()
+	{
+		var body = (Body)methodWithBody.GetBodyAndParseIfNeeded();
+		var variable = new Variable("numbers", false, new List(body, [new Number(type, 0)]), body);
+		Assert.That(visitor.Visit(new ListCall(variable.InitialValue, new Number(type, 0))),
+			Is.EqualTo("numbers[0]"));
+	}
 
 	[Test]
 	public void GenerateMethodCall() =>
-		Assert.That(
-			visitor.Visit(new MethodCall(member.Type.Methods[0], new MemberCall(null, member),
-				new Expression[] { new Text(type, "Hi") })), Is.EqualTo("Console.WriteLine(\"Hi\")"));
+		Assert.That(visitor.Visit(new MethodCall(member.Type.Methods[0], new MemberCall(null, member),
+		[
+			new Text(type, "Hi")
+		])), Is.EqualTo("Console.WriteLine(\"Hi\")"));
 
 	[Test]
 	public void GenerateNumber() =>
@@ -60,8 +71,8 @@ public sealed class CSharpExpressionVisitorTests : TestExpressions
 	[TestCase("true", "true")]
 	[TestCase("\"Hey\"", "\"Hey\"")]
 	[TestCase("42", "42")]
-	[TestCase("log.Write(\"Hey\")", "Console.WriteLine(\"Hey\")")]
-	[TestCase("log.output", "log.output")]
+	[TestCase("logger.Log(\"Hey\")", "Console.WriteLine(\"Hey\")")]
+	[TestCase("logger.Log", "logger.Log")]
 	public void ConvertStrictToCSharp(string strictCode, string expectedCSharpCode) =>
 		Assert.That(visitor.Visit(ParseExpression(strictCode)), Is.EqualTo(expectedCSharpCode));
 
@@ -78,7 +89,7 @@ public sealed class CSharpExpressionVisitorTests : TestExpressions
 		{
 			// @formatter:off
 			"	var number = 5;",
-			"	if (bla == 5)",
+			"	if (five == 5)",
 			"		return true;",
 			"	false;"
 		}));
@@ -88,15 +99,14 @@ public sealed class CSharpExpressionVisitorTests : TestExpressions
 	public void GenerateIfElse()
 	{
 		var multilineMethod = new Method(type, 0, this,
-			new[]
-			{
-				"IsBlaFive Boolean",
+			[
+				"IsFiveFive Boolean",
 				"	constant value = 5",
 				"	if value is 5",
 				"		return true",
 				"	else",
 				"		return false"
-			});
+			]);
 		Assert.That(visitor.VisitBody(multilineMethod.GetBodyAndParseIfNeeded()),
 			Is.EqualTo(new[]
 			{

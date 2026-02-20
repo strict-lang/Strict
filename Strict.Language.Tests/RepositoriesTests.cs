@@ -1,13 +1,7 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
 using System.IO.Compression;
-using System.Linq;
-using System.Threading.Tasks;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Engines;
-using NUnit.Framework;
-using Strict.Language.Expressions;
+using BenchmarkDotNet.Running;
 
 namespace Strict.Language.Tests;
 
@@ -15,12 +9,24 @@ namespace Strict.Language.Tests;
 [SimpleJob(RunStrategy.Throughput, warmupCount: 1, iterationCount: 10)]
 public class RepositoriesTests
 {
+	[SetUp]
+	public void CreateRepositories()
+	{
+		parser = new ExpressionParserTests();
+		parser.CreateType();
+		repos = new Repositories(parser);
+	}
+
+	private Repositories repos = null!;
+	private ExpressionParserTests parser = null!;
+
+	[TearDown]
+	public void DisposeParserType() => parser.TearDown();
+
 	[Test]
 	public void InvalidPathWontWork() =>
 		Assert.ThrowsAsync<DirectoryNotFoundException>(() =>
 			repos.LoadFromPath(nameof(InvalidPathWontWork)));
-
-	private readonly Repositories repos = new(new ExpressionParserTests());
 
 	[Test]
 	public void LoadingNonGithubPackageWontWork() =>
@@ -30,7 +36,7 @@ public class RepositoriesTests
 	[Test]
 	public async Task LoadStrictBaseTypes()
 	{
-		var basePackage = await repos.LoadStrictPackage();
+		using var basePackage = await repos.LoadStrictPackage();
 		Assert.That(basePackage.FindDirectType(Base.Any), Is.Not.Null);
 		Assert.That(basePackage.FindDirectType(Base.Number), Is.Not.Null);
 		Assert.That(basePackage.FindDirectType(Base.App), Is.Not.Null);
@@ -45,31 +51,61 @@ public class RepositoriesTests
 		await Task.WhenAll(tasks);
 		foreach (var task in tasks)
 			Assert.That(task.Result, Is.EqualTo(tasks[0].Result));
+		tasks[0].Result.Dispose();
 	}
 
 	[Test]
 	public async Task MakeSureParsingFailedErrorMessagesAreClickable()
 	{
-		var parser = new MethodExpressionParser();
-		var strictPackage = await new Repositories(parser).LoadStrictPackage();
-		Assert.That(
-			() => new Type(strictPackage,
-				new TypeLines("Invalid", "has 1")).ParseMembersAndMethods(null!),
+		using var strictPackage = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
+		Assert.That(() =>
+			{
+				using var _ = new Type(strictPackage, new TypeLines("Invalid", "has 1")).
+					ParseMembersAndMethods(null!);
+			}, //ncrunch: no coverage
 			Throws.InstanceOf<ParsingFailed>().With.Message.Contains(@"Base\Invalid.strict:line 1"));
 	}
 
+	//ncrunch: no coverage start
 	[Test]
+	[Category("Slow")]
 	public async Task LoadStrictExamplesPackageAndUseBasePackageTypes()
 	{
-		var parser = new MethodExpressionParser();
-		var repositories = new Repositories(parser);
-		await repositories.LoadStrictPackage();
-		await repositories.LoadStrictPackage("Math");
-		var examplesPackage = await repositories.LoadStrictPackage("Examples");
-		var program = new Type(examplesPackage, new TypeLines("ValidProgram", "has number", "Run Number", "\tnumber")).
-			ParseMembersAndMethods(parser);
+		using var basePackage = await repos.LoadStrictPackage();
+		using var mathPackage = await repos.LoadStrictPackage("Math");
+		using var examplesPackage = await repos.LoadStrictPackage("Examples");
+		using var program =
+			new Type(examplesPackage,
+					new TypeLines("ValidProgram", "has number", "Run Number", "\tnumber")).
+				ParseMembersAndMethods(parser);
 		Assert.That(program.Methods[0].ReturnType.ToString(), Contains.Substring(Base.Number));
 		Assert.That(program.Members[0].Type.ToString(), Contains.Substring(Base.Number));
+	}
+
+	[Test]
+	[Category("Slow")]
+	public async Task LoadStrictImageProcessingTypes()
+	{
+		using var basePackage = await repos.LoadStrictPackage();
+		using var mathPackage = await repos.LoadFromPath(StrictDevelopmentFolder + ".Math");
+		using var imageProcessingPackage =
+			await repos.LoadFromPath(StrictDevelopmentFolder + ".ImageProcessing");
+		var adjustBrightness = imageProcessingPackage.GetType("AdjustBrightness");
+		Assert.That(adjustBrightness, Is.Not.Null);
+		Assert.That(adjustBrightness.Methods[0].GetBodyAndParseIfNeeded(), Is.Not.Null);
+	} //ncrunch: no coverage end
+
+	[Test]
+	public async Task CheckGenericTypesAreLoadedCorrectlyAfterSorting()
+	{
+		using var program =
+			new Type(await repos.LoadStrictPackage(),
+					new TypeLines("ValidProgram", "has texts", "Run Texts", "\t\"Result \" + 5")).
+				ParseMembersAndMethods(parser);
+		program.Methods[0].GetBodyAndParseIfNeeded();
+		Assert.That(program.Members[0].Type.IsIterator, Is.True);
+		Assert.That(program.Members[0].Type.Members.Count, Is.GreaterThan(1));
+		Assert.That(program.Members[0].Type.Methods.Count, Is.GreaterThan(5));
 	}
 
 	/// <summary>
@@ -78,7 +114,7 @@ public class RepositoriesTests
 	///  File2 needs File3 and Number
 	///   File3 needs File4
 	///    File4 needs File5 and File6
-	///			 File5 needs Number
+	///			File5 needs Number
 	/// File6 needs File5
 	/// </summary>
 	[Test]
@@ -113,8 +149,7 @@ public class RepositoriesTests
 	[Test]
 	public void NoFilesAllowedInStrictFolderNeedsToBeInASubFolder()
 	{
-		var strictFilePath = Path.Combine(StrictDevelopmentFolder,
-			"UnitTestForCoverage.strict");
+		var strictFilePath = Path.Combine(StrictDevelopmentFolder, "UnitTestForCoverage.strict");
 		File.Create(strictFilePath).Close();
 		Assert.That(() => repos.LoadFromPath(StrictDevelopmentFolder),
 			Throws.InstanceOf<Repositories.NoFilesAllowedInStrictFolderNeedsToBeInASubFolder>());
@@ -150,8 +185,8 @@ public class RepositoriesTests
 
 	/// <summary>
 	/// Zip file loading makes a difference (4-5 times faster), but otherwise there is close to zero
-	/// impact how we load the files, parallel or not, async is only 10-20% faster and not important.
-	/// File.ReadAllLinesAsync is by far the slowest way (2-3x slower) to load files.
+	/// impact on how we load the files, parallel or not, async is only 10-20% faster and not
+	/// important. File.ReadAllLinesAsync is by far the slowest way (2-3x slower) to load files.
 	/// </summary>
 	[Test]
 	[Category("Slow")]
@@ -187,10 +222,19 @@ public class RepositoriesTests
 	[Benchmark]
 	public async Task LoadStrictBaseTypesHundredTimes()
 	{
-		//await repos.LoadStrictPackage();
-		//MemoryProfiler.GetSnapshot(nameof(LoadStrictBaseTypesTenTimes) + " once");
+#if MEMORY_PROFILER
+		await repos.LoadStrictPackage();
+		// Requires Jetbrains.Profiler.Windows.Api.MemoryProfiler
+		MemoryProfiler.GetSnapshot(nameof(LoadStrictBaseTypesHundredTimes) + " once");
+#endif
 		for (var iteration = 0; iteration < 100; iteration++)
 			await repos.LoadStrictPackage();
-		//MemoryProfiler.GetSnapshot(nameof(LoadStrictBaseTypesTenTimes) + "10");
-	} //ncrunch: no coverage end
+#if MEMORY_PROFILER
+		MemoryProfiler.GetSnapshot(nameof(LoadStrictBaseTypesHundredTimes) + " 100 more times");
+#endif
+	}
+
+	[Test]
+	[Category("Manual")]
+	public void BenchmarkIsOperator() => BenchmarkRunner.Run<BinaryOperatorTests>();
 }

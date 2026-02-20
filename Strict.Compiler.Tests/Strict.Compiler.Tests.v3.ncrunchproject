@@ -1,24 +1,7 @@
 ﻿<ProjectConfiguration>
   <Settings>
     <IgnoredTests>
-      <NamedTestSelector>
-        <TestName>Strict.Compiler.Tests.SourceGeneratorTests.InvalidConsoleAppWillGiveUsCompilationError</TestName>
-      </NamedTestSelector>
-      <NamedTestSelector>
-        <TestName>Strict.Compiler.Tests.SourceGeneratorTests.GenerateFileReadProgram</TestName>
-      </NamedTestSelector>
-      <NamedTestSelector>
-        <TestName>Strict.Compiler.Tests.SourceGeneratorTests.CreateFileAndWriteIntoIt</TestName>
-      </NamedTestSelector>
-      <FixtureTestSelector>
-        <FixtureName>Strict.Compiler.Tests.CSharpTypeVisitorTests</FixtureName>
-      </FixtureTestSelector>
-      <NamedTestSelector>
-        <TestName>Strict.Compiler.Tests.SourceGeneratorTests.ArithmeticFunction</TestName>
-      </NamedTestSelector>
-      <NamedTestSelector>
-        <TestName>Strict.Compiler.Tests.SourceGeneratorTests.GenerateDirectoryGetFilesProgram</TestName>
-      </NamedTestSelector>
+      <AllTestsSelector />
     </IgnoredTests>
   </Settings>
 </ProjectConfiguration>

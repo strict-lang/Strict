@@ -6,17 +6,9 @@ using Type = Strict.Language.Type;
 
 namespace Strict.LanguageServer;
 
-public sealed class AutoCompletor : ICompletionHandler
+public sealed class AutoCompletor(StrictDocument documentManager, Package package)
+	: ICompletionHandler
 {
-	private readonly StrictDocument documentManager;
-	private readonly Package package;
-
-	public AutoCompletor(StrictDocument documentManager, Package package)
-	{
-		this.package = package;
-		this.documentManager = documentManager;
-	}
-
 	public async Task<CompletionList> Handle(CompletionParams request,
 		CancellationToken cancellationToken)
 	{

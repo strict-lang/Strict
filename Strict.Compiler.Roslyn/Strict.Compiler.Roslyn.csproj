@@ -1,15 +1,17 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net7.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 		<WarningsAsErrors />
+		<LangVersion>default</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Strict.Compiler\Strict.Compiler.csproj" />
-    <ProjectReference Include="..\Strict.Language.Expressions\Strict.Language.Expressions.csproj" />
+    <ProjectReference Include="..\Strict.Expressions\Strict.Expressions.csproj" />
     <ProjectReference Include="..\Strict.Language\Strict.Language.csproj" />
   </ItemGroup>
 

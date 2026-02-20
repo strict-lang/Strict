@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using Strict.Language;
+﻿using Strict.Language;
 using Type = Strict.Language.Type;
 
 namespace Strict.Compiler.Roslyn;
@@ -59,7 +56,7 @@ public sealed class CSharpTypeVisitor : TypeVisitor
 
 	public void VisitMember(Member member)
 	{
-		if (member.Name == "log")
+		if (member.Name == "logger")
 			return;
 		var accessModifier = member.IsPublic
 			? "public"
@@ -74,8 +71,8 @@ public sealed class CSharpTypeVisitor : TypeVisitor
 		ref string accessModifier)
 	{
 		var initializationExpression = "";
-		if (member.Value != null)
-			initializationExpression += " = " + expressionVisitor.Visit(member.Value);
+		if (member.InitialValue != null)
+			initializationExpression += " = " + expressionVisitor.Visit(member.InitialValue);
 		if (member.Name == "file")
 			accessModifier += " static";
 		if (string.IsNullOrEmpty(initializationExpression) && member.Type.IsIterator)

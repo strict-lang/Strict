@@ -1,11 +1,8 @@
-﻿using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-using NUnit.Framework;
+﻿using NUnit.Framework;
 using OmniSharp.Extensions.LanguageServer.Protocol;
 using OmniSharp.Extensions.LanguageServer.Protocol.Models;
 using Strict.Language;
-using Strict.Language.Expressions;
+using Strict.Expressions;
 
 namespace Strict.LanguageServer.Tests;
 
@@ -23,7 +20,7 @@ public sealed class AutoCompletorTests : LanguageServerTests
 
 	// @formatter:off
 	[TestCase("Write", 2,
-		"has log",
+		"has logger",
 		"Log(message Text)",
 		"\tlog.")]
 	[TestCase("for", 2,
@@ -31,11 +28,11 @@ public sealed class AutoCompletorTests : LanguageServerTests
 		"Bla",
 		"\trange.")]
 	[TestCase("to", 2,
-		"has log",
+		"has logger",
 		"CheckText(message Text)",
 		"\tmessage.")]
 	[TestCase("to", 4,
-		"has log",
+		"has logger",
 		"SecondMethod Number",
 		"\t5",
 		"FirstMethod(message Text)",
@@ -74,8 +71,8 @@ public sealed class AutoCompletorTests : LanguageServerTests
 	private static DocumentUri GetDocumentUri(string seed) =>
 		new("", "", $"Test{seed}.strict", "", "");
 
-	[TestCase(2, "Write", "has log", "Log(message Text)", "\trandom.")]
-	[TestCase(1, "Write", "has log", "has some Text", "Log(message Text)", "\trandom.")]
+	[TestCase(2, "Write", "has logger", "Log(message Text)", "\trandom.")]
+	[TestCase(1, "Write", "has logger", "has some Text", "Log(message Text)", "\trandom.")]
 	public async Task HandleInvalidAutoCompleteAsync(int triggerLine, string completionName, params string[] code)
 	{
 		var documentUri = GetDocumentUri(completionName);

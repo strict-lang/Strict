@@ -1,32 +1,39 @@
-﻿namespace Strict.VirtualMachine;
+﻿namespace Strict.Runtime;
 
+/// <summary>
+/// Each Instruction corresponds to a Statement class in the <see cref="Statements" /> namespace
+/// here. For details on what each instruction does, see the corresponding Statement class.
+/// </summary>
 public enum Instruction
 {
+	LoadConstantToRegister,
+	LoadVariableToRegister,
+	StoreConstantToVariable,
+	StoreRegisterToVariable,
 	Set,
-	StoreVariable,
-	StoreFromRegister,
-	Load,
-	LoadConstant,
-	InitLoopStatement,
-	SetLoadSeparator = 100,
+	LoopBegin,
+	LoopEnd,
+	ListCall,
+	StoreSeparator = 100,
 	Add,
 	Subtract,
 	Multiply,
 	Divide,
 	Modulo,
-	BinaryOperatorsSeparator = 200,
-	GreaterThan,
-	LessThan,
+	ArithmeticSeparator = 200,
 	Equal,
 	NotEqual,
-	ConditionalSeparator = 300,
+	LessThan,
+	GreaterThan,
+	BinaryOperatorsSeparator = 300,
+	Jump,
 	JumpIfTrue,
 	JumpIfFalse,
 	JumpIfNotZero,
 	JumpEnd,
 	JumpToIdIfFalse,
 	JumpToIdIfTrue,
-	JumpsSeparator = 400,
+	ControlFlowSeparator = 400,
 	Invoke,
 	Return
 }

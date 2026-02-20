@@ -1,11 +1,9 @@
-using System;
-using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
-using System.IO;
 using ManagedCuda;
 using ManagedCuda.NVRTC;
 using NUnit.Framework;
+using Strict.Language;
 
 namespace Strict.Compiler.Cuda.Tests;
 
@@ -43,7 +41,7 @@ public class BlurPerformanceTests
 	private void LoadImage()
 	{
 		var bitmap =
-			new Bitmap(@"TexturedMeshTests.RenderTexturedBoxPlaneAndSphereWithImage.approved.png");
+			new Bitmap("TexturedMeshTests.RenderTexturedBoxPlaneAndSphereWithImage.approved.png");
 		width = bitmap.Width;
 		height = bitmap.Height;
 		var data = bitmap.LockBits(new Rectangle(0, 0, bitmap.Width, bitmap.Height),
@@ -70,7 +68,7 @@ public class BlurPerformanceTests
 
 	private int width;
 	private int height;
-	private byte[] image = Array.Empty<byte>();
+	private byte[] image = [];
 	private const int BlurIterations = 200;
 
 	public void CompileKernel()
@@ -94,7 +92,6 @@ public class BlurPerformanceTests
 			// Use max capabilities on actual hardware we have at runtime
 			var computeVersion = CudaContext.GetDeviceComputeCapability(0);
 			var shaderModelVersion = "" + computeVersion.Major + computeVersion.Minor;
-			Console.WriteLine("ShaderModelVersion=" + shaderModelVersion);
 			Compile(rtc, shaderModelVersion);
 		}
 		catch (NVRTCException)
@@ -104,12 +101,13 @@ public class BlurPerformanceTests
 		}
 	}
 
+	[Log]
 	private void Compile(CudaRuntimeCompiler rtc, string shaderModelVersion)
 	{ // see http://docs.nvidia.com/cuda/nvrtc/index.html for usage and options
 		//https://arnon.dk/matching-sm-architectures-arch-and-gencode-for-various-nvidia-cards/
 		//nvcc .\vectorAdd.cu -use_fast_math -ptx -m 64 -arch compute_61 -code sm_61 -o .\vectorAdd.ptx
 		//https://docs.nvidia.com/cuda/nvrtc/index.html#group__options
-		rtc.Compile(new[] { "--gpu-architecture=compute_" + shaderModelVersion });
+		rtc.Compile(["--gpu-architecture=compute_" + shaderModelVersion]);
 		Console.WriteLine("Cuda compile log: " + rtc.GetLogAsString());
 		const int DeviceID = 0;
 		var ctx = new CudaContext(DeviceID);

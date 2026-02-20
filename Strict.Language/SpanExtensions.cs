@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
 
 namespace Strict.Language;
 
@@ -72,7 +69,7 @@ public static class SpanExtensions
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static bool Contains(this ReadOnlySpan<char> input, IEnumerable<string> items)
+	public static bool ContainsAnyItem(this ReadOnlySpan<char> input, IEnumerable<string> items)
 	{
 		foreach (var item in items)
 			if (input.IndexOf(item.AsSpan()) >= 0)
@@ -94,10 +91,13 @@ public static class SpanExtensions
 	public static bool IsWord(this ReadOnlySpan<char> input)
 	{
 		foreach (var c in input)
-			if (c is (< 'A' or > 'Z') and (< 'a' or > 'z'))
+			if (!IsLetter(c))
 				return false;
 		return true;
 	}
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static bool IsLetter(this char c) => c is >= 'A' and <= 'Z' or >= 'a' and <= 'z';
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static bool IsTrueText(this ReadOnlySpan<char> input) =>
@@ -113,8 +113,8 @@ public static class SpanExtensions
 	/// times faster than double.TryParse.
 	/// </summary>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	// ReSharper disable once MethodTooLong
 	// ReSharper disable once ExcessiveIndentation
+	// ReSharper disable once MethodTooLong
 	public static bool TryParseNumber(this ReadOnlySpan<char> input, out double number)
 	{
 		if (input[0] == '-')

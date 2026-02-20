@@ -1,12 +1,13 @@
-using System.Threading.Tasks;
 using NUnit.Framework;
 using Strict.Compiler.Roslyn;
 using Strict.Language;
-using Strict.Language.Expressions;
+using Strict.Expressions;
+using Strict.Expressions.Tests;
+using Type = Strict.Language.Type;
 
 namespace Strict.Compiler.Tests;
 
-public class TestCSharpGenerator
+public class TestCSharpGenerator : NoConsoleWriteLineAllowed
 {
 	[SetUp]
 	public Task CreateGenerator()
@@ -23,7 +24,7 @@ public class TestCSharpGenerator
 
 	protected Type CreateHelloWorldProgramType() =>
 		new Type(package,
-				new TypeLines("Program", "has App", "has log", "Run",
-					"\tlog.Write(\"Hello World\")")).
+				new TypeLines("Program", "has App", "has logger", "Run",
+					"\tlogger.Log(\"Hello World\")")).
 			ParseMembersAndMethods(parser);
 }

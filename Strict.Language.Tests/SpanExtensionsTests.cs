@@ -1,7 +1,4 @@
-﻿using System;
-using NUnit.Framework;
-
-namespace Strict.Language.Tests;
+﻿namespace Strict.Language.Tests;
 
 public class SpanExtensionsTests
 {
@@ -71,8 +68,8 @@ GetComplicatedSequenceTexts returns Texts
 		Assert.That(index, Is.EqualTo(expectedWords.Length));
 	}
 
-	[TestCase(@"1, 2")]
-	[TestCase(@"word, number, 123")]
+	[TestCase("1, 2")]
+	[TestCase("word, number, 123")]
 	public void SplitWordsByComma(string input)
 	{
 		var index = 0;
@@ -88,7 +85,7 @@ GetComplicatedSequenceTexts returns Texts
 	[TestCase("aksbdkasbd\nsadnakjsdnk")]
 	public void SplitLines(string input)
 	{
-		var expectedLines = input.Split(new[] { Environment.NewLine, "\n" }, StringSplitOptions.None);
+		var expectedLines = input.Split([Environment.NewLine, "\n"], StringSplitOptions.None);
 		var index = 0;
 		foreach (var wordSpan in input.AsSpan().SplitLines())
 		{
@@ -111,23 +108,39 @@ GetComplicatedSequenceTexts returns Texts
 	[TestCase("*")]
 	[TestCase("is")]
 	public void AnyOperator(string input) =>
-		Assert.That(input.AsSpan().Any(new[] { "+", "-", "*", "is" }), Is.True);
+		Assert.That(input.AsSpan().Any(["+", "-", "*", "is"]), Is.True);
 
 	[TestCase("is+")]
 	public void NotAnyOperator(string input) =>
-		Assert.That(input.AsSpan().Any(new[] { "+", "-", "*", "is" }), Is.False);
+		Assert.That(input.AsSpan().Any(["+", "-", "*", "is"]), Is.False);
 
 	[TestCase("5 * 6")]
 	[TestCase("1 + 2")]
 	[TestCase(@"""hello"" is Text")]
 	public void ContainsOperator(string input) =>
-		Assert.That(input.AsSpan().Contains(new[] { "+", "-", "*", "is" }), Is.True);
+		Assert.That(input.AsSpan().ContainsAnyItem(["+", "-", "*", "is"]), Is.True);
 
 	[TestCase(@"""hello"" is Text")]
 	public void NotContainsOperator(string input) =>
-		Assert.That(input.AsSpan().Contains(new[] { "+", "-", "*" }), Is.False);
+		Assert.That(input.AsSpan().ContainsAnyItem(["+", "-", "*"]), Is.False);
 
 	[TestCase(@"""hello"" is Text")]
 	public void Count(string input) =>
 		Assert.That(input.AsSpan().Count('\"'), Is.EqualTo(2));
+
+	[TestCase("word", true)]
+	[TestCase("someNumber", true)]
+	[TestCase(" ", false)]
+	[TestCase("5", false)]
+	[TestCase(".", false)]
+	public void IsWord(string text, bool expected) =>
+		Assert.That(text.AsSpan().IsWord(), Is.EqualTo(expected));
+
+	[TestCase('a', true)]
+	[TestCase('Z', true)]
+	[TestCase('5', false)]
+	[TestCase('.', false)]
+	[TestCase(' ', false)]
+	public void IsLetter(char c, bool expected) =>
+		Assert.That(c.IsLetter(), Is.EqualTo(expected));
 }

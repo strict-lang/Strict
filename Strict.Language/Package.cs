@@ -1,17 +1,22 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
+using System.Collections;
 using System.Runtime.CompilerServices;
 
 namespace Strict.Language;
 
-/// <inheritdoc />
 /// <summary>
 /// In C# or Java called namespace or package as well, in Strict this is any code folder.
 /// </summary>
-public class Package : Context
+public class Package : Context, IEnumerable<Type>, IDisposable
 {
+#if DEBUG
+	public Package(string packagePath, [CallerFilePath] string callerFilePath = "",
+		[CallerLineNumber] int callerLineNumber = 0,
+		[CallerMemberName] string callerMemberName = "") : this(RootForPackages, packagePath,
+		// ReSharper disable ExplicitCallerInfoArgument
+		callerFilePath, callerLineNumber, callerMemberName) { }
+#else
 	public Package(string packagePath) : this(RootForPackages, packagePath) { }
+#endif
 	private static readonly Root RootForPackages = new();
 
 	/// <summary>
@@ -22,9 +27,14 @@ public class Package : Context
 	/// </summary>
 	private sealed class Root : Package
 	{
+#if DEBUG
+		public Root([CallerFilePath] string callerFilePath = "", [CallerLineNumber] int callerLineNumber = 0,
+			[CallerMemberName] string callerMemberName = "") : base(null, string.Empty, callerFilePath,
+			callerLineNumber, callerMemberName) =>
+#else
 		public Root() : base(null, string.Empty) =>
-			cachedFoundTypes.Add(Base.None,
-				new Type(this, new TypeLines(Base.None, Array.Empty<string>())));
+#endif
+			cachedFoundTypes.Add(Base.None, new Type(this, new TypeLines(Base.None)));
 
 		public override Type? FindType(string name, Context? searchingFrom = null) =>
 			cachedFoundTypes.TryGetValue(name, out var previouslyFoundType)
@@ -41,17 +51,34 @@ public class Package : Context
 		private readonly Dictionary<string, Type> cachedFoundTypes = new(StringComparer.Ordinal);
 	}
 
-	public Package(Package? parentPackage, string packagePath) : base(parentPackage,
-		Path.GetFileName(packagePath))
+	public Package(Package? parentPackage, string packagePath, [CallerFilePath] string callerFilePath = "",
+		[CallerLineNumber] int callerLineNumber = 0,
+		[CallerMemberName] string callerMemberName = "") : base(parentPackage,
+		Path.GetFileName(packagePath), callerFilePath, callerLineNumber, callerMemberName)
 	{
 		FolderPath = packagePath;
-		parentPackage?.children.Add(this);
+		if (parentPackage == null)
+			return;
+		var existing = parentPackage.children.FirstOrDefault(existingPackage => existingPackage.Name == Name);
+		if (existing != null)
+			throw new PackageAlreadyExists(Name, parentPackage, existing); //ncrunch: no coverage
+		parentPackage.children.Add(this);
 	}
+
+	public class PackageAlreadyExists(string name, Package parentPackage, Package existing)
+		: Exception(name + " in " + (parentPackage.Name == "" //ncrunch: no coverage
+				? nameof(Root)
+				: "parent package " + parentPackage)
+#if DEBUG
+			+ ", existing package created by " + existing.callerFilePath + ":" +
+			existing.callerLineNumber + " from method " + existing.callerMemberName
+#endif
+		);
 
 	public string FolderPath { get; }
 	private readonly List<Package> children = new();
-	internal void Add(Type type) => types.Add(type);
-	private readonly List<Type> types = new();
+	internal void Add(Type type) => types.Add(type.Name, type);
+	private readonly Dictionary<string, Type> types = new();
 
 	public Type? FindFullType(string fullName)
 	{
@@ -71,8 +98,8 @@ public class Package : Context
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	private static bool IsPrivateName(string name) => char.IsLower(name[0]);
 
-	public sealed class FullNameMustContainPackageAndTypeNames : Exception { }
-	public sealed class PrivateTypesAreOnlyAvailableInItsPackage : Exception { }
+	public sealed class FullNameMustContainPackageAndTypeNames : Exception;
+	public sealed class PrivateTypesAreOnlyAvailableInItsPackage : Exception;
 
 	/// <summary>
 	/// The following picture shows the typical search steps and optimizations done. It is different
@@ -105,13 +132,7 @@ public class Package : Context
 	private Type? lastType;
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public Type? FindDirectType(string name)
-	{
-		foreach (var t in types)
-			if (t.Name == name)
-				return t;
-		return null;
-	}
+	public Type? FindDirectType(string name) => types.GetValueOrDefault(name);
 
 	private Type? FindTypeInChildrenPackages(string name, Context? searchingFromPackage)
 	{
@@ -138,5 +159,16 @@ public class Package : Context
 	public Package? Find(string name) =>
 		FindSubPackage(name) ?? RootForPackages.FindSubPackage(name);
 
-	public void Remove(Type type) => types.Remove(type);
+	public void Remove(Type? type)
+	{
+		if (type != null)
+			types.Remove(type.Name);
+	}
+
+	internal void Remove(Package package) => children.Remove(package);
+	public IEnumerator<Type> GetEnumerator() => new List<Type>(types.Values).GetEnumerator();
+	IEnumerator IEnumerable.GetEnumerator() => GetEnumerator(); //ncrunch: no coverage
+
+	// ReSharper disable once ConditionalAccessQualifierIsNonNullableAccordingToAPIContract
+	public void Dispose() => ((Package)Parent)?.Remove(this);
 }

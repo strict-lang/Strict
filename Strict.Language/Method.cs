@@ -1,9 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.CompilerServices;
 
 [assembly: InternalsVisibleTo("Strict.Language.Tests")]
+[assembly: InternalsVisibleTo("Strict.Validators")]
+[assembly: InternalsVisibleTo("Strict.HighLevelRuntime")]
 
 namespace Strict.Language;
 
@@ -13,8 +12,15 @@ namespace Strict.Language;
 /// </summary>
 public sealed class Method : Context
 {
+#if DEBUG
+	public Method(Type type, int typeLineNumber, ExpressionParser parser,
+		IReadOnlyList<string> lines, [CallerFilePath] string callerFilePath = "",
+		[CallerLineNumber] int callerLineNumber = 0, [CallerMemberName] string callerMemberName = "")
+		: base(type, GetName(lines[0]), callerFilePath, callerLineNumber, callerMemberName)
+#else
 	public Method(Type type, int typeLineNumber, ExpressionParser parser, IReadOnlyList<string> lines)
 		: base(type, GetName(lines[0]))
+#endif
 	{
 		if (lines.Count > Limit.MethodLength)
 			throw new MethodLengthMustNotExceedTwelve(this, lines.Count, typeLineNumber);
@@ -22,23 +28,38 @@ public sealed class Method : Context
 		Parser = parser;
 		this.lines = lines;
 		var restSpan = lines[0].AsSpan(Name.Length);
-		ReturnType = ParseReturnType(type, restSpan);
+		if (restSpan.StartsWith("()"))
+			throw new EmptyParametersMustBeRemoved(this);
+		if (restSpan.Length == 1)
+			throw new InvalidMethodParameters(this, restSpan.ToString());
+		if (IsMethodGeneric(restSpan))
+			IsGeneric = true;
+		var closingBracketIndex = restSpan.LastIndexOf(") ");
+		var returnTypeSpan = closingBracketIndex > 0
+			? restSpan[(closingBracketIndex + 2)..]
+			: restSpan.Length > 0 && restSpan[0] == ' '
+				? restSpan[1..]
+				: [];
+		ReturnType = returnTypeSpan.Length is 0
+			? GetEmptyReturnType(type)
+			: ParseReturnType(type, returnTypeSpan.ToString());
 		if (lines.Count > 1)
 			methodBody = PreParseBody();
-		ParseParameters(type, restSpan);
+		if (restSpan.Length > 2 && restSpan[0] == '(' && closingBracketIndex < 0)
+			closingBracketIndex = restSpan.LastIndexOf(")");
+		if (closingBracketIndex > 0)
+			ParseParameters(type, restSpan[1..closingBracketIndex]);
 	}
 
-	public sealed class MethodLengthMustNotExceedTwelve : ParsingFailed
-	{
-		public MethodLengthMustNotExceedTwelve(Method method, int linesCount, int lineNumber) : base(
-			method.Type, lineNumber,
-			$"Method {method.Name} has {linesCount} lines but limit is {Limit.MethodLength}") { }
-	}
+	public sealed class
+		MethodLengthMustNotExceedTwelve(Method method, int linesCount, int lineNumber)
+		: ParsingFailed(method.Type, lineNumber,
+			$"Method {method.Name} has {linesCount} lines but limit is {Limit.MethodLength}");
 
 	/// <summary>
-	/// Simple lexer to just parse the method definition and get all used names and types. Method code
-	/// itself is parsed only on demand (when GetBodyAndParseIfNeeded is called) in are more complex
-	/// way (Shunting yard/BNF/etc.) and slower. Examples: Run, Run(number), Run returns Text
+	/// Simple lexer to just parse the method definition and get all used names and types. Method
+	/// code itself is parsed only on demand (when GetBodyAndParseIfNeeded is called) in a more
+	/// complex way (Shunting yard/BNF/etc.) and slower. Examples: Run, Run(number), Run returns Text
 	/// </summary>
 	private static string GetName(ReadOnlySpan<char> firstLine)
 	{
@@ -47,12 +68,6 @@ public sealed class Method : Context
 			if (firstLine[i] == '(' || firstLine[i] == ' ')
 			{
 				name = firstLine[..i];
-				if (IsNameIsNotOperator(firstLine))
-					return firstLine[..(i + 4)].ToString();
-				if (IsNameIsNotInOperator(firstLine))
-					return firstLine[..(i + 7)].ToString();
-				if (IsNameIsInOperator(firstLine))
-					return firstLine[..(i + 3)].ToString();
 				break;
 			}
 		return !name.IsWord() && !name.IsOperator()
@@ -60,115 +75,78 @@ public sealed class Method : Context
 			: name.ToString();
 	}
 
-	private static bool IsNameIsInOperator(ReadOnlySpan<char> input) => input.StartsWith(BinaryOperator.IsIn + "(", StringComparison.Ordinal);
-
-	private static bool IsNameIsNotOperator(ReadOnlySpan<char> input) =>
-		input.StartsWith(BinaryOperator.IsNot + "(", StringComparison.Ordinal);
-
-	private static bool IsNameIsNotInOperator(ReadOnlySpan<char> input) =>
-		input.StartsWith(BinaryOperator.IsNotIn + "(", StringComparison.Ordinal);
-
 	public int TypeLineNumber { get; }
 	public ExpressionParser Parser { get; }
 	internal readonly IReadOnlyList<string> lines;
 	private readonly Body? methodBody;
+	public bool WasParsedAlready => methodBody is { Expressions.Count: > 0 };
 
-	private Type ParseReturnType(Type type, ReadOnlySpan<char> rest)
+	private Type ParseReturnType(Context type, string returnTypeText)
 	{
-		if (rest.Length == 0)
-			return GetEmptyReturnType(type);
-		if (IsReturnTypeAny(rest))
-			throw new MethodReturnTypeAsAnyIsNotAllowed(this, rest.ToString());
-		if (IsMethodGeneric(rest))
-			IsGeneric = true;
-		var closingBracketIndex = rest.LastIndexOf(')');
-		var lastOpeningBracketIndex = rest.LastIndexOf('(');
-		if (lastOpeningBracketIndex > 2)
-			return Type.GetType(rest[(rest.LastIndexOf(' ') + 1)..].ToString());
-		var gotBrackets = closingBracketIndex > 0;
-		return gotBrackets && rest.Length == 2
-			? throw new EmptyParametersMustBeRemoved(this)
-			: rest[0] != '(' == gotBrackets || rest.Length < 2
-				? throw new InvalidMethodParameters(this, rest.ToString())
-				: rest[0] == ' ' && !gotBrackets
-					? type.GetType(rest[1..].ToString())
-					: closingBracketIndex + 2 < rest.Length
-						? Type.GetType(rest[(closingBracketIndex + 2)..].ToString())
-						: GetEmptyReturnType(type);
+		if (returnTypeText == Base.Any)
+			throw new MethodReturnTypeAsAnyIsNotAllowed(this, returnTypeText);
+		var hasMultipleReturnTypes = returnTypeText.Contains(" or ", StringComparison.Ordinal);
+		return hasMultipleReturnTypes
+			? ParseMultipleReturnTypes(returnTypeText)
+			: type.GetType(returnTypeText);
 	}
 
+	private Type ParseMultipleReturnTypes(string typeNames) =>
+		new OneOfType(Type, typeNames.Split(" or ", StringSplitOptions.TrimEntries).
+			Select(typeName => Type.GetType(typeName)).ToList());
+
 	private Type GetEmptyReturnType(Type type) =>
-		Name == From
+		Name is From
 			? type
 			: type.GetType(Base.None);
 
-	private static bool IsReturnTypeAny(ReadOnlySpan<char> rest) =>
-		rest[0] == ' ' && rest[1..].Equals(Base.Any, StringComparison.Ordinal);
-
-	public sealed class MethodReturnTypeAsAnyIsNotAllowed : ParsingFailed
-	{
-		public MethodReturnTypeAsAnyIsNotAllowed(Method method, string name) : base(method.Type, 0, name) { }
-	}
+	public sealed class MethodReturnTypeAsAnyIsNotAllowed(Method method, string name)
+		: ParsingFailed(method.Type, 0, name);
 
 	private static bool IsMethodGeneric(ReadOnlySpan<char> headerLine) =>
 		headerLine.Contains(Base.Generic, StringComparison.Ordinal) ||
 		headerLine.Contains(Base.Generic.MakeFirstLetterLowercase(), StringComparison.Ordinal);
 
-	public bool IsGeneric { get; private set; }
+	public bool IsGeneric { get; }
 
-	private void ParseParameters(Type type, ReadOnlySpan<char> rest)
+	private void ParseParameters(Type type, ReadOnlySpan<char> parametersSpan)
 	{
-		if (rest.Length == 0)
-			return;
-		var closingBracketIndex = rest.LastIndexOf(')');
-		var lastOpeningBracketIndex = rest.LastIndexOf('(');
-		// If the type contains brackets, exclude it from the rest for proper parameter parsing
-		if (lastOpeningBracketIndex > 2)
-		{
-			var lastSpaceIndex = rest.LastIndexOf(' ');
-			if (lastSpaceIndex > 0)
-				ParseAndAddParameters(type, rest, lastSpaceIndex - 1);
-			return;
-		}
-		if (closingBracketIndex > 0)
-			ParseAndAddParameters(type, rest, closingBracketIndex);
-	}
-
-	private void ParseAndAddParameters(Type type, ReadOnlySpan<char> rest, int closingBracketIndex)
-	{
-		foreach (var nameAndType in rest[1..closingBracketIndex].
-			Split(',', StringSplitOptions.TrimEntries))
+		foreach (var nameAndType in SplitParameters(parametersSpan))
 		{
 			if (char.IsUpper(nameAndType[0]))
-				throw new ParametersMustStartWithLowerCase(this);
+				throw new ParametersMustStartWithLowerCase(this, nameAndType.ToString());
 			var nameAndTypeAsString = nameAndType.ToString();
 			if (IsParameterTypeAny(nameAndTypeAsString))
 				throw new ParametersWithTypeAnyIsNotAllowed(this, nameAndTypeAsString);
 			parameters.Add(nameAndTypeAsString.Contains('=')
-				? GetParameterByExtractingNameAndDefaultValue(type, nameAndTypeAsString)
+				? GetParameterByExtractingNameAndDefaultValue(type, nameAndTypeAsString, Parser)
 				: new Parameter(type, nameAndTypeAsString));
 		}
 		if (parameters.Count > Limit.ParameterCount)
-			throw new MethodParameterCountMustNotExceedThree(this,
+			throw new MethodParameterCountMustNotExceedLimit(this,
 				TypeLineNumber + methodLineNumber - 1);
 	}
 
-	public sealed class ParametersMustStartWithLowerCase : ParsingFailed
-	{
-		public ParametersMustStartWithLowerCase(Method method) : base(method.Type, 0, "", method.Name) { }
-	}
+	private static SpanSplitEnumerator SplitParameters(ReadOnlySpan<char> parametersSpan) =>
+		parametersSpan.Contains('(') && (!parametersSpan.Contains(',') ||
+			IsCommaInsideBrackets(parametersSpan, parametersSpan.IndexOf(',')))
+			? new SpanSplitEnumerator(parametersSpan, char.MaxValue, StringSplitOptions.None)
+			: parametersSpan.Split(',', StringSplitOptions.TrimEntries);
+
+	private static bool IsCommaInsideBrackets(ReadOnlySpan<char> parametersSpan, int commaIndex) =>
+		parametersSpan.IndexOf(')') > commaIndex && parametersSpan.LastIndexOf('(') < commaIndex;
+
+	public sealed class ParametersMustStartWithLowerCase(Method method, string message)
+		: ParsingFailed(method.Type, 0, message, method.Name);
 
 	private static bool IsParameterTypeAny(string nameAndTypeString) =>
-		nameAndTypeString == Base.Any.MakeFirstLetterLowercase() ||
-		nameAndTypeString.Contains(" Any");
+		nameAndTypeString == Type.AnyLowercase || nameAndTypeString.Contains(" " + Base.Any);
 
-	public sealed class ParametersWithTypeAnyIsNotAllowed : ParsingFailed
-	{
-		public ParametersWithTypeAnyIsNotAllowed(Method method, string name) : base(method.Type, 0, name) { }
-	}
+	public sealed class ParametersWithTypeAnyIsNotAllowed(Method method, string name)
+		: ParsingFailed(method.Type, 0, name);
 
 	private Parameter GetParameterByExtractingNameAndDefaultValue(Type type,
-		string nameAndTypeAsString)
+		string nameAndTypeAsString, ExpressionParser parser)
 	{
 		var nameAndDefaultValue = nameAndTypeAsString.Split(" = ");
 		if (nameAndDefaultValue.Length < 2)
@@ -176,57 +154,142 @@ public sealed class Method : Context
 				nameAndTypeAsString);
 		var defaultValue = methodBody != null
 			? ParseExpression(methodBody, nameAndDefaultValue[1])
-			: null;
-		return defaultValue == null
-			? throw new DefaultValueCouldNotBeParsedIntoExpression(this,
-				TypeLineNumber + methodLineNumber - 1, nameAndTypeAsString)
-			: new Parameter(type, nameAndDefaultValue[0], defaultValue);
+			: type.GetMemberExpression(parser, nameAndDefaultValue[0], nameAndDefaultValue[1],
+				TypeLineNumber);
+		return new Parameter(type, nameAndDefaultValue[0], defaultValue);
 	}
 
-	public sealed class MissingParameterDefaultValue : ParsingFailed
+	public sealed class MissingParameterDefaultValue(Method method, int lineNumber,
+		string nameAndType) : ParsingFailed(method.Type, lineNumber, nameAndType);
+
+	public sealed class MethodParameterCountMustNotExceedLimit(Method method, int lineNumber)
+		: ParsingFailed(method.Type, lineNumber,
+			$"{
+				GetMethodName(method)
+			} has parameters count {
+				method.Parameters.Count
+			} but limit is {
+				Limit.ParameterCount
+			}")
 	{
-		public MissingParameterDefaultValue(Method method, int lineNumber, string nameAndType) : base(method.Type, lineNumber, nameAndType) { }
+		private static string GetMethodName(Method method) =>
+			method.Name == From
+				? "Type " + method.Type.FullName + " " + From + " constructor method"
+				: "Method " + method.Name;
 	}
 
-	public sealed class DefaultValueCouldNotBeParsedIntoExpression : ParsingFailed
+	public sealed class InvalidMethodParameters(Method method, string rest)
+		: ParsingFailed(method.Type, 0, rest, method.Name);
+
+	public sealed class EmptyParametersMustBeRemoved(Method method)
+		: ParsingFailed(method.Type, 0, "", method.Name);
+
+	internal Method(Method cloneFrom, Type newReturnType)
+		: base(newReturnType, cloneFrom.Name
+#if DEBUG
+			, cloneFrom.callerFilePath, cloneFrom.callerLineNumber, cloneFrom.callerMemberName
+#endif
+		)
 	{
-		public DefaultValueCouldNotBeParsedIntoExpression(Method method, int lineNumber,
-			string defaultValueExpression) : base(method.Type, lineNumber, defaultValueExpression) { }
+		TypeLineNumber = cloneFrom.TypeLineNumber;
+		Parser = cloneFrom.Parser;
+		lines = cloneFrom.lines;
+		IsGeneric = cloneFrom.IsGeneric;
+		ReturnType = newReturnType;
+		if (cloneFrom.methodBody != null)
+			methodBody = cloneFrom.methodBody.CloneAndUpdateMethod(this); //ncrunch: no coverage
+		parameters = cloneFrom.parameters;
+		Tests = cloneFrom.Tests;
+		lines = cloneFrom.lines;
 	}
 
-	public sealed class MethodParameterCountMustNotExceedThree : ParsingFailed
+	internal Method(Method cloneFrom, GenericTypeImplementation typeWithImplementation)
+		: base(typeWithImplementation, cloneFrom.Name
+#if DEBUG
+			, cloneFrom.callerFilePath, cloneFrom.callerLineNumber, cloneFrom.callerMemberName
+#endif
+		)
 	{
-		public MethodParameterCountMustNotExceedThree(Method method, int lineNumber) : base(method.Type, lineNumber, $"Method {method.Name} has parameters count {method.Parameters.Count} but limit is {Limit.ParameterCount}") { }
+		TypeLineNumber = cloneFrom.TypeLineNumber;
+		Parser = cloneFrom.Parser;
+		lines = cloneFrom.lines;
+		IsGeneric = false;
+		ReturnType = ReplaceWithImplementationOrGenericType(cloneFrom.ReturnType, typeWithImplementation, 0);
+		parameters = new List<Parameter>(cloneFrom.parameters);
+		for (var index = 0; index < parameters.Count; index++)
+			parameters[index] = cloneFrom.parameters[index].CloneWithImplementationType(
+				ReplaceWithImplementationOrGenericType(cloneFrom.Parameters[index].Type,
+					typeWithImplementation, index));
+		if (cloneFrom.methodBody != null)
+			methodBody = cloneFrom.methodBody.CloneAndUpdateMethod(this);
+		Tests = cloneFrom.Tests;
+		lines = cloneFrom.lines;
 	}
 
-	public sealed class InvalidMethodParameters : ParsingFailed
+	/// <summary>
+	/// Nested generic implementations (like Mutable(List)) keep their outer type while substituting
+	/// the implemented list type. This makes Add(Type) return Mutable(List(Number)) as expected.
+	/// </summary>
+	private static Type ReplaceWithImplementationOrGenericType(Type type,
+		GenericTypeImplementation typeWithImplementation, int index)
 	{
-		public InvalidMethodParameters(Method method, string rest) : base(method.Type, 0, rest,
-			method.Name) { }
-	}
-
-	public sealed class EmptyParametersMustBeRemoved : ParsingFailed
-	{
-		public EmptyParametersMustBeRemoved(Method method) : base(method.Type, 0, "", method.Name) { }
+		if (type.Name == Base.Generic)
+			return typeWithImplementation.ImplementationTypes[index];
+		if (type is GenericTypeImplementation genericImplementation)
+		{
+			var updatedImplementationTypes =
+				new Type[genericImplementation.ImplementationTypes.Count];
+			var hasChanges = false;
+			for (var implementationIndex = 0;
+				implementationIndex < updatedImplementationTypes.Length; implementationIndex++)
+			{
+				var implementationType = genericImplementation.ImplementationTypes[implementationIndex];
+				var updatedType = implementationType.Name == Base.Generic
+					? typeWithImplementation.ImplementationTypes[index]
+					: implementationType == typeWithImplementation.Generic
+						? typeWithImplementation
+						: implementationType;
+				updatedImplementationTypes[implementationIndex] = updatedType;
+				if (!ReferenceEquals(updatedType, implementationType))
+					hasChanges = true;
+			}
+			if (hasChanges)
+				return genericImplementation.Generic.GetGenericImplementation(updatedImplementationTypes);
+		}
+		return type.IsGeneric && type == typeWithImplementation.Generic
+			? typeWithImplementation
+			: type;
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public Expression ParseLine(Body body, string currentLine)
 	{
 		var expression = Parser.ParseLineExpression(body, currentLine.AsSpan(body.Tabs));
-		if (IsTestExpression(currentLine, expression))
+		if (IsTestExpression(body, currentLine, expression))
 			Tests.Add(expression);
+		// Checks for obvious recursive calls with same arguments at the last line (non-test method),
+		// this won't catch most recursive calls, see Executor for most other cases.
+		else if (currentLine.Contains(body.Method.Name +
+				body.Method.parameters.Select(p => p.Name).ToBrackets()) &&
+			expression.GetType().Name == "MethodCall" &&
+			body.ParsingLineNumber == body.Method.Tests.Count + 1 && currentLine != "\tRun")
+			throw new RecursiveCallCausesStackOverflow(body);
 		return expression;
 	}
 
-	private static bool IsTestExpression(string currentLine, Expression expression) =>
-		currentLine.Contains($" {BinaryOperator.Is} ") &&
+	public sealed class RecursiveCallCausesStackOverflow(Body body) : ParsingFailed(body);
+
+	private static bool IsTestExpression(Body body, string currentLine, Expression expression) =>
+		(currentLine.Contains($" {BinaryOperator.Is} ") ||
+			expression.GetType().Name == "MethodCall" &&
+			body.ParsingLineNumber == body.Method.Tests.Count + 1) &&
 		!currentLine.Trim().StartsWith("if", StringComparison.Ordinal) &&
-		!currentLine.Contains("?") && expression.ReturnType.Name == Base.Boolean;
+		!currentLine.Contains("?") && expression.ReturnType.IsBoolean;
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public Expression ParseExpression(Body body, ReadOnlySpan<char> text) =>
-		Parser.ParseExpression(body, text);
+	public Expression
+		ParseExpression(Body body, ReadOnlySpan<char> text, bool makeMutable = false) =>
+		Parser.ParseExpression(body, text, makeMutable);
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public List<Expression> ParseListArguments(Body body, ReadOnlySpan<char> text) =>
@@ -235,7 +298,7 @@ public sealed class Method : Context
 	public const string From = "from";
 
 	/// <summary>
-	/// Skips the first method declaration line, then counts and removes the tabs from each line.
+	/// Skips the first method declaration line, then counts, and removes the tabs from each line.
 	/// Also groups all expressions on the same tabs level into bodies. In case a body has only
 	/// a single line (which is most often the case), that only expression is used directly.
 	/// </summary>
@@ -255,7 +318,7 @@ public sealed class Method : Context
 	private bool CheckBodyLine(string line, Body body)
 	{
 		if (line.Length == 0)
-			throw new Type.EmptyLineIsNotAllowed(Type, TypeLineNumber + methodLineNumber);
+			throw new TypeParser.EmptyLineIsNotAllowed(Type, TypeLineNumber + methodLineNumber);
 		var tabs = GetTabs(line);
 		if (tabs > body.Tabs)
 			PreParseBody(tabs, body);
@@ -266,8 +329,9 @@ public sealed class Method : Context
 	private static int GetTabs(string line)
 	{
 		var tabs = 0;
-		foreach (var t in line)
-			if (t == '\t')
+		// ReSharper disable once ForCanBeConvertedToForeach, would consume too much memory!
+		for (var index = 0; index < line.Length; index++)
+			if (line[index] == '\t')
 				tabs++;
 			else
 				break;
@@ -279,66 +343,147 @@ public sealed class Method : Context
 		if (tabs is 0 or > 3)
 			throw new InvalidIndentation(Type, lineNumber, line, Name);
 		if (char.IsWhiteSpace(line[tabs]))
-			throw new Type.ExtraWhitespacesFoundAtBeginningOfLine(Type, lineNumber, line, Name);
+			throw new TypeParser.ExtraWhitespacesFoundAtBeginningOfLine(Type, lineNumber, line, Name);
 		if (char.IsWhiteSpace(line[^1]))
-			throw new Type.ExtraWhitespacesFoundAtEndOfLine(Type, lineNumber, line, Name);
+			throw new TypeParser.ExtraWhitespacesFoundAtEndOfLine(Type, lineNumber, line, Name);
 	}
 
-	public sealed class InvalidIndentation : ParsingFailed
-	{
-		public InvalidIndentation(Type type, int lineNumber, string line, string method) : base(type,
-			lineNumber, method, line) { }
-	}
+	public sealed class InvalidIndentation(Type type, int lineNumber, string line, string method)
+		: ParsingFailed(type, lineNumber, method, line);
 
 	private bool IsCurrentLineInBodyScope(int bodyTabs) =>
 		methodLineNumber < lines.Count && GetTabs(lines[methodLineNumber]) != bodyTabs;
 
 	public Type Type => (Type)Parent;
 	public IReadOnlyList<Parameter> Parameters => parameters;
-	private List<Parameter> parameters = new();
-	public Type ReturnType { get; private set; }
+	private readonly List<Parameter> parameters = new();
+	public Type ReturnType { get; }
 	public bool IsPublic => char.IsUpper(Name[0]);
 	public List<Expression> Tests { get; } = new();
+	public bool IsTrait => methodBody == null;
 
 	public override Type? FindType(string name, Context? searchingFrom = null) =>
-		name == Base.Value
+		name == Type.ValueLowercase
 			? Type
 			: Type.FindType(name, searchingFrom ?? this);
 
-	public Expression GetBodyAndParseIfNeeded() =>
-		methodBody == null
-			? throw new CannotCallBodyOnTraitMethod()
-			: methodBody.Expressions.Count > 0
-				? methodBody
-				: methodBody.Parse();
+	public Expression GetBodyAndParseIfNeeded(bool parseTestsOnlyForGeneric = false)
+	{
+		if (methodBody == null)
+			throw new CannotCallBodyOnTraitMethod(Type, Name);
+		if (parseTestsOnlyForGeneric && Type.IsGeneric)
+			return ParseTestsOnlyForGeneric();
+		if (methodBody.Expressions.Count > 0)
+			return !parseTestsOnlyForGeneric && methodBody.Expressions.Any(expression =>
+				expression.GetType().Name == "PlaceholderExpression")
+				? methodBody.Parse()
+				: methodBody.Expressions.Count == 1
+					? methodBody.Expressions[0]
+					: methodBody;
+		var expression = methodBody.Parse();
+		if (expression.GetType().Name == Base.Declaration)
+			throw new DeclarationIsNeverUsedAndMustBeRemoved(Type, TypeLineNumber, expression);
+		if (methodBody.Variables != null)
+			foreach (var variable in methodBody.Variables)
+				if (variable is { IsMutable: true, InitialValue.IsConstant: true } &&
+					!Parser.IsVariableMutated(methodBody, variable.Name))
+					throw new MutableUsesConstantValue(methodBody, variable.Name, variable.InitialValue);
+		if (Tests.Count < 1 && !IsTestPackage())
+			throw new MethodMustHaveAtLeastOneTest(Type, Name, TypeLineNumber);
+		return BodyParsed?.Invoke(expression) ?? expression;
+	}
 
-	public class CannotCallBodyOnTraitMethod : Exception { }
+	private Expression ParseTestsOnlyForGeneric()
+	{
+		if (methodBody == null)
+			throw new CannotCallBodyOnTraitMethod(Type, Name); //ncrunch: no coverage
+		if (methodBody.Expressions.Count > 0)
+			return methodBody.Expressions.Count == 1
+				? methodBody.Expressions[0]
+				: methodBody;
+		var expressions = new List<Expression>();
+		for (var index = 1; index < lines.Count; index++)
+		{
+			var line = lines[index];
+			methodBody.ParsingLineNumber = index;
+			if (IsDeclarationLine(line))
+			{
+				var declaration = Parser.ParseLineExpression(methodBody,
+					line.AsSpan(methodBody.Tabs));
+				expressions.Add(declaration);
+				continue;
+			}
+			if (!IsPotentialTestLine(line) || IsControlFlowLine(line))
+				continue;
+			var expression = Parser.ParseLineExpression(methodBody, line.AsSpan(methodBody.Tabs));
+			if (IsStandaloneInlineTestExpression(expression))
+			{
+				Tests.Add(expression);
+				expressions.Add(expression);
+			}
+		}
+		if (Tests.Count < 1 && !IsTestPackage())
+			throw new MethodMustHaveAtLeastOneTest(Type, Name, TypeLineNumber); //ncrunch: no coverage
+		expressions.Add(new PlaceholderExpression(ReturnType));
+		methodBody.SetExpressions(expressions);
+		return methodBody;
+	}
+
+	private static bool IsPotentialTestLine(string line) =>
+		line.Contains($" {BinaryOperator.Is} ", StringComparison.Ordinal) && !line.Contains("?");
+
+	private static bool IsDeclarationLine(string line) =>
+		line.StartsWith("\t" + Keyword.Constant + " ", StringComparison.Ordinal) ||
+		line.StartsWith("\t" + Keyword.Let + " ", StringComparison.Ordinal) ||
+		line.StartsWith("\t" + Keyword.Mutable + " ", StringComparison.Ordinal);
+
+	private static bool IsControlFlowLine(string line) =>
+		line.StartsWith("\tif ", StringComparison.Ordinal) ||
+		line.StartsWith("\tfor ", StringComparison.Ordinal) ||
+		line.StartsWith("\treturn ", StringComparison.Ordinal) ||
+		line.StartsWith("\t\t", StringComparison.Ordinal);
+
+	private static bool IsStandaloneInlineTestExpression(Expression expression) =>
+		expression.ReturnType.Name == Base.Boolean &&
+		expression.GetType().Name is not "If" &&
+		expression.GetType().Name is not Base.Return &&
+		expression.GetType().Name is not Base.Declaration &&
+		expression.GetType().Name is not Base.MutableReassignment;
+
+	private sealed class PlaceholderExpression(Type returnType)
+		: Expression(returnType)
+	{
+		public override bool IsConstant => true; //ncrunch: no coverage
+		public override string ToString() => ReturnType.Name;
+	}
+
+	public sealed class DeclarationIsNeverUsedAndMustBeRemoved(Type type, int lineNumber,
+		Expression expression) : ParsingFailed(type, lineNumber, expression.ToString());
+
+	public sealed class MutableUsesConstantValue(Body body, string name, Expression value)
+		: ParsingFailed(body,
+			$"Mutable declaration uses constant value, use constant instead: constant {name} = {value}");
+
+	/// <summary>
+	/// Needed when rewriting method body to a single expression, or creating a new Body from Visitor.
+	/// </summary>
+	internal void SetBodySingleExpression(Expression expression) =>
+		methodBody!.SetExpressions(expression is Body body
+			? body.Expressions
+			: [expression]);
+
+	public event Func<Expression, Expression>? BodyParsed;
+	private bool IsTestPackage() => Type.Package.Name == "TestPackage" || Name == "Run";
+
+	public sealed class MethodMustHaveAtLeastOneTest(Type type, string name, int typeLineNumber)
+		: ParsingFailed(type, typeLineNumber, name);
+
+	public class CannotCallBodyOnTraitMethod(Type type, string name) : Exception(type + "." + name);
 
 	public override string ToString() =>
 		Name + parameters.ToBrackets() + (ReturnType.Name == Base.None
 			? ""
 			: " " + ReturnType.Name);
-
-	public Method CloneWithImplementation(GenericTypeImplementation typeWithImplementation)
-	{
-		var clone = (Method)MemberwiseClone();
-		clone.ReturnType = ReplaceWithImplementationOrGenericType(clone.ReturnType, typeWithImplementation, 0);
-		clone.parameters = new List<Parameter>(parameters);
-		for (var index = 0; index < clone.Parameters.Count; index++)
-			clone.parameters[index] = clone.parameters[index].CloneWithImplementationType(
-				ReplaceWithImplementationOrGenericType(clone.Parameters[index].Type,
-					typeWithImplementation, index));
-		clone.IsGeneric = false;
-		return clone;
-	}
-
-	private static Type ReplaceWithImplementationOrGenericType(Type type,
-		GenericTypeImplementation typeWithImplementation, int index) =>
-		type.Name == Base.Generic
-			? typeWithImplementation.ImplementationTypes[index] //Number
-			: type.IsGeneric
-				? typeWithImplementation //ListNumber
-				: type;
 
 	public bool HasEqualSignature(Method method) =>
 		Name == method.Name && Parameters.Count == method.Parameters.Count &&
@@ -348,4 +493,41 @@ public sealed class Method : Context
 	private bool HasSameParameterTypes(Method method) =>
 		!method.Parameters.Where((parameter, index) =>
 			parameter.Type.Name != Base.Generic && Parameters[index].Type != parameter.Type).Any();
+
+	public int GetParameterUsageCount(string parameterName) =>
+		lines.Count(l => l.Contains(" " + parameterName) || l.Contains("(" + parameterName) ||
+			l.Contains(parameterName + " ") || l.Contains("\t" + parameterName));
+
+	/// <summary>
+	/// Very low level check if a variableName can be found in the raw text in these method lines.
+	/// </summary>
+	public int GetVariableUsageCount(string variableName) =>
+		lines.Count(l => l.Contains(" " + variableName) || l.Contains("(" + variableName) ||
+			l.Contains("\t" + variableName));
+
+	/// <summary>
+	/// Checks if another method has the same signature, doesn't matter if it is from this type or
+	/// any parent or child type. Used to avoid methods with the same return types and parameters.
+	/// Slightly different from <see cref="HasEqualSignature"/> which does extra generic checks.
+	/// </summary>
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public bool IsSameMethodNameReturnTypeAndParameters(Method other)
+	{
+		if (Name != other.Name || ReturnType != other.ReturnType ||
+			parameters.Count != other.Parameters.Count)
+			return false;
+		for (var index = 0; index < parameters.Count; index++)
+			if (parameters[index].Type != other.Parameters[index].Type)
+				return false;
+		return true;
+	}
+
+	public string[] GetLinesAndStripTabs(Range innerBodyRange, Body bodyForTabs)
+	{
+		var result = new string[innerBodyRange.End.Value - innerBodyRange.Start.Value];
+		for (var lineNumber = innerBodyRange.Start.Value; lineNumber < innerBodyRange.End.Value;
+			lineNumber++)
+			result[lineNumber - innerBodyRange.Start.Value] = lines[lineNumber][bodyForTabs.Tabs..];
+		return result;
+	}
 }

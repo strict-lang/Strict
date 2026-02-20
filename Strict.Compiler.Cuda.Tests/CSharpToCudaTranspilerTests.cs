@@ -1,9 +1,9 @@
-﻿using System.Threading.Tasks;
-using ManagedCuda;
+﻿using ManagedCuda;
 using ManagedCuda.NVRTC;
 using NUnit.Framework;
 using Strict.Language;
-using Strict.Language.Expressions;
+using Strict.Expressions;
+using Type = Strict.Language.Type;
 
 namespace Strict.Compiler.Cuda.Tests;
 
@@ -18,6 +18,9 @@ public class CSharpToCudaTranspilerTests
 
 	private CSharpToCudaTranspiler transpiler = null!;
 
+	[TearDown]
+	public void DisposeTranspiler() => transpiler.Dispose();
+
 	[TestCase("")]
 	public void EmptyInputWillNotWork(string input) =>
 		Assert.That(() => transpiler.Convert(input),
@@ -26,7 +29,7 @@ public class CSharpToCudaTranspilerTests
 	[Test]
 	public void MissingReturnStatement() =>
 		Assert.That(() => GetParsedCSharpType(nameof(MissingReturnStatement)),
-			Throws.InstanceOf<MissingReturnStatement>()!);
+			Throws.InstanceOf<MissingReturnStatement>());
 
 	[Test]
 	public void ParseAddNumbers()
@@ -80,7 +83,7 @@ public class CSharpToCudaTranspilerTests
 		// see http://docs.nvidia.com/cuda/nvrtc/index.html for usage and options
 		//https://arnon.dk/matching-sm-architectures-arch-and-gencode-for-various-nvidia-cards/
 		//nvcc .\vectorAdd.cu -use_fast_math -ptx -m 64 -arch compute_61 -code sm_61 -o .\vectorAdd.ptx
-		rtc.Compile(new[] { "--gpu-architecture=compute_75" });
+		rtc.Compile(["--gpu-architecture=compute_75"]);
 		return rtc;
 	}
 

@@ -1,14 +1,21 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net7.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 		<WarningsAsErrors />
-		<DefineConstants>$(DefineConstants)TRACE;LOG_DETAILS</DefineConstants>
+		<LoggingEnabled>false</LoggingEnabled>
+		<LangVersion>default</LangVersion>
   </PropertyGroup>
 
+	<ItemGroup Condition="'$(Configuration)'=='Debug' and '$(LoggingEnabled)' == 'true'">
+		<PackageReference Include="MethodDecorator.Fody" Version="1.1.1" />
+	</ItemGroup>
+
   <ItemGroup>
+    <PackageReference Include="Ben.Demystifier" Version="0.4.1" />
     <PackageReference Include="LazyCache" Version="2.4.0" />
   </ItemGroup>
 

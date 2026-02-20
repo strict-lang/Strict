@@ -1,10 +1,9 @@
-﻿using Strict.Language;
+﻿using Type = Strict.Language.Type;
 
 namespace Strict.Compiler.Roslyn;
 
-public class CSharpFile : SourceFile
+public class CSharpFile(Type type) : SourceFile
 {
-	public CSharpFile(Type type) => visitor = new CSharpTypeVisitor(type);
-	private readonly CSharpTypeVisitor visitor;
+	private readonly CSharpTypeVisitor visitor = new(type);
 	public override string ToString() => visitor.FileContent;
 }

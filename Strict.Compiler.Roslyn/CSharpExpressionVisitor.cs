@@ -1,8 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using Strict.Language;
-using Strict.Language.Expressions;
+﻿using Strict.Language;
+using Strict.Expressions;
 using Type = Strict.Language.Type;
 
 namespace Strict.Compiler.Roslyn;
@@ -66,13 +63,8 @@ public class CSharpExpressionVisitor : ExpressionVisitor
 			_ => methodName
 		};
 
-	protected override string Visit(ConstantDeclaration constantDeclaration)
-	{
-		var value = Visit(constantDeclaration.Value);
-		if (value.StartsWith("Mutable ", StringComparison.OrdinalIgnoreCase))
-			value = "Mutable(" + value["Mutable ".Length..] + ")";
-		return "var " + constantDeclaration.Name + " = " + value;
-	}
+	protected override string Visit(Declaration declaration) =>
+		"var " + declaration.Name + " = " + Visit(declaration.Value);
 
 	protected override string Visit(Return returnExpression) =>
 		"return " + Visit(returnExpression.Value);
@@ -84,7 +76,7 @@ public class CSharpExpressionVisitor : ExpressionVisitor
 			: ".") + (methodCall.Method.Name == "Read" && methodCall.Instance?.ToString() == "file"
 			? "ReadToEnd"
 			: methodCall.Method.Name == "Write" &&
-			methodCall.Instance?.ReturnType.Name is Base.Log or Base.System
+			methodCall.Instance?.ReturnType.Name is Base.Logger or Base.System
 				? "WriteLine"
 				: methodCall.Method.Name == Method.From
 					? methodCall.Method.Type.Name
@@ -107,7 +99,7 @@ public class CSharpExpressionVisitor : ExpressionVisitor
 			: "");
 
 	protected override string Visit(MemberCall memberCall) =>
-		memberCall.Member.Type.Name is Base.Log or Base.System
+		memberCall.Member.Type.Name is Base.Logger or Base.System
 			? "Console"
 			: memberCall.Instance != null
 				? memberCall.Instance + "." + memberCall.Member.Name
@@ -120,7 +112,7 @@ public class CSharpExpressionVisitor : ExpressionVisitor
 
 	protected override IReadOnlyList<string> VisitFor(For forExpression)
 	{
-		var block = new List<string> { "foreach (var index in " + Visit(forExpression.Value) + ")" };
+		var block = new List<string> { "foreach (var index in " + Visit(forExpression.Iterator) + ")" };
 		block.AddRange(Indent(VisitBody(forExpression.Body)));
 		return block;
 	}

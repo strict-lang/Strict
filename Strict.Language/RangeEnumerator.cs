@@ -1,5 +1,3 @@
-﻿using System;
-
 namespace Strict.Language;
 
 /// <summary>
@@ -29,9 +27,17 @@ public ref struct RangeEnumerator
 	{
 		if (IsAtEnd)
 			return false;
+		var bracketCount = 0;
 		for (var index = offset; index < input.Length; index++)
-			if (input[index] == splitter)
+		{
+			var current = input[index];
+			if (current == '(')
+				bracketCount++;
+			else if (current == ')')
+				bracketCount--;
+			if (current == splitter && bracketCount == 0)
 				return GetWordBeforeSplitter(index);
+		}
 		if (removeLeadingSpace && input[offset] == ' ')
 			offset++;
 		Current = (outerStart + offset)..(outerStart + input.Length);

@@ -1,6 +1,4 @@
-using System;
 using System.Diagnostics;
-using System.Threading.Tasks;
 
 namespace Strict.Compiler.Cuda.Tests;
 
@@ -51,7 +49,6 @@ public record TestPerformance(int Iterations, int ChunkSize, Action<int, int> Ru
 
 	private void CudaGpu() => RunGpu(Iterations);
 
-	// ReSharper disable once TooManyDeclarations
 	private void CudaGpuAndCpu()
 	{
 		//not really worth it, only after many iterations +-1%

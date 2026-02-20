@@ -1,15 +1,10 @@
 ﻿using Strict.Language;
 
-namespace Strict.VirtualMachine;
+namespace Strict.Runtime;
 
-public sealed class InvokedMethod
+public class InvokedMethod(IReadOnlyList<Expression> expressions,
+	IReadOnlyDictionary<string, Instance> arguments)
 {
-	public InvokedMethod(IReadOnlyList<Expression> expressions, IReadOnlyDictionary<string, Instance> arguments)
-	{
-		Expressions = expressions;
-		Arguments = arguments;
-	}
-
-	public IReadOnlyList<Expression> Expressions { get; }
-	public IReadOnlyDictionary<string, Instance> Arguments { get; }
+	public IReadOnlyList<Expression> Expressions { get; } = expressions;
+	public IReadOnlyDictionary<string, Instance> Arguments { get; } = arguments;
 }

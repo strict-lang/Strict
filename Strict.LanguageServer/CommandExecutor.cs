@@ -6,32 +6,22 @@ using OmniSharp.Extensions.LanguageServer.Protocol.Server;
 using OmniSharp.Extensions.LanguageServer.Protocol.Window;
 using OmniSharp.Extensions.LanguageServer.Protocol.Workspace;
 using Strict.Language;
-using Strict.Language.Expressions;
-using Strict.VirtualMachine;
+using Strict.Expressions;
+using Strict.Runtime;
 
 namespace Strict.LanguageServer;
+
 //ncrunch: no coverage start
-
-public class CommandExecutor : IExecuteCommandHandler
+public class CommandExecutor(ILanguageServerFacade languageServer,
+	StrictDocument document, Package package) : IExecuteCommandHandler
 {
-	private readonly VirtualMachine.VirtualMachine vm = new();
+	private readonly BytecodeInterpreter vm = new();
 	private const string CommandName = "strict-vscode-client.run";
-	private readonly StrictDocument document;
-	private readonly ILanguageServerFacade languageServer;
-	private readonly Package package;
-
-	public CommandExecutor(ILanguageServerFacade languageServer, StrictDocument document,
-		Package package)
-	{
-		this.document = document;
-		this.languageServer = languageServer;
-		this.package = package;
-	}
 
 	Task<Unit> IRequestHandler<ExecuteCommandParams, Unit>.Handle(
 		ExecuteCommandParams request, CancellationToken cancellationToken)
 	{
-		var methodCall = request.Arguments?[0]["label"].ToString();
+		var methodCall = request.Arguments?[0]["label"]?.ToString() ?? null;
 		var documentUri =
 			DocumentUri.From(request.Arguments?[1].ToString() ?? throw new PathCanNotBeEmpty());
 		var folderName = documentUri.Path.GetFolderName();
