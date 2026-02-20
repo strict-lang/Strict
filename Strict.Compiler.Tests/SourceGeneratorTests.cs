@@ -6,7 +6,7 @@ using Type = Strict.Language.Type;
 
 namespace Strict.Compiler.Tests;
 
-[Ignore("TODO: fix later")]
+//[Ignore("TODO: fix later")]
 public sealed class SourceGeneratorTests : TestCSharpGenerator
 {
 	[Test]
@@ -178,9 +178,9 @@ public class Program
 		const string DevelopmentExamplesFolder = Repositories.StrictDevelopmentFolderPrefix + ExamplesSubFolder;
 		if (Directory.Exists(DevelopmentExamplesFolder))
 			return DevelopmentExamplesFolder;
-		const string ExamplesPackageName = nameof(Strict) + ExamplesSubFolder;
+		const string ExamplesPackageName = "Strict.Examples";
 		return await Repositories.DownloadAndExtractRepository(
-				new Uri("https://github.com/strict-lang/" + ExamplesPackageName), ExamplesPackageName).
+				new Uri(Repositories.StrictPrefixUri.AbsoluteUri + ExamplesSubFolder), ExamplesPackageName).
 			ConfigureAwait(false);
 	}
 
