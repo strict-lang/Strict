@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+option csharp_namespace = "Strict.PackageManager";
+
+package packageManager;
+
+service PackageManager {
+  rpc DownloadPackage (PackageDownloadRequest) returns (EmptyReply);
+}
+
+message PackageDownloadRequest {
+	string packageUrl = 1;
+	string packageName = 2;
+	string targetPath = 3;
+}
+
+message EmptyReply { }

@@ -50,6 +50,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Strict.LanguageServer", "St
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Strict.LanguageServer.Tests", "Strict.LanguageServer.Tests\Strict.LanguageServer.Tests.csproj", "{BC6C366A-0DBB-44EA-9DBA-C6A528EA1EAE}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Strict.PackageManager", "Strict.PackageManager\Strict.PackageManager.csproj", "{73BBAA30-F227-4C79-AAB1-7893ABC8A7D3}"
+EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Strict.Validators", "Strict.Validators\Strict.Validators.csproj", "{BA945DFC-7FB7-4B04-A12B-D44CEC7FDB3A}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Strict.Validators.Tests", "Strict.Validators.Tests\Strict.Validators.Tests.csproj", "{B3129836-F56F-44BE-B5DA-A1373CBD289A}"
@@ -130,6 +132,10 @@ Global
 		{BC6C366A-0DBB-44EA-9DBA-C6A528EA1EAE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{BC6C366A-0DBB-44EA-9DBA-C6A528EA1EAE}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{BC6C366A-0DBB-44EA-9DBA-C6A528EA1EAE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{73BBAA30-F227-4C79-AAB1-7893ABC8A7D3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{73BBAA30-F227-4C79-AAB1-7893ABC8A7D3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{73BBAA30-F227-4C79-AAB1-7893ABC8A7D3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{73BBAA30-F227-4C79-AAB1-7893ABC8A7D3}.Release|Any CPU.Build.0 = Release|Any CPU
 		{BA945DFC-7FB7-4B04-A12B-D44CEC7FDB3A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{BA945DFC-7FB7-4B04-A12B-D44CEC7FDB3A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{BA945DFC-7FB7-4B04-A12B-D44CEC7FDB3A}.Release|Any CPU.ActiveCfg = Release|Any CPU
