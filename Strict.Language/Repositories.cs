@@ -228,10 +228,10 @@ public sealed class Repositories
 		var inDegreeGraphMap = CreateInDegreeGraphMap(files);
 		if (GotNestedImplements(files))
 		{
-			var sortedDependencies = EmptyDegreeQueueAndGenerateSortedOutput(files, inDegreeGraphMap);
+			var reversedDependencies = EmptyDegreeQueueAndGenerateSortedOutput(files, inDegreeGraphMap);
 			if (inDegreeGraphMap.Any(keyValue => keyValue.Value > 0))
-				AddUnresolvedRemainingTypes(files, inDegreeGraphMap, sortedDependencies);
-			return sortedDependencies;
+				AddUnresolvedRemainingTypes(files, inDegreeGraphMap, reversedDependencies);
+			return reversedDependencies;
 		}
 		return files.Values; //ncrunch: no coverage
 	}
@@ -260,30 +260,30 @@ public sealed class Repositories
 		return inDegree;
 	}
 
-	private static List<TypeLines> EmptyDegreeQueueAndGenerateSortedOutput(
+	private static Stack<TypeLines> EmptyDegreeQueueAndGenerateSortedOutput(
 		IReadOnlyDictionary<string, TypeLines> files, Dictionary<string, int> inDegree)
 	{
-		var sortedDependencies = new List<TypeLines>();
+		var reversedDependencies = new Stack<TypeLines>();
 		var zeroDegreeQueue = CreateZeroDegreeQueue(inDegree);
 		while (zeroDegreeQueue.Count > 0)
 			if (files.TryGetValue(zeroDegreeQueue.Dequeue(), out var lines))
 			{
-				sortedDependencies.Add(lines);
+				reversedDependencies.Push(lines);
 				foreach (var vertex in lines.DependentTypes)
 					if (--inDegree[vertex] is 0)
 						zeroDegreeQueue.Enqueue(vertex);
 			}
-		return sortedDependencies;
+		return reversedDependencies;
 	}
 
 	private static void AddUnresolvedRemainingTypes(IReadOnlyDictionary<string, TypeLines> files,
-		Dictionary<string, int> inDegree, List<TypeLines> sortedDependencies)
+		Dictionary<string, int> inDegree, Stack<TypeLines> reversedDependencies)
 	{
 		foreach (var unresolvedType in inDegree.Where(x => x.Value > 0))
 			if (files.TryGetValue(unresolvedType.Key, out var lines))
-				if (sortedDependencies.All(
+				if (reversedDependencies.All(
 					alreadyAddedType => alreadyAddedType.Name != unresolvedType.Key))
-					sortedDependencies.Add(lines);
+					reversedDependencies.Push(lines);
 	}
 
 	private static Queue<string> CreateZeroDegreeQueue(Dictionary<string, int> inDegree)

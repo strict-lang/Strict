@@ -142,6 +142,8 @@ public class Type : Context, IDisposable
 	private sealed class TypeIsNotParsedCallParseMembersAndMethods(Type type)
 		: Exception(type.ToString()); //ncrunch: no coverage
 
+	private bool IsParsed => IsGeneric || Lines.Length <= 1 || typeParser.LineNumber != -1;
+
 	public bool IsEnum =>
 		CheckIfParsed() && methods.Count == 0 && members.Count > 0 &&
 		members.All(m => m.IsConstant || m.Type.IsEnum);
@@ -333,7 +335,7 @@ public class Type : Context, IDisposable
 			return true;
 		if (IsCompatibleOneOfType(sameOrUsableType))
 			return true;
-		if (IsEnum && members[0].Type.IsSameOrCanBeUsedAs(sameOrUsableType))
+		if (IsParsed && IsEnum && members[0].Type.IsSameOrCanBeUsedAs(sameOrUsableType))
 			return true;
 		return maxDepth >= 0 && Members.Count(m => !m.IsConstant &&
 			m.Type.IsSameOrCanBeUsedAs(sameOrUsableType, allowImplicitConversion, maxDepth - 1)) == 1;
