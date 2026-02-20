@@ -63,7 +63,9 @@ public class TestPackage : Package
 			"is(other) Boolean",
 			"\t5 is 5",
 			"\t6 is not 5",
-			"\tvalue is other"));
+			"\tvalue is other",
+			"Increment Mutable(Number)",
+			"\tvalue + 1"));
 		var range = new Type(this, new TypeLines(Base.Range,
 			"has iterator",
 			"has Start Number",

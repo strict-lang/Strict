@@ -128,6 +128,8 @@ public sealed class BytecodeInterpreter
 			return;
 		if (TryHandleToConversion(invokeStatement))
 			return;
+		if (TryHandleIncrementDecrement(invokeStatement))
+			return;
 		if (GetValueByKeyForDictionaryAndStoreInRegister(invokeStatement))
 			return;
 		var methodStatements = GetByteCodeFromInvokedMethodCall(invokeStatement);
@@ -143,6 +145,24 @@ public sealed class BytecodeInterpreter
 		}.RunStatements(methodStatements).Returns;
 		if (instance != null)
 			Memory.Registers[invokeStatement.Register] = instance;
+	}
+
+	/// <summary>
+	/// Handles Number.Increment and Number.Decrement by directly computing the result without
+	/// going through the generic method invocation path (which fails for primitive types with no members).
+	/// </summary>
+	private bool TryHandleIncrementDecrement(Invoke invoke)
+	{
+		var methodName = invoke.Method?.Method.Name;
+		if (methodName != "Increment" && methodName != "Decrement")
+			return false;
+		if (invoke.Method!.Instance == null ||
+			!Memory.Variables.TryGetValue(invoke.Method.Instance.ToString(), out var current))
+			return false;
+		var delta = methodName == "Increment" ? 1m : -1m;
+		Memory.Registers[invoke.Register] =
+			new Instance(current.ReturnType, Convert.ToDecimal(current.Value) + delta);
+		return true;
 	}
 
 	/// <summary>Handles `value to Text` and `value to Number` method calls via the `To` expression.</summary>

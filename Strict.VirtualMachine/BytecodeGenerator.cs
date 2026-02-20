@@ -192,6 +192,16 @@ public sealed class ByteCodeGenerator
 			GenerateStatementsForRemoveMethod(methodCall);
 			return true;
 		}
+		case "Increment":
+		case "Decrement":
+		{
+			var register = registry.AllocateRegister();
+			statements.Add(new Invoke(methodCall, register, registry));
+			if (methodCall.Instance != null)
+				statements.Add(new StoreFromRegisterStatement(register,
+					methodCall.Instance.ToString()));
+			return true;
+		}
 		default:
 			return false;
 		}

@@ -218,7 +218,7 @@ public class BaseVirtualMachineTests : TestExpressions
 		"Invert Text",
 		"\tmutable result = \"\"",
 		"\tfor numbers",
-		"\t\tresult = result + \"-\" + value to Text",
+		"\t\tresult = result + value * -1",
 		"\tresult"
 	];
 	protected static readonly Statement[] ExpectedStatementsOfInvertValueKata =
@@ -227,19 +227,20 @@ public class BaseVirtualMachineTests : TestExpressions
 			new Instance(ListType,
 				new List<Expression>
 				{
-					new Value(NumberType, 1.0),
-					new Value(NumberType, 2.0),
-					new Value(NumberType, 3.0),
-					new Value(NumberType, 4.0)
+					new Value(NumberType, 1),
+					new Value(NumberType, 2),
+					new Value(NumberType, 3),
+					new Value(NumberType, 4),
+					new Value(NumberType, 5)
 				}), "numbers"),
 		new StoreVariableStatement(new Instance(TextType, ""), "result"),
 		new LoadVariableToRegister(Register.R0, "numbers"),
 		new LoopBeginStatement(Register.R0),
-		new LoadVariableToRegister(Register.R1, "result"),
-		new LoadConstantStatement(Register.R2, new Instance(TextType, "-")),
-		new Binary(Instruction.Add, Register.R1, Register.R2, Register.R3),
-		new Invoke("value to Text", Register.R4),
-		new Binary(Instruction.Add, Register.R3, Register.R4, Register.R5),
+		new LoadVariableToRegister(Register.R1, "value"),
+		new LoadConstantStatement(Register.R2, new Instance(NumberType, -1)),
+		new Binary(Instruction.Multiply, Register.R1, Register.R2, Register.R3),
+		new LoadVariableToRegister(Register.R4, "result"),
+		new Binary(Instruction.Add, Register.R4, Register.R3, Register.R5),
 		new StoreFromRegisterStatement(Register.R5, "result"),
 		new LoopEndStatement(8),
 		new LoadVariableToRegister(Register.R6, "result"),
