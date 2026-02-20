@@ -74,7 +74,11 @@ public sealed class BytecodeInterpreter
 		}
 		else if (statement is RemoveFromTableStatement removeFromTableStatement)
 		{
-			Memory.Registers[removeFromTableStatement.Register].GetRawValue();
+			var key = Memory.Registers[removeFromTableStatement.Register].GetRawValue();
+			var dict = (Dictionary<Value, Value>)Memory.Variables[removeFromTableStatement.Identifier].Value;
+			var keyToRemove = dict.Keys.FirstOrDefault(k => k.Data.Equals(key));
+			if (keyToRemove != null)
+				dict.Remove(keyToRemove);
 		}
 	}
 
@@ -135,6 +139,8 @@ public sealed class BytecodeInterpreter
 	{
 		if (statement is not Invoke { Method: not null } invokeStatement)
 			return;
+		if (TryCreateEmptyDictionaryInstance(invokeStatement))
+			return;
 		if (GetValueByKeyForDictionaryAndStoreInRegister(invokeStatement))
 			return;
 		var methodStatements = GetByteCodeFromInvokedMethodCall(invokeStatement);
@@ -150,6 +156,18 @@ public sealed class BytecodeInterpreter
 		}.RunStatements(methodStatements).Returns;
 		if (instance != null)
 			Memory.Registers[invokeStatement.Register] = instance;
+	}
+
+	private bool TryCreateEmptyDictionaryInstance(Invoke invoke)
+	{
+		if (invoke.Method?.Instance != null ||
+			invoke.Method?.ReturnType is not GenericTypeImplementation
+			{
+				Generic.Name: Base.Dictionary
+			} dictionaryType)
+			return false;
+		Memory.Registers[invoke.Register] = new Instance(dictionaryType, new Dictionary<Value, Value>());
+		return true;
 	}
 
 	private bool GetValueByKeyForDictionaryAndStoreInRegister(Invoke invoke)
@@ -175,15 +193,21 @@ public sealed class BytecodeInterpreter
 			invoke.Method?.Method != null && invoke.PersistedRegistry != null)
 			return new ByteCodeGenerator(
 					new InvokedMethod(
-						((Body)invoke.Method.Method.GetBodyAndParseIfNeeded()).Expressions,
+						GetExpressionsFromMethod(invoke.Method.Method),
 						FormArgumentsForMethodCall(invoke)), invoke.PersistedRegistry).
 				Generate();
 		var instance = GetVariableInstanceFromMemory(invoke.Method?.Instance?.ToString() ?? throw new InvalidOperationException());
 		return new ByteCodeGenerator(
 			new InstanceInvokedMethod(
-				((Body)invoke.Method.Method.GetBodyAndParseIfNeeded()).Expressions,
+				GetExpressionsFromMethod(invoke.Method!.Method),
 				FormArgumentsForMethodCall(invoke), instance),
 			invoke.PersistedRegistry ?? throw new InvalidOperationException()).Generate();
+	}
+
+	private static IReadOnlyList<Expression> GetExpressionsFromMethod(Method method)
+	{
+		var result = method.GetBodyAndParseIfNeeded();
+		return result is Body body ? body.Expressions : [result];
 	}
 
 	private Instance GetVariableInstanceFromMemory(string variableIdentifier)

@@ -12,16 +12,16 @@ public class BytecodeInterpreterTests : BaseVirtualMachineTests
 		if (type.Package.FindDirectType("Days") == null)
 			new Type(type.Package,
 				new TypeLines("Days", "has Monday = 1", "has Tuesday = 2", "has Wednesday = 3",
-					"has Thursday = 4", "has Friday = 5", "has Saturday = 6")).ParseMembersAndMethods(new MethodExpressionParser());
+					"has Friday = 5")).ParseMembersAndMethods(new MethodExpressionParser());
 	}
 
 	[Test]
 	public void ReturnEnum()
 	{
 		CreateSampleEnum();
-		var statements = new ByteCodeGenerator(GenerateMethodCallFromSource("WeekDays",
-			"WeekDays(5).GetMonday", "has dummy Number", "GetMonday Number",
-			"\tconstant monday = Days.Monday", "\tmonday")).Generate();
+		var statements = new ByteCodeGenerator(GenerateMethodCallFromSource(nameof(ReturnEnum),
+			nameof(ReturnEnum) + "(5).GetMonday", "has dummy Number", "GetMonday Number",
+			"\tDays.Monday")).Generate();
 		var result = vm.Execute(statements).Returns;
 		Assert.That(result!.Value, Is.EqualTo(1));
 	}
@@ -30,8 +30,9 @@ public class BytecodeInterpreterTests : BaseVirtualMachineTests
 	public void EnumIfConditionComparison()
 	{
 		CreateSampleEnum();
-		var statements = new ByteCodeGenerator(GenerateMethodCallFromSource("WeekDays",
-			"WeekDays(5).GetMonday(Days.Monday)", "has dummy Number", "GetMonday(days) Boolean",
+		var statements = new ByteCodeGenerator(GenerateMethodCallFromSource(nameof(EnumIfConditionComparison),
+			nameof(EnumIfConditionComparison) + "(5).GetMonday(Days.Monday)", "has dummy Number",
+			"GetMonday(days) Boolean",
 			"\tif days is Days.Monday", "\t\treturn true", "\telse", "\t\treturn false")).Generate();
 		var result = vm.Execute(statements).Returns;
 		Assert.That(result!.Value, Is.EqualTo(true));
@@ -102,23 +103,22 @@ public class BytecodeInterpreterTests : BaseVirtualMachineTests
 	[Test]
 	public void AccessListByIndex()
 	{
-		var statements = new ByteCodeGenerator(GenerateMethodCallFromSource("AccessList",
-			"AccessList(1, 2, 3, 4, 5).Get(2)",
+		var statements = new ByteCodeGenerator(GenerateMethodCallFromSource(nameof(AccessListByIndex),
+			nameof(AccessListByIndex) + "(1, 2, 3, 4, 5).Get(2)",
 			"has numbers",
 			"Get(index Number) Number",
-			"\tconstant element = numbers(index)",
-			"\telement")).Generate();
+			"\tnumbers(index)")).Generate();
 		Assert.That(vm.Execute(statements).Returns?.Value, Is.EqualTo(3));
 	}
 
 	[Test]
 	public void AccessListByIndexNonNumberType()
 	{
-		var statements = new ByteCodeGenerator(GenerateMethodCallFromSource("AccessList",
-			"AccessList(\"1\", \"2\", \"3\", \"4\", \"5\").Get(2)",
+		var statements = new ByteCodeGenerator(GenerateMethodCallFromSource(
+			nameof(AccessListByIndexNonNumberType),
+			nameof(AccessListByIndexNonNumberType) + "(\"1\", \"2\", \"3\", \"4\", \"5\").Get(2)",
 			"has texts", "Get(index Number) Text",
-			"\tconstant element = texts(index)",
-			"\telement")).Generate();
+			"\ttexts(index)")).Generate();
 		Assert.That(vm.Execute(statements).Returns?.Value, Is.EqualTo("3"));
 	}
 
@@ -141,13 +141,11 @@ public class BytecodeInterpreterTests : BaseVirtualMachineTests
 	[TestCase("NumberConvertor", "NumberConvertor(5).ConvertToText", "5",
 		"has number",
 		"ConvertToText Text",
-		"\tconstant result = 5 to Text",
-		"\tresult")]
+		"\t5 to Text")]
 	[TestCase("TextConvertor", "TextConvertor(\"5\").ConvertToNumber", 5,
 		"has text",
 		"ConvertToNumber Number",
-		"\tconstant result = text to Number",
-		"\tresult")]
+		"\ttext to Number")]
 	public void ExecuteToOperator(string programName, string methodCall, object expected, params string[] code)
 	{
 		var statements = new ByteCodeGenerator(GenerateMethodCallFromSource(programName,
@@ -193,7 +191,7 @@ public class BytecodeInterpreterTests : BaseVirtualMachineTests
 			"IsEven Number",
 			"\tmutable sum = 0",
 			"\tfor number",
-			"\t\tif (index % 2) is 0",
+			"\t\tif index % 2 is 0",
 			"\t\t\tsum = sum + index",
 			"\tsum"
 		})]
@@ -204,7 +202,7 @@ public class BytecodeInterpreterTests : BaseVirtualMachineTests
 			"IsEvenList Number",
 			"\tmutable sum = 0",
 			"\tfor numbers",
-			"\t\tif (index % 2) is 0",
+			"\t\tif index % 2 is 0",
 			"\t\t\tsum = sum + index",
 			"\tsum"
 		})]
@@ -223,7 +221,7 @@ public class BytecodeInterpreterTests : BaseVirtualMachineTests
 			"Add Numbers",
 			"\tmutable myList = (100, 200, 300, 400)",
 			"\tfor myList",
-			"\t\tif (value % 2) is 0",
+			"\t\tif value % 2 is 0",
 			"\t\t\tmyList = myList + index",
 			"\tmyList"
 		})]
@@ -343,7 +341,7 @@ public class BytecodeInterpreterTests : BaseVirtualMachineTests
 				Value).Count, Is.EqualTo(1));
 	}
 
-	[TestCase("CollectionAdd(5).AddToDictionary",
+	[TestCase("DictionaryGet(5).AddToDictionary",
 		"5",
 		"has number",
 		"AddToDictionary Number",
@@ -354,12 +352,12 @@ public class BytecodeInterpreterTests : BaseVirtualMachineTests
 	{
 		var statements =
 			new ByteCodeGenerator(
-				GenerateMethodCallFromSource(nameof(CollectionAdd), methodCall, code)).Generate();
+				GenerateMethodCallFromSource(nameof(DictionaryGet), methodCall, code)).Generate();
 		var result = vm.Execute(statements).Returns?.Value!;
 		Assert.That(result.ToString(), Is.EqualTo(expected));
 	}
 
-	[TestCase("CollectionAdd(5).AddToDictionary",
+	[TestCase("DictionaryRemove(5).AddToDictionary",
 		"5",
 		"has number",
 		"AddToDictionary Number",
@@ -367,14 +365,14 @@ public class BytecodeInterpreterTests : BaseVirtualMachineTests
 		"\tvalues.Add(1, number)",
 		"\tvalues.Add(2, number + 10)",
 		"\tvalues.Remove(1)",
-		"\tvalues.Get(1)")]
+		"\tvalues.Get(2)")]
 	public void DictionaryRemove(string methodCall, string expected, params string[] code)
 	{
 		var statements =
 			new ByteCodeGenerator(
-				GenerateMethodCallFromSource(nameof(CollectionAdd), methodCall, code)).Generate();
+				GenerateMethodCallFromSource(nameof(DictionaryRemove), methodCall, code)).Generate();
 		var result = vm.Execute(statements).Returns?.Value!;
-		Assert.That(result.ToString(), Is.EqualTo(expected));
+		Assert.That(result.ToString(), Is.EqualTo("15"));
 	}
 
 	[Test]
@@ -394,7 +392,7 @@ public class BytecodeInterpreterTests : BaseVirtualMachineTests
 	{
 		var source = new[]
 		{
-			"has numbers", "Reverse Numbers", "\tmutable result = Numbers", "\tconstant len = numbers.Length - 1", "\tfor Range(len, 0)",
+			"has numbers", "Reverse Numbers", "\tmutable result = Numbers", "\tlet len = numbers.Length - 1", "\tfor Range(len, 0)",
 			"\t\tresult.Add(numbers(index))", "\tresult"
 		};
 		var statements = new ByteCodeGenerator(GenerateMethodCallFromSource(nameof(ReverseWithRange),

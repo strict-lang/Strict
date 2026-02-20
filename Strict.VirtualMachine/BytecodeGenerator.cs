@@ -35,7 +35,7 @@ public sealed class ByteCodeGenerator
 		var methodBody = methodCall.Method.GetBodyAndParseIfNeeded();
 		Expressions = methodBody is not Body
 			? new[] { methodBody }
-			: ((Body)methodCall.Method.GetBodyAndParseIfNeeded()).Expressions;
+			: ((Body)methodBody).Expressions;
 		registry = new Registry();
 	}
 

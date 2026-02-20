@@ -381,7 +381,9 @@ public class MethodExpressionParser : ExpressionParser
 					forExpression.CustomVariables.Any(v => v.ContainsAnythingMutable) ||
 					forExpression.Iterator is Binary { Instance: VariableCall forVariableCall } &&
 					forVariableCall.Variable.Name == variableName || forExpression.Body is Body forBody &&
-					IsVariableMutated(forBody, variableName)))
+					IsVariableMutated(forBody, variableName) ||
+					forExpression.Body is If forIfBody &&
+					CheckForVariableMutationInIf(variableName, forIfBody)))
 				return true;
 			if (expression is MethodCall { Instance: VariableCall variableCall, IsMutable: true } &&
 				variableCall.Variable.Name == variableName)
