@@ -2,16 +2,18 @@ namespace Strict.Runtime.Tests;
 
 public class BytecodeInterpreterTests : BaseVirtualMachineTests
 {
-	/*TODO
 	[SetUp]
 	public void Setup() => vm = new BytecodeInterpreter();
 
 	protected BytecodeInterpreter vm = null!;
 
-	private void CreateSampleEnum() =>
-		new Type(type.Package,
-			new TypeLines("Days", "has Monday = 1", "has Tuesday = 2", "has Wednesday = 3",
-				"has Thursday = 4", "has Friday = 5", "has Saturday = 6")).ParseMembersAndMethods(new MethodExpressionParser());
+	private void CreateSampleEnum()
+	{
+		if (type.Package.FindDirectType("Days") == null)
+			new Type(type.Package,
+				new TypeLines("Days", "has Monday = 1", "has Tuesday = 2", "has Wednesday = 3",
+					"has Thursday = 4", "has Friday = 5", "has Saturday = 6")).ParseMembersAndMethods(new MethodExpressionParser());
+	}
 
 	[Test]
 	public void ReturnEnum()
@@ -434,5 +436,4 @@ public class BytecodeInterpreterTests : BaseVirtualMachineTests
 		Assert.That(
 			() => vm.Execute([new Binary(instruction, Register.R0)]),
 			Throws.InstanceOf<BytecodeInterpreter.OperandsRequired>());
-	*/
 }

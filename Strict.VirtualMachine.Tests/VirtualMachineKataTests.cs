@@ -2,7 +2,6 @@
 
 public class BytecodeInterpreterTestsKata : BytecodeInterpreterTests
 {
-	/*TODO
 	[Test]
 	public void BestTimeToBuyStocksKata()
 	{
@@ -52,5 +51,4 @@ public class BytecodeInterpreterTestsKata : BytecodeInterpreterTests
 			"\tresult")).Generate();
 		Assert.That(vm.Execute(statements).Returns!.Value, Is.EqualTo(17));
 	}
-	*/
 }

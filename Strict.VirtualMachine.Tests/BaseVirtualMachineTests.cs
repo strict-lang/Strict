@@ -25,7 +25,6 @@ public class BaseVirtualMachineTests : TestExpressions
 		"\tif operation is \"divide\"",
 		"\t\treturn First / Second"
 	];
-	/*TODO
 	protected static readonly Statement[] ExpectedStatementsOfArithmeticFunctionExample =
 	[
 		new StoreVariableStatement(new Instance(NumberType, 10), "First"),
@@ -267,5 +266,4 @@ public class BaseVirtualMachineTests : TestExpressions
 				new MethodExpressionParser());
 		return (MethodCall)ParseExpression(methodCall);
 	}
-	*/
 }

@@ -1,11 +1,10 @@
 namespace Strict.Runtime.Statements;
 
-public sealed class Binary(Register first, Instruction instruction, Register second)
+public sealed class Binary(Instruction instruction, params Register[] registers)
 	: Statement(instruction)
 {
-	public Register First { get; } = first;
-	public Register Second { get; } = second;
-	public override string ToString() => $"{Instruction} {First} {Second}";
+	public Register[] Registers { get; } = registers;
+	public override string ToString() => $"{Instruction} {string.Join(" ", Registers)}";
 
 	public bool IsConditional() =>
 		Instruction is > Instruction.ArithmeticSeparator and < Instruction.BinaryOperatorsSeparator;

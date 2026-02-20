@@ -1,5 +1,9 @@
 using System.Diagnostics;
+using Strict.Expressions;
+using Strict.Language;
 using Strict.Runtime.Statements;
+using BinaryStatement = Strict.Runtime.Statements.Binary;
+using Return = Strict.Runtime.Statements.Return;
 
 namespace Strict.Runtime;
 
@@ -15,6 +19,8 @@ public sealed class BytecodeInterpreter
 	{
 		conditionFlag = false;
 		instructionIndex = 0;
+		iteratorInitialized = false;
+		loopIterationNumber = 0;
 		statements.Clear();
 		Returns = null;
 		Memory.Registers.Clear();
@@ -23,6 +29,8 @@ public sealed class BytecodeInterpreter
 
 	private bool conditionFlag;
 	private int instructionIndex;
+	private bool iteratorInitialized;
+	private int loopIterationNumber;
 	private IList<Statement> statements = new List<Statement>();
 	public Instance? Returns { get; private set; }
 	// ReSharper disable once AutoPropertyCanBeMadeGetOnly.Local
@@ -39,14 +47,7 @@ public sealed class BytecodeInterpreter
 
 	private void ExecuteStatement(Statement statement)
 	{
-		if (conditionFlag) //dummy
-			return;
 		Debug.Assert(statement != null);
-	}
-	/*TODO
-	   private bool iteratorInitialized;
-	   private int loopIterationNumber;
-	{
 		if (TryExecuteReturn(statement))
 			return;
 		TryStoreInstructions(statement);
@@ -326,7 +327,7 @@ public sealed class BytecodeInterpreter
 
 	private void TryExecuteRest(Statement statement)
 	{
-		if (statement is Binary binaryStatement)
+		if (statement is BinaryStatement binaryStatement)
 		{
 			if (binaryStatement.IsConditional())
 				TryConditionalOperationExecution(binaryStatement);
@@ -335,9 +336,13 @@ public sealed class BytecodeInterpreter
 		}
 		else if (statement is Jump jumpStatement)
 			TryJumpOperation(jumpStatement);
+		else if (statement is JumpIf jumpIfStatement)
+			TryJumpIfOperation(jumpIfStatement);
+		else if (statement is JumpToId jumpToIdStatement)
+			TryJumpToIdOperation(jumpToIdStatement);
 	}
 
-	private void TryBinaryOperationExecution(Binary statement)
+	private void TryBinaryOperationExecution(BinaryStatement statement)
 	{
 		var (right, left) = GetOperands(statement);
 		Memory.Registers[statement.Registers[^1]] = statement.Instruction switch
@@ -354,12 +359,12 @@ public sealed class BytecodeInterpreter
 		};
 	}
 
-	private (Instance, Instance) GetOperands(Binary statement) =>
+	private (Instance, Instance) GetOperands(BinaryStatement statement) =>
 		Memory.Registers.Count < 2
 			? throw new OperandsRequired()
 			: (Memory.Registers[statement.Registers[1]], Memory.Registers[statement.Registers[0]]);
 
-	private void TryConditionalOperationExecution(Binary statement)
+	private void TryConditionalOperationExecution(BinaryStatement statement)
 	{
 		var (right, left) = GetOperands(statement);
 		NormalizeValues(right, left);
@@ -383,14 +388,25 @@ public sealed class BytecodeInterpreter
 	private void TryJumpOperation(Jump statement)
 	{
 		if (conditionFlag && statement.Instruction is Instruction.JumpIfTrue ||
+			!conditionFlag && statement.Instruction is Instruction.JumpIfFalse)
+			instructionIndex += statement.InstructionsToSkip;
+	}
+
+	private void TryJumpIfOperation(JumpIf statement)
+	{
+		if (conditionFlag && statement.Instruction is Instruction.JumpIfTrue ||
 			!conditionFlag && statement.Instruction is Instruction.JumpIfFalse ||
 			statement is JumpIfNotZero jumpIfNotZeroStatement &&
 			Convert.ToInt32(Memory.Registers[jumpIfNotZeroStatement.Register].Value) > 0)
-			instructionIndex += Convert.ToInt32(((JumpIf)statement).Steps);
-		else if (!conditionFlag && statement.Instruction is Instruction.JumpToIdIfFalse ||
+			instructionIndex += Convert.ToInt32(statement.Steps);
+	}
+
+	private void TryJumpToIdOperation(JumpToId statement)
+	{
+		if (!conditionFlag && statement.Instruction is Instruction.JumpToIdIfFalse ||
 			conditionFlag && statement.Instruction is Instruction.JumpToIdIfTrue)
 		{
-			var id = ((JumpToId)statement).Id;
+			var id = statement.Id;
 			var endIndex = statements.IndexOf(statements.First(jumpStatement =>
 				jumpStatement.Instruction is Instruction.JumpEnd &&
 				jumpStatement is JumpToId jumpViaId && jumpViaId.Id == id));
@@ -401,5 +417,4 @@ public sealed class BytecodeInterpreter
 
 	public sealed class OperandsRequired : Exception { }
 	private sealed class VariableNotFoundInMemory : Exception { }
-	*/
 }

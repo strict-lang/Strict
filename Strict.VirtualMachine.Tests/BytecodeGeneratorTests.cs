@@ -2,7 +2,6 @@
 
 public sealed class ByteCodeGeneratorTests : BaseVirtualMachineTests
 {
-	/*TODO
 	[TestCaseSource(nameof(ByteCodeCases))]
 	public void Generate(string methodCall, string programName, Statement[] expectedByteCode,
 		params string[] code)
@@ -137,5 +136,4 @@ public sealed class ByteCodeGeneratorTests : BaseVirtualMachineTests
 				SimpleMethodCallCode);
 		}
 	}
-	*/
 }
