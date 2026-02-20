@@ -172,17 +172,19 @@ public sealed class Repositories
 		if (parent != null && files.Count == 0)
 			return parent; //ncrunch: no coverage
 #if DEBUG
+		var folderName = Path.GetFileName(packagePath);
 		var package = parent != null
 			// ReSharper disable ExplicitCallerInfoArgument
 			? new Package(parent, packagePath, callerFilePath, callerLineNumber, callerMemberName)
-			: new Package(packagePath.Contains('.')
-				? packagePath.Split('.')[1]
+			: new Package(folderName.Contains('.')
+				? folderName.Split('.')[1]
 				: packagePath, callerFilePath, callerLineNumber, callerMemberName);
 #else
+		var folderName = Path.GetFileName(packagePath);
 		var package = parent != null
 			? new Package(parent, packagePath)
-			: new Package(packagePath.Contains('.')
-				? packagePath.Split('.')[1]
+			: new Package(folderName.Contains('.')
+				? folderName.Split('.')[1]
 				: packagePath);
 #endif
 		if (package.Name == nameof(Strict) && files.Count > 0)
@@ -226,10 +228,10 @@ public sealed class Repositories
 		var inDegreeGraphMap = CreateInDegreeGraphMap(files);
 		if (GotNestedImplements(files))
 		{
-			var reversedDependencies = EmptyDegreeQueueAndGenerateSortedOutput(files, inDegreeGraphMap);
+			var sortedDependencies = EmptyDegreeQueueAndGenerateSortedOutput(files, inDegreeGraphMap);
 			if (inDegreeGraphMap.Any(keyValue => keyValue.Value > 0))
-				AddUnresolvedRemainingTypes(files, inDegreeGraphMap, reversedDependencies);
-			return reversedDependencies;
+				AddUnresolvedRemainingTypes(files, inDegreeGraphMap, sortedDependencies);
+			return sortedDependencies;
 		}
 		return files.Values; //ncrunch: no coverage
 	}
@@ -258,30 +260,30 @@ public sealed class Repositories
 		return inDegree;
 	}
 
-	private static Stack<TypeLines> EmptyDegreeQueueAndGenerateSortedOutput(
+	private static List<TypeLines> EmptyDegreeQueueAndGenerateSortedOutput(
 		IReadOnlyDictionary<string, TypeLines> files, Dictionary<string, int> inDegree)
 	{
-		var reversedDependencies = new Stack<TypeLines>();
+		var sortedDependencies = new List<TypeLines>();
 		var zeroDegreeQueue = CreateZeroDegreeQueue(inDegree);
 		while (zeroDegreeQueue.Count > 0)
 			if (files.TryGetValue(zeroDegreeQueue.Dequeue(), out var lines))
 			{
-				reversedDependencies.Push(lines);
+				sortedDependencies.Add(lines);
 				foreach (var vertex in lines.DependentTypes)
 					if (--inDegree[vertex] is 0)
 						zeroDegreeQueue.Enqueue(vertex);
 			}
-		return reversedDependencies;
+		return sortedDependencies;
 	}
 
 	private static void AddUnresolvedRemainingTypes(IReadOnlyDictionary<string, TypeLines> files,
-		Dictionary<string, int> inDegree, Stack<TypeLines> reversedDependencies)
+		Dictionary<string, int> inDegree, List<TypeLines> sortedDependencies)
 	{
 		foreach (var unresolvedType in inDegree.Where(x => x.Value > 0))
 			if (files.TryGetValue(unresolvedType.Key, out var lines))
-				if (reversedDependencies.All(
+				if (sortedDependencies.All(
 					alreadyAddedType => alreadyAddedType.Name != unresolvedType.Key))
-					reversedDependencies.Push(lines);
+					sortedDependencies.Add(lines);
 	}
 
 	private static Queue<string> CreateZeroDegreeQueue(Dictionary<string, int> inDegree)

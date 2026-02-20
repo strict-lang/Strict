@@ -8,11 +8,16 @@ namespace Strict.LanguageServer.Tests;
 
 public sealed class AutoCompletorTests : LanguageServerTests
 {
+	[OneTimeSetUp]
+	public async Task LoadStrictPackageAsync()
+	{
+		package = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
+	}
+
 	[SetUp]
-	public async Task CreateStrictDocumentAsync()
+	public void CreateStrictDocument()
 	{
 		strictDocument = new StrictDocument();
-		package = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
 	}
 
 	private StrictDocument strictDocument = null!;
@@ -20,7 +25,7 @@ public sealed class AutoCompletorTests : LanguageServerTests
 
 	// @formatter:off
 	[TestCase("Write", 2,
-		"has logger",
+		"has log TextWriter",
 		"Log(message Text)",
 		"\tlog.")]
 	[TestCase("for", 2,

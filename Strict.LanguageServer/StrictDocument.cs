@@ -29,7 +29,7 @@ public sealed class StrictDocument
 		if (change.Range is not null &&
 			change.Text.StartsWith(Environment.NewLine, StringComparison.Ordinal) &&
 			change.Range.Start.Line == change.Range.End.Line)
-			content.Insert(change.Range.Start.Line + 1, change.Text[2..]);
+			content.Insert(change.Range.Start.Line + 1, change.Text[Environment.NewLine.Length..]);
 		else if (change.Range is not null && content.Count - 1 < change.Range.Start.Line)
 			AddSingleOrMultiLineNewText(change);
 		else if (change.Range is not null && change.Range.Start.Line < change.Range.End.Line)
