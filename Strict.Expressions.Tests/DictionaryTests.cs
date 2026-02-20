@@ -56,11 +56,9 @@ public sealed class DictionaryTests : TestExpressions
 	[Test]
 	public void DictionaryTupleConstructorParsesAsMethodCall()
 	{
-   using var dictionary = new Type(type.Package,
-				new TypeLines(nameof(DictionaryTupleConstructorParsesAsMethodCall),
-					"has number",
-					"Run Dictionary(Number, Number)",
-					"\tDictionary((2, 4))")).
+		using var dictionary = new Type(type.Package,
+				new TypeLines(nameof(DictionaryTupleConstructorParsesAsMethodCall), "has number",
+					"Run Dictionary(Number, Number)", "\tDictionary((2, 4))")).
 			ParseMembersAndMethods(new MethodExpressionParser());
 		var expression = dictionary.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(expression, Is.InstanceOf<MethodCall>());
@@ -68,13 +66,11 @@ public sealed class DictionaryTests : TestExpressions
 	}
 
 	[Test]
- public void DictionaryConstructorWithMultiplePairsKeepsText()
+	public void DictionaryConstructorWithMultiplePairsKeepsText()
 	{
 		using var dictionary = new Type(type.Package,
-        new TypeLines(nameof(DictionaryConstructorWithMultiplePairsKeepsText),
-					"has number",
-					"Run Dictionary(Number, Number)",
-					"\tDictionary((2, 4), (4, 8))")).
+				new TypeLines(nameof(DictionaryConstructorWithMultiplePairsKeepsText), "has number",
+					"Run Dictionary(Number, Number)", "\tDictionary((2, 4), (4, 8))")).
 			ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(dictionary.Methods[0].GetBodyAndParseIfNeeded().ToString(),
 			Is.EqualTo("Dictionary((2, 4), (4, 8))"));
@@ -84,10 +80,8 @@ public sealed class DictionaryTests : TestExpressions
 	public void DictionaryTypeExpressionInMemberCallKeepsText()
 	{
 		using var dictionary = new Type(type.Package,
-				new TypeLines(nameof(DictionaryTypeExpressionInMemberCallKeepsText),
-					"has number",
-					"Run Boolean",
-					"\tDictionary(Number, Number).Length is 0")).
+				new TypeLines(nameof(DictionaryTypeExpressionInMemberCallKeepsText), "has number",
+					"Run Boolean", "\tDictionary(Number, Number).Length is 0")).
 			ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(dictionary.Methods[0].GetBodyAndParseIfNeeded().ToString(),
 			Is.EqualTo("Dictionary(Number, Number).Length is 0"));
@@ -179,7 +173,6 @@ public sealed class DictionaryTests : TestExpressions
 					type.GetType(Base.Number), type.GetType(Base.Text), type.GetType(Base.Boolean)
 				}, type),
 			Throws.InstanceOf<Dictionary.DictionaryMustBeInitializedWithTwoTypeParameters>().With.
-				Message.StartsWith(
-					"Expected Type Parameters: 2, Given type parameters: 3 and they are " +
+				Message.StartsWith("Expected Type Parameters: 2, Given type parameters: 3 and they are " +
 					"TestPackage.Number, TestPackage.Text, TestPackage.Boolean"));
 }

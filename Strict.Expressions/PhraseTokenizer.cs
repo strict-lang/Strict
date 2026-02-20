@@ -157,7 +157,7 @@ public sealed class PhraseTokenizer
 				var additionalBrackets = 0;
 				while (tokens.index + 1 < tokens.input.Length)
 				{
-          var nextCharacter = tokens.input[tokens.index + 1];
+					var nextCharacter = tokens.input[tokens.index + 1];
 					if (nextCharacter == OpenBracket)
 						additionalBrackets++;
 					else if (nextCharacter == CloseBracket)

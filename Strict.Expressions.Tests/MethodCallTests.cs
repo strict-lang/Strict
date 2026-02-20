@@ -37,8 +37,7 @@ public sealed class MethodCallTests : TestExpressions
 	public void PrivateMethodWithTooManyArgumentsIsNotMatched()
 	{
 		type.Methods.Add(new Method(type, 0, this, ["hidden(number) Number", "\t1"]));
-		Assert.That(() => ParseExpression("hidden(1, 2)"),
-     Throws.InstanceOf<ParsingFailed>());
+		Assert.That(() => ParseExpression("hidden(1, 2)"), Throws.InstanceOf<ParsingFailed>());
 	}
 
 	[Test]
@@ -46,8 +45,7 @@ public sealed class MethodCallTests : TestExpressions
 	{
 		type.Methods.Add(new Method(type, 0, this,
 			["hiddenWithTwo(number, other Number) Number", "\t1"]));
-		Assert.That(() => ParseExpression("hiddenWithTwo(1)"),
-     Throws.InstanceOf<ParsingFailed>());
+		Assert.That(() => ParseExpression("hiddenWithTwo(1)"), Throws.InstanceOf<ParsingFailed>());
 	}
 
 	[Test]
@@ -55,7 +53,7 @@ public sealed class MethodCallTests : TestExpressions
 	{
 		type.Methods.Add(new Method(type, 0, this, ["hiddenText(number) Number", "\t1"]));
 		Assert.That(() => ParseExpression("hiddenText(\"text\")"),
-     Throws.InstanceOf<ParsingFailed>());
+			Throws.InstanceOf<ParsingFailed>());
 	}
 
 	[Test]
@@ -75,7 +73,7 @@ public sealed class MethodCallTests : TestExpressions
 			"\tdigits((number / 10).Floor) + number % 10"
 		]);
 		type.Methods.Add(digitsMethod);
-    var binary = (Binary)digitsMethod.GetBodyAndParseIfNeeded();
+		var binary = (Binary)digitsMethod.GetBodyAndParseIfNeeded();
 		var methodCall = (MethodCall)binary.Instance!;
 		Assert.That(methodCall.Method.Name, Is.EqualTo("digits"));
 		Assert.That(methodCall.Arguments[0].ToString(), Is.EqualTo("(number / 10).Floor"));
@@ -244,7 +242,7 @@ public sealed class MethodCallTests : TestExpressions
 				"\tvalue")).ParseMembersAndMethods(new MethodExpressionParser());
 		var program = new Type(type.Package,
 			new TypeLines(nameof(TypeImplementsGenericTypeWithLength),
-				"has logger", //unused member should be removed later when we allow class without members
+				"has logger",
 				"GetLengthSquare(type HasLength) Number",
 				"\ttype.Length * type.Length",
 				"Dummy",

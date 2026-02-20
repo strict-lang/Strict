@@ -96,6 +96,7 @@ public sealed class ByteCodeGenerator
 		statements.Add(new Return(registry.PreviousRegister));
 	}
 
+	// ReSharper disable once MemberCanBeMadeStatic.Local
 	private void GenerateStatementsFromExpression(Expression expression)
 	{
 		Debug.Assert(expression != null);

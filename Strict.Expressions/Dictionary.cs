@@ -1,12 +1,11 @@
 using Strict.Language;
-using System;
 using Type = Strict.Language.Type;
 
 namespace Strict.Expressions;
 
 public sealed class Dictionary : Value
 {
- public Dictionary(IReadOnlyList<Type> types, Type dictionaryImplementationType) : base(
+	public Dictionary(IReadOnlyList<Type> types, Type dictionaryImplementationType) : base(
 		dictionaryImplementationType, CreateEmptyMembers(dictionaryImplementationType))
 	{
 		if (types.Count != 2)
@@ -33,8 +32,7 @@ public sealed class Dictionary : Value
 	public override string ToString() => ReturnType.Name;
 
 	public static Expression? TryParse(Body body, ReadOnlySpan<char> input) =>
-   input.StartsWith(Base.Dictionary + '(') && input[^1] == ')' &&
-		AreTypeParameters(body, input)
+		input.StartsWith(Base.Dictionary + '(') && input[^1] == ')' && AreTypeParameters(body, input)
 			? new Dictionary(ParseTypeParameters(body, input), body.Method.GetType(input.ToString()))
 			: null;
 

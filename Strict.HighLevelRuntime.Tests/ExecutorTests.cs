@@ -21,6 +21,18 @@ public sealed class ExecutorTests
 			Throws.TypeOf<Executor.MissingArgument>().With.Message.StartsWith("first"));
 	}
 
+	[Test]
+	public void FromConstructorWithExistingInstanceThrows()
+	{
+		using var t = CreateType(nameof(FromConstructorWithExistingInstanceThrows), "has number",
+			"from(number Number)", "\tvalue");
+		var method = t.Methods.Single(m => m.Name == Method.From);
+		var number = new ValueInstance(TestPackage.Instance.FindType(Base.Number)!, 3);
+		var instance = new ValueInstance(t, 1);
+		Assert.That(() => executor.Execute(method, instance, [number]),
+			Throws.InstanceOf<MethodCall.CannotCallFromConstructorWithExistingInstance>());
+	}
+
 	private static Type CreateCalcType() =>
 		CreateType("Calc", "mutable last Number", "Add(first Number, second = 1) Number",
 			"\tAdd(1) is 2", "\tlast = first + second");
@@ -49,6 +61,17 @@ public sealed class ExecutorTests
 			new ValueInstance(TestPackage.Instance.FindType(Base.Number)!, 2),
 			new ValueInstance(TestPackage.Instance.FindType(Base.Number)!, 3)
 		]), Throws.InstanceOf<Executor.TooManyArguments>().With.Message.StartsWith("Number:3"));
+	}
+
+	[Test]
+	public void ArgumentDoesNotMapToMethodParameters()
+	{
+		using var t = CreateType(nameof(ArgumentDoesNotMapToMethodParameters), "has number",
+			"Use(number Number) Number", "\tnumber");
+		var method = t.Methods.Single(m => m.Name == "Use");
+		var boolean = new ValueInstance(TestPackage.Instance.FindType(Base.Boolean)!, true);
+		Assert.That(() => executor.Execute(method, null, [boolean]),
+			Throws.InstanceOf<Executor.ArgumentDoesNotMapToMethodParameters>());
 	}
 
 	[Test]
@@ -104,6 +127,17 @@ public sealed class ExecutorTests
 		Assert.That(Convert.ToDouble(executor.Execute(t.Methods.Single(m => m.Name == "Pow"), null, [
 			N(2), N(3)
 		]).Value), Is.EqualTo(8));
+	}
+
+	[Test]
+	public void AddTwoTexts()
+	{
+		using var t = CreateType(nameof(AddTwoTexts), "has text",
+			"Concat(text Text, other Text) Text", "\ttext + other");
+		var textType = t.GetType(Base.Text);
+		var result = executor.Execute(t.Methods.Single(m => m.Name == "Concat"), null,
+			[new ValueInstance(textType, "hi "), new ValueInstance(textType, "there")]);
+		Assert.That(result.Value, Is.EqualTo("hi there"));
 	}
 
 	[Test]
@@ -226,12 +260,57 @@ public sealed class ExecutorTests
 	}
 
 	[Test]
+	public void MethodRequiresTestWhenParsingFailsDuringValidation()
+	{
+		using var t = CreateType(nameof(MethodRequiresTestWhenParsingFailsDuringValidation),
+			"has number", "Compute Number", "\tunknown(1)");
+		var method = t.Methods.Single(m => m.Name == "Compute");
+		var validatingExecutor = new Executor();
+		Assert.That(() => validatingExecutor.Execute(method, null, []),
+			Throws.InstanceOf<Executor.MethodRequiresTest>());
+	}
+
+	[Test]
+	public void InvalidTypeForFromConstructor()
+	{
+		using var t = CreateType(nameof(InvalidTypeForFromConstructor), "has flag Boolean",
+			"from(flag Boolean, other Boolean)", "\tvalue");
+		var method = t.Methods.Single(m => m.Name == Method.From);
+		var number = new ValueInstance(TestPackage.Instance.FindType(Base.Number)!, 1);
+		var boolean = new ValueInstance(TestPackage.Instance.FindType(Base.Boolean)!, true);
+		Assert.That(() => executor.Execute(method, null, [number, boolean]),
+			Throws.InstanceOf<Executor.InvalidTypeForArgument>());
+	}
+
+	[Test]
+	public void FromConstructorConvertsSingleCharText()
+	{
+		using var t = CreateType(nameof(FromConstructorConvertsSingleCharText), "has number",
+			"has text", "from(number Number, text Text)", "\tvalue");
+		var method = t.Methods.Single(m => m.Name == Method.From);
+		var numberText = new ValueInstance(TestPackage.Instance.FindType(Base.Text)!, "A");
+		var text = new ValueInstance(TestPackage.Instance.FindType(Base.Text)!, "ok");
+		var result = executor.Execute(method, null, [numberText, text]);
+		var values = (IDictionary<string, object?>)result.Value!;
+		Assert.That(values["number"], Is.EqualTo(65));
+	}
+
+	[Test]
 	public void CompareNumberToText()
 	{
 		using var t = CreateType(nameof(CompareNumberToText), "has number", "Compare",
 			"\t\"5\" is 5");
 		Assert.That(executor.Execute(t.Methods.Single(m => m.Name == "Compare"), null, []).Value,
 			Is.EqualTo(false));
+	}
+
+	[Test]
+	public void CompareTextToCharacterTab()
+	{
+		using var t = CreateType(nameof(CompareTextToCharacterTab), "has number", "Compare Boolean",
+			"\t\"7\" is Character.Tab");
+		Assert.That(executor.Execute(t.Methods.Single(m => m.Name == "Compare"), null, []).Value,
+			Is.EqualTo(true));
 	}
 
 	[Test]

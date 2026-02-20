@@ -80,6 +80,20 @@ public sealed class ListTests
 			}));
 	}
 
+	[Test]
+	public void DivideLists()
+	{
+		using var t = CreateType(nameof(DivideLists), "has numbers", "Divide Numbers",
+			"\tnumbers / numbers");
+		Assert.That(
+			executor.Execute(t.Methods.Single(m => m.Name == "Divide"), CreateNumbers(t), []).Value,
+			Is.EqualTo(new[]
+			{
+				new ValueInstance(t.GetType(Base.Number), 1.0),
+				new ValueInstance(t.GetType(Base.Number), 1.0)
+			}));
+	}
+
 	[TestCase("(1, 2, 3) * (1, 2)")]
 	[TestCase("(1, 2, 3) * (1, 2, 3, 4)")]
 	public void ListsHaveDifferentDimensionsIsNotAllowed(string input)

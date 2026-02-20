@@ -9,7 +9,7 @@ public sealed class ValueInstance : IEquatable<ValueInstance>
 	public ValueInstance(Type returnType, object? value)
 	{
 		if (value is Expression)
-			throw new InvalidTypeValue(returnType, Value);
+			throw new InvalidTypeValue(returnType, Value); //ncrunch: no coverage
 		ReturnType = returnType;
 		Value = CheckIfValueMatchesReturnType(ReturnType.IsMutable
 			? ((GenericTypeImplementation)ReturnType).ImplementationTypes[0]
@@ -90,11 +90,11 @@ public sealed class ValueInstance : IEquatable<ValueInstance>
 		"Can't assign member " + member + " (of " + values.DictionaryToWordList() + ") to " +
 		returnType + " " + returnType.Members.ToBrackets());
 
-	public sealed class InvalidTypeValue(Type returnType, object? value) : ExecutionFailed(
-		returnType, value switch
+	public sealed class InvalidTypeValue(Type returnType, object? value) : ExecutionFailed(returnType,
+		value switch //ncrunch: no coverage
 		{
 			null => "null",
-			Expression => "Expression " + value + " needs to be evaluated!",
+			Expression => "Expression " + value + " needs to be evaluated!", //ncrunch: no coverage
 			IEnumerable valueEnumerable => valueEnumerable.EnumerableToWordList(", ", true),
 			_ => value + ""
 		} + " (" + value?.GetType() + ") for " + returnType.Name);
@@ -123,29 +123,21 @@ public sealed class ValueInstance : IEquatable<ValueInstance>
 		if (Value is IDictionary<string, object?> valueDictionary)
 			if (valueDictionary.TryGetValue(name, out var value))
 				return value;
-		return null;
+		return null; //ncrunch: no coverage
 	}
-
-	public Range GetRange()
-	{
-		if (Value is IDictionary<string, object?> valueDictionary)
-			return new Range(Convert.ToInt32(valueDictionary["Start"]),
-				Convert.ToInt32(valueDictionary["ExclusiveEnd"]));
-		throw new IteratorNotSupported(this);
-	}
-
-	public class IteratorNotSupported(ValueInstance instance)
-		: ExecutionFailed(instance.ReturnType, instance.ToString());
 
 	public Index GetIteratorLength() =>
 		Value switch
 		{
 			IList list => list.Count,
-			int count => count,
+			int count => count, //ncrunch: no coverage, in Strict numbers are double
 			double countDouble => (int)countDouble,
 			string text => text.Length,
 			_ => throw new IteratorNotSupported(this)
 		};
+
+	public class IteratorNotSupported(ValueInstance instance)
+		: ExecutionFailed(instance.ReturnType, instance.ToString());
 
 	public object? GetIteratorValue(int index) =>
 		ReturnType.Name is Base.Number or Base.Range

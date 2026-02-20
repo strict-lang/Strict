@@ -1,5 +1,3 @@
-using Strict.Language.Tests;
-
 namespace Strict.Expressions.Tests;
 
 public class DeclarationTests : TestExpressions

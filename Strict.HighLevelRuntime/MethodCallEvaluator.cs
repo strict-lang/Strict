@@ -15,14 +15,7 @@ public sealed class MethodCallEvaluator(Executor executor)
 		var index = Convert.ToInt32(EqualsExtensions.NumberToDouble(indexValue.Value));
 		if (listInstance.Value is IList list)
 			return list[index] as ValueInstance ?? new ValueInstance(call.ReturnType, list[index]);
-		if (listInstance.Value is IDictionary<string, object?> members &&
-			(members.TryGetValue("Elements", out var elements) ||
-				members.TryGetValue("elements", out elements)) && elements is IList memberList)
-			return memberList[index] as ValueInstance ??
-				new ValueInstance(call.ReturnType, memberList[index]);
-		if (listInstance.Value is string text)
-			return new ValueInstance(call.ReturnType, (int)text[index]);
-		throw new InvalidOperationException("List call can only be used on iterators, got: " +
+		throw new InvalidOperationException("List call can only be used on iterators, got: " + //ncrunch: no coverage
 			listInstance);
 	}
 
@@ -36,28 +29,7 @@ public sealed class MethodCallEvaluator(Executor executor)
 			: call.Method.Name != Method.From
 				? ctx.This
 				: null;
-		var args = new List<ValueInstance>(call.Arguments.Count);
-		foreach (var a in call.Arguments)
-			args.Add(executor.RunExpression(a, ctx));
-		if (instance is not
-			{
-				ReturnType: GenericTypeImplementation { Generic.Name: Base.Dictionary },
-				Value: IDictionary dictionaryValues
-			} || args.Count <= 0 || call.Method.Name != "Add")
-			return executor.Execute(call.Method, instance, args, ctx);
-		if (args.Count == 2)
-		{
-			var addKey = args[0].Value ??
-				throw new InvalidOperationException("Dictionary key cannot be null");
-			dictionaryValues[addKey] = args[1].Value;
-			return instance;
-		}
-		if (!TryGetPairValues(args[0], out var key, out var value))
-			return executor.Execute(call.Method, instance, args, ctx);
-		var nonNullKey = key ??
-			throw new InvalidOperationException("Dictionary key cannot be null");
-		dictionaryValues[nonNullKey] = value;
-		return instance;
+		return ExecuteMethodCall(call, instance, ctx);
 	}
 
 	private static bool IsArithmetic(string name) =>
@@ -75,7 +47,7 @@ public sealed class MethodCallEvaluator(Executor executor)
 		ExecutionContext ctx)
 	{
 		if (call.Instance == null || call.Arguments.Count != 1)
-			throw new InvalidOperationException("Binary call must have instance and 1 argument");
+			throw new InvalidOperationException("Binary call must have instance and 1 argument"); //ncrunch: no coverage
 		var leftInstance = executor.RunExpression(call.Instance, ctx);
 		var rightInstance = executor.RunExpression(call.Arguments[0], ctx);
 		return IsArithmetic(call.Method.Name)
@@ -104,7 +76,7 @@ public sealed class MethodCallEvaluator(Executor executor)
 				BinaryOperator.Divide => Number(call.Method, l / r),
 				BinaryOperator.Modulate => Number(call.Method, l % r),
 				BinaryOperator.Power => Number(call.Method, Math.Pow(l, r)),
-				_ => ExecuteMethodCall(call, leftInstance, ctx)
+				_ => ExecuteMethodCall(call, leftInstance, ctx) //ncrunch: no coverage
 			};
 		}
 		if (leftInstance.ReturnType.Name == Base.Text && rightInstance.ReturnType.Name == Base.Text)
@@ -117,7 +89,7 @@ public sealed class MethodCallEvaluator(Executor executor)
 		{
 			if (left is not IList<ValueInstance> leftList ||
 				right is not IList<ValueInstance> rightList)
-				throw new InvalidOperationException(
+				throw new InvalidOperationException( //ncrunch: no coverage
 					"Expected List<ValueInstance> for iterator operation, " +
 					"other iterators are not yet supported: left=" + left + ", right=" + right);
 			if (op is BinaryOperator.Multiply or BinaryOperator.Divide &&
@@ -129,30 +101,30 @@ public sealed class MethodCallEvaluator(Executor executor)
 				BinaryOperator.Minus => SubtractLists(leftInstance.ReturnType, leftList, rightList),
 				BinaryOperator.Multiply => MultiplyLists(leftInstance.ReturnType, leftList, rightList),
 				BinaryOperator.Divide => DivideLists(leftInstance.ReturnType, leftList, rightList),
-				_ => throw new NotSupportedException(
+				_ => throw new NotSupportedException( //ncrunch: no coverage
 					"Only +, -, *, / operators are supported for Lists, got: " + op)
 			};
 		}
 		if (leftInstance.ReturnType.IsIterator && rightInstance.ReturnType.Name == Base.Number)
 		{
 			if (left is not IList<ValueInstance> leftList)
-				throw new InvalidOperationException("Expected left list for iterator operation " + op +
-					": left=" + left + ", right=" + right);
+				throw new InvalidOperationException("Expected left list for iterator operation " + //ncrunch: no coverage
+					op + ": left=" + left + ", right=" + right);
 			if (op == BinaryOperator.Plus)
 				return AddToList(leftInstance.ReturnType, leftList, rightInstance);
 			if (op == BinaryOperator.Minus)
 				return RemoveFromList(leftInstance.ReturnType, leftList, rightInstance);
 			if (right is not double rightNumber)
-				throw new InvalidOperationException("Expected right number for iterator operation " + op +
-					": left=" + left + ", right=" + right);
+				throw new InvalidOperationException("Expected right number for iterator operation " + //ncrunch: no coverage
+					op + ": left=" + left + ", right=" + right);
 			if (op == BinaryOperator.Multiply)
 				return MultiplyList(leftInstance.ReturnType, leftList, rightNumber);
 			if (op == BinaryOperator.Divide)
 				return DivideList(leftInstance.ReturnType, leftList, rightNumber);
-			throw new NotSupportedException(
+			throw new NotSupportedException( //ncrunch: no coverage
 				"Only +, -, *, / operators are supported for List and Number, got: " + op);
 		}
-		return ExecuteMethodCall(call, leftInstance, ctx);
+		return ExecuteMethodCall(call, leftInstance, ctx); //ncrunch: no coverage
 	}
 
 	private static ValueInstance Number(Context any, double n) => new(any.GetType(Base.Number), n);
@@ -162,12 +134,10 @@ public sealed class MethodCallEvaluator(Executor executor)
 		ValueInstance leftInstance, ValueInstance rightInstance)
 	{
 		var op = call.Method.Name;
-		var left = leftInstance.Value;
-		var right = rightInstance.Value;
+		var left = leftInstance.Value!;
+		var right = rightInstance.Value!;
 		if (op is BinaryOperator.Is or UnaryOperator.Not)
 		{
-			if (left == null || right == null)
-				throw new Executor.ComparisonsToNullAreNotAllowed(call.Method, left, right);
 			if (rightInstance.ReturnType.IsError)
 			{
 				var matches = rightInstance.ReturnType.Name == Base.Error
@@ -200,7 +170,7 @@ public sealed class MethodCallEvaluator(Executor executor)
 			BinaryOperator.Smaller => Executor.Bool(call.Method, l < r),
 			BinaryOperator.GreaterOrEqual => Executor.Bool(call.Method, l >= r),
 			BinaryOperator.SmallerOrEqual => Executor.Bool(call.Method, l <= r),
-			_ => ExecuteMethodCall(call, leftInstance, ctx)
+			_ => ExecuteMethodCall(call, leftInstance, ctx) //ncrunch: no coverage
 		};
 	}
 
@@ -214,7 +184,7 @@ public sealed class MethodCallEvaluator(Executor executor)
 			BinaryOperator.And => Executor.Bool(call.Method, Executor.ToBool(left) && Executor.ToBool(right)),
 			BinaryOperator.Or => Executor.Bool(call.Method, Executor.ToBool(left) || Executor.ToBool(right)),
 			BinaryOperator.Xor => Executor.Bool(call.Method, Executor.ToBool(left) ^ Executor.ToBool(right)),
-			_ => ExecuteMethodCall(call, leftInstance, ctx)
+			_ => ExecuteMethodCall(call, leftInstance, ctx) //ncrunch: no coverage
 		};
 	}
 
@@ -283,10 +253,10 @@ public sealed class MethodCallEvaluator(Executor executor)
 	private static string ConvertToText(object? value) =>
 		value switch
 		{
-			string text => text,
+			string text => text, //ncrunch: no coverage
 			double number => number.ToString(CultureInfo.InvariantCulture),
-			int number => number.ToString(CultureInfo.InvariantCulture),
-			_ => value?.ToString() ?? string.Empty
+			int number => number.ToString(CultureInfo.InvariantCulture), //ncrunch: no coverage
+			_ => value?.ToString() ?? string.Empty //ncrunch: no coverage
 		};
 
 	private static ValueInstance RemoveFromList(Type leftListType,
@@ -319,12 +289,18 @@ public sealed class MethodCallEvaluator(Executor executor)
 		return new ValueInstance(leftListType, result);
 	}
 
-	private ValueInstance ExecuteMethodCall(MethodCall call, ValueInstance instance,
+	private ValueInstance ExecuteMethodCall(MethodCall call, ValueInstance? instance,
 		ExecutionContext ctx)
 	{
 		var args = new List<ValueInstance>(call.Arguments.Count);
 		foreach (var a in call.Arguments)
 			args.Add(executor.RunExpression(a, ctx));
+		if (instance is { ReturnType.IsDictionary: true } && args.Count > 0 && call.Method.Name == "Add")
+		{
+			if (args.Count == 2)
+				((IDictionary)instance.Value!)[args[0]] = args[1];
+			return instance;
+		}
 		return executor.Execute(call.Method, instance, args, ctx);
 	}
 
@@ -341,7 +317,7 @@ public sealed class MethodCallEvaluator(Executor executor)
 				{
 					Generic.Name: Base.List
 				} => stacktraceList,
-				_ => throw new NotSupportedException("Error member not supported: " + member)
+				_ => throw new NotSupportedException("Error member not supported: " + member) //ncrunch: no coverage
 			};
 		return new ValueInstance(errorType, errorMembers);
 	}
@@ -357,7 +333,7 @@ public sealed class MethodCallEvaluator(Executor executor)
 				Base.Method => CreateMethodValue(ctx.Method),
 				Base.Text or Base.Name => ctx.Method.Type.FilePath,
 				Base.Number => (double)(source?.LineNumber ?? ctx.Method.TypeLineNumber),
-				_ => throw new NotSupportedException("Stacktrace member not supported: " + member)
+				_ => throw new NotSupportedException("Stacktrace member not supported: " + member) //ncrunch: no coverage
 			};
 		return members;
 	}
@@ -371,7 +347,7 @@ public sealed class MethodCallEvaluator(Executor executor)
 			{
 				Base.Name or Base.Text => method.Name,
 				Base.Type => CreateTypeValue(method.Type),
-				_ => throw new NotSupportedException("Method member not supported: " + member)
+				_ => throw new NotSupportedException("Method member not supported: " + member) //ncrunch: no coverage
 			};
 		return values;
 	}
@@ -385,28 +361,8 @@ public sealed class MethodCallEvaluator(Executor executor)
 			{
 				Base.Name => type.Name,
 				Base.Text => type.Package.FullName,
-				_ => throw new NotSupportedException("Type member not supported: " + member)
+				_ => throw new NotSupportedException("Type member not supported: " + member) //ncrunch: no coverage
 			};
 		return values;
-	}
-
-	private static bool TryGetPairValues(ValueInstance pair, out object? key, out object? value)
-	{
-		key = null;
-		value = null;
-		var pairList = pair.Value switch
-		{
-			IList list => list,
-			_ => null
-		};
-		if (pairList == null || pairList.Count < 2)
-			return false;
-		key = pairList[0] is ValueInstance keyInstance
-			? keyInstance.Value
-			: pairList[0];
-		value = pairList[1] is ValueInstance valueInstance
-			? valueInstance.Value
-			: pairList[1];
-		return true;
 	}
 }

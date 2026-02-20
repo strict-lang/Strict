@@ -1,5 +1,3 @@
-using System;
-
 namespace Strict.Language;
 
 /// <summary>

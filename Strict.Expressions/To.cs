@@ -28,7 +28,9 @@ public sealed class To(Expression left, Method operatorMethod, Type conversionTy
 					conversionType.Name
 				} does not exist and no member is compatible (method returns {
 					method.ReturnType.Name
-				}, token '{text.ToString()}')", conversionType);
+				}, token '{
+					text.ToString()
+				}')", conversionType);
 		return new To(left, method, conversionType);
 	}
 

@@ -27,9 +27,7 @@ internal sealed class ForEvaluator(Executor executor)
 		}
 		else
 		{
-			var loopRange = iterator.ReturnType.Name == Base.Range
-				? iterator.GetRange()
-				: new Range(0, iterator.GetIteratorLength());
+			var loopRange = new Range(0, iterator.GetIteratorLength());
 			for (var index = loopRange.Start.Value; index < loopRange.End.Value; index++)
 				ExecuteForIteration(f, ctx, iterator, results, itemType, index);
 		}
@@ -45,12 +43,11 @@ internal sealed class ForEvaluator(Executor executor)
 		var loop = new ExecutionContext(ctx.Type, ctx.Method) { This = ctx.This, Parent = ctx };
 		loop.Set(Type.IndexLowercase, new ValueInstance(itemType.GetType(Base.Number), index));
 		var value = iterator.GetIteratorValue(index);
-		loop.Set(Type.ValueLowercase,
-			value as ValueInstance ?? new ValueInstance(itemType, value));
+		var valueInstance = value as ValueInstance ?? new ValueInstance(itemType, value);
+		loop.Set(Type.ValueLowercase, valueInstance);
 		foreach (var customVariable in f.CustomVariables)
 			if (customVariable is VariableCall variableCall)
-				loop.Set(variableCall.Variable.Name,
-					new ValueInstance(variableCall.ReturnType, value));
+				loop.Set(variableCall.Variable.Name, valueInstance);
 		var itemResult = executor.RunExpression(f.Body, loop);
 		if (itemResult.ReturnType.Name != Base.None)
 			results.Add(itemResult);
@@ -68,8 +65,9 @@ internal sealed class ForEvaluator(Executor executor)
 			foreach (var value in results)
 				text += value.ReturnType.Name switch
 				{
-					Base.Number or Base.Character => (int)EqualsExtensions.NumberToDouble(value.Value),
-					Base.Text => ((string)value.Value!)[0],
+					Base.Number => (int)EqualsExtensions.NumberToDouble(value.Value),
+					Base.Character => "" + (char)value.Value!,
+					Base.Text => (string)value.Value!,
 					_ => throw new NotSupportedException("Can't append to text: " + value)
 				};
 			return new ValueInstance(ctx.Method.ReturnType, text);

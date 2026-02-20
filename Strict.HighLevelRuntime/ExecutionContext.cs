@@ -1,6 +1,5 @@
 using Strict.Language;
 using System.Collections;
-using System.Collections.Generic;
 using Type = Strict.Language.Type;
 
 namespace Strict.HighLevelRuntime;
@@ -22,24 +21,6 @@ public sealed class ExecutionContext(Type type, Method method)
 			return v;
 		if (This == null)
 			return Parent?.Find(name);
-    if (This.ReturnType is GenericTypeImplementation { Generic.Name: Base.Dictionary } dictionaryType &&
-			This.Value is IDictionary dictionaryValues)
-		{
-			var member = Type.FindMember(name);
-			if (member != null && IsListMemberType(member.Type))
-			{
-				var pairs = BuildDictionaryPairsList(dictionaryValues, member.Type,
-					dictionaryType.ImplementationTypes[0], dictionaryType.ImplementationTypes[1]);
-				return new ValueInstance(member.Type, pairs);
-			}
-		}
-		if (This.Value is IDictionary<string, object?> rawMembers &&
-			rawMembers.TryGetValue(name, out var rawValue))
-		{
-			var memberType = Type.FindMember(name)?.Type;
-			if (memberType != null)
-				return new ValueInstance(memberType, rawValue);
-		}
 		if (name == Type.ValueLowercase)
 			return This;
 		var implicitMember =
@@ -52,26 +33,17 @@ public sealed class ExecutionContext(Type type, Method method)
 
 	public ValueInstance Set(string name, ValueInstance value) => Variables[name] = value;
 
-	internal static IList BuildDictionaryPairsList(IDictionary dictionaryValues, Type listMemberType,
-		Type keyType, Type valueType)
+	internal static IList BuildDictionaryPairsList(Type listMemberType,
+		Dictionary<ValueInstance, ValueInstance> dictionary)
 	{
-		var elementType = listMemberType is GenericTypeImplementation { Generic.Name: Base.List } listType
-			? listType.ImplementationTypes[0]
+		var elementType = listMemberType is GenericTypeImplementation { Generic.Name: Base.List } list
+			? list.ImplementationTypes[0]
 			: listMemberType;
-		var pairs = new List<ValueInstance>(dictionaryValues.Count);
-		foreach (DictionaryEntry entry in dictionaryValues)
-		{
-			var keyInstance = new ValueInstance(keyType, entry.Key);
-			var valueInstance = new ValueInstance(valueType, entry.Value);
-			pairs.Add(new ValueInstance(elementType,
-				new List<ValueInstance> { keyInstance, valueInstance }));
-		}
+		var pairs = new List<ValueInstance>(dictionary.Count);
+		foreach (var entry in dictionary)
+			pairs.Add(new ValueInstance(elementType, new List<ValueInstance> { entry.Key, entry.Value }));
 		return pairs;
 	}
-
-	private static bool IsListMemberType(Type memberType) =>
-		memberType.Name == Base.List ||
-		memberType is GenericTypeImplementation { Generic.Name: Base.List };
 
 	public sealed class VariableNotFound(string name, Type type, ValueInstance? instance)
 		: Exception($"Variable '{name}' or member '{name}' of this type '{type}'" + (instance != null
@@ -80,6 +52,6 @@ public sealed class ExecutionContext(Type type, Method method)
 
 	public override string ToString() =>
 		nameof(ExecutionContext) + " Type=" + Type.Name + ", This=" + This + ", Variables:" +
-		Environment.NewLine + "  " + Variables.DictionaryToWordList(Environment.NewLine + "  ", " ",
-			true);
+		Environment.NewLine + "  " +
+		Variables.DictionaryToWordList(Environment.NewLine + "  ", " ", true);
 }

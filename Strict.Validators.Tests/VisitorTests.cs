@@ -1,4 +1,4 @@
-﻿namespace Strict.Validators.Tests;
+namespace Strict.Validators.Tests;
 
 public sealed class VisitorTests
 {
@@ -78,6 +78,7 @@ public sealed class VisitorTests
 		]);
 		var visitor = new CountingVisitor();
 		visitor.Visit(method, true);
+		Assert.That(visitor.BodyCount, Is.EqualTo(1));
 		Assert.That(visitor.MutableReassignmentCount, Is.EqualTo(1));
 	}
 

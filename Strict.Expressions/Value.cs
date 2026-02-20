@@ -17,11 +17,12 @@ public class Value(Type valueType, object data, int lineNumber = 0, bool isMutab
 	public object Data { get; } = data;
 
 	public override string ToString() =>
-		Data is string
-			? "\"" + Data + "\""
-			: Data is double doubleData
-				? doubleData.ToString("0.0")
-				: Data.ToString()!;
+		Data switch
+		{
+			string => "\"" + Data + "\"",
+			double doubleData => doubleData.ToString("0.0"),
+			_ => Data.ToString()!
+		};
 
 	public override bool IsConstant => true;
 

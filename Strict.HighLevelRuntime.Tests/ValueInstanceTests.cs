@@ -85,9 +85,99 @@ public sealed class ValueInstanceTests
 	{
 		using var t =
 			new Type(TestPackage.Instance,
-					new TypeLines(nameof(CompareTypeContainingNumber),
-						new[] { "has number", "Run Boolean", "\tnumber is 42" })).
-				ParseMembersAndMethods(new MethodExpressionParser());
+				new TypeLines(nameof(CompareTypeContainingNumber), "has number", "Run Boolean",
+					"\tnumber is 42")).ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(new ValueInstance(t, 42), Is.EqualTo(new ValueInstance(numberType, 42)));
+	}
+
+	[Test]
+	public void NoneTypeRejectsNonNullValue()
+	{
+		var package = new Package(nameof(NoneTypeRejectsNonNullValue));
+		var noneType = package.FindType(Base.None, package);
+		Assert.That(() => new ValueInstance(noneType!, 1),
+			Throws.InstanceOf<ValueInstance.InvalidTypeValue>());
+	}
+
+	[Test]
+	public void NonNoneTypeRejectsNullValue() =>
+		Assert.That(() => new ValueInstance(numberType, null),
+			Throws.InstanceOf<ValueInstance.InvalidTypeValue>());
+
+	[Test]
+	public void BooleanTypeRejectsNonBoolValue()
+	{
+		var boolType = TestPackage.Instance.GetType(Base.Boolean);
+		Assert.That(() => new ValueInstance(boolType, 1),
+			Throws.InstanceOf<ValueInstance.InvalidTypeValue>());
+	}
+
+	[Test]
+	public void EnumTypeAllowsNumberAndText()
+	{
+		var enumType = new Type(TestPackage.Instance,
+				new TypeLines(nameof(EnumTypeAllowsNumberAndText), "constant One", "constant Something = \"Something\"")).
+			ParseMembersAndMethods(new MethodExpressionParser());
+		Assert.That(() => new ValueInstance(enumType, 1), Throws.Nothing);
+	}
+
+	[Test]
+	public void EnumTypeRejectsNonEnumValue()
+	{
+		var enumType = new Type(TestPackage.Instance,
+				new TypeLines(nameof(EnumTypeRejectsNonEnumValue), "constant One")).
+			ParseMembersAndMethods(new MethodExpressionParser());
+		Assert.That(() => new ValueInstance(enumType, true),
+			Throws.InstanceOf<ValueInstance.InvalidTypeValue>());
+	}
+
+	[Test]
+	public void TextTypeRejectsNonStringValue()
+	{
+		var textType = TestPackage.Instance.GetType(Base.Text);
+		Assert.That(() => new ValueInstance(textType, 5),
+			Throws.InstanceOf<ValueInstance.InvalidTypeValue>());
+	}
+
+	[Test]
+	public void CharacterTypeRejectsNonCharacterValue()
+	{
+		var charType = TestPackage.Instance.GetType(Base.Character);
+		Assert.That(() => new ValueInstance(charType, "A"),
+			Throws.InstanceOf<ValueInstance.InvalidTypeValue>());
+	}
+
+	[Test]
+	public void ListTypeRejectsInvalidValue()
+	{
+		var listType = TestPackage.Instance.GetListImplementationType(numberType);
+		Assert.That(() => new ValueInstance(listType, new object()),
+			Throws.InstanceOf<ValueInstance.InvalidTypeValue>());
+	}
+
+	[Test]
+	public void NumberTypeRejectsNonNumericValue() =>
+		Assert.That(() => new ValueInstance(numberType, "nope"),
+			Throws.InstanceOf<ValueInstance.InvalidTypeValue>());
+
+	[Test]
+	public void TypeRejectsUnknownDictionaryMembers()
+	{
+		using var t = new Type(TestPackage.Instance,
+				new TypeLines(nameof(TypeRejectsUnknownDictionaryMembers), "has number", "has text")).
+			ParseMembersAndMethods(new MethodExpressionParser());
+		var values = new Dictionary<string, object?> { { "wrong", 1 } };
+		Assert.That(() => new ValueInstance(t, values),
+			Throws.InstanceOf<ValueInstance.UnableToAssignMemberToType>());
+	}
+
+	[Test]
+	public void NonErrorTypeRejectsUnsupportedValue()
+	{
+		using var t = new Type(TestPackage.Instance,
+				new TypeLines(nameof(NonErrorTypeRejectsUnsupportedValue), "has number", "has text")).
+			ParseMembersAndMethods(new MethodExpressionParser());
+		Assert.That(() => new ValueInstance(t, new object()),
+			Throws.InstanceOf<ValueInstance.InvalidTypeValue>());
 	}
 }

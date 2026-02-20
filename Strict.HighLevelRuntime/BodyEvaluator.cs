@@ -7,33 +7,11 @@ internal sealed class BodyEvaluator(Executor executor)
 {
 	public ValueInstance Evaluate(Body body, ExecutionContext ctx, bool runOnlyTests)
 	{
-		ValueInstance last =
-			new((ctx.This?.ReturnType.Package ?? body.Method.Type.Package).FindType(Base.None)!, null);
 		if (runOnlyTests)
 			executor.IncrementInlineTestDepth();
 		try
 		{
-			foreach (var e in body.Expressions)
-			{
-				var isTest = !e.Equals(body.Expressions[^1]) && IsStandaloneInlineTest(e);
-				if (isTest == !runOnlyTests && e is not Declaration && e is not MutableReassignment ||
-					runOnlyTests && e is Declaration &&
-					body.Method.Type.Members.Any(m => !m.IsConstant && e.ToString().Contains(m.Name)))
-					continue;
-				last = executor.RunExpression(e, ctx);
-				if (runOnlyTests && isTest && !Executor.ToBool(last))
-					throw new Executor.TestFailed(body.Method, e, last, GetTestFailureDetails(e, ctx));
-			}
-			if (runOnlyTests && last.Value == null && body.Method.Name != Base.Run &&
-				body.Expressions.Count > 1)
-				throw new Executor.MethodRequiresTest(body.Method, body);
-			if (runOnlyTests || last.ReturnType.IsError || body.Method.ReturnType == last.ReturnType)
-				return last;
-			if (body.Method.ReturnType.IsMutable && !last.ReturnType.IsMutable &&
-				last.ReturnType == ((GenericTypeImplementation)body.Method.ReturnType).
-				ImplementationTypes[0])
-				return new ValueInstance(body.Method.ReturnType, last.Value);
-			throw new Executor.ReturnTypeMustMatchMethod(body, last);
+			return TryEvaluate(body, ctx, runOnlyTests);
 		}
 		catch (ExecutionFailed ex)
 		{
@@ -46,6 +24,33 @@ internal sealed class BodyEvaluator(Executor executor)
 			if (runOnlyTests)
 				executor.DecrementInlineTestDepth();
 		}
+	}
+
+	private ValueInstance TryEvaluate(Body body, ExecutionContext ctx, bool runOnlyTests)
+	{
+		ValueInstance last =
+			new((ctx.This?.ReturnType.Package ?? body.Method.Type.Package).FindType(Base.None)!, null);
+		foreach (var e in body.Expressions)
+		{
+			var isTest = !e.Equals(body.Expressions[^1]) && IsStandaloneInlineTest(e);
+			if (isTest == !runOnlyTests && e is not Declaration && e is not MutableReassignment ||
+				runOnlyTests && e is Declaration &&
+				body.Method.Type.Members.Any(m => !m.IsConstant && e.ToString().Contains(m.Name)))
+				continue;
+			last = executor.RunExpression(e, ctx);
+			if (runOnlyTests && isTest && !Executor.ToBool(last))
+				throw new Executor.TestFailed(body.Method, e, last, GetTestFailureDetails(e, ctx));
+		}
+		if (runOnlyTests && last.Value == null && body.Method.Name != Base.Run &&
+			body.Expressions.Count > 1)
+			throw new Executor.MethodRequiresTest(body.Method, body);
+		if (runOnlyTests || last.ReturnType.IsError || body.Method.ReturnType == last.ReturnType)
+			return last;
+		if (body.Method.ReturnType.IsMutable && !last.ReturnType.IsMutable &&
+			last.ReturnType == ((GenericTypeImplementation)body.Method.ReturnType).
+			ImplementationTypes[0])
+			return new ValueInstance(body.Method.ReturnType, last.Value);
+		throw new Executor.ReturnTypeMustMatchMethod(body, last);
 	}
 
 	private static bool IsStandaloneInlineTest(Expression e) =>

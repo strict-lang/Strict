@@ -1,6 +1,3 @@
-using Iced.Intel;
-using System.Reflection.Metadata;
-
 namespace Strict.Expressions.Tests;
 
 public sealed class ListTests : TestExpressions

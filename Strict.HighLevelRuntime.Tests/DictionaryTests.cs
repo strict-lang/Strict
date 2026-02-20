@@ -34,11 +34,10 @@ public sealed class DictionaryTests
 		var method = t.Methods.Single(m => m.Name == "Run");
 		var result = executor.Execute(method, null, []);
 		Assert.That(result.ReturnType.Name, Is.EqualTo("Dictionary(Number, Number)"));
-		var values = (System.Collections.IDictionary)result.Value!;
+		var values = (Dictionary<ValueInstance, ValueInstance>)result.Value!;
 		Assert.That(values.Count, Is.EqualTo(2));
-		var keys = values.Keys.Cast<object?>().ToList();
-		Assert.That(keys.Select(EqualsExtensions.NumberToDouble), Does.Contain(2));
-		Assert.That(keys.Select(EqualsExtensions.NumberToDouble), Does.Contain(4));
+		Assert.That(values.Keys.Select(k => EqualsExtensions.NumberToDouble(k.Value)),
+			Does.Contain(2).And.Contain(4));
 	}
 
 	[Test]
@@ -48,13 +47,23 @@ public sealed class DictionaryTests
 			"Run Dictionary(Number, Number)", "\tDictionary((1, 2)).Add(3, 4)");
 		var method = t.Methods.Single(m => m.Name == "Run");
 		var result = executor.Execute(method, null, []);
+		var values = (Dictionary<ValueInstance, ValueInstance>)result.Value!;
+		Assert.That(values.Keys.Select(k => EqualsExtensions.NumberToDouble(k.Value)),
+			Does.Contain(1).And.Contain(3));
+		var key1 = values.Keys.First(key => EqualsExtensions.NumberToDouble(key.Value) == 1);
+		var key3 = values.Keys.First(key => EqualsExtensions.NumberToDouble(key.Value) == 3);
+		Assert.That(Convert.ToDouble(values[key1].Value), Is.EqualTo(2));
+		Assert.That(Convert.ToDouble(values[key3].Value), Is.EqualTo(4));
+	}
+
+	[Test]
+	public void DictionaryAddUsesKeysAndValuesPairs()
+	{
+		using var t = CreateType(nameof(DictionaryAddUsesKeysAndValuesPairs), "has number",
+			"Run Dictionary(Number, Number)", "\tDictionary((1, 2)).Add(3, 4).Add(5, 6)");
+		var method = t.Methods.Single(m => m.Name == "Run");
+		var result = executor.Execute(method, null, []);
 		var values = (System.Collections.IDictionary)result.Value!;
-		var keys = values.Keys.Cast<object?>().ToList();
-		Assert.That(keys.Select(EqualsExtensions.NumberToDouble), Does.Contain(1));
-		Assert.That(keys.Select(EqualsExtensions.NumberToDouble), Does.Contain(3));
-		var key1 = keys.First(key => EqualsExtensions.NumberToDouble(key) == 1);
-		var key3 = keys.First(key => EqualsExtensions.NumberToDouble(key) == 3);
-		Assert.That(Convert.ToDouble(values[key1!]), Is.EqualTo(2));
-		Assert.That(Convert.ToDouble(values[key3!]), Is.EqualTo(4));
+		Assert.That(values.Count, Is.EqualTo(3));
 	}
 }

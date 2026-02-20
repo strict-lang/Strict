@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using Strict.Runtime.Statements;
 
 namespace Strict.Runtime;
@@ -25,6 +25,7 @@ public sealed class BytecodeInterpreter
 	private int instructionIndex;
 	private IList<Statement> statements = new List<Statement>();
 	public Instance? Returns { get; private set; }
+	// ReSharper disable once AutoPropertyCanBeMadeGetOnly.Local
 	public Memory Memory { get; private init; } = new();
 
 	private BytecodeInterpreter RunStatements(IList<Statement> allStatements)

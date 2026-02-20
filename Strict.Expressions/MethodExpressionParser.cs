@@ -75,11 +75,12 @@ public class MethodExpressionParser : ExpressionParser
 		var binary = Binary.Parse(body, input, postfix.Output);
 		if (postfix.Output.Count == 0)
 #if DEBUG
-			if (inputText != binary.ToString())
-				throw new GeneratedBinaryExpressionDoesNotMatchInputExactly(body, binary, inputText); //ncrunch: no coverage
-			else
+			return inputText != binary.ToString()
+				? throw new GeneratedBinaryExpressionDoesNotMatchInputExactly(body, binary, inputText)
+				: binary;
+#else
+			return binary;
 #endif
-				return binary;
 		return ParseInContext(body, input[postfix.Output.Peek()], [binary]) ??
 			throw new UnknownExpression(body,
 				input[postfix.Output.Peek()].ToString() + " in " + inputText);
@@ -305,8 +306,7 @@ public class MethodExpressionParser : ExpressionParser
 				: ParameterCall.TryParse(body, input));
 		return call == null
 			? null
-			: new MemberCall(instance,
-        new Member(body.ReturnType, input.ToString(), call.ReturnType),
+			: new MemberCall(instance, new Member(body.ReturnType, input.ToString(), call.ReturnType),
 				body.CurrentFileLineNumber);
 	}
 
