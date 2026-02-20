@@ -75,7 +75,7 @@ public class CSharpExpressionVisitor : ExpressionVisitor
 			? ""
 			: ".") + (methodCall.Method.Name == "Read" && methodCall.Instance?.ToString() == "file"
 			? "ReadToEnd"
-			: methodCall.Method.Name == "Write" &&
+			: methodCall.Method.Name is "Write" or "Log" &&
 			methodCall.Instance?.ReturnType.Name is Base.Logger or Base.System
 				? "WriteLine"
 				: methodCall.Method.Name == Method.From
