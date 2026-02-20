@@ -2,7 +2,6 @@
 
 public sealed class ByteCodeGeneratorTests : BaseVirtualMachineTests
 {
-	/*TODO
 	[TestCaseSource(nameof(ByteCodeCases))]
 	public void Generate(string methodCall, string programName, Statement[] expectedByteCode,
 		params string[] code)
@@ -28,7 +27,7 @@ public sealed class ByteCodeGeneratorTests : BaseVirtualMachineTests
 					new Binary(Instruction.Add, Register.R0, Register.R1, Register.R2),
 					new StoreFromRegisterStatement(Register.R2, "something"),
 					new LoadVariableToRegister(Register.R3, "something"),
-					new LoadConstantStatement(Register.R4, new Instance(NumberType, 5)),
+					new LoadConstantStatement(Register.R4, new Instance(NumberType, 10)),
 					new Binary(Instruction.Add, Register.R3, Register.R4, Register.R5),
 					new Return(Register.R5)
 				},
@@ -66,6 +65,7 @@ public sealed class ByteCodeGeneratorTests : BaseVirtualMachineTests
 					new LoadVariableToRegister(Register.R0, "First"),
 					new LoadVariableToRegister(Register.R1, "Second"),
 					new Binary(Instruction.Add, Register.R0, Register.R1, Register.R2),
+					new LoadConstantStatement(Register.R3, new Instance(NumberType, 1.0)),
 					new Binary(Instruction.Add, Register.R2, Register.R3, Register.R4),
 					new Return(Register.R4)
 				},
@@ -115,7 +115,7 @@ public sealed class ByteCodeGeneratorTests : BaseVirtualMachineTests
 					new LoadVariableToRegister(Register.R2, "multiplier"),
 					new Binary(Instruction.Multiply, Register.R1, Register.R2, Register.R3),
 					new StoreFromRegisterStatement(Register.R3, "result"),
-					new IterationEnd(7),
+					new LoopEndStatement(7),
 					new LoadVariableToRegister(Register.R4, "result"),
 					new Return(Register.R4)
 				}, SimpleLoopExample);
@@ -137,5 +137,4 @@ public sealed class ByteCodeGeneratorTests : BaseVirtualMachineTests
 				SimpleMethodCallCode);
 		}
 	}
-	*/
 }

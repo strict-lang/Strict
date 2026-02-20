@@ -381,7 +381,11 @@ public class MethodExpressionParser : ExpressionParser
 					forExpression.CustomVariables.Any(v => v.ContainsAnythingMutable) ||
 					forExpression.Iterator is Binary { Instance: VariableCall forVariableCall } &&
 					forVariableCall.Variable.Name == variableName || forExpression.Body is Body forBody &&
-					IsVariableMutated(forBody, variableName)))
+					IsVariableMutated(forBody, variableName) ||
+					forExpression.Body is If forIfBody &&
+					CheckForVariableMutationInIf(variableName, forIfBody) ||
+					forExpression.Body is MethodCall { Instance: VariableCall bodyVarCall, IsMutable: true } &&
+					bodyVarCall.Variable.Name == variableName))
 				return true;
 			if (expression is MethodCall { Instance: VariableCall variableCall, IsMutable: true } &&
 				variableCall.Variable.Name == variableName)
@@ -399,14 +403,20 @@ public class MethodExpressionParser : ExpressionParser
 	{
 		if (IsMutationOfVariable(ifExpression.Then, variableName) ||
 			ifExpression.Then is Body thenBody && IsVariableMutated(thenBody, variableName) ||
-			ifExpression.Then is If ifBody && CheckForVariableMutationInIf(variableName, ifBody))
+			ifExpression.Then is If ifBody && CheckForVariableMutationInIf(variableName, ifBody) ||
+			IsMutableMethodCallOnVariable(ifExpression.Then, variableName))
 			return true;
 		return ifExpression.OptionalElse != null &&
 			(IsMutationOfVariable(ifExpression.OptionalElse, variableName) ||
 				ifExpression.OptionalElse is Body elseBody && IsVariableMutated(elseBody, variableName) ||
 				ifExpression.OptionalElse is If elseIfBody &&
-				CheckForVariableMutationInIf(variableName, elseIfBody));
+				CheckForVariableMutationInIf(variableName, elseIfBody) ||
+				IsMutableMethodCallOnVariable(ifExpression.OptionalElse, variableName));
 	}
+
+	private static bool IsMutableMethodCallOnVariable(Expression expression, string variableName) =>
+		expression is MethodCall { Instance: VariableCall varCall, IsMutable: true } &&
+		varCall.Variable.Name == variableName;
 
 	/// <summary>
 	/// Similar to TryParseExpression, but we know there are commas separating expressions

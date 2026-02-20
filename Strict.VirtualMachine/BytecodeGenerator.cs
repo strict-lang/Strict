@@ -1,8 +1,12 @@
+using System.Collections;
 using System.Diagnostics;
 using Strict.Expressions;
 using Strict.Language;
 using Strict.Runtime.Statements;
 using Return = Strict.Runtime.Statements.Return;
+using Binary = Strict.Expressions.Binary;
+using BinaryStatement = Strict.Runtime.Statements.Binary;
+using Type = Strict.Language.Type;
 
 namespace Strict.Runtime;
 
@@ -11,7 +15,7 @@ public sealed class ByteCodeGenerator
 	public ByteCodeGenerator(InvokedMethod method, Registry registry)
 	{
 		foreach (var argument in method.Arguments)
-			statements.Add(new StoreConstantToVariable(argument.Value, argument.Key));
+			statements.Add(new StoreVariableStatement(argument.Value, argument.Key));
 		Expressions = method.Expressions;
 		this.registry = registry;
 		if (method is InstanceInvokedMethod instanceMethod)
@@ -20,6 +24,9 @@ public sealed class ByteCodeGenerator
 
 	private readonly List<Statement> statements = [];
 	private readonly Registry registry;
+	private readonly Stack<int> idStack = new();
+	private readonly Register[] registers = Enum.GetValues<Register>();
+	private int conditionalId;
 
 	public ByteCodeGenerator(MethodCall methodCall)
 	{
@@ -29,7 +36,7 @@ public sealed class ByteCodeGenerator
 		var methodBody = methodCall.Method.GetBodyAndParseIfNeeded();
 		Expressions = methodBody is not Body
 			? new[] { methodBody }
-			: ((Body)methodCall.Method.GetBodyAndParseIfNeeded()).Expressions;
+			: ((Body)methodBody).Expressions;
 		registry = new Registry();
 	}
 
@@ -38,7 +45,7 @@ public sealed class ByteCodeGenerator
 	private void AddMembersFromCaller(Instance instance)
 	{
 		if (instance.ReturnType != null)
-			statements.Add(new StoreConstantToVariable(instance,
+			statements.Add(new StoreVariableStatement(instance,
 				instance.ReturnType.Members.First(member => !member.Type.IsTrait).Name));
 	}
 
@@ -51,17 +58,14 @@ public sealed class ByteCodeGenerator
 				{
 					Generic.Name: Base.List
 				})
-				statements.Add(new StoreConstantToVariable(
+				statements.Add(new StoreVariableStatement(
 					new Instance(instance.Method.Parameters[parameterIndex].Type,
 						instance.Arguments),
 					instance.ReturnType.Members[parameterIndex].Name));
 			else
-				statements.Add(new StoreConstantToVariable(
+				statements.Add(new StoreVariableStatement(
 					new Instance(instance.Arguments[parameterIndex], true),
 					instance.ReturnType.Members[parameterIndex].Name));
-			if (instance.ReturnType.Members[parameterIndex].InitialValue == null)
-				instance.ReturnType.Members[parameterIndex].
-					CheckIfWeCouldUpdateValue(instance.Arguments[parameterIndex], new Body(instance.Method));
 		}
 	}
 
@@ -69,7 +73,7 @@ public sealed class ByteCodeGenerator
 	{
 		for (var parameterIndex = 0; parameterIndex < methodCall.Method.Parameters.Count;
 			parameterIndex++)
-			statements?.Add(new StoreConstantToVariable(
+			statements?.Add(new StoreVariableStatement(
 				new Instance(methodCall.Arguments[parameterIndex]),
 				methodCall.Method.Parameters[parameterIndex].Name));
 	}
@@ -96,19 +100,10 @@ public sealed class ByteCodeGenerator
 		statements.Add(new Return(registry.PreviousRegister));
 	}
 
-	// ReSharper disable once MemberCanBeMadeStatic.Local
 	private void GenerateStatementsFromExpression(Expression expression)
 	{
 		Debug.Assert(expression != null);
-		Debug.Assert(expression != null);
-	}
-	/*TODO
-		private readonly Stack<int> idStack = new();
-		private readonly Register[] registers = Enum.GetValues<Register>();
-		private int conditionalId;
-	private void GenerateStatementsFromExpression(Expression expression)
-	{
-		TryGenerateBodyStatements(expression) ?? TryGenerateBinaryStatements(expression) ??
+		_ = TryGenerateBodyStatements(expression) ?? TryGenerateBinaryStatements(expression) ??
 			TryGenerateIfStatements(expression) ?? TryGenerateAssignmentStatements(expression) ??
 			TryGenerateLoopStatements(expression) ?? TryGenerateMutableStatements(expression) ??
 			TryGenerateMemberCallStatement(expression) ?? TryGenerateToOperatorStatement(expression) ??
@@ -118,48 +113,37 @@ public sealed class ByteCodeGenerator
 			throw new NotSupportedException(expression.ToString());
 	}
 
-	private bool TryGenerateListCallStatement(Expression expression)
+	private bool? TryGenerateListCallStatement(Expression expression)
 	{
 		if (expression is not ListCall listCall)
-			return false;
+			return null;
 		GenerateStatementsFromExpression(listCall.Index);
 		var indexRegister = registry.PreviousRegister;
-		statements.Add(new ListCall(registry.AllocateRegister(), indexRegister,
+		statements.Add(new ListCallStatement(registry.AllocateRegister(), indexRegister,
 			listCall.List.ToString()));
 		return true;
 	}
 
-	private bool TryGenerateToOperatorStatement(Expression expression)
+	private bool? TryGenerateToOperatorStatement(Expression expression)
 	{
-		if (expression is not To toExpression)
-			return false;
-		if (toExpression.Instance == null)
-			return false;
-		GenerateStatementsFromExpression(toExpression.Instance);
-		statements.Add(new Conversion(registry.PreviousRegister, registry.AllocateRegister(),
-			toExpression.ConversionType, GetInstructionForConversionType(toExpression.ConversionType)));
-		return true;
+		if (expression is not To)
+			return null;
+		// To is a MethodCall - generate as Invoke (interpreter handles conversion)
+		return TryGenerateMethodCallStatement(expression);
 	}
 
-	private static Instruction GetInstructionForConversionType(Type conversionType) =>
-		conversionType.Name switch
-		{
-			Base.Text => Instruction.ToText,
-			_ => Instruction.ToNumber
-		};
-
-	private bool TryGenerateVariableCallStatement(Expression expression)
+	private bool? TryGenerateVariableCallStatement(Expression expression)
 	{
 		if (expression is not (VariableCall or ParameterCall))
-			return false;
+			return null;
 		statements.Add(new LoadVariableToRegister(registry.AllocateRegister(), expression.ToString()));
 		return true;
 	}
 
-	private bool TryGenerateMemberCallStatement(Expression expression)
+	private bool? TryGenerateMemberCallStatement(Expression expression)
 	{
 		if (expression is not MemberCall memberCall)
-			return false;
+			return null;
 		if (memberCall.Instance == null)
 			statements.Add(
 				new LoadVariableToRegister(registry.AllocateRegister(), expression.ToString()));
@@ -175,19 +159,19 @@ public sealed class ByteCodeGenerator
 				new Instance(type, value)));
 	}
 
-	private bool TryGenerateValueStatement(Expression expression)
+	private bool? TryGenerateValueStatement(Expression expression)
 	{
 		if (expression is not Value valueExpression)
-			return false;
+			return null;
 		statements.Add(new LoadConstantStatement(registry.AllocateRegister(),
 			new Instance(valueExpression.ReturnType, valueExpression.Data)));
 		return true;
 	}
 
-	private bool TryGenerateMethodCallStatement(Expression expression)
+	private bool? TryGenerateMethodCallStatement(Expression expression)
 	{
 		if (expression is Binary || expression is not MethodCall methodCall)
-			return false;
+			return null;
 		if (TryGenerateStatementForCollectionManipulation(methodCall))
 			return true;
 		statements.Add(new Invoke(methodCall, registry.AllocateRegister(), registry));
@@ -208,6 +192,16 @@ public sealed class ByteCodeGenerator
 			GenerateStatementsForRemoveMethod(methodCall);
 			return true;
 		}
+		case "Increment":
+		case "Decrement":
+		{
+			var register = registry.AllocateRegister();
+			statements.Add(new Invoke(methodCall, register, registry));
+			if (methodCall.Instance != null)
+				statements.Add(new StoreFromRegisterStatement(register,
+					methodCall.Instance.ToString()));
+			return true;
+		}
 		default:
 			return false;
 		}
@@ -219,10 +213,10 @@ public sealed class ByteCodeGenerator
 			return;
 		GenerateStatementsFromExpression(methodCall.Arguments[0]);
 		if (methodCall.Instance.ReturnType is GenericTypeImplementation { Generic.Name: Base.List })
-			statements.Add(new Remove(methodCall.Instance.ToString(),
+			statements.Add(new RemoveStatement(methodCall.Instance.ToString(),
 				registry.PreviousRegister));
 		else
-			statements.Add(new RemoveFromTable(registry.PreviousRegister,
+			statements.Add(new RemoveFromTableStatement(registry.PreviousRegister,
 				methodCall.Instance.ToString()));
 	}
 
@@ -231,7 +225,7 @@ public sealed class ByteCodeGenerator
 		if (TryGenerateAddForTable(methodCall) || methodCall.Instance == null)
 			return;
 		GenerateStatementsFromExpression(methodCall.Arguments[0]);
-		statements.Add(new WriteToList(registry.PreviousRegister,
+		statements.Add(new WriteToListStatement(registry.PreviousRegister,
 			methodCall.Instance.ToString()));
 	}
 
@@ -243,26 +237,26 @@ public sealed class ByteCodeGenerator
 		var key = registry.PreviousRegister;
 		GenerateStatementsFromExpression(methodCall.Arguments[1]);
 		var value = registry.PreviousRegister;
-		statements.Add(new WriteToTable(key, value, methodCall.Instance.ToString()));
+		statements.Add(new WriteToTableStatement(key, value, methodCall.Instance.ToString()));
 		return true;
 	}
 
-	private bool TryGenerateBodyStatements(Expression expression)
+	private bool? TryGenerateBodyStatements(Expression expression)
 	{
 		if (expression is not Body body)
-			return false;
+			return null;
 		GenerateStatements(body.Expressions);
 		return true;
 	}
 
-	private bool TryGenerateMutableStatements(Expression expression)
+	private bool? TryGenerateMutableStatements(Expression expression)
 	{
-		if (expression is MutableDeclaration declaration)
+		if (expression is Declaration { IsMutable: true } declaration)
 			GenerateForAssignmentOrDeclaration(declaration.Value, declaration.Name);
 		else if (expression is MutableReassignment assignment)
 			GenerateForAssignmentOrDeclaration(assignment.Value, assignment.Name);
 		else
-			return false;
+			return null;
 		return true;
 	}
 
@@ -273,45 +267,50 @@ public sealed class ByteCodeGenerator
 		else
 		{
 			GenerateStatementsFromExpression(declarationOrAssignment);
-			statements.Add(new StoreRegisterToVariable(registers[registry.NextRegister - 1], name));
+			statements.Add(new StoreFromRegisterStatement(registers[registry.NextRegister - 1], name));
 		}
 	}
 
-	private bool TryGenerateLoopStatements(Expression expression)
+	private bool? TryGenerateLoopStatements(Expression expression)
 	{
 		if (expression is not For forExpression)
-			return false;
+			return null;
 		GenerateLoopStatements(forExpression);
 		return true;
 	}
 
-	private bool TryGenerateAssignmentStatements(Expression expression)
+	private bool? TryGenerateAssignmentStatements(Expression expression)
 	{
 		if (expression is not Declaration assignmentExpression || expression.IsMutable)
-			return false;
+			return null;
 		GenerateForAssignmentOrDeclaration(assignmentExpression.Value, assignmentExpression.Name);
 		return true;
 	}
 
 	private void
-		TryGenerateStatementsForAssignmentValue(Value assignmentValue, string variableName) =>
-		statements.Add(new StoreConstantToVariable(new Instance(assignmentValue.ReturnType,
-			assignmentValue.Data.GetType().IsArray
-				? ((IEnumerable<Expression>)assignmentValue.Data).ToList()
-				: assignmentValue.Data), variableName));
+		TryGenerateStatementsForAssignmentValue(Value assignmentValue, string variableName)
+	{
+		var data = assignmentValue.Data is IEnumerable<Expression> expressions
+			? (object)expressions.ToList()
+			: assignmentValue.Data is IDictionary
+				? new Dictionary<Value, Value>()
+				: assignmentValue.Data;
+		statements.Add(new StoreVariableStatement(new Instance(assignmentValue.ReturnType, data),
+			variableName));
+	}
 
-	private bool TryGenerateIfStatements(Expression expression)
+	private bool? TryGenerateIfStatements(Expression expression)
 	{
 		if (expression is not If ifExpression)
-			return false;
+			return null;
 		GenerateIfStatements(ifExpression);
 		return true;
 	}
 
-	private bool TryGenerateBinaryStatements(Expression expression)
+	private bool? TryGenerateBinaryStatements(Expression expression)
 	{
 		if (expression is not Binary binary)
-			return false;
+			return null;
 		GenerateCodeForBinary(binary);
 		return true;
 	}
@@ -319,25 +318,25 @@ public sealed class ByteCodeGenerator
 	private void GenerateLoopStatements(For forExpression)
 	{
 		var statementCountBeforeLoopStart = statements.Count;
-		if (forExpression.Value is MethodCall rangeExpression &&
-			forExpression.Value.ReturnType.Name == Base.Range && rangeExpression.Method.Name == Method.From)
-			GenerateStatementForLoopRangeInstruction(rangeExpression);
+		if (forExpression.Iterator is MethodCall rangeExpression &&
+			forExpression.Iterator.ReturnType.Name == Base.Range && rangeExpression.Method.Name == Method.From)
+			GenerateStatementForRangeLoopInstruction(rangeExpression);
 		else
 		{
-			GenerateStatementsFromExpression(forExpression.Value);
-			statements.Add(new LoopBegin(registry.PreviousRegister));
+			GenerateStatementsFromExpression(forExpression.Iterator);
+			statements.Add(new LoopBeginStatement(registry.PreviousRegister));
 		}
 		GenerateStatementsForLoopBody(forExpression);
-		statements.Add(new IterationEnd(statements.Count - statementCountBeforeLoopStart));
+		statements.Add(new LoopEndStatement(statements.Count - statementCountBeforeLoopStart));
 	}
 
-	private void GenerateStatementForLoopRangeInstruction(MethodCall rangeExpression)
+	private void GenerateStatementForRangeLoopInstruction(MethodCall rangeExpression)
 	{
 		GenerateStatementsFromExpression(rangeExpression.Arguments[0]);
 		var startIndexRegister = registry.PreviousRegister;
 		GenerateStatementsFromExpression(rangeExpression.Arguments[1]);
 		var endIndexRegister = registry.PreviousRegister;
-		statements.Add(new LoopRangeBegin(startIndexRegister, endIndexRegister));
+		statements.Add(new LoopBeginStatement(startIndexRegister, endIndexRegister));
 	}
 
 	private void GenerateStatementsForLoopBody(For forExpression)
@@ -399,7 +398,7 @@ public sealed class ByteCodeGenerator
 	{
 		GenerateStatementsFromExpression(condition);
 		var instanceCallRegister = registry.PreviousRegister;
-		statements.Add(new LoadConstantToRegister(registry.AllocateRegister(), new Instance(condition.ReturnType, true)));
+		statements.Add(new LoadConstantStatement(registry.AllocateRegister(), new Instance(condition.ReturnType, true)));
 		GenerateInstructionsFromIfCondition(Instruction.Equal, instanceCallRegister,
 			registry.PreviousRegister);
 	}
@@ -415,7 +414,7 @@ public sealed class ByteCodeGenerator
 	private void GenerateInstructionsFromIfCondition(Instruction conditionInstruction,
 		Register leftRegister, Register rightRegister)
 	{
-		statements.Add(new Binary(conditionInstruction, leftRegister, rightRegister));
+		statements.Add(new BinaryStatement(conditionInstruction, leftRegister, rightRegister));
 		idStack.Push(conditionalId);
 		statements.Add(new JumpToId(Instruction.JumpToIdIfFalse, conditionalId++));
 	}
@@ -464,9 +463,12 @@ public sealed class ByteCodeGenerator
 	private void GenerateBinaryStatement(MethodCall binary, Instruction operationInstruction)
 	{
 		if (binary.Instance is Binary binaryOp)
-			statements.Add(new Binary(operationInstruction,
-				GenerateValueBinaryStatements(binaryOp, operationInstruction),
-				registry.AllocateRegister(), registry.AllocateRegister()));
+		{
+			var leftReg = GenerateValueBinaryStatements(binaryOp, operationInstruction);
+			GenerateStatementsFromExpression(binary.Arguments[0]);
+			statements.Add(new BinaryStatement(operationInstruction, leftReg,
+				registry.PreviousRegister, registry.AllocateRegister()));
+		}
 		else if (binary.Arguments[0] is Binary binaryArg)
 			GenerateNestedBinaryStatements(binary, operationInstruction, binaryArg);
 		else
@@ -481,7 +483,7 @@ public sealed class ByteCodeGenerator
 		var left = registry.AllocateRegister();
 		if (binary.Instance != null)
 			statements.Add(new LoadVariableToRegister(left, binary.Instance.ToString()));
-		statements.Add(new Binary(operationInstruction, left, right,
+		statements.Add(new BinaryStatement(operationInstruction, left, right,
 			registry.AllocateRegister()));
 	}
 
@@ -495,10 +497,9 @@ public sealed class ByteCodeGenerator
 		GenerateStatementsFromExpression(binary.Arguments[0]);
 		var rightValue = registry.PreviousRegister;
 		var resultRegister = registry.AllocateRegister();
-		statements.Add(new Binary(operationInstruction, leftValue, rightValue, resultRegister));
+		statements.Add(new BinaryStatement(operationInstruction, leftValue, rightValue, resultRegister));
 		return resultRegister;
 	}
 
 	private sealed class InstanceNameNotFound : Exception { }
-	*/
 }
