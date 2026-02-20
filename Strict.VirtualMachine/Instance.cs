@@ -1,4 +1,4 @@
-﻿using Strict.Expressions;
+using Strict.Expressions;
 using Strict.Language;
 using Type = Strict.Language.Type;
 
@@ -22,10 +22,8 @@ public sealed class Instance
 	public Instance(string typeName, object value)
 	{
 		Value = value;
-		this.typeName = typeName;
+		TypeName = typeName;
 	}
-
-	private readonly string typeName = string.Empty;
 
 	public Instance(Expression expression, bool isMember = false)
 	{
@@ -39,10 +37,7 @@ public sealed class Instance
 
 	public bool IsMember { get; }
 	public Type? ReturnType { get; }
-	public string TypeName =>
-		ReturnType == null
-			? typeName
-			: ReturnType.Name;
+	public string TypeName { get => ReturnType?.Name ?? field; } = string.Empty;
 	public object Value { get; set; }
 
 	public object GetRawValue()
@@ -88,11 +83,7 @@ public sealed class Instance
 		if (right.Value is Expression rightExpression)
 			elements.Remove(rightExpression);
 		else
-		{
-			var indexToRemove =
-				elements.FindIndex(element => ((Value)element).Data.Equals(right.Value));
-			elements.RemoveAt(indexToRemove);
-		}
+			elements.RemoveAt(elements.FindIndex(element => ((Value)element).Data.Equals(right.Value)));
 		return new Instance(left.ReturnType, elements);
 	}
 

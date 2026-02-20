@@ -1,4 +1,4 @@
-﻿namespace Strict.Runtime.Tests;
+namespace Strict.Runtime.Tests;
 
 public sealed class ByteCodeGeneratorTests : BaseVirtualMachineTests
 {
@@ -135,6 +135,26 @@ public sealed class ByteCodeGeneratorTests : BaseVirtualMachineTests
 			yield return new TestCaseData("AddNumbers(2, 5).GetSum",
 				"AddNumbers", ExpectedSimpleMethodCallCode,
 				SimpleMethodCallCode);
+			yield return new TestCaseData("IfWithMethodCallLeft(5).Check", "IfWithMethodCallLeft",
+				new Statement[]
+				{
+					new StoreVariableStatement(new Instance(NumberType, 5), "number"),
+					new Invoke(Register.R0, null!, null!),
+					new LoadConstantStatement(Register.R1, new Instance(NumberType, 0)),
+					new Binary(Instruction.GreaterThan, Register.R0, Register.R1),
+					new JumpToId(Instruction.JumpToIdIfFalse, 0),
+					new LoadConstantStatement(Register.R2,
+						new Instance(TestPackage.Instance.GetType(Base.Boolean), true)),
+					new Return(Register.R2), new JumpToId(Instruction.JumpEnd, 0),
+					new LoadConstantStatement(Register.R3,
+						new Instance(TestPackage.Instance.GetType(Base.Boolean), false)),
+					new Return(Register.R3)
+				},
+				new[]
+				{
+					"has number", "Check Boolean", "\tif GetValue > 0", "\t\treturn true", "\tfalse",
+					"GetValue Number", "\tnumber + 1"
+				});
 		}
 	}
 }

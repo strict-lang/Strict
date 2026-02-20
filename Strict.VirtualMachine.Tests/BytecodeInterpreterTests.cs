@@ -11,8 +11,8 @@ public class BytecodeInterpreterTests : BaseVirtualMachineTests
 	{
 		if (type.Package.FindDirectType("Days") == null)
 			new Type(type.Package,
-				new TypeLines("Days", "constant Monday = 1", "constant Tuesday = 2",
-					"constant Wednesday = 3", "constant Friday = 5")).
+					new TypeLines("Days", "constant Monday = 1", "constant Tuesday = 2",
+						"constant Wednesday = 3", "constant Friday = 5")).
 				ParseMembersAndMethods(new MethodExpressionParser());
 	}
 
@@ -331,6 +331,17 @@ public class BytecodeInterpreterTests : BaseVirtualMachineTests
 				Value).Count, Is.EqualTo(1));
 	}
 
+	[Test]
+	public void CreateEmptyDictionaryFromConstructor()
+	{
+		var dictionaryType = TestPackage.Instance.GetType(Base.Dictionary).
+			GetGenericImplementation(NumberType, NumberType);
+		var methodCall = CreateFromMethodCall(dictionaryType);
+		var statements = new List<Statement> { new Invoke(Register.R0, methodCall, new Registry()) };
+		var result = vm.Execute(statements).Memory.Registers[Register.R0].Value;
+		Assert.That(result, Is.InstanceOf<Dictionary<Value, Value>>().And.Count.EqualTo(0));
+	}
+
 	[TestCase("DictionaryGet(5).AddToDictionary",
 		"5",
 		"has number",
@@ -373,7 +384,7 @@ public class BytecodeInterpreterTests : BaseVirtualMachineTests
 		};
 		var statements = new ByteCodeGenerator(GenerateMethodCallFromSource(nameof(ReturnWithinALoop),
 			"ReturnWithinALoop(5).GetAll", source)).Generate();
-		Assert.That(() => vm.Execute(statements).Returns?.Value, Is.EqualTo(5));
+		Assert.That(() => vm.Execute(statements).Returns?.Value, Is.EqualTo(1 + 2 + 3 + 4 + 5));
 	}
 
 	[Test]
@@ -400,6 +411,30 @@ public class BytecodeInterpreterTests : BaseVirtualMachineTests
 				new JumpIf(Instruction.JumpIfTrue, 2),
 				new Binary(Instruction.Add, Register.R2, Register.R0, Register.R0)
 			]).Memory.Registers[Register.R0].Value, Is.EqualTo(15));
+
+	[Test]
+	public void JumpIfTrueSkipsNextInstruction() =>
+		Assert.That(
+			vm.Execute([
+				new SetStatement(new Instance(NumberType, 1), Register.R0),
+				new SetStatement(new Instance(NumberType, 1), Register.R1),
+				new SetStatement(new Instance(NumberType, 0), Register.R2),
+				new Binary(Instruction.Equal, Register.R0, Register.R1),
+				new JumpIfTrue(1, Register.R0),
+				new Binary(Instruction.Add, Register.R0, Register.R1, Register.R2)
+			]).Memory.Registers[Register.R2].Value, Is.EqualTo(0));
+
+	[Test]
+	public void JumpIfFalseSkipsNextInstruction() =>
+		Assert.That(
+			vm.Execute([
+				new SetStatement(new Instance(NumberType, 1), Register.R0),
+				new SetStatement(new Instance(NumberType, 2), Register.R1),
+				new SetStatement(new Instance(NumberType, 0), Register.R2),
+				new Binary(Instruction.Equal, Register.R0, Register.R1),
+				new JumpIfFalse(1, Register.R0),
+				new Binary(Instruction.Add, Register.R0, Register.R1, Register.R2)
+			]).Memory.Registers[Register.R2].Value, Is.EqualTo(0));
 
 	[TestCase(Instruction.GreaterThan, new[] { 1, 2 }, 2 - 1)]
 	[TestCase(Instruction.LessThan, new[] { 1, 2 }, 1 + 2)]

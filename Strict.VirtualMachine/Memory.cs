@@ -1,13 +1,10 @@
-﻿using Strict.Expressions;
+using Strict.Expressions;
 using Strict.Language;
 
 namespace Strict.Runtime;
 
 public sealed class Memory
 {
-	public Dictionary<string, Instance> Variables = new();
-	public Dictionary<Register, Instance> Registers { get; init; } = new();
-
 	public void AddToCollectionVariable(string key, object element)
 	{
 		Variables.TryGetValue(key, out var collection);
@@ -17,14 +14,16 @@ public sealed class Memory
 				: ConvertToValueFormWhenListIsEmpty(collection, element));
 	}
 
+	public Dictionary<string, Instance> Variables = new();
+	public Dictionary<Register, Instance> Registers { get; init; } = new();
+
 	public void AddToDictionary(string variableKey, Instance keyToAddTo, Instance value)
 	{
 		Variables.TryGetValue(variableKey, out var collection);
-		if (collection?.Value is not Dictionary<Value, Value> dictionary ||
-			keyToAddTo.ReturnType == null || value.ReturnType == null)
-			return;
-		dictionary.Add(new Value(keyToAddTo.ReturnType, keyToAddTo.Value),
-			new Value(value.ReturnType, value.Value));
+		if (collection?.Value is Dictionary<Value, Value> dictionary &&
+			keyToAddTo.ReturnType != null && value.ReturnType != null)
+			dictionary.Add(new Value(keyToAddTo.ReturnType, keyToAddTo.Value),
+				new Value(value.ReturnType, value.Value));
 	}
 
 	private static Value ConvertObjectToValueForm(object obj, Expression prototype) =>

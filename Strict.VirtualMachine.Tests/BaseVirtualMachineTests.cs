@@ -1,4 +1,4 @@
-﻿global using Type = Strict.Language.Type;
+global using Type = Strict.Language.Type;
 
 namespace Strict.Runtime.Tests;
 
@@ -153,7 +153,7 @@ public class BaseVirtualMachineTests : TestExpressions
 	[
 		new StoreVariableStatement(new Instance(NumberType, 2), "firstNumber"),
 		new StoreVariableStatement(new Instance(NumberType, 5), "secondNumber"),
-		new Invoke("SumNumbers(firstNumber, secondNumber)", Register.R0),
+		new Invoke(Register.R0, null!, null!),
 		new Return(Register.R0)
 	];
 	protected static readonly Statement[] ExpectedStatementsOfRemoveParenthesesKata =

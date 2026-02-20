@@ -1,7 +1,12 @@
-﻿namespace Strict.Runtime.Tests;
+namespace Strict.Runtime.Tests;
 
-public class BytecodeInterpreterTestsKata : BytecodeInterpreterTests
+public class BytecodeInterpreterKataTests : BaseVirtualMachineTests
 {
+	[SetUp]
+	public void Setup() => vm = new BytecodeInterpreter();
+
+	protected BytecodeInterpreter vm = null!;
+
 	[Test]
 	public void BestTimeToBuyStocksKata()
 	{
