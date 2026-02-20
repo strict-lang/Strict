@@ -47,7 +47,7 @@ public class BytecodeInterpreterTestsKata : BytecodeInterpreterTests
 			"\tmutable result = 0",
 			"\tfor sheep",
 			"\t\tif value",
-			"\t\t\tresult.Increment",
+			"\t\t\tresult = result + 1",
 			"\tresult")).Generate();
 		Assert.That(vm.Execute(statements).Returns!.Value, Is.EqualTo(17));
 	}

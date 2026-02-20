@@ -65,6 +65,7 @@ public sealed class ByteCodeGeneratorTests : BaseVirtualMachineTests
 					new LoadVariableToRegister(Register.R0, "First"),
 					new LoadVariableToRegister(Register.R1, "Second"),
 					new Binary(Instruction.Add, Register.R0, Register.R1, Register.R2),
+					new LoadConstantStatement(Register.R3, new Instance(NumberType, 1.0)),
 					new Binary(Instruction.Add, Register.R2, Register.R3, Register.R4),
 					new Return(Register.R4)
 				},

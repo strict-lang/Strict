@@ -70,13 +70,13 @@ public sealed class BytecodeInterpreter
 		{
 			var item = Memory.Registers[removeStatement.Register].GetRawValue();
 			var list = (List<Expression>)Memory.Variables[removeStatement.Identifier].Value;
-			list.RemoveAll(expression => ((Value)expression).Data.Equals(item));
+			list.RemoveAll(expression => EqualsExtensions.AreEqual(((Value)expression).Data, item));
 		}
 		else if (statement is RemoveFromTableStatement removeFromTableStatement)
 		{
 			var key = Memory.Registers[removeFromTableStatement.Register].GetRawValue();
 			var dict = (Dictionary<Value, Value>)Memory.Variables[removeFromTableStatement.Identifier].Value;
-			var keyToRemove = dict.Keys.FirstOrDefault(k => k.Data.Equals(key));
+			var keyToRemove = dict.Keys.FirstOrDefault(k => EqualsExtensions.AreEqual(k.Data, key));
 			if (keyToRemove != null)
 				dict.Remove(keyToRemove);
 		}
@@ -161,6 +161,7 @@ public sealed class BytecodeInterpreter
 	private bool TryCreateEmptyDictionaryInstance(Invoke invoke)
 	{
 		if (invoke.Method?.Instance != null ||
+			invoke.Method?.Method.Name != Method.From ||
 			invoke.Method?.ReturnType is not GenericTypeImplementation
 			{
 				Generic.Name: Base.Dictionary
@@ -178,10 +179,13 @@ public sealed class BytecodeInterpreter
 				Generic.Name: Base.Dictionary
 			})
 			return false;
-		var key = (Value)invoke.Method.Arguments[0];
+		var keyArg = invoke.Method.Arguments[0];
+		var keyData = keyArg is Value argValue
+			? argValue.Data
+			: Memory.Variables[keyArg.ToString()].Value;
 		var dictionary = Memory.Variables[invoke.Method.Instance.ToString()].Value;
 		var value = ((Dictionary<Value, Value>)dictionary).
-			FirstOrDefault(element => element.Key.Data.Equals(key.Data)).Value;
+			FirstOrDefault(element => EqualsExtensions.AreEqual(element.Key.Data, keyData)).Value;
 		if (value != null)
 			Memory.Registers[invoke.Register] = new Instance(value.ReturnType, value);
 		return true;
@@ -396,8 +400,8 @@ public sealed class BytecodeInterpreter
 		{
 			Instruction.GreaterThan => left > right,
 			Instruction.LessThan => left < right,
-			Instruction.Equal => left.Value.Equals(right.Value),
-			Instruction.NotEqual => !left.Value.Equals(right.Value),
+			Instruction.Equal => EqualsExtensions.AreEqual(left.GetRawValue(), right.GetRawValue()),
+			Instruction.NotEqual => !EqualsExtensions.AreEqual(left.GetRawValue(), right.GetRawValue()),
 			_ => false //ncrunch: no coverage
 		};
 	}

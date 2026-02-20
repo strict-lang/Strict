@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Diagnostics;
 using Strict.Expressions;
 using Strict.Language;
@@ -288,11 +289,16 @@ public sealed class ByteCodeGenerator
 	}
 
 	private void
-		TryGenerateStatementsForAssignmentValue(Value assignmentValue, string variableName) =>
-		statements.Add(new StoreVariableStatement(new Instance(assignmentValue.ReturnType,
-			assignmentValue.Data.GetType().IsArray
-				? ((IEnumerable<Expression>)assignmentValue.Data).ToList()
-				: assignmentValue.Data), variableName));
+		TryGenerateStatementsForAssignmentValue(Value assignmentValue, string variableName)
+	{
+		var data = assignmentValue.Data is IEnumerable<Expression> expressions
+			? (object)expressions.ToList()
+			: assignmentValue.Data is IDictionary
+				? new Dictionary<Value, Value>()
+				: assignmentValue.Data;
+		statements.Add(new StoreVariableStatement(new Instance(assignmentValue.ReturnType, data),
+			variableName));
+	}
 
 	private bool? TryGenerateIfStatements(Expression expression)
 	{
@@ -458,9 +464,12 @@ public sealed class ByteCodeGenerator
 	private void GenerateBinaryStatement(MethodCall binary, Instruction operationInstruction)
 	{
 		if (binary.Instance is Binary binaryOp)
-			statements.Add(new BinaryStatement(operationInstruction,
-				GenerateValueBinaryStatements(binaryOp, operationInstruction),
-				registry.AllocateRegister(), registry.AllocateRegister()));
+		{
+			var leftReg = GenerateValueBinaryStatements(binaryOp, operationInstruction);
+			GenerateStatementsFromExpression(binary.Arguments[0]);
+			statements.Add(new BinaryStatement(operationInstruction, leftReg,
+				registry.PreviousRegister, registry.AllocateRegister()));
+		}
 		else if (binary.Arguments[0] is Binary binaryArg)
 			GenerateNestedBinaryStatements(binary, operationInstruction, binaryArg);
 		else

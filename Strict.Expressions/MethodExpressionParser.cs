@@ -383,7 +383,9 @@ public class MethodExpressionParser : ExpressionParser
 					forVariableCall.Variable.Name == variableName || forExpression.Body is Body forBody &&
 					IsVariableMutated(forBody, variableName) ||
 					forExpression.Body is If forIfBody &&
-					CheckForVariableMutationInIf(variableName, forIfBody)))
+					CheckForVariableMutationInIf(variableName, forIfBody) ||
+					forExpression.Body is MethodCall { Instance: VariableCall bodyVarCall, IsMutable: true } &&
+					bodyVarCall.Variable.Name == variableName))
 				return true;
 			if (expression is MethodCall { Instance: VariableCall variableCall, IsMutable: true } &&
 				variableCall.Variable.Name == variableName)

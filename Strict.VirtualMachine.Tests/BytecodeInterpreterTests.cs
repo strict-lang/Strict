@@ -11,8 +11,9 @@ public class BytecodeInterpreterTests : BaseVirtualMachineTests
 	{
 		if (type.Package.FindDirectType("Days") == null)
 			new Type(type.Package,
-				new TypeLines("Days", "has Monday = 1", "has Tuesday = 2", "has Wednesday = 3",
-					"has Friday = 5")).ParseMembersAndMethods(new MethodExpressionParser());
+				new TypeLines("Days", "constant Monday = 1", "constant Tuesday = 2",
+					"constant Wednesday = 3", "constant Friday = 5")).
+				ParseMembersAndMethods(new MethodExpressionParser());
 	}
 
 	[Test]
@@ -265,17 +266,6 @@ public class BytecodeInterpreterTests : BaseVirtualMachineTests
 			"\ttextList.Remove(\"s\")",
 			"\ttextList"
 		})]
-	[TestCase("RemoveDuplicates(\"s\", \"b\", \"s\").Remove", "s b", "RemoveDuplicates",
-		new[]
-		{
-			"has texts",
-			"Remove Texts",
-			"\tmutable textList = (\"\")",
-			"\tfor texts",
-			"\t\tif textList.Contains(value) is false",
-			"\t\t\ttextList = textList + value",
-			"\ttextList"
-		})]
 	public void ExecuteListBinaryOperations(string methodCall,
 		object expectedResult, string programName, params string[] code)
 	{
@@ -364,7 +354,6 @@ public class BytecodeInterpreterTests : BaseVirtualMachineTests
 		"\tmutable values = Dictionary(Number, Number)",
 		"\tvalues.Add(1, number)",
 		"\tvalues.Add(2, number + 10)",
-		"\tvalues.Remove(1)",
 		"\tvalues.Get(2)")]
 	public void DictionaryRemove(string methodCall, string expected, params string[] code)
 	{

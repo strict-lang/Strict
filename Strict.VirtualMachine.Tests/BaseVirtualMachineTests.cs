@@ -218,7 +218,7 @@ public class BaseVirtualMachineTests : TestExpressions
 		"Invert Text",
 		"\tmutable result = \"\"",
 		"\tfor numbers",
-		"\t\tresult = result + 0 - value",
+		"\t\tresult = result + \"-\" + value to Text",
 		"\tresult"
 	];
 	protected static readonly Statement[] ExpectedStatementsOfInvertValueKata =
@@ -227,24 +227,24 @@ public class BaseVirtualMachineTests : TestExpressions
 			new Instance(ListType,
 				new List<Expression>
 				{
-					new Value(NumberType, 1),
-					new Value(NumberType, 2),
-					new Value(NumberType, 3),
-					new Value(NumberType, 4),
-					new Value(NumberType, 5)
+					new Value(NumberType, 1.0),
+					new Value(NumberType, 2.0),
+					new Value(NumberType, 3.0),
+					new Value(NumberType, 4.0)
 				}), "numbers"),
 		new StoreVariableStatement(new Instance(TextType, ""), "result"),
 		new LoadVariableToRegister(Register.R0, "numbers"),
 		new LoopBeginStatement(Register.R0),
-		new LoadConstantStatement(Register.R1, new Instance(NumberType, 0)),
-		new LoadVariableToRegister(Register.R2, "value"),
-		new Binary(Instruction.Subtract, Register.R1, Register.R2, Register.R3),
-		new LoadVariableToRegister(Register.R4, "result"),
-		new Binary(Instruction.Add, Register.R4, Register.R3, Register.R5),
-		new StoreFromRegisterStatement(Register.R5, "result"),
-		new IterationEnd(8),
-		new LoadVariableToRegister(Register.R6, "result"),
-		new Return(Register.R6)
+		new LoadVariableToRegister(Register.R1, "result"),
+		new LoadConstantStatement(Register.R2, new Instance(TextType, "-")),
+		new Binary(Instruction.Add, Register.R1, Register.R2, Register.R3),
+		new LoadVariableToRegister(Register.R4, "value"),
+		new Conversion(Register.R4, Register.R5, TextType, Instruction.ToText),
+		new Binary(Instruction.Add, Register.R3, Register.R5, Register.R6),
+		new StoreFromRegisterStatement(Register.R6, "result"),
+		new IterationEnd(9),
+		new LoadVariableToRegister(Register.R7, "result"),
+		new Return(Register.R7)
 	];
 
 	protected MethodCall GenerateMethodCallFromSource(string programName, string methodCall,
