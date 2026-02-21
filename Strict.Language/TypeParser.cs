@@ -325,6 +325,9 @@ public sealed class TypeParser(Type type, string[] lines)
 			throw new Body.ReturnAsLastExpressionIsNotNeeded(new Body(method));
 		if (checkLines.Count < 3)
 			return;
+		static int GetIndent(string line) => line.TakeWhile(c => c == '\t').Count();
+		if (GetIndent(checkLines[^1]) != GetIndent(checkLines[^2]))
+			return;
 		var prevAssignmentIndex = checkLines[^2].IndexOf(" = ", StringComparison.Ordinal);
 		if (prevAssignmentIndex <= 0)
 			return;
