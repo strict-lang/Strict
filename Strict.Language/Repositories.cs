@@ -172,17 +172,19 @@ public sealed class Repositories
 		if (parent != null && files.Count == 0)
 			return parent; //ncrunch: no coverage
 #if DEBUG
+		var folderName = Path.GetFileName(packagePath);
 		var package = parent != null
 			// ReSharper disable ExplicitCallerInfoArgument
 			? new Package(parent, packagePath, callerFilePath, callerLineNumber, callerMemberName)
-			: new Package(packagePath.Contains('.')
-				? packagePath.Split('.')[1]
+			: new Package(folderName.Contains('.')
+				? folderName.Split('.')[1]
 				: packagePath, callerFilePath, callerLineNumber, callerMemberName);
 #else
+		var folderName = Path.GetFileName(packagePath);
 		var package = parent != null
 			? new Package(parent, packagePath)
-			: new Package(packagePath.Contains('.')
-				? packagePath.Split('.')[1]
+			: new Package(folderName.Contains('.')
+				? folderName.Split('.')[1]
 				: packagePath);
 #endif
 		if (package.Name == nameof(Strict) && files.Count > 0)
