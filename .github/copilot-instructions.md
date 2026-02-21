@@ -10,8 +10,10 @@
 
 ## Project-Specific Rules
 - Strict is a simple-to-understand programming language that not only humans can read and understand, but also computers are able to understand, modify and write it.
-- The long-term goal is NOT to create just another programming language, but use Strict as the foundation for a higher level language for computers to understand and write code. This is the first step towards a future where computers can write their own code, which is the ultimate goal of Strict. Again, this is very different from other programming languages that are designed for humans to write code but not for computers to understand it. Even though LLMs can be trained to repeat and imitate, which is amazing to see, they still don't understand anything really and make the most ridiculous mistakes on any project bigger than a handful of files.) Strict needs to be very fast, both in execution and writing code (much faster than any existing system), so millions of lines of code can be thought of by computers and be evaluated in real time (seconds).
+- The long-term goal is NOT to create just another programming language, but use Strict as the foundation for a higher level language for computers to understand and write code. This is the first step towards a future where computers can write their own code, which is the ultimate goal of Strict. Again, this is very different from other programming languages that are designed for humans to write code but not for computers to understand it. Even though LLMs can be trained to repeat and imitate, which is amazing to see, they still don't understand anything really and make the most ridiculous mistakes on any project bigger than a handful of files. Strict needs to be very fast, both in execution and writing code (much faster than any existing system), so millions of lines of code can be thought of by computers and be evaluated in real time (seconds).
 - Use dotnet build to build, dotnet test to test, do not try to use VS building or ReSharper build, you always fail trying to do that.
+- The AdderProgram implementation must be written in Strict, with C# code only used to run it.
+- Keep AdderProgram in the Tests project and use TestPackage (or Strict.Base) for basic types.
 
 ## Strict Semantics
 - When asked about Strict semantics, derive behavior directly from README.md and TestPackage.cs examples; re-check cited examples before answering and avoid contradicting them.
@@ -381,3 +383,7 @@ Otherwise → not TDD
 ```
 
 No exceptions without your human partner's permission.
+
+## Code Style
+- No empty lines are allowed inside methods.
+- Avoid adding `ArgumentNullException.ThrowIfNull`/debug asserts.

@@ -11,6 +11,7 @@
       <Value>Strict.Compiler.Roslyn\Strict.Compiler.Roslyn.csproj</Value>
       <Value>Strict.Compiler.Tests\Strict.Compiler.Tests.csproj</Value>
       <Value>Program.cs:Strict.Language.Tests\Strict.Language.Tests.csproj</Value>
+      <Value>Strict.PackageManager\Strict.PackageManager.csproj</Value>
     </MetricsExclusionList>
     <RdiConfigured>True</RdiConfigured>
     <SolutionConfigured>True</SolutionConfigured>

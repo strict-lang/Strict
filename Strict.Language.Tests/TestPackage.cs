@@ -250,9 +250,9 @@ public class TestPackage : Package
 		// @formatter:on
 		foreach (var type in new[]
 			{
-				any, boolean, hasLength, number, range, character, mutable, iterator, list, text, baseType,
-				generic, logger, file, textWriter, textReader, name, error, errorWithValue, method, stacktrace,
-				dictionary
+				any, boolean, hasLength, number, range, character, mutable, iterator, list, text,
+				baseType, generic, logger, file, textWriter, textReader, name, error, errorWithValue,
+				method, stacktrace, dictionary
 			})
 			type.ParseMembersAndMethods(parser);
 	}
