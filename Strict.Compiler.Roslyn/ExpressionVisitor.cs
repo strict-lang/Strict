@@ -40,6 +40,7 @@ public abstract class ExpressionVisitor
 			Declaration assignment => Visit(assignment),
 			Binary binary => Visit(binary),
 			Return returnExpression => Visit(returnExpression),
+			Not not => not.ToString(),
 			MethodCall call => Visit(call),
 			MemberCall member => Visit(member),
 			Value value => Visit(value),

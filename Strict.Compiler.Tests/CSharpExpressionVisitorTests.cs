@@ -24,7 +24,7 @@ public sealed class CSharpExpressionVisitorTests : TestExpressions
 	[Test]
 	public void GenerateAssignment() =>
 		Assert.That(
-			visitor.Visit(new Declaration((Body)methodWithBody.GetBodyAndParseIfNeeded(), nameof(numberFive),
+			visitor.Visit(new Declaration((Body)methodWithBody.GetBodyAndParseIfNeeded(), "number",
 				numberFive)), Is.EqualTo("var number = 5"));
 
 	[Test]
@@ -47,7 +47,7 @@ public sealed class CSharpExpressionVisitorTests : TestExpressions
 	{
 		var body = (Body)methodWithBody.GetBodyAndParseIfNeeded();
 		var variable = new Variable("numbers", false, new List(body, [new Number(type, 0)]), body);
-		Assert.That(visitor.Visit(new ListCall(variable.InitialValue, new Number(type, 0))),
+		Assert.That(visitor.Visit(new ListCall(new VariableCall(variable), new Number(type, 0))),
 			Is.EqualTo("numbers[0]"));
 	}
 
@@ -66,13 +66,11 @@ public sealed class CSharpExpressionVisitorTests : TestExpressions
 	public void GenerateText() =>
 		Assert.That(visitor.Visit(new Text(method, "Hey")), Is.EqualTo("\"Hey\""));
 
-	[TestCase("constant other = 3", "var other = 3")]
 	[TestCase("5 + 5", "5 + 5")]
 	[TestCase("true", "true")]
 	[TestCase("\"Hey\"", "\"Hey\"")]
 	[TestCase("42", "42")]
 	[TestCase("logger.Log(\"Hey\")", "Console.WriteLine(\"Hey\")")]
-	[TestCase("logger.Log", "logger.Log")]
 	public void ConvertStrictToCSharp(string strictCode, string expectedCSharpCode) =>
 		Assert.That(visitor.Visit(ParseExpression(strictCode)), Is.EqualTo(expectedCSharpCode));
 

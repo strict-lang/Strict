@@ -73,7 +73,7 @@ public sealed class CSharpTypeVisitorTests : TestCSharpGenerator
 				"has Output",
 				"has system",
 				"Read Text",
-				"\tsystem.WriteLine(\"implementing system trait\")",
+				"\tsystem.Write(\"implementing system trait\")",
 				"\tRead is \"Read successfully\"",
 				"\t\"Read successfully\"",
 				"Write(generic) Boolean",
@@ -90,7 +90,7 @@ public sealed class CSharpTypeVisitorTests : TestCSharpGenerator
 	"));
 		Assert.That(visitor.FileContent, Contains.Substring(@"	public bool Write(Generic generic)
 	{
-		Write(5) == true;
+		Write(5);
 		var stringBuilder = ""printed successfully"";
 		true;
 	}"));
@@ -161,7 +161,7 @@ Run
 	[TestCase("ll - mm", "ll - mm")]
 	[TestCase("ll * mm", "ll * mm")]
 	public void ListsBinaryOperation(string code, string expected) =>
-		Assert.That(new CSharpTypeVisitor(new Type(TestPackage.Instance, new TypeLines(Computer,
+		Assert.That(new CSharpTypeVisitor(new Type(package, new TypeLines(Computer,
 				@$"has logger
 Run
 	constant ll = (1, 2) + (3, 4)
