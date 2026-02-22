@@ -173,6 +173,62 @@ List.strict usage (all lists are simply surrounded by brackets, basically any me
 	("Hi", "Hello", "Hi").Count("Hi") is 2
 ```
 
+## if expressions
+Strict only has `if` for conditional expressions, which can be in block and single-line forms, plus a selector-style variant for compact matching. Everything is an expression, `if` and `for` always return an expression as well, which can be used as an automated return expression as well. In for loops the `if` expression is often used to filter values like piping in functional languages, see below for more advanced examples.
+
+```
+if value > 0
+	value
+```
+
+Single-line conditional are pretty much the same (like '?' in C, C# or Java, just using "then" like in F# or Haskell). This is often used to return or assign simple expressions based on a condition, it all must fit in a line (as always max. length is 100).
+```
+value > 0 then value else 0
+```
+C#:
+```
+var result = value > 0 ? value : 0;
+```
+Scala or Haskell:
+```
+val result = if value > 0 then value else 0
+```
+
+Finally we have the selector `if`, it starts pretty much the same as above and also uses "then". The if line ends with "is" or "is not" (and other keywords or expressions that can be compared). It works like a switch or match expression in other languages, but is more powerful as you can use any expression and aretmetic or comparison operator or type check here.
+```
+if operation is
+	"add" then value
+	"subtract" then 0 - value
+	"multiply" then value * value
+```
+C#:
+```
+var result = operation switch
+{
+	"add" => value,
+	"subtract" => 0 - value,
+	"multiply" => value * value
+	_ => throw new InvalidOperationException("Unknown operation: " + operation)
+};
+```
+Scala:
+```
+val result = operation match
+	case "add" => value
+	case "subtract" => 0 - value
+	case "multiply" => value * value
+	case _ => "Unknown operation"
+```
+Haskell:
+```
+let result = case operation of
+	"add" -> value
+	"subtract" -> 0 - value
+	"multiply" -> value * value
+	_ -> "Unknown operation: " ++ operation
+```
+It is important to note that if there is no fallback else case at the end an Error is automatically generated and thrown at runtime if no case above it matches.
+
 # for
 The only iterator in Strict is the "for" expression, it is usually used to enumerate through lists, but anything that implements Iterator can be enumerated (Enum, List, Number, Range and anything that implements List like Dictionary). The syntax for "for" is quite powerful and not much like c-style languages, it is more like functional languages. A for loop is also usually the only spot where mutable variables are used and make sense, so a lot of optimizations are done here to avoid actual mutable usage at runtime and thus allowing almost all code to be executed without side effects and in parallel. Remember that you don't have to write any parallel code, threads, processes, async, etc. it is all done automatically be the runtime and way more powerful than any other programming language could provide. All of the following examples are automatically executed in parallel and even on the GPU if available and if it would be faster to do so.
 
@@ -433,12 +489,11 @@ Remove Text
 	RemoveParentheses("example(unwanted thing)example").Remove is "exampleexample"
 	mutable parentheses = 0
 	for text
-		if value is "("
-			parentheses = parentheses + 1
-		else if value is ")"
-			parentheses = parentheses - 1
-		else if parentheses is 0
-			value
+		if value is
+			"(" then parentheses.Increase
+			")" then parentheses.Decrease
+			else if parentheses is 0
+				value
 ```
 
 ## Blog

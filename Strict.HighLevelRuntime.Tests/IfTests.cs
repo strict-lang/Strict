@@ -1,6 +1,7 @@
 using Strict.Expressions;
 using Strict.Language;
 using Strict.Language.Tests;
+using System.Collections.Generic;
 using Type = Strict.Language.Type;
 
 namespace Strict.HighLevelRuntime.Tests;
@@ -79,5 +80,15 @@ public sealed class IfTests
 				[new ValueInstance(TestPackage.Instance.FindType(Base.Boolean)!, false)]),
 			Throws.TypeOf<ExecutionFailed>().With.InnerException.
 				TypeOf<Executor.ReturnTypeMustMatchMethod>());
+	}
+
+	[Test]
+	public void SelectorIfUsesElseWhenNoCaseMatches()
+	{
+		using var t = CreateType(nameof(SelectorIfUsesElseWhenNoCaseMatches), "has value Number",
+			"Run Boolean", "\tif value is", "\t\t2 then true", "\t\telse false");
+    var instance = new ValueInstance(t, 3.0);
+		var result = executor.Execute(t.Methods.Single(m => m.Name == "Run"), instance, []);
+		Assert.That(result.Value, Is.EqualTo(false));
 	}
 }

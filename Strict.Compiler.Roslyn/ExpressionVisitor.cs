@@ -1,10 +1,10 @@
-﻿using Strict.Language;
+using Strict.Language;
 using Strict.Expressions;
 
 namespace Strict.Compiler.Roslyn;
 
 /// <summary>
-/// Goes through all of the possible <see cref="Strict.Language.Expression"/> classes.
+/// Goes through all the possible <see cref="Strict.Language.Expression"/> classes.
 /// </summary>
 public abstract class ExpressionVisitor
 {
@@ -13,6 +13,7 @@ public abstract class ExpressionVisitor
 		{
 			Body body => VisitBody(body),
 			If ifExpression => VisitIf(ifExpression),
+			SelectorIf selectorIf => VisitSelectorIf(selectorIf),
 			For forExpression => VisitFor(forExpression),
 			_ => [Visit(expression) + ";"]
 		};
@@ -27,6 +28,17 @@ public abstract class ExpressionVisitor
 			return block;
 		block.Add("else");
 		block.AddRange(Indent(VisitBody(ifExpression.OptionalElse)));
+		return block;
+	}
+
+  protected IReadOnlyList<string> VisitSelectorIf(SelectorIf selectorIf)
+	{
+		var block = new List<string> { "switch (" + Visit(selectorIf.Selector) + ")", "{" };
+		foreach (var @case in selectorIf.Cases)
+			block.Add("\tcase " + Visit(@case.Pattern) + ": return " + Visit(@case.Then) + ";");
+		if (selectorIf.OptionalElse != null)
+			block.Add("\tdefault: return " + Visit(selectorIf.OptionalElse) + ";");
+		block.Add("}");
 		return block;
 	}
 

@@ -115,4 +115,27 @@ public sealed class CSharpExpressionVisitorTests : TestExpressions
 				"		return false;"
 			}));
 	}
+
+	[Test]
+	public void GenerateSwitch()
+	{
+		var multilineMethod = new Method(type, 0, this,
+			[
+				"IsNumberTwo Boolean",
+				"	constant value = 5",
+				"	if value is",
+				"		2 then true",
+				"		else false"
+			]);
+		Assert.That(visitor.VisitBody(multilineMethod.GetBodyAndParseIfNeeded()),
+			Is.EqualTo(new[]
+			{
+				"	var value = 5;",
+				"	switch (value)",
+				"	{",
+				"		case 2: return true;",
+				"		default: return false;",
+				"	}"
+			}));
+	}
 }

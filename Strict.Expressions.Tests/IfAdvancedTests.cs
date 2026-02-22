@@ -21,7 +21,51 @@ public sealed class IfAdvancedTests : TestExpressions
 			Is.EqualTo(new If(GetCondition(), GetThen(), 0, new MethodCall(method))).And.Not.
 				EqualTo(new If(GetCondition(), GetThen())));
 
-  [TestCase("constant result = true then true else false")]
+	[Test]
+	public void ParseSelectorIf()
+	{
+		var program = new Type(Package,
+			new TypeLines(nameof(ParseSelectorIf),
+				// @formatter:off
+				"has operation Text",
+				"Run Number",
+				"\tif operation is",
+				"\t\t\"add\" then 1",
+				"\t\t\"subtract\" then 2",
+				"\t\t\"multiply\" then 3",
+				"\t\t\"divide\" then 4")).ParseMembersAndMethods(new MethodExpressionParser());
+		// @formatter:on
+		var expression = program.Methods[0].GetBodyAndParseIfNeeded();
+		Assert.That(expression.ToString(), Is.EqualTo(string.Join(Environment.NewLine,
+			"if operation is",
+			"\t\"add\" then 1",
+			"\t\"subtract\" then 2",
+			"\t\"multiply\" then 3",
+			"\t\"divide\" then 4")));
+	}
+
+	[Test]
+	public void ParseSelectorIfWithElse()
+	{
+		var program = new Type(Package,
+			new TypeLines(nameof(ParseSelectorIfWithElse),
+				// @formatter:off
+				"has operation Text",
+				"Run Number",
+				"\tif operation is",
+				"\t\t\"add\" then 1",
+				"\t\t\"subtract\" then 2",
+				"\t\telse 3")).ParseMembersAndMethods(new MethodExpressionParser());
+		// @formatter:on
+		var expression = program.Methods[0].GetBodyAndParseIfNeeded();
+		Assert.That(expression.ToString(), Is.EqualTo(string.Join(Environment.NewLine,
+			"if operation is",
+			"\t\"add\" then 1",
+			"\t\"subtract\" then 2",
+			"\telse 3")));
+	}
+
+	[TestCase("constant result = true then true else false")]
 	[TestCase("constant result = false then \"Yes\" else \"No\"")]
 	[TestCase("constant result = 5 is 5 then (1, 2) else (3, 4)")]
 	[TestCase("constant result = 5 + (false then 1 else 2)")]
@@ -34,11 +78,11 @@ public sealed class IfAdvancedTests : TestExpressions
 	}
 
 	[Test]
- public void ConditionalExpressionsCannotBeNested() =>
+	public void ConditionalExpressionsCannotBeNested() =>
 		Assert.That(() => ParseExpression("constant result = true then true else (5 is 5 then false else true)"),
 			Throws.InstanceOf<If.ConditionalExpressionsCannotBeNested>());
 
-  [TestCase("logger.Log(true then \"Yes\" else \"No\")")]
+	[TestCase("logger.Log(true then \"Yes\" else \"No\")")]
 	[TestCase("logger.Log(true then \"Yes\" + \"text\" else \"No\")")]
 	[TestCase("logger.Log(\"Result\" + (true then \"Yes\" else \"No\"))")]
 	[TestCase("logger.Log((true then \"Yes\" else \"No\") + \"Result\")")]

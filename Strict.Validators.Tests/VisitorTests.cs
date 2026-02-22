@@ -39,6 +39,9 @@ public sealed class VisitorTests
 			case If:
 				IfCount++;
 				break;
+			case SelectorIf:
+				IfCount += 2;
+				break;
 			case For:
 				ForCount++;
 				break;
@@ -106,5 +109,19 @@ public sealed class VisitorTests
 		var visitor = new CountingVisitor();
 		visitor.Visit(method, true);
 		Assert.That(visitor.ListCallCount, Is.EqualTo(1));
+	}
+
+	[Test]
+	public void VisitsSelectIf()
+	{
+		var method = new Method(type, 1, parser, [
+			"Run(number)",
+			"\tif number is",
+			"\t\t1 then logger.Log(0)",
+			"\t\t2 then logger.Log(5)"
+		]);
+		var visitor = new CountingVisitor();
+		visitor.Visit(method, true);
+		Assert.That(visitor.IfCount, Is.EqualTo(2));
 	}
 }
