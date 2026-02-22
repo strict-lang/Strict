@@ -287,4 +287,50 @@ public sealed class ForTests : TestExpressions
 		var parsedExpression = (For)programType.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(parsedExpression.ToString(), Does.StartWith(expected));
 	}
+
+	[Test]
+	public void ForBodyWithInlineConditionalThenConcatenation()
+	{
+		var programType = new Type(type.Package,
+				new TypeLines(nameof(ForBodyWithInlineConditionalThenConcatenation), "has number",
+					"GetElementsText(elements Numbers) Text",
+					"\tfor elements",
+					"\t\t(index is 0 then \"\" else \", \") + value")).
+			ParseMembersAndMethods(new MethodExpressionParser());
+		var forExpression = (For)programType.Methods[0].GetBodyAndParseIfNeeded();
+		Assert.That(forExpression.ToString(), Does.StartWith("for elements"));
+	}
+
+	[Test]
+	public void RemoveParenthesesWithElseIfChain()
+	{
+		var programType = new Type(type.Package,
+				new TypeLines(nameof(RemoveParenthesesWithElseIfChain), "has text",
+					"Remove Text",
+					"\tmutable parentheses = 0",
+					"\tfor text",
+					"\t\tif value is \"(\"",
+					"\t\t\tparentheses = parentheses + 1",
+					"\t\telse if value is \")\"",
+					"\t\t\tparentheses = parentheses - 1",
+					"\t\telse if parentheses is 0",
+					"\t\t\tvalue")).
+			ParseMembersAndMethods(new MethodExpressionParser());
+		var body = (Body)programType.Methods[0].GetBodyAndParseIfNeeded();
+		Assert.That(body.Expressions[1], Is.TypeOf<For>());
+	}
+
+	[Test]
+	public void ForBodyMultiLinePiping()
+	{
+		var programType = new Type(type.Package,
+				new TypeLines(nameof(ForBodyMultiLinePiping), "has numbers",
+					"GetTextLengths Text",
+					"\tfor numbers",
+					"\t\tto Text",
+					"\t\tLength")).
+			ParseMembersAndMethods(new MethodExpressionParser());
+		var forExpression = (For)programType.Methods[0].GetBodyAndParseIfNeeded();
+		Assert.That(forExpression.Body, Is.Not.Null);
+	}
 }

@@ -91,4 +91,42 @@ public sealed class ForTests
 		Assert.That(() => executor.Execute(t.Methods.Single(m => m.Name == "Run"), null, [container]),
 			Throws.InstanceOf<ValueInstance.IteratorNotSupported>());
 	}
+
+	[Test]
+	public void GetElementsTextWithCompactConditionalThen()
+	{
+		using var t = CreateType(nameof(GetElementsTextWithCompactConditionalThen), "has number",
+			"GetElementsText(elements Numbers) Text",
+			"\tfor elements",
+			"\t\t(index is 0 then \"\" else \", \") + value");
+		var numberType = TestPackage.Instance.FindType(Base.Number)!;
+		var result = executor.Execute(t.Methods.Single(m => m.Name == "GetElementsText"), null,
+			[new ValueInstance(TestPackage.Instance.FindType(Base.List)!.GetGenericImplementation(numberType),
+				new List<ValueInstance>
+				{
+					new(numberType, 1.0),
+					new(numberType, 3.0)
+				})]);
+		Assert.That(result.Value, Is.EqualTo("1, 3"));
+	}
+
+	[Test]
+	public void RemoveParenthesesWithElseIfChain()
+	{
+		using var t = CreateType(nameof(RemoveParenthesesWithElseIfChain), "has text",
+			"Remove Text",
+			"\tmutable parentheses = 0",
+			"\tfor text",
+			"\t\tif value is \"(\"",
+			"\t\t\tparentheses = parentheses + 1",
+			"\t\telse if value is \")\"",
+			"\t\t\tparentheses = parentheses - 1",
+			"\t\telse if parentheses is 0",
+			"\t\t\tvalue");
+		var textType = TestPackage.Instance.FindType(Base.Text)!;
+		var result = executor.Execute(t.Methods.Single(m => m.Name == "Remove"),
+			new ValueInstance(t, new Dictionary<string, object?> { { "text", "example(unwanted)example" } }),
+			[]);
+		Assert.That(result.Value, Is.EqualTo("exampleexample"));
+	}
 }
