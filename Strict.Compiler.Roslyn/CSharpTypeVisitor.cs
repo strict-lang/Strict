@@ -1,4 +1,4 @@
-﻿using Strict.Language;
+using Strict.Language;
 using Type = Strict.Language.Type;
 
 namespace Strict.Compiler.Roslyn;
@@ -56,13 +56,14 @@ public sealed class CSharpTypeVisitor : TypeVisitor
 
 	public void VisitMember(Member member)
 	{
-		if (member.Name == "logger")
+		if (member.Name == "logger" || member.Name == "App")
 			return;
 		var accessModifier = member.IsPublic
 			? "public"
 			: "private";
 		var csharpTypeName = expressionVisitor.GetCSharpTypeName(member.Type);
-		var initializationExpression = BuildInitializationExpression(member, csharpTypeName, ref accessModifier);
+		var initializationExpression =
+			BuildInitializationExpression(member, csharpTypeName, ref accessModifier);
 		FileContent += "\t" + accessModifier + " " + csharpTypeName + " " +
 			member.Name + initializationExpression + SemicolonAndLineBreak;
 	}

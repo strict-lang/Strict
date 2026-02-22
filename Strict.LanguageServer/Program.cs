@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.IO.Pipelines;
 using System.IO.Pipes;
 using Microsoft.Extensions.DependencyInjection;
@@ -10,6 +10,7 @@ using Strict.Expressions;
 using Strict.LanguageServer;
 using PipeOptions = System.IO.Pipes.PipeOptions;
 
+//ncrunch: no coverage start
 var (input, output) = await CreateAndGetPipeline();
 // @formatter:off
  var strictBase = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();

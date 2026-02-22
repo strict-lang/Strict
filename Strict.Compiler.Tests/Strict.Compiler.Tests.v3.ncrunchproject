@@ -1,7 +1,36 @@
 ﻿<ProjectConfiguration>
   <Settings>
     <IgnoredTests>
-      <AllTestsSelector />
+      <NamedTestSelector>
+        <TestName>Strict.Compiler.Tests.CSharpTypeVisitorTests.ManualTestsCanWriteToConsole</TestName>
+      </NamedTestSelector>
+      <NamedTestSelector>
+        <TestName>Strict.Compiler.Tests.SourceGeneratorTests.InvalidConsoleAppWillGiveUsCompilationError</TestName>
+      </NamedTestSelector>
+      <NamedTestSelector>
+        <TestName>Strict.Compiler.Tests.TestCSharpGenerator.ManualTestsCanWriteToConsole</TestName>
+      </NamedTestSelector>
+      <NamedTestSelector>
+        <TestName>Strict.Compiler.Tests.SourceGeneratorTests.ManualTestsCanWriteToConsole</TestName>
+      </NamedTestSelector>
+      <NamedTestSelector>
+        <TestName>Strict.Compiler.Tests.SourceGeneratorTests.ExecuteOperation</TestName>
+      </NamedTestSelector>
+      <NamedTestSelector>
+        <TestName>Strict.Compiler.Tests.SourceGeneratorTests.GenerateDirectoryGetFilesProgram</TestName>
+      </NamedTestSelector>
+      <NamedTestSelector>
+        <TestName>Strict.Compiler.Tests.SourceGeneratorTests.GenerateFileReadProgram</TestName>
+      </NamedTestSelector>
+      <NamedTestSelector>
+        <TestName>Strict.Compiler.Tests.SourceGeneratorTests.LinkedListAnalyzer</TestName>
+      </NamedTestSelector>
+      <NamedTestSelector>
+        <TestName>Strict.Compiler.Tests.SourceGeneratorTests.ReduceButGrow</TestName>
+      </NamedTestSelector>
+      <NamedTestSelector>
+        <TestName>Strict.Compiler.Tests.SourceGeneratorTests.RemoveDuplicateWords</TestName>
+      </NamedTestSelector>
     </IgnoredTests>
   </Settings>
 </ProjectConfiguration>

@@ -17,16 +17,17 @@ The LSP (Language Server Protocol) implementation here adds support for VSCode, 
 
 ![Strict Layers](https://strict-lang.org/img/StrictLayers.svg?sanitize=true)
 
-## Architecture at a Glance
+## Architecture at a Glance (from low to high level)
 
 | Layer | Responsibility | When It Runs | Rejects / Optimises |
 |-------|----------------|-------------|---------------------|
 | **Strict.Language** | Load *.strict* files, package handling, core type parsing (structure only) | File load | Bad formatting & package errors |
 | **Strict.Expressions** | Lazy-parse method bodies into an immutable tree of `if`, `for`, assignments, calls… | First method call | Structural/semantic violations |
 | **Strict.Validators** | Visitor-based static analysis & constant folding | After expression parsing | Impossible casts, unused mutables, foldable constants |
-| **Strict.Runtime** | Execute expression tree via ~40 instructions | On demand by the caller | Value/type errors, side-effects |
-| **Strict.TestRunner** | Run in-code tests (`method must start with a test`) | First call to a method | Failing test expressions |
-| **Strict.Optimizers** | Strip passed tests & other provably dead code | After first successful run | Dead instructions, test artefacts |
+| **Strict.HighLevelRuntime** | Execute expressions directly in interpreter mode for fast checks and tests | On demand during test execution | Value/type errors, side-effects |
+| **Strict.TestRunner** | Run in-code tests via HighLevelRuntime (`method must start with a test`) | First call to a method | Failing test expressions, the central verification point |
+| **Strict.Optimizers** | Remove passed tests and other provably dead code before low-level codegen | After tests succeed | Dead instructions, test artefacts |
+| **Strict.Runtime** | Execute optimized expression tree via ~40 instructions | On demand by the caller | Value/type errors, side-effects |
 
 ## 1 · Strict.Language
 * Parses package headers and type signatures only.
@@ -43,22 +44,37 @@ The LSP (Language Server Protocol) implementation here adds support for VSCode, 
 * Flags impossible casts (`"abc" to Number`) and other static mistakes.
 * Separation of concerns: validation without touching runtime state.
 
-## 4 · Strict.Runtime
-* The Runtime is the single source of truth for dynamic behaviour.
-* Executes ~40 byte-code-like instructions as statements, all in memory for now.
-* Very fast, the goal is to run this in Strict itself and go through millions of lines per second.
+## 4 · Strict.HighLevelRuntime
+* Interpreter-style execution for quick feedback during editing.
+* Drives tests and advanced checks without bytecode generation.
+* Fast enough for most validation and dev workflows.
 
 ## 5 · Strict.TestRunner
 * Every method must open with a self-contained test.
 * Tests are executed once; passing expressions become `true` and are pruned.
-* Guarantees that only verified code reaches production.
+* Guarantees that only verified code reaches lower layers.
 
 ## 6 · Strict.Optimizers
-* Final clean-up pass: Remove passed test code.
-* Eliminate unused variables created solely for testing.
+* Final clean-up pass before low-level code generation.
+* Remove passed test code and provably dead instructions.
 * Preserve original line numbers for precise error reporting.
 
-Note: There are older projects like the VS Code LanguageServer, Cuda Compiler, Roslyn, Grammar, etc. but these are no the focus here, we just want to get the Runtime working, switch all the code to Strict itself and let it rip then ^^
+## 7 · Strict.Runtime
+* Executes optimized expression tree via ~40 byte-code-like instructions.
+* Still evolving and currently less battle-tested than HighLevelRuntime.
+* Intended for maximum execution speed at scale.
+
+## 8 · Strict.Compiler
+* Transpiles Strict into C# or CUDA for execution on existing runtimes.
+* Useful for running select Strict code without the Strict.Runtime bytecode path.
+* Still relevant, but secondary to the core runtime work right now.
+
+## 9 · Strict.LanguageServer
+* VS Code-first LSP implementation for daily Strict development.
+* Needs to be solid so future work can happen directly in Strict.
+* Active again after a long pause and now a top priority.
+
+Note: Peripheral projects kept around for specific purposes: `Strict.Grammar.Tests` (syntax highlighters from `Grammar.ebnf`), `Strict.PackageManager` (github-based packages, optional for now), and legacy compiler experiments (Cuda/Roslyn helpers).
 
 ---
 
@@ -292,7 +308,7 @@ Here the dictionary with keysAndValues is iterated. On each iteration the for bo
 GetElementsText Text
 	(1, 3).GetElementsText is "1, 3"
 	for elements
-		(index is 0 ? "" else ", ") + value
+   (index is 0 then "" else ", ") + value
 ```
 This method goes through the elements and does a quick check if we are at the first element via "index is 0", if yes, then an empty Text string is used, else ", " is used. Then that value is concatenated via "+ value", where value is the current value from the for enumeration. The result of the for body expression is a Text (either just the value as Text for the first iteration or ", " + value otherwise). The same way for expression boolean value was used in the previous example, this Text value is now used to create a new list (since we didn't specify + at the beginning of the for expression, see below for more examples). So the return value of the for expression is a list of Text, which is not what we asked for, we wanted a Text, so Strict automatically concatenates the list into a single Text value, which is then returned.
 

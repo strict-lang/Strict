@@ -83,16 +83,16 @@ public sealed class IfTests : TestExpressions
 
 	[Test]
 	public void MissingElseExpression() =>
-		Assert.That(() => ParseExpression("constant result = true ? true"),
+   Assert.That(() => ParseExpression("constant result = true then true"),
 			Throws.InstanceOf<If.MissingElseExpression>());
 
 	[Test]
 	public void InvalidConditionInConditionalExpression() =>
-		Assert.That(() => ParseExpression("constant result = 5 ? true"),
-			Throws.InstanceOf<UnknownExpression>());
+   Assert.That(() => ParseExpression("constant result = 5 then true else false"),
+			Throws.InstanceOf<If.InvalidCondition>());
 
 	[Test]
 	public void ReturnTypeOfConditionalThenAndElseMustHaveMatchingType() =>
-		Assert.That(() => ParseExpression("constant result = true ? true else 5"),
+    Assert.That(() => ParseExpression("constant result = true then true else 5"),
 			Throws.InstanceOf<If.ReturnTypeOfThenAndElseMustHaveMatchingType>());
 }

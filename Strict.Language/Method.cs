@@ -283,8 +283,8 @@ public sealed class Method : Context
 		(currentLine.Contains($" {BinaryOperator.Is} ") ||
 			expression.GetType().Name == "MethodCall" &&
 			body.ParsingLineNumber == body.Method.Tests.Count + 1) &&
-		!currentLine.Trim().StartsWith("if", StringComparison.Ordinal) &&
-		!currentLine.Contains("?") && expression.ReturnType.IsBoolean;
+		!currentLine.Trim().StartsWith("if ", StringComparison.Ordinal) &&
+		!currentLine.Contains(" then ") && expression.ReturnType.IsBoolean;
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public Expression

@@ -1,4 +1,4 @@
-﻿using Strict.Language;
+using Strict.Language;
 using Strict.Expressions;
 using Type = Strict.Language.Type;
 
@@ -20,7 +20,15 @@ public class CSharpExpressionVisitor : ExpressionVisitor
 			? "Main"
 			: method.Name;
 		var methodHeader =
-			$"{GetAccessModifier(isInterface, method, isMainEntryPoint)}{GetCSharpTypeName(method.ReturnType)} {methodName}({WriteParameters(method)})";
+			$"{
+				GetAccessModifier(isInterface, method, isMainEntryPoint)
+			}{
+				GetCSharpTypeName(method.ReturnType)
+			} {
+				methodName
+			}({
+				WriteParameters(method)
+			})";
 		return isInterface
 			? methodHeader + ";" + NewLine
 			: methodHeader + NewLine + "\t{" + NewLine + "\t";
@@ -69,21 +77,28 @@ public class CSharpExpressionVisitor : ExpressionVisitor
 	protected override string Visit(Return returnExpression) =>
 		"return " + Visit(returnExpression.Value);
 
-	protected override string Visit(MethodCall methodCall) =>
-		VisitMethodCallInstance(methodCall) +
-		(methodCall.Method.Name == Method.From || methodCall.Instance == null
-			? ""
-			: ".") + (methodCall.Method.Name == "Read" && methodCall.Instance?.ToString() == "file"
-			? "ReadToEnd"
-			: methodCall.Method.Name is "Write" or "Log" &&
-			methodCall.Instance?.ReturnType.Name is Base.Logger or Base.System
-				? "WriteLine"
-				: methodCall.Method.Name == Method.From
-					? methodCall.Method.Type.Name
-					: methodCall.Method.Name) + "(" + methodCall.Arguments.Select(Visit).ToWordList() +
-		(methodCall.ReturnType.Name == "File"
-			? ", FileMode.OpenOrCreate"
-			: "") + ")";
+	protected override string Visit(MethodCall methodCall)
+	{
+		var result = VisitMethodCallInstance(methodCall);
+		if (methodCall.Method.Name != Method.From && methodCall.Instance != null)
+			result += ".";
+		if (methodCall.Method.Name == "Read" && methodCall.Instance?.ToString() == "file")
+			result += "ReadToEnd";
+		else if (methodCall.Method.Name is "Write" or "Log" &&
+			methodCall.Instance?.ReturnType.Name is Base.Logger or Base.System)
+			result += "WriteLine";
+		else if (methodCall.Method.Name == Method.From)
+			result += methodCall.Method.Type.Name == "File"
+				? "FileStream"
+				: methodCall.Method.Type.Name;
+		else
+			result += methodCall.Method.Name;
+		result += "(" + methodCall.Arguments.Select(Visit).ToWordList();
+		if (methodCall.ReturnType.Name == "File")
+			result += ", FileMode.OpenOrCreate";
+		result += ")";
+		return result;
+	}
 
 	private string VisitMethodCallInstance(MethodCall methodCall) =>
 		((methodCall.Arguments.FirstOrDefault() as MethodCall)?.Instance?.ToString() == "file"

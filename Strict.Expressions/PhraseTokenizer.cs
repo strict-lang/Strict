@@ -178,12 +178,21 @@ public sealed class PhraseTokenizer
 
 		private bool HandleListSeparator()
 		{
-			if (tokens.input[tokens.index] != ',' && tokens.input[tokens.index] != '?')
+     if (tokens.input[tokens.index] != ',')
+			{
+				if (IsThenOrElseSeparator())
+					foundListSeparator = true;
 				return true;
+			}
 			foundListSeparator = true;
 			result.Add(tokens.index..(tokens.index + 1));
 			return false;
 		}
+
+		private bool IsThenOrElseSeparator() =>
+			tokens.index > 0 && tokens.input[tokens.index - 1] == ' ' &&
+			(tokens.input.AsSpan(tokens.index).StartsWith("then ", StringComparison.Ordinal) ||
+			tokens.input.AsSpan(tokens.index).StartsWith("else ", StringComparison.Ordinal));
 
 		private bool HandleMethodCall()
 		{

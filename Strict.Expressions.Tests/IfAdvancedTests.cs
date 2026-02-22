@@ -21,11 +21,11 @@ public sealed class IfAdvancedTests : TestExpressions
 			Is.EqualTo(new If(GetCondition(), GetThen(), 0, new MethodCall(method))).And.Not.
 				EqualTo(new If(GetCondition(), GetThen())));
 
-	[TestCase("constant result = true ? true else false")]
-	[TestCase("constant result = false ? \"Yes\" else \"No\"")]
-	[TestCase("constant result = 5 is 5 ? (1, 2) else (3, 4)")]
-	[TestCase("constant result = 5 + (false ? 1 else 2)")]
-	[TestCase("constant result = 5 is not 4 ? (1, 2) else (3, 4)")]
+  [TestCase("constant result = true then true else false")]
+	[TestCase("constant result = false then \"Yes\" else \"No\"")]
+	[TestCase("constant result = 5 is 5 then (1, 2) else (3, 4)")]
+	[TestCase("constant result = 5 + (false then 1 else 2)")]
+	[TestCase("constant result = 5 is not 4 then (1, 2) else (3, 4)")]
 	public void ValidConditionalExpressions(string code)
 	{
 		var body = (Body)ParseExpression(code, "result is Number");
@@ -34,16 +34,16 @@ public sealed class IfAdvancedTests : TestExpressions
 	}
 
 	[Test]
-	public void ConditionalExpressionsCannotBeNested() =>
-		Assert.That(() => ParseExpression("constant result = true ? true else (5 is 5 ? false else true)"),
+ public void ConditionalExpressionsCannotBeNested() =>
+		Assert.That(() => ParseExpression("constant result = true then true else (5 is 5 then false else true)"),
 			Throws.InstanceOf<If.ConditionalExpressionsCannotBeNested>());
 
-	[TestCase("logger.Log(true ? \"Yes\" else \"No\")")]
-	[TestCase("logger.Log(true ? \"Yes\" + \"text\" else \"No\")")]
-	[TestCase("logger.Log(\"Result\" + (true ? \"Yes\" else \"No\"))")]
-	[TestCase("logger.Log((true ? \"Yes\" else \"No\") + \"Result\")")]
-	[TestCase("5 is 5 ? false else true")]
-	[TestCase("6 is 5 ? true else false")]
+  [TestCase("logger.Log(true then \"Yes\" else \"No\")")]
+	[TestCase("logger.Log(true then \"Yes\" + \"text\" else \"No\")")]
+	[TestCase("logger.Log(\"Result\" + (true then \"Yes\" else \"No\"))")]
+	[TestCase("logger.Log((true then \"Yes\" else \"No\") + \"Result\")")]
+	[TestCase("5 is 5 then false else true")]
+	[TestCase("6 is 5 then true else false")]
 	public void ConditionalExpressionsAsPartOfOtherExpression(string code) =>
 		Assert.That(ParseExpression(code).ToString(), Is.EqualTo(code));
 

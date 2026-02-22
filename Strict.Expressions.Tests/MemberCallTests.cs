@@ -163,7 +163,7 @@ public sealed class MemberCallTests : TestExpressions
 				using var _ = new Type(type.Package,
 					new TypeLines(nameof(MemberCallUsingAnotherMemberIsForbidden),
 					"has file = File(\"test.txt\")",
-					"has fileDescription = file.Length > 1000 ? \"big file\" else \"small file\"",
+					"has fileDescription = file.Length > 1000 then \"big file\" else \"small file\"",
 					"Run",
 					"\tconstant a = 5")).ParseMembersAndMethods(parser);
 			}, //ncrunch: no coverage

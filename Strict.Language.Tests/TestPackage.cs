@@ -16,24 +16,24 @@ public class TestPackage : Package
 		var boolean = new Type(this, new TypeLines(Base.Boolean,
 			"not Boolean",
 			"\tnot true is false",
-			"\tvalue ? false else true",
+			"\tvalue then false else true",
 			"is(other) Boolean",
 			"\tvalue is other",
 			"and(other) Boolean",
-			"\tvalue and other ? true else false",
+			"\tvalue and other then true else false",
 			"or(other) Boolean",
-			"\tvalue or other ? false else true",
+			"\tvalue or other then false else true",
 			"xor(other) Boolean",
 			"\ttrue xor false",
 			"\tfalse xor false is false",
-			"\tvalue and other or (not value) and (not other) ? false else true"));
+			"\tvalue and other or (not value) and (not other) then false else true"));
 		var hasLength = new Type(this, new TypeLines("HasLength","Length Number"));
 		var number = new Type(this, new TypeLines(Base.Number,
 			"to Character",
 			"\t5 to Character is \"5\"",
 			"\tconstant canOnlyConvertSingleDigit = Error",
-			"\t13 to Character is canOnlyConvertSingleDigit",
-			"\tvalue is in Range(0, 10) ? Character(Character.zeroCharacter + value) else canOnlyConvertSingleDigit(value)",
+     "\t13 to Character is canOnlyConvertSingleDigit",
+			"\tvalue is in Range(0, 10) then Character(Character.zeroCharacter + value) else canOnlyConvertSingleDigit(value)",
 			"+(other) Number",
 			"\t3 + 4 is 7",
 			"\tvalue + other",
@@ -91,7 +91,7 @@ public class TestPackage : Package
 			"\tRange(1, 4).Reverse is Range(3, 0)",
 			"\tRange(10, 5).Reverse is Range(6, 11)",
 			"\tRange(-5, -10).Reverse is Range(-9, -4)",
-			"\tLength > 0 ? Range(ExclusiveEnd - 1, Start - 1) else Range(ExclusiveEnd + 1, Start + 1)"));
+      "\tLength > 0 then Range(ExclusiveEnd - 1, Start - 1) else Range(ExclusiveEnd + 1, Start + 1)"));
 		var character = new Type(this, new TypeLines(Base.Character,
 			"has number",
 			"constant zeroCharacter = 48",
@@ -102,7 +102,7 @@ public class TestPackage : Package
 			"\tconstant notANumber = Error",
 			"\tCharacter(\"A\") to Number is notANumber",
 			"\tlet result = number - zeroCharacter",
-			"\tresult is in Range(0, 10) ? result else notANumber(value)"));
+      "\tresult is in Range(0, 10) then result else notANumber(value)"));
 		var mutable = new Type(this, new TypeLines(Base.Mutable,
 			"has generic"));
 		var iterator = new Type(this, new TypeLines(Base.Iterator,

@@ -1,4 +1,4 @@
-﻿using NUnit.Framework;
+using NUnit.Framework;
 using OmniSharp.Extensions.LanguageServer.Protocol;
 using OmniSharp.Extensions.LanguageServer.Protocol.Models;
 using Strict.Language;
@@ -9,19 +9,15 @@ namespace Strict.LanguageServer.Tests;
 public sealed class AutoCompletorTests : LanguageServerTests
 {
 	[OneTimeSetUp]
-	public async Task LoadStrictPackageAsync()
-	{
+	public async Task LoadStrictPackageAsync() =>
 		package = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
-	}
+
+	private Package package = null!;
 
 	[SetUp]
-	public void CreateStrictDocument()
-	{
-		strictDocument = new StrictDocument();
-	}
+	public void CreateStrictDocument() => strictDocument = new StrictDocument();
 
 	private StrictDocument strictDocument = null!;
-	private Package package = null!;
 
 	// @formatter:off
 	[TestCase("Write", 2,
@@ -55,7 +51,8 @@ public sealed class AutoCompletorTests : LanguageServerTests
 		"\tconstant result = 5",
 		"TriggerInMiddleOfTheLine",
 		"\tconstant result = true",
-		"\tconstant another = result.")] // @formatter:on
+		"\tconstant another = result.")]
+	// @formatter:on
 	public async Task HandleLogAutoCompleteAsync(string completionName, int lineNumber, params string[] code)
 	{
 		var documentUri = GetDocumentUri(completionName == "+"

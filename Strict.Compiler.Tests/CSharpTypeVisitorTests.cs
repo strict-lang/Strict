@@ -125,7 +125,7 @@ public sealed class CSharpTypeVisitorTests : TestCSharpGenerator
 		Assert.That(visitor.FileContent, Contains.Substring("\tprivate int number"));
 		Assert.That(visitor.FileContent,
 			Contains.Substring(
-				"\tprivate static FileStream file = new File(\"test.txt\", FileMode.OpenOrCreate);"));
+				"\tprivate static FileStream file = new FileStream(\"test.txt\", FileMode.OpenOrCreate);"));
 		Assert.That(visitor.FileContent,
 			Contains.Substring("\tpublic void Run()" + Environment.NewLine));
 	}
@@ -148,9 +148,9 @@ public sealed class CSharpTypeVisitorTests : TestCSharpGenerator
 			Contains.Substring("\tConsole.WriteLine(random);"));
 
 	[TestCase(@"	constant file = File(""test.txt"")
-	file.Write(number)", "\tvar file = new File(\"test.txt\", FileMode.OpenOrCreate);")]
+	file.Write(number)", "\tvar file = new FileStream(\"test.txt\", FileMode.OpenOrCreate);")]
 	[TestCase(@"	File(""test"").Write(number)",
-		"\tnew File(\"test\", FileMode.OpenOrCreate).Write(number);")]
+		"\tnew FileStream(\"test\", FileMode.OpenOrCreate).Write(number);")]
 	public void InitializeValueUsingConstructorInsideMethod(string code, string expected) =>
 		Assert.That(new CSharpTypeVisitor(new Type(package, new TypeLines(Computer, (@"has number
 Run

@@ -113,7 +113,7 @@ public sealed class TestExecutorTests
 					"\t5 to Character is \"5\"",
 					"\tconstant canOnlyConvertSingleDigit = Error",
 					"\t13 to Character is canOnlyConvertSingleDigit",
-					"\tvalue is in Range(0, 10) ? Character(Character.zeroCharacter + value) else canOnlyConvertSingleDigit(value)")).
+					"\tvalue is in Range(0, 10) then Character(Character.zeroCharacter + value) else canOnlyConvertSingleDigit(value)")).
 			ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(type.Methods[0].GetBodyAndParseIfNeeded().ToString(),
 			Is.EqualTo(new[]
@@ -121,7 +121,7 @@ public sealed class TestExecutorTests
 				"5 to Character is \"5\"",
 				"constant canOnlyConvertSingleDigit = Error",
 				"13 to Character is canOnlyConvertSingleDigit",
-				"value is in Range(0, 10) ? Character(Character.zeroCharacter + value) else canOnlyConvertSingleDigit(value)"
+				"value is in Range(0, 10) then Character(Character.zeroCharacter + value) else canOnlyConvertSingleDigit(value)"
 				// @formatter:on
 			}.ToWordList(Environment.NewLine)));
 		executor.RunAllTestsInType(type);

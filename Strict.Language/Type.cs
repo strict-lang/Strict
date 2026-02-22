@@ -143,7 +143,6 @@ public class Type : Context, IDisposable
 		: Exception(type.ToString()); //ncrunch: no coverage
 
 	private bool IsParsed => IsGeneric || Lines.Length <= 1 || typeParser.LineNumber != -1;
-
 	public bool IsEnum =>
 		CheckIfParsed() && methods.Count == 0 && members.Count > 0 &&
 		members.All(m => m.IsConstant || m.Type.IsEnum);

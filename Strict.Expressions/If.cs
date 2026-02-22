@@ -7,9 +7,13 @@ namespace Strict.Expressions;
 /// If expressions are used for branching, can also be used as an input for any other expression
 /// like method arguments, other conditions, etc. like conditional operators.
 /// </summary>
-public sealed class If(Expression condition, Expression then, int lineNumber = 0,
-	Expression? optionalElse = null, Body? bodyForErrorMessage = null)
-	: Expression(CheckExpressionAndGetMatchingType(then, optionalElse, bodyForErrorMessage), lineNumber)
+public sealed class If(
+	Expression condition,
+	Expression then,
+	int lineNumber = 0,
+	Expression? optionalElse = null,
+	Body? bodyForErrorMessage = null) : Expression(
+	CheckExpressionAndGetMatchingType(then, optionalElse, bodyForErrorMessage), lineNumber)
 {
 	private static Type CheckExpressionAndGetMatchingType(Expression then, Expression? optionalElse,
 		Body? bodyForErrorMessage) =>
@@ -32,8 +36,10 @@ public sealed class If(Expression condition, Expression then, int lineNumber = 0
 				throw new ReturnTypeOfThenAndElseMustHaveMatchingType(
 					bodyForErrorMessage ?? new Body(thenType.Methods[0]), thenType, elseType);
 
-	public class ReturnTypeOfThenAndElseMustHaveMatchingType(Body body,
-		Type thenReturnType, Type optionalElseReturnType) : ParsingFailed(body,
+	public class ReturnTypeOfThenAndElseMustHaveMatchingType(
+		Body body,
+		Type thenReturnType,
+		Type optionalElseReturnType) : ParsingFailed(body,
 		"The Then type: " + thenReturnType + " is not same as the Else type: " +
 		optionalElseReturnType);
 
@@ -52,7 +58,7 @@ public sealed class If(Expression condition, Expression then, int lineNumber = 0
 		OptionalElse != null && (OptionalElse.ReturnType.IsSameOrCanBeUsedAs(Then.ReturnType) ||
 			Then.ReturnType.IsError || OptionalElse.ReturnType.IsError) && Then is not Body &&
 		OptionalElse is not Body && OptionalElse is not If
-			? Condition + " ? " + Then + " else " + OptionalElse
+			? Condition + ThenSeparator + Then + ElseSeparator + OptionalElse
 			: "if " + Condition + Environment.NewLine + IndentExpression(Then) + (OptionalElse != null
 				? OptionalElse is If
 					? Environment.NewLine + "else " + OptionalElse
@@ -69,7 +75,8 @@ public sealed class If(Expression condition, Expression then, int lineNumber = 0
 	public static Expression? TryParse(Body body, ReadOnlySpan<char> line) =>
 		line.Equals("if", StringComparison.Ordinal)
 			? throw new MissingCondition(body)
-			: line.Equals("else", StringComparison.Ordinal) || line.StartsWith("else if", StringComparison.Ordinal)
+			: line.Equals("else", StringComparison.Ordinal) ||
+			line.StartsWith("else if", StringComparison.Ordinal)
 				? throw new UnexpectedElse(body)
 				: line.StartsWith("if ", StringComparison.Ordinal)
 					? TryParseIf(body, line)
@@ -94,7 +101,8 @@ public sealed class If(Expression condition, Expression then, int lineNumber = 0
 	{
 		var condition = body.Method.ParseExpression(body, line);
 		var booleanType = condition.ReturnType.GetType(Base.Boolean);
-		if (condition.ReturnType == booleanType || booleanType.IsSameOrCanBeUsedAs(condition.ReturnType, false))
+		if (condition.ReturnType == booleanType ||
+			booleanType.IsSameOrCanBeUsedAs(condition.ReturnType, false))
 			return condition;
 		throw new InvalidCondition(body, condition.ReturnType);
 	}
@@ -119,7 +127,8 @@ public sealed class If(Expression condition, Expression then, int lineNumber = 0
 	private static bool HasElseIf(ReadOnlySpan<char> line) =>
 		line.StartsWith("else if ", StringComparison.Ordinal);
 
-	private static bool HasOnlyElse(ReadOnlySpan<char> line) => line.Equals("else", StringComparison.Ordinal);
+	private static bool HasOnlyElse(ReadOnlySpan<char> line) =>
+		line.Equals("else", StringComparison.Ordinal);
 
 	private static Expression CreateElse(Body body)
 	{
@@ -132,19 +141,18 @@ public sealed class If(Expression condition, Expression then, int lineNumber = 0
 
 	public static bool CanTryParseConditional(Body body, ReadOnlySpan<char> input)
 	{
-		var questionMarkIndex = input.IndexOf('?');
+		var thenIndex = input.IndexOf(ThenSeparator, StringComparison.Ordinal);
 		var firstBracket = input.IndexOf('(');
-		if (questionMarkIndex > 2 &&
-			NoFirstBracketOrSurroundedByIt(input, firstBracket, questionMarkIndex))
-			return MemoryExtensions.Count(input, '?') > 1
+		if (thenIndex > 0 && NoFirstBracketOrSurroundedByIt(input, firstBracket, thenIndex))
+			return CountThenSeparators(input) > 1
 				? throw new ConditionalExpressionsCannotBeNested(body)
 				: true;
 		return false;
 	}
 
 	private static bool NoFirstBracketOrSurroundedByIt(ReadOnlySpan<char> input, int firstBracket,
-		int questionMarkIndex) =>
-		firstBracket == -1 || firstBracket > questionMarkIndex || input.IndexOf(')') < questionMarkIndex ||
+		int separatorIndex) =>
+		firstBracket == -1 || firstBracket > separatorIndex || input.IndexOf(')') < separatorIndex ||
 		firstBracket == 0 && input[^1] == ')';
 
 	public sealed class ConditionalExpressionsCannotBeNested(Body body) : ParsingFailed(body);
@@ -153,17 +161,32 @@ public sealed class If(Expression condition, Expression then, int lineNumber = 0
 	{
 		if (input[0] == '(' && input[^1] == ')')
 			input = input[1..^1];
-		var questionMarkIndex = input.IndexOf('?');
-		if (questionMarkIndex < 2)
+		var thenIndex = input.IndexOf(ThenSeparator, StringComparison.Ordinal);
+		if (thenIndex < 1)
 			throw new InvalidCondition(body); //ncrunch: no coverage
-		var elseIndex = input.IndexOf(" else ");
-		if (elseIndex <= 5)
+		var elseIndex = input.IndexOf(ElseSeparator, StringComparison.Ordinal);
+		if (elseIndex <= thenIndex)
 			throw new MissingElseExpression(body);
-		return new If(GetConditionExpression(body, input[..(questionMarkIndex - 1)]),
-			body.Method.ParseExpression(body, input[(questionMarkIndex + 2)..elseIndex]),
+		return new If(GetConditionExpression(body, input[..thenIndex]),
+			body.Method.ParseExpression(body, input[(thenIndex + ThenSeparator.Length)..elseIndex]),
 			body.CurrentFileLineNumber,
-			body.Method.ParseExpression(body, input[(elseIndex + 6)..]));
+			body.Method.ParseExpression(body, input[(elseIndex + ElseSeparator.Length)..]));
 	}
+
+	private static int CountThenSeparators(ReadOnlySpan<char> input)
+	{
+		var count = 0;
+		for (var index = 0; index <= input.Length - ThenSeparator.Length; index++)
+			if (input[index..].StartsWith(ThenSeparator, StringComparison.Ordinal))
+			{
+				count++;
+				index += ThenSeparator.Length - 1;
+			}
+		return count;
+	}
+
+	public const string ThenSeparator = " then ";
+	private const string ElseSeparator = " else ";
 
 	public sealed class MissingElseExpression(Body body) : ParsingFailed(body);
 }

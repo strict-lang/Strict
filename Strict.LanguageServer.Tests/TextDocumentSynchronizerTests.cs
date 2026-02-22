@@ -8,8 +8,6 @@ namespace Strict.LanguageServer.Tests;
 
 public sealed class TextDocumentSynchronizerTests : LanguageServerTests
 {
-	private static readonly DocumentUri MultiLineURI = new("", "", "Test/MultiLine.strict", "", "");
-
 	[SetUp]
 	public void MultiLineSetup()
 	{
@@ -18,6 +16,7 @@ public sealed class TextDocumentSynchronizerTests : LanguageServerTests
 		textDocumentHandler.Document.InitializeContent(MultiLineURI);
 	}
 
+	private static readonly DocumentUri MultiLineURI = new("", "", "Test/MultiLine.strict", "", "");
 	private static IEnumerable<TestCaseData> TextDocumentChangeCases
 	{
 		//ncrunch: no coverage start
@@ -30,8 +29,7 @@ public sealed class TextDocumentSynchronizerTests : LanguageServerTests
 			yield return new TestCaseData(new Range(0, 0, 0, 9), "", new[] { "bla = 5" });
 			yield return new TestCaseData(new Range(1, 0, 1, 0), "constant something = 5",
 				new[] { "constant bla = 5", "constant something = 5" });
-		}
-		//ncrunch: no coverage end
+		} //ncrunch: no coverage end
 	}
 	private static IEnumerable<TestCaseData> MultiLineTextDocumentChanges
 	{
@@ -54,8 +52,7 @@ public sealed class TextDocumentSynchronizerTests : LanguageServerTests
 				new[] { "has number", "Add(num Number) Number", "\tnum + number", "NextMethod", "\t5" });
 			yield return new TestCaseData(new Range(2, 10, 2, 10), Environment.NewLine,
 				new[] { "has number", "Add(num Number) Number", "\tnum + number", "" });
-		}
-		//ncrunch: no coverage end
+		} //ncrunch: no coverage end
 	}
 
 	[TestCaseSource(nameof(TextDocumentChangeCases))]

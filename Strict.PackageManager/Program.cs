@@ -1,5 +1,6 @@
 using Strict.PackageManager.Services;
 
+//ncrunch: no coverage start
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddGrpc();
 var app = builder.Build();

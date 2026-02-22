@@ -322,10 +322,21 @@ public sealed class Executor(TestBehavior behavior = TestBehavior.OnFirstRun)
 		var hasMethodCalls = bodyLine.Contains('(') && !bodyLine.StartsWith('(');
 		if (hasMethodCalls)
 			return false;
-		var questionMarkCount = bodyLine.Count(c => c == '?');
+		var thenCount = CountThenSeparators(bodyLine);
 		var operatorCount = bodyLine.Split(' ').Count(w => w is "and" or "or" or "not" or "is");
-		return questionMarkCount == 0 && operatorCount <= 1 ||
-			questionMarkCount == 1 && operatorCount <= 2;
+		return thenCount == 0 && operatorCount <= 1 || thenCount == 1 && operatorCount <= 2;
+	}
+
+	private static int CountThenSeparators(string input)
+	{
+		var count = 0;
+		for (var index = 0; index <= input.Length - If.ThenSeparator.Length; index++)
+			if (input.AsSpan(index).StartsWith(If.ThenSeparator, StringComparison.Ordinal))
+			{
+				count++;
+				index += If.ThenSeparator.Length - 1;
+			}
+		return count;
 	}
 
 	/// <summary>

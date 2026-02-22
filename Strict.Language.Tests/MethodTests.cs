@@ -168,7 +168,7 @@ public sealed class MethodTests
 			new TypeLines(nameof(ConditionalExpressionIsNotTest),
 				"has logger",
 				"ConditionalExpressionIsNotTest Boolean",
-				"	5 is 5 ? true else false")).ParseMembersAndMethods(parser);
+				"	5 is 5 then true else false")).ParseMembersAndMethods(parser);
 		customType.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(customType.Methods[0].Tests.Count, Is.EqualTo(0));
 	}

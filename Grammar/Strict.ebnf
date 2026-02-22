@@ -38,7 +38,7 @@ methodcall			= methodname ('(' arguments ')')?
 arguments				= argument (',' argument)*
 argument				= expression
 if							= 'if' expression LF block ('else' LF block)?
-conditionalif		= expression '?' expression 'else' expression
+conditionalif		= expression 'then' expression 'else' expression
 for							= 'for' (reference 'in')? expression LF block
 binary_op				= '+' | '-' | '*' | '/' | '%' | '<' | '<=' | '>' | '>=' |  'in' | 'is' | 'is' 'not' | 'and' | 'or' | 'xor'
 unary_op				= '-' | 'not'
