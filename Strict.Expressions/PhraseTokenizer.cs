@@ -178,7 +178,7 @@ public sealed class PhraseTokenizer
 
 		private bool HandleListSeparator()
 		{
-     if (tokens.input[tokens.index] != ',')
+			if (tokens.input[tokens.index] != ',')
 			{
 				if (IsThenOrElseSeparator())
 					foundListSeparator = true;
@@ -192,7 +192,7 @@ public sealed class PhraseTokenizer
 		private bool IsThenOrElseSeparator() =>
 			tokens.index > 0 && tokens.input[tokens.index - 1] == ' ' &&
 			(tokens.input.AsSpan(tokens.index).StartsWith("then ", StringComparison.Ordinal) ||
-			tokens.input.AsSpan(tokens.index).StartsWith("else ", StringComparison.Ordinal));
+				tokens.input.AsSpan(tokens.index).StartsWith("else ", StringComparison.Ordinal));
 
 		private bool HandleMethodCall()
 		{

@@ -83,7 +83,7 @@ public class CSharpExpressionVisitor : ExpressionVisitor
 		if (methodCall.Method.Name != Method.From && methodCall.Instance != null)
 			result += ".";
 		if (methodCall.Method.Name == "Read" && methodCall.Instance?.ToString() == "file")
-			result += "ReadToEnd";
+			result += "ReadToEnd"; //ncrunch: no coverage
 		else if (methodCall.Method.Name is "Write" or "Log" &&
 			methodCall.Instance?.ReturnType.Name is Base.Logger or Base.System)
 			result += "WriteLine";

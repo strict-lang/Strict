@@ -26,6 +26,7 @@ public sealed class Executor(TestBehavior behavior = TestBehavior.OnFirstRun)
 	private readonly HashSet<Method> validatedMethods = [];
 	private BodyEvaluator BodyEvaluator => field ??= new BodyEvaluator(this);
 	private IfEvaluator IfEvaluator => field ??= new IfEvaluator(this);
+  private SelectorIfEvaluator SelectorIfEvaluator => field ??= new SelectorIfEvaluator(this);
 	private ForEvaluator ForEvaluator => field ??= new ForEvaluator(this);
 	private MethodCallEvaluator MethodCallEvaluator => field ??= new MethodCallEvaluator(this);
 	private ToEvaluator ToEvaluator => field ??= new ToEvaluator(this);
@@ -229,6 +230,7 @@ public sealed class Executor(TestBehavior behavior = TestBehavior.OnFirstRun)
 			MemberCall m => EvaluateMemberCall(m, context),
 			ListCall listCall => MethodCallEvaluator.EvaluateListCall(listCall, context),
 			If iff => IfEvaluator.Evaluate(iff, context),
+     SelectorIf selectorIf => SelectorIfEvaluator.Evaluate(selectorIf, context),
 			For f => ForEvaluator.Evaluate(f, context),
 			Return r => EvaluateReturn(r, context),
 			To t => ToEvaluator.Evaluate(t, context),

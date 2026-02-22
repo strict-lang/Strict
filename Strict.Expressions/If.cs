@@ -87,6 +87,9 @@ public sealed class If(
 
 	private static Expression TryParseIf(Body body, ReadOnlySpan<char> line)
 	{
+		var trimmedLine = line.TrimEnd();
+		if (trimmedLine.EndsWith(SelectorSuffix, StringComparison.Ordinal))
+			return ParseSelectorIf(body, trimmedLine);
 		var condition = GetConditionExpression(body, line[3..]);
 		var thenBody = body.FindCurrentChild();
 		if (thenBody == null)
@@ -95,6 +98,62 @@ public sealed class If(
 		return new If(condition, then, body.CurrentFileLineNumber, HasRemainingBody(body)
 			? CreateElseIfOrElse(body, body.GetLine(body.ParsingLineNumber + 1).AsSpan(body.Tabs))
 			: null, body);
+	}
+
+	private static Expression ParseSelectorIf(Body body, ReadOnlySpan<char> line)
+	{
+		var trimmedLine = line.TrimEnd();
+		var selectorText = trimmedLine[3..^SelectorSuffix.Length];
+		if (selectorText.IsEmpty)
+			throw new MissingCondition(body); //ncrunch: no coverage
+		var selector = body.Method.ParseExpression(body, selectorText);
+		var thenBody = body.FindCurrentChild();
+		if (thenBody == null)
+			throw new MissingThen(body); //ncrunch: no coverage
+		var cases = ParseSelectorCases(thenBody, selector, out var optionalElse);
+		return new SelectorIf(selector, cases, body.CurrentFileLineNumber, optionalElse, body);
+	}
+
+	private static IReadOnlyList<SelectorIf.Case> ParseSelectorCases(Body body, Expression selector,
+		out Expression? optionalElse)
+	{
+		optionalElse = null;
+		var cases = new List<SelectorIf.Case>();
+		for (var lineNumber = body.LineRange.Start.Value; lineNumber < body.LineRange.End.Value;
+			lineNumber++)
+		{
+			var line = body.GetLine(lineNumber).AsSpan(body.Tabs).TrimStart();
+			if (line.StartsWith(ElsePrefix, StringComparison.Ordinal) ||
+				line.Equals(ElseKeyword, StringComparison.Ordinal))
+			{
+				if (optionalElse != null || lineNumber + 1 < body.LineRange.End.Value)
+					throw new UnexpectedElse(body); //ncrunch: no coverage
+				var elseText = line.Length > ElsePrefix.Length
+					? line[ElsePrefix.Length..].TrimStart()
+					: ReadOnlySpan<char>.Empty;
+				if (elseText.IsEmpty)
+					throw new MissingElseExpression(body); //ncrunch: no coverage
+				optionalElse = body.Method.ParseExpression(body, elseText);
+				break;
+			}
+			var thenIndex = line.IndexOf(ThenSeparator, StringComparison.Ordinal);
+			if (thenIndex < 0)
+				throw new MissingThen(body); //ncrunch: no coverage
+			var patternText = line[..thenIndex].TrimEnd();
+			var thenText = line[(thenIndex + ThenSeparator.Length)..].TrimStart();
+			var pattern = body.Method.ParseExpression(body, patternText);
+			var thenExpression = body.Method.ParseExpression(body, thenText);
+			var condition = CreateSelectorCondition(selector, pattern);
+			cases.Add(new SelectorIf.Case(pattern, thenExpression, condition));
+		}
+		return cases;
+	}
+
+	private static Expression CreateSelectorCondition(Expression selector, Expression pattern)
+	{
+		var arguments = new[] { pattern };
+		return new Binary(selector, selector.ReturnType.GetMethod(BinaryOperator.Is, arguments),
+			arguments);
 	}
 
 	private static Expression GetConditionExpression(Body body, ReadOnlySpan<char> line)
@@ -187,6 +246,8 @@ public sealed class If(
 
 	public const string ThenSeparator = " then ";
 	private const string ElseSeparator = " else ";
-
+	private const string ElsePrefix = "else ";
+	private const string ElseKeyword = "else";
+	private const string SelectorSuffix = " is";
 	public sealed class MissingElseExpression(Body body) : ParsingFailed(body);
 }

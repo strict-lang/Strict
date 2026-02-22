@@ -1,6 +1,7 @@
 using Strict.Expressions;
 using Strict.Language;
 using Strict.Language.Tests;
+using System.Collections.Generic;
 using Type = Strict.Language.Type;
 
 namespace Strict.HighLevelRuntime.Tests;
@@ -23,6 +24,19 @@ public sealed class ForTests
 			"\tfor item in (1, 2, 3)", "\t\titem");
 		var result = executor.Execute(t.Methods.Single(m => m.Name == "Sum"), null, []);
 		Assert.That(Convert.ToDouble(result.Value), Is.EqualTo(6));
+	}
+
+	[TestCase("add", 6)]
+	[TestCase("subtract", -6)]
+	public void SelectorIfInForUsesOperation(string operation, double expected)
+	{
+    using var t = CreateType(nameof(SelectorIfInForUsesOperation), "has operation Text",
+			"Run Number", "\tfor (1, 2, 3)", "\t\tif operation is",
+			"\t\t\t\"add\" then value", "\t\t\t\"subtract\" then 0 - value");
+		var instance = new ValueInstance(t,
+			new Dictionary<string, object?> { { "operation", operation } });
+		var result = executor.Execute(t.Methods.Single(m => m.Name == "Run"), instance, []);
+		Assert.That(Convert.ToDouble(result.Value), Is.EqualTo(expected));
 	}
 
 	[Test]

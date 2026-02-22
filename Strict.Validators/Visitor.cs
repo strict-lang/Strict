@@ -1,4 +1,4 @@
-﻿using Type = Strict.Language.Type;
+using Type = Strict.Language.Type;
 
 namespace Strict.Validators;
 
@@ -117,6 +117,16 @@ public abstract class Visitor
 			Visit(ifExpression.Condition, body, context);
 			Visit(ifExpression.Then, body, context);
 			Visit(ifExpression.OptionalElse, body, context);
+		}
+		else if (expression is SelectorIf selectorIf)
+		{
+			Visit(selectorIf.Selector, body, context);
+			foreach (var @case in selectorIf.Cases)
+			{
+				Visit(@case.Pattern, body, context);
+				Visit(@case.Then, body, context);
+			}
+     Visit(selectorIf.OptionalElse, body, context);
 		}
 		else if (expression is ListCall listCall)
 		{
