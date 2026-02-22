@@ -54,6 +54,7 @@ public sealed class Body : Expression
 			try
 			{
 				expressions.Add(Method.ParseLine(this, CurrentLine));
+				UpdateValueTypeForPiping(expressions[^1]);
 			}
 			catch (ParsingFailed)
 			{
@@ -69,6 +70,17 @@ public sealed class Body : Expression
 		return Expressions.Count == 1
 			? Expressions[0]
 			: this;
+	}
+
+	private void UpdateValueTypeForPiping(Expression lastExpression)
+	{
+		if (lastExpression.ReturnType.Name == Base.None)
+			return;
+		var valueVar = FindVariable(Type.ValueLowercase.AsSpan(), false);
+		if (valueVar == null || valueVar.Type == lastExpression.ReturnType)
+			return;
+		Variables!.Remove(valueVar);
+		AddVariable(Type.ValueLowercase, lastExpression, true);
 	}
 
 	public Range LineRange { get; internal set; }

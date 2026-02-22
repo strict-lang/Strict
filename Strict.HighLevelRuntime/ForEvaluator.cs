@@ -80,5 +80,7 @@ internal sealed class ForEvaluator(Executor executor)
 	private static Type GetForValueType(ValueInstance iterator) =>
 		iterator.ReturnType is GenericTypeImplementation { Generic.Name: Base.List } list
 			? list.ImplementationTypes[0]
-			: iterator.ReturnType.GetType(Base.Number);
+			: iterator.ReturnType.Name == Base.Text
+				? iterator.ReturnType.GetType(Base.Text)
+				: iterator.ReturnType.GetType(Base.Number);
 }

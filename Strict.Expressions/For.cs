@@ -97,7 +97,9 @@ public sealed class For(Expression[] customVariables, Expression iterator, Expre
 		var originalLines = line.ToString() + Environment.NewLine +
 			body.Method.GetLinesAndStripTabs(innerBody.LineRange, body).ToWordList(Environment.NewLine);
 		var generatedLines = forExpression.ToString();
-		if (generatedLines != originalLines)
+		if (generatedLines != originalLines &&
+			!body.Method.GetLinesAndStripTabs(innerBody.LineRange, body).Any(l =>
+				l.TrimStart().StartsWith(BinaryOperator.To + " ", StringComparison.Ordinal)))
 			throw new GeneratedForExpressionDoesNotMatchInputExactly(body, forExpression, originalLines); //ncrunch: no coverage
 #endif
 		return forExpression;

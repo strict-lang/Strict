@@ -325,12 +325,12 @@ public sealed class ForTests : TestExpressions
 	{
 		var programType = new Type(type.Package,
 				new TypeLines(nameof(ForBodyMultiLinePiping), "has numbers",
-					"GetTextLengths Text",
+					"GetNumbersText Text",
 					"\tfor numbers",
 					"\t\tto Text",
-					"\t\tLength")).
+					"\t\tto Number")).
 			ParseMembersAndMethods(new MethodExpressionParser());
 		var forExpression = (For)programType.Methods[0].GetBodyAndParseIfNeeded();
-		Assert.That(forExpression.Body, Is.Not.Null);
+		Assert.That(forExpression.Body.ToString(), Does.Contain("to Text"));
 	}
 }
