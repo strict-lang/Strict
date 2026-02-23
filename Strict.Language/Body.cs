@@ -77,7 +77,7 @@ public sealed class Body : Expression
 		if (lastExpression.ReturnType.Name == Base.None)
 			return;
 		var valueVar = FindVariable(Type.ValueLowercase.AsSpan(), false);
-		if (valueVar == null || valueVar.Type == lastExpression.ReturnType)
+		if (valueVar == null || valueVar.Type == lastExpression.ReturnType || !valueVar.IsMutable)
 			return;
 		Variables!.Remove(valueVar);
 		AddVariable(Type.ValueLowercase, lastExpression, true);

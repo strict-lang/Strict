@@ -6,7 +6,7 @@ public sealed class IfTests : TestExpressions
 	public void MissingCondition() =>
 		Assert.That(() => ParseExpression("if"),
 			Throws.InstanceOf<If.MissingCondition>().With.Message.
-				Contains(@"TestPackage\dummy.strict:line 2"));
+				Contains("TestPackage" + Path.DirectorySeparatorChar + "dummy.strict:line 2"));
 
 	[Test]
 	public void InvalidCondition() =>
@@ -71,7 +71,7 @@ public sealed class IfTests : TestExpressions
 	public void ParseMissingElseExpression() =>
 		Assert.That(() => ParseExpression("if five is 5", "\tRun", "else"),
 			Throws.InstanceOf<If.MissingElseExpression>().With.Message.
-				Contains(@"TestPackage\dummy.strict:line 4"));
+				Contains("TestPackage" + Path.DirectorySeparatorChar + "dummy.strict:line 4"));
 
 	[Test]
 	public void ReturnGetHashCode()

@@ -249,7 +249,7 @@ public sealed class MethodCallTests : TestExpressions
 				"\tconstant countOfFive = HasLengthImplementation(true)",
 				"\tconstant lengthSquare = GetLengthSquare(countOfFive)")).ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(program.Methods[1].GetBodyAndParseIfNeeded().ToString(),
-			Is.EqualTo("constant countOfFive = HasLengthImplementation(true)\r\n" +
+			Is.EqualTo("constant countOfFive = HasLengthImplementation(true)\n" +
 				"constant lengthSquare = GetLengthSquare(countOfFive)"));
 	}
 
@@ -263,7 +263,7 @@ public sealed class MethodCallTests : TestExpressions
 				"\tconstant mutableNumber = 5",
 				"\tmutableNumber + 10")).ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(program.Methods[0].GetBodyAndParseIfNeeded().ToString(),
-			Is.EqualTo("constant mutableNumber = 5\r\nmutableNumber + 10"));
+			Is.EqualTo("constant mutableNumber = 5\nmutableNumber + 10"));
 	}
 
 	[Test]

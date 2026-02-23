@@ -85,6 +85,13 @@ public sealed class MethodCallEvaluator(Executor executor)
 				? new ValueInstance(leftInstance.ReturnType, (string)left! + (string)right!)
 				: throw new NotSupportedException("Only + operator is supported for Text, got: " + op);
 		}
+		if (leftInstance.ReturnType.Name == Base.Text && rightInstance.ReturnType.Name == Base.Number)
+		{
+			return op == BinaryOperator.Plus
+				? new ValueInstance(leftInstance.ReturnType,
+					(string)left! + (int)EqualsExtensions.NumberToDouble(right))
+				: throw new NotSupportedException("Only + operator is supported for Text+Number, got: " + op);
+		}
 		if (leftInstance.ReturnType.IsIterator && rightInstance.ReturnType.IsIterator)
 		{
 			if (left is not IList<ValueInstance> leftList ||

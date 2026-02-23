@@ -45,11 +45,32 @@ public class MethodExpressionParser : ExpressionParser
 	private Expression TryParseCommon(Body body, ReadOnlySpan<char> input, bool makeMutable) =>
 		Boolean.TryParse(body, input) ?? Text.TryParse(body, input) ??
 		List.TryParseWithSingleElement(body, input, makeMutable) ?? Number.TryParse(body, input) ??
-		TryParseMemberOrZeroOrOneArgumentMethodOrNestedCall(body, input) ?? (input.IsOperator()
+		TryParseMemberOrZeroOrOneArgumentMethodOrNestedCall(body, input) ??
+		TryParseForBodyValueMethodCall(body, input) ?? (input.IsOperator()
 			? throw new InvalidOperatorHere(body, input.ToString())
 			: input.IsWord()
 				? throw new Body.IdentifierNotFound(body, input.ToString())
 				: throw new UnknownExpression(body, input.ToString()));
+
+	private static Expression? TryParseForBodyValueMethodCall(Body body, ReadOnlySpan<char> input)
+	{
+		if (!IsContextInForExpression(body) || !input.IsWord())
+			return null;
+		var valueVar = body.FindVariable(Type.ValueLowercase.AsSpan());
+		if (valueVar == null)
+			return null;
+		var inputName = input.ToString();
+		var valueType = valueVar.Type;
+		var valueCall = new VariableCall(valueVar, body.CurrentFileLineNumber);
+		var method = valueType.FindMethod(inputName, []);
+		if (method != null)
+			return new MethodCall(method, valueCall, [], null, body.CurrentFileLineNumber);
+		var member = valueType.Members.FirstOrDefault(m =>
+			m.Name.Equals(inputName, StringComparison.Ordinal));
+		return member != null
+			? new MemberCall(valueCall, member, body.CurrentFileLineNumber)
+			: null;
+	}
 
 	private static Expression? TryParseErrorOrTextOrListOrConditionalExpression(Body body,
 		ReadOnlySpan<char> input, bool makeMutable) =>
@@ -112,9 +133,18 @@ public class MethodExpressionParser : ExpressionParser
 							: throw new InvalidOperatorHere(body, input[methodRange].ToString());
 	}
 
-	private static bool IsContextInForExpression(Body body) =>
-		body.Parent != null && body.Parent.GetLine(body.LineRange.Start.Value - 1).TrimStart().
-			StartsWith(Keyword.For, StringComparison.Ordinal);
+	private static bool IsContextInForExpression(Body body)
+	{
+		var current = body;
+		while (current.Parent != null)
+		{
+			if (current.Parent.GetLine(current.LineRange.Start.Value - 1).TrimStart().
+				StartsWith(Keyword.For, StringComparison.Ordinal))
+				return true;
+			current = current.Parent;
+		}
+		return false;
+	}
 
 	/// <summary>
 	/// By far the most common use-case, we call something from another instance, use some binary

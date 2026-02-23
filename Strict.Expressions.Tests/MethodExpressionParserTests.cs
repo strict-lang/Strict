@@ -40,7 +40,7 @@ public sealed class MethodExpressionParserTests : TestExpressions
 		Assert.That(body.Expressions, Has.Count.EqualTo(3));
 		Assert.That(body.Expressions[0].ToString(), Is.EqualTo(MethodTests.ConstantNumber[1..]));
 		Assert.That(body.Expressions[1].ToString(),
-			Is.EqualTo(MethodTests.NestedMethodLines[2][1..] + "\r\n" +
+			Is.EqualTo(MethodTests.NestedMethodLines[2][1..] + Environment.NewLine +
 				MethodTests.NestedMethodLines[3][1..]));
 		Assert.That(body.Expressions[2].ToString(), Is.EqualTo("false"));
 	}

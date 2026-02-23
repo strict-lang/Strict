@@ -31,7 +31,17 @@ public sealed class ExecutionContext(Type type, Method method)
 		return Parent?.Find(name);
 	}
 
-	public ValueInstance Set(string name, ValueInstance value) => Variables[name] = value;
+	public ValueInstance Set(string name, ValueInstance value)
+	{
+		var ctx = this;
+		while (ctx != null)
+		{
+			if (ctx.Variables.ContainsKey(name))
+				return ctx.Variables[name] = value;
+			ctx = ctx.Parent;
+		}
+		return Variables[name] = value;
+	}
 
 	internal static IList BuildDictionaryPairsList(Type listMemberType,
 		Dictionary<ValueInstance, ValueInstance> dictionary)
