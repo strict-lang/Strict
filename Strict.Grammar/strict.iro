@@ -1,14 +1,16 @@
 name = strict
 file_extensions[] = strict;
 
-__KEYWORD_CONTROL \= ((if|else|for|to|from|in|is)(?!([a-zA-Z]+[a-zA-Z0-9_]*)))
-__KEYWORD_OTHER \= ((has|mutable|constant|return)(?!([a-zA-Z]+[a-zA-Z0-9_]*)))
-__KEYWORD_OPERATORS \= (is|not|and|or|xor)
-__OPERATORS \= ([\{\}.+|\-()<>\[\]!=%*,:/]+)
+__KEYWORD_CONTROL \= ((if|else|for|then|from|return)(?!([a-zA-Z]+[a-zA-Z0-9_]*)))
+__KEYWORD_OTHER \= ((has|constant|let|with)(?!([a-zA-Z]+[a-zA-Z0-9_]*)))
+__KEYWORD_OPERATORS \= (\b(?:is|not|and|or|xor|in|to)\b)
+__OPERATORS \= ([\{\}.+|\-()<>\[\]!=%*,:/^]+)
 __IDENTIFIER \= ([a-zA-Z]+[a-zA-Z0-9_]*)
 __OPTIONAL_IDENTIFIER \= ([a-zA-Z]*[a-zA-Z0-9_]*)
-__TYPE_NAME \= ([a-zA-Z][a-zA-Z0-9_<>\[\]\?]*)
-__BUILTIN \= (true|false|self)
+__TYPE_NAME \= ([a-zA-Z][a-zA-Z0-9_<>\[\]\?(),]*)
+__DANGER_TYPES \= (Any|any|(Mutable)(\([^\)]*\))?)
+__BASE_TYPES \= ((None|Any|Boolean|Booleans|Number|Numbers|Character|Characters|HashCode|Range|Ranges|Text|Texts|Error|Errors|ErrorWithValue|ErrorWithValues|Iterator|Iterators|List|Lists|Type|Types|Method|Methods|Logger|App|System|File|Files|Directory|Directories|TextWriter|TextReader|Stacktrace|Stacktraces|Name|Names|Dictionary|Dictionaries)(?!([a-zA-Z]+[a-zA-Z0-9_]*)))
+__BUILTIN \= (true|false|generic|iterator|elements|value|index|other|outer)
 
 styles [] {
    .None : style {
@@ -17,118 +19,117 @@ styles [] {
    }
 
    .NameOfLabel : style {
-       color = #111
+       color = #9CDCFE
        textmate_scope = variable.other
    }
 
    .keyword_declaration : style {
-      color = red
+      color = #569CD6
       textmate_scope = keyword.declaration
    }
 
    .keyword_control : style {
-      color = red
-      italic = true
+      color = #569CD6
       textmate_scope = keyword.control
    }
 
    .keyword_exception : style {
-      color = red
+      color = #569CD6
       textmate_scope = keyword.other
    }
 
    .keyword_other : style {
-      color = red
+      color = #569CD6
+      textmate_scope = keyword.other
+   }
+
+   .keyword_danger : style {
+      color = #FF0000
       textmate_scope = keyword.other
    }
 
    .Builtin : style {
-      color = blue
+      color = #9CDCFE
       textmate_scope = variable.language
    }
 
    .Identifier : style {
-      color = white
+      color = #D4D4D4
       textmate_scope = variable
    }
 
    .NameOfType : style {
-      color = green
+      color = #4EC9B0
       textmate_scope = entity.name.type
    }
 
    .NameOfVariable : style {
-      color = white
+      color = #9CDCFE
       textmate_scope = variable
    }
 
    .NameOfMember : style {
-      color = orange
+      color = #9CDCFE
       textmate_scope = variable.other.member
    }
 
    .NameOfFunction : style {
-      color = pink
+      color = #DCDCAA
       textmate_scope = entity.name.function
    }
 
-   .AmbigousMethodId : style {
-     color = white
-     textmate_scope = identifier
-   }
-
    .NameOfParameter : style {
-      color = white
+      color = #9CDCFE
       textmate_scope = variable.parameter
    }
 
    .NameOfAttribute : style {
-      color = brown
+      color = #C586C0
       textmate_scope = entity.other.attribute-name
    }
 
    .FunctionCall : style {
-      color = yellow
+      color = #DCDCAA
       textmate_scope = entity.name.function
    }
 
    .NumberLiteral : style {
-      color = blue
+      color = #B5CEA8
       textmate_scope = constant.numeric
    }
 
    .Punctuation : style {
-      color = orange
+      color = #D4D4D4
       textmate_scope = punctuation
    }
 
    .Accessor : style {
-      color = orange
+      color = #D4D4D4
       textmate_scope = punctuation
    }
 
    .Assign : style {
-      color = orange
+      color = #D4D4D4
       textmate_scope = punctuation
    }
 
    .Operator : style {
-      color = orange
+      color = #D7BA7D
       textmate_scope = keyword.operator
    }
 
    .KeywordOperator : style {
-      color = orange
+      color = #C586C0
       textmate_scope = keyword.operator
    }
 
    .TextLiteral : style {
-      color = blue
+      color = #D69D85
       textmate_scope = string
    }
 
    .Illegal : style {
-      color = white
+      color = #D4D4D4
       background_color = red
       textmate_scope = invalid
    }
@@ -177,6 +178,10 @@ contexts [] {
          : eol_pop {
          }
          : pattern {
+            regex \= $${__DANGER_TYPES}
+            styles [] = .keyword_danger;
+         }
+         : pattern {
             regex \= $${__TYPE_NAME}
             styles [] = .NameOfType;
          }
@@ -188,6 +193,10 @@ contexts [] {
    }
 
    ClassSpecific : context {
+     : pattern {
+       regex \= $${__DANGER_TYPES}
+       styles []= .keyword_danger;
+     }
      : pattern {
        regex \= (implement)(\s+)$${__TYPE_NAME}
        styles []= .keyword_declaration, .None, .NameOfType;
@@ -245,6 +254,10 @@ contexts [] {
    }
 
    MethodDeclaration : context {
+      : pattern {
+         regex \= $${__DANGER_TYPES}
+         styles []= .keyword_danger;
+      }
       : inline_push {
          regex \= (method)(\s+)$${__IDENTIFIER}(\s*)(\()
          styles [] = .keyword_declaration, .None, .NameOfFunction, .None, .Punctuation;
@@ -309,10 +322,14 @@ contexts [] {
 
    MutableOrConstant : context {
       : pattern {
-        regex \= (mutable|constant)(\s+)$${__IDENTIFIER}(\s+)(\=)
+        regex \= (mutable)(\s+)$${__IDENTIFIER}(\s+)(\=)
+        styles []= .keyword_danger, .None, .NameOfVariable, .None, .Punctuation;
+     }
+     : pattern {
+        regex \= (constant)(\s+)$${__IDENTIFIER}(\s+)(\=)
         styles []= .keyword_declaration, .None, .NameOfVariable, .None, .Punctuation;
       }
-      : pattern {
+     : pattern {
         regex \= (has)(\s+)$${__IDENTIFIER}(\s+)$${__TYPE_NAME}
         styles []= .keyword_declaration, .None, .NameOfVariable, .None, .NameOfType;
       }
@@ -330,6 +347,10 @@ contexts [] {
       : include "MutableOrConstant";
       : include "CreateExpression";
       : include "Keyword";
+      : pattern {
+        regex \= $${__DANGER_TYPES}
+        styles []= .keyword_danger;
+      }
       : include "MethodCall";
 
       : pattern {
@@ -363,6 +384,7 @@ contexts [] {
             regex \= (\))
             styles [] = .Punctuation;
          }
+         : include "Expressions";
          : include "ExpressionList" ;
          : pattern {
             regex \= (,)
@@ -372,6 +394,10 @@ contexts [] {
    }
 
    Keyword : context {
+     : pattern {
+         regex \= (mutable)(?!([a-zA-Z]+[a-zA-Z0-9_]*))
+         styles [] = .keyword_danger;
+      }
      : pattern {
          regex \= $${__KEYWORD_CONTROL}
          styles [] = .keyword_control;
@@ -383,6 +409,14 @@ contexts [] {
    }
 
    Operator : context {
+      : pattern {
+         regex \= (\b(?:is)\b)(\s+)(\b(?:not)\b)(\s+)(\b(?:in)\b)
+         styles [] = .KeywordOperator, .KeywordOperator, .KeywordOperator, .KeywordOperator, .KeywordOperator;
+      }
+      : pattern {
+         regex \= (\b(?:is)\b)(\s+)(\b(?:not)\b)
+         styles [] = .KeywordOperator, .KeywordOperator, .KeywordOperator;
+      }
       : pattern {
          regex  \= $${__OPERATORS}
          styles [] = .Operator;
@@ -401,6 +435,31 @@ contexts [] {
    }
 
    MethodCall : context {
+      : pattern {
+         regex \= (\s+)(Mutable|Mutables)(\s*)(\()
+         styles [] = .None, .keyword_danger, .None, .Punctuation;
+      }
+      : pattern {
+         regex \= (Mutable)(\([^\)]*\))
+         styles [] = .keyword_danger, .Punctuation;
+      }
+      : pattern {
+         regex \= $${__DANGER_TYPES}
+         styles [] = .keyword_danger;
+      }
+      : inline_push {
+         regex \= (\b(?:from|to|is|in|get)\b)(\s*)(\<.*\>)?(\s*)(\()
+         styles [] = .KeywordOperator, .None, .NameOfType, .None, .Punctuation;
+         : pop {
+            regex \= (\))
+            styles [] = .Punctuation;
+         }
+         : include "main" ;
+         : pattern {
+            regex \= (,)
+            styles [] = .Punctuation;
+         }
+      }
       : inline_push {
          regex \= (.)$${__IDENTIFIER}(\s*)(\<.*\>)?(\s*)(\()
          styles [] = .Accessor, .FunctionCall, .None, .NameOfType, .None, .Punctuation;
@@ -451,6 +510,14 @@ contexts [] {
 
 
    Identifier : context {
+      : pattern {
+         regex \= $${__DANGER_TYPES}
+         styles [] = .keyword_danger;
+      }
+      : pattern {
+         regex \= $${__BASE_TYPES}
+         styles [] = .NameOfType;
+      }
       : pattern {
          regex \= $${__BUILTIN}
          styles [] = .Builtin;

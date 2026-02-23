@@ -7,14 +7,18 @@ namespace Strict.Expressions;
 /// If expressions are used for branching, can also be used as an input for any other expression
 /// like method arguments, other conditions, etc. like conditional operators.
 /// </summary>
-public sealed class If(
-	Expression condition,
-	Expression then,
-	int lineNumber = 0,
-	Expression? optionalElse = null,
-	Body? bodyForErrorMessage = null) : Expression(
+public sealed class If(Expression condition, Expression then, int lineNumber = 0,
+	Expression? optionalElse = null, Body? bodyForErrorMessage = null) : Expression(
 	CheckExpressionAndGetMatchingType(then, optionalElse, bodyForErrorMessage), lineNumber)
 {
+	private const string IfPrefix = "if ";
+	private const string IfKeyword = "if";
+	public const string ThenSeparator = " then ";
+	private const string ElseSeparator = " else ";
+	private const string ElsePrefix = "else ";
+	private const string ElseKeyword = "else";
+	private const string SelectorSuffix = " is";
+
 	private static Type CheckExpressionAndGetMatchingType(Expression then, Expression? optionalElse,
 		Body? bodyForErrorMessage) =>
 		then is Declaration || optionalElse is Declaration
@@ -59,10 +63,10 @@ public sealed class If(
 			Then.ReturnType.IsError || OptionalElse.ReturnType.IsError) && Then is not Body &&
 		OptionalElse is not Body && OptionalElse is not If
 			? Condition + ThenSeparator + Then + ElseSeparator + OptionalElse
-			: "if " + Condition + Environment.NewLine + IndentExpression(Then) + (OptionalElse != null
+			: IfPrefix + Condition + Environment.NewLine + IndentExpression(Then) + (OptionalElse != null
 				? OptionalElse is If
-					? Environment.NewLine + "else " + OptionalElse
-					: Environment.NewLine + "else" + Environment.NewLine + IndentExpression(OptionalElse)
+					? Environment.NewLine + ElsePrefix + OptionalElse
+					: Environment.NewLine + ElseKeyword + Environment.NewLine + IndentExpression(OptionalElse)
 				: "");
 
 	public override bool IsConstant =>
@@ -73,12 +77,12 @@ public sealed class If(
 		(OptionalElse?.Equals(otherIf.OptionalElse) ?? otherIf.OptionalElse == null);
 
 	public static Expression? TryParse(Body body, ReadOnlySpan<char> line) =>
-		line.Equals("if", StringComparison.Ordinal)
+		line.Equals(IfKeyword, StringComparison.Ordinal)
 			? throw new MissingCondition(body)
-			: line.Equals("else", StringComparison.Ordinal) ||
+			: line.Equals(ElseKeyword, StringComparison.Ordinal) ||
 			line.StartsWith("else if", StringComparison.Ordinal)
 				? throw new UnexpectedElse(body)
-				: line.StartsWith("if ", StringComparison.Ordinal)
+				: line.StartsWith(IfPrefix, StringComparison.Ordinal)
 					? TryParseIf(body, line)
 					: null;
 
@@ -244,10 +248,5 @@ public sealed class If(
 		return count;
 	}
 
-	public const string ThenSeparator = " then ";
-	private const string ElseSeparator = " else ";
-	private const string ElsePrefix = "else ";
-	private const string ElseKeyword = "else";
-	private const string SelectorSuffix = " is";
 	public sealed class MissingElseExpression(Body body) : ParsingFailed(body);
 }

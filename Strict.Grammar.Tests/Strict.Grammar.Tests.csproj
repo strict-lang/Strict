@@ -11,7 +11,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Include="..\Grammar\Strict.ebnf" Link="Strict.ebnf">
+    <Content Include="..\Strict.Grammar\Strict.ebnf" Link="Strict.ebnf">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
@@ -30,7 +30,7 @@
 
   <ItemGroup>
     <Compile Update="GrammarTests.cs">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </Compile>
   </ItemGroup>
 

@@ -12,20 +12,13 @@ using PipeOptions = System.IO.Pipes.PipeOptions;
 
 //ncrunch: no coverage start
 var (input, output) = await CreateAndGetPipeline();
-// @formatter:off
- var strictBase = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
-var server = await LanguageServer.From(options =>
-	options.WithInput(input)
-		.WithOutput(output)
-		.WithLoggerFactory(new LoggerFactory())
-		.AddDefaultLoggingProvider()
-		.WithServices(services => ConfigureServices(services, strictBase))
-		.WithHandler<TextDocumentSynchronizer>()
-		.WithHandler<AutoCompletor>()
-		.WithHandler<CommandExecutor>()
-		.WithHandler<DocumentHighlighter>());
+var strictBase = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
+var server = await LanguageServer.From(options => options.WithInput(input).WithOutput(output).
+	WithLoggerFactory(new LoggerFactory()).AddDefaultLoggingProvider().
+	WithServices(services => ConfigureServices(services, strictBase)).
+	WithHandler<TextDocumentSynchronizer>().WithHandler<AutoCompletor>().
+	WithHandler<CommandExecutor>().WithHandler<DocumentHighlighter>());
 await server.WaitForExit;
-// @formatter:on
 await Task.WhenAny(Task.Run(async () =>
 {
 	while (true)

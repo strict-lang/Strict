@@ -1,0 +1,51 @@
+LETTER				:= [A-Za-z]
+DIGIT					:= [0-9]
+NUMBER				:= [0-9]+ ('.' [0-9]+)?
+STRINGCHAR		:= [a-zA-Z0-9 .,;:!?+*/=<>()_^%&|~@#$'-]
+STRING				:= '"' (STRINGCHAR | TAB | '\\')* '"'
+LF						:= '\n'
+TAB						:= '\t'
+NAME					:= [A-Za-z]+
+PATH					:= NAME ('.' NAME)*
+file					= (member | method | assignment)*
+package				= PATH
+type					= NAME ('(' variable (',' variable)* ')')?
+member				= 'has' variable ('with' expression)? LF?
+variable			= NAME type?
+method				= methodname ('(' parameters ')')? type? LF? block?
+parameters		= parameter (',' parameter)*
+parameter			= NAME type? ('=' expression)?
+methodname		= NAME | binary_op | unary_op | conversion
+block					= (TAB+ expression LF?)*
+expression		= conditional
+conditional		= logical_or ('then' expression ('else' | ':') expression)?
+logical_or		= logical_and (logical_or_op logical_and)*
+logical_and		= equality (logical_and_op equality)*
+equality			= comparison (equality_op comparison)*
+comparison		= additive (comparison_op additive)*
+additive			= multiplicative (additive_op multiplicative)*
+multiplicative	= unary (multiplicative_op unary)*
+unary				= unary_op unary | postfix
+postfix			= primary ('.' methodcall | conversion variablecall)*
+primary			= constant | group | return | mutable | if | for | member | assignment | variablecall
+constant			= 'true' | 'false' | NUMBER | STRING
+conversion		= 'from' | 'to'
+variablecall	= NAME ('(' arguments? ')')?
+assignment		= 'constant'? 'mutable'? 'let'? NAME '=' expression
+group					= '(' expression (',' expression)* ')'
+return				= 'return' expression
+reference			= NAME
+methodcall		= methodname ('(' arguments? ')')?
+arguments			= argument (',' argument)*
+argument			= expression
+if						= 'if' expression LF block ('else' LF block)?
+for						= 'for' (reference 'in')? expression LF block
+binary_op			= '+' | '-' | '*' | '/' | '%' | '^' | '<' | '<=' | '>' | '>=' | 'in' | 'is' | 'is not' | 'is not in' | 'and' | 'or' | 'xor'
+logical_or_op	= 'or' | 'xor'
+logical_and_op	= 'and'
+equality_op		= 'is not in' | 'is not' | 'is' | 'in'
+comparison_op	= '<' | '<=' | '>' | '>='
+additive_op		= '+' | '-'
+multiplicative_op	= '*' | '/' | '%' | '^'
+unary_op			= '-' | 'not'
+mutable				= 'mutable' NAME '=' expression
