@@ -26,7 +26,7 @@ public sealed class Executor(TestBehavior behavior = TestBehavior.OnFirstRun)
 	private readonly HashSet<Method> validatedMethods = [];
 	private BodyEvaluator BodyEvaluator => field ??= new BodyEvaluator(this);
 	private IfEvaluator IfEvaluator => field ??= new IfEvaluator(this);
-  private SelectorIfEvaluator SelectorIfEvaluator => field ??= new SelectorIfEvaluator(this);
+	private SelectorIfEvaluator SelectorIfEvaluator => field ??= new SelectorIfEvaluator(this);
 	private ForEvaluator ForEvaluator => field ??= new ForEvaluator(this);
 	private MethodCallEvaluator MethodCallEvaluator => field ??= new MethodCallEvaluator(this);
 	private ToEvaluator ToEvaluator => field ??= new ToEvaluator(this);
@@ -77,7 +77,7 @@ public sealed class Executor(TestBehavior behavior = TestBehavior.OnFirstRun)
 	{
 		var context =
 			new ExecutionContext(method.Type, method) { This = instance, Parent = parentContext };
-		if (!runOnlyTests)
+    if (!runOnlyTests)
 			for (var i = 0; i < method.Parameters.Count; i++)
 			{
 				var param = method.Parameters[i];
@@ -86,7 +86,7 @@ public sealed class Executor(TestBehavior behavior = TestBehavior.OnFirstRun)
 					: param.DefaultValue != null
 						? RunExpression(param.DefaultValue, context)
 						: throw new MissingArgument(method, param.Name, args);
-				context.Set(param.Name, arg);
+				context.Variables[param.Name] = arg;
 			}
 		AddDictionaryElementsAlias(context, instance);
 		return context;
@@ -230,7 +230,7 @@ public sealed class Executor(TestBehavior behavior = TestBehavior.OnFirstRun)
 			MemberCall m => EvaluateMemberCall(m, context),
 			ListCall listCall => MethodCallEvaluator.EvaluateListCall(listCall, context),
 			If iff => IfEvaluator.Evaluate(iff, context),
-     SelectorIf selectorIf => SelectorIfEvaluator.Evaluate(selectorIf, context),
+			SelectorIf selectorIf => SelectorIfEvaluator.Evaluate(selectorIf, context),
 			For f => ForEvaluator.Evaluate(f, context),
 			Return r => EvaluateReturn(r, context),
 			To t => ToEvaluator.Evaluate(t, context),

@@ -85,6 +85,13 @@ public sealed class MethodCallEvaluator(Executor executor)
 				? new ValueInstance(leftInstance.ReturnType, (string)left! + (string)right!)
 				: throw new NotSupportedException("Only + operator is supported for Text, got: " + op);
 		}
+		if (leftInstance.ReturnType.Name == Base.Text && rightInstance.ReturnType.Name == Base.Number)
+		{
+			return op == BinaryOperator.Plus
+				? new ValueInstance(leftInstance.ReturnType,
+					(string)left! + (int)EqualsExtensions.NumberToDouble(right))
+				: throw new NotSupportedException("Only + operator is supported for Text+Number, got: " + op);
+		}
 		if (leftInstance.ReturnType.IsIterator && rightInstance.ReturnType.IsIterator)
 		{
 			if (left is not IList<ValueInstance> leftList ||
@@ -147,15 +154,15 @@ public sealed class MethodCallEvaluator(Executor executor)
 					? Executor.Bool(call.Method, matches)
 					: Executor.Bool(call.Method, !matches);
 			}
-			if (call.Instance!.ReturnType.Name == Base.Character && right is string rightText)
+      if (leftInstance.ReturnType.Name == Base.Character && right is string rightText)
 			{
 				right = (int)rightText[0];
-				rightInstance = new ValueInstance(call.Instance.ReturnType, right);
+       rightInstance = new ValueInstance(leftInstance.ReturnType, right);
 			}
-			if (call.Instance.ReturnType.Name == Base.Text && right is int rightInt)
+      if (leftInstance.ReturnType.Name == Base.Text && right is int rightInt)
 			{
 				right = rightInt + "";
-				rightInstance = new ValueInstance(call.Instance.ReturnType, right);
+       rightInstance = new ValueInstance(leftInstance.ReturnType, right);
 			}
 			var equals = leftInstance.Equals(rightInstance);
 			return Executor.Bool(call.Method, op is BinaryOperator.Is

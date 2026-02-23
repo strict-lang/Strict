@@ -126,7 +126,7 @@ public abstract class Visitor
 				Visit(@case.Pattern, body, context);
 				Visit(@case.Then, body, context);
 			}
-     Visit(selectorIf.OptionalElse, body, context);
+			Visit(selectorIf.OptionalElse, body, context);
 		}
 		else if (expression is ListCall listCall)
 		{
