@@ -31,7 +31,7 @@ public abstract class ExpressionVisitor
 		return block;
 	}
 
-  protected IReadOnlyList<string> VisitSelectorIf(SelectorIf selectorIf)
+	protected IReadOnlyList<string> VisitSelectorIf(SelectorIf selectorIf)
 	{
 		var block = new List<string> { "switch (" + Visit(selectorIf.Selector) + ")", "{" };
 		foreach (var @case in selectorIf.Cases)

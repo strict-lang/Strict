@@ -1,7 +1,6 @@
 using Strict.Expressions;
 using Strict.Language;
 using Strict.Language.Tests;
-using System.Collections.Generic;
 using Type = Strict.Language.Type;
 
 namespace Strict.HighLevelRuntime.Tests;
@@ -87,7 +86,7 @@ public sealed class IfTests
 	{
 		using var t = CreateType(nameof(SelectorIfUsesElseWhenNoCaseMatches), "has value Number",
 			"Run Boolean", "\tif value is", "\t\t2 then true", "\t\telse false");
-    var instance = new ValueInstance(t, 3.0);
+		var instance = new ValueInstance(t, 3.0);
 		var result = executor.Execute(t.Methods.Single(m => m.Name == "Run"), instance, []);
 		Assert.That(result.Value, Is.EqualTo(false));
 	}

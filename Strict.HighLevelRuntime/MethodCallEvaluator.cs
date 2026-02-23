@@ -154,15 +154,15 @@ public sealed class MethodCallEvaluator(Executor executor)
 					? Executor.Bool(call.Method, matches)
 					: Executor.Bool(call.Method, !matches);
 			}
-			if (call.Instance!.ReturnType.Name == Base.Character && right is string rightText)
+      if (leftInstance.ReturnType.Name == Base.Character && right is string rightText)
 			{
 				right = (int)rightText[0];
-				rightInstance = new ValueInstance(call.Instance.ReturnType, right);
+       rightInstance = new ValueInstance(leftInstance.ReturnType, right);
 			}
-			if (call.Instance.ReturnType.Name == Base.Text && right is int rightInt)
+      if (leftInstance.ReturnType.Name == Base.Text && right is int rightInt)
 			{
 				right = rightInt + "";
-				rightInstance = new ValueInstance(call.Instance.ReturnType, right);
+       rightInstance = new ValueInstance(leftInstance.ReturnType, right);
 			}
 			var equals = leftInstance.Equals(rightInstance);
 			return Executor.Bool(call.Method, op is BinaryOperator.Is

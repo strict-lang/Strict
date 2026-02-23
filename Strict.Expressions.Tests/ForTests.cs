@@ -108,7 +108,7 @@ public sealed class ForTests : TestExpressions
 			"\t\t1"
 		]);
 		Assert.That(runMethod.GetBodyAndParseIfNeeded().ToString(),
-			Is.EqualTo("for elements\n\t1"));
+			Is.EqualTo("for elements" + Environment.NewLine + "\t1"));
 	}
 
 	[Test]
@@ -116,36 +116,31 @@ public sealed class ForTests : TestExpressions
 		Assert.That(
 			((For)((Body)ParseExpression("mutable myIndex = 0", "for myIndex in Range(0, 5)",
 				"\tlogger.Log(myIndex)")).Expressions[1]).ToString(),
-			Is.EqualTo("for myIndex in Range(0, 5)\n\tlogger.Log(myIndex)"));
+			Is.EqualTo("for myIndex in Range(0, 5)" + Environment.NewLine + "\tlogger.Log(myIndex)"));
 
 	[TestCase("for myIndex in Range(0, 5)", "\tlogger.Log(myIndex)",
 		"for myIndex in Range(0, 5)\n\tlogger.Log(myIndex)")]
 	[TestCase("for (1, 2, 3)", "\tlogger.Log(index)", "for (1, 2, 3)\n\tlogger.Log(index)")]
 	[TestCase("for (1, 2, 3)", "\tlogger.Log(value)", "for (1, 2, 3)\n\tlogger.Log(value)")]
-	[TestCase("for myIndex in Range(2, 5)",
-		"\tlogger.Log(myIndex)",
-		"\tfor Range(0, 10)",
+	[TestCase("for myIndex in Range(2, 5)", "\tlogger.Log(myIndex)", "\tfor Range(0, 10)",
 		"\t\tlogger.Log(index)",
-		"for myIndex in Range(2, 5)\n" +
-		"\tlogger.Log(myIndex)\n" +
-		"\tfor Range(0, 10)\n" +
+		"for myIndex in Range(2, 5)\n" + "\tlogger.Log(myIndex)\n" + "\tfor Range(0, 10)\n" +
 		"\t\tlogger.Log(index)")]
-	[TestCase("for firstIndex in Range(1, 10)",
-		"\tfor secondIndex in Range(1, 10)",
-		"\t\tlogger.Log(firstIndex)",
-		"\t\tlogger.Log(secondIndex)",
-		"for firstIndex in Range(1, 10)\n" +
-		"\tfor secondIndex in Range(1, 10)\n" +
-		"\t\tlogger.Log(firstIndex)\n" +
-		"\t\tlogger.Log(secondIndex)")]
+	[TestCase("for firstIndex in Range(1, 10)", "\tfor secondIndex in Range(1, 10)",
+		"\t\tlogger.Log(firstIndex)", "\t\tlogger.Log(secondIndex)",
+		"for firstIndex in Range(1, 10)\n" + "\tfor secondIndex in Range(1, 10)\n" +
+		"\t\tlogger.Log(firstIndex)\n" + "\t\tlogger.Log(secondIndex)")]
 	public void ParseForExpressionWithCustomVariableName(params string[] lines) =>
-		Assert.That(((For)ParseExpression(lines[..^1])).ToString(), Is.EqualTo(lines[^1]));
+		Assert.That(((For)ParseExpression(lines[..^1])).ToString(),
+			Is.EqualTo(lines[^1].Replace("\n", Environment.NewLine)));
 
 	[Test]
 	public void NestedIfInForIsIndented() =>
 		Assert.That(
 			((For)ParseExpression("for Range(0, 2)", "\tif five is 5", "\t\tlogger.Log(\"Hey\")")).
-			ToString(), Is.EqualTo("for Range(0, 2)\n\tif five is 5\n\t\tlogger.Log(\"Hey\")"));
+			ToString(),
+			Is.EqualTo("for Range(0, 2)" + Environment.NewLine + "\tif five is 5" +
+				Environment.NewLine + "\t\tlogger.Log(\"Hey\")"));
 
 	[Test]
 	public void ValidIteratorReturnTypeWithValue() =>
@@ -167,7 +162,7 @@ public sealed class ForTests : TestExpressions
 		"\tlogger.Log(element)", "for element in (\"1\", \"2\", \"3\")\n\tlogger.Log(element)")]
 	public void ParseForListExpressionWithIterableVariable(params string[] lines) =>
 		Assert.That(((For)((Body)ParseExpression(lines[..^1])).Expressions[1]).ToString(),
-			Is.EqualTo(lines[^1]));
+			Is.EqualTo(lines[^1].Replace("\n", Environment.NewLine)));
 
 	[Test]
 	public void ValidIteratorReturnTypeForRange() =>
