@@ -1,11 +1,14 @@
+using BenchmarkDotNet.Attributes;
+using BenchmarkDotNet.Engines;
+using BenchmarkDotNet.Running;
+
 namespace Strict.Runtime.Tests;
 
+[MemoryDiagnoser]
+[SimpleJob(RunStrategy.Throughput, warmupCount: 1, iterationCount: 10)]
 public sealed class AdderProgramTests : BaseVirtualMachineTests
 {
-	[SetUp]
-	public void Setup() => vm = new BytecodeInterpreter();
-
-	private BytecodeInterpreter vm = null!;
+	private readonly BytecodeInterpreter vm = new();
 
 	private static readonly string[] AdderProgramCode =
 	[
@@ -34,7 +37,14 @@ public sealed class AdderProgramTests : BaseVirtualMachineTests
 		Assert.That(ExecuteAddTotals("AdderProgram(1, 2).AddTotals"), Is.EqualTo(new[] { 1m, 3m }));
 
 	[Test]
+	[Category("Slow")]
+	[Benchmark]
 	public void AddTotalsForThreeNumbers() =>
 		Assert.That(ExecuteAddTotals("AdderProgram(1, 2, 3).AddTotals"),
 			Is.EqualTo(new[] { 1m, 3m, 6m }));
+
+	//ncrunch: no coverage start
+	[Test]
+	[Category("Manual")]
+	public void BenchmarkCompare() => BenchmarkRunner.Run<AdderProgramTests>();
 }

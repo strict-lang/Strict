@@ -1,3 +1,6 @@
+using BenchmarkDotNet.Attributes;
+using BenchmarkDotNet.Engines;
+using BenchmarkDotNet.Running;
 using Strict.Expressions;
 using Strict.HighLevelRuntime;
 using Strict.Language;
@@ -6,12 +9,11 @@ using Type = Strict.Language.Type;
 
 namespace Strict.TestRunner.Tests;
 
+[MemoryDiagnoser]
+[SimpleJob(RunStrategy.Throughput, warmupCount: 1, iterationCount: 10)]
 public sealed class TestExecutorTests
 {
-	[SetUp]
-	public void Setup() => executor = new TestExecutor();
-
-	private TestExecutor executor = null!;
+	private readonly TestExecutor executor = new();
 
 	[Test]
 	public void RunMethod()
@@ -221,5 +223,12 @@ public sealed class TestExecutorTests
 	}
 
 	[Test]
+	[Category("Slow")]
+	[Benchmark]
 	public void RunAllTestsInPackage() => executor.RunAllTestsInPackage(TestPackage.Instance);
+
+	//ncrunch: no coverage start
+	[Test]
+	[Category("Manual")]
+	public void BenchmarkCompare() => BenchmarkRunner.Run<TestExecutorTests>();
 }
