@@ -11,7 +11,7 @@ public sealed class GrammarTests
 	public void CreateGrammarAndSource()
 	{
 		grammar = new EbnfGrammar(EbnfStyle.CharacterSets | EbnfStyle.CardinalityFlags |
-			EbnfStyle.WhitespaceSeparator | EbnfStyle.EscapeTerminalStrings);
+			EbnfStyle.EscapeTerminalStrings);
 		source = File.ReadAllText("Strict.ebnf");
 	}
 

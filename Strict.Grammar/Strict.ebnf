@@ -25,8 +25,9 @@ equality			= comparison (equality_op comparison)*
 comparison		= additive (comparison_op additive)*
 additive			= multiplicative (additive_op multiplicative)*
 multiplicative	= unary (multiplicative_op unary)*
-unary				= unary_op unary | postfix
-postfix			= primary ('.' methodcall | conversion variablecall)*
+unary				= unary_op unary | convert
+convert			= postfix conversion variablecall | postfix
+postfix			= primary ('.' methodcall)*
 primary			= constant | group | return | mutable | if | for | member | assignment | variablecall
 constant			= 'true' | 'false' | NUMBER | STRING
 conversion		= 'from' | 'to'
@@ -43,7 +44,7 @@ for						= 'for' (reference 'in')? expression LF block
 binary_op			= '+' | '-' | '*' | '/' | '%' | '^' | '<' | '<=' | '>' | '>=' | 'in' | 'is' | 'is not' | 'is not in' | 'and' | 'or' | 'xor'
 logical_or_op	= 'or' | 'xor'
 logical_and_op	= 'and'
-equality_op		= 'is not in' | 'is not' | 'is' | 'in'
+equality_op		= 'is' 'not' 'in' | 'is' 'not' | 'is' | 'in'
 comparison_op	= '<' | '<=' | '>' | '>='
 additive_op		= '+' | '-'
 multiplicative_op	= '*' | '/' | '%' | '^'
