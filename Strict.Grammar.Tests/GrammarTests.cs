@@ -60,7 +60,7 @@ public sealed class GrammarTests
 	{
 		var built = grammar.Build(source, Start);
 		built.Separator = (Terminals.Set(' ') | Terminals.Set('\r')).Repeat(0);
-    built.Optimizations = GrammarOptimizations.CharacterSetAlternations |
+		built.Optimizations = GrammarOptimizations.CharacterSetAlternations |
 			GrammarOptimizations.TrimUnnamedUnaryParsers |
 			GrammarOptimizations.TrimSingleItemSequencesOrAlterations;
 		return built;

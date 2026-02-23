@@ -142,7 +142,7 @@ public sealed class BodyTests : TestExpressions
       "\tconstant number = 5",
       "\tfor Range(1, number)",
       "\t\tif index is number",
-      "\t\t\tlet current = index",
+      "\t\t\tconstant current = index",
       "\t\t\treturn current",
       "\tnumber")).ParseMembersAndMethods(new MethodExpressionParser());
 		// @formatter:on

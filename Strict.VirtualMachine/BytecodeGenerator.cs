@@ -134,10 +134,9 @@ public sealed class ByteCodeGenerator
 		_ = TryGenerateBodyStatements(expression) ?? TryGenerateBinaryStatements(expression) ??
 			TryGenerateIfStatements(expression) ?? TryGenerateAssignmentStatements(expression) ??
 			TryGenerateLoopStatements(expression) ?? TryGenerateMutableStatements(expression) ??
-			TryGenerateMemberCallStatement(expression) ?? TryGenerateToOperatorStatement(expression) ??
-			TryGenerateVariableCallStatement(expression) ??
-			TryGenerateMethodCallStatement(expression) ?? TryGenerateValueStatement(expression) ??
-			TryGenerateListCallStatement(expression) ??
+			TryGenerateMemberCallStatement(expression) ??
+			TryGenerateVariableCallStatement(expression) ?? TryGenerateValueStatement(expression) ??
+			TryGenerateMethodCallStatement(expression) ?? TryGenerateListCallStatement(expression) ??
 			throw new NotSupportedException(expression.ToString());
 	}
 
@@ -150,14 +149,6 @@ public sealed class ByteCodeGenerator
 		statements.Add(new ListCallStatement(registry.AllocateRegister(), indexRegister,
 			listCall.List.ToString()));
 		return true;
-	}
-
-	private bool? TryGenerateToOperatorStatement(Expression expression)
-	{
-		if (expression is not To)
-			return null;
-		// To is a MethodCall - generate as Invoke (interpreter handles conversion)
-		return TryGenerateMethodCallStatement(expression);
 	}
 
 	private bool? TryGenerateVariableCallStatement(Expression expression)

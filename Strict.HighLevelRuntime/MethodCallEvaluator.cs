@@ -154,15 +154,15 @@ public sealed class MethodCallEvaluator(Executor executor)
 					? Executor.Bool(call.Method, matches)
 					: Executor.Bool(call.Method, !matches);
 			}
-      if (leftInstance.ReturnType.Name == Base.Character && right is string rightText)
+			if (leftInstance.ReturnType.Name == Base.Character && right is string rightText)
 			{
 				right = (int)rightText[0];
-       rightInstance = new ValueInstance(leftInstance.ReturnType, right);
+				rightInstance = new ValueInstance(leftInstance.ReturnType, right);
 			}
-      if (leftInstance.ReturnType.Name == Base.Text && right is int rightInt)
+			if (leftInstance.ReturnType.Name == Base.Text && right is int rightInt)
 			{
 				right = rightInt + "";
-       rightInstance = new ValueInstance(leftInstance.ReturnType, right);
+				rightInstance = new ValueInstance(leftInstance.ReturnType, right);
 			}
 			var equals = leftInstance.Equals(rightInstance);
 			return Executor.Bool(call.Method, op is BinaryOperator.Is
@@ -308,7 +308,11 @@ public sealed class MethodCallEvaluator(Executor executor)
 				((IDictionary)instance.Value!)[args[0]] = args[1];
 			return instance;
 		}
-		return executor.Execute(call.Method, instance, args, ctx);
+		var result = executor.Execute(call.Method, instance, args, ctx);
+		if (call.Method.ReturnType.IsMutable && call.Instance is VariableCall variableCall &&
+			instance != null)
+			ctx.Set(variableCall.Variable.Name, new ValueInstance(instance.ReturnType, result.Value));
+		return result;
 	}
 
 	private static ValueInstance Error(string name, ExecutionContext ctx, Expression? source = null)

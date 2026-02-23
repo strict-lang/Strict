@@ -127,13 +127,13 @@ public sealed class For(Expression[] customVariables, Expression iterator, Expre
 		if (innerBody.FindVariable(Type.IndexLowercase) != null &&
 			innerBody.FindVariable(Type.ValueLowercase) != null)
 			return;
-   innerBody.AddVariable(Type.IndexLowercase, new Number(body.Method, 0), false);
+		innerBody.AddVariable(Type.IndexLowercase, new Number(body.Method, 0), false);
 		var valueExpression = body.Method.ParseExpression(body,
 			GetVariableExpressionValue(body, line), true);
 		if (valueExpression.ReturnType is GenericTypeImplementation { Generic.Name: Base.List } ||
 			valueExpression.ReturnType.Name == Base.List)
 			valueExpression = new ListCall(valueExpression, new Number(body.Method, 0));
-    innerBody.AddVariable(Type.ValueLowercase, valueExpression, false);
+		innerBody.AddVariable(Type.ValueLowercase, valueExpression, false);
 	}
 
 	private static string GetVariableExpressionValue(Body body, ReadOnlySpan<char> line,
@@ -158,7 +158,7 @@ public sealed class For(Expression[] customVariables, Expression iterator, Expre
 
 	private static ReadOnlySpan<char> FindVariableNames(ReadOnlySpan<char> line) =>
 		line.Contains(InWithSpaces, StringComparison.Ordinal)
-			? line[4..(line.LastIndexOf(InWithSpaces))]
+			? line[4..line.LastIndexOf(InWithSpaces)]
 			: "";
 
 	private static Expression[] AddVariablesIfTheyDoNotExistYet(Body body, ReadOnlySpan<char> line,
@@ -188,7 +188,7 @@ public sealed class For(Expression[] customVariables, Expression iterator, Expre
 					: null, body.Method.Type.FindMember(name)!));
 				continue;
 			}
-     innerBody.AddVariable(name, GetVariableValue(body, line, variableIndex), false);
+			innerBody.AddVariable(name, GetVariableValue(body, line, variableIndex), false);
 			variables.Add(new VariableCall(innerBody.Variables!.Last(), body.CurrentFileLineNumber));
 			if (variableIndex >= 0)
 				variableIndex++;

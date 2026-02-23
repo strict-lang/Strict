@@ -182,7 +182,7 @@ public sealed class MethodCallTests : TestExpressions
 				"has logger",
 				"has Number",
 				$"Dummy(dummy Number) {nameof(ValueMustHaveCorrectType)}",
-				"\tconstant result = value",
+				"\tlet result = value",
 				"\tresult is " + nameof(ValueMustHaveCorrectType),
 				"\tresult")).
 			ParseMembersAndMethods(new MethodExpressionParser());

@@ -56,7 +56,7 @@ public sealed class CSharpTypeVisitor : TypeVisitor
 
 	public void VisitMember(Member member)
 	{
-		if (member.Name == "logger" || member.Name == "App")
+		if (member.Name is "logger" or "App")
 			return;
 		var accessModifier = member.IsPublic
 			? "public"
