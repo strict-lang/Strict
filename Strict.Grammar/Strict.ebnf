@@ -1,41 +1,40 @@
-LETTER				:= [A-Za-z]
-DIGIT					:= [0-9]
-NUMBER				:= [0-9]+ ('.' [0-9]+)?
+NUMBER				:= '-'? [0-9]+ ('.' [0-9]+)?
 STRINGCHAR		:= [a-zA-Z0-9 .,;:!?+*/=<>()_^%&|~@#$'-]
 STRING				:= '"' (STRINGCHAR | TAB | '\\')* '"'
-LF						:= '\n' | '\r\n'
-TAB						:= '\t'
-LPAREN				:= '('
-RPAREN				:= ')'
-NAME					:= [A-Za-z0-9]+
-PATH					:= NAME ('.' NAME)*
-file					= (member | method | assignment)*
-package				= PATH
-member				= ('has' | 'constant' | 'mutable') nameAndType ('=' expression)? ('with' expression)? LF?
-nameAndType   = NAME type?
-type					= NAME (LPAREN parameters RPAREN)?
-method				= methodname (LPAREN parameters RPAREN)? type? LF? block?
-parameters		= parameter (',' parameter)*
-parameter			= NAME type? ('=' expression)?
-methodname		= NAME | binary_op | unary_op | conversion
-block					= (TAB+ expression* LF?)*
-expression		= if | for | return | mutable | assignment | member | selector_if
-selector_if		= binary ('then' expression ('else' | ':') expression)?
-binary				= unary (binary_op unary)*
-unary				= unary_op unary | postfix
-postfix			= primary ('.' methodcall)*
-primary			= constant | variablecall | group
+LF						:= '\n'
+SPACE					:= ' '
+TAB 					:= '\t'
+NAME					:= [A-Za-z]+
+file					= member* method*
+
+member				= ('has' | 'constant' | 'mutable') SPACE NAME ' with ' expression LF | ('has' | 'constant' | 'mutable') SPACE name_and_type (' = ' expression)? (' with ' expression)? LF
+name_and_type = NAME (SPACE type)?
+type					= NAME ('(' parameters ')')?
+parameters		= parameter (',' SPACE parameter)*
+parameter			= name_and_type (SPACE '=' SPACE expression)?
+expression		= ternary_if | binary | constant | unary | variable_or_method_call | list
 constant			= 'true' | 'false' | NUMBER | STRING
-variablecall	= NAME ('(' arguments? ')')?
-assignment		= 'constant'? 'mutable'? 'let'? NAME '=' expression
-group					= '(' expression (',' expression)* ')'
-return				= 'return' expression
-methodcall		= methodname ('(' arguments? ')')?
-arguments			= expression (',' expression)*
-if						= 'if' expression LF block ('else' LF block)?
-reference			= NAME
-for						= 'for' (reference 'in')? expression LF block
-binary_op			= '+' | '-' | '*' | '/' | '%' | '^' | '<' | '<=' | '>' | '>=' | 'in' | 'is' | 'is not' | 'is not in' | 'and' | 'or' | 'xor' | 'to'
+variable_or_method_call = reference ('(' arguments? ')')? ('.' variable_or_method_call)*
+reference			= call_target '.' reference+ | call_target
+call_target   = NAME | NUMBER | list
+arguments			= expression (', ' expression)*
+ternary_if		= expression_without_ternary ' then ' expression ' else ' expression
+binary				= expression_without_binary SPACE (binary_op_with_space | binary_op SPACE) expression_without_binary (SPACE (binary_op_with_space | binary_op SPACE) expression_without_binary)*
+expression_without_binary = constant | unary | variable_or_method_call | list
+expression_without_ternary = binary | expression_without_binary
+binary_op_with_space = 'is not in ' | 'is not ' | 'is in '
+binary_op			= '+' | '-' | '*' | '/' | '%' | '^' | '<' | '<=' | '>' | '>=' | '=' | 'in' | 'is' | 'and' | 'or' | 'xor' | 'to'
+unary					= unary_op SPACE expression
 unary_op			= '-' | 'not'
-conversion		= 'from' | 'to'
-mutable				= 'mutable' NAME '=' expression
+list          = '()' ('.' variable_or_method_call)? | '(' expression (', ' expression)* ')' ('.' variable_or_method_call)?
+
+method				= (type | binary_op ('(' parameters ')') | unary_op ('(' parameters ')')?) (SPACE type)? LF block*
+block					= (TAB+ block_expression LF?)*
+block_expression = if | selector_if | for | return | mutable | assignment | expression
+if						= 'if ' expression LF block (TAB+ 'else' (SPACE if | LF block))?
+selector_if		= 'if ' expression (' is' | ' is not') LF (TAB+ 'then ' expression LF)* (TAB+ 'else ' expression LF)?
+for						= 'for ' ((reference ' in ' expression) | expression) LF block
+return				= 'return ' expression
+mutable				= 'mutable ' name_and_type (' = ' expression)?
+assignment		= (('constant' | 'mutable' | 'let') SPACE)? assignable ' = ' expression
+assignable		= NAME | variable_or_method_call
