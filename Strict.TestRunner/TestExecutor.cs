@@ -1,3 +1,4 @@
+using System.Reflection.Metadata.Ecma335;
 using Strict.HighLevelRuntime;
 using Strict.Language;
 using Type = Strict.Language.Type;
@@ -15,16 +16,29 @@ public sealed class TestExecutor
 
 	public void RunAllTestsInPackage(Package package)
 	{
+		PackagesCount++;
 		foreach (var type in package)
 			RunAllTestsInType(type);
 	}
 
+	public int PackagesCount { get; private set; }
+
 	public void RunAllTestsInType(Type type)
 	{
+		TypesCount++;
 		foreach (var method in type.Methods)
 			if (!method.IsTrait)
 				RunMethod(method);
 	}
 
-	public void RunMethod(Method method) => executor.Execute(method, null, []);
+	public int TypesCount { get; private set; }
+
+	public void RunMethod(Method method)
+	{
+		MethodsCount++;
+		executor.Execute(method, null, []);
+	}
+
+	public int MethodsCount { get; private set; }
+	public int TestsCount => executor.TestsCount;
 }

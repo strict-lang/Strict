@@ -13,7 +13,7 @@ namespace Strict.TestRunner.Tests;
 [SimpleJob(RunStrategy.Throughput, warmupCount: 1, iterationCount: 10)]
 public sealed class TestExecutorTests
 {
-	private readonly TestExecutor executor = new();
+	public readonly TestExecutor executor = new();
 
 	[Test]
 	public void RunMethod()
@@ -227,6 +227,14 @@ public sealed class TestExecutorTests
 	public void RunAllTestsInPackage() => executor.RunAllTestsInPackage(TestPackage.Instance);
 
 	//ncrunch: no coverage start
+	[Test]
+	[Category("Slow")]
+	public void RunAllTestsInPackageTwice()
+	{
+		executor.RunAllTestsInPackage(TestPackage.Instance);
+		Assert.That(() => executor.RunAllTestsInPackage(TestPackage.Instance), Throws.Nothing);
+	}
+
 	[Test]
 	[Category("Manual")]
 	public void BenchmarkCompare() => BenchmarkRunner.Run<TestExecutorTests>();

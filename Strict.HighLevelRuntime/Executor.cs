@@ -30,6 +30,7 @@ public sealed class Executor(TestBehavior behavior = TestBehavior.OnFirstRun)
 	private ForEvaluator ForEvaluator => field ??= new ForEvaluator(this);
 	private MethodCallEvaluator MethodCallEvaluator => field ??= new MethodCallEvaluator(this);
 	private ToEvaluator ToEvaluator => field ??= new ToEvaluator(this);
+	public int TestsCount { get; private set; }
 
 	private ValueInstance Execute(Method method, ValueInstance? instance,
 		IReadOnlyList<ValueInstance> args, ExecutionContext? parentContext, bool runOnlyTests)
@@ -227,8 +228,11 @@ public sealed class Executor(TestBehavior behavior = TestBehavior.OnFirstRun)
 			" requires these parameters: " + method.Parameters.ToWordList());
 
 	public ValueInstance RunExpression(Expression expr, ExecutionContext context,
-		bool runOnlyTests = false) =>
-		expr switch
+		bool runOnlyTests = false)
+	{
+		if (runOnlyTests)
+			TestsCount++;
+		return expr switch
 		{
 			Body body => BodyEvaluator.Evaluate(body, context, runOnlyTests),
 			Value v => v.Data as ValueInstance ?? CreateValueInstance(v.ReturnType, v.Data, context),
@@ -247,6 +251,7 @@ public sealed class Executor(TestBehavior behavior = TestBehavior.OnFirstRun)
 			Instance => EvaluateVariable(Type.ValueLowercase, context),
 			_ => throw new ExpressionNotSupported(expr, context) //ncrunch: no coverage
 		};
+	}
 
 	private object EvaluateValueData(object valueData, ExecutionContext context) =>
 		valueData switch
