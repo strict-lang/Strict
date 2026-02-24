@@ -1,51 +1,42 @@
-LETTER				:= [A-Za-z]
-DIGIT					:= [0-9]
-NUMBER				:= [0-9]+ ('.' [0-9]+)?
+NUMBER				:= '-'? [0-9]+ ('.' [0-9]+)? ([eE] ('+' | '-')? [0-9]+)?
 STRINGCHAR		:= [a-zA-Z0-9 .,;:!?+*/=<>()_^%&|~@#$'-]
 STRING				:= '"' (STRINGCHAR | TAB | '\\')* '"'
 LF						:= '\n'
-TAB						:= '\t'
+SPACE					:= ' '
+TAB 					:= '\t'
 NAME					:= [A-Za-z]+
-PATH					:= NAME ('.' NAME)*
-file					= (member | method | assignment)*
-package				= PATH
-type					= NAME ('(' variable (',' variable)* ')')?
-member				= 'has' variable ('with' expression)? LF?
-variable			= NAME type?
-method				= methodname ('(' parameters ')')? type? LF? block?
-parameters		= parameter (',' parameter)*
-parameter			= NAME type? ('=' expression)?
-methodname		= NAME | binary_op | unary_op | conversion
-block					= (TAB+ expression LF?)*
-expression		= conditional
-conditional		= logical_or ('then' expression ('else' | ':') expression)?
-logical_or		= logical_and (logical_or_op logical_and)*
-logical_and		= equality (logical_and_op equality)*
-equality			= comparison (equality_op comparison)*
-comparison		= additive (comparison_op additive)*
-additive			= multiplicative (additive_op multiplicative)*
-multiplicative	= unary (multiplicative_op unary)*
-unary				= unary_op unary | postfix
-postfix			= primary ('.' methodcall | conversion variablecall)*
-primary			= constant | group | return | mutable | if | for | member | assignment | variablecall
+file					= member* method*
+
+member				= ('has' | 'constant' | 'mutable') SPACE NAME ' with ' expression LF | ('has' | 'constant' | 'mutable') SPACE name_and_type (' = ' expression)? (' with ' expression)? LF
+name_and_type = NAME (SPACE type)?
+type					= NAME ('(' parameters ')')?
+parameters		= parameter (',' SPACE parameter)*
+parameter			= name_and_type (SPACE '=' SPACE expression)?
+expression		= ternary_if | binary | unary | variable_or_method_call | constant | list
 constant			= 'true' | 'false' | NUMBER | STRING
-conversion		= 'from' | 'to'
-variablecall	= NAME ('(' arguments? ')')?
-assignment		= 'constant'? 'mutable'? 'let'? NAME '=' expression
-group					= '(' expression (',' expression)* ')'
-return				= 'return' expression
-reference			= NAME
-methodcall		= methodname ('(' arguments? ')')?
-arguments			= argument (',' argument)*
-argument			= expression
-if						= 'if' expression LF block ('else' LF block)?
-for						= 'for' (reference 'in')? expression LF block
-binary_op			= '+' | '-' | '*' | '/' | '%' | '^' | '<' | '<=' | '>' | '>=' | 'in' | 'is' | 'is not' | 'is not in' | 'and' | 'or' | 'xor'
-logical_or_op	= 'or' | 'xor'
-logical_and_op	= 'and'
-equality_op		= 'is not in' | 'is not' | 'is' | 'in'
-comparison_op	= '<' | '<=' | '>' | '>='
-additive_op		= '+' | '-'
-multiplicative_op	= '*' | '/' | '%' | '^'
-unary_op			= '-' | 'not'
-mutable				= 'mutable' NAME '=' expression
+variable_or_method_call = reference ('(' arguments? ')')? ('.' variable_or_method_call)*
+reference			= NUMBER '.' reference | call_target ('.' reference)*
+call_target   = NAME | constant | list
+arguments			= expression (', ' expression)*
+ternary_if		= expression_without_ternary ' then ' expression ' else ' expression
+binary				= expression_without_binary SPACE (binary_op_with_space | binary_op SPACE) expression_without_binary (SPACE (binary_op_with_space | binary_op SPACE) expression_without_binary)*
+expression_without_binary = unary | method_reference | operator_call | variable_or_method_call | constant | list
+expression_without_ternary = binary | expression_without_binary
+binary_op_with_space = 'is not in ' | 'is not ' | 'is in '
+binary_op			= '+' | '-' | '*' | '/' | '%' | '^' | '<=' | '<' | '>=' | '>' | '=' | 'in' | 'is' | 'and' | 'or' | 'xor' | 'to'
+unary					= unary_op expression
+unary_op			= '-' | 'not '
+method_reference = 'to' SPACE type
+operator_call = binary_op '(' arguments? ')' ('.' variable_or_method_call)*
+list          = '()' ('.' variable_or_method_call)? | '(' expression (', ' expression)* ')' ('.' variable_or_method_call)?
+
+method				= (type | binary_op ('(' parameters ')') | unary_op ('(' parameters ')')?) (SPACE type)? LF block*
+block					= (TAB+ block_expression LF?)*
+block_expression = if | selector_if | for | return | mutable | assignment | expression
+if						= 'if ' expression LF block (TAB+ 'else' (SPACE if | LF block))?
+selector_if		= 'if ' expression (' is' | ' is not') LF (TAB+ 'then ' expression LF)* (TAB+ 'else ' expression LF)?
+for						= 'for ' ((reference ' in ' expression) | expression) LF block
+return				= 'return ' expression
+mutable				= 'mutable ' name_and_type (' = ' expression)?
+assignment		= (('constant' | 'mutable' | 'let') SPACE)? assignable ' = ' expression
+assignable		= NAME | variable_or_method_call

@@ -6,7 +6,7 @@
 - Apply Limit.cs rules with a ~2x multiplier for C#. Classes should ideally be between 100-400 lines, but classes above 500 lines should be split for better maintainability.
 - When splitting `Executor.cs`, keep high-level methods there (Execute, exceptions, DoArgumentsMatch, stackoverflow detection, arguments/instances/parameters handling, RunExpression), and move expression evaluators into separate classes unless they are single-line/simple.
 - Do not add new methods to low level types like `SpanExtensions` without asking first; keep refactors focused and fix one issue at a time.
-- If you cannot make the test pass within 3 edits, stop and output: failing test name, error message, suspected root cause, and 3 proposed fixes.
+- If you cannot make the test pass within 5 edits, stop and output: failing test name, error message, suspected root cause, and show a proposed fix (or up to 3 fixes if it is unclear). This resets if the user gives a new prompt.
 
 ## Project-Specific Rules
 - Strict is a simple-to-understand programming language that not only humans can read and understand, but also computers are able to understand, modify and write it.
