@@ -143,7 +143,7 @@ public sealed class ValueInstance : IEquatable<ValueInstance>
 		ReturnType.Name is Base.Number or Base.Range
 			? index
 			: Value is string
-       ? ((string)Value!)[index].ToString()
+				? ((string)Value!)[index]
 				: Value is IList list
 					? list[index]
 					: throw new IteratorNotSupported(this);

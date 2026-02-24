@@ -338,9 +338,8 @@ public sealed class ExecutorTests
 	{
 		using var t = CreateType(nameof(CallNumberPlusOperator), "has number", "+(text) Number",
 			"\tnumber + text.Length");
-		var instance = new ValueInstance(t, 5);
 		Assert.That(
-			executor.Execute(t.Methods.Single(m => m.Name == BinaryOperator.Plus), instance,
-				[new ValueInstance(t.GetType(Base.Text), "abc")]).Value, Is.EqualTo(8));
+			executor.Execute(t.Methods.Single(m => m.Name == BinaryOperator.Plus), new ValueInstance(t, 5),
+				[new ValueInstance(t.GetType(Base.Text), "abc")]).Value, Is.EqualTo(5 + 3));
 	}
 }

@@ -158,7 +158,7 @@ public sealed class For(Expression[] customVariables, Expression iterator, Expre
 
 	private static ReadOnlySpan<char> FindVariableNames(ReadOnlySpan<char> line) =>
 		line.Contains(InWithSpaces, StringComparison.Ordinal)
-			? line[4..(line.LastIndexOf(InWithSpaces))]
+			? line[4..line.LastIndexOf(InWithSpaces)]
 			: "";
 
 	private static Expression[] AddVariablesIfTheyDoNotExistYet(Body body, ReadOnlySpan<char> line,

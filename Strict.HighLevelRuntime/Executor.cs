@@ -60,6 +60,12 @@ public sealed class Executor(TestBehavior behavior = TestBehavior.OnFirstRun)
 					? Bool(body.ReturnType, true)
 					: throw new MethodRequiresTest(method, body.ToString());
 			var result = RunExpression(body, context, runOnlyTests);
+			if (!runOnlyTests && method.ReturnType is GenericTypeImplementation
+				{
+					Generic.Name: Base.Mutable
+				} mutableReturnType && !result.ReturnType.IsMutable &&
+				result.ReturnType.IsSameOrCanBeUsedAs(mutableReturnType.ImplementationTypes[0]))
+				return new ValueInstance(method.ReturnType, result.Value);
 			return !runOnlyTests && !method.ReturnType.IsMutable && result.ReturnType.IsMutable &&
 				((GenericTypeImplementation)result.ReturnType).ImplementationTypes[0].
 				IsSameOrCanBeUsedAs(method.ReturnType)
@@ -77,7 +83,7 @@ public sealed class Executor(TestBehavior behavior = TestBehavior.OnFirstRun)
 	{
 		var context =
 			new ExecutionContext(method.Type, method) { This = instance, Parent = parentContext };
-    if (!runOnlyTests)
+		if (!runOnlyTests)
 			for (var i = 0; i < method.Parameters.Count; i++)
 			{
 				var param = method.Parameters[i];

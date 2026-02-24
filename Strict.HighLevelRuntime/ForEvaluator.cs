@@ -43,21 +43,24 @@ internal sealed class ForEvaluator(Executor executor)
 		var loop = new ExecutionContext(ctx.Type, ctx.Method) { This = ctx.This, Parent = ctx };
 		loop.Set(Type.IndexLowercase, new ValueInstance(itemType.GetType(Base.Number), index));
 		var value = iterator.GetIteratorValue(index);
+		if (itemType.Name == Base.Text && value is char character)
+			value = character.ToString();
 		var valueInstance = value as ValueInstance ?? new ValueInstance(itemType, value);
 		loop.Set(Type.ValueLowercase, valueInstance);
 		foreach (var customVariable in f.CustomVariables)
 			if (customVariable is VariableCall variableCall)
 				loop.Set(variableCall.Variable.Name, valueInstance);
-    var itemResult = f.Body is Body body
+		var itemResult = f.Body is Body body
 			? EvaluateBody(body, loop)
 			: executor.RunExpression(f.Body, loop);
-		if (itemResult.ReturnType.Name != Base.None)
+		if (itemResult.ReturnType.Name != Base.None && !itemResult.ReturnType.IsMutable)
 			results.Add(itemResult);
 	}
 
 	private ValueInstance EvaluateBody(Body body, ExecutionContext ctx)
 	{
-		var noneType = (ctx.This?.ReturnType.Package ?? body.Method.Type.Package).FindType(Base.None)!;
+		var noneType =
+			(ctx.This?.ReturnType.Package ?? body.Method.Type.Package).FindType(Base.None)!;
 		ValueInstance last = new(noneType, null);
 		foreach (var e in body.Expressions)
 			last = executor.RunExpression(e, ctx);
@@ -77,7 +80,7 @@ internal sealed class ForEvaluator(Executor executor)
 				text += value.ReturnType.Name switch
 				{
 					Base.Number => (int)EqualsExtensions.NumberToDouble(value.Value),
-          Base.Character => "" + (char)value.Value!,
+					Base.Character => "" + (char)value.Value!,
 					Base.Text => (string)value.Value!,
 					_ => throw new NotSupportedException("Can't append to text: " + value)
 				};
@@ -92,6 +95,6 @@ internal sealed class ForEvaluator(Executor executor)
 		iterator.ReturnType is GenericTypeImplementation { Generic.Name: Base.List } list
 			? list.ImplementationTypes[0]
 			: iterator.ReturnType.Name == Base.Text
-       ? iterator.ReturnType.GetType(Base.Text)
+				? iterator.ReturnType.GetType(Base.Text)
 				: iterator.ReturnType.GetType(Base.Number);
 }

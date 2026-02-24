@@ -8,8 +8,10 @@ namespace Strict.Runtime.Tests;
 [SimpleJob(RunStrategy.Throughput, warmupCount: 1, iterationCount: 10)]
 public sealed class AdderProgramTests : BaseVirtualMachineTests
 {
-	private readonly BytecodeInterpreter vm = new();
+	[SetUp]
+	public void Setup() => vm = new BytecodeInterpreter();
 
+	private BytecodeInterpreter vm = null!;
 	private static readonly string[] AdderProgramCode =
 	[
 		"has numbers",
@@ -25,7 +27,7 @@ public sealed class AdderProgramTests : BaseVirtualMachineTests
 	private List<decimal> ExecuteAddTotals(string methodCall) =>
 		((IEnumerable<Expression>)vm.Execute(
 			new ByteCodeGenerator(GenerateMethodCallFromSource("AdderProgram",
-				methodCall, AdderProgramCode)).Generate()).Returns!.Value!).
+				methodCall, AdderProgramCode)).Generate()).Returns!.Value).
 		Select(e => Convert.ToDecimal(((Value)e).Data)).ToList();
 
 	[Test]
