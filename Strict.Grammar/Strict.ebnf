@@ -5,14 +5,16 @@ STRINGCHAR		:= [a-zA-Z0-9 .,;:!?+*/=<>()_^%&|~@#$'-]
 STRING				:= '"' (STRINGCHAR | TAB | '\\')* '"'
 LF						:= '\n' | '\r\n'
 TAB						:= '\t'
-NAME					:= [A-Za-z]+
+LPAREN				:= '('
+RPAREN				:= ')'
+NAME					:= [A-Za-z0-9]+
 PATH					:= NAME ('.' NAME)*
 file					= (member | method | assignment)*
 package				= PATH
-type					= NAME ('(' variable (',' variable)* ')')?
-member				= ('has' | 'constant' | 'mutable') variable ('=' expression)? ('with' expression)? LF?
-variable			= NAME type?
-method				= methodname ('(' parameters ')')? type? LF? block?
+member				= ('has' | 'constant' | 'mutable') nameAndType ('=' expression)? ('with' expression)? LF?
+nameAndType   = NAME type?
+type					= NAME (LPAREN parameters RPAREN)?
+method				= methodname (LPAREN parameters RPAREN)? type? LF? block?
 parameters		= parameter (',' parameter)*
 parameter			= NAME type? ('=' expression)?
 methodname		= NAME | binary_op | unary_op | conversion

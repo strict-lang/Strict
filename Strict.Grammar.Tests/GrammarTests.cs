@@ -52,6 +52,7 @@ public sealed class GrammarTests
 	[TestCase("xor(other) Boolean\n\ttrue xor true is false\n\tfalse xor true\n\tnot (false xor false)\n\t(value and other) or (not value and not other) then false else true")]
 	[TestCase("is(other) Boolean\n\tnot false\n\tfalse is not true\n\tvalue is other")]
 	[TestCase("to Text\n\ttrue to Text is \"true\"\n\tnot true to Text is \"false\"\n\tvalue then \"true\" else \"false\"")]
+	[TestCase("method(arg Number, argTwo Number)")]
 	[TestCase("has keysAndValues List(key Generic, mappedValue Generic)")]
 	public void ParsesValidStrictCode(string code)
 	{
