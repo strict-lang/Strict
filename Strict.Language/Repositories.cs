@@ -1,4 +1,4 @@
-﻿using System.IO.Compression;
+using System.IO.Compression;
 using System.Runtime.CompilerServices;
 using LazyCache;
 
@@ -77,8 +77,12 @@ public sealed class Repositories
 		[CallerMemberName] string callerMemberName = ""
 #endif
 	) =>
+#if DEBUG
 		LoadFromUrl(new Uri(StrictPrefixUri.AbsoluteUri + packagePostfixName), callerFilePath,
 			callerLineNumber, callerMemberName);
+#else
+		LoadFromUrl(new Uri(StrictPrefixUri.AbsoluteUri + packagePostfixName));
+#endif
 
 	public sealed class OnlyGithubDotComUrlsAreAllowedForNow : Exception;
 	//ncrunch: no coverage start, only called once per session and only if not on development machine
@@ -149,11 +153,14 @@ public sealed class Repositories
 		[CallerMemberName] string callerMemberName = ""
 #endif
 	) =>
-		cacheService.GetOrAddAsync(packagePath,
-			_ => CreatePackageFromFiles(packagePath,
-				// ReSharper disable ExplicitCallerInfoArgument
-				Directory.GetFiles(packagePath, "*" + Type.Extension), null, callerFilePath,
-				callerLineNumber, callerMemberName));
+		cacheService.GetOrAddAsync(packagePath, _ => CreatePackageFromFiles(packagePath,
+			// ReSharper disable ExplicitCallerInfoArgument
+			Directory.GetFiles(packagePath, "*" + Type.Extension)
+#if DEBUG
+			, null, callerFilePath, callerLineNumber, callerMemberName));
+#else
+		));
+#endif
 
 	/// <summary>
 	/// Initially we need to create just empty types, and then after they all have been created,

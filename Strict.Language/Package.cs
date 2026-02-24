@@ -51,10 +51,15 @@ public class Package : Context, IEnumerable<Type>, IDisposable
 		private readonly Dictionary<string, Type> cachedFoundTypes = new(StringComparer.Ordinal);
 	}
 
-	public Package(Package? parentPackage, string packagePath, [CallerFilePath] string callerFilePath = "",
-		[CallerLineNumber] int callerLineNumber = 0,
+#if DEBUG
+	public Package(Package? parentPackage, string packagePath,
+		[CallerFilePath] string callerFilePath = "", [CallerLineNumber] int callerLineNumber = 0,
 		[CallerMemberName] string callerMemberName = "") : base(parentPackage,
 		Path.GetFileName(packagePath), callerFilePath, callerLineNumber, callerMemberName)
+#else
+	public Package(Package? parentPackage, string packagePath)
+		: base(parentPackage, Path.GetFileName(packagePath))
+#endif
 	{
 		FolderPath = packagePath;
 		if (parentPackage == null)
@@ -68,7 +73,7 @@ public class Package : Context, IEnumerable<Type>, IDisposable
 	public class PackageAlreadyExists(string name, Package parentPackage, Package existing)
 		: Exception(name + " in " + (parentPackage.Name == "" //ncrunch: no coverage
 				? nameof(Root)
-				: "parent package " + parentPackage)
+				: "parent package " + parentPackage) + ", existing package " + existing.Name
 #if DEBUG
 			+ ", existing package created by " + existing.callerFilePath + ":" +
 			existing.callerLineNumber + " from method " + existing.callerMemberName

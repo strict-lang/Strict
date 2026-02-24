@@ -1,4 +1,6 @@
+#if DEBUG
 using System.Runtime.CompilerServices;
+#endif
 
 namespace Strict.Language;
 
@@ -35,7 +37,7 @@ public class Type : Context, IDisposable
 		lineCount, $"Type {type.Name} has lines count {lineCount} but limit is {Limit.LineCount}");
 
 	public sealed class TypeAlreadyExistsInPackage(string name, Package package, Type existingType)
-		: Exception(name + " in package: " + package
+		: Exception(name + " in package: " + package + ", existing type : " + existingType
 #if DEBUG
 			+ ", existing type created by " + existingType.callerFilePath + ":" +
 			existingType.callerLineNumber + " from method " + existingType.callerMemberName

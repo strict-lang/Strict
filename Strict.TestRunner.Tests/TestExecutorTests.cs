@@ -223,7 +223,6 @@ public sealed class TestExecutorTests
 	}
 
 	[Test]
-	[Category("Slow")]
 	[Benchmark]
 	public void RunAllTestsInPackage() => executor.RunAllTestsInPackage(TestPackage.Instance);
 
