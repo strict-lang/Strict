@@ -47,6 +47,11 @@ public sealed class GrammarTests
 	[TestCase("Run\n\tsomeList(1) = 5")]
 	[TestCase("has text with Length > 1 and \" \" is not in value")]
 	[TestCase("digits Numbers\n\t1.digits is (1)")]
+	[TestCase(">=(other) Boolean\n\t0 >= 0\n\tvalue >= other")]
+	[TestCase("Reverse Range\n\tLength > 0 then Range(ExclusiveEnd - 1, Start - 1) else Range(ExclusiveEnd + 1, Start + 1)")]
+	[TestCase("to Text\n\tto Text is \"\tat Stacktrace.to in Base\\Stacktrace.strict:line 7\"")]
+	[TestCase("+(other) Text\n\t+(\"more\") is \"more\"")]
+	[TestCase("to Number\n\t\"1e10\" to Number is 1e10")]
 	public void ParsesValidStrictCode(string code)
 	{
 		var result = BuildGrammar().Match(code + "\n");

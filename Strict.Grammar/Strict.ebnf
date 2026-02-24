@@ -1,4 +1,4 @@
-NUMBER				:= '-'? [0-9]+ ('.' [0-9]+)?
+NUMBER				:= '-'? [0-9]+ ('.' [0-9]+)? ([eE] ('+' | '-')? [0-9]+)?
 STRINGCHAR		:= [a-zA-Z0-9 .,;:!?+*/=<>()_^%&|~@#$'-]
 STRING				:= '"' (STRINGCHAR | TAB | '\\')* '"'
 LF						:= '\n'
@@ -12,20 +12,22 @@ name_and_type = NAME (SPACE type)?
 type					= NAME ('(' parameters ')')?
 parameters		= parameter (',' SPACE parameter)*
 parameter			= name_and_type (SPACE '=' SPACE expression)?
-expression		= ternary_if | binary | constant | unary | variable_or_method_call | list
+expression		= ternary_if | binary | unary | variable_or_method_call | constant | list
 constant			= 'true' | 'false' | NUMBER | STRING
 variable_or_method_call = reference ('(' arguments? ')')? ('.' variable_or_method_call)*
-reference			= call_target '.' reference+ | call_target
-call_target   = NAME | NUMBER | list
+reference			= NUMBER '.' reference | call_target ('.' reference)*
+call_target   = NAME | constant | list
 arguments			= expression (', ' expression)*
 ternary_if		= expression_without_ternary ' then ' expression ' else ' expression
 binary				= expression_without_binary SPACE (binary_op_with_space | binary_op SPACE) expression_without_binary (SPACE (binary_op_with_space | binary_op SPACE) expression_without_binary)*
-expression_without_binary = constant | unary | variable_or_method_call | list
+expression_without_binary = unary | method_reference | operator_call | variable_or_method_call | constant | list
 expression_without_ternary = binary | expression_without_binary
 binary_op_with_space = 'is not in ' | 'is not ' | 'is in '
-binary_op			= '+' | '-' | '*' | '/' | '%' | '^' | '<' | '<=' | '>' | '>=' | '=' | 'in' | 'is' | 'and' | 'or' | 'xor' | 'to'
-unary					= unary_op SPACE expression
-unary_op			= '-' | 'not'
+binary_op			= '+' | '-' | '*' | '/' | '%' | '^' | '<=' | '<' | '>=' | '>' | '=' | 'in' | 'is' | 'and' | 'or' | 'xor' | 'to'
+unary					= unary_op expression
+unary_op			= '-' | 'not '
+method_reference = 'to' SPACE type
+operator_call = binary_op '(' arguments? ')' ('.' variable_or_method_call)*
 list          = '()' ('.' variable_or_method_call)? | '(' expression (', ' expression)* ')' ('.' variable_or_method_call)?
 
 method				= (type | binary_op ('(' parameters ')') | unary_op ('(' parameters ')')?) (SPACE type)? LF block*
