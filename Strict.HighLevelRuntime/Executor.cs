@@ -11,13 +11,14 @@ public sealed class Executor(TestBehavior behavior = TestBehavior.OnFirstRun)
 		IReadOnlyList<ValueInstance> args, ExecutionContext? parentContext = null)
 	{
 		Statistics.MethodCount++;
+		EnsureCachedBaseValues(method.Type);
 		ValueInstance? returnValue = null;
 		if (inlineTestDepth == 0 && behavior != TestBehavior.Disabled &&
 			(behavior == TestBehavior.TestRunner || validatedMethods.Add(method)))
 			returnValue = Execute(method, instance, args, parentContext, true);
 		if (inlineTestDepth > 0 || behavior != TestBehavior.TestRunner)
 			returnValue = Execute(method, instance, args, parentContext, false);
-		return returnValue ?? new ValueInstance(method.ReturnType, null, Statistics);
+		return returnValue ?? None(method.ReturnType);
 	}
 
 	/// <summary>
@@ -40,7 +41,7 @@ public sealed class Executor(TestBehavior behavior = TestBehavior.OnFirstRun)
 		if (method is { Name: Method.From, Type.IsGeneric: false })
 			return instance != null
 				? throw new MethodCall.CannotCallFromConstructorWithExistingInstance()
-				: new ValueInstance(method.Type, GetFromConstructorValue(method, args), Statistics);
+				: CreateValueInstance(method.Type, GetFromConstructorValue(method, args));
 		var context = CreateExecutionContext(method, instance, args, parentContext, runOnlyTests);
 		if (runOnlyTests && IsSimpleSingleLineMethod(method))
 			return Bool(method.ReturnType, true);
@@ -60,19 +61,18 @@ public sealed class Executor(TestBehavior behavior = TestBehavior.OnFirstRun)
 				? Bool(body.ReturnType, true)
 				: throw new MethodRequiresTest(method, body.ToString());
 		var result = RunExpression(body, context, runOnlyTests);
-		if (context.ExitMethodAndReturnValue != null)
-			return context.ExitMethodAndReturnValue;
-		if (!runOnlyTests &&
-			method.ReturnType is GenericTypeImplementation
+		if (context.ExitMethodAndReturnValue.HasValue)
+			return context.ExitMethodAndReturnValue.Value;
+		if (!runOnlyTests && method.ReturnType is GenericTypeImplementation
 			{
 				Generic.Name: Base.Mutable
 			} mutableReturnType && !result.ReturnType.IsMutable &&
 			result.ReturnType.IsSameOrCanBeUsedAs(mutableReturnType.ImplementationTypes[0]))
-			return new ValueInstance(method.ReturnType, result.Value, Statistics);
+			return CreateValueInstance(method.ReturnType, result);
 		return !runOnlyTests && !method.ReturnType.IsMutable && result.ReturnType.IsMutable &&
 			((GenericTypeImplementation)result.ReturnType).ImplementationTypes[0].
 			IsSameOrCanBeUsedAs(method.ReturnType)
-				? new ValueInstance(method.ReturnType, result.Value, Statistics)
+				? CreateValueInstance(method.ReturnType, result)
 				: result;
 	}
 
@@ -92,15 +92,15 @@ public sealed class Executor(TestBehavior behavior = TestBehavior.OnFirstRun)
 						: throw new MissingArgument(method, param.Name, args);
 				context.Variables[param.Name] = arg;
 			}
-		AddDictionaryElementsAlias(context, instance);
+		context.AddDictionaryElements(instance);
 		return context;
 	}
 
 	private static void ValidateInstanceAndArguments(Method method, ValueInstance? instance,
 		IReadOnlyList<ValueInstance> args, ExecutionContext? parentContext)
 	{
-		if (instance != null && !instance.ReturnType.IsSameOrCanBeUsedAs(method.Type))
-			throw new CannotCallMethodWithWrongInstance(method, instance); //ncrunch: no coverage
+		if (instance.HasValue && !instance.Value.ReturnType.IsSameOrCanBeUsedAs(method.Type))
+			throw new CannotCallMethodWithWrongInstance(method, instance.Value);
 		if (args.Count > method.Parameters.Count)
 			throw new TooManyArguments(method, args[method.Parameters.Count].ToString(), args);
 		for (var index = 0; index < args.Count; index++)
@@ -112,18 +112,59 @@ public sealed class Executor(TestBehavior behavior = TestBehavior.OnFirstRun)
 					method.Parameters[index].ToStringWithInnerMembers() +
 					" cannot be assigned from argument " + args[index] + " " + args[index].ReturnType);
 		if (parentContext != null && parentContext.Method == method &&
-			(parentContext.This?.Equals(instance) ?? instance == null) &&
+			(parentContext.This?.Equals(instance) ?? !instance.HasValue) &&
 			DoArgumentsMatch(method, args, parentContext.Variables))
 			throw new StackOverflowCallingItselfWithSameInstanceAndArguments(method, instance, args,
 				parentContext);
 	}
 
-	private static readonly object BoxedTrue = true;
-	private static readonly object BoxedFalse = false;
-	internal ValueInstance Bool(Context any, bool b) =>
-		new(any.GetType(Base.Boolean), b
-			? BoxedTrue
-			: BoxedFalse, Statistics);
+	private ValueInstance? cachedTrue;
+	private ValueInstance? cachedFalse;
+	private ValueInstance? cachedNone;
+	private ValueInstance[] cachedNumbers = Array.Empty<ValueInstance>();
+	private bool cachedValuesInitialized;
+
+	internal ValueInstance Bool(Context any, bool b)
+	{
+		EnsureCachedBaseValues(any);
+		return b
+			? cachedTrue!.Value
+			: cachedFalse!.Value;
+	}
+
+	internal ValueInstance None(Context any)
+	{
+		EnsureCachedBaseValues(any);
+		return cachedNone!.Value;
+	}
+
+	internal ValueInstance Number(Context any, double number)
+	{
+		EnsureCachedBaseValues(any);
+		if (double.IsInteger(number))
+		{
+			var index = (int)number + 1;
+			if ((uint)index < (uint)cachedNumbers.Length)
+				return cachedNumbers[index];
+		}
+		return new ValueInstance(any.GetType(Base.Number), number, Statistics);
+	}
+
+	private void EnsureCachedBaseValues(Context context)
+	{
+		if (cachedValuesInitialized)
+			return;
+		cachedValuesInitialized = true;
+		var booleanType = context.GetType(Base.Boolean);
+		var numberType = context.GetType(Base.Number);
+		var noneType = context.GetType(Base.None);
+		cachedTrue = new ValueInstance(booleanType, true, Statistics);
+		cachedFalse = new ValueInstance(booleanType, false, Statistics);
+		cachedNone = new ValueInstance(noneType, Statistics);
+		cachedNumbers = new ValueInstance[12];
+		for (var value = -1; value <= 10; value++)
+			cachedNumbers[value + 1] = new ValueInstance(numberType, value, Statistics);
+	}
 
 	private static bool DoArgumentsMatch(Method method, IReadOnlyList<ValueInstance> args,
 		IReadOnlyDictionary<string, ValueInstance> parentContextVariables)
@@ -166,7 +207,7 @@ public sealed class Executor(TestBehavior behavior = TestBehavior.OnFirstRun)
 		Statistics.FromCreationsCount++;
 		if (args.Count == 0 && method.Type.Name == Base.Text)
 			return "";
-		if (method.Type.IsDictionary && args.Count == 1 && args[0].ReturnType.IsIterator)
+		if (method.Type.IsDictionary && args is [{ ReturnType.IsIterator: true }])
 			return args[0].Value as IDictionary ?? FillDictionaryFromListKeyAndValues(args[0].Value);
 		if (args.Count == 1)
 		{
@@ -180,21 +221,6 @@ public sealed class Executor(TestBehavior behavior = TestBehavior.OnFirstRun)
 		return ConvertFromArgumentsToDictionary(method, args);
 	}
 
-	private void AddDictionaryElementsAlias(ExecutionContext context, ValueInstance? instance)
-	{
-		if (instance?.ReturnType is not GenericTypeImplementation
-			{
-				Generic.Name: Base.Dictionary
-			} implementation || instance.Value is not Dictionary<ValueInstance, ValueInstance> dictionary ||
-			context.Variables.ContainsKey(Type.ElementsLowercase))
-			return;
-		var listMemberType = implementation.Members.FirstOrDefault(member =>
-			member.Type is GenericTypeImplementation { Generic.Name: Base.List } ||
-			member.Type.Name == Base.List)?.Type ?? implementation.GetType(Base.List);
-		var listValue = ExecutionContext.BuildDictionaryPairsList(listMemberType, dictionary);
-		context.Set(Type.ElementsLowercase, new ValueInstance(listMemberType, listValue));
-	}
-
 	private static object? TryConvertSingleCharacterText(Type targetType, ValueInstance value) =>
 		value.ReturnType.Name == Base.Text && value.Value is string { Length: 1 } text &&
 		targetType.Name is Base.Number or Base.Character
@@ -205,9 +231,12 @@ public sealed class Executor(TestBehavior behavior = TestBehavior.OnFirstRun)
 		value.ReturnType.Name == Base.Text && value.Value is string text && text.Length == 1 &&
 		targetType.Name is Base.Number or Base.Character;
 
-	public sealed class InvalidTypeForArgument(		Type type,
-		IReadOnlyList<ValueInstance> args,		int index) : ExecutionFailed(type, args[index] +
-		" at index=" + index + " does not match type=" + type + " Member=" +		type.Members[index]);
+	public sealed class InvalidTypeForArgument(
+		Type type,
+		IReadOnlyList<ValueInstance> args,
+		int index) : ExecutionFailed(type,
+		args[index] + " at index=" + index + " does not match type=" + type + " Member=" +
+		type.Members[index]);
 
 	public sealed class CannotCallMethodWithWrongInstance(Method method, ValueInstance instance)
 		: ExecutionFailed(method, instance.ToString()); //ncrunch: no coverage
@@ -231,10 +260,13 @@ public sealed class Executor(TestBehavior behavior = TestBehavior.OnFirstRun)
 		bool runOnlyTests = false)
 	{
 		Statistics.ExpressionCount++;
+		EnsureCachedBaseValues(context.Type);
 		return expr switch
 		{
 			Body body => BodyEvaluator.Evaluate(body, context, runOnlyTests),
-			Value v => v.Data as ValueInstance ?? CreateValueInstance(v.ReturnType, v.Data, context),
+			Value v => v.Data is ValueInstance valueInstance
+				? valueInstance
+				: CreateValueInstance(v.ReturnType, v.Data, context),
 			ParameterCall or VariableCall => EvaluateVariable(expr.ToString(), context),
 			MemberCall m => EvaluateMemberCall(m, context),
 			ListCall listCall => MethodCallEvaluator.EvaluateListCall(listCall, context),
@@ -255,7 +287,8 @@ public sealed class Executor(TestBehavior behavior = TestBehavior.OnFirstRun)
 	private object EvaluateValueData(object valueData, ExecutionContext context) =>
 		valueData switch
 		{
-			Expression valueExpression => RunExpression(valueExpression, context), //ncrunch: no coverage
+			Expression valueExpression =>
+				RunExpression(valueExpression, context), //ncrunch: no coverage
 			IList<Expression> list => list.Select(e => RunExpression(e, context)).ToList(),
 			_ => valueData
 		};
@@ -266,7 +299,37 @@ public sealed class Executor(TestBehavior behavior = TestBehavior.OnFirstRun)
 		var value = EvaluateValueData(valueData, context);
 		if (returnType.IsDictionary)
 			value = NormalizeDictionaryValue(returnType, (IDictionary<string, object?>)value);
-		return new ValueInstance(returnType, value, Statistics);
+		return CreateValueInstance(returnType, value);
+	}
+
+	internal ValueInstance CreateValueInstance(Type returnType, object? value)
+	{
+		if (value is ValueInstance valueInstance)
+			return CreateValueInstance(returnType, valueInstance);
+		var effectiveType = GetEffectiveType(returnType);
+		if (effectiveType.Name == Base.None)
+			return new ValueInstance(returnType, Statistics);
+		if (effectiveType.IsBoolean)
+			return new ValueInstance(returnType, (bool)value!, Statistics);
+		if (IsNumberType(effectiveType))
+			return new ValueInstance(returnType, EqualsExtensions.NumberToDouble(value), Statistics);
+		return IsTextType(effectiveType)
+			? new ValueInstance(returnType, (string)value!, Statistics)
+			: new ValueInstance(returnType, value, Statistics);
+	}
+
+	internal ValueInstance CreateValueInstance(Type returnType, ValueInstance value)
+	{
+		var effectiveType = GetEffectiveType(returnType);
+		if (effectiveType.Name == Base.None)
+			return new ValueInstance(returnType, Statistics);
+		if (effectiveType.IsBoolean)
+			return new ValueInstance(returnType, value.AsBool(), Statistics);
+		if (IsNumberType(effectiveType))
+			return new ValueInstance(returnType, value.AsNumber(), Statistics);
+		if (IsTextType(effectiveType))
+			return new ValueInstance(returnType, (string)value.Value!, Statistics);
+		return new ValueInstance(returnType, value.Value, Statistics);
 	}
 
 	private static object NormalizeDictionaryValue(Type dictionaryType,
@@ -308,7 +371,7 @@ public sealed class Executor(TestBehavior behavior = TestBehavior.OnFirstRun)
 			throw new UnableToCallMemberWithoutInstance(member, ctx); //ncrunch: no coverage
 		if (ctx.This?.Value is Dictionary<string, object?> dict &&
 			dict.TryGetValue(member.Member.Name, out var value))
-			return new ValueInstance(member.ReturnType, value, Statistics);
+			return CreateValueInstance(member.ReturnType, value);
 		if (member.Member.InitialValue != null && member.IsConstant)
 			return RunExpression(member.Member.InitialValue, ctx);
 		return member.Instance is VariableCall { Variable.Name: Type.OuterLowercase }
@@ -323,8 +386,9 @@ public sealed class Executor(TestBehavior behavior = TestBehavior.OnFirstRun)
 		MethodCallEvaluator.Evaluate(call, ctx);
 
 	public sealed class ReturnTypeMustMatchMethod(Body body, ValueInstance last) : ExecutionFailed(
-		body.Method, "Return value " + last + " does not match method " + body.Method.Name +
-		" ReturnType=" + body.Method.ReturnType);
+		body.Method,
+		"Return value " + last + " does not match method " + body.Method.Name + " ReturnType=" +
+		body.Method.ReturnType);
 
 	/// <summary>
 	/// Skip parsing for trivially simple methods during validation to avoid missing-instance errors.
@@ -387,14 +451,18 @@ public sealed class Executor(TestBehavior behavior = TestBehavior.OnFirstRun)
 			body + " ({CountExpressionComplexity(body)} expressions)") { }
 	}
 
-	public sealed class TestFailed(Method method, Expression expression, ValueInstance result,
+	public sealed class TestFailed(
+		Method method,
+		Expression expression,
+		ValueInstance result,
 		string details) : ExecutionFailed(method,
 		$"\"{method.Name}\" method failed: {expression}, result: {result}" + (details.Length > 0
 			? $", evaluated: {details}"
 			: "") + " in" + Environment.NewLine +
 		$"{method.Type.FilePath}:line {expression.LineNumber + 1}");
 
-	private ValueInstance EvaluateAndAssign(string name, Expression value, ExecutionContext ctx, bool isDeclaration)
+	private ValueInstance EvaluateAndAssign(string name, Expression value, ExecutionContext ctx,
+		bool isDeclaration)
 	{
 		if (isDeclaration)
 			Statistics.VariableDeclarationCount++;
@@ -410,7 +478,9 @@ public sealed class Executor(TestBehavior behavior = TestBehavior.OnFirstRun)
 	private ValueInstance EvaluateReturn(Return r, ExecutionContext ctx)
 	{
 		Statistics.ReturnCount++;
-		return ctx.ExitMethodAndReturnValue = RunExpression(r.Value, ctx);
+		var result = RunExpression(r.Value, ctx);
+		ctx.ExitMethodAndReturnValue = result;
+		return result;
 	}
 
 	private ValueInstance EvaluateNot(Not not, ExecutionContext ctx)
@@ -426,9 +496,17 @@ public sealed class Executor(TestBehavior behavior = TestBehavior.OnFirstRun)
 		v switch
 		{
 			bool b => b,
-			ValueInstance vi => ToBool(vi.Value),
+			ValueInstance vi => vi.AsBool(),
 			Value { ReturnType.Name: Base.Boolean, Data: bool bv } => bv, //ncrunch: no coverage
-			_ => throw new InvalidOperationException("Expected Boolean, got: " + v) //ncrunch: no coverage
+			_ => throw new InvalidOperationException("Expected Boolean, got: " +
+				v) //ncrunch: no coverage
 		};
 
-	}
+	private static Type GetEffectiveType(Type returnType) =>
+		returnType.IsMutable
+			? ((GenericTypeImplementation)returnType).ImplementationTypes[0]
+			: returnType;
+
+	private static bool IsNumberType(Type type) => ValueInstance.IsNumberType(type);
+	private static bool IsTextType(Type type) => type.Name is Base.Text or Base.Name;
+}

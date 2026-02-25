@@ -29,8 +29,7 @@ internal sealed class BodyEvaluator(Executor executor)
 
 	private ValueInstance TryEvaluate(Body body, ExecutionContext ctx, bool runOnlyTests)
 	{
-		ValueInstance last =
-			new((ctx.This?.ReturnType.Package ?? body.Method.Type.Package).FindType(Base.None)!, null, executor.Statistics);
+		var last = executor.None(ctx.This?.ReturnType ?? body.Method.Type);
 		foreach (var e in body.Expressions)
 		{
 			var isTest = !e.Equals(body.Expressions[^1]) && IsStandaloneInlineTest(e);
@@ -41,8 +40,8 @@ internal sealed class BodyEvaluator(Executor executor)
 				body.Method.Type.Members.Any(m => !m.IsConstant && e.ToString().Contains(m.Name)))
 				continue;
 			last = executor.RunExpression(e, ctx);
-			if (ctx.ExitMethodAndReturnValue != null)
-				return ctx.ExitMethodAndReturnValue;
+			if (ctx.ExitMethodAndReturnValue.HasValue)
+				return ctx.ExitMethodAndReturnValue.Value;
 			if (runOnlyTests && isTest && !Executor.ToBool(last))
 				throw new Executor.TestFailed(body.Method, e, last, GetTestFailureDetails(e, ctx));
 		}
@@ -63,8 +62,10 @@ internal sealed class BodyEvaluator(Executor executor)
 		e is not MutableReassignment;
 
 	private string GetTestFailureDetails(Expression expression, ExecutionContext ctx) =>
-		expression is Binary { Method.Name: BinaryOperator.Is, Instance: not null } binary &&
-		binary.Arguments.Count == 1
+		expression is Binary
+		{
+			Method.Name: BinaryOperator.Is, Instance: not null, Arguments.Count: 1
+		} binary
 			? GetBinaryComparisonDetails(binary, ctx, BinaryOperator.Is)
 			: expression is Not { Instance: Binary { Method.Name: BinaryOperator.Is } notBinary } &&
 			notBinary.Arguments.Count == 1

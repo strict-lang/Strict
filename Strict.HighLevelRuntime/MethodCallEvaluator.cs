@@ -13,10 +13,12 @@ public sealed class MethodCallEvaluator(Executor executor)
 		executor.Statistics.ListCallCount++;
 		var listInstance = executor.RunExpression(call.List, ctx);
 		var indexValue = executor.RunExpression(call.Index, ctx);
-		var index = Convert.ToInt32(EqualsExtensions.NumberToDouble(indexValue.Value));
+		var index = (int)indexValue.AsNumber();
 		if (listInstance.Value is IList list)
-			return list[index] as ValueInstance ?? new ValueInstance(call.ReturnType, list[index], executor.Statistics);
-		throw new InvalidOperationException("List call can only be used on iterators, got: " + //ncrunch: no coverage
+			return list[index] is ValueInstance valueInstance
+				? valueInstance
+				: executor.CreateValueInstance(call.ReturnType, list[index]);
+		throw new InvalidOperationException("List call can only be used on iterators, got: " +
 			listInstance);
 	}
 
@@ -65,13 +67,11 @@ public sealed class MethodCallEvaluator(Executor executor)
 	{
 		executor.Statistics.ArithmeticCount++;
 		var op = call.Method.Name;
-		var left = leftInstance.Value;
-		var right = rightInstance.Value;
 		if (leftInstance.ReturnType.Name == Base.Number &&
 			rightInstance.ReturnType.Name == Base.Number)
 		{
-			var l = EqualsExtensions.NumberToDouble(left);
-			var r = EqualsExtensions.NumberToDouble(right);
+			var l = leftInstance.AsNumber();
+			var r = rightInstance.AsNumber();
 			return op switch
 			{
 				BinaryOperator.Plus => Number(call.Method, l + r),
@@ -83,17 +83,19 @@ public sealed class MethodCallEvaluator(Executor executor)
 				_ => ExecuteMethodCall(call, leftInstance, ctx) //ncrunch: no coverage
 			};
 		}
+		var left = leftInstance.Value;
+		var right = rightInstance.Value;
 		if (leftInstance.ReturnType.Name == Base.Text && rightInstance.ReturnType.Name == Base.Text)
 		{
 			return op == BinaryOperator.Plus
-				? new ValueInstance(leftInstance.ReturnType, (string)left! + (string)right!, executor.Statistics)
+       ? new ValueInstance(leftInstance.ReturnType, (string)left! + (string)right!, executor.Statistics)
 				: throw new NotSupportedException("Only + operator is supported for Text, got: " + op);
 		}
 		if (leftInstance.ReturnType.Name == Base.Text && rightInstance.ReturnType.Name == Base.Number)
 		{
 			return op == BinaryOperator.Plus
-				? new ValueInstance(leftInstance.ReturnType,
-					(string)left! + (int)EqualsExtensions.NumberToDouble(right), executor.Statistics)
+        ? new ValueInstance(leftInstance.ReturnType,
+					(string)left! + (int)rightInstance.AsNumber(), executor.Statistics)
 				: throw new NotSupportedException("Only + operator is supported for Text+Number, got: " + op);
 		}
 		if (leftInstance.ReturnType.IsIterator && rightInstance.ReturnType.IsIterator)
@@ -125,9 +127,7 @@ public sealed class MethodCallEvaluator(Executor executor)
 				return AddToList(leftInstance.ReturnType, leftList, rightInstance);
 			if (op == BinaryOperator.Minus)
 				return RemoveFromList(leftInstance.ReturnType, leftList, rightInstance);
-			if (right is not double rightNumber)
-				throw new InvalidOperationException("Expected right number for iterator operation " + //ncrunch: no coverage
-					op + ": left=" + left + ", right=" + right);
+      var rightNumber = rightInstance.AsNumber();
 			if (op == BinaryOperator.Multiply)
 				return MultiplyList(leftInstance.ReturnType, leftList, rightNumber);
 			if (op == BinaryOperator.Divide)
@@ -138,7 +138,7 @@ public sealed class MethodCallEvaluator(Executor executor)
 		return ExecuteMethodCall(call, leftInstance, ctx); //ncrunch: no coverage
 	}
 
-	private ValueInstance Number(Context any, double n) => new(any.GetType(Base.Number), n, executor.Statistics);
+  private ValueInstance Number(Context any, double n) => executor.Number(any, n);
 	public const string ListsHaveDifferentDimensions = "listsHaveDifferentDimensions";
 
 	private ValueInstance ExecuteComparisonOperation(MethodCall call, ExecutionContext ctx,
@@ -166,16 +166,15 @@ public sealed class MethodCallEvaluator(Executor executor)
 			}
 			if (leftInstance.ReturnType.Name == Base.Text && right is int rightInt)
 			{
-				right = rightInt + "";
-				rightInstance = new ValueInstance(leftInstance.ReturnType, right, executor.Statistics);
+        rightInstance = new ValueInstance(leftInstance.ReturnType, rightInt.ToString(), executor.Statistics);
 			}
 			var equals = leftInstance.Equals(rightInstance);
 			return executor.Bool(call.Method, op is BinaryOperator.Is
 				? equals
 				: !equals);
 		}
-		var l = EqualsExtensions.NumberToDouble(left);
-		var r = EqualsExtensions.NumberToDouble(right);
+		var l = leftInstance.AsNumber();
+		var r = rightInstance.AsNumber();
 		return op switch
 		{
 			BinaryOperator.Greater => executor.Bool(call.Method, l > r),
@@ -190,13 +189,11 @@ public sealed class MethodCallEvaluator(Executor executor)
 		ValueInstance leftInstance, ValueInstance rightInstance)
 	{
 		executor.Statistics.LogicalOperationCount++;
-		var left = leftInstance.Value;
-		var right = rightInstance.Value;
 		return call.Method.Name switch
 		{
-			BinaryOperator.And => executor.Bool(call.Method, Executor.ToBool(left) && Executor.ToBool(right)),
-			BinaryOperator.Or => executor.Bool(call.Method, Executor.ToBool(left) || Executor.ToBool(right)),
-			BinaryOperator.Xor => executor.Bool(call.Method, Executor.ToBool(left) ^ Executor.ToBool(right)),
+			BinaryOperator.And => executor.Bool(call.Method, leftInstance.AsBool() && rightInstance.AsBool()),
+			BinaryOperator.Or => executor.Bool(call.Method, leftInstance.AsBool() || rightInstance.AsBool()),
+			BinaryOperator.Xor => executor.Bool(call.Method, leftInstance.AsBool() ^ rightInstance.AsBool()),
 			_ => ExecuteMethodCall(call, leftInstance, ctx) //ncrunch: no coverage
 		};
 	}
@@ -211,7 +208,7 @@ public sealed class MethodCallEvaluator(Executor executor)
 			combined.Add(item);
 		foreach (var item in rightList)
 			combined.Add(isLeftText && item.ReturnType.Name != Base.Text
-				? new ValueInstance(listType.GetType(Base.Text), item.Value?.ToString(), executor.Statistics)
+       ? new ValueInstance(listType.GetType(Base.Text), ConvertToText(item.Value), executor.Statistics)
 				: item);
 		return new ValueInstance(listType, combined, executor.Statistics);
 	}
@@ -233,8 +230,8 @@ public sealed class MethodCallEvaluator(Executor executor)
 		var result = new List<ValueInstance>();
 		for (var index = 0; index < leftList.Count; index++)
 			result.Add(new ValueInstance(leftListType.GetType(Base.Number),
-				EqualsExtensions.NumberToDouble(leftList[index].Value) *
-				EqualsExtensions.NumberToDouble(rightList[index].Value), executor.Statistics));
+				leftList[index].AsNumber() *
+				rightList[index].AsNumber(), executor.Statistics));
 		return new ValueInstance(leftListType, result, executor.Statistics);
 	}
 
@@ -244,8 +241,8 @@ public sealed class MethodCallEvaluator(Executor executor)
 		var result = new List<ValueInstance>();
 		for (var index = 0; index < leftList.Count; index++)
 			result.Add(new ValueInstance(leftListType.GetType(Base.Number),
-				EqualsExtensions.NumberToDouble(leftList[index].Value) /
-				EqualsExtensions.NumberToDouble(rightList[index].Value), executor.Statistics));
+				leftList[index].AsNumber() /
+				rightList[index].AsNumber(), executor.Statistics));
 		return new ValueInstance(leftListType, result, executor.Statistics);
 	}
 
@@ -288,7 +285,7 @@ public sealed class MethodCallEvaluator(Executor executor)
 		var result = new List<ValueInstance>(leftList.Count);
 		foreach (var item in leftList)
 			result.Add(new ValueInstance(item.ReturnType,
-				EqualsExtensions.NumberToDouble(item.Value) * rightNumber, executor.Statistics));
+				item.AsNumber() * rightNumber, executor.Statistics));
 		return new ValueInstance(leftListType, result, executor.Statistics);
 	}
 
@@ -298,7 +295,7 @@ public sealed class MethodCallEvaluator(Executor executor)
 		var result = new List<object?>(leftList.Count);
 		foreach (var item in leftList)
 			result.Add(new ValueInstance(item.ReturnType,
-				EqualsExtensions.NumberToDouble(item.Value) / rightNumber, executor.Statistics));
+				item.AsNumber() / rightNumber, executor.Statistics));
 		return new ValueInstance(leftListType, result, executor.Statistics);
 	}
 
@@ -310,14 +307,14 @@ public sealed class MethodCallEvaluator(Executor executor)
 			args.Add(executor.RunExpression(a, ctx));
 		if (instance is { ReturnType.IsDictionary: true } && args.Count > 0 && call.Method.Name == "Add")
 		{
-			if (args.Count == 2)
-				((IDictionary)instance.Value!)[args[0]] = args[1];
-			return instance;
+			if (args.Count == 2 && instance.Value.Value is IDictionary dict)
+				dict[args[0]] = args[1];
+			return instance.Value;
 		}
 		var result = executor.Execute(call.Method, instance, args, ctx);
 		if (call.Method.ReturnType.IsMutable && call.Instance is VariableCall variableCall &&
-			instance != null)
-			ctx.Set(variableCall.Variable.Name, new ValueInstance(instance.ReturnType, result.Value, executor.Statistics));
+			instance.HasValue)
+			ctx.Set(variableCall.Variable.Name, executor.CreateValueInstance(instance.Value.ReturnType, result));
 		return result;
 	}
 

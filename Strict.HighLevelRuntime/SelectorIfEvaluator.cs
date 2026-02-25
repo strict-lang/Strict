@@ -13,6 +13,6 @@ internal sealed class SelectorIfEvaluator(Executor executor)
 				return executor.RunExpression(@case.Then, ctx);
 		return selectorIf.OptionalElse != null
 			? executor.RunExpression(selectorIf.OptionalElse, ctx)
-			: new ValueInstance(selectorIf.ReturnType.GetType(Base.None), null, executor.Statistics);
+			: executor.None(selectorIf.ReturnType);
 	}
 }

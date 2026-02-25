@@ -23,15 +23,15 @@ internal sealed class ForEvaluator(Executor executor)
 				for (var index = start; index < end; index++)
 				{
 					ExecuteForIteration(f, ctx, iterator, results, itemType, index);
-					if (ctx.ExitMethodAndReturnValue != null)
-						return ctx.ExitMethodAndReturnValue;
+					if (ctx.ExitMethodAndReturnValue.HasValue)
+						return ctx.ExitMethodAndReturnValue.Value;
 				}
 			else
 				for (var index = start; index > end; index--)
 				{
 					ExecuteForIteration(f, ctx, iterator, results, itemType, index);
-					if (ctx.ExitMethodAndReturnValue != null)
-						return ctx.ExitMethodAndReturnValue;
+					if (ctx.ExitMethodAndReturnValue.HasValue)
+						return ctx.ExitMethodAndReturnValue.Value;
 				}
 		}
 		else
@@ -40,8 +40,8 @@ internal sealed class ForEvaluator(Executor executor)
 			for (var index = loopRange.Start.Value; index < loopRange.End.Value; index++)
 			{
 				ExecuteForIteration(f, ctx, iterator, results, itemType, index);
-				if (ctx.ExitMethodAndReturnValue != null)
-					return ctx.ExitMethodAndReturnValue;
+				if (ctx.ExitMethodAndReturnValue.HasValue)
+					return ctx.ExitMethodAndReturnValue.Value;
 			}
 		}
 		return ShouldConsolidateForResult(results, ctx) ?? new ValueInstance(results.Count == 0
@@ -54,11 +54,13 @@ internal sealed class ForEvaluator(Executor executor)
 		ICollection<ValueInstance> results, Type itemType, int index)
 	{
 		var loop = new ExecutionContext(ctx.Type, ctx.Method) { This = ctx.This, Parent = ctx };
-		loop.Set(Type.IndexLowercase, new ValueInstance(itemType.GetType(Base.Number), index, executor.Statistics));
+		loop.Set(Type.IndexLowercase, executor.Number(itemType, index));
 		var value = iterator.GetIteratorValue(index);
 		if (itemType.Name == Base.Text && value is char character)
 			value = character.ToString();
-		var valueInstance = value as ValueInstance ?? new ValueInstance(itemType, value, executor.Statistics);
+		var valueInstance = value is ValueInstance vi
+			? vi
+			: executor.CreateValueInstance(itemType, value);
 		loop.Set(Type.ValueLowercase, valueInstance);
 		foreach (var customVariable in f.CustomVariables)
 			if (customVariable is VariableCall variableCall)
@@ -66,7 +68,7 @@ internal sealed class ForEvaluator(Executor executor)
 		var itemResult = f.Body is Body body
 			? EvaluateBody(body, loop)
 			: executor.RunExpression(f.Body, loop);
-		if (loop.ExitMethodAndReturnValue != null)
+		if (loop.ExitMethodAndReturnValue.HasValue)
 			ctx.ExitMethodAndReturnValue = loop.ExitMethodAndReturnValue;
 		else if (itemResult.ReturnType.Name != Base.None && !itemResult.ReturnType.IsMutable)
 			results.Add(itemResult);
@@ -74,14 +76,12 @@ internal sealed class ForEvaluator(Executor executor)
 
 	private ValueInstance EvaluateBody(Body body, ExecutionContext ctx)
 	{
-		var noneType =
-			(ctx.This?.ReturnType.Package ?? body.Method.Type.Package).FindType(Base.None)!;
-		ValueInstance last = new(noneType, null, executor.Statistics);
+		var last = executor.None(body.Method);
 		foreach (var e in body.Expressions)
 		{
 			last = executor.RunExpression(e, ctx);
-			if (ctx.ExitMethodAndReturnValue != null)
-				return ctx.ExitMethodAndReturnValue;
+			if (ctx.ExitMethodAndReturnValue.HasValue)
+				return ctx.ExitMethodAndReturnValue.Value;
 		}
 		return last;
 	}
@@ -90,23 +90,22 @@ internal sealed class ForEvaluator(Executor executor)
 		ExecutionContext ctx)
 	{
 		if (ctx.Method.ReturnType.Name == Base.Number)
-			return new ValueInstance(ctx.Method.ReturnType,
-				results.Sum(value => EqualsExtensions.NumberToDouble(value.Value)), executor.Statistics);
+     return executor.Number(ctx.Method, results.Sum(value => value.AsNumber()));
 		if (ctx.Method.ReturnType.Name == Base.Text)
 		{
 			var text = "";
 			foreach (var value in results)
 				text += value.ReturnType.Name switch
 				{
-					Base.Number => (int)EqualsExtensions.NumberToDouble(value.Value),
-					Base.Character => "" + (char)value.Value!,
+					Base.Number => (int)value.AsNumber(),
+          Base.Character => "" + (char)(int)value.Value!,
 					Base.Text => (string)value.Value!,
 					_ => throw new NotSupportedException("Can't append to text: " + value)
 				};
 			return new ValueInstance(ctx.Method.ReturnType, text, executor.Statistics);
 		}
 		return ctx.Method.ReturnType.Name == Base.Boolean
-			? new ValueInstance(ctx.Method.ReturnType, results.Any(value => value.Value is true), executor.Statistics)
+			? executor.Bool(ctx.Method, results.Any(value => value.AsBool()))
 			: null;
 	}
 

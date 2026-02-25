@@ -47,6 +47,7 @@ public sealed class ToTests
 					"Convert(number)", "\tcharacter to Number * 10 ^ number")).
 			ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(
+			// ReSharper disable once ConfusingCharAsIntegerInConstructor
 			executor.Execute(type.Methods[0], new ValueInstance(type, '5'),
 				[new ValueInstance(type.GetType(Base.Number), 3)]).Value, Is.EqualTo(5 * 1000));
 	}

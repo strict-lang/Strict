@@ -12,8 +12,8 @@ internal sealed class ToEvaluator(Executor executor)
 		var left = executor.RunExpression(to.Instance!, ctx).Value;
 		if (to.Instance!.ReturnType.Name == Base.Text && to.ConversionType.Name == Base.Number &&
 			left is string textValue)
-			return new ValueInstance(to.ConversionType,
-				double.Parse(textValue, CultureInfo.InvariantCulture), executor.Statistics);
+     return executor.Number(to.ConversionType,
+				double.Parse(textValue, CultureInfo.InvariantCulture));
 		if (to.ConversionType.Name == Base.Text)
 			return new ValueInstance(to.ConversionType, left?.ToString() ?? "", executor.Statistics);
 		if (!to.Method.IsTrait && to.Method.Type.Name != Base.Number)

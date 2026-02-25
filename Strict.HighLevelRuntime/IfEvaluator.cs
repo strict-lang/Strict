@@ -12,14 +12,14 @@ internal sealed class IfEvaluator(Executor executor)
 		{
 			var thenResult = executor.RunExpression(iff.Then, ctx);
 			return iff.Then is MutableReassignment || IsMutableInstanceCall(iff.Then)
-				? new ValueInstance(iff.ReturnType.GetType(Base.None), null, executor.Statistics)
+				? executor.None(iff.ReturnType)
 				: thenResult;
 		}
 		if (iff.OptionalElse == null)
-			return new ValueInstance(iff.ReturnType.GetType(Base.None), null, executor.Statistics);
+			return executor.None(iff.ReturnType);
 		var elseResult = executor.RunExpression(iff.OptionalElse, ctx);
 		return iff.OptionalElse is MutableReassignment || IsMutableInstanceCall(iff.OptionalElse)
-			? new ValueInstance(iff.ReturnType.GetType(Base.None), null, executor.Statistics)
+			? executor.None(iff.ReturnType)
 			: elseResult;
 	}
 

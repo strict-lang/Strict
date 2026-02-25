@@ -14,15 +14,16 @@ public sealed class ValueInstanceTests
 
 	[Test]
 	public void ToStringShowsTypeAndValue() =>
-		Assert.That(new ValueInstance(numberType, 42).ToString(), Is.EqualTo("Number:42"));
+		Assert.That(new ValueInstance(numberType, 42d).ToString(), Is.EqualTo("Number:42"));
 
 	[Test]
 	public void CompareTwoNumbers() =>
-		Assert.That(new ValueInstance(numberType, 42), Is.EqualTo(new ValueInstance(numberType, 42)));
+		Assert.That(new ValueInstance(numberType, 42d),
+			Is.EqualTo(new ValueInstance(numberType, 42d)));
 
 	[Test]
 	public void CompareNumberToText() =>
-		Assert.That(new ValueInstance(numberType, 5),
+		Assert.That(new ValueInstance(numberType, 5d),
 			Is.Not.EqualTo(new ValueInstance(TestPackage.Instance.GetType(Base.Text), "5")));
 
 	[Test]
@@ -87,7 +88,7 @@ public sealed class ValueInstanceTests
 			new Type(TestPackage.Instance,
 				new TypeLines(nameof(CompareTypeContainingNumber), "has number", "Run Boolean",
 					"\tnumber is 42")).ParseMembersAndMethods(new MethodExpressionParser());
-		Assert.That(new ValueInstance(t, 42), Is.EqualTo(new ValueInstance(numberType, 42)));
+		Assert.That(new ValueInstance(t, 42d), Is.EqualTo(new ValueInstance(numberType, 42d)));
 	}
 
 	[Test]
@@ -101,7 +102,7 @@ public sealed class ValueInstanceTests
 
 	[Test]
 	public void NonNoneTypeRejectsNullValue() =>
-		Assert.That(() => new ValueInstance(numberType, null),
+		Assert.That(() => new ValueInstance(numberType),
 			Throws.InstanceOf<ValueInstance.InvalidTypeValue>());
 
 	[Test]
@@ -113,10 +114,19 @@ public sealed class ValueInstanceTests
 	}
 
 	[Test]
+	public void ObjectConstructorRejectsBooleanType()
+	{
+		var boolType = TestPackage.Instance.GetType(Base.Boolean);
+		Assert.That(() => new ValueInstance(boolType, (object)true),
+			Throws.InstanceOf<ValueInstance.InvalidTypeValue>());
+	}
+
+	[Test]
 	public void EnumTypeAllowsNumberAndText()
 	{
 		var enumType = new Type(TestPackage.Instance,
-				new TypeLines(nameof(EnumTypeAllowsNumberAndText), "constant One", "constant Something = \"Something\"")).
+				new TypeLines(nameof(EnumTypeAllowsNumberAndText), "constant One",
+					"constant Something = \"Something\"")).
 			ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(() => new ValueInstance(enumType, 1), Throws.Nothing);
 	}
@@ -140,6 +150,14 @@ public sealed class ValueInstanceTests
 	}
 
 	[Test]
+	public void ObjectConstructorRejectsTextType()
+	{
+		var textType = TestPackage.Instance.GetType(Base.Text);
+		Assert.That(() => new ValueInstance(textType, (object)"text"),
+			Throws.InstanceOf<ValueInstance.InvalidTypeValue>());
+	}
+
+	[Test]
 	public void CharacterTypeRejectsNonCharacterValue()
 	{
 		var charType = TestPackage.Instance.GetType(Base.Character);
@@ -159,6 +177,20 @@ public sealed class ValueInstanceTests
 	public void NumberTypeRejectsNonNumericValue() =>
 		Assert.That(() => new ValueInstance(numberType, "nope"),
 			Throws.InstanceOf<ValueInstance.InvalidTypeValue>());
+
+	[Test]
+	public void ObjectConstructorRejectsNumberType() =>
+		Assert.That(() => new ValueInstance(numberType, (object)1d),
+			Throws.InstanceOf<ValueInstance.InvalidTypeValue>());
+
+	[Test]
+	public void ObjectConstructorRejectsNoneType()
+	{
+		var package = new Package(nameof(ObjectConstructorRejectsNoneType));
+		var noneType = package.FindType(Base.None, package);
+		Assert.That(() => new ValueInstance(noneType!, (object?)null),
+			Throws.InstanceOf<ValueInstance.InvalidTypeValue>());
+	}
 
 	[Test]
 	public void TypeRejectsUnknownDictionaryMembers()

@@ -29,7 +29,7 @@ public sealed class ExecutionContext(Type type, Method method)
 			Type.Members.FirstOrDefault(m => !m.IsConstant && m.Type.Name != Base.Iterator);
 		if (implicitMember != null &&
 			implicitMember.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
-			return new ValueInstance(implicitMember.Type, This.Value);
+			return ValueInstance.Create(implicitMember.Type, This.Value, statistics);
 		return Parent?.Find(name, statistics);
 	}
 
@@ -53,7 +53,8 @@ public sealed class ExecutionContext(Type type, Method method)
 			: listMemberType;
 		var pairs = new List<ValueInstance>(dictionary.Count);
 		foreach (var entry in dictionary)
-			pairs.Add(new ValueInstance(elementType, new List<ValueInstance> { entry.Key, entry.Value }));
+			pairs.Add(
+				new ValueInstance(elementType, new List<ValueInstance> { entry.Key, entry.Value }));
 		return pairs;
 	}
 
@@ -66,4 +67,20 @@ public sealed class ExecutionContext(Type type, Method method)
 		nameof(ExecutionContext) + " Type=" + Type.Name + ", This=" + This + ", Variables:" +
 		Environment.NewLine + "  " +
 		Variables.DictionaryToWordList(Environment.NewLine + "  ", " ", true);
+
+	public void AddDictionaryElements(ValueInstance? instance)
+	{
+		if (instance?.ReturnType is not GenericTypeImplementation
+			{
+				Generic.Name: Base.Dictionary
+			} implementation ||
+			instance.Value.Value is not Dictionary<ValueInstance, ValueInstance> dictionary ||
+			Variables.ContainsKey(Type.ElementsLowercase))
+			return;
+		var listMemberType = implementation.Members.FirstOrDefault(member =>
+			member.Type is GenericTypeImplementation { Generic.Name: Base.List } ||
+			member.Type.Name == Base.List)?.Type ?? implementation.GetType(Base.List);
+		var listValue = ExecutionContext.BuildDictionaryPairsList(listMemberType, dictionary);
+		Set(Type.ElementsLowercase, new ValueInstance(listMemberType, listValue));
+	}
 }

@@ -27,8 +27,8 @@ public sealed class ExecutorTests
 		using var t = CreateType(nameof(FromConstructorWithExistingInstanceThrows), "has number",
 			"from(number Number)", "\tvalue");
 		var method = t.Methods.Single(m => m.Name == Method.From);
-		var number = new ValueInstance(TestPackage.Instance.FindType(Base.Number)!, 3);
-		var instance = new ValueInstance(t, 1);
+   var number = new ValueInstance(TestPackage.Instance.FindType(Base.Number)!, 3d);
+		var instance = new ValueInstance(t, 1d);
 		Assert.That(() => executor.Execute(method, instance, [number]),
 			Throws.InstanceOf<MethodCall.CannotCallFromConstructorWithExistingInstance>());
 	}
@@ -47,7 +47,7 @@ public sealed class ExecutorTests
 		using var t = CreateCalcType();
 		var method = t.Methods.Single(m => m.Name == "Add");
 		var result = executor.Execute(method, null,
-			[new ValueInstance(TestPackage.Instance.FindType(Base.Number)!, 5)]);
+     [new ValueInstance(TestPackage.Instance.FindType(Base.Number)!, 5d)]);
 		Assert.That(Convert.ToDouble(result.Value), Is.EqualTo(6));
 	}
 
@@ -57,9 +57,9 @@ public sealed class ExecutorTests
 		using var t = CreateCalcType();
 		var method = t.Methods.Single(m => m.Name == "Add");
 		Assert.That(() => executor.Execute(method, null, [
-			new ValueInstance(TestPackage.Instance.FindType(Base.Number)!, 1),
-			new ValueInstance(TestPackage.Instance.FindType(Base.Number)!, 2),
-			new ValueInstance(TestPackage.Instance.FindType(Base.Number)!, 3)
+      new ValueInstance(TestPackage.Instance.FindType(Base.Number)!, 1d),
+			new ValueInstance(TestPackage.Instance.FindType(Base.Number)!, 2d),
+			new ValueInstance(TestPackage.Instance.FindType(Base.Number)!, 3d)
 		]), Throws.InstanceOf<Executor.TooManyArguments>().With.Message.StartsWith("Number:3"));
 	}
 
@@ -79,8 +79,8 @@ public sealed class ExecutorTests
 	{
 		using var t = CreateCalcType();
 		var method = t.Methods.Single(m => m.Name == "Add");
-		var first = new ValueInstance(TestPackage.Instance.FindType(Base.Number)!, 5);
-		var second = new ValueInstance(TestPackage.Instance.FindType(Base.Number)!, 7);
+    var first = new ValueInstance(TestPackage.Instance.FindType(Base.Number)!, 5d);
+		var second = new ValueInstance(TestPackage.Instance.FindType(Base.Number)!, 7d);
 		var result = executor.Execute(method, null, [first, second]);
 		Assert.That(result.ReturnType.Name, Is.EqualTo(Base.Number));
 		Assert.That(Convert.ToDouble(result.Value), Is.EqualTo(12));
@@ -92,7 +92,7 @@ public sealed class ExecutorTests
 		using var t = CreateType(nameof(EvaluateDeclaration), "mutable last Number",
 			"AddFive(number) Number", "\tconstant five = 5", "\tnumber + five");
 		var method = t.Methods.Single(m => m.Name == "AddFive");
-		var number = new ValueInstance(TestPackage.Instance.FindType(Base.Number)!, 5);
+   var number = new ValueInstance(TestPackage.Instance.FindType(Base.Number)!, 5d);
 		var result = executor.Execute(method, null, [number]);
 		Assert.That(Convert.ToDouble(result.Value), Is.EqualTo(10));
 	}

@@ -16,8 +16,8 @@ public sealed class ListTests
 	}
 
 	private Executor executor = null!;
-	private ValueInstance one = null!;
-	private ValueInstance two = null!;
+	private ValueInstance one;
+	private ValueInstance two;
 
 	private static Type CreateType(string name, params string[] lines) =>
 		new Type(TestPackage.Instance, new TypeLines(name, lines)).ParseMembersAndMethods(
