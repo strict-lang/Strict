@@ -13,15 +13,16 @@ public sealed class ExecutionContext(Type type, Method method)
 	public Dictionary<string, ValueInstance> Variables { get; } = new(StringComparer.Ordinal);
 	public ValueInstance? ExitMethodAndReturnValue { get; internal set; }
 
-	public ValueInstance Get(string name) =>
-		Find(name) ?? throw new VariableNotFound(name, Type, This);
+	public ValueInstance Get(string name, Statistics statistics) =>
+		Find(name, statistics) ?? throw new VariableNotFound(name, Type, This);
 
-	public ValueInstance? Find(string name)
+	public ValueInstance? Find(string name, Statistics statistics)
 	{
+		statistics.FindVariableCount++;
 		if (Variables.TryGetValue(name, out var v))
 			return v;
 		if (This == null)
-			return Parent?.Find(name);
+			return Parent?.Find(name, statistics);
 		if (name == Type.ValueLowercase)
 			return This;
 		var implicitMember =
@@ -29,7 +30,7 @@ public sealed class ExecutionContext(Type type, Method method)
 		if (implicitMember != null &&
 			implicitMember.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
 			return new ValueInstance(implicitMember.Type, This.Value);
-		return Parent?.Find(name);
+		return Parent?.Find(name, statistics);
 	}
 
 	public ValueInstance Set(string name, ValueInstance value)

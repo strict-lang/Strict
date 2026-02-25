@@ -10,14 +10,14 @@ public sealed class Executor(TestBehavior behavior = TestBehavior.OnFirstRun)
 	public ValueInstance Execute(Method method, ValueInstance? instance,
 		IReadOnlyList<ValueInstance> args, ExecutionContext? parentContext = null)
 	{
-		Statistics.MethodCallCount++;
+		Statistics.MethodCount++;
 		ValueInstance? returnValue = null;
 		if (inlineTestDepth == 0 && behavior != TestBehavior.Disabled &&
 			(behavior == TestBehavior.TestRunner || validatedMethods.Add(method)))
 			returnValue = Execute(method, instance, args, parentContext, true);
 		if (inlineTestDepth > 0 || behavior != TestBehavior.TestRunner)
 			returnValue = Execute(method, instance, args, parentContext, false);
-		return returnValue ?? new ValueInstance(method.ReturnType, null);
+		return returnValue ?? new ValueInstance(method.ReturnType, null, Statistics);
 	}
 
 	/// <summary>
@@ -40,7 +40,7 @@ public sealed class Executor(TestBehavior behavior = TestBehavior.OnFirstRun)
 		if (method is { Name: Method.From, Type.IsGeneric: false })
 			return instance != null
 				? throw new MethodCall.CannotCallFromConstructorWithExistingInstance()
-				: new ValueInstance(method.Type, GetFromConstructorValue(method, args));
+				: new ValueInstance(method.Type, GetFromConstructorValue(method, args), Statistics);
 		var context = CreateExecutionContext(method, instance, args, parentContext, runOnlyTests);
 		if (runOnlyTests && IsSimpleSingleLineMethod(method))
 			return Bool(method.ReturnType, true);
@@ -68,11 +68,11 @@ public sealed class Executor(TestBehavior behavior = TestBehavior.OnFirstRun)
 				Generic.Name: Base.Mutable
 			} mutableReturnType && !result.ReturnType.IsMutable &&
 			result.ReturnType.IsSameOrCanBeUsedAs(mutableReturnType.ImplementationTypes[0]))
-			return new ValueInstance(method.ReturnType, result.Value);
+			return new ValueInstance(method.ReturnType, result.Value, Statistics);
 		return !runOnlyTests && !method.ReturnType.IsMutable && result.ReturnType.IsMutable &&
 			((GenericTypeImplementation)result.ReturnType).ImplementationTypes[0].
 			IsSameOrCanBeUsedAs(method.ReturnType)
-				? new ValueInstance(method.ReturnType, result.Value)
+				? new ValueInstance(method.ReturnType, result.Value, Statistics)
 				: result;
 	}
 
@@ -123,7 +123,7 @@ public sealed class Executor(TestBehavior behavior = TestBehavior.OnFirstRun)
 	internal ValueInstance Bool(Context any, bool b) =>
 		new(any.GetType(Base.Boolean), b
 			? BoxedTrue
-			: BoxedFalse);
+			: BoxedFalse, Statistics);
 
 	private static bool DoArgumentsMatch(Method method, IReadOnlyList<ValueInstance> args,
 		IReadOnlyDictionary<string, ValueInstance> parentContextVariables)
@@ -161,8 +161,9 @@ public sealed class Executor(TestBehavior behavior = TestBehavior.OnFirstRun)
 		return result;
 	}
 
-	private static object? GetFromConstructorValue(Method method, IReadOnlyList<ValueInstance> args)
+	private object? GetFromConstructorValue(Method method, IReadOnlyList<ValueInstance> args)
 	{
+		Statistics.FromCreationsCount++;
 		if (args.Count == 0 && method.Type.Name == Base.Text)
 			return "";
 		if (method.Type.IsDictionary && args.Count == 1 && args[0].ReturnType.IsIterator)
@@ -229,8 +230,7 @@ public sealed class Executor(TestBehavior behavior = TestBehavior.OnFirstRun)
 	public ValueInstance RunExpression(Expression expr, ExecutionContext context,
 		bool runOnlyTests = false)
 	{
-		if (runOnlyTests)
-			Statistics.TestsCount++;
+		Statistics.ExpressionCount++;
 		return expr switch
 		{
 			Body body => BodyEvaluator.Evaluate(body, context, runOnlyTests),
@@ -245,8 +245,8 @@ public sealed class Executor(TestBehavior behavior = TestBehavior.OnFirstRun)
 			To t => ToEvaluator.Evaluate(t, context),
 			Not n => EvaluateNot(n, context),
 			MethodCall call => EvaluateMethodCall(call, context),
-			Declaration c => EvaluateAndAssign(c.Name, c.Value, context),
-			MutableReassignment a => EvaluateAndAssign(a.Name, a.Value, context),
+			Declaration c => EvaluateAndAssign(c.Name, c.Value, context, true),
+			MutableReassignment a => EvaluateAndAssign(a.Name, a.Value, context, false),
 			Instance => EvaluateVariable(Type.ValueLowercase, context),
 			_ => throw new ExpressionNotSupported(expr, context) //ncrunch: no coverage
 		};
@@ -266,7 +266,7 @@ public sealed class Executor(TestBehavior behavior = TestBehavior.OnFirstRun)
 		var value = EvaluateValueData(valueData, context);
 		if (returnType.IsDictionary)
 			value = NormalizeDictionaryValue(returnType, (IDictionary<string, object?>)value);
-		return new ValueInstance(returnType, value);
+		return new ValueInstance(returnType, value, Statistics);
 	}
 
 	private static object NormalizeDictionaryValue(Type dictionaryType,
@@ -295,25 +295,25 @@ public sealed class Executor(TestBehavior behavior = TestBehavior.OnFirstRun)
 
 	private ValueInstance EvaluateVariable(string name, ExecutionContext context)
 	{
-		Statistics.FindVariableCount++;
-		return context.Find(name) ?? (name == Type.ValueLowercase
+		Statistics.VariableCallCount++;
+		return context.Find(name, Statistics) ?? (name == Type.ValueLowercase
 			? context.This
 			: null) ?? throw new ExecutionContext.VariableNotFound(name, context.Type, context.This);
 	}
 
 	public ValueInstance EvaluateMemberCall(MemberCall member, ExecutionContext ctx)
 	{
+		Statistics.MemberCallCount++;
 		if (ctx.This == null && ctx.Type.Members.Contains(member.Member))
 			throw new UnableToCallMemberWithoutInstance(member, ctx); //ncrunch: no coverage
 		if (ctx.This?.Value is Dictionary<string, object?> dict &&
 			dict.TryGetValue(member.Member.Name, out var value))
-			return new ValueInstance(member.ReturnType, value);
+			return new ValueInstance(member.ReturnType, value, Statistics);
 		if (member.Member.InitialValue != null && member.IsConstant)
 			return RunExpression(member.Member.InitialValue, ctx);
-		Statistics.FindVariableCount++;
 		return member.Instance is VariableCall { Variable.Name: Type.OuterLowercase }
-			? ctx.Parent!.Get(member.Member.Name)
-			: ctx.Get(member.Member.Name);
+			? ctx.Parent!.Get(member.Member.Name, Statistics)
+			: ctx.Get(member.Member.Name, Statistics);
 	}
 
 	internal void IncrementInlineTestDepth() => inlineTestDepth++;
@@ -323,9 +323,8 @@ public sealed class Executor(TestBehavior behavior = TestBehavior.OnFirstRun)
 		MethodCallEvaluator.Evaluate(call, ctx);
 
 	public sealed class ReturnTypeMustMatchMethod(Body body, ValueInstance last) : ExecutionFailed(
-		body.Method,
-		"Return value " + last + " does not match method " + body.Method.Name + " ReturnType=" +
-		body.Method.ReturnType);
+		body.Method, "Return value " + last + " does not match method " + body.Method.Name +
+		" ReturnType=" + body.Method.ReturnType);
 
 	/// <summary>
 	/// Skip parsing for trivially simple methods during validation to avoid missing-instance errors.
@@ -395,9 +394,16 @@ public sealed class Executor(TestBehavior behavior = TestBehavior.OnFirstRun)
 			: "") + " in" + Environment.NewLine +
 		$"{method.Type.FilePath}:line {expression.LineNumber + 1}");
 
-	private ValueInstance EvaluateAndAssign(string name, Expression value, ExecutionContext ctx)
+	private ValueInstance EvaluateAndAssign(string name, Expression value, ExecutionContext ctx, bool isDeclaration)
 	{
-		Statistics.MutableUsageCount++;
+		if (isDeclaration)
+			Statistics.VariableDeclarationCount++;
+		if (value.IsMutable)
+		{
+			if (isDeclaration)
+				Statistics.MutableDeclarationCount++;
+			Statistics.MutableUsageCount++;
+		}
 		return ctx.Set(name, RunExpression(value, ctx));
 	}
 
@@ -407,8 +413,11 @@ public sealed class Executor(TestBehavior behavior = TestBehavior.OnFirstRun)
 		return ctx.ExitMethodAndReturnValue = RunExpression(r.Value, ctx);
 	}
 
-	private ValueInstance EvaluateNot(Not not, ExecutionContext ctx) =>
-		Bool(not.ReturnType, !ToBool(RunExpression(not.Instance!, ctx)));
+	private ValueInstance EvaluateNot(Not not, ExecutionContext ctx)
+	{
+		Statistics.UnaryCount++;
+		return Bool(not.ReturnType, !ToBool(RunExpression(not.Instance!, ctx)));
+	}
 
 	public class UnableToCallMemberWithoutInstance(MemberCall member, ExecutionContext ctx)
 		: Exception(member + ", context " + ctx); //ncrunch: no coverage

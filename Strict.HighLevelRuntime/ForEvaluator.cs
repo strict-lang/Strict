@@ -8,6 +8,7 @@ internal sealed class ForEvaluator(Executor executor)
 {
 	public ValueInstance Evaluate(For f, ExecutionContext ctx)
 	{
+		executor.Statistics.ForCount++;
 		var iterator = executor.RunExpression(f.Iterator, ctx);
 		var results = new List<ValueInstance>();
 		var itemType = GetForValueType(iterator);
@@ -46,18 +47,18 @@ internal sealed class ForEvaluator(Executor executor)
 		return ShouldConsolidateForResult(results, ctx) ?? new ValueInstance(results.Count == 0
 				? iterator.ReturnType
 				: iterator.ReturnType.GetType(Base.List).GetGenericImplementation(results[0].ReturnType),
-			results);
+			results, executor.Statistics);
 	}
 
 	private void ExecuteForIteration(For f, ExecutionContext ctx, ValueInstance iterator,
 		ICollection<ValueInstance> results, Type itemType, int index)
 	{
 		var loop = new ExecutionContext(ctx.Type, ctx.Method) { This = ctx.This, Parent = ctx };
-		loop.Set(Type.IndexLowercase, new ValueInstance(itemType.GetType(Base.Number), index));
+		loop.Set(Type.IndexLowercase, new ValueInstance(itemType.GetType(Base.Number), index, executor.Statistics));
 		var value = iterator.GetIteratorValue(index);
 		if (itemType.Name == Base.Text && value is char character)
 			value = character.ToString();
-		var valueInstance = value as ValueInstance ?? new ValueInstance(itemType, value);
+		var valueInstance = value as ValueInstance ?? new ValueInstance(itemType, value, executor.Statistics);
 		loop.Set(Type.ValueLowercase, valueInstance);
 		foreach (var customVariable in f.CustomVariables)
 			if (customVariable is VariableCall variableCall)
@@ -75,7 +76,7 @@ internal sealed class ForEvaluator(Executor executor)
 	{
 		var noneType =
 			(ctx.This?.ReturnType.Package ?? body.Method.Type.Package).FindType(Base.None)!;
-		ValueInstance last = new(noneType, null);
+		ValueInstance last = new(noneType, null, executor.Statistics);
 		foreach (var e in body.Expressions)
 		{
 			last = executor.RunExpression(e, ctx);
@@ -85,12 +86,12 @@ internal sealed class ForEvaluator(Executor executor)
 		return last;
 	}
 
-	private static ValueInstance? ShouldConsolidateForResult(List<ValueInstance> results,
+	private ValueInstance? ShouldConsolidateForResult(List<ValueInstance> results,
 		ExecutionContext ctx)
 	{
 		if (ctx.Method.ReturnType.Name == Base.Number)
 			return new ValueInstance(ctx.Method.ReturnType,
-				results.Sum(value => EqualsExtensions.NumberToDouble(value.Value)));
+				results.Sum(value => EqualsExtensions.NumberToDouble(value.Value)), executor.Statistics);
 		if (ctx.Method.ReturnType.Name == Base.Text)
 		{
 			var text = "";
@@ -102,10 +103,10 @@ internal sealed class ForEvaluator(Executor executor)
 					Base.Text => (string)value.Value!,
 					_ => throw new NotSupportedException("Can't append to text: " + value)
 				};
-			return new ValueInstance(ctx.Method.ReturnType, text);
+			return new ValueInstance(ctx.Method.ReturnType, text, executor.Statistics);
 		}
 		return ctx.Method.ReturnType.Name == Base.Boolean
-			? new ValueInstance(ctx.Method.ReturnType, results.Any(value => value.Value is true))
+			? new ValueInstance(ctx.Method.ReturnType, results.Any(value => value.Value is true), executor.Statistics)
 			: null;
 	}
 

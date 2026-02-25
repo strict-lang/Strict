@@ -6,7 +6,7 @@ namespace Strict.HighLevelRuntime;
 
 public sealed class ValueInstance : IEquatable<ValueInstance>
 {
-	public ValueInstance(Type returnType, object? value)
+	public ValueInstance(Type returnType, object? value, Statistics? statistics = null)
 	{
 		if (value is Expression)
 			throw new InvalidTypeValue(returnType, Value); //ncrunch: no coverage
@@ -14,6 +14,24 @@ public sealed class ValueInstance : IEquatable<ValueInstance>
 		Value = CheckIfValueMatchesReturnType(ReturnType.IsMutable
 			? ((GenericTypeImplementation)ReturnType).ImplementationTypes[0]
 			: ReturnType, value);
+		if (statistics == null)
+			return;
+		statistics.ValueInstanceCount++;
+		var typeForStats = ReturnType.IsMutable
+			? ((GenericTypeImplementation)ReturnType).ImplementationTypes[0]
+			: ReturnType;
+		if (typeForStats.IsBoolean)
+			statistics.BooleanCount++;
+		else if (typeForStats.Name == Base.Number)
+			statistics.NumberCount++;
+		else if (typeForStats.Name is Base.Text or Base.Name)
+			statistics.TextCount++;
+		else if (typeForStats.Name == Base.List ||
+			typeForStats is GenericTypeImplementation { Generic.Name: Base.List })
+			statistics.ListCount++;
+		else if (typeForStats.Name == Base.Dictionary ||
+			typeForStats is GenericTypeImplementation { Generic.Name: Base.Dictionary })
+			statistics.DictionaryCount++;
 	}
 
 	public Type ReturnType { get; }

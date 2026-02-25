@@ -30,10 +30,12 @@ internal sealed class BodyEvaluator(Executor executor)
 	private ValueInstance TryEvaluate(Body body, ExecutionContext ctx, bool runOnlyTests)
 	{
 		ValueInstance last =
-			new((ctx.This?.ReturnType.Package ?? body.Method.Type.Package).FindType(Base.None)!, null);
+			new((ctx.This?.ReturnType.Package ?? body.Method.Type.Package).FindType(Base.None)!, null, executor.Statistics);
 		foreach (var e in body.Expressions)
 		{
 			var isTest = !e.Equals(body.Expressions[^1]) && IsStandaloneInlineTest(e);
+			if (isTest)
+				executor.Statistics.TestsCount++;
 			if (isTest == !runOnlyTests && e is not Declaration && e is not MutableReassignment ||
 				runOnlyTests && e is Declaration &&
 				body.Method.Type.Members.Any(m => !m.IsConstant && e.ToString().Contains(m.Name)))
@@ -52,7 +54,7 @@ internal sealed class BodyEvaluator(Executor executor)
 		if (body.Method.ReturnType.IsMutable && !last.ReturnType.IsMutable &&
 			last.ReturnType == ((GenericTypeImplementation)body.Method.ReturnType).
 			ImplementationTypes[0])
-			return new ValueInstance(body.Method.ReturnType, last.Value);
+			return new ValueInstance(body.Method.ReturnType, last.Value, executor.Statistics);
 		throw new Executor.ReturnTypeMustMatchMethod(body, last);
 	}
 
