@@ -53,7 +53,7 @@ internal sealed class BodyEvaluator(Executor executor)
 		if (body.Method.ReturnType.IsMutable && !last.ReturnType.IsMutable &&
 			last.ReturnType == ((GenericTypeImplementation)body.Method.ReturnType).
 			ImplementationTypes[0])
-			return new ValueInstance(body.Method.ReturnType, last.Value, executor.Statistics);
+			return executor.CreateValueInstance(body.Method.ReturnType, last.Value);
 		throw new Executor.ReturnTypeMustMatchMethod(body, last);
 	}
 

@@ -1,3 +1,4 @@
+using Strict.Expressions;
 using Strict.Language;
 using System.Collections;
 using Type = Strict.Language.Type;
@@ -29,7 +30,7 @@ public sealed class ExecutionContext(Type type, Method method)
 			Type.Members.FirstOrDefault(m => !m.IsConstant && m.Type.Name != Base.Iterator);
 		if (implicitMember != null &&
 			implicitMember.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
-			return ValueInstance.Create(implicitMember.Type, This.Value, statistics);
+			return ValueInstance.Create(implicitMember.Type, This.Value);
 		return Parent?.Find(name, statistics);
 	}
 
@@ -53,8 +54,8 @@ public sealed class ExecutionContext(Type type, Method method)
 			: listMemberType;
 		var pairs = new List<ValueInstance>(dictionary.Count);
 		foreach (var entry in dictionary)
-			pairs.Add(
-				new ValueInstance(elementType, new List<ValueInstance> { entry.Key, entry.Value }));
+			pairs.Add(ValueInstance.CreateObject(elementType,
+				new List<ValueInstance> { entry.Key, entry.Value }));
 		return pairs;
 	}
 
@@ -81,6 +82,6 @@ public sealed class ExecutionContext(Type type, Method method)
 			member.Type is GenericTypeImplementation { Generic.Name: Base.List } ||
 			member.Type.Name == Base.List)?.Type ?? implementation.GetType(Base.List);
 		var listValue = ExecutionContext.BuildDictionaryPairsList(listMemberType, dictionary);
-		Set(Type.ElementsLowercase, new ValueInstance(listMemberType, listValue));
+		Set(Type.ElementsLowercase, ValueInstance.CreateObject(listMemberType, listValue));
 	}
 }

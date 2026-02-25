@@ -4,7 +4,7 @@ using System.Globalization;
 using System.Runtime.InteropServices;
 using Type = Strict.Language.Type;
 
-namespace Strict.HighLevelRuntime;
+namespace Strict.Expressions;
 
 [StructLayout(LayoutKind.Explicit)]
 public readonly struct ValueInstance : IEquatable<ValueInstance>
@@ -17,88 +17,130 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 	private readonly int intValue;
 	[FieldOffset(8)]
 	private readonly double doubleValue;
-	[FieldOffset(8)]
-	private readonly object? objectValue;
+	// Note: string, List<ValueInstance>, and Dictionary<string, ValueInstance> are all reference types
+	// so they can share the same memory location at offset 16
+	[FieldOffset(16)]
+	private readonly string? textValue;
+	[FieldOffset(16)]
+	private readonly List<ValueInstance>? listValue;
+	[FieldOffset(16)]
+	private readonly Dictionary<string, ValueInstance>? dictionaryValue;
+	[FieldOffset(16)]
+	private readonly Dictionary<ValueInstance, ValueInstance>? instanceDictionaryValue;
 
-	/// <summary>
-	/// Create a None instance without storing a value.
-	/// </summary>
-	public ValueInstance(Type returnType, Statistics? statistics = null)
+	private ValueInstance(Type returnType)
 	{
 		ReturnType = returnType;
-		var effectiveType = GetEffectiveType(returnType);
-		if (effectiveType.Name != Base.None)
-			throw new InvalidTypeValue(returnType, null);
-		objectValue = null;
-		if (statistics != null)
-			UpdateStatistics(statistics, effectiveType);
+		textValue = null;
 	}
 
-
-	/// <summary>
-	/// Create a Boolean instance without boxing.
-	/// </summary>
-	public ValueInstance(Type returnType, bool value, Statistics? statistics = null)
+	private ValueInstance(Type returnType, bool value)
 	{
 		ReturnType = returnType;
-		var effectiveType = GetEffectiveType(returnType);
-		if (!effectiveType.IsBoolean)
-			throw new InvalidTypeValue(returnType, value);
 		boolValue = value;
-		if (statistics != null)
-			UpdateStatistics(statistics, effectiveType);
+		textValue = null;
 	}
 
-	/// <summary>
-	/// Create a Number instance without boxing.
-	/// </summary>
-	public ValueInstance(Type returnType, double number, Statistics? statistics = null)
+	private ValueInstance(Type returnType, double number)
 	{
 		ReturnType = returnType;
-		var effectiveType = GetEffectiveType(returnType);
-		if (!IsNumberType(effectiveType))
-			throw new InvalidTypeValue(returnType, number);
 		doubleValue = number;
-		if (statistics != null)
-			UpdateStatistics(statistics, effectiveType);
+		textValue = null;
 	}
 
-	/// <summary>
-	/// Create a Number or Integer instance from an integer value.
-	/// </summary>
-	public ValueInstance(Type returnType, int number, Statistics? statistics = null)
+	private ValueInstance(Type returnType, int number)
 	{
 		ReturnType = returnType;
-		var effectiveType = GetEffectiveType(returnType);
+		intValue = number;
+		textValue = null;
+	}
+
+	private ValueInstance(Type returnType, string text)
+	{
+		ReturnType = returnType;
+		textValue = text;
+	}
+
+	private ValueInstance(Type returnType, List<ValueInstance> list)
+	{
+		ReturnType = returnType;
+		listValue = list;
+	}
+
+	private ValueInstance(Type returnType, Dictionary<string, ValueInstance> dict)
+	{
+		ReturnType = returnType;
+		dictionaryValue = dict;
+	}
+
+	private ValueInstance(Type returnType, Dictionary<ValueInstance, ValueInstance> dict)
+	{
+		ReturnType = returnType;
+		instanceDictionaryValue = dict;
+	}
+
+	public static Type GetEffectiveType(Type returnType) =>
+		returnType.IsMutable
+			? ((GenericTypeImplementation)returnType).ImplementationTypes[0]
+			: returnType;
+
+	public static bool IsNumberType(Type type) =>
+		type.Name == Base.Number || type.Members.Count == 1 && type.IsSameOrCanBeUsedAs(type.GetType(Base.Number));
+
+	public static bool IsTextType(Type type) => type.Name is Base.Text or Base.Name;
+
+	// NOTE: Global caching removed - ValueInstance contains Type references that are context-specific.
+	// Each package/test has different Type instances, so caching causes type mismatches.
+	// Caching should be done at the Executor level where the type context is stable.
+
+	public static ValueInstance CreateNone(Context ctx)
+	{
+		var noneType = ctx.GetType(Base.None);
+		return new ValueInstance(noneType);
+	}
+
+	public static ValueInstance CreateBoolean(Context ctx, bool value)
+	{
+		var boolType = ctx.GetType(Base.Boolean);
+		var effectiveType = GetEffectiveType(boolType);
+		if (!effectiveType.IsBoolean)
+			throw new InvalidTypeValue(boolType, value);
+		return new ValueInstance(boolType, value);
+	}
+
+	public static ValueInstance CreateNumber(Context ctx, double value)
+	{
+		var numberType = ctx.GetType(Base.Number);
+		var effectiveType = GetEffectiveType(numberType);
+		if (!IsNumberType(effectiveType))
+			throw new InvalidTypeValue(numberType, value);
+		return new ValueInstance(numberType, value);
+	}
+
+	public static ValueInstance CreateInteger(Context ctx, int value)
+	{
+		var numberType = ctx.GetType(Base.Number);
+		var effectiveType = GetEffectiveType(numberType);
 		if (IsNumberType(effectiveType))
-			doubleValue = number;
-		else if (TryGetIntegerValue(effectiveType, number, out var integerValue))
-			intValue = integerValue;
-		else
-			throw new InvalidTypeValue(returnType, number);
-		if (statistics != null)
-			UpdateStatistics(statistics, effectiveType);
+			return CreateNumber(ctx, value);
+		if (TryGetIntegerValue(effectiveType, value, out var integerValue))
+			return new ValueInstance(numberType, integerValue);
+		throw new InvalidTypeValue(numberType, value);
 	}
 
-	/// <summary>
-	/// Create a Text instance without boxing.
-	/// </summary>
-	public ValueInstance(Type returnType, string text, Statistics? statistics = null)
+	public static ValueInstance CreateText(Context ctx, string value)
 	{
-		ReturnType = returnType;
-		var effectiveType = GetEffectiveType(returnType);
+		var textType = ctx.GetType(Base.Text);
+		var effectiveType = GetEffectiveType(textType);
 		if (!IsTextType(effectiveType))
-			throw new InvalidTypeValue(returnType, text);
-		objectValue = text;
-		if (statistics != null)
-			UpdateStatistics(statistics, effectiveType);
+			throw new InvalidTypeValue(textType, value);
+		return new ValueInstance(textType, value);
 	}
 
-	public ValueInstance(Type returnType, object? value, Statistics? statistics = null)
+	public static ValueInstance CreateObject(Type returnType, object? value)
 	{
 		if (value is Expression)
 			throw new InvalidTypeValue(returnType, value);
-		ReturnType = returnType;
 		var effectiveType = GetEffectiveType(returnType);
 		if (effectiveType.Name == Base.None || effectiveType.IsBoolean || IsNumberType(effectiveType) ||
 			IsTextType(effectiveType))
@@ -107,29 +149,16 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 		if (normalized is null)
 			throw new InvalidTypeValue(returnType, value);
 		if (TryGetIntegerValue(effectiveType, normalized, out var integerValue))
-			intValue = integerValue;
-		else
-			objectValue = normalized;
-		if (statistics != null)
-			UpdateStatistics(statistics, effectiveType);
-	}
-
-
-	private static void UpdateStatistics(Statistics statistics, Type effectiveType)
-	{
-		statistics.ValueInstanceCount++;
-		if (effectiveType.IsBoolean)
-			statistics.BooleanCount++;
-		else if (effectiveType.Name == Base.Number)
-			statistics.NumberCount++;
-		else if (effectiveType.Name is Base.Text or Base.Name)
-			statistics.TextCount++;
-		else if (effectiveType.Name == Base.List ||
-			effectiveType is GenericTypeImplementation { Generic.Name: Base.List })
-			statistics.ListCount++;
-		else if (effectiveType.Name == Base.Dictionary ||
-			effectiveType is GenericTypeImplementation { Generic.Name: Base.Dictionary })
-			statistics.DictionaryCount++;
+			return new ValueInstance(returnType, integerValue);
+		if (normalized is List<ValueInstance> list)
+			return new ValueInstance(returnType, list);
+		if (normalized is Dictionary<string, ValueInstance> dict)
+			return new ValueInstance(returnType, dict);
+		if (normalized is Dictionary<ValueInstance, ValueInstance> instanceDict)
+			return new ValueInstance(returnType, instanceDict);
+		if (normalized is string str)
+			return new ValueInstance(returnType, str);
+		throw new InvalidTypeValue(returnType, value);
 	}
 
 	public object? Value
@@ -144,12 +173,22 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 			if (IsNumberType(effectiveType))
 				return doubleValue;
 			if (IsTextType(effectiveType))
-				return objectValue;
+				return textValue;
 			if (IsCharacterType(effectiveType) || effectiveType.IsEnum)
 				return intValue;
-			return objectValue;
+			// For List and Dictionary, return the strongly typed value
+			if (listValue is List<ValueInstance> list)
+				return list;
+			if (dictionaryValue is Dictionary<string, ValueInstance> dict)
+				return dict;
+			if (instanceDictionaryValue is Dictionary<ValueInstance, ValueInstance> instanceDict)
+				return instanceDict;
+			return null;
 		}
 	}
+
+	private static bool IsCharacterType(Type type) => type.Name is Base.Character or Base.HashCode ||
+		type.Members.Count == 1 && type.IsSameOrCanBeUsedAs(type.GetType(Base.Character));
 
 	public double AsNumber()
 	{
@@ -171,49 +210,36 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 		return (bool)Value!;
 	}
 
-
-	private static Type GetEffectiveType(Type returnType) =>
-		returnType.IsMutable ? ((GenericTypeImplementation)returnType).ImplementationTypes[0] : returnType;
-
-	private static bool IsTextType(Type type) => type.Name is Base.Text or Base.Name;
-
-	internal static bool IsNumberType(Type type) =>
-		type.Name == Base.Number || type.Members.Count == 1 && type.IsSameOrCanBeUsedAs(type.GetType(Base.Number));
-
-	private static bool IsCharacterType(Type type) => type.Name is Base.Character or Base.HashCode ||
-		type.Members.Count == 1 && type.IsSameOrCanBeUsedAs(type.GetType(Base.Character));
-
-
-	internal static ValueInstance Create(Type returnType, object? value, Statistics? statistics = null)
+	public static ValueInstance Create(Type returnType, object? value)
 	{
 		if (value is ValueInstance valueInstance)
-			return Create(returnType, valueInstance, statistics);
+			return Create(returnType, valueInstance);
 		var effectiveType = GetEffectiveType(returnType);
 		if (effectiveType.Name == Base.None)
-			return new ValueInstance(returnType, statistics);
+			return new ValueInstance(returnType);
 		if (effectiveType.IsBoolean)
-			return new ValueInstance(returnType, (bool)value!, statistics);
+			return new ValueInstance(returnType, (bool)value!);
 		if (IsNumberType(effectiveType))
 			return value is int intValue
-				? new ValueInstance(returnType, intValue, statistics)
-				: new ValueInstance(returnType, EqualsExtensions.NumberToDouble(value), statistics);
+				? new ValueInstance(returnType, (double)intValue)
+				: new ValueInstance(returnType, EqualsExtensions.NumberToDouble(value));
 		if (IsTextType(effectiveType))
-			return new ValueInstance(returnType, (string)value!, statistics);
-		return new ValueInstance(returnType, value, statistics);
+			return new ValueInstance(returnType, (string)value!);
+		return CreateObject(returnType, value);
 	}
 
-	internal static ValueInstance Create(Type returnType, ValueInstance value, Statistics? statistics = null)
+	public static ValueInstance Create(Type returnType, ValueInstance value)
 	{
 		var effectiveType = GetEffectiveType(returnType);
 		if (effectiveType.Name == Base.None)
-			return new ValueInstance(returnType, statistics);
+			return new ValueInstance(returnType);
 		if (effectiveType.IsBoolean)
-			return new ValueInstance(returnType, value.AsBool(), statistics);
+			return new ValueInstance(returnType, value.AsBool());
 		if (IsNumberType(effectiveType))
-			return new ValueInstance(returnType, value.AsNumber(), statistics);
+			return new ValueInstance(returnType, value.AsNumber());
 		if (IsTextType(effectiveType))
-			return new ValueInstance(returnType, (string)value.Value!, statistics);
-		return new ValueInstance(returnType, value.Value, statistics);
+			return new ValueInstance(returnType, (string)value.Value!);
+		return CreateObject(returnType, value.Value);
 	}
 
 	private static bool TryGetIntegerValue(Type type, object value, out int intValue)
@@ -359,11 +385,10 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 		return HashCode.Combine(ReturnType, Value);
 	}
 
-	public object? FindInnerValue(string name)
+	public ValueInstance? FindInnerValue(string name)
 	{
-		if (objectValue is IDictionary<string, object?> valueDictionary)
-			if (valueDictionary.TryGetValue(name, out var value))
-				return value;
+		if (dictionaryValue != null && dictionaryValue.TryGetValue(name, out var value))
+			return value;
 		return null;
 	}
 
@@ -372,26 +397,52 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 		var effectiveType = GetEffectiveType(ReturnType);
 		if (IsNumberType(effectiveType))
 			return (int)AsNumber();
-		return objectValue switch
-		{
-			IList list => list.Count,
-			string text => text.Length,
-			_ => throw new IteratorNotSupported(this)
-		};
+		if (listValue != null)
+			return listValue.Count;
+		if (textValue != null)
+			return textValue.Length;
+		throw new IteratorNotSupported(this);
 	}
 
 	public class IteratorNotSupported(ValueInstance instance)
 		: ExecutionFailed(instance.ReturnType, instance.ToString());
 
-	public object? GetIteratorValue(int index) =>
-		ReturnType.Name is Base.Number or Base.Range
-			? index
-			: objectValue is string str
-				? str[index]
-				: objectValue is IList list
-					? list[index]
-					: throw new IteratorNotSupported(this);
+	public object? GetIteratorValue(int index)
+	{
+		if (ReturnType.Name is Base.Number or Base.Range)
+			return index;
+		if (textValue != null)
+			return textValue[index];
+		if (listValue != null)
+			return listValue[index];
+		throw new IteratorNotSupported(this);
+	}
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

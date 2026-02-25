@@ -147,7 +147,7 @@ public sealed class Executor(TestBehavior behavior = TestBehavior.OnFirstRun)
 			if ((uint)index < (uint)cachedNumbers.Length)
 				return cachedNumbers[index];
 		}
-		return new ValueInstance(any.GetType(Base.Number), number, Statistics);
+		return Make(ValueInstance.CreateNumber(any, number));
 	}
 
 	private void EnsureCachedBaseValues(Context context)
@@ -155,15 +155,34 @@ public sealed class Executor(TestBehavior behavior = TestBehavior.OnFirstRun)
 		if (cachedValuesInitialized)
 			return;
 		cachedValuesInitialized = true;
-		var booleanType = context.GetType(Base.Boolean);
-		var numberType = context.GetType(Base.Number);
-		var noneType = context.GetType(Base.None);
-		cachedTrue = new ValueInstance(booleanType, true, Statistics);
-		cachedFalse = new ValueInstance(booleanType, false, Statistics);
-		cachedNone = new ValueInstance(noneType, Statistics);
+		cachedTrue = Make(ValueInstance.CreateBoolean(context, true));
+		cachedFalse = Make(ValueInstance.CreateBoolean(context, false));
+		cachedNone = Make(ValueInstance.CreateNone(context));
 		cachedNumbers = new ValueInstance[12];
 		for (var value = -1; value <= 10; value++)
-			cachedNumbers[value + 1] = new ValueInstance(numberType, value, Statistics);
+			cachedNumbers[value + 1] = Make(ValueInstance.CreateNumber(context, value));
+	}
+
+	/// <summary>
+	/// Single entry point for creating ValueInstances in HighLevelRuntime.
+	/// Updates Statistics and returns the instance. All code should use this instead of
+	/// calling ValueInstance constructors or Create* methods directly.
+	/// </summary>
+	private ValueInstance Make(ValueInstance instance)
+	{
+		Statistics.ValueInstanceCount++;
+		var effectiveType = ValueInstance.GetEffectiveType(instance.ReturnType);
+		if (effectiveType.IsBoolean)
+			Statistics.BooleanCount++;
+		else if (effectiveType.Name == Base.Number)
+			Statistics.NumberCount++;
+		else if (ValueInstance.IsTextType(effectiveType))
+			Statistics.TextCount++;
+		else if (effectiveType.IsList)
+			Statistics.ListCount++;
+		else if (effectiveType.IsDictionary)
+			Statistics.DictionaryCount++;
+		return instance;
 	}
 
 	private static bool DoArgumentsMatch(Method method, IReadOnlyList<ValueInstance> args,
@@ -306,31 +325,11 @@ public sealed class Executor(TestBehavior behavior = TestBehavior.OnFirstRun)
 	{
 		if (value is ValueInstance valueInstance)
 			return CreateValueInstance(returnType, valueInstance);
-		var effectiveType = GetEffectiveType(returnType);
-		if (effectiveType.Name == Base.None)
-			return new ValueInstance(returnType, Statistics);
-		if (effectiveType.IsBoolean)
-			return new ValueInstance(returnType, (bool)value!, Statistics);
-		if (IsNumberType(effectiveType))
-			return new ValueInstance(returnType, EqualsExtensions.NumberToDouble(value), Statistics);
-		return IsTextType(effectiveType)
-			? new ValueInstance(returnType, (string)value!, Statistics)
-			: new ValueInstance(returnType, value, Statistics);
+		return Make(ValueInstance.Create(returnType, value));
 	}
 
-	internal ValueInstance CreateValueInstance(Type returnType, ValueInstance value)
-	{
-		var effectiveType = GetEffectiveType(returnType);
-		if (effectiveType.Name == Base.None)
-			return new ValueInstance(returnType, Statistics);
-		if (effectiveType.IsBoolean)
-			return new ValueInstance(returnType, value.AsBool(), Statistics);
-		if (IsNumberType(effectiveType))
-			return new ValueInstance(returnType, value.AsNumber(), Statistics);
-		if (IsTextType(effectiveType))
-			return new ValueInstance(returnType, (string)value.Value!, Statistics);
-		return new ValueInstance(returnType, value.Value, Statistics);
-	}
+	internal ValueInstance CreateValueInstance(Type returnType, ValueInstance value) =>
+		Make(ValueInstance.Create(returnType, value));
 
 	private static object NormalizeDictionaryValue(Type dictionaryType,
 		IDictionary<string, object?> rawMembers)

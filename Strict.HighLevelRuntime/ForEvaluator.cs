@@ -44,10 +44,11 @@ internal sealed class ForEvaluator(Executor executor)
 					return ctx.ExitMethodAndReturnValue.Value;
 			}
 		}
-		return ShouldConsolidateForResult(results, ctx) ?? new ValueInstance(results.Count == 0
+		return ShouldConsolidateForResult(results, ctx) ?? executor.CreateValueInstance(
+			results.Count == 0
 				? iterator.ReturnType
 				: iterator.ReturnType.GetType(Base.List).GetGenericImplementation(results[0].ReturnType),
-			results, executor.Statistics);
+			results);
 	}
 
 	private void ExecuteForIteration(For f, ExecutionContext ctx, ValueInstance iterator,
@@ -102,7 +103,7 @@ internal sealed class ForEvaluator(Executor executor)
 					Base.Text => (string)value.Value!,
 					_ => throw new NotSupportedException("Can't append to text: " + value)
 				};
-			return new ValueInstance(ctx.Method.ReturnType, text, executor.Statistics);
+			return executor.CreateValueInstance(ctx.Method.ReturnType, text);
 		}
 		return ctx.Method.ReturnType.Name == Base.Boolean
 			? executor.Bool(ctx.Method, results.Any(value => value.AsBool()))

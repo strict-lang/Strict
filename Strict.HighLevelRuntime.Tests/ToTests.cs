@@ -21,7 +21,7 @@ public sealed class ToTests
 	{
 		using var t = CreateType(nameof(EvaluateToTextAndNumber), "has number", "GetText Text",
 			"\tnumber to Text", "GetNumber Number", "\tnumber to Text to Number");
-		var instance = new ValueInstance(t, 5);
+		var instance = ValueInstance.Create(t, 5);
 		Assert.That(executor.Execute(t.Methods.Single(m => m.Name == "GetText"), instance, []).Value,
 			Is.EqualTo("5"));
 		Assert.That(
@@ -48,7 +48,7 @@ public sealed class ToTests
 			ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(
 			// ReSharper disable once ConfusingCharAsIntegerInConstructor
-			executor.Execute(type.Methods[0], new ValueInstance(type, '5'),
-				[new ValueInstance(type.GetType(Base.Number), 3)]).Value, Is.EqualTo(5 * 1000));
+			executor.Execute(type.Methods[0], ValueInstance.Create(type, '5'),
+				[ValueInstance.Create(type.GetType(Base.Number), 3)]).Value, Is.EqualTo(5 * 1000));
 	}
 }

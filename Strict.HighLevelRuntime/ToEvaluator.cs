@@ -15,7 +15,7 @@ internal sealed class ToEvaluator(Executor executor)
      return executor.Number(to.ConversionType,
 				double.Parse(textValue, CultureInfo.InvariantCulture));
 		if (to.ConversionType.Name == Base.Text)
-			return new ValueInstance(to.ConversionType, left?.ToString() ?? "", executor.Statistics);
+			return executor.CreateValueInstance(to.ConversionType, left?.ToString() ?? "");
 		if (!to.Method.IsTrait && to.Method.Type.Name != Base.Number)
 			return executor.EvaluateMethodCall(to, ctx);
 		return !to.Method.IsTrait
