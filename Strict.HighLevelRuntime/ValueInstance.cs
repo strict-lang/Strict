@@ -1,23 +1,16 @@
 using Strict.Language;
 using System.Collections;
 using System.Globalization;
-using System.Runtime.InteropServices;
 using Type = Strict.Language.Type;
 
 namespace Strict.HighLevelRuntime;
 
-[StructLayout(LayoutKind.Explicit)]
 public readonly struct ValueInstance : IEquatable<ValueInstance>
 {
-	[FieldOffset(0)]
 	public readonly Type ReturnType;
-	[FieldOffset(8)]
 	private readonly bool boolValue;
-	[FieldOffset(8)]
 	private readonly int intValue;
-	[FieldOffset(8)]
 	private readonly double doubleValue;
-	[FieldOffset(8)]
 	private readonly object? objectValue;
 
 	/// <summary>
@@ -291,7 +284,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 			if (value is not double && value is not int)
 				throw new InvalidTypeValue(type, value);
 		}
-		else if (value is IDictionary<string, object?> valueDictionary)
+		else if (value is IDictionary<string, ValueInstance> valueDictionary)
 		{
 			foreach (var assignMember in valueDictionary)
 				if (type.Members.All(m =>
@@ -303,8 +296,8 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 		return value;
 	}
 
-	public sealed class UnableToAssignMemberToType(KeyValuePair<string, object?> member,
-		IDictionary<string, object?> values,
+	public sealed class UnableToAssignMemberToType(KeyValuePair<string, ValueInstance> member,
+		IDictionary<string, ValueInstance> values,
 		Type returnType) : ExecutionFailed(returnType,
 		"Can't assign member " + member + " (of " + values.DictionaryToWordList() + ") to " +
 		returnType + " " + returnType.Members.ToBrackets());
@@ -361,9 +354,9 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 
 	public object? FindInnerValue(string name)
 	{
-		if (objectValue is IDictionary<string, object?> valueDictionary)
+		if (objectValue is IDictionary<string, ValueInstance> valueDictionary)
 			if (valueDictionary.TryGetValue(name, out var value))
-				return value;
+				return value.Value;
 		return null;
 	}
 

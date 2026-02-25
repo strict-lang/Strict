@@ -42,8 +42,11 @@ public sealed class IfTests
 		using var t = CreateType(nameof(EvaluateIsInEnumerableRange), "has number",
 			"IsInRange(range Range) Boolean", "\tnumber is in range");
 		var rangeType = TestPackage.Instance.FindType(Base.Range)!;
+		var numberType = TestPackage.Instance.FindType(Base.Number)!;
 		var rangeInstance = new ValueInstance(rangeType,
-			new Dictionary<string, object?> { { "Start", 1.0 }, { "ExclusiveEnd", 10.0 } });
+			new Dictionary<string, ValueInstance> {
+				{ "Start", new ValueInstance(numberType, 1.0) },
+				{ "ExclusiveEnd", new ValueInstance(numberType, 10.0) } });
 		var result = executor.Execute(t.Methods.Single(m => m.Name == "IsInRange"),
 			new ValueInstance(t, 7.0), [rangeInstance]);
 		Assert.That(result.Value, Is.EqualTo(true));
@@ -58,8 +61,11 @@ public sealed class IfTests
 		using var t = CreateType(nameof(EvaluateIsNotInEnumerableRange), "has number",
 			"IsNotInRange(range Range) Boolean", "\tnumber is not in range");
 		var rangeType = TestPackage.Instance.FindType(Base.Range)!;
+		var numberType = TestPackage.Instance.FindType(Base.Number)!;
 		var rangeInstance = new ValueInstance(rangeType,
-			new Dictionary<string, object?> { { "Start", 1.0 }, { "ExclusiveEnd", 10.0 } });
+			new Dictionary<string, ValueInstance> {
+				{ "Start", new ValueInstance(numberType, 1.0) },
+				{ "ExclusiveEnd", new ValueInstance(numberType, 10.0) } });
 		var result = executor.Execute(t.Methods.Single(m => m.Name == "IsNotInRange"),
 			new ValueInstance(t, 11), [rangeInstance]);
 		Assert.That(result.Value, Is.EqualTo(true));

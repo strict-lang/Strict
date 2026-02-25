@@ -13,12 +13,12 @@ internal sealed class ForEvaluator(Executor executor)
 		var results = new List<ValueInstance>();
 		var itemType = GetForValueType(iterator);
 		if (iterator.ReturnType.Name == Base.Range &&
-			iterator.Value is IDictionary<string, object?> rangeValues &&
+			iterator.Value is IDictionary<string, ValueInstance> rangeValues &&
 			rangeValues.TryGetValue("Start", out var startValue) &&
 			rangeValues.TryGetValue("ExclusiveEnd", out var endValue))
 		{
-			var start = Convert.ToInt32(startValue);
-			var end = Convert.ToInt32(endValue);
+			var start = (int)startValue.AsNumber();
+			var end = (int)endValue.AsNumber();
 			if (start <= end)
 				for (var index = start; index < end; index++)
 				{

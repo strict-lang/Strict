@@ -198,7 +198,7 @@ public sealed class ValueInstanceTests
 		using var t = new Type(TestPackage.Instance,
 				new TypeLines(nameof(TypeRejectsUnknownDictionaryMembers), "has number", "has text")).
 			ParseMembersAndMethods(new MethodExpressionParser());
-		var values = new Dictionary<string, object?> { { "wrong", 1 } };
+		var values = new Dictionary<string, ValueInstance> { { "wrong", new ValueInstance(numberType, 1.0) } };
 		Assert.That(() => new ValueInstance(t, values),
 			Throws.InstanceOf<ValueInstance.UnableToAssignMemberToType>());
 	}

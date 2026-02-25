@@ -225,7 +225,8 @@ public sealed class ExecutorTests
 			"IfDifferent Boolean", "\tlast is false");
 		var method = t.Methods.Single(m => m.Name == "IfDifferent");
 		var result = executor.Execute(method,
-			new ValueInstance(t, new Dictionary<string, object?> { { "last", false } }), []);
+			new ValueInstance(t, new Dictionary<string, ValueInstance> {
+				{ "last", new ValueInstance(TestPackage.Instance.FindType(Base.Boolean)!, false) } }), []);
 		Assert.That(Convert.ToBoolean(result.Value), Is.EqualTo(true));
 	}
 
@@ -291,8 +292,8 @@ public sealed class ExecutorTests
 		var numberText = new ValueInstance(TestPackage.Instance.FindType(Base.Text)!, "A");
 		var text = new ValueInstance(TestPackage.Instance.FindType(Base.Text)!, "ok");
 		var result = executor.Execute(method, null, [numberText, text]);
-		var values = (IDictionary<string, object?>)result.Value!;
-		Assert.That(values["number"], Is.EqualTo(65));
+		var values = (IDictionary<string, ValueInstance>)result.Value!;
+		Assert.That(values["number"].AsNumber(), Is.EqualTo(65));
 	}
 
 	[Test]

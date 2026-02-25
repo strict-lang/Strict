@@ -33,7 +33,8 @@ public sealed class ForTests
 			"Run Number", "\tfor (1, 2, 3)", "\t\tif operation is", "\t\t\t\"add\" then value",
 			"\t\t\t\"subtract\" then 0 - value");
 		var instance = new ValueInstance(t,
-			new Dictionary<string, object?> { { "operation", operation } });
+			new Dictionary<string, ValueInstance> {
+				{ "operation", new ValueInstance(TestPackage.Instance.FindType(Base.Text)!, operation) } });
 		var result = executor.Execute(t.Methods.Single(m => m.Name == "Run"), instance, []);
 		Assert.That(Convert.ToDouble(result.Value), Is.EqualTo(expected));
 	}
@@ -100,7 +101,8 @@ public sealed class ForTests
 		using var t = CreateType(TypeName, "has numbers", $"Run(container {TypeName}) Number",
 			"\tfor container", "\t\t1");
 		var container = new ValueInstance(t,
-			new Dictionary<string, object?> { { "numbers", new List<ValueInstance>() } });
+			new Dictionary<string, ValueInstance> {
+				{ "numbers", new ValueInstance(t.Members.Single(m => m.Name == "numbers").Type, new List<ValueInstance>()) } });
 		Assert.That(() => executor.Execute(t.Methods.Single(m => m.Name == "Run"), null, [container]),
 			Throws.InstanceOf<ValueInstance.IteratorNotSupported>());
 	}
@@ -138,7 +140,8 @@ public sealed class ForTests
 			"\t\t\tvalue");
 		var result = executor.Execute(t.Methods.Single(m => m.Name == "Remove"),
 			new ValueInstance(t,
-				new Dictionary<string, object?> { { "text", "example(unwanted)example" } }), []);
+				new Dictionary<string, ValueInstance> {
+					{ "text", new ValueInstance(TestPackage.Instance.FindType(Base.Text)!, "example(unwanted)example") } }), []);
 		Assert.That(result.Value, Is.EqualTo("exampleexample"));
 	}
 }

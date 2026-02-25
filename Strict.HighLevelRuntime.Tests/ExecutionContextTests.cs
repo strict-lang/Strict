@@ -17,7 +17,7 @@ public sealed class ExecutionContextTests
 		var ctx = new ExecutionContext(num, num.Methods[0]);
 		var val = new ValueInstance(num, 123);
 		ctx.Set("answer", val);
-		Assert.That(ctx.Get("answer", new Statistics()), Is.SameAs(val));
+		Assert.That(ctx.Get("answer", new Statistics()), Is.EqualTo(val));
 	}
 
 	[Test]

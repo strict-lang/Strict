@@ -24,7 +24,8 @@ public sealed class ListTests
 			new MethodExpressionParser());
 
 	private ValueInstance CreateNumbers(Type t) =>
-		new(t, new Dictionary<string, object?> { { "numbers", new[] { one, two } } });
+		new(t, new Dictionary<string, ValueInstance> {
+			{ "numbers", new ValueInstance(t.Members.Single(m => m.Name == "numbers").Type, new List<ValueInstance> { one, two }) } });
 
 	[Test]
 	public void CallListOperator()

@@ -292,7 +292,7 @@ public sealed class MethodCallEvaluator(Executor executor)
 	private ValueInstance DivideList(Type leftListType, ICollection<ValueInstance> leftList,
 		double rightNumber)
 	{
-		var result = new List<object?>(leftList.Count);
+		var result = new List<ValueInstance>(leftList.Count);
 		foreach (var item in leftList)
 			result.Add(new ValueInstance(item.ReturnType,
 				item.AsNumber() / rightNumber, executor.Statistics));
@@ -320,63 +320,63 @@ public sealed class MethodCallEvaluator(Executor executor)
 
 	private ValueInstance Error(string name, ExecutionContext ctx, Expression? source = null)
 	{
-		var stacktraceList = new List<object?> { CreateStacktrace(ctx, source) };
-		var errorMembers = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+		var stacktrace = CreateStacktrace(ctx, source);
+		var stacktraceList = new List<ValueInstance> { stacktrace };
+		var errorMembers = new Dictionary<string, ValueInstance>(StringComparer.OrdinalIgnoreCase);
 		var errorType = ctx.Method.GetType(Base.Error);
 		foreach (var member in errorType.Members)
 			errorMembers[member.Name] = member.Type.Name switch
 			{
-				Base.Name or Base.Text => name,
+				Base.Name or Base.Text => new ValueInstance(member.Type, name, executor.Statistics),
 				_ when member.Type.Name == Base.List || member.Type is GenericTypeImplementation
 				{
 					Generic.Name: Base.List
-				} => stacktraceList,
+				} => new ValueInstance(member.Type, stacktraceList, executor.Statistics),
 				_ => throw new NotSupportedException("Error member not supported: " + member) //ncrunch: no coverage
 			};
 		return new ValueInstance(errorType, errorMembers, executor.Statistics);
 	}
 
-	private static Dictionary<string, object?> CreateStacktrace(ExecutionContext ctx,
-		Expression? source)
+	private ValueInstance CreateStacktrace(ExecutionContext ctx, Expression? source)
 	{
-		var members = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+		var members = new Dictionary<string, ValueInstance>(StringComparer.OrdinalIgnoreCase);
 		var stacktraceType = ctx.Method.GetType(Base.Stacktrace);
 		foreach (var member in stacktraceType.Members)
 			members[member.Name] = member.Type.Name switch
 			{
-				Base.Method => CreateMethodValue(ctx.Method),
-				Base.Text or Base.Name => ctx.Method.Type.FilePath,
-				Base.Number => (double)(source?.LineNumber ?? ctx.Method.TypeLineNumber),
+				Base.Method => CreateMethodValue(ctx.Method, member.Type),
+				Base.Text or Base.Name => new ValueInstance(member.Type, ctx.Method.Type.FilePath, executor.Statistics),
+				Base.Number => executor.Number(ctx.Method, source?.LineNumber ?? ctx.Method.TypeLineNumber),
 				_ => throw new NotSupportedException("Stacktrace member not supported: " + member) //ncrunch: no coverage
 			};
-		return members;
+		return new ValueInstance(stacktraceType, members, executor.Statistics);
 	}
 
-	private static Dictionary<string, object?> CreateMethodValue(Method method)
+	private ValueInstance CreateMethodValue(Method method, Type methodMemberType)
 	{
-		var values = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+		var values = new Dictionary<string, ValueInstance>(StringComparer.OrdinalIgnoreCase);
 		var methodType = method.GetType(Base.Method);
 		foreach (var member in methodType.Members)
 			values[member.Name] = member.Type.Name switch
 			{
-				Base.Name or Base.Text => method.Name,
-				Base.Type => CreateTypeValue(method.Type),
+				Base.Name or Base.Text => new ValueInstance(member.Type, method.Name, executor.Statistics),
+				Base.Type => CreateTypeValue(method.Type, member.Type),
 				_ => throw new NotSupportedException("Method member not supported: " + member) //ncrunch: no coverage
 			};
-		return values;
+		return new ValueInstance(methodMemberType, values, executor.Statistics);
 	}
 
-	private static Dictionary<string, object?> CreateTypeValue(Type type)
+	private ValueInstance CreateTypeValue(Type type, Type typeMemberType)
 	{
-		var values = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+		var values = new Dictionary<string, ValueInstance>(StringComparer.OrdinalIgnoreCase);
 		var typeType = type.GetType(Base.Type);
 		foreach (var member in typeType.Members)
 			values[member.Name] = member.Type.Name switch
 			{
-				Base.Name => type.Name,
-				Base.Text => type.Package.FullName,
+				Base.Name => new ValueInstance(member.Type, type.Name, executor.Statistics),
+				Base.Text => new ValueInstance(member.Type, type.Package.FullName, executor.Statistics),
 				_ => throw new NotSupportedException("Type member not supported: " + member) //ncrunch: no coverage
 			};
-		return values;
+		return new ValueInstance(typeMemberType, values, executor.Statistics);
 	}
 }

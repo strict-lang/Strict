@@ -181,11 +181,11 @@ public sealed class Executor(TestBehavior behavior = TestBehavior.OnFirstRun)
 		: ExecutionFailed(method, "Parent context=" + parentContext + ", Instance=" + instance +
 			", arguments=" + args.ToWordList());
 
-	private static IDictionary<string, object?> ConvertFromArgumentsToDictionary(Method fromMethod,
-		IReadOnlyList<ValueInstance> args)
+	private IDictionary<string, ValueInstance> ConvertFromArgumentsToDictionary(
+		Method fromMethod, IReadOnlyList<ValueInstance> args)
 	{
 		var type = fromMethod.Type;
-		var result = new Dictionary<string, object?>(StringComparer.Ordinal);
+		var result = new Dictionary<string, ValueInstance>(StringComparer.Ordinal);
 		for (var index = 0; index < args.Count; index++)
 		{
 			var parameter = fromMethod.Parameters[index];
@@ -221,11 +221,11 @@ public sealed class Executor(TestBehavior behavior = TestBehavior.OnFirstRun)
 		return ConvertFromArgumentsToDictionary(method, args);
 	}
 
-	private static object? TryConvertSingleCharacterText(Type targetType, ValueInstance value) =>
+	private ValueInstance TryConvertSingleCharacterText(Type targetType, ValueInstance value) =>
 		value.ReturnType.Name == Base.Text && value.Value is string { Length: 1 } text &&
 		targetType.Name is Base.Number or Base.Character
-			? (int)text[0]
-			: value.Value;
+			? new ValueInstance(targetType, (int)text[0], Statistics)
+			: value;
 
 	private static bool IsSingleCharacterTextArgument(Type targetType, ValueInstance value) =>
 		value.ReturnType.Name == Base.Text && value.Value is string text && text.Length == 1 &&
@@ -369,9 +369,9 @@ public sealed class Executor(TestBehavior behavior = TestBehavior.OnFirstRun)
 		Statistics.MemberCallCount++;
 		if (ctx.This == null && ctx.Type.Members.Contains(member.Member))
 			throw new UnableToCallMemberWithoutInstance(member, ctx); //ncrunch: no coverage
-		if (ctx.This?.Value is Dictionary<string, object?> dict &&
+		if (ctx.This?.Value is Dictionary<string, ValueInstance> dict &&
 			dict.TryGetValue(member.Member.Name, out var value))
-			return CreateValueInstance(member.ReturnType, value);
+			return value;
 		if (member.Member.InitialValue != null && member.IsConstant)
 			return RunExpression(member.Member.InitialValue, ctx);
 		return member.Instance is VariableCall { Variable.Name: Type.OuterLowercase }
