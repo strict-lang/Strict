@@ -223,16 +223,24 @@ public sealed class TestExecutorTests
 	}
 
 	[Test]
+	public void RunDictionaryTestsTwice()
+	{
+		using var type = TestPackage.Instance.GetType(Base.Dictionary);
+		executor.RunAllTestsInType(type);
+		executor.RunAllTestsInType(type);
+	}
+
+	[Test]
 	[Benchmark]
 	public void RunAllTestsInPackage() => executor.RunAllTestsInPackage(TestPackage.Instance);
 
-	//ncrunch: no coverage start
+	//nocrunch: no coverage start
 	[Test]
-	[Category("Slow")]
+	//[Category("Slow")]
 	public void RunAllTestsInPackageTwice()
 	{
 		executor.RunAllTestsInPackage(TestPackage.Instance);
-		Assert.That(() => executor.RunAllTestsInPackage(TestPackage.Instance), Throws.Nothing);
+		executor.RunAllTestsInPackage(TestPackage.Instance);
 	}
 
 	[Test]
