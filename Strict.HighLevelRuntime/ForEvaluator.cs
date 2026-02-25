@@ -20,16 +20,28 @@ internal sealed class ForEvaluator(Executor executor)
 			var end = Convert.ToInt32(endValue);
 			if (start <= end)
 				for (var index = start; index < end; index++)
+				{
 					ExecuteForIteration(f, ctx, iterator, results, itemType, index);
+					if (ctx.ExitMethodAndReturnValue != null)
+						return ctx.ExitMethodAndReturnValue;
+				}
 			else
 				for (var index = start; index > end; index--)
+				{
 					ExecuteForIteration(f, ctx, iterator, results, itemType, index);
+					if (ctx.ExitMethodAndReturnValue != null)
+						return ctx.ExitMethodAndReturnValue;
+				}
 		}
 		else
 		{
 			var loopRange = new Range(0, iterator.GetIteratorLength());
 			for (var index = loopRange.Start.Value; index < loopRange.End.Value; index++)
+			{
 				ExecuteForIteration(f, ctx, iterator, results, itemType, index);
+				if (ctx.ExitMethodAndReturnValue != null)
+					return ctx.ExitMethodAndReturnValue;
+			}
 		}
 		return ShouldConsolidateForResult(results, ctx) ?? new ValueInstance(results.Count == 0
 				? iterator.ReturnType
@@ -53,7 +65,9 @@ internal sealed class ForEvaluator(Executor executor)
 		var itemResult = f.Body is Body body
 			? EvaluateBody(body, loop)
 			: executor.RunExpression(f.Body, loop);
-		if (itemResult.ReturnType.Name != Base.None && !itemResult.ReturnType.IsMutable)
+		if (loop.ExitMethodAndReturnValue != null)
+			ctx.ExitMethodAndReturnValue = loop.ExitMethodAndReturnValue;
+		else if (itemResult.ReturnType.Name != Base.None && !itemResult.ReturnType.IsMutable)
 			results.Add(itemResult);
 	}
 
@@ -63,7 +77,11 @@ internal sealed class ForEvaluator(Executor executor)
 			(ctx.This?.ReturnType.Package ?? body.Method.Type.Package).FindType(Base.None)!;
 		ValueInstance last = new(noneType, null);
 		foreach (var e in body.Expressions)
+		{
 			last = executor.RunExpression(e, ctx);
+			if (ctx.ExitMethodAndReturnValue != null)
+				return ctx.ExitMethodAndReturnValue;
+		}
 		return last;
 	}
 

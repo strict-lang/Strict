@@ -74,6 +74,7 @@ public abstract class Context
 	{
 		lock (types)
 		{
+			FindTypeCount++;
 			if (types.TryGetValue(name, out var type))
 				return type;
 			var result = GuessTypeFromName();
@@ -98,6 +99,7 @@ public abstract class Context
 	}
 
 	private readonly IDictionary<string, Type?> types = new Dictionary<string, Type?>();
+	public static int FindTypeCount { get; private set; }
 
 	public sealed class ListPrefixIsNotAllowedUseImplementationTypeNameInPlural(string typeName)
 		: Exception($"List should not be used as prefix for {

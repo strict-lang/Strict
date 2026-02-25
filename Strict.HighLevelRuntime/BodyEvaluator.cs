@@ -7,6 +7,7 @@ internal sealed class BodyEvaluator(Executor executor)
 {
 	public ValueInstance Evaluate(Body body, ExecutionContext ctx, bool runOnlyTests)
 	{
+		executor.Statistics.BodyCount++;
 		if (runOnlyTests)
 			executor.IncrementInlineTestDepth();
 		try
@@ -38,6 +39,8 @@ internal sealed class BodyEvaluator(Executor executor)
 				body.Method.Type.Members.Any(m => !m.IsConstant && e.ToString().Contains(m.Name)))
 				continue;
 			last = executor.RunExpression(e, ctx);
+			if (ctx.ExitMethodAndReturnValue != null)
+				return ctx.ExitMethodAndReturnValue;
 			if (runOnlyTests && isTest && !Executor.ToBool(last))
 				throw new Executor.TestFailed(body.Method, e, last, GetTestFailureDetails(e, ctx));
 		}

@@ -151,8 +151,8 @@ public sealed class MethodCallEvaluator(Executor executor)
 					? leftInstance.ReturnType.IsError
 					: leftInstance.ReturnType.IsSameOrCanBeUsedAs(rightInstance.ReturnType);
 				return op is BinaryOperator.Is
-					? Executor.Bool(call.Method, matches)
-					: Executor.Bool(call.Method, !matches);
+					? executor.Bool(call.Method, matches)
+					: executor.Bool(call.Method, !matches);
 			}
 			if (leftInstance.ReturnType.Name == Base.Character && right is string rightText)
 			{
@@ -165,7 +165,7 @@ public sealed class MethodCallEvaluator(Executor executor)
 				rightInstance = new ValueInstance(leftInstance.ReturnType, right);
 			}
 			var equals = leftInstance.Equals(rightInstance);
-			return Executor.Bool(call.Method, op is BinaryOperator.Is
+			return executor.Bool(call.Method, op is BinaryOperator.Is
 				? equals
 				: !equals);
 		}
@@ -173,10 +173,10 @@ public sealed class MethodCallEvaluator(Executor executor)
 		var r = EqualsExtensions.NumberToDouble(right);
 		return op switch
 		{
-			BinaryOperator.Greater => Executor.Bool(call.Method, l > r),
-			BinaryOperator.Smaller => Executor.Bool(call.Method, l < r),
-			BinaryOperator.GreaterOrEqual => Executor.Bool(call.Method, l >= r),
-			BinaryOperator.SmallerOrEqual => Executor.Bool(call.Method, l <= r),
+			BinaryOperator.Greater => executor.Bool(call.Method, l > r),
+			BinaryOperator.Smaller => executor.Bool(call.Method, l < r),
+			BinaryOperator.GreaterOrEqual => executor.Bool(call.Method, l >= r),
+			BinaryOperator.SmallerOrEqual => executor.Bool(call.Method, l <= r),
 			_ => ExecuteMethodCall(call, leftInstance, ctx) //ncrunch: no coverage
 		};
 	}
@@ -188,9 +188,9 @@ public sealed class MethodCallEvaluator(Executor executor)
 		var right = rightInstance.Value;
 		return call.Method.Name switch
 		{
-			BinaryOperator.And => Executor.Bool(call.Method, Executor.ToBool(left) && Executor.ToBool(right)),
-			BinaryOperator.Or => Executor.Bool(call.Method, Executor.ToBool(left) || Executor.ToBool(right)),
-			BinaryOperator.Xor => Executor.Bool(call.Method, Executor.ToBool(left) ^ Executor.ToBool(right)),
+			BinaryOperator.And => executor.Bool(call.Method, Executor.ToBool(left) && Executor.ToBool(right)),
+			BinaryOperator.Or => executor.Bool(call.Method, Executor.ToBool(left) || Executor.ToBool(right)),
+			BinaryOperator.Xor => executor.Bool(call.Method, Executor.ToBool(left) ^ Executor.ToBool(right)),
 			_ => ExecuteMethodCall(call, leftInstance, ctx) //ncrunch: no coverage
 		};
 	}

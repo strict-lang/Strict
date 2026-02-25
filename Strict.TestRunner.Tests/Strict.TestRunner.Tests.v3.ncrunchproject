@@ -4,6 +4,9 @@
       <NamedTestSelector>
         <TestName>Strict.TestRunner.Tests.TestExecutorTests.BenchmarkCompare</TestName>
       </NamedTestSelector>
+      <NamedTestSelector>
+        <TestName>Strict.TestRunner.Tests.TestExecutorTests.RunAllTestsInPackageTwice</TestName>
+      </NamedTestSelector>
     </IgnoredTests>
   </Settings>
 </ProjectConfiguration>

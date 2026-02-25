@@ -11,7 +11,7 @@ namespace Strict.TestRunner.Tests;
 
 [MemoryDiagnoser]
 [SimpleJob(RunStrategy.Throughput, warmupCount: 1, iterationCount: 10)]
-public sealed class TestExecutorTests
+public class TestExecutorTests
 {
 	public readonly TestExecutor executor = new();
 
@@ -234,9 +234,9 @@ public sealed class TestExecutorTests
 	[Benchmark]
 	public void RunAllTestsInPackage() => executor.RunAllTestsInPackage(TestPackage.Instance);
 
-	//nocrunch: no coverage start
+	//ncrunch: no coverage start
 	[Test]
-	//[Category("Slow")]
+	[Category("Slow")]
 	public void RunAllTestsInPackageTwice()
 	{
 		executor.RunAllTestsInPackage(TestPackage.Instance);

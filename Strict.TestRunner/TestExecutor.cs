@@ -1,4 +1,3 @@
-using System.Reflection.Metadata.Ecma335;
 using Strict.HighLevelRuntime;
 using Strict.Language;
 using Type = Strict.Language.Type;
@@ -18,7 +17,8 @@ public sealed class TestExecutor
 	{
 		PackagesCount++;
 		foreach (var type in package)
-			RunAllTestsInType(type);
+			if (type is not GenericTypeImplementation)
+				RunAllTestsInType(type);
 	}
 
 	public int PackagesCount { get; private set; }
@@ -40,5 +40,5 @@ public sealed class TestExecutor
 	}
 
 	public int MethodsCount { get; private set; }
-	public int TestsCount => executor.TestsCount;
+	public Statistics Statistics => executor.Statistics;
 }

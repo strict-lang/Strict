@@ -11,6 +11,7 @@ public sealed class ExecutionContext(Type type, Method method)
 	public ExecutionContext? Parent { get; init; }
 	public ValueInstance? This { get; init; }
 	public Dictionary<string, ValueInstance> Variables { get; } = new(StringComparer.Ordinal);
+	public ValueInstance? ExitMethodAndReturnValue { get; internal set; }
 
 	public ValueInstance Get(string name) =>
 		Find(name) ?? throw new VariableNotFound(name, Type, This);

@@ -10,4 +10,4 @@ Console.WriteLine("Total execution time: " + TimeSpan.FromTicks(endTicks - start
 Console.WriteLine("Packages: " + tests.executor.PackagesCount);
 Console.WriteLine("Types: " + tests.executor.TypesCount);
 Console.WriteLine("Methods: " + tests.executor.MethodsCount);
-Console.WriteLine("Tests: " + tests.executor.TestsCount);
+Console.WriteLine(tests.executor.Statistics);
