@@ -250,7 +250,7 @@ public sealed class MethodCallEvaluator(Executor executor)
 			list.ImplementationTypes[0].Name == Base.Text;
 		foreach (var item in leftList)
 			combined.Add(item);
-		combined.Add(isLeftText && right.ReturnType.Name != Base.Text
+		combined.Add(isLeftText && (right.ReturnType?.Name ?? string.Empty) != Base.Text
 			? executor.CreateValueInstance(leftListType.GetType(Base.Text), ConvertToText(right.Value))
 			: right);
 		return executor.CreateValueInstance(leftListType, combined);
@@ -280,7 +280,7 @@ public sealed class MethodCallEvaluator(Executor executor)
 	{
 		var result = new List<ValueInstance>(leftList.Count);
 		foreach (var item in leftList)
-			result.Add(executor.CreateValueInstance(item.ReturnType, item.AsNumber() * rightNumber));
+			result.Add(executor.CreateValueInstance(item.ReturnType!, item.AsNumber() * rightNumber));
 		return executor.CreateValueInstance(leftListType, result);
 	}
 
@@ -289,16 +289,23 @@ public sealed class MethodCallEvaluator(Executor executor)
 	{
 		var result = new List<ValueInstance>(leftList.Count);
 		foreach (var item in leftList)
-			result.Add(executor.CreateValueInstance(item.ReturnType, item.AsNumber() / rightNumber));
+			result.Add(executor.CreateValueInstance(item.ReturnType!, item.AsNumber() / rightNumber));
 		return executor.CreateValueInstance(leftListType, result);
 	}
 
 	private ValueInstance ExecuteMethodCall(MethodCall call, ValueInstance? instance,
 		ExecutionContext ctx)
 	{
-		var args = new List<ValueInstance>(call.Arguments.Count);
-		foreach (var a in call.Arguments)
-			args.Add(executor.RunExpression(a, ctx));
+		IReadOnlyList<ValueInstance> args;
+		if (call.Arguments.Count == 0)
+			args = Array.Empty<ValueInstance>();
+		else
+		{
+			var argsList = new List<ValueInstance>(call.Arguments.Count);
+			foreach (var a in call.Arguments)
+				argsList.Add(executor.RunExpression(a, ctx));
+			args = argsList;
+		}
 		if (instance is { ReturnType.IsDictionary: true } && args.Count > 0 && call.Method.Name == "Add")
 		{
 			if (args.Count == 2 && instance.Value.Value is IDictionary dict)
@@ -308,7 +315,7 @@ public sealed class MethodCallEvaluator(Executor executor)
 		var result = executor.Execute(call.Method, instance, args, ctx);
 		if (call.Method.ReturnType.IsMutable && call.Instance is VariableCall variableCall &&
 			instance.HasValue)
-			ctx.Set(variableCall.Variable.Name, executor.CreateValueInstance(instance.Value.ReturnType, result));
+			ctx.Set(variableCall.Variable.Name, executor.CreateValueInstance(instance.Value.ReturnType!, result));
 		return result;
 	}
 

@@ -11,6 +11,7 @@ public sealed class ExecutionContext(Type type, Method method)
 	public Method Method { get; } = method;
 	public ExecutionContext? Parent { get; init; }
 	public ValueInstance? This { get; init; }
+	//TODO: check if we can lazy-init this, for each method context this is by far the slowest and most memory consuming call. If we have no local variables or no one accessing anything, there is no need for this. With 0–5 vars most contexts stay empty.
 	public Dictionary<string, ValueInstance> Variables { get; } = new(StringComparer.Ordinal);
 	public ValueInstance? ExitMethodAndReturnValue { get; internal set; }
 
@@ -30,7 +31,7 @@ public sealed class ExecutionContext(Type type, Method method)
 			Type.Members.FirstOrDefault(m => !m.IsConstant && m.Type.Name != Base.Iterator);
 		if (implicitMember != null &&
 			implicitMember.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
-			return ValueInstance.Create(implicitMember.Type, This.Value);
+			return This;//probably not needed: .Clone(implicitMember.Type);
 		return Parent?.Find(name, statistics);
 	}
 
@@ -54,7 +55,7 @@ public sealed class ExecutionContext(Type type, Method method)
 			: listMemberType;
 		var pairs = new List<ValueInstance>(dictionary.Count);
 		foreach (var entry in dictionary)
-			pairs.Add(ValueInstance.CreateObject(elementType,
+			pairs.Add(new ValueInstance(elementType,
 				new List<ValueInstance> { entry.Key, entry.Value }));
 		return pairs;
 	}
@@ -69,6 +70,7 @@ public sealed class ExecutionContext(Type type, Method method)
 		Environment.NewLine + "  " +
 		Variables.DictionaryToWordList(Environment.NewLine + "  ", " ", true);
 
+	/*TODO: probably eats up memory! avoid!
 	public void AddDictionaryElements(ValueInstance? instance)
 	{
 		if (instance?.ReturnType is not GenericTypeImplementation
@@ -84,4 +86,5 @@ public sealed class ExecutionContext(Type type, Method method)
 		var listValue = ExecutionContext.BuildDictionaryPairsList(listMemberType, dictionary);
 		Set(Type.ElementsLowercase, ValueInstance.CreateObject(listMemberType, listValue));
 	}
+	*/
 }

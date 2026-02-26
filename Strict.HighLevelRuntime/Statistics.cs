@@ -8,14 +8,18 @@ namespace Strict.HighLevelRuntime;
 public sealed record Statistics
 {
 	public int MethodCount { get; set; }
+	public int MethodTested { get; set; }
 	public int TestsCount { get; set; }
 	public int ExpressionCount { get; set; }
+
+	//TODO: these are not longer tracked, either remove or fix
 	public int ValueInstanceCount { get; set; }
 	public int BooleanCount { get; set; }
 	public int NumberCount { get; set; }
 	public int TextCount { get; set; }
 	public int ListCount { get; set; }
 	public int DictionaryCount { get; set; }
+
 	public int BodyCount { get; set; }
 	public int IfCount { get; set; }
 	public int SelectorIfCount { get; set; }
