@@ -156,6 +156,7 @@ public sealed class Executor
 		Statistics.FromCreationsCount++;
 		if (args.Count == 0 && method.Type.Name == Base.Text)
 			return "";
+		/*TODO: strange special rules, hopefully not longer needed
 		if (method.Type.IsDictionary && args is [{ ReturnType.IsIterator: true }])
 			return args[0].Value as IDictionary ?? FillDictionaryFromListKeyAndValues(args[0].Value);
 		if (args.Count == 1)
@@ -167,6 +168,7 @@ public sealed class Executor
 				!IsSingleCharacterTextArgument(method.Type, arg))
 				return arg.Value;
 		}
+		*/
 		return ConvertFromArgumentsToDictionary(method, args);
 	}
 
@@ -192,7 +194,7 @@ public sealed class Executor
 	}
 
 	private static object? TryConvertSingleCharacterText(Type targetType, ValueInstance value) =>
-		value.ReturnType.Name == Base.Text && value.Value is string { Length: 1 } text &&
+		value.IsText.Name == Base.Text && value.Value is string { Length: 1 } text &&
 		targetType.Name is Base.Number or Base.Character
 			? (int)text[0]
 			: value.Value;
