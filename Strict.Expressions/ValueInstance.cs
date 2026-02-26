@@ -1,3 +1,4 @@
+using System.Collections;
 using Strict.Language;
 using Type = Strict.Language.Type;
 
@@ -24,30 +25,36 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 	/// </summary>
 	internal readonly double number;
 	/// <summary>
-	/// These are all quiet double NaN values that won't happen in our code.
+	/// These are all unsupported double values, which we don't allow or support.
 	/// </summary>
-	private static readonly double
-		IsText = BitConverter.UInt64BitsToDouble(0x7FF8_0000_0000_0003UL);
-	private static readonly double
-		IsList = BitConverter.UInt64BitsToDouble(0x7FF8_0000_0000_0004UL);
-	private static readonly double IsDictionary =
-		BitConverter.UInt64BitsToDouble(0x7FF8_0000_0000_0005UL);
-	private static readonly double
-		IsType = BitConverter.UInt64BitsToDouble(0x7FF8_0000_0000_0006UL);
+	private const double IsText = -7.90897526e307;
+	private const double IsList = -7.81590825e307;
+	private const double IsDictionary = -7.719027815e307;
+	private const double IsType = -7.657178621e307;
 
 	public ValueInstance(Type booleanReturnType, bool isTrue)
 	{
 		value = booleanReturnType;
 		number = isTrue
-			? 0
-			: 1;
+			? 1
+			: 0;
 	}
 
 	public ValueInstance(Type numberReturnType, double setNumber)
 	{
+		if (setNumber is IsText or IsList or IsDictionary or IsType)
+			throw new InvalidTypeValue(numberReturnType, setNumber);
 		value = numberReturnType;
 		number = setNumber;
 	}
+
+	public sealed class InvalidTypeValue(Type returnType, object? value) : ParsingFailed(returnType,
+		0, value switch
+		{
+			null => "null",
+			Expression => "Expression " + value + " needs to be evaluated!",
+			_ => value + ""
+		} + " (" + value?.GetType() + ") for " + returnType.Name);
 
 	public ValueInstance(string text)
 	{
@@ -400,9 +407,9 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 		if (number == IsText)
 			return "\"" + EscapeText((string)value!) + "\"";
 		if (number == IsList)
-			return ((List<ValueInstance>)value!).Select(v => v.ToExpressionCodeString()).ToWordList();
+			return ((ValueListInstance)value!).Items.Select(v => v.ToExpressionCodeString()).ToWordList();
 		if (number == IsDictionary)
-			return ((Dictionary<ValueInstance, ValueInstance>)value!).Select(kv =>
+			return ((ValueDictionaryInstance)value!).Items.Select(kv =>
 					"(" + kv.Key.ToExpressionCodeString() + ", " + kv.Value.ToExpressionCodeString() + ")").
 				ToWordList();
 		if (number == IsType)

@@ -42,7 +42,7 @@ public sealed class ConstantCollapserTests
 			"\tfolded + 1"
 		]);
 		collapser.Visit(method, true);
-		Assert.That(((Number)method.GetBodyAndParseIfNeeded()).Data, Is.EqualTo(6));
+		Assert.That(((Number)method.GetBodyAndParseIfNeeded()).ToString(), Is.EqualTo("6"));
 	}
 
 	[Test]
@@ -54,7 +54,7 @@ public sealed class ConstantCollapserTests
 			"\tfolded + \"yo\""
 		]);
 		collapser.Visit(method, true);
-		Assert.That(((Text)method.GetBodyAndParseIfNeeded()).Data, Is.EqualTo("5yo"));
+		Assert.That(((Text)method.GetBodyAndParseIfNeeded()).ToString(), Is.EqualTo("\"5yo\""));
 	}
 
 	[Test]
@@ -65,7 +65,7 @@ public sealed class ConstantCollapserTests
 			"\ttrue or false and true"
 		]);
 		collapser.Visit(method, true);
-		Assert.That(((Boolean)method.GetBodyAndParseIfNeeded()).Data, Is.EqualTo(true));
+		Assert.That(((Boolean)method.GetBodyAndParseIfNeeded()).ToString(), Is.EqualTo("true"));
 	}
 
 	[Test]
@@ -89,7 +89,7 @@ public sealed class ConstantCollapserTests
 			"\tsecond * 2"
 		]);
 		collapser.Visit(method, true);
-		Assert.That(((Number)method.GetBodyAndParseIfNeeded()).Data, Is.EqualTo(10));
+		Assert.That(((Number)method.GetBodyAndParseIfNeeded()).ToString(), Is.EqualTo("10"));
 	}
 
 	[Test]
@@ -100,7 +100,7 @@ public sealed class ConstantCollapserTests
 				"constant number = 17 + 4", "Run", "\tnumber"));
 		simpleType.ParseMembersAndMethods(parser);
 		collapser.Visit(simpleType, true);
-		Assert.That(((Number)simpleType.Members[0].InitialValue!).Data, Is.EqualTo(21));
+		Assert.That(((Number)simpleType.Members[0].InitialValue!).ToString(), Is.EqualTo("21"));
 	}
 
 	[Test]
@@ -112,8 +112,8 @@ public sealed class ConstantCollapserTests
 				"\tnumber + number * 2"));
 		simpleType.ParseMembersAndMethods(parser);
 		collapser.Visit(simpleType, true);
-		Assert.That(((Number)simpleType.Methods[0].Parameters[1].DefaultValue!).Data,
-			Is.EqualTo(21));
-		Assert.That(((Number)simpleType.Methods[^1].GetBodyAndParseIfNeeded()).Data, Is.EqualTo(3));
+		Assert.That(((Number)simpleType.Methods[0].Parameters[1].DefaultValue!).ToString(),
+			Is.EqualTo("21"));
+		Assert.That(((Number)simpleType.Methods[^1].GetBodyAndParseIfNeeded()).ToString(), Is.EqualTo("3"));
 	}
 }

@@ -3,7 +3,7 @@ using Strict.Language;
 namespace Strict.Expressions;
 
 public sealed class Text(Context context, string value, int lineNumber = 0)
-	: Value(context.GetType(Base.Text), new ValueInstance(value), lineNumber)
+	: Value(context.GetType(Base.Text), value, lineNumber)
 {
 	/// <summary>
 	/// Text must start and end with a double quote, only called for input that does not contain any

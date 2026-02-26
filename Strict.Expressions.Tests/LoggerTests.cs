@@ -15,8 +15,16 @@ public sealed class LoggerTests
 		Assert.That(Run(type.Methods[0]), Is.EqualTo("Hello"));
 	}
 
-	public string Run(Method method) =>
-		method.GetBodyAndParseIfNeeded() is MethodCall call && call.Method.Name == "Log"
-			? ((Text)call.Arguments[0]).Data.ToString()!
-			: "";
+	public string Run(Method method)
+	{
+		if (method.GetBodyAndParseIfNeeded() is MethodCall call && call.Method.Name == "Log")
+		{
+			var text = call.Arguments[0] as Text;
+			if (text == null)
+				return ""; //ncrunch: no coverage
+			var quoted = text.Data.ToExpressionCodeString();
+			return quoted.Length >= 2 ? quoted[1..^1] : quoted;
+		}
+		return "";
+	}
 }

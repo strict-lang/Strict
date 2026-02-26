@@ -15,6 +15,10 @@ public static class EqualsExtensions
 			return true;
 		if (value is ValueInstance valueInstance && other is ValueInstance otherValueInstance)
 			return valueInstance.Equals(otherValueInstance);
+		if (value is ValueListInstance vli && other is ValueListInstance otherVli)
+			return vli.Equals(otherVli);
+		if (value is ValueDictionaryInstance vdi && other is ValueDictionaryInstance otherVdi)
+			return vdi.Equals(otherVdi);
 		if (value is IList valueList && other is IList otherValueList)
 			return AreListsEqual(valueList, otherValueList);
 		if (value is IDictionary valueDict && other is IDictionary otherValueDict)

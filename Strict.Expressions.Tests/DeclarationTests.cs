@@ -52,7 +52,7 @@ public class DeclarationTests : TestExpressions
 		Assert.That(expression.Name, Is.EqualTo("result"));
 		Assert.That(expression.Value, Is.InstanceOf<Binary>());
 		var rightExpression = (Number)((Binary)expression.Value).Arguments[0];
-		Assert.That(rightExpression.Data, Is.EqualTo(6));
+		Assert.That(rightExpression.ToString(), Is.EqualTo("6"));
 	}
 
 	[Test]
@@ -78,7 +78,7 @@ public class DeclarationTests : TestExpressions
 		Assert.That(expression.Value, Is.InstanceOf<Not>());
 		Assert.That(expression.Value.ToString(), Is.EqualTo("not true"));
 		var rightExpression = (expression.Value as Not)!.Instance as Boolean;
-		Assert.That(rightExpression!.Data, Is.EqualTo(true));
+		Assert.That(rightExpression!.ToString(), Is.EqualTo("true"));
 	}
 
 	[Test]
