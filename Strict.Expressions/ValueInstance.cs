@@ -24,6 +24,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 	/// Stores the value only if it is a None, Boolean, or Number. Otherwise use value below.
 	/// </summary>
 	internal readonly double number;
+
 	/// <summary>
 	/// These are all unsupported double values, which we don't allow or support.
 	/// </summary>
@@ -133,6 +134,9 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 		IsType => ((ValueTypeInstance)value!).ReturnType.IsSameOrCanBeUsedAs(otherType),
 		_ => ((Type)value).IsSameOrCanBeUsedAs(otherType),
 	};
+	
+	public bool IsTypeType =>
+		number == IsType && value is ValueTypeInstance { ReturnType.Name: Base.Type };
 
 	/// <summary>
 	/// Special code to make the ValueInstance mutable if the method return type requires it (rare)

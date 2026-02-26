@@ -121,7 +121,7 @@ public class CSharpExpressionVisitor : ExpressionVisitor
 				: memberCall.Member.Name;
 
 	protected override string Visit(Value value) =>
-		value.Data is Type
+		value.Data.IsTypeType
 			? GetCSharpTypeName(value.ReturnType)
 			: value.ToString();
 
