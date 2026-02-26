@@ -19,7 +19,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 	/// If number is IsType, then this points to a TypeValueInstance containing the ReturnType.
 	/// In all other cases this is a primitive (None, Boolean, Number) and value is the ReturnType.
 	/// </summary>
-	private readonly object? value;
+	private readonly object value;
 	/// <summary>
 	/// Stores the value only if it is a None, Boolean, or Number. Otherwise use value below.
 	/// </summary>
@@ -48,7 +48,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 		number = setNumber;
 	}
 
-	public sealed class InvalidTypeValue(Type returnType, object? value) : ParsingFailed(returnType,
+	public sealed class InvalidTypeValue(Type returnType, object value) : ParsingFailed(returnType,
 		0, value switch
 		{
 			null => "null",
@@ -78,6 +78,211 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 	{
 		value = instance;
 		number = IsType;
+	}
+
+	/// <summary>
+	/// Used by ApplyMethodReturnTypeMutable to flip if this is a mutable result or not.
+	/// </summary>
+	private ValueInstance(object existingValue, double existingNumber, Type newType)
+	{
+		switch (existingNumber)
+		{
+		case IsText:
+			value = new ValueTypeInstance(newType, new Dictionary<string, ValueInstance>
+			{
+				{ Base.Text, new ValueInstance((string)existingValue) }
+			});
+			number = IsType;
+			break;
+		case IsList:
+			value = new ValueListInstance(newType, ((ValueListInstance)existingValue).Items);
+			number = IsList;
+			break;
+		case IsDictionary:
+			value = new ValueDictionaryInstance(newType, ((ValueDictionaryInstance)existingValue).Items);
+			number = IsDictionary;
+			break;
+		case IsType:
+			var existingInstance = (ValueTypeInstance)existingValue;
+			if (!newType.IsMutable && existingInstance.ReturnType.IsMutable && newType.Name == Base.Text)
+			{
+				value = existingInstance.Members[Base.Text].value;
+				number = IsText;
+			}
+			else
+			{
+				value = new ValueTypeInstance(newType, existingInstance.Members);
+				number = IsType;
+			}
+			break;
+		default:
+			value = newType;
+			number = existingNumber;
+			break;
+		}
+	}
+
+	public bool IsPrimitiveType(Type noneBoolOrNumberType) => value == noneBoolOrNumberType;
+
+	public bool IsSameOrCanBeUsedAs(Type otherType) => number switch
+	{
+		IsText => otherType.Name == Base.Text,
+		IsList => ((ValueListInstance)value).ReturnType.IsSameOrCanBeUsedAs(otherType),
+		IsDictionary => ((ValueDictionaryInstance)value).ReturnType.IsSameOrCanBeUsedAs(otherType),
+		IsType => ((ValueTypeInstance)value!).ReturnType.IsSameOrCanBeUsedAs(otherType),
+		_ => ((Type)value).IsSameOrCanBeUsedAs(otherType),
+	};
+
+	/// <summary>
+	/// Special code to make the ValueInstance mutable if the method return type requires it (rare)
+	/// </summary>
+	public ValueInstance ApplyMethodReturnTypeMutable(Type methodReturnType)
+	{
+		var isInstanceMutable = IsMutable;
+		if (isInstanceMutable == methodReturnType.IsMutable)
+			return this;
+		if (isInstanceMutable)
+		{
+			var type = number switch
+			{
+				IsList => ((ValueListInstance)value).ReturnType,
+				IsDictionary => ((ValueDictionaryInstance)value).ReturnType,
+				IsType => ((ValueTypeInstance)value!).ReturnType,
+				_ => (Type)value
+			};
+			return type.GetFirstImplementation().IsSameOrCanBeUsedAs(methodReturnType)
+				? new ValueInstance(value, number, methodReturnType)
+				: this;
+		}
+		return IsSameOrCanBeUsedAs(methodReturnType.GetFirstImplementation())
+			? new ValueInstance(value, number, methodReturnType)
+			: this;
+	}
+	/*this is exactly what we wanted to avoid!
+	/// <summary>
+	/// The return type. For text without stored type returns null — check IsTextInstance first.
+	/// </summary>
+	public Type? ReturnType =>
+		number == IsText
+			? value is (Type t, _) ? t : null
+			: number == IsList
+				? ((ValueListInstance)value!).ReturnType
+				: number == IsDictionary
+					? ((ValueDictionaryInstance)value!).ReturnType
+					: number == IsType
+						? ((ValueTypeInstance)value!).ReturnType
+						: (Type)value!;
+
+	/// <summary>
+	/// The raw underlying object: string for Text, List&lt;ValueInstance&gt; for List,
+	/// Dictionary for Dictionary/Type. Null for None/primitives.
+	/// </summary>
+	public object? Value =>
+		number == IsText
+			? GetTextString()
+			: number == IsList
+				? (object?)((ValueListInstance)value!).Items
+				: number == IsDictionary
+					? ((ValueDictionaryInstance)value!).Items
+					: number == IsType
+						? ((ValueTypeInstance)value!).Members
+						: null;
+
+	public double AsNumber() => number;
+
+	public bool AsBool() => number != 0;
+	*/
+
+	public int GetIteratorLength()
+	{
+		if (number == IsList)
+			return ((ValueListInstance)value).Items.Count;
+		if (number == IsText)
+			return ((string)value).Length;
+		return (int)number;
+	}
+
+	public ValueInstance GetIteratorValue(Type charTypeIfNeeded, int index)
+	{
+		if (number == IsText)
+			return new ValueInstance(charTypeIfNeeded, (double)(((string)value)[index]));
+		if (number == IsList)
+			return ((ValueListInstance)value).Items[index];
+		throw new IteratorNotSupported(this); //ncrunch: no coverage
+	}
+
+	public class IteratorNotSupported(ValueInstance instance)
+		: Exception(instance.ToString());
+	/*
+	public static ValueInstance CreateNumber(Context ctx, double n) =>
+		new(ctx.GetType(Base.Number), n);
+
+	public static ValueInstance CreateBoolean(Context ctx, bool b) =>
+		new(ctx.GetType(Base.Boolean), b);
+
+	public static ValueInstance CreateNone(Context ctx) =>
+		new(ctx.GetType(Base.None));
+
+	public static ValueInstance CreateObject(Type returnType, object? val)
+	{
+		if (val is Expression)
+			throw new InvalidTypeValue(returnType, val);
+		var effective = GetEffectiveType(returnType);
+		if (effective.Name == Base.None)
+			return new ValueInstance(returnType);
+		if (effective.IsBoolean)
+			return val is bool b ? new ValueInstance(returnType, b) : throw new InvalidTypeValue(returnType, val);
+		if (IsNumberType(effective))
+			return new ValueInstance(returnType, EqualsExtensions.NumberToDouble(val));
+		if (IsTextType(effective))
+			return val is string s ? new ValueInstance(returnType, s) : throw new InvalidTypeValue(returnType, val);
+		if (val is List<ValueInstance> list)
+			return new ValueInstance(returnType, list);
+		if (val is Dictionary<ValueInstance, ValueInstance> dict)
+			return new ValueInstance(returnType, dict);
+		if (val is System.Collections.IList rawList)
+			return new ValueInstance(returnType, rawList.Cast<ValueInstance>().ToList());
+		if (val is IDictionary<string, object?> members)
+			return new ValueInstance(new ValueTypeInstance(returnType,
+				members.ToDictionary(kv => kv.Key,
+					kv => kv.Value is ValueInstance vi ? vi : kv.Value is string str
+						? new ValueInstance(str)
+						: kv.Value is double d
+							? new ValueInstance(returnType, d)
+							: new ValueInstance(returnType),
+					StringComparer.OrdinalIgnoreCase)));
+		throw new InvalidTypeValue(returnType, val);
+	}
+
+	public static ValueInstance Create(Type returnType, object? val)
+	{
+		if (val is ValueInstance vi)
+			return Create(returnType, vi);
+		var effective = GetEffectiveType(returnType);
+		if (effective.Name == Base.None)
+			return new ValueInstance(returnType);
+		if (effective.IsBoolean)
+			return val is bool b ? new ValueInstance(returnType, b)
+				: new ValueInstance(returnType, val is double d2 ? d2 != 0 : val != null);
+		if (IsNumberType(effective))
+			return new ValueInstance(returnType, EqualsExtensions.NumberToDouble(val));
+		if (IsTextType(effective))
+			return new ValueInstance(returnType, val is string s2 ? s2 : val?.ToString() ?? "");
+		return CreateObject(returnType, val);
+	}
+
+	public static ValueInstance Create(Type returnType, ValueInstance val)
+	{
+		var effective = GetEffectiveType(returnType);
+		if (effective.Name == Base.None)
+			return new ValueInstance(returnType);
+		if (effective.IsBoolean)
+			return new ValueInstance(returnType, val.AsBool());
+		if (IsNumberType(effective))
+			return new ValueInstance(returnType, val.AsNumber());
+		if (IsTextType(effective))
+			return new ValueInstance(returnType, val.Value is string sv ? sv : val.ToExpressionCodeString().Trim('"'));
+		return CreateObject(returnType, val.Value);
 	}
 
 	/*should be handled at Creation time, primitives can be mutable, but anything else need to
@@ -389,32 +594,44 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 				(IsCharacterType(otherEffectiveType) || otherEffectiveType.IsEnum))
 				return intValue == other.intValue;
 		*/
+
+	public bool IsMutable =>
+		number == IsText
+			? false
+			: number == IsList
+				? ((ValueListInstance)value).ReturnType.IsMutable
+				: number == IsDictionary
+					? ((ValueDictionaryInstance)value).ReturnType.IsMutable
+					: number == IsType
+						? ((ValueTypeInstance)value).ReturnType.IsMutable
+						: ((Type)value).IsMutable;
+
 	public override string ToString() => GetTypeName() + ": " + ToExpressionCodeString();
 
 	private string GetTypeName() =>
 		number == IsText
 			? Base.Text
 			: number == IsList
-				? ((ValueListInstance)value!).ReturnType.Name
+				? ((ValueListInstance)value).ReturnType.Name
 				: number == IsDictionary
-					? ((ValueDictionaryInstance)value!).ReturnType.Name
+					? ((ValueDictionaryInstance)value).ReturnType.Name
 					: number == IsType
-						? ((ValueTypeInstance)value!).ReturnType.Name
-						: ((Type)value!).Name;
+						? ((ValueTypeInstance)value).ReturnType.Name
+						: ((Type)value).Name;
 
 	public string ToExpressionCodeString()
 	{
 		if (number == IsText)
-			return "\"" + EscapeText((string)value!) + "\"";
+			return "\"" + EscapeText((string)value) + "\"";
 		if (number == IsList)
-			return ((ValueListInstance)value!).Items.Select(v => v.ToExpressionCodeString()).ToWordList();
+			return ((ValueListInstance)value).Items.Select(v => v.ToExpressionCodeString()).ToWordList();
 		if (number == IsDictionary)
-			return ((ValueDictionaryInstance)value!).Items.Select(kv =>
+			return ((ValueDictionaryInstance)value).Items.Select(kv =>
 					"(" + kv.Key.ToExpressionCodeString() + ", " + kv.Value.ToExpressionCodeString() + ")").
 				ToWordList();
 		if (number == IsType)
-			return ((ValueTypeInstance)value!).ToString()!;
-		var primitiveType = GetEffectiveType((Type)value!);
+			return ((ValueTypeInstance)value).ToString()!;
+		var primitiveType = GetEffectiveType((Type)value);
 		if (primitiveType.Name == Base.Number)
 			return number.ToString(System.Globalization.CultureInfo.InvariantCulture);
 		if (primitiveType.Name == Base.Boolean)
@@ -430,7 +647,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 
 	public static Type GetEffectiveType(Type returnType) =>
 		returnType.IsMutable
-			? ((GenericTypeImplementation)returnType).ImplementationTypes[0]
+			? returnType.GetFirstImplementation()
 			: returnType;
 
 	/// <summary>
@@ -441,9 +658,9 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 	{
 		if (number == IsType)
 		{
-			var instance = (ValueTypeInstance)value!;
+			var instance = (ValueTypeInstance)value;
 			if (other.number == IsType)
-				return instance.Equals((ValueTypeInstance)other.value!);
+				return instance.Equals((ValueTypeInstance)other.value);
 			if (other.number != IsList && other.number != IsDictionary && other.number != IsText &&
 				instance.Members.TryGetValue("number", out var numberMember) &&
 				numberMember.number == other.number)
@@ -451,18 +668,18 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 		}
 		else if (other.number == IsType && number != IsList && number != IsDictionary &&
 			number != IsText &&
-			((ValueTypeInstance)other.value!).Members.TryGetValue("number",
+			((ValueTypeInstance)other.value).Members.TryGetValue("number",
 				out var otherNumberMember) && otherNumberMember.number == number)
 			return true;
 		if (number != other.number)
 			return false;
 		if (number == IsText)
-			return (string)value! == (string)other.value!;
+			return (string)value == (string)other.value;
 		if (number == IsList)
 			return EqualsExtensions.AreEqual(value, other.value);
 		return number == IsDictionary
 			? EqualsExtensions.AreEqual(value, other.value)
-			: ((Type)other.value!).IsSameOrCanBeUsedAs((Type)value!);
+			: ((Type)other.value).IsSameOrCanBeUsedAs((Type)value);
 	}
 
 	public override int GetHashCode() => HashCode.Combine(number, value);

@@ -55,8 +55,10 @@ internal sealed class ForEvaluator(Executor executor)
 		ICollection<ValueInstance> results, Type itemType, int index)
 	{
 		var loop = new ExecutionContext(ctx.Type, ctx.Method) { This = ctx.This, Parent = ctx };
-		loop.Set(Type.IndexLowercase, executor.Number(itemType, index));
-		var value = iterator.GetIteratorValue(index);
+		var indexInstance = executor.Number(itemType, index);
+		loop.Set(Type.IndexLowercase, indexInstance);
+		//If this is Range or Number, we should not call GetIteratorValue, index is what we use!
+		var value = iterator.IsNumber || iterator.IsRange ? indexInstance : iterator.GetIteratorValue(itemType, index);
 		if (itemType.Name == Base.Text && value is char character)
 			value = character.ToString();
 		var valueInstance = value is ValueInstance vi

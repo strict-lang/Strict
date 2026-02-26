@@ -36,7 +36,7 @@ public sealed class TestExecutor
 	public void RunMethod(Method method)
 	{
 		MethodsCount++;
-		executor.Execute(method, null, []);
+		executor.Execute(method);
 	}
 
 	public int MethodsCount { get; private set; }

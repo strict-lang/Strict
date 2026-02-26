@@ -587,4 +587,6 @@ public class Type : Context, IDisposable
 				return lineNumber;
 		return -1;
 	}
+
+	public Type GetFirstImplementation() => ((GenericTypeImplementation)this).ImplementationTypes[0];
 }

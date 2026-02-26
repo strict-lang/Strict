@@ -296,9 +296,16 @@ public sealed class MethodCallEvaluator(Executor executor)
 	private ValueInstance ExecuteMethodCall(MethodCall call, ValueInstance? instance,
 		ExecutionContext ctx)
 	{
-		var args = new List<ValueInstance>(call.Arguments.Count);
-		foreach (var a in call.Arguments)
-			args.Add(executor.RunExpression(a, ctx));
+		IReadOnlyList<ValueInstance> args;
+		if (call.Arguments.Count == 0)
+			args = Array.Empty<ValueInstance>();
+		else
+		{
+			var argsList = new List<ValueInstance>(call.Arguments.Count);
+			foreach (var a in call.Arguments)
+				argsList.Add(executor.RunExpression(a, ctx));
+			args = argsList;
+		}
 		if (instance is { ReturnType.IsDictionary: true } && args.Count > 0 && call.Method.Name == "Add")
 		{
 			if (args.Count == 2 && instance.Value.Value is IDictionary dict)
