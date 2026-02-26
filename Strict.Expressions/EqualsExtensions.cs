@@ -1,7 +1,7 @@
 using System.Collections;
 using System.Globalization;
 
-namespace Strict.Language;
+namespace Strict.Expressions;
 
 /// <summary>
 /// Comparing C# object value equality sucks we have to do a lot of work to compare two instances
@@ -13,6 +13,8 @@ public static class EqualsExtensions
 	{
 		if (ReferenceEquals(value, other))
 			return true;
+		if (value is ValueInstance valueInstance && other is ValueInstance otherValueInstance)
+			return valueInstance.Equals(otherValueInstance);
 		if (value is IList valueList && other is IList otherValueList)
 			return AreListsEqual(valueList, otherValueList);
 		if (value is IDictionary valueDict && other is IDictionary otherValueDict)

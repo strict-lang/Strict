@@ -6,8 +6,10 @@ namespace Strict.Expressions;
 public sealed class Binary(Expression left, Method operatorMethod, Expression[] right)
 	: MethodCall(operatorMethod, left, right, null, left.LineNumber)
 {
+	/// <summary>
+	/// For "in" we have to swap left and right (in is always implemented in the Iterator)
+	/// </summary>
 	public override string ToString() =>
-		// For "in" we have to swap left and right (in is always implemented in the Iterator)
 		Method.Name is BinaryOperator.In
 			? AddNestedBracketsIfNeeded(Arguments[0]) + " is in " + AddNestedBracketsIfNeeded(Instance!)
 			: AddNestedBracketsIfNeeded(Instance!) + " " + (Method.Name is UnaryOperator.Not
@@ -20,8 +22,7 @@ public sealed class Binary(Expression left, Method operatorMethod, Expression[] 
 			? $"({child})"
 			: child.ToString();
 
-	public static Expression
-		Parse(Body body, ReadOnlySpan<char> input, Stack<Range> postfixTokens)
+	public static Expression Parse(Body body, ReadOnlySpan<char> input, Stack<Range> postfixTokens)
 	{
 #if LOG_OPERATORS_PARSING
 		Console.WriteLine();

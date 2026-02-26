@@ -161,8 +161,8 @@ public class MethodCall : ConcreteExpression
 		if (arguments.Count == 0)
 			return
 			[
-				new Value(body.Method.GetType(Base.Name), basedOnErrorVariable?.ToString() ??
-					(fromType.Name == Base.Error
+				new Value(body.Method.GetType(Base.Name),
+					basedOnErrorVariable?.ToString() ?? (fromType.Name == Base.Error
 						? body.CurrentDeclarationNameForErrorText ?? body.Method.Name
 						: fromType.Name)),
 				CreateListFromMethodCall(body, Base.Stacktrace, CreateStacktraces(body))

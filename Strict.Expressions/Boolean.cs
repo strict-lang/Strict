@@ -4,12 +4,15 @@ using Strict.Language;
 namespace Strict.Expressions;
 
 /// <summary>
-/// Constant boolean that appears anywhere in the parsed code, simply "true" or "false"
+/// Constant boolean that appears anywhere in the parsed code, "true" or "false"
 /// </summary>
 public sealed class Boolean(Context context, bool value, int lineNumber = 0)
 	: Value(context.GetType(Base.Boolean), value, lineNumber)
 {
-	public override string ToString() => base.ToString().ToLower();
+	public override string ToString() =>
+		Data.number == 0
+			? "false"
+			: "true";
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static Expression? TryParse(Body body, ReadOnlySpan<char> line) =>

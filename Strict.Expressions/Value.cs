@@ -6,28 +6,30 @@ namespace Strict.Expressions;
 /// <summary>
 /// Any expression with a fixed value, often optimized from all known code trees. Mostly used as
 /// parameters and assignment values via the derived classes <see cref="Number"/>,
-/// <see cref="Boolean"/> or <see cref="Text"/>.
-/// All expressions have a ReturnType and many expressions contains a <see cref="Value"/> like
-/// <see cref="Declaration"/> or indirectly as parts of a <see cref="Binary"/> expression.
-/// For generic values like <see cref="List"/> the Data contains the generic type used.
+/// <see cref="Boolean"/> or <see cref="Text"/>. Already optimized for use in HighLevelRuntime.
 /// </summary>
-public class Value(Type valueType, object data, int lineNumber = 0, bool isMutable = false)
+public class Value(Type valueType, ValueInstance data, int lineNumber = 0, bool isMutable = false)
 	: ConcreteExpression(valueType, lineNumber, isMutable)
 {
-	public object Data { get; } = data;
+	protected Value(Type valueType, bool value, int lineNumber = 0, bool isMutable = false)
+		: this(valueType, new ValueInstance(valueType, value), lineNumber, isMutable) { }
 
-	public override string ToString() =>
-		Data switch
-		{
-			string => "\"" + Data + "\"",
-			double doubleData => doubleData.ToString("0.0"),
-			_ => Data.ToString()!
-		};
+	protected Value(Type valueType, double value, int lineNumber = 0, bool isMutable = false)
+		: this(valueType, new ValueInstance(valueType, value), lineNumber, isMutable) { }
 
+	public Value(Type valueType, string text, int lineNumber = 0, bool isMutable = false)
+		: this(valueType, new ValueInstance(text), lineNumber, isMutable) { }
+
+	protected Value(Type valueType, int lineNumber = 0, bool isMutable = false)
+		: this(valueType, new ValueInstance(valueType), lineNumber, isMutable) { }
+
+	protected Value(Type valueType, List<ValueInstance> items, int lineNumber = 0,
+		bool isMutable = false) : this(valueType, new ValueInstance(valueType, items), lineNumber,
+		isMutable) { }
+
+	public ValueInstance Data { get; } = data;
+	public override string ToString() => Data.ToExpressionCodeString();
 	public override bool IsConstant => true;
-
-	public override bool Equals(Expression? other) =>
-		other is Value v && EqualsExtensions.AreEqual(Data, v.Data);
-
-	public override int GetHashCode() => HashCode.Combine(base.GetHashCode(), Data);
+	public override bool Equals(Expression? other) => other is Value v && Data.Equals(v.Data);
+	public override int GetHashCode() => HashCode.Combine(base.GetHashCode(), Data.GetHashCode());
 }

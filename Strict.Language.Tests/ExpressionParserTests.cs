@@ -1,3 +1,5 @@
+using Boolean = Strict.Expressions.Boolean;
+
 namespace Strict.Language.Tests;
 
 public class ExpressionParserTests : ExpressionParser
@@ -37,7 +39,7 @@ public class ExpressionParserTests : ExpressionParser
 	//ncrunch: no coverage start, not the focus here
 	public override Expression ParseExpression(Body body, ReadOnlySpan<char> text,
 		bool isMutable = false) =>
-		new Value(type.GetType(Base.Boolean), int.TryParse(text, out _), 0, isMutable);
+		new Boolean(type, true);
 
 	public override List<Expression> ParseListArguments(Body body, ReadOnlySpan<char> text) => null!;
 
