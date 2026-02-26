@@ -31,7 +31,7 @@ public sealed class ExecutionContext(Type type, Method method)
 			Type.Members.FirstOrDefault(m => !m.IsConstant && m.Type.Name != Base.Iterator);
 		if (implicitMember != null &&
 			implicitMember.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
-			return This.Clone(implicitMember.Type);
+			return This;//probably not needed: .Clone(implicitMember.Type);
 		return Parent?.Find(name, statistics);
 	}
 
@@ -55,7 +55,7 @@ public sealed class ExecutionContext(Type type, Method method)
 			: listMemberType;
 		var pairs = new List<ValueInstance>(dictionary.Count);
 		foreach (var entry in dictionary)
-			pairs.Add(ValueInstance.CreateObject(elementType,
+			pairs.Add(new ValueInstance(elementType,
 				new List<ValueInstance> { entry.Key, entry.Value }));
 		return pairs;
 	}
@@ -70,7 +70,7 @@ public sealed class ExecutionContext(Type type, Method method)
 		Environment.NewLine + "  " +
 		Variables.DictionaryToWordList(Environment.NewLine + "  ", " ", true);
 
-	//TODO: probably eats up memory!
+	/*TODO: probably eats up memory! avoid!
 	public void AddDictionaryElements(ValueInstance? instance)
 	{
 		if (instance?.ReturnType is not GenericTypeImplementation
@@ -86,4 +86,5 @@ public sealed class ExecutionContext(Type type, Method method)
 		var listValue = ExecutionContext.BuildDictionaryPairsList(listMemberType, dictionary);
 		Set(Type.ElementsLowercase, ValueInstance.CreateObject(listMemberType, listValue));
 	}
+	*/
 }

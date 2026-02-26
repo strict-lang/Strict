@@ -83,6 +83,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 	/// <summary>
 	/// Used by ApplyMethodReturnTypeMutable to flip if this is a mutable result or not.
 	/// </summary>
+	//initial idea: public ValueInstance? Clone(Type type) => throw new NotImplementedException();
 	private ValueInstance(object existingValue, double existingNumber, Type newType)
 	{
 		switch (existingNumber)
@@ -656,6 +657,8 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 	/// </summary>
 	public bool Equals(ValueInstance other)
 	{
+		if (number == other.number && value == other.value)
+			return true;
 		if (number == IsType)
 		{
 			var instance = (ValueTypeInstance)value;

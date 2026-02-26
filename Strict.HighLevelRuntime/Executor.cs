@@ -65,9 +65,9 @@ public sealed class Executor
 			Statistics.MethodCount++;
 		ValidateInstanceAndArguments(method, instance, args, parentContext);
 		if (method is { Name: Method.From, Type.IsGeneric: false })
-			return instance != noneInstance
-				? throw new MethodCall.CannotCallFromConstructorWithExistingInstance()
-				: CreateValueInstance(method.Type, GetFromConstructorValue(method, args));
+			return instance.Equals(noneInstance)
+				? CreateValueInstance(method.Type, GetFromConstructorValue(method, args))
+				: throw new MethodCall.CannotCallFromConstructorWithExistingInstance();
 		var context = CreateExecutionContext(method, instance, args, parentContext, runOnlyTests);
 		if (runOnlyTests && IsSimpleSingleLineMethod(method))
 			return trueInstance;
@@ -110,27 +110,27 @@ public sealed class Executor
 						: throw new MissingArgument(method, param.Name, args);
 				context.Variables[param.Name] = arg;
 			}
-		context.AddDictionaryElements(instance);
+		//TODO: avoid context.AddDictionaryElements(instance);
 		return context;
 	}
 
-	private static void ValidateInstanceAndArguments(Method method, ValueInstance? instance,
+	private void ValidateInstanceAndArguments(Method method, ValueInstance instance,
 		IReadOnlyList<ValueInstance> args, ExecutionContext? parentContext)
 	{
-		if (instance.HasValue && !instance.Value.ReturnType.IsSameOrCanBeUsedAs(method.Type))
-			throw new CannotCallMethodWithWrongInstance(method, instance.Value);
+		if (instance.IsSameOrCanBeUsedAs(method.Type))
+			throw new CannotCallMethodWithWrongInstance(method, instance);
 		if (args.Count > method.Parameters.Count)
 			throw new TooManyArguments(method, args[method.Parameters.Count].ToString(), args);
 		for (var index = 0; index < args.Count; index++)
-			if (!args[index].ReturnType.IsSameOrCanBeUsedAs(method.Parameters[index].Type) &&
+			if (!args[index].IsSameOrCanBeUsedAs(method.Parameters[index].Type) &&
 				!method.Parameters[index].Type.IsIterator && method.Name != Method.From &&
 				!IsSingleCharacterTextArgument(method.Parameters[index].Type, args[index]))
 				throw new ArgumentDoesNotMapToMethodParameters(method,
 					"Method \"" + method + "\" parameter " + index + ": " +
 					method.Parameters[index].ToStringWithInnerMembers() +
-					" cannot be assigned from argument " + args[index] + " " + args[index].ReturnType);
+					" cannot be assigned from argument " + args[index]);
 		if (parentContext != null && parentContext.Method == method &&
-			(parentContext.This?.Equals(instance) ?? !instance.HasValue) &&
+			(parentContext.This?.Equals(instance) ?? instance.Equals(noneInstance)) &&
 			DoArgumentsMatch(method, args, parentContext.Variables))
 			throw new StackOverflowCallingItselfWithSameInstanceAndArguments(method, instance, args,
 				parentContext);
@@ -151,27 +151,6 @@ public sealed class Executor
 		: ExecutionFailed(method, "Parent context=" + parentContext + ", Instance=" + instance +
 			", arguments=" + args.ToWordList());
 
-	private static IDictionary<string, object?> ConvertFromArgumentsToDictionary(Method fromMethod,
-		IReadOnlyList<ValueInstance> args)
-	{
-		var type = fromMethod.Type;
-		var result = new Dictionary<string, object?>(StringComparer.Ordinal);
-		for (var index = 0; index < args.Count; index++)
-		{
-			var parameter = fromMethod.Parameters[index];
-			if (!args[index].ReturnType.IsSameOrCanBeUsedAs(parameter.Type) &&
-				!parameter.Type.IsIterator && !IsSingleCharacterTextArgument(parameter.Type, args[index]))
-				throw new InvalidTypeForArgument(type, args, index);
-			var memberName = type.Members.FirstOrDefault(member =>
-					member.Name.Equals(parameter.Name, StringComparison.OrdinalIgnoreCase))?.Name ??
-				(parameter.Name.Length > 0
-					? char.ToUpperInvariant(parameter.Name[0]) + parameter.Name[1..]
-					: parameter.Name);
-			result.Add(memberName, TryConvertSingleCharacterText(parameter.Type, args[index]));
-		}
-		return result;
-	}
-
 	private object? GetFromConstructorValue(Method method, IReadOnlyList<ValueInstance> args)
 	{
 		Statistics.FromCreationsCount++;
@@ -189,6 +168,27 @@ public sealed class Executor
 				return arg.Value;
 		}
 		return ConvertFromArgumentsToDictionary(method, args);
+	}
+
+	private static IDictionary<string, object?> ConvertFromArgumentsToDictionary(Method fromMethod,
+		IReadOnlyList<ValueInstance> args)
+	{
+		var type = fromMethod.Type;
+		var result = new Dictionary<string, object?>(StringComparer.Ordinal);
+		for (var index = 0; index < args.Count; index++)
+		{
+			var parameter = fromMethod.Parameters[index];
+			if (!args[index].IsSameOrCanBeUsedAs(parameter.Type) &&
+				!parameter.Type.IsIterator && !IsSingleCharacterTextArgument(parameter.Type, args[index]))
+				throw new InvalidTypeForArgument(type, args, index);
+			var memberName = type.Members.FirstOrDefault(member =>
+					member.Name.Equals(parameter.Name, StringComparison.OrdinalIgnoreCase))?.Name ??
+				(parameter.Name.Length > 0
+					? char.ToUpperInvariant(parameter.Name[0]) + parameter.Name[1..]
+					: parameter.Name);
+			result.Add(memberName, TryConvertSingleCharacterText(parameter.Type, args[index]));
+		}
+		return result;
 	}
 
 	private static object? TryConvertSingleCharacterText(Type targetType, ValueInstance value) =>
