@@ -20,7 +20,7 @@ public abstract class Visitor
 
 	public virtual void Visit(Type type, object? context = null)
 	{
-		if (type.Name == Base.Any)
+		if (type.IsAny)
 			return;
 		foreach (var member in type.Members)
 			Visit(member, context);

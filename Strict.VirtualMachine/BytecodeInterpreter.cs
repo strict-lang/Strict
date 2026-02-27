@@ -174,9 +174,9 @@ public sealed class BytecodeInterpreter
 		else
 			throw new InvalidOperationException(); //ncrunch: no coverage
 		var conversionType = invoke.Method.ReturnType;
-		if (conversionType.Name == Base.Text)
+		if (conversionType.IsText)
 			Memory.Registers[invoke.Register] = new Instance(conversionType, rawValue.ToString() ?? "");
-		else if (conversionType.Name == Base.Number)
+		else if (conversionType.IsNumber)
 			Memory.Registers[invoke.Register] = new Instance(conversionType, Convert.ToDecimal(rawValue));
 		return true;
 	}
@@ -332,11 +332,11 @@ public sealed class BytecodeInterpreter
 	{
 		var index = Convert.ToInt32(Memory.Variables["index"].Value);
 		var value = iterableVariable.Value.ToString();
-		if (iterableVariable.ReturnType?.Name == Base.Text && value is not null)
+		if (iterableVariable.ReturnType?.IsText && value is not null)
 			Memory.Variables["value"] = new Instance(Base.Text, value[index].ToString());
 		else if (iterableVariable.ReturnType is GenericTypeImplementation { Generic.Name: Base.List })
 			Memory.Variables["value"] = new Instance(((List<Expression>)iterableVariable.Value)[index]);
-		else if (iterableVariable.ReturnType?.Name == Base.Number)
+		else if (iterableVariable.ReturnType?.IsNumber)
 			Memory.Variables["value"] = new Instance(Base.Number, index + 1);
 	}
 

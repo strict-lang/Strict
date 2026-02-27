@@ -16,6 +16,7 @@ public sealed class Executor
 		trueInstance = new ValueInstance(booleanType, true);
 		falseInstance = new ValueInstance(booleanType, false);
 		numberType = initialPackage.GetType(Base.Number);
+		characterType = initialPackage.GetType(Base.Character);
 		bodyEvaluator = new BodyEvaluator(this);
 		ifEvaluator = new IfEvaluator(this);
 		selectorIfEvaluator = new SelectorIfEvaluator(this);
@@ -25,12 +26,13 @@ public sealed class Executor
 	}
 
 	private readonly TestBehavior behavior;
-	private readonly Type noneType;
-	private readonly ValueInstance noneInstance;
+	internal readonly Type noneType;
+	internal readonly ValueInstance noneInstance;
 	private readonly Type booleanType;
 	private readonly ValueInstance trueInstance;
 	private readonly ValueInstance falseInstance;
 	private readonly Type numberType;
+	internal readonly Type characterType;
 	private readonly BodyEvaluator bodyEvaluator;
 	private readonly IfEvaluator ifEvaluator;
 	private readonly SelectorIfEvaluator selectorIfEvaluator;
@@ -154,7 +156,7 @@ public sealed class Executor
 	private object? GetFromConstructorValue(Method method, IReadOnlyList<ValueInstance> args)
 	{
 		Statistics.FromCreationsCount++;
-		if (args.Count == 0 && method.Type.Name == Base.Text)
+		if (args.Count == 0 && method.Type.IsText)
 			return "";
 		/*TODO: strange special rules, hopefully not longer needed
 		if (method.Type.IsDictionary && args is [{ ReturnType.IsIterator: true }])
@@ -162,7 +164,7 @@ public sealed class Executor
 		if (args.Count == 1)
 		{
 			var arg = args[0];
-			if (method.Type.Name == Base.Character && IsSingleCharacterTextArgument(method.Type, arg))
+			if (method.Type.IsCharacter && IsSingleCharacterTextArgument(method.Type, arg))
 				return (int)((string)arg.Value!)[0];
 			if (method.Type.IsSameOrCanBeUsedAs(arg.ReturnType) &&
 				!IsSingleCharacterTextArgument(method.Type, arg))
@@ -194,39 +196,34 @@ public sealed class Executor
 	}
 
 	private static object? TryConvertSingleCharacterText(Type targetType, ValueInstance value) =>
-		value.IsText.Name == Base.Text && value.Value is string { Length: 1 } text &&
+		value.IsText && value.Text.Length == 1 &&
 		targetType.Name is Base.Number or Base.Character
-			? (int)text[0]
-			: value.Value;
+			? (int)value.Text[0]
+			: value.Text;
 
 	private static bool IsSingleCharacterTextArgument(Type targetType, ValueInstance value) =>
-		value.ReturnType.Name == Base.Text && value.Value is string text && text.Length == 1 &&
+		value.ReturnType.IsText && value.Value is string text && text.Length == 1 &&
 		targetType.Name is Base.Number or Base.Character;
 
-	public sealed class InvalidTypeForArgument(
-		Type type,
-		IReadOnlyList<ValueInstance> args,
-		int index) : ExecutionFailed(type,
-		args[index] + " at index=" + index + " does not match type=" + type + " Member=" +
-		type.Members[index]);
+	public sealed class InvalidTypeForArgument(Type type, IReadOnlyList<ValueInstance> args,
+		int index) : ExecutionFailed(type, args[index] + " at index=" + index + " does not match " +
+		"type=" + type + " Member=" + type.Members[index]);
 
 	public sealed class CannotCallMethodWithWrongInstance(Method method, ValueInstance instance)
 		: ExecutionFailed(method, instance.ToString()); //ncrunch: no coverage
 
-	public sealed class
-		TooManyArguments(Method method, string argument, IEnumerable<ValueInstance> args)
-		: ExecutionFailed(method,
-			argument + ", given arguments: " + args.ToWordList() + ", method " + method.Name +
-			" requires these parameters: " + method.Parameters.ToWordList());
+	public sealed class TooManyArguments(Method method, string argument,
+		IEnumerable<ValueInstance> args) : ExecutionFailed(method,
+		argument + ", given arguments: " + args.ToWordList() + ", method " + method.Name +
+		" requires these parameters: " + method.Parameters.ToWordList());
 
 	public sealed class ArgumentDoesNotMapToMethodParameters(Method method, string message)
 		: ExecutionFailed(method, message);
 
-	public sealed class
-		MissingArgument(Method method, string paramName, IEnumerable<ValueInstance> args)
-		: ExecutionFailed(method,
-			paramName + ", given arguments: " + args.ToWordList() + ", method " + method.Name +
-			" requires these parameters: " + method.Parameters.ToWordList());
+	public sealed class MissingArgument(Method method, string paramName,
+		IEnumerable<ValueInstance> args) : ExecutionFailed(method,
+		paramName + ", given arguments: " + args.ToWordList() + ", method " + method.Name +
+		" requires these parameters: " + method.Parameters.ToWordList());
 
 	public ValueInstance RunExpression(Expression expr, ExecutionContext context,
 		bool runOnlyTests = false)
@@ -263,7 +260,7 @@ public sealed class Executor
 			IList<Expression> list => list.Select(e => RunExpression(e, context)).ToList(),
 			_ => valueData
 		};
-
+//TODO: do these properly with new ValueInstance!
 	private ValueInstance CreateValueInstance(Type returnType, object valueData,
 		ExecutionContext context)
 	{
@@ -286,9 +283,7 @@ public sealed class Executor
 	private static object NormalizeDictionaryValue(Type dictionaryType,
 		IDictionary<string, object?> rawMembers)
 	{
-		var listMemberName = dictionaryType.Members.First(member =>
-			member.Type is GenericTypeImplementation { Generic.Name: Base.List } ||
-			member.Type.Name == Base.List).Name;
+		var listMemberName = dictionaryType.Members.First(member => member.Type.IsList).Name;
 		return FillDictionaryFromListKeyAndValues(rawMembers[listMemberName]);
 	}
 
@@ -447,8 +442,8 @@ public sealed class Executor
 		v switch
 		{
 			bool b => b,
-			ValueInstance vi => vi.AsBool(),
-			Value { ReturnType.Name: Base.Boolean, Data: bool bv } => bv, //ncrunch: no coverage
+			ValueInstance vi => vi.Boolean(),
+			Value { ReturnType.IsBoolean, Data: bool bv } => bv, //ncrunch: no coverage
 			_ => throw new InvalidOperationException("Expected Boolean, got: " +
 				v) //ncrunch: no coverage
 		};
@@ -479,7 +474,7 @@ public sealed class Executor
 		var effectiveType = ValueInstance.GetEffectiveType(instance.ReturnType);
 		if (effectiveType.IsBoolean)
 			Statistics.BooleanCount++;
-		else if (effectiveType.Name == Base.Number)
+		else if (effectiveType.IsNumber)
 			Statistics.NumberCount++;
 		else if (ValueInstance.IsTextType(effectiveType))
 			Statistics.TextCount++;

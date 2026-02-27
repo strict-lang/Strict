@@ -23,8 +23,7 @@ public sealed class Dictionary : Value
 		//not needed, this was wrong code before: var listMemberName = dictionaryImplementationType
 		//.Members
 		//.FirstOrDefault(member =>
-		//	member.Type is GenericTypeImplementation { Generic.Name: Base.List } ||
-		//	member.Type.Name == Base.List)?.Name ?? Type.ElementsLowercase;
+		//	member.Type.IsList)?.     Name ?? Type.ElementsLowercase;
 		return new ValueInstance(dictionaryImplementationType, new Dictionary<ValueInstance,
 			ValueInstance>());
 	}

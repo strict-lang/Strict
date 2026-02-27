@@ -168,14 +168,14 @@ public sealed class ForTests : TestExpressions
 	public void ValidIteratorReturnTypeForRange() =>
 		Assert.That(
 			((MethodCall)((For)ParseExpression("for Range(0, 10)", "\tlogger.Log(index)")).Body).
-			Arguments[0].ReturnType.Name == Base.Number);
+			Arguments[0].ReturnType.IsNumber);
 
 	[Test]
 	public void ValidIteratorReturnTypeTextForList() =>
 		Assert.That(
 			((VariableCall)((MethodCall)((For)((Body)ParseExpression("mutable element = \"1\"",
 					"for element in (\"1\", \"2\", \"3\")", "\tlogger.Log(element)")).Expressions[1]).Body).
-				Arguments[0]).Variable.Type.Name == Base.Text);
+				Arguments[0]).Variable.Type.IsText);
 
 	[Test]
 	public void ValidLoopProgram()

@@ -58,7 +58,7 @@ internal sealed class BodyEvaluator(Executor executor)
 	}
 
 	private static bool IsStandaloneInlineTest(Expression e) =>
-		e.ReturnType.Name == Base.Boolean && e is not If && e is not Return && e is not Declaration &&
+		e.ReturnType.IsBoolean && e is not If && e is not Return && e is not Declaration &&
 		e is not MutableReassignment;
 
 	private string GetTestFailureDetails(Expression expression, ExecutionContext ctx) =>

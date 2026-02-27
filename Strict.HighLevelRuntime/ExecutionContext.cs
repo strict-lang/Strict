@@ -82,7 +82,7 @@ public sealed class ExecutionContext(Type type, Method method)
 			return;
 		var listMemberType = implementation.Members.FirstOrDefault(member =>
 			member.Type is GenericTypeImplementation { Generic.Name: Base.List } ||
-			member.Type.Name == Base.List)?.Type ?? implementation.GetType(Base.List);
+			member.Type.IsList)?     .Type ?? implementation.GetType(Base.List);
 		var listValue = ExecutionContext.BuildDictionaryPairsList(listMemberType, dictionary);
 		Set(Type.ElementsLowercase, ValueInstance.CreateObject(listMemberType, listValue));
 	}

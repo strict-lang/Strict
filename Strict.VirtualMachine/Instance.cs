@@ -35,9 +35,9 @@ public sealed class Instance
 		IsMember = isMember;
 	}
 
+	//TODO: very inefficient, object should be avoided like we did in Value and ValueInstance, also we don't need that much stuff here, figure out more efficient solution!
 	public bool IsMember { get; }
-	public Type? ReturnType { get; }
-	public string TypeName { get => ReturnType?.Name ?? field; } = string.Empty;
+	public Type ReturnType { get; }
 	public object Value { get; set; }
 
 	public object GetRawValue()
@@ -49,34 +49,38 @@ public sealed class Instance
 
 	public static Instance operator +(Instance left, Instance right)
 	{
-		if (!left.TypeName.StartsWith(Base.List, StringComparison.Ordinal))
+		if (!left.ReturnType.IsList)
 			return HandleTextTypeConversionForBinaryOperations(left, right, BinaryOperator.Plus);
-		return left.ReturnType is GenericTypeImplementation { Name: Base.List }
-			? new Instance(left.ReturnType, left.Value + right.Value.ToString())
-			: AddElementToTheListAndGetInstance(left, right);
+		//TODO: over complicated, should always be a list here
+		if (left.ReturnType is GenericTypeImplementation { Name: Base.List })
+		{
+			return new Instance(left.ReturnType, left.Value + right.Value.ToString());
+		}
+		else
+		{
+			return AddElementToTheListAndGetInstance(left, right);
+		}
 	}
 
 	private static Instance HandleTextTypeConversionForBinaryOperations(Instance left,
 		Instance right, string binaryOperator)
 	{
-		var leftReturnTypeName = left.TypeName;
-		var rightReturnTypeName = right.TypeName;
-		if (leftReturnTypeName == Base.Number && rightReturnTypeName == Base.Number)
+		if (left.ReturnType.IsNumber && right.ReturnType.IsNumber)
 			return new Instance(right.ReturnType ?? left.ReturnType,
 				binaryOperator == BinaryOperator.Plus
 					? Convert.ToDouble(left.Value) + Convert.ToDouble(right.Value)
 					: Convert.ToDouble(left.Value) - Convert.ToDouble(right.Value));
-		if (leftReturnTypeName == Base.Text && rightReturnTypeName == Base.Text)
+		if (left.ReturnType.IsText && right.ReturnType.IsText)
 			return new Instance(right.ReturnType ?? left.ReturnType,
 				left.Value.ToString() + right.Value);
-		if (rightReturnTypeName == Base.Text && leftReturnTypeName == Base.Number)
+		if (right.ReturnType.IsText && left.ReturnType.IsNumber)
 			return new Instance(right.ReturnType, left.Value.ToString() + right.Value);
 		return new Instance(left.ReturnType, left.Value + right.Value.ToString());
 	}
 
 	public static Instance operator -(Instance left, Instance right)
 	{
-		if (!left.TypeName.StartsWith("List", StringComparison.Ordinal))
+		if (!left.ReturnType.IsList)
 			return new Instance(left.ReturnType,
 				Convert.ToDouble(left.Value) - Convert.ToDouble(right.Value));
 		var elements = new List<Expression>((List<Expression>)left.Value);
@@ -105,5 +109,5 @@ public sealed class Instance
 		return new Instance(left.ReturnType, elements);
 	}
 
-	public override string ToString() => $"{Value} {TypeName}";
+	public override string ToString() => $"{Value} {ReturnType.Name}";
 }

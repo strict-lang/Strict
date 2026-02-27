@@ -180,7 +180,7 @@ public sealed class ListTests : TestExpressions
 	{
 		var texts = type.GetListImplementationType(type.GetType(Base.Text));
 		var containsMethod = texts.Methods.FirstOrDefault(m =>
-			m.Name == BinaryOperator.In && m.Parameters[0].Type.Name == Base.Text);
+			m.Name == BinaryOperator.In && m.Parameters[0].Type.IsText);
 		Assert.That(containsMethod!.Type, Is.EqualTo(texts));
 		Assert.That(containsMethod.Parameters[0].Type.Name, Is.EqualTo(Base.Text));
 		var body = (Body)containsMethod.GetBodyAndParseIfNeeded();

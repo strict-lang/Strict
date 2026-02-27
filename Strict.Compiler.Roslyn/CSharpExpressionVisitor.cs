@@ -45,17 +45,19 @@ public class CSharpExpressionVisitor : ExpressionVisitor
 
 	public string GetCSharpTypeName(Type type)
 	{
-		if (type is GenericTypeImplementation genericTypeImplementation)
-			return $"List<{GetCSharpTypeName(genericTypeImplementation.ImplementationTypes[0])}>";
-		return type.Name switch
-		{
-			Base.None => "void",
-			Base.Number => "int",
-			Base.Text => "string",
-			Base.Boolean => "bool",
-			"File" => "FileStream",
-			_ => type.Name
-		};
+		if (type.IsList)
+			return $"List<{GetCSharpTypeName(type.GetFirstImplementation())}>";
+		if (type.IsNone)
+			return "void";
+		if (type.IsBoolean)
+			return "bool";
+		if (type.IsNumber)
+			return "int"; //could be double as well
+		if (type.IsText)
+			return "string";
+		return type.Name == "File"
+			? "FileStream"
+			: type.Name;
 	}
 
 	private string WriteParameters(Method method) =>

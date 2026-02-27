@@ -80,9 +80,9 @@ public sealed class ConstantCollapser : Visitor
 		if (expression is To to)
 		{
 			var value = to.Instance as Value;
-			if (to.ConversionType.Name == Base.Number && value is Text textValue)
+			if (to.ConversionType.IsNumber && value is Text textValue)
 				return new Number(to.Method.Type, double.Parse(GetText(textValue)));
-			if (to.ConversionType.Name == Base.Text && value is Number numberValue)
+			if (to.ConversionType.IsText && value is Number numberValue)
 				return new Text(to.Method.Type, GetNumber(numberValue).ToString(CultureInfo.InvariantCulture));
 			throw new UnsupportedToExpression(to.ToStringWithType()); //ncrunch: no coverage
 		}

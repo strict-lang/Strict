@@ -444,7 +444,7 @@ public sealed class Method : Context
 		line.StartsWith("\t\t", StringComparison.Ordinal);
 
 	private static bool IsStandaloneInlineTestExpression(Expression expression) =>
-		expression.ReturnType.Name == Base.Boolean &&
+		expression.ReturnType.IsBoolean &&
 		expression.GetType().Name is not "If" &&
 		expression.GetType().Name is not Base.Return &&
 		expression.GetType().Name is not Base.Declaration &&
@@ -481,7 +481,7 @@ public sealed class Method : Context
 	public class CannotCallBodyOnTraitMethod(Type type, string name) : Exception(type + "." + name);
 
 	public override string ToString() =>
-		Name + parameters.ToBrackets() + (ReturnType.Name == Base.None
+		Name + parameters.ToBrackets() + (ReturnType.IsNone
 			? ""
 			: " " + ReturnType.Name);
 

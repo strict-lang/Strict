@@ -43,7 +43,7 @@ public sealed class ByteCodeGenerator
 	}
 
 	private IReadOnlyList<Expression> Expressions { get; }
-	private readonly Type? returnType;
+	private readonly Type returnType;
 	private int forResultId;
 
 	private void AddMembersFromCaller(Instance instance)
@@ -113,7 +113,7 @@ public sealed class ByteCodeGenerator
 
 	private bool TryGenerateNumberForLoopReturn(Expression expression)
 	{
-		if (expression is not For forExpression || returnType?.Name != Base.Number)
+		if (expression is not For forExpression || !returnType.IsNumber)
 			return false;
 		GenerateStatementsForNumberAggregation(forExpression);
 		return true;

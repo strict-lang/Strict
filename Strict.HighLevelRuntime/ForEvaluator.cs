@@ -59,7 +59,7 @@ internal sealed class ForEvaluator(Executor executor)
 		loop.Set(Type.IndexLowercase, indexInstance);
 		//If this is Range or Number, we should not call GetIteratorValue, index is what we use!
 		var value = iterator.IsNumber || iterator.IsRange ? indexInstance : iterator.GetIteratorValue(itemType, index);
-		if (itemType.Name == Base.Text && value is char character)
+		if (itemType.IsText && value is char character)
 			value = character.ToString();
 		var valueInstance = value is ValueInstance vi
 			? vi
@@ -73,7 +73,7 @@ internal sealed class ForEvaluator(Executor executor)
 			: executor.RunExpression(f.Body, loop);
 		if (loop.ExitMethodAndReturnValue.HasValue)
 			ctx.ExitMethodAndReturnValue = loop.ExitMethodAndReturnValue;
-		else if (itemResult.ReturnType.Name != Base.None && !itemResult.ReturnType.IsMutable)
+		else if (itemResult.IsPrimitiveType(executor.noneType) && !itemResult.IsMutable)
 			results.Add(itemResult);
 	}
 
@@ -92,30 +92,30 @@ internal sealed class ForEvaluator(Executor executor)
 	private ValueInstance? ShouldConsolidateForResult(List<ValueInstance> results,
 		ExecutionContext ctx)
 	{
-		if (ctx.Method.ReturnType.Name == Base.Number)
-     return executor.Number(ctx.Method, results.Sum(value => value.AsNumber()));
-		if (ctx.Method.ReturnType.Name == Base.Text)
+		if (ctx.Method.ReturnType.IsNumber)
+     return executor.Number(ctx.Method, results.Sum(value => value.Number()));
+		if (ctx.Method.ReturnType.IsText)
 		{
 			var text = "";
 			foreach (var value in results)
 				text += value.ReturnType.Name switch
 				{
-					Base.Number => (int)value.AsNumber(),
+					Base.Number => (int)value.Number(),
           Base.Character => "" + (char)(int)value.Value!,
 					Base.Text => (string)value.Value!,
 					_ => throw new NotSupportedException("Can't append to text: " + value)
 				};
 			return executor.CreateValueInstance(ctx.Method.ReturnType, text);
 		}
-		return ctx.Method.ReturnType.Name == Base.Boolean
-			? executor.Bool(ctx.Method, results.Any(value => value.AsBool()))
+		return ctx.Method.ReturnType.IsBoolean
+			? executor.Bool(ctx.Method, results.Any(value => value.Boolean()))
 			: null;
 	}
 
 	private static Type GetForValueType(ValueInstance iterator) =>
 		iterator.ReturnType is GenericTypeImplementation { Generic.Name: Base.List } list
 			? list.ImplementationTypes[0]
-			: iterator.ReturnType.Name == Base.Text
+			: iterator.ReturnType.IsText
 				? iterator.ReturnType.GetType(Base.Text)
 				: iterator.ReturnType.GetType(Base.Number);
 }

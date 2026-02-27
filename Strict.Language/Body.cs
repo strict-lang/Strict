@@ -74,7 +74,7 @@ public sealed class Body : Expression
 
 	private void UpdateValueTypeForPiping(Expression lastExpression)
 	{
-		if (lastExpression.ReturnType.Name == Base.None)
+		if (lastExpression.ReturnType.IsNone)
 			return;
 		var valueVar = FindVariable(Type.ValueLowercase.AsSpan(), false);
 		if (valueVar == null || valueVar.Type == lastExpression.ReturnType || !valueVar.IsMutable)
@@ -160,7 +160,7 @@ public sealed class Body : Expression
 	/// </summary>
 	private static bool
 		ChildHasMatchingMethodReturnType(Type parentType, Expression lastExpression) =>
-		lastExpression.GetType().Name == Base.Declaration && parentType.Name == Base.None ||
+		lastExpression.GetType().Name == Base.Declaration && parentType.IsNone ||
 		lastExpression.ReturnType.IsError ||
 		lastExpression.ReturnType.IsSameOrCanBeUsedAs(parentType) ||
 		// Allow automatically converting an item to a list if the method requires a list

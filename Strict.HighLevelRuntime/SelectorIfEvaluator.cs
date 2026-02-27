@@ -1,5 +1,4 @@
 using Strict.Expressions;
-using Strict.Language;
 
 namespace Strict.HighLevelRuntime;
 
@@ -13,6 +12,6 @@ internal sealed class SelectorIfEvaluator(Executor executor)
 				return executor.RunExpression(@case.Then, ctx);
 		return selectorIf.OptionalElse != null
 			? executor.RunExpression(selectorIf.OptionalElse, ctx)
-			: executor.None(selectorIf.ReturnType);
+			: executor.noneInstance;
 	}
 }

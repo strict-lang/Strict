@@ -12,6 +12,14 @@ public sealed class GenericTypeImplementation : Type
 		ImplementationTypes = implementationTypes;
 		ImplementMembers();
 		ImplementMethods();
+		if (Generic.IsMutable)
+			typeKind = TypeKind.Mutable;
+		if (Generic.IsError)
+			typeKind = TypeKind.Error;
+		if (Generic.IsList)
+			typeKind = TypeKind.List;
+		if (Generic.IsDictionary)
+			typeKind = TypeKind.Dictionary;
 	}
 
 	private static string[] CreateHasLines(Type generic, IReadOnlyList<Type> implementationTypes) =>
@@ -35,13 +43,14 @@ public sealed class GenericTypeImplementation : Type
 
 	private Type GetImplementedMemberType(Type memberType, ref int implementationTypeIndex)
 	{
+//TODO: this is confusing, just use IsList and grab the firstImplementationType
 		if (memberType is GenericType
 			{
 				Generic.Name: Base.List, GenericImplementations.Count: > 1
 			} genericType)
 			return genericType.Generic.GetGenericImplementation(
 				genericType.Generic.GetGenericImplementation(ImplementationTypes[0]));
-		return memberType.Name == Base.List
+		return memberType.IsList
 			? this
 			: ImplementationTypes[implementationTypeIndex++];
 	}

@@ -44,7 +44,7 @@ public sealed class Member : NamedType
 		{
 			expressions[index] = parser.ParseExpression(
 				new Body(new Method(Type, 0, parser, [ConstraintsBody])), constraintsText[index]);
-			if (expressions[index].ReturnType.Name != Base.Boolean)
+			if (!expressions[index].ReturnType.IsBoolean)
 				throw new InvalidConstraintExpression(Type, Name, constraintsText[index]);
 		}
 		Constraints = expressions;
