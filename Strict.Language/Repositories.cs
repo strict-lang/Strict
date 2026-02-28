@@ -7,13 +7,13 @@ using LazyCache;
 namespace Strict.Language;
 
 /// <summary>
-/// Loads packages from url (like GitHub) and caches it to disc for the current and subsequent
-/// runs. Next time Repositories is created, we will check for outdated cache and delete the zip
-/// files to allow redownloading fresh files. All locally cached packages and all types in them
-/// are always available for any .strict file in the Editor. If a type is not found,
-/// packages.strict.dev is asked if we can get a url (used here to load).
+/// Loads packages from url (like GitHub) and caches it to disc for the current and later runs.
+/// Next time Repositories is created, we will check for outdated cache and delete the zip files
+/// to allow redownloading fresh files. All locally cached packages and all types in them are
+/// always available for any .strict file in the Editor. If a type is not found,
+/// packages.strict-lang.org is asked if we can get a url (used here to load).
 /// </summary>
-/// <remarks>Everything in here is async, you can easily load many packages in parallel</remarks>
+/// <remarks>Everything in here is async, you can load many packages in parallel</remarks>
 public sealed class Repositories
 {
 	/// <summary>
@@ -26,7 +26,7 @@ public sealed class Repositories
 		cacheService = new CachingService();
 		this.parser = parser;
 		if (Directory.Exists(CacheFolder))
-			//ncrunch: no coverage start, rarely happens
+			//ncrunch: no coverage start
 			foreach (var file in Directory.GetFiles(CacheFolder, "*.zip"))
 				if (File.GetLastWriteTimeUtc(file) < DateTime.UtcNow.AddHours(-1))
 					File.Delete(file);
@@ -179,20 +179,18 @@ public sealed class Repositories
 		if (parent != null && files.Count == 0)
 			return parent; //ncrunch: no coverage
 #if DEBUG
-		var folderName = Path.GetFileName(packagePath);
 		var package = parent != null
 			// ReSharper disable ExplicitCallerInfoArgument
-			? new Package(parent, packagePath, callerFilePath, callerLineNumber, callerMemberName)
-			: new Package(folderName.Contains('.')
-				? folderName.Split('.')[1]
-				: packagePath, callerFilePath, callerLineNumber, callerMemberName);
+			? new Package(parent, packagePath, this, callerFilePath, callerLineNumber, callerMemberName)
+			: new Package(packagePath, this, callerFilePath, callerLineNumber, callerMemberName);
 #else
 		var folderName = Path.GetFileName(packagePath);
+		var folderName = Path.GetFileName(packagePath);
 		var package = parent != null
-			? new Package(parent, packagePath)
+			? new Package(parent, packagePath, this)
 			: new Package(folderName.Contains('.')
 				? folderName.Split('.')[1]
-				: packagePath);
+				: packagePath, this);
 #endif
 		if (package.Name == nameof(Strict) && files.Count > 0)
 			throw new NoFilesAllowedInStrictFolderNeedsToBeInASubFolder(files); //ncrunch: no coverage
@@ -345,7 +343,7 @@ public sealed class Repositories
 
 	/// <summary>
 	/// In Strict only words are valid directory names = package names, no symbols (like .git, .hg,
-	/// .vs or _NCrunch) or numbers or dot separators (like Strict.Compiler) are allowed.
+	/// .vs, or _NCrunch) or numbers or dot separators (like Strict.Compiler) are allowed.
 	/// </summary>
 	private static bool IsValidCodeDirectory(string directory) =>
 		Path.GetFileName(directory).IsWord();
@@ -356,4 +354,9 @@ public sealed class Repositories
 			Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), StrictPackages);
 	private const string StrictPackages = nameof(StrictPackages);
 	public static readonly Uri StrictPrefixUri = new("https://github.com/strict-lang/Strict.");
+
+	/// <summary>
+	/// Called by Package.Dispose
+	/// </summary>
+	internal void Remove(Package result) => cacheService.Remove(result.FullName);
 }

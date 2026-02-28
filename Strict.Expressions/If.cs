@@ -172,7 +172,7 @@ public sealed class If(Expression condition, Expression then, int lineNumber = 0
 
 	public sealed class InvalidCondition(Body body, Type? conditionReturnType = null)
 		: ParsingFailed(body, conditionReturnType != null
-			? body.Method.FullName + "\n Return type " + conditionReturnType + " is not " + Base.Boolean
+			? body.Method.FolderName + "\n Return type " + conditionReturnType + " is not " + Base.Boolean
 			: null);
 
 	public sealed class MissingThen(Body body) : ParsingFailed(body);

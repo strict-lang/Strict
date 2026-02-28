@@ -137,12 +137,18 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 			TextId => otherType.IsText,
 			ListId => ((ValueListInstance)value).ReturnType.IsSameOrCanBeUsedAs(otherType),
 			DictionaryId => ((ValueDictionaryInstance)value).ReturnType.IsSameOrCanBeUsedAs(otherType),
-			TypeId => ((ValueTypeInstance)value!).ReturnType.IsSameOrCanBeUsedAs(otherType),
+			TypeId => ((ValueTypeInstance)value).ReturnType.IsSameOrCanBeUsedAs(otherType),
 			_ => ((Type)value).IsSameOrCanBeUsedAs(otherType),
 		};
 
-	public bool IsTypeType =>
+	public bool IsValueTypeInstanceType =>
 		number == TypeId && value is ValueTypeInstance { ReturnType.Name: Base.Type };
+
+	public ValueTypeInstance? FindValueTypeInstance(string typeName) =>
+		number == TypeId && value is ValueTypeInstance instance &&
+		instance.ReturnType.Name == typeName
+			? instance
+			: null;
 
 	/// <summary>
 	/// Special code to make the ValueInstance mutable if the method return type requires it (rare)
@@ -158,7 +164,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 			{
 				ListId => ((ValueListInstance)value).ReturnType,
 				DictionaryId => ((ValueDictionaryInstance)value).ReturnType,
-				TypeId => ((ValueTypeInstance)value!).ReturnType,
+				TypeId => ((ValueTypeInstance)value).ReturnType,
 				_ => (Type)value
 			};
 			return type.GetFirstImplementation().IsSameOrCanBeUsedAs(methodReturnType)
@@ -177,12 +183,12 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 		number == TextId
 			? value is (Type t, _) ? t : null
 			: number == ListId
-				? ((ValueListInstance)value!).ReturnType
+				? ((ValueListInstance)value).ReturnType
 				: number == DictionaryId
-					? ((ValueDictionaryInstance)value!).ReturnType
+					? ((ValueDictionaryInstance)value).ReturnType
 					: number == TypeId
-						? ((ValueTypeInstance)value!).ReturnType
-						: (Type)value!;
+						? ((ValueTypeInstance)value).ReturnType
+						: (Type)value;
 
 	/// <summary>
 	/// The raw underlying object: string for Text, List&lt;ValueInstance&gt; for List,
@@ -192,11 +198,11 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 		number == TextId
 			? GetTextString()
 			: number == ListId
-				? (object?)((ValueListInstance)value!).Items
+				? (object?)((ValueListInstance)value).Items
 				: number == DictionaryId
-					? ((ValueDictionaryInstance)value!).Items
+					? ((ValueDictionaryInstance)value).Items
 					: number == TypeId
-						? ((ValueTypeInstance)value!).Members
+						? ((ValueTypeInstance)value).Members
 						: null;
 	*/
 
@@ -208,6 +214,8 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 			return ((string)value).Length;
 		return (int)number;
 	}
+
+	public Type GetIteratorType() => ((ValueListInstance)value).ReturnType.GetFirstImplementation();
 
 	public ValueInstance GetIteratorValue(Type charTypeIfNeeded, int index)
 	{
@@ -392,7 +400,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 			var effectiveType = GetEffectiveType(ReturnType);
 			if (effectiveType.IsBoolean)
 				return boolValue;
-			return (bool)Value!;
+			return (bool);
 		}
 
 		public static ValueInstance Create(Type returnType, object? value)
@@ -403,13 +411,13 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 			if (effectiveType.IsNone)
 				return new ValueInstance(returnType);
 			if (effectiveType.IsBoolean)
-				return new ValueInstance(returnType, (bool)value!);
+				return new ValueInstance(returnType, (bool)value);
 			if (IsNumberType(effectiveType))
 				return value is int intValue
 					? new ValueInstance(returnType, (double)intValue)
 					: new ValueInstance(returnType, EqualsExtensions.NumberToDouble(value));
 			if (IsTextType(effectiveType))
-				return new ValueInstance(returnType, (string)value!);
+				return new ValueInstance(returnType, (string)value);
 			return CreateObject(returnType, value);
 		}
 
@@ -423,7 +431,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 			if (IsNumberType(effectiveType))
 				return new ValueInstance(returnType, value.AsNumber());
 			if (IsTextType(effectiveType))
-				return new ValueInstance(returnType, (string)value.Value!);
+				return new ValueInstance(returnType, (string)value.Value);
 			return CreateObject(returnType, value.Value);
 		}
 

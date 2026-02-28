@@ -11,7 +11,7 @@ public sealed class SourceGeneratorTests : TestCSharpGenerator
 	[Test]
 	public void GenerateCSharpInterface()
 	{
-		var app = new Type(package, new TypeLines("DummyApp", "Run")).ParseMembersAndMethods(parser);
+		using var app = new Type(package, new TypeLines("DummyApp", "Run")).ParseMembersAndMethods(parser);
 		var file = generator.Generate(app);
 		Assert.That(file.ToString(), Is.EqualTo(@"namespace SourceGeneratorTests;
 

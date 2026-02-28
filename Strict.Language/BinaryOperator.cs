@@ -3,7 +3,7 @@ using System.Runtime.CompilerServices;
 namespace Strict.Language;
 
 /// <summary>
-/// https://strict.dev/docs/Keywords
+/// https://strict-lang.org/docs/Keywords
 /// </summary>
 public static class BinaryOperator
 {

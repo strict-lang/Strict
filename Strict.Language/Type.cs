@@ -286,7 +286,7 @@ public class Type : Context, IDisposable
 	public sealed class CannotGetGenericImplementationOnNonGeneric(string name, string key)
 		: Exception("Type: " + name + ", Generic Implementation: " + key);
 
-	public string FilePath => Path.Combine(Package.FolderPath, Name) + Extension;
+	public string FilePath => Path.Combine(Package.FullName, Name) + Extension;
 	public const string Extension = ".strict";
 
 	public Member? FindMember(string name)
@@ -568,7 +568,7 @@ public class Type : Context, IDisposable
 	}
 
 	//ncrunch: no coverage start
-	public sealed class TypeMustBeGenericToCallThis(Type type) : Exception(type.FullName);
+	public sealed class TypeMustBeGenericToCallThis(Type type) : Exception(type.FolderName);
 
 	public sealed class InvalidGenericTypeWithoutGenericArguments(Type type) : Exception(
 		"This type is broken and needs to be fixed, check the creation: " + type + ", CreatedBy: " +

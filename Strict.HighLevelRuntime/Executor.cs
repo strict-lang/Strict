@@ -17,6 +17,7 @@ public sealed class Executor
 		falseInstance = new ValueInstance(booleanType, false);
 		numberType = initialPackage.GetType(Base.Number);
 		characterType = initialPackage.GetType(Base.Character);
+		textType = initialPackage.GetType(Base.Text);
 		bodyEvaluator = new BodyEvaluator(this);
 		ifEvaluator = new IfEvaluator(this);
 		selectorIfEvaluator = new SelectorIfEvaluator(this);
@@ -31,8 +32,9 @@ public sealed class Executor
 	private readonly Type booleanType;
 	private readonly ValueInstance trueInstance;
 	private readonly ValueInstance falseInstance;
-	private readonly Type numberType;
+	internal readonly Type numberType;
 	internal readonly Type characterType;
+	internal readonly Type textType;
 	private readonly BodyEvaluator bodyEvaluator;
 	private readonly IfEvaluator ifEvaluator;
 	private readonly SelectorIfEvaluator selectorIfEvaluator;
@@ -81,7 +83,7 @@ public sealed class Executor
 		catch (Exception inner) when (runOnlyTests)
 		{
 			throw new MethodRequiresTest(method,
-				$"Test execution failed: {method.Parent.FullName}.{method.Name}\n" +
+				$"Test execution failed: {method.Parent.FolderName}.{method.Name}\n" +
 				method.lines.ToWordList("\n") + "\n" + inner);
 		}
 		if (body is not Body && runOnlyTests)
@@ -391,7 +393,7 @@ public sealed class Executor
 	public class MethodRequiresTest(Method method, string body) : ExecutionFailed(method,
 		body.StartsWith("Test execution failed", StringComparison.Ordinal)
 			? body
-			: $"Method {method.Parent.FullName}.{method.Name}\n{body}")
+			: $"Method {method.Parent.FolderName}.{method.Name}\n{body}")
 	{
 		public MethodRequiresTest(Method method, Body body) : this(method,
 			body + " ({CountExpressionComplexity(body)} expressions)") { }

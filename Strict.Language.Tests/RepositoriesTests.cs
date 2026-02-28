@@ -40,6 +40,7 @@ public class RepositoriesTests
 		Assert.That(basePackage.FindDirectType(Base.Any), Is.Not.Null);
 		Assert.That(basePackage.FindDirectType(Base.Number), Is.Not.Null);
 		Assert.That(basePackage.FindDirectType(Base.App), Is.Not.Null);
+		repos.Remove(basePackage);
 	}
 
 	[Test]
@@ -156,7 +157,8 @@ public class RepositoriesTests
 		File.Delete(strictFilePath);
 	}
 
-	public static readonly string StrictDevelopmentFolder = Repositories.StrictDevelopmentFolderPrefix[..^1];
+	public static readonly string StrictDevelopmentFolder =
+		Repositories.StrictDevelopmentFolderPrefix[..^1];
 
 	[Test]
 	[Category("Slow")]

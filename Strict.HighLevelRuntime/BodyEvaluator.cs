@@ -17,7 +17,7 @@ internal sealed class BodyEvaluator(Executor executor)
 		catch (ExecutionFailed ex)
 		{
 			throw new ExecutionFailed(body.Method,
-				"Failed in \"" + body.Method.Type.FullName + "." + body.Method.Name + "\":" +
+				"Failed in \"" + body.Method.Type.FolderName + "." + body.Method.Name + "\":" +
 				Environment.NewLine + body.Expressions.ToWordList(Environment.NewLine), ex);
 		}
 		finally
@@ -29,7 +29,7 @@ internal sealed class BodyEvaluator(Executor executor)
 
 	private ValueInstance TryEvaluate(Body body, ExecutionContext ctx, bool runOnlyTests)
 	{
-		var last = executor.None(ctx.This?.ReturnType ?? body.Method.Type);
+		var last = executor.noneInstance;
 		foreach (var e in body.Expressions)
 		{
 			var isTest = !e.Equals(body.Expressions[^1]) && IsStandaloneInlineTest(e);

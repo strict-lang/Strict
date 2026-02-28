@@ -12,7 +12,7 @@ internal sealed class ForEvaluator(Executor executor)
 		var iterator = executor.RunExpression(f.Iterator, ctx);
 		var results = new List<ValueInstance>();
 		var itemType = GetForValueType(iterator);
-		if (iterator.ReturnType.Name == Base.Range &&
+		if (iterator.IsValueTypeInstance && iterator..GetValueTypeInstanceType().Name == Base.Range &&
 			iterator.Value is IDictionary<string, object?> rangeValues &&
 			rangeValues.TryGetValue("Start", out var startValue) &&
 			rangeValues.TryGetValue("ExclusiveEnd", out var endValue))
@@ -112,10 +112,10 @@ internal sealed class ForEvaluator(Executor executor)
 			: null;
 	}
 
-	private static Type GetForValueType(ValueInstance iterator) =>
-		iterator.ReturnType is GenericTypeImplementation { Generic.Name: Base.List } list
-			? list.ImplementationTypes[0]
-			: iterator.ReturnType.IsText
-				? iterator.ReturnType.GetType(Base.Text)
-				: iterator.ReturnType.GetType(Base.Number);
+	private Type GetForValueType(ValueInstance iterator) =>
+		iterator.IsText
+			? executor.textType
+			: iterator.IsList
+				? iterator.GetIteratorType()
+				: executor.numberType;
 }

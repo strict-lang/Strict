@@ -17,10 +17,12 @@ public class TestCSharpGenerator : NoConsoleWriteLineAllowed
 		package = new Package(nameof(SourceGeneratorTests));
 		_ = TestPackage.Instance;
 		new Type(package, new TypeLines(Base.App, "Run")).ParseMembersAndMethods(parser);
-		new Type(package, new TypeLines(Base.System, "has textWriter", "Write(text)",
-			"\ttextWriter.Write(text)")).ParseMembersAndMethods(parser);
+		new Type(package,
+				new TypeLines(Base.System, "has textWriter", "Write(text)", "\ttextWriter.Write(text)")).
+			ParseMembersAndMethods(parser);
 		new Type(package, new TypeLines("Input", "Read Text")).ParseMembersAndMethods(parser);
-		new Type(package, new TypeLines("Output", "Write(generic) Boolean")).ParseMembersAndMethods(parser);
+		new Type(package, new TypeLines("Output", "Write(generic) Boolean")).
+			ParseMembersAndMethods(parser);
 		generator = new CSharpGenerator();
 	}
 
@@ -33,7 +35,6 @@ public class TestCSharpGenerator : NoConsoleWriteLineAllowed
 
 	protected Type CreateHelloWorldProgramType() =>
 		new Type(package,
-				new TypeLines("Program", "has App", "has logger", "Run",
-					"\tlogger.Log(\"Hello World\")")).
-			ParseMembersAndMethods(parser);
+			new TypeLines("Program", "has App", "has logger", "Run",
+				"\tlogger.Log(\"Hello World\")")).ParseMembersAndMethods(parser);
 }

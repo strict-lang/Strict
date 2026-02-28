@@ -10,7 +10,7 @@ namespace Strict.Language;
 /// is available. The high-level context knows all types, low-level scope in methods is managed via
 /// <see cref="Body"/> (which is every MethodBody, If.Then, If.Else, or For).
 /// </summary>
-[DebuggerDisplay("Property={FullName}")]
+[DebuggerDisplay("Property={FolderName}")]
 public abstract class Context
 {
 	protected Context(Context? parent, string name
@@ -35,9 +35,9 @@ public abstract class Context
 		this.callerLineNumber = callerLineNumber;
 		this.callerMemberName = callerMemberName;
 #endif
-		FullName = string.IsNullOrEmpty(parent?.Name) || parent.Name is nameof(Base)
+		FolderName = string.IsNullOrEmpty(parent?.Name)
 			? name
-			: parent + "." + name;
+			: parent + "/" + name;
 	}
 
 #if DEBUG
@@ -58,17 +58,19 @@ public abstract class Context
 	public sealed class NameMustBeAWordWithoutAnySpecialCharactersOrNumbers(string name)
 		: Exception(name);
 
+//TODO: move .Base -> main folder, .Math, .ImageProcessing, .Examples, etc. all into the Strict repository and use them as sub folders, long term this is easier to manage and a much better folder structure.
+//TODO: in code we can use Strict/Number to fully describe a number, use Strict/Math/Vector2D, etc. most of the time we only use the name Number, Vector2D, etc. and there is no need to use the path anyway.
 	public sealed class PackageNameMustBeAWordWithoutSpecialCharacters(string name) : Exception(
-		"Name " + name +
-		" ;Allowed characters: Alphabets, Numbers or '-' in the middle or end of the name");
+		"Name " + name + "; Must start with a letter, then only allowed characters are: Letters " +
+		"(A-z), Numbers (0-9) or '-'. Do not use '.', '_', spaces or any other special characters.");
 
 	public Context Parent { get; }
 	public string Name { get; }
-	public string FullName { get; }
+	public string FolderName { get; }
 
 	// ReSharper disable once InconsistentlySynchronizedField
 	public Type GetType(string name) =>
-		TryGetType(name) ?? throw new TypeNotFound(name, FullName, types.Keys.ToWordList());
+		TryGetType(name) ?? throw new TypeNotFound(name, FolderName, types.Keys.ToWordList());
 
 	internal Type? TryGetType(string name)
 	{
@@ -78,7 +80,8 @@ public abstract class Context
 			if (types.TryGetValue(name, out var type))
 				return type;
 			var result = GuessTypeFromName();
-			types[name] = result;
+			if (result != null)
+				types[name] = result;
 			return result;
 		}
 
@@ -99,7 +102,7 @@ public abstract class Context
 	}
 
 	private readonly IDictionary<string, Type?> types = new Dictionary<string, Type?>();
-	public static int FindTypeCount { get; private set; }
+	internal static int FindTypeCount { get; private set; }
 
 	public sealed class ListPrefixIsNotAllowedUseImplementationTypeNameInPlural(string typeName)
 		: Exception($"List should not be used as prefix for {
@@ -168,12 +171,12 @@ public abstract class Context
 
 	private Type? FindFullType(string name) =>
 		name.Contains('.')
-			? name == FullName
+			? name == FolderName
 				? this as Type
 				: GetPackage()?.FindFullType(name)
 			: null;
 
-	public override string ToString() => FullName;
+	public override string ToString() => FolderName;
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public Package? GetPackage() =>

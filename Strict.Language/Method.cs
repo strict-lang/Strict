@@ -174,7 +174,7 @@ public sealed class Method : Context
 	{
 		private static string GetMethodName(Method method) =>
 			method.Name == From
-				? "Type " + method.Type.FullName + " " + From + " constructor method"
+				? "Type " + method.Type.FolderName + " " + From + " constructor method"
 				: "Method " + method.Name;
 	}
 

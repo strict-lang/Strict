@@ -100,7 +100,7 @@ public sealed class ListAdvancedTests : TestExpressions
 		var expression = (Body)typeWithMutableList.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(expression.Expressions[0].ToString(),
 			Is.EqualTo("mutable result = List(Number)"));
-		Assert.That(((Declaration)expression.Expressions[0]).Value.ReturnType.FullName,
+		Assert.That(((Declaration)expression.Expressions[0]).Value.ReturnType.FolderName,
 			Is.EqualTo("TestPackage.List(Number)"));
 	}
 
