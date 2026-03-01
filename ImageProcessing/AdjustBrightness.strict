@@ -1,0 +1,16 @@
+has brightness Number
+Process(mutable image ColorImage) ColorImage
+	mutable testImage = ColorImage(Size(1, 1), (Color(0, 1, 2)))
+	AdjustBrightness(0).Process(testImage) is ColorImage(Size(1, 1), (Color(0, 1, 2)))
+	AdjustBrightness(5).Process(testImage) is ColorImage(Size(1, 1), (Color(5, 6, 7)))
+	if brightness is 0
+		return image
+	for row, column in image.Size
+		GetBrightnessAdjustedColor(image.Colors(column * image.Size.Width + row))
+GetBrightnessAdjustedColor(currentColor Color) Color
+	AdjustBrightness(0).GetBrightnessAdjustedColor(Color(0, 1, 2)) is Color(0, 1, 2)
+	AdjustBrightness(5).GetBrightnessAdjustedColor(Color(0, 0, 0)) is Color(5, 5, 5)
+	AdjustBrightness(-5).GetBrightnessAdjustedColor(Color(0, 0, 0)) is Color(0, 0, 0)
+	Color((currentColor.Red + brightness).Clamp(0, 255),
+	(currentColor.Green + brightness).Clamp(0, 255),
+	(currentColor.Blue + brightness).Clamp(0, 255))

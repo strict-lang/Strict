@@ -99,10 +99,9 @@ public class RepositoriesTests
 	[Test]
 	public async Task CheckGenericTypesAreLoadedCorrectlyAfterSorting()
 	{
-		using var program =
-			new Type(await repos.LoadStrictPackage(),
-					new TypeLines("ValidProgram", "has texts", "Run Texts", "\t\"Result \" + 5")).
-				ParseMembersAndMethods(parser);
+		using var program = new Type(await repos.LoadStrictPackage(),
+				new TypeLines("ValidProgram", "has texts", "Run Texts", "\t\"Result \" + 5")).
+			ParseMembersAndMethods(parser);
 		program.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(program.Members[0].Type.IsIterator, Is.True);
 		Assert.That(program.Members[0].Type.Members.Count, Is.GreaterThan(1));

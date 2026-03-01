@@ -1,0 +1,10 @@
+has instructions
+GoToMatchingLoopBracket(direction Number, mutable index Number)
+	mutable loopDepth = direction
+	for Range(index + direction, instructions.Length)
+		if instructions(index) is
+			Instruction.LoopIfNonZero then loopDepth.Increase
+			Instruction.JumpBackIfNonZero then loopDepth.Decrease
+		if loopDepth is 0
+			return 0
+	loopDepth

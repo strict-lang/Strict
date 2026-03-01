@@ -57,10 +57,22 @@ public sealed class Repositories
 	)
 	{
 		var parts = packageUrl.AbsoluteUri.Split('/');
-		if (parts.Length < 5 && parts[0] != "https:" && parts[1] != "" && parts[2] != "github.com")
+		if (parts.Length < 5 || parts[0] != "https:" || parts[1] != "" || parts[2] != "github.com")
 			throw new OnlyGithubDotComUrlsAreAllowedForNow(packageUrl.AbsoluteUri);
 		var organization = parts[3];
 		var packageFullName = parts[4..].ToWordList("/");
+		var strictWithSubfolderLength = "Strict".Length + 1;
+		if (Directory.Exists(StrictDevelopmentFolder) &&
+			packageFullName.StartsWith("Strict", StringComparison.OrdinalIgnoreCase))
+			return await LoadFromPath(StrictDevelopmentFolder +
+				(packageFullName.Length > strictWithSubfolderLength
+					? packageFullName[strictWithSubfolderLength..]
+					: "")
+#if DEBUG
+				, callerFilePath, callerLineNumber, callerMemberName
+#endif
+			);
+		//TODO: this doesn't make sense
 		if (!Directory.Exists(CacheFolder))
 			Directory.CreateDirectory(CacheFolder);
 		var localCachePath = Path.Combine(CacheFolder, packageFullName);

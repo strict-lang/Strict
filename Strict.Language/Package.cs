@@ -32,7 +32,7 @@ public class Package : Context, IEnumerable<Type>, IDisposable
 		this.createdFromRepos = createdFromRepos;
 		if (parentPackage == null)
 			return;
-		var existing = parentPackage.children.FirstOrDefault(existingPackage => existingPackage.Name == Name);
+		var existing = parentPackage.children.FirstOrDefault(existing => existing.Name == Name);
 		if (existing != null)
 			throw new PackageAlreadyExists(Name, parentPackage, existing); //ncrunch: no coverage
 		parentPackage.children.Add(this);
@@ -89,14 +89,14 @@ public class Package : Context, IEnumerable<Type>, IDisposable
 
 	public Type? FindFullType(string fullName)
 	{
-		var parts = fullName.Split('.');
+		var parts = fullName.Split('/');
 		if (parts.Length < 2)
 			throw new FullNameMustContainPackageAndTypeNames();
 		if (IsPrivateName(parts[^1]))
 			throw new PrivateTypesAreOnlyAvailableInItsPackage();
-		if (!fullName.StartsWith(ToString() + ".", StringComparison.Ordinal))
+		if (!fullName.StartsWith(ToString() + "/", StringComparison.Ordinal))
 			return (Parent as Package)?.FindFullType(fullName);
-		var subName = fullName.Replace(ToString() + ".", "");
+		var subName = fullName.Replace(ToString() + "/", "");
 		return subName.Contains('.')
 			? FindSubPackage(subName.Split('.')[0])?.FindFullType(fullName)
 			: FindDirectType(subName);

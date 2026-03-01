@@ -1,0 +1,3 @@
+has textWriter
+Log(text)
+	textWriter.Write(text)

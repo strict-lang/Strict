@@ -1,0 +1,9 @@
+has iterator
+GetName(type) Text
+	type.Name
+GetName(member) Text
+	member.Name
+CompareTo(member) Number
+	value > member.Value then 1 else value < member.Value then -1 else 0
+Equals(member) Boolean
+	value is member.Value

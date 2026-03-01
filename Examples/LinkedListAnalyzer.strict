@@ -1,0 +1,20 @@
+mutable visited Nodes
+GetChainedNode(number) Node
+	constant head = Node
+	mutable current = head
+	for Range(1, number)
+		current.Next = Node
+		current = current.Next
+	current.Next = head
+GetLoopLength(node) Number
+	mutable first = Node
+	mutable second = Node
+	first.Next = second
+	second.Next = first
+	GetLoopLength(first) is 2
+	mutable third = Node
+	second.Next = third
+	third.Next = first
+	GetLoopLength(first) is 3
+	visited.Add(node)
+	visited.Contains(node.Next) then visited.Length else GetLoopLength(node.Next)

@@ -1,0 +1,3 @@
+for Iterator(Generic)
+in(element Generic) Boolean
+Length Number

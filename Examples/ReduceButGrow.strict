@@ -1,0 +1,7 @@
+has numbers
+GetMultiplicationOfNumbers Number
+	ReduceButGrow(2, 3, 4, 5).GetMultiplicationOfNumbers is 120
+	ReduceButGrow(120, 5, 40, 0).GetMultiplicationOfNumbers is 0
+	ReduceButGrow(2, 2, 2, 2).GetMultiplicationOfNumbers is 16
+	for numbers
+		* value

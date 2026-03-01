@@ -1,0 +1,5 @@
+from(filename Name)
+Length Number
+Read Text
+Write(text)
+Delete

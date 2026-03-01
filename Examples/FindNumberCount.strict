@@ -1,0 +1,5 @@
+has numbers
+FindNumberCount Number
+	NumberCount(5, 10).FindNumberCount is 5
+	for Range(numbers(0), numbers(1))
+		1

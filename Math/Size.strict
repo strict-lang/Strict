@@ -1,0 +1,22 @@
+has iterator Iterator(Vector2)
+has Width Number with value > 0
+has Height Number with value > 0
+for Iterator(Vector2)
+	for x in Range(0, Width)
+	for y in Range(0, Height)
+		Vector2(x, y)
+in(element Vector2) Boolean
+	true
+Area Number
+	Size(1, 1).Area is 1
+	Size(2, 3).Area is 6
+	Width * Height
+Length Number
+	Size(1, 2).Area is Size(1, 2).Length
+	Area
++(number) Size
+	Size(1, 1) + 1 is Size(2, 2)
+	Size(Width + number, Height + number)
+*(number) Size
+	Size(1, 1) * 5 is Size(5, 5)
+	Size(Width * number, Height * number)

@@ -1,0 +1,25 @@
+has iterator
+has Start Number
+has ExclusiveEnd Number
+for Iterator(Number)
+	value
+in(number) Boolean
+	3 is in Range(1, 4)
+	5 is not in Range(1, 4)
+	0 is not in Range(1, 4)
+	number >= Start and number < ExclusiveEnd
+Length Number
+	Range(0, 5).Length is 5
+	Range(2, 18).Length is 16
+	ExclusiveEnd - Start
+Sum Number
+	Range(2, 5).Sum is 2 + 3 + 4
+	Range(42, 45).Sum is 42 + 43 + 44
+	for
+		value
+Reverse Range
+	Range(0, 5).Reverse is Range(4, -1)
+	Range(1, 4).Reverse is Range(3, 0)
+	Range(10, 5).Reverse is Range(6, 11)
+	Range(-5, -10).Reverse is Range(-9, -4)
+	Length > 0 then Range(ExclusiveEnd - 1, Start - 1) else Range(ExclusiveEnd + 1, Start + 1)

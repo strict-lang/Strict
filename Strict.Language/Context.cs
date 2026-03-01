@@ -59,7 +59,7 @@ public abstract class Context
 		: Exception(name);
 
 //TODO: move .Base -> main folder, .Math, .ImageProcessing, .Examples, etc. all into the Strict repository and use them as sub folders, long term this is easier to manage and a much better folder structure.
-//TODO: in code we can use Strict/Number to fully describe a number, use Strict/Math/Vector2D, etc. most of the time we only use the name Number, Vector2D, etc. and there is no need to use the path anyway.
+//TODO: in code we can use Strict/Number to fully describe a number, use Strict/Math/Vector2, etc. most of the time we only use the name Number, Vector2, etc. and there is no need to use the path anyway.
 	public sealed class PackageNameMustBeAWordWithoutSpecialCharacters(string name) : Exception(
 		"Name " + name + "; Must start with a letter, then only allowed characters are: Letters " +
 		"(A-z), Numbers (0-9) or '-'. Do not use '.', '_', spaces or any other special characters.");
@@ -170,7 +170,7 @@ public abstract class Context
 		GetType(Base.Dictionary).GetGenericImplementation(keyType, valueType);
 
 	private Type? FindFullType(string name) =>
-		name.Contains('.')
+		name.Contains('/')
 			? name == FolderName
 				? this as Type
 				: GetPackage()?.FindFullType(name)

@@ -1,0 +1,22 @@
+has number
+constant zeroCharacter = 48
+constant NewLine = Character(13)
+constant Tab = Character(7)
+from(text)
+	Character("b") is "b"
+	Character(7) is Tab
+	7 to Character is "7"
+	Character("ab") is Error
+	text.Characters(0)
+to Text
+	Character("a") to Text is "a"
+	"" + value
++(other) Text
+	Character("1") + Character("2") is "12"
+	value to Text + other
+to Number
+	Character("3") to Number is 3
+	constant notANumber = Error
+	Character("A") to Number is notANumber
+	let result = number - zeroCharacter
+	result is in Range(0, 10) then result else notANumber(value)
