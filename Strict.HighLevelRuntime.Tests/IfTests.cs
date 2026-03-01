@@ -41,8 +41,7 @@ public sealed class IfTests
 	{
 		using var t = CreateType(nameof(EvaluateIsInEnumerableRange), "has number",
 			"IsInRange(range Range) Boolean", "\tnumber is in range");
-		var rangeType = TestPackage.Instance.FindType(Base.Range)!;
-		var rangeInstance = ValueInstance.Create(rangeType,
+		var rangeInstance = ValueInstance.Create(executor.rangeType,
 			new Dictionary<string, object?> { { "Start", 1.0 }, { "ExclusiveEnd", 10.0 } });
 		var result = executor.Execute(t.Methods.Single(m => m.Name == "IsInRange"),
 			ValueInstance.Create(t, 7.0), [rangeInstance]);
@@ -57,8 +56,7 @@ public sealed class IfTests
 	{
 		using var t = CreateType(nameof(EvaluateIsNotInEnumerableRange), "has number",
 			"IsNotInRange(range Range) Boolean", "\tnumber is not in range");
-		var rangeType = TestPackage.Instance.FindType(Base.Range)!;
-		var rangeInstance = ValueInstance.Create(rangeType,
+		var rangeInstance = ValueInstance.Create(executor.rangeType,
 			new Dictionary<string, object?> { { "Start", 1.0 }, { "ExclusiveEnd", 10.0 } });
 		var result = executor.Execute(t.Methods.Single(m => m.Name == "IsNotInRange"),
 			ValueInstance.Create(t, 11), [rangeInstance]);

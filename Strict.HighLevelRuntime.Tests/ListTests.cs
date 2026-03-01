@@ -11,9 +11,8 @@ public sealed class ListTests
 	public void CreateExecutor()
 	{
 		executor = new Executor(TestBehavior.Disabled);
-		var numType = TestPackage.Instance.GetType(Base.Number);
-		one = ValueInstance.Create(numType, 1d);
-		two = ValueInstance.Create(numType, 2d);
+		one = ValueInstance.Create(executor.numberType, 1d);
+		two = ValueInstance.Create(executor.numberType, 2d);
 	}
 
 	private Executor executor = null!;

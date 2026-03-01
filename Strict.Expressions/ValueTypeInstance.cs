@@ -1,9 +1,8 @@
-﻿using Strict.Language;
-using Type = Strict.Language.Type;
+﻿using Type = Strict.Language.Type;
 
 namespace Strict.Expressions;
 
-public class ValueTypeInstance(Type returnType, Dictionary<string, ValueInstance> members) :
+public sealed class ValueTypeInstance(Type returnType, Dictionary<string, ValueInstance> members) :
 	IEquatable<ValueTypeInstance>
 {
 	public readonly Type ReturnType = returnType;

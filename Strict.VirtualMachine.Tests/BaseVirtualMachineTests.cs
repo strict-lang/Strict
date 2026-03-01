@@ -5,9 +5,9 @@ namespace Strict.Runtime.Tests;
 public class BaseVirtualMachineTests : TestExpressions
 {
 	//ncrunch: no coverage start
-	protected static readonly Type NumberType = TestPackage.Instance.FindType(Base.Number)!;
-	protected static readonly Type TextType = TestPackage.Instance.FindType(Base.Text)!;
-	protected static readonly Type ListType = TestPackage.Instance.FindType(Base.List)!;
+	protected static readonly Type NumberType = TestPackage.Instance.GetType(Base.Number);
+	protected static readonly Type TextType = TestPackage.Instance.GetType(Base.Text);
+	protected static readonly Type ListType = TestPackage.Instance.GetType(Base.List);
 	protected static readonly string[] ArithmeticFunctionExample =
 	[
 		"has First Number",

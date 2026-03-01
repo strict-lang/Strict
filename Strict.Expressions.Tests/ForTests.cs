@@ -146,7 +146,7 @@ public sealed class ForTests : TestExpressions
 	public void ValidIteratorReturnTypeWithValue() =>
 		Assert.That(
 			((VariableCall)((MethodCall)((For)ParseExpression("for (1, 2, 3)", "\tlogger.Log(value)")).
-				Body).Arguments[0]).ReturnType.FolderName, Is.EqualTo("TestPackage.Number"));
+				Body).Arguments[0]).ReturnType.FolderName, Is.EqualTo("TestPackage/Number"));
 
 	[TestCase("constant elements = (1, 2, 3)", "for elements", "\tlogger.Log(index)",
 		"for elements\n\tlogger.Log(index)")]

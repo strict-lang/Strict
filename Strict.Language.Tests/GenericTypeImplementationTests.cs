@@ -41,9 +41,9 @@ public sealed class GenericTypeImplementationTests
 			}, //ncrunch: no coverage
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.
 				InstanceOf<Context.TypeArgumentsCountDoesNotMatchGenericType>().With.Message.Contains(
-					"The generic type TestPackage.Comparer needs these type arguments: (Generic TestPackage." +
-					"Generic, SecondType TestPackage.Generic), this does not match provided types: (TestPackage." +
-					"Text)"));
+					"The generic type TestPackage/Comparer needs these type arguments: " +
+					"(Generic TestPackage/Generic, SecondType TestPackage/Generic), this does not match " +
+					"provided types: (TestPackage/Text)"));
 
 	[Test]
 	public void GenericTypeWithMultipleImplementations()

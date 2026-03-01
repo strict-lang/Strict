@@ -1,4 +1,3 @@
-using System.Collections;
 using Strict.Language;
 using Type = Strict.Language.Type;
 
@@ -13,11 +12,11 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 {
 	public ValueInstance(Type noneReturnType) => value = noneReturnType;
 	/// <summary>
-	/// If number is TextId, value points to a string (only non Mutable, for Mutable TypeId is used)
+	/// If number is TextId, value points to a string (only non-Mutable, for Mutable TypeId is used)
 	/// If number is ListId, value points to ValueListInstance (ReturnType and Items)
 	/// If number is DictionaryId, value points to ValueDictionaryInstance (ReturnType and Items)
 	/// If number is TypeId, then this points to a TypeValueInstance containing the ReturnType.
-	/// In all other cases this is a primitive (None, Boolean, Number) and value is the ReturnType.
+	/// In all other cases this is a primitive (None, Boolean, Number), and value is the ReturnType.
 	/// </summary>
 	private readonly object value;
 	/// <summary>
@@ -74,9 +73,9 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 		number = DictionaryId;
 	}
 
-	public ValueInstance(ValueTypeInstance instance)
+	public ValueInstance(Type returnType, Dictionary<string, ValueInstance> members)
 	{
-		value = instance;
+		value = new ValueTypeInstance(returnType, members);
 		number = TypeId;
 	}
 
@@ -138,7 +137,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 			ListId => ((ValueListInstance)value).ReturnType.IsSameOrCanBeUsedAs(otherType),
 			DictionaryId => ((ValueDictionaryInstance)value).ReturnType.IsSameOrCanBeUsedAs(otherType),
 			TypeId => ((ValueTypeInstance)value).ReturnType.IsSameOrCanBeUsedAs(otherType),
-			_ => ((Type)value).IsSameOrCanBeUsedAs(otherType),
+			_ => ((Type)value).IsSameOrCanBeUsedAs(otherType)
 		};
 
 	public bool IsValueTypeInstanceType =>
@@ -217,14 +216,13 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 
 	public Type GetIteratorType() => ((ValueListInstance)value).ReturnType.GetFirstImplementation();
 
-	public ValueInstance GetIteratorValue(Type charTypeIfNeeded, int index)
-	{
-		if (number == TextId)
-			return new ValueInstance(charTypeIfNeeded, (double)(((string)value)[index]));
-		if (number == ListId)
-			return ((ValueListInstance)value).Items[index];
-		throw new IteratorNotSupported(this); //ncrunch: no coverage
-	}
+	public ValueInstance GetIteratorValue(Type charTypeIfNeeded, int index) =>
+		number switch
+		{
+			TextId => new ValueInstance(charTypeIfNeeded, ((string)value)[index]),
+			ListId => ((ValueListInstance)value).Items[index],
+			_ => throw new IteratorNotSupported(this)
+		};
 
 	public class IteratorNotSupported(ValueInstance instance)
 		: Exception(instance.ToString());
@@ -622,15 +620,14 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 	public override string ToString() => GetTypeName() + ": " + ToExpressionCodeString();
 
 	private string GetTypeName() =>
-		number == TextId
-			? Base.Text
-			: number == ListId
-				? ((ValueListInstance)value).ReturnType.Name
-				: number == DictionaryId
-					? ((ValueDictionaryInstance)value).ReturnType.Name
-					: number == TypeId
-						? ((ValueTypeInstance)value).ReturnType.Name
-						: ((Type)value).Name;
+		number switch
+		{
+			TextId => Base.Text,
+			ListId => ((ValueListInstance)value).ReturnType.Name,
+			DictionaryId => ((ValueDictionaryInstance)value).ReturnType.Name,
+			TypeId => ((ValueTypeInstance)value).ReturnType.Name,
+			_ => ((Type)value).Name
+		};
 
 	public string ToExpressionCodeString() =>
 		number switch

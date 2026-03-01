@@ -218,7 +218,7 @@ public class Type : Context, IDisposable
 	}
 
 	public override Type? FindType(string name, Context? searchingFrom = null) =>
-		name == Name || name.Contains('.') && name == base.ToString() || name is Other or Outer
+		name == Name || name.Contains('/') && name == base.ToString() || name is Other or Outer
 			? this
 			: Package.FindType(name, searchingFrom ?? this);
 

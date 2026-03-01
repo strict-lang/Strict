@@ -19,7 +19,7 @@ public sealed class MemberCallTests : TestExpressions
 	public void NestedMemberNotFound() =>
 		Assert.That(() => ParseExpression("logger.unknown"),
 			Throws.InstanceOf<MemberOrMethodNotFound>().With.Message.
-				StartsWith("unknown in TestPackage.Log"));
+				StartsWith("unknown in TestPackage/Log"));
 
 	[Test]
 	public void NumbersCanNotStartNestedCall() =>

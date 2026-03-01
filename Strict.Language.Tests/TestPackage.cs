@@ -3,7 +3,7 @@ namespace Strict.Language.Tests;
 /// <summary>
 /// Helper context to provide a bunch of helper types to make tests work.
 /// </summary>
-public class TestPackage : Package
+public sealed class TestPackage : Package
 {
 	public static readonly Package Instance = new TestPackage();
 

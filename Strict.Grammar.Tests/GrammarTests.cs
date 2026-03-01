@@ -74,18 +74,13 @@ public sealed class GrammarTests
 	[Test]
 	public void CheckAllBaseFiles()
 	{
-		var basePath = Directory.Exists(DefaultStrictBasePath)
-			? DefaultStrictBasePath
-			: Path.Combine(FindSolutionPath(), "Strict.Base");
-		foreach (var file in Directory.GetFiles(basePath, "*.strict"))
+		var basePath = Directory.Exists(Repositories.StrictDevelopmentFolder)
+			? Repositories.StrictDevelopmentFolder
+			: Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "..");
+		foreach (var file in Directory.GetFiles(basePath, "*" + Language.Type.Extension))
 		{
 			var result = BuildGrammar().Match(File.ReadAllText(file).Replace("\r\n", "\n") + "\n");
 			Assert.That(result.Success, Is.True, file + ": " + GetErrorDetails("", result));
 		}
 	}
-
-	private const string DefaultStrictBasePath = Repositories.StrictDevelopmentFolderPrefix + "Base";
-
-	private static string FindSolutionPath() =>
-		Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "..", ".."); //ncrunch: no coverage
 }

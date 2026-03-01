@@ -111,13 +111,12 @@ public sealed class ForTests
 		using var t = CreateType(nameof(GetElementsTextWithCompactConditionalThen), "has number",
 			"GetElementsText(elements Numbers) Text", "\tfor elements",
 			"\t\t(index is 0 then \"\" else \", \") + value");
-		var numberType = TestPackage.Instance.FindType(Base.Number)!;
-		var listType = TestPackage.Instance.FindType(Base.List)!.GetGenericImplementation(numberType);
 		var nums = new List<ValueInstance>
 		{
-			ValueInstance.Create(numberType, 1.0),
-			ValueInstance.Create(numberType, 3.0)
+			ValueInstance.Create(executor.numberType, 1.0),
+			ValueInstance.Create(executor.numberType, 3.0)
 		};
+		var listType = executor.listType.GetGenericImplementation(executor.numberType);
 		var result = executor.Execute(t.Methods.Single(m => m.Name == "GetElementsText"), null,
 			[ValueInstance.CreateObject(listType, nums)]);
 		Assert.That(result.Value, Is.EqualTo("1, 3"));

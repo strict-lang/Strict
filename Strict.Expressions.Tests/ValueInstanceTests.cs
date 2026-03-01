@@ -127,9 +127,8 @@ public sealed class ValueInstanceTests
 		using var t = new Type(TestPackage.Instance,
 			new TypeLines(nameof(ValueTypeInstanceStoresMembers), "has number", "Run Boolean",
 				"\tnumber is 1")).ParseMembersAndMethods(new MethodExpressionParser());
-		var typeInstance = new ValueTypeInstance(t,
-			new Dictionary<string, ValueInstance> { { "number", new ValueInstance(numberType, 7d) } });
-		var vi = new ValueInstance(typeInstance);
-		Assert.That(vi.ToString(), Does.Contain(nameof(ValueTypeInstanceStoresMembers)));
+		var instance = new ValueInstance(t,
+			new Dictionary<string, ValueInstance> { { "number", new ValueInstance(numberType, 7) } });
+		Assert.That(instance.ToString(), Does.Contain(nameof(ValueTypeInstanceStoresMembers)));
 	}
 }

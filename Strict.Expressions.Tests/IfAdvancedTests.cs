@@ -103,8 +103,8 @@ public sealed class IfAdvancedTests : TestExpressions
 				"		return \"5\"")).ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(),
 			Throws.InstanceOf<Body.ChildBodyReturnTypeMustMatchMethod>().With.Message.Contains(
-				"Last expression return \"5\" return type: TestPackage.Text is not matching with expected " +
-				"method return type: TestPackage.Number in method line: 3"));
+				"Last expression return \"5\" return type: TestPackage/Text is not matching with " +
+				"expected method return type: TestPackage/Number in method line: 3"));
 	}
 
 	private static readonly Package Package = new(nameof(IfTests));
@@ -125,8 +125,8 @@ public sealed class IfAdvancedTests : TestExpressions
 		// @formatter:on
 		Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(),
 			Throws.InstanceOf<Body.ChildBodyReturnTypeMustMatchMethod>().With.Message.Contains(
-				"Last expression return \"Hello\" return type: TestPackage.Text is not matching with " +
-				"expected method return type: TestPackage.Number in method line: 4"));
+				"Last expression return \"Hello\" return type: TestPackage/Text is not matching with " +
+				"expected method return type: TestPackage/Number in method line: 4"));
 	}
 
 	[Test]

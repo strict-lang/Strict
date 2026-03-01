@@ -176,20 +176,18 @@ public class Program
 		new Type(overridePackage ?? TestPackage.Instance,
 			new TypeLines(programName,
 				await File.ReadAllLinesAsync(Path.Combine(await GetExampleFolder(),
-					$"{programName}.strict")))).ParseMembersAndMethods(parser);
+					programName + Type.Extension)))).ParseMembersAndMethods(parser);
 
 	private static async Task<string> GetExampleFolder()
 	{
-		const string ExamplesSubFolder = "Examples";
-		const string DevelopmentExamplesFolder =
-			Repositories.StrictDevelopmentFolderPrefix + ExamplesSubFolder;
-		if (Directory.Exists(DevelopmentExamplesFolder))
-			return DevelopmentExamplesFolder;
-		const string ExamplesPackageName = "Strict.Examples";
-		return await Repositories.DownloadAndExtractRepository(
-				new Uri(Repositories.StrictPrefixUri.AbsoluteUri + ExamplesSubFolder),
-				ExamplesPackageName).
+		var examplesFolder = Path.Combine(Repositories.StrictDevelopmentFolder, "Examples");
+		if (Directory.Exists(examplesFolder))
+			return examplesFolder;
+		var cacheFolder = Path.Combine(Repositories.CacheFolder, "Strict", "Examples");
+		await Repositories.
+			DownloadRepositoryStrictFiles(cacheFolder, "strict-lang", "Strict/Examples").
 			ConfigureAwait(false);
+		return cacheFolder;
 	}
 
 	[Test]

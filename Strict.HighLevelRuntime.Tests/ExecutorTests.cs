@@ -56,11 +56,10 @@ public sealed class ExecutorTests
 	{
 		using var t = CreateCalcType();
 		var method = t.Methods.Single(m => m.Name == "Add");
-		var num = TestPackage.Instance.FindType(Base.Number)!;
-		Assert.That(() => executor.Execute(method, null, [
-			ValueInstance.Create(num, 1d),
-			ValueInstance.Create(num, 2d),
-			ValueInstance.Create(num, 3d)
+		Assert.That(() => executor.Execute(method, executor.noneInstance, [
+			new ValueInstance(executor.numberType, 1),
+			new ValueInstance(executor.numberType, 2),
+			new ValueInstance(executor.numberType, 3)
 		]), Throws.InstanceOf<Executor.TooManyArguments>().With.Message.StartsWith("Number:3"));
 	}
 
@@ -80,12 +79,10 @@ public sealed class ExecutorTests
 	{
 		using var t = CreateCalcType();
 		var method = t.Methods.Single(m => m.Name == "Add");
-		var num = TestPackage.Instance.FindType(Base.Number)!;
-		var first = ValueInstance.Create(num, 5d);
-		var second = ValueInstance.Create(num, 7d);
-		var result = executor.Execute(method, null, [first, second]);
-		Assert.That(result.ReturnType.Name, Is.EqualTo(Base.Number));
-		Assert.That(Convert.ToDouble(result.Value), Is.EqualTo(12));
+		var first = new ValueInstance(executor.numberType, 5);
+		var second = new ValueInstance(executor.numberType, 7);
+		var result = executor.Execute(method, executor.noneInstance, [first, second]);
+		Assert.That(result.Number, Is.EqualTo(12));
 	}
 
 	[Test]
@@ -102,6 +99,7 @@ public sealed class ExecutorTests
 	[Test]
 	public void EvaluateAllArithmeticOperators()
 	{
+		//TODO: why not just use Number, it has all operators already!
 		using var t = CreateType(nameof(EvaluateAllArithmeticOperators), "mutable last Number",
 			"Plus(first Number, second Number) Number", "\tfirst + second",
 			"Minus(first Number, second Number) Number", "\tfirst - second",
@@ -109,7 +107,7 @@ public sealed class ExecutorTests
 			"Div(first Number, second Number) Number", "\tfirst / second",
 			"Mod(first Number, second Number) Number", "\tfirst % second",
 			"Pow(first Number, second Number) Number", "\tfirst ^ second");
-		var num = TestPackage.Instance.FindType(Base.Number)!;
+		var num = executor.numberType;
 		static ValueInstance N(Type numType, double x) => ValueInstance.Create(numType, x);
 		Assert.That(Convert.ToDouble(executor.Execute(t.Methods.Single(m => m.Name == "Plus"), null, [
 			N(num, 2), N(num, 3)
@@ -135,6 +133,7 @@ public sealed class ExecutorTests
 	[Test]
 	public void AddTwoTexts()
 	{
+		//TODO: why not just use Text, it has all operators already!
 		using var t = CreateType(nameof(AddTwoTexts), "has text",
 			"Concat(text Text, other Text) Text", "\ttext + other");
 		var textType = t.GetType(Base.Text);
@@ -146,6 +145,7 @@ public sealed class ExecutorTests
 	[Test]
 	public void EvaluateAllComparisonOperators()
 	{
+		//TODO: why not just use Number, it has all operators already!
 		using var t = CreateType(nameof(EvaluateAllComparisonOperators), "mutable last Number",
 			"Gt(first Number, second Number) Boolean", "\tfirst > second",
 			"Lt(first Number, second Number) Boolean", "\tfirst < second",
@@ -153,72 +153,71 @@ public sealed class ExecutorTests
 			"Lte(first Number, second Number) Boolean", "\tfirst <= second",
 			"Eq(first Number, second Number) Boolean", "\tfirst is second",
 			"Neq(first Number, second Number) Boolean", "\tfirst is not second");
-		var num = TestPackage.Instance.FindType(Base.Number)!;
-		ValueInstance N(double x) => ValueInstance.Create(num, x);
-		Assert.That(executor.Execute(t.Methods.Single(m => m.Name == "Gt"), null, [N(5), N(3)]).Value,
-			Is.EqualTo(true));
-		Assert.That(executor.Execute(t.Methods.Single(m => m.Name == "Lt"), null, [N(2), N(3)]).Value,
+		ValueInstance N(double x) => new ValueInstance(executor.numberType, x);
+		Assert.That(
+			executor.Execute(t.Methods.Single(m => m.Name == "Gt"), executor.noneInstance,
+				[N(5), N(3)]), Is.EqualTo(executor.trueInstance));
+		Assert.That(executor.Execute(t.Methods.Single(m => m.Name == "Lt"), executor.noneInstance, [N(2), N(3)]),
 			Is.EqualTo(true));
 		Assert.That(
-			executor.Execute(t.Methods.Single(m => m.Name == "Gte"), null, [N(5), N(3)]).Value,
+			executor.Execute(t.Methods.Single(m => m.Name == "Gte"), executor.noneInstance, [N(5), N(3)]),
 			Is.EqualTo(true));
 		Assert.That(
-			executor.Execute(t.Methods.Single(m => m.Name == "Gte"), null, [N(5), N(5)]).Value,
+			executor.Execute(t.Methods.Single(m => m.Name == "Gte"), executor.noneInstance, [N(5), N(5)]).Value,
 			Is.EqualTo(true));
 		Assert.That(
-			executor.Execute(t.Methods.Single(m => m.Name == "Lte"), null, [N(2), N(3)]).Value,
+			executor.Execute(t.Methods.Single(m => m.Name == "Lte"), executor.noneInstance, [N(2), N(3)]).Value,
 			Is.EqualTo(true));
 		Assert.That(
-			executor.Execute(t.Methods.Single(m => m.Name == "Lte"), null, [N(3), N(3)]).Value,
+			executor.Execute(t.Methods.Single(m => m.Name == "Lte"), executor.noneInstance, [N(3), N(3)]).Value,
 			Is.EqualTo(true));
-		Assert.That(executor.Execute(t.Methods.Single(m => m.Name == "Eq"), null, [N(3), N(3)]).Value,
+		Assert.That(executor.Execute(t.Methods.Single(m => m.Name == "Eq"), executor.noneInstance, [N(3), N(3)]).Value,
 			Is.EqualTo(true));
 		Assert.That(
-			executor.Execute(t.Methods.Single(m => m.Name == "Neq"), null, [N(3), N(4)]).Value,
+			executor.Execute(t.Methods.Single(m => m.Name == "Neq"), executor.noneInstance, [N(3), N(4)]).Value,
 			Is.EqualTo(true));
 	}
 
 	[Test]
 	public void EvaluateAllLogicalOperators()
 	{
+		//TODO: why not just use Boolean, it has all operators already!
 		using var t = CreateType(nameof(EvaluateAllLogicalOperators), "has unused Boolean",
 			"And(first Boolean, second Boolean) Boolean", "\tfirst and second",
 			"Or(first Boolean, second Boolean) Boolean", "\tfirst or second",
 			"Xor(first Boolean, second Boolean) Boolean", "\tfirst xor second",
 			"Not(first Boolean) Boolean", "\tnot first");
-		var boolType = TestPackage.Instance.FindType(Base.Boolean)!;
-		ValueInstance B(bool x) => ValueInstance.Create(boolType, x);
+		AssertBooleanOperation(t.Methods.Single(m => m.Name == "And"), true, true, true);
+		AssertBooleanOperation(t.Methods.Single(m => m.Name == "And"), true, false, false);
+		AssertBooleanOperation(t.Methods.Single(m => m.Name == "Or"), true, false, true);
+		AssertBooleanOperation(t.Methods.Single(m => m.Name == "Or"), false, false, false);
+		AssertBooleanOperation(t.Methods.Single(m => m.Name == "Xor"), true, false, true);
+		AssertBooleanOperation(t.Methods.Single(m => m.Name == "Xor"), true, true, false);
 		Assert.That(
-			executor.Execute(t.Methods.Single(m => m.Name == "And"), null, [B(true), B(true)]).Value,
-			Is.EqualTo(true));
-		Assert.That(
-			executor.Execute(t.Methods.Single(m => m.Name == "And"), null, [B(true), B(false)]).Value,
-			Is.EqualTo(false));
-		Assert.That(
-			executor.Execute(t.Methods.Single(m => m.Name == "Or"), null, [B(true), B(false)]).Value,
-			Is.EqualTo(true));
-		Assert.That(
-			executor.Execute(t.Methods.Single(m => m.Name == "Or"), null, [B(false), B(false)]).Value,
-			Is.EqualTo(false));
-		Assert.That(
-			executor.Execute(t.Methods.Single(m => m.Name == "Xor"), null, [B(true), B(false)]).Value,
-			Is.EqualTo(true));
-		Assert.That(
-			executor.Execute(t.Methods.Single(m => m.Name == "Xor"), null, [B(true), B(true)]).Value,
-			Is.EqualTo(false));
-		Assert.That(executor.Execute(t.Methods.Single(m => m.Name == "Not"), null, [B(false)]).Value,
-			Is.EqualTo(true));
+			executor.Execute(t.Methods.Single(m => m.Name == "Not"), executor.noneInstance,
+				[executor.falseInstance]), Is.EqualTo(executor.trueInstance));
 	}
+
+	private void AssertBooleanOperation(Method method, bool first, bool second, bool result) =>
+		Assert.That(executor.Execute(method, executor.noneInstance, [
+			first
+				? executor.trueInstance
+				: executor.falseInstance,
+			second
+				? executor.trueInstance
+				: executor.falseInstance
+		]), Is.EqualTo(result
+			? executor.trueInstance
+			: executor.falseInstance));
 
 	[Test]
 	public void EvaluateMemberCallFromStaticConstant()
 	{
 		using var t = CreateType(nameof(EvaluateMemberCallFromStaticConstant), "mutable last Number",
 			"GetTab Character", "\tCharacter.Tab");
-		var method = t.Methods.Single(m => m.Name == "GetTab");
-		var result = executor.Execute(method, null, []);
-		Assert.That(result.ReturnType.Name, Is.EqualTo(Base.Character));
-		Assert.That(result.Value, Is.EqualTo(7));
+		var result = executor.Execute(t.Methods.Single(m => m.Name == "GetTab"));
+		Assert.That(result.IsPrimitiveType(executor.characterType), Is.EqualTo(true));
+		Assert.That(result.Number, Is.EqualTo(7));
 	}
 
 	[Test]
@@ -226,9 +225,8 @@ public sealed class ExecutorTests
 	{
 		using var t = CreateType(nameof(EvaluateBooleanComparisons), "mutable last Boolean",
 			"IfDifferent Boolean", "\tlast is false");
-		var method = t.Methods.Single(m => m.Name == "IfDifferent");
-		var result = executor.Execute(method,
-			ValueInstance.Create(t, new Dictionary<string, object?> { { "last", false } }), []);
+		var result = executor.Execute(t.Methods.Single(m => m.Name == "IfDifferent"),
+			new ValueInstance(new ValueTypeInstance(t, new Dictionary<string, ValueInstance> { { "last", false } }), []);
 		Assert.That(Convert.ToBoolean(result.Value), Is.EqualTo(true));
 	}
 

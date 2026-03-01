@@ -1,7 +1,10 @@
 using Strict.Expressions;
 using Strict.Language;
 using System.Collections;
+using System.Runtime.CompilerServices;
 using Type = Strict.Language.Type;
+
+[assembly: InternalsVisibleTo("Strict.HighLevelRuntime.Tests")]
 
 namespace Strict.HighLevelRuntime;
 
@@ -18,6 +21,8 @@ public sealed class Executor
 		numberType = initialPackage.GetType(Base.Number);
 		characterType = initialPackage.GetType(Base.Character);
 		textType = initialPackage.GetType(Base.Text);
+		rangeType = initialPackage.GetType(Base.Range);
+		listType = initialPackage.GetType(Base.List);
 		bodyEvaluator = new BodyEvaluator(this);
 		ifEvaluator = new IfEvaluator(this);
 		selectorIfEvaluator = new SelectorIfEvaluator(this);
@@ -29,12 +34,14 @@ public sealed class Executor
 	private readonly TestBehavior behavior;
 	internal readonly Type noneType;
 	internal readonly ValueInstance noneInstance;
-	private readonly Type booleanType;
-	private readonly ValueInstance trueInstance;
-	private readonly ValueInstance falseInstance;
+	internal readonly Type booleanType;
+	internal readonly ValueInstance trueInstance;
+	internal readonly ValueInstance falseInstance;
 	internal readonly Type numberType;
 	internal readonly Type characterType;
 	internal readonly Type textType;
+	internal readonly Type rangeType;
+	internal readonly Type listType;
 	private readonly BodyEvaluator bodyEvaluator;
 	private readonly IfEvaluator ifEvaluator;
 	private readonly SelectorIfEvaluator selectorIfEvaluator;
@@ -60,8 +67,8 @@ public sealed class Executor
 	private readonly HashSet<Method> validatedMethods = [];
 	public Statistics Statistics { get; } = new();
 
-	private ValueInstance Execute(Method method, ValueInstance instance,
-		IReadOnlyList<ValueInstance> args, ExecutionContext? parentContext, bool runOnlyTests = false)
+	public ValueInstance Execute(Method method, ValueInstance instance,
+		IReadOnlyList<ValueInstance> args, ExecutionContext? parentContext = null, bool runOnlyTests = false)
 	{
 		if (runOnlyTests)
 			Statistics.MethodTested++;

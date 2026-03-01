@@ -8,7 +8,8 @@ namespace Strict.LanguageServer.Tests;
 
 public class LanguageServerTests
 {
-	protected static readonly DocumentUri URI = new("", "", "Test/Test.strict", "", "");
+	protected static readonly DocumentUri URI = new("", "", "Test/Test" + Language.Type.Extension,
+		"", "");
 	protected TextDocumentSynchronizer textDocumentHandler = null!;
 	protected Mock<ILanguageServer> languageServer = null!;
 

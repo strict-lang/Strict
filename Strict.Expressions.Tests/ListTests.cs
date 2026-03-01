@@ -170,9 +170,9 @@ public sealed class ListTests : TestExpressions
 	{
 		var numbers = type.GetListImplementationType(type.GetType(Base.Number));
 		Assert.That(numbers.Members[1].ToString(),
-			Is.EqualTo("elements TestPackage.List(Number)"));
+			Is.EqualTo("elements TestPackage/List(Number)"));
 		Assert.That(numbers.Methods[1].Parent.ToString(),
-			Is.EqualTo("TestPackage.List(Number)"));
+			Is.EqualTo("TestPackage/List(Number)"));
 	}
 
 	[Test]

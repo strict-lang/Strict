@@ -11,7 +11,7 @@ public sealed class DictionaryTests : TestExpressions
 				"\tconstant result = 5")).ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(listInListType.Members[0].Type.IsIterator, Is.True);
 		Assert.That(listInListType.Members[0].Type.Name,
-			Is.EqualTo("List(key TestPackage.Generic, value TestPackage.Generic)"));
+			Is.EqualTo("List(key TestPackage/Generic, value TestPackage/Generic)"));
 		var genericType = (GenericType)listInListType.Members[0].Type;
 		Assert.That(genericType.Generic.Name, Is.EqualTo("List"));
 	}
@@ -36,7 +36,7 @@ public sealed class DictionaryTests : TestExpressions
 				"\tconstant result = 5")).ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(listInListType.Methods[0].Parameters[0].Type.IsIterator, Is.True);
 		Assert.That(listInListType.Methods[0].Parameters[0].Type.Name,
-			Is.EqualTo("List(firstType TestPackage.Generic, mappedSecondType TestPackage.Generic)"));
+			Is.EqualTo("List(firstType TestPackage/Generic, mappedSecondType TestPackage/Generic)"));
 	}
 
 	[Test]
@@ -48,7 +48,7 @@ public sealed class DictionaryTests : TestExpressions
 			ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(dictionary.Members[0].Type, Is.InstanceOf<GenericTypeImplementation>());
 		Assert.That(dictionary.Members[0].Type.ToString(),
-			Is.EqualTo("TestPackage.Dictionary(Number, Number)"));
+			Is.EqualTo("TestPackage/Dictionary(Number, Number)"));
 		Assert.That(((GenericTypeImplementation)dictionary.Members[0].Type).ImplementationTypes[1],
 			Is.EqualTo(type.GetType(Base.Number)));
 	}
@@ -97,7 +97,7 @@ public sealed class DictionaryTests : TestExpressions
 			ParseMembersAndMethods(new MethodExpressionParser());
 		dictionary.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(dictionary.Members[0].Type.ToString(),
-			Is.EqualTo("TestPackage.Dictionary(Text, Boolean)"));
+			Is.EqualTo("TestPackage/Dictionary(Text, Boolean)"));
 	}
 
 	[Test]
@@ -110,8 +110,9 @@ public sealed class DictionaryTests : TestExpressions
 		Assert.That(() => dictionary.Methods[0].GetBodyAndParseIfNeeded(),
 			Throws.InnerException.InstanceOf<Type.ArgumentsDoNotMatchMethodParameters>().With.
 				InnerException.Message.Contains(
-					"Arguments: 4 TestPackage.Number, \"10\" TestPackage.Text do not match these TestPackage.Dictionary(Text, Boolean) method(s):" +
-					"\nAdd(key TestPackage.Text, mappedValue TestPackage.Boolean) Mutable(Dictionary(Text, Boolean))"));
+					"Arguments: 4 TestPackage/Number, \"10\" TestPackage/Text do not match these " +
+					"TestPackage/Dictionary(Text, Boolean) method(s):\nAdd(key TestPackage/Text, " +
+					"mappedValue TestPackage/Boolean) Mutable(Dictionary(Text, Boolean))"));
 	}
 
 	[Test]
@@ -174,5 +175,5 @@ public sealed class DictionaryTests : TestExpressions
 				}, type),
 			Throws.InstanceOf<Dictionary.DictionaryMustBeInitializedWithTwoTypeParameters>().With.
 				Message.StartsWith("Expected Type Parameters: 2, Given type parameters: 3 and they are " +
-					"TestPackage.Number, TestPackage.Text, TestPackage.Boolean"));
+					"TestPackage.Number, TestPackage/Text, TestPackage/Boolean"));
 }

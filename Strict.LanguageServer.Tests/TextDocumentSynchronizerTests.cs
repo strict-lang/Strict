@@ -16,7 +16,8 @@ public sealed class TextDocumentSynchronizerTests : LanguageServerTests
 		textDocumentHandler.Document.InitializeContent(MultiLineURI);
 	}
 
-	private static readonly DocumentUri MultiLineURI = new("", "", "Test/MultiLine.strict", "", "");
+	private static readonly DocumentUri MultiLineURI =
+		new("", "", "Test/MultiLine" + Language.Type.Extension, "", "");
 	private static IEnumerable<TestCaseData> TextDocumentChangeCases
 	{
 		//ncrunch: no coverage start
