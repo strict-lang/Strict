@@ -100,8 +100,8 @@ public sealed class ListAdvancedTests : TestExpressions
 		var expression = (Body)typeWithMutableList.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(expression.Expressions[0].ToString(),
 			Is.EqualTo("mutable result = List(Number)"));
-		Assert.That(((Declaration)expression.Expressions[0]).Value.ReturnType.FullName,
-			Is.EqualTo("TestPackage.List(Number)"));
+		Assert.That(((Declaration)expression.Expressions[0]).Value.ReturnType.FolderName,
+			Is.EqualTo("TestPackage/List(Number)"));
 	}
 
 	[Test]
@@ -255,7 +255,7 @@ public sealed class ListAdvancedTests : TestExpressions
 			"\tVector2(3, 4).Length is 5",
 			"\t(X * X + Y * Y).SquareRoot")).ParseMembersAndMethods(parser);
 		Assert.That(program.Members[1].Name, Is.EqualTo("One"));
-		Assert.That(program.Members[1].Type.ToString(), Is.EqualTo("TestPackage.Vector2"));
+		Assert.That(program.Members[1].Type.ToString(), Is.EqualTo("TestPackage/Vector2"));
 	}
 
 	[Test]
@@ -297,7 +297,7 @@ public sealed class ListAdvancedTests : TestExpressions
 		var argumentExpression = ((MethodCall)body.Expressions[1]).Arguments[0];
 		Assert.That(argumentExpression, Is.InstanceOf<List>());
 		Assert.That(argumentExpression.ReturnType.ToString(),
-			Is.EqualTo("TestPackage." + expectedList));
+			Is.EqualTo("TestPackage/" + expectedList));
 	}
 
 	[Test]

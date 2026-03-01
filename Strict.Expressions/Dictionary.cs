@@ -18,15 +18,14 @@ public sealed class Dictionary : Value
 	public Type KeyType { get; }
 	public Type MappedValueType { get; }
 
-	private static object CreateEmptyMembers(Type dictionaryImplementationType)
+	private static ValueInstance CreateEmptyMembers(Type dictionaryImplementationType)
 	{
-		var listMemberName = dictionaryImplementationType.Members.FirstOrDefault(member =>
-			member.Type is GenericTypeImplementation { Generic.Name: Base.List } ||
-			member.Type.Name == Base.List)?.Name ?? Type.ElementsLowercase;
-		return new System.Collections.Generic.Dictionary<string, object?>(StringComparer.Ordinal)
-		{
-			[listMemberName] = new System.Collections.Generic.List<object?>()
-		};
+		//not needed, this was wrong code before: var listMemberName = dictionaryImplementationType
+		//.Members
+		//.FirstOrDefault(member =>
+		//	member.Type.IsList)?.     Name ?? Type.ElementsLowercase;
+		return new ValueInstance(dictionaryImplementationType, new Dictionary<ValueInstance,
+			ValueInstance>());
 	}
 
 	public override string ToString() => ReturnType.Name;

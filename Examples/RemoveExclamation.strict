@@ -1,0 +1,8 @@
+has text
+Remove Text
+	RemoveExclamation("Hello There!").Remove is "Hello There"
+	RemoveExclamation("Hi!!!").Remove is "Hi"
+	RemoveExclamation("Wow! Awesome! There!").Remove is "Wow Awesome There"
+	for text
+		if value is not "!"
+			value

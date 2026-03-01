@@ -1,3 +1,6 @@
+using BenchmarkDotNet.Attributes;
+using BenchmarkDotNet.Engines;
+using BenchmarkDotNet.Running;
 using Strict.Expressions;
 using Strict.HighLevelRuntime;
 using Strict.Language;
@@ -6,12 +9,11 @@ using Type = Strict.Language.Type;
 
 namespace Strict.TestRunner.Tests;
 
-public sealed class TestExecutorTests
+[MemoryDiagnoser]
+[SimpleJob(RunStrategy.Throughput, warmupCount: 1, iterationCount: 10)]
+public class TestExecutorTests
 {
-	[SetUp]
-	public void Setup() => executor = new TestExecutor();
-
-	private TestExecutor executor = null!;
+	public readonly TestExecutor executor = new();
 
 	[Test]
 	public void RunMethod()
@@ -221,5 +223,27 @@ public sealed class TestExecutorTests
 	}
 
 	[Test]
+	public void RunDictionaryTestsTwice()
+	{
+		using var type = TestPackage.Instance.GetType(Base.Dictionary);
+		executor.RunAllTestsInType(type);
+		executor.RunAllTestsInType(type);
+	}
+
+	[Test]
+	[Benchmark]
 	public void RunAllTestsInPackage() => executor.RunAllTestsInPackage(TestPackage.Instance);
+
+	//ncrunch: no coverage start
+	[Test]
+	[Category("Slow")]
+	public void RunAllTestsInPackageTwice()
+	{
+		executor.RunAllTestsInPackage(TestPackage.Instance);
+		executor.RunAllTestsInPackage(TestPackage.Instance);
+	}
+
+	[Test]
+	[Category("Manual")]
+	public void BenchmarkCompare() => BenchmarkRunner.Run<TestExecutorTests>();
 }

@@ -16,7 +16,7 @@
 - Keep AdderProgram in the Tests project and use TestPackage (or Strict.Base) for basic types.
 
 ## Strict Semantics
-- When asked about Strict semantics, derive behavior directly from README.md and TestPackage.cs examples; re-check cited examples before answering and avoid contradicting them.
+- When asked about Strict semantics, derive behavior directly from README.md and Strict/TestPackage examples; re-check cited examples before answering and avoid contradicting them.
 
 ## Test-Driven Development (TDD)
 

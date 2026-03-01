@@ -1,0 +1,14 @@
+has number
+Sum Number
+	mutable first = 1
+	mutable second = 1
+	mutable sum = 0
+	for Range(1, number)
+		let next = first + second
+		if next >= number
+			return sum
+		if next % 2 is 0
+			sum.Increment(next)
+		first = second
+		second = next
+	sum

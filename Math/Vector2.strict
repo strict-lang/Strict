@@ -1,0 +1,25 @@
+has numbers with Length is 2
+constant One = Vector2(1, 1)
+constant Left = Vector2(-1, 0)
+constant Right = Vector2(1, 0)
+constant Up = Vector2(0, -1)
+constant Down = Vector2(0, 1)
+X Number
+	Vector2(1, 2).X is 1
+	numbers(0)
+Y Number
+	Vector2(1, 2).Y is 2
+	numbers(1)
+Length Number
+	Vector2.Length is 0
+	Vector2(3, 4).Length is 5
+	(X * X + Y * Y).SquareRoot
++(other) List
+	Vector2 + Vector2.One is (1, 1)
+	Vector2(1, 2) + Vector2(4, 5) is (5, 7)
+	Vector2(X + other.X, Y + other.Y)
+Normalize Vector2
+	Vector2.One.Normalize is Vector2.One
+	Vector2(0, 5).Normalize is Vector2(0, 1)
+	Vector2(3, 4).Normalize.Length is 1
+	value / Length

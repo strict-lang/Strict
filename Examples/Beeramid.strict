@@ -1,0 +1,14 @@
+has bonus Number
+has price Number
+GetCompleteLevelCount Number
+	Beeramid(10, 3).GetCompleteLevelCount is 1
+	Beeramid(20, 4).GetCompleteLevelCount is 2
+	Beeramid(100, 5).GetCompleteLevelCount is 3
+	CalculateCompleteLevelCount(bonus / price, 0)
+CalculateCompleteLevelCount(numberOfCans Number, levelCount Number) Number
+	CalculateCompleteLevelCount(3, 0) is 1
+	CalculateCompleteLevelCount(5, 0) is 2
+	CalculateCompleteLevelCount(20, 1) is 3
+	let remainingCans = numberOfCans - levelCount * levelCount
+	let nextLevelSquare = (levelCount + 1) * (levelCount + 1)
+	remainingCans < nextLevelSquare then levelCount else CalculateCompleteLevelCount(remainingCans, levelCount + 1)

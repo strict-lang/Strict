@@ -1,0 +1,5 @@
+has numbers
+Reverse Numbers
+	ReverseList(1, 2, 3, 4).Reverse is (4, 3, 2, 1)
+	for Range(0, numbers.Length).Reverse
+		numbers(index)

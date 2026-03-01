@@ -1,0 +1,44 @@
+has characters
++(other) Text
+	+("more") is "more"
+	"Hey" + " " + "you" is "Hey you"
+	characters + other.characters
++(number) Text
+	+(1) is "1"
+	"Your age is " + 18 is "Your age is 18"
+	characters + number to Text
+to Number
+	"5" to Number is 5
+	"123" to Number is 123
+	"-17" to Number is 17
+	"1.3" to Number is 1.3
+	"1e10" to Number is 1e10
+	for characters.Reverse
+		value to Number * 10 ^ index
+in(text) Boolean
+	"hi" is not in "hello there"
+	"lo" is in "hello there"
+	for
+		StartsWith(text, index)
+StartsWith(text, start = 0) Boolean
+	"hello".StartsWith("hel")
+	"hello".StartsWith("hel", 1) is false
+	"yo mama".StartsWith("mama") is false
+	for text.characters
+		value is not outer(start + index)
+Count(character) Number
+	"".Count("1") is 0
+	"abc".Count("a") is 1
+	"hello".Count("l") is 2
+	for
+		if value is character
+			1
+SurroundWithParentheses Text
+	"".SurroundWithParentheses is "()"
+	"Hi".SurroundWithParentheses is "(Hi)"
+	"1, 2, 3".SurroundWithParentheses is "(1, 2, 3)"
+	"(" + value + ")"
+is(other) Boolean
+	"A" is "A"
+	"Hi" is not "hi"
+	value is other

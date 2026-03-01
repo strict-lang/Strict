@@ -95,7 +95,7 @@ public sealed class EnumTests
 					"\t\treturn numbers(0) + numbers(1)")).
 			ParseMembersAndMethods(parser);
 		var ifExpression = (If)consumingType.Methods[0].GetBodyAndParseIfNeeded();
-		Assert.That(ifExpression.Condition.ReturnType.Name, Is.EqualTo(Base.Boolean));
+		Assert.That(ifExpression.Condition.ReturnType.IsBoolean, Is.True);
 		var binary = (Binary)ifExpression.Condition;
 		Assert.That(((MemberCall)binary.Arguments[0]).Member.Name, Is.EqualTo("Add"));
 		Assert.That(((MemberCall)((MemberCall)binary.Instance!).Member.InitialValue!).Member.Name,

@@ -8,10 +8,11 @@ public sealed class List : Value
 	public List(Body bodyForErrorMessage, List<Expression> values, bool isMutable = false) : base(
 		values[0].ReturnType.GetListImplementationType(
 			GetCommonBaseType(values.Select(v => v.ReturnType).ToList(), bodyForErrorMessage)),
-		values, values[0].LineNumber, isMutable) =>
+		//impossible to know what the ValueInstances would be here: values
+		new List<ValueInstance>(), values[0].LineNumber, isMutable) =>
 		Values = values;
 
-	public List(Type type, int lineNumber = 0) : base(type, Array.Empty<Expression>(), lineNumber,
+	public List(Type type, int lineNumber = 0) : base(type, new List<ValueInstance>(), lineNumber,
 		true) =>
 		Values = [];
 

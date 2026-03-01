@@ -46,13 +46,13 @@ public class PackageTests
 	public void GetFullNames()
 	{
 		Assert.That(mainPackage.ToString(), Is.EqualTo(nameof(PackageTests)));
-		Assert.That(mainType.ToString(), Is.EqualTo(nameof(PackageTests) + "." + mainType.Name));
+		Assert.That(mainType.ToString(), Is.EqualTo(nameof(PackageTests) + "/" + mainType.Name));
 		Assert.That(subPackage.ToString(),
-			Is.EqualTo(nameof(PackageTests) + "." + nameof(subPackage)));
+			Is.EqualTo(nameof(PackageTests) + "/" + nameof(subPackage)));
 		Assert.That(privateSubType.ToString(),
-			Is.EqualTo(nameof(PackageTests) + "." + nameof(subPackage) + "." + privateSubType.Name));
+			Is.EqualTo(nameof(PackageTests) + "/" + nameof(subPackage) + "/" + privateSubType.Name));
 		Assert.That(publicSubType.ToString(),
-			Is.EqualTo(nameof(PackageTests) + "." + nameof(subPackage) + "." + publicSubType.Name));
+			Is.EqualTo(nameof(PackageTests) + "/" + nameof(subPackage) + "/" + publicSubType.Name));
 	}
 
 	[Test]
@@ -62,7 +62,7 @@ public class PackageTests
 		Assert.Throws<Package.PrivateTypesAreOnlyAvailableInItsPackage>(() =>
 			mainPackage.GetType(privateSubType.ToString()));
 		Assert.Throws<Package.PrivateTypesAreOnlyAvailableInItsPackage>(() =>
-			mainPackage.GetType(nameof(TestPackage) + "." + nameof(PackageTests) + "." +
+			mainPackage.GetType(nameof(TestPackage) + "/" + nameof(PackageTests) + "/" +
 				privateSubType.Name));
 	}
 

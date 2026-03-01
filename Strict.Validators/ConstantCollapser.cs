@@ -80,16 +80,29 @@ public sealed class ConstantCollapser : Visitor
 		if (expression is To to)
 		{
 			var value = to.Instance as Value;
-			if (to.ConversionType.Name == Base.Number && value?.Data is string text)
-				return new Number(to.Method.Type, double.Parse(text));
-			if (to.ConversionType.Name == Base.Text && value?.Data is double number)
-				return new Text(to.Method.Type, number.ToString(CultureInfo.InvariantCulture));
+			if (to.ConversionType.IsNumber && value is Text textValue)
+				return new Number(to.Method.Type, double.Parse(GetText(textValue)));
+			if (to.ConversionType.IsText && value is Number numberValue)
+				return new Text(to.Method.Type, GetNumber(numberValue).ToString(CultureInfo.InvariantCulture));
 			throw new UnsupportedToExpression(to.ToStringWithType()); //ncrunch: no coverage
 		}
 		return expression;
 	}
 
 	public class UnsupportedToExpression(string toStringWithType) : Exception(toStringWithType); //ncrunch: no coverage
+
+	private static double GetNumber(Number n) =>
+		double.Parse(n.Data.ToExpressionCodeString(), System.Globalization.CultureInfo.InvariantCulture);
+
+	private static string GetText(Text t)
+	{
+		var quoted = t.Data.ToExpressionCodeString();
+		return quoted.Length >= 2
+			? quoted[1..^1].Replace("\\\"", "\"").Replace("\\\\", "\\")
+			: quoted;
+	}
+
+	private static bool GetBool(Boolean b) => b.Data.ToExpressionCodeString() != "false";
 
 	/// <summary>
 	/// Would be nice if all of these are evaluated via actual strict code!
@@ -106,33 +119,33 @@ public sealed class ConstantCollapser : Visitor
 		if (method.Name == BinaryOperator.Plus)
 		{
 			if (leftNumber != null && rightNumber != null)
-				return new Number(method, (double)leftNumber.Data + (double)rightNumber.Data);
+				return new Number(method, GetNumber(leftNumber) + GetNumber(rightNumber));
 			var leftText = left as Text;
 			var rightText = right as Text;
 			if (leftText != null && rightText != null)
-				return new Text(method, (string)leftText.Data + (string)rightText.Data);
+				return new Text(method, GetText(leftText) + GetText(rightText));
 			//ncrunch: no coverage start
 			if (leftText != null && rightNumber != null)
-				return new Text(method, (string)leftText.Data + rightNumber.Data);
+				return new Text(method, GetText(leftText) + GetNumber(rightNumber));
 			if (leftNumber != null && rightText != null)
-				return new Text(method, (double)leftNumber.Data + (string)rightText.Data);
+				return new Text(method, GetNumber(leftNumber) + GetText(rightText));
 			if (leftText != null && right is Boolean rightBool)
-				return new Text(method, (string)leftText.Data + rightBool.Data);
+				return new Text(method, GetText(leftText) + GetBool(rightBool));
 			if (left is Boolean leftBool && rightText != null)
-				return new Text(method, leftBool.Data + (string)rightText.Data);
+				return new Text(method, GetBool(leftBool) + GetText(rightText));
 		}
 		else if (method.Name == BinaryOperator.Minus && leftNumber != null && rightNumber != null)
-			return new Number(method, (double)leftNumber.Data - (double)rightNumber.Data);
+			return new Number(method, GetNumber(leftNumber) - GetNumber(rightNumber));
 		else if (method.Name == BinaryOperator.Multiply && leftNumber != null && rightNumber != null)
-			return new Number(method, (double)leftNumber.Data * (double)rightNumber.Data);
+			return new Number(method, GetNumber(leftNumber) * GetNumber(rightNumber));
 		else if (method.Name == BinaryOperator.Divide && leftNumber != null && rightNumber != null)
-			return new Number(method, (double)leftNumber.Data / (double)rightNumber.Data);
+			return new Number(method, GetNumber(leftNumber) / GetNumber(rightNumber));
 		if (left is Boolean leftBoolean && right is Boolean rightBoolean)
 		{
 			if (method.Name == BinaryOperator.And)
-				return new Boolean(method, (bool)leftBoolean.Data && (bool)rightBoolean.Data);
+				return new Boolean(method, GetBool(leftBoolean) && GetBool(rightBoolean));
 			if (method.Name == BinaryOperator.Or)
-				return new Boolean(method, (bool)leftBoolean.Data || (bool)rightBoolean.Data);
+				return new Boolean(method, GetBool(leftBoolean) || GetBool(rightBoolean));
 		}
 		return null; //ncrunch: no coverage end
 	}

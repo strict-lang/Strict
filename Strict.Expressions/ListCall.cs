@@ -51,7 +51,7 @@ public sealed class ListCall(Expression list, Expression index) : ConcreteExpres
 			} memberCall)
 			index = memberCall.Member.InitialValue;
 		if (index is Number indexNumber)
-			return (int)(double)indexNumber.Data;
+			return (int)indexNumber.Data.number;
 		return null;
 	}
 
@@ -77,7 +77,7 @@ public sealed class ListCall(Expression list, Expression index) : ConcreteExpres
 	private static int? ExtractLengthValue(Expression lengthConstraint) =>
 		lengthConstraint is Binary { Arguments.Count: > 0 } binary &&
 		binary.Arguments[0] is Number lengthNumber
-			? (int)(double)lengthNumber.Data
+			? (int)lengthNumber.Data.number
 			: null;
 
 	public sealed class NegativeIndexIsNeverAllowed(Body body, Expression list) :

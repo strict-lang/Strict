@@ -1,0 +1,11 @@
+has number
+GetNthFibonacci Number
+	Fibonacci(5).GetNthFibonacci is 5
+	Fibonacci(10).GetNthFibonacci is 55
+	mutable first = 1
+	mutable second = 1
+	for Range(2, number)
+		let next = first + second
+		first = second
+		second = next
+	second

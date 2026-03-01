@@ -11,20 +11,20 @@ public sealed class ListTests
 	public void CreateExecutor()
 	{
 		executor = new Executor(TestBehavior.Disabled);
-		one = new ValueInstance(TestPackage.Instance.GetType(Base.Number), 1);
-		two = new ValueInstance(TestPackage.Instance.GetType(Base.Number), 2);
+		one = ValueInstance.Create(executor.numberType, 1d);
+		two = ValueInstance.Create(executor.numberType, 2d);
 	}
 
 	private Executor executor = null!;
-	private ValueInstance one = null!;
-	private ValueInstance two = null!;
+	private ValueInstance one;
+	private ValueInstance two;
 
 	private static Type CreateType(string name, params string[] lines) =>
 		new Type(TestPackage.Instance, new TypeLines(name, lines)).ParseMembersAndMethods(
 			new MethodExpressionParser());
 
 	private ValueInstance CreateNumbers(Type t) =>
-		new(t, new Dictionary<string, object?> { { "numbers", new[] { one, two } } });
+		ValueInstance.Create(t, new Dictionary<string, object?> { { "numbers", new[] { one, two } } });
 
 	[Test]
 	public void CallListOperator()
@@ -63,7 +63,7 @@ public sealed class ListTests
 			"\tnumbers * 2");
 		Assert.That(
 			executor.Execute(t.Methods.Single(m => m.Name == "Multiply"), CreateNumbers(t), []).Value,
-			Is.EqualTo(new[] { two, new ValueInstance(t.GetType(Base.Number), 4) }));
+			Is.EqualTo(new[] { two, ValueInstance.Create(t.GetType(Base.Number), 4d) }));
 	}
 
 	[Test]
@@ -75,8 +75,8 @@ public sealed class ListTests
 			executor.Execute(t.Methods.Single(m => m.Name == "Divide"), CreateNumbers(t), []).Value,
 			Is.EqualTo(new[]
 			{
-				new ValueInstance(t.GetType(Base.Number), 0.1),
-				new ValueInstance(t.GetType(Base.Number), 0.2)
+				ValueInstance.Create(t.GetType(Base.Number), 0.1),
+				ValueInstance.Create(t.GetType(Base.Number), 0.2)
 			}));
 	}
 
@@ -89,8 +89,8 @@ public sealed class ListTests
 			executor.Execute(t.Methods.Single(m => m.Name == "Divide"), CreateNumbers(t), []).Value,
 			Is.EqualTo(new[]
 			{
-				new ValueInstance(t.GetType(Base.Number), 1.0),
-				new ValueInstance(t.GetType(Base.Number), 1.0)
+				ValueInstance.Create(t.GetType(Base.Number), 1.0),
+				ValueInstance.Create(t.GetType(Base.Number), 1.0)
 			}));
 	}
 
@@ -135,7 +135,8 @@ public sealed class ListTests
 		Assert.That(executor.Execute(type.Methods[0], null, []).Value,
 			Is.EqualTo(new List<ValueInstance>
 			{
-				new(type.GetType(Base.Number), 2.0), new(type.GetType(Base.Number), 1.0)
+				ValueInstance.Create(type.GetType(Base.Number), 2.0),
+				ValueInstance.Create(type.GetType(Base.Number), 1.0)
 			}));
 	}
 

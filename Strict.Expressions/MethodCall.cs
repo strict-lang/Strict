@@ -111,9 +111,9 @@ public class MethodCall : ConcreteExpression
 	private static Type NormalizeListAndDictionaryImplementation(Type fromType,
 		IReadOnlyList<Expression> arguments)
 	{
-		if (fromType.Name == Base.List && fromType.IsGeneric && arguments.Count > 0)
+		if (fromType.IsList && fromType.IsGeneric && arguments.Count > 0)
 			return fromType.GetGenericImplementation(arguments[0].ReturnType);
-		if (fromType.Name != Base.Dictionary || !fromType.IsGeneric)
+		if (!fromType.IsDictionary || !fromType.IsGeneric)
 			return fromType;
 		if (arguments.Count > 1)
 			return arguments[0] is List { Values.Count: 2 } firstPair
@@ -128,7 +128,7 @@ public class MethodCall : ConcreteExpression
 
 	private static void ValidateMutableImplementation(Type fromType, IReadOnlyList<Expression> args)
 	{
-		if (fromType.Name == Base.Mutable && fromType.IsGeneric && args.Count == 1 &&
+		if (fromType.IsMutable && fromType.IsGeneric && args.Count == 1 &&
 			args[0].ReturnType is not GenericTypeImplementation { Generic.Name: Base.List })
 			throw new Type.GenericTypesCannotBeUsedDirectlyUseImplementation(fromType,
 				Base.Mutable + " must be used with a List implementation");
@@ -161,8 +161,8 @@ public class MethodCall : ConcreteExpression
 		if (arguments.Count == 0)
 			return
 			[
-				new Value(body.Method.GetType(Base.Name), basedOnErrorVariable?.ToString() ??
-					(fromType.Name == Base.Error
+				new Value(body.Method.GetType(Base.Name),
+					basedOnErrorVariable?.ToString() ?? (fromType.IsError
 						? body.CurrentDeclarationNameForErrorText ?? body.Method.Name
 						: fromType.Name)),
 				CreateListFromMethodCall(body, Base.Stacktrace, CreateStacktraces(body))
@@ -195,10 +195,10 @@ public class MethodCall : ConcreteExpression
 		IReadOnlyList<Expression> arguments) =>
 		fromType.Name == Base.Type && arguments.Count == 1
 			? [
-				arguments[0].ReturnType.Name == Base.Text
+				arguments[0].ReturnType.IsText
 					? new Value(body.Method.GetType(Base.Name), ((Value)arguments[0]).Data)
 					: arguments[0],
-				new Text(body.Method, body.Method.Type.Package.FullName)
+				new Text(body.Method, ((Context)body.Method.Type.Package).FolderName)
 			]
 			: arguments;
 
@@ -235,7 +235,7 @@ public class MethodCall : ConcreteExpression
 				: $"{Instance}") + $".{Method.Name}{Arguments.ToBrackets()}"
 			: ReturnType is GenericTypeImplementation { Generic.Name: Base.ErrorWithValue }
 				? Arguments[0] + "(" + Arguments[1] + ")"
-				: ReturnType.Name == Base.Error
+				: ReturnType.IsError
 					? Base.Error
 					: Method.Name == Method.From &&
 					ReturnType is GenericTypeImplementation { Generic.Name: Base.Dictionary }

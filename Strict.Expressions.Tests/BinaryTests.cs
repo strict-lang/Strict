@@ -39,7 +39,7 @@ public sealed class BinaryTests : TestExpressions
 	public void NoMatchingMethodFound() =>
 		Assert.That(() => ParseExpression("true - \"text\""),
 			Throws.Exception.InnerException.InstanceOf<Type.NoMatchingMethodFound>().With.InnerException.
-				Message.Contains("not found for TestPackage.Boolean, available methods"));
+				Message.Contains("not found for TestPackage/Boolean, available methods"));
 
 	[Test]
 	public void ConversionTypeNotFound() =>

@@ -1,0 +1,11 @@
+has text
+Remove Text
+	RemoveParentheses("example(unwanted thing)example").Remove is "exampleexample"
+	mutable parentheses = 0
+	for text
+		if value is "("
+			parentheses.Increase
+		else if value is ")"
+			parentheses.Decrease
+		else if parentheses is 0
+			value

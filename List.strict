@@ -1,0 +1,134 @@
+has iterator
+has elements Generics
+to Text
+	Numbers to Text is ""
+	(1, 2) to Text is "(1, 2)"
+	GetElementsText.SurroundWithParentheses
+GetElementsText Text
+	(1, 3).GetElementsText is "1, 3"
+	for elements
+		(index is 0 then "" else ", ") + value
+for Iterator
+	elements
+Length Number
+	(1, 2).Length is 2
+	for elements
+		1
+is(other) Boolean
+	(1, 2) is (1, 2)
+	(1, 2, 3) is not (1, 2)
+	elements is other.elements
++(other) List
+	(1, 2, 3) + (4, 5) is (1, 2, 3, 4, 5)
+	("Hello", "World") + (1, 2) is ("Hello", "World", "1", "2")
+	("1", "2") + (3, 4) is ("1", "2", "3", "4")
+	("1", "2") to Numbers + (3, 4) is ("1", "2", "3", "4")
+	("3", "4") + (1, 2) to Text is ("3", "4", "(1, 2)")
+	("3", "4") + (1, 2) to Texts is ("3", "4", "1", "2")
+	(1 + 2) * 3 is not 1 + 2 * 3
+	(("1", "2") + (3, 4)) to Numbers is (1, 2, 3, 4)
+	3 + (4) is (3, 4)
+	(1) + ("Hi") is Error("Cannot downcast Texts to fit to Numbers")
+	elements + other.elements
+-(other) List
+	(1, 2, 3) - (3) is (1, 2)
+	elements - other.elements
+/(other) List
+	(2, 4, 6) / (2) is (1, 2, 3)
+	(1, 2) / (2, 4) is (0.5, 0.5)
+	(1) / (20, 10) is (0.05, 0.1)
+	elements / other.elements
+*(other) List
+	(1, 2) * (3, 5) is (3, 10)
+	constant listsHaveDifferentDimensions = Error
+	(1) * (1, 2) is listsHaveDifferentDimensions
+	if Length is not other.Length
+		listsHaveDifferentDimensions
+	elements * other.elements
++(generic) List
+	(1, 2, 3) + 4 is (1, 2, 3, 4)
+	("Hello", "World") + 5 is ("Hello", "World", "5")
+	elements + generic
+-(generic) List
+	(1, 2, 3) - 3 is (1, 2)
+	(1, 2, 3) - 4 is (1, 2, 3)
+	elements - generic
+*(generic) List
+	(1, 2) * 3 is (3, 6)
+	elements * generic
+/(generic) List
+	(2, 4, 6) / 2 is (1, 2, 3)
+	(20, 10) / 1 is (0.05, 0.1)
+	elements / generic
+Sum Generic
+	(1, 2, 3).Sum is 6
+	for elements
+		value
+X Generic
+	(1, 2, 3).X is 1
+	().X is Error
+	elements(0)
+Y Generic
+	(1, 2).Y is 2
+	(1).Y is Error
+	elements(1)
+Z Generic
+	(1, 2, 3).Z is 3
+	(1, 2).Z is Error
+	elements(2)
+W Generic
+	(1, 2, 3, 4).W is 4
+	(1, 2, 3).W is Error
+	elements(3)
+First Generic
+	(1, 2, 3).First is 1
+	elements(0)
+Last Generic
+	(1, 2, 3).Last is 3
+	elements(-1)
+Key Generic
+	("A", "Apple").Key is "A"
+	elements(0)
+Value Generic
+	("A", "Apple").Key is "Apple"
+	elements(1)
+in(other Generic) Boolean
+	3 is in (1, 2, 3)
+	3 is not in (1, 2)
+	5 is not in (1, 8)
+	5 is in (11, 7, 5, 3, 2)
+	"b" is in ("a", "b", "c")
+	"d" is not in ("a", "b", "c")
+	for elements
+		value is other
+Index(other Generic) Number
+	(1, 2, 3).Index(2) is 1
+	(1, 2, 3).Index(9) is -1
+	for elements
+		if value is other
+			return index
+	-1
+Add(element Generic) Mutable(List)
+	mutable someList = List(Mutable(Number))
+	someList.Add(1)
+	someList.Add(2)
+	someList is (1, 2)
+	someList(0) = 5
+	someList is (5, 2)
+	someList.Add(3) is (5, 2, 3)
+	value = value + element
+Remove(element Generic) Mutable(List)
+	(1, 2, 3).Remove(2) is (1, 3)
+	value = value - element
+Count(searchFor Generic) Number
+	(1, 2).Count(1) is 1
+	(1, 3).Count(2) is 0
+	("Hi", "Hello", "Hi").Count("Hi") is 2
+	for elements
+		if value is searchFor
+			1
+Reverse List
+	(1, 2, 3).Reverse is (3, 2, 1)
+	(5, 10, 5).Reverse is (5, 10, 5)
+	for Range(0, value.Length).Reverse
+		outer.value(index)

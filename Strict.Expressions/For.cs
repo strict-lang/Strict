@@ -89,7 +89,7 @@ public sealed class For(Expression[] customVariables, Expression iterator, Expre
 			CheckForIncorrectMatchingTypes(innerBody, variableNames, iterator);
 		else
 			AddImplicitVariables(body, line, innerBody);
-		if (!GetIteratorType(iterator).IsIterator && iterator.ReturnType.Name != Base.Number)
+		if (!GetIteratorType(iterator).IsIterator && !iterator.ReturnType.IsNumber)
 			throw new ExpressionTypeIsNotAnIterator(body, iterator.ReturnType.Name,
 				line[4..].ToString());
 		var forExpression = new For(variables, iterator, innerBody.Parse(), body.CurrentFileLineNumber);
@@ -127,13 +127,12 @@ public sealed class For(Expression[] customVariables, Expression iterator, Expre
 		if (innerBody.FindVariable(Type.IndexLowercase) != null &&
 			innerBody.FindVariable(Type.ValueLowercase) != null)
 			return;
-		innerBody.AddVariable(Type.IndexLowercase, new Number(body.Method, 0), false);
+		innerBody.AddVariable(Type.IndexLowercase, new Number(body.Method, 0), true);
 		var valueExpression = body.Method.ParseExpression(body,
 			GetVariableExpressionValue(body, line), true);
-		if (valueExpression.ReturnType is GenericTypeImplementation { Generic.Name: Base.List } ||
-			valueExpression.ReturnType.Name == Base.List)
+		if (valueExpression.ReturnType.IsList)
 			valueExpression = new ListCall(valueExpression, new Number(body.Method, 0));
-		innerBody.AddVariable(Type.ValueLowercase, valueExpression, false);
+		innerBody.AddVariable(Type.ValueLowercase, valueExpression, true);
 	}
 
 	private static string GetVariableExpressionValue(Body body, ReadOnlySpan<char> line,
@@ -251,7 +250,7 @@ public sealed class For(Expression[] customVariables, Expression iterator, Expre
 			for (var depth = 0; depth < implementationDepth; depth++)
 				if (iteratorType is GenericTypeImplementation { IsIterator: true } genericType)
 					iteratorType = genericType.ImplementationTypes[0];
-			if ((iteratorType.Name != Base.Range || mutableValue.Type.Name != Base.Number) &&
+			if ((iteratorType.Name != Base.Range || !mutableValue.Type.IsNumber) &&
 				iteratorType.Name != mutableValue.Type.Name &&
 				!iteratorType.IsSameOrCanBeUsedAs(mutableValue.Type, false))
 				throw new IteratorTypeDoesNotMatchWithIterable(innerBody, iteratorType.Name, variable,

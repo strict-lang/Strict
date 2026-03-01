@@ -20,7 +20,7 @@ internal class TypeMethodFinder(Type type)
 	public Method? FindMethod(string methodName, IReadOnlyList<Expression> arguments)
 	{
 		if (Type.IsGeneric)
-			throw new GenericTypesCannotBeUsedDirectlyUseImplementation(Type, Type.Name == Base.Mutable
+			throw new GenericTypesCannotBeUsedDirectlyUseImplementation(Type, Type.IsMutable
 				? Base.Mutable + " must be used via keyword, not manually constructed!"
 				: "Type is Generic and cannot be used directly");
 		return Type is OneOfType
@@ -56,7 +56,7 @@ internal class TypeMethodFinder(Type type)
 		if (arguments.Count == 1 && matchingMethods.Count > 0 &&
 			matchingMethods[0].Parameters.Count > 0 &&
 			matchingMethods[0].Parameters[0].Type.Name is Base.Number or Base.Character &&
-			arguments[0].ReturnType.Name == Base.Text && arguments[0].IsConstant &&
+			arguments[0].ReturnType.IsText && arguments[0].IsConstant &&
 			arguments[0].GetType().Name == "Text" && GetTextValue(arguments[0]).Length == 1)
 			return matchingMethods[0];
 		// If this is a from constructor, we can call the methodParameterType constructor to pass
@@ -116,8 +116,8 @@ internal class TypeMethodFinder(Type type)
 		// Allow `is`/`is not` comparisons against our own type (Range is Range), those are mostly not
 		// implemented. Also, always allow comparison against Errors for error checking.
 		if (method.Name is BinaryOperator.Is or UnaryOperator.Not && method.Parameters.Count > 0 &&
-			method.Parameters[0].Type.Name == Base.Any && (commonTypeOfArguments == currentType ||
-				commonTypeOfArguments?.Name == Base.Error))
+			method.Parameters[0].Type.IsAny && (commonTypeOfArguments == currentType ||
+				(commonTypeOfArguments?.IsError ?? false)))
 			return true;
 		if (method is { Name: Method.From, Parameters.Count: 0 } && typesOfArguments.Count == 1 &&
 			method.ReturnType.IsSameOrCanBeUsedAs(typesOfArguments[0], false))
@@ -134,12 +134,12 @@ internal class TypeMethodFinder(Type type)
 	private static bool IsMethodParameterMatchingArgument(Method method, int index, Type argumentType)
 	{
 		var methodParameterType = method.Parameters[index].Type;
-		if (methodParameterType is GenericTypeImplementation { Generic.Name: Base.Mutable } mutableType)
-			methodParameterType = mutableType.ImplementationTypes[0];
+		if (methodParameterType.IsMutable)
+			methodParameterType = methodParameterType.GetFirstImplementation();
 		if (argumentType == methodParameterType || method.IsGeneric ||
 			IsArgumentImplementationTypeMatchParameterType(argumentType, methodParameterType))
 			return true;
-		if (methodParameterType.Name != Base.Text && methodParameterType.IsEnum &&
+		if (!methodParameterType.IsText && methodParameterType.IsEnum &&
 			methodParameterType.Members[0].Type.IsSameOrCanBeUsedAs(argumentType))
 			return true;
 		if (methodParameterType.Name == Base.Iterator && method.Type.IsSameOrCanBeUsedAs(argumentType))

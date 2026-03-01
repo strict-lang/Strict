@@ -170,9 +170,9 @@ public sealed class ListTests : TestExpressions
 	{
 		var numbers = type.GetListImplementationType(type.GetType(Base.Number));
 		Assert.That(numbers.Members[1].ToString(),
-			Is.EqualTo("elements TestPackage.List(Number)"));
+			Is.EqualTo("elements TestPackage/List(Number)"));
 		Assert.That(numbers.Methods[1].Parent.ToString(),
-			Is.EqualTo("TestPackage.List(Number)"));
+			Is.EqualTo("TestPackage/List(Number)"));
 	}
 
 	[Test]
@@ -180,7 +180,7 @@ public sealed class ListTests : TestExpressions
 	{
 		var texts = type.GetListImplementationType(type.GetType(Base.Text));
 		var containsMethod = texts.Methods.FirstOrDefault(m =>
-			m.Name == BinaryOperator.In && m.Parameters[0].Type.Name == Base.Text);
+			m.Name == BinaryOperator.In && m.Parameters[0].Type.IsText);
 		Assert.That(containsMethod!.Type, Is.EqualTo(texts));
 		Assert.That(containsMethod.Parameters[0].Type.Name, Is.EqualTo(Base.Text));
 		var body = (Body)containsMethod.GetBodyAndParseIfNeeded();

@@ -1,4 +1,3 @@
-﻿using System.IO.Compression;
 using System.Runtime.CompilerServices;
 using LazyCache;
 
@@ -7,13 +6,13 @@ using LazyCache;
 namespace Strict.Language;
 
 /// <summary>
-/// Loads packages from url (like GitHub) and caches it to disc for the current and subsequent
-/// runs. Next time Repositories is created, we will check for outdated cache and delete the zip
-/// files to allow redownloading fresh files. All locally cached packages and all types in them
-/// are always available for any .strict file in the Editor. If a type is not found,
-/// packages.strict.dev is asked if we can get a url (used here to load).
+/// Loads packages from url (like GitHub) and caches it to disc for the current and later runs.
+/// Next time Repositories is created, we will check for outdated cache and delete the zip files
+/// to allow redownloading fresh files. All locally cached packages and all types in them are
+/// always available for any .strict file in the Editor. If a type is not found,
+/// packages.strict-lang.org is asked if we can get a url (used here to load).
 /// </summary>
-/// <remarks>Everything in here is async, you can easily load many packages in parallel</remarks>
+/// <remarks>Everything in here is async, you can load many packages in parallel</remarks>
 public sealed class Repositories
 {
 	/// <summary>
@@ -26,7 +25,7 @@ public sealed class Repositories
 		cacheService = new CachingService();
 		this.parser = parser;
 		if (Directory.Exists(CacheFolder))
-			//ncrunch: no coverage start, rarely happens
+			//ncrunch: no coverage start
 			foreach (var file in Directory.GetFiles(CacheFolder, "*.zip"))
 				if (File.GetLastWriteTimeUtc(file) < DateTime.UtcNow.AddHours(-1))
 					File.Delete(file);
@@ -34,6 +33,21 @@ public sealed class Repositories
 
 	private readonly IAppCache cacheService;
 	private readonly ExpressionParser parser;
+	public Task<Package> LoadStrictPackage(string packageSubfolder = ""
+#if DEBUG
+		, [CallerFilePath] string callerFilePath = "", [CallerLineNumber] int callerLineNumber = 0,
+		[CallerMemberName] string callerMemberName = ""
+#endif
+	) =>
+#if DEBUG
+		LoadFromUrl(new Uri(GitHubStrictUri.AbsoluteUri + (packageSubfolder == ""
+			? ""
+			: "/" + packageSubfolder)), callerFilePath, callerLineNumber, callerMemberName);
+#else
+		LoadFromUrl(new Uri(GitHubStrictUri.AbsoluteUri + (packageSubfolder == ""
+			? ""
+			: "/" + packageSubfolder));
+#endif
 
 	public async Task<Package> LoadFromUrl(Uri packageUrl
 #if DEBUG
@@ -42,105 +56,47 @@ public sealed class Repositories
 #endif
 	)
 	{
-		var isStrictPackage = packageUrl.AbsoluteUri.StartsWith(StrictPrefixUri.AbsoluteUri, StringComparison.Ordinal);
-		if (!isStrictPackage && (packageUrl.Host != "github.com" || string.IsNullOrEmpty(packageUrl.AbsolutePath)))
-			throw new OnlyGithubDotComUrlsAreAllowedForNow();
-		var packageName = packageUrl.AbsolutePath.Split('/').Last();
-		if (isStrictPackage)
-		{
-			var developmentFolder =
-				StrictDevelopmentFolderPrefix.Replace(nameof(Strict) + ".", packageName);
-			if (Directory.Exists(developmentFolder))
-				return await LoadFromPath(developmentFolder
+		var parts = packageUrl.AbsoluteUri.Split('/');
+		if (parts.Length < 5 || parts[0] != "https:" || parts[1] != "" || parts[2] != "github.com")
+			throw new OnlyGithubDotComUrlsAreAllowedForNow(packageUrl.AbsoluteUri);
+		var organization = parts[3];
+		var packageFullName = parts[4..].ToWordList("/");
+		var strictWithSubfolderLength = "Strict".Length + 1;
+		if (Directory.Exists(StrictDevelopmentFolder) &&
+			packageFullName.StartsWith("Strict", StringComparison.OrdinalIgnoreCase))
+			return await LoadFromPath(StrictDevelopmentFolder +
+				(packageFullName.Length > strictWithSubfolderLength
+					? packageFullName[strictWithSubfolderLength..]
+					: "")
 #if DEBUG
-					// ReSharper disable ExplicitCallerInfoArgument
-					, callerFilePath, callerLineNumber, callerMemberName
+				, callerFilePath, callerLineNumber, callerMemberName
 #endif
-				);
-		} //ncrunch: no coverage
-		return await FindOrAddPath(packageUrl, packageName); //ncrunch: no coverage
+			);
+		//TODO: this doesn't make sense
+		if (!Directory.Exists(CacheFolder))
+			Directory.CreateDirectory(CacheFolder);
+		var localCachePath = Path.Combine(CacheFolder, packageFullName);
+		if (PreviouslyCheckedDirectories.Add(localCachePath) && !Directory.Exists(localCachePath))
+			await DownloadRepositoryStrictFiles(localCachePath, organization, packageFullName);
+		return await LoadFromPath(localCachePath
+#if DEBUG
+			, callerFilePath, callerLineNumber, callerMemberName
+#endif
+		);
 	}
 
-	private async Task<Package> FindOrAddPath(Uri packageUrl, string packageName)
-	{ //ncrunch: no coverage start
-		var localPath = Path.Combine(CacheFolder, packageName);
-		if (!PreviouslyCheckedDirectories.Add(localPath))
-			return await LoadFromPath(localPath);
-		if (!Directory.Exists(localPath))
-			localPath = await DownloadAndExtractRepository(packageUrl, packageName);
-		return await LoadFromPath(localPath);
-	} //ncrunch: no coverage end
+	public sealed class OnlyGithubDotComUrlsAreAllowedForNow(string uri) : Exception(uri +
+		" is invalid. Valid url: https://github.com/strict-lang/Strict, it must always start with " +
+		"https://github.com and only include the organization and repo name, nothing else!");
 
-	public Task<Package> LoadStrictPackage(string packagePostfixName = nameof(Base)
-#if DEBUG
-		, [CallerFilePath] string callerFilePath = "", [CallerLineNumber] int callerLineNumber = 0,
-		[CallerMemberName] string callerMemberName = ""
-#endif
-	) =>
-		LoadFromUrl(new Uri(StrictPrefixUri.AbsoluteUri + packagePostfixName), callerFilePath,
-			callerLineNumber, callerMemberName);
-
-	public sealed class OnlyGithubDotComUrlsAreAllowedForNow : Exception;
 	//ncrunch: no coverage start, only called once per session and only if not on development machine
 	private static readonly HashSet<string> PreviouslyCheckedDirectories = new();
 
-	internal static async Task<string> DownloadAndExtractRepository(Uri packageUrl,
-		string packageName)
+	internal static async Task DownloadRepositoryStrictFiles(string localCachePath, string org,
+		string repoNameAndOptionalSubFolders)
 	{
-		if (!Directory.Exists(CacheFolder))
-			Directory.CreateDirectory(CacheFolder);
-		var targetPath = Path.Combine(CacheFolder, packageName);
-		if (Directory.Exists(targetPath) &&
-			File.Exists(Path.Combine(CacheFolder, packageName + ".zip")))
-			return targetPath;
-		await DownloadAndExtract(packageUrl, packageName, targetPath);
-		return targetPath;
-	}
-
-	private static async Task DownloadAndExtract(Uri packageUrl, string packageName,
-		string targetPath)
-	{
-		var localZip = Path.Combine(CacheFolder, packageName + ".zip");
-		using HttpClient client = new();
-		await DownloadFile(client, new Uri(packageUrl + "/archive/master.zip"), localZip);
-		await Task.Run(() =>
-			UnzipInCacheFolderAndMoveToTargetPath(packageName, targetPath, localZip));
-	}
-
-	private static async Task DownloadFile(HttpClient client, Uri uri, string fileName)
-	{
-		await using var stream = await client.GetStreamAsync(uri);
-		await using var file = new FileStream(fileName, FileMode.CreateNew);
-		await stream.CopyToAsync(file);
-	}
-
-	private static void UnzipInCacheFolderAndMoveToTargetPath(string packageName, string targetPath,
-		string localZip)
-	{
-		ZipFile.ExtractToDirectory(localZip, CacheFolder, true);
-		var masterDirectory = Path.Combine(CacheFolder, packageName + "-master");
-		if (!Directory.Exists(masterDirectory))
-			throw new NoMasterFolderFoundFromPackage(packageName, localZip);
-		if (Directory.Exists(targetPath))
-			new DirectoryInfo(targetPath).Delete(true);
-		TryMoveOrCopyWhenDeletionDidNotFullyWork(targetPath, masterDirectory);
-	}
-
-	public sealed class NoMasterFolderFoundFromPackage(string packageName, string localZip)
-		: Exception(packageName + ", localZip: " + localZip);
-
-	private static void TryMoveOrCopyWhenDeletionDidNotFullyWork(string targetPath,
-		string masterDirectory)
-	{
-		try
-		{
-			Directory.Move(masterDirectory, targetPath);
-		}
-		catch
-		{
-			foreach (var file in Directory.GetFiles(masterDirectory))
-				File.Copy(file, Path.Combine(targetPath, Path.GetFileName(file)), true);
-		}
+		using var downloader = new GitHubStrictDownloader(org, repoNameAndOptionalSubFolders);
+		await downloader.DownloadFiles(localCachePath);
 	} //ncrunch: no coverage end
 
 	public Task<Package> LoadFromPath(string packagePath
@@ -149,46 +105,39 @@ public sealed class Repositories
 		[CallerMemberName] string callerMemberName = ""
 #endif
 	) =>
-		cacheService.GetOrAddAsync(packagePath,
-			_ => CreatePackageFromFiles(packagePath,
-				// ReSharper disable ExplicitCallerInfoArgument
-				Directory.GetFiles(packagePath, "*" + Type.Extension), null, callerFilePath,
-				callerLineNumber, callerMemberName));
+		cacheService.GetOrAddAsync(packagePath, _ => CreatePackageFromFiles(packagePath,
+			// ReSharper disable ExplicitCallerInfoArgument
+			Directory.GetFiles(packagePath, "*" + Type.Extension)
+#if DEBUG
+			, null, callerFilePath, callerLineNumber, callerMemberName));
+#else
+		));
+#endif
 
 	/// <summary>
 	/// Initially we need to create just empty types, and then after they all have been created,
 	/// we will fill and load them, otherwise we could not use types within the package context.
 	/// </summary>
 	private async Task<Package> CreatePackageFromFiles(string packagePath,
-		IReadOnlyCollection<string> files,
+		IReadOnlyCollection<string> files, Package? parent = null
 #if DEBUG
-		Package? parent = null, [CallerFilePath] string callerFilePath = "",
-		[CallerLineNumber] int callerLineNumber = 0, [CallerMemberName] string callerMemberName = "")
-#else
-		Package? parent = null)
+		, [CallerFilePath] string callerFilePath = "",
+		[CallerLineNumber] int callerLineNumber = 0, [CallerMemberName] string callerMemberName = ""
 #endif
+	)
 	{
 		// The main folder can be empty, other folders must contain at least one file to create a package
 		if (parent != null && files.Count == 0)
 			return parent; //ncrunch: no coverage
 #if DEBUG
-		var folderName = Path.GetFileName(packagePath);
 		var package = parent != null
-			// ReSharper disable ExplicitCallerInfoArgument
-			? new Package(parent, packagePath, callerFilePath, callerLineNumber, callerMemberName)
-			: new Package(folderName.Contains('.')
-				? folderName.Split('.')[1]
-				: packagePath, callerFilePath, callerLineNumber, callerMemberName);
+			? new Package(parent, packagePath, this, callerFilePath, callerLineNumber, callerMemberName)
+			: new Package(packagePath, this, callerFilePath, callerLineNumber, callerMemberName);
 #else
-		var folderName = Path.GetFileName(packagePath);
 		var package = parent != null
-			? new Package(parent, packagePath)
-			: new Package(folderName.Contains('.')
-				? folderName.Split('.')[1]
-				: packagePath);
+			? new Package(parent, packagePath, this)
+			: new Package(packagePath, this);
 #endif
-		if (package.Name == nameof(Strict) && files.Count > 0)
-			throw new NoFilesAllowedInStrictFolderNeedsToBeInASubFolder(files); //ncrunch: no coverage
 		var types = GetTypes(files, package);
 		foreach (var type in types)
 			type.ParseMembersAndMethods(parser);
@@ -199,10 +148,6 @@ public sealed class Repositories
 		);
 		return package;
 	}
-
-	//ncrunch: no coverage start
-	public sealed class NoFilesAllowedInStrictFolderNeedsToBeInASubFolder(IEnumerable<string> files)
-		: Exception(files.ToWordList()); //ncrunch: no coverage end
 
 	private ICollection<Type> GetTypes(IReadOnlyCollection<string> files, Package package)
 	{
@@ -338,15 +283,20 @@ public sealed class Repositories
 
 	/// <summary>
 	/// In Strict only words are valid directory names = package names, no symbols (like .git, .hg,
-	/// .vs or _NCrunch) or numbers or dot separators (like Strict.Compiler) are allowed.
+	/// .vs, or _NCrunch) or numbers or dot separators (like Strict.Compiler) are allowed.
 	/// </summary>
 	private static bool IsValidCodeDirectory(string directory) =>
 		Path.GetFileName(directory).IsWord();
 
-	public const string StrictDevelopmentFolderPrefix = @"C:\code\GitHub\strict-lang\Strict.";
-	private static string CacheFolder =>
+	public const string StrictDevelopmentFolder = @"C:\code\GitHub\strict-lang\Strict";
+	internal static string CacheFolder =>
 		Path.Combine( //ncrunch: no coverage, only downloaded and cached on non-development machines
 			Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), StrictPackages);
 	private const string StrictPackages = nameof(StrictPackages);
-	public static readonly Uri StrictPrefixUri = new("https://github.com/strict-lang/Strict.");
+	public static readonly Uri GitHubStrictUri = new("https://github.com/strict-lang/Strict");
+
+	/// <summary>
+	/// Called by Package.Dispose
+	/// </summary>
+	internal void Remove(Package result) => cacheService.Remove(result.FullName);
 }

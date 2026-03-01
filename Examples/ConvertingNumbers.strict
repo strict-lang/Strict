@@ -1,0 +1,9 @@
+has numbers
+GetComplicatedSequenceTexts Texts
+	ConvertingNumbers(1, 21).GetComplicatedSequenceTexts is ("16")
+	for numbers
+		to Text
+		Length * Length
+		if value > 3
+			4 + value * 3
+			to Text

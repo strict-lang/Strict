@@ -10,17 +10,17 @@ public sealed class MethodCallEvaluator(Executor executor)
 {
 	public ValueInstance EvaluateListCall(ListCall call, ExecutionContext ctx)
 	{
+		executor.Statistics.ListCallCount++;
 		var listInstance = executor.RunExpression(call.List, ctx);
 		var indexValue = executor.RunExpression(call.Index, ctx);
-		var index = Convert.ToInt32(EqualsExtensions.NumberToDouble(indexValue.Value));
-		if (listInstance.Value is IList list)
-			return list[index] as ValueInstance ?? new ValueInstance(call.ReturnType, list[index]);
-		throw new InvalidOperationException("List call can only be used on iterators, got: " + //ncrunch: no coverage
-			listInstance);
+		return listInstance.IsList
+			? listInstance.GetIteratorValue(executor.characterType, (int)indexValue.Number)
+			: throw new InvalidOperationException("List call needs a list, got: " + listInstance);
 	}
 
 	public ValueInstance Evaluate(MethodCall call, ExecutionContext ctx)
 	{
+		executor.Statistics.MethodCallCount++;
 		var op = call.Method.Name;
 		if (IsArithmetic(op) || IsCompare(op) || IsLogical(op))
 			return EvaluateArithmeticOrCompareOrLogical(call, ctx);
@@ -46,6 +46,7 @@ public sealed class MethodCallEvaluator(Executor executor)
 	private ValueInstance EvaluateArithmeticOrCompareOrLogical(MethodCall call,
 		ExecutionContext ctx)
 	{
+		executor.Statistics.BinaryCount++;
 		if (call.Instance == null || call.Arguments.Count != 1)
 			throw new InvalidOperationException("Binary call must have instance and 1 argument"); //ncrunch: no coverage
 		var leftInstance = executor.RunExpression(call.Instance, ctx);
@@ -54,20 +55,19 @@ public sealed class MethodCallEvaluator(Executor executor)
 			? ExecuteArithmeticOperation(call, ctx, leftInstance, rightInstance)
 			: IsCompare(call.Method.Name)
 				? ExecuteComparisonOperation(call, ctx, leftInstance, rightInstance)
-				: ExecuteBinaryOperation(call, ctx, leftInstance, rightInstance);
+				: ExecuteLogicalBinaryOperation(call, ctx, leftInstance, rightInstance);
 	}
 
 	private ValueInstance ExecuteArithmeticOperation(MethodCall call, ExecutionContext ctx,
 		ValueInstance leftInstance, ValueInstance rightInstance)
 	{
+		executor.Statistics.ArithmeticCount++;
 		var op = call.Method.Name;
-		var left = leftInstance.Value;
-		var right = rightInstance.Value;
-		if (leftInstance.ReturnType.Name == Base.Number &&
-			rightInstance.ReturnType.Name == Base.Number)
+		if (leftInstance.ReturnType.IsNumber &&
+			rightInstance.ReturnType.IsNumber)
 		{
-			var l = EqualsExtensions.NumberToDouble(left);
-			var r = EqualsExtensions.NumberToDouble(right);
+			var l = leftInstance.Number();
+			var r = rightInstance.Number();
 			return op switch
 			{
 				BinaryOperator.Plus => Number(call.Method, l + r),
@@ -79,17 +79,19 @@ public sealed class MethodCallEvaluator(Executor executor)
 				_ => ExecuteMethodCall(call, leftInstance, ctx) //ncrunch: no coverage
 			};
 		}
-		if (leftInstance.ReturnType.Name == Base.Text && rightInstance.ReturnType.Name == Base.Text)
+		var left = leftInstance.Value;
+		var right = rightInstance.Value;
+		if (leftInstance.ReturnType.IsText && rightInstance.ReturnType.IsText)
 		{
 			return op == BinaryOperator.Plus
-				? new ValueInstance(leftInstance.ReturnType, (string)left! + (string)right!)
+				? executor.CreateValueInstance(leftInstance.ReturnType, (string)left! + (string)right!)
 				: throw new NotSupportedException("Only + operator is supported for Text, got: " + op);
 		}
-		if (leftInstance.ReturnType.Name == Base.Text && rightInstance.ReturnType.Name == Base.Number)
+		if (leftInstance.ReturnType.IsText && rightInstance.ReturnType.IsNumber)
 		{
 			return op == BinaryOperator.Plus
-				? new ValueInstance(leftInstance.ReturnType,
-					(string)left! + (int)EqualsExtensions.NumberToDouble(right))
+				? executor.CreateValueInstance(leftInstance.ReturnType,
+					(string)left! + (int)rightInstance.Number())
 				: throw new NotSupportedException("Only + operator is supported for Text+Number, got: " + op);
 		}
 		if (leftInstance.ReturnType.IsIterator && rightInstance.ReturnType.IsIterator)
@@ -112,7 +114,7 @@ public sealed class MethodCallEvaluator(Executor executor)
 					"Only +, -, *, / operators are supported for Lists, got: " + op)
 			};
 		}
-		if (leftInstance.ReturnType.IsIterator && rightInstance.ReturnType.Name == Base.Number)
+		if (leftInstance.ReturnType.IsIterator && rightInstance.ReturnType.IsNumber)
 		{
 			if (left is not IList<ValueInstance> leftList)
 				throw new InvalidOperationException("Expected left list for iterator operation " + //ncrunch: no coverage
@@ -121,9 +123,7 @@ public sealed class MethodCallEvaluator(Executor executor)
 				return AddToList(leftInstance.ReturnType, leftList, rightInstance);
 			if (op == BinaryOperator.Minus)
 				return RemoveFromList(leftInstance.ReturnType, leftList, rightInstance);
-			if (right is not double rightNumber)
-				throw new InvalidOperationException("Expected right number for iterator operation " + //ncrunch: no coverage
-					op + ": left=" + left + ", right=" + right);
+      var rightNumber = rightInstance.Number();
 			if (op == BinaryOperator.Multiply)
 				return MultiplyList(leftInstance.ReturnType, leftList, rightNumber);
 			if (op == BinaryOperator.Divide)
@@ -134,12 +134,13 @@ public sealed class MethodCallEvaluator(Executor executor)
 		return ExecuteMethodCall(call, leftInstance, ctx); //ncrunch: no coverage
 	}
 
-	private static ValueInstance Number(Context any, double n) => new(any.GetType(Base.Number), n);
+  private ValueInstance Number(Context any, double n) => executor.Number(any, n);
 	public const string ListsHaveDifferentDimensions = "listsHaveDifferentDimensions";
 
 	private ValueInstance ExecuteComparisonOperation(MethodCall call, ExecutionContext ctx,
 		ValueInstance leftInstance, ValueInstance rightInstance)
 	{
+		executor.Statistics.CompareCount++;
 		var op = call.Method.Name;
 		var left = leftInstance.Value!;
 		var right = rightInstance.Value!;
@@ -147,70 +148,66 @@ public sealed class MethodCallEvaluator(Executor executor)
 		{
 			if (rightInstance.ReturnType.IsError)
 			{
-				var matches = rightInstance.ReturnType.Name == Base.Error
+				var matches = rightInstance.ReturnType.IsError
 					? leftInstance.ReturnType.IsError
 					: leftInstance.ReturnType.IsSameOrCanBeUsedAs(rightInstance.ReturnType);
 				return op is BinaryOperator.Is
-					? Executor.Bool(call.Method, matches)
-					: Executor.Bool(call.Method, !matches);
+					? executor.Bool(call.Method, matches)
+					: executor.Bool(call.Method, !matches);
 			}
-			if (leftInstance.ReturnType.Name == Base.Character && right is string rightText)
+			if (leftInstance.ReturnType.IsCharacter && right is string rightText)
 			{
 				right = (int)rightText[0];
-				rightInstance = new ValueInstance(leftInstance.ReturnType, right);
+				rightInstance = executor.CreateValueInstance(leftInstance.ReturnType, right);
 			}
-			if (leftInstance.ReturnType.Name == Base.Text && right is int rightInt)
-			{
-				right = rightInt + "";
-				rightInstance = new ValueInstance(leftInstance.ReturnType, right);
-			}
+			if (leftInstance.ReturnType.IsText && right is int rightInt)
+				rightInstance = executor.CreateValueInstance(leftInstance.ReturnType, rightInt.ToString());
 			var equals = leftInstance.Equals(rightInstance);
-			return Executor.Bool(call.Method, op is BinaryOperator.Is
+			return executor.Bool(call.Method, op is BinaryOperator.Is
 				? equals
 				: !equals);
 		}
-		var l = EqualsExtensions.NumberToDouble(left);
-		var r = EqualsExtensions.NumberToDouble(right);
+		var l = leftInstance.Number();
+		var r = rightInstance.Number();
 		return op switch
 		{
-			BinaryOperator.Greater => Executor.Bool(call.Method, l > r),
-			BinaryOperator.Smaller => Executor.Bool(call.Method, l < r),
-			BinaryOperator.GreaterOrEqual => Executor.Bool(call.Method, l >= r),
-			BinaryOperator.SmallerOrEqual => Executor.Bool(call.Method, l <= r),
+			BinaryOperator.Greater => executor.Bool(call.Method, l > r),
+			BinaryOperator.Smaller => executor.Bool(call.Method, l < r),
+			BinaryOperator.GreaterOrEqual => executor.Bool(call.Method, l >= r),
+			BinaryOperator.SmallerOrEqual => executor.Bool(call.Method, l <= r),
 			_ => ExecuteMethodCall(call, leftInstance, ctx) //ncrunch: no coverage
 		};
 	}
 
-	private ValueInstance ExecuteBinaryOperation(MethodCall call, ExecutionContext ctx,
+	private ValueInstance ExecuteLogicalBinaryOperation(MethodCall call, ExecutionContext ctx,
 		ValueInstance leftInstance, ValueInstance rightInstance)
 	{
-		var left = leftInstance.Value;
-		var right = rightInstance.Value;
+		executor.Statistics.LogicalOperationCount++;
 		return call.Method.Name switch
 		{
-			BinaryOperator.And => Executor.Bool(call.Method, Executor.ToBool(left) && Executor.ToBool(right)),
-			BinaryOperator.Or => Executor.Bool(call.Method, Executor.ToBool(left) || Executor.ToBool(right)),
-			BinaryOperator.Xor => Executor.Bool(call.Method, Executor.ToBool(left) ^ Executor.ToBool(right)),
+			BinaryOperator.And => executor.Bool(call.Method, leftInstance.Boolean() && rightInstance.Boolean()),
+			BinaryOperator.Or => executor.Bool(call.Method, leftInstance.Boolean() || rightInstance.Boolean()),
+			BinaryOperator.Xor => executor.Bool(call.Method, leftInstance.Boolean() ^ rightInstance.Boolean()),
 			_ => ExecuteMethodCall(call, leftInstance, ctx) //ncrunch: no coverage
 		};
 	}
 
-	private static ValueInstance CombineLists(Type listType, ICollection<ValueInstance> leftList,
+	private ValueInstance CombineLists(Type listType, ICollection<ValueInstance> leftList,
 		ICollection<ValueInstance> rightList)
 	{
 		var combined = new List<ValueInstance>(leftList.Count + rightList.Count);
 		var isLeftText = listType is GenericTypeImplementation { Generic.Name: Base.List } list &&
-			list.ImplementationTypes[0].Name == Base.Text;
+			list.ImplementationTypes[0].IsText;
 		foreach (var item in leftList)
 			combined.Add(item);
 		foreach (var item in rightList)
-			combined.Add(isLeftText && item.ReturnType.Name != Base.Text
-				? new ValueInstance(listType.GetType(Base.Text), item.Value?.ToString())
+			combined.Add(isLeftText && !item.IsText
+				? executor.CreateValueInstance(listType.GetType(Base.Text), ConvertToText(item.Value))
 				: item);
-		return new ValueInstance(listType, combined);
+		return executor.CreateValueInstance(listType, combined);
 	}
 
-	private static ValueInstance SubtractLists(Type listType, IEnumerable<ValueInstance> leftList,
+	private ValueInstance SubtractLists(Type listType, IEnumerable<ValueInstance> leftList,
 		IEnumerable<ValueInstance> rightList)
 	{
 		var remainder = new List<ValueInstance>();
@@ -218,45 +215,44 @@ public sealed class MethodCallEvaluator(Executor executor)
 			remainder.Add(item);
 		foreach (var item in rightList)
 			remainder.Remove(item);
-		return new ValueInstance(listType, remainder);
+		return executor.CreateValueInstance(listType, remainder);
 	}
 
-	private static ValueInstance MultiplyLists(Type leftListType, IList<ValueInstance> leftList,
+	private ValueInstance MultiplyLists(Type leftListType, IList<ValueInstance> leftList,
 		IList<ValueInstance> rightList)
 	{
 		var result = new List<ValueInstance>();
 		for (var index = 0; index < leftList.Count; index++)
-			result.Add(new ValueInstance(leftListType.GetType(Base.Number),
-				EqualsExtensions.NumberToDouble(leftList[index].Value) *
-				EqualsExtensions.NumberToDouble(rightList[index].Value)));
-		return new ValueInstance(leftListType, result);
+			result.Add(executor.CreateValueInstance(leftListType.GetType(Base.Number),
+				leftList[index].Number() * rightList[index].Number()));
+		return executor.CreateValueInstance(leftListType, result);
 	}
 
-	private static ValueInstance DivideLists(Type leftListType, IList<ValueInstance> leftList,
+	private ValueInstance DivideLists(Type leftListType, IList<ValueInstance> leftList,
 		IList<ValueInstance> rightList)
 	{
 		var result = new List<ValueInstance>();
 		for (var index = 0; index < leftList.Count; index++)
-			result.Add(new ValueInstance(leftListType.GetType(Base.Number),
-				EqualsExtensions.NumberToDouble(leftList[index].Value) /
-				EqualsExtensions.NumberToDouble(rightList[index].Value)));
-		return new ValueInstance(leftListType, result);
+			result.Add(executor.CreateValueInstance(leftListType.GetType(Base.Number),
+				leftList[index].Number() / rightList[index].Number()));
+		return executor.CreateValueInstance(leftListType, result);
 	}
 
-	private static ValueInstance AddToList(Type leftListType, ICollection<ValueInstance> leftList,
+	private ValueInstance AddToList(Type leftListType, ICollection<ValueInstance> leftList,
 		ValueInstance right)
 	{
 		var combined = new List<ValueInstance>(leftList.Count + 1);
 		var isLeftText = leftListType is GenericTypeImplementation { Generic.Name: Base.List } list &&
-			list.ImplementationTypes[0].Name == Base.Text;
+			list.ImplementationTypes[0].IsText;
 		foreach (var item in leftList)
 			combined.Add(item);
-		combined.Add(isLeftText && right.ReturnType.Name != Base.Text
-			? new ValueInstance(leftListType.GetType(Base.Text), ConvertToText(right.Value))
+		combined.Add(isLeftText && !right.IsText
+			? executor.CreateValueInstance(leftListType.GetType(Base.Text), ConvertToText(right.Value))
 			: right);
-		return new ValueInstance(leftListType, combined);
+		return executor.CreateValueInstance(leftListType, combined);
 	}
 
+	//TODO: remove, use ValueInstance stuff!
 	private static string ConvertToText(object? value) =>
 		value switch
 		{
@@ -266,56 +262,61 @@ public sealed class MethodCallEvaluator(Executor executor)
 			_ => value?.ToString() ?? string.Empty //ncrunch: no coverage
 		};
 
-	private static ValueInstance RemoveFromList(Type leftListType,
+	private ValueInstance RemoveFromList(Type leftListType,
 		IEnumerable<ValueInstance> leftList, ValueInstance right)
 	{
 		var result = new List<ValueInstance>();
 		foreach (var item in leftList)
 			if (!item.Equals(right))
 				result.Add(item);
-		return new ValueInstance(leftListType, result);
+		return executor.CreateValueInstance(leftListType, result);
 	}
 
-	private static ValueInstance MultiplyList(Type leftListType,
+	private ValueInstance MultiplyList(Type leftListType,
 		ICollection<ValueInstance> leftList, double rightNumber)
 	{
 		var result = new List<ValueInstance>(leftList.Count);
 		foreach (var item in leftList)
-			result.Add(new ValueInstance(item.ReturnType,
-				EqualsExtensions.NumberToDouble(item.Value) * rightNumber));
-		return new ValueInstance(leftListType, result);
+			result.Add(executor.CreateValueInstance(item.ReturnType, item.Number() * rightNumber));
+		return executor.CreateValueInstance(leftListType, result);
 	}
 
-	private static ValueInstance DivideList(Type leftListType, ICollection<ValueInstance> leftList,
+	private ValueInstance DivideList(Type leftListType, ICollection<ValueInstance> leftList,
 		double rightNumber)
 	{
-		var result = new List<object?>(leftList.Count);
+		var result = new List<ValueInstance>(leftList.Count);
 		foreach (var item in leftList)
-			result.Add(new ValueInstance(item.ReturnType,
-				EqualsExtensions.NumberToDouble(item.Value) / rightNumber));
-		return new ValueInstance(leftListType, result);
+			result.Add(executor.CreateValueInstance(item.ReturnType, item.Number() / rightNumber));
+		return executor.CreateValueInstance(leftListType, result);
 	}
 
 	private ValueInstance ExecuteMethodCall(MethodCall call, ValueInstance? instance,
 		ExecutionContext ctx)
 	{
-		var args = new List<ValueInstance>(call.Arguments.Count);
-		foreach (var a in call.Arguments)
-			args.Add(executor.RunExpression(a, ctx));
+		IReadOnlyList<ValueInstance> args;
+		if (call.Arguments.Count == 0)
+			args = Array.Empty<ValueInstance>();
+		else
+		{
+			var argsList = new List<ValueInstance>(call.Arguments.Count);
+			foreach (var a in call.Arguments)
+				argsList.Add(executor.RunExpression(a, ctx));
+			args = argsList;
+		}
 		if (instance is { ReturnType.IsDictionary: true } && args.Count > 0 && call.Method.Name == "Add")
 		{
-			if (args.Count == 2)
-				((IDictionary)instance.Value!)[args[0]] = args[1];
-			return instance;
+			if (args.Count == 2 && instance.Value.Value is IDictionary dict)
+				dict[args[0]] = args[1];
+			return instance.Value;
 		}
 		var result = executor.Execute(call.Method, instance, args, ctx);
 		if (call.Method.ReturnType.IsMutable && call.Instance is VariableCall variableCall &&
-			instance != null)
-			ctx.Set(variableCall.Variable.Name, new ValueInstance(instance.ReturnType, result.Value));
+			instance.HasValue)
+			ctx.Set(variableCall.Variable.Name, executor.CreateValueInstance(instance.Value.ReturnType, result));
 		return result;
 	}
 
-	private static ValueInstance Error(string name, ExecutionContext ctx, Expression? source = null)
+	private ValueInstance Error(string name, ExecutionContext ctx, Expression? source = null)
 	{
 		var stacktraceList = new List<object?> { CreateStacktrace(ctx, source) };
 		var errorMembers = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
@@ -324,13 +325,10 @@ public sealed class MethodCallEvaluator(Executor executor)
 			errorMembers[member.Name] = member.Type.Name switch
 			{
 				Base.Name or Base.Text => name,
-				_ when member.Type.Name == Base.List || member.Type is GenericTypeImplementation
-				{
-					Generic.Name: Base.List
-				} => stacktraceList,
+				_ when member.Type.IsList => stacktraceList,
 				_ => throw new NotSupportedException("Error member not supported: " + member) //ncrunch: no coverage
 			};
-		return new ValueInstance(errorType, errorMembers);
+		return executor.CreateValueInstance(errorType, errorMembers);
 	}
 
 	private static Dictionary<string, object?> CreateStacktrace(ExecutionContext ctx,
@@ -371,7 +369,7 @@ public sealed class MethodCallEvaluator(Executor executor)
 			values[member.Name] = member.Type.Name switch
 			{
 				Base.Name => type.Name,
-				Base.Text => type.Package.FullName,
+				Base.Text => ((Context)type.Package).FolderName,
 				_ => throw new NotSupportedException("Type member not supported: " + member) //ncrunch: no coverage
 			};
 		return values;

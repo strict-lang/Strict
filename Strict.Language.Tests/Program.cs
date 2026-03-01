@@ -6,7 +6,6 @@ public static class Program
 	public static async Task Main()
 	{
 		var tests = new RepositoriesTests();
-		await tests.LoadingZippedStrictBaseHundredTimes();
 		tests.LoadingAllStrictFilesWithoutAsyncHundredTimes();
 		tests.SortImplementsOneThousandTimesInParallel();
 		await tests.LoadStrictBaseTypesHundredTimes();

@@ -87,14 +87,15 @@ public class Declaration : ConcreteExpression
 		return new Declaration(body, name, value, true);
 	}
 
-	private static bool IsExpressionFullyConstant(Expression expr)
+	private static bool IsExpressionFullyConstant(Expression? expr)
 	{
-		if (!expr.IsConstant)
+		if (expr is not { IsConstant: true })
 			return false;
 		return expr switch
 		{
 			MethodCall methodCall => methodCall.Arguments.All(IsExpressionFullyConstant),
-			MemberCall memberCall => IsExpressionFullyConstant(memberCall.Member.InitialValue!),
+			MemberCall memberCall => IsExpressionFullyConstant(memberCall.Member.InitialValue),
+			VariableCall variableCall => IsExpressionFullyConstant(variableCall.Variable.InitialValue),
 			List list => list.Values.All(IsExpressionFullyConstant),
 			_ => true
 		};

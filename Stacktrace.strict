@@ -1,0 +1,8 @@
+has Method
+has FilePath Text
+has Line Number
+to Text
+	to Text is "	at Stacktrace.to in Base\Stacktrace.strict:line 7"
+	Stacktrace(from) to Text is "	at Stacktrace.from in Base\Stacktrace.strict:line 7"
+	Stacktrace(from).First.Method.Type is value
+	"	at " + Method + " in " + FilePath + ":line " + Line

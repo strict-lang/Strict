@@ -1,4 +1,6 @@
+#if DEBUG
 using System.Runtime.CompilerServices;
+#endif
 
 namespace Strict.Language;
 
@@ -29,13 +31,14 @@ public class Type : Context, IDisposable
 		CreatedBy = "Package: " + package + ", file=" + file;
 		typeMethodFinder = new TypeMethodFinder(this);
 		typeParser = new TypeParser(this, Lines);
+		typeKind = GetTypeKindFromName();
 	}
 
 	public sealed class LinesCountMustNotExceedLimit(Type type, int lineCount) : ParsingFailed(type,
 		lineCount, $"Type {type.Name} has lines count {lineCount} but limit is {Limit.LineCount}");
 
 	public sealed class TypeAlreadyExistsInPackage(string name, Package package, Type existingType)
-		: Exception(name + " in package: " + package
+		: Exception(name + " in package: " + package + ", existing type : " + existingType
 #if DEBUG
 			+ ", existing type created by " + existingType.callerFilePath + ":" +
 			existingType.callerLineNumber + " from method " + existingType.callerMemberName
@@ -55,6 +58,7 @@ public class Type : Context, IDisposable
 	public string CreatedBy { get; protected init; }
 	private readonly TypeMethodFinder typeMethodFinder;
 	private readonly TypeParser typeParser;
+	internal TypeKind typeKind;
 
 	private bool OneOfFirstThreeLinesContainsGeneric()
 	{
@@ -64,6 +68,25 @@ public class Type : Context, IDisposable
 				return true;
 		return false;
 	}
+
+	private TypeKind GetTypeKindFromName() =>
+		Name switch
+		{
+			Base.None => TypeKind.None,
+			Base.Boolean => TypeKind.Boolean,
+			Base.Number => TypeKind.Number,
+			Base.Text => TypeKind.Text,
+			Base.Character => TypeKind.Character,
+			Base.List => TypeKind.List,
+			Base.Dictionary => TypeKind.Dictionary,
+			Base.Error => TypeKind.Error,
+			Base.ErrorWithValue => TypeKind.Error,
+			Base.Iterator => TypeKind.Iterator,
+			Base.Mutable => TypeKind.Mutable,
+			Base.Name => TypeKind.Text,
+			Base.Any => TypeKind.Any,
+			_ => TypeKind.Unknown
+		};
 
 	private static bool HasGenericMember(string line) =>
 		(line.StartsWith(HasWithSpaceAtEnd, StringComparison.Ordinal) ||
@@ -88,6 +111,7 @@ public class Type : Context, IDisposable
 		if (typeParser.LineNumber >= 0)
 			throw new TypeWasAlreadyParsed(this); //ncrunch: no coverage
 		typeParser.ParseMembersAndMethods(parser);
+		DetermineEnumTypeKind();
 		ValidateMethodAndMemberCountLimits();
 		// ReSharper disable once ForCanBeConvertedToForeach, for performance reasons:
 		// https://codeblog.jonskeet.uk/2009/01/29/for-vs-foreach-on-arrays-and-lists/
@@ -98,6 +122,13 @@ public class Type : Context, IDisposable
 				CheckIfTraitIsImplementedFullyOrNone(trait);
 		}
 		return this;
+	}
+
+	private void DetermineEnumTypeKind()
+	{
+		if (methods.Count == 0 && members.Count > 0 &&
+			members.All(m => m.IsConstant || m.Type.IsEnum))
+			typeKind = TypeKind.Enum;
 	}
 
 	public class TypeWasAlreadyParsed(Type type) : Exception(type.ToString()); //ncrunch: no coverage
@@ -113,15 +144,16 @@ public class Type : Context, IDisposable
 			: Limit.MemberCount;
 		if (members.Count > memberLimit)
 			throw new MemberCountShouldNotExceedLimit(this, memberLimit);
-		if (IsDataType || IsEnum)
+		if (IsEnum || IsDataType)
 			return;
-		if (methods.Count == 0 && members.Count < 2 && !IsNoneAnyOrBoolean() && Name != Base.Name)
+		if (methods.Count == 0 && members.Count < 2 && typeKind == TypeKind.Unknown)
 			throw new NoMethodsFound(this, typeParser.LineNumber);
 		if (methods.Count > Limit.MethodCount && (Package.Name != nameof(Base) &&
 			Package.Name != "TestPackage" || Name == "MethodCountMustNotExceedFifteen"))
 			throw new MethodCountMustNotExceedLimit(this);
 	}
 
+	public bool IsEnum => typeKind == TypeKind.Enum;
 	/// <summary>
 	/// Data types have no methods and just some data. Number, Text, and most Base types are not
 	/// data types as they have functionality (which makes sense), only types higher up that only
@@ -142,15 +174,8 @@ public class Type : Context, IDisposable
 	private sealed class TypeIsNotParsedCallParseMembersAndMethods(Type type)
 		: Exception(type.ToString()); //ncrunch: no coverage
 
-	private bool IsParsed => IsGeneric || Lines.Length <= 1 || typeParser.LineNumber != -1;
-	public bool IsEnum =>
-		CheckIfParsed() && methods.Count == 0 && members.Count > 0 &&
-		members.All(m => m.IsConstant || m.Type.IsEnum);
-
 	public sealed class MemberCountShouldNotExceedLimit(Type type, int limit) : ParsingFailed(type,
 		0, $"{type.Name} type has {type.members.Count} members, max: {limit}");
-
-	private bool IsNoneAnyOrBoolean() => Name is Base.None or Base.Any or Base.Boolean or Base.Mutable;
 
 	public sealed class NoMethodsFound(Type type, int lineNumber) : ParsingFailed(type, lineNumber,
 		"Each type must have at least two members (datatypes and enums) or at least one method, " +
@@ -175,8 +200,7 @@ public class Type : Context, IDisposable
 	protected readonly List<Member> members = [];
 	public List<Method> Methods => methods;
 	protected readonly List<Method> methods = [];
-	public bool IsTrait =>
-		Name != Base.Number && Name != Base.Boolean && CheckIfParsed() && Members.Count == 0;
+	public bool IsTrait => !IsNumber && !IsBoolean && CheckIfParsed() && Members.Count == 0;
 	public Dictionary<string, Type> AvailableMemberTypes
 	{
 		get
@@ -194,7 +218,7 @@ public class Type : Context, IDisposable
 	}
 
 	public override Type? FindType(string name, Context? searchingFrom = null) =>
-		name == Name || name.Contains('.') && name == base.ToString() || name is Other or Outer
+		name == Name || name.Contains('/') && name == base.ToString() || name is Other or Outer
 			? this
 			: Package.FindType(name, searchingFrom ?? this);
 
@@ -262,7 +286,7 @@ public class Type : Context, IDisposable
 	public sealed class CannotGetGenericImplementationOnNonGeneric(string name, string key)
 		: Exception("Type: " + name + ", Generic Implementation: " + key);
 
-	public string FilePath => Path.Combine(Package.FolderPath, Name) + Extension;
+	public string FilePath => Path.Combine(Package.FullName, Name) + Extension;
 	public const string Extension = ".strict";
 
 	public Member? FindMember(string name)
@@ -281,14 +305,13 @@ public class Type : Context, IDisposable
 		string extraInformation) : Exception(type + " " + extraInformation);
 
 	/// <summary>
-	/// Any non-public member is automatically iterable if it has Iterator, for example,
-	/// Text.strict or Error.strict have public members you have to iterate over yourself.
-	/// If there are two private iterators, then pick the first member automatically.
-	/// Any number is also iteratable, most iterators are just List(ofSomeType)
+	/// Any non-public member is automatically iterable if it has Iterator, for example, Text.strict
+	/// or Error.strict have public members you have to iterate over yourself. If there are more
+	/// private iterators, pick the first member automatically. List and number are also iterable.
 	/// </summary>
 	public bool IsIterator =>
-		Name == Base.Iterator || Name.StartsWith(Base.Iterator + "(", StringComparison.Ordinal) ||
-		HasAnyIteratorMember();
+		typeKind == TypeKind.Iterator ||
+		Name.StartsWith(Base.Iterator + "(", StringComparison.Ordinal) || HasAnyIteratorMember();
 
 	private bool HasAnyIteratorMember()
 	{
@@ -317,13 +340,13 @@ public class Type : Context, IDisposable
 	private readonly Dictionary<string, bool> cachedEvaluatedMemberTypes = new();
 
 	/// <summary>
-	/// Can OUR type be converted to sameOrUpcastableType and be used as such? Be careful how this is
+	/// Can OUR type be converted to sameOrUsableType and be used as such? Be careful how this is
 	/// called. A derived RedApple can be used as the base class Apple, but not the other way around.
 	/// </summary>
 	public bool IsSameOrCanBeUsedAs(Type sameOrUsableType, bool allowImplicitConversion = true,
 		int maxDepth = 2)
 	{
-		if (this == sameOrUsableType || sameOrUsableType.Name == Base.Any)
+		if (this == sameOrUsableType || sameOrUsableType.IsAny)
 			return true;
 		if (members.Count(m => m.Type == sameOrUsableType) == 1)
 			return true;
@@ -334,7 +357,7 @@ public class Type : Context, IDisposable
 			return true;
 		if (IsCompatibleOneOfType(sameOrUsableType))
 			return true;
-		if (IsParsed && IsEnum && members[0].Type.IsSameOrCanBeUsedAs(sameOrUsableType))
+		if (IsEnum && members[0].Type.IsSameOrCanBeUsedAs(sameOrUsableType))
 			return true;
 		return maxDepth >= 0 && Members.Count(m => !m.IsConstant &&
 			m.Type.IsSameOrCanBeUsedAs(sameOrUsableType, allowImplicitConversion, maxDepth - 1)) == 1;
@@ -366,7 +389,7 @@ public class Type : Context, IDisposable
 		// Allow number and iterators for return types
 		if (Name == Base.Number && elseType.IsIterator)
 			return elseType;
-		if (elseType.Name == Base.Number && IsIterator)
+		if (elseType.IsNumber && IsIterator)
 			return this;
 		foreach (var member in members)
 			if (elseType.members.Any(otherMember => otherMember.Type == member.Type))
@@ -415,8 +438,7 @@ public class Type : Context, IDisposable
 				AddFromConstructorWithMembersAsArguments(methods.Count > 0
 					? methods[0].Parser
 					: GetType(Base.Any).AvailableMethods.First().Value[0].Parser);
-			if (this is GenericTypeImplementation dictImpl &&
-				dictImpl.Generic.Name == Base.Dictionary &&
+			if (this is GenericTypeImplementation dictImpl && dictImpl.Generic.IsDictionary &&
 				dictImpl.Generic.AvailableMethods.TryGetValue(Method.From, out var genericFromMethods) &&
 				cachedAvailableMethods!.TryGetValue(Method.From, out var existingFromMethods))
 				foreach (var fromMethod in genericFromMethods)
@@ -536,7 +558,7 @@ public class Type : Context, IDisposable
 			if (member.Type is GenericType genericType)
 				foreach (var namedType in genericType.GenericImplementations)
 					genericArguments.Add(namedType);
-			else if (member.Type.Name == Base.List || member.Type.IsIterator)
+			else if (member.Type.IsList || member.Type.IsIterator)
 				genericArguments.Add(new Parameter(this, Base.Generic));
 			else if (member.Type.IsGeneric)
 				genericArguments.Add(member);
@@ -546,7 +568,7 @@ public class Type : Context, IDisposable
 	}
 
 	//ncrunch: no coverage start
-	public sealed class TypeMustBeGenericToCallThis(Type type) : Exception(type.FullName);
+	public sealed class TypeMustBeGenericToCallThis(Type type) : Exception(type.FolderName);
 
 	public sealed class InvalidGenericTypeWithoutGenericArguments(Type type) : Exception(
 		"This type is broken and needs to be fixed, check the creation: " + type + ", CreatedBy: " +
@@ -564,15 +586,18 @@ public class Type : Context, IDisposable
 		string remainingTextSpan, int typeLineNumber) =>
 		typeParser.GetMemberExpression(parser, memberName, remainingTextSpan, typeLineNumber);
 
-	public bool IsMutable =>
-		Name == Base.Mutable || this is GenericTypeImplementation { Generic.Name: Base.Mutable };
+	public bool IsNone => typeKind == TypeKind.None;
 	/// <summary>
 	/// Is this a boolean or if OneOfType, is one of the types a boolean? Used to check for tests
 	/// </summary>
-	public virtual bool IsBoolean => Name == Base.Boolean;
-	public bool IsError =>
-		Name is Base.Error || this is GenericTypeImplementation { Generic.Name: Base.ErrorWithValue };
-	public bool IsDictionary => this is GenericTypeImplementation { Generic.Name: Base.Dictionary };
+	public virtual bool IsBoolean => typeKind == TypeKind.Boolean;
+	public bool IsText => typeKind == TypeKind.Text;
+	public bool IsNumber => typeKind == TypeKind.Number;
+	public bool IsError => typeKind == TypeKind.Error;
+	public bool IsList => typeKind == TypeKind.List;
+	public bool IsDictionary => typeKind == TypeKind.Dictionary;
+	public bool IsMutable => typeKind == TypeKind.Mutable;
+	public bool IsAny => typeKind == TypeKind.Any;
 	public void Dispose() => ((Package)Parent).Remove(this);
 
 	public int FindLineNumber(string firstLineThatContains)
@@ -582,4 +607,6 @@ public class Type : Context, IDisposable
 				return lineNumber;
 		return -1;
 	}
+
+	public Type GetFirstImplementation() => ((GenericTypeImplementation)this).ImplementationTypes[0];
 }

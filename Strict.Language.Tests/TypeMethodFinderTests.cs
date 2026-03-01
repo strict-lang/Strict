@@ -18,7 +18,7 @@ public sealed class TypeMethodFinderTests
 	private Type appType = null!;
 
 	[TearDown]
-	public void TearDown() => TestPackage.Instance.Remove(appType);
+	public void TearDown() => appType.Dispose();
 
 	[Test]
 	public void CanUpCastNumberWithList()
@@ -32,7 +32,7 @@ public sealed class TypeMethodFinderTests
 		]);
 		Assert.That(result, Is.InstanceOf<Method>());
 		Assert.That(result?.ToString(),
-			Is.EqualTo("Add(first TestPackage.Number, other TestPackage.List(Number)) List"));
+			Is.EqualTo("Add(first TestPackage/Number, other TestPackage/List(Number)) List"));
 	}
 
 	[Test]
@@ -58,7 +58,7 @@ public sealed class TypeMethodFinderTests
 				])?.
 				ToString(),
 			Is.EqualTo(
-				"Add(other TestPackage.List(Text), first TestPackage.Generic) List"));
+				"Add(other TestPackage/List(Text), first TestPackage/Generic) List"));
 	}
 
 	[Test]
@@ -68,9 +68,9 @@ public sealed class TypeMethodFinderTests
 			"has logger",
 			"Write(generic)", "\tlogger.Log(generic)");
 		Assert.That(type.FindMethod("Write", [new Text(type, "hello")])?.ToString(),
-			Is.EqualTo("Write(generic TestPackage.Generic)"));
+			Is.EqualTo("Write(generic TestPackage/Generic)"));
 		Assert.That(type.FindMethod("Write", [new Number(type, 5)])?.ToString(),
-			Is.EqualTo("Write(generic TestPackage.Generic)"));
+			Is.EqualTo("Write(generic TestPackage/Generic)"));
 	}
 
 	[Test]

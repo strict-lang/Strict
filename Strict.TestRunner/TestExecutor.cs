@@ -15,16 +15,30 @@ public sealed class TestExecutor
 
 	public void RunAllTestsInPackage(Package package)
 	{
+		PackagesCount++;
 		foreach (var type in package)
-			RunAllTestsInType(type);
+			if (type is not GenericTypeImplementation)
+				RunAllTestsInType(type);
 	}
+
+	public int PackagesCount { get; private set; }
 
 	public void RunAllTestsInType(Type type)
 	{
+		TypesCount++;
 		foreach (var method in type.Methods)
 			if (!method.IsTrait)
 				RunMethod(method);
 	}
 
-	public void RunMethod(Method method) => executor.Execute(method, null, []);
+	public int TypesCount { get; private set; }
+
+	public void RunMethod(Method method)
+	{
+		MethodsCount++;
+		executor.Execute(method);
+	}
+
+	public int MethodsCount { get; private set; }
+	public Statistics Statistics => executor.Statistics;
 }

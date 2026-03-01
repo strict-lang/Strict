@@ -1,0 +1,28 @@
+has target Vector2
+from(path Text)
+	target = Vector2(path.Count("E") - path.Count("W"), path.Count("N") - path.Count("S"))
+	for path
+		if value is
+			"N" then target.Y.Increment
+			"S" then target.Y.Decrement
+			"E" then target.X.Increment
+			"W" then target.X.Decrement
+GetDirections Text
+	ShorterPath("").GetDirections is ""
+	ShorterPath("NNE").GetDirections is "NNE"
+	ShorterPath("NNEN").GetDirections is "NNNE"
+	ShorterPath("SSNEWSN").GetDirections is "S"
+	ShorterPath("NWSE").GetDirections is ""
+	GetVerticalDirections + GetHorizontalDirections
+GetVerticalDirections Text
+	ShorterPath("").GetVerticalDirections is ""
+	ShorterPath("NN").GetVerticalDirections is "NN"
+	ShorterPath("NSN").GetVerticalDirections is "N"
+	for target.Y
+		target.Y > 0 then "N" else "S"
+GetHorizontalDirections Text
+	ShorterPath("").GetHorizontalDirections is ""
+	ShorterPath("EEEW").GetVerticalDirections is "EE"
+	ShorterPath("WWWE").GetVerticalDirections is "WW"
+	for target.X
+		target.X > 0 then "E" else "W"

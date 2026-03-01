@@ -3,6 +3,7 @@ using OmniSharp.Extensions.LanguageServer.Protocol;
 using OmniSharp.Extensions.LanguageServer.Protocol.Models;
 using Strict.Language;
 using Strict.Expressions;
+using Type = Strict.Language.Type;
 
 namespace Strict.LanguageServer.Tests;
 
@@ -71,7 +72,7 @@ public sealed class AutoCompletorTests : LanguageServerTests
 	}
 
 	private static DocumentUri GetDocumentUri(string seed) =>
-		new("", "", $"Test{seed}.strict", "", "");
+		new("", "", "Test" + seed + Type.Extension, "", "");
 
 	[TestCase(2, "Write", "has logger", "Log(message Text)", "\trandom.")]
 	[TestCase(1, "Write", "has logger", "has some Text", "Log(message Text)", "\trandom.")]

@@ -1,0 +1,8 @@
+has texts
+Remove Texts
+	RemoveDuplicateWords("a", "b", "b").Remove is ("a", "b")
+	RemoveDuplicateWords("a", "b", "c").Remove is ("a", "b", "c")
+	RemoveDuplicateWords("hello", "hi", "hiiii", "hello").Remove is ("hello", "hi", "hiiii")
+	for texts
+		if texts.Count(value) > 1
+			texts.Remove(value)

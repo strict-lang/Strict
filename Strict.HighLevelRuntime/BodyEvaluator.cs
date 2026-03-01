@@ -7,6 +7,7 @@ internal sealed class BodyEvaluator(Executor executor)
 {
 	public ValueInstance Evaluate(Body body, ExecutionContext ctx, bool runOnlyTests)
 	{
+		executor.Statistics.BodyCount++;
 		if (runOnlyTests)
 			executor.IncrementInlineTestDepth();
 		try
@@ -16,7 +17,7 @@ internal sealed class BodyEvaluator(Executor executor)
 		catch (ExecutionFailed ex)
 		{
 			throw new ExecutionFailed(body.Method,
-				"Failed in \"" + body.Method.Type.FullName + "." + body.Method.Name + "\":" +
+				"Failed in \"" + body.Method.Type.FolderName + "." + body.Method.Name + "\":" +
 				Environment.NewLine + body.Expressions.ToWordList(Environment.NewLine), ex);
 		}
 		finally
@@ -28,16 +29,19 @@ internal sealed class BodyEvaluator(Executor executor)
 
 	private ValueInstance TryEvaluate(Body body, ExecutionContext ctx, bool runOnlyTests)
 	{
-		ValueInstance last =
-			new((ctx.This?.ReturnType.Package ?? body.Method.Type.Package).FindType(Base.None)!, null);
+		var last = executor.noneInstance;
 		foreach (var e in body.Expressions)
 		{
 			var isTest = !e.Equals(body.Expressions[^1]) && IsStandaloneInlineTest(e);
+			if (isTest)
+				executor.Statistics.TestsCount++;
 			if (isTest == !runOnlyTests && e is not Declaration && e is not MutableReassignment ||
 				runOnlyTests && e is Declaration &&
 				body.Method.Type.Members.Any(m => !m.IsConstant && e.ToString().Contains(m.Name)))
 				continue;
 			last = executor.RunExpression(e, ctx);
+			if (ctx.ExitMethodAndReturnValue.HasValue)
+				return ctx.ExitMethodAndReturnValue.Value;
 			if (runOnlyTests && isTest && !Executor.ToBool(last))
 				throw new Executor.TestFailed(body.Method, e, last, GetTestFailureDetails(e, ctx));
 		}
@@ -49,17 +53,19 @@ internal sealed class BodyEvaluator(Executor executor)
 		if (body.Method.ReturnType.IsMutable && !last.ReturnType.IsMutable &&
 			last.ReturnType == ((GenericTypeImplementation)body.Method.ReturnType).
 			ImplementationTypes[0])
-			return new ValueInstance(body.Method.ReturnType, last.Value);
+			return executor.CreateValueInstance(body.Method.ReturnType, last.Value);
 		throw new Executor.ReturnTypeMustMatchMethod(body, last);
 	}
 
 	private static bool IsStandaloneInlineTest(Expression e) =>
-		e.ReturnType.Name == Base.Boolean && e is not If && e is not Return && e is not Declaration &&
+		e.ReturnType.IsBoolean && e is not If && e is not Return && e is not Declaration &&
 		e is not MutableReassignment;
 
 	private string GetTestFailureDetails(Expression expression, ExecutionContext ctx) =>
-		expression is Binary { Method.Name: BinaryOperator.Is, Instance: not null } binary &&
-		binary.Arguments.Count == 1
+		expression is Binary
+		{
+			Method.Name: BinaryOperator.Is, Instance: not null, Arguments.Count: 1
+		} binary
 			? GetBinaryComparisonDetails(binary, ctx, BinaryOperator.Is)
 			: expression is Not { Instance: Binary { Method.Name: BinaryOperator.Is } notBinary } &&
 			notBinary.Arguments.Count == 1

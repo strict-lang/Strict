@@ -6,6 +6,5 @@ namespace Strict.LanguageServer;
 public static class BaseSelectors
 {
 	public static readonly TextDocumentSelector StrictDocumentSelector =
-		new(
-			new TextDocumentFilter { Pattern = "**/*.strict" });
-} //ncrunch: no coverage end
+		new(new TextDocumentFilter { Pattern = "**/*" + Language.Type.Extension });
+}

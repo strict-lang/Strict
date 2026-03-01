@@ -118,7 +118,7 @@ public sealed class MethodCallTests : TestExpressions
 	public void ParseCallWithUnknownMemberCallArgument() =>
 		Assert.That(() => ParseExpression("logger.Log(logger.unknown)"),
 			Throws.InstanceOf<MemberOrMethodNotFound>().With.Message.
-				StartsWith("unknown in TestPackage.Logger"));
+				StartsWith("unknown in TestPackage/Logger"));
 
 	[Test]
 	public void MethodCallMembersMustBeWords() =>

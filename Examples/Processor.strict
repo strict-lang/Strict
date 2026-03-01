@@ -1,0 +1,10 @@
+has progress Number
+IsJobDone Boolean or Text
+	Processor(100).IsJobDone is true
+	Processor(78).IsJobDone is false
+	Processor(0).IsJobDone is "Work not started yet"
+	if progress is 100
+		return true
+	if progress > 0
+		return false
+	"Work not started yet"

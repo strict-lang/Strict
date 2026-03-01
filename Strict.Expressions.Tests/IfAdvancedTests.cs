@@ -103,8 +103,8 @@ public sealed class IfAdvancedTests : TestExpressions
 				"		return \"5\"")).ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(),
 			Throws.InstanceOf<Body.ChildBodyReturnTypeMustMatchMethod>().With.Message.Contains(
-				"Last expression return \"5\" return type: TestPackage.Text is not matching with expected " +
-				"method return type: TestPackage.Number in method line: 3"));
+				"Last expression return \"5\" return type: TestPackage/Text is not matching with " +
+				"expected method return type: TestPackage/Number in method line: 3"));
 	}
 
 	private static readonly Package Package = new(nameof(IfTests));
@@ -125,8 +125,8 @@ public sealed class IfAdvancedTests : TestExpressions
 		// @formatter:on
 		Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(),
 			Throws.InstanceOf<Body.ChildBodyReturnTypeMustMatchMethod>().With.Message.Contains(
-				"Last expression return \"Hello\" return type: TestPackage.Text is not matching with " +
-				"expected method return type: TestPackage.Number in method line: 4"));
+				"Last expression return \"Hello\" return type: TestPackage/Text is not matching with " +
+				"expected method return type: TestPackage/Number in method line: 4"));
 	}
 
 	[Test]
@@ -145,7 +145,7 @@ public sealed class IfAdvancedTests : TestExpressions
 		// @formatter:on
 		Assert.That(
 			((Body)program.Methods[0].GetBodyAndParseIfNeeded()).children[0].ReturnType.ToString(),
-			Is.EqualTo("TestPackage.Number"));
+			Is.EqualTo("TestPackage/Number"));
 	}
 
 	[Test]
@@ -164,22 +164,23 @@ public sealed class IfAdvancedTests : TestExpressions
 				"	\"don't matter\"")).ParseMembersAndMethods(new MethodExpressionParser());
 		// @formatter:on
 		var body = (Body)program.Methods[0].GetBodyAndParseIfNeeded();
-		Assert.That(body.ReturnType.ToString(), Is.EqualTo("TestPackage.Text"));
-		Assert.That(body.children[0].ReturnType.ToString(), Is.EqualTo("TestPackage.Text"));
-		Assert.That(body.children[1].ReturnType.ToString(), Is.EqualTo("TestPackage.Text"));
+		Assert.That(body.ReturnType.ToString(), Is.EqualTo("TestPackage/Text"));
+		Assert.That(body.children[0].ReturnType.ToString(), Is.EqualTo("TestPackage/Text"));
+		Assert.That(body.children[1].ReturnType.ToString(), Is.EqualTo("TestPackage/Text"));
 	}
 
 	[Test]
 	public void ParseElseIf() =>
-		Assert.That(ParseExpression("if five is 5", "\tlogger.Log(\"Hey\")", "else if five is 5", "\tlogger.Log(\"Hey\")"),
+		Assert.That(
+			ParseExpression("if five is 5", "\tlogger.Log(\"Hey\")", "else if five is 5",
+				"\tlogger.Log(\"Hey\")"),
 			Is.EqualTo(new If(GetCondition(), GetThen(), 0, new If(GetCondition(), GetThen()))));
 
 	[TestCase("else if five is 6")]
 	[TestCase("else if")]
 	[TestCase("if five is 5", "\tlogger.Log(\"Hey\")", "else if")]
 	public void UnexpectedElseIf(params string[] code) =>
-		Assert.That(() => ParseExpression(code),
-			Throws.InstanceOf<If.UnexpectedElse>());
+		Assert.That(() => ParseExpression(code), Throws.InstanceOf<If.UnexpectedElse>());
 
 	[Test]
 	public void ElseIfWithoutThen() =>
@@ -215,7 +216,7 @@ public sealed class IfAdvancedTests : TestExpressions
 			"	logger.Log(\"Hello\")",
 			"	return \"Hello\"",
 			"\"don't matter\"")), body.ToString());
-		Assert.That(body.children[1].ReturnType.ToString(), Is.EqualTo("TestPackage.Text"));
+		Assert.That(body.children[1].ReturnType.ToString(), Is.EqualTo("TestPackage/Text"));
 		Assert.That(body.children.Count, Is.EqualTo(3));
 	}
 

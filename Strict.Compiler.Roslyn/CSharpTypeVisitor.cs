@@ -31,7 +31,7 @@ public sealed class CSharpTypeVisitor : TypeVisitor
 		foreach (var member in type.Members)
 			if (type.IsTraitImplementation(member.Type))
 				VisitImplement(member.Type);
-		FileContent += "namespace " + type.Package.FolderPath + SemicolonAndLineBreak + NewLine;
+		FileContent += "namespace " + type.Package.FullName + SemicolonAndLineBreak + NewLine;
 	}
 
 	public string FileContent { get; private set; } = "";
