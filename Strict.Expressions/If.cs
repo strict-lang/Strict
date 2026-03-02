@@ -163,7 +163,7 @@ public sealed class If(Expression condition, Expression then, int lineNumber = 0
 	private static Expression GetConditionExpression(Body body, ReadOnlySpan<char> line)
 	{
 		var condition = body.Method.ParseExpression(body, line);
-		var booleanType = condition.ReturnType.GetType(Base.Boolean);
+		var booleanType = condition.ReturnType.GetType(Type.Boolean);
 		if (condition.ReturnType == booleanType ||
 			booleanType.IsSameOrCanBeUsedAs(condition.ReturnType, false))
 			return condition;
@@ -172,7 +172,8 @@ public sealed class If(Expression condition, Expression then, int lineNumber = 0
 
 	public sealed class InvalidCondition(Body body, Type? conditionReturnType = null)
 		: ParsingFailed(body, conditionReturnType != null
-			? body.Method.FolderName + "\n Return type " + conditionReturnType + " is not " + Base.Boolean
+			? body.Method.FolderName + "\n Return type " + conditionReturnType + " is not " +
+			Type.Boolean
 			: null);
 
 	public sealed class MissingThen(Body body) : ParsingFailed(body);

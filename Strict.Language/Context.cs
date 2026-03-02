@@ -25,7 +25,7 @@ public abstract class Context
 			throw new NameMustBeAWordWithoutAnySpecialCharactersOrNumbers(name);
 		if (this is Package && !name.IsAlphaNumericWithAllowedSpecialCharacters())
 			throw new PackageNameMustBeAWordWithoutSpecialCharacters(name);
-		if (isNotGeneric && !string.IsNullOrEmpty(name) && !name.Length.IsWithinLimit() &&
+		if (isNotGeneric && !string.IsNullOrEmpty(name) && !name.Length.IsNameLengthWithinLimit() &&
 			!name.IsOperatorOrAllowedMethodName())
 			throw new NameLengthIsNotWithinTheAllowedLimit(name);
 		Parent = parent!;
@@ -58,8 +58,6 @@ public abstract class Context
 	public sealed class NameMustBeAWordWithoutAnySpecialCharactersOrNumbers(string name)
 		: Exception(name);
 
-//TODO: move .Base -> main folder, .Math, .ImageProcessing, .Examples, etc. all into the Strict repository and use them as sub folders, long term this is easier to manage and a much better folder structure.
-//TODO: in code we can use Strict/Number to fully describe a number, use Strict/Math/Vector2, etc. most of the time we only use the name Number, Vector2, etc. and there is no need to use the path anyway.
 	public sealed class PackageNameMustBeAWordWithoutSpecialCharacters(string name) : Exception(
 		"Name " + name + "; Must start with a letter, then only allowed characters are: Letters " +
 		"(A-z), Numbers (0-9) or '-'. Do not use '.', '_', spaces or any other special characters.");
@@ -117,22 +115,22 @@ public abstract class Context
 	private Type? TryGetTypeFromPluralNameAsListWithSingularName(string name)
 	{
 		var singularName = name[..^1];
-		if (singularName == Base.Generic)
-			return GetType(Base.List);
+		if (singularName == Type.GenericUppercase)
+			return GetType(Type.List);
 		var elementType = FindFullType(singularName) ?? FindType(singularName, this);
 		if (elementType != null)
 			return GetListImplementationType(elementType);
 		return FindFullType(name) ?? FindType(name, this);
 	}
 
-	private const string GenericImplementationPostfix = "(" + Base.Generic + ")";
+	private const string GenericImplementationPostfix = "(" + Type.GenericUppercase + ")";
 
 	private Type GetGenericTypeWithArguments(string name)
 	{
 		var mainType = GetType(name[..name.IndexOf('(')]);
 		var rest = name[(mainType.Name.Length + 1)..^1];
 		var arguments = rest.Split(',', StringSplitOptions.TrimEntries);
-		if (rest.Contains("Generic"))
+		if (rest.Contains(Type.GenericUppercase))
 		{
 			var namedTypes = GetNamedTypes(mainType, arguments);
 			return mainType.Package.FindDirectType(mainType.GetImplementationName(namedTypes)) ??
@@ -164,10 +162,10 @@ public abstract class Context
 		", this does not match provided types: " + typeArguments.ToBrackets());
 
 	public GenericTypeImplementation GetListImplementationType(Type implementation) =>
-		GetType(Base.List).GetGenericImplementation(implementation);
+		GetType(Type.List).GetGenericImplementation(implementation);
 
 	public GenericTypeImplementation GetDictionaryImplementationType(Type keyType, Type valueType) =>
-		GetType(Base.Dictionary).GetGenericImplementation(keyType, valueType);
+		GetType(Type.Dictionary).GetGenericImplementation(keyType, valueType);
 
 	private Type? FindFullType(string name) =>
 		name.Contains('/')

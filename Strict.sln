@@ -62,6 +62,92 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Strict.HighLevelRuntime.Tes
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Strict.Grammar", "Strict.Grammar\Strict.Grammar.csproj", "{264FB21B-1186-AE43-A5FA-A436C9F9B27D}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Strict", "Strict", "{CAF602EA-BA64-4818-B27E-4A757B4D2259}"
+	ProjectSection(SolutionItems) = preProject
+		Any.strict = Any.strict
+		App.strict = App.strict
+		Boolean.strict = Boolean.strict
+		Character.strict = Character.strict
+		Dictionary.strict = Dictionary.strict
+		Directory.strict = Directory.strict
+		Enum.strict = Enum.strict
+		Error.strict = Error.strict
+		ErrorWithValue.strict = ErrorWithValue.strict
+		File.strict = File.strict
+		Generic.strict = Generic.strict
+		HashCode.strict = HashCode.strict
+		Input.strict = Input.strict
+		Iterator.strict = Iterator.strict
+		List.strict = List.strict
+		Logger.strict = Logger.strict
+		Member.strict = Member.strict
+		Method.strict = Method.strict
+		Mutable.strict = Mutable.strict
+		Name.strict = Name.strict
+		Number.strict = Number.strict
+		Range.strict = Range.strict
+		Stacktrace.strict = Stacktrace.strict
+		System.strict = System.strict
+		Text.strict = Text.strict
+		TextReader.strict = TextReader.strict
+		TextWriter.strict = TextWriter.strict
+		Type.strict = Type.strict
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Math", "Math", "{C436613F-79E2-4B74-86B2-9F8B67D29712}"
+	ProjectSection(SolutionItems) = preProject
+		Math\README.md = Math\README.md
+		Math\Size.strict = Math\Size.strict
+		Math\Vector2.strict = Math\Vector2.strict
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ImageProcessing", "ImageProcessing", "{EB6CB05E-9C14-4F1F-8A36-82B7E6A40ED5}"
+	ProjectSection(SolutionItems) = preProject
+		ImageProcessing\AdjustBrightness.strict = ImageProcessing\AdjustBrightness.strict
+		ImageProcessing\Color.strict = ImageProcessing\Color.strict
+		ImageProcessing\ColorImage.strict = ImageProcessing\ColorImage.strict
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Examples", "Examples", "{87015E92-9B24-4DBA-8A57-BECAF9E61F2F}"
+	ProjectSection(SolutionItems) = preProject
+		Examples\ArithmeticFunction.strict = Examples\ArithmeticFunction.strict
+		Examples\Beeramid.strict = Examples\Beeramid.strict
+		Examples\ConvertingNumbers.strict = Examples\ConvertingNumbers.strict
+		Examples\EvenFibonacci.strict = Examples\EvenFibonacci.strict
+		Examples\ExecuteOperation.strict = Examples\ExecuteOperation.strict
+		Examples\Fibonacci.strict = Examples\Fibonacci.strict
+		Examples\FindFirstNonConsecutiveNumber.strict = Examples\FindFirstNonConsecutiveNumber.strict
+		Examples\FindNumberCount.strict = Examples\FindNumberCount.strict
+		Examples\Instruction.strict = Examples\Instruction.strict
+		Examples\LinkedListAnalyzer.strict = Examples\LinkedListAnalyzer.strict
+		Examples\MatchingLoopFinder.strict = Examples\MatchingLoopFinder.strict
+		Examples\Node.strict = Examples\Node.strict
+		Examples\Processor.strict = Examples\Processor.strict
+		Examples\README.md = Examples\README.md
+		Examples\ReduceButGrow.strict = Examples\ReduceButGrow.strict
+		Examples\Register.strict = Examples\Register.strict
+		Examples\RemoveDuplicateWords.strict = Examples\RemoveDuplicateWords.strict
+		Examples\RemoveExclamation.strict = Examples\RemoveExclamation.strict
+		Examples\RemoveParentheses.strict = Examples\RemoveParentheses.strict
+		Examples\ReverseList.strict = Examples\ReverseList.strict
+		Examples\ShorterPath.strict = Examples\ShorterPath.strict
+		Examples\Statement.strict = Examples\Statement.strict
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "csTranspilerOutput", "csTranspilerOutput", "{57FE9C48-33B8-44D5-AEC2-EF9CDDEA3F1D}"
+	ProjectSection(SolutionItems) = preProject
+		Examples\csTranspilerOutput\Fibonacci.cs = Examples\csTranspilerOutput\Fibonacci.cs
+		Examples\csTranspilerOutput\Beeramid.cs = Examples\csTranspilerOutput\Beeramid.cs
+		Examples\csTranspilerOutput\ReduceButGrow.cs = Examples\csTranspilerOutput\ReduceButGrow.cs
+		Examples\csTranspilerOutput\ExecuteOperation.cs = Examples\csTranspilerOutput\ExecuteOperation.cs
+		Examples\csTranspilerOutput\LinkedListAnalyzer.cs = Examples\csTranspilerOutput\LinkedListAnalyzer.cs
+		Examples\csTranspilerOutput\ArithmeticFunction.cs = Examples\csTranspilerOutput\ArithmeticFunction.cs
+		Examples\csTranspilerOutput\RemoveDuplicateWords.cs = Examples\csTranspilerOutput\RemoveDuplicateWords.cs
+		Examples\csTranspilerOutput\RemoveExclamation.cs = Examples\csTranspilerOutput\RemoveExclamation.cs
+		Examples\csTranspilerOutput\RemoveParentheses.cs = Examples\csTranspilerOutput\RemoveParentheses.cs
+		Examples\csTranspilerOutput\ReverseList.cs = Examples\csTranspilerOutput\ReverseList.cs
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -170,5 +256,11 @@ Global
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {DEA35D12-F095-424A-8A50-6D7EBE08D917}
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{C436613F-79E2-4B74-86B2-9F8B67D29712} = {CAF602EA-BA64-4818-B27E-4A757B4D2259}
+		{EB6CB05E-9C14-4F1F-8A36-82B7E6A40ED5} = {CAF602EA-BA64-4818-B27E-4A757B4D2259}
+		{87015E92-9B24-4DBA-8A57-BECAF9E61F2F} = {CAF602EA-BA64-4818-B27E-4A757B4D2259}
+		{57FE9C48-33B8-44D5-AEC2-EF9CDDEA3F1D} = {87015E92-9B24-4DBA-8A57-BECAF9E61F2F}
 	EndGlobalSection
 EndGlobal

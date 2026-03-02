@@ -16,9 +16,9 @@ public class TestCSharpGenerator : NoConsoleWriteLineAllowed
 		parser = new MethodExpressionParser();
 		package = new Package(nameof(SourceGeneratorTests));
 		_ = TestPackage.Instance;
-		new Type(package, new TypeLines(Base.App, "Run")).ParseMembersAndMethods(parser);
+		new Type(package, new TypeLines(Type.App, "Run")).ParseMembersAndMethods(parser);
 		new Type(package,
-				new TypeLines(Base.System, "has textWriter", "Write(text)", "\ttextWriter.Write(text)")).
+				new TypeLines(Type.System, "has textWriter", "Write(text)", "\ttextWriter.Write(text)")).
 			ParseMembersAndMethods(parser);
 		new Type(package, new TypeLines("Input", "Read Text")).ParseMembersAndMethods(parser);
 		new Type(package, new TypeLines("Output", "Write(generic) Boolean")).

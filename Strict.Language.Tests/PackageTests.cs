@@ -25,7 +25,7 @@ public class PackageTests
 	public void NoneIsAlwaysKnown()
 	{
 		var emptyPackage = new Package(nameof(NoneIsAlwaysKnown));
-		Assert.That(emptyPackage.FindType(Base.None, emptyPackage), Is.Not.Null);
+		Assert.That(emptyPackage.FindType(Type.None, emptyPackage), Is.Not.Null);
 		Assert.That(emptyPackage.FindType(nameof(NoneIsAlwaysKnown), emptyPackage), Is.Null);
 	}
 
@@ -38,7 +38,7 @@ public class PackageTests
 	public void RootPackageToStringShouldNotCrash()
 	{
 		Assert.That(mainType.Package.Parent.ToString(), Is.Empty);
-		Assert.That(mainType.Package.Parent.FindType(Base.None)?.Name, Is.EqualTo(Base.None));
+		Assert.That(mainType.Package.Parent.FindType(Type.None)?.Name, Is.EqualTo(Type.None));
 		Assert.That(mainPackage.Parent.GetPackage(), Is.Null);
 	}
 
@@ -126,11 +126,11 @@ public class PackageTests
 		{
 			expressionParser.CreateType();
 			using var strictPackage = await new Repositories(expressionParser).LoadStrictPackage();
-			Assert.That(mainPackage.GetType(Base.Number),
-				Is.EqualTo(strictPackage.GetType(Base.Number)).Or.
-					EqualTo(subPackage.GetType(Base.Number)));
-			Assert.That(mainPackage.GetType(Base.Character),
-				Is.Not.EqualTo(mainPackage.FindType(Base.App)));
+			Assert.That(mainPackage.GetType(Type.Number),
+				Is.EqualTo(strictPackage.GetType(Type.Number)).Or.
+					EqualTo(subPackage.GetType(Type.Number)));
+			Assert.That(mainPackage.GetType(Type.Character),
+				Is.Not.EqualTo(mainPackage.FindType(Type.App)));
 		}
 		finally
 		{

@@ -8,7 +8,7 @@ public abstract class TestExpressions : MethodExpressionParser
 	{
 		type = new Type(TestPackage.Instance, new TypeLines("dummy", "Run")).
 			ParseMembersAndMethods(this);
-		type.GetType(Base.Boolean);
+		type.GetType(Type.Boolean);
 		member = new Member(type, "logger", null);
 		type.Members.Add(member);
 		method = new Method(type, 0, this, [MethodTests.Run]);
@@ -18,7 +18,7 @@ public abstract class TestExpressions : MethodExpressionParser
 		type.Methods.AddRange(new List<Method> { method, methodWithBody });
 		numberFive = new Number(type, 5);
 		list = new List(new Body(method), [numberFive]);
-		five = new Member(type, "five", type.GetType(Base.Number)) { InitialValue = numberFive };
+		five = new Member(type, "five", type.GetType(Type.Number)) { InitialValue = numberFive };
 		type.Members.Add(five);
 	}
 
@@ -78,11 +78,11 @@ public abstract class TestExpressions : MethodExpressionParser
 	{
 		var isExpression = CreateBinary(new MemberCall(null, five), BinaryOperator.Is, numberFive);
 		return isNot
-			? new Not(TestPackage.Instance.GetType(Base.Boolean).GetMethod(UnaryOperator.Not, []),
+			? new Not(TestPackage.Instance.GetType(Type.Boolean).GetMethod(UnaryOperator.Not, []),
 				isExpression)
 			: isExpression;
 	}
 
 	protected Not CreateNot(Expression right) =>
-		new(TestPackage.Instance.GetType(Base.Boolean).GetMethod(UnaryOperator.Not, []), right);
+		new(TestPackage.Instance.GetType(Type.Boolean).GetMethod(UnaryOperator.Not, []), right);
 }

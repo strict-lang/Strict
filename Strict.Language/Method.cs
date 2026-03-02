@@ -83,7 +83,7 @@ public sealed class Method : Context
 
 	private Type ParseReturnType(Context type, string returnTypeText)
 	{
-		if (returnTypeText == Base.Any)
+		if (returnTypeText == Type.Any)
 			throw new MethodReturnTypeAsAnyIsNotAllowed(this, returnTypeText);
 		var hasMultipleReturnTypes = returnTypeText.Contains(" or ", StringComparison.Ordinal);
 		return hasMultipleReturnTypes
@@ -98,14 +98,14 @@ public sealed class Method : Context
 	private Type GetEmptyReturnType(Type type) =>
 		Name is From
 			? type
-			: type.GetType(Base.None);
+			: type.GetType(Type.None);
 
 	public sealed class MethodReturnTypeAsAnyIsNotAllowed(Method method, string name)
 		: ParsingFailed(method.Type, 0, name);
 
 	private static bool IsMethodGeneric(ReadOnlySpan<char> headerLine) =>
-		headerLine.Contains(Base.Generic, StringComparison.Ordinal) ||
-		headerLine.Contains(Base.Generic.MakeFirstLetterLowercase(), StringComparison.Ordinal);
+		headerLine.Contains(Type.GenericUppercase, StringComparison.Ordinal) ||
+		headerLine.Contains(Type.GenericLowercase, StringComparison.Ordinal);
 
 	public bool IsGeneric { get; }
 
@@ -140,7 +140,7 @@ public sealed class Method : Context
 		: ParsingFailed(method.Type, 0, message, method.Name);
 
 	private static bool IsParameterTypeAny(string nameAndTypeString) =>
-		nameAndTypeString == Type.AnyLowercase || nameAndTypeString.Contains(" " + Base.Any);
+		nameAndTypeString == Type.AnyLowercase || nameAndTypeString.Contains(" " + Type.Any);
 
 	public sealed class ParametersWithTypeAnyIsNotAllowed(Method method, string name)
 		: ParsingFailed(method.Type, 0, name);
@@ -233,7 +233,7 @@ public sealed class Method : Context
 	private static Type ReplaceWithImplementationOrGenericType(Type type,
 		GenericTypeImplementation typeWithImplementation, int index)
 	{
-		if (type.Name == Base.Generic)
+		if (type.Name == Type.GenericUppercase)
 			return typeWithImplementation.ImplementationTypes[index];
 		if (type is GenericTypeImplementation genericImplementation)
 		{
@@ -244,7 +244,7 @@ public sealed class Method : Context
 				implementationIndex < updatedImplementationTypes.Length; implementationIndex++)
 			{
 				var implementationType = genericImplementation.ImplementationTypes[implementationIndex];
-				var updatedType = implementationType.Name == Base.Generic
+				var updatedType = implementationType.Name == Type.GenericUppercase
 					? typeWithImplementation.ImplementationTypes[index]
 					: implementationType == typeWithImplementation.Generic
 						? typeWithImplementation
@@ -296,6 +296,7 @@ public sealed class Method : Context
 		Parser.ParseListArguments(body, text);
 
 	public const string From = "from";
+	public const string Run = nameof(Run);
 
 	/// <summary>
 	/// Skips the first method declaration line, then counts, and removes the tabs from each line.
@@ -375,13 +376,13 @@ public sealed class Method : Context
 			return ParseTestsOnlyForGeneric();
 		if (methodBody.Expressions.Count > 0)
 			return !parseTestsOnlyForGeneric && methodBody.Expressions.Any(expression =>
-				expression.GetType().Name == "PlaceholderExpression")
+				expression.GetType().Name == nameof(PlaceholderExpression))
 				? methodBody.Parse()
 				: methodBody.Expressions.Count == 1
 					? methodBody.Expressions[0]
 					: methodBody;
 		var expression = methodBody.Parse();
-		if (expression.GetType().Name == Base.Declaration)
+		if (expression.GetType().Name == Body.Declaration)
 			throw new DeclarationIsNeverUsedAndMustBeRemoved(Type, TypeLineNumber, expression);
 		if (methodBody.Variables != null)
 			foreach (var variable in methodBody.Variables)
@@ -446,12 +447,11 @@ public sealed class Method : Context
 	private static bool IsStandaloneInlineTestExpression(Expression expression) =>
 		expression.ReturnType.IsBoolean &&
 		expression.GetType().Name is not "If" &&
-		expression.GetType().Name is not Base.Return &&
-		expression.GetType().Name is not Base.Declaration &&
-		expression.GetType().Name is not Base.MutableReassignment;
+		expression.GetType().Name is not "Return" &&
+		expression.GetType().Name is not Body.Declaration &&
+		expression.GetType().Name is not Body.MutableReassignment;
 
-	private sealed class PlaceholderExpression(Type returnType)
-		: Expression(returnType)
+	internal sealed class PlaceholderExpression(Type returnType) : Expression(returnType)
 	{
 		public override bool IsConstant => true; //ncrunch: no coverage
 		public override string ToString() => ReturnType.Name;
@@ -487,12 +487,13 @@ public sealed class Method : Context
 
 	public bool HasEqualSignature(Method method) =>
 		Name == method.Name && Parameters.Count == method.Parameters.Count &&
-		(ReturnType == method.ReturnType || method.ReturnType.Name == Base.Generic ||
-			ReturnType.Name == Base.Generic) && HasSameParameterTypes(method);
+		(ReturnType == method.ReturnType || method.ReturnType.Name == Type.GenericUppercase ||
+			ReturnType.Name == Type.GenericUppercase) && HasSameParameterTypes(method);
 
 	private bool HasSameParameterTypes(Method method) =>
 		!method.Parameters.Where((parameter, index) =>
-			parameter.Type.Name != Base.Generic && Parameters[index].Type != parameter.Type).Any();
+			parameter.Type.Name != Type.GenericUppercase &&
+			Parameters[index].Type != parameter.Type).Any();
 
 	public int GetParameterUsageCount(string parameterName) =>
 		lines.Count(l => l.Contains(" " + parameterName) || l.Contains("(" + parameterName) ||

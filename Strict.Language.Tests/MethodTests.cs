@@ -49,7 +49,7 @@ public sealed class MethodTests
 		var method = new Method(type, 0, null!, [Run]);
 		Assert.That(method.Name, Is.EqualTo(Run));
 		Assert.That(method.Parameters, Is.Empty);
-		Assert.That(method.ReturnType, Is.EqualTo(type.GetType(Base.None)));
+		Assert.That(method.ReturnType, Is.EqualTo(type.GetType(Type.None)));
 		Assert.That(method.ToString(), Is.EqualTo(Run));
 	}
 
@@ -71,7 +71,7 @@ public sealed class MethodTests
 		var method = new Method(type, 0, null!, NestedMethodLines);
 		Assert.That(method.Name, Is.EqualTo("IsFiveFive"));
 		Assert.That(method.Parameters, Is.Empty);
-		Assert.That(method.ReturnType, Is.EqualTo(type.GetType(Base.Boolean)));
+		Assert.That(method.ReturnType, Is.EqualTo(type.GetType(Type.Boolean)));
 		Assert.That(method.ToString(), Is.EqualTo(NestedMethodLines[0]));
 	}
 
@@ -127,7 +127,7 @@ public sealed class MethodTests
 	public void CloningWithSameParameterType()
 	{
 		var method = new Method(type, 0, parser, ["Run(variable Text)", "	\"5\""]);
-		Assert.That(method.Parameters[0].CloneWithImplementationType(type.GetType(Base.Text)),
+		Assert.That(method.Parameters[0].CloneWithImplementationType(type.GetType(Type.Text)),
 			Is.EqualTo(method.Parameters[0]));
 	}
 
@@ -158,7 +158,7 @@ public sealed class MethodTests
 		var expression = customType.Methods[0].GetBodyAndParseIfNeeded();
 		var body = expression as Body;
 		Assert.That(body != null && body.Expressions.Any(e =>
-			e.GetType().Name == "PlaceholderExpression"), Is.False);
+			e.GetType().Name == nameof(Method.PlaceholderExpression)), Is.False);
 	}
 
 	[Test]
@@ -181,7 +181,7 @@ public sealed class MethodTests
 		Assert.That(method.Parameters[0].Name, Is.EqualTo("iterator"));
 		Assert.That(method.Parameters[0].Type, Is.EqualTo(type.GetType("Iterator(Text)")));
 		Assert.That(method.Parameters[1].Name, Is.EqualTo("index"));
-		Assert.That(method.Parameters[1].Type, Is.EqualTo(type.GetType(Base.Number)));
+		Assert.That(method.Parameters[1].Type, Is.EqualTo(type.GetType(Type.Number)));
 	}
 
 	[Test]
@@ -361,7 +361,7 @@ public sealed class MethodTests
 	[Test]
 	public void GetVariableUsageCount() =>
 		Assert.That(
-			TestPackage.Instance.GetType(Base.Character).AvailableMethods["to"][0].
+			TestPackage.Instance.GetType(Type.Character).AvailableMethods["to"][0].
 				GetVariableUsageCount("notANumber"), Is.EqualTo(3));
 
 	[Test]

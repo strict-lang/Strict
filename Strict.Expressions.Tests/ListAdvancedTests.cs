@@ -29,8 +29,8 @@ public sealed class ListAdvancedTests : TestExpressions
 			new TypeLines(nameof(ListGenericLengthAddition), "has ones Numbers", "has twos Numbers",
 				"AddListLength Number", "\tones.Length + twos.Length")).ParseMembersAndMethods(parser);
 		Assert.That(program.Members[0].Name, Is.EqualTo("ones"));
-		var numbersListType = type.GetType(Base.List).
-			GetGenericImplementation(type.GetType(Base.Number));
+		var numbersListType = type.GetType(Type.List).
+			GetGenericImplementation(type.GetType(Type.Number));
 		Assert.That(program.Members[0].Type, Is.EqualTo(numbersListType));
 		Assert.That(program.Members[1].Type, Is.EqualTo(numbersListType));
 	}
@@ -54,7 +54,7 @@ public sealed class ListAdvancedTests : TestExpressions
 				new TypeLines(testName, "has logger", code, "\t(1, 2, 3, input)")).
 			ParseMembersAndMethods(parser);
 		Assert.That(program.Methods[0].GetBodyAndParseIfNeeded().ReturnType,
-			Is.EqualTo(program.GetListImplementationType(type.GetType(Base.Number))));
+			Is.EqualTo(program.GetListImplementationType(type.GetType(Type.Number))));
 	}
 
 	[Test]

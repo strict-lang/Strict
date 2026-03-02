@@ -87,7 +87,7 @@ public class CSharpType : Type
 				: method.bodyLines.Last().Text.Contains('-')
 					? "-"
 					: "*";
-			var numberType = method.FindType(Base.Number)!;
+			var numberType = method.FindType(Type.Number)!;
 			var arguments = new Expression[] { new Value(numberType, "second") };
 			var returnExpression = new Return(new Binary(new Value(numberType, "first"),
 				numberType.GetMethod(binaryOperator, arguments), arguments));

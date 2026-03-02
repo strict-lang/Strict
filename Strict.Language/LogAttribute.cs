@@ -24,15 +24,11 @@ public class LogAttribute : Attribute, IMethodDecorator
 			Console.WriteLine($"[{nameof(Strict)}] Body.Parse {methodValue}, Lines={rangeValue}");
 		}
 		else
-			Console.WriteLine($"[{
-				nameof(Strict)
-			}] {
-				method.DeclaringType?.Name
-			}{
+			Console.WriteLine($"[{nameof(Strict)}] {method.DeclaringType?.Name}"+
 				(method.Name == ".ctor"
 					? ""
-					: "." + method.Name)
-			}({
+					: "." + method.Name)+
+			$"({
 				// ReSharper disable once ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract
 				string.Join(", ", args.Select(a => a != null
 					? a.ToString()

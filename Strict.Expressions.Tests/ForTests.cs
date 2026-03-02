@@ -81,7 +81,7 @@ public sealed class ForTests : TestExpressions
 		var body = (Body)programType.Methods[0].GetBodyAndParseIfNeeded();
 		var forExpression = (For)body.Expressions[0];
 		Assert.That(((Body)forExpression.Body).FindVariable("element")?.Type.Name,
-			Is.EqualTo(Base.Number));
+			Is.EqualTo(Type.Number));
 	}
 
 	[Test]
@@ -100,8 +100,8 @@ public sealed class ForTests : TestExpressions
 	[Test]
 	public void ParseForDictionaryElementsExpression()
 	{
-		var number = type.GetType(Base.Number);
-		var dictionary = type.GetType(Base.Dictionary).GetGenericImplementation(number, number);
+		var number = type.GetType(Type.Number);
+		var dictionary = type.GetType(Type.Dictionary).GetGenericImplementation(number, number);
 		var runMethod = new Method(dictionary, 0, new MethodExpressionParser(), [
 			"Run Number",
 			"\tfor elements",
@@ -187,7 +187,7 @@ public sealed class ForTests : TestExpressions
 					"\t\t1")).
 			ParseMembersAndMethods(new MethodExpressionParser());
 		var parsedExpression = (For)programType.Methods[0].GetBodyAndParseIfNeeded();
-		Assert.That(parsedExpression.ReturnType.Name, Is.EqualTo(Base.Range));
+		Assert.That(parsedExpression.ReturnType.Name, Is.EqualTo(Type.Range));
 		Assert.That(parsedExpression.Iterator.ToString(), Is.EqualTo("Range(0, number)"));
 	}
 

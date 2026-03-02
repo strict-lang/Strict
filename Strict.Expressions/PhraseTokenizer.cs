@@ -5,7 +5,7 @@ namespace Strict.Expressions;
 /// <summary>
 /// Phrases are any expressions containing spaces (if not, they are just single expressions and
 /// don't need any tokenizing). They could come from a full line of code, conditions of ifs, the
-/// right part of assignments or method call arguments. Optimized for speed and memory efficiency
+/// right part of assignments, or method call arguments. Optimized for speed and memory efficiency
 /// (no new), no memory is allocated except for the check if we are in a list or just grouping.
 /// </summary>
 //ncrunch: no coverage start, for better performance

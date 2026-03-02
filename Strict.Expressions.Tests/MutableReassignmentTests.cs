@@ -16,7 +16,7 @@ public sealed class MutableReassignmentTests : TestExpressions
 		program.ParseMembersAndMethods(parser);
 		Assert.That(program.Members[0].IsMutable, Is.True);
 		Assert.That(program.Methods[0].GetBodyAndParseIfNeeded().ReturnType,
-			Is.EqualTo(type.GetType(Base.Number)));
+			Is.EqualTo(type.GetType(Type.Number)));
 	}
 
 	[Test]
@@ -29,7 +29,7 @@ public sealed class MutableReassignmentTests : TestExpressions
 		Assert.That(program.Methods[0].Parameters[0].IsMutable, Is.True);
 		Assert.That(program.Methods[0].Parameters[1].IsMutable, Is.True);
 		Assert.That(program.Methods[0].GetBodyAndParseIfNeeded().ReturnType,
-			Is.EqualTo(type.GetType(Base.Number)));
+			Is.EqualTo(type.GetType(Type.Number)));
 	}
 
 	[Test]
@@ -40,8 +40,8 @@ public sealed class MutableReassignmentTests : TestExpressions
 				"Run Mutable(List(Number))", "\tnumbers.Add(5)"));
 		program.ParseMembersAndMethods(parser);
 		Assert.That(program.Methods[0].GetBodyAndParseIfNeeded().ReturnType,
-			Is.EqualTo(type.GetType(Base.Mutable).
-				GetGenericImplementation(type.GetListImplementationType(type.GetType(Base.Number)))));
+			Is.EqualTo(type.GetType(Type.Mutable).
+				GetGenericImplementation(type.GetListImplementationType(type.GetType(Type.Number)))));
 	}
 
 	[Test]
@@ -157,7 +157,7 @@ public sealed class MutableReassignmentTests : TestExpressions
 		program.ParseMembersAndMethods(parser);
 		var body = (Body)program.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(body.ReturnType,
-			Is.EqualTo(type.GetType(Base.Number)));
+			Is.EqualTo(type.GetType(Type.Number)));
 		Assert.That(body.Expressions[0].ReturnType.Name,
 			Is.EqualTo("Number"));
 	}

@@ -40,7 +40,7 @@ public class MethodExpressionParser : ExpressionParser
 	}
 
 	private static bool IsExpressionTypeAny(ReadOnlySpan<char> input) =>
-		input.Equals(Base.Any, StringComparison.Ordinal) || input.StartsWith(Base.Any + "(");
+		input.Equals(Type.Any, StringComparison.Ordinal) || input.StartsWith(Type.Any + "(");
 
 	private Expression TryParseCommon(Body body, ReadOnlySpan<char> input, bool makeMutable) =>
 		Boolean.TryParse(body, input) ?? Text.TryParse(body, input) ??
@@ -354,10 +354,10 @@ public class MethodExpressionParser : ExpressionParser
 		Expression? instance, ReadOnlySpan<char> input)
 	{
 		if (!input.Equals(Type.ElementsLowercase, StringComparison.Ordinal) ||
-			type is not GenericTypeImplementation { Generic.Name: Base.Dictionary })
+			type is not GenericTypeImplementation { Generic.Name: Type.Dictionary })
 			return null;
 		var listMember = type.Members.FirstOrDefault(member =>
-			member.Type.Name.StartsWith(Base.List, StringComparison.Ordinal));
+			member.Type.Name.StartsWith(Type.List, StringComparison.Ordinal));
 		if (listMember == null)
 			return null; //ncrunch: no coverage
 		var keyword = listMember.IsConstant

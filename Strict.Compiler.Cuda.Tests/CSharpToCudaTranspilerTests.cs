@@ -38,8 +38,8 @@ public class CSharpToCudaTranspilerTests
 		Assert.That(type.Name, Is.EqualTo(AddNumbers));
 		Assert.That(type.Methods, Has.Count.EqualTo(1));
 		Assert.That(type.Methods[0].Name, Is.EqualTo("Add"));
-		Assert.That(type.Methods[0].Parameters[1].Type, Is.EqualTo(type.FindType(Base.Number)));
-		Assert.That(type.Methods[0].ReturnType, Is.EqualTo(type.FindType(Base.Number)));
+		Assert.That(type.Methods[0].Parameters[1].Type, Is.EqualTo(type.FindType(Type.Number)));
+		Assert.That(type.Methods[0].ReturnType, Is.EqualTo(type.FindType(Type.Number)));
 		Assert.That(type.Methods[0].GetBodyAndParseIfNeeded().ToString(),
 			Is.EqualTo("return first + second"));
 	}

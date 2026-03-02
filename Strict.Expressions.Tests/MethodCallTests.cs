@@ -139,7 +139,7 @@ public sealed class MethodCallTests : TestExpressions
 	[Test]
 	public void SimpleFromMethodCall() =>
 		Assert.That(ParseExpression("Character(7)"),
-			Is.EqualTo(CreateFromMethodCall(type.GetType(Base.Character), new Number(type, 7))));
+			Is.EqualTo(CreateFromMethodCall(type.GetType(Type.Character), new Number(type, 7))));
 
 	[TestCase("Character(5)")]
 	[TestCase("Range(0, 10)")]
@@ -152,7 +152,7 @@ public sealed class MethodCallTests : TestExpressions
 	{
 		var body = (Body)ParseExpression("mutable variable = 7", "variable = variable + 1");
 		var expression = body.Expressions[0];
-		Assert.That(type.GetType(Base.Mutable).Methods.Count, Is.EqualTo(0));
+		Assert.That(type.GetType(Type.Mutable).Methods.Count, Is.EqualTo(0));
 		Assert.That(expression is Declaration, Is.True);
 		Assert.That(((Declaration)expression).IsMutable, Is.True);
 	}

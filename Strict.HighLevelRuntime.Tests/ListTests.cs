@@ -63,7 +63,7 @@ public sealed class ListTests
 			"\tnumbers * 2");
 		Assert.That(
 			executor.Execute(t.Methods.Single(m => m.Name == "Multiply"), CreateNumbers(t), []).Value,
-			Is.EqualTo(new[] { two, ValueInstance.Create(t.GetType(Base.Number), 4d) }));
+			Is.EqualTo(new[] { two, ValueInstance.Create(t.GetType(Type.Number), 4d) }));
 	}
 
 	[Test]
@@ -75,8 +75,8 @@ public sealed class ListTests
 			executor.Execute(t.Methods.Single(m => m.Name == "Divide"), CreateNumbers(t), []).Value,
 			Is.EqualTo(new[]
 			{
-				ValueInstance.Create(t.GetType(Base.Number), 0.1),
-				ValueInstance.Create(t.GetType(Base.Number), 0.2)
+				ValueInstance.Create(t.GetType(Type.Number), 0.1),
+				ValueInstance.Create(t.GetType(Type.Number), 0.2)
 			}));
 	}
 
@@ -89,8 +89,8 @@ public sealed class ListTests
 			executor.Execute(t.Methods.Single(m => m.Name == "Divide"), CreateNumbers(t), []).Value,
 			Is.EqualTo(new[]
 			{
-				ValueInstance.Create(t.GetType(Base.Number), 1.0),
-				ValueInstance.Create(t.GetType(Base.Number), 1.0)
+				ValueInstance.Create(t.GetType(Type.Number), 1.0),
+				ValueInstance.Create(t.GetType(Type.Number), 1.0)
 			}));
 	}
 
@@ -101,8 +101,8 @@ public sealed class ListTests
 		using var t = CreateType(nameof(ListsHaveDifferentDimensionsIsNotAllowed), "has number",
 			"Run", "\t" + input);
 		var error = executor.Execute(t.Methods[0], null, []);
-		Assert.That(error.ReturnType.Name, Is.EqualTo(Base.Error));
-		Assert.That(error.FindInnerValue(Base.Name),
+		Assert.That(error.ReturnType.Name, Is.EqualTo(Type.Error));
+		Assert.That(error.FindInnerValue(Type.Name),
 			Is.EqualTo(MethodCallEvaluator.ListsHaveDifferentDimensions));
 	}
 
@@ -135,8 +135,8 @@ public sealed class ListTests
 		Assert.That(executor.Execute(type.Methods[0], null, []).Value,
 			Is.EqualTo(new List<ValueInstance>
 			{
-				ValueInstance.Create(type.GetType(Base.Number), 2.0),
-				ValueInstance.Create(type.GetType(Base.Number), 1.0)
+				ValueInstance.Create(type.GetType(Type.Number), 2.0),
+				ValueInstance.Create(type.GetType(Type.Number), 1.0)
 			}));
 	}
 

@@ -16,11 +16,11 @@ public class TypeLines
 		DependentTypes = ExtractDependentTypes();
 #if DEBUG
 		// Some sanity checks to make sure the Any base type used everywhere isn't broken
-		if (Name != Base.Any)
+		if (Name != Type.Any)
 			return;
 		AnyMustImplement(0, Method.From);
-		AnyMustImplement(1, "to " + Base.Type);
-		AnyMustImplement(2, "to " + Base.Text);
+		AnyMustImplement(1, "to " + nameof(Type));
+		AnyMustImplement(2, "to " + Type.Text);
 #endif
 	}
 #if DEBUG
@@ -71,7 +71,7 @@ public class TypeLines
 				AddIfNotExisting(dependentTypes, part);
 		else if (remainingLine.EndsWith('s'))
 		{
-			AddIfNotExisting(dependentTypes, Base.List);
+			AddIfNotExisting(dependentTypes, Type.List);
 			AddIfNotExisting(dependentTypes, remainingLine[..^1].MakeFirstLetterUppercase());
 		}
 		else
@@ -85,7 +85,7 @@ public class TypeLines
 		else if (typeName.Contains(' '))
 			typeName = typeName.Split(' ')[1];
 		if (!dependentTypes.Contains(typeName.MakeFirstLetterUppercase()) && Name != typeName &&
-			!typeName.IsKeyword() && typeName != Base.Generic)
+			!typeName.IsKeyword() && typeName != Type.GenericUppercase)
 			dependentTypes.Add(typeName.MakeFirstLetterUppercase());
 	}
 

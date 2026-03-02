@@ -45,7 +45,7 @@ internal sealed class BodyEvaluator(Executor executor)
 			if (runOnlyTests && isTest && !Executor.ToBool(last))
 				throw new Executor.TestFailed(body.Method, e, last, GetTestFailureDetails(e, ctx));
 		}
-		if (runOnlyTests && last.Value == null && body.Method.Name != Base.Run &&
+		if (runOnlyTests && last.Value == null && body.Method.Name != Type.Run &&
 			body.Expressions.Count > 1)
 			throw new Executor.MethodRequiresTest(body.Method, body);
 		if (runOnlyTests || last.ReturnType.IsError || body.Method.ReturnType == last.ReturnType)

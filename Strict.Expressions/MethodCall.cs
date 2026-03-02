@@ -5,7 +5,7 @@ namespace Strict.Expressions;
 
 /// <summary>
 /// Any type of method we can call, this includes normal local method calls, recursions, calls to
-/// any of our implement base types (instance is null in all of those cases), calls to other types
+/// any of our implement base types (instance is null in all of those cases). Calls to other types
 /// (either From(type) or instance method calls, there are no static methods) or any operator
 /// <see cref="Binary"/> or <see cref="Not"/> unary call (which are all normal methods as well).
 /// Like MemberCall has the same syntax when the parent instance is used: Type.Method
@@ -70,7 +70,8 @@ public class MethodCall : ConcreteExpression
 		for (var index = 0; index < arguments.Count; index++)
 		{
 			var parameterType = method.Parameters[index].Type;
-			if (parameterType is GenericTypeImplementation { Generic.Name: Base.Mutable } mutableType)
+			if (parameterType is GenericTypeImplementation { Generic.Name: Type.Mutable }
+				mutableType)
 				parameterType = mutableType.ImplementationTypes[0];
 			if (!arguments[index].ReturnType.IsSameOrCanBeUsedAs(parameterType))
 				return false;
@@ -111,7 +112,7 @@ public class MethodCall : ConcreteExpression
 	private static Type NormalizeListAndDictionaryImplementation(Type fromType,
 		IReadOnlyList<Expression> arguments)
 	{
-		if (fromType.IsList && fromType.IsGeneric && arguments.Count > 0)
+		if (fromType is { IsList: true, IsGeneric: true } && arguments.Count > 0)
 			return fromType.GetGenericImplementation(arguments[0].ReturnType);
 		if (!fromType.IsDictionary || !fromType.IsGeneric)
 			return fromType;
@@ -128,17 +129,17 @@ public class MethodCall : ConcreteExpression
 
 	private static void ValidateMutableImplementation(Type fromType, IReadOnlyList<Expression> args)
 	{
-		if (fromType.IsMutable && fromType.IsGeneric && args.Count == 1 &&
-			args[0].ReturnType is not GenericTypeImplementation { Generic.Name: Base.List })
+		if (fromType is { IsMutable: true, IsGeneric: true } && args is
+			[{ ReturnType: not GenericTypeImplementation { Generic.Name: Type.List } }])
 			throw new Type.GenericTypesCannotBeUsedDirectlyUseImplementation(fromType,
-				Base.Mutable + " must be used with a List implementation");
-		if (fromType is GenericTypeImplementation { Generic.Name: Base.Mutable } mutableImpl &&
+				Type.Mutable + " must be used with a List implementation");
+		if (fromType is GenericTypeImplementation { Generic.Name: Type.Mutable } mutableImpl &&
 			mutableImpl.ImplementationTypes[0] is not GenericTypeImplementation
 			{
-				Generic.Name: Base.List
+				Generic.Name: Type.List
 			})
 			throw new Type.GenericTypesCannotBeUsedDirectlyUseImplementation(mutableImpl,
-				Base.Mutable + " must be used with a List implementation");
+				Type.Mutable + " must be used with a List implementation");
 	}
 
 	private static IReadOnlyList<Expression> NormalizeDictionaryArguments(Body body, Type fromType,
@@ -148,7 +149,7 @@ public class MethodCall : ConcreteExpression
 			return arguments;
 		if (arguments.Count > 1)
 			return [new List(body, arguments.ToList())];
-		return arguments.Count == 1 && arguments[0] is List { Values.Count: 2 } singlePair
+		return arguments is [List { Values.Count: 2 } singlePair]
 			? [new List(body, [singlePair])]
 			: arguments;
 	}
@@ -156,49 +157,49 @@ public class MethodCall : ConcreteExpression
 	private static IReadOnlyList<Expression> NormalizeErrorArguments(Body body, ref Type fromType,
 		IReadOnlyList<Expression> arguments, Expression? basedOnErrorVariable)
 	{
-		if (!fromType.IsSameOrCanBeUsedAs(fromType.GetType(Base.Error)))
+		if (!fromType.IsSameOrCanBeUsedAs(fromType.GetType(Type.Error)))
 			return arguments;
 		if (arguments.Count == 0)
 			return
 			[
-				new Value(body.Method.GetType(Base.Name),
+				new Value(body.Method.GetType(nameof(Type.Name)),
 					basedOnErrorVariable?.ToString() ?? (fromType.IsError
 						? body.CurrentDeclarationNameForErrorText ?? body.Method.Name
 						: fromType.Name)),
-				CreateListFromMethodCall(body, Base.Stacktrace, CreateStacktraces(body))
+				CreateListFromMethodCall(body, Type.Stacktrace, CreateStacktraces(body))
 			];
 		if (arguments.Count > 1)
 			throw new Type.ArgumentsDoNotMatchMethodParameters(arguments, fromType, fromType.Methods); //ncrunch: no coverage
 		if (basedOnErrorVariable != null)
 		{
-			fromType = fromType.GetType(Base.ErrorWithValue).
+			fromType = fromType.GetType(Type.ErrorWithValue).
 				GetGenericImplementation(arguments[0].ReturnType);
 			return [basedOnErrorVariable, arguments[0]];
 		}
-		if (arguments[0] is Value { ReturnType.Name: Base.Text } textValue)
+		if (arguments[0] is Value { ReturnType.Name: Type.Text } textValue)
 			return
 			[
-				new Value(body.Method.GetType(Base.Name), textValue.Data.ToString() ?? ""),
-				CreateListFromMethodCall(body, Base.Stacktrace, CreateStacktraces(body))
+				new Value(body.Method.GetType(nameof(Type.Name)), textValue.Data.ToString()),
+				CreateListFromMethodCall(body, Type.Stacktrace, CreateStacktraces(body))
 			];
 		arguments =
 		[
 			CreateFromMethodCall(body, fromType, []),
 			arguments[0]
 		];
-		fromType = fromType.GetType(Base.ErrorWithValue).
+		fromType = fromType.GetType(Type.ErrorWithValue).
 			GetGenericImplementation(arguments[1].ReturnType);
 		return arguments;
 	}
 
 	private static IReadOnlyList<Expression> NormalizeTypeArguments(Body body, Type fromType,
 		IReadOnlyList<Expression> arguments) =>
-		fromType.Name == Base.Type && arguments.Count == 1
+		fromType.Name == nameof(Type) && arguments.Count == 1
 			? [
 				arguments[0].ReturnType.IsText
-					? new Value(body.Method.GetType(Base.Name), ((Value)arguments[0]).Data)
+					? new Value(body.Method.GetType(nameof(Type.Name)), ((Value)arguments[0]).Data)
 					: arguments[0],
-				new Text(body.Method, ((Context)body.Method.Type.Package).FolderName)
+				new Text(body.Method, body.Method.Type.Package.FolderName)
 			]
 			: arguments;
 
@@ -211,10 +212,10 @@ public class MethodCall : ConcreteExpression
 		[CreateStacktrace(body)];
 
 	private static Expression CreateStacktrace(Body body) =>
-		CreateFromMethodCall(body, body.Method.GetType(Base.Stacktrace), [
-			CreateFromMethodCall(body, body.Method.GetType(Base.Method), [
-				new Value(body.Method.GetType(Base.Name), body.Method.Name),
-				CreateFromMethodCall(body, body.Method.GetType(Base.Type),
+		CreateFromMethodCall(body, body.Method.GetType(Type.Stacktrace), [
+			CreateFromMethodCall(body, body.Method.GetType(nameof(Method)), [
+				new Value(body.Method.GetType(nameof(Type.Name)), body.Method.Name),
+				CreateFromMethodCall(body, body.Method.GetType(nameof(Type)),
 					[new Text(body.Method, body.Method.Type.Name)])
 			]),
 			new Text(body.Method, body.Method.Type.FilePath),
@@ -233,18 +234,18 @@ public class MethodCall : ConcreteExpression
 			? (Instance is Binary
 				? $"({Instance})"
 				: $"{Instance}") + $".{Method.Name}{Arguments.ToBrackets()}"
-			: ReturnType is GenericTypeImplementation { Generic.Name: Base.ErrorWithValue }
+			: ReturnType is GenericTypeImplementation { Generic.Name: Type.ErrorWithValue }
 				? Arguments[0] + "(" + Arguments[1] + ")"
 				: ReturnType.IsError
-					? Base.Error
+					? Type.Error
 					: Method.Name == Method.From &&
-					ReturnType is GenericTypeImplementation { Generic.Name: Base.Dictionary }
+					ReturnType is GenericTypeImplementation { Generic.Name: Type.Dictionary }
 						? FormatDictionaryConstructor()
 						: $"{GetProperMethodName()}{Arguments.ToBrackets()}";
 
 	private string FormatDictionaryConstructor() =>
-		Arguments.Count == 1 && Arguments[0] is List list
-			? Base.Dictionary + (list.Values.All(value => value is List)
+		Arguments is [List list]
+			? Type.Dictionary + (list.Values.All(value => value is List)
 				? list.Values.ToBrackets()
 				: $"({list})")
 			: throw new NotSupportedException("Invalid Dictionary arguments: " + Arguments.ToBrackets());

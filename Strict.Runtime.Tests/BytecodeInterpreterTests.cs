@@ -334,7 +334,7 @@ public class BytecodeInterpreterTests : BaseVirtualMachineTests
 	[Test]
 	public void CreateEmptyDictionaryFromConstructor()
 	{
-		var dictionaryType = TestPackage.Instance.GetType(Base.Dictionary).
+		var dictionaryType = TestPackage.Instance.GetType(Type.Dictionary).
 			GetGenericImplementation(NumberType, NumberType);
 		var methodCall = CreateFromMethodCall(dictionaryType);
 		var statements = new List<Statement> { new Invoke(Register.R0, methodCall, new Registry()) };

@@ -65,7 +65,7 @@ public class Package : Context, IEnumerable<Type>, IDisposable
 #else
 		public Root() : base(null, string.Empty) =>
 #endif
-			cachedFoundTypes.Add(Base.None, new Type(this, new TypeLines(Base.None)));
+			cachedFoundTypes.Add(Type.None, new Type(this, new TypeLines(Type.None)));
 
 		public override Type? FindType(string name, Context? searchingFrom = null) =>
 			cachedFoundTypes.TryGetValue(name, out var previouslyFoundType)
@@ -158,7 +158,7 @@ public class Package : Context, IEnumerable<Type>, IDisposable
 	public Package? FindSubPackage(string name)
 	{
 		foreach (var child in children)
-			if (child.Name == name || ((Context)child).FolderName == name)
+			if (child.Name == name || child.FolderName == name)
 				return child;
 		return null;
 	}

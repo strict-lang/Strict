@@ -157,7 +157,7 @@ public sealed class Repositories
 		{
 			var lines = new TypeLines(Path.GetFileNameWithoutExtension(filePath),
 				File.ReadAllLines(filePath));
-			if (lines.Name != Base.Mutable && lines.DependentTypes.Count > 0)
+			if (lines.Name != Type.Mutable && lines.DependentTypes.Count > 0)
 				filesWithMembers.Add(lines.Name, lines);
 			else
 				types.Add(new Type(package, lines));

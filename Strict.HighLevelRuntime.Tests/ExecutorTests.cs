@@ -27,7 +27,7 @@ public sealed class ExecutorTests
 		using var t = CreateType(nameof(FromConstructorWithExistingInstanceThrows), "has number",
 			"from(number Number)", "\tvalue");
 		var method = t.Methods.Single(m => m.Name == Method.From);
-		var number = ValueInstance.Create(TestPackage.Instance.FindType(Base.Number)!, 3d);
+		var number = ValueInstance.Create(TestPackage.Instance.FindType(Type.Number)!, 3d);
 		var instance = ValueInstance.Create(t, 1d);
 		Assert.That(() => executor.Execute(method, instance, [number]),
 			Throws.InstanceOf<MethodCall.CannotCallFromConstructorWithExistingInstance>());
@@ -47,7 +47,7 @@ public sealed class ExecutorTests
 		using var t = CreateCalcType();
 		var method = t.Methods.Single(m => m.Name == "Add");
 		var result = executor.Execute(method, null,
-			[ValueInstance.Create(TestPackage.Instance.FindType(Base.Number)!, 5d)]);
+			[ValueInstance.Create(TestPackage.Instance.FindType(Type.Number)!, 5d)]);
 		Assert.That(Convert.ToDouble(result.Value), Is.EqualTo(6));
 	}
 
@@ -69,7 +69,7 @@ public sealed class ExecutorTests
 		using var t = CreateType(nameof(ArgumentDoesNotMapToMethodParameters), "has number",
 			"Use(number Number) Number", "\tnumber");
 		var method = t.Methods.Single(m => m.Name == "Use");
-		var boolean = ValueInstance.Create(TestPackage.Instance.FindType(Base.Boolean)!, true);
+		var boolean = ValueInstance.Create(TestPackage.Instance.FindType(Type.Boolean)!, true);
 		Assert.That(() => executor.Execute(method, null, [boolean]),
 			Throws.InstanceOf<Executor.ArgumentDoesNotMapToMethodParameters>());
 	}
@@ -91,7 +91,7 @@ public sealed class ExecutorTests
 		using var t = CreateType(nameof(EvaluateDeclaration), "mutable last Number",
 			"AddFive(number) Number", "\tconstant five = 5", "\tnumber + five");
 		var method = t.Methods.Single(m => m.Name == "AddFive");
-		var number = ValueInstance.Create(TestPackage.Instance.FindType(Base.Number)!, 5d);
+		var number = ValueInstance.Create(TestPackage.Instance.FindType(Type.Number)!, 5d);
 		var result = executor.Execute(method, null, [number]);
 		Assert.That(Convert.ToDouble(result.Value), Is.EqualTo(10));
 	}
@@ -136,7 +136,7 @@ public sealed class ExecutorTests
 		//TODO: why not just use Text, it has all operators already!
 		using var t = CreateType(nameof(AddTwoTexts), "has text",
 			"Concat(text Text, other Text) Text", "\ttext + other");
-		var textType = t.GetType(Base.Text);
+		var textType = t.GetType(Type.Text);
 		var result = executor.Execute(t.Methods.Single(m => m.Name == "Concat"), null,
 			[ValueInstance.Create(textType, "hi "), ValueInstance.Create(textType, "there")]);
 		Assert.That(result.Value, Is.EqualTo("hi there"));
@@ -277,8 +277,8 @@ public sealed class ExecutorTests
 		using var t = CreateType(nameof(InvalidTypeForFromConstructor), "has flag Boolean",
 			"from(flag Boolean, other Boolean)", "\tvalue");
 		var method = t.Methods.Single(m => m.Name == Method.From);
-		var number = ValueInstance.Create(TestPackage.Instance.FindType(Base.Number)!, 1);
-		var boolean = ValueInstance.Create(TestPackage.Instance.FindType(Base.Boolean)!, true);
+		var number = ValueInstance.Create(TestPackage.Instance.FindType(Type.Number)!, 1);
+		var boolean = ValueInstance.Create(TestPackage.Instance.FindType(Type.Boolean)!, true);
 		Assert.That(() => executor.Execute(method, null, [number, boolean]),
 			Throws.InstanceOf<Executor.InvalidTypeForArgument>());
 	}
@@ -289,8 +289,8 @@ public sealed class ExecutorTests
 		using var t = CreateType(nameof(FromConstructorConvertsSingleCharText), "has number",
 			"has text", "from(number Number, text Text)", "\tvalue");
 		var method = t.Methods.Single(m => m.Name == Method.From);
-		var numberText = ValueInstance.Create(TestPackage.Instance.FindType(Base.Text)!, "A");
-		var text = ValueInstance.Create(TestPackage.Instance.FindType(Base.Text)!, "ok");
+		var numberText = ValueInstance.Create(TestPackage.Instance.FindType(Type.Text)!, "A");
+		var text = ValueInstance.Create(TestPackage.Instance.FindType(Type.Text)!, "ok");
 		var result = executor.Execute(method, null, [numberText, text]);
 		var values = (IDictionary<string, object?>)result.Value!;
 		Assert.That(values["number"], Is.EqualTo(65));
@@ -330,7 +330,7 @@ public sealed class ExecutorTests
 			"has number", "Recursive(other Number)", "\tRecursive(number)");
 		Assert.That(
 			() => executor.Execute(t.Methods.Single(m => m.Name == "Recursive"),
-				ValueInstance.Create(t, 3), [ValueInstance.Create(t.GetType(Base.Number), 1)]).Value,
+				ValueInstance.Create(t, 3), [ValueInstance.Create(t.GetType(Type.Number), 1)]).Value,
 			Throws.InstanceOf<Executor.StackOverflowCallingItselfWithSameInstanceAndArguments>());
 	}
 
@@ -342,6 +342,6 @@ public sealed class ExecutorTests
 		Assert.That(
 			executor.Execute(t.Methods.Single(m => m.Name == BinaryOperator.Plus),
 				ValueInstance.Create(t, 5),
-				[ValueInstance.Create(t.GetType(Base.Text), "abc")]).Value, Is.EqualTo(5 + 3));
+				[ValueInstance.Create(t.GetType(Type.Text), "abc")]).Value, Is.EqualTo(5 + 3));
 	}
 }

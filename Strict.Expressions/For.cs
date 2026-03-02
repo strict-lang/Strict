@@ -199,9 +199,9 @@ public sealed class For(Expression[] customVariables, Expression iterator, Expre
 	{
 		var forIteratorText = GetForIteratorText(line);
 		var iterator = body.Method.ParseExpression(body, forIteratorText, true);
-		if (iterator is MethodCall { ReturnType.Name: Base.Range } methodCall)
+		if (iterator is MethodCall { ReturnType.Name: Type.Range } methodCall)
 			return GetVariableValueFromRange(iterator, methodCall);
-		if (iterator.ReturnType is not GenericTypeImplementation { Generic.Name: Base.List })
+		if (iterator.ReturnType is not GenericTypeImplementation { Generic.Name: Type.List })
 			return iterator;
 		var firstValue = body.Method.ParseExpression(body, forIteratorText[^1] == ')'
 			? forIteratorText[1..forIteratorText.IndexOf(',')]
@@ -219,7 +219,7 @@ public sealed class For(Expression[] customVariables, Expression iterator, Expre
 			? methodCall.Arguments[0]
 			: methodCall.Instance is MethodCall
 			{
-				ReturnType.Name: Base.Range, Arguments.Count: > 0
+				ReturnType.Name: Type.Range, Arguments.Count: > 0
 			} innerMethodCall
 				? innerMethodCall.Arguments[0]
 				: iterator;
@@ -250,7 +250,7 @@ public sealed class For(Expression[] customVariables, Expression iterator, Expre
 			for (var depth = 0; depth < implementationDepth; depth++)
 				if (iteratorType is GenericTypeImplementation { IsIterator: true } genericType)
 					iteratorType = genericType.ImplementationTypes[0];
-			if ((iteratorType.Name != Base.Range || !mutableValue.Type.IsNumber) &&
+			if ((iteratorType.Name != Type.Range || !mutableValue.Type.IsNumber) &&
 				iteratorType.Name != mutableValue.Type.Name &&
 				!iteratorType.IsSameOrCanBeUsedAs(mutableValue.Type, false))
 				throw new IteratorTypeDoesNotMatchWithIterable(innerBody, iteratorType.Name, variable,

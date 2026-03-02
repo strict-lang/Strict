@@ -1,4 +1,5 @@
 using Strict.Language;
+using Type = Strict.Language.Type;
 
 namespace Strict.Expressions;
 
@@ -51,7 +52,7 @@ public class Declaration : ConcreteExpression
 
 	/// <summary>
 	/// Highly optimized parsing of assignments, skips over the mutable, grabs the name of the local
-	/// variable, then skips over the space, equal and space characters and parses the rest, e.g.
+	/// variable, then skips over the space, equal, and space characters, and parses the rest, e.g.,
 	/// constant hello = "hello" + " " + "world"
 	///					 ^ ^       ^ ^   ^ ^       END, using TryParseExpression with Range(12, 35)
 	/// </summary>
@@ -81,7 +82,7 @@ public class Declaration : ConcreteExpression
 		string name)
 	{
 		var value = valueSpan.IsFirstLetterUppercase() && (valueSpan.IsPlural() ||
-			valueSpan.StartsWith(Base.List + '(' + Base.Mutable, StringComparison.Ordinal))
+			valueSpan.StartsWith(Type.List + '(' + Type.Mutable, StringComparison.Ordinal))
 			? new List(body.Method.Type.GetType(valueSpan.ToString()))
 			: body.Method.ParseExpression(body, valueSpan, true);
 		return new Declaration(body, name, value, true);

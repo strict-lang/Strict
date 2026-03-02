@@ -28,7 +28,7 @@ public sealed class ExecutionContext(Type type, Method method)
 		if (name == Type.ValueLowercase)
 			return This;
 		var implicitMember =
-			Type.Members.FirstOrDefault(m => !m.IsConstant && m.Type.Name != Base.Iterator);
+			Type.Members.FirstOrDefault(m => !m.IsConstant && m.Type.Name != Type.Iterator);
 		if (implicitMember != null &&
 			implicitMember.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
 			return This;//probably not needed: .Clone(implicitMember.Type);
@@ -50,7 +50,7 @@ public sealed class ExecutionContext(Type type, Method method)
 	internal static IList BuildDictionaryPairsList(Type listMemberType,
 		Dictionary<ValueInstance, ValueInstance> dictionary)
 	{
-		var elementType = listMemberType is GenericTypeImplementation { Generic.Name: Base.List } list
+		var elementType = listMemberType is GenericTypeImplementation { Generic.Name: Type.List } list
 			? list.ImplementationTypes[0]
 			: listMemberType;
 		var pairs = new List<ValueInstance>(dictionary.Count);
@@ -75,14 +75,14 @@ public sealed class ExecutionContext(Type type, Method method)
 	{
 		if (instance?.ReturnType is not GenericTypeImplementation
 			{
-				Generic.Name: Base.Dictionary
+				Generic.Name: Type.Dictionary
 			} implementation ||
 			instance.Value.Value is not Dictionary<ValueInstance, ValueInstance> dictionary ||
 			Variables.ContainsKey(Type.ElementsLowercase))
 			return;
 		var listMemberType = implementation.Members.FirstOrDefault(member =>
-			member.Type is GenericTypeImplementation { Generic.Name: Base.List } ||
-			member.Type.IsList)?     .Type ?? implementation.GetType(Base.List);
+			member.Type is GenericTypeImplementation { Generic.Name: Type.List } ||
+			member.Type.IsList)?     .Type ?? implementation.GetType(Type.List);
 		var listValue = ExecutionContext.BuildDictionaryPairsList(listMemberType, dictionary);
 		Set(Type.ElementsLowercase, ValueInstance.CreateObject(listMemberType, listValue));
 	}

@@ -6,7 +6,7 @@ namespace Strict.Expressions.Tests;
 public sealed class ValueInstanceTests
 {
 	[SetUp]
-	public void CreateNumber() => numberType = TestPackage.Instance.GetType(Base.Number);
+	public void CreateNumber() => numberType = TestPackage.Instance.GetType(Type.Number);
 
 	private Type numberType = null!;
 

@@ -46,12 +46,10 @@ public sealed class MemberCallTests : TestExpressions
 
 	[Test]
 	public void MemberWithArgumentsInitializerShouldNotHaveType() =>
-		Assert.That(
-			() =>
+		Assert.That(() =>
 			{
-				using var _ =
-					new Type(type.Package, new TypeLines("Declaration", "has input Text = Text(5)")).
-						ParseMembersAndMethods(parser);
+				using var _ = new Type(type.Package, new TypeLines(Body.Declaration,
+						"has input Text = Text(5)")).ParseMembersAndMethods(parser);
 			}, //ncrunch: no coverage
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.
 				InstanceOf<NamedType.AssignmentWithInitializerTypeShouldNotHaveNameWithType>());
@@ -90,10 +88,10 @@ public sealed class MemberCallTests : TestExpressions
 				"GetInput Text", "\tinput")).ParseMembersAndMethods(parser);
 		Assert.That(assignmentType.Members[0].Name, Is.EqualTo("input"));
 		Assert.That(assignmentType.Members[0].IsPublic, Is.False);
-		Assert.That(assignmentType.Members[0].Type, Is.EqualTo(type.GetType(Base.Character)));
+		Assert.That(assignmentType.Members[0].Type, Is.EqualTo(type.GetType(Type.Character)));
 		Assert.That(assignmentType.Members[0].InitialValue, Is.InstanceOf<MethodCall>());
 		var methodCall = (MethodCall)assignmentType.Members[0].InitialValue!;
-		Assert.That(methodCall.Method.ReturnType.Name, Is.EqualTo(Base.Character));
+		Assert.That(methodCall.Method.ReturnType.Name, Is.EqualTo(Type.Character));
 		Assert.That(methodCall.Arguments[0], Is.EqualTo(new Number(type, 5)));
 	}
 
@@ -126,7 +124,7 @@ public sealed class MemberCallTests : TestExpressions
 						"\tcombinedNumber")).
 				ParseMembersAndMethods(parser);
 		Assert.That(assignmentType.Members[0].Name, Is.EqualTo("combinedNumber"));
-		Assert.That(assignmentType.Members[0].Type, Is.EqualTo(type.GetType(Base.Number)));
+		Assert.That(assignmentType.Members[0].Type, Is.EqualTo(type.GetType(Type.Number)));
 		var binary = (Binary)assignmentType.Members[0].InitialValue!;
 		Assert.That(binary.Instance, Is.EqualTo(new Number(type, 3)));
 		Assert.That(binary.Arguments[0], Is.EqualTo(new Number(type, 5)));

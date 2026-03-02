@@ -12,7 +12,7 @@ internal sealed class ForEvaluator(Executor executor)
 		var iterator = executor.RunExpression(f.Iterator, ctx);
 		var results = new List<ValueInstance>();
 		var itemType = GetForValueType(iterator);
-		if (iterator.IsValueTypeInstance && iterator..GetValueTypeInstanceType().Name == Base.Range &&
+		if (iterator.IsValueTypeInstance && iterator..GetValueTypeInstanceType().Name == Type.Range &&
 			iterator.Value is IDictionary<string, object?> rangeValues &&
 			rangeValues.TryGetValue("Start", out var startValue) &&
 			rangeValues.TryGetValue("ExclusiveEnd", out var endValue))
@@ -47,7 +47,7 @@ internal sealed class ForEvaluator(Executor executor)
 		return ShouldConsolidateForResult(results, ctx) ?? executor.CreateValueInstance(
 			results.Count == 0
 				? iterator.ReturnType
-				: iterator.ReturnType.GetType(Base.List).GetGenericImplementation(results[0].ReturnType),
+				: iterator.ReturnType.GetType(Type.List).GetGenericImplementation(results[0].ReturnType),
 			results);
 	}
 

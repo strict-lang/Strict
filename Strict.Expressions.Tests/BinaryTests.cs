@@ -104,7 +104,7 @@ public sealed class BinaryTests : TestExpressions
 
 	[Test]
 	public void ParseToOperator() =>
-		Assert.That(((To)ParseExpression("5 to Text")).ConversionType.Name, Is.EqualTo(Base.Text));
+		Assert.That(((To)ParseExpression("5 to Text")).ConversionType.Name, Is.EqualTo(Type.Text));
 
 	[Test]
 	public void ParsePowerWithMultiplyOperator() =>
@@ -148,6 +148,6 @@ public sealed class BinaryTests : TestExpressions
 	{
 		var expression = ParseExpression("(\"a\", \"b\") + \"5\"");
 		Assert.That(expression, Is.InstanceOf<Binary>());
-		Assert.That(((Binary)expression).ReturnType, Is.EqualTo(type.GetType(Base.Text.Pluralize())));
+		Assert.That(((Binary)expression).ReturnType, Is.EqualTo(type.GetType(Type.Text.Pluralize())));
 	}
 }

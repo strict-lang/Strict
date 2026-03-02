@@ -2,7 +2,7 @@
 
 namespace Strict.Expressions;
 
-public class ValueListInstance(Type returnType, List<ValueInstance> items) :
+public sealed class ValueListInstance(Type returnType, List<ValueInstance> items) :
 	IEquatable<ValueListInstance>
 {
 	public readonly Type ReturnType = returnType;
@@ -12,4 +12,8 @@ public class ValueListInstance(Type returnType, List<ValueInstance> items) :
 		other is not null && (ReferenceEquals(this, other) ||
 			other.ReturnType.IsSameOrCanBeUsedAs(ReturnType) &&
 			EqualsExtensions.AreEqual(Items, other.Items));
+
+	//ncrunch: no coverage start
+	public override bool Equals(object? other) => Equals(other as ValueListInstance);
+	public override int GetHashCode() => HashCode.Combine(ReturnType, Items);
 }

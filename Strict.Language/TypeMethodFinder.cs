@@ -21,7 +21,7 @@ internal class TypeMethodFinder(Type type)
 	{
 		if (Type.IsGeneric)
 			throw new GenericTypesCannotBeUsedDirectlyUseImplementation(Type, Type.IsMutable
-				? Base.Mutable + " must be used via keyword, not manually constructed!"
+				? Mutable + " must be used via keyword, not manually constructed!"
 				: "Type is Generic and cannot be used directly");
 		return Type is OneOfType
 			? FindMethodWithOneOfType(methodName, arguments)
@@ -43,7 +43,7 @@ internal class TypeMethodFinder(Type type)
 	{
 		if (!Type.AvailableMethods.TryGetValue(methodName, out var matchingMethods))
 			return null;
-		if (arguments.Count == 2 && arguments[0].ReturnType.IsError)
+		if (arguments is [{ ReturnType.IsError: true }, _])
 			return matchingMethods[0];
 		var typesOfArguments = arguments.Select(argument => argument.ReturnType).ToList();
 		var commonTypeOfArguments = TryGetSingleElementType(typesOfArguments);
@@ -55,9 +55,10 @@ internal class TypeMethodFinder(Type type)
 		// Single character text can always be used as a character (thus number)
 		if (arguments.Count == 1 && matchingMethods.Count > 0 &&
 			matchingMethods[0].Parameters.Count > 0 &&
-			matchingMethods[0].Parameters[0].Type.Name is Base.Number or Base.Character &&
+			(matchingMethods[0].Parameters[0].Type.IsNumber ||
+				matchingMethods[0].Parameters[0].Type.IsCharacter) &&
 			arguments[0].ReturnType.IsText && arguments[0].IsConstant &&
-			arguments[0].GetType().Name == "Text" && GetTextValue(arguments[0]).Length == 1)
+			arguments[0].GetType().Name == Text && GetTextValue(arguments[0]).Length == 1)
 			return matchingMethods[0];
 		// If this is a from constructor, we can call the methodParameterType constructor to pass
 		// along the argument and make it work if it wasn't matching yet.
@@ -94,7 +95,7 @@ internal class TypeMethodFinder(Type type)
 			{
 				Type: GenericTypeImplementation
 				{
-					Generic.Name: Base.List
+					Generic.Name: List
 				} parameterType
 			}
 		] && IsFromConstructorWithMatchingConstraints(method, numberOfArguments)
@@ -105,7 +106,7 @@ internal class TypeMethodFinder(Type type)
 	{
 		if (method.Name != Method.From)
 			return true;
-		var member = method.Type.Members.FirstOrDefault(m => !m.IsConstant && m.Type.Name != Base.Iterator);
+		var member = method.Type.Members.FirstOrDefault(m => !m.IsConstant && m.Type.Name != Iterator);
 		return member?.Constraints == null ||
 			member.Constraints[0].ToString().Contains("Length is " + numberOfArguments); //TODO: do actual evaluation of constraint
 	}
@@ -139,10 +140,10 @@ internal class TypeMethodFinder(Type type)
 		if (argumentType == methodParameterType || method.IsGeneric ||
 			IsArgumentImplementationTypeMatchParameterType(argumentType, methodParameterType))
 			return true;
-		if (!methodParameterType.IsText && methodParameterType.IsEnum &&
+		if (methodParameterType is { IsText: false, IsEnum: true } &&
 			methodParameterType.Members[0].Type.IsSameOrCanBeUsedAs(argumentType))
 			return true;
-		if (methodParameterType.Name == Base.Iterator && method.Type.IsSameOrCanBeUsedAs(argumentType))
+		if (methodParameterType.Name == Type.Iterator && method.Type.IsSameOrCanBeUsedAs(argumentType))
 			return true; //ncrunch: no coverage
 		if (!methodParameterType.IsGeneric)
 			return argumentType.IsSameOrCanBeUsedAs(methodParameterType);

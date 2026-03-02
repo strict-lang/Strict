@@ -52,7 +52,7 @@ public sealed class Instance
 		if (!left.ReturnType.IsList)
 			return HandleTextTypeConversionForBinaryOperations(left, right, BinaryOperator.Plus);
 		//TODO: over complicated, should always be a list here
-		if (left.ReturnType is GenericTypeImplementation { Name: Base.List })
+		if (left.ReturnType is GenericTypeImplementation { Name: Type.List })
 		{
 			return new Instance(left.ReturnType, left.Value + right.Value.ToString());
 		}

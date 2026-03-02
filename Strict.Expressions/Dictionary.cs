@@ -31,13 +31,13 @@ public sealed class Dictionary : Value
 	public override string ToString() => ReturnType.Name;
 
 	public static Expression? TryParse(Body body, ReadOnlySpan<char> input) =>
-		input.StartsWith(Base.Dictionary + '(') && input[^1] == ')' && AreTypeParameters(body, input)
+		input.StartsWith(Type.Dictionary + '(') && input[^1] == ')' && AreTypeParameters(body, input)
 			? new Dictionary(ParseTypeParameters(body, input), body.Method.GetType(input.ToString()))
 			: null;
 
 	private static bool AreTypeParameters(Body body, ReadOnlySpan<char> input)
 	{
-		foreach (var typeText in input[(Base.Dictionary.Length + 1)..^1].
+		foreach (var typeText in input[(Type.Dictionary.Length + 1)..^1].
 			Split(',', StringSplitOptions.TrimEntries))
 			if (body.Method.FindType(typeText.ToString()) == null)
 				return false;
@@ -47,7 +47,7 @@ public sealed class Dictionary : Value
 	private static List<Type> ParseTypeParameters(Body body, ReadOnlySpan<char> input)
 	{
 		var types = new List<Type>();
-		foreach (var typeText in input[(Base.Dictionary.Length + 1)..^1].
+		foreach (var typeText in input[(Type.Dictionary.Length + 1)..^1].
 			Split(',', StringSplitOptions.TrimEntries))
 			types.Add(body.Method.GetType(typeText.ToString()));
 		return types.Count != 2

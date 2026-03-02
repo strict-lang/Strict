@@ -28,5 +28,5 @@ public class Value(Type valueType, ValueInstance data, int lineNumber = 0, bool 
 	public override string ToString() => Data.ToExpressionCodeString();
 	public override bool IsConstant => true;
 	public override bool Equals(Expression? other) => other is Value v && Data.Equals(v.Data);
-	public override int GetHashCode() => HashCode.Combine(base.GetHashCode(), Data.GetHashCode());
+	public override int GetHashCode() => Data.GetHashCode();
 }

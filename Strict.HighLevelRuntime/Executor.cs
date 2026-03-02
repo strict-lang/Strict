@@ -13,16 +13,16 @@ public sealed class Executor
 	public Executor(Package initialPackage, TestBehavior behavior = TestBehavior.OnFirstRun)
 	{
 		this.behavior = behavior;
-		noneType = initialPackage.GetType(Base.None);
+		noneType = initialPackage.GetType(Type.None);
 		noneInstance = new ValueInstance(noneType);
-		booleanType = initialPackage.GetType(Base.Boolean);
+		booleanType = initialPackage.GetType(Type.Boolean);
 		trueInstance = new ValueInstance(booleanType, true);
 		falseInstance = new ValueInstance(booleanType, false);
-		numberType = initialPackage.GetType(Base.Number);
-		characterType = initialPackage.GetType(Base.Character);
-		textType = initialPackage.GetType(Base.Text);
-		rangeType = initialPackage.GetType(Base.Range);
-		listType = initialPackage.GetType(Base.List);
+		numberType = initialPackage.GetType(Type.Number);
+		characterType = initialPackage.GetType(Type.Character);
+		textType = initialPackage.GetType(Type.Text);
+		rangeType = initialPackage.GetType(Type.Range);
+		listType = initialPackage.GetType(Type.List);
 		bodyEvaluator = new BodyEvaluator(this);
 		ifEvaluator = new IfEvaluator(this);
 		selectorIfEvaluator = new SelectorIfEvaluator(this);

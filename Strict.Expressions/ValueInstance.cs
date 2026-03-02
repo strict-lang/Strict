@@ -90,7 +90,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 		case TextId:
 			value = new ValueTypeInstance(newType, new Dictionary<string, ValueInstance>
 			{
-				{ Base.Text, new ValueInstance((string)existingValue) }
+				{ Type.Text, new ValueInstance((string)existingValue) }
 			});
 			number = TypeId;
 			break;
@@ -106,7 +106,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 			var existingInstance = (ValueTypeInstance)existingValue;
 			if (!newType.IsMutable && existingInstance.ReturnType.IsMutable && newType.IsText)
 			{
-				value = existingInstance.Members[Base.Text].value;
+				value = existingInstance.Members[Type.Text].value;
 				number = TextId;
 			}
 			else
@@ -141,7 +141,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 		};
 
 	public bool IsValueTypeInstanceType =>
-		number == TypeId && value is ValueTypeInstance { ReturnType.Name: Base.Type };
+		number == TypeId && value is ValueTypeInstance { ReturnType.Name: nameof(Type) };
 
 	public ValueTypeInstance? FindValueTypeInstance(string typeName) =>
 		number == TypeId && value is ValueTypeInstance instance &&
@@ -228,13 +228,13 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 		: Exception(instance.ToString());
 	/*
 	public static ValueInstance CreateNumber(Context ctx, double n) =>
-		new(ctx.GetType(Base.Number), n);
+		new(ctx.GetType(Type.Number), n);
 
 	public static ValueInstance CreateBoolean(Context ctx, bool b) =>
-		new(ctx.GetType(Base.Boolean), b);
+		new(ctx.GetType(Type.Boolean), b);
 
 	public static ValueInstance CreateNone(Context ctx) =>
-		new(ctx.GetType(Base.None));
+		new(ctx.GetType(Type.None));
 
 	public static ValueInstance CreateObject(Type returnType, object? val)
 	{
@@ -303,13 +303,13 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 	ReturnType)
 
 		public static bool IsNumberType(Type type) =>
-			type.IsNumber || type.Members.Count == 1 && type.IsSameOrCanBeUsedAs(type.GetType(Base.Number));
+			type.IsNumber || type.Members.Count == 1 && type.IsSameOrCanBeUsedAs(type.GetType(Type.Number));
 
 		public static bool IsTextType(Type type) => type.Name is Base.Text or Base.Name;
 	/*still needed?
 		public static ValueInstance CreateInteger(Context ctx, int value)
 		{
-			var numberType = ctx.GetType(Base.Number);
+			var numberType = ctx.GetType(Type.Number);
 			var effectiveType = GetEffectiveType(numberType);
 			if (IsNumberType(effectiveType))
 				return CreateNumber(ctx, value);
@@ -321,7 +321,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 	/*no idea what all this is about
 		public static ValueInstance CreateText(Context ctx, string value)
 		{
-			var textType = ctx.GetType(Base.Text);
+			var textType = ctx.GetType(Type.Text);
 			var effectiveType = GetEffectiveType(textType);
 			if (!IsTextType(effectiveType))
 				throw new InvalidTypeValue(textType, value);
@@ -379,7 +379,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 		}
 
 		private static bool IsCharacterType(Type type) => type.Name is Base.Character or Base.HashCode ||
-			type.Members.Count == 1 && type.IsSameOrCanBeUsedAs(type.GetType(Base.Character));
+			type.Members.Count == 1 && type.IsSameOrCanBeUsedAs(type.GetType(Type.Character));
 
 		public double AsNumber()
 		{
@@ -489,11 +489,11 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 					throw new InvalidTypeValue(type, value);
 			}
 			else if (type.IsList || type.IsDictionary)// ||
-				//type is GenericTypeImplementation { Generic.Name: Base.List } ||
-				//type is GenericTypeImplementation { Generic.Name: Base.Dictionary } ||
-				//type is GenericType { Generic.Name: Base.List } || type is GenericType
+				//type is GenericTypeImplementation { Generic.Name: Type.List } ||
+				//type is GenericTypeImplementation { Generic.Name: Type.Dictionary } ||
+				//type is GenericType { Generic.Name: Type.List } || type is GenericType
 				//{
-				//	Generic.Name: Base.Dictionary
+				//	Generic.Name: Type.Dictionary
 				//})
 			{
 				if (value is IList<Expression>)
@@ -515,7 +515,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 						!m.Name.Equals(assignMember.Key, StringComparison.OrdinalIgnoreCase)))
 						throw new UnableToAssignMemberToType(assignMember, valueDictionary, type);
 			}
-			else if (!type.IsSameOrCanBeUsedAs(type.GetType(Base.Error)))
+			else if (!type.IsSameOrCanBeUsedAs(type.GetType(Type.Error)))
 				throw new InvalidTypeValue(type, value);
 			return value;
 		}
@@ -622,7 +622,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 	private string GetTypeName() =>
 		number switch
 		{
-			TextId => Base.Text,
+			TextId => Type.Text,
 			ListId => ((ValueListInstance)value).ReturnType.Name,
 			DictionaryId => ((ValueDictionaryInstance)value).ReturnType.Name,
 			TypeId => ((ValueTypeInstance)value).ReturnType.Name,
@@ -649,7 +649,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 				? "false"
 				: "true";
 		if (primitiveType.IsNone)
-			return Base.None;
+			return Type.None;
 		if (primitiveType.IsNumber)
 			return number.ToString(System.Globalization.CultureInfo.InvariantCulture);
 		return primitiveType.IsMutable

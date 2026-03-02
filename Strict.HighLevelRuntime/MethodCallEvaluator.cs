@@ -196,13 +196,13 @@ public sealed class MethodCallEvaluator(Executor executor)
 		ICollection<ValueInstance> rightList)
 	{
 		var combined = new List<ValueInstance>(leftList.Count + rightList.Count);
-		var isLeftText = listType is GenericTypeImplementation { Generic.Name: Base.List } list &&
+		var isLeftText = listType is GenericTypeImplementation { Generic.Name: Type.List } list &&
 			list.ImplementationTypes[0].IsText;
 		foreach (var item in leftList)
 			combined.Add(item);
 		foreach (var item in rightList)
 			combined.Add(isLeftText && !item.IsText
-				? executor.CreateValueInstance(listType.GetType(Base.Text), ConvertToText(item.Value))
+				? executor.CreateValueInstance(listType.GetType(Type.Text), ConvertToText(item.Value))
 				: item);
 		return executor.CreateValueInstance(listType, combined);
 	}
@@ -223,7 +223,7 @@ public sealed class MethodCallEvaluator(Executor executor)
 	{
 		var result = new List<ValueInstance>();
 		for (var index = 0; index < leftList.Count; index++)
-			result.Add(executor.CreateValueInstance(leftListType.GetType(Base.Number),
+			result.Add(executor.CreateValueInstance(leftListType.GetType(Type.Number),
 				leftList[index].Number() * rightList[index].Number()));
 		return executor.CreateValueInstance(leftListType, result);
 	}
@@ -233,7 +233,7 @@ public sealed class MethodCallEvaluator(Executor executor)
 	{
 		var result = new List<ValueInstance>();
 		for (var index = 0; index < leftList.Count; index++)
-			result.Add(executor.CreateValueInstance(leftListType.GetType(Base.Number),
+			result.Add(executor.CreateValueInstance(leftListType.GetType(Type.Number),
 				leftList[index].Number() / rightList[index].Number()));
 		return executor.CreateValueInstance(leftListType, result);
 	}
@@ -242,12 +242,12 @@ public sealed class MethodCallEvaluator(Executor executor)
 		ValueInstance right)
 	{
 		var combined = new List<ValueInstance>(leftList.Count + 1);
-		var isLeftText = leftListType is GenericTypeImplementation { Generic.Name: Base.List } list &&
+		var isLeftText = leftListType is GenericTypeImplementation { Generic.Name: Type.List } list &&
 			list.ImplementationTypes[0].IsText;
 		foreach (var item in leftList)
 			combined.Add(item);
 		combined.Add(isLeftText && !right.IsText
-			? executor.CreateValueInstance(leftListType.GetType(Base.Text), ConvertToText(right.Value))
+			? executor.CreateValueInstance(leftListType.GetType(Type.Text), ConvertToText(right.Value))
 			: right);
 		return executor.CreateValueInstance(leftListType, combined);
 	}
@@ -320,7 +320,7 @@ public sealed class MethodCallEvaluator(Executor executor)
 	{
 		var stacktraceList = new List<object?> { CreateStacktrace(ctx, source) };
 		var errorMembers = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
-		var errorType = ctx.Method.GetType(Base.Error);
+		var errorType = ctx.Method.GetType(Type.Error);
 		foreach (var member in errorType.Members)
 			errorMembers[member.Name] = member.Type.Name switch
 			{
@@ -335,7 +335,7 @@ public sealed class MethodCallEvaluator(Executor executor)
 		Expression? source)
 	{
 		var members = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
-		var stacktraceType = ctx.Method.GetType(Base.Stacktrace);
+		var stacktraceType = ctx.Method.GetType(Type.Stacktrace);
 		foreach (var member in stacktraceType.Members)
 			members[member.Name] = member.Type.Name switch
 			{
@@ -350,7 +350,7 @@ public sealed class MethodCallEvaluator(Executor executor)
 	private static Dictionary<string, object?> CreateMethodValue(Method method)
 	{
 		var values = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
-		var methodType = method.GetType(Base.Method);
+		var methodType = method.GetType(Type.Method);
 		foreach (var member in methodType.Members)
 			values[member.Name] = member.Type.Name switch
 			{
@@ -364,7 +364,7 @@ public sealed class MethodCallEvaluator(Executor executor)
 	private static Dictionary<string, object?> CreateTypeValue(Type type)
 	{
 		var values = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
-		var typeType = type.GetType(Base.Type);
+		var typeType = type.GetType(Type.Type);
 		foreach (var member in typeType.Members)
 			values[member.Name] = member.Type.Name switch
 			{

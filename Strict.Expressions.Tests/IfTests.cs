@@ -28,7 +28,7 @@ public sealed class IfTests : TestExpressions
 					"		return Character(5)",
 					"	else",
 					"		return 5"
-				]).GetBodyAndParseIfNeeded().ReturnType, Is.EqualTo(type.GetType(Base.Number)));
+				]).GetBodyAndParseIfNeeded().ReturnType, Is.EqualTo(type.GetType(Type.Number)));
 
 	[Test]
 	public void ParseInvalidSpaceAfterElseIsNotAllowed() =>

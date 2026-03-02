@@ -135,9 +135,9 @@ public sealed class Body : Expression
 			throw new SpanExtensions.EmptyInputIsNotAllowed();
 		ParsingLineNumber--;
 		var lastExpression = Expressions[^1];
-		var isLastExpressionReturn = lastExpression.GetType().Name == Base.Return;
-		if (Method.ReturnType.Name != Base.None && (isLastExpressionReturn || IsMethodReturn()) &&
-			Method.Name != Base.Run && Method.Name != From && !ChildHasMatchingMethodReturnType(
+		var isLastExpressionReturn = lastExpression.GetType().Name == "Return";
+		if (Method.ReturnType.Name != Type.None && (isLastExpressionReturn || IsMethodReturn()) &&
+			Method.Name != Run && Method.Name != From && !ChildHasMatchingMethodReturnType(
 				Parent == null
 					? Method.ReturnType
 					: Parent.ReturnType, lastExpression))
@@ -160,26 +160,22 @@ public sealed class Body : Expression
 	/// </summary>
 	private static bool
 		ChildHasMatchingMethodReturnType(Type parentType, Expression lastExpression) =>
-		lastExpression.GetType().Name == Base.Declaration && parentType.IsNone ||
+		lastExpression.GetType().Name == Declaration && parentType.IsNone ||
 		lastExpression.ReturnType.IsError ||
 		lastExpression.ReturnType.IsSameOrCanBeUsedAs(parentType) ||
 		// Allow automatically converting an item to a list if the method requires a list
 		parentType.IsIterator && parentType.GetListImplementationType(lastExpression.ReturnType) ==
 		parentType;
 
+	internal const string Declaration = nameof(Declaration);
+	internal const string MutableReassignment = nameof(MutableReassignment);
+
 	public sealed class ChildBodyReturnTypeMustMatchMethod(Body body, Expression lastExpression)
-		: ParsingFailed(body,
-			$"Last expression {
-				lastExpression
-			} return type: {
-				lastExpression.ReturnType
-			} is not matching with expected method return type:" + $" {
-				(body.Parent == null
-					? body.Method.ReturnType
-					: body.Parent.ReturnType)
-			} in method line: {
-				body.ParsingLineNumber
-			}");
+		: ParsingFailed(body, $"Last expression {lastExpression} return type: " +
+			$"{lastExpression.ReturnType} is not matching with expected method return type: " +
+			(body.Parent == null
+				? body.Method.ReturnType
+				: body.Parent.ReturnType) + " in method line: " + body.ParsingLineNumber);
 
 	public sealed class ReturnAsLastExpressionIsNotNeeded(Body body) : ParsingFailed(body);
 	public List<Variable>? Variables { get; private set; }
@@ -188,9 +184,9 @@ public sealed class Body : Expression
 	{
 		if (name.IsKeyword())
 			throw new NamedType.CannotUseKeywordsAsName(name);
-		if (!name.Length.IsWithinLimit())
+		if (!name.Length.IsNameLengthWithinLimit())
 			throw new NamedType.NameLengthIsNotWithinTheAllowedLimit(name);
-		if (!value.ToString().StartsWith(Base.Error, StringComparison.InvariantCulture))
+		if (!value.ToString().StartsWith(Type.Error, StringComparison.InvariantCulture))
 			CheckForNameWithDifferentTypeUsage(name, value);
 		if (FindVariable(name.AsSpan(), name != Type.IndexLowercase && name != Type.ValueLowercase) is
 			not null)
@@ -202,7 +198,7 @@ public sealed class Body : Expression
 	private void CheckForNameWithDifferentTypeUsage(string name, Expression value)
 	{
 		var nameType = value.ReturnType.TryGetType(name.MakeFirstLetterUppercase());
-		if (nameType != null && nameType != value.ReturnType && nameType.Name != Base.Error)
+		if (nameType != null && nameType != value.ReturnType && nameType.Name != Type.Error)
 			throw new VariableNameCannotHaveDifferentTypeNameThanValue(this, name,
 				value.ReturnType.Name);
 	}

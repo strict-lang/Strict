@@ -8,7 +8,7 @@ public sealed class TypeMethodFinderTests
 	public void CreatePackage()
 	{
 		parser = new MethodExpressionParser();
-		appType = CreateType(Base.App, "Run");
+		appType = CreateType(Type.App, "Run");
 	}
 
 	private Type CreateType(string name, params string[] lines) =>
@@ -142,7 +142,7 @@ public sealed class TypeMethodFinderTests
 	[Test]
 	public void RangeTypeShouldHaveCorrectAvailableMethods()
 	{
-		var range = TestPackage.Instance.GetType(Base.Range);
+		var range = TestPackage.Instance.GetType(Type.Range);
 		Assert.That(range.AvailableMethods.Values.Select(methods => methods.Count).Sum(),
 			Is.EqualTo(8), "AvailableMethods: " + range.AvailableMethods.ToWordList());
 	}
@@ -150,7 +150,7 @@ public sealed class TypeMethodFinderTests
 	[Test]
 	public void TextTypeShouldHaveCorrectAvailableMethods()
 	{
-		var text = TestPackage.Instance.GetType(Base.Text + "s");
+		var text = TestPackage.Instance.GetType(Type.Text + "s");
 		Assert.That(text.AvailableMethods.Values.Select(methods => methods.Count).Sum(),
 			Is.GreaterThanOrEqualTo(18), "AvailableMethods: " + text.AvailableMethods.ToWordList("\n"));
 	}
@@ -158,8 +158,8 @@ public sealed class TypeMethodFinderTests
 	[Test]
 	public void DictionaryIsComparisonShouldNotThrow()
 	{
-		var number = TestPackage.Instance.GetType(Base.Number);
-		var dictionary = TestPackage.Instance.GetType(Base.Dictionary).
+		var number = TestPackage.Instance.GetType(Type.Number);
+		var dictionary = TestPackage.Instance.GetType(Type.Dictionary).
 			GetGenericImplementation(number, number);
 		Assert.That(dictionary.FindMethod(BinaryOperator.Is, [new Instance(dictionary)]),
 			Is.Not.Null);
@@ -196,13 +196,13 @@ public sealed class TypeMethodFinderTests
 	[Test]
 	public void IsMutableAndHasMatchingInnerType()
 	{
-		var number = TestPackage.Instance.GetType(Base.Number);
-		Assert.That(CreateMutableType(Base.Number).IsSameOrCanBeUsedAs(number), Is.True);
-		Assert.That(CreateMutableType(Base.Text).IsSameOrCanBeUsedAs(number), Is.False);
+		var number = TestPackage.Instance.GetType(Type.Number);
+		Assert.That(CreateMutableType(Type.Number).IsSameOrCanBeUsedAs(number), Is.True);
+		Assert.That(CreateMutableType(Type.Text).IsSameOrCanBeUsedAs(number), Is.False);
 	}
 
 	private static Type CreateMutableType(string typeName) =>
-		TestPackage.Instance.GetType(Base.Mutable).
+		TestPackage.Instance.GetType(Type.Mutable).
 			GetGenericImplementation(TestPackage.Instance.GetType(typeName));
 
 	[Test]

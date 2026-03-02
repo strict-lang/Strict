@@ -50,7 +50,7 @@ public sealed class DictionaryTests : TestExpressions
 		Assert.That(dictionary.Members[0].Type.ToString(),
 			Is.EqualTo("TestPackage/Dictionary(Number, Number)"));
 		Assert.That(((GenericTypeImplementation)dictionary.Members[0].Type).ImplementationTypes[1],
-			Is.EqualTo(type.GetType(Base.Number)));
+			Is.EqualTo(type.GetType(Type.Number)));
 	}
 
 	[Test]
@@ -126,15 +126,15 @@ public sealed class DictionaryTests : TestExpressions
 		var body = (Body)registerType.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(((Declaration)body.Expressions[0]).Value, Is.InstanceOf<Dictionary>());
 		var dictionaryExpression = (Dictionary)((Declaration)body.Expressions[0]).Value;
-		Assert.That(dictionaryExpression.KeyType, Is.EqualTo(type.GetType(Base.Number)));
-		Assert.That(dictionaryExpression.MappedValueType, Is.EqualTo(type.GetType(Base.Text)));
+		Assert.That(dictionaryExpression.KeyType, Is.EqualTo(type.GetType(Type.Number)));
+		Assert.That(dictionaryExpression.MappedValueType, Is.EqualTo(type.GetType(Type.Text)));
 	}
 
 	[Test]
 	public void DictionaryExpressionToStringUsesTypeName()
 	{
-		var number = type.GetType(Base.Number);
-		var dictionaryType = type.GetType(Base.Dictionary).GetGenericImplementation(number, number);
+		var number = type.GetType(Type.Number);
+		var dictionaryType = type.GetType(Type.Dictionary).GetGenericImplementation(number, number);
 		Assert.That(new Dictionary([number, number], dictionaryType).ToString(),
 			Is.EqualTo("Dictionary(Number, Number)"));
 	}
@@ -171,7 +171,7 @@ public sealed class DictionaryTests : TestExpressions
 			() => new Dictionary(
 				new List<Type>
 				{
-					type.GetType(Base.Number), type.GetType(Base.Text), type.GetType(Base.Boolean)
+					type.GetType(Type.Number), type.GetType(Type.Text), type.GetType(Type.Boolean)
 				}, type),
 			Throws.InstanceOf<Dictionary.DictionaryMustBeInitializedWithTwoTypeParameters>().With.
 				Message.StartsWith("Expected Type Parameters: 2, Given type parameters: 3 and they are " +

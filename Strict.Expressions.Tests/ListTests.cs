@@ -102,7 +102,7 @@ public sealed class ListTests : TestExpressions
 		Assert.That(parsedExpression, Is.InstanceOf<Binary>());
 		Assert.That(parsedExpression.ToString(), Is.EqualTo(Code));
 		Assert.That(((Binary)parsedExpression).ReturnType,
-			Is.EqualTo(type.GetType(Base.Text.Pluralize())));
+			Is.EqualTo(type.GetType(Type.Text.Pluralize())));
 	}
 
 	[Test]
@@ -120,9 +120,9 @@ public sealed class ListTests : TestExpressions
 		Assert.That(() => ParseExpression(code),
 			Throws.InstanceOf<MethodCall.ConstructorForSameTypeArgumentIsNotAllowed>());
 
-	[TestCase("(1, 2)", Base.Number)]
-	[TestCase("(\"1\", \"2\")", Base.Text)]
-	[TestCase("(true, false)", Base.Boolean)]
+	[TestCase("(1, 2)", Type.Number)]
+	[TestCase("(\"1\", \"2\")", Type.Text)]
+	[TestCase("(true, false)", Type.Boolean)]
 	public void ListShouldHaveCorrectImplementationReturnType(string code, string expectedType) =>
 		Assert.That(ParseExpression(code).ReturnType,
 			Is.EqualTo(type.GetListImplementationType(type.GetType(expectedType))));
@@ -168,7 +168,7 @@ public sealed class ListTests : TestExpressions
 	[Test]
 	public void MethodsAndMembersOfListShouldHaveImplementationTypeAsParent()
 	{
-		var numbers = type.GetListImplementationType(type.GetType(Base.Number));
+		var numbers = type.GetListImplementationType(type.GetType(Type.Number));
 		Assert.That(numbers.Members[1].ToString(),
 			Is.EqualTo("elements TestPackage/List(Number)"));
 		Assert.That(numbers.Methods[1].Parent.ToString(),
@@ -178,15 +178,15 @@ public sealed class ListTests : TestExpressions
 	[Test]
 	public void MethodBodyShouldBeUpdatedWithImplementationType()
 	{
-		var texts = type.GetListImplementationType(type.GetType(Base.Text));
+		var texts = type.GetListImplementationType(type.GetType(Type.Text));
 		var containsMethod = texts.Methods.FirstOrDefault(m =>
 			m.Name == BinaryOperator.In && m.Parameters[0].Type.IsText);
 		Assert.That(containsMethod!.Type, Is.EqualTo(texts));
-		Assert.That(containsMethod.Parameters[0].Type.Name, Is.EqualTo(Base.Text));
+		Assert.That(containsMethod.Parameters[0].Type.Name, Is.EqualTo(Type.Text));
 		var body = (Body)containsMethod.GetBodyAndParseIfNeeded();
 		Assert.That(body.Method, Is.EqualTo(containsMethod));
 		Assert.That(body.Method.Type, Is.EqualTo(texts));
-		Assert.That(body.Method.Parameters[0].Type.Name, Is.EqualTo(Base.Text));
+		Assert.That(body.Method.Parameters[0].Type.Name, Is.EqualTo(Type.Text));
 		Assert.That(body.Method, Is.EqualTo(containsMethod), texts.Methods.ToWordList());
 	}
 
@@ -199,5 +199,5 @@ public sealed class ListTests : TestExpressions
 	[Test]
 	public void Index() =>
 		Assert.That(ParseExpression("(1, 2, 3).Index(9) is -1").ReturnType,
-			Is.EqualTo(type.GetType(Base.Boolean)));
+			Is.EqualTo(type.GetType(Type.Boolean)));
 }

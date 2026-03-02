@@ -74,7 +74,7 @@ public sealed class IfTests
 		var method = t.Methods.Single(m => m.Name == "Run");
 		Assert.That(
 			() => executor.Execute(method, null,
-				[ValueInstance.Create(TestPackage.Instance.FindType(Base.Boolean)!, false)]),
+				[ValueInstance.Create(TestPackage.Instance.FindType(Type.Boolean)!, false)]),
 			Throws.TypeOf<ExecutionFailed>().With.InnerException.
 				TypeOf<Executor.ReturnTypeMustMatchMethod>());
 	}

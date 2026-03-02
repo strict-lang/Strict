@@ -9,7 +9,7 @@ public sealed class TypeTests
 	public void CreateParser()
 	{
 		parser = new MethodExpressionParser();
-		appType = CreateType(Base.App, "Run");
+		appType = CreateType(Type.App, "Run");
 	}
 
 	private Type CreateType(string name, params string[] lines) =>
@@ -24,7 +24,7 @@ public sealed class TypeTests
 
 	[Test]
 	public void AddingTheSameNameIsNotAllowed() =>
-		Assert.That(() => CreateType(Base.App, "Run"),
+		Assert.That(() => CreateType(Type.App, "Run"),
 			Throws.InstanceOf<Type.TypeAlreadyExistsInPackage>());
 
 	[Test]
@@ -71,7 +71,7 @@ public sealed class TypeTests
 
 	[Test]
 	public void TypeNameMustBeWord() =>
-		Assert.That(() => new Member(package.GetType(Base.App), "blub7", null!),
+		Assert.That(() => new Member(package.GetType(Type.App), "blub7", null!),
 			Throws.InstanceOf<Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers>());
 
 	[Test]
@@ -118,7 +118,7 @@ public sealed class TypeTests
 
 	private static void CheckApp(Type program)
 	{
-		Assert.That(program.Members[0].Type.Name, Is.EqualTo(Base.App));
+		Assert.That(program.Members[0].Type.Name, Is.EqualTo(Type.App));
 		Assert.That(program.Members[1].Name, Is.EqualTo("logger"));
 		Assert.That(program.Methods[0].Name, Is.EqualTo("Run"));
 		Assert.That(program.IsTrait, Is.False);
@@ -159,8 +159,8 @@ public sealed class TypeTests
 		Assert.That(app.Methods[0].Name, Is.EqualTo("Run"));
 	}
 
-	[TestCase(Base.Number, "has number", "Run", "\tmutable result = 2", "\tresult = result + 2")]
-	[TestCase(Base.Text, "has number", "Run", "\tmutable result = \"2\"", "\tresult = result + \"!\"")]
+	[TestCase(Type.Number, "has number", "Run", "\tmutable result = 2", "\tresult = result + 2")]
+	[TestCase(Type.Text, "has number", "Run", "\tmutable result = \"2\"", "\tresult = result + \"!\"")]
 	public void MutableTypesHaveProperDataReturnType(string expected, params string[] code)
 	{
 		using var type = new Type(package, new TypeLines(nameof(MutableTypesHaveProperDataReturnType), code));
@@ -214,24 +214,24 @@ public sealed class TypeTests
 	[Test]
 	public void MakeSureGenericTypeIsProperlyGenerated()
 	{
-		var listType = package.GetType(Base.List);
+		var listType = package.GetType(Type.List);
 		Assert.That(listType.IsGeneric, Is.True);
-		Assert.That(listType.Members[0].Type, Is.EqualTo(package.GetType(Base.Iterator)));
+		Assert.That(listType.Members[0].Type, Is.EqualTo(package.GetType(Type.Iterator)));
 		using var type = new Type(package,
 			new TypeLines(nameof(MakeSureGenericTypeIsProperlyGenerated), "has numbers",
 				"GetNumbers Numbers", "\tnumbers"));
 		var getNumbersBody = type.ParseMembersAndMethods(parser).Methods[0].
 			GetBodyAndParseIfNeeded();
-		var numbersType = package.GetListImplementationType(package.GetType(Base.Number));
+		var numbersType = package.GetListImplementationType(package.GetType(Type.Number));
 		Assert.That(getNumbersBody.ReturnType, Is.EqualTo(numbersType));
-		Assert.That(numbersType.Generic, Is.EqualTo(package.GetType(Base.List)));
-		Assert.That(numbersType.ImplementationTypes[0], Is.EqualTo(package.GetType(Base.Number)));
+		Assert.That(numbersType.Generic, Is.EqualTo(package.GetType(Type.List)));
+		Assert.That(numbersType.ImplementationTypes[0], Is.EqualTo(package.GetType(Type.Number)));
 	}
 
 	[Test]
 	public void CannotGetGenericImplementationOnNonGenericType() =>
 		Assert.That(
-			() => package.GetType(Base.Text).GetGenericImplementation(package.GetType(Base.Number)),
+			() => package.GetType(Type.Text).GetGenericImplementation(package.GetType(Type.Number)),
 			Throws.InstanceOf<Type.CannotGetGenericImplementationOnNonGeneric>());
 
 	[Test]
@@ -252,13 +252,13 @@ public sealed class TypeTests
 					"\tconstant result = list + 5")).ParseMembersAndMethods(null!),
 			Throws.InstanceOf<ParsingFailed>());
 
-	[TestCase(Base.TextWriter, 0)]
-	[TestCase(Base.Mutable, 1)]
-	[TestCase(Base.Logger, 1)]
-	[TestCase(Base.Number, 0)]
-	[TestCase(Base.Character, 2)]
-	[TestCase(Base.Text, 2)]
-	[TestCase(Base.Error, 5)]
+	[TestCase(Type.TextWriter, 0)]
+	[TestCase(Type.Mutable, 1)]
+	[TestCase(Type.Logger, 1)]
+	[TestCase(Type.Number, 0)]
+	[TestCase(Type.Character, 2)]
+	[TestCase(Type.Text, 2)]
+	[TestCase(Type.Error, 5)]
 	public void ValidateAvailableMemberTypesCount(string name, int expectedCount)
 	{
 		var type = package.GetType(name);
@@ -351,8 +351,8 @@ public sealed class TypeTests
 		using var redApple = CreateType("RedApple", "has apple", "Color Text", "\tvalue.Color");
 		Assert.That(apple.IsSameOrCanBeUsedAs(redApple), Is.False);
 		Assert.That(redApple.IsSameOrCanBeUsedAs(apple), Is.True);
-		Assert.That(redApple.IsSameOrCanBeUsedAs(package.GetType(Base.Text)), Is.True);
-		Assert.That(redApple.IsSameOrCanBeUsedAs(package.GetType(Base.Number)), Is.False);
+		Assert.That(redApple.IsSameOrCanBeUsedAs(package.GetType(Type.Text)), Is.True);
+		Assert.That(redApple.IsSameOrCanBeUsedAs(package.GetType(Type.Number)), Is.False);
 	}
 
 	[Test]
@@ -360,15 +360,15 @@ public sealed class TypeTests
 	{
 		using var logger = CreateType("FileLogger", "has source File", "has logger", "Log Number",
 			"\tvalue");
-		Assert.That(logger.IsSameOrCanBeUsedAs(package.GetType(Base.File)), Is.True);
-		Assert.That(logger.IsSameOrCanBeUsedAs(package.GetType(Base.Logger)), Is.True);
+		Assert.That(logger.IsSameOrCanBeUsedAs(package.GetType(Type.File)), Is.True);
+		Assert.That(logger.IsSameOrCanBeUsedAs(package.GetType(Type.Logger)), Is.True);
 	}
 
 	[Test]
 	public void AccountantIsNotCompatibleWithFile()
 	{
 		using var accountant = CreateType("Accountant", "has taxFile File", "has assetFile File", "Calculate Number", "\tvalue");
-		Assert.That(accountant.IsSameOrCanBeUsedAs(package.GetType(Base.File)), Is.False);
+		Assert.That(accountant.IsSameOrCanBeUsedAs(package.GetType(Type.File)), Is.False);
 	}
 
 	[Test]
@@ -376,7 +376,7 @@ public sealed class TypeTests
 	{
 		using var instructionType = new Type(package,
 			new TypeLines("Instruction", "constant Set", "constant Add")).ParseMembersAndMethods(parser);
-		Assert.That(instructionType.IsSameOrCanBeUsedAs(package.GetType(Base.Number)), Is.True);
+		Assert.That(instructionType.IsSameOrCanBeUsedAs(package.GetType(Type.Number)), Is.True);
 	}
 
 	[Test]
@@ -387,40 +387,40 @@ public sealed class TypeTests
 			Throws.InstanceOf<MethodExpressionParser.CannotAccessMemberBeforeTypeIsParsed>().Or.
 				InstanceOf<MemberNameWithDifferentTypeNamesThanOwnAreNotAllowed>());
 
-	[TestCase(Base.Number, false)]
-	[TestCase(Base.Number + "s", true)]
-	[TestCase(Base.Character, false)]
-	[TestCase(Base.Character + "s", true)]
-	[TestCase(Base.Text, true)]
-	[TestCase(Base.Text + "s", true)]
-	[TestCase(Base.Boolean, false)]
+	[TestCase(Type.Number, false)]
+	[TestCase(Type.Number + "s", true)]
+	[TestCase(Type.Character, false)]
+	[TestCase(Type.Character + "s", true)]
+	[TestCase(Type.Text, true)]
+	[TestCase(Type.Text + "s", true)]
+	[TestCase(Type.Boolean, false)]
 	public void ValidateIsIterator(string name, bool expected) =>
 		Assert.That(package.GetType(name).IsIterator, Is.EqualTo(expected));
 
 	[Test]
 	public void FindLineNumber() =>
-		Assert.That(package.GetType(Base.Number).FindLineNumber("to Text"), Is.EqualTo(28));
+		Assert.That(package.GetType(Type.Number).FindLineNumber("to Text"), Is.EqualTo(28));
 
 	[Test]
 	public void FindFirstUnionTypeReturnsThisWhenElseTypeIsError()
 	{
-		var errorType = package.GetType(Base.Error);
+		var errorType = package.GetType(Type.Error);
 		Assert.That(appType.FindFirstUnionType(errorType), Is.EqualTo(appType));
 	}
 
 	[Test]
 	public void FindFirstUnionTypeReturnsElseTypeWhenCurrentTypeIsError()
 	{
-		var errorType = package.GetType(Base.Error);
-		var textType = package.GetType(Base.Text);
+		var errorType = package.GetType(Type.Error);
+		var textType = package.GetType(Type.Text);
 		Assert.That(errorType.FindFirstUnionType(textType), Is.EqualTo(textType));
 	}
 
 	[Test]
 	public void FindFirstUnionTypeReturnsIteratorWhenElseTypeIsNumber()
 	{
-		var iteratorType = package.GetType(Base.List);
-		var numberType = package.GetType(Base.Number);
+		var iteratorType = package.GetType(Type.List);
+		var numberType = package.GetType(Type.Number);
 		Assert.That(iteratorType.FindFirstUnionType(numberType), Is.EqualTo(iteratorType));
 	}
 
@@ -432,7 +432,7 @@ public sealed class TypeTests
 		using var secondType = CreateType(nameof(FindFirstUnionTypeReturnsSharedMemberType) + "Second",
 			"has number", "Run", "\t1");
 		Assert.That(firstType.FindFirstUnionType(secondType),
-			Is.EqualTo(package.GetType(Base.Number)));
+			Is.EqualTo(package.GetType(Type.Number)));
 	}
 
 	[Test]

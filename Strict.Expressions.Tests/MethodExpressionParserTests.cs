@@ -17,7 +17,7 @@ public sealed class MethodExpressionParserTests : TestExpressions
 					[MethodTests.Run, MethodTests.ConstantNumber, "\tnumber is Number"]).
 				GetBodyAndParseIfNeeded();
 		var declaration = (Declaration)body.Expressions[0];
-		Assert.That(declaration.ReturnType, Is.EqualTo(type.FindType(Base.Number)));
+		Assert.That(declaration.ReturnType, Is.EqualTo(type.FindType(Type.Number)));
 		Assert.That(declaration.ToString(), Is.EqualTo(MethodTests.ConstantNumber[1..]));
 	}
 
@@ -55,9 +55,9 @@ public sealed class MethodExpressionParserTests : TestExpressions
 		var body = (Body)new Method(type, 0, this, [
 			MethodTests.Run, MethodTests.ConstantErrorMessage, errorExpression
 		]).GetBodyAndParseIfNeeded();
-		Assert.That(body.ReturnType, Is.EqualTo(type.FindType(Base.None)));
+		Assert.That(body.ReturnType, Is.EqualTo(type.FindType(Type.None)));
 		Assert.That(body.Expressions, Has.Count.EqualTo(2));
-		Assert.That(body.Expressions[0].ReturnType.Name, Is.EqualTo(Base.Text));
+		Assert.That(body.Expressions[0].ReturnType.Name, Is.EqualTo(Type.Text));
 		Assert.That(body.Expressions[1], Is.TypeOf<MethodCall>());
 	}
 

@@ -15,7 +15,7 @@ public class CSharpExpressionVisitor : ExpressionVisitor
 	public string VisitMethodHeader(Method method, bool isInterface)
 	{
 		var isMainEntryPoint =
-			method.Type.Members.Any(t => t.Type.Name == Base.App) && method.Name == "Run";
+			method.Type.Members.Any(t => t.Type.Name == Type.App) && method.Name == "Run";
 		var methodName = isMainEntryPoint
 			? "Main"
 			: method.Name;

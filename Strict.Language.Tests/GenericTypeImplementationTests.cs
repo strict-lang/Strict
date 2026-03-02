@@ -99,12 +99,12 @@ public sealed class GenericTypeImplementationTests
 		Assert.That(methodCall.Arguments, Has.Count.EqualTo(2));
 		Assert.That(methodCall.Method.Type, Is.InstanceOf<GenericTypeImplementation>());
 		var customErrorType = (GenericTypeImplementation)methodCall.Method.Type;
-		Assert.That(customErrorType.Generic.Name, Is.EqualTo(Base.ErrorWithValue));
+		Assert.That(customErrorType.Generic.Name, Is.EqualTo(Type.ErrorWithValue));
 		Assert.That(customErrorType.Members, Has.Count.EqualTo(2));
 		Assert.That(customErrorType.Members[0].Name, Is.EqualTo("Error"));
-		Assert.That(customErrorType.Members[0].Type.Name, Is.EqualTo(Base.Error));
+		Assert.That(customErrorType.Members[0].Type.Name, Is.EqualTo(Type.Error));
 		Assert.That(customErrorType.Members[1].Name, Is.EqualTo("Value"));
-		Assert.That(customErrorType.Members[1].Type.Name, Is.EqualTo(Base.Number));
+		Assert.That(customErrorType.Members[1].Type.Name, Is.EqualTo(Type.Number));
 		Assert.That(customErrorType.AvailableMethods, Has.Count.GreaterThan(1));
 		Assert.That(customErrorType.AvailableMethods[Method.From][0].Parameters, Has.Count.EqualTo(2),
 			customErrorType.ToString());
@@ -113,11 +113,11 @@ public sealed class GenericTypeImplementationTests
 	[Test]
 	public void DictionaryImplementationUsesListMemberType()
 	{
-		var number = TestPackage.Instance.GetType(Base.Number);
-		var dictionary = TestPackage.Instance.GetType(Base.Dictionary).
+		var number = TestPackage.Instance.GetType(Type.Number);
+		var dictionary = TestPackage.Instance.GetType(Type.Dictionary).
 			GetGenericImplementation(number, number);
 		var listMember = dictionary.Members[0].Type;
 		Assert.That(listMember, Is.InstanceOf<GenericTypeImplementation>());
-		Assert.That(((GenericTypeImplementation)listMember).Generic.Name, Is.EqualTo(Base.List));
+		Assert.That(((GenericTypeImplementation)listMember).Generic.Name, Is.EqualTo(Type.List));
 	}
 }

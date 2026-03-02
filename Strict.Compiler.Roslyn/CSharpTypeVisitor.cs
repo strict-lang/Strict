@@ -9,7 +9,7 @@ public sealed class CSharpTypeVisitor : TypeVisitor
 	{
 		Name = type.Name;
 		expressionVisitor = new CSharpExpressionVisitor();
-		isImplementingApp = type.Members.Any(t => t.Type.Name == Base.App);
+		isImplementingApp = type.Members.Any(t => t.Type.Name == Type.App);
 		isInterface = type.IsTrait;
 		CreateHeader(type);
 		CreateClass();

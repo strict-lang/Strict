@@ -24,7 +24,7 @@ public sealed class GenericTypeImplementation : Type
 
 	private static string[] CreateHasLines(Type generic, IReadOnlyList<Type> implementationTypes) =>
 		generic.IsMutable && implementationTypes[0].IsGeneric
-			? [HasWithSpaceAtEnd + generic.Name, HasWithSpaceAtEnd + Base.Generic]
+			? [HasWithSpaceAtEnd + generic.Name, HasWithSpaceAtEnd + GenericUppercase]
 			: [HasWithSpaceAtEnd + generic.Name];
 
 	public Type Generic { get; }
@@ -35,7 +35,7 @@ public sealed class GenericTypeImplementation : Type
 		var implementationTypeIndex = 0;
 		foreach (var member in Generic.Members)
 			members.Add((member.Type.IsGeneric || member.Type is GenericType) &&
-				member.Type.Name != Base.Iterator
+				member.Type.Name != Iterator
 					? member.CloneWithImplementation(GetImplementedMemberType(member.Type,
 						ref implementationTypeIndex))
 					: member);
@@ -46,7 +46,7 @@ public sealed class GenericTypeImplementation : Type
 //TODO: this is confusing, just use IsList and grab the firstImplementationType
 		if (memberType is GenericType
 			{
-				Generic.Name: Base.List, GenericImplementations.Count: > 1
+				Generic.Name: List, GenericImplementations.Count: > 1
 			} genericType)
 			return genericType.Generic.GetGenericImplementation(
 				genericType.Generic.GetGenericImplementation(ImplementationTypes[0]));

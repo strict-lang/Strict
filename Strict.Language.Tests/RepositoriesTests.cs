@@ -37,9 +37,9 @@ public class RepositoriesTests
 	public async Task LoadStrictBaseTypes()
 	{
 		using var basePackage = await repos.LoadStrictPackage();
-		Assert.That(basePackage.FindDirectType(Base.Any), Is.Not.Null);
-		Assert.That(basePackage.FindDirectType(Base.Number), Is.Not.Null);
-		Assert.That(basePackage.FindDirectType(Base.App), Is.Not.Null);
+		Assert.That(basePackage.FindDirectType(Type.Any), Is.Not.Null);
+		Assert.That(basePackage.FindDirectType(Type.Number), Is.Not.Null);
+		Assert.That(basePackage.FindDirectType(Type.App), Is.Not.Null);
 		repos.Remove(basePackage);
 	}
 
@@ -79,8 +79,8 @@ public class RepositoriesTests
 			new Type(examplesPackage,
 					new TypeLines("ValidProgram", "has number", "Run Number", "\tnumber")).
 				ParseMembersAndMethods(parser);
-		Assert.That(program.Methods[0].ReturnType.ToString(), Contains.Substring(Base.Number));
-		Assert.That(program.Members[0].Type.ToString(), Contains.Substring(Base.Number));
+		Assert.That(program.Methods[0].ReturnType.ToString(), Contains.Substring(Type.Number));
+		Assert.That(program.Members[0].Type.ToString(), Contains.Substring(Type.Number));
 	}
 
 	[Test]

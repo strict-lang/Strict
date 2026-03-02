@@ -1,5 +1,6 @@
 using System.Runtime.CompilerServices;
 using Strict.Language;
+using Type = Strict.Language.Type;
 
 namespace Strict.Expressions;
 
@@ -7,7 +8,7 @@ namespace Strict.Expressions;
 /// Constant boolean that appears anywhere in the parsed code, "true" or "false"
 /// </summary>
 public sealed class Boolean(Context context, bool value, int lineNumber = 0)
-	: Value(context.GetType(Base.Boolean), value, lineNumber)
+	: Value(context.GetType(Type.Boolean), value, lineNumber)
 {
 	public override string ToString() =>
 		Data.number == 0

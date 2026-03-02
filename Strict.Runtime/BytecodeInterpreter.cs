@@ -186,7 +186,7 @@ public sealed class BytecodeInterpreter
 		if (invoke.Method?.Instance != null || invoke.Method?.Method.Name != Method.From ||
 			invoke.Method?.ReturnType is not GenericTypeImplementation
 			{
-				Generic.Name: Base.Dictionary
+				Generic.Name: Type.Dictionary
 			} dictionaryType)
 			return false;
 		Memory.Registers[invoke.Register] = new Instance(dictionaryType, new Dictionary<Value, Value>());
@@ -198,7 +198,7 @@ public sealed class BytecodeInterpreter
 		if (invoke.Method?.Method.Name != "Get" ||
 			invoke.Method.Instance?.ReturnType is not GenericTypeImplementation
 			{
-				Generic.Name: Base.Dictionary
+				Generic.Name: Type.Dictionary
 			})
 			return false;
 		var keyArg = invoke.Method.Arguments[0];
@@ -285,7 +285,7 @@ public sealed class BytecodeInterpreter
 		if (Memory.Variables.ContainsKey("index"))
 			Memory.Variables["index"].Value = Convert.ToInt32(Memory.Variables["index"].Value) + 1;
 		else
-			Memory.Variables.Add("index", new Instance(Base.Number, 0));
+			Memory.Variables.Add("index", new Instance(Type.Number, 0));
 		Memory.Registers.TryGetValue(loopBeginStatement.Register, out var iterableVariable);
 		if (iterableVariable is null)
 			return; //ncrunch: no coverage
@@ -313,7 +313,7 @@ public sealed class BytecodeInterpreter
 					: 1);
 		else
 			Memory.Variables.Add("index",
-				new Instance(Base.Number, loopBeginStatement.StartIndexValue ?? 0));
+				new Instance(Type.Number, loopBeginStatement.StartIndexValue ?? 0));
 		Memory.Variables["value"] = Memory.Variables["index"];
 	}
 
@@ -333,11 +333,11 @@ public sealed class BytecodeInterpreter
 		var index = Convert.ToInt32(Memory.Variables["index"].Value);
 		var value = iterableVariable.Value.ToString();
 		if (iterableVariable.ReturnType?.IsText && value is not null)
-			Memory.Variables["value"] = new Instance(Base.Text, value[index].ToString());
-		else if (iterableVariable.ReturnType is GenericTypeImplementation { Generic.Name: Base.List })
+			Memory.Variables["value"] = new Instance(Type.Text, value[index].ToString());
+		else if (iterableVariable.ReturnType is GenericTypeImplementation { Generic.Name: Type.List })
 			Memory.Variables["value"] = new Instance(((List<Expression>)iterableVariable.Value)[index]);
 		else if (iterableVariable.ReturnType?.IsNumber)
-			Memory.Variables["value"] = new Instance(Base.Number, index + 1);
+			Memory.Variables["value"] = new Instance(Type.Number, index + 1);
 	}
 
 	private void TryStoreInstructions(Statement statement)

@@ -49,6 +49,6 @@ public sealed class ToTests
 		Assert.That(
 			// ReSharper disable once ConfusingCharAsIntegerInConstructor
 			executor.Execute(type.Methods[0], ValueInstance.Create(type, '5'),
-				[ValueInstance.Create(type.GetType(Base.Number), 3)]).Value, Is.EqualTo(5 * 1000));
+				[ValueInstance.Create(type.GetType(Type.Number), 3)]).Value, Is.EqualTo(5 * 1000));
 	}
 }

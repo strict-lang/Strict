@@ -127,5 +127,4 @@ ipch/
 *.sap
 /Strict_NCrunchResults
 /.NCrunch_Strict
-Base.zip
 /coverage-results

@@ -28,7 +28,7 @@ public sealed class GitHubStrictDownloader : IDisposable
 		var items = JsonSerializer.Deserialize<List<ContentItem>>(json,
 			new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
 		foreach (var item in items)
-			if (item.Type == "file" && item.Name is not null && item.DownloadUrl is not null &&
+			if (item is { Type: "file", Name: not null, DownloadUrl: not null } &&
 				item.Name.EndsWith(".strict", StringComparison.OrdinalIgnoreCase))
 			{
 				var localPath = Path.Combine(outputDirectory, item.Name);

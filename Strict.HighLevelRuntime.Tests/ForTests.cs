@@ -62,7 +62,7 @@ public sealed class ForTests
 		using var t = CreateType(nameof(TextReturnTypeConsolidatesCharacters), "has number",
 			"Join(character) Text", "\tfor (character, character)", "\t\tvalue");
 		var result = executor.Execute(t.Methods.Single(m => m.Name == "Join"), null,
-			[ValueInstance.Create(t.GetType(Base.Character), 'b')]);
+			[ValueInstance.Create(t.GetType(Type.Character), 'b')]);
 		Assert.That(result.Value, Is.EqualTo("bb"));
 	}
 

@@ -225,7 +225,7 @@ public class TestExecutorTests
 	[Test]
 	public void RunDictionaryTestsTwice()
 	{
-		using var type = TestPackage.Instance.GetType(Base.Dictionary);
+		using var type = TestPackage.Instance.GetType(Type.Dictionary);
 		executor.RunAllTestsInType(type);
 		executor.RunAllTestsInType(type);
 	}

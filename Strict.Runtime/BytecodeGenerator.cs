@@ -60,7 +60,7 @@ public sealed class ByteCodeGenerator
 		{
 			if (instance.Method.Parameters[parameterIndex].Type is GenericTypeImplementation
 				{
-					Generic.Name: Base.List
+					Generic.Name: Type.List
 				})
 				statements.Add(new StoreVariableStatement(
 					new Instance(instance.Method.Parameters[parameterIndex].Type, instance.Arguments),
@@ -231,7 +231,7 @@ public sealed class ByteCodeGenerator
 		if (methodCall.Instance == null)
 			return; //ncrunch: no coverage
 		GenerateStatementsFromExpression(methodCall.Arguments[0]);
-		if (methodCall.Instance.ReturnType is GenericTypeImplementation { Generic.Name: Base.List })
+		if (methodCall.Instance.ReturnType is GenericTypeImplementation { Generic.Name: Type.List })
 			statements.Add(new RemoveStatement(methodCall.Instance.ToString(),
 				registry.PreviousRegister));
 	}
@@ -335,7 +335,7 @@ public sealed class ByteCodeGenerator
 	{
 		var statementCountBeforeLoopStart = statements.Count;
 		if (forExpression.Iterator is MethodCall rangeExpression &&
-			forExpression.Iterator.ReturnType.Name == Base.Range &&
+			forExpression.Iterator.ReturnType.Name == Type.Range &&
 			rangeExpression.Method.Name == Method.From)
 			GenerateStatementForRangeLoopInstruction(rangeExpression);
 		else

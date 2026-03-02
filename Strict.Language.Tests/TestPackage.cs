@@ -11,9 +11,9 @@ public sealed class TestPackage : Package
 	{
 		var parser = new MethodExpressionParser();
 		// @formatter:off
-		var any = new Type(this, new TypeLines(Base.Any,
+		var any = new Type(this, new TypeLines(Type.Any,
 			"from", "to Type", "to Text", "is(other) Boolean"));
-		var boolean = new Type(this, new TypeLines(Base.Boolean,
+		var boolean = new Type(this, new TypeLines(Type.Boolean,
 			"not Boolean",
 			"\tnot true is false",
 			"\tvalue then false else true",
@@ -28,7 +28,7 @@ public sealed class TestPackage : Package
 			"\tfalse xor false is false",
 			"\tvalue and other or (not value) and (not other) then false else true"));
 		var hasLength = new Type(this, new TypeLines("HasLength","Length Number"));
-		var number = new Type(this, new TypeLines(Base.Number,
+		var number = new Type(this, new TypeLines(Type.Number,
 			"to Character",
 			"\t5 to Character is \"5\"",
 			"\tconstant canOnlyConvertSingleDigit = Error",
@@ -68,7 +68,7 @@ public sealed class TestPackage : Package
 			"\tvalue = value + 1",
 			"Decrement Mutable(Number)",
 			"\tvalue = value - 1"));
-		var range = new Type(this, new TypeLines(Base.Range,
+		var range = new Type(this, new TypeLines(Type.Range,
 			"has iterator",
 			"has Start Number",
 			"has ExclusiveEnd Number",
@@ -94,7 +94,7 @@ public sealed class TestPackage : Package
 			"\tRange(10, 5).Reverse is Range(6, 11)",
 			"\tRange(-5, -10).Reverse is Range(-9, -4)",
       "\tLength > 0 then Range(ExclusiveEnd - 1, Start - 1) else Range(ExclusiveEnd + 1, Start + 1)"));
-		var character = new Type(this, new TypeLines(Base.Character,
+		var character = new Type(this, new TypeLines(Type.Character,
 			"has number",
 			"constant zeroCharacter = 48",
 			"constant NewLine = Character(13)",
@@ -105,13 +105,13 @@ public sealed class TestPackage : Package
 			"\tCharacter(\"A\") to Number is notANumber",
 			"\tlet result = number - zeroCharacter",
       "\tresult is in Range(0, 10) then result else notANumber(value)"));
-		var mutable = new Type(this, new TypeLines(Base.Mutable,
+		var mutable = new Type(this, new TypeLines(Type.Mutable,
 			"has generic"));
-		var iterator = new Type(this, new TypeLines(Base.Iterator,
+		var iterator = new Type(this, new TypeLines(Type.Iterator,
 			"for Iterator(Generic)",
 			"in(element Generic) Boolean",
 			"Length Number"));
-		var list = new Type(this, new TypeLines(Base.List,
+		var list = new Type(this, new TypeLines(Type.List,
 			"has iterator",
 			"has elements Generics",
 			"Length Number",
@@ -189,7 +189,7 @@ public sealed class TestPackage : Package
 			"\t(5, 10, 5).Reverse is (5, 10, 5)",
 			"\tfor Range(0, value.Length).Reverse",
 			"\t\touter.value(index)"));
-		var text = new Type(this, new TypeLines(Base.Text,
+		var text = new Type(this, new TypeLines(Type.Text,
 			"has characters",
 			"from(number)",
 			"\tvalue",
@@ -209,32 +209,32 @@ public sealed class TestPackage : Package
 			"\t\"Hey\" is \"Hey\"",
 			"\t\"Hi\" is not \"Hey\"",
 			"\tvalue is other"));
-		var baseType = new Type(this, new TypeLines(Base.Type, "has Name",
+		var baseType = new Type(this, new TypeLines(nameof(Type), "has Name",
 			"has Package Text",
 			"to Text",
 			"\tPackage + \".\" + Name"));
-		var generic = new Type(this, new TypeLines(Base.Generic, "from(type)"));
-		var logger = new Type(this, new TypeLines(Base.Logger,
+		var generic = new Type(this, new TypeLines(Type.GenericUppercase, "from(type)"));
+		var logger = new Type(this, new TypeLines(Type.Logger,
 			"has textWriter",
 			"Log(text)",
 			"\ttextWriter.Write(text)"));
-		var file = new Type(this, new TypeLines(Base.File,
+		var file = new Type(this, new TypeLines(Type.File,
 			"from(text)",
 			"Read Text",
 			"Write(text)",
 			"Delete",
 			"Length Number"));
-		var textWriter = new Type(this, new TypeLines(Base.TextWriter, "Write(text)"));
-		var textReader = new Type(this, new TypeLines(Base.TextReader, "Read Text"));
-		var name = new Type(this, new TypeLines(Base.Name, "has text"));
-		var error = new Type(this, new TypeLines(Base.Error, "has Name", "has Stacktraces",
+		var textWriter = new Type(this, new TypeLines(Type.TextWriter, "Write(text)"));
+		var textReader = new Type(this, new TypeLines(Type.TextReader, "Read Text"));
+		var name = new Type(this, new TypeLines(nameof(Name), "has text"));
+		var error = new Type(this, new TypeLines(Type.Error, "has Name", "has Stacktraces",
 			"Text Text", "\tName to Text"));
-		var errorWithValue = new Type(this, new TypeLines(Base.ErrorWithValue, "has Error",
+		var errorWithValue = new Type(this, new TypeLines(Type.ErrorWithValue, "has Error",
 			"has Value Generic"));
-		var method = new Type(this, new TypeLines(Base.Method, "has Name", "has Type"));
-		var stacktrace = new Type(this, new TypeLines(Base.Stacktrace,
+		var method = new Type(this, new TypeLines(nameof(Method), "has Name", "has Type"));
+		var stacktrace = new Type(this, new TypeLines(Type.Stacktrace,
 			"has Method", "has FilePath Text", "has Line Number"));
-		var dictionary = new Type(this, new TypeLines(Base.Dictionary,
+		var dictionary = new Type(this, new TypeLines(Type.Dictionary,
 			"has keysAndValues List(key Generic, mappedValue Generic)",
 			"from",
 			"\tDictionary(Number, Number).Length is 0",

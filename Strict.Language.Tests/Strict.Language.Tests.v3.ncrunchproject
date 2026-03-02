@@ -10,6 +10,9 @@
       <NamedTestSelector>
         <TestName>Strict.Language.Tests.RepositoriesTests.LoadingZippedStrictBaseHundredTimes</TestName>
       </NamedTestSelector>
+      <NamedTestSelector>
+        <TestName>Strict.Language.Tests.RepositoriesTests.LoadingZippedStrictHundredTimes</TestName>
+      </NamedTestSelector>
     </IgnoredTests>
   </Settings>
 </ProjectConfiguration>

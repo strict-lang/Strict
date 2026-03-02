@@ -2,8 +2,8 @@
 
 namespace Strict.Expressions;
 
-public sealed class ValueTypeInstance(Type returnType, Dictionary<string, ValueInstance> members) :
-	IEquatable<ValueTypeInstance>
+public sealed class ValueTypeInstance(Type returnType,
+	Dictionary<string, ValueInstance> members) : IEquatable<ValueTypeInstance>
 {
 	public readonly Type ReturnType = returnType;
 	public readonly Dictionary<string, ValueInstance> Members = members;

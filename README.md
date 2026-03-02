@@ -126,7 +126,7 @@ Only needed code that is actually called is ever parsed, validated, tested and r
 
 Happy coding with **Strict** — where there’s exactly one way to do it right.
 
-## Examples (all from Strict.Base/Number.strict)
+## Examples (all from Strict/Number.strict)
 ```
 	3 + 4 is 7
 	2 is not 3
@@ -440,7 +440,7 @@ int result =
         .Select(n => n * 10)
         .Sum();
 ```
-Haskell        
+Haskell
 ```
 numList :: [Int]
 numList = [0..9]

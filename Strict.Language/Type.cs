@@ -11,6 +11,46 @@ namespace Strict.Language;
 /// </summary>
 public class Type : Context, IDisposable
 {
+	/// <summary>
+	/// Has no implementation and is used for void, empty, or none, which is not valid to assign.
+	/// </summary>
+	public const string None = nameof(None);
+	/// <summary>
+	/// Defines all the methods available in any type (everything automatically implements **Any**).
+	/// These methods don't have to be implemented by any class, they are automatically implemented.
+	/// </summary>
+	public const string Any = nameof(Any);
+	/// <summary>
+	/// Most basic type: can only be true or false, any statement must either be None or return a
+	/// Boolean (anything else is a compiler error). Any statement returning false (like a failing
+	/// test) will also immediately cause an error at runtime or in the Editor via SCrunch.
+	/// </summary>
+	public const string Boolean = nameof(Boolean);
+	/// <summary>
+	/// Can be any floating point or integer number (think byte, short, int, long, float, or double
+	/// in other languages). Also, it can be a decimal or BigInteger, the compiler can decide and
+	/// optimize this away into anything that makes sense in the current context.
+	/// </summary>
+	public const string Number = nameof(Number);
+	public const string Character = nameof(Character);
+	public const string HashCode = nameof(HashCode);
+	public const string Range = nameof(Range);
+	public const string Text = nameof(Text);
+	public const string Error = nameof(Error);
+	public const string ErrorWithValue = nameof(ErrorWithValue);
+	public const string Iterator = nameof(Iterator);
+	public const string List = nameof(List);
+	public const string Logger = nameof(Logger);
+	public const string App = nameof(App);
+	public const string System = nameof(System);
+	public const string File = nameof(File);
+	public const string Directory = nameof(Directory);
+	public const string TextWriter = nameof(TextWriter);
+	public const string TextReader = nameof(TextReader);
+	public const string Stacktrace = nameof(Stacktrace);
+	public const string Mutable = nameof(Mutable);
+	public const string Dictionary = nameof(Dictionary);
+
 #if DEBUG
 	public Type(Package package, TypeLines file, [CallerFilePath] string callerFilePath = "",
 		[CallerLineNumber] int callerLineNumber = 0,
@@ -27,7 +67,7 @@ public class Type : Context, IDisposable
 			throw new TypeAlreadyExistsInPackage(Name, package, existingType);
 		package.Add(this);
 		Lines = file.Lines;
-		IsGeneric = Name == Base.Generic || OneOfFirstThreeLinesContainsGeneric();
+		IsGeneric = Name == GenericUppercase || OneOfFirstThreeLinesContainsGeneric();
 		CreatedBy = "Package: " + package + ", file=" + file;
 		typeMethodFinder = new TypeMethodFinder(this);
 		typeParser = new TypeParser(this, Lines);
@@ -72,26 +112,26 @@ public class Type : Context, IDisposable
 	private TypeKind GetTypeKindFromName() =>
 		Name switch
 		{
-			Base.None => TypeKind.None,
-			Base.Boolean => TypeKind.Boolean,
-			Base.Number => TypeKind.Number,
-			Base.Text => TypeKind.Text,
-			Base.Character => TypeKind.Character,
-			Base.List => TypeKind.List,
-			Base.Dictionary => TypeKind.Dictionary,
-			Base.Error => TypeKind.Error,
-			Base.ErrorWithValue => TypeKind.Error,
-			Base.Iterator => TypeKind.Iterator,
-			Base.Mutable => TypeKind.Mutable,
-			Base.Name => TypeKind.Text,
-			Base.Any => TypeKind.Any,
+			None => TypeKind.None,
+			Boolean => TypeKind.Boolean,
+			Number => TypeKind.Number,
+			Text => TypeKind.Text,
+			Character => TypeKind.Character,
+			List => TypeKind.List,
+			Dictionary => TypeKind.Dictionary,
+			Error => TypeKind.Error,
+			ErrorWithValue => TypeKind.Error,
+			Iterator => TypeKind.Iterator,
+			Mutable => TypeKind.Mutable,
+			nameof(Name) => TypeKind.Text,
+			Any => TypeKind.Any,
 			_ => TypeKind.Unknown
 		};
 
 	private static bool HasGenericMember(string line) =>
 		(line.StartsWith(HasWithSpaceAtEnd, StringComparison.Ordinal) ||
 			line.StartsWith(MutableWithSpaceAtEnd, StringComparison.Ordinal)) &&
-		(line.Contains(Base.Generic, StringComparison.Ordinal) ||
+		(line.Contains(GenericUppercase, StringComparison.Ordinal) ||
 			line.Contains(GenericLowercase, StringComparison.Ordinal));
 
 	public const string HasWithSpaceAtEnd = Keyword.Has + " ";
@@ -99,7 +139,7 @@ public class Type : Context, IDisposable
 	public const string ConstantWithSpaceAtEnd = Keyword.Constant + " ";
 
 	private static bool HasGenericMethodHeader(string line) =>
-		line.Contains(Base.Generic, StringComparison.Ordinal) ||
+		line.Contains(GenericUppercase, StringComparison.Ordinal) ||
 		line.Contains(GenericLowercase, StringComparison.Ordinal);
 
 	/// <summary>
@@ -148,7 +188,7 @@ public class Type : Context, IDisposable
 			return;
 		if (methods.Count == 0 && members.Count < 2 && typeKind == TypeKind.Unknown)
 			throw new NoMethodsFound(this, typeParser.LineNumber);
-		if (methods.Count > Limit.MethodCount && (Package.Name != nameof(Base) &&
+		if (methods.Count > Limit.MethodCount && (Package.Name != nameof(Strict) &&
 			Package.Name != "TestPackage" || Name == "MethodCountMustNotExceedFifteen"))
 			throw new MethodCountMustNotExceedLimit(this);
 	}
@@ -161,8 +201,8 @@ public class Type : Context, IDisposable
 	/// </summary>
 	public bool IsDataType =>
 		CheckIfParsed() && methods.Count == 0 &&
-		(members.Count > 1 || members is [{ InitialValue: not null }]) || Name == Base.Number ||
-		Name == Base.Name;
+		(members.Count > 1 || members is [{ InitialValue: not null }]) || Name == Number ||
+		Name == nameof(Name);
 
 	private bool CheckIfParsed()
 	{
@@ -223,9 +263,10 @@ public class Type : Context, IDisposable
 			: Package.FindType(name, searchingFrom ?? this);
 
 	/// <summary>
-	/// Only internally used, cannot be specified as member, parameter or variable. Everything is Any.
+	/// Everything internally is Any, cannot be specified as member, parameter, or variable.
 	/// </summary>
 	public const string AnyLowercase = "any";
+	public const string GenericUppercase = "Generic";
 	public const string GenericLowercase = "generic";
 	public const string IteratorLowercase = "iterator";
 	public const string ElementsLowercase = "elements";
@@ -269,7 +310,7 @@ public class Type : Context, IDisposable
 	private GenericTypeImplementation CreateGenericImplementation(string key,
 		IReadOnlyList<Type> implementationTypes)
 	{
-		if (Name is Base.List or Base.Iterator or Base.Mutable && implementationTypes.Count == 1 ||
+		if (Name is List or Iterator or Mutable && implementationTypes.Count == 1 ||
 			GetGenericTypeArguments().Count == implementationTypes.Count ||
 			HasMatchingConstructor(implementationTypes))
 		{
@@ -311,7 +352,7 @@ public class Type : Context, IDisposable
 	/// </summary>
 	public bool IsIterator =>
 		typeKind == TypeKind.Iterator ||
-		Name.StartsWith(Base.Iterator + "(", StringComparison.Ordinal) || HasAnyIteratorMember();
+		Name.StartsWith(Iterator + "(", StringComparison.Ordinal) || HasAnyIteratorMember();
 
 	private bool HasAnyIteratorMember()
 	{
@@ -367,10 +408,10 @@ public class Type : Context, IDisposable
 	/// Only allow implicit conversions as defined in Any.strict (to Text, to Type, to HashCode)
 	/// </summary>
 	private static bool IsImplicitToConversion(Context targetType) =>
-		targetType.Name is Base.Text or Base.Type or Base.HashCode;
+		targetType.Name is Text or nameof(Type) or HashCode;
 
 	internal bool IsMutableAndHasMatchingInnerType(Type argumentType) =>
-		this is GenericTypeImplementation { Generic.Name: Base.Mutable } genericTypeImplementation &&
+		this is GenericTypeImplementation { Generic.Name: Mutable } genericTypeImplementation &&
 		genericTypeImplementation.ImplementationTypes[0].IsSameOrCanBeUsedAs(argumentType);
 
 	private bool IsCompatibleOneOfType(Type sameOrBaseType) =>
@@ -387,7 +428,7 @@ public class Type : Context, IDisposable
 		if (IsError)
 			return elseType;
 		// Allow number and iterators for return types
-		if (Name == Base.Number && elseType.IsIterator)
+		if (Name == Number && elseType.IsIterator)
 			return elseType;
 		if (elseType.IsNumber && IsIterator)
 			return this;
@@ -425,7 +466,7 @@ public class Type : Context, IDisposable
 			foreach (var method in methods)
 				if (method.IsPublic || method.Name == Method.From || method.Name.AsSpan().IsOperator())
 					AddAvailableMethod(method);
-			if (Name == Base.Any)
+			if (Name == Any)
 				return cachedAvailableMethods;
 			// Types are composed in Strict, we want users to be able to use base methods but exclude
 			// public members (e.g., Type.Name), constants (e.g., constant Tab = Character(7)) and if we
@@ -437,8 +478,8 @@ public class Type : Context, IDisposable
 				methods.All(m => m.Name != Method.From))
 				AddFromConstructorWithMembersAsArguments(methods.Count > 0
 					? methods[0].Parser
-					: GetType(Base.Any).AvailableMethods.First().Value[0].Parser);
-			if (this is GenericTypeImplementation dictImpl && dictImpl.Generic.IsDictionary &&
+					: GetType(Any).AvailableMethods.First().Value[0].Parser);
+			if (this is GenericTypeImplementation { Generic.IsDictionary: true } dictImpl &&
 				dictImpl.Generic.AvailableMethods.TryGetValue(Method.From, out var genericFromMethods) &&
 				cachedAvailableMethods!.TryGetValue(Method.From, out var existingFromMethods))
 				foreach (var fromMethod in genericFromMethods)
@@ -491,7 +532,7 @@ public class Type : Context, IDisposable
 					member.Name.MakeFirstLetterLowercase() +
 					(member.InitialValue != null
 						? " = " + member.InitialValue
-						: member.Type.Name == Base.List
+						: member.Type.Name == List
 							? ""
 							: " " + member.Type.Name);
 		return parameters;
@@ -519,7 +560,7 @@ public class Type : Context, IDisposable
 
 	private void AddAnyMethods()
 	{
-		cachedAnyMethods ??= GetType(Base.Any).AvailableMethods;
+		cachedAnyMethods ??= GetType(Any).AvailableMethods;
 		if (!IsGeneric)
 			foreach (var (_, anyMethods) in cachedAnyMethods)
 			foreach (var anyMethod in anyMethods)
@@ -559,7 +600,7 @@ public class Type : Context, IDisposable
 				foreach (var namedType in genericType.GenericImplementations)
 					genericArguments.Add(namedType);
 			else if (member.Type.IsList || member.Type.IsIterator)
-				genericArguments.Add(new Parameter(this, Base.Generic));
+				genericArguments.Add(new Parameter(this, GenericUppercase));
 			else if (member.Type.IsGeneric)
 				genericArguments.Add(member);
 		return genericArguments.Count == 0
@@ -593,6 +634,7 @@ public class Type : Context, IDisposable
 	public virtual bool IsBoolean => typeKind == TypeKind.Boolean;
 	public bool IsText => typeKind == TypeKind.Text;
 	public bool IsNumber => typeKind == TypeKind.Number;
+	public bool IsCharacter => typeKind == TypeKind.Character;
 	public bool IsError => typeKind == TypeKind.Error;
 	public bool IsList => typeKind == TypeKind.List;
 	public bool IsDictionary => typeKind == TypeKind.Dictionary;

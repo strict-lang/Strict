@@ -62,11 +62,11 @@ public class DeclarationTests : TestExpressions
 		var expression = (Declaration)body.Expressions[0];
 		Assert.That(expression.Name, Is.EqualTo("numbers"));
 		Assert.That(expression.ReturnType.Name,
-			Is.EqualTo(Base.List + "(" + Base.Number + ")"));
+			Is.EqualTo(Type.List + "(" + Type.Number + ")"));
 		Assert.That(expression.Value, Is.InstanceOf<Binary>());
 		var leftExpression = ((Binary)expression.Value).Instance!;
 		Assert.That(leftExpression.ReturnType.Name,
-			Is.EqualTo(Base.List + "(" + Base.Number + ")"));
+			Is.EqualTo(Type.List + "(" + Type.Number + ")"));
 	}
 
 	[Test]
@@ -152,7 +152,7 @@ public class DeclarationTests : TestExpressions
 				"\t\"Hello World\"",
 				"Run",
 				"\t\"Random Text\"")).ParseMembersAndMethods(parser);
-		Assert.That(program.Methods[0].ReturnType.Name, Is.EqualTo(Base.Text));
+		Assert.That(program.Methods[0].ReturnType.Name, Is.EqualTo(Type.Text));
 	}
 
 	[Test]

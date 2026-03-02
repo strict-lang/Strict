@@ -27,7 +27,7 @@ public abstract class NamedType
 			if (!Name.IsWord())
 				throw new Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers(Name);
 		}
-		if (!Name.Length.IsWithinLimit())
+		if (!Name.Length.IsNameLengthWithinLimit())
 			throw new NameLengthIsNotWithinTheAllowedLimit(Name);
 	}
 
@@ -49,15 +49,9 @@ public abstract class NamedType
 	public sealed class AssignmentWithInitializerTypeShouldNotHaveNameWithType(string name)
 		: Exception(name);
 
-	public sealed class NameLengthIsNotWithinTheAllowedLimit(string name) : Exception($"Name {
-		name
-	} length is {
-		name.Length
-	} but allowed limit is between {
-		Limit.NameMinLimit
-	} and {
-		Limit.NameMaxLimit
-	}");
+	public sealed class NameLengthIsNotWithinTheAllowedLimit(string name) : Exception(
+		$"Name {name} length is {name.Length} but allowed limit is between " +
+		$"{Limit.NameMinLimit} and {Limit.NameMaxLimit} characters.");
 
 	public string Name { get; }
 	public Type Type { get; protected set; }
