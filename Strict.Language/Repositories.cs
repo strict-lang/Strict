@@ -141,11 +141,13 @@ public sealed class Repositories
 		var types = GetTypes(files, package);
 		foreach (var type in types)
 			type.ParseMembersAndMethods(parser);
+		/*not longer auto parsed
 		await GetSubDirectoriesAndParse(packagePath, package
 #if DEBUG
 			, callerFilePath, callerLineNumber, callerMemberName
 #endif
 		);
+		*/
 		return package;
 	}
 
@@ -247,7 +249,7 @@ public sealed class Repositories
 			types.Add(new Type(package, typeLines));
 		return types;
 	}
-
+/*user should specify which packages he wants, we shouldn't just load all in a repo!
 	private async Task GetSubDirectoriesAndParse(string packagePath, Package package
 #if DEBUG
 		, string callerFilePath, int callerLineNumber, string callerMemberName
@@ -287,7 +289,7 @@ public sealed class Repositories
 	/// </summary>
 	private static bool IsValidCodeDirectory(string directory) =>
 		Path.GetFileName(directory).IsWord();
-
+*/
 	public const string StrictDevelopmentFolder = @"C:\code\GitHub\strict-lang\Strict";
 	internal static string CacheFolder =>
 		Path.Combine( //ncrunch: no coverage, only downloaded and cached on non-development machines

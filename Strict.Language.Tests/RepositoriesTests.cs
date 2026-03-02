@@ -40,7 +40,6 @@ public class RepositoriesTests
 		Assert.That(basePackage.FindDirectType(Type.Any), Is.Not.Null);
 		Assert.That(basePackage.FindDirectType(Type.Number), Is.Not.Null);
 		Assert.That(basePackage.FindDirectType(Type.App), Is.Not.Null);
-		repos.Remove(basePackage);
 	}
 
 	[Test]
@@ -64,7 +63,8 @@ public class RepositoriesTests
 				using var _ = new Type(strictPackage, new TypeLines("Invalid", "has 1")).
 					ParseMembersAndMethods(null!);
 			}, //ncrunch: no coverage
-			Throws.InstanceOf<ParsingFailed>().With.Message.Contains(@"Base\Invalid.strict:line 1"));
+			Throws.InstanceOf<ParsingFailed>().With.Message.
+				Contains(@"Strict\Invalid.strict:line 1"));
 	}
 
 	//ncrunch: no coverage start

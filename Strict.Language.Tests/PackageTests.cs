@@ -19,7 +19,7 @@ public class PackageTests
 	private Type publicSubType = null!;
 
 	[TearDown]
-	public void TearDown() => ((Package)mainPackage.Parent).Remove(mainPackage);
+	public void TearDown() => mainPackage.Dispose();//((Package)mainPackage.Parent).Remove(mainPackage);
 
 	[Test]
 	public void NoneIsAlwaysKnown()
@@ -37,7 +37,7 @@ public class PackageTests
 	[Test]
 	public void RootPackageToStringShouldNotCrash()
 	{
-		Assert.That(mainType.Package.Parent.ToString(), Is.Empty);
+		Assert.That(mainType.Package.Parent.FullName, Is.Empty);
 		Assert.That(mainType.Package.Parent.FindType(Type.None)?.Name, Is.EqualTo(Type.None));
 		Assert.That(mainPackage.Parent.GetPackage(), Is.Null);
 	}
@@ -45,13 +45,13 @@ public class PackageTests
 	[Test]
 	public void GetFullNames()
 	{
-		Assert.That(mainPackage.ToString(), Is.EqualTo(nameof(PackageTests)));
-		Assert.That(mainType.ToString(), Is.EqualTo(nameof(PackageTests) + "/" + mainType.Name));
-		Assert.That(subPackage.ToString(),
+		Assert.That(mainPackage.FullName, Is.EqualTo(nameof(PackageTests)));
+		Assert.That(mainType.FullName, Is.EqualTo(nameof(PackageTests) + "/" + mainType.Name));
+		Assert.That(subPackage.FullName,
 			Is.EqualTo(nameof(PackageTests) + "/" + nameof(subPackage)));
-		Assert.That(privateSubType.ToString(),
+		Assert.That(privateSubType.FullName,
 			Is.EqualTo(nameof(PackageTests) + "/" + nameof(subPackage) + "/" + privateSubType.Name));
-		Assert.That(publicSubType.ToString(),
+		Assert.That(publicSubType.FullName,
 			Is.EqualTo(nameof(PackageTests) + "/" + nameof(subPackage) + "/" + publicSubType.Name));
 	}
 
@@ -60,7 +60,7 @@ public class PackageTests
 	{
 		Assert.That(mainType.GetType(publicSubType.Name), Is.EqualTo(publicSubType));
 		Assert.Throws<Package.PrivateTypesAreOnlyAvailableInItsPackage>(() =>
-			mainPackage.GetType(privateSubType.ToString()));
+			mainPackage.GetType(privateSubType.FullName));
 		Assert.Throws<Package.PrivateTypesAreOnlyAvailableInItsPackage>(() =>
 			mainPackage.GetType(nameof(TestPackage) + "/" + nameof(PackageTests) + "/" +
 				privateSubType.Name));
@@ -69,13 +69,13 @@ public class PackageTests
 	[Test]
 	public void FindSubTypeBothWays()
 	{
-		Assert.That(mainType.GetType(publicSubType.ToString()), Is.EqualTo(publicSubType));
-		Assert.That(publicSubType.GetType(mainType.ToString()), Is.EqualTo(mainType));
+		Assert.That(mainType.GetType(publicSubType.FullName), Is.EqualTo(publicSubType));
+		Assert.That(publicSubType.GetType(mainType.FullName), Is.EqualTo(mainType));
 	}
 
 	[Test]
 	public void FindPackage() =>
-		Assert.That(mainPackage.Find(subPackage.ToString()), Is.EqualTo(subPackage));
+		Assert.That(mainPackage.Find(subPackage.FullName), Is.EqualTo(subPackage));
 
 	[Test]
 	public void FindUnknownPackage() =>

@@ -10,7 +10,7 @@ namespace Strict.Language;
 /// is available. The high-level context knows all types, low-level scope in methods is managed via
 /// <see cref="Body"/> (which is every MethodBody, If.Then, If.Else, or For).
 /// </summary>
-[DebuggerDisplay("Property={FolderName}")]
+[DebuggerDisplay("Property={FullName}")]
 public abstract class Context
 {
 	protected Context(Context? parent, string name
@@ -35,7 +35,7 @@ public abstract class Context
 		this.callerLineNumber = callerLineNumber;
 		this.callerMemberName = callerMemberName;
 #endif
-		FolderName = string.IsNullOrEmpty(parent?.Name)
+		FullName = string.IsNullOrEmpty(parent?.Name)
 			? name
 			: parent + "/" + name;
 	}
@@ -64,11 +64,10 @@ public abstract class Context
 
 	public Context Parent { get; }
 	public string Name { get; }
-	public string FolderName { get; }
-
-	// ReSharper disable once InconsistentlySynchronizedField
+	public string FullName { get; }
+	public abstract Type? FindType(string name, Context? searchingFrom = null);
 	public Type GetType(string name) =>
-		TryGetType(name) ?? throw new TypeNotFound(name, FolderName, types.Keys.ToWordList());
+		TryGetType(name) ?? throw new TypeNotFound(name, this);
 
 	internal Type? TryGetType(string name)
 	{
@@ -169,12 +168,12 @@ public abstract class Context
 
 	private Type? FindFullType(string name) =>
 		name.Contains('/')
-			? name == FolderName
+			? name == FullName
 				? this as Type
 				: GetPackage()?.FindFullType(name)
 			: null;
 
-	public override string ToString() => FolderName;
+	public override string ToString() => FullName;
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public Package? GetPackage() =>
@@ -185,8 +184,17 @@ public abstract class Context
 				: package
 			: Parent.GetPackage();
 
-	public sealed class TypeNotFound(string typeName, string contextFullName, string contextTypes)
-		: Exception($"{typeName} not found in {contextFullName}, available types: " + contextTypes);
-
-	public abstract Type? FindType(string name, Context? searchingFrom = null);
+	public sealed class TypeNotFound(string typeName, Context context)
+		: Exception($"{typeName} not found in\n"+WriteContextTypes(context))
+	{
+		private static string WriteContextTypes(Context context)
+		{
+			var result = context.GetType().Name + " " + context.FullName + ", " +
+				"available " + "types: " + context.types.Keys.ToWordList();
+			// ReSharper disable once ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract
+			if (context.Parent != null && context.Parent.Name != string.Empty)
+				result += "\n\tParent " + WriteContextTypes(context.Parent);
+			return result;
+		}
+	}
 }

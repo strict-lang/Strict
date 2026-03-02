@@ -258,7 +258,7 @@ public class Type : Context, IDisposable
 	}
 
 	public override Type? FindType(string name, Context? searchingFrom = null) =>
-		name == Name || name.Contains('/') && name == base.ToString() || name is Other or Outer
+		name == Name || name is Other or Outer || name == FullName
 			? this
 			: Package.FindType(name, searchingFrom ?? this);
 
@@ -609,7 +609,7 @@ public class Type : Context, IDisposable
 	}
 
 	//ncrunch: no coverage start
-	public sealed class TypeMustBeGenericToCallThis(Type type) : Exception(type.FolderName);
+	public sealed class TypeMustBeGenericToCallThis(Type type) : Exception(type.FullName);
 
 	public sealed class InvalidGenericTypeWithoutGenericArguments(Type type) : Exception(
 		"This type is broken and needs to be fixed, check the creation: " + type + ", CreatedBy: " +

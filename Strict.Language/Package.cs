@@ -28,7 +28,6 @@ public class Package : Context, IEnumerable<Type>, IDisposable
 		: base(parentPackage, Path.GetFileName(packagePath))
 #endif
 	{
-		FullName = packagePath;
 		this.createdFromRepos = createdFromRepos;
 		if (parentPackage == null)
 			return;
@@ -82,7 +81,6 @@ public class Package : Context, IEnumerable<Type>, IDisposable
 		private readonly Dictionary<string, Type> cachedFoundTypes = new(StringComparer.Ordinal);
 	}
 
-	public string FullName { get; }
 	private readonly List<Package> children = new();
 	internal void Add(Type type) => types.Add(type.Name, type);
 	private readonly Dictionary<string, Type> types = new();
@@ -96,9 +94,9 @@ public class Package : Context, IEnumerable<Type>, IDisposable
 			throw new PrivateTypesAreOnlyAvailableInItsPackage();
 		if (!fullName.StartsWith(ToString() + "/", StringComparison.Ordinal))
 			return (Parent as Package)?.FindFullType(fullName);
-		var subName = fullName.Replace(ToString() + "/", "");
-		return subName.Contains('.')
-			? FindSubPackage(subName.Split('.')[0])?.FindFullType(fullName)
+		var subName = fullName.Replace(FullName + "/", "");
+		return subName.Contains('/')
+			? FindSubPackage(subName.Split('/')[0])?.FindFullType(fullName)
 			: FindDirectType(subName);
 	}
 
@@ -158,7 +156,7 @@ public class Package : Context, IEnumerable<Type>, IDisposable
 	public Package? FindSubPackage(string name)
 	{
 		foreach (var child in children)
-			if (child.Name == name || child.FolderName == name)
+			if (child.Name == name || child.FullName == name)
 				return child;
 		return null;
 	}

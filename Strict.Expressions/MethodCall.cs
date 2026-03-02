@@ -199,7 +199,7 @@ public class MethodCall : ConcreteExpression
 				arguments[0].ReturnType.IsText
 					? new Value(body.Method.GetType(nameof(Type.Name)), ((Value)arguments[0]).Data)
 					: arguments[0],
-				new Text(body.Method, body.Method.Type.Package.FolderName)
+				new Text(body.Method, ((Context)body.Method.Type.Package).FullName)
 			]
 			: arguments;
 

@@ -90,7 +90,7 @@ public sealed class Executor
 		catch (Exception inner) when (runOnlyTests)
 		{
 			throw new MethodRequiresTest(method,
-				$"Test execution failed: {method.Parent.FolderName}.{method.Name}\n" +
+				$"Test execution failed: {method.Parent.FullName}.{method.Name}\n" +
 				method.lines.ToWordList("\n") + "\n" + inner);
 		}
 		if (body is not Body && runOnlyTests)
@@ -400,7 +400,7 @@ public sealed class Executor
 	public class MethodRequiresTest(Method method, string body) : ExecutionFailed(method,
 		body.StartsWith("Test execution failed", StringComparison.Ordinal)
 			? body
-			: $"Method {method.Parent.FolderName}.{method.Name}\n{body}")
+			: $"Method {method.Parent.FullName}.{method.Name}\n{body}")
 	{
 		public MethodRequiresTest(Method method, Body body) : this(method,
 			body + " ({CountExpressionComplexity(body)} expressions)") { }

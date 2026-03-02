@@ -17,7 +17,7 @@ internal sealed class BodyEvaluator(Executor executor)
 		catch (ExecutionFailed ex)
 		{
 			throw new ExecutionFailed(body.Method,
-				"Failed in \"" + body.Method.Type.FolderName + "." + body.Method.Name + "\":" +
+				"Failed in \"" + body.Method.Type.FullName + "." + body.Method.Name + "\":" +
 				Environment.NewLine + body.Expressions.ToWordList(Environment.NewLine), ex);
 		}
 		finally

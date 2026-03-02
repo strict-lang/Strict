@@ -369,7 +369,7 @@ public sealed class MethodCallEvaluator(Executor executor)
 			values[member.Name] = member.Type.Name switch
 			{
 				Base.Name => type.Name,
-				Base.Text => ((Context)type.Package).FolderName,
+				Base.Text => ((Context)type.Package).FullName,
 				_ => throw new NotSupportedException("Type member not supported: " + member) //ncrunch: no coverage
 			};
 		return values;
