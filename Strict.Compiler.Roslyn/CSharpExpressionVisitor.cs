@@ -87,7 +87,7 @@ public class CSharpExpressionVisitor : ExpressionVisitor
 		if (methodCall.Method.Name == "Read" && methodCall.Instance?.ToString() == "file")
 			result += "ReadToEnd"; //ncrunch: no coverage
 		else if (methodCall.Method.Name is "Write" or "Log" &&
-			methodCall.Instance?.ReturnType.Name is Base.Logger or Base.System)
+			methodCall.Instance?.ReturnType.Name is Type.Logger or Type.System)
 			result += "WriteLine";
 		else if (methodCall.Method.Name == Method.From)
 			result += methodCall.Method.Type.Name == "File"
@@ -116,7 +116,7 @@ public class CSharpExpressionVisitor : ExpressionVisitor
 			: "");
 
 	protected override string Visit(MemberCall memberCall) =>
-		memberCall.Member.Type.Name is Base.Logger or Base.System
+		memberCall.Member.Type.Name is Type.Logger or Type.System
 			? "Console"
 			: memberCall.Instance != null
 				? memberCall.Instance + "." + memberCall.Member.Name

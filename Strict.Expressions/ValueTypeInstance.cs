@@ -10,6 +10,7 @@ public sealed class ValueTypeInstance(Type returnType,
 
 	public bool Equals(ValueTypeInstance? other) =>
 		other is not null && (ReferenceEquals(this, other) ||
-			other.ReturnType.IsSameOrCanBeUsedAs(ReturnType) &&
-			EqualsExtensions.AreEqual(Members, other.Members));
+			other.ReturnType.IsSameOrCanBeUsedAs(ReturnType) && Members.Count == other.Members.Count &&
+			Members.All(kvp =>
+				other.Members.TryGetValue(kvp.Key, out var value) && kvp.Value.Equals(value)));
 }

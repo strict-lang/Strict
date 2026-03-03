@@ -92,7 +92,7 @@ public sealed class ConstantCollapser : Visitor
 	public class UnsupportedToExpression(string toStringWithType) : Exception(toStringWithType); //ncrunch: no coverage
 
 	private static double GetNumber(Number n) =>
-		double.Parse(n.Data.ToExpressionCodeString(), System.Globalization.CultureInfo.InvariantCulture);
+		double.Parse(n.Data.ToExpressionCodeString(), CultureInfo.InvariantCulture);
 
 	private static string GetText(Text t)
 	{

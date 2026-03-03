@@ -193,7 +193,7 @@ public sealed class ListTests : TestExpressions
 	[Test]
 	public void CompareLists() =>
 		Assert.That(
-			EqualsExtensions.AreEqual(new List<Number> { new(type, 2), new(type, 3) },
+			new List<Number> { new(type, 2), new(type, 3) }.SequenceEqual(
 				new List<Number> { new(type, 2), new(type, 3) }), Is.True);
 
 	[Test]

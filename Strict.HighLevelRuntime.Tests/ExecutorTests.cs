@@ -8,7 +8,8 @@ namespace Strict.HighLevelRuntime.Tests;
 public sealed class ExecutorTests
 {
 	[SetUp]
-	public void CreateExecutor() => executor = new Executor(TestBehavior.Disabled);
+	public void CreateExecutor() =>
+		executor = new Executor(TestPackage.Instance, TestBehavior.Disabled);
 
 	private Executor executor = null!;
 
@@ -17,7 +18,7 @@ public sealed class ExecutorTests
 	{
 		using var t = CreateCalcType();
 		var method = t.Methods.Single(m => m.Name == "Add");
-		Assert.That(() => executor.Execute(method, null, []),
+		Assert.That(() => executor.Execute(method),
 			Throws.TypeOf<Executor.MissingArgument>().With.Message.StartsWith("first"));
 	}
 
@@ -27,8 +28,8 @@ public sealed class ExecutorTests
 		using var t = CreateType(nameof(FromConstructorWithExistingInstanceThrows), "has number",
 			"from(number Number)", "\tvalue");
 		var method = t.Methods.Single(m => m.Name == Method.From);
-		var number = ValueInstance.Create(TestPackage.Instance.FindType(Type.Number)!, 3d);
-		var instance = ValueInstance.Create(t, 1d);
+		var number = new ValueInstance(executor.numberType, 3);
+		var instance = new ValueInstance(t, 1);
 		Assert.That(() => executor.Execute(method, instance, [number]),
 			Throws.InstanceOf<MethodCall.CannotCallFromConstructorWithExistingInstance>());
 	}
@@ -46,9 +47,9 @@ public sealed class ExecutorTests
 	{
 		using var t = CreateCalcType();
 		var method = t.Methods.Single(m => m.Name == "Add");
-		var result = executor.Execute(method, null,
-			[ValueInstance.Create(TestPackage.Instance.FindType(Type.Number)!, 5d)]);
-		Assert.That(Convert.ToDouble(result.Value), Is.EqualTo(6));
+		var result = executor.Execute(method, executor.noneInstance,
+			[new ValueInstance(executor.numberType, 5)]);
+		Assert.That(result.Number, Is.EqualTo(6));
 	}
 
 	[Test]
@@ -69,8 +70,7 @@ public sealed class ExecutorTests
 		using var t = CreateType(nameof(ArgumentDoesNotMapToMethodParameters), "has number",
 			"Use(number Number) Number", "\tnumber");
 		var method = t.Methods.Single(m => m.Name == "Use");
-		var boolean = ValueInstance.Create(TestPackage.Instance.FindType(Type.Boolean)!, true);
-		Assert.That(() => executor.Execute(method, null, [boolean]),
+		Assert.That(() => executor.Execute(method, executor.noneInstance, [executor.trueInstance]),
 			Throws.InstanceOf<Executor.ArgumentDoesNotMapToMethodParameters>());
 	}
 

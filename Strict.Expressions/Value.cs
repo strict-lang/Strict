@@ -25,7 +25,7 @@ public class Value(Type valueType, ValueInstance data, int lineNumber = 0, bool 
 		isMutable) { }
 
 	public ValueInstance Data { get; } = data;
-	public override string ToString() => Data.ToExpressionCodeString();
+	public override string ToString() => Data.ToExpressionCodeString(true);
 	public override bool IsConstant => true;
 	public override bool Equals(Expression? other) => other is Value v && Data.Equals(v.Data);
 	public override int GetHashCode() => Data.GetHashCode();

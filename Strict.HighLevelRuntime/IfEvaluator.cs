@@ -8,7 +8,7 @@ internal sealed class IfEvaluator(Executor executor)
 	public ValueInstance Evaluate(If iff, ExecutionContext ctx)
 	{
 		executor.Statistics.IfCount++;
-		if (Executor.ToBool(executor.RunExpression(iff.Condition, ctx)))
+		if (executor.RunExpression(iff.Condition, ctx).Boolean)
 		{
 			var thenResult = executor.RunExpression(iff.Then, ctx);
 			return iff.Then is MutableReassignment || IsMutableInstanceCall(iff.Then)

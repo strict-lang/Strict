@@ -12,10 +12,10 @@ internal sealed class ForEvaluator(Executor executor)
 		var iterator = executor.RunExpression(f.Iterator, ctx);
 		var results = new List<ValueInstance>();
 		var itemType = GetForValueType(iterator);
-		if (iterator.IsValueTypeInstance && iterator..GetValueTypeInstanceType().Name == Type.Range &&
-			iterator.Value is IDictionary<string, object?> rangeValues &&
-			rangeValues.TryGetValue("Start", out var startValue) &&
-			rangeValues.TryGetValue("ExclusiveEnd", out var endValue))
+		var iteratorInstance = iterator.TryGetValueTypeInstance();
+		if (iteratorInstance?.ReturnType == executor.rangeType &&
+			iteratorInstance.Members.TryGetValue("Start", out var startValue) &&
+			iteratorInstance.Members.TryGetValue("ExclusiveEnd", out var endValue))
 		{
 			var start = Convert.ToInt32(startValue);
 			var end = Convert.ToInt32(endValue);
@@ -44,30 +44,24 @@ internal sealed class ForEvaluator(Executor executor)
 					return ctx.ExitMethodAndReturnValue.Value;
 			}
 		}
-		return ShouldConsolidateForResult(results, ctx) ?? executor.CreateValueInstance(
-			results.Count == 0
-				? iterator.ReturnType
-				: iterator.ReturnType.GetType(Type.List).GetGenericImplementation(results[0].ReturnType),
-			results);
+		return ShouldConsolidateForResult(results, ctx) ?? new ValueInstance(
+			executor.listType.GetGenericImplementation(iterator.GetIteratorType()), results);
 	}
 
 	private void ExecuteForIteration(For f, ExecutionContext ctx, ValueInstance iterator,
 		ICollection<ValueInstance> results, Type itemType, int index)
 	{
 		var loop = new ExecutionContext(ctx.Type, ctx.Method) { This = ctx.This, Parent = ctx };
-		var indexInstance = executor.Number(itemType, index);
+		var indexInstance = new ValueInstance(executor.numberType, index);
 		loop.Set(Type.IndexLowercase, indexInstance);
-		//If this is Range or Number, we should not call GetIteratorValue, index is what we use!
-		var value = iterator.IsNumber || iterator.IsRange ? indexInstance : iterator.GetIteratorValue(itemType, index);
-		if (itemType.IsText && value is char character)
-			value = character.ToString();
-		var valueInstance = value is ValueInstance vi
-			? vi
-			: executor.CreateValueInstance(itemType, value);
-		loop.Set(Type.ValueLowercase, valueInstance);
+		var value = iterator.IsPrimitiveType(executor.numberType) ||
+			iterator.IsPrimitiveType(executor.rangeType)
+				? indexInstance
+				: iterator.GetIteratorValue(itemType, index);
+		loop.Set(Type.ValueLowercase, value);
 		foreach (var customVariable in f.CustomVariables)
 			if (customVariable is VariableCall variableCall)
-				loop.Set(variableCall.Variable.Name, valueInstance);
+				loop.Set(variableCall.Variable.Name, value);
 		var itemResult = f.Body is Body body
 			? EvaluateBody(body, loop)
 			: executor.RunExpression(f.Body, loop);
@@ -79,7 +73,7 @@ internal sealed class ForEvaluator(Executor executor)
 
 	private ValueInstance EvaluateBody(Body body, ExecutionContext ctx)
 	{
-		var last = executor.None(body.Method);
+		var last = executor.noneInstance;
 		foreach (var e in body.Expressions)
 		{
 			last = executor.RunExpression(e, ctx);
@@ -93,23 +87,24 @@ internal sealed class ForEvaluator(Executor executor)
 		ExecutionContext ctx)
 	{
 		if (ctx.Method.ReturnType.IsNumber)
-     return executor.Number(ctx.Method, results.Sum(value => value.Number()));
-		if (ctx.Method.ReturnType.IsText)
-		{
-			var text = "";
-			foreach (var value in results)
-				text += value.ReturnType.Name switch
-				{
-					Base.Number => (int)value.Number(),
-          Base.Character => "" + (char)(int)value.Value!,
-					Base.Text => (string)value.Value!,
-					_ => throw new NotSupportedException("Can't append to text: " + value)
-				};
-			return executor.CreateValueInstance(ctx.Method.ReturnType, text);
-		}
-		return ctx.Method.ReturnType.IsBoolean
-			? executor.Bool(ctx.Method, results.Any(value => value.Boolean()))
-			: null;
+			return new ValueInstance(executor.numberType, results.Sum(value => value.Number));
+		if (ctx.Method.ReturnType.IsBoolean)
+			return new ValueInstance(executor.booleanType, results.Any(value => value.Boolean));
+		if (!ctx.Method.ReturnType.IsText)
+			return null;
+		var text = "";
+		foreach (var value in results)
+			if (value.IsPrimitiveType(executor.characterType))
+				text += (char)value.Number;
+			else if (value.IsList || value.IsDictionary)
+				text += (text == ""
+					? ""
+					: ", ") + "(" + value.ToExpressionCodeString() + ")";
+			else
+				text += (text == ""
+					? ""
+					: ", ") + value.ToExpressionCodeString();
+		return new ValueInstance(text);
 	}
 
 	private Type GetForValueType(ValueInstance iterator) =>

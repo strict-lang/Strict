@@ -42,18 +42,17 @@ internal sealed class BodyEvaluator(Executor executor)
 			last = executor.RunExpression(e, ctx);
 			if (ctx.ExitMethodAndReturnValue.HasValue)
 				return ctx.ExitMethodAndReturnValue.Value;
-			if (runOnlyTests && isTest && !Executor.ToBool(last))
+			if (runOnlyTests && isTest && !last.Boolean)
 				throw new Executor.TestFailed(body.Method, e, last, GetTestFailureDetails(e, ctx));
 		}
-		if (runOnlyTests && last.Value == null && body.Method.Name != Type.Run &&
+		if (runOnlyTests && last.Equals(executor.noneInstance) && body.Method.Name != Method.Run &&
 			body.Expressions.Count > 1)
 			throw new Executor.MethodRequiresTest(body.Method, body);
-		if (runOnlyTests || last.ReturnType.IsError || body.Method.ReturnType == last.ReturnType)
+		if (runOnlyTests || last.IsError || last.IsType(body.Method.ReturnType))
 			return last;
-		if (body.Method.ReturnType.IsMutable && !last.ReturnType.IsMutable &&
-			last.ReturnType == ((GenericTypeImplementation)body.Method.ReturnType).
-			ImplementationTypes[0])
-			return executor.CreateValueInstance(body.Method.ReturnType, last.Value);
+		if (body.Method.ReturnType.IsMutable && !last.IsMutable &&
+			last.IsType(((GenericTypeImplementation)body.Method.ReturnType).ImplementationTypes[0]))
+			return new ValueInstance(last, body.Method.ReturnType);
 		throw new Executor.ReturnTypeMustMatchMethod(body, last);
 	}
 

@@ -10,8 +10,9 @@ public sealed class ValueDictionaryInstance(Type returnType,
 
 	public bool Equals(ValueDictionaryInstance? other) =>
 		other is not null && (ReferenceEquals(this, other) ||
-			other.ReturnType.IsSameOrCanBeUsedAs(ReturnType) &&
-			EqualsExtensions.AreEqual(Items, other.Items));
+			other.ReturnType.IsSameOrCanBeUsedAs(ReturnType) && Items.Count == other.Items.Count &&
+			Items.All(kvp =>
+				other.Items.TryGetValue(kvp.Key, out var value) && kvp.Value.Equals(value)));
 
 	//ncrunch: no coverage start
 	public override bool Equals(object? other) => Equals(other as ValueDictionaryInstance);

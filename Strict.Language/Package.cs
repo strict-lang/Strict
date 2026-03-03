@@ -1,6 +1,8 @@
 using System.Collections;
 using System.Runtime.CompilerServices;
 
+[assembly: InternalsVisibleTo("Strict.Compiler.Cuda")]
+
 namespace Strict.Language;
 
 /// <summary>

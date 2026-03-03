@@ -72,9 +72,6 @@ public sealed class Repositories
 				, callerFilePath, callerLineNumber, callerMemberName
 #endif
 			);
-		//TODO: this doesn't make sense
-		if (!Directory.Exists(CacheFolder))
-			Directory.CreateDirectory(CacheFolder);
 		var localCachePath = Path.Combine(CacheFolder, packageFullName);
 		if (PreviouslyCheckedDirectories.Add(localCachePath) && !Directory.Exists(localCachePath))
 			await DownloadRepositoryStrictFiles(localCachePath, organization, packageFullName);
@@ -95,6 +92,8 @@ public sealed class Repositories
 	internal static async Task DownloadRepositoryStrictFiles(string localCachePath, string org,
 		string repoNameAndOptionalSubFolders)
 	{
+		if (!Directory.Exists(localCachePath))
+			Directory.CreateDirectory(localCachePath);
 		using var downloader = new GitHubStrictDownloader(org, repoNameAndOptionalSubFolders);
 		await downloader.DownloadFiles(localCachePath);
 	} //ncrunch: no coverage end
@@ -106,7 +105,6 @@ public sealed class Repositories
 #endif
 	) =>
 		cacheService.GetOrAddAsync(packagePath, _ => CreatePackageFromFiles(packagePath,
-			// ReSharper disable ExplicitCallerInfoArgument
 			Directory.GetFiles(packagePath, "*" + Type.Extension)
 #if DEBUG
 			, null, callerFilePath, callerLineNumber, callerMemberName));
@@ -141,13 +139,6 @@ public sealed class Repositories
 		var types = GetTypes(files, package);
 		foreach (var type in types)
 			type.ParseMembersAndMethods(parser);
-		/*not longer auto parsed
-		await GetSubDirectoriesAndParse(packagePath, package
-#if DEBUG
-			, callerFilePath, callerLineNumber, callerMemberName
-#endif
-		);
-		*/
 		return package;
 	}
 

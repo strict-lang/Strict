@@ -29,7 +29,7 @@ public sealed class GitHubStrictDownloader : IDisposable
 			new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
 		foreach (var item in items)
 			if (item is { Type: "file", Name: not null, DownloadUrl: not null } &&
-				item.Name.EndsWith(".strict", StringComparison.OrdinalIgnoreCase))
+				item.Name.EndsWith(Type.Extension, StringComparison.OrdinalIgnoreCase))
 			{
 				var localPath = Path.Combine(outputDirectory, item.Name);
 				using var fileResponse = await http.GetAsync(item.DownloadUrl, token).ConfigureAwait(false);

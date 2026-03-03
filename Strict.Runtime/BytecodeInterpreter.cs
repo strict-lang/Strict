@@ -1,9 +1,11 @@
+using System.Collections;
 using System.Diagnostics;
 using Strict.Expressions;
 using Strict.Language;
 using Strict.Runtime.Statements;
 using BinaryStatement = Strict.Runtime.Statements.Binary;
 using Return = Strict.Runtime.Statements.Return;
+using Type = Strict.Language.Type;
 
 namespace Strict.Runtime;
 
@@ -66,7 +68,7 @@ public sealed class BytecodeInterpreter
 		{
 			var item = Memory.Registers[removeStatement.Register].GetRawValue();
 			var list = (List<Expression>)Memory.Variables[removeStatement.Identifier].Value;
-			list.RemoveAll(expression => EqualsExtensions.AreEqual(((Value)expression).Data, item));
+			list.RemoveAll(expression => ((Value)expression).Data.Equals(item));
 		}
 	}
 
@@ -207,7 +209,7 @@ public sealed class BytecodeInterpreter
 			: Memory.Variables[keyArg.ToString()].Value;
 		var dictionary = Memory.Variables[invoke.Method.Instance.ToString()].Value;
 		var value = ((Dictionary<Value, Value>)dictionary).
-			FirstOrDefault(element => EqualsExtensions.AreEqual(element.Key.Data, keyData)).Value;
+			FirstOrDefault(element => element.Key.Data.Equals(keyData)).Value;
 		if (value != null)
 			Memory.Registers[invoke.Register] = new Instance(value.ReturnType, value);
 		return true;
@@ -331,8 +333,8 @@ public sealed class BytecodeInterpreter
 	private void AlterValueVariable(Instance iterableVariable)
 	{
 		var index = Convert.ToInt32(Memory.Variables["index"].Value);
-		var value = iterableVariable.Value.ToString();
-		if (iterableVariable.ReturnType?.IsText && value is not null)
+		var value = iterableVariable.Value.ToString();//TODO: wtf, don't use ToString, use values here!
+		if (iterableVariable.Value.IsText && value is not null)
 			Memory.Variables["value"] = new Instance(Type.Text, value[index].ToString());
 		else if (iterableVariable.ReturnType is GenericTypeImplementation { Generic.Name: Type.List })
 			Memory.Variables["value"] = new Instance(((List<Expression>)iterableVariable.Value)[index]);
@@ -409,10 +411,32 @@ public sealed class BytecodeInterpreter
 		{
 			Instruction.GreaterThan => left > right,
 			Instruction.LessThan => left < right,
-			Instruction.Equal => EqualsExtensions.AreEqual(left.GetRawValue(), right.GetRawValue()),
-			Instruction.NotEqual => !EqualsExtensions.AreEqual(left.GetRawValue(), right.GetRawValue()),
+			Instruction.Equal => AreEqual(left.GetRawValue(), right.GetRawValue()),
+			Instruction.NotEqual => !AreEqual(left.GetRawValue(), right.GetRawValue()),
 			_ => false //ncrunch: no coverage
 		};
+	}
+
+	//remove! everything should be compared like ValueInstance! way faster
+	public static bool AreEqual(object? value, object? other)
+	{
+		if (ReferenceEquals(value, other))
+			return true;
+		if (value is ValueInstance valueInstance && other is ValueInstance otherValueInstance)
+			return valueInstance.Equals(otherValueInstance);
+		if (value is ValueListInstance vli && other is ValueListInstance otherVli)
+			return vli.Equals(otherVli);
+		if (value is ValueDictionaryInstance vdi && other is ValueDictionaryInstance otherVdi)
+			return vdi.Equals(otherVdi);
+		/*nah
+		if (value is IList valueList && other is IList otherValueList)
+			return valueList.SequenceEqual(otherValueList);
+		if (value is IDictionary valueDict && other is IDictionary otherValueDict)
+			return AreDictionariesEqual(valueDict, otherValueDict);
+		if (IsNumeric(value) && IsNumeric(other))
+			return NumberToDouble(value) == NumberToDouble(other);
+			*/
+		return value?.Equals(other) ?? false;
 	}
 
 	private static void NormalizeValues(params Instance[] instances)

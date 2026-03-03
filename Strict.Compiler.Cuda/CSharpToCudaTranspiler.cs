@@ -49,12 +49,14 @@ public class CSharpToCudaTranspiler(Package strictBase) : IDisposable
 					: "";
 
 	private static string GetParameterTextWithNameAndType(Type type) =>
-		type.Methods[0].
-			Parameters.Aggregate("", (current, parameter) => current + parameter.Type.Name switch
+		type.Methods[0].Parameters.Aggregate("", (current, parameter) => current +
+			parameter.Type.Name switch
 			{
-				Base.Number when parameter.Name is "Width" or "Height" => "const int " + parameter.Name + ", ",
-				Base.Number when parameter.Name == "initialDepth" => "const float " + parameter.Name + ", ",
-				Base.Number => "const float *" + parameter.Name + ", ",
+				Type.Number when parameter.Name is "Width" or "Height" => "const int " + parameter.Name +
+					", ",
+				Type.Number when parameter.Name == "initialDepth" => "const float " + parameter.Name +
+					", ",
+				Type.Number => "const float *" + parameter.Name + ", ",
 				_ => throw new NotSupportedException(parameter.ToString())
 			});
 
@@ -97,9 +99,10 @@ public class CSharpType : Type
 	}
 
 	public CSharpType(Package strictPackage, string filePath) : base(
-		strictPackage, new TypeLines(Path.GetFileNameWithoutExtension(filePath), File.ReadAllLines(filePath)))
+		strictPackage, new TypeLines(Path.GetFileNameWithoutExtension(filePath),
+			global::System.IO.File.ReadAllLines(filePath)))
 	{
-		var inputCode = File.ReadAllLines(filePath);
+		var inputCode = base.Lines;
 		var methodName = "";
 		var returnType = "";
 		var parameters = new List<string>();

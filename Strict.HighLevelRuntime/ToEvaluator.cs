@@ -14,13 +14,13 @@ internal sealed class ToEvaluator(Executor executor)
 			return new ValueInstance(to.ConversionType,
 				double.Parse(left.Text, CultureInfo.InvariantCulture));
 		if (to.ConversionType.IsText)
-			return executor.CreateValueInstance(to.ConversionType, left.ToExpressionCodeString());
-		if (to.Method.IsTrait)
-			throw new ToMethodNotImplemented(left, to.ConversionType);
-		return executor.EvaluateMethodCall(to, ctx);
+			return new ValueInstance(left.ToExpressionCodeString());
+		return to.Method.IsTrait
+			? throw new ToMethodNotImplemented(left, to.ConversionType)
+			: executor.EvaluateMethodCall(to, ctx);
 	}
 
 	public sealed class ToMethodNotImplemented(ValueInstance left, Type toConversionType)
-		: ExecutionFailed(toConversionType,
-			"Conversion from " + left + " to " + toConversionType.Name + " not supported");
+		: ExecutionFailed(toConversionType, "Conversion from " + left + " to " +
+			toConversionType.Name + " not supported");
 }

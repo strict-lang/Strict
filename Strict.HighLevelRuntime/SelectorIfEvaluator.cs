@@ -8,7 +8,7 @@ internal sealed class SelectorIfEvaluator(Executor executor)
 	{
 		executor.Statistics.SelectorIfCount++;
 		foreach (var @case in selectorIf.Cases)
-			if (Executor.ToBool(executor.RunExpression(@case.Condition, ctx)))
+			if (executor.RunExpression(@case.Condition, ctx).Boolean)
 				return executor.RunExpression(@case.Then, ctx);
 		return selectorIf.OptionalElse != null
 			? executor.RunExpression(selectorIf.OptionalElse, ctx)

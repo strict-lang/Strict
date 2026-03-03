@@ -33,4 +33,3 @@ public sealed record Statistics
 	public int FindTypeCount => Context.FindTypeCount;
 	public int FindVariableCount { get; internal set; }
 }
-

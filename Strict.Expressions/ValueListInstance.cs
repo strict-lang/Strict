@@ -10,8 +10,7 @@ public sealed class ValueListInstance(Type returnType, List<ValueInstance> items
 
 	public bool Equals(ValueListInstance? other) =>
 		other is not null && (ReferenceEquals(this, other) ||
-			other.ReturnType.IsSameOrCanBeUsedAs(ReturnType) &&
-			EqualsExtensions.AreEqual(Items, other.Items));
+			other.ReturnType.IsSameOrCanBeUsedAs(ReturnType) && Items.SequenceEqual(other.Items));
 
 	//ncrunch: no coverage start
 	public override bool Equals(object? other) => Equals(other as ValueListInstance);

@@ -2,6 +2,8 @@
 using System.Runtime.CompilerServices;
 #endif
 
+
+
 namespace Strict.Language;
 
 /// <summary>
@@ -640,7 +642,12 @@ public class Type : Context, IDisposable
 	public bool IsDictionary => typeKind == TypeKind.Dictionary;
 	public bool IsMutable => typeKind == TypeKind.Mutable;
 	public bool IsAny => typeKind == TypeKind.Any;
-	public void Dispose() => ((Package)Parent).Remove(this);
+
+	public void Dispose()
+	{
+		GC.SuppressFinalize(this);
+		((Package)Parent).Remove(this);
+	}
 
 	public int FindLineNumber(string firstLineThatContains)
 	{
