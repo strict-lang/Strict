@@ -88,7 +88,7 @@ public abstract class Visitor
 			return expression;
 		if (expression is Body innerBody)
 			Visit(innerBody, context); //ncrunch: no coverage
-		if (expression is Binary binary)
+		else if (expression is Binary binary)
 		{
 			var changedInstance = Visit(binary.Instance, body, context)!;
 			var rewrittenArgument = Visit(binary.Arguments[0], body, context)!;
@@ -96,7 +96,7 @@ public abstract class Visitor
 				!ReferenceEquals(rewrittenArgument, binary.Arguments[0]))
 				return new Binary(changedInstance, binary.Method, [rewrittenArgument]);
 		}
-		if (expression is Declaration declaration)
+		else if (expression is Declaration declaration)
 		{
 			var newValue = Visit(declaration.Value, body, context)!;
 			if (!ReferenceEquals(newValue, declaration.Value) && body != null)

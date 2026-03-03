@@ -94,13 +94,8 @@ public sealed class ConstantCollapser : Visitor
 	private static double GetNumber(Number n) =>
 		double.Parse(n.Data.ToExpressionCodeString(), CultureInfo.InvariantCulture);
 
-	private static string GetText(Text t)
-	{
-		var quoted = t.Data.ToExpressionCodeString();
-		return quoted.Length >= 2
-			? quoted[1..^1].Replace("\\\"", "\"").Replace("\\\\", "\\")
-			: quoted;
-	}
+	private static string GetText(Text t) =>
+		t.Data.ToExpressionCodeString().Replace("\\\"", "\"").Replace(@"\\", @"\");
 
 	private static bool GetBool(Boolean b) => b.Data.ToExpressionCodeString() != "false";
 
@@ -111,9 +106,11 @@ public sealed class ConstantCollapser : Visitor
 		Context method)
 	{
 		if (left is Binary leftBinary)
-			left = TryCollapseBinaryExpression(leftBinary.Instance!, leftBinary.Arguments[0], leftBinary.Method) ?? left; //ncrunch: no coverage
+			left = TryCollapseBinaryExpression(leftBinary.Instance!, leftBinary.Arguments[0],
+				leftBinary.Method) ?? left;
 		if (right is Binary rightBinary)
-			right = TryCollapseBinaryExpression(rightBinary.Instance!, rightBinary.Arguments[0], rightBinary.Method) ?? right; //ncrunch: no coverage
+			right = TryCollapseBinaryExpression(rightBinary.Instance!, rightBinary.Arguments[0],
+				rightBinary.Method) ?? right;
 		var leftNumber = left as Number;
 		var rightNumber = right as Number;
 		if (method.Name == BinaryOperator.Plus)

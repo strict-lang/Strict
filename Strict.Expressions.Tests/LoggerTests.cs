@@ -19,9 +19,6 @@ public sealed class LoggerTests
 		if (method.GetBodyAndParseIfNeeded() is not MethodCall call || call.Method.Name != "Log")
 			return ""; //ncrunch: no coverage
 		var text = (Text)call.Arguments[0];
-		var quoted = text.Data.ToExpressionCodeString();
-		return quoted.Length >= 2
-			? quoted[1..^1]
-			: quoted;
+		return text.Data.ToExpressionCodeString();
 	}
 }

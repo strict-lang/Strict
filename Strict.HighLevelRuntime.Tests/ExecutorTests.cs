@@ -91,9 +91,9 @@ public sealed class ExecutorTests
 		using var t = CreateType(nameof(EvaluateDeclaration), "mutable last Number",
 			"AddFive(number) Number", "\tconstant five = 5", "\tnumber + five");
 		var method = t.Methods.Single(m => m.Name == "AddFive");
-		var number = ValueInstance.Create(TestPackage.Instance.FindType(Type.Number)!, 5d);
-		var result = executor.Execute(method, null, [number]);
-		Assert.That(Convert.ToDouble(result.Value), Is.EqualTo(10));
+		var number = new ValueInstance(executor.numberType, 5);
+		var result = executor.Execute(method, executor.noneInstance, [number]);
+		Assert.That(result.Number, Is.EqualTo(10));
 	}
 
 	[Test]

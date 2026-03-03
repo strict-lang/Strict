@@ -644,8 +644,8 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 		number switch
 		{
 			TextId => escapeText
-				? (string)value
-				: "\"" + EscapeText((string)value) + "\"",
+				? "\"" + EscapeText((string)value) + "\""
+				: (string)value,
 			ListId => ((ValueListInstance)value).Items.
 				Select(v => v.ToExpressionCodeString(escapeText)).ToWordList(),
 			DictionaryId => ((ValueDictionaryInstance)value).Items.Select(kv =>
