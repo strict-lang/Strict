@@ -61,8 +61,7 @@ public sealed class MethodCallEvaluator(Executor executor)
 	{
 		executor.Statistics.ArithmeticCount++;
 		var op = call.Method.Name;
-		if (left.IsPrimitiveType(executor.numberType) &&
-			right.IsPrimitiveType(executor.numberType))
+		if (IsNumberLike(left) && IsNumberLike(right))
 		{
 			var l = left.Number;
 			var r = right.Number;
@@ -121,6 +120,16 @@ public sealed class MethodCallEvaluator(Executor executor)
 				"Only +, -, *, / operators are supported for List and Number, got: " + op);
 		}
 		return ExecuteMethodCall(call, left, ctx); //ncrunch: no coverage
+	}
+
+	//TODO: this is not good, should be in ValueInstance and avoided as much as possible
+	private bool IsNumberLike(ValueInstance value)
+	{
+		if (value.IsPrimitiveType(executor.numberType))
+			return true;
+		if (value.IsText || value.IsList || value.IsDictionary)
+			return false;
+		return value.GetTypeExceptText().IsSameOrCanBeUsedAs(executor.numberType);
 	}
 
 	public const string ListsHaveDifferentDimensions = "listsHaveDifferentDimensions";

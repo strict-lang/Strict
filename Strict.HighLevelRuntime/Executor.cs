@@ -21,7 +21,6 @@ public class Executor
 		falseInstance = new ValueInstance(booleanType, false);
 		numberType = initialPackage.GetType(Type.Number);
 		characterType = initialPackage.GetType(Type.Character);
-		textType = initialPackage.GetType(Type.Text);
 		rangeType = initialPackage.GetType(Type.Range);
 		listType = initialPackage.GetType(Type.List);
 		bodyEvaluator = new BodyEvaluator(this);
@@ -40,7 +39,6 @@ public class Executor
 	internal readonly ValueInstance falseInstance;
 	internal readonly Type numberType;
 	internal readonly Type characterType;
-	internal readonly Type textType;
 	internal readonly Type rangeType;
 	internal readonly Type listType;
 	private readonly BodyEvaluator bodyEvaluator;
@@ -232,6 +230,9 @@ public class Executor
 		return expr switch
 		{
 			Body body => bodyEvaluator.Evaluate(body, context, runOnlyTests),
+			List list => new ValueInstance(list.ReturnType,
+				list.Values.Select(value => RunExpression(value, context)).ToList()),
+			//TODO: add test first: Dictionary dict =>
 			Value v => v.Data,
 			ParameterCall or VariableCall => EvaluateVariable(expr.ToString(), context),
 			MemberCall m => EvaluateMemberCall(m, context),

@@ -17,8 +17,8 @@ internal sealed class ForEvaluator(Executor executor)
 			iteratorInstance.Members.TryGetValue("Start", out var startValue) &&
 			iteratorInstance.Members.TryGetValue("ExclusiveEnd", out var endValue))
 		{
-			var start = Convert.ToInt32(startValue);
-			var end = Convert.ToInt32(endValue);
+			var start = (int)startValue.Number;
+			var end = (int)endValue.Number;
 			if (start <= end)
 				for (var index = start; index < end; index++)
 				{
@@ -45,7 +45,7 @@ internal sealed class ForEvaluator(Executor executor)
 			}
 		}
 		return ShouldConsolidateForResult(results, ctx) ?? new ValueInstance(
-			executor.listType.GetGenericImplementation(iterator.GetIteratorType()), results);
+			executor.listType.GetGenericImplementation(itemType), results);
 	}
 
 	private void ExecuteForIteration(For f, ExecutionContext ctx, ValueInstance iterator,
@@ -55,7 +55,7 @@ internal sealed class ForEvaluator(Executor executor)
 		var indexInstance = new ValueInstance(executor.numberType, index);
 		loop.Set(Type.IndexLowercase, indexInstance);
 		var value = iterator.IsPrimitiveType(executor.numberType) ||
-			iterator.IsPrimitiveType(executor.rangeType)
+			iterator.TryGetValueTypeInstance()?.ReturnType == executor.rangeType
 				? indexInstance
 				: iterator.GetIteratorValue(itemType, index);
 		loop.Set(Type.ValueLowercase, value);
@@ -96,20 +96,22 @@ internal sealed class ForEvaluator(Executor executor)
 		foreach (var value in results)
 			if (value.IsPrimitiveType(executor.characterType))
 				text += (char)value.Number;
+			else if (value.IsText || value.IsPrimitiveType(executor.numberType) ||
+				value.IsPrimitiveType(executor.booleanType))
+				text += value.ToExpressionCodeString();
 			else if (value.IsList || value.IsDictionary)
+				//TODO: need test
 				text += (text == ""
 					? ""
 					: ", ") + "(" + value.ToExpressionCodeString() + ")";
 			else
-				text += (text == ""
-					? ""
-					: ", ") + value.ToExpressionCodeString();
+				throw new NotSupportedException("For text return type cannot consolidate value " + value);
 		return new ValueInstance(text);
 	}
 
 	private Type GetForValueType(ValueInstance iterator) =>
 		iterator.IsText
-			? executor.textType
+			? executor.characterType
 			: iterator.IsList
 				? iterator.GetIteratorType()
 				: executor.numberType;

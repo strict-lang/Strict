@@ -67,6 +67,7 @@ public abstract class Context
 	public string Name { get; }
 	public string FullName { get; }
 	public abstract Type? FindType(string name, Context? searchingFrom = null);
+
 	public Type GetType(string name) =>
 		TryGetType(name) ?? throw new TypeNotFound(name, this);
 
@@ -175,6 +176,13 @@ public abstract class Context
 			: null;
 
 	public override string ToString() => FullName;
+	public string ToDebugString() =>
+#if DEBUG
+		FullName + " Parent+" + Parent +
+		", created from " + callerMemberName + " in " + callerFilePath + ":line " + callerLineNumber;
+#else
+		FullName + " Parent+" + Parent
+#endif
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public Package? GetPackage() =>

@@ -105,10 +105,12 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 			number = ListId;
 			break;
 		case DictionaryId:
+			//TODO: zero tests for this usecase
 			value = new ValueDictionaryInstance(newType, ((ValueDictionaryInstance)existingInstance.value).Items);
 			number = DictionaryId;
 			break;
 		case TypeId:
+			//TODO: zero tests for this usecase
 			var existingTypeInstance = (ValueTypeInstance)existingInstance.value;
 			if (!newType.IsMutable && existingTypeInstance.ReturnType.IsMutable && newType.IsText)
 			{
@@ -178,6 +180,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 			return IsSameOrCanBeUsedAs(methodReturnType.GetFirstImplementation())
 				? new ValueInstance(this, methodReturnType)
 				: this;
+		//TODO: zero tests for this usecase
 		return GetTypeExceptText().GetFirstImplementation().IsSameOrCanBeUsedAs(methodReturnType)
 			? new ValueInstance(this, methodReturnType)
 			: this;
@@ -186,7 +189,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 	public Type GetTypeExceptText() =>
 		number switch
 		{
-			ListId => ((ValueListInstance)value).ReturnType,
+			ListId => ((ValueListInstance)value).ReturnType, //TODO: zero tests for this usecase
 			DictionaryId => ((ValueDictionaryInstance)value).ReturnType,
 			TypeId => ((ValueTypeInstance)value).ReturnType,
 			_ => (Type)value
@@ -228,8 +231,18 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 			return ((ValueListInstance)value).Items.Count;
 		if (number == TextId)
 			return ((string)value).Length;
-		if (number == DictionaryId || number == TypeId)
+		if (number == DictionaryId)
 			throw new IteratorNotSupported(this);
+		//TODO: this is ugly, check if needed or can be simplified
+		if (number == TypeId)
+		{
+			var typeInstance = (ValueTypeInstance)value;
+			if (typeInstance.ReturnType.IsList && typeInstance.Members.TryGetValue(Type.Text, out var textMember))
+				return textMember.Text.Length;
+			if (typeInstance.Members.TryGetValue("keysAndValues", out var elementsMember) && elementsMember.IsList)
+				return elementsMember.List.Items.Count; //TODO: zero tests for this usecase
+			throw new IteratorNotSupported(this);
+		}
 		return (int)number;
 	}
 
@@ -240,6 +253,13 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 		{
 			TextId => new ValueInstance(charTypeIfNeeded, ((string)value)[index]),
 			ListId => ((ValueListInstance)value).Items[index],
+		//TODO: this is ugly, check if needed or can be simplified
+			TypeId when ((ValueTypeInstance)value).ReturnType.IsList &&
+				((ValueTypeInstance)value).Members.TryGetValue(Type.Text, out var textMember) =>
+				new ValueInstance(charTypeIfNeeded, textMember.Text[index]),
+			//TODO: zero tests for this usecase
+			TypeId when ((ValueTypeInstance)value).Members.TryGetValue("elements", out var elementsMember) &&
+				elementsMember.IsList => elementsMember.List.Items[index],
 			_ => throw new IteratorNotSupported(this)
 		};
 

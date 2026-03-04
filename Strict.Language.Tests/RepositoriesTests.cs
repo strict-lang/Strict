@@ -36,7 +36,8 @@ public class RepositoriesTests
 	[Test]
 	public async Task LoadStrictBaseTypes()
 	{
-		Assert.That(repos.ContainsPackageNameInCache(nameof(Strict)), Is.False);
+		Assert.That(repos.ContainsPackageNameInCache(nameof(Strict)), Is.False,
+			await repos.ToDebugString());
 		using var basePackage = await repos.LoadStrictPackage();
 		Assert.That(basePackage.FindDirectType(Type.Any), Is.Not.Null);
 		Assert.That(basePackage.FindDirectType(Type.Number), Is.Not.Null);
@@ -102,7 +103,8 @@ public class RepositoriesTests
 	[Test]
 	public async Task CheckGenericTypesAreLoadedCorrectlyAfterSorting()
 	{
-		using var program = new Type(await repos.LoadStrictPackage(),
+		using var package = await repos.LoadStrictPackage();
+		using var program = new Type(package,
 				new TypeLines("ValidProgram", "has texts", "Run Texts", "\t\"Result \" + 5")).
 			ParseMembersAndMethods(parser);
 		program.Methods[0].GetBodyAndParseIfNeeded();

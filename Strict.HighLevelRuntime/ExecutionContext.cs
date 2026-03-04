@@ -31,7 +31,7 @@ public sealed class ExecutionContext(Type type, Method method)
 			Type.Members.FirstOrDefault(m => !m.IsConstant && m.Type.Name != Type.Iterator);
 		if (implicitMember != null &&
 			implicitMember.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
-			return This;//probably not needed: .Clone(implicitMember.Type);
+			return new ValueInstance(This.Value, implicitMember.Type);
 		return Parent?.Find(name, statistics);
 	}
 

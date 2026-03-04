@@ -11,11 +11,11 @@ in(key Generic) Boolean
 	for keysAndValues
 		value.Key is key
 get(key Generic) Generic
-	constant abbrevation = Dictionary(("A", "Apple"), ("B", "Ball"))
-	abbrevation("A") is "Apple"
-	abbrevation("B") is "Ball"
+	constant abbreviations = Dictionary(("A", "Apple"), ("B", "Ball"))
+	abbreviations("A") is "Apple"
+	abbreviations("B") is "Ball"
 	constant KeyNotFound = Error
-	abbrevation("C") is KeyNotFound
+	abbreviations("C") is KeyNotFound
 	for keysAndValues
 		if value.Key is key
 			return value.Value

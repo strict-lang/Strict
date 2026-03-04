@@ -127,11 +127,14 @@ public sealed class Repositories
 			? new Package(parent, packagePath, this)
 			: new Package(packagePath, this);
 #endif
+		loadedPackages.Add(package);
 		var types = GetTypes(files, package);
 		foreach (var type in types)
 			type.ParseMembersAndMethods(parser);
 		return package;
 	}
+
+	private List<Package> loadedPackages = [];
 
 	private ICollection<Type> GetTypes(IReadOnlyCollection<string> files, Package package)
 	{
@@ -284,7 +287,21 @@ public sealed class Repositories
 	/// <summary>
 	/// Called by Package.Dispose
 	/// </summary>
-	internal void Remove(Package result) => cacheService.Remove(result.FullName);
+	internal void Remove(Package result)
+	{
+		cacheService.Remove(result.FullName);
+		loadedPackages.Remove(result);
+	}
+
 	public bool ContainsPackageNameInCache(string fullName) =>
 		cacheService.TryGetValue<LazyCache.AsyncLazy<Package>>(fullName, out _);
+
+	public async Task<string> ToDebugString() =>
+		nameof(Repositories) +
+		"\nStrict: " + (cacheService.TryGetValue<AsyncLazy<Package>>(nameof(Strict),
+			out var lazyPackage)
+			? (await lazyPackage.Value).ToDebugString()
+			: "") +
+		"\nLoadedPackages: " + loadedPackages.ToWordList("\n  ") +
+		"\nPreviouslyCheckedDirectories: " + PreviouslyCheckedDirectories.ToWordList();
 }
