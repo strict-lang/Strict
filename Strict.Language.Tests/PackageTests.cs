@@ -19,7 +19,7 @@ public class PackageTests
 	private Type publicSubType = null!;
 
 	[TearDown]
-	public void TearDown() => mainPackage.Dispose();//((Package)mainPackage.Parent).Remove(mainPackage);
+	public void TearDown() => mainPackage.Dispose();
 
 	[Test]
 	public void NoneIsAlwaysKnown()
@@ -46,13 +46,16 @@ public class PackageTests
 	public void GetFullNames()
 	{
 		Assert.That(mainPackage.FullName, Is.EqualTo(nameof(PackageTests)));
-		Assert.That(mainType.FullName, Is.EqualTo(nameof(PackageTests) + "/" + mainType.Name));
+		Assert.That(mainType.FullName,
+			Is.EqualTo(nameof(PackageTests) + Context.ParentSeparator + mainType.Name));
 		Assert.That(subPackage.FullName,
-			Is.EqualTo(nameof(PackageTests) + "/" + nameof(subPackage)));
+			Is.EqualTo(nameof(PackageTests) + Context.ParentSeparator + nameof(subPackage)));
 		Assert.That(privateSubType.FullName,
-			Is.EqualTo(nameof(PackageTests) + "/" + nameof(subPackage) + "/" + privateSubType.Name));
+			Is.EqualTo(nameof(PackageTests) + Context.ParentSeparator + nameof(subPackage) +
+			Context.ParentSeparator + privateSubType.Name));
 		Assert.That(publicSubType.FullName,
-			Is.EqualTo(nameof(PackageTests) + "/" + nameof(subPackage) + "/" + publicSubType.Name));
+			Is.EqualTo(nameof(PackageTests) + Context.ParentSeparator + nameof(subPackage) +
+			Context.ParentSeparator + publicSubType.Name));
 	}
 
 	[Test]
@@ -62,8 +65,8 @@ public class PackageTests
 		Assert.Throws<Package.PrivateTypesAreOnlyAvailableInItsPackage>(() =>
 			mainPackage.GetType(privateSubType.FullName));
 		Assert.Throws<Package.PrivateTypesAreOnlyAvailableInItsPackage>(() =>
-			mainPackage.GetType(nameof(TestPackage) + "/" + nameof(PackageTests) + "/" +
-				privateSubType.Name));
+			mainPackage.GetType(nameof(TestPackage) + Context.ParentSeparator + nameof(PackageTests) +
+			Context.ParentSeparator +	privateSubType.Name));
 	}
 
 	[Test]

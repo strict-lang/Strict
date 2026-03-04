@@ -26,7 +26,7 @@ public class RepositoriesTests
 	[Test]
 	public void InvalidPathWontWork() =>
 		Assert.ThrowsAsync<DirectoryNotFoundException>(() =>
-			repos.LoadFromPath(nameof(InvalidPathWontWork)));
+			repos.LoadFromPath(nameof(InvalidPathWontWork), nameof(InvalidPathWontWork)));
 
 	[Test]
 	public void LoadingNonGithubPackageWontWork() =>
@@ -36,6 +36,7 @@ public class RepositoriesTests
 	[Test]
 	public async Task LoadStrictBaseTypes()
 	{
+		Assert.That(repos.ContainsPackageNameInCache(nameof(Strict)), Is.False);
 		using var basePackage = await repos.LoadStrictPackage();
 		Assert.That(basePackage.FindDirectType(Type.Any), Is.Not.Null);
 		Assert.That(basePackage.FindDirectType(Type.Number), Is.Not.Null);
@@ -64,7 +65,7 @@ public class RepositoriesTests
 					ParseMembersAndMethods(null!);
 			}, //ncrunch: no coverage
 			Throws.InstanceOf<ParsingFailed>().With.Message.
-				Contains(@"Strict\Invalid.strict:line 1"));
+				Contains(@"Strict/Invalid.strict:line 1"));
 	}
 
 	//ncrunch: no coverage start
@@ -88,9 +89,11 @@ public class RepositoriesTests
 	public async Task LoadStrictImageProcessingTypes()
 	{
 		using var basePackage = await repos.LoadStrictPackage();
-		using var mathPackage = await repos.LoadFromPath(Repositories.StrictDevelopmentFolder + ".Math");
-		using var imageProcessingPackage =
-			await repos.LoadFromPath(Repositories.StrictDevelopmentFolder + ".ImageProcessing");
+		using var mathPackage = await repos.LoadFromPath(nameof(Strict) + ".Math",
+			Repositories.GetLocalDevelopmentPath(Repositories.StrictOrg, nameof(Strict) + ".Math"));
+		using var imageProcessingPackage = await repos.LoadFromPath(nameof(Strict) + ".ImageProcessing",
+			Repositories.GetLocalDevelopmentPath(Repositories.StrictOrg,
+			nameof(Strict) + ".ImageProcessing"));
 		var adjustBrightness = imageProcessingPackage.GetType("AdjustBrightness");
 		Assert.That(adjustBrightness, Is.Not.Null);
 		Assert.That(adjustBrightness.Methods[0].GetBodyAndParseIfNeeded(), Is.Not.Null);
@@ -181,37 +184,10 @@ public class RepositoriesTests
 	public void LoadingAllStrictFilesWithoutAsyncHundredTimes()
 	{
 		for (var iteration = 0; iteration < 100; iteration++)
-			foreach (var file in Directory.GetFiles(Repositories.StrictDevelopmentFolder,
+			foreach (var file in Directory.GetFiles(
+				Repositories.GetLocalDevelopmentPath(Repositories.StrictOrg, nameof(Strict)),
 				"*" + Type.Extension))
 				File.ReadAllLines(file);
-	}
-
-	[Test]
-	[Category("Slow")]
-	[Benchmark]
-	public async Task LoadingZippedStrictHundredTimes()
-	{
-		var zipFilePath = Path.Combine(Repositories.StrictDevelopmentFolder, "Strict.zip");
-		if (!File.Exists(zipFilePath))
-		{
-			await using var archive = await ZipFile.OpenAsync(zipFilePath, ZipArchiveMode.Create);
-			foreach (var path in Directory.GetFiles(Repositories.StrictDevelopmentFolder,
-				"*" + Type.Extension))
-			{
-				var entry = archive.CreateEntry(Path.GetFileName(path));
-				await using var fileStream = File.OpenRead(path);
-				await using var es = await entry.OpenAsync();
-				await fileStream.CopyToAsync(es);
-			}
-			//obs: ZipFile.CreateFromDirectory(Repositories.StrictDevelopmentFolder, zipFilePath);
-		}
-		for (var iteration = 0; iteration < 100; iteration++)
-		{
-			var tasks = new List<Task>();
-			foreach (var entry in (await ZipFile.OpenReadAsync(zipFilePath)).Entries)
-				tasks.Add(new StreamReader(await entry.OpenAsync()).ReadToEndAsync());
-			await Task.WhenAll(tasks);
-		}
 	}
 
 	[Test]

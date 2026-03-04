@@ -5,7 +5,7 @@ public sealed class MethodTests
 	[SetUp]
 	public void CreateType()
 	{
-		type = new Type(TestPackage.Instance, new MockRunTypeLines());
+		type = new Type(TestPackage.Instance, new MockRunTypeLines(nameof(MethodTests)));
 		parser = new MethodExpressionParser();
 	}
 
@@ -235,22 +235,9 @@ public sealed class MethodTests
 			Throws.InstanceOf<NamedType.AssignmentWithInitializerTypeShouldNotHaveNameWithType>());
 
 	[Test]
-	public void MethodMustHaveAtLeastOneTest() =>
-		Assert.That(
-			() =>
-			{
-				using var package = new Package(nameof(MethodMustHaveAtLeastOneTest));
-				using var mockType = new Type(package, new MockRunTypeLines());
-				return new Method(mockType, 0, parser, ["NoTestMethod Number", "	5"]).
-					GetBodyAndParseIfNeeded();
-			}, //ncrunch: no coverage
-			Throws.InstanceOf<Method.MethodMustHaveAtLeastOneTest>());
-
-	[Test]
 	public void MethodWithTestsAreAllowed()
 	{
-		using var package = new Package(TestPackage.Instance, nameof(MethodWithTestsAreAllowed));
-		using var methodWithTestsType = new Type(package,
+		using var methodWithTestsType = new Type(TestPackage.Instance,
 			new TypeLines(nameof(MethodWithTestsAreAllowed), "has logger",
 				"MethodWithTestsAreAllowed Number", "\tMethodWithTestsAreAllowed is 5", "\t5"));
 		methodWithTestsType.ParseMembersAndMethods(parser);
@@ -260,9 +247,7 @@ public sealed class MethodTests
 	[Test]
 	public void ParseMethodWithMultipleReturnType()
 	{
-		using var package =
-			new Package(TestPackage.Instance, nameof(ParseMethodWithMultipleReturnType));
-		using var multipleReturnTypeMethod = new Type(package, new TypeLines("Processor",
+		using var multipleReturnTypeMethod = new Type(TestPackage.Instance, new TypeLines("Processor",
 			// @formatter:off
 			"has progress Number",
 			"IsJobDone Boolean or Text",
@@ -284,9 +269,7 @@ public sealed class MethodTests
 	[Test]
 	public void ParseMethodWithParametersAndMultipleReturnType()
 	{
-		using var package = new Package(TestPackage.Instance,
-			nameof(ParseMethodWithParametersAndMultipleReturnType));
-		using var multipleReturnTypeMethod = new Type(package, new TypeLines("Processor",
+		using var multipleReturnTypeMethod = new Type(TestPackage.Instance, new TypeLines("Processor",
 			// @formatter:off
 			"has progress Number",
 			"IsJobDone(number, text) Boolean or Text",
@@ -306,9 +289,7 @@ public sealed class MethodTests
 	[Test]
 	public void MethodCallWithMultipleReturnTypes()
 	{
-		using var package =
-			new Package(TestPackage.Instance, nameof(MethodCallWithMultipleReturnTypes));
-		using var multipleReturnTypeMethod = new Type(package, new TypeLines("Processor",
+		using var multipleReturnTypeMethod = new Type(TestPackage.Instance, new TypeLines("Processor",
 			// @formatter:off
 			"has progress Number",
 			"IsJobDone Boolean or Text",

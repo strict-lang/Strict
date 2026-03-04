@@ -2,8 +2,6 @@
 using System.Runtime.CompilerServices;
 #endif
 
-
-
 namespace Strict.Language;
 
 /// <summary>
@@ -329,7 +327,7 @@ public class Type : Context, IDisposable
 	public sealed class CannotGetGenericImplementationOnNonGeneric(string name, string key)
 		: Exception("Type: " + name + ", Generic Implementation: " + key);
 
-	public string FilePath => Path.Combine(Package.FullName, Name) + Extension;
+	public string FilePath => FullName + Extension;
 	public const string Extension = ".strict";
 
 	public Member? FindMember(string name)

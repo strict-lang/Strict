@@ -10,23 +10,23 @@ namespace Strict.Language;
 /// </summary>
 public class Package : Context, IEnumerable<Type>, IDisposable
 {
-	private readonly Repositories? createdFromRepos;
 #if DEBUG
 	public Package(string packagePath, Repositories? createdFromRepos = null,
 		[CallerFilePath] string callerFilePath = "", [CallerLineNumber] int callerLineNumber = 0,
 		[CallerMemberName] string callerMemberName = "") : this(RootForPackages, packagePath,
 		createdFromRepos, callerFilePath, callerLineNumber, callerMemberName) { }
 #else
-	public Package(string packagePath, Repositories createdFromRepos)
+	public Package(string packagePath, Repositories? createdFromRepos = null)
 		: this(RootForPackages, packagePath, createdFromRepos) { }
 #endif
+
 #if DEBUG
 	public Package(Package? parentPackage, string packagePath, Repositories? createdFromRepos = null,
 		[CallerFilePath] string callerFilePath = "", [CallerLineNumber] int callerLineNumber = 0,
 		[CallerMemberName] string callerMemberName = "") : base(parentPackage,
 		Path.GetFileName(packagePath), callerFilePath, callerLineNumber, callerMemberName)
 #else
-	public Package(Package? parentPackage, string packagePath, Repositories? createdFromRepos
+	public Package(Package? parentPackage, string packagePath, Repositories? createdFromRepos = null)
 		: base(parentPackage, Path.GetFileName(packagePath))
 #endif
 	{
@@ -50,6 +50,7 @@ public class Package : Context, IEnumerable<Type>, IDisposable
 		);
 
 	private static readonly Root RootForPackages = new();
+	private readonly Repositories? createdFromRepos;
 
 	/// <summary>
 	/// Contains all high level <see cref="Package"/>s. Just contains the fallback None type (think
@@ -89,16 +90,16 @@ public class Package : Context, IEnumerable<Type>, IDisposable
 
 	public Type? FindFullType(string fullName)
 	{
-		var parts = fullName.Split('/');
+		var parts = fullName.Split(Context.ParentSeparator);
 		if (parts.Length < 2)
 			throw new FullNameMustContainPackageAndTypeNames();
 		if (IsPrivateName(parts[^1]))
 			throw new PrivateTypesAreOnlyAvailableInItsPackage();
-		if (!fullName.StartsWith(ToString() + "/", StringComparison.Ordinal))
+		if (!fullName.StartsWith(FullName + Context.ParentSeparator, StringComparison.Ordinal))
 			return (Parent as Package)?.FindFullType(fullName);
-		var subName = fullName.Replace(FullName + "/", "");
-		return subName.Contains('/')
-			? FindSubPackage(subName.Split('/')[0])?.FindFullType(fullName)
+		var subName = fullName.Replace(FullName + Context.ParentSeparator, "");
+		return subName.Contains(Context.ParentSeparator)
+			? FindSubPackage(subName.Split(Context.ParentSeparator)[0])?.FindFullType(fullName)
 			: FindDirectType(subName);
 	}
 
@@ -176,11 +177,14 @@ public class Package : Context, IEnumerable<Type>, IDisposable
 	public IEnumerator<Type> GetEnumerator() => new List<Type>(types.Values).GetEnumerator();
 	IEnumerator IEnumerable.GetEnumerator() => GetEnumerator(); //ncrunch: no coverage
 
-	// ReSharper disable once ConditionalAccessQualifierIsNonNullableAccordingToAPIContract
 	public void Dispose()
 	{
+		GC.SuppressFinalize(this);
+		while (children.Count > 0)
+			children[0].Dispose();
 		foreach (var type in types)
 			type.Value.Dispose();
+		// ReSharper disable once ConditionalAccessQualifierIsNonNullableAccordingToAPIContract
 		((Package)Parent)?.Remove(this);
 		createdFromRepos?.Remove(this);
 	}

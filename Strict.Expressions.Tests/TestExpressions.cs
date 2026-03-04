@@ -42,7 +42,7 @@ public abstract class TestExpressions : MethodExpressionParser
 	[TearDown]
 	public void NoConsoleAllowed()
 	{
-		TestPackage.Instance.Remove(type);
+		type.Dispose();
 		noConsole.CheckIfConsoleIsEmpty();
 	}
 

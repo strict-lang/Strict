@@ -38,15 +38,15 @@ public sealed class TextTests : TestExpressions
 		"\t\"SecondLineToMakeItThanHundredCharacters\" +",
 		"\t\"ThirdLineToMakeItThanHundredCharacters\" +", "\t\"FourthLine\"",
 		"\tresult is Text")]
-	public void
-		ParseMultiLineTextExpressions(string testName, string expectedOutput,
-			params string[] code) =>
-		Assert.That(
-			((Body)new Type(TestPackage.Instance,
-					new TypeLines(nameof(ParseMultiLineTextExpressions) + testName, code)).
-				ParseMembersAndMethods(new MethodExpressionParser()).Methods[0].
-				GetBodyAndParseIfNeeded()).Expressions[0].ToString(),
+	public void ParseMultiLineTextExpressions(string testName, string expectedOutput,
+		params string[] code)
+	{
+		using var testType = new Type(TestPackage.Instance,
+			new TypeLines(nameof(ParseMultiLineTextExpressions) + testName, code)).
+				ParseMembersAndMethods(new MethodExpressionParser());
+		Assert.That(((Body)testType.Methods[0].GetBodyAndParseIfNeeded()).Expressions[0].ToString(),
 			Is.EqualTo(expectedOutput));
+	}
 
 	[TestCase("ParseNewLineTextExpression", "\"FirstLine\" + Character.NewLine + \"ThirdLine\" + Character.NewLine", "has logger", "Run Text",
 		"	\"FirstLine\" + Character.NewLine + \"ThirdLine\" + Character.NewLine")]
@@ -56,8 +56,7 @@ public sealed class TextTests : TestExpressions
 	public void ParseNewLineTextExpression(string testName, string expected, params string[] code)
 	{
 		using var multiLineType = new Type(TestPackage.Instance,
-				new TypeLines(testName, code)).
-			ParseMembersAndMethods(new MethodExpressionParser());
+			new TypeLines(testName, code)).ParseMembersAndMethods(new MethodExpressionParser());
 		var binary = (Binary)multiLineType.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(binary.ToString(), Is.EqualTo(expected));
 	}
@@ -70,9 +69,8 @@ public sealed class TextTests : TestExpressions
 	public void ParseMultiLineTextEndsWithNewLine(string testName, string expected,
 		params string[] code)
 	{
-		using var multiLineType =
-			new Type(TestPackage.Instance, new TypeLines(testName, code)).ParseMembersAndMethods(
-				new MethodExpressionParser());
+		using var multiLineType =	new Type(TestPackage.Instance,
+			new TypeLines(testName, code)).ParseMembersAndMethods(new MethodExpressionParser());
 		var constantDeclaration = (Binary)multiLineType.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(constantDeclaration.ToString(), Is.EqualTo(expected));
 	}

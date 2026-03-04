@@ -1,3 +1,5 @@
+using Strict.Language.Tests;
+
 namespace Strict.Expressions.Tests;
 
 public class DeclarationTests : TestExpressions
@@ -6,7 +8,6 @@ public class DeclarationTests : TestExpressions
 	public void CreateParserAndPackage() => parser = new MethodExpressionParser();
 
 	private ExpressionParser parser = null!;
-	private static readonly Package Package = new(nameof(DeclarationTests));
 
 	[Test]
 	public void MissingConstantValue() =>
@@ -128,9 +129,9 @@ public class DeclarationTests : TestExpressions
 	[Test]
 	public void AssignmentWithMethodCall()
 	{
-		// @formatter:off
-		var program = new Type(Package,
+		using var program = new Type(TestPackage.Instance,
 			new TypeLines(nameof(AssignmentWithMethodCall),
+				// @formatter:off
 				"has logger",
 				"MethodToCall Text",
 				"\t\"Hello World\"",
@@ -145,7 +146,7 @@ public class DeclarationTests : TestExpressions
 	[Test]
 	public void LocalMethodCallShouldHaveCorrectReturnType()
 	{
-		var program = new Type(type.Package,
+		using var program = new Type(TestPackage.Instance,
 			new TypeLines(nameof(LocalMethodCallShouldHaveCorrectReturnType),
 				"has logger",
 				"LocalMethod Text",
@@ -156,14 +157,16 @@ public class DeclarationTests : TestExpressions
 	}
 
 	[Test]
-	public void LetAssignmentWithConstructorCall() =>
-		Assert.That(
-			((Declaration)((Body)new Type(Package,
-					new TypeLines(nameof(LetAssignmentWithConstructorCall), "has logger",
-						"Run",
-						"\tconstant file = File(\"test.txt\")",
-						"\tfile is File")).ParseMembersAndMethods(parser).Methods[0].
-				GetBodyAndParseIfNeeded()).Expressions[0]).Value.ToString(), Is.EqualTo("File(\"test.txt\")"));
+	public void LetAssignmentWithConstructorCall()
+	{
+		using var type = new Type(TestPackage.Instance,
+			new TypeLines(nameof(LetAssignmentWithConstructorCall), "has logger",
+				"Run",
+				"\tconstant file = File(\"test.txt\")",
+				"\tfile is File")).ParseMembersAndMethods(parser);
+		Assert.That(((Declaration)((Body)type.Methods[0].GetBodyAndParseIfNeeded()).Expressions[0]).
+			Value.ToString(), Is.EqualTo("File(\"test.txt\")"));
+	}
 
 	[Test]
 	public void LetUsesConstantValue() =>
@@ -175,7 +178,7 @@ public class DeclarationTests : TestExpressions
 	public void ConstantUsesNonConstantValue() =>
 		Assert.That(() =>
 		{
-			var program = new Type(Package,
+			using var program = new Type(TestPackage.Instance,
 				new TypeLines(nameof(ConstantUsesNonConstantValue),
 					"has number",
 					"Run",

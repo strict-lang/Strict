@@ -21,8 +21,9 @@ ShowResult("nested conv", built.Match("Run\n\ttrue to Text\n\tfalse to Text\n"))
 ShowResult("group expr", built.Match("Run\n\tnot (true)\n"));
 ShowResult("string", built.Match("Run\n\t\"hello\"\n"));
 ShowResult("decimal", built.Match("has number\n"));
-var basePath = Directory.Exists(Repositories.StrictDevelopmentFolder)
-	? Repositories.StrictDevelopmentFolder
+var localPath = Repositories.GetLocalDevelopmentPath(Repositories.StrictOrg, nameof(Strict));
+var basePath = Directory.Exists(localPath)
+	? localPath
 	: Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "..");
 foreach (var file in Directory.GetFiles(basePath, "*" + Strict.Language.Type.Extension))
 	ShowResult(Path.GetFileName(file), built.Match(File.ReadAllText(file)));

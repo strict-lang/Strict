@@ -6,7 +6,8 @@ public class ExpressionParserTests : ExpressionParser
 {
 	[SetUp]
 	public void CreateType() =>
-		type = new Type(TestPackage.Instance, new MockRunTypeLines()).ParseMembersAndMethods(this);
+		type = new Type(TestPackage.Instance, new MockRunTypeLines(nameof(ExpressionParserTests))).
+			ParseMembersAndMethods(this);
 
 	private Type type = null!;
 

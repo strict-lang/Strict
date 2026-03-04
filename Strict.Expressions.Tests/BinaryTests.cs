@@ -72,10 +72,9 @@ public sealed class BinaryTests : TestExpressions
 
 	[Test]
 	public void NestedBinary() =>
-		ParseAndCheckOutputMatchesInput("2 * 5 + 3",
-			CreateBinary(
-				CreateBinary(new Number(method, 2), BinaryOperator.Multiply, new Number(method, 5)),
-				BinaryOperator.Plus, new Number(method, 3)));
+		ParseAndCheckOutputMatchesInput("2 * 5 + 3", CreateBinary(
+			CreateBinary(new Number(method, 2), BinaryOperator.Multiply, new Number(method, 5)),
+			BinaryOperator.Plus, new Number(method, 3)));
 
 	[TestCase("1 + 2")]
 	[TestCase("1 is 1")]

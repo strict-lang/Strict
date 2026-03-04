@@ -1,3 +1,5 @@
+using Strict.Language.Tests;
+
 namespace Strict.Expressions.Tests;
 
 public sealed class MemberCallTests : TestExpressions
@@ -48,7 +50,7 @@ public sealed class MemberCallTests : TestExpressions
 	public void MemberWithArgumentsInitializerShouldNotHaveType() =>
 		Assert.That(() =>
 			{
-				using var _ = new Type(type.Package, new TypeLines(Body.Declaration,
+				using var _ = new Type(TestPackage.Instance, new TypeLines(Body.Declaration,
 						"has input Text = Text(5)")).ParseMembersAndMethods(parser);
 			}, //ncrunch: no coverage
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.
@@ -61,7 +63,7 @@ public sealed class MemberCallTests : TestExpressions
 		Assert.That(
 			() =>
 			{
-				using var _ = new Type(type.Package,
+				using var _ = new Type(TestPackage.Instance,
 						new TypeLines(nameof(UnknownExpressionInMemberInitializer),
 							"has input Text = random")).
 					ParseMembersAndMethods(parser);
@@ -73,7 +75,7 @@ public sealed class MemberCallTests : TestExpressions
 		Assert.That(
 			() =>
 			{
-				using var _ = new Type(type.Package,
+				using var _ = new Type(TestPackage.Instance,
 					new TypeLines(nameof(NameMustBeAWordWithoutAnySpecialCharacterOrNumber),
 						"has input1$ = Text(5)")).ParseMembersAndMethods(parser);
 			}, //ncrunch: no coverage
@@ -83,7 +85,7 @@ public sealed class MemberCallTests : TestExpressions
 	[Test]
 	public void MemberWithArgumentsInitializer()
 	{
-		using var assignmentType = new Type(type.Package,
+		using var assignmentType = new Type(TestPackage.Instance,
 			new TypeLines(nameof(MemberWithArgumentsInitializer), "has input = Character(5)",
 				"GetInput Text", "\tinput")).ParseMembersAndMethods(parser);
 		Assert.That(assignmentType.Members[0].Name, Is.EqualTo("input"));
@@ -98,10 +100,9 @@ public sealed class MemberCallTests : TestExpressions
 	[Test]
 	public void MemberGetHashCodeAndEquals()
 	{
-		using var memberCall =
-			new Type(type.Package,
-				new TypeLines(nameof(MemberGetHashCodeAndEquals), "has input = Text(5)", "GetInput Text",
-					"\tinput")).ParseMembersAndMethods(parser);
+		using var memberCall = new Type(TestPackage.Instance,
+			new TypeLines(nameof(MemberGetHashCodeAndEquals), "has input = Text(5)", "GetInput Text",
+				"\tinput")).ParseMembersAndMethods(parser);
 		Assert.That(memberCall.Members[0].GetHashCode(),
 			Is.EqualTo(memberCall.Members[0].Name.GetHashCode()));
 		Assert.That(
@@ -116,13 +117,11 @@ public sealed class MemberCallTests : TestExpressions
 	public void MemberWithBinaryExpression()
 	{
 		// @formatter:off
-		using var assignmentType =
-			new Type(type.Package,
-					new TypeLines(nameof(MemberWithBinaryExpression),
-						"has combinedNumber = 3 + 5",
-						"GetCombined Number",
-						"\tcombinedNumber")).
-				ParseMembersAndMethods(parser);
+		using var assignmentType = new Type(TestPackage.Instance,
+			new TypeLines(nameof(MemberWithBinaryExpression),
+				"has combinedNumber = 3 + 5",
+				"GetCombined Number",
+				"\tcombinedNumber")).ParseMembersAndMethods(parser);
 		Assert.That(assignmentType.Members[0].Name, Is.EqualTo("combinedNumber"));
 		Assert.That(assignmentType.Members[0].Type, Is.EqualTo(type.GetType(Type.Number)));
 		var binary = (Binary)assignmentType.Members[0].InitialValue!;
@@ -133,7 +132,7 @@ public sealed class MemberCallTests : TestExpressions
 	[Test]
 	public void FromConstructorCall()
 	{
-		using var program = new Type(type.Package,
+		using var program = new Type(TestPackage.Instance,
 			new TypeLines(nameof(FromConstructorCall),
 				"has file = File(\"test.txt\")",
 				"Run",
@@ -145,7 +144,7 @@ public sealed class MemberCallTests : TestExpressions
 	[Test]
 	public void FromConstructorCallUsingMemberName()
 	{
-		using var program = new Type(type.Package,
+		using var program = new Type(TestPackage.Instance,
 			new TypeLines(nameof(FromConstructorCallUsingMemberName),
 				"has file = \"test.txt\"",
 				"Run",
@@ -158,7 +157,7 @@ public sealed class MemberCallTests : TestExpressions
 		Assert.That(
 			() =>
 			{
-				using var _ = new Type(type.Package,
+				using var _ = new Type(TestPackage.Instance,
 					new TypeLines(nameof(MemberCallUsingAnotherMemberIsForbidden),
 					"has file = File(\"test.txt\")",
 					"has fileDescription = file.Length > 1000 then \"big file\" else \"small file\"",
@@ -170,7 +169,7 @@ public sealed class MemberCallTests : TestExpressions
 	[Test]
 	public void BaseTypeMemberCallInDerivedType()
 	{
-		using var program = new Type(type.Package,
+		using var program = new Type(TestPackage.Instance,
 			new TypeLines(nameof(BaseTypeMemberCallInDerivedType),
 				"has Range",
 				"Run",
@@ -188,7 +187,7 @@ public sealed class MemberCallTests : TestExpressions
 		Assert.That(
 			() =>
 			{
-				using var _ = new Type(type.Package, new TypeLines(nameof(DuplicateMembersAreNotAllowed),
+				using var _ = new Type(TestPackage.Instance, new TypeLines(nameof(DuplicateMembersAreNotAllowed),
 					"has something Number",
 					"has something Number",
 					"Run",
@@ -199,7 +198,7 @@ public sealed class MemberCallTests : TestExpressions
 	[Test]
 	public void MembersWithDifferentNamesAreAllowed()
 	{
-		using var program = new Type(type.Package,
+		using var program = new Type(TestPackage.Instance,
 			new TypeLines(nameof(MembersWithDifferentNamesAreAllowed),
 				"has something Number",
 				"has somethingDifferent Number",
@@ -214,7 +213,7 @@ public sealed class MemberCallTests : TestExpressions
 		Assert.That(
 			() =>
 			{
-				using var _ = new Type(type.Package,
+				using var _ = new Type(TestPackage.Instance,
 				new TypeLines(nameof(MemberNameWithDifferentTypeNamesThanOwnNotAllowed),
 					"has numbers Boolean",
 					"Run",
@@ -228,7 +227,7 @@ public sealed class MemberCallTests : TestExpressions
 		Assert.That(
 			() =>
 			{
-				using var dummy = new Type(type.Package,
+				using var dummy = new Type(TestPackage.Instance,
 					new TypeLines(nameof(VariableNameCannotHaveDifferentTypeNameThanValue),
 						"has text",
 						"Run",
@@ -244,7 +243,7 @@ public sealed class MemberCallTests : TestExpressions
 		Assert.That(
 			() =>
 			{
-				using var _ = new Type(type.Package,
+				using var _ = new Type(TestPackage.Instance,
 					new TypeLines(nameof(CannotAccessMemberInSameTypeBeforeTypeIsParsed),
 						"has Range",
 						"has something = Range(0, 13)",

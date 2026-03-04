@@ -180,13 +180,13 @@ public class Program
 
 	private static async Task<string> GetExampleFolder()
 	{
-		var examplesFolder = Path.Combine(Repositories.StrictDevelopmentFolder, "Examples");
+		var packageName = nameof(Strict) + Context.ParentSeparator + "Examples";
+		var examplesFolder = Repositories.GetLocalDevelopmentPath(Repositories.StrictOrg, packageName);
 		if (Directory.Exists(examplesFolder))
 			return examplesFolder;
-		var cacheFolder = Path.Combine(Repositories.CacheFolder, "Strict", "Examples");
-		await Repositories.
-			DownloadRepositoryStrictFiles(cacheFolder, "strict-lang", "Strict/Examples").
-			ConfigureAwait(false);
+		var cacheFolder = Path.Combine(Repositories.CacheFolder, Repositories.StrictOrg, packageName);
+		await Repositories.DownloadRepositoryStrictFiles(cacheFolder, Repositories.StrictOrg,
+			packageName).ConfigureAwait(false);
 		return cacheFolder;
 	}
 

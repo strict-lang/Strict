@@ -74,8 +74,9 @@ public sealed class GrammarTests
 	[Test]
 	public void CheckAllBaseFiles()
 	{
-		var basePath = Directory.Exists(Repositories.StrictDevelopmentFolder)
-			? Repositories.StrictDevelopmentFolder
+		var localPath = Repositories.GetLocalDevelopmentPath(Repositories.StrictOrg, nameof(Strict));
+		var basePath = Directory.Exists(localPath)
+			? localPath
 			: Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "..");
 		foreach (var file in Directory.GetFiles(basePath, "*" + Language.Type.Extension))
 		{

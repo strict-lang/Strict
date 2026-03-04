@@ -59,7 +59,7 @@ public sealed class TypeTests
 	[Test]
 	public void NoMethodsFound() =>
 		Assert.That(
-			() => new Type(new Package(nameof(NoMethodsFound)), new TypeLines("dummy", "has Number")).
+			() => new Type(TestPackage.Instance, new TypeLines("dummy", "has Number")).
 				ParseMembersAndMethods(null!), Throws.InstanceOf<Type.NoMethodsFound>());
 
 	[Test]

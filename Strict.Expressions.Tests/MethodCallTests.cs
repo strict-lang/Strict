@@ -1,3 +1,5 @@
+using Strict.Language.Tests;
+
 namespace Strict.Expressions.Tests;
 
 public sealed class MethodCallTests : TestExpressions
@@ -177,8 +179,8 @@ public sealed class MethodCallTests : TestExpressions
 	[Test]
 	public void ValueMustHaveCorrectType()
 	{
-		var program = new Type(type.Package, new TypeLines(
-				nameof(ValueMustHaveCorrectType),
+		using var program = new Type(TestPackage.Instance,
+			new TypeLines(nameof(ValueMustHaveCorrectType),
 				"has logger",
 				"has Number",
 				$"Dummy(dummy Number) {nameof(ValueMustHaveCorrectType)}",
@@ -194,15 +196,14 @@ public sealed class MethodCallTests : TestExpressions
 	[Test]
 	public void CanAccessThePropertiesOfValue()
 	{
-		var program = new Type(type.Package, new TypeLines(
-				nameof(CanAccessThePropertiesOfValue),
+		using var program = new Type(TestPackage.Instance,
+			new TypeLines(nameof(CanAccessThePropertiesOfValue),
 				"has logger",
 				"has Number",
 				"has myMember Text",
 				"Dummy(dummy Number) Text",
 				"\tlet result = value.myMember",
-				"\tresult + \"dummy\"")).
-			ParseMembersAndMethods(new MethodExpressionParser());
+				"\tresult + \"dummy\"")).ParseMembersAndMethods(new MethodExpressionParser());
 		var body = (Body)program.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(body.FindVariable("value")?.Type, Is.EqualTo(program));
 		Assert.That(body.FindVariable("result")?.Type.Name, Is.EqualTo("Text"));
@@ -220,9 +221,7 @@ public sealed class MethodCallTests : TestExpressions
 		"\tinstanceWithTexts is ProgramWithPublicMember")]
 	public void ParseConstructorCallWithList(string programName, string expected, params string[] code)
 	{
-		var program = new Type(type.Package, new TypeLines(
-				programName,
-				code)).
+		using var program = new Type(TestPackage.Instance, new TypeLines(programName, code)).
 			ParseMembersAndMethods(new MethodExpressionParser());
 		var assignment =
 			(Declaration)((Body)program.Methods[0].GetBodyAndParseIfNeeded()).Expressions[0];
@@ -232,7 +231,7 @@ public sealed class MethodCallTests : TestExpressions
 	[Test]
 	public void TypeImplementsGenericTypeWithLength()
 	{
-		new Type(type.Package,
+		using var _ = new Type(TestPackage.Instance,
 			new TypeLines("HasLengthImplementation",
 				"has HasLength",
 				"has boolean",
@@ -240,7 +239,7 @@ public sealed class MethodCallTests : TestExpressions
 				"\tboolean = boolean",
 				"Length Number",
 				"\tvalue")).ParseMembersAndMethods(new MethodExpressionParser());
-		var program = new Type(type.Package,
+		using var program = new Type(TestPackage.Instance,
 				new TypeLines(nameof(TypeImplementsGenericTypeWithLength), "has logger",
 					"GetLengthSquare(type HasLength) Number", "\ttype.Length * type.Length", "Dummy",
 					"\tconstant countOfFive = HasLengthImplementation(true)",
@@ -254,7 +253,7 @@ public sealed class MethodCallTests : TestExpressions
 	[Test]
 	public void MutableCanUseChildMethods()
 	{
-		var program = new Type(type.Package,
+		using var program = new Type(TestPackage.Instance,
 			new TypeLines(nameof(MutableCanUseChildMethods),
 				"has logger",
 				"Dummy Number",
@@ -267,7 +266,7 @@ public sealed class MethodCallTests : TestExpressions
 	[Test]
 	public void ConstructorCallWithMethodCall()
 	{
-		var program = new Type(type.Package,
+		using var program = new Type(TestPackage.Instance,
 			new TypeLines("ArithmeticFunction",
 				"has numbers",
 				"from(first Number, second Number)",
@@ -281,7 +280,7 @@ public sealed class MethodCallTests : TestExpressions
 	[Test]
 	public void RecursiveStackOverflow()
 	{
-		var program = new Type(type.Package,
+		using var program = new Type(TestPackage.Instance,
 			new TypeLines("RecursiveStackOverflow",
 				"has number",
 				"AddFiveWithInput Number",
@@ -295,14 +294,15 @@ public sealed class MethodCallTests : TestExpressions
 	[Test]
 	public void NestedMethodCall()
 	{
-		var program = new Type(type.Package,
-				new TypeLines(nameof(NestedMethodCall), "has logger", "Run",
-					"\tFile(\"fileName\").Write(\"someText\")", "\ttrue")).
+		using var program = new Type(TestPackage.Instance,
+			new TypeLines(nameof(NestedMethodCall), "has logger", "Run",
+				"\tFile(\"fileName\").Write(\"someText\")", "\ttrue")).
 			ParseMembersAndMethods(new MethodExpressionParser());
 		var body = (Body)program.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(body.Expressions[0], Is.InstanceOf<MethodCall>());
 		Assert.That(((MethodCall)body.Expressions[0]).Method.Name, Is.EqualTo("Write"));
-		Assert.That(((MethodCall)body.Expressions[0]).ToString(), Is.EqualTo("File(\"fileName\").Write(\"someText\")"));
+		Assert.That(((MethodCall)body.Expressions[0]).ToString(),
+			Is.EqualTo("File(\"fileName\").Write(\"someText\")"));
 		Assert.That(((MethodCall)body.Expressions[0]).Instance?.ToString(),
 			Is.EqualTo("File(\"fileName\")"));
 	}
@@ -310,13 +310,12 @@ public sealed class MethodCallTests : TestExpressions
 	[Test]
 	public void MethodCallAsMethodParameter()
 	{
-		var program = new Type(type.Package,
-				new TypeLines(nameof(MethodCallAsMethodParameter),
-					"has logger",
-					"AppendFiveWithInput(number) Number",
-					"\tAppendFiveWithInput(AppendFiveWithInput(5)) is 15",
-					"\tnumber + 5")).
-			ParseMembersAndMethods(new MethodExpressionParser());
+		using var program = new Type(TestPackage.Instance,
+			new TypeLines(nameof(MethodCallAsMethodParameter),
+				"has logger",
+				"AppendFiveWithInput(number) Number",
+				"\tAppendFiveWithInput(AppendFiveWithInput(5)) is 15",
+				"\tnumber + 5")).ParseMembersAndMethods(new MethodExpressionParser());
 		var body = (Body)program.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(body.Expressions[0].ToString(),
 			Is.EqualTo("AppendFiveWithInput(AppendFiveWithInput(5)) is 15"));
@@ -327,36 +326,36 @@ public sealed class MethodCallTests : TestExpressions
 	[Test]
 	public void TypeCanBeAutoInitialized()
 	{
-		new Type(type.Package,
-				new TypeLines(nameof(TypeCanBeAutoInitialized),
-					"has logger",
-					"AddFiveWithInput(number) Number",
-					"\tAddFiveWithInput(AddFiveWithInput(5)) is 15",
-					"\tnumber + 5")).
-			ParseMembersAndMethods(new MethodExpressionParser());
-		var consumingType = new Type(type.Package,
-				new TypeLines("AutoInitializedTypeConsumer",
-					"has typeCanBeAutoInitialized",
-					"GetResult(number) Number",
-					"\tGetResult(10) is 15",
-					"\ttypeCanBeAutoInitialized.AddFiveWithInput(number)")).
+		using var _ = new Type(TestPackage.Instance,
+			new TypeLines(nameof(TypeCanBeAutoInitialized),
+				"has logger",
+				"AddFiveWithInput(number) Number",
+				"\tAddFiveWithInput(AddFiveWithInput(5)) is 15",
+				"\tnumber + 5")).ParseMembersAndMethods(new MethodExpressionParser());
+		using var consumingType = new Type(TestPackage.Instance,
+			new TypeLines("AutoInitializedTypeConsumer",
+				"has typeCanBeAutoInitialized",
+				"GetResult(number) Number",
+				"\tGetResult(10) is 15",
+				"\ttypeCanBeAutoInitialized.AddFiveWithInput(number)")).
 			ParseMembersAndMethods(new MethodExpressionParser());
 		var body = (Body)consumingType.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(consumingType.Members[0].Type.Name, Is.EqualTo("TypeCanBeAutoInitialized"));
-		Assert.That(((MethodCall)body.Expressions[1]).Instance?.ReturnType.Name, Is.EqualTo("TypeCanBeAutoInitialized"));
+		Assert.That(((MethodCall)body.Expressions[1]).Instance?.ReturnType.Name,
+			Is.EqualTo("TypeCanBeAutoInitialized"));
 	}
 
 	[Test]
 	public void TypeCannotBeAutoInitialized()
 	{
-		new Type(type.Package,
+		using var _ = new Type(TestPackage.Instance,
 				new TypeLines(nameof(TypeCannotBeAutoInitialized),
 					"has number",
 					"AddFiveWithInput Number",
 					"\tTypeCannotBeAutoInitialized(10).AddFiveWithInput is 15",
 					"\tnumber + 5")).
 			ParseMembersAndMethods(new MethodExpressionParser());
-		var consumer = new Type(type.Package,
+		using var consumer = new Type(TestPackage.Instance,
 				new TypeLines("ConsumingType",
 					"has logger",
 					"GetResult(number) Number",
@@ -365,6 +364,7 @@ public sealed class MethodCallTests : TestExpressions
 					"\tinstance.AddFiveWithInput")).
 			ParseMembersAndMethods(new MethodExpressionParser());
 		var body = (Body)consumer.Methods[0].GetBodyAndParseIfNeeded();
-		Assert.That(((Declaration)body.Expressions[1]).Value.ReturnType.Name, Is.EqualTo("TypeCannotBeAutoInitialized"));
+		Assert.That(((Declaration)body.Expressions[1]).Value.ReturnType.Name,
+			Is.EqualTo("TypeCannotBeAutoInitialized"));
 	}
 }

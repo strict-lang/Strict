@@ -1,3 +1,5 @@
+using Strict.Language.Tests;
+
 namespace Strict.Expressions.Tests;
 
 public sealed class BodyTests : TestExpressions
@@ -28,7 +30,7 @@ public sealed class BodyTests : TestExpressions
 	[Test]
 	public void CannotAccessAnotherMethodVariable()
 	{
-		var program = new Type(new Package(nameof(CannotAccessAnotherMethodVariable)),
+		var program = new Type(TestPackage.Instance,
 			new TypeLines(nameof(CannotAccessAnotherMethodVariable),
 				// @formatter:off
 				"has logger",
@@ -45,13 +47,12 @@ public sealed class BodyTests : TestExpressions
 	[Test]
 	public void IsConstant()
 	{
-		var program = new Type(new Package(nameof(IsConstant)),
-			new TypeLines(nameof(IsConstant),
-				// @formatter:off
-				"has logger",
-				"Run",
-				"\tconstant number = 5",
-				"\tlogger.Log(number + number)")).ParseMembersAndMethods(new MethodExpressionParser());
+		var program = new Type(TestPackage.Instance, new TypeLines(nameof(IsConstant),
+			// @formatter:off
+			"has logger",
+			"Run",
+			"\tconstant number = 5",
+			"\tlogger.Log(number + number)")).ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(program.Methods[0].GetBodyAndParseIfNeeded().IsConstant, Is.False);
 	}
 
@@ -134,7 +135,7 @@ public sealed class BodyTests : TestExpressions
 	[Test]
 	public void ChildBodyReturnsFromThreeTabsToOneDirectly()
 	{
-		var program = new Type(new Package(nameof(ChildBodyReturnsFromThreeTabsToOneDirectly)),
+		var program = new Type(TestPackage.Instance,
 			new TypeLines(nameof(ChildBodyReturnsFromThreeTabsToOneDirectly),
       // @formatter:off
       "has logger",

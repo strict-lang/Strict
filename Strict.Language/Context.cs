@@ -37,7 +37,7 @@ public abstract class Context
 #endif
 		FullName = string.IsNullOrEmpty(parent?.Name)
 			? name
-			: parent + "/" + name;
+			: parent.FullName + ParentSeparator + name;
 	}
 
 #if DEBUG
@@ -45,6 +45,7 @@ public abstract class Context
 	protected readonly int callerLineNumber;
 	protected readonly string callerMemberName;
 #endif
+	public const char ParentSeparator = '/';
 
 	private static bool IsNotMethodOrPackageAndNotConflictingType(Context context, Context parent,
 		string name)
@@ -167,7 +168,7 @@ public abstract class Context
 		GetType(Type.Dictionary).GetGenericImplementation(keyType, valueType);
 
 	private Type? FindFullType(string name) =>
-		name.Contains('/')
+		name.Contains(ParentSeparator)
 			? name == FullName
 				? this as Type
 				: GetPackage()?.FindFullType(name)

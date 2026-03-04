@@ -1,8 +1,8 @@
 namespace Strict.Language;
 
 public sealed class OneOfType(Type definedInType, IReadOnlyList<Type> types) : Type(
-	definedInType.Package,
-	new TypeLines(string.Join("Or", types.Select(t => t.Name)), GetOneOfTypeLines(types)))
+	definedInType.Package, new TypeLines(string.Join("Or", types.Select(t => t.Name)),
+		GetOneOfTypeLines(types)))
 {
 	private static string[] GetOneOfTypeLines(IReadOnlyList<Type> types)
 	{

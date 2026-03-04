@@ -1,3 +1,5 @@
+using Strict.Language.Tests;
+
 namespace Strict.Expressions.Tests;
 
 public sealed class IfAdvancedTests : TestExpressions
@@ -24,7 +26,7 @@ public sealed class IfAdvancedTests : TestExpressions
 	[Test]
 	public void ParseSelectorIf()
 	{
-		var program = new Type(Package,
+		using var program = new Type(TestPackage.Instance,
 			new TypeLines(nameof(ParseSelectorIf),
 				// @formatter:off
 				"has operation Text",
@@ -47,7 +49,7 @@ public sealed class IfAdvancedTests : TestExpressions
 	[Test]
 	public void ParseSelectorIfWithElse()
 	{
-		var program = new Type(Package,
+		using var program = new Type(TestPackage.Instance,
 			new TypeLines(nameof(ParseSelectorIfWithElse),
 				// @formatter:off
 				"has operation Text",
@@ -94,7 +96,7 @@ public sealed class IfAdvancedTests : TestExpressions
 	[Test]
 	public void ReturnTypeOfThenMustMatchMethodReturnType()
 	{
-		var program = new Type(Package,
+		using var program = new Type(TestPackage.Instance,
 			new TypeLines(nameof(ReturnTypeOfThenMustMatchMethodReturnType),
 				"has logger",
 				"InvalidRun Number",
@@ -107,21 +109,19 @@ public sealed class IfAdvancedTests : TestExpressions
 				"expected method return type: TestPackage/Number in method line: 3"));
 	}
 
-	private static readonly Package Package = new(nameof(IfTests));
-
 	[Test]
 	public void ReturnTypeOfElseMustMatchMethodReturnType()
 	{
-		var program = new Type(Package, new TypeLines(
-			nameof(ReturnTypeOfElseMustMatchMethodReturnType),
-			// @formatter:off
-			"has logger",
-			"InvalidRun Number",
-			"	InvalidRun is Number",
-			"	if 5 is 5",
-			"		constant file = File(\"test.txt\")",
-			"		return \"Hello\"",
-			"	6")).ParseMembersAndMethods(new MethodExpressionParser());
+		using var program = new Type(TestPackage.Instance,
+			new TypeLines(nameof(ReturnTypeOfElseMustMatchMethodReturnType),
+				// @formatter:off
+				"has logger",
+				"InvalidRun Number",
+				"	InvalidRun is Number",
+				"	if 5 is 5",
+				"		constant file = File(\"test.txt\")",
+				"		return \"Hello\"",
+				"	6")).ParseMembersAndMethods(new MethodExpressionParser());
 		// @formatter:on
 		Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(),
 			Throws.InstanceOf<Body.ChildBodyReturnTypeMustMatchMethod>().With.Message.Contains(
@@ -132,7 +132,7 @@ public sealed class IfAdvancedTests : TestExpressions
 	[Test]
 	public void ThenReturnsImplementedTypeOfMethodReturnType()
 	{
-		var program = new Type(Package,
+		using var program = new Type(TestPackage.Instance,
 			new TypeLines(nameof(ThenReturnsImplementedTypeOfMethodReturnType),
 				// @formatter:off
 				"has logger",
@@ -151,7 +151,7 @@ public sealed class IfAdvancedTests : TestExpressions
 	[Test]
 	public void MultiLineThenAndElseWithMatchingMethodReturnType()
 	{
-		var program = new Type(Package,
+		using var program = new Type(TestPackage.Instance,
 			new TypeLines(nameof(MultiLineThenAndElseWithMatchingMethodReturnType),
 				// @formatter:off
 				"has logger",
@@ -190,7 +190,7 @@ public sealed class IfAdvancedTests : TestExpressions
 	[Test]
 	public void ValidMultipleElseIf()
 	{
-		var program = new Type(Package,
+		using var program = new Type(TestPackage.Instance,
 			new TypeLines(nameof(ValidMultipleElseIf),
 				// @formatter:off
 				"has logger",
@@ -223,7 +223,7 @@ public sealed class IfAdvancedTests : TestExpressions
 	[Test]
 	public void ElseIfMissingThen()
 	{
-		var program = new Type(Package,
+		using var program = new Type(TestPackage.Instance,
 			new TypeLines(nameof(ElseIfMissingThen),
 				// @formatter:off
 				"has logger",
@@ -242,7 +242,7 @@ public sealed class IfAdvancedTests : TestExpressions
 	[Test]
 	public void MultiLineElseWithMismatchingReturnType()
 	{
-		var program = new Type(Package, new TypeLines(
+		using var program = new Type(TestPackage.Instance, new TypeLines(
 			nameof(MultiLineElseWithMismatchingReturnType),
 			// @formatter:off
 			"has logger",

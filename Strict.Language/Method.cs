@@ -87,13 +87,17 @@ public sealed class Method : Context
 			throw new MethodReturnTypeAsAnyIsNotAllowed(this, returnTypeText);
 		var hasMultipleReturnTypes = returnTypeText.Contains(" or ", StringComparison.Ordinal);
 		return hasMultipleReturnTypes
-			? ParseMultipleReturnTypes(returnTypeText)
+			? ParseMultipleReturnTypes(type, returnTypeText)
 			: type.GetType(returnTypeText);
 	}
 
-	private Type ParseMultipleReturnTypes(string typeNames) =>
-		new OneOfType(Type, typeNames.Split(" or ", StringSplitOptions.TrimEntries).
-			Select(typeName => Type.GetType(typeName)).ToList());
+	private Type ParseMultipleReturnTypes(Context type, string typeNames)
+	{
+		var types = typeNames.Split(" or ", StringSplitOptions.TrimEntries).
+			Select(typeName => Type.GetType(typeName)).ToList();
+		var typeName = string.Join("Or", types.Select(t => t.Name));
+		return type.FindType(typeName) ?? new OneOfType(Type, types);
+	}
 
 	private Type GetEmptyReturnType(Type type) =>
 		Name is From
@@ -389,8 +393,6 @@ public sealed class Method : Context
 				if (variable is { IsMutable: true, InitialValue.IsConstant: true } &&
 					!Parser.IsVariableMutated(methodBody, variable.Name))
 					throw new MutableUsesConstantValue(methodBody, variable.Name, variable.InitialValue);
-		if (Tests.Count < 1 && !IsTestPackage())
-			throw new MethodMustHaveAtLeastOneTest(Type, Name, TypeLineNumber);
 		return BodyParsed?.Invoke(expression) ?? expression;
 	}
 
@@ -423,8 +425,6 @@ public sealed class Method : Context
 				expressions.Add(expression);
 			}
 		}
-		if (Tests.Count < 1 && !IsTestPackage())
-			throw new MethodMustHaveAtLeastOneTest(Type, Name, TypeLineNumber); //ncrunch: no coverage
 		expressions.Add(new PlaceholderExpression(ReturnType));
 		methodBody.SetExpressions(expressions);
 		return methodBody;
@@ -474,10 +474,6 @@ public sealed class Method : Context
 
 	public event Func<Expression, Expression>? BodyParsed;
 	private bool IsTestPackage() => Type.Package.Name == "TestPackage" || Name == "Run";
-
-	public sealed class MethodMustHaveAtLeastOneTest(Type type, string name, int typeLineNumber)
-		: ParsingFailed(type, typeLineNumber, name);
-
 	public class CannotCallBodyOnTraitMethod(Type type, string name) : Exception(type + "." + name);
 
 	public override string ToString() =>
