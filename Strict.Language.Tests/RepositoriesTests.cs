@@ -65,7 +65,7 @@ public class RepositoriesTests
 					ParseMembersAndMethods(null!);
 			}, //ncrunch: no coverage
 			Throws.InstanceOf<ParsingFailed>().With.Message.
-				Contains(@"Strict/Invalid.strict:line 1"));
+				Contains(Path.Combine("Strict", "Invalid.strict") + ":line 1"));
 	}
 
 	//ncrunch: no coverage start

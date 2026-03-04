@@ -8,7 +8,8 @@ namespace Strict.HighLevelRuntime.Tests;
 public sealed class ToTests
 {
 	[SetUp]
-	public void CreateExecutor() => executor = new Executor(TestBehavior.Disabled);
+	public void CreateExecutor() =>
+		executor = new Executor(TestPackage.Instance, TestBehavior.Disabled);
 
 	private Executor executor = null!;
 
@@ -21,12 +22,10 @@ public sealed class ToTests
 	{
 		using var t = CreateType(nameof(EvaluateToTextAndNumber), "has number", "GetText Text",
 			"\tnumber to Text", "GetNumber Number", "\tnumber to Text to Number");
-		var instance = ValueInstance.Create(t, 5);
-		Assert.That(executor.Execute(t.Methods.Single(m => m.Name == "GetText"), instance, []).Value,
+		var instance = new ValueInstance(t, 5);
+		Assert.That(executor.Execute(t.Methods.Single(m => m.Name == "GetText"), instance, []).Text,
 			Is.EqualTo("5"));
-		Assert.That(
-			Convert.ToDouble(executor.
-				Execute(t.Methods.Single(m => m.Name == "GetNumber"), instance, []).Value),
+		Assert.That(executor.Execute(t.Methods.Single(m => m.Name == "GetNumber"), instance, []).Number,
 			Is.EqualTo(5));
 	}
 
@@ -35,7 +34,8 @@ public sealed class ToTests
 	{
 		using var t = CreateType(nameof(ToCharacterComparison), "has number", "Compare",
 			"\t5 to Character is \"5\"");
-		Assert.That(executor.Execute(t.Methods.Single(m => m.Name == "Compare"), null, []).Value,
+		Assert.That(
+			executor.Execute(t.Methods.Single(m => m.Name == "Compare"), executor.noneInstance, []).Boolean,
 			Is.EqualTo(true));
 	}
 
@@ -46,9 +46,7 @@ public sealed class ToTests
 				new TypeLines(nameof(ConvertCharacterToNumberAndMultiply), "has character",
 					"Convert(number)", "\tcharacter to Number * 10 ^ number")).
 			ParseMembersAndMethods(new MethodExpressionParser());
-		Assert.That(
-			// ReSharper disable once ConfusingCharAsIntegerInConstructor
-			executor.Execute(type.Methods[0], ValueInstance.Create(type, '5'),
-				[ValueInstance.Create(type.GetType(Type.Number), 3)]).Value, Is.EqualTo(5 * 1000));
+		Assert.That(executor.Execute(type.Methods[0], new ValueInstance(type, '5'),
+			[new ValueInstance(type.GetType(Type.Number), 3)]).Number, Is.EqualTo(5 * 1000));
 	}
 }

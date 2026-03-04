@@ -201,14 +201,14 @@ public class BaseVirtualMachineTests : TestExpressions
 	protected static readonly Statement[] ExpectedStatementsOfSimpleListDeclaration =
 	[
 		new StoreVariableStatement(new Instance(NumberType, 5), "number"),
-		new LoadConstantStatement(Register.R0, new Instance(ListType,
+		new LoadConstantStatement(Register.R0, new Instance(ListType.GetGenericImplementation(NumberType),
 			new List<Expression>
 			{
-				new Value(NumberType, 1),
-				new Value(NumberType, 2),
-				new Value(NumberType, 3),
-				new Value(NumberType, 4),
-				new Value(NumberType, 5)
+				new Value(NumberType, new ValueInstance(NumberType, 1.0)),
+				new Value(NumberType, new ValueInstance(NumberType, 2.0)),
+				new Value(NumberType, new ValueInstance(NumberType, 3.0)),
+				new Value(NumberType, new ValueInstance(NumberType, 4.0)),
+				new Value(NumberType, new ValueInstance(NumberType, 5.0))
 			})),
 		new Return(Register.R0)
 	];
@@ -227,11 +227,11 @@ public class BaseVirtualMachineTests : TestExpressions
 			new Instance(ListType,
 				new List<Expression>
 				{
-					new Value(NumberType, 1),
-					new Value(NumberType, 2),
-					new Value(NumberType, 3),
-					new Value(NumberType, 4),
-					new Value(NumberType, 5)
+					new Value(NumberType, new ValueInstance(NumberType, 1.0)),
+					new Value(NumberType, new ValueInstance(NumberType, 2.0)),
+					new Value(NumberType, new ValueInstance(NumberType, 3.0)),
+					new Value(NumberType, new ValueInstance(NumberType, 4.0)),
+					new Value(NumberType, new ValueInstance(NumberType, 5.0))
 				}), "numbers"),
 		new StoreVariableStatement(new Instance(TextType, ""), "result"),
 		new LoadVariableToRegister(Register.R0, "numbers"),

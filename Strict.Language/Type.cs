@@ -327,7 +327,10 @@ public class Type : Context, IDisposable
 	public sealed class CannotGetGenericImplementationOnNonGeneric(string name, string key)
 		: Exception("Type: " + name + ", Generic Implementation: " + key);
 
-	public string FilePath => FullName + Extension;
+	public string FilePath =>
+		Path.GetFullPath(Path.Combine(
+			Package.FolderPath ?? Repositories.GetLocalDevelopmentPath(Repositories.StrictOrg, "Strict"),
+			(this is GenericTypeImplementation gti ? gti.Generic.Name : Name) + Extension));
 	public const string Extension = ".strict";
 
 	public Member? FindMember(string name)

@@ -17,7 +17,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Strict.Language\Strict.Language.csproj" />
-    <ProjectReference Include="..\Strict.VirtualMachine\Strict.Runtime.csproj" />
+    <ProjectReference Include="..\Strict.Runtime\Strict.Runtime.csproj" />
   </ItemGroup>
 
 </Project>

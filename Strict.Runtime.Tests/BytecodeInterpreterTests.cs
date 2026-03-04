@@ -272,7 +272,8 @@ public class BytecodeInterpreterTests : BaseVirtualMachineTests
 		var statements = new ByteCodeGenerator(GenerateMethodCallFromSource(programName,
 			methodCall, code)).Generate();
 		var values = (List<Expression>)vm.Execute(statements).Returns?.Value!;
-		var elements = values.Aggregate("", (current, value) => current + ((Value)value).Data + " ");
+		var elements = values.Aggregate("", (current, value) => current +
+			(((Value)value).Data.IsText ? ((Value)value).Data.Text : (object)((Value)value).Data.Number) + " ");
 		Assert.That(elements.Trim(), Is.EqualTo(expectedResult));
 	} //ncrunch: no coverage end
 
@@ -313,7 +314,9 @@ public class BytecodeInterpreterTests : BaseVirtualMachineTests
 
 	private string ExpressionListToSpaceSeparatedString(IList<Statement> statements) =>
 		((IEnumerable<Expression>)vm.Execute(statements).Returns?.Value!).Aggregate("",
-			(current, value) => current + ((Value)value).Data + " ");
+			(current, value) => current + (((Value)value).Data.IsText
+				? ((Value)value).Data.Text
+				: (object)((Value)value).Data.Number) + " ");
 
 	[Test]
 	public void DictionaryAdd()

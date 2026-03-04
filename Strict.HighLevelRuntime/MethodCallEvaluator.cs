@@ -267,7 +267,7 @@ public sealed class MethodCallEvaluator(Executor executor)
 	{
 		IReadOnlyList<ValueInstance> args;
 		if (call.Arguments.Count == 0)
-			args = Array.Empty<ValueInstance>();
+			args = [];
 		else
 		{
 			var argsList = new List<ValueInstance>(call.Arguments.Count);

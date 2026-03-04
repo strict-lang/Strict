@@ -34,7 +34,7 @@ internal sealed class BodyEvaluator(Executor executor)
 		{
 			var isTest = !e.Equals(body.Expressions[^1]) && IsStandaloneInlineTest(e);
 			if (isTest)
-				executor.Statistics.TestsCount++;
+				executor.Statistics.TestExpressions++;
 			if (isTest == !runOnlyTests && e is not Declaration && e is not MutableReassignment ||
 				runOnlyTests && e is Declaration &&
 				body.Method.Type.Members.Any(m => !m.IsConstant && e.ToString().Contains(m.Name)))

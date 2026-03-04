@@ -9,13 +9,11 @@ namespace Strict.TestRunner;
 /// we don't call some code, it is not parsed, executed, or tested at all. This forces execution
 /// of every method in every type to run all included tests to find out if anything is not working.
 /// </summary>
-public sealed class TestExecutor
+public sealed class TestExecutor(Package package) : Executor(package, TestBehavior.TestRunner)
 {
-	private readonly Executor executor = new(TestBehavior.TestRunner);
-
 	public void RunAllTestsInPackage(Package package)
 	{
-		PackagesCount++;
+		Statistics.PackagesTested++;
 		foreach (var type in package)
 			if (type is not GenericTypeImplementation)
 				RunAllTestsInType(type);
@@ -25,7 +23,7 @@ public sealed class TestExecutor
 
 	public void RunAllTestsInType(Type type)
 	{
-		TypesCount++;
+		Statistics.TypesTested++;
 		foreach (var method in type.Methods)
 			if (!method.IsTrait)
 				RunMethod(method);
@@ -35,10 +33,9 @@ public sealed class TestExecutor
 
 	public void RunMethod(Method method)
 	{
-		MethodsCount++;
-		executor.Execute(method);
+		Statistics.MethodsTested++;
+		Execute(method);
 	}
 
 	public int MethodsCount { get; private set; }
-	public Statistics Statistics => executor.Statistics;
 }

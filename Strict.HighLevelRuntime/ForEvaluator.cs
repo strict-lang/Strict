@@ -67,7 +67,7 @@ internal sealed class ForEvaluator(Executor executor)
 			: executor.RunExpression(f.Body, loop);
 		if (loop.ExitMethodAndReturnValue.HasValue)
 			ctx.ExitMethodAndReturnValue = loop.ExitMethodAndReturnValue;
-		else if (itemResult.IsPrimitiveType(executor.noneType) && !itemResult.IsMutable)
+		else if (!itemResult.IsPrimitiveType(executor.noneType) && !itemResult.IsMutable)
 			results.Add(itemResult);
 	}
 

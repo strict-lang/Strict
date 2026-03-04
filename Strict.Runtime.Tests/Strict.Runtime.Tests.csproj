@@ -20,7 +20,7 @@
 	<ItemGroup>
 		<ProjectReference Include="..\Strict.Expressions.Tests\Strict.Expressions.Tests.csproj" />
 		<ProjectReference Include="..\Strict.Language.Tests\Strict.Language.Tests.csproj" />
-		<ProjectReference Include="..\Strict.VirtualMachine\Strict.Runtime.csproj" />
+		<ProjectReference Include="..\Strict.Runtime\Strict.Runtime.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

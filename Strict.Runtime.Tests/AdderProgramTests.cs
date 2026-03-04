@@ -28,7 +28,7 @@ public sealed class AdderProgramTests : BaseVirtualMachineTests
 		((IEnumerable<Expression>)vm.Execute(
 			new ByteCodeGenerator(GenerateMethodCallFromSource("AdderProgram",
 				methodCall, AdderProgramCode)).Generate()).Returns!.Value).
-		Select(e => Convert.ToDecimal(((Value)e).Data)).ToList();
+		Select(e => (decimal)((Value)e).Data.Number).ToList();
 
 	[Test]
 	public void AddTotalsForSingleNumber() =>

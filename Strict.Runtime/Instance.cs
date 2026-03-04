@@ -5,109 +5,123 @@ using Type = Strict.Language.Type;
 namespace Strict.Runtime;
 
 /// <summary>
-/// The only place where we can have a "static" method call to one of the from methods of a type
-/// before we have a type instance yet, it is the only way to create instances.
+/// Runtime instance holding a type and its value. Value is polymorphic (number, text, bool,
+/// List&lt;Expression&gt;, Dictionary&lt;Value,Value&gt;) until fully migrated to ValueInstance.
 /// </summary>
 public sealed class Instance
 {
-	public Instance(Type? type, object value)
+	public Instance(Type type, object value)
 	{
-		ReturnType = type;
-		if (value is Value valueObj)
-			Value = valueObj.Data;
-		else
-			Value = value;
+		ReturnType = type!;
+		Value = value is Value valueObj ? valueObj.Data : value;
 	}
 
-	public Instance(string typeName, object value)
+	public Instance(Expression expression)
 	{
-		Value = value;
-		TypeName = typeName;
+		ReturnType = expression.ReturnType!;
+		Value = expression is Value value ? (object)value.Data : expression;
 	}
 
-	public Instance(Expression expression, bool isMember = false)
-	{
-		ReturnType = expression.ReturnType;
-		if (expression is Value value)
-			Value = value.Data;
-		else
-			Value = expression;
-		IsMember = isMember;
-	}
-
-	//TODO: very inefficient, object should be avoided like we did in Value and ValueInstance, also we don't need that much stuff here, figure out more efficient solution!
-	public bool IsMember { get; }
 	public Type ReturnType { get; }
-	public object Value { get; set; }
-
-	public object GetRawValue()
+	//TODO: migrate Value from object to ValueInstance once List<Expression>/Dictionary<Value,Value> usages are replaced
+	private object rawValue = null!;
+	public object Value
 	{
-		if (Value is Value value)
-			return value.Data;
-		return Value;
+		get => rawValue is ValueInstance vi
+			? vi.IsText ? (object)vi.Text
+			: vi.IsList || vi.IsDictionary ? rawValue // pass-through for complex types
+			: ReturnType.IsBoolean ? vi.Number != 0
+			: (object)vi.Number
+			: rawValue;
+		set => rawValue = value;
 	}
+
+	internal object ValueInstance => rawValue;
+
+	/// <summary>Returns the backing ValueInstance if stored as one, otherwise default.</summary>
+	internal Strict.Expressions.ValueInstance RawValueInstance =>
+		rawValue is Strict.Expressions.ValueInstance vi ? vi : default;
+
+	public object GetRawValue() => Value; // Value already unwraps ValueInstance
+
+	private double ToDouble() =>
+		rawValue is ValueInstance vi
+			? vi.Number
+			: Convert.ToDouble(rawValue);
 
 	public static Instance operator +(Instance left, Instance right)
 	{
 		if (!left.ReturnType.IsList)
 			return HandleTextTypeConversionForBinaryOperations(left, right, BinaryOperator.Plus);
-		//TODO: over complicated, should always be a list here
 		if (left.ReturnType is GenericTypeImplementation { Name: Type.List })
-		{
-			return new Instance(left.ReturnType, left.Value + right.Value.ToString());
-		}
-		else
-		{
-			return AddElementToTheListAndGetInstance(left, right);
-		}
+			return new Instance(left.ReturnType, left.Value.ToString() + right.Value);
+		return AddElementToTheListAndGetInstance(left, right);
 	}
 
 	private static Instance HandleTextTypeConversionForBinaryOperations(Instance left,
-		Instance right, string binaryOperator)
-	{
-		if (left.ReturnType.IsNumber && right.ReturnType.IsNumber)
-			return new Instance(right.ReturnType ?? left.ReturnType,
+		Instance right, string binaryOperator) =>
+		left.ReturnType.IsNumber && right.ReturnType.IsNumber
+			? new Instance(right.ReturnType,
 				binaryOperator == BinaryOperator.Plus
-					? Convert.ToDouble(left.Value) + Convert.ToDouble(right.Value)
-					: Convert.ToDouble(left.Value) - Convert.ToDouble(right.Value));
-		if (left.ReturnType.IsText && right.ReturnType.IsText)
-			return new Instance(right.ReturnType ?? left.ReturnType,
-				left.Value.ToString() + right.Value);
-		if (right.ReturnType.IsText && left.ReturnType.IsNumber)
-			return new Instance(right.ReturnType, left.Value.ToString() + right.Value);
-		return new Instance(left.ReturnType, left.Value + right.Value.ToString());
-	}
+					? left.ToDouble() + right.ToDouble()
+					: left.ToDouble() - right.ToDouble())
+			: left.ReturnType.IsText && right.ReturnType.IsText
+				? new Instance(right.ReturnType, left.GetRawValue().ToString() + right.GetRawValue())
+				: right.ReturnType.IsText && left.ReturnType.IsNumber
+					? new Instance(right.ReturnType, left.GetRawValue().ToString() + right.GetRawValue())
+					: new Instance(left.ReturnType, left.GetRawValue().ToString() + right.GetRawValue());
 
 	public static Instance operator -(Instance left, Instance right)
 	{
 		if (!left.ReturnType.IsList)
-			return new Instance(left.ReturnType,
-				Convert.ToDouble(left.Value) - Convert.ToDouble(right.Value));
+			return new Instance(left.ReturnType, left.ToDouble() - right.ToDouble());
 		var elements = new List<Expression>((List<Expression>)left.Value);
-		if (right.Value is Expression rightExpression)
+		if (right.rawValue is Expression rightExpression)
 			elements.Remove(rightExpression);
 		else
-			elements.RemoveAt(elements.FindIndex(element => ((Value)element).Data.Equals(right.Value)));
+			elements.RemoveAt(elements.FindIndex(element =>
+				BytecodeInterpreter.AreEqual(((Value)element).Data.IsText
+					? ((Value)element).Data.Text
+					: (object)((Value)element).Data.Number, right.Value)));
 		return new Instance(left.ReturnType, elements);
 	}
 
-	public static bool operator >(Instance left, Instance right)
-	{
-		return Convert.ToDouble(left.Value) > Convert.ToDouble(right.Value);
-	}
+	public static bool operator >(Instance left, Instance right) =>
+		left.ToDouble() > right.ToDouble();
 
-	public static bool operator <(Instance left, Instance right)
-	{
-		return Convert.ToDouble(left.Value) < Convert.ToDouble(right.Value);
-	}
+	public static bool operator <(Instance left, Instance right) =>
+		left.ToDouble() < right.ToDouble();
 
 	private static Instance AddElementToTheListAndGetInstance(Instance left, Instance right)
 	{
 		var elements = new List<Expression>((List<Expression>)left.Value);
-		var rightValue = new Value(elements.First().ReturnType, right.Value);
+		var elementType = elements.First().ReturnType;
+		var rightValue = right.rawValue is ValueInstance vi
+			? new Value(elementType, vi)
+			: elementType.IsNumber
+				? new Value(elementType, new ValueInstance(elementType, Convert.ToDouble(right.Value)))
+				: new Value(elementType, new ValueInstance(right.Value.ToString() ?? ""));
 		elements.Add(rightValue);
 		return new Instance(left.ReturnType, elements);
 	}
 
-	public override string ToString() => $"{Value} {ReturnType.Name}";
+	public override string ToString()
+	{
+		if (rawValue is ValueInstance vi && vi.IsList)
+			return string.Join(" ", vi.List.Items.Select(item =>
+				item.IsText ? item.Text
+				: item.Number == Math.Truncate(item.Number)
+					? ((long)item.Number).ToString()
+					: item.Number.ToString()));
+		var v = Value;
+		if (v is List<Expression> list)
+			return string.Join(" ", list.Select(e => e is Value val
+				? (val.Data.IsText ? val.Data.Text : val.Data.Number == Math.Truncate(val.Data.Number)
+					? ((long)val.Data.Number).ToString()
+					: val.Data.Number.ToString())
+				: e.ToString()));
+		if (v is double d)
+			return $"{(d == Math.Truncate(d) ? (long)d : d)}";
+		return v?.ToString() ?? "";
+	}
 }

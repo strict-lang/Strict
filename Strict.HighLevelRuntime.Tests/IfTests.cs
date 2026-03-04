@@ -8,7 +8,7 @@ namespace Strict.HighLevelRuntime.Tests;
 public sealed class IfTests
 {
 	[SetUp]
-	public void CreateExecutor() => executor = new Executor(TestBehavior.Disabled);
+	public void CreateExecutor() => executor = new Executor(TestPackage.Instance, TestBehavior.Disabled);
 
 	private Executor executor = null!;
 
@@ -22,8 +22,8 @@ public sealed class IfTests
 		using var t = CreateType(nameof(EvaluateIfTrueThenReturn), "mutable last Number",
 			"IfTrue Number", "\tif true", "\t\treturn 33", "\t0");
 		var method = t.Methods.Single(m => m.Name == "IfTrue");
-		var result = executor.Execute(method, null, []);
-		Assert.That(Convert.ToDouble(result.Value), Is.EqualTo(33));
+		var result = executor.Execute(method, executor.noneInstance, []);
+		Assert.That(result.Number, Is.EqualTo(33));
 	}
 
 	[Test]
@@ -32,8 +32,8 @@ public sealed class IfTests
 		using var t = CreateType(nameof(EvaluateIfFalseFallsThrough), "mutable last Number",
 			"IfFalse Number", "\tif false", "\t\treturn 99", "\t42");
 		var method = t.Methods.Single(m => m.Name == "IfFalse");
-		var result = executor.Execute(method, null, []);
-		Assert.That(Convert.ToDouble(result.Value), Is.EqualTo(42));
+		var result = executor.Execute(method, executor.noneInstance, []);
+		Assert.That(result.Number, Is.EqualTo(42));
 	}
 
 	[Test]
@@ -41,14 +41,18 @@ public sealed class IfTests
 	{
 		using var t = CreateType(nameof(EvaluateIsInEnumerableRange), "has number",
 			"IsInRange(range Range) Boolean", "\tnumber is in range");
-		var rangeInstance = ValueInstance.Create(executor.rangeType,
-			new Dictionary<string, object?> { { "Start", 1.0 }, { "ExclusiveEnd", 10.0 } });
+		var rangeInstance = new ValueInstance(executor.rangeType,
+			new Dictionary<string, ValueInstance>(StringComparer.OrdinalIgnoreCase)
+			{
+				{ "Start", new ValueInstance(executor.numberType, 1.0) },
+				{ "ExclusiveEnd", new ValueInstance(executor.numberType, 10.0) }
+			});
 		var result = executor.Execute(t.Methods.Single(m => m.Name == "IsInRange"),
-			ValueInstance.Create(t, 7.0), [rangeInstance]);
-		Assert.That(result.Value, Is.EqualTo(true));
+			new ValueInstance(t, 7.0), [rangeInstance]);
+		Assert.That(result.Boolean, Is.EqualTo(true));
 		result = executor.Execute(t.Methods.Single(m => m.Name == "IsInRange"),
-			ValueInstance.Create(t, 11.0), [rangeInstance]);
-		Assert.That(result.Value, Is.EqualTo(false));
+			new ValueInstance(t, 11.0), [rangeInstance]);
+		Assert.That(result.Boolean, Is.EqualTo(false));
 	}
 
 	[Test]
@@ -56,14 +60,18 @@ public sealed class IfTests
 	{
 		using var t = CreateType(nameof(EvaluateIsNotInEnumerableRange), "has number",
 			"IsNotInRange(range Range) Boolean", "\tnumber is not in range");
-		var rangeInstance = ValueInstance.Create(executor.rangeType,
-			new Dictionary<string, object?> { { "Start", 1.0 }, { "ExclusiveEnd", 10.0 } });
+		var rangeInstance = new ValueInstance(executor.rangeType,
+			new Dictionary<string, ValueInstance>(StringComparer.OrdinalIgnoreCase)
+			{
+				{ "Start", new ValueInstance(executor.numberType, 1.0) },
+				{ "ExclusiveEnd", new ValueInstance(executor.numberType, 10.0) }
+			});
 		var result = executor.Execute(t.Methods.Single(m => m.Name == "IsNotInRange"),
-			ValueInstance.Create(t, 11), [rangeInstance]);
-		Assert.That(result.Value, Is.EqualTo(true));
+			new ValueInstance(t, 11), [rangeInstance]);
+		Assert.That(result.Boolean, Is.EqualTo(true));
 		result = executor.Execute(t.Methods.Single(m => m.Name == "IsNotInRange"),
-			ValueInstance.Create(t, 7), [rangeInstance]);
-		Assert.That(result.Value, Is.EqualTo(false));
+			new ValueInstance(t, 7), [rangeInstance]);
+		Assert.That(result.Boolean, Is.EqualTo(false));
 	}
 
 	[Test]
@@ -73,8 +81,8 @@ public sealed class IfTests
 			"Run(condition Boolean) Number", "\t5 is 5", "\tif condition", "\t\t6");
 		var method = t.Methods.Single(m => m.Name == "Run");
 		Assert.That(
-			() => executor.Execute(method, null,
-				[ValueInstance.Create(TestPackage.Instance.FindType(Type.Boolean)!, false)]),
+			() => executor.Execute(method, executor.noneInstance,
+				[new ValueInstance(TestPackage.Instance.FindType(Type.Boolean)!, false)]),
 			Throws.TypeOf<ExecutionFailed>().With.InnerException.
 				TypeOf<Executor.ReturnTypeMustMatchMethod>());
 	}
@@ -84,8 +92,8 @@ public sealed class IfTests
 	{
 		using var t = CreateType(nameof(SelectorIfUsesElseWhenNoCaseMatches), "has value Number",
 			"Run Boolean", "\tif value is", "\t\t2 then true", "\t\telse false");
-		var instance = ValueInstance.Create(t, 3.0);
+		var instance = new ValueInstance(t, 3.0);
 		var result = executor.Execute(t.Methods.Single(m => m.Name == "Run"), instance, []);
-		Assert.That(result.Value, Is.EqualTo(false));
+		Assert.That(result.Boolean, Is.EqualTo(false));
 	}
 }

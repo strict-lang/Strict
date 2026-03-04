@@ -75,9 +75,14 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 
 	public ValueInstance(Type returnType, Dictionary<string, ValueInstance> members)
 	{
+		if (!returnType.IsMutable && (returnType.IsNumber || returnType.IsText || returnType.IsCharacter || returnType.IsList || returnType.IsDictionary || returnType.IsEnum || returnType.IsBoolean || returnType.IsNone))
+			throw new ValueTypeInstanceShouldOnlyBeCreatedForComplexTypes(returnType);
 		value = new ValueTypeInstance(returnType, members);
 		number = TypeId;
 	}
+
+	public class ValueTypeInstanceShouldOnlyBeCreatedForComplexTypes(Language.Type returnType)
+		: Exception(returnType.ToString()) { }
 
 	/// <summary>
 	/// Used by ApplyMethodReturnTypeMutable and TryEvaluate to flip if this is a mutable or not.
@@ -143,7 +148,8 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 	public bool IsSameOrCanBeUsedAs(Type otherType) =>
 		number switch
 		{
-			TextId => otherType.IsText,
+			TextId => otherType.IsText ||	(otherType.IsList &&
+				otherType is GenericTypeImplementation { ImplementationTypes: [{ IsCharacter: true }] }),
 			ListId => ((ValueListInstance)value).ReturnType.IsSameOrCanBeUsedAs(otherType),
 			DictionaryId => ((ValueDictionaryInstance)value).ReturnType.IsSameOrCanBeUsedAs(otherType),
 			TypeId => ((ValueTypeInstance)value).ReturnType.IsSameOrCanBeUsedAs(otherType),
@@ -220,6 +226,8 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 			return ((ValueListInstance)value).Items.Count;
 		if (number == TextId)
 			return ((string)value).Length;
+		if (number == DictionaryId || number == TypeId)
+			throw new IteratorNotSupported(this);
 		return (int)number;
 	}
 

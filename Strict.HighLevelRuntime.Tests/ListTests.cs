@@ -10,9 +10,9 @@ public sealed class ListTests
 	[SetUp]
 	public void CreateExecutor()
 	{
-		executor = new Executor(TestBehavior.Disabled);
-		one = ValueInstance.Create(executor.numberType, 1d);
-		two = ValueInstance.Create(executor.numberType, 2d);
+		executor = new Executor(TestPackage.Instance, TestBehavior.Disabled);
+		one = new ValueInstance(executor.numberType, 1);
+		two = new ValueInstance(executor.numberType, 2);
 	}
 
 	private Executor executor = null!;
@@ -24,7 +24,8 @@ public sealed class ListTests
 			new MethodExpressionParser());
 
 	private ValueInstance CreateNumbers(Type t) =>
-		ValueInstance.Create(t, new Dictionary<string, object?> { { "numbers", new[] { one, two } } });
+		new ValueInstance(t, new Dictionary<string, ValueInstance>(StringComparer.OrdinalIgnoreCase)
+			{ { "numbers", new ValueInstance(t.Members[0].Type, new List<ValueInstance> { one, two }) } });
 
 	[Test]
 	public void CallListOperator()
@@ -32,7 +33,7 @@ public sealed class ListTests
 		using var t = CreateType(nameof(CallListOperator), "has numbers", "Double Numbers",
 			"\tnumbers + numbers");
 		Assert.That(
-			executor.Execute(t.Methods.Single(m => m.Name == "Double"), CreateNumbers(t), []).Value,
+			executor.Execute(t.Methods.Single(m => m.Name == "Double"), CreateNumbers(t), []).List.Items,
 			Is.EqualTo(new[] { one, two, one, two }));
 	}
 
@@ -42,8 +43,8 @@ public sealed class ListTests
 		using var t = CreateType(nameof(AddNumberToList), "has numbers", "AddOne Numbers",
 			"\tnumbers + 1");
 		Assert.That(
-			executor.Execute(t.Methods.Single(m => m.Name == "AddOne"), CreateNumbers(t), []).Value,
-			Is.EqualTo(new List<object?> { one, two, one }));
+			executor.Execute(t.Methods.Single(m => m.Name == "AddOne"), CreateNumbers(t), []).List.Items,
+			Is.EqualTo(new List<ValueInstance> { one, two, one }));
 	}
 
 	[Test]
@@ -52,7 +53,7 @@ public sealed class ListTests
 		using var t = CreateType(nameof(AddNumberToList), "has numbers", "RemoveOne Numbers",
 			"\tnumbers - 1");
 		Assert.That(
-			executor.Execute(t.Methods.Single(m => m.Name == "RemoveOne"), CreateNumbers(t), []).Value,
+			executor.Execute(t.Methods.Single(m => m.Name == "RemoveOne"), CreateNumbers(t), []).List.Items,
 			Is.EqualTo(new[] { two }));
 	}
 
@@ -62,8 +63,8 @@ public sealed class ListTests
 		using var t = CreateType(nameof(MultiplyList), "has numbers", "Multiply Numbers",
 			"\tnumbers * 2");
 		Assert.That(
-			executor.Execute(t.Methods.Single(m => m.Name == "Multiply"), CreateNumbers(t), []).Value,
-			Is.EqualTo(new[] { two, ValueInstance.Create(t.GetType(Type.Number), 4d) }));
+			executor.Execute(t.Methods.Single(m => m.Name == "Multiply"), CreateNumbers(t), []).List.Items,
+			Is.EqualTo(new[] { two, new ValueInstance(t.GetType(Type.Number), 4d) }));
 	}
 
 	[Test]
@@ -72,11 +73,11 @@ public sealed class ListTests
 		using var t = CreateType(nameof(DivideList), "has numbers", "Divide Numbers",
 			"\tnumbers / 10");
 		Assert.That(
-			executor.Execute(t.Methods.Single(m => m.Name == "Divide"), CreateNumbers(t), []).Value,
+			executor.Execute(t.Methods.Single(m => m.Name == "Divide"), CreateNumbers(t), []).List.Items,
 			Is.EqualTo(new[]
 			{
-				ValueInstance.Create(t.GetType(Type.Number), 0.1),
-				ValueInstance.Create(t.GetType(Type.Number), 0.2)
+				new ValueInstance(t.GetType(Type.Number), 0.1),
+				new ValueInstance(t.GetType(Type.Number), 0.2)
 			}));
 	}
 
@@ -86,11 +87,11 @@ public sealed class ListTests
 		using var t = CreateType(nameof(DivideLists), "has numbers", "Divide Numbers",
 			"\tnumbers / numbers");
 		Assert.That(
-			executor.Execute(t.Methods.Single(m => m.Name == "Divide"), CreateNumbers(t), []).Value,
+			executor.Execute(t.Methods.Single(m => m.Name == "Divide"), CreateNumbers(t), []).List.Items,
 			Is.EqualTo(new[]
 			{
-				ValueInstance.Create(t.GetType(Type.Number), 1.0),
-				ValueInstance.Create(t.GetType(Type.Number), 1.0)
+				new ValueInstance(t.GetType(Type.Number), 1.0),
+				new ValueInstance(t.GetType(Type.Number), 1.0)
 			}));
 	}
 
@@ -100,9 +101,9 @@ public sealed class ListTests
 	{
 		using var t = CreateType(nameof(ListsHaveDifferentDimensionsIsNotAllowed), "has number",
 			"Run", "\t" + input);
-		var error = executor.Execute(t.Methods[0], null, []);
-		Assert.That(error.ReturnType.Name, Is.EqualTo(Type.Error));
-		Assert.That(error.FindInnerValue(Type.Name),
+		var error = executor.Execute(t.Methods[0], executor.noneInstance, []);
+		Assert.That(error.GetTypeExceptText().Name, Is.EqualTo(Type.Error));
+		Assert.That(error.TryGetValueTypeInstance()!.Members["name"].Text,
 			Is.EqualTo(MethodCallEvaluator.ListsHaveDifferentDimensions));
 	}
 
@@ -113,7 +114,7 @@ public sealed class ListTests
 				new TypeLines(nameof(RunListIn), "has number", "Run Boolean",
 					"\t\"d\" is not in (\"a\", \"b\", \"c\")", "\t\"b\" is in (\"a\", \"b\", \"c\")")).
 			ParseMembersAndMethods(new MethodExpressionParser());
-		Assert.That(executor.Execute(type.Methods[0], null, []).Value, Is.EqualTo(true));
+		Assert.That(executor.Execute(type.Methods[0], executor.noneInstance, []).Boolean, Is.EqualTo(true));
 	}
 
 	[Test]
@@ -123,7 +124,7 @@ public sealed class ListTests
 				new TypeLines(nameof(RunListCount), "has number", "GetCount Number",
 					"\t(1, 2).Count(1)")).
 			ParseMembersAndMethods(new MethodExpressionParser());
-		Assert.That(executor.Execute(type.Methods[0], null, []).Value, Is.EqualTo(1));
+		Assert.That(executor.Execute(type.Methods[0], executor.noneInstance, []).Number, Is.EqualTo(1));
 	}
 
 	[Test]
@@ -132,11 +133,11 @@ public sealed class ListTests
 		using var type = new Type(TestPackage.Instance,
 			new TypeLines(nameof(RunListCount), "has number", "GetReverse List(Number)",
 				"\t(1, 2).Reverse")).ParseMembersAndMethods(new MethodExpressionParser());
-		Assert.That(executor.Execute(type.Methods[0], null, []).Value,
+		Assert.That(executor.Execute(type.Methods[0], executor.noneInstance, []).List.Items,
 			Is.EqualTo(new List<ValueInstance>
 			{
-				ValueInstance.Create(type.GetType(Type.Number), 2.0),
-				ValueInstance.Create(type.GetType(Type.Number), 1.0)
+				new ValueInstance(type.GetType(Type.Number), 2.0),
+				new ValueInstance(type.GetType(Type.Number), 1.0)
 			}));
 	}
 
@@ -150,6 +151,6 @@ public sealed class ListTests
 				new TypeLines(nameof(ListExpressionIsBecomesListOfValueInstances), "has number",
 					"CompareLists", "\t(1, 2).Reverse is (2, 1)")).
 			ParseMembersAndMethods(new MethodExpressionParser());
-		executor.Execute(type.Methods[0], null, []);
+		executor.Execute(type.Methods[0], executor.noneInstance, []);
 	}
 }

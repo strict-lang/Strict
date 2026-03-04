@@ -48,9 +48,8 @@ public sealed class ByteCodeGenerator
 
 	private void AddMembersFromCaller(Instance instance)
 	{
-		if (instance.ReturnType != null)
-			statements.Add(new StoreVariableStatement(instance,
-				instance.ReturnType.Members.First(member => !member.Type.IsTrait).Name));
+		statements.Add(new StoreVariableStatement(instance,
+			instance.ReturnType.Members.First(member => !member.Type.IsTrait).Name, isMember: true));
 	}
 
 	private void AddInstanceMemberVariables(MethodCall instance)
@@ -64,11 +63,11 @@ public sealed class ByteCodeGenerator
 				})
 				statements.Add(new StoreVariableStatement(
 					new Instance(instance.Method.Parameters[parameterIndex].Type, instance.Arguments),
-					instance.ReturnType.Members[parameterIndex].Name));
+					instance.ReturnType.Members[parameterIndex].Name, isMember: true));
 			else
 				statements.Add(new StoreVariableStatement(
-					new Instance(instance.Arguments[parameterIndex], true),
-					instance.ReturnType.Members[parameterIndex].Name));
+					new Instance(instance.Arguments[parameterIndex]),
+					instance.ReturnType.Members[parameterIndex].Name, isMember: true));
 		}
 	}
 
@@ -122,7 +121,7 @@ public sealed class ByteCodeGenerator
 	private void GenerateStatementsForNumberAggregation(For forExpression)
 	{
 		var resultVariable = $"forResult{forResultId++}";
-		statements.Add(new StoreVariableStatement(new Instance(returnType!, 0), resultVariable));
+		statements.Add(new StoreVariableStatement(new Instance(returnType, 0), resultVariable));
 		GenerateLoopStatements(forExpression, resultVariable);
 		statements.Add(new LoadVariableToRegister(registry.AllocateRegister(), resultVariable));
 		statements.Add(new Return(registry.PreviousRegister));
@@ -305,12 +304,18 @@ public sealed class ByteCodeGenerator
 
 	private void TryGenerateStatementsForAssignmentValue(Value assignmentValue, string variableName)
 	{
-		var data = assignmentValue.Data switch
+		object data;
+		if (assignmentValue.Data.IsList)
 		{
-			IEnumerable<Expression> expressions => expressions.ToList(),
-			IDictionary => new Dictionary<Value, Value>(),
-			_ => assignmentValue.Data
-		};
+			var elementType =
+				((GenericTypeImplementation)assignmentValue.ReturnType).ImplementationTypes[0];
+			data = assignmentValue.Data.List.Items.
+				Select(vi => (Expression)new Value(elementType, vi)).ToList();
+		}
+		else if (assignmentValue.ReturnType.IsDictionary)
+			data = new Dictionary<Value, Value>();
+		else
+			data = assignmentValue.Data;
 		statements.Add(new StoreVariableStatement(new Instance(assignmentValue.ReturnType, data),
 			variableName));
 	}

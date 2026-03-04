@@ -4,10 +4,11 @@ using System.Runtime.CompilerServices;
 using Type = Strict.Language.Type;
 
 [assembly: InternalsVisibleTo("Strict.HighLevelRuntime.Tests")]
+[assembly: InternalsVisibleTo("Strict.TestRunner")]
 
 namespace Strict.HighLevelRuntime;
 
-public sealed class Executor
+public class Executor
 {
 	public Executor(Package initialPackage, TestBehavior behavior = TestBehavior.OnFirstRun)
 	{
@@ -53,9 +54,9 @@ public sealed class Executor
 		var returnValue = noneInstance;
 		if (inlineTestDepth == 0 && behavior != TestBehavior.Disabled &&
 			(behavior == TestBehavior.TestRunner || validatedMethods.Add(method)))
-			returnValue = Execute(method, noneInstance, Array.Empty<ValueInstance>(), null, true);
+			returnValue = Execute(method, noneInstance, [], null, true);
 		if (inlineTestDepth > 0 || behavior != TestBehavior.TestRunner)
-			returnValue = Execute(method, noneInstance, Array.Empty<ValueInstance>());
+			returnValue = Execute(method, noneInstance, []);
 		return returnValue;
 	}
 
@@ -69,10 +70,7 @@ public sealed class Executor
 	public ValueInstance Execute(Method method, ValueInstance instance,
 		IReadOnlyList<ValueInstance> args, ExecutionContext? parentContext = null, bool runOnlyTests = false)
 	{
-		if (runOnlyTests)
-			Statistics.MethodTested++;
-		else
-			Statistics.MethodCount++;
+		Statistics.MethodCount++;
 		ValidateInstanceAndArguments(method, instance, args, parentContext);
 		if (method is { Name: Method.From, Type.IsGeneric: false })
 			return instance.Equals(noneInstance)
@@ -124,7 +122,7 @@ public sealed class Executor
 	private void ValidateInstanceAndArguments(Method method, ValueInstance instance,
 		IReadOnlyList<ValueInstance> args, ExecutionContext? parentContext)
 	{
-		if (instance.IsSameOrCanBeUsedAs(method.Type))
+		if (!instance.IsPrimitiveType(noneType) && !instance.IsSameOrCanBeUsedAs(method.Type))
 			throw new CannotCallMethodWithWrongInstance(method, instance);
 		if (args.Count > method.Parameters.Count)
 			throw new TooManyArguments(method, args[method.Parameters.Count].ToString(), args);
@@ -163,6 +161,8 @@ public sealed class Executor
 		Statistics.FromCreationsCount++;
 		if (args.Count == 0 && method.Type.IsText)
 			return new ValueInstance("");
+		if (method.Type.IsCharacter || method.Type.IsNumber || method.Type.IsEnum && !args[0].IsText)
+			return new ValueInstance(method.Type, args[0].Number);
 		/*TODO: strange special rules, hopefully not longer needed
 		if (method.Type.IsDictionary && args is [{ ReturnType.IsIterator: true }])
 			return args[0].Value as IDictionary ?? FillDictionaryFromListKeyAndValues(args[0].Value);
@@ -387,10 +387,7 @@ public sealed class Executor
 			body + " ({CountExpressionComplexity(body)} expressions)") { }
 	}
 
-	public sealed class TestFailed(
-		Method method,
-		Expression expression,
-		ValueInstance result,
+	public sealed class TestFailed(Method method,	Expression expression, ValueInstance result,
 		string details) : ExecutionFailed(method,
 		$"\"{method.Name}\" method failed: {expression}, result: {result}" + (details.Length > 0
 			? $", evaluated: {details}"
@@ -474,7 +471,7 @@ public sealed class Executor
 	private ValueInstance? cachedTrue;
 	private ValueInstance? cachedFalse;
 	private ValueInstance? cachedNone;
-	private ValueInstance[] cachedNumbers = Array.Empty<ValueInstance>();
+	private ValueInstance[] cachedNumbers = [];
 	private bool cachedValuesInitialized;
 
 	internal ValueInstance Bool(Context any, bool b)

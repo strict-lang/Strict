@@ -289,8 +289,7 @@ public class MethodExpressionParser : ExpressionParser
 
 	// ReSharper disable once TooManyArguments
 	private Expression? TryVariableOrValueOrParameterOrMemberOrMethodCall(Context context,
-		Expression? instance, Body body, ReadOnlySpan<char> input,
-		IReadOnlyList<Expression> arguments)
+		Expression? instance, Body body, ReadOnlySpan<char> input, IReadOnlyList<Expression> arguments)
 	{
 		var type = context as Type ?? body.Method.Type;
 		return !input.IsWord() && !input.Contains(' ') && !input.Contains('(')

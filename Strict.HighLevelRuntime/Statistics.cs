@@ -7,9 +7,11 @@ namespace Strict.HighLevelRuntime;
 /// </summary>
 public sealed record Statistics
 {
+	public int PackagesTested { get; internal set; }
+	public int TypesTested { get; internal set; }
+	public int MethodsTested { get; internal set; }
+	public int TestExpressions { get; internal set; }
 	public int MethodCount { get; internal set; }
-	public int MethodTested { get; internal set; }
-	public int TestsCount { get; internal set; }
 	public int ExpressionCount { get; internal set; }
 	public int BodyCount { get; internal set; }
 	public int IfCount { get; internal set; }
