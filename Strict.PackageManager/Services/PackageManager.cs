@@ -1,5 +1,5 @@
 using Grpc.Core;
-using System.IO.Compression;
+using Strict.Language;
 
 namespace Strict.PackageManager.Services;
 
@@ -7,19 +7,22 @@ namespace Strict.PackageManager.Services;
 public sealed class PackageManager(ILogger<PackageManager> logger)
 	: Strict.PackageManager.PackageManager.PackageManagerBase
 {
-	public override Task<EmptyReply> DownloadPackage(PackageDownloadRequest requestModel,
-		ServerCallContext context) =>
-		(Task<EmptyReply>)DownloadAndExtract(requestModel.PackageUrl,
-			requestModel.PackageName, requestModel.TargetPath);
-
-	private async Task DownloadAndExtract(string packageUrl, string packageName,
-		string targetPath)
+	public override async Task<EmptyReply> DownloadPackage(PackageDownloadRequest request,
+		ServerCallContext context)
 	{
-		logger.LogTrace("Service invoked " + packageUrl + " " + packageName + " " + targetPath);
-		var localZip = Path.Combine(CacheFolder, packageName + ".zip");
-		using HttpClient client = new();
-		await DownloadFile(client, new Uri(packageUrl + "/archive/master.zip"), localZip);
-		await Task.Run(() => UnzipInCacheFolderAndMoveToTargetPath(packageName, targetPath, localZip));
+		var parts = request.PackageUrl.Split('/');
+		var org = parts[3];
+		var localCachePath = Path.Combine(CacheFolder, org, request.PackageName);
+		logger.LogTrace("Service invoked " + request.PackageUrl + " " + request.PackageName + " " +
+			request.TargetPath);
+		if (!Directory.Exists(localCachePath))
+			Directory.CreateDirectory(localCachePath);
+		using var downloader = new GitHubStrictDownloader(org, request.PackageName);
+		await downloader.DownloadFiles(localCachePath, context.CancellationToken);
+		if (!string.IsNullOrWhiteSpace(request.TargetPath) &&
+			!request.TargetPath.Equals(localCachePath, StringComparison.OrdinalIgnoreCase))
+			CopyToTargetPath(localCachePath, request.TargetPath);
+		return new EmptyReply();
 	}
 
 	private static string CacheFolder =>
@@ -27,39 +30,11 @@ public sealed class PackageManager(ILogger<PackageManager> logger)
 			StrictPackages);
 	private const string StrictPackages = nameof(StrictPackages);
 
-	private static async Task DownloadFile(HttpClient client, Uri uri, string fileName)
+	private static void CopyToTargetPath(string sourcePath, string targetPath)
 	{
-		await using var stream = await client.GetStreamAsync(uri);
-		await using var file = new FileStream(fileName, FileMode.CreateNew);
-		await stream.CopyToAsync(file);
-	}
-
-	private static void UnzipInCacheFolderAndMoveToTargetPath(string packageName, string targetPath,
-		string localZip)
-	{
-		ZipFile.ExtractToDirectory(localZip, CacheFolder, true);
-		var masterDirectory = Path.Combine(CacheFolder, packageName + "-master");
-		if (!Directory.Exists(masterDirectory))
-			throw new NoMasterFolderFoundFromPackage(packageName, localZip);
-		if (Directory.Exists(targetPath))
-			new DirectoryInfo(targetPath).Delete(true);
-		TryMoveOrCopyWhenDeletionDidNotFullyWork(targetPath, masterDirectory);
-	}
-
-	public sealed class NoMasterFolderFoundFromPackage(string packageName, string localZip)
-		: Exception(packageName + ", localZip: " + localZip);
-
-	private static void TryMoveOrCopyWhenDeletionDidNotFullyWork(string targetPath,
-		string masterDirectory)
-	{
-		try
-		{
-			Directory.Move(masterDirectory, targetPath);
-		}
-		catch
-		{
-			foreach (var file in Directory.GetFiles(masterDirectory))
-				File.Copy(file, Path.Combine(targetPath, Path.GetFileName(file)), true);
-		}
+		if (!Directory.Exists(targetPath))
+			Directory.CreateDirectory(targetPath);
+		foreach (var file in Directory.GetFiles(sourcePath))
+			File.Copy(file, Path.Combine(targetPath, Path.GetFileName(file)), true);
 	}
 }

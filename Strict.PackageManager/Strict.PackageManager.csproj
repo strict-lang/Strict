@@ -16,4 +16,8 @@
     <PackageReference Include="Grpc.AspNetCore" Version="2.76.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Strict.Language\Strict.Language.csproj" />
+  </ItemGroup>
+
 </Project>
