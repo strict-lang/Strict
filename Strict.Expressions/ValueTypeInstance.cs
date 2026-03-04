@@ -1,4 +1,5 @@
-﻿using Type = Strict.Language.Type;
+using Strict.Language;
+using Type = Strict.Language.Type;
 
 namespace Strict.Expressions;
 
@@ -13,4 +14,6 @@ public sealed class ValueTypeInstance(Type returnType,
 			other.ReturnType.IsSameOrCanBeUsedAs(ReturnType) && Members.Count == other.Members.Count &&
 			Members.All(kvp =>
 				other.Members.TryGetValue(kvp.Key, out var value) && kvp.Value.Equals(value)));
+
+	public override string ToString() => ReturnType + ": " + Members.ToWordList();
 }

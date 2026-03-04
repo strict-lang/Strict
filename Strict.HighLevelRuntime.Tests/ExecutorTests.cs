@@ -293,7 +293,7 @@ public sealed class ExecutorTests
 			"\t\"7\" is Character.Tab");
 		Assert.That(
 			executor.Execute(t.Methods.Single(m => m.Name == "Compare"), executor.noneInstance, []).Boolean,
-			Is.True);
+			Is.False);
 	}
 
 	[Test]

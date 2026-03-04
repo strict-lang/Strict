@@ -144,7 +144,8 @@ public sealed class MethodCallEvaluator(Executor executor)
 			}
 			if (left.IsPrimitiveType(executor.characterType) && right.IsText)
 				right = new ValueInstance(executor.characterType, right.Text[0]);
-			if (left.IsText && right.IsPrimitiveType(executor.numberType))
+			if (left.IsText &&
+				(right.IsPrimitiveType(executor.numberType) || right.IsPrimitiveType(executor.characterType)))
 				right = new ValueInstance(right.ToExpressionCodeString());
 			var equals = left.Equals(right);
 			if (op is not BinaryOperator.Is)
@@ -176,8 +177,8 @@ public sealed class MethodCallEvaluator(Executor executor)
 		};
 	}
 
-	private static ValueInstance CombineLists(Type listType, ICollection<ValueInstance> leftList,
-		ICollection<ValueInstance> rightList)
+	private static ValueInstance CombineLists(Type listType, IReadOnlyList<ValueInstance> leftList,
+		IReadOnlyList<ValueInstance> rightList)
 	{
 		var combined = new List<ValueInstance>(leftList.Count + rightList.Count);
 		var isLeftText = listType is GenericTypeImplementation { Generic.Name: Type.List } list &&
@@ -191,8 +192,8 @@ public sealed class MethodCallEvaluator(Executor executor)
 		return new ValueInstance(listType, combined);
 	}
 
-	private static ValueInstance SubtractLists(Type listType, IEnumerable<ValueInstance> leftList,
-		IEnumerable<ValueInstance> rightList)
+	private static ValueInstance SubtractLists(Type listType, IReadOnlyList<ValueInstance> leftList,
+		IReadOnlyList<ValueInstance> rightList)
 	{
 		var remainder = new List<ValueInstance>();
 		foreach (var item in leftList)
@@ -203,7 +204,7 @@ public sealed class MethodCallEvaluator(Executor executor)
 	}
 
 	private static ValueInstance MultiplyLists(Type leftListType, Type numberType,
-		IList<ValueInstance> leftList, IList<ValueInstance> rightList)
+		IReadOnlyList<ValueInstance> leftList, IReadOnlyList<ValueInstance> rightList)
 	{
 		var result = new List<ValueInstance>();
 		for (var index = 0; index < leftList.Count; index++)
@@ -212,7 +213,7 @@ public sealed class MethodCallEvaluator(Executor executor)
 	}
 
 	private static ValueInstance DivideLists(Type leftListType, Type numberType,
-		IList<ValueInstance> leftList, IList<ValueInstance> rightList)
+		IReadOnlyList<ValueInstance> leftList, IReadOnlyList<ValueInstance> rightList)
 	{
 		var result = new List<ValueInstance>();
 		for (var index = 0; index < leftList.Count; index++)
@@ -220,7 +221,7 @@ public sealed class MethodCallEvaluator(Executor executor)
 		return new ValueInstance(leftListType, result);
 	}
 
-	private static ValueInstance AddToList(Type leftListType, ICollection<ValueInstance> leftList,
+	private static ValueInstance AddToList(Type leftListType, IReadOnlyList<ValueInstance> leftList,
 		ValueInstance right)
 	{
 		var combined = new List<ValueInstance>(leftList.Count + 1);
@@ -235,7 +236,7 @@ public sealed class MethodCallEvaluator(Executor executor)
 	}
 
 	private static ValueInstance RemoveFromList(Type leftListType,
-		IEnumerable<ValueInstance> leftList, ValueInstance right)
+		IReadOnlyList<ValueInstance> leftList, ValueInstance right)
 	{
 		var result = new List<ValueInstance>();
 		foreach (var item in leftList)
@@ -245,7 +246,7 @@ public sealed class MethodCallEvaluator(Executor executor)
 	}
 
 	private static ValueInstance MultiplyList(Type leftListType,
-		ICollection<ValueInstance> leftList, double rightNumber)
+		IReadOnlyList<ValueInstance> leftList, double rightNumber)
 	{
 		var result = new List<ValueInstance>(leftList.Count);
 		foreach (var item in leftList)
@@ -253,7 +254,7 @@ public sealed class MethodCallEvaluator(Executor executor)
 		return new ValueInstance(leftListType, result);
 	}
 
-	private static ValueInstance DivideList(Type leftListType, ICollection<ValueInstance> leftList,
+	private static ValueInstance DivideList(Type leftListType, IReadOnlyList<ValueInstance> leftList,
 		double rightNumber)
 	{
 		var result = new List<ValueInstance>(leftList.Count);

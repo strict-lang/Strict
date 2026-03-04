@@ -1,12 +1,12 @@
-﻿using Type = Strict.Language.Type;
+using Type = Strict.Language.Type;
 
 namespace Strict.Expressions;
 
-public sealed class ValueListInstance(Type returnType, List<ValueInstance> items) :
+public sealed class ValueListInstance(Type returnType, IReadOnlyList<ValueInstance> items) :
 	IEquatable<ValueListInstance>
 {
 	public readonly Type ReturnType = returnType;
-	public readonly List<ValueInstance> Items = items;
+	public readonly IReadOnlyList<ValueInstance> Items = items;
 
 	public bool Equals(ValueListInstance? other) =>
 		other is not null && (ReferenceEquals(this, other) ||

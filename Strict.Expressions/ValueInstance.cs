@@ -61,7 +61,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 		number = TextId;
 	}
 
-	public ValueInstance(Type returnType, List<ValueInstance> list)
+	public ValueInstance(Type returnType, IReadOnlyList<ValueInstance> list)
 	{
 		value = new ValueListInstance(returnType, list);
 		number = ListId;
@@ -75,7 +75,9 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 
 	public ValueInstance(Type returnType, Dictionary<string, ValueInstance> members)
 	{
-		if (!returnType.IsMutable && (returnType.IsNumber || returnType.IsText || returnType.IsCharacter || returnType.IsList || returnType.IsDictionary || returnType.IsEnum || returnType.IsBoolean || returnType.IsNone))
+		if (!returnType.IsMutable && (returnType.IsNumber || returnType.IsText ||
+			returnType.IsCharacter || returnType.IsList || returnType.IsDictionary ||
+			returnType.IsEnum || returnType.IsBoolean || returnType.IsNone))
 			throw new ValueTypeInstanceShouldOnlyBeCreatedForComplexTypes(returnType);
 		value = new ValueTypeInstance(returnType, members);
 		number = TypeId;
@@ -673,6 +675,8 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 			return Type.None;
 		if (primitiveType.IsNumber)
 			return number.ToString(System.Globalization.CultureInfo.InvariantCulture);
+		if (primitiveType.IsCharacter)
+			return ((char)number).ToString();
 		return primitiveType.IsMutable
 			// ReSharper disable once TailRecursiveCall
 			? GetPrimitiveCodeString(primitiveType.GetFirstImplementation())

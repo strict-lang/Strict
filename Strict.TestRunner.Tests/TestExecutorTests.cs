@@ -13,7 +13,7 @@ namespace Strict.TestRunner.Tests;
 [SimpleJob(RunStrategy.Throughput, warmupCount: 1, iterationCount: 10)]
 public class TestExecutorTests
 {
-	public readonly TestExecutor executor = new();
+	public readonly TestExecutor executor = new(TestPackage.Instance);
 
 	[Test]
 	public void RunMethod()

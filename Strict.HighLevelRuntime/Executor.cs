@@ -1,5 +1,6 @@
 using Strict.Expressions;
 using Strict.Language;
+using System.Collections;
 using System.Runtime.CompilerServices;
 using Type = Strict.Language.Type;
 
@@ -161,21 +162,15 @@ public class Executor
 		Statistics.FromCreationsCount++;
 		if (args.Count == 0 && method.Type.IsText)
 			return new ValueInstance("");
-		if (method.Type.IsCharacter || method.Type.IsNumber || method.Type.IsEnum && !args[0].IsText)
+		if (method.Type.IsCharacter || method.Type.IsNumber || method.Type.IsEnum && args.Count > 0 && !args[0].IsText ||
+			args.Count == 1 && args[0].IsSameOrCanBeUsedAs(method.Type))
 			return new ValueInstance(method.Type, args[0].Number);
-		/*TODO: strange special rules, hopefully not longer needed
-		if (method.Type.IsDictionary && args is [{ ReturnType.IsIterator: true }])
-			return args[0].Value as IDictionary ?? FillDictionaryFromListKeyAndValues(args[0].Value);
-		if (args.Count == 1)
-		{
-			var arg = args[0];
-			if (method.Type.IsCharacter && IsSingleCharacterTextArgument(method.Type, arg))
-				return (int)((string)arg.Value!)[0];
-			if (method.Type.IsSameOrCanBeUsedAs(arg.ReturnType) &&
-				!IsSingleCharacterTextArgument(method.Type, arg))
-				return arg.Value;
-		}
-		*/
+		if (method.Type.IsList)
+			return new ValueInstance(method.Type, args);
+		if (method.Type.IsDictionary)
+			return args[0].IsDictionary
+				? args[0]
+				: new ValueInstance(method.Type, FillDictionaryFromListKeyAndValues(args[0]));
 		var members = new Dictionary<string, ValueInstance>(StringComparer.Ordinal);
 		for (var index = 0; index < args.Count; index++)
 		{
@@ -193,6 +188,18 @@ public class Executor
 				: args[index]);
 		}
 		return new ValueInstance(method.Type, members);
+	}
+
+	private static Dictionary<ValueInstance, ValueInstance> FillDictionaryFromListKeyAndValues(
+		ValueInstance value)
+	{
+		var dictionary = new Dictionary<ValueInstance, ValueInstance>();
+		foreach (var pair in value.List.Items)
+		{
+			var keyAndValue = pair.List.Items;
+			dictionary[keyAndValue[0]] = keyAndValue[1];
+		}
+		return dictionary;
 	}
 
 	private static bool IsSingleCharacterTextArgument(Type targetType, ValueInstance value) =>
@@ -278,17 +285,6 @@ public class Executor
 		return FillDictionaryFromListKeyAndValues(rawMembers[listMemberName]);
 	}
 
-	private static object FillDictionaryFromListKeyAndValues(object? value)
-	{
-		var pairs = (IList)value!;
-		var dictionary = new Dictionary<ValueInstance, ValueInstance>();
-		foreach (var pair in pairs)
-		{
-			var keyAndValue = (List<ValueInstance>)((ValueInstance)pair!).Value!;
-			dictionary[keyAndValue[0]] = keyAndValue[1];
-		}
-		return dictionary;
-	}
 */
 	public class ExpressionNotSupported(Expression expr, ExecutionContext context)
 		: ExecutionFailed(context.Type, expr.GetType().Name); //ncrunch: no coverage

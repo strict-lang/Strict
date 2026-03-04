@@ -286,5 +286,5 @@ public sealed class Repositories
 	/// </summary>
 	internal void Remove(Package result) => cacheService.Remove(result.FullName);
 	public bool ContainsPackageNameInCache(string fullName) =>
-		cacheService.TryGetValue<Task<Package>>(fullName, out _);
+		cacheService.TryGetValue<LazyCache.AsyncLazy<Package>>(fullName, out _);
 }
