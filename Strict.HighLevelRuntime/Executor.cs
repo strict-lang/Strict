@@ -303,6 +303,17 @@ public class Executor
 		Statistics.MemberCallCount++;
 		if (ctx.This == null && ctx.Type.Members.Contains(member.Member))
 			throw new UnableToCallMemberWithoutInstance(member, ctx); //ncrunch: no coverage
+		if (ctx.This is { IsDictionary: true } &&
+			member.Member.Name.Equals(Type.ElementsLowercase, StringComparison.OrdinalIgnoreCase))
+		{
+			var pairs = new List<ValueInstance>();
+			var pairType = member.Member.Type is GenericTypeImplementation { Generic.Name: Type.List } listType
+				? listType.ImplementationTypes[0]
+				: member.Member.Type;
+			foreach (var pair in ctx.This.Value.GetDictionaryItems())
+				pairs.Add(new ValueInstance(pairType, [pair.Key, pair.Value]));
+			return new ValueInstance(member.Member.Type, pairs);
+		}
 		var typeInstance = ctx.This?.TryGetValueTypeInstance();
 		if (typeInstance != null && typeInstance.Members.TryGetValue(member.Member.Name, out var value))
 			return value;

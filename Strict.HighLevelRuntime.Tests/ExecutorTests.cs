@@ -99,94 +99,81 @@ public sealed class ExecutorTests
 	[Test]
 	public void EvaluateAllArithmeticOperators()
 	{
-		//TODO: why not just use Number, it has all operators already!
-		using var t = CreateType(nameof(EvaluateAllArithmeticOperators), "mutable last Number",
-			"Plus(first Number, second Number) Number", "\tfirst + second",
-			"Minus(first Number, second Number) Number", "\tfirst - second",
-			"Mul(first Number, second Number) Number", "\tfirst * second",
-			"Div(first Number, second Number) Number", "\tfirst / second",
-			"Mod(first Number, second Number) Number", "\tfirst % second",
-			"Pow(first Number, second Number) Number", "\tfirst ^ second");
-		var num = executor.numberType;
-		static ValueInstance N(Type numType, double x) => new ValueInstance(numType, x);
-		Assert.That(executor.Execute(t.Methods.Single(m => m.Name == "Plus"), executor.noneInstance,
-			[N(num, 2), N(num, 3)]).Number, Is.EqualTo(5));
-		Assert.That(executor.Execute(t.Methods.Single(m => m.Name == "Minus"), executor.noneInstance,
-			[N(num, 8), N(num, 3)]).Number, Is.EqualTo(5));
-		Assert.That(executor.Execute(t.Methods.Single(m => m.Name == "Mul"), executor.noneInstance,
-			[N(num, 6), N(num, 7)]).Number, Is.EqualTo(42));
-		Assert.That(executor.Execute(t.Methods.Single(m => m.Name == "Div"), executor.noneInstance,
-			[N(num, 8), N(num, 2)]).Number, Is.EqualTo(4));
-		Assert.That(executor.Execute(t.Methods.Single(m => m.Name == "Mod"), executor.noneInstance,
-			[N(num, 8), N(num, 3)]).Number, Is.EqualTo(2));
-		Assert.That(executor.Execute(t.Methods.Single(m => m.Name == "Pow"), executor.noneInstance,
-			[N(num, 2), N(num, 3)]).Number, Is.EqualTo(8));
+		var number = TestPackage.Instance.GetType(Type.Number);
+		Method GetBinaryOperator(string op) => number.Methods.Single(m =>
+			m.Name == op && m.Parameters.Count == 1);
+		ValueInstance N(double x) => new(number, x);
+		Assert.That(executor.Execute(GetBinaryOperator(BinaryOperator.Plus), N(2), [N(3)]).Number,
+			Is.EqualTo(5));
+		Assert.That(executor.Execute(GetBinaryOperator(BinaryOperator.Minus), N(8), [N(3)]).Number,
+			Is.EqualTo(5));
+		Assert.That(executor.Execute(GetBinaryOperator(BinaryOperator.Multiply), N(6), [N(7)]).Number,
+			Is.EqualTo(42));
+		Assert.That(executor.Execute(GetBinaryOperator(BinaryOperator.Divide), N(8), [N(2)]).Number,
+			Is.EqualTo(4));
+		Assert.That(executor.Execute(GetBinaryOperator(BinaryOperator.Modulate), N(8), [N(3)]).Number,
+			Is.EqualTo(2));
+		Assert.That(executor.Execute(GetBinaryOperator(BinaryOperator.Power), N(2), [N(3)]).Number,
+			Is.EqualTo(8));
 	}
 
 	[Test]
 	public void AddTwoTexts()
 	{
-		//TODO: why not just use Text, it has all operators already!
-		using var t = CreateType(nameof(AddTwoTexts), "has text",
-			"Concat(text Text, other Text) Text", "\ttext + other");
-		var result = executor.Execute(t.Methods.Single(m => m.Name == "Concat"), executor.noneInstance,
-			[new ValueInstance("hi "), new ValueInstance("there")]);
+		var text = TestPackage.Instance.GetType(Type.Text);
+		var plusText = text.Methods.Single(m =>
+			m.Name == BinaryOperator.Plus && m.Parameters is [{ Type.IsText: true }]);
+		var result = executor.Execute(plusText, new ValueInstance("hi "), [new ValueInstance("there")]);
 		Assert.That(result.Text, Is.EqualTo("hi there"));
 	}
 
 	[Test]
 	public void EvaluateAllComparisonOperators()
 	{
-		//TODO: why not just use Number, it has all operators already!
-		using var t = CreateType(nameof(EvaluateAllComparisonOperators), "mutable last Number",
-			"Gt(first Number, second Number) Boolean", "\tfirst > second",
-			"Lt(first Number, second Number) Boolean", "\tfirst < second",
-			"Gte(first Number, second Number) Boolean", "\tfirst >= second",
-			"Lte(first Number, second Number) Boolean", "\tfirst <= second",
-			"Eq(first Number, second Number) Boolean", "\tfirst is second",
-			"Neq(first Number, second Number) Boolean", "\tfirst is not second");
-		ValueInstance N(double x) => new ValueInstance(executor.numberType, x);
-		Assert.That(executor.Execute(t.Methods.Single(m => m.Name == "Gt"), executor.noneInstance,
-			[N(5), N(3)]), Is.EqualTo(executor.trueInstance));
-		Assert.That(executor.Execute(t.Methods.Single(m => m.Name == "Lt"), executor.noneInstance,
-			[N(2), N(3)]), Is.EqualTo(executor.trueInstance));
-		Assert.That(executor.Execute(t.Methods.Single(m => m.Name == "Gte"), executor.noneInstance,
-			[N(5), N(3)]), Is.EqualTo(executor.trueInstance));
-		Assert.That(executor.Execute(t.Methods.Single(m => m.Name == "Gte"), executor.noneInstance,
-			[N(5), N(5)]).Boolean, Is.True);
-		Assert.That(executor.Execute(t.Methods.Single(m => m.Name == "Lte"), executor.noneInstance,
-			[N(2), N(3)]).Boolean, Is.True);
-		Assert.That(executor.Execute(t.Methods.Single(m => m.Name == "Lte"), executor.noneInstance,
-			[N(3), N(3)]).Boolean, Is.True);
-		Assert.That(executor.Execute(t.Methods.Single(m => m.Name == "Eq"), executor.noneInstance,
-			[N(3), N(3)]).Boolean, Is.True);
-		Assert.That(executor.Execute(t.Methods.Single(m => m.Name == "Neq"), executor.noneInstance,
-			[N(3), N(4)]).Boolean, Is.True);
+		var number = TestPackage.Instance.GetType(Type.Number);
+		Method GetBinaryOperator(string op) => number.Methods.Single(m =>
+			m.Name == op && m.Parameters.Count == 1);
+		ValueInstance N(double x) => new(number, x);
+		Assert.That(executor.Execute(GetBinaryOperator(BinaryOperator.Greater), N(5), [N(3)]),
+			Is.EqualTo(executor.trueInstance));
+		Assert.That(executor.Execute(GetBinaryOperator(BinaryOperator.Smaller), N(2), [N(3)]),
+			Is.EqualTo(executor.trueInstance));
+		Assert.That(executor.Execute(GetBinaryOperator(BinaryOperator.GreaterOrEqual), N(5), [N(3)]),
+			Is.EqualTo(executor.trueInstance));
+		Assert.That(executor.Execute(GetBinaryOperator(BinaryOperator.GreaterOrEqual), N(5), [N(5)]).Boolean,
+			Is.True);
+		Assert.That(executor.Execute(GetBinaryOperator(BinaryOperator.SmallerOrEqual), N(2), [N(3)]).Boolean,
+			Is.True);
+		Assert.That(executor.Execute(GetBinaryOperator(BinaryOperator.SmallerOrEqual), N(3), [N(3)]).Boolean,
+			Is.True);
+		Assert.That(executor.Execute(GetBinaryOperator(BinaryOperator.Is), N(3), [N(3)]).Boolean,
+			Is.True);
+		Assert.That(executor.Execute(GetBinaryOperator(BinaryOperator.Is), N(3), [N(4)]).Boolean,
+			Is.False);
 	}
 
 	[Test]
 	public void EvaluateAllLogicalOperators()
 	{
-		//TODO: why not just use Boolean, it has all operators already!
-		using var t = CreateType(nameof(EvaluateAllLogicalOperators), "has unused Boolean",
-			"And(first Boolean, second Boolean) Boolean", "\tfirst and second",
-			"Or(first Boolean, second Boolean) Boolean", "\tfirst or second",
-			"Xor(first Boolean, second Boolean) Boolean", "\tfirst xor second",
-			"Not(first Boolean) Boolean", "\tnot first");
-		AssertBooleanOperation(t.Methods.Single(m => m.Name == "And"), true, true, true);
-		AssertBooleanOperation(t.Methods.Single(m => m.Name == "And"), true, false, false);
-		AssertBooleanOperation(t.Methods.Single(m => m.Name == "Or"), true, false, true);
-		AssertBooleanOperation(t.Methods.Single(m => m.Name == "Or"), false, false, false);
-		AssertBooleanOperation(t.Methods.Single(m => m.Name == "Xor"), true, false, true);
-		AssertBooleanOperation(t.Methods.Single(m => m.Name == "Xor"), true, true, false);
-		Assert.That(
-			executor.Execute(t.Methods.Single(m => m.Name == "Not"), executor.noneInstance,
-				[executor.falseInstance]), Is.EqualTo(executor.trueInstance));
+		var boolean = TestPackage.Instance.GetType(Type.Boolean);
+		Method GetBinaryOperator(string op) => boolean.Methods.Single(m =>
+			m.Name == op && m.ReturnType.IsBoolean && m.Parameters is [{ Type.IsBoolean: true }]);
+		var and = GetBinaryOperator(BinaryOperator.And);
+		var or = GetBinaryOperator(BinaryOperator.Or);
+		var xor = GetBinaryOperator(BinaryOperator.Xor);
+		var not = boolean.Methods.Single(m =>
+			m.Name == UnaryOperator.Not && m.ReturnType.IsBoolean && m.Parameters.Count == 0);
+		AssertBooleanOperation(and, true, true, true);
+		AssertBooleanOperation(and, true, false, false);
+		AssertBooleanOperation(or, true, false, false);
+		AssertBooleanOperation(or, false, false, true);
+		AssertBooleanOperation(xor, true, false, true);
+		AssertBooleanOperation(xor, true, true, false);
+		Assert.That(executor.Execute(not, executor.falseInstance, []), Is.EqualTo(executor.trueInstance));
 	}
 
 	private void AssertBooleanOperation(Method method, bool first, bool second, bool result) =>
-		Assert.That(executor.Execute(method, executor.noneInstance,
-			[executor.ToBoolean(first),executor.ToBoolean(second)]),
+		Assert.That(executor.Execute(method, executor.ToBoolean(first), [executor.ToBoolean(second)]),
 			Is.EqualTo(executor.ToBoolean(result)));
 
 	[Test]

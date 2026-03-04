@@ -73,9 +73,19 @@ internal class TypeMethodFinder(Type type)
 		throw new ArgumentsDoNotMatchMethodParameters(arguments, Type, matchingMethods);
 	}
 
-	private static string GetTextValue(Expression argument) =>
-		argument.GetType().GetProperty("Data", BindingFlags.Instance | BindingFlags.Public)?.
-			GetValue(argument)?.ToString() ?? "";
+	private static string GetTextValue(Expression argument)
+	{
+		var data = argument.GetType().GetProperty("Data", BindingFlags.Instance | BindingFlags.Public)?.GetValue(argument);
+		if (data is string value)
+			return value;
+		var text = data?.ToString() ?? argument.ToString();
+		const string valueInstanceTextPrefix = "Text: \"";
+		if (text.StartsWith(valueInstanceTextPrefix, StringComparison.Ordinal) && text.EndsWith("\"", StringComparison.Ordinal))
+			return text[valueInstanceTextPrefix.Length..^1];
+		return text.Length >= 2 && text[0] == '"' && text[^1] == '"'
+			? text[1..^1]
+			: text;
+	}
 
 	private static T? TryGetSingleElementType<T>(IEnumerable<T> argumentTypes) where T : class
 	{
