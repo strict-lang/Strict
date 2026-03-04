@@ -160,9 +160,13 @@ public class Executor
 		Statistics.FromCreationsCount++;
 		if (args.Count == 0 && method.Type.IsText)
 			return new ValueInstance("");
-		if (method.Type.IsCharacter || method.Type.IsNumber || method.Type.IsEnum && args.Count > 0 && !args[0].IsText ||
-			args.Count == 1 && args[0].IsSameOrCanBeUsedAs(method.Type))
-			return new ValueInstance(method.Type, args[0].Number);
+		if ((method.Type.IsCharacter || method.Type.IsNumber || method.Type.IsEnum) && args.Count == 1)
+		{
+			if (IsSingleCharacterTextArgument(method.Type, args[0]))
+				return new ValueInstance(method.Type, args[0].Text[0]);
+			if (!args[0].IsText || args[0].IsSameOrCanBeUsedAs(method.Type))
+				return new ValueInstance(method.Type, args[0].Number);
+		}
 		if (method.Type.IsList)
 			return new ValueInstance(method.Type, args);
 		if (method.Type.IsDictionary)

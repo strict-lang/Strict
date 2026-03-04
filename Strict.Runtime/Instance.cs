@@ -13,13 +13,21 @@ public sealed class Instance
 	public Instance(Type type, object value)
 	{
 		ReturnType = type!;
-		Value = value is Value valueObj ? valueObj.Data : value;
+		Value = value is Strict.Expressions.List listExpression
+			? listExpression.Values
+			: value is Value valueObj
+				? valueObj.Data
+				: value;
 	}
 
 	public Instance(Expression expression)
 	{
 		ReturnType = expression.ReturnType!;
-		Value = expression is Value value ? (object)value.Data : expression;
+		Value = expression is Strict.Expressions.List listExpression
+			? listExpression.Values
+			: expression is Value value
+				? (object)value.Data
+				: expression;
 	}
 
 	public Type ReturnType { get; }
@@ -51,6 +59,8 @@ public sealed class Instance
 
 	public static Instance operator +(Instance left, Instance right)
 	{
+		if (left.rawValue is ValueInstance { IsList: true } || left.Value is List<Expression>)
+			return AddElementToTheListAndGetInstance(left, right);
 		if (!left.ReturnType.IsList)
 			return HandleTextTypeConversionForBinaryOperations(left, right, BinaryOperator.Plus);
 		if (left.ReturnType is GenericTypeImplementation { Name: Type.List })
@@ -73,17 +83,40 @@ public sealed class Instance
 
 	public static Instance operator -(Instance left, Instance right)
 	{
+		if (left.rawValue is ValueInstance { IsList: true })
+		{
+			var items = new List<ValueInstance>(((ValueInstance)left.rawValue).List.Items);
+			var removeIndex = items.FindIndex(item => BytecodeInterpreter.AreEqual(item.IsText
+				? item.Text
+				: (object)item.Number, right.Value));
+			if (removeIndex >= 0)
+				items.RemoveAt(removeIndex);
+			return new Instance(left.ReturnType,
+				new ValueInstance(((ValueInstance)left.rawValue).List.ReturnType, items));
+		}
+		if (left.Value is List<Expression>)
+		{
+			var elements = new List<Expression>((List<Expression>)left.Value);
+			if (right.rawValue is Expression rightExpression)
+				elements.Remove(rightExpression);
+			else
+				elements.RemoveAt(elements.FindIndex(element =>
+					BytecodeInterpreter.AreEqual(((Value)element).Data.IsText
+						? ((Value)element).Data.Text
+						: (object)((Value)element).Data.Number, right.Value)));
+			return new Instance(left.ReturnType, elements);
+		}
 		if (!left.ReturnType.IsList)
 			return new Instance(left.ReturnType, left.ToDouble() - right.ToDouble());
-		var elements = new List<Expression>((List<Expression>)left.Value);
-		if (right.rawValue is Expression rightExpression)
-			elements.Remove(rightExpression);
+		var listElements = new List<Expression>((List<Expression>)left.Value);
+		if (right.rawValue is Expression expression)
+			listElements.Remove(expression);
 		else
-			elements.RemoveAt(elements.FindIndex(element =>
+			listElements.RemoveAt(listElements.FindIndex(element =>
 				BytecodeInterpreter.AreEqual(((Value)element).Data.IsText
 					? ((Value)element).Data.Text
 					: (object)((Value)element).Data.Number, right.Value)));
-		return new Instance(left.ReturnType, elements);
+		return new Instance(left.ReturnType, listElements);
 	}
 
 	public static bool operator >(Instance left, Instance right) =>
@@ -94,6 +127,19 @@ public sealed class Instance
 
 	private static Instance AddElementToTheListAndGetInstance(Instance left, Instance right)
 	{
+		if (left.rawValue is ValueInstance { IsList: true } listValue)
+		{
+			var items = new List<ValueInstance>(listValue.List.Items);
+			if (right.rawValue is ValueInstance rightValueInstance)
+				items.Add(rightValueInstance);
+			else if (right.ReturnType.IsNumber)
+				items.Add(new ValueInstance(right.ReturnType, Convert.ToDouble(right.Value)));
+			else if (right.ReturnType.IsText)
+				items.Add(new ValueInstance(right.Value.ToString() ?? ""));
+			else
+				items.Add(new ValueInstance(right.Value.ToString() ?? ""));
+			return new Instance(left.ReturnType, new ValueInstance(listValue.List.ReturnType, items));
+		}
 		var elements = new List<Expression>((List<Expression>)left.Value);
 		var elementType = elements.First().ReturnType;
 		var rightValue = right.rawValue is ValueInstance vi

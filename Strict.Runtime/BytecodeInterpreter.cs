@@ -344,6 +344,16 @@ public sealed class BytecodeInterpreter
 			return (int)d;
 		if (iterableInstance.Value is int i)
 			return i;
+		if (iterableInstance.Value is IList<Expression> listExpressions)
+			return listExpressions.Count;
+		if (iterableInstance.Value is ValueInstance valueInstance)
+			return valueInstance.IsText
+				? valueInstance.Text.Length
+				: valueInstance.IsList
+					? valueInstance.List.Items.Count
+					: iterableInstance.ReturnType.IsNumber
+						? (int)valueInstance.Number
+						: 0;
 		return iterableInstance.ReturnType is { IsIterator: true }
 			? ((IEnumerable<Expression>)iterableInstance.Value).Count()
 			: 0; //ncrunch: no coverage
@@ -353,6 +363,28 @@ public sealed class BytecodeInterpreter
 		LoopBeginStatement loopBeginStatement)
 	{
 		var index = Convert.ToInt32(Memory.Variables["index"].Value);
+		if (iterableVariable.Value is ValueInstance valueInstance)
+		{
+			if (valueInstance.IsText)
+			{
+				if (index < valueInstance.Text.Length)
+					Memory.Variables["value"] = new Instance(
+						iterableVariable.ReturnType.GetType(Type.Text), valueInstance.Text[index].ToString());
+				else
+					loopBeginStatement.LoopCount = 0;
+			}
+			else if (valueInstance.IsList)
+			{
+				var items = valueInstance.List.Items;
+				if (index < items.Count)
+					Memory.Variables["value"] = new Instance(items[index].GetTypeExceptText(), items[index]);
+				else
+					loopBeginStatement.LoopCount = 0;
+			}
+			else if (iterableVariable.ReturnType.IsNumber)
+				Memory.Variables["value"] = new Instance(numberType, index + 1);
+			return;
+		}
 		if (iterableVariable.Value is string text)
 		{
 			if (index < text.Length)
@@ -361,9 +393,8 @@ public sealed class BytecodeInterpreter
 			else
 				loopBeginStatement.LoopCount = 0;
 		}
-		else if (iterableVariable.ReturnType is GenericTypeImplementation { Generic.Name: Type.List })
+		else if (iterableVariable.Value is IList<Expression> list)
 		{
-			var list = (List<Expression>)iterableVariable.Value;
 			if (index < list.Count)
 				Memory.Variables["value"] = new Instance(list[index]);
 			else

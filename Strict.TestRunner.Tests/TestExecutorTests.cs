@@ -38,7 +38,7 @@ public class TestExecutorTests
 				"	10")).ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(() => executor.RunMethod(type.Methods.First(m => m.Name == "Run")),
 			Throws.InstanceOf<ExecutionFailed>().With.InnerException.With.Message.
-				StartsWith("\"Run\" method failed: 5 is 6, result: False"));
+				Contains("\"Run\" method failed: 5 is 6, result: Boolean: false"));
 	}
 
 	[Test]
@@ -70,7 +70,7 @@ public class TestExecutorTests
 				"	5")).ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(() => executor.RunAllTestsInType(type),
 			Throws.InstanceOf<ExecutionFailed>().With.InnerException.With.Message.
-				Contains("\"Other\" method failed: 2 is 3, result: False"));
+				Contains("\"Other\" method failed: 2 is 3, result: Boolean: false"));
 	}
 
 	[Test]

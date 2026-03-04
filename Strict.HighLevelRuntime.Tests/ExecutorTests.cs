@@ -140,16 +140,16 @@ public sealed class ExecutorTests
 			Is.EqualTo(executor.trueInstance));
 		Assert.That(executor.Execute(GetBinaryOperator(BinaryOperator.GreaterOrEqual), N(5), [N(3)]),
 			Is.EqualTo(executor.trueInstance));
-		Assert.That(executor.Execute(GetBinaryOperator(BinaryOperator.GreaterOrEqual), N(5), [N(5)]).Boolean,
-			Is.True);
-		Assert.That(executor.Execute(GetBinaryOperator(BinaryOperator.SmallerOrEqual), N(2), [N(3)]).Boolean,
-			Is.True);
-		Assert.That(executor.Execute(GetBinaryOperator(BinaryOperator.SmallerOrEqual), N(3), [N(3)]).Boolean,
-			Is.True);
-		Assert.That(executor.Execute(GetBinaryOperator(BinaryOperator.Is), N(3), [N(3)]).Boolean,
-			Is.True);
-		Assert.That(executor.Execute(GetBinaryOperator(BinaryOperator.Is), N(3), [N(4)]).Boolean,
-			Is.False);
+		Assert.That(executor.Execute(GetBinaryOperator(BinaryOperator.GreaterOrEqual), N(5), [N(5)]),
+			Is.EqualTo(executor.trueInstance));
+		Assert.That(executor.Execute(GetBinaryOperator(BinaryOperator.SmallerOrEqual), N(2), [N(3)]),
+			Is.EqualTo(executor.trueInstance));
+		Assert.That(executor.Execute(GetBinaryOperator(BinaryOperator.SmallerOrEqual), N(3), [N(3)]),
+			Is.EqualTo(executor.trueInstance));
+		Assert.That(executor.Execute(GetBinaryOperator(BinaryOperator.Is), N(3), [N(3)]),
+			Is.EqualTo(executor.trueInstance));
+		Assert.That(executor.Execute(GetBinaryOperator(BinaryOperator.Is), N(3), [N(4)]),
+			Is.EqualTo(executor.falseInstance));
 	}
 
 	[Test]
@@ -158,15 +158,15 @@ public sealed class ExecutorTests
 		var boolean = TestPackage.Instance.GetType(Type.Boolean);
 		Method GetBinaryOperator(string op) => boolean.Methods.Single(m =>
 			m.Name == op && m.ReturnType.IsBoolean && m.Parameters is [{ Type.IsBoolean: true }]);
-		var and = GetBinaryOperator(BinaryOperator.And);
-		var or = GetBinaryOperator(BinaryOperator.Or);
-		var xor = GetBinaryOperator(BinaryOperator.Xor);
 		var not = boolean.Methods.Single(m =>
 			m.Name == UnaryOperator.Not && m.ReturnType.IsBoolean && m.Parameters.Count == 0);
+		var and = GetBinaryOperator(BinaryOperator.And);
 		AssertBooleanOperation(and, true, true, true);
 		AssertBooleanOperation(and, true, false, false);
+		var or = GetBinaryOperator(BinaryOperator.Or);
 		AssertBooleanOperation(or, true, false, false);
 		AssertBooleanOperation(or, false, false, true);
+		var xor = GetBinaryOperator(BinaryOperator.Xor);
 		AssertBooleanOperation(xor, true, false, true);
 		AssertBooleanOperation(xor, true, true, false);
 		Assert.That(executor.Execute(not, executor.falseInstance, []), Is.EqualTo(executor.trueInstance));
@@ -191,10 +191,9 @@ public sealed class ExecutorTests
 	{
 		using var t = CreateType(nameof(EvaluateBooleanComparisons), "mutable last Boolean",
 			"IfDifferent Boolean", "\tlast is false");
-		var result = executor.Execute(t.Methods.Single(m => m.Name == "IfDifferent"),
-			new ValueInstance(t,
-				new Dictionary<string, ValueInstance> { { "last", executor.falseInstance } }), []);
-		Assert.That(result.Boolean, Is.True);
+		Assert.That(executor.Execute(t.Methods.Single(m => m.Name == "IfDifferent"),
+			new ValueInstance(t, new Dictionary<string, ValueInstance>
+			{ { "last", executor.falseInstance } }), []), Is.EqualTo(executor.trueInstance));
 	}
 
 	[Test]
@@ -202,8 +201,8 @@ public sealed class ExecutorTests
 	{
 		using var t = CreateType(nameof(EvaluateRangeEquality), "has number", "Compare Boolean",
 			"\tRange(0, 5) is Range(0, 5)");
-		var result = executor.Execute(t.Methods.Single(m => m.Name == "Compare"), executor.noneInstance, []);
-		Assert.That(result.Boolean, Is.True);
+		Assert.That(executor.Execute(t.Methods.Single(m => m.Name == "Compare"), executor.noneInstance,
+			[]), Is.EqualTo(executor.trueInstance));
 	}
 
 	[Test]
@@ -211,7 +210,8 @@ public sealed class ExecutorTests
 	{
 		using var t = CreateType(nameof(MultilineMethodRequiresTests), "has number", "GetText Text",
 			"\tif number is 0", "\t\treturn \"\"", "\tnumber to Text");
-		var instance = new ValueInstance(t, new Dictionary<string, ValueInstance> { { "number", new ValueInstance(executor.numberType, 5.0) } });
+		var instance = new ValueInstance(t, new Dictionary<string, ValueInstance>
+			{	{ "number", new ValueInstance(executor.numberType, 5.0) } });
 		Assert.That(executor.Execute(t.Methods.Single(m => m.Name == "GetText"), instance, []).Text,
 			Is.EqualTo("5"));
 	}
@@ -269,8 +269,8 @@ public sealed class ExecutorTests
 		using var t = CreateType(nameof(CompareNumberToText), "has number", "Compare",
 			"\t\"5\" is 5");
 		Assert.That(
-			executor.Execute(t.Methods.Single(m => m.Name == "Compare"), executor.noneInstance, []).Boolean,
-			Is.True);
+			executor.Execute(t.Methods.Single(m => m.Name == "Compare"), executor.noneInstance, []),
+			Is.EqualTo(executor.trueInstance));
 	}
 
 	[Test]
@@ -279,8 +279,8 @@ public sealed class ExecutorTests
 		using var t = CreateType(nameof(CompareTextToCharacterTab), "has number", "Compare Boolean",
 			"\t\"7\" is Character.Tab");
 		Assert.That(
-			executor.Execute(t.Methods.Single(m => m.Name == "Compare"), executor.noneInstance, []).Boolean,
-			Is.False);
+			executor.Execute(t.Methods.Single(m => m.Name == "Compare"), executor.noneInstance, []),
+			Is.EqualTo(executor.falseInstance));
 	}
 
 	[Test]

@@ -183,7 +183,9 @@ public sealed class ByteCodeGenerator
 		if (expression is not Value valueExpression)
 			return null;
 		statements.Add(new LoadConstantStatement(registry.AllocateRegister(),
-			new Instance(valueExpression.ReturnType, valueExpression.Data)));
+			expression is Strict.Expressions.List listExpression
+				? new Instance(valueExpression.ReturnType, listExpression.Values)
+				: new Instance(valueExpression.ReturnType, valueExpression.Data)));
 		return true;
 	}
 
@@ -305,7 +307,9 @@ public sealed class ByteCodeGenerator
 	private void TryGenerateStatementsForAssignmentValue(Value assignmentValue, string variableName)
 	{
 		object data;
-		if (assignmentValue.Data.IsList)
+		if (assignmentValue is Strict.Expressions.List { Values.Count: > 0 } listExpression)
+			data = listExpression.Values;
+		else if (assignmentValue.Data.IsList)
 		{
 			var elementType =
 				((GenericTypeImplementation)assignmentValue.ReturnType).ImplementationTypes[0];
