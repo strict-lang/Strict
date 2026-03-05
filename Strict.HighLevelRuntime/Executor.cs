@@ -1,6 +1,5 @@
 using Strict.Expressions;
 using Strict.Language;
-using System.Collections;
 using System.Runtime.CompilerServices;
 using Type = Strict.Language.Type;
 
@@ -87,7 +86,7 @@ public class Executor
 		{
 			throw new MethodRequiresTest(method,
 				$"Test execution failed: {method.Parent.FullName}.{method.Name}\n" +
-				method.lines.ToWordList("\n") + "\n" + inner);
+				method.lines.ToLines() + Environment.NewLine + inner);
 		}
 		if (body is not Body && runOnlyTests)
 			return IsSimpleExpressionWithLessThanThreeSubExpressions(body)
@@ -151,9 +150,9 @@ public class Executor
 	}
 
 	public sealed class StackOverflowCallingItselfWithSameInstanceAndArguments(Method method,
-		ValueInstance? instance, IEnumerable<ValueInstance> args, ExecutionContext parentContext)
+		ValueInstance? instance, IReadOnlyList<ValueInstance> args, ExecutionContext parentContext)
 		: ExecutionFailed(method, "Parent context=" + parentContext + ", Instance=" + instance +
-			", arguments=" + args.ToWordList());
+			", arguments=" + string.Join(", ", args));
 
 	private ValueInstance GetFromConstructorValue(Method method, IReadOnlyList<ValueInstance> args)
 	{
@@ -180,16 +179,21 @@ public class Executor
 			if (!args[index].IsSameOrCanBeUsedAs(parameter.Type) &&
 				!parameter.Type.IsIterator && !IsSingleCharacterTextArgument(parameter.Type, args[index]))
 				throw new InvalidTypeForArgument(method.Type, args, index);
-			var memberName = method.Type.Members.FirstOrDefault(member =>
-					member.Name.Equals(parameter.Name, StringComparison.OrdinalIgnoreCase))?.Name ??
-				(parameter.Name.Length > 0
-					? char.ToUpperInvariant(parameter.Name[0]) + parameter.Name[1..]
-					: parameter.Name);
+			var memberName = GetFirstMemberMatchingParameter(method, parameter)?.Name ??
+				StringExtensions.MakeFirstLetterUppercase(parameter.Name);
 			members.Add(memberName, IsSingleCharacterTextArgument(parameter.Type, args[index])
 				? new ValueInstance(characterType, args[index].Text[0])
 				: args[index]);
 		}
 		return new ValueInstance(method.Type, members);
+	}
+
+	private static Member? GetFirstMemberMatchingParameter(Method method, Parameter parameter)
+	{
+		foreach (var member in method.Type.Members)
+			if (member.Name.Equals(parameter.Name, StringComparison.OrdinalIgnoreCase))
+				return member;
+		return null;
 	}
 
 	private static Dictionary<ValueInstance, ValueInstance> FillDictionaryFromListKeyAndValues(
@@ -215,17 +219,17 @@ public class Executor
 		: ExecutionFailed(method, instance.ToString()); //ncrunch: no coverage
 
 	public sealed class TooManyArguments(Method method, string argument,
-		IEnumerable<ValueInstance> args) : ExecutionFailed(method,
-		argument + ", given arguments: " + args.ToWordList() + ", method " + method.Name +
-		" requires these parameters: " + method.Parameters.ToWordList());
+		IReadOnlyList<ValueInstance> args) : ExecutionFailed(method,
+		argument + ", given arguments: " + string.Join(", ", args) + ", method " + method.Name +
+		" requires these parameters: " + string.Join(", ", method.Parameters));
 
 	public sealed class ArgumentDoesNotMapToMethodParameters(Method method, string message)
 		: ExecutionFailed(method, message);
 
 	public sealed class MissingArgument(Method method, string paramName,
-		IEnumerable<ValueInstance> args) : ExecutionFailed(method,
-		paramName + ", given arguments: " + args.ToWordList() + ", method " + method.Name +
-		" requires these parameters: " + method.Parameters.ToWordList());
+		IReadOnlyList<ValueInstance> args) : ExecutionFailed(method,
+		paramName + ", given arguments: " + string.Join(", ", args) + ", method " + method.Name +
+		" requires these parameters: " + string.Join(", ", method.Parameters));
 
 	public ValueInstance RunExpression(Expression expr, ExecutionContext context,
 		bool runOnlyTests = false)
@@ -234,8 +238,7 @@ public class Executor
 		return expr switch
 		{
 			Body body => bodyEvaluator.Evaluate(body, context, runOnlyTests),
-			List list => new ValueInstance(list.ReturnType,
-				list.Values.Select(value => RunExpression(value, context)).ToList()),
+			List list => EvaluateListExpression(list, context),
 			//TODO: add test first: Dictionary dict =>
 			Value v => v.Data,
 			ParameterCall or VariableCall => EvaluateVariable(expr.ToString(), context),
@@ -255,7 +258,15 @@ public class Executor
 		};
 	}
 
-/*TODO: do these properly with new ValueInstance!
+	private ValueInstance EvaluateListExpression(List list, ExecutionContext context)
+	{
+		var values = new List<ValueInstance>(list.Values.Count);
+		foreach (var value in list.Values)
+			values.Add(RunExpression(value, context));
+		return new ValueInstance(list.ReturnType, values);
+	}
+
+/*TODO:
 	private object EvaluateValueData(object valueData, ExecutionContext context) =>
 		valueData switch
 		{
@@ -311,8 +322,8 @@ public class Executor
 			member.Member.Name.Equals(Type.ElementsLowercase, StringComparison.OrdinalIgnoreCase))
 		{
 			var pairs = new List<ValueInstance>();
-			var pairType = member.Member.Type is GenericTypeImplementation { Generic.Name: Type.List } listType
-				? listType.ImplementationTypes[0]
+			var pairType = member.Member.Type is { IsList: true, IsGeneric: true }
+				? listType.GetFirstImplementation()
 				: member.Member.Type;
 			foreach (var pair in ctx.This.Value.GetDictionaryItems())
 				pairs.Add(new ValueInstance(pairType, [pair.Key, pair.Value]));

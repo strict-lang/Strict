@@ -390,7 +390,7 @@ public sealed class TypeParser(Type type, string[] lines)
 		}
 		catch (Exception ex)
 		{
-			throw new ParsingFailed(type, LineNumber, ex.Message.Split('\n').Take(2).ToWordList("\n"), ex);
+			throw new ParsingFailed(type, LineNumber, ex.Message.Split('\n').Take(2).ToLines(), ex);
 		}
 	}
 

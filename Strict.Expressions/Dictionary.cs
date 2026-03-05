@@ -62,7 +62,7 @@ public sealed class Dictionary : Value
 				$"Expected Type Parameters: 2, Given type parameters: {
 					types.Count
 				} and they are {
-					types.ToWordList()
+					string.Join(", ", types)
 				}") { }
 
 		public DictionaryMustBeInitializedWithTwoTypeParameters(Body body, string expressionText) :

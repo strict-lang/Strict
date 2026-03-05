@@ -234,7 +234,7 @@ public sealed class Body : Expression
 	}
 
 	public sealed class IdentifierNotFound(Body body, string name) : ParsingFailed(body,
-		name + ", Variables in scope: " + body.GetAllVariables().ToWordList());
+		name + ", Variables in scope: " + string.Join(", ", body.GetAllVariables()));
 
 	private List<Variable> GetAllVariables()
 	{

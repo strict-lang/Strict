@@ -4,28 +4,19 @@ namespace Strict.Language;
 
 public static class StringExtensions
 {
-	public static string ToBrackets<T>(this IEnumerable<T> list) =>
+	public static string ToBrackets<T>(this IReadOnlyList<T> list) =>
 		list.Any()
-			? "(" + list.ToWordList() + ")"
+			? "(" + string.Join(DefaultSeparator, list) + ")"
 			: "";
 
-	public static string ToWordList<T>(this IEnumerable<T> list, string separator = ", ") =>
-		list is IDictionary<string, object?> dictionary
-			? dictionary.DictionaryToWordList(separator)
-			: string.Join(separator, list);
+	private const string DefaultSeparator = ", ";
 
-	public static string EnumerableToWordList(this IEnumerable values, string separator = ", ",
-		bool outputTypes = false) =>
-		values switch
-		{
-			IDictionary<string, object?> dict => dict.DictionaryToWordList(outputTypes: outputTypes),
-			IDictionary iDictionary => iDictionary.IDictionaryToWordList(outputTypes: outputTypes),
-			_ => values as string ?? values.Cast<object?>().ToWordList(separator)
-		};
+	public static string ToLines(this IEnumerable<string> lines) =>
+		string.Join(Environment.NewLine, lines);
 
-	public static string DictionaryToWordList<TKey, TValue>(this IDictionary<TKey, TValue> list,
+	public static string DictionaryToWordList<Key, Value>(this IReadOnlyDictionary<Key, Value> list,
 		string separator = "; ", string keyValueSeparator = "=", bool outputTypes = false)
-		where TKey : notnull
+		where Key : notnull
 	{
 		var result = new List<string>();
 		foreach (var pair in list)
@@ -38,8 +29,17 @@ public static class StringExtensions
 					pair.Value?.GetType().Name != "ValueInstance"
 						? " (" + pair.Value?.GetType().Name + ")"
 						: "")));
-		return result.ToWordList(separator);
+		return string.Join<string>(separator, result);
 	}
+
+	private static string EnumerableToWordList(this IEnumerable values, string separator = DefaultSeparator,
+		bool outputTypes = false) =>
+		values switch
+		{
+			IReadOnlyDictionary<string, object?> dict => dict.DictionaryToWordList(outputTypes: outputTypes),
+			IDictionary iDictionary => iDictionary.IDictionaryToWordList(outputTypes: outputTypes),
+			_ => values as string ?? string.Join(separator, values.Cast<object?>())
+		};
 
 	public static string IDictionaryToWordList(this IDictionary list, string separator = "; ",
 		bool outputTypes = false)
@@ -53,7 +53,7 @@ public static class StringExtensions
 				: enumerator.Value + (outputTypes
 					? " (" + enumerator.Value?.GetType().Name + ")"
 					: "")));
-		return result.ToWordList(separator);
+		return string.Join<string>(separator, result);
 	}
 
 	public static bool IsWordOrWordWithNumberAtEnd(this ReadOnlySpan<char> text, out int number)
@@ -96,11 +96,8 @@ public static class StringExtensions
 			return true;
 		}
 
-		public string MakeFirstLetterUppercase() =>
-			text[..1].ToUpperInvariant() + text[1..];
-
-		public string MakeFirstLetterLowercase() =>
-			text[..1].ToLowerInvariant() + text[1..];
+		public string MakeFirstLetterUppercase() =>	text[..1].ToUpperInvariant() + text[1..];
+		public string MakeFirstLetterLowercase() =>	text[..1].ToLowerInvariant() + text[1..];
 
 		public string GetTextInsideBrackets()
 		{

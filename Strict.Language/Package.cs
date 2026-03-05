@@ -8,7 +8,7 @@ namespace Strict.Language;
 /// <summary>
 /// In C# or Java called namespace or package as well, in Strict this is any code folder.
 /// </summary>
-public class Package : Context, IEnumerable<Type>, IDisposable
+public class Package : Context, IDisposable
 {
 #if DEBUG
 	public Package(string packagePath, Repositories? createdFromRepos = null,
@@ -176,8 +176,7 @@ public class Package : Context, IEnumerable<Type>, IDisposable
 	}
 
 	internal void Remove(Package package) => children.Remove(package);
-	public IEnumerator<Type> GetEnumerator() => new List<Type>(types.Values).GetEnumerator();
-	IEnumerator IEnumerable.GetEnumerator() => GetEnumerator(); //ncrunch: no coverage
+	public IReadOnlyDictionary<string, Type> Types => types;
 
 	public void Dispose()
 	{

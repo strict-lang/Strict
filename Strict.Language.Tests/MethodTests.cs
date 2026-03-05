@@ -58,7 +58,7 @@ public sealed class MethodTests
 	{
 		var method = new Method(type, 0, null!, ["from(number)"]);
 		Assert.That(method.Name, Is.EqualTo("from"));
-		Assert.That(method.Parameters, Has.Count.EqualTo(1), method.Parameters.ToWordList());
+		Assert.That(method.Parameters, Has.Count.EqualTo(1), string.Join(", ", method.Parameters));
 		Assert.That(method.Parameters[0].Type, Is.EqualTo(type.GetType("Number")));
 		Assert.That(method.ReturnType, Is.EqualTo(type));
 	}

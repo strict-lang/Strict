@@ -158,8 +158,8 @@ public abstract class Context
 	}
 
 	public sealed class TypeArgumentsCountDoesNotMatchGenericType(Type mainType,
-		IReadOnlyCollection<Type> typeArguments) : Exception("The generic type " + mainType +
-		" needs these type arguments: " + mainType.GetGenericTypeArguments().ToBrackets() +
+		IReadOnlyList<Type> typeArguments) : Exception("The generic type " + mainType +
+		" needs these type arguments: " + mainType.GetGenericTypeArguments().ToList().ToBrackets() +
 		", this does not match provided types: " + typeArguments.ToBrackets());
 
 	public GenericTypeImplementation GetListImplementationType(Type implementation) =>
@@ -181,10 +181,9 @@ public abstract class Context
 		FullName + " Parent+" + Parent +
 		", created from " + callerMemberName + " in " + callerFilePath + ":line " + callerLineNumber;
 #else
-		FullName + " Parent+" + Parent
+		FullName + " Parent+" + Parent;
 #endif
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public Package? GetPackage() =>
 		this is Package package
 			// ReSharper disable once ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract
@@ -199,7 +198,7 @@ public abstract class Context
 		private static string WriteContextTypes(Context context)
 		{
 			var result = context.GetType().Name + " " + context.FullName + ", " +
-				"available " + "types: " + context.types.Keys.ToWordList();
+				"available " + "types: " + string.Join(", ", context.types.Keys);
 			// ReSharper disable once ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract
 			if (context.Parent != null && context.Parent.Name != string.Empty)
 				result += "\n\tParent " + WriteContextTypes(context.Parent);

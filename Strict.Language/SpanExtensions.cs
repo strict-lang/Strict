@@ -1,4 +1,4 @@
-﻿using System.Runtime.CompilerServices;
+using System.Runtime.CompilerServices;
 
 namespace Strict.Language;
 
@@ -60,19 +60,19 @@ public static class SpanExtensions
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static bool Any(this ReadOnlySpan<char> input, IEnumerable<string> items)
+	public static bool Any(this ReadOnlySpan<char> input, IReadOnlyList<string> items)
 	{
-		foreach (var item in items)
-			if (input.Compare(item.AsSpan()))
+		for (var i = 0; i < items.Count; i++)
+			if (input.Compare(items[i].AsSpan()))
 				return true;
 		return false;
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static bool ContainsAnyItem(this ReadOnlySpan<char> input, IEnumerable<string> items)
+	public static bool ContainsAnyItem(this ReadOnlySpan<char> input, IReadOnlyList<string> items)
 	{
-		foreach (var item in items)
-			if (input.IndexOf(item.AsSpan()) >= 0)
+		for (var i = 0; i < items.Count; i++)
+			if (input.IndexOf(items[i].AsSpan()) >= 0)
 				return true;
 		return false;
 	}

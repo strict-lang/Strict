@@ -112,20 +112,7 @@ public sealed class StringExtensionsTests
 	}
 
 	[Test]
-	public void ToWordList()
-	{
-		Assert.That(new List<string> { "hi", "there" }.ToWordList(), Is.EqualTo("hi, there"));
-		Assert.That(new[] { 1, 2, 3 }.ToWordList(), Is.EqualTo("1, 2, 3"));
+	public void DictionaryToWordList() =>
 		Assert.That(new Dictionary<string, object?> { { "number", 5 }, { "values", new[] { 0, 1, 2 } } }.
 			DictionaryToWordList(), Is.EqualTo("number=5; values=0, 1, 2"));
-		IDictionary dict = new Hashtable
-		{
-			{ "name", "Kata" },
-			{ "ids", new List<int> { 1, 2, 3 } }
-		};
-		Assert.That(dict.EnumerableToWordList(),
-			Does.Contain("name=Kata").And.Contains("ids=1, 2, 3"));
-		IEnumerable values = new ArrayList { "apple", "banana", "cherry" };
-		Assert.That(values.EnumerableToWordList(), Is.EqualTo("apple, banana, cherry"));
-	}
 }

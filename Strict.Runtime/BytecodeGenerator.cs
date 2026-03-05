@@ -1,4 +1,3 @@
-using System.Collections;
 using System.Diagnostics;
 using Strict.Expressions;
 using Strict.Language;
@@ -51,11 +50,12 @@ public sealed class ByteCodeGenerator
 			instance.GetTypeExceptText().Members.First(member => !member.Type.IsTrait).Name, isMember: true));
 
 	private static ValueInstance GetValueInstanceFromExpression(Expression expression) =>
-		expression is Expressions.List list
-			? list.Data
-			: expression is Value val
-				? val.Data
-				: new ValueInstance(expression.ToString());
+		expression switch
+		{
+			List list => list.Data,
+			Value val => val.Data,
+			_ => new ValueInstance(expression.ToString())
+		};
 
 	private void AddInstanceMemberVariables(MethodCall instance)
 	{
@@ -65,7 +65,7 @@ public sealed class ByteCodeGenerator
 			if (instance.Method.Parameters[parameterIndex].Type is GenericTypeImplementation
 				{
 					Generic.Name: Type.List
-				} && !(instance.Arguments.Count == 1 && instance.Arguments[0] is Expressions.List))
+				} && !(instance.Arguments.Count == 1 && instance.Arguments[0] is List))
 			{
 				var listItems = instance.Arguments.Select(GetValueInstanceFromExpression).ToList();
 				statements.Add(new StoreVariableStatement(
@@ -318,11 +318,10 @@ public sealed class ByteCodeGenerator
 
 	private void TryGenerateStatementsForAssignmentValue(Value assignmentValue, string variableName)
 	{
-		ValueInstance data;
-		if (assignmentValue.ReturnType.IsDictionary)
-			data = new ValueInstance(assignmentValue.ReturnType, new Dictionary<ValueInstance, ValueInstance>());
-		else
-			data = GetValueInstanceFromExpression(assignmentValue);
+		var data = assignmentValue.ReturnType.IsDictionary
+			? new ValueInstance(assignmentValue.ReturnType,
+				new Dictionary<ValueInstance, ValueInstance>())
+			: GetValueInstanceFromExpression(assignmentValue);
 		statements.Add(new StoreVariableStatement(data, variableName));
 	}
 

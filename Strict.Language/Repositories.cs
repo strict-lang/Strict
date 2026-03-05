@@ -52,7 +52,8 @@ public sealed class Repositories
 		if (parts.Length < 5 || parts[0] != "https:" || parts[1] != "" || parts[2] != "github.com")
 			throw new OnlyGithubDotComUrlsAreAllowedForNow(packageUrl.AbsoluteUri);
 		var organization = parts[3];
-		var packageFullName = parts[4..].ToWordList(Context.ParentSeparator.ToString());
+		string[] tempQualifier = parts[4..];
+		var packageFullName = string.Join<string>(Context.ParentSeparator.ToString(), tempQualifier);
 		var localDevelopmentPath = GetLocalDevelopmentPath(organization, packageFullName);
 		if (Directory.Exists(localDevelopmentPath))
 			return await LoadFromPath(packageFullName, localDevelopmentPath
@@ -234,47 +235,7 @@ public sealed class Repositories
 			types.Add(new Type(package, typeLines));
 		return types;
 	}
-/*user should specify which packages he wants, we shouldn't just load all in a repo!
-	private async Task GetSubDirectoriesAndParse(string packagePath, Package package
-#if DEBUG
-		, string callerFilePath, int callerLineNumber, string callerMemberName
-#endif
-	)
-	{
-		var subDirectories = Directory.GetDirectories(packagePath);
-		if (subDirectories.Length > 0)
-			await Task.WhenAll(ParseAllSubFolders(subDirectories, package
-#if DEBUG
-				, callerFilePath, callerLineNumber, callerMemberName
-#endif
-			));
-	}
 
-	private List<Task> ParseAllSubFolders(IEnumerable<string> subDirectories, Package package
-#if DEBUG
-		, string callerFilePath, int callerLineNumber, string callerMemberName
-#endif
-	)
-	{
-		var tasks = new List<Task>();
-		foreach (var directory in subDirectories)
-			if (IsValidCodeDirectory(directory))
-				tasks.Add(CreatePackageFromFiles(directory, //ncrunch: no coverage
-					Directory.GetFiles(directory, "*" + Type.Extension), package
-#if DEBUG
-					, callerFilePath, callerLineNumber, callerMemberName
-#endif
-				));
-		return tasks;
-	}
-
-	/// <summary>
-	/// In Strict only words are valid directory names = package names, no symbols (like .git, .hg,
-	/// .vs, or _NCrunch) or numbers or dot separators (like Strict.Compiler) are allowed.
-	/// </summary>
-	private static bool IsValidCodeDirectory(string directory) =>
-		Path.GetFileName(directory).IsWord();
-*/
 	public const string DevelopmentBaseFolder = @"C:\code\GitHub\";
 	internal static string CacheFolder =>
 		Path.Combine( //ncrunch: no coverage, only downloaded and cached on non-development machines
@@ -302,6 +263,6 @@ public sealed class Repositories
 			out var lazyPackage)
 			? (await lazyPackage.Value).ToDebugString()
 			: "") +
-		"\nLoadedPackages: " + loadedPackages.ToWordList("\n  ") +
-		"\nPreviouslyCheckedDirectories: " + PreviouslyCheckedDirectories.ToWordList();
+		"\nLoadedPackages: " + string.Join("\n  ", loadedPackages) +
+		"\nPreviouslyCheckedDirectories: " + string.Join<string>(", ", PreviouslyCheckedDirectories.ToList());
 }

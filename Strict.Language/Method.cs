@@ -273,12 +273,23 @@ public sealed class Method : Context
 			Tests.Add(expression);
 		// Checks for obvious recursive calls with same arguments at the last line (non-test method),
 		// this won't catch most recursive calls, see Executor for most other cases.
-		else if (currentLine.Contains(body.Method.Name +
-				body.Method.parameters.Select(p => p.Name).ToBrackets()) &&
-			expression.GetType().Name == "MethodCall" &&
-			body.ParsingLineNumber == body.Method.Tests.Count + 1 && currentLine != "\tRun")
+		else if (expression.GetType().Name == "MethodCall" &&
+			body.ParsingLineNumber == body.Method.Tests.Count + 1 && currentLine != "\tRun" &&
+			currentLine.Contains(body.Method.GetNameWithParameters()))
 			throw new RecursiveCallCausesStackOverflow(body);
 		return expression;
+	}
+
+	private string GetNameWithParameters()
+	{
+		var result = "";
+		foreach (var param in parameters)
+			result += (result==""
+				? ""
+				: ", ") + param.Type.Name;
+		if (result.Length > 0)
+			result = "(" + result + ")";
+		return Name + result;
 	}
 
 	public sealed class RecursiveCallCausesStackOverflow(Body body) : ParsingFailed(body);

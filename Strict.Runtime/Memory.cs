@@ -1,6 +1,5 @@
 using Strict.Expressions;
 using Strict.Language;
-using Type = Strict.Language.Type;
 
 namespace Strict.Runtime;
 
@@ -32,10 +31,11 @@ public sealed class Memory
 	public void AddToDictionary(string variableKey, ValueInstance keyToAddTo, ValueInstance value)
 	{
 		Variables.TryGetValue(variableKey, out var collection);
-		if (!collection.IsDictionary)
-			return;
-		var dictionaryItems = new Dictionary<ValueInstance, ValueInstance>(collection.GetDictionaryItems());
-		dictionaryItems.Add(keyToAddTo, value);
-		Variables[variableKey] = new ValueInstance(collection.GetTypeExceptText(), dictionaryItems);
+		if (collection.IsDictionary)
+			Variables[variableKey] = new ValueInstance(collection.GetTypeExceptText(),
+				new Dictionary<ValueInstance, ValueInstance>(collection.GetDictionaryItems())
+				{
+					{ keyToAddTo, value }
+				});
 	}
 }

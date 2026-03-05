@@ -1,5 +1,4 @@
 global using Type = Strict.Language.Type;
-using Strict.Expressions;
 
 namespace Strict.Runtime.Tests;
 
@@ -9,10 +8,8 @@ public class BaseVirtualMachineTests : TestExpressions
 	protected static readonly Type NumberType = TestPackage.Instance.GetType(Type.Number);
 	protected static readonly Type TextType = TestPackage.Instance.GetType(Type.Text);
 	protected static readonly Type ListType = TestPackage.Instance.GetType(Type.List);
-	
 	protected static ValueInstance Number(double value) => new(NumberType, value);
 	protected static ValueInstance Text(string value) => new(value);
-	
 	protected static readonly string[] ArithmeticFunctionExample =
 	[
 		"has First Number",

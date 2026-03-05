@@ -144,10 +144,10 @@ public sealed class ByteCodeGeneratorTests : BaseVirtualMachineTests
 					new Binary(Instruction.GreaterThan, Register.R0, Register.R1),
 					new JumpToId(Instruction.JumpToIdIfFalse, 0),
 					new LoadConstantStatement(Register.R2,
-						new ValueInstance(TestPackage.Instance.GetType(Type.Boolean), true ? 1.0 : 0)),
+						new ValueInstance(TestPackage.Instance.GetType(Type.Boolean), 1)),
 					new Return(Register.R2), new JumpToId(Instruction.JumpEnd, 0),
 					new LoadConstantStatement(Register.R3,
-						new ValueInstance(TestPackage.Instance.GetType(Type.Boolean), false ? 1.0 : 0)),
+						new ValueInstance(TestPackage.Instance.GetType(Type.Boolean), 0)),
 					new Return(Register.R3)
 				},
 				new[]

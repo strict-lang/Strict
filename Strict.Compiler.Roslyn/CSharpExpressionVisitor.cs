@@ -95,7 +95,7 @@ public class CSharpExpressionVisitor : ExpressionVisitor
 				: methodCall.Method.Type.Name;
 		else
 			result += methodCall.Method.Name;
-		result += "(" + methodCall.Arguments.Select(Visit).ToWordList();
+		result += "(" + string.Join(", ", methodCall.Arguments.Select(Visit));
 		if (methodCall.ReturnType.Name == "File")
 			result += ", FileMode.OpenOrCreate";
 		result += ")";

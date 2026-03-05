@@ -33,7 +33,7 @@ public abstract class NamedType
 
 	public sealed class CannotUseKeywordsAsName(string name) : Exception(name +
 		" is a keyword and cannot be used as a identifier name. Keywords List: " +
-		Keyword.GetAllKeywords.ToWordList());
+		string.Join<string>(", ", Keyword.GetAllKeywords));
 
 	/// <summary>
 	/// Most things should NOT be mutable, this is mostly for optimizations like going through for loops

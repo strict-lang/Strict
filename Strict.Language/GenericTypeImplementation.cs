@@ -6,7 +6,7 @@ public sealed class GenericTypeImplementation : Type
 		generic.Package, new TypeLines(generic.GetImplementationName(implementationTypes),
 			CreateHasLines(generic, implementationTypes)))
 	{
-		CreatedBy = "Generic: " + generic + ", Implementations: " + implementationTypes.ToWordList() +
+		CreatedBy = "Generic: " + generic + ", Implementations: " + string.Join(", ", implementationTypes) +
 			", " + CreatedBy;
 		Generic = generic;
 		ImplementationTypes = implementationTypes;

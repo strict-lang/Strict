@@ -288,11 +288,25 @@ public class Type : Context, IDisposable
 		return GetGenericImplementation(key) ?? CreateGenericImplementation(key, implementationTypes);
 	}
 
-	internal string GetImplementationName(IEnumerable<Type> implementationTypes) =>
-		Name + "(" + implementationTypes.Select(t => t.Name).ToWordList() + ")";
+	internal string GetImplementationName(IReadOnlyList<Type> implementationTypes)
+	{
+		var key = "";
+		for (var i = 0; i < implementationTypes.Count; i++)
+			key += (key == ""
+				? ""
+				: ", ") + implementationTypes[i].Name;
+		return Name + "(" + key + ")";
+	}
 
-	internal string GetImplementationName(IEnumerable<NamedType> implementationTypes) =>
-		Name + "(" + implementationTypes.Select(t => t.Name + " " + t.Type).ToWordList() + ")";
+	internal string GetImplementationName(IReadOnlyList<NamedType> implementationTypes)
+	{
+		var key = "";
+		for (var i = 0; i < implementationTypes.Count; i++)
+			key += (key == ""
+				? ""
+				: ", ") + implementationTypes[i].Name + " " + implementationTypes[i].Type;
+		return Name + "(" + key + ")";
+	}
 
 	private GenericTypeImplementation? GetGenericImplementation(string key)
 	{
@@ -392,19 +406,47 @@ public class Type : Context, IDisposable
 	{
 		if (this == sameOrUsableType || sameOrUsableType.IsAny)
 			return true;
-		if (members.Count(m => m.Type == sameOrUsableType) == 1)
+		if (allowImplicitConversion && IsImplicitToConversion(sameOrUsableType))
+			return true;
+		if (IsEnum && members[0].Type.IsSameOrCanBeUsedAs(sameOrUsableType))
+			return true;
+		if (HasExactlyOneMemberOfType(sameOrUsableType))
 			return true;
 		if (IsMutableAndHasMatchingInnerType(sameOrUsableType) ||
 			sameOrUsableType.IsMutableAndHasMatchingInnerType(this))
 			return true;
-		if (allowImplicitConversion && IsImplicitToConversion(sameOrUsableType))
-			return true;
 		if (IsCompatibleOneOfType(sameOrUsableType))
 			return true;
-		if (IsEnum && members[0].Type.IsSameOrCanBeUsedAs(sameOrUsableType))
-			return true;
-		return maxDepth >= 0 && Members.Count(m => !m.IsConstant &&
-			m.Type.IsSameOrCanBeUsedAs(sameOrUsableType, allowImplicitConversion, maxDepth - 1)) == 1;
+		return maxDepth >= 0 &&
+			HasExactlyOneUsableMember(sameOrUsableType, allowImplicitConversion, maxDepth);
+	}
+
+	private bool HasExactlyOneMemberOfType(Type targetType)
+	{
+		// Basically members.Count(m => m.Type == targetType) == 1, but more performant
+		var found = false;
+		foreach (var m in members)
+			if (m.Type == targetType)
+			{
+				if (found)
+					return false;
+				found = true;
+			}
+		return found;
+	}
+
+	private bool HasExactlyOneUsableMember(Type targetType, bool allowImplicitConversion, int maxDepth)
+	{
+		var found = false;
+		foreach (var m in Members)
+			if (!m.IsConstant &&
+				m.Type.IsSameOrCanBeUsedAs(targetType, allowImplicitConversion, maxDepth - 1))
+			{
+				if (found)
+					return false;
+				found = true;
+			}
+		return found;
 	}
 
 	/// <summary>
@@ -574,14 +616,14 @@ public class Type : Context, IDisposable
 
 	public sealed class NoMatchingMethodFound(Type type, string methodName,
 		IReadOnlyDictionary<string, List<Method>> availableMethods) : Exception("\"" + methodName +
-		"\" not found for " + type + ", available methods: " + availableMethods.Keys.ToWordList());
+		"\" not found for " + type + ", available methods: " + string.Join(", ", availableMethods.Keys));
 
 	public sealed class ArgumentsDoNotMatchMethodParameters(IReadOnlyList<Expression> arguments,
 		Type type, IEnumerable<Method> allMethods) : Exception((arguments.Count == 0
 			? "No arguments does "
 			: (arguments.Count == 1
 				? "Argument: "
-				: "Arguments: ") + arguments.Select(a => a.ToStringWithType()).ToWordList() + " do ") +
+				: "Arguments: ") + string.Join(", ", arguments.Select(a => a.ToStringWithType())) + " do ") +
 		"not match these " + type + " method(s):\n" + string.Join("\n", allMethods));
 
 	public bool IsUpcastable(Type otherType) =>

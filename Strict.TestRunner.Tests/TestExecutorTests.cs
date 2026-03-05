@@ -125,7 +125,7 @@ public class TestExecutorTests
 				"13 to Character is canOnlyConvertSingleDigit",
 				"value is in Range(0, 10) then Character(Character.zeroCharacter + value) else canOnlyConvertSingleDigit(value)"
 				// @formatter:on
-			}.ToWordList(Environment.NewLine)));
+			}.ToLines()));
 		executor.RunAllTestsInType(type);
 	}
 
@@ -149,7 +149,7 @@ public class TestExecutorTests
 				"for range",
 				"\tvalue"
 				// @formatter:on
-			}.ToWordList(Environment.NewLine)));
+			}.ToLines()));
 		executor.RunAllTestsInType(type);
 	}
 
@@ -169,7 +169,7 @@ public class TestExecutorTests
 				"for numbers",
 				"\t1"
 				// @formatter:on
-			}.ToWordList(Environment.NewLine)));
+			}.ToLines()));
 		executor.RunAllTestsInType(type);
 	}
 

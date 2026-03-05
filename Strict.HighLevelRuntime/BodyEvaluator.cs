@@ -18,7 +18,7 @@ internal sealed class BodyEvaluator(Executor executor)
 		{
 			throw new ExecutionFailed(body.Method,
 				"Failed in \"" + body.Method.Type.FullName + "." + body.Method.Name + "\":" +
-				Environment.NewLine + body.Expressions.ToWordList(Environment.NewLine), ex);
+				Environment.NewLine + string.Join(Environment.NewLine, body.Expressions), ex);
 		}
 		finally
 		{
@@ -36,8 +36,8 @@ internal sealed class BodyEvaluator(Executor executor)
 			if (isTest)
 				executor.Statistics.TestExpressions++;
 			if (isTest == !runOnlyTests && e is not Declaration && e is not MutableReassignment ||
-				runOnlyTests && e is Declaration &&
-				body.Method.Type.Members.Any(m => !m.IsConstant && e.ToString().Contains(m.Name)))
+				runOnlyTests && e is Declaration decl &&
+				body.Method.Type.Members.Any(m => !m.IsConstant && ExpressionReferencesMember(decl.Value, m.Name)))
 				continue;
 			last = executor.RunExpression(e, ctx);
 			if (ctx.ExitMethodAndReturnValue.HasValue)
@@ -55,6 +55,17 @@ internal sealed class BodyEvaluator(Executor executor)
 			return new ValueInstance(last, body.Method.ReturnType);
 		throw new Executor.ReturnTypeMustMatchMethod(body, last);
 	}
+
+	private static bool ExpressionReferencesMember(Expression expr, string memberName) =>
+		expr switch
+		{
+			MemberCall m => m.Member.Name == memberName,
+			MethodCall call =>
+				(call.Instance != null && ExpressionReferencesMember(call.Instance, memberName)) ||
+				call.Arguments.Any(a => ExpressionReferencesMember(a, memberName)),
+			List list => list.Values.Any(v => ExpressionReferencesMember(v, memberName)),
+			_ => false
+		};
 
 	private static bool IsStandaloneInlineTest(Expression e) =>
 		e.ReturnType.IsBoolean && e is not If && e is not Return && e is not Declaration &&

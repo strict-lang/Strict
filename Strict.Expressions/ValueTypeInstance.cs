@@ -15,5 +15,5 @@ public sealed class ValueTypeInstance(Type returnType,
 			Members.All(kvp =>
 				other.Members.TryGetValue(kvp.Key, out var value) && kvp.Value.Equals(value)));
 
-	public override string ToString() => ReturnType + ": " + Members.ToWordList();
+	public override string ToString() => ReturnType + ": " + Members.DictionaryToWordList();
 }

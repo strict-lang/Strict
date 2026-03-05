@@ -22,7 +22,7 @@ public sealed class For(Expression[] customVariables, Expression iterator, Expre
 
 	private string InCustomVariables() =>
 		CustomVariables.Length > 0
-			? CustomVariables.ToWordList() + " in "
+			? string.Join(", ", CustomVariables) + " in "
 			: "";
 
 	public override bool IsConstant => Iterator.IsConstant && Body.IsConstant;
@@ -95,7 +95,7 @@ public sealed class For(Expression[] customVariables, Expression iterator, Expre
 		var forExpression = new For(variables, iterator, innerBody.Parse(), body.CurrentFileLineNumber);
 #if DEBUG
 		var originalLines = line.ToString() + Environment.NewLine +
-			body.Method.GetLinesAndStripTabs(innerBody.LineRange, body).ToWordList(Environment.NewLine);
+			body.Method.GetLinesAndStripTabs(innerBody.LineRange, body).ToLines();
 		var generatedLines = forExpression.ToString();
 		if (generatedLines != originalLines &&
 			!body.Method.GetLinesAndStripTabs(innerBody.LineRange, body).Any(l =>

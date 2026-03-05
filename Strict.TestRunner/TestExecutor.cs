@@ -14,12 +14,10 @@ public sealed class TestExecutor(Package package) : Executor(package, TestBehavi
 	public void RunAllTestsInPackage(Package package)
 	{
 		Statistics.PackagesTested++;
-		foreach (var type in package)
+		foreach (var type in new List<Type>(package.Types.Values))
 			if (type is not GenericTypeImplementation)
 				RunAllTestsInType(type);
 	}
-
-	public int PackagesCount { get; private set; }
 
 	public void RunAllTestsInType(Type type)
 	{
@@ -29,13 +27,9 @@ public sealed class TestExecutor(Package package) : Executor(package, TestBehavi
 				RunMethod(method);
 	}
 
-	public int TypesCount { get; private set; }
-
 	public void RunMethod(Method method)
 	{
 		Statistics.MethodsTested++;
 		Execute(method);
 	}
-
-	public int MethodsCount { get; private set; }
 }

@@ -11,10 +11,8 @@ public sealed class Binary(Expression left, Method operatorMethod, Expression[] 
 	/// </summary>
 	public override string ToString() =>
 		Method.Name is BinaryOperator.In
-			? AddNestedBracketsIfNeeded(Arguments[0]) + " is in " + AddNestedBracketsIfNeeded(Instance!)
-			: AddNestedBracketsIfNeeded(Instance!) + " " + (Method.Name is UnaryOperator.Not
-				? "is "
-				: "") + Method.Name + " " + AddNestedBracketsIfNeeded(Arguments[0]);
+			? $"{AddNestedBracketsIfNeeded(Arguments[0])} is in {AddNestedBracketsIfNeeded(Instance!)}"
+			: $"{AddNestedBracketsIfNeeded(Instance!)} {(Method.Name is UnaryOperator.Not ? "is " : "")}{Method.Name} {AddNestedBracketsIfNeeded(Arguments[0])}";
 
 	private string AddNestedBracketsIfNeeded(Expression child) =>
 		child is MethodCall binaryOrUnary && BinaryOperator.GetPrecedence(binaryOrUnary.Method.Name) <
@@ -35,7 +33,7 @@ public sealed class Binary(Expression left, Method operatorMethod, Expression[] 
 
 	public sealed class IncompleteTokensForBinaryExpression(Body body, ReadOnlySpan<char> input,
 		IEnumerable<Range> postfixTokens) : ParsingFailed(body, //ncrunch: no coverage
-		input.GetTextsFromRanges(postfixTokens).Reverse().ToWordList());
+		string.Join(", ", input.GetTextsFromRanges(postfixTokens).Reverse()));
 
 	private static Expression BuildBinaryExpression(Body body, ReadOnlySpan<char> input,
 		Range operatorTokenRange, Stack<Range> tokens)

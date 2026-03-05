@@ -547,6 +547,6 @@ public class MethodExpressionParser : ExpressionParser
 		: ParsingFailed(body, message); //ncrunch: no coverage
 
 	public sealed class InvalidArgumentItIsNotMethodOrListCall(Body body,
-		Expression variable, IEnumerable<Expression> arguments)
-		: ParsingFailed(body, arguments.ToWordList(), variable.ReturnType);
+		Expression variable, IReadOnlyList<Expression> arguments)
+		: ParsingFailed(body, string.Join(", ", arguments), variable.ReturnType);
 }

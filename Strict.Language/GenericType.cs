@@ -11,7 +11,7 @@ public sealed class GenericType : Type
 		base(generic.Package, new TypeLines(generic.GetImplementationName(genericImplementations),
 			HasWithSpaceAtEnd + generic.Name))
 	{
-		CreatedBy = "Generic: " + generic + ", GenericImplementations: " + genericImplementations.ToWordList() +
+		CreatedBy = "Generic: " + generic + ", GenericImplementations: " + string.Join(", ", genericImplementations) +
 			", " + CreatedBy;
 		Generic = generic;
 		GenericImplementations = genericImplementations;

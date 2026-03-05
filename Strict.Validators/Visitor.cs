@@ -14,8 +14,8 @@ public abstract class Visitor
 {
 	public void Visit(Package package, object? context = null)
 	{
-		foreach (var type in package)
-			Visit(type, context);
+		foreach (var type in package.Types)
+			Visit(type.Value, context);
 	}
 
 	public virtual void Visit(Type type, object? context = null)

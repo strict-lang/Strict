@@ -64,7 +64,7 @@ public sealed class ListCall(Expression list, Expression index) : ConcreteExpres
 		return memberCall.Instance as List;
 	}
 
-	private static Expression? FindLengthConstraint(IEnumerable<Expression>? constraints)
+	private static Expression? FindLengthConstraint(IReadOnlyList<Expression>? constraints)
 	{
 		if (constraints != null)
 			foreach (var constraint in constraints)

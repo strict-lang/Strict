@@ -6,7 +6,7 @@ namespace Strict.Runtime.Tests;
 
 [MemoryDiagnoser]
 [SimpleJob(RunStrategy.Throughput, warmupCount: 1, iterationCount: 10)]
-public sealed class AdderProgramTests : BaseVirtualMachineTests
+public class AdderProgramTests : BaseVirtualMachineTests
 {
 	[SetUp]
 	public void Setup() => vm = new BytecodeInterpreter();

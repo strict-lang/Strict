@@ -144,7 +144,8 @@ public sealed class TypeMethodFinderTests
 	{
 		var range = TestPackage.Instance.GetType(Type.Range);
 		Assert.That(range.AvailableMethods.Values.Select(methods => methods.Count).Sum(),
-			Is.EqualTo(8), "AvailableMethods: " + range.AvailableMethods.ToWordList());
+			Is.EqualTo(8),
+			"AvailableMethods: " + range.AvailableMethods.DictionaryToWordList("\n"));
 	}
 
 	[Test]
@@ -152,7 +153,8 @@ public sealed class TypeMethodFinderTests
 	{
 		var text = TestPackage.Instance.GetType(Type.Text + "s");
 		Assert.That(text.AvailableMethods.Values.Select(methods => methods.Count).Sum(),
-			Is.GreaterThanOrEqualTo(18), "AvailableMethods: " + text.AvailableMethods.ToWordList("\n"));
+			Is.GreaterThanOrEqualTo(18),
+			"AvailableMethods: " + text.AvailableMethods.DictionaryToWordList("\n"));
 	}
 
 	[Test]
@@ -190,7 +192,7 @@ public sealed class TypeMethodFinderTests
 			type.AvailableMethods.Values.Any(methods =>
 				methods.Any(method => !method.IsPublic && !method.Name.AsSpan().IsOperator())), Is.False,
 			// If this fails, check by debugging each private method and see if IsOperator returns true
-			type.AvailableMethods.ToWordList());
+			type.AvailableMethods.DictionaryToWordList("\n"));
 	}
 
 	[Test]

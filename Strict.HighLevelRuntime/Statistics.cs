@@ -7,6 +7,7 @@ namespace Strict.HighLevelRuntime;
 /// </summary>
 public sealed record Statistics
 {
+	//ncrunch: no coverage start
 	public int PackagesTested { get; internal set; }
 	public int TypesTested { get; internal set; }
 	public int MethodsTested { get; internal set; }
@@ -34,4 +35,34 @@ public sealed record Statistics
 	public int MutableUsageCount { get; internal set; }
 	public int FindTypeCount => Context.FindTypeCount;
 	public int FindVariableCount { get; internal set; }
+
+	public void Reset()
+	{
+		PackagesTested = 0;
+		TypesTested = 0;
+		MethodsTested = 0;
+		TestExpressions = 0;
+		MethodCount = 0;
+		ExpressionCount = 0;
+		BodyCount = 0;
+		IfCount = 0;
+		SelectorIfCount = 0;
+		ForCount = 0;
+		MethodCallCount = 0;
+		MemberCallCount = 0;
+		ListCallCount = 0;
+		BinaryCount = 0;
+		ArithmeticCount = 0;
+		CompareCount = 0;
+		LogicalOperationCount = 0;
+		UnaryCount = 0;
+		FromCreationsCount = 0;
+		ToConversionCount = 0;
+		ReturnCount = 0;
+		VariableDeclarationCount = 0;
+		VariableCallCount = 0;
+		MutableDeclarationCount = 0;
+		MutableUsageCount = 0;
+		FindVariableCount = 0;
+	}
 }

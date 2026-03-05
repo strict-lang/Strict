@@ -30,9 +30,9 @@ public sealed class ListTests : TestExpressions
 		ParseAndCheckOutputMatchesInput(input,
 			new List(new Body(method), GetListExpressions(expected.Split(", "))));
 
-	private List<Expression> GetListExpressions(IEnumerable<string> elements)
+	private List<Expression> GetListExpressions(IReadOnlyList<string> elements)
 	{
-		var expressions = new List<Expression>();
+		var expressions = new List<Expression>(elements.Count);
 		var body = new Body(method);
 		foreach (var elementWithSpace in elements)
 			AddElementExpression(expressions, elementWithSpace.TrimStart(), body);
@@ -187,7 +187,7 @@ public sealed class ListTests : TestExpressions
 		Assert.That(body.Method, Is.EqualTo(containsMethod));
 		Assert.That(body.Method.Type, Is.EqualTo(texts));
 		Assert.That(body.Method.Parameters[0].Type.Name, Is.EqualTo(Type.Text));
-		Assert.That(body.Method, Is.EqualTo(containsMethod), texts.Methods.ToWordList());
+		Assert.That(body.Method, Is.EqualTo(containsMethod), string.Join(", ", texts.Methods));
 	}
 
 	[Test]

@@ -274,12 +274,11 @@ public sealed class BytecodeInterpreter
 		if (iterableVariable.IsText)
 		{
 			var firstNumberVar = Memory.Variables.Values.FirstOrDefault(v => !v.IsText && !v.IsList && !v.IsDictionary);
-			if (!Equals(firstNumberVar, default(ValueInstance)))
-				numberType = firstNumberVar.GetTypeExceptText().GetType(Type.Number);
-			else
-			{
-				numberType = Memory.Registers.Values.FirstOrDefault(v => !v.IsText && !v.IsList && !v.IsDictionary).GetTypeExceptText().GetType(Type.Number);
-			}
+			numberType = !Equals(firstNumberVar, default(ValueInstance))
+				? firstNumberVar.GetTypeExceptText().GetType(Type.Number)
+				: Memory.Registers.Values.
+					FirstOrDefault(v => v is { IsText: false, IsList: false, IsDictionary: false }).
+					GetTypeExceptText().GetType(Type.Number);
 		}
 		else
 		{
@@ -470,6 +469,7 @@ public sealed class BytecodeInterpreter
 	}
 
 	public static bool AreEqual(ValueInstance value, ValueInstance other) => value.Equals(other);
+
 	public static bool AreEqual(object? value, object? other)
 	{
 		if (ReferenceEquals(value, other))
