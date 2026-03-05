@@ -24,11 +24,13 @@ public sealed class AdderProgramTests : BaseVirtualMachineTests
 		"\tresults"
 	];
 
-	private List<decimal> ExecuteAddTotals(string methodCall) =>
-		((IEnumerable<Expression>)vm.Execute(
+	private List<decimal> ExecuteAddTotals(string methodCall)
+	{
+		var result = vm.Execute(
 			new ByteCodeGenerator(GenerateMethodCallFromSource("AdderProgram",
-				methodCall, AdderProgramCode)).Generate()).Returns!.Value).
-		Select(e => (decimal)((Value)e).Data.Number).ToList();
+				methodCall, AdderProgramCode)).Generate()).Returns!.Value;
+		return result.List.Items.Select(item => (decimal)item.Number).ToList();
+	}
 
 	[Test]
 	public void AddTotalsForSingleNumber() =>

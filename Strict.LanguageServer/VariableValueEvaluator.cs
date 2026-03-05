@@ -1,4 +1,4 @@
-﻿using OmniSharp.Extensions.LanguageServer.Protocol.Server;
+using OmniSharp.Extensions.LanguageServer.Protocol.Server;
 using Strict.Runtime;
 
 namespace Strict.LanguageServer;
@@ -15,8 +15,9 @@ public sealed class VariableValueEvaluator(ILanguageServerFacade languageServer,
 			foreach (var variable in vm.Memory.Variables.Where(variable =>
 				//ncrunch: no coverage start, TODO: missing tests
 				lines[i].Contains(variable.Key)))
-				lineValuePair[i] =
-					variable.Value.Value.ToString() ?? throw new InvalidOperationException();
+				lineValuePair[i] = variable.Value.IsText
+					? variable.Value.Text
+					: variable.Value.Number.ToString();
 		//ncrunch: no coverage end
 		languageServer.SendNotification(NotificationName,
 			new VariableStateNotificationMessage(lineValuePair));

@@ -1,6 +1,8 @@
+using Strict.Expressions;
+
 namespace Strict.Runtime.Statements;
 
-public sealed class StoreVariableStatement(Instance constant, string identifier, bool isMember = false)
+public sealed class StoreVariableStatement(ValueInstance constant, string identifier, bool isMember = false)
 	: InstanceStatement(Instruction.StoreConstantToVariable, constant)
 {
 	public string Identifier { get; } = identifier;

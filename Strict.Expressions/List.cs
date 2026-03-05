@@ -30,6 +30,11 @@ public sealed class List : Value
 	public List<Expression> Values { get; }
 	public override bool IsConstant => Values.All(v => v.IsConstant);
 
+	public new ValueInstance Data =>
+		new(ReturnType, Values.Select(v => v is Value val
+			? val.Data
+			: throw new InvalidOperationException($"List contains non-constant expression: {v}")).ToList());
+
 	public override string ToString()
 	{
 		if (Values.Count == 0)

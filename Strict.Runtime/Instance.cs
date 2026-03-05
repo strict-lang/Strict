@@ -19,7 +19,6 @@ public sealed class Instance
 				? valueObj.Data
 				: value;
 	}
-
 	public Instance(Expression expression)
 	{
 		ReturnType = expression.ReturnType!;
@@ -29,37 +28,80 @@ public sealed class Instance
 				? (object)value.Data
 				: expression;
 	}
-
 	public Type ReturnType { get; }
-	//TODO: migrate Value from object to ValueInstance once List<Expression>/Dictionary<Value,Value> usages are replaced
 	private object rawValue = null!;
+	private ValueInstance data;
 	public object Value
 	{
 		get => rawValue is ValueInstance vi
-			? vi.IsText ? (object)vi.Text
-			: vi.IsList || vi.IsDictionary ? rawValue // pass-through for complex types
-			: ReturnType.IsBoolean ? vi.Number != 0
-			: (object)vi.Number
+			? vi.IsText
+				? (object)vi.Text
+				: vi.IsList
+					? ToExpressionList(vi)
+					: vi.IsDictionary
+						? ToValueDictionary(vi)
+						: ReturnType.IsBoolean
+							? vi.Number != 0
+							: (object)vi.Number
 			: rawValue;
-		set => rawValue = value;
+		set
+		{
+			rawValue = value;
+			data = ToValueInstance(value);
+		}
 	}
-
-	internal object ValueInstance => rawValue;
-
-	/// <summary>Returns the backing ValueInstance if stored as one, otherwise default.</summary>
-	internal Strict.Expressions.ValueInstance RawValueInstance =>
-		rawValue is Strict.Expressions.ValueInstance vi ? vi : default;
-
-	public object GetRawValue() => Value; // Value already unwraps ValueInstance
-
+	internal ValueInstance ValueInstance => data;
+	private ValueInstance ToValueInstance(object raw) => raw is ValueInstance valueInstance
+		? valueInstance
+		: raw is Value value
+			? value.Data
+			: raw is MemberCall memberCall && memberCall.Member.InitialValue is Value initialValue
+				? initialValue.Data
+				: raw is IList<Expression> expressionList
+					? new ValueInstance(ReturnType,
+						expressionList.Select(expression => expression is Value itemValue
+							? itemValue.Data
+							: expression is MemberCall call && call.Member.InitialValue is Value innerInitialValue
+								? innerInitialValue.Data
+								: new ValueInstance(expression.ToString())).ToList())
+					: raw is Dictionary<Value, Value> dictionary
+						? new ValueInstance(ReturnType,
+							dictionary.ToDictionary(keyValue => keyValue.Key.Data,
+								keyValue => keyValue.Value.Data))
+						: ReturnType.IsText
+							? new ValueInstance(raw.ToString() ?? "")
+							: new ValueInstance(ReturnType, Convert.ToDouble(raw));
+	private List<Expression> ToExpressionList(ValueInstance listInstance)
+	{
+		var items = listInstance.List.Items;
+		var listType = listInstance.List.ReturnType;
+		var elementType = listType is GenericTypeImplementation { Generic.Name: Type.List } genericList
+			? genericList.ImplementationTypes[0]
+			: ReturnType;
+		return items.Select(item => (Expression)new Value(item.IsText
+			? elementType.GetType(Type.Text)
+			: item.GetTypeExceptText(), item)).ToList();
+	}
+	private Dictionary<Value, Value> ToValueDictionary(ValueInstance dictionaryInstance)
+	{
+		var dictionary = new Dictionary<Value, Value>();
+		foreach (var item in dictionaryInstance.GetDictionaryItems())
+			dictionary[new Value(item.Key.IsText
+				? ReturnType.GetType(Type.Text)
+				: item.Key.GetTypeExceptText(), item.Key)] = new Value(item.Value.IsText
+				? ReturnType.GetType(Type.Text)
+				: item.Value.GetTypeExceptText(), item.Value);
+		return dictionary;
+	}
 	private double ToDouble() =>
-		rawValue is ValueInstance vi
-			? vi.Number
-			: Convert.ToDouble(rawValue);
-
+		data.IsText
+			? rawValue is string
+				? Convert.ToDouble(data.Text)
+				: Convert.ToDouble(rawValue)
+			: data.Number;
 	public static Instance operator +(Instance left, Instance right)
 	{
-		if (left.rawValue is ValueInstance { IsList: true } || left.Value is List<Expression>)
+		if (left.data.IsList || left.Value is List<Expression>)
 			return AddElementToTheListAndGetInstance(left, right);
 		if (!left.ReturnType.IsList)
 			return HandleTextTypeConversionForBinaryOperations(left, right, BinaryOperator.Plus);
@@ -67,7 +109,6 @@ public sealed class Instance
 			return new Instance(left.ReturnType, left.Value.ToString() + right.Value);
 		return AddElementToTheListAndGetInstance(left, right);
 	}
-
 	private static Instance HandleTextTypeConversionForBinaryOperations(Instance left,
 		Instance right, string binaryOperator) =>
 		left.ReturnType.IsNumber && right.ReturnType.IsNumber
@@ -80,19 +121,18 @@ public sealed class Instance
 				: right.ReturnType.IsText && left.ReturnType.IsNumber
 					? new Instance(right.ReturnType, left.GetRawValue().ToString() + right.GetRawValue())
 					: new Instance(left.ReturnType, left.GetRawValue().ToString() + right.GetRawValue());
-
 	public static Instance operator -(Instance left, Instance right)
 	{
-		if (left.rawValue is ValueInstance { IsList: true })
+		if (left.data.IsList)
 		{
-			var items = new List<ValueInstance>(((ValueInstance)left.rawValue).List.Items);
+			var items = new List<ValueInstance>(left.data.List.Items);
 			var removeIndex = items.FindIndex(item => BytecodeInterpreter.AreEqual(item.IsText
 				? item.Text
 				: (object)item.Number, right.Value));
 			if (removeIndex >= 0)
 				items.RemoveAt(removeIndex);
 			return new Instance(left.ReturnType,
-				new ValueInstance(((ValueInstance)left.rawValue).List.ReturnType, items));
+				new ValueInstance(left.data.List.ReturnType, items));
 		}
 		if (left.Value is List<Expression>)
 		{
@@ -118,43 +158,40 @@ public sealed class Instance
 					: (object)((Value)element).Data.Number, right.Value)));
 		return new Instance(left.ReturnType, listElements);
 	}
-
 	public static bool operator >(Instance left, Instance right) =>
 		left.ToDouble() > right.ToDouble();
-
 	public static bool operator <(Instance left, Instance right) =>
 		left.ToDouble() < right.ToDouble();
-
 	private static Instance AddElementToTheListAndGetInstance(Instance left, Instance right)
 	{
-		if (left.rawValue is ValueInstance { IsList: true } listValue)
+		if (left.data.IsList)
 		{
-			var items = new List<ValueInstance>(listValue.List.Items);
-			if (right.rawValue is ValueInstance rightValueInstance)
-				items.Add(rightValueInstance);
+			var items = new List<ValueInstance>(left.data.List.Items);
+			if (right.data.GetTypeExceptText().IsSameOrCanBeUsedAs(right.ReturnType))
+				items.Add(right.data);
 			else if (right.ReturnType.IsNumber)
 				items.Add(new ValueInstance(right.ReturnType, Convert.ToDouble(right.Value)));
 			else if (right.ReturnType.IsText)
 				items.Add(new ValueInstance(right.Value.ToString() ?? ""));
 			else
 				items.Add(new ValueInstance(right.Value.ToString() ?? ""));
-			return new Instance(left.ReturnType, new ValueInstance(listValue.List.ReturnType, items));
+			return new Instance(left.ReturnType, new ValueInstance(left.data.List.ReturnType, items));
 		}
 		var elements = new List<Expression>((List<Expression>)left.Value);
 		var elementType = elements.First().ReturnType;
-		var rightValue = right.rawValue is ValueInstance vi
-			? new Value(elementType, vi)
+		var rightValue = right.data.GetTypeExceptText().IsSameOrCanBeUsedAs(right.ReturnType)
+			? new Value(elementType, right.data)
 			: elementType.IsNumber
 				? new Value(elementType, new ValueInstance(elementType, Convert.ToDouble(right.Value)))
 				: new Value(elementType, new ValueInstance(right.Value.ToString() ?? ""));
 		elements.Add(rightValue);
 		return new Instance(left.ReturnType, elements);
 	}
-
+	public object GetRawValue() => Value;
 	public override string ToString()
 	{
-		if (rawValue is ValueInstance vi && vi.IsList)
-			return string.Join(" ", vi.List.Items.Select(item =>
+		if (data.IsList)
+			return string.Join(" ", data.List.Items.Select(item =>
 				item.IsText ? item.Text
 				: item.Number == Math.Truncate(item.Number)
 					? ((long)item.Number).ToString()

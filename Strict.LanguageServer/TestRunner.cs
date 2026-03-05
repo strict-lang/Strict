@@ -1,4 +1,4 @@
-﻿using OmniSharp.Extensions.LanguageServer.Protocol.Server;
+using OmniSharp.Extensions.LanguageServer.Protocol.Server;
 using Strict.Language;
 using Strict.Expressions;
 using Strict.Runtime;
@@ -20,7 +20,7 @@ public sealed class TestRunner(ILanguageServerFacade languageServer, IEnumerable
 				var output = vm.
 					Execute(new ByteCodeGenerator((MethodCall)methodCall.Instance).Generate()).Returns;
 				languageServer?.SendNotification(NotificationName, new TestNotificationMessage(
-					GetLineNumber(test), Equals(output?.Value, ((Value)methodCall.Arguments[0]).Data)
+					GetLineNumber(test), Equals(output, ((Value)methodCall.Arguments[0]).Data)
 						? TestState.Green
 						: TestState.Red));
 			}

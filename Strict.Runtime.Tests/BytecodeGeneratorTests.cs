@@ -20,14 +20,14 @@ public sealed class ByteCodeGeneratorTests : BaseVirtualMachineTests
 		{
 			yield return new TestCaseData("Test(5).Assign", "Test", new Statement[]
 				{
-					new StoreVariableStatement(new Instance(NumberType, 5), "number"),
-					new StoreVariableStatement(new Instance(NumberType, 5), "five"),
+					new StoreVariableStatement(Number(5), "number"),
+					new StoreVariableStatement(Number(5), "five"),
 					new LoadVariableToRegister(Register.R0, "five"),
-					new LoadConstantStatement(Register.R1, new Instance(NumberType, 5)),
+					new LoadConstantStatement(Register.R1, Number(5)),
 					new Binary(Instruction.Add, Register.R0, Register.R1, Register.R2),
 					new StoreFromRegisterStatement(Register.R2, "something"),
 					new LoadVariableToRegister(Register.R3, "something"),
-					new LoadConstantStatement(Register.R4, new Instance(NumberType, 10)),
+					new LoadConstantStatement(Register.R4, Number(10)),
 					new Binary(Instruction.Add, Register.R3, Register.R4, Register.R5),
 					new Return(Register.R5)
 				},
@@ -42,8 +42,8 @@ public sealed class ByteCodeGeneratorTests : BaseVirtualMachineTests
 			yield return new TestCaseData("Add(10, 5).Calculate", "Add",
 				new Statement[]
 				{
-					new StoreVariableStatement(new Instance(NumberType, 10), "First"),
-					new StoreVariableStatement(new Instance(NumberType, 5), "Second"),
+					new StoreVariableStatement(Number(10), "First"),
+					new StoreVariableStatement(Number(5), "Second"),
 					new LoadVariableToRegister(Register.R0, "First"),
 					new LoadVariableToRegister(Register.R1, "Second"),
 					new Binary(Instruction.Add, Register.R0, Register.R1, Register.R2),
@@ -60,12 +60,12 @@ public sealed class ByteCodeGeneratorTests : BaseVirtualMachineTests
 			yield return new TestCaseData("AddOne(10, 5).Calculate", "AddOne",
 				new Statement[]
 				{
-					new StoreVariableStatement(new Instance(NumberType, 10), "First"),
-					new StoreVariableStatement(new Instance(NumberType, 5), "Second"),
+					new StoreVariableStatement(Number(10), "First"),
+					new StoreVariableStatement(Number(5), "Second"),
 					new LoadVariableToRegister(Register.R0, "First"),
 					new LoadVariableToRegister(Register.R1, "Second"),
 					new Binary(Instruction.Add, Register.R0, Register.R1, Register.R2),
-					new LoadConstantStatement(Register.R3, new Instance(NumberType, 1.0)),
+					new LoadConstantStatement(Register.R3, Number(1.0)),
 					new Binary(Instruction.Add, Register.R2, Register.R3, Register.R4),
 					new Return(Register.R4)
 				},
@@ -80,8 +80,8 @@ public sealed class ByteCodeGeneratorTests : BaseVirtualMachineTests
 			yield return new TestCaseData("Multiply(10).By(2)", "Multiply",
 				new Statement[]
 				{
-					new StoreVariableStatement(new Instance(NumberType, 10), "number"),
-					new StoreVariableStatement(new Instance(NumberType, 2), "multiplyBy"),
+					new StoreVariableStatement(Number(10), "number"),
+					new StoreVariableStatement(Number(2), "multiplyBy"),
 					new LoadVariableToRegister(Register.R0, "number"),
 					new LoadVariableToRegister(Register.R1, "multiplyBy"),
 					new Binary(Instruction.Multiply, Register.R0, Register.R1, Register.R2),
@@ -95,8 +95,8 @@ public sealed class ByteCodeGeneratorTests : BaseVirtualMachineTests
 			yield return new TestCaseData("Bla(10).SomeFunction", "Bla",
 				new Statement[]
 				{
-					new StoreVariableStatement(new Instance(NumberType, 10), "number"),
-					new StoreVariableStatement(new Instance(NumberType, 5), "blaa"),
+					new StoreVariableStatement(Number(10), "number"),
+					new StoreVariableStatement(Number(5), "blaa"),
 					new LoadVariableToRegister(Register.R0, "blaa"),
 					new LoadVariableToRegister(Register.R1, "number"),
 					new Binary(Instruction.Add, Register.R0, Register.R1, Register.R2),
@@ -106,9 +106,9 @@ public sealed class ByteCodeGeneratorTests : BaseVirtualMachineTests
 				"SimpleLoopExample",
 				new Statement[]
 				{
-					new StoreVariableStatement(new Instance(NumberType, 10), "number"),
-					new StoreVariableStatement(new Instance(NumberType, 1), "result"),
-					new StoreVariableStatement(new Instance(NumberType, 2), "multiplier"),
+					new StoreVariableStatement(Number(10), "number"),
+					new StoreVariableStatement(Number(1), "result"),
+					new StoreVariableStatement(Number(2), "multiplier"),
 					new LoadVariableToRegister(Register.R0, "number"),
 					new LoopBeginStatement(Register.R0),
 					new LoadVariableToRegister(Register.R1, "result"),
@@ -138,16 +138,16 @@ public sealed class ByteCodeGeneratorTests : BaseVirtualMachineTests
 			yield return new TestCaseData("IfWithMethodCallLeft(5).Check", "IfWithMethodCallLeft",
 				new Statement[]
 				{
-					new StoreVariableStatement(new Instance(NumberType, 5), "number"),
+					new StoreVariableStatement(Number(5), "number"),
 					new Invoke(Register.R0, null!, null!),
-					new LoadConstantStatement(Register.R1, new Instance(NumberType, 0)),
+					new LoadConstantStatement(Register.R1, Number(0)),
 					new Binary(Instruction.GreaterThan, Register.R0, Register.R1),
 					new JumpToId(Instruction.JumpToIdIfFalse, 0),
 					new LoadConstantStatement(Register.R2,
-						new Instance(TestPackage.Instance.GetType(Type.Boolean), true)),
+						new ValueInstance(TestPackage.Instance.GetType(Type.Boolean), true ? 1.0 : 0)),
 					new Return(Register.R2), new JumpToId(Instruction.JumpEnd, 0),
 					new LoadConstantStatement(Register.R3,
-						new Instance(TestPackage.Instance.GetType(Type.Boolean), false)),
+						new ValueInstance(TestPackage.Instance.GetType(Type.Boolean), false ? 1.0 : 0)),
 					new Return(Register.R3)
 				},
 				new[]

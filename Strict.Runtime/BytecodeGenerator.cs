@@ -46,11 +46,16 @@ public sealed class ByteCodeGenerator
 	private readonly Type returnType;
 	private int forResultId;
 
-	private void AddMembersFromCaller(Instance instance)
-	{
+	private void AddMembersFromCaller(ValueInstance instance) =>
 		statements.Add(new StoreVariableStatement(instance,
-			instance.ReturnType.Members.First(member => !member.Type.IsTrait).Name, isMember: true));
-	}
+			instance.GetTypeExceptText().Members.First(member => !member.Type.IsTrait).Name, isMember: true));
+
+	private static ValueInstance GetValueInstanceFromExpression(Expression expression) =>
+		expression is Expressions.List list
+			? list.Data
+			: expression is Value val
+				? val.Data
+				: new ValueInstance(expression.ToString());
 
 	private void AddInstanceMemberVariables(MethodCall instance)
 	{
@@ -60,14 +65,19 @@ public sealed class ByteCodeGenerator
 			if (instance.Method.Parameters[parameterIndex].Type is GenericTypeImplementation
 				{
 					Generic.Name: Type.List
-				})
+				} && !(instance.Arguments.Count == 1 && instance.Arguments[0] is Expressions.List))
+			{
+				var listItems = instance.Arguments.Select(GetValueInstanceFromExpression).ToList();
 				statements.Add(new StoreVariableStatement(
-					new Instance(instance.Method.Parameters[parameterIndex].Type, instance.Arguments),
+					new ValueInstance(instance.Method.Parameters[parameterIndex].Type, listItems),
 					instance.ReturnType.Members[parameterIndex].Name, isMember: true));
+			}
 			else
+			{
 				statements.Add(new StoreVariableStatement(
-					new Instance(instance.Arguments[parameterIndex]),
+					GetValueInstanceFromExpression(instance.Arguments[parameterIndex]),
 					instance.ReturnType.Members[parameterIndex].Name, isMember: true));
+			}
 		}
 	}
 
@@ -76,7 +86,7 @@ public sealed class ByteCodeGenerator
 		for (var parameterIndex = 0; parameterIndex < methodCall.Method.Parameters.Count;
 			parameterIndex++)
 			statements?.Add(new StoreVariableStatement(
-				new Instance(methodCall.Arguments[parameterIndex]),
+				GetValueInstanceFromExpression(methodCall.Arguments[parameterIndex]),
 				methodCall.Method.Parameters[parameterIndex].Name));
 	}
 
@@ -85,7 +95,7 @@ public sealed class ByteCodeGenerator
 	private List<Statement> GenerateStatements(IEnumerable<Expression> expressions)
 	{
 		foreach (var expression in expressions)
-			if ((expression.GetHashCode() == Expressions[^1].GetHashCode() ||
+			if ((ReferenceEquals(expression, Expressions[^1]) ||
 					expression is Expressions.Return) && expression is not If)
 				GenerateStatementsFromReturn(expression);
 			else
@@ -121,7 +131,7 @@ public sealed class ByteCodeGenerator
 	private void GenerateStatementsForNumberAggregation(For forExpression)
 	{
 		var resultVariable = $"forResult{forResultId++}";
-		statements.Add(new StoreVariableStatement(new Instance(returnType, 0), resultVariable));
+		statements.Add(new StoreVariableStatement(new ValueInstance(returnType, 0), resultVariable));
 		GenerateLoopStatements(forExpression, resultVariable);
 		statements.Add(new LoadVariableToRegister(registry.AllocateRegister(), resultVariable));
 		statements.Add(new Return(registry.PreviousRegister));
@@ -174,18 +184,20 @@ public sealed class ByteCodeGenerator
 	private void TryGenerateForEnum(Type type, Expression value)
 	{
 		if (type.IsEnum)
-			statements.Add(new LoadConstantStatement(registry.AllocateRegister(),
-				new Instance(type, value)));
+		{
+			var data = value is Value val
+				? val.Data
+				: new ValueInstance(value.ToString());
+			statements.Add(new LoadConstantStatement(registry.AllocateRegister(), data));
+		}
 	}
 
 	private bool? TryGenerateValueStatement(Expression expression)
 	{
-		if (expression is not Value valueExpression)
+		if (expression is not Value)
 			return null;
 		statements.Add(new LoadConstantStatement(registry.AllocateRegister(),
-			expression is Strict.Expressions.List listExpression
-				? new Instance(valueExpression.ReturnType, listExpression.Values)
-				: new Instance(valueExpression.ReturnType, valueExpression.Data)));
+			GetValueInstanceFromExpression(expression)));
 		return true;
 	}
 
@@ -306,22 +318,12 @@ public sealed class ByteCodeGenerator
 
 	private void TryGenerateStatementsForAssignmentValue(Value assignmentValue, string variableName)
 	{
-		object data;
-		if (assignmentValue is Strict.Expressions.List { Values.Count: > 0 } listExpression)
-			data = listExpression.Values;
-		else if (assignmentValue.Data.IsList)
-		{
-			var elementType =
-				((GenericTypeImplementation)assignmentValue.ReturnType).ImplementationTypes[0];
-			data = assignmentValue.Data.List.Items.
-				Select(vi => (Expression)new Value(elementType, vi)).ToList();
-		}
-		else if (assignmentValue.ReturnType.IsDictionary)
-			data = new Dictionary<Value, Value>();
+		ValueInstance data;
+		if (assignmentValue.ReturnType.IsDictionary)
+			data = new ValueInstance(assignmentValue.ReturnType, new Dictionary<ValueInstance, ValueInstance>());
 		else
-			data = assignmentValue.Data;
-		statements.Add(new StoreVariableStatement(new Instance(assignmentValue.ReturnType, data),
-			variableName));
+			data = GetValueInstanceFromExpression(assignmentValue);
+		statements.Add(new StoreVariableStatement(data, variableName));
 	}
 
 	private bool? TryGenerateIfStatements(Expression expression)
@@ -437,7 +439,7 @@ public sealed class ByteCodeGenerator
 		GenerateStatementsFromExpression(condition);
 		var instanceCallRegister = registry.PreviousRegister;
 		statements.Add(new LoadConstantStatement(registry.AllocateRegister(),
-			new Instance(condition.ReturnType, true)));
+			new ValueInstance(condition.ReturnType, 1.0)));
 		GenerateInstructionsFromIfCondition(Instruction.Equal, instanceCallRegister,
 			registry.PreviousRegister);
 	}

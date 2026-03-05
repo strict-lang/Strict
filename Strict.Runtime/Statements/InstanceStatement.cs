@@ -1,7 +1,9 @@
+using Strict.Expressions;
+
 namespace Strict.Runtime.Statements;
 
-public abstract class InstanceStatement(Instruction instruction, Instance instance) : Statement(instruction)
+public abstract class InstanceStatement(Instruction instruction, ValueInstance valueInstance) : Statement(instruction)
 {
-	public Instance Instance { get; } = instance;
-	public override string ToString() => $"{Instruction} {Instance.Value}";
+	public ValueInstance ValueInstance { get; } = valueInstance;
+	public override string ToString() => $"{Instruction} {ValueInstance.ToExpressionCodeString()}";
 }

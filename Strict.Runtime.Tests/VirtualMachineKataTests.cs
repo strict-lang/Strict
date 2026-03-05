@@ -22,7 +22,7 @@ public class BytecodeInterpreterKataTests : BaseVirtualMachineTests
 			"\t\telse if value - min > max",
 			"\t\t\tmax = value - min",
 			"\tmax")).Generate();
-		Assert.That(vm.Execute(statements).Returns?.Value, Is.EqualTo(5));
+		Assert.That(vm.Execute(statements).Returns!.Value.Number, Is.EqualTo(5));
 	}
 
 	[TestCase("RemoveParentheses(\"some(thing)\").Remove", "some")]
@@ -31,7 +31,7 @@ public class BytecodeInterpreterKataTests : BaseVirtualMachineTests
 	{
 		var statements = new ByteCodeGenerator(GenerateMethodCallFromSource("RemoveParentheses",
 			methodCall, RemoveParenthesesKata)).Generate();
-		Assert.That(vm.Execute(statements).Returns?.Value, Is.EqualTo(expectedResult));
+		Assert.That(vm.Execute(statements).Returns!.Value.Text, Is.EqualTo(expectedResult));
 	}
 
 	[TestCase("Invertor(1, 2, 3, 4, 5).Invert", "-1-2-3-4-5")]
@@ -39,7 +39,7 @@ public class BytecodeInterpreterKataTests : BaseVirtualMachineTests
 	{
 		var statements = new ByteCodeGenerator(GenerateMethodCallFromSource("Invertor",
 			methodCall, InvertValueKata)).Generate();
-		Assert.That(vm.Execute(statements).Returns?.Value, Is.EqualTo(expectedResult));
+		Assert.That(vm.Execute(statements).Returns!.Value.Text, Is.EqualTo(expectedResult));
 	}
 
 	[Test]
@@ -54,6 +54,6 @@ public class BytecodeInterpreterKataTests : BaseVirtualMachineTests
 			"\t\tif value",
 			"\t\t\tresult.Increment",
 			"\tresult")).Generate();
-		Assert.That(vm.Execute(statements).Returns!.Value, Is.EqualTo(17));
+		Assert.That(vm.Execute(statements).Returns!.Value.Number, Is.EqualTo(17));
 	}
 }

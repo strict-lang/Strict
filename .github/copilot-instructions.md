@@ -18,6 +18,9 @@
 ## Strict Semantics
 - When asked about Strict semantics, derive behavior directly from README.md and Strict/TestPackage examples; re-check cited examples before answering and avoid contradicting them.
 
+## Strict.Runtime Guidelines
+- Prefer ValueInstance-backed representations and avoid object-based value/rawValue conversions where possible.
+
 ## Test-Driven Development (TDD)
 
 ### Overview

@@ -13,7 +13,6 @@ public sealed class BytecodeInterpreter
 	public BytecodeInterpreter Execute(IList<Statement> allStatements)
 	{
 		Clear();
-		// Reset loop state that lives on LoopBeginStatement objects
 		foreach (var loopBegin in allStatements.OfType<LoopBeginStatement>())
 			loopBegin.Reset();
 		return RunStatements(allStatements);
@@ -32,7 +31,7 @@ public sealed class BytecodeInterpreter
 	private bool conditionFlag;
 	private int instructionIndex;
 	private IList<Statement> statements = new List<Statement>();
-	public Instance? Returns { get; private set; }
+	public ValueInstance? Returns { get; private set; }
 	public Memory Memory { get; private init; } = new();
 
 	private BytecodeInterpreter RunStatements(IList<Statement> allStatements)
@@ -63,29 +62,30 @@ public sealed class BytecodeInterpreter
 
 	private void TryRemoveStatement(Statement statement)
 	{
-		if (statement is RemoveStatement removeStatement)
-		{
-			var item = Memory.Registers[removeStatement.Register].GetRawValue();
-			var list = (List<Expression>)Memory.Variables[removeStatement.Identifier].Value;
-			list.RemoveAll(expression =>
-			{
-				var data = ((Value)expression).Data;
-				return AreEqual(data.IsText ? (object)data.Text : data.Number, item);
-			});
-		}
+		if (statement is not RemoveStatement removeStatement)
+			return;
+		var item = Memory.Registers[removeStatement.Register];
+		var listItems = new List<ValueInstance>(Memory.Variables[removeStatement.Identifier].List.Items);
+		listItems.RemoveAll(vi => AreEqual(vi, item));
+		Memory.Variables[removeStatement.Identifier] = new ValueInstance(
+			Memory.Variables[removeStatement.Identifier].List.ReturnType, listItems);
 	}
 
 	private void TryExecuteListCall(Statement statement)
 	{
 		if (statement is not ListCallStatement listCallStatement)
 			return;
-		var indexValue =
-			Convert.ToInt32(Memory.Registers[listCallStatement.IndexValueRegister].GetRawValue());
-		var variableListElement =
-			((List<Expression>)Memory.Variables[listCallStatement.Identifier].Value).
-			ElementAt(indexValue);
-		Memory.Registers[listCallStatement.Register] =
-			new Instance(variableListElement.ReturnType, variableListElement);
+		var indexValue = (int)Memory.Registers[listCallStatement.IndexValueRegister].Number;
+		var variableListElement = Memory.Variables[listCallStatement.Identifier].List.Items.ElementAt(indexValue);
+		Memory.Registers[listCallStatement.Register] = variableListElement;
+	}
+
+	private void TryWriteToListInstruction(Statement statement)
+	{
+		if (statement is not WriteToListStatement writeToListStatement)
+			return;
+		Memory.AddToCollectionVariable(writeToListStatement.Identifier,
+			Memory.Registers[writeToListStatement.Register]);
 	}
 
 	private void TryWriteToTableInstruction(Statement statement)
@@ -96,19 +96,10 @@ public sealed class BytecodeInterpreter
 			Memory.Registers[writeToTableStatement.Key], Memory.Registers[writeToTableStatement.Value]);
 	}
 
-	private void TryWriteToListInstruction(Statement statement)
-	{
-		if (statement is not WriteToListStatement writeToListStatement)
-			return;
-		Memory.AddToCollectionVariable(writeToListStatement.Identifier,
-			Memory.Registers[writeToListStatement.Register].Value);
-	}
-
 	private void TryLoopEndInstruction(Statement statement)
 	{
 		if (statement is not LoopEndStatement loopEndStatement)
 			return;
-		// Find the most recently started loop by scanning backward
 		var loopBegin = statements.Take(instructionIndex).OfType<LoopBeginStatement>().Last();
 		loopBegin.LoopCount--;
 		if (loopBegin.LoopCount <= 0)
@@ -135,18 +126,14 @@ public sealed class BytecodeInterpreter
 			{
 				Registers = Memory.Registers,
 				Variables =
-					new Dictionary<string, Instance>(
+					new Dictionary<string, ValueInstance>(
 						Memory.Variables.Where(v => Memory.MemberVariableNames.Contains(v.Key)))
 			}
 		}.RunStatements(methodStatements).Returns;
 		if (instance != null)
-			Memory.Registers[invokeStatement.Register] = instance;
+			Memory.Registers[invokeStatement.Register] = instance.Value;
 	}
 
-	/// <summary>
-	/// Handles Number.Increment and Number.Decrement by directly computing the result without
-	/// going through the generic method invocation path (which fails for primitive types with no members).
-	/// </summary>
 	private bool TryHandleIncrementDecrement(Invoke invoke)
 	{
 		var methodName = invoke.Method?.Method.Name;
@@ -159,36 +146,31 @@ public sealed class BytecodeInterpreter
 			? 1.0
 			: -1.0;
 		Memory.Registers[invoke.Register] =
-			new Instance(current.ReturnType, Convert.ToDouble(current.Value) + delta);
+			new ValueInstance(current.GetTypeExceptText(), current.Number + delta);
 		return true;
 	}
 
-	/// <summary>
-	/// Handles 'value to Text' and 'value to Number' method calls via the 'To' expression.
-	/// </summary>
 	private bool TryHandleToConversion(Invoke invoke)
 	{
 		if (invoke.Method?.Method.Name != BinaryOperator.To)
 			return false;
 		var instanceExpr = invoke.Method.Instance ?? throw new InvalidOperationException();
-		object rawValue;
-		if (instanceExpr is Value constValue)
-			rawValue = constValue.Data.IsText ? (object)constValue.Data.Text : constValue.Data.Number;
-		else if (Memory.Variables.TryGetValue(instanceExpr.ToString(), out var varValue))
-			rawValue = varValue.Value; // Value already unwraps ValueInstance to double or string
-		else
-			throw new InvalidOperationException(); //ncrunch: no coverage
+		var rawValue = instanceExpr is Value constValue
+			? constValue.Data
+			: Memory.Variables.TryGetValue(instanceExpr.ToString(), out var varValue)
+				? varValue
+				: throw new InvalidOperationException(); //ncrunch: no coverage
 		var conversionType = invoke.Method.ReturnType;
 		if (conversionType.IsText)
-			Memory.Registers[invoke.Register] = new Instance(conversionType,
-				rawValue is string s
-					? s
-					: rawValue.ToString()!);
+			Memory.Registers[invoke.Register] =
+				rawValue.IsText
+					? rawValue
+					: new ValueInstance(rawValue.ToExpressionCodeString());
 		else if (conversionType.IsNumber)
-			Memory.Registers[invoke.Register] = new Instance(conversionType,
-				rawValue is string str
-					? Convert.ToDouble(str)
-					: Convert.ToDouble(rawValue));
+			Memory.Registers[invoke.Register] =
+				rawValue.IsText
+					? new ValueInstance(conversionType, Convert.ToDouble(rawValue.Text))
+					: rawValue;
 		return true;
 	}
 
@@ -200,7 +182,7 @@ public sealed class BytecodeInterpreter
 				Generic.Name: Type.Dictionary
 			} dictionaryType)
 			return false;
-		Memory.Registers[invoke.Register] = new Instance(dictionaryType, new Dictionary<Value, Value>());
+		Memory.Registers[invoke.Register] = new ValueInstance(dictionaryType, new Dictionary<ValueInstance, ValueInstance>());
 		return true;
 	}
 
@@ -215,12 +197,12 @@ public sealed class BytecodeInterpreter
 		var keyArg = invoke.Method.Arguments[0];
 		var keyData = keyArg is Value argValue
 			? argValue.Data
-			: Memory.Variables[keyArg.ToString()].RawValueInstance;
-		var dictionary = Memory.Variables[invoke.Method.Instance.ToString()].Value;
-		var value = ((Dictionary<Value, Value>)dictionary).
-			FirstOrDefault(element => element.Key.Data.Equals(keyData)).Value;
-		if (value != null)
-			Memory.Registers[invoke.Register] = new Instance(value.ReturnType, value);
+			: Memory.Variables[keyArg.ToString()];
+		var dictionary = Memory.Variables[invoke.Method.Instance.ToString()];
+		var value = dictionary.GetDictionaryItems().
+			FirstOrDefault(element => element.Key.Equals(keyData)).Value;
+		if (!Equals(value, default(ValueInstance)))
+			Memory.Registers[invoke.Register] = value;
 		return true;
 	}
 
@@ -232,8 +214,9 @@ public sealed class BytecodeInterpreter
 				new InvokedMethod(GetExpressionsFromMethod(invoke.Method.Method),
 					FormArgumentsForMethodCall(invoke), invoke.Method.Method.ReturnType),
 				invoke.PersistedRegistry).Generate();
-		var instance = GetVariableInstanceFromMemory(invoke.Method?.Instance?.ToString() ??
-			throw new InvalidOperationException());
+		if (!Memory.Variables.TryGetValue(invoke.Method?.Instance?.ToString() ??
+			throw new InvalidOperationException(), out var instance))
+			throw new VariableNotFoundInMemory();
 		return new ByteCodeGenerator(
 			new InstanceInvokedMethod(GetExpressionsFromMethod(invoke.Method!.Method),
 				FormArgumentsForMethodCall(invoke), instance, invoke.Method.Method.ReturnType),
@@ -248,22 +231,16 @@ public sealed class BytecodeInterpreter
 			: [result];
 	}
 
-	private Instance GetVariableInstanceFromMemory(string variableIdentifier)
+	private Dictionary<string, ValueInstance> FormArgumentsForMethodCall(Invoke invoke)
 	{
-		Memory.Variables.TryGetValue(variableIdentifier, out var methodCallInstance);
-		return methodCallInstance ?? throw new VariableNotFoundInMemory();
-	}
-
-	private Dictionary<string, Instance> FormArgumentsForMethodCall(Invoke invoke)
-	{
-		var arguments = new Dictionary<string, Instance>();
+		var arguments = new Dictionary<string, ValueInstance>();
 		if (invoke.Method == null)
 			return arguments; // ncrunch: no coverage
 		for (var index = 0; index < invoke.Method.Method.Parameters.Count; index++)
 		{
 			var argument = invoke.Method.Arguments[index];
 			var argumentInstance = argument is Value argumentValue
-				? new Instance(argumentValue.ReturnType, argumentValue.Data)
+				? argumentValue.Data
 				: Memory.Variables[argument.ToString()];
 			arguments.Add(invoke.Method.Method.Parameters[index].Name, argumentInstance);
 		}
@@ -291,27 +268,41 @@ public sealed class BytecodeInterpreter
 
 	private void ProcessCollectionLoopIteration(LoopBeginStatement loopBeginStatement)
 	{
-		Memory.Registers.TryGetValue(loopBeginStatement.Register, out var iterableVariable);
-		if (iterableVariable is null)
+		if (!Memory.Registers.TryGetValue(loopBeginStatement.Register, out var iterableVariable))
 			return; //ncrunch: no coverage
-		var numberType = iterableVariable.ReturnType.GetType(Type.Number);
-		if (Memory.Variables.ContainsKey("index"))
-			Memory.Variables["index"].Value = Convert.ToInt32(Memory.Variables["index"].Value) + 1;
+		Type numberType;
+		if (iterableVariable.IsText)
+		{
+			var firstNumberVar = Memory.Variables.Values.FirstOrDefault(v => !v.IsText && !v.IsList && !v.IsDictionary);
+			if (!Equals(firstNumberVar, default(ValueInstance)))
+				numberType = firstNumberVar.GetTypeExceptText().GetType(Type.Number);
+			else
+			{
+				numberType = Memory.Registers.Values.FirstOrDefault(v => !v.IsText && !v.IsList && !v.IsDictionary).GetTypeExceptText().GetType(Type.Number);
+			}
+		}
 		else
-			Memory.Variables.Add("index", new Instance(numberType, 0));
+		{
+			numberType = iterableVariable.GetTypeExceptText().GetType(Type.Number);
+		}
+		if (Memory.Variables.ContainsKey("index"))
+		{
+			var current = Memory.Variables["index"];
+			Memory.Variables["index"] = new ValueInstance(numberType, current.Number + 1);
+		}
+		else
+			Memory.Variables.Add("index", new ValueInstance(numberType, 0));
 		if (!loopBeginStatement.IsInitialized)
 		{
 			loopBeginStatement.LoopCount = GetLength(iterableVariable);
 			loopBeginStatement.IsInitialized = true;
 		}
-		var prevLoopCount = loopBeginStatement.LoopCount;
 		AlterValueVariable(iterableVariable, numberType, loopBeginStatement);
-		if (loopBeginStatement.LoopCount != prevLoopCount)
+		if (loopBeginStatement.LoopCount <= 0)
 		{
-			// out-of-bounds: skip loop body and land on LoopEnd
 			var stepsToLoopEnd = statements.Skip(instructionIndex + 1).
 				TakeWhile(s => s is not LoopEndStatement).Count();
-			instructionIndex += stepsToLoopEnd; // for-loop +1 will land on LoopEnd
+			instructionIndex += stepsToLoopEnd;
 		}
 	}
 
@@ -319,89 +310,56 @@ public sealed class BytecodeInterpreter
 	{
 		if (!loopBeginStatement.IsInitialized)
 		{
-			var startIndex = Convert.ToInt32(Memory.Registers[loopBeginStatement.Register].Value);
-			var endIndex = Convert.ToInt32(Memory.Registers[loopBeginStatement.EndIndex!.Value].Value);
+			var startIndex = Convert.ToInt32(Memory.Registers[loopBeginStatement.Register].Number);
+			var endIndex = Convert.ToInt32(Memory.Registers[loopBeginStatement.EndIndex!.Value].Number);
 			loopBeginStatement.InitializeRangeState(startIndex, endIndex);
 		}
 		var isDecreasing = loopBeginStatement.IsDecreasing ?? false;
-		var numberType = Memory.Registers[loopBeginStatement.Register].ReturnType.GetType(Type.Number);
+		var numberType = Memory.Registers[loopBeginStatement.Register].GetTypeExceptText().GetType(Type.Number);
 		if (Memory.Variables.ContainsKey("index"))
-			Memory.Variables["index"].Value = Convert.ToInt32(Memory.Variables["index"].Value) +
-				(isDecreasing
-					? -1
-					: 1);
+		{
+			var current = Memory.Variables["index"];
+			Memory.Variables["index"] = new ValueInstance(numberType, current.Number + (isDecreasing
+				? -1
+				: 1));
+		}
 		else
 			Memory.Variables.Add("index",
-				new Instance(numberType, loopBeginStatement.StartIndexValue ?? 0));
+				new ValueInstance(numberType, loopBeginStatement.StartIndexValue ?? 0));
 		Memory.Variables["value"] = Memory.Variables["index"];
 	}
 
-	private static int GetLength(Instance iterableInstance)
+	private static int GetLength(ValueInstance iterableInstance)
 	{
-		if (iterableInstance.Value is string iterableString)
-			return iterableString.Length;
-		if (iterableInstance.Value is double d)
-			return (int)d;
-		if (iterableInstance.Value is int i)
-			return i;
-		if (iterableInstance.Value is IList<Expression> listExpressions)
-			return listExpressions.Count;
-		if (iterableInstance.Value is ValueInstance valueInstance)
-			return valueInstance.IsText
-				? valueInstance.Text.Length
-				: valueInstance.IsList
-					? valueInstance.List.Items.Count
-					: iterableInstance.ReturnType.IsNumber
-						? (int)valueInstance.Number
-						: 0;
-		return iterableInstance.ReturnType is { IsIterator: true }
-			? ((IEnumerable<Expression>)iterableInstance.Value).Count()
-			: 0; //ncrunch: no coverage
+		if (iterableInstance.IsText)
+			return iterableInstance.Text.Length;
+		if (iterableInstance.IsList)
+			return iterableInstance.List.Items.Count;
+		return (int)iterableInstance.Number;
 	}
 
-	private void AlterValueVariable(Instance iterableVariable, Type numberType,
+	private void AlterValueVariable(ValueInstance iterableVariable, Type numberType,
 		LoopBeginStatement loopBeginStatement)
 	{
-		var index = Convert.ToInt32(Memory.Variables["index"].Value);
-		if (iterableVariable.Value is ValueInstance valueInstance)
+		var index = Convert.ToInt32(Memory.Variables["index"].Number);
+		if (iterableVariable.IsText)
 		{
-			if (valueInstance.IsText)
-			{
-				if (index < valueInstance.Text.Length)
-					Memory.Variables["value"] = new Instance(
-						iterableVariable.ReturnType.GetType(Type.Text), valueInstance.Text[index].ToString());
-				else
-					loopBeginStatement.LoopCount = 0;
-			}
-			else if (valueInstance.IsList)
-			{
-				var items = valueInstance.List.Items;
-				if (index < items.Count)
-					Memory.Variables["value"] = new Instance(items[index].GetTypeExceptText(), items[index]);
-				else
-					loopBeginStatement.LoopCount = 0;
-			}
-			else if (iterableVariable.ReturnType.IsNumber)
-				Memory.Variables["value"] = new Instance(numberType, index + 1);
+			if (index < iterableVariable.Text.Length)
+				Memory.Variables["value"] = new ValueInstance(iterableVariable.Text[index].ToString());
+			else
+				loopBeginStatement.LoopCount = 0;
 			return;
 		}
-		if (iterableVariable.Value is string text)
+		if (iterableVariable.IsList)
 		{
-			if (index < text.Length)
-				Memory.Variables["value"] = new Instance(
-					iterableVariable.ReturnType.GetType(Type.Text), text[index].ToString());
+			var items = iterableVariable.List.Items;
+			if (index < items.Count)
+				Memory.Variables["value"] = items[index];
 			else
 				loopBeginStatement.LoopCount = 0;
+			return;
 		}
-		else if (iterableVariable.Value is IList<Expression> list)
-		{
-			if (index < list.Count)
-				Memory.Variables["value"] = new Instance(list[index]);
-			else
-				loopBeginStatement.LoopCount = 0;
-		}
-		else if (iterableVariable.ReturnType.IsNumber)
-			Memory.Variables["value"] = new Instance(numberType, index + 1);
+		Memory.Variables["value"] = new ValueInstance(numberType, index + 1);
 	}
 
 	private void TryStoreInstructions(Statement statement)
@@ -409,10 +367,10 @@ public sealed class BytecodeInterpreter
 		if (statement.Instruction > Instruction.StoreSeparator)
 			return;
 		if (statement is SetStatement setStatement)
-			Memory.Registers[setStatement.Register] = setStatement.Instance;
+			Memory.Registers[setStatement.Register] = setStatement.ValueInstance;
 		else if (statement is StoreVariableStatement storeVariableStatement)
 		{
-			Memory.Variables[storeVariableStatement.Identifier] = storeVariableStatement.Instance;
+			Memory.Variables[storeVariableStatement.Identifier] = storeVariableStatement.ValueInstance;
 			if (storeVariableStatement.IsMember)
 				Memory.MemberVariableNames.Add(storeVariableStatement.Identifier);
 		}
@@ -427,7 +385,7 @@ public sealed class BytecodeInterpreter
 			Memory.Registers[loadVariableStatement.Register] =
 				Memory.Variables[loadVariableStatement.Identifier];
 		else if (statement is LoadConstantStatement loadConstantStatement)
-			Memory.Registers[loadConstantStatement.Register] = loadConstantStatement.Instance;
+			Memory.Registers[loadConstantStatement.Register] = loadConstantStatement.ValueInstance;
 	}
 
 	private void TryExecuteRest(Statement statement)
@@ -452,24 +410,48 @@ public sealed class BytecodeInterpreter
 		var (right, left) = GetOperands(statement);
 		Memory.Registers[statement.Registers[^1]] = statement.Instruction switch
 		{
-			Instruction.Add => left + right,
-			Instruction.Subtract => left - right,
-			Instruction.Multiply => new Instance(right.ReturnType,
-				ToDouble(left) * ToDouble(right)),
-			Instruction.Divide => new Instance(right.ReturnType,
-				ToDouble(left) / ToDouble(right)),
-			Instruction.Modulo => new Instance(right.ReturnType,
-				ToDouble(left) % ToDouble(right)),
+			Instruction.Add => AddValueInstances(left, right),
+			Instruction.Subtract => SubtractValueInstances(left, right),
+			Instruction.Multiply => new ValueInstance(right.GetTypeExceptText(),
+				left.Number * right.Number),
+			Instruction.Divide => new ValueInstance(right.GetTypeExceptText(),
+				left.Number / right.Number),
+			Instruction.Modulo => new ValueInstance(right.GetTypeExceptText(),
+				left.Number % right.Number),
 			_ => Memory.Registers[statement.Registers[^1]] //ncrunch: no coverage
 		};
 	}
 
-	private static double ToDouble(Instance instance) =>
-		instance.Value is ValueInstance vi
-			? vi.Number
-			: Convert.ToDouble(instance.Value);
+	private static ValueInstance AddValueInstances(ValueInstance left, ValueInstance right)
+	{
+		if (left.IsList)
+		{
+			var items = new List<ValueInstance>(left.List.Items) { right };
+			return new ValueInstance(left.List.ReturnType, items);
+		}
+		if (left.IsText || right.IsText)
+			return new ValueInstance((left.IsText
+				? left.Text
+				: left.Number.ToString()) + (right.IsText
+				? right.Text
+				: right.Number.ToString()));
+		return new ValueInstance(right.GetTypeExceptText(), left.Number + right.Number);
+	}
 
-	private (Instance, Instance) GetOperands(BinaryStatement statement) =>
+	private static ValueInstance SubtractValueInstances(ValueInstance left, ValueInstance right)
+	{
+		if (left.IsList)
+		{
+			var items = new List<ValueInstance>(left.List.Items);
+			var removeIndex = items.FindIndex(item => AreEqual(item, right));
+			if (removeIndex >= 0)
+				items.RemoveAt(removeIndex);
+			return new ValueInstance(left.List.ReturnType, items);
+		}
+		return new ValueInstance(left.GetTypeExceptText(), left.Number - right.Number);
+	}
+
+	private (ValueInstance, ValueInstance) GetOperands(BinaryStatement statement) =>
 		Memory.Registers.Count < 2
 			? throw new OperandsRequired()
 			: (Memory.Registers[statement.Registers[1]], Memory.Registers[statement.Registers[0]]);
@@ -477,40 +459,38 @@ public sealed class BytecodeInterpreter
 	private void TryConditionalOperationExecution(BinaryStatement statement)
 	{
 		var (right, left) = GetOperands(statement);
-		NormalizeValues(right, left);
 		conditionFlag = statement.Instruction switch
 		{
-			Instruction.GreaterThan => left > right,
-			Instruction.LessThan => left < right,
-			Instruction.Equal => AreEqual(left.GetRawValue(), right.GetRawValue()),
-			Instruction.NotEqual => !AreEqual(left.GetRawValue(), right.GetRawValue()),
+			Instruction.GreaterThan => left.Number > right.Number,
+			Instruction.LessThan => left.Number < right.Number,
+			Instruction.Equal => AreEqual(left, right),
+			Instruction.NotEqual => !AreEqual(left, right),
 			_ => false //ncrunch: no coverage
 		};
 	}
 
-	//remove! everything should be compared like ValueInstance! way faster
+	public static bool AreEqual(ValueInstance value, ValueInstance other) => value.Equals(other);
 	public static bool AreEqual(object? value, object? other)
 	{
 		if (ReferenceEquals(value, other))
 			return true;
-		if (value is ValueInstance vi)
-			value = vi.IsText ? (object)vi.Text : vi.Number;
-		if (other is ValueInstance ovi)
-			other = ovi.IsText ? (object)ovi.Text : ovi.Number;
-		if (value is ValueListInstance vli && other is ValueListInstance otherVli)
-			return vli.Equals(otherVli);
-		if (value is ValueDictionaryInstance vdi && other is ValueDictionaryInstance otherVdi)
-			return vdi.Equals(otherVdi);
-		if (value is Expression exprLeft && other is Expression exprRight)
-			return exprLeft.Equals(exprRight);
+		if (value is ValueInstance valueInstance && other is ValueInstance otherValueInstance)
+			return AreEqual(valueInstance, otherValueInstance);
+		if (value is ValueInstance left)
+			value = left.IsText
+				? left.Text
+				: left.Number;
+		if (other is ValueInstance right)
+			other = right.IsText
+				? right.Text
+				: right.Number;
+		if (value is ValueListInstance valueList && other is ValueListInstance otherList)
+			return valueList.Equals(otherList);
+		if (value is ValueDictionaryInstance valueDictionary && other is ValueDictionaryInstance otherDictionary)
+			return valueDictionary.Equals(otherDictionary);
+		if (value is Expression leftExpression && other is Expression rightExpression)
+			return leftExpression.Equals(rightExpression);
 		return value?.Equals(other) ?? false;
-	}
-
-	private static void NormalizeValues(params Instance[] instances)
-	{
-		foreach (var instance in instances)
-			if (instance.Value is MemberCall member && member.Member.InitialValue is Value initValue)
-				instance.Value = initValue.Data;
 	}
 
 	private void TryJumpOperation(Jump statement)
@@ -525,7 +505,7 @@ public sealed class BytecodeInterpreter
 		if (conditionFlag && statement.Instruction is Instruction.JumpIfTrue ||
 			!conditionFlag && statement.Instruction is Instruction.JumpIfFalse ||
 			statement is JumpIfNotZero jumpIfNotZeroStatement &&
-			Convert.ToInt32(Memory.Registers[jumpIfNotZeroStatement.Register].Value) > 0)
+			Memory.Registers[jumpIfNotZeroStatement.Register].Number > 0)
 			instructionIndex += Convert.ToInt32(statement.Steps);
 	}
 

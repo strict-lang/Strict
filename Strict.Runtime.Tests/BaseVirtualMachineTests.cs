@@ -1,4 +1,5 @@
 global using Type = Strict.Language.Type;
+using Strict.Expressions;
 
 namespace Strict.Runtime.Tests;
 
@@ -8,6 +9,10 @@ public class BaseVirtualMachineTests : TestExpressions
 	protected static readonly Type NumberType = TestPackage.Instance.GetType(Type.Number);
 	protected static readonly Type TextType = TestPackage.Instance.GetType(Type.Text);
 	protected static readonly Type ListType = TestPackage.Instance.GetType(Type.List);
+	
+	protected static ValueInstance Number(double value) => new(NumberType, value);
+	protected static ValueInstance Text(string value) => new(value);
+	
 	protected static readonly string[] ArithmeticFunctionExample =
 	[
 		"has First Number",
@@ -27,11 +32,11 @@ public class BaseVirtualMachineTests : TestExpressions
 	];
 	protected static readonly Statement[] ExpectedStatementsOfArithmeticFunctionExample =
 	[
-		new StoreVariableStatement(new Instance(NumberType, 10), "First"),
-		new StoreVariableStatement(new Instance(NumberType, 5), "Second"),
-		new StoreVariableStatement(new Instance(TextType, "add"), "operation"),
+		new StoreVariableStatement(Number(10), "First"),
+		new StoreVariableStatement(Number(5), "Second"),
+		new StoreVariableStatement(Text("add"), "operation"),
 		new LoadVariableToRegister(Register.R0, "operation"),
-		new LoadConstantStatement(Register.R1, new Instance(TextType, "add")),
+		new LoadConstantStatement(Register.R1, Text("add")),
 		new Binary(Instruction.Equal, Register.R0, Register.R1),
 		new JumpToId(Instruction.JumpToIdIfFalse, 0),
 		new LoadVariableToRegister(Register.R2, "First"),
@@ -39,7 +44,7 @@ public class BaseVirtualMachineTests : TestExpressions
 		new Binary(Instruction.Add, Register.R2, Register.R3, Register.R4),
 		new Return(Register.R4), new JumpToId(Instruction.JumpEnd, 0),
 		new LoadVariableToRegister(Register.R5, "operation"),
-		new LoadConstantStatement(Register.R6, new Instance(TextType, "subtract")),
+		new LoadConstantStatement(Register.R6, Text("subtract")),
 		new Binary(Instruction.Equal, Register.R5, Register.R6),
 		new JumpToId(Instruction.JumpToIdIfFalse, 1),
 		new LoadVariableToRegister(Register.R7, "First"),
@@ -47,7 +52,7 @@ public class BaseVirtualMachineTests : TestExpressions
 		new Binary(Instruction.Subtract, Register.R7, Register.R8, Register.R9),
 		new Return(Register.R9), new JumpToId(Instruction.JumpEnd, 1),
 		new LoadVariableToRegister(Register.R10, "operation"),
-		new LoadConstantStatement(Register.R11, new Instance(TextType, "multiply")),
+		new LoadConstantStatement(Register.R11, Text("multiply")),
 		new Binary(Instruction.Equal, Register.R10, Register.R11),
 		new JumpToId(Instruction.JumpToIdIfFalse, 2),
 		new LoadVariableToRegister(Register.R12, "First"),
@@ -55,7 +60,7 @@ public class BaseVirtualMachineTests : TestExpressions
 		new Binary(Instruction.Multiply, Register.R12, Register.R13, Register.R14),
 		new Return(Register.R14), new JumpToId(Instruction.JumpEnd, 2),
 		new LoadVariableToRegister(Register.R15, "operation"),
-		new LoadConstantStatement(Register.R0, new Instance(TextType, "divide")),
+		new LoadConstantStatement(Register.R0, Text("divide")),
 		new Binary(Instruction.Equal, Register.R15, Register.R0),
 		new JumpToId(Instruction.JumpToIdIfFalse, 3),
 		new LoadVariableToRegister(Register.R1, "First"),
@@ -151,29 +156,29 @@ public class BaseVirtualMachineTests : TestExpressions
 	];
 	protected static readonly Statement[] ExpectedSimpleMethodCallCode =
 	[
-		new StoreVariableStatement(new Instance(NumberType, 2), "firstNumber"),
-		new StoreVariableStatement(new Instance(NumberType, 5), "secondNumber"),
+		new StoreVariableStatement(Number(2), "firstNumber"),
+		new StoreVariableStatement(Number(5), "secondNumber"),
 		new Invoke(Register.R0, null!, null!),
 		new Return(Register.R0)
 	];
 	protected static readonly Statement[] ExpectedStatementsOfRemoveParenthesesKata =
 	[
-		new StoreVariableStatement(new Instance(TextType, "some(thing)"), "text"),
-		new StoreVariableStatement(new Instance(TextType, ""), "result"),
-		new StoreVariableStatement(new Instance(NumberType, 0), "count"),
+		new StoreVariableStatement(Text("some(thing)"), "text"),
+		new StoreVariableStatement(Text(""), "result"),
+		new StoreVariableStatement(Number(0), "count"),
 		new LoadVariableToRegister(Register.R0, "text"),
 		new LoopBeginStatement(Register.R0),
 		new LoadVariableToRegister(Register.R1, "value"),
-		new LoadConstantStatement(Register.R2, new Instance(TextType, "(")),
+		new LoadConstantStatement(Register.R2, Text("(")),
 		new Binary(Instruction.Equal, Register.R1, Register.R2),
 		new JumpToId(Instruction.JumpToIdIfFalse, 0),
 		new LoadVariableToRegister(Register.R3, "count"),
-		new LoadConstantStatement(Register.R4, new Instance(NumberType, 1)),
+		new LoadConstantStatement(Register.R4, Number(1)),
 		new Binary(Instruction.Add, Register.R3, Register.R4, Register.R5),
 		new StoreFromRegisterStatement(Register.R5, "count"),
 		new JumpToId(Instruction.JumpEnd, 0),
 		new LoadVariableToRegister(Register.R6, "count"),
-		new LoadConstantStatement(Register.R7, new Instance(NumberType, 0)),
+		new LoadConstantStatement(Register.R7, Number(0)),
 		new Binary(Instruction.Equal, Register.R6, Register.R7),
 		new JumpToId(Instruction.JumpToIdIfFalse, 1),
 		new LoadVariableToRegister(Register.R8, "result"),
@@ -182,11 +187,11 @@ public class BaseVirtualMachineTests : TestExpressions
 		new StoreFromRegisterStatement(Register.R10, "result"),
 		new JumpToId(Instruction.JumpEnd, 1),
 		new LoadVariableToRegister(Register.R11, "value"),
-		new LoadConstantStatement(Register.R12, new Instance(TextType, ")")),
+		new LoadConstantStatement(Register.R12, Text(")")),
 		new Binary(Instruction.Equal, Register.R11, Register.R12),
 		new JumpToId(Instruction.JumpToIdIfFalse, 2),
 		new LoadVariableToRegister(Register.R13, "count"),
-		new LoadConstantStatement(Register.R14, new Instance(NumberType, 1)),
+		new LoadConstantStatement(Register.R14, Number(1)),
 		new Binary(Instruction.Subtract, Register.R13, Register.R14, Register.R15),
 		new StoreFromRegisterStatement(Register.R15, "count"),
 		new JumpToId(Instruction.JumpEnd, 2),
@@ -200,16 +205,9 @@ public class BaseVirtualMachineTests : TestExpressions
 	];
 	protected static readonly Statement[] ExpectedStatementsOfSimpleListDeclaration =
 	[
-		new StoreVariableStatement(new Instance(NumberType, 5), "number"),
-		new LoadConstantStatement(Register.R0, new Instance(ListType.GetGenericImplementation(NumberType),
-			new List<Expression>
-			{
-				new Value(NumberType, new ValueInstance(NumberType, 1.0)),
-				new Value(NumberType, new ValueInstance(NumberType, 2.0)),
-				new Value(NumberType, new ValueInstance(NumberType, 3.0)),
-				new Value(NumberType, new ValueInstance(NumberType, 4.0)),
-				new Value(NumberType, new ValueInstance(NumberType, 5.0))
-			})),
+		new StoreVariableStatement(Number(5), "number"),
+		new LoadConstantStatement(Register.R0, new ValueInstance(ListType.GetGenericImplementation(NumberType),
+			[Number(1), Number(2), Number(3), Number(4), Number(5)])),
 		new Return(Register.R0)
 	];
 	protected static readonly string[] InvertValueKata =
@@ -224,20 +222,13 @@ public class BaseVirtualMachineTests : TestExpressions
 	protected static readonly Statement[] ExpectedStatementsOfInvertValueKata =
 	[
 		new StoreVariableStatement(
-			new Instance(ListType,
-				new List<Expression>
-				{
-					new Value(NumberType, new ValueInstance(NumberType, 1.0)),
-					new Value(NumberType, new ValueInstance(NumberType, 2.0)),
-					new Value(NumberType, new ValueInstance(NumberType, 3.0)),
-					new Value(NumberType, new ValueInstance(NumberType, 4.0)),
-					new Value(NumberType, new ValueInstance(NumberType, 5.0))
-				}), "numbers"),
-		new StoreVariableStatement(new Instance(TextType, ""), "result"),
+			new ValueInstance(ListType.GetGenericImplementation(NumberType),
+				[Number(1), Number(2), Number(3), Number(4)]), "numbers"),
+		new StoreVariableStatement(Text(""), "result"),
 		new LoadVariableToRegister(Register.R0, "numbers"),
 		new LoopBeginStatement(Register.R0),
 		new LoadVariableToRegister(Register.R1, "value"),
-		new LoadConstantStatement(Register.R2, new Instance(NumberType, -1)),
+		new LoadConstantStatement(Register.R2, Number(-1)),
 		new Binary(Instruction.Multiply, Register.R1, Register.R2, Register.R3),
 		new LoadVariableToRegister(Register.R4, "result"),
 		new Binary(Instruction.Add, Register.R4, Register.R3, Register.R5),
