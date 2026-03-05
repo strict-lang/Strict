@@ -74,9 +74,9 @@ public class Executor
 			return instance.Equals(noneInstance)
 				? GetFromConstructorValue(method, args)
 				: throw new MethodCall.CannotCallFromConstructorWithExistingInstance();
-		var context = CreateExecutionContext(method, instance, args, parentContext, runOnlyTests);
 		if (runOnlyTests && IsSimpleSingleLineMethod(method))
 			return trueInstance;
+		var context = CreateExecutionContext(method, instance, args, parentContext, runOnlyTests);
 		Expression body;
 		try
 		{

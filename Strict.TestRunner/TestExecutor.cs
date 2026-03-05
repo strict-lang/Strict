@@ -11,12 +11,24 @@ namespace Strict.TestRunner;
 /// </summary>
 public sealed class TestExecutor(Package package) : Executor(package, TestBehavior.TestRunner)
 {
+	private readonly Dictionary<Package, Type[]> cachedNonGenericTypes = new();
+
 	public void RunAllTestsInPackage(Package package)
 	{
 		Statistics.PackagesTested++;
-		foreach (var type in new List<Type>(package.Types.Values))
+		if (!cachedNonGenericTypes.TryGetValue(package, out var types))
+			cachedNonGenericTypes[package] = types = BuildNonGenericTypesArray(package);
+		foreach (var type in types)
+			RunAllTestsInType(type);
+	}
+
+	private static Type[] BuildNonGenericTypesArray(Package package)
+	{
+		var result = new List<Type>(package.Types.Count);
+		foreach (var type in package.Types.Values)
 			if (type is not GenericTypeImplementation)
-				RunAllTestsInType(type);
+				result.Add(type);
+		return result.ToArray();
 	}
 
 	public void RunAllTestsInType(Type type)

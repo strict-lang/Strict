@@ -280,10 +280,10 @@ public sealed class MethodCallEvaluator(Executor executor)
 			args = [];
 		else
 		{
-			var argsList = new List<ValueInstance>(call.Arguments.Count);
-			foreach (var a in call.Arguments)
-				argsList.Add(executor.RunExpression(a, ctx));
-			args = argsList;
+			var argsArray = new ValueInstance[call.Arguments.Count];
+			for (var i = 0; i < call.Arguments.Count; i++)
+				argsArray[i] = executor.RunExpression(call.Arguments[i], ctx);
+			args = argsArray;
 		}
 		if (instance is { IsDictionary: true } && args.Count > 0 && call.Method.Name == "Add")
 		{

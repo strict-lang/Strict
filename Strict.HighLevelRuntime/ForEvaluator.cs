@@ -10,9 +10,10 @@ internal sealed class ForEvaluator(Executor executor)
 	{
 		executor.Statistics.ForCount++;
 		var iterator = executor.RunExpression(f.Iterator, ctx);
-		var results = new List<ValueInstance>();
+		List<ValueInstance>? results = null;
 		var itemType = GetForValueType(iterator);
 		var iteratorInstance = iterator.TryGetValueTypeInstance();
+		var loop = new ExecutionContext(ctx.Type, ctx.Method) { This = ctx.This, Parent = ctx };
 		if (iteratorInstance?.ReturnType == executor.rangeType &&
 			iteratorInstance.Members.TryGetValue("Start", out var startValue) &&
 			iteratorInstance.Members.TryGetValue("ExclusiveEnd", out var endValue))
@@ -22,14 +23,16 @@ internal sealed class ForEvaluator(Executor executor)
 			if (start <= end)
 				for (var index = start; index < end; index++)
 				{
-					ExecuteForIteration(f, ctx, iterator, results, itemType, index);
+					loop.ResetForLoopIteration();
+					ExecuteForIteration(f, ctx, iterator, ref results, itemType, index, loop);
 					if (ctx.ExitMethodAndReturnValue.HasValue)
 						return ctx.ExitMethodAndReturnValue.Value;
 				}
 			else
 				for (var index = start; index > end; index--)
 				{
-					ExecuteForIteration(f, ctx, iterator, results, itemType, index);
+					loop.ResetForLoopIteration();
+					ExecuteForIteration(f, ctx, iterator, ref results, itemType, index, loop);
 					if (ctx.ExitMethodAndReturnValue.HasValue)
 						return ctx.ExitMethodAndReturnValue.Value;
 				}
@@ -39,19 +42,19 @@ internal sealed class ForEvaluator(Executor executor)
 			var loopRange = new Range(0, iterator.GetIteratorLength());
 			for (var index = loopRange.Start.Value; index < loopRange.End.Value; index++)
 			{
-				ExecuteForIteration(f, ctx, iterator, results, itemType, index);
+				loop.ResetForLoopIteration();
+				ExecuteForIteration(f, ctx, iterator, ref results, itemType, index, loop);
 				if (ctx.ExitMethodAndReturnValue.HasValue)
 					return ctx.ExitMethodAndReturnValue.Value;
 			}
 		}
 		return ShouldConsolidateForResult(results, ctx) ?? new ValueInstance(
-			executor.listType.GetGenericImplementation(itemType), results);
+			executor.listType.GetGenericImplementation(itemType), results ?? []);
 	}
 
 	private void ExecuteForIteration(For f, ExecutionContext ctx, ValueInstance iterator,
-		ICollection<ValueInstance> results, Type itemType, int index)
+		ref List<ValueInstance>? results, Type itemType, int index, ExecutionContext loop)
 	{
-		var loop = new ExecutionContext(ctx.Type, ctx.Method) { This = ctx.This, Parent = ctx };
 		var indexInstance = new ValueInstance(executor.numberType, index);
 		loop.Set(Type.IndexLowercase, indexInstance);
 		var value = iterator.IsPrimitiveType(executor.numberType) ||
@@ -68,7 +71,10 @@ internal sealed class ForEvaluator(Executor executor)
 		if (loop.ExitMethodAndReturnValue.HasValue)
 			ctx.ExitMethodAndReturnValue = loop.ExitMethodAndReturnValue;
 		else if (!itemResult.IsPrimitiveType(executor.noneType) && !itemResult.IsMutable)
+		{
+			results ??= new List<ValueInstance>();
 			results.Add(itemResult);
+		}
 	}
 
 	private ValueInstance EvaluateBody(Body body, ExecutionContext ctx)
@@ -83,15 +89,19 @@ internal sealed class ForEvaluator(Executor executor)
 		return last;
 	}
 
-	private ValueInstance? ShouldConsolidateForResult(List<ValueInstance> results,
+	private ValueInstance? ShouldConsolidateForResult(List<ValueInstance>? results,
 		ExecutionContext ctx)
 	{
 		if (ctx.Method.ReturnType.IsNumber)
-			return new ValueInstance(executor.numberType, results.Sum(value => value.Number));
+			return new ValueInstance(executor.numberType,
+				results?.Sum(value => value.Number) ?? 0);
 		if (ctx.Method.ReturnType.IsBoolean)
-			return new ValueInstance(executor.booleanType, results.Any(value => value.Boolean));
+			return new ValueInstance(executor.booleanType,
+				results?.Any(value => value.Boolean) ?? false);
 		if (!ctx.Method.ReturnType.IsText)
 			return null;
+		if (results == null)
+			return new ValueInstance("");
 		var text = "";
 		foreach (var value in results)
 			if (value.IsPrimitiveType(executor.characterType))

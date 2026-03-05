@@ -39,6 +39,21 @@ public sealed class ExecutionContext(Type type, Method method)
 		return Parent?.Find(name, statistics);
 	}
 
+	/// <summary>
+	/// Clears local variables and resets the early-exit flag so the same context can be reused
+	/// across for-loop iterations, saving one <see cref="Dictionary{TKey, TValue}"/> + one
+	/// <see cref="ExecutionContext"/> allocation per iteration.
+	/// Calling this on a freshly-created context (before the first iteration) is safe and a no-op:
+	/// <c>variables?.Clear()</c> does nothing when the dictionary has not yet been allocated.
+	/// Using <c>Clear()</c> rather than setting <c>variables = null</c> is intentional: it keeps
+	/// the already-allocated dictionary alive so it can be reused without re-allocating.
+	/// </summary>
+	public void ResetForLoopIteration()
+	{
+		variables?.Clear();
+		ExitMethodAndReturnValue = null;
+	}
+
 	public ValueInstance Set(string name, ValueInstance value)
 	{
 		var ctx = this;
