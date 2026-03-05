@@ -61,8 +61,8 @@ public sealed class ErrorTests : TestExpressions
 	public void ErrorCanAddDetails()
 	{
 		using var programType = new Type(TestPackage.Instance,
-			new TypeLines(nameof(ErrorCanAddDetails), "has number", "Run",
-				"\tconstant someError = Error", "\tsomeError(number)")).
+				new TypeLines(nameof(ErrorCanAddDetails), "has number", "Run",
+					"\tconstant someError = Error", "\tsomeError(number)")).
 			ParseMembersAndMethods(new MethodExpressionParser());
 		var body = (Body)programType.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(body.Expressions[0], Is.InstanceOf<Declaration>());

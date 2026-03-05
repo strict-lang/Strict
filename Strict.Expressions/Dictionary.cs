@@ -6,7 +6,8 @@ namespace Strict.Expressions;
 public sealed class Dictionary : Value
 {
 	public Dictionary(IReadOnlyList<Type> types, Type dictionaryImplementationType) : base(
-		dictionaryImplementationType, CreateEmptyMembers(dictionaryImplementationType))
+		dictionaryImplementationType, new ValueInstance(dictionaryImplementationType,
+			new Dictionary<ValueInstance, ValueInstance>()))
 	{
 		if (types.Count != 2)
 			throw new DictionaryMustBeInitializedWithTwoTypeParameters(dictionaryImplementationType,
@@ -17,17 +18,6 @@ public sealed class Dictionary : Value
 
 	public Type KeyType { get; }
 	public Type MappedValueType { get; }
-
-	private static ValueInstance CreateEmptyMembers(Type dictionaryImplementationType)
-	{
-		//not needed, this was wrong code before: var listMemberName = dictionaryImplementationType
-		//.Members
-		//.FirstOrDefault(member =>
-		//	member.Type.IsList)?.     Name ?? Type.ElementsLowercase;
-		return new ValueInstance(dictionaryImplementationType, new Dictionary<ValueInstance,
-			ValueInstance>());
-	}
-
 	public override string ToString() => ReturnType.Name;
 
 	public static Expression? TryParse(Body body, ReadOnlySpan<char> input) =>

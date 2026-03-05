@@ -159,12 +159,12 @@ public class DeclarationTests : TestExpressions
 	[Test]
 	public void LetAssignmentWithConstructorCall()
 	{
-		using var type = new Type(TestPackage.Instance,
+		using var runType = new Type(TestPackage.Instance,
 			new TypeLines(nameof(LetAssignmentWithConstructorCall), "has logger",
 				"Run",
 				"\tconstant file = File(\"test.txt\")",
 				"\tfile is File")).ParseMembersAndMethods(parser);
-		Assert.That(((Declaration)((Body)type.Methods[0].GetBodyAndParseIfNeeded()).Expressions[0]).
+		Assert.That(((Declaration)((Body)runType.Methods[0].GetBodyAndParseIfNeeded()).Expressions[0]).
 			Value.ToString(), Is.EqualTo("File(\"test.txt\")"));
 	}
 

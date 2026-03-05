@@ -8,10 +8,18 @@ internal class TypeMethodFinder(Type type)
 	public Type Type { get; } = type;
 
 	public Method? FindFromMethodImplementation(IReadOnlyList<Type> implementationTypes) =>
-		!Type.AvailableMethods.TryGetValue(Method.From, out var methods)
-			? null
-			: methods.FirstOrDefault(m => IsMethodWithMatchingParametersType(m, implementationTypes,
-				TryGetSingleElementType(implementationTypes), Type));
+		Type.AvailableMethods.TryGetValue(Method.From, out var methods)
+			? FindFromMethod(implementationTypes, methods)
+			: null;
+
+	private Method? FindFromMethod(IReadOnlyList<Type> implementationTypes, List<Method> methods)
+	{
+		for (var index = 0; index < methods.Count; index++)
+			if (IsMethodWithMatchingParametersType(methods[index], implementationTypes,
+				TryGetSingleElementType(implementationTypes), Type))
+				return methods[index];
+		return null;
+	}
 
 	public Method GetMethod(string methodName, IReadOnlyList<Expression> arguments) =>
 		FindMethod(methodName, arguments) ??
@@ -87,13 +95,13 @@ internal class TypeMethodFinder(Type type)
 			: text;
 	}
 
-	private static T? TryGetSingleElementType<T>(IEnumerable<T> argumentTypes) where T : class
+	private static T? TryGetSingleElementType<T>(IReadOnlyList<T> argumentTypes) where T : class
 	{
 		T? firstType = null;
-		foreach (var type in argumentTypes)
+		for (var i = 0; i < argumentTypes.Count; i++)
 			if (firstType == null)
-				firstType = type;
-			else if (firstType != type)
+				firstType = argumentTypes[i];
+			else if (firstType != argumentTypes[i])
 				return null;
 		return firstType;
 	}
@@ -134,12 +142,21 @@ internal class TypeMethodFinder(Type type)
 			method.ReturnType.IsSameOrCanBeUsedAs(typesOfArguments[0], false))
 			return true; //ncrunch: no coverage
 		if (typesOfArguments.Count > method.Parameters.Count || typesOfArguments.Count <
-			method.Parameters.Count(p => p.DefaultValue == null))
+			GetMethodParameterDefaultValueCount(method))
 			return false;
 		for (var index = 0; index < typesOfArguments.Count; index++)
 			if (!IsMethodParameterMatchingArgument(method, index, typesOfArguments[index]))
 				return false;
 		return true;
+	}
+
+	private static int GetMethodParameterDefaultValueCount(Method method)
+	{
+		var count = 0;
+		for (var index = 0; index < method.Parameters.Count; index++)
+			if (method.Parameters[index].DefaultValue == null)
+				count++;
+		return count;
 	}
 
 	private static bool IsMethodParameterMatchingArgument(Method method, int index, Type argumentType)

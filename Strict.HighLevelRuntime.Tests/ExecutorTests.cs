@@ -100,8 +100,10 @@ public sealed class ExecutorTests
 	public void EvaluateAllArithmeticOperators()
 	{
 		var number = TestPackage.Instance.GetType(Type.Number);
-		Method GetBinaryOperator(string op) => number.Methods.Single(m =>
-			m.Name == op && m.Parameters.Count == 1);
+
+		Method GetBinaryOperator(string op) =>
+			number.Methods.Single(m => m.Name == op && m.Parameters.Count == 1);
+
 		ValueInstance N(double x) => new(number, x);
 		Assert.That(executor.Execute(GetBinaryOperator(BinaryOperator.Plus), N(2), [N(3)]).Number,
 			Is.EqualTo(5));
@@ -131,8 +133,10 @@ public sealed class ExecutorTests
 	public void EvaluateAllComparisonOperators()
 	{
 		var number = TestPackage.Instance.GetType(Type.Number);
-		Method GetBinaryOperator(string op) => number.Methods.Single(m =>
-			m.Name == op && m.Parameters.Count == 1);
+
+		Method GetBinaryOperator(string op) =>
+			number.Methods.Single(m => m.Name == op && m.Parameters.Count == 1);
+
 		ValueInstance N(double x) => new(number, x);
 		Assert.That(executor.Execute(GetBinaryOperator(BinaryOperator.Greater), N(5), [N(3)]),
 			Is.EqualTo(executor.trueInstance));
@@ -156,8 +160,11 @@ public sealed class ExecutorTests
 	public void EvaluateAllLogicalOperators()
 	{
 		var boolean = TestPackage.Instance.GetType(Type.Boolean);
-		Method GetBinaryOperator(string op) => boolean.Methods.Single(m =>
-			m.Name == op && m.ReturnType.IsBoolean && m.Parameters is [{ Type.IsBoolean: true }]);
+
+		Method GetBinaryOperator(string op) =>
+			boolean.Methods.Single(m =>
+				m.Name == op && m.ReturnType.IsBoolean && m.Parameters is [{ Type.IsBoolean: true }]);
+
 		var not = boolean.Methods.Single(m =>
 			m.Name == UnaryOperator.Not && m.ReturnType.IsBoolean && m.Parameters.Count == 0);
 		var and = GetBinaryOperator(BinaryOperator.And);
@@ -191,9 +198,11 @@ public sealed class ExecutorTests
 	{
 		using var t = CreateType(nameof(EvaluateBooleanComparisons), "mutable last Boolean",
 			"IfDifferent Boolean", "\tlast is false");
-		Assert.That(executor.Execute(t.Methods.Single(m => m.Name == "IfDifferent"),
-			new ValueInstance(t, new Dictionary<string, ValueInstance>
-			{ { "last", executor.falseInstance } }), []), Is.EqualTo(executor.trueInstance));
+		Assert.That(
+			executor.Execute(t.Methods.Single(m => m.Name == "IfDifferent"),
+				new ValueInstance(t,
+					new Dictionary<string, ValueInstance> { { "last", executor.falseInstance } }), []),
+			Is.EqualTo(executor.trueInstance));
 	}
 
 	[Test]
@@ -210,8 +219,11 @@ public sealed class ExecutorTests
 	{
 		using var t = CreateType(nameof(MultilineMethodRequiresTests), "has number", "GetText Text",
 			"\tif number is 0", "\t\treturn \"\"", "\tnumber to Text");
-		var instance = new ValueInstance(t, new Dictionary<string, ValueInstance>
-			{	{ "number", new ValueInstance(executor.numberType, 5.0) } });
+		var instance = new ValueInstance(t,
+			new Dictionary<string, ValueInstance>
+			{
+				{ "number", new ValueInstance(executor.numberType, 5.0) }
+			});
 		Assert.That(executor.Execute(t.Methods.Single(m => m.Name == "GetText"), instance, []).Text,
 			Is.EqualTo("5"));
 	}
@@ -298,10 +310,10 @@ public sealed class ExecutorTests
 		using var t = CreateType(nameof(StackOverflowCallingYourselfWithSameInstanceMember),
 			"has number", "Recursive(other Number)", "\tRecursive(number)");
 		Assert.That(() => executor.Execute(t.Methods.Single(m => m.Name == "Recursive"),
-			new ValueInstance(t, new Dictionary<string, ValueInstance>
-			{
-				{ "number", new ValueInstance(executor.numberType, 3.0) }
-			}),	[new ValueInstance(executor.numberType, 1.0)]),
+				new ValueInstance(t, new Dictionary<string, ValueInstance>
+				{
+					{ "number", new ValueInstance(executor.numberType, 3.0) }
+				}), [new ValueInstance(executor.numberType, 1.0)]),
 			Throws.InstanceOf<Executor.StackOverflowCallingItselfWithSameInstanceAndArguments>());
 	}
 

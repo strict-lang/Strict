@@ -29,7 +29,6 @@ public sealed class List : Value
 
 	public List<Expression> Values { get; }
 	public override bool IsConstant => Values.All(v => v.IsConstant);
-
 	public new ValueInstance Data =>
 		new(ReturnType, Values.Select(v => v is Value val
 			? val.Data

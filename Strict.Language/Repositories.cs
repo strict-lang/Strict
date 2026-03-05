@@ -52,8 +52,8 @@ public sealed class Repositories
 		if (parts.Length < 5 || parts[0] != "https:" || parts[1] != "" || parts[2] != "github.com")
 			throw new OnlyGithubDotComUrlsAreAllowedForNow(packageUrl.AbsoluteUri);
 		var organization = parts[3];
-		string[] tempQualifier = parts[4..];
-		var packageFullName = string.Join<string>(Context.ParentSeparator.ToString(), tempQualifier);
+		var remaining = parts[4..];
+		var packageFullName = string.Join<string>(Context.ParentSeparator.ToString(), remaining);
 		var localDevelopmentPath = GetLocalDevelopmentPath(organization, packageFullName);
 		if (Directory.Exists(localDevelopmentPath))
 			return await LoadFromPath(packageFullName, localDevelopmentPath
@@ -135,7 +135,7 @@ public sealed class Repositories
 		return package;
 	}
 
-	private List<Package> loadedPackages = [];
+	private readonly List<Package> loadedPackages = [];
 
 	private ICollection<Type> GetTypes(IReadOnlyCollection<string> files, Package package)
 	{

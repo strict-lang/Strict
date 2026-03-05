@@ -11,8 +11,12 @@ public sealed class ExecutionContext(Type type, Method method)
 	public Method Method { get; } = method;
 	public ExecutionContext? Parent { get; init; }
 	public ValueInstance? This { get; init; }
-	//TODO: check if we can lazy-init this, for each method context this is by far the slowest and most memory consuming call. If we have no local variables or no one accessing anything, there is no need for this. With 0–5 vars most contexts stay empty.
-	public Dictionary<string, ValueInstance> Variables { get; } = new(StringComparer.Ordinal);
+	private Dictionary<string, ValueInstance>? variables;
+	/// <summary>
+	/// Lazy-initialized: only created when a variable is actually written, avoiding allocation for
+	/// methods that never declare local variables (the majority of test-runner invocations).
+	/// </summary>
+	public Dictionary<string, ValueInstance> Variables => variables ??= new(StringComparer.Ordinal);
 	public ValueInstance? ExitMethodAndReturnValue { get; internal set; }
 
 	public ValueInstance Get(string name, Statistics statistics) =>
@@ -21,7 +25,7 @@ public sealed class ExecutionContext(Type type, Method method)
 	public ValueInstance? Find(string name, Statistics statistics)
 	{
 		statistics.FindVariableCount++;
-		if (Variables.TryGetValue(name, out var v))
+		if (variables != null && variables.TryGetValue(name, out var v))
 			return v;
 		if (This == null)
 			return Parent?.Find(name, statistics);
@@ -40,8 +44,8 @@ public sealed class ExecutionContext(Type type, Method method)
 		var ctx = this;
 		while (ctx != null)
 		{
-			if (ctx.Variables.ContainsKey(name))
-				return ctx.Variables[name] = value;
+			if (ctx.variables != null && ctx.variables.ContainsKey(name))
+				return ctx.variables[name] = value;
 			ctx = ctx.Parent;
 		}
 		return Variables[name] = value;
@@ -68,7 +72,7 @@ public sealed class ExecutionContext(Type type, Method method)
 	public override string ToString() =>
 		nameof(ExecutionContext) + " Type=" + Type.Name + ", This=" + This + ", Variables:" +
 		Environment.NewLine + "  " +
-		Variables.DictionaryToWordList(Environment.NewLine + "  ", " ", true);
+		(variables?.DictionaryToWordList(Environment.NewLine + "  ", " ", true) ?? "");
 
 	/*TODO: probably eats up memory! avoid!
 	public void AddDictionaryElements(ValueInstance? instance)

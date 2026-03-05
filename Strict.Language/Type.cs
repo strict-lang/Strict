@@ -50,7 +50,6 @@ public class Type : Context, IDisposable
 	public const string Stacktrace = nameof(Stacktrace);
 	public const string Mutable = nameof(Mutable);
 	public const string Dictionary = nameof(Dictionary);
-
 #if DEBUG
 	public Type(Package package, TypeLines file, [CallerFilePath] string callerFilePath = "",
 		[CallerLineNumber] int callerLineNumber = 0,
@@ -304,7 +303,7 @@ public class Type : Context, IDisposable
 		for (var i = 0; i < implementationTypes.Count; i++)
 			key += (key == ""
 				? ""
-				: ", ") + implementationTypes[i].Name + " " + implementationTypes[i].Type;
+				: ", ") + implementationTypes[i];
 		return Name + "(" + key + ")";
 	}
 
@@ -344,7 +343,9 @@ public class Type : Context, IDisposable
 	public string FilePath =>
 		Path.GetFullPath(Path.Combine(
 			Package.FolderPath ?? Repositories.GetLocalDevelopmentPath(Repositories.StrictOrg, "Strict"),
-			(this is GenericTypeImplementation gti ? gti.Generic.Name : Name) + Extension));
+			(this is GenericTypeImplementation genericType
+				? genericType.Generic.Name
+				: Name) + Extension));
 	public const string Extension = ".strict";
 
 	public Member? FindMember(string name)

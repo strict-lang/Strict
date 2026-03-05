@@ -102,12 +102,11 @@ public class CSharpType : Type
 		strictPackage, new TypeLines(Path.GetFileNameWithoutExtension(filePath),
 			global::System.IO.File.ReadAllLines(filePath)))
 	{
-		var inputCode = base.Lines;
 		var methodName = "";
 		var returnType = "";
 		var parameters = new List<string>();
 		var returnStatement = "";
-		foreach (var line in inputCode)
+		foreach (var line in Lines)
 		{
 			if (HasIgnoredOrEmptyText(line))
 				continue;

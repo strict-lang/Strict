@@ -1,4 +1,4 @@
-﻿namespace Strict.Language;
+namespace Strict.Language;
 
 /// <summary>
 /// Optimization to split type parsing into three steps:
@@ -83,10 +83,11 @@ public class TypeLines
 		if (typeName.Contains(Keyword.With))
 			typeName = typeName[..typeName.IndexOf("with", StringComparison.Ordinal)].Trim();
 		else if (typeName.Contains(' '))
-			typeName = typeName.Split(' ')[1];
-		if (!dependentTypes.Contains(typeName.MakeFirstLetterUppercase()) && Name != typeName &&
+			typeName = typeName[(typeName.IndexOf(' ') + 1)..];
+		var upperTypeName = typeName.MakeFirstLetterUppercase();
+		if (!dependentTypes.Contains(upperTypeName) && Name != typeName &&
 			!typeName.IsKeyword() && typeName != Type.GenericUppercase)
-			dependentTypes.Add(typeName.MakeFirstLetterUppercase());
+			dependentTypes.Add(upperTypeName);
 	}
 
 	public override string ToString() => Name + DependentTypes.ToBrackets();

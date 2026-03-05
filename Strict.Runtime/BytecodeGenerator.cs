@@ -92,14 +92,14 @@ public sealed class ByteCodeGenerator
 
 	public List<Statement> Generate() => GenerateStatements(Expressions);
 
-	private List<Statement> GenerateStatements(IEnumerable<Expression> expressions)
+	private List<Statement> GenerateStatements(IReadOnlyList<Expression> expressions)
 	{
-		foreach (var expression in expressions)
-			if ((ReferenceEquals(expression, Expressions[^1]) ||
-					expression is Expressions.Return) && expression is not If)
-				GenerateStatementsFromReturn(expression);
+		for (var i = 0; i < expressions.Count; i++)
+			if ((ReferenceEquals((Expression?)expressions[i], Expressions[^1]) ||
+					expressions[i] is Expressions.Return) && (Expression?)expressions[i] is not If)
+				GenerateStatementsFromReturn(expressions[i]);
 			else
-				GenerateStatementsFromExpression(expression);
+				GenerateStatementsFromExpression(expressions[i]);
 		return statements;
 	}
 

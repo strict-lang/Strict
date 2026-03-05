@@ -1,4 +1,3 @@
-using System.IO.Compression;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Engines;
 using BenchmarkDotNet.Running;
@@ -94,7 +93,7 @@ public class RepositoriesTests
 			Repositories.GetLocalDevelopmentPath(Repositories.StrictOrg, nameof(Strict) + ".Math"));
 		using var imageProcessingPackage = await repos.LoadFromPath(nameof(Strict) + ".ImageProcessing",
 			Repositories.GetLocalDevelopmentPath(Repositories.StrictOrg,
-			nameof(Strict) + ".ImageProcessing"));
+				nameof(Strict) + ".ImageProcessing"));
 		var adjustBrightness = imageProcessingPackage.GetType("AdjustBrightness");
 		Assert.That(adjustBrightness, Is.Not.Null);
 		Assert.That(adjustBrightness.Methods[0].GetBodyAndParseIfNeeded(), Is.Not.Null);

@@ -52,10 +52,10 @@ public class PackageTests
 			Is.EqualTo(nameof(PackageTests) + Context.ParentSeparator + nameof(subPackage)));
 		Assert.That(privateSubType.FullName,
 			Is.EqualTo(nameof(PackageTests) + Context.ParentSeparator + nameof(subPackage) +
-			Context.ParentSeparator + privateSubType.Name));
+				Context.ParentSeparator + privateSubType.Name));
 		Assert.That(publicSubType.FullName,
 			Is.EqualTo(nameof(PackageTests) + Context.ParentSeparator + nameof(subPackage) +
-			Context.ParentSeparator + publicSubType.Name));
+				Context.ParentSeparator + publicSubType.Name));
 	}
 
 	[Test]
@@ -66,7 +66,7 @@ public class PackageTests
 			mainPackage.GetType(privateSubType.FullName));
 		Assert.Throws<Package.PrivateTypesAreOnlyAvailableInItsPackage>(() =>
 			mainPackage.GetType(nameof(TestPackage) + Context.ParentSeparator + nameof(PackageTests) +
-			Context.ParentSeparator +	privateSubType.Name));
+				Context.ParentSeparator + privateSubType.Name));
 	}
 
 	[Test]

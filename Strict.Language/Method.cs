@@ -284,7 +284,7 @@ public sealed class Method : Context
 	{
 		var result = "";
 		foreach (var param in parameters)
-			result += (result==""
+			result += (result == ""
 				? ""
 				: ", ") + param.Type.Name;
 		if (result.Length > 0)

@@ -1,4 +1,3 @@
-using System.Collections;
 using System.Runtime.CompilerServices;
 
 [assembly: InternalsVisibleTo("Strict.Compiler.Cuda")]
@@ -19,7 +18,6 @@ public class Package : Context, IDisposable
 	public Package(string packagePath, Repositories? createdFromRepos = null)
 		: this(RootForPackages, packagePath, createdFromRepos) { }
 #endif
-
 #if DEBUG
 	public Package(Package? parentPackage, string packagePath, Repositories? createdFromRepos = null,
 		[CallerFilePath] string callerFilePath = "", [CallerLineNumber] int callerLineNumber = 0,
@@ -31,7 +29,9 @@ public class Package : Context, IDisposable
 #endif
 	{
 		this.createdFromRepos = createdFromRepos;
-		FolderPath = Path.IsPathRooted(packagePath) ? packagePath : null;
+		FolderPath = Path.IsPathRooted(packagePath)
+			? packagePath
+			: null;
 		if (parentPackage == null)
 			return;
 		var existing = parentPackage.children.FirstOrDefault(existing => existing.Name == Name);

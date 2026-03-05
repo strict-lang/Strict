@@ -32,8 +32,11 @@ public sealed class ForTests
 		using var t = CreateType(nameof(SelectorIfInForUsesOperation), "has operation Text",
 			"Run Number", "\tfor (1, 2, 3)", "\t\tif operation is", "\t\t\t\"add\" then value",
 			"\t\t\t\"subtract\" then 0 - value");
-		var instance = new ValueInstance(t, new Dictionary<string, ValueInstance>(StringComparer.OrdinalIgnoreCase)
-			{ { "operation", new ValueInstance(operation) } });
+		var instance = new ValueInstance(t,
+			new Dictionary<string, ValueInstance>(StringComparer.OrdinalIgnoreCase)
+			{
+				{ "operation", new ValueInstance(operation) }
+			});
 		var result = executor.Execute(t.Methods.Single(m => m.Name == "Run"), instance, []);
 		Assert.That(result.Number, Is.EqualTo(expected));
 	}
@@ -99,8 +102,11 @@ public sealed class ForTests
 		const string TypeName = nameof(ForLoopThrowsWhenIteratorLengthIsUnsupported);
 		using var t = CreateType(TypeName, "has numbers", $"Run(container {TypeName}) Number",
 			"\tfor container", "\t\t1");
-		var container = new ValueInstance(t, new Dictionary<string, ValueInstance>(StringComparer.OrdinalIgnoreCase)
-			{ { "numbers", new ValueInstance(t.Members[0].Type, new List<ValueInstance>()) } });
+		var container = new ValueInstance(t,
+			new Dictionary<string, ValueInstance>(StringComparer.OrdinalIgnoreCase)
+			{
+				{ "numbers", new ValueInstance(t.Members[0].Type, new List<ValueInstance>()) }
+			});
 		Assert.That(() => executor.Execute(t.Methods.Single(m => m.Name == "Run"), executor.noneInstance, [container]),
 			Throws.InstanceOf<ValueInstance.IteratorNotSupported>());
 	}
@@ -113,8 +119,8 @@ public sealed class ForTests
 			"\t\t(index is 0 then \"\" else \", \") + value");
 		var nums = new List<ValueInstance>
 		{
-			new ValueInstance(executor.numberType, 1.0),
-			new ValueInstance(executor.numberType, 3.0)
+			new(executor.numberType, 1.0),
+			new(executor.numberType, 3.0)
 		};
 		var listType = executor.listType.GetGenericImplementation(executor.numberType);
 		var result = executor.Execute(t.Methods.Single(m => m.Name == "GetElementsText"), executor.noneInstance,

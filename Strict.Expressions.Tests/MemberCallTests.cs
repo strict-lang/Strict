@@ -51,7 +51,7 @@ public sealed class MemberCallTests : TestExpressions
 		Assert.That(() =>
 			{
 				using var _ = new Type(TestPackage.Instance, new TypeLines(Body.Declaration,
-						"has input Text = Text(5)")).ParseMembersAndMethods(parser);
+					"has input Text = Text(5)")).ParseMembersAndMethods(parser);
 			}, //ncrunch: no coverage
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.
 				InstanceOf<NamedType.AssignmentWithInitializerTypeShouldNotHaveNameWithType>());

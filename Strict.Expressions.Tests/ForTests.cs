@@ -7,8 +7,7 @@ public sealed class ForTests : TestExpressions
 {
 	[Test]
 	public void MissingBody() =>
-		Assert.That(() => ParseExpression("for Range(2, 5)"),
-			Throws.InstanceOf<MissingInnerBody>());
+		Assert.That(() => ParseExpression("for Range(2, 5)"), Throws.InstanceOf<MissingInnerBody>());
 
 	[Test]
 	public void MissingExpression() =>
@@ -51,8 +50,7 @@ public sealed class ForTests : TestExpressions
 	[TestCase("for gibberish", "\tlogger.Log(\"Hi\")")]
 	[TestCase("for element in gibberish", "\tlogger.Log(element)")]
 	public void UnidentifiedIterable(params string[] lines) =>
-		Assert.That(() => ParseExpression(lines),
-			Throws.InstanceOf<Body.IdentifierNotFound>());
+		Assert.That(() => ParseExpression(lines), Throws.InstanceOf<Body.IdentifierNotFound>());
 
 	[Test]
 	public void ImmutableVariableNotAllowedToBeAnIterator() =>
@@ -73,12 +71,8 @@ public sealed class ForTests : TestExpressions
 	{
 		using var programType = new Type(TestPackage.Instance,
 			new TypeLines(nameof(ForVariableUsesNonListIteratorValue), "has logger",
-				"LogCount(count Number) Number",
-				"\tfor element in count",
-				"\t\tlogger.Log(element)",
-				"\t\telement",
-				"\tcount")).
-			ParseMembersAndMethods(new MethodExpressionParser());
+				"LogCount(count Number) Number", "\tfor element in count", "\t\tlogger.Log(element)",
+				"\t\telement", "\tcount")).ParseMembersAndMethods(new MethodExpressionParser());
 		var body = (Body)programType.Methods[0].GetBodyAndParseIfNeeded();
 		var forExpression = (For)body.Expressions[0];
 		Assert.That(((Body)forExpression.Body).FindVariable("element")?.Type.Name,
@@ -151,14 +145,13 @@ public sealed class ForTests : TestExpressions
 
 	[TestCase("constant elements = (1, 2, 3)", "for elements", "\tlogger.Log(index)",
 		"for elements\n\tlogger.Log(index)")]
-	[TestCase("constant elements = (1, 2, 3)", "for Range(0, elements.Length)", "\tlogger.Log(index)",
-		"for Range(0, elements.Length)\n\tlogger.Log(index)")]
+	[TestCase("constant elements = (1, 2, 3)", "for Range(0, elements.Length)",
+		"\tlogger.Log(index)", "for Range(0, elements.Length)\n\tlogger.Log(index)")]
 	[TestCase("mutable element = 0", "for element in (1, 2, 3)", "\tlogger.Log(element)",
 		"for element in (1, 2, 3)\n\tlogger.Log(element)")]
 	[TestCase("constant iterationCount = 10", "for iterationCount", "\tlogger.Log(index)",
 		"for iterationCount\n\tlogger.Log(index)")]
-	[TestCase("constant dummy = 0", "for 10", "\tlogger.Log(index)",
-		"for 10\n\tlogger.Log(index)")]
+	[TestCase("constant dummy = 0", "for 10", "\tlogger.Log(index)", "for 10\n\tlogger.Log(index)")]
 	[TestCase("mutable element = \"1\"", "for element in (\"1\", \"2\", \"3\")",
 		"\tlogger.Log(element)", "for element in (\"1\", \"2\", \"3\")\n\tlogger.Log(element)")]
 	public void ParseForListExpressionWithIterableVariable(params string[] lines) =>
@@ -182,11 +175,8 @@ public sealed class ForTests : TestExpressions
 	public void ValidLoopProgram()
 	{
 		using var programType = new Type(TestPackage.Instance,
-			new TypeLines(nameof(ValidLoopProgram), "has number",
-				"CountNumber Number",
-				"\tfor Range(0, number)",
-				"\t\t1")).
-			ParseMembersAndMethods(new MethodExpressionParser());
+			new TypeLines(nameof(ValidLoopProgram), "has number", "CountNumber Number",
+				"\tfor Range(0, number)", "\t\t1")).ParseMembersAndMethods(new MethodExpressionParser());
 		var parsedExpression = (For)programType.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(parsedExpression.ReturnType.Name, Is.EqualTo(Type.Range));
 		Assert.That(parsedExpression.Iterator.ToString(), Is.EqualTo("Range(0, number)"));
@@ -196,8 +186,8 @@ public sealed class ForTests : TestExpressions
 	public void ErrorExpressionIsNotAnIterator()
 	{
 		using var programType = new Type(TestPackage.Instance,
-			new TypeLines(nameof(ErrorExpressionIsNotAnIterator), "has number", "LogError Number",
-				"\tconstant error = Error(\"Process Failed\")", "\tfor error", "\t\tvalue")).
+				new TypeLines(nameof(ErrorExpressionIsNotAnIterator), "has number", "LogError Number",
+					"\tconstant error = Error(\"Process Failed\")", "\tfor error", "\t\tvalue")).
 			ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(() => programType.Methods[0].GetBodyAndParseIfNeeded(),
 			Throws.InstanceOf<For.ExpressionTypeIsNotAnIterator>());
@@ -221,8 +211,8 @@ public sealed class ForTests : TestExpressions
 	public void IterateNameType()
 	{
 		using var programType = new Type(TestPackage.Instance,
-			new TypeLines(nameof(IterateNameType), "has number", "LogError Number",
-				"\tconstant name = Name(\"Strict\")", "\tfor name", "\t\tvalue")).
+				new TypeLines(nameof(IterateNameType), "has number", "LogError Number",
+					"\tconstant name = Name(\"Strict\")", "\tfor name", "\t\tvalue")).
 			ParseMembersAndMethods(new MethodExpressionParser());
 		var parsedExpression = (Body)programType.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(parsedExpression.Expressions[1], Is.TypeOf(typeof(For)));
@@ -234,48 +224,31 @@ public sealed class ForTests : TestExpressions
 		Assert.That(() => ParseExpression("for Range(2, 5)", "for index in Range(1, 10)"),
 			Throws.InstanceOf<For.MissingInnerBody>());
 
-	[TestCase(
-		"WithParameter", "for element in (1, 2, 3, 4)",
-		"has logger",
-		"LogError Number",
-		"\tfor element in (1, 2, 3, 4)",
-		"\t\tlogger.Log(element)")]
-	[TestCase(
-		"WithList", "for element in elements",
-		"has logger",
-		"LogError(elements Numbers) Number",
-		"\tfor element in elements",
-		"\t\tlogger.Log(element)")]
-	[TestCase(
-		"WithListTexts", "for element in texts",
-		"has logger",
-		"LogError(texts) Number",
-		"\tfor element in texts",
-		"\t\tlogger.Log(element)")]
+	[TestCase("WithParameter", "for element in (1, 2, 3, 4)", "has logger", "LogError Number",
+		"\tfor element in (1, 2, 3, 4)", "\t\tlogger.Log(element)")]
+	[TestCase("WithList", "for element in elements", "has logger",
+		"LogError(elements Numbers) Number", "\tfor element in elements", "\t\tlogger.Log(element)")]
+	[TestCase("WithListTexts", "for element in texts", "has logger", "LogError(texts) Number",
+		"\tfor element in texts", "\t\tlogger.Log(element)")]
 	public void AllowCustomVariablesInFor(string testName, string expected, params string[] code)
 	{
 		using var programType = new Type(TestPackage.Instance,
-			new TypeLines(nameof(AllowCustomVariablesInFor) + testName, code)).
+				new TypeLines(nameof(AllowCustomVariablesInFor) + testName, code)).
 			ParseMembersAndMethods(new MethodExpressionParser());
 		var parsedExpression = (For)programType.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(parsedExpression.ToString(), Does.StartWith(expected));
 	}
 
-	[TestCase("WithNumbers", "for row, column in listOfNumbers",
-		"has logger",
-		"LogAllNumbers(listOfNumbers List(Numbers))",
-		"\tfor row, column in listOfNumbers",
+	[TestCase("WithNumbers", "for row, column in listOfNumbers", "has logger",
+		"LogAllNumbers(listOfNumbers List(Numbers))", "\tfor row, column in listOfNumbers",
 		"\t\tlogger.Log(column)")]
-	[TestCase(
-		"WithTexts", "for row, column in texts",
-		"has logger",
-		"LogTexts(texts)",
-		"\tfor row, column in texts",
-		"\t\tlogger.Log(column)")]
-	public void ParseForExpressionWithMultipleVariables(string testName, string expected, params string[] code)
+	[TestCase("WithTexts", "for row, column in texts", "has logger", "LogTexts(texts)",
+		"\tfor row, column in texts", "\t\tlogger.Log(column)")]
+	public void ParseForExpressionWithMultipleVariables(string testName, string expected,
+		params string[] code)
 	{
-		using var programType =	new Type(TestPackage.Instance,
-			new TypeLines(nameof(ParseForExpressionWithMultipleVariables) + testName, code)).
+		using var programType = new Type(TestPackage.Instance,
+				new TypeLines(nameof(ParseForExpressionWithMultipleVariables) + testName, code)).
 			ParseMembersAndMethods(new MethodExpressionParser());
 		var parsedExpression = (For)programType.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(parsedExpression.ToString(), Does.StartWith(expected));
@@ -285,10 +258,9 @@ public sealed class ForTests : TestExpressions
 	public void ForBodyWithInlineConditionalThenConcatenation()
 	{
 		using var programType = new Type(TestPackage.Instance,
-			new TypeLines(nameof(ForBodyWithInlineConditionalThenConcatenation), "has number",
-				"GetElementsText(elements Numbers) Text",
-				"\tfor elements",
-				"\t\t(index is 0 then \"\" else \", \") + value")).
+				new TypeLines(nameof(ForBodyWithInlineConditionalThenConcatenation), "has number",
+					"GetElementsText(elements Numbers) Text", "\tfor elements",
+					"\t\t(index is 0 then \"\" else \", \") + value")).
 			ParseMembersAndMethods(new MethodExpressionParser());
 		var forExpression = (For)programType.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(forExpression.ToString(), Does.StartWith("for elements"));
@@ -298,16 +270,10 @@ public sealed class ForTests : TestExpressions
 	public void RemoveParenthesesWithElseIfChain()
 	{
 		using var programType = new Type(TestPackage.Instance,
-			new TypeLines(nameof(RemoveParenthesesWithElseIfChain), "has text",
-				"Remove Text",
-				"\tmutable parentheses = 0",
-				"\tfor text",
-				"\t\tif value is \"(\"",
-				"\t\t\tparentheses = parentheses + 1",
-				"\t\telse if value is \")\"",
-				"\t\t\tparentheses = parentheses - 1",
-				"\t\telse if parentheses is 0",
-				"\t\t\tvalue")).
+				new TypeLines(nameof(RemoveParenthesesWithElseIfChain), "has text", "Remove Text",
+					"\tmutable parentheses = 0", "\tfor text", "\t\tif value is \"(\"",
+					"\t\t\tparentheses = parentheses + 1", "\t\telse if value is \")\"",
+					"\t\t\tparentheses = parentheses - 1", "\t\telse if parentheses is 0", "\t\t\tvalue")).
 			ParseMembersAndMethods(new MethodExpressionParser());
 		var body = (Body)programType.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(body.Expressions[1], Is.TypeOf<For>());
@@ -317,11 +283,8 @@ public sealed class ForTests : TestExpressions
 	public void ForBodyMultiLinePiping()
 	{
 		using var programType = new Type(TestPackage.Instance,
-			new TypeLines(nameof(ForBodyMultiLinePiping), "has numbers",
-				"GetNumbersText Numbers",
-				"\tfor numbers",
-				"\t\tto Text",
-				"\t\tLength")).
+				new TypeLines(nameof(ForBodyMultiLinePiping), "has numbers", "GetNumbersText Numbers",
+					"\tfor numbers", "\t\tto Text", "\t\tLength")).
 			ParseMembersAndMethods(new MethodExpressionParser());
 		var forExpression = (For)programType.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(forExpression.Body.ToString(), Does.Contain("to Text"));

@@ -109,11 +109,11 @@ public sealed class For(Expression[] customVariables, Expression iterator, Expre
 		line.Contains(InWithSpaces, StringComparison.Ordinal);
 
 	private const string InWithSpaces = " in ";
-
+#if DEBUG
 	private sealed class GeneratedForExpressionDoesNotMatchInputExactly(Body body, Expression @for,
 		string line) : ParsingFailed(body, "\n" + //ncrunch: no coverage
 		@for.ToString().Replace("\t", "  ") + "\nOriginal lines:\n" + line.Replace("\t", "  "));
-
+#endif
 	private static Expression ParseWithImplicitVariable(Body body, ReadOnlySpan<char> line,
 		Body innerBody)
 	{

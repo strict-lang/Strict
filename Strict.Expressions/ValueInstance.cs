@@ -152,8 +152,8 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 	public bool IsSameOrCanBeUsedAs(Type otherType) =>
 		number switch
 		{
-			TextId => otherType.IsText ||	(otherType.IsList &&
-				otherType is GenericTypeImplementation { ImplementationTypes: [{ IsCharacter: true }] }),
+			TextId => otherType.IsText || otherType.IsList &&
+				otherType is GenericTypeImplementation { ImplementationTypes: [{ IsCharacter: true }] },
 			ListId => ((ValueListInstance)value).ReturnType.IsSameOrCanBeUsedAs(otherType),
 			DictionaryId => ((ValueDictionaryInstance)value).ReturnType.IsSameOrCanBeUsedAs(otherType),
 			TypeId => ((ValueTypeInstance)value).ReturnType.IsSameOrCanBeUsedAs(otherType),
@@ -223,7 +223,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 		{
 			TextId => new ValueInstance(charTypeIfNeeded, ((string)value)[index]),
 			ListId => ((ValueListInstance)value).Items[index],
-		//TODO: this is ugly, check if needed or can be simplified
+			//TODO: this is ugly, check if needed or can be simplified
 			TypeId when ((ValueTypeInstance)value).ReturnType.IsList &&
 				((ValueTypeInstance)value).Members.TryGetValue(Type.Text, out var textMember) =>
 				new ValueInstance(charTypeIfNeeded, textMember.Text[index]),
@@ -234,6 +234,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 		};
 
 	public class IteratorNotSupported(ValueInstance instance) : Exception(instance.ToString());
+
 	public Dictionary<ValueInstance, ValueInstance> GetDictionaryItems() =>
 		((ValueDictionaryInstance)value).Items;
 
@@ -267,7 +268,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 				: (string)value,
 			ListId => BuildListString(((ValueListInstance)value).Items, escapeText),
 			DictionaryId => BuildDictionaryString(((ValueDictionaryInstance)value).Items, escapeText),
-			TypeId => ((ValueTypeInstance)value).ToString()!,
+			TypeId => ((ValueTypeInstance)value).ToString(),
 			_ => GetPrimitiveCodeString((Type)value)
 		};
 

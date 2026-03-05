@@ -45,8 +45,8 @@ public sealed class DictionaryTests : TestExpressions
 	public void ParseDictionaryType()
 	{
 		using var dictionary = new Type(TestPackage.Instance,
-			new TypeLines(nameof(ParseDictionaryType), "has inputMap Dictionary(Number, Number)",
-				"UseDictionary", "\tinputMap.Add(4, 6)", "\tinputMap")).
+				new TypeLines(nameof(ParseDictionaryType), "has inputMap Dictionary(Number, Number)",
+					"UseDictionary", "\tinputMap.Add(4, 6)", "\tinputMap")).
 			ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(dictionary.Members[0].Type, Is.InstanceOf<GenericTypeImplementation>());
 		Assert.That(dictionary.Members[0].Type.ToString(),
@@ -59,8 +59,8 @@ public sealed class DictionaryTests : TestExpressions
 	public void DictionaryTupleConstructorParsesAsMethodCall()
 	{
 		using var dictionary = new Type(TestPackage.Instance,
-			new TypeLines(nameof(DictionaryTupleConstructorParsesAsMethodCall), "has number",
-				"Run Dictionary(Number, Number)", "\tDictionary((2, 4))")).
+				new TypeLines(nameof(DictionaryTupleConstructorParsesAsMethodCall), "has number",
+					"Run Dictionary(Number, Number)", "\tDictionary((2, 4))")).
 			ParseMembersAndMethods(new MethodExpressionParser());
 		var expression = dictionary.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(expression, Is.InstanceOf<MethodCall>());
@@ -71,8 +71,8 @@ public sealed class DictionaryTests : TestExpressions
 	public void DictionaryConstructorWithMultiplePairsKeepsText()
 	{
 		using var dictionary = new Type(TestPackage.Instance,
-			new TypeLines(nameof(DictionaryConstructorWithMultiplePairsKeepsText), "has number",
-				"Run Dictionary(Number, Number)", "\tDictionary((2, 4), (4, 8))")).
+				new TypeLines(nameof(DictionaryConstructorWithMultiplePairsKeepsText), "has number",
+					"Run Dictionary(Number, Number)", "\tDictionary((2, 4), (4, 8))")).
 			ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(dictionary.Methods[0].GetBodyAndParseIfNeeded().ToString(),
 			Is.EqualTo("Dictionary((2, 4), (4, 8))"));
@@ -82,8 +82,8 @@ public sealed class DictionaryTests : TestExpressions
 	public void DictionaryTypeExpressionInMemberCallKeepsText()
 	{
 		using var dictionary = new Type(TestPackage.Instance,
-			new TypeLines(nameof(DictionaryTypeExpressionInMemberCallKeepsText), "has number",
-				"Run Boolean", "\tDictionary(Number, Number).Length is 0")).
+				new TypeLines(nameof(DictionaryTypeExpressionInMemberCallKeepsText), "has number",
+					"Run Boolean", "\tDictionary(Number, Number).Length is 0")).
 			ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(dictionary.Methods[0].GetBodyAndParseIfNeeded().ToString(),
 			Is.EqualTo("Dictionary(Number, Number).Length is 0"));
@@ -93,9 +93,9 @@ public sealed class DictionaryTests : TestExpressions
 	public void ParseDictionaryWithMixedInputTypes()
 	{
 		using var dictionary = new Type(TestPackage.Instance,
-			new TypeLines(nameof(ParseDictionaryWithMixedInputTypes),
-				"has input Dictionary(Text, Boolean)", "AddToDictionaryAndGetLength Number",
-				"\tinput.Add(\"10\", true)", "\tinput.Length")).
+				new TypeLines(nameof(ParseDictionaryWithMixedInputTypes),
+					"has input Dictionary(Text, Boolean)", "AddToDictionaryAndGetLength Number",
+					"\tinput.Add(\"10\", true)", "\tinput.Length")).
 			ParseMembersAndMethods(new MethodExpressionParser());
 		dictionary.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(dictionary.Members[0].Type.ToString(),
@@ -121,9 +121,9 @@ public sealed class DictionaryTests : TestExpressions
 	public void CreateAndValidateDictionaryTypeInstance()
 	{
 		using var registerType = new Type(TestPackage.Instance,
-			new TypeLines("SchoolRegister", "has logger", "LogStudentsDetails",
-				"\tmutable studentsRegister = Dictionary(Number, Text)",
-				"\tstudentsRegister.Add(1, \"AK\")", "\tlogger.Log(studentsRegister)")).
+				new TypeLines("SchoolRegister", "has logger", "LogStudentsDetails",
+					"\tmutable studentsRegister = Dictionary(Number, Text)",
+					"\tstudentsRegister.Add(1, \"AK\")", "\tlogger.Log(studentsRegister)")).
 			ParseMembersAndMethods(new MethodExpressionParser());
 		var body = (Body)registerType.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(((Declaration)body.Expressions[0]).Value, Is.InstanceOf<Dictionary>());
@@ -145,9 +145,9 @@ public sealed class DictionaryTests : TestExpressions
 	public void DictionaryMustBeInitializedWithTwoTypeParameters()
 	{
 		using var testType = new Type(TestPackage.Instance,
-			new TypeLines(nameof(DictionaryMustBeInitializedWithTwoTypeParameters), "has logger",
-				"DummyInitialization",
-				"\tmutable studentsRegister = Dictionary(Number, Text, Number)")).
+				new TypeLines(nameof(DictionaryMustBeInitializedWithTwoTypeParameters), "has logger",
+					"DummyInitialization",
+					"\tmutable studentsRegister = Dictionary(Number, Text, Number)")).
 			ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(() => testType.Methods[0].GetBodyAndParseIfNeeded(),
 			Throws.InstanceOf<Dictionary.DictionaryMustBeInitializedWithTwoTypeParameters>().With.
@@ -158,9 +158,9 @@ public sealed class DictionaryTests : TestExpressions
 	public void CannotAddMismatchingInputTypesToDictionaryInstance()
 	{
 		using var testType = new Type(TestPackage.Instance,
-			new TypeLines(nameof(CannotAddMismatchingInputTypesToDictionaryInstance), "has logger",
-				"DummyInitialization", "\tconstant studentsRegister = Dictionary(Number, Boolean)",
-				"\tstudentsRegister.Add(5, \"hi\")", "\tlogger.Log(studentsRegister)")).
+				new TypeLines(nameof(CannotAddMismatchingInputTypesToDictionaryInstance), "has logger",
+					"DummyInitialization", "\tconstant studentsRegister = Dictionary(Number, Boolean)",
+					"\tstudentsRegister.Add(5, \"hi\")", "\tlogger.Log(studentsRegister)")).
 			ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(() => testType.Methods[0].GetBodyAndParseIfNeeded(),
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.
@@ -169,10 +169,12 @@ public sealed class DictionaryTests : TestExpressions
 
 	[Test]
 	public void CannotCreateDictionaryExpressionWithThreeTypeParameters() =>
-		Assert.That(() => new Dictionary(new List<Type>
-			{
-				type.GetType(Type.Number), type.GetType(Type.Text), type.GetType(Type.Boolean)
-			}, type),
+		Assert.That(
+			() => new Dictionary(
+				new List<Type>
+				{
+					type.GetType(Type.Number), type.GetType(Type.Text), type.GetType(Type.Boolean)
+				}, type),
 			Throws.InstanceOf<Dictionary.DictionaryMustBeInitializedWithTwoTypeParameters>().With.
 				Message.StartsWith("Expected Type Parameters: 2, Given type parameters: 3 and they are " +
 					"TestPackage/Number, TestPackage/Text, TestPackage/Boolean"));

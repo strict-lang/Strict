@@ -24,8 +24,13 @@ public sealed class ListTests
 			new MethodExpressionParser());
 
 	private ValueInstance CreateNumbers(Type t) =>
-		new ValueInstance(t, new Dictionary<string, ValueInstance>(StringComparer.OrdinalIgnoreCase)
-			{ { "numbers", new ValueInstance(t.Members[0].Type, new List<ValueInstance> { one, two }) } });
+		new(t,
+			new Dictionary<string, ValueInstance>(StringComparer.OrdinalIgnoreCase)
+			{
+				{
+					"numbers", new ValueInstance(t.Members[0].Type, new List<ValueInstance> { one, two })
+				}
+			});
 
 	[Test]
 	public void CallListOperator()
@@ -136,8 +141,8 @@ public sealed class ListTests
 		Assert.That(executor.Execute(type.Methods[0], executor.noneInstance, []).List.Items,
 			Is.EqualTo(new List<ValueInstance>
 			{
-				new ValueInstance(type.GetType(Type.Number), 2.0),
-				new ValueInstance(type.GetType(Type.Number), 1.0)
+				new(type.GetType(Type.Number), 2.0),
+				new(type.GetType(Type.Number), 1.0)
 			}));
 	}
 

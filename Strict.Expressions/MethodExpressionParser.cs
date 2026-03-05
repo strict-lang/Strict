@@ -107,10 +107,10 @@ public class MethodExpressionParser : ExpressionParser
 			throw new UnknownExpression(body,
 				input[postfix.Output.Peek()].ToString() + " in " + inputText);
 	}
-
+#if DEBUG
 	private sealed class GeneratedBinaryExpressionDoesNotMatchInputExactly(Body body,
 		Expression binary, string inputText) : ParsingFailed(body, binary + ", inputText=" + inputText); //ncrunch: no coverage
-
+#endif
 	private Expression ParseMethodCallWithArguments(Body body, ReadOnlySpan<char> input,
 		ShuntingYard postfix)
 	{

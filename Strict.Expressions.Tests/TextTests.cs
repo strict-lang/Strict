@@ -42,8 +42,8 @@ public sealed class TextTests : TestExpressions
 		params string[] code)
 	{
 		using var testType = new Type(TestPackage.Instance,
-			new TypeLines(nameof(ParseMultiLineTextExpressions) + testName, code)).
-				ParseMembersAndMethods(new MethodExpressionParser());
+				new TypeLines(nameof(ParseMultiLineTextExpressions) + testName, code)).
+			ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(((Body)testType.Methods[0].GetBodyAndParseIfNeeded()).Expressions[0].ToString(),
 			Is.EqualTo(expectedOutput));
 	}
@@ -69,8 +69,9 @@ public sealed class TextTests : TestExpressions
 	public void ParseMultiLineTextEndsWithNewLine(string testName, string expected,
 		params string[] code)
 	{
-		using var multiLineType =	new Type(TestPackage.Instance,
-			new TypeLines(testName, code)).ParseMembersAndMethods(new MethodExpressionParser());
+		using var multiLineType =
+			new Type(TestPackage.Instance, new TypeLines(testName, code)).ParseMembersAndMethods(
+				new MethodExpressionParser());
 		var constantDeclaration = (Binary)multiLineType.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(constantDeclaration.ToString(), Is.EqualTo(expected));
 	}

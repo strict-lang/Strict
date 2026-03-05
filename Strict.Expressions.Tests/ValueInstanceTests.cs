@@ -1,4 +1,3 @@
-using Strict.Expressions;
 using Strict.Language.Tests;
 
 namespace Strict.Expressions.Tests;

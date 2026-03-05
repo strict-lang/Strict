@@ -61,8 +61,8 @@ public static class StringExtensions
 		number = -1;
 		for (var index = 0; index < text.Length; index++)
 			if (!char.IsAsciiLetter(text[index]))
-				return index == text.Length - 1 && int.TryParse(text[index].ToString(), out number) &&
-					number is > 1 and < 10;
+				return index == text.Length - 1 && char.IsAsciiDigit(text[index]) &&
+					(number = text[index] - '0') is > 1 and < 10;
 		return true;
 	}
 
@@ -96,8 +96,23 @@ public static class StringExtensions
 			return true;
 		}
 
-		public string MakeFirstLetterUppercase() =>	text[..1].ToUpperInvariant() + text[1..];
-		public string MakeFirstLetterLowercase() =>	text[..1].ToLowerInvariant() + text[1..];
+		public string MakeFirstLetterUppercase() =>
+			text.Length == 0 || char.IsUpper(text[0])
+				? text
+				: string.Create(text.Length, text, static (span, s) =>
+				{
+					span[0] = char.ToUpperInvariant(s[0]);
+					s.AsSpan(1).CopyTo(span[1..]);
+				});
+
+		public string MakeFirstLetterLowercase() =>
+			text.Length == 0 || char.IsLower(text[0])
+				? text
+				: string.Create(text.Length, text, static (span, s) =>
+				{
+					span[0] = char.ToLowerInvariant(s[0]);
+					s.AsSpan(1).CopyTo(span[1..]);
+				});
 
 		public string GetTextInsideBrackets()
 		{

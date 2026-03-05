@@ -70,8 +70,7 @@ public class MethodCall : ConcreteExpression
 		for (var index = 0; index < arguments.Count; index++)
 		{
 			var parameterType = method.Parameters[index].Type;
-			if (parameterType is GenericTypeImplementation { Generic.Name: Type.Mutable }
-				mutableType)
+			if (parameterType is GenericTypeImplementation { Generic.Name: Type.Mutable } mutableType)
 				parameterType = mutableType.ImplementationTypes[0];
 			if (!arguments[index].ReturnType.IsSameOrCanBeUsedAs(parameterType))
 				return false;
@@ -199,7 +198,7 @@ public class MethodCall : ConcreteExpression
 				arguments[0].ReturnType.IsText
 					? new Value(body.Method.GetType(nameof(Type.Name)), ((Value)arguments[0]).Data)
 					: arguments[0],
-				new Text(body.Method, ((Context)body.Method.Type.Package).FullName)
+				new Text(body.Method, body.Method.Type.Package.FullName)
 			]
 			: arguments;
 

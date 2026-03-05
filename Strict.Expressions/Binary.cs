@@ -12,7 +12,17 @@ public sealed class Binary(Expression left, Method operatorMethod, Expression[] 
 	public override string ToString() =>
 		Method.Name is BinaryOperator.In
 			? $"{AddNestedBracketsIfNeeded(Arguments[0])} is in {AddNestedBracketsIfNeeded(Instance!)}"
-			: $"{AddNestedBracketsIfNeeded(Instance!)} {(Method.Name is UnaryOperator.Not ? "is " : "")}{Method.Name} {AddNestedBracketsIfNeeded(Arguments[0])}";
+			: $"{
+				AddNestedBracketsIfNeeded(Instance!)
+			} {
+				(Method.Name is UnaryOperator.Not
+					? "is "
+					: "")
+			}{
+				Method.Name
+			} {
+				AddNestedBracketsIfNeeded(Arguments[0])
+			}";
 
 	private string AddNestedBracketsIfNeeded(Expression child) =>
 		child is MethodCall binaryOrUnary && BinaryOperator.GetPrecedence(binaryOrUnary.Method.Name) <

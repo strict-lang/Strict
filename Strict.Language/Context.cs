@@ -1,5 +1,7 @@
 using System.Diagnostics;
+#if DEBUG
 using System.Runtime.CompilerServices;
+#endif
 using static Strict.Language.NamedType;
 
 namespace Strict.Language;
@@ -193,7 +195,7 @@ public abstract class Context
 			: Parent.GetPackage();
 
 	public sealed class TypeNotFound(string typeName, Context context)
-		: Exception($"{typeName} not found in\n"+WriteContextTypes(context))
+		: Exception($"{typeName} not found in\n" + WriteContextTypes(context))
 	{
 		private static string WriteContextTypes(Context context)
 		{

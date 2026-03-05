@@ -1,5 +1,3 @@
-using System.Collections;
-
 namespace Strict.Language.Tests;
 
 public sealed class StringExtensionsTests

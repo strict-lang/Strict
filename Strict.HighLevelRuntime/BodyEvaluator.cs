@@ -61,7 +61,7 @@ internal sealed class BodyEvaluator(Executor executor)
 		{
 			MemberCall m => m.Member.Name == memberName,
 			MethodCall call =>
-				(call.Instance != null && ExpressionReferencesMember(call.Instance, memberName)) ||
+				call.Instance != null && ExpressionReferencesMember(call.Instance, memberName) ||
 				call.Arguments.Any(a => ExpressionReferencesMember(a, memberName)),
 			List list => list.Values.Any(v => ExpressionReferencesMember(v, memberName)),
 			_ => false

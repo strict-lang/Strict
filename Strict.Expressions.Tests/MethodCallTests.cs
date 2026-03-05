@@ -180,13 +180,13 @@ public sealed class MethodCallTests : TestExpressions
 	public void ValueMustHaveCorrectType()
 	{
 		using var program = new Type(TestPackage.Instance,
-			new TypeLines(nameof(ValueMustHaveCorrectType),
-				"has logger",
-				"has Number",
-				$"Dummy(dummy Number) {nameof(ValueMustHaveCorrectType)}",
-				"\tlet result = value",
-				"\tresult is " + nameof(ValueMustHaveCorrectType),
-				"\tresult")).
+				new TypeLines(nameof(ValueMustHaveCorrectType),
+					"has logger",
+					"has Number",
+					$"Dummy(dummy Number) {nameof(ValueMustHaveCorrectType)}",
+					"\tlet result = value",
+					"\tresult is " + nameof(ValueMustHaveCorrectType),
+					"\tresult")).
 			ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(
 			((Body)program.Methods[0].GetBodyAndParseIfNeeded()).FindVariable("value")?.Type,
@@ -295,8 +295,8 @@ public sealed class MethodCallTests : TestExpressions
 	public void NestedMethodCall()
 	{
 		using var program = new Type(TestPackage.Instance,
-			new TypeLines(nameof(NestedMethodCall), "has logger", "Run",
-				"\tFile(\"fileName\").Write(\"someText\")", "\ttrue")).
+				new TypeLines(nameof(NestedMethodCall), "has logger", "Run",
+					"\tFile(\"fileName\").Write(\"someText\")", "\ttrue")).
 			ParseMembersAndMethods(new MethodExpressionParser());
 		var body = (Body)program.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(body.Expressions[0], Is.InstanceOf<MethodCall>());
@@ -333,11 +333,11 @@ public sealed class MethodCallTests : TestExpressions
 				"\tAddFiveWithInput(AddFiveWithInput(5)) is 15",
 				"\tnumber + 5")).ParseMembersAndMethods(new MethodExpressionParser());
 		using var consumingType = new Type(TestPackage.Instance,
-			new TypeLines("AutoInitializedTypeConsumer",
-				"has typeCanBeAutoInitialized",
-				"GetResult(number) Number",
-				"\tGetResult(10) is 15",
-				"\ttypeCanBeAutoInitialized.AddFiveWithInput(number)")).
+				new TypeLines("AutoInitializedTypeConsumer",
+					"has typeCanBeAutoInitialized",
+					"GetResult(number) Number",
+					"\tGetResult(10) is 15",
+					"\ttypeCanBeAutoInitialized.AddFiveWithInput(number)")).
 			ParseMembersAndMethods(new MethodExpressionParser());
 		var body = (Body)consumingType.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(consumingType.Members[0].Type.Name, Is.EqualTo("TypeCanBeAutoInitialized"));
