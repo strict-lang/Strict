@@ -23,7 +23,7 @@ internal sealed class ForEvaluator(Executor executor)
 			if (start <= end)
 				for (var index = start; index < end; index++)
 				{
-					loop.ResetForLoopIteration();
+					loop.ResetIteration();
 					ExecuteForIteration(f, ctx, iterator, ref results, itemType, index, loop);
 					if (ctx.ExitMethodAndReturnValue.HasValue)
 						return ctx.ExitMethodAndReturnValue.Value;
@@ -31,7 +31,7 @@ internal sealed class ForEvaluator(Executor executor)
 			else
 				for (var index = start; index > end; index--)
 				{
-					loop.ResetForLoopIteration();
+					loop.ResetIteration();
 					ExecuteForIteration(f, ctx, iterator, ref results, itemType, index, loop);
 					if (ctx.ExitMethodAndReturnValue.HasValue)
 						return ctx.ExitMethodAndReturnValue.Value;
@@ -42,7 +42,7 @@ internal sealed class ForEvaluator(Executor executor)
 			var loopRange = new Range(0, iterator.GetIteratorLength());
 			for (var index = loopRange.Start.Value; index < loopRange.End.Value; index++)
 			{
-				loop.ResetForLoopIteration();
+				loop.ResetIteration();
 				ExecuteForIteration(f, ctx, iterator, ref results, itemType, index, loop);
 				if (ctx.ExitMethodAndReturnValue.HasValue)
 					return ctx.ExitMethodAndReturnValue.Value;

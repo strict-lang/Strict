@@ -1,7 +1,7 @@
 using Strict.TestRunner.Tests;
 
 var tests = new TestExecutorTests();
-// Warm up
+// Warm up, will cache a lot of things: first parse, types, bodies, expressions
 tests.RunAllTestsInPackage();
 tests.executor.Statistics.Reset();
 var allocatedBefore = GC.GetAllocatedBytesForCurrentThread();
@@ -13,5 +13,5 @@ var endTicks = DateTime.UtcNow.Ticks;
 var allocatedAfter = GC.GetAllocatedBytesForCurrentThread();
 Console.WriteLine("Total execution time per run: " +
 	TimeSpan.FromTicks(endTicks - startTicks) / Runs);
-Console.WriteLine("Allocated bytes (current thread): " + (allocatedAfter - allocatedBefore));
+Console.WriteLine("Allocated bytes per run: " + (allocatedAfter - allocatedBefore) / Runs);
 Console.WriteLine(tests.executor.Statistics);

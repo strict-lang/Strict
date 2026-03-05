@@ -1,7 +1,4 @@
 using System.Diagnostics;
-#if DEBUG
-using System.Runtime.CompilerServices;
-#endif
 using static Strict.Language.NamedType;
 
 namespace Strict.Language;

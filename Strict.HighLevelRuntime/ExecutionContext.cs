@@ -16,7 +16,8 @@ public sealed class ExecutionContext(Type type, Method method)
 	/// Lazy-initialized: only created when a variable is actually written, avoiding allocation for
 	/// methods that never declare local variables (the majority of test-runner invocations).
 	/// </summary>
-	public Dictionary<string, ValueInstance> Variables => variables ??= new(StringComparer.Ordinal);
+	public Dictionary<string, ValueInstance> Variables =>
+		variables ??= new Dictionary<string, ValueInstance>(StringComparer.Ordinal);
 	public ValueInstance? ExitMethodAndReturnValue { get; internal set; }
 
 	public ValueInstance Get(string name, Statistics statistics) =>
@@ -40,15 +41,10 @@ public sealed class ExecutionContext(Type type, Method method)
 	}
 
 	/// <summary>
-	/// Clears local variables and resets the early-exit flag so the same context can be reused
-	/// across for-loop iterations, saving one <see cref="Dictionary{TKey, TValue}"/> + one
-	/// <see cref="ExecutionContext"/> allocation per iteration.
-	/// Calling this on a freshly-created context (before the first iteration) is safe and a no-op:
-	/// <c>variables?.Clear()</c> does nothing when the dictionary has not yet been allocated.
-	/// Using <c>Clear()</c> rather than setting <c>variables = null</c> is intentional: it keeps
-	/// the already-allocated dictionary alive so it can be reused without re-allocating.
+	/// Clears local variables and resets the early-exit so the same context can be reused in the
+	/// next for iteration, saving <see cref="Dictionary{TKey, TValue}"/> and context allocations.
 	/// </summary>
-	public void ResetForLoopIteration()
+	public void ResetIteration()
 	{
 		variables?.Clear();
 		ExitMethodAndReturnValue = null;
