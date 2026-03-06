@@ -238,7 +238,7 @@ public class Executor
 		{
 			Body body => bodyEvaluator.Evaluate(body, context, runOnlyTests),
 			List list => EvaluateListExpression(list, context),
-			//TODO: add test first: Dictionary dict =>
+			Expressions.Dictionary dict => dict.Data,
 			Value v => v.Data,
 			ParameterCall or VariableCall => EvaluateVariable(expr.ToString(), context),
 			MemberCall m => EvaluateMemberCall(m, context),

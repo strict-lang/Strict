@@ -11,7 +11,9 @@ namespace Strict.Runtime;
 /// </summary>
 public sealed class Instance
 {
-	//TODO: isn't this supposed to be completely removed?
+	/// <summary>
+	/// Legacy constructor still used during migration to ValueInstance-based execution.
+	/// </summary>
 	public Instance(Type type, object value)
 	{
 		ReturnType = type;

@@ -18,6 +18,17 @@ public sealed class DictionaryTests
 			new MethodExpressionParser());
 
 	[Test]
+	public void DictionaryExpressionEvaluatesToEmptyDictionary()
+	{
+		using var t = CreateType(nameof(DictionaryExpressionEvaluatesToEmptyDictionary), "has number",
+			"Run Dictionary(Number, Number)", "\tDictionary(Number, Number)");
+		var method = t.Methods.Single(m => m.Name == "Run");
+		var result = executor.Execute(method);
+		Assert.That(result.IsDictionary, Is.True);
+		Assert.That(result.GetDictionaryItems().Count, Is.EqualTo(0));
+	}
+
+	[Test]
 	public void DictionaryTypeExpressionHasLengthZero()
 	{
 		using var t = CreateType(nameof(DictionaryTypeExpressionHasLengthZero), "has number",

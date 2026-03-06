@@ -148,6 +148,9 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 	public bool IsList => number is ListId;
 	public ValueListInstance List => (ValueListInstance)value;
 	public bool IsDictionary => number is DictionaryId;
+	public bool IsNumberLike(Type numberType) =>
+		IsPrimitiveType(numberType) ||
+		(!IsText && !IsList && !IsDictionary) && GetTypeExceptText().IsSameOrCanBeUsedAs(numberType);
 
 	public bool IsSameOrCanBeUsedAs(Type otherType) =>
 		number switch
@@ -202,7 +205,6 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 			return ((string)value).Length;
 		if (number == DictionaryId)
 			throw new IteratorNotSupported(this);
-		//TODO: this is ugly, check if needed or can be simplified
 		if (number == TypeId)
 		{
 			var typeInstance = (ValueTypeInstance)value;
@@ -222,7 +224,6 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 		{
 			TextId => new ValueInstance(charTypeIfNeeded, ((string)value)[index]),
 			ListId => ((ValueListInstance)value).Items[index],
-			//TODO: this is ugly, check if needed or can be simplified
 			TypeId when ((ValueTypeInstance)value).ReturnType.IsList &&
 				((ValueTypeInstance)value).Members.TryGetValue(Type.Text, out var textMember) =>
 				new ValueInstance(charTypeIfNeeded, textMember.Text[index]),

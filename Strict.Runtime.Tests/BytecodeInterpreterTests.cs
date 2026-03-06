@@ -2,7 +2,6 @@ using System.Globalization;
 
 namespace Strict.Runtime.Tests;
 
-//TODO: major cleanup needed here, most test look the same and are verbose for no reason
 public class BytecodeInterpreterTests : BaseVirtualMachineTests
 {
 	[SetUp]
@@ -258,7 +257,7 @@ public class BytecodeInterpreterTests : BaseVirtualMachineTests
 		Assert.That(elements.Trim(), Is.EqualTo(expectedResult));
 	} //ncrunch: no coverage end
 
-	[TestCase("TestContains(\"s\", \"b\", \"s\").Contains(\"b\")", "True", "TestContains",
+	[TestCase("TestContains(\"s\", \"b\", \"s\").Contains(\"b\")", "true", "TestContains",
 		new[]
 		{
 			"has elements Texts", "Contains(other Text) Boolean", "\tfor elements",
@@ -270,14 +269,7 @@ public class BytecodeInterpreterTests : BaseVirtualMachineTests
 		var statements = new ByteCodeGenerator(GenerateMethodCallFromSource(programName,
 			methodCall, code)).Generate();
 		var result = vm.Execute(statements).Returns!.Value;
-		var actual = result.IsText //TODO: why is this not using result.ToExecutionCodeString(), same as with all below!
-			? result.Text
-			: result.Number == 1
-				? "True"
-				: result.Number == 0
-					? "False"
-					: result.Number.ToString(CultureInfo.InvariantCulture);
-		Assert.That(actual, Is.EqualTo(expectedResult));
+		Assert.That(result.ToExpressionCodeString(), Is.EqualTo(expectedResult));
 	}
 
 	[TestCase("NumbersAdder(5).AddNumberToList", "1 2 3 5", "has number", "AddNumberToList Numbers",

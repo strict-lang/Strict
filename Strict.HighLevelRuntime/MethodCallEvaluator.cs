@@ -122,15 +122,7 @@ public sealed class MethodCallEvaluator(Executor executor)
 		return ExecuteMethodCall(call, left, ctx); //ncrunch: no coverage
 	}
 
-	//TODO: this is not good, should be in ValueInstance and avoided as much as possible
-	private bool IsNumberLike(ValueInstance value)
-	{
-		if (value.IsPrimitiveType(executor.numberType))
-			return true;
-		if (value.IsText || value.IsList || value.IsDictionary)
-			return false;
-		return value.GetTypeExceptText().IsSameOrCanBeUsedAs(executor.numberType);
-	}
+	private bool IsNumberLike(ValueInstance value) => value.IsNumberLike(executor.numberType);
 
 	public const string ListsHaveDifferentDimensions = "listsHaveDifferentDimensions";
 
