@@ -1,8 +1,9 @@
 using NUnit.Framework;
 using OmniSharp.Extensions.LanguageServer.Protocol;
 using OmniSharp.Extensions.LanguageServer.Protocol.Models;
-using Strict.Language;
 using Strict.Expressions;
+using Strict.Language;
+using Strict.Language.Tests;
 using Type = Strict.Language.Type;
 
 namespace Strict.LanguageServer.Tests;
@@ -16,7 +17,7 @@ public sealed class AutoCompletorTests : LanguageServerTests
 	private Package package = null!;
 
 	[SetUp]
-	public void CreateStrictDocument() => strictDocument = new StrictDocument();
+	public void CreateStrictDocument() => strictDocument = new StrictDocument(TestPackage.Instance);
 
 	private StrictDocument strictDocument = null!;
 

@@ -58,7 +58,7 @@ public sealed class ByteCodeGenerator
 				memberCall.Member.InitialValue is Value enumValue
 					? enumValue.Data
 					: new ValueInstance(memberCall.Member.InitialValue.ToString()),
-			_ => new ValueInstance(expression.ToString())
+			_ => new ValueInstance(expression.ToString()) //ncrunch: no coverage
 		};
 
 	private void AddInstanceMemberVariables(MethodCall instance)

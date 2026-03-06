@@ -1,10 +1,11 @@
 using OmniSharp.Extensions.LanguageServer.Protocol.Server;
+using Strict.Language;
 using Strict.Runtime;
 
 namespace Strict.LanguageServer;
 
-public sealed class VariableValueEvaluator(ILanguageServerFacade languageServer, string[] lines)
-	: RunnerService, RunnableService
+public sealed class VariableValueEvaluator(Package package, ILanguageServerFacade languageServer, string[] lines)
+	: RunnerService(package), RunnableService
 {
 	private const string NotificationName = "valueEvaluationNotification";
 

@@ -5,7 +5,7 @@ namespace Strict.Runtime.Tests;
 public class BytecodeInterpreterTests : BaseVirtualMachineTests
 {
 	[SetUp]
-	public void Setup() => vm = new BytecodeInterpreter();
+	public void Setup() => vm = new BytecodeInterpreter(TestPackage.Instance);
 
 	protected BytecodeInterpreter vm = null!;
 

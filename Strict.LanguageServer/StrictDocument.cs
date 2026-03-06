@@ -1,4 +1,4 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using OmniSharp.Extensions.LanguageServer.Protocol;
 using OmniSharp.Extensions.LanguageServer.Protocol.Models;
@@ -10,11 +10,11 @@ using Range = OmniSharp.Extensions.LanguageServer.Protocol.Models.Range;
 
 namespace Strict.LanguageServer;
 
-public sealed class StrictDocument
+public sealed class StrictDocument(Package package)
 {
 	private readonly ConcurrentDictionary<DocumentUri, string[]> strictDocuments = new();
 	private List<string> content = [];
-	private readonly BytecodeInterpreter vm = new();
+	private readonly BytecodeInterpreter vm = new(package);
 
 	public void Update(DocumentUri uri, TextDocumentContentChangeEvent[] changes)
 	{
@@ -134,9 +134,9 @@ public sealed class StrictDocument
 			var methods = ParseTypeMethods(type.Methods);
 			if (methods != null)
 				// @formatter:off
-				new RunnerService()
-					.AddService(new TestRunner(languageServer,methods))
-					.AddService(new VariableValueEvaluator(languageServer, Get(uri)))
+				new RunnerService(package)
+					.AddService(new TestRunner(package, languageServer,methods))
+					.AddService(new VariableValueEvaluator(package, languageServer, Get(uri)))
 					.RunAllServices();
 			// @formatter:on
 		}

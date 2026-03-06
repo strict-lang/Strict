@@ -1,4 +1,4 @@
-﻿using Moq;
+using Moq;
 using NUnit.Framework;
 using OmniSharp.Extensions.LanguageServer.Protocol;
 using OmniSharp.Extensions.LanguageServer.Protocol.Server;
@@ -23,7 +23,7 @@ public class LanguageServerTests
 		languageServer.Setup(expression => expression.TextDocument).
 			Returns(new Mock<ITextDocumentLanguageServer>().Object);
 		textDocumentHandler =
-			new TextDocumentSynchronizer(languageServer.Object, new StrictDocument(), TestPackage.Instance);
+			new TextDocumentSynchronizer(languageServer.Object, new StrictDocument(TestPackage.Instance), TestPackage.Instance);
 		textDocumentHandler.Document.AddOrUpdate(URI, "constant bla = 5");
 	}
 }

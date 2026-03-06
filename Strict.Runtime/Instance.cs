@@ -11,6 +11,7 @@ namespace Strict.Runtime;
 /// </summary>
 public sealed class Instance
 {
+	//TODO: migration is NOT done!
 	/// <summary>
 	/// Legacy constructor still used during migration to ValueInstance-based execution.
 	/// </summary>

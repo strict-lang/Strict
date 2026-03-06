@@ -123,7 +123,6 @@ public sealed class MethodCallEvaluator(Executor executor)
 	}
 
 	private bool IsNumberLike(ValueInstance value) => value.IsNumberLike(executor.numberType);
-
 	public const string ListsHaveDifferentDimensions = "listsHaveDifferentDimensions";
 
 	private ValueInstance ExecuteComparisonOperation(MethodCall call, ExecutionContext ctx,

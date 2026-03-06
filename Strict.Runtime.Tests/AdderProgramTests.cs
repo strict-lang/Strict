@@ -9,7 +9,7 @@ namespace Strict.Runtime.Tests;
 public class AdderProgramTests : BaseVirtualMachineTests
 {
 	[SetUp]
-	public void Setup() => vm = new BytecodeInterpreter();
+	public void Setup() => vm = new BytecodeInterpreter(TestPackage.Instance);
 
 	private BytecodeInterpreter vm = null!;
 	private static readonly string[] AdderProgramCode =

@@ -1,10 +1,11 @@
-﻿using Strict.Runtime;
+using Strict.Language;
+using Strict.Runtime;
 
 namespace Strict.LanguageServer;
 
-public class RunnerService
+public class RunnerService(Package package)
 {
-	private BytecodeInterpreter VmInstance { get; } = new();
+	private BytecodeInterpreter VmInstance { get; } = new(package);
 	private readonly List<RunnableService> services = new();
 
 	public RunnerService AddService(RunnableService runnableService)

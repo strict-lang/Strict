@@ -8,8 +8,10 @@ using Type = Strict.Language.Type;
 
 namespace Strict.Runtime;
 
-public sealed class BytecodeInterpreter
+public sealed class BytecodeInterpreter(Package package)
 {
+	private readonly Package package = package;
+
 	public BytecodeInterpreter Execute(IList<Statement> allStatements)
 	{
 		Clear();
@@ -120,7 +122,8 @@ public sealed class BytecodeInterpreter
 		if (GetValueByKeyForDictionaryAndStoreInRegister(invokeStatement))
 			return;
 		var methodStatements = GetByteCodeFromInvokedMethodCall(invokeStatement);
-		var instance = new BytecodeInterpreter
+		//TODO: this is stupid, why would we create a new interpreter for every instruction
+		var instance = new BytecodeInterpreter(package)
 		{
 			Memory = new Memory
 			{
@@ -216,7 +219,7 @@ public sealed class BytecodeInterpreter
 				invoke.PersistedRegistry).Generate();
 		if (!Memory.Variables.TryGetValue(invoke.Method?.Instance?.ToString() ??
 			throw new InvalidOperationException(), out var instance))
-			throw new VariableNotFoundInMemory(); //TODO: need test
+			throw new VariableNotFoundInMemory(); //ncrunch: no coverage
 		return new ByteCodeGenerator(
 			new InstanceInvokedMethod(GetExpressionsFromMethod(invoke.Method!.Method),
 				FormArgumentsForMethodCall(invoke), instance, invoke.Method.Method.ReturnType),
@@ -270,33 +273,19 @@ public sealed class BytecodeInterpreter
 	{
 		if (!Memory.Registers.TryGetValue(loopBeginStatement.Register, out var iterableVariable))
 			return; //ncrunch: no coverage
-		Type numberType;
-		if (iterableVariable.IsText)
-		{
-			var firstNumberVar = Memory.Variables.Values.FirstOrDefault(v => !v.IsText && !v.IsList && !v.IsDictionary);
-			numberType = !Equals(firstNumberVar, default(ValueInstance))
-				? firstNumberVar.GetTypeExceptText().GetType(Type.Number)
-				: Memory.Registers.Values.
-					FirstOrDefault(v => v is { IsText: false, IsList: false, IsDictionary: false }).
-					GetTypeExceptText().GetType(Type.Number);
-		}
-		else
-		{
-			numberType = iterableVariable.GetTypeExceptText().GetType(Type.Number);
-		}
 		if (Memory.Variables.ContainsKey("index"))
 		{
 			var current = Memory.Variables["index"];
-			Memory.Variables["index"] = new ValueInstance(numberType, current.Number + 1);
+			Memory.Variables["index"] = new ValueInstance(package.GetType(Type.Number), current.Number + 1);
 		}
 		else
-			Memory.Variables.Add("index", new ValueInstance(numberType, 0));
+			Memory.Variables.Add("index", new ValueInstance(package.GetType(Type.Number), 0));
 		if (!loopBeginStatement.IsInitialized)
 		{
 			loopBeginStatement.LoopCount = GetLength(iterableVariable);
 			loopBeginStatement.IsInitialized = true;
 		}
-		AlterValueVariable(iterableVariable, numberType, loopBeginStatement);
+		AlterValueVariable(iterableVariable, package.GetType(Type.Number), loopBeginStatement);
 		if (loopBeginStatement.LoopCount <= 0)
 		{
 			var stepsToLoopEnd = statements.Skip(instructionIndex + 1).
@@ -346,7 +335,7 @@ public sealed class BytecodeInterpreter
 			if (index < iterableVariable.Text.Length)
 				Memory.Variables["value"] = new ValueInstance(iterableVariable.Text[index].ToString());
 			else
-				loopBeginStatement.LoopCount = 0;
+				loopBeginStatement.LoopCount = 0; //ncrunch: no coverage. TODO: add test, never happens
 			return;
 		}
 		if (iterableVariable.IsList)
@@ -355,7 +344,7 @@ public sealed class BytecodeInterpreter
 			if (index < items.Count)
 				Memory.Variables["value"] = items[index];
 			else
-				loopBeginStatement.LoopCount = 0;
+				loopBeginStatement.LoopCount = 0; //ncrunch: no coverage. TODO: add test, never happens
 			return;
 		}
 		Memory.Variables["value"] = new ValueInstance(numberType, index + 1);
@@ -470,6 +459,7 @@ public sealed class BytecodeInterpreter
 
 	public static bool AreEqual(ValueInstance value, ValueInstance other) => value.Equals(other);
 
+	//TODO: should be removed, this should not be needed!
 	public static bool AreEqual(object? value, object? other)
 	{
 		if (ReferenceEquals(value, other))

@@ -412,4 +412,31 @@ public sealed class ExecutorTests
 			executor.Execute(t.Methods.Single(m => m.Name == "Check"), executor.noneInstance, []),
 			Is.EqualTo(executor.falseInstance));
 	}
+
+	[Test]
+	public void IsNotViaExplicitCallReturnsTrueForDifferentNumbers()
+	{
+		using var t = CreateType(nameof(IsNotViaExplicitCallReturnsTrueForDifferentNumbers),
+			"has number", "Check(other Number) Boolean", "\tnumber.not(other)");
+		var method = t.Methods.Single(m => m.Name == "Check");
+		var instance = new ValueInstance(t,
+			new Dictionary<string, ValueInstance> { { "number", new ValueInstance(executor.numberType, 5.0) } });
+		Assert.That(executor.Execute(method, instance, [new ValueInstance(executor.numberType, 3.0)]),
+			Is.EqualTo(executor.trueInstance));
+		Assert.That(executor.Execute(method, instance, [new ValueInstance(executor.numberType, 5.0)]),
+			Is.EqualTo(executor.falseInstance));
+	}
+
+	[Test]
+	public void IsNotErrorViaExplicitCallReturnsTrueForNumber()
+	{
+		using var t = CreateType(nameof(IsNotErrorViaExplicitCallReturnsTrueForNumber),
+			"has number", "CheckIsNotError Boolean",
+			"\tconstant err = Error",
+			"\tnumber.not(err)");
+		var method = t.Methods.Single(m => m.Name == "CheckIsNotError");
+		var instance = new ValueInstance(t,
+			new Dictionary<string, ValueInstance> { { "number", new ValueInstance(executor.numberType, 5.0) } });
+		Assert.That(executor.Execute(method, instance, []), Is.EqualTo(executor.trueInstance));
+	}
 }
