@@ -357,4 +357,59 @@ public sealed class ExecutorTests
 			validatingExecutor.Execute(t.Methods.Single(m => m.Name == "Run"),
 				executor.noneInstance, [], null, true).Number, Is.EqualTo(0));
 	}
+
+	[Test]
+	public void CannotCallMethodWithWrongInstanceThrows()
+	{
+		using var t = CreateType(nameof(CannotCallMethodWithWrongInstanceThrows), "has number",
+			"Compute Number", "\tnumber");
+		var method = t.Methods.Single(m => m.Name == "Compute");
+		Assert.That(() => executor.Execute(method, executor.trueInstance, []),
+			Throws.InstanceOf<Executor.CannotCallMethodWithWrongInstance>());
+	}
+
+	[Test]
+	public void MutableDeclarationWithMutableValueTracksStatistics()
+	{
+		using var t = CreateType(nameof(MutableDeclarationWithMutableValueTracksStatistics),
+			"has number", "Run Number",
+			"\tmutable vx = number",
+			"\tmutable vy = vx",
+			"\tvx + vy");
+		executor.Execute(t.Methods.Single(m => m.Name == "Run"), executor.noneInstance, []);
+		Assert.That(executor.Statistics.MutableDeclarationCount, Is.EqualTo(1));
+		Assert.That(executor.Statistics.MutableUsageCount, Is.EqualTo(1));
+	}
+
+	[Test]
+	public void IsNotOperatorReturnsTrueForDifferentValues()
+	{
+		using var t = CreateType(nameof(IsNotOperatorReturnsTrueForDifferentValues), "has number",
+			"Check Boolean", "\t1 is not 2");
+		Assert.That(
+			executor.Execute(t.Methods.Single(m => m.Name == "Check"), executor.noneInstance, []),
+			Is.EqualTo(executor.trueInstance));
+	}
+
+	[Test]
+	public void IsNotOperatorReturnsFalseForSameValues()
+	{
+		using var t = CreateType(nameof(IsNotOperatorReturnsFalseForSameValues), "has number",
+			"Check Boolean", "\t1 is not 1");
+		Assert.That(
+			executor.Execute(t.Methods.Single(m => m.Name == "Check"), executor.noneInstance, []),
+			Is.EqualTo(executor.falseInstance));
+	}
+
+	[Test]
+	public void IsNotErrorReturnsFalseWhenBothAreErrors()
+	{
+		using var t = CreateType(nameof(IsNotErrorReturnsFalseWhenBothAreErrors), "has number",
+			"Check Boolean",
+			"\tconstant err = Error(\"test\")",
+			"\terr is not err");
+		Assert.That(
+			executor.Execute(t.Methods.Single(m => m.Name == "Check"), executor.noneInstance, []),
+			Is.EqualTo(executor.falseInstance));
+	}
 }

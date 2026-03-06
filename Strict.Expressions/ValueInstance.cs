@@ -80,7 +80,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 		if (!returnType.IsMutable && (returnType.IsNumber || returnType.IsText ||
 			returnType.IsCharacter || returnType.IsList || returnType.IsDictionary ||
 			returnType.IsEnum || returnType.IsBoolean || returnType.IsNone))
-			throw new ValueTypeInstanceShouldOnlyBeCreatedForComplexTypes(returnType); //TODO: need test
+			throw new ValueTypeInstanceShouldOnlyBeCreatedForComplexTypes(returnType);
 		value = new ValueTypeInstance(returnType, members);
 		number = TypeId;
 	}

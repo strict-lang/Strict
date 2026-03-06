@@ -129,6 +129,58 @@ public sealed class ForTests
 	}
 
 	[Test]
+	public void ForLoopWithAscendingRangeAndEarlyReturn()
+	{
+		using var t = CreateType(nameof(ForLoopWithAscendingRangeAndEarlyReturn), "has number",
+			"FindFirst Number",
+			"\tfor Range(1, 5)",
+			"\t\tif value is 3",
+			"\t\t\treturn value",
+			"\t\t0");
+		var result = executor.Execute(t.Methods.Single(m => m.Name == "FindFirst"),
+			executor.noneInstance, []);
+		Assert.That(result.Number, Is.EqualTo(3));
+	}
+
+	[Test]
+	public void ForLoopWithDescendingRangeAndEarlyReturn()
+	{
+		using var t = CreateType(nameof(ForLoopWithDescendingRangeAndEarlyReturn), "has number",
+			"FindFirst Number",
+			"\tfor Range(5, 1)",
+			"\t\tif value is 3",
+			"\t\t\treturn value",
+			"\t\t0");
+		var result = executor.Execute(t.Methods.Single(m => m.Name == "FindFirst"),
+			executor.noneInstance, []);
+		Assert.That(result.Number, Is.EqualTo(3));
+	}
+
+	[Test]
+	public void TextReturnTypeWithNoResultsReturnsEmpty()
+	{
+		using var t = CreateType(nameof(TextReturnTypeWithNoResultsReturnsEmpty), "has number",
+			"GetText Text",
+			"\tmutable sum = 0",
+			"\tfor (1, 2, 3)",
+			"\t\tif value > 0",
+			"\t\t\tsum = sum + value");
+		var result = executor.Execute(t.Methods.Single(m => m.Name == "GetText"),
+			executor.noneInstance, []);
+		Assert.That(result.Text, Is.EqualTo(""));
+	}
+
+	[Test]
+	public void TextReturnTypeConsolidatesListValues()
+	{
+		using var t = CreateType(nameof(TextReturnTypeConsolidatesListValues), "has number",
+			"Merge Text", "\tfor (\"a\", \"b\")", "\t\t(value, value)");
+		var result = executor.Execute(t.Methods.Single(m => m.Name == "Merge"),
+			executor.noneInstance, []);
+		Assert.That(result.Text, Is.EqualTo("(a, a), (b, b)"));
+	}
+
+	[Test]
 	public void RemoveParenthesesWithElseIfChain()
 	{
 		using var t = CreateType(nameof(RemoveParenthesesWithElseIfChain),

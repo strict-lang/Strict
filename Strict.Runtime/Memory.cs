@@ -9,7 +9,7 @@ public sealed class Memory
 	{
 		Variables.TryGetValue(key, out var collection);
 		if (!collection.IsList)
-			return; //TODO: need test
+			return;
 		var listItems = new List<ValueInstance>(collection.List.Items);
 		if (listItems.Count > 0)
 		{
@@ -18,7 +18,7 @@ public sealed class Memory
 			return;
 		}
 		if (collection.GetTypeExceptText() is not GenericTypeImplementation genericImplementationType)
-			throw new InvalidOperationException(); //TODO: need test
+			throw new InvalidOperationException();
 		listItems.Add(element);
 		Variables[key] = new ValueInstance(genericImplementationType, listItems);
 	}

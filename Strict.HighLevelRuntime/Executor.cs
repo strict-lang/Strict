@@ -120,7 +120,7 @@ public class Executor
 		IReadOnlyList<ValueInstance> args, ExecutionContext? parentContext)
 	{
 		if (!instance.IsPrimitiveType(noneType) && !instance.IsSameOrCanBeUsedAs(method.Type))
-			throw new CannotCallMethodWithWrongInstance(method, instance); //TODO: need test
+			throw new CannotCallMethodWithWrongInstance(method, instance);
 		if (args.Count > method.Parameters.Count)
 			throw new TooManyArguments(method, args[method.Parameters.Count].ToString(), args);
 		for (var index = 0; index < args.Count; index++)
@@ -386,7 +386,7 @@ public class Executor
 		if (isDeclaration)
 			Statistics.VariableDeclarationCount++;
 		if (value.IsMutable)
-		{ //TODO: need test
+		{
 			if (isDeclaration)
 				Statistics.MutableDeclarationCount++;
 			Statistics.MutableUsageCount++;

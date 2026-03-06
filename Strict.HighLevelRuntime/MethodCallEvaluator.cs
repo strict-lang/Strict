@@ -148,7 +148,7 @@ public sealed class MethodCallEvaluator(Executor executor)
 				var matches = leftInstance != null && leftInstance.ReturnType.IsError &&
 					leftInstance.ReturnType.IsSameOrCanBeUsedAs(rightInstance.ReturnType);
 				if (op is not BinaryOperator.Is)
-					matches = !matches; //TODO: need test
+					matches = !matches;
 				return executor.ToBoolean(matches);
 			}
 			if (left.IsPrimitiveType(executor.characterType) && right.IsText)
@@ -158,7 +158,7 @@ public sealed class MethodCallEvaluator(Executor executor)
 				right = new ValueInstance(right.ToExpressionCodeString());
 			var equals = left.Equals(right);
 			if (op is not BinaryOperator.Is)
-				equals = !equals; //TODO: need test
+				equals = !equals;
 			return executor.ToBoolean(equals);
 		}
 		var l = left.Number;

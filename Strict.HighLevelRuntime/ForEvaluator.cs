@@ -26,7 +26,7 @@ internal sealed class ForEvaluator(Executor executor)
 					loop.ResetIteration();
 					ExecuteForIteration(f, ctx, iterator, ref results, itemType, index, loop);
 					if (ctx.ExitMethodAndReturnValue.HasValue)
-						return ctx.ExitMethodAndReturnValue.Value; //TODO: need test
+						return ctx.ExitMethodAndReturnValue.Value;
 				}
 			else
 				for (var index = start; index > end; index--)
@@ -34,7 +34,7 @@ internal sealed class ForEvaluator(Executor executor)
 					loop.ResetIteration();
 					ExecuteForIteration(f, ctx, iterator, ref results, itemType, index, loop);
 					if (ctx.ExitMethodAndReturnValue.HasValue)
-						return ctx.ExitMethodAndReturnValue.Value; //TODO: need test
+						return ctx.ExitMethodAndReturnValue.Value;
 				}
 		}
 		else
@@ -84,7 +84,7 @@ internal sealed class ForEvaluator(Executor executor)
 		{
 			last = executor.RunExpression(e, ctx);
 			if (ctx.ExitMethodAndReturnValue.HasValue)
-				return ctx.ExitMethodAndReturnValue.Value; //TODO: need test
+				return ctx.ExitMethodAndReturnValue.Value;
 		}
 		return last;
 	}
@@ -101,7 +101,7 @@ internal sealed class ForEvaluator(Executor executor)
 		if (!ctx.Method.ReturnType.IsText)
 			return null;
 		if (results == null)
-			return new ValueInstance(""); //TODO: need test
+			return new ValueInstance("");
 		var text = "";
 		foreach (var value in results)
 			if (value.IsPrimitiveType(executor.characterType))
@@ -110,7 +110,6 @@ internal sealed class ForEvaluator(Executor executor)
 				value.IsPrimitiveType(executor.booleanType))
 				text += value.ToExpressionCodeString();
 			else if (value.IsList || value.IsDictionary)
-				//TODO: need test
 				text += (text == ""
 					? ""
 					: ", ") + "(" + value.ToExpressionCodeString() + ")";
