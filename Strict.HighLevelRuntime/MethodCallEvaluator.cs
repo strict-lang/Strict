@@ -130,7 +130,7 @@ public sealed class MethodCallEvaluator(Executor executor)
 	{
 		executor.Statistics.CompareCount++;
 		var op = call.Method.Name;
-		if (op is BinaryOperator.Is or UnaryOperator.Not)
+		if (op is BinaryOperator.Is)
 		{
 			var rightInstance = right.TryGetValueTypeInstance();
 			if (rightInstance is { ReturnType.IsError: true })
@@ -138,8 +138,6 @@ public sealed class MethodCallEvaluator(Executor executor)
 				var leftInstance = left.TryGetValueTypeInstance();
 				var matches = leftInstance != null && leftInstance.ReturnType.IsError &&
 					leftInstance.ReturnType.IsSameOrCanBeUsedAs(rightInstance.ReturnType);
-				if (op is not BinaryOperator.Is)
-					matches = !matches;
 				return executor.ToBoolean(matches);
 			}
 			if (left.IsPrimitiveType(executor.characterType) && right.IsText)
@@ -147,10 +145,7 @@ public sealed class MethodCallEvaluator(Executor executor)
 			if (left.IsText &&
 				(right.IsPrimitiveType(executor.numberType) || right.IsPrimitiveType(executor.characterType)))
 				right = new ValueInstance(right.ToExpressionCodeString());
-			var equals = left.Equals(right);
-			if (op is not BinaryOperator.Is)
-				equals = !equals;
-			return executor.ToBoolean(equals);
+			return executor.ToBoolean(left.Equals(right));
 		}
 		var l = left.Number;
 		var r = right.Number;

@@ -9,7 +9,7 @@ internal sealed class BodyEvaluator(Executor executor)
 	{
 		executor.Statistics.BodyCount++;
 		if (runOnlyTests)
-			executor.IncrementInlineTestDepth();
+			inlineTestDepth++;
 		try
 		{
 			return TryEvaluate(body, ctx, runOnlyTests);
@@ -23,9 +23,14 @@ internal sealed class BodyEvaluator(Executor executor)
 		finally
 		{
 			if (runOnlyTests)
-				executor.DecrementInlineTestDepth();
+				inlineTestDepth--;
 		}
 	}
+
+	/// <summary>
+	/// Evaluate inline tests at top-level only (outermost call), avoid recursion
+	/// </summary>
+	internal int inlineTestDepth;
 
 	private ValueInstance TryEvaluate(Body body, ExecutionContext ctx, bool runOnlyTests)
 	{
@@ -78,7 +83,9 @@ internal sealed class BodyEvaluator(Executor executor)
 				call.Instance != null && ExpressionReferencesMember(call.Instance, memberName) ||
 				call.Arguments.Any(a => ExpressionReferencesMember(a, memberName)),
 			List list => list.Values.Any(v => ExpressionReferencesMember(v, memberName)),
-			Expressions.Dictionary => false,
+			Dictionary dict =>
+				dict.KeyType.Name.Equals(memberName, StringComparison.OrdinalIgnoreCase) ||
+				dict.MappedValueType.Name.Equals(memberName, StringComparison.OrdinalIgnoreCase),
 			_ => false
 		};
 

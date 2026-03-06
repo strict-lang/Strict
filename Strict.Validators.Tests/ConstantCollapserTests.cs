@@ -28,7 +28,6 @@ public sealed class ConstantCollapserTests
 			new TypeLines(nameof(FoldMemberInitialValueExpressions),
 				"has number = 17 + 4", "Run", "\tnumber"));
 		simpleType.ParseMembersAndMethods(parser);
-		// ReSharper disable once AccessToDisposedClosure
 		Assert.That(() => collapser.Visit(simpleType, true),
 			Throws.InstanceOf<ConstantCollapser.UseConstantHere>());
 	}
@@ -55,6 +54,32 @@ public sealed class ConstantCollapserTests
 		]);
 		collapser.Visit(method, true);
 		Assert.That(((Text)method.GetBodyAndParseIfNeeded()).Data.Text, Is.EqualTo("5yo"));
+	}
+
+	[Test]
+	public void FoldTwoConstants()
+	{
+		var method = new Method(type, 1, parser, [
+			"Run",
+			"\tconstant hi = \"Hi\"",
+			"\thi + hi"
+		]);
+		collapser.Visit(method, true);
+		Assert.That(((Text)method.GetBodyAndParseIfNeeded()).Data.Text, Is.EqualTo("HiHi"));
+	}
+
+	[Test]
+	public void FoldTwoMembers()
+	{
+		using var foldType = new Type(TestPackage.Instance,
+			new TypeLines(nameof(FoldTwoMembers),
+			"has one = 1",
+			"has two = 2",
+			"Run Number",
+			"\tone + two"));
+		foldType.ParseMembersAndMethods(parser);
+		collapser.Visit(foldType.Methods[0], true);
+		Assert.That(((Number)foldType.Methods[0].GetBodyAndParseIfNeeded()).Data.Number, Is.EqualTo(3));
 	}
 
 	[Test]
@@ -182,5 +207,59 @@ public sealed class ConstantCollapserTests
 		]);
 		collapser.Visit(method, true);
 		Assert.That(method.GetBodyAndParseIfNeeded(), Is.InstanceOf<Binary>());
+	}
+
+	[Test]
+	public void FoldTextPlusBoolean()
+	{
+		var method = new Method(type, 1, parser, [
+			"Run",
+			"\t\"hello\" + true"
+		]);
+		collapser.Visit(method, true);
+		Assert.That(((Text)method.GetBodyAndParseIfNeeded()).Data.Text, Is.EqualTo("helloTrue"));
+	}
+
+	[Test]
+	public void FoldsMemberWithBinaryInitialValueOnLeftSide()
+	{
+		using var testType = new Type(TestPackage.Instance,
+			new TypeLines(nameof(FoldsMemberWithBinaryInitialValueOnLeftSide),
+				"constant one = 2 + 3",
+				"Run Number",
+				"\tone * 2"));
+		testType.ParseMembersAndMethods(parser);
+		collapser.Visit(testType.Methods[0], true);
+		Assert.That(((Number)testType.Methods[0].GetBodyAndParseIfNeeded()).Data.Number, Is.EqualTo(10));
+	}
+
+	[Test]
+	public void FoldsMemberWithBinaryInitialValueOnRightSide()
+	{
+		using var testType = new Type(TestPackage.Instance,
+			new TypeLines(nameof(FoldsMemberWithBinaryInitialValueOnRightSide),
+				"constant one = 2 + 3",
+				"Run Number",
+				"\t2 * one"));
+		testType.ParseMembersAndMethods(parser);
+		collapser.Visit(testType.Methods[0], true);
+		Assert.That(((Number)testType.Methods[0].GetBodyAndParseIfNeeded()).Data.Number, Is.EqualTo(10));
+	}
+
+	[Test]
+	public void SubstitutesConstantMemberCallInBinaryWhenOtherSideIsNonConstant()
+	{
+		using var testType = new Type(TestPackage.Instance,
+			new TypeLines("PartialBinaryCollapse",
+				"constant one = 1",
+				"has number",
+				"AddConstant Number",
+				"\tone + number",
+				"Run",
+				"\tnumber"));
+		testType.ParseMembersAndMethods(parser);
+		collapser.Visit(testType.Methods[0], true);
+		Assert.That(((Binary)testType.Methods[0].GetBodyAndParseIfNeeded()).Instance,
+			Is.InstanceOf<Number>());
 	}
 }

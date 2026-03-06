@@ -33,8 +33,18 @@ public class MethodCall : ConcreteExpression
 	public Method Method { get; }
 	public Expression? Instance { get; }
 	public IReadOnlyList<Expression> Arguments { get; }
-	public override bool IsConstant =>
-		(Instance?.IsConstant ?? true) && Arguments.All(a => a.IsConstant);
+	public override bool IsConstant
+	{
+		get
+		{
+			if (Instance?.IsConstant == false)
+				return false;
+			for (var index = 0; index < Arguments.Count; index++)
+				if (!Arguments[index].IsConstant)
+					return false;
+			return true;
+		}
+	}
 
 	// ReSharper disable once TooManyArguments
 	public static Expression? TryParse(Expression? instance, Body body,

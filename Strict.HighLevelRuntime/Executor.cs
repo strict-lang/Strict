@@ -50,18 +50,14 @@ public class Executor
 	public ValueInstance Execute(Method method)
 	{
 		var returnValue = noneInstance;
-		if (inlineTestDepth == 0 && behavior != TestBehavior.Disabled &&
+		if (bodyEvaluator.inlineTestDepth == 0 && behavior != TestBehavior.Disabled &&
 			(behavior == TestBehavior.TestRunner || validatedMethods.Add(method)))
 			returnValue = Execute(method, noneInstance, [], null, true);
-		if (inlineTestDepth > 0 || behavior != TestBehavior.TestRunner)
+		if (bodyEvaluator.inlineTestDepth > 0 || behavior != TestBehavior.TestRunner)
 			returnValue = Execute(method, noneInstance, []);
 		return returnValue;
 	}
 
-	/// <summary>
-	/// Evaluate inline tests at top-level only (outermost call), avoid recursion
-	/// </summary>
-	private int inlineTestDepth;
 	private readonly HashSet<Method> validatedMethods = [];
 	public Statistics Statistics { get; } = new();
 
@@ -238,7 +234,7 @@ public class Executor
 		{
 			Body body => bodyEvaluator.Evaluate(body, context, runOnlyTests),
 			List list => EvaluateListExpression(list, context),
-			Expressions.Dictionary dict => dict.Data,
+			Dictionary dict => dict.Data,
 			Value v => v.Data,
 			ParameterCall or VariableCall => EvaluateVariable(expr.ToString(), context),
 			MemberCall m => EvaluateMemberCall(m, context),
@@ -302,8 +298,8 @@ public class Executor
 			: ctx.Get(member.Member.Name, Statistics);
 	}
 
-	internal void IncrementInlineTestDepth() => inlineTestDepth++;
-	internal void DecrementInlineTestDepth() => inlineTestDepth--;
+	public class UnableToCallMemberWithoutInstance(MemberCall member, ExecutionContext ctx)
+		: Exception(member + ", context " + ctx); //ncrunch: no coverage
 
 	internal ValueInstance EvaluateMethodCall(MethodCall call, ExecutionContext ctx) =>
 		methodCallEvaluator.Evaluate(call, ctx);
@@ -405,13 +401,8 @@ public class Executor
 	private ValueInstance EvaluateNot(Not not, ExecutionContext ctx)
 	{
 		Statistics.UnaryCount++;
-		return !RunExpression(not.Instance!, ctx).Boolean
-			? trueInstance
-			: falseInstance;
+		return ToBoolean(!RunExpression(not.Instance!, ctx).Boolean);
 	}
-
-	public class UnableToCallMemberWithoutInstance(MemberCall member, ExecutionContext ctx)
-		: Exception(member + ", context " + ctx); //ncrunch: no coverage
 
 	public ValueInstance ToBoolean(bool isTrue) =>
 		isTrue

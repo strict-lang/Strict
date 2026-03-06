@@ -52,7 +52,8 @@ public sealed class ByteCodeGenerator
 	private static ValueInstance GetValueInstanceFromExpression(Expression expression) =>
 		expression switch
 		{
-			List list => list.Data,
+			List list => list.TryGetConstantData() ?? throw new NotSupportedException(
+				"Dynamic lists (mutable or containing any non constant expression) are not supported yet"),
 			Value val => val.Data,
 			MemberCall memberCall when memberCall.Member.InitialValue != null =>
 				memberCall.Member.InitialValue is Value enumValue

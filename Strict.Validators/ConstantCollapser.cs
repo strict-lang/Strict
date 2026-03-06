@@ -62,28 +62,27 @@ public sealed class ConstantCollapser : Visitor
 				left = leftMember.Member.InitialValue;
 			var right = binary.Arguments[0];
 			if (right is VariableCall { Variable.InitialValue.IsConstant: true } rightCall)
-				right = rightCall.Variable.InitialValue; //ncrunch: no coverage
+				right = rightCall.Variable.InitialValue;
 			if (right is MemberCall { Member.InitialValue.IsConstant: true } rightMember)
-				right = rightMember.Member.InitialValue; //ncrunch: no coverage
+				right = rightMember.Member.InitialValue;
 			var collapsedExpression = TryCollapseBinaryExpression(left, right, binary.Method);
 			if (collapsedExpression != null)
 				return collapsedExpression;
-			//ncrunch: no coverage start
 			if (!ReferenceEquals(left, binary.Instance!) || !ReferenceEquals(right, binary.Arguments[0]))
 			{
 				var arguments = new[] { right };
 				return new Binary(left, left.ReturnType.GetMethod(binary.Method.Name, arguments), arguments);
 			}
-		} //ncrunch: no coverage end
+		}
 		if (!expression.IsConstant)
-			return expression; //ncrunch: no coverage
+			return expression;
 		if (expression is To to)
 		{
 			var value = to.Instance as Value;
 			if (to.ConversionType.IsNumber && value is Text textValue)
-				return new Number(to.Method.Type, double.Parse(GetText(textValue)));
+				return new Number(to.Method.Type, double.Parse(textValue.Data.Text));
 			if (to.ConversionType.IsText && value is Number numberValue)
-				return new Text(to.Method.Type, GetNumber(numberValue).ToString(CultureInfo.InvariantCulture));
+				return new Text(to.Method.Type, numberValue.Data.Number.ToString(CultureInfo.InvariantCulture));
 			throw new UnsupportedToExpression(to.ToStringWithType()); //ncrunch: no coverage
 		}
 		return expression;
@@ -91,17 +90,6 @@ public sealed class ConstantCollapser : Visitor
 
 	public class UnsupportedToExpression(string toStringWithType) : Exception(toStringWithType); //ncrunch: no coverage
 
-	private static double GetNumber(Number n) =>
-		double.Parse(n.Data.ToExpressionCodeString(), CultureInfo.InvariantCulture);
-
-	private static string GetText(Text t) =>
-		t.Data.ToExpressionCodeString().Replace("\\\"", "\"").Replace(@"\\", @"\");
-
-	private static bool GetBool(Boolean b) => b.Data.ToExpressionCodeString() != "false";
-
-	/// <summary>
-	/// Would be nice if all of these are evaluated via actual strict code!
-	/// </summary>
 	private static Expression? TryCollapseBinaryExpression(Expression left, Expression right,
 		Context method)
 	{
@@ -116,32 +104,28 @@ public sealed class ConstantCollapser : Visitor
 		if (method.Name == BinaryOperator.Plus)
 		{
 			if (leftNumber != null && rightNumber != null)
-				return new Number(method, GetNumber(leftNumber) + GetNumber(rightNumber));
+				return new Number(method, leftNumber.Data.Number + rightNumber.Data.Number);
 			var leftText = left as Text;
 			var rightText = right as Text;
 			if (leftText != null && rightText != null)
-				return new Text(method, GetText(leftText) + GetText(rightText));
+				return new Text(method, leftText.Data.Text + rightText.Data.Text);
 			if (leftText != null && rightNumber != null)
-				return new Text(method, GetText(leftText) + GetNumber(rightNumber));
-			if (leftNumber != null && rightText != null)
-				return new Text(method, GetNumber(leftNumber) + GetText(rightText));
+				return new Text(method, leftText.Data.Text + rightNumber.Data.ToExpressionCodeString());
 			if (leftText != null && right is Boolean rightBool)
-				return new Text(method, GetText(leftText) + GetBool(rightBool));
-			if (left is Boolean leftBool && rightText != null)
-				return new Text(method, GetBool(leftBool) + GetText(rightText));
+				return new Text(method, leftText.Data.Text + rightBool.Data.Boolean);
 		}
 		else if (method.Name == BinaryOperator.Minus && leftNumber != null && rightNumber != null)
-			return new Number(method, GetNumber(leftNumber) - GetNumber(rightNumber));
+			return new Number(method, leftNumber.Data.Number - rightNumber.Data.Number);
 		else if (method.Name == BinaryOperator.Multiply && leftNumber != null && rightNumber != null)
-			return new Number(method, GetNumber(leftNumber) * GetNumber(rightNumber));
+			return new Number(method, leftNumber.Data.Number * rightNumber.Data.Number);
 		else if (method.Name == BinaryOperator.Divide && leftNumber != null && rightNumber != null)
-			return new Number(method, GetNumber(leftNumber) / GetNumber(rightNumber));
+			return new Number(method, leftNumber.Data.Number / rightNumber.Data.Number);
 		if (left is Boolean leftBoolean && right is Boolean rightBoolean)
 		{
 			if (method.Name == BinaryOperator.And)
-				return new Boolean(method, GetBool(leftBoolean) && GetBool(rightBoolean));
+				return new Boolean(method, leftBoolean.Data.Boolean && rightBoolean.Data.Boolean);
 			if (method.Name == BinaryOperator.Or)
-				return new Boolean(method, GetBool(leftBoolean) || GetBool(rightBoolean));
+				return new Boolean(method, leftBoolean.Data.Boolean || rightBoolean.Data.Boolean);
 		}
 		return null;
 	}

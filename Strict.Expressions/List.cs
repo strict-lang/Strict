@@ -8,13 +8,11 @@ public sealed class List : Value
 	public List(Body bodyForErrorMessage, List<Expression> values, bool isMutable = false) : base(
 		values[0].ReturnType.GetListImplementationType(
 			GetCommonBaseType(values.Select(v => v.ReturnType).ToList(), bodyForErrorMessage)),
-		//impossible to know what the ValueInstances would be here: values
 		new List<ValueInstance>(), values[0].LineNumber, isMutable) =>
 		Values = values;
 
 	public List(Type type, int lineNumber = 0) : base(type, new List<ValueInstance>(), lineNumber,
-		true) =>
-		Values = [];
+		true) => Values = [];
 
 	private static Type
 		GetCommonBaseType(IReadOnlyList<Type> returnTypes, Body bodyForErrorMessage) =>
@@ -28,11 +26,28 @@ public sealed class List : Value
 		: ParsingFailed(body, "List has one or many mismatching types " + string.Join(", ", returnTypes));
 
 	public List<Expression> Values { get; }
-	public override bool IsConstant => Values.All(v => v.IsConstant);
-	public new ValueInstance Data =>
-		new(ReturnType, Values.Select(v => v is Value val
-			? val.Data
-			: throw new InvalidOperationException($"List contains non-constant expression: {v}")).ToList());
+	public override bool IsConstant
+	{
+		get
+		{
+			for (var i = 0; i < Values.Count; i++)
+				if (!Values[i].IsConstant)
+					return false;
+			return true;
+		}
+	}
+
+	public ValueInstance? TryGetConstantData()
+	{
+		if (!IsConstant)
+			return null;
+		var valueInstances = new ValueInstance[Values.Count];
+		for (var i = 0; i < Values.Count; i++)
+			valueInstances[i] = ((Value)Values[i]).Data;
+		return new ValueInstance(ReturnType, valueInstances);
+	}
+
+	public new ValueInstance Data => throw new NotSupportedException("Use TryGetConstantData instead!");
 
 	public override string ToString()
 	{

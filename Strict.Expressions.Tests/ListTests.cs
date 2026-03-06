@@ -200,4 +200,19 @@ public sealed class ListTests : TestExpressions
 	public void Index() =>
 		Assert.That(ParseExpression("(1, 2, 3).Index(9) is -1").ReturnType,
 			Is.EqualTo(type.GetType(Type.Boolean)));
+
+	[Test]
+	public void MutableListIsNotConstant()
+	{
+		var body = (Body)ParseExpression("mutable numbers = (1, 2, 3)", "numbers.Add(4)");
+		Assert.That(body.Expressions[^1].IsConstant, Is.False);
+	}
+
+	[Test]
+	public void CannotGetConstantDataFromListWithNonConstants()
+	{
+		var list = (List)ParseExpression("(1, 2, 3, 4, five)");
+		Assert.That(() => list.Data, Throws.InstanceOf<NotSupportedException>());
+		Assert.That(list.TryGetConstantData(), Is.Null);
+	}
 }

@@ -345,17 +345,29 @@ public sealed class ExecutorTests
 	}
 
 	[Test]
-	public void InlineTestDictionaryDeclarationNotSkipped()
+	public void InlineDictionaryDeclarationLength()
 	{
-		using var t = CreateType(nameof(InlineTestDictionaryDeclarationNotSkipped),
-			"has number", "Run Number",
+		using var t = CreateType(nameof(InlineDictionaryDeclarationLength),
+			"has number", "GetCount Number",
+			"\t(1, 2, 3).Length is 3",
 			"\tconstant myDict = Dictionary(Number, Number)",
-			"\tmyDict.Length is 0",
-			"\tnumber");
+			"\tmyDict.Length");
 		var validatingExecutor = new Executor(TestPackage.Instance);
 		Assert.That(
-			validatingExecutor.Execute(t.Methods.Single(m => m.Name == "Run"),
-				executor.noneInstance, [], null, true).Number, Is.EqualTo(0));
+			validatingExecutor.Execute(t.Methods.Single(m => m.Name == "GetCount")).Number, Is.EqualTo(0));
+	}
+
+	[Test]
+	public void InlineTestDictionaryDeclaration()
+	{
+		using var t = CreateType(nameof(InlineTestDictionaryDeclaration),
+				"has number", "Run Number",
+				"\tconstant myDict = Dictionary(Text, Text)",
+				"\tmyDict.Length is 0",
+				"\tnumber");
+		var validatingExecutor = new Executor(TestPackage.Instance);
+		Assert.That(
+			validatingExecutor.Execute(t.Methods.Single(m => m.Name == "Run")).Number, Is.EqualTo(0));
 	}
 
 	[Test]
@@ -411,32 +423,5 @@ public sealed class ExecutorTests
 		Assert.That(
 			executor.Execute(t.Methods.Single(m => m.Name == "Check"), executor.noneInstance, []),
 			Is.EqualTo(executor.falseInstance));
-	}
-
-	[Test]
-	public void IsNotViaExplicitCallReturnsTrueForDifferentNumbers()
-	{
-		using var t = CreateType(nameof(IsNotViaExplicitCallReturnsTrueForDifferentNumbers),
-			"has number", "Check(other Number) Boolean", "\tnumber.not(other)");
-		var method = t.Methods.Single(m => m.Name == "Check");
-		var instance = new ValueInstance(t,
-			new Dictionary<string, ValueInstance> { { "number", new ValueInstance(executor.numberType, 5.0) } });
-		Assert.That(executor.Execute(method, instance, [new ValueInstance(executor.numberType, 3.0)]),
-			Is.EqualTo(executor.trueInstance));
-		Assert.That(executor.Execute(method, instance, [new ValueInstance(executor.numberType, 5.0)]),
-			Is.EqualTo(executor.falseInstance));
-	}
-
-	[Test]
-	public void IsNotErrorViaExplicitCallReturnsTrueForNumber()
-	{
-		using var t = CreateType(nameof(IsNotErrorViaExplicitCallReturnsTrueForNumber),
-			"has number", "CheckIsNotError Boolean",
-			"\tconstant err = Error",
-			"\tnumber.not(err)");
-		var method = t.Methods.Single(m => m.Name == "CheckIsNotError");
-		var instance = new ValueInstance(t,
-			new Dictionary<string, ValueInstance> { { "number", new ValueInstance(executor.numberType, 5.0) } });
-		Assert.That(executor.Execute(method, instance, []), Is.EqualTo(executor.trueInstance));
 	}
 }
