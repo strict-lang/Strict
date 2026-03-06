@@ -6,7 +6,6 @@ public class BaseVirtualMachineTests : TestExpressions
 {
 	//ncrunch: no coverage start
 	protected static readonly Type NumberType = TestPackage.Instance.GetType(Type.Number);
-	protected static readonly Type TextType = TestPackage.Instance.GetType(Type.Text);
 	protected static readonly Type ListType = TestPackage.Instance.GetType(Type.List);
 	protected static ValueInstance Number(double value) => new(NumberType, value);
 	protected static ValueInstance Text(string value) => new(value);

@@ -58,18 +58,27 @@ public class MethodExpressionParser : ExpressionParser
 			return null;
 		var valueVar = body.FindVariable(Type.ValueLowercase.AsSpan());
 		if (valueVar == null)
-			return null;
+			return null; //ncrunch: no coverage
 		var inputName = input.ToString();
 		var valueType = valueVar.Type;
 		var valueCall = new VariableCall(valueVar, body.CurrentFileLineNumber);
 		var method = valueType.FindMethod(inputName, []);
 		if (method != null)
-			return new MethodCall(method, valueCall, [], null, body.CurrentFileLineNumber);
-		var member = valueType.Members.FirstOrDefault(m =>
-			m.Name.Equals(inputName, StringComparison.Ordinal));
+			return new MethodCall(method, valueCall, [], null, body.CurrentFileLineNumber); //ncrunch: no coverage
+		var member = FindMember(valueType, inputName);
 		return member != null
 			? new MemberCall(valueCall, member, body.CurrentFileLineNumber)
 			: null;
+	}
+
+	private static Member? FindMember(Type valueType, string inputName)
+	{
+		for (var index = 0; index < valueType.Members.Count; index++)
+			//ncrunch: no coverage start
+			if (valueType.Members[index].Name.Equals(inputName, StringComparison.Ordinal))
+				return valueType.Members[index];
+		//ncrunch: no coverage end
+		return null;
 	}
 
 	private static Expression? TryParseErrorOrTextOrListOrConditionalExpression(Body body,

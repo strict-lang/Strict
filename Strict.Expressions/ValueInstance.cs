@@ -48,10 +48,12 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 	}
 
 	public sealed class InvalidTypeValue(Type returnType, object value) : ParsingFailed(returnType,
+		//ncrunch: no coverage start
 		0, value switch
 		{
 			null => "null",
 			Expression => "Expression " + value + " needs to be evaluated!",
+			//ncrunch: no coverage end
 			_ => value + ""
 		} + " (" + value?.GetType() + ") for " + returnType.Name);
 
@@ -78,7 +80,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 		if (!returnType.IsMutable && (returnType.IsNumber || returnType.IsText ||
 			returnType.IsCharacter || returnType.IsList || returnType.IsDictionary ||
 			returnType.IsEnum || returnType.IsBoolean || returnType.IsNone))
-			throw new ValueTypeInstanceShouldOnlyBeCreatedForComplexTypes(returnType);
+			throw new ValueTypeInstanceShouldOnlyBeCreatedForComplexTypes(returnType); //TODO: need test
 		value = new ValueTypeInstance(returnType, members);
 		number = TypeId;
 	}
@@ -105,12 +107,10 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 			number = ListId;
 			break;
 		case DictionaryId:
-			//TODO: zero tests for this usecase
 			value = new ValueDictionaryInstance(newType, ((ValueDictionaryInstance)existingInstance.value).Items);
 			number = DictionaryId;
 			break;
 		case TypeId:
-			//TODO: zero tests for this usecase
 			var existingTypeInstance = (ValueTypeInstance)existingInstance.value;
 			if (!newType.IsMutable && existingTypeInstance.ReturnType.IsMutable && newType.IsText)
 			{
@@ -180,7 +180,6 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 			return IsSameOrCanBeUsedAs(methodReturnType.GetFirstImplementation())
 				? new ValueInstance(this, methodReturnType)
 				: this;
-		//TODO: zero tests for this usecase
 		return GetTypeExceptText().GetFirstImplementation().IsSameOrCanBeUsedAs(methodReturnType)
 			? new ValueInstance(this, methodReturnType)
 			: this;
@@ -189,7 +188,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 	public Type GetTypeExceptText() =>
 		number switch
 		{
-			ListId => ((ValueListInstance)value).ReturnType, //TODO: zero tests for this usecase
+			ListId => ((ValueListInstance)value).ReturnType,
 			DictionaryId => ((ValueDictionaryInstance)value).ReturnType,
 			TypeId => ((ValueTypeInstance)value).ReturnType,
 			_ => (Type)value
@@ -210,7 +209,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 			if (typeInstance.ReturnType.IsList && typeInstance.Members.TryGetValue(Type.Text, out var textMember))
 				return textMember.Text.Length;
 			if (typeInstance.Members.TryGetValue("keysAndValues", out var elementsMember) && elementsMember.IsList)
-				return elementsMember.List.Items.Count; //TODO: zero tests for this usecase
+				return elementsMember.List.Items.Count;
 			throw new IteratorNotSupported(this);
 		}
 		return (int)number;
@@ -227,7 +226,6 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 			TypeId when ((ValueTypeInstance)value).ReturnType.IsList &&
 				((ValueTypeInstance)value).Members.TryGetValue(Type.Text, out var textMember) =>
 				new ValueInstance(charTypeIfNeeded, textMember.Text[index]),
-			//TODO: zero tests for this usecase
 			TypeId when ((ValueTypeInstance)value).Members.TryGetValue("elements", out var elementsMember) &&
 				elementsMember.IsList => elementsMember.List.Items[index],
 			_ => throw new IteratorNotSupported(this)

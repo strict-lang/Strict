@@ -113,7 +113,6 @@ public class Executor
 						: throw new MissingArgument(method, param.Name, args);
 				context.Variables[param.Name] = arg;
 			}
-		//TODO: avoid context.AddDictionaryElements(instance);
 		return context;
 	}
 
@@ -121,7 +120,7 @@ public class Executor
 		IReadOnlyList<ValueInstance> args, ExecutionContext? parentContext)
 	{
 		if (!instance.IsPrimitiveType(noneType) && !instance.IsSameOrCanBeUsedAs(method.Type))
-			throw new CannotCallMethodWithWrongInstance(method, instance);
+			throw new CannotCallMethodWithWrongInstance(method, instance); //TODO: need test
 		if (args.Count > method.Parameters.Count)
 			throw new TooManyArguments(method, args[method.Parameters.Count].ToString(), args);
 		for (var index = 0; index < args.Count; index++)
@@ -165,7 +164,7 @@ public class Executor
 				return new ValueInstance(method.Type, args[0].Text[0]);
 			if (!args[0].IsText || args[0].IsSameOrCanBeUsedAs(method.Type))
 				return new ValueInstance(method.Type, args[0].Number);
-		}
+		} //ncrunch: no coverage
 		if (method.Type.IsList)
 			return new ValueInstance(method.Type, args);
 		if (method.Type.IsDictionary)
@@ -180,7 +179,7 @@ public class Executor
 				!parameter.Type.IsIterator && !IsSingleCharacterTextArgument(parameter.Type, args[index]))
 				throw new InvalidTypeForArgument(method.Type, args, index);
 			var memberName = GetFirstMemberMatchingParameter(method, parameter)?.Name ??
-				StringExtensions.MakeFirstLetterUppercase(parameter.Name);
+				parameter.Name.MakeFirstLetterUppercase();
 			members.Add(memberName, IsSingleCharacterTextArgument(parameter.Type, args[index])
 				? new ValueInstance(characterType, args[index].Text[0])
 				: args[index]);
@@ -193,7 +192,7 @@ public class Executor
 		foreach (var member in method.Type.Members)
 			if (member.Name.Equals(parameter.Name, StringComparison.OrdinalIgnoreCase))
 				return member;
-		return null;
+		return null; //ncrunch: no coverage
 	}
 
 	private static Dictionary<ValueInstance, ValueInstance> FillDictionaryFromListKeyAndValues(
@@ -266,42 +265,6 @@ public class Executor
 		return new ValueInstance(list.ReturnType, values);
 	}
 
-/*TODO:
-	private object EvaluateValueData(object valueData, ExecutionContext context) =>
-		valueData switch
-		{
-			Expression valueExpression =>
-				RunExpression(valueExpression, context), //ncrunch: no coverage
-			IList<Expression> list => list.Select(e => RunExpression(e, context)).ToList(),
-			_ => valueData
-		};
-	private ValueInstance CreateValueInstance(Type returnType, object valueData,
-		ExecutionContext context)
-	{
-		var value = EvaluateValueData(valueData, context);
-		if (returnType.IsDictionary)
-			value = NormalizeDictionaryValue(returnType, (IDictionary<string, object?>)value);
-		return CreateValueInstance(returnType, value);
-	}
-
-	internal ValueInstance CreateValueInstance(Type returnType, object? value)
-	{
-		if (value is ValueInstance valueInstance)
-			return CreateValueInstance(returnType, valueInstance);
-		return Make(ValueInstance.Create(returnType, value));
-	}
-
-	internal ValueInstance CreateValueInstance(Type returnType, ValueInstance value) =>
-		Make(ValueInstance.Create(returnType, value));
-
-	private static object NormalizeDictionaryValue(Type dictionaryType,
-		IDictionary<string, object?> rawMembers)
-	{
-		var listMemberName = dictionaryType.Members.First(member => member.Type.IsList).Name;
-		return FillDictionaryFromListKeyAndValues(rawMembers[listMemberName]);
-	}
-
-*/
 	public class ExpressionNotSupported(Expression expr, ExecutionContext context)
 		: ExecutionFailed(context.Type, expr.GetType().Name); //ncrunch: no coverage
 
@@ -423,7 +386,7 @@ public class Executor
 		if (isDeclaration)
 			Statistics.VariableDeclarationCount++;
 		if (value.IsMutable)
-		{
+		{ //TODO: need test
 			if (isDeclaration)
 				Statistics.MutableDeclarationCount++;
 			Statistics.MutableUsageCount++;
@@ -454,81 +417,4 @@ public class Executor
 		isTrue
 			? trueInstance
 			: falseInstance;
-	/*nah
-	private void EnsureCachedBaseValues(Context context)
-	{
-		if (cachedValuesInitialized)
-			return;
-		cachedValuesInitialized = true;
-		//TODO: cache types here instead
-		cachedTrue = Make(ValueInstance.CreateBoolean(context, true));
-		cachedFalse = Make(ValueInstance.CreateBoolean(context, false));
-		cachedNone = Make(ValueInstance.CreateNone(context));
-		cachedNumbers = new ValueInstance[12];
-		for (var value = -1; value <= 10; value++)
-			cachedNumbers[value + 1] = Make(ValueInstance.CreateNumber(context, value));
-	}
-
-	/// <summary>
-	/// Single entry point for creating ValueInstances in HighLevelRuntime.
-	/// Updates Statistics and returns the instance. All code should use this instead of
-	/// calling ValueInstance constructors or Create* methods directly.
-	/// </summary>
-	private ValueInstance Make(ValueInstance instance)
-	{
-		Statistics.ValueInstanceCount++;
-		var effectiveType = ValueInstance.GetEffectiveType(instance.ReturnType);
-		if (effectiveType.IsBoolean)
-			Statistics.BooleanCount++;
-		else if (effectiveType.IsNumber)
-			Statistics.NumberCount++;
-		else if (ValueInstance.IsTextType(effectiveType))
-			Statistics.TextCount++;
-		else if (effectiveType.IsList)
-			Statistics.ListCount++;
-		else if (effectiveType.IsDictionary)
-			Statistics.DictionaryCount++;
-		return instance;
-	}
-
-	private ValueInstance? cachedTrue;
-	private ValueInstance? cachedFalse;
-	private ValueInstance? cachedNone;
-	private ValueInstance[] cachedNumbers = [];
-	private bool cachedValuesInitialized;
-
-	internal ValueInstance Bool(Context any, bool b)
-	{
-		EnsureCachedBaseValues(any);
-		return b
-			? cachedTrue!.Value
-			: cachedFalse!.Value;
-	}
-
-	internal ValueInstance None(Context any)
-	{
-		EnsureCachedBaseValues(any);
-		return cachedNone!.Value;
-	}
-
-	internal ValueInstance Number(Context any, double number)
-	{
-		EnsureCachedBaseValues(any);
-		if (double.IsInteger(number))
-		{
-			var index = (int)number + 1;
-			if ((uint)index < (uint)cachedNumbers.Length)
-				return cachedNumbers[index];
-		}
-		return Make(ValueInstance.CreateNumber(any, number));
-	}
-
-	private static bool IsNumberType(Type type) => ValueInstance.IsNumberType(type);
-	private static bool IsTextType(Type type) => type.Name is Base.Text or Base.Name;
-
-	private static Type GetEffectiveType(Type returnType) =>
-		returnType.IsMutable
-			? ((GenericTypeImplementation)returnType).ImplementationTypes[0]
-			: returnType;
-	*/
 }

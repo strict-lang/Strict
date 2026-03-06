@@ -9,7 +9,7 @@ public sealed class Memory
 	{
 		Variables.TryGetValue(key, out var collection);
 		if (!collection.IsList)
-			return;
+			return; //TODO: need test
 		var listItems = new List<ValueInstance>(collection.List.Items);
 		if (listItems.Count > 0)
 		{
@@ -18,11 +18,12 @@ public sealed class Memory
 			return;
 		}
 		if (collection.GetTypeExceptText() is not GenericTypeImplementation genericImplementationType)
-			throw new InvalidOperationException();
+			throw new InvalidOperationException(); //TODO: need test
 		listItems.Add(element);
 		Variables[key] = new ValueInstance(genericImplementationType, listItems);
 	}
 
+	//TODO: very bad for performance, can we maybe find a better solution or use this less often?
 	public Dictionary<string, ValueInstance> Variables = new();
 	public Dictionary<Register, ValueInstance> Registers { get; init; } = new();
 	/// <summary>Names of variables that belong to the calling instance's members.</summary>

@@ -42,8 +42,12 @@ internal sealed class BodyEvaluator(Executor executor)
 			last = executor.RunExpression(e, ctx);
 			if (ctx.ExitMethodAndReturnValue.HasValue)
 				return ctx.ExitMethodAndReturnValue.Value;
-			if (runOnlyTests && isTest && !last.Boolean)
-				throw new Executor.TestFailed(body.Method, e, last, GetTestFailureDetails(e, ctx));
+			if (runOnlyTests && isTest)
+			{
+				if (!last.Boolean)
+					throw new Executor.TestFailed(body.Method, e, last, GetTestFailureDetails(e, ctx));
+				last = GetStandaloneInlineTestComparedValue(e, ctx) ?? last;
+			}
 		}
 		if (runOnlyTests && last.Equals(executor.noneInstance) && body.Method.Name != Method.Run &&
 			body.Expressions.Count > 1)
@@ -56,6 +60,16 @@ internal sealed class BodyEvaluator(Executor executor)
 		throw new Executor.ReturnTypeMustMatchMethod(body, last);
 	}
 
+	private ValueInstance? GetStandaloneInlineTestComparedValue(Expression expression,
+		ExecutionContext ctx) => expression switch
+	{
+		Binary { Method.Name: BinaryOperator.Is, Instance: not null } binary =>
+			executor.RunExpression(binary.Instance, ctx),
+		Not { Instance: Binary { Method.Name: BinaryOperator.Is, Instance: not null } binary } =>
+			executor.RunExpression(binary.Instance, ctx),
+		_ => null
+	};
+
 	private static bool ExpressionReferencesMember(Expression expr, string memberName) =>
 		expr switch
 		{
@@ -64,6 +78,7 @@ internal sealed class BodyEvaluator(Executor executor)
 				call.Instance != null && ExpressionReferencesMember(call.Instance, memberName) ||
 				call.Arguments.Any(a => ExpressionReferencesMember(a, memberName)),
 			List list => list.Values.Any(v => ExpressionReferencesMember(v, memberName)),
+			Expressions.Dictionary => false,
 			_ => false
 		};
 

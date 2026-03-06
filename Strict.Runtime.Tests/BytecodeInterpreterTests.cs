@@ -31,7 +31,6 @@ public class BytecodeInterpreterTests : BaseVirtualMachineTests
 	}
 
 	[Test]
-	[Ignore("Enum argument comparison not working correctly - TODO: Fix enum parameter passing")]
 	public void EnumIfConditionComparison()
 	{
 		CreateSampleEnum();
@@ -40,8 +39,8 @@ public class BytecodeInterpreterTests : BaseVirtualMachineTests
 			nameof(EnumIfConditionComparison) + "(5).GetMonday(Days.Monday)", "has dummy Number",
 			"GetMonday(days) Boolean", "\tif days is Days.Monday", "\t\treturn true", "\telse",
 			"\t\treturn false")).Generate();
-		var result = vm.Execute(statements).Returns;
-		Assert.That(result!.Value.Number, Is.EqualTo(1));
+		var result = vm.Execute(statements).Returns!;
+		Assert.That(result.Value.Number, Is.EqualTo(1));
 	}
 
 	[TestCase(Instruction.Add, 15, 5, 10)]

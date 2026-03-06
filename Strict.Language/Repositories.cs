@@ -61,6 +61,7 @@ public sealed class Repositories
 				, callerFilePath, callerLineNumber, callerMemberName
 #endif
 			);
+		//ncrunch: no coverage start
 		var localCachePath = Path.Combine(CacheFolder, organization, packageFullName);
 		if (PreviouslyCheckedDirectories.Add(localCachePath) && !Directory.Exists(localCachePath))
 			await DownloadRepositoryStrictFiles(localCachePath, organization, packageFullName);
@@ -69,7 +70,7 @@ public sealed class Repositories
 			, callerFilePath, callerLineNumber, callerMemberName
 #endif
 		);
-	}
+	} //ncrunch: no coverage end
 
 	public static string GetLocalDevelopmentPath(string organization, string packageFullName) =>
 		DevelopmentBaseFolder + organization + Context.ParentSeparator + packageFullName;

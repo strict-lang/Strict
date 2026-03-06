@@ -20,6 +20,7 @@ internal sealed class ToEvaluator(Executor executor)
 			: executor.EvaluateMethodCall(to, ctx);
 	}
 
+	//ncrunch: no coverage start
 	public sealed class ToMethodNotImplemented(ValueInstance left, Type toConversionType)
 		: ExecutionFailed(toConversionType, "Conversion from " + left + " to " +
 			toConversionType.Name + " not supported");

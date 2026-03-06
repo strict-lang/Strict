@@ -54,6 +54,10 @@ public sealed class ByteCodeGenerator
 		{
 			List list => list.Data,
 			Value val => val.Data,
+			MemberCall memberCall when memberCall.Member.InitialValue != null =>
+				memberCall.Member.InitialValue is Value enumValue
+					? enumValue.Data
+					: new ValueInstance(memberCall.Member.InitialValue.ToString()),
 			_ => new ValueInstance(expression.ToString())
 		};
 

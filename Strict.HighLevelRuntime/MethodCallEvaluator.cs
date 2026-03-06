@@ -148,7 +148,7 @@ public sealed class MethodCallEvaluator(Executor executor)
 				var matches = leftInstance != null && leftInstance.ReturnType.IsError &&
 					leftInstance.ReturnType.IsSameOrCanBeUsedAs(rightInstance.ReturnType);
 				if (op is not BinaryOperator.Is)
-					matches = !matches;
+					matches = !matches; //TODO: need test
 				return executor.ToBoolean(matches);
 			}
 			if (left.IsPrimitiveType(executor.characterType) && right.IsText)
@@ -158,7 +158,7 @@ public sealed class MethodCallEvaluator(Executor executor)
 				right = new ValueInstance(right.ToExpressionCodeString());
 			var equals = left.Equals(right);
 			if (op is not BinaryOperator.Is)
-				equals = !equals;
+				equals = !equals; //TODO: need test
 			return executor.ToBoolean(equals);
 		}
 		var l = left.Number;
@@ -340,8 +340,7 @@ public sealed class MethodCallEvaluator(Executor executor)
 				nameof(Type.Name) or Type.Text => new ValueInstance(method.Name),
 				nameof(Type) => new ValueInstance(method.GetType(nameof(Type)),
 					CreateTypeValue(method.Type)),
-				_ => throw new NotSupportedException("Method member not supported: " +
-					member) //ncrunch: no coverage
+				_ => throw new NotSupportedException("Method member not supported: " + member) //ncrunch: no coverage
 			};
 		return values;
 	}

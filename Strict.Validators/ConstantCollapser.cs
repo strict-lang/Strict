@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 using Boolean = Strict.Expressions.Boolean;
 using Type = Strict.Language.Type;
 
@@ -121,7 +121,6 @@ public sealed class ConstantCollapser : Visitor
 			var rightText = right as Text;
 			if (leftText != null && rightText != null)
 				return new Text(method, GetText(leftText) + GetText(rightText));
-			//ncrunch: no coverage start
 			if (leftText != null && rightNumber != null)
 				return new Text(method, GetText(leftText) + GetNumber(rightNumber));
 			if (leftNumber != null && rightText != null)
@@ -144,6 +143,6 @@ public sealed class ConstantCollapser : Visitor
 			if (method.Name == BinaryOperator.Or)
 				return new Boolean(method, GetBool(leftBoolean) || GetBool(rightBoolean));
 		}
-		return null; //ncrunch: no coverage end
+		return null;
 	}
 }

@@ -175,6 +175,8 @@ public abstract class Context
 			: null;
 
 	public override string ToString() => FullName;
+
+	//ncrunch: no coverage start
 	public string ToDebugString() =>
 #if DEBUG
 		FullName + " Parent+" + Parent +
@@ -182,6 +184,7 @@ public abstract class Context
 #else
 		FullName + " Parent+" + Parent;
 #endif
+	//ncrunch: no coverage end
 
 	public Package? GetPackage() =>
 		this is Package package

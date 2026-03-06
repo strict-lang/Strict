@@ -329,4 +329,32 @@ public sealed class ExecutorTests
 			}),
 			[new ValueInstance("abc")]).Number, Is.EqualTo(5 + 3));
 	}
+
+	[Test]
+	public void InlineTestSkipListDeclarationReferencingMember()
+	{
+		using var t = CreateType(nameof(InlineTestSkipListDeclarationReferencingMember),
+			"has first Number", "has second Number", "GetCount Number",
+			"\t(1, 2, 3).Length is 3",
+			"\tlet myList = (second, 2, 3)",
+			"\tmyList.Length");
+		var validatingExecutor = new Executor(TestPackage.Instance);
+		Assert.That(
+			validatingExecutor.Execute(t.Methods.Single(m => m.Name == "GetCount"),
+				executor.noneInstance, [], null, true).Number, Is.EqualTo(3));
+	}
+
+	[Test]
+	public void InlineTestDictionaryDeclarationNotSkipped()
+	{
+		using var t = CreateType(nameof(InlineTestDictionaryDeclarationNotSkipped),
+			"has number", "Run Number",
+			"\tconstant myDict = Dictionary(Number, Number)",
+			"\tmyDict.Length is 0",
+			"\tnumber");
+		var validatingExecutor = new Executor(TestPackage.Instance);
+		Assert.That(
+			validatingExecutor.Execute(t.Methods.Single(m => m.Name == "Run"),
+				executor.noneInstance, [], null, true).Number, Is.EqualTo(0));
+	}
 }

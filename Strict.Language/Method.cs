@@ -484,7 +484,6 @@ public sealed class Method : Context
 			: [expression]);
 
 	public event Func<Expression, Expression>? BodyParsed;
-	private bool IsTestPackage() => Type.Package.Name == "TestPackage" || Name == "Run";
 	public class CannotCallBodyOnTraitMethod(Type type, string name) : Exception(type + "." + name);
 
 	public override string ToString() =>

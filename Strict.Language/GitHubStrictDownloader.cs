@@ -3,6 +3,7 @@ using System.Text.Json;
 
 namespace Strict.Language;
 
+//ncrunch: no coverage start
 public sealed class GitHubStrictDownloader : IDisposable
 {
 	public GitHubStrictDownloader(string owner, string repoNameAndFolders)

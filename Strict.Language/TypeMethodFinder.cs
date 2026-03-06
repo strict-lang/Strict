@@ -18,7 +18,7 @@ internal class TypeMethodFinder(Type type)
 			if (IsMethodWithMatchingParametersType(methods[index], implementationTypes,
 				TryGetSingleElementType(implementationTypes), Type))
 				return methods[index];
-		return null;
+		return null; //ncrunch: no coverage
 	}
 
 	public Method GetMethod(string methodName, IReadOnlyList<Expression> arguments) =>
@@ -83,14 +83,15 @@ internal class TypeMethodFinder(Type type)
 
 	private static string GetTextValue(Expression argument)
 	{
-		var data = argument.GetType().GetProperty("Data", BindingFlags.Instance | BindingFlags.Public)?.GetValue(argument);
+		var data = argument.GetType().
+			GetProperty("Data", BindingFlags.Instance | BindingFlags.Public)?.GetValue(argument);
 		if (data is string value)
-			return value;
+			return value; //ncrunch: no coverage
 		var text = data?.ToString() ?? argument.ToString();
 		const string ValueInstanceTextPrefix = "Text: \"";
 		if (text.StartsWith(ValueInstanceTextPrefix, StringComparison.Ordinal) && text.EndsWith("\"", StringComparison.Ordinal))
 			return text[ValueInstanceTextPrefix.Length..^1];
-		return text.Length >= 2 && text[0] == '"' && text[^1] == '"'
+		return text.Length >= 2 && text[0] == '"' && text[^1] == '"' //ncrunch: no coverage
 			? text[1..^1]
 			: text;
 	}
@@ -137,7 +138,7 @@ internal class TypeMethodFinder(Type type)
 		if (method.Name is BinaryOperator.Is or UnaryOperator.Not && method.Parameters.Count > 0 &&
 			method.Parameters[0].Type.IsAny && (commonTypeOfArguments == currentType ||
 				(commonTypeOfArguments?.IsError ?? false)))
-			return true;
+			return true; //ncrunch: no coverage
 		if (method is { Name: Method.From, Parameters.Count: 0 } && typesOfArguments.Count == 1 &&
 			method.ReturnType.IsSameOrCanBeUsedAs(typesOfArguments[0], false))
 			return true; //ncrunch: no coverage

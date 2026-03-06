@@ -5,9 +5,9 @@ namespace Strict.HighLevelRuntime;
 /// <summary>
 /// Keeps track of things happening the classes here, usually used together with TestRunner.
 /// </summary>
+//ncrunch: no coverage start
 public sealed record Statistics
 {
-	//ncrunch: no coverage start
 	public int PackagesTested { get; internal set; }
 	public int TypesTested { get; internal set; }
 	public int MethodsTested { get; internal set; }

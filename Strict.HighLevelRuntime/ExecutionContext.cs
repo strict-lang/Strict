@@ -1,6 +1,5 @@
 using Strict.Expressions;
 using Strict.Language;
-using System.Collections;
 using Type = Strict.Language.Type;
 
 namespace Strict.HighLevelRuntime;
@@ -62,19 +61,6 @@ public sealed class ExecutionContext(Type type, Method method)
 		return Variables[name] = value;
 	}
 
-	internal static IList BuildDictionaryPairsList(Type listMemberType,
-		Dictionary<ValueInstance, ValueInstance> dictionary)
-	{
-		var elementType = listMemberType is GenericTypeImplementation { Generic.Name: Type.List } list
-			? list.ImplementationTypes[0]
-			: listMemberType;
-		var pairs = new List<ValueInstance>(dictionary.Count);
-		foreach (var entry in dictionary)
-			pairs.Add(new ValueInstance(elementType,
-				new List<ValueInstance> { entry.Key, entry.Value }));
-		return pairs;
-	}
-
 	public sealed class VariableNotFound(string name, Type type, ValueInstance? instance)
 		: Exception($"Variable '{name}' or member '{name}' of this type '{type}'" + (instance != null
 			? $" (instance='{instance}')"
@@ -84,22 +70,4 @@ public sealed class ExecutionContext(Type type, Method method)
 		nameof(ExecutionContext) + " Type=" + Type.Name + ", This=" + This + ", Variables:" +
 		Environment.NewLine + "  " +
 		(variables?.DictionaryToWordList(Environment.NewLine + "  ", " ", true) ?? "");
-
-	/*TODO: probably eats up memory! avoid!
-	public void AddDictionaryElements(ValueInstance? instance)
-	{
-		if (instance?.ReturnType is not GenericTypeImplementation
-			{
-				Generic.Name: Type.Dictionary
-			} implementation ||
-			instance.Value.Value is not Dictionary<ValueInstance, ValueInstance> dictionary ||
-			Variables.ContainsKey(Type.ElementsLowercase))
-			return;
-		var listMemberType = implementation.Members.FirstOrDefault(member =>
-			member.Type is GenericTypeImplementation { Generic.Name: Type.List } ||
-			member.Type.IsList)?     .Type ?? implementation.GetType(Type.List);
-		var listValue = ExecutionContext.BuildDictionaryPairsList(listMemberType, dictionary);
-		Set(Type.ElementsLowercase, ValueInstance.CreateObject(listMemberType, listValue));
-	}
-	*/
 }

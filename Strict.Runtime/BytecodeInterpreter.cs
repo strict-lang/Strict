@@ -216,7 +216,7 @@ public sealed class BytecodeInterpreter
 				invoke.PersistedRegistry).Generate();
 		if (!Memory.Variables.TryGetValue(invoke.Method?.Instance?.ToString() ??
 			throw new InvalidOperationException(), out var instance))
-			throw new VariableNotFoundInMemory();
+			throw new VariableNotFoundInMemory(); //TODO: need test
 		return new ByteCodeGenerator(
 			new InstanceInvokedMethod(GetExpressionsFromMethod(invoke.Method!.Method),
 				FormArgumentsForMethodCall(invoke), instance, invoke.Method.Method.ReturnType),

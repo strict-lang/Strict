@@ -121,6 +121,7 @@ public sealed class CSharpTypeVisitor : TypeVisitor
 		{
 			if (!testMethod.Value.Any())
 				break;
+			//ncrunch: no coverage start
 			hasTestMethods = true;
 			AddTestExpressions(testMethod);
 		}

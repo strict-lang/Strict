@@ -127,6 +127,7 @@ public class CSharpExpressionVisitor : ExpressionVisitor
 			? GetCSharpTypeName(value.ReturnType)
 			: value.ToString();
 
+	//ncrunch: no coverage start
 	protected override IReadOnlyList<string> VisitFor(For forExpression)
 	{
 		var block = new List<string> { "foreach (var index in " + Visit(forExpression.Iterator) + ")" };

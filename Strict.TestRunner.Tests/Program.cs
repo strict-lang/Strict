@@ -1,5 +1,6 @@
 using Strict.TestRunner.Tests;
 
+//ncrunch: no coverage start
 var tests = new TestExecutorTests();
 // Warm up, will cache a lot of things: first parse, types, bodies, expressions
 tests.RunAllTestsInPackage();

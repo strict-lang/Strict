@@ -23,36 +23,12 @@ public static class StringExtensions
 			result.Add(pair.Key + (outputTypes && pair.Key is not string
 				? " (" + pair.Key.GetType().Name + ")"
 				: "") + keyValueSeparator + (pair.Value is IEnumerable values
-				? values.EnumerableToWordList(outputTypes: outputTypes)
+				? values as string ?? string.Join(", ", values.Cast<object?>())
 				: pair.Value + (outputTypes && pair.Value is not string && pair.Value is not int &&
 					pair.Value is not double && pair.Value is not bool &&
 					pair.Value?.GetType().Name != "ValueInstance"
 						? " (" + pair.Value?.GetType().Name + ")"
 						: "")));
-		return string.Join<string>(separator, result);
-	}
-
-	private static string EnumerableToWordList(this IEnumerable values, string separator = DefaultSeparator,
-		bool outputTypes = false) =>
-		values switch
-		{
-			IReadOnlyDictionary<string, object?> dict => dict.DictionaryToWordList(outputTypes: outputTypes),
-			IDictionary iDictionary => iDictionary.IDictionaryToWordList(outputTypes: outputTypes),
-			_ => values as string ?? string.Join(separator, values.Cast<object?>())
-		};
-
-	public static string IDictionaryToWordList(this IDictionary list, string separator = "; ",
-		bool outputTypes = false)
-	{
-		var enumerator = list.GetEnumerator();
-		using var disposeEnumerator = enumerator as IDisposable;
-		var result = new List<string>();
-		while (enumerator.MoveNext())
-			result.Add(enumerator.Key + "=" + (enumerator.Value is IEnumerable values
-				? values.EnumerableToWordList(outputTypes: outputTypes)
-				: enumerator.Value + (outputTypes
-					? " (" + enumerator.Value?.GetType().Name + ")"
-					: "")));
 		return string.Join<string>(separator, result);
 	}
 

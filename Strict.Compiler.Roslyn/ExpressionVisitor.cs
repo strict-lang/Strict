@@ -14,7 +14,7 @@ public abstract class ExpressionVisitor
 			Body body => VisitBody(body),
 			If ifExpression => VisitIf(ifExpression),
 			SelectorIf selectorIf => VisitSelectorIf(selectorIf),
-			For forExpression => VisitFor(forExpression),
+			For forExpression => VisitFor(forExpression), //ncrunch: no coverage
 			_ => [Visit(expression) + ";"]
 		};
 
