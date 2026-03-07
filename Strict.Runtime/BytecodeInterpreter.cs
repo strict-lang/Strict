@@ -68,7 +68,7 @@ public sealed class BytecodeInterpreter(Package package)
 			return;
 		var item = Memory.Registers[removeStatement.Register];
 		var listItems = new List<ValueInstance>(Memory.Variables[removeStatement.Identifier].List.Items);
-		listItems.RemoveAll(vi => AreEqual(vi, item));
+		listItems.RemoveAll(vi => vi.Equals(item));
 		Memory.Variables[removeStatement.Identifier] = new ValueInstance(
 			Memory.Variables[removeStatement.Identifier].List.ReturnType, listItems);
 	}
@@ -431,7 +431,7 @@ public sealed class BytecodeInterpreter(Package package)
 		if (left.IsList)
 		{
 			var items = new List<ValueInstance>(left.List.Items);
-			var removeIndex = items.FindIndex(item => AreEqual(item, right));
+			var removeIndex = items.FindIndex(item => item.Equals(right));
 			if (removeIndex >= 0)
 				items.RemoveAt(removeIndex);
 			return new ValueInstance(left.List.ReturnType, items);
@@ -451,36 +451,10 @@ public sealed class BytecodeInterpreter(Package package)
 		{
 			Instruction.GreaterThan => left.Number > right.Number,
 			Instruction.LessThan => left.Number < right.Number,
-			Instruction.Equal => AreEqual(left, right),
-			Instruction.NotEqual => !AreEqual(left, right),
+			Instruction.Equal => left.Equals(right),
+			Instruction.NotEqual => !left.Equals(right),
 			_ => false //ncrunch: no coverage
 		};
-	}
-
-	public static bool AreEqual(ValueInstance value, ValueInstance other) => value.Equals(other);
-
-	//TODO: should be removed, this should not be needed!
-	public static bool AreEqual(object? value, object? other)
-	{
-		if (ReferenceEquals(value, other))
-			return true;
-		if (value is ValueInstance valueInstance && other is ValueInstance otherValueInstance)
-			return AreEqual(valueInstance, otherValueInstance);
-		if (value is ValueInstance left)
-			value = left.IsText
-				? left.Text
-				: left.Number;
-		if (other is ValueInstance right)
-			other = right.IsText
-				? right.Text
-				: right.Number;
-		if (value is ValueListInstance valueList && other is ValueListInstance otherList)
-			return valueList.Equals(otherList);
-		if (value is ValueDictionaryInstance valueDictionary && other is ValueDictionaryInstance otherDictionary)
-			return valueDictionary.Equals(otherDictionary);
-		if (value is Expression leftExpression && other is Expression rightExpression)
-			return leftExpression.Equals(rightExpression);
-		return value?.Equals(other) ?? false;
 	}
 
 	private void TryJumpOperation(Jump statement)

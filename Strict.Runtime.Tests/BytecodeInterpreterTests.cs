@@ -425,4 +425,24 @@ public class BytecodeInterpreterTests : BaseVirtualMachineTests
 	public void OperandsRequired(Instruction instruction) =>
 		Assert.That(() => vm.Execute([new Binary(instruction, Register.R0)]),
 			Throws.InstanceOf<BytecodeInterpreter.OperandsRequired>());
+
+	[Test]
+	public void LoopOverEmptyListSkipsBody()
+	{
+		var emptyList = new ValueInstance(NumberType, new List<ValueInstance>());
+		var result = vm.Execute([
+			new StoreVariableStatement(emptyList, "numbers"),
+			new StoreVariableStatement(Number(0), "result"),
+			new LoadVariableToRegister(Register.R0, "numbers"),
+			new LoopBeginStatement(Register.R0),
+			new LoadVariableToRegister(Register.R1, "result"),
+			new LoadConstantStatement(Register.R2, Number(1)),
+			new Binary(Instruction.Add, Register.R1, Register.R2, Register.R3),
+			new StoreFromRegisterStatement(Register.R3, "result"),
+			new LoopEndStatement(5),
+			new LoadVariableToRegister(Register.R4, "result"),
+			new Return(Register.R4)
+		]).Returns;
+		Assert.That(result!.Value.Number, Is.EqualTo(0));
+	}
 }
