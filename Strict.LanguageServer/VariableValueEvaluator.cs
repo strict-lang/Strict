@@ -14,7 +14,7 @@ public sealed class VariableValueEvaluator(Package package, ILanguageServerFacad
 		var lineValuePair = new Dictionary<int, string>();
 		for (var i = 0; i < lines.Length; i++)
 			foreach (var variable in vm.Memory.Variables.Where(variable =>
-				//ncrunch: no coverage start, TODO: missing tests
+				//ncrunch: no coverage start
 				lines[i].Contains(variable.Key)))
 				lineValuePair[i] = variable.Value.IsText
 					? variable.Value.Text

@@ -27,14 +27,14 @@ public sealed class BytecodeInterpreter(Package package)
 		statements.Clear();
 		Returns = null;
 		Memory.Registers.Clear();
-		Memory.Variables.Clear();
+		Memory.Frame = new CallFrame();
 	}
 
 	private bool conditionFlag;
 	private int instructionIndex;
 	private IList<Statement> statements = new List<Statement>();
 	public ValueInstance? Returns { get; private set; }
-	public Memory Memory { get; private init; } = new();
+	public Memory Memory { get; } = new();
 
 	private BytecodeInterpreter RunStatements(IList<Statement> allStatements)
 	{
@@ -67,10 +67,10 @@ public sealed class BytecodeInterpreter(Package package)
 		if (statement is not RemoveStatement removeStatement)
 			return;
 		var item = Memory.Registers[removeStatement.Register];
-		var listItems = new List<ValueInstance>(Memory.Variables[removeStatement.Identifier].List.Items);
+		var listItems = new List<ValueInstance>(Memory.Frame.Get(removeStatement.Identifier).List.Items);
 		listItems.RemoveAll(vi => vi.Equals(item));
-		Memory.Variables[removeStatement.Identifier] = new ValueInstance(
-			Memory.Variables[removeStatement.Identifier].List.ReturnType, listItems);
+		Memory.Frame.Set(removeStatement.Identifier,
+			new ValueInstance(Memory.Frame.Get(removeStatement.Identifier).List.ReturnType, listItems));
 	}
 
 	private void TryExecuteListCall(Statement statement)
@@ -78,7 +78,7 @@ public sealed class BytecodeInterpreter(Package package)
 		if (statement is not ListCallStatement listCallStatement)
 			return;
 		var indexValue = (int)Memory.Registers[listCallStatement.IndexValueRegister].Number;
-		var variableListElement = Memory.Variables[listCallStatement.Identifier].List.Items.ElementAt(indexValue);
+		var variableListElement = Memory.Frame.Get(listCallStatement.Identifier).List.Items.ElementAt(indexValue);
 		Memory.Registers[listCallStatement.Register] = variableListElement;
 	}
 
@@ -122,19 +122,34 @@ public sealed class BytecodeInterpreter(Package package)
 		if (GetValueByKeyForDictionaryAndStoreInRegister(invokeStatement))
 			return;
 		var methodStatements = GetByteCodeFromInvokedMethodCall(invokeStatement);
-		//TODO: this is stupid, why would we create a new interpreter for every instruction
-		var instance = new BytecodeInterpreter(package)
-		{
-			Memory = new Memory
-			{
-				Registers = Memory.Registers,
-				Variables =
-					new Dictionary<string, ValueInstance>(
-						Memory.Variables.Where(v => Memory.MemberVariableNames.Contains(v.Key)))
-			}
-		}.RunStatements(methodStatements).Returns;
-		if (instance != null)
-			Memory.Registers[invokeStatement.Register] = instance.Value;
+		var result = RunChildScope(methodStatements);
+		if (result != null)
+			Memory.Registers[invokeStatement.Register] = result.Value;
+	}
+
+	/// <summary>
+	/// Runs <paramref name="childStatements"/> in a child <see cref="CallFrame"/> while reusing
+	/// this interpreter instance. All mutable fields are saved on the C# call stack (zero heap
+	/// allocations for the bookkeeping) and restored after the child finishes.
+	/// </summary>
+	private ValueInstance? RunChildScope(IList<Statement> childStatements)
+	{
+		var savedStatements = statements;
+		var savedIndex = instructionIndex;
+		var savedConditionFlag = conditionFlag;
+		var savedReturns = Returns;
+		var savedFrame = Memory.Frame;
+		Memory.Frame = new CallFrame(savedFrame);
+		Returns = null;
+		RunStatements(childStatements);
+		var result = Returns;
+		Memory.Frame.Clear();
+		Memory.Frame = savedFrame;
+		statements = savedStatements;
+		instructionIndex = savedIndex;
+		conditionFlag = savedConditionFlag;
+		Returns = savedReturns;
+		return result;
 	}
 
 	private bool TryHandleIncrementDecrement(Invoke invoke)
@@ -143,7 +158,7 @@ public sealed class BytecodeInterpreter(Package package)
 		if (methodName != "Increment" && methodName != "Decrement")
 			return false;
 		if (invoke.Method!.Instance == null ||
-			!Memory.Variables.TryGetValue(invoke.Method.Instance.ToString(), out var current))
+			!Memory.Frame.TryGet(invoke.Method.Instance.ToString(), out var current))
 			return false; //ncrunch: no coverage
 		var delta = methodName == "Increment"
 			? 1.0
@@ -160,7 +175,7 @@ public sealed class BytecodeInterpreter(Package package)
 		var instanceExpr = invoke.Method.Instance ?? throw new InvalidOperationException();
 		var rawValue = instanceExpr is Value constValue
 			? constValue.Data
-			: Memory.Variables.TryGetValue(instanceExpr.ToString(), out var varValue)
+			: Memory.Frame.TryGet(instanceExpr.ToString(), out var varValue)
 				? varValue
 				: throw new InvalidOperationException(); //ncrunch: no coverage
 		var conversionType = invoke.Method.ReturnType;
@@ -200,8 +215,8 @@ public sealed class BytecodeInterpreter(Package package)
 		var keyArg = invoke.Method.Arguments[0];
 		var keyData = keyArg is Value argValue
 			? argValue.Data
-			: Memory.Variables[keyArg.ToString()];
-		var dictionary = Memory.Variables[invoke.Method.Instance.ToString()];
+			: Memory.Frame.Get(keyArg.ToString());
+		var dictionary = Memory.Frame.Get(invoke.Method.Instance.ToString());
 		var value = dictionary.GetDictionaryItems().
 			FirstOrDefault(element => element.Key.Equals(keyData)).Value;
 		if (!Equals(value, default(ValueInstance)))
@@ -217,7 +232,7 @@ public sealed class BytecodeInterpreter(Package package)
 				new InvokedMethod(GetExpressionsFromMethod(invoke.Method.Method),
 					FormArgumentsForMethodCall(invoke), invoke.Method.Method.ReturnType),
 				invoke.PersistedRegistry).Generate();
-		if (!Memory.Variables.TryGetValue(invoke.Method?.Instance?.ToString() ??
+		if (!Memory.Frame.TryGet(invoke.Method?.Instance?.ToString() ??
 			throw new InvalidOperationException(), out var instance))
 			throw new VariableNotFoundInMemory(); //ncrunch: no coverage
 		return new ByteCodeGenerator(
@@ -244,7 +259,7 @@ public sealed class BytecodeInterpreter(Package package)
 			var argument = invoke.Method.Arguments[index];
 			var argumentInstance = argument is Value argumentValue
 				? argumentValue.Data
-				: Memory.Variables[argument.ToString()];
+				: Memory.Frame.Get(argument.ToString());
 			arguments.Add(invoke.Method.Method.Parameters[index].Name, argumentInstance);
 		}
 		return arguments;
@@ -271,15 +286,15 @@ public sealed class BytecodeInterpreter(Package package)
 
 	private void ProcessCollectionLoopIteration(LoopBeginStatement loopBeginStatement)
 	{
-		if (!Memory.Registers.TryGetValue(loopBeginStatement.Register, out var iterableVariable))
+		if (!Memory.Registers.TryGet(loopBeginStatement.Register, out var iterableVariable))
 			return; //ncrunch: no coverage
-		if (Memory.Variables.ContainsKey("index"))
+		if (Memory.Frame.ContainsKey("index"))
 		{
-			var current = Memory.Variables["index"];
-			Memory.Variables["index"] = new ValueInstance(package.GetType(Type.Number), current.Number + 1);
+			var current = Memory.Frame.Get("index");
+			Memory.Frame.Set("index", new ValueInstance(package.GetType(Type.Number), current.Number + 1));
 		}
 		else
-			Memory.Variables.Add("index", new ValueInstance(package.GetType(Type.Number), 0));
+			Memory.Frame.Set("index", new ValueInstance(package.GetType(Type.Number), 0));
 		if (!loopBeginStatement.IsInitialized)
 		{
 			loopBeginStatement.LoopCount = GetLength(iterableVariable);
@@ -304,17 +319,17 @@ public sealed class BytecodeInterpreter(Package package)
 		}
 		var isDecreasing = loopBeginStatement.IsDecreasing ?? false;
 		var numberType = Memory.Registers[loopBeginStatement.Register].GetTypeExceptText().GetType(Type.Number);
-		if (Memory.Variables.ContainsKey("index"))
+		if (Memory.Frame.ContainsKey("index"))
 		{
-			var current = Memory.Variables["index"];
-			Memory.Variables["index"] = new ValueInstance(numberType, current.Number + (isDecreasing
+			var current = Memory.Frame.Get("index");
+			Memory.Frame.Set("index", new ValueInstance(numberType, current.Number + (isDecreasing
 				? -1
-				: 1));
+				: 1)));
 		}
 		else
-			Memory.Variables.Add("index",
+			Memory.Frame.Set("index",
 				new ValueInstance(numberType, loopBeginStatement.StartIndexValue ?? 0));
-		Memory.Variables["value"] = Memory.Variables["index"];
+		Memory.Frame.Set("value", Memory.Frame.Get("index"));
 	}
 
 	private static int GetLength(ValueInstance iterableInstance)
@@ -329,25 +344,23 @@ public sealed class BytecodeInterpreter(Package package)
 	private void AlterValueVariable(ValueInstance iterableVariable, Type numberType,
 		LoopBeginStatement loopBeginStatement)
 	{
-		var index = Convert.ToInt32(Memory.Variables["index"].Number);
+		var index = Convert.ToInt32(Memory.Frame.Get("index").Number);
 		if (iterableVariable.IsText)
 		{
 			if (index < iterableVariable.Text.Length)
-				Memory.Variables["value"] = new ValueInstance(iterableVariable.Text[index].ToString());
-			else
-				loopBeginStatement.LoopCount = 0; //ncrunch: no coverage. TODO: add test, never happens
+				Memory.Frame.Set("value", new ValueInstance(iterableVariable.Text[index].ToString()));
 			return;
 		}
 		if (iterableVariable.IsList)
 		{
 			var items = iterableVariable.List.Items;
 			if (index < items.Count)
-				Memory.Variables["value"] = items[index];
+				Memory.Frame.Set("value", items[index]);
 			else
-				loopBeginStatement.LoopCount = 0; //ncrunch: no coverage. TODO: add test, never happens
+				loopBeginStatement.LoopCount = 0;
 			return;
 		}
-		Memory.Variables["value"] = new ValueInstance(numberType, index + 1);
+		Memory.Frame.Set("value", new ValueInstance(numberType, index + 1));
 	}
 
 	private void TryStoreInstructions(Statement statement)
@@ -357,21 +370,18 @@ public sealed class BytecodeInterpreter(Package package)
 		if (statement is SetStatement setStatement)
 			Memory.Registers[setStatement.Register] = setStatement.ValueInstance;
 		else if (statement is StoreVariableStatement storeVariableStatement)
-		{
-			Memory.Variables[storeVariableStatement.Identifier] = storeVariableStatement.ValueInstance;
-			if (storeVariableStatement.IsMember)
-				Memory.MemberVariableNames.Add(storeVariableStatement.Identifier);
-		}
+			Memory.Frame.Set(storeVariableStatement.Identifier, storeVariableStatement.ValueInstance,
+				storeVariableStatement.IsMember);
 		else if (statement is StoreFromRegisterStatement storeFromRegisterStatement)
-			Memory.Variables[storeFromRegisterStatement.Identifier] =
-				Memory.Registers[storeFromRegisterStatement.Register];
+			Memory.Frame.Set(storeFromRegisterStatement.Identifier,
+				Memory.Registers[storeFromRegisterStatement.Register]);
 	}
 
 	private void TryLoadInstructions(Statement statement)
 	{
 		if (statement is LoadVariableToRegister loadVariableStatement)
 			Memory.Registers[loadVariableStatement.Register] =
-				Memory.Variables[loadVariableStatement.Identifier];
+				Memory.Frame.Get(loadVariableStatement.Identifier);
 		else if (statement is LoadConstantStatement loadConstantStatement)
 			Memory.Registers[loadConstantStatement.Register] = loadConstantStatement.ValueInstance;
 	}
@@ -440,7 +450,7 @@ public sealed class BytecodeInterpreter(Package package)
 	}
 
 	private (ValueInstance, ValueInstance) GetOperands(BinaryStatement statement) =>
-		Memory.Registers.Count < 2
+		statement.Registers.Length < 2
 			? throw new OperandsRequired()
 			: (Memory.Registers[statement.Registers[1]], Memory.Registers[statement.Registers[0]]);
 

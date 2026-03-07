@@ -14,4 +14,8 @@
     <ProjectReference Include="..\Strict.Language\Strict.Language.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="Strict.Runtime.Tests" />
+  </ItemGroup>
+
 </Project>

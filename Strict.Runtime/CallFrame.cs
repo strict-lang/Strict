@@ -1,0 +1,74 @@
+using Strict.Expressions;
+
+namespace Strict.Runtime;
+
+/// <summary>
+/// Variable scope for one method invocation. Writes always go to this frame's own lazy dict;
+/// reads walk the parent chain but only through member variables, so child calls can access
+/// the caller's 'has' fields without copying them. Modelled after
+/// <see cref="HighLevelRuntime.ExecutionContext"/>.
+/// </summary>
+internal sealed class CallFrame(CallFrame? parent = null)
+{
+	private Dictionary<string, ValueInstance>? variables;
+	private HashSet<string>? memberNames;
+
+	/// <summary>
+	/// Materialised locals dict — used by <see cref="Memory.Variables"/> for test compat.
+	/// </summary>
+	internal Dictionary<string, ValueInstance> Variables =>
+		variables ??= new Dictionary<string, ValueInstance>();
+
+	internal bool TryGet(string name, out ValueInstance value)
+	{
+		if (variables != null && variables.TryGetValue(name, out value))
+			return true;
+		if (parent != null)
+			return parent.TryGetMember(name, out value);
+		value = default;
+		return false;
+	}
+
+	private bool TryGetMember(string name, out ValueInstance value)
+	{
+		if (memberNames != null && memberNames.Contains(name) &&
+			variables != null && variables.TryGetValue(name, out value))
+			return true;
+		value = default;
+		return false;
+	}
+
+	internal ValueInstance Get(string name) =>
+		TryGet(name, out var value) ? value : throw new KeyNotFoundException(name);
+
+	/// <summary>
+	/// Always writes to this frame's own dict (never clobbers parent).
+	/// </summary>
+	internal void Set(string name, ValueInstance value, bool isMember = false)
+	{
+		variables ??= new Dictionary<string, ValueInstance>();
+		variables[name] = value;
+		if (isMember)
+		{
+			memberNames ??= [];
+			memberNames.Add(name);
+		}
+	}
+
+	internal bool ContainsKey(string name)
+	{
+		if (variables != null && variables.ContainsKey(name))
+			return true;
+		return parent != null && parent.ContainsKeyAsMember(name);
+	}
+
+	private bool ContainsKeyAsMember(string name) =>
+		memberNames != null && memberNames.Contains(name) &&
+		variables != null && variables.ContainsKey(name);
+
+	internal void Clear()
+	{
+		variables?.Clear();
+		memberNames?.Clear();
+	}
+}

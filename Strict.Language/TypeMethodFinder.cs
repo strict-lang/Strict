@@ -126,9 +126,58 @@ internal class TypeMethodFinder(Type type)
 		if (method.Name != Method.From)
 			return true;
 		var member = method.Type.Members.FirstOrDefault(m => !m.IsConstant && m.Type.Name != Iterator);
-		return member?.Constraints == null ||
-			member.Constraints[0].ToString().Contains("Length is " + numberOfArguments); //TODO: do actual evaluation of constraint
+		if (member?.Constraints == null)
+			return true;
+		return ConstraintCouldBeSatisfiedByArgumentCount(member.Constraints[0], numberOfArguments);
 	}
+
+	private static bool ConstraintCouldBeSatisfiedByArgumentCount(Expression constraint, int numberOfArguments)
+	{
+		var constraintText = constraint.ToString();
+		// Check for "Length is N" pattern
+		if (constraintText.Contains("Length is "))
+			return constraintText.Contains("Length is " + numberOfArguments);
+		// Check for "Length > N", "Length >= N", "Length < N", "Length <= N" patterns
+		//ncrunch: no coverage start
+		if (constraintText.Contains("Length"))
+		{
+			if (constraintText.Contains("> 0"))
+				return numberOfArguments > 0;
+			if (constraintText.Contains(">= "))
+				return TryExtractNumberAndCompare(constraintText, ">=", numberOfArguments);
+			if (constraintText.Contains("> "))
+				return TryExtractNumberAndCompare(constraintText, ">", numberOfArguments);
+			if (constraintText.Contains("< "))
+				return TryExtractNumberAndCompare(constraintText, "<", numberOfArguments);
+			if (constraintText.Contains("<= "))
+				return TryExtractNumberAndCompare(constraintText, "<=", numberOfArguments);
+		}
+		// For other constraint types (like " " is not in value), we assume they could pass
+		return true;
+	}
+
+	private static bool TryExtractNumberAndCompare(string constraintText, string op, int numberOfArguments)
+	{
+		var opIndex = constraintText.IndexOf(op, StringComparison.Ordinal);
+		if (opIndex < 0)
+			return true;
+		var afterOp = constraintText[(opIndex + op.Length)..].TrimStart();
+		var numberEndIndex = 0;
+		while (numberEndIndex < afterOp.Length && char.IsDigit(afterOp[numberEndIndex]))
+			numberEndIndex++;
+		if (numberEndIndex == 0)
+			return true;
+		if (!int.TryParse(afterOp[..numberEndIndex], out var constraintNumber))
+			return true;
+		return op switch
+		{
+			">" => numberOfArguments > constraintNumber,
+			">=" => numberOfArguments >= constraintNumber,
+			"<" => numberOfArguments < constraintNumber,
+			"<=" => numberOfArguments <= constraintNumber,
+			_ => true
+		};
+	} //ncrunch: no coverage end
 
 	private static bool IsMethodWithMatchingParametersType(Method method,
 		IReadOnlyList<Type> typesOfArguments, Type? commonTypeOfArguments, Type currentType)

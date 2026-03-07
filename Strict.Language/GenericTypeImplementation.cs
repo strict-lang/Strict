@@ -43,13 +43,9 @@ public sealed class GenericTypeImplementation : Type
 
 	private Type GetImplementedMemberType(Type memberType, ref int implementationTypeIndex)
 	{
-		//TODO: this is confusing, just use IsList and grab the firstImplementationType
-		if (memberType is GenericType
-			{
-				Generic.Name: List, GenericImplementations.Count: > 1
-			} genericType)
-			return genericType.Generic.GetGenericImplementation(
-				genericType.Generic.GetGenericImplementation(ImplementationTypes[0]));
+		if (memberType is GenericType { Generic.Name: List, GenericImplementations.Count: > 1 } generic)
+			return generic.Generic.GetGenericImplementation(
+				generic.Generic.GetGenericImplementation(ImplementationTypes[0]));
 		return memberType.IsList
 			? this
 			: ImplementationTypes[implementationTypeIndex++];

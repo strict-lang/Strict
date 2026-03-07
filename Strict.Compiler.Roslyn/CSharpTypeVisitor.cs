@@ -1,9 +1,10 @@
 using Strict.Language;
+using Strict.Validators;
 using Type = Strict.Language.Type;
 
 namespace Strict.Compiler.Roslyn;
 
-public sealed class CSharpTypeVisitor : TypeVisitor
+public sealed class CSharpTypeVisitor : Visitor
 {
 	public CSharpTypeVisitor(Type type)
 	{
@@ -14,9 +15,9 @@ public sealed class CSharpTypeVisitor : TypeVisitor
 		CreateHeader(type);
 		CreateClass();
 		foreach (var member in type.Members)
-			VisitMember(member);
+			Visit(member);
 		foreach (var method in type.Methods)
-			VisitMethod(method);
+			Visit(method);
 		AddTests();
 		ParsingDone();
 	}
@@ -54,7 +55,7 @@ public sealed class CSharpTypeVisitor : TypeVisitor
 
 	private static readonly string NewLine = Environment.NewLine;
 
-	public void VisitMember(Member member)
+	protected override void Visit(Member member, object? context = null)
 	{
 		if (member.Name is "logger" or "App")
 			return;
@@ -83,16 +84,16 @@ public sealed class CSharpTypeVisitor : TypeVisitor
 
 	private static readonly string SemicolonAndLineBreak = ";" + NewLine;
 
-	public void VisitMethod(Method method)
+	public override void Visit(Method method, bool forceParsingBody = false, object? context = null)
 	{
 		VisitMethodHeader(method);
 		if (!isInterface)
-			VisitMethodBody(method);
+			BuildMethodBody(method);
 	}
 
 	private void VisitMethodHeader(Method method) => FileContent += "\t" + expressionVisitor.VisitMethodHeader(method, isInterface);
 
-	private void VisitMethodBody(Method method)
+	private void BuildMethodBody(Method method)
 	{
 		var body = expressionVisitor.VisitBody(method.GetBodyAndParseIfNeeded());
 		testExpressions.Add(method.Name,

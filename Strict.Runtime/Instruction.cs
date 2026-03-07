@@ -1,4 +1,4 @@
-﻿namespace Strict.Runtime;
+namespace Strict.Runtime;
 
 /// <summary>
 /// Each Instruction corresponds to a Statement class in the <see cref="Statements" /> namespace
@@ -37,4 +37,3 @@ public enum Instruction
 	Invoke,
 	Return
 }
-

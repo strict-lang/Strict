@@ -434,8 +434,7 @@ public class BytecodeInterpreterTests : BaseVirtualMachineTests
 			new StoreVariableStatement(emptyList, "numbers"),
 			new StoreVariableStatement(Number(0), "result"),
 			new LoadVariableToRegister(Register.R0, "numbers"),
-			new LoopBeginStatement(Register.R0),
-			new LoadVariableToRegister(Register.R1, "result"),
+			new LoopBeginStatement(Register.R0), new LoadVariableToRegister(Register.R1, "result"),
 			new LoadConstantStatement(Register.R2, Number(1)),
 			new Binary(Instruction.Add, Register.R1, Register.R2, Register.R3),
 			new StoreFromRegisterStatement(Register.R3, "result"),
@@ -444,5 +443,85 @@ public class BytecodeInterpreterTests : BaseVirtualMachineTests
 			new Return(Register.R4)
 		]).Returns;
 		Assert.That(result!.Value.Number, Is.EqualTo(0));
+	}
+
+	[Test]
+	public void LoopOverTextStopsWhenIndexExceedsLength()
+	{
+		var text = Text("Hi");
+		var loopBegin = new LoopBeginStatement(Register.R0);
+		var result = vm.Execute([
+			new StoreVariableStatement(text, "words"),
+			new StoreVariableStatement(Number(0), "count"),
+			new LoadVariableToRegister(Register.R0, "words"),
+			loopBegin,
+			new LoadVariableToRegister(Register.R1, "count"),
+			new LoadConstantStatement(Register.R2, Number(1)),
+			new Binary(Instruction.Add, Register.R1, Register.R2, Register.R3),
+			new StoreFromRegisterStatement(Register.R3, "count"),
+			new LoopEndStatement(5),
+			new LoadVariableToRegister(Register.R4, "count"),
+			new Return(Register.R4)
+		]).Returns;
+		Assert.That(result!.Value.Number, Is.EqualTo(2));
+	}
+
+	[Test]
+	public void LoopOverListStopsWhenIndexExceedsCount()
+	{
+		var source = new[]
+		{
+			"has numbers",
+			"CountItems Number",
+			"\tmutable count = 0",
+			"\tfor numbers",
+			"\t\tcount = count + 1",
+			"\tcount"
+		};
+		var statements = new ByteCodeGenerator(GenerateMethodCallFromSource(
+			nameof(LoopOverListStopsWhenIndexExceedsCount),
+			$"{nameof(LoopOverListStopsWhenIndexExceedsCount)}(1, 2, 3).CountItems", source)).Generate();
+		var result = vm.Execute(statements).Returns!.Value.Number;
+		Assert.That(result, Is.EqualTo(3));
+	}
+
+	[Test]
+	public void LoopOverSingleCharTextStopsAtEnd()
+	{
+		var source = new[]
+		{
+			"has letter Text",
+			"CountChars Number",
+			"\tmutable count = 0",
+			"\tfor letter",
+			"\t\tcount = count + 1",
+			"\tcount"
+		};
+		var statements = new ByteCodeGenerator(GenerateMethodCallFromSource(
+			nameof(LoopOverSingleCharTextStopsAtEnd),
+			$"{nameof(LoopOverSingleCharTextStopsAtEnd)}(\"X\").CountChars", source)).Generate();
+		var result = vm.Execute(statements).Returns!.Value.Number;
+		Assert.That(result, Is.EqualTo(1));
+	}
+
+	[Test]
+	public void LoopOverSingleItemListStopsAtEnd()
+	{
+		var singleItemList = new ValueInstance(NumberType,
+			new List<ValueInstance> { new ValueInstance(NumberType, 42) });
+		var result = vm.Execute([
+			new StoreVariableStatement(singleItemList, "items"),
+			new StoreVariableStatement(Number(0), "count"),
+			new LoadVariableToRegister(Register.R0, "items"),
+			new LoopBeginStatement(Register.R0),
+			new LoadVariableToRegister(Register.R1, "count"),
+			new LoadConstantStatement(Register.R2, Number(1)),
+			new Binary(Instruction.Add, Register.R1, Register.R2, Register.R3),
+			new StoreFromRegisterStatement(Register.R3, "count"),
+			new LoopEndStatement(5),
+			new LoadVariableToRegister(Register.R4, "count"),
+			new Return(Register.R4)
+		]).Returns;
+		Assert.That(result!.Value.Number, Is.EqualTo(1));
 	}
 }

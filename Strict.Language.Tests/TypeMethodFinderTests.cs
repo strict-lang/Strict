@@ -250,4 +250,26 @@ public sealed class TypeMethodFinderTests
 			"Run", "\t5 to Character is \"5\"");
 		type.GetMethod("Run", []).GetBodyAndParseIfNeeded();
 	}
+
+	[Test]
+	public void ConstraintWithLengthGreaterThanZero()
+	{
+		using var type = CreateType(nameof(ConstraintWithLengthGreaterThanZero),
+			"has logger",
+			"Result(items Generics) Text",
+			"\titems.Length > 0 then \"Has items\" else \"No items\"");
+		var method = type.FindMethod("Result", [new List(null!, [new Number(type, 1)])]);
+		Assert.That(method, Is.Not.Null);
+	}
+
+	[Test]
+	public void ConstraintWithExactLength()
+	{
+		using var type = CreateType(nameof(ConstraintWithExactLength),
+			"has logger",
+			"Pair(items Generics) Text",
+			"\tvalue.Length is 2 then \"Pair\" else \"Not pair\"");
+		var method = type.FindMethod("Pair", [new List(null!, [new Number(type, 1), new Number(type, 2)])]);
+		Assert.That(method, Is.Not.Null);
+	}
 }
