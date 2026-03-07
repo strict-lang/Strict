@@ -6,24 +6,45 @@ namespace Strict.Expressions;
 public sealed class List : Value
 {
 	public List(Body bodyForErrorMessage, List<Expression> values, bool isMutable = false) : base(
-		values[0].ReturnType.GetListImplementationType(
-			GetCommonBaseType(values.Select(v => v.ReturnType).ToList(), bodyForErrorMessage)),
-		new List<ValueInstance>(), values[0].LineNumber, isMutable) =>
-		Values = values;
+		values[0].ReturnType.GetListImplementationType(GetCommonBaseType(values, bodyForErrorMessage)),
+		new List<ValueInstance>(), values[0].LineNumber, isMutable) => Values = values;
 
 	public List(Type type, int lineNumber = 0) : base(type, new List<ValueInstance>(), lineNumber,
 		true) => Values = [];
 
-	private static Type
-		GetCommonBaseType(IReadOnlyList<Type> returnTypes, Body bodyForErrorMessage) =>
-		returnTypes.Count == 1 || returnTypes.All(t => t == returnTypes[0]) ||
-		returnTypes.Any(t => t.Members.Any(member => member.Type == returnTypes[0]))
-			? returnTypes[0]
-			: returnTypes.FirstOrDefault(t => returnTypes[0].Members.Any(m => m.Type == t)) ??
-			throw new ListElementsMustHaveMatchingType(bodyForErrorMessage, returnTypes);
+	private static Type GetCommonBaseType(IReadOnlyList<Expression> values, Body bodyForErrorMessage)
+	{
+		var firstType = values[0].ReturnType;
+		if (values.Count == 1)
+			return firstType;
+		var allSameType = true;
+		for (var i = 1; i < values.Count; i++)
+			if (values[i].ReturnType != firstType)
+			{
+				allSameType = false;
+				break;
+			}
+		if (allSameType)
+			return firstType;
+		for (var i = 0; i < values.Count; i++)
+		{
+			var members = values[i].ReturnType.Members;
+			for (var j = 0; j < members.Count; j++)
+				if (members[j].Type == firstType)
+					return firstType;
+		}
+		for (var i = 0; i < values.Count; i++)
+		{
+			var members = firstType.Members;
+			for (var j = 0; j < members.Count; j++)
+				if (members[j].Type == values[i].ReturnType)
+					return values[i].ReturnType; //ncrunch: no coverage
+		}
+		throw new ListElementsMustHaveMatchingType(bodyForErrorMessage, values);
+	}
 
-	public sealed class ListElementsMustHaveMatchingType(Body body, IEnumerable<Type> returnTypes)
-		: ParsingFailed(body, "List has one or many mismatching types " + string.Join(", ", returnTypes));
+	public sealed class ListElementsMustHaveMatchingType(Body body, IReadOnlyList<Expression> values)
+		: ParsingFailed(body, "List has one or many mismatching types " + string.Join(", ", values));
 
 	public List<Expression> Values { get; }
 	public override bool IsConstant
@@ -36,6 +57,24 @@ public sealed class List : Value
 			return true;
 		}
 	}
+
+	public override bool Equals(Expression? other) =>
+		ReferenceEquals(this, other) ||
+		(other is List list && ReturnType == list.ReturnType &&
+			Values.Count == list.Values.Count && ValuesEqual(list));
+
+	private bool ValuesEqual(List other)
+	{
+		for (var i = 0; i < Values.Count; i++)
+			if (!Values[i].Equals(other.Values[i]))
+				return false; //ncrunch: no coverage
+		return true;
+	}
+
+	public override int GetHashCode() =>
+		Values.Count > 0 //ncrunch: no coverage
+			? ReturnType.GetHashCode() ^ Values[0].GetHashCode() ^ Values.Count
+			: ReturnType.GetHashCode();
 
 	public ValueInstance? TryGetConstantData()
 	{

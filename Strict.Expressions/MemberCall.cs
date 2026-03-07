@@ -13,11 +13,12 @@ public sealed class MemberCall(Expression? instance, Member member, int lineNumb
 	public static Expression? TryParse(Body body, Type type, Expression? instance,
 		ReadOnlySpan<char> partToParse)
 	{
-		foreach (var member in type.Members)
-			if (partToParse.Equals(member.Name, StringComparison.Ordinal))
+		var members = type.Members;
+		for (var i = 0; i < members.Count; i++)
+			if (partToParse.Equals(members[i].Name, StringComparison.Ordinal))
 				return instance == null && body.IsFakeBodyForMemberInitialization
 					? throw new CannotAccessMemberBeforeTypeIsParsed(body, partToParse.ToString(), type)
-					: new MemberCall(instance, member, body.CurrentFileLineNumber);
+					: new MemberCall(instance, members[i], body.CurrentFileLineNumber);
 		return body.Method.Name == Member.ConstraintsBody
 			? FindContainingMethodTypeMemberForConstraints(body, instance, partToParse.ToString())
 			: null;
@@ -38,4 +39,12 @@ public sealed class MemberCall(Expression? instance, Member member, int lineNumb
 		Instance != null
 			? $"{Instance}.{Member.Name}"
 			: Member.Name;
+
+	public override bool Equals(Expression? other) =>
+		ReferenceEquals(this, other) ||
+		(other is MemberCall mc && Member.Name == mc.Member.Name &&
+			Member.Type == mc.Member.Type && Equals(Instance, mc.Instance));
+
+	public override int GetHashCode() =>
+		Member.GetHashCode() ^ (Instance?.GetHashCode() ?? 0);
 }

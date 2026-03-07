@@ -165,9 +165,13 @@ public class Type : Context, IDisposable
 
 	private void DetermineEnumTypeKind()
 	{
-		if (methods.Count == 0 && members.Count > 0 &&
-			members.All(m => m.IsConstant || m.Type.IsEnum))
+		if (methods.Count == 0 && members.Count > 0)
+		{
+			for (var i = 0; i < members.Count; i++)
+				if (!members[i].IsConstant && !members[i].Type.IsEnum)
+					return;
 			typeKind = TypeKind.Enum;
+		}
 	}
 
 	public class TypeWasAlreadyParsed(Type type) : Exception(type.ToString()); //ncrunch: no coverage

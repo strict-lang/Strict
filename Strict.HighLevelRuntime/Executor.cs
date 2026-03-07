@@ -308,10 +308,21 @@ public class Executor
 		body.Method, "Return value " + last + " does not match method " + body.Method.Name +
 		" ReturnType=" + body.Method.ReturnType);
 
+	private readonly Dictionary<Method, bool> simpleMethodCache = new();
+
 	/// <summary>
 	/// Skip parsing for trivially simple methods during validation to avoid missing-instance errors.
 	/// </summary>
-	private static bool IsSimpleSingleLineMethod(Method method)
+	private bool IsSimpleSingleLineMethod(Method method)
+	{
+		if (simpleMethodCache.TryGetValue(method, out var cached))
+			return cached;
+		var result = CheckIsSimpleSingleLineMethod(method);
+		simpleMethodCache[method] = result;
+		return result;
+	}
+
+	private static bool CheckIsSimpleSingleLineMethod(Method method)
 	{
 		if (method.lines.Count != 2)
 			return false;
@@ -320,8 +331,27 @@ public class Executor
 		if (hasMethodCalls)
 			return false;
 		var thenCount = CountThenSeparators(bodyLine);
-		var operatorCount = bodyLine.Split(' ').Count(w => w is "and" or "or" or "not" or "is");
+		var operatorCount = CountOperatorWords(bodyLine);
 		return thenCount == 0 && operatorCount <= 1 || thenCount == 1 && operatorCount <= 2;
+	}
+
+	private static int CountOperatorWords(string input)
+	{
+		var span = input.AsSpan();
+		var count = 0;
+		while (span.Length > 0)
+		{
+			var spaceIndex = span.IndexOf(' ');
+			var word = spaceIndex < 0
+				? span
+				: span[..spaceIndex];
+			if (word is "and" or "or" or "not" or "is")
+				count++;
+			if (spaceIndex < 0)
+				break;
+			span = span[(spaceIndex + 1)..];
+		}
+		return count;
 	}
 
 	private static int CountThenSeparators(string input)

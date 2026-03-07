@@ -259,18 +259,33 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 			_ => ((Type)value).Name
 		};
 
-	public string ToExpressionCodeString(bool escapeText = false) =>
-		number switch
+	public string ToExpressionCodeString(bool escapeText = false)
+	{
+		ToExpressionCodeStringCalls++;
+		if (escapeText)
+			ToExpressionCodeStringEscapedCalls++;
+		return number switch
 		{
 			TextId => escapeText
 				? "\"" + EscapeText((string)value) + "\""
 				: (string)value,
 			ListId => BuildListString(((ValueListInstance)value).Items, escapeText),
 			DictionaryId => BuildDictionaryString(((ValueDictionaryInstance)value).Items, escapeText),
-			TypeId => ((ValueTypeInstance)value).ToString(),
+			TypeId => ToTypeExpressionCodeString(),
 			_ => GetPrimitiveCodeString((Type)value)
 		};
+	}
 
+	public static int ToExpressionCodeStringTypeIdCalls;
+
+	private string ToTypeExpressionCodeString()
+	{
+		ToExpressionCodeStringTypeIdCalls++;
+		return ((ValueTypeInstance)value).ToString();
+	}
+
+	public static int ToExpressionCodeStringCalls = 0;
+	public static int ToExpressionCodeStringEscapedCalls;
 	private static string EscapeText(string s) => s.Replace("\\", @"\\").Replace("\"", "\\\"");
 
 	private static string BuildListString(IReadOnlyList<ValueInstance> items, bool escapeText)
@@ -300,6 +315,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 
 	private string GetPrimitiveCodeString(Type primitiveType)
 	{
+		GetPrimitiveCodeStringCalls++;
 		if (primitiveType.IsBoolean)
 			return number == 0
 				? "false"
@@ -307,13 +323,58 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 		if (primitiveType.IsNone)
 			return Type.None;
 		if (primitiveType.IsNumber)
-			return number.ToString(System.Globalization.CultureInfo.InvariantCulture);
+			return GetCachedNumberString();
 		if (primitiveType.IsCharacter)
-			return ((char)number).ToString();
+			return GetCachedCharString();
+		GetPrimitiveCodeStringCallsNonNumberBooleanChar++;
 		return primitiveType.IsMutable
 			// ReSharper disable once TailRecursiveCall
 			? GetPrimitiveCodeString(primitiveType.GetFirstImplementation())
 			: throw new NotSupportedException(primitiveType.ToString());
+	}
+
+	public static int GetPrimitiveCodeStringCalls = 0;
+	public static int GetPrimitiveCodeStringCallsNonNumberBooleanChar = 0;
+
+	public string GetCachedNumberString()
+	{
+		if (double.IsInteger(number))
+		{
+			var intValue = (int)number;
+			if ((uint)intValue < (uint)CachedIntegerStrings.Length)
+				return CachedIntegerStrings[intValue];
+			if (intValue == -1)
+				return "-1";
+		}
+		return number.ToString(System.Globalization.CultureInfo.InvariantCulture);
+	}
+
+	private static readonly string[] CachedIntegerStrings = CreateIntegerStringCache();
+
+	private static string[] CreateIntegerStringCache()
+	{
+		var cache = new string[101];
+		for (var i = 0; i < cache.Length; i++)
+			cache[i] = i.ToString(System.Globalization.CultureInfo.InvariantCulture);
+		return cache;
+	}
+
+	private string GetCachedCharString()
+	{
+		var c = (char)number;
+		return c < 128
+			? CachedAsciiCharStrings[c]
+			: c.ToString();
+	}
+
+	private static readonly string[] CachedAsciiCharStrings = CreateAsciiCharCache();
+
+	private static string[] CreateAsciiCharCache()
+	{
+		var cache = new string[128];
+		for (var i = 0; i < cache.Length; i++)
+			cache[i] = ((char)i).ToString();
+		return cache;
 	}
 
 	/// <summary>
@@ -322,6 +383,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 	/// </summary>
 	public bool Equals(ValueInstance other)
 	{
+		EqualsCalls++;
 		if (number == other.number && value == other.value)
 			return true;
 		if (number == TypeId)
@@ -350,5 +412,6 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 			: ((Type)other.value).IsSameOrCanBeUsedAs((Type)value);
 	}
 
+	public static int EqualsCalls = 0;
 	public override int GetHashCode() => HashCode.Combine(number, value);
 }

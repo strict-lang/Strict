@@ -8,11 +8,18 @@ public sealed class ValueDictionaryInstance(Type returnType,
 	public readonly Type ReturnType = returnType;
 	public readonly Dictionary<ValueInstance, ValueInstance> Items = items;
 
-	public bool Equals(ValueDictionaryInstance? other) =>
-		other is not null && (ReferenceEquals(this, other) ||
-			other.ReturnType.IsSameOrCanBeUsedAs(ReturnType) && Items.Count == other.Items.Count &&
-			Items.All(kvp =>
-				other.Items.TryGetValue(kvp.Key, out var value) && kvp.Value.Equals(value)));
+	public bool Equals(ValueDictionaryInstance? other)
+	{
+		if (ReferenceEquals(this, other))
+			return true; //ncrunch: no coverage
+		if (other is null || Items.Count != other.Items.Count ||
+			!other.ReturnType.IsSameOrCanBeUsedAs(ReturnType))
+			return false;
+		foreach (var kvp in Items)
+			if (!other.Items.TryGetValue(kvp.Key, out var value) || !kvp.Value.Equals(value))
+				return false;
+		return true;
+	}
 
 	//ncrunch: no coverage start
 	public override bool Equals(object? other) => Equals(other as ValueDictionaryInstance);

@@ -1,4 +1,4 @@
-﻿using Strict.Language;
+using Strict.Language;
 using Type = Strict.Language.Type;
 
 namespace Strict.Expressions;
@@ -29,4 +29,10 @@ public sealed class TypeComparison(Type returnType, Type targetType, int lineNum
 				body.CurrentFileLineNumber)
 			: body.Method.ParseExpression(body, input[nextTokenRange]);
 	}
+
+	//ncrunch: no coverage start
+	public override bool Equals(Expression? other) =>
+		ReferenceEquals(this, other) ||
+		(other is TypeComparison tc && TargetType == tc.TargetType);
+	public override int GetHashCode() => TargetType.GetHashCode();
 }

@@ -136,11 +136,11 @@ public sealed class BinaryTests : TestExpressions
 	public void NestedBinaryExpressionsTwoGroups() =>
 		ParseAndCheckOutputMatchesInput("(1 + 2) * (3 + 4) * 5",
 			CreateBinary(
-				CreateBinary(new Number(method, 1), BinaryOperator.Plus, new Number(method, 2)),
-				BinaryOperator.Multiply,
 				CreateBinary(
-					CreateBinary(new Number(method, 3), BinaryOperator.Plus, new Number(method, 4)),
-					BinaryOperator.Multiply, new Number(method, 5))));
+					CreateBinary(new Number(method, 1), BinaryOperator.Plus, new Number(method, 2)),
+					BinaryOperator.Multiply,
+					CreateBinary(new Number(method, 3), BinaryOperator.Plus, new Number(method, 4))),
+				BinaryOperator.Multiply, new Number(method, 5)));
 
 	[Test]
 	public void HasMatchingLeftAndRightExpressionTypes()

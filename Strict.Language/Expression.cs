@@ -12,6 +12,7 @@ public abstract class Expression(Type returnType, int lineNumber = 0, bool isMut
 	public Type ReturnType { get; } = returnType;
 	public int LineNumber { get; } = lineNumber;
 	public bool IsMutable { get; } = isMutable;
+	public abstract bool IsConstant { get; }
 	/// <summary>
 	/// By default, all expressions should be immutable in Strict. However, many times some part of
 	/// the code will actually change something, thus making that expression AND anything that calls
@@ -32,17 +33,13 @@ public abstract class Expression(Type returnType, int lineNumber = 0, bool isMut
 			return false;
 		}
 	}
-	public abstract bool IsConstant { get; }
-
-	public virtual bool Equals(Expression? other) =>
-		!ReferenceEquals(null, other) &&
-		(ReferenceEquals(this, other) || other.ToString() == ToString());
 
 	public override bool Equals(object? obj) =>
 		!ReferenceEquals(null, obj) && (ReferenceEquals(this, obj) ||
 			obj.GetType() == GetType() && Equals((Expression)obj));
 
-	public override int GetHashCode() => ToString().GetHashCode();
+	public abstract bool Equals(Expression? other);
+	public abstract override int GetHashCode();
 	public override string ToString() => base.ToString() + " " + ReturnType;
 
 	protected static string IndentExpression(Expression expression) =>

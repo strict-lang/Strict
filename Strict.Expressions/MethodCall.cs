@@ -252,6 +252,24 @@ public class MethodCall : ConcreteExpression
 						? FormatDictionaryConstructor()
 						: $"{GetProperMethodName()}{Arguments.ToBrackets()}";
 
+	public override bool Equals(Expression? other) =>
+		ReferenceEquals(this, other) ||
+		(other is MethodCall mc && other.GetType() == GetType() &&
+			Method.IsSameMethodNameReturnTypeAndParameters(mc.Method) &&
+			Equals(Instance, mc.Instance) && ArgumentsEqual(mc.Arguments));
+
+	private bool ArgumentsEqual(IReadOnlyList<Expression> otherArguments)
+	{
+		if (Arguments.Count != otherArguments.Count)
+			return false; //ncrunch: no coverage
+		for (var i = 0; i < Arguments.Count; i++)
+			if (!Arguments[i].Equals(otherArguments[i]))
+				return false; //ncrunch: no coverage
+		return true;
+	}
+
+	public override int GetHashCode() => Method.GetHashCode() ^ (Instance?.GetHashCode() ?? 0);
+
 	private string FormatDictionaryConstructor() =>
 		Arguments is [List list]
 			? Type.Dictionary + (list.Values.All(value => value is List)

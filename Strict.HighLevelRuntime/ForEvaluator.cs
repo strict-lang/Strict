@@ -1,5 +1,6 @@
 using Strict.Expressions;
 using Strict.Language;
+using System.Text;
 using Type = Strict.Language.Type;
 
 namespace Strict.HighLevelRuntime;
@@ -93,29 +94,52 @@ internal sealed class ForEvaluator(Executor executor)
 		ExecutionContext ctx)
 	{
 		if (ctx.Method.ReturnType.IsNumber)
-			return new ValueInstance(executor.numberType,
-				results?.Sum(value => value.Number) ?? 0);
+		{
+			var sum = 0.0;
+			if (results != null)
+				for (var i = 0; i < results.Count; i++)
+					sum += results[i].Number;
+			return new ValueInstance(executor.numberType, sum);
+		}
 		if (ctx.Method.ReturnType.IsBoolean)
-			return new ValueInstance(executor.booleanType,
-				results?.Any(value => value.Boolean) ?? false);
+		{
+			var any = false;
+			if (results != null)
+				for (var i = 0; i < results.Count; i++)
+					if (results[i].Boolean)
+					{
+						any = true;
+						break;
+					}
+			return new ValueInstance(executor.booleanType, any);
+		}
 		if (!ctx.Method.ReturnType.IsText)
 			return null;
 		if (results == null)
 			return new ValueInstance("");
-		var text = "";
+		var text = new StringBuilder();
 		foreach (var value in results)
 			if (value.IsPrimitiveType(executor.characterType))
-				text += (char)value.Number;
-			else if (value.IsText || value.IsPrimitiveType(executor.numberType) ||
-				value.IsPrimitiveType(executor.booleanType))
-				text += value.ToExpressionCodeString();
+				text.Append((char)value.Number);
+			else if (value.IsText)
+				text.Append(value.Text);
+			else if (value.IsPrimitiveType(executor.numberType))
+				text.Append(value.GetCachedNumberString());
+			else if (value.IsPrimitiveType(executor.booleanType))
+				text.Append(value.Boolean //ncrunch: no coverage
+					? "true"
+					: "false");
 			else if (value.IsList || value.IsDictionary)
-				text += (text == ""
-					? ""
-					: ", ") + "(" + value.ToExpressionCodeString() + ")";
+			{
+				if (text.Length > 0)
+					text.Append(", ");
+				text.Append('(');
+				text.Append(value.ToExpressionCodeString());
+				text.Append(')');
+			}
 			else
 				throw new NotSupportedException("For text return type cannot consolidate value " + value);
-		return new ValueInstance(text);
+		return new ValueInstance(text.ToString());
 	}
 
 	private Type GetForValueType(ValueInstance iterator) =>

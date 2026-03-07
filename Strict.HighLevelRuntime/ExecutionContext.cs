@@ -31,11 +31,11 @@ public sealed class ExecutionContext(Type type, Method method)
 			return Parent?.Find(name, statistics);
 		if (name == Type.ValueLowercase)
 			return This;
-		var implicitMember =
-			Type.Members.FirstOrDefault(m => !m.IsConstant && m.Type.Name != Type.Iterator);
-		if (implicitMember != null &&
-			implicitMember.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
-			return new ValueInstance(This.Value, implicitMember.Type);
+		var members = Type.Members;
+		for (var i = 0; i < members.Count; i++)
+			if (!members[i].IsConstant && members[i].Type.Name != Type.Iterator &&
+				members[i].Name.Equals(name, StringComparison.OrdinalIgnoreCase))
+				return new ValueInstance(This.Value, members[i].Type);
 		return Parent?.Find(name, statistics);
 	}
 

@@ -100,8 +100,8 @@ public sealed class ByteCodeGenerator
 	private List<Statement> GenerateStatements(IReadOnlyList<Expression> expressions)
 	{
 		for (var i = 0; i < expressions.Count; i++)
-			if ((ReferenceEquals((Expression?)expressions[i], Expressions[^1]) ||
-					expressions[i] is Expressions.Return) && (Expression?)expressions[i] is not If)
+			if ((ReferenceEquals(expressions[i], Expressions[^1]) ||
+					expressions[i] is Expressions.Return) && expressions[i] is not If)
 				GenerateStatementsFromReturn(expressions[i]);
 			else
 				GenerateStatementsFromExpression(expressions[i]);

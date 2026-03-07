@@ -29,6 +29,10 @@ public class ExpressionParserTests : ExpressionParser
 	public class TestExpression(Type returnType) : Expression(returnType)
 	{
 		public override bool IsConstant => false; //ncrunch: no coverage
+		public override bool Equals(Expression? other) =>
+			ReferenceEquals(this, other) ||
+			(other is TestExpression t && ReturnType == t.ReturnType);
+		public override int GetHashCode() => ReturnType.GetHashCode();
 	}
 
 	public override Expression ParseLineExpression(Body body, ReadOnlySpan<char> line)

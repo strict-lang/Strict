@@ -1,4 +1,4 @@
-﻿using Strict.Language;
+using Strict.Language;
 
 namespace Strict.Expressions;
 
@@ -17,4 +17,10 @@ public sealed class ParameterCall(Parameter parameter, int lineNumber = 0)
 	}
 
 	public override string ToString() => Parameter.Name;
+	//ncrunch: no coverage start
+	public override bool Equals(Expression? other) =>
+		ReferenceEquals(this, other) ||
+		(other is ParameterCall pc && Parameter.Name == pc.Parameter.Name &&
+			Parameter.Type == pc.Parameter.Type);
+	public override int GetHashCode() => Parameter.GetHashCode();
 }

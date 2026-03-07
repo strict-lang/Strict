@@ -130,10 +130,11 @@ public sealed class ListTests : TestExpressions
 	[Test]
 	public void ParseMultipleListInBinary() =>
 		ParseAndCheckOutputMatchesInput("(1, 2, 3, 4, 5) + (1) + 4",
-			CreateBinary(new List(new Body(method), GetListExpressions("1, 2, 3, 4, 5".Split(", "))),
-				BinaryOperator.Plus,
-				CreateBinary(new List(new Body(method), GetListExpressions("1".Split(", "))),
-					BinaryOperator.Plus, new Number(method, 4))));
+			CreateBinary(
+				CreateBinary(new List(new Body(method), GetListExpressions("1, 2, 3, 4, 5".Split(", "))),
+					BinaryOperator.Plus,
+					new List(new Body(method), GetListExpressions("1".Split(", ")))),
+				BinaryOperator.Plus, new Number(method, 4)));
 
 	[Test]
 	public void ParseNestedLists() =>

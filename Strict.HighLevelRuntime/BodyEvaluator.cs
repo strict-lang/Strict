@@ -35,14 +35,14 @@ internal sealed class BodyEvaluator(Executor executor)
 	private ValueInstance TryEvaluate(Body body, ExecutionContext ctx, bool runOnlyTests)
 	{
 		var last = executor.noneInstance;
-		foreach (var e in body.Expressions)
+		for (var index = 0; index < body.Expressions.Count; index++)
 		{
-			var isTest = !e.Equals(body.Expressions[^1]) && IsStandaloneInlineTest(e);
+			var e = body.Expressions[index];
+			var isTest = !ReferenceEquals(e, body.Expressions[^1]) && IsStandaloneInlineTest(e);
 			if (isTest)
 				executor.Statistics.TestExpressions++;
 			if (isTest == !runOnlyTests && e is not Declaration && e is not MutableReassignment ||
-				runOnlyTests && e is Declaration decl &&
-				body.Method.Type.Members.Any(m => !m.IsConstant && ExpressionReferencesMember(decl.Value, m.Name)))
+				runOnlyTests && e is Declaration decl && DeclarationReferencesAnyMember(body, decl))
 				continue;
 			last = executor.RunExpression(e, ctx);
 			if (ctx.ExitMethodAndReturnValue.HasValue)
@@ -68,10 +68,12 @@ internal sealed class BodyEvaluator(Executor executor)
 	private ValueInstance? GetStandaloneInlineTestComparedValue(Expression expression,
 		ExecutionContext ctx) => expression switch
 	{
+		Binary { Method.Name: BinaryOperator.Is, Instance: Value v } => v.Data,
 		Binary { Method.Name: BinaryOperator.Is, Instance: not null } binary =>
 			executor.RunExpression(binary.Instance, ctx),
+		Not { Instance: Binary { Method.Name: BinaryOperator.Is, Instance: Value v } } => v.Data,
 		Not { Instance: Binary { Method.Name: BinaryOperator.Is, Instance: not null } binary } =>
-			executor.RunExpression(binary.Instance, ctx),
+			executor.RunExpression(binary.Instance, ctx), //ncrunch: no coverage
 		_ => null
 	};
 
@@ -92,6 +94,15 @@ internal sealed class BodyEvaluator(Executor executor)
 	private static bool IsStandaloneInlineTest(Expression e) =>
 		e.ReturnType.IsBoolean && e is not If && e is not Return && e is not Declaration &&
 		e is not MutableReassignment;
+
+	private static bool DeclarationReferencesAnyMember(Body body, Declaration decl)
+	{
+		var members = body.Method.Type.Members;
+		for (var i = 0; i < members.Count; i++)
+			if (!members[i].IsConstant && ExpressionReferencesMember(decl.Value, members[i].Name))
+				return true;
+		return false;
+	}
 
 	private string GetTestFailureDetails(Expression expression, ExecutionContext ctx) =>
 		expression is Binary

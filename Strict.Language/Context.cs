@@ -100,7 +100,7 @@ public abstract class Context
 	}
 
 	private readonly IDictionary<string, Type?> types = new Dictionary<string, Type?>();
-	internal static int FindTypeCount { get; private set; }
+	internal static int FindTypeCount;
 
 	public sealed class ListPrefixIsNotAllowedUseImplementationTypeNameInPlural(string typeName)
 		: Exception($"List should not be used as prefix for {

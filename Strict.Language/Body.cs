@@ -259,6 +259,24 @@ public sealed class Body : Expression
 
 	public override bool IsConstant => Expressions.All(e => e.IsConstant);
 	public override string ToString() => string.Join(Environment.NewLine, Expressions);
+
+	public override bool Equals(Expression? other) =>
+		ReferenceEquals(this, other) ||
+		(other is Body b && Expressions.Count == b.Expressions.Count && ExpressionsEqual(b));
+
+	private bool ExpressionsEqual(Body other)
+	{
+		for (var i = 0; i < Expressions.Count; i++)
+			if (!Expressions[i].Equals(other.Expressions[i]))
+				return false; //ncrunch: no coverage
+		return true;
+	}
+
+	public override int GetHashCode() =>
+		Expressions.Count > 0 //ncrunch: no coverage
+			? Expressions[0].GetHashCode() ^ Expressions.Count
+			: 0;
+
 	public string GetLine(int lineNumber) => Method.lines[lineNumber];
 
 	public Body? FindCurrentChild()

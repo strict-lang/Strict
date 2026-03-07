@@ -1,4 +1,4 @@
-﻿using Strict.Language;
+using Strict.Language;
 
 namespace Strict.Expressions;
 
@@ -15,5 +15,10 @@ public sealed class VariableCall(Variable variable, int lineNumber = 0)
 
 	public Variable Variable { get; } = variable;
 	public override string ToString() => Variable.Name;
+	public override bool Equals(Expression? other) =>
+		ReferenceEquals(this, other) ||
+		(other is VariableCall vc && Variable.Name == vc.Variable.Name &&
+			Variable.Type == vc.Variable.Type);
+	public override int GetHashCode() => Variable.GetHashCode(); //ncrunch: no coverage
 	public override bool IsConstant => Variable.InitialValue.IsConstant && !Variable.IsMutable;
 }

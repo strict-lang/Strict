@@ -67,4 +67,22 @@ public sealed class SelectorIf(Expression selector, IReadOnlyList<SelectorIf.Cas
 					bodyForErrorMessage ?? new Body(thenType.Methods[0]), thenType, elseType);
 
 	private const string ThenSeparator = " then ";
+
+	//ncrunch: no coverage start
+	public override bool Equals(Expression? other) =>
+		ReferenceEquals(this, other) ||
+		(other is SelectorIf si && Selector.Equals(si.Selector) &&
+			Cases.Count == si.Cases.Count && CasesEqual(si) &&
+			(OptionalElse?.Equals(si.OptionalElse) ?? si.OptionalElse == null));
+
+	private bool CasesEqual(SelectorIf other)
+	{
+		for (var i = 0; i < Cases.Count; i++)
+			if (!Cases[i].Pattern.Equals(other.Cases[i].Pattern) ||
+				!Cases[i].Then.Equals(other.Cases[i].Then))
+				return false;
+		return true;
+	}
+
+	public override int GetHashCode() => Selector.GetHashCode() ^ Cases.Count;
 }
