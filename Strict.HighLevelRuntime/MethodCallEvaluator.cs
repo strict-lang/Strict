@@ -90,7 +90,7 @@ public sealed class MethodCallEvaluator(Executor executor)
 		if (left.IsList && right.IsList)
 		{
 			if (op is BinaryOperator.Multiply or BinaryOperator.Divide &&
-				left.List.Items.Count != right.List.Items.Count)
+				left.List.Items.Length != right.List.Items.Length)
 				return Error(ListsHaveDifferentDimensions, ctx, call);
 			return op switch
 			{
@@ -175,105 +175,125 @@ public sealed class MethodCallEvaluator(Executor executor)
 	private static ValueInstance CombineLists(Type listType, IReadOnlyList<ValueInstance> leftList,
 		IReadOnlyList<ValueInstance> rightList)
 	{
-		var combined = new List<ValueInstance>(leftList.Count + rightList.Count);
 		var isLeftText = listType is GenericTypeImplementation { Generic.Name: Type.List } list &&
 			list.ImplementationTypes[0].IsText;
-		foreach (var item in leftList)
-			combined.Add(item);
-		foreach (var item in rightList)
-			combined.Add(isLeftText && !item.IsText
-				? new ValueInstance(item.ToExpressionCodeString())
-				: item);
+		var combined = new ValueInstance[leftList.Count + rightList.Count];
+		var idx = 0;
+		for (var i = 0; i < leftList.Count; i++)
+			combined[idx++] = leftList[i];
+		for (var i = 0; i < rightList.Count; i++)
+			combined[idx++] = isLeftText && !rightList[i].IsText
+				? new ValueInstance(rightList[i].ToExpressionCodeString())
+				: rightList[i];
 		return new ValueInstance(listType, combined);
 	}
 
 	private static ValueInstance SubtractLists(Type listType, IReadOnlyList<ValueInstance> leftList,
 		IReadOnlyList<ValueInstance> rightList)
 	{
-		var remainder = new List<ValueInstance>();
-		foreach (var item in leftList)
-			remainder.Add(item);
-		foreach (var item in rightList)
-			remainder.Remove(item);
-		return new ValueInstance(listType, remainder);
+		var removed = new bool[rightList.Count];
+		var temp = new ValueInstance[leftList.Count];
+		var count = 0;
+		for (var i = 0; i < leftList.Count; i++)
+		{
+			var keep = true;
+			for (var j = 0; j < rightList.Count; j++)
+				if (!removed[j] && leftList[i].Equals(rightList[j]))
+				{
+					removed[j] = true;
+					keep = false;
+					break;
+				}
+			if (keep)
+				temp[count++] = leftList[i];
+		}
+		if (count == leftList.Count)
+			return new ValueInstance(listType, temp);
+		var result = new ValueInstance[count];
+		Array.Copy(temp, result, count);
+		return new ValueInstance(listType, result);
 	}
 
 	private static ValueInstance MultiplyLists(Type leftListType, Type numberType,
 		IReadOnlyList<ValueInstance> leftList, IReadOnlyList<ValueInstance> rightList)
 	{
-		var result = new List<ValueInstance>();
+		var result = new ValueInstance[leftList.Count];
 		for (var index = 0; index < leftList.Count; index++)
-			result.Add(new ValueInstance(numberType, leftList[index].Number * rightList[index].Number));
+			result[index] = new ValueInstance(numberType, leftList[index].Number * rightList[index].Number);
 		return new ValueInstance(leftListType, result);
 	}
 
 	private static ValueInstance DivideLists(Type leftListType, Type numberType,
 		IReadOnlyList<ValueInstance> leftList, IReadOnlyList<ValueInstance> rightList)
 	{
-		var result = new List<ValueInstance>();
+		var result = new ValueInstance[leftList.Count];
 		for (var index = 0; index < leftList.Count; index++)
-			result.Add(new ValueInstance(numberType, leftList[index].Number / rightList[index].Number));
+			result[index] = new ValueInstance(numberType, leftList[index].Number / rightList[index].Number);
 		return new ValueInstance(leftListType, result);
 	}
 
 	private static ValueInstance AddToList(Type leftListType, IReadOnlyList<ValueInstance> leftList,
 		ValueInstance right)
 	{
-		var combined = new List<ValueInstance>(leftList.Count + 1);
 		var isLeftText = leftListType is GenericTypeImplementation { Generic.Name: Type.List } list &&
 			list.ImplementationTypes[0].IsText;
-		foreach (var item in leftList)
-			combined.Add(item);
-		combined.Add(isLeftText && !right.IsText
+		var combined = new ValueInstance[leftList.Count + 1];
+		for (var i = 0; i < leftList.Count; i++)
+			combined[i] = leftList[i];
+		combined[leftList.Count] = isLeftText && !right.IsText
 			? new ValueInstance(right.ToExpressionCodeString())
-			: right);
+			: right;
 		return new ValueInstance(leftListType, combined);
 	}
 
 	private static ValueInstance RemoveFromList(Type leftListType,
 		IReadOnlyList<ValueInstance> leftList, ValueInstance right)
 	{
-		var result = new List<ValueInstance>();
-		foreach (var item in leftList)
-			if (!item.Equals(right))
-				result.Add(item);
+		var count = 0;
+		for (var i = 0; i < leftList.Count; i++)
+			if (!leftList[i].Equals(right))
+				count++;
+		var result = new ValueInstance[count];
+		var idx = 0;
+		for (var i = 0; i < leftList.Count; i++)
+			if (!leftList[i].Equals(right))
+				result[idx++] = leftList[i];
 		return new ValueInstance(leftListType, result);
 	}
 
 	private static ValueInstance MultiplyList(Type leftListType,
 		IReadOnlyList<ValueInstance> leftList, double rightNumber)
 	{
-		var result = new List<ValueInstance>(leftList.Count);
-		foreach (var item in leftList)
-			result.Add(new ValueInstance(item.GetTypeExceptText(), item.Number * rightNumber));
+		var result = new ValueInstance[leftList.Count];
+		for (var i = 0; i < leftList.Count; i++)
+			result[i] = new ValueInstance(leftList[i].GetTypeExceptText(), leftList[i].Number * rightNumber);
 		return new ValueInstance(leftListType, result);
 	}
 
 	private static ValueInstance DivideList(Type leftListType, IReadOnlyList<ValueInstance> leftList,
 		double rightNumber)
 	{
-		var result = new List<ValueInstance>(leftList.Count);
-		foreach (var item in leftList)
-			result.Add(new ValueInstance(item.GetTypeExceptText(), item.Number / rightNumber));
+		var result = new ValueInstance[leftList.Count];
+		for (var i = 0; i < leftList.Count; i++)
+			result[i] = new ValueInstance(leftList[i].GetTypeExceptText(), leftList[i].Number / rightNumber);
 		return new ValueInstance(leftListType, result);
 	}
 
 	private ValueInstance ExecuteMethodCall(MethodCall call, ValueInstance? instance,
 		ExecutionContext ctx)
 	{
-		IReadOnlyList<ValueInstance> args;
+		ValueInstance[] args;
 		if (call.Arguments.Count == 0)
 			args = [];
 		else
 		{
-			var argsArray = new ValueInstance[call.Arguments.Count];
+			args = new ValueInstance[call.Arguments.Count];
 			for (var i = 0; i < call.Arguments.Count; i++)
-				argsArray[i] = executor.RunExpression(call.Arguments[i], ctx);
-			args = argsArray;
+				args[i] = executor.RunExpression(call.Arguments[i], ctx);
 		}
-		if (instance is { IsDictionary: true } && args.Count > 0 && call.Method.Name == "Add")
+		if (instance is { IsDictionary: true } && args.Length > 0 && call.Method.Name == "Add")
 		{
-			if (args.Count == 2)
+			if (args.Length == 2)
 				instance.Value.GetDictionaryItems()[args[0]] = args[1];
 			return instance.Value;
 		}
@@ -286,61 +306,61 @@ public sealed class MethodCallEvaluator(Executor executor)
 
 	private ValueInstance Error(string name, ExecutionContext ctx, Expression? source = null)
 	{
-		var errorMembers = new Dictionary<string, ValueInstance>(StringComparer.OrdinalIgnoreCase);
 		var errorType = ctx.Method.GetType(Type.Error);
-		foreach (var member in errorType.Members)
-			errorMembers[member.Name] = member.Type.Name switch
+		var errorValues = new ValueInstance[errorType.Members.Count];
+		for (var i = 0; i < errorType.Members.Count; i++)
+			errorValues[i] = errorType.Members[i].Type.Name switch
 			{
 				nameof(Type.Name) or Type.Text => new ValueInstance(name),
-				_ when member.Type.IsList => CreateStacktrace(ctx, source),
-				_ => throw new NotSupportedException("Error member not supported: " + member) //ncrunch: no coverage
+				_ when errorType.Members[i].Type.IsList => CreateStacktrace(ctx, source),
+				_ => throw new NotSupportedException("Error member not supported: " + errorType.Members[i]) //ncrunch: no coverage
 			};
-		return new ValueInstance(errorType, errorMembers);
+		return new ValueInstance(errorType, errorValues);
 	}
 
 	private ValueInstance CreateStacktrace(ExecutionContext ctx, Expression? source)
 	{
-		var members = new Dictionary<string, ValueInstance>(StringComparer.OrdinalIgnoreCase);
 		var stacktraceType = ctx.Method.GetType(Type.Stacktrace);
-		foreach (var member in stacktraceType.Members)
-			members[member.Name] = member.Type.Name switch
+		var stackValues = new ValueInstance[stacktraceType.Members.Count];
+		for (var i = 0; i < stacktraceType.Members.Count; i++)
+			stackValues[i] = stacktraceType.Members[i].Type.Name switch
 			{
 				nameof(Method) => new ValueInstance(ctx.Method.GetType(nameof(Method)),
 					CreateMethodValue(ctx.Method)),
 				Type.Text or nameof(Type.Name) => new ValueInstance(ctx.Method.Type.FilePath),
 				Type.Number => new ValueInstance(executor.numberType,
-					source?.LineNumber ?? ctx.Method.TypeLineNumber),
-				_ => throw new NotSupportedException("Stacktrace member not supported: " + member) //ncrunch: no coverage
+					(double)(source?.LineNumber ?? ctx.Method.TypeLineNumber)),
+				_ => throw new NotSupportedException("Stacktrace member not supported: " + stacktraceType.Members[i]) //ncrunch: no coverage
 			};
 		return new ValueInstance(executor.listType.GetGenericImplementation(stacktraceType),
-			[new ValueInstance(stacktraceType, members)]);
+			[new ValueInstance(stacktraceType, stackValues)]);
 	}
 
-	private static Dictionary<string, ValueInstance> CreateMethodValue(Method method)
+	private static ValueInstance[] CreateMethodValue(Method method)
 	{
-		var values = new Dictionary<string, ValueInstance>(StringComparer.OrdinalIgnoreCase);
 		var methodType = method.GetType(nameof(Method));
-		foreach (var member in methodType.Members)
-			values[member.Name] = member.Type.Name switch
+		var values = new ValueInstance[methodType.Members.Count];
+		for (var i = 0; i < methodType.Members.Count; i++)
+			values[i] = methodType.Members[i].Type.Name switch
 			{
 				nameof(Type.Name) or Type.Text => new ValueInstance(method.Name),
 				nameof(Type) => new ValueInstance(method.GetType(nameof(Type)),
 					CreateTypeValue(method.Type)),
-				_ => throw new NotSupportedException("Method member not supported: " + member) //ncrunch: no coverage
+				_ => throw new NotSupportedException("Method member not supported: " + methodType.Members[i]) //ncrunch: no coverage
 			};
 		return values;
 	}
 
-	private static Dictionary<string, ValueInstance> CreateTypeValue(Type type)
+	private static ValueInstance[] CreateTypeValue(Type type)
 	{
-		var values = new Dictionary<string, ValueInstance>(StringComparer.OrdinalIgnoreCase);
 		var typeType = type.GetType(nameof(Type));
-		foreach (var member in typeType.Members)
-			values[member.Name] = member.Type.Name switch
+		var values = new ValueInstance[typeType.Members.Count];
+		for (var i = 0; i < typeType.Members.Count; i++)
+			values[i] = typeType.Members[i].Type.Name switch
 			{
 				nameof(Type.Name) => new ValueInstance(type.Name),
 				Type.Text => new ValueInstance(type.Package.FullName),
-				_ => throw new NotSupportedException("Type member not supported: " + member) //ncrunch: no coverage
+				_ => throw new NotSupportedException("Type member not supported: " + typeType.Members[i]) //ncrunch: no coverage
 			};
 		return values;
 	}

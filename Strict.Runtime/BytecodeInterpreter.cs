@@ -67,8 +67,14 @@ public sealed class BytecodeInterpreter(Package package)
 		if (statement is not RemoveStatement removeStatement)
 			return;
 		var item = Memory.Registers[removeStatement.Register];
-		var listItems = new List<ValueInstance>(Memory.Frame.Get(removeStatement.Identifier).List.Items);
-		listItems.RemoveAll(vi => vi.Equals(item));
+		//TODO: why do we have to make a copy every time?
+		var oldList = Memory.Frame.Get(removeStatement.Identifier).List.Items;
+		var listItems = new ValueInstance[oldList.Length - 1];
+		var newIndex = 0;
+		for (var index = 0; index < oldList.Length; index++)
+			if (!oldList[index].Equals(item))
+				listItems[newIndex++] = oldList[index];
+		//list version: listItems.RemoveAll(vi => vi.Equals(item));
 		Memory.Frame.Set(removeStatement.Identifier,
 			new ValueInstance(Memory.Frame.Get(removeStatement.Identifier).List.ReturnType, listItems));
 	}
@@ -337,7 +343,7 @@ public sealed class BytecodeInterpreter(Package package)
 		if (iterableInstance.IsText)
 			return iterableInstance.Text.Length;
 		if (iterableInstance.IsList)
-			return iterableInstance.List.Items.Count;
+			return iterableInstance.List.Items.Length;
 		return (int)iterableInstance.Number;
 	}
 
@@ -354,7 +360,7 @@ public sealed class BytecodeInterpreter(Package package)
 		if (iterableVariable.IsList)
 		{
 			var items = iterableVariable.List.Items;
-			if (index < items.Count)
+			if (index < items.Length)
 				Memory.Frame.Set("value", items[index]);
 			else
 				loopBeginStatement.LoopCount = 0;
@@ -424,8 +430,9 @@ public sealed class BytecodeInterpreter(Package package)
 	{
 		if (left.IsList)
 		{
+			//TODO: not efficient, we should use a dynamic list and just modify it!
 			var items = new List<ValueInstance>(left.List.Items) { right };
-			return new ValueInstance(left.List.ReturnType, items);
+			return new ValueInstance(left.List.ReturnType, items.ToArray());
 		}
 		if (left.IsText || right.IsText)
 			return new ValueInstance((left.IsText
@@ -444,7 +451,7 @@ public sealed class BytecodeInterpreter(Package package)
 			var removeIndex = items.FindIndex(item => item.Equals(right));
 			if (removeIndex >= 0)
 				items.RemoveAt(removeIndex);
-			return new ValueInstance(left.List.ReturnType, items);
+			return new ValueInstance(left.List.ReturnType, items.ToArray());
 		}
 		return new ValueInstance(left.GetTypeExceptText(), left.Number - right.Number);
 	}

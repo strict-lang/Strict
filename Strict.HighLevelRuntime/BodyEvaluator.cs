@@ -35,10 +35,11 @@ internal sealed class BodyEvaluator(Executor executor)
 	private ValueInstance TryEvaluate(Body body, ExecutionContext ctx, bool runOnlyTests)
 	{
 		var last = executor.noneInstance;
-		for (var index = 0; index < body.Expressions.Count; index++)
+		var count = body.Expressions.Count;
+		for (var index = 0; index < count; index++)
 		{
 			var e = body.Expressions[index];
-			var isTest = !ReferenceEquals(e, body.Expressions[^1]) && IsStandaloneInlineTest(e);
+			var isTest = index < count - 1 && IsStandaloneInlineTest(e);
 			if (isTest)
 				executor.Statistics.TestExpressions++;
 			if (isTest == !runOnlyTests && e is not Declaration && e is not MutableReassignment ||
@@ -54,8 +55,8 @@ internal sealed class BodyEvaluator(Executor executor)
 				last = GetStandaloneInlineTestComparedValue(e, ctx) ?? last;
 			}
 		}
-		if (runOnlyTests && last.Equals(executor.noneInstance) && body.Method.Name != Method.Run &&
-			body.Expressions.Count > 1)
+		if (runOnlyTests && count > 1 && last.Equals(executor.noneInstance) &&
+			body.Method.Name != Method.Run)
 			throw new Executor.MethodRequiresTest(body.Method, body);
 		if (runOnlyTests || last.IsError || last.IsType(body.Method.ReturnType))
 			return last;

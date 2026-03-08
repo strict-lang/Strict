@@ -63,25 +63,25 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 		number = TextId;
 	}
 
-	public ValueInstance(Type returnType, IReadOnlyList<ValueInstance> list)
-	{
-		value = new ValueListInstance(returnType, list);
-		number = ListId;
-	}
-
 	public ValueInstance(Type returnType, Dictionary<ValueInstance, ValueInstance> dictionary)
 	{
 		value = new ValueDictionaryInstance(returnType, dictionary);
 		number = DictionaryId;
 	}
 
-	public ValueInstance(Type returnType, Dictionary<string, ValueInstance> members)
+	public ValueInstance(Type returnType, ValueInstance[] values)
 	{
+		if (returnType.IsList)
+		{
+			value = new ValueListInstance(returnType, values);
+			number = ListId;
+			return;
+		}
 		if (!returnType.IsMutable && (returnType.IsNumber || returnType.IsText ||
-			returnType.IsCharacter || returnType.IsList || returnType.IsDictionary ||
+			returnType.IsCharacter || returnType.IsDictionary ||
 			returnType.IsEnum || returnType.IsBoolean || returnType.IsNone))
 			throw new ValueTypeInstanceShouldOnlyBeCreatedForComplexTypes(returnType);
-		value = new ValueTypeInstance(returnType, members);
+		value = new ValueTypeInstance(returnType, values);
 		number = TypeId;
 	}
 
@@ -96,10 +96,11 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 		switch (existingInstance.number)
 		{
 		case TextId:
-			value = new ValueTypeInstance(newType, new Dictionary<string, ValueInstance>
-			{
-				{ Type.Text, new ValueInstance((string)existingInstance.value) }
-			});
+			var textTypeMembers = newType.Members;
+			var textValues = new ValueInstance[textTypeMembers.Count];
+			textValues[ValueTypeInstance.FindMemberIndex(textTypeMembers, Type.Text)] =
+				new ValueInstance((string)existingInstance.value);
+			value = new ValueTypeInstance(newType, textValues);
 			number = TypeId;
 			break;
 		case ListId:
@@ -114,12 +115,14 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 			var existingTypeInstance = (ValueTypeInstance)existingInstance.value;
 			if (!newType.IsMutable && existingTypeInstance.ReturnType.IsMutable && newType.IsText)
 			{
-				value = existingTypeInstance.Members[Type.Text].value;
+				var textIdx = ValueTypeInstance.FindMemberIndex(existingTypeInstance.ReturnType.Members,
+					Type.Text);
+				value = existingTypeInstance.Values[textIdx].value;
 				number = TextId;
 			}
 			else
 			{
-				value = new ValueTypeInstance(newType, existingTypeInstance.Members);
+				value = new ValueTypeInstance(newType, existingTypeInstance.Values);
 				number = TypeId;
 			}
 			break;
@@ -141,6 +144,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 		};
 
 	public bool IsPrimitiveType(Type noneBoolOrNumberType) => value == noneBoolOrNumberType;
+	internal bool HasValue => value != null;
 	public bool IsText => number is TextId;
 	public string Text => (string)value;
 	public double Number => number;
@@ -148,6 +152,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 	public bool IsList => number is ListId;
 	public ValueListInstance List => (ValueListInstance)value;
 	public bool IsDictionary => number is DictionaryId;
+
 	public bool IsNumberLike(Type numberType) =>
 		IsPrimitiveType(numberType) ||
 		(!IsText && !IsList && !IsDictionary) && GetTypeExceptText().IsSameOrCanBeUsedAs(numberType);
@@ -200,7 +205,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 	public int GetIteratorLength()
 	{
 		if (number == ListId)
-			return ((ValueListInstance)value).Items.Count;
+			return ((ValueListInstance)value).Items.Length;
 		if (number == TextId)
 			return ((string)value).Length;
 		if (number == DictionaryId)
@@ -208,10 +213,16 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 		if (number == TypeId)
 		{
 			var typeInstance = (ValueTypeInstance)value;
-			if (typeInstance.ReturnType.IsList && typeInstance.Members.TryGetValue(Type.Text, out var textMember))
-				return textMember.Text.Length;
-			if (typeInstance.Members.TryGetValue("keysAndValues", out var elementsMember) && elementsMember.IsList)
-				return elementsMember.List.Items.Count;
+			if (typeInstance.ReturnType.IsList)
+			{
+				for (var i = 0; i < typeInstance.Values.Length; i++)
+					if (typeInstance.Values[i].IsText)
+						return typeInstance.Values[i].Text.Length;
+				if (typeInstance.TryGetValue(Type.Text, out var textMember))
+					return textMember.Text.Length;
+			}
+			if (typeInstance.TryGetValue("keysAndValues", out var elementsMember) && elementsMember.IsList)
+				return elementsMember.List.Items.Length;
 			throw new IteratorNotSupported(this);
 		}
 		return (int)number;
@@ -225,12 +236,29 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 			TextId => new ValueInstance(charTypeIfNeeded, ((string)value)[index]),
 			ListId => ((ValueListInstance)value).Items[index],
 			TypeId when ((ValueTypeInstance)value).ReturnType.IsList &&
-				((ValueTypeInstance)value).Members.TryGetValue(Type.Text, out var textMember) =>
-				new ValueInstance(charTypeIfNeeded, textMember.Text[index]),
-			TypeId when ((ValueTypeInstance)value).Members.TryGetValue("elements", out var elementsMember) &&
+				FindTextInValues((ValueTypeInstance)value, out var wrappedText) =>
+				new ValueInstance(charTypeIfNeeded, wrappedText![index]),
+			TypeId when ((ValueTypeInstance)value).TryGetValue("elements", out var elementsMember) &&
 				elementsMember.IsList => elementsMember.List.Items[index],
 			_ => throw new IteratorNotSupported(this)
 		};
+
+	private static bool FindTextInValues(ValueTypeInstance typeInstance, out string? text)
+	{
+		for (var i = 0; i < typeInstance.Values.Length; i++)
+			if (typeInstance.Values[i].IsText)
+			{
+				text = typeInstance.Values[i].Text;
+				return true;
+			}
+		if (typeInstance.TryGetValue(Type.Text, out var member) && member.IsText)
+		{
+			text = member.Text;
+			return true;
+		}
+		text = null;
+		return false;
+	}
 
 	public class IteratorNotSupported(ValueInstance instance) : Exception(instance.ToString());
 
@@ -392,13 +420,13 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 			if (other.number == TypeId)
 				return instance.Equals((ValueTypeInstance)other.value);
 			if (other.number != ListId && other.number != DictionaryId && other.number != TextId &&
-				instance.Members.TryGetValue("number", out var numberMember) &&
+				instance.TryGetValue("number", out var numberMember) &&
 				numberMember.number == other.number)
 				return true;
 		}
 		else if (other.number == TypeId && number != ListId && number != DictionaryId &&
 			number != TextId &&
-			((ValueTypeInstance)other.value).Members.TryGetValue("number",
+			((ValueTypeInstance)other.value).TryGetValue("number",
 				out var otherNumberMember) && otherNumberMember.number == number)
 			return true;
 		if (number != other.number)

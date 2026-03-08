@@ -304,12 +304,12 @@ public sealed class ListAdvancedTests : TestExpressions
 	public void CreateMutableListWithMutableExpressions()
 	{
 		using var program = new Type(TestPackage.Instance, new TypeLines(
-					// @formatter:off
-					nameof(CreateMutableListWithMutableExpressions),
-					"has logger",
-					"Add(element Number) Mutable(List)",
-					"\tmutable someList = List(Mutable(Number))",
-					"\tsomeList.Add(1)")).
+			// @formatter:off
+			nameof(CreateMutableListWithMutableExpressions),
+			"has logger",
+			"Add(element Number) Mutable(List)",
+			"\tmutable someList = List(Mutable(Number))",
+			"\tsomeList.Add(1)")).
 			ParseMembersAndMethods(parser);
 		var body = (Body)program.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(body.Expressions[0].ToString(), Is.EqualTo("mutable someList = List(Mutable(Number))"));

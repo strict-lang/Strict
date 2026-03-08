@@ -24,13 +24,7 @@ public sealed class ListTests
 			new MethodExpressionParser());
 
 	private ValueInstance CreateNumbers(Type t) =>
-		new(t,
-			new Dictionary<string, ValueInstance>(StringComparer.OrdinalIgnoreCase)
-			{
-				{
-					"numbers", new ValueInstance(t.Members[0].Type, new List<ValueInstance> { one, two })
-				}
-			});
+		new(t, [new ValueInstance(t.Members[0].Type, [one, two])]);
 
 	[Test]
 	public void CallListOperator()
@@ -38,8 +32,8 @@ public sealed class ListTests
 		using var t = CreateType(nameof(CallListOperator), "has numbers", "Double Numbers",
 			"\tnumbers + numbers");
 		Assert.That(
-			executor.Execute(t.Methods.Single(m => m.Name == "Double"), CreateNumbers(t), []).List.Items,
-			Is.EqualTo(new[] { one, two, one, two }));
+			executor.Execute(t.Methods.Single(m => m.Name == "Double"), CreateNumbers(t), []).List.
+				Items, Is.EqualTo(new[] { one, two, one, two }));
 	}
 
 	[Test]
@@ -48,8 +42,8 @@ public sealed class ListTests
 		using var t = CreateType(nameof(AddNumberToList), "has numbers", "AddOne Numbers",
 			"\tnumbers + 1");
 		Assert.That(
-			executor.Execute(t.Methods.Single(m => m.Name == "AddOne"), CreateNumbers(t), []).List.Items,
-			Is.EqualTo(new List<ValueInstance> { one, two, one }));
+			executor.Execute(t.Methods.Single(m => m.Name == "AddOne"), CreateNumbers(t), []).List.
+				Items, Is.EqualTo(new List<ValueInstance> { one, two, one }));
 	}
 
 	[Test]
@@ -58,8 +52,8 @@ public sealed class ListTests
 		using var t = CreateType(nameof(AddNumberToList), "has numbers", "RemoveOne Numbers",
 			"\tnumbers - 1");
 		Assert.That(
-			executor.Execute(t.Methods.Single(m => m.Name == "RemoveOne"), CreateNumbers(t), []).List.Items,
-			Is.EqualTo(new[] { two }));
+			executor.Execute(t.Methods.Single(m => m.Name == "RemoveOne"), CreateNumbers(t), []).List.
+				Items, Is.EqualTo(new[] { two }));
 	}
 
 	[Test]
@@ -68,8 +62,8 @@ public sealed class ListTests
 		using var t = CreateType(nameof(MultiplyList), "has numbers", "Multiply Numbers",
 			"\tnumbers * 2");
 		Assert.That(
-			executor.Execute(t.Methods.Single(m => m.Name == "Multiply"), CreateNumbers(t), []).List.Items,
-			Is.EqualTo(new[] { two, new ValueInstance(t.GetType(Type.Number), 4d) }));
+			executor.Execute(t.Methods.Single(m => m.Name == "Multiply"), CreateNumbers(t), []).List.
+				Items, Is.EqualTo(new[] { two, new ValueInstance(t.GetType(Type.Number), 4) }));
 	}
 
 	[Test]
@@ -108,7 +102,7 @@ public sealed class ListTests
 			"Run", "\t" + input);
 		var error = executor.Execute(t.Methods[0], executor.noneInstance, []);
 		Assert.That(error.GetTypeExceptText().Name, Is.EqualTo(Type.Error));
-		Assert.That(error.TryGetValueTypeInstance()!.Members["name"].Text,
+		Assert.That(error.TryGetValueTypeInstance()!["name"].Text,
 			Is.EqualTo(MethodCallEvaluator.ListsHaveDifferentDimensions));
 	}
 

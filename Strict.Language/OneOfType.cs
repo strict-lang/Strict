@@ -1,8 +1,7 @@
 namespace Strict.Language;
 
-public sealed class OneOfType(Type definedInType, IReadOnlyList<Type> types) : Type(
-	definedInType.Package, new TypeLines(string.Join("Or", types.Select(t => t.Name)),
-		GetOneOfTypeLines(types)))
+public sealed class OneOfType(Type definedInType, Type[] types, string combinedName) : Type(
+	definedInType.Package, new TypeLines(combinedName, GetOneOfTypeLines(types)))
 {
 	private static string[] GetOneOfTypeLines(IReadOnlyList<Type> types)
 	{
@@ -12,6 +11,7 @@ public sealed class OneOfType(Type definedInType, IReadOnlyList<Type> types) : T
 		return lines;
 	}
 
-	public IReadOnlyList<Type> Types { get; } = types;
+	public Type[] Types { get; } = types;
 	public override bool IsBoolean => Types.Any(t => t.IsBoolean);
+	public static string BuildName(Type[] types) => string.Join("Or", types.Select(t => t.Name));
 }

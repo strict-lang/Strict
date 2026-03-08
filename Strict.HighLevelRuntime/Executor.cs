@@ -46,6 +46,18 @@ public class Executor
 	private readonly ForEvaluator forEvaluator;
 	private readonly MethodCallEvaluator methodCallEvaluator;
 	private readonly ToEvaluator toEvaluator;
+	private readonly Stack<ExecutionContext> contextPool = new();
+	internal ExecutionContext RentContext(Type type, Method method, ValueInstance? instance,
+		ExecutionContext? parent)
+	{
+		if (contextPool.TryPop(out var ctx))
+		{
+			ctx.Reset(type, method, instance, parent);
+			return ctx;
+		}
+		return new ExecutionContext(type, method, instance, parent);
+	}
+	internal void ReturnContext(ExecutionContext ctx) => contextPool.Push(ctx);
 
 	public ValueInstance Execute(Method method)
 	{
@@ -59,10 +71,10 @@ public class Executor
 	}
 
 	private readonly HashSet<Method> validatedMethods = [];
-	public Statistics Statistics { get; } = new();
+	public Statistics Statistics = new();
 
 	public ValueInstance Execute(Method method, ValueInstance instance,
-		IReadOnlyList<ValueInstance> args, ExecutionContext? parentContext = null, bool runOnlyTests = false)
+		ValueInstance[] args, ExecutionContext? parentContext = null, bool runOnlyTests = false)
 	{
 		Statistics.MethodCount++;
 		ValidateInstanceAndArguments(method, instance, args, parentContext);
@@ -73,31 +85,37 @@ public class Executor
 		if (runOnlyTests && IsSimpleSingleLineMethod(method))
 			return trueInstance;
 		var context = CreateExecutionContext(method, instance, args, parentContext, runOnlyTests);
-		Expression body;
 		try
 		{
-			body = method.GetBodyAndParseIfNeeded(runOnlyTests && method.Type.IsGeneric);
+			Expression body;
+			try
+			{
+				body = method.GetBodyAndParseIfNeeded(runOnlyTests && method.Type.IsGeneric);
+			}
+			catch (Exception inner) when (runOnlyTests)
+			{
+				throw new MethodRequiresTest(method,
+					$"Test execution failed: {method.Parent.FullName}.{method.Name}\n" +
+					method.lines.ToLines() + Environment.NewLine + inner);
+			}
+			if (body is not Body && runOnlyTests)
+				return IsSimpleExpressionWithLessThanThreeSubExpressions(body)
+					? trueInstance
+					: throw new MethodRequiresTest(method, body.ToString());
+			var result = RunExpression(body, context, runOnlyTests);
+			return context.ExitMethodAndReturnValue ??
+				result.ApplyMethodReturnTypeMutable(method.ReturnType);
 		}
-		catch (Exception inner) when (runOnlyTests)
+		finally
 		{
-			throw new MethodRequiresTest(method,
-				$"Test execution failed: {method.Parent.FullName}.{method.Name}\n" +
-				method.lines.ToLines() + Environment.NewLine + inner);
+			ReturnContext(context);
 		}
-		if (body is not Body && runOnlyTests)
-			return IsSimpleExpressionWithLessThanThreeSubExpressions(body)
-				? trueInstance
-				: throw new MethodRequiresTest(method, body.ToString());
-		var result = RunExpression(body, context, runOnlyTests);
-		return context.ExitMethodAndReturnValue ??
-			result.ApplyMethodReturnTypeMutable(method.ReturnType);
 	}
 
 	private ExecutionContext CreateExecutionContext(Method method, ValueInstance instance,
 		IReadOnlyList<ValueInstance> args, ExecutionContext? parentContext, bool runOnlyTests)
 	{
-		var context =
-			new ExecutionContext(method.Type, method) { This = instance, Parent = parentContext };
+		var context = RentContext(method.Type, method, instance, parentContext);
 		if (!runOnlyTests)
 			for (var i = 0; i < method.Parameters.Count; i++)
 			{
@@ -149,12 +167,12 @@ public class Executor
 		: ExecutionFailed(method, "Parent context=" + parentContext + ", Instance=" + instance +
 			", arguments=" + string.Join(", ", args));
 
-	private ValueInstance GetFromConstructorValue(Method method, IReadOnlyList<ValueInstance> args)
+	private ValueInstance GetFromConstructorValue(Method method, ValueInstance[] args)
 	{
 		Statistics.FromCreationsCount++;
-		if (args.Count == 0 && method.Type.IsText)
+		if (args.Length == 0 && method.Type.IsText)
 			return new ValueInstance("");
-		if ((method.Type.IsCharacter || method.Type.IsNumber || method.Type.IsEnum) && args.Count == 1)
+		if ((method.Type.IsCharacter || method.Type.IsNumber || method.Type.IsEnum) && args.Length == 1)
 		{
 			if (IsSingleCharacterTextArgument(method.Type, args[0]))
 				return new ValueInstance(method.Type, args[0].Text[0]);
@@ -167,28 +185,29 @@ public class Executor
 			return args[0].IsDictionary
 				? args[0]
 				: new ValueInstance(method.Type, FillDictionaryFromListKeyAndValues(args[0]));
-		var members = new Dictionary<string, ValueInstance>(StringComparer.Ordinal);
-		for (var index = 0; index < args.Count; index++)
+		var typeMembers = method.Type.Members;
+		var values = new ValueInstance[typeMembers.Count];
+		for (var index = 0; index < args.Length; index++)
 		{
 			var parameter = method.Parameters[index];
 			if (!args[index].IsSameOrCanBeUsedAs(parameter.Type) &&
 				!parameter.Type.IsIterator && !IsSingleCharacterTextArgument(parameter.Type, args[index]))
 				throw new InvalidTypeForArgument(method.Type, args, index);
-			var memberName = GetFirstMemberMatchingParameter(method, parameter)?.Name ??
-				parameter.Name.MakeFirstLetterUppercase();
-			members.Add(memberName, IsSingleCharacterTextArgument(parameter.Type, args[index])
+			var memberIndex = GetMemberIndexForParameter(typeMembers, parameter, index);
+			values[memberIndex] = IsSingleCharacterTextArgument(parameter.Type, args[index])
 				? new ValueInstance(characterType, args[index].Text[0])
-				: args[index]);
+				: args[index];
 		}
-		return new ValueInstance(method.Type, members);
+		return new ValueInstance(method.Type, values);
 	}
 
-	private static Member? GetFirstMemberMatchingParameter(Method method, Parameter parameter)
+	private static int GetMemberIndexForParameter(IReadOnlyList<Member> typeMembers,
+		Parameter parameter, int fallbackIndex)
 	{
-		foreach (var member in method.Type.Members)
-			if (member.Name.Equals(parameter.Name, StringComparison.OrdinalIgnoreCase))
-				return member;
-		return null; //ncrunch: no coverage
+		for (var i = 0; i < typeMembers.Count; i++)
+			if (typeMembers[i].Name.Equals(parameter.Name, StringComparison.OrdinalIgnoreCase))
+				return i;
+		return fallbackIndex;
 	}
 
 	private static Dictionary<ValueInstance, ValueInstance> FillDictionaryFromListKeyAndValues(
@@ -255,9 +274,10 @@ public class Executor
 
 	private ValueInstance EvaluateListExpression(List list, ExecutionContext context)
 	{
-		var values = new List<ValueInstance>(list.Values.Count);
-		foreach (var value in list.Values)
-			values.Add(RunExpression(value, context));
+		var count = list.Values.Count;
+		var values = new ValueInstance[count];
+		for (var i = 0; i < count; i++)
+			values[i] = RunExpression(list.Values[i], context);
 		return new ValueInstance(list.ReturnType, values);
 	}
 
@@ -280,16 +300,18 @@ public class Executor
 		if (ctx.This is { IsDictionary: true } &&
 			member.Member.Name.Equals(Type.ElementsLowercase, StringComparison.OrdinalIgnoreCase))
 		{
-			var pairs = new List<ValueInstance>();
+			var dict = ctx.This.Value.GetDictionaryItems();
+			var pairs = new ValueInstance[dict.Count];
 			var pairType = member.Member.Type is { IsList: true, IsGeneric: true }
 				? listType.GetFirstImplementation()
 				: member.Member.Type;
-			foreach (var pair in ctx.This.Value.GetDictionaryItems())
-				pairs.Add(new ValueInstance(pairType, [pair.Key, pair.Value]));
+			var index = 0;
+			foreach (var pair in dict)
+				pairs[index++] = new ValueInstance(pairType, [pair.Key, pair.Value]);
 			return new ValueInstance(member.Member.Type, pairs);
 		}
 		var typeInstance = ctx.This?.TryGetValueTypeInstance();
-		if (typeInstance != null && typeInstance.Members.TryGetValue(member.Member.Name, out var value))
+		if (typeInstance != null && typeInstance.TryGetValue(member.Member.Name, out var value))
 			return value;
 		if (member.Member.InitialValue != null && member.IsConstant)
 			return RunExpression(member.Member.InitialValue, ctx);

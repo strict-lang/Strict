@@ -31,20 +31,17 @@ internal class TypeMethodFinder(Type type)
 			throw new GenericTypesCannotBeUsedDirectlyUseImplementation(Type, Type.IsMutable
 				? Mutable + " must be used via keyword, not manually constructed!"
 				: "Type is Generic and cannot be used directly");
-		return Type is OneOfType
-			? FindMethodWithOneOfType(methodName, arguments)
-			: FindMethodWithType(methodName, arguments);
-	}
-
-	private Method? FindMethodWithOneOfType(string methodName, IReadOnlyList<Expression> arguments)
-	{
-		foreach (var subType in ((OneOfType)Type).Types)
+		if (Type is OneOfType oneOfType)
 		{
-			var foundSubTypeMethod = subType.FindMethod(methodName, arguments);
-			if (foundSubTypeMethod != null)
-				return foundSubTypeMethod;
-		} //ncrunch: no coverage
-		return null; //ncrunch: no coverage
+			foreach (var subType in oneOfType.Types)
+			{
+				var foundSubTypeMethod = subType.FindMethod(methodName, arguments);
+				if (foundSubTypeMethod != null)
+					return foundSubTypeMethod;
+			} //ncrunch: no coverage
+			return null; //ncrunch: no coverage
+		}
+		return FindMethodWithType(methodName, arguments);
 	}
 
 	private Method? FindMethodWithType(string methodName, IReadOnlyList<Expression> arguments)

@@ -7,6 +7,9 @@
       <NamedTestSelector>
         <TestName>Strict.TestRunner.Tests.TestExecutorTests.RunAllTestsInPackageTwice</TestName>
       </NamedTestSelector>
+      <NamedTestSelector>
+        <TestName>Strict.TestRunner.Tests.TestExecutorTests.AllocatesLessThan80KBPerRunAfterWarmup</TestName>
+      </NamedTestSelector>
     </IgnoredTests>
   </Settings>
 </ProjectConfiguration>

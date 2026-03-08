@@ -1,4 +1,4 @@
-﻿namespace Strict.Language;
+namespace Strict.Language;
 
 /// <summary>
 /// Extends a generic type with more generic details, this is NOT an implementation yet. E.g.,
@@ -11,8 +11,6 @@ public sealed class GenericType : Type
 		base(generic.Package, new TypeLines(generic.GetImplementationName(genericImplementations),
 			HasWithSpaceAtEnd + generic.Name))
 	{
-		CreatedBy = "Generic: " + generic + ", GenericImplementations: " + string.Join(", ", genericImplementations) +
-			", " + CreatedBy;
 		Generic = generic;
 		GenericImplementations = genericImplementations;
 		members.AddRange(generic.Members);

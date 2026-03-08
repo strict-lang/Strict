@@ -199,13 +199,14 @@ public sealed class TypeMethodFinderTests
 	public void IsMutableAndHasMatchingInnerType()
 	{
 		var number = TestPackage.Instance.GetType(Type.Number);
-		Assert.That(CreateMutableType(Type.Number).IsSameOrCanBeUsedAs(number), Is.True);
-		Assert.That(CreateMutableType(Type.Text).IsSameOrCanBeUsedAs(number), Is.False);
+		Assert.That(
+			TestPackage.Instance.GetType(Type.Mutable).GetGenericImplementation(number).
+				IsSameOrCanBeUsedAs(number), Is.True);
+		var type = TestPackage.Instance.GetType(Type.Text);
+		Assert.That(
+			TestPackage.Instance.GetType(Type.Mutable).GetGenericImplementation(type).
+				IsSameOrCanBeUsedAs(number), Is.False);
 	}
-
-	private static Type CreateMutableType(string typeName) =>
-		TestPackage.Instance.GetType(Type.Mutable).
-			GetGenericImplementation(TestPackage.Instance.GetType(typeName));
 
 	[Test]
 	public void InitializeInnerTypeMemberUsingOuterTypeConstructor()

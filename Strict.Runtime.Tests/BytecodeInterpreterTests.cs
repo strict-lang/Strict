@@ -429,7 +429,7 @@ public class BytecodeInterpreterTests : BaseVirtualMachineTests
 	[Test]
 	public void LoopOverEmptyListSkipsBody()
 	{
-		var emptyList = new ValueInstance(NumberType, new List<ValueInstance>());
+		var emptyList = new ValueInstance(NumberType, Array.Empty<ValueInstance>());
 		var result = vm.Execute([
 			new StoreVariableStatement(emptyList, "numbers"),
 			new StoreVariableStatement(Number(0), "result"),
@@ -507,8 +507,7 @@ public class BytecodeInterpreterTests : BaseVirtualMachineTests
 	[Test]
 	public void LoopOverSingleItemListStopsAtEnd()
 	{
-		var singleItemList = new ValueInstance(NumberType,
-			new List<ValueInstance> { new ValueInstance(NumberType, 42) });
+		var singleItemList = new ValueInstance(NumberType, [new ValueInstance(NumberType, 42)]);
 		var result = vm.Execute([
 			new StoreVariableStatement(singleItemList, "items"),
 			new StoreVariableStatement(Number(0), "count"),

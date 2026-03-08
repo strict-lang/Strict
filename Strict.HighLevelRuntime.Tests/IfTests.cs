@@ -41,12 +41,11 @@ public sealed class IfTests
 	{
 		using var t = CreateType(nameof(EvaluateIsInEnumerableRange), "has number",
 			"IsInRange(range Range) Boolean", "\tnumber is in range");
-		var rangeInstance = new ValueInstance(executor.rangeType,
-			new Dictionary<string, ValueInstance>(StringComparer.OrdinalIgnoreCase)
-			{
-				{ "Start", new ValueInstance(executor.numberType, 1.0) },
-				{ "ExclusiveEnd", new ValueInstance(executor.numberType, 10.0) }
-			});
+		var rangeInstance = new ValueInstance(executor.rangeType, new ValueInstance[] {
+			default,  // iterator (index 0)
+			new ValueInstance(executor.numberType, 1.0),  // Start (index 1)
+			new ValueInstance(executor.numberType, 10.0)  // ExclusiveEnd (index 2)
+		});
 		var result = executor.Execute(t.Methods.Single(m => m.Name == "IsInRange"),
 			new ValueInstance(t, 7.0), [rangeInstance]);
 		Assert.That(result.Boolean, Is.EqualTo(true));
@@ -60,12 +59,11 @@ public sealed class IfTests
 	{
 		using var t = CreateType(nameof(EvaluateIsNotInEnumerableRange), "has number",
 			"IsNotInRange(range Range) Boolean", "\tnumber is not in range");
-		var rangeInstance = new ValueInstance(executor.rangeType,
-			new Dictionary<string, ValueInstance>(StringComparer.OrdinalIgnoreCase)
-			{
-				{ "Start", new ValueInstance(executor.numberType, 1.0) },
-				{ "ExclusiveEnd", new ValueInstance(executor.numberType, 10.0) }
-			});
+		var rangeInstance = new ValueInstance(executor.rangeType, new ValueInstance[] {
+			default,  // iterator (index 0)
+			new ValueInstance(executor.numberType, 1.0),  // Start (index 1)
+			new ValueInstance(executor.numberType, 10.0)  // ExclusiveEnd (index 2)
+		});
 		var result = executor.Execute(t.Methods.Single(m => m.Name == "IsNotInRange"),
 			new ValueInstance(t, 11), [rangeInstance]);
 		Assert.That(result.Boolean, Is.EqualTo(true));

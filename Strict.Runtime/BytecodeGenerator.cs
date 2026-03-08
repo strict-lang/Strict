@@ -72,7 +72,8 @@ public sealed class ByteCodeGenerator
 					Generic.Name: Type.List
 				} && !(instance.Arguments.Count == 1 && instance.Arguments[0] is List))
 			{
-				var listItems = instance.Arguments.Select(GetValueInstanceFromExpression).ToList();
+				//TODO: not very efficient
+				var listItems = instance.Arguments.Select(GetValueInstanceFromExpression).ToArray();
 				statements.Add(new StoreVariableStatement(
 					new ValueInstance(instance.Method.Parameters[parameterIndex].Type, listItems),
 					instance.ReturnType.Members[parameterIndex].Name, isMember: true));

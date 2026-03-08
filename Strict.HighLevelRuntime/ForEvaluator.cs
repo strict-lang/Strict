@@ -14,43 +14,50 @@ internal sealed class ForEvaluator(Executor executor)
 		List<ValueInstance>? results = null;
 		var itemType = GetForValueType(iterator);
 		var iteratorInstance = iterator.TryGetValueTypeInstance();
-		var loop = new ExecutionContext(ctx.Type, ctx.Method) { This = ctx.This, Parent = ctx };
-		if (iteratorInstance?.ReturnType == executor.rangeType &&
-			iteratorInstance.Members.TryGetValue("Start", out var startValue) &&
-			iteratorInstance.Members.TryGetValue("ExclusiveEnd", out var endValue))
+		var loop = executor.RentContext(ctx.Type, ctx.Method, ctx.This, ctx);
+		try
 		{
-			var start = (int)startValue.Number;
-			var end = (int)endValue.Number;
-			if (start <= end)
-				for (var index = start; index < end; index++)
-				{
-					loop.ResetIteration();
-					ExecuteForIteration(f, ctx, iterator, ref results, itemType, index, loop);
-					if (ctx.ExitMethodAndReturnValue.HasValue)
-						return ctx.ExitMethodAndReturnValue.Value;
-				}
-			else
-				for (var index = start; index > end; index--)
-				{
-					loop.ResetIteration();
-					ExecuteForIteration(f, ctx, iterator, ref results, itemType, index, loop);
-					if (ctx.ExitMethodAndReturnValue.HasValue)
-						return ctx.ExitMethodAndReturnValue.Value;
-				}
-		}
-		else
-		{
-			var loopRange = new Range(0, iterator.GetIteratorLength());
-			for (var index = loopRange.Start.Value; index < loopRange.End.Value; index++)
+			if (iteratorInstance?.ReturnType == executor.rangeType &&
+				iteratorInstance.TryGetValue("Start", out var startValue) &&
+				iteratorInstance.TryGetValue("ExclusiveEnd", out var endValue))
 			{
-				loop.ResetIteration();
-				ExecuteForIteration(f, ctx, iterator, ref results, itemType, index, loop);
-				if (ctx.ExitMethodAndReturnValue.HasValue)
-					return ctx.ExitMethodAndReturnValue.Value;
+				var start = (int)startValue.Number;
+				var end = (int)endValue.Number;
+				if (start <= end)
+					for (var index = start; index < end; index++)
+					{
+						loop.ResetIteration();
+						ExecuteForIteration(f, ctx, iterator, ref results, itemType, index, loop);
+						if (ctx.ExitMethodAndReturnValue.HasValue)
+							return ctx.ExitMethodAndReturnValue.Value;
+					}
+				else
+					for (var index = start; index > end; index--)
+					{
+						loop.ResetIteration();
+						ExecuteForIteration(f, ctx, iterator, ref results, itemType, index, loop);
+						if (ctx.ExitMethodAndReturnValue.HasValue)
+							return ctx.ExitMethodAndReturnValue.Value;
+					}
 			}
+			else
+			{
+				var loopRange = new Range(0, iterator.GetIteratorLength());
+				for (var index = loopRange.Start.Value; index < loopRange.End.Value; index++)
+				{
+					loop.ResetIteration();
+					ExecuteForIteration(f, ctx, iterator, ref results, itemType, index, loop);
+					if (ctx.ExitMethodAndReturnValue.HasValue)
+						return ctx.ExitMethodAndReturnValue.Value;
+				}
+			}
+			return ShouldConsolidateForResult(results, ctx) ?? new ValueInstance(
+				executor.listType.GetGenericImplementation(itemType), results?.ToArray() ?? []);
 		}
-		return ShouldConsolidateForResult(results, ctx) ?? new ValueInstance(
-			executor.listType.GetGenericImplementation(itemType), results ?? []);
+		finally
+		{
+			executor.ReturnContext(loop);
+		}
 	}
 
 	private void ExecuteForIteration(For f, ExecutionContext ctx, ValueInstance iterator,

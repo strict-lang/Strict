@@ -200,8 +200,7 @@ public sealed class ExecutorTests
 			"IfDifferent Boolean", "\tlast is false");
 		Assert.That(
 			executor.Execute(t.Methods.Single(m => m.Name == "IfDifferent"),
-				new ValueInstance(t,
-					new Dictionary<string, ValueInstance> { { "last", executor.falseInstance } }), []),
+				new ValueInstance(t, [executor.falseInstance]), []),
 			Is.EqualTo(executor.trueInstance));
 	}
 
@@ -220,10 +219,7 @@ public sealed class ExecutorTests
 		using var t = CreateType(nameof(MultilineMethodRequiresTests), "has number", "GetText Text",
 			"\tif number is 0", "\t\treturn \"\"", "\tnumber to Text");
 		var instance = new ValueInstance(t,
-			new Dictionary<string, ValueInstance>
-			{
-				{ "number", new ValueInstance(executor.numberType, 5.0) }
-			});
+			[new ValueInstance(executor.numberType, 5.0)]);
 		Assert.That(executor.Execute(t.Methods.Single(m => m.Name == "GetText"), instance, []).Text,
 			Is.EqualTo("5"));
 	}
@@ -271,7 +267,7 @@ public sealed class ExecutorTests
 		var numberText = new ValueInstance("A");
 		var text = new ValueInstance("ok");
 		var result = executor.Execute(method, executor.noneInstance, [numberText, text]);
-		var members = result.TryGetValueTypeInstance()!.Members;
+		var members = result.TryGetValueTypeInstance()!;
 		Assert.That(members["number"].Number, Is.EqualTo(65));
 	}
 
@@ -310,10 +306,8 @@ public sealed class ExecutorTests
 		using var t = CreateType(nameof(StackOverflowCallingYourselfWithSameInstanceMember),
 			"has number", "Recursive(other Number)", "\tRecursive(number)");
 		Assert.That(() => executor.Execute(t.Methods.Single(m => m.Name == "Recursive"),
-				new ValueInstance(t, new Dictionary<string, ValueInstance>
-				{
-					{ "number", new ValueInstance(executor.numberType, 3.0) }
-				}), [new ValueInstance(executor.numberType, 1.0)]),
+				new ValueInstance(t, [new ValueInstance(executor.numberType, 3.0)]),
+				[new ValueInstance(executor.numberType, 1.0)]),
 			Throws.InstanceOf<Executor.StackOverflowCallingItselfWithSameInstanceAndArguments>());
 	}
 
@@ -323,10 +317,7 @@ public sealed class ExecutorTests
 		using var t = CreateType(nameof(CallNumberPlusOperator), "has number", "+(text) Number",
 			"\tnumber + text.Length");
 		Assert.That(executor.Execute(t.Methods.Single(m => m.Name == BinaryOperator.Plus),
-			new ValueInstance(t, new Dictionary<string, ValueInstance>
-			{
-				{ "number", new ValueInstance(executor.numberType, 5.0) }
-			}),
+			new ValueInstance(t, [new ValueInstance(executor.numberType, 5.0)]),
 			[new ValueInstance("abc")]).Number, Is.EqualTo(5 + 3));
 	}
 

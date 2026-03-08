@@ -2,11 +2,11 @@ using Type = Strict.Language.Type;
 
 namespace Strict.Expressions;
 
-public sealed class ValueListInstance(Type returnType, IReadOnlyList<ValueInstance> items) :
+public sealed class ValueListInstance(Type returnType, ValueInstance[] items) :
 	IEquatable<ValueListInstance>
 {
 	public readonly Type ReturnType = returnType;
-	public readonly IReadOnlyList<ValueInstance> Items = items;
+	public readonly ValueInstance[] Items = items;
 
 	public bool Equals(ValueListInstance? other) =>
 		other is not null && (ReferenceEquals(this, other) ||

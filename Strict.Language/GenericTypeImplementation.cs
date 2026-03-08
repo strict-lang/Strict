@@ -2,27 +2,25 @@ namespace Strict.Language;
 
 public sealed class GenericTypeImplementation : Type
 {
-	public GenericTypeImplementation(Type generic, IReadOnlyList<Type> implementationTypes) : base(
+	public GenericTypeImplementation(Type generic, Type[] implementationTypes) : base(
 		generic.Package, new TypeLines(generic.GetImplementationName(implementationTypes),
 			CreateHasLines(generic, implementationTypes)))
 	{
-		CreatedBy = "Generic: " + generic + ", Implementations: " + string.Join(", ", implementationTypes) +
-			", " + CreatedBy;
 		Generic = generic;
 		ImplementationTypes = implementationTypes;
-		ImplementMembers();
-		ImplementMethods();
-		if (Generic.IsMutable)
-			typeKind = TypeKind.Mutable;
 		if (Generic.IsError)
 			typeKind = TypeKind.Error;
 		if (Generic.IsList)
 			typeKind = TypeKind.List;
 		if (Generic.IsDictionary)
 			typeKind = TypeKind.Dictionary;
+		if (Generic.IsMutable)
+			typeKind = ImplementationTypes[0].typeKind;
+		ImplementMembers();
+		ImplementMethods();
 	}
 
-	private static string[] CreateHasLines(Type generic, IReadOnlyList<Type> implementationTypes) =>
+	private static string[] CreateHasLines(Type generic, Type[] implementationTypes) =>
 		generic.IsMutable && implementationTypes[0].IsGeneric
 			? [HasWithSpaceAtEnd + generic.Name, HasWithSpaceAtEnd + GenericUppercase]
 			: [HasWithSpaceAtEnd + generic.Name];

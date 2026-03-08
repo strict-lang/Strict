@@ -15,7 +15,6 @@ public enum TypeKind : ushort
 	Error,
 	Enum,
 	Iterator,
-	Mutable,
 	Any,
 	Unknown
 }

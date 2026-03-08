@@ -21,7 +21,7 @@ public sealed class ExecutionContextTests
 	{
 		var numberType = TestPackage.Instance.GetType(Type.Number);
 		var parent = new ExecutionContext(numberType, numberType.Methods[0]);
-		var child = new ExecutionContext(numberType, numberType.Methods[0]) { Parent = parent };
+		var child = new ExecutionContext(numberType, numberType.Methods[0], parent: parent);
 		parent.Set("x", new ValueInstance(numberType, 5));
 		Assert.That(child.Get("x", new Statistics()).Number, Is.EqualTo(5));
 	}

@@ -67,7 +67,7 @@ public class Type : Context, IDisposable
 		package.Add(this);
 		Lines = file.Lines;
 		IsGeneric = Name == GenericUppercase || OneOfFirstThreeLinesContainsGeneric();
-		CreatedBy = "Package: " + package + ", file=" + file;
+		IsMutable = Name.StartsWith(Mutable, StringComparison.Ordinal);
 		typeMethodFinder = new TypeMethodFinder(this);
 		typeParser = new TypeParser(this, Lines);
 		typeKind = GetTypeKindFromName();
@@ -92,9 +92,11 @@ public class Type : Context, IDisposable
 	/// </summary>
 	public bool IsGeneric { get; }
 	/// <summary>
-	/// For debugging purposes to see where this Type was initially created.
+	/// Mutable types should be avoided as they make code non parallel and slow. Mutable types have
+	/// always an inner type (e.g., Mutable(Text)), use GetFirstImplementation to get to that type.
+	/// The TypeKind of the inner type will be mirrored here to make comparisons fast.
 	/// </summary>
-	public string CreatedBy { get; protected init; }
+	public bool IsMutable { get; }
 	private readonly TypeMethodFinder typeMethodFinder;
 	private readonly TypeParser typeParser;
 	internal TypeKind typeKind;
@@ -121,7 +123,6 @@ public class Type : Context, IDisposable
 			Error => TypeKind.Error,
 			ErrorWithValue => TypeKind.Error,
 			Iterator => TypeKind.Iterator,
-			Mutable => TypeKind.Mutable,
 			nameof(Name) => TypeKind.Text,
 			Any => TypeKind.Any,
 			_ => TypeKind.Unknown
@@ -151,6 +152,8 @@ public class Type : Context, IDisposable
 			throw new TypeWasAlreadyParsed(this); //ncrunch: no coverage
 		typeParser.ParseMembersAndMethods(parser);
 		DetermineEnumTypeKind();
+		//if ((Name.StartsWith("List") || Name.StartsWith("Mutable(List")) && typeKind != TypeKind.List)
+		//	throw new NotSupportedException("Something went wrong with this list creation!");
 		ValidateMethodAndMemberCountLimits();
 		// ReSharper disable once ForCanBeConvertedToForeach, for performance reasons:
 		// https://codeblog.jonskeet.uk/2009/01/29/for-vs-foreach-on-arrays-and-lists/
@@ -187,9 +190,9 @@ public class Type : Context, IDisposable
 			: Limit.MemberCount;
 		if (members.Count > memberLimit)
 			throw new MemberCountShouldNotExceedLimit(this, memberLimit);
-		if (IsEnum || IsDataType)
+		if (IsEnum || IsDataType || IsMutable)
 			return;
-		if (methods.Count == 0 && members.Count < 2 && typeKind == TypeKind.Unknown)
+		if (typeKind == TypeKind.Unknown && methods.Count == 0 && members.Count < 2)
 			throw new NoMethodsFound(this, typeParser.LineNumber);
 		if (methods.Count > Limit.MethodCount && (Package.Name != nameof(Strict) &&
 			Package.Name != "TestPackage" || Name == "MethodCountMustNotExceedFifteen"))
@@ -291,10 +294,10 @@ public class Type : Context, IDisposable
 		return GetGenericImplementation(key) ?? CreateGenericImplementation(key, implementationTypes);
 	}
 
-	internal string GetImplementationName(IReadOnlyList<Type> implementationTypes)
+	internal string GetImplementationName(Type[] implementationTypes)
 	{
 		var key = "";
-		for (var i = 0; i < implementationTypes.Count; i++)
+		for (var i = 0; i < implementationTypes.Length; i++)
 			key += (key == ""
 				? ""
 				: ", ") + implementationTypes[i].Name;
@@ -325,12 +328,13 @@ public class Type : Context, IDisposable
 	/// Most often called for List (or the Iterator trait), which we want to optimize for
 	/// </summary>
 	private GenericTypeImplementation CreateGenericImplementation(string key,
-		IReadOnlyList<Type> implementationTypes)
+		Type[] implementationTypes)
 	{
-		if (Name is List or Iterator or Mutable && implementationTypes.Count == 1 ||
-			GetGenericTypeArguments().Count == implementationTypes.Count ||
+		if ((IsList || IsIterator || IsMutable) && implementationTypes.Length == 1 ||
+			GetGenericTypeArguments().Count == implementationTypes.Length ||
 			HasMatchingConstructor(implementationTypes))
 		{
+			//TODO: this is extemely slow
 			var genericType = new GenericTypeImplementation(this, implementationTypes);
 			cachedGenericTypes!.Add(key, genericType);
 			return genericType;
@@ -409,16 +413,17 @@ public class Type : Context, IDisposable
 	public bool IsSameOrCanBeUsedAs(Type sameOrUsableType, bool allowImplicitConversion = true,
 		int maxDepth = 2)
 	{
-		if (this == sameOrUsableType || sameOrUsableType.IsAny)
+		if (this == sameOrUsableType || sameOrUsableType.IsAny || typeKind < TypeKind.List &&
+			typeKind == sameOrUsableType.typeKind)
 			return true;
 		if (allowImplicitConversion && IsImplicitToConversion(sameOrUsableType))
 			return true;
 		if (IsEnum && members[0].Type.IsSameOrCanBeUsedAs(sameOrUsableType))
 			return true;
-		if (HasExactlyOneMemberOfType(sameOrUsableType))
+		if (IsMutable && GetFirstImplementation().IsSameOrCanBeUsedAs(sameOrUsableType) ||
+			sameOrUsableType.IsMutable && IsSameOrCanBeUsedAs(sameOrUsableType.GetFirstImplementation()))
 			return true;
-		if (IsMutableAndHasMatchingInnerType(sameOrUsableType) ||
-			sameOrUsableType.IsMutableAndHasMatchingInnerType(this))
+		if (HasExactlyOneMemberOfType(sameOrUsableType))
 			return true;
 		if (IsCompatibleOneOfType(sameOrUsableType))
 			return true;
@@ -460,12 +465,14 @@ public class Type : Context, IDisposable
 	private static bool IsImplicitToConversion(Context targetType) =>
 		targetType.Name is Text or nameof(Type) or HashCode;
 
-	internal bool IsMutableAndHasMatchingInnerType(Type argumentType) =>
-		this is GenericTypeImplementation { Generic.Name: Mutable } genericTypeImplementation &&
-		genericTypeImplementation.ImplementationTypes[0].IsSameOrCanBeUsedAs(argumentType);
-
-	private bool IsCompatibleOneOfType(Type sameOrBaseType) =>
-		sameOrBaseType is OneOfType oneOfType && oneOfType.Types.Any(t => IsSameOrCanBeUsedAs(t));
+	private bool IsCompatibleOneOfType(Type sameOrBaseType)
+	{
+		if (sameOrBaseType is OneOfType oneOfType)
+			for (var index = 0; index < oneOfType.Types.Length; index++)
+				if (IsSameOrCanBeUsedAs(oneOfType.Types[index]))
+					return true;
+		return false;
+	}
 
 	/// <summary>
 	/// When two types are using in a conditional expression, i.e., then and else return types and
@@ -662,8 +669,8 @@ public class Type : Context, IDisposable
 	public sealed class TypeMustBeGenericToCallThis(Type type) : Exception(type.FullName);
 
 	public sealed class InvalidGenericTypeWithoutGenericArguments(Type type) : Exception(
-		"This type is broken and needs to be fixed, check the creation: " + type + ", CreatedBy: " +
-		type.CreatedBy);
+		"This type is broken and needs to be fixed, check the creation: " + type + ", Package: " +
+		type.Package + ", file=" + type.FilePath);
 	//ncrunch: no coverage end
 
 	public sealed class TypeHasNoMembersAndThusMustBeATraitWithoutMethodBodies(Type type)
@@ -688,7 +695,6 @@ public class Type : Context, IDisposable
 	public bool IsError => typeKind == TypeKind.Error;
 	public bool IsList => typeKind == TypeKind.List;
 	public bool IsDictionary => typeKind == TypeKind.Dictionary;
-	public bool IsMutable => typeKind == TypeKind.Mutable;
 	public bool IsAny => typeKind == TypeKind.Any;
 
 	public void Dispose()

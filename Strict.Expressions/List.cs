@@ -6,11 +6,12 @@ namespace Strict.Expressions;
 public sealed class List : Value
 {
 	public List(Body bodyForErrorMessage, List<Expression> values, bool isMutable = false) : base(
-		values[0].ReturnType.GetListImplementationType(GetCommonBaseType(values, bodyForErrorMessage)),
-		new List<ValueInstance>(), values[0].LineNumber, isMutable) => Values = values;
+		values[0].ReturnType.
+			GetListImplementationType(GetCommonBaseType(values, bodyForErrorMessage)), [],
+		values[0].LineNumber, isMutable) =>
+		Values = values;
 
-	public List(Type type, int lineNumber = 0) : base(type, new List<ValueInstance>(), lineNumber,
-		true) => Values = [];
+	public List(Type type, int lineNumber = 0) : base(type, [], lineNumber, true) => Values = [];
 
 	private static Type GetCommonBaseType(IReadOnlyList<Expression> values, Body bodyForErrorMessage)
 	{

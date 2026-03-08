@@ -4,12 +4,12 @@ using Type = Strict.Language.Type;
 
 namespace Strict.HighLevelRuntime;
 
-public sealed class ExecutionContext(Type type, Method method)
+public sealed class ExecutionContext(Type type, Method method, ValueInstance? thisInstance = null, ExecutionContext? parent = null)
 {
-	public Type Type { get; } = type;
-	public Method Method { get; } = method;
-	public ExecutionContext? Parent { get; init; }
-	public ValueInstance? This { get; init; }
+	public Type Type { get; private set; } = type;
+	public Method Method { get; private set; } = method;
+	public ExecutionContext? Parent { get; private set; } = parent;
+	public ValueInstance? This { get; private set; } = thisInstance;
 	private Dictionary<string, ValueInstance>? variables;
 	/// <summary>
 	/// Lazy-initialized: only created when a variable is actually written, avoiding allocation for
@@ -45,6 +45,18 @@ public sealed class ExecutionContext(Type type, Method method)
 	/// </summary>
 	public void ResetIteration()
 	{
+		variables?.Clear();
+		ExitMethodAndReturnValue = null;
+	}
+	/// <summary>
+	/// Full reset for pool reuse: updates all identity fields and clears mutable state.
+	/// </summary>
+	internal void Reset(Type newType, Method newMethod, ValueInstance? instance, ExecutionContext? newParent)
+	{
+		Type = newType;
+		Method = newMethod;
+		This = instance;
+		Parent = newParent;
 		variables?.Clear();
 		ExitMethodAndReturnValue = null;
 	}

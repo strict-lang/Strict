@@ -32,11 +32,7 @@ public sealed class ForTests
 		using var t = CreateType(nameof(SelectorIfInForUsesOperation), "has operation Text",
 			"Run Number", "\tfor (1, 2, 3)", "\t\tif operation is", "\t\t\t\"add\" then value",
 			"\t\t\t\"subtract\" then 0 - value");
-		var instance = new ValueInstance(t,
-			new Dictionary<string, ValueInstance>(StringComparer.OrdinalIgnoreCase)
-			{
-				{ "operation", new ValueInstance(operation) }
-			});
+		var instance = new ValueInstance(t, new ValueInstance[] { new ValueInstance(operation) });
 		var result = executor.Execute(t.Methods.Single(m => m.Name == "Run"), instance, []);
 		Assert.That(result.Number, Is.EqualTo(expected));
 	}
@@ -103,10 +99,7 @@ public sealed class ForTests
 		using var t = CreateType(TypeName, "has numbers", $"Run(container {TypeName}) Number",
 			"\tfor container", "\t\t1");
 		var container = new ValueInstance(t,
-			new Dictionary<string, ValueInstance>(StringComparer.OrdinalIgnoreCase)
-			{
-				{ "numbers", new ValueInstance(t.Members[0].Type, new List<ValueInstance>()) }
-			});
+			[new ValueInstance(t.Members[0].Type, Array.Empty<ValueInstance>())]);
 		Assert.That(() => executor.Execute(t.Methods.Single(m => m.Name == "Run"), executor.noneInstance, [container]),
 			Throws.InstanceOf<ValueInstance.IteratorNotSupported>());
 	}
@@ -117,14 +110,10 @@ public sealed class ForTests
 		using var t = CreateType(nameof(GetElementsTextWithCompactConditionalThen), "has number",
 			"GetElementsText(elements Numbers) Text", "\tfor elements",
 			"\t\t(index is 0 then \"\" else \", \") + value");
-		var nums = new List<ValueInstance>
-		{
-			new(executor.numberType, 1.0),
-			new(executor.numberType, 3.0)
-		};
+		ValueInstance[] nums = [new(executor.numberType, 1), new(executor.numberType, 3)];
 		var listType = executor.listType.GetGenericImplementation(executor.numberType);
-		var result = executor.Execute(t.Methods.Single(m => m.Name == "GetElementsText"), executor.noneInstance,
-			[new ValueInstance(listType, nums)]);
+		var result = executor.Execute(t.Methods.Single(m => m.Name == "GetElementsText"),
+			executor.noneInstance, [new ValueInstance(listType, nums)]);
 		Assert.That(result.Text, Is.EqualTo("1, 3"));
 	}
 
@@ -196,8 +185,7 @@ public sealed class ForTests
 			"\t\telse if parentheses is 0",
 			"\t\t\tvalue");
 		var result = executor.Execute(t.Methods.Single(m => m.Name == "Remove"),
-			new ValueInstance(t, new Dictionary<string, ValueInstance>(StringComparer.OrdinalIgnoreCase)
-				{ { "text", new ValueInstance("example(unwanted)example") } }), []);
+			new ValueInstance(t, new ValueInstance[] { new ValueInstance("example(unwanted)example") }), []);
 		Assert.That(result.Text, Is.EqualTo("exampleexample"));
 	}
 }

@@ -93,10 +93,12 @@ public sealed class Method : Context
 
 	private Type ParseMultipleReturnTypes(Context type, string typeNames)
 	{
-		var types = typeNames.Split(" or ", StringSplitOptions.TrimEntries).
-			Select(typeName => Type.GetType(typeName)).ToList();
-		var typeName = string.Join("Or", types.Select(t => t.Name));
-		return type.FindType(typeName) ?? new OneOfType(Type, types);
+		var splitNames = typeNames.Split(" or ", StringSplitOptions.TrimEntries);
+		var types = new Type[splitNames.Length];
+		for (var index = 0; index < types.Length; index++)
+			types[index] = Type.GetType(splitNames[index]);
+		var typeName = OneOfType.BuildName(types);
+		return type.FindType(typeName) ?? new OneOfType(Type, types, typeName);
 	}
 
 	private Type GetEmptyReturnType(Type type) =>

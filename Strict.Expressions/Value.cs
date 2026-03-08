@@ -20,7 +20,7 @@ public class Value(Type valueType, ValueInstance data, int lineNumber = 0, bool 
 	public Value(Type valueType, string text, int lineNumber = 0, bool isMutable = false)
 		: this(valueType, new ValueInstance(text), lineNumber, isMutable) { }
 
-	protected Value(Type valueType, List<ValueInstance> items, int lineNumber = 0,
+	protected Value(Type valueType, ValueInstance[] items, int lineNumber = 0,
 		bool isMutable = false) : this(valueType, new ValueInstance(valueType, items), lineNumber,
 		isMutable) { }
 
