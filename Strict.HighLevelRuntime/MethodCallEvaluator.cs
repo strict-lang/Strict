@@ -19,9 +19,9 @@ public sealed class MethodCallEvaluator(Executor executor)
 	public ValueInstance Evaluate(MethodCall call, ExecutionContext ctx)
 	{
 		executor.Statistics.MethodCallCount++;
-		var op = call.Method.Name;
-		if (IsArithmetic(op) || IsCompare(op) || IsLogical(op))
-			return EvaluateArithmeticOrCompareOrLogical(call, ctx);
+		var operatorType = GetOperatorCategory(call.Method.Name);
+		if (operatorType != OperatorCategory.None)
+			return EvaluateArithmeticOrCompareOrLogical(call, ctx, operatorType);
 		var instance = call.Instance != null
 			? executor.RunExpression(call.Instance, ctx)
 			: call.Method.Name != Method.From
@@ -30,30 +30,43 @@ public sealed class MethodCallEvaluator(Executor executor)
 		return ExecuteMethodCall(call, instance, ctx);
 	}
 
-	private static bool IsArithmetic(string name) =>
-		name is BinaryOperator.Plus or BinaryOperator.Minus or BinaryOperator.Multiply
-			or BinaryOperator.Divide or BinaryOperator.Modulate or BinaryOperator.Power;
+	private enum OperatorCategory : byte
+	{
+		None,
+		Arithmetic,
+		Comparison,
+		Logical
+	}
 
-	private static bool IsCompare(string name) =>
-		name is BinaryOperator.Greater or BinaryOperator.Smaller or BinaryOperator.Is
-			or BinaryOperator.GreaterOrEqual or BinaryOperator.SmallerOrEqual or UnaryOperator.Not;
-
-	private static bool IsLogical(string name) =>
-		name is BinaryOperator.And or BinaryOperator.Or or BinaryOperator.Xor or UnaryOperator.Not;
+	private static OperatorCategory GetOperatorCategory(string name) =>
+		name switch
+		{
+			BinaryOperator.Plus or BinaryOperator.Minus or BinaryOperator.Multiply
+				or BinaryOperator.Divide or BinaryOperator.Modulate or BinaryOperator.Power
+				=> OperatorCategory.Arithmetic,
+			BinaryOperator.Greater or BinaryOperator.Smaller or BinaryOperator.Is
+				or BinaryOperator.GreaterOrEqual or BinaryOperator.SmallerOrEqual
+				=> OperatorCategory.Comparison,
+			BinaryOperator.And or BinaryOperator.Or or BinaryOperator.Xor or UnaryOperator.Not
+				=> OperatorCategory.Logical,
+			_ => OperatorCategory.None
+		};
 
 	private ValueInstance EvaluateArithmeticOrCompareOrLogical(MethodCall call,
-		ExecutionContext ctx)
+		ExecutionContext ctx, OperatorCategory operatorType)
 	{
 		executor.Statistics.BinaryCount++;
 		if (call.Instance == null || call.Arguments.Count != 1)
 			throw new InvalidOperationException("Binary call must have instance and 1 argument"); //ncrunch: no coverage
 		var leftInstance = executor.RunExpression(call.Instance, ctx);
 		var rightInstance = executor.RunExpression(call.Arguments[0], ctx);
-		return IsArithmetic(call.Method.Name)
-			? ExecuteArithmeticOperation(call, ctx, leftInstance, rightInstance)
-			: IsCompare(call.Method.Name)
-				? ExecuteComparisonOperation(call, ctx, leftInstance, rightInstance)
-				: ExecuteLogicalBinaryOperation(call, ctx, leftInstance, rightInstance);
+		return operatorType switch
+		{
+			OperatorCategory.Arithmetic => ExecuteArithmeticOperation(call, ctx, leftInstance, rightInstance),
+			OperatorCategory.Comparison => ExecuteComparisonOperation(call, ctx, leftInstance, rightInstance),
+			OperatorCategory.Logical => ExecuteLogicalBinaryOperation(call, ctx, leftInstance, rightInstance),
+			_ => throw new InvalidOperationException("Unknown operator category") //ncrunch: no coverage
+		};
 	}
 
 	private ValueInstance ExecuteArithmeticOperation(MethodCall call, ExecutionContext ctx,
@@ -207,8 +220,6 @@ public sealed class MethodCallEvaluator(Executor executor)
 			if (keep)
 				temp[count++] = leftList[i];
 		}
-		if (count == leftList.Count)
-			return new ValueInstance(listType, temp);
 		var result = new ValueInstance[count];
 		Array.Copy(temp, result, count);
 		return new ValueInstance(listType, result);

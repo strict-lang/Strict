@@ -209,7 +209,7 @@ public class Executor
 		for (var i = 0; i < typeMembers.Count; i++)
 			if (typeMembers[i].Name.Equals(parameter.Name, StringComparison.OrdinalIgnoreCase))
 				return i;
-		return fallbackIndex;
+		return fallbackIndex; //ncrunch: no coverage
 	}
 
 	private static Dictionary<ValueInstance, ValueInstance> FillDictionaryFromListKeyAndValues(

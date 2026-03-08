@@ -27,8 +27,10 @@ internal sealed class ForEvaluator(Executor executor)
 		List<ValueInstance>? results = null;
 		var itemType = GetForValueType(iterator);
 		var iteratorInstance = iterator.TryGetValueTypeInstance();
-		if (iteratorInstance?.ReturnType == executor.rangeType &&
-			iteratorInstance.TryGetValue("Start", out var startValue) &&
+		var isRangeIterator = iteratorInstance?.ReturnType == executor.rangeType;
+		var bodyAsBody = f.Body as Body;
+		if (isRangeIterator &&
+			iteratorInstance!.TryGetValue("Start", out var startValue) &&
 			iteratorInstance.TryGetValue("ExclusiveEnd", out var endValue))
 		{
 			var start = (int)startValue.Number;
@@ -37,7 +39,7 @@ internal sealed class ForEvaluator(Executor executor)
 				for (var index = start; index < end; index++)
 				{
 					loop.ResetIteration();
-					ExecuteForIteration(f, ctx, iterator, ref results, itemType, index, loop);
+					ExecuteForIteration(f, ctx, iterator, ref results, itemType, index, loop, isRangeIterator, bodyAsBody);
 					if (ctx.ExitMethodAndReturnValue.HasValue)
 						return ctx.ExitMethodAndReturnValue.Value;
 				}
@@ -45,7 +47,7 @@ internal sealed class ForEvaluator(Executor executor)
 				for (var index = start; index > end; index--)
 				{
 					loop.ResetIteration();
-					ExecuteForIteration(f, ctx, iterator, ref results, itemType, index, loop);
+					ExecuteForIteration(f, ctx, iterator, ref results, itemType, index, loop, isRangeIterator, bodyAsBody);
 					if (ctx.ExitMethodAndReturnValue.HasValue)
 						return ctx.ExitMethodAndReturnValue.Value;
 				}
@@ -56,7 +58,7 @@ internal sealed class ForEvaluator(Executor executor)
 			for (var index = loopRange.Start.Value; index < loopRange.End.Value; index++)
 			{
 				loop.ResetIteration();
-				ExecuteForIteration(f, ctx, iterator, ref results, itemType, index, loop);
+				ExecuteForIteration(f, ctx, iterator, ref results, itemType, index, loop, isRangeIterator, bodyAsBody);
 				if (ctx.ExitMethodAndReturnValue.HasValue)
 					return ctx.ExitMethodAndReturnValue.Value;
 			}
@@ -66,20 +68,20 @@ internal sealed class ForEvaluator(Executor executor)
 	}
 
 	private void ExecuteForIteration(For f, ExecutionContext ctx, ValueInstance iterator,
-		ref List<ValueInstance>? results, Type itemType, int index, ExecutionContext loop)
+		ref List<ValueInstance>? results, Type itemType, int index, ExecutionContext loop,
+		bool isRangeIterator, Body? bodyAsBody)
 	{
 		var indexInstance = new ValueInstance(executor.numberType, index);
 		loop.Set(Type.IndexLowercase, indexInstance);
-		var value = iterator.IsPrimitiveType(executor.numberType) ||
-			iterator.TryGetValueTypeInstance()?.ReturnType == executor.rangeType
+		var value = iterator.IsPrimitiveType(executor.numberType) || isRangeIterator
 				? indexInstance
 				: iterator.GetIteratorValue(itemType, index);
 		loop.Set(Type.ValueLowercase, value);
 		foreach (var customVariable in f.CustomVariables)
 			if (customVariable is VariableCall variableCall)
 				loop.Set(variableCall.Variable.Name, value);
-		var itemResult = f.Body is Body body
-			? EvaluateBody(body, loop)
+		var itemResult = bodyAsBody != null
+			? EvaluateBody(bodyAsBody, loop)
 			: executor.RunExpression(f.Body, loop);
 		if (loop.ExitMethodAndReturnValue.HasValue)
 			ctx.ExitMethodAndReturnValue = loop.ExitMethodAndReturnValue;

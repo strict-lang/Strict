@@ -51,10 +51,10 @@ public sealed class ValueTypeInstance(Type returnType, ValueInstance[] values)
 		if (ReferenceEquals(this, other))
 			return true; //ncrunch: no coverage
 		if (!other.ReturnType.IsSameOrCanBeUsedAs(ReturnType) || Values.Length != other.Values.Length)
-			return false;
+			return false; //ncrunch: no coverage
 		for (var i = 0; i < Values.Length; i++)
 			if (!Values[i].Equals(other.Values[i]))
-				return false;
+				return false; //ncrunch: no coverage
 		return true;
 	}
 }

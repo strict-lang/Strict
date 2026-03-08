@@ -215,9 +215,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 				for (var i = 0; i < typeInstance.Values.Length; i++)
 					if (typeInstance.Values[i].IsText)
 						return typeInstance.Values[i].Text.Length;
-				if (typeInstance.TryGetValue(Type.Text, out var textMember))
-					return textMember.Text.Length;
-			}
+			} //ncrunch: no coverage
 			if (typeInstance.TryGetValue("keysAndValues", out var elementsMember) && elementsMember.IsList)
 				return elementsMember.List.Items.Length;
 			throw new IteratorNotSupported(this);
@@ -247,15 +245,10 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 			{
 				text = typeInstance.Values[i].Text;
 				return true;
-			}
-		if (typeInstance.TryGetValue(Type.Text, out var member) && member.IsText)
-		{
-			text = member.Text;
-			return true;
-		}
+			} //ncrunch: no coverage start
 		text = null;
 		return false;
-	}
+	} //ncrunch: no coverage end
 
 	public class IteratorNotSupported(ValueInstance instance) : Exception(instance.ToString());
 

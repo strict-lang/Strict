@@ -237,12 +237,12 @@ public class TestExecutorTests
 	//ncrunch: no coverage start
 	[Test]
 	[Category("Slow")]
-	public void AllocatesLessThan60KbPerRunAfterWarmup()
+	public void AllocatesLessThan40KbPerRunAfterWarmup()
 	{
 		executor.RunAllTestsInPackage(TestPackage.Instance);
 		var allocatedBefore = GC.GetAllocatedBytesForCurrentThread();
 		executor.RunAllTestsInPackage(TestPackage.Instance);
-		Assert.That(GC.GetAllocatedBytesForCurrentThread() - allocatedBefore, Is.LessThan(60_000));
+		Assert.That(GC.GetAllocatedBytesForCurrentThread() - allocatedBefore, Is.LessThan(40_000));
 	}
 
 	[Test]
