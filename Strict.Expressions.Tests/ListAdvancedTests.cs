@@ -307,7 +307,7 @@ public sealed class ListAdvancedTests : TestExpressions
 			// @formatter:off
 			nameof(CreateMutableListWithMutableExpressions),
 			"has logger",
-			"Add(element Number) Mutable(List)",
+			"Add(element Number) Mutable(List(Mutable(Number)))",
 			"\tmutable someList = List(Mutable(Number))",
 			"\tsomeList.Add(1)")).
 			ParseMembersAndMethods(parser);

@@ -468,10 +468,11 @@ public sealed class Method : Context
 	{
 		public override bool IsConstant => true; //ncrunch: no coverage
 		public override string ToString() => ReturnType.Name;
+		public override int GetHashCode() => ReturnType.GetHashCode(); //ncrunch: no coverage
+
 		public override bool Equals(Expression? other) =>
 			ReferenceEquals(this, other) || //ncrunch: no coverage
-			(other is PlaceholderExpression p && ReturnType == p.ReturnType);
-		public override int GetHashCode() => ReturnType.GetHashCode(); //ncrunch: no coverage
+			other is PlaceholderExpression p && ReturnType == p.ReturnType;
 	}
 
 	public sealed class DeclarationIsNeverUsedAndMustBeRemoved(Type type, int lineNumber,

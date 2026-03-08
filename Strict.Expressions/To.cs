@@ -49,9 +49,9 @@ public sealed class To(Expression left, Method operatorMethod, Type conversionTy
 
 	//ncrunch: no coverage start
 	public override bool Equals(Expression? other) =>
-		ReferenceEquals(this, other) ||
-		(other is To to && Method.IsSameMethodNameReturnTypeAndParameters(to.Method) &&
-			Equals(Instance, to.Instance) && ConversionType == to.ConversionType);
+		ReferenceEquals(this, other) || other is To to &&
+		Method.IsSameMethodNameReturnTypeAndParameters(to.Method) && Equals(Instance, to.Instance) &&
+		ConversionType == to.ConversionType;
 
 	public override int GetHashCode() => Method.GetHashCode() ^ ConversionType.GetHashCode();
 }

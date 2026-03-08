@@ -44,9 +44,10 @@ public class Executor
 	private readonly IfEvaluator ifEvaluator;
 	private readonly SelectorIfEvaluator selectorIfEvaluator;
 	private readonly ForEvaluator forEvaluator;
-	private readonly MethodCallEvaluator methodCallEvaluator;
+	internal readonly MethodCallEvaluator methodCallEvaluator;
 	private readonly ToEvaluator toEvaluator;
 	private readonly Stack<ExecutionContext> contextPool = new();
+
 	internal ExecutionContext RentContext(Type type, Method method, ValueInstance? instance,
 		ExecutionContext? parent)
 	{
@@ -57,6 +58,7 @@ public class Executor
 		}
 		return new ExecutionContext(type, method, instance, parent);
 	}
+
 	internal void ReturnContext(ExecutionContext ctx) => contextPool.Push(ctx);
 
 	public ValueInstance Execute(Method method)
@@ -264,7 +266,7 @@ public class Executor
 			Return r => EvaluateReturn(r, context),
 			To t => toEvaluator.Evaluate(t, context),
 			Not n => EvaluateNot(n, context),
-			MethodCall call => EvaluateMethodCall(call, context),
+			MethodCall call => methodCallEvaluator.Evaluate(call, context),
 			Declaration c => EvaluateAndAssign(c.Name, c.Value, context, true),
 			MutableReassignment a => EvaluateAndAssign(a.Name, a.Value, context, false),
 			Instance => EvaluateVariable(Type.ValueLowercase, context),
@@ -274,6 +276,7 @@ public class Executor
 
 	private ValueInstance EvaluateListExpression(List list, ExecutionContext context)
 	{
+		//TODO: this is called quite often, not sure why we would have to call RunExpression on every list item every time, once it was evaluated, there is no need to do it again. same with other things here, we probably call way to many things over and over again.
 		var count = list.Values.Count;
 		var values = new ValueInstance[count];
 		for (var i = 0; i < count; i++)
@@ -322,9 +325,6 @@ public class Executor
 
 	public class UnableToCallMemberWithoutInstance(MemberCall member, ExecutionContext ctx)
 		: Exception(member + ", context " + ctx); //ncrunch: no coverage
-
-	internal ValueInstance EvaluateMethodCall(MethodCall call, ExecutionContext ctx) =>
-		methodCallEvaluator.Evaluate(call, ctx);
 
 	public sealed class ReturnTypeMustMatchMethod(Body body, ValueInstance last) : ExecutionFailed(
 		body.Method, "Return value " + last + " does not match method " + body.Method.Name +

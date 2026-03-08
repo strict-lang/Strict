@@ -35,7 +35,7 @@ public sealed class Body : Expression
 	public Body? Parent { get; private set; }
 	public readonly List<Body> children = new();
 	/// <summary>
-	/// If an Error is decleared, remember the name of the constant variable declared to use as the
+	/// If an Error is declared, remember the name of the constant variable declared to use as the
 	/// Error.Text itself. When showing the error it outputs clearly what went wrong where.
 	/// </summary>
 	public string? CurrentDeclarationNameForErrorText { get; set; }
@@ -262,7 +262,7 @@ public sealed class Body : Expression
 
 	public override bool Equals(Expression? other) =>
 		ReferenceEquals(this, other) ||
-		(other is Body b && Expressions.Count == b.Expressions.Count && ExpressionsEqual(b));
+		other is Body b && Expressions.Count == b.Expressions.Count && ExpressionsEqual(b);
 
 	private bool ExpressionsEqual(Body other)
 	{
@@ -273,6 +273,7 @@ public sealed class Body : Expression
 	}
 
 	public override int GetHashCode() =>
+		// ReSharper disable NonReadonlyMemberInGetHashCode
 		Expressions.Count > 0 //ncrunch: no coverage
 			? Expressions[0].GetHashCode() ^ Expressions.Count
 			: 0;

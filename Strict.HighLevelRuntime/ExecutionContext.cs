@@ -4,7 +4,8 @@ using Type = Strict.Language.Type;
 
 namespace Strict.HighLevelRuntime;
 
-public sealed class ExecutionContext(Type type, Method method, ValueInstance? thisInstance = null, ExecutionContext? parent = null)
+public sealed class ExecutionContext(Type type, Method method, ValueInstance? thisInstance = null,
+	ExecutionContext? parent = null)
 {
 	public Type Type { get; private set; } = type;
 	public Method Method { get; private set; } = method;
@@ -48,10 +49,12 @@ public sealed class ExecutionContext(Type type, Method method, ValueInstance? th
 		variables?.Clear();
 		ExitMethodAndReturnValue = null;
 	}
+
 	/// <summary>
 	/// Full reset for pool reuse: updates all identity fields and clears mutable state.
 	/// </summary>
-	internal void Reset(Type newType, Method newMethod, ValueInstance? instance, ExecutionContext? newParent)
+	internal void Reset(Type newType, Method newMethod, ValueInstance? instance,
+		ExecutionContext? newParent)
 	{
 		Type = newType;
 		Method = newMethod;

@@ -41,9 +41,8 @@ public sealed class MemberCall(Expression? instance, Member member, int lineNumb
 			: Member.Name;
 
 	public override bool Equals(Expression? other) =>
-		ReferenceEquals(this, other) ||
-		(other is MemberCall mc && Member.Name == mc.Member.Name &&
-			Member.Type == mc.Member.Type && Equals(Instance, mc.Instance));
+		ReferenceEquals(this, other) || other is MemberCall mc && Member.Name == mc.Member.Name &&
+		Member.Type == mc.Member.Type && Equals(Instance, mc.Instance);
 
 	public override int GetHashCode() =>
 		Member.GetHashCode() ^ (Instance?.GetHashCode() ?? 0);

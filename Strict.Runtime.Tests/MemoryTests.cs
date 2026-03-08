@@ -7,8 +7,7 @@ public sealed class MemoryTests
 	[Test]
 	public void AddToCollectionVariableDoesNothingWhenValueIsNotAList()
 	{
-		var memory = new Memory();
-		memory.Variables["count"] = new ValueInstance(NumberType, 5.0);
+		var memory = new Memory { Variables = { ["count"] = new ValueInstance(NumberType, 5.0) } };
 		memory.AddToCollectionVariable("count", new ValueInstance(NumberType, 1.0));
 		Assert.That(memory.Variables["count"].Number, Is.EqualTo(5));
 	}

@@ -329,7 +329,7 @@ public sealed class MethodCallEvaluator(Executor executor)
 					CreateMethodValue(ctx.Method)),
 				Type.Text or nameof(Type.Name) => new ValueInstance(ctx.Method.Type.FilePath),
 				Type.Number => new ValueInstance(executor.numberType,
-					(double)(source?.LineNumber ?? ctx.Method.TypeLineNumber)),
+					source?.LineNumber ?? ctx.Method.TypeLineNumber),
 				_ => throw new NotSupportedException("Stacktrace member not supported: " + stacktraceType.Members[i]) //ncrunch: no coverage
 			};
 		return new ValueInstance(executor.listType.GetGenericImplementation(stacktraceType),

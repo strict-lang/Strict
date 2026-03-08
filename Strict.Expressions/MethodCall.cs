@@ -254,9 +254,9 @@ public class MethodCall : ConcreteExpression
 
 	public override bool Equals(Expression? other) =>
 		ReferenceEquals(this, other) ||
-		(other is MethodCall mc && other.GetType() == GetType() &&
-			Method.IsSameMethodNameReturnTypeAndParameters(mc.Method) &&
-			Equals(Instance, mc.Instance) && ArgumentsEqual(mc.Arguments));
+		other is MethodCall mc && other.GetType() == GetType() &&
+		Method.IsSameMethodNameReturnTypeAndParameters(mc.Method) &&
+		Equals(Instance, mc.Instance) && ArgumentsEqual(mc.Arguments);
 
 	private bool ArgumentsEqual(IReadOnlyList<Expression> otherArguments)
 	{

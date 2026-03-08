@@ -2,9 +2,8 @@ namespace Strict.Language;
 
 public sealed class GenericTypeImplementation : Type
 {
-	public GenericTypeImplementation(Type generic, Type[] implementationTypes) : base(
-		generic.Package, new TypeLines(generic.GetImplementationName(implementationTypes),
-			CreateHasLines(generic, implementationTypes)))
+	public GenericTypeImplementation(Type generic, Type[] implementationTypes, string typeName)
+		: base(generic.Package, new TypeLines(typeName, CreateHasLines(generic, implementationTypes)))
 	{
 		Generic = generic;
 		ImplementationTypes = implementationTypes;
@@ -31,12 +30,14 @@ public sealed class GenericTypeImplementation : Type
 	private void ImplementMembers()
 	{
 		var implementationTypeIndex = 0;
-		foreach (var member in Generic.Members)
-			members.Add((member.Type.IsGeneric || member.Type is GenericType) &&
-				member.Type.Name != Iterator
-					? member.CloneWithImplementation(GetImplementedMemberType(member.Type,
-						ref implementationTypeIndex))
-					: member);
+		for (var index = 0; index < Generic.Members.Count; index++)
+		{
+			var member = Generic.Members[index];
+			if ((member.Type.IsGeneric || member.Type is GenericType) && member.Type.Name != Iterator)
+				member = member.CloneWithImplementation(GetImplementedMemberType(member.Type,
+					ref implementationTypeIndex));
+			members.Add(member);
+		}
 	}
 
 	private Type GetImplementedMemberType(Type memberType, ref int implementationTypeIndex)

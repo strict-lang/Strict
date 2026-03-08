@@ -16,9 +16,10 @@ public sealed class Instance(Type type, int lineNumber = 0, bool isMutable = fal
 
 	public override bool IsConstant => false;
 	public override string ToString() => Type.ValueLowercase;
+
 	//ncrunch: no coverage start
 	public override bool Equals(Expression? other) =>
-		ReferenceEquals(this, other) ||
-		(other is Instance i && ReturnType == i.ReturnType);
+		ReferenceEquals(this, other) || other is Instance i && ReturnType == i.ReturnType;
+
 	public override int GetHashCode() => ReturnType.GetHashCode();
 }

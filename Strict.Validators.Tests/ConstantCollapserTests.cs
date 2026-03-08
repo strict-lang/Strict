@@ -73,10 +73,10 @@ public sealed class ConstantCollapserTests
 	{
 		using var foldType = new Type(TestPackage.Instance,
 			new TypeLines(nameof(FoldTwoMembers),
-			"has one = 1",
-			"has two = 2",
-			"Run Number",
-			"\tone + two"));
+				"has one = 1",
+				"has two = 2",
+				"Run Number",
+				"\tone + two"));
 		foldType.ParseMembersAndMethods(parser);
 		collapser.Visit(foldType.Methods[0], true);
 		Assert.That(((Number)foldType.Methods[0].GetBodyAndParseIfNeeded()).Data.Number, Is.EqualTo(3));

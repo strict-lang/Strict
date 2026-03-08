@@ -10,14 +10,15 @@ namespace Strict.Runtime;
 public sealed class RegisterFile
 {
 	private readonly ValueInstance[] data = new ValueInstance[16];
-
 	public ValueInstance this[Register r]
 	{
 		get => data[(int)r];
 		set => data[(int)r] = value;
 	}
 
-	/// <summary>Returns false (and a default value) only when the slot has never been written.</summary>
+	/// <summary>
+	/// Returns false (and a default value) only when the slot has never been written.
+	/// </summary>
 	internal bool TryGet(Register r, out ValueInstance value)
 	{
 		value = data[(int)r];

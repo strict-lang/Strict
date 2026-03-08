@@ -106,8 +106,7 @@ public sealed class ConstantCollapser : Visitor
 			if (leftNumber != null && rightNumber != null)
 				return new Number(method, leftNumber.Data.Number + rightNumber.Data.Number);
 			var leftText = left as Text;
-			var rightText = right as Text;
-			if (leftText != null && rightText != null)
+			if (leftText != null && right is Text rightText)
 				return new Text(method, leftText.Data.Text + rightText.Data.Text);
 			if (leftText != null && rightNumber != null)
 				return new Text(method, leftText.Data.Text + rightNumber.Data.ToExpressionCodeString());

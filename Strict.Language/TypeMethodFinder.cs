@@ -123,9 +123,8 @@ internal class TypeMethodFinder(Type type)
 		if (method.Name != Method.From)
 			return true;
 		var member = method.Type.Members.FirstOrDefault(m => !m.IsConstant && m.Type.Name != Iterator);
-		if (member?.Constraints == null)
-			return true;
-		return ConstraintCouldBeSatisfiedByArgumentCount(member.Constraints[0], numberOfArguments);
+		return member?.Constraints == null ||
+			ConstraintCouldBeSatisfiedByArgumentCount(member.Constraints[0], numberOfArguments);
 	}
 
 	private static bool ConstraintCouldBeSatisfiedByArgumentCount(Expression constraint, int numberOfArguments)

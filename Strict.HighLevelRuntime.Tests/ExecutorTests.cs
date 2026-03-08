@@ -322,17 +322,16 @@ public sealed class ExecutorTests
 	}
 
 	[Test]
-	public void InlineTestSkipListDeclarationReferencingMember()
+	public void InlineListReferencingMember()
 	{
-		using var t = CreateType(nameof(InlineTestSkipListDeclarationReferencingMember),
+		using var t = CreateType(nameof(InlineListReferencingMember),
 			"has first Number", "has second Number", "GetCount Number",
 			"\t(1, 2, 3).Length is 3",
 			"\tlet myList = (second, 2, 3)",
 			"\tmyList.Length");
 		var validatingExecutor = new Executor(TestPackage.Instance);
 		Assert.That(
-			validatingExecutor.Execute(t.Methods.Single(m => m.Name == "GetCount"),
-				executor.noneInstance, [], null, true).Number, Is.EqualTo(3));
+			validatingExecutor.Execute(t.Methods.Single(m => m.Name == "GetCount")).Number, Is.EqualTo(3));
 	}
 
 	[Test]
@@ -352,10 +351,10 @@ public sealed class ExecutorTests
 	public void InlineTestDictionaryDeclaration()
 	{
 		using var t = CreateType(nameof(InlineTestDictionaryDeclaration),
-				"has number", "Run Number",
-				"\tconstant myDict = Dictionary(Text, Text)",
-				"\tmyDict.Length is 0",
-				"\tnumber");
+			"has number", "Run Number",
+			"\tconstant myDict = Dictionary(Text, Text)",
+			"\tmyDict.Length is 0",
+			"\tnumber");
 		var validatingExecutor = new Executor(TestPackage.Instance);
 		Assert.That(
 			validatingExecutor.Execute(t.Methods.Single(m => m.Name == "Run")).Number, Is.EqualTo(0));

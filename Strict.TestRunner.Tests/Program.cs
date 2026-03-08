@@ -8,7 +8,7 @@ Console.WriteLine("Initial warmup run: " + tests.executor.Statistics);
 tests.executor.Statistics.Reset();
 var allocatedBefore = GC.GetAllocatedBytesForCurrentThread();
 var startTicks = DateTime.UtcNow.Ticks;
-const int Runs = 100;
+const int Runs = 1000;
 for (var count = 0; count < Runs; count++)
 	tests.RunAllTestsInPackage();
 var endTicks = DateTime.UtcNow.Ticks;

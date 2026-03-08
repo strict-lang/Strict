@@ -67,16 +67,11 @@ public sealed class BytecodeInterpreter(Package package)
 		if (statement is not RemoveStatement removeStatement)
 			return;
 		var item = Memory.Registers[removeStatement.Register];
-		//TODO: why do we have to make a copy every time?
 		var oldList = Memory.Frame.Get(removeStatement.Identifier).List.Items;
-		var listItems = new ValueInstance[oldList.Length - 1];
-		var newIndex = 0;
-		for (var index = 0; index < oldList.Length; index++)
-			if (!oldList[index].Equals(item))
-				listItems[newIndex++] = oldList[index];
-		//list version: listItems.RemoveAll(vi => vi.Equals(item));
+		var filteredItems = oldList.Where(existingItem => !existingItem.Equals(item)).ToArray();
 		Memory.Frame.Set(removeStatement.Identifier,
-			new ValueInstance(Memory.Frame.Get(removeStatement.Identifier).List.ReturnType, listItems));
+			new ValueInstance(Memory.Frame.Get(removeStatement.Identifier).List.ReturnType,
+				filteredItems));
 	}
 
 	private void TryExecuteListCall(Statement statement)

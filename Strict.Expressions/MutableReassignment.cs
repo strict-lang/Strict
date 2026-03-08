@@ -50,11 +50,11 @@ public sealed class MutableReassignment : ConcreteExpression
 
 	public override bool IsConstant => false;
 	public override string ToString() => Name + " = " + Value;
+
 	//ncrunch: no coverage start
 	public override bool Equals(Expression? other) =>
-		ReferenceEquals(this, other) ||
-		(other is MutableReassignment mr && Name == mr.Name &&
-			Target.Equals(mr.Target) && Value.Equals(mr.Value));
+		ReferenceEquals(this, other) || other is MutableReassignment mr && Name == mr.Name &&
+		Target.Equals(mr.Target) && Value.Equals(mr.Value);
 
 	public override int GetHashCode() => Name.GetHashCode() ^ Value.GetHashCode();
 }

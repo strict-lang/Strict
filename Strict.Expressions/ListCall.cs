@@ -93,10 +93,11 @@ public sealed class ListCall(Expression list, Expression index) : ConcreteExpres
 
 	public override bool IsConstant => List.IsConstant && Index.IsConstant;
 	public override string ToString() => $"{List}({Index})";
+
 	//ncrunch: no coverage start
 	public override bool Equals(Expression? other) =>
 		ReferenceEquals(this, other) ||
-		(other is ListCall lc && List.Equals(lc.List) && Index.Equals(lc.Index));
+		other is ListCall lc && List.Equals(lc.List) && Index.Equals(lc.Index);
 
 	public override int GetHashCode() => List.GetHashCode() ^ Index.GetHashCode();
 }

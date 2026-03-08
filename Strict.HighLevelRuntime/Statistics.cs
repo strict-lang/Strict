@@ -36,12 +36,7 @@ public sealed record Statistics
 	public int MutableUsageCount { get; internal set; }
 	public int FindVariableCount { get; internal set; }
 	public int FindTypeCount => Context.FindTypeCount;
-	public int GetPrimitiveCodeStringCalls => ValueInstance.GetPrimitiveCodeStringCalls;
-	public int GetPrimitiveCodeStringCallsNonNumberBooleanChar => ValueInstance.GetPrimitiveCodeStringCallsNonNumberBooleanChar;
-	public int EqualsCalls => ValueInstance.EqualsCalls;
-	public int ToExpressionCodeStringCalls => ValueInstance.ToExpressionCodeStringCalls;
-	public int ToExpressionCodeStringEscapedCalls => ValueInstance.ToExpressionCodeStringEscapedCalls;
-	public int ToExpressionCodeStringTypeIdCalls => ValueInstance.ToExpressionCodeStringTypeIdCalls;
+	public int ValueInstanceComplexEqualsCalls => ValueInstance.ComplexEqualsCalls;
 
 	public void Reset()
 	{
@@ -72,11 +67,6 @@ public sealed record Statistics
 		MutableUsageCount = 0;
 		FindVariableCount = 0;
 		Context.FindTypeCount = 0;
-		ValueInstance.GetPrimitiveCodeStringCalls = 0;
-		ValueInstance.GetPrimitiveCodeStringCallsNonNumberBooleanChar = 0;
-		ValueInstance.EqualsCalls = 0;
-		ValueInstance.ToExpressionCodeStringCalls = 0;
-		ValueInstance.ToExpressionCodeStringEscapedCalls = 0;
-		ValueInstance.ToExpressionCodeStringTypeIdCalls = 0;
+		ValueInstance.ComplexEqualsCalls = 0;
 	}
 }

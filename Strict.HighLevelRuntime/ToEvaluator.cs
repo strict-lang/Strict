@@ -17,7 +17,7 @@ internal sealed class ToEvaluator(Executor executor)
 			return new ValueInstance(left.ToExpressionCodeString());
 		return to.Method.IsTrait
 			? throw new ToMethodNotImplemented(left, to.ConversionType)
-			: executor.EvaluateMethodCall(to, ctx);
+			: executor.methodCallEvaluator.Evaluate(to, ctx);
 	}
 
 	//ncrunch: no coverage start

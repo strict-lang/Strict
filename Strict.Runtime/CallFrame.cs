@@ -5,16 +5,14 @@ namespace Strict.Runtime;
 /// <summary>
 /// Variable scope for one method invocation. Writes always go to this frame's own lazy dict;
 /// reads walk the parent chain but only through member variables, so child calls can access
-/// the caller's 'has' fields without copying them. Modelled after
-/// <see cref="HighLevelRuntime.ExecutionContext"/>.
+/// the caller's 'has' fields without copying them. Modeled after ExecutionContext.
 /// </summary>
 internal sealed class CallFrame(CallFrame? parent = null)
 {
 	private Dictionary<string, ValueInstance>? variables;
 	private HashSet<string>? memberNames;
-
 	/// <summary>
-	/// Materialised locals dict — used by <see cref="Memory.Variables"/> for test compat.
+	/// Materialized locals dict — used by <see cref="Memory.Variables"/> for test compat.
 	/// </summary>
 	internal Dictionary<string, ValueInstance> Variables =>
 		variables ??= new Dictionary<string, ValueInstance>();
@@ -39,7 +37,9 @@ internal sealed class CallFrame(CallFrame? parent = null)
 	}
 
 	internal ValueInstance Get(string name) =>
-		TryGet(name, out var value) ? value : throw new KeyNotFoundException(name);
+		TryGet(name, out var value)
+			? value
+			: throw new KeyNotFoundException(name);
 
 	/// <summary>
 	/// Always writes to this frame's own dict (never clobbers parent).

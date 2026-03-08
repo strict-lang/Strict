@@ -60,9 +60,8 @@ public sealed class List : Value
 	}
 
 	public override bool Equals(Expression? other) =>
-		ReferenceEquals(this, other) ||
-		(other is List list && ReturnType == list.ReturnType &&
-			Values.Count == list.Values.Count && ValuesEqual(list));
+		ReferenceEquals(this, other) || other is List list && ReturnType == list.ReturnType &&
+		Values.Count == list.Values.Count && ValuesEqual(list);
 
 	private bool ValuesEqual(List other)
 	{
@@ -87,7 +86,8 @@ public sealed class List : Value
 		return new ValueInstance(ReturnType, valueInstances);
 	}
 
-	public new ValueInstance Data => throw new NotSupportedException("Use TryGetConstantData instead!");
+	public new ValueInstance Data =>
+		throw new NotSupportedException("Use TryGetConstantData instead!");
 
 	public override string ToString()
 	{

@@ -70,10 +70,9 @@ public sealed class SelectorIf(Expression selector, IReadOnlyList<SelectorIf.Cas
 
 	//ncrunch: no coverage start
 	public override bool Equals(Expression? other) =>
-		ReferenceEquals(this, other) ||
-		(other is SelectorIf si && Selector.Equals(si.Selector) &&
-			Cases.Count == si.Cases.Count && CasesEqual(si) &&
-			(OptionalElse?.Equals(si.OptionalElse) ?? si.OptionalElse == null));
+		ReferenceEquals(this, other) || other is SelectorIf si && Selector.Equals(si.Selector) &&
+		Cases.Count == si.Cases.Count && CasesEqual(si) &&
+		(OptionalElse?.Equals(si.OptionalElse) ?? si.OptionalElse == null);
 
 	private bool CasesEqual(SelectorIf other)
 	{

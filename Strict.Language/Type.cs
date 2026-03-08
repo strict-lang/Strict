@@ -152,8 +152,6 @@ public class Type : Context, IDisposable
 			throw new TypeWasAlreadyParsed(this); //ncrunch: no coverage
 		typeParser.ParseMembersAndMethods(parser);
 		DetermineEnumTypeKind();
-		//if ((Name.StartsWith("List") || Name.StartsWith("Mutable(List")) && typeKind != TypeKind.List)
-		//	throw new NotSupportedException("Something went wrong with this list creation!");
 		ValidateMethodAndMemberCountLimits();
 		// ReSharper disable once ForCanBeConvertedToForeach, for performance reasons:
 		// https://codeblog.jonskeet.uk/2009/01/29/for-vs-foreach-on-arrays-and-lists/
@@ -334,8 +332,7 @@ public class Type : Context, IDisposable
 			GetGenericTypeArguments().Count == implementationTypes.Length ||
 			HasMatchingConstructor(implementationTypes))
 		{
-			//TODO: this is extemely slow
-			var genericType = new GenericTypeImplementation(this, implementationTypes);
+			var genericType = new GenericTypeImplementation(this, implementationTypes, key);
 			cachedGenericTypes!.Add(key, genericType);
 			return genericType;
 		}

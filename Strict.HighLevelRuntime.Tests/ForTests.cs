@@ -32,7 +32,7 @@ public sealed class ForTests
 		using var t = CreateType(nameof(SelectorIfInForUsesOperation), "has operation Text",
 			"Run Number", "\tfor (1, 2, 3)", "\t\tif operation is", "\t\t\t\"add\" then value",
 			"\t\t\t\"subtract\" then 0 - value");
-		var instance = new ValueInstance(t, new ValueInstance[] { new ValueInstance(operation) });
+		var instance = new ValueInstance(t, [new ValueInstance(operation)]);
 		var result = executor.Execute(t.Methods.Single(m => m.Name == "Run"), instance, []);
 		Assert.That(result.Number, Is.EqualTo(expected));
 	}
@@ -185,7 +185,7 @@ public sealed class ForTests
 			"\t\telse if parentheses is 0",
 			"\t\t\tvalue");
 		var result = executor.Execute(t.Methods.Single(m => m.Name == "Remove"),
-			new ValueInstance(t, new ValueInstance[] { new ValueInstance("example(unwanted)example") }), []);
+			new ValueInstance(t, [ new ValueInstance("example(unwanted)example") ]), []);
 		Assert.That(result.Text, Is.EqualTo("exampleexample"));
 	}
 }

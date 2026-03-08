@@ -6,8 +6,8 @@ using Strict.Runtime;
 namespace Strict.LanguageServer;
 
 //ncrunch: no coverage start
-public sealed class TestRunner(Package package, ILanguageServerFacade languageServer, IEnumerable<Method> methods)
-	: RunnerService(package), RunnableService
+public sealed class TestRunner(Package package, ILanguageServerFacade languageServer,
+	IEnumerable<Method> methods) : RunnerService(package), RunnableService
 {
 	private IEnumerable<Method> Methods { get; } = methods;
 	private const string NotificationName = "testRunnerNotification";

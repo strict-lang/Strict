@@ -33,6 +33,7 @@ public sealed class TypeComparison(Type returnType, Type targetType, int lineNum
 	//ncrunch: no coverage start
 	public override bool Equals(Expression? other) =>
 		ReferenceEquals(this, other) ||
-		(other is TypeComparison tc && TargetType == tc.TargetType);
+		other is TypeComparison tc && TargetType == tc.TargetType;
+
 	public override int GetHashCode() => TargetType.GetHashCode();
 }

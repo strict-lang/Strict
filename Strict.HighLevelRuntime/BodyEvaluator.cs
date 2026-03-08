@@ -48,12 +48,8 @@ internal sealed class BodyEvaluator(Executor executor)
 			last = executor.RunExpression(e, ctx);
 			if (ctx.ExitMethodAndReturnValue.HasValue)
 				return ctx.ExitMethodAndReturnValue.Value;
-			if (runOnlyTests && isTest)
-			{
-				if (!last.Boolean)
-					throw new Executor.TestFailed(body.Method, e, last, GetTestFailureDetails(e, ctx));
-				last = GetStandaloneInlineTestComparedValue(e, ctx) ?? last;
-			}
+			if (runOnlyTests && isTest && !last.Boolean)
+				throw new Executor.TestFailed(body.Method, e, last, GetTestFailureDetails(e, ctx));
 		}
 		if (runOnlyTests && count > 1 && last.Equals(executor.noneInstance) &&
 			body.Method.Name != Method.Run)
@@ -65,18 +61,6 @@ internal sealed class BodyEvaluator(Executor executor)
 			return new ValueInstance(last, body.Method.ReturnType);
 		throw new Executor.ReturnTypeMustMatchMethod(body, last);
 	}
-
-	private ValueInstance? GetStandaloneInlineTestComparedValue(Expression expression,
-		ExecutionContext ctx) => expression switch
-	{
-		Binary { Method.Name: BinaryOperator.Is, Instance: Value v } => v.Data,
-		Binary { Method.Name: BinaryOperator.Is, Instance: not null } binary =>
-			executor.RunExpression(binary.Instance, ctx),
-		Not { Instance: Binary { Method.Name: BinaryOperator.Is, Instance: Value v } } => v.Data,
-		Not { Instance: Binary { Method.Name: BinaryOperator.Is, Instance: not null } binary } =>
-			executor.RunExpression(binary.Instance, ctx), //ncrunch: no coverage
-		_ => null
-	};
 
 	private static bool ExpressionReferencesMember(Expression expr, string memberName) =>
 		expr switch

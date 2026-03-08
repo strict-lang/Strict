@@ -14,9 +14,12 @@ public sealed class TestExecutor(Package package) : Executor(package, TestBehavi
 	public void RunAllTestsInPackage(Package package)
 	{
 		Statistics.PackagesTested++;
-		foreach (var type in new List<Type>(package.Types.Values))
-			if (type is not GenericTypeImplementation)
-				RunAllTestsInType(type);
+		var typesToTest = new List<Type>();
+		foreach (var pair in package.Types)
+			if (pair.Value is not GenericTypeImplementation)
+				typesToTest.Add(pair.Value);
+		foreach (var type in typesToTest)
+			RunAllTestsInType(type);
 	}
 
 	public void RunAllTestsInType(Type type)

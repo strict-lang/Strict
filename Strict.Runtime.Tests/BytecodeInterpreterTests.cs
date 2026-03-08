@@ -255,7 +255,7 @@ public class BytecodeInterpreterTests : BaseVirtualMachineTests
 			? item.Text
 			: item.Number) + " ");
 		Assert.That(elements.Trim(), Is.EqualTo(expectedResult));
-	} //ncrunch: no coverage end
+	}
 
 	[TestCase("TestContains(\"s\", \"b\", \"s\").Contains(\"b\")", "true", "TestContains",
 		new[]
@@ -429,7 +429,8 @@ public class BytecodeInterpreterTests : BaseVirtualMachineTests
 	[Test]
 	public void LoopOverEmptyListSkipsBody()
 	{
-		var emptyList = new ValueInstance(NumberType, Array.Empty<ValueInstance>());
+		var numbersListType = ListType.GetGenericImplementation(NumberType);
+		var emptyList = new ValueInstance(numbersListType, Array.Empty<ValueInstance>());
 		var result = vm.Execute([
 			new StoreVariableStatement(emptyList, "numbers"),
 			new StoreVariableStatement(Number(0), "result"),
@@ -507,7 +508,8 @@ public class BytecodeInterpreterTests : BaseVirtualMachineTests
 	[Test]
 	public void LoopOverSingleItemListStopsAtEnd()
 	{
-		var singleItemList = new ValueInstance(NumberType, [new ValueInstance(NumberType, 42)]);
+		var numbersListType = ListType.GetGenericImplementation(NumberType);
+		var singleItemList = new ValueInstance(numbersListType, [new ValueInstance(NumberType, 42)]);
 		var result = vm.Execute([
 			new StoreVariableStatement(singleItemList, "items"),
 			new StoreVariableStatement(Number(0), "count"),
