@@ -1,4 +1,5 @@
-﻿using Strict.Language;
+﻿using System.IO;
+using Strict.Language;
 using Strict.Expressions;
 using Type = Strict.Language.Type;
 
@@ -15,63 +16,17 @@ public class CSharpToCudaTranspiler(Package strictBase) : IDisposable
 		return GenerateCuda(type);
 	}
 
-	public static string GenerateCuda(Type type)
-	{
-		var expression = type.Methods[0].GetBodyAndParseIfNeeded().ToString();
-		var parameterText = GetParameterTextWithNameAndType(type) + "float *output";
-		string output;
-		if (!parameterText.Contains("Width"))
-		{
-			parameterText += ", const int count";
-			output = "first[idx] " + GetOperator(expression) + " second[idx]";
-		}
-		else
-		{
-			output = "initialDepth";
-		}
-		return
-			@"extern ""C"" __global__ void " + type.Methods[0].Name + "(" + parameterText + @")
-{
-	int x = blockIdx.x * blockDim.x + threadIdx.x;
-	int y = blockIdx.y * blockDim.y + threadIdx.y;
-	int idx = y * blockDim.x + x;
-	output[idx] = " + output + @";
-}";
-	}
-
-	private static string GetOperator(string expression) =>
-		expression.Contains('+')
-			? "+"
-			: expression.Contains('-')
-				? "-"
-				: expression.Contains('*')
-					? "*"
-					: "";
-
-	private static string GetParameterTextWithNameAndType(Type type) =>
-		type.Methods[0].Parameters.Aggregate("", (current, parameter) => current +
-			parameter.Type.Name switch
-			{
-				Type.Number when parameter.Name is "Width" or "Height" => "const int " + parameter.Name +
-					", ",
-				Type.Number when parameter.Name == "initialDepth" => "const float " + parameter.Name +
-					", ",
-				Type.Number => "const float *" + parameter.Name + ", ",
-				_ => throw new NotSupportedException(parameter.ToString())
-			});
+	public static string GenerateCuda(Type type) =>
+		new StatementsToCudaCompiler().Compile(type.Methods[0]);
 
 	public Type ParseCSharp(string filePath) =>
 		filePath == ""
 			? throw new InvalidCode()
-			: new CSharpType(package, filePath).ParseMembersAndMethods(parser);
+			: new CSharpType(package, filePath);
 
 	public class InvalidCode : Exception;
 
-	public void Dispose()
-	{
-		package.Dispose();
-		strictBase.Dispose();
-	}
+	public void Dispose() => package.Dispose();
 }
 
 public class CSharpType : Type
@@ -98,40 +53,57 @@ public class CSharpType : Type
 		*/
 	}
 
-	public CSharpType(Package strictPackage, string filePath) : base(
-		strictPackage, new TypeLines(Path.GetFileNameWithoutExtension(filePath),
-			global::System.IO.File.ReadAllLines(filePath)))
+	public CSharpType(Package strictPackage, string filePath)
+		: this(strictPackage, ExtractMethodInfo(filePath)) { }
+
+	private CSharpType(Package strictPackage, (string typeName, string methodLine, string bodyLine) info)
+		: base(strictPackage, new TypeLines(info.typeName, info.methodLine))
 	{
+		methods.Add(new Method(this, 0, new CSharpExpressionParser(),
+			[info.methodLine, "\t" + info.bodyLine]));
+	}
+
+	private static (string typeName, string methodLine, string bodyLine) ExtractMethodInfo(string filePath)
+	{
+		var typeName = Path.GetFileNameWithoutExtension(filePath);
 		var methodName = "";
 		var returnType = "";
 		var parameters = new List<string>();
 		var returnStatement = "";
-		foreach (var line in Lines)
+		foreach (var line in global::System.IO.File.ReadAllLines(filePath))
 		{
-			if (HasIgnoredOrEmptyText(line))
+			if (IsIgnoredOrEmptyText(line, typeName))
 				continue;
 			if (line.StartsWith("\t\treturn", StringComparison.Ordinal) || line.StartsWith("\t\t\t", StringComparison.Ordinal))
-				returnStatement = line.Trim().Replace(";", "");
+			{
+				var value = line.Trim().Replace(";", "");
+				if (value.StartsWith("return ", StringComparison.Ordinal))
+					value = value[7..];
+				else if (value.Contains(" = "))
+					value = value[(value.LastIndexOf(" = ", StringComparison.Ordinal) + 3)..];
+				returnStatement = value;
+			}
 			else
 			{
 				var parts = line.Trim().Split([' ', '(', ')', ','], StringSplitOptions.RemoveEmptyEntries);
 				if (parts[1] == "float")
-					returnType = " returns Number";
+					returnType = " Number";
 				methodName = parts[2];
 				AddMethodParameters(parts, parameters);
 			}
 		}
 		if (returnStatement == "")
 			throw new MissingReturnStatement();
-		var method = new Method(this, 0, new CSharpExpressionParser(), [
-			methodName + parameters.ToBrackets() + returnType, "\t" + returnStatement
-		]);
-		methods.Add(method);
+		return (typeName, methodName + parameters.ToBrackets() + returnType, returnStatement);
 	}
 
-	private bool HasIgnoredOrEmptyText(string line) =>
-		line == "" || line.Contains("{") || line.Contains("}") || line.StartsWith("using ", StringComparison.Ordinal) || line.StartsWith("namespace ", StringComparison.Ordinal) ||
-		line.Contains(Name) || line.Contains("this.") || line.StartsWith("\tprivate ", StringComparison.Ordinal) || line.StartsWith("\t\tfor ", StringComparison.Ordinal);
+	private static bool IsIgnoredOrEmptyText(string line, string typeName) =>
+		line == "" || line.Contains("{") || line.Contains("}") ||
+		line.StartsWith("using ", StringComparison.Ordinal) ||
+		line.StartsWith("namespace ", StringComparison.Ordinal) ||
+		line.Contains(typeName) || line.Contains("this.") ||
+		line.StartsWith("\tprivate ", StringComparison.Ordinal) ||
+		line.StartsWith("\t\tfor ", StringComparison.Ordinal);
 
 	private static void AddMethodParameters(IReadOnlyList<string> parts, List<string> parameters)
 	{

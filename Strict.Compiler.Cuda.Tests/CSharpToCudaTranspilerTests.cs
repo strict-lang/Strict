@@ -2,19 +2,17 @@
 using ManagedCuda.NVRTC;
 using NUnit.Framework;
 using Strict.Language;
+using Strict.Language.Tests;
 using Strict.Expressions;
 using Type = Strict.Language.Type;
 
 namespace Strict.Compiler.Cuda.Tests;
 
-[Ignore("fix all other things first")]
 public class CSharpToCudaTranspilerTests
 {
 	[SetUp]
-	public async Task CreateTranspiler() =>
-		transpiler =
-			new CSharpToCudaTranspiler(await new Repositories(new MethodExpressionParser()).
-				LoadStrictPackage());
+	public void CreateTranspiler() =>
+		transpiler = new CSharpToCudaTranspiler(TestPackage.Instance);
 
 	private CSharpToCudaTranspiler transpiler = null!;
 
@@ -41,11 +39,11 @@ public class CSharpToCudaTranspilerTests
 		Assert.That(type.Methods[0].Parameters[1].Type, Is.EqualTo(type.FindType(Type.Number)));
 		Assert.That(type.Methods[0].ReturnType, Is.EqualTo(type.FindType(Type.Number)));
 		Assert.That(type.Methods[0].GetBodyAndParseIfNeeded().ToString(),
-			Is.EqualTo("return first + second"));
+			Is.EqualTo("first + second"));
 	}
 
 	private Type GetParsedCSharpType(string fileName) =>
-		transpiler.ParseCSharp(@"..\..\..\Input\" + fileName + ".cs");
+		transpiler.ParseCSharp(Path.Combine("..", "..", "..", "Input", fileName + ".cs"));
 
 	private static CudaDeviceVariable<float> CreateAndRunKernel(CudaRuntimeCompiler rtc, string methodName)
 	{
@@ -88,6 +86,7 @@ public class CSharpToCudaTranspilerTests
 	}
 
 	[Category("Slow")]
+	[Ignore("Requires GPU hardware and CUDA drivers")]
 	[TestCase(AddNumbers, 3)]
 	[TestCase(SubtractNumbers, -1)]
 	[TestCase(MultiplyNumbers, 2)]
