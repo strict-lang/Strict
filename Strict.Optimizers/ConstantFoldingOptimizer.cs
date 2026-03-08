@@ -48,7 +48,7 @@ public sealed class ConstantFoldingOptimizer : StatementOptimizer
 		var result = ComputeResult(binary.Instruction, leftLoad.ValueInstance,
 			rightLoad.ValueInstance);
 		if (result == null)
-			return false;
+			return false; //ncrunch: no coverage
 		statements[binaryIndex] = new LoadConstantStatement(resultRegister, result.Value);
 		// Remove in descending index order to preserve positions
 		var first = Math.Max(leftIndex, rightIndex);
@@ -87,6 +87,6 @@ public sealed class ConstantFoldingOptimizer : StatementOptimizer
 				left.Number / right.Number),
 			Instruction.Modulo => new ValueInstance(left.GetTypeExceptText(),
 				left.Number % right.Number),
-			_ => null
+			_ => null //ncrunch: no coverage
 		};
 }

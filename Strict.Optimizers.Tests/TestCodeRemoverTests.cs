@@ -6,21 +6,12 @@ using Return = Strict.Runtime.Statements.Return;
 namespace Strict.Optimizers.Tests;
 
 /// <summary>
-/// Tests for the test code remover — the core Strict.Optimizers mission per the README:
-/// "Remove passed test code and provably dead instructions" and
-/// "Tests are executed once; passing expressions become true and are pruned."
-/// In Strict, test assertions are comparison + conditional jump blocks at the start of a method.
-/// After tests pass, these blocks are dead code: a comparison against a known-true constant
-/// followed by JumpToIdIfFalse/JumpEnd pairs that will never branch. This optimizer identifies
-/// and removes those patterns.
+/// Remove passed test code and provably dead instructions, Tests are executed once; passing
+/// expressions become true and are pruned. In Strict, test assertions are comparison + conditional
+/// jump blocks at the start of a method. After tests pass, these blocks are dead code and removed.
 /// </summary>
-public sealed class TestCodeRemoverTests
+public sealed class TestCodeRemoverTests : TestOptimizers
 {
-	private static readonly Type NumberType = TestPackage.Instance.GetType(Type.Number);
-	private static readonly Type BooleanType = TestPackage.Instance.GetType(Type.Boolean);
-	private static ValueInstance Number(double value) => new(NumberType, value);
-	private static ValueInstance Boolean(bool value) => new(BooleanType, value ? 1 : 0);
-
 	[Test]
 	public void RemovePassedTestAssertionPattern()
 	{
@@ -28,8 +19,8 @@ public sealed class TestCodeRemoverTests
 		// This is a passed test that always evaluates to true — remove the whole block
 		var statements = new List<Statement>
 		{
-			new LoadConstantStatement(Register.R0, Number(5)),
-			new LoadConstantStatement(Register.R1, Number(5)),
+			new LoadConstantStatement(Register.R0, Num(5)),
+			new LoadConstantStatement(Register.R1, Num(5)),
 			new Binary(Instruction.Equal, Register.R0, Register.R1),
 			new JumpToId(Instruction.JumpToIdIfFalse, 0),
 			new JumpToId(Instruction.JumpEnd, 0),
@@ -48,14 +39,14 @@ public sealed class TestCodeRemoverTests
 		var statements = new List<Statement>
 		{
 			// First test: 5 is 5
-			new LoadConstantStatement(Register.R0, Number(5)),
-			new LoadConstantStatement(Register.R1, Number(5)),
+			new LoadConstantStatement(Register.R0, Num(5)),
+			new LoadConstantStatement(Register.R1, Num(5)),
 			new Binary(Instruction.Equal, Register.R0, Register.R1),
 			new JumpToId(Instruction.JumpToIdIfFalse, 0),
 			new JumpToId(Instruction.JumpEnd, 0),
 			// Second test: 10 is 10
-			new LoadConstantStatement(Register.R2, Number(10)),
-			new LoadConstantStatement(Register.R3, Number(10)),
+			new LoadConstantStatement(Register.R2, Num(10)),
+			new LoadConstantStatement(Register.R3, Num(10)),
 			new Binary(Instruction.Equal, Register.R2, Register.R3),
 			new JumpToId(Instruction.JumpToIdIfFalse, 1),
 			new JumpToId(Instruction.JumpEnd, 1),
@@ -73,8 +64,8 @@ public sealed class TestCodeRemoverTests
 		// 5 is 3 — these don't match, so this is real conditional logic, not a passed test
 		var statements = new List<Statement>
 		{
-			new LoadConstantStatement(Register.R0, Number(5)),
-			new LoadConstantStatement(Register.R1, Number(3)),
+			new LoadConstantStatement(Register.R0, Num(5)),
+			new LoadConstantStatement(Register.R1, Num(3)),
 			new Binary(Instruction.Equal, Register.R0, Register.R1),
 			new JumpToId(Instruction.JumpToIdIfFalse, 0),
 			new JumpToId(Instruction.JumpEnd, 0),
@@ -91,11 +82,11 @@ public sealed class TestCodeRemoverTests
 		// Test block that has actual code inside - this is real conditional logic
 		var statements = new List<Statement>
 		{
-			new LoadConstantStatement(Register.R0, Number(5)),
-			new LoadConstantStatement(Register.R1, Number(5)),
+			new LoadConstantStatement(Register.R0, Num(5)),
+			new LoadConstantStatement(Register.R1, Num(5)),
 			new Binary(Instruction.Equal, Register.R0, Register.R1),
 			new JumpToId(Instruction.JumpToIdIfFalse, 0),
-			new LoadConstantStatement(Register.R2, Number(99)),
+			new LoadConstantStatement(Register.R2, Num(99)),
 			new Return(Register.R2),
 			new JumpToId(Instruction.JumpEnd, 0),
 			new Return(Register.R0)
@@ -110,7 +101,7 @@ public sealed class TestCodeRemoverTests
 		var statements = new List<Statement>
 		{
 			new LoadVariableToRegister(Register.R0, "x"),
-			new LoadConstantStatement(Register.R1, Number(5)),
+			new LoadConstantStatement(Register.R1, Num(5)),
 			new Binary(Instruction.Equal, Register.R0, Register.R1),
 			new JumpToId(Instruction.JumpToIdIfFalse, 0),
 			new JumpToId(Instruction.JumpEnd, 0),

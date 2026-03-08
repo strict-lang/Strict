@@ -5,19 +5,16 @@ using Return = Strict.Runtime.Statements.Return;
 
 namespace Strict.Optimizers.Tests;
 
-public sealed class UnreachableCodeEliminatorTests
+public sealed class UnreachableCodeEliminatorTests : TestOptimizers
 {
-	private static readonly Type NumberType = TestPackage.Instance.GetType(Type.Number);
-	private static ValueInstance Number(double value) => new(NumberType, value);
-
 	[Test]
 	public void RemoveStatementsAfterUnconditionalReturn()
 	{
 		var statements = new List<Statement>
 		{
-			new LoadConstantStatement(Register.R0, Number(5)),
+			new LoadConstantStatement(Register.R0, Num(5)),
 			new Return(Register.R0),
-			new LoadConstantStatement(Register.R1, Number(10)),
+			new LoadConstantStatement(Register.R1, Num(10)),
 			new Return(Register.R1)
 		};
 		var optimized = new UnreachableCodeEliminator().Optimize(statements);
@@ -30,8 +27,8 @@ public sealed class UnreachableCodeEliminatorTests
 	{
 		var statements = new List<Statement>
 		{
-			new LoadConstantStatement(Register.R0, Number(5)),
-			new LoadConstantStatement(Register.R1, Number(3)),
+			new LoadConstantStatement(Register.R0, Num(5)),
+			new LoadConstantStatement(Register.R1, Num(3)),
 			new Binary(Instruction.Add, Register.R0, Register.R1, Register.R2),
 			new Return(Register.R2)
 		};
@@ -44,14 +41,14 @@ public sealed class UnreachableCodeEliminatorTests
 	{
 		var statements = new List<Statement>
 		{
-			new LoadConstantStatement(Register.R0, Number(1)),
-			new LoadConstantStatement(Register.R1, Number(1)),
+			new LoadConstantStatement(Register.R0, Num(1)),
+			new LoadConstantStatement(Register.R1, Num(1)),
 			new Binary(Instruction.Equal, Register.R0, Register.R1),
 			new JumpToId(Instruction.JumpToIdIfFalse, 0),
-			new LoadConstantStatement(Register.R2, Number(5)),
+			new LoadConstantStatement(Register.R2, Num(5)),
 			new Return(Register.R2),
 			new JumpToId(Instruction.JumpEnd, 0),
-			new LoadConstantStatement(Register.R3, Number(10)),
+			new LoadConstantStatement(Register.R3, Num(10)),
 			new Return(Register.R3)
 		};
 		var optimized = new UnreachableCodeEliminator().Optimize(statements);
@@ -63,10 +60,10 @@ public sealed class UnreachableCodeEliminatorTests
 	{
 		var statements = new List<Statement>
 		{
-			new LoadConstantStatement(Register.R0, Number(5)),
+			new LoadConstantStatement(Register.R0, Num(5)),
 			new Return(Register.R0),
 			new JumpToId(Instruction.JumpEnd, 0),
-			new LoadConstantStatement(Register.R1, Number(10)),
+			new LoadConstantStatement(Register.R1, Num(10)),
 			new Return(Register.R1)
 		};
 		var optimized = new UnreachableCodeEliminator().Optimize(statements);
@@ -86,11 +83,11 @@ public sealed class UnreachableCodeEliminatorTests
 	{
 		var statements = new List<Statement>
 		{
-			new StoreVariableStatement(Number(0), "sum"),
+			new StoreVariableStatement(Num(0), "sum"),
 			new LoadVariableToRegister(Register.R0, "numbers"),
 			new LoopBeginStatement(Register.R0),
 			new LoadVariableToRegister(Register.R1, "sum"),
-			new LoadConstantStatement(Register.R2, Number(1)),
+			new LoadConstantStatement(Register.R2, Num(1)),
 			new Binary(Instruction.Add, Register.R1, Register.R2, Register.R3),
 			new StoreFromRegisterStatement(Register.R3, "sum"),
 			new LoopEndStatement(6),

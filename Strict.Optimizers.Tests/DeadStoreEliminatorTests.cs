@@ -5,19 +5,15 @@ using Return = Strict.Runtime.Statements.Return;
 
 namespace Strict.Optimizers.Tests;
 
-public sealed class DeadStoreEliminatorTests
+public sealed class DeadStoreEliminatorTests : TestOptimizers
 {
-	private static readonly Type NumberType = TestPackage.Instance.GetType(Type.Number);
-	private static ValueInstance Number(double value) => new(NumberType, value);
-	private static ValueInstance Text(string value) => new(value);
-
 	[Test]
 	public void RemoveUnusedVariable()
 	{
 		var statements = new List<Statement>
 		{
-			new StoreVariableStatement(Number(5), "unused"),
-			new StoreVariableStatement(Number(10), "used"),
+			new StoreVariableStatement(Num(5), "unused"),
+			new StoreVariableStatement(Num(10), "used"),
 			new LoadVariableToRegister(Register.R0, "used"),
 			new Return(Register.R0)
 		};
@@ -32,7 +28,7 @@ public sealed class DeadStoreEliminatorTests
 	{
 		var statements = new List<Statement>
 		{
-			new StoreVariableStatement(Number(5), "x"),
+			new StoreVariableStatement(Num(5), "x"),
 			new LoadVariableToRegister(Register.R0, "x"),
 			new Return(Register.R0)
 		};
@@ -45,8 +41,8 @@ public sealed class DeadStoreEliminatorTests
 	{
 		var statements = new List<Statement>
 		{
-			new StoreVariableStatement(Number(5), "member", isMember: true),
-			new LoadConstantStatement(Register.R0, Number(10)),
+			new StoreVariableStatement(Num(5), "member", isMember: true),
+			new LoadConstantStatement(Register.R0, Num(10)),
 			new Return(Register.R0)
 		};
 		var optimized = new DeadStoreEliminator().Optimize(statements);
@@ -58,9 +54,9 @@ public sealed class DeadStoreEliminatorTests
 	{
 		var statements = new List<Statement>
 		{
-			new StoreVariableStatement(Number(1), "dead1"),
-			new StoreVariableStatement(Number(2), "dead2"),
-			new StoreVariableStatement(Number(3), "alive"),
+			new StoreVariableStatement(Num(1), "dead1"),
+			new StoreVariableStatement(Num(2), "dead2"),
+			new StoreVariableStatement(Num(3), "alive"),
 			new LoadVariableToRegister(Register.R0, "alive"),
 			new Return(Register.R0)
 		};
@@ -74,9 +70,9 @@ public sealed class DeadStoreEliminatorTests
 	{
 		var statements = new List<Statement>
 		{
-			new StoreVariableStatement(Number(0), "count"),
+			new StoreVariableStatement(Num(0), "count"),
 			new LoadVariableToRegister(Register.R0, "count"),
-			new LoadConstantStatement(Register.R1, Number(1)),
+			new LoadConstantStatement(Register.R1, Num(1)),
 			new Binary(Instruction.Add, Register.R0, Register.R1, Register.R2),
 			new StoreFromRegisterStatement(Register.R2, "count"),
 			new LoadVariableToRegister(Register.R3, "count"),

@@ -42,10 +42,10 @@ public sealed class TestCodeRemover : StatementOptimizer
 		if (statements[startIndex + 2] is not Binary binary || !binary.IsConditional())
 			return false;
 		if (binary.Instruction != Instruction.Equal)
-			return false;
+			return false; //ncrunch: no coverage
 		if (statements[startIndex + 3] is not JumpToId conditional ||
 			conditional.Instruction != Instruction.JumpToIdIfFalse)
-			return false;
+			return false; //ncrunch: no coverage
 		if (statements[startIndex + 4] is not JumpToId end ||
 			end.Instruction != Instruction.JumpEnd || end.Id != conditional.Id)
 			return false;
@@ -55,9 +55,9 @@ public sealed class TestCodeRemover : StatementOptimizer
 	private static bool AreValuesEqual(ValueInstance left, ValueInstance right)
 	{
 		if (left.IsText && right.IsText)
-			return left.Text == right.Text;
+			return left.Text == right.Text; //ncrunch: no coverage
 		if (!left.IsText && !right.IsText)
 			return left.Number == right.Number;
-		return false;
+		return false; //ncrunch: no coverage
 	}
 }

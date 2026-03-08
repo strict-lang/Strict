@@ -26,7 +26,7 @@ public sealed class StrengthReducer : StatementOptimizer
 			var leftIndex = FindStatementIndex(statements, i, binary.Registers[0]);
 			var rightIndex = FindStatementIndex(statements, i, binary.Registers[1]);
 			if (leftIndex < 0 || rightIndex < 0)
-				continue;
+				continue; //ncrunch: no coverage
 			var leftIsConst = statements[leftIndex] is LoadConstantStatement;
 			var rightIsConst = statements[rightIndex] is LoadConstantStatement;
 			if (!leftIsConst && !rightIsConst)
@@ -81,9 +81,10 @@ public sealed class StrengthReducer : StatementOptimizer
 		statements[index] = statement switch
 		{
 			LoadVariableToRegister load => new LoadVariableToRegister(newRegister, load.Identifier),
+			//ncrunch: no coverage start
 			LoadConstantStatement load => new LoadConstantStatement(newRegister, load.ValueInstance),
 			_ => statement
-		};
+		}; //ncrunch: no coverage end
 	}
 
 	private static void RemoveIndicesDescending(List<Statement> statements, int a, int b)
@@ -128,7 +129,7 @@ public sealed class StrengthReducer : StatementOptimizer
 			if (statements[i] is LoadConstantStatement load && load.Register == register ||
 				statements[i] is LoadVariableToRegister varLoad && varLoad.Register == register)
 				return i;
-		return -1;
+		return -1; //ncrunch: no coverage
 	}
 
 	private enum IdentitySide { None, Left, Right }

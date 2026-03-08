@@ -5,11 +5,8 @@ using Return = Strict.Runtime.Statements.Return;
 
 namespace Strict.Optimizers.Tests;
 
-public sealed class RedundantLoadEliminatorTests
+public sealed class RedundantLoadEliminatorTests : TestOptimizers
 {
-	private static readonly Type NumberType = TestPackage.Instance.GetType(Type.Number);
-	private static ValueInstance Number(double value) => new(NumberType, value);
-
 	[Test]
 	public void EliminateDuplicateLoadOfSameVariable()
 	{
@@ -76,7 +73,7 @@ public sealed class RedundantLoadEliminatorTests
 	{
 		var statements = new List<Statement>
 		{
-			new StoreVariableStatement(Number(5), "x"),
+			new StoreVariableStatement(Num(5), "x"),
 			new LoadVariableToRegister(Register.R0, "x"),
 			new Return(Register.R0)
 		};

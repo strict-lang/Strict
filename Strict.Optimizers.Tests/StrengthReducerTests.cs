@@ -5,18 +5,15 @@ using Return = Strict.Runtime.Statements.Return;
 
 namespace Strict.Optimizers.Tests;
 
-public sealed class StrengthReducerTests
+public sealed class StrengthReducerTests : TestOptimizers
 {
-	private static readonly Type NumberType = TestPackage.Instance.GetType(Type.Number);
-	private static ValueInstance Number(double value) => new(NumberType, value);
-
 	[Test]
 	public void MultiplyByOneBecomesLoad()
 	{
 		var statements = new List<Statement>
 		{
 			new LoadVariableToRegister(Register.R0, "x"),
-			new LoadConstantStatement(Register.R1, Number(1)),
+			new LoadConstantStatement(Register.R1, Num(1)),
 			new Binary(Instruction.Multiply, Register.R0, Register.R1, Register.R2),
 			new Return(Register.R2)
 		};
@@ -31,7 +28,7 @@ public sealed class StrengthReducerTests
 	{
 		var statements = new List<Statement>
 		{
-			new LoadConstantStatement(Register.R0, Number(1)),
+			new LoadConstantStatement(Register.R0, Num(1)),
 			new LoadVariableToRegister(Register.R1, "x"),
 			new Binary(Instruction.Multiply, Register.R0, Register.R1, Register.R2),
 			new Return(Register.R2)
@@ -48,7 +45,7 @@ public sealed class StrengthReducerTests
 		var statements = new List<Statement>
 		{
 			new LoadVariableToRegister(Register.R0, "x"),
-			new LoadConstantStatement(Register.R1, Number(0)),
+			new LoadConstantStatement(Register.R1, Num(0)),
 			new Binary(Instruction.Multiply, Register.R0, Register.R1, Register.R2),
 			new Return(Register.R2)
 		};
@@ -64,7 +61,7 @@ public sealed class StrengthReducerTests
 		var statements = new List<Statement>
 		{
 			new LoadVariableToRegister(Register.R0, "x"),
-			new LoadConstantStatement(Register.R1, Number(0)),
+			new LoadConstantStatement(Register.R1, Num(0)),
 			new Binary(Instruction.Add, Register.R0, Register.R1, Register.R2),
 			new Return(Register.R2)
 		};
@@ -80,7 +77,7 @@ public sealed class StrengthReducerTests
 		var statements = new List<Statement>
 		{
 			new LoadVariableToRegister(Register.R0, "x"),
-			new LoadConstantStatement(Register.R1, Number(0)),
+			new LoadConstantStatement(Register.R1, Num(0)),
 			new Binary(Instruction.Subtract, Register.R0, Register.R1, Register.R2),
 			new Return(Register.R2)
 		};
@@ -95,7 +92,7 @@ public sealed class StrengthReducerTests
 		var statements = new List<Statement>
 		{
 			new LoadVariableToRegister(Register.R0, "x"),
-			new LoadConstantStatement(Register.R1, Number(1)),
+			new LoadConstantStatement(Register.R1, Num(1)),
 			new Binary(Instruction.Divide, Register.R0, Register.R1, Register.R2),
 			new Return(Register.R2)
 		};
@@ -110,7 +107,7 @@ public sealed class StrengthReducerTests
 		var statements = new List<Statement>
 		{
 			new LoadVariableToRegister(Register.R0, "x"),
-			new LoadConstantStatement(Register.R1, Number(5)),
+			new LoadConstantStatement(Register.R1, Num(5)),
 			new Binary(Instruction.Multiply, Register.R0, Register.R1, Register.R2),
 			new Return(Register.R2)
 		};
@@ -131,7 +128,7 @@ public sealed class StrengthReducerTests
 	{
 		var statements = new List<Statement>
 		{
-			new LoadConstantStatement(Register.R0, Number(0)),
+			new LoadConstantStatement(Register.R0, Num(0)),
 			new LoadVariableToRegister(Register.R1, "x"),
 			new Binary(Instruction.Multiply, Register.R0, Register.R1, Register.R2),
 			new Return(Register.R2)
@@ -146,7 +143,7 @@ public sealed class StrengthReducerTests
 	{
 		var statements = new List<Statement>
 		{
-			new LoadConstantStatement(Register.R0, Number(0)),
+			new LoadConstantStatement(Register.R0, Num(0)),
 			new LoadVariableToRegister(Register.R1, "x"),
 			new Binary(Instruction.Add, Register.R0, Register.R1, Register.R2),
 			new Return(Register.R2)

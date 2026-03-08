@@ -5,19 +5,15 @@ using Return = Strict.Runtime.Statements.Return;
 
 namespace Strict.Optimizers.Tests;
 
-public sealed class JumpThreadingOptimizerTests
+public sealed class JumpThreadingOptimizerTests : TestOptimizers
 {
-	private static readonly Type NumberType = TestPackage.Instance.GetType(Type.Number);
-	private static readonly Type BooleanType = TestPackage.Instance.GetType(Type.Boolean);
-	private static ValueInstance Number(double value) => new(NumberType, value);
-
 	[Test]
 	public void RemoveEmptyConditionalBlock()
 	{
 		var statements = new List<Statement>
 		{
-			new LoadConstantStatement(Register.R0, Number(5)),
-			new LoadConstantStatement(Register.R1, Number(5)),
+			new LoadConstantStatement(Register.R0, Num(5)),
+			new LoadConstantStatement(Register.R1, Num(5)),
 			new Binary(Instruction.Equal, Register.R0, Register.R1),
 			new JumpToId(Instruction.JumpToIdIfFalse, 0),
 			new JumpToId(Instruction.JumpEnd, 0),
@@ -32,14 +28,14 @@ public sealed class JumpThreadingOptimizerTests
 	{
 		var statements = new List<Statement>
 		{
-			new LoadConstantStatement(Register.R0, Number(5)),
-			new LoadConstantStatement(Register.R1, Number(5)),
+			new LoadConstantStatement(Register.R0, Num(5)),
+			new LoadConstantStatement(Register.R1, Num(5)),
 			new Binary(Instruction.Equal, Register.R0, Register.R1),
 			new JumpToId(Instruction.JumpToIdIfFalse, 0),
-			new LoadConstantStatement(Register.R2, Number(10)),
+			new LoadConstantStatement(Register.R2, Num(10)),
 			new Return(Register.R2),
 			new JumpToId(Instruction.JumpEnd, 0),
-			new LoadConstantStatement(Register.R3, Number(20)),
+			new LoadConstantStatement(Register.R3, Num(20)),
 			new Return(Register.R3)
 		};
 		var optimized = new JumpThreadingOptimizer().Optimize(statements);

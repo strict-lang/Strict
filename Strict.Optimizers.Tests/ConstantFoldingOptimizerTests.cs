@@ -6,19 +6,15 @@ using Return = Strict.Runtime.Statements.Return;
 
 namespace Strict.Optimizers.Tests;
 
-public sealed class ConstantFoldingOptimizerTests
+public sealed class ConstantFoldingOptimizerTests : TestOptimizers
 {
-	private static readonly Type NumberType = TestPackage.Instance.GetType(Type.Number);
-	private static ValueInstance Number(double value) => new(NumberType, value);
-	private static ValueInstance Text(string value) => new(value);
-
 	[Test]
 	public void FoldAdditionOfTwoConstants()
 	{
 		var statements = new List<Statement>
 		{
-			new LoadConstantStatement(Register.R0, Number(5)),
-			new LoadConstantStatement(Register.R1, Number(3)),
+			new LoadConstantStatement(Register.R0, Num(5)),
+			new LoadConstantStatement(Register.R1, Num(3)),
 			new Binary(Instruction.Add, Register.R0, Register.R1, Register.R2),
 			new Return(Register.R2)
 		};
@@ -34,8 +30,8 @@ public sealed class ConstantFoldingOptimizerTests
 	{
 		var statements = new List<Statement>
 		{
-			new LoadConstantStatement(Register.R0, Number(10)),
-			new LoadConstantStatement(Register.R1, Number(3)),
+			new LoadConstantStatement(Register.R0, Num(10)),
+			new LoadConstantStatement(Register.R1, Num(3)),
 			new Binary(Instruction.Subtract, Register.R0, Register.R1, Register.R2),
 			new Return(Register.R2)
 		};
@@ -49,8 +45,8 @@ public sealed class ConstantFoldingOptimizerTests
 	{
 		var statements = new List<Statement>
 		{
-			new LoadConstantStatement(Register.R0, Number(4)),
-			new LoadConstantStatement(Register.R1, Number(3)),
+			new LoadConstantStatement(Register.R0, Num(4)),
+			new LoadConstantStatement(Register.R1, Num(3)),
 			new Binary(Instruction.Multiply, Register.R0, Register.R1, Register.R2),
 			new Return(Register.R2)
 		};
@@ -64,8 +60,8 @@ public sealed class ConstantFoldingOptimizerTests
 	{
 		var statements = new List<Statement>
 		{
-			new LoadConstantStatement(Register.R0, Number(10)),
-			new LoadConstantStatement(Register.R1, Number(2)),
+			new LoadConstantStatement(Register.R0, Num(10)),
+			new LoadConstantStatement(Register.R1, Num(2)),
 			new Binary(Instruction.Divide, Register.R0, Register.R1, Register.R2),
 			new Return(Register.R2)
 		};
@@ -79,8 +75,8 @@ public sealed class ConstantFoldingOptimizerTests
 	{
 		var statements = new List<Statement>
 		{
-			new LoadConstantStatement(Register.R0, Number(7)),
-			new LoadConstantStatement(Register.R1, Number(3)),
+			new LoadConstantStatement(Register.R0, Num(7)),
+			new LoadConstantStatement(Register.R1, Num(3)),
 			new Binary(Instruction.Modulo, Register.R0, Register.R1, Register.R2),
 			new Return(Register.R2)
 		};
@@ -94,8 +90,8 @@ public sealed class ConstantFoldingOptimizerTests
 	{
 		var statements = new List<Statement>
 		{
-			new LoadConstantStatement(Register.R0, Text("Hello")),
-			new LoadConstantStatement(Register.R1, Text(" World")),
+			new LoadConstantStatement(Register.R0, new("Hello")),
+			new LoadConstantStatement(Register.R1, new(" World")),
 			new Binary(Instruction.Add, Register.R0, Register.R1, Register.R2),
 			new Return(Register.R2)
 		};
@@ -110,7 +106,7 @@ public sealed class ConstantFoldingOptimizerTests
 		var statements = new List<Statement>
 		{
 			new LoadVariableToRegister(Register.R0, "x"),
-			new LoadConstantStatement(Register.R1, Number(3)),
+			new LoadConstantStatement(Register.R1, Num(3)),
 			new Binary(Instruction.Add, Register.R0, Register.R1, Register.R2),
 			new Return(Register.R2)
 		};
@@ -123,8 +119,8 @@ public sealed class ConstantFoldingOptimizerTests
 	{
 		var statements = new List<Statement>
 		{
-			new LoadConstantStatement(Register.R0, Number(5)),
-			new LoadConstantStatement(Register.R1, Number(5)),
+			new LoadConstantStatement(Register.R0, Num(5)),
+			new LoadConstantStatement(Register.R1, Num(5)),
 			new Binary(Instruction.Equal, Register.R0, Register.R1),
 			new Return(Register.R0)
 		};
@@ -137,10 +133,10 @@ public sealed class ConstantFoldingOptimizerTests
 	{
 		var statements = new List<Statement>
 		{
-			new LoadConstantStatement(Register.R0, Number(2)),
-			new LoadConstantStatement(Register.R1, Number(3)),
+			new LoadConstantStatement(Register.R0, Num(2)),
+			new LoadConstantStatement(Register.R1, Num(3)),
 			new Binary(Instruction.Add, Register.R0, Register.R1, Register.R2),
-			new LoadConstantStatement(Register.R3, Number(4)),
+			new LoadConstantStatement(Register.R3, Num(4)),
 			new Binary(Instruction.Multiply, Register.R2, Register.R3, Register.R4),
 			new Return(Register.R4)
 		};
@@ -154,7 +150,7 @@ public sealed class ConstantFoldingOptimizerTests
 	{
 		var statements = new List<Statement>
 		{
-			new StoreVariableStatement(Number(5), "x"),
+			new StoreVariableStatement(Num(5), "x"),
 			new LoadVariableToRegister(Register.R0, "x"),
 			new Return(Register.R0)
 		};
