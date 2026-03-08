@@ -7,12 +7,7 @@ namespace Strict.Optimizers;
 
 /// <summary>
 /// Removes passed test assertion patterns from bytecode. In Strict, every method starts with
-/// self-contained tests that are "executed once; passing expressions become true and are pruned"
-/// (README). A passed test typically generates:
-///   LoadConstant result, LoadConstant expected, Equal, JumpToIdIfFalse(id), JumpEnd(id)
-/// When both constants match (the test passed), the entire block is provably dead and removed.
-/// Only removes the pattern when: both operands are constants, they are equal, the conditional
-/// block is empty (JumpToIdIfFalse immediately followed by its matching JumpEnd).
+/// self-contained tests that are executed once; passing expressions become true and are pruned
 /// </summary>
 public sealed class TestCodeRemover : StatementOptimizer
 {

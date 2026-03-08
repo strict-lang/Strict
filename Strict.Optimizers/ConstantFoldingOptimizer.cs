@@ -74,11 +74,12 @@ public sealed class ConstantFoldingOptimizer : StatementOptimizer
 		ValueInstance right) =>
 		operation switch
 		{
-			Instruction.Add when left.IsText || right.IsText => new ValueInstance(
-				(left.IsText ? left.Text : left.ToExpressionCodeString()) +
-				(right.IsText ? right.Text : right.ToExpressionCodeString())),
-			Instruction.Add => new ValueInstance(left.GetTypeExceptText(),
-				left.Number + right.Number),
+			Instruction.Add when left.IsText || right.IsText => new ValueInstance((left.IsText
+				? left.Text
+				: left.ToExpressionCodeString()) + (right.IsText
+				? right.Text
+				: right.ToExpressionCodeString())),
+			Instruction.Add => new ValueInstance(left.GetTypeExceptText(), left.Number + right.Number),
 			Instruction.Subtract => new ValueInstance(left.GetTypeExceptText(),
 				left.Number - right.Number),
 			Instruction.Multiply => new ValueInstance(left.GetTypeExceptText(),

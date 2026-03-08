@@ -1,4 +1,3 @@
-using Strict.Runtime;
 using Strict.Runtime.Statements;
 
 namespace Strict.Optimizers;

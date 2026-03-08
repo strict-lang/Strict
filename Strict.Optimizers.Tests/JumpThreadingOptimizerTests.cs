@@ -1,4 +1,3 @@
-using Strict.Expressions;
 using Strict.Runtime.Statements;
 using Binary = Strict.Runtime.Statements.Binary;
 using Return = Strict.Runtime.Statements.Return;
@@ -8,26 +7,22 @@ namespace Strict.Optimizers.Tests;
 public sealed class JumpThreadingOptimizerTests : TestOptimizers
 {
 	[Test]
-	public void RemoveEmptyConditionalBlock()
-	{
-		var statements = new List<Statement>
-		{
+	public void RemoveEmptyConditionalBlock() =>
+		Assert.That(Optimize([
 			new LoadConstantStatement(Register.R0, Num(5)),
 			new LoadConstantStatement(Register.R1, Num(5)),
 			new Binary(Instruction.Equal, Register.R0, Register.R1),
 			new JumpToId(Instruction.JumpToIdIfFalse, 0),
 			new JumpToId(Instruction.JumpEnd, 0),
 			new Return(Register.R0)
-		};
-		var optimized = new JumpThreadingOptimizer().Optimize(statements);
-		Assert.That(optimized.Count(s => s is JumpToId), Is.EqualTo(0));
-	}
+		], 3).Count(s => s is JumpToId), Is.EqualTo(0));
+
+	private List<Statement> Optimize(List<Statement> statements, int expectedCount) =>
+		Optimize(new JumpThreadingOptimizer(), statements, expectedCount);
 
 	[Test]
-	public void KeepNonEmptyConditionalBlock()
-	{
-		var statements = new List<Statement>
-		{
+	public void KeepNonEmptyConditionalBlock() =>
+		Optimize([
 			new LoadConstantStatement(Register.R0, Num(5)),
 			new LoadConstantStatement(Register.R1, Num(5)),
 			new Binary(Instruction.Equal, Register.R0, Register.R1),
@@ -37,16 +32,11 @@ public sealed class JumpThreadingOptimizerTests : TestOptimizers
 			new JumpToId(Instruction.JumpEnd, 0),
 			new LoadConstantStatement(Register.R3, Num(20)),
 			new Return(Register.R3)
-		};
-		var optimized = new JumpThreadingOptimizer().Optimize(statements);
-		Assert.That(optimized, Has.Count.EqualTo(9));
-	}
+		], 9);
 
 	[Test]
-	public void RemoveMultipleEmptyConditionalBlocks()
-	{
-		var statements = new List<Statement>
-		{
+	public void RemoveMultipleEmptyConditionalBlocks() =>
+		Assert.That(Optimize([
 			new Binary(Instruction.Equal, Register.R0, Register.R1),
 			new JumpToId(Instruction.JumpToIdIfFalse, 0),
 			new JumpToId(Instruction.JumpEnd, 0),
@@ -54,16 +44,8 @@ public sealed class JumpThreadingOptimizerTests : TestOptimizers
 			new JumpToId(Instruction.JumpToIdIfFalse, 1),
 			new JumpToId(Instruction.JumpEnd, 1),
 			new Return(Register.R0)
-		};
-		var optimized = new JumpThreadingOptimizer().Optimize(statements);
-		Assert.That(optimized.Count(s => s is JumpToId), Is.EqualTo(0));
-	}
+		], 1).Count(s => s is JumpToId), Is.EqualTo(0));
 
 	[Test]
-	public void HandleEmptyStatementList()
-	{
-		var statements = new List<Statement>();
-		var optimized = new JumpThreadingOptimizer().Optimize(statements);
-		Assert.That(optimized, Is.Empty);
-	}
+	public void HandleEmptyStatementList() => Optimize([], 0);
 }

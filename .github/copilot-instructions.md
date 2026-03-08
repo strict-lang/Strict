@@ -229,7 +229,7 @@ Tests written after code pass immediately. Passing immediately proves nothing:
 - Might test wrong thing
 - Might test implementation, not behavior
 - Might miss edge cases you forgot
-- You never saw it catch the bug
+- "It worked when I tried it" ≠ comprehensive
 
 Test-first forces you to see the test fail, proving it actually tests something.
 
@@ -390,3 +390,4 @@ No exceptions without your human partner's permission.
 ## Code Style
 - No empty lines are allowed inside methods.
 - Avoid adding `ArgumentNullException.ThrowIfNull`/debug asserts.
+- In tests, prefer inlining `var` locals where possible and using expression-bodied tests/helpers when they stay readable; avoid unused helper overloads.

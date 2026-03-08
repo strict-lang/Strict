@@ -31,12 +31,18 @@ public sealed class StrengthReducer : StatementOptimizer
 			var rightIsConst = statements[rightIndex] is LoadConstantStatement;
 			if (!leftIsConst && !rightIsConst)
 				continue;
-			var leftValue = leftIsConst ? ((LoadConstantStatement)statements[leftIndex]).ValueInstance : (ValueInstance?)null;
-			var rightValue = rightIsConst ? ((LoadConstantStatement)statements[rightIndex]).ValueInstance : (ValueInstance?)null;
-			if (TryReduceMultiplyByZero(statements, i, binary, leftIndex, rightIndex, leftValue, rightValue))
-				{ i = Math.Max(1, i - 2); continue; }
-			if (TryReduceIdentity(statements, i, binary, leftIndex, rightIndex, leftValue, rightValue))
-				{ i = Math.Max(1, i - 2); continue; }
+			var leftValue = leftIsConst
+				? ((LoadConstantStatement)statements[leftIndex]).ValueInstance
+				: (ValueInstance?)null;
+			var rightValue = rightIsConst
+				? ((LoadConstantStatement)statements[rightIndex]).ValueInstance
+				: (ValueInstance?)null;
+			if (TryReduceMultiplyByZero(statements, i, binary, leftIndex, rightIndex, leftValue,
+				rightValue))
+				i = Math.Max(1, i - 2);
+			else if (TryReduceIdentity(statements, i, binary, leftIndex, rightIndex, leftValue,
+				rightValue))
+				i = Math.Max(1, i - 2);
 		}
 		return statements;
 	}
@@ -52,7 +58,8 @@ public sealed class StrengthReducer : StatementOptimizer
 		if (!isLeftZero && !isRightZero)
 			return false;
 		var resultRegister = binary.Registers[2];
-		var zeroConst = isLeftZero ? (LoadConstantStatement)statements[leftIndex]
+		var zeroConst = isLeftZero
+			? (LoadConstantStatement)statements[leftIndex]
 			: (LoadConstantStatement)statements[rightIndex];
 		statements[binaryIndex] = new LoadConstantStatement(resultRegister, zeroConst.ValueInstance);
 		RemoveIndicesDescending(statements, leftIndex, rightIndex);
@@ -67,15 +74,18 @@ public sealed class StrengthReducer : StatementOptimizer
 		if (identitySide == IdentitySide.None)
 			return false;
 		var resultRegister = binary.Registers[2];
-		var keepIndex = identitySide == IdentitySide.Left ? rightIndex : leftIndex;
-		var removeIndex = identitySide == IdentitySide.Left ? leftIndex : rightIndex;
+		var keepIndex = identitySide == IdentitySide.Left
+			? rightIndex
+			: leftIndex;
+		var removeIndex = identitySide == IdentitySide.Left
+			? leftIndex
+			: rightIndex;
 		RewriteRegister(statements, keepIndex, resultRegister);
 		RemoveIndicesDescending(statements, binaryIndex, removeIndex);
 		return true;
 	}
 
-	private static void RewriteRegister(List<Statement> statements, int index,
-		Register newRegister)
+	private static void RewriteRegister(List<Statement> statements, int index, Register newRegister)
 	{
 		var statement = statements[index];
 		statements[index] = statement switch
@@ -99,14 +109,12 @@ public sealed class StrengthReducer : StatementOptimizer
 		instruction is > Instruction.StoreSeparator and < Instruction.ArithmeticSeparator;
 
 	private static IdentitySide GetIdentitySide(Instruction instruction, ValueInstance? leftValue,
-		ValueInstance? rightValue)
-	{
-		if (IsIdentityValue(instruction, leftValue))
-			return IdentitySide.Left;
-		if (IsIdentityValue(instruction, rightValue))
-			return IdentitySide.Right;
-		return IdentitySide.None;
-	}
+		ValueInstance? rightValue) =>
+		IsIdentityValue(instruction, leftValue)
+			? IdentitySide.Left
+			: IsIdentityValue(instruction, rightValue)
+				? IdentitySide.Right
+				: IdentitySide.None;
 
 	private static bool IsIdentityValue(Instruction instruction, ValueInstance? value)
 	{
@@ -132,5 +140,10 @@ public sealed class StrengthReducer : StatementOptimizer
 		return -1; //ncrunch: no coverage
 	}
 
-	private enum IdentitySide { None, Left, Right }
+	private enum IdentitySide
+	{
+		None,
+		Left,
+		Right
+	}
 }

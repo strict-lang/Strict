@@ -28,7 +28,7 @@ public sealed class JumpThreadingOptimizer : StatementOptimizer
 					continue;
 				statements.RemoveAt(i + 1);
 				statements.RemoveAt(i);
-				if (i > 0 && statements[i - 1] is Binary { } binary && binary.IsConditional())
+				if (i > 0 && statements[i - 1] is Binary binary && binary.IsConditional())
 					statements.RemoveAt(--i);
 				changed = true;
 				i = Math.Max(0, i - 1);
