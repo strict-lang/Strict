@@ -24,7 +24,8 @@ public sealed class ConstantFoldingOptimizer : StatementOptimizer
 				if (!TryFoldAt(statements, i))
 					continue;
 				changed = true;
-				i--;
+				// After folding, the replacement shifts down so recheck from the new position
+				i = Math.Max(1, i - 2);
 			}
 		} while (changed);
 		return statements;
@@ -38,28 +39,32 @@ public sealed class ConstantFoldingOptimizer : StatementOptimizer
 		var leftRegister = binary.Registers[0];
 		var rightRegister = binary.Registers[1];
 		var resultRegister = binary.Registers[2];
-		var leftLoad = FindLoadConstant(statements, binaryIndex, leftRegister);
-		var rightLoad = FindLoadConstant(statements, binaryIndex, rightRegister);
-		if (leftLoad == null || rightLoad == null)
+		var leftIndex = FindLoadConstantIndex(statements, binaryIndex, leftRegister);
+		var rightIndex = FindLoadConstantIndex(statements, binaryIndex, rightRegister);
+		if (leftIndex < 0 || rightIndex < 0)
 			return false;
+		var leftLoad = (LoadConstantStatement)statements[leftIndex];
+		var rightLoad = (LoadConstantStatement)statements[rightIndex];
 		var result = ComputeResult(binary.Instruction, leftLoad.ValueInstance,
 			rightLoad.ValueInstance);
 		if (result == null)
 			return false;
-		var foldedStatement = new LoadConstantStatement(resultRegister, result.Value);
-		statements[binaryIndex] = foldedStatement;
-		statements.Remove(leftLoad);
-		statements.Remove(rightLoad);
+		statements[binaryIndex] = new LoadConstantStatement(resultRegister, result.Value);
+		// Remove in descending index order to preserve positions
+		var first = Math.Max(leftIndex, rightIndex);
+		var second = Math.Min(leftIndex, rightIndex);
+		statements.RemoveAt(first);
+		statements.RemoveAt(second);
 		return true;
 	}
 
-	private static LoadConstantStatement? FindLoadConstant(List<Statement> statements,
-		int beforeIndex, Register register)
+	private static int FindLoadConstantIndex(List<Statement> statements, int beforeIndex,
+		Register register)
 	{
 		for (var i = beforeIndex - 1; i >= 0; i--)
 			if (statements[i] is LoadConstantStatement load && load.Register == register)
-				return load;
-		return null;
+				return i;
+		return -1;
 	}
 
 	private static bool IsArithmetic(Instruction instruction) =>
