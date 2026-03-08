@@ -132,4 +132,87 @@ public sealed class InstructionOptimizerTests
 		var optimized = new InstructionOptimizer().Optimize(statements);
 		Assert.That(optimized, Is.Empty);
 	}
+
+	[Test]
+	public void PipelineRemovesPassedTestsThenFoldsConstants()
+	{
+		// Test assertion (5 is 5) followed by constant arithmetic (2 + 3)
+		var statements = new List<Statement>
+		{
+			new LoadConstantStatement(Register.R0, Number(5)),
+			new LoadConstantStatement(Register.R1, Number(5)),
+			new Binary(Instruction.Equal, Register.R0, Register.R1),
+			new JumpToId(Instruction.JumpToIdIfFalse, 0),
+			new JumpToId(Instruction.JumpEnd, 0),
+			new LoadConstantStatement(Register.R2, Number(2)),
+			new LoadConstantStatement(Register.R3, Number(3)),
+			new Binary(Instruction.Add, Register.R2, Register.R3, Register.R4),
+			new Return(Register.R4)
+		};
+		var optimized = new InstructionOptimizer().Optimize(statements);
+		Assert.That(optimized, Has.Count.EqualTo(2));
+		Assert.That(((LoadConstantStatement)optimized[0]).ValueInstance.Number, Is.EqualTo(5));
+	}
+
+	[Test]
+	public void PipelineReducesStrengthAndEliminatesDeadStores()
+	{
+		// unused store + x * 1 (identity)
+		var statements = new List<Statement>
+		{
+			new StoreVariableStatement(Number(42), "unused"),
+			new LoadVariableToRegister(Register.R0, "x"),
+			new LoadConstantStatement(Register.R1, Number(1)),
+			new Binary(Instruction.Multiply, Register.R0, Register.R1, Register.R2),
+			new Return(Register.R2)
+		};
+		var originalCount = statements.Count;
+		var optimized = new InstructionOptimizer().Optimize(statements);
+		Assert.That(optimized.Count, Is.LessThan(originalCount));
+		Assert.That(optimized.Any(s => s is LoadVariableToRegister));
+		Assert.That(optimized[^1], Is.InstanceOf<Return>());
+	}
+
+	[Test]
+	public void PipelineRemovesUnreachableCodeAfterFolding()
+	{
+		// After constant folding: LoadConst 8, Return, then some dead code
+		var statements = new List<Statement>
+		{
+			new LoadConstantStatement(Register.R0, Number(5)),
+			new LoadConstantStatement(Register.R1, Number(3)),
+			new Binary(Instruction.Add, Register.R0, Register.R1, Register.R2),
+			new Return(Register.R2),
+			new LoadConstantStatement(Register.R3, Number(999)),
+			new Return(Register.R3)
+		};
+		var optimized = new InstructionOptimizer().Optimize(statements);
+		Assert.That(optimized, Has.Count.EqualTo(2));
+		Assert.That(((LoadConstantStatement)optimized[0]).ValueInstance.Number, Is.EqualTo(8));
+	}
+
+	[Test]
+	public void PipelineHandlesComplexMethodWithTestsAndIdentity()
+	{
+		// Full Strict method pattern: test assertion + identity operation + return
+		var statements = new List<Statement>
+		{
+			// Test: 10 is 10 (passed test, should be removed)
+			new LoadConstantStatement(Register.R0, Number(10)),
+			new LoadConstantStatement(Register.R1, Number(10)),
+			new Binary(Instruction.Equal, Register.R0, Register.R1),
+			new JumpToId(Instruction.JumpToIdIfFalse, 0),
+			new JumpToId(Instruction.JumpEnd, 0),
+			// Real code: x + 0 (identity, should reduce to just x)
+			new StoreVariableStatement(Number(5), "x"),
+			new LoadVariableToRegister(Register.R2, "x"),
+			new LoadConstantStatement(Register.R3, Number(0)),
+			new Binary(Instruction.Add, Register.R2, Register.R3, Register.R4),
+			new Return(Register.R4)
+		};
+		var originalCount = statements.Count;
+		var optimized = new InstructionOptimizer().Optimize(statements);
+		Assert.That(optimized.Count, Is.LessThan(originalCount));
+		Assert.That(optimized[^1], Is.InstanceOf<Return>());
+	}
 }
