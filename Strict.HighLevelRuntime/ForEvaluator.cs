@@ -74,8 +74,8 @@ internal sealed class ForEvaluator(Executor executor)
 		var indexInstance = new ValueInstance(executor.numberType, index);
 		loop.Set(Type.IndexLowercase, indexInstance);
 		var value = iterator.IsPrimitiveType(executor.numberType) || isRangeIterator
-				? indexInstance
-				: iterator.GetIteratorValue(itemType, index);
+			? indexInstance
+			: iterator.GetIteratorValue(itemType, index);
 		loop.Set(Type.ValueLowercase, value);
 		foreach (var customVariable in f.CustomVariables)
 			if (customVariable is VariableCall variableCall)

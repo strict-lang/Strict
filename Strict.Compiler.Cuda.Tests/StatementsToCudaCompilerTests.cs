@@ -49,10 +49,7 @@ public sealed class StatementsToCudaCompilerTests
 		Assert.That(cuda, Does.Contain("int idx = y * blockDim.x + x"));
 	}
 
-	private static Method CreateSingleMethod(string typeName, params string[] methodLines)
-	{
-		var type = new Type(TestPackage.Instance, new TypeLines(typeName, methodLines))
-			.ParseMembersAndMethods(new MethodExpressionParser());
-		return type.Methods[0];
-	}
+	private static Method CreateSingleMethod(string typeName, params string[] methodLines) =>
+		new Type(TestPackage.Instance, new TypeLines(typeName, methodLines)).
+			ParseMembersAndMethods(new MethodExpressionParser()).Methods[0];
 }

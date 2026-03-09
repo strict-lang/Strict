@@ -1,4 +1,3 @@
-﻿using System.IO;
 using Strict.Language;
 using Strict.Expressions;
 using Type = Strict.Language.Type;
@@ -13,8 +12,8 @@ public class CSharpToCudaTranspiler(Package strictBase) : IDisposable
 	public string Convert(string filePath)
 	{
 		var type = ParseCSharp(filePath);
-		return GenerateCuda(type);
-	}
+		return GenerateCuda(type); //ncrunch: no coverage, no tests for this, calls GenerateCuda directly
+	} //ncrunch: no coverage
 
 	public static string GenerateCuda(Type type) =>
 		new StatementsToCudaCompiler().Compile(type.Methods[0]);
@@ -25,7 +24,6 @@ public class CSharpToCudaTranspiler(Package strictBase) : IDisposable
 			: new CSharpType(package, filePath);
 
 	public class InvalidCode : Exception;
-
 	public void Dispose() => package.Dispose();
 }
 
@@ -57,11 +55,9 @@ public class CSharpType : Type
 		: this(strictPackage, ExtractMethodInfo(filePath)) { }
 
 	private CSharpType(Package strictPackage, (string typeName, string methodLine, string bodyLine) info)
-		: base(strictPackage, new TypeLines(info.typeName, info.methodLine))
-	{
+		: base(strictPackage, new TypeLines(info.typeName, info.methodLine)) =>
 		methods.Add(new Method(this, 0, new CSharpExpressionParser(),
 			[info.methodLine, "\t" + info.bodyLine]));
-	}
 
 	private static (string typeName, string methodLine, string bodyLine) ExtractMethodInfo(string filePath)
 	{
@@ -74,7 +70,8 @@ public class CSharpType : Type
 		{
 			if (IsIgnoredOrEmptyText(line, typeName))
 				continue;
-			if (line.StartsWith("\t\treturn", StringComparison.Ordinal) || line.StartsWith("\t\t\t", StringComparison.Ordinal))
+			if (line.StartsWith("\t\treturn", StringComparison.Ordinal) ||
+				line.StartsWith("\t\t\t", StringComparison.Ordinal))
 			{
 				var value = line.Trim().Replace(";", "");
 				if (value.StartsWith("return ", StringComparison.Ordinal))
@@ -92,9 +89,9 @@ public class CSharpType : Type
 				AddMethodParameters(parts, parameters);
 			}
 		}
-		if (returnStatement == "")
-			throw new MissingReturnStatement();
-		return (typeName, methodName + parameters.ToBrackets() + returnType, returnStatement);
+		return returnStatement == ""
+			? throw new MissingReturnStatement()
+			: (typeName, methodName + parameters.ToBrackets() + returnType, returnStatement);
 	}
 
 	private static bool IsIgnoredOrEmptyText(string line, string typeName) =>
@@ -110,10 +107,10 @@ public class CSharpType : Type
 		for (var index = 3; index < parts.Count; index += 2)
 			if (parts[index] == "DepthImage")
 				parameters.AddRange([
-					"input Number", "Width Number", "Height Number", "initialDepth Number"
+					"input Number", "width Number", "height Number", "initialDepth Number"
 				]);
 			else if (parts[index] != "float")
-				throw new NotSupportedException(parts[index + 1]);
+				throw new NotSupportedException(parts[index + 1]); //ncrunch: no coverage
 			else
 				parameters.Add(parts[index + 1] + " Number");
 	}

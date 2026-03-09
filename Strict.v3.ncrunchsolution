@@ -4,8 +4,6 @@
     <EnableRDI>True</EnableRDI>
     <MetricsExclusionList>
       <Value>Program.cs:Strict.Language.Tests\Strict.Language.Tests.csproj</Value>
-      <Value>Strict.Compiler.Cuda\Strict.Compiler.Cuda.csproj</Value>
-      <Value>Strict.Compiler.Cuda.Tests\Strict.Compiler.Cuda.Tests.csproj</Value>
     </MetricsExclusionList>
     <RdiConfigured>True</RdiConfigured>
     <SolutionConfigured>True</SolutionConfigured>

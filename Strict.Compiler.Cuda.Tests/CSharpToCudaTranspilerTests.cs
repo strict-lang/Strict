@@ -1,14 +1,12 @@
-﻿using ManagedCuda;
+using ManagedCuda;
 using ManagedCuda.NVRTC;
 using NUnit.Framework;
-using Strict.Language;
 using Strict.Language.Tests;
-using Strict.Expressions;
 using Type = Strict.Language.Type;
 
 namespace Strict.Compiler.Cuda.Tests;
 
-public class CSharpToCudaTranspilerTests
+public sealed class CSharpToCudaTranspilerTests
 {
 	[SetUp]
 	public void CreateTranspiler() =>
@@ -45,7 +43,21 @@ public class CSharpToCudaTranspilerTests
 	private Type GetParsedCSharpType(string fileName) =>
 		transpiler.ParseCSharp(Path.Combine("..", "..", "..", "Input", fileName + ".cs"));
 
-	private static CudaDeviceVariable<float> CreateAndRunKernel(CudaRuntimeCompiler rtc, string methodName)
+	[TestCase(AddNumbers, 3)]
+	[TestCase(SubtractNumbers, -1)]
+	[TestCase(MultiplyNumbers, 2)]
+	[TestCase(InitializeDepths, 5)]
+	public void ParseGenerateCudaAndExecute(string fileName, int expectedNumber)
+	{
+		var type = GetParsedCSharpType(fileName);
+		var cuda = CSharpToCudaTranspiler.GenerateCuda(type);
+		var rtc = CompileKernelAndSaveAsPtxFile(cuda, type.Name);
+		var output = CreateAndRunKernel(rtc, type.Methods[0].Name);
+		Assert.That(output[0], Is.EqualTo(expectedNumber));
+	}
+
+	private static CudaDeviceVariable<float> CreateAndRunKernel(CudaRuntimeCompiler rtc,
+		string methodName)
 	{
 		var context = new CudaContext(0);
 		const int Count = 1;
@@ -83,21 +95,6 @@ public class CSharpToCudaTranspilerTests
 		//nvcc .\vectorAdd.cu -use_fast_math -ptx -m 64 -arch compute_61 -code sm_61 -o .\vectorAdd.ptx
 		rtc.Compile(["--gpu-architecture=compute_75"]);
 		return rtc;
-	}
-
-	[Category("Slow")]
-	[Ignore("Requires GPU hardware and CUDA drivers")]
-	[TestCase(AddNumbers, 3)]
-	[TestCase(SubtractNumbers, -1)]
-	[TestCase(MultiplyNumbers, 2)]
-	[TestCase(InitializeDepths, 5)]
-	public void ParseGenerateCudaAndExecute(string fileName, int expectedNumber)
-	{
-		var type = GetParsedCSharpType(fileName);
-		var cuda = CSharpToCudaTranspiler.GenerateCuda(type);
-		var rtc = CompileKernelAndSaveAsPtxFile(cuda, type.Name);
-		var output = CreateAndRunKernel(rtc, type.Methods[0].Name);
-		Assert.That(output[0], Is.EqualTo(expectedNumber));
 	}
 
 	private const string AddNumbers = nameof(AddNumbers);

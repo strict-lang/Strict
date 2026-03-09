@@ -408,6 +408,6 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 			: ((Type)other.value).IsSameOrCanBeUsedAs((Type)value);
 	}
 
-	public static int ComplexEqualsCalls = 0;
+	public static int ComplexEqualsCalls;
 	public override int GetHashCode() => HashCode.Combine(number, value);
 }

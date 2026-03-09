@@ -15,6 +15,18 @@
 - The AdderProgram implementation must be written in Strict, with C# code only used to run it.
 - Keep AdderProgram in the Tests project and use TestPackage (or Strict.Base) for basic types.
 
+## Code Style
+- No empty lines are allowed inside methods.
+- Avoid adding `ArgumentNullException.ThrowIfNull`/debug asserts.
+- Do not add more \[Ignore\( attributes in any Tests project, except in an allowlist file.
+- Do not add SupportedOSPlatform attributes, especially in tests just because you can't do something locally.
+- Do not add ad-hoc hacky cuda kernel code or any code without a proper transpiler or code emitter.
+
+## Tests
+- Do not run Category("Manual") or [Ignore] tests ever, tests with these attributes are either supposed to be manually run or are currently disabled and ignored. If a test is fixed, remove the Ignore attribute and it becomes a normal test again.
+- Tests in the Slow or Nightly category are usually not run every time and can be skipped and ignored. On bigger refactors they should be run, our CI usually runs them on each checkin as they will be slower and we want to keep all tests fast (<10ms)
+- Prefer NCrunch for C# or SCrunch for Strict, all tests should be run all the time (if something changed), it is fine to run tests via `dotnet test` to also include Slow and Nightly tests.
+
 ## Strict Semantics
 - When asked about Strict semantics, derive behavior directly from README.md and Strict/TestPackage examples; re-check cited examples before answering and avoid contradicting them.
 
@@ -386,7 +398,3 @@ Otherwise → not TDD
 ```
 
 No exceptions without your human partner's permission.
-
-## Code Style
-- No empty lines are allowed inside methods.
-- Avoid adding `ArgumentNullException.ThrowIfNull`/debug asserts.

@@ -23,8 +23,10 @@ public sealed class StatementsToCudaCompiler
 	private static List<Statement> GenerateStatements(Method method)
 	{
 		var body = method.GetBodyAndParseIfNeeded();
-		IReadOnlyList<Expression> expressions = body is Body b ? b.Expressions : [body];
-		var arguments = method.Parameters.ToDictionary(p => p.Name, p => new ValueInstance(p.Type, 0.0));
+		var expressions = body is Body b
+			? b.Expressions
+			: [body];
+		var arguments = method.Parameters.ToDictionary(p => p.Name, p => new ValueInstance(p.Type, 0));
 		return new ByteCodeGenerator(new InvokedMethod(expressions, arguments, method.ReturnType),
 			new Registry()).Generate();
 	}
@@ -42,9 +44,10 @@ public sealed class StatementsToCudaCompiler
 					: load.Identifier + "[idx]";
 				break;
 			case LoadConstantStatement constant:
+				//ncrunch: no coverage start
 				registers[constant.Register] =
 					constant.ValueInstance.Number.ToString(System.Globalization.CultureInfo.InvariantCulture);
-				break;
+				break; //ncrunch: no coverage end
 			case BinaryStatement binary when !binary.IsConditional():
 				registers[binary.Registers[2]] =
 					$"{registers[binary.Registers[0]]} {GetOperatorSymbol(binary.Instruction)} {registers[binary.Registers[1]]}";
@@ -56,12 +59,18 @@ public sealed class StatementsToCudaCompiler
 		var parameterText = BuildParameterText(method) + "float *output";
 		if (!HasDimensionParameters(method))
 			parameterText += ", const int count";
-		return $@"extern ""C"" __global__ void {method.Name}({parameterText})
+		return $@"extern ""C"" __global__ void {
+			method.Name
+		}({
+			parameterText
+		})
 {{
 	int x = blockIdx.x * blockDim.x + threadIdx.x;
 	int y = blockIdx.y * blockDim.y + threadIdx.y;
 	int idx = y * blockDim.x + x;
-	output[idx] = {outputExpression};
+	output[idx] = {
+		outputExpression
+	};
 }}";
 	}
 
@@ -75,18 +84,18 @@ public sealed class StatementsToCudaCompiler
 			Instruction.Add => "+",
 			Instruction.Subtract => "-",
 			Instruction.Multiply => "*",
-			Instruction.Divide => "/",
-			_ => throw new NotSupportedException(instruction.ToString())
+			Instruction.Divide => "/", //ncrunch: no coverage
+			_ => throw new NotSupportedException(instruction.ToString()) //ncrunch: no coverage
 		};
 
 	private static string BuildParameterText(Method method) =>
 		method.Parameters.Aggregate("", (current, parameter) => current +
-			parameter.Type.Name switch
+			parameter.Type.Name switch //ncrunch: no coverage
 			{
 				Type.Number when parameter.Name is "Width" or "Height" or "width" or "height" => "const int " + parameter.Name + ", ",
 				Type.Number when parameter.Name == "initialDepth" => "const float " + parameter.Name + ", ",
 				Type.Number => "const float *" + parameter.Name + ", ",
-				_ => throw new NotSupportedException(parameter.ToString())
+				_ => throw new NotSupportedException(parameter.ToString()) //ncrunch: no coverage
 			});
 
 	private static bool HasDimensionParameters(Method method) =>
