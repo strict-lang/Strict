@@ -175,7 +175,7 @@ public sealed class Runner
 		Log("┌─ Step 7: Optimize");
 		var startTicks = DateTime.UtcNow.Ticks;
 		var optimizedStatements = new List<Statement>(statements);
-		var optimizers = new StatementOptimizer[]
+		var optimizers = new InstructionOptimizer[]
 		{
 			new TestCodeRemover(), new ConstantFoldingOptimizer(), new DeadStoreEliminator(),
 			new UnreachableCodeEliminator(), new RedundantLoadEliminator()

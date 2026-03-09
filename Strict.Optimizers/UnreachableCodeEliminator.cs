@@ -1,5 +1,5 @@
 using Strict.Runtime;
-using Strict.Runtime.Statements;
+using Strict.Runtime.Instructions;
 
 namespace Strict.Optimizers;
 
@@ -8,23 +8,29 @@ namespace Strict.Optimizers;
 /// execute. Scans linearly; once an unconditional Return is found, everything after it is dead
 /// unless a JumpEnd or loop boundary appears that could serve as a branch target.
 /// </summary>
-public sealed class UnreachableCodeEliminator : StatementOptimizer
+public sealed class UnreachableCodeEliminator : InstructionOptimizer
 {
-	public override List<Statement> Optimize(List<Statement> statements)
+	public override List<Instruction> Optimize(List<Instruction> instructions)
 	{
 		var depth = 0;
-		for (var i = 0; i < statements.Count - 1; i++)
+		for (var i = 0; i < instructions.Count - 1; i++)
 		{
-			if (statements[i] is JumpToId { Instruction: Instruction.JumpToIdIfFalse or Instruction.JumpToIdIfTrue })
+			if (instructions[i] is JumpToId
+				{
+					InstructionType: InstructionType.JumpToIdIfFalse or InstructionType.JumpToIdIfTrue
+				})
 				depth++;
-			else if (statements[i] is JumpToId { Instruction: Instruction.JumpEnd })
+			else if (instructions[i] is JumpToId { InstructionType: InstructionType.JumpEnd })
 				depth = Math.Max(0, depth - 1);
-			else if (depth == 0 && statements[i] is Return or Jump { Instruction: Instruction.Jump })
+			else if (depth == 0 && instructions[i] is ReturnInstruction or Jump
+				{
+					InstructionType: InstructionType.Jump
+				})
 			{
-				statements.RemoveRange(i + 1, statements.Count - i - 1);
+				instructions.RemoveRange(i + 1, instructions.Count - i - 1);
 				break;
 			}
 		}
-		return statements;
+		return instructions;
 	}
 }

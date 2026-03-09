@@ -10,7 +10,7 @@ public class BytecodeInterpreterKataTests : BaseVirtualMachineTests
 	[Test]
 	public void BestTimeToBuyStocksKata()
 	{
-		var statements = new ByteCodeGenerator(GenerateMethodCallFromSource("Stock",
+		var instructions = new ByteCodeGenerator(GenerateMethodCallFromSource("Stock",
 			"Stock(7, 1, 5, 3, 6, 4).MaxProfit",
 			"has prices Numbers",
 			"MaxProfit Number",
@@ -22,30 +22,30 @@ public class BytecodeInterpreterKataTests : BaseVirtualMachineTests
 			"\t\telse if value - min > max",
 			"\t\t\tmax = value - min",
 			"\tmax")).Generate();
-		Assert.That(vm.Execute(statements).Returns!.Value.Number, Is.EqualTo(5));
+		Assert.That(vm.Execute(instructions).Returns!.Value.Number, Is.EqualTo(5));
 	}
 
 	[TestCase("RemoveParentheses(\"some(thing)\").Remove", "some")]
 	[TestCase("RemoveParentheses(\"(some)thing\").Remove", "thing")]
 	public void RemoveParentheses(string methodCall, string expectedResult)
 	{
-		var statements = new ByteCodeGenerator(GenerateMethodCallFromSource("RemoveParentheses",
+		var instructions = new ByteCodeGenerator(GenerateMethodCallFromSource("RemoveParentheses",
 			methodCall, RemoveParenthesesKata)).Generate();
-		Assert.That(vm.Execute(statements).Returns!.Value.Text, Is.EqualTo(expectedResult));
+		Assert.That(vm.Execute(instructions).Returns!.Value.Text, Is.EqualTo(expectedResult));
 	}
 
 	[TestCase("Invertor(1, 2, 3, 4, 5).Invert", "-1-2-3-4-5")]
 	public void InvertValues(string methodCall, string expectedResult)
 	{
-		var statements = new ByteCodeGenerator(GenerateMethodCallFromSource("Invertor",
+		var instructions = new ByteCodeGenerator(GenerateMethodCallFromSource("Invertor",
 			methodCall, InvertValueKata)).Generate();
-		Assert.That(vm.Execute(statements).Returns!.Value.Text, Is.EqualTo(expectedResult));
+		Assert.That(vm.Execute(instructions).Returns!.Value.Text, Is.EqualTo(expectedResult));
 	}
 
 	[Test]
 	public void CountingSheepKata()
 	{
-		var statements = new ByteCodeGenerator(GenerateMethodCallFromSource("SheepCounter",
+		var instructions = new ByteCodeGenerator(GenerateMethodCallFromSource("SheepCounter",
 			"SheepCounter(true, true, true, false, true, true, true, true, true, false, true, false, true, false, false, true, true, true, true, true, false, false, true, true).Count",
 			"has sheep Booleans",
 			"Count Number",
@@ -54,6 +54,6 @@ public class BytecodeInterpreterKataTests : BaseVirtualMachineTests
 			"\t\tif value",
 			"\t\t\tresult.Increment",
 			"\tresult")).Generate();
-		Assert.That(vm.Execute(statements).Returns!.Value.Number, Is.EqualTo(17));
+		Assert.That(vm.Execute(instructions).Returns!.Value.Number, Is.EqualTo(17));
 	}
 }

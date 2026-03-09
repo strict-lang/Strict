@@ -1,30 +1,25 @@
-using System.Diagnostics;
 using Strict.Expressions;
 using Strict.Language;
 using Strict.Runtime.Instructions;
-using BinaryInstruction = Strict.Runtime.Instructions.Binary;
-using ReturnInstruction = Strict.Runtime.Instructions.ReturnInstruction;
 using Type = Strict.Language.Type;
 
 namespace Strict.Runtime;
 
 public sealed class BytecodeInterpreter(Package package)
 {
-	private readonly Package package = package;
-
-	public BytecodeInterpreter Execute(IList<Instruction> allStatements)
+	public BytecodeInterpreter Execute(IList<Instruction> allInstructions)
 	{
 		Clear();
-		foreach (var loopBegin in allStatements.OfType<LoopBeginInstruction>())
+		foreach (var loopBegin in allInstructions.OfType<LoopBeginInstruction>())
 			loopBegin.Reset();
-		return RunStatements(allStatements);
+		return RunInstructions(allInstructions);
 	}
 
 	private void Clear()
 	{
 		conditionFlag = false;
 		instructionIndex = 0;
-		statements.Clear();
+		instructions.Clear();
 		Returns = null;
 		Memory.Registers.Clear();
 		Memory.Frame = new CallFrame();
@@ -32,34 +27,34 @@ public sealed class BytecodeInterpreter(Package package)
 
 	private bool conditionFlag;
 	private int instructionIndex;
-	private IList<Instruction> statements = new List<Instruction>();
+	private IList<Instruction> instructions = new List<Instruction>();
 	public ValueInstance? Returns { get; private set; }
 	public Memory Memory { get; } = new();
 
-	private BytecodeInterpreter RunStatements(IList<Instruction> allStatements)
+	private BytecodeInterpreter RunInstructions(IList<Instruction> allInstructions)
 	{
-		statements = allStatements;
+		instructions = allInstructions;
 		for (instructionIndex = 0;
-			instructionIndex is not -1 && instructionIndex < allStatements.Count; instructionIndex++)
-			ExecuteInstruction(allStatements[instructionIndex]);
+			instructionIndex is not -1 && instructionIndex < instructions.Count;
+			instructionIndex++)
+			ExecuteInstruction(instructions[instructionIndex]);
 		return this;
 	}
 
 	private void ExecuteInstruction(Instruction instruction)
 	{
-		Debug.Assert(statement != null);
-		if (TryExecuteReturn(statement))
+		if (TryExecuteReturn(instruction))
 			return;
-		TryStoreInstructions(statement);
-		TryLoadInstructions(statement);
-		TryLoopInitInstruction(statement);
-		TryLoopEndInstruction(statement);
-		TryInvokeInstruction(statement);
-		TryWriteToListInstruction(statement);
-		TryWriteToTableInstruction(statement);
-		TryRemoveInstruction(statement);
-		TryExecuteListCall(statement);
-		TryExecuteRest(statement);
+		TryStoreInstructions(instruction);
+		TryLoadInstructions(instruction);
+		TryLoopInitInstruction(instruction);
+		TryLoopEndInstruction(instruction);
+		TryInvokeInstruction(instruction);
+		TryWriteToListInstruction(instruction);
+		TryWriteToTableInstruction(instruction);
+		TryRemoveInstruction(instruction);
+		TryExecuteListCall(instruction);
+		TryExecuteRest(instruction);
 	}
 
 	private void TryRemoveInstruction(Instruction instruction)
@@ -99,54 +94,50 @@ public sealed class BytecodeInterpreter(Package package)
 			Memory.Registers[writeToTableInstruction.Key], Memory.Registers[writeToTableInstruction.Value]);
 	}
 
-	private void TryLoopEndInstruction(Statement statement)
+	private void TryLoopEndInstruction(Instruction instruction)
 	{
-		if (statement is not LoopEndInstruction loopEndStatement)
+		if (instruction is not LoopEndInstruction loopEndStatement)
 			return;
-		var loopBegin = statements.Take(instructionIndex).OfType<LoopBeginInstruction>().Last();
+		var loopBegin = instructions.Take(instructionIndex).OfType<LoopBeginInstruction>().Last();
 		loopBegin.LoopCount--;
 		if (loopBegin.LoopCount <= 0)
 			return;
 		instructionIndex -= loopEndStatement.Steps + 1;
 	}
 
-	private void TryInvokeInstruction(Statement statement)
+	private void TryInvokeInstruction(Instruction instruction)
 	{
-		if (statement is not Invoke { Method: not null } invokeStatement)
+		if (instruction is not Invoke { Method: not null } invokeStatement ||
+			TryCreateEmptyDictionaryInstance(invokeStatement) ||
+			TryHandleToConversion(invokeStatement) ||
+			TryHandleIncrementDecrement(invokeStatement) ||
+			GetValueByKeyForDictionaryAndStoreInRegister(invokeStatement))
 			return;
-		if (TryCreateEmptyDictionaryInstance(invokeStatement))
-			return;
-		if (TryHandleToConversion(invokeStatement))
-			return;
-		if (TryHandleIncrementDecrement(invokeStatement))
-			return;
-		if (GetValueByKeyForDictionaryAndStoreInRegister(invokeStatement))
-			return;
-		var methodStatements = GetByteCodeFromInvokedMethodCall(invokeStatement);
-		var result = RunChildScope(methodStatements);
+		var methodInstructions = GetByteCodeFromInvokedMethodCall(invokeStatement);
+		var result = RunChildScope(methodInstructions);
 		if (result != null)
 			Memory.Registers[invokeStatement.Register] = result.Value;
 	}
 
 	/// <summary>
-	/// Runs <paramref name="childStatements"/> in a child <see cref="CallFrame"/> while reusing
-	/// this interpreter instance. All mutable fields are saved on the C# call stack (zero heap
+	/// Runs <paramref name="childInstructions"/> in a child <see cref="CallFrame"/> while reusing
+	/// this interpreter instance. All mutable fields are saved on the call stack (zero heap
 	/// allocations for the bookkeeping) and restored after the child finishes.
 	/// </summary>
-	private ValueInstance? RunChildScope(IList<Instruction> childStatements)
+	private ValueInstance? RunChildScope(List<Instruction> childInstructions)
 	{
-		var savedStatements = statements;
+		var savedStatements = instructions;
 		var savedIndex = instructionIndex;
 		var savedConditionFlag = conditionFlag;
 		var savedReturns = Returns;
 		var savedFrame = Memory.Frame;
 		Memory.Frame = new CallFrame(savedFrame);
 		Returns = null;
-		RunStatements(childStatements);
+		RunInstructions(childInstructions);
 		var result = Returns;
 		Memory.Frame.Clear();
 		Memory.Frame = savedFrame;
-		statements = savedStatements;
+		instructions = savedStatements;
 		instructionIndex = savedIndex;
 		conditionFlag = savedConditionFlag;
 		Returns = savedReturns;
@@ -266,18 +257,18 @@ public sealed class BytecodeInterpreter(Package package)
 		return arguments;
 	}
 
-	private bool TryExecuteReturn(Statement statement)
+	private bool TryExecuteReturn(Instruction instruction)
 	{
-		if (statement is not ReturnInstruction returnStatement)
+		if (instruction is not ReturnInstruction returnInstruction)
 			return false;
-		Returns = Memory.Registers[returnStatement.Register];
+		Returns = Memory.Registers[returnInstruction.Register];
 		instructionIndex = -2;
 		return true;
 	}
 
-	private void TryLoopInitInstruction(Statement statement)
+	private void TryLoopInitInstruction(Instruction instruction)
 	{
-		if (statement is not LoopBeginInstruction loopBeginStatement)
+		if (instruction is not LoopBeginInstruction loopBeginStatement)
 			return;
 		if (loopBeginStatement.IsRange)
 			ProcessRangeLoopIteration(loopBeginStatement);
@@ -292,7 +283,8 @@ public sealed class BytecodeInterpreter(Package package)
 		if (Memory.Frame.ContainsKey("index"))
 		{
 			var current = Memory.Frame.Get("index");
-			Memory.Frame.Set("index", new ValueInstance(package.GetType(Type.Number), current.Number + 1));
+			Memory.Frame.Set("index",
+				new ValueInstance(package.GetType(Type.Number), current.Number + 1));
 		}
 		else
 			Memory.Frame.Set("index", new ValueInstance(package.GetType(Type.Number), 0));
@@ -304,7 +296,7 @@ public sealed class BytecodeInterpreter(Package package)
 		AlterValueVariable(iterableVariable, package.GetType(Type.Number), loopBeginStatement);
 		if (loopBeginStatement.LoopCount <= 0)
 		{
-			var stepsToLoopEnd = statements.Skip(instructionIndex + 1).
+			var stepsToLoopEnd = instructions.Skip(instructionIndex + 1).
 				TakeWhile(s => s is not LoopEndInstruction).Count();
 			instructionIndex += stepsToLoopEnd;
 		}
@@ -319,7 +311,8 @@ public sealed class BytecodeInterpreter(Package package)
 			loopBeginStatement.InitializeRangeState(startIndex, endIndex);
 		}
 		var isDecreasing = loopBeginStatement.IsDecreasing ?? false;
-		var numberType = Memory.Registers[loopBeginStatement.Register].GetTypeExceptText().GetType(Type.Number);
+		var numberType = Memory.Registers[loopBeginStatement.Register].GetTypeExceptText().
+			GetType(Type.Number);
 		if (Memory.Frame.ContainsKey("index"))
 		{
 			var current = Memory.Frame.Get("index");
@@ -364,60 +357,60 @@ public sealed class BytecodeInterpreter(Package package)
 		Memory.Frame.Set("value", new ValueInstance(numberType, index + 1));
 	}
 
-	private void TryStoreInstructions(Statement statement)
+	private void TryStoreInstructions(Instruction instruction)
 	{
-		if (statement.Instruction > Instruction.StoreSeparator)
+		if (instruction.InstructionType > InstructionType.StoreSeparator)
 			return;
-		if (statement is SetInstruction setStatement)
+		if (instruction is SetInstruction setStatement)
 			Memory.Registers[setStatement.Register] = setStatement.ValueInstance;
-		else if (statement is StoreVariableInstruction storeVariableStatement)
+		else if (instruction is StoreVariableInstruction storeVariableStatement)
 			Memory.Frame.Set(storeVariableStatement.Identifier, storeVariableStatement.ValueInstance,
 				storeVariableStatement.IsMember);
-		else if (statement is StoreFromRegisterInstruction storeFromRegisterStatement)
+		else if (instruction is StoreFromRegisterInstruction storeFromRegisterStatement)
 			Memory.Frame.Set(storeFromRegisterStatement.Identifier,
 				Memory.Registers[storeFromRegisterStatement.Register]);
 	}
 
-	private void TryLoadInstructions(Statement statement)
+	private void TryLoadInstructions(Instruction instruction)
 	{
-		if (statement is LoadVariableToRegister loadVariableStatement)
+		if (instruction is LoadVariableToRegister loadVariableStatement)
 			Memory.Registers[loadVariableStatement.Register] =
 				Memory.Frame.Get(loadVariableStatement.Identifier);
-		else if (statement is LoadConstantInstruction loadConstantStatement)
+		else if (instruction is LoadConstantInstruction loadConstantStatement)
 			Memory.Registers[loadConstantStatement.Register] = loadConstantStatement.ValueInstance;
 	}
 
-	private void TryExecuteRest(Statement statement)
+	private void TryExecuteRest(Instruction instruction)
 	{
-		if (statement is BinaryInstruction binaryStatement)
+		if (instruction is BinaryInstruction binaryStatement)
 		{
 			if (binaryStatement.IsConditional())
 				TryConditionalOperationExecution(binaryStatement);
 			else
 				TryBinaryOperationExecution(binaryStatement);
 		}
-		else if (statement is Jump jumpStatement)
+		else if (instruction is Jump jumpStatement)
 			TryJumpOperation(jumpStatement);
-		else if (statement is JumpIf jumpIfStatement)
+		else if (instruction is JumpIf jumpIfStatement)
 			TryJumpIfOperation(jumpIfStatement);
-		else if (statement is JumpToId jumpToIdStatement)
+		else if (instruction is JumpToId jumpToIdStatement)
 			TryJumpToIdOperation(jumpToIdStatement);
 	}
 
-	private void TryBinaryOperationExecution(BinaryInstruction statement)
+	private void TryBinaryOperationExecution(BinaryInstruction instruction)
 	{
-		var (right, left) = GetOperands(statement);
-		Memory.Registers[statement.Registers[^1]] = statement.Instruction switch
+		var (right, left) = GetOperands(instruction);
+		Memory.Registers[instruction.Registers[^1]] = instruction.InstructionType switch
 		{
-			Instruction.Add => AddValueInstances(left, right),
-			Instruction.Subtract => SubtractValueInstances(left, right),
-			Instruction.Multiply => new ValueInstance(right.GetTypeExceptText(),
+			InstructionType.Add => AddValueInstances(left, right),
+			InstructionType.Subtract => SubtractValueInstances(left, right),
+			InstructionType.Multiply => new ValueInstance(right.GetTypeExceptText(),
 				left.Number * right.Number),
-			Instruction.Divide => new ValueInstance(right.GetTypeExceptText(),
+			InstructionType.Divide => new ValueInstance(right.GetTypeExceptText(),
 				left.Number / right.Number),
-			Instruction.Modulo => new ValueInstance(right.GetTypeExceptText(),
+			InstructionType.Modulo => new ValueInstance(right.GetTypeExceptText(),
 				left.Number % right.Number),
-			_ => Memory.Registers[statement.Registers[^1]] //ncrunch: no coverage
+			_ => Memory.Registers[instruction.Registers[^1]] //ncrunch: no coverage
 		};
 	}
 
@@ -426,6 +419,7 @@ public sealed class BytecodeInterpreter(Package package)
 		if (left.IsList)
 		{
 			//TODO: not efficient, we should use a dynamic list and just modify it!
+			//TODO: we cannot make a new duplicate list every operation, like adding an entry ..
 			var items = new List<ValueInstance>(left.List.Items) { right };
 			return new ValueInstance(left.List.ReturnType, items.ToArray());
 		}
@@ -440,59 +434,57 @@ public sealed class BytecodeInterpreter(Package package)
 
 	private static ValueInstance SubtractValueInstances(ValueInstance left, ValueInstance right)
 	{
-		if (left.IsList)
-		{
-			var items = new List<ValueInstance>(left.List.Items);
-			var removeIndex = items.FindIndex(item => item.Equals(right));
-			if (removeIndex >= 0)
-				items.RemoveAt(removeIndex);
-			return new ValueInstance(left.List.ReturnType, items.ToArray());
-		}
-		return new ValueInstance(left.GetTypeExceptText(), left.Number - right.Number);
+		if (!left.IsList)
+			return new ValueInstance(left.GetTypeExceptText(), left.Number - right.Number);
+		var items = new List<ValueInstance>(left.List.Items);
+		var removeIndex = items.FindIndex(item => item.Equals(right));
+		if (removeIndex >= 0)
+			items.RemoveAt(removeIndex);
+		return new ValueInstance(left.List.ReturnType, items.ToArray());
 	}
 
-	private (ValueInstance, ValueInstance) GetOperands(BinaryInstruction statement) =>
-		statement.Registers.Length < 2
+	private (ValueInstance, ValueInstance) GetOperands(BinaryInstruction instruction) =>
+		instruction.Registers.Length < 2
 			? throw new OperandsRequired()
-			: (Memory.Registers[statement.Registers[1]], Memory.Registers[statement.Registers[0]]);
+			: (Memory.Registers[instruction.Registers[1]], Memory.Registers[instruction.Registers[0]]);
 
-	private void TryConditionalOperationExecution(BinaryInstruction statement)
+	private void TryConditionalOperationExecution(BinaryInstruction instruction)
 	{
-		var (right, left) = GetOperands(statement);
-		conditionFlag = statement.Instruction switch
+		var (right, left) = GetOperands(instruction);
+		conditionFlag = instruction.InstructionType switch
 		{
-			Instruction.GreaterThan => left.Number > right.Number,
-			Instruction.LessThan => left.Number < right.Number,
-			Instruction.Equal => left.Equals(right),
-			Instruction.NotEqual => !left.Equals(right),
+			InstructionType.GreaterThan => left.Number > right.Number,
+			InstructionType.LessThan => left.Number < right.Number,
+			InstructionType.Equal => left.Equals(right),
+			InstructionType.NotEqual => !left.Equals(right),
 			_ => false //ncrunch: no coverage
 		};
 	}
 
-	private void TryJumpOperation(Jump statement)
+	private void TryJumpOperation(Jump instruction)
 	{
-		if (conditionFlag && statement.Instruction is Instruction.JumpIfTrue ||
-			!conditionFlag && statement.Instruction is Instruction.JumpIfFalse)
-			instructionIndex += statement.InstructionsToSkip;
+		if (conditionFlag && instruction.InstructionType is InstructionType.JumpIfTrue ||
+			!conditionFlag && instruction.InstructionType is InstructionType.JumpIfFalse)
+			instructionIndex += instruction.InstructionsToSkip;
 	}
 
-	private void TryJumpIfOperation(JumpIf statement)
+	private void TryJumpIfOperation(JumpIf instruction)
 	{
-		if (conditionFlag && statement.Instruction is Instruction.JumpIfTrue ||
-			!conditionFlag && statement.Instruction is Instruction.JumpIfFalse ||
-			statement is JumpIfNotZero jumpIfNotZeroStatement &&
+		if (conditionFlag && instruction.InstructionType is InstructionType.JumpIfTrue ||
+			!conditionFlag && instruction.InstructionType is InstructionType.JumpIfFalse ||
+			instruction is JumpIfNotZero jumpIfNotZeroStatement &&
 			Memory.Registers[jumpIfNotZeroStatement.Register].Number > 0)
-			instructionIndex += Convert.ToInt32(statement.Steps);
+			instructionIndex += Convert.ToInt32(instruction.Steps);
 	}
 
-	private void TryJumpToIdOperation(JumpToId statement)
+	private void TryJumpToIdOperation(JumpToId instruction)
 	{
-		if (!conditionFlag && statement.Instruction is Instruction.JumpToIdIfFalse ||
-			conditionFlag && statement.Instruction is Instruction.JumpToIdIfTrue)
+		if (!conditionFlag && instruction.InstructionType is InstructionType.JumpToIdIfFalse ||
+			conditionFlag && instruction.InstructionType is InstructionType.JumpToIdIfTrue)
 		{
-			var id = statement.Id;
-			var endIndex = statements.IndexOf(statements.First(jumpStatement =>
-				jumpStatement.Instruction is Instruction.JumpEnd && jumpStatement is JumpToId jumpViaId &&
+			var id = instruction.Id;
+			var endIndex = instructions.IndexOf(instructions.First(jumpStatement =>
+				jumpStatement.InstructionType is InstructionType.JumpEnd && jumpStatement is JumpToId jumpViaId &&
 				jumpViaId.Id == id));
 			if (endIndex != -1)
 				instructionIndex = endIndex;

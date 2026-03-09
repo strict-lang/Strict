@@ -27,8 +27,8 @@ public class AdderProgramTests : BaseVirtualMachineTests
 	private List<decimal> ExecuteAddTotals(string methodCall)
 	{
 		var result = vm.Execute(
-			new ByteCodeGenerator(GenerateMethodCallFromSource("AdderProgram",
-				methodCall, AdderProgramCode)).Generate()).Returns!.Value;
+			new ByteCodeGenerator(GenerateMethodCallFromSource("AdderProgram", methodCall,
+				AdderProgramCode)).Generate()).Returns!.Value;
 		return result.List.Items.Select(item => (decimal)item.Number).ToList();
 	}
 
@@ -38,7 +38,8 @@ public class AdderProgramTests : BaseVirtualMachineTests
 
 	[Test]
 	public void AddTotalsForTwoNumbers() =>
-		Assert.That(ExecuteAddTotals("AdderProgram(1, 2).AddTotals"), Is.EqualTo(new[] { 1m, 3m }));
+		Assert.That(ExecuteAddTotals("AdderProgram(1, 2).AddTotals"),
+			Is.EqualTo(new[] { 1m, 3m }));
 
 	//ncrunch: no coverage start
 	[Test]

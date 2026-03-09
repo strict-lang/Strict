@@ -1,5 +1,5 @@
 using Strict.Runtime;
-using Strict.Runtime.Statements;
+using Strict.Runtime.Instructions;
 
 namespace Strict.Optimizers;
 
@@ -9,31 +9,31 @@ namespace Strict.Optimizers;
 /// branches have been stripped but the jump pair remains. Also removes the preceding comparison
 /// Binary statement if it is no longer needed.
 /// </summary>
-public sealed class JumpThreadingOptimizer : StatementOptimizer
+public sealed class JumpThreadingOptimizer : InstructionOptimizer
 {
-	public override List<Statement> Optimize(List<Statement> statements)
+	public override List<Instruction> Optimize(List<Instruction> instructions)
 	{
 		bool changed;
 		do
 		{
 			changed = false;
-			for (var i = 0; i < statements.Count - 1; i++)
+			for (var i = 0; i < instructions.Count - 1; i++)
 			{
-				if (statements[i] is not JumpToId conditional ||
-					conditional.Instruction is not (Instruction.JumpToIdIfFalse
-						or Instruction.JumpToIdIfTrue))
+				if (instructions[i] is not JumpToId conditional ||
+					conditional.InstructionType is not (InstructionType.JumpToIdIfFalse
+						or InstructionType.JumpToIdIfTrue))
 					continue;
-				if (statements[i + 1] is not JumpToId end ||
-					end.Instruction != Instruction.JumpEnd || end.Id != conditional.Id)
+				if (instructions[i + 1] is not JumpToId end ||
+					end.InstructionType != InstructionType.JumpEnd || end.Id != conditional.Id)
 					continue;
-				statements.RemoveAt(i + 1);
-				statements.RemoveAt(i);
-				if (i > 0 && statements[i - 1] is Binary binary && binary.IsConditional())
-					statements.RemoveAt(--i);
+				instructions.RemoveAt(i + 1);
+				instructions.RemoveAt(i);
+				if (i > 0 && instructions[i - 1] is BinaryInstruction binary && binary.IsConditional())
+					instructions.RemoveAt(--i);
 				changed = true;
 				i = Math.Max(0, i - 1);
 			}
 		} while (changed);
-		return statements;
+		return instructions;
 	}
 }

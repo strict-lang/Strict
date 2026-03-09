@@ -1,7 +1,6 @@
 using Strict.Expressions;
 using Strict.Runtime;
-using Strict.Runtime.Statements;
-using Binary = Strict.Runtime.Statements.Binary;
+using Strict.Runtime.Instructions;
 
 namespace Strict.Optimizers;
 
@@ -14,44 +13,44 @@ namespace Strict.Optimizers;
 /// - x * 0 or 0 * x → 0 (replace entire sequence with load constant 0)
 /// The non-identity operand's register is rewritten to the result register where needed.
 /// </summary>
-public sealed class StrengthReducer : StatementOptimizer
+public sealed class StrengthReducer : AllInstructionOptimizers
 {
-	public override List<Statement> Optimize(List<Statement> statements)
+	public override List<Instruction> Optimize(List<Instruction> instructions)
 	{
-		for (var i = 2; i < statements.Count; i++)
+		for (var i = 2; i < instructions.Count; i++)
 		{
-			if (statements[i] is not Binary binary || binary.IsConditional() ||
-				!IsArithmetic(binary.Instruction) || binary.Registers.Length < 3)
+			if (instructions[i] is not BinaryInstruction binary || binary.IsConditional() ||
+				!IsArithmetic(binary.InstructionType) || binary.Registers.Length < 3)
 				continue;
-			var leftIndex = FindStatementIndex(statements, i, binary.Registers[0]);
-			var rightIndex = FindStatementIndex(statements, i, binary.Registers[1]);
+			var leftIndex = FindInstructionIndex(instructions, i, binary.Registers[0]);
+			var rightIndex = FindInstructionIndex(instructions, i, binary.Registers[1]);
 			if (leftIndex < 0 || rightIndex < 0)
 				continue; //ncrunch: no coverage
-			var leftIsConst = statements[leftIndex] is LoadConstantStatement;
-			var rightIsConst = statements[rightIndex] is LoadConstantStatement;
+			var leftIsConst = instructions[leftIndex] is LoadConstantInstruction;
+			var rightIsConst = instructions[rightIndex] is LoadConstantInstruction;
 			if (!leftIsConst && !rightIsConst)
 				continue;
 			var leftValue = leftIsConst
-				? ((LoadConstantStatement)statements[leftIndex]).ValueInstance
+				? ((LoadConstantInstruction)instructions[leftIndex]).ValueInstance
 				: (ValueInstance?)null;
 			var rightValue = rightIsConst
-				? ((LoadConstantStatement)statements[rightIndex]).ValueInstance
+				? ((LoadConstantInstruction)instructions[rightIndex]).ValueInstance
 				: (ValueInstance?)null;
-			if (TryReduceMultiplyByZero(statements, i, binary, leftIndex, rightIndex, leftValue,
+			if (TryReduceMultiplyByZero(instructions, i, binary, leftIndex, rightIndex, leftValue,
 				rightValue))
 				i = Math.Max(1, i - 2);
-			else if (TryReduceIdentity(statements, i, binary, leftIndex, rightIndex, leftValue,
+			else if (TryReduceIdentity(instructions, i, binary, leftIndex, rightIndex, leftValue,
 				rightValue))
 				i = Math.Max(1, i - 2);
 		}
-		return statements;
+		return instructions;
 	}
 
-	private static bool TryReduceMultiplyByZero(List<Statement> statements, int binaryIndex,
-		Binary binary, int leftIndex, int rightIndex, ValueInstance? leftValue,
+	private static bool TryReduceMultiplyByZero(List<Instruction> Instructions, int binaryIndex,
+		BinaryInstruction binary, int leftIndex, int rightIndex, ValueInstance? leftValue,
 		ValueInstance? rightValue)
 	{
-		if (binary.Instruction != Instruction.Multiply)
+		if (binary.InstructionType != InstructionType.Multiply)
 			return false;
 		var isLeftZero = leftValue is { } lv && !lv.IsText && lv.Number == 0;
 		var isRightZero = rightValue is { } rv && !rv.IsText && rv.Number == 0;
@@ -59,18 +58,18 @@ public sealed class StrengthReducer : StatementOptimizer
 			return false;
 		var resultRegister = binary.Registers[2];
 		var zeroConst = isLeftZero
-			? (LoadConstantStatement)statements[leftIndex]
-			: (LoadConstantStatement)statements[rightIndex];
-		statements[binaryIndex] = new LoadConstantStatement(resultRegister, zeroConst.ValueInstance);
-		RemoveIndicesDescending(statements, leftIndex, rightIndex);
+			? (LoadConstantInstruction)Instructions[leftIndex]
+			: (LoadConstantInstruction)Instructions[rightIndex];
+		Instructions[binaryIndex] = new LoadConstantInstruction(resultRegister, zeroConst.ValueInstance);
+		RemoveIndicesDescending(Instructions, leftIndex, rightIndex);
 		return true;
 	}
 
-	private static bool TryReduceIdentity(List<Statement> statements, int binaryIndex,
-		Binary binary, int leftIndex, int rightIndex, ValueInstance? leftValue,
+	private static bool TryReduceIdentity(List<Instruction> Instructions, int binaryIndex,
+		BinaryInstruction binary, int leftIndex, int rightIndex, ValueInstance? leftValue,
 		ValueInstance? rightValue)
 	{
-		var identitySide = GetIdentitySide(binary.Instruction, leftValue, rightValue);
+		var identitySide = GetIdentitySide(binary.InstructionType, leftValue, rightValue);
 		if (identitySide == IdentitySide.None)
 			return false;
 		var resultRegister = binary.Registers[2];
@@ -80,35 +79,35 @@ public sealed class StrengthReducer : StatementOptimizer
 		var removeIndex = identitySide == IdentitySide.Left
 			? leftIndex
 			: rightIndex;
-		RewriteRegister(statements, keepIndex, resultRegister);
-		RemoveIndicesDescending(statements, binaryIndex, removeIndex);
+		RewriteRegister(Instructions, keepIndex, resultRegister);
+		RemoveIndicesDescending(Instructions, binaryIndex, removeIndex);
 		return true;
 	}
 
-	private static void RewriteRegister(List<Statement> statements, int index, Register newRegister)
+	private static void RewriteRegister(List<Instruction> Instructions, int index, Register newRegister)
 	{
-		var statement = statements[index];
-		statements[index] = statement switch
+		var Instruction = Instructions[index];
+		Instructions[index] = Instruction switch
 		{
 			LoadVariableToRegister load => new LoadVariableToRegister(newRegister, load.Identifier),
 			//ncrunch: no coverage start
-			LoadConstantStatement load => new LoadConstantStatement(newRegister, load.ValueInstance),
-			_ => statement
+			LoadConstantInstruction load => new LoadConstantInstruction(newRegister, load.ValueInstance),
+			_ => Instruction
 		}; //ncrunch: no coverage end
 	}
 
-	private static void RemoveIndicesDescending(List<Statement> statements, int a, int b)
+	private static void RemoveIndicesDescending(List<Instruction> Instructions, int a, int b)
 	{
 		var first = Math.Max(a, b);
 		var second = Math.Min(a, b);
-		statements.RemoveAt(first);
-		statements.RemoveAt(second);
+		Instructions.RemoveAt(first);
+		Instructions.RemoveAt(second);
 	}
 
-	private static bool IsArithmetic(Instruction instruction) =>
-		instruction is > Instruction.StoreSeparator and < Instruction.ArithmeticSeparator;
+	private static bool IsArithmetic(InstructionType instruction) =>
+		instruction is > InstructionType.StoreSeparator and < InstructionType.ArithmeticSeparator;
 
-	private static IdentitySide GetIdentitySide(Instruction instruction, ValueInstance? leftValue,
+	private static IdentitySide GetIdentitySide(InstructionType instruction, ValueInstance? leftValue,
 		ValueInstance? rightValue) =>
 		IsIdentityValue(instruction, leftValue)
 			? IdentitySide.Left
@@ -116,26 +115,26 @@ public sealed class StrengthReducer : StatementOptimizer
 				? IdentitySide.Right
 				: IdentitySide.None;
 
-	private static bool IsIdentityValue(Instruction instruction, ValueInstance? value)
+	private static bool IsIdentityValue(InstructionType instruction, ValueInstance? value)
 	{
 		if (value is not { } v || v.IsText)
 			return false;
 		return instruction switch
 		{
-			Instruction.Multiply when v.Number == 1 => true,
-			Instruction.Divide when v.Number == 1 => true,
-			Instruction.Add when v.Number == 0 => true,
-			Instruction.Subtract when v.Number == 0 => true,
+			InstructionType.Multiply when v.Number == 1 => true,
+			InstructionType.Divide when v.Number == 1 => true,
+			InstructionType.Add when v.Number == 0 => true,
+			InstructionType.Subtract when v.Number == 0 => true,
 			_ => false
 		};
 	}
 
-	private static int FindStatementIndex(List<Statement> statements, int beforeIndex,
+	private static int FindInstructionIndex(List<Instruction> Instructions, int beforeIndex,
 		Register register)
 	{
 		for (var i = beforeIndex - 1; i >= 0; i--)
-			if (statements[i] is LoadConstantStatement load && load.Register == register ||
-				statements[i] is LoadVariableToRegister varLoad && varLoad.Register == register)
+			if (Instructions[i] is LoadConstantInstruction load && load.Register == register ||
+				Instructions[i] is LoadVariableToRegister varLoad && varLoad.Register == register)
 				return i;
 		return -1; //ncrunch: no coverage
 	}

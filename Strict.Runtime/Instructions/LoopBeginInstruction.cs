@@ -4,7 +4,6 @@ public sealed class LoopBeginInstruction : RegisterInstruction
 {
 	public LoopBeginInstruction(Register register) : base(InstructionType.LoopBegin, register) { }
 
-	/// <summary>Range loop: from startIndex to endIndex register (inclusive).</summary>
 	public LoopBeginInstruction(Register startIndex, Register endIndex)
 		: base(InstructionType.LoopBegin, startIndex)
 	{
@@ -14,7 +13,6 @@ public sealed class LoopBeginInstruction : RegisterInstruction
 
 	public Register? EndIndex { get; }
 	public bool IsRange { get; }
-	/// <summary>Loop execution state - set during Execute, reset before each new run.</summary>
 	public bool IsInitialized { get; set; }
 	public int LoopCount { get; set; }
 	public int? StartIndexValue { get; private set; }

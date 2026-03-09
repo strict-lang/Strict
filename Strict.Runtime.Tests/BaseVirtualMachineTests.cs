@@ -1,4 +1,5 @@
 global using Type = Strict.Language.Type;
+using Strict.Runtime.Instructions;
 
 namespace Strict.Runtime.Tests;
 
@@ -26,43 +27,43 @@ public class BaseVirtualMachineTests : TestExpressions
 		"\tif operation is \"divide\"",
 		"\t\treturn First / Second"
 	];
-	protected static readonly Statement[] ExpectedStatementsOfArithmeticFunctionExample =
+	protected static readonly Instruction[] ExpectedInstructionsOfArithmeticFunctionExample =
 	[
-		new StoreVariableStatement(Number(10), "First"),
-		new StoreVariableStatement(Number(5), "Second"),
-		new StoreVariableStatement(Text("add"), "operation"),
+		new StoreVariableInstruction(Number(10), "First"),
+		new StoreVariableInstruction(Number(5), "Second"),
+		new StoreVariableInstruction(Text("add"), "operation"),
 		new LoadVariableToRegister(Register.R0, "operation"),
-		new LoadConstantStatement(Register.R1, Text("add")),
-		new Binary(Instruction.Equal, Register.R0, Register.R1),
-		new JumpToId(Instruction.JumpToIdIfFalse, 0),
+		new LoadConstantInstruction(Register.R1, Text("add")),
+		new BinaryInstruction(InstructionType.Equal, Register.R0, Register.R1),
+		new JumpToId(InstructionType.JumpToIdIfFalse, 0),
 		new LoadVariableToRegister(Register.R2, "First"),
 		new LoadVariableToRegister(Register.R3, "Second"),
-		new Binary(Instruction.Add, Register.R2, Register.R3, Register.R4),
-		new Return(Register.R4), new JumpToId(Instruction.JumpEnd, 0),
+		new BinaryInstruction(InstructionType.Add, Register.R2, Register.R3, Register.R4),
+		new ReturnInstruction(Register.R4), new JumpToId(InstructionType.JumpEnd, 0),
 		new LoadVariableToRegister(Register.R5, "operation"),
-		new LoadConstantStatement(Register.R6, Text("subtract")),
-		new Binary(Instruction.Equal, Register.R5, Register.R6),
-		new JumpToId(Instruction.JumpToIdIfFalse, 1),
+		new LoadConstantInstruction(Register.R6, Text("subtract")),
+		new BinaryInstruction(InstructionType.Equal, Register.R5, Register.R6),
+		new JumpToId(InstructionType.JumpToIdIfFalse, 1),
 		new LoadVariableToRegister(Register.R7, "First"),
 		new LoadVariableToRegister(Register.R8, "Second"),
-		new Binary(Instruction.Subtract, Register.R7, Register.R8, Register.R9),
-		new Return(Register.R9), new JumpToId(Instruction.JumpEnd, 1),
+		new BinaryInstruction(InstructionType.Subtract, Register.R7, Register.R8, Register.R9),
+		new ReturnInstruction(Register.R9), new JumpToId(InstructionType.JumpEnd, 1),
 		new LoadVariableToRegister(Register.R10, "operation"),
-		new LoadConstantStatement(Register.R11, Text("multiply")),
-		new Binary(Instruction.Equal, Register.R10, Register.R11),
-		new JumpToId(Instruction.JumpToIdIfFalse, 2),
+		new LoadConstantInstruction(Register.R11, Text("multiply")),
+		new BinaryInstruction(InstructionType.Equal, Register.R10, Register.R11),
+		new JumpToId(InstructionType.JumpToIdIfFalse, 2),
 		new LoadVariableToRegister(Register.R12, "First"),
 		new LoadVariableToRegister(Register.R13, "Second"),
-		new Binary(Instruction.Multiply, Register.R12, Register.R13, Register.R14),
-		new Return(Register.R14), new JumpToId(Instruction.JumpEnd, 2),
+		new BinaryInstruction(InstructionType.Multiply, Register.R12, Register.R13, Register.R14),
+		new ReturnInstruction(Register.R14), new JumpToId(InstructionType.JumpEnd, 2),
 		new LoadVariableToRegister(Register.R15, "operation"),
-		new LoadConstantStatement(Register.R0, Text("divide")),
-		new Binary(Instruction.Equal, Register.R15, Register.R0),
-		new JumpToId(Instruction.JumpToIdIfFalse, 3),
+		new LoadConstantInstruction(Register.R0, Text("divide")),
+		new BinaryInstruction(InstructionType.Equal, Register.R15, Register.R0),
+		new JumpToId(InstructionType.JumpToIdIfFalse, 3),
 		new LoadVariableToRegister(Register.R1, "First"),
 		new LoadVariableToRegister(Register.R2, "Second"),
-		new Binary(Instruction.Divide, Register.R1, Register.R2, Register.R3),
-		new Return(Register.R3), new JumpToId(Instruction.JumpEnd, 3)
+		new BinaryInstruction(InstructionType.Divide, Register.R1, Register.R2, Register.R3),
+		new ReturnInstruction(Register.R3), new JumpToId(InstructionType.JumpEnd, 3)
 	];
 	protected static readonly string[] SimpleLoopExample =
 	[
@@ -150,61 +151,62 @@ public class BaseVirtualMachineTests : TestExpressions
 		"SumNumbers Number",
 		"\t10 + 532"
 	];
-	protected static readonly Statement[] ExpectedSimpleMethodCallCode =
+	protected static readonly Instruction[] ExpectedSimpleMethodCallCode =
 	[
-		new StoreVariableStatement(Number(2), "firstNumber"),
-		new StoreVariableStatement(Number(5), "secondNumber"),
+		new StoreVariableInstruction(Number(2), "firstNumber"),
+		new StoreVariableInstruction(Number(5), "secondNumber"),
 		new Invoke(Register.R0, null!, null!),
-		new Return(Register.R0)
+		new ReturnInstruction(Register.R0)
 	];
-	protected static readonly Statement[] ExpectedStatementsOfRemoveParenthesesKata =
+	protected static readonly Instruction[] ExpectedInstructionsOfRemoveParenthesesKata =
 	[
-		new StoreVariableStatement(Text("some(thing)"), "text"),
-		new StoreVariableStatement(Text(""), "result"),
-		new StoreVariableStatement(Number(0), "count"),
+		new StoreVariableInstruction(Text("some(thing)"), "text"),
+		new StoreVariableInstruction(Text(""), "result"),
+		new StoreVariableInstruction(Number(0), "count"),
 		new LoadVariableToRegister(Register.R0, "text"),
-		new LoopBeginStatement(Register.R0),
+		new LoopBeginInstruction(Register.R0),
 		new LoadVariableToRegister(Register.R1, "value"),
-		new LoadConstantStatement(Register.R2, Text("(")),
-		new Binary(Instruction.Equal, Register.R1, Register.R2),
-		new JumpToId(Instruction.JumpToIdIfFalse, 0),
+		new LoadConstantInstruction(Register.R2, Text("(")),
+		new BinaryInstruction(InstructionType.Equal, Register.R1, Register.R2),
+		new JumpToId(InstructionType.JumpToIdIfFalse, 0),
 		new LoadVariableToRegister(Register.R3, "count"),
-		new LoadConstantStatement(Register.R4, Number(1)),
-		new Binary(Instruction.Add, Register.R3, Register.R4, Register.R5),
-		new StoreFromRegisterStatement(Register.R5, "count"),
-		new JumpToId(Instruction.JumpEnd, 0),
+		new LoadConstantInstruction(Register.R4, Number(1)),
+		new BinaryInstruction(InstructionType.Add, Register.R3, Register.R4, Register.R5),
+		new StoreFromRegisterInstruction(Register.R5, "count"),
+		new JumpToId(InstructionType.JumpEnd, 0),
 		new LoadVariableToRegister(Register.R6, "count"),
-		new LoadConstantStatement(Register.R7, Number(0)),
-		new Binary(Instruction.Equal, Register.R6, Register.R7),
-		new JumpToId(Instruction.JumpToIdIfFalse, 1),
+		new LoadConstantInstruction(Register.R7, Number(0)),
+		new BinaryInstruction(InstructionType.Equal, Register.R6, Register.R7),
+		new JumpToId(InstructionType.JumpToIdIfFalse, 1),
 		new LoadVariableToRegister(Register.R8, "result"),
 		new LoadVariableToRegister(Register.R9, "value"),
-		new Binary(Instruction.Add, Register.R8, Register.R9, Register.R10),
-		new StoreFromRegisterStatement(Register.R10, "result"),
-		new JumpToId(Instruction.JumpEnd, 1),
+		new BinaryInstruction(InstructionType.Add, Register.R8, Register.R9, Register.R10),
+		new StoreFromRegisterInstruction(Register.R10, "result"),
+		new JumpToId(InstructionType.JumpEnd, 1),
 		new LoadVariableToRegister(Register.R11, "value"),
-		new LoadConstantStatement(Register.R12, Text(")")),
-		new Binary(Instruction.Equal, Register.R11, Register.R12),
-		new JumpToId(Instruction.JumpToIdIfFalse, 2),
+		new LoadConstantInstruction(Register.R12, Text(")")),
+		new BinaryInstruction(InstructionType.Equal, Register.R11, Register.R12),
+		new JumpToId(InstructionType.JumpToIdIfFalse, 2),
 		new LoadVariableToRegister(Register.R13, "count"),
-		new LoadConstantStatement(Register.R14, Number(1)),
-		new Binary(Instruction.Subtract, Register.R13, Register.R14, Register.R15),
-		new StoreFromRegisterStatement(Register.R15, "count"),
-		new JumpToId(Instruction.JumpEnd, 2),
-		new LoopEndStatement(29),
+		new LoadConstantInstruction(Register.R14, Number(1)),
+		new BinaryInstruction(InstructionType.Subtract, Register.R13, Register.R14, Register.R15),
+		new StoreFromRegisterInstruction(Register.R15, "count"),
+		new JumpToId(InstructionType.JumpEnd, 2),
+		new LoopEndInstruction(29),
 		new LoadVariableToRegister(Register.R0, "result"),
-		new Return(Register.R0)
+		new ReturnInstruction(Register.R0)
 	];
 	protected static readonly string[] SimpleListDeclarationExample =
 	[
 		"has number", "Declare Numbers", "\t(1, 2, 3, 4, 5)"
 	];
-	protected static readonly Statement[] ExpectedStatementsOfSimpleListDeclaration =
+	protected static readonly Instruction[] ExpectedInstructionsOfSimpleListDeclaration =
 	[
-		new StoreVariableStatement(Number(5), "number"),
-		new LoadConstantStatement(Register.R0, new ValueInstance(ListType.GetGenericImplementation(NumberType),
-			[Number(1), Number(2), Number(3), Number(4), Number(5)])),
-		new Return(Register.R0)
+		new StoreVariableInstruction(Number(5), "number"),
+		new LoadConstantInstruction(Register.R0,
+			new ValueInstance(ListType.GetGenericImplementation(NumberType),
+				[Number(1), Number(2), Number(3), Number(4), Number(5)])),
+		new ReturnInstruction(Register.R0)
 	];
 	protected static readonly string[] InvertValueKata =
 	[
@@ -215,23 +217,24 @@ public class BaseVirtualMachineTests : TestExpressions
 		"\t\tresult = result + value * -1",
 		"\tresult"
 	];
-	protected static readonly Statement[] ExpectedStatementsOfInvertValueKata =
+	//TODO: remove if unused!
+	protected static readonly Instruction[] ExpectedInstructionsOfInvertValueKata =
 	[
-		new StoreVariableStatement(
+		new StoreVariableInstruction(
 			new ValueInstance(ListType.GetGenericImplementation(NumberType),
 				[Number(1), Number(2), Number(3), Number(4)]), "numbers"),
-		new StoreVariableStatement(Text(""), "result"),
+		new StoreVariableInstruction(Text(""), "result"),
 		new LoadVariableToRegister(Register.R0, "numbers"),
-		new LoopBeginStatement(Register.R0),
+		new LoopBeginInstruction(Register.R0),
 		new LoadVariableToRegister(Register.R1, "value"),
-		new LoadConstantStatement(Register.R2, Number(-1)),
-		new Binary(Instruction.Multiply, Register.R1, Register.R2, Register.R3),
+		new LoadConstantInstruction(Register.R2, Number(-1)),
+		new BinaryInstruction(InstructionType.Multiply, Register.R1, Register.R2, Register.R3),
 		new LoadVariableToRegister(Register.R4, "result"),
-		new Binary(Instruction.Add, Register.R4, Register.R3, Register.R5),
-		new StoreFromRegisterStatement(Register.R5, "result"),
-		new LoopEndStatement(8),
+		new BinaryInstruction(InstructionType.Add, Register.R4, Register.R3, Register.R5),
+		new StoreFromRegisterInstruction(Register.R5, "result"),
+		new LoopEndInstruction(8),
 		new LoadVariableToRegister(Register.R6, "result"),
-		new Return(Register.R6)
+		new ReturnInstruction(Register.R6)
 	];
 
 	protected MethodCall GenerateMethodCallFromSource(string programName, string methodCall,

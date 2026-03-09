@@ -8,7 +8,7 @@ public class TestOptimizers
 	public ValueInstance Num(double value) => new(numberType, value);
 	protected readonly Type numberType = TestPackage.Instance.GetType(Type.Number);
 
-	protected List<Statement> Optimize(StatementOptimizer optimizer, List<Statement> statements,
+	protected List<Statement> Optimize(InstructionOptimizer optimizer, List<Statement> statements,
 		int expectedCount)
 	{
 		var optimizedStatements = optimizer.Optimize(statements);

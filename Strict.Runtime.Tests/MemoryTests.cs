@@ -7,8 +7,8 @@ public sealed class MemoryTests
 	[Test]
 	public void AddToCollectionVariableDoesNothingWhenValueIsNotAList()
 	{
-		var memory = new Memory { Variables = { ["count"] = new ValueInstance(NumberType, 5.0) } };
-		memory.AddToCollectionVariable("count", new ValueInstance(NumberType, 1.0));
+		var memory = new Memory { Variables = { ["count"] = new ValueInstance(NumberType, 5) } };
+		memory.AddToCollectionVariable("count", new ValueInstance(NumberType, 1));
 		Assert.That(memory.Variables["count"].Number, Is.EqualTo(5));
 	}
 
@@ -17,8 +17,8 @@ public sealed class MemoryTests
 	{
 		var memory = new Memory();
 		var listType = TestPackage.Instance.GetListImplementationType(NumberType);
-		memory.Variables["items"] = new ValueInstance(listType, [new(NumberType, 1.0)]);
-		memory.AddToCollectionVariable("items", new ValueInstance(NumberType, 2.0));
+		memory.Variables["items"] = new ValueInstance(listType, [new(NumberType, 1)]);
+		memory.AddToCollectionVariable("items", new ValueInstance(NumberType, 2));
 		Assert.That(memory.Variables["items"].List.Items.Count, Is.EqualTo(2));
 	}
 }

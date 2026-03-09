@@ -4,10 +4,10 @@ using Return = Strict.Runtime.Statements.Return;
 
 namespace Strict.Optimizers.Tests;
 
-public sealed class InstructionOptimizerTests : TestOptimizers
+public sealed class AllInstructionOptimizersTests : TestOptimizers
 {
 	private List<Statement> Optimize(List<Statement> statements, int expectedCount) =>
-		Optimize(new InstructionOptimizer(), statements, expectedCount);
+		Optimize(new AllInstructionOptimizers(), statements, expectedCount);
 
 	[Test]
 	public void ChainsMultipleOptimizers()

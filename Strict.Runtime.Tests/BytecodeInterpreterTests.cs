@@ -1,4 +1,5 @@
 using System.Globalization;
+using Strict.Runtime.Instructions;
 
 namespace Strict.Runtime.Tests;
 
@@ -42,59 +43,59 @@ public class BytecodeInterpreterTests : BaseVirtualMachineTests
 		Assert.That(result.Value.Number, Is.EqualTo(1));
 	}
 
-	[TestCase(Instruction.Add, 15, 5, 10)]
-	[TestCase(Instruction.Subtract, 5, 8, 3)]
-	[TestCase(Instruction.Multiply, 4, 2, 2)]
-	[TestCase(Instruction.Divide, 3, 7.5, 2.5)]
-	[TestCase(Instruction.Modulo, 1, 5, 2)]
-	[TestCase(Instruction.Add, "510", "5", 10)]
-	[TestCase(Instruction.Add, "510", 5, "10")]
-	[TestCase(Instruction.Add, "510", "5", "10")]
-	public void Execute(Instruction operation, object expected, params object[] inputs)
+	[TestCase(InstructionType.Add, 15, 5, 10)]
+	[TestCase(InstructionType.Subtract, 5, 8, 3)]
+	[TestCase(InstructionType.Multiply, 4, 2, 2)]
+	[TestCase(InstructionType.Divide, 3, 7.5, 2.5)]
+	[TestCase(InstructionType.Modulo, 1, 5, 2)]
+	[TestCase(InstructionType.Add, "510", "5", 10)]
+	[TestCase(InstructionType.Add, "510", 5, "10")]
+	[TestCase(InstructionType.Add, "510", "5", "10")]
+	public void Execute(InstructionType operation, object expected, params object[] inputs)
 	{
-		var result = vm.Execute(BuildStatements(inputs, operation)).Memory.Registers[Register.R1];
+		var result = vm.Execute(BuildInstructions(inputs, operation)).Memory.Registers[Register.R1];
 		var actual = expected is string
 			? (object)result.Text
 			: result.Number;
 		Assert.That(actual, Is.EqualTo(expected));
 	}
 
-	private static Statement[]
-		BuildStatements(IReadOnlyList<object> inputs, Instruction operation) =>
+	private static Instruction[] BuildInstructions(IReadOnlyList<object> inputs,
+		InstructionType operation) =>
 	[
-		new SetStatement(inputs[0] is string s0
+		new SetInstruction(inputs[0] is string s0
 			? Text(s0)
 			: Number(Convert.ToDouble(inputs[0])), Register.R0),
-		new SetStatement(inputs[1] is string s1
+		new SetInstruction(inputs[1] is string s1
 			? Text(s1)
 			: inputs[1] is double d
 				? Number(d)
 				: Number(Convert.ToDouble(inputs[1])), Register.R1),
-		new Binary(operation, Register.R0, Register.R1)
+		new BinaryInstruction(operation, Register.R0, Register.R1)
 	];
 
 	[Test]
 	public void LoadVariable() =>
 		Assert.That(vm.Execute([
-			new LoadConstantStatement(Register.R0, Number(5))
+			new LoadConstantInstruction(Register.R0, Number(5))
 		]).Memory.Registers[Register.R0].Number, Is.EqualTo(5));
 
 	[Test]
 	public void SetAndAdd() =>
 		Assert.That(vm.Execute([
-			new LoadConstantStatement(Register.R0, Number(10)),
-			new LoadConstantStatement(Register.R1, Number(5)),
-			new Binary(Instruction.Add, Register.R0, Register.R1, Register.R2)
+			new LoadConstantInstruction(Register.R0, Number(10)),
+			new LoadConstantInstruction(Register.R1, Number(5)),
+			new BinaryInstruction(InstructionType.Add, Register.R0, Register.R1, Register.R2)
 		]).Memory.Registers[Register.R2].Number, Is.EqualTo(15));
 
 	[Test]
 	public void AddFiveTimes() =>
 		Assert.That(vm.Execute([
-			new SetStatement(Number(5), Register.R0),
-			new SetStatement(Number(1), Register.R1),
-			new SetStatement(Number(0), Register.R2),
-			new Binary(Instruction.Add, Register.R0, Register.R2, Register.R2),
-			new Binary(Instruction.Subtract, Register.R0, Register.R1, Register.R0),
+			new SetInstruction(Number(5), Register.R0),
+			new SetInstruction(Number(1), Register.R1),
+			new SetInstruction(Number(0), Register.R2),
+			new BinaryInstruction(InstructionType.Add, Register.R0, Register.R2, Register.R2),
+			new BinaryInstruction(InstructionType.Subtract, Register.R0, Register.R1, Register.R0),
 			new JumpIfNotZero(-3, Register.R0)
 		]).Memory.Registers[Register.R2].Number, Is.EqualTo(0 + 5 + 4 + 3 + 2 + 1));
 
@@ -131,16 +132,19 @@ public class BytecodeInterpreterTests : BaseVirtualMachineTests
 	[Test]
 	public void ReduceButGrowLoopExample() =>
 		Assert.That(vm.Execute([
-			new StoreVariableStatement(Number(10), "number"),
-			new StoreVariableStatement(Number(1), "result"),
-			new StoreVariableStatement(Number(2), "multiplier"),
+			new StoreVariableInstruction(Number(10), "number"),
+			new StoreVariableInstruction(Number(1), "result"),
+			new StoreVariableInstruction(Number(2), "multiplier"),
 			new LoadVariableToRegister(Register.R0, "number"),
-			new LoopBeginStatement(Register.R0), new LoadVariableToRegister(Register.R2, "result"),
+			new LoopBeginInstruction(Register.R0),
+			new LoadVariableToRegister(Register.R2, "result"),
 			new LoadVariableToRegister(Register.R3, "multiplier"),
-			new Binary(Instruction.Multiply, Register.R2, Register.R3, Register.R4),
-			new StoreFromRegisterStatement(Register.R4, "result"),
-			new LoopEndStatement(5),
-			new LoadVariableToRegister(Register.R5, "result"), new Return(Register.R5)
+			new BinaryInstruction(InstructionType.Multiply, Register.R2, Register.R3,
+				Register.R4),
+			new StoreFromRegisterInstruction(Register.R4, "result"),
+			new LoopEndInstruction(5),
+			new LoadVariableToRegister(Register.R5, "result"),
+			new ReturnInstruction(Register.R5)
 		]).Returns!.Value.Number, Is.EqualTo(1024));
 
 	[TestCase("NumberConvertor", "NumberConvertor(5).ConvertToText", "5", "has number",
@@ -283,7 +287,7 @@ public class BytecodeInterpreterTests : BaseVirtualMachineTests
 		Assert.That(result.TrimEnd(), Is.EqualTo(expected));
 	}
 
-	private string ExpressionListToSpaceSeparatedString(IList<Statement> statements)
+	private string ExpressionListToSpaceSeparatedString(IList<Instruction> statements)
 	{
 		var result = vm.Execute(statements).Returns!.Value;
 		return result.List.Items.Aggregate("", (current, item) => current + (item.IsText
@@ -312,7 +316,7 @@ public class BytecodeInterpreterTests : BaseVirtualMachineTests
 		var dictionaryType = TestPackage.Instance.GetType(Type.Dictionary).
 			GetGenericImplementation(NumberType, NumberType);
 		var methodCall = CreateFromMethodCall(dictionaryType);
-		var statements = new List<Statement> { new Invoke(Register.R0, methodCall, new Registry()) };
+		var statements = new List<Instruction> { new Invoke(Register.R0, methodCall, new Registry()) };
 		var result = vm.Execute(statements).Memory.Registers[Register.R0];
 		Assert.That(result.IsDictionary, Is.True);
 		Assert.That(result.GetDictionaryItems().Count, Is.EqualTo(0));
@@ -375,55 +379,56 @@ public class BytecodeInterpreterTests : BaseVirtualMachineTests
 	[Test]
 	public void ConditionalJump() =>
 		Assert.That(vm.Execute([
-			new SetStatement(Number(5), Register.R0),
-			new SetStatement(Number(1), Register.R1),
-			new SetStatement(Number(10), Register.R2),
-			new Binary(Instruction.LessThan, Register.R2, Register.R0),
-			new JumpIf(Instruction.JumpIfTrue, 2),
-			new Binary(Instruction.Add, Register.R2, Register.R0, Register.R0)
+			new SetInstruction(Number(5), Register.R0),
+			new SetInstruction(Number(1), Register.R1),
+			new SetInstruction(Number(10), Register.R2),
+			new BinaryInstruction(InstructionType.LessThan, Register.R2, Register.R0),
+			new JumpIf(InstructionType.JumpIfTrue, 2),
+			new BinaryInstruction(InstructionType.Add, Register.R2, Register.R0, Register.R0)
 		]).Memory.Registers[Register.R0].Number, Is.EqualTo(15));
 
 	[Test]
 	public void JumpIfTrueSkipsNextInstruction() =>
 		Assert.That(vm.Execute([
-			new SetStatement(Number(1), Register.R0),
-			new SetStatement(Number(1), Register.R1),
-			new SetStatement(Number(0), Register.R2),
-			new Binary(Instruction.Equal, Register.R0, Register.R1),
+			new SetInstruction(Number(1), Register.R0),
+			new SetInstruction(Number(1), Register.R1),
+			new SetInstruction(Number(0), Register.R2),
+			new BinaryInstruction(InstructionType.Equal, Register.R0, Register.R1),
 			new JumpIfTrue(1, Register.R0),
-			new Binary(Instruction.Add, Register.R0, Register.R1, Register.R2)
+			new BinaryInstruction(InstructionType.Add, Register.R0, Register.R1, Register.R2)
 		]).Memory.Registers[Register.R2].Number, Is.EqualTo(0));
 
 	[Test]
 	public void JumpIfFalseSkipsNextInstruction() =>
 		Assert.That(vm.Execute([
-			new SetStatement(Number(1), Register.R0),
-			new SetStatement(Number(2), Register.R1),
-			new SetStatement(Number(0), Register.R2),
-			new Binary(Instruction.Equal, Register.R0, Register.R1),
+			new SetInstruction(Number(1), Register.R0),
+			new SetInstruction(Number(2), Register.R1),
+			new SetInstruction(Number(0), Register.R2),
+			new BinaryInstruction(InstructionType.Equal, Register.R0, Register.R1),
 			new JumpIfFalse(1, Register.R0),
-			new Binary(Instruction.Add, Register.R0, Register.R1, Register.R2)
+			new BinaryInstruction(InstructionType.Add, Register.R0, Register.R1, Register.R2)
 		]).Memory.Registers[Register.R2].Number, Is.EqualTo(0));
 
-	[TestCase(Instruction.GreaterThan, new[] { 1, 2 }, 2 - 1)]
-	[TestCase(Instruction.LessThan, new[] { 1, 2 }, 1 + 2)]
-	[TestCase(Instruction.Equal, new[] { 5, 5 }, 5 + 5)]
-	[TestCase(Instruction.NotEqual, new[] { 5, 5 }, 5 - 5)]
-	public void ConditionalJumpIfAndElse(Instruction conditional, int[] registers, int expected) =>
+	[TestCase(InstructionType.GreaterThan, new[] { 1, 2 }, 2 - 1)]
+	[TestCase(InstructionType.LessThan, new[] { 1, 2 }, 1 + 2)]
+	[TestCase(InstructionType.Equal, new[] { 5, 5 }, 5 + 5)]
+	[TestCase(InstructionType.NotEqual, new[] { 5, 5 }, 5 - 5)]
+	public void ConditionalJumpIfAndElse(InstructionType conditional, int[] registers,
+		int expected) =>
 		Assert.That(vm.Execute([
-			new SetStatement(Number(registers[0]), Register.R0),
-			new SetStatement(Number(registers[1]), Register.R1),
-			new Binary(conditional, Register.R0, Register.R1),
-			new JumpIf(Instruction.JumpIfTrue, 2),
-			new Binary(Instruction.Subtract, Register.R1, Register.R0, Register.R0),
-			new JumpIf(Instruction.JumpIfFalse, 2),
-			new Binary(Instruction.Add, Register.R0, Register.R1, Register.R0)
+			new SetInstruction(Number(registers[0]), Register.R0),
+			new SetInstruction(Number(registers[1]), Register.R1),
+			new BinaryInstruction(conditional, Register.R0, Register.R1),
+			new JumpIf(InstructionType.JumpIfTrue, 2),
+			new BinaryInstruction(InstructionType.Subtract, Register.R1, Register.R0, Register.R0),
+			new JumpIf(InstructionType.JumpIfFalse, 2),
+			new BinaryInstruction(InstructionType.Add, Register.R0, Register.R1, Register.R0)
 		]).Memory.Registers[Register.R0].Number, Is.EqualTo(expected));
 
-	[TestCase(Instruction.Add)]
-	[TestCase(Instruction.GreaterThan)]
-	public void OperandsRequired(Instruction instruction) =>
-		Assert.That(() => vm.Execute([new Binary(instruction, Register.R0)]),
+	[TestCase(InstructionType.Add)]
+	[TestCase(InstructionType.GreaterThan)]
+	public void OperandsRequired(InstructionType instruction) =>
+		Assert.That(() => vm.Execute([new BinaryInstruction(instruction, Register.R0)]),
 			Throws.InstanceOf<BytecodeInterpreter.OperandsRequired>());
 
 	[Test]
@@ -432,16 +437,17 @@ public class BytecodeInterpreterTests : BaseVirtualMachineTests
 		var numbersListType = ListType.GetGenericImplementation(NumberType);
 		var emptyList = new ValueInstance(numbersListType, Array.Empty<ValueInstance>());
 		var result = vm.Execute([
-			new StoreVariableStatement(emptyList, "numbers"),
-			new StoreVariableStatement(Number(0), "result"),
+			new StoreVariableInstruction(emptyList, "numbers"),
+			new StoreVariableInstruction(Number(0), "result"),
 			new LoadVariableToRegister(Register.R0, "numbers"),
-			new LoopBeginStatement(Register.R0), new LoadVariableToRegister(Register.R1, "result"),
-			new LoadConstantStatement(Register.R2, Number(1)),
-			new Binary(Instruction.Add, Register.R1, Register.R2, Register.R3),
-			new StoreFromRegisterStatement(Register.R3, "result"),
-			new LoopEndStatement(5),
+			new LoopBeginInstruction(Register.R0),
+			new LoadVariableToRegister(Register.R1, "result"),
+			new LoadConstantInstruction(Register.R2, Number(1)),
+			new BinaryInstruction(InstructionType.Add, Register.R1, Register.R2, Register.R3),
+			new StoreFromRegisterInstruction(Register.R3, "result"),
+			new LoopEndInstruction(5),
 			new LoadVariableToRegister(Register.R4, "result"),
-			new Return(Register.R4)
+			new ReturnInstruction(Register.R4)
 		]).Returns;
 		Assert.That(result!.Value.Number, Is.EqualTo(0));
 	}
@@ -450,19 +456,19 @@ public class BytecodeInterpreterTests : BaseVirtualMachineTests
 	public void LoopOverTextStopsWhenIndexExceedsLength()
 	{
 		var text = Text("Hi");
-		var loopBegin = new LoopBeginStatement(Register.R0);
+		var loopBegin = new LoopBeginInstruction(Register.R0);
 		var result = vm.Execute([
-			new StoreVariableStatement(text, "words"),
-			new StoreVariableStatement(Number(0), "count"),
+			new StoreVariableInstruction(text, "words"),
+			new StoreVariableInstruction(Number(0), "count"),
 			new LoadVariableToRegister(Register.R0, "words"),
 			loopBegin,
 			new LoadVariableToRegister(Register.R1, "count"),
-			new LoadConstantStatement(Register.R2, Number(1)),
-			new Binary(Instruction.Add, Register.R1, Register.R2, Register.R3),
-			new StoreFromRegisterStatement(Register.R3, "count"),
-			new LoopEndStatement(5),
+			new LoadConstantInstruction(Register.R2, Number(1)),
+			new BinaryInstruction(InstructionType.Add, Register.R1, Register.R2, Register.R3),
+			new StoreFromRegisterInstruction(Register.R3, "count"),
+			new LoopEndInstruction(5),
 			new LoadVariableToRegister(Register.R4, "count"),
-			new Return(Register.R4)
+			new ReturnInstruction(Register.R4)
 		]).Returns;
 		Assert.That(result!.Value.Number, Is.EqualTo(2));
 	}
@@ -511,17 +517,17 @@ public class BytecodeInterpreterTests : BaseVirtualMachineTests
 		var numbersListType = ListType.GetGenericImplementation(NumberType);
 		var singleItemList = new ValueInstance(numbersListType, [new ValueInstance(NumberType, 42)]);
 		var result = vm.Execute([
-			new StoreVariableStatement(singleItemList, "items"),
-			new StoreVariableStatement(Number(0), "count"),
+			new StoreVariableInstruction(singleItemList, "items"),
+			new StoreVariableInstruction(Number(0), "count"),
 			new LoadVariableToRegister(Register.R0, "items"),
-			new LoopBeginStatement(Register.R0),
+			new LoopBeginInstruction(Register.R0),
 			new LoadVariableToRegister(Register.R1, "count"),
-			new LoadConstantStatement(Register.R2, Number(1)),
-			new Binary(Instruction.Add, Register.R1, Register.R2, Register.R3),
-			new StoreFromRegisterStatement(Register.R3, "count"),
-			new LoopEndStatement(5),
+			new LoadConstantInstruction(Register.R2, Number(1)),
+			new BinaryInstruction(InstructionType.Add, Register.R1, Register.R2, Register.R3),
+			new StoreFromRegisterInstruction(Register.R3, "count"),
+			new LoopEndInstruction(5),
 			new LoadVariableToRegister(Register.R4, "count"),
-			new Return(Register.R4)
+			new ReturnInstruction(Register.R4)
 		]).Returns;
 		Assert.That(result!.Value.Number, Is.EqualTo(1));
 	}

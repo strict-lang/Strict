@@ -1,5 +1,5 @@
 using Strict.Runtime;
-using Strict.Runtime.Statements;
+using Strict.Runtime.Instructions;
 
 namespace Strict.Optimizers;
 
@@ -9,26 +9,26 @@ namespace Strict.Optimizers;
 /// (or loop/jump boundaries), the second load is removed and all references to its register
 /// are rewritten to use the first load's register.
 /// </summary>
-public sealed class RedundantLoadEliminator : StatementOptimizer
+public sealed class RedundantLoadEliminator : InstructionOptimizer
 {
-	public override List<Statement> Optimize(List<Statement> statements)
+	public override List<Instruction> Optimize(List<Instruction> instructions)
 	{
 		var variableToRegister = new Dictionary<string, Register>();
 		var registerRemapping = new Dictionary<Register, Register>();
 		var toRemove = new List<int>();
-		for (var i = 0; i < statements.Count; i++)
+		for (var i = 0; i < instructions.Count; i++)
 		{
-			if (IsBlockBoundary(statements[i]))
+			if (IsBlockBoundary(instructions[i]))
 			{
 				variableToRegister.Clear();
 				continue;
 			}
-			if (statements[i] is StoreFromRegisterStatement storeReg)
+			if (instructions[i] is StoreFromRegisterInstruction storeReg)
 			{
 				variableToRegister.Remove(storeReg.Identifier);
 				continue;
 			}
-			if (statements[i] is not LoadVariableToRegister load)
+			if (instructions[i] is not LoadVariableToRegister load)
 				continue;
 			if (variableToRegister.TryGetValue(load.Identifier, out var existingRegister))
 			{
@@ -39,23 +39,23 @@ public sealed class RedundantLoadEliminator : StatementOptimizer
 				variableToRegister[load.Identifier] = load.Register;
 		}
 		for (var i = toRemove.Count - 1; i >= 0; i--)
-			statements.RemoveAt(toRemove[i]);
+			instructions.RemoveAt(toRemove[i]);
 		if (registerRemapping.Count > 0)
-			RemapRegisters(statements, registerRemapping);
-		return statements;
+			RemapRegisters(instructions, registerRemapping);
+		return instructions;
 	}
 
-	private static bool IsBlockBoundary(Statement statement) =>
-		statement.Instruction is Instruction.LoopBegin or Instruction.LoopEnd or
-			Instruction.Jump or Instruction.JumpIfTrue or Instruction.JumpIfFalse or
-			Instruction.JumpIfNotZero or Instruction.JumpEnd or Instruction.JumpToIdIfFalse or
-			Instruction.JumpToIdIfTrue;
+	private static bool IsBlockBoundary(Instruction statement) =>
+		statement.InstructionType is InstructionType.LoopBegin or InstructionType.LoopEnd or
+			InstructionType.Jump or InstructionType.JumpIfTrue or InstructionType.JumpIfFalse or
+			InstructionType.JumpIfNotZero or InstructionType.JumpEnd or InstructionType.JumpToIdIfFalse or
+			InstructionType.JumpToIdIfTrue;
 
-	private static void RemapRegisters(List<Statement> statements,
+	private static void RemapRegisters(List<Instruction> instructions,
 		Dictionary<Register, Register> remapping)
 	{
-		for (var i = 0; i < statements.Count; i++)
-			if (statements[i] is Binary binary)
+		for (var i = 0; i < instructions.Count; i++)
+			if (instructions[i] is BinaryInstruction binary)
 			{
 				var remapped = false;
 				var newRegisters = new Register[binary.Registers.Length];
@@ -68,7 +68,7 @@ public sealed class RedundantLoadEliminator : StatementOptimizer
 						remapped = true;
 				}
 				if (remapped)
-					statements[i] = new Binary(binary.Instruction, newRegisters);
+					instructions[i] = new BinaryInstruction(binary.InstructionType, newRegisters);
 			}
 	}
 }

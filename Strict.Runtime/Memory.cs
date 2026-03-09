@@ -28,7 +28,7 @@ public sealed class Memory
 		collection.List.Items.CopyTo(listItems);
 		listItems[^1] = element;
 		Frame.Set(key, new ValueInstance(collection.List.ReturnType, listItems));
-		/*TODO: can't see how this is still needed?
+		/*TODO: can't see how this is still needed? clean up!
 			return;
 		}
 		if (collection.GetTypeExceptText() is not GenericTypeImplementation genericImplementationType)
