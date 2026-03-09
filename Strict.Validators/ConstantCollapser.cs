@@ -33,7 +33,7 @@ public sealed class ConstantCollapser : Visitor
 		List<Expression>? rewritten = null;
 		for (var i = 0; i < body.Expressions.Count; i++)
 			if (body.Expressions[i] is Declaration decl && decl.Value is not MethodCall &&
-				!IsVariableStillUsed(body, declaration.Name, i))
+				!IsVariableStillUsed(body, decl.Name, i))
 			{
 				CollapsedCount++;
 				if (rewritten == null)
@@ -112,7 +112,7 @@ public sealed class ConstantCollapser : Visitor
 			if (to.ConversionType.IsNumber && value is Text textValue)
 				return new Number(to.Method.Type, double.Parse(textValue.Data.Text));
 			if (to.ConversionType.IsText && value is Number numberValue)
-				return new Text(to.Method.Type, numberValue.Data.Number.ToString(CultureInfo.InvariantCulture));
+				return new Text(to.Method.Type, numberValue.Data.ToExpressionCodeString());
 			throw new UnsupportedToExpression(to.ToStringWithType()); //ncrunch: no coverage
 		}
 		return expression;
