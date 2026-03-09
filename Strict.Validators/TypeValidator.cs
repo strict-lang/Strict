@@ -84,9 +84,11 @@ public sealed class TypeValidator : Visitor
 		if (expression is ParameterCall parameterCall)
 			variables.used.Add(parameterCall.Parameter.Name);
 		else if (expression is VariableCall variableCall)
-			variables.used.Add(variableCall.Variable.Name); //ncrunch: no coverage
+			variables.used.Add(variableCall.Variable.Name);
 		else if (expression is MutableReassignment reassignment)
 			variables.reassignedMutables.Add(reassignment.Name);
+		else
+			return base.Visit(expression, body, context);
 		return expression;
 	}
 

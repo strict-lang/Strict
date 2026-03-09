@@ -28,9 +28,22 @@ public sealed class MutableReassignment : ConcreteExpression
 	public Expression Value { get; }
 
 	public static Expression? TryParse(Body body, ReadOnlySpan<char> line) =>
-		line.Contains(" = ", StringComparison.Ordinal)
+		ContainsAssignmentOutsideString(line)
 			? TryParseReassignment(body, line)
 			: null;
+
+	private static bool ContainsAssignmentOutsideString(ReadOnlySpan<char> input)
+	{
+		var inText = false;
+		for (var i = 0; i < input.Length - 2; i++)
+		{
+			if (input[i] == '"')
+				inText = !inText;
+			if (!inText && input[i] == ' ' && input[i + 1] == '=' && input[i + 2] == ' ')
+				return true;
+		}
+		return false;
+	}
 
 	private static Expression TryParseReassignment(Body body, ReadOnlySpan<char> line)
 	{

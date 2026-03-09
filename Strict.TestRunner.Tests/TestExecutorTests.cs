@@ -223,6 +223,20 @@ public class TestExecutorTests
 	}
 
 	[Test]
+	public void RunAllTestsInTypeWithLoggerAutoInjected()
+	{
+		using var type = new Type(TestPackage.Instance,
+			new TypeLines(nameof(RunAllTestsInTypeWithLoggerAutoInjected),
+				"has first Number",
+				"has second Number",
+				"has logger",
+				"Add Number",
+				"\tRunAllTestsInTypeWithLoggerAutoInjected(2, 3).Add is 5",
+				"\tfirst + second")).ParseMembersAndMethods(new MethodExpressionParser());
+		executor.RunAllTestsInType(type);
+	}
+
+	[Test]
 	public void RunDictionaryTestsTwice()
 	{
 		using var type = TestPackage.Instance.GetType(Type.Dictionary);

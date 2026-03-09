@@ -200,7 +200,8 @@ internal class TypeMethodFinder(Type type)
 	{
 		var count = 0;
 		for (var index = 0; index < method.Parameters.Count; index++)
-			if (method.Parameters[index].DefaultValue == null)
+			if (method.Parameters[index].DefaultValue == null &&
+				method.Parameters[index].Type.Name != Type.Logger)
 				count++;
 		return count;
 	}

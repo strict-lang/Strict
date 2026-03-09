@@ -75,6 +75,25 @@ public class Executor
 	private readonly HashSet<Method> validatedMethods = [];
 	public readonly Statistics Statistics = new();
 
+	public void ExecuteRunMethod(Type type)
+	{
+		var runMethod = type.Methods.FirstOrDefault(m => m.Name == Method.Run && m.Parameters.Count == 0);
+		if (runMethod == null)
+			return; //ncrunch: no coverage
+		var fromMethod = type.Methods.FirstOrDefault(m => m.Name == Method.From);
+		if (fromMethod == null)
+		{
+			Execute(runMethod, noneInstance, []);
+			return;
+		} //ncrunch: no coverage
+		var nonLoggerArgs = fromMethod.Parameters
+			.Where(p => p.Type.Name != Type.Logger)
+			.Select(p => new ValueInstance(numberType, 0))
+			.ToArray();
+		var instance = Execute(fromMethod, noneInstance, nonLoggerArgs);
+		Execute(runMethod, instance, []);
+	}
+
 	public ValueInstance Execute(Method method, ValueInstance instance,
 		ValueInstance[] args, ExecutionContext? parentContext = null, bool runOnlyTests = false)
 	{
@@ -84,6 +103,12 @@ public class Executor
 			return instance.Equals(noneInstance)
 				? GetFromConstructorValue(method, args)
 				: throw new MethodCall.CannotCallFromConstructorWithExistingInstance();
+		if (method.IsTrait && method.Type.Name == Type.TextWriter && method.Name == "Write")
+		{
+			if (args.Length > 0)
+				Console.Write(args[0].ToExpressionCodeString());
+			return noneInstance;
+		}
 		if (runOnlyTests && IsSimpleSingleLineMethod(method))
 			return trueInstance;
 		var context = CreateExecutionContext(method, instance, args, parentContext, runOnlyTests);
@@ -200,6 +225,10 @@ public class Executor
 				? new ValueInstance(characterType, args[index].Text[0])
 				: args[index];
 		}
+		for (var index = args.Length; index < method.Parameters.Count; index++)
+			if (method.Parameters[index].Type.Name == Type.Logger)
+				values[GetMemberIndexForParameter(typeMembers, method.Parameters[index], index)] =
+					CreateConsoleLogger(method.Parameters[index].Type);
 		return new ValueInstance(method.Type, values);
 	}
 
@@ -210,6 +239,13 @@ public class Executor
 			if (typeMembers[i].Name.Equals(parameter.Name, StringComparison.OrdinalIgnoreCase))
 				return i;
 		return fallbackIndex; //ncrunch: no coverage
+	}
+
+	private static ValueInstance CreateConsoleLogger(Type loggerType)
+	{
+		var textWriterType = loggerType.Members[0].Type;
+		return new ValueInstance(loggerType,
+			[new ValueInstance(textWriterType, Array.Empty<ValueInstance>())]);
 	}
 
 	private static Dictionary<ValueInstance, ValueInstance> FillDictionaryFromListKeyAndValues(
