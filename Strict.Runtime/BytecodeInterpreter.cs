@@ -1,9 +1,9 @@
 using System.Diagnostics;
 using Strict.Expressions;
 using Strict.Language;
-using Strict.Runtime.Statements;
-using BinaryStatement = Strict.Runtime.Statements.Binary;
-using Return = Strict.Runtime.Statements.Return;
+using Strict.Runtime.Instructions;
+using BinaryInstruction = Strict.Runtime.Instructions.Binary;
+using ReturnInstruction = Strict.Runtime.Instructions.ReturnInstruction;
 using Type = Strict.Language.Type;
 
 namespace Strict.Runtime;
@@ -12,10 +12,10 @@ public sealed class BytecodeInterpreter(Package package)
 {
 	private readonly Package package = package;
 
-	public BytecodeInterpreter Execute(IList<Statement> allStatements)
+	public BytecodeInterpreter Execute(IList<Instruction> allStatements)
 	{
 		Clear();
-		foreach (var loopBegin in allStatements.OfType<LoopBeginStatement>())
+		foreach (var loopBegin in allStatements.OfType<LoopBeginInstruction>())
 			loopBegin.Reset();
 		return RunStatements(allStatements);
 	}
@@ -32,20 +32,20 @@ public sealed class BytecodeInterpreter(Package package)
 
 	private bool conditionFlag;
 	private int instructionIndex;
-	private IList<Statement> statements = new List<Statement>();
+	private IList<Instruction> statements = new List<Instruction>();
 	public ValueInstance? Returns { get; private set; }
 	public Memory Memory { get; } = new();
 
-	private BytecodeInterpreter RunStatements(IList<Statement> allStatements)
+	private BytecodeInterpreter RunStatements(IList<Instruction> allStatements)
 	{
 		statements = allStatements;
 		for (instructionIndex = 0;
 			instructionIndex is not -1 && instructionIndex < allStatements.Count; instructionIndex++)
-			ExecuteStatement(allStatements[instructionIndex]);
+			ExecuteInstruction(allStatements[instructionIndex]);
 		return this;
 	}
 
-	private void ExecuteStatement(Statement statement)
+	private void ExecuteInstruction(Instruction instruction)
 	{
 		Debug.Assert(statement != null);
 		if (TryExecuteReturn(statement))
@@ -57,53 +57,53 @@ public sealed class BytecodeInterpreter(Package package)
 		TryInvokeInstruction(statement);
 		TryWriteToListInstruction(statement);
 		TryWriteToTableInstruction(statement);
-		TryRemoveStatement(statement);
+		TryRemoveInstruction(statement);
 		TryExecuteListCall(statement);
 		TryExecuteRest(statement);
 	}
 
-	private void TryRemoveStatement(Statement statement)
+	private void TryRemoveInstruction(Instruction instruction)
 	{
-		if (statement is not RemoveStatement removeStatement)
+		if (instruction is not RemoveInstruction removeInstruction)
 			return;
-		var item = Memory.Registers[removeStatement.Register];
-		var oldList = Memory.Frame.Get(removeStatement.Identifier).List.Items;
+		var item = Memory.Registers[removeInstruction.Register];
+		var oldList = Memory.Frame.Get(removeInstruction.Identifier).List.Items;
 		var filteredItems = oldList.Where(existingItem => !existingItem.Equals(item)).ToArray();
-		Memory.Frame.Set(removeStatement.Identifier,
-			new ValueInstance(Memory.Frame.Get(removeStatement.Identifier).List.ReturnType,
+		Memory.Frame.Set(removeInstruction.Identifier,
+			new ValueInstance(Memory.Frame.Get(removeInstruction.Identifier).List.ReturnType,
 				filteredItems));
 	}
 
-	private void TryExecuteListCall(Statement statement)
+	private void TryExecuteListCall(Instruction instruction)
 	{
-		if (statement is not ListCallStatement listCallStatement)
+		if (instruction is not ListCallInstruction listCallInstruction)
 			return;
-		var indexValue = (int)Memory.Registers[listCallStatement.IndexValueRegister].Number;
-		var variableListElement = Memory.Frame.Get(listCallStatement.Identifier).List.Items.ElementAt(indexValue);
-		Memory.Registers[listCallStatement.Register] = variableListElement;
+		var indexValue = (int)Memory.Registers[listCallInstruction.IndexValueRegister].Number;
+		var variableListElement = Memory.Frame.Get(listCallInstruction.Identifier).List.Items.ElementAt(indexValue);
+		Memory.Registers[listCallInstruction.Register] = variableListElement;
 	}
 
-	private void TryWriteToListInstruction(Statement statement)
+	private void TryWriteToListInstruction(Instruction instruction)
 	{
-		if (statement is not WriteToListStatement writeToListStatement)
+		if (instruction is not WriteToListInstruction writeToListInstruction)
 			return;
-		Memory.AddToCollectionVariable(writeToListStatement.Identifier,
-			Memory.Registers[writeToListStatement.Register]);
+		Memory.AddToCollectionVariable(writeToListInstruction.Identifier,
+			Memory.Registers[writeToListInstruction.Register]);
 	}
 
-	private void TryWriteToTableInstruction(Statement statement)
+	private void TryWriteToTableInstruction(Instruction instruction)
 	{
-		if (statement is not WriteToTableStatement writeToTableStatement)
+		if (instruction is not WriteToTableInstruction writeToTableInstruction)
 			return;
-		Memory.AddToDictionary(writeToTableStatement.Identifier,
-			Memory.Registers[writeToTableStatement.Key], Memory.Registers[writeToTableStatement.Value]);
+		Memory.AddToDictionary(writeToTableInstruction.Identifier,
+			Memory.Registers[writeToTableInstruction.Key], Memory.Registers[writeToTableInstruction.Value]);
 	}
 
 	private void TryLoopEndInstruction(Statement statement)
 	{
-		if (statement is not LoopEndStatement loopEndStatement)
+		if (statement is not LoopEndInstruction loopEndStatement)
 			return;
-		var loopBegin = statements.Take(instructionIndex).OfType<LoopBeginStatement>().Last();
+		var loopBegin = statements.Take(instructionIndex).OfType<LoopBeginInstruction>().Last();
 		loopBegin.LoopCount--;
 		if (loopBegin.LoopCount <= 0)
 			return;
@@ -133,7 +133,7 @@ public sealed class BytecodeInterpreter(Package package)
 	/// this interpreter instance. All mutable fields are saved on the C# call stack (zero heap
 	/// allocations for the bookkeeping) and restored after the child finishes.
 	/// </summary>
-	private ValueInstance? RunChildScope(IList<Statement> childStatements)
+	private ValueInstance? RunChildScope(IList<Instruction> childStatements)
 	{
 		var savedStatements = statements;
 		var savedIndex = instructionIndex;
@@ -225,7 +225,7 @@ public sealed class BytecodeInterpreter(Package package)
 		return true;
 	}
 
-	private List<Statement> GetByteCodeFromInvokedMethodCall(Invoke invoke)
+	private List<Instruction> GetByteCodeFromInvokedMethodCall(Invoke invoke)
 	{
 		if (invoke.Method?.Instance == null && invoke.Method?.Method != null &&
 			invoke.PersistedRegistry != null)
@@ -268,7 +268,7 @@ public sealed class BytecodeInterpreter(Package package)
 
 	private bool TryExecuteReturn(Statement statement)
 	{
-		if (statement is not Return returnStatement)
+		if (statement is not ReturnInstruction returnStatement)
 			return false;
 		Returns = Memory.Registers[returnStatement.Register];
 		instructionIndex = -2;
@@ -277,7 +277,7 @@ public sealed class BytecodeInterpreter(Package package)
 
 	private void TryLoopInitInstruction(Statement statement)
 	{
-		if (statement is not LoopBeginStatement loopBeginStatement)
+		if (statement is not LoopBeginInstruction loopBeginStatement)
 			return;
 		if (loopBeginStatement.IsRange)
 			ProcessRangeLoopIteration(loopBeginStatement);
@@ -285,7 +285,7 @@ public sealed class BytecodeInterpreter(Package package)
 			ProcessCollectionLoopIteration(loopBeginStatement);
 	}
 
-	private void ProcessCollectionLoopIteration(LoopBeginStatement loopBeginStatement)
+	private void ProcessCollectionLoopIteration(LoopBeginInstruction loopBeginStatement)
 	{
 		if (!Memory.Registers.TryGet(loopBeginStatement.Register, out var iterableVariable))
 			return; //ncrunch: no coverage
@@ -305,12 +305,12 @@ public sealed class BytecodeInterpreter(Package package)
 		if (loopBeginStatement.LoopCount <= 0)
 		{
 			var stepsToLoopEnd = statements.Skip(instructionIndex + 1).
-				TakeWhile(s => s is not LoopEndStatement).Count();
+				TakeWhile(s => s is not LoopEndInstruction).Count();
 			instructionIndex += stepsToLoopEnd;
 		}
 	}
 
-	private void ProcessRangeLoopIteration(LoopBeginStatement loopBeginStatement)
+	private void ProcessRangeLoopIteration(LoopBeginInstruction loopBeginStatement)
 	{
 		if (!loopBeginStatement.IsInitialized)
 		{
@@ -343,7 +343,7 @@ public sealed class BytecodeInterpreter(Package package)
 	}
 
 	private void AlterValueVariable(ValueInstance iterableVariable, Type numberType,
-		LoopBeginStatement loopBeginStatement)
+		LoopBeginInstruction loopBeginStatement)
 	{
 		var index = Convert.ToInt32(Memory.Frame.Get("index").Number);
 		if (iterableVariable.IsText)
@@ -368,12 +368,12 @@ public sealed class BytecodeInterpreter(Package package)
 	{
 		if (statement.Instruction > Instruction.StoreSeparator)
 			return;
-		if (statement is SetStatement setStatement)
+		if (statement is SetInstruction setStatement)
 			Memory.Registers[setStatement.Register] = setStatement.ValueInstance;
-		else if (statement is StoreVariableStatement storeVariableStatement)
+		else if (statement is StoreVariableInstruction storeVariableStatement)
 			Memory.Frame.Set(storeVariableStatement.Identifier, storeVariableStatement.ValueInstance,
 				storeVariableStatement.IsMember);
-		else if (statement is StoreFromRegisterStatement storeFromRegisterStatement)
+		else if (statement is StoreFromRegisterInstruction storeFromRegisterStatement)
 			Memory.Frame.Set(storeFromRegisterStatement.Identifier,
 				Memory.Registers[storeFromRegisterStatement.Register]);
 	}
@@ -383,13 +383,13 @@ public sealed class BytecodeInterpreter(Package package)
 		if (statement is LoadVariableToRegister loadVariableStatement)
 			Memory.Registers[loadVariableStatement.Register] =
 				Memory.Frame.Get(loadVariableStatement.Identifier);
-		else if (statement is LoadConstantStatement loadConstantStatement)
+		else if (statement is LoadConstantInstruction loadConstantStatement)
 			Memory.Registers[loadConstantStatement.Register] = loadConstantStatement.ValueInstance;
 	}
 
 	private void TryExecuteRest(Statement statement)
 	{
-		if (statement is BinaryStatement binaryStatement)
+		if (statement is BinaryInstruction binaryStatement)
 		{
 			if (binaryStatement.IsConditional())
 				TryConditionalOperationExecution(binaryStatement);
@@ -404,7 +404,7 @@ public sealed class BytecodeInterpreter(Package package)
 			TryJumpToIdOperation(jumpToIdStatement);
 	}
 
-	private void TryBinaryOperationExecution(BinaryStatement statement)
+	private void TryBinaryOperationExecution(BinaryInstruction statement)
 	{
 		var (right, left) = GetOperands(statement);
 		Memory.Registers[statement.Registers[^1]] = statement.Instruction switch
@@ -451,12 +451,12 @@ public sealed class BytecodeInterpreter(Package package)
 		return new ValueInstance(left.GetTypeExceptText(), left.Number - right.Number);
 	}
 
-	private (ValueInstance, ValueInstance) GetOperands(BinaryStatement statement) =>
+	private (ValueInstance, ValueInstance) GetOperands(BinaryInstruction statement) =>
 		statement.Registers.Length < 2
 			? throw new OperandsRequired()
 			: (Memory.Registers[statement.Registers[1]], Memory.Registers[statement.Registers[0]]);
 
-	private void TryConditionalOperationExecution(BinaryStatement statement)
+	private void TryConditionalOperationExecution(BinaryInstruction statement)
 	{
 		var (right, left) = GetOperands(statement);
 		conditionFlag = statement.Instruction switch

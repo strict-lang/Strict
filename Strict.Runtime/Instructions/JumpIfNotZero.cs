@@ -1,7 +1,7 @@
-namespace Strict.Runtime.Statements;
+namespace Strict.Runtime.Instructions;
 
 public sealed class JumpIfNotZero(int steps, Register register)
-	: JumpIf(Instruction.JumpIfNotZero, steps)
+	: JumpIf(InstructionType.JumpIfNotZero, steps)
 {
 	public Register Register { get; } = register;
 }

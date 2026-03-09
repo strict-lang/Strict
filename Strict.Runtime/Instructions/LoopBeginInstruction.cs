@@ -1,12 +1,12 @@
-namespace Strict.Runtime.Statements;
+namespace Strict.Runtime.Instructions;
 
-public sealed class LoopBeginStatement : RegisterStatement
+public sealed class LoopBeginInstruction : RegisterInstruction
 {
-	public LoopBeginStatement(Register register) : base(Instruction.LoopBegin, register) { }
+	public LoopBeginInstruction(Register register) : base(InstructionType.LoopBegin, register) { }
 
 	/// <summary>Range loop: from startIndex to endIndex register (inclusive).</summary>
-	public LoopBeginStatement(Register startIndex, Register endIndex)
-		: base(Instruction.LoopBegin, startIndex)
+	public LoopBeginInstruction(Register startIndex, Register endIndex)
+		: base(InstructionType.LoopBegin, startIndex)
 	{
 		EndIndex = endIndex;
 		IsRange = true;
