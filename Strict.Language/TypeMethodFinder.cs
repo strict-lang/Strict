@@ -201,9 +201,30 @@ internal class TypeMethodFinder(Type type)
 		var count = 0;
 		for (var index = 0; index < method.Parameters.Count; index++)
 			if (method.Parameters[index].DefaultValue == null &&
-				method.Parameters[index].Type.Name != Type.Logger)
+				!CanAutoCreateType(method.Parameters[index].Type))
 				count++;
 		return count;
+	}
+
+	/// <summary>
+	/// A type can be auto-created (injected without explicit argument) if it is a trait
+	/// (resolved via the runtime's trait-implementation registry) or if it is a concrete type
+	/// all of whose members are themselves auto-creatable (e.g. Logger whose only member is
+	/// the TextWriter trait).
+	/// </summary>
+	private static bool CanAutoCreateType(Type type, HashSet<Type>? visiting = null)
+	{
+		if (type.IsTrait)
+			return true;
+		if (type.IsNumber || type.IsBoolean || type.IsCharacter || type.IsText || type.IsNone ||
+		    type.Members.Count == 0)
+			return false;
+		visiting ??= [];
+		if (!visiting.Add(type))
+			return false;
+		var result = type.Members.All(m => CanAutoCreateType(m.Type, visiting));
+		visiting.Remove(type);
+		return result;
 	}
 
 	private static bool IsMethodParameterMatchingArgument(Method method, int index, Type argumentType)

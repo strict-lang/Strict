@@ -225,6 +225,10 @@ public sealed class TestPackage : Package
 			"Delete",
 			"Length Number"));
 		var textWriter = new Type(this, new TypeLines(Type.TextWriter, "Write(text)"));
+		var system = new Type(this, new TypeLines(Type.System,
+			"has textWriter",
+			"Write(text)",
+			"\ttextWriter.Write(text)"));
 		var textReader = new Type(this, new TypeLines(Type.TextReader, "Read Text"));
 		var name = new Type(this, new TypeLines(nameof(Name), "has text"));
 		var error = new Type(this, new TypeLines(Type.Error, "has Name", "has Stacktraces",
@@ -253,7 +257,7 @@ public sealed class TestPackage : Package
 		foreach (var type in new[]
 			{
 				any, boolean, hasLength, number, range, character, mutable, iterator, list, text,
-				baseType, generic, logger, file, textWriter, textReader, name, error, errorWithValue,
+				baseType, generic, logger, file, textWriter, system, textReader, name, error, errorWithValue,
 				method, stacktrace, dictionary
 			})
 			type.ParseMembersAndMethods(parser);
