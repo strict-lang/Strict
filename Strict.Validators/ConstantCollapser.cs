@@ -33,7 +33,13 @@ public sealed class ConstantCollapser : Visitor
 	{
 		List<Expression>? rewritten = null;
 		for (var i = 0; i < body.Expressions.Count; i++)
-			if (body.Expressions[i] is Declaration)
+		{
+			if (body.Expressions[i] is not Declaration declaration)
+				continue;
+			// Only remove the declaration if all usages have been replaced (i.e. the variable is
+			// no longer referenced outside of Binary operands) — non-constant values used as
+			// MethodCall instances are NOT inlined by base.Visit and must stay in the body.
+			if (!IsVariableStillUsed(body, declaration.Name, i))
 			{
 				CollapsedCount++;
 				if (rewritten == null)
@@ -46,8 +52,34 @@ public sealed class ConstantCollapser : Visitor
 				else
 					rewritten.Remove(body.Expressions[i]);
 			}
+		}
 		return rewritten;
 	}
+
+	private static bool IsVariableStillUsed(Body body, string variableName, int declarationIndex)
+	{
+		for (var i = 0; i < body.Expressions.Count; i++)
+		{
+			if (i == declarationIndex)
+				continue;
+			if (ContainsVariableCall(body.Expressions[i], variableName))
+				return true;
+		}
+		return false;
+	}
+
+	private static bool ContainsVariableCall(Expression expression, string name) =>
+		expression switch
+		{
+			VariableCall vc => vc.Variable.Name == name,
+			Binary b => ContainsVariableCall(b.Instance!, name) ||
+				ContainsVariableCall(b.Arguments[0], name),
+			MethodCall mc => (mc.Instance != null && ContainsVariableCall(mc.Instance, name)) ||
+				mc.Arguments.Any(a => ContainsVariableCall(a, name)),
+			Declaration d => ContainsVariableCall(d.Value, name),
+			MutableReassignment mr => ContainsVariableCall(mr.Value, name),
+			_ => false
+		};
 
 	public int CollapsedCount { get; private set; }
 

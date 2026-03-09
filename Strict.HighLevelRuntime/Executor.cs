@@ -86,12 +86,23 @@ public class Executor
 			Execute(runMethod, noneInstance, []);
 			return;
 		} //ncrunch: no coverage
-		var nonLoggerArgs = fromMethod.Parameters
-			.Where(p => p.Type.Name != Type.Logger)
-			.Select(p => new ValueInstance(numberType, 0))
+		var explicitArgs = fromMethod.Parameters
+			.Where(p => TryAutoCreateInstance(p.Type) == null)
+			.Select(p => GetDefaultValue(p.Type))
 			.ToArray();
-		var instance = Execute(fromMethod, noneInstance, nonLoggerArgs);
+		var instance = Execute(fromMethod, noneInstance, explicitArgs);
 		Execute(runMethod, instance, []);
+	}
+
+	private ValueInstance GetDefaultValue(Type type)
+	{
+		if (type.IsNumber)
+			return new ValueInstance(numberType, 0);
+		if (type.IsText)
+			return new ValueInstance("");
+		if (type.IsBoolean)
+			return new ValueInstance(booleanType, false);
+		return noneInstance; //ncrunch: no coverage
 	}
 
 	public ValueInstance Execute(Method method, ValueInstance instance,
@@ -103,9 +114,9 @@ public class Executor
 			return instance.Equals(noneInstance)
 				? GetFromConstructorValue(method, args)
 				: throw new MethodCall.CannotCallFromConstructorWithExistingInstance();
-		if (method.IsTrait && method.Type.Name == Type.TextWriter && method.Name == "Write")
+		if (instance.TryGetValueTypeInstance()?.ReturnType.Name == Type.System)
 		{
-			if (args.Length > 0)
+			if (method.Name == "Write" && args.Length > 0)
 				Console.Write(args[0].ToExpressionCodeString());
 			return noneInstance;
 		}
@@ -226,26 +237,56 @@ public class Executor
 				: args[index];
 		}
 		for (var index = args.Length; index < method.Parameters.Count; index++)
-			if (method.Parameters[index].Type.Name == Type.Logger)
+		{
+			var autoValue = TryAutoCreateInstance(method.Parameters[index].Type);
+			if (autoValue != null)
 				values[GetMemberIndexForParameter(typeMembers, method.Parameters[index], index)] =
-					CreateConsoleLogger(method.Parameters[index].Type);
+					autoValue.Value;
+		}
 		return new ValueInstance(method.Type, values);
 	}
 
-	private static int GetMemberIndexForParameter(IReadOnlyList<Member> typeMembers,
-		Parameter parameter, int fallbackIndex)
-	{
-		for (var i = 0; i < typeMembers.Count; i++)
-			if (typeMembers[i].Name.Equals(parameter.Name, StringComparison.OrdinalIgnoreCase))
-				return i;
-		return fallbackIndex; //ncrunch: no coverage
-	}
+	private static readonly IReadOnlyDictionary<string, string> TraitImplementationRegistry =
+		new Dictionary<string, string> { { Type.TextWriter, Type.System } };
 
-	private static ValueInstance CreateConsoleLogger(Type loggerType)
+	private ValueInstance? TryAutoCreateInstance(Type type, HashSet<string>? creating = null)
 	{
-		var textWriterType = loggerType.Members[0].Type;
-		return new ValueInstance(loggerType,
-			[new ValueInstance(textWriterType, Array.Empty<ValueInstance>())]);
+		creating ??= [];
+		if (type.IsTrait)
+		{
+			if (!TraitImplementationRegistry.TryGetValue(type.Name, out var concreteName))
+				return null;
+			var concreteType = type.FindType(concreteName);
+			if (concreteType == null)
+				return null;
+			return TryAutoCreateInstance(concreteType, creating);
+		}
+		if (!creating.Add(type.Name))
+		{
+			var dummyValues = new ValueInstance[type.Members.Count];
+			for (var i = 0; i < dummyValues.Length; i++)
+				dummyValues[i] = noneInstance;
+			return new ValueInstance(type, dummyValues);
+		}
+		var members = type.Members;
+		if (members.Count == 0)
+		{
+			creating.Remove(type.Name);
+			return null;
+		}
+		var values = new ValueInstance[members.Count];
+		for (var i = 0; i < members.Count; i++)
+		{
+			var memberValue = TryAutoCreateInstance(members[i].Type, creating);
+			if (memberValue == null)
+			{
+				creating.Remove(type.Name);
+				return null;
+			}
+			values[i] = memberValue.Value;
+		}
+		creating.Remove(type.Name);
+		return new ValueInstance(type, values);
 	}
 
 	private static Dictionary<ValueInstance, ValueInstance> FillDictionaryFromListKeyAndValues(
@@ -258,6 +299,15 @@ public class Executor
 			dictionary[keyAndValue[0]] = keyAndValue[1];
 		}
 		return dictionary;
+	}
+
+	private static int GetMemberIndexForParameter(IReadOnlyList<Member> typeMembers,
+		Parameter parameter, int fallbackIndex)
+	{
+		for (var i = 0; i < typeMembers.Count; i++)
+			if (typeMembers[i].Name.Equals(parameter.Name, StringComparison.OrdinalIgnoreCase))
+				return i;
+		return fallbackIndex; //ncrunch: no coverage
 	}
 
 	private static bool IsSingleCharacterTextArgument(Type targetType, ValueInstance value) =>
