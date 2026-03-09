@@ -1,4 +1,5 @@
 using Strict;
+using System.Diagnostics;
 
 //ncrunch: no coverage start
 if (args.Length == 0)
@@ -16,7 +17,13 @@ if (!File.Exists(strictFilePath))
 }
 try
 {
-	new Runner(strictFilePath).Run();
+	new Runner(strictFilePath,
+#if DEBUG
+		true
+#else
+		false
+#endif
+		).Run();
 }
 catch (Exception ex)
 {

@@ -33,7 +33,7 @@ public sealed class ConstantCollapser : Visitor
 	{
 		List<Expression>? rewritten = null;
 		for (var i = 0; i < body.Expressions.Count; i++)
-			if (body.Expressions[i] is Declaration)
+			if (body.Expressions[i] is Declaration decl && decl.Value is not MethodCall)
 			{
 				CollapsedCount++;
 				if (rewritten == null)

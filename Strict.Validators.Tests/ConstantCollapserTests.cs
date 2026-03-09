@@ -1,3 +1,5 @@
+using System.Reflection.Metadata;
+using System.Text;
 using Boolean = Strict.Expressions.Boolean;
 
 namespace Strict.Validators.Tests;
@@ -261,5 +263,20 @@ public sealed class ConstantCollapserTests
 		collapser.Visit(testType.Methods[0], true);
 		Assert.That(((Binary)testType.Methods[0].GetBodyAndParseIfNeeded()).Instance,
 			Is.InstanceOf<Number>());
+	}
+
+	[Test]
+	public void UsedConstantComplexExpressionShouldNotBeFolded()
+	{
+		using var testType = new Type(TestPackage.Instance,
+			new TypeLines(nameof(UsedConstantComplexExpressionShouldNotBeFolded),
+				"has logger",
+				"Run",
+				"\tconstant program = " + nameof(UsedConstantComplexExpressionShouldNotBeFolded),
+				"\tlogger.Log(program)"));
+		testType.ParseMembersAndMethods(parser);
+		collapser.Visit(testType.Methods[0], true);
+		var body = (Body)testType.Methods[0].GetBodyAndParseIfNeeded();
+		Assert.That(body.Expressions, Has.Count.EqualTo(2));
 	}
 }

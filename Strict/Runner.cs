@@ -13,19 +13,19 @@ namespace Strict;
 
 public sealed class Runner
 {
-	//ncrunch: no coverage start
-	public Runner(string strictFilePath)
+	public Runner(string strictFilePath, bool enableDetailedOutput = false)
 	{
-		Console.WriteLine("╔════════════════════════════════════╗");
-		Console.WriteLine("║ Strict Programming Language Runner ║");
-		Console.WriteLine("╚════════════════════════════════════╝");
-		Console.WriteLine("┌─ Step 1: Loading Strict package");
+		this.enableDetailedOutput = enableDetailedOutput;
+		Log("╔════════════════════════════════════╗");
+		Log("║ Strict Programming Language Runner ║");
+		Log("╚════════════════════════════════════╝");
+		Log("┌─ Step 1: Loading Strict package");
 		var startTicks = DateTime.UtcNow.Ticks;
 		var basePackage = TestPackage.Instance;
 		var endTicks = DateTime.UtcNow.Ticks;
-		Console.WriteLine("└─ Step 1 ⏱ Time: " +
+		Log("└─ Step 1 ⏱ Time: " +
 			TimeSpan.FromTicks(endTicks - startTicks).TotalMilliseconds + " ms");
-		Console.WriteLine("┌─ Step 2: Create package and load type: " + strictFilePath);
+		Log("┌─ Step 2: Create package and load type: " + strictFilePath);
 		var startLoadTypeTicks = DateTime.UtcNow.Ticks;
 		package = new Package(basePackage,
 			Path.GetDirectoryName(Path.GetFullPath(strictFilePath)) ??
@@ -35,14 +35,22 @@ public sealed class Runner
 		mainType = new Type(package, typeLines).ParseMembersAndMethods(new MethodExpressionParser());
 		var endLoadTypeTicks = DateTime.UtcNow.Ticks;
 		stepTimes.Add(endLoadTypeTicks - startLoadTypeTicks);
-		Console.WriteLine("│  ✓ Loaded package: " + package.Name);
-		Console.WriteLine("│  ✓ Created type: " + mainType.Name);
-		Console.WriteLine("│  ✓ Members: " + mainType.Members.Count);
-		Console.WriteLine("│  ✓ Methods: " + mainType.Methods.Count);
-		Console.WriteLine("└─ Step 2 ⏱ Time: " +
+		Log("│  ✓ Loaded package: " + package.Name);
+		Log("│  ✓ Created type: " + mainType.Name);
+		Log("│  ✓ Members: " + mainType.Members.Count);
+		Log("│  ✓ Methods: " + mainType.Methods.Count);
+		Log("└─ Step 2 ⏱ Time: " +
 			TimeSpan.FromTicks(endLoadTypeTicks - startLoadTypeTicks).TotalMilliseconds + " ms");
 	}
+	
+	private readonly bool enableDetailedOutput;
 
+	private void Log(string message)
+	{
+		if (enableDetailedOutput)
+			Console.WriteLine(message); //ncrunch: no coverage
+	}
+	
 	private readonly List<long> stepTimes = new();
 	private readonly Package package;
 	private readonly Type mainType;
@@ -52,129 +60,121 @@ public sealed class Runner
 		Parse();
 		Validate();
 		RunTests();
-		GenerateBytecode();
-		OptimizeBytecode();
-		ExecuteBytecode();
-		Console.WriteLine("⏱ Total Time (without Step 1 Loading Strict package): " +
+		//TODO: rename to instructions here too, we are really on a assembly level here and not high level statements anymore, this is just confusing
+		var statements = GenerateBytecode();
+		var optimizedStatements = OptimizeBytecode(statements);
+		ExecuteBytecode(optimizedStatements);
+		Log("⏱ Total Time (without Step 1 Loading Strict package): " +
 			TimeSpan.FromTicks(stepTimes.Sum()).TotalMilliseconds + " ms");
 	}
 
 	private void Parse()
 	{
-		Console.WriteLine("┌─ Step 3: Parse Method Bodies");
+		Log("┌─ Step 3: Parse Method Bodies");
 		var startTicks = DateTime.UtcNow.Ticks;
 		var parsedMethods = 0;
 		var totalExpressions = 0;
 		foreach (var method in mainType.Methods)
-		{
-			if (method.IsTrait)
-				continue;
-			var body = method.GetBodyAndParseIfNeeded();
-			parsedMethods++;
-			if (body is Body bodyExpr)
-				totalExpressions += bodyExpr.Expressions.Count;
-			else
-				totalExpressions++;
-		}
-		Console.WriteLine("│  ✓ Parsed methods: " + parsedMethods);
-		Console.WriteLine("│  ✓ Total expressions: " + totalExpressions);
+			if (!method.IsTrait)
+			{
+				var body = method.GetBodyAndParseIfNeeded();
+				parsedMethods++;
+				if (body is Body bodyExpr)
+					totalExpressions += bodyExpr.Expressions.Count;
+				else
+					totalExpressions++; //ncrunch: no coverage
+			}
+		Log("│  ✓ Parsed methods: " + parsedMethods);
+		Log("│  ✓ Total expressions: " + totalExpressions);
 		var endTicks = DateTime.UtcNow.Ticks;
 		stepTimes.Add(endTicks - startTicks);
-		Console.WriteLine("└─ Step 3 ⏱ Time: " +
+		Log("└─ Step 3 ⏱ Time: " +
 			TimeSpan.FromTicks(endTicks - startTicks).TotalMilliseconds + " ms");
 	}
 
 	private void Validate()
 	{
-		Console.WriteLine("┌─ Step 4: Run Validators");
+		Log("┌─ Step 4: Run Validators");
 		var startTicks = DateTime.UtcNow.Ticks;
 		try
 		{
 			new TypeValidator().Visit(mainType);
-			Console.WriteLine("│  ✓ All type validations passed, no unused expressions found");
+			Log("│  ✓ All type validations passed, no unused expressions found");
 			var constants = new ConstantCollapser();
 			constants.Visit(mainType);
-			Console.WriteLine("│  ✓ Constant expressions collapsed: " + constants.CollapsedCount);
+			Log("│  ✓ Constant expressions collapsed: " + constants.CollapsedCount);
 		}
+		//ncrunch: no coverage start
 		catch (Exception ex)
 		{
-			Console.WriteLine("│  ✗ Validation failed: " + ex.Message);
+			Log("│  ✗ Validation failed: " + ex.Message);
 			throw;
-		}
+		} //ncrunch: no coverage end
 		var endTicks = DateTime.UtcNow.Ticks;
 		stepTimes.Add(endTicks - startTicks);
-		Console.WriteLine("└─ Step 4 ⏱ Time: " +
+		Log("└─ Step 4 ⏱ Time: " +
 			TimeSpan.FromTicks(endTicks - startTicks).TotalMilliseconds + " ms");
 	}
 
 	private void RunTests()
 	{
-		Console.WriteLine("┌─ Step 5: Run Tests");
+		Log("┌─ Step 5: Run Tests");
 		var startTicks = DateTime.UtcNow.Ticks;
 		var testExecutor = new TestExecutor(package);
 		try
 		{
 			testExecutor.RunAllTestsInType(mainType);
-			Console.WriteLine("│  ✓ Methods tested: " + testExecutor.Statistics.MethodsTested);
-			Console.WriteLine("│  ✓ Types tested: " + testExecutor.Statistics.TypesTested);
-			Console.WriteLine("│  ✓ " + testExecutor.Statistics);
-			Console.WriteLine("│  ✓ All tests passed");
+			Log("│  ✓ Methods tested: " + testExecutor.Statistics.MethodsTested);
+			Log("│  ✓ Types tested: " + testExecutor.Statistics.TypesTested);
+			Log("│  ✓ " + testExecutor.Statistics);
+			Log("│  ✓ All tests passed");
 		}
+		//ncrunch: no coverage start
 		catch (Exception ex)
 		{
-			Console.WriteLine($"│  ✗ Tests failed: {ex.Message}");
+			Log($"│  ✗ Tests failed: {ex.Message}");
 			throw;
-		}
+		} //ncrunch: no coverage end
 		var endTicks = DateTime.UtcNow.Ticks;
 		stepTimes.Add(endTicks - startTicks);
-		Console.WriteLine("└─ Step 5 ⏱ Time: " +
+		Log("└─ Step 5 ⏱ Time: " +
 			TimeSpan.FromTicks(endTicks - startTicks).TotalMilliseconds + " ms");
 	}
 
-	private List<Statement>? generatedStatements;
-
-	private void GenerateBytecode()
+	private List<Statement> GenerateBytecode()
 	{
-		Console.WriteLine("┌─ Step 6: Generate Bytecode");
+		Log("┌─ Step 6: Generate Bytecode");
 		var startTicks = DateTime.UtcNow.Ticks;
-		var totalInstructions = 0;
-		generatedStatements = [];
+		var statements = new List<Statement>();
 		foreach (var method in mainType.Methods.Where(m => !m.IsTrait))
 			try
 			{
-				var arguments = method.Parameters.Select(p =>
-					(Expression)new Value(p.Type, new ValueInstance(p.Type, 0))).ToList();
+				//TODO: why is this so low level, can't we just generate the whole type/whole package?
+				var arguments = method.Parameters.Select(
+					//ncrunch: no coverage start
+					p => (Expression)new Value(p.Type, new ValueInstance(p.Type, 0))).ToList();
+				//ncrunch: no coverage end
 				var methodCall = new MethodCall(method, null, arguments);
 				var generator = new ByteCodeGenerator(methodCall);
-				var statements = generator.Generate();
-				generatedStatements.AddRange(statements);
-				totalInstructions += statements.Count;
-			}
+				statements.AddRange(generator.Generate());
+			} //ncrunch: no coverage start
 			catch (Exception ex)
 			{
-				Console.WriteLine("│  ⚠ Failed method " + method.Name + ": " + ex.Message);
-			}
+				Log("│  ⚠ Failed method " + method.Name + ": " + ex.Message);
+			} //ncrunch: no coverage end
 		var endTicks = DateTime.UtcNow.Ticks;
-		Console.WriteLine("│  ✓ Generated bytecode instructions: " + totalInstructions);
+		Log("│  ✓ Generated bytecode instructions: " + statements.Count);
 		stepTimes.Add(endTicks - startTicks);
-		Console.WriteLine("└─ Step 6 ⏱ Time: " +
+		Log("└─ Step 6 ⏱ Time: " +
 			TimeSpan.FromTicks(endTicks - startTicks).TotalMilliseconds + " ms");
+		return statements;
 	}
 
-	private List<Statement>? optimizedStatements;
-
-	private void OptimizeBytecode()
+	private List<Statement> OptimizeBytecode(List<Statement> statements)
 	{
-		Console.WriteLine("┌─ Step 7: Optimize");
-		if (generatedStatements == null || generatedStatements.Count == 0)
-		{
-			Console.WriteLine("│  ⚠ No bytecode to optimize");
-			Console.WriteLine("└─ Step 7 Skipped");
-			return;
-		}
+		Log("┌─ Step 7: Optimize");
 		var startTicks = DateTime.UtcNow.Ticks;
-		var originalCount = generatedStatements.Count;
-		optimizedStatements = new List<Statement>(generatedStatements);
+		var optimizedStatements = new List<Statement>(statements);
 		var optimizers = new StatementOptimizer[]
 		{
 			new TestCodeRemover(), new ConstantFoldingOptimizer(), new DeadStoreEliminator(),
@@ -186,45 +186,33 @@ public sealed class Runner
 			optimizedStatements = optimizer.Optimize(optimizedStatements);
 			var removed = beforeCount - optimizedStatements.Count;
 			if (removed > 0)
-				Console.WriteLine($"│  ✓ {optimizer.GetType().Name}: removed {removed} instructions");
+				Log($"│  ✓ {optimizer.GetType().Name}: removed {removed} instructions");
 		}
 		var endTicks = DateTime.UtcNow.Ticks;
-		Console.WriteLine($"│  ✓ Total optimization: From {
-			originalCount
+		Log($"│  ✓ Total optimization: From {
+			statements.Count
 		} to {
 			optimizedStatements.Count
 		} instructions ({
-			originalCount - optimizedStatements.Count
-		} removed, " + (originalCount - optimizedStatements.Count) * 100 / originalCount + "%)");
+			statements.Count - optimizedStatements.Count
+		} removed, " + (statements.Count - optimizedStatements.Count) * 100 / statements.Count + "%)");
 		stepTimes.Add(endTicks - startTicks);
-		Console.WriteLine("└─ Step 7 ⏱ Time: " +
+		Log("└─ Step 7 ⏱ Time: " +
 			TimeSpan.FromTicks(endTicks - startTicks).TotalMilliseconds + " ms");
+		return optimizedStatements;
 	}
 
-	private void ExecuteBytecode()
+	private void ExecuteBytecode(List<Statement> statements) //TODO: use the actual statements
 	{
-		Console.WriteLine("┌─ Step 8: Execute");
+		Log("┌─ Step 8: Execute");
+		Log("│  ✓ Executing " + mainType.Name + ".Run method:");
 		var startTicks = DateTime.UtcNow.Ticks;
-		var runMethod = mainType.Methods.FirstOrDefault(m => m.Name == Method.Run && m.Parameters.Count == 0);
-		if (runMethod == null)
-		{
-			Console.WriteLine("│  ℹ No Run method found to execute");
-			Console.WriteLine("└─ Step 8 Skipped");
-			return;
-		}
-		try
-		{
-			new Executor(package, TestBehavior.Disabled).ExecuteRunMethod(mainType);
-			Console.WriteLine("│  ✓ Run method executed successfully");
-		}
-		catch (Exception ex)
-		{
-			Console.WriteLine("│  ✗ Execution failed: " + ex.Message);
-			throw;
-		}
+		//TODO: this is completely wrong, itshould execute bytecode and not run the HighLevelRuntime interpreter!
+		new Executor(package, TestBehavior.Disabled).ExecuteRunMethod(mainType);
 		var endTicks = DateTime.UtcNow.Ticks;
+		Log("│  ✓ Run method executed successfully");
 		stepTimes.Add(endTicks - startTicks);
-		Console.WriteLine("└─ Step 8 ⏱ Time: " +
+		Log("└─ Step 8 ⏱ Time: " +
 			TimeSpan.FromTicks(endTicks - startTicks).TotalMilliseconds + " ms");
 	}
 }

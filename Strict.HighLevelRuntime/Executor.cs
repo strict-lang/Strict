@@ -1,5 +1,6 @@
 using Strict.Expressions;
 using Strict.Language;
+using System.Net.Mail;
 using System.Runtime.CompilerServices;
 using Type = Strict.Language.Type;
 
@@ -79,20 +80,11 @@ public class Executor
 	{
 		var runMethod = type.Methods.FirstOrDefault(m => m.Name == Method.Run && m.Parameters.Count == 0);
 		if (runMethod == null)
-			return; //ncrunch: no coverage
-		var fromMethod = type.Methods.FirstOrDefault(m => m.Name == Method.From);
-		if (fromMethod == null)
-		{
-			Execute(runMethod, noneInstance, []);
-			return;
-		} //ncrunch: no coverage
-		var nonLoggerArgs = fromMethod.Parameters
-			.Where(p => p.Type.Name != Type.Logger)
-			.Select(p => new ValueInstance(numberType, 0))
-			.ToArray();
-		var instance = Execute(fromMethod, noneInstance, nonLoggerArgs);
-		Execute(runMethod, instance, []);
+			throw new MethodNotFound(type, Method.Run);
+		Execute(runMethod);
 	}
+
+	public class MethodNotFound(Type type, string methodName) : ExecutionFailed(type, methodName);
 
 	public ValueInstance Execute(Method method, ValueInstance instance,
 		ValueInstance[] args, ExecutionContext? parentContext = null, bool runOnlyTests = false)
@@ -106,7 +98,7 @@ public class Executor
 		if (method.IsTrait && method.Type.Name == Type.TextWriter && method.Name == "Write")
 		{
 			if (args.Length > 0)
-				Console.Write(args[0].ToExpressionCodeString());
+				Console.WriteLine(args[0].ToExpressionCodeString());
 			return noneInstance;
 		}
 		if (runOnlyTests && IsSimpleSingleLineMethod(method))

@@ -4,7 +4,7 @@ namespace Strict.Runtime;
 /// Each Instruction corresponds to a Statement class in the <see cref="Statements" /> namespace
 /// here. For details on what each instruction does, see the corresponding Statement class.
 /// </summary>
-public enum Instruction
+public enum Instruction //TODO: rename to InstructionType
 {
 	LoadConstantToRegister,
 	LoadVariableToRegister,

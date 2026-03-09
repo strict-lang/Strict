@@ -414,4 +414,14 @@ public sealed class ExecutorTests
 			executor.Execute(t.Methods.Single(m => m.Name == "Check"), executor.noneInstance, []),
 			Is.EqualTo(executor.falseInstance));
 	}
+
+	[Test]
+	public void ExecuteRunMethod() =>
+		executor.ExecuteRunMethod(CreateType(nameof(ExecuteRunMethod), "has number", "Run", "\tnumber"));
+
+	[Test]
+	public void ExecuteRunMethodWillFailIfThereIsNoRunMethod() =>
+		Assert.That(() => executor.ExecuteRunMethod(
+			CreateType(nameof(ExecuteRunMethodWillFailIfThereIsNoRunMethod), "has number",
+				"GetNumber Number", "\tnumber")), Throws.InstanceOf<Executor.MethodNotFound>());
 }
