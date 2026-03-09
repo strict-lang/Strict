@@ -81,7 +81,22 @@ public class Executor
 		var runMethod = type.Methods.FirstOrDefault(m => m.Name == Method.Run && m.Parameters.Count == 0);
 		if (runMethod == null)
 			throw new MethodNotFound(type, Method.Run);
-		Execute(runMethod);
+		var instance = CreateFullInstance(type);
+		Execute(runMethod, instance, []);
+	}
+
+	private ValueInstance CreateFullInstance(Type type)
+	{
+		var members = type.Members;
+		if (members.Count == 0)
+			return noneInstance;
+		var values = new ValueInstance[members.Count];
+		for (var i = 0; i < members.Count; i++)
+		{
+			var autoValue = TryAutoCreateInstance(members[i].Type);
+			values[i] = autoValue ?? GetDefaultValue(members[i].Type);
+		}
+		return new ValueInstance(type, values);
 	}
 
 	public class MethodNotFound(Type type, string methodName) : ExecutionFailed(type, methodName);
