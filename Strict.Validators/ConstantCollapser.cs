@@ -29,12 +29,13 @@ public sealed class ConstantCollapser : Visitor
 			body.SetExpressions(rewritten);
 	}
 
-	private static List<Expression>? RemoveAllConstantDeclarations(Body body)
+	private List<Expression>? RemoveAllConstantDeclarations(Body body)
 	{
 		List<Expression>? rewritten = null;
 		for (var i = 0; i < body.Expressions.Count; i++)
 			if (body.Expressions[i] is Declaration)
 			{
+				CollapsedCount++;
 				if (rewritten == null)
 				{
 					rewritten = new List<Expression>(body.Expressions.Count - 1);
@@ -47,6 +48,8 @@ public sealed class ConstantCollapser : Visitor
 			}
 		return rewritten;
 	}
+
+	public int CollapsedCount { get; private set; }
 
 	protected override Expression? Visit(Expression? expression, Body? body, object? context = null)
 	{
@@ -70,6 +73,7 @@ public sealed class ConstantCollapser : Visitor
 				return collapsedExpression;
 			if (!ReferenceEquals(left, binary.Instance!) || !ReferenceEquals(right, binary.Arguments[0]))
 			{
+				CollapsedCount++;
 				var arguments = new[] { right };
 				return new Binary(left, left.ReturnType.GetMethod(binary.Method.Name, arguments), arguments);
 			}
@@ -78,6 +82,7 @@ public sealed class ConstantCollapser : Visitor
 			return expression;
 		if (expression is To to)
 		{
+			CollapsedCount++;
 			var value = to.Instance as Value;
 			if (to.ConversionType.IsNumber && value is Text textValue)
 				return new Number(to.Method.Type, double.Parse(textValue.Data.Text));

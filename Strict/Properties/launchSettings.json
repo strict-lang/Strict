@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "Strict": {
+      "commandName": "Project",
+      "commandLineArgs": "Examples/SimpleCalculator.strict"
+    }
+  }
+}

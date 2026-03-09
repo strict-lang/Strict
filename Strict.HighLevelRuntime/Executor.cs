@@ -73,7 +73,7 @@ public class Executor
 	}
 
 	private readonly HashSet<Method> validatedMethods = [];
-	public Statistics Statistics = new();
+	public readonly Statistics Statistics = new();
 
 	public ValueInstance Execute(Method method, ValueInstance instance,
 		ValueInstance[] args, ExecutionContext? parentContext = null, bool runOnlyTests = false)
