@@ -5,9 +5,6 @@
         <FixtureName>Strict.Compiler.Cuda.Tests.SigmoidPerformanceTests</FixtureName>
       </FixtureTestSelector>
       <FixtureTestSelector>
-        <FixtureName>Strict.Compiler.Cuda.Tests.KernelTests</FixtureName>
-      </FixtureTestSelector>
-      <FixtureTestSelector>
         <FixtureName>Strict.Compiler.Cuda.Tests.BlurPerformanceTests</FixtureName>
       </FixtureTestSelector>
     </IgnoredTests>

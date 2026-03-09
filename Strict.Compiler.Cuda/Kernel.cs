@@ -1,4 +1,4 @@
-﻿using ManagedCuda;
+using ManagedCuda;
 using ManagedCuda.CudaBlas;
 using ManagedCuda.NVRTC;
 
@@ -7,7 +7,7 @@ namespace Strict.Compiler.Cuda;
 public class Kernel : IDisposable
 {
 	public CudaContext Context { get; } = new(0);
-	public CudaBlas Handle => handle ??= new();
+	public CudaBlas Handle => handle ??= new(); //ncrunch: no coverage
 	private CudaBlas? handle;
 
 	public void Dispose()
@@ -43,10 +43,11 @@ public class Kernel : IDisposable
 			rtc.Compile(["--gpu-architecture=compute_61"]);
 			result = nvrtcResult.Success;
 		}
+		//ncrunch: no coverage start
 		catch (NVRTCException ex)
 		{
 			result = ex.NVRTCError;
-		}
+		} //ncrunch: no coverage end
 		return result;
 	}
 

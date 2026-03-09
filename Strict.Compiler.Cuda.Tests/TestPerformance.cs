@@ -6,6 +6,7 @@ namespace Strict.Compiler.Cuda.Tests;
 /// Interestingly the chunksize doesn't matter much as long as it is 10 or more, after 100 there is
 /// almost no benefit.
 /// </summary>
+//ncrunch: no coverage start
 public record TestPerformance(int Iterations, int ChunkSize, Action<int, int> RunChunk,
 	Action<int> RunGpu, Action<string> Done)
 {

@@ -1,5 +1,6 @@
 using System.Drawing;
 using System.Drawing.Imaging;
+using System.Runtime.Versioning;
 using ManagedCuda;
 using ManagedCuda.NVRTC;
 using NUnit.Framework;
@@ -26,6 +27,7 @@ namespace Strict.Compiler.Cuda.Tests;
 /// Strict should be faster than all of these
 /// </summary>
 [Category("Manual")]
+[SupportedOSPlatform("windows")]
 public class BlurPerformanceTests
 {
 	//ncrunch: no coverage start

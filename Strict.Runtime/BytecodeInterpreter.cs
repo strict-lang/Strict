@@ -499,6 +499,6 @@ public sealed class BytecodeInterpreter(Package package)
 		}
 	}
 
-	public sealed class OperandsRequired : Exception { }
-	private sealed class VariableNotFoundInMemory : Exception { }
+	public sealed class OperandsRequired : Exception;
+	private sealed class VariableNotFoundInMemory : Exception;
 }

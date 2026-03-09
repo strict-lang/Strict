@@ -13,6 +13,7 @@ namespace Strict.Compiler.Cuda.Tests;
 [Category("Manual")]
 public class SigmoidPerformanceTests
 {
+	//ncrunch: no coverage start
 	[Test]
 	public void CpuAndGpuLoops()
 	{
