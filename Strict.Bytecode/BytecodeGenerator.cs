@@ -42,10 +42,24 @@ public sealed class BytecodeGenerator
 	private Type ReturnType { get; }
 	private int forResultId;
 
-	private void AddMembersFromCaller(ValueInstance instance) =>
-		instructions.Add(new StoreVariableInstruction(instance,
-			instance.GetTypeExceptText().Members.First(member => !member.Type.IsTrait).Name,
-			isMember: true));
+	private void AddMembersFromCaller(ValueInstance instance)
+	{
+		var typeInstance = instance.TryGetValueTypeInstance();
+		if (typeInstance != null)
+		{
+			var members = typeInstance.ReturnType.Members;
+			for (var i = 0; i < members.Count && i < typeInstance.Values.Length; i++)
+				if (!members[i].Type.IsTrait)
+					instructions.Add(new StoreVariableInstruction(typeInstance.Values[i],
+						members[i].Name, isMember: true));
+			return;
+		}
+		var firstNonTraitMember = instance.GetTypeExceptText().Members
+			.FirstOrDefault(member => !member.Type.IsTrait);
+		if (firstNonTraitMember != null)
+			instructions.Add(new StoreVariableInstruction(instance,
+				firstNonTraitMember.Name, isMember: true));
+	}
 
 	private static ValueInstance GetValueInstanceFromExpression(Expression expression) =>
 		expression switch

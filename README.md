@@ -47,8 +47,9 @@ The LSP (Language Server Protocol) implementation here adds support for VSCode, 
 | **Strict.Validators** | Visitor-based static analysis & constant folding | After expression parsing | Impossible casts, unused mutables, foldable constants |
 | **Strict.HighLevelRuntime** | Execute expressions directly in interpreter mode for fast checks and tests | On demand during test execution | Value/type errors, side-effects |
 | **Strict.TestRunner** | Run in-code tests via HighLevelRuntime (`method must start with a test`) | First call to a method | Failing test expressions, the central verification point |
-| **Strict.Optimizers** | Remove passed tests and other provably dead code before low-level codegen | After tests succeed | Dead instructions, test artefacts |
-| **Strict.Runtime** | Execute optimized expression tree via ~40 instructions | On demand by the caller | Value/type errors, side-effects |
+| **Strict.Bytecode** | Generate register-based bytecode instructions from expression trees | After tests succeed | Unsupported expression patterns |
+| **Strict.Optimizers** | Remove passed tests and other provably dead code from bytecode | After bytecode generation | Dead instructions, test artefacts, constant folds |
+| **Strict** (exe) | Execute optimized bytecode in the VirtualMachine; orchestrate the full pipeline | Final step | Value/type errors, side-effects |
 
 ## 1 · Strict.Language
 * Parses package headers and type signatures only.
@@ -75,51 +76,57 @@ The LSP (Language Server Protocol) implementation here adds support for VSCode, 
 * Tests are executed once; passing expressions become `true` and are pruned.
 * Guarantees that only verified code reaches lower layers.
 
-## 6 · Strict.Optimizers
-* Final clean-up pass before low-level code generation.
-* Remove passed test code and provably dead instructions.
+## 6 · Strict.Bytecode
+* Converts expression trees into flat register-based instructions (`BytecodeGenerator`).
+* Defines the instruction set (~20 types: arithmetic, jumps, loads, stores, loops, invoke).
+* Pure code generation — no execution happens here.
+
+## 7 · Strict.Optimizers
+* Operates on bytecode instruction lists produced by `Strict.Bytecode`.
+* Runs multiple passes: test code removal, constant folding, dead store elimination, unreachable code elimination, redundant load elimination, jump threading, strength reduction.
 * Preserve original line numbers for precise error reporting.
 
-## 7 · Strict.Runtime
-* Executes optimized expression tree via ~20 byte-code-like instructions.
-* Intended for maximum execution speed at runtime for the executable.
+## 8 · Strict (exe) — Runner + VirtualMachine
+* The `Runner` orchestrates the full pipeline: load → parse → validate → test → generate → optimize → execute.
+* The `VirtualMachine` executes optimized bytecode via a register file, call frames and a program counter.
+* Only the VM sees real values and side-effects — this is where programs actually run.
 
-## 8 · Strict.Compiler
+## 9 · Strict.Compiler
 * Transpiles Strict into C# or CUDA for execution on existing runtimes.
-* Useful for running select Strict code without the Strict.Runtime bytecode path.
-* Still relevant, but secondary to the core runtime work right now.
+* `Strict.Compiler.Roslyn` generates C# source, `Strict.Compiler.Cuda` generates CUDA kernels.
+* Useful for running select Strict code without the bytecode path.
 
-## 9 · Strict.LanguageServer
+## 10 · Strict.LanguageServer
 * VS Code-first LSP implementation for daily Strict development.
 * Needs to be solid so future work can happen directly in Strict.
 * Active again after a long pause and now a top priority.
 
-Note: Peripheral projects kept around for specific purposes: `Strict.Grammar.Tests` (syntax highlighters from `Grammar.ebnf`), `Strict.PackageManager` (github-based packages, optional for now), and legacy compiler experiments (Cuda/Roslyn helpers).
+Note: Peripheral projects kept around for specific purposes: `Strict.Grammar` + `Strict.Grammar.Tests` (syntax highlighters from `Grammar.ebnf`), `Strict.PackageManager` (github-based packages, optional for now).
 
 ---
 
 ### Key Design Decisions
 
 1. **Immutable Expression Tree**
-   Static analysis only; no runtime state sneaks in.
+	 Static analysis only; no runtime state sneaks in.
 
 2. **Validation Before Execution**
-   Catch the trivial stuff early, let the Runtime handle the hard parts.
+	 Catch the trivial stuff early, let the VM handle the hard parts.
 
-3. **Runtime Is King**
-   Only the VM sees real values and side-effects — optimisation happens post-execution.
+3. **VM Is King**
+	 Only the VirtualMachine sees real values and side-effects — everything before it is compilation.
 
 4. **One-Time Tests**
-   Tests live where the code lives, run once, then disappear.
+	 Tests live where the code lives, run once, then disappear from the bytecode.
 
 ---
 
 ### Why This Matters
 
-Only needed code that is actually called is ever parsed, validated, tested and runs in the Runtime. This is a very different approach and allows generating millions of .strict lines of code and discarding anything that is not needed or doesn't work pretty much immediatly.
-* **Fast Feedback** — formatting and type errors fail instantly, long before runtime.
+Only needed code that is actually called is ever parsed, validated, tested and executed in the VM. This is a very different approach and allows generating millions of .strict lines of code and discarding anything that is not needed or doesn't work pretty much immediately.
+* **Fast Feedback** — formatting and type errors fail instantly, long before the VM.
 * **Deterministic Builds** — immutable trees + one canonical code style = no drift.
-* **Lean Runtime** — by the time code hits the Runtime, dead weight is already gone.
+* **Lean Bytecode** — by the time code hits the VirtualMachine, dead weight is already gone.
 
 ---
 

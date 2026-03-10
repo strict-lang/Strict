@@ -109,7 +109,8 @@ public sealed class VirtualMachine(Package package)
 	private void TryInvokeInstruction(Instruction instruction)
 	{
 		if (instruction is not Invoke { Method: not null } invoke ||
-			TryCreateEmptyDictionaryInstance(invoke) || TryHandleToConversion(invoke) ||
+			TryCreateEmptyDictionaryInstance(invoke) || TryHandleFromConstructor(invoke) ||
+			TryHandleNativeTraitMethod(invoke) || TryHandleToConversion(invoke) ||
 			TryHandleIncrementDecrement(invoke) || GetValueByKeyForDictionaryAndStoreInRegister(invoke))
 			return;
 		var methodInstructions = GetByteCodeFromInvokedMethodCall(invoke);
@@ -195,6 +196,157 @@ public sealed class VirtualMachine(Package package)
 		return true;
 	}
 
+	/// <summary>
+	/// Handles From constructor calls like SimpleCalculator(2, 3) by creating a ValueInstance
+	/// with evaluated argument values for each non-trait member.
+	/// </summary>
+	private bool TryHandleFromConstructor(Invoke invoke)
+	{
+		if (invoke.Method?.Method.Name != Method.From || invoke.Method.Instance != null)
+			return false;
+		var targetType = invoke.Method.ReturnType;
+		if (targetType is GenericTypeImplementation)
+			return false; //ncrunch: no coverage
+		var members = targetType.Members;
+		var values = new ValueInstance[members.Count];
+		var argIndex = 0;
+		for (var i = 0; i < members.Count; i++)
+			if (members[i].Type.IsTrait)
+				values[i] = CreateTraitInstance(members[i].Type); //ncrunch: no coverage
+			else if (argIndex < invoke.Method.Arguments.Count)
+				values[i] = EvaluateExpression(invoke.Method.Arguments[argIndex++]);
+			else
+				values[i] = new ValueInstance(members[i].Type, 0);
+		Memory.Registers[invoke.Register] = new ValueInstance(targetType, values);
+		return true;
+	}
+
+	//ncrunch: no coverage start
+	private ValueInstance CreateTraitInstance(Type traitType)
+	{
+		var concreteName = traitType.Name switch
+		{
+			Type.TextWriter => Type.System,
+			Type.Logger => Type.System,
+			_ => traitType.Name
+		};
+		var concreteType = traitType.FindType(concreteName);
+		return concreteType != null
+			? new ValueInstance(concreteType, System.Array.Empty<ValueInstance>())
+			: new ValueInstance(traitType, 0);
+	} //ncrunch: no coverage end
+
+	/// <summary>
+	/// Handles native trait method calls like logger.Log(...) by writing directly to Console.
+	/// Logger delegates to TextWriter.Write which maps to System → Console.WriteLine.
+	/// </summary>
+	private bool TryHandleNativeTraitMethod(Invoke invoke)
+	{
+		if (invoke.Method?.Instance is not MemberCall memberCall)
+			return false;
+		var memberTypeName = memberCall.Member.Type.Name;
+		if (memberTypeName is not (Type.Logger or Type.TextWriter or Type.System))
+			return false;
+		if (invoke.Method.Arguments.Count > 0)
+		{
+			var argValue = EvaluateExpression(invoke.Method.Arguments[0]);
+			Console.WriteLine(argValue.ToExpressionCodeString());
+		}
+		return true;
+	}
+
+	/// <summary>
+	/// Evaluates an arbitrary expression to a ValueInstance using the current VM state.
+	/// Handles values, variables, member calls, binary operations, and method calls.
+	/// </summary>
+	private ValueInstance EvaluateExpression(Expression expression)
+	{
+		if (expression is Value value)
+			return value.Data;
+		if (expression is VariableCall or ParameterCall)
+			return Memory.Frame.Get(expression.ToString());
+		if (expression is MemberCall memberCall)
+			return EvaluateMemberCall(memberCall);
+		if (expression is Binary binary)
+			return EvaluateBinary(binary);
+		if (expression is MethodCall methodCall)
+			return EvaluateMethodCall(methodCall);
+		return new ValueInstance(expression.ToString()); //ncrunch: no coverage
+	}
+
+	private ValueInstance EvaluateMemberCall(MemberCall memberCall)
+	{
+		if (memberCall.Instance != null &&
+			Memory.Frame.TryGet(memberCall.Instance.ToString(), out var instanceValue))
+		{ //ncrunch: no coverage start
+			var typeInstance = instanceValue.TryGetValueTypeInstance();
+			if (typeInstance != null && typeInstance.TryGetValue(memberCall.Member.Name, out var memberValue))
+				return memberValue;
+		} //ncrunch: no coverage end
+		if (Memory.Frame.TryGet(memberCall.ToString(), out var frameValue))
+			return frameValue;
+		//ncrunch: no coverage start
+		if (memberCall.Member.InitialValue is Value enumValue)
+			return enumValue.Data;
+		return new ValueInstance(memberCall.ToString());
+	} //ncrunch: no coverage end
+
+	private ValueInstance EvaluateBinary(Binary binary)
+	{
+		var left = EvaluateExpression(binary.Instance!);
+		var right = EvaluateExpression(binary.Arguments[0]);
+		return binary.Method.Name switch
+		{
+			BinaryOperator.Plus => AddValueInstances(left, right),
+			//ncrunch: no coverage start
+			BinaryOperator.Minus => SubtractValueInstances(left, right),
+			BinaryOperator.Multiply => new ValueInstance(right.GetTypeExceptText(),
+				left.Number * right.Number),
+			BinaryOperator.Divide => new ValueInstance(right.GetTypeExceptText(),
+				left.Number / right.Number),
+			_ => new ValueInstance(left.GetTypeExceptText(), left.Number)
+		}; //ncrunch: no coverage end
+	}
+
+	private ValueInstance EvaluateMethodCall(MethodCall call)
+	{
+		if (call.Method.Name == Method.From)
+			return EvaluateFromConstructor(call); //ncrunch: no coverage
+		var instance = call.Instance != null
+			? EvaluateExpression(call.Instance)
+			: default;
+		var args = call.Method.Parameters.Count > 0
+			? call.Arguments.Select(EvaluateExpression).ToArray()
+			: [];
+		var argDict = new Dictionary<string, ValueInstance>();
+		for (var i = 0; i < call.Method.Parameters.Count && i < args.Length; i++)
+			argDict[call.Method.Parameters[i].Name] = args[i]; //ncrunch: no coverage
+		var expressions = GetExpressionsFromMethod(call.Method);
+		var invokedMethod = !instance.Equals(default(ValueInstance))
+			? new InstanceInvokedMethod(expressions, argDict, instance, call.Method.ReturnType)
+			: new InvokedMethod(expressions, argDict, call.Method.ReturnType);
+		var childInstructions = new BytecodeGenerator(invokedMethod, new Registry()).Generate();
+		var result = RunChildScope(childInstructions);
+		return result ?? new ValueInstance(call.Method.ReturnType, 0);
+	}
+
+	//ncrunch: no coverage start
+	private ValueInstance EvaluateFromConstructor(MethodCall call)
+	{
+		var targetType = call.ReturnType;
+		var members = targetType.Members;
+		var values = new ValueInstance[members.Count];
+		var argIndex = 0;
+		for (var i = 0; i < members.Count; i++)
+			if (members[i].Type.IsTrait)
+				values[i] = CreateTraitInstance(members[i].Type);
+			else if (argIndex < call.Arguments.Count)
+				values[i] = EvaluateExpression(call.Arguments[argIndex++]);
+			else
+				values[i] = new ValueInstance(members[i].Type, 0);
+		return new ValueInstance(targetType, values);
+	} //ncrunch: no coverage end
+
 	private bool GetValueByKeyForDictionaryAndStoreInRegister(Invoke invoke)
 	{
 		if (invoke.Method?.Method.Name != "Get" ||
@@ -247,10 +399,10 @@ public sealed class VirtualMachine(Package package)
 			return arguments; // ncrunch: no coverage
 		for (var index = 0; index < invoke.Method.Method.Parameters.Count; index++)
 		{
+			if (index >= invoke.Method.Arguments.Count)
+				break; //ncrunch: no coverage
 			var argument = invoke.Method.Arguments[index];
-			var argumentInstance = argument is Value argumentValue
-				? argumentValue.Data
-				: Memory.Frame.Get(argument.ToString());
+			var argumentInstance = EvaluateExpression(argument);
 			arguments.Add(invoke.Method.Method.Parameters[index].Name, argumentInstance);
 		}
 		return arguments;

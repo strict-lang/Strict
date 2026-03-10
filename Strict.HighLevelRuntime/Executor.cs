@@ -122,11 +122,11 @@ public class Executor
 				? GetFromConstructorValue(method, args)
 				: throw new MethodCall.CannotCallFromConstructorWithExistingInstance();
 		if (instance.TryGetValueTypeInstance()?.ReturnType.Name == Type.System)
-		{
+		{ //ncrunch: no coverage start
 			if (method.Name == "Write" && args.Length > 0)
 				Console.WriteLine(args[0].ToExpressionCodeString());
 			return noneInstance;
-		}
+		} //ncrunch: no coverage end
 		if (runOnlyTests && IsSimpleSingleLineMethod(method))
 			return trueInstance;
 		var context = CreateExecutionContext(method, instance, args, parentContext, runOnlyTests);

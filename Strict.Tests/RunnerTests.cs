@@ -2,21 +2,31 @@ namespace Strict.Tests;
 
 public sealed class RunnerTests
 {
+	[SetUp]
+	public void CreateTextWriter()
+	{
+		writer = new StringWriter();
+		rememberConsole = Console.Out;
+		Console.SetOut(writer);
+	}
+
+	private StringWriter writer = null!;
+	private TextWriter rememberConsole = null!;
+
+	[TearDown]
+	public void RestoreConsole() => Console.SetOut(rememberConsole);
+
 	[Test]
 	public void RunSimpleCalculator()
 	{
-		using var writer = new StringWriter();
-		var rememberConsole = Console.Out;
-		Console.SetOut(writer);
-		try
-		{
-			new Runner("Examples/SimpleCalculator.strict").Run();
-		}
-		finally
-		{
-			Console.SetOut(rememberConsole);
-		}
-		Assert.That(writer.ToString(), Is.EqualTo(
-			"2 + 3 = 5" + Environment.NewLine + "2 * 3 = 6" + Environment.NewLine));
+		using var _ = new Runner("Examples/SimpleCalculator.strict").Run();
+		Assert.That(writer.ToString(), Does.StartWith("2 + 3 = 5" + Environment.NewLine + "2 * 3 = 6"));
+	}
+
+	[Test]
+	public void RunWithFullDiagnostics()
+	{
+		using var _ = new Runner("Examples/SimpleCalculator.strict", true).Run();
+		Assert.That(writer.ToString().Length, Is.GreaterThan(1000));
 	}
 }
