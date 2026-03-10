@@ -11,7 +11,8 @@ namespace Strict;
 
 public sealed class Runner : IDisposable
 {
-	public Runner(Package basePackage, string strictFilePath, bool enableTestsAndDetailedOutput = false)
+	public Runner(Package basePackage, string strictFilePath,
+		bool enableTestsAndDetailedOutput = false)
 	{
 		this.enableTestsAndDetailedOutput = enableTestsAndDetailedOutput;
 		Log("╔════════════════════════════════════╗");
@@ -53,14 +54,12 @@ public sealed class Runner : IDisposable
 	}
 
 	/// <summary>
-	/// Creates a Runner that executes pre-compiled bytecode from a .sbc file. The corresponding
-	/// .strict source is loaded only to resolve type and method references — parsing, validation,
-	/// testing, and bytecode generation are all skipped.
+	/// Creates a Runner that executes pre-compiled bytecode from a .strict_binary file.
+	/// TODO: remove: The corresponding .strict source is loaded only to resolve type and method references — parsing, validation, testing, and bytecode generation are all skipped.
 	/// </summary>
-	public static Runner LoadBytecodeFile(string strictBinaryFilePath,
+	public static Runner LoadBytecodeFile(Package basePackage, string strictBinaryFilePath,
 		bool enableTestsAndDetailedOutput = false)
 	{
-		var basePackage = TestPackage.Instance;
 		var sourcePath = BytecodeSerializer.ReadSourcePath(strictBinaryFilePath);
 		var resolvedSource = ResolveSourcePath(strictBinaryFilePath, sourcePath);
 		Package? userPackage = null;

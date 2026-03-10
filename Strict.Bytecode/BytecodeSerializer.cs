@@ -17,34 +17,45 @@ public static class BytecodeSerializer
 	{
 		using var writer = new BinaryWriter(File.Create(outputPath));
 		writer.Write(MagicBytes);
+		writer.Write((byte)Version);
 		writer.Write(sourceFilePath);
-		writer.Write(instructions.Count);
+		writer.Write7BitEncodedInt(instructions.Count);
 		foreach (var instruction in instructions)
 			WriteInstruction(writer, instruction);
 	}
 
 	private static readonly byte[] MagicBytes = "Strict".Select(c => (byte)c).ToArray();
+	private const int Version = 1;
 	public const string Extension = ".strict_binary";
 
 	public static (List<Instruction> Instructions, string SourceFilePath) Deserialize(
 		string sbcFilePath, Package package)
 	{
 		using var reader = new BinaryReader(File.OpenRead(sbcFilePath));
-		ValidateMagic(reader);
+		ValidateMagicAndVersion(reader);
 		var sourcePath = reader.ReadString();
-		var count = reader.ReadInt32();
+		var count = reader.Read7BitEncodedInt();
 		var instructions = new List<Instruction>(count);
 		for (var i = 0; i < count; i++)
 			instructions.Add(ReadInstruction(reader, package));
 		return (instructions, sourcePath);
 	}
 
-	private static void ValidateMagic(BinaryReader reader)
+	private static void ValidateMagicAndVersion(BinaryReader reader)
 	{
 		var magic = reader.ReadBytes(MagicBytes.Length);
 		if (!magic.SequenceEqual(MagicBytes))
-			throw new InvalidBytecodeFileException();
+			throw new InvalidBytecodeFileException("Invalid file layout, should start with 'Strict'");
+		var fileVersion = reader.ReadByte();
+		if (fileVersion is 0 or > Version)
+			throw new InvalidVersion(fileVersion);
 	}
+
+	public sealed class InvalidBytecodeFileException(string message)
+		: Exception("Not a valid Strict bytecode (" + Extension + ") file: " + message);
+
+	public sealed class InvalidVersion(byte fileVersion) : Exception("File version: " +
+		fileVersion + ", this runtime only supports up to version " + Version);
 
 	/// <summary>
 	/// Reads only the embedded source file path from the .sbc header without deserializing
@@ -53,12 +64,9 @@ public static class BytecodeSerializer
 	public static string ReadSourcePath(string strictBinaryFilePath)
 	{
 		using var reader = new BinaryReader(File.OpenRead(strictBinaryFilePath));
-		ValidateMagic(reader);
+		ValidateMagicAndVersion(reader);
 		return reader.ReadString();
 	}
-
-	public sealed class InvalidBytecodeFileException()
-		: Exception("Not a valid Strict bytecode (" + Extension + ") file");
 
 	private enum InstructionClass : byte
 	{
@@ -264,12 +272,14 @@ public static class BytecodeSerializer
 			w.Write(memberCall.Member.Type.Name);
 			w.Write(memberCall.Instance != null);
 			if (memberCall.Instance != null)
+				// ReSharper disable once TailRecursiveCall
 				WriteExpression(w, memberCall.Instance);
 			break;
 		case Binary binary:
 			w.Write((byte)ExpressionKind.BinaryExpr);
 			w.Write(binary.Method.Name);
 			WriteExpression(w, binary.Instance!);
+			// ReSharper disable once TailRecursiveCall
 			WriteExpression(w, binary.Arguments[0]);
 			break;
 		case MethodCall methodCall:
@@ -341,7 +351,7 @@ public static class BytecodeSerializer
 			InstructionClass.WriteToTable => ReadWriteToTable(r),
 			InstructionClass.Remove => ReadRemove(r),
 			InstructionClass.ListCall => ReadListCall(r),
-			_ => throw new InvalidBytecodeFileException()
+			_ => throw new InvalidBytecodeFileException("Unknown instruction: " + cls)
 		};
 	}
 
@@ -427,11 +437,11 @@ public static class BytecodeSerializer
 		{
 			ValueKind.Text => new ValueInstance(r.ReadString()),
 			ValueKind.None => new ValueInstance(package.GetType(r.ReadString())),
-			ValueKind.Boolean => new ValueInstance(package.GetType(r.ReadString()),
-				r.ReadBoolean()),
+			ValueKind.Boolean => new ValueInstance(package.GetType(r.ReadString()), r.ReadBoolean()),
 			ValueKind.Number => new ValueInstance(package.GetType(r.ReadString()), r.ReadDouble()),
 			ValueKind.List => ReadListValueInstance(r, package),
-			_ => throw new InvalidBytecodeFileException()
+			_ => throw new InvalidBytecodeFileException("Unknown value: " + kind + " in " +
+				r.BaseStream.Position + " of " + r.BaseStream.Length + " bytes.")
 		};
 	}
 
@@ -457,7 +467,8 @@ public static class BytecodeSerializer
 			ExpressionKind.MemberRef => ReadMemberRef(r, package),
 			ExpressionKind.BinaryExpr => ReadBinaryExpr(r, package),
 			ExpressionKind.MethodCallExpr => ReadMethodCallExpr(r, package),
-			_ => throw new InvalidBytecodeFileException()
+			_ => throw new InvalidBytecodeFileException("Unknown expression: " + kind + " in " +
+				r.BaseStream.Position + " of " + r.BaseStream.Length + " bytes.")
 		};
 	}
 
@@ -481,7 +492,9 @@ public static class BytecodeSerializer
 		var memberName = r.ReadString();
 		var memberTypeName = r.ReadString();
 		var hasInstance = r.ReadBoolean();
-		Expression? instance = hasInstance ? ReadExpression(r, package) : null;
+		var instance = hasInstance
+			? ReadExpression(r, package)
+			: null;
 		// Construct a lightweight Member whose Name and Type match what the VM needs.
 		// The declaring type (first constructor arg) is only used for GetType() lookup during
 		// construction, so any accessible base type works as the context.
@@ -499,7 +512,8 @@ public static class BytecodeSerializer
 		return new Binary(left, operatorMethod, [right]);
 	}
 
-	private static Method FindOperatorMethod(Package package, string operatorName, Type preferredType)
+	private static Method FindOperatorMethod(Package package, string operatorName,
+		Type preferredType)
 	{
 		var method = preferredType.Methods.FirstOrDefault(m => m.Name == operatorName);
 		if (method != null)
@@ -520,7 +534,9 @@ public static class BytecodeSerializer
 		var paramCount = r.ReadInt32();
 		var returnTypeName = r.ReadString();
 		var hasInstance = r.ReadBoolean();
-		Expression? instance = hasInstance ? ReadExpression(r, package) : null;
+		var instance = hasInstance
+			? ReadExpression(r, package)
+			: null;
 		var argCount = r.ReadInt32();
 		var args = new Expression[argCount];
 		for (var i = 0; i < argCount; i++)
@@ -544,7 +560,9 @@ public static class BytecodeSerializer
 			var paramCount = r.ReadInt32();
 			var returnTypeName = r.ReadString();
 			var hasInstance = r.ReadBoolean();
-			Expression? instance = hasInstance ? ReadExpression(r, package) : null;
+			var instance = hasInstance
+				? ReadExpression(r, package)
+				: null;
 			var argCount = r.ReadInt32();
 			var args = new Expression[argCount];
 			for (var i = 0; i < argCount; i++)
@@ -573,8 +591,9 @@ public static class BytecodeSerializer
 
 	private static Method FindMethod(Type type, string methodName, int paramCount)
 	{
-		var method = type.Methods.FirstOrDefault(m =>
-			m.Name == methodName && m.Parameters.Count == paramCount) ??
+		var method =
+			type.Methods.FirstOrDefault(m =>
+				m.Name == methodName && m.Parameters.Count == paramCount) ??
 			type.Methods.FirstOrDefault(m => m.Name == methodName);
 		if (method != null)
 			return method;

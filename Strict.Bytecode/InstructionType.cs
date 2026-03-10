@@ -4,7 +4,7 @@ namespace Strict.Bytecode;
 /// Each InstructionType corresponds to an Instruction class in the <see cref="Instructions" /> namespace
 /// here. For details on what each instruction does, see the corresponding Instruction class.
 /// </summary>
-public enum InstructionType
+public enum InstructionType : byte
 {
 	LoadConstantToRegister,
 	LoadVariableToRegister,
@@ -12,18 +12,18 @@ public enum InstructionType
 	StoreRegisterToVariable,
 	Set,
 	ListCall,
-	StoreSeparator = 100,
+	StoreSeparator = 10,
 	Add,
 	Subtract,
 	Multiply,
 	Divide,
 	Modulo,
-	ArithmeticSeparator = 200,
+	ArithmeticSeparator = 20,
 	Equal,
 	NotEqual,
 	LessThan,
 	GreaterThan,
-	BinaryOperatorsSeparator = 300,
+	BinaryOperatorsSeparator = 30,
 	Invoke,
 	Return,
 	LoopBegin,
