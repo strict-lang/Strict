@@ -1,7 +1,9 @@
 using System.IO.Compression;
 using System.Text;
 using Strict.Bytecode.Instructions;
+using Strict.Expressions;
 using Strict.Language;
+using Type = Strict.Language.Type;
 
 namespace Strict.Bytecode;
 
@@ -18,40 +20,47 @@ public sealed class BytecodeDecompiler(Package basePackage)
 	public void Decompile(string strictBinaryFilePath, string outputFolder)
 	{
 		Directory.CreateDirectory(outputFolder);
+		var binaryDir = Path.GetDirectoryName(Path.GetFullPath(strictBinaryFilePath)) ?? ".";
 		using var zip = ZipFile.OpenRead(strictBinaryFilePath);
 		foreach (var entry in zip.Entries)
 			if (entry.Name.EndsWith(".bytecode", StringComparison.OrdinalIgnoreCase))
 			{
 				var typeName = Path.GetFileNameWithoutExtension(entry.Name);
-				List<Instruction> instructions;
-				try
-				{
-					using var entryStream = entry.Open();
-					instructions = BytecodeSerializer.DeserializeEntry(entryStream, basePackage);
-				}
-				//ncrunch: no coverage start
-				catch (Exception ex)
-				{
-					WriteErrorFile(outputFolder, typeName, ex.Message);
-					continue;
-				} //ncrunch: no coverage end
-				var sourceLines = ReconstructSource(typeName, instructions);
+				using var entryStream = entry.Open();
+				var instructions = BytecodeSerializer.DeserializeEntry(entryStream,
+					GetPackageForType(binaryDir, typeName));
+				var sourceLines = ReconstructSource(instructions);
 				var outputPath = Path.Combine(outputFolder, typeName + ".strict");
 				File.WriteAllLines(outputPath, sourceLines, Encoding.UTF8);
 			}
 	}
 
-	//ncrunch: no coverage start
-	private static void WriteErrorFile(string outputFolder, string typeName, string errorMessage)
-	{
-		var lines = new[] { "// Decompilation failed: " + errorMessage };
-		File.WriteAllLines(Path.Combine(outputFolder, typeName + ".strict"), lines, Encoding.UTF8);
-	} //ncrunch: no coverage end
+	private readonly Dictionary<string, Package> packagesByDirectory = new();
 
-	private static IEnumerable<string> ReconstructSource(string typeName,
-		IList<Instruction> instructions)
+	private Package GetPackageForType(string binaryDir, string typeName)
 	{
-		var lines = new List<string> { "// Decompiled from " + typeName + ".bytecode" };
+		if (basePackage.FindType(typeName) != null)
+			return basePackage;
+		var sourceFile = Path.Combine(binaryDir, typeName + Type.Extension);
+		if (!File.Exists(sourceFile))
+			return basePackage;
+		//ncrunch: no coverage start
+		if (!packagesByDirectory.TryGetValue(binaryDir, out var appPackage))
+		{
+			appPackage = new Package(basePackage, binaryDir);
+			packagesByDirectory[binaryDir] = appPackage;
+		}
+		if (appPackage.FindDirectType(typeName) == null)
+		{
+			var typeLines = new TypeLines(typeName, File.ReadAllLines(sourceFile));
+			_ = new Type(appPackage, typeLines).ParseMembersAndMethods(new MethodExpressionParser());
+		}
+		return appPackage; //ncrunch: no coverage end
+	}
+
+	private static IEnumerable<string> ReconstructSource(IList<Instruction> instructions)
+	{
+		var lines = new List<string>();
 		var members = new List<string>();
 		var bodyLines = new List<string>();
 		foreach (var inst in instructions)
@@ -67,34 +76,6 @@ public sealed class BytecodeDecompiler(Package basePackage)
 				bodyLines.Add("\tconstant " + storeVar.Identifier + " = " +
 					storeVar.ValueInstance.ToExpressionCodeString());
 				break; //ncrunch: no coverage end
-			case LoadVariableToRegister loadVar:
-				bodyLines.Add("\t// load " + loadVar.Identifier + " → " + loadVar.Register);
-				break;
-			case BinaryInstruction bin when bin.Registers.Length >= 2:
-				bodyLines.Add("\t// " + bin.InstructionType + " " +
-					string.Join(", ", bin.Registers.Select(r => r.ToString())));
-				break;
-			case ReturnInstruction ret:
-				bodyLines.Add("\t// return " + ret.Register);
-				break;
-			//ncrunch: no coverage start
-			case Invoke invoke:
-				bodyLines.Add("\t// invoke " + (invoke.Method?.Method.Name ?? "?") + " → " +
-					invoke.Register);
-				break;
-			case LoopBeginInstruction loopBegin:
-				bodyLines.Add("\t// for loop start " + loopBegin.Register +
-					(loopBegin.IsRange
-						? " to " + loopBegin.EndIndex
-						: ""));
-				break;
-			case LoopEndInstruction:
-				bodyLines.Add("\t// for loop end");
-				break;
-			default:
-				bodyLines.Add("\t// " + inst);
-				break;
-			 //ncrunch: no coverage end
 			}
 		}
 		lines.AddRange(members);

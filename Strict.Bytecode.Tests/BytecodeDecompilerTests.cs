@@ -19,7 +19,7 @@ public sealed class BytecodeDecompilerTests : TestBytecode
 			var outputFile = Path.Combine(outputFolder, "Add.strict");
 			Assert.That(File.Exists(outputFile), Is.True, "Add.strict should be created");
 			var content = File.ReadAllText(outputFile);
-			Assert.That(content, Does.Contain("Decompiled from Add.bytecode"));
+			Assert.That(content, Does.Contain("has First Number"));
 		}
 		finally
 		{
