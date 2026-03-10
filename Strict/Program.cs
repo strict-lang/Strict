@@ -1,4 +1,6 @@
 using Strict;
+using Strict.Expressions;
+using Strict.Language;
 
 //ncrunch: no coverage start
 if (args.Length == 0)
@@ -16,7 +18,8 @@ if (!File.Exists(strictFilePath))
 }
 try
 {
-	new Runner(strictFilePath
+	using var basePackage = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
+	using var _ = new Runner(basePackage, strictFilePath
 #if DEBUG
 		, true
 #endif

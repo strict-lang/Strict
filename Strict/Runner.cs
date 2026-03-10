@@ -11,7 +11,7 @@ namespace Strict;
 
 public sealed class Runner : IDisposable
 {
-	public Runner(string strictFilePath, bool enableTestsAndDetailedOutput = false)
+	public Runner(Package basePackage, string strictFilePath, bool enableTestsAndDetailedOutput = false)
 	{
 		this.enableTestsAndDetailedOutput = enableTestsAndDetailedOutput;
 		Log("╔════════════════════════════════════╗");
@@ -19,7 +19,6 @@ public sealed class Runner : IDisposable
 		Log("╚════════════════════════════════════╝");
 		Log("┌─ Step 1: Loading Strict package");
 		var startTicks = DateTime.UtcNow.Ticks;
-		basePackage = new Repositories(new MethodExpressionParser()).LoadStrictPackage().GetAwaiter().GetResult();
 		var endTicks = DateTime.UtcNow.Ticks;
 		Log("└─ Step 1 ⏱ Time: " +
 			TimeSpan.FromTicks(endTicks - startTicks).TotalMilliseconds + " ms");
@@ -50,7 +49,6 @@ public sealed class Runner : IDisposable
 	}
 
 	private readonly List<long> stepTimes = new();
-	private readonly Package basePackage;
 	private readonly Package package;
 	private readonly Type mainType;
 
@@ -205,9 +203,5 @@ public sealed class Runner : IDisposable
 			" ms");
 	}
 
-	public void Dispose()
-	{
-		package.Dispose();
-		basePackage.Dispose();
-	}
+	public void Dispose() => package.Dispose();
 }
