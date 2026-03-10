@@ -27,10 +27,7 @@ try
 		diagnostics = true;
 #endif
 	using var basePackage = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
-	if (filePath.EndsWith(BytecodeSerializer.Extension, StringComparison.OrdinalIgnoreCase))
-		Runner.LoadBytecodeFile(basePackage, filePath, diagnostics).Run();
-	else
-		new Runner(basePackage, filePath, diagnostics).Run();
+	new Runner(basePackage, filePath, diagnostics).Run();
 }
 catch (Exception ex)
 {

@@ -1,3 +1,4 @@
+using System.IO.Compression;
 using System.Text;
 using Strict.Bytecode.Instructions;
 
@@ -13,9 +14,8 @@ public sealed class BytecodeSerializerTests : TestBytecode
 				"has First Number", "has Second Number", "Calculate Number",
 				"\tAdd(10, 5).Calculate is 15", "\tFirst + Second")).Generate();
 		var binaryFilePath = GetTempStrictBinaryFilePath();
-		BytecodeSerializer.Serialize(instructions, binaryFilePath, "dummy.strict");
-		var (loaded, sourcePath) = BytecodeSerializer.Deserialize(binaryFilePath, TestPackage.Instance);
-		Assert.That(sourcePath, Is.EqualTo("dummy.strict"));
+		BytecodeSerializer.Serialize(instructions, binaryFilePath, "Add");
+		var loaded = BytecodeSerializer.Deserialize(binaryFilePath, TestPackage.Instance);
 		Assert.That(loaded.Count, Is.EqualTo(instructions.Count));
 		Assert.That(loaded.ConvertAll(x => x.ToString()),
 			Is.EqualTo(instructions.ConvertAll(x => x.ToString())));
@@ -36,8 +36,8 @@ public sealed class BytecodeSerializerTests : TestBytecode
 				"\tmutable result = 1", "\tconstant multiplier = 2", "\tfor number",
 				"\t\tresult = result * multiplier", "\tresult")).Generate();
 		var binaryFilePath = GetTempStrictBinaryFilePath();
-		BytecodeSerializer.Serialize(instructions, binaryFilePath, "dummy.strict");
-		var (loaded, _) = BytecodeSerializer.Deserialize(binaryFilePath, TestPackage.Instance);
+		BytecodeSerializer.Serialize(instructions, binaryFilePath, "SimpleLoopExample");
+		var loaded = BytecodeSerializer.Deserialize(binaryFilePath, TestPackage.Instance);
 		Assert.That(loaded.Count, Is.EqualTo(instructions.Count));
 		Assert.That(loaded.ConvertAll(x => x.ToString()),
 			Is.EqualTo(instructions.ConvertAll(x => x.ToString())));
@@ -59,8 +59,8 @@ public sealed class BytecodeSerializerTests : TestBytecode
 				"\tif operation is \"multiply\"", "\t\treturn First * Second",
 				"\tif operation is \"divide\"", "\t\treturn First / Second")).Generate();
 		var binaryFilePath = GetTempStrictBinaryFilePath();
-		BytecodeSerializer.Serialize(instructions, binaryFilePath, "dummy.strict");
-		var (loaded, _) = BytecodeSerializer.Deserialize(binaryFilePath, TestPackage.Instance);
+		BytecodeSerializer.Serialize(instructions, binaryFilePath, "ArithmeticFunction");
+		var loaded = BytecodeSerializer.Deserialize(binaryFilePath, TestPackage.Instance);
 		Assert.That(loaded.Count, Is.EqualTo(instructions.Count));
 		Assert.That(loaded.ConvertAll(x => x.ToString()),
 			Is.EqualTo(instructions.ConvertAll(x => x.ToString())));
@@ -74,55 +74,47 @@ public sealed class BytecodeSerializerTests : TestBytecode
 				"SimpleListDeclaration(5).Declare",
 				"has number", "Declare Numbers", "\t(1, 2, 3, 4, 5)")).Generate();
 		var binaryFilePath = GetTempStrictBinaryFilePath();
-		BytecodeSerializer.Serialize(instructions, binaryFilePath, "dummy.strict");
-		var (loaded, _) = BytecodeSerializer.Deserialize(binaryFilePath, TestPackage.Instance);
+		BytecodeSerializer.Serialize(instructions, binaryFilePath, "SimpleListDeclaration");
+		var loaded = BytecodeSerializer.Deserialize(binaryFilePath, TestPackage.Instance);
 		Assert.That(loaded.Count, Is.EqualTo(instructions.Count));
 		Assert.That(loaded.ConvertAll(x => x.ToString()),
 			Is.EqualTo(instructions.ConvertAll(x => x.ToString())));
 	}
 
 	[Test]
-	public void SavedFileHasCorrectMagicHeader()
+	public void SavedFileIsZipWithCorrectMagicInEntry()
 	{
 		var instructions = new List<Instruction> { new ReturnInstruction(Register.R0) };
 		var binaryFilePath = GetTempStrictBinaryFilePath();
-		BytecodeSerializer.Serialize(instructions, binaryFilePath, "test.strict");
-		var bytes = File.ReadAllBytes(binaryFilePath);
-		Assert.That(Encoding.UTF8.GetString(bytes[..6]), Is.EqualTo(nameof(Strict)));
-		Assert.That(bytes[6], Is.EqualTo(1));
+		BytecodeSerializer.Serialize(instructions, binaryFilePath, "test");
+		using var zip = ZipFile.OpenRead(binaryFilePath);
+		using var stream = zip.Entries.Single().Open();
+		using var reader = new BinaryReader(stream);
+		Assert.That(Encoding.UTF8.GetString(reader.ReadBytes(6)), Is.EqualTo(nameof(Strict)));
+		Assert.That(reader.ReadByte(), Is.EqualTo(2));
 	}
 
 	[Test]
-	public void InvalidMagicHeaderThrows()
+	public void InvalidFileThrows()
 	{
 		var binaryFilePath = GetTempStrictBinaryFilePath();
 		File.WriteAllBytes(binaryFilePath, [0xFF, 0xFF, 0xFF, 0xFF]);
 		Assert.Throws<BytecodeSerializer.InvalidBytecodeFileException>(() =>
-			BytecodeSerializer.ReadSourcePath(binaryFilePath));
+			BytecodeSerializer.Deserialize(binaryFilePath, TestPackage.Instance));
 	}
 
 	[Test]
-	public void ReadSourcePathExtractsEmbeddedPath()
-	{
-		var instructions = new List<Instruction> { new ReturnInstruction(Register.R0) };
-		const string expected = "Examples/SimpleCalculator.strict";
-		var binaryFilePath = GetTempStrictBinaryFilePath();
-		BytecodeSerializer.Serialize(instructions, binaryFilePath, expected);
-		Assert.That(BytecodeSerializer.ReadSourcePath(binaryFilePath), Is.EqualTo(expected));
-	}
-
-	[Test]
-	public void SerializedFileSizeIsCompact()
+	public void SerializedEntryContentIsCompact()
 	{
 		var instructions = new BytecodeGenerator(
 			GenerateMethodCallFromSource("Add", "Add(10, 5).Calculate",
 				"has First Number", "has Second Number", "Calculate Number",
 				"\tAdd(10, 5).Calculate is 15", "\tFirst + Second")).Generate();
 		var binaryFilePath = GetTempStrictBinaryFilePath();
-		BytecodeSerializer.Serialize(instructions, binaryFilePath, "dummy.strict");
-		var fileSize = new FileInfo(binaryFilePath).Length;
-		// 6-byte 'Strict' + 1-byte version + 13-byte source string + 4-byte count + ~6 instructions
-		Assert.That(fileSize, Is.LessThan(103),//TODO: make more compact!
-			"Serialized arithmetic bytecode should be compact (< 80 bytes)");
+		BytecodeSerializer.Serialize(instructions, binaryFilePath, "Add");
+		using var zip = ZipFile.OpenRead(binaryFilePath);
+		// Uncompressed entry content for a simple 6-instruction arithmetic method should be < 50 bytes
+		Assert.That(zip.Entries.Single().Length, Is.LessThan(50),
+			"Serialized arithmetic bytecode entry should be compact (< 50 bytes)");
 	}
 }

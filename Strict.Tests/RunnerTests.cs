@@ -37,14 +37,14 @@ public sealed class RunnerTests
 	public void RunFromBytecodeFileProducesSameOutput()
 	{
 		const string StrictFilePath = "Examples/SimpleCalculator.strict";
-		var binaryFilePath = Path.ChangeExtension(StrictFilePath, BytecodeSerializer.Extension);
+		var binaryFilePath = Path.ChangeExtension(StrictFilePath, BytecodeSerializer.Extension)!;
 		try
 		{
 			new Runner(TestPackage.Instance, StrictFilePath).Run().Dispose();
 			Assert.That(File.Exists(binaryFilePath), Is.True,
 				BytecodeSerializer.Extension + " file should have been created");
 			writer.GetStringBuilder().Clear();
-			using var runner = Runner.LoadBytecodeFile(TestPackage.Instance, binaryFilePath).Run();
+			using var runner = new Runner(TestPackage.Instance, binaryFilePath).Run();
 			Assert.That(writer.ToString(),
 				Does.StartWith("2 + 3 = 5" + Environment.NewLine + "2 * 3 = 6"));
 		}

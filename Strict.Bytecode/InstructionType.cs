@@ -3,6 +3,8 @@ namespace Strict.Bytecode;
 /// <summary>
 /// Each InstructionType corresponds to an Instruction class in the <see cref="Instructions" /> namespace
 /// here. For details on what each instruction does, see the corresponding Instruction class.
+/// Invoke variants (InvokeWriteToList, InvokeWriteToTable, InvokeRemove) encode special list/table
+/// operations as distinct instruction types so no secondary enum is needed.
 /// </summary>
 public enum InstructionType : byte
 {
@@ -34,5 +36,8 @@ public enum InstructionType : byte
 	JumpIfNotZero,
 	JumpEnd,
 	JumpToIdIfFalse,
-	JumpToIdIfTrue
+	JumpToIdIfTrue,
+	InvokeWriteToList,
+	InvokeWriteToTable,
+	InvokeRemove
 }
