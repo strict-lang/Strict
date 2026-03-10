@@ -40,9 +40,67 @@ public sealed class Runner : IDisposable
 		Log("│  ✓ Methods: " + mainType.Methods.Count);
 		Log("└─ Step 2 ⏱ Time: " +
 			TimeSpan.FromTicks(endLoadTypeTicks - startLoadTypeTicks).TotalMilliseconds + " ms");
+		sourceFilePath = strictFilePath;
+	}
+
+	private Runner(Package loadedPackage, Type loadedMainType,
+		List<Instruction> preloadedInstructions, bool enableTestsAndDetailedOutput,
+		string? resolvedSourcePath = null)
+	{
+		this.enableTestsAndDetailedOutput = enableTestsAndDetailedOutput;
+		package = loadedPackage;
+		mainType = loadedMainType;
+		preloadedBytecode = preloadedInstructions;
+		sourceFilePath = resolvedSourcePath;
+	}
+
+	/// <summary>
+	/// Creates a Runner that executes pre-compiled bytecode from a .sbc file. The corresponding
+	/// .strict source is loaded only to resolve type and method references — parsing, validation,
+	/// testing and bytecode generation are all skipped.
+	/// </summary>
+	public static Runner LoadBytecodeFile(string sbcFilePath,
+		bool enableTestsAndDetailedOutput = false)
+	{
+		var basePackage = TestPackage.Instance;
+		var sourcePath = BytecodeSerializer.ReadSourcePath(sbcFilePath);
+		var resolvedSource = ResolveSourcePath(sbcFilePath, sourcePath);
+		Package? userPackage = null;
+		try
+		{
+			userPackage = new Package(basePackage,
+				Path.GetDirectoryName(Path.GetFullPath(resolvedSource)) ??
+				throw new InvalidOperationException(
+					"Cannot determine package path for " + resolvedSource));
+			var typeName = Path.GetFileNameWithoutExtension(resolvedSource);
+			var typeLines = new TypeLines(typeName, File.ReadAllLines(resolvedSource));
+			var mainType =
+				new Type(userPackage, typeLines).ParseMembersAndMethods(new MethodExpressionParser());
+			var (instructions, _) = BytecodeSerializer.Deserialize(sbcFilePath, userPackage);
+			return new Runner(userPackage, mainType, instructions, enableTestsAndDetailedOutput,
+				resolvedSource);
+		}
+		catch
+		{
+			userPackage?.Dispose();
+			throw;
+		}
+	}
+
+	private static string ResolveSourcePath(string sbcFilePath, string sourcePath)
+	{
+		if (File.Exists(sourcePath))
+			return sourcePath;
+		var relative = Path.Combine(Path.GetDirectoryName(sbcFilePath) ?? ".", sourcePath);
+		if (File.Exists(relative))
+			return relative;
+		throw new FileNotFoundException(
+			$"Source file '{sourcePath}' referenced by '{sbcFilePath}' not found.");
 	}
 
 	private readonly bool enableTestsAndDetailedOutput;
+	private readonly string? sourceFilePath;
+	private readonly List<Instruction>? preloadedBytecode;
 
 	private void Log(string message)
 	{
@@ -56,6 +114,24 @@ public sealed class Runner : IDisposable
 
 	public Runner Run()
 	{
+		if (preloadedBytecode != null)
+			return RunFromPreloadedBytecode();
+		return RunFromSource();
+	}
+
+	private Runner RunFromPreloadedBytecode()
+	{
+		Log("╔════════════════════════════════════╗");
+		Log("║  Running from pre-compiled .sbc    ║");
+		Log("╚════════════════════════════════════╝");
+		ExecuteBytecode(preloadedBytecode!);
+		Console.WriteLine("Successfully executed pre-compiled " + mainType.Name + " in " +
+			TimeSpan.FromTicks(stepTimes.Sum()).ToString(@"s\.ffffff") + "s");
+		return this;
+	}
+
+	private Runner RunFromSource()
+	{
 		if (enableTestsAndDetailedOutput)
 		{
 			Parse();
@@ -64,10 +140,21 @@ public sealed class Runner : IDisposable
 		}
 		var instructions = GenerateBytecode();
 		var optimizedInstructions = OptimizeBytecode(instructions);
+		SaveBytecodeIfPossible(optimizedInstructions);
 		ExecuteBytecode(optimizedInstructions);
 		Console.WriteLine("Successfully parsed, optimized and executed " + mainType.Name + " in " +
 			TimeSpan.FromTicks(stepTimes.Sum()).ToString(@"s\.ffffff") + "s");
 		return this;
+	}
+
+	private void SaveBytecodeIfPossible(List<Instruction> optimizedInstructions)
+	{
+		if (string.IsNullOrEmpty(sourceFilePath))
+			return;
+		var sbcPath = Path.ChangeExtension(sourceFilePath, BytecodeSerializer.Extension);
+		Log("┌─ Saving bytecode to: " + sbcPath);
+		BytecodeSerializer.Serialize(optimizedInstructions, sbcPath, sourceFilePath);
+		Log("└─ Bytecode saved: " + new FileInfo(sbcPath).Length + " bytes");
 	}
 
 	private void Parse()

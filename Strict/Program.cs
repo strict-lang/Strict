@@ -1,26 +1,37 @@
 using Strict;
+using Strict.Bytecode;
 
 //ncrunch: no coverage start
 if (args.Length == 0)
 {
-	Console.WriteLine("Usage: Strict <file.strict>");
+	Console.WriteLine("Usage: Strict <file.strict|file.sbc>");
 	Console.WriteLine("Example: Strict Examples/SimpleCalculator.strict");
+	Console.WriteLine("Example: Strict Examples/SimpleCalculator.sbc");
 	return;
 }
-var strictFilePath = args[0];
-if (!File.Exists(strictFilePath))
+var filePath = args[0];
+if (!File.Exists(filePath))
 {
-	Console.WriteLine($"Error: File not found: {strictFilePath}");
+	Console.WriteLine($"Error: File not found: {filePath}");
 	Environment.ExitCode = 1;
 	return;
 }
 try
 {
-	new Runner(strictFilePath
+	var isBytecodeFile = filePath.EndsWith(BytecodeSerializer.Extension,
+		StringComparison.OrdinalIgnoreCase);
+	if (isBytecodeFile)
+		Runner.LoadBytecodeFile(filePath
 #if DEBUG
-		, true
+			, true
 #endif
-	).Run();
+		).Run();
+	else
+		new Runner(filePath
+#if DEBUG
+			, true
+#endif
+		).Run();
 }
 catch (Exception ex)
 {
