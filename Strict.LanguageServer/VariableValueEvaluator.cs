@@ -1,6 +1,5 @@
 using OmniSharp.Extensions.LanguageServer.Protocol.Server;
 using Strict.Language;
-using Strict.Runtime;
 
 namespace Strict.LanguageServer;
 
@@ -9,7 +8,7 @@ public sealed class VariableValueEvaluator(Package package, ILanguageServerFacad
 {
 	private const string NotificationName = "valueEvaluationNotification";
 
-	public void Run(BytecodeInterpreter vm)
+	public void Run(VirtualMachine vm)
 	{
 		var lineValuePair = new Dictionary<int, string>();
 		for (var i = 0; i < lines.Length; i++)

@@ -1,4 +1,4 @@
-using Strict.Runtime.Instructions;
+using Strict.Bytecode.Instructions;
 
 namespace Strict.Optimizers.Tests;
 
@@ -69,7 +69,7 @@ public sealed class AllInstructionOptimizersTests : TestOptimizers
 
 	[Test]
 	public void OptimizedInstructionsExecuteCorrectly() =>
-		Assert.That(new BytecodeInterpreter(TestPackage.Instance).Execute(Optimize([
+		Assert.That(new VirtualMachine(TestPackage.Instance).Execute(Optimize([
 			new LoadConstantInstruction(Register.R0, Num(10)),
 			new LoadConstantInstruction(Register.R1, Num(5)),
 			new BinaryInstruction(InstructionType.Add, Register.R0, Register.R1, Register.R2),
@@ -78,7 +78,7 @@ public sealed class AllInstructionOptimizersTests : TestOptimizers
 
 	[Test]
 	public void OptimizedMultiplicationExecutesCorrectly() =>
-		Assert.That(new BytecodeInterpreter(TestPackage.Instance).Execute(Optimize([
+		Assert.That(new VirtualMachine(TestPackage.Instance).Execute(Optimize([
 			new LoadConstantInstruction(Register.R0, Num(4)),
 			new LoadConstantInstruction(Register.R1, Num(3)),
 			new BinaryInstruction(InstructionType.Multiply, Register.R0, Register.R1, Register.R2),

@@ -1,5 +1,5 @@
 global using Type = Strict.Language.Type;
-using Strict.Runtime.Instructions;
+using Strict.Bytecode.Instructions;
 
 namespace Strict.Optimizers.Tests;
 

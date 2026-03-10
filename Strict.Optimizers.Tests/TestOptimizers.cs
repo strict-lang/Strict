@@ -1,5 +1,5 @@
 using Strict.Expressions;
-using Strict.Runtime.Instructions;
+using Strict.Bytecode.Instructions;
 
 namespace Strict.Optimizers.Tests;
 

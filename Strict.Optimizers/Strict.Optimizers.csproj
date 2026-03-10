@@ -10,7 +10,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Strict.Runtime\Strict.Runtime.csproj" />
+    <ProjectReference Include="..\Strict.Bytecode\Strict.Bytecode.csproj" />
   </ItemGroup>
 
 </Project>

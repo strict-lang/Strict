@@ -68,7 +68,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Strict.Compiler.Cuda\Strict.Compiler.Cuda.csproj" />
     <ProjectReference Include="..\Strict.Language.Tests\Strict.Language.Tests.csproj" />
-    <ProjectReference Include="..\Strict.Runtime\Strict.Runtime.csproj" />
+    <ProjectReference Include="..\Strict.Bytecode\Strict.Bytecode.csproj" />
   </ItemGroup>
 
 </Project>

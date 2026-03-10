@@ -1,7 +1,7 @@
 using OmniSharp.Extensions.LanguageServer.Protocol.Server;
 using Strict.Language;
 using Strict.Expressions;
-using Strict.Runtime;
+using Strict.Bytecode;
 
 namespace Strict.LanguageServer;
 
@@ -12,13 +12,13 @@ public sealed class TestRunner(Package package, ILanguageServerFacade languageSe
 	private IEnumerable<Method> Methods { get; } = methods;
 	private const string NotificationName = "testRunnerNotification";
 
-	public void Run(BytecodeInterpreter vm)
+	public void Run(VirtualMachine vm)
 	{
 		foreach (var test in Methods.SelectMany(method => method.Tests))
 			if (test is MethodCall { Instance: { } } methodCall)
 			{
 				var output = vm.
-					Execute(new ByteCodeGenerator((MethodCall)methodCall.Instance).Generate()).Returns;
+					Execute(new BytecodeGenerator((MethodCall)methodCall.Instance).Generate()).Returns;
 				languageServer?.SendNotification(NotificationName, new TestNotificationMessage(
 					GetLineNumber(test), Equals(output, ((Value)methodCall.Arguments[0]).Data)
 						? TestState.Green

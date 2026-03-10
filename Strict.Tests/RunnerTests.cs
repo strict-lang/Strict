@@ -1,6 +1,6 @@
 namespace Strict.Tests;
 
-public class RunnerTests
+public sealed class RunnerTests
 {
 	[Test]
 	public void RunSimpleCalculator()

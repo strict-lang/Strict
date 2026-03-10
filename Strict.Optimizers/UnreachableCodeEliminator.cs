@@ -1,5 +1,5 @@
-using Strict.Runtime;
-using Strict.Runtime.Instructions;
+using Strict.Bytecode;
+using Strict.Bytecode.Instructions;
 
 namespace Strict.Optimizers;
 

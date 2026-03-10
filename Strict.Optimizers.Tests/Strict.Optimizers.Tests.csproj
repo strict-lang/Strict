@@ -18,14 +18,15 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Strict.Optimizers\Strict.Optimizers.csproj" />
-    <ProjectReference Include="..\Strict.Runtime\Strict.Runtime.csproj" />
+    <ProjectReference Include="..\Strict.Bytecode\Strict.Bytecode.csproj" />
     <ProjectReference Include="..\Strict.Language.Tests\Strict.Language.Tests.csproj" />
     <ProjectReference Include="..\Strict.Expressions.Tests\Strict.Expressions.Tests.csproj" />
+    <ProjectReference Include="..\Strict\Strict.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <Using Include="NUnit.Framework" />
-    <Using Include="Strict.Runtime" />
+    <Using Include="Strict.Bytecode" />
     <Using Include="Strict.Language" />
     <Using Include="Strict.Language.Tests" />
   </ItemGroup>

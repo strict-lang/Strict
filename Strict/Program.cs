@@ -24,7 +24,7 @@ try
 }
 catch (Exception ex)
 {
-	Console.WriteLine($"Pipeline failed: {ex.GetType().Name}: {ex.Message}");
+	Console.WriteLine($"Execution failed: {ex.GetType().Name}: {ex.Message}");
 	if (ex.InnerException != null)
 		Console.WriteLine($"  Inner: {ex.InnerException.GetType().Name}: {ex.InnerException.Message}");
 	Environment.ExitCode = 1;

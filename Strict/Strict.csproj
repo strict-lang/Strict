@@ -12,12 +12,16 @@
     <ProjectReference Include="..\Strict.Validators\Strict.Validators.csproj" />
     <ProjectReference Include="..\Strict.TestRunner\Strict.TestRunner.csproj" />
     <ProjectReference Include="..\Strict.HighLevelRuntime\Strict.HighLevelRuntime.csproj" />
-    <ProjectReference Include="..\Strict.Runtime\Strict.Runtime.csproj" />
+    <ProjectReference Include="..\Strict.Bytecode\Strict.Bytecode.csproj" />
     <ProjectReference Include="..\Strict.Optimizers\Strict.Optimizers.csproj" />
   </ItemGroup>
   <ItemGroup>
     <None Update="Examples\SimpleCalculator.strict">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Strict.Tests" />
   </ItemGroup>
 </Project>

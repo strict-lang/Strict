@@ -17,7 +17,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Strict.Language\Strict.Language.csproj" />
-    <ProjectReference Include="..\Strict.Runtime\Strict.Runtime.csproj" />
+    <ProjectReference Include="..\Strict.Bytecode\Strict.Bytecode.csproj" />
+    <ProjectReference Include="..\Strict\Strict.csproj" />
   </ItemGroup>
 
 </Project>

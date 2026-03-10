@@ -1,0 +1,12 @@
+﻿<ProjectConfiguration>
+  <Settings>
+    <IgnoredTests>
+      <NamedTestSelector>
+        <TestName>Strict.Tests.AdderProgramTests.BenchmarkCompare</TestName>
+      </NamedTestSelector>
+      <NamedTestSelector>
+        <TestName>Strict.Tests.AdderProgramTests.AddTotalsForThreeNumbers</TestName>
+      </NamedTestSelector>
+    </IgnoredTests>
+  </Settings>
+</ProjectConfiguration>

@@ -3,8 +3,8 @@ using Strict.HighLevelRuntime;
 using Strict.Language;
 using Strict.Language.Tests;
 using Strict.Optimizers;
-using Strict.Runtime;
-using Strict.Runtime.Instructions;
+using Strict.Bytecode;
+using Strict.Bytecode.Instructions;
 using Strict.TestRunner;
 using Strict.Validators;
 using Type = Strict.Language.Type;
@@ -154,7 +154,7 @@ public sealed class Runner
 					p => (Expression)new Value(p.Type, new ValueInstance(p.Type, 0))).ToList();
 				//ncrunch: no coverage end
 				var methodCall = new MethodCall(method, null, arguments);
-				var generator = new ByteCodeGenerator(methodCall);
+				var generator = new BytecodeGenerator(methodCall);
 				instructions.AddRange(generator.Generate());
 			} //ncrunch: no coverage start
 			catch (Exception ex)

@@ -7,7 +7,7 @@ using OmniSharp.Extensions.LanguageServer.Protocol.Window;
 using OmniSharp.Extensions.LanguageServer.Protocol.Workspace;
 using Strict.Language;
 using Strict.Expressions;
-using Strict.Runtime;
+using Strict.Bytecode;
 
 namespace Strict.LanguageServer;
 
@@ -15,7 +15,7 @@ namespace Strict.LanguageServer;
 public class CommandExecutor(ILanguageServerFacade languageServer,
 	StrictDocument document, Package package) : IExecuteCommandHandler
 {
-	private readonly BytecodeInterpreter vm = new(package);
+	private readonly VirtualMachine vm = new(package);
 	private const string CommandName = "strict-vscode-client.run";
 
 	Task<Unit> IRequestHandler<ExecuteCommandParams, Unit>.Handle(
@@ -38,7 +38,7 @@ public class CommandExecutor(ILanguageServerFacade languageServer,
 		var typeName = documentUri.Path.GetFileName();
 		var type = subPackage.SynchronizeAndGetType(typeName, code);
 		var call = (MethodCall)type.ParseExpression(methodCall);
-		var instructions = new ByteCodeGenerator(call).Generate();
+		var instructions = new BytecodeGenerator(call).Generate();
 		languageServer.Window.LogInfo($"Compiling: {
 			Environment.NewLine + string.Join(",",
 				instructions.ConvertAll(instruction => instruction + Environment.NewLine))
@@ -50,5 +50,3 @@ public class CommandExecutor(ILanguageServerFacade languageServer,
 		ExecuteCommandCapability capability, ClientCapabilities clientCapabilities) =>
 		new() { Commands = new Container<string>(CommandName) };
 }
-
-public class PathCanNotBeEmpty : Exception { }

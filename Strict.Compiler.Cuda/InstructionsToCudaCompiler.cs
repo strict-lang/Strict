@@ -1,13 +1,13 @@
 using Strict.Expressions;
 using Strict.Language;
-using Strict.Runtime;
-using Strict.Runtime.Instructions;
+using Strict.Bytecode;
+using Strict.Bytecode.Instructions;
 using Type = Strict.Language.Type;
 
 namespace Strict.Compiler.Cuda;
 
 /// <summary>
-/// Compiles a Strict method to a CUDA C kernel using the Runtime's <see cref="ByteCodeGenerator" />
+/// Compiles a Strict method to a CUDA C kernel using the Runtime's <see cref="BytecodeGenerator" />
 /// to produce bytecode instructions, then translates them to CUDA C.
 /// </summary>
 public sealed class InstructionsToCudaCompiler
@@ -21,7 +21,7 @@ public sealed class InstructionsToCudaCompiler
 			? b.Expressions
 			: [body];
 		var arguments = method.Parameters.ToDictionary(p => p.Name, p => new ValueInstance(p.Type, 0));
-		return new ByteCodeGenerator(new InvokedMethod(expressions, arguments, method.ReturnType),
+		return new BytecodeGenerator(new InvokedMethod(expressions, arguments, method.ReturnType),
 			new Registry()).Generate();
 	}
 
