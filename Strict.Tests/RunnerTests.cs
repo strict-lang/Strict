@@ -17,6 +17,6 @@ public class RunnerTests
 			Console.SetOut(rememberConsole);
 		}
 		Assert.That(writer.ToString(), Is.EqualTo(
-			"2 + 3 = 5" + Environment.NewLine +	"2 * 3 = 6" + Environment.NewLine));
+			"2 + 3 = 5" + Environment.NewLine + "2 * 3 = 6" + Environment.NewLine));
 	}
 }

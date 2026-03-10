@@ -13,7 +13,7 @@ namespace Strict.Optimizers;
 /// - x * 0 or 0 * x → 0 (replace entire sequence with load constant 0)
 /// The non-identity operand's register is rewritten to the result register where needed.
 /// </summary>
-public sealed class StrengthReducer : AllInstructionOptimizers
+public sealed class StrengthReducer : InstructionOptimizer
 {
 	public override List<Instruction> Optimize(List<Instruction> instructions)
 	{

@@ -16,11 +16,9 @@ if (!File.Exists(strictFilePath))
 }
 try
 {
-	new Runner(strictFilePath,
+	new Runner(strictFilePath
 #if DEBUG
-		true
-#else
-		false
+		, true
 #endif
 	).Run();
 }

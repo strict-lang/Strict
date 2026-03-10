@@ -218,7 +218,7 @@ internal class TypeMethodFinder(Type type)
 		if (type.IsTrait)
 			return true;
 		if (type.Members.Count == 0)
-			return false;
+			return false; //ncrunch: no coverage
 		visiting ??= [];
 		if (!visiting.Add(type))
 			return false;

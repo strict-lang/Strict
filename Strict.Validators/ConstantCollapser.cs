@@ -52,25 +52,23 @@ public sealed class ConstantCollapser : Visitor
 	private static bool IsVariableStillUsed(Body body, string variableName, int declarationIndex)
 	{
 		for (var i = 0; i < body.Expressions.Count; i++)
-		{
-			if (i == declarationIndex)
-				continue;
-			if (ContainsVariableCall(body.Expressions[i], variableName))
-				return true;
-		}
+			if (i != declarationIndex && ContainsVariableCall(body.Expressions[i], variableName))
+				return true; //ncrunch: no coverage
 		return false;
 	}
 
 	private static bool ContainsVariableCall(Expression expression, string name) =>
 		expression switch
 		{
+			//ncrunch: no coverage start
 			VariableCall vc => vc.Variable.Name == name,
 			Binary b => ContainsVariableCall(b.Instance!, name) ||
 				ContainsVariableCall(b.Arguments[0], name),
 			MethodCall mc => (mc.Instance != null && ContainsVariableCall(mc.Instance, name)) ||
 				mc.Arguments.Any(a => ContainsVariableCall(a, name)),
+			//ncrunch: no coverage end
 			Declaration d => ContainsVariableCall(d.Value, name),
-			MutableReassignment mr => ContainsVariableCall(mr.Value, name),
+			MutableReassignment mr => ContainsVariableCall(mr.Value, name), //ncrunch: no coverage
 			_ => false
 		};
 

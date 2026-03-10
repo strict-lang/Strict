@@ -15,7 +15,7 @@ public sealed class ByteCodeGenerator
 			instructions.Add(new StoreVariableInstruction(argument.Value, argument.Key));
 		Expressions = method.Expressions;
 		this.registry = registry;
-		returnType = method.ReturnType;
+		ReturnType = method.ReturnType;
 		if (method is InstanceInvokedMethod instanceMethod)
 			AddMembersFromCaller(instanceMethod.InstanceCall);
 	}
@@ -36,11 +36,11 @@ public sealed class ByteCodeGenerator
 			? body.Expressions
 			: [methodBody];
 		registry = new Registry();
-		returnType = methodCall.Method.ReturnType;
+		ReturnType = methodCall.Method.ReturnType;
 	}
 
 	private IReadOnlyList<Expression> Expressions { get; }
-	private readonly Type returnType;
+	private Type ReturnType { get; }
 	private int forResultId;
 
 	private void AddMembersFromCaller(ValueInstance instance) =>
@@ -98,8 +98,8 @@ public sealed class ByteCodeGenerator
 	private List<Instruction> GenerateInstructions(IReadOnlyList<Expression> expressions)
 	{
 		for (var i = 0; i < expressions.Count; i++)
-			if ((i == expressions.Count - 1 || expressions[i] is Expressions.Return) &&
-				expressions[i] is not If)
+			if ((ReferenceEquals(expressions[i], Expressions[^1]) ||
+					expressions[i] is Expressions.Return) && expressions[i] is not If)
 				GenerateStatementsFromReturn(expressions[i]);
 			else
 				GenerateStatementsFromExpression(expressions[i]);
@@ -125,7 +125,7 @@ public sealed class ByteCodeGenerator
 
 	private bool TryGenerateNumberForLoopReturn(Expression expression)
 	{
-		if (expression is not For forExpression || !returnType.IsNumber)
+		if (expression is not For forExpression || !ReturnType.IsNumber)
 			return false;
 		GenerateStatementsForNumberAggregation(forExpression);
 		return true;
@@ -134,7 +134,7 @@ public sealed class ByteCodeGenerator
 	private void GenerateStatementsForNumberAggregation(For forExpression)
 	{
 		var resultVariable = $"forResult{forResultId++}";
-		instructions.Add(new StoreVariableInstruction(new ValueInstance(returnType, 0), resultVariable));
+		instructions.Add(new StoreVariableInstruction(new ValueInstance(ReturnType, 0), resultVariable));
 		GenerateLoopStatements(forExpression, resultVariable);
 		instructions.Add(new LoadVariableToRegister(registry.AllocateRegister(), resultVariable));
 		instructions.Add(new ReturnInstruction(registry.PreviousRegister));
@@ -303,7 +303,7 @@ public sealed class ByteCodeGenerator
 		}
 	}
 
-	private bool? TryGenerateLoopStatements(Expression expression)
+private bool? TryGenerateLoopStatements(Expression expression)
 	{
 		if (expression is not For forExpression)
 			return null;
