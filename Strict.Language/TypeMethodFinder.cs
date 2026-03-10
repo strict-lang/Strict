@@ -187,8 +187,8 @@ internal class TypeMethodFinder(Type type)
 		if (method is { Name: Method.From, Parameters.Count: 0 } && typesOfArguments.Count == 1 &&
 			method.ReturnType.IsSameOrCanBeUsedAs(typesOfArguments[0], false))
 			return true; //ncrunch: no coverage
-		if (typesOfArguments.Count > method.Parameters.Count || typesOfArguments.Count <
-			GetMethodParameterDefaultValueCount(method))
+		if (typesOfArguments.Count > method.Parameters.Count ||
+			typesOfArguments.Count < GetRequiredMethodParametersCount(method))
 			return false;
 		for (var index = 0; index < typesOfArguments.Count; index++)
 			if (!IsMethodParameterMatchingArgument(method, index, typesOfArguments[index]))
@@ -196,7 +196,7 @@ internal class TypeMethodFinder(Type type)
 		return true;
 	}
 
-	private static int GetMethodParameterDefaultValueCount(Method method)
+	private static int GetRequiredMethodParametersCount(Method method)
 	{
 		var count = 0;
 		for (var index = 0; index < method.Parameters.Count; index++)
@@ -207,17 +207,17 @@ internal class TypeMethodFinder(Type type)
 	}
 
 	/// <summary>
-	/// A type can be auto-created (injected without explicit argument) if it is a trait
-	/// (resolved via the runtime's trait-implementation registry) or if it is a concrete type
-	/// all of whose members are themselves auto-creatable (e.g. Logger whose only member is
-	/// the TextWriter trait).
+	/// A type can be auto-created (injected without explicit argument) if it is a trait (resolved
+	/// via the runtime's trait-implementation registry) or if it is a concrete type all of whose
+	/// members are themselves auto-creatable. Logger whose only member is the TextWriter trait.
 	/// </summary>
 	private static bool CanAutoCreateType(Type type, HashSet<Type>? visiting = null)
 	{
+		if (type.IsNumber || type.IsBoolean || type.IsCharacter || type.IsText)
+			return false;
 		if (type.IsTrait)
 			return true;
-		if (type.IsNumber || type.IsBoolean || type.IsCharacter || type.IsText || type.IsNone ||
-		    type.Members.Count == 0)
+		if (type.Members.Count == 0)
 			return false;
 		visiting ??= [];
 		if (!visiting.Add(type))

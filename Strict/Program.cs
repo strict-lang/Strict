@@ -1,5 +1,4 @@
 using Strict;
-using System.Diagnostics;
 
 //ncrunch: no coverage start
 if (args.Length == 0)
@@ -23,7 +22,7 @@ try
 #else
 		false
 #endif
-		).Run();
+	).Run();
 }
 catch (Exception ex)
 {

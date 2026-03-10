@@ -1,42 +1,48 @@
-# Strict.Runner
+# Strict executable
 
-A comprehensive pipeline runner that exercises all stages of the Strict programming language compilation and execution pipeline.
+Runs though all stages in the Strict workflow to execute a strict file. Will give you statistics
+and performance metrics in debug mode, in release just gives the final output.
 
 ## Purpose
 
 This tool demonstrates and tests the complete Strict workflow from source code to execution:
 
-1. **Load Package and Parse Types** (Strict.Language)
+1. **Load Strict Package**
+   - Loads the Strict base package from the main directory
+   - Parses type signatures and members
+   - Validates package structure
+
+2. **Load Package and Parse Types**
    - Loads .strict files from a package directory
    - Parses type signatures and members
    - Validates package structure
 
-2. **Parse Method Bodies** (Strict.Expressions)
+3. **Parse Method Bodies** (Strict.Expressions)
    - Lazy-parses method bodies into immutable expression trees
    - Handles `if`, `for`, assignments, calls, and all Strict constructs
    - Performs early structural validation
 
-3. **Run Validators** (Strict.Validators)
+4. **Run Validators** (Strict.Validators)
    - Static analysis and constant folding
    - Detects unused variables, impossible casts, and other issues
    - Ensures code quality before execution
 
-4. **Run Tests** (Strict.TestRunner + HighLevelRuntime)
+5. **Run Tests** (Strict.TestRunner + HighLevelRuntime)
    - Executes all inline tests (every method must start with tests)
    - Uses interpreter-style execution for fast feedback
    - Verifies all test expressions evaluate to true
 
-5. **Generate Bytecode** (Strict.Runtime)
+6. **Generate Bytecode** (Strict.Runtime)
    - Converts expression trees to ~40 bytecode-like instructions
    - Optimizes for execution speed
    - Prepares for low-level runtime
 
-6. **Optimize Bytecode** (Strict.Optimizers)
+7. **Optimize Bytecode** (Strict.Optimizers)
    - Removes passed test code
    - Performs constant folding, dead store elimination
    - Eliminates unreachable code and redundant loads
 
-7. **Execute Bytecode** (Strict.Runtime)
+8. **Execute Bytecode** (Strict.Runtime)
    - Runs optimized bytecode via BytecodeInterpreter
    - Provides final output and return values
    - Maximum execution speed
@@ -44,17 +50,13 @@ This tool demonstrates and tests the complete Strict workflow from source code t
 ## Usage
 
 ```bash
-dotnet run --project Strict.Runner <path-to-strict-file>
+Strict <strict-file>
 ```
 
 ### Example
 
 ```bash
-# Run from repository root
-dotnet run --project Strict.Runner -- Strict.Base/Number.strict
-
-# Or from a custom package
-dotnet run --project Strict.Runner -- Examples/SimpleAdder.strict
+Strict Examples/SimpleCalculator.strict
 ```
 
 ## Output
@@ -62,9 +64,9 @@ dotnet run --project Strict.Runner -- Examples/SimpleAdder.strict
 The runner provides detailed progress through each pipeline stage:
 
 ```
-╔════════════════════════════════════════════════════════════════╗
-║           Strict Programming Language Pipeline Runner          ║
-╚════════════════════════════════════════════════════════════════╝
+╔═════════════════════════════════════════════════╗
+║           Strict Programming Language           ║
+╚═════════════════════════════════════════════════╝
 
 ┌─ Step 1: Load Package and Parse Types (Strict.Language)
 │  ✓ Loaded package: Strict.Base
@@ -80,9 +82,9 @@ The runner provides detailed progress through each pipeline stage:
 
 ...
 
-╔════════════════════════════════════════════════════════════════╗
-║                    Pipeline Complete ✓                         ║
-╚════════════════════════════════════════════════════════════════╝
+╔═════════════════════════════════════════════════╗
+║              Pipeline Complete ✓                ║
+╚═════════════════════════════════════════════════╝
 ```
 
 ## Exit Codes

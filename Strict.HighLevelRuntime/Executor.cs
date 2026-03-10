@@ -1,6 +1,5 @@
 using Strict.Expressions;
 using Strict.Language;
-using System.Net.Mail;
 using System.Runtime.CompilerServices;
 using Type = Strict.Language.Type;
 
@@ -78,18 +77,18 @@ public class Executor
 
 	public void ExecuteRunMethod(Type type)
 	{
-		var runMethod = type.Methods.FirstOrDefault(m => m.Name == Method.Run && m.Parameters.Count == 0);
-		if (runMethod == null)
+		var run = type.Methods.FirstOrDefault(m => m is { Name: Method.Run, Parameters.Count: 0 });
+		if (run == null)
 			throw new MethodNotFound(type, Method.Run);
 		var instance = CreateFullInstance(type);
-		Execute(runMethod, instance, []);
+		Execute(run, instance, []);
 	}
 
 	private ValueInstance CreateFullInstance(Type type)
 	{
 		var members = type.Members;
 		if (members.Count == 0)
-			return noneInstance;
+			return noneInstance; //ncrunch: no coverage
 		var values = new ValueInstance[members.Count];
 		for (var i = 0; i < members.Count; i++)
 		{
@@ -105,13 +104,14 @@ public class Executor
 	{
 		if (type.IsNumber)
 			return new ValueInstance(numberType, 0);
+		//ncrunch: no coverage start
 		if (type.IsText)
 			return new ValueInstance("");
-		if (type.IsBoolean)
-			return new ValueInstance(booleanType, false);
-		return noneInstance; //ncrunch: no coverage
-	}
-	
+		return type.IsBoolean
+			? new ValueInstance(booleanType, false)
+			: noneInstance;
+	} //ncrunch: no coverage end
+
 	public ValueInstance Execute(Method method, ValueInstance instance,
 		ValueInstance[] args, ExecutionContext? parentContext = null, bool runOnlyTests = false)
 	{
@@ -124,7 +124,7 @@ public class Executor
 		if (instance.TryGetValueTypeInstance()?.ReturnType.Name == Type.System)
 		{
 			if (method.Name == "Write" && args.Length > 0)
-				Console.Write(args[0].ToExpressionCodeString());
+				Console.WriteLine(args[0].ToExpressionCodeString());
 			return noneInstance;
 		}
 		if (runOnlyTests && IsSimpleSingleLineMethod(method))
@@ -262,11 +262,12 @@ public class Executor
 		if (type.IsTrait)
 		{
 			if (!TraitImplementationRegistry.TryGetValue(type.Name, out var concreteName))
-				return null;
+				return null; //ncrunch: no coverage
 			var concreteType = type.FindType(concreteName);
-			if (concreteType == null)
-				return null;
-			return TryAutoCreateInstance(concreteType, creating);
+			return concreteType == null
+				? null
+				// ReSharper disable once TailRecursiveCall
+				: TryAutoCreateInstance(concreteType, creating);
 		}
 		if (!creating.Add(type.Name))
 		{
@@ -286,10 +287,10 @@ public class Executor
 		{
 			var memberValue = TryAutoCreateInstance(members[i].Type, creating);
 			if (memberValue == null)
-			{
+			{ //ncrunch: no coverage start
 				creating.Remove(type.Name);
 				return null;
-			}
+			} //ncrunch: no coverage end
 			values[i] = memberValue.Value;
 		}
 		creating.Remove(type.Name);

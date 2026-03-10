@@ -1,6 +1,4 @@
-using Strict.Runtime.Statements;
-using Binary = Strict.Runtime.Statements.Binary;
-using Return = Strict.Runtime.Statements.Return;
+using Strict.Runtime.Instructions;
 
 namespace Strict.Optimizers.Tests;
 
@@ -11,78 +9,78 @@ namespace Strict.Optimizers.Tests;
 /// </summary>
 public sealed class TestCodeRemoverTests : TestOptimizers
 {
-	private List<Statement> Optimize(List<Statement> statements, int expectedCount) =>
+	private List<Instruction> Optimize(List<Instruction> statements, int expectedCount) =>
 		Optimize(new TestCodeRemover(), statements, expectedCount);
 
 	[Test]
 	public void RemovePassedTestAssertionPattern()
 	{
 		var optimized = Optimize([
-			new LoadConstantStatement(Register.R0, Num(5)),
-			new LoadConstantStatement(Register.R1, Num(5)),
-			new Binary(Instruction.Equal, Register.R0, Register.R1),
-			new JumpToId(Instruction.JumpToIdIfFalse, 0),
-			new JumpToId(Instruction.JumpEnd, 0),
+			new LoadConstantInstruction(Register.R0, Num(5)),
+			new LoadConstantInstruction(Register.R1, Num(5)),
+			new BinaryInstruction(InstructionType.Equal, Register.R0, Register.R1),
+			new JumpToId(InstructionType.JumpToIdIfFalse, 0),
+			new JumpToId(InstructionType.JumpEnd, 0),
 			new LoadVariableToRegister(Register.R2, "x"),
-			new Return(Register.R2)
+			new ReturnInstruction(Register.R2)
 		], 2);
 		Assert.That(optimized[0], Is.InstanceOf<LoadVariableToRegister>());
-		Assert.That(optimized[1], Is.InstanceOf<Return>());
+		Assert.That(optimized[1], Is.InstanceOf<ReturnInstruction>());
 	}
 
 	[Test]
 	public void RemoveMultiplePassedTestAssertions() =>
 		Optimize([
-			new LoadConstantStatement(Register.R0, Num(5)),
-			new LoadConstantStatement(Register.R1, Num(5)),
-			new Binary(Instruction.Equal, Register.R0, Register.R1),
-			new JumpToId(Instruction.JumpToIdIfFalse, 0),
-			new JumpToId(Instruction.JumpEnd, 0),
-			new LoadConstantStatement(Register.R2, Num(10)),
-			new LoadConstantStatement(Register.R3, Num(10)),
-			new Binary(Instruction.Equal, Register.R2, Register.R3),
-			new JumpToId(Instruction.JumpToIdIfFalse, 1),
-			new JumpToId(Instruction.JumpEnd, 1),
+			new LoadConstantInstruction(Register.R0, Num(5)),
+			new LoadConstantInstruction(Register.R1, Num(5)),
+			new BinaryInstruction(InstructionType.Equal, Register.R0, Register.R1),
+			new JumpToId(InstructionType.JumpToIdIfFalse, 0),
+			new JumpToId(InstructionType.JumpEnd, 0),
+			new LoadConstantInstruction(Register.R2, Num(10)),
+			new LoadConstantInstruction(Register.R3, Num(10)),
+			new BinaryInstruction(InstructionType.Equal, Register.R2, Register.R3),
+			new JumpToId(InstructionType.JumpToIdIfFalse, 1),
+			new JumpToId(InstructionType.JumpEnd, 1),
 			new LoadVariableToRegister(Register.R4, "result"),
-			new Return(Register.R4)
+			new ReturnInstruction(Register.R4)
 		], 2);
 
 	[Test]
 	public void DoNotRemoveTestWithMismatchedConstants() =>
 		Optimize([
-			new LoadConstantStatement(Register.R0, Num(5)),
-			new LoadConstantStatement(Register.R1, Num(3)),
-			new Binary(Instruction.Equal, Register.R0, Register.R1),
-			new JumpToId(Instruction.JumpToIdIfFalse, 0),
-			new JumpToId(Instruction.JumpEnd, 0),
+			new LoadConstantInstruction(Register.R0, Num(5)),
+			new LoadConstantInstruction(Register.R1, Num(3)),
+			new BinaryInstruction(InstructionType.Equal, Register.R0, Register.R1),
+			new JumpToId(InstructionType.JumpToIdIfFalse, 0),
+			new JumpToId(InstructionType.JumpEnd, 0),
 			new LoadVariableToRegister(Register.R2, "x"),
-			new Return(Register.R2)
+			new ReturnInstruction(Register.R2)
 		], 7);
 
 	[Test]
 	public void DoNotRemoveConditionalBlockWithBody() =>
 		Optimize([
-			new LoadConstantStatement(Register.R0, Num(5)),
-			new LoadConstantStatement(Register.R1, Num(5)),
-			new Binary(Instruction.Equal, Register.R0, Register.R1),
-			new JumpToId(Instruction.JumpToIdIfFalse, 0),
-			new LoadConstantStatement(Register.R2, Num(99)),
-			new Return(Register.R2),
-			new JumpToId(Instruction.JumpEnd, 0),
-			new Return(Register.R0)
+			new LoadConstantInstruction(Register.R0, Num(5)),
+			new LoadConstantInstruction(Register.R1, Num(5)),
+			new BinaryInstruction(InstructionType.Equal, Register.R0, Register.R1),
+			new JumpToId(InstructionType.JumpToIdIfFalse, 0),
+			new LoadConstantInstruction(Register.R2, Num(99)),
+			new ReturnInstruction(Register.R2),
+			new JumpToId(InstructionType.JumpEnd, 0),
+			new ReturnInstruction(Register.R0)
 		], 8);
 
 	[Test]
 	public void DoNotRemoveWhenVariablesInvolvedInComparison() =>
 		Optimize([
 			new LoadVariableToRegister(Register.R0, "x"),
-			new LoadConstantStatement(Register.R1, Num(5)),
-			new Binary(Instruction.Equal, Register.R0, Register.R1),
-			new JumpToId(Instruction.JumpToIdIfFalse, 0),
-			new JumpToId(Instruction.JumpEnd, 0),
-			new Return(Register.R0)
+			new LoadConstantInstruction(Register.R1, Num(5)),
+			new BinaryInstruction(InstructionType.Equal, Register.R0, Register.R1),
+			new JumpToId(InstructionType.JumpToIdIfFalse, 0),
+			new JumpToId(InstructionType.JumpEnd, 0),
+			new ReturnInstruction(Register.R0)
 		], 6);
 
 	[Test]
-	public void HandleEmptyStatementList() => Optimize([], 0);
+	public void HandleEmptyInstructionList() => Optimize([], 0);
 }

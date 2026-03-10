@@ -1,9 +1,7 @@
 using Strict.Expressions;
 using Strict.Language;
 using Strict.Runtime;
-using Strict.Runtime.Statements;
-using BinaryStatement = Strict.Runtime.Statements.Binary;
-using Return = Strict.Runtime.Statements.Return;
+using Strict.Runtime.Instructions;
 using Type = Strict.Language.Type;
 
 namespace Strict.Compiler.Cuda;
@@ -14,13 +12,9 @@ namespace Strict.Compiler.Cuda;
 /// </summary>
 public sealed class StatementsToCudaCompiler
 {
-	public string Compile(Method method)
-	{
-		var statements = GenerateStatements(method);
-		return BuildCudaKernel(method, statements);
-	}
+	public string Compile(Method method) => BuildCudaKernel(method, GenerateInstructions(method));
 
-	private static List<Statement> GenerateStatements(Method method)
+	private static List<Instruction> GenerateInstructions(Method method)
 	{
 		var body = method.GetBodyAndParseIfNeeded();
 		var expressions = body is Body b
@@ -31,28 +25,29 @@ public sealed class StatementsToCudaCompiler
 			new Registry()).Generate();
 	}
 
-	private static string BuildCudaKernel(Method method, List<Statement> statements)
+	private static string BuildCudaKernel(Method method, List<Instruction> instructions)
 	{
 		var registers = new Dictionary<Register, string>();
 		var outputExpression = "";
-		foreach (var statement in statements)
-			switch (statement)
+		foreach (var instruction in instructions)
+			switch (instruction)
 			{
 			case LoadVariableToRegister load:
 				registers[load.Register] = IsScalarParameter(method, load.Identifier)
 					? load.Identifier
 					: load.Identifier + "[idx]";
 				break;
-			case LoadConstantStatement constant:
+			case LoadConstantInstruction constant:
 				//ncrunch: no coverage start
 				registers[constant.Register] =
 					constant.ValueInstance.Number.ToString(System.Globalization.CultureInfo.InvariantCulture);
 				break; //ncrunch: no coverage end
-			case BinaryStatement binary when !binary.IsConditional():
+			case BinaryInstruction binary when !binary.IsConditional():
 				registers[binary.Registers[2]] =
-					$"{registers[binary.Registers[0]]} {GetOperatorSymbol(binary.Instruction)} {registers[binary.Registers[1]]}";
+					$"{registers[binary.Registers[0]]} {GetOperatorSymbol(binary.InstructionType)} " +
+					$"{registers[binary.Registers[1]]}";
 				break;
-			case Return ret:
+			case ReturnInstruction ret:
 				outputExpression = registers[ret.Register];
 				break;
 			}
@@ -78,13 +73,13 @@ public sealed class StatementsToCudaCompiler
 		method.Parameters.Any(p => p.Name == name) &&
 		name is "Width" or "Height" or "width" or "height" or "initialDepth";
 
-	private static string GetOperatorSymbol(Instruction instruction) =>
+	private static string GetOperatorSymbol(InstructionType instruction) =>
 		instruction switch
 		{
-			Instruction.Add => "+",
-			Instruction.Subtract => "-",
-			Instruction.Multiply => "*",
-			Instruction.Divide => "/", //ncrunch: no coverage
+			InstructionType.Add => "+",
+			InstructionType.Subtract => "-",
+			InstructionType.Multiply => "*",
+			InstructionType.Divide => "/", //ncrunch: no coverage
 			_ => throw new NotSupportedException(instruction.ToString()) //ncrunch: no coverage
 		};
 
@@ -92,8 +87,10 @@ public sealed class StatementsToCudaCompiler
 		method.Parameters.Aggregate("", (current, parameter) => current +
 			parameter.Type.Name switch //ncrunch: no coverage
 			{
-				Type.Number when parameter.Name is "Width" or "Height" or "width" or "height" => "const int " + parameter.Name + ", ",
-				Type.Number when parameter.Name == "initialDepth" => "const float " + parameter.Name + ", ",
+				Type.Number when parameter.Name is "Width" or "Height" or "width" or "height" =>
+					"const int " + parameter.Name + ", ",
+				Type.Number when parameter.Name == "initialDepth" => "const float " + parameter.Name +
+					", ",
 				Type.Number => "const float *" + parameter.Name + ", ",
 				_ => throw new NotSupportedException(parameter.ToString()) //ncrunch: no coverage
 			});
