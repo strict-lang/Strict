@@ -13,8 +13,8 @@ public sealed class DeadStoreEliminatorTests : TestOptimizers
 			new ReturnInstruction(Register.R0)
 		], 3)[0]).Identifier, Is.EqualTo("used"));
 
-	private List<Instruction> Optimize(List<Instruction> statements, int expectedCount) =>
-		Optimize(new DeadStoreEliminator(), statements, expectedCount);
+	private List<Instruction> Optimize(List<Instruction> instructions, int expectedCount) =>
+		Optimize(new DeadStoreEliminator(), instructions, expectedCount);
 
 	[Test]
 	public void KeepVariableThatIsLoaded() =>

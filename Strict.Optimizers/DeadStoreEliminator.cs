@@ -3,9 +3,9 @@ using Strict.Runtime.Instructions;
 namespace Strict.Optimizers;
 
 /// <summary>
-/// Removes stores to variables that are never loaded again. A StoreVariableStatement is dead
+/// Removes stores to variables that are never loaded again. A StoreVariableInstruction is dead
 /// if the variable identifier never appears in any LoadVariableToRegister or
-/// StoreFromRegisterStatement in the rest of the instruction list. Member variables are always
+/// StoreFromRegisterInstruction in the rest of the instruction list. Member variables are always
 /// kept as they may be accessed externally.
 /// </summary>
 public sealed class DeadStoreEliminator : InstructionOptimizer
@@ -13,8 +13,8 @@ public sealed class DeadStoreEliminator : InstructionOptimizer
 	public override List<Instruction> Optimize(List<Instruction> instructions)
 	{
 		var usedVariables = CollectUsedVariables(instructions);
-		instructions.RemoveAll(statement =>
-			statement is StoreVariableInstruction store && !store.IsMember &&
+		instructions.RemoveAll(instruction =>
+			instruction is StoreVariableInstruction { IsMember: false } store &&
 			!usedVariables.Contains(store.Identifier));
 		return instructions;
 	}

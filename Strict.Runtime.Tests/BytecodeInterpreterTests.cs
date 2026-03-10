@@ -23,10 +23,10 @@ public class BytecodeInterpreterTests : BaseVirtualMachineTests
 	public void ReturnEnum()
 	{
 		CreateSampleEnum();
-		var statements = new ByteCodeGenerator(GenerateMethodCallFromSource(nameof(ReturnEnum),
+		var instructions = new ByteCodeGenerator(GenerateMethodCallFromSource(nameof(ReturnEnum),
 			nameof(ReturnEnum) + "(5).GetMonday", "has dummy Number", "GetMonday Number",
 			"\tDays.Monday")).Generate();
-		var result = vm.Execute(statements).Returns;
+		var result = vm.Execute(instructions).Returns;
 		Assert.That(result!.Value.Number, Is.EqualTo(1));
 	}
 
@@ -34,12 +34,12 @@ public class BytecodeInterpreterTests : BaseVirtualMachineTests
 	public void EnumIfConditionComparison()
 	{
 		CreateSampleEnum();
-		var statements = new ByteCodeGenerator(GenerateMethodCallFromSource(
+		var instructions = new ByteCodeGenerator(GenerateMethodCallFromSource(
 			nameof(EnumIfConditionComparison),
 			nameof(EnumIfConditionComparison) + "(5).GetMonday(Days.Monday)", "has dummy Number",
 			"GetMonday(days) Boolean", "\tif days is Days.Monday", "\t\treturn true", "\telse",
 			"\t\treturn false")).Generate();
-		var result = vm.Execute(statements).Returns!;
+		var result = vm.Execute(instructions).Returns!;
 		Assert.That(result.Value.Number, Is.EqualTo(1));
 	}
 
@@ -105,28 +105,28 @@ public class BytecodeInterpreterTests : BaseVirtualMachineTests
 	[TestCase("ArithmeticFunction(10, 5).Calculate(\"divide\")", 2)]
 	public void RunArithmeticFunctionExample(string methodCall, int expectedResult)
 	{
-		var statements = new ByteCodeGenerator(GenerateMethodCallFromSource("ArithmeticFunction",
+		var instructions = new ByteCodeGenerator(GenerateMethodCallFromSource("ArithmeticFunction",
 			methodCall, ArithmeticFunctionExample)).Generate();
-		Assert.That(vm.Execute(statements).Returns!.Value.Number, Is.EqualTo(expectedResult));
+		Assert.That(vm.Execute(instructions).Returns!.Value.Number, Is.EqualTo(expectedResult));
 	}
 
 	[Test]
 	public void AccessListByIndex()
 	{
-		var statements = new ByteCodeGenerator(GenerateMethodCallFromSource(nameof(AccessListByIndex),
+		var instructions = new ByteCodeGenerator(GenerateMethodCallFromSource(nameof(AccessListByIndex),
 			nameof(AccessListByIndex) + "(1, 2, 3, 4, 5).Get(2)", "has numbers",
 			"Get(index Number) Number", "\tnumbers(index)")).Generate();
-		Assert.That(vm.Execute(statements).Returns!.Value.Number, Is.EqualTo(3));
+		Assert.That(vm.Execute(instructions).Returns!.Value.Number, Is.EqualTo(3));
 	}
 
 	[Test]
 	public void AccessListByIndexNonNumberType()
 	{
-		var statements = new ByteCodeGenerator(GenerateMethodCallFromSource(
+		var instructions = new ByteCodeGenerator(GenerateMethodCallFromSource(
 			nameof(AccessListByIndexNonNumberType),
 			nameof(AccessListByIndexNonNumberType) + "(\"1\", \"2\", \"3\", \"4\", \"5\").Get(2)",
 			"has texts", "Get(index Number) Text", "\ttexts(index)")).Generate();
-		Assert.That(vm.Execute(statements).Returns!.Value.Text, Is.EqualTo("3"));
+		Assert.That(vm.Execute(instructions).Returns!.Value.Text, Is.EqualTo("3"));
 	}
 
 	[Test]
@@ -154,9 +154,9 @@ public class BytecodeInterpreterTests : BaseVirtualMachineTests
 	public void ExecuteToOperator(string programName, string methodCall, object expected,
 		params string[] code)
 	{
-		var statements = new ByteCodeGenerator(GenerateMethodCallFromSource(programName,
+		var instructions = new ByteCodeGenerator(GenerateMethodCallFromSource(programName,
 			methodCall, code)).Generate();
-		var result = vm.Execute(statements).Returns!.Value;
+		var result = vm.Execute(instructions).Returns!.Value;
 		var actual = expected is string
 			? (object)result.Text
 			: result.Number;
@@ -183,18 +183,18 @@ public class BytecodeInterpreterTests : BaseVirtualMachineTests
 	// ReSharper disable TooManyArguments, makes below tests easier
 	public void MethodCall(string programName, string methodCall, string[] source, object expected)
 	{
-		var statements =
+		var instructions =
 			new ByteCodeGenerator(GenerateMethodCallFromSource(programName, methodCall, source)).
 				Generate();
-		Assert.That(vm.Execute(statements).Returns!.Value.Number, Is.EqualTo(expected));
+		Assert.That(vm.Execute(instructions).Returns!.Value.Number, Is.EqualTo(expected));
 	}
 
 	[Test]
 	public void IfAndElseTest()
 	{
-		var statements = new ByteCodeGenerator(GenerateMethodCallFromSource("IfAndElseTest",
+		var instructions = new ByteCodeGenerator(GenerateMethodCallFromSource("IfAndElseTest",
 			"IfAndElseTest(3).IsEven", IfAndElseTestCode)).Generate();
-		Assert.That(vm.Execute(statements).Returns!.Value.Text,
+		Assert.That(vm.Execute(instructions).Returns!.Value.Text,
 			Is.EqualTo("Number is less or equal than 10"));
 	}
 
@@ -213,10 +213,10 @@ public class BytecodeInterpreterTests : BaseVirtualMachineTests
 	public void CompileCompositeBinariesInIfCorrectlyWithModulo(string methodCall,
 		object expectedResult, string methodName, params string[] code)
 	{
-		var statements =
+		var instructions =
 			new ByteCodeGenerator(GenerateMethodCallFromSource(methodName, methodCall, code)).
 				Generate();
-		Assert.That(vm.Execute(statements).Returns!.Value.Number, Is.EqualTo(expectedResult));
+		Assert.That(vm.Execute(instructions).Returns!.Value.Number, Is.EqualTo(expectedResult));
 	}
 
 	[TestCase("AddToTheList(5).Add", "100 200 300 400 0 1 2 3", "AddToTheList",
@@ -252,9 +252,9 @@ public class BytecodeInterpreterTests : BaseVirtualMachineTests
 	public void ExecuteListBinaryOperations(string methodCall, object expectedResult,
 		string programName, params string[] code)
 	{
-		var statements = new ByteCodeGenerator(GenerateMethodCallFromSource(programName,
+		var instructions = new ByteCodeGenerator(GenerateMethodCallFromSource(programName,
 			methodCall, code)).Generate();
-		var result = vm.Execute(statements).Returns!.Value;
+		var result = vm.Execute(instructions).Returns!.Value;
 		var elements = result.List.Items.Aggregate("", (current, item) => current + (item.IsText
 			? item.Text
 			: item.Number) + " ");
@@ -270,9 +270,9 @@ public class BytecodeInterpreterTests : BaseVirtualMachineTests
 	public void CallCommonMethodCalls(string methodCall, object expectedResult, string programName,
 		params string[] code)
 	{
-		var statements = new ByteCodeGenerator(GenerateMethodCallFromSource(programName,
+		var instructions = new ByteCodeGenerator(GenerateMethodCallFromSource(programName,
 			methodCall, code)).Generate();
-		var result = vm.Execute(statements).Returns!.Value;
+		var result = vm.Execute(instructions).Returns!.Value;
 		Assert.That(result.ToExpressionCodeString(), Is.EqualTo(expectedResult));
 	}
 
@@ -280,16 +280,16 @@ public class BytecodeInterpreterTests : BaseVirtualMachineTests
 		"\tmutable numbers = (1, 2, 3)", "\tnumbers.Add(number)", "\tnumbers")]
 	public void CollectionAdd(string methodCall, string expected, params string[] code)
 	{
-		var statements =
+		var instructions =
 			new ByteCodeGenerator(GenerateMethodCallFromSource("NumbersAdder", methodCall, code)).
 				Generate();
-		var result = ExpressionListToSpaceSeparatedString(statements);
+		var result = ExpressionListToSpaceSeparatedString(instructions);
 		Assert.That(result.TrimEnd(), Is.EqualTo(expected));
 	}
 
-	private string ExpressionListToSpaceSeparatedString(IList<Instruction> statements)
+	private string ExpressionListToSpaceSeparatedString(IList<Instruction> instructions)
 	{
-		var result = vm.Execute(statements).Returns!.Value;
+		var result = vm.Execute(instructions).Returns!.Value;
 		return result.List.Items.Aggregate("", (current, item) => current + (item.IsText
 			? item.Text
 			: item.Number) + " ");
@@ -316,8 +316,8 @@ public class BytecodeInterpreterTests : BaseVirtualMachineTests
 		var dictionaryType = TestPackage.Instance.GetType(Type.Dictionary).
 			GetGenericImplementation(NumberType, NumberType);
 		var methodCall = CreateFromMethodCall(dictionaryType);
-		var statements = new List<Instruction> { new Invoke(Register.R0, methodCall, new Registry()) };
-		var result = vm.Execute(statements).Memory.Registers[Register.R0];
+		var instructions = new List<Instruction> { new Invoke(Register.R0, methodCall, new Registry()) };
+		var result = vm.Execute(instructions).Memory.Registers[Register.R0];
 		Assert.That(result.IsDictionary, Is.True);
 		Assert.That(result.GetDictionaryItems().Count, Is.EqualTo(0));
 	}
@@ -327,10 +327,10 @@ public class BytecodeInterpreterTests : BaseVirtualMachineTests
 		"\tvalues.Get(1)")]
 	public void DictionaryGet(string methodCall, string expected, params string[] code)
 	{
-		var statements =
+		var instructions =
 			new ByteCodeGenerator(
 				GenerateMethodCallFromSource(nameof(DictionaryGet), methodCall, code)).Generate();
-		var result = vm.Execute(statements).Returns!.Value;
+		var result = vm.Execute(instructions).Returns!.Value;
 		var actual = result.IsText
 			? result.Text
 			: result.Number.ToString(CultureInfo.InvariantCulture);
@@ -342,10 +342,10 @@ public class BytecodeInterpreterTests : BaseVirtualMachineTests
 		"\tvalues.Add(2, number + 10)", "\tvalues.Get(2)")]
 	public void DictionaryRemove(string methodCall, string expected, params string[] code)
 	{
-		var statements =
+		var instructions =
 			new ByteCodeGenerator(
 				GenerateMethodCallFromSource(nameof(DictionaryRemove), methodCall, code)).Generate();
-		var result = vm.Execute(statements).Returns!.Value;
+		var result = vm.Execute(instructions).Returns!.Value;
 		var actual = result.IsText
 			? result.Text
 			: result.Number.ToString(CultureInfo.InvariantCulture);
@@ -356,9 +356,9 @@ public class BytecodeInterpreterTests : BaseVirtualMachineTests
 	public void ReturnWithinALoop()
 	{
 		var source = new[] { "has number", "GetAll Number", "\tfor number", "\t\tvalue" };
-		var statements = new ByteCodeGenerator(GenerateMethodCallFromSource(nameof(ReturnWithinALoop),
+		var instructions = new ByteCodeGenerator(GenerateMethodCallFromSource(nameof(ReturnWithinALoop),
 			"ReturnWithinALoop(5).GetAll", source)).Generate();
-		Assert.That(() => vm.Execute(statements).Returns!.Value.Number,
+		Assert.That(() => vm.Execute(instructions).Returns!.Value.Number,
 			Is.EqualTo(1 + 2 + 3 + 4 + 5));
 	}
 
@@ -371,9 +371,9 @@ public class BytecodeInterpreterTests : BaseVirtualMachineTests
 			"\tlet len = numbers.Length - 1", "\tfor Range(len, 0)", "\t\tresult.Add(numbers(index))",
 			"\tresult"
 		};
-		var statements = new ByteCodeGenerator(GenerateMethodCallFromSource(nameof(ReverseWithRange),
+		var instructions = new ByteCodeGenerator(GenerateMethodCallFromSource(nameof(ReverseWithRange),
 			"ReverseWithRange(1, 2, 3).Reverse", source)).Generate();
-		Assert.That(() => ExpressionListToSpaceSeparatedString(statements), Is.EqualTo("3 2 1 "));
+		Assert.That(() => ExpressionListToSpaceSeparatedString(instructions), Is.EqualTo("3 2 1 "));
 	}
 
 	[Test]
@@ -485,10 +485,10 @@ public class BytecodeInterpreterTests : BaseVirtualMachineTests
 			"\t\tcount = count + 1",
 			"\tcount"
 		};
-		var statements = new ByteCodeGenerator(GenerateMethodCallFromSource(
+		var instructions = new ByteCodeGenerator(GenerateMethodCallFromSource(
 			nameof(LoopOverListStopsWhenIndexExceedsCount),
 			$"{nameof(LoopOverListStopsWhenIndexExceedsCount)}(1, 2, 3).CountItems", source)).Generate();
-		var result = vm.Execute(statements).Returns!.Value.Number;
+		var result = vm.Execute(instructions).Returns!.Value.Number;
 		Assert.That(result, Is.EqualTo(3));
 	}
 
@@ -504,10 +504,10 @@ public class BytecodeInterpreterTests : BaseVirtualMachineTests
 			"\t\tcount = count + 1",
 			"\tcount"
 		};
-		var statements = new ByteCodeGenerator(GenerateMethodCallFromSource(
+		var instructions = new ByteCodeGenerator(GenerateMethodCallFromSource(
 			nameof(LoopOverSingleCharTextStopsAtEnd),
 			$"{nameof(LoopOverSingleCharTextStopsAtEnd)}(\"X\").CountChars", source)).Generate();
-		var result = vm.Execute(statements).Returns!.Value.Number;
+		var result = vm.Execute(instructions).Returns!.Value.Number;
 		Assert.That(result, Is.EqualTo(1));
 	}
 

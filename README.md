@@ -81,9 +81,8 @@ The LSP (Language Server Protocol) implementation here adds support for VSCode, 
 * Preserve original line numbers for precise error reporting.
 
 ## 7 · Strict.Runtime
-* Executes optimized expression tree via ~40 byte-code-like instructions.
-* Still evolving and currently less battle-tested than HighLevelRuntime.
-* Intended for maximum execution speed at scale.
+* Executes optimized expression tree via ~20 byte-code-like instructions.
+* Intended for maximum execution speed at runtime for the executable.
 
 ## 8 · Strict.Compiler
 * Transpiles Strict into C# or CUDA for execution on existing runtimes.

@@ -3,7 +3,7 @@
 /// <summary>
 /// 16 general purpose registers (R0-R15) for use in instructions, normally only very few are
 /// needed (2-3), but if things are nested we might need keep track of a comparison result in an
-/// if statement for the else part later on. Return value is always the last used register.
+/// if instruction for the else part later on. Return value is always the last used register.
 /// </summary>
 public enum Register
 {

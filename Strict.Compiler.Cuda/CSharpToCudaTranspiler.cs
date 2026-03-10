@@ -16,7 +16,7 @@ public class CSharpToCudaTranspiler(Package strictBase) : IDisposable
 	} //ncrunch: no coverage
 
 	public static string GenerateCuda(Type type) =>
-		new StatementsToCudaCompiler().Compile(type.Methods[0]);
+		new InstructionsToCudaCompiler().Compile(type.Methods[0]);
 
 	public Type ParseCSharp(string filePath) =>
 		filePath == ""
@@ -31,7 +31,7 @@ public class CSharpType : Type
 {
 	public class CSharpExpressionParser : MethodExpressionParser
 	{
-		/*this is a hack anyway
+		/*TODO: clean up, this is a hack anyway
 		public override BlockExpression ParseMethodBody(Method method)
 		{
 			if (method.bodyLines.Last().Text.Contains("depth"))

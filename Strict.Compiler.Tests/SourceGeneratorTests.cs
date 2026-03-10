@@ -215,9 +215,10 @@ public class Program
 	public async Task ExecuteOperation()
 	{
 		using var register = await ReadStrictFileAndCreateType("Register", TestPackage.Instance);
+		using var instructionType =
+			await ReadStrictFileAndCreateType("InstructionType", TestPackage.Instance);
 		using var instruction =
 			await ReadStrictFileAndCreateType("Instruction", TestPackage.Instance);
-		using var statement = await ReadStrictFileAndCreateType("Statement", TestPackage.Instance);
 		await GenerateCSharpByReadingStrictProgramAndCompareWithOutput(nameof(ExecuteOperation),
 			TestPackage.Instance);
 	}

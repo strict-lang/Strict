@@ -11,8 +11,8 @@ public class TestOptimizers
 	protected List<Instruction> Optimize(InstructionOptimizer optimizer,
 		List<Instruction> instructions, int expectedCount)
 	{
-		var optimizedStatements = optimizer.Optimize(instructions);
-		Assert.That(optimizedStatements, Has.Count.EqualTo(expectedCount));
-		return optimizedStatements;
+		var optimizedInstructions = optimizer.Optimize(instructions);
+		Assert.That(optimizedInstructions, Has.Count.EqualTo(expectedCount));
+		return optimizedInstructions;
 	}
 }

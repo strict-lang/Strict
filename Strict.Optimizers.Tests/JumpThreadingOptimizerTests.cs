@@ -15,8 +15,8 @@ public sealed class JumpThreadingOptimizerTests : TestOptimizers
 			new ReturnInstruction(Register.R0)
 		], 3).Count(s => s is JumpToId), Is.EqualTo(0));
 
-	private List<Instruction> Optimize(List<Instruction> statements, int expectedCount) =>
-		Optimize(new JumpThreadingOptimizer(), statements, expectedCount);
+	private List<Instruction> Optimize(List<Instruction> instructions, int expectedCount) =>
+		Optimize(new JumpThreadingOptimizer(), instructions, expectedCount);
 
 	[Test]
 	public void KeepNonEmptyConditionalBlock() =>

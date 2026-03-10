@@ -8,10 +8,10 @@ public sealed class ByteCodeGeneratorTests : BaseVirtualMachineTests
 	public void Generate(string methodCall, string programName, Instruction[] expectedByteCode,
 		params string[] code)
 	{
-		var statements =
+		var instructions =
 			new ByteCodeGenerator(GenerateMethodCallFromSource(programName, methodCall, code)).
 				Generate();
-		Assert.That(statements.ConvertAll(x => x.ToString()),
+		Assert.That(instructions.ConvertAll(x => x.ToString()),
 			Is.EqualTo(expectedByteCode.ToList().ConvertAll(x => x.ToString())));
 	}
 

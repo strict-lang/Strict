@@ -96,27 +96,25 @@ public sealed class BytecodeInterpreter(Package package)
 
 	private void TryLoopEndInstruction(Instruction instruction)
 	{
-		if (instruction is not LoopEndInstruction loopEndStatement)
+		if (instruction is not LoopEndInstruction loopEnd)
 			return;
 		var loopBegin = instructions.Take(instructionIndex).OfType<LoopBeginInstruction>().Last();
 		loopBegin.LoopCount--;
 		if (loopBegin.LoopCount <= 0)
 			return;
-		instructionIndex -= loopEndStatement.Steps + 1;
+		instructionIndex -= loopEnd.Steps + 1;
 	}
 
 	private void TryInvokeInstruction(Instruction instruction)
 	{
-		if (instruction is not Invoke { Method: not null } invokeStatement ||
-			TryCreateEmptyDictionaryInstance(invokeStatement) ||
-			TryHandleToConversion(invokeStatement) ||
-			TryHandleIncrementDecrement(invokeStatement) ||
-			GetValueByKeyForDictionaryAndStoreInRegister(invokeStatement))
+		if (instruction is not Invoke { Method: not null } invoke ||
+			TryCreateEmptyDictionaryInstance(invoke) || TryHandleToConversion(invoke) ||
+			TryHandleIncrementDecrement(invoke) || GetValueByKeyForDictionaryAndStoreInRegister(invoke))
 			return;
-		var methodInstructions = GetByteCodeFromInvokedMethodCall(invokeStatement);
+		var methodInstructions = GetByteCodeFromInvokedMethodCall(invoke);
 		var result = RunChildScope(methodInstructions);
 		if (result != null)
-			Memory.Registers[invokeStatement.Register] = result.Value;
+			Memory.Registers[invoke.Register] = result.Value;
 	}
 
 	/// <summary>
@@ -126,7 +124,7 @@ public sealed class BytecodeInterpreter(Package package)
 	/// </summary>
 	private ValueInstance? RunChildScope(List<Instruction> childInstructions)
 	{
-		var savedStatements = instructions;
+		var savedInstructions = instructions;
 		var savedIndex = instructionIndex;
 		var savedConditionFlag = conditionFlag;
 		var savedReturns = Returns;
@@ -137,7 +135,7 @@ public sealed class BytecodeInterpreter(Package package)
 		var result = Returns;
 		Memory.Frame.Clear();
 		Memory.Frame = savedFrame;
-		instructions = savedStatements;
+		instructions = savedInstructions;
 		instructionIndex = savedIndex;
 		conditionFlag = savedConditionFlag;
 		Returns = savedReturns;
@@ -268,17 +266,17 @@ public sealed class BytecodeInterpreter(Package package)
 
 	private void TryLoopInitInstruction(Instruction instruction)
 	{
-		if (instruction is not LoopBeginInstruction loopBeginStatement)
+		if (instruction is not LoopBeginInstruction loopBegin)
 			return;
-		if (loopBeginStatement.IsRange)
-			ProcessRangeLoopIteration(loopBeginStatement);
+		if (loopBegin.IsRange)
+			ProcessRangeLoopIteration(loopBegin);
 		else
-			ProcessCollectionLoopIteration(loopBeginStatement);
+			ProcessCollectionLoopIteration(loopBegin);
 	}
 
-	private void ProcessCollectionLoopIteration(LoopBeginInstruction loopBeginStatement)
+	private void ProcessCollectionLoopIteration(LoopBeginInstruction loopBegin)
 	{
-		if (!Memory.Registers.TryGet(loopBeginStatement.Register, out var iterableVariable))
+		if (!Memory.Registers.TryGet(loopBegin.Register, out var iterableVariable))
 			return; //ncrunch: no coverage
 		if (Memory.Frame.ContainsKey("index"))
 		{
@@ -288,13 +286,13 @@ public sealed class BytecodeInterpreter(Package package)
 		}
 		else
 			Memory.Frame.Set("index", new ValueInstance(package.GetType(Type.Number), 0));
-		if (!loopBeginStatement.IsInitialized)
+		if (!loopBegin.IsInitialized)
 		{
-			loopBeginStatement.LoopCount = GetLength(iterableVariable);
-			loopBeginStatement.IsInitialized = true;
+			loopBegin.LoopCount = GetLength(iterableVariable);
+			loopBegin.IsInitialized = true;
 		}
-		AlterValueVariable(iterableVariable, package.GetType(Type.Number), loopBeginStatement);
-		if (loopBeginStatement.LoopCount <= 0)
+		AlterValueVariable(iterableVariable, package.GetType(Type.Number), loopBegin);
+		if (loopBegin.LoopCount <= 0)
 		{
 			var stepsToLoopEnd = instructions.Skip(instructionIndex + 1).
 				TakeWhile(s => s is not LoopEndInstruction).Count();
@@ -302,16 +300,16 @@ public sealed class BytecodeInterpreter(Package package)
 		}
 	}
 
-	private void ProcessRangeLoopIteration(LoopBeginInstruction loopBeginStatement)
+	private void ProcessRangeLoopIteration(LoopBeginInstruction loopBegin)
 	{
-		if (!loopBeginStatement.IsInitialized)
+		if (!loopBegin.IsInitialized)
 		{
-			var startIndex = Convert.ToInt32(Memory.Registers[loopBeginStatement.Register].Number);
-			var endIndex = Convert.ToInt32(Memory.Registers[loopBeginStatement.EndIndex!.Value].Number);
-			loopBeginStatement.InitializeRangeState(startIndex, endIndex);
+			var startIndex = Convert.ToInt32(Memory.Registers[loopBegin.Register].Number);
+			var endIndex = Convert.ToInt32(Memory.Registers[loopBegin.EndIndex!.Value].Number);
+			loopBegin.InitializeRangeState(startIndex, endIndex);
 		}
-		var isDecreasing = loopBeginStatement.IsDecreasing ?? false;
-		var numberType = Memory.Registers[loopBeginStatement.Register].GetTypeExceptText().
+		var isDecreasing = loopBegin.IsDecreasing ?? false;
+		var numberType = Memory.Registers[loopBegin.Register].GetTypeExceptText().
 			GetType(Type.Number);
 		if (Memory.Frame.ContainsKey("index"))
 		{
@@ -322,7 +320,7 @@ public sealed class BytecodeInterpreter(Package package)
 		}
 		else
 			Memory.Frame.Set("index",
-				new ValueInstance(numberType, loopBeginStatement.StartIndexValue ?? 0));
+				new ValueInstance(numberType, loopBegin.StartIndexValue ?? 0));
 		Memory.Frame.Set("value", Memory.Frame.Get("index"));
 	}
 
@@ -336,7 +334,7 @@ public sealed class BytecodeInterpreter(Package package)
 	}
 
 	private void AlterValueVariable(ValueInstance iterableVariable, Type numberType,
-		LoopBeginInstruction loopBeginStatement)
+		LoopBeginInstruction loopBegin)
 	{
 		var index = Convert.ToInt32(Memory.Frame.Get("index").Number);
 		if (iterableVariable.IsText)
@@ -351,7 +349,7 @@ public sealed class BytecodeInterpreter(Package package)
 			if (index < items.Length)
 				Memory.Frame.Set("value", items[index]);
 			else
-				loopBeginStatement.LoopCount = 0;
+				loopBegin.LoopCount = 0;
 			return;
 		}
 		Memory.Frame.Set("value", new ValueInstance(numberType, index + 1));
@@ -361,40 +359,39 @@ public sealed class BytecodeInterpreter(Package package)
 	{
 		if (instruction.InstructionType > InstructionType.StoreSeparator)
 			return;
-		if (instruction is SetInstruction setStatement)
-			Memory.Registers[setStatement.Register] = setStatement.ValueInstance;
-		else if (instruction is StoreVariableInstruction storeVariableStatement)
-			Memory.Frame.Set(storeVariableStatement.Identifier, storeVariableStatement.ValueInstance,
-				storeVariableStatement.IsMember);
-		else if (instruction is StoreFromRegisterInstruction storeFromRegisterStatement)
-			Memory.Frame.Set(storeFromRegisterStatement.Identifier,
-				Memory.Registers[storeFromRegisterStatement.Register]);
+		if (instruction is SetInstruction set)
+			Memory.Registers[set.Register] = set.ValueInstance;
+		else if (instruction is StoreVariableInstruction storeVariable)
+			Memory.Frame.Set(storeVariable.Identifier, storeVariable.ValueInstance,
+				storeVariable.IsMember);
+		else if (instruction is StoreFromRegisterInstruction storeFromRegister)
+			Memory.Frame.Set(storeFromRegister.Identifier, Memory.Registers[storeFromRegister.Register]);
 	}
 
 	private void TryLoadInstructions(Instruction instruction)
 	{
-		if (instruction is LoadVariableToRegister loadVariableStatement)
-			Memory.Registers[loadVariableStatement.Register] =
-				Memory.Frame.Get(loadVariableStatement.Identifier);
-		else if (instruction is LoadConstantInstruction loadConstantStatement)
-			Memory.Registers[loadConstantStatement.Register] = loadConstantStatement.ValueInstance;
+		if (instruction is LoadVariableToRegister loadVariable)
+			Memory.Registers[loadVariable.Register] =
+				Memory.Frame.Get(loadVariable.Identifier);
+		else if (instruction is LoadConstantInstruction loadConstant)
+			Memory.Registers[loadConstant.Register] = loadConstant.ValueInstance;
 	}
 
 	private void TryExecuteRest(Instruction instruction)
 	{
-		if (instruction is BinaryInstruction binaryStatement)
+		if (instruction is BinaryInstruction binary)
 		{
-			if (binaryStatement.IsConditional())
-				TryConditionalOperationExecution(binaryStatement);
+			if (binary.IsConditional())
+				TryConditionalOperationExecution(binary);
 			else
-				TryBinaryOperationExecution(binaryStatement);
+				TryBinaryOperationExecution(binary);
 		}
-		else if (instruction is Jump jumpStatement)
-			TryJumpOperation(jumpStatement);
-		else if (instruction is JumpIf jumpIfStatement)
-			TryJumpIfOperation(jumpIfStatement);
-		else if (instruction is JumpToId jumpToIdStatement)
-			TryJumpToIdOperation(jumpToIdStatement);
+		else if (instruction is Jump jump)
+			TryJumpOperation(jump);
+		else if (instruction is JumpIf jumpIf)
+			TryJumpIfOperation(jumpIf);
+		else if (instruction is JumpToId jumpToId)
+			TryJumpToIdOperation(jumpToId);
 	}
 
 	private void TryBinaryOperationExecution(BinaryInstruction instruction)
@@ -472,8 +469,8 @@ public sealed class BytecodeInterpreter(Package package)
 	{
 		if (conditionFlag && instruction.InstructionType is InstructionType.JumpIfTrue ||
 			!conditionFlag && instruction.InstructionType is InstructionType.JumpIfFalse ||
-			instruction is JumpIfNotZero jumpIfNotZeroStatement &&
-			Memory.Registers[jumpIfNotZeroStatement.Register].Number > 0)
+			instruction is JumpIfNotZero jumpIfNotZero &&
+			Memory.Registers[jumpIfNotZero.Register].Number > 0)
 			instructionIndex += Convert.ToInt32(instruction.Steps);
 	}
 
@@ -483,8 +480,8 @@ public sealed class BytecodeInterpreter(Package package)
 			conditionFlag && instruction.InstructionType is InstructionType.JumpToIdIfTrue)
 		{
 			var id = instruction.Id;
-			var endIndex = instructions.IndexOf(instructions.First(jumpStatement =>
-				jumpStatement.InstructionType is InstructionType.JumpEnd && jumpStatement is JumpToId jumpViaId &&
+			var endIndex = instructions.IndexOf(instructions.First(jump =>
+				jump.InstructionType is InstructionType.JumpEnd && jump is JumpToId jumpViaId &&
 				jumpViaId.Id == id));
 			if (endIndex != -1)
 				instructionIndex = endIndex;

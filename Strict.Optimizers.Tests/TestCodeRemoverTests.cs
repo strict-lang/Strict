@@ -9,8 +9,8 @@ namespace Strict.Optimizers.Tests;
 /// </summary>
 public sealed class TestCodeRemoverTests : TestOptimizers
 {
-	private List<Instruction> Optimize(List<Instruction> statements, int expectedCount) =>
-		Optimize(new TestCodeRemover(), statements, expectedCount);
+	private List<Instruction> Optimize(List<Instruction> instructions, int expectedCount) =>
+		Optimize(new TestCodeRemover(), instructions, expectedCount);
 
 	[Test]
 	public void RemovePassedTestAssertionPattern()

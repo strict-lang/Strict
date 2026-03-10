@@ -5,10 +5,10 @@ using Strict.Runtime.Instructions;
 namespace Strict.Optimizers;
 
 /// <summary>
-/// Folds constant arithmetic at the instruction level. When two LoadConstantStatements feed
+/// Folds constant arithmetic at the instruction level. When two LoadConstantInstructions feed
 /// directly into a Binary arithmetic operation (Add, Subtract, Multiply, Divide, Modulo),
-/// all three statements are replaced by a single LoadConstantStatement with the computed result.
-/// This is repeated until no more folding is possible (handles chained constants).
+/// all three instructions are replaced by a single LoadConstantInstruction with the computed
+/// result. This is repeated until no more folding is possible (handles chained constants).
 /// </summary>
 public sealed class ConstantFoldingOptimizer : InstructionOptimizer
 {
@@ -57,11 +57,11 @@ public sealed class ConstantFoldingOptimizer : InstructionOptimizer
 		return true;
 	}
 
-	private static int FindLoadConstantIndex(List<Instruction> statements, int beforeIndex,
+	private static int FindLoadConstantIndex(List<Instruction> instructions, int beforeIndex,
 		Register register)
 	{
 		for (var i = beforeIndex - 1; i >= 0; i--)
-			if (statements[i] is LoadConstantInstruction load && load.Register == register)
+			if (instructions[i] is LoadConstantInstruction load && load.Register == register)
 				return i;
 		return -1;
 	}

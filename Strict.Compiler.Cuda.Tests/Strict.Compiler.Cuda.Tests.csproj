@@ -42,7 +42,9 @@
     <Content Include="Input\MultiplyNumbers.cs">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="Input\AddNumbers.cs" />
+    <Content Include="Input\AddNumbers.cs">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
     <Content Include="Input\InitializeDepths.cs">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
@@ -53,9 +55,6 @@
     <Content Include="Output\InitializeDepths.cu" />
     <Content Include="Output\MultiplyNumbers.cu" />
     <Content Include="Output\SubtractNumbers.cu" />
-    <Content Include="TexturedMeshTests.RenderTexturedBoxPlaneAndSphereWithImage.approved.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
   </ItemGroup>
 
   <ItemGroup>

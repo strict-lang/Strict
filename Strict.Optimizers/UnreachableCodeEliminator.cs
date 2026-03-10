@@ -4,7 +4,7 @@ using Strict.Runtime.Instructions;
 namespace Strict.Optimizers;
 
 /// <summary>
-/// Removes statements that follow an unconditional Return or Jump instruction and can never
+/// Removes instructions that follow an unconditional Return or Jump instruction and can never
 /// execute. Scans linearly; once an unconditional Return is found, everything after it is dead
 /// unless a JumpEnd or loop boundary appears that could serve as a branch target.
 /// </summary>

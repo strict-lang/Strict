@@ -21,8 +21,8 @@ public class Type : Context, IDisposable
 	/// </summary>
 	public const string Any = nameof(Any);
 	/// <summary>
-	/// Most basic type: can only be true or false, any statement must either be None or return a
-	/// Boolean (anything else is a compiler error). Any statement returning false (like a failing
+	/// Most basic type: can only be true or false, any expression must either be None or return a
+	/// Boolean (anything else is a compiler error). Any expression returning false (like a failing
 	/// test) will also immediately cause an error at runtime or in the Editor via SCrunch.
 	/// </summary>
 	public const string Boolean = nameof(Boolean);

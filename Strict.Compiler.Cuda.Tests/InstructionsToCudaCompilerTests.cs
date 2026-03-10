@@ -6,9 +6,9 @@ using Type = Strict.Language.Type;
 
 namespace Strict.Compiler.Cuda.Tests;
 
-public sealed class StatementsToCudaCompilerTests
+public sealed class InstructionsToCudaCompilerTests
 {
-	private readonly StatementsToCudaCompiler compiler = new();
+	private readonly InstructionsToCudaCompiler compiler = new();
 
 	[TestCase("Add", "+")]
 	[TestCase("Subtract", "-")]

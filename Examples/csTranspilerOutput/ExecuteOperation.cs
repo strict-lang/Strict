@@ -3,22 +3,22 @@
 public class ExecuteOperation
 {
 	private List<Register> registers = new List<Register>();
-	public Register TryOperationExecution(Statement statement)
+	public Register TryOperationExecution(Instruction instruction)
 	{
 		if (registers.Length() < 2)
 			Strict.Language.Expressions.Error TestPackage.Error;
-		GetOperationResult(statement, registers[1], registers[0]);
+		GetOperationResult(instruction, registers[1], registers[0]);
 		registers[1];
 	}
-	public int GetOperationResult(Statement statement, Register left, Register right)
+	public int GetOperationResult(Instruction instruction, Register left, Register right)
 	{
-		if (statement.Instruction == Instruction.Add)
+		if (instruction.InstructionType == InstructionType.Add)
 			return left + right;
-		if (statement.Instruction == Instruction.Subtract)
+		if (instruction.InstructionType == InstructionType.Subtract)
 			return left - right;
-		if (statement.Instruction == Instruction.Multiply)
+		if (instruction.InstructionType == InstructionType.Multiply)
 			return left * right;
-		if (statement.Instruction == Instruction.Divide)
+		if (instruction.InstructionType == InstructionType.Divide)
 			return left / right;
 	}
 }

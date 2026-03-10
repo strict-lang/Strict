@@ -8,9 +8,9 @@ namespace Strict.Compiler.Cuda;
 
 /// <summary>
 /// Compiles a Strict method to a CUDA C kernel using the Runtime's <see cref="ByteCodeGenerator" />
-/// to produce bytecode statements, then translates them to CUDA C.
+/// to produce bytecode instructions, then translates them to CUDA C.
 /// </summary>
-public sealed class StatementsToCudaCompiler
+public sealed class InstructionsToCudaCompiler
 {
 	public string Compile(Method method) => BuildCudaKernel(method, GenerateInstructions(method));
 

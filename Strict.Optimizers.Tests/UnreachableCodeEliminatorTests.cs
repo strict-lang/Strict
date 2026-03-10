@@ -13,8 +13,8 @@ public sealed class UnreachableCodeEliminatorTests : TestOptimizers
 			new ReturnInstruction(Register.R1)
 		], 2)[1], Is.InstanceOf<ReturnInstruction>());
 
-	private List<Instruction> Optimize(List<Instruction> statements, int expectedCount) =>
-		Optimize(new UnreachableCodeEliminator(), statements, expectedCount);
+	private List<Instruction> Optimize(List<Instruction> instructions, int expectedCount) =>
+		Optimize(new UnreachableCodeEliminator(), instructions, expectedCount);
 
 	[Test]
 	public void KeepAllInstructionsWhenNoDeadCodeExists() =>

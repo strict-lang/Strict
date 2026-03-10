@@ -7,7 +7,7 @@ namespace Strict.Optimizers;
 /// Removes empty conditional blocks — JumpToIdIfFalse/JumpToIdIfTrue immediately followed by
 /// the matching JumpEnd with the same ID. This pattern appears when test code or other dead
 /// branches have been stripped but the jump pair remains. Also removes the preceding comparison
-/// Binary statement if it is no longer needed.
+/// BinaryInstruction if it is no longer needed.
 /// </summary>
 public sealed class JumpThreadingOptimizer : InstructionOptimizer
 {

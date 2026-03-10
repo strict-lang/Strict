@@ -46,7 +46,8 @@ public class BytecodeInterpreterKataTests : BaseVirtualMachineTests
 	public void CountingSheepKata()
 	{
 		var instructions = new ByteCodeGenerator(GenerateMethodCallFromSource("SheepCounter",
-			"SheepCounter(true, true, true, false, true, true, true, true, true, false, true, false, true, false, false, true, true, true, true, true, false, false, true, true).Count",
+			"SheepCounter(true, true, true, false, true, true, true, true, true, false, true, false, " +
+			"true, false, false, true, true, true, true, true, false, false, true, true).Count",
 			"has sheep Booleans",
 			"Count Number",
 			"\tmutable result = 0",

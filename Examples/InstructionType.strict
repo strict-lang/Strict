@@ -1,0 +1,17 @@
+constant Set
+constant Add
+constant Subtract
+constant Multiply
+constant Divide
+constant BinaryOperatorsSeparator = 100
+constant GreaterThan
+constant LessThan
+constant Equal
+constant NotEqual
+constant ConditionalSeparator = 200
+constant JumpIfTrue
+constant JumpIfFalse
+constant JumpIfNotZero
+constant JumpsSeparator = 300
+constant LoopIfNonZero
+constant JumpBackIfNonZero

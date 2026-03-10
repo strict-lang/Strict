@@ -46,7 +46,7 @@ public sealed class StrengthReducer : InstructionOptimizer
 		return instructions;
 	}
 
-	private static bool TryReduceMultiplyByZero(List<Instruction> Instructions, int binaryIndex,
+	private static bool TryReduceMultiplyByZero(List<Instruction> instructions, int binaryIndex,
 		BinaryInstruction binary, int leftIndex, int rightIndex, ValueInstance? leftValue,
 		ValueInstance? rightValue)
 	{
@@ -58,14 +58,14 @@ public sealed class StrengthReducer : InstructionOptimizer
 			return false;
 		var resultRegister = binary.Registers[2];
 		var zeroConst = isLeftZero
-			? (LoadConstantInstruction)Instructions[leftIndex]
-			: (LoadConstantInstruction)Instructions[rightIndex];
-		Instructions[binaryIndex] = new LoadConstantInstruction(resultRegister, zeroConst.ValueInstance);
-		RemoveIndicesDescending(Instructions, leftIndex, rightIndex);
+			? (LoadConstantInstruction)instructions[leftIndex]
+			: (LoadConstantInstruction)instructions[rightIndex];
+		instructions[binaryIndex] = new LoadConstantInstruction(resultRegister, zeroConst.ValueInstance);
+		RemoveIndicesDescending(instructions, leftIndex, rightIndex);
 		return true;
 	}
 
-	private static bool TryReduceIdentity(List<Instruction> Instructions, int binaryIndex,
+	private static bool TryReduceIdentity(List<Instruction> instructions, int binaryIndex,
 		BinaryInstruction binary, int leftIndex, int rightIndex, ValueInstance? leftValue,
 		ValueInstance? rightValue)
 	{
@@ -79,29 +79,24 @@ public sealed class StrengthReducer : InstructionOptimizer
 		var removeIndex = identitySide == IdentitySide.Left
 			? leftIndex
 			: rightIndex;
-		RewriteRegister(Instructions, keepIndex, resultRegister);
-		RemoveIndicesDescending(Instructions, binaryIndex, removeIndex);
+		RewriteRegister(instructions, keepIndex, resultRegister);
+		RemoveIndicesDescending(instructions, binaryIndex, removeIndex);
 		return true;
 	}
 
-	private static void RewriteRegister(List<Instruction> Instructions, int index, Register newRegister)
+	private static void RewriteRegister(List<Instruction> instructions, int index, Register newRegister)
 	{
-		var Instruction = Instructions[index];
-		Instructions[index] = Instruction switch
-		{
-			LoadVariableToRegister load => new LoadVariableToRegister(newRegister, load.Identifier),
-			//ncrunch: no coverage start
-			LoadConstantInstruction load => new LoadConstantInstruction(newRegister, load.ValueInstance),
-			_ => Instruction
-		}; //ncrunch: no coverage end
-	}
+		if (instructions[index] is LoadVariableToRegister load1)
+			instructions[index] = new LoadVariableToRegister(newRegister, load1.Identifier);
+		//ncrunch: no coverage start
+		else if (instructions[index] is LoadConstantInstruction load2)
+			instructions[index] = new LoadConstantInstruction(newRegister, load2.ValueInstance);
+	} //ncrunch: no coverage end
 
-	private static void RemoveIndicesDescending(List<Instruction> Instructions, int a, int b)
+	private static void RemoveIndicesDescending(List<Instruction> instructions, int a, int b)
 	{
-		var first = Math.Max(a, b);
-		var second = Math.Min(a, b);
-		Instructions.RemoveAt(first);
-		Instructions.RemoveAt(second);
+		instructions.RemoveAt(Math.Max(a, b));
+		instructions.RemoveAt(Math.Min(a, b));
 	}
 
 	private static bool IsArithmetic(InstructionType instruction) =>
@@ -129,12 +124,12 @@ public sealed class StrengthReducer : InstructionOptimizer
 		};
 	}
 
-	private static int FindInstructionIndex(List<Instruction> Instructions, int beforeIndex,
+	private static int FindInstructionIndex(List<Instruction> instructions, int beforeIndex,
 		Register register)
 	{
 		for (var i = beforeIndex - 1; i >= 0; i--)
-			if (Instructions[i] is LoadConstantInstruction load && load.Register == register ||
-				Instructions[i] is LoadVariableToRegister varLoad && varLoad.Register == register)
+			if (instructions[i] is LoadConstantInstruction load && load.Register == register ||
+				instructions[i] is LoadVariableToRegister varLoad && varLoad.Register == register)
 				return i;
 		return -1; //ncrunch: no coverage
 	}

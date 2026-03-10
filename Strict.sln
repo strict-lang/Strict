@@ -119,6 +119,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Examples", "Examples", "{87
 		Examples\FindFirstNonConsecutiveNumber.strict = Examples\FindFirstNonConsecutiveNumber.strict
 		Examples\FindNumberCount.strict = Examples\FindNumberCount.strict
 		Examples\Instruction.strict = Examples\Instruction.strict
+		Examples\InstructionType.strict = Examples\InstructionType.strict
 		Examples\LinkedListAnalyzer.strict = Examples\LinkedListAnalyzer.strict
 		Examples\MatchingLoopFinder.strict = Examples\MatchingLoopFinder.strict
 		Examples\Node.strict = Examples\Node.strict
@@ -131,7 +132,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Examples", "Examples", "{87
 		Examples\RemoveParentheses.strict = Examples\RemoveParentheses.strict
 		Examples\ReverseList.strict = Examples\ReverseList.strict
 		Examples\ShorterPath.strict = Examples\ShorterPath.strict
-		Examples\Statement.strict = Examples\Statement.strict
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "csTranspilerOutput", "csTranspilerOutput", "{57FE9C48-33B8-44D5-AEC2-EF9CDDEA3F1D}"

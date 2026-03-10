@@ -17,8 +17,8 @@ public sealed class StrengthReducerTests : TestOptimizers
 		Assert.That(optimizedInstructions[1], Is.InstanceOf<ReturnInstruction>());
 	}
 
-	private List<Instruction> Optimize(List<Instruction> statements, int expectedCount) =>
-		Optimize(new StrengthReducer(), statements, expectedCount);
+	private List<Instruction> Optimize(List<Instruction> instructions, int expectedCount) =>
+		Optimize(new StrengthReducer(), instructions, expectedCount);
 
 	[Test]
 	public void MultiplyByOneOnLeftBecomesLoad()

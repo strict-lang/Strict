@@ -18,8 +18,8 @@ public sealed class RedundantLoadEliminatorTests : TestOptimizers
 			Is.EqualTo(new[] { Register.R0, Register.R0, Register.R2 }));
 	}
 
-	private List<Instruction> Optimize(List<Instruction> statements, int expectedCount) =>
-		Optimize(new RedundantLoadEliminator(), statements, expectedCount);
+	private List<Instruction> Optimize(List<Instruction> instructions, int expectedCount) =>
+		Optimize(new RedundantLoadEliminator(), instructions, expectedCount);
 
 	[Test]
 	public void DoNotEliminateLoadAfterStoreToSameVariable() =>

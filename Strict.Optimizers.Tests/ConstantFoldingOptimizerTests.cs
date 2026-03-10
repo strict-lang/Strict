@@ -5,8 +5,8 @@ namespace Strict.Optimizers.Tests;
 
 public sealed class ConstantFoldingOptimizerTests : TestOptimizers
 {
-	private List<Instruction> Optimize(List<Instruction> statements, int expectedCount) =>
-		Optimize(new ConstantFoldingOptimizer(), statements, expectedCount);
+	private List<Instruction> Optimize(List<Instruction> instructions, int expectedCount) =>
+		Optimize(new ConstantFoldingOptimizer(), instructions, expectedCount);
 
 	[Test]
 	public void FoldAdditionOfTwoConstants()
