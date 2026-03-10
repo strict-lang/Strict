@@ -60,12 +60,11 @@ public sealed class BytecodeDecompiler(Package basePackage)
 
 	private static IEnumerable<string> ReconstructSource(IList<Instruction> instructions)
 	{
-		var lines = new List<string>();
 		var members = new List<string>();
 		var bodyLines = new List<string>();
-		foreach (var inst in instructions)
+		for (var index = 0; index < instructions.Count; index++)
 		{
-			switch (inst)
+			switch (instructions[index])
 			{
 			case StoreVariableInstruction storeVar when storeVar.IsMember:
 				members.Add("has " + storeVar.Identifier + " " +
@@ -76,9 +75,19 @@ public sealed class BytecodeDecompiler(Package basePackage)
 				bodyLines.Add("\tconstant " + storeVar.Identifier + " = " +
 					storeVar.ValueInstance.ToExpressionCodeString());
 				break; //ncrunch: no coverage end
+			case Invoke invoke when invoke.Method != null &&
+				index + 1 < instructions.Count &&
+				instructions[index + 1] is StoreFromRegisterInstruction nextStore &&
+				nextStore.Register == invoke.Register:
+				bodyLines.Add("\tconstant " + nextStore.Identifier + " = " + invoke.Method);
+				index++;
+				break;
+			case Invoke invoke when invoke.Method != null:
+				bodyLines.Add("\t" + invoke.Method);
+				break;
 			}
 		}
-		lines.AddRange(members);
+		var lines = new List<string>(members);
 		if (bodyLines.Count > 0)
 		{
 			lines.Add("Run");
