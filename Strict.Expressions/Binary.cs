@@ -6,11 +6,13 @@ namespace Strict.Expressions;
 public sealed class Binary(Expression left, Method operatorMethod, Expression[] right)
 	: MethodCall(operatorMethod, left, right, null, left.LineNumber)
 {
+	private string? cachedString;
+
 	/// <summary>
 	/// For "in" we have to swap left and right (in is always implemented in the Iterator)
 	/// </summary>
 	public override string ToString() =>
-		Method.Name is BinaryOperator.In
+		cachedString ??= Method.Name is BinaryOperator.In
 			? $"{AddNestedBracketsIfNeeded(Arguments[0])} is in {AddNestedBracketsIfNeeded(Instance!)}"
 			: $"{
 				AddNestedBracketsIfNeeded(Instance!)
@@ -36,9 +38,18 @@ public sealed class Binary(Expression left, Method operatorMethod, Expression[] 
 		Console.WriteLine();
 		Console.WriteLine("Binary.Parse " + input.ToString() + ", postfixTokens=" + postfixTokens.Count);
 #endif
-		return postfixTokens.Count < 3
-			? throw new IncompleteTokensForBinaryExpression(body, input, postfixTokens)
-			: BuildBinaryExpression(body, input, postfixTokens.Pop(), postfixTokens);
+		if (postfixTokens.Count < 3)
+			throw new IncompleteTokensForBinaryExpression(body, input, postfixTokens); //ncrunch: no coverage
+		ValidateInOperatorUsage(input);
+		return BuildBinaryExpression(body, input, postfixTokens.Pop(), postfixTokens);
+	}
+
+	private static void ValidateInOperatorUsage(ReadOnlySpan<char> input)
+	{
+		if (input.Contains(" in ", StringComparison.Ordinal) &&
+			!input.Contains(" is in ", StringComparison.Ordinal) &&
+			!input.Contains(" is not in ", StringComparison.Ordinal))
+			throw new InMustAlwaysBePrecededByIsOrIsNot(input.ToString());
 	}
 
 	public sealed class IncompleteTokensForBinaryExpression(Body body, ReadOnlySpan<char> input,
@@ -48,11 +59,6 @@ public sealed class Binary(Expression left, Method operatorMethod, Expression[] 
 	private static Expression BuildBinaryExpression(Body body, ReadOnlySpan<char> input,
 		Range operatorTokenRange, Stack<Range> tokens)
 	{
-		// If just "in" was passed, check if it was preceded by an "is" or "is not" (or be in for)
-		if (input.Contains(" in ", StringComparison.Ordinal) &&
-			!input.Contains(" is in ", StringComparison.Ordinal) &&
-			!input.Contains(" is not in ", StringComparison.Ordinal))
-			throw new InMustAlwaysBePrecededByIsOrIsNot(input.ToString());
 		var operatorToken = input[operatorTokenRange].ToString();
 #if LOG_OPERATORS_PARSING
 		Console.WriteLine("BuildBinaryExpression operator=" + operatorToken + ", remaining tokens=" +

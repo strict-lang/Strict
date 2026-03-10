@@ -101,24 +101,28 @@ public static class BinaryOperator
 			_ => int.MaxValue
 		};
 
+	/// <summary>
+	/// Length-based dispatch avoids up to 8 sequential Compare calls in the hot path.
+	/// Length 2: to, in, is, or, &lt;=, &gt;=. Length 3: and, xor, not.
+	/// </summary>
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static int GetPrecedence(ReadOnlySpan<char> token) =>
-		// "to" needs to be higher than all the other operators as it needs to convert first
-		token.Compare(To)
-			? 20
-			: token.Compare(In)
-				? 9
-				: token.Compare(SmallerOrEqual) || token.Compare(GreaterOrEqual)
-					? 7
-					: token.Compare(And)
-						? 6
-						: token.Compare(Xor)
-							? 5
-							: token.Compare(Or)
-								? 4
-								// "is not" and "is not in" will be flipped after we have all tokens
-								: token.Compare(UnaryOperator.Not)
-									? 3
-									: token.Compare(Is)
-										? 1
-										: GetPrecedence(token[0]);
+		token.Length switch
+		{
+			1 => GetPrecedence(token[0]),
+			2 => token[0] switch
+			{
+				't' => 20, // to
+				'i' => token[1] == 'n' ? 9 : 1, // in=9, is=1
+				'o' => 4, // or
+				_ => 7 // <=, >=
+			},
+			3 => token[0] switch
+			{
+				'a' => 6, // and
+				'x' => 5, // xor
+				_ => 3 // not
+			},
+			_ => GetPrecedence(token[0])
+		};
 }

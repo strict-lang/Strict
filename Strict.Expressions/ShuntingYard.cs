@@ -25,9 +25,9 @@ public sealed class ShuntingYard
 		var (_, length) = tokenRange.GetOffsetAndLength(input.Length);
 		if (length == 1)
 			PutSingleCharacterTokenIntoStacks(tokenRange);
-		else if (input[tokenRange].IsMultiCharacterOperator())
+		else if (input.AsSpan()[tokenRange].IsMultiCharacterOperator())
 		{
-			ApplyHigherOrEqualPrecedenceOperators(BinaryOperator.GetPrecedence(input[tokenRange]));
+			ApplyHigherOrEqualPrecedenceOperators(BinaryOperator.GetPrecedence(input.AsSpan()[tokenRange]));
 			operators.Push(tokenRange);
 		}
 		else
@@ -65,7 +65,7 @@ public sealed class ShuntingYard
 	{
 		while (operators.Count > 0)
 			if (!IsOpeningBracket(precedence) &&
-				BinaryOperator.GetPrecedence(input[operators.Peek()].AsSpan()) >= precedence)
+				BinaryOperator.GetPrecedence(input.AsSpan()[operators.Peek()]) >= precedence)
 				AddOperatorToOutput();
 			else
 				return;
@@ -75,16 +75,16 @@ public sealed class ShuntingYard
 	{
 		var newOperator = operators.Pop();
 		// If "is not" or "is not in" was parsed, flip them to make BinaryExpression parsing easier
-		if (input[newOperator] == BinaryOperator.Is)
+		if (input.AsSpan()[newOperator].Compare(BinaryOperator.Is))
 		{
-			if (input[Output.Peek()] == UnaryOperator.Not)
+			if (input.AsSpan()[Output.Peek()].Compare(UnaryOperator.Not))
 			{
 				var notRange = Output.Pop();
-				if (input[Output.Peek()] != BinaryOperator.In)
+				if (!input.AsSpan()[Output.Peek()].Compare(BinaryOperator.In))
 					Output.Push(newOperator);
 				Output.Push(notRange);
 			}
-			else if (input[Output.Peek()] != BinaryOperator.In)
+			else if (!input.AsSpan()[Output.Peek()].Compare(BinaryOperator.In))
 				Output.Push(newOperator);
 		}
 		else
