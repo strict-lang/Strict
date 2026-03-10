@@ -112,7 +112,8 @@ public sealed class BytecodeGenerator
 	{
 		for (var i = 0; i < expressions.Count; i++)
 			if ((ReferenceEquals(expressions[i], Expressions[^1]) ||
-					expressions[i] is Expressions.Return) && expressions[i] is not If)
+					expressions[i] is Expressions.Return) && expressions[i] is not If &&
+				expressions[i] is not SelectorIf)
 				GenerateReturnInstruction(expressions[i]);
 			else
 				GenerateInstructionFromExpression(expressions[i]);
@@ -148,7 +149,8 @@ public sealed class BytecodeGenerator
 
 	private void GenerateInstructionFromExpression(Expression expression) =>
 		_ = TryGenerateBodyInstructions(expression) ?? TryGenerateBinaryInstructions(expression) ??
-			TryGenerateIfInstructions(expression) ?? TryGenerateAssignmentInstructions(expression) ??
+			TryGenerateIfInstructions(expression) ?? TryGenerateSelectorIfInstructions(expression) ??
+			TryGenerateAssignmentInstructions(expression) ??
 			TryGenerateLoopInstructions(expression) ?? TryGenerateMutableInstructions(expression) ??
 			TryGenerateMemberCallInstruction(expression) ??
 			TryGenerateVariableCallInstruction(expression) ?? TryGenerateValueInstruction(expression) ??
@@ -337,6 +339,30 @@ public sealed class BytecodeGenerator
 			return null;
 		GenerateIfInstructions(ifExpression);
 		return true;
+	}
+
+	private bool? TryGenerateSelectorIfInstructions(Expression expression)
+	{
+		if (expression is not SelectorIf selectorIf)
+			return null;
+		GenerateSelectorIfInstructions(selectorIf);
+		return true;
+	}
+
+	private void GenerateSelectorIfInstructions(SelectorIf selectorIf)
+	{
+		foreach (var @case in selectorIf.Cases)
+		{
+			GenerateCodeForIfCondition(@case.Condition);
+			GenerateInstructionFromExpression(@case.Then);
+			instructions.Add(new ReturnInstruction(registry.PreviousRegister));
+			instructions.Add(new JumpToId(InstructionType.JumpEnd, idStack.Pop()));
+		}
+		if (selectorIf.OptionalElse != null)
+		{
+			GenerateInstructionFromExpression(selectorIf.OptionalElse);
+			instructions.Add(new ReturnInstruction(registry.PreviousRegister));
+		}
 	}
 
 	private bool? TryGenerateBinaryInstructions(Expression expression)
