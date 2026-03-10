@@ -1,8 +1,8 @@
 {
   "profiles": {
-    "Strict": {
-      "commandName": "Project",
-      "commandLineArgs": "Examples/SimpleCalculator.strictbinary decompile"
-    }
+		"Strict": {
+			"commandName": "Project",
+			"commandLineArgs": "Examples/SimpleCalculator.strictbinary"
+		}
   }
 }

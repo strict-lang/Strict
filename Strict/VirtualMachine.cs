@@ -221,8 +221,8 @@ public sealed class VirtualMachine(Package package)
 		return true;
 	}
 
-	//ncrunch: no coverage start
-	private ValueInstance CreateTraitInstance(Type traitType)
+	//ncrunch: no coverage start, TODO: add more tests
+	private static ValueInstance CreateTraitInstance(Type traitType)
 	{
 		var concreteName = traitType.Name switch
 		{

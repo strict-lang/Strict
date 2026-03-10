@@ -88,8 +88,8 @@ public static class BinaryOperator
 	public static int GetPrecedence(char tokenFirstCharacter) =>
 		tokenFirstCharacter switch
 		{
-			',' => 0,  // ncrunch: no coverage always has to flush everything out; ',' cannot be reached
-								 // because this method is called only for operators
+			',' => 0, // ncrunch: no coverage always has to flush everything out; ',' cannot be reached
+								// because this method is called only for operators
 			'+' => 11, // unary '-' and 'not' operators have lower precedence (3)
 			'-' => 11,
 			'%' => 12,
@@ -113,7 +113,9 @@ public static class BinaryOperator
 			2 => token[0] switch
 			{
 				't' => 20, // to
-				'i' => token[1] == 'n' ? 9 : 1, // in=9, is=1
+				'i' => token[1] == 'n'
+					? 9 // in
+					: 1, // is
 				'o' => 4, // or
 				_ => 7 // <=, >=
 			},

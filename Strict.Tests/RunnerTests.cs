@@ -54,4 +54,29 @@ public sealed class RunnerTests
 				File.Delete(binaryFilePath);
 		}
 	}
+
+	[Test]
+	public void RunFromBytecodeFileWithoutStrictSourceFile()
+	{
+		const string sourceFilePath = "Examples/SimpleCalculator.strict";
+		var tempDirectory = Path.Combine(Path.GetTempPath(), "Strict" + Guid.NewGuid().ToString("N"));
+		Directory.CreateDirectory(tempDirectory);
+		var copiedSourceFilePath = Path.Combine(tempDirectory, Path.GetFileName(sourceFilePath));
+		var copiedBinaryFilePath = Path.ChangeExtension(copiedSourceFilePath, BytecodeSerializer.Extension)!;
+		try
+		{
+			File.Copy(sourceFilePath, copiedSourceFilePath);
+			new Runner(TestPackage.Instance, copiedSourceFilePath).Run().Dispose();
+			Assert.That(File.Exists(copiedBinaryFilePath), Is.True);
+			File.Delete(copiedSourceFilePath);
+			writer.GetStringBuilder().Clear();
+			using var _ = new Runner(TestPackage.Instance, copiedBinaryFilePath).Run();
+			Assert.That(writer.ToString(), Does.StartWith("2 + 3 = 5" + Environment.NewLine + "2 * 3 = 6"));
+		}
+		finally
+		{
+			if (Directory.Exists(tempDirectory))
+				Directory.Delete(tempDirectory, true);
+		}
+	}
 }

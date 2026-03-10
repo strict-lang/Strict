@@ -27,7 +27,7 @@ try
 		var outputFolder = Path.GetFileNameWithoutExtension(filePath);
 		new BytecodeDecompiler(basePackage).Decompile(filePath, outputFolder);
 		Console.WriteLine("Decompilation complete, written all partial .strict files (only what " +
-			"was included, no tests) to folder: " + outputFolder);
+			"was included in bytecode, no tests) to folder: " + outputFolder);
 		return;
 	}
 	var diagnostics = args.Length > 1 &&

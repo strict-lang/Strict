@@ -17,14 +17,27 @@ namespace Strict.Bytecode;
 public static class BytecodeSerializer
 {
 	public static void Serialize(IList<Instruction> instructions, string outputFilePath,
-		string typeName = "main")
+		string typeName = "main", string? sourceDirectoryPath = null)
 	{
 		using var fileStream = new FileStream(outputFilePath, FileMode.Create, FileAccess.Write);
 		using var zip = new ZipArchive(fileStream, ZipArchiveMode.Create, leaveOpen: false);
 		var entry = zip.CreateEntry(typeName + BytecodeEntryExtension, CompressionLevel.Optimal);
-		using var entryStream = entry.Open();
-		using var writer = new BinaryWriter(entryStream);
-		WriteEntry(writer, instructions);
+		using (var entryStream = entry.Open())
+		using (var writer = new BinaryWriter(entryStream))
+			WriteEntry(writer, instructions);
+		if (!string.IsNullOrWhiteSpace(sourceDirectoryPath) && Directory.Exists(sourceDirectoryPath))
+			AddSourceEntries(zip, sourceDirectoryPath);
+	}
+
+	private static void AddSourceEntries(ZipArchive zip, string sourceDirectoryPath)
+	{
+		foreach (var sourceFilePath in Directory.GetFiles(sourceDirectoryPath, "*" + Type.Extension))
+		{
+			var sourceEntry = zip.CreateEntry(Path.GetFileName(sourceFilePath), CompressionLevel.Optimal);
+			using var sourceStream = sourceEntry.Open();
+			using var writer = new StreamWriter(sourceStream);
+			writer.Write(File.ReadAllText(sourceFilePath));
+		}
 	}
 
 	private const string BytecodeEntryExtension = ".bytecode";
@@ -44,21 +57,74 @@ public static class BytecodeSerializer
 	public const byte Version = 1;
 	public const string Extension = ".strictbinary";
 
+	public static Dictionary<string, Type> LoadEmbeddedTypes(string zipFilePath, Package package)
+	{
+		using var zip = ZipFile.OpenRead(zipFilePath);
+		var sourceEntries = zip.Entries.Where(entry =>
+			entry.Name.EndsWith(Type.Extension, StringComparison.OrdinalIgnoreCase)).ToList();
+		if (sourceEntries.Count == 0)
+			return new Dictionary<string, Type>(StringComparer.Ordinal);
+		var typesByName = new Dictionary<string, Type>(StringComparer.Ordinal);
+		foreach (var entry in sourceEntries)
+		{
+			var typeName = Path.GetFileNameWithoutExtension(entry.Name);
+			if (package.FindDirectType(typeName) != null)
+				continue;
+			using var entryStream = entry.Open();
+			using var reader = new StreamReader(entryStream);
+			var lines = ReadLines(reader);
+			typesByName[typeName] = new Type(package, new TypeLines(typeName, lines));
+		}
+		foreach (var type in typesByName.Values)
+			type.ParseMembersAndMethods(new MethodExpressionParser());
+		return typesByName;
+	}
+
+	private static string[] ReadLines(StreamReader reader)
+	{
+		var text = reader.ReadToEnd();
+		return text.Replace("\r\n", "\n", StringComparison.Ordinal).
+			Split('\n', StringSplitOptions.None);
+	}
+
 	public static List<Instruction> Deserialize(string zipFilePath, Package package)
+	{
+		var entries = DeserializeAll(zipFilePath, package);
+		return entries.Values.First();
+	}
+
+	public static Dictionary<string, List<Instruction>> DeserializeAll(string zipFilePath,
+		Package package)
 	{
 		try
 		{
 			using var zip = ZipFile.OpenRead(zipFilePath);
-			if (zip.Entries.Count == 0)
+			var bytecodeEntries = zip.Entries.Where(entry =>
+				entry.Name.EndsWith(BytecodeEntryExtension, StringComparison.OrdinalIgnoreCase)).ToList();
+			if (bytecodeEntries.Count == 0)
 				throw new InvalidBytecodeFileException(Extension + " ZIP contains no entries");
-			using var entryStream = zip.Entries[0].Open();
-			using var reader = new BinaryReader(entryStream);
-			return ReadEntry(reader, package);
+			foreach (var entry in bytecodeEntries)
+				EnsureTypeExists(package, Path.GetFileNameWithoutExtension(entry.Name));
+			var result = new Dictionary<string, List<Instruction>>(StringComparer.Ordinal);
+			foreach (var entry in bytecodeEntries)
+			{
+				var typeName = Path.GetFileNameWithoutExtension(entry.Name);
+				using var entryStream = entry.Open();
+				result[typeName] = DeserializeEntry(entryStream, package);
+			}
+			return result;
 		}
 		catch (InvalidDataException ex)
 		{
 			throw new InvalidBytecodeFileException("Not a valid " + Extension + "ZIP file: " + ex.Message);
 		}
+	}
+
+	private static void EnsureTypeExists(Package package, string typeName)
+	{
+		if (package.FindDirectType(typeName) != null)
+			return;
+		new Type(package, new TypeLines(typeName, Method.Run)).ParseMembersAndMethods(new MethodExpressionParser());
 	}
 
 	internal static List<Instruction> DeserializeEntry(Stream entryStream, Package package)
@@ -554,14 +620,14 @@ public static class BytecodeSerializer
 
 	private static Value ReadBooleanValue(BinaryReader r, Package package, string[] table)
 	{
-		var type = package.GetType(table[r.Read7BitEncodedInt()]);
+		var type = EnsureResolvedType(package, table[r.Read7BitEncodedInt()]);
 		return new Value(type, new ValueInstance(type, r.ReadBoolean()));
 	}
 
 	private static Expression ReadVariableRef(BinaryReader r, Package package, string[] table)
 	{
 		var name = table[r.Read7BitEncodedInt()];
-		var type = package.GetType(table[r.Read7BitEncodedInt()]);
+		var type = EnsureResolvedType(package, table[r.Read7BitEncodedInt()]);
 		var param = new Parameter(type, name, new Value(type, new ValueInstance(type)));
 		return new ParameterCall(param);
 	}
@@ -574,7 +640,7 @@ public static class BytecodeSerializer
 		var instance = hasInstance
 			? ReadExpression(r, package, table)
 			: null;
-		var anyBaseType = package.GetType(Type.Number);
+		var anyBaseType = EnsureResolvedType(package, Type.Number);
 		var fakeMember = new Member(anyBaseType, memberName + " " + memberTypeName, null);
 		return new MemberCall(instance, fakeMember);
 	}
@@ -596,7 +662,7 @@ public static class BytecodeSerializer
 			return method;
 		foreach (var typeName in new[] { Type.Number, Type.Text, Type.Boolean })
 		{
-			method = package.GetType(typeName).Methods.FirstOrDefault(m => m.Name == operatorName);
+			method = EnsureResolvedType(package, typeName).Methods.FirstOrDefault(m => m.Name == operatorName);
 			if (method != null)
 				return method;
 		}
@@ -617,12 +683,13 @@ public static class BytecodeSerializer
 		var args = new Expression[argCount];
 		for (var i = 0; i < argCount; i++)
 			args[i] = ReadExpression(r, package, table);
-		var declaringType = package.GetType(declaringTypeName);
-		var method = FindMethod(declaringType, methodName, paramCount);
-		var returnType = returnTypeName != method.ReturnType.Name
-			? package.GetType(returnTypeName)
+		var declaringType = EnsureResolvedType(package, declaringTypeName);
+		var returnType = EnsureResolvedType(package, returnTypeName);
+		var method = FindMethod(declaringType, methodName, paramCount, returnType);
+		var declaredReturnType = returnType != method.ReturnType
+			? returnType
 			: null;
-		return new MethodCall(method, instance, args, returnType);
+		return new MethodCall(method, instance, args, declaredReturnType);
 	}
 
 	private static (MethodCall? MethodCall, Registry? Registry) ReadMethodCallData(BinaryReader r,
@@ -643,12 +710,13 @@ public static class BytecodeSerializer
 			var args = new Expression[argCount];
 			for (var i = 0; i < argCount; i++)
 				args[i] = ReadExpression(r, package, table);
-			var declaringType = package.GetType(declaringTypeName);
-			var method = FindMethod(declaringType, methodName, paramCount);
-			var returnType = returnTypeName != method.ReturnType.Name
-				? package.GetType(returnTypeName)
+			var declaringType = EnsureResolvedType(package, declaringTypeName);
+			var returnType = EnsureResolvedType(package, returnTypeName);
+			var method = FindMethod(declaringType, methodName, paramCount, returnType);
+			var methodReturnType = returnType != method.ReturnType
+				? returnType
 				: null;
-			methodCall = new MethodCall(method, instance, args, returnType);
+			methodCall = new MethodCall(method, instance, args, methodReturnType);
 		}
 		Registry? registry = null;
 		if (r.ReadBoolean())
@@ -663,23 +731,52 @@ public static class BytecodeSerializer
 		return (methodCall, registry);
 	}
 
-	private static Method FindMethod(Type type, string methodName, int paramCount)
+	private static Type EnsureResolvedType(Package package, string typeName)
 	{
-		var method =
-			type.Methods.FirstOrDefault(m =>
-				m.Name == methodName && m.Parameters.Count == paramCount) ??
-			type.Methods.FirstOrDefault(m => m.Name == methodName);
+		var resolved = package.FindType(typeName) ?? package.FindFullType(typeName);
+		if (resolved != null)
+			return resolved;
+		if (typeName.EndsWith(')') && typeName.Contains('('))
+			return package.GetType(typeName);
+		if (char.IsLower(typeName[0]))
+			throw new TypeNotFoundForBytecode(typeName);
+		EnsureTypeExists(package, typeName);
+		return package.GetType(typeName);
+	}
+
+	private static Method FindMethod(Type type, string methodName, int paramCount, Type returnType)
+	{
+		var method = type.Methods.FirstOrDefault(existingMethod =>
+			existingMethod.Name == methodName && existingMethod.Parameters.Count == paramCount) ??
+			type.Methods.FirstOrDefault(existingMethod => existingMethod.Name == methodName);
 		if (method != null)
 			return method;
-		if (type.AvailableMethods.TryGetValue(methodName, out var available))
+		if (type.AvailableMethods.TryGetValue(methodName, out var availableMethods))
 		{
-			var found = available.FirstOrDefault(m => m.Parameters.Count == paramCount) ??
-				available.FirstOrDefault();
+			var found = availableMethods.FirstOrDefault(existingMethod =>
+				existingMethod.Parameters.Count == paramCount) ?? availableMethods.FirstOrDefault();
 			if (found != null)
 				return found;
 		}
-		throw new MethodNotFoundException(methodName);
+		var methodHeader = BuildMethodHeader(methodName, paramCount, returnType);
+		var createdMethod = new Method(type, 0, new MethodExpressionParser(), [methodHeader]);
+		type.Methods.Add(createdMethod);
+		return createdMethod;
 	}
+
+	private static string BuildMethodHeader(string methodName, int paramCount, Type returnType)
+	{
+		if (paramCount == 0)
+			return returnType.IsNone
+				? methodName
+				: methodName + " " + returnType.Name;
+		var parameters = Enumerable.Range(1, paramCount).
+			Select(parameterIndex => "argument" + parameterIndex + " " + Type.Number);
+		return methodName + "(" + string.Join(", ", parameters) + ") " + returnType.Name;
+	}
+
+	public sealed class TypeNotFoundForBytecode(string typeName)
+		: Exception("Type '" + typeName + "' not found while deserializing bytecode") { }
 
 	public sealed class MethodNotFoundException(string methodName)
 		: Exception($"Method '{methodName}' not found") { }

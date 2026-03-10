@@ -22,10 +22,19 @@ public sealed class Runner : IDisposable
 		Log("╔════════════════════════════════════╗");
 		Log("║ Strict Programming Language Runner ║");
 		Log("╚════════════════════════════════════╝");
-		if (Path.GetExtension(strictFilePath) == BytecodeSerializer.Extension)
-			InitializeFromBinaryFile(basePackage, strictFilePath);
-		else
-			InitializeFromSourceFile(basePackage, strictFilePath);
+		try
+		{
+			if (Path.GetExtension(strictFilePath) == BytecodeSerializer.Extension)
+				InitializeFromBinaryFile(basePackage, strictFilePath);
+			else
+				InitializeFromSourceFile(basePackage, strictFilePath);
+		}
+		catch
+		{
+			if (package != null)
+				package.Dispose();
+			throw;
+		}
 	}
 
 	private void InitializeFromBinaryFile(Package basePackage, string binaryFilePath)
@@ -33,21 +42,17 @@ public sealed class Runner : IDisposable
 		Log("┌─ Step 1: Loading pre-compiled binary: " + binaryFilePath);
 		var startTicks = DateTime.UtcNow.Ticks;
 		var binaryDir = Path.GetDirectoryName(Path.GetFullPath(binaryFilePath)) ?? ".";
-		var typeName = Path.GetFileNameWithoutExtension(binaryFilePath);
-		var sourceFile = Path.Combine(binaryDir, typeName + ".strict");
 		package = new Package(basePackage, binaryDir);
-		if (File.Exists(sourceFile))
+		BytecodeSerializer.LoadEmbeddedTypes(binaryFilePath, package);
+		var requestedTypeName = Path.GetFileNameWithoutExtension(binaryFilePath);
+		var bytecodeByType = BytecodeSerializer.DeserializeAll(binaryFilePath, package);
+		var selectedTypeName = requestedTypeName;
+		if (!bytecodeByType.TryGetValue(selectedTypeName, out preloadedBytecode))
 		{
-			var typeLines = new TypeLines(typeName, File.ReadAllLines(sourceFile));
-			mainType = new Type(package, typeLines).ParseMembersAndMethods(new MethodExpressionParser());
+			selectedTypeName = bytecodeByType.Keys.First();
+			preloadedBytecode = bytecodeByType[selectedTypeName];
 		}
-		else
-		{
-			// No source available: create a minimal stub type for execution logging only
-			mainType = new Type(package, new TypeLines(typeName)).
-				ParseMembersAndMethods(new MethodExpressionParser());
-		}
-		preloadedBytecode = BytecodeSerializer.Deserialize(binaryFilePath, package);
+		mainType = package.GetType(selectedTypeName);
 		var endTicks = DateTime.UtcNow.Ticks;
 		stepTimes.Add(endTicks - startTicks);
 		Log("└─ Step 1 ⏱ Time: " +
@@ -100,7 +105,7 @@ public sealed class Runner : IDisposable
 		Log("║  Running from pre-compiled .strictbinary  ║");
 		Log("╚═══════════════════════════════════════════╝");
 		ExecuteBytecode(preloadedBytecode!);
-		Console.WriteLine("Successfully executed pre-compiled " + mainType.Name + " in " +
+		Log("Successfully executed pre-compiled " + mainType.Name + " in " +
 			TimeSpan.FromTicks(stepTimes.Sum()).ToString(@"s\.ffffff") + "s");
 		return this;
 	}
@@ -251,7 +256,7 @@ public sealed class Runner : IDisposable
 		var startTicks = DateTime.UtcNow.Ticks;
 		new VirtualMachine(package).Execute(instructions);
 		var endTicks = DateTime.UtcNow.Ticks;
-		Log("│  ✓ Run method executed successfully");
+		Log("│  ✓ Run method executed successfully, instructions: " + instructions.Count);
 		stepTimes.Add(endTicks - startTicks);
 		Log("└─ Step 8 ⏱ Time: " + TimeSpan.FromTicks(endTicks - startTicks).TotalMilliseconds +
 			" ms");
@@ -261,7 +266,8 @@ public sealed class Runner : IDisposable
 	{
 		var binaryPath = Path.ChangeExtension(sourceFilePath, BytecodeSerializer.Extension)!;
 		Log("┌─ Saving bytecode to: " + binaryPath);
-		BytecodeSerializer.Serialize(optimizedInstructions, binaryPath, mainType.Name);
+		BytecodeSerializer.Serialize(optimizedInstructions, binaryPath, mainType.Name,
+			Path.GetDirectoryName(sourceFilePath!));
 		Log("└─ Bytecode saved: " + new FileInfo(binaryPath).Length + " bytes");
 	}
 

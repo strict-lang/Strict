@@ -50,7 +50,8 @@ public sealed class BytecodeDecompilerTests : TestBytecode
 		}
 	}
 
-	private (string binaryFilePath, string outputFolder) SerializeAndDecompile(
+	//TODO: improve based on caller
+	private static (string binaryFilePath, string outputFolder) SerializeAndDecompile(
 		List<Instruction> instructions, string typeName)
 	{
 		var binaryFilePath = GetTempStrictBinaryFilePath();
