@@ -210,7 +210,7 @@ public sealed class ValueInstanceTests
 	{
 		var listType = TestPackage.Instance.GetListImplementationType(numberType);
 		var instance = new ValueInstance(listType, Array.Empty<ValueInstance>());
-		Assert.That(instance.GetTypeExceptText(), Is.EqualTo(listType));
+		Assert.That(instance.GetType(), Is.EqualTo(listType));
 	}
 
 	[Test]

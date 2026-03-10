@@ -6,9 +6,10 @@ using Strict.Language;
 //ncrunch: no coverage start
 if (args.Length == 0)
 {
-	Console.WriteLine("Usage: Strict <file.strict|file.strict_binary> [diagnostics]");
+	Console.WriteLine("Usage: Strict <file.strict|file.strictbinary> [diagnostics|decompile]");
 	Console.WriteLine("Example: Strict Examples/SimpleCalculator.strict diagnostics");
-	Console.WriteLine("Example: Strict Examples/SimpleCalculator.strict_binary");
+	Console.WriteLine("Example: Strict Examples/SimpleCalculator.strictbinary");
+	Console.WriteLine("Example: Strict Examples/SimpleCalculator.strictbinary decompile");
 	return;
 }
 var filePath = args[0];
@@ -20,13 +21,21 @@ if (!File.Exists(filePath))
 }
 try
 {
+	using var basePackage = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
+	if (args.Length > 1 && args[1].Equals("decompile", StringComparison.OrdinalIgnoreCase))
+	{
+		var outputFolder = Path.GetFileNameWithoutExtension(filePath);
+		new BytecodeDecompiler(basePackage).Decompile(filePath, outputFolder);
+		Console.WriteLine("Decompilation complete, written all partial .strict files (only what " +
+			"was included, no tests) to folder: " + outputFolder);
+		return;
+	}
 	var diagnostics = args.Length > 1 &&
 		args[1].Equals("diagnostics", StringComparison.OrdinalIgnoreCase);
 #if DEBUG
 	if (!diagnostics)
 		diagnostics = true;
 #endif
-	using var basePackage = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
 	new Runner(basePackage, filePath, diagnostics).Run();
 }
 catch (Exception ex)

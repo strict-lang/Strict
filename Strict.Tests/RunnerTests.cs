@@ -37,7 +37,7 @@ public sealed class RunnerTests
 	public void RunFromBytecodeFileProducesSameOutput()
 	{
 		const string StrictFilePath = "Examples/SimpleCalculator.strict";
-		var binaryFilePath = Path.ChangeExtension(StrictFilePath, BytecodeSerializer.Extension)!;
+		var binaryFilePath = Path.ChangeExtension(StrictFilePath, BytecodeSerializer.Extension);
 		try
 		{
 			new Runner(TestPackage.Instance, StrictFilePath).Run().Dispose();

@@ -277,7 +277,7 @@ public sealed class MethodCallEvaluator(Executor executor)
 	{
 		var result = new ValueInstance[leftList.Count];
 		for (var i = 0; i < leftList.Count; i++)
-			result[i] = new ValueInstance(leftList[i].GetTypeExceptText(), leftList[i].Number * rightNumber);
+			result[i] = new ValueInstance(leftList[i].GetType(), leftList[i].Number * rightNumber);
 		return new ValueInstance(leftListType, result);
 	}
 
@@ -286,7 +286,7 @@ public sealed class MethodCallEvaluator(Executor executor)
 	{
 		var result = new ValueInstance[leftList.Count];
 		for (var i = 0; i < leftList.Count; i++)
-			result[i] = new ValueInstance(leftList[i].GetTypeExceptText(), leftList[i].Number / rightNumber);
+			result[i] = new ValueInstance(leftList[i].GetType(), leftList[i].Number / rightNumber);
 		return new ValueInstance(leftListType, result);
 	}
 

@@ -43,7 +43,7 @@ public sealed class Memory
 		Frame.TryGet(variableKey, out var collection);
 		if (collection.IsDictionary)
 			//TODO: same here, why not modify the dictionary?
-			Frame.Set(variableKey, new ValueInstance(collection.GetTypeExceptText(),
+			Frame.Set(variableKey, new ValueInstance(collection.GetType(),
 				new Dictionary<ValueInstance, ValueInstance>(collection.GetDictionaryItems())
 				{
 					{ keyToAddTo, value }

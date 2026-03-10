@@ -99,12 +99,6 @@ public sealed class ExecutorTests
 	[Test]
 	public void EvaluateAllArithmeticOperators()
 	{
-		var number = TestPackage.Instance.GetType(Type.Number);
-
-		Method GetBinaryOperator(string op) =>
-			number.Methods.Single(m => m.Name == op && m.Parameters.Count == 1);
-
-		ValueInstance N(double x) => new(number, x);
 		Assert.That(executor.Execute(GetBinaryOperator(BinaryOperator.Plus), N(2), [N(3)]).Number,
 			Is.EqualTo(5));
 		Assert.That(executor.Execute(GetBinaryOperator(BinaryOperator.Minus), N(8), [N(3)]).Number,
@@ -119,6 +113,12 @@ public sealed class ExecutorTests
 			Is.EqualTo(8));
 	}
 
+	private Method GetBinaryOperator(string op) =>
+		numberType.Methods.Single(m => m.Name == op && m.Parameters.Count == 1);
+
+	private readonly Type numberType = TestPackage.Instance.GetType(Type.Number);
+	private ValueInstance N(double x) => new(numberType, x);
+
 	[Test]
 	public void AddTwoTexts()
 	{
@@ -132,12 +132,6 @@ public sealed class ExecutorTests
 	[Test]
 	public void EvaluateAllComparisonOperators()
 	{
-		var number = TestPackage.Instance.GetType(Type.Number);
-
-		Method GetBinaryOperator(string op) =>
-			number.Methods.Single(m => m.Name == op && m.Parameters.Count == 1);
-
-		ValueInstance N(double x) => new(number, x);
 		Assert.That(executor.Execute(GetBinaryOperator(BinaryOperator.Greater), N(5), [N(3)]),
 			Is.EqualTo(executor.trueInstance));
 		Assert.That(executor.Execute(GetBinaryOperator(BinaryOperator.Smaller), N(2), [N(3)]),
@@ -159,25 +153,25 @@ public sealed class ExecutorTests
 	[Test]
 	public void EvaluateAllLogicalOperators()
 	{
-		var boolean = TestPackage.Instance.GetType(Type.Boolean);
-
-		Method GetBinaryOperator(string op) =>
-			boolean.Methods.Single(m =>
-				m.Name == op && m.ReturnType.IsBoolean && m.Parameters is [{ Type.IsBoolean: true }]);
-
-		var not = boolean.Methods.Single(m =>
+		var not = booleanType.Methods.Single(m =>
 			m.Name == UnaryOperator.Not && m.ReturnType.IsBoolean && m.Parameters.Count == 0);
-		var and = GetBinaryOperator(BinaryOperator.And);
+		var and = GetBinaryBooleanOperator(BinaryOperator.And);
 		AssertBooleanOperation(and, true, true, true);
 		AssertBooleanOperation(and, true, false, false);
-		var or = GetBinaryOperator(BinaryOperator.Or);
+		var or = GetBinaryBooleanOperator(BinaryOperator.Or);
 		AssertBooleanOperation(or, true, false, false);
 		AssertBooleanOperation(or, false, false, true);
-		var xor = GetBinaryOperator(BinaryOperator.Xor);
+		var xor = GetBinaryBooleanOperator(BinaryOperator.Xor);
 		AssertBooleanOperation(xor, true, false, true);
 		AssertBooleanOperation(xor, true, true, false);
 		Assert.That(executor.Execute(not, executor.falseInstance, []), Is.EqualTo(executor.trueInstance));
 	}
+
+	private readonly Type booleanType = TestPackage.Instance.GetType(Type.Boolean);
+
+	private Method GetBinaryBooleanOperator(string op) =>
+		booleanType.Methods.Single(m =>
+			m.Name == op && m.ReturnType.IsBoolean && m.Parameters is [{ Type.IsBoolean: true }]);
 
 	private void AssertBooleanOperation(Method method, bool first, bool second, bool result) =>
 		Assert.That(executor.Execute(method, executor.ToBoolean(first), [executor.ToBoolean(second)]),

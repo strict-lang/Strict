@@ -152,7 +152,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 
 	public bool IsNumberLike(Type numberType) =>
 		IsPrimitiveType(numberType) ||
-		!IsText && !IsList && !IsDictionary && GetTypeExceptText().IsSameOrCanBeUsedAs(numberType);
+		!IsText && !IsList && !IsDictionary && GetType().IsSameOrCanBeUsedAs(numberType);
 
 	public bool IsSameOrCanBeUsedAs(Type otherType) =>
 		number switch
@@ -185,12 +185,15 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 			return IsSameOrCanBeUsedAs(methodReturnType.GetFirstImplementation())
 				? new ValueInstance(this, methodReturnType)
 				: this;
-		return GetTypeExceptText().GetFirstImplementation().IsSameOrCanBeUsedAs(methodReturnType)
+		return GetType().GetFirstImplementation().IsSameOrCanBeUsedAs(methodReturnType)
 			? new ValueInstance(this, methodReturnType)
 			: this;
 	}
 
-	public Type GetTypeExceptText() =>
+	/// <summary>
+	/// Gets the underlying type, except if it is a Text, that should always be checked before.
+	/// </summary>
+	public new Type GetType() =>
 		number switch
 		{
 			ListId => ((ValueListInstance)value).ReturnType,

@@ -1,5 +1,3 @@
-using Strict.Bytecode.Instructions;
-
 namespace Strict.Bytecode.Tests;
 
 public sealed class BytecodeDecompilerTests : TestBytecode
@@ -16,7 +14,7 @@ public sealed class BytecodeDecompilerTests : TestBytecode
 		var outputFolder = Path.Combine(Path.GetTempPath(), "decompiled_" + Path.GetRandomFileName());
 		try
 		{
-			BytecodeDecompiler.Decompile(binaryFilePath, outputFolder, TestPackage.Instance);
+			new BytecodeDecompiler(TestPackage.Instance).Decompile(binaryFilePath, outputFolder);
 			Assert.That(Directory.Exists(outputFolder), Is.True, "Output folder should be created");
 			var outputFile = Path.Combine(outputFolder, "Add.strict");
 			Assert.That(File.Exists(outputFile), Is.True, "Add.strict should be created");
@@ -33,7 +31,8 @@ public sealed class BytecodeDecompilerTests : TestBytecode
 	}
 
 	private static string GetTempStrictBinaryFilePath() =>
-		Path.Combine(Path.GetTempPath(), "decomp_test" + decompTestCounter++ + BytecodeSerializer.Extension);
+		Path.Combine(Path.GetTempPath(), nameof(BytecodeDecompilerTests) + decompTestCounter++ +
+			BytecodeSerializer.Extension);
 
 	private static int decompTestCounter;
 }

@@ -5,15 +5,9 @@ namespace Strict.Tests;
 
 public sealed class CallFrameTests
 {
-	private static readonly ValueInstance SomeNumber =
-		new(TestPackage.Instance.GetType(Language.Type.Number), 42);
-
 	[Test]
 	public void TryGetReturnsFalseWhenVariableNotFoundInRootFrame()
-	{
-		var frame = new CallFrame();
-		Assert.That(frame.TryGet("missing", out _), Is.False);
-	}
+		=> Assert.That(new CallFrame().TryGet("missing", out _), Is.False);
 
 	[Test]
 	public void TryGetReturnsFalseForParentLocalVariableNotExposedAsMember()
@@ -23,6 +17,9 @@ public sealed class CallFrameTests
 		var child = new CallFrame(parent);
 		Assert.That(child.TryGet("local", out _), Is.False);
 	}
+	
+	private static readonly ValueInstance SomeNumber =
+		new(TestPackage.Instance.GetType(Language.Type.Number), 42);
 
 	[Test]
 	public void TryGetFindsMemberVariableFromParent()

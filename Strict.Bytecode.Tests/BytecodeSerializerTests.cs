@@ -91,14 +91,14 @@ public sealed class BytecodeSerializerTests : TestBytecode
 		using var stream = zip.Entries.Single().Open();
 		using var reader = new BinaryReader(stream);
 		Assert.That(Encoding.UTF8.GetString(reader.ReadBytes(6)), Is.EqualTo(nameof(Strict)));
-		Assert.That(reader.ReadByte(), Is.EqualTo(2));
+		Assert.That(reader.ReadByte(), Is.EqualTo(BytecodeSerializer.Version));
 	}
 
 	[Test]
 	public void InvalidFileThrows()
 	{
 		var binaryFilePath = GetTempStrictBinaryFilePath();
-		File.WriteAllBytes(binaryFilePath, [0xFF, 0xFF, 0xFF, 0xFF]);
+		File.WriteAllBytes(binaryFilePath, [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]);
 		Assert.Throws<BytecodeSerializer.InvalidBytecodeFileException>(() =>
 			BytecodeSerializer.Deserialize(binaryFilePath, TestPackage.Instance));
 	}

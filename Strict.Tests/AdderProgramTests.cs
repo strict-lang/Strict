@@ -37,7 +37,7 @@ public class AdderProgramTests : TestBytecode
 
 	[Test]
 	public void AddTotalsForSingleNumber() =>
-		Assert.That(ExecuteAddTotals("AdderProgram(5).AddTotals"), Is.EqualTo(new[] { 5m }));
+		Assert.That(ExecuteAddTotals("AdderProgram(5).AddTotals"), Is.EqualTo(new[] { 5 }));
 
 	[Test]
 	public void AddTotalsForTwoNumbers() =>
@@ -49,8 +49,7 @@ public class AdderProgramTests : TestBytecode
 	[Category("Slow")]
 	[Benchmark]
 	public void AddTotalsForThreeNumbers() =>
-		Assert.That(ExecuteAddTotals("AdderProgram(1, 2, 3).AddTotals"),
-			Is.EqualTo(new[] { 1m, 3m, 6m }));
+		Assert.That(ExecuteAddTotals("AdderProgram(1, 2, 3).AddTotals"), Is.EqualTo(new[] { 1, 3, 6 }));
 
 	[Test]
 	[Category("Manual")]

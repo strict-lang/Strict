@@ -1,4 +1,3 @@
-using System.Collections;
 using System.IO.Compression;
 using Strict.Bytecode.Instructions;
 using Strict.Expressions;
@@ -17,33 +16,33 @@ namespace Strict.Bytecode;
 /// </summary>
 public static class BytecodeSerializer
 {
-	private static readonly byte[] EntryMagicBytes = "Strict"u8.ToArray();
-	private const byte Version = 2;
-	public const string Extension = ".strict_binary";
-	private const string BytecodeEntryExtension = ".bytecode";
-
-	public static void Serialize(IList<Instruction> instructions, string outputPath,
+	public static void Serialize(IList<Instruction> instructions, string outputFilePath,
 		string typeName = "main")
 	{
-		using var fileStream = new FileStream(outputPath, FileMode.Create, FileAccess.Write);
+		using var fileStream = new FileStream(outputFilePath, FileMode.Create, FileAccess.Write);
 		using var zip = new ZipArchive(fileStream, ZipArchiveMode.Create, leaveOpen: false);
 		var entry = zip.CreateEntry(typeName + BytecodeEntryExtension, CompressionLevel.Optimal);
 		using var entryStream = entry.Open();
 		using var writer = new BinaryWriter(entryStream);
-		var stringTable = BuildStringTable(instructions);
-		WriteEntry(writer, instructions, stringTable);
+		WriteEntry(writer, instructions);
 	}
 
-	private static void WriteEntry(BinaryWriter w, IList<Instruction> instructions,
-		StringTable stringTable)
+	private const string BytecodeEntryExtension = ".bytecode";
+
+	private static void WriteEntry(BinaryWriter writer, IList<Instruction> instructions)
 	{
-		w.Write(EntryMagicBytes);
-		w.Write(Version);
-		WriteStringTable(w, stringTable);
-		w.Write7BitEncodedInt(instructions.Count);
+		writer.Write(EntryMagicBytes);
+		writer.Write(Version);
+		var table = new NameTable(instructions);
+		table.Write(writer);
+		writer.Write7BitEncodedInt(instructions.Count);
 		foreach (var instruction in instructions)
-			WriteInstruction(w, instruction, stringTable);
+			WriteInstruction(writer, instruction, table);
 	}
+
+	private static readonly byte[] EntryMagicBytes = "Strict"u8.ToArray();
+	public const byte Version = 1;
+	public const string Extension = ".strictbinary";
 
 	public static List<Instruction> Deserialize(string zipFilePath, Package package)
 	{
@@ -51,14 +50,14 @@ public static class BytecodeSerializer
 		{
 			using var zip = ZipFile.OpenRead(zipFilePath);
 			if (zip.Entries.Count == 0)
-				throw new InvalidBytecodeFileException("ZIP contains no entries");
+				throw new InvalidBytecodeFileException(Extension + " ZIP contains no entries");
 			using var entryStream = zip.Entries[0].Open();
 			using var reader = new BinaryReader(entryStream);
 			return ReadEntry(reader, package);
 		}
 		catch (InvalidDataException ex)
 		{
-			throw new InvalidBytecodeFileException("Not a valid ZIP file: " + ex.Message);
+			throw new InvalidBytecodeFileException("Not a valid " + Extension + "ZIP file: " + ex.Message);
 		}
 	}
 
@@ -68,14 +67,14 @@ public static class BytecodeSerializer
 		return ReadEntry(reader, package);
 	}
 
-	private static List<Instruction> ReadEntry(BinaryReader r, Package package)
+	private static List<Instruction> ReadEntry(BinaryReader reader, Package package)
 	{
-		ValidateMagicAndVersion(r);
-		var stringTable = ReadStringTable(r);
-		var count = r.Read7BitEncodedInt();
+		ValidateMagicAndVersion(reader);
+		var table = new NameTable(reader);
+		var count = reader.Read7BitEncodedInt();
 		var instructions = new List<Instruction>(count);
-		for (var i = 0; i < count; i++)
-			instructions.Add(ReadInstruction(r, package, stringTable));
+		for (var index = 0; index < count; index++)
+			instructions.Add(ReadInstruction(reader, package, table.ToArray()));
 		return instructions;
 	}
 
@@ -83,7 +82,7 @@ public static class BytecodeSerializer
 	{
 		var magic = reader.ReadBytes(EntryMagicBytes.Length);
 		if (!magic.SequenceEqual(EntryMagicBytes))
-			throw new InvalidBytecodeFileException("Entry does not start with 'Strict' magic");
+			throw new InvalidBytecodeFileException("Entry does not start with 'Strict' magic bytes");
 		var fileVersion = reader.ReadByte();
 		if (fileVersion is 0 or > Version)
 			throw new InvalidVersion(fileVersion);
@@ -95,446 +94,354 @@ public static class BytecodeSerializer
 	public sealed class InvalidVersion(byte fileVersion) : Exception("File version: " +
 		fileVersion + ", this runtime only supports up to version " + Version);
 
-	// ── String table ──────────────────────────────────────────────────────────
-
-	private sealed class StringTable : IEnumerable<string>
-	{
-		private readonly List<string> strings = [];
-		private readonly Dictionary<string, int> index = new(StringComparer.Ordinal);
-
-		public int Add(string s)
-		{
-			if (index.TryGetValue(s, out var i))
-				return i;
-			i = strings.Count;
-			strings.Add(s);
-			index[s] = i;
-			return i;
-		}
-
-		public int this[string s] => index[s];
-		public int Count => strings.Count;
-		public IEnumerator<string> GetEnumerator() => strings.GetEnumerator();
-		IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
-	}
-
-	private static StringTable BuildStringTable(IList<Instruction> instructions)
-	{
-		var table = new StringTable();
-		foreach (var inst in instructions)
-			CollectStrings(inst, table);
-		return table;
-	}
-
-	private static void CollectStrings(Instruction inst, StringTable table)
-	{
-		switch (inst)
-		{
-		case LoadVariableToRegister loadVar:
-			table.Add(loadVar.Identifier);
-			break;
-		case StoreVariableInstruction storeVar:
-			table.Add(storeVar.Identifier);
-			CollectValueInstanceStrings(storeVar.ValueInstance, table);
-			break;
-		case StoreFromRegisterInstruction storeReg:
-			table.Add(storeReg.Identifier);
-			break;
-		case SetInstruction set:
-			CollectValueInstanceStrings(set.ValueInstance, table);
-			break;
-		case LoadConstantInstruction loadConst:
-			CollectValueInstanceStrings(loadConst.ValueInstance, table);
-			break;
-		case Invoke invoke when invoke.Method != null:
-			CollectMethodCallStrings(invoke.Method, table);
-			break;
-		case WriteToListInstruction writeList:
-			table.Add(writeList.Identifier);
-			break;
-		case WriteToTableInstruction writeTable:
-			table.Add(writeTable.Identifier);
-			break;
-		case RemoveInstruction remove:
-			table.Add(remove.Identifier);
-			break;
-		case ListCallInstruction listCall:
-			table.Add(listCall.Identifier);
-			break;
-		}
-	}
-
-	private static void CollectValueInstanceStrings(ValueInstance val, StringTable table)
-	{
-		if (val.IsText)
-		{
-			table.Add(val.Text);
-			return;
-		}
-		if (val.IsList)
-		{
-			table.Add(val.List.ReturnType.Name);
-			foreach (var item in val.List.Items)
-				CollectValueInstanceStrings(item, table);
-			return;
-		}
-		var type = val.GetTypeExceptText();
-		if (type.IsBoolean || type.IsNone)
-			table.Add(type.Name);
-		else if (!IsSmallNumber(val.Number))
-			table.Add(type.Name);
-		// SmallNumber: no type name needed (Number is implied)
-	}
-
-	private static void CollectMethodCallStrings(MethodCall mc, StringTable table)
-	{
-		table.Add(mc.Method.Type.Name);
-		table.Add(mc.Method.Name);
-		table.Add(mc.ReturnType.Name);
-		if (mc.Instance != null)
-			CollectExpressionStrings(mc.Instance, table);
-		foreach (var arg in mc.Arguments)
-			CollectExpressionStrings(arg, table);
-	}
-
-	private static void CollectExpressionStrings(Expression expr, StringTable table)
-	{
-		switch (expr)
-		{
-		case Value val when val.Data.IsText:
-			table.Add(val.Data.Text);
-			break;
-		case Value val when val.Data.GetTypeExceptText().IsBoolean:
-			table.Add(val.Data.GetTypeExceptText().Name);
-			break;
-		case Value val when !IsSmallNumber(val.Data.Number):
-			table.Add(val.Data.GetTypeExceptText().Name);
-			break;
-		case MemberCall memberCall:
-			table.Add(memberCall.Member.Name);
-			table.Add(memberCall.Member.Type.Name);
-			if (memberCall.Instance != null)
-				CollectExpressionStrings(memberCall.Instance, table);
-			break;
-		case Binary binary:
-			table.Add(binary.Method.Name);
-			CollectExpressionStrings(binary.Instance!, table);
-			CollectExpressionStrings(binary.Arguments[0], table);
-			break;
-		case MethodCall mc:
-			CollectMethodCallStrings(mc, table);
-			break;
-		default:
-			table.Add(expr.ToString());
-			table.Add(expr.ReturnType.Name);
-			break;
-		}
-	}
-
-	private static void WriteStringTable(BinaryWriter w, StringTable table)
-	{
-		w.Write7BitEncodedInt(table.Count);
-		foreach (var s in table)
-			w.Write(s);
-	}
-
-	private static string[] ReadStringTable(BinaryReader r)
-	{
-		var count = r.Read7BitEncodedInt();
-		var table = new string[count];
-		for (var i = 0; i < count; i++)
-			table[i] = r.ReadString();
-		return table;
-	}
-
-	// ── ValueKind ─────────────────────────────────────────────────────────────
-
 	private enum ValueKind : byte
 	{
 		None,
+		/// <summary>
+		/// 0–255 stored as 1 byte; Number type is implied
+		/// </summary>
+		SmallNumber,
+		/// <summary>
+		/// Any 32-bit signed integer value, no floating point.
+		/// </summary>
+		IntegerNumber,
+		/// <summary>
+		/// Any other number is stored as a 64-bit double floating point number (default in Strict)
+		/// </summary>
 		Number,
 		Text,
 		Boolean,
 		List,
-		SmallNumber,  // 0–255 stored as 1 byte; Number type is implied
+		//TODO: need tests
 		Character,
 		Name,
 		Dictionary
 	}
 
-	private static bool IsSmallNumber(double v) =>
-		v >= 0 && v <= 255 && v == Math.Floor(v);
-
-	// ── Write helpers ─────────────────────────────────────────────────────────
-
-	private static void WriteInstruction(BinaryWriter w, Instruction inst, StringTable table)
+	private static void WriteInstruction(BinaryWriter writer, Instruction instruction,
+		NameTable table)
 	{
-		switch (inst)
+		switch (instruction)
 		{
 		case LoadConstantInstruction loadConst:
-			w.Write((byte)InstructionType.LoadConstantToRegister);
-			w.Write((byte)loadConst.Register);
-			WriteValueInstance(w, loadConst.ValueInstance, table);
+			writer.Write((byte)InstructionType.LoadConstantToRegister);
+			writer.Write((byte)loadConst.Register);
+			WriteValueInstance(writer, loadConst.ValueInstance, table);
 			break;
 		case LoadVariableToRegister loadVar:
-			w.Write((byte)InstructionType.LoadVariableToRegister);
-			w.Write((byte)loadVar.Register);
-			w.Write7BitEncodedInt(table[loadVar.Identifier]);
+			writer.Write((byte)InstructionType.LoadVariableToRegister);
+			writer.Write((byte)loadVar.Register);
+			writer.Write7BitEncodedInt(table[loadVar.Identifier]);
 			break;
 		case StoreVariableInstruction storeVar:
-			w.Write((byte)InstructionType.StoreConstantToVariable);
-			WriteValueInstance(w, storeVar.ValueInstance, table);
-			w.Write7BitEncodedInt(table[storeVar.Identifier]);
-			w.Write(storeVar.IsMember);
+			writer.Write((byte)InstructionType.StoreConstantToVariable);
+			WriteValueInstance(writer, storeVar.ValueInstance, table);
+			writer.Write7BitEncodedInt(table[storeVar.Identifier]);
+			writer.Write(storeVar.IsMember);
 			break;
 		case StoreFromRegisterInstruction storeReg:
-			w.Write((byte)InstructionType.StoreRegisterToVariable);
-			w.Write((byte)storeReg.Register);
-			w.Write7BitEncodedInt(table[storeReg.Identifier]);
+			writer.Write((byte)InstructionType.StoreRegisterToVariable);
+			writer.Write((byte)storeReg.Register);
+			writer.Write7BitEncodedInt(table[storeReg.Identifier]);
 			break;
 		case SetInstruction set:
-			w.Write((byte)InstructionType.Set);
-			WriteValueInstance(w, set.ValueInstance, table);
-			w.Write((byte)set.Register);
+			writer.Write((byte)InstructionType.Set);
+			WriteValueInstance(writer, set.ValueInstance, table);
+			writer.Write((byte)set.Register);
 			break;
 		case BinaryInstruction binary:
-			w.Write((byte)binary.InstructionType);
-			w.Write((byte)binary.Registers.Length);
+			writer.Write((byte)binary.InstructionType);
+			writer.Write((byte)binary.Registers.Length);
 			foreach (var reg in binary.Registers)
-				w.Write((byte)reg);
+				writer.Write((byte)reg);
 			break;
 		case Invoke invoke:
-			w.Write((byte)InstructionType.Invoke);
-			w.Write((byte)invoke.Register);
-			WriteMethodCallData(w, invoke.Method, invoke.PersistedRegistry, table);
+			writer.Write((byte)InstructionType.Invoke);
+			writer.Write((byte)invoke.Register);
+			WriteMethodCallData(writer, invoke.Method, invoke.PersistedRegistry, table);
 			break;
 		case ReturnInstruction ret:
-			w.Write((byte)InstructionType.Return);
-			w.Write((byte)ret.Register);
+			writer.Write((byte)InstructionType.Return);
+			writer.Write((byte)ret.Register);
 			break;
 		case LoopBeginInstruction loopBegin:
-			w.Write((byte)InstructionType.LoopBegin);
-			w.Write((byte)loopBegin.Register);
-			w.Write(loopBegin.IsRange);
+			writer.Write((byte)InstructionType.LoopBegin);
+			writer.Write((byte)loopBegin.Register);
+			writer.Write(loopBegin.IsRange);
 			if (loopBegin.IsRange)
-				w.Write7BitEncodedInt((int)loopBegin.EndIndex!.Value);
+				writer.Write7BitEncodedInt((int)loopBegin.EndIndex!.Value);
 			break;
 		case LoopEndInstruction loopEnd:
-			w.Write((byte)InstructionType.LoopEnd);
-			w.Write7BitEncodedInt(loopEnd.Steps);
+			writer.Write((byte)InstructionType.LoopEnd);
+			writer.Write7BitEncodedInt(loopEnd.Steps);
 			break;
 		case JumpIfNotZero jumpIfNotZero:
-			w.Write((byte)InstructionType.JumpIfNotZero);
-			w.Write7BitEncodedInt(jumpIfNotZero.Steps);
-			w.Write((byte)jumpIfNotZero.Register);
+			writer.Write((byte)InstructionType.JumpIfNotZero);
+			writer.Write7BitEncodedInt(jumpIfNotZero.Steps);
+			writer.Write((byte)jumpIfNotZero.Register);
 			break;
 		case JumpIf jumpIf:
-			w.Write((byte)jumpIf.InstructionType);
-			w.Write7BitEncodedInt(jumpIf.Steps);
+			writer.Write((byte)jumpIf.InstructionType);
+			writer.Write7BitEncodedInt(jumpIf.Steps);
 			break;
 		case Jump jump:
-			w.Write((byte)jump.InstructionType);
-			w.Write7BitEncodedInt(jump.InstructionsToSkip);
+			writer.Write((byte)jump.InstructionType);
+			writer.Write7BitEncodedInt(jump.InstructionsToSkip);
 			break;
 		case JumpToId jumpToId:
-			w.Write((byte)jumpToId.InstructionType);
-			w.Write7BitEncodedInt(jumpToId.Id);
+			writer.Write((byte)jumpToId.InstructionType);
+			writer.Write7BitEncodedInt(jumpToId.Id);
 			break;
 		case WriteToListInstruction writeToList:
-			w.Write((byte)InstructionType.InvokeWriteToList);
-			w.Write((byte)writeToList.Register);
-			w.Write7BitEncodedInt(table[writeToList.Identifier]);
+			writer.Write((byte)InstructionType.InvokeWriteToList);
+			writer.Write((byte)writeToList.Register);
+			writer.Write7BitEncodedInt(table[writeToList.Identifier]);
 			break;
 		case WriteToTableInstruction writeToTable:
-			w.Write((byte)InstructionType.InvokeWriteToTable);
-			w.Write((byte)writeToTable.Key);
-			w.Write((byte)writeToTable.Value);
-			w.Write7BitEncodedInt(table[writeToTable.Identifier]);
+			writer.Write((byte)InstructionType.InvokeWriteToTable);
+			writer.Write((byte)writeToTable.Key);
+			writer.Write((byte)writeToTable.Value);
+			writer.Write7BitEncodedInt(table[writeToTable.Identifier]);
 			break;
 		case RemoveInstruction remove:
-			w.Write((byte)InstructionType.InvokeRemove);
-			w.Write7BitEncodedInt(table[remove.Identifier]);
-			w.Write((byte)remove.Register);
+			writer.Write((byte)InstructionType.InvokeRemove);
+			writer.Write7BitEncodedInt(table[remove.Identifier]);
+			writer.Write((byte)remove.Register);
 			break;
 		case ListCallInstruction listCall:
-			w.Write((byte)InstructionType.ListCall);
-			w.Write((byte)listCall.Register);
-			w.Write((byte)listCall.IndexValueRegister);
-			w.Write7BitEncodedInt(table[listCall.Identifier]);
+			writer.Write((byte)InstructionType.ListCall);
+			writer.Write((byte)listCall.Register);
+			writer.Write((byte)listCall.IndexValueRegister);
+			writer.Write7BitEncodedInt(table[listCall.Identifier]);
 			break;
 		}
 	}
 
-	private static void WriteValueInstance(BinaryWriter w, ValueInstance val, StringTable table)
+	private static void WriteValueInstance(BinaryWriter writer, ValueInstance val, NameTable table)
 	{
 		if (val.IsText)
 		{
-			w.Write((byte)ValueKind.Text);
-			w.Write7BitEncodedInt(table[val.Text]);
+			writer.Write((byte)ValueKind.Text);
+			writer.Write7BitEncodedInt(table[val.Text]);
 			return;
 		}
 		if (val.IsList)
 		{
-			w.Write((byte)ValueKind.List);
-			w.Write7BitEncodedInt(table[val.List.ReturnType.Name]);
+			writer.Write((byte)ValueKind.List);
+			writer.Write7BitEncodedInt(table[val.List.ReturnType.Name]);
 			var items = val.List.Items;
-			w.Write7BitEncodedInt(items.Length);
+			writer.Write7BitEncodedInt(items.Length);
 			foreach (var item in items)
-				WriteValueInstance(w, item, table);
+				WriteValueInstance(writer, item, table);
 			return;
 		}
-		var type = val.GetTypeExceptText();
+		var type = val.GetType();
 		if (type.IsBoolean)
 		{
-			w.Write((byte)ValueKind.Boolean);
-			w.Write7BitEncodedInt(table[type.Name]);
-			w.Write(val.Boolean);
+			writer.Write((byte)ValueKind.Boolean);
+			writer.Write7BitEncodedInt(table[type.Name]);
+			writer.Write(val.Boolean);
 			return;
 		}
 		if (type.IsNone)
 		{
-			w.Write((byte)ValueKind.None);
-			w.Write7BitEncodedInt(table[type.Name]);
+			writer.Write((byte)ValueKind.None);
+			writer.Write7BitEncodedInt(table[type.Name]);
 			return;
 		}
-		if (IsSmallNumber(val.Number))
+		if (type.IsNumber)
 		{
-			w.Write((byte)ValueKind.SmallNumber);
-			w.Write((byte)(int)val.Number);
-			return;
+			if (IsSmallNumber(val.Number))
+			{
+				writer.Write((byte)ValueKind.SmallNumber);
+				writer.Write((byte)(int)val.Number);
+			}
+			else if (IsIntegerNumber(val.Number))
+			{
+				writer.Write((byte)ValueKind.IntegerNumber);
+				writer.Write((int)val.Number);
+			}
+			else
+			{
+				writer.Write((byte)ValueKind.Number);
+				writer.Write(val.Number);
+			}
 		}
-		w.Write((byte)ValueKind.Number);
-		w.Write7BitEncodedInt(table[type.Name]);
-		w.Write(val.Number);
+		else
+			throw new NotSupportedException("WriteValueInstance not supported value: " + val);
 	}
+
+	private static bool IsSmallNumber(double value) =>
+		value is >= 0 and <= 255 && value == Math.Floor(value);
+
+	public static bool IsIntegerNumber(double value) =>
+		value is >= int.MinValue and <= int.MaxValue && value == Math.Floor(value);
 
 	private enum ExpressionKind : byte
 	{
-		SmallNumberValue,   // 1 extra byte (0–255)
-		NumberValue,        // 8-byte double
-		TextValue,          // string-table index
-		BooleanValue,       // string-table index + 1-byte bool
-		VariableRef,        // string-table index (name) + string-table index (type)
-		MemberRef,          // string-table index (name) + string-table index (type) + optional instance
-		BinaryExpr,         // string-table index (op) + left + right
-		MethodCallExpr      // string-table indices + optional instance + args
+		/// <summary>
+		/// Store any small number as just 1 extra byte (only values 0–255 would work)
+		/// </summary>
+		SmallNumberValue,
+		/// <summary>
+		/// 4-byte integer number, second most common like int in c-type languages.
+		/// </summary>
+		IntegerNumberValue,
+		/// <summary>
+		/// 8-byte double floating point number for everything else
+		/// </summary>
+		NumberValue,
+		/// <summary>
+		/// Stored as a NameTable index
+		/// </summary>
+		TextValue,
+		/// <summary>
+		/// NameTable index + 1-byte bool
+		/// </summary>
+		BooleanValue,
+		/// <summary>
+		/// NameTable index (name) + NameTable index (type)
+		/// </summary>
+		VariableRef,
+		/// <summary>
+		/// NameTable index (name) + NameTable index (type) + optional instance
+		/// </summary>
+		MemberRef,
+		/// <summary>
+		/// NameTable index (op) + left + right
+		/// </summary>
+		BinaryExpr,
+		/// <summary>
+		/// NameTable indices + optional instance + args
+		/// </summary>
+		MethodCallExpr
 	}
 
-	private static void WriteExpression(BinaryWriter w, Expression expr, StringTable table)
+	private static void WriteExpression(BinaryWriter writer, Expression expr, NameTable table)
 	{
 		switch (expr)
 		{
-		case Value val when val.Data.IsText:
-			w.Write((byte)ExpressionKind.TextValue);
-			w.Write7BitEncodedInt(table[val.Data.Text]);
+		case Value { Data.IsText: true } val:
+			writer.Write((byte)ExpressionKind.TextValue);
+			writer.Write7BitEncodedInt(table[val.Data.Text]);
 			break;
-		case Value val when val.Data.GetTypeExceptText().IsBoolean:
-			w.Write((byte)ExpressionKind.BooleanValue);
-			w.Write7BitEncodedInt(table[val.Data.GetTypeExceptText().Name]);
-			w.Write(val.Data.Boolean);
+		case Value val when val.Data.GetType().IsBoolean:
+			writer.Write((byte)ExpressionKind.BooleanValue);
+			writer.Write7BitEncodedInt(table[val.Data.GetType().Name]);
+			writer.Write(val.Data.Boolean);
 			break;
-		case Value val when IsSmallNumber(val.Data.Number):
-			w.Write((byte)ExpressionKind.SmallNumberValue);
-			w.Write((byte)(int)val.Data.Number);
+		case Value val when val.Data.GetType().IsNumber:
+			if (IsSmallNumber(val.Data.Number))
+			{
+				writer.Write((byte)ExpressionKind.SmallNumberValue);
+				writer.Write((byte)(int)val.Data.Number);
+			}
+			else if (IsIntegerNumber(val.Data.Number))
+			{
+				writer.Write((byte)ExpressionKind.IntegerNumberValue);
+				writer.Write((int)val.Data.Number);
+			}
+			else
+			{
+				writer.Write((byte)ExpressionKind.NumberValue);
+				writer.Write(val.Data.Number);
+			}
 			break;
 		case Value val:
-			w.Write((byte)ExpressionKind.NumberValue);
-			w.Write(val.Data.Number);
-			break;
+			throw new NotSupportedException("WriteExpression not supported value: " + val);
 		case MemberCall memberCall:
-			w.Write((byte)ExpressionKind.MemberRef);
-			w.Write7BitEncodedInt(table[memberCall.Member.Name]);
-			w.Write7BitEncodedInt(table[memberCall.Member.Type.Name]);
-			w.Write(memberCall.Instance != null);
+			writer.Write((byte)ExpressionKind.MemberRef);
+			writer.Write7BitEncodedInt(table[memberCall.Member.Name]);
+			writer.Write7BitEncodedInt(table[memberCall.Member.Type.Name]);
+			writer.Write(memberCall.Instance != null);
 			if (memberCall.Instance != null)
-				WriteExpression(w, memberCall.Instance, table);
+				// ReSharper disable TailRecursiveCall
+				WriteExpression(writer, memberCall.Instance, table);
 			break;
 		case Binary binary:
-			w.Write((byte)ExpressionKind.BinaryExpr);
-			w.Write7BitEncodedInt(table[binary.Method.Name]);
-			WriteExpression(w, binary.Instance!, table);
-			WriteExpression(w, binary.Arguments[0], table);
+			writer.Write((byte)ExpressionKind.BinaryExpr);
+			writer.Write7BitEncodedInt(table[binary.Method.Name]);
+			WriteExpression(writer, binary.Instance!, table);
+			WriteExpression(writer, binary.Arguments[0], table);
 			break;
 		case MethodCall mc:
-			w.Write((byte)ExpressionKind.MethodCallExpr);
-			w.Write7BitEncodedInt(table[mc.Method.Type.Name]);
-			w.Write7BitEncodedInt(table[mc.Method.Name]);
-			w.Write7BitEncodedInt(mc.Method.Parameters.Count);
-			w.Write7BitEncodedInt(table[mc.ReturnType.Name]);
-			w.Write(mc.Instance != null);
+			writer.Write((byte)ExpressionKind.MethodCallExpr);
+			writer.Write7BitEncodedInt(table[mc.Method.Type.Name]);
+			writer.Write7BitEncodedInt(table[mc.Method.Name]);
+			writer.Write7BitEncodedInt(mc.Method.Parameters.Count);
+			writer.Write7BitEncodedInt(table[mc.ReturnType.Name]);
+			writer.Write(mc.Instance != null);
 			if (mc.Instance != null)
-				WriteExpression(w, mc.Instance, table);
-			w.Write7BitEncodedInt(mc.Arguments.Count);
+				WriteExpression(writer, mc.Instance, table);
+			writer.Write7BitEncodedInt(mc.Arguments.Count);
 			foreach (var arg in mc.Arguments)
-				WriteExpression(w, arg, table);
+				WriteExpression(writer, arg, table);
 			break;
 		default:
-			w.Write((byte)ExpressionKind.VariableRef);
-			w.Write7BitEncodedInt(table[expr.ToString()]);
-			w.Write7BitEncodedInt(table[expr.ReturnType.Name]);
+			writer.Write((byte)ExpressionKind.VariableRef);
+			writer.Write7BitEncodedInt(table[expr.ToString()]);
+			writer.Write7BitEncodedInt(table[expr.ReturnType.Name]);
 			break;
 		}
 	}
 
-	private static void WriteMethodCallData(BinaryWriter w, MethodCall? methodCall,
-		Registry? registry, StringTable table)
+	private static void WriteMethodCallData(BinaryWriter writer, MethodCall? methodCall,
+		Registry? registry, NameTable table)
 	{
-		w.Write(methodCall != null);
+		writer.Write(methodCall != null);
 		if (methodCall != null)
 		{
-			w.Write7BitEncodedInt(table[methodCall.Method.Type.Name]);
-			w.Write7BitEncodedInt(table[methodCall.Method.Name]);
-			w.Write7BitEncodedInt(methodCall.Method.Parameters.Count);
-			w.Write7BitEncodedInt(table[methodCall.ReturnType.Name]);
-			w.Write(methodCall.Instance != null);
+			writer.Write7BitEncodedInt(table[methodCall.Method.Type.Name]);
+			writer.Write7BitEncodedInt(table[methodCall.Method.Name]);
+			writer.Write7BitEncodedInt(methodCall.Method.Parameters.Count);
+			writer.Write7BitEncodedInt(table[methodCall.ReturnType.Name]);
+			writer.Write(methodCall.Instance != null);
 			if (methodCall.Instance != null)
-				WriteExpression(w, methodCall.Instance, table);
-			w.Write7BitEncodedInt(methodCall.Arguments.Count);
+				WriteExpression(writer, methodCall.Instance, table);
+			writer.Write7BitEncodedInt(methodCall.Arguments.Count);
 			foreach (var arg in methodCall.Arguments)
-				WriteExpression(w, arg, table);
+				WriteExpression(writer, arg, table);
 		}
-		w.Write(registry != null);
+		writer.Write(registry != null);
 		if (registry != null)
 		{
-			w.Write((byte)registry.NextRegister);
-			w.Write((byte)registry.PreviousRegister);
+			writer.Write((byte)registry.NextRegister);
+			writer.Write((byte)registry.PreviousRegister);
 		}
 	}
 
-	// ── Read helpers ──────────────────────────────────────────────────────────
-
-	private static Instruction ReadInstruction(BinaryReader r, Package package, string[] table)
+	private static Instruction ReadInstruction(BinaryReader reader, Package package, string[] table)
 	{
-		var type = (InstructionType)r.ReadByte();
+		var type = (InstructionType)reader.ReadByte();
 		return type switch
 		{
-			InstructionType.LoadConstantToRegister => ReadLoadConstant(r, package, table),
-			InstructionType.LoadVariableToRegister => ReadLoadVariable(r, table),
-			InstructionType.StoreConstantToVariable => ReadStoreVariable(r, package, table),
-			InstructionType.StoreRegisterToVariable => ReadStoreFromRegister(r, table),
-			InstructionType.Set => ReadSet(r, package, table),
-			InstructionType.Invoke => ReadInvoke(r, package, table),
-			InstructionType.Return => new ReturnInstruction((Register)r.ReadByte()),
-			InstructionType.LoopBegin => ReadLoopBegin(r),
-			InstructionType.LoopEnd => new LoopEndInstruction(r.Read7BitEncodedInt()),
-			InstructionType.JumpIfNotZero => ReadJumpIfNotZero(r),
-			InstructionType.Jump => new Jump(r.Read7BitEncodedInt()),
-			InstructionType.JumpIfTrue => new Jump(r.Read7BitEncodedInt(), InstructionType.JumpIfTrue),
-			InstructionType.JumpIfFalse => new Jump(r.Read7BitEncodedInt(), InstructionType.JumpIfFalse),
-			InstructionType.JumpEnd => new JumpToId(InstructionType.JumpEnd, r.Read7BitEncodedInt()),
-			InstructionType.JumpToIdIfFalse => new JumpToId(InstructionType.JumpToIdIfFalse, r.Read7BitEncodedInt()),
-			InstructionType.JumpToIdIfTrue => new JumpToId(InstructionType.JumpToIdIfTrue, r.Read7BitEncodedInt()),
-			InstructionType.InvokeWriteToList => ReadWriteToList(r, table),
-			InstructionType.InvokeWriteToTable => ReadWriteToTable(r, table),
-			InstructionType.InvokeRemove => ReadRemove(r, table),
-			InstructionType.ListCall => ReadListCall(r, table),
-			_ when IsBinaryOp(type) => ReadBinary(r, type),
+			InstructionType.LoadConstantToRegister => ReadLoadConstant(reader, package, table),
+			InstructionType.LoadVariableToRegister => ReadLoadVariable(reader, table),
+			InstructionType.StoreConstantToVariable => ReadStoreVariable(reader, package, table),
+			InstructionType.StoreRegisterToVariable => ReadStoreFromRegister(reader, table),
+			InstructionType.Set => ReadSet(reader, package, table),
+			InstructionType.Invoke => ReadInvoke(reader, package, table),
+			InstructionType.Return => new ReturnInstruction((Register)reader.ReadByte()),
+			InstructionType.LoopBegin => ReadLoopBegin(reader),
+			InstructionType.LoopEnd => new LoopEndInstruction(reader.Read7BitEncodedInt()),
+			InstructionType.JumpIfNotZero => ReadJumpIfNotZero(reader),
+			InstructionType.Jump => new Jump(reader.Read7BitEncodedInt()),
+			InstructionType.JumpIfTrue => new Jump(reader.Read7BitEncodedInt(), InstructionType.JumpIfTrue),
+			InstructionType.JumpIfFalse => new Jump(reader.Read7BitEncodedInt(), InstructionType.JumpIfFalse),
+			InstructionType.JumpEnd => new JumpToId(InstructionType.JumpEnd, reader.Read7BitEncodedInt()),
+			InstructionType.JumpToIdIfFalse => new JumpToId(InstructionType.JumpToIdIfFalse, reader.Read7BitEncodedInt()),
+			InstructionType.JumpToIdIfTrue => new JumpToId(InstructionType.JumpToIdIfTrue, reader.Read7BitEncodedInt()),
+			InstructionType.InvokeWriteToList => ReadWriteToList(reader, table),
+			InstructionType.InvokeWriteToTable => ReadWriteToTable(reader, table),
+			InstructionType.InvokeRemove => ReadRemove(reader, table),
+			InstructionType.ListCall => ReadListCall(reader, table),
+			_ when IsBinaryOp(type) => ReadBinary(reader, type),
 			_ => throw new InvalidBytecodeFileException("Unknown instruction type: " + type)
 		};
 	}
 
 	private static bool IsBinaryOp(InstructionType t) =>
-		t > InstructionType.StoreSeparator && t < InstructionType.BinaryOperatorsSeparator;
+		t is > InstructionType.StoreSeparator and < InstructionType.BinaryOperatorsSeparator;
 
 	private static LoadConstantInstruction ReadLoadConstant(BinaryReader r, Package package,
 		string[] table) =>
@@ -574,12 +481,9 @@ public static class BytecodeSerializer
 	{
 		var reg = (Register)r.ReadByte();
 		var isRange = r.ReadBoolean();
-		if (isRange)
-		{
-			var endReg = (Register)r.Read7BitEncodedInt();
-			return new LoopBeginInstruction(reg, endReg);
-		}
-		return new LoopBeginInstruction(reg);
+		return isRange
+			? new LoopBeginInstruction(reg, (Register)r.Read7BitEncodedInt())
+			: new LoopBeginInstruction(reg);
 	}
 
 	private static JumpIfNotZero ReadJumpIfNotZero(BinaryReader r) =>
@@ -606,10 +510,12 @@ public static class BytecodeSerializer
 			ValueKind.None => new ValueInstance(package.GetType(table[r.Read7BitEncodedInt()])),
 			ValueKind.Boolean =>
 				new ValueInstance(package.GetType(table[r.Read7BitEncodedInt()]), r.ReadBoolean()),
-			ValueKind.Number =>
-				new ValueInstance(package.GetType(table[r.Read7BitEncodedInt()]), r.ReadDouble()),
 			ValueKind.SmallNumber =>
-				new ValueInstance(package.GetType(Type.Number), (double)r.ReadByte()),
+				new ValueInstance(package.GetType(Type.Number), r.ReadByte()),
+			ValueKind.IntegerNumber =>
+				new ValueInstance(package.GetType(Type.Number), r.ReadInt32()),
+			ValueKind.Number =>
+				new ValueInstance(package.GetType(Type.Number), r.ReadDouble()),
 			ValueKind.List => ReadListValueInstance(r, package, table),
 			_ => throw new InvalidBytecodeFileException("Unknown ValueKind: " + kind + " at byte " +
 				r.BaseStream.Position)
@@ -633,6 +539,7 @@ public static class BytecodeSerializer
 		return kind switch
 		{
 			ExpressionKind.SmallNumberValue => new Number(package, r.ReadByte()),
+			ExpressionKind.IntegerNumberValue => new Number(package, r.ReadInt32()),
 			ExpressionKind.NumberValue => new Number(package, r.ReadDouble()),
 			ExpressionKind.TextValue => new Text(package, table[r.Read7BitEncodedInt()]),
 			ExpressionKind.BooleanValue => ReadBooleanValue(r, package, table),

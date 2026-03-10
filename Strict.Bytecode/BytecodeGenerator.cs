@@ -54,8 +54,8 @@ public sealed class BytecodeGenerator
 						members[i].Name, isMember: true));
 			return;
 		}
-		var firstNonTraitMember = instance.GetTypeExceptText().Members
-			.FirstOrDefault(member => !member.Type.IsTrait);
+		var firstNonTraitMember = instance.GetType().Members.
+			FirstOrDefault(member => !member.Type.IsTrait);
 		if (firstNonTraitMember != null)
 			instructions.Add(new StoreVariableInstruction(instance,
 				firstNonTraitMember.Name, isMember: true));

@@ -6,47 +6,47 @@ using Strict.Language;
 namespace Strict.Bytecode;
 
 /// <summary>
-/// Partially reconstructs .strict source files from a .strict_binary ZIP file.
-/// The output is a best-effort approximation — it may not compile, contains no tests,
-/// and only includes what the serialized instructions reveal. Useful for diagnostics/debugging.
+/// Partially reconstructs .strict source files from a .strictbinary ZIP file as an approximation.
+/// For debugging, will not compile, no tests. Only includes what serialized data reveals.
 /// </summary>
-public static class BytecodeDecompiler
+public sealed class BytecodeDecompiler(Package basePackage)
 {
 	/// <summary>
-	/// Opens a .strict_binary ZIP file, deserializes each bytecode entry, and writes
+	/// Opens a .strictbinary ZIP file, deserializes each bytecode entry, and writes
 	/// a reconstructed .strict source file per entry into <paramref name="outputFolder" />.
 	/// </summary>
-	public static void Decompile(string strictBinaryFilePath, string outputFolder, Package package)
+	public void Decompile(string strictBinaryFilePath, string outputFolder)
 	{
 		Directory.CreateDirectory(outputFolder);
 		using var zip = ZipFile.OpenRead(strictBinaryFilePath);
 		foreach (var entry in zip.Entries)
-		{
-			if (!entry.Name.EndsWith(".bytecode", StringComparison.OrdinalIgnoreCase))
-				continue;
-			var typeName = Path.GetFileNameWithoutExtension(entry.Name);
-			List<Instruction> instructions;
-			try
+			if (entry.Name.EndsWith(".bytecode", StringComparison.OrdinalIgnoreCase))
 			{
-				using var entryStream = entry.Open();
-				instructions = BytecodeSerializer.DeserializeEntry(entryStream, package);
+				var typeName = Path.GetFileNameWithoutExtension(entry.Name);
+				List<Instruction> instructions;
+				try
+				{
+					using var entryStream = entry.Open();
+					instructions = BytecodeSerializer.DeserializeEntry(entryStream, basePackage);
+				}
+				//ncrunch: no coverage start
+				catch (Exception ex)
+				{
+					WriteErrorFile(outputFolder, typeName, ex.Message);
+					continue;
+				} //ncrunch: no coverage end
+				var sourceLines = ReconstructSource(typeName, instructions);
+				var outputPath = Path.Combine(outputFolder, typeName + ".strict");
+				File.WriteAllLines(outputPath, sourceLines, Encoding.UTF8);
 			}
-			catch (Exception ex)
-			{
-				WriteErrorFile(outputFolder, typeName, ex.Message);
-				continue;
-			}
-			var sourceLines = ReconstructSource(typeName, instructions);
-			var outputPath = Path.Combine(outputFolder, typeName + ".strict");
-			File.WriteAllLines(outputPath, sourceLines, Encoding.UTF8);
-		}
 	}
 
+	//ncrunch: no coverage start
 	private static void WriteErrorFile(string outputFolder, string typeName, string errorMessage)
 	{
 		var lines = new[] { "// Decompilation failed: " + errorMessage };
 		File.WriteAllLines(Path.Combine(outputFolder, typeName + ".strict"), lines, Encoding.UTF8);
-	}
+	} //ncrunch: no coverage end
 
 	private static IEnumerable<string> ReconstructSource(string typeName,
 		IList<Instruction> instructions)
@@ -60,12 +60,13 @@ public static class BytecodeDecompiler
 			{
 			case StoreVariableInstruction storeVar when storeVar.IsMember:
 				members.Add("has " + storeVar.Identifier + " " +
-					storeVar.ValueInstance.GetTypeExceptText().Name);
+					storeVar.ValueInstance.GetType().Name);
 				break;
 			case StoreVariableInstruction storeVar:
+				//ncrunch: no coverage start
 				bodyLines.Add("\tconstant " + storeVar.Identifier + " = " +
 					storeVar.ValueInstance.ToExpressionCodeString());
-				break;
+				break; //ncrunch: no coverage end
 			case LoadVariableToRegister loadVar:
 				bodyLines.Add("\t// load " + loadVar.Identifier + " → " + loadVar.Register);
 				break;
@@ -76,6 +77,7 @@ public static class BytecodeDecompiler
 			case ReturnInstruction ret:
 				bodyLines.Add("\t// return " + ret.Register);
 				break;
+			//ncrunch: no coverage start
 			case Invoke invoke:
 				bodyLines.Add("\t// invoke " + (invoke.Method?.Method.Name ?? "?") + " → " +
 					invoke.Register);
@@ -92,6 +94,7 @@ public static class BytecodeDecompiler
 			default:
 				bodyLines.Add("\t// " + inst);
 				break;
+			 //ncrunch: no coverage end
 			}
 		}
 		lines.AddRange(members);

@@ -201,11 +201,13 @@ public class RepositoriesTests
 		// Requires Jetbrains.Profiler.Windows.Api.MemoryProfiler
 		MemoryProfiler.GetSnapshot(nameof(LoadStrictBaseTypesHundredTimes) + " once");
 #endif
+		Package? package = null;
 		for (var iteration = 0; iteration < 100; iteration++)
-			await repos.LoadStrictPackage();
+			package = await repos.LoadStrictPackage();
 #if MEMORY_PROFILER
 		MemoryProfiler.GetSnapshot(nameof(LoadStrictBaseTypesHundredTimes) + " 100 more times");
 #endif
+		package!.Dispose();
 	}
 
 	[Test]

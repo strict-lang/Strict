@@ -19,10 +19,12 @@
 - No empty lines are allowed inside methods.
 - Avoid adding `ArgumentNullException.ThrowIfNull`/debug asserts.
 - No duplicate code is allowed, not in production, not in tests. If code exists for something, reuse it. If it doesn't exist, add it in the right place and reuse it.
+- Do name variables and members properly, no 1 letter abbrevations (not even i, a, b, c, s, n), explain what this is. i should be index, s could be name or message or whatever, n might be number or name. Do not use long verbose names either. Short scope -> short names, long scope -> longer names with more of an explanation what they are for (e.g. outputFilePath, optimizedInstructions).
 - In tests, prefer inlining `var` locals where possible and using expression-bodied tests/helpers when they stay readable; avoid unused helper overloads.
 - Do not add more \[Ignore\( attributes in any Tests project, except in an allowlist file.
 - Do not add SupportedOSPlatform attributes, especially in tests just because you can't do something locally.
 - Do not add ad-hoc hacky cuda kernel code or any code without a proper transpiler or code emitter.
+- Do not add long comments, limit to 3 lines for summaries, best is none or 1 line. Inside methods there should usually not be any comments. Do not add comments to separate sections in a file (like using ---- or ====, that's ugly).
 
 ## Tests
 - Do not run Category("Manual") or \[Ignore\] tests ever, tests with these attributes are either supposed to be manually run or are currently disabled and ignored. If a test is fixed, remove the Ignore attribute and it becomes a normal test again.

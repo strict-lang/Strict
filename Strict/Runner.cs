@@ -44,7 +44,7 @@ public sealed class Runner : IDisposable
 		else
 		{
 			// No source available: create a minimal stub type for execution logging only
-			mainType = new Type(package, new TypeLines(typeName, Array.Empty<string>())).
+			mainType = new Type(package, new TypeLines(typeName)).
 				ParseMembersAndMethods(new MethodExpressionParser());
 		}
 		preloadedBytecode = BytecodeSerializer.Deserialize(binaryFilePath, package);
@@ -89,18 +89,16 @@ public sealed class Runner : IDisposable
 	private Package package = null!;
 	private Type mainType = null!;
 
-	public Runner Run()
-	{
-		if (preloadedBytecode != null)
-			return RunFromPreloadedBytecode();
-		return RunFromSource();
-	}
+	public Runner Run() =>
+		preloadedBytecode != null
+			? RunFromPreloadedBytecode()
+			: RunFromSource();
 
 	private Runner RunFromPreloadedBytecode()
 	{
-		Log("╔════════════════════════════════════╗");
-		Log("║  Running from pre-compiled .sbc    ║");
-		Log("╚════════════════════════════════════╝");
+		Log("╔═══════════════════════════════════════════╗");
+		Log("║  Running from pre-compiled .strictbinary  ║");
+		Log("╚═══════════════════════════════════════════╝");
 		ExecuteBytecode(preloadedBytecode!);
 		Console.WriteLine("Successfully executed pre-compiled " + mainType.Name + " in " +
 			TimeSpan.FromTicks(stepTimes.Sum()).ToString(@"s\.ffffff") + "s");
@@ -201,8 +199,8 @@ public sealed class Runner : IDisposable
 	{
 		Log("┌─ Step 6: Generate Bytecode");
 		var startTicks = DateTime.UtcNow.Ticks;
-		var runMethod = mainType.Methods.FirstOrDefault(m =>
-			m is { Name: Method.Run, Parameters.Count: 0 }) ??
+		var runMethod =
+			mainType.Methods.FirstOrDefault(m => m is { Name: Method.Run, Parameters.Count: 0 }) ??
 			throw new InvalidOperationException("No Run method found on " + mainType.Name);
 		var runMethodCall = new MethodCall(runMethod, null, Array.Empty<Expression>());
 		var instructions = new BytecodeGenerator(runMethodCall).Generate();

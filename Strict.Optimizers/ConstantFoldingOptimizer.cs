@@ -78,14 +78,14 @@ public sealed class ConstantFoldingOptimizer : InstructionOptimizer
 				: left.ToExpressionCodeString()) + (right.IsText
 				? right.Text
 				: right.ToExpressionCodeString())),
-			InstructionType.Add => new ValueInstance(left.GetTypeExceptText(), left.Number + right.Number),
-			InstructionType.Subtract => new ValueInstance(left.GetTypeExceptText(),
+			InstructionType.Add => new ValueInstance(left.GetType(), left.Number + right.Number),
+			InstructionType.Subtract => new ValueInstance(left.GetType(),
 				left.Number - right.Number),
-			InstructionType.Multiply => new ValueInstance(left.GetTypeExceptText(),
+			InstructionType.Multiply => new ValueInstance(left.GetType(),
 				left.Number * right.Number),
-			InstructionType.Divide => new ValueInstance(left.GetTypeExceptText(),
+			InstructionType.Divide => new ValueInstance(left.GetType(),
 				left.Number / right.Number),
-			InstructionType.Modulo => new ValueInstance(left.GetTypeExceptText(),
+			InstructionType.Modulo => new ValueInstance(left.GetType(),
 				left.Number % right.Number),
 			_ => null //ncrunch: no coverage
 		};

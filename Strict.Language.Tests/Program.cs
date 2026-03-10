@@ -6,9 +6,11 @@ public static class Program
 	public static async Task Main()
 	{
 		var tests = new RepositoriesTests();
+		tests.CreateRepositories();
 		tests.LoadingAllStrictFilesWithoutAsyncHundredTimes();
 		tests.SortImplementsOneThousandTimesInParallel();
 		await tests.LoadStrictBaseTypesHundredTimes();
+		tests.DisposeParserType();
 		await tests.LoadStrictBaseTypes();
 	}
 }

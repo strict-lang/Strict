@@ -156,7 +156,7 @@ public sealed class VirtualMachine(Package package)
 			? 1.0
 			: -1.0;
 		Memory.Registers[invoke.Register] =
-			new ValueInstance(current.GetTypeExceptText(), current.Number + delta);
+			new ValueInstance(current.GetType(), current.Number + delta);
 		return true;
 	}
 
@@ -300,11 +300,11 @@ public sealed class VirtualMachine(Package package)
 			BinaryOperator.Plus => AddValueInstances(left, right),
 			//ncrunch: no coverage start
 			BinaryOperator.Minus => SubtractValueInstances(left, right),
-			BinaryOperator.Multiply => new ValueInstance(right.GetTypeExceptText(),
+			BinaryOperator.Multiply => new ValueInstance(right.GetType(),
 				left.Number * right.Number),
-			BinaryOperator.Divide => new ValueInstance(right.GetTypeExceptText(),
+			BinaryOperator.Divide => new ValueInstance(right.GetType(),
 				left.Number / right.Number),
-			_ => new ValueInstance(left.GetTypeExceptText(), left.Number)
+			_ => new ValueInstance(left.GetType(), left.Number)
 		}; //ncrunch: no coverage end
 	}
 
@@ -462,7 +462,7 @@ public sealed class VirtualMachine(Package package)
 			loopBegin.InitializeRangeState(startIndex, endIndex);
 		}
 		var isDecreasing = loopBegin.IsDecreasing ?? false;
-		var numberType = Memory.Registers[loopBegin.Register].GetTypeExceptText().
+		var numberType = Memory.Registers[loopBegin.Register].GetType().
 			GetType(Type.Number);
 		if (Memory.Frame.ContainsKey("index"))
 		{
@@ -554,11 +554,11 @@ public sealed class VirtualMachine(Package package)
 		{
 			InstructionType.Add => AddValueInstances(left, right),
 			InstructionType.Subtract => SubtractValueInstances(left, right),
-			InstructionType.Multiply => new ValueInstance(right.GetTypeExceptText(),
+			InstructionType.Multiply => new ValueInstance(right.GetType(),
 				left.Number * right.Number),
-			InstructionType.Divide => new ValueInstance(right.GetTypeExceptText(),
+			InstructionType.Divide => new ValueInstance(right.GetType(),
 				left.Number / right.Number),
-			InstructionType.Modulo => new ValueInstance(right.GetTypeExceptText(),
+			InstructionType.Modulo => new ValueInstance(right.GetType(),
 				left.Number % right.Number),
 			_ => Memory.Registers[instruction.Registers[^1]] //ncrunch: no coverage
 		};
@@ -579,13 +579,13 @@ public sealed class VirtualMachine(Package package)
 				: left.Number.ToString()) + (right.IsText
 				? right.Text
 				: right.Number.ToString()));
-		return new ValueInstance(right.GetTypeExceptText(), left.Number + right.Number);
+		return new ValueInstance(right.GetType(), left.Number + right.Number);
 	}
 
 	private static ValueInstance SubtractValueInstances(ValueInstance left, ValueInstance right)
 	{
 		if (!left.IsList)
-			return new ValueInstance(left.GetTypeExceptText(), left.Number - right.Number);
+			return new ValueInstance(left.GetType(), left.Number - right.Number);
 		var items = new List<ValueInstance>(left.List.Items);
 		var removeIndex = items.FindIndex(item => item.Equals(right));
 		if (removeIndex >= 0)

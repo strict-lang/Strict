@@ -45,7 +45,7 @@ public sealed class DictionaryTests
 			"Run Dictionary(Number, Number)", "\tDictionary((2, 4)).Add(4, 8)");
 		var method = t.Methods.Single(m => m.Name == Method.Run);
 		var result = executor.Execute(method);
-		Assert.That(result.GetTypeExceptText().Name, Is.EqualTo("Dictionary(Number, Number)"));
+		Assert.That(result.GetType().Name, Is.EqualTo("Dictionary(Number, Number)"));
 		var values = result.GetDictionaryItems();
 		Assert.That(values.Count, Is.EqualTo(2));
 		Assert.That(values.Keys.Select(k => k.Number), Does.Contain(2).And.Contain(4));

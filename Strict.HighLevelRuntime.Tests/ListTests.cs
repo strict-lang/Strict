@@ -101,7 +101,7 @@ public sealed class ListTests
 		using var t = CreateType(nameof(ListsHaveDifferentDimensionsIsNotAllowed), "has number",
 			"Run", "\t" + input);
 		var error = executor.Execute(t.Methods[0], executor.noneInstance, []);
-		Assert.That(error.GetTypeExceptText().Name, Is.EqualTo(Type.Error));
+		Assert.That(error.GetType().Name, Is.EqualTo(Type.Error));
 		Assert.That(error.TryGetValueTypeInstance()!["name"].Text,
 			Is.EqualTo(MethodCallEvaluator.ListsHaveDifferentDimensions));
 	}
