@@ -7,7 +7,6 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Strict.Language\Strict.Language.csproj" />
-    <ProjectReference Include="..\Strict.Language.Tests\Strict.Language.Tests.csproj" />
     <ProjectReference Include="..\Strict.Expressions\Strict.Expressions.csproj" />
     <ProjectReference Include="..\Strict.Validators\Strict.Validators.csproj" />
     <ProjectReference Include="..\Strict.TestRunner\Strict.TestRunner.csproj" />
