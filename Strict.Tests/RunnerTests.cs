@@ -1,4 +1,5 @@
 using Strict.Bytecode;
+using Strict.Language.Tests;
 
 namespace Strict.Tests;
 
@@ -21,36 +22,36 @@ public sealed class RunnerTests
 	[Test]
 	public void RunSimpleCalculator()
 	{
-		using var _ = new Runner("Examples/SimpleCalculator.strict").Run();
+		using var _ = new Runner(TestPackage.Instance, "Examples/SimpleCalculator.strict").Run();
 		Assert.That(writer.ToString(), Does.StartWith("2 + 3 = 5" + Environment.NewLine + "2 * 3 = 6"));
 	}
 
 	[Test]
 	public void RunWithFullDiagnostics()
 	{
-		using var _ = new Runner("Examples/SimpleCalculator.strict", true).Run();
+		using var _ = new Runner(TestPackage.Instance, "Examples/SimpleCalculator.strict", true).Run();
 		Assert.That(writer.ToString().Length, Is.GreaterThan(1000));
 	}
 
 	[Test]
 	public void RunFromBytecodeFileProducesSameOutput()
 	{
-		var strictPath = "Examples/SimpleCalculator.strict";
-		var binaryPath = Path.ChangeExtension(strictPath, BytecodeSerializer.Extension);
+		const string StrictFilePath = "Examples/SimpleCalculator.strict";
+		var binaryFilePath = Path.ChangeExtension(StrictFilePath, BytecodeSerializer.Extension);
 		try
 		{
-			new Runner(strictPath).Run().Dispose();
-			Assert.That(File.Exists(binaryPath), Is.True,
+			new Runner(TestPackage.Instance, StrictFilePath).Run().Dispose();
+			Assert.That(File.Exists(binaryFilePath), Is.True,
 				BytecodeSerializer.Extension + " file should have been created");
 			writer.GetStringBuilder().Clear();
-			using var runner = Runner.LoadBytecodeFile(binaryPath).Run();
+			using var runner = Runner.LoadBytecodeFile(TestPackage.Instance, binaryFilePath).Run();
 			Assert.That(writer.ToString(),
 				Does.StartWith("2 + 3 = 5" + Environment.NewLine + "2 * 3 = 6"));
 		}
 		finally
 		{
-			if (File.Exists(binaryPath))
-				File.Delete(binaryPath);
+			if (File.Exists(binaryFilePath))
+				File.Delete(binaryFilePath);
 		}
 	}
 }

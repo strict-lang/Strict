@@ -1,6 +1,5 @@
 using Strict.Expressions;
 using Strict.Language;
-using Strict.Language.Tests;
 using Strict.Optimizers;
 using Strict.Bytecode;
 using Strict.Bytecode.Instructions;
@@ -12,7 +11,7 @@ namespace Strict;
 
 public sealed class Runner : IDisposable
 {
-	public Runner(string strictFilePath, bool enableTestsAndDetailedOutput = false)
+	public Runner(Package basePackage, string strictFilePath, bool enableTestsAndDetailedOutput = false)
 	{
 		this.enableTestsAndDetailedOutput = enableTestsAndDetailedOutput;
 		Log("╔════════════════════════════════════╗");
@@ -20,7 +19,6 @@ public sealed class Runner : IDisposable
 		Log("╚════════════════════════════════════╝");
 		Log("┌─ Step 1: Loading Strict package");
 		var startTicks = DateTime.UtcNow.Ticks;
-		var basePackage = TestPackage.Instance;
 		var endTicks = DateTime.UtcNow.Ticks;
 		Log("└─ Step 1 ⏱ Time: " +
 			TimeSpan.FromTicks(endTicks - startTicks).TotalMilliseconds + " ms");

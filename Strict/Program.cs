@@ -1,5 +1,7 @@
 using Strict;
 using Strict.Bytecode;
+using Strict.Expressions;
+using Strict.Language;
 
 //ncrunch: no coverage start
 if (args.Length == 0)
@@ -21,14 +23,14 @@ try
 	var diagnostics = args.Length > 1 &&
 		args[1].Equals("diagnostics", StringComparison.OrdinalIgnoreCase);
 #if DEBUG
-	diagnostics = true;
+	if (!diagnostics)
+		diagnostics = true;
 #endif
-	var isBytecodeFile = filePath.EndsWith(BytecodeSerializer.Extension,
-		StringComparison.OrdinalIgnoreCase);
-	if (isBytecodeFile)
-		Runner.LoadBytecodeFile(filePath, diagnostics).Run();
+	using var basePackage = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
+	if (filePath.EndsWith(BytecodeSerializer.Extension, StringComparison.OrdinalIgnoreCase))
+		Runner.LoadBytecodeFile(basePackage, filePath, diagnostics).Run();
 	else
-		new Runner(filePath, diagnostics).Run();
+		new Runner(basePackage, filePath, diagnostics).Run();
 }
 catch (Exception ex)
 {

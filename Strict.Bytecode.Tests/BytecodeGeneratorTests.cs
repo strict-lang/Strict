@@ -320,6 +320,36 @@ public sealed class BytecodeGeneratorTests : TestBytecode
 					"has number", "Check Boolean", "\tif GetValue > 0", "\t\treturn true", "\tfalse",
 					"GetValue Number", "\tnumber + 1"
 				});
+			yield return new TestCaseData("SelectorIfExample(\"add\").GetResult", "SelectorIfExample",
+				(Instruction[])
+				[
+					new StoreVariableInstruction(Text("add"), "operation"),
+					new LoadVariableToRegister(Register.R0, "operation"),
+					new LoadConstantInstruction(Register.R1, Text("add")),
+					new BinaryInstruction(InstructionType.Equal, Register.R0, Register.R1),
+					new JumpToId(InstructionType.JumpToIdIfFalse, 0),
+					new LoadConstantInstruction(Register.R2, Number(1)),
+					new ReturnInstruction(Register.R2),
+					new JumpToId(InstructionType.JumpEnd, 0),
+					new LoadVariableToRegister(Register.R3, "operation"),
+					new LoadConstantInstruction(Register.R4, Text("subtract")),
+					new BinaryInstruction(InstructionType.Equal, Register.R3, Register.R4),
+					new JumpToId(InstructionType.JumpToIdIfFalse, 1),
+					new LoadConstantInstruction(Register.R5, Number(2)),
+					new ReturnInstruction(Register.R5),
+					new JumpToId(InstructionType.JumpEnd, 1),
+					new LoadConstantInstruction(Register.R6, Number(3)),
+					new ReturnInstruction(Register.R6)
+				],
+				(string[])
+				[
+					"has operation Text",
+					"GetResult Number",
+					"\tif operation is",
+					"\t\t\"add\" then 1",
+					"\t\t\"subtract\" then 2",
+					"\t\telse 3"
+				]);
 		}
 	}
 }
