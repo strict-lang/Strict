@@ -1,3 +1,5 @@
+using Strict.Bytecode;
+
 namespace Strict.Tests;
 
 public sealed class RunnerTests
@@ -34,21 +36,21 @@ public sealed class RunnerTests
 	public void RunFromBytecodeFileProducesSameOutput()
 	{
 		var strictPath = "Examples/SimpleCalculator.strict";
-		var sbcPath = Path.ChangeExtension(strictPath, ".sbc");
+		var binaryPath = Path.ChangeExtension(strictPath, BytecodeSerializer.Extension);
 		try
 		{
-			// Run once to generate the .sbc file alongside the .strict source.
-			using (new Runner(strictPath).Run()) { }
-			Assert.That(File.Exists(sbcPath), Is.True, ".sbc file should have been created");
+			new Runner(strictPath).Run().Dispose();
+			Assert.That(File.Exists(binaryPath), Is.True,
+				BytecodeSerializer.Extension + " file should have been created");
 			writer.GetStringBuilder().Clear();
-			using var runner = Runner.LoadBytecodeFile(sbcPath).Run();
+			using var runner = Runner.LoadBytecodeFile(binaryPath).Run();
 			Assert.That(writer.ToString(),
 				Does.StartWith("2 + 3 = 5" + Environment.NewLine + "2 * 3 = 6"));
 		}
 		finally
 		{
-			if (File.Exists(sbcPath))
-				File.Delete(sbcPath);
+			if (File.Exists(binaryPath))
+				File.Delete(binaryPath);
 		}
 	}
 }

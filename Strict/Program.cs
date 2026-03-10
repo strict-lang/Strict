@@ -4,9 +4,9 @@ using Strict.Bytecode;
 //ncrunch: no coverage start
 if (args.Length == 0)
 {
-	Console.WriteLine("Usage: Strict <file.strict|file.sbc>");
-	Console.WriteLine("Example: Strict Examples/SimpleCalculator.strict");
-	Console.WriteLine("Example: Strict Examples/SimpleCalculator.sbc");
+	Console.WriteLine("Usage: Strict <file.strict|file.strict_binary> [diagnostics]");
+	Console.WriteLine("Example: Strict Examples/SimpleCalculator.strict diagnostics");
+	Console.WriteLine("Example: Strict Examples/SimpleCalculator.strict_binary");
 	return;
 }
 var filePath = args[0];
@@ -18,20 +18,17 @@ if (!File.Exists(filePath))
 }
 try
 {
+	var diagnostics = args.Length > 1 &&
+		args[1].Equals("diagnostics", StringComparison.OrdinalIgnoreCase);
+#if DEBUG
+	diagnostics = true;
+#endif
 	var isBytecodeFile = filePath.EndsWith(BytecodeSerializer.Extension,
 		StringComparison.OrdinalIgnoreCase);
 	if (isBytecodeFile)
-		Runner.LoadBytecodeFile(filePath
-#if DEBUG
-			, true
-#endif
-		).Run();
+		Runner.LoadBytecodeFile(filePath, diagnostics).Run();
 	else
-		new Runner(filePath
-#if DEBUG
-			, true
-#endif
-		).Run();
+		new Runner(filePath, diagnostics).Run();
 }
 catch (Exception ex)
 {

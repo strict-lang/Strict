@@ -57,14 +57,14 @@ public sealed class Runner : IDisposable
 	/// <summary>
 	/// Creates a Runner that executes pre-compiled bytecode from a .sbc file. The corresponding
 	/// .strict source is loaded only to resolve type and method references — parsing, validation,
-	/// testing and bytecode generation are all skipped.
+	/// testing, and bytecode generation are all skipped.
 	/// </summary>
-	public static Runner LoadBytecodeFile(string sbcFilePath,
+	public static Runner LoadBytecodeFile(string strictBinaryFilePath,
 		bool enableTestsAndDetailedOutput = false)
 	{
 		var basePackage = TestPackage.Instance;
-		var sourcePath = BytecodeSerializer.ReadSourcePath(sbcFilePath);
-		var resolvedSource = ResolveSourcePath(sbcFilePath, sourcePath);
+		var sourcePath = BytecodeSerializer.ReadSourcePath(strictBinaryFilePath);
+		var resolvedSource = ResolveSourcePath(strictBinaryFilePath, sourcePath);
 		Package? userPackage = null;
 		try
 		{
@@ -76,7 +76,7 @@ public sealed class Runner : IDisposable
 			var typeLines = new TypeLines(typeName, File.ReadAllLines(resolvedSource));
 			var mainType =
 				new Type(userPackage, typeLines).ParseMembersAndMethods(new MethodExpressionParser());
-			var (instructions, _) = BytecodeSerializer.Deserialize(sbcFilePath, userPackage);
+			var (instructions, _) = BytecodeSerializer.Deserialize(strictBinaryFilePath, userPackage);
 			return new Runner(userPackage, mainType, instructions, enableTestsAndDetailedOutput,
 				resolvedSource);
 		}
@@ -87,15 +87,15 @@ public sealed class Runner : IDisposable
 		}
 	}
 
-	private static string ResolveSourcePath(string sbcFilePath, string sourcePath)
+	private static string ResolveSourcePath(string strictBinaryFilePath, string sourcePath)
 	{
 		if (File.Exists(sourcePath))
 			return sourcePath;
-		var relative = Path.Combine(Path.GetDirectoryName(sbcFilePath) ?? ".", sourcePath);
+		var relative = Path.Combine(Path.GetDirectoryName(strictBinaryFilePath) ?? ".", sourcePath);
 		if (File.Exists(relative))
 			return relative;
 		throw new FileNotFoundException(
-			$"Source file '{sourcePath}' referenced by '{sbcFilePath}' not found.");
+			$"Source file '{sourcePath}' referenced by '{strictBinaryFilePath}' not found.");
 	}
 
 	private readonly bool enableTestsAndDetailedOutput;
@@ -145,16 +145,6 @@ public sealed class Runner : IDisposable
 		Console.WriteLine("Successfully parsed, optimized and executed " + mainType.Name + " in " +
 			TimeSpan.FromTicks(stepTimes.Sum()).ToString(@"s\.ffffff") + "s");
 		return this;
-	}
-
-	private void SaveBytecodeIfPossible(List<Instruction> optimizedInstructions)
-	{
-		if (string.IsNullOrEmpty(sourceFilePath))
-			return;
-		var sbcPath = Path.ChangeExtension(sourceFilePath, BytecodeSerializer.Extension);
-		Log("┌─ Saving bytecode to: " + sbcPath);
-		BytecodeSerializer.Serialize(optimizedInstructions, sbcPath, sourceFilePath);
-		Log("└─ Bytecode saved: " + new FileInfo(sbcPath).Length + " bytes");
 	}
 
 	private void Parse()
@@ -290,6 +280,14 @@ public sealed class Runner : IDisposable
 		stepTimes.Add(endTicks - startTicks);
 		Log("└─ Step 8 ⏱ Time: " + TimeSpan.FromTicks(endTicks - startTicks).TotalMilliseconds +
 			" ms");
+	}
+
+	private void SaveBytecodeIfPossible(List<Instruction> optimizedInstructions)
+	{
+		var binaryPath = Path.ChangeExtension(sourceFilePath, BytecodeSerializer.Extension)!;
+		Log("┌─ Saving bytecode to: " + binaryPath);
+		BytecodeSerializer.Serialize(optimizedInstructions, binaryPath, sourceFilePath!);
+		Log("└─ Bytecode saved: " + new FileInfo(binaryPath).Length + " bytes");
 	}
 
 	public void Dispose() => package.Dispose();

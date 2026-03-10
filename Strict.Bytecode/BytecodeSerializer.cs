@@ -12,9 +12,6 @@ namespace Strict.Bytecode;
 /// </summary>
 public static class BytecodeSerializer
 {
-	private static readonly byte[] MagicBytes = [0x73, 0x62, 0x63, 0x01];
-	public const string Extension = ".sbc";
-
 	public static void Serialize(IList<Instruction> instructions, string outputPath,
 		string sourceFilePath)
 	{
@@ -25,6 +22,9 @@ public static class BytecodeSerializer
 		foreach (var instruction in instructions)
 			WriteInstruction(writer, instruction);
 	}
+
+	private static readonly byte[] MagicBytes = "Strict".Select(c => (byte)c).ToArray();
+	public const string Extension = ".strict_binary";
 
 	public static (List<Instruction> Instructions, string SourceFilePath) Deserialize(
 		string sbcFilePath, Package package)
@@ -39,28 +39,26 @@ public static class BytecodeSerializer
 		return (instructions, sourcePath);
 	}
 
-	/// <summary>
-	/// Reads only the embedded source file path from the .sbc header without deserializing
-	/// the instruction payload.
-	/// </summary>
-	public static string ReadSourcePath(string sbcFilePath)
-	{
-		using var reader = new BinaryReader(File.OpenRead(sbcFilePath));
-		ValidateMagic(reader);
-		return reader.ReadString();
-	}
-
 	private static void ValidateMagic(BinaryReader reader)
 	{
-		var magic = reader.ReadBytes(4);
+		var magic = reader.ReadBytes(MagicBytes.Length);
 		if (!magic.SequenceEqual(MagicBytes))
 			throw new InvalidBytecodeFileException();
 	}
 
-	public sealed class InvalidBytecodeFileException : Exception
+	/// <summary>
+	/// Reads only the embedded source file path from the .sbc header without deserializing
+	/// the instruction payload.
+	/// </summary>
+	public static string ReadSourcePath(string strictBinaryFilePath)
 	{
-		public InvalidBytecodeFileException() : base("Not a valid Strict bytecode (.sbc) file") { }
+		using var reader = new BinaryReader(File.OpenRead(strictBinaryFilePath));
+		ValidateMagic(reader);
+		return reader.ReadString();
 	}
+
+	public sealed class InvalidBytecodeFileException()
+		: Exception("Not a valid Strict bytecode (" + Extension + ") file");
 
 	private enum InstructionClass : byte
 	{
