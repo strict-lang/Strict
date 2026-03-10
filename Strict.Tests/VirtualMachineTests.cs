@@ -597,4 +597,24 @@ public sealed class VirtualMachineTests : TestBytecode
 		]).Returns;
 		Assert.That(result!.Value.Number, Is.EqualTo(1));
 	}
+
+	[TestCase("add", 1)]
+	[TestCase("subtract", 2)]
+	[TestCase("other", 3)]
+	public void SelectorIfReturnsCorrectCase(string operation, double expected)
+	{
+		var instructions = new BytecodeGenerator(GenerateMethodCallFromSource(
+			nameof(SelectorIfReturnsCorrectCase),
+			$"{nameof(SelectorIfReturnsCorrectCase)}(\"{operation}\").GetResult",
+			// @formatter:off
+			"has operation Text",
+			"GetResult Number",
+			"\tif operation is",
+			"\t\t\"add\" then 1",
+			"\t\t\"subtract\" then 2",
+			"\t\telse 3")).Generate();
+		// @formatter:on
+		var result = vm.Execute(instructions).Returns!;
+		Assert.That(result.Value.Number, Is.EqualTo(expected));
+	}
 }
