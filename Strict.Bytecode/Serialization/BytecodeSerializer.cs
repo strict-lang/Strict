@@ -37,6 +37,25 @@ public sealed class BytecodeSerializer
 	public const byte Version = 1;
 	public const string Extension = ".strictbinary";
 
+	/// <summary>
+	/// Serializes all types and their instructions into in-memory .bytecode entry payloads.
+	/// </summary>
+	public static Dictionary<string, byte[]> SerializeToEntryBytes(
+		Dictionary<string, IList<Instruction>> instructionsByType)
+	{
+		var result = new Dictionary<string, byte[]>(instructionsByType.Count,
+			StringComparer.Ordinal);
+		foreach (var (typeName, instructions) in instructionsByType)
+		{
+			using var stream = new MemoryStream();
+			using var writer = new BinaryWriter(stream, System.Text.Encoding.UTF8, leaveOpen: true);
+			WriteEntry(writer, instructions);
+			writer.Flush();
+			result[typeName] = stream.ToArray();
+		}
+		return result;
+	}
+
 	public static bool IsIntegerNumber(double value) =>
 		value is >= int.MinValue and <= int.MaxValue && value == Math.Floor(value);
 

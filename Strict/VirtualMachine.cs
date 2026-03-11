@@ -112,7 +112,7 @@ public sealed class VirtualMachine(Package package)
 	{
 		var idx = instructionIndex - steps;
 		while (idx < instructions.Count && instructions[idx] is not LoopBeginInstruction)
-			idx++;
+			idx++; //ncrunch: no coverage
 		return idx < instructions.Count
 			? (LoopBeginInstruction)instructions[idx]
 			: throw new InvalidOperationException("No matching LoopBeginInstruction found for LoopEnd");

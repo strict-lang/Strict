@@ -36,57 +36,6 @@ public sealed class BytecodeDeserializer
 	public Package Package { get; }
 	public Dictionary<string, List<Instruction>> Instructions { get; }
 
-	public sealed class InvalidBytecodeFileException(string message) : Exception(
-		"Not a valid Strict bytecode (" + BytecodeSerializer.Extension + ") file: " + message);
-
-/*this makes no sense, we would only load a package once anyway except for some performance
-testing
-	private sealed class CachedEntry(BytecodeDeserializer deserializer, DateTime modified)
-	{
-		public BytecodeDeserializer Deserializer { get; } = deserializer;
-		public DateTime Modified { get; } = modified;
-	}
-
-	private static readonly Dictionary<string, CachedEntry> Cache =
-		new(StringComparer.OrdinalIgnoreCase);
-	private static readonly object CacheLock = new();
-
-	/// <summary>
-	/// Loads and caches deserialized bytecode keyed by file path and modification time.
-	/// Subsequent calls for the same unchanged file return the cached result without file I/O.
-	/// </summary>
-	public static BytecodeDeserializer LoadCached(string zipFilePath, Package basePackage)
-	{
-		var fullPath = Path.GetFullPath(zipFilePath);
-		var mtime = File.GetLastWriteTimeUtc(fullPath);
-		var packageName = CachedBinaryPackagePrefix + Path.GetFileNameWithoutExtension(fullPath);
-		lock (CacheLock)
-		{
-			if (Cache.TryGetValue(fullPath, out var cached) && cached.Modified == mtime)
-				return cached.Deserializer; //ncrunch: no coverage
-			if (Cache.TryGetValue(fullPath, out var stale))
-			{ //ncrunch: no coverage start
-				stale.Deserializer.LocalPackage.Dispose();
-				Cache.Remove(fullPath);
-			} //ncrunch: no coverage end
-			foreach (var key in Cache.Keys.ToList())
-			{
-				var entry = Cache[key];
-				if (entry.Deserializer.LocalPackage.Name == packageName &&
-					entry.Deserializer.LocalPackage.Parent == basePackage)
-				{
-					entry.Deserializer.LocalPackage.Dispose();
-					Cache.Remove(key);
-				}
-			}
-			var deserializer = new BytecodeDeserializer(fullPath, basePackage);
-			Cache[fullPath] = new CachedEntry(deserializer, mtime);
-			return deserializer;
-		}
-	}
-
-	public const string CachedBinaryPackagePrefix = "binary-";
-*/
 	private static Dictionary<string, List<Instruction>> DeserializeAllFromZip(ZipArchive zip,
 		Package package, string? sourceDirectory)
 	{
@@ -111,6 +60,37 @@ testing
 	}
 
 	private const string BytecodeEntryExtension = ".bytecode";
+
+	public sealed class InvalidBytecodeFileException(string message) : Exception(
+		"Not a valid Strict bytecode (" + BytecodeSerializer.Extension + ") file: " + message);
+
+	/// <summary>
+	/// Deserializes all bytecode entries from in-memory .bytecode payloads.
+	/// </summary>
+	public BytecodeDeserializer(Dictionary<string, byte[]> entryBytesByType, Package basePackage,
+		string packageName = "memory")
+	{
+		Package = new Package(basePackage, packageName + "-" + ++memoryPackageCounter);
+		Instructions = DeserializeAllFromEntries(entryBytesByType, Package);
+	}
+
+	private static Dictionary<string, List<Instruction>> DeserializeAllFromEntries(
+		Dictionary<string, byte[]> entryBytesByType, Package package)
+	{
+		if (entryBytesByType.Count == 0)
+			throw new InvalidBytecodeFileException(BytecodeSerializer.Extension + //ncrunch: no coverage
+				" ZIP contains no entries");
+		foreach (var typeName in entryBytesByType.Keys)
+			EnsureTypeExists(package, typeName, null);
+		var result = new Dictionary<string, List<Instruction>>(entryBytesByType.Count,
+			StringComparer.Ordinal);
+		foreach (var (typeName, entryBytes) in entryBytesByType)
+		{
+			using var stream = new MemoryStream(entryBytes);
+			result[typeName] = DeserializeEntry(stream, package);
+		}
+		return result;
+	}
 
 	private static void EnsureTypeExists(Package package, string typeName, string? sourceDirectory)
 	{
@@ -487,4 +467,6 @@ testing
 
 	private static readonly string[] ParameterNames =
 		["first", "second", "third", "fourth", "fifth", "sixth", "seventh", "eighth"];
+
+	private static int memoryPackageCounter;
 }

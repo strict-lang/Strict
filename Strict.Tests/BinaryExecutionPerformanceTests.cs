@@ -18,7 +18,8 @@ public class BinaryExecutionPerformanceTests
 	{
 		rememberConsoleOut = Console.Out;
 		Console.SetOut(TextWriter.Null);
-		EnsureBinaryFileExists();
+		if (!File.Exists(BinaryFilePath))
+			new Runner(TestPackage.Instance, StrictFilePath).Run().Dispose(); //ncrunch: no coverage
 		var deserializer = new BytecodeDeserializer(BinaryFilePath, TestPackage.Instance);
 		binaryPackage = deserializer.Package;
 		instructions = deserializer.Instructions.Values.First();
@@ -41,17 +42,13 @@ public class BinaryExecutionPerformanceTests
 		binaryPackage.Dispose();
 	}
 
-	private static void EnsureBinaryFileExists()
-	{
-		if (!File.Exists(BinaryFilePath))
-			new Runner(TestPackage.Instance, StrictFilePath).Run().Dispose(); //ncrunch: no coverage
-	}
-
 	[Test]
 	[Benchmark]
+	[NCrunch.Framework.ExclusivelyUses("Examples/SimpleCalculator.strict")]
 	public void ExecuteBinaryOnce() => vm.Execute(instructions);
 
 	[Test]
+	[NCrunch.Framework.ExclusivelyUses("Examples/SimpleCalculator.strict")]
 	public void ExecuteBinaryThousandTimes()
 	{
 		for (var run = 0; run < 1000; run++)

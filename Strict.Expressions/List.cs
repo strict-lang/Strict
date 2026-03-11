@@ -89,7 +89,7 @@ public sealed class List : Value
 				// Recursively evaluate nested list constants; List.Data throws NotSupportedException so we use TryGetConstantData
 				var innerData = innerList.TryGetConstantData();
 				if (innerData == null)
-					return null;
+					return null; //ncrunch: no coverage, only when we have mutable items
 				valueInstances[i] = innerData.Value;
 			}
 			else
@@ -99,9 +99,7 @@ public sealed class List : Value
 	}
 
 	private ValueInstance? cachedData;
-
-	public new ValueInstance Data =>
-		throw new NotSupportedException("Use TryGetConstantData instead!");
+	public new ValueInstance Data => throw new NotSupportedException("Use TryGetConstantData instead!");
 
 	public override string ToString()
 	{
