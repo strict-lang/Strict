@@ -3,6 +3,7 @@ using Strict.Language;
 using Strict.Optimizers;
 using Strict.Bytecode;
 using Strict.Bytecode.Instructions;
+using Strict.Bytecode.Serialization;
 using Strict.TestRunner;
 using Strict.Validators;
 using Type = Strict.Language.Type;

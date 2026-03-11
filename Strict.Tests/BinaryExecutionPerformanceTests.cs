@@ -3,6 +3,7 @@ using BenchmarkDotNet.Engines;
 using BenchmarkDotNet.Running;
 using Strict.Bytecode;
 using Strict.Bytecode.Instructions;
+using Strict.Bytecode.Serialization;
 using Strict.Language;
 using Strict.Language.Tests;
 
@@ -62,6 +63,7 @@ public class BinaryExecutionPerformanceTests
 		}
 	}
 
+	//ncrunch: no coverage start
 	[Test]
 	[Category("Slow")]
 	public void ExecuteBinaryThousandTimes()

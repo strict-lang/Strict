@@ -1,4 +1,5 @@
 using Strict.Bytecode;
+using Strict.Bytecode.Serialization;
 using Strict.Language.Tests;
 
 namespace Strict.Tests;

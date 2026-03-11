@@ -1,6 +1,7 @@
 using System.IO.Compression;
 using System.Text;
 using Strict.Bytecode.Instructions;
+using Strict.Bytecode.Serialization;
 using Strict.Expressions;
 using Strict.Language;
 using Type = Strict.Language.Type;
@@ -82,7 +83,7 @@ public sealed class BytecodeDecompiler(Package basePackage)
 				bodyLines.Add("\tconstant " + nextStore.Identifier + " = " + invoke.Method);
 				index++;
 				break;
-			case Invoke invoke when invoke.Method != null:
+			case Invoke { Method: not null } invoke:
 				bodyLines.Add("\t" + invoke.Method);
 				break;
 			}

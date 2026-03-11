@@ -1,6 +1,7 @@
 using System.IO.Compression;
 using System.Text;
 using Strict.Bytecode.Instructions;
+using Strict.Bytecode.Serialization;
 
 namespace Strict.Bytecode.Tests;
 

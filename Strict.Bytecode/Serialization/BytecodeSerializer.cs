@@ -4,7 +4,7 @@ using Strict.Expressions;
 using Strict.Language;
 using Type = Strict.Language.Type;
 
-namespace Strict.Bytecode;
+namespace Strict.Bytecode.Serialization;
 
 /// <summary>
 /// Saves optimized <see cref="Instruction" /> lists to a compact .strict_binary ZIP file
@@ -159,30 +159,6 @@ public static class BytecodeSerializer
 
 	public sealed class InvalidVersion(byte fileVersion) : Exception("File version: " +
 		fileVersion + ", this runtime only supports up to version " + Version);
-
-	private enum ValueKind : byte
-	{
-		None,
-		/// <summary>
-		/// 0–255 stored as 1 byte; Number type is implied
-		/// </summary>
-		SmallNumber,
-		/// <summary>
-		/// Any 32-bit signed integer value, no floating point.
-		/// </summary>
-		IntegerNumber,
-		/// <summary>
-		/// Any other number is stored as a 64-bit double floating point number (default in Strict)
-		/// </summary>
-		Number,
-		Text,
-		Boolean,
-		List,
-		//TODO: need tests
-		Character,
-		Name,
-		Dictionary
-	}
 
 	private static void WriteInstruction(BinaryWriter writer, Instruction instruction,
 		NameTable table)
@@ -342,46 +318,6 @@ public static class BytecodeSerializer
 
 	public static bool IsIntegerNumber(double value) =>
 		value is >= int.MinValue and <= int.MaxValue && value == Math.Floor(value);
-
-	private enum ExpressionKind : byte
-	{
-		/// <summary>
-		/// Store any small number as just 1 extra byte (only values 0–255 would work)
-		/// </summary>
-		SmallNumberValue,
-		/// <summary>
-		/// 4-byte integer number, second most common like int in c-type languages.
-		/// </summary>
-		IntegerNumberValue,
-		/// <summary>
-		/// 8-byte double floating point number for everything else
-		/// </summary>
-		NumberValue,
-		/// <summary>
-		/// Stored as a NameTable index
-		/// </summary>
-		TextValue,
-		/// <summary>
-		/// NameTable index + 1-byte bool
-		/// </summary>
-		BooleanValue,
-		/// <summary>
-		/// NameTable index (name) + NameTable index (type)
-		/// </summary>
-		VariableRef,
-		/// <summary>
-		/// NameTable index (name) + NameTable index (type) + optional instance
-		/// </summary>
-		MemberRef,
-		/// <summary>
-		/// NameTable index (op) + left + right
-		/// </summary>
-		BinaryExpr,
-		/// <summary>
-		/// NameTable indices + optional instance + args
-		/// </summary>
-		MethodCallExpr
-	}
 
 	private static void WriteExpression(BinaryWriter writer, Expression expr, NameTable table)
 	{

@@ -1,5 +1,6 @@
 using Strict;
 using Strict.Bytecode;
+using Strict.Bytecode.Serialization;
 using Strict.Language;
 using Strict.Language.Tests;
 using Strict.Tests;
