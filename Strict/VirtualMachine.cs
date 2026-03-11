@@ -8,6 +8,8 @@ namespace Strict;
 
 public sealed class VirtualMachine(Package package)
 {
+	private readonly Type numberType = package.GetType(Type.Number);
+
 	public VirtualMachine Execute(IList<Instruction> allInstructions)
 	{
 		Clear();
@@ -95,11 +97,25 @@ public sealed class VirtualMachine(Package package)
 	{
 		if (instruction is not LoopEndInstruction loopEnd)
 			return;
-		var loopBegin = instructions.Take(instructionIndex).OfType<LoopBeginInstruction>().Last();
+		var loopBegin = loopEnd.Begin ?? FindLoopBeginFromSteps(loopEnd.Steps);
 		loopBegin.LoopCount--;
 		if (loopBegin.LoopCount <= 0)
 			return;
 		instructionIndex -= loopEnd.Steps + 1;
+	}
+
+	/// <summary>
+	/// Fallback for manually constructed or deserialized LoopEndInstructions that don't have
+	/// Begin set. Scans forward from the computed base position (at most 2 steps for range loops).
+	/// </summary>
+	private LoopBeginInstruction FindLoopBeginFromSteps(int steps)
+	{
+		var idx = instructionIndex - steps;
+		while (idx < instructions.Count && instructions[idx] is not LoopBeginInstruction)
+			idx++;
+		return idx < instructions.Count
+			? (LoopBeginInstruction)instructions[idx]
+			: throw new InvalidOperationException("No matching LoopBeginInstruction found for LoopEnd");
 	}
 
 	private void TryInvokeInstruction(Instruction instruction)
@@ -426,25 +442,22 @@ public sealed class VirtualMachine(Package package)
 	{
 		if (!Memory.Registers.TryGet(loopBegin.Register, out var iterableVariable))
 			return; //ncrunch: no coverage
-		if (Memory.Frame.ContainsKey("index"))
-		{
-			var current = Memory.Frame.Get("index");
-			Memory.Frame.Set("index",
-				new ValueInstance(package.GetType(Type.Number), current.Number + 1));
-		}
+		if (Memory.Frame.TryGet("index", out var indexValue))
+			Memory.Frame.Set("index", new ValueInstance(numberType, indexValue.Number + 1));
 		else
-			Memory.Frame.Set("index", new ValueInstance(package.GetType(Type.Number), 0));
+			Memory.Frame.Set("index", new ValueInstance(numberType, 0));
 		if (!loopBegin.IsInitialized)
 		{
 			loopBegin.LoopCount = GetLength(iterableVariable);
 			loopBegin.IsInitialized = true;
 		}
-		AlterValueVariable(iterableVariable, package.GetType(Type.Number), loopBegin);
+		AlterValueVariable(iterableVariable, loopBegin);
 		if (loopBegin.LoopCount <= 0)
 		{
-			var stepsToLoopEnd = instructions.Skip(instructionIndex + 1).
-				TakeWhile(s => s is not LoopEndInstruction).Count();
-			instructionIndex += stepsToLoopEnd;
+			var skipTo = instructionIndex + 1;
+			while (skipTo < instructions.Count && instructions[skipTo] is not LoopEndInstruction)
+				skipTo++;
+			instructionIndex = skipTo;
 		}
 	}
 
@@ -457,15 +470,10 @@ public sealed class VirtualMachine(Package package)
 			loopBegin.InitializeRangeState(startIndex, endIndex);
 		}
 		var isDecreasing = loopBegin.IsDecreasing ?? false;
-		var numberType = Memory.Registers[loopBegin.Register].GetType().
-			GetType(Type.Number);
-		if (Memory.Frame.ContainsKey("index"))
-		{
-			var current = Memory.Frame.Get("index");
-			Memory.Frame.Set("index", new ValueInstance(numberType, current.Number + (isDecreasing
+		if (Memory.Frame.TryGet("index", out var indexValue))
+			Memory.Frame.Set("index", new ValueInstance(numberType, indexValue.Number + (isDecreasing
 				? -1
 				: 1)));
-		}
 		else
 			Memory.Frame.Set("index",
 				new ValueInstance(numberType, loopBegin.StartIndexValue ?? 0));
@@ -481,10 +489,9 @@ public sealed class VirtualMachine(Package package)
 		return (int)iterableInstance.Number;
 	}
 
-	private void AlterValueVariable(ValueInstance iterableVariable, Type numberType,
-		LoopBeginInstruction loopBegin)
+	private void AlterValueVariable(ValueInstance iterableVariable, LoopBeginInstruction loopBegin)
 	{
-		var index = Convert.ToInt32(Memory.Frame.Get("index").Number);
+		var index = (int)Memory.Frame.Get("index").Number;
 		if (iterableVariable.IsText)
 		{
 			if (index < iterableVariable.Text.Length)
@@ -512,7 +519,7 @@ public sealed class VirtualMachine(Package package)
 		else if (instruction is StoreVariableInstruction storeVariable)
 		{
 			var value = storeVariable.ValueInstance;
-			// Create defensive copy to prevent aliasing across Execute() calls when lists are mutated in-place
+			// Create defensive copy to isolate list state between separate Execute() calls when lists are mutated in-place
 			if (value.IsList)
 				value = new ValueInstance(value.List.ReturnType, value.List.Items.ToArray());
 			Memory.Frame.Set(storeVariable.Identifier, value, storeVariable.IsMember);

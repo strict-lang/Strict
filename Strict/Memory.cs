@@ -22,7 +22,7 @@ public sealed class Memory
 	{
 		Frame.TryGet(key, out var collection);
 		if (!collection.IsList)
-			throw new InvalidOperationException("Cannot add to non-list variable: " + key);
+			throw new InvalidOperationException("Cannot add to non-list variable \"" + key + "\" of type " + collection.GetType().Name);
 		collection.List.Items.Add(element);
 	}
 

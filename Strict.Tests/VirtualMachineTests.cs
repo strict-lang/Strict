@@ -663,6 +663,6 @@ public sealed class VirtualMachineTests : TestBytecode
 		var result = vm.Execute(instructions).Returns!.Value;
 		var elapsedMs = (DateTime.UtcNow - startTime).TotalMilliseconds;
 		Assert.That(result.List.Items.Count, Is.EqualTo(101));
-		Assert.That(elapsedMs, Is.LessThan(200));
+		Assert.That(elapsedMs, Is.LessThan(100));
 	}
 }
