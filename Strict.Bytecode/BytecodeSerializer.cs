@@ -35,8 +35,8 @@ public static class BytecodeSerializer
 	/// Opens the ZIP once, loads embedded source types and deserializes bytecode, then caches
 	/// the result keyed by absolute file path + modification time. Subsequent calls for the same
 	/// unchanged file return the cached Package and Instructions without any file I/O.
-	/// The local package is given a unique "_bc_" prefix so it never collides with source-runner
-	/// packages (which use the directory name) or Strict type names (which must be capitalized).
+	/// The local package uses a "bin-" prefix (e.g. "bin-SimpleCalculator") so it never collides
+	/// with source-runner packages (directory names) or Strict type names (must start uppercase).
 	/// </summary>
 	public static (Package LocalPackage, Dictionary<string, List<Instruction>> Instructions)
 		LoadTypesAndDeserializeAll(string zipFilePath, Package basePackage)
@@ -53,6 +53,8 @@ public static class BytecodeSerializer
 				stale.LocalPackage.Dispose();
 				binaryCache.Remove(fullPath);
 			}
+			// Evict any other entry whose cached package has the same name under the same parent.
+			// Rare (only when different file paths produce the same binary name, e.g. in tests).
 			foreach (var key in binaryCache.Keys.ToList())
 			{
 				var entry = binaryCache[key];

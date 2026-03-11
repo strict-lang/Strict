@@ -39,7 +39,6 @@ for (var run = 0; run < Runs; run++)
 	hotPathBenchmark.ExecuteBinaryOnce();
 var hotEndTicks = DateTime.UtcNow.Ticks;
 var hotAllocatedAfter = GC.GetAllocatedBytesForCurrentThread();
-hotPathBenchmark.Cleanup();
 Console.WriteLine("Total execution time per run (VM-only, pre-loaded bytecode): " +
 	TimeSpan.FromTicks(hotEndTicks - hotStartTicks) / Runs);
 Console.WriteLine("Allocated bytes per run (VM-only): " + (hotAllocatedAfter - hotAllocatedBefore) / Runs);

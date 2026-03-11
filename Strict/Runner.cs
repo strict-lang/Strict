@@ -43,7 +43,7 @@ public sealed class Runner : IDisposable
 		var startTicks = DateTime.UtcNow.Ticks;
 		(package, var bytecodeByType) =
 			BytecodeSerializer.LoadTypesAndDeserializeAll(binaryFilePath, basePackage);
-		disposePackage = false;
+		disposePackage = false; // cache owns the package lifetime; this Runner must not dispose it
 		var requestedTypeName = Path.GetFileNameWithoutExtension(binaryFilePath);
 		var selectedTypeName = requestedTypeName;
 		if (!bytecodeByType.TryGetValue(selectedTypeName, out preloadedBytecode))

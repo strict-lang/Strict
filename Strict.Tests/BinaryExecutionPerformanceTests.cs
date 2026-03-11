@@ -31,13 +31,6 @@ public class BinaryExecutionPerformanceTests
 		vm = new VirtualMachine(binaryPackage);
 	}
 
-	[GlobalCleanup]
-	[TearDown]
-	public void Cleanup()
-	{
-		// Package lifetime is managed by BytecodeSerializer cache; do not dispose it here.
-	}
-
 	private static void EnsureBinaryFileExists()
 	{
 		if (!File.Exists(BinaryFilePath))
