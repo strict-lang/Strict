@@ -18,12 +18,11 @@ public class BinaryExecutionPerformanceTests
 	{
 		rememberConsoleOut = Console.Out;
 		Console.SetOut(TextWriter.Null);
-		if (!File.Exists(BinaryFilePath))
-			new Runner(TestPackage.Instance, StrictFilePath).Run().Dispose(); //ncrunch: no coverage
+		new Runner(TestPackage.Instance, StrictFilePath).Run().Dispose();
 		var deserializer = new BytecodeDeserializer(BinaryFilePath, TestPackage.Instance);
 		binaryPackage = deserializer.Package;
 		instructions = deserializer.Instructions.Values.First();
-		vm = new VirtualMachine(binaryPackage);
+		vm = new VirtualMachine(binaryPackage, deserializer.PrecompiledMethods);
 	}
 
 	private TextWriter rememberConsoleOut = null!;
@@ -42,14 +41,11 @@ public class BinaryExecutionPerformanceTests
 		binaryPackage.Dispose();
 	}
 
-	[Test]
 	[Benchmark]
-	[NCrunch.Framework.ExclusivelyUses("Examples/SimpleCalculator.strict")]
-	public void ExecuteBinaryOnce() => vm.Execute(instructions);
+	public void ExecuteBinary() => vm.Execute(instructions); //ncrunch: no coverage
 
 	[Test]
-	[NCrunch.Framework.ExclusivelyUses("Examples/SimpleCalculator.strict")]
-	public void ExecuteBinaryThousandTimes()
+	public void ExecuteBinary1000Times()
 	{
 		for (var run = 0; run < 1000; run++)
 			vm.Execute(instructions);

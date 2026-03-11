@@ -30,19 +30,16 @@ public sealed class BytecodeDeserializerTests : TestBytecode
 	private static readonly byte[] MagicBytes = "Strict"u8.ToArray();
 
 	[Test]
-	public void EntryWithBadMagicBytesThrows()
-	{
+	public void EntryWithBadMagicBytesThrows() =>
 		Assert.That(() => new BytecodeDeserializer(new Dictionary<string, byte[]>
 			{
 				["test"] = [0xBA, 0xAD, 0xBA, 0xAD, 0xBA, 0xAD, 0x01]
 			}, TestPackage.Instance),
 			Throws.TypeOf<BytecodeDeserializer.InvalidBytecodeFileException>().With.Message.
 				Contains("magic bytes"));
-	}
 
 	[Test]
-	public void VersionZeroThrows()
-	{
+	public void VersionZeroThrows() =>
 		Assert.That(() => new BytecodeDeserializer(new Dictionary<string, byte[]>
 			{
 				["test"] = BuildEntryBytes(writer =>
@@ -52,11 +49,9 @@ public sealed class BytecodeDeserializerTests : TestBytecode
 				})
 			}, TestPackage.Instance),
 			Throws.TypeOf<BytecodeDeserializer.InvalidVersion>().With.Message.Contains("version"));
-	}
 
 	[Test]
-	public void UnknownValueKindThrows()
-	{
+	public void UnknownValueKindThrows() =>
 		Assert.That(() => new BytecodeDeserializer(new Dictionary<string, byte[]>
 			{
 				["test"] = BuildEntryBytes(writer =>
@@ -72,11 +67,9 @@ public sealed class BytecodeDeserializerTests : TestBytecode
 			}, TestPackage.Instance),
 			Throws.TypeOf<BytecodeDeserializer.InvalidBytecodeFileException>().With.Message.
 				Contains("Unknown ValueKind"));
-	}
 
 	[Test]
-	public void UnknownExpressionKindThrows()
-	{
+	public void UnknownExpressionKindThrows() =>
 		Assert.That(() => new BytecodeDeserializer(new Dictionary<string, byte[]>
 			{
 				["test"] = BuildEntryBytes(writer =>
@@ -102,7 +95,6 @@ public sealed class BytecodeDeserializerTests : TestBytecode
 			}, TestPackage.Instance),
 			Throws.TypeOf<BytecodeDeserializer.InvalidBytecodeFileException>().With.Message.
 				Contains("Unknown ExpressionKind"));
-	}
 
 	private static byte[] BuildEntryBytes(Action<BinaryWriter> writeContent)
 	{

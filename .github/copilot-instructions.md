@@ -36,6 +36,8 @@
 
 ## Strict.Runtime Guidelines
 - Prefer ValueInstance-backed representations and avoid object-based value/rawValue conversions where possible.
+- Bytecode artifacts should be self-contained for runtime (no source .strict fallback), and .strictbinary packaging should mirror package/project directory structure for reconstruction.
+- Bytecode packaging should be compact and include only actually used methods; base type entries should usually have empty method lists unless methods are called.
 
 ## Test-Driven Development (TDD)
 

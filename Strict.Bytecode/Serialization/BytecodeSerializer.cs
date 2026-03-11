@@ -2,6 +2,7 @@ using System.IO.Compression;
 using Strict.Bytecode.Instructions;
 using Strict.Expressions;
 using Strict.Language;
+using Type = Strict.Language.Type;
 
 namespace Strict.Bytecode.Serialization;
 
@@ -22,6 +23,32 @@ public sealed class BytecodeSerializer
 		OutputFilePath = Path.Combine(outputFolder, packageName + Extension);
 		using var fileStream = new FileStream(OutputFilePath, FileMode.Create, FileAccess.Write);
 		using var zip = new ZipArchive(fileStream, ZipArchiveMode.Create, leaveOpen: false);
+		WriteBytecodeEntries(zip, instructionsByType);
+	}
+
+	/// <summary>
+	/// Serializes package type data into compact .bytecode entries with members, method signatures,
+	/// and method instruction bodies.
+	/// </summary>
+	public BytecodeSerializer(IReadOnlyList<TypeBytecodeData> types, string outputFolder,
+		string packageName)
+	{
+		OutputFilePath = Path.Combine(outputFolder, packageName + Extension);
+		using var fileStream = new FileStream(OutputFilePath, FileMode.Create, FileAccess.Write);
+		using var zip = new ZipArchive(fileStream, ZipArchiveMode.Create, leaveOpen: false);
+		foreach (var typeData in types)
+		{
+			var entry = zip.CreateEntry(typeData.EntryPath + BytecodeEntryExtension,
+				CompressionLevel.Optimal);
+			using var entryStream = entry.Open();
+			using var writer = new BinaryWriter(entryStream);
+			WriteTypeEntry(writer, typeData);
+		}
+	}
+
+	private static void WriteBytecodeEntries(ZipArchive zip,
+		Dictionary<string, IList<Instruction>> instructionsByType)
+	{
 		foreach (var (typeName, instructions) in instructionsByType)
 		{
 			var entry = zip.CreateEntry(typeName + BytecodeEntryExtension, CompressionLevel.Optimal);
@@ -31,11 +58,137 @@ public sealed class BytecodeSerializer
 		}
 	}
 
+	private static void WriteTypeEntry(BinaryWriter writer, TypeBytecodeData typeData)
+	{
+		writer.Write(EntryMagicBytes);
+		writer.Write(Version);
+		var table = CreateTypeEntryNameTable(typeData);
+		table.Write(writer);
+		WriteMembers(writer, typeData.Members, table);
+		WriteMethodHeaders(writer, typeData.Methods, table);
+		writer.Write7BitEncodedInt(typeData.RunInstructions.Count);
+		foreach (var instruction in typeData.RunInstructions)
+			WriteInstruction(writer, instruction, table);
+		writer.Write7BitEncodedInt(typeData.MethodInstructions.Count);
+		foreach (var methodData in typeData.MethodInstructions)
+		{
+			writer.Write7BitEncodedInt(table[methodData.Key.Name]);
+			writer.Write7BitEncodedInt(methodData.Key.Parameters.Count);
+			writer.Write7BitEncodedInt(methodData.Value.Count);
+			foreach (var instruction in methodData.Value)
+				WriteInstruction(writer, instruction, table);
+		}
+	}
+
+	private static NameTable CreateTypeEntryNameTable(TypeBytecodeData typeData)
+	{
+		var table = new NameTable(typeData.RunInstructions);
+		foreach (var methodInstructions in typeData.MethodInstructions.Values)
+		foreach (var instruction in methodInstructions)
+			table.CollectInstruction(instruction);
+		table.Add(typeData.TypeName);
+		foreach (var member in typeData.Members)
+		{
+			table.Add(member.Name);
+			table.Add(member.TypeName);
+		}
+		foreach (var method in typeData.Methods)
+		{
+			table.Add(method.Name);
+			table.Add(method.ReturnTypeName);
+			foreach (var parameter in method.Parameters)
+			{
+				table.Add(parameter.Name);
+				table.Add(parameter.TypeName);
+			}
+		}
+		return table;
+	}
+
+	private static void WriteMembers(BinaryWriter writer, IReadOnlyList<MemberBytecodeData> members,
+		NameTable table)
+	{
+		writer.Write7BitEncodedInt(members.Count);
+		foreach (var member in members)
+		{
+			writer.Write7BitEncodedInt(table[member.Name]);
+			WriteTypeReference(writer, member.TypeName, table);
+			writer.Write(false);
+		}
+	}
+
+	private static void WriteMethodHeaders(BinaryWriter writer,
+		IReadOnlyList<MethodBytecodeData> methods, NameTable table)
+	{
+		writer.Write7BitEncodedInt(methods.Count);
+		foreach (var method in methods)
+		{
+			writer.Write7BitEncodedInt(table[method.Name]);
+			writer.Write7BitEncodedInt(method.Parameters.Count);
+			foreach (var parameter in method.Parameters)
+			{
+				writer.Write7BitEncodedInt(table[parameter.Name]);
+				WriteTypeReference(writer, parameter.TypeName, table);
+			}
+			WriteTypeReference(writer, method.ReturnTypeName, table);
+		}
+	}
+
+	private static void WriteTypeReference(BinaryWriter writer, string typeName, NameTable table)
+	{
+		switch (typeName)
+		{
+		case Type.None:
+			writer.Write(TypeRefNone);
+			break;
+		case Type.Boolean:
+			writer.Write(TypeRefBoolean);
+			break;
+		case Type.Number:
+			writer.Write(TypeRefNumber);
+			break;
+		case Type.Text:
+			writer.Write(TypeRefText);
+			break;
+		case Type.List:
+			writer.Write(TypeRefList);
+			break;
+		case Type.Dictionary:
+			writer.Write(TypeRefDictionary);
+			break;
+		default:
+			writer.Write(TypeRefCustom);
+			writer.Write7BitEncodedInt(table[typeName]);
+			break;
+		}
+	}
+
 	public string OutputFilePath { get; }
-	private const string BytecodeEntryExtension = ".bytecode";
+	public const string BytecodeEntryExtension = ".bytecode";
 	internal static readonly byte[] EntryMagicBytes = "Strict"u8.ToArray();
 	public const byte Version = 1;
 	public const string Extension = ".strictbinary";
+	private const char MethodEntrySeparator = '#';
+
+	public static string BuildMethodEntryName(string typeName, string methodName, int parameterCount) =>
+		typeName + "/" + methodName + MethodEntrySeparator + parameterCount;
+
+	public static bool TryParseMethodEntryName(string entryName, out string typeName,
+		out string methodName, out int parameterCount)
+	{
+		typeName = string.Empty;
+		methodName = string.Empty;
+		parameterCount = 0;
+		var slashIndex = entryName.IndexOf('/');
+		if (slashIndex <= 0)
+			return false;
+		var separatorIndex = entryName.LastIndexOf(MethodEntrySeparator);
+		if (separatorIndex <= slashIndex + 1 || separatorIndex == entryName.Length - 1)
+			return false;
+		typeName = entryName[..slashIndex];
+		methodName = entryName[(slashIndex + 1)..separatorIndex];
+		return int.TryParse(entryName[(separatorIndex + 1)..], out parameterCount);
+	}
 
 	/// <summary>
 	/// Serializes all types and their instructions into in-memory .bytecode entry payloads.
@@ -331,4 +484,12 @@ public sealed class BytecodeSerializer
 			writer.Write((byte)registry.PreviousRegister);
 		}
 	}
+
+	private const byte TypeRefNone = 0;
+	private const byte TypeRefBoolean = 1;
+	private const byte TypeRefNumber = 2;
+	private const byte TypeRefText = 3;
+	private const byte TypeRefList = 4;
+	private const byte TypeRefDictionary = 5;
+	private const byte TypeRefCustom = byte.MaxValue;
 }

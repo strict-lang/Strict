@@ -95,8 +95,9 @@ public sealed class BytecodeSerializerTests : TestBytecode
 	{
 		var binaryFilePath = new BytecodeSerializer(
 			new Dictionary<string, IList<Instruction>>
-				{ ["test"] = new List<Instruction> { new ReturnInstruction(Register.R0) } },
-			Path.GetTempPath(), "test" + testFileCounter++).OutputFilePath;
+			{
+				["test"] = new List<Instruction> { new ReturnInstruction(Register.R0) }
+			}, Path.GetTempPath(), "test" + testFileCounter++).OutputFilePath;
 		using var zip = ZipFile.OpenRead(binaryFilePath);
 		using var stream = zip.Entries.Single().Open();
 		using var reader = new BinaryReader(stream);
@@ -562,8 +563,9 @@ public sealed class BytecodeSerializerTests : TestBytecode
 	public void EnsureResolvedTypeCreatesStubForUnknownType()
 	{
 		var entryBytes = CreateBytecodeWithCustomTypeName("UnknownStubType");
-		var deserialized = new BytecodeDeserializer(new Dictionary<string, byte[]> { ["main"] =
-			entryBytes }, TestPackage.Instance);
+		var deserialized =
+			new BytecodeDeserializer(new Dictionary<string, byte[]> { ["main"] = entryBytes },
+				TestPackage.Instance);
 		Assert.That(deserialized.Instructions.Values.First(), Has.Count.EqualTo(1));
 	}
 
@@ -593,8 +595,9 @@ public sealed class BytecodeSerializerTests : TestBytecode
 	public void BuildMethodHeaderWithParametersCreatesMethod()
 	{
 		var entryBytes = CreateBytecodeWithMethodParameters(2);
-		var deserialized = new BytecodeDeserializer(new Dictionary<string, byte[]> { ["main"] =
-			entryBytes }, TestPackage.Instance);
+		var deserialized =
+			new BytecodeDeserializer(new Dictionary<string, byte[]> { ["main"] = entryBytes },
+				TestPackage.Instance);
 		Assert.That(deserialized.Instructions.Values.First(), Has.Count.EqualTo(1));
 	}
 

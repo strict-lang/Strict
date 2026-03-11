@@ -71,7 +71,7 @@ public sealed class Runner : IDisposable
 		Log("╔═══════════════════════════════════════════╗");
 		Log("║  Running from pre-compiled .strictbinary  ║");
 		Log("╚═══════════════════════════════════════════╝");
-		ExecuteBytecode(preloadedInstructions);
+		ExecuteBytecode(preloadedInstructions, deserializer?.PrecompiledMethods);
 		Log("Successfully executed pre-compiled " + mainType.Name + " in " +
 			TimeSpan.FromTicks(stepTimes.Sum()).ToString(@"s\.ffffff") + "s");
 		return this;
@@ -216,12 +216,13 @@ public sealed class Runner : IDisposable
 		return optimizedInstructions;
 	}
 
-	private void ExecuteBytecode(List<Instruction> instructions)
+	private void ExecuteBytecode(List<Instruction> instructions,
+		Dictionary<string, List<Instruction>>? precompiledMethods = null)
 	{
 		Log("┌─ Step 8: Execute");
 		Log("│  ✓ Executing " + mainType.Name + ".Run method:");
 		var startTicks = DateTime.UtcNow.Ticks;
-		new VirtualMachine(package).Execute(instructions);
+		new VirtualMachine(package, precompiledMethods).Execute(instructions);
 		var endTicks = DateTime.UtcNow.Ticks;
 		Log("│  ✓ Run method executed successfully, instructions: " + instructions.Count);
 		stepTimes.Add(endTicks - startTicks);
@@ -231,11 +232,197 @@ public sealed class Runner : IDisposable
 
 	private void SaveBytecodeIfPossible(List<Instruction> optimizedInstructions)
 	{
-		var serializer = new BytecodeSerializer(
-			new Dictionary<string, IList<Instruction>> { [mainType.Name] = optimizedInstructions },
-			currentFolder, mainType.Name);
+		var typeBytecodeData = BuildTypeBytecodeData(optimizedInstructions);
+		var serializer = new BytecodeSerializer(typeBytecodeData, currentFolder, mainType.Name);
 		Console.WriteLine("Saving " + new FileInfo(serializer.OutputFilePath).Length +
 			" bytes of bytecode to: " + serializer.OutputFilePath);
+	}
+
+	private IReadOnlyList<TypeBytecodeData> BuildTypeBytecodeData(
+		List<Instruction> optimizedRunInstructions)
+	{
+		var methodsByType = new Dictionary<Type, Dictionary<Method, IList<Instruction>>>();
+		var methodsToCompile = new Queue<Method>();
+		var compiledMethodKeys = new HashSet<string>(StringComparer.Ordinal);
+		EnqueueCalledMethods(optimizedRunInstructions, methodsToCompile, compiledMethodKeys);
+		while (methodsToCompile.Count > 0)
+		{
+			var method = methodsToCompile.Dequeue();
+			if (method.IsTrait || !IsTypeInsideCurrentPackage(method.Type))
+				continue;
+			var methodExpressions = GetMethodExpressions(method);
+			var methodInstructions = new BytecodeGenerator(
+				new InvokedMethod(methodExpressions, EmptyArguments, method.ReturnType),
+				new Registry()).Generate();
+			if (!methodsByType.TryGetValue(method.Type, out var typeMethods))
+			{
+				typeMethods = new Dictionary<Method, IList<Instruction>>();
+				methodsByType[method.Type] = typeMethods;
+			}
+			typeMethods[method] = methodInstructions;
+			EnqueueCalledMethods(methodInstructions, methodsToCompile, compiledMethodKeys);
+		}
+		var requiredTypes = CollectRequiredTypes(methodsByType, optimizedRunInstructions);
+		var usedMethodKeys = compiledMethodKeys;
+		var calledTypeNames = usedMethodKeys.Select(methodKey => methodKey.Split('|')[0]).
+			ToHashSet(StringComparer.Ordinal);
+		var memberTypeNames = new HashSet<string>(mainType.Members.Select(member =>
+			member.Type.Name), StringComparer.Ordinal);
+		foreach (var currentPackageType in methodsByType.Keys.Where(IsTypeInsideCurrentPackage))
+		foreach (var member in currentPackageType.Members)
+			memberTypeNames.Add(member.Type.Name);
+		var typeData = new List<TypeBytecodeData>();
+		foreach (var requiredType in requiredTypes)
+		{
+			if (!IsTypeInsideCurrentPackage(requiredType) &&
+				!calledTypeNames.Contains(requiredType.Name) &&
+				!memberTypeNames.Contains(requiredType.Name))
+				continue;
+			methodsByType.TryGetValue(requiredType, out var compiledMethods);
+			var methodDefinitions = requiredType.Methods.Where(method =>
+				usedMethodKeys.Contains(BytecodeDeserializer.BuildMethodInstructionKey(requiredType.Name,
+					method.Name, method.Parameters.Count)) ||
+				requiredType == mainType && method.Name == Method.Run &&
+				method.Parameters.Count == 0).Select(method =>
+				new MethodBytecodeData(method.Name,
+					method.Parameters.Select(parameter =>
+						new MethodParameterBytecodeData(parameter.Name, parameter.Type.Name)).ToList(),
+					method.ReturnType.Name)).ToList();
+			var members = requiredType.Members.Where(member => !member.IsConstant).Select(member =>
+				new MemberBytecodeData(member.Name, member.Type.Name)).ToList();
+			var methodInstructions = new Dictionary<MethodBytecodeData, IList<Instruction>>();
+			if (compiledMethods != null)
+				foreach (var compiledMethod in compiledMethods)
+					methodInstructions[new MethodBytecodeData(compiledMethod.Key.Name,
+						compiledMethod.Key.Parameters.Select(parameter =>
+							new MethodParameterBytecodeData(parameter.Name, parameter.Type.Name)).ToList(),
+						compiledMethod.Key.ReturnType.Name)] = compiledMethod.Value;
+			typeData.Add(new TypeBytecodeData(requiredType.Name, BuildTypeEntryPath(requiredType),
+				members, methodDefinitions,
+				requiredType == mainType
+					? optimizedRunInstructions
+					: EmptyInstructions,
+				methodInstructions));
+		}
+		return typeData;
+	}
+
+	private HashSet<Type> CollectRequiredTypes(
+		Dictionary<Type, Dictionary<Method, IList<Instruction>>> methodsByType,
+		IReadOnlyList<Instruction> optimizedRunInstructions)
+	{
+		var requiredTypes = new HashSet<Type> { mainType };
+		foreach (var member in mainType.Members)
+			requiredTypes.Add(member.Type);
+		foreach (var instruction in optimizedRunInstructions)
+			CollectInstructionTypes(instruction, requiredTypes);
+		foreach (var methodEntry in methodsByType)
+		{
+			requiredTypes.Add(methodEntry.Key);
+			if (IsTypeInsideCurrentPackage(methodEntry.Key))
+				foreach (var member in methodEntry.Key.Members)
+					requiredTypes.Add(member.Type);
+			foreach (var compiledMethod in methodEntry.Value)
+			{
+				AddMethodSignatureTypes(compiledMethod.Key, requiredTypes);
+				foreach (var instruction in compiledMethod.Value)
+					CollectInstructionTypes(instruction, requiredTypes);
+			}
+		}
+		return requiredTypes;
+	}
+
+	private static void AddMethodSignatureTypes(Method method, ISet<Type> requiredTypes)
+	{
+		requiredTypes.Add(method.Type);
+		requiredTypes.Add(method.ReturnType);
+		foreach (var parameter in method.Parameters)
+			requiredTypes.Add(parameter.Type);
+	}
+
+	private static void CollectInstructionTypes(Instruction instruction, ISet<Type> requiredTypes)
+	{
+		if (instruction is not Invoke { Method: not null } invoke)
+			return;
+		AddMethodSignatureTypes(invoke.Method.Method, requiredTypes);
+		requiredTypes.Add(invoke.Method.ReturnType);
+	}
+
+	private static readonly IList<Instruction> EmptyInstructions = Array.Empty<Instruction>();
+	private static readonly IReadOnlyDictionary<Method, IList<Instruction>> EmptyMethodInstructions =
+		new Dictionary<Method, IList<Instruction>>();
+
+	private string BuildTypeEntryPath(Type type) =>
+		IsTypeInsideCurrentPackage(type)
+			? package.Name + "/" + type.Name
+			: "Strict/" + type.Name;
+
+	private bool IsTypeInsideCurrentPackage(Type type) =>
+		type.Package == package ||
+		type.Package.FullName.StartsWith(package.FullName + Context.ParentSeparator,
+			StringComparison.Ordinal);
+
+	private static IReadOnlyList<Expression> GetMethodExpressions(Method method)
+	{
+		var methodBody = method.GetBodyAndParseIfNeeded();
+		return methodBody is Body body
+			? body.Expressions
+			: [methodBody];
+	}
+
+	// ReSharper disable once CollectionNeverUpdated.Local
+	private static readonly Dictionary<string, ValueInstance> EmptyArguments =
+		new(StringComparer.Ordinal);
+
+	private static void EnqueueCalledMethods(IReadOnlyList<Instruction> instructions,
+		Queue<Method> methodsToCompile, HashSet<string> compiledMethodKeys)
+	{
+		foreach (var invokeInstruction in instructions.OfType<Invoke>())
+		{
+			if (invokeInstruction.Method == null)
+				continue;
+			EnqueueCalledMethod(invokeInstruction.Method.Method, methodsToCompile, compiledMethodKeys);
+			if (invokeInstruction.Method.Instance != null)
+				EnqueueMethodsFromExpression(invokeInstruction.Method.Instance, methodsToCompile,
+					compiledMethodKeys);
+			foreach (var argument in invokeInstruction.Method.Arguments)
+				EnqueueMethodsFromExpression(argument, methodsToCompile, compiledMethodKeys);
+		}
+	}
+
+	private static void EnqueueMethodsFromExpression(Expression expression,
+		Queue<Method> methodsToCompile, HashSet<string> compiledMethodKeys)
+	{
+		switch (expression)
+		{
+		case MethodCall methodCall:
+			EnqueueCalledMethod(methodCall.Method, methodsToCompile, compiledMethodKeys);
+			if (methodCall.Instance != null)
+				EnqueueMethodsFromExpression(methodCall.Instance, methodsToCompile,
+					compiledMethodKeys);
+			foreach (var argument in methodCall.Arguments)
+				EnqueueMethodsFromExpression(argument, methodsToCompile, compiledMethodKeys);
+			break;
+		case MemberCall { Instance: not null } memberCall:
+			// ReSharper disable once TailRecursiveCall
+			EnqueueMethodsFromExpression(memberCall.Instance, methodsToCompile, compiledMethodKeys);
+			break;
+		case Strict.Expressions.List listExpression:
+			foreach (var value in listExpression.Values)
+				EnqueueMethodsFromExpression(value, methodsToCompile, compiledMethodKeys);
+			break;
+		}
+	}
+
+	private static void EnqueueCalledMethod(Method method, Queue<Method> methodsToCompile,
+		HashSet<string> compiledMethodKeys)
+	{
+		if (method.Name == Method.From)
+			return;
+		var methodKey = BytecodeDeserializer.BuildMethodInstructionKey(method.Type.Name,
+			method.Name, method.Parameters.Count);
+		if (compiledMethodKeys.Add(methodKey))
+			methodsToCompile.Enqueue(method);
 	}
 
 	public void Dispose() => package.Dispose();

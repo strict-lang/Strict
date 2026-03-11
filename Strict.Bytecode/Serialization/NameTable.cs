@@ -50,6 +50,13 @@ internal sealed class NameTable : IEnumerable<string>
 		return this;
 	}
 
+	public NameTable AddRange(IEnumerable<string> namesToAdd)
+	{
+		foreach (var name in namesToAdd)
+			Add(name);
+		return this;
+	}
+
 	private readonly Dictionary<string, int> indices = new(StringComparer.Ordinal);
 	private readonly List<string> names = [];
 	public int this[string name] => indices[name];
@@ -122,4 +129,10 @@ internal sealed class NameTable : IEnumerable<string>
 		foreach (var s in this)
 			writer.Write(s);
 	}
+
+	public NameTable CollectExpression(Expression? expression) =>
+		CollectExpressionStrings(expression);
+
+	public NameTable CollectInstruction(Instruction instruction) =>
+		CollectStrings(instruction);
 }

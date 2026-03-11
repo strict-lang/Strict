@@ -2,9 +2,7 @@
   <Settings>
     <AllowParallelTestExecution>True</AllowParallelTestExecution>
     <EnableRDI>True</EnableRDI>
-    <HotSpotsLineExclusionList>
-      <Value>VirtualMachine.cs:Strict\Strict.csproj-433</Value>
-    </HotSpotsLineExclusionList>
+    <HotSpotsLineExclusionList />
     <MetricsExclusionList>
       <Value>Program.cs:Strict.Language.Tests\Strict.Language.Tests.csproj</Value>
     </MetricsExclusionList>
