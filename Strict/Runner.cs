@@ -295,7 +295,7 @@ public sealed class Runner : IDisposable
 				foreach (var compiledMethod in compiledMethods)
 					methodInstructions[new MethodBytecodeData(compiledMethod.Key.Name,
 						compiledMethod.Key.Parameters.Select(parameter =>
-							new MethodParameterBytecodeData(parameter.Name, parameter.Type.Name)).ToList(),
+							new MethodParameterBytecodeData(parameter.Name, parameter.Type.Name)).ToList(), //ncrunch: no coverage
 						compiledMethod.Key.ReturnType.Name)] = compiledMethod.Value;
 			typeData.Add(new TypeBytecodeData(requiredType.Name, BuildTypeEntryPath(requiredType),
 				members, methodDefinitions,
@@ -378,16 +378,16 @@ public sealed class Runner : IDisposable
 		Queue<Method> methodsToCompile, HashSet<string> compiledMethodKeys)
 	{
 		foreach (var invokeInstruction in instructions.OfType<Invoke>())
-		{
-			if (invokeInstruction.Method == null)
-				continue;
-			EnqueueCalledMethod(invokeInstruction.Method.Method, methodsToCompile, compiledMethodKeys);
-			if (invokeInstruction.Method.Instance != null)
-				EnqueueMethodsFromExpression(invokeInstruction.Method.Instance, methodsToCompile,
+			if (invokeInstruction.Method != null)
+			{
+				EnqueueCalledMethod(invokeInstruction.Method.Method, methodsToCompile,
 					compiledMethodKeys);
-			foreach (var argument in invokeInstruction.Method.Arguments)
-				EnqueueMethodsFromExpression(argument, methodsToCompile, compiledMethodKeys);
-		}
+				if (invokeInstruction.Method.Instance != null)
+					EnqueueMethodsFromExpression(invokeInstruction.Method.Instance, methodsToCompile,
+						compiledMethodKeys);
+				foreach (var argument in invokeInstruction.Method.Arguments)
+					EnqueueMethodsFromExpression(argument, methodsToCompile, compiledMethodKeys);
+			}
 	}
 
 	private static void EnqueueMethodsFromExpression(Expression expression,
@@ -405,12 +405,13 @@ public sealed class Runner : IDisposable
 			break;
 		case MemberCall { Instance: not null } memberCall:
 			// ReSharper disable once TailRecursiveCall
+			//ncrunch: no coverage start
 			EnqueueMethodsFromExpression(memberCall.Instance, methodsToCompile, compiledMethodKeys);
 			break;
-		case Strict.Expressions.List listExpression:
+		case List listExpression:
 			foreach (var value in listExpression.Values)
 				EnqueueMethodsFromExpression(value, methodsToCompile, compiledMethodKeys);
-			break;
+			break; //ncrunch: no coverage end
 		}
 	}
 

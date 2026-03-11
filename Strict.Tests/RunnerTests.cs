@@ -115,44 +115,28 @@ public sealed class RunnerTests
 	public void SaveStrictBinaryWithTypeBytecodeEntriesOnly()
 	{
 		var binaryFilePath = Path.ChangeExtension(StrictFilePath, BytecodeSerializer.Extension);
-		try
-		{
-			new Runner(TestPackage.Instance, StrictFilePath).Run().Dispose();
-			using var archive = System.IO.Compression.ZipFile.OpenRead(binaryFilePath);
-			var entries = archive.Entries.Select(entry => entry.FullName).ToList();
-			Assert.That(
-				entries.Any(entry => entry.EndsWith(BytecodeSerializer.BytecodeEntryExtension,
-					StringComparison.OrdinalIgnoreCase)), Is.False);
-			Assert.That(entries.Any(entry => entry.Contains("#", StringComparison.Ordinal)), Is.False);
-			Assert.That(entries, Does.Contain("Examples/SimpleCalculator.bytecode"));
-			Assert.That(entries, Does.Contain("Strict/Number.bytecode"));
-			Assert.That(entries, Does.Contain("Strict/Logger.bytecode"));
-			Assert.That(entries.Count, Is.LessThanOrEqualTo(4));
-			Assert.That(new FileInfo(binaryFilePath).Length, Is.LessThan(1200));
-		}
-		finally
-		{
-			if (File.Exists(binaryFilePath))
-				File.Delete(binaryFilePath);
-		}
+		new Runner(TestPackage.Instance, StrictFilePath).Run().Dispose();
+		using var archive = System.IO.Compression.ZipFile.OpenRead(binaryFilePath);
+		var entries = archive.Entries.Select(entry => entry.FullName).ToList();
+		Assert.That(
+			entries.All(entry => entry.EndsWith(BytecodeSerializer.BytecodeEntryExtension,
+				StringComparison.OrdinalIgnoreCase)), Is.True, string.Join(", ", entries.ToList()));
+		Assert.That(entries.Any(entry => entry.Contains("#", StringComparison.Ordinal)), Is.False);
+		Assert.That(entries, Does.Contain("Examples/SimpleCalculator.bytecode"));
+		Assert.That(entries, Does.Contain("Strict/Number.bytecode"));
+		Assert.That(entries, Does.Contain("Strict/Logger.bytecode"));
+		Assert.That(entries.Count, Is.LessThanOrEqualTo(4));
+		Assert.That(new FileInfo(binaryFilePath).Length, Is.LessThan(1200));
 	}
 
 	[Test]
 	public void ExportOnlyUsedMethodsForBaseTypes()
 	{
 		var binaryFilePath = Path.ChangeExtension(StrictFilePath, BytecodeSerializer.Extension);
-		try
-		{
-			new Runner(TestPackage.Instance, StrictFilePath).Run().Dispose();
-			using var archive = System.IO.Compression.ZipFile.OpenRead(binaryFilePath);
-			var numberMethodCount = ReadMethodHeaderCount(archive, "Strict/Number.bytecode");
-			Assert.That(numberMethodCount, Is.LessThanOrEqualTo(3));
-		}
-		finally
-		{
-			if (File.Exists(binaryFilePath))
-				File.Delete(binaryFilePath);
-		}
+		new Runner(TestPackage.Instance, StrictFilePath).Run().Dispose();
+		using var archive = System.IO.Compression.ZipFile.OpenRead(binaryFilePath);
+		var numberMethodCount = ReadMethodHeaderCount(archive, "Strict/Number.bytecode");
+		Assert.That(numberMethodCount, Is.LessThanOrEqualTo(3));
 	}
 
 	private static int ReadMethodHeaderCount(System.IO.Compression.ZipArchive archive,
@@ -163,18 +147,18 @@ public sealed class RunnerTests
 		_ = reader.ReadBytes(6);
 		var version = reader.ReadByte();
 		if (version != BytecodeSerializer.Version)
-			throw new InvalidOperationException("Expected version " + BytecodeSerializer.Version);
+			throw new InvalidOperationException("Expected version " + BytecodeSerializer.Version); //ncrunch: no coverage
 		var nameCount = reader.Read7BitEncodedInt();
 		for (var nameIndex = 0; nameIndex < nameCount; nameIndex++)
 			_ = reader.ReadString();
 		var memberCount = reader.Read7BitEncodedInt();
 		for (var memberIndex = 0; memberIndex < memberCount; memberIndex++)
-		{
+		{ //ncrunch: no coverage start
 			_ = reader.Read7BitEncodedInt();
 			_ = reader.Read7BitEncodedInt();
 			if (reader.ReadBoolean())
 				throw new InvalidOperationException("Unexpected initial value in compact metadata");
-		}
+		} //ncrunch: no coverage end
 		return reader.Read7BitEncodedInt();
 	}
 }

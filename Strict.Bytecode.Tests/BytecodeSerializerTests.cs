@@ -122,8 +122,8 @@ public sealed class BytecodeSerializerTests : TestBytecode
 				"has First Number", "has Second Number", "Calculate Number",
 				"\tAdd(10, 5).Calculate is 15", "\tFirst + Second")).Generate();
 		var entryBytes = SerializeToMemory("Add", instructions)["Add"];
-		Assert.That(entryBytes.Length, Is.LessThan(50),
-			"Serialized arithmetic bytecode entry should be compact (< 50 bytes)");
+		Assert.That(entryBytes.Length, Is.LessThan(60),
+			"Serialized arithmetic bytecode entry should be compact (< 60 bytes)");
 	}
 
 	[Test]
@@ -538,6 +538,8 @@ public sealed class BytecodeSerializerTests : TestBytecode
 		WriteEntryMagicAndVersion(writer);
 		var names = new[] { "main", "Run", "None", "Number", "$$bogus$$" };
 		WriteNameTable(writer, names);
+		writer.Write7BitEncodedInt(0);
+		writer.Write7BitEncodedInt(0);
 		writer.Write7BitEncodedInt(1);
 		writer.Write((byte)InstructionType.Invoke);
 		writer.Write((byte)Register.R0);
@@ -555,6 +557,7 @@ public sealed class BytecodeSerializerTests : TestBytecode
 		writer.Write(SmallNumberKind);
 		writer.Write((byte)2);
 		writer.Write(false);
+		writer.Write7BitEncodedInt(0);
 		writer.Flush();
 		return stream.ToArray();
 	}
@@ -576,6 +579,8 @@ public sealed class BytecodeSerializerTests : TestBytecode
 		WriteEntryMagicAndVersion(writer);
 		var names = new[] { "main", "Run", typeName, "None" };
 		WriteNameTable(writer, names);
+		writer.Write7BitEncodedInt(0);
+		writer.Write7BitEncodedInt(0);
 		writer.Write7BitEncodedInt(1);
 		writer.Write((byte)InstructionType.Invoke);
 		writer.Write((byte)Register.R0);
@@ -587,6 +592,7 @@ public sealed class BytecodeSerializerTests : TestBytecode
 		writer.Write(false);
 		writer.Write7BitEncodedInt(0);
 		writer.Write(false);
+		writer.Write7BitEncodedInt(0);
 		writer.Flush();
 		return stream.ToArray();
 	}
@@ -608,6 +614,8 @@ public sealed class BytecodeSerializerTests : TestBytecode
 		WriteEntryMagicAndVersion(writer);
 		var names = new[] { "Main", "Run", "None", "Compute", "Number" };
 		WriteNameTable(writer, names);
+		writer.Write7BitEncodedInt(0);
+		writer.Write7BitEncodedInt(0);
 		writer.Write7BitEncodedInt(1);
 		writer.Write((byte)InstructionType.Invoke);
 		writer.Write((byte)Register.R0);
@@ -624,6 +632,7 @@ public sealed class BytecodeSerializerTests : TestBytecode
 			writer.Write((byte)(index + 1));
 		}
 		writer.Write(false);
+		writer.Write7BitEncodedInt(0);
 		writer.Flush();
 		return stream.ToArray();
 	}

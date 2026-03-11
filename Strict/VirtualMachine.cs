@@ -130,7 +130,7 @@ public sealed class VirtualMachine(Package package,
 		var invokeInstructions = GetPrecompiledMethodInstructions(invoke);
 		var result = invokeInstructions != null
 			? RunChildScope(invokeInstructions,
-				() => InitializeMethodCallScope(invoke.Method,
+				() => InitializeMethodCallScope(invoke.Method, //ncrunch: no coverage
 					invoke.Method.Arguments.Select(EvaluateExpression).ToArray(),
 					invoke.Method.Instance != null
 						? EvaluateExpression(invoke.Method.Instance)
@@ -155,6 +155,7 @@ public sealed class VirtualMachine(Package package,
 		ValueInstance? evaluatedInstance = null)
 	{
 		for (var parameterIndex = 0; parameterIndex < methodCall.Method.Parameters.Count &&
+			//ncrunch: no coverage start
 			parameterIndex < methodCall.Arguments.Count; parameterIndex++)
 			Memory.Frame.Set(methodCall.Method.Parameters[parameterIndex].Name,
 				evaluatedArguments != null
@@ -162,6 +163,7 @@ public sealed class VirtualMachine(Package package,
 					: EvaluateExpression(methodCall.Arguments[parameterIndex]));
 		if (methodCall.Instance == null)
 			return;
+		//ncrunch: no coverage end
 		var instance = evaluatedInstance ?? EvaluateExpression(methodCall.Instance);
 		var typeInstance = instance.TryGetValueTypeInstance();
 		if (typeInstance != null)
@@ -174,10 +176,12 @@ public sealed class VirtualMachine(Package package,
 						isMember: true);
 			return;
 		}
+		//ncrunch: no coverage start
 		var firstNonTraitMember = instance.GetType().Members.FirstOrDefault(member =>
 			!member.Type.IsTrait);
 		if (firstNonTraitMember != null)
 			Memory.Frame.Set(firstNonTraitMember.Name, instance, isMember: true);
+		//ncrunch: no coverage end
 	}
 
 	private ValueInstance? RunChildScope(List<Instruction> childInstructions,

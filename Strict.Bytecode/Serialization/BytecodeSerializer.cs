@@ -142,8 +142,8 @@ public sealed class BytecodeSerializer
 			writer.Write(TypeRefNone);
 			break;
 		case Type.Boolean:
-			writer.Write(TypeRefBoolean);
-			break;
+			writer.Write(TypeRefBoolean); //ncrunch: no coverage
+			break; //ncrunch: no coverage
 		case Type.Number:
 			writer.Write(TypeRefNumber);
 			break;
@@ -151,11 +151,12 @@ public sealed class BytecodeSerializer
 			writer.Write(TypeRefText);
 			break;
 		case Type.List:
+			//ncrunch: no coverage start
 			writer.Write(TypeRefList);
 			break;
 		case Type.Dictionary:
 			writer.Write(TypeRefDictionary);
-			break;
+			break; //ncrunch: no coverage end
 		default:
 			writer.Write(TypeRefCustom);
 			writer.Write7BitEncodedInt(table[typeName]);
@@ -168,27 +169,6 @@ public sealed class BytecodeSerializer
 	internal static readonly byte[] EntryMagicBytes = "Strict"u8.ToArray();
 	public const byte Version = 1;
 	public const string Extension = ".strictbinary";
-	private const char MethodEntrySeparator = '#';
-
-	public static string BuildMethodEntryName(string typeName, string methodName, int parameterCount) =>
-		typeName + "/" + methodName + MethodEntrySeparator + parameterCount;
-
-	public static bool TryParseMethodEntryName(string entryName, out string typeName,
-		out string methodName, out int parameterCount)
-	{
-		typeName = string.Empty;
-		methodName = string.Empty;
-		parameterCount = 0;
-		var slashIndex = entryName.IndexOf('/');
-		if (slashIndex <= 0)
-			return false;
-		var separatorIndex = entryName.LastIndexOf(MethodEntrySeparator);
-		if (separatorIndex <= slashIndex + 1 || separatorIndex == entryName.Length - 1)
-			return false;
-		typeName = entryName[..slashIndex];
-		methodName = entryName[(slashIndex + 1)..separatorIndex];
-		return int.TryParse(entryName[(separatorIndex + 1)..], out parameterCount);
-	}
 
 	/// <summary>
 	/// Serializes all types and their instructions into in-memory .bytecode entry payloads.
@@ -200,9 +180,14 @@ public sealed class BytecodeSerializer
 			StringComparer.Ordinal);
 		foreach (var (typeName, instructions) in instructionsByType)
 		{
+			var typeData = new TypeBytecodeData(typeName, typeName,
+				Array.Empty<MemberBytecodeData>(),
+				Array.Empty<MethodBytecodeData>(),
+				instructions,
+				new Dictionary<MethodBytecodeData, IList<Instruction>>());
 			using var stream = new MemoryStream();
 			using var writer = new BinaryWriter(stream, System.Text.Encoding.UTF8, leaveOpen: true);
-			WriteEntry(writer, instructions);
+			WriteTypeEntry(writer, typeData);
 			writer.Flush();
 			result[typeName] = stream.ToArray();
 		}

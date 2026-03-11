@@ -59,10 +59,13 @@ public sealed class BytecodeDeserializerTests : TestBytecode
 					writer.Write(MagicBytes);
 					writer.Write(BytecodeSerializer.Version);
 					writer.Write7BitEncodedInt(0);
+					writer.Write7BitEncodedInt(0);
+					writer.Write7BitEncodedInt(0);
 					writer.Write7BitEncodedInt(1);
 					writer.Write((byte)InstructionType.LoadConstantToRegister);
 					writer.Write((byte)Register.R0);
 					writer.Write((byte)0xFF);
+					writer.Write7BitEncodedInt(0);
 				})
 			}, TestPackage.Instance),
 			Throws.TypeOf<BytecodeDeserializer.InvalidBytecodeFileException>().With.Message.
@@ -80,6 +83,8 @@ public sealed class BytecodeDeserializerTests : TestBytecode
 					writer.Write("Number");
 					writer.Write("Run");
 					writer.Write("None");
+					writer.Write7BitEncodedInt(0);
+					writer.Write7BitEncodedInt(0);
 					writer.Write7BitEncodedInt(1);
 					writer.Write((byte)InstructionType.Invoke);
 					writer.Write((byte)Register.R0);
@@ -91,6 +96,7 @@ public sealed class BytecodeDeserializerTests : TestBytecode
 					writer.Write(false);
 					writer.Write7BitEncodedInt(1);
 					writer.Write((byte)0xFF);
+					writer.Write7BitEncodedInt(0);
 				})
 			}, TestPackage.Instance),
 			Throws.TypeOf<BytecodeDeserializer.InvalidBytecodeFileException>().With.Message.

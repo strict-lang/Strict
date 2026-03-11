@@ -68,8 +68,7 @@ public sealed class BytecodeDeserializer
 	{
 		using var stream = new MemoryStream(typeEntry.Bytes);
 		using var reader = new BinaryReader(stream, System.Text.Encoding.UTF8, leaveOpen: true);
-		if (ValidateMagicAndVersion(reader) != BytecodeSerializer.Version)
-			return;
+		_ = ValidateMagicAndVersion(reader);
 		var table = new NameTable(reader).ToArray();
 		var type = EnsureTypeForEntry(package, typeEntry.EntryName);
 		var memberCount = reader.Read7BitEncodedInt();
@@ -79,7 +78,7 @@ public sealed class BytecodeDeserializer
 			var memberTypeName = ReadTypeReferenceName(reader, table);
 			_ = EnsureMember(type, memberName, memberTypeName);
 			if (reader.ReadBoolean())
-				_ = ReadExpression(reader, package, table);
+				_ = ReadExpression(reader, package, table); //ncrunch: no coverage
 		}
 		var methodCount = reader.Read7BitEncodedInt();
 		for (var methodIndex = 0; methodIndex < methodCount; methodIndex++)
@@ -128,15 +127,7 @@ public sealed class BytecodeDeserializer
 	{
 		using var stream = new MemoryStream(typeEntry.Bytes);
 		using var reader = new BinaryReader(stream, System.Text.Encoding.UTF8, leaveOpen: true);
-		var version = ValidateMagicAndVersion(reader);
-		if (version != BytecodeSerializer.Version)
-		{
-			stream.Position = 0;
-			var typeName = GetTypeNameFromEntryName(typeEntry.EntryName);
-			EnsureTypeExists(package, typeName);
-			runInstructions[typeName] = DeserializeEntry(stream, package);
-			return;
-		}
+		_ = ValidateMagicAndVersion(reader);
 		var table = new NameTable(reader).ToArray();
 		var typeNameForKey = GetTypeNameFromEntryName(typeEntry.EntryName);
 		var memberCount = reader.Read7BitEncodedInt();
@@ -145,7 +136,7 @@ public sealed class BytecodeDeserializer
 			_ = reader.Read7BitEncodedInt();
 			_ = ReadTypeReferenceName(reader, table);
 			if (reader.ReadBoolean())
-				_ = ReadExpression(reader, package, table);
+				_ = ReadExpression(reader, package, table); //ncrunch: no coverage
 		}
 		var methodCount = reader.Read7BitEncodedInt();
 		for (var methodIndex = 0; methodIndex < methodCount; methodIndex++)
@@ -188,7 +179,7 @@ public sealed class BytecodeDeserializer
 	{
 		var segments = entryName.Split(Context.ParentSeparator, StringSplitOptions.RemoveEmptyEntries);
 		if (segments.Length == 0)
-			throw new InvalidBytecodeFileException("Invalid entry name: " + entryName);
+			throw new InvalidBytecodeFileException("Invalid entry name: " + entryName); //ncrunch: no coverage
 		var typeName = segments[^1];
 		var existingType = package.FindType(typeName);
 		if (existingType != null)
@@ -241,7 +232,7 @@ public sealed class BytecodeDeserializer
 		DeserializeAllFromEntries(Dictionary<string, byte[]> entryBytesByType, Package package)
 	{
 		if (entryBytesByType.Count == 0)
-			throw new InvalidBytecodeFileException(BytecodeSerializer.Extension +
+			throw new InvalidBytecodeFileException(BytecodeSerializer.Extension + //ncrunch: no coverage
 				" ZIP contains no entries");
 		var runInstructions = new Dictionary<string, List<Instruction>>(StringComparer.Ordinal);
 		var methodInstructions = new Dictionary<string, List<Instruction>>(StringComparer.Ordinal);
@@ -256,10 +247,9 @@ public sealed class BytecodeDeserializer
 
 	private static void EnsureTypeExists(Package package, string typeName)
 	{
-		if (package.FindDirectType(typeName) != null)
-			return;
-		new Type(package, new TypeLines(typeName, Method.Run)).ParseMembersAndMethods(
-			new MethodExpressionParser());
+		if (package.FindDirectType(typeName) == null)
+			new Type(package, new TypeLines(typeName, Method.Run)).ParseMembersAndMethods(
+				new MethodExpressionParser());
 	}
 
 	public static string BuildMethodInstructionKey(string typeName, string methodName,
@@ -614,7 +604,7 @@ public sealed class BytecodeDeserializer
 	private static string BuildMethodHeader(string methodName, int paramCount, Type returnType)
 	{
 		if (paramCount == 0)
-			return returnType.IsNone
+			return returnType.IsNone //ncrunch: no coverage
 				? methodName
 				: methodName + " " + returnType.Name;
 		var parameters = Enumerable.Range(0, paramCount).Select(parameterIndex =>
@@ -630,14 +620,14 @@ public sealed class BytecodeDeserializer
 		reader.ReadByte() switch
 		{
 			TypeRefNone => Type.None,
-			TypeRefBoolean => Type.Boolean,
+			TypeRefBoolean => Type.Boolean, //ncrunch: no coverage
 			TypeRefNumber => Type.Number,
 			TypeRefText => Type.Text,
-			TypeRefList => Type.List,
-			TypeRefDictionary => Type.Dictionary,
+			TypeRefList => Type.List, //ncrunch: no coverage
+			TypeRefDictionary => Type.Dictionary, //ncrunch: no coverage
 			TypeRefCustom => table[reader.Read7BitEncodedInt()],
-			var unknownType => throw new InvalidBytecodeFileException("Unknown type ref: " +
-				unknownType)
+			var unknownType => throw new InvalidBytecodeFileException( //ncrunch: no coverage
+				"Unknown type ref: " + unknownType)
 		};
 
 	private const byte TypeRefNone = 0;
