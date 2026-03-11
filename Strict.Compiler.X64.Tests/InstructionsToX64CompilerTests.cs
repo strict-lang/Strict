@@ -375,42 +375,42 @@ public sealed class InstructionsToX64CompilerTests
 	}
 
 	[Test]
-	public void CompileToWindowsExecutableAsmIncludesMainEntryPoint()
+	public void CompileWindowsPlatformIncludesMainEntryPoint()
 	{
 		var instructions = new List<Instruction>
 		{
 			new LoadConstantInstruction(Register.R0, new ValueInstance(NumberType, 42.0)),
 			new ReturnInstruction(Register.R0)
 		};
-		var assembly = compiler.CompileToWindowsExecutableAsm("Run", instructions);
+		var assembly = compiler.CompileForPlatform("Run", instructions, Platform.Windows);
 		Assert.That(assembly, Does.Contain("global main"));
 		Assert.That(assembly, Does.Contain("main:"));
 		Assert.That(assembly, Does.Contain("call Run"));
 	}
 
 	[Test]
-	public void CompileToWindowsExecutableAsmIncludesExitProcess()
+	public void CompileWindowsPlatformIncludesExitProcess()
 	{
 		var instructions = new List<Instruction>
 		{
 			new LoadConstantInstruction(Register.R0, new ValueInstance(NumberType, 1.0)),
 			new ReturnInstruction(Register.R0)
 		};
-		var assembly = compiler.CompileToWindowsExecutableAsm("Compute", instructions);
+		var assembly = compiler.CompileForPlatform("Compute", instructions, Platform.Windows);
 		Assert.That(assembly, Does.Contain("extern ExitProcess"));
 		Assert.That(assembly, Does.Contain("call ExitProcess"));
 		Assert.That(assembly, Does.Contain("xor rcx, rcx"));
 	}
 
 	[Test]
-	public void CompileToWindowsExecutableAsmContainsBothFunctionAndEntryPoint()
+	public void CompileWindowsPlatformContainsBothFunctionAndEntryPoint()
 	{
 		var instructions = new List<Instruction>
 		{
 			new LoadConstantInstruction(Register.R0, new ValueInstance(NumberType, 5.0)),
 			new ReturnInstruction(Register.R0)
 		};
-		var assembly = compiler.CompileToWindowsExecutableAsm("MyFunc", instructions);
+		var assembly = compiler.CompileForPlatform("MyFunc", instructions, Platform.Windows);
 		Assert.That(assembly, Does.Contain("global MyFunc"));
 		Assert.That(assembly, Does.Contain("MyFunc:"));
 		Assert.That(assembly, Does.Contain("global main"));
@@ -418,44 +418,86 @@ public sealed class InstructionsToX64CompilerTests
 	}
 
 	[Test]
-	public void CompileToWindowsExecutableAsmEntryPointAppearsAfterFunction()
+	public void CompileWindowsPlatformEntryPointAppearsAfterFunction()
 	{
 		var instructions = new List<Instruction>
 		{
 			new LoadConstantInstruction(Register.R0, new ValueInstance(NumberType, 1.0)),
 			new ReturnInstruction(Register.R0)
 		};
-		var assembly = compiler.CompileToWindowsExecutableAsm("Work", instructions);
+		var assembly = compiler.CompileForPlatform("Work", instructions, Platform.Windows);
 		var funcPos = assembly.IndexOf("Work:", StringComparison.Ordinal);
 		var mainPos = assembly.IndexOf("main:", StringComparison.Ordinal);
 		Assert.That(funcPos, Is.LessThan(mainPos), "Function body should appear before main entry point");
 	}
 
 	[Test]
-	public void CompileToWindowsExecutableAsmHasShadowSpaceForWindowsAbi()
+	public void CompileWindowsPlatformHasShadowSpaceForWindowsAbi()
 	{
 		var instructions = new List<Instruction>
 		{
 			new LoadConstantInstruction(Register.R0, new ValueInstance(NumberType, 0.0)),
 			new ReturnInstruction(Register.R0)
 		};
-		var assembly = compiler.CompileToWindowsExecutableAsm("Entry", instructions);
+		var assembly = compiler.CompileForPlatform("Entry", instructions, Platform.Windows);
 		Assert.That(assembly, Does.Contain("sub rsp, 32"), "Windows ABI requires 32-byte shadow space");
 		Assert.That(assembly, Does.Contain("add rsp, 32"));
 	}
 
 	[Test]
-	public void WindowsExecutableLinkerReturnsNullWhenNasmNotAvailable()
+	public void CompileLinuxPlatformUsesStartEntryPointAndSyscallExit()
 	{
-		if (WindowsExecutableLinker.IsNasmAvailable)
+		var instructions = new List<Instruction>
+		{
+			new LoadConstantInstruction(Register.R0, new ValueInstance(NumberType, 0.0)),
+			new ReturnInstruction(Register.R0)
+		};
+		var assembly = compiler.CompileForPlatform("Run", instructions, Platform.Linux);
+		Assert.That(assembly, Does.Contain("global _start"));
+		Assert.That(assembly, Does.Contain("_start:"));
+		Assert.That(assembly, Does.Contain("call Run"));
+		Assert.That(assembly, Does.Contain("mov rax, 60"));
+		Assert.That(assembly, Does.Contain("syscall"));
+	}
+
+	[Test]
+	public void CompileMacOsPlatformUsesMainAndSyscallExit()
+	{
+		var instructions = new List<Instruction>
+		{
+			new LoadConstantInstruction(Register.R0, new ValueInstance(NumberType, 0.0)),
+			new ReturnInstruction(Register.R0)
+		};
+		var assembly = compiler.CompileForPlatform("Run", instructions, Platform.MacOS);
+		Assert.That(assembly, Does.Contain("global _main"));
+		Assert.That(assembly, Does.Contain("_main:"));
+		Assert.That(assembly, Does.Contain("0x2000001"));
+		Assert.That(assembly, Does.Contain("syscall"));
+	}
+
+	[Test]
+	public void CompileLinuxArmPlatformThrowsNotSupported()
+	{
+		var instructions = new List<Instruction>
+		{
+			new ReturnInstruction(Register.R0)
+		};
+		Assert.Throws<NotSupportedException>(() =>
+			compiler.CompileForPlatform("Run", instructions, Platform.LinuxArm));
+	}
+
+	[Test]
+	public void NativeExecutableLinkerThrowsToolNotFoundWhenNasmMissing()
+	{
+		if (NativeExecutableLinker.IsNasmAvailable)
 			Assert.Ignore("NASM is installed – skipping unavailability test");
-		var linker = new WindowsExecutableLinker();
+		var linker = new NativeExecutableLinker();
 		var tempAsm = Path.Combine(Path.GetTempPath(), "test_" + Guid.NewGuid() + ".asm");
 		File.WriteAllText(tempAsm, "section .text\nglobal main\nmain:\n    ret");
 		try
 		{
-			Assert.That(linker.TryCreateExecutable(tempAsm), Is.Null,
-				"Should return null when NASM is not installed");
+			Assert.Throws<ToolNotFoundException>(() =>
+				linker.CreateExecutable(tempAsm, Platform.Windows));
 		}
 		finally
 		{
@@ -465,17 +507,43 @@ public sealed class InstructionsToX64CompilerTests
 	}
 
 	[Test]
-	public void WindowsExecutableLinkerIsNasmAvailableReturnsBooleanWithoutThrowing()
+	public void NativeExecutableLinkerThrowsNotSupportedForLinuxArm()
 	{
-		var result = WindowsExecutableLinker.IsNasmAvailable;
+		var linker = new NativeExecutableLinker();
+		var tempAsm = Path.Combine(Path.GetTempPath(), "test_" + Guid.NewGuid() + ".asm");
+		File.WriteAllText(tempAsm, "section .text\nglobal _start\n_start:\n    ret");
+		try
+		{
+			Assert.Throws<NotSupportedException>(() =>
+				linker.CreateExecutable(tempAsm, Platform.LinuxArm));
+		}
+		finally
+		{
+			if (File.Exists(tempAsm))
+				File.Delete(tempAsm);
+		}
+	}
+
+	[Test]
+	public void NativeExecutableLinkerIsNasmAvailableReturnsBooleanWithoutThrowing()
+	{
+		var result = NativeExecutableLinker.IsNasmAvailable;
 		Assert.That(result, Is.TypeOf<bool>());
 	}
 
 	[Test]
-	public void WindowsExecutableLinkerIsGccAvailableReturnsBooleanWithoutThrowing()
+	public void NativeExecutableLinkerIsGccAvailableReturnsBooleanWithoutThrowing()
 	{
-		var result = WindowsExecutableLinker.IsGccAvailable;
+		var result = NativeExecutableLinker.IsGccAvailable;
 		Assert.That(result, Is.TypeOf<bool>());
+	}
+
+	[Test]
+	public void ToolNotFoundExceptionContainsNameAndUrl()
+	{
+		var exception = new ToolNotFoundException("nasm", "https://nasm.us");
+		Assert.That(exception.Message, Does.Contain("nasm"));
+		Assert.That(exception.Message, Does.Contain("https://nasm.us"));
 	}
 
 	private static Method CreateSingleMethod(string typeName, params string[] methodLines) =>

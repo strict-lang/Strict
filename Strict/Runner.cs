@@ -62,10 +62,10 @@ public sealed class Runner : IDisposable
 			Console.WriteLine(message);
 	}
 
-	public Runner Run() =>
+	public Runner Run(Platform? targetPlatform = null) =>
 		deserializer != null
 			? RunFromPreloadedBytecode(deserializer.Instructions[mainType.Name])
-			: RunFromSource();
+			: RunFromSource(targetPlatform);
 
 	private Runner RunFromPreloadedBytecode(List<Instruction> preloadedInstructions)
 	{
@@ -78,7 +78,7 @@ public sealed class Runner : IDisposable
 		return this;
 	}
 
-	private Runner RunFromSource()
+	private Runner RunFromSource(Platform? targetPlatform)
 	{
 		if (enableTestsAndDetailedOutput)
 		{
@@ -90,7 +90,8 @@ public sealed class Runner : IDisposable
 		var optimizedInstructions = OptimizeBytecode(instructions);
 		ExecuteBytecode(optimizedInstructions);
 		SaveBytecodeIfPossible(optimizedInstructions);
-		SaveWindowsExecutableIfPossible(optimizedInstructions);
+		if (targetPlatform.HasValue)
+			SavePlatformExecutable(optimizedInstructions, targetPlatform.Value);
 		Console.WriteLine("Successfully parsed, optimized and executed " + mainType.Name + " in " +
 			TimeSpan.FromTicks(stepTimes.Sum()).ToString(@"s\.ffffff") + "s");
 		return this;
@@ -241,23 +242,19 @@ public sealed class Runner : IDisposable
 	}
 
 	/// <summary>
-	/// Generates a complete Windows-executable NASM assembly (with main entry point) and saves it
-	/// as a .asm file. Then attempts to invoke NASM + gcc to produce a .exe.
+	/// Generates a platform-specific executable from the compiled instructions.
+	/// Saves a .asm file, then invokes NASM and the platform linker.
+	/// Throws <see cref="ToolNotFoundException"/> if required tools are missing.
 	/// </summary>
-	private void SaveWindowsExecutableIfPossible(List<Instruction> optimizedInstructions)
+	private void SavePlatformExecutable(List<Instruction> optimizedInstructions, Platform platform)
 	{
-		var compiler = new InstructionsToX64Compiler();
-		var assemblyText = compiler.CompileToWindowsExecutableAsm(mainType.Name, optimizedInstructions);
+		var assemblyText = new InstructionsToX64Compiler().CompileForPlatform(
+			mainType.Name, optimizedInstructions, platform);
 		var asmPath = Path.Combine(currentFolder, mainType.Name + ".asm");
 		File.WriteAllText(asmPath, assemblyText);
-		Console.WriteLine("Saved x64 NASM assembly to: " + asmPath);
-		var exePath = new WindowsExecutableLinker().TryCreateExecutable(asmPath);
-		if (exePath != null)
-			Console.WriteLine("Saved Windows executable to: " + exePath);
-		else
-			Console.WriteLine("NASM not found – assemble manually: nasm -f win64 " +
-				mainType.Name + ".asm -o " + mainType.Name + ".obj && gcc " +
-				mainType.Name + ".obj -o " + mainType.Name + ".exe -lkernel32");
+		Console.WriteLine("Saved " + platform + " NASM assembly to: " + asmPath);
+		var exePath = new NativeExecutableLinker().CreateExecutable(asmPath, platform);
+		Console.WriteLine("Saved " + platform + " executable to: " + exePath);
 	}
 
 	public void Dispose() => package.Dispose();

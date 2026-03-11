@@ -24,17 +24,27 @@ public sealed class InstructionsToX64Compiler
 		BuildX64Assembly(methodName, [], [.. instructions]);
 
 	/// <summary>
-	/// Produces a complete Windows-executable NASM source: the compiled method followed by a
-	/// <c>main</c> entry point that calls it and then invokes <c>ExitProcess(0)</c>.
-	/// Assemble with: nasm -f win64 {name}.asm -o {name}.obj
-	/// Link with:     gcc {name}.obj -o {name}.exe -lkernel32
+	/// Produces a complete NASM source for the target platform: the compiled method followed by
+	/// an entry point that calls it and exits cleanly.
 	/// </summary>
-	public string CompileToWindowsExecutableAsm(string methodName,
-		IList<Instruction> instructions)
+	public string CompileForPlatform(string methodName, IList<Instruction> instructions,
+		Platform platform)
 	{
+		if (platform == Platform.LinuxArm)
+			throw new NotSupportedException(
+				"AArch64 code generation is not yet implemented for LinuxArm.");
 		var functionAsm = BuildX64Assembly(methodName, [], [.. instructions]);
-		return functionAsm + "\n" + BuildWindowsEntryPoint(methodName);
+		return functionAsm + "\n" + BuildEntryPoint(methodName, platform);
 	}
+
+	private static string BuildEntryPoint(string methodName, Platform platform) =>
+		platform switch
+		{
+			Platform.Windows => BuildWindowsEntryPoint(methodName),
+			Platform.Linux => BuildLinuxEntryPoint(methodName),
+			Platform.MacOS => BuildMacOsEntryPoint(methodName),
+			_ => throw new NotSupportedException("Unsupported platform: " + platform)
+		};
 
 	private static string BuildWindowsEntryPoint(string methodName) =>
 		string.Join("\n",
@@ -53,6 +63,32 @@ public sealed class InstructionsToX64Compiler
 			"    add rsp, 32",
 			"    pop rbp",
 			"    ret");
+
+	private static string BuildLinuxEntryPoint(string methodName) =>
+		string.Join("\n",
+			"",
+			"global _start",
+			"",
+			"_start:",
+			"    push rbp",
+			"    mov rbp, rsp",
+			$"    call {methodName}",
+			"    mov rdi, 0",
+			"    mov rax, 60",
+			"    syscall");
+
+	private static string BuildMacOsEntryPoint(string methodName) =>
+		string.Join("\n",
+			"",
+			"global _main",
+			"",
+			"_main:",
+			"    push rbp",
+			"    mov rbp, rsp",
+			$"    call _{methodName}",
+			"    xor rdi, rdi",
+			"    mov rax, 0x2000001",
+			"    syscall");
 
 	private static List<Instruction> GenerateInstructions(Method method)
 	{

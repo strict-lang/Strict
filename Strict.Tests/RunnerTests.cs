@@ -1,4 +1,5 @@
 using Strict.Bytecode.Serialization;
+using Strict.Compiler.X64;
 using Strict.Language;
 using Strict.Language.Tests;
 
@@ -115,22 +116,23 @@ public sealed class RunnerTests
 	}
 
 	[Test]
-	public void RunningFromSourceCreatesAsmFileNextToBinary()
+	public void RunWithPlatformWindowsCreatesAsmFileWithWindowsEntryPoint()
 	{
 		const string StrictFilePath = "Examples/SimpleCalculator.strict";
 		var asmPath = Path.ChangeExtension(StrictFilePath, ".asm");
 		var binaryPath = Path.ChangeExtension(StrictFilePath, BytecodeSerializer.Extension);
 		try
 		{
-			using var _ = new Runner(TestPackage.Instance, StrictFilePath).Run();
-			Assert.That(File.Exists(asmPath), Is.True, ".asm file should be created next to .strictbinary");
-			Assert.That(writer.ToString(), Does.Contain("Saved x64 NASM assembly to:"));
+			using var runner = new Runner(TestPackage.Instance, StrictFilePath);
+			try { runner.Run(Platform.Windows); }
+			catch (ToolNotFoundException) { /* asm was written before linking */ }
+			Assert.That(File.Exists(asmPath), Is.True, ".asm file should be created");
+			Assert.That(writer.ToString(), Does.Contain("Saved Windows NASM assembly to:"));
 			var asmContent = File.ReadAllText(asmPath);
 			Assert.That(asmContent, Does.Contain("section .text"));
 			Assert.That(asmContent, Does.Contain("global SimpleCalculator"));
 			Assert.That(asmContent, Does.Contain("global main"));
 			Assert.That(asmContent, Does.Contain("extern ExitProcess"));
-			Assert.That(asmContent, Does.Contain("call SimpleCalculator"));
 		}
 		finally
 		{
@@ -142,18 +144,65 @@ public sealed class RunnerTests
 	}
 
 	[Test]
-	public void RunningFromSourceLogsNasmInstructionsWhenNasmNotAvailable()
+	public void RunWithPlatformLinuxCreatesAsmFileWithStartEntryPoint()
 	{
 		const string StrictFilePath = "Examples/SimpleCalculator.strict";
 		var asmPath = Path.ChangeExtension(StrictFilePath, ".asm");
 		var binaryPath = Path.ChangeExtension(StrictFilePath, BytecodeSerializer.Extension);
 		try
 		{
-			using var _ = new Runner(TestPackage.Instance, StrictFilePath).Run();
-			var output = writer.ToString();
-			Assert.That(output,
-				Does.Contain("Saved Windows executable to:").Or.Contain("nasm -f win64"),
-				"Should either report success or provide nasm assembly instructions");
+			using var runner = new Runner(TestPackage.Instance, StrictFilePath);
+			try { runner.Run(Platform.Linux); }
+			catch (ToolNotFoundException) { /* asm was written before linking */ }
+			Assert.That(File.Exists(asmPath), Is.True, ".asm file should be created");
+			Assert.That(writer.ToString(), Does.Contain("Saved Linux NASM assembly to:"));
+			var asmContent = File.ReadAllText(asmPath);
+			Assert.That(asmContent, Does.Contain("global _start"));
+			Assert.That(asmContent, Does.Contain("_start:"));
+		}
+		finally
+		{
+			if (File.Exists(asmPath))
+				File.Delete(asmPath);
+			if (File.Exists(binaryPath))
+				File.Delete(binaryPath);
+		}
+	}
+
+	[Test]
+	public void RunWithNoPlatformDoesNotCreateAsmFile()
+	{
+		const string StrictFilePath = "Examples/SimpleCalculator.strict";
+		var asmPath = Path.ChangeExtension(StrictFilePath, ".asm");
+		var binaryPath = Path.ChangeExtension(StrictFilePath, BytecodeSerializer.Extension);
+		try
+		{
+			using var runner = new Runner(TestPackage.Instance, StrictFilePath);
+			runner.Run();
+			Assert.That(File.Exists(asmPath), Is.False, ".asm file should NOT be created without a platform flag");
+			Assert.That(writer.ToString(), Does.Not.Contain("NASM assembly"));
+		}
+		finally
+		{
+			if (File.Exists(asmPath))
+				File.Delete(asmPath);
+			if (File.Exists(binaryPath))
+				File.Delete(binaryPath);
+		}
+	}
+
+	[Test]
+	public void RunWithPlatformWindowsThrowsToolNotFoundWhenNasmMissing()
+	{
+		if (NativeExecutableLinker.IsNasmAvailable)
+			Assert.Ignore("NASM is installed – skipping missing-tool test");
+		const string StrictFilePath = "Examples/SimpleCalculator.strict";
+		var asmPath = Path.ChangeExtension(StrictFilePath, ".asm");
+		var binaryPath = Path.ChangeExtension(StrictFilePath, BytecodeSerializer.Extension);
+		try
+		{
+			using var runner = new Runner(TestPackage.Instance, StrictFilePath);
+			Assert.Throws<ToolNotFoundException>(() => runner.Run(Platform.Windows));
 		}
 		finally
 		{
@@ -176,7 +225,8 @@ public sealed class RunnerTests
 			writer.GetStringBuilder().Clear();
 			if (File.Exists(asmPath))
 				File.Delete(asmPath);
-			using var _ = new Runner(TestPackage.Instance, binaryPath).Run();
+			using var runner = new Runner(TestPackage.Instance, binaryPath);
+			runner.Run();
 			Assert.That(File.Exists(asmPath), Is.False, ".asm file should not be created when loading precompiled bytecode");
 		}
 		finally
