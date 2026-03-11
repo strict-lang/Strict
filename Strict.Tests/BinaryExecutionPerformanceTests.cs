@@ -25,17 +25,18 @@ public class BinaryExecutionPerformanceTests
 	public void Setup()
 	{
 		EnsureBinaryFileExists();
-		binaryPackage = new Package(TestPackage.Instance,
-			Path.GetDirectoryName(Path.GetFullPath(BinaryFilePath)) ?? ".");
-		BytecodeSerializer.LoadEmbeddedTypes(BinaryFilePath, binaryPackage);
-		instructions = BytecodeSerializer.DeserializeAll(BinaryFilePath, binaryPackage)
-			.Values.First();
+		(binaryPackage, var instructionsByType) =
+			BytecodeSerializer.LoadTypesAndDeserializeAll(BinaryFilePath, TestPackage.Instance);
+		instructions = instructionsByType.Values.First();
 		vm = new VirtualMachine(binaryPackage);
 	}
 
 	[GlobalCleanup]
 	[TearDown]
-	public void Cleanup() => binaryPackage.Dispose();
+	public void Cleanup()
+	{
+		// Package lifetime is managed by BytecodeSerializer cache; do not dispose it here.
+	}
 
 	private static void EnsureBinaryFileExists()
 	{

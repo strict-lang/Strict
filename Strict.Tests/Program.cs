@@ -14,48 +14,20 @@ var basePackage = TestPackage.Instance;
 if (!File.Exists(binaryFilePath))
 	RunSilently(() => new Runner(basePackage,
 		Path.Combine(AppContext.BaseDirectory, "Examples", "SimpleCalculator.strict")).Run().Dispose());
-// Warm up: one full binary execution to JIT and cache everything
+// Warm up: one full binary execution to JIT and cache everything (also populates the binary cache)
 RunBinaryOnce(basePackage, binaryFilePath);
 Console.WriteLine("Warmup complete. Starting performance measurement...");
 const int Runs = 1000;
-// Measure each sub-step separately to find the bottleneck
-long newPackageTicks = 0, loadTypesTicks = 0, deserializeTicks = 0, executeTicks = 0;
-var savedOut = Console.Out;
-Console.SetOut(TextWriter.Null);
-for (var run = 0; run < Runs; run++)
-{
-	var stepStart = DateTime.UtcNow.Ticks;
-	var binaryDir = Path.GetDirectoryName(Path.GetFullPath(binaryFilePath)) ?? ".";
-	using var pkg = new Package(basePackage, binaryDir);
-	newPackageTicks += DateTime.UtcNow.Ticks - stepStart;
-	stepStart = DateTime.UtcNow.Ticks;
-	BytecodeSerializer.LoadEmbeddedTypes(binaryFilePath, pkg);
-	loadTypesTicks += DateTime.UtcNow.Ticks - stepStart;
-	stepStart = DateTime.UtcNow.Ticks;
-	var loadedInstructions = BytecodeSerializer.DeserializeAll(binaryFilePath, pkg).Values.First();
-	deserializeTicks += DateTime.UtcNow.Ticks - stepStart;
-	stepStart = DateTime.UtcNow.Ticks;
-	new VirtualMachine(pkg).Execute(loadedInstructions);
-	executeTicks += DateTime.UtcNow.Ticks - stepStart;
-}
-Console.SetOut(savedOut);
-Console.WriteLine("Per-step breakdown (avg of " + Runs + " runs):");
-Console.WriteLine("  new Package():             " + TimeSpan.FromTicks(newPackageTicks / Runs));
-Console.WriteLine("  LoadEmbeddedTypes():       " + TimeSpan.FromTicks(loadTypesTicks / Runs));
-Console.WriteLine("  DeserializeAll():          " + TimeSpan.FromTicks(deserializeTicks / Runs));
-Console.WriteLine("  VirtualMachine.Execute():  " + TimeSpan.FromTicks(executeTicks / Runs));
-Console.WriteLine("  Total per run:             " +
-	TimeSpan.FromTicks((newPackageTicks + loadTypesTicks + deserializeTicks + executeTicks) / Runs));
-// Measure: 1000 iterations of full Runner.Run() from .strictbinary
+// Measure: 1000 iterations of full Runner.Run() from .strictbinary (cache hits after warmup)
 var allocatedBefore = GC.GetAllocatedBytesForCurrentThread();
 var startTicks = DateTime.UtcNow.Ticks;
 for (var run = 0; run < Runs; run++)
 	RunBinaryOnce(basePackage, binaryFilePath);
 var endTicks = DateTime.UtcNow.Ticks;
 var allocatedAfter = GC.GetAllocatedBytesForCurrentThread();
-Console.WriteLine("Total execution time per run (full binary Runner.Run): " +
+Console.WriteLine("Total execution time per run (full binary Runner.Run, cached): " +
 	TimeSpan.FromTicks(endTicks - startTicks) / Runs);
-Console.WriteLine("Allocated bytes per run: " + (allocatedAfter - allocatedBefore) / Runs);
+Console.WriteLine("Allocated bytes per run (cached): " + (allocatedAfter - allocatedBefore) / Runs);
 // Now measure only the hot VM execution loop (pre-loaded bytecode, no file I/O)
 var hotPathBenchmark = new BinaryExecutionPerformanceTests();
 hotPathBenchmark.Setup();

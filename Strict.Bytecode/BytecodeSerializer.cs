@@ -13,9 +13,86 @@ namespace Strict.Bytecode;
 /// Entry layout: magic(6) + version(1) + string-table + instruction-count(7bit) + instructions.
 /// All counts and lengths use Write7BitEncodedInt. String identifiers/names use string-table indices.
 /// SmallNumber ValueKind stores 0–255 values in 1 byte (type implied). No source path is stored.
+/// Results are cached per file path+modification-time so repeated loads skip ZIP I/O entirely.
 /// </summary>
 public static class BytecodeSerializer
 {
+	private sealed class CachedBinaryData(
+		Package localPackage,
+		Dictionary<string, List<Instruction>> instructions,
+		DateTime modified)
+	{
+		public Package LocalPackage { get; } = localPackage;
+		public Dictionary<string, List<Instruction>> Instructions { get; } = instructions;
+		public DateTime Modified { get; } = modified;
+	}
+
+	private static readonly Dictionary<string, CachedBinaryData> binaryCache =
+		new(StringComparer.OrdinalIgnoreCase);
+	private static readonly object cacheLock = new();
+
+	/// <summary>
+	/// Opens the ZIP once, loads embedded source types and deserializes bytecode, then caches
+	/// the result keyed by absolute file path + modification time. Subsequent calls for the same
+	/// unchanged file return the cached Package and Instructions without any file I/O.
+	/// The local package is given a unique "_bc_" prefix so it never collides with source-runner
+	/// packages (which use the directory name) or Strict type names (which must be capitalized).
+	/// </summary>
+	public static (Package LocalPackage, Dictionary<string, List<Instruction>> Instructions)
+		LoadTypesAndDeserializeAll(string zipFilePath, Package basePackage)
+	{
+		var fullPath = Path.GetFullPath(zipFilePath);
+		var mtime = File.GetLastWriteTimeUtc(fullPath);
+		var packageName = "bin-" + Path.GetFileNameWithoutExtension(fullPath);
+		lock (cacheLock)
+		{
+			if (binaryCache.TryGetValue(fullPath, out var cached) && cached.Modified == mtime)
+				return (cached.LocalPackage, cached.Instructions);
+			if (binaryCache.TryGetValue(fullPath, out var stale))
+			{
+				stale.LocalPackage.Dispose();
+				binaryCache.Remove(fullPath);
+			}
+			foreach (var key in binaryCache.Keys.ToList())
+			{
+				var entry = binaryCache[key];
+				if (entry.LocalPackage.Name == packageName && entry.LocalPackage.Parent == basePackage)
+				{
+					entry.LocalPackage.Dispose();
+					binaryCache.Remove(key);
+				}
+			}
+			var localPackage = new Package(basePackage, packageName);
+			Dictionary<string, List<Instruction>> instructions;
+			try
+			{
+				instructions = LoadFromZipOnce(fullPath, localPackage);
+			}
+			catch
+			{
+				localPackage.Dispose();
+				throw;
+			}
+			binaryCache[fullPath] = new CachedBinaryData(localPackage, instructions, mtime);
+			return (localPackage, instructions);
+		}
+	}
+
+	private static Dictionary<string, List<Instruction>> LoadFromZipOnce(string fullPath,
+		Package package)
+	{
+		try
+		{
+			using var zip = ZipFile.OpenRead(fullPath);
+			LoadEmbeddedTypesFromZip(zip, package);
+			return DeserializeAllFromZip(zip, package);
+		}
+		catch (InvalidDataException ex)
+		{
+			throw new InvalidBytecodeFileException("Not a valid " + Extension + " ZIP file: " + ex.Message);
+		}
+	}
+
 	public static void Serialize(IList<Instruction> instructions, string outputFilePath,
 		string typeName = "main", string? sourceDirectoryPath = null)
 	{
@@ -60,6 +137,11 @@ public static class BytecodeSerializer
 	public static Dictionary<string, Type> LoadEmbeddedTypes(string zipFilePath, Package package)
 	{
 		using var zip = ZipFile.OpenRead(zipFilePath);
+		return LoadEmbeddedTypesFromZip(zip, package);
+	}
+
+	private static Dictionary<string, Type> LoadEmbeddedTypesFromZip(ZipArchive zip, Package package)
+	{
 		var sourceEntries = zip.Entries.Where(entry =>
 			entry.Name.EndsWith(Type.Extension, StringComparison.OrdinalIgnoreCase)).ToList();
 		if (sourceEntries.Count == 0)
@@ -99,25 +181,31 @@ public static class BytecodeSerializer
 		try
 		{
 			using var zip = ZipFile.OpenRead(zipFilePath);
-			var bytecodeEntries = zip.Entries.Where(entry =>
-				entry.Name.EndsWith(BytecodeEntryExtension, StringComparison.OrdinalIgnoreCase)).ToList();
-			if (bytecodeEntries.Count == 0)
-				throw new InvalidBytecodeFileException(Extension + " ZIP contains no entries");
-			foreach (var entry in bytecodeEntries)
-				EnsureTypeExists(package, Path.GetFileNameWithoutExtension(entry.Name));
-			var result = new Dictionary<string, List<Instruction>>(StringComparer.Ordinal);
-			foreach (var entry in bytecodeEntries)
-			{
-				var typeName = Path.GetFileNameWithoutExtension(entry.Name);
-				using var entryStream = entry.Open();
-				result[typeName] = DeserializeEntry(entryStream, package);
-			}
-			return result;
+			return DeserializeAllFromZip(zip, package);
 		}
 		catch (InvalidDataException ex)
 		{
-			throw new InvalidBytecodeFileException("Not a valid " + Extension + "ZIP file: " + ex.Message);
+			throw new InvalidBytecodeFileException("Not a valid " + Extension + " ZIP file: " + ex.Message);
 		}
+	}
+
+	private static Dictionary<string, List<Instruction>> DeserializeAllFromZip(ZipArchive zip,
+		Package package)
+	{
+		var bytecodeEntries = zip.Entries.Where(entry =>
+			entry.Name.EndsWith(BytecodeEntryExtension, StringComparison.OrdinalIgnoreCase)).ToList();
+		if (bytecodeEntries.Count == 0)
+			throw new InvalidBytecodeFileException(Extension + " ZIP contains no entries");
+		foreach (var entry in bytecodeEntries)
+			EnsureTypeExists(package, Path.GetFileNameWithoutExtension(entry.Name));
+		var result = new Dictionary<string, List<Instruction>>(StringComparer.Ordinal);
+		foreach (var entry in bytecodeEntries)
+		{
+			var typeName = Path.GetFileNameWithoutExtension(entry.Name);
+			using var entryStream = entry.Open();
+			result[typeName] = DeserializeEntry(entryStream, package);
+		}
+		return result;
 	}
 
 	private static void EnsureTypeExists(Package package, string typeName)
@@ -136,17 +224,19 @@ public static class BytecodeSerializer
 	private static List<Instruction> ReadEntry(BinaryReader reader, Package package)
 	{
 		ValidateMagicAndVersion(reader);
-		var table = new NameTable(reader);
+		var tableArray = new NameTable(reader).ToArray();
+		var numberType = package.GetType(Type.Number);
 		var count = reader.Read7BitEncodedInt();
 		var instructions = new List<Instruction>(count);
 		for (var index = 0; index < count; index++)
-			instructions.Add(ReadInstruction(reader, package, table.ToArray()));
+			instructions.Add(ReadInstruction(reader, package, tableArray, numberType));
 		return instructions;
 	}
 
 	private static void ValidateMagicAndVersion(BinaryReader reader)
 	{
-		var magic = reader.ReadBytes(EntryMagicBytes.Length);
+		Span<byte> magic = stackalloc byte[EntryMagicBytes.Length];
+		reader.Read(magic);
 		if (!magic.SequenceEqual(EntryMagicBytes))
 			throw new InvalidBytecodeFileException("Entry does not start with 'Strict' magic bytes");
 		var fileVersion = reader.ReadByte();
@@ -476,16 +566,17 @@ public static class BytecodeSerializer
 		}
 	}
 
-	private static Instruction ReadInstruction(BinaryReader reader, Package package, string[] table)
+	private static Instruction ReadInstruction(BinaryReader reader, Package package, string[] table,
+		Type numberType)
 	{
 		var type = (InstructionType)reader.ReadByte();
 		return type switch
 		{
-			InstructionType.LoadConstantToRegister => ReadLoadConstant(reader, package, table),
+			InstructionType.LoadConstantToRegister => ReadLoadConstant(reader, package, table, numberType),
 			InstructionType.LoadVariableToRegister => ReadLoadVariable(reader, table),
-			InstructionType.StoreConstantToVariable => ReadStoreVariable(reader, package, table),
+			InstructionType.StoreConstantToVariable => ReadStoreVariable(reader, package, table, numberType),
 			InstructionType.StoreRegisterToVariable => ReadStoreFromRegister(reader, table),
-			InstructionType.Set => ReadSet(reader, package, table),
+			InstructionType.Set => ReadSet(reader, package, table, numberType),
 			InstructionType.Invoke => ReadInvoke(reader, package, table),
 			InstructionType.Return => new ReturnInstruction((Register)reader.ReadByte()),
 			InstructionType.LoopBegin => ReadLoopBegin(reader),
@@ -510,22 +601,23 @@ public static class BytecodeSerializer
 		t is > InstructionType.StoreSeparator and < InstructionType.BinaryOperatorsSeparator;
 
 	private static LoadConstantInstruction ReadLoadConstant(BinaryReader r, Package package,
-		string[] table) =>
-		new((Register)r.ReadByte(), ReadValueInstance(r, package, table));
+		string[] table, Type numberType) =>
+		new((Register)r.ReadByte(), ReadValueInstance(r, package, table, numberType));
 
 	private static LoadVariableToRegister ReadLoadVariable(BinaryReader r, string[] table) =>
 		new((Register)r.ReadByte(), table[r.Read7BitEncodedInt()]);
 
 	private static StoreVariableInstruction ReadStoreVariable(BinaryReader r, Package package,
-		string[] table) =>
-		new(ReadValueInstance(r, package, table), table[r.Read7BitEncodedInt()], r.ReadBoolean());
+		string[] table, Type numberType) =>
+		new(ReadValueInstance(r, package, table, numberType), table[r.Read7BitEncodedInt()], r.ReadBoolean());
 
 	private static StoreFromRegisterInstruction ReadStoreFromRegister(BinaryReader r,
 		string[] table) =>
 		new((Register)r.ReadByte(), table[r.Read7BitEncodedInt()]);
 
-	private static SetInstruction ReadSet(BinaryReader r, Package package, string[] table) =>
-		new(ReadValueInstance(r, package, table), (Register)r.ReadByte());
+	private static SetInstruction ReadSet(BinaryReader r, Package package, string[] table,
+		Type numberType) =>
+		new(ReadValueInstance(r, package, table, numberType), (Register)r.ReadByte());
 
 	private static BinaryInstruction ReadBinary(BinaryReader r, InstructionType type)
 	{
@@ -567,7 +659,8 @@ public static class BytecodeSerializer
 	private static ListCallInstruction ReadListCall(BinaryReader r, string[] table) =>
 		new((Register)r.ReadByte(), (Register)r.ReadByte(), table[r.Read7BitEncodedInt()]);
 
-	private static ValueInstance ReadValueInstance(BinaryReader r, Package package, string[] table)
+	private static ValueInstance ReadValueInstance(BinaryReader r, Package package, string[] table,
+		Type numberType)
 	{
 		var kind = (ValueKind)r.ReadByte();
 		return kind switch
@@ -576,26 +669,23 @@ public static class BytecodeSerializer
 			ValueKind.None => new ValueInstance(package.GetType(table[r.Read7BitEncodedInt()])),
 			ValueKind.Boolean =>
 				new ValueInstance(package.GetType(table[r.Read7BitEncodedInt()]), r.ReadBoolean()),
-			ValueKind.SmallNumber =>
-				new ValueInstance(package.GetType(Type.Number), r.ReadByte()),
-			ValueKind.IntegerNumber =>
-				new ValueInstance(package.GetType(Type.Number), r.ReadInt32()),
-			ValueKind.Number =>
-				new ValueInstance(package.GetType(Type.Number), r.ReadDouble()),
-			ValueKind.List => ReadListValueInstance(r, package, table),
+			ValueKind.SmallNumber => new ValueInstance(numberType, r.ReadByte()),
+			ValueKind.IntegerNumber => new ValueInstance(numberType, r.ReadInt32()),
+			ValueKind.Number => new ValueInstance(numberType, r.ReadDouble()),
+			ValueKind.List => ReadListValueInstance(r, package, table, numberType),
 			_ => throw new InvalidBytecodeFileException("Unknown ValueKind: " + kind + " at byte " +
 				r.BaseStream.Position)
 		};
 	}
 
 	private static ValueInstance ReadListValueInstance(BinaryReader r, Package package,
-		string[] table)
+		string[] table, Type numberType)
 	{
 		var typeName = table[r.Read7BitEncodedInt()];
 		var count = r.Read7BitEncodedInt();
 		var items = new ValueInstance[count];
 		for (var i = 0; i < count; i++)
-			items[i] = ReadValueInstance(r, package, table);
+			items[i] = ReadValueInstance(r, package, table, numberType);
 		return new ValueInstance(package.GetType(typeName), items);
 	}
 
