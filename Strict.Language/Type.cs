@@ -444,17 +444,23 @@ public class Type : Context, IDisposable
 
 	private bool HasExactlyOneUsableMember(Type targetType, bool allowImplicitConversion, int maxDepth)
 	{
+		var key = (targetType, allowImplicitConversion, maxDepth);
+		if (usableMemberCache.TryGetValue(key, out var cached))
+			return cached;
 		var found = false;
-		foreach (var m in Members)
-			if (!m.IsConstant &&
-				m.Type.IsSameOrCanBeUsedAs(targetType, allowImplicitConversion, maxDepth - 1))
+		for (var memberIndex = 0; memberIndex < members.Count; memberIndex++)
+			if (!members[memberIndex].IsConstant &&
+				members[memberIndex].Type.IsSameOrCanBeUsedAs(targetType, allowImplicitConversion,
+					maxDepth - 1))
 			{
 				if (found)
-					return false;
+					return usableMemberCache[key] = false;
 				found = true;
 			}
-		return found;
+		return usableMemberCache[key] = found;
 	}
+
+	private readonly Dictionary<(Type, bool, int), bool> usableMemberCache = [];
 
 	/// <summary>
 	/// Only allow implicit conversions as defined in Any.strict (to Text, to Type, to HashCode)

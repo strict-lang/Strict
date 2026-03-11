@@ -13,12 +13,6 @@ if (args.Length == 0)
 	return;
 }
 var filePath = args[0];
-if (!File.Exists(filePath))
-{
-	Console.WriteLine($"Error: File not found: {filePath}");
-	Environment.ExitCode = 1;
-	return;
-}
 try
 {
 	using var basePackage = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();

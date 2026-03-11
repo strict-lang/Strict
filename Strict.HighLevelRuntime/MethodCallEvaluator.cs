@@ -4,26 +4,26 @@ using Type = Strict.Language.Type;
 
 namespace Strict.HighLevelRuntime;
 
-public sealed class MethodCallEvaluator(Executor executor)
+public sealed class MethodCallEvaluator(Interpreter interpreter)
 {
 	public ValueInstance EvaluateListCall(ListCall call, ExecutionContext ctx)
 	{
-		executor.Statistics.ListCallCount++;
-		var listInstance = executor.RunExpression(call.List, ctx);
-		var indexValue = executor.RunExpression(call.Index, ctx);
+		interpreter.Statistics.ListCallCount++;
+		var listInstance = interpreter.RunExpression(call.List, ctx);
+		var indexValue = interpreter.RunExpression(call.Index, ctx);
 		return listInstance.IsList
-			? listInstance.GetIteratorValue(executor.characterType, (int)indexValue.Number)
+			? listInstance.GetIteratorValue(interpreter.characterType, (int)indexValue.Number)
 			: throw new InvalidOperationException("List call needs a list, got: " + listInstance);
 	}
 
 	public ValueInstance Evaluate(MethodCall call, ExecutionContext ctx)
 	{
-		executor.Statistics.MethodCallCount++;
+		interpreter.Statistics.MethodCallCount++;
 		var operatorType = GetOperatorCategory(call.Method.Name);
 		if (operatorType != OperatorCategory.None)
 			return EvaluateArithmeticOrCompareOrLogical(call, ctx, operatorType);
 		var instance = call.Instance != null
-			? executor.RunExpression(call.Instance, ctx)
+			? interpreter.RunExpression(call.Instance, ctx)
 			: call.Method.Name != Method.From
 				? ctx.This
 				: null;
@@ -55,11 +55,11 @@ public sealed class MethodCallEvaluator(Executor executor)
 	private ValueInstance EvaluateArithmeticOrCompareOrLogical(MethodCall call,
 		ExecutionContext ctx, OperatorCategory operatorType)
 	{
-		executor.Statistics.BinaryCount++;
+		interpreter.Statistics.BinaryCount++;
 		if (call.Instance == null || call.Arguments.Count != 1)
 			throw new InvalidOperationException("Binary call must have instance and 1 argument"); //ncrunch: no coverage
-		var leftInstance = executor.RunExpression(call.Instance, ctx);
-		var rightInstance = executor.RunExpression(call.Arguments[0], ctx);
+		var leftInstance = interpreter.RunExpression(call.Instance, ctx);
+		var rightInstance = interpreter.RunExpression(call.Arguments[0], ctx);
 		return operatorType switch
 		{
 			OperatorCategory.Arithmetic => ExecuteArithmeticOperation(call, ctx, leftInstance, rightInstance),
@@ -72,7 +72,7 @@ public sealed class MethodCallEvaluator(Executor executor)
 	private ValueInstance ExecuteArithmeticOperation(MethodCall call, ExecutionContext ctx,
 		ValueInstance left, ValueInstance right)
 	{
-		executor.Statistics.ArithmeticCount++;
+		interpreter.Statistics.ArithmeticCount++;
 		var op = call.Method.Name;
 		if (IsNumberLike(left) && IsNumberLike(right))
 		{
@@ -80,12 +80,12 @@ public sealed class MethodCallEvaluator(Executor executor)
 			var r = right.Number;
 			return op switch
 			{
-				BinaryOperator.Plus => new ValueInstance(executor.numberType, l + r),
-				BinaryOperator.Minus => new ValueInstance(executor.numberType, l - r),
-				BinaryOperator.Multiply => new ValueInstance(executor.numberType, l * r),
-				BinaryOperator.Divide => new ValueInstance(executor.numberType, l / r),
-				BinaryOperator.Modulate => new ValueInstance(executor.numberType, l % r),
-				BinaryOperator.Power => new ValueInstance(executor.numberType, Math.Pow(l, r)),
+				BinaryOperator.Plus => new ValueInstance(interpreter.numberType, l + r),
+				BinaryOperator.Minus => new ValueInstance(interpreter.numberType, l - r),
+				BinaryOperator.Multiply => new ValueInstance(interpreter.numberType, l * r),
+				BinaryOperator.Divide => new ValueInstance(interpreter.numberType, l / r),
+				BinaryOperator.Modulate => new ValueInstance(interpreter.numberType, l % r),
+				BinaryOperator.Power => new ValueInstance(interpreter.numberType, Math.Pow(l, r)),
 				_ => ExecuteMethodCall(call, left, ctx) //ncrunch: no coverage
 			};
 		}
@@ -93,7 +93,7 @@ public sealed class MethodCallEvaluator(Executor executor)
 			return op == BinaryOperator.Plus
 				? new ValueInstance(left.Text + right.Text)
 				: throw new NotSupportedException("Only + operator is supported for Text, got: " + op);
-		if (left.IsText && right.IsPrimitiveType(executor.numberType))
+		if (left.IsText && right.IsPrimitiveType(interpreter.numberType))
 		{
 			return op == BinaryOperator.Plus
 				? new ValueInstance(left.Text + right.Number)
@@ -111,15 +111,15 @@ public sealed class MethodCallEvaluator(Executor executor)
 					right.List.Items),
 				BinaryOperator.Minus => SubtractLists(left.List.ReturnType, left.List.Items,
 					right.List.Items),
-				BinaryOperator.Multiply => MultiplyLists(left.List.ReturnType, executor.numberType,
+				BinaryOperator.Multiply => MultiplyLists(left.List.ReturnType, interpreter.numberType,
 					left.List.Items, right.List.Items),
-				BinaryOperator.Divide => DivideLists(left.List.ReturnType, executor.numberType,
+				BinaryOperator.Divide => DivideLists(left.List.ReturnType, interpreter.numberType,
 					left.List.Items, right.List.Items),
 				_ => throw new NotSupportedException( //ncrunch: no coverage
 					"Only +, -, *, / operators are supported for Lists, got: " + op)
 			};
 		}
-		if (left.IsList && right.IsPrimitiveType(executor.numberType))
+		if (left.IsList && right.IsPrimitiveType(interpreter.numberType))
 		{
 			if (op == BinaryOperator.Plus)
 				return AddToList(left.List.ReturnType, left.List.Items, right);
@@ -135,13 +135,13 @@ public sealed class MethodCallEvaluator(Executor executor)
 		return ExecuteMethodCall(call, left, ctx); //ncrunch: no coverage
 	}
 
-	private bool IsNumberLike(ValueInstance value) => value.IsNumberLike(executor.numberType);
+	private bool IsNumberLike(ValueInstance value) => value.IsNumberLike(interpreter.numberType);
 	public const string ListsHaveDifferentDimensions = "listsHaveDifferentDimensions";
 
 	private ValueInstance ExecuteComparisonOperation(MethodCall call, ExecutionContext ctx,
 		ValueInstance left, ValueInstance right)
 	{
-		executor.Statistics.CompareCount++;
+		interpreter.Statistics.CompareCount++;
 		var op = call.Method.Name;
 		if (op is BinaryOperator.Is)
 		{
@@ -151,23 +151,23 @@ public sealed class MethodCallEvaluator(Executor executor)
 				var leftInstance = left.TryGetValueTypeInstance();
 				var matches = leftInstance != null && leftInstance.ReturnType.IsError &&
 					leftInstance.ReturnType.IsSameOrCanBeUsedAs(rightInstance.ReturnType);
-				return executor.ToBoolean(matches);
+				return interpreter.ToBoolean(matches);
 			}
-			if (left.IsPrimitiveType(executor.characterType) && right.IsText)
-				right = new ValueInstance(executor.characterType, right.Text[0]);
+			if (left.IsPrimitiveType(interpreter.characterType) && right.IsText)
+				right = new ValueInstance(interpreter.characterType, right.Text[0]);
 			if (left.IsText &&
-				(right.IsPrimitiveType(executor.numberType) || right.IsPrimitiveType(executor.characterType)))
+				(right.IsPrimitiveType(interpreter.numberType) || right.IsPrimitiveType(interpreter.characterType)))
 				right = new ValueInstance(right.ToExpressionCodeString());
-			return executor.ToBoolean(left.Equals(right));
+			return interpreter.ToBoolean(left.Equals(right));
 		}
 		var l = left.Number;
 		var r = right.Number;
 		return op switch
 		{
-			BinaryOperator.Greater => executor.ToBoolean(l > r),
-			BinaryOperator.Smaller => executor.ToBoolean(l < r),
-			BinaryOperator.GreaterOrEqual => executor.ToBoolean(l >= r),
-			BinaryOperator.SmallerOrEqual => executor.ToBoolean(l <= r),
+			BinaryOperator.Greater => interpreter.ToBoolean(l > r),
+			BinaryOperator.Smaller => interpreter.ToBoolean(l < r),
+			BinaryOperator.GreaterOrEqual => interpreter.ToBoolean(l >= r),
+			BinaryOperator.SmallerOrEqual => interpreter.ToBoolean(l <= r),
 			_ => ExecuteMethodCall(call, left, ctx) //ncrunch: no coverage
 		};
 	}
@@ -175,12 +175,12 @@ public sealed class MethodCallEvaluator(Executor executor)
 	private ValueInstance ExecuteLogicalBinaryOperation(MethodCall call, ExecutionContext ctx,
 		ValueInstance left, ValueInstance right)
 	{
-		executor.Statistics.LogicalOperationCount++;
+		interpreter.Statistics.LogicalOperationCount++;
 		return call.Method.Name switch
 		{
-			BinaryOperator.And => executor.ToBoolean(left.Boolean && right.Boolean),
-			BinaryOperator.Or => executor.ToBoolean(left.Boolean || right.Boolean),
-			BinaryOperator.Xor => executor.ToBoolean(left.Boolean ^ right.Boolean),
+			BinaryOperator.And => interpreter.ToBoolean(left.Boolean && right.Boolean),
+			BinaryOperator.Or => interpreter.ToBoolean(left.Boolean || right.Boolean),
+			BinaryOperator.Xor => interpreter.ToBoolean(left.Boolean ^ right.Boolean),
 			_ => ExecuteMethodCall(call, left, ctx) //ncrunch: no coverage
 		};
 	}
@@ -300,7 +300,7 @@ public sealed class MethodCallEvaluator(Executor executor)
 		{
 			args = new ValueInstance[call.Arguments.Count];
 			for (var i = 0; i < call.Arguments.Count; i++)
-				args[i] = executor.RunExpression(call.Arguments[i], ctx);
+				args[i] = interpreter.RunExpression(call.Arguments[i], ctx);
 		}
 		if (instance is { IsDictionary: true } && args.Length > 0 && call.Method.Name == "Add")
 		{
@@ -308,9 +308,9 @@ public sealed class MethodCallEvaluator(Executor executor)
 				instance.Value.GetDictionaryItems()[args[0]] = args[1];
 			return instance.Value;
 		}
-		var result = executor.Execute(call.Method, instance ?? executor.noneInstance, args, ctx);
+		var result = interpreter.Execute(call.Method, instance ?? interpreter.noneInstance, args, ctx);
 		if (call.Method.ReturnType.IsMutable && call.Instance is VariableCall variableCall &&
-			!instance.Equals(executor.noneInstance))
+			!instance.Equals(interpreter.noneInstance))
 			ctx.Set(variableCall.Variable.Name, result);
 		return result;
 	}
@@ -339,11 +339,11 @@ public sealed class MethodCallEvaluator(Executor executor)
 				nameof(Method) => new ValueInstance(ctx.Method.GetType(nameof(Method)),
 					CreateMethodValue(ctx.Method)),
 				Type.Text or nameof(Type.Name) => new ValueInstance(ctx.Method.Type.FilePath),
-				Type.Number => new ValueInstance(executor.numberType,
+				Type.Number => new ValueInstance(interpreter.numberType,
 					source?.LineNumber ?? ctx.Method.TypeLineNumber),
 				_ => throw new NotSupportedException("Stacktrace member not supported: " + stacktraceType.Members[i]) //ncrunch: no coverage
 			};
-		return new ValueInstance(executor.listType.GetGenericImplementation(stacktraceType),
+		return new ValueInstance(interpreter.listType.GetGenericImplementation(stacktraceType),
 			[new ValueInstance(stacktraceType, stackValues)]);
 	}
 

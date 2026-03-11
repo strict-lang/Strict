@@ -5,20 +5,20 @@ using Type = Strict.Language.Type;
 
 namespace Strict.HighLevelRuntime;
 
-internal sealed class ForEvaluator(Executor executor)
+internal sealed class ForEvaluator(Interpreter interpreter)
 {
 	public ValueInstance Evaluate(For f, ExecutionContext ctx)
 	{
-		executor.Statistics.ForCount++;
-		var iterator = executor.RunExpression(f.Iterator, ctx);
-		var loop = executor.RentContext(ctx.Type, ctx.Method, ctx.This, ctx);
+		interpreter.Statistics.ForCount++;
+		var iterator = interpreter.RunExpression(f.Iterator, ctx);
+		var loop = interpreter.RentContext(ctx.Type, ctx.Method, ctx.This, ctx);
 		try
 		{
 			return TryEvaluate(f, ctx, iterator, loop);
 		}
 		finally
 		{
-			executor.ReturnContext(loop);
+			interpreter.ReturnContext(loop);
 		}
 	}
 
@@ -27,7 +27,7 @@ internal sealed class ForEvaluator(Executor executor)
 		List<ValueInstance>? results = null;
 		var itemType = GetForValueType(iterator);
 		var iteratorInstance = iterator.TryGetValueTypeInstance();
-		var isRangeIterator = iteratorInstance?.ReturnType == executor.rangeType;
+		var isRangeIterator = iteratorInstance?.ReturnType == interpreter.rangeType;
 		var bodyAsBody = f.Body as Body;
 		if (isRangeIterator &&
 			iteratorInstance!.TryGetValue("Start", out var startValue) &&
@@ -64,16 +64,16 @@ internal sealed class ForEvaluator(Executor executor)
 			}
 		}
 		return ShouldConsolidateForResult(results, ctx) ?? new ValueInstance(
-			executor.listType.GetGenericImplementation(itemType), results?.ToArray() ?? []);
+			interpreter.listType.GetGenericImplementation(itemType), results?.ToArray() ?? []);
 	}
 
 	private void ExecuteForIteration(For f, ExecutionContext ctx, ValueInstance iterator,
 		ref List<ValueInstance>? results, Type itemType, int index, ExecutionContext loop,
 		bool isRangeIterator, Body? bodyAsBody)
 	{
-		var indexInstance = new ValueInstance(executor.numberType, index);
+		var indexInstance = new ValueInstance(interpreter.numberType, index);
 		loop.Set(Type.IndexLowercase, indexInstance);
-		var value = iterator.IsPrimitiveType(executor.numberType) || isRangeIterator
+		var value = iterator.IsPrimitiveType(interpreter.numberType) || isRangeIterator
 			? indexInstance
 			: iterator.GetIteratorValue(itemType, index);
 		loop.Set(Type.ValueLowercase, value);
@@ -82,10 +82,10 @@ internal sealed class ForEvaluator(Executor executor)
 				loop.Set(variableCall.Variable.Name, value);
 		var itemResult = bodyAsBody != null
 			? EvaluateBody(bodyAsBody, loop)
-			: executor.RunExpression(f.Body, loop);
+			: interpreter.RunExpression(f.Body, loop);
 		if (loop.ExitMethodAndReturnValue.HasValue)
 			ctx.ExitMethodAndReturnValue = loop.ExitMethodAndReturnValue;
-		else if (!itemResult.IsPrimitiveType(executor.noneType) && !itemResult.IsMutable)
+		else if (!itemResult.IsPrimitiveType(interpreter.noneType) && !itemResult.IsMutable)
 		{
 			results ??= new List<ValueInstance>();
 			results.Add(itemResult);
@@ -94,10 +94,10 @@ internal sealed class ForEvaluator(Executor executor)
 
 	private ValueInstance EvaluateBody(Body body, ExecutionContext ctx)
 	{
-		var last = executor.noneInstance;
+		var last = interpreter.noneInstance;
 		foreach (var e in body.Expressions)
 		{
-			last = executor.RunExpression(e, ctx);
+			last = interpreter.RunExpression(e, ctx);
 			if (ctx.ExitMethodAndReturnValue.HasValue)
 				return ctx.ExitMethodAndReturnValue.Value;
 		}
@@ -113,7 +113,7 @@ internal sealed class ForEvaluator(Executor executor)
 			if (results != null)
 				for (var i = 0; i < results.Count; i++)
 					sum += results[i].Number;
-			return new ValueInstance(executor.numberType, sum);
+			return new ValueInstance(interpreter.numberType, sum);
 		}
 		if (ctx.Method.ReturnType.IsBoolean)
 		{
@@ -125,7 +125,7 @@ internal sealed class ForEvaluator(Executor executor)
 						any = true;
 						break;
 					}
-			return new ValueInstance(executor.booleanType, any);
+			return new ValueInstance(interpreter.booleanType, any);
 		}
 		if (!ctx.Method.ReturnType.IsText)
 			return null;
@@ -133,13 +133,13 @@ internal sealed class ForEvaluator(Executor executor)
 			return new ValueInstance("");
 		var text = new StringBuilder();
 		foreach (var value in results)
-			if (value.IsPrimitiveType(executor.characterType))
+			if (value.IsPrimitiveType(interpreter.characterType))
 				text.Append((char)value.Number);
 			else if (value.IsText)
 				text.Append(value.Text);
-			else if (value.IsPrimitiveType(executor.numberType))
+			else if (value.IsPrimitiveType(interpreter.numberType))
 				text.Append(value.GetCachedNumberString());
-			else if (value.IsPrimitiveType(executor.booleanType))
+			else if (value.IsPrimitiveType(interpreter.booleanType))
 				text.Append(value.Boolean //ncrunch: no coverage
 					? "true"
 					: "false");
@@ -158,8 +158,8 @@ internal sealed class ForEvaluator(Executor executor)
 
 	private Type GetForValueType(ValueInstance iterator) =>
 		iterator.IsText
-			? executor.characterType
+			? interpreter.characterType
 			: iterator.IsList
 				? iterator.GetIteratorType()
-				: executor.numberType;
+				: interpreter.numberType;
 }

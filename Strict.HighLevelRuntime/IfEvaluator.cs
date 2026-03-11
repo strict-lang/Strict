@@ -3,23 +3,23 @@ using Strict.Language;
 
 namespace Strict.HighLevelRuntime;
 
-internal sealed class IfEvaluator(Executor executor)
+internal sealed class IfEvaluator(Interpreter interpreter)
 {
 	public ValueInstance Evaluate(If iff, ExecutionContext ctx)
 	{
-		executor.Statistics.IfCount++;
-		if (executor.RunExpression(iff.Condition, ctx).Boolean)
+		interpreter.Statistics.IfCount++;
+		if (interpreter.RunExpression(iff.Condition, ctx).Boolean)
 		{
-			var thenResult = executor.RunExpression(iff.Then, ctx);
+			var thenResult = interpreter.RunExpression(iff.Then, ctx);
 			return iff.Then is MutableReassignment || IsMutableInstanceCall(iff.Then)
-				? executor.noneInstance
+				? interpreter.noneInstance
 				: thenResult;
 		}
 		if (iff.OptionalElse == null)
-			return executor.noneInstance;
-		var elseResult = executor.RunExpression(iff.OptionalElse, ctx);
+			return interpreter.noneInstance;
+		var elseResult = interpreter.RunExpression(iff.OptionalElse, ctx);
 		return iff.OptionalElse is MutableReassignment || IsMutableInstanceCall(iff.OptionalElse)
-			? executor.noneInstance
+			? interpreter.noneInstance
 			: elseResult;
 	}
 

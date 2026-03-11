@@ -85,7 +85,7 @@ public abstract class Context
 
 		Type? GuessTypeFromName()
 		{
-			if (name == Name || this is Type && ((Type)this).IsGeneric &&
+			if (name == Name && this is Type || this is Type && ((Type)this).IsGeneric &&
 				name.StartsWith(Name, StringComparison.Ordinal) &&
 				name == Name + GenericImplementationPostfix)
 				return (Type)this;

@@ -18,7 +18,6 @@ internal enum ValueKind : byte
 	Text,
 	Boolean,
 	List,
-	//TODO: need tests
 	Character,
 	Name,
 	Dictionary

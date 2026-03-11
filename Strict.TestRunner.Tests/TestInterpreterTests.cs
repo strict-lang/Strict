@@ -11,9 +11,9 @@ namespace Strict.TestRunner.Tests;
 
 [MemoryDiagnoser]
 [SimpleJob(RunStrategy.Throughput, warmupCount: 1, iterationCount: 10)]
-public class TestExecutorTests
+public class TestInterpreterTests
 {
-	public readonly TestExecutor executor = new(TestPackage.Instance);
+	public readonly TestInterpreter interpreter = new(TestPackage.Instance);
 
 	[Test]
 	public void RunMethod()
@@ -24,7 +24,7 @@ public class TestExecutorTests
 				"Run Number",
 				"	5 is 5",
 				"	10")).ParseMembersAndMethods(new MethodExpressionParser());
-		executor.RunMethod(type.Methods.First(m => m.Name == "Run"));
+		interpreter.RunMethod(type.Methods.First(m => m.Name == "Run"));
 	}
 
 	[Test]
@@ -36,7 +36,7 @@ public class TestExecutorTests
 				"Run Number",
 				"	5 is 6",
 				"	10")).ParseMembersAndMethods(new MethodExpressionParser());
-		Assert.That(() => executor.RunMethod(type.Methods.First(m => m.Name == "Run")),
+		Assert.That(() => interpreter.RunMethod(type.Methods.First(m => m.Name == "Run")),
 			Throws.InstanceOf<ExecutionFailed>().With.InnerException.With.Message.
 				Contains("\"Run\" method failed: 5 is 6, result: Boolean: false"));
 	}
@@ -53,7 +53,7 @@ public class TestExecutorTests
 				"Other Number",
 				"	2 is 2",
 				"	5")).ParseMembersAndMethods(new MethodExpressionParser());
-		executor.RunAllTestsInType(type);
+		interpreter.RunAllTestsInType(type);
 	}
 
 	[Test]
@@ -68,7 +68,7 @@ public class TestExecutorTests
 				"Other Number",
 				"	2 is 3",
 				"	5")).ParseMembersAndMethods(new MethodExpressionParser());
-		Assert.That(() => executor.RunAllTestsInType(type),
+		Assert.That(() => interpreter.RunAllTestsInType(type),
 			Throws.InstanceOf<ExecutionFailed>().With.InnerException.With.Message.
 				Contains("\"Other\" method failed: 2 is 3, result: Boolean: false"));
 	}
@@ -81,7 +81,7 @@ public class TestExecutorTests
 					"	constant numberList = List(5)",
 					"	numberList(0) is number")).
 			ParseMembersAndMethods(new MethodExpressionParser());
-		executor.RunAllTestsInType(type);
+		interpreter.RunAllTestsInType(type);
 	}
 
 	[Test]
@@ -92,7 +92,7 @@ public class TestExecutorTests
 					"	constant canOnlyConvertSingleDigit = Error",
 					"	13 to Character is canOnlyConvertSingleDigit")).
 			ParseMembersAndMethods(new MethodExpressionParser());
-		executor.RunAllTestsInType(type);
+		interpreter.RunAllTestsInType(type);
 	}
 
 	[Test]
@@ -102,7 +102,7 @@ public class TestExecutorTests
 				new TypeLines(nameof(RunRangeReverseComparison), "has number", "Run",
 					"	Range(-5, -10).Reverse is Range(-9, -4)")).
 			ParseMembersAndMethods(new MethodExpressionParser());
-		executor.RunAllTestsInType(type);
+		interpreter.RunAllTestsInType(type);
 	}
 
 	[Test]
@@ -126,7 +126,7 @@ public class TestExecutorTests
 				"value is in Range(0, 10) then Character(Character.zeroCharacter + value) else canOnlyConvertSingleDigit(value)"
 				// @formatter:on
 			}.ToLines()));
-		executor.RunAllTestsInType(type);
+		interpreter.RunAllTestsInType(type);
 	}
 
 	[Test]
@@ -150,7 +150,7 @@ public class TestExecutorTests
 				"\tvalue"
 				// @formatter:on
 			}.ToLines()));
-		executor.RunAllTestsInType(type);
+		interpreter.RunAllTestsInType(type);
 	}
 
 	[Test]
@@ -170,7 +170,7 @@ public class TestExecutorTests
 				"\t1"
 				// @formatter:on
 			}.ToLines()));
-		executor.RunAllTestsInType(type);
+		interpreter.RunAllTestsInType(type);
 	}
 
 	[Test]
@@ -187,7 +187,7 @@ public class TestExecutorTests
 			Is.EqualTo("(1, 2, 3) + (4, 5) is (1, 2, 3, 4, 5)" + Environment.NewLine +
 				"(\"Hello\", \"World\") + (1, 2) is (\"Hello\", \"World\", \"1\", \"2\")" +
 				Environment.NewLine + "number"));
-		executor.RunAllTestsInType(type);
+		interpreter.RunAllTestsInType(type);
 	}
 
 	[Test]
@@ -198,7 +198,7 @@ public class TestExecutorTests
 				"\t(1, 2).Add(3) is (1, 2, 3)")).ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(type.Methods[0].GetBodyAndParseIfNeeded().ToString(),
 			Is.EqualTo("(1, 2).Add(3) is (1, 2, 3)"));
-		executor.RunAllTestsInType(type);
+		interpreter.RunAllTestsInType(type);
 	}
 
 	[Test]
@@ -209,7 +209,7 @@ public class TestExecutorTests
 				"\t\"Hey\" is \"Hey\"",
 				"\t\"Hi\" is not \"Hey\"",
 				"\tnumber")).ParseMembersAndMethods(new MethodExpressionParser());
-		executor.RunAllTestsInType(type);
+		interpreter.RunAllTestsInType(type);
 	}
 
 	[Test]
@@ -219,7 +219,7 @@ public class TestExecutorTests
 				new TypeLines(nameof(RunNumberToCharacterBody), "has number", "Run",
 					"\t(1, 2).Add(3) is (1, 2, 3)", "\tnumber")).
 			ParseMembersAndMethods(new MethodExpressionParser());
-		executor.RunAllTestsInType(type);
+		interpreter.RunAllTestsInType(type);
 	}
 
 	[Test]
@@ -233,29 +233,29 @@ public class TestExecutorTests
 				"Add Number",
 				"\tRunAllTestsInTypeWithLoggerAutoInjected(2, 3).Add is 5",
 				"\tfirst + second")).ParseMembersAndMethods(new MethodExpressionParser());
-		executor.RunAllTestsInType(type);
+		interpreter.RunAllTestsInType(type);
 	}
 
 	[Test]
 	public void RunDictionaryTestsTwice()
 	{
 		using var type = TestPackage.Instance.GetType(Type.Dictionary);
-		executor.RunAllTestsInType(type);
-		executor.RunAllTestsInType(type);
+		interpreter.RunAllTestsInType(type);
+		interpreter.RunAllTestsInType(type);
 	}
 
 	[Test]
 	[Benchmark]
-	public void RunAllTestsInPackage() => executor.RunAllTestsInPackage(TestPackage.Instance);
+	public void RunAllTestsInPackage() => interpreter.RunAllTestsInPackage(TestPackage.Instance);
 
 	//ncrunch: no coverage start
 	[Test]
 	[Category("Slow")]
 	public void AllocatesLessThan40KbPerRunAfterWarmup()
 	{
-		executor.RunAllTestsInPackage(TestPackage.Instance);
+		interpreter.RunAllTestsInPackage(TestPackage.Instance);
 		var allocatedBefore = GC.GetAllocatedBytesForCurrentThread();
-		executor.RunAllTestsInPackage(TestPackage.Instance);
+		interpreter.RunAllTestsInPackage(TestPackage.Instance);
 		Assert.That(GC.GetAllocatedBytesForCurrentThread() - allocatedBefore, Is.LessThan(40_000));
 	}
 
@@ -263,11 +263,11 @@ public class TestExecutorTests
 	[Category("Slow")]
 	public void RunAllTestsInPackageTwice()
 	{
-		executor.RunAllTestsInPackage(TestPackage.Instance);
-		executor.RunAllTestsInPackage(TestPackage.Instance);
+		interpreter.RunAllTestsInPackage(TestPackage.Instance);
+		interpreter.RunAllTestsInPackage(TestPackage.Instance);
 	}
 
 	[Test]
 	[Category("Manual")]
-	public void BenchmarkCompare() => BenchmarkRunner.Run<TestExecutorTests>();
+	public void BenchmarkCompare() => BenchmarkRunner.Run<TestInterpreterTests>();
 }

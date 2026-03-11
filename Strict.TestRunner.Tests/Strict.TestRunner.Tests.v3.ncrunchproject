@@ -1,17 +1,14 @@
-﻿<ProjectConfiguration>
+<ProjectConfiguration>
   <Settings>
     <IgnoredTests>
       <NamedTestSelector>
-        <TestName>Strict.TestRunner.Tests.TestExecutorTests.BenchmarkCompare</TestName>
+        <TestName>Strict.TestRunner.Tests.TestInterpreterTests.BenchmarkCompare</TestName>
       </NamedTestSelector>
       <NamedTestSelector>
-        <TestName>Strict.TestRunner.Tests.TestExecutorTests.RunAllTestsInPackageTwice</TestName>
+        <TestName>Strict.TestRunner.Tests.TestInterpreterTests.AllocatesLessThan40KbPerRunAfterWarmup</TestName>
       </NamedTestSelector>
       <NamedTestSelector>
-        <TestName>Strict.TestRunner.Tests.TestExecutorTests.AllocatesLessThan80KBPerRunAfterWarmup</TestName>
-      </NamedTestSelector>
-      <NamedTestSelector>
-        <TestName>Strict.TestRunner.Tests.TestExecutorTests.AllocatesLessThan40KbPerRunAfterWarmup</TestName>
+        <TestName>Strict.TestRunner.Tests.TestInterpreterTests.RunAllTestsInPackageTwice</TestName>
       </NamedTestSelector>
     </IgnoredTests>
   </Settings>

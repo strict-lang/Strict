@@ -1,0 +1,15 @@
+has width Number
+has height Number
+has logger
+Area Number
+	AreaCalculator(3, 4).Area is 12
+	AreaCalculator(10, 5).Area is 50
+	width * height
+Perimeter Number
+	AreaCalculator(3, 4).Perimeter is 14
+	AreaCalculator(10, 5).Perimeter is 30
+	width + width + height + height
+Run
+	constant rect = AreaCalculator(5, 10)
+	logger.Log("Area: " + rect.Area)
+	logger.Log("Perimeter: " + rect.Perimeter)

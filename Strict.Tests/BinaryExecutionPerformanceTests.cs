@@ -1,7 +1,6 @@
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Engines;
 using BenchmarkDotNet.Running;
-using Strict.Bytecode;
 using Strict.Bytecode.Instructions;
 using Strict.Bytecode.Serialization;
 using Strict.Language;
@@ -13,60 +12,53 @@ namespace Strict.Tests;
 [SimpleJob(RunStrategy.Throughput, warmupCount: 1, iterationCount: 10)]
 public class BinaryExecutionPerformanceTests
 {
-	private VirtualMachine vm = null!;
-	private List<Instruction> instructions = null!;
-	private Package binaryPackage = null!;
-	private static readonly string BinaryFilePath =
-		Path.ChangeExtension(
-			Path.Combine(AppContext.BaseDirectory, "Examples", "SimpleCalculator.strict"),
-			BytecodeSerializer.Extension)!;
-
 	[GlobalSetup]
 	[SetUp]
 	public void Setup()
 	{
+		rememberConsoleOut = Console.Out;
+		Console.SetOut(TextWriter.Null);
 		EnsureBinaryFileExists();
-		(binaryPackage, var instructionsByType) =
-			BytecodeSerializer.LoadTypesAndDeserializeAll(BinaryFilePath, TestPackage.Instance);
-		instructions = instructionsByType.Values.First();
+		var deserializer = new BytecodeDeserializer(BinaryFilePath, TestPackage.Instance);
+		binaryPackage = deserializer.Package;
+		instructions = deserializer.Instructions.Values.First();
 		vm = new VirtualMachine(binaryPackage);
+	}
+
+	private TextWriter rememberConsoleOut = null!;
+	private VirtualMachine vm = null!;
+	private List<Instruction> instructions = null!;
+	private Package binaryPackage = null!;
+	private static string StrictFilePath =>
+		Path.Combine(AppContext.BaseDirectory, "Examples", "SimpleCalculator.strict");
+	private static readonly string BinaryFilePath =
+		Path.ChangeExtension(StrictFilePath, BytecodeSerializer.Extension);
+
+	[TearDown]
+	public void RestoreConsole()
+	{
+		Console.SetOut(rememberConsoleOut);
+		binaryPackage.Dispose();
 	}
 
 	private static void EnsureBinaryFileExists()
 	{
 		if (!File.Exists(BinaryFilePath))
-			RunSilently(() => new Runner(TestPackage.Instance,
-				Path.Combine(AppContext.BaseDirectory, "Examples", "SimpleCalculator.strict")).Run().Dispose());
+			new Runner(TestPackage.Instance, StrictFilePath).Run().Dispose(); //ncrunch: no coverage
 	}
 
 	[Test]
 	[Benchmark]
-	public void ExecuteBinaryOnce() => RunSilently(() => vm.Execute(instructions));
+	public void ExecuteBinaryOnce() => vm.Execute(instructions);
 
-	private static void RunSilently(Action action)
+	[Test]
+	public void ExecuteBinaryThousandTimes()
 	{
-		var saved = Console.Out;
-		Console.SetOut(TextWriter.Null);
-		try
-		{
-			action();
-		}
-		finally
-		{
-			Console.SetOut(saved);
-		}
+		for (var run = 0; run < 1000; run++)
+			vm.Execute(instructions);
 	}
 
 	//ncrunch: no coverage start
-	[Test]
-	[Category("Slow")]
-	public void ExecuteBinaryThousandTimes()
-	{
-		const int Runs = 1000;
-		for (var run = 0; run < Runs; run++)
-			ExecuteBinaryOnce();
-	}
-
 	[Test]
 	[Category("Manual")]
 	public void BenchmarkCompare() => BenchmarkRunner.Run<BinaryExecutionPerformanceTests>();

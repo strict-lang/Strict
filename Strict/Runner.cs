@@ -13,7 +13,7 @@ namespace Strict;
 public sealed class Runner : IDisposable
 {
 	/// <summary>
-	/// Creates a Runner for a .strict source file (parses, validates, compiles and runs it),
+	/// Creates a Runner for a .strict source file (parses, validates, compiles, and runs it),
 	/// or for a .strict_binary ZIP file (loads pre-compiled bytecode and executes it directly).
 	/// </summary>
 	public Runner(Package basePackage, string strictFilePath,
@@ -23,66 +23,37 @@ public sealed class Runner : IDisposable
 		Log("╔════════════════════════════════════╗");
 		Log("║ Strict Programming Language Runner ║");
 		Log("╚════════════════════════════════════╝");
-		try
-		{
-			if (Path.GetExtension(strictFilePath) == BytecodeSerializer.Extension)
-				InitializeFromBinaryFile(basePackage, strictFilePath);
-			else
-				InitializeFromSourceFile(basePackage, strictFilePath);
-		}
-		catch
-		{
-			if (package != null)
-				package.Dispose();
-			throw;
-		}
-	}
-
-	private void InitializeFromBinaryFile(Package basePackage, string binaryFilePath)
-	{
-		Log("┌─ Step 1: Loading pre-compiled binary: " + binaryFilePath);
+		Log("┌─ Step 1: Loading: " + strictFilePath);
 		var startTicks = DateTime.UtcNow.Ticks;
-		(package, var bytecodeByType) =
-			BytecodeSerializer.LoadTypesAndDeserializeAll(binaryFilePath, basePackage);
-		disposePackage = false; // cache owns the package lifetime; this Runner must not dispose it
-		var requestedTypeName = Path.GetFileNameWithoutExtension(binaryFilePath);
-		var selectedTypeName = requestedTypeName;
-		if (!bytecodeByType.TryGetValue(selectedTypeName, out preloadedBytecode))
+		currentFolder = Path.GetDirectoryName(Path.GetFullPath(strictFilePath))!;
+		var typeName = Path.GetFileNameWithoutExtension(strictFilePath);
+		if (Path.GetExtension(strictFilePath) == BytecodeSerializer.Extension)
 		{
-			selectedTypeName = bytecodeByType.Keys.First();
-			preloadedBytecode = bytecodeByType[selectedTypeName];
+			deserializer = new BytecodeDeserializer(strictFilePath, basePackage);
+			package = deserializer.Package;
+			mainType = package.GetType(typeName);
 		}
-		mainType = package.GetType(selectedTypeName);
+		else
+		{
+			package = new Package(basePackage,
+				Path.GetDirectoryName(Path.GetFullPath(strictFilePath)) ??
+				throw new InvalidOperationException("Cannot determine package path"));
+			var typeLines = new TypeLines(typeName, File.ReadAllLines(strictFilePath));
+			mainType =
+				new Type(package, typeLines).ParseMembersAndMethods(new MethodExpressionParser());
+		}
 		var endTicks = DateTime.UtcNow.Ticks;
 		stepTimes.Add(endTicks - startTicks);
 		Log("└─ Step 1 ⏱ Time: " +
 			TimeSpan.FromTicks(endTicks - startTicks).TotalMilliseconds + " ms");
 	}
 
-	private void InitializeFromSourceFile(Package basePackage, string strictFilePath)
-	{
-		Log("┌─ Step 1: Create package and load type: " + strictFilePath);
-		var startLoadTypeTicks = DateTime.UtcNow.Ticks;
-		package = new Package(basePackage,
-			Path.GetDirectoryName(Path.GetFullPath(strictFilePath)) ??
-			throw new InvalidOperationException("Cannot determine package path"));
-		var typeName = Path.GetFileNameWithoutExtension(strictFilePath);
-		var typeLines = new TypeLines(typeName, File.ReadAllLines(strictFilePath));
-		mainType = new Type(package, typeLines).ParseMembersAndMethods(new MethodExpressionParser());
-		var endLoadTypeTicks = DateTime.UtcNow.Ticks;
-		stepTimes.Add(endLoadTypeTicks - startLoadTypeTicks);
-		sourceFilePath = strictFilePath;
-		Log("│  ✓ Loaded package: " + package.Name);
-		Log("│  ✓ Created type: " + mainType.Name);
-		Log("│  ✓ Members: " + mainType.Members.Count);
-		Log("│  ✓ Methods: " + mainType.Methods.Count);
-		Log("└─ Step 1 ⏱ Time: " +
-			TimeSpan.FromTicks(endLoadTypeTicks - startLoadTypeTicks).TotalMilliseconds + " ms");
-	}
-
 	private readonly bool enableTestsAndDetailedOutput;
-	private List<Instruction>? preloadedBytecode;
-	private string? sourceFilePath;
+	private readonly string currentFolder;
+	private readonly BytecodeDeserializer? deserializer;
+	private readonly Package package;
+	private readonly Type mainType;
+	private readonly List<long> stepTimes = new();
 
 	private void Log(string message)
 	{
@@ -90,22 +61,17 @@ public sealed class Runner : IDisposable
 			Console.WriteLine(message);
 	}
 
-	private readonly List<long> stepTimes = new();
-	private bool disposePackage = true;
-	private Package package = null!;
-	private Type mainType = null!;
-
 	public Runner Run() =>
-		preloadedBytecode != null
-			? RunFromPreloadedBytecode()
+		deserializer != null
+			? RunFromPreloadedBytecode(deserializer.Instructions[mainType.Name])
 			: RunFromSource();
 
-	private Runner RunFromPreloadedBytecode()
+	private Runner RunFromPreloadedBytecode(List<Instruction> preloadedInstructions)
 	{
 		Log("╔═══════════════════════════════════════════╗");
 		Log("║  Running from pre-compiled .strictbinary  ║");
 		Log("╚═══════════════════════════════════════════╝");
-		ExecuteBytecode(preloadedBytecode!);
+		ExecuteBytecode(preloadedInstructions);
 		Log("Successfully executed pre-compiled " + mainType.Name + " in " +
 			TimeSpan.FromTicks(stepTimes.Sum()).ToString(@"s\.ffffff") + "s");
 		return this;
@@ -121,8 +87,8 @@ public sealed class Runner : IDisposable
 		}
 		var instructions = GenerateBytecode();
 		var optimizedInstructions = OptimizeBytecode(instructions);
-		SaveBytecodeIfPossible(optimizedInstructions);
 		ExecuteBytecode(optimizedInstructions);
+		SaveBytecodeIfPossible(optimizedInstructions);
 		Console.WriteLine("Successfully parsed, optimized and executed " + mainType.Name + " in " +
 			TimeSpan.FromTicks(stepTimes.Sum()).ToString(@"s\.ffffff") + "s");
 		return this;
@@ -180,7 +146,7 @@ public sealed class Runner : IDisposable
 	{
 		Log("┌─ Step 5: Run Tests");
 		var startTicks = DateTime.UtcNow.Ticks;
-		var testExecutor = new TestExecutor(package);
+		var testExecutor = new TestInterpreter(package);
 		try
 		{
 			testExecutor.RunAllTestsInType(mainType);
@@ -265,16 +231,12 @@ public sealed class Runner : IDisposable
 
 	private void SaveBytecodeIfPossible(List<Instruction> optimizedInstructions)
 	{
-		var binaryPath = Path.ChangeExtension(sourceFilePath, BytecodeSerializer.Extension)!;
-		Log("┌─ Saving bytecode to: " + binaryPath);
-		BytecodeSerializer.Serialize(optimizedInstructions, binaryPath, mainType.Name,
-			Path.GetDirectoryName(sourceFilePath!));
-		Log("└─ Bytecode saved: " + new FileInfo(binaryPath).Length + " bytes");
+		var serializer = new BytecodeSerializer(
+			new Dictionary<string, IList<Instruction>> { [mainType.Name] = optimizedInstructions },
+			currentFolder, mainType.Name);
+		Console.WriteLine("Saving " + new FileInfo(serializer.OutputFilePath).Length +
+			" bytes of bytecode to: " + serializer.OutputFilePath);
 	}
 
-	public void Dispose()
-	{
-		if (disposePackage)
-			package.Dispose();
-	}
+	public void Dispose() => package.Dispose();
 }

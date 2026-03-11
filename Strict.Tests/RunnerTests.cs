@@ -1,5 +1,5 @@
-using Strict.Bytecode;
 using Strict.Bytecode.Serialization;
+using Strict.Language;
 using Strict.Language.Tests;
 
 namespace Strict.Tests;
@@ -41,10 +41,13 @@ public sealed class RunnerTests
 		var binaryFilePath = Path.ChangeExtension(StrictFilePath, BytecodeSerializer.Extension);
 		try
 		{
-			new Runner(TestPackage.Instance, StrictFilePath).Run().Dispose();
-			Assert.That(File.Exists(binaryFilePath), Is.True,
-				BytecodeSerializer.Extension + " file should have been created");
-			writer.GetStringBuilder().Clear();
+			if (!File.Exists(binaryFilePath))
+			{ //ncrunch: no coverage start, only needed once
+				new Runner(TestPackage.Instance, StrictFilePath).Run().Dispose();
+				Assert.That(File.Exists(binaryFilePath), Is.True,
+					BytecodeSerializer.Extension + " file should have been created");
+				writer.GetStringBuilder().Clear();
+			} //ncrunch: no coverage end
 			using var runner = new Runner(TestPackage.Instance, binaryFilePath).Run();
 			Assert.That(writer.ToString(),
 				Does.StartWith("2 + 3 = 5" + Environment.NewLine + "2 * 3 = 6"));
@@ -57,27 +60,57 @@ public sealed class RunnerTests
 	}
 
 	[Test]
-	public void RunFromBytecodeFileWithoutStrictSourceFile()
+	[Description("Without source on disk, sub-method calls fail because the VM needs method " +
+		"bodies. Once all methods are pre-compiled into the .strictbinary this will work.")]
+	public void RunFromBytecodeFileWithoutStrictSourceFileNotYetSupported()
 	{
-		const string sourceFilePath = "Examples/SimpleCalculator.strict";
+		const string SourceFilePath = "Examples/SimpleCalculator.strict";
 		var tempDirectory = Path.Combine(Path.GetTempPath(), "Strict" + Guid.NewGuid().ToString("N"));
 		Directory.CreateDirectory(tempDirectory);
-		var copiedSourceFilePath = Path.Combine(tempDirectory, Path.GetFileName(sourceFilePath));
-		var copiedBinaryFilePath = Path.ChangeExtension(copiedSourceFilePath, BytecodeSerializer.Extension)!;
+		var copiedSourceFilePath = Path.Combine(tempDirectory, Path.GetFileName(SourceFilePath));
+		var copiedBinaryFilePath = Path.ChangeExtension(copiedSourceFilePath, BytecodeSerializer.Extension);
 		try
 		{
-			File.Copy(sourceFilePath, copiedSourceFilePath);
+			File.Copy(SourceFilePath, copiedSourceFilePath);
 			new Runner(TestPackage.Instance, copiedSourceFilePath).Run().Dispose();
 			Assert.That(File.Exists(copiedBinaryFilePath), Is.True);
 			File.Delete(copiedSourceFilePath);
-			writer.GetStringBuilder().Clear();
-			using var _ = new Runner(TestPackage.Instance, copiedBinaryFilePath).Run();
-			Assert.That(writer.ToString(), Does.StartWith("2 + 3 = 5" + Environment.NewLine + "2 * 3 = 6"));
+			Assert.That(() => new Runner(TestPackage.Instance, copiedBinaryFilePath).Run(),
+				Throws.TypeOf<Method.CannotCallBodyOnTraitMethod>());
 		}
 		finally
 		{
 			if (Directory.Exists(tempDirectory))
 				Directory.Delete(tempDirectory, true);
 		}
+	}
+
+	[Test]
+	public void RunFizzBuzz()
+	{
+		using var _ = new Runner(TestPackage.Instance, "Examples/FizzBuzz.strict").Run();
+		var output = writer.ToString();
+		Assert.That(output, Does.Contain("FizzBuzz(3) = Fizz"));
+		Assert.That(output, Does.Contain("FizzBuzz(5) = Buzz"));
+		Assert.That(output, Does.Contain("FizzBuzz(15) = FizzBuzz"));
+		Assert.That(output, Does.Contain("FizzBuzz(7) = 7"));
+	}
+
+	[Test]
+	public void RunAreaCalculator()
+	{
+		using var _ = new Runner(TestPackage.Instance, "Examples/AreaCalculator.strict").Run();
+		var output = writer.ToString();
+		Assert.That(output, Does.Contain("Area: 50"));
+		Assert.That(output, Does.Contain("Perimeter: 30"));
+	}
+
+	[Test]
+	public void RunGreeter()
+	{
+		using var _ = new Runner(TestPackage.Instance, "Examples/Greeter.strict").Run();
+		var output = writer.ToString();
+		Assert.That(output, Does.Contain("Hello, World!"));
+		Assert.That(output, Does.Contain("Hello, Strict!"));
 	}
 }

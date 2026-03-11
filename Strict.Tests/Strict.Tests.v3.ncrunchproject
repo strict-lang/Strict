@@ -10,9 +10,6 @@
       <NamedTestSelector>
         <TestName>Strict.Tests.BinaryExecutionPerformanceTests.BenchmarkCompare</TestName>
       </NamedTestSelector>
-      <NamedTestSelector>
-        <TestName>Strict.Tests.BinaryExecutionPerformanceTests.ExecuteBinaryThousandTimes</TestName>
-      </NamedTestSelector>
     </IgnoredTests>
   </Settings>
 </ProjectConfiguration>

@@ -4,12 +4,12 @@ using Type = Strict.Language.Type;
 
 namespace Strict.HighLevelRuntime;
 
-internal sealed class ToEvaluator(Executor executor)
+internal sealed class ToEvaluator(Interpreter interpreter)
 {
 	public ValueInstance Evaluate(To to, ExecutionContext ctx)
 	{
-		executor.Statistics.ToConversionCount++;
-		var left = executor.RunExpression(to.Instance!, ctx);
+		interpreter.Statistics.ToConversionCount++;
+		var left = interpreter.RunExpression(to.Instance!, ctx);
 		if (to.Instance!.ReturnType.IsText && to.ConversionType.IsNumber && left.IsText)
 			return new ValueInstance(to.ConversionType,
 				double.Parse(left.Text, CultureInfo.InvariantCulture));
@@ -17,7 +17,7 @@ internal sealed class ToEvaluator(Executor executor)
 			return new ValueInstance(left.ToExpressionCodeString());
 		return to.Method.IsTrait
 			? throw new ToMethodNotImplemented(left, to.ConversionType)
-			: executor.methodCallEvaluator.Evaluate(to, ctx);
+			: interpreter.methodCallEvaluator.Evaluate(to, ctx);
 	}
 
 	//ncrunch: no coverage start

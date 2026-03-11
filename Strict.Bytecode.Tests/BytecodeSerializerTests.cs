@@ -2,6 +2,7 @@ using System.IO.Compression;
 using System.Text;
 using Strict.Bytecode.Instructions;
 using Strict.Bytecode.Serialization;
+using Type = Strict.Language.Type;
 
 namespace Strict.Bytecode.Tests;
 
@@ -14,18 +15,23 @@ public sealed class BytecodeSerializerTests : TestBytecode
 			GenerateMethodCallFromSource("Add", "Add(10, 5).Calculate",
 				"has First Number", "has Second Number", "Calculate Number",
 				"\tAdd(10, 5).Calculate is 15", "\tFirst + Second")).Generate();
-		var binaryFilePath = GetTempStrictBinaryFilePath();
-		BytecodeSerializer.Serialize(instructions, binaryFilePath, "Add");
-		var loaded = BytecodeSerializer.Deserialize(binaryFilePath, TestPackage.Instance);
+		var binaryFilePath = SerializeToTemp("Add", instructions);
+		var loaded = new BytecodeDeserializer(binaryFilePath, TestPackage.Instance).
+			Instructions.Values.First();
 		Assert.That(loaded.Count, Is.EqualTo(instructions.Count));
 		Assert.That(loaded.ConvertAll(x => x.ToString()),
 			Is.EqualTo(instructions.ConvertAll(x => x.ToString())));
 	}
 
-	private static string GetTempStrictBinaryFilePath() =>
-		Path.Combine(Path.GetTempPath(), "test" + testFileCounter++ + BytecodeSerializer.Extension);
+	private static string SerializeToTemp(string typeName, IList<Instruction> instructions) =>
+		new BytecodeSerializer(
+			new Dictionary<string, IList<Instruction>> { [typeName] = instructions },
+			Path.GetTempPath(), "test" + testFileCounter++).OutputFilePath;
 
 	private static int testFileCounter;
+
+	private static string GetTempStrictBinaryFilePath() =>
+		Path.Combine(Path.GetTempPath(), "test" + testFileCounter++ + BytecodeSerializer.Extension);
 
 	[Test]
 	public void RoundTripLoopBytecode()
@@ -36,9 +42,9 @@ public sealed class BytecodeSerializerTests : TestBytecode
 				"has number", "GetMultiplicationOfNumbers Number",
 				"\tmutable result = 1", "\tconstant multiplier = 2", "\tfor number",
 				"\t\tresult = result * multiplier", "\tresult")).Generate();
-		var binaryFilePath = GetTempStrictBinaryFilePath();
-		BytecodeSerializer.Serialize(instructions, binaryFilePath, "SimpleLoopExample");
-		var loaded = BytecodeSerializer.Deserialize(binaryFilePath, TestPackage.Instance);
+		var binaryFilePath = SerializeToTemp("SimpleLoopExample", instructions);
+		var loaded = new BytecodeDeserializer(binaryFilePath, TestPackage.Instance).
+			Instructions.Values.First();
 		Assert.That(loaded.Count, Is.EqualTo(instructions.Count));
 		Assert.That(loaded.ConvertAll(x => x.ToString()),
 			Is.EqualTo(instructions.ConvertAll(x => x.ToString())));
@@ -59,9 +65,9 @@ public sealed class BytecodeSerializerTests : TestBytecode
 				"\tif operation is \"subtract\"", "\t\treturn First - Second",
 				"\tif operation is \"multiply\"", "\t\treturn First * Second",
 				"\tif operation is \"divide\"", "\t\treturn First / Second")).Generate();
-		var binaryFilePath = GetTempStrictBinaryFilePath();
-		BytecodeSerializer.Serialize(instructions, binaryFilePath, "ArithmeticFunction");
-		var loaded = BytecodeSerializer.Deserialize(binaryFilePath, TestPackage.Instance);
+		var binaryFilePath = SerializeToTemp("ArithmeticFunction", instructions);
+		var loaded = new BytecodeDeserializer(binaryFilePath, TestPackage.Instance).
+			Instructions.Values.First();
 		Assert.That(loaded.Count, Is.EqualTo(instructions.Count));
 		Assert.That(loaded.ConvertAll(x => x.ToString()),
 			Is.EqualTo(instructions.ConvertAll(x => x.ToString())));
@@ -74,9 +80,9 @@ public sealed class BytecodeSerializerTests : TestBytecode
 			GenerateMethodCallFromSource("SimpleListDeclaration",
 				"SimpleListDeclaration(5).Declare",
 				"has number", "Declare Numbers", "\t(1, 2, 3, 4, 5)")).Generate();
-		var binaryFilePath = GetTempStrictBinaryFilePath();
-		BytecodeSerializer.Serialize(instructions, binaryFilePath, "SimpleListDeclaration");
-		var loaded = BytecodeSerializer.Deserialize(binaryFilePath, TestPackage.Instance);
+		var binaryFilePath = SerializeToTemp("SimpleListDeclaration", instructions);
+		var loaded = new BytecodeDeserializer(binaryFilePath, TestPackage.Instance).
+			Instructions.Values.First();
 		Assert.That(loaded.Count, Is.EqualTo(instructions.Count));
 		Assert.That(loaded.ConvertAll(x => x.ToString()),
 			Is.EqualTo(instructions.ConvertAll(x => x.ToString())));
@@ -85,9 +91,8 @@ public sealed class BytecodeSerializerTests : TestBytecode
 	[Test]
 	public void SavedFileIsZipWithCorrectMagicInEntry()
 	{
-		var instructions = new List<Instruction> { new ReturnInstruction(Register.R0) };
-		var binaryFilePath = GetTempStrictBinaryFilePath();
-		BytecodeSerializer.Serialize(instructions, binaryFilePath, "test");
+		var binaryFilePath = SerializeToTemp("test",
+			new List<Instruction> { new ReturnInstruction(Register.R0) });
 		using var zip = ZipFile.OpenRead(binaryFilePath);
 		using var stream = zip.Entries.Single().Open();
 		using var reader = new BinaryReader(stream);
@@ -100,8 +105,8 @@ public sealed class BytecodeSerializerTests : TestBytecode
 	{
 		var binaryFilePath = GetTempStrictBinaryFilePath();
 		File.WriteAllBytes(binaryFilePath, [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]);
-		Assert.Throws<BytecodeSerializer.InvalidBytecodeFileException>(() =>
-			BytecodeSerializer.Deserialize(binaryFilePath, TestPackage.Instance));
+		Assert.Throws<BytecodeDeserializer.InvalidBytecodeFileException>(() =>
+			new BytecodeDeserializer(binaryFilePath, TestPackage.Instance));
 	}
 
 	[Test]
@@ -111,11 +116,567 @@ public sealed class BytecodeSerializerTests : TestBytecode
 			GenerateMethodCallFromSource("Add", "Add(10, 5).Calculate",
 				"has First Number", "has Second Number", "Calculate Number",
 				"\tAdd(10, 5).Calculate is 15", "\tFirst + Second")).Generate();
-		var binaryFilePath = GetTempStrictBinaryFilePath();
-		BytecodeSerializer.Serialize(instructions, binaryFilePath, "Add");
+		var binaryFilePath = SerializeToTemp("Add", instructions);
 		using var zip = ZipFile.OpenRead(binaryFilePath);
-		// Uncompressed entry content for a simple 6-instruction arithmetic method should be < 50 bytes
 		Assert.That(zip.Entries.Single().Length, Is.LessThan(50),
 			"Serialized arithmetic bytecode entry should be compact (< 50 bytes)");
 	}
+
+	[Test]
+	public void RoundTripSetInstruction()
+	{
+		var instructions = new List<Instruction>
+		{
+			new SetInstruction(Number(42), Register.R0),
+			new ReturnInstruction(Register.R0)
+		};
+		AssertRoundTrip(instructions);
+	}
+
+	private static void AssertRoundTrip(IList<Instruction> instructions, string typeName = "main")
+	{
+		var binaryFilePath = SerializeToTemp(typeName, instructions);
+		var loaded = new BytecodeDeserializer(binaryFilePath, TestPackage.Instance).
+			Instructions.Values.First();
+		Assert.That(loaded.Count, Is.EqualTo(instructions.Count));
+		for (var index = 0; index < instructions.Count; index++)
+			Assert.That(loaded[index].InstructionType, Is.EqualTo(instructions[index].InstructionType));
+	}
+
+	[Test]
+	public void RoundTripStoreFromRegisterInstruction()
+	{
+		var instructions = new List<Instruction>
+		{
+			new StoreFromRegisterInstruction(Register.R1, "result"),
+			new ReturnInstruction(Register.R0)
+		};
+		AssertRoundTrip(instructions);
+	}
+
+	[Test]
+	public void RoundTripLoadVariableToRegister()
+	{
+		var instructions = new List<Instruction>
+		{
+			new StoreVariableInstruction(Number(5), "count"),
+			new LoadVariableToRegister(Register.R0, "count"),
+			new ReturnInstruction(Register.R0)
+		};
+		AssertRoundTrip(instructions);
+	}
+
+	[Test]
+	public void RoundTripAllBinaryOperators()
+	{
+		var instructions = new List<Instruction>
+		{
+			new BinaryInstruction(InstructionType.Add, Register.R0, Register.R1),
+			new BinaryInstruction(InstructionType.Subtract, Register.R0, Register.R1),
+			new BinaryInstruction(InstructionType.Multiply, Register.R0, Register.R1),
+			new BinaryInstruction(InstructionType.Divide, Register.R0, Register.R1),
+			new BinaryInstruction(InstructionType.Modulo, Register.R0, Register.R1),
+			new BinaryInstruction(InstructionType.Equal, Register.R0, Register.R1),
+			new BinaryInstruction(InstructionType.NotEqual, Register.R0, Register.R1),
+			new BinaryInstruction(InstructionType.LessThan, Register.R0, Register.R1),
+			new BinaryInstruction(InstructionType.GreaterThan, Register.R0, Register.R1),
+			new ReturnInstruction(Register.R0)
+		};
+		var binaryFilePath = SerializeToTemp("BinaryOps", instructions);
+		var loaded = new BytecodeDeserializer(binaryFilePath, TestPackage.Instance).
+			Instructions.Values.First();
+		Assert.That(loaded.Count, Is.EqualTo(instructions.Count));
+		for (var index = 0; index < instructions.Count; index++)
+			Assert.That(loaded[index].InstructionType, Is.EqualTo(instructions[index].InstructionType));
+	}
+
+	[Test]
+	public void RoundTripJumpInstructions()
+	{
+		var instructions = new List<Instruction>
+		{
+			new Jump(3),
+			new Jump(2, InstructionType.JumpIfTrue),
+			new Jump(1, InstructionType.JumpIfFalse),
+			new JumpIfNotZero(5, Register.R0),
+			new JumpToId(InstructionType.JumpEnd, 10),
+			new JumpToId(InstructionType.JumpToIdIfFalse, 20),
+			new JumpToId(InstructionType.JumpToIdIfTrue, 30),
+			new ReturnInstruction(Register.R0)
+		};
+		var binaryFilePath = SerializeToTemp("Jumps", instructions);
+		var loaded = new BytecodeDeserializer(binaryFilePath, TestPackage.Instance).
+			Instructions.Values.First();
+		Assert.That(loaded.Count, Is.EqualTo(instructions.Count));
+		for (var index = 0; index < instructions.Count; index++)
+			Assert.That(loaded[index].InstructionType, Is.EqualTo(instructions[index].InstructionType));
+	}
+
+	[Test]
+	public void RoundTripLoopBeginWithRange()
+	{
+		var instructions = new List<Instruction>
+		{
+			new LoopBeginInstruction(Register.R0, Register.R5),
+			new LoopEndInstruction(3),
+			new ReturnInstruction(Register.R0)
+		};
+		AssertRoundTrip(instructions);
+	}
+
+	[Test]
+	public void RoundTripLoopBeginWithoutRange()
+	{
+		var instructions = new List<Instruction>
+		{
+			new LoopBeginInstruction(Register.R0),
+			new LoopEndInstruction(2),
+			new ReturnInstruction(Register.R0)
+		};
+		AssertRoundTrip(instructions);
+	}
+
+	[Test]
+	public void RoundTripWriteToListInstruction()
+	{
+		var instructions = new List<Instruction>
+		{
+			new WriteToListInstruction(Register.R0, "myList"),
+			new ReturnInstruction(Register.R0)
+		};
+		AssertRoundTrip(instructions);
+	}
+
+	[Test]
+	public void RoundTripWriteToTableInstruction()
+	{
+		var instructions = new List<Instruction>
+		{
+			new WriteToTableInstruction(Register.R0, Register.R1, "myTable"),
+			new ReturnInstruction(Register.R0)
+		};
+		AssertRoundTrip(instructions);
+	}
+
+	[Test]
+	public void RoundTripRemoveInstruction()
+	{
+		var instructions = new List<Instruction>
+		{
+			new RemoveInstruction("myList", Register.R0),
+			new ReturnInstruction(Register.R0)
+		};
+		AssertRoundTrip(instructions);
+	}
+
+	[Test]
+	public void RoundTripListCallInstruction()
+	{
+		var instructions = new List<Instruction>
+		{
+			new ListCallInstruction(Register.R0, Register.R1, "myList"),
+			new ReturnInstruction(Register.R0)
+		};
+		AssertRoundTrip(instructions);
+	}
+
+	[Test]
+	public void RoundTripSmallNumberValue()
+	{
+		var instructions = new List<Instruction>
+		{
+			new LoadConstantInstruction(Register.R0, Number(42)),
+			new ReturnInstruction(Register.R0)
+		};
+		AssertRoundTripValues(instructions);
+	}
+
+	private static void AssertRoundTripValues(IList<Instruction> instructions,
+		string typeName = "main")
+	{
+		var binaryFilePath = SerializeToTemp(typeName, instructions);
+		var loaded = new BytecodeDeserializer(binaryFilePath, TestPackage.Instance).
+			Instructions.Values.First();
+		Assert.That(loaded.Count, Is.EqualTo(instructions.Count));
+		Assert.That(loaded.ConvertAll(x => x.ToString()),
+			Is.EqualTo(instructions.ToList().ConvertAll(x => x.ToString())));
+	}
+
+	[Test]
+	public void RoundTripIntegerNumberValue() =>
+		AssertRoundTripValues(new List<Instruction>
+		{
+			new LoadConstantInstruction(Register.R0, Number(1000)),
+			new ReturnInstruction(Register.R0)
+		});
+
+	[Test]
+	public void RoundTripLargeDoubleNumberValue() =>
+		AssertRoundTripValues(new List<Instruction>
+		{
+			new LoadConstantInstruction(Register.R0, Number(3.14159)),
+			new ReturnInstruction(Register.R0)
+		});
+
+	[Test]
+	public void RoundTripTextValue() =>
+		AssertRoundTripValues(new List<Instruction>
+		{
+			new LoadConstantInstruction(Register.R0, Text("hello world")),
+			new ReturnInstruction(Register.R0)
+		});
+
+	[Test]
+	public void RoundTripBooleanValue() =>
+		AssertRoundTripValues(new List<Instruction>
+		{
+			new LoadConstantInstruction(Register.R0, new ValueInstance(boolType, true)),
+			new LoadConstantInstruction(Register.R1, new ValueInstance(boolType, false)),
+			new ReturnInstruction(Register.R0)
+		});
+
+	private readonly Type boolType = TestPackage.Instance.GetType(Type.Boolean);
+
+	[Test]
+	public void RoundTripNoneValue() =>
+		AssertRoundTripValues(new List<Instruction>
+		{
+			new StoreVariableInstruction(new ValueInstance(noneType), "nothing"),
+			new ReturnInstruction(Register.R0)
+		});
+
+	private readonly Type noneType = TestPackage.Instance.GetType(Type.None);
+
+	[Test]
+	public void RoundTripListValue() =>
+		AssertRoundTripValues(new List<Instruction>
+		{
+			new LoadConstantInstruction(Register.R0,
+				new ValueInstance(ListType, [Number(1), Number(2), Number(3)])),
+			new ReturnInstruction(Register.R0)
+		});
+
+	[Test]
+	public void RoundTripStoreVariableAsMember() =>
+		AssertRoundTripValues(new List<Instruction>
+		{
+			new StoreVariableInstruction(Number(10), "First", isMember: true),
+			new StoreVariableInstruction(Number(20), "Second", isMember: true),
+			new ReturnInstruction(Register.R0)
+		});
+
+	[Test]
+	public void RoundTripInvokeWithMethodCallExpressions() =>
+		AssertRoundTripValues(
+			new BytecodeGenerator(GenerateMethodCallFromSource("Greeter", "Greeter(\"world\").Greet",
+				"has text Text", "Greet Text", "\tGreeter(\"world\").Greet is \"hello world\"",
+				"\t\"hello \" + text")).Generate(), "Greeter");
+
+	[Test]
+	public void RoundTripNegativeIntegerValue() =>
+		AssertRoundTripValues(new List<Instruction>
+		{
+			new LoadConstantInstruction(Register.R0, Number(-500)), new ReturnInstruction(Register.R0)
+		});
+
+	[Test]
+	public void RoundTripMultipleTypesInSingleZip()
+	{
+		var addInstructions = new List<Instruction>
+		{
+			new LoadConstantInstruction(Register.R0, Number(10)),
+			new ReturnInstruction(Register.R0)
+		};
+		var subInstructions = new List<Instruction>
+		{
+			new LoadConstantInstruction(Register.R0, Number(5)),
+			new ReturnInstruction(Register.R0)
+		};
+		var outputFilePath = new BytecodeSerializer(
+			new Dictionary<string, IList<Instruction>>
+			{
+				["TypeA"] = addInstructions,
+				["TypeB"] = subInstructions
+			}, Path.GetTempPath(), "multi" + testFileCounter++).OutputFilePath;
+		var deserializer = new BytecodeDeserializer(outputFilePath, TestPackage.Instance);
+		Assert.That(deserializer.Instructions, Has.Count.EqualTo(2));
+		Assert.That(deserializer.Instructions["TypeA"], Has.Count.EqualTo(2));
+		Assert.That(deserializer.Instructions["TypeB"], Has.Count.EqualTo(2));
+	}
+
+	[Test]
+	public void RoundTripDictionaryValue()
+	{
+		var dictType = TestPackage.Instance.GetDictionaryImplementationType(NumberType, NumberType);
+		var items = new Dictionary<ValueInstance, ValueInstance>
+		{
+			{ Number(1), Number(10) },
+			{ Number(2), Number(20) }
+		};
+		var instructions = new List<Instruction>
+		{
+			new LoadConstantInstruction(Register.R0, new ValueInstance(dictType, items)),
+			new ReturnInstruction(Register.R0)
+		};
+		var binaryFilePath = SerializeToTemp("DictTest", instructions);
+		var loaded = new BytecodeDeserializer(binaryFilePath, TestPackage.Instance).
+			Instructions.Values.First();
+		Assert.That(loaded.Count, Is.EqualTo(instructions.Count));
+		var loadedDict = ((LoadConstantInstruction)loaded[0]).ValueInstance;
+		Assert.That(loadedDict.IsDictionary, Is.True);
+		var loadedItems = loadedDict.GetDictionaryItems();
+		Assert.That(loadedItems.Count, Is.EqualTo(2));
+		Assert.That(loadedItems[Number(1)].Number, Is.EqualTo(10));
+		Assert.That(loadedItems[Number(2)].Number, Is.EqualTo(20));
+	}
+
+	[Test]
+	public void ZipContainsNoBytecodeSourceEntries()
+	{
+		var instructions = new List<Instruction> { new ReturnInstruction(Register.R0) };
+		var binaryFilePath = SerializeToTemp("CleanZip", instructions);
+		using var zip = ZipFile.OpenRead(binaryFilePath);
+		Assert.That(zip.Entries.All(entry => entry.Name.EndsWith(".bytecode",
+			StringComparison.OrdinalIgnoreCase)), Is.True);
+	}
+
+	[Test]
+	public void RoundTripInvokeWithIntegerNumberArgument()
+	{
+		var instructions = new BytecodeGenerator(
+			GenerateMethodCallFromSource("LargeAdder", "LargeAdder(1000).GetSum",
+				//@formatter off
+				"has number",
+				"GetSum Number",
+				"\tLargeAdder(1000).GetSum is 1500",
+				"\tAddOffset(500)",
+				"AddOffset(offset Number) Number",
+				"\tnumber + offset")).Generate();
+		AssertRoundTripValues(instructions, "LargeAdder");
+	}
+
+	[Test]
+	public void RoundTripInvokeWithDoubleNumberArgument()
+	{
+		var instructions = new BytecodeGenerator(
+			GenerateMethodCallFromSource("DoubleCalc", "DoubleCalc(3.14).GetHalf",
+				"has number",
+				"GetHalf Number",
+				"\tHalve(number)",
+				"Halve(value Number) Number",
+				"\tvalue / 2")).Generate();
+		AssertRoundTripValues(instructions, "DoubleCalc");
+	}
+
+	[Test]
+	public void RoundTripInvokeWithBooleanArgument()
+	{
+		var instructions = new BytecodeGenerator(
+			GenerateMethodCallFromSource("BoolCheck", "BoolCheck(true).GetResult",
+				"has flag Boolean",
+				"GetResult Number",
+				"\tSelectValue(flag)",
+				"SelectValue(condition Boolean) Number",
+				"\tcondition then 1 else 0")).Generate();
+		AssertRoundTripValues(instructions, "BoolCheck");
+	}
+
+	[Test]
+	public void RoundTripListMemberWithIteration()
+	{
+		var instructions = new BytecodeGenerator(
+			GenerateMethodCallFromSource("ListSum", "ListSum(1, 2, 3).Total",
+				"has numbers",
+				"Total Number",
+				"\tListSum(1, 2, 3).Total is 6",
+				"\tmutable sum = 0",
+				"\tfor numbers",
+				"\t\tsum = sum + value",
+				"\tsum")).Generate();
+		//@formatter on
+		AssertRoundTripValues(instructions, "ListSum");
+	}
+
+	[Test]
+	public void RoundTripDictionaryWriteAndRead()
+	{
+		var dictType = TestPackage.Instance.GetDictionaryImplementationType(NumberType, NumberType);
+		var emptyDict = new Dictionary<ValueInstance, ValueInstance>();
+		var instructions = new List<Instruction>
+		{
+			new StoreVariableInstruction(new ValueInstance(dictType, emptyDict), "table"),
+			new LoadConstantInstruction(Register.R0, Number(1)),
+			new LoadConstantInstruction(Register.R1, Number(10)),
+			new WriteToTableInstruction(Register.R0, Register.R1, "table"),
+			new LoadConstantInstruction(Register.R2, Number(2)),
+			new LoadConstantInstruction(Register.R3, Number(20)),
+			new WriteToTableInstruction(Register.R2, Register.R3, "table"),
+			new ReturnInstruction(Register.R0)
+		};
+		AssertRoundTripValues(instructions, "DictOps");
+	}
+
+	[Test]
+	public void RoundTripMethodWithParameters()
+	{
+		var instructions = new BytecodeGenerator(
+			GenerateMethodCallFromSource("Multiplier",
+				"Multiplier(10).Scale(3)",
+				"has number",
+				"Scale(factor Number) Number",
+				"\tMultiplier(10).Scale(3) is 30",
+				"\tnumber * factor")).Generate();
+		AssertRoundTripValues(instructions, "Multiplier");
+	}
+
+	[Test]
+	public void MethodNotFoundThrows()
+	{
+		var binaryFilePath = CreateBytecodeWithUnknownOperator();
+		Assert.Throws<BytecodeDeserializer.MethodNotFoundException>(() =>
+			new BytecodeDeserializer(binaryFilePath, TestPackage.Instance));
+	}
+
+	private static string CreateBytecodeWithUnknownOperator()
+	{
+		var outputPath = GetTempStrictBinaryFilePath();
+		using var fileStream = new FileStream(outputPath, FileMode.Create, FileAccess.Write);
+		using var zip = new ZipArchive(fileStream, ZipArchiveMode.Create, leaveOpen: false);
+		var entry = zip.CreateEntry("main.bytecode", CompressionLevel.Optimal);
+		using var entryStream = entry.Open();
+		using var writer = new BinaryWriter(entryStream);
+		WriteEntryMagicAndVersion(writer);
+		var names = new[] { "main", "Run", "None", "Number", "$$bogus$$" };
+		WriteNameTable(writer, names);
+		writer.Write7BitEncodedInt(1);
+		writer.Write((byte)InstructionType.Invoke);
+		writer.Write((byte)Register.R0);
+		writer.Write(true);
+		writer.Write7BitEncodedInt(0);
+		writer.Write7BitEncodedInt(1);
+		writer.Write7BitEncodedInt(0);
+		writer.Write7BitEncodedInt(2);
+		writer.Write(false);
+		writer.Write7BitEncodedInt(1);
+		writer.Write(BinaryExprKind);
+		writer.Write7BitEncodedInt(4);
+		writer.Write(SmallNumberKind);
+		writer.Write((byte)1);
+		writer.Write(SmallNumberKind);
+		writer.Write((byte)2);
+		writer.Write(false);
+		return outputPath;
+	}
+
+	[Test]
+	public void EnsureResolvedTypeCreatesStubForUnknownType()
+	{
+		var binaryFilePath = CreateBytecodeWithCustomTypeName("UnknownStubType");
+		var deserialized = new BytecodeDeserializer(binaryFilePath, TestPackage.Instance);
+		Assert.That(deserialized.Instructions.Values.First(), Has.Count.EqualTo(1));
+	}
+
+	private static string CreateBytecodeWithCustomTypeName(string typeName)
+	{
+		var outputPath = GetTempStrictBinaryFilePath();
+		using var fileStream = new FileStream(outputPath, FileMode.Create, FileAccess.Write);
+		using var zip = new ZipArchive(fileStream, ZipArchiveMode.Create, leaveOpen: false);
+		var entry = zip.CreateEntry("main.bytecode", CompressionLevel.Optimal);
+		using var entryStream = entry.Open();
+		using var writer = new BinaryWriter(entryStream);
+		WriteEntryMagicAndVersion(writer);
+		var names = new[] { "main", "Run", typeName, "None" };
+		WriteNameTable(writer, names);
+		writer.Write7BitEncodedInt(1);
+		writer.Write((byte)InstructionType.Invoke);
+		writer.Write((byte)Register.R0);
+		writer.Write(true);
+		writer.Write7BitEncodedInt(2);
+		writer.Write7BitEncodedInt(1);
+		writer.Write7BitEncodedInt(0);
+		writer.Write7BitEncodedInt(3);
+		writer.Write(false);
+		writer.Write7BitEncodedInt(0);
+		writer.Write(false);
+		return outputPath;
+	}
+
+	[Test]
+	public void BuildMethodHeaderWithParametersCreatesMethod()
+	{
+		var binaryFilePath = CreateBytecodeWithMethodParameters(2);
+		var deserialized = new BytecodeDeserializer(binaryFilePath, TestPackage.Instance);
+		Assert.That(deserialized.Instructions.Values.First(), Has.Count.EqualTo(1));
+	}
+
+	private static string CreateBytecodeWithMethodParameters(int paramCount)
+	{
+		var outputPath = GetTempStrictBinaryFilePath();
+		using var fileStream = new FileStream(outputPath, FileMode.Create, FileAccess.Write);
+		using var zip = new ZipArchive(fileStream, ZipArchiveMode.Create, leaveOpen: false);
+		var entry = zip.CreateEntry("main.bytecode", CompressionLevel.Optimal);
+		using var entryStream = entry.Open();
+		using var writer = new BinaryWriter(entryStream);
+		WriteEntryMagicAndVersion(writer);
+		var names = new[] { "Main", "Run", "None", "Compute", "Number" };
+		WriteNameTable(writer, names);
+		writer.Write7BitEncodedInt(1);
+		writer.Write((byte)InstructionType.Invoke);
+		writer.Write((byte)Register.R0);
+		writer.Write(true);
+		writer.Write7BitEncodedInt(0);
+		writer.Write7BitEncodedInt(3);
+		writer.Write7BitEncodedInt(paramCount);
+		writer.Write7BitEncodedInt(4);
+		writer.Write(false);
+		writer.Write7BitEncodedInt(paramCount);
+		for (var index = 0; index < paramCount; index++)
+		{
+			writer.Write(SmallNumberKind);
+			writer.Write((byte)(index + 1));
+		}
+		writer.Write(false);
+		return outputPath;
+	}
+
+	[Test]
+	public void TypeNotFoundForLowercaseThrows()
+	{
+		var binaryFilePath = CreateBytecodeWithCustomTypeName("lowercase");
+		Assert.Throws<BytecodeDeserializer.TypeNotFoundForBytecode>(() =>
+			new BytecodeDeserializer(binaryFilePath, TestPackage.Instance));
+	}
+
+	[Test]
+	public void InvalidVersionThrows()
+	{
+		var outputPath = GetTempStrictBinaryFilePath();
+		using (var fileStream = new FileStream(outputPath, FileMode.Create, FileAccess.Write))
+		using (var zip = new ZipArchive(fileStream, ZipArchiveMode.Create, leaveOpen: false))
+		{
+			var entry = zip.CreateEntry("main.bytecode", CompressionLevel.Optimal);
+			using var entryStream = entry.Open();
+			using var writer = new BinaryWriter(entryStream);
+			writer.Write(Encoding.UTF8.GetBytes("Strict"));
+			writer.Write((byte)0);
+		}
+		Assert.Throws<BytecodeDeserializer.InvalidVersion>(() =>
+			new BytecodeDeserializer(outputPath, TestPackage.Instance));
+	}
+
+	private static void WriteEntryMagicAndVersion(BinaryWriter writer)
+	{
+		writer.Write(Encoding.UTF8.GetBytes("Strict"));
+		writer.Write(BytecodeSerializer.Version);
+	}
+
+	private static void WriteNameTable(BinaryWriter writer, string[] names)
+	{
+		writer.Write7BitEncodedInt(names.Length);
+		foreach (var name in names)
+			writer.Write(name);
+	}
+
+	private const byte SmallNumberKind = 0;
+	private const byte BinaryExprKind = 7;
 }

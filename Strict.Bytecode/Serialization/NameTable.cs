@@ -1,10 +1,9 @@
-﻿using System.Collections;
+using System.Collections;
 using Strict.Bytecode.Instructions;
-using Strict.Bytecode.Serialization;
 using Strict.Expressions;
 using Strict.Language;
 
-namespace Strict.Bytecode;
+namespace Strict.Bytecode.Serialization;
 
 /// <summary>
 /// Used in BytecodeSerializer to write out strings, names, identifiers, etc. once.
@@ -56,7 +55,7 @@ internal sealed class NameTable : IEnumerable<string>
 	public int this[string name] => indices[name];
 	public int Count => names.Count;
 	public IEnumerator<string> GetEnumerator() => names.GetEnumerator();
-	IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+	IEnumerator IEnumerable.GetEnumerator() => GetEnumerator(); //ncrunch: no coverage
 
 	private NameTable CollectValueInstanceStrings(ValueInstance val)
 	{
@@ -69,9 +68,17 @@ internal sealed class NameTable : IEnumerable<string>
 				CollectValueInstanceStrings(item);
 			return this;
 		}
-		//TODO: dictionary support
+		if (val.IsDictionary)
+		{
+			Add(val.GetType().Name);
+			foreach (var kvp in val.GetDictionaryItems())
+			{
+				CollectValueInstanceStrings(kvp.Key);
+				CollectValueInstanceStrings(kvp.Value);
+			}
+			return this;
+		}
 		var type = val.GetType();
-		// None, Bool, Character, SmallNumber or IntegerNumber: no type name needed, Number is implied
 		if ((type.IsNone || type.IsBoolean || type.IsNumber || type.IsCharacter) &&
 			BytecodeSerializer.IsIntegerNumber(val.Number))
 			return this;
@@ -98,7 +105,7 @@ internal sealed class NameTable : IEnumerable<string>
 			Value val when val.Data.GetType().IsBoolean => Add(val.Data.GetType().Name),
 			Value val when !val.Data.GetType().IsNumber ||
 				!BytecodeSerializer.IsIntegerNumber(val.Data.Number)
-				=> Add(val.Data.GetType().Name),
+				=> Add(val.Data.GetType().Name), //ncrunch: no coverage
 			MemberCall memberCall => Add(memberCall.Member.Name).Add(memberCall.Member.Type.Name).
 				CollectExpressionStrings(memberCall.Instance),
 			Binary binary => Add(binary.Method.Name).CollectExpressionStrings(binary.Instance).

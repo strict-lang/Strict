@@ -8,9 +8,9 @@ using Type = Strict.Language.Type;
 
 namespace Strict.HighLevelRuntime;
 
-public class Executor
+public class Interpreter
 {
-	public Executor(Package initialPackage, TestBehavior behavior = TestBehavior.OnFirstRun)
+	public Interpreter(Package initialPackage, TestBehavior behavior = TestBehavior.OnFirstRun)
 	{
 		this.behavior = behavior;
 		noneType = initialPackage.GetType(Type.None);

@@ -3,11 +3,11 @@ using Strict.Language;
 
 namespace Strict.HighLevelRuntime;
 
-internal sealed class BodyEvaluator(Executor executor)
+internal sealed class BodyEvaluator(Interpreter interpreter)
 {
 	public ValueInstance Evaluate(Body body, ExecutionContext ctx, bool runOnlyTests)
 	{
-		executor.Statistics.BodyCount++;
+		interpreter.Statistics.BodyCount++;
 		if (runOnlyTests)
 			inlineTestDepth++;
 		try
@@ -34,32 +34,32 @@ internal sealed class BodyEvaluator(Executor executor)
 
 	private ValueInstance TryEvaluate(Body body, ExecutionContext ctx, bool runOnlyTests)
 	{
-		var last = executor.noneInstance;
+		var last = interpreter.noneInstance;
 		var count = body.Expressions.Count;
 		for (var index = 0; index < count; index++)
 		{
 			var e = body.Expressions[index];
 			var isTest = index < count - 1 && IsStandaloneInlineTest(e);
 			if (isTest)
-				executor.Statistics.TestExpressions++;
+				interpreter.Statistics.TestExpressions++;
 			if (isTest == !runOnlyTests && e is not Declaration && e is not MutableReassignment ||
 				runOnlyTests && e is Declaration decl && DeclarationReferencesAnyMember(body, decl))
 				continue;
-			last = executor.RunExpression(e, ctx);
+			last = interpreter.RunExpression(e, ctx);
 			if (ctx.ExitMethodAndReturnValue.HasValue)
 				return ctx.ExitMethodAndReturnValue.Value;
 			if (runOnlyTests && isTest && !last.Boolean)
-				throw new Executor.TestFailed(body.Method, e, last, GetTestFailureDetails(e, ctx));
+				throw new Interpreter.TestFailed(body.Method, e, last, GetTestFailureDetails(e, ctx));
 		}
-		if (runOnlyTests && count > 1 && last.Equals(executor.noneInstance) &&
+		if (runOnlyTests && count > 1 && last.Equals(interpreter.noneInstance) &&
 			body.Method.Name != Method.Run)
-			throw new Executor.MethodRequiresTest(body.Method, body);
+			throw new Interpreter.MethodRequiresTest(body.Method, body);
 		if (runOnlyTests || last.IsError || last.IsType(body.Method.ReturnType))
 			return last;
 		if (body.Method.ReturnType.IsMutable && !last.IsMutable &&
 			last.IsType(((GenericTypeImplementation)body.Method.ReturnType).ImplementationTypes[0]))
 			return new ValueInstance(last, body.Method.ReturnType);
-		throw new Executor.ReturnTypeMustMatchMethod(body, last);
+		throw new Interpreter.ReturnTypeMustMatchMethod(body, last);
 	}
 
 	private static bool ExpressionReferencesMember(Expression expr, string memberName) =>
@@ -101,6 +101,6 @@ internal sealed class BodyEvaluator(Executor executor)
 				: string.Empty;
 
 	private string GetBinaryComparisonDetails(MethodCall binary, ExecutionContext ctx, string op) =>
-		executor.RunExpression(binary.Instance!, ctx) + " " + op + " " +
-		executor.RunExpression(binary.Arguments[0], ctx);
+		interpreter.RunExpression(binary.Instance!, ctx) + " " + op + " " +
+		interpreter.RunExpression(binary.Arguments[0], ctx);
 }

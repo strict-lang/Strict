@@ -9,9 +9,9 @@ public sealed class ToTests
 {
 	[SetUp]
 	public void CreateExecutor() =>
-		executor = new Executor(TestPackage.Instance, TestBehavior.Disabled);
+		interpreter = new Interpreter(TestPackage.Instance, TestBehavior.Disabled);
 
-	private Executor executor = null!;
+	private Interpreter interpreter = null!;
 
 	private static Type CreateType(string name, params string[] lines) =>
 		new Type(TestPackage.Instance, new TypeLines(name, lines)).ParseMembersAndMethods(
@@ -23,9 +23,9 @@ public sealed class ToTests
 		using var t = CreateType(nameof(EvaluateToTextAndNumber), "has number", "GetText Text",
 			"\tnumber to Text", "GetNumber Number", "\tnumber to Text to Number");
 		var instance = new ValueInstance(t, 5);
-		Assert.That(executor.Execute(t.Methods.Single(m => m.Name == "GetText"), instance, []).Text,
+		Assert.That(interpreter.Execute(t.Methods.Single(m => m.Name == "GetText"), instance, []).Text,
 			Is.EqualTo("5"));
-		Assert.That(executor.Execute(t.Methods.Single(m => m.Name == "GetNumber"), instance, []).Number,
+		Assert.That(interpreter.Execute(t.Methods.Single(m => m.Name == "GetNumber"), instance, []).Number,
 			Is.EqualTo(5));
 	}
 
@@ -35,7 +35,7 @@ public sealed class ToTests
 		using var t = CreateType(nameof(ToCharacterComparison), "has number", "Compare",
 			"\t5 to Character is \"5\"");
 		Assert.That(
-			executor.Execute(t.Methods.Single(m => m.Name == "Compare"), executor.noneInstance, []).Boolean,
+			interpreter.Execute(t.Methods.Single(m => m.Name == "Compare"), interpreter.noneInstance, []).Boolean,
 			Is.EqualTo(true));
 	}
 
@@ -46,7 +46,7 @@ public sealed class ToTests
 				new TypeLines(nameof(ConvertCharacterToNumberAndMultiply), "has character",
 					"Convert(number)", "\tcharacter to Number * 10 ^ number")).
 			ParseMembersAndMethods(new MethodExpressionParser());
-		Assert.That(executor.Execute(type.Methods[0], new ValueInstance(type, '5'),
+		Assert.That(interpreter.Execute(type.Methods[0], new ValueInstance(type, '5'),
 			[new ValueInstance(type.GetType(Type.Number), 3)]).Number, Is.EqualTo(5 * 1000));
 	}
 }

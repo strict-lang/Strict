@@ -28,13 +28,18 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Examples\" />
-  </ItemGroup>
-
-  <ItemGroup>
-		<None Include="..\Strict\Examples\SimpleCalculator.strict" Link="Examples\SimpleCalculator.strict">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</None>
+    <None Update="Examples\AreaCalculator.strict">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Examples\FizzBuzz.strict">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Examples\Greeter.strict">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Examples\SimpleCalculator.strict">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>

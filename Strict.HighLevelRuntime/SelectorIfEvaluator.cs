@@ -2,16 +2,16 @@ using Strict.Expressions;
 
 namespace Strict.HighLevelRuntime;
 
-internal sealed class SelectorIfEvaluator(Executor executor)
+internal sealed class SelectorIfEvaluator(Interpreter interpreter)
 {
 	public ValueInstance Evaluate(SelectorIf selectorIf, ExecutionContext ctx)
 	{
-		executor.Statistics.SelectorIfCount++;
+		interpreter.Statistics.SelectorIfCount++;
 		foreach (var @case in selectorIf.Cases)
-			if (executor.RunExpression(@case.Condition, ctx).Boolean)
-				return executor.RunExpression(@case.Then, ctx);
+			if (interpreter.RunExpression(@case.Condition, ctx).Boolean)
+				return interpreter.RunExpression(@case.Then, ctx);
 		return selectorIf.OptionalElse != null
-			? executor.RunExpression(selectorIf.OptionalElse, ctx)
-			: executor.noneInstance;
+			? interpreter.RunExpression(selectorIf.OptionalElse, ctx)
+			: interpreter.noneInstance;
 	}
 }

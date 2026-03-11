@@ -38,10 +38,13 @@ public sealed class PhraseTokenizer
 	{
 		textStart = tokenStart = -1;
 		for (index = 0; index < input.Length; index++)
-			if (input[index] == '\"')
+		{
+			var character = input[index];
+			if (character == '\"')
 				GetSingleTokenTillEndOfText(processToken);
 			else if (textStart == -1)
-				ProcessNormalToken(processToken);
+				ProcessNormalToken(character, processToken);
+		}
 		if (textStart != -1)
 			throw new UnterminatedString(input);
 		if (tokenStart >= 0)
@@ -66,12 +69,12 @@ public sealed class PhraseTokenizer
 	private int textStart = -1;
 	private int tokenStart = -1;
 
-	private void ProcessNormalToken(Action<Range> processToken)
+	private void ProcessNormalToken(char character, Action<Range> processToken)
 	{
-		if (input[index] == OpenBracket)
+		if (character == OpenBracket)
 			foreach (var token in new TokensTillMatchingBracketGrabber(this).GetRanges())
 				processToken(token);
-		else if (input[index] == ' ')
+		else if (character == ' ')
 		{
 			if (tokenStart >= 0)
 				ProcessTokenAfterSpace(processToken);
@@ -197,7 +200,7 @@ public sealed class PhraseTokenizer
 		private bool HandleMethodCall()
 		{
 			HandleMethodCallStates();
-			tokens.ProcessNormalToken(result.Add);
+			tokens.ProcessNormalToken(tokens.input[tokens.index], result.Add);
 			return isInMethodCall && (tokens.index + 1 < tokens.input.Length &&
 				tokens.input[tokens.index] == CloseBracket &&
 				(tokens.input[tokens.index + 1] != '.' || foundBinaryOperationInMethodCall) ||

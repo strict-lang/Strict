@@ -6,14 +6,13 @@ namespace Strict.Compiler.Cuda;
 
 public class CSharpToCudaTranspiler(Package strictBase) : IDisposable
 {
-	private readonly Package package = new(strictBase, nameof(CSharpToCudaTranspiler));
-	private readonly CSharpType.CSharpExpressionParser parser = new();
-
 	public string Convert(string filePath)
 	{
 		var type = ParseCSharp(filePath);
 		return GenerateCuda(type); //ncrunch: no coverage, no tests for this, calls GenerateCuda directly
 	} //ncrunch: no coverage
+
+	private readonly Package package = new(strictBase, nameof(CSharpToCudaTranspiler));
 
 	public static string GenerateCuda(Type type) =>
 		new InstructionsToCudaCompiler().Compile(type.Methods[0]);
@@ -29,34 +28,12 @@ public class CSharpToCudaTranspiler(Package strictBase) : IDisposable
 
 public class CSharpType : Type
 {
-	public class CSharpExpressionParser : MethodExpressionParser
-	{
-		/*TODO: clean up, this is a hack anyway
-		public override BlockExpression ParseMethodBody(Method method)
-		{
-			if (method.bodyLines.Last().Text.Contains("depth"))
-				return new MethodBody(method,
-					new List<Expression> { new Text(method, method.bodyLines.Last().Text) });
-			var binaryOperator = method.bodyLines.Last().Text.Contains('+')
-				? "+"
-				: method.bodyLines.Last().Text.Contains('-')
-					? "-"
-					: "*";
-			var numberType = method.FindType(Type.Number)!;
-			var arguments = new Expression[] { new Value(numberType, "second") };
-			var returnExpression = new Return(new Binary(new Value(numberType, "first"),
-				numberType.GetMethod(binaryOperator, arguments), arguments));
-			return new MethodBody(method, new List<Expression> { returnExpression });
-		}
-		*/
-	}
-
 	public CSharpType(Package strictPackage, string filePath)
 		: this(strictPackage, ExtractMethodInfo(filePath)) { }
 
 	private CSharpType(Package strictPackage, (string typeName, string methodLine, string bodyLine) info)
 		: base(strictPackage, new TypeLines(info.typeName, info.methodLine)) =>
-		methods.Add(new Method(this, 0, new CSharpExpressionParser(),
+		methods.Add(new Method(this, 0, new MethodExpressionParser(),
 			[info.methodLine, "\t" + info.bodyLine]));
 
 	private static (string typeName, string methodLine, string bodyLine) ExtractMethodInfo(string filePath)

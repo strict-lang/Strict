@@ -51,12 +51,13 @@ public sealed class BytecodeDecompilerTests : TestBytecode
 		}
 	}
 
-	//TODO: improve based on caller
 	private static (string binaryFilePath, string outputFolder) SerializeAndDecompile(
 		List<Instruction> instructions, string typeName)
 	{
-		var binaryFilePath = GetTempStrictBinaryFilePath();
-		BytecodeSerializer.Serialize(instructions, binaryFilePath, typeName);
+		var binaryFilePath = new BytecodeSerializer(
+			new Dictionary<string, IList<Instruction>> { [typeName] = instructions },
+			Path.GetTempPath(),
+			nameof(BytecodeDecompilerTests) + decompTestCounter++).OutputFilePath;
 		var outputFolder = Path.Combine(Path.GetTempPath(), "decompiled_" + Path.GetRandomFileName());
 		new BytecodeDecompiler(TestPackage.Instance).Decompile(binaryFilePath, outputFolder);
 		Assert.That(Directory.Exists(outputFolder), Is.True, "Output folder should be created");
@@ -72,10 +73,6 @@ public sealed class BytecodeDecompilerTests : TestBytecode
 		if (File.Exists(binaryFilePath))
 			File.Delete(binaryFilePath);
 	}
-
-	private static string GetTempStrictBinaryFilePath() =>
-		Path.Combine(Path.GetTempPath(), nameof(BytecodeDecompilerTests) + decompTestCounter++ +
-			BytecodeSerializer.Extension);
 
 	private static int decompTestCounter;
 }

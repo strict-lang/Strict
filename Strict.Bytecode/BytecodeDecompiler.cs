@@ -28,7 +28,7 @@ public sealed class BytecodeDecompiler(Package basePackage)
 			{
 				var typeName = Path.GetFileNameWithoutExtension(entry.Name);
 				using var entryStream = entry.Open();
-				var instructions = BytecodeSerializer.DeserializeEntry(entryStream,
+				var instructions = BytecodeDeserializer.DeserializeEntry(entryStream,
 					GetPackageForType(binaryDir, typeName));
 				var sourceLines = ReconstructSource(instructions);
 				var outputPath = Path.Combine(outputFolder, typeName + ".strict");
@@ -42,10 +42,10 @@ public sealed class BytecodeDecompiler(Package basePackage)
 	{
 		if (basePackage.FindType(typeName) != null)
 			return basePackage;
+		//ncrunch: no coverage start
 		var sourceFile = Path.Combine(binaryDir, typeName + Type.Extension);
 		if (!File.Exists(sourceFile))
 			return basePackage;
-		//ncrunch: no coverage start
 		if (!packagesByDirectory.TryGetValue(binaryDir, out var appPackage))
 		{
 			appPackage = new Package(basePackage, binaryDir);
@@ -84,9 +84,10 @@ public sealed class BytecodeDecompiler(Package basePackage)
 				index++;
 				break;
 			case Invoke { Method: not null } invoke:
+				//ncrunch: no coverage start
 				bodyLines.Add("\t" + invoke.Method);
 				break;
-			}
+			} //ncrunch: no coverage end
 		}
 		var lines = new List<string>(members);
 		if (bodyLines.Count > 0)

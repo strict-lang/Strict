@@ -8,9 +8,9 @@ namespace Strict.HighLevelRuntime.Tests;
 public sealed class ForTests
 {
 	[SetUp]
-	public void CreateExecutor() => executor = new Executor(TestPackage.Instance, TestBehavior.Disabled);
+	public void CreateExecutor() => interpreter = new Interpreter(TestPackage.Instance, TestBehavior.Disabled);
 
-	private Executor executor = null!;
+	private Interpreter interpreter = null!;
 
 	private static Type CreateType(string name, params string[] lines) =>
 		new Type(TestPackage.Instance, new TypeLines(name, lines)).ParseMembersAndMethods(
@@ -21,7 +21,7 @@ public sealed class ForTests
 	{
 		using var t = CreateType(nameof(CustomVariableInForLoopIsUsed), "has number", "Sum Number",
 			"\tfor item in (1, 2, 3)", "\t\titem");
-		var result = executor.Execute(t.Methods.Single(m => m.Name == "Sum"), executor.noneInstance, []);
+		var result = interpreter.Execute(t.Methods.Single(m => m.Name == "Sum"), interpreter.noneInstance, []);
 		Assert.That(result.Number, Is.EqualTo(6));
 	}
 
@@ -33,7 +33,7 @@ public sealed class ForTests
 			"Run Number", "\tfor (1, 2, 3)", "\t\tif operation is", "\t\t\t\"add\" then value",
 			"\t\t\t\"subtract\" then 0 - value");
 		var instance = new ValueInstance(t, [new ValueInstance(operation)]);
-		var result = executor.Execute(t.Methods.Single(m => m.Name == "Run"), instance, []);
+		var result = interpreter.Execute(t.Methods.Single(m => m.Name == "Run"), instance, []);
 		Assert.That(result.Number, Is.EqualTo(expected));
 	}
 
@@ -42,7 +42,7 @@ public sealed class ForTests
 	{
 		using var t = CreateType(nameof(TextReturnTypeConsolidatesNumbers), "has number", "Join Text",
 			"\tfor (\"a\", \"abc\")", "\t\tvalue.Length");
-		var result = executor.Execute(t.Methods.Single(m => m.Name == "Join"), executor.noneInstance, []);
+		var result = interpreter.Execute(t.Methods.Single(m => m.Name == "Join"), interpreter.noneInstance, []);
 		Assert.That(result.Text, Is.EqualTo("13"));
 	}
 
@@ -51,7 +51,7 @@ public sealed class ForTests
 	{
 		using var t = CreateType(nameof(TextReturnTypeConsolidatesTexts), "has number", "Join Text",
 			"\tfor (\"hello \", \"world\")", "\t\tvalue");
-		var result = executor.Execute(t.Methods.Single(m => m.Name == "Join"), executor.noneInstance, []);
+		var result = interpreter.Execute(t.Methods.Single(m => m.Name == "Join"), interpreter.noneInstance, []);
 		Assert.That(result.Text, Is.EqualTo("hello world"));
 	}
 
@@ -60,7 +60,7 @@ public sealed class ForTests
 	{
 		using var t = CreateType(nameof(TextReturnTypeConsolidatesCharacters), "has number",
 			"Join(character) Text", "\tfor (character, character)", "\t\tvalue");
-		var result = executor.Execute(t.Methods.Single(m => m.Name == "Join"), executor.noneInstance,
+		var result = interpreter.Execute(t.Methods.Single(m => m.Name == "Join"), interpreter.noneInstance,
 			[new ValueInstance(t.GetType(Type.Character), 'b')]);
 		Assert.That(result.Text, Is.EqualTo("bb"));
 	}
@@ -70,7 +70,7 @@ public sealed class ForTests
 	{
 		using var t = CreateType(nameof(TextReturnTypeThrowsWhenUnsupportedValueIsUsed), "has number",
 			"Join Text", "\tfor (1, 2)", "\t\tError(\"boom\")");
-		Assert.That(() => executor.Execute(t.Methods.Single(m => m.Name == "Join"), executor.noneInstance, []),
+		Assert.That(() => interpreter.Execute(t.Methods.Single(m => m.Name == "Join"), interpreter.noneInstance, []),
 			Throws.InstanceOf<NotSupportedException>());
 	}
 
@@ -79,7 +79,7 @@ public sealed class ForTests
 	{
 		using var t = CreateType(nameof(ForLoopUsesNumberIteratorLength), "has number", "Run Number",
 			"\tfor 3", "\t\t1");
-		var result = executor.Execute(t.Methods.Single(m => m.Name == "Run"), executor.noneInstance, []);
+		var result = interpreter.Execute(t.Methods.Single(m => m.Name == "Run"), interpreter.noneInstance, []);
 		Assert.That(result.Number, Is.EqualTo(3));
 	}
 
@@ -88,7 +88,7 @@ public sealed class ForTests
 	{
 		using var t = CreateType(nameof(ForLoopUsesFloatingNumberIteratorLength), "has number",
 			"Run Number", "\tfor 2.5", "\t\t1");
-		var result = executor.Execute(t.Methods.Single(m => m.Name == "Run"), executor.noneInstance, []);
+		var result = interpreter.Execute(t.Methods.Single(m => m.Name == "Run"), interpreter.noneInstance, []);
 		Assert.That(result.Number, Is.EqualTo(2));
 	}
 
@@ -100,7 +100,7 @@ public sealed class ForTests
 			"\tfor container", "\t\t1");
 		var container = new ValueInstance(t,
 			[new ValueInstance(t.Members[0].Type, Array.Empty<ValueInstance>())]);
-		Assert.That(() => executor.Execute(t.Methods.Single(m => m.Name == "Run"), executor.noneInstance, [container]),
+		Assert.That(() => interpreter.Execute(t.Methods.Single(m => m.Name == "Run"), interpreter.noneInstance, [container]),
 			Throws.InstanceOf<ValueInstance.IteratorNotSupported>());
 	}
 
@@ -110,10 +110,10 @@ public sealed class ForTests
 		using var t = CreateType(nameof(GetElementsTextWithCompactConditionalThen), "has number",
 			"GetElementsText(elements Numbers) Text", "\tfor elements",
 			"\t\t(index is 0 then \"\" else \", \") + value");
-		ValueInstance[] nums = [new(executor.numberType, 1), new(executor.numberType, 3)];
-		var listType = executor.listType.GetGenericImplementation(executor.numberType);
-		var result = executor.Execute(t.Methods.Single(m => m.Name == "GetElementsText"),
-			executor.noneInstance, [new ValueInstance(listType, nums)]);
+		ValueInstance[] nums = [new(interpreter.numberType, 1), new(interpreter.numberType, 3)];
+		var listType = interpreter.listType.GetGenericImplementation(interpreter.numberType);
+		var result = interpreter.Execute(t.Methods.Single(m => m.Name == "GetElementsText"),
+			interpreter.noneInstance, [new ValueInstance(listType, nums)]);
 		Assert.That(result.Text, Is.EqualTo("1, 3"));
 	}
 
@@ -126,8 +126,8 @@ public sealed class ForTests
 			"\t\tif value is 3",
 			"\t\t\treturn value",
 			"\t\t0");
-		var result = executor.Execute(t.Methods.Single(m => m.Name == "FindFirst"),
-			executor.noneInstance, []);
+		var result = interpreter.Execute(t.Methods.Single(m => m.Name == "FindFirst"),
+			interpreter.noneInstance, []);
 		Assert.That(result.Number, Is.EqualTo(3));
 	}
 
@@ -140,8 +140,8 @@ public sealed class ForTests
 			"\t\tif value is 3",
 			"\t\t\treturn value",
 			"\t\t0");
-		var result = executor.Execute(t.Methods.Single(m => m.Name == "FindFirst"),
-			executor.noneInstance, []);
+		var result = interpreter.Execute(t.Methods.Single(m => m.Name == "FindFirst"),
+			interpreter.noneInstance, []);
 		Assert.That(result.Number, Is.EqualTo(3));
 	}
 
@@ -154,8 +154,8 @@ public sealed class ForTests
 			"\tfor (1, 2, 3)",
 			"\t\tif value > 0",
 			"\t\t\tsum = sum + value");
-		var result = executor.Execute(t.Methods.Single(m => m.Name == "GetText"),
-			executor.noneInstance, []);
+		var result = interpreter.Execute(t.Methods.Single(m => m.Name == "GetText"),
+			interpreter.noneInstance, []);
 		Assert.That(result.Text, Is.EqualTo(""));
 	}
 
@@ -164,8 +164,8 @@ public sealed class ForTests
 	{
 		using var t = CreateType(nameof(TextReturnTypeConsolidatesListValues), "has number",
 			"Merge Text", "\tfor (\"a\", \"b\")", "\t\t(value, value)");
-		var result = executor.Execute(t.Methods.Single(m => m.Name == "Merge"),
-			executor.noneInstance, []);
+		var result = interpreter.Execute(t.Methods.Single(m => m.Name == "Merge"),
+			interpreter.noneInstance, []);
 		Assert.That(result.Text, Is.EqualTo("(a, a), (b, b)"));
 	}
 
@@ -184,7 +184,7 @@ public sealed class ForTests
 			"\t\t\tparentheses.Decrement",
 			"\t\telse if parentheses is 0",
 			"\t\t\tvalue");
-		var result = executor.Execute(t.Methods.Single(m => m.Name == "Remove"),
+		var result = interpreter.Execute(t.Methods.Single(m => m.Name == "Remove"),
 			new ValueInstance(t, [ new ValueInstance("example(unwanted)example") ]), []);
 		Assert.That(result.Text, Is.EqualTo("exampleexample"));
 	}

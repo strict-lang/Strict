@@ -1,0 +1,11 @@
+has text
+has logger
+Greet Text
+	Greeter("World").Greet is "Hello, World!"
+	Greeter("Strict").Greet is "Hello, Strict!"
+	"Hello, " + text + "!"
+Run
+	constant english = Greeter("World")
+	constant strict = Greeter("Strict")
+	logger.Log(english.Greet)
+	logger.Log(strict.Greet)

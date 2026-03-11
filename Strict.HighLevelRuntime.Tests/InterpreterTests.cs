@@ -5,21 +5,21 @@ using Type = Strict.Language.Type;
 
 namespace Strict.HighLevelRuntime.Tests;
 
-public sealed class ExecutorTests
+public sealed class InterpreterTests
 {
 	[SetUp]
 	public void CreateExecutor() =>
-		executor = new Executor(TestPackage.Instance, TestBehavior.Disabled);
+		interpreter = new Interpreter(TestPackage.Instance, TestBehavior.Disabled);
 
-	private Executor executor = null!;
+	private Interpreter interpreter = null!;
 
 	[Test]
 	public void MissingArgument()
 	{
 		using var t = CreateCalcType();
 		var method = t.Methods.Single(m => m.Name == "Add");
-		Assert.That(() => executor.Execute(method),
-			Throws.TypeOf<Executor.MissingArgument>().With.Message.StartsWith("first"));
+		Assert.That(() => interpreter.Execute(method),
+			Throws.TypeOf<Interpreter.MissingArgument>().With.Message.StartsWith("first"));
 	}
 
 	[Test]
@@ -28,9 +28,9 @@ public sealed class ExecutorTests
 		using var t = CreateType(nameof(FromConstructorWithExistingInstanceThrows), "has number",
 			"from(number Number)", "\tvalue");
 		var method = t.Methods.Single(m => m.Name == Method.From);
-		var number = new ValueInstance(executor.numberType, 3);
+		var number = new ValueInstance(interpreter.numberType, 3);
 		var instance = new ValueInstance(t, 1);
-		Assert.That(() => executor.Execute(method, instance, [number]),
+		Assert.That(() => interpreter.Execute(method, instance, [number]),
 			Throws.InstanceOf<MethodCall.CannotCallFromConstructorWithExistingInstance>());
 	}
 
@@ -47,8 +47,8 @@ public sealed class ExecutorTests
 	{
 		using var t = CreateCalcType();
 		var method = t.Methods.Single(m => m.Name == "Add");
-		var result = executor.Execute(method, executor.noneInstance,
-			[new ValueInstance(executor.numberType, 5)]);
+		var result = interpreter.Execute(method, interpreter.noneInstance,
+			[new ValueInstance(interpreter.numberType, 5)]);
 		Assert.That(result.Number, Is.EqualTo(6));
 	}
 
@@ -57,11 +57,11 @@ public sealed class ExecutorTests
 	{
 		using var t = CreateCalcType();
 		var method = t.Methods.Single(m => m.Name == "Add");
-		Assert.That(() => executor.Execute(method, executor.noneInstance, [
-			new ValueInstance(executor.numberType, 1),
-			new ValueInstance(executor.numberType, 2),
-			new ValueInstance(executor.numberType, 3)
-		]), Throws.InstanceOf<Executor.TooManyArguments>().With.Message.StartsWith("Number: 3"));
+		Assert.That(() => interpreter.Execute(method, interpreter.noneInstance, [
+			new ValueInstance(interpreter.numberType, 1),
+			new ValueInstance(interpreter.numberType, 2),
+			new ValueInstance(interpreter.numberType, 3)
+		]), Throws.InstanceOf<Interpreter.TooManyArguments>().With.Message.StartsWith("Number: 3"));
 	}
 
 	[Test]
@@ -70,8 +70,8 @@ public sealed class ExecutorTests
 		using var t = CreateType(nameof(ArgumentDoesNotMapToMethodParameters), "has number",
 			"Use(number Number) Number", "\tnumber");
 		var method = t.Methods.Single(m => m.Name == "Use");
-		Assert.That(() => executor.Execute(method, executor.noneInstance, [executor.trueInstance]),
-			Throws.InstanceOf<Executor.ArgumentDoesNotMapToMethodParameters>());
+		Assert.That(() => interpreter.Execute(method, interpreter.noneInstance, [interpreter.trueInstance]),
+			Throws.InstanceOf<Interpreter.ArgumentDoesNotMapToMethodParameters>());
 	}
 
 	[Test]
@@ -79,9 +79,9 @@ public sealed class ExecutorTests
 	{
 		using var t = CreateCalcType();
 		var method = t.Methods.Single(m => m.Name == "Add");
-		var first = new ValueInstance(executor.numberType, 5);
-		var second = new ValueInstance(executor.numberType, 7);
-		var result = executor.Execute(method, executor.noneInstance, [first, second]);
+		var first = new ValueInstance(interpreter.numberType, 5);
+		var second = new ValueInstance(interpreter.numberType, 7);
+		var result = interpreter.Execute(method, interpreter.noneInstance, [first, second]);
 		Assert.That(result.Number, Is.EqualTo(12));
 	}
 
@@ -91,25 +91,25 @@ public sealed class ExecutorTests
 		using var t = CreateType(nameof(EvaluateDeclaration), "mutable last Number",
 			"AddFive(number) Number", "\tconstant five = 5", "\tnumber + five");
 		var method = t.Methods.Single(m => m.Name == "AddFive");
-		var number = new ValueInstance(executor.numberType, 5);
-		var result = executor.Execute(method, executor.noneInstance, [number]);
+		var number = new ValueInstance(interpreter.numberType, 5);
+		var result = interpreter.Execute(method, interpreter.noneInstance, [number]);
 		Assert.That(result.Number, Is.EqualTo(10));
 	}
 
 	[Test]
 	public void EvaluateAllArithmeticOperators()
 	{
-		Assert.That(executor.Execute(GetBinaryOperator(BinaryOperator.Plus), N(2), [N(3)]).Number,
+		Assert.That(interpreter.Execute(GetBinaryOperator(BinaryOperator.Plus), N(2), [N(3)]).Number,
 			Is.EqualTo(5));
-		Assert.That(executor.Execute(GetBinaryOperator(BinaryOperator.Minus), N(8), [N(3)]).Number,
+		Assert.That(interpreter.Execute(GetBinaryOperator(BinaryOperator.Minus), N(8), [N(3)]).Number,
 			Is.EqualTo(5));
-		Assert.That(executor.Execute(GetBinaryOperator(BinaryOperator.Multiply), N(6), [N(7)]).Number,
+		Assert.That(interpreter.Execute(GetBinaryOperator(BinaryOperator.Multiply), N(6), [N(7)]).Number,
 			Is.EqualTo(42));
-		Assert.That(executor.Execute(GetBinaryOperator(BinaryOperator.Divide), N(8), [N(2)]).Number,
+		Assert.That(interpreter.Execute(GetBinaryOperator(BinaryOperator.Divide), N(8), [N(2)]).Number,
 			Is.EqualTo(4));
-		Assert.That(executor.Execute(GetBinaryOperator(BinaryOperator.Modulate), N(8), [N(3)]).Number,
+		Assert.That(interpreter.Execute(GetBinaryOperator(BinaryOperator.Modulate), N(8), [N(3)]).Number,
 			Is.EqualTo(2));
-		Assert.That(executor.Execute(GetBinaryOperator(BinaryOperator.Power), N(2), [N(3)]).Number,
+		Assert.That(interpreter.Execute(GetBinaryOperator(BinaryOperator.Power), N(2), [N(3)]).Number,
 			Is.EqualTo(8));
 	}
 
@@ -125,29 +125,29 @@ public sealed class ExecutorTests
 		var text = TestPackage.Instance.GetType(Type.Text);
 		var plusText = text.Methods.Single(m =>
 			m.Name == BinaryOperator.Plus && m.Parameters is [{ Type.IsText: true }]);
-		var result = executor.Execute(plusText, new ValueInstance("hi "), [new ValueInstance("there")]);
+		var result = interpreter.Execute(plusText, new ValueInstance("hi "), [new ValueInstance("there")]);
 		Assert.That(result.Text, Is.EqualTo("hi there"));
 	}
 
 	[Test]
 	public void EvaluateAllComparisonOperators()
 	{
-		Assert.That(executor.Execute(GetBinaryOperator(BinaryOperator.Greater), N(5), [N(3)]),
-			Is.EqualTo(executor.trueInstance));
-		Assert.That(executor.Execute(GetBinaryOperator(BinaryOperator.Smaller), N(2), [N(3)]),
-			Is.EqualTo(executor.trueInstance));
-		Assert.That(executor.Execute(GetBinaryOperator(BinaryOperator.GreaterOrEqual), N(5), [N(3)]),
-			Is.EqualTo(executor.trueInstance));
-		Assert.That(executor.Execute(GetBinaryOperator(BinaryOperator.GreaterOrEqual), N(5), [N(5)]),
-			Is.EqualTo(executor.trueInstance));
-		Assert.That(executor.Execute(GetBinaryOperator(BinaryOperator.SmallerOrEqual), N(2), [N(3)]),
-			Is.EqualTo(executor.trueInstance));
-		Assert.That(executor.Execute(GetBinaryOperator(BinaryOperator.SmallerOrEqual), N(3), [N(3)]),
-			Is.EqualTo(executor.trueInstance));
-		Assert.That(executor.Execute(GetBinaryOperator(BinaryOperator.Is), N(3), [N(3)]),
-			Is.EqualTo(executor.trueInstance));
-		Assert.That(executor.Execute(GetBinaryOperator(BinaryOperator.Is), N(3), [N(4)]),
-			Is.EqualTo(executor.falseInstance));
+		Assert.That(interpreter.Execute(GetBinaryOperator(BinaryOperator.Greater), N(5), [N(3)]),
+			Is.EqualTo(interpreter.trueInstance));
+		Assert.That(interpreter.Execute(GetBinaryOperator(BinaryOperator.Smaller), N(2), [N(3)]),
+			Is.EqualTo(interpreter.trueInstance));
+		Assert.That(interpreter.Execute(GetBinaryOperator(BinaryOperator.GreaterOrEqual), N(5), [N(3)]),
+			Is.EqualTo(interpreter.trueInstance));
+		Assert.That(interpreter.Execute(GetBinaryOperator(BinaryOperator.GreaterOrEqual), N(5), [N(5)]),
+			Is.EqualTo(interpreter.trueInstance));
+		Assert.That(interpreter.Execute(GetBinaryOperator(BinaryOperator.SmallerOrEqual), N(2), [N(3)]),
+			Is.EqualTo(interpreter.trueInstance));
+		Assert.That(interpreter.Execute(GetBinaryOperator(BinaryOperator.SmallerOrEqual), N(3), [N(3)]),
+			Is.EqualTo(interpreter.trueInstance));
+		Assert.That(interpreter.Execute(GetBinaryOperator(BinaryOperator.Is), N(3), [N(3)]),
+			Is.EqualTo(interpreter.trueInstance));
+		Assert.That(interpreter.Execute(GetBinaryOperator(BinaryOperator.Is), N(3), [N(4)]),
+			Is.EqualTo(interpreter.falseInstance));
 	}
 
 	[Test]
@@ -164,7 +164,7 @@ public sealed class ExecutorTests
 		var xor = GetBinaryBooleanOperator(BinaryOperator.Xor);
 		AssertBooleanOperation(xor, true, false, true);
 		AssertBooleanOperation(xor, true, true, false);
-		Assert.That(executor.Execute(not, executor.falseInstance, []), Is.EqualTo(executor.trueInstance));
+		Assert.That(interpreter.Execute(not, interpreter.falseInstance, []), Is.EqualTo(interpreter.trueInstance));
 	}
 
 	private readonly Type booleanType = TestPackage.Instance.GetType(Type.Boolean);
@@ -174,16 +174,16 @@ public sealed class ExecutorTests
 			m.Name == op && m.ReturnType.IsBoolean && m.Parameters is [{ Type.IsBoolean: true }]);
 
 	private void AssertBooleanOperation(Method method, bool first, bool second, bool result) =>
-		Assert.That(executor.Execute(method, executor.ToBoolean(first), [executor.ToBoolean(second)]),
-			Is.EqualTo(executor.ToBoolean(result)));
+		Assert.That(interpreter.Execute(method, interpreter.ToBoolean(first), [interpreter.ToBoolean(second)]),
+			Is.EqualTo(interpreter.ToBoolean(result)));
 
 	[Test]
 	public void EvaluateMemberCallFromStaticConstant()
 	{
 		using var t = CreateType(nameof(EvaluateMemberCallFromStaticConstant), "mutable last Number",
 			"GetTab Character", "\tCharacter.Tab");
-		var result = executor.Execute(t.Methods.Single(m => m.Name == "GetTab"));
-		Assert.That(result.IsPrimitiveType(executor.characterType), Is.True, result.ToString());
+		var result = interpreter.Execute(t.Methods.Single(m => m.Name == "GetTab"));
+		Assert.That(result.IsPrimitiveType(interpreter.characterType), Is.True, result.ToString());
 		Assert.That(result.Number, Is.EqualTo(7));
 	}
 
@@ -193,9 +193,9 @@ public sealed class ExecutorTests
 		using var t = CreateType(nameof(EvaluateBooleanComparisons), "mutable last Boolean",
 			"IfDifferent Boolean", "\tlast is false");
 		Assert.That(
-			executor.Execute(t.Methods.Single(m => m.Name == "IfDifferent"),
-				new ValueInstance(t, [executor.falseInstance]), []),
-			Is.EqualTo(executor.trueInstance));
+			interpreter.Execute(t.Methods.Single(m => m.Name == "IfDifferent"),
+				new ValueInstance(t, [interpreter.falseInstance]), []),
+			Is.EqualTo(interpreter.trueInstance));
 	}
 
 	[Test]
@@ -203,8 +203,8 @@ public sealed class ExecutorTests
 	{
 		using var t = CreateType(nameof(EvaluateRangeEquality), "has number", "Compare Boolean",
 			"\tRange(0, 5) is Range(0, 5)");
-		Assert.That(executor.Execute(t.Methods.Single(m => m.Name == "Compare"), executor.noneInstance,
-			[]), Is.EqualTo(executor.trueInstance));
+		Assert.That(interpreter.Execute(t.Methods.Single(m => m.Name == "Compare"), interpreter.noneInstance,
+			[]), Is.EqualTo(interpreter.trueInstance));
 	}
 
 	[Test]
@@ -213,8 +213,8 @@ public sealed class ExecutorTests
 		using var t = CreateType(nameof(MultilineMethodRequiresTests), "has number", "GetText Text",
 			"\tif number is 0", "\t\treturn \"\"", "\tnumber to Text");
 		var instance = new ValueInstance(t,
-			[new ValueInstance(executor.numberType, 5.0)]);
-		Assert.That(executor.Execute(t.Methods.Single(m => m.Name == "GetText"), instance, []).Text,
+			[new ValueInstance(interpreter.numberType, 5.0)]);
+		Assert.That(interpreter.Execute(t.Methods.Single(m => m.Name == "GetText"), instance, []).Text,
 			Is.EqualTo("5"));
 	}
 
@@ -224,9 +224,9 @@ public sealed class ExecutorTests
 		using var t = CreateType("NoTestsNeedValidation", "has number", "Compute Number", "\tif true",
 			"\t\treturn 1", "\t2");
 		var method = t.Methods.Single(m => m.Name == "Compute");
-		var validatingExecutor = new Executor(TestPackage.Instance);
+		var validatingExecutor = new Interpreter(TestPackage.Instance);
 		var ex = Assert.Throws<ExecutionFailed>(() => validatingExecutor.Execute(method));
-		Assert.That(ex!.InnerException, Is.InstanceOf<Executor.MethodRequiresTest>());
+		Assert.That(ex!.InnerException, Is.InstanceOf<Interpreter.MethodRequiresTest>());
 	}
 
 	[Test]
@@ -235,9 +235,9 @@ public sealed class ExecutorTests
 		using var t = CreateType(nameof(MethodRequiresTestWhenParsingFailsDuringValidation),
 			"has number", "Compute Number", "\tunknown(1)");
 		var method = t.Methods.Single(m => m.Name == "Compute");
-		var validatingExecutor = new Executor(TestPackage.Instance);
+		var validatingExecutor = new Interpreter(TestPackage.Instance);
 		Assert.That(() => validatingExecutor.Execute(method),
-			Throws.InstanceOf<Executor.MethodRequiresTest>());
+			Throws.InstanceOf<Interpreter.MethodRequiresTest>());
 	}
 
 	[Test]
@@ -246,10 +246,10 @@ public sealed class ExecutorTests
 		using var t = CreateType(nameof(InvalidTypeForFromConstructor), "has flag Boolean",
 			"from(flag Boolean, other Boolean)", "\tvalue");
 		var method = t.Methods.Single(m => m.Name == Method.From);
-		var number = new ValueInstance(executor.numberType, 1.0);
-		var boolean = executor.trueInstance;
-		Assert.That(() => executor.Execute(method, executor.noneInstance, [number, boolean]),
-			Throws.InstanceOf<Executor.InvalidTypeForArgument>());
+		var number = new ValueInstance(interpreter.numberType, 1.0);
+		var boolean = interpreter.trueInstance;
+		Assert.That(() => interpreter.Execute(method, interpreter.noneInstance, [number, boolean]),
+			Throws.InstanceOf<Interpreter.InvalidTypeForArgument>());
 	}
 
 	[Test]
@@ -260,7 +260,7 @@ public sealed class ExecutorTests
 		var method = t.Methods.Single(m => m.Name == Method.From);
 		var numberText = new ValueInstance("A");
 		var text = new ValueInstance("ok");
-		var result = executor.Execute(method, executor.noneInstance, [numberText, text]);
+		var result = interpreter.Execute(method, interpreter.noneInstance, [numberText, text]);
 		var members = result.TryGetValueTypeInstance()!;
 		Assert.That(members["number"].Number, Is.EqualTo(65));
 	}
@@ -271,8 +271,8 @@ public sealed class ExecutorTests
 		using var t = CreateType(nameof(CompareNumberToText), "has number", "Compare",
 			"\t\"5\" is 5");
 		Assert.That(
-			executor.Execute(t.Methods.Single(m => m.Name == "Compare"), executor.noneInstance, []),
-			Is.EqualTo(executor.trueInstance));
+			interpreter.Execute(t.Methods.Single(m => m.Name == "Compare"), interpreter.noneInstance, []),
+			Is.EqualTo(interpreter.trueInstance));
 	}
 
 	[Test]
@@ -281,8 +281,8 @@ public sealed class ExecutorTests
 		using var t = CreateType(nameof(CompareTextToCharacterTab), "has number", "Compare Boolean",
 			"\t\"7\" is Character.Tab");
 		Assert.That(
-			executor.Execute(t.Methods.Single(m => m.Name == "Compare"), executor.noneInstance, []),
-			Is.EqualTo(executor.falseInstance));
+			interpreter.Execute(t.Methods.Single(m => m.Name == "Compare"), interpreter.noneInstance, []),
+			Is.EqualTo(interpreter.falseInstance));
 	}
 
 	[Test]
@@ -299,10 +299,10 @@ public sealed class ExecutorTests
 	{
 		using var t = CreateType(nameof(StackOverflowCallingYourselfWithSameInstanceMember),
 			"has number", "Recursive(other Number)", "\tRecursive(number)");
-		Assert.That(() => executor.Execute(t.Methods.Single(m => m.Name == "Recursive"),
-				new ValueInstance(t, [new ValueInstance(executor.numberType, 3.0)]),
-				[new ValueInstance(executor.numberType, 1.0)]),
-			Throws.InstanceOf<Executor.StackOverflowCallingItselfWithSameInstanceAndArguments>());
+		Assert.That(() => interpreter.Execute(t.Methods.Single(m => m.Name == "Recursive"),
+				new ValueInstance(t, [new ValueInstance(interpreter.numberType, 3.0)]),
+				[new ValueInstance(interpreter.numberType, 1.0)]),
+			Throws.InstanceOf<Interpreter.StackOverflowCallingItselfWithSameInstanceAndArguments>());
 	}
 
 	[Test]
@@ -310,8 +310,8 @@ public sealed class ExecutorTests
 	{
 		using var t = CreateType(nameof(CallNumberPlusOperator), "has number", "+(text) Number",
 			"\tnumber + text.Length");
-		Assert.That(executor.Execute(t.Methods.Single(m => m.Name == BinaryOperator.Plus),
-			new ValueInstance(t, [new ValueInstance(executor.numberType, 5.0)]),
+		Assert.That(interpreter.Execute(t.Methods.Single(m => m.Name == BinaryOperator.Plus),
+			new ValueInstance(t, [new ValueInstance(interpreter.numberType, 5.0)]),
 			[new ValueInstance("abc")]).Number, Is.EqualTo(5 + 3));
 	}
 
@@ -323,7 +323,7 @@ public sealed class ExecutorTests
 			"\t(1, 2, 3).Length is 3",
 			"\tlet myList = (second, 2, 3)",
 			"\tmyList.Length");
-		var validatingExecutor = new Executor(TestPackage.Instance);
+		var validatingExecutor = new Interpreter(TestPackage.Instance);
 		Assert.That(
 			validatingExecutor.Execute(t.Methods.Single(m => m.Name == "GetCount")).Number, Is.EqualTo(3));
 	}
@@ -336,7 +336,7 @@ public sealed class ExecutorTests
 			"\t(1, 2, 3).Length is 3",
 			"\tconstant myDict = Dictionary(Number, Number)",
 			"\tmyDict.Length");
-		var validatingExecutor = new Executor(TestPackage.Instance);
+		var validatingExecutor = new Interpreter(TestPackage.Instance);
 		Assert.That(
 			validatingExecutor.Execute(t.Methods.Single(m => m.Name == "GetCount")).Number, Is.EqualTo(0));
 	}
@@ -349,7 +349,7 @@ public sealed class ExecutorTests
 			"\tconstant myDict = Dictionary(Text, Text)",
 			"\tmyDict.Length is 0",
 			"\tnumber");
-		var validatingExecutor = new Executor(TestPackage.Instance);
+		var validatingExecutor = new Interpreter(TestPackage.Instance);
 		Assert.That(
 			validatingExecutor.Execute(t.Methods.Single(m => m.Name == "Run")).Number, Is.EqualTo(0));
 	}
@@ -360,8 +360,8 @@ public sealed class ExecutorTests
 		using var t = CreateType(nameof(CannotCallMethodWithWrongInstanceThrows), "has number",
 			"Compute Number", "\tnumber");
 		var method = t.Methods.Single(m => m.Name == "Compute");
-		Assert.That(() => executor.Execute(method, executor.trueInstance, []),
-			Throws.InstanceOf<Executor.CannotCallMethodWithWrongInstance>());
+		Assert.That(() => interpreter.Execute(method, interpreter.trueInstance, []),
+			Throws.InstanceOf<Interpreter.CannotCallMethodWithWrongInstance>());
 	}
 
 	[Test]
@@ -372,9 +372,9 @@ public sealed class ExecutorTests
 			"\tmutable vx = number",
 			"\tmutable vy = vx",
 			"\tvx + vy");
-		executor.Execute(t.Methods.Single(m => m.Name == "Run"), executor.noneInstance, []);
-		Assert.That(executor.Statistics.MutableDeclarationCount, Is.EqualTo(1));
-		Assert.That(executor.Statistics.MutableUsageCount, Is.EqualTo(1));
+		interpreter.Execute(t.Methods.Single(m => m.Name == "Run"), interpreter.noneInstance, []);
+		Assert.That(interpreter.Statistics.MutableDeclarationCount, Is.EqualTo(1));
+		Assert.That(interpreter.Statistics.MutableUsageCount, Is.EqualTo(1));
 	}
 
 	[Test]
@@ -383,8 +383,8 @@ public sealed class ExecutorTests
 		using var t = CreateType(nameof(IsNotOperatorReturnsTrueForDifferentValues), "has number",
 			"Check Boolean", "\t1 is not 2");
 		Assert.That(
-			executor.Execute(t.Methods.Single(m => m.Name == "Check"), executor.noneInstance, []),
-			Is.EqualTo(executor.trueInstance));
+			interpreter.Execute(t.Methods.Single(m => m.Name == "Check"), interpreter.noneInstance, []),
+			Is.EqualTo(interpreter.trueInstance));
 	}
 
 	[Test]
@@ -393,8 +393,8 @@ public sealed class ExecutorTests
 		using var t = CreateType(nameof(IsNotOperatorReturnsFalseForSameValues), "has number",
 			"Check Boolean", "\t1 is not 1");
 		Assert.That(
-			executor.Execute(t.Methods.Single(m => m.Name == "Check"), executor.noneInstance, []),
-			Is.EqualTo(executor.falseInstance));
+			interpreter.Execute(t.Methods.Single(m => m.Name == "Check"), interpreter.noneInstance, []),
+			Is.EqualTo(interpreter.falseInstance));
 	}
 
 	[Test]
@@ -405,17 +405,17 @@ public sealed class ExecutorTests
 			"\tconstant err = Error(\"test\")",
 			"\terr is not err");
 		Assert.That(
-			executor.Execute(t.Methods.Single(m => m.Name == "Check"), executor.noneInstance, []),
-			Is.EqualTo(executor.falseInstance));
+			interpreter.Execute(t.Methods.Single(m => m.Name == "Check"), interpreter.noneInstance, []),
+			Is.EqualTo(interpreter.falseInstance));
 	}
 
 	[Test]
 	public void ExecuteRunMethod() =>
-		executor.ExecuteRunMethod(CreateType(nameof(ExecuteRunMethod), "has number", "Run", "\tnumber"));
+		interpreter.ExecuteRunMethod(CreateType(nameof(ExecuteRunMethod), "has number", "Run", "\tnumber"));
 
 	[Test]
 	public void ExecuteRunMethodWillFailIfThereIsNoRunMethod() =>
-		Assert.That(() => executor.ExecuteRunMethod(
+		Assert.That(() => interpreter.ExecuteRunMethod(
 			CreateType(nameof(ExecuteRunMethodWillFailIfThereIsNoRunMethod), "has number",
-				"GetNumber Number", "\tnumber")), Throws.InstanceOf<Executor.MethodNotFound>());
+				"GetNumber Number", "\tnumber")), Throws.InstanceOf<Interpreter.MethodNotFound>());
 }

@@ -1,0 +1,23 @@
+has number
+has logger
+Classify Text
+	FizzBuzz(3).Classify is "Fizz"
+	FizzBuzz(5).Classify is "Buzz"
+	FizzBuzz(15).Classify is "FizzBuzz"
+	FizzBuzz(7).Classify is "7"
+	if number % 15 is 0
+		return "FizzBuzz"
+	if number % 3 is 0
+		return "Fizz"
+	if number % 5 is 0
+		return "Buzz"
+	number to Text
+Run
+	constant three = FizzBuzz(3)
+	constant five = FizzBuzz(5)
+	constant fifteen = FizzBuzz(15)
+	constant seven = FizzBuzz(7)
+	logger.Log("FizzBuzz(3) = " + three.Classify)
+	logger.Log("FizzBuzz(5) = " + five.Classify)
+	logger.Log("FizzBuzz(15) = " + fifteen.Classify)
+	logger.Log("FizzBuzz(7) = " + seven.Classify)

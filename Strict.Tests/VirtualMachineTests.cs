@@ -617,4 +617,16 @@ public sealed class VirtualMachineTests : TestBytecode
 		var result = vm.Execute(instructions).Returns!;
 		Assert.That(result.Value.Number, Is.EqualTo(expected));
 	}
+
+	[Test]
+	public void RoundTripInvokeWithDoubleNumberArgument()
+	{
+		var instructions = new BytecodeGenerator(
+			GenerateMethodCallFromSource("DoubleCalc", "DoubleCalc(3.14).GetHalf",
+				"has number",
+				"GetHalf Number",
+				"\tnumber / 2")).Generate();
+		var result = vm.Execute(instructions).Returns!;
+		Assert.That(result.Value.Number, Is.EqualTo(3.14 / 2));
+	}
 }
