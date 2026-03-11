@@ -7,7 +7,7 @@ using Strict.Language;
 //ncrunch: no coverage start
 if (args.Length == 0)
 {
-	Console.WriteLine("Usage: Strict <file.strict|file.strictbinary> [-options]");
+	Console.WriteLine("Usage: Strict <file.strict|file.strictbinary> [-options] [args...]");
 	Console.WriteLine();
 	Console.WriteLine("Options:");
 	Console.WriteLine("  -diagnostics   Output detailed step-by-step logs and timing for each pipeline stage");
@@ -23,16 +23,22 @@ if (args.Length == 0)
 	Console.WriteLine("  -MacOS         Compile to a native macOS x64 executable");
 	Console.WriteLine("                 Requires: nasm (https://nasm.us) and clang");
 	Console.WriteLine();
+	Console.WriteLine("Arguments:");
+	Console.WriteLine("  args...        Optional numbers passed to the program's Run(numbers) method");
+	Console.WriteLine("                 Example: Strict Sum.strict 5 10 20  =>  prints 35");
+	Console.WriteLine();
 	Console.WriteLine("Examples:");
 	Console.WriteLine("  Strict Examples/SimpleCalculator.strict");
 	Console.WriteLine("  Strict Examples/SimpleCalculator.strict -diagnostics");
 	Console.WriteLine("  Strict Examples/SimpleCalculator.strict -Windows");
 	Console.WriteLine("  Strict Examples/SimpleCalculator.strictbinary");
 	Console.WriteLine("  Strict Examples/SimpleCalculator.strictbinary -decompile");
+	Console.WriteLine("  Strict Examples/Sum.strict 5 10 20");
 	return;
 }
 var filePath = args[0];
-var options = new HashSet<string>(args.Skip(1), StringComparer.OrdinalIgnoreCase);
+var options = new HashSet<string>(args.Skip(1).Where(arg => arg.StartsWith("-", StringComparison.Ordinal)), StringComparer.OrdinalIgnoreCase);
+var programArgs = args.Skip(1).Where(arg => !arg.StartsWith("-", StringComparison.Ordinal)).ToArray();
 try
 {
 	using var basePackage = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
@@ -49,7 +55,8 @@ try
 	diagnostics = true;
 #endif
 	var targetPlatform = ParsePlatformOption(options);
-	new Runner(basePackage, filePath, diagnostics).Run(targetPlatform);
+	var runArgs = programArgs.Length > 0 ? programArgs : null;
+	new Runner(basePackage, filePath, diagnostics).Run(targetPlatform, runArgs);
 }
 catch (Exception ex)
 {

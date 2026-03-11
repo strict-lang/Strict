@@ -188,7 +188,10 @@ public sealed class TestPackage : Package
 			"\t(1, 2, 3).Reverse is (3, 2, 1)",
 			"\t(5, 10, 5).Reverse is (5, 10, 5)",
 			"\tfor Range(0, value.Length).Reverse",
-			"\t\touter.value(index)"));
+			"\t\touter.value(index)",
+			"Sum Number",
+			"\tfor elements",
+			"\t\tvalue"));
 		var text = new Type(this, new TypeLines(Type.Text,
 			"has characters",
 			"+(other) Text",

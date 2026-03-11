@@ -12,11 +12,15 @@ public sealed class VirtualMachine(Package package,
 {
 	private readonly Type numberType = package.GetType(Type.Number);
 
-	public VirtualMachine Execute(IList<Instruction> allInstructions)
+	public VirtualMachine Execute(IList<Instruction> allInstructions,
+		IReadOnlyDictionary<string, ValueInstance>? initialVariables = null)
 	{
 		Clear();
 		foreach (var loopBegin in allInstructions.OfType<LoopBeginInstruction>())
 			loopBegin.Reset();
+		if (initialVariables != null)
+			foreach (var (name, value) in initialVariables)
+				Memory.Frame.Set(name, value);
 		return RunInstructions(allInstructions);
 	}
 

@@ -235,7 +235,8 @@ public sealed class RunnerTests
 				File.Delete(asmPath);
 		}
 	}
-}
+
+	[Test]
 	public void SaveStrictBinaryWithTypeBytecodeEntriesOnly()
 	{
 		var binaryFilePath = Path.ChangeExtension(StrictFilePath, BytecodeSerializer.Extension);
@@ -284,5 +285,41 @@ public sealed class RunnerTests
 				throw new InvalidOperationException("Unexpected initial value in compact metadata");
 		} //ncrunch: no coverage end
 		return reader.Read7BitEncodedInt();
+	}
+
+	[Test]
+	public void RunSumWithProgramArguments()
+	{
+		const string sumFilePath = "Examples/Sum.strict";
+		var binaryPath = Path.ChangeExtension(sumFilePath, BytecodeSerializer.Extension);
+		try
+		{
+			using var runner = new Runner(TestPackage.Instance, sumFilePath);
+			runner.Run(programArgs: ["5", "10", "20"]);
+			Assert.That(writer.ToString(), Does.Contain("35"));
+		}
+		finally
+		{
+			if (File.Exists(binaryPath))
+				File.Delete(binaryPath);
+		}
+	}
+
+	[Test]
+	public void RunSumWithNoArgumentsUsesEmptyList()
+	{
+		const string sumFilePath = "Examples/Sum.strict";
+		var binaryPath = Path.ChangeExtension(sumFilePath, BytecodeSerializer.Extension);
+		try
+		{
+			using var runner = new Runner(TestPackage.Instance, sumFilePath);
+			runner.Run(programArgs: ["0"]);
+			Assert.That(writer.ToString(), Does.Contain("0"));
+		}
+		finally
+		{
+			if (File.Exists(binaryPath))
+				File.Delete(binaryPath);
+		}
 	}
 }
