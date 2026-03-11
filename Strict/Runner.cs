@@ -4,6 +4,7 @@ using Strict.Optimizers;
 using Strict.Bytecode;
 using Strict.Bytecode.Instructions;
 using Strict.Bytecode.Serialization;
+using Strict.Compiler.X64;
 using Strict.TestRunner;
 using Strict.Validators;
 using Type = Strict.Language.Type;
@@ -89,6 +90,7 @@ public sealed class Runner : IDisposable
 		var optimizedInstructions = OptimizeBytecode(instructions);
 		ExecuteBytecode(optimizedInstructions);
 		SaveBytecodeIfPossible(optimizedInstructions);
+		SaveWindowsExecutableIfPossible(optimizedInstructions);
 		Console.WriteLine("Successfully parsed, optimized and executed " + mainType.Name + " in " +
 			TimeSpan.FromTicks(stepTimes.Sum()).ToString(@"s\.ffffff") + "s");
 		return this;
@@ -236,6 +238,19 @@ public sealed class Runner : IDisposable
 			currentFolder, mainType.Name);
 		Console.WriteLine("Saving " + new FileInfo(serializer.OutputFilePath).Length +
 			" bytes of bytecode to: " + serializer.OutputFilePath);
+	}
+
+	/// <summary>
+	/// Generates x64 NASM assembly for the compiled Run method and saves it as a .asm file next
+	/// to the .strictbinary, ready to be assembled with: nasm -f win64 {name}.asm -o {name}.obj
+	/// </summary>
+	private void SaveWindowsExecutableIfPossible(List<Instruction> optimizedInstructions)
+	{
+		var assemblyText = new InstructionsToX64Compiler().CompileInstructions(
+			mainType.Name, optimizedInstructions);
+		var asmPath = Path.Combine(currentFolder, mainType.Name + ".asm");
+		File.WriteAllText(asmPath, assemblyText);
+		Console.WriteLine("Saved x64 NASM assembly to: " + asmPath);
 	}
 
 	public void Dispose() => package.Dispose();

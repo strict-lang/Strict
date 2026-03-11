@@ -113,4 +113,51 @@ public sealed class RunnerTests
 		Assert.That(output, Does.Contain("Hello, World!"));
 		Assert.That(output, Does.Contain("Hello, Strict!"));
 	}
+
+	[Test]
+	public void RunningFromSourceCreatesAsmFileNextToBinary()
+	{
+		const string StrictFilePath = "Examples/SimpleCalculator.strict";
+		var asmPath = Path.ChangeExtension(StrictFilePath, ".asm");
+		var binaryPath = Path.ChangeExtension(StrictFilePath, BytecodeSerializer.Extension);
+		try
+		{
+			using var _ = new Runner(TestPackage.Instance, StrictFilePath).Run();
+			Assert.That(File.Exists(asmPath), Is.True, ".asm file should be created next to .strictbinary");
+			Assert.That(writer.ToString(), Does.Contain("Saved x64 NASM assembly to:"));
+			Assert.That(File.ReadAllText(asmPath), Does.Contain("section .text"));
+			Assert.That(File.ReadAllText(asmPath), Does.Contain("global SimpleCalculator"));
+		}
+		finally
+		{
+			if (File.Exists(asmPath))
+				File.Delete(asmPath);
+			if (File.Exists(binaryPath))
+				File.Delete(binaryPath);
+		}
+	}
+
+	[Test]
+	public void AsmFileIsNotCreatedWhenRunningFromPrecompiledBytecode()
+	{
+		const string StrictFilePath = "Examples/SimpleCalculator.strict";
+		var binaryPath = Path.ChangeExtension(StrictFilePath, BytecodeSerializer.Extension);
+		var asmPath = Path.ChangeExtension(StrictFilePath, ".asm");
+		try
+		{
+			new Runner(TestPackage.Instance, StrictFilePath).Run().Dispose();
+			writer.GetStringBuilder().Clear();
+			if (File.Exists(asmPath))
+				File.Delete(asmPath);
+			using var _ = new Runner(TestPackage.Instance, binaryPath).Run();
+			Assert.That(File.Exists(asmPath), Is.False, ".asm file should not be created when loading precompiled bytecode");
+		}
+		finally
+		{
+			if (File.Exists(binaryPath))
+				File.Delete(binaryPath);
+			if (File.Exists(asmPath))
+				File.Delete(asmPath);
+		}
+	}
 }

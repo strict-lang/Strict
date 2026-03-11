@@ -7,13 +7,21 @@ using Type = Strict.Language.Type;
 namespace Strict.Compiler.X64;
 
 /// <summary>
-/// Compiles a Strict method to x64 NASM assembly using bytecode instructions.
-/// Strict registers R0–R15 map directly to XMM registers xmm0–xmm15 for numeric (double) values.
+/// Compiles a Strict method or pre-compiled instruction list to x64 NASM assembly text.
+/// Strict registers R0–R15 map to XMM registers xmm0–xmm15 for numeric (double) values.
 /// Follows the System V AMD64 ABI: first 8 float/double parameters in xmm0–xmm7, return in xmm0.
+/// The generated NASM text can be assembled with: nasm -f win64 output.asm -o output.obj
 /// </summary>
 public sealed class InstructionsToX64Compiler
 {
-	public string Compile(Method method) => BuildX64Assembly(method, GenerateInstructions(method));
+	public string Compile(Method method)
+	{
+		var paramNames = method.Parameters.Select(p => p.Name);
+		return BuildX64Assembly(method.Name, paramNames, GenerateInstructions(method));
+	}
+
+	public string CompileInstructions(string methodName, IList<Instruction> instructions) =>
+		BuildX64Assembly(methodName, [], [.. instructions]);
 
 	private static List<Instruction> GenerateInstructions(Method method)
 	{
@@ -24,14 +32,15 @@ public sealed class InstructionsToX64Compiler
 			new Registry()).Generate();
 	}
 
-	private static string BuildX64Assembly(Method method, List<Instruction> instructions)
+	private static string BuildX64Assembly(string methodName, IEnumerable<string> paramNames,
+		List<Instruction> instructions)
 	{
-		var paramIndexByName = method.Parameters
-			.Select((p, i) => (p.Name, Index: i))
-			.ToDictionary(x => x.Name, x => x.Index);
-		var variableSlots = BuildVariableSlots(method, instructions);
+		var paramIndexByName = paramNames
+			.Select((name, index) => (name, index))
+			.ToDictionary(x => x.name, x => x.index);
+		var variableSlots = BuildVariableSlots(paramIndexByName.Keys, instructions);
 		var dataConstants = CollectConstants(instructions);
-		var jumpLabels = BuildJumpLabels(instructions);
+		var (jumpLabels, jumpEndPositions) = BuildJumpLabels(instructions);
 		var lines = new List<string>();
 		if (dataConstants.Count > 0)
 		{
@@ -41,9 +50,9 @@ public sealed class InstructionsToX64Compiler
 			lines.Add("");
 		}
 		lines.Add("section .text");
-		lines.Add($"global {method.Name}");
+		lines.Add($"global {methodName}");
 		lines.Add("");
-		lines.Add($"{method.Name}:");
+		lines.Add($"{methodName}:");
 		lines.Add("    push rbp");
 		lines.Add("    mov rbp, rsp");
 		var frameSize = AlignTo16(variableSlots.Count * 8);
@@ -59,7 +68,7 @@ public sealed class InstructionsToX64Compiler
 			if (jumpLabels.TryGetValue(index, out var label))
 				lines.Add($".{label}:");
 			EmitInstruction(instructions[index], lines, paramIndexByName, variableSlots,
-				dataConstants, jumpLabels, index);
+				dataConstants, jumpLabels, jumpEndPositions, instructions, index);
 		}
 		if (frameSize > 0)
 			lines.Add($"    add rsp, {frameSize}");
@@ -70,22 +79,22 @@ public sealed class InstructionsToX64Compiler
 
 	private static int AlignTo16(int size) => (size + 15) / 16 * 16;
 
-	private static Dictionary<string, int> BuildVariableSlots(Method method,
+	private static Dictionary<string, int> BuildVariableSlots(IEnumerable<string> paramNames,
 		List<Instruction> instructions)
 	{
 		var slots = new Dictionary<string, int>();
-		foreach (var param in method.Parameters)
-			slots[param.Name] = slots.Count;
+		foreach (var name in paramNames)
+			slots[name] = slots.Count;
 		foreach (var instruction in instructions)
 		{
-			var name = instruction switch
+			var varName = instruction switch
 			{
 				StoreFromRegisterInstruction store => store.Identifier,
 				StoreVariableInstruction store => store.Identifier,
 				_ => null
 			};
-			if (name != null && !slots.ContainsKey(name))
-				slots[name] = slots.Count;
+			if (varName != null && !slots.ContainsKey(varName))
+				slots[varName] = slots.Count;
 		}
 		return slots;
 	}
@@ -111,28 +120,41 @@ public sealed class InstructionsToX64Compiler
 		return constants;
 	}
 
-	private static Dictionary<int, string> BuildJumpLabels(List<Instruction> instructions)
+	private static (Dictionary<int, string> Labels, Dictionary<int, int> JumpEndPositions)
+		BuildJumpLabels(List<Instruction> instructions)
 	{
 		var labels = new Dictionary<int, string>();
+		var jumpEndPositions = new Dictionary<int, int>();
 		var labelIndex = 0;
 		for (var index = 0; index < instructions.Count; index++)
 		{
-			var target = instructions[index] switch
+			switch (instructions[index])
 			{
-				Jump jump => index + jump.InstructionsToSkip + 1,
-				JumpIf jumpIf => index + jumpIf.Steps + 1,
-				_ => -1
-			};
-			if (target >= 0 && !labels.ContainsKey(target))
-				labels[target] = $"L{labelIndex++}";
+			case Jump jump:
+				AddLabelAt(labels, index + jump.InstructionsToSkip + 1, ref labelIndex);
+				break;
+			case JumpIf jumpIf:
+				AddLabelAt(labels, index + jumpIf.Steps + 1, ref labelIndex);
+				break;
+			case JumpToId { InstructionType: InstructionType.JumpEnd } jumpEnd:
+				jumpEndPositions[jumpEnd.Id] = index;
+				AddLabelAt(labels, index, ref labelIndex);
+				break;
+			}
 		}
-		return labels;
+		return (labels, jumpEndPositions);
+	}
+
+	private static void AddLabelAt(Dictionary<int, string> labels, int target, ref int labelIndex)
+	{
+		if (target >= 0 && !labels.ContainsKey(target))
+			labels[target] = $"L{labelIndex++}";
 	}
 
 	private static void EmitInstruction(Instruction instruction, List<string> lines,
 		Dictionary<string, int> paramIndexByName, Dictionary<string, int> variableSlots,
 		List<(string Label, double Value)> dataConstants, Dictionary<int, string> jumpLabels,
-		int index)
+		Dictionary<int, int> jumpEndPositions, List<Instruction> allInstructions, int index)
 	{
 		switch (instruction)
 		{
@@ -143,11 +165,8 @@ public sealed class InstructionsToX64Compiler
 		case StoreVariableInstruction:
 			break;
 		case LoadVariableToRegister loadVar:
-		{
-			var dest = ToXmm(loadVar.Register);
-			lines.Add($"    movsd {dest}, [rbp-{(variableSlots[loadVar.Identifier] + 1) * 8}]");
+			lines.Add($"    movsd {ToXmm(loadVar.Register)}, [rbp-{(variableSlots[loadVar.Identifier] + 1) * 8}]");
 			break;
-		}
 		case LoadConstantInstruction loadConst:
 			EmitLoadConstant(loadConst.Register, loadConst.ValueInstance, dataConstants, lines);
 			break;
@@ -169,6 +188,11 @@ public sealed class InstructionsToX64Compiler
 		}
 		case Jump jump:
 			EmitJump(jump, jumpLabels, index, lines);
+			break;
+		case JumpToId { InstructionType: InstructionType.JumpEnd }:
+			break;
+		case JumpToId jumpToId:
+			EmitJumpToId(jumpToId, jumpEndPositions, jumpLabels, allInstructions, index, lines);
 			break;
 		}
 	}
@@ -223,7 +247,7 @@ public sealed class InstructionsToX64Compiler
 			_ => throw new NotSupportedException($"x64 compilation of {binary.InstructionType} is not supported") //ncrunch: no coverage
 		};
 		if (op == null)
-			return; // Modulo not directly translatable to a single SSE2 instruction
+			return;
 		if (dest != src0)
 			lines.Add($"    movsd {dest}, {src0}");
 		lines.Add($"    {op} {dest}, {src1}");
@@ -249,6 +273,43 @@ public sealed class InstructionsToX64Compiler
 		};
 		lines.Add($"    {op} {label}");
 	}
+
+	private static void EmitJumpToId(JumpToId jumpToId, Dictionary<int, int> jumpEndPositions,
+		Dictionary<int, string> jumpLabels, List<Instruction> allInstructions, int index,
+		List<string> lines)
+	{
+		if (!jumpEndPositions.TryGetValue(jumpToId.Id, out var endIndex) ||
+			!jumpLabels.TryGetValue(endIndex, out var label))
+			return;
+		var prevComparison = index > 0 ? allInstructions[index - 1] as BinaryInstruction : null;
+		var op = jumpToId.InstructionType switch
+		{
+			InstructionType.JumpToIdIfFalse => GetFalseJumpOp(prevComparison?.InstructionType),
+			InstructionType.JumpToIdIfTrue => GetTrueJumpOp(prevComparison?.InstructionType),
+			_ => "jmp" //ncrunch: no coverage
+		};
+		lines.Add($"    {op} .{label}");
+	}
+
+	private static string GetFalseJumpOp(InstructionType? comparisonType) =>
+		comparisonType switch
+		{
+			InstructionType.Equal => "jne",
+			InstructionType.NotEqual => "je",
+			InstructionType.LessThan => "jae",
+			InstructionType.GreaterThan => "jbe",
+			_ => "jne"
+		};
+
+	private static string GetTrueJumpOp(InstructionType? comparisonType) =>
+		comparisonType switch
+		{
+			InstructionType.Equal => "je",
+			InstructionType.NotEqual => "jne",
+			InstructionType.LessThan => "jb",
+			InstructionType.GreaterThan => "ja",
+			_ => "je"
+		};
 
 	private static string ToXmm(Register register) => $"xmm{(int)register}";
 }

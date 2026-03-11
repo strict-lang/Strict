@@ -1,4 +1,6 @@
 using NUnit.Framework;
+using Strict.Bytecode;
+using Strict.Bytecode.Instructions;
 using Strict.Compiler.X64;
 using Strict.Expressions;
 using Strict.Language;
@@ -10,19 +12,20 @@ namespace Strict.Compiler.X64.Tests;
 public sealed class InstructionsToX64CompilerTests
 {
 	private readonly InstructionsToX64Compiler compiler = new();
+	private static readonly Type NumberType = TestPackage.Instance.GetType(Type.Number);
 
-	[TestCase("Add", "+", "addsd")]
-	[TestCase("Subtract", "-", "subsd")]
-	[TestCase("Multiply", "*", "mulsd")]
-	public void GenerateArithmeticFunction(string methodName, string op, string asmOp)
+	[TestCase("ArithAdd", "+", "addsd")]
+	[TestCase("ArithSubtract", "-", "subsd")]
+	[TestCase("ArithMultiply", "*", "mulsd")]
+	public void GenerateArithmeticFunction(string typeName, string op, string asmOp)
 	{
-		var method = CreateSingleMethod(methodName,
+		var method = CreateSingleMethod(typeName,
 			"has dummy Number",
-			$"{methodName}(first Number, second Number) Number",
+			$"{typeName}(first Number, second Number) Number",
 			$"\tfirst {op} second");
 		var assembly = compiler.Compile(method);
-		Assert.That(assembly, Does.Contain($"global {methodName}"));
-		Assert.That(assembly, Does.Contain($"{methodName}:"));
+		Assert.That(assembly, Does.Contain($"global {typeName}"));
+		Assert.That(assembly, Does.Contain($"{typeName}:"));
 		Assert.That(assembly, Does.Contain(asmOp));
 		Assert.That(assembly, Does.Contain("ret"));
 	}
@@ -117,7 +120,262 @@ public sealed class InstructionsToX64CompilerTests
 		Assert.That(assembly, Does.Contain("addsd"));
 	}
 
+	[Test]
+	public void CompileInstructionsFromListUsesGivenMethodName()
+	{
+		var instructions = new List<Instruction>
+		{
+			new LoadConstantInstruction(Register.R0, new ValueInstance(NumberType, 42.0)),
+			new ReturnInstruction(Register.R0)
+		};
+		var assembly = compiler.CompileInstructions("Run", instructions);
+		Assert.That(assembly, Does.Contain("global Run"));
+		Assert.That(assembly, Does.Contain("Run:"));
+		Assert.That(assembly, Does.Contain("section .text"));
+		Assert.That(assembly, Does.Contain("ret"));
+	}
+
+	[Test]
+	public void CompileInstructionsHasNoPrologueParamSpillsForEmptyParamList()
+	{
+		var instructions = new List<Instruction>
+		{
+			new LoadConstantInstruction(Register.R0, new ValueInstance(NumberType, 1.0)),
+			new ReturnInstruction(Register.R0)
+		};
+		var assembly = compiler.CompileInstructions("Run", instructions);
+		Assert.That(assembly, Does.Not.Contain("movsd [rbp-8], xmm0"));
+	}
+
+	[Test]
+	public void SingleParameterFunctionSpillsOnlyFirstRegister()
+	{
+		var method = CreateSingleMethod("DoubleType",
+			"has dummy Number",
+			"DoubleNum(num Number) Number",
+			"\tnum + num");
+		var assembly = compiler.Compile(method);
+		Assert.That(assembly, Does.Contain("movsd [rbp-8], xmm0"));
+		Assert.That(assembly, Does.Not.Contain("movsd [rbp-16], xmm1"));
+	}
+
+	[Test]
+	public void FrameSizeAlignsTo16BytesBoundary()
+	{
+		var method = CreateSingleMethod("ThreeVarType",
+			"has dummy Number",
+			"ThreeVar(first Number, second Number, third Number) Number",
+			"\tlet temp = first + second",
+			"\ttemp + third");
+		var assembly = compiler.Compile(method);
+		Assert.That(assembly, Does.Contain("sub rsp, 32"));
+	}
+
+	[Test]
+	public void TwoParamFrameSizeIs16Bytes()
+	{
+		var method = CreateSingleMethod("TwoParmType",
+			"has dummy Number",
+			"TwoParam(first Number, second Number) Number",
+			"\tfirst + second");
+		var assembly = compiler.Compile(method);
+		Assert.That(assembly, Does.Contain("sub rsp, 16"));
+	}
+
+	[Test]
+	public void ConditionalBranchGeneratesUcomisd()
+	{
+		var method = CreateSingleMethod("ConditionalType",
+			"has dummy Number",
+			"IsPositive(num Number) Number",
+			"\tif num > 0",
+			"\t\treturn num",
+			"\t0");
+		var assembly = compiler.Compile(method);
+		Assert.That(assembly, Does.Contain("ucomisd"));
+	}
+
+	[Test]
+	public void ConditionalBranchGeneratesJbeForGreaterThanJumpIfFalse()
+	{
+		var method = CreateSingleMethod("GreaterThanType",
+			"has dummy Number",
+			"IsAboveZero(num Number) Number",
+			"\tif num > 0",
+			"\t\treturn num",
+			"\t0");
+		var assembly = compiler.Compile(method);
+		Assert.That(assembly, Does.Contain("jbe"));
+	}
+
+	[Test]
+	public void EqualComparisonJumpIfFalseGeneratesJne()
+	{
+		var method = CreateSingleMethod("EqualJumpType",
+			"has dummy Number",
+			"IsEqualFive(num Number) Number",
+			"\tif num is 5",
+			"\t\treturn num",
+			"\t0");
+		var assembly = compiler.Compile(method);
+		Assert.That(assembly, Does.Contain("jne"));
+	}
+
+	[Test]
+	public void JumpIfFalseGeneratesJne()
+	{
+		var instructions = new List<Instruction>
+		{
+			new LoadConstantInstruction(Register.R0, new ValueInstance(NumberType, 1.0)),
+			new LoadConstantInstruction(Register.R1, new ValueInstance(NumberType, 2.0)),
+			new BinaryInstruction(InstructionType.Equal, Register.R0, Register.R1),
+			new Jump(2, InstructionType.JumpIfFalse),
+			new LoadConstantInstruction(Register.R0, new ValueInstance(NumberType, 10.0)),
+			new ReturnInstruction(Register.R0),
+			new LoadConstantInstruction(Register.R0, new ValueInstance(NumberType, 0.0)),
+			new ReturnInstruction(Register.R0)
+		};
+		var assembly = compiler.CompileInstructions("TestJump", instructions);
+		Assert.That(assembly, Does.Contain("jne"));
+	}
+
+	[Test]
+	public void JumpIfTrueGeneratesJe()
+	{
+		var instructions = new List<Instruction>
+		{
+			new LoadConstantInstruction(Register.R0, new ValueInstance(NumberType, 1.0)),
+			new LoadConstantInstruction(Register.R1, new ValueInstance(NumberType, 2.0)),
+			new BinaryInstruction(InstructionType.Equal, Register.R0, Register.R1),
+			new Jump(2, InstructionType.JumpIfTrue),
+			new LoadConstantInstruction(Register.R0, new ValueInstance(NumberType, 0.0)),
+			new ReturnInstruction(Register.R0),
+			new LoadConstantInstruction(Register.R0, new ValueInstance(NumberType, 10.0)),
+			new ReturnInstruction(Register.R0)
+		};
+		var assembly = compiler.CompileInstructions("TestJumpTrue", instructions);
+		Assert.That(assembly, Does.Contain("je"));
+	}
+
+	[Test]
+	public void UnconditionalJumpGeneratesJmp()
+	{
+		var instructions = new List<Instruction>
+		{
+			new LoadConstantInstruction(Register.R0, new ValueInstance(NumberType, 1.0)),
+			new Jump(1),
+			new LoadConstantInstruction(Register.R0, new ValueInstance(NumberType, 99.0)),
+			new ReturnInstruction(Register.R0)
+		};
+		var assembly = compiler.CompileInstructions("TestUncondJump", instructions);
+		Assert.That(assembly, Does.Contain("jmp"));
+	}
+
+	[Test]
+	public void JumpCreatesLabelAtTargetInstruction()
+	{
+		var instructions = new List<Instruction>
+		{
+			new LoadConstantInstruction(Register.R0, new ValueInstance(NumberType, 1.0)),
+			new Jump(1),
+			new LoadConstantInstruction(Register.R0, new ValueInstance(NumberType, 99.0)),
+			new ReturnInstruction(Register.R0)
+		};
+		var assembly = compiler.CompileInstructions("TestLabel", instructions);
+		Assert.That(assembly, Does.Contain(".L0:"));
+		var lines = assembly.Split('\n');
+		var labelLine = Array.FindIndex(lines, l => l.Contains(".L0:"));
+		var retLine = Array.FindIndex(lines, l => l.TrimStart().StartsWith("ret", StringComparison.Ordinal));
+		Assert.That(labelLine, Is.LessThan(retLine));
+	}
+
+	[Test]
+	public void SameConstantUsedTwiceCreatesOnlyOneDataEntry()
+	{
+		var instructions = new List<Instruction>
+		{
+			new LoadConstantInstruction(Register.R0, new ValueInstance(NumberType, 7.0)),
+			new LoadConstantInstruction(Register.R1, new ValueInstance(NumberType, 7.0)),
+			new BinaryInstruction(InstructionType.Add, Register.R0, Register.R1, Register.R2),
+			new ReturnInstruction(Register.R2)
+		};
+		var assembly = compiler.CompileInstructions("Dedup", instructions);
+		Assert.That(assembly.Split('\n').Count(l => l.Contains("const_")), Is.EqualTo(3));
+	}
+
+	[Test]
+	public void TwoDifferentConstantsBothAppearInDataSection()
+	{
+		var instructions = new List<Instruction>
+		{
+			new LoadConstantInstruction(Register.R0, new ValueInstance(NumberType, 3.0)),
+			new LoadConstantInstruction(Register.R1, new ValueInstance(NumberType, 7.0)),
+			new BinaryInstruction(InstructionType.Add, Register.R0, Register.R1, Register.R2),
+			new ReturnInstruction(Register.R2)
+		};
+		var assembly = compiler.CompileInstructions("TwoConsts", instructions);
+		Assert.That(assembly, Does.Contain("const_0"));
+		Assert.That(assembly, Does.Contain("const_1"));
+	}
+
+	[Test]
+	public void RegisterMappingIsCorrectForHighRegisters()
+	{
+		var instructions = new List<Instruction>
+		{
+			new LoadConstantInstruction(Register.R5, new ValueInstance(NumberType, 1.0)),
+			new LoadConstantInstruction(Register.R10, new ValueInstance(NumberType, 2.0)),
+			new BinaryInstruction(InstructionType.Add, Register.R5, Register.R10, Register.R15),
+			new ReturnInstruction(Register.R15)
+		};
+		var assembly = compiler.CompileInstructions("HighRegs", instructions);
+		Assert.That(assembly, Does.Contain("xmm5"));
+		Assert.That(assembly, Does.Contain("xmm10"));
+		Assert.That(assembly, Does.Contain("xmm15"));
+	}
+
+	[Test]
+	public void DataSectionAppearsBeforeTextSection()
+	{
+		var method = CreateSingleMethod("OrderTestType",
+			"has dummy Number",
+			"OrderTest(first Number, second Number) Number",
+			"\tfirst + 9");
+		var assembly = compiler.Compile(method);
+		var dataPos = assembly.IndexOf("section .data", StringComparison.Ordinal);
+		var textPos = assembly.IndexOf("section .text", StringComparison.Ordinal);
+		Assert.That(dataPos, Is.LessThan(textPos));
+	}
+
+	[Test]
+	public void SubtractionUsesSubsdInstruction()
+	{
+		var method = CreateSingleMethod("SubOrderType",
+			"has dummy Number",
+			"SubOrder(first Number, second Number) Number",
+			"\tfirst - second");
+		var assembly = compiler.Compile(method);
+		Assert.That(assembly, Does.Contain("subsd"));
+		Assert.That(assembly, Does.Contain("xmm0"));
+		Assert.That(assembly, Does.Contain("xmm1"));
+	}
+
+	[Test]
+	public void JumpToIdIfFalseWithEqualComparisonGeneratesJne()
+	{
+		var method = CreateSingleMethod("JumpToIdType",
+			"has dummy Number",
+			"JumpToId(operation Text) Number",
+			"\tif operation is \"add\"",
+			"\t\treturn 1",
+			"\t0");
+		var assembly = compiler.Compile(method);
+		Assert.That(assembly, Does.Contain("jne"));
+		Assert.That(assembly, Does.Contain(".L"));
+	}
+
 	private static Method CreateSingleMethod(string typeName, params string[] methodLines) =>
 		new Type(TestPackage.Instance, new TypeLines(typeName, methodLines)).
 			ParseMembersAndMethods(new MethodExpressionParser()).Methods[0];
 }
+
