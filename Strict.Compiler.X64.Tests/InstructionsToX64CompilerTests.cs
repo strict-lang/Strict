@@ -374,6 +374,110 @@ public sealed class InstructionsToX64CompilerTests
 		Assert.That(assembly, Does.Contain(".L"));
 	}
 
+	[Test]
+	public void CompileToWindowsExecutableAsmIncludesMainEntryPoint()
+	{
+		var instructions = new List<Instruction>
+		{
+			new LoadConstantInstruction(Register.R0, new ValueInstance(NumberType, 42.0)),
+			new ReturnInstruction(Register.R0)
+		};
+		var assembly = compiler.CompileToWindowsExecutableAsm("Run", instructions);
+		Assert.That(assembly, Does.Contain("global main"));
+		Assert.That(assembly, Does.Contain("main:"));
+		Assert.That(assembly, Does.Contain("call Run"));
+	}
+
+	[Test]
+	public void CompileToWindowsExecutableAsmIncludesExitProcess()
+	{
+		var instructions = new List<Instruction>
+		{
+			new LoadConstantInstruction(Register.R0, new ValueInstance(NumberType, 1.0)),
+			new ReturnInstruction(Register.R0)
+		};
+		var assembly = compiler.CompileToWindowsExecutableAsm("Compute", instructions);
+		Assert.That(assembly, Does.Contain("extern ExitProcess"));
+		Assert.That(assembly, Does.Contain("call ExitProcess"));
+		Assert.That(assembly, Does.Contain("xor rcx, rcx"));
+	}
+
+	[Test]
+	public void CompileToWindowsExecutableAsmContainsBothFunctionAndEntryPoint()
+	{
+		var instructions = new List<Instruction>
+		{
+			new LoadConstantInstruction(Register.R0, new ValueInstance(NumberType, 5.0)),
+			new ReturnInstruction(Register.R0)
+		};
+		var assembly = compiler.CompileToWindowsExecutableAsm("MyFunc", instructions);
+		Assert.That(assembly, Does.Contain("global MyFunc"));
+		Assert.That(assembly, Does.Contain("MyFunc:"));
+		Assert.That(assembly, Does.Contain("global main"));
+		Assert.That(assembly, Does.Contain("call MyFunc"));
+	}
+
+	[Test]
+	public void CompileToWindowsExecutableAsmEntryPointAppearsAfterFunction()
+	{
+		var instructions = new List<Instruction>
+		{
+			new LoadConstantInstruction(Register.R0, new ValueInstance(NumberType, 1.0)),
+			new ReturnInstruction(Register.R0)
+		};
+		var assembly = compiler.CompileToWindowsExecutableAsm("Work", instructions);
+		var funcPos = assembly.IndexOf("Work:", StringComparison.Ordinal);
+		var mainPos = assembly.IndexOf("main:", StringComparison.Ordinal);
+		Assert.That(funcPos, Is.LessThan(mainPos), "Function body should appear before main entry point");
+	}
+
+	[Test]
+	public void CompileToWindowsExecutableAsmHasShadowSpaceForWindowsAbi()
+	{
+		var instructions = new List<Instruction>
+		{
+			new LoadConstantInstruction(Register.R0, new ValueInstance(NumberType, 0.0)),
+			new ReturnInstruction(Register.R0)
+		};
+		var assembly = compiler.CompileToWindowsExecutableAsm("Entry", instructions);
+		Assert.That(assembly, Does.Contain("sub rsp, 32"), "Windows ABI requires 32-byte shadow space");
+		Assert.That(assembly, Does.Contain("add rsp, 32"));
+	}
+
+	[Test]
+	public void WindowsExecutableLinkerReturnsNullWhenNasmNotAvailable()
+	{
+		if (WindowsExecutableLinker.IsNasmAvailable)
+			Assert.Ignore("NASM is installed – skipping unavailability test");
+		var linker = new WindowsExecutableLinker();
+		var tempAsm = Path.Combine(Path.GetTempPath(), "test_" + Guid.NewGuid() + ".asm");
+		File.WriteAllText(tempAsm, "section .text\nglobal main\nmain:\n    ret");
+		try
+		{
+			Assert.That(linker.TryCreateExecutable(tempAsm), Is.Null,
+				"Should return null when NASM is not installed");
+		}
+		finally
+		{
+			if (File.Exists(tempAsm))
+				File.Delete(tempAsm);
+		}
+	}
+
+	[Test]
+	public void WindowsExecutableLinkerIsNasmAvailableReturnsBooleanWithoutThrowing()
+	{
+		var result = WindowsExecutableLinker.IsNasmAvailable;
+		Assert.That(result, Is.TypeOf<bool>());
+	}
+
+	[Test]
+	public void WindowsExecutableLinkerIsGccAvailableReturnsBooleanWithoutThrowing()
+	{
+		var result = WindowsExecutableLinker.IsGccAvailable;
+		Assert.That(result, Is.TypeOf<bool>());
+	}
+
 	private static Method CreateSingleMethod(string typeName, params string[] methodLines) =>
 		new Type(TestPackage.Instance, new TypeLines(typeName, methodLines)).
 			ParseMembersAndMethods(new MethodExpressionParser()).Methods[0];

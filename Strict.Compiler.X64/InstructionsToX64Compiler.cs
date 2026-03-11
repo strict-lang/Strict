@@ -23,6 +23,37 @@ public sealed class InstructionsToX64Compiler
 	public string CompileInstructions(string methodName, IList<Instruction> instructions) =>
 		BuildX64Assembly(methodName, [], [.. instructions]);
 
+	/// <summary>
+	/// Produces a complete Windows-executable NASM source: the compiled method followed by a
+	/// <c>main</c> entry point that calls it and then invokes <c>ExitProcess(0)</c>.
+	/// Assemble with: nasm -f win64 {name}.asm -o {name}.obj
+	/// Link with:     gcc {name}.obj -o {name}.exe -lkernel32
+	/// </summary>
+	public string CompileToWindowsExecutableAsm(string methodName,
+		IList<Instruction> instructions)
+	{
+		var functionAsm = BuildX64Assembly(methodName, [], [.. instructions]);
+		return functionAsm + "\n" + BuildWindowsEntryPoint(methodName);
+	}
+
+	private static string BuildWindowsEntryPoint(string methodName) =>
+		string.Join("\n",
+			"",
+			"extern ExitProcess",
+			"",
+			"global main",
+			"",
+			"main:",
+			"    push rbp",
+			"    mov rbp, rsp",
+			"    sub rsp, 32",
+			$"    call {methodName}",
+			"    xor rcx, rcx",
+			"    call ExitProcess",
+			"    add rsp, 32",
+			"    pop rbp",
+			"    ret");
+
 	private static List<Instruction> GenerateInstructions(Method method)
 	{
 		var body = method.GetBodyAndParseIfNeeded();

@@ -125,8 +125,35 @@ public sealed class RunnerTests
 			using var _ = new Runner(TestPackage.Instance, StrictFilePath).Run();
 			Assert.That(File.Exists(asmPath), Is.True, ".asm file should be created next to .strictbinary");
 			Assert.That(writer.ToString(), Does.Contain("Saved x64 NASM assembly to:"));
-			Assert.That(File.ReadAllText(asmPath), Does.Contain("section .text"));
-			Assert.That(File.ReadAllText(asmPath), Does.Contain("global SimpleCalculator"));
+			var asmContent = File.ReadAllText(asmPath);
+			Assert.That(asmContent, Does.Contain("section .text"));
+			Assert.That(asmContent, Does.Contain("global SimpleCalculator"));
+			Assert.That(asmContent, Does.Contain("global main"));
+			Assert.That(asmContent, Does.Contain("extern ExitProcess"));
+			Assert.That(asmContent, Does.Contain("call SimpleCalculator"));
+		}
+		finally
+		{
+			if (File.Exists(asmPath))
+				File.Delete(asmPath);
+			if (File.Exists(binaryPath))
+				File.Delete(binaryPath);
+		}
+	}
+
+	[Test]
+	public void RunningFromSourceLogsNasmInstructionsWhenNasmNotAvailable()
+	{
+		const string StrictFilePath = "Examples/SimpleCalculator.strict";
+		var asmPath = Path.ChangeExtension(StrictFilePath, ".asm");
+		var binaryPath = Path.ChangeExtension(StrictFilePath, BytecodeSerializer.Extension);
+		try
+		{
+			using var _ = new Runner(TestPackage.Instance, StrictFilePath).Run();
+			var output = writer.ToString();
+			Assert.That(output,
+				Does.Contain("Saved Windows executable to:").Or.Contain("nasm -f win64"),
+				"Should either report success or provide nasm assembly instructions");
 		}
 		finally
 		{

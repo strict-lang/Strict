@@ -241,16 +241,23 @@ public sealed class Runner : IDisposable
 	}
 
 	/// <summary>
-	/// Generates x64 NASM assembly for the compiled Run method and saves it as a .asm file next
-	/// to the .strictbinary, ready to be assembled with: nasm -f win64 {name}.asm -o {name}.obj
+	/// Generates a complete Windows-executable NASM assembly (with main entry point) and saves it
+	/// as a .asm file. Then attempts to invoke NASM + gcc to produce a .exe.
 	/// </summary>
 	private void SaveWindowsExecutableIfPossible(List<Instruction> optimizedInstructions)
 	{
-		var assemblyText = new InstructionsToX64Compiler().CompileInstructions(
-			mainType.Name, optimizedInstructions);
+		var compiler = new InstructionsToX64Compiler();
+		var assemblyText = compiler.CompileToWindowsExecutableAsm(mainType.Name, optimizedInstructions);
 		var asmPath = Path.Combine(currentFolder, mainType.Name + ".asm");
 		File.WriteAllText(asmPath, assemblyText);
 		Console.WriteLine("Saved x64 NASM assembly to: " + asmPath);
+		var exePath = new WindowsExecutableLinker().TryCreateExecutable(asmPath);
+		if (exePath != null)
+			Console.WriteLine("Saved Windows executable to: " + exePath);
+		else
+			Console.WriteLine("NASM not found – assemble manually: nasm -f win64 " +
+				mainType.Name + ".asm -o " + mainType.Name + ".obj && gcc " +
+				mainType.Name + ".obj -o " + mainType.Name + ".exe -lkernel32");
 	}
 
 	public void Dispose() => package.Dispose();
