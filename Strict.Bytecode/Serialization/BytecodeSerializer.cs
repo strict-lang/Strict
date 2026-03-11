@@ -164,7 +164,7 @@ public sealed class BytecodeSerializer
 			writer.Write((byte)ValueKind.List);
 			writer.Write7BitEncodedInt(table[val.List.ReturnType.Name]);
 			var items = val.List.Items;
-			writer.Write7BitEncodedInt(items.Length);
+			writer.Write7BitEncodedInt(items.Count);
 			foreach (var item in items)
 				WriteValueInstance(writer, item, table);
 			return;

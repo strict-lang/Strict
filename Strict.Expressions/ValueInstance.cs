@@ -205,7 +205,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 	public int GetIteratorLength()
 	{
 		if (number == ListId)
-			return ((ValueListInstance)value).Items.Length;
+			return ((ValueListInstance)value).Items.Count;
 		if (number == TextId)
 			return ((string)value).Length;
 		if (number == DictionaryId)
@@ -220,7 +220,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 						return typeInstance.Values[i].Text.Length;
 			} //ncrunch: no coverage
 			if (typeInstance.TryGetValue("keysAndValues", out var elementsMember) && elementsMember.IsList)
-				return elementsMember.List.Items.Length;
+				return elementsMember.List.Items.Count;
 			throw new IteratorNotSupported(this);
 		}
 		return (int)number;

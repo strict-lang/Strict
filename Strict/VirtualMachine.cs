@@ -63,11 +63,7 @@ public sealed class VirtualMachine(Package package)
 		if (instruction is not RemoveInstruction removeInstruction)
 			return;
 		var item = Memory.Registers[removeInstruction.Register];
-		var oldList = Memory.Frame.Get(removeInstruction.Identifier).List.Items;
-		var filteredItems = oldList.Where(existingItem => !existingItem.Equals(item)).ToArray();
-		Memory.Frame.Set(removeInstruction.Identifier,
-			new ValueInstance(Memory.Frame.Get(removeInstruction.Identifier).List.ReturnType,
-				filteredItems));
+		Memory.Frame.Get(removeInstruction.Identifier).List.Items.RemoveAll(existingItem => existingItem.Equals(item));
 	}
 
 	private void TryExecuteListCall(Instruction instruction)
@@ -75,7 +71,7 @@ public sealed class VirtualMachine(Package package)
 		if (instruction is not ListCallInstruction listCallInstruction)
 			return;
 		var indexValue = (int)Memory.Registers[listCallInstruction.IndexValueRegister].Number;
-		var variableListElement = Memory.Frame.Get(listCallInstruction.Identifier).List.Items.ElementAt(indexValue);
+		var variableListElement = Memory.Frame.Get(listCallInstruction.Identifier).List.Items[indexValue];
 		Memory.Registers[listCallInstruction.Register] = variableListElement;
 	}
 
@@ -221,7 +217,6 @@ public sealed class VirtualMachine(Package package)
 		return true;
 	}
 
-	//ncrunch: no coverage start, TODO: add more tests
 	private static ValueInstance CreateTraitInstance(Type traitType)
 	{
 		var concreteName = traitType.Name switch
@@ -234,7 +229,7 @@ public sealed class VirtualMachine(Package package)
 		return concreteType != null
 			? new ValueInstance(concreteType, System.Array.Empty<ValueInstance>())
 			: new ValueInstance(traitType, 0);
-	} //ncrunch: no coverage end
+	}
 
 	/// <summary>
 	/// Handles native trait method calls like logger.Log(...) by writing directly to Console.
@@ -482,7 +477,7 @@ public sealed class VirtualMachine(Package package)
 		if (iterableInstance.IsText)
 			return iterableInstance.Text.Length;
 		if (iterableInstance.IsList)
-			return iterableInstance.List.Items.Length;
+			return iterableInstance.List.Items.Count;
 		return (int)iterableInstance.Number;
 	}
 
@@ -499,7 +494,7 @@ public sealed class VirtualMachine(Package package)
 		if (iterableVariable.IsList)
 		{
 			var items = iterableVariable.List.Items;
-			if (index < items.Length)
+			if (index < items.Count)
 				Memory.Frame.Set("value", items[index]);
 			else
 				loopBegin.LoopCount = 0;
@@ -515,8 +510,13 @@ public sealed class VirtualMachine(Package package)
 		if (instruction is SetInstruction set)
 			Memory.Registers[set.Register] = set.ValueInstance;
 		else if (instruction is StoreVariableInstruction storeVariable)
-			Memory.Frame.Set(storeVariable.Identifier, storeVariable.ValueInstance,
-				storeVariable.IsMember);
+		{
+			var value = storeVariable.ValueInstance;
+			// Create defensive copy to prevent aliasing across Execute() calls when lists are mutated in-place
+			if (value.IsList)
+				value = new ValueInstance(value.List.ReturnType, value.List.Items.ToArray());
+			Memory.Frame.Set(storeVariable.Identifier, value, storeVariable.IsMember);
+		}
 		else if (instruction is StoreFromRegisterInstruction storeFromRegister)
 			Memory.Frame.Set(storeFromRegister.Identifier, Memory.Registers[storeFromRegister.Register]);
 	}
@@ -568,10 +568,9 @@ public sealed class VirtualMachine(Package package)
 	{
 		if (left.IsList)
 		{
-			//TODO: not efficient, we should use a dynamic list and just modify it!
-			//TODO: we cannot make a new duplicate list every operation, like adding an entry ..
-			var items = new List<ValueInstance>(left.List.Items) { right };
-			return new ValueInstance(left.List.ReturnType, items.ToArray());
+			// Mutates left's list in-place; caller's defensive copy in TryStoreInstructions ensures isolation
+			left.List.Items.Add(right);
+			return left;
 		}
 		if (left.IsText || right.IsText)
 			return new ValueInstance((left.IsText

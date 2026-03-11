@@ -7,11 +7,11 @@ namespace Strict.Tests;
 public sealed class MemoryTests
 {
 	[Test]
-	public void AddToCollectionVariableDoesNothingWhenValueIsNotAList()
+	public void AddToCollectionVariableThrowsWhenValueIsNotAList()
 	{
 		var memory = new Memory { Variables = { ["count"] = new ValueInstance(NumberType, 5) } };
-		memory.AddToCollectionVariable("count", new ValueInstance(NumberType, 1));
-		Assert.That(memory.Variables["count"].Number, Is.EqualTo(5));
+		Assert.That(() => memory.AddToCollectionVariable("count", new ValueInstance(NumberType, 1)),
+			Throws.InvalidOperationException);
 	}
 
 	private static readonly Type NumberType = TestPackage.Instance.GetType(Type.Number);
