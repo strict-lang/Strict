@@ -42,11 +42,10 @@ public sealed class Runner : IDisposable
 	{
 		Log("┌─ Step 1: Loading pre-compiled binary: " + binaryFilePath);
 		var startTicks = DateTime.UtcNow.Ticks;
-		var binaryDir = Path.GetDirectoryName(Path.GetFullPath(binaryFilePath)) ?? ".";
-		package = new Package(basePackage, binaryDir);
-		BytecodeSerializer.LoadEmbeddedTypes(binaryFilePath, package);
+		(package, var bytecodeByType) =
+			BytecodeSerializer.LoadTypesAndDeserializeAll(binaryFilePath, basePackage);
+		disposePackage = false; // cache owns the package lifetime; this Runner must not dispose it
 		var requestedTypeName = Path.GetFileNameWithoutExtension(binaryFilePath);
-		var bytecodeByType = BytecodeSerializer.DeserializeAll(binaryFilePath, package);
 		var selectedTypeName = requestedTypeName;
 		if (!bytecodeByType.TryGetValue(selectedTypeName, out preloadedBytecode))
 		{
@@ -92,6 +91,7 @@ public sealed class Runner : IDisposable
 	}
 
 	private readonly List<long> stepTimes = new();
+	private bool disposePackage = true;
 	private Package package = null!;
 	private Type mainType = null!;
 
@@ -272,5 +272,9 @@ public sealed class Runner : IDisposable
 		Log("└─ Bytecode saved: " + new FileInfo(binaryPath).Length + " bytes");
 	}
 
-	public void Dispose() => package.Dispose();
+	public void Dispose()
+	{
+		if (disposePackage)
+			package.Dispose();
+	}
 }

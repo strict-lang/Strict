@@ -1,6 +1,7 @@
 using Strict;
 using Strict.Bytecode;
 using Strict.Bytecode.Serialization;
+using Strict.Bytecode.Instructions;
 using Strict.Language;
 using Strict.Language.Tests;
 using Strict.Tests;
@@ -14,20 +15,20 @@ var basePackage = TestPackage.Instance;
 if (!File.Exists(binaryFilePath))
 	RunSilently(() => new Runner(basePackage,
 		Path.Combine(AppContext.BaseDirectory, "Examples", "SimpleCalculator.strict")).Run().Dispose());
-// Warm up: one full binary execution to JIT and cache everything
+// Warm up: one full binary execution to JIT and cache everything (also populates the binary cache)
 RunBinaryOnce(basePackage, binaryFilePath);
 Console.WriteLine("Warmup complete. Starting performance measurement...");
-// Measure: 1000 iterations of full Runner.Run() from .strictbinary
+const int Runs = 1000;
+// Measure: 1000 iterations of full Runner.Run() from .strictbinary (cache hits after warmup)
 var allocatedBefore = GC.GetAllocatedBytesForCurrentThread();
 var startTicks = DateTime.UtcNow.Ticks;
-const int Runs = 1000;
 for (var run = 0; run < Runs; run++)
 	RunBinaryOnce(basePackage, binaryFilePath);
 var endTicks = DateTime.UtcNow.Ticks;
 var allocatedAfter = GC.GetAllocatedBytesForCurrentThread();
-Console.WriteLine("Total execution time per run (full binary Runner.Run): " +
+Console.WriteLine("Total execution time per run (full binary Runner.Run, cached): " +
 	TimeSpan.FromTicks(endTicks - startTicks) / Runs);
-Console.WriteLine("Allocated bytes per run: " + (allocatedAfter - allocatedBefore) / Runs);
+Console.WriteLine("Allocated bytes per run (cached): " + (allocatedAfter - allocatedBefore) / Runs);
 // Now measure only the hot VM execution loop (pre-loaded bytecode, no file I/O)
 var hotPathBenchmark = new BinaryExecutionPerformanceTests();
 hotPathBenchmark.Setup();
@@ -39,7 +40,6 @@ for (var run = 0; run < Runs; run++)
 	hotPathBenchmark.ExecuteBinaryOnce();
 var hotEndTicks = DateTime.UtcNow.Ticks;
 var hotAllocatedAfter = GC.GetAllocatedBytesForCurrentThread();
-hotPathBenchmark.Cleanup();
 Console.WriteLine("Total execution time per run (VM-only, pre-loaded bytecode): " +
 	TimeSpan.FromTicks(hotEndTicks - hotStartTicks) / Runs);
 Console.WriteLine("Allocated bytes per run (VM-only): " + (hotAllocatedAfter - hotAllocatedBefore) / Runs);

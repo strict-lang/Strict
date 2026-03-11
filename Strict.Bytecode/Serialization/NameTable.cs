@@ -107,6 +107,8 @@ internal sealed class NameTable : IEnumerable<string>
 			_ => Add(expr.ToString()).Add(expr.ReturnType.Name)
 		};
 
+	public string[] ToArray() => names.ToArray();
+
 	public void Write(BinaryWriter writer)
 	{
 		writer.Write7BitEncodedInt(Count);
