@@ -1,13 +1,17 @@
 using Strict.Bytecode;
 using Strict.Bytecode.Instructions;
+using Strict.Bytecode.Serialization;
 using Strict.Expressions;
 using Strict.Language;
 using Type = Strict.Language.Type;
 
 namespace Strict;
 
-public sealed class VirtualMachine(Package package)
+public sealed class VirtualMachine(Package package,
+	IReadOnlyDictionary<string, List<Instruction>>? precompiledMethodInstructions = null)
 {
+	private readonly Type numberType = package.GetType(Type.Number);
+
 	public VirtualMachine Execute(IList<Instruction> allInstructions)
 	{
 		Clear();
@@ -63,11 +67,7 @@ public sealed class VirtualMachine(Package package)
 		if (instruction is not RemoveInstruction removeInstruction)
 			return;
 		var item = Memory.Registers[removeInstruction.Register];
-		var oldList = Memory.Frame.Get(removeInstruction.Identifier).List.Items;
-		var filteredItems = oldList.Where(existingItem => !existingItem.Equals(item)).ToArray();
-		Memory.Frame.Set(removeInstruction.Identifier,
-			new ValueInstance(Memory.Frame.Get(removeInstruction.Identifier).List.ReturnType,
-				filteredItems));
+		Memory.Frame.Get(removeInstruction.Identifier).List.Items.RemoveAll(existingItem => existingItem.Equals(item));
 	}
 
 	private void TryExecuteListCall(Instruction instruction)
@@ -75,7 +75,7 @@ public sealed class VirtualMachine(Package package)
 		if (instruction is not ListCallInstruction listCallInstruction)
 			return;
 		var indexValue = (int)Memory.Registers[listCallInstruction.IndexValueRegister].Number;
-		var variableListElement = Memory.Frame.Get(listCallInstruction.Identifier).List.Items.ElementAt(indexValue);
+		var variableListElement = Memory.Frame.Get(listCallInstruction.Identifier).List.Items[indexValue];
 		Memory.Registers[listCallInstruction.Register] = variableListElement;
 	}
 
@@ -99,11 +99,25 @@ public sealed class VirtualMachine(Package package)
 	{
 		if (instruction is not LoopEndInstruction loopEnd)
 			return;
-		var loopBegin = instructions.Take(instructionIndex).OfType<LoopBeginInstruction>().Last();
+		var loopBegin = loopEnd.Begin ?? FindLoopBeginFromSteps(loopEnd.Steps);
 		loopBegin.LoopCount--;
 		if (loopBegin.LoopCount <= 0)
 			return;
 		instructionIndex -= loopEnd.Steps + 1;
+	}
+
+	/// <summary>
+	/// Fallback for manually constructed or deserialized LoopEndInstructions that don't have
+	/// Begin set. Scans forward from the computed base position (at most 2 steps for range loops).
+	/// </summary>
+	private LoopBeginInstruction FindLoopBeginFromSteps(int steps)
+	{
+		var idx = instructionIndex - steps;
+		while (idx < instructions.Count && instructions[idx] is not LoopBeginInstruction)
+			idx++; //ncrunch: no coverage
+		return idx < instructions.Count
+			? (LoopBeginInstruction)instructions[idx]
+			: throw new InvalidOperationException("No matching LoopBeginInstruction found for LoopEnd");
 	}
 
 	private void TryInvokeInstruction(Instruction instruction)
@@ -113,18 +127,65 @@ public sealed class VirtualMachine(Package package)
 			TryHandleNativeTraitMethod(invoke) || TryHandleToConversion(invoke) ||
 			TryHandleIncrementDecrement(invoke) || GetValueByKeyForDictionaryAndStoreInRegister(invoke))
 			return;
-		var methodInstructions = GetByteCodeFromInvokedMethodCall(invoke);
-		var result = RunChildScope(methodInstructions);
+		var invokeInstructions = GetPrecompiledMethodInstructions(invoke);
+		var result = invokeInstructions != null
+			? RunChildScope(invokeInstructions,
+				() => InitializeMethodCallScope(invoke.Method, //ncrunch: no coverage
+					invoke.Method.Arguments.Select(EvaluateExpression).ToArray(),
+					invoke.Method.Instance != null
+						? EvaluateExpression(invoke.Method.Instance)
+						: null))
+			: RunChildScope(GetByteCodeFromInvokedMethodCall(invoke));
 		if (result != null)
 			Memory.Registers[invoke.Register] = result.Value;
 	}
 
-	/// <summary>
-	/// Runs <paramref name="childInstructions"/> in a child <see cref="CallFrame"/> while reusing
-	/// this interpreter instance. All mutable fields are saved on the call stack (zero heap
-	/// allocations for the bookkeeping) and restored after the child finishes.
-	/// </summary>
-	private ValueInstance? RunChildScope(List<Instruction> childInstructions)
+	private List<Instruction>? GetPrecompiledMethodInstructions(Method method) =>
+		precompiledMethodInstructions?.GetValueOrDefault(
+			BytecodeDeserializer.BuildMethodInstructionKey(method.Type.Name, method.Name,
+				method.Parameters.Count));
+
+	private List<Instruction>? GetPrecompiledMethodInstructions(Invoke invoke) =>
+		invoke.Method == null
+			? null
+			: GetPrecompiledMethodInstructions(invoke.Method.Method);
+
+	private void InitializeMethodCallScope(MethodCall methodCall,
+		IReadOnlyList<ValueInstance>? evaluatedArguments = null,
+		ValueInstance? evaluatedInstance = null)
+	{
+		for (var parameterIndex = 0; parameterIndex < methodCall.Method.Parameters.Count &&
+			//ncrunch: no coverage start
+			parameterIndex < methodCall.Arguments.Count; parameterIndex++)
+			Memory.Frame.Set(methodCall.Method.Parameters[parameterIndex].Name,
+				evaluatedArguments != null
+					? evaluatedArguments[parameterIndex]
+					: EvaluateExpression(methodCall.Arguments[parameterIndex]));
+		if (methodCall.Instance == null)
+			return;
+		//ncrunch: no coverage end
+		var instance = evaluatedInstance ?? EvaluateExpression(methodCall.Instance);
+		var typeInstance = instance.TryGetValueTypeInstance();
+		if (typeInstance != null)
+		{
+			var members = typeInstance.ReturnType.Members;
+			for (var memberIndex = 0; memberIndex < members.Count &&
+				memberIndex < typeInstance.Values.Length; memberIndex++)
+				if (!members[memberIndex].Type.IsTrait)
+					Memory.Frame.Set(members[memberIndex].Name, typeInstance.Values[memberIndex],
+						isMember: true);
+			return;
+		}
+		//ncrunch: no coverage start
+		var firstNonTraitMember = instance.GetType().Members.FirstOrDefault(member =>
+			!member.Type.IsTrait);
+		if (firstNonTraitMember != null)
+			Memory.Frame.Set(firstNonTraitMember.Name, instance, isMember: true);
+		//ncrunch: no coverage end
+	}
+
+	private ValueInstance? RunChildScope(List<Instruction> childInstructions,
+		Action? initializeScope = null)
 	{
 		var savedInstructions = instructions;
 		var savedIndex = instructionIndex;
@@ -132,6 +193,7 @@ public sealed class VirtualMachine(Package package)
 		var savedReturns = Returns;
 		var savedFrame = Memory.Frame;
 		Memory.Frame = new CallFrame(savedFrame);
+		initializeScope?.Invoke();
 		Returns = null;
 		RunInstructions(childInstructions);
 		var result = Returns;
@@ -212,7 +274,7 @@ public sealed class VirtualMachine(Package package)
 		var argIndex = 0;
 		for (var i = 0; i < members.Count; i++)
 			if (members[i].Type.IsTrait)
-				values[i] = CreateTraitInstance(members[i].Type); //ncrunch: no coverage
+				values[i] = CreateTraitInstance(members[i].Type);
 			else if (argIndex < invoke.Method.Arguments.Count)
 				values[i] = EvaluateExpression(invoke.Method.Arguments[argIndex++]);
 			else
@@ -221,20 +283,15 @@ public sealed class VirtualMachine(Package package)
 		return true;
 	}
 
-	//ncrunch: no coverage start, TODO: add more tests
 	private static ValueInstance CreateTraitInstance(Type traitType)
 	{
-		var concreteName = traitType.Name switch
-		{
-			Type.TextWriter => Type.System,
-			Type.Logger => Type.System,
-			_ => traitType.Name
-		};
-		var concreteType = traitType.FindType(concreteName);
+		var concreteType = traitType.FindType(traitType.Name is Type.TextWriter or Type.Logger
+			? Type.System
+			: traitType.Name);
 		return concreteType != null
-			? new ValueInstance(concreteType, System.Array.Empty<ValueInstance>())
+			? new ValueInstance(concreteType, Array.Empty<ValueInstance>())
 			: new ValueInstance(traitType, 0);
-	} //ncrunch: no coverage end
+	}
 
 	/// <summary>
 	/// Handles native trait method calls like logger.Log(...) by writing directly to Console.
@@ -312,6 +369,17 @@ public sealed class VirtualMachine(Package package)
 	{
 		if (call.Method.Name == Method.From)
 			return EvaluateFromConstructor(call); //ncrunch: no coverage
+		var precompiledInstructions = GetPrecompiledMethodInstructions(call.Method);
+		if (precompiledInstructions != null)
+		{
+			var evaluatedArguments = call.Arguments.Select(EvaluateExpression).ToArray();
+			var evaluatedInstance = call.Instance != null
+				? EvaluateExpression(call.Instance)
+				: (ValueInstance?)null;
+			var precompiledResult = RunChildScope(precompiledInstructions,
+				() => InitializeMethodCallScope(call, evaluatedArguments, evaluatedInstance));
+			return precompiledResult ?? new ValueInstance(call.Method.ReturnType, 0);
+		}
 		var instance = call.Instance != null
 			? EvaluateExpression(call.Instance)
 			: default;
@@ -431,25 +499,21 @@ public sealed class VirtualMachine(Package package)
 	{
 		if (!Memory.Registers.TryGet(loopBegin.Register, out var iterableVariable))
 			return; //ncrunch: no coverage
-		if (Memory.Frame.ContainsKey("index"))
-		{
-			var current = Memory.Frame.Get("index");
-			Memory.Frame.Set("index",
-				new ValueInstance(package.GetType(Type.Number), current.Number + 1));
-		}
-		else
-			Memory.Frame.Set("index", new ValueInstance(package.GetType(Type.Number), 0));
+		Memory.Frame.Set("index", Memory.Frame.TryGet("index", out var indexValue)
+			? new ValueInstance(numberType, indexValue.Number + 1)
+			: new ValueInstance(numberType, 0));
 		if (!loopBegin.IsInitialized)
 		{
 			loopBegin.LoopCount = GetLength(iterableVariable);
 			loopBegin.IsInitialized = true;
 		}
-		AlterValueVariable(iterableVariable, package.GetType(Type.Number), loopBegin);
+		AlterValueVariable(iterableVariable, loopBegin);
 		if (loopBegin.LoopCount <= 0)
 		{
-			var stepsToLoopEnd = instructions.Skip(instructionIndex + 1).
-				TakeWhile(s => s is not LoopEndInstruction).Count();
-			instructionIndex += stepsToLoopEnd;
+			var skipTo = instructionIndex + 1;
+			while (skipTo < instructions.Count && instructions[skipTo] is not LoopEndInstruction)
+				skipTo++;
+			instructionIndex = skipTo;
 		}
 	}
 
@@ -462,15 +526,10 @@ public sealed class VirtualMachine(Package package)
 			loopBegin.InitializeRangeState(startIndex, endIndex);
 		}
 		var isDecreasing = loopBegin.IsDecreasing ?? false;
-		var numberType = Memory.Registers[loopBegin.Register].GetType().
-			GetType(Type.Number);
-		if (Memory.Frame.ContainsKey("index"))
-		{
-			var current = Memory.Frame.Get("index");
-			Memory.Frame.Set("index", new ValueInstance(numberType, current.Number + (isDecreasing
+		if (Memory.Frame.TryGet("index", out var indexValue))
+			Memory.Frame.Set("index", new ValueInstance(numberType, indexValue.Number + (isDecreasing
 				? -1
 				: 1)));
-		}
 		else
 			Memory.Frame.Set("index",
 				new ValueInstance(numberType, loopBegin.StartIndexValue ?? 0));
@@ -482,14 +541,13 @@ public sealed class VirtualMachine(Package package)
 		if (iterableInstance.IsText)
 			return iterableInstance.Text.Length;
 		if (iterableInstance.IsList)
-			return iterableInstance.List.Items.Length;
+			return iterableInstance.List.Items.Count;
 		return (int)iterableInstance.Number;
 	}
 
-	private void AlterValueVariable(ValueInstance iterableVariable, Type numberType,
-		LoopBeginInstruction loopBegin)
+	private void AlterValueVariable(ValueInstance iterableVariable, LoopBeginInstruction loopBegin)
 	{
-		var index = Convert.ToInt32(Memory.Frame.Get("index").Number);
+		var index = (int)Memory.Frame.Get("index").Number;
 		if (iterableVariable.IsText)
 		{
 			if (index < iterableVariable.Text.Length)
@@ -499,7 +557,7 @@ public sealed class VirtualMachine(Package package)
 		if (iterableVariable.IsList)
 		{
 			var items = iterableVariable.List.Items;
-			if (index < items.Length)
+			if (index < items.Count)
 				Memory.Frame.Set("value", items[index]);
 			else
 				loopBegin.LoopCount = 0;
@@ -515,8 +573,13 @@ public sealed class VirtualMachine(Package package)
 		if (instruction is SetInstruction set)
 			Memory.Registers[set.Register] = set.ValueInstance;
 		else if (instruction is StoreVariableInstruction storeVariable)
-			Memory.Frame.Set(storeVariable.Identifier, storeVariable.ValueInstance,
-				storeVariable.IsMember);
+		{
+			var value = storeVariable.ValueInstance;
+			// Create defensive copy to isolate list state between separate Execute() calls when lists are mutated in-place
+			if (value.IsList)
+				value = new ValueInstance(value.List.ReturnType, value.List.Items.ToArray());
+			Memory.Frame.Set(storeVariable.Identifier, value, storeVariable.IsMember);
+		}
 		else if (instruction is StoreFromRegisterInstruction storeFromRegister)
 			Memory.Frame.Set(storeFromRegister.Identifier, Memory.Registers[storeFromRegister.Register]);
 	}
@@ -568,10 +631,9 @@ public sealed class VirtualMachine(Package package)
 	{
 		if (left.IsList)
 		{
-			//TODO: not efficient, we should use a dynamic list and just modify it!
-			//TODO: we cannot make a new duplicate list every operation, like adding an entry ..
-			var items = new List<ValueInstance>(left.List.Items) { right };
-			return new ValueInstance(left.List.ReturnType, items.ToArray());
+			// Mutates left's list in-place; caller's defensive copy in TryStoreInstructions ensures isolation
+			left.List.Items.Add(right);
+			return left;
 		}
 		if (left.IsText || right.IsText)
 			return new ValueInstance((left.IsText

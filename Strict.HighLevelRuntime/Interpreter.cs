@@ -370,7 +370,9 @@ public class Interpreter
 
 	private ValueInstance EvaluateListExpression(List list, ExecutionContext context)
 	{
-		//TODO: this is called quite often, not sure why we would have to call RunExpression on every list item every time, once it was evaluated, there is no need to do it again. same with other things here, we probably call way to many things over and over again.
+		var constantData = list.TryGetConstantData();
+		if (constantData.HasValue)
+			return constantData.Value;
 		var count = list.Values.Count;
 		var values = new ValueInstance[count];
 		for (var i = 0; i < count; i++)

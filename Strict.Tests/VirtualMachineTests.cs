@@ -629,4 +629,55 @@ public sealed class VirtualMachineTests : TestBytecode
 		var result = vm.Execute(instructions).Returns!;
 		Assert.That(result.Value.Number, Is.EqualTo(3.14 / 2));
 	}
+
+	[Test]
+	public void CreateInstanceWithLoggerTraitMember()
+	{
+		if (type.Package.FindDirectType("TypeWithLogger") == null)
+			new Type(type.Package, new TypeLines("TypeWithLogger", "has logger",
+				"GetZero Number", "\t0")).ParseMembersAndMethods(new MethodExpressionParser());
+		var typeWithLogger = type.Package.FindDirectType("TypeWithLogger")!;
+		var fromMethodCall = CreateFromMethodCall(typeWithLogger);
+		var instructions = new List<Instruction> { new Invoke(Register.R0, fromMethodCall, new Registry()) };
+		var result = vm.Execute(instructions).Memory.Registers[Register.R0];
+		Assert.That(result.TryGetValueTypeInstance(), Is.Not.Null);
+	}
+
+	[Test]
+	public void CreateInstanceWithTextWriterTraitMemberCreatesSystemMemberValue()
+	{
+		if (type.Package.FindDirectType("TypeWithTextWriter") == null)
+			new Type(type.Package, new TypeLines("TypeWithTextWriter", "has writer TextWriter",
+				"GetZero Number", "\t0")).ParseMembersAndMethods(new MethodExpressionParser());
+		var typeWithTextWriter = type.Package.FindDirectType("TypeWithTextWriter")!;
+		var fromMethodCall = CreateFromMethodCall(typeWithTextWriter);
+		var instructions = new List<Instruction> { new Invoke(Register.R0, fromMethodCall, new Registry()) };
+		var result = vm.Execute(instructions).Memory.Registers[Register.R0];
+		var typeInstance = result.TryGetValueTypeInstance();
+		Assert.That(typeInstance, Is.Not.Null);
+		Assert.That(typeInstance!["writer"].GetType().Name, Is.EqualTo(Type.System));
+	}
+
+	[Test]
+	public void AddHundredElementsToMutableList()
+	{
+		var source = new[]
+		{
+			"has count Number",
+			"AddMany Numbers",
+			"\tmutable myList = (0)",
+			"\tfor count",
+			"\t\tmyList = myList + value",
+			"\tmyList"
+		};
+		var instructions = new BytecodeGenerator(GenerateMethodCallFromSource(
+			nameof(AddHundredElementsToMutableList),
+			$"{nameof(AddHundredElementsToMutableList)}(100).AddMany",
+			source)).Generate();
+		var startTime = DateTime.UtcNow;
+		var result = vm.Execute(instructions).Returns!.Value;
+		var elapsedMs = (DateTime.UtcNow - startTime).TotalMilliseconds;
+		Assert.That(result.List.Items.Count, Is.EqualTo(101));
+		Assert.That(elapsedMs, Is.LessThan(800));
+	}
 }

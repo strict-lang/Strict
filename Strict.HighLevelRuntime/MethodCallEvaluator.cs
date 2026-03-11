@@ -103,7 +103,7 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 		if (left.IsList && right.IsList)
 		{
 			if (op is BinaryOperator.Multiply or BinaryOperator.Divide &&
-				left.List.Items.Length != right.List.Items.Length)
+				left.List.Items.Count != right.List.Items.Count)
 				return Error(ListsHaveDifferentDimensions, ctx, call);
 			return op switch
 			{

@@ -20,11 +20,11 @@ public sealed class BytecodeDeserializer
 	{
 		var fullPath = Path.GetFullPath(filePath);
 		var packageName = Path.GetFileNameWithoutExtension(fullPath);
-		Package = new Package(basePackage, packageName);
+		Package = new Package(basePackage, packageName + "-" + ++packageCounter);
 		try
 		{
 			using var zip = ZipFile.OpenRead(fullPath);
-			Instructions = DeserializeAllFromZip(zip, Package, Path.GetDirectoryName(fullPath));
+			(Instructions, PrecompiledMethods) = DeserializeAllFromZip(zip, Package);
 		}
 		catch (InvalidDataException ex)
 		{
@@ -35,100 +35,226 @@ public sealed class BytecodeDeserializer
 
 	public Package Package { get; }
 	public Dictionary<string, List<Instruction>> Instructions { get; }
+	public Dictionary<string, List<Instruction>> PrecompiledMethods { get; }
+
+	private static (Dictionary<string, List<Instruction>> RunInstructions,
+		Dictionary<string, List<Instruction>> MethodInstructions)
+		DeserializeAllFromZip(ZipArchive zip, Package package)
+	{
+		var bytecodeEntries = zip.Entries.Where(entry =>
+			entry.FullName.EndsWith(BytecodeSerializer.BytecodeEntryExtension,
+				StringComparison.OrdinalIgnoreCase)).ToList();
+		if (bytecodeEntries.Count == 0)
+			throw new InvalidBytecodeFileException(BytecodeSerializer.Extension +
+				" ZIP contains no entries");
+		var typeEntries = bytecodeEntries.Select(entry => new TypeEntryData(
+			GetEntryNameWithoutExtension(entry.FullName), ReadAllBytes(entry.Open()))).ToList();
+		foreach (var typeEntry in typeEntries)
+			ReadTypeMetadata(typeEntry, package);
+		var runInstructions = new Dictionary<string, List<Instruction>>(StringComparer.Ordinal);
+		var methodInstructions = new Dictionary<string, List<Instruction>>(StringComparer.Ordinal);
+		foreach (var typeEntry in typeEntries)
+			ReadTypeInstructions(typeEntry, package, runInstructions, methodInstructions);
+		return (runInstructions, methodInstructions);
+	}
+
+	private sealed class TypeEntryData(string entryName, byte[] bytes)
+	{
+		public string EntryName { get; } = entryName;
+		public byte[] Bytes { get; } = bytes;
+	}
+
+	private static void ReadTypeMetadata(TypeEntryData typeEntry, Package package)
+	{
+		using var stream = new MemoryStream(typeEntry.Bytes);
+		using var reader = new BinaryReader(stream, System.Text.Encoding.UTF8, leaveOpen: true);
+		_ = ValidateMagicAndVersion(reader);
+		var table = new NameTable(reader).ToArray();
+		var type = EnsureTypeForEntry(package, typeEntry.EntryName);
+		var memberCount = reader.Read7BitEncodedInt();
+		for (var memberIndex = 0; memberIndex < memberCount; memberIndex++)
+		{
+			var memberName = table[reader.Read7BitEncodedInt()];
+			var memberTypeName = ReadTypeReferenceName(reader, table);
+			_ = EnsureMember(type, memberName, memberTypeName);
+			if (reader.ReadBoolean())
+				_ = ReadExpression(reader, package, table); //ncrunch: no coverage
+		}
+		var methodCount = reader.Read7BitEncodedInt();
+		for (var methodIndex = 0; methodIndex < methodCount; methodIndex++)
+		{
+			var methodName = table[reader.Read7BitEncodedInt()];
+			var parameterCount = reader.Read7BitEncodedInt();
+			var parameters = new string[parameterCount];
+			for (var parameterIndex = 0; parameterIndex < parameterCount; parameterIndex++)
+			{
+				var parameterName = table[reader.Read7BitEncodedInt()];
+				var parameterType = ReadTypeReferenceName(reader, table);
+				parameters[parameterIndex] = parameterName + " " + parameterType;
+			}
+			var returnTypeName = ReadTypeReferenceName(reader, table);
+			EnsureMethod(type, methodName, parameters, returnTypeName);
+		}
+	}
+
+	private static Member EnsureMember(Type type, string memberName, string memberTypeName)
+	{
+		var existing = type.Members.FirstOrDefault(member => member.Name == memberName);
+		if (existing != null)
+			return existing;
+		var member = new Member(type, memberName + " " + memberTypeName, null);
+		type.Members.Add(member);
+		return member;
+	}
+
+	private static void EnsureMethod(Type type, string methodName, string[] parameters,
+		string returnTypeName)
+	{
+		if (type.Methods.Any(existingMethod => existingMethod.Name == methodName &&
+			existingMethod.Parameters.Count == parameters.Length))
+			return;
+		var header = parameters.Length == 0
+			? returnTypeName == Type.None
+				? methodName
+				: methodName + " " + returnTypeName
+			: methodName + "(" + string.Join(", ", parameters) + ") " + returnTypeName;
+		type.Methods.Add(new Method(type, 0, new MethodExpressionParser(), [header]));
+	}
+
+	private static void ReadTypeInstructions(TypeEntryData typeEntry, Package package,
+		Dictionary<string, List<Instruction>> runInstructions,
+		Dictionary<string, List<Instruction>> methodInstructions)
+	{
+		using var stream = new MemoryStream(typeEntry.Bytes);
+		using var reader = new BinaryReader(stream, System.Text.Encoding.UTF8, leaveOpen: true);
+		_ = ValidateMagicAndVersion(reader);
+		var table = new NameTable(reader).ToArray();
+		var typeNameForKey = GetTypeNameFromEntryName(typeEntry.EntryName);
+		var memberCount = reader.Read7BitEncodedInt();
+		for (var memberIndex = 0; memberIndex < memberCount; memberIndex++)
+		{
+			_ = reader.Read7BitEncodedInt();
+			_ = ReadTypeReferenceName(reader, table);
+			if (reader.ReadBoolean())
+				_ = ReadExpression(reader, package, table); //ncrunch: no coverage
+		}
+		var methodCount = reader.Read7BitEncodedInt();
+		for (var methodIndex = 0; methodIndex < methodCount; methodIndex++)
+		{
+			_ = reader.Read7BitEncodedInt();
+			var parameterCount = reader.Read7BitEncodedInt();
+			for (var parameterIndex = 0; parameterIndex < parameterCount; parameterIndex++)
+			{
+				_ = reader.Read7BitEncodedInt();
+				_ = ReadTypeReferenceName(reader, table);
+			}
+			_ = ReadTypeReferenceName(reader, table);
+		}
+		var numberType = package.GetType(Type.Number);
+		var runInstructionCount = reader.Read7BitEncodedInt();
+		runInstructions[typeNameForKey] = ReadInstructions(reader, package, table, numberType,
+			runInstructionCount);
+		var compiledMethodCount = reader.Read7BitEncodedInt();
+		for (var methodIndex = 0; methodIndex < compiledMethodCount; methodIndex++)
+		{
+			var methodName = table[reader.Read7BitEncodedInt()];
+			var parameterCount = reader.Read7BitEncodedInt();
+			var instructionCount = reader.Read7BitEncodedInt();
+			methodInstructions[BuildMethodInstructionKey(typeNameForKey, methodName,
+				parameterCount)] = ReadInstructions(reader, package, table, numberType,
+				instructionCount);
+		}
+	}
+
+	private static List<Instruction> ReadInstructions(BinaryReader reader, Package package,
+		string[] table, Type numberType, int instructionCount)
+	{
+		var instructions = new List<Instruction>(instructionCount);
+		for (var instructionIndex = 0; instructionIndex < instructionCount; instructionIndex++)
+			instructions.Add(ReadInstruction(reader, package, table, numberType));
+		return instructions;
+	}
+
+	private static Type EnsureTypeForEntry(Package package, string entryName)
+	{
+		var segments = entryName.Split(Context.ParentSeparator, StringSplitOptions.RemoveEmptyEntries);
+		if (segments.Length == 0)
+			throw new InvalidBytecodeFileException("Invalid entry name: " + entryName); //ncrunch: no coverage
+		var typeName = segments[^1];
+		var existingType = package.FindType(typeName);
+		if (existingType != null)
+			return existingType;
+		var targetPackage = package;
+		for (var segmentIndex = 0; segmentIndex < segments.Length - 1; segmentIndex++)
+			targetPackage = targetPackage.FindSubPackage(segments[segmentIndex]) ??
+				new Package(targetPackage, segments[segmentIndex]);
+		return targetPackage.FindDirectType(typeName) != null
+			? targetPackage.GetType(typeName)
+			: new Type(targetPackage, new TypeLines(typeName, Method.Run));
+	}
+
+	private static string GetTypeNameFromEntryName(string entryName) =>
+		entryName.Contains(Context.ParentSeparator)
+			? entryName[(entryName.LastIndexOf(Context.ParentSeparator) + 1)..]
+			: entryName;
+
+	private static byte[] ReadAllBytes(Stream stream)
+	{
+		using var memory = new MemoryStream();
+		stream.CopyTo(memory);
+		return memory.ToArray();
+	}
+
+	private static string GetEntryNameWithoutExtension(string fullName)
+	{
+		var normalized = fullName.Replace('\\', '/');
+		var extensionStart = normalized.LastIndexOf('.');
+		return extensionStart > 0
+			? normalized[..extensionStart]
+			: normalized;
+	}
 
 	public sealed class InvalidBytecodeFileException(string message) : Exception(
 		"Not a valid Strict bytecode (" + BytecodeSerializer.Extension + ") file: " + message);
 
-/*this makes no sense, we would only load a package once anyway except for some performance
-testing
-	private sealed class CachedEntry(BytecodeDeserializer deserializer, DateTime modified)
-	{
-		public BytecodeDeserializer Deserializer { get; } = deserializer;
-		public DateTime Modified { get; } = modified;
-	}
-
-	private static readonly Dictionary<string, CachedEntry> Cache =
-		new(StringComparer.OrdinalIgnoreCase);
-	private static readonly object CacheLock = new();
-
 	/// <summary>
-	/// Loads and caches deserialized bytecode keyed by file path and modification time.
-	/// Subsequent calls for the same unchanged file return the cached result without file I/O.
+	/// Deserializes all bytecode entries from in-memory .bytecode payloads.
 	/// </summary>
-	public static BytecodeDeserializer LoadCached(string zipFilePath, Package basePackage)
+	public BytecodeDeserializer(Dictionary<string, byte[]> entryBytesByType, Package basePackage,
+		string packageName = "memory")
 	{
-		var fullPath = Path.GetFullPath(zipFilePath);
-		var mtime = File.GetLastWriteTimeUtc(fullPath);
-		var packageName = CachedBinaryPackagePrefix + Path.GetFileNameWithoutExtension(fullPath);
-		lock (CacheLock)
-		{
-			if (Cache.TryGetValue(fullPath, out var cached) && cached.Modified == mtime)
-				return cached.Deserializer; //ncrunch: no coverage
-			if (Cache.TryGetValue(fullPath, out var stale))
-			{ //ncrunch: no coverage start
-				stale.Deserializer.LocalPackage.Dispose();
-				Cache.Remove(fullPath);
-			} //ncrunch: no coverage end
-			foreach (var key in Cache.Keys.ToList())
-			{
-				var entry = Cache[key];
-				if (entry.Deserializer.LocalPackage.Name == packageName &&
-					entry.Deserializer.LocalPackage.Parent == basePackage)
-				{
-					entry.Deserializer.LocalPackage.Dispose();
-					Cache.Remove(key);
-				}
-			}
-			var deserializer = new BytecodeDeserializer(fullPath, basePackage);
-			Cache[fullPath] = new CachedEntry(deserializer, mtime);
-			return deserializer;
-		}
+		Package = new Package(basePackage, packageName + "-" + ++packageCounter);
+		(Instructions, PrecompiledMethods) = DeserializeAllFromEntries(entryBytesByType, Package);
 	}
 
-	public const string CachedBinaryPackagePrefix = "binary-";
-*/
-	private static Dictionary<string, List<Instruction>> DeserializeAllFromZip(ZipArchive zip,
-		Package package, string? sourceDirectory)
+	private static (Dictionary<string, List<Instruction>> RunInstructions,
+		Dictionary<string, List<Instruction>> MethodInstructions)
+		DeserializeAllFromEntries(Dictionary<string, byte[]> entryBytesByType, Package package)
 	{
-		var bytecodeEntries = zip.Entries.Where(entry =>
-			entry.Name.EndsWith(BytecodeEntryExtension, StringComparison.OrdinalIgnoreCase)).ToList();
-		if (bytecodeEntries.Count == 0)
-			throw new InvalidBytecodeFileException(BytecodeSerializer.Extension +
+		if (entryBytesByType.Count == 0)
+			throw new InvalidBytecodeFileException(BytecodeSerializer.Extension + //ncrunch: no coverage
 				" ZIP contains no entries");
-		var typeNames = new string[bytecodeEntries.Count];
-		for (var entryIndex = 0; entryIndex < bytecodeEntries.Count; entryIndex++)
+		var runInstructions = new Dictionary<string, List<Instruction>>(StringComparer.Ordinal);
+		var methodInstructions = new Dictionary<string, List<Instruction>>(StringComparer.Ordinal);
+		foreach (var entry in entryBytesByType)
 		{
-			typeNames[entryIndex] = Path.GetFileNameWithoutExtension(bytecodeEntries[entryIndex].Name);
-			EnsureTypeExists(package, typeNames[entryIndex], sourceDirectory);
+			var typeEntry = new TypeEntryData(entry.Key, entry.Value);
+			ReadTypeMetadata(typeEntry, package);
+			ReadTypeInstructions(typeEntry, package, runInstructions, methodInstructions);
 		}
-		var result = new Dictionary<string, List<Instruction>>(bytecodeEntries.Count, StringComparer.Ordinal);
-		for (var entryIndex = 0; entryIndex < bytecodeEntries.Count; entryIndex++)
-		{
-			using var entryStream = bytecodeEntries[entryIndex].Open();
-			result[typeNames[entryIndex]] = DeserializeEntry(entryStream, package);
-		}
-		return result;
+		return (runInstructions, methodInstructions);
 	}
 
-	private const string BytecodeEntryExtension = ".bytecode";
-
-	private static void EnsureTypeExists(Package package, string typeName, string? sourceDirectory)
+	private static void EnsureTypeExists(Package package, string typeName)
 	{
-		if (package.FindDirectType(typeName) != null)
-			return; //ncrunch: no coverage
-		if (sourceDirectory != null)
-		{
-			var sourceFile = Path.Combine(sourceDirectory, typeName + Type.Extension);
-			if (File.Exists(sourceFile))
-			{
-				new Type(package, new TypeLines(typeName, File.ReadAllLines(sourceFile))).
-					ParseMembersAndMethods(new MethodExpressionParser());
-				return;
-			}
-		}
-		new Type(package, new TypeLines(typeName, Method.Run)).ParseMembersAndMethods(
-			new MethodExpressionParser());
+		if (package.FindDirectType(typeName) == null)
+			new Type(package, new TypeLines(typeName, Method.Run)).ParseMembersAndMethods(
+				new MethodExpressionParser());
 	}
+
+	public static string BuildMethodInstructionKey(string typeName, string methodName,
+		int parameterCount) =>
+		typeName + "|" + methodName + "|" + parameterCount;
 
 	internal static List<Instruction> DeserializeEntry(Stream entryStream, Package package)
 	{
@@ -138,7 +264,7 @@ testing
 
 	private static List<Instruction> ReadEntry(BinaryReader reader, Package package)
 	{
-		ValidateMagicAndVersion(reader);
+		_ = ValidateMagicAndVersion(reader);
 		var tableArray = new NameTable(reader).ToArray();
 		var numberType = package.GetType(Type.Number);
 		var count = reader.Read7BitEncodedInt();
@@ -148,15 +274,16 @@ testing
 		return instructions;
 	}
 
-	private static void ValidateMagicAndVersion(BinaryReader reader)
+	private static byte ValidateMagicAndVersion(BinaryReader reader)
 	{
 		Span<byte> magic = stackalloc byte[BytecodeSerializer.EntryMagicBytes.Length];
 		_ = reader.Read(magic);
 		if (!magic.SequenceEqual(BytecodeSerializer.EntryMagicBytes))
 			throw new InvalidBytecodeFileException("Entry does not start with 'Strict' magic bytes");
 		var fileVersion = reader.ReadByte();
-		if (fileVersion is 0 or > BytecodeSerializer.Version)
-			throw new InvalidVersion(fileVersion);
+		return fileVersion is 0 or > BytecodeSerializer.Version
+			? throw new InvalidVersion(fileVersion)
+			: fileVersion;
 	}
 
 	public sealed class InvalidVersion(byte fileVersion) : Exception("File version: " +
@@ -447,7 +574,7 @@ testing
 			return package.GetType(typeName); //ncrunch: no coverage
 		if (char.IsLower(typeName[0]))
 			throw new TypeNotFoundForBytecode(typeName);
-		EnsureTypeExists(package, typeName, null);
+		EnsureTypeExists(package, typeName);
 		return package.GetType(typeName);
 	}
 
@@ -477,7 +604,7 @@ testing
 	private static string BuildMethodHeader(string methodName, int paramCount, Type returnType)
 	{
 		if (paramCount == 0)
-			return returnType.IsNone
+			return returnType.IsNone //ncrunch: no coverage
 				? methodName
 				: methodName + " " + returnType.Name;
 		var parameters = Enumerable.Range(0, paramCount).Select(parameterIndex =>
@@ -487,4 +614,27 @@ testing
 
 	private static readonly string[] ParameterNames =
 		["first", "second", "third", "fourth", "fifth", "sixth", "seventh", "eighth"];
+	private static int packageCounter;
+
+	private static string ReadTypeReferenceName(BinaryReader reader, string[] table) =>
+		reader.ReadByte() switch
+		{
+			TypeRefNone => Type.None,
+			TypeRefBoolean => Type.Boolean, //ncrunch: no coverage
+			TypeRefNumber => Type.Number,
+			TypeRefText => Type.Text,
+			TypeRefList => Type.List, //ncrunch: no coverage
+			TypeRefDictionary => Type.Dictionary, //ncrunch: no coverage
+			TypeRefCustom => table[reader.Read7BitEncodedInt()],
+			var unknownType => throw new InvalidBytecodeFileException( //ncrunch: no coverage
+				"Unknown type ref: " + unknownType)
+		};
+
+	private const byte TypeRefNone = 0;
+	private const byte TypeRefBoolean = 1;
+	private const byte TypeRefNumber = 2;
+	private const byte TypeRefText = 3;
+	private const byte TypeRefList = 4;
+	private const byte TypeRefDictionary = 5;
+	private const byte TypeRefCustom = byte.MaxValue;
 }

@@ -78,16 +78,28 @@ public sealed class List : Value
 
 	public ValueInstance? TryGetConstantData()
 	{
+		if (cachedData.HasValue)
+			return cachedData;
 		if (!IsConstant)
 			return null;
 		var valueInstances = new ValueInstance[Values.Count];
 		for (var i = 0; i < Values.Count; i++)
-			valueInstances[i] = ((Value)Values[i]).Data;
-		return new ValueInstance(ReturnType, valueInstances);
+			if (Values[i] is List innerList)
+			{
+				// Recursively evaluate nested list constants; List.Data throws NotSupportedException so we use TryGetConstantData
+				var innerData = innerList.TryGetConstantData();
+				if (innerData == null)
+					return null; //ncrunch: no coverage, only when we have mutable items
+				valueInstances[i] = innerData.Value;
+			}
+			else
+				valueInstances[i] = ((Value)Values[i]).Data;
+		cachedData = new ValueInstance(ReturnType, valueInstances);
+		return cachedData;
 	}
 
-	public new ValueInstance Data =>
-		throw new NotSupportedException("Use TryGetConstantData instead!");
+	private ValueInstance? cachedData;
+	public new ValueInstance Data => throw new NotSupportedException("Use TryGetConstantData instead!");
 
 	public override string ToString()
 	{

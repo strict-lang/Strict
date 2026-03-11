@@ -122,4 +122,6 @@ internal sealed class NameTable : IEnumerable<string>
 		foreach (var s in this)
 			writer.Write(s);
 	}
+
+	public NameTable CollectInstruction(Instruction instruction) => CollectStrings(instruction);
 }

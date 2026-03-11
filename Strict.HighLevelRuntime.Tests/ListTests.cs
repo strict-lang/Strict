@@ -152,4 +152,17 @@ public sealed class ListTests
 			ParseMembersAndMethods(new MethodExpressionParser());
 		interpreter.Execute(type.Methods[0], interpreter.noneInstance, []);
 	}
+
+	[Test]
+	public void ConstantListExpressionCachesDataBetweenCalls()
+	{
+		using var type = new Type(TestPackage.Instance,
+				new TypeLines("ConstListCache",
+					"has number",
+					"TestReverse Boolean",
+					"\t(1, 2).Reverse is (2, 1)")).
+			ParseMembersAndMethods(new MethodExpressionParser());
+		Assert.That(interpreter.Execute(type.Methods[0], interpreter.noneInstance, []).Boolean, Is.True);
+		Assert.That(interpreter.Execute(type.Methods[0], interpreter.noneInstance, []).Boolean, Is.True);
+	}
 }

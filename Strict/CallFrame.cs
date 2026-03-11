@@ -55,17 +55,6 @@ internal sealed class CallFrame(CallFrame? parent = null)
 		}
 	}
 
-	internal bool ContainsKey(string name)
-	{
-		if (variables != null && variables.ContainsKey(name))
-			return true;
-		return parent != null && parent.ContainsKeyAsMember(name);
-	}
-
-	private bool ContainsKeyAsMember(string name) =>
-		memberNames != null && memberNames.Contains(name) &&
-		variables != null && variables.ContainsKey(name);
-
 	internal void Clear()
 	{
 		variables?.Clear();

@@ -376,19 +376,24 @@ public sealed class BytecodeGenerator
 	private void GenerateLoopInstructions(For forExpression, string? aggregationTarget = null)
 	{
 		var instructionCountBeforeLoopStart = instructions.Count;
+		LoopBeginInstruction loopBegin;
 		if (forExpression.Iterator is MethodCall rangeExpression &&
 			forExpression.Iterator.ReturnType.Name == Type.Range &&
 			rangeExpression.Method.Name == Method.From)
-			GenerateInstructionForRangeLoopInstruction(rangeExpression);
+			loopBegin = GenerateInstructionForRangeLoopInstruction(rangeExpression);
 		else
 		{
 			GenerateInstructionFromExpression(forExpression.Iterator);
-			instructions.Add(new LoopBeginInstruction(registry.PreviousRegister));
+			loopBegin = new LoopBeginInstruction(registry.PreviousRegister);
+			instructions.Add(loopBegin);
 		}
 		GenerateInstructionsForLoopBody(forExpression);
 		if (!string.IsNullOrWhiteSpace(aggregationTarget))
 			AddNumberAggregation(aggregationTarget);
-		instructions.Add(new LoopEndInstruction(instructions.Count - instructionCountBeforeLoopStart));
+		instructions.Add(new LoopEndInstruction(instructions.Count - instructionCountBeforeLoopStart)
+		{
+			Begin = loopBegin
+		});
 	}
 
 	private void AddNumberAggregation(string aggregationTarget)
@@ -401,13 +406,15 @@ public sealed class BytecodeGenerator
 		instructions.Add(new StoreFromRegisterInstruction(registry.PreviousRegister, aggregationTarget));
 	}
 
-	private void GenerateInstructionForRangeLoopInstruction(MethodCall rangeExpression)
+	private LoopBeginInstruction GenerateInstructionForRangeLoopInstruction(MethodCall rangeExpression)
 	{
 		GenerateInstructionFromExpression(rangeExpression.Arguments[0]);
 		var startIndexRegister = registry.PreviousRegister;
 		GenerateInstructionFromExpression(rangeExpression.Arguments[1]);
 		var endIndexRegister = registry.PreviousRegister;
-		instructions.Add(new LoopBeginInstruction(startIndexRegister, endIndexRegister));
+		var loopBegin = new LoopBeginInstruction(startIndexRegister, endIndexRegister);
+		instructions.Add(loopBegin);
+		return loopBegin;
 	}
 
 	private void GenerateInstructionsForLoopBody(For forExpression)
