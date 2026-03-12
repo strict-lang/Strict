@@ -25,12 +25,12 @@ public sealed class RunnerTests
 	[Test]
 	public void RunSimpleCalculator()
 	{
-		using var _ = new Runner(TestPackage.Instance, StrictFilePath).Run();
+		using var _ = new Runner(TestPackage.Instance, SimpleCalculatorFilePath).Run();
 		Assert.That(writer.ToString(),
 			Does.StartWith("2 + 3 = 5" + Environment.NewLine + "2 * 3 = 6"));
 	}
 
-	private string StrictFilePath => GetExamplesFilePath("SimpleCalculator");
+	private string SimpleCalculatorFilePath => GetExamplesFilePath("SimpleCalculator");
 
 	public static string GetExamplesFilePath(string filename)
 	{
@@ -40,6 +40,18 @@ public sealed class RunnerTests
 		if (File.Exists(localPath))
 			return localPath;
 		return Path.Combine(FindRepoRoot(), "Examples", filename + Language.Type.Extension);
+	}
+
+	public string GetExamplesBinaryFile(string filename)
+	{
+		var localPath = Path.ChangeExtension(GetExamplesFilePath(filename), BytecodeSerializer.Extension);
+		if (File.Exists(localPath))
+			return localPath;
+		new Runner(TestPackage.Instance, GetExamplesFilePath(filename)).Run().Dispose();
+		Assert.That(File.Exists(localPath), Is.True,
+			BytecodeSerializer.Extension + " file should have been created");
+		writer.GetStringBuilder().Clear();
+		return localPath;
 	}
 
 	private static string FindRepoRoot()
@@ -57,18 +69,14 @@ public sealed class RunnerTests
 	[Test]
 	public void RunWithFullDiagnostics()
 	{
-		using var _ = new Runner(TestPackage.Instance, StrictFilePath, true).Run();
+		using var _ = new Runner(TestPackage.Instance, SimpleCalculatorFilePath, true).Run();
 		Assert.That(writer.ToString().Length, Is.GreaterThan(1000));
 	}
 
 	[Test]
 	public void RunFromBytecodeFileProducesSameOutput()
 	{
-		var binaryFilePath = Path.ChangeExtension(StrictFilePath, BytecodeSerializer.Extension);
-		new Runner(TestPackage.Instance, StrictFilePath).Run().Dispose();
-		Assert.That(File.Exists(binaryFilePath), Is.True,
-			BytecodeSerializer.Extension + " file should have been created");
-		writer.GetStringBuilder().Clear();
+		var binaryFilePath = GetExamplesBinaryFile("SimpleCalculator");
 		using var runner = new Runner(TestPackage.Instance, binaryFilePath).Run();
 		Assert.That(writer.ToString(),
 			Does.StartWith("2 + 3 = 5" + Environment.NewLine + "2 * 3 = 6"));
@@ -79,11 +87,11 @@ public sealed class RunnerTests
 	{
 		var tempDirectory = Path.Combine(Path.GetTempPath(), "Strict" + Guid.NewGuid().ToString("N"));
 		Directory.CreateDirectory(tempDirectory);
-		var copiedSourceFilePath = Path.Combine(tempDirectory, Path.GetFileName(StrictFilePath));
+		var copiedSourceFilePath = Path.Combine(tempDirectory, Path.GetFileName(SimpleCalculatorFilePath));
 		var copiedBinaryFilePath = Path.ChangeExtension(copiedSourceFilePath, BytecodeSerializer.Extension);
 		try
 		{
-			File.Copy(StrictFilePath, copiedSourceFilePath);
+			File.Copy(SimpleCalculatorFilePath, copiedSourceFilePath);
 			new Runner(TestPackage.Instance, copiedSourceFilePath).Run().Dispose();
 			Assert.That(File.Exists(copiedBinaryFilePath), Is.True);
 			writer.GetStringBuilder().Clear();
@@ -163,17 +171,17 @@ public sealed class RunnerTests
 	[Test]
 	public void RunWithPlatformWindowsThrowsNotSupportedForProgramsWithLoggerCalls()
 	{
-		using var runner = new Runner(TestPackage.Instance, StrictFilePath);
+		using var runner = new Runner(TestPackage.Instance, SimpleCalculatorFilePath);
 		Assert.Throws<NotSupportedException>(() => runner.Run(Platform.Windows));
 	}
 
 	[Test]
 	public void RunWithNoPlatformDoesNotCreateAsmFile()
 	{
-		var asmFilePath = Path.ChangeExtension(StrictFilePath, ".asm");
+		var asmFilePath = Path.ChangeExtension(SimpleCalculatorFilePath, ".asm");
 		if (File.Exists(asmFilePath))
 			File.Delete(asmFilePath);
-		using var runner = new Runner(TestPackage.Instance, StrictFilePath).Run();
+		using var runner = new Runner(TestPackage.Instance, SimpleCalculatorFilePath).Run();
 		Assert.That(File.Exists(asmFilePath), Is.False,
 			".asm file should NOT be created without a platform flag");
 		Assert.That(writer.ToString(), Does.Not.Contain("NASM assembly"));
@@ -192,12 +200,12 @@ public sealed class RunnerTests
 	[Test]
 	public void AsmFileIsNotCreatedWhenRunningFromPrecompiledBytecode()
 	{
-		var asmPath = Path.ChangeExtension(StrictFilePath, ".asm");
+		var asmPath = Path.ChangeExtension(SimpleCalculatorFilePath, ".asm");
 		writer.GetStringBuilder().Clear();
 		if (File.Exists(asmPath))
 			File.Delete(asmPath);
 		using var runner = new Runner(TestPackage.Instance,
-			Path.ChangeExtension(StrictFilePath, BytecodeSerializer.Extension));
+			Path.ChangeExtension(SimpleCalculatorFilePath, BytecodeSerializer.Extension));
 		runner.Run();
 		Assert.That(File.Exists(asmPath), Is.False,
 			".asm file should not be created when loading precompiled bytecode");
@@ -207,7 +215,7 @@ public sealed class RunnerTests
 	public void SaveStrictBinaryWithTypeBytecodeEntriesOnly()
 	{
 		using var archive = System.IO.Compression.ZipFile.OpenRead(
-			Path.ChangeExtension(StrictFilePath, BytecodeSerializer.Extension));
+			Path.ChangeExtension(SimpleCalculatorFilePath, BytecodeSerializer.Extension));
 		var entries = archive.Entries.Select(entry => entry.FullName).ToList();
 		Assert.That(
 			entries.All(entry => entry.EndsWith(BytecodeSerializer.BytecodeEntryExtension,
@@ -222,8 +230,8 @@ public sealed class RunnerTests
 	[Test]
 	public void ExportOnlyUsedMethodsForBaseTypes()
 	{
-		var binaryFilePath = Path.ChangeExtension(StrictFilePath, BytecodeSerializer.Extension);
-		new Runner(TestPackage.Instance, StrictFilePath).Run().Dispose();
+		var binaryFilePath = Path.ChangeExtension(SimpleCalculatorFilePath, BytecodeSerializer.Extension);
+		new Runner(TestPackage.Instance, SimpleCalculatorFilePath).Run().Dispose();
 		using var archive = System.IO.Compression.ZipFile.OpenRead(binaryFilePath);
 		var numberMethodCount = ReadMethodHeaderCount(archive, "Strict/Number.bytecode");
 		Assert.That(numberMethodCount, Is.LessThanOrEqualTo(3));
