@@ -511,6 +511,56 @@ public sealed class InstructionsToAssemblyTests
 			compiler.CompileForPlatform("TestFunc", instructions, Platform.Linux));
 	}
 
+	[Test]
+	public void PrintInstructionEmitsLinuxPrintfWithDataSection()
+	{
+		var instructions = new List<Instruction>
+		{
+			new PrintInstruction("Hello World"),
+			new ReturnInstruction(Register.R0)
+		};
+		var assembly = compiler.CompileForPlatform("Run", instructions, Platform.Linux);
+		Assert.That(assembly, Does.Contain("extern printf"));
+		Assert.That(assembly, Does.Contain("section .data"));
+		Assert.That(assembly, Does.Contain("\"Hello World\""));
+		Assert.That(assembly, Does.Contain("lea rdi, [rel str_0]"));
+		Assert.That(assembly, Does.Contain("call printf"));
+		Assert.That(assembly, Does.Contain("global main"));
+		Assert.That(assembly, Does.Contain("main:"));
+	}
+
+	[Test]
+	public void PrintInstructionWithNumberEmitsLinuxPrintfWithFormat()
+	{
+		var instructions = new List<Instruction>
+		{
+			new LoadConstantInstruction(Register.R0, new ValueInstance(NumberType, 42.0)),
+			new PrintInstruction("Result = ", Register.R0),
+			new ReturnInstruction(Register.R0)
+		};
+		var assembly = compiler.CompileForPlatform("Run", instructions, Platform.Linux);
+		Assert.That(assembly, Does.Contain("\"Result = %g\""));
+		Assert.That(assembly, Does.Contain("lea rdi, [rel str_0]"));
+		Assert.That(assembly, Does.Contain("mov eax, 1"));
+		Assert.That(assembly, Does.Contain("call printf"));
+	}
+
+	[Test]
+	public void PrintInstructionEmitsWindowsPrintfWithShadowSpace()
+	{
+		var instructions = new List<Instruction>
+		{
+			new PrintInstruction("Output"),
+			new ReturnInstruction(Register.R0)
+		};
+		var assembly = compiler.CompileForPlatform("Run", instructions, Platform.Windows);
+		Assert.That(assembly, Does.Contain("extern printf"));
+		Assert.That(assembly, Does.Contain("lea rcx, [rel str_0]"));
+		Assert.That(assembly, Does.Contain("sub rsp, 32"));
+		Assert.That(assembly, Does.Contain("call printf"));
+		Assert.That(assembly, Does.Contain("add rsp, 32"));
+	}
+
 	private static Method CreateSingleMethod(string typeName, params string[] methodLines) =>
 		new Type(TestPackage.Instance, new TypeLines(typeName, methodLines)).
 			ParseMembersAndMethods(new MethodExpressionParser()).Methods[0];

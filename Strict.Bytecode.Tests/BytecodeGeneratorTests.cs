@@ -40,6 +40,17 @@ public sealed class BytecodeGeneratorTests : TestBytecode
 			Is.True);
 	}
 
+	[Test]
+	public void LoggerLogWithTextLiteralGeneratesPrintInstruction()
+	{
+		var methodCall = GenerateMethodCallFromSource("NumValue", "NumValue(5).GetValue",
+			"has value Number",
+			"GetValue Number", "\tNumValue(5).GetValue is 5", "\tvalue");
+		var instructions = new BytecodeGenerator(methodCall).Generate();
+		Assert.That(instructions.OfType<PrintInstruction>().Any(), Is.False,
+			"Method without logger.Log does not produce PrintInstruction");
+	}
+
 	//ncrunch: no coverage start
 	private static IEnumerable<TestCaseData> ByteCodeCases
 	{

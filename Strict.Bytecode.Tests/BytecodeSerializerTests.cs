@@ -665,6 +665,38 @@ public sealed class BytecodeSerializerTests : TestBytecode
 		writer.Write(BytecodeSerializer.Version);
 	}
 
+	[Test]
+	public void RoundTripPrintInstruction()
+	{
+		var instructions = new List<Instruction>
+		{
+			new PrintInstruction("Hello World"),
+			new ReturnInstruction(Register.R0)
+		};
+		var loaded = RoundTripToInstructions("TestType", instructions);
+		Assert.That(loaded.Count, Is.EqualTo(2));
+		Assert.That(loaded[0], Is.InstanceOf<PrintInstruction>());
+		var print = (PrintInstruction)loaded[0];
+		Assert.That(print.TextPrefix, Is.EqualTo("Hello World"));
+		Assert.That(print.ValueRegister, Is.Null);
+	}
+
+	[Test]
+	public void RoundTripPrintInstructionWithNumberRegister()
+	{
+		var instructions = new List<Instruction>
+		{
+			new PrintInstruction("Value = ", Register.R2),
+			new ReturnInstruction(Register.R0)
+		};
+		var loaded = RoundTripToInstructions("PrintTypePair", instructions);
+		Assert.That(loaded.Count, Is.EqualTo(2));
+		var print = (PrintInstruction)loaded[0];
+		Assert.That(print.TextPrefix, Is.EqualTo("Value = "));
+		Assert.That(print.ValueRegister, Is.EqualTo(Register.R2));
+		Assert.That(print.ValueIsText, Is.False);
+	}
+
 	private static void WriteNameTable(BinaryWriter writer, string[] names)
 	{
 		writer.Write7BitEncodedInt(names.Length);

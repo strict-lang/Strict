@@ -79,6 +79,7 @@ public sealed class ConstantFoldingOptimizer : InstructionOptimizer
 			Invoke invoke => invoke.Register == register,
 			BinaryInstruction binary when binary.Registers.Length >= 3 => binary.Registers[2] == register,
 			LoadConstantInstruction loadConstant => loadConstant.Register == register,
+			PrintInstruction => false,
 			_ => false
 		};
 

@@ -243,7 +243,7 @@ public sealed class BytecodeGenerator
 		if (arg is Binary binary)
 		{
 			var prefix = ExtractTextPrefix(binary.Instance);
-			var valueExpr = binary.Arguments[0] is To { Instance: { } inner } ? inner : binary.Arguments[0];
+			var valueExpr = UnwrapToConversion(binary.Arguments[0]);
 			GenerateInstructionFromExpression(valueExpr);
 			instructions.Add(new PrintInstruction(prefix, registry.PreviousRegister,
 				valueExpr.ReturnType.IsText));
@@ -267,6 +267,9 @@ public sealed class BytecodeGenerator
 			To { Instance: { } inner } => ExtractTextPrefix(inner),
 			_ => ""
 		};
+
+	private static Expression UnwrapToConversion(Expression expr) =>
+		expr is To { Instance: { } inner } ? inner : expr;
 
 	private bool TryGenerateInstructionForCollectionManipulation(MethodCall methodCall)
 	{
