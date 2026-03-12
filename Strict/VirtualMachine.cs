@@ -103,20 +103,20 @@ public sealed class VirtualMachine(Package package,
 	{
 		if (instruction is not LoopEndInstruction loopEnd)
 			return;
-		var loopBegin = loopEnd.Begin ?? FindLoopBeginFromSteps(loopEnd.Steps);
+		var loopBegin = loopEnd.Begin ?? FindLoopBeginByScanning(loopEnd.Steps);
 		loopBegin.LoopCount--;
 		if (loopBegin.LoopCount <= 0)
 			return;
-		instructionIndex -= loopEnd.Steps + 1;
+		instructionIndex = instructions.IndexOf(loopBegin) - 1;
 	}
 
 	/// <summary>
-	/// Fallback for manually constructed or deserialized LoopEndInstructions that don't have
-	/// Begin set. Scans forward from the computed base position (at most 2 steps for range loops).
+	/// Fallback for deserialized LoopEndInstructions that don't have Begin set.
+	/// Uses Steps as a hint to find the LoopBeginInstruction by scanning.
 	/// </summary>
-	private LoopBeginInstruction FindLoopBeginFromSteps(int steps)
+	private LoopBeginInstruction FindLoopBeginByScanning(int steps)
 	{
-		var idx = instructionIndex - steps;
+		var idx = Math.Max(0, instructionIndex - steps);
 		while (idx < instructions.Count && instructions[idx] is not LoopBeginInstruction)
 			idx++; //ncrunch: no coverage
 		return idx < instructions.Count
