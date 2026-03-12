@@ -230,16 +230,16 @@ public sealed class BytecodeGenerator
 		if (memberCall.Member.Type.Name is not (Type.Logger or Type.TextWriter or Type.System))
 			return false;
 		if (methodCall.Arguments.Count == 0)
-		{
+		{ //ncrunch: no coverage start
 			instructions.Add(new PrintInstruction(""));
 			return true;
-		}
+		} //ncrunch: no coverage end
 		var arg = methodCall.Arguments[0];
 		if (arg is Value textValue && textValue.Data.IsText)
-		{
+		{ //ncrunch: no coverage start
 			instructions.Add(new PrintInstruction(textValue.Data.Text));
 			return true;
-		}
+		} //ncrunch: no coverage end
 		if (arg is Binary binary)
 		{
 			var prefix = ExtractTextPrefix(binary.Instance);
@@ -256,16 +256,17 @@ public sealed class BytecodeGenerator
 				argMethodCall.ReturnType.IsText));
 			return true;
 		}
+		//ncrunch: no coverage start
 		instructions.Add(new PrintInstruction(arg.ToString()));
 		return true;
-	}
+	} //ncrunch: no coverage end
 
 	private static string ExtractTextPrefix(Expression? expr) =>
 		expr switch
 		{
 			Value v when v.Data.IsText => v.Data.Text,
-			To { Instance: { } inner } => ExtractTextPrefix(inner),
-			_ => ""
+			To { Instance: { } inner } => ExtractTextPrefix(inner), //ncrunch: no coverage
+			_ => "" //ncrunch: no coverage
 		};
 
 	private static Expression UnwrapToConversion(Expression expr) =>

@@ -4,6 +4,5 @@ public enum Platform
 {
 	Windows,
 	Linux,
-	LinuxArm,
 	MacOS
 }

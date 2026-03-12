@@ -68,7 +68,8 @@ public sealed class Runner : IDisposable
 	public Runner Run(Platform? targetPlatform = null, params string[] programArgs) =>
 		deserializer != null
 			? targetPlatform.HasValue
-				?	SavePlatformExecutable(deserializer.Instructions[mainType.Name], targetPlatform.Value)
+				?	SavePlatformExecutable(deserializer.Instructions[mainType.Name], targetPlatform.Value,
+					deserializer.PrecompiledMethods)
 				: RunFromPreloadedBytecode(deserializer.Instructions[mainType.Name], programArgs)
 			: RunFromSource(targetPlatform, programArgs);
 
@@ -96,7 +97,7 @@ public sealed class Runner : IDisposable
 		var instructions = GenerateBytecode();
 		var optimizedInstructions = OptimizeBytecode(instructions);
 		if (targetPlatform.HasValue)
-			SavePlatformExecutable(optimizedInstructions, targetPlatform.Value);
+			SavePlatformExecutable(optimizedInstructions, targetPlatform.Value, null);
 		else
 		{
 			ExecuteBytecode(optimizedInstructions, null, BuildProgramArguments(programArgs));
@@ -269,7 +270,8 @@ public sealed class Runner : IDisposable
 			runMethod = mainType.Methods.FirstOrDefault(method =>
 				method.Name == Method.Run && method.Parameters.Count == 1 && method.Parameters[0].Type.IsList);
 		if (runMethod == null)
-			throw new NotSupportedException("No Run method with " + programArgs.Length + " arguments " +
+			throw new NotSupportedException( //ncrunch: no coverage
+				"No Run method with " + programArgs.Length + " arguments " +
 				"found: " + ParsingFailed.GetClickableStacktraceLine(mainType, 0, Method.Run));
 		var numberType = package.GetType(Type.Number);
 		var numbersType = package.GetListImplementationType(numberType);
@@ -293,10 +295,12 @@ public sealed class Runner : IDisposable
 	/// Always saves a .asm file; then invokes NASM and the platform linker.
 	/// Throws <see cref="ToolNotFoundException"/> if required tools are missing.
 	/// </summary>
-	private Runner SavePlatformExecutable(List<Instruction> optimizedInstructions, Platform platform)
+	private Runner SavePlatformExecutable(List<Instruction> optimizedInstructions, Platform platform,
+		IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods)
 	{
 		var compiler = new InstructionsToAssembly();
-		var assemblyText = compiler.CompileForPlatform(mainType.Name, optimizedInstructions, platform);
+		var assemblyText = compiler.CompileForPlatform(mainType.Name, optimizedInstructions, platform,
+			precompiledMethods);
 		var asmPath = Path.Combine(currentFolder, mainType.Name + ".asm");
 		File.WriteAllText(asmPath, assemblyText);
 		Console.WriteLine("Saved " + platform + " NASM assembly to: " + asmPath);
@@ -465,13 +469,14 @@ public sealed class Runner : IDisposable
 		switch (expression)
 		{
 		case MethodCall methodCall:
+			//ncrunch: no coverage start
 			EnqueueCalledMethod(methodCall.Method, methodsToCompile, compiledMethodKeys);
 			if (methodCall.Instance != null)
 				EnqueueMethodsFromExpression(methodCall.Instance, methodsToCompile,
 					compiledMethodKeys);
 			foreach (var argument in methodCall.Arguments)
 				EnqueueMethodsFromExpression(argument, methodsToCompile, compiledMethodKeys);
-			break;
+			break; //ncrunch: no coverage end
 		case MemberCall { Instance: not null } memberCall:
 			// ReSharper disable once TailRecursiveCall
 			//ncrunch: no coverage start
@@ -512,8 +517,9 @@ public sealed class Runner : IDisposable
 			? targetType.Methods.FirstOrDefault(m => m.Name == methodName && m.Parameters.Count == 0) ??
 			  throw new InvalidOperationException(
 				  "Method " + methodName + " not found on " + targetType.Name)
-			: targetType.Methods.FirstOrDefault(m => m.Name == Method.Run && m.Parameters.Count == 0) ??
-			  throw new InvalidOperationException("No Run method found on " + targetType.Name);
+			: targetType.Methods.FirstOrDefault(
+				m => m.Name == Method.Run && m.Parameters.Count == 0) ?? //ncrunch: no coverage
+				throw new InvalidOperationException("No Run method found on " + targetType.Name);
 		var body = method.GetBodyAndParseIfNeeded();
 		var expressions = body is Body bodyExpr ? bodyExpr.Expressions : [body];
 		var instance = new ValueInstance(targetType, BuildInstanceValueArray(targetType, constructorArgs));

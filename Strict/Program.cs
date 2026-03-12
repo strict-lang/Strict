@@ -43,10 +43,8 @@ public static class Program
 		Console.WriteLine("                 Requires: nasm (https://nasm.us) and gcc (https://www.mingw-w64.org)");
 		Console.WriteLine("  -Linux         Compile to a native Linux x64 executable");
 		Console.WriteLine("                 Requires: nasm (https://nasm.us) and gcc");
-		Console.WriteLine("  -LinuxArm      Compile to a native Linux AArch64 executable (Raspberry Pi, Jetson, …)");
-		Console.WriteLine("                 Note: AArch64 code generation is not yet implemented");
 		Console.WriteLine("  -MacOS         Compile to a native macOS x64 executable");
-		Console.WriteLine("                 Requires: nasm (https://nasm.us) and clang");
+		Console.WriteLine("                 Requires: nasm (https://nasm.us) and clang (e.g. from Xcode)");
 		Console.WriteLine();
 		Console.WriteLine("Arguments:");
 		Console.WriteLine("  args...        Optional numbers passed to the program's Run(numbers) method");
@@ -98,8 +96,6 @@ public static class Program
 			return Platform.Windows;
 		if (options.Contains("-Linux"))
 			return Platform.Linux;
-		if (options.Contains("-LinuxArm"))
-			return Platform.LinuxArm;
 		if (options.Contains("-MacOS"))
 			return Platform.MacOS;
 		return null;

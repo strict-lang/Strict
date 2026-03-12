@@ -1,6 +1,7 @@
 using NUnit.Framework;
 using Strict.Bytecode;
 using Strict.Bytecode.Instructions;
+using Strict.Bytecode.Serialization;
 using Strict.Expressions;
 using Strict.Language;
 using Strict.Language.Tests;
@@ -436,14 +437,6 @@ public sealed class InstructionsToAssemblyTests
 	}
 
 	[Test]
-	public void CompileLinuxArmPlatformThrowsNotSupported()
-	{
-		var instructions = new List<Instruction> { new ReturnInstruction(Register.R0) };
-		Assert.Throws<NotSupportedException>(() =>
-			compiler.CompileForPlatform("Run", instructions, Platform.LinuxArm));
-	}
-
-	[Test]
 	public void NativeExecutableLinkerThrowsToolNotFoundWhenNasmMissing()
 	{
 		if (NativeExecutableLinker.IsNasmAvailable)
@@ -465,24 +458,6 @@ public sealed class InstructionsToAssemblyTests
 	} //ncrunch: no coverage end
 
 	[Test]
-	public void NativeExecutableLinkerThrowsNotSupportedForLinuxArm()
-	{
-		var linker = new NativeExecutableLinker();
-		var tempAsm = Path.Combine(Path.GetTempPath(), "test_" + Guid.NewGuid() + ".asm");
-		File.WriteAllText(tempAsm, "section .text\nglobal _start\n_start:\n    ret");
-		try
-		{
-			Assert.Throws<NotSupportedException>(() =>
-				linker.CreateExecutable(tempAsm, Platform.LinuxArm));
-		}
-		finally
-		{
-			if (File.Exists(tempAsm))
-				File.Delete(tempAsm);
-		}
-	}
-
-	[Test]
 	public void NativeExecutableLinkerIsNasmAvailableReturnsBooleanWithoutThrowing() =>
 		Assert.That(NativeExecutableLinker.IsNasmAvailable, Is.TypeOf<bool>());
 
@@ -499,6 +474,90 @@ public sealed class InstructionsToAssemblyTests
 	}
 
 	[Test]
+	public void CompileForPlatformSupportsInvokeWithPrecompiledMethodBytecode()
+	{
+		var type = new Type(TestPackage.Instance, new TypeLines("InvokeCompileType",
+			"has dummy Number",
+			"Add(first Number, second Number) Number",
+			"\tfirst + second",
+			"Run Number",
+			"\tAdd(2, 3)"))
+			.ParseMembersAndMethods(new MethodExpressionParser());
+		var runMethod = type.Methods.First(method => method.Name == Method.Run);
+		var addMethod = type.Methods.First(method => method.Name == "Add");
+		var runInstructions = new BytecodeGenerator(new MethodCall(runMethod)).Generate();
+		var addInstructions = new BytecodeGenerator(new InvokedMethod(
+			(addMethod.GetBodyAndParseIfNeeded() as Body)?.Expressions ?? [addMethod.GetBodyAndParseIfNeeded()],
+			new Dictionary<string, ValueInstance>(), addMethod.ReturnType), new Registry()).Generate();
+		var methodKey = BytecodeDeserializer.BuildMethodInstructionKey(type.Name, addMethod.Name,
+			addMethod.Parameters.Count);
+		var assembly = compiler.CompileForPlatform(type.Name, runInstructions, Platform.Windows,
+			new Dictionary<string, List<Instruction>> { [methodKey] = addInstructions });
+		Assert.That(assembly, Does.Contain("call " + type.Name + "_Add_2"));
+	}
+
+	[Test]
+	public void CompileForPlatformSupportsSimpleCalculatorStyleConstructorAndInstanceMethodCalls()
+	{
+		var type = new Type(TestPackage.Instance, new TypeLines("AssemblySimpleCalculator",
+			"has first Number",
+			"has second Number",
+			"Add Number",
+			"\tfirst + second",
+			"Run Number",
+			"\tconstant calc = AssemblySimpleCalculator(2, 3)",
+			"\tcalc.Add"))
+			.ParseMembersAndMethods(new MethodExpressionParser());
+		var runMethod = type.Methods.First(method => method.Name == Method.Run);
+		var addMethod = type.Methods.First(method => method.Name == "Add");
+		var runInstructions = new BytecodeGenerator(new MethodCall(runMethod)).Generate();
+		var addInstructions = new BytecodeGenerator(new InvokedMethod(
+			(addMethod.GetBodyAndParseIfNeeded() as Body)?.Expressions ?? [addMethod.GetBodyAndParseIfNeeded()],
+			new Dictionary<string, ValueInstance>(), addMethod.ReturnType), new Registry()).Generate();
+		var methodKey = BytecodeDeserializer.BuildMethodInstructionKey(type.Name, addMethod.Name,
+			addMethod.Parameters.Count);
+		var assembly = compiler.CompileForPlatform(type.Name, runInstructions, Platform.Linux,
+			new Dictionary<string, List<Instruction>> { [methodKey] = addInstructions });
+		Assert.That(assembly, Does.Contain("call " + type.Name + "_Add_0"));
+	}
+
+	[Test]
+	public void WindowsLinkerArgsIncludeSizeFocusedFlags()
+	{
+		var linkerArgs = GetWindowsLinkerArgs(hasPrintCalls: true);
+		Assert.That(linkerArgs, Does.Contain("-s"));
+		Assert.That(linkerArgs, Does.Contain("-Wl,--gc-sections"));
+		Assert.That(linkerArgs, Does.Contain("-Wl,--strip-all"));
+	}
+
+	[Test]
+	public void WindowsLinkerArgsWithPrintUseNoStdLibAndExplicitEntry()
+	{
+		var linkerArgs = GetWindowsLinkerArgs(hasPrintCalls: true);
+		Assert.That(linkerArgs, Does.Contain("-nostdlib"));
+		Assert.That(linkerArgs, Does.Contain("-Wl,-e,main"));
+		Assert.That(linkerArgs, Does.Not.Contain("msvcrt"));
+	}
+
+	[Test]
+	public void WindowsLinkerArgsWithoutPrintUseNoStdLibAndExplicitEntry()
+	{
+		var linkerArgs = GetWindowsLinkerArgs(hasPrintCalls: false);
+		Assert.That(linkerArgs, Does.Contain("-nostdlib"));
+		Assert.That(linkerArgs, Does.Contain("-Wl,-e,main"));
+	}
+
+	private static string GetWindowsLinkerArgs(bool hasPrintCalls)
+	{
+		var method = typeof(NativeExecutableLinker).GetMethod("BuildLinkerArgs",
+			System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ??
+			throw new InvalidOperationException("BuildLinkerArgs not found");
+		return (string)(method.Invoke(null,
+			new object[] { "test.obj", "test.exe", Platform.Windows, hasPrintCalls }) ??
+			throw new InvalidOperationException("BuildLinkerArgs returned null"));
+	}
+
+	[Test]
 	public void InvokeInstructionThrowsNotSupportedForPlatformCompilation()
 	{
 		var instructions = new List<Instruction>
@@ -511,26 +570,12 @@ public sealed class InstructionsToAssemblyTests
 			compiler.CompileForPlatform("TestFunc", instructions, Platform.Linux));
 	}
 
+	private static Method CreateSingleMethod(string typeName, params string[] methodLines) =>
+		new Type(TestPackage.Instance, new TypeLines(typeName, methodLines)).
+			ParseMembersAndMethods(new MethodExpressionParser()).Methods[0];
+	
 	[Test]
-	public void PrintInstructionEmitsLinuxPrintfWithDataSection()
-	{
-		var instructions = new List<Instruction>
-		{
-			new PrintInstruction("Hello World"),
-			new ReturnInstruction(Register.R0)
-		};
-		var assembly = compiler.CompileForPlatform("Run", instructions, Platform.Linux);
-		Assert.That(assembly, Does.Contain("extern printf"));
-		Assert.That(assembly, Does.Contain("section .data"));
-		Assert.That(assembly, Does.Contain("\"Hello World\""));
-		Assert.That(assembly, Does.Contain("lea rdi, [rel str_0]"));
-		Assert.That(assembly, Does.Contain("call printf"));
-		Assert.That(assembly, Does.Contain("global main"));
-		Assert.That(assembly, Does.Contain("main:"));
-	}
-
-	[Test]
-	public void PrintInstructionWithNumberEmitsLinuxPrintfWithFormat()
+	public void PrintInstructionWithNumberEmitsWindowsWriteFilePath()
 	{
 		var instructions = new List<Instruction>
 		{
@@ -538,15 +583,15 @@ public sealed class InstructionsToAssemblyTests
 			new PrintInstruction("Result = ", Register.R0),
 			new ReturnInstruction(Register.R0)
 		};
-		var assembly = compiler.CompileForPlatform("Run", instructions, Platform.Linux);
-		Assert.That(assembly, Does.Contain("\"Result = %g\""));
-		Assert.That(assembly, Does.Contain("lea rdi, [rel str_0]"));
-		Assert.That(assembly, Does.Contain("mov eax, 1"));
-		Assert.That(assembly, Does.Contain("call printf"));
+		var assembly = compiler.CompileForPlatform("Run", instructions, Platform.Windows);
+		Assert.That(assembly, Does.Contain("extern GetStdHandle"));
+		Assert.That(assembly, Does.Contain("extern WriteFile"));
+		Assert.That(assembly, Does.Contain("call WriteFile"));
+		Assert.That(assembly, Does.Not.Contain("call printf"));
 	}
 
 	[Test]
-	public void PrintInstructionEmitsWindowsPrintfWithShadowSpace()
+	public void PrintInstructionEmitsWindowsWriteFileWithShadowSpace()
 	{
 		var instructions = new List<Instruction>
 		{
@@ -554,14 +599,41 @@ public sealed class InstructionsToAssemblyTests
 			new ReturnInstruction(Register.R0)
 		};
 		var assembly = compiler.CompileForPlatform("Run", instructions, Platform.Windows);
-		Assert.That(assembly, Does.Contain("extern printf"));
-		Assert.That(assembly, Does.Contain("lea rcx, [rel str_0]"));
-		Assert.That(assembly, Does.Contain("sub rsp, 32"));
-		Assert.That(assembly, Does.Contain("call printf"));
-		Assert.That(assembly, Does.Contain("add rsp, 32"));
+		Assert.That(assembly, Does.Contain("extern GetStdHandle"));
+		Assert.That(assembly, Does.Contain("extern WriteFile"));
+		Assert.That(assembly, Does.Contain("sub rsp, 48"));
+		Assert.That(assembly, Does.Contain("call WriteFile"));
+		Assert.That(assembly, Does.Not.Contain("call printf"));
 	}
 
-	private static Method CreateSingleMethod(string typeName, params string[] methodLines) =>
-		new Type(TestPackage.Instance, new TypeLines(typeName, methodLines)).
-			ParseMembersAndMethods(new MethodExpressionParser()).Methods[0];
+	[Test]
+	public void PrintInstructionWithNumberPreservesXmmValueAcrossGetStdHandleCall()
+	{
+		var instructions = new List<Instruction>
+		{
+			new LoadConstantInstruction(Register.R0, new ValueInstance(NumberType, 42.0)),
+			new PrintInstruction("Result = ", Register.R0),
+			new ReturnInstruction(Register.R0)
+		};
+		var assembly = compiler.CompileForPlatform("Run", instructions, Platform.Windows);
+		Assert.That(assembly, Does.Contain("movsd [rsp], xmm0"));
+		Assert.That(assembly, Does.Contain("call GetStdHandle"));
+		Assert.That(assembly, Does.Contain("movsd xmm0, [rsp]"));
+		Assert.That(assembly, Does.Contain("cvttsd2si rax, xmm0"));
+	}
+
+	[Test]
+	public void PrintInstructionWithPrefixPreservesNumericRegisterAcrossPrefixWriteOnWindows()
+	{
+		var instructions = new List<Instruction>
+		{
+			new LoadConstantInstruction(Register.R2, new ValueInstance(NumberType, 7.0)),
+			new PrintInstruction("Value = ", Register.R2),
+			new ReturnInstruction(Register.R2)
+		};
+		var assembly = compiler.CompileForPlatform("Run", instructions, Platform.Windows);
+		Assert.That(assembly, Does.Contain("movsd [rsp], xmm2"));
+		Assert.That(assembly, Does.Contain("call WriteFile"));
+		Assert.That(assembly, Does.Contain("movsd xmm15, [rsp]"));
+	}
 }

@@ -1,0 +1,8 @@
+has logger
+AllocateMany Number
+	mutable values = List(Mutable(Number))
+	for 20000
+		values.Add(index)
+	values.Length
+Run
+	logger.Log("allocated numbers: " + AllocateMany)

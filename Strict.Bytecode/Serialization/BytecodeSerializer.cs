@@ -429,11 +429,12 @@ public sealed class BytecodeSerializer
 				WriteExpression(writer, memberCall.Instance, table); //ncrunch: no coverage
 			break;
 		case Binary binary:
+			//ncrunch: no coverage start
 			writer.Write((byte)ExpressionKind.BinaryExpr);
 			writer.Write7BitEncodedInt(table[binary.Method.Name]);
 			WriteExpression(writer, binary.Instance!, table);
 			WriteExpression(writer, binary.Arguments[0], table);
-			break;
+			break; //ncrunch: no coverage end
 		case MethodCall mc:
 			writer.Write((byte)ExpressionKind.MethodCallExpr);
 			writer.Write7BitEncodedInt(table[mc.Method.Type.Name]);
@@ -442,7 +443,7 @@ public sealed class BytecodeSerializer
 			writer.Write7BitEncodedInt(table[mc.ReturnType.Name]);
 			writer.Write(mc.Instance != null);
 			if (mc.Instance != null)
-				WriteExpression(writer, mc.Instance, table);
+				WriteExpression(writer, mc.Instance, table); //ncrunch: no coverage
 			writer.Write7BitEncodedInt(mc.Arguments.Count);
 			foreach (var arg in mc.Arguments)
 				WriteExpression(writer, arg, table);

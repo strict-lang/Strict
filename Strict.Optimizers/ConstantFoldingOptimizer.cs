@@ -68,19 +68,18 @@ public sealed class ConstantFoldingOptimizer : InstructionOptimizer
 			if (WritesToRegister(instruction, register))
 				return -1;
 		}
-		return -1;
+		return -1; //ncrunch: no coverage
 	}
 
 	private static bool WritesToRegister(Instruction instruction, Register register) =>
 		instruction switch
 		{
 			LoadVariableToRegister loadVariable => loadVariable.Register == register,
-			ListCallInstruction listCall => listCall.Register == register,
-			Invoke invoke => invoke.Register == register,
+			ListCallInstruction listCall => listCall.Register == register, //ncrunch: no coverage
+			Invoke invoke => invoke.Register == register, //ncrunch: no coverage
 			BinaryInstruction binary when binary.Registers.Length >= 3 => binary.Registers[2] == register,
 			LoadConstantInstruction loadConstant => loadConstant.Register == register,
-			PrintInstruction => false,
-			_ => false
+			_ => false //ncrunch: no coverage
 		};
 
 	private static bool IsArithmetic(InstructionType instruction) =>
@@ -96,14 +95,10 @@ public sealed class ConstantFoldingOptimizer : InstructionOptimizer
 				? right.Text
 				: right.ToExpressionCodeString())),
 			InstructionType.Add => new ValueInstance(left.GetType(), left.Number + right.Number),
-			InstructionType.Subtract => new ValueInstance(left.GetType(),
-				left.Number - right.Number),
-			InstructionType.Multiply => new ValueInstance(left.GetType(),
-				left.Number * right.Number),
-			InstructionType.Divide => new ValueInstance(left.GetType(),
-				left.Number / right.Number),
-			InstructionType.Modulo => new ValueInstance(left.GetType(),
-				left.Number % right.Number),
+			InstructionType.Subtract => new ValueInstance(left.GetType(),	left.Number - right.Number),
+			InstructionType.Multiply => new ValueInstance(left.GetType(),	left.Number * right.Number),
+			InstructionType.Divide => new ValueInstance(left.GetType(),	left.Number / right.Number),
+			InstructionType.Modulo => new ValueInstance(left.GetType(),	left.Number % right.Number),
 			_ => null //ncrunch: no coverage
 		};
 }

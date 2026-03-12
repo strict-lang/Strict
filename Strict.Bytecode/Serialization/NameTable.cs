@@ -109,8 +109,8 @@ internal sealed class NameTable : IEnumerable<string>
 				=> Add(val.Data.GetType().Name), //ncrunch: no coverage
 			MemberCall memberCall => Add(memberCall.Member.Name).Add(memberCall.Member.Type.Name).
 				CollectExpressionStrings(memberCall.Instance),
-			Binary binary => Add(binary.Method.Name).CollectExpressionStrings(binary.Instance).
-				CollectExpressionStrings(binary.Arguments[0]),
+			Binary binary => Add(binary.Method.Name). //ncrunch: no coverage
+				CollectExpressionStrings(binary.Instance).CollectExpressionStrings(binary.Arguments[0]),
 			MethodCall mc => CollectMethodCallStrings(mc),
 			_ => Add(expr.ToString()).Add(expr.ReturnType.Name)
 		};

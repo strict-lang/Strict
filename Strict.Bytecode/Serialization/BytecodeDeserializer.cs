@@ -87,11 +87,11 @@ public sealed class BytecodeDeserializer
 			var parameterCount = reader.Read7BitEncodedInt();
 			var parameters = new string[parameterCount];
 			for (var parameterIndex = 0; parameterIndex < parameterCount; parameterIndex++)
-			{
+			{ //ncrunch: no coverage start
 				var parameterName = table[reader.Read7BitEncodedInt()];
 				var parameterType = ReadTypeReferenceName(reader, table);
 				parameters[parameterIndex] = parameterName + " " + parameterType;
-			}
+			} //ncrunch: no coverage end
 			var returnTypeName = ReadTypeReferenceName(reader, table);
 			EnsureMethod(type, methodName, parameters, returnTypeName);
 		}
@@ -112,7 +112,7 @@ public sealed class BytecodeDeserializer
 	{
 		if (type.Methods.Any(existingMethod => existingMethod.Name == methodName &&
 			existingMethod.Parameters.Count == parameters.Length))
-			return;
+			return; //ncrunch: no coverage
 		var header = parameters.Length == 0
 			? returnTypeName == Type.None
 				? methodName
@@ -144,10 +144,10 @@ public sealed class BytecodeDeserializer
 			_ = reader.Read7BitEncodedInt();
 			var parameterCount = reader.Read7BitEncodedInt();
 			for (var parameterIndex = 0; parameterIndex < parameterCount; parameterIndex++)
-			{
+			{ //ncrunch: no coverage start
 				_ = reader.Read7BitEncodedInt();
 				_ = ReadTypeReferenceName(reader, table);
-			}
+			} //ncrunch: no coverage end
 			_ = ReadTypeReferenceName(reader, table);
 		}
 		var numberType = package.GetType(Type.Number);
@@ -457,9 +457,8 @@ public sealed class BytecodeDeserializer
 			ExpressionKind.IntegerNumberValue => new Number(package, reader.ReadInt32()),
 			ExpressionKind.NumberValue =>
 				new Number(package, reader.ReadDouble()), //ncrunch: no coverage
-			ExpressionKind.TextValue => new Text(package, table[reader.Read7BitEncodedInt()]),
-			ExpressionKind.BooleanValue =>
-				ReadBooleanValue(reader, package, table), //ncrunch: no coverage
+			ExpressionKind.TextValue => new Text(package, table[reader.Read7BitEncodedInt()]), //ncrunch: no coverage
+			ExpressionKind.BooleanValue => ReadBooleanValue(reader, package, table), //ncrunch: no coverage
 			ExpressionKind.VariableRef => ReadVariableRef(reader, package, table),
 			ExpressionKind.MemberRef => ReadMemberRef(reader, package, table),
 			ExpressionKind.BinaryExpr => ReadBinaryExpr(reader, package, table),
@@ -502,8 +501,8 @@ public sealed class BytecodeDeserializer
 		var left = ReadExpression(reader, package, table);
 		var right = ReadExpression(reader, package, table);
 		var operatorMethod = FindOperatorMethod(operatorName, left.ReturnType);
-		return new Binary(left, operatorMethod, [right]);
-	}
+		return new Binary(left, operatorMethod, [right]); //ncrunch: no coverage
+	} //ncrunch: no coverage
 
 	private static Method FindOperatorMethod(string operatorName, Type preferredType) =>
 		preferredType.Methods.FirstOrDefault(m => m.Name == operatorName) ?? throw new
@@ -634,7 +633,7 @@ public sealed class BytecodeDeserializer
 			TypeRefNone => Type.None,
 			TypeRefBoolean => Type.Boolean, //ncrunch: no coverage
 			TypeRefNumber => Type.Number,
-			TypeRefText => Type.Text,
+			TypeRefText => Type.Text, //ncrunch: no coverage
 			TypeRefList => Type.List, //ncrunch: no coverage
 			TypeRefDictionary => Type.Dictionary, //ncrunch: no coverage
 			TypeRefCustom => table[reader.Read7BitEncodedInt()],

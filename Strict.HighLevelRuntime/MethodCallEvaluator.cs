@@ -107,10 +107,8 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 				return Error(ListsHaveDifferentDimensions, ctx, call);
 			return op switch
 			{
-				BinaryOperator.Plus => CombineLists(left.List.ReturnType, left.List.Items,
-					right.List.Items),
-				BinaryOperator.Minus => SubtractLists(left.List.ReturnType, left.List.Items,
-					right.List.Items),
+				BinaryOperator.Plus => CombineLists(left, right.List.Items),
+				BinaryOperator.Minus => SubtractLists(left, right.List.Items),
 				BinaryOperator.Multiply => MultiplyLists(left.List.ReturnType, interpreter.numberType,
 					left.List.Items, right.List.Items),
 				BinaryOperator.Divide => DivideLists(left.List.ReturnType, interpreter.numberType,
@@ -122,14 +120,14 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 		if (left.IsList && right.IsPrimitiveType(interpreter.numberType))
 		{
 			if (op == BinaryOperator.Plus)
-				return AddToList(left.List.ReturnType, left.List.Items, right);
+				return AddToList(left, right);
 			if (op == BinaryOperator.Minus)
-				return RemoveFromList(left.List.ReturnType, left.List.Items, right);
+				return RemoveFromList(left, right);
 			if (op == BinaryOperator.Multiply)
 				return MultiplyList(left.List.ReturnType, left.List.Items, right.Number);
 			if (op == BinaryOperator.Divide)
 				return DivideList(left.List.ReturnType, left.List.Items, right.Number);
-			throw new NotSupportedException( //ncrunch: no coverage
+			throw new NotSupportedException(//ncrunch: no coverage
 				"Only +, -, *, / operators are supported for List and Number, got: " + op);
 		}
 		return ExecuteMethodCall(call, left, ctx); //ncrunch: no coverage
@@ -185,44 +183,104 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 		};
 	}
 
-	private static ValueInstance CombineLists(Type listType, IReadOnlyList<ValueInstance> leftList,
+	private static ValueInstance CombineLists(ValueInstance leftList,
 		IReadOnlyList<ValueInstance> rightList)
 	{
-		var isLeftText = listType is GenericTypeImplementation { Generic.Name: Type.List } list &&
-			list.ImplementationTypes[0].IsText;
-		var combined = new ValueInstance[leftList.Count + rightList.Count];
-		var idx = 0;
-		for (var i = 0; i < leftList.Count; i++)
-			combined[idx++] = leftList[i];
-		for (var i = 0; i < rightList.Count; i++)
-			combined[idx++] = isLeftText && !rightList[i].IsText
-				? new ValueInstance(rightList[i].ToExpressionCodeString())
-				: rightList[i];
-		return new ValueInstance(listType, combined);
+		var isLeftText = leftList.List.ReturnType is GenericTypeImplementation
+		{
+			Generic.Name: Type.List
+		} list && list.ImplementationTypes[0].IsText;
+		if (leftList.IsMutable)
+		{
+			foreach (var item in rightList)
+				leftList.List.Items.Add(isLeftText && !item.IsText
+					? new ValueInstance(item.ToExpressionCodeString())
+					: item);
+			return leftList;
+		}
+		var combined = new ValueInstance[leftList.List.Items.Count + rightList.Count];
+		var itemIndex = 0;
+		foreach (var item in leftList.List.Items)
+			combined[itemIndex++] = item;
+		foreach (var item in rightList)
+			combined[itemIndex++] = isLeftText && !item.IsText
+				? new ValueInstance(item.ToExpressionCodeString())
+				: item;
+		return new ValueInstance(leftList.List.ReturnType, combined);
 	}
 
-	private static ValueInstance SubtractLists(Type listType, IReadOnlyList<ValueInstance> leftList,
+	private static ValueInstance SubtractLists(ValueInstance leftList,
 		IReadOnlyList<ValueInstance> rightList)
 	{
-		var removed = new bool[rightList.Count];
-		var temp = new ValueInstance[leftList.Count];
-		var count = 0;
-		for (var i = 0; i < leftList.Count; i++)
+		if (leftList.IsMutable)
 		{
-			var keep = true;
-			for (var j = 0; j < rightList.Count; j++)
-				if (!removed[j] && leftList[i].Equals(rightList[j]))
+			foreach (var rightItem in rightList)
+			{
+				var removeIndex = leftList.List.Items.FindIndex(leftItem => leftItem.Equals(rightItem));
+				if (removeIndex >= 0)
+					leftList.List.Items.RemoveAt(removeIndex);
+			}
+			return leftList;
+		}
+		var removed = new bool[rightList.Count];
+		var temp = new ValueInstance[leftList.List.Items.Count];
+		var itemCount = 0;
+		for (var leftIndex = 0; leftIndex < leftList.List.Items.Count; leftIndex++)
+		{
+			var shouldKeep = true;
+			for (var rightIndex = 0; rightIndex < rightList.Count; rightIndex++)
+				if (!removed[rightIndex] && leftList.List.Items[leftIndex].Equals(rightList[rightIndex]))
 				{
-					removed[j] = true;
-					keep = false;
+					removed[rightIndex] = true;
+					shouldKeep = false;
 					break;
 				}
-			if (keep)
-				temp[count++] = leftList[i];
+			if (shouldKeep)
+				temp[itemCount++] = leftList.List.Items[leftIndex];
 		}
+		var result = new ValueInstance[itemCount];
+		Array.Copy(temp, result, itemCount);
+		return new ValueInstance(leftList.List.ReturnType, result);
+	}
+
+	private static ValueInstance AddToList(ValueInstance leftList, ValueInstance right)
+	{
+		var isLeftText = leftList.List.ReturnType is GenericTypeImplementation
+		{
+			Generic.Name: Type.List
+		} list && list.ImplementationTypes[0].IsText;
+		var rightItem = isLeftText && !right.IsText
+			? new ValueInstance(right.ToExpressionCodeString())
+			: right;
+		if (leftList.IsMutable)
+		{
+			leftList.List.Items.Add(rightItem);
+			return leftList;
+		}
+		var combined = new ValueInstance[leftList.List.Items.Count + 1];
+		for (var itemIndex = 0; itemIndex < leftList.List.Items.Count; itemIndex++)
+			combined[itemIndex] = leftList.List.Items[itemIndex];
+		combined[leftList.List.Items.Count] = rightItem;
+		return new ValueInstance(leftList.List.ReturnType, combined);
+	}
+
+	private static ValueInstance RemoveFromList(ValueInstance leftList, ValueInstance right)
+	{
+		if (leftList.IsMutable)
+		{
+			leftList.List.Items.RemoveAll(item => item.Equals(right));
+			return leftList;
+		}
+		var count = 0;
+		for (var index = 0; index < leftList.List.Items.Count; index++)
+			if (!leftList.List.Items[index].Equals(right))
+				count++;
 		var result = new ValueInstance[count];
-		Array.Copy(temp, result, count);
-		return new ValueInstance(listType, result);
+		var resultIndex = 0;
+		for (var index = 0; index < leftList.List.Items.Count; index++)
+			if (!leftList.List.Items[index].Equals(right))
+				result[resultIndex++] = leftList.List.Items[index];
+		return new ValueInstance(leftList.List.ReturnType, result);
 	}
 
 	private static ValueInstance MultiplyLists(Type leftListType, Type numberType,
@@ -240,35 +298,6 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 		var result = new ValueInstance[leftList.Count];
 		for (var index = 0; index < leftList.Count; index++)
 			result[index] = new ValueInstance(numberType, leftList[index].Number / rightList[index].Number);
-		return new ValueInstance(leftListType, result);
-	}
-
-	private static ValueInstance AddToList(Type leftListType, IReadOnlyList<ValueInstance> leftList,
-		ValueInstance right)
-	{
-		var isLeftText = leftListType is GenericTypeImplementation { Generic.Name: Type.List } list &&
-			list.ImplementationTypes[0].IsText;
-		var combined = new ValueInstance[leftList.Count + 1];
-		for (var i = 0; i < leftList.Count; i++)
-			combined[i] = leftList[i];
-		combined[leftList.Count] = isLeftText && !right.IsText
-			? new ValueInstance(right.ToExpressionCodeString())
-			: right;
-		return new ValueInstance(leftListType, combined);
-	}
-
-	private static ValueInstance RemoveFromList(Type leftListType,
-		IReadOnlyList<ValueInstance> leftList, ValueInstance right)
-	{
-		var count = 0;
-		for (var i = 0; i < leftList.Count; i++)
-			if (!leftList[i].Equals(right))
-				count++;
-		var result = new ValueInstance[count];
-		var idx = 0;
-		for (var i = 0; i < leftList.Count; i++)
-			if (!leftList[i].Equals(right))
-				result[idx++] = leftList[i];
 		return new ValueInstance(leftListType, result);
 	}
 

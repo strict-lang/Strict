@@ -17,10 +17,6 @@ public sealed class NativeExecutableLinker
 	/// </summary>
 	public string CreateExecutable(string asmPath, Platform platform, bool hasPrintCalls = false)
 	{
-		if (platform == Platform.LinuxArm)
-			throw new NotSupportedException(
-				"AArch64 code generation is not yet implemented. " +
-				"A dedicated ARM code-generator is required for LinuxArm.");
 		var nasmPath = FindTool("nasm") ??
 			throw new ToolNotFoundException("nasm", "https://nasm.us");
 		var objPath = Path.ChangeExtension(asmPath, ".obj");
@@ -48,21 +44,25 @@ public sealed class NativeExecutableLinker
 		{
 			Platform.Windows => "win64",
 			Platform.Linux => "elf64",
-			Platform.MacOS => "macho64",
-			_ => throw new NotSupportedException("Unsupported platform: " + platform)
+			Platform.MacOS => "macho64", //ncrunch: no coverage
+			_ => throw new NotSupportedException("Unsupported platform: " + platform) //ncrunch: no coverage
 		};
 
-	private static string BuildLinkerArgs(string objPath, string exePath, Platform platform, bool hasPrintCalls = false) =>
-		platform switch
+	private static string BuildLinkerArgs(string objPath, string exePath, Platform platform, bool hasPrintCalls = false)
+	{
+		const string SizeFlags = "-s -Wl,--gc-sections -Wl,--strip-all";
+		return platform switch
 		{
-			Platform.Windows => $"\"{objPath}\" -o \"{exePath}\" -lkernel32",
+			Platform.Windows => $"\"{objPath}\" -o \"{exePath}\" {SizeFlags} -nostdlib -Wl,-e,main -lkernel32",
 			Platform.Linux => hasPrintCalls
-				? $"\"{objPath}\" -o \"{exePath}\""
-				: $"\"{objPath}\" -o \"{exePath}\" -nostdlib -Wl,-e,_start",
-			Platform.MacOS => $"\"{objPath}\" -o \"{exePath}\"",
-			_ => throw new NotSupportedException("Unsupported platform: " + platform)
+				? $"\"{objPath}\" -o \"{exePath}\" {SizeFlags}"
+				: $"\"{objPath}\" -o \"{exePath}\" {SizeFlags} -nostdlib -Wl,-e,_start",
+			Platform.MacOS => $"\"{objPath}\" -o \"{exePath}\" {SizeFlags}", //ncrunch: no coverage
+			_ => throw new NotSupportedException("Unsupported platform: " + platform) //ncrunch: no coverage
 		};
+	}
 
+	//ncrunch: no coverage start
 	private static string LinkerDownloadUrlFor(Platform platform) =>
 		platform switch
 		{
@@ -70,12 +70,12 @@ public sealed class NativeExecutableLinker
 			Platform.Linux => "https://gcc.gnu.org",
 			Platform.MacOS => "https://developer.apple.com/xcode",
 			_ => "https://gcc.gnu.org"
-		};
+		}; //ncrunch: no coverage end
 
 	private static string? FindTool(string name)
 	{
 		if (!OperatingSystem.IsWindows())
-		{
+		{ //ncrunch: no coverage start
 			try
 			{
 				var result = RunProcess("which", name);
@@ -86,7 +86,7 @@ public sealed class NativeExecutableLinker
 			{
 				// `which` exits non-zero when the tool is not found; fall through to PATH search
 			}
-		}
+		} //ncrunch: no coverage end
 		var executableName = OperatingSystem.IsWindows()
 			? name + ".exe"
 			: name;
@@ -97,7 +97,7 @@ public sealed class NativeExecutableLinker
 			if (File.Exists(candidate))
 				return candidate;
 		}
-		return null;
+		return null; //ncrunch: no coverage
 	}
 
 	private static string RunProcess(string executable, string arguments)
@@ -113,16 +113,17 @@ public sealed class NativeExecutableLinker
 		process.Start();
 		var output = process.StandardOutput.ReadToEnd();
 		if (!process.WaitForExit(TimeoutMilliseconds))
-		{
+		{ //ncrunch: no coverage start
 			process.Kill();
 			throw new InvalidOperationException($"Process '{executable}' timed out after {TimeoutMilliseconds} ms");
-		}
+		} //ncrunch: no coverage end
 		if (process.ExitCode == 0)
 			return output;
+		//ncrunch: no coverage start
 		var error = process.StandardError.ReadToEnd();
 		throw new InvalidOperationException(
 			$"Process '{executable}' failed with exit code {process.ExitCode}: {error}");
-	}
+	} //ncrunch: no coverage end
 
 	private const int TimeoutMilliseconds = 10000;
 }

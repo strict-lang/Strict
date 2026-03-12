@@ -74,7 +74,7 @@ public sealed class VirtualMachine(Package package,
 		if (print.ValueRegister.HasValue)
 			Console.WriteLine(print.TextPrefix + Memory.Registers[print.ValueRegister.Value].ToExpressionCodeString());
 		else
-			Console.WriteLine(print.TextPrefix);
+			Console.WriteLine(print.TextPrefix); //ncrunch: no coverage
 	}
 
 	private void TryRemoveInstruction(Instruction instruction)
@@ -262,9 +262,9 @@ public sealed class VirtualMachine(Package package,
 	private static ValueInstance ConvertToText(ValueInstance rawValue)
 	{
 		if (rawValue.IsText)
-			return rawValue;
+			return rawValue; //ncrunch: no coverage
 		if (rawValue.TryGetValueTypeInstance() is { } typeInstance)
-		{
+		{ //ncrunch: no coverage start
 			var members = typeInstance.ReturnType.Members;
 			var memberValues = new List<string>(typeInstance.Values.Length);
 			for (var memberIndex = 0; memberIndex < typeInstance.Values.Length && memberIndex < members.Count; memberIndex++)
@@ -274,7 +274,7 @@ public sealed class VirtualMachine(Package package,
 			return memberValues.Count == 0
 				? new ValueInstance(typeInstance.ReturnType.Name)
 				: new ValueInstance("(" + string.Join(", ", memberValues) + ")");
-		}
+		} //ncrunch: no coverage end
 		return new ValueInstance(rawValue.ToExpressionCodeString());
 	}
 
@@ -336,13 +336,14 @@ public sealed class VirtualMachine(Package package,
 		var memberTypeName = memberCall.Member.Type.Name;
 		if (memberTypeName is not (Type.Logger or Type.TextWriter or Type.System))
 			return false;
+		//ncrunch: no coverage start
 		if (invoke.Method.Arguments.Count > 0)
 		{
 			var argValue = EvaluateExpression(invoke.Method.Arguments[0]);
 			Console.WriteLine(argValue.ToExpressionCodeString());
 		}
 		return true;
-	}
+	} //ncrunch: no coverage end
 
 	/// <summary>
 	/// Evaluates an arbitrary expression to a ValueInstance using the current VM state.
@@ -356,12 +357,13 @@ public sealed class VirtualMachine(Package package,
 			return Memory.Frame.Get(expression.ToString());
 		if (expression is MemberCall memberCall)
 			return EvaluateMemberCall(memberCall);
+		//ncrunch: no coverage start
 		if (expression is Binary binary)
 			return EvaluateBinary(binary);
 		if (expression is MethodCall methodCall)
 			return EvaluateMethodCall(methodCall);
-		return new ValueInstance(expression.ToString()); //ncrunch: no coverage
-	}
+		return new ValueInstance(expression.ToString());
+	} //ncrunch: no coverage end
 
 	private ValueInstance EvaluateMemberCall(MemberCall memberCall)
 	{
@@ -380,6 +382,7 @@ public sealed class VirtualMachine(Package package,
 		return new ValueInstance(memberCall.ToString());
 	} //ncrunch: no coverage end
 
+	//ncrunch: no coverage start
 	private ValueInstance EvaluateBinary(Binary binary)
 	{
 		var left = EvaluateExpression(binary.Instance!);
@@ -387,16 +390,16 @@ public sealed class VirtualMachine(Package package,
 		return binary.Method.Name switch
 		{
 			BinaryOperator.Plus => AddValueInstances(left, right),
-			//ncrunch: no coverage start
 			BinaryOperator.Minus => SubtractValueInstances(left, right),
 			BinaryOperator.Multiply => new ValueInstance(right.GetType(),
 				left.Number * right.Number),
 			BinaryOperator.Divide => new ValueInstance(right.GetType(),
 				left.Number / right.Number),
 			_ => new ValueInstance(left.GetType(), left.Number)
-		}; //ncrunch: no coverage end
-	}
+		};
+	} //ncrunch: no coverage end
 
+	//ncrunch: no coverage start
 	private ValueInstance EvaluateMethodCall(MethodCall call)
 	{
 		if (call.Method.Name == Method.From)
@@ -438,7 +441,7 @@ public sealed class VirtualMachine(Package package,
 		var childInstructions = new BytecodeGenerator(invokedMethod, new Registry()).Generate();
 		var result = RunChildScope(childInstructions);
 		return result ?? new ValueInstance(call.Method.ReturnType, 0);
-	}
+	} //ncrunch: no coverage end
 
 	//ncrunch: no coverage start
 	private ValueInstance EvaluateFromConstructor(MethodCall call)

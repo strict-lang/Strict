@@ -165,4 +165,75 @@ public sealed class ListTests
 		Assert.That(interpreter.Execute(type.Methods[0], interpreter.noneInstance, []).Boolean, Is.True);
 		Assert.That(interpreter.Execute(type.Methods[0], interpreter.noneInstance, []).Boolean, Is.True);
 	}
+
+	[Test]
+	public void AddToMutableListReusesExistingListInstance()
+	{
+		var mutableList = CreateMutableNumberList(one, two);
+		var result = InvokePrivateListMethod("AddToList", mutableList,
+			new ValueInstance(interpreter.numberType, 3));
+		Assert.That(ReferenceEquals(mutableList.List.Items, result.List.Items), Is.True);
+		Assert.That(result.List.Items.Count, Is.EqualTo(3));
+	}
+
+	[Test]
+	public void CombineMutableListsReusesLeftListInstance()
+	{
+		var leftList = CreateMutableNumberList(one, two);
+		var rightList = new[] { new ValueInstance(interpreter.numberType, 3), new ValueInstance(interpreter.numberType, 4) };
+		var result = InvokePrivateListMethod("CombineLists", leftList, rightList);
+		Assert.That(ReferenceEquals(leftList.List.Items, result.List.Items), Is.True);
+		Assert.That(result.List.Items.Count, Is.EqualTo(4));
+	}
+
+	[Test]
+	public void SubtractMutableListsReusesLeftListInstance()
+	{
+		var leftList = CreateMutableNumberList(one, two, one);
+		var rightList = new[] { one, two };
+		var result = InvokePrivateListMethod("SubtractLists", leftList, rightList);
+		Assert.That(ReferenceEquals(leftList.List.Items, result.List.Items), Is.True);
+		Assert.That(result.List.Items, Is.EqualTo(new[] { one }));
+	}
+
+	[Test]
+	public void RemoveFromMutableListReusesLeftListInstance()
+	{
+		var leftList = CreateMutableNumberList(one, two, one);
+		var result = InvokePrivateListMethod("RemoveFromList", leftList, one);
+		Assert.That(ReferenceEquals(leftList.List.Items, result.List.Items), Is.True);
+		Assert.That(result.List.Items, Is.EqualTo(new[] { two }));
+	}
+
+	[Test]
+	public void AddToImmutableListCreatesNewListAndKeepsOriginalUnchanged()
+	{
+		using var type = CreateType("ImmutableListCopyType",
+			"has numbers",
+			"Append Numbers",
+			"\tnumbers + 3");
+		var typeInstance = CreateNumbers(type);
+		var originalNumbers = typeInstance.TryGetValueTypeInstance()!["numbers"];
+		var result = interpreter.Execute(type.Methods.Single(method => method.Name == "Append"),
+			typeInstance, []);
+		Assert.That(ReferenceEquals(originalNumbers.List.Items, result.List.Items), Is.False);
+		Assert.That(originalNumbers.List.Items.Count, Is.EqualTo(2));
+	}
+
+	private ValueInstance CreateMutableNumberList(params ValueInstance[] items)
+	{
+		var numberType = interpreter.numberType;
+		var listType = numberType.GetListImplementationType(numberType);
+		var mutableListType = numberType.GetType(Type.Mutable).GetGenericImplementation(listType);
+		return new ValueInstance(mutableListType, items);
+	}
+
+	private static ValueInstance InvokePrivateListMethod(string methodName, params object[] args)
+	{
+		var method = typeof(MethodCallEvaluator).GetMethod(methodName,
+			System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ??
+			throw new InvalidOperationException(methodName + " method not found");
+		return (ValueInstance)(method.Invoke(null, args) ??
+			throw new InvalidOperationException(methodName + " returned null"));
+	}
 }

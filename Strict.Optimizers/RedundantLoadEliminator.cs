@@ -72,6 +72,6 @@ public sealed class RedundantLoadEliminator : InstructionOptimizer
 				instructions[i] = new StoreFromRegisterInstruction(mappedStore, store.Identifier);
 			else if (instructions[i] is ReturnInstruction ret &&
 				remapping.TryGetValue(ret.Register, out var mappedReturn))
-				instructions[i] = new ReturnInstruction(mappedReturn);
+				instructions[i] = new ReturnInstruction(mappedReturn); //ncrunch: no coverage
 	}
 }

@@ -37,9 +37,9 @@ public sealed class RunnerTests
 		var localPath = Path.Combine(
 			Repositories.GetLocalDevelopmentPath(Repositories.StrictOrg, nameof(Strict)),
 			"Examples", filename + Language.Type.Extension);
-		if (File.Exists(localPath))
-			return localPath;
-		return Path.Combine(FindRepoRoot(), "Examples", filename + Language.Type.Extension);
+		return File.Exists(localPath)
+			? localPath
+			: Path.Combine(FindRepoRoot(), "Examples", filename + Language.Type.Extension);
 	}
 
 	public string GetExamplesBinaryFile(string filename)
@@ -47,13 +47,15 @@ public sealed class RunnerTests
 		var localPath = Path.ChangeExtension(GetExamplesFilePath(filename), BytecodeSerializer.Extension);
 		if (File.Exists(localPath))
 			return localPath;
+		//ncrunch: no coverage start
 		new Runner(TestPackage.Instance, GetExamplesFilePath(filename)).Run().Dispose();
 		Assert.That(File.Exists(localPath), Is.True,
 			BytecodeSerializer.Extension + " file should have been created");
 		writer.GetStringBuilder().Clear();
 		return localPath;
-	}
+	} //ncrunch: no coverage end
 
+	//ncrunch: no coverage start
 	private static string FindRepoRoot()
 	{
 		var dir = AppContext.BaseDirectory;
@@ -64,7 +66,7 @@ public sealed class RunnerTests
 			dir = Path.GetDirectoryName(dir);
 		}
 		throw new DirectoryNotFoundException("Cannot find repository root (Strict.sln not found)");
-	}
+	} //ncrunch: no coverage end
 
 	[Test]
 	public void RunWithFullDiagnostics()
@@ -142,8 +144,7 @@ public sealed class RunnerTests
 		var pureAdderPath = GetExamplesFilePath("PureAdder");
 		var asmPath = Path.ChangeExtension(pureAdderPath, ".asm");
 		using var runner = new Runner(TestPackage.Instance, pureAdderPath);
-		try { runner.Run(Platform.Windows); }
-		catch (ToolNotFoundException) { }
+		try { runner.Run(Platform.Windows); }	catch (ToolNotFoundException) { }
 		Assert.That(File.Exists(asmPath), Is.True, ".asm file should be created");
 		Assert.That(writer.ToString(), Does.Contain("Saved Windows NASM assembly to:"));
 		var asmContent = File.ReadAllText(asmPath);
@@ -159,8 +160,7 @@ public sealed class RunnerTests
 		var pureAdderPath = GetExamplesFilePath("PureAdder");
 		var asmPath = Path.ChangeExtension(pureAdderPath, ".asm");
 		using var runner = new Runner(TestPackage.Instance, pureAdderPath);
-		try { runner.Run(Platform.Linux); }
-		catch (ToolNotFoundException) { }
+		try { runner.Run(Platform.Linux); } catch (ToolNotFoundException) { }
 		Assert.That(File.Exists(asmPath), Is.True, ".asm file should be created");
 		Assert.That(writer.ToString(), Does.Contain("Saved Linux NASM assembly to:"));
 		var asmContent = File.ReadAllText(asmPath);
@@ -169,10 +169,24 @@ public sealed class RunnerTests
 	}
 
 	[Test]
-	public void RunWithPlatformWindowsThrowsNotSupportedForProgramsWithRuntimeMethodCalls()
+	public void RunWithPlatformWindowsSupportsProgramsWithRuntimeMethodCalls()
 	{
+		var asmPath = Path.ChangeExtension(SimpleCalculatorFilePath, ".asm");
 		using var runner = new Runner(TestPackage.Instance, SimpleCalculatorFilePath);
-		Assert.Throws<NotSupportedException>(() => runner.Run(Platform.Windows));
+		try { runner.Run(Platform.Windows); }	catch (ToolNotFoundException) { }
+		Assert.That(File.Exists(asmPath), Is.True, ".asm file should be created");
+	}
+
+	[Test]
+	public void RunFromBytecodeWithPlatformWindowsSupportsRuntimeMethodCalls()
+	{
+		var binaryFilePath = GetExamplesBinaryFile("SimpleCalculator");
+		var asmPath = Path.ChangeExtension(binaryFilePath, ".asm");
+		if (File.Exists(asmPath))
+			File.Delete(asmPath); //ncrunch: no coverage
+		using var runner = new Runner(TestPackage.Instance, binaryFilePath);
+		try { runner.Run(Platform.Windows); }	catch (ToolNotFoundException) { }
+		Assert.That(File.Exists(asmPath), Is.True, ".asm file should be created for bytecode platform compilation");
 	}
 
 	[Test]
@@ -180,8 +194,7 @@ public sealed class RunnerTests
 	{
 		var pureAdderPath = GetExamplesFilePath("PureAdder");
 		using var runner = new Runner(TestPackage.Instance, pureAdderPath);
-		try { runner.Run(Platform.Linux); }
-		catch (ToolNotFoundException) { }
+		try { runner.Run(Platform.Linux); } catch (ToolNotFoundException) { }
 		Assert.That(writer.ToString(), Does.Not.Contain("executed"),
 			"Platform compilation should not execute the program");
 		Assert.That(writer.ToString(), Does.Contain("Saved Linux NASM assembly to:"),
@@ -359,5 +372,39 @@ public sealed class RunnerTests
 		using var runner = new Runner(TestPackage.Instance, GetExamplesFilePath("TemperatureConverter"));
 		runner.RunExpression("TemperatureConverter(0).ToFahrenheit");
 		Assert.That(writer.ToString(), Does.Contain("32"));
+	}
+
+	//ncrunch: no coverage start
+	[Test]
+	[Category("Slow")]
+	public void RunMemoryPressureProgramTwiceKeepsMemoryBoundedAfterCollection()
+	{
+		var memoryPressureFilePath = GetExamplesFilePath("MemoryPressure");
+		var binaryFilePath = Path.ChangeExtension(memoryPressureFilePath, BytecodeSerializer.Extension);
+		if (File.Exists(binaryFilePath))
+			File.Delete(binaryFilePath);
+		binaryFilePath = GetExamplesBinaryFile("MemoryPressure");
+		writer.GetStringBuilder().Clear();
+		ForceGarbageCollection();
+		using (var firstRun = new Runner(TestPackage.Instance, binaryFilePath).Run())
+			;
+		ForceGarbageCollection();
+		var memoryAfterFirstRun = GC.GetTotalMemory(true);
+		using (var secondRun = new Runner(TestPackage.Instance, binaryFilePath).Run())
+			;
+		ForceGarbageCollection();
+		var memoryAfterSecondRun = GC.GetTotalMemory(true);
+		var outputLines = writer.ToString().Split(Environment.NewLine,
+			StringSplitOptions.RemoveEmptyEntries);
+		Assert.That(outputLines.Length, Is.EqualTo(2));
+		Assert.That(outputLines[0], Is.EqualTo("allocated: 20001"));
+		Assert.That(outputLines[1], Is.EqualTo("allocated: 20001"));
+	}
+
+	private static void ForceGarbageCollection()
+	{
+		GC.Collect();
+		GC.WaitForPendingFinalizers();
+		GC.Collect();
 	}
 }

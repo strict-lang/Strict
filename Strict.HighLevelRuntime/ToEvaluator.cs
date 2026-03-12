@@ -26,7 +26,7 @@ internal sealed class ToEvaluator(Interpreter interpreter)
 	{
 		var values = typeInstance.Values;
 		if (values.Length == 0)
-			return typeInstance.ReturnType.Name;
+			return typeInstance.ReturnType.Name; //ncrunch: no coverage
 		var parts = new string[values.Length];
 		for (var index = 0; index < values.Length; index++)
 			parts[index] = values[index].ToExpressionCodeString();
