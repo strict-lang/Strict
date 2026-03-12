@@ -32,8 +32,15 @@ public sealed class RunnerTests
 
 	private string StrictFilePath => GetExamplesFilePath("SimpleCalculator");
 
-	public static string GetExamplesFilePath(string filename) =>
-		Path.Combine(FindRepoRoot(), "Examples", filename + Language.Type.Extension);
+	public static string GetExamplesFilePath(string filename)
+	{
+		var localPath = Path.Combine(
+			Repositories.GetLocalDevelopmentPath(Repositories.StrictOrg, nameof(Strict)),
+			"Examples", filename + Language.Type.Extension);
+		if (File.Exists(localPath))
+			return localPath;
+		return Path.Combine(FindRepoRoot(), "Examples", filename + Language.Type.Extension);
+	}
 
 	private static string FindRepoRoot()
 	{
