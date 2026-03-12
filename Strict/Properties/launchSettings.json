@@ -2,7 +2,7 @@
   "profiles": {
 		"Strict": {
 			"commandName": "Project",
-			"commandLineArgs": "c:/code/GitHub/strict-lang/Strict/Examples/SimpleCalculator.strictbinary"
+			"commandLineArgs": "c:/code/GitHub/strict-lang/Strict/Examples/SimpleCalculator.strictbinary -Windows"
 		}
   }
 }

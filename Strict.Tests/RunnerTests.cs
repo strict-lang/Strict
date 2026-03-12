@@ -191,8 +191,7 @@ public sealed class RunnerTests
 	public void RunWithPlatformWindowsThrowsToolNotFoundWhenNasmMissing()
 	{
 		if (NativeExecutableLinker.IsNasmAvailable)
-			return;
-		//ncrunch: no coverage start
+			return;	//ncrunch: no coverage start
 		using var runner = new Runner(TestPackage.Instance, GetExamplesFilePath("PureAdder"));
 		Assert.Throws<ToolNotFoundException>(() => runner.Run(Platform.Windows));
 	} //ncrunch: no coverage end
@@ -203,7 +202,7 @@ public sealed class RunnerTests
 		var asmPath = Path.ChangeExtension(SimpleCalculatorFilePath, ".asm");
 		writer.GetStringBuilder().Clear();
 		if (File.Exists(asmPath))
-			File.Delete(asmPath);
+			File.Delete(asmPath); //ncrunch: no coverage
 		using var runner = new Runner(TestPackage.Instance,
 			Path.ChangeExtension(SimpleCalculatorFilePath, BytecodeSerializer.Extension));
 		runner.Run();
