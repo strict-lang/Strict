@@ -44,14 +44,16 @@ public sealed class BytecodeGenerator
 
 	private void AddMembersFromCaller(ValueInstance instance)
 	{
+		instructions.Add(new StoreVariableInstruction(instance, Type.ValueLowercase, isMember: true));
 		var typeInstance = instance.TryGetValueTypeInstance();
 		if (typeInstance != null)
 		{
 			var members = typeInstance.ReturnType.Members;
-			for (var i = 0; i < members.Count && i < typeInstance.Values.Length; i++)
-				if (!members[i].Type.IsTrait)
-					instructions.Add(new StoreVariableInstruction(typeInstance.Values[i],
-						members[i].Name, isMember: true));
+			for (var memberIndex = 0; memberIndex < members.Count && memberIndex < typeInstance.Values.Length;
+				memberIndex++)
+				if (!members[memberIndex].Type.IsTrait)
+					instructions.Add(new StoreVariableInstruction(typeInstance.Values[memberIndex],
+						members[memberIndex].Name, isMember: true));
 			return;
 		}
 		var firstNonTraitMember = instance.GetType().Members.
@@ -170,7 +172,7 @@ public sealed class BytecodeGenerator
 
 	private bool? TryGenerateVariableCallInstruction(Expression expression)
 	{
-		if (expression is not (VariableCall or ParameterCall))
+		if (expression is not (VariableCall or ParameterCall or Instance))
 			return null;
 		instructions.Add(
 			new LoadVariableToRegister(registry.AllocateRegister(), expression.ToString()));
@@ -540,7 +542,8 @@ public sealed class BytecodeGenerator
 	{
 		if (binary.Instance is Binary binaryOp)
 		{
-			var leftReg = GenerateValueBinaryInstructions(binaryOp, operationInstruction);
+			var leftReg = GenerateValueBinaryInstructions(binaryOp,
+				GetInstructionBasedOnBinaryOperationName(binaryOp.Method.Name));
 			GenerateInstructionFromExpression(binary.Arguments[0]);
 			instructions.Add(new BinaryInstruction(operationInstruction, leftReg, registry.PreviousRegister,
 				registry.AllocateRegister()));

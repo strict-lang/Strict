@@ -129,3 +129,6 @@ ipch/
 /.NCrunch_Strict
 /coverage-results
 /.dotnet-home
+*.strictbinary
+*.exe
+*.asm

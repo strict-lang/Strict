@@ -1,0 +1,16 @@
+has red Number
+has green Number
+has blue Number
+has logger
+Brighten Number
+	Pixel(100, 150, 200).Brighten is 250
+	red + green
+Darken Number
+	Pixel(100, 150, 200).Darken is 50
+	red / 2
+Run
+	constant firstPixel = Pixel(100, 150, 200)
+	constant secondPixel = Pixel(60, 120, 180)
+	logger.Log(firstPixel + ".Brighten is " + firstPixel.Brighten)
+	logger.Log(firstPixel + ".Darken is " + firstPixel.Darken)
+	logger.Log(secondPixel + ".Darken is " + secondPixel.Darken)

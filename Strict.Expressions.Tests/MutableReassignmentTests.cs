@@ -71,15 +71,13 @@ public sealed class MutableReassignmentTests : TestExpressions
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.InstanceOf<Context.TypeNotFound>());
 
 	[Test]
-	public void MutableMemberWithTextType()
+	public void ConcatenateMutableMemberWithNumber()
 	{
 		using var program = new Type(TestPackage.Instance,
-			new TypeLines(nameof(MutableMemberWithTextType), "mutable something Text",
-				"Add(input Number) Text", "\tconstant result = input + something"));
+			new TypeLines(nameof(ConcatenateMutableMemberWithNumber), "mutable something Text",
+				"Add(input Number) Text", "\tinput + something"));
 		program.ParseMembersAndMethods(parser);
-		Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(),
-			Throws.InstanceOf<ParsingFailed>().With.InnerException.
-				InstanceOf<Type.ArgumentsDoNotMatchMethodParameters>());
+		Assert.That(program.Methods[0].GetBodyAndParseIfNeeded().ReturnType.IsText, Is.True);
 	}
 
 	[Test]

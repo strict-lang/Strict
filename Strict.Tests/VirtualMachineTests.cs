@@ -675,6 +675,7 @@ public sealed class VirtualMachineTests : TestBytecode
 			$"{nameof(AddHundredElementsToMutableList)}(100).AddMany",
 			source)).Generate();
 		var startTime = DateTime.UtcNow;
+		//TODO: still horrible performance, this needs to be optimized, the VM recreates the mutable list every time, which makes no sense, it just needs to mutate it
 		var result = vm.Execute(instructions).Returns!.Value;
 		var elapsedMs = (DateTime.UtcNow - startTime).TotalMilliseconds;
 		Assert.That(result.List.Items.Count, Is.EqualTo(101));

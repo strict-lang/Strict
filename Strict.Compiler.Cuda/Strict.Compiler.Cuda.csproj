@@ -15,6 +15,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Strict.Compiler\Strict.Compiler.csproj" />
     <ProjectReference Include="..\Strict.Expressions\Strict.Expressions.csproj" />
     <ProjectReference Include="..\Strict.Language\Strict.Language.csproj" />
     <ProjectReference Include="..\Strict.Bytecode\Strict.Bytecode.csproj" />

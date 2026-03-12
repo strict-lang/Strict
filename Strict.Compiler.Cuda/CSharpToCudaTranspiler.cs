@@ -4,6 +4,9 @@ using Type = Strict.Language.Type;
 
 namespace Strict.Compiler.Cuda;
 
+/// <summary>
+/// Early research project, not really making sense anymore, should be removed soon.
+/// </summary>
 public class CSharpToCudaTranspiler(Package strictBase) : IDisposable
 {
 	public string Convert(string filePath)
@@ -15,7 +18,7 @@ public class CSharpToCudaTranspiler(Package strictBase) : IDisposable
 	private readonly Package package = new(strictBase, nameof(CSharpToCudaTranspiler));
 
 	public static string GenerateCuda(Type type) =>
-		new InstructionsToCudaCompiler().Compile(type.Methods[0]);
+		new InstructionsToCuda().Compile(type.Methods[0]);
 
 	public Type ParseCSharp(string filePath) =>
 		filePath == ""
@@ -70,6 +73,8 @@ public class CSharpType : Type
 			? throw new MissingReturnStatement()
 			: (typeName, methodName + parameters.ToBrackets() + returnType, returnStatement);
 	}
+
+	public sealed class MissingReturnStatement : Exception;
 
 	private static bool IsIgnoredOrEmptyText(string line, string typeName) =>
 		line == "" || line.Contains("{") || line.Contains("}") ||

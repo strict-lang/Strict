@@ -18,11 +18,11 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		Strict.v3.ncrunchsolution = Strict.v3.ncrunchsolution
 	EndProjectSection
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Strict.Compiler", "Strict.Compiler\Strict.Compiler.csproj", "{D9E14E41-8F3C-4B92-B773-227871A96F96}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Strict.Transpiler", "Strict.Transpiler\Strict.Transpiler.csproj", "{D9E14E41-8F3C-4B92-B773-227871A96F96}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Strict.Compiler.Roslyn", "Strict.Compiler.Roslyn\Strict.Compiler.Roslyn.csproj", "{00DC0E82-9C6A-45D2-A292-EFD3900FC96C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Strict.Transpiler.Roslyn", "Strict.Transpiler.Roslyn\Strict.Transpiler.Roslyn.csproj", "{00DC0E82-9C6A-45D2-A292-EFD3900FC96C}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Strict.Compiler.Tests", "Strict.Compiler.Tests\Strict.Compiler.Tests.csproj", "{E80EB301-EAC7-47ED-801C-DA4D775F7D6F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Strict.Transpiler.Tests", "Strict.Transpiler.Tests\Strict.Transpiler.Tests.csproj", "{E80EB301-EAC7-47ED-801C-DA4D775F7D6F}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Strict.Expressions", "Strict.Expressions\Strict.Expressions.csproj", "{392902F7-F537-4384-920C-7BAE554A05B6}"
 EndProject
@@ -94,67 +94,21 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "StrictFiles", "StrictFiles"
 		Type.strict = Type.strict
 	EndProjectSection
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Math", "Math", "{C436613F-79E2-4B74-86B2-9F8B67D29712}"
-	ProjectSection(SolutionItems) = preProject
-		Math\README.md = Math\README.md
-		Math\Size.strict = Math\Size.strict
-		Math\Vector2.strict = Math\Vector2.strict
-	EndProjectSection
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ImageProcessing", "ImageProcessing", "{EB6CB05E-9C14-4F1F-8A36-82B7E6A40ED5}"
-	ProjectSection(SolutionItems) = preProject
-		ImageProcessing\AdjustBrightness.strict = ImageProcessing\AdjustBrightness.strict
-		ImageProcessing\Color.strict = ImageProcessing\Color.strict
-		ImageProcessing\ColorImage.strict = ImageProcessing\ColorImage.strict
-	EndProjectSection
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Examples", "Examples", "{87015E92-9B24-4DBA-8A57-BECAF9E61F2F}"
-	ProjectSection(SolutionItems) = preProject
-		Examples\ArithmeticFunction.strict = Examples\ArithmeticFunction.strict
-		Examples\Beeramid.strict = Examples\Beeramid.strict
-		Examples\ConvertingNumbers.strict = Examples\ConvertingNumbers.strict
-		Examples\EvenFibonacci.strict = Examples\EvenFibonacci.strict
-		Examples\ExecuteOperation.strict = Examples\ExecuteOperation.strict
-		Examples\Fibonacci.strict = Examples\Fibonacci.strict
-		Examples\FindFirstNonConsecutiveNumber.strict = Examples\FindFirstNonConsecutiveNumber.strict
-		Examples\FindNumberCount.strict = Examples\FindNumberCount.strict
-		Examples\Instruction.strict = Examples\Instruction.strict
-		Examples\InstructionType.strict = Examples\InstructionType.strict
-		Examples\LinkedListAnalyzer.strict = Examples\LinkedListAnalyzer.strict
-		Examples\MatchingLoopFinder.strict = Examples\MatchingLoopFinder.strict
-		Examples\Node.strict = Examples\Node.strict
-		Examples\Processor.strict = Examples\Processor.strict
-		Examples\README.md = Examples\README.md
-		Examples\ReduceButGrow.strict = Examples\ReduceButGrow.strict
-		Examples\Register.strict = Examples\Register.strict
-		Examples\RemoveDuplicateWords.strict = Examples\RemoveDuplicateWords.strict
-		Examples\RemoveExclamation.strict = Examples\RemoveExclamation.strict
-		Examples\RemoveParentheses.strict = Examples\RemoveParentheses.strict
-		Examples\ReverseList.strict = Examples\ReverseList.strict
-		Examples\ShorterPath.strict = Examples\ShorterPath.strict
-	EndProjectSection
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "csTranspilerOutput", "csTranspilerOutput", "{57FE9C48-33B8-44D5-AEC2-EF9CDDEA3F1D}"
-	ProjectSection(SolutionItems) = preProject
-		Examples\csTranspilerOutput\ArithmeticFunction.cs = Examples\csTranspilerOutput\ArithmeticFunction.cs
-		Examples\csTranspilerOutput\Beeramid.cs = Examples\csTranspilerOutput\Beeramid.cs
-		Examples\csTranspilerOutput\ExecuteOperation.cs = Examples\csTranspilerOutput\ExecuteOperation.cs
-		Examples\csTranspilerOutput\Fibonacci.cs = Examples\csTranspilerOutput\Fibonacci.cs
-		Examples\csTranspilerOutput\LinkedListAnalyzer.cs = Examples\csTranspilerOutput\LinkedListAnalyzer.cs
-		Examples\csTranspilerOutput\ReduceButGrow.cs = Examples\csTranspilerOutput\ReduceButGrow.cs
-		Examples\csTranspilerOutput\RemoveDuplicateWords.cs = Examples\csTranspilerOutput\RemoveDuplicateWords.cs
-		Examples\csTranspilerOutput\RemoveExclamation.cs = Examples\csTranspilerOutput\RemoveExclamation.cs
-		Examples\csTranspilerOutput\RemoveParentheses.cs = Examples\csTranspilerOutput\RemoveParentheses.cs
-		Examples\csTranspilerOutput\ReverseList.cs = Examples\csTranspilerOutput\ReverseList.cs
-	EndProjectSection
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Strict", "Strict\Strict.csproj", "{4F9E13DD-52AA-5923-2207-40EE4E0E8879}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Strict.Tests", "Strict.Tests\Strict.Tests.csproj", "{14A0F8D6-4F84-4385-9994-752E72AEE89F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Strict.Compiler.X64", "Strict.Compiler.X64\Strict.Compiler.X64.csproj", "{1644E5BE-75E8-41B9-816F-6EB2E4444236}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Strict.Compiler.Assembly", "Strict.Compiler.Assembly\Strict.Compiler.Assembly.csproj", "{1644E5BE-75E8-41B9-816F-6EB2E4444236}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Strict.Compiler.X64.Tests", "Strict.Compiler.X64.Tests\Strict.Compiler.X64.Tests.csproj", "{C1F76AB9-D183-43C6-93D3-E57C84915E3C}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Strict.Compiler.Assembly.Tests", "Strict.Compiler.Assembly.Tests\Strict.Compiler.Assembly.Tests.csproj", "{C1F76AB9-D183-43C6-93D3-E57C84915E3C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Strict.Compiler", "Strict.Compiler\Strict.Compiler.csproj", "{39BF8183-4C93-4790-BE24-02D6117C72C1}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Math", "Math\Math.csproj", "{C57ED73C-C844-337B-38C6-202CD86C0A7A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ImageProcessing", "ImageProcessing\ImageProcessing.csproj", "{4F35B2E8-E46D-8D5B-BE27-65E34CCBCCD5}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Examples", "Examples\Examples.csproj", "{4231C2B0-5AEB-2EC9-2588-94FF03EC9E9D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -502,15 +456,62 @@ Global
 		{C1F76AB9-D183-43C6-93D3-E57C84915E3C}.Release|x64.Build.0 = Release|Any CPU
 		{C1F76AB9-D183-43C6-93D3-E57C84915E3C}.Release|x86.ActiveCfg = Release|Any CPU
 		{C1F76AB9-D183-43C6-93D3-E57C84915E3C}.Release|x86.Build.0 = Release|Any CPU
+		{39BF8183-4C93-4790-BE24-02D6117C72C1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{39BF8183-4C93-4790-BE24-02D6117C72C1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{39BF8183-4C93-4790-BE24-02D6117C72C1}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{39BF8183-4C93-4790-BE24-02D6117C72C1}.Debug|x64.Build.0 = Debug|Any CPU
+		{39BF8183-4C93-4790-BE24-02D6117C72C1}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{39BF8183-4C93-4790-BE24-02D6117C72C1}.Debug|x86.Build.0 = Debug|Any CPU
+		{39BF8183-4C93-4790-BE24-02D6117C72C1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{39BF8183-4C93-4790-BE24-02D6117C72C1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{39BF8183-4C93-4790-BE24-02D6117C72C1}.Release|x64.ActiveCfg = Release|Any CPU
+		{39BF8183-4C93-4790-BE24-02D6117C72C1}.Release|x64.Build.0 = Release|Any CPU
+		{39BF8183-4C93-4790-BE24-02D6117C72C1}.Release|x86.ActiveCfg = Release|Any CPU
+		{39BF8183-4C93-4790-BE24-02D6117C72C1}.Release|x86.Build.0 = Release|Any CPU
+		{C57ED73C-C844-337B-38C6-202CD86C0A7A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C57ED73C-C844-337B-38C6-202CD86C0A7A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C57ED73C-C844-337B-38C6-202CD86C0A7A}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{C57ED73C-C844-337B-38C6-202CD86C0A7A}.Debug|x64.Build.0 = Debug|Any CPU
+		{C57ED73C-C844-337B-38C6-202CD86C0A7A}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{C57ED73C-C844-337B-38C6-202CD86C0A7A}.Debug|x86.Build.0 = Debug|Any CPU
+		{C57ED73C-C844-337B-38C6-202CD86C0A7A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C57ED73C-C844-337B-38C6-202CD86C0A7A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C57ED73C-C844-337B-38C6-202CD86C0A7A}.Release|x64.ActiveCfg = Release|Any CPU
+		{C57ED73C-C844-337B-38C6-202CD86C0A7A}.Release|x64.Build.0 = Release|Any CPU
+		{C57ED73C-C844-337B-38C6-202CD86C0A7A}.Release|x86.ActiveCfg = Release|Any CPU
+		{C57ED73C-C844-337B-38C6-202CD86C0A7A}.Release|x86.Build.0 = Release|Any CPU
+		{4F35B2E8-E46D-8D5B-BE27-65E34CCBCCD5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4F35B2E8-E46D-8D5B-BE27-65E34CCBCCD5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4F35B2E8-E46D-8D5B-BE27-65E34CCBCCD5}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{4F35B2E8-E46D-8D5B-BE27-65E34CCBCCD5}.Debug|x64.Build.0 = Debug|Any CPU
+		{4F35B2E8-E46D-8D5B-BE27-65E34CCBCCD5}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{4F35B2E8-E46D-8D5B-BE27-65E34CCBCCD5}.Debug|x86.Build.0 = Debug|Any CPU
+		{4F35B2E8-E46D-8D5B-BE27-65E34CCBCCD5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4F35B2E8-E46D-8D5B-BE27-65E34CCBCCD5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4F35B2E8-E46D-8D5B-BE27-65E34CCBCCD5}.Release|x64.ActiveCfg = Release|Any CPU
+		{4F35B2E8-E46D-8D5B-BE27-65E34CCBCCD5}.Release|x64.Build.0 = Release|Any CPU
+		{4F35B2E8-E46D-8D5B-BE27-65E34CCBCCD5}.Release|x86.ActiveCfg = Release|Any CPU
+		{4F35B2E8-E46D-8D5B-BE27-65E34CCBCCD5}.Release|x86.Build.0 = Release|Any CPU
+		{4231C2B0-5AEB-2EC9-2588-94FF03EC9E9D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4231C2B0-5AEB-2EC9-2588-94FF03EC9E9D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4231C2B0-5AEB-2EC9-2588-94FF03EC9E9D}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{4231C2B0-5AEB-2EC9-2588-94FF03EC9E9D}.Debug|x64.Build.0 = Debug|Any CPU
+		{4231C2B0-5AEB-2EC9-2588-94FF03EC9E9D}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{4231C2B0-5AEB-2EC9-2588-94FF03EC9E9D}.Debug|x86.Build.0 = Debug|Any CPU
+		{4231C2B0-5AEB-2EC9-2588-94FF03EC9E9D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4231C2B0-5AEB-2EC9-2588-94FF03EC9E9D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4231C2B0-5AEB-2EC9-2588-94FF03EC9E9D}.Release|x64.ActiveCfg = Release|Any CPU
+		{4231C2B0-5AEB-2EC9-2588-94FF03EC9E9D}.Release|x64.Build.0 = Release|Any CPU
+		{4231C2B0-5AEB-2EC9-2588-94FF03EC9E9D}.Release|x86.ActiveCfg = Release|Any CPU
+		{4231C2B0-5AEB-2EC9-2588-94FF03EC9E9D}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
-		{C436613F-79E2-4B74-86B2-9F8B67D29712} = {CAF602EA-BA64-4818-B27E-4A757B4D2259}
-		{EB6CB05E-9C14-4F1F-8A36-82B7E6A40ED5} = {CAF602EA-BA64-4818-B27E-4A757B4D2259}
-		{87015E92-9B24-4DBA-8A57-BECAF9E61F2F} = {CAF602EA-BA64-4818-B27E-4A757B4D2259}
-		{57FE9C48-33B8-44D5-AEC2-EF9CDDEA3F1D} = {87015E92-9B24-4DBA-8A57-BECAF9E61F2F}
+		{C57ED73C-C844-337B-38C6-202CD86C0A7A} = {CAF602EA-BA64-4818-B27E-4A757B4D2259}
+		{4F35B2E8-E46D-8D5B-BE27-65E34CCBCCD5} = {CAF602EA-BA64-4818-B27E-4A757B4D2259}
+		{4231C2B0-5AEB-2EC9-2588-94FF03EC9E9D} = {CAF602EA-BA64-4818-B27E-4A757B4D2259}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {DEA35D12-F095-424A-8A50-6D7EBE08D917}

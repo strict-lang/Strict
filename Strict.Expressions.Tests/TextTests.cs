@@ -75,4 +75,15 @@ public sealed class TextTests : TestExpressions
 		var constantDeclaration = (Binary)multiLineType.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(constantDeclaration.ToString(), Is.EqualTo(expected));
 	}
+
+	[Test]
+	public void ConcatenateText()
+	{
+		using var testType = new Type(TestPackage.Instance,
+				new TypeLines("Position", "has x Number", "has y Number", "has logger", "Run",
+					"\tconstant pos = Position(10, 20)", "\tlogger.Log(pos + \" is the position\")")).
+			ParseMembersAndMethods(new MethodExpressionParser());
+		var call = (MethodCall)((Body)testType.Methods[0].GetBodyAndParseIfNeeded()).Expressions[^1];
+		Assert.That(call.Arguments[0].ToString(), Is.EqualTo("pos + \" is the position\""));
+	}
 }

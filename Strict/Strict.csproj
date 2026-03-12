@@ -7,6 +7,7 @@
     <ApplicationIcon>Strict.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Strict.Compiler.Assembly\Strict.Compiler.Assembly.csproj" />
     <ProjectReference Include="..\Strict.Language\Strict.Language.csproj" />
     <ProjectReference Include="..\Strict.Expressions\Strict.Expressions.csproj" />
     <ProjectReference Include="..\Strict.Validators\Strict.Validators.csproj" />
@@ -14,7 +15,6 @@
     <ProjectReference Include="..\Strict.HighLevelRuntime\Strict.HighLevelRuntime.csproj" />
     <ProjectReference Include="..\Strict.Bytecode\Strict.Bytecode.csproj" />
     <ProjectReference Include="..\Strict.Optimizers\Strict.Optimizers.csproj" />
-    <ProjectReference Include="..\Strict.Compiler.X64\Strict.Compiler.X64.csproj" />
   </ItemGroup>
   <ItemGroup>
     <None Update="Examples\SimpleCalculator.strict">

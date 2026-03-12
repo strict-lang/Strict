@@ -14,10 +14,23 @@ internal sealed class ToEvaluator(Interpreter interpreter)
 			return new ValueInstance(to.ConversionType,
 				double.Parse(left.Text, CultureInfo.InvariantCulture));
 		if (to.ConversionType.IsText)
-			return new ValueInstance(left.ToExpressionCodeString());
+			return left.TryGetValueTypeInstance() is { } typeInstance
+				? new ValueInstance(BuildMembersText(typeInstance))
+				: new ValueInstance(left.ToExpressionCodeString());
 		return to.Method.IsTrait
 			? throw new ToMethodNotImplemented(left, to.ConversionType)
 			: interpreter.methodCallEvaluator.Evaluate(to, ctx);
+	}
+
+	private static string BuildMembersText(ValueTypeInstance typeInstance)
+	{
+		var values = typeInstance.Values;
+		if (values.Length == 0)
+			return typeInstance.ReturnType.Name;
+		var parts = new string[values.Length];
+		for (var index = 0; index < values.Length; index++)
+			parts[index] = values[index].ToExpressionCodeString();
+		return "(" + string.Join(", ", parts) + ")";
 	}
 
 	//ncrunch: no coverage start

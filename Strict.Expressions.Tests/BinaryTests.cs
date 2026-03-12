@@ -149,4 +149,18 @@ public sealed class BinaryTests : TestExpressions
 		Assert.That(expression, Is.InstanceOf<Binary>());
 		Assert.That(((Binary)expression).ReturnType, Is.EqualTo(type.GetType(Type.Text.Pluralize())));
 	}
+
+	[Test]
+	public void NumberPlusTextFallsBackToTextConcatenation()
+	{
+		var expression = ParseExpression("five + \" items\"");
+		Assert.That(expression.ReturnType.IsText, Is.True);
+		Assert.That(expression.ToString(), Is.EqualTo("five + \" items\""));
+	}
+
+	[Test]
+	public void InInsideTextLiteralIsNotTreatedAsOperator() =>
+		ParseAndCheckOutputMatchesInput("\"100C in Fahrenheit: \" + \"212\"",
+			CreateBinary(new Text(method, "100C in Fahrenheit: "), BinaryOperator.Plus,
+				new Text(method, "212")));
 }

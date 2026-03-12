@@ -12,7 +12,7 @@ public sealed class BytecodeDecompilerTests : TestBytecode
 			GenerateMethodCallFromSource("Add", "Add(10, 5).Calculate",
 				"has First Number", "has Second Number", "Calculate Number",
 				"\tAdd(10, 5).Calculate is 15", "\tFirst + Second")).Generate();
-		var (binaryFilePath, outputFolder) = SerializeAndDecompile(instructions, "Add");
+		var outputFolder = SerializeAndDecompile(instructions, "Add");
 		try
 		{
 			var content = File.ReadAllText(Path.Combine(outputFolder, "Add.strict"));
@@ -20,7 +20,8 @@ public sealed class BytecodeDecompilerTests : TestBytecode
 		}
 		finally
 		{
-			Cleanup(binaryFilePath, outputFolder);
+			if (Directory.Exists(outputFolder))
+				Directory.Delete(outputFolder, recursive: true);
 		}
 	}
 
@@ -37,7 +38,7 @@ public sealed class BytecodeDecompilerTests : TestBytecode
 				"\tCounter(5).Calculate is 10",
 				"\tconstant doubled = Counter(3).Double",
 				"\tdoubled * 2")).Generate();
-		var (binaryFilePath, outputFolder) = SerializeAndDecompile(instructions, "Counter");
+		var outputFolder = SerializeAndDecompile(instructions, "Counter");
 		try
 		{
 			var content = File.ReadAllText(Path.Combine(outputFolder, "Counter.strict"));
@@ -47,12 +48,12 @@ public sealed class BytecodeDecompilerTests : TestBytecode
 		}
 		finally
 		{
-			Cleanup(binaryFilePath, outputFolder);
+			if (Directory.Exists(outputFolder))
+				Directory.Delete(outputFolder, recursive: true);
 		}
 	}
 
-	private static (string binaryFilePath, string outputFolder) SerializeAndDecompile(
-		List<Instruction> instructions, string typeName)
+	private static string SerializeAndDecompile(List<Instruction> instructions, string typeName)
 	{
 		var binaryFilePath = new BytecodeSerializer(
 			new Dictionary<string, IList<Instruction>> { [typeName] = instructions },
@@ -63,15 +64,7 @@ public sealed class BytecodeDecompilerTests : TestBytecode
 		Assert.That(Directory.Exists(outputFolder), Is.True, "Output folder should be created");
 		Assert.That(File.Exists(Path.Combine(outputFolder, typeName + ".strict")), Is.True,
 			typeName + ".strict should be created");
-		return (binaryFilePath, outputFolder);
-	}
-
-	private static void Cleanup(string binaryFilePath, string outputFolder)
-	{
-		if (Directory.Exists(outputFolder))
-			Directory.Delete(outputFolder, recursive: true);
-		if (File.Exists(binaryFilePath))
-			File.Delete(binaryFilePath);
+		return outputFolder;
 	}
 
 	private static int decompTestCounter;

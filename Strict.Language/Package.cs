@@ -1,6 +1,6 @@
 using System.Runtime.CompilerServices;
 
-[assembly: InternalsVisibleTo("Strict.Compiler.Cuda")]
+[assembly: InternalsVisibleTo("Strict.Transpiler.Cuda")]
 
 namespace Strict.Language;
 
@@ -31,7 +31,8 @@ public class Package : Context, IDisposable
 		this.createdFromRepos = createdFromRepos;
 		FolderPath = Path.IsPathRooted(packagePath)
 			? packagePath
-			: null;
+			: Repositories.GetLocalDevelopmentPath(Repositories.StrictOrg,
+				packagePath.Replace("TestPackage", "Strict"));
 		if (parentPackage == null)
 			return;
 		var existing = parentPackage.children.FirstOrDefault(existing => existing.Name == Name);
@@ -52,7 +53,7 @@ public class Package : Context, IDisposable
 
 	private static readonly Root RootForPackages = new();
 	private readonly Repositories? createdFromRepos;
-	public string? FolderPath { get; }
+	public string FolderPath { get; }
 
 	/// <summary>
 	/// Contains all high level <see cref="Package"/>s. Just contains the fallback None type (think

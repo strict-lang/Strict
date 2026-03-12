@@ -49,4 +49,31 @@ public sealed class ToTests
 		Assert.That(interpreter.Execute(type.Methods[0], new ValueInstance(type, '5'),
 			[new ValueInstance(type.GetType(Type.Number), 3)]).Number, Is.EqualTo(5 * 1000));
 	}
+
+	[Test]
+	public void ComplexTypeToTextDisplaysMemberValues()
+	{
+		using var pointType = CreateType(nameof(ComplexTypeToTextDisplaysMemberValues) + "Point",
+			"has x Number", "has y Number");
+		using var t = CreateType(nameof(ComplexTypeToTextDisplaysMemberValues),
+			"has point " + nameof(ComplexTypeToTextDisplaysMemberValues) + "Point",
+			"GetText Text", "\tpoint to Text");
+		var pointInstance = new ValueInstance(pointType, [
+			new ValueInstance(interpreter.numberType, 10),
+			new ValueInstance(interpreter.numberType, 20)
+		]);
+		var typeInstance = new ValueInstance(t, [pointInstance]);
+		Assert.That(interpreter.Execute(t.Methods.Single(m => m.Name == "GetText"), typeInstance, []).Text,
+			Is.EqualTo("(10, 20)"));
+	}
+
+	[Test]
+	public void NumberPlusTextConcatenatesCorrectly()
+	{
+		using var t = CreateType(nameof(NumberPlusTextConcatenatesCorrectly),
+			"has number", "GetText Text", "\tnumber + \" items\"");
+		Assert.That(
+			interpreter.Execute(t.Methods.Single(m => m.Name == "GetText"), new ValueInstance(t, 5), []).Text,
+			Is.EqualTo("5 items"));
+	}
 }

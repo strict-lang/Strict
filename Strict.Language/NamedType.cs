@@ -27,7 +27,7 @@ public abstract class NamedType
 			if (!Name.IsWord())
 				throw new Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers(Name);
 		}
-		if (!Name.Length.IsNameLengthWithinLimit())
+		if (!Name.Length.IsNameLengthWithinLimit() && Name != "x" && Name != "y" && Name != "z")
 			throw new NameLengthIsNotWithinTheAllowedLimit(Name);
 	}
 

@@ -169,6 +169,7 @@ public sealed class VirtualMachine(Package package,
 			return;
 		//ncrunch: no coverage end
 		var instance = evaluatedInstance ?? EvaluateExpression(methodCall.Instance);
+		Memory.Frame.Set(Type.ValueLowercase, instance, isMember: true);
 		var typeInstance = instance.TryGetValueTypeInstance();
 		if (typeInstance != null)
 		{
@@ -233,21 +234,37 @@ public sealed class VirtualMachine(Package package,
 		var instanceExpr = invoke.Method.Instance ?? throw new InvalidOperationException();
 		var rawValue = instanceExpr is Value constValue
 			? constValue.Data
-			: Memory.Frame.TryGet(instanceExpr.ToString(), out var varValue)
-				? varValue
+			: Memory.Frame.TryGet(instanceExpr.ToString(), out var variableValue)
+				? variableValue
 				: throw new InvalidOperationException(); //ncrunch: no coverage
 		var conversionType = invoke.Method.ReturnType;
 		if (conversionType.IsText)
-			Memory.Registers[invoke.Register] =
-				rawValue.IsText
-					? rawValue
-					: new ValueInstance(rawValue.ToExpressionCodeString());
+			Memory.Registers[invoke.Register] = ConvertToText(rawValue);
 		else if (conversionType.IsNumber)
 			Memory.Registers[invoke.Register] =
 				rawValue.IsText
 					? new ValueInstance(conversionType, Convert.ToDouble(rawValue.Text))
 					: rawValue;
 		return true;
+	}
+
+	private static ValueInstance ConvertToText(ValueInstance rawValue)
+	{
+		if (rawValue.IsText)
+			return rawValue;
+		if (rawValue.TryGetValueTypeInstance() is { } typeInstance)
+		{
+			var members = typeInstance.ReturnType.Members;
+			var memberValues = new List<string>(typeInstance.Values.Length);
+			for (var memberIndex = 0; memberIndex < typeInstance.Values.Length && memberIndex < members.Count; memberIndex++)
+				if (!members[memberIndex].Type.IsTrait && members[memberIndex].Type.Name is not
+					(Type.Logger or Type.TextWriter or Type.System))
+					memberValues.Add(typeInstance.Values[memberIndex].ToExpressionCodeString());
+			return memberValues.Count == 0
+				? new ValueInstance(typeInstance.ReturnType.Name)
+				: new ValueInstance("(" + string.Join(", ", memberValues) + ")");
+		}
+		return new ValueInstance(rawValue.ToExpressionCodeString());
 	}
 
 	private bool TryCreateEmptyDictionaryInstance(Invoke invoke)
@@ -275,14 +292,14 @@ public sealed class VirtualMachine(Package package,
 			return false; //ncrunch: no coverage
 		var members = targetType.Members;
 		var values = new ValueInstance[members.Count];
-		var argIndex = 0;
-		for (var i = 0; i < members.Count; i++)
-			if (members[i].Type.IsTrait)
-				values[i] = CreateTraitInstance(members[i].Type);
-			else if (argIndex < invoke.Method.Arguments.Count)
-				values[i] = EvaluateExpression(invoke.Method.Arguments[argIndex++]);
+		var argumentIndex = 0;
+		for (var memberIndex = 0; memberIndex < members.Count; memberIndex++)
+			if (members[memberIndex].Type.IsTrait)
+				values[memberIndex] = CreateTraitInstance(members[memberIndex].Type);
+			else if (argumentIndex < invoke.Method.Arguments.Count)
+				values[memberIndex] = EvaluateExpression(invoke.Method.Arguments[argumentIndex++]);
 			else
-				values[i] = new ValueInstance(members[i].Type, 0);
+				values[memberIndex] = new ValueInstance(members[memberIndex].Type, 0);
 		Memory.Registers[invoke.Register] = new ValueInstance(targetType, values);
 		return true;
 	}
@@ -299,7 +316,7 @@ public sealed class VirtualMachine(Package package,
 
 	/// <summary>
 	/// Handles native trait method calls like logger.Log(...) by writing directly to Console.
-	/// Logger delegates to TextWriter.Write which maps to System → Console.WriteLine.
+	/// Logger delegates to TextWriter.Write which maps to System -> Console.WriteLine.
 	/// </summary>
 	private bool TryHandleNativeTraitMethod(Invoke invoke)
 	{
@@ -324,7 +341,7 @@ public sealed class VirtualMachine(Package package,
 	{
 		if (expression is Value value)
 			return value.Data;
-		if (expression is VariableCall or ParameterCall)
+		if (expression is VariableCall or ParameterCall or Instance)
 			return Memory.Frame.Get(expression.ToString());
 		if (expression is MemberCall memberCall)
 			return EvaluateMemberCall(memberCall);
@@ -373,6 +390,16 @@ public sealed class VirtualMachine(Package package,
 	{
 		if (call.Method.Name == Method.From)
 			return EvaluateFromConstructor(call); //ncrunch: no coverage
+		if (call.Method.Name == BinaryOperator.To && call.Instance != null)
+		{
+			var rawValue = EvaluateExpression(call.Instance);
+			if (call.ReturnType.IsText)
+				return ConvertToText(rawValue);
+			if (call.ReturnType.IsNumber)
+				return rawValue.IsText
+					? new ValueInstance(call.ReturnType, Convert.ToDouble(rawValue.Text))
+					: rawValue;
+		}
 		var precompiledInstructions = GetPrecompiledMethodInstructions(call.Method);
 		if (precompiledInstructions != null)
 		{
@@ -391,8 +418,8 @@ public sealed class VirtualMachine(Package package,
 			? call.Arguments.Select(EvaluateExpression).ToArray()
 			: [];
 		var argDict = new Dictionary<string, ValueInstance>();
-		for (var i = 0; i < call.Method.Parameters.Count && i < args.Length; i++)
-			argDict[call.Method.Parameters[i].Name] = args[i]; //ncrunch: no coverage
+		for (var parameterIndex = 0; parameterIndex < call.Method.Parameters.Count && parameterIndex < args.Length; parameterIndex++)
+			argDict[call.Method.Parameters[parameterIndex].Name] = args[parameterIndex]; //ncrunch: no coverage
 		var expressions = GetExpressionsFromMethod(call.Method);
 		var invokedMethod = !instance.Equals(default(ValueInstance))
 			? new InstanceInvokedMethod(expressions, argDict, instance, call.Method.ReturnType)

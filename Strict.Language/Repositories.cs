@@ -1,7 +1,7 @@
 using System.Runtime.CompilerServices;
 using LazyCache;
 
-[assembly: InternalsVisibleTo("Strict.Compiler.Tests")]
+[assembly: InternalsVisibleTo("Strict.Transpiler.Tests")]
 
 namespace Strict.Language;
 

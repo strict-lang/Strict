@@ -18,7 +18,8 @@ public class BinaryExecutionPerformanceTests
 	{
 		rememberConsoleOut = Console.Out;
 		Console.SetOut(TextWriter.Null);
-		new Runner(TestPackage.Instance, StrictFilePath).Run().Dispose();
+		if (!File.Exists(BinaryFilePath))
+			new Runner(TestPackage.Instance, StrictFilePath).Run().Dispose(); //ncrunch: no coverage
 		var deserializer = new BytecodeDeserializer(BinaryFilePath, TestPackage.Instance);
 		binaryPackage = deserializer.Package;
 		instructions = deserializer.Instructions.Values.First();
@@ -29,8 +30,7 @@ public class BinaryExecutionPerformanceTests
 	private VirtualMachine vm = null!;
 	private List<Instruction> instructions = null!;
 	private Package binaryPackage = null!;
-	private static string StrictFilePath =>
-		Path.Combine(AppContext.BaseDirectory, "Examples", "SimpleCalculator.strict");
+	private static string StrictFilePath => RunnerTests.GetExamplesFilePath("SimpleCalculator");
 	private static readonly string BinaryFilePath =
 		Path.ChangeExtension(StrictFilePath, BytecodeSerializer.Extension);
 

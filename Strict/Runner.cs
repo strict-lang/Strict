@@ -5,7 +5,8 @@ using Strict.Optimizers;
 using Strict.Bytecode;
 using Strict.Bytecode.Instructions;
 using Strict.Bytecode.Serialization;
-using Strict.Compiler.X64;
+using Strict.Compiler;
+using Strict.Compiler.Assembly;
 using Strict.TestRunner;
 using Strict.Validators;
 using Type = Strict.Language.Type;
@@ -37,9 +38,10 @@ public sealed class Runner : IDisposable
 		}
 		else
 		{
-			package = new Package(basePackage,
-				Path.GetDirectoryName(Path.GetFullPath(strictFilePath)) ??
-				throw new InvalidOperationException("Cannot determine package path"));
+			var packageName = Path.GetFileNameWithoutExtension(strictFilePath);
+				//Path.GetDirectoryName(Path.GetFullPath(strictFilePath)) ??
+				//throw new InvalidOperationException("Cannot determine package path");
+			package = new Package(basePackage, packageName);
 			var typeLines = new TypeLines(typeName, File.ReadAllLines(strictFilePath));
 			mainType =
 				new Type(package, typeLines).ParseMembersAndMethods(new MethodExpressionParser());
@@ -63,25 +65,25 @@ public sealed class Runner : IDisposable
 			Console.WriteLine(message);
 	}
 
-	public Runner Run(Platform? targetPlatform = null, string[]? programArgs = null) =>
+	public Runner Run(Platform? targetPlatform = null, params string[] programArgs) =>
 		deserializer != null
 			? RunFromPreloadedBytecode(deserializer.Instructions[mainType.Name], programArgs)
 			: RunFromSource(targetPlatform, programArgs);
 
 	private Runner RunFromPreloadedBytecode(List<Instruction> preloadedInstructions,
-		string[]? programArgs)
+		string[] programArgs)
 	{
 		Log("╔═══════════════════════════════════════════╗");
 		Log("║  Running from pre-compiled .strictbinary  ║");
 		Log("╚═══════════════════════════════════════════╝");
 		ExecuteBytecode(preloadedInstructions, deserializer?.PrecompiledMethods,
-			BuildProgramArgsVariables(programArgs));
+			BuildProgramArguments(programArgs));
 		Log("Successfully executed pre-compiled " + mainType.Name + " in " +
 			TimeSpan.FromTicks(stepTimes.Sum()).ToString(@"s\.ffffff") + "s");
 		return this;
 	}
 
-	private Runner RunFromSource(Platform? targetPlatform, string[]? programArgs)
+	private Runner RunFromSource(Platform? targetPlatform, string[] programArgs)
 	{
 		if (enableTestsAndDetailedOutput)
 		{
@@ -91,7 +93,7 @@ public sealed class Runner : IDisposable
 		}
 		var instructions = GenerateBytecode();
 		var optimizedInstructions = OptimizeBytecode(instructions);
-		ExecuteBytecode(optimizedInstructions, null, BuildProgramArgsVariables(programArgs));
+		ExecuteBytecode(optimizedInstructions, null, BuildProgramArguments(programArgs));
 		SaveBytecodeIfPossible(optimizedInstructions);
 		if (targetPlatform.HasValue)
 			SavePlatformExecutable(optimizedInstructions, targetPlatform.Value);
@@ -190,7 +192,9 @@ public sealed class Runner : IDisposable
 		else
 		{
 			var body = runMethod.GetBodyAndParseIfNeeded();
-			var expressions = body is Body bodyExpr ? bodyExpr.Expressions : [body];
+			var expressions = body is Body bodyExpr
+				? bodyExpr.Expressions
+				: [body];
 			instructions = new BytecodeGenerator(
 				new InvokedMethod(expressions, EmptyArguments, runMethod.ReturnType),
 				new Registry()).Generate();
@@ -250,20 +254,23 @@ public sealed class Runner : IDisposable
 			" ms");
 	}
 
-	private IReadOnlyDictionary<string, ValueInstance>? BuildProgramArgsVariables(
-		string[]? programArgs)
+	private IReadOnlyDictionary<string, ValueInstance>? BuildProgramArguments(string[] programArgs)
 	{
 		if (programArgs is not { Length: > 0 })
 			return null;
-		var runMethod =
-			mainType.Methods.FirstOrDefault(m => m.Name == Method.Run && m.Parameters.Count == 1);
+		var runMethod = mainType.Methods.FirstOrDefault(method =>
+			method.Name == Method.Run && method.Parameters.Count == programArgs.Length);
 		if (runMethod == null)
-			return null;
+			runMethod = mainType.Methods.FirstOrDefault(method =>
+				method.Name == Method.Run && method.Parameters.Count == 1 && method.Parameters[0].Type.IsList);
+		if (runMethod == null)
+			throw new NotSupportedException("No Run method with " + programArgs.Length + " arguments " +
+				"found: " + ParsingFailed.GetClickableStacktraceLine(mainType, 0, Method.Run));
 		var numberType = package.GetType(Type.Number);
 		var numbersType = package.GetListImplementationType(numberType);
-		var numbers = programArgs.Select(arg =>
+		var numbers = programArgs.Select(argument =>
 			new ValueInstance(numberType,
-				double.Parse(arg, CultureInfo.InvariantCulture))).ToArray();
+				double.Parse(argument, CultureInfo.InvariantCulture))).ToArray();
 		var numbersValue = new ValueInstance(numbersType, numbers);
 		return new Dictionary<string, ValueInstance> { [runMethod.Parameters[0].Name] = numbersValue };
 	}
@@ -283,7 +290,7 @@ public sealed class Runner : IDisposable
 	/// </summary>
 	private void SavePlatformExecutable(List<Instruction> optimizedInstructions, Platform platform)
 	{
-		var assemblyText = new InstructionsToX64Compiler().CompileForPlatform(
+		var assemblyText = new InstructionsToAssembly().CompileForPlatform(
 			mainType.Name, optimizedInstructions, platform);
 		var asmPath = Path.Combine(currentFolder, mainType.Name + ".asm");
 		File.WriteAllText(asmPath, assemblyText);
@@ -291,7 +298,7 @@ public sealed class Runner : IDisposable
 		var exePath = new NativeExecutableLinker().CreateExecutable(asmPath, platform);
 		Console.WriteLine("Saved " + platform + " executable to: " + exePath);
 	}
-	
+
 	private IReadOnlyList<TypeBytecodeData> BuildTypeBytecodeData(
 		List<Instruction> optimizedRunInstructions)
 	{

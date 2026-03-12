@@ -1,5 +1,6 @@
 global using Type = Strict.Language.Type;
 using Strict.Bytecode.Instructions;
+using Strict.Expressions;
 
 namespace Strict.Optimizers.Tests;
 
@@ -103,4 +104,20 @@ public sealed class ConstantFoldingOptimizerTests : TestOptimizers
 			new LoadVariableToRegister(Register.R0, "x"),
 			new ReturnInstruction(Register.R0)
 		], 3);
+
+	[Test]
+	public void DoNotFoldWithStaleConstantAfterRegisterOverwrite()
+	{
+		var optimized = new ConstantFoldingOptimizer().Optimize([
+			new LoadConstantInstruction(Register.R0, Num(5)),
+			new LoadVariableToRegister(Register.R1, "celsius"),
+			new BinaryInstruction(InstructionType.Multiply, Register.R1, Register.R1, Register.R0),
+			new LoadConstantInstruction(Register.R2, Num(32)),
+			new BinaryInstruction(InstructionType.Add, Register.R0, Register.R2, Register.R3),
+			new ReturnInstruction(Register.R3)
+		]);
+		var result = new VirtualMachine(TestPackage.Instance).Execute(optimized,
+			new Dictionary<string, ValueInstance> { ["celsius"] = Num(100) }).Returns!.Value;
+		Assert.That(result.Number, Is.EqualTo(10032));
+	}
 }

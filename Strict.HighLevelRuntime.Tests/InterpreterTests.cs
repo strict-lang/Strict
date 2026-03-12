@@ -418,4 +418,16 @@ public sealed class InterpreterTests
 		Assert.That(() => interpreter.ExecuteRunMethod(
 			CreateType(nameof(ExecuteRunMethodWillFailIfThereIsNoRunMethod), "has number",
 				"GetNumber Number", "\tnumber")), Throws.InstanceOf<Interpreter.MethodNotFound>());
+
+	[Test]
+	public void ComputeNumber()
+	{
+		using var t = CreateType(nameof(ComputeNumber), "has celsius Number",
+			"ConvertToFahrenheit Number",
+			"\tcelsius * 9 / 5 + 32");
+		Assert.That(
+			interpreter.Execute(t.Methods.Single(m => m.Name == "ConvertToFahrenheit"),
+				new ValueInstance(t, 100), []).Number,
+			Is.EqualTo(100 * 9 / 5 + 32));
+	}
 }

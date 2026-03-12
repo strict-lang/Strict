@@ -60,11 +60,27 @@ public sealed class ConstantFoldingOptimizer : InstructionOptimizer
 	private static int FindLoadConstantIndex(List<Instruction> instructions, int beforeIndex,
 		Register register)
 	{
-		for (var i = beforeIndex - 1; i >= 0; i--)
-			if (instructions[i] is LoadConstantInstruction load && load.Register == register)
-				return i;
+		for (var instructionIndex = beforeIndex - 1; instructionIndex >= 0; instructionIndex--)
+		{
+			var instruction = instructions[instructionIndex];
+			if (instruction is LoadConstantInstruction loadConstant && loadConstant.Register == register)
+				return instructionIndex;
+			if (WritesToRegister(instruction, register))
+				return -1;
+		}
 		return -1;
 	}
+
+	private static bool WritesToRegister(Instruction instruction, Register register) =>
+		instruction switch
+		{
+			LoadVariableToRegister loadVariable => loadVariable.Register == register,
+			ListCallInstruction listCall => listCall.Register == register,
+			Invoke invoke => invoke.Register == register,
+			BinaryInstruction binary when binary.Registers.Length >= 3 => binary.Registers[2] == register,
+			LoadConstantInstruction loadConstant => loadConstant.Register == register,
+			_ => false
+		};
 
 	private static bool IsArithmetic(InstructionType instruction) =>
 		instruction is > InstructionType.StoreSeparator and < InstructionType.ArithmeticSeparator;

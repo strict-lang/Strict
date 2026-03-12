@@ -346,8 +346,7 @@ public class Type : Context, IDisposable
 		: Exception("Type: " + name + ", Generic Implementation: " + key);
 
 	public string FilePath =>
-		Path.GetFullPath(Path.Combine(
-			Package.FolderPath ?? Repositories.GetLocalDevelopmentPath(Repositories.StrictOrg, "Strict"),
+		Path.GetFullPath(Path.Combine(Package.FolderPath,
 			(this is GenericTypeImplementation genericType
 				? genericType.Generic.Name
 				: Name) + Extension));

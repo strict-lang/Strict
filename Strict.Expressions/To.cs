@@ -41,6 +41,18 @@ public sealed class To(Expression left, Method operatorMethod, Type conversionTy
 				m.ReturnType.IsSameOrCanBeUsedAs(conversionType))
 			: null;
 
+	/// <summary>
+	/// Creates a To expression converting left to Text, using the type's own to Text method or
+	/// the inherited Any.to Text fallback.
+	/// </summary>
+	public static To ConvertToText(Expression left, Type textType)
+	{
+		var method = left.ReturnType.GetMethod(BinaryOperator.To, []);
+		if (method.ReturnType.Name != textType.Name)
+			method = FindConversionMethod(left.ReturnType, textType) ?? method;
+		return new To(left, method, textType);
+	}
+
 	public sealed class ConversionTypeNotFound(Body body, string typeName)
 		: ParsingFailed(body, typeName);
 

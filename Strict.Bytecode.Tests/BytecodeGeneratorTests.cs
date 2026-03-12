@@ -16,6 +16,30 @@ public sealed class BytecodeGeneratorTests : TestBytecode
 			Is.EqualTo(expectedByteCode.ToList().ConvertAll(x => x.ToString())));
 	}
 
+	[Test]
+	public void GenerateKeepsNestedLeftBinaryOperator()
+	{
+		var instructions = new BytecodeGenerator(GenerateMethodCallFromSource("TemperatureConverter",
+			"TemperatureConverter(100).ToFahrenheit", "has celsius Number", "ToFahrenheit Number",
+			"\tcelsius * 9 / 5 + 32")).Generate();
+		var binaryInstructionTypes = instructions.OfType<BinaryInstruction>().Select(binary =>
+			binary.InstructionType).ToList();
+		Assert.That(binaryInstructionTypes, Is.EqualTo(new[]
+		{
+			InstructionType.Multiply, InstructionType.Divide, InstructionType.Add
+		}));
+	}
+
+	[Test]
+	public void GenerateIfWithInstanceValueOnRightSide()
+	{
+		var methodCall = GenerateMethodCallFromSource("ValueComparison", "ValueComparison(5).IsSame",
+			"has number Number", "IsSame Boolean", "\tif value is value", "\t\treturn true", "\tfalse");
+		var instructions = new BytecodeGenerator(methodCall).Generate();
+		Assert.That(instructions.OfType<LoadVariableToRegister>().Any(load => load.Identifier == "value"),
+			Is.True);
+	}
+
 	//ncrunch: no coverage start
 	private static IEnumerable<TestCaseData> ByteCodeCases
 	{
