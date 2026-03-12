@@ -77,14 +77,18 @@ public static class Program
 		}
 		else
 		{
-			var programArgs = args.Skip(1).Where(arg => !arg.StartsWith("-", StringComparison.Ordinal)).
+			var nonFlagArgs = args.Skip(1).Where(arg => !arg.StartsWith("-", StringComparison.Ordinal)).
 				ToArray();
 			var diagnostics = options.Contains("-diagnostics");
 #if DEBUG
 			if (!diagnostics)
 				diagnostics = true;
 #endif
-			new Runner(basePackage, filePath, diagnostics).Run(GetPlatformOption(options), programArgs);
+			using var runner = new Runner(basePackage, filePath, diagnostics);
+			if (nonFlagArgs.Length == 1 && nonFlagArgs[0].Contains('('))
+				runner.RunExpression(nonFlagArgs[0]);
+			else
+				runner.Run(GetPlatformOption(options), nonFlagArgs);
 		}
 	}
 

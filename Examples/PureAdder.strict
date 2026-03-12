@@ -1,0 +1,7 @@
+has first Number
+has second Number
+Add Number
+	PureAdder(2, 3).Add is 5
+	first + second
+Run Number
+	42

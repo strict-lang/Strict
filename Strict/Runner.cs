@@ -487,4 +487,77 @@ public sealed class Runner : IDisposable
 	}
 
 	public void Dispose() => package.Dispose();
+
+	/// <summary>
+	/// Evaluates a Strict expression like "TypeName(args).Method" or "TypeName(args)" (calls Run).
+	/// The result is printed to Console if the method returns a value.
+	/// Example: runner.RunExpression("Fibonacci(5).GetNthFibonacci") prints "5".
+	/// </summary>
+	public Runner RunExpression(string expression)
+	{
+		var (typeName, constructorArgs, methodName) = ParseExpressionArg(expression);
+		var targetType = typeName == mainType.Name
+			? mainType
+			: package.GetType(typeName);
+		var method = methodName != null
+			? targetType.Methods.FirstOrDefault(m => m.Name == methodName && m.Parameters.Count == 0) ??
+			  throw new InvalidOperationException(
+				  "Method " + methodName + " not found on " + targetType.Name)
+			: targetType.Methods.FirstOrDefault(m => m.Name == Method.Run && m.Parameters.Count == 0) ??
+			  throw new InvalidOperationException("No Run method found on " + targetType.Name);
+		var initialVariables = BuildInstanceVariables(targetType, constructorArgs);
+		var body = method.GetBodyAndParseIfNeeded();
+		var allExpressions = body is Body bodyExpr ? bodyExpr.Expressions : [body];
+		var expressions = allExpressions.Where(expr => !method.Tests.Contains(expr)).ToList();
+		var instructions = new BytecodeGenerator(
+			new InvokedMethod(expressions, EmptyArguments, method.ReturnType),
+			new Registry()).Generate();
+		var vm = new VirtualMachine(package, null);
+		var optimizedInstructions = OptimizeBytecode(instructions);
+		vm.Execute(optimizedInstructions, initialVariables);
+		if (vm.Returns.HasValue)
+			Console.WriteLine(vm.Returns.Value.ToExpressionCodeString());
+		return this;
+	}
+
+	private static (string TypeName, double[] ConstructorArgs, string? MethodName) ParseExpressionArg(
+		string expression)
+	{
+		var dotIndex = expression.LastIndexOf('.');
+		string? methodName = null;
+		var typeAndArgs = expression;
+		if (dotIndex >= 0 && expression.IndexOf('(') < dotIndex)
+		{
+			methodName = expression[(dotIndex + 1)..];
+			typeAndArgs = expression[..dotIndex];
+		}
+		var parenIndex = typeAndArgs.IndexOf('(');
+		var typeName = typeAndArgs[..parenIndex];
+		var argsContent = typeAndArgs[(parenIndex + 1)..^1].Trim();
+		var constructorArgs = argsContent.Length == 0
+			? Array.Empty<double>()
+			: argsContent.Split(',').Select(argStr =>
+				double.Parse(argStr.Trim(), CultureInfo.InvariantCulture)).ToArray();
+		return (typeName, constructorArgs, methodName);
+	}
+
+	private IReadOnlyDictionary<string, ValueInstance>? BuildInstanceVariables(Type type,
+		double[] constructorArgs)
+	{
+		if (constructorArgs.Length == 0)
+			return null;
+		var dataMembers = type.Members.Where(member =>
+			!member.Type.IsTrait &&
+			member.Type.Name is not (Type.Logger or Type.TextWriter or Type.System)).ToList();
+		var result = new Dictionary<string, ValueInstance>(StringComparer.Ordinal);
+		for (var memberIndex = 0;
+			memberIndex < dataMembers.Count && memberIndex < constructorArgs.Length;
+			memberIndex++)
+		{
+			var member = dataMembers[memberIndex];
+			result[member.Name] =
+				new ValueInstance(package.GetType(Type.Number), constructorArgs[memberIndex]);
+		}
+		return result;
+	}
 }

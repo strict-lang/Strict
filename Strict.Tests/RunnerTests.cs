@@ -131,15 +131,16 @@ public sealed class RunnerTests
 	[Test]
 	public void RunWithPlatformWindowsCreatesAsmFileWithWindowsEntryPoint()
 	{
-		var asmPath = Path.ChangeExtension(StrictFilePath, ".asm");
-		using var runner = new Runner(TestPackage.Instance, StrictFilePath);
+		var pureAdderPath = GetExamplesFilePath("PureAdder");
+		var asmPath = Path.ChangeExtension(pureAdderPath, ".asm");
+		using var runner = new Runner(TestPackage.Instance, pureAdderPath);
 		try { runner.Run(Platform.Windows); }
 		catch (ToolNotFoundException) { }
 		Assert.That(File.Exists(asmPath), Is.True, ".asm file should be created");
 		Assert.That(writer.ToString(), Does.Contain("Saved Windows NASM assembly to:"));
 		var asmContent = File.ReadAllText(asmPath);
 		Assert.That(asmContent, Does.Contain("section .text"));
-		Assert.That(asmContent, Does.Contain("global SimpleCalculator"));
+		Assert.That(asmContent, Does.Contain("global PureAdder"));
 		Assert.That(asmContent, Does.Contain("global main"));
 		Assert.That(asmContent, Does.Contain("extern ExitProcess"));
 	}
@@ -147,8 +148,9 @@ public sealed class RunnerTests
 	[Test]
 	public void RunWithPlatformLinuxCreatesAsmFileWithStartEntryPoint()
 	{
-		var asmPath = Path.ChangeExtension(StrictFilePath, ".asm");
-		using var runner = new Runner(TestPackage.Instance, StrictFilePath);
+		var pureAdderPath = GetExamplesFilePath("PureAdder");
+		var asmPath = Path.ChangeExtension(pureAdderPath, ".asm");
+		using var runner = new Runner(TestPackage.Instance, pureAdderPath);
 		try { runner.Run(Platform.Linux); }
 		catch (ToolNotFoundException) { }
 		Assert.That(File.Exists(asmPath), Is.True, ".asm file should be created");
@@ -156,6 +158,13 @@ public sealed class RunnerTests
 		var asmContent = File.ReadAllText(asmPath);
 		Assert.That(asmContent, Does.Contain("global _start"));
 		Assert.That(asmContent, Does.Contain("_start:"));
+	}
+
+	[Test]
+	public void RunWithPlatformWindowsThrowsNotSupportedForProgramsWithLoggerCalls()
+	{
+		using var runner = new Runner(TestPackage.Instance, StrictFilePath);
+		Assert.Throws<NotSupportedException>(() => runner.Run(Platform.Windows));
 	}
 
 	[Test]
@@ -176,8 +185,7 @@ public sealed class RunnerTests
 		if (NativeExecutableLinker.IsNasmAvailable)
 			return;
 		//ncrunch: no coverage start
-		var asmPath = Path.ChangeExtension(StrictFilePath, ".asm");
-		using var runner = new Runner(TestPackage.Instance, StrictFilePath);
+		using var runner = new Runner(TestPackage.Instance, GetExamplesFilePath("PureAdder"));
 		Assert.Throws<ToolNotFoundException>(() => runner.Run(Platform.Windows));
 	} //ncrunch: no coverage end
 
@@ -307,5 +315,29 @@ public sealed class RunnerTests
 		Assert.That(output, Does.Contain("100C in Fahrenheit: 212"));
 		Assert.That(output, Does.Contain("0C in Fahrenheit: 32"));
 		Assert.That(output, Does.Contain("100C in Kelvin: 373"));
+	}
+
+	[Test]
+	public void RunExpressionWithSingleConstructorArgAndMethod()
+	{
+		using var runner = new Runner(TestPackage.Instance, GetExamplesFilePath("TemperatureConverter"));
+		runner.RunExpression("TemperatureConverter(100).ToFahrenheit");
+		Assert.That(writer.ToString(), Does.Contain("212"));
+	}
+
+	[Test]
+	public void RunExpressionWithMultipleConstructorArgs()
+	{
+		using var runner = new Runner(TestPackage.Instance, GetExamplesFilePath("Pixel"));
+		runner.RunExpression("Pixel(100, 150, 200).Brighten");
+		Assert.That(writer.ToString(), Does.Contain("250"));
+	}
+
+	[Test]
+	public void RunExpressionWithZeroConstructorArgValue()
+	{
+		using var runner = new Runner(TestPackage.Instance, GetExamplesFilePath("TemperatureConverter"));
+		runner.RunExpression("TemperatureConverter(0).ToFahrenheit");
+		Assert.That(writer.ToString(), Does.Contain("32"));
 	}
 }

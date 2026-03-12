@@ -236,7 +236,11 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 		case Jump jump:
 			EmitJump(jump, jumpLabels, index, lines);
 			break;
-		case JumpToId { InstructionType: InstructionType.JumpEnd }:
+		case Invoke:
+		throw new NotSupportedException(
+			"Console output via logger.Log cannot be compiled to native assembly. " +
+			"Use the interpreted runner for programs with console output.");
+	case JumpToId { InstructionType: InstructionType.JumpEnd }:
 			break;
 		case JumpToId jumpToId:
 			EmitJumpToId(jumpToId, jumpEndPositions, jumpLabels, allInstructions, index, lines);

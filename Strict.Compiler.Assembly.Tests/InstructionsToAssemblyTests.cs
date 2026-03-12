@@ -498,6 +498,19 @@ public sealed class InstructionsToAssemblyTests
 		Assert.That(exception.Message, Does.Contain("https://nasm.us"));
 	}
 
+	[Test]
+	public void InvokeInstructionThrowsNotSupportedForPlatformCompilation()
+	{
+		var instructions = new List<Instruction>
+		{
+			new LoadConstantInstruction(Register.R0, new ValueInstance(NumberType, 1.0)),
+			new Invoke(Register.R1, null!, new Registry()),
+			new ReturnInstruction(Register.R0)
+		};
+		Assert.Throws<NotSupportedException>(() =>
+			compiler.CompileForPlatform("TestFunc", instructions, Platform.Linux));
+	}
+
 	private static Method CreateSingleMethod(string typeName, params string[] methodLines) =>
 		new Type(TestPackage.Instance, new TypeLines(typeName, methodLines)).
 			ParseMembersAndMethods(new MethodExpressionParser()).Methods[0];
