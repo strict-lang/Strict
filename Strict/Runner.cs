@@ -67,7 +67,9 @@ public sealed class Runner : IDisposable
 
 	public Runner Run(Platform? targetPlatform = null, params string[] programArgs) =>
 		deserializer != null
-			? RunFromPreloadedBytecode(deserializer.Instructions[mainType.Name], programArgs)
+			? targetPlatform.HasValue
+				?	SavePlatformExecutable(deserializer.Instructions[mainType.Name], targetPlatform.Value)
+				: RunFromPreloadedBytecode(deserializer.Instructions[mainType.Name], programArgs)
 			: RunFromSource(targetPlatform, programArgs);
 
 	private Runner RunFromPreloadedBytecode(List<Instruction> preloadedInstructions,
@@ -94,11 +96,7 @@ public sealed class Runner : IDisposable
 		var instructions = GenerateBytecode();
 		var optimizedInstructions = OptimizeBytecode(instructions);
 		if (targetPlatform.HasValue)
-		{
 			SavePlatformExecutable(optimizedInstructions, targetPlatform.Value);
-			Console.WriteLine("Compiled " + mainType.Name + " to executable in " +
-				TimeSpan.FromTicks(stepTimes.Sum()).ToString(@"s\.ffffff") + "s");
-		}
 		else
 		{
 			ExecuteBytecode(optimizedInstructions, null, BuildProgramArguments(programArgs));
@@ -295,7 +293,7 @@ public sealed class Runner : IDisposable
 	/// Always saves a .asm file; then invokes NASM and the platform linker.
 	/// Throws <see cref="ToolNotFoundException"/> if required tools are missing.
 	/// </summary>
-	private void SavePlatformExecutable(List<Instruction> optimizedInstructions, Platform platform)
+	private Runner SavePlatformExecutable(List<Instruction> optimizedInstructions, Platform platform)
 	{
 		var assemblyText = new InstructionsToAssembly().CompileForPlatform(
 			mainType.Name, optimizedInstructions, platform);
@@ -303,7 +301,10 @@ public sealed class Runner : IDisposable
 		File.WriteAllText(asmPath, assemblyText);
 		Console.WriteLine("Saved " + platform + " NASM assembly to: " + asmPath);
 		var exePath = new NativeExecutableLinker().CreateExecutable(asmPath, platform);
-		Console.WriteLine("Saved " + platform + " executable to: " + exePath);
+		Console.WriteLine("Compiled " + mainType.Name + " in " +
+			TimeSpan.FromTicks(stepTimes.Sum()).ToString(@"s\.ffffff") + "s to " + platform +
+			" executable to: " + exePath);
+		return this;
 	}
 
 	private IReadOnlyList<TypeBytecodeData> BuildTypeBytecodeData(
