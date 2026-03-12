@@ -38,6 +38,7 @@ internal sealed class NameTable : IEnumerable<string>
 			WriteToTableInstruction writeTable => Add(writeTable.Identifier),
 			RemoveInstruction remove => Add(remove.Identifier),
 			ListCallInstruction listCall => Add(listCall.Identifier),
+			PrintInstruction print => Add(print.TextPrefix),
 			_ => this
 		};
 

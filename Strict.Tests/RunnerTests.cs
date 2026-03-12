@@ -169,7 +169,7 @@ public sealed class RunnerTests
 	}
 
 	[Test]
-	public void RunWithPlatformWindowsThrowsNotSupportedForProgramsWithLoggerCalls()
+	public void RunWithPlatformWindowsThrowsNotSupportedForProgramsWithRuntimeMethodCalls()
 	{
 		using var runner = new Runner(TestPackage.Instance, SimpleCalculatorFilePath);
 		Assert.Throws<NotSupportedException>(() => runner.Run(Platform.Windows));

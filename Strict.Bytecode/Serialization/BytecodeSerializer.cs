@@ -305,6 +305,16 @@ public sealed class BytecodeSerializer
 			writer.Write((byte)listCall.IndexValueRegister);
 			writer.Write7BitEncodedInt(table[listCall.Identifier]);
 			break;
+		case PrintInstruction print:
+			writer.Write((byte)InstructionType.Print);
+			writer.Write7BitEncodedInt(table[print.TextPrefix]);
+			writer.Write(print.ValueRegister.HasValue);
+			if (print.ValueRegister.HasValue)
+			{
+				writer.Write((byte)print.ValueRegister.Value);
+				writer.Write(print.ValueIsText);
+			}
+			break;
 		}
 	}
 

@@ -295,12 +295,13 @@ public sealed class Runner : IDisposable
 	/// </summary>
 	private Runner SavePlatformExecutable(List<Instruction> optimizedInstructions, Platform platform)
 	{
-		var assemblyText = new InstructionsToAssembly().CompileForPlatform(
-			mainType.Name, optimizedInstructions, platform);
+		var compiler = new InstructionsToAssembly();
+		var assemblyText = compiler.CompileForPlatform(mainType.Name, optimizedInstructions, platform);
 		var asmPath = Path.Combine(currentFolder, mainType.Name + ".asm");
 		File.WriteAllText(asmPath, assemblyText);
 		Console.WriteLine("Saved " + platform + " NASM assembly to: " + asmPath);
-		var exePath = new NativeExecutableLinker().CreateExecutable(asmPath, platform);
+		var hasPrint = compiler.HasPrintInstructions(optimizedInstructions);
+		var exePath = new NativeExecutableLinker().CreateExecutable(asmPath, platform, hasPrint);
 		Console.WriteLine("Compiled " + mainType.Name + " in " +
 			TimeSpan.FromTicks(stepTimes.Sum()).ToString(@"s\.ffffff") + "s to " + platform +
 			" executable to: " + exePath);

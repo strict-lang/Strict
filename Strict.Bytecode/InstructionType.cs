@@ -39,5 +39,6 @@ public enum InstructionType : byte
 	JumpToIdIfTrue,
 	InvokeWriteToList,
 	InvokeWriteToTable,
-	InvokeRemove
+	InvokeRemove,
+	Print
 }

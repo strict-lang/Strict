@@ -58,12 +58,23 @@ public sealed class VirtualMachine(Package package,
 		TryLoadInstructions(instruction);
 		TryLoopInitInstruction(instruction);
 		TryLoopEndInstruction(instruction);
+		TryPrintInstruction(instruction);
 		TryInvokeInstruction(instruction);
 		TryWriteToListInstruction(instruction);
 		TryWriteToTableInstruction(instruction);
 		TryRemoveInstruction(instruction);
 		TryExecuteListCall(instruction);
 		TryExecuteRest(instruction);
+	}
+
+	private void TryPrintInstruction(Instruction instruction)
+	{
+		if (instruction is not PrintInstruction print)
+			return;
+		if (print.ValueRegister.HasValue)
+			Console.WriteLine(print.TextPrefix + Memory.Registers[print.ValueRegister.Value].ToExpressionCodeString());
+		else
+			Console.WriteLine(print.TextPrefix);
 	}
 
 	private void TryRemoveInstruction(Instruction instruction)
@@ -131,14 +142,14 @@ public sealed class VirtualMachine(Package package,
 			TryHandleNativeTraitMethod(invoke) || TryHandleToConversion(invoke) ||
 			TryHandleIncrementDecrement(invoke) || GetValueByKeyForDictionaryAndStoreInRegister(invoke))
 			return;
+		var evaluatedArgs = invoke.Method.Arguments.Select(EvaluateExpression).ToArray();
+		var evaluatedInstance = invoke.Method.Instance != null
+			? EvaluateExpression(invoke.Method.Instance)
+			: (ValueInstance?)null;
 		var invokeInstructions = GetPrecompiledMethodInstructions(invoke);
 		var result = invokeInstructions != null
-			? RunChildScope(invokeInstructions,
-				() => InitializeMethodCallScope(invoke.Method, //ncrunch: no coverage
-					invoke.Method.Arguments.Select(EvaluateExpression).ToArray(),
-					invoke.Method.Instance != null
-						? EvaluateExpression(invoke.Method.Instance)
-						: null))
+			? RunChildScope(invokeInstructions, //ncrunch: no coverage
+				() => InitializeMethodCallScope(invoke.Method, evaluatedArgs, evaluatedInstance))
 			: RunChildScope(GetByteCodeFromInvokedMethodCall(invoke));
 		if (result != null)
 			Memory.Registers[invoke.Register] = result.Value;

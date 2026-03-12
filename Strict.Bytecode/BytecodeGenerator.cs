@@ -217,20 +217,68 @@ public sealed class BytecodeGenerator
 			return null;
 		if (TryGenerateInstructionForCollectionManipulation(methodCall))
 			return true;
+		if (TryGeneratePrintInstruction(methodCall))
+			return true;
 		instructions.Add(new Invoke(registry.AllocateRegister(), methodCall, registry));
 		return true;
 	}
+
+	private bool TryGeneratePrintInstruction(MethodCall methodCall)
+	{
+		if (methodCall.Instance is not MemberCall memberCall)
+			return false;
+		if (memberCall.Member.Type.Name is not (Type.Logger or Type.TextWriter or Type.System))
+			return false;
+		if (methodCall.Arguments.Count == 0)
+		{
+			instructions.Add(new PrintInstruction(""));
+			return true;
+		}
+		var arg = methodCall.Arguments[0];
+		if (arg is Value textValue && textValue.Data.IsText)
+		{
+			instructions.Add(new PrintInstruction(textValue.Data.Text));
+			return true;
+		}
+		if (arg is Binary binary)
+		{
+			var prefix = ExtractTextPrefix(binary.Instance);
+			var valueExpr = binary.Arguments[0] is To { Instance: { } inner } ? inner : binary.Arguments[0];
+			GenerateInstructionFromExpression(valueExpr);
+			instructions.Add(new PrintInstruction(prefix, registry.PreviousRegister,
+				valueExpr.ReturnType.IsText));
+			return true;
+		}
+		if (arg is MethodCall argMethodCall)
+		{
+			GenerateInstructionFromExpression(argMethodCall);
+			instructions.Add(new PrintInstruction("", registry.PreviousRegister,
+				argMethodCall.ReturnType.IsText));
+			return true;
+		}
+		instructions.Add(new PrintInstruction(arg.ToString()));
+		return true;
+	}
+
+	private static string ExtractTextPrefix(Expression? expr) =>
+		expr switch
+		{
+			Value v when v.Data.IsText => v.Data.Text,
+			To { Instance: { } inner } => ExtractTextPrefix(inner),
+			_ => ""
+		};
 
 	private bool TryGenerateInstructionForCollectionManipulation(MethodCall methodCall)
 	{
 		switch (methodCall.Method.Name)
 		{
-		case "Add":
+		case "Add" when methodCall.Instance?.ReturnType.IsList == true ||
+			methodCall.Instance?.ReturnType.IsDictionary == true:
 		{
 			GenerateInstructionsForAddMethod(methodCall);
 			return true;
 		}
-		case "Remove":
+		case "Remove" when methodCall.Instance?.ReturnType.IsList == true:
 		{
 			GenerateInstructionsForRemoveMethod(methodCall);
 			return true;

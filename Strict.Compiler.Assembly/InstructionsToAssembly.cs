@@ -32,31 +32,46 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 		if (platform == Platform.LinuxArm)
 			throw new NotSupportedException(
 				"AArch64 code generation is not yet implemented for LinuxArm.");
-		var functionAsm = BuildAssembly(methodName, [], [.. instructions]);
-		return functionAsm + "\n" + BuildEntryPoint(methodName, platform);
+		var hasPrint = instructions.OfType<PrintInstruction>().Any();
+		var functionAsm = BuildAssembly(methodName, [], [.. instructions], platform);
+		return functionAsm + "\n" + BuildEntryPoint(methodName, platform, hasPrint);
 	}
 
-	private static string BuildEntryPoint(string methodName, Platform platform) =>
+	public bool HasPrintInstructions(IList<Instruction> instructions) =>
+		instructions.OfType<PrintInstruction>().Any();
+
+	private static string BuildEntryPoint(string methodName, Platform platform, bool hasPrint = false) =>
 		platform switch
 		{
-			Platform.Windows => BuildWindowsEntryPoint(methodName),
-			Platform.Linux => BuildLinuxEntryPoint(methodName),
-			Platform.MacOS => BuildMacOsEntryPoint(methodName),
+			Platform.Windows => BuildWindowsEntryPoint(methodName, hasPrint),
+			Platform.Linux => BuildLinuxEntryPoint(methodName, hasPrint),
+			Platform.MacOS => BuildMacOsEntryPoint(methodName, hasPrint),
 			_ => throw new NotSupportedException("Unsupported platform: " + platform)
 		};
 
-	private static string BuildWindowsEntryPoint(string methodName) =>
-		string.Join("\n", "", "extern ExitProcess", "", "global main", "", "main:", "    push rbp",
+	private static string BuildWindowsEntryPoint(string methodName, bool hasPrint) =>
+		string.Join("\n", "", "extern ExitProcess",
+			hasPrint ? "extern printf" : "",
+			"", "global main", "", "main:", "    push rbp",
 			"    mov rbp, rsp", "    sub rsp, 32", $"    call {methodName}", "    xor rcx, rcx",
 			"    call ExitProcess", "    add rsp, 32", "    pop rbp", "    ret");
 
-	private static string BuildLinuxEntryPoint(string methodName) =>
-		string.Join("\n", "", "global _start", "", "_start:", "    push rbp", "    mov rbp, rsp",
+	private static string BuildLinuxEntryPoint(string methodName, bool hasPrint)
+	{
+		if (hasPrint)
+			return string.Join("\n", "extern printf", "", "global main", "", "main:",
+				"    push rbp", "    mov rbp, rsp",
+				$"    call {methodName}", "    mov rdi, 0", "    mov rax, 60", "    syscall");
+		return string.Join("\n", "", "global _start", "", "_start:", "    push rbp", "    mov rbp, rsp",
 			$"    call {methodName}", "    mov rdi, 0", "    mov rax, 60", "    syscall");
+	}
 
-	private static string BuildMacOsEntryPoint(string methodName) =>
-		string.Join("\n", "", "global _main", "", "_main:", "    push rbp", "    mov rbp, rsp",
+	private static string BuildMacOsEntryPoint(string methodName, bool hasPrint)
+	{
+		var printExtern = hasPrint ? "extern _printf\n" : "";
+		return printExtern + string.Join("\n", "", "global _main", "", "_main:", "    push rbp", "    mov rbp, rsp",
 			$"    call _{methodName}", "    xor rdi, rdi", "    mov rax, 0x2000001", "    syscall");
+	}
 
 	private static List<Instruction> GenerateInstructions(Method method)
 	{
@@ -71,19 +86,22 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 	}
 
 	private static string BuildAssembly(string methodName, IEnumerable<string> paramNames,
-		List<Instruction> instructions)
+		List<Instruction> instructions, Platform platform = Platform.Linux)
 	{
 		var paramIndexByName = paramNames.Select((name, index) => (name, index)).
 			ToDictionary(x => x.name, x => x.index);
 		var variableSlots = BuildVariableSlots(paramIndexByName.Keys, instructions);
 		var dataConstants = CollectConstants(instructions);
+		var printStrings = CollectPrintStrings(instructions);
 		var (jumpLabels, jumpEndPositions) = BuildJumpLabels(instructions);
 		var lines = new List<string>();
-		if (dataConstants.Count > 0)
+		if (dataConstants.Count > 0 || printStrings.Count > 0)
 		{
 			lines.Add("section .data");
 			foreach (var (label, value) in dataConstants)
 				lines.Add($"    {label}: dq 0x{BitConverter.DoubleToInt64Bits(value):X16}");
+			foreach (var (label, text) in printStrings)
+				lines.Add($"    {label}: db {BuildStringBytes(text)}, 10, 0");
 			lines.Add("");
 		}
 		lines.Add("section .text");
@@ -105,7 +123,7 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 			if (jumpLabels.TryGetValue(index, out var label))
 				lines.Add($".{label}:");
 			EmitInstruction(instructions[index], lines, paramIndexByName, variableSlots, dataConstants,
-				jumpLabels, jumpEndPositions, instructions, index);
+				printStrings, jumpLabels, jumpEndPositions, instructions, index, platform);
 		}
 		if (frameSize > 0)
 			lines.Add($"    add rsp, {frameSize}");
@@ -191,8 +209,11 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 
 	private static void EmitInstruction(Instruction instruction, List<string> lines,
 		Dictionary<string, int> paramIndexByName, Dictionary<string, int> variableSlots,
-		List<(string Label, double Value)> dataConstants, Dictionary<int, string> jumpLabels,
-		Dictionary<int, int> jumpEndPositions, List<Instruction> allInstructions, int index)
+		List<(string Label, double Value)> dataConstants,
+		List<(string Label, string Text)> printStrings,
+		Dictionary<int, string> jumpLabels,
+		Dictionary<int, int> jumpEndPositions, List<Instruction> allInstructions, int index,
+		Platform platform = Platform.Linux)
 	{
 		switch (instruction)
 		{
@@ -233,19 +254,108 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 				lines.Add($"    movsd xmm0, {src}");
 			break;
 		}
+		case PrintInstruction print:
+			EmitPrint(print, printStrings, lines, platform);
+			break;
 		case Jump jump:
 			EmitJump(jump, jumpLabels, index, lines);
 			break;
 		case Invoke:
-		throw new NotSupportedException(
-			"Console output via logger.Log cannot be compiled to native assembly. " +
-			"Use the interpreted runner for programs with console output.");
-	case JumpToId { InstructionType: InstructionType.JumpEnd }:
+			throw new NotSupportedException(
+				"Non-print method calls cannot be compiled to native assembly. " +
+				"Use the interpreted runner for programs with complex runtime method calls.");
+		case JumpToId { InstructionType: InstructionType.JumpEnd }:
 			break;
 		case JumpToId jumpToId:
 			EmitJumpToId(jumpToId, jumpEndPositions, jumpLabels, allInstructions, index, lines);
 			break;
 		}
+	}
+
+	private static void EmitPrint(PrintInstruction print,
+		List<(string Label, string Text)> printStrings,
+		List<string> lines, Platform platform)
+	{
+		var (strLabel, _) = printStrings.First(p => p.Text == BuildPrintKey(print));
+		if (print.ValueRegister.HasValue && !print.ValueIsText)
+		{
+			var numXmm = ToXmm(print.ValueRegister.Value);
+			if (platform == Platform.Windows)
+			{
+				lines.Add($"    lea rcx, [rel {strLabel}]");
+				if (numXmm != "xmm1")
+					lines.Add($"    movsd xmm1, {numXmm}");
+				lines.Add("    sub rsp, 32");
+				lines.Add("    call printf");
+				lines.Add("    add rsp, 32");
+			}
+			else
+			{
+				lines.Add($"    lea rdi, [rel {strLabel}]");
+				if (numXmm != "xmm0")
+					lines.Add($"    movsd xmm0, {numXmm}");
+				lines.Add("    mov eax, 1");
+				lines.Add("    call printf");
+			}
+		}
+		else
+		{
+			if (platform == Platform.Windows)
+			{
+				lines.Add($"    lea rcx, [rel {strLabel}]");
+				lines.Add("    sub rsp, 32");
+				lines.Add("    call printf");
+				lines.Add("    add rsp, 32");
+			}
+			else
+			{
+				lines.Add($"    lea rdi, [rel {strLabel}]");
+				lines.Add("    xor eax, eax");
+				lines.Add("    call printf");
+			}
+		}
+	}
+
+	private static string BuildPrintKey(PrintInstruction print) =>
+		print.ValueRegister.HasValue && !print.ValueIsText ? print.TextPrefix + "%g" : print.TextPrefix;
+
+	private static List<(string Label, string Text)> CollectPrintStrings(List<Instruction> instructions)
+	{
+		var strings = new List<(string, string)>();
+		var seen = new HashSet<string>(StringComparer.Ordinal);
+		var labelIndex = 0;
+		foreach (var instruction in instructions.OfType<PrintInstruction>())
+		{
+			var key = BuildPrintKey(instruction);
+			if (seen.Add(key))
+				strings.Add(($"str_{labelIndex++}", key));
+		}
+		return strings;
+	}
+
+	private static string BuildStringBytes(string text)
+	{
+		if (text.Length == 0)
+			return "";
+		var parts = new List<string>();
+		var ascii = new System.Text.StringBuilder();
+		foreach (var c in text)
+		{
+			if (c is >= ' ' and <= '~' && c != '"' && c != '\\')
+				ascii.Append(c);
+			else
+			{
+				if (ascii.Length > 0)
+				{
+					parts.Add($"\"{ascii}\"");
+					ascii.Clear();
+				}
+				parts.Add(((int)c).ToString());
+			}
+		}
+		if (ascii.Length > 0)
+			parts.Add($"\"{ascii}\"");
+		return string.Join(", ", parts);
 	}
 
 	private static void EmitStoreConstantToSlot(ValueInstance value, int slot,

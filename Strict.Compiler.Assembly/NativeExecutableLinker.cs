@@ -15,7 +15,7 @@ public sealed class NativeExecutableLinker
 	/// Throws <see cref="NotSupportedException"/> for platforms whose code generation is not yet
 	/// implemented (e.g., LinuxArm requires a separate AArch64 code-generator).
 	/// </summary>
-	public string CreateExecutable(string asmPath, Platform platform)
+	public string CreateExecutable(string asmPath, Platform platform, bool hasPrintCalls = false)
 	{
 		if (platform == Platform.LinuxArm)
 			throw new NotSupportedException(
@@ -35,7 +35,7 @@ public sealed class NativeExecutableLinker
 			? ".exe"
 			: "";
 		var exePath = Path.ChangeExtension(asmPath, null) + exeExtension;
-		var linkerArgs = BuildLinkerArgs(objPath, exePath, platform);
+		var linkerArgs = BuildLinkerArgs(objPath, exePath, platform, hasPrintCalls);
 		RunProcess(linkerPath, linkerArgs);
 		return exePath;
 	}
@@ -52,11 +52,13 @@ public sealed class NativeExecutableLinker
 			_ => throw new NotSupportedException("Unsupported platform: " + platform)
 		};
 
-	private static string BuildLinkerArgs(string objPath, string exePath, Platform platform) =>
+	private static string BuildLinkerArgs(string objPath, string exePath, Platform platform, bool hasPrintCalls = false) =>
 		platform switch
 		{
 			Platform.Windows => $"\"{objPath}\" -o \"{exePath}\" -lkernel32",
-			Platform.Linux => $"\"{objPath}\" -o \"{exePath}\" -nostdlib -Wl,-e,_start",
+			Platform.Linux => hasPrintCalls
+				? $"\"{objPath}\" -o \"{exePath}\""
+				: $"\"{objPath}\" -o \"{exePath}\" -nostdlib -Wl,-e,_start",
 			Platform.MacOS => $"\"{objPath}\" -o \"{exePath}\"",
 			_ => throw new NotSupportedException("Unsupported platform: " + platform)
 		};

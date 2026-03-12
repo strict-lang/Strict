@@ -322,6 +322,7 @@ public sealed class BytecodeDeserializer
 			InstructionType.InvokeWriteToTable => ReadWriteToTable(reader, table),
 			InstructionType.InvokeRemove => ReadRemove(reader, table),
 			InstructionType.ListCall => ReadListCall(reader, table),
+			InstructionType.Print => ReadPrint(reader, table),
 			_ when IsBinaryOp(type) => ReadBinary(reader, type),
 			_ => throw new InvalidBytecodeFileException("Unknown instruction type: " + type) //ncrunch: no coverage
 		};
@@ -391,6 +392,17 @@ public sealed class BytecodeDeserializer
 	private static ListCallInstruction ReadListCall(BinaryReader reader, string[] table) =>
 		new((Register)reader.ReadByte(), (Register)reader.ReadByte(),
 			table[reader.Read7BitEncodedInt()]);
+
+	private static PrintInstruction ReadPrint(BinaryReader reader, string[] table)
+	{
+		var textPrefix = table[reader.Read7BitEncodedInt()];
+		var hasValue = reader.ReadBoolean();
+		if (!hasValue)
+			return new PrintInstruction(textPrefix);
+		var reg = (Register)reader.ReadByte();
+		var valueIsText = reader.ReadBoolean();
+		return new PrintInstruction(textPrefix, reg, valueIsText);
+	}
 
 	private static ValueInstance ReadValueInstance(BinaryReader reader, Package package,
 		string[] table, Type numberType)
