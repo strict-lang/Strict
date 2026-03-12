@@ -322,4 +322,101 @@ public sealed class RunnerTests
 				File.Delete(binaryPath);
 		}
 	}
+
+	[Test]
+	public void RunFibonacciRunner()
+	{
+		const string filePath = "Examples/FibonacciRunner.strict";
+		var binaryPath = Path.ChangeExtension(filePath, BytecodeSerializer.Extension);
+		try
+		{
+			using var _ = new Runner(TestPackage.Instance, filePath).Run();
+			var output = writer.ToString();
+			Assert.That(output, Does.Contain("Fibonacci(10) = 55"));
+			Assert.That(output, Does.Contain("Fibonacci(5) = 5"));
+		}
+		finally
+		{
+			if (File.Exists(binaryPath))
+				File.Delete(binaryPath);
+		}
+	}
+
+	[Test]
+	public void RunNumberStats()
+	{
+		const string filePath = "Examples/NumberStats.strict";
+		var binaryPath = Path.ChangeExtension(filePath, BytecodeSerializer.Extension);
+		try
+		{
+			using var _ = new Runner(TestPackage.Instance, filePath).Run();
+			var output = writer.ToString();
+			Assert.That(output, Does.Contain("Sum: 150"));
+			Assert.That(output, Does.Contain("Maximum: 50"));
+		}
+		finally
+		{
+			if (File.Exists(binaryPath))
+				File.Delete(binaryPath);
+		}
+	}
+
+	[Test]
+	public void RunGcdCalculator()
+	{
+		const string filePath = "Examples/GcdCalculator.strict";
+		var binaryPath = Path.ChangeExtension(filePath, BytecodeSerializer.Extension);
+		try
+		{
+			using var _ = new Runner(TestPackage.Instance, filePath).Run();
+			var output = writer.ToString();
+			Assert.That(output, Does.Contain("GCD(48, 18) = 6"));
+			Assert.That(output, Does.Contain("GCD(12, 8) = 4"));
+		}
+		finally
+		{
+			if (File.Exists(binaryPath))
+				File.Delete(binaryPath);
+		}
+	}
+
+	[Test]
+	public void RunPixel()
+	{
+		const string filePath = "Examples/Pixel.strict";
+		var binaryPath = Path.ChangeExtension(filePath, BytecodeSerializer.Extension);
+		try
+		{
+			using var _ = new Runner(TestPackage.Instance, filePath).Run();
+			var output = writer.ToString();
+			Assert.That(output, Does.Contain("Grayscale of (100, 150, 200): 150"));
+			Assert.That(output, Does.Contain("Grayscale of (60, 120, 180): 120"));
+			Assert.That(output, Does.Contain("Darken red of firstPixel: 50"));
+		}
+		finally
+		{
+			if (File.Exists(binaryPath))
+				File.Delete(binaryPath);
+		}
+	}
+
+	[Test]
+	public void RunTemperatureConverter()
+	{
+		const string filePath = "Examples/TemperatureConverter.strict";
+		var binaryPath = Path.ChangeExtension(filePath, BytecodeSerializer.Extension);
+		try
+		{
+			using var _ = new Runner(TestPackage.Instance, filePath).Run();
+			var output = writer.ToString();
+			Assert.That(output, Does.Contain("100C in Fahrenheit: 212"));
+			Assert.That(output, Does.Contain("0C in Fahrenheit: 32"));
+			Assert.That(output, Does.Contain("100C in Kelvin: 373"));
+		}
+		finally
+		{
+			if (File.Exists(binaryPath))
+				File.Delete(binaryPath);
+		}
+	}
 }

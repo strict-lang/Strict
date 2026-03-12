@@ -1,0 +1,20 @@
+has first Number
+has second Number
+has logger
+GCD Number
+	GcdCalculator(48, 18).GCD is 6
+	GcdCalculator(12, 8).GCD is 4
+	mutable current = first
+	mutable modulo = second
+	for Range(0, 100)
+		if modulo is 0
+			return current
+		let temp = modulo
+		modulo = current % modulo
+		current = temp
+	current
+Run
+	constant firstCalc = GcdCalculator(48, 18)
+	constant secondCalc = GcdCalculator(12, 8)
+	logger.Log("GCD(48, 18) = " + firstCalc.GCD)
+	logger.Log("GCD(12, 8) = " + secondCalc.GCD)

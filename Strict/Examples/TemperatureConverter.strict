@@ -1,0 +1,16 @@
+has celsius Number
+has logger
+ToFahrenheit Number
+	TemperatureConverter(100).ToFahrenheit is 212
+	TemperatureConverter(0).ToFahrenheit is 32
+	celsius * 9 / 5 + 32
+ToKelvin Number
+	TemperatureConverter(100).ToKelvin is 373
+	TemperatureConverter(0).ToKelvin is 273
+	celsius + 273
+Run
+	constant boiling = TemperatureConverter(100)
+	constant freezing = TemperatureConverter(0)
+	logger.Log("100C in Fahrenheit: " + boiling.ToFahrenheit)
+	logger.Log("0C in Fahrenheit: " + freezing.ToFahrenheit)
+	logger.Log("100C in Kelvin: " + boiling.ToKelvin)
