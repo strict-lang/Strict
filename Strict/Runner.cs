@@ -93,12 +93,19 @@ public sealed class Runner : IDisposable
 		}
 		var instructions = GenerateBytecode();
 		var optimizedInstructions = OptimizeBytecode(instructions);
-		ExecuteBytecode(optimizedInstructions, null, BuildProgramArguments(programArgs));
-		SaveBytecodeIfPossible(optimizedInstructions);
 		if (targetPlatform.HasValue)
+		{
 			SavePlatformExecutable(optimizedInstructions, targetPlatform.Value);
-		Console.WriteLine("Successfully parsed, optimized and executed " + mainType.Name + " in " +
-			TimeSpan.FromTicks(stepTimes.Sum()).ToString(@"s\.ffffff") + "s");
+			Console.WriteLine("Compiled " + mainType.Name + " to executable in " +
+				TimeSpan.FromTicks(stepTimes.Sum()).ToString(@"s\.ffffff") + "s");
+		}
+		else
+		{
+			ExecuteBytecode(optimizedInstructions, null, BuildProgramArguments(programArgs));
+			SaveBytecodeIfPossible(optimizedInstructions);
+			Console.WriteLine("Successfully parsed, optimized and executed " + mainType.Name + " in " +
+				TimeSpan.FromTicks(stepTimes.Sum()).ToString(@"s\.ffffff") + "s");
+		}
 		return this;
 	}
 
@@ -491,7 +498,7 @@ public sealed class Runner : IDisposable
 	/// <summary>
 	/// Evaluates a Strict expression like "TypeName(args).Method" or "TypeName(args)" (calls Run).
 	/// The result is printed to Console if the method returns a value.
-	/// Example: runner.RunExpression("Fibonacci(5).GetNthFibonacci") prints "5".
+	/// Example: runner.RunExpression("FibonacciRunner(5).Compute") prints "5".
 	/// </summary>
 	public Runner RunExpression(string expression)
 	{
@@ -505,16 +512,14 @@ public sealed class Runner : IDisposable
 				  "Method " + methodName + " not found on " + targetType.Name)
 			: targetType.Methods.FirstOrDefault(m => m.Name == Method.Run && m.Parameters.Count == 0) ??
 			  throw new InvalidOperationException("No Run method found on " + targetType.Name);
-		var initialVariables = BuildInstanceVariables(targetType, constructorArgs);
 		var body = method.GetBodyAndParseIfNeeded();
-		var allExpressions = body is Body bodyExpr ? bodyExpr.Expressions : [body];
-		var expressions = allExpressions.Where(expr => !method.Tests.Contains(expr)).ToList();
+		var expressions = body is Body bodyExpr ? bodyExpr.Expressions : [body];
+		var instance = new ValueInstance(targetType, BuildInstanceValueArray(targetType, constructorArgs));
 		var instructions = new BytecodeGenerator(
-			new InvokedMethod(expressions, EmptyArguments, method.ReturnType),
+			new InstanceInvokedMethod(expressions, EmptyArguments, instance, method.ReturnType),
 			new Registry()).Generate();
 		var vm = new VirtualMachine(package, null);
-		var optimizedInstructions = OptimizeBytecode(instructions);
-		vm.Execute(optimizedInstructions, initialVariables);
+		vm.Execute(OptimizeBytecode(instructions));
 		if (vm.Returns.HasValue)
 			Console.WriteLine(vm.Returns.Value.ToExpressionCodeString());
 		return this;
@@ -541,23 +546,18 @@ public sealed class Runner : IDisposable
 		return (typeName, constructorArgs, methodName);
 	}
 
-	private IReadOnlyDictionary<string, ValueInstance>? BuildInstanceVariables(Type type,
-		double[] constructorArgs)
+	private ValueInstance[] BuildInstanceValueArray(Type type, double[] constructorArgs)
 	{
-		if (constructorArgs.Length == 0)
-			return null;
-		var dataMembers = type.Members.Where(member =>
-			!member.Type.IsTrait &&
-			member.Type.Name is not (Type.Logger or Type.TextWriter or Type.System)).ToList();
-		var result = new Dictionary<string, ValueInstance>(StringComparer.Ordinal);
-		for (var memberIndex = 0;
-			memberIndex < dataMembers.Count && memberIndex < constructorArgs.Length;
-			memberIndex++)
-		{
-			var member = dataMembers[memberIndex];
-			result[member.Name] =
-				new ValueInstance(package.GetType(Type.Number), constructorArgs[memberIndex]);
-		}
-		return result;
+		var numberType = package.GetType(Type.Number);
+		var members = type.Members;
+		var values = new ValueInstance[members.Count];
+		var argIndex = 0;
+		for (var memberIndex = 0; memberIndex < members.Count; memberIndex++)
+			values[memberIndex] = members[memberIndex].Type.IsTrait
+				? new ValueInstance(members[memberIndex].Type, 0)
+				: argIndex < constructorArgs.Length
+					? new ValueInstance(numberType, constructorArgs[argIndex++])
+					: new ValueInstance(members[memberIndex].Type, 0);
+		return values;
 	}
 }

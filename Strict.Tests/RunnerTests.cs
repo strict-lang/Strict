@@ -176,6 +176,19 @@ public sealed class RunnerTests
 	}
 
 	[Test]
+	public void RunWithPlatformDoesNotExecuteProgram()
+	{
+		var pureAdderPath = GetExamplesFilePath("PureAdder");
+		using var runner = new Runner(TestPackage.Instance, pureAdderPath);
+		try { runner.Run(Platform.Linux); }
+		catch (ToolNotFoundException) { }
+		Assert.That(writer.ToString(), Does.Not.Contain("executed"),
+			"Platform compilation should not execute the program");
+		Assert.That(writer.ToString(), Does.Contain("Saved Linux NASM assembly to:"),
+			"Should report that assembly was saved");
+	}
+
+	[Test]
 	public void RunWithNoPlatformDoesNotCreateAsmFile()
 	{
 		var asmFilePath = Path.ChangeExtension(SimpleCalculatorFilePath, ".asm");
@@ -327,9 +340,9 @@ public sealed class RunnerTests
 	[Test]
 	public void RunExpressionWithSingleConstructorArgAndMethod()
 	{
-		using var runner = new Runner(TestPackage.Instance, GetExamplesFilePath("TemperatureConverter"));
-		runner.RunExpression("TemperatureConverter(100).ToFahrenheit");
-		Assert.That(writer.ToString(), Does.Contain("212"));
+		using var runner = new Runner(TestPackage.Instance, GetExamplesFilePath("FibonacciRunner"));
+		runner.RunExpression("FibonacciRunner(5).Compute");
+		Assert.That(writer.ToString(), Does.Contain("5"));
 	}
 
 	[Test]
