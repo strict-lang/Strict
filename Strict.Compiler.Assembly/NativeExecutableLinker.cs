@@ -74,9 +74,16 @@ public sealed class NativeExecutableLinker
 	{
 		if (!OperatingSystem.IsWindows())
 		{
-			var result = RunProcess("which", name);
-			if (result.Trim().Length > 0 && File.Exists(result.Trim()))
-				return result.Trim();
+			try
+			{
+				var result = RunProcess("which", name);
+				if (result.Trim().Length > 0 && File.Exists(result.Trim()))
+					return result.Trim();
+			}
+			catch (InvalidOperationException ex) when (ex.Message.Contains("exit code"))
+			{
+				// `which` exits non-zero when the tool is not found; fall through to PATH search
+			}
 		}
 		var executableName = OperatingSystem.IsWindows()
 			? name + ".exe"

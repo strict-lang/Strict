@@ -11,6 +11,6 @@ Darken Number
 Run
 	constant firstPixel = Pixel(100, 150, 200)
 	constant secondPixel = Pixel(60, 120, 180)
-	logger.Log(firstPixel + ".Brighten is " + firstPixel.Brighten)
-	logger.Log(firstPixel + ".Darken is " + firstPixel.Darken)
-	logger.Log(secondPixel + ".Darken is " + secondPixel.Darken)
+	logger.Log("(100, 150, 200).Brighten is " + firstPixel.Brighten)
+	logger.Log("(100, 150, 200).Darken is " + firstPixel.Darken)
+	logger.Log("(60, 120, 180).Darken is " + secondPixel.Darken)

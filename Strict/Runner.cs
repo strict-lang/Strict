@@ -285,7 +285,7 @@ public sealed class Runner : IDisposable
 
 	/// <summary>
 	/// Generates a platform-specific executable from the compiled instructions.
-	/// Saves a .asm file, then invokes NASM and the platform linker.
+	/// Always saves a .asm file; then invokes NASM and the platform linker.
 	/// Throws <see cref="ToolNotFoundException"/> if required tools are missing.
 	/// </summary>
 	private void SavePlatformExecutable(List<Instruction> optimizedInstructions, Platform platform)
