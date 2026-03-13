@@ -133,3 +133,4 @@ ipch/
 *.exe
 *.asm
 *.ll
+*.obj
