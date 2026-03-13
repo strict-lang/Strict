@@ -299,11 +299,37 @@ public sealed class Runner : IDisposable
 	}
 
 	/// <summary>
-	/// Generates a platform-specific executable from the compiled instructions.
-	/// Always saves a .asm file; then invokes NASM and the platform linker.
+	/// Generates a platform-specific executable from the compiled instructions. Prefers the LLVM IR
+	/// backend when clang is available (faster single-step compilation with -O2 optimizations),
+	/// otherwise falls back to the NASM + gcc/clang pipeline.
 	/// Throws <see cref="ToolNotFoundException"/> if required tools are missing.
 	/// </summary>
 	private Runner SavePlatformExecutable(List<Instruction> optimizedInstructions, Platform platform,
+		IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods) =>
+		useLlvm || (!useNasm && LlvmLinker.IsClangAvailable)
+			? SaveLlvmExecutable(optimizedInstructions, platform, precompiledMethods)
+			: SaveNasmExecutable(optimizedInstructions, platform, precompiledMethods);
+
+	internal bool useLlvm;
+	internal bool useNasm;
+
+	private Runner SaveLlvmExecutable(List<Instruction> optimizedInstructions, Platform platform,
+		IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods)
+	{
+		var llvmCompiler = new InstructionsToLlvmIr();
+		var llvmIr = llvmCompiler.CompileForPlatform(mainType.Name, optimizedInstructions, platform,
+			precompiledMethods);
+		var llvmPath = Path.Combine(currentFolder, mainType.Name + ".ll");
+		File.WriteAllText(llvmPath, llvmIr);
+		Console.WriteLine("Saved " + platform + " LLVM IR to: " + llvmPath);
+		var exeFilePath = new LlvmLinker().CreateExecutable(llvmPath, platform);
+		Console.WriteLine("Compiled " + mainType.Name + " via LLVM in " +
+			TimeSpan.FromTicks(stepTimes.Sum()).ToString(@"s\.ffffff") + "s to " + platform +
+			" executable of " + new FileInfo(exeFilePath).Length.ToString("N0") + " bytes to: " + exeFilePath);
+		return this;
+	}
+
+	private Runner SaveNasmExecutable(List<Instruction> optimizedInstructions, Platform platform,
 		IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods)
 	{
 		var compiler = new InstructionsToAssembly();

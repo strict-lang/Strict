@@ -132,3 +132,4 @@ ipch/
 *.strictbinary
 *.exe
 *.asm
+*.ll

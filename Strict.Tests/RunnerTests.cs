@@ -166,7 +166,10 @@ public sealed class RunnerTests
 		var pureAdderPath = GetExamplesFilePath("PureAdder");
 		var asmPath = Path.ChangeExtension(pureAdderPath, ".asm");
 		using var runner = new Runner(TestPackage.Instance, pureAdderPath);
-		runner.Run(Platform.Windows);
+		runner.useNasm = true;
+		if (!NativeExecutableLinker.IsNasmAvailable)
+			return;
+		runner.Run(Platform.Windows); //ncrunch: no coverage start
 		Assert.That(File.Exists(asmPath), Is.True, ".asm file should be created");
 		Assert.That(writer.ToString(), Does.Contain("Saved Windows NASM assembly to:"));
 		var asmContent = File.ReadAllText(asmPath);
@@ -174,7 +177,7 @@ public sealed class RunnerTests
 		Assert.That(asmContent, Does.Contain("global PureAdder"));
 		Assert.That(asmContent, Does.Contain("global main"));
 		Assert.That(asmContent, Does.Contain("extern ExitProcess"));
-	}
+	} //ncrunch: no coverage end
 
 	[Test]
 	public void RunWithPlatformLinuxCreatesAsmFileWithStartEntryPoint()
@@ -183,8 +186,11 @@ public sealed class RunnerTests
 		var asmPath = Path.ChangeExtension(pureAdderPath, ".asm");
 		var executablePath = Path.ChangeExtension(asmPath, null);
 		using var runner = new Runner(TestPackage.Instance, pureAdderPath);
-		if (OperatingSystem.IsLinux())
-		{ //ncrunch: no coverage start
+		runner.useNasm = true;
+		if (!NativeExecutableLinker.IsNasmAvailable)
+			return;
+		if (OperatingSystem.IsLinux()) //ncrunch: no coverage start
+		{
 			runner.Run(Platform.Linux);
 			Assert.That(File.Exists(executablePath), Is.True, "Linux executable should be created");
 		} //ncrunch: no coverage end
@@ -202,9 +208,12 @@ public sealed class RunnerTests
 	{
 		var asmPath = Path.ChangeExtension(SimpleCalculatorFilePath, ".asm");
 		using var runner = new Runner(TestPackage.Instance, SimpleCalculatorFilePath);
+		runner.useNasm = true;
+		if (!NativeExecutableLinker.IsNasmAvailable)
+			return; //ncrunch: no coverage start
 		runner.Run(Platform.Windows);
 		Assert.That(File.Exists(asmPath), Is.True, ".asm file should be created");
-	}
+	} //ncrunch: no coverage end
 
 	[Test]
 	public void RunFromBytecodeWithPlatformWindowsSupportsRuntimeMethodCalls()
@@ -214,24 +223,30 @@ public sealed class RunnerTests
 		if (File.Exists(asmPath))
 			File.Delete(asmPath); //ncrunch: no coverage
 		using var runner = new Runner(TestPackage.Instance, binaryFilePath);
+		runner.useNasm = true;
+		if (!NativeExecutableLinker.IsNasmAvailable)
+			return; //ncrunch: no coverage start
 		runner.Run(Platform.Windows);
 		Assert.That(File.Exists(asmPath), Is.True, ".asm file should be created for bytecode platform compilation");
-	}
+	} //ncrunch: no coverage end
 
 	[Test]
 	public void RunWithPlatformDoesNotExecuteProgram()
 	{
 		var pureAdderPath = GetExamplesFilePath("PureAdder");
 		using var runner = new Runner(TestPackage.Instance, pureAdderPath);
+		runner.useNasm = true;
+		if (!NativeExecutableLinker.IsNasmAvailable)
+			return; //ncrunch: no coverage start
 		if (OperatingSystem.IsLinux())
-			runner.Run(Platform.Linux); //ncrunch: no coverage
+			runner.Run(Platform.Linux);
 		else
 			Assert.Throws<InvalidOperationException>(() => runner.Run(Platform.Linux));
 		Assert.That(writer.ToString(), Does.Not.Contain("executed"),
 			"Platform compilation should not execute the program");
 		Assert.That(writer.ToString(), Does.Contain("Saved Linux NASM assembly to:"),
 			"Should report that assembly was saved");
-	}
+	} //ncrunch: no coverage end
 
 	[Test]
 	public void RunWithNoPlatformDoesNotCreateAsmFile()
@@ -251,7 +266,41 @@ public sealed class RunnerTests
 		if (NativeExecutableLinker.IsNasmAvailable)
 			return; //ncrunch: no coverage start
 		using var runner = new Runner(TestPackage.Instance, GetExamplesFilePath("PureAdder"));
+		runner.useNasm = true;
 		Assert.Throws<ToolNotFoundException>(() => runner.Run(Platform.Windows));
+	} //ncrunch: no coverage end
+
+	[Test]
+	public void RunWithLlvmBackendCreatesLlvmIrFileForLinux()
+	{
+		if (!LlvmLinker.IsClangAvailable)
+			return; //ncrunch: no coverage start
+		var pureAdderPath = GetExamplesFilePath("PureAdder");
+		var llvmPath = Path.ChangeExtension(pureAdderPath, ".ll");
+		using var runner = new Runner(TestPackage.Instance, pureAdderPath);
+		runner.useLlvm = true;
+		runner.Run(Platform.Linux);
+		Assert.That(File.Exists(llvmPath), Is.True, ".ll file should be created");
+		Assert.That(writer.ToString(), Does.Contain("Saved Linux LLVM IR to:"));
+		var irContent = File.ReadAllText(llvmPath);
+		Assert.That(irContent, Does.Contain("define double @PureAdder("));
+		Assert.That(irContent, Does.Contain("define i32 @main()"));
+		Assert.That(irContent, Does.Contain("target triple"));
+	} //ncrunch: no coverage end
+
+	[Test]
+	public void RunWithLlvmBackendProducesLinuxExecutable()
+	{
+		if (!LlvmLinker.IsClangAvailable || !OperatingSystem.IsLinux())
+			return; //ncrunch: no coverage start
+		var pureAdderPath = GetExamplesFilePath("PureAdder");
+		var exePath = Path.ChangeExtension(pureAdderPath, null);
+		if (exePath.EndsWith(".strict", StringComparison.Ordinal))
+			exePath = exePath[..^7];
+		using var runner = new Runner(TestPackage.Instance, pureAdderPath);
+		runner.useLlvm = true;
+		runner.Run(Platform.Linux);
+		Assert.That(writer.ToString(), Does.Contain("via LLVM"));
 	} //ncrunch: no coverage end
 
 	[Test]
