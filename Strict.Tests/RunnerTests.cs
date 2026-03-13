@@ -32,7 +32,7 @@ public sealed class RunnerTests
 			"Examples");
 		if (!Directory.Exists(examplesDir))
 			return;
-		foreach (var ext in new[] { ".ll", ".asm", ".obj", ".exe" })
+		foreach (var ext in new[] { ".ll", ".mlir", ".llvm.mlir", ".asm", ".obj", ".exe" })
 			foreach (var file in Directory.GetFiles(examplesDir, "*" + ext))
 				File.Delete(file);
 		foreach (var strict in Directory.GetFiles(examplesDir, "*.strict"))

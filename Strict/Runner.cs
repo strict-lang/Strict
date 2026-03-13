@@ -299,19 +299,22 @@ public sealed class Runner : IDisposable
 	}
 
 	/// <summary>
-	/// Generates a platform-specific executable from the compiled instructions. Uses the LLVM IR
-	/// backend when explicitly requested via -llvm flag, otherwise uses the NASM + gcc/clang
-	/// pipeline. LLVM is opt-in until feature parity is reached.
+	/// Generates a platform-specific executable from the compiled instructions. Uses MLIR when
+	/// -mlir is specified, LLVM IR when -llvm is specified, otherwise NASM + gcc/clang pipeline.
+	/// LLVM and MLIR are opt-in until feature parity is reached.
 	/// Throws <see cref="ToolNotFoundException"/> if required tools are missing.
 	/// </summary>
 	private Runner SavePlatformExecutable(List<Instruction> optimizedInstructions, Platform platform,
 		IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods) =>
-		useLlvm
-			? SaveLlvmExecutable(optimizedInstructions, platform, precompiledMethods)
-			: SaveNasmExecutable(optimizedInstructions, platform, precompiledMethods);
+		useMlir
+			? SaveMlirExecutable(optimizedInstructions, platform, precompiledMethods)
+			: useLlvm
+				? SaveLlvmExecutable(optimizedInstructions, platform, precompiledMethods)
+				: SaveNasmExecutable(optimizedInstructions, platform, precompiledMethods);
 
 	internal bool useLlvm;
 	internal bool useNasm;
+	internal bool useMlir;
 
 	private Runner SaveLlvmExecutable(List<Instruction> optimizedInstructions, Platform platform,
 		IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods)
@@ -324,6 +327,22 @@ public sealed class Runner : IDisposable
 		Console.WriteLine("Saved " + platform + " LLVM IR to: " + llvmPath);
 		var exeFilePath = new LlvmLinker().CreateExecutable(llvmPath, platform);
 		Console.WriteLine("Compiled " + mainType.Name + " via LLVM in " +
+			TimeSpan.FromTicks(stepTimes.Sum()).ToString(@"s\.ffffff") + "s to " + platform +
+			" executable of " + new FileInfo(exeFilePath).Length.ToString("N0") + " bytes to: " + exeFilePath);
+		return this;
+	}
+
+	private Runner SaveMlirExecutable(List<Instruction> optimizedInstructions, Platform platform,
+		IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods)
+	{
+		var mlirCompiler = new InstructionsToMlir();
+		var mlirText = mlirCompiler.CompileForPlatform(mainType.Name, optimizedInstructions, platform,
+			precompiledMethods);
+		var mlirPath = Path.Combine(currentFolder, mainType.Name + ".mlir");
+		File.WriteAllText(mlirPath, mlirText);
+		Console.WriteLine("Saved " + platform + " MLIR to: " + mlirPath);
+		var exeFilePath = new MlirLinker().CreateExecutable(mlirPath, platform);
+		Console.WriteLine("Compiled " + mainType.Name + " via MLIR in " +
 			TimeSpan.FromTicks(stepTimes.Sum()).ToString(@"s\.ffffff") + "s to " + platform +
 			" executable of " + new FileInfo(exeFilePath).Length.ToString("N0") + " bytes to: " + exeFilePath);
 		return this;

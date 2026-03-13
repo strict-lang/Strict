@@ -45,6 +45,7 @@ public static class Program
 		Console.WriteLine("                 Default backend: LLVM (clang) if available, otherwise NASM + gcc/clang");
 		Console.WriteLine("  -llvm          Force LLVM IR backend (requires clang: https://releases.llvm.org)");
 		Console.WriteLine("  -nasm          Force NASM backend (requires nasm + gcc/clang)");
+		Console.WriteLine("  -mlir          Force MLIR backend (requires mlir-opt + mlir-translate + clang)");
 		Console.WriteLine();
 		Console.WriteLine("Arguments:");
 		Console.WriteLine("  args...        Optional numbers passed to the program's Run(numbers) method");
@@ -84,13 +85,15 @@ public static class Program
 				diagnostics = true;
 #endif
 			using var runner = new Runner(basePackage, filePath, diagnostics);
-			if (options.Contains("-llvm") && options.Contains("-nasm"))
+			if (new[] { "-llvm", "-nasm", "-mlir" }.Count(options.Contains) > 1)
 				throw new InvalidOperationException(
-					"Cannot specify both -llvm and -nasm. Choose one backend.");
+					"Cannot specify multiple backend flags (-llvm, -nasm, -mlir). Choose one.");
 			if (options.Contains("-llvm"))
 				runner.useLlvm = true;
 			else if (options.Contains("-nasm"))
 				runner.useNasm = true;
+			else if (options.Contains("-mlir"))
+				runner.useMlir = true;
 			if (nonFlagArgs.Length == 1 && nonFlagArgs[0].Contains('('))
 				runner.RunExpression(nonFlagArgs[0]);
 			else
