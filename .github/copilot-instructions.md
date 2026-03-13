@@ -1,5 +1,13 @@
 # Copilot Instructions
 
+## 🚨 Top Priority: Strict Self-Hosting Conversion
+
+**Read [`strict-conversion-plan.md`](../strict-conversion-plan.md) first.** It is the top priority
+for all ongoing work. The plan outlines converting every C# layer of the Strict implementation into
+`.strict` files so the language can bootstrap itself. Always check the plan before starting any new
+task, update progress percentages when `.strict` files are added or C# files are replaced, and
+follow the layer-by-layer order described there.
+
 ## Project Guidelines
 - In Strict, type instance equality should check type compatibility and then compare member values (including list/dictionary members) rather than reference equality.
 - Aim for a proper root-cause fix rather than a quick workaround or “duct-taping.”
