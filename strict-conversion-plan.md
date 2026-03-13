@@ -9,7 +9,7 @@ written in Strict, and what C# features are still missing from the Strict runtim
 
 ---
 
-## Architecture Overview (8 layers, bottom to top)
+## Architecture Overview (10 phases, bottom to top)
 
 | # | C# Project | Purpose | C# Files | C# Lines | Test Methods |
 |---|-----------|---------|----------|----------|--------------|
