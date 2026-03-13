@@ -20,7 +20,28 @@ public sealed class RunnerTests
 	private TextWriter rememberConsole = null!;
 
 	[TearDown]
-	public void RestoreConsole() => Console.SetOut(rememberConsole);
+	public void RestoreConsole()
+	{
+		Console.SetOut(rememberConsole);
+		CleanupGeneratedFiles();
+	}
+
+	private static void CleanupGeneratedFiles()
+	{
+		var examplesDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "..",
+			"Examples");
+		if (!Directory.Exists(examplesDir))
+			return;
+		foreach (var ext in new[] { ".ll", ".asm", ".obj", ".exe" })
+			foreach (var file in Directory.GetFiles(examplesDir, "*" + ext))
+				File.Delete(file);
+		foreach (var strict in Directory.GetFiles(examplesDir, "*.strict"))
+		{
+			var noExt = Path.ChangeExtension(strict, null);
+			if (File.Exists(noExt) && !noExt.EndsWith(".strict", StringComparison.Ordinal))
+				File.Delete(noExt);
+		}
+	}
 
 	[Test]
 	public void RunSimpleCalculator()
