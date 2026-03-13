@@ -32,8 +32,8 @@ public sealed class Runner : IDisposable
 		var startTicks = DateTime.UtcNow.Ticks;
 		if (Directory.Exists(strictFilePath))
 		{
-			currentFolder = Path.GetFullPath(strictFilePath.TrimEnd(Path.DirectorySeparatorChar,
-				Path.AltDirectorySeparatorChar));
+			currentFolder = Path.GetFullPath(
+			strictFilePath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
 			(package, mainType) = LoadPackageFromDirectory(basePackage, currentFolder);
 		}
 		else
@@ -524,9 +524,10 @@ public sealed class Runner : IDisposable
 		if (!childPackage.Types.TryGetValue(packageName, out var mainType))
 			// Fallback: use the first type with a Run method if no type matches the directory name
 			mainType = childPackage.Types.Values.FirstOrDefault(type => //ncrunch: no coverage
-					type.Methods.Any(method => method.Name == Method.Run)) ?? //ncrunch: no coverage
-				throw new InvalidOperationException(
-					"No type named '" + packageName + "' or type with Run method found in: " + dirPath);
+				type.Methods.Any(method => method.Name == Method.Run)) ?? //ncrunch: no coverage
+				throw new InvalidOperationException("Package directory '" + dirPath +
+					"' does not contain a type named '" + packageName +
+					"' or any type with a Run method.");
 		return (childPackage, mainType);
 	}
 
@@ -546,7 +547,7 @@ public sealed class Runner : IDisposable
 				Select(t => t.Name).ToList();
 			if (resolved.Count == 0)
 			{
-				// Circular or unresolvable dependencies — yield remaining types in their original order
+				// Circular or unresolvable dependencies — yield remaining types as-is
 				foreach (var remaining in withInternalDeps.Values)
 					yield return remaining;
 				yield break;
