@@ -42,7 +42,7 @@ public sealed class RunnerTests
 		Assert.That(output, Does.Contain("(1, 2, 3).Sum = 6"));
 	}
 
-	private string SimpleCalculatorFilePath => GetExamplesFilePath("SimpleCalculator");
+	private static string SimpleCalculatorFilePath => GetExamplesFilePath("SimpleCalculator");
 
 	public static string GetExamplesFilePath(string filename)
 	{
@@ -166,7 +166,7 @@ public sealed class RunnerTests
 		var pureAdderPath = GetExamplesFilePath("PureAdder");
 		var asmPath = Path.ChangeExtension(pureAdderPath, ".asm");
 		using var runner = new Runner(TestPackage.Instance, pureAdderPath);
-		try { runner.Run(Platform.Windows); }	catch (ToolNotFoundException) { }
+		runner.Run(Platform.Windows);
 		Assert.That(File.Exists(asmPath), Is.True, ".asm file should be created");
 		Assert.That(writer.ToString(), Does.Contain("Saved Windows NASM assembly to:"));
 		var asmContent = File.ReadAllText(asmPath);
@@ -181,8 +181,15 @@ public sealed class RunnerTests
 	{
 		var pureAdderPath = GetExamplesFilePath("PureAdder");
 		var asmPath = Path.ChangeExtension(pureAdderPath, ".asm");
+		var executablePath = Path.ChangeExtension(asmPath, null);
 		using var runner = new Runner(TestPackage.Instance, pureAdderPath);
-		try { runner.Run(Platform.Linux); } catch (ToolNotFoundException) { }
+		if (OperatingSystem.IsLinux())
+		{ //ncrunch: no coverage start
+			runner.Run(Platform.Linux);
+			Assert.That(File.Exists(executablePath), Is.True, "Linux executable should be created");
+		} //ncrunch: no coverage end
+		else
+			Assert.Throws<InvalidOperationException>(() => runner.Run(Platform.Linux));
 		Assert.That(File.Exists(asmPath), Is.True, ".asm file should be created");
 		Assert.That(writer.ToString(), Does.Contain("Saved Linux NASM assembly to:"));
 		var asmContent = File.ReadAllText(asmPath);
@@ -195,7 +202,7 @@ public sealed class RunnerTests
 	{
 		var asmPath = Path.ChangeExtension(SimpleCalculatorFilePath, ".asm");
 		using var runner = new Runner(TestPackage.Instance, SimpleCalculatorFilePath);
-		try { runner.Run(Platform.Windows); }	catch (ToolNotFoundException) { }
+		runner.Run(Platform.Windows);
 		Assert.That(File.Exists(asmPath), Is.True, ".asm file should be created");
 	}
 
@@ -207,7 +214,7 @@ public sealed class RunnerTests
 		if (File.Exists(asmPath))
 			File.Delete(asmPath); //ncrunch: no coverage
 		using var runner = new Runner(TestPackage.Instance, binaryFilePath);
-		try { runner.Run(Platform.Windows); }	catch (ToolNotFoundException) { }
+		runner.Run(Platform.Windows);
 		Assert.That(File.Exists(asmPath), Is.True, ".asm file should be created for bytecode platform compilation");
 	}
 
@@ -216,7 +223,10 @@ public sealed class RunnerTests
 	{
 		var pureAdderPath = GetExamplesFilePath("PureAdder");
 		using var runner = new Runner(TestPackage.Instance, pureAdderPath);
-		try { runner.Run(Platform.Linux); } catch (ToolNotFoundException) { }
+		if (OperatingSystem.IsLinux())
+			runner.Run(Platform.Linux); //ncrunch: no coverage
+		else
+			Assert.Throws<InvalidOperationException>(() => runner.Run(Platform.Linux));
 		Assert.That(writer.ToString(), Does.Not.Contain("executed"),
 			"Platform compilation should not execute the program");
 		Assert.That(writer.ToString(), Does.Contain("Saved Linux NASM assembly to:"),
@@ -239,7 +249,7 @@ public sealed class RunnerTests
 	public void RunWithPlatformWindowsThrowsToolNotFoundWhenNasmMissing()
 	{
 		if (NativeExecutableLinker.IsNasmAvailable)
-			return;	//ncrunch: no coverage start
+			return; //ncrunch: no coverage start
 		using var runner = new Runner(TestPackage.Instance, GetExamplesFilePath("PureAdder"));
 		Assert.Throws<ToolNotFoundException>(() => runner.Run(Platform.Windows));
 	} //ncrunch: no coverage end
@@ -315,7 +325,7 @@ public sealed class RunnerTests
 		Assert.That(writer.ToString(), Does.Contain("35"));
 	}
 
-	private string SumFilePath => GetExamplesFilePath("Sum");
+	private static string SumFilePath => GetExamplesFilePath("Sum");
 
 	[Test]
 	public void RunSumWithNoArgumentsUsesEmptyList()
@@ -408,14 +418,10 @@ public sealed class RunnerTests
 		binaryFilePath = GetExamplesBinaryFile("MemoryPressure");
 		writer.GetStringBuilder().Clear();
 		ForceGarbageCollection();
-		using (var firstRun = new Runner(TestPackage.Instance, binaryFilePath).Run())
-			;
+		new Runner(TestPackage.Instance, binaryFilePath).Run().Dispose();
 		ForceGarbageCollection();
-		var memoryAfterFirstRun = GC.GetTotalMemory(true);
-		using (var secondRun = new Runner(TestPackage.Instance, binaryFilePath).Run())
-			;
+		new Runner(TestPackage.Instance, binaryFilePath).Run().Dispose();
 		ForceGarbageCollection();
-		var memoryAfterSecondRun = GC.GetTotalMemory(true);
 		var outputLines = writer.ToString().Split(Environment.NewLine,
 			StringSplitOptions.RemoveEmptyEntries);
 		Assert.That(outputLines.Length, Is.EqualTo(2));

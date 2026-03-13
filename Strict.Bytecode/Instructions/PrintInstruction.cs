@@ -10,8 +10,17 @@ public sealed class PrintInstruction(string textPrefix, Register? valueRegister 
 	public string TextPrefix { get; } = textPrefix;
 	public Register? ValueRegister { get; } = valueRegister;
 	public bool ValueIsText { get; } = valueIsText;
+
 	public override string ToString() =>
 		ValueRegister.HasValue
-			? $"Print \"{TextPrefix}\" + {(ValueIsText ? "text" : "number")} {ValueRegister.Value}"
+			? $"Print \"{
+				TextPrefix
+			}\" + {
+				(ValueIsText
+					? "text"
+					: "number")
+			} {
+				ValueRegister.Value
+			}"
 			: $"Print \"{TextPrefix}\"";
 }

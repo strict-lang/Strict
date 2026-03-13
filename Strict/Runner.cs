@@ -77,7 +77,7 @@ public sealed class Runner : IDisposable
 	public Runner Run(Platform? targetPlatform = null, params string[] programArgs) =>
 		deserializer != null
 			? targetPlatform.HasValue
-				?	SavePlatformExecutable(deserializer.Instructions[mainType.Name], targetPlatform.Value,
+				? SavePlatformExecutable(deserializer.Instructions[mainType.Name], targetPlatform.Value,
 					deserializer.PrecompiledMethods)
 				: RunFromPreloadedBytecode(deserializer.Instructions[mainType.Name], programArgs)
 			: RunFromSource(targetPlatform, programArgs);
@@ -274,10 +274,9 @@ public sealed class Runner : IDisposable
 		if (programArgs is not { Length: > 0 })
 			return null;
 		var runMethod = mainType.Methods.FirstOrDefault(method =>
-			method.Name == Method.Run && method.Parameters.Count == programArgs.Length);
-		if (runMethod == null)
-			runMethod = mainType.Methods.FirstOrDefault(method =>
-				method.Name == Method.Run && method.Parameters.Count == 1 && method.Parameters[0].Type.IsList);
+				method.Name == Method.Run && method.Parameters.Count == programArgs.Length) ??
+			mainType.Methods.FirstOrDefault(method => method is
+				{ Name: Method.Run, Parameters: [{ Type.IsList: true }] });
 		if (runMethod == null)
 			throw new NotSupportedException( //ncrunch: no coverage
 				"No Run method with " + programArgs.Length + " arguments " +
@@ -314,10 +313,10 @@ public sealed class Runner : IDisposable
 		File.WriteAllText(asmPath, assemblyText);
 		Console.WriteLine("Saved " + platform + " NASM assembly to: " + asmPath);
 		var hasPrint = compiler.HasPrintInstructions(optimizedInstructions);
-		var exePath = new NativeExecutableLinker().CreateExecutable(asmPath, platform, hasPrint);
+		var exeFilePath = new NativeExecutableLinker().CreateExecutable(asmPath, platform, hasPrint);
 		Console.WriteLine("Compiled " + mainType.Name + " in " +
 			TimeSpan.FromTicks(stepTimes.Sum()).ToString(@"s\.ffffff") + "s to " + platform +
-			" executable to: " + exePath);
+			" executable of " + new FileInfo(exeFilePath).Length.ToString("N0") + " bytes to: " + exeFilePath);
 		return this;
 	}
 
@@ -515,17 +514,17 @@ public sealed class Runner : IDisposable
 		var packageName = Path.GetFileName(dirPath);
 		var childPackage = new Package(basePackage, packageName);
 		var parser = new MethodExpressionParser();
-		var typeLinesByName = Directory.GetFiles(dirPath, "*" + Type.Extension,
-			SearchOption.TopDirectoryOnly).ToDictionary(
-			Path.GetFileNameWithoutExtension,
+		var files = Directory.GetFiles(dirPath, "*" + Type.Extension, SearchOption.TopDirectoryOnly);
+		// ReSharper disable once RedundantSuppressNullableWarningExpression
+		var typeLinesByName = files.ToDictionary(s => Path.GetFileNameWithoutExtension(s)!,
 			filePath => new TypeLines(Path.GetFileNameWithoutExtension(filePath),
 				File.ReadAllLines(filePath)), StringComparer.Ordinal);
 		foreach (var sortedTypeLines in SortTypesByDependency(typeLinesByName))
 			new Type(childPackage, sortedTypeLines).ParseMembersAndMethods(parser);
 		if (!childPackage.Types.TryGetValue(packageName, out var mainType))
 			// Fallback: use the first type with a Run method if no type matches the directory name
-			mainType = childPackage.Types.Values.FirstOrDefault(type =>
-				type.Methods.Any(method => method.Name == Method.Run)) ??
+			mainType = childPackage.Types.Values.FirstOrDefault(type => //ncrunch: no coverage
+					type.Methods.Any(method => method.Name == Method.Run)) ?? //ncrunch: no coverage
 				throw new InvalidOperationException(
 					"No type named '" + packageName + "' or type with Run method found in: " + dirPath);
 		return (childPackage, mainType);
@@ -536,15 +535,15 @@ public sealed class Runner : IDisposable
 	{
 		var withInternalDeps = new Dictionary<string, TypeLines>(StringComparer.Ordinal);
 		foreach (var typeLines in typeLinesByName.Values)
-			if (typeLines.DependentTypes.Any(dep => typeLinesByName.ContainsKey(dep)))
-				withInternalDeps[typeLines.Name] = typeLines;
+			if (typeLines.DependentTypes.Any(typeLinesByName.ContainsKey))
+				withInternalDeps[typeLines.Name] = typeLines; //ncrunch: no coverage
 			else
 				yield return typeLines;
 		while (withInternalDeps.Count > 0)
-		{
-			var resolved = withInternalDeps.Values
-				.Where(t => !t.DependentTypes.Any(dep => withInternalDeps.ContainsKey(dep)))
-				.Select(t => t.Name).ToList();
+		{ //ncrunch: no coverage start
+			var resolved = withInternalDeps.Values.
+				Where(t => !t.DependentTypes.Any(dep => withInternalDeps.ContainsKey(dep))).
+				Select(t => t.Name).ToList();
 			if (resolved.Count == 0)
 			{
 				// Circular or unresolvable dependencies — yield remaining types in their original order
@@ -557,7 +556,7 @@ public sealed class Runner : IDisposable
 				yield return withInternalDeps[name];
 				withInternalDeps.Remove(name);
 			}
-		}
+		} //ncrunch: no coverage end
 	}
 
 	public void Dispose() => package.Dispose();
@@ -575,18 +574,19 @@ public sealed class Runner : IDisposable
 			: package.GetType(typeName);
 		var method = methodName != null
 			? targetType.Methods.FirstOrDefault(m => m.Name == methodName && m.Parameters.Count == 0) ??
-			  throw new InvalidOperationException(
-				  "Method " + methodName + " not found on " + targetType.Name)
+			throw new InvalidOperationException("Method " + methodName + " not found in " + targetType.Name)
 			: targetType.Methods.FirstOrDefault(
 				m => m.Name == Method.Run && m.Parameters.Count == 0) ?? //ncrunch: no coverage
-				throw new InvalidOperationException("No Run method found on " + targetType.Name);
+			throw new InvalidOperationException("No Run method found in " + targetType.Name);
 		var body = method.GetBodyAndParseIfNeeded();
-		var expressions = body is Body bodyExpr ? bodyExpr.Expressions : [body];
+		var expressions = body is Body bodyExpr
+			? bodyExpr.Expressions
+			: [body];
 		var instance = new ValueInstance(targetType, BuildInstanceValueArray(targetType, constructorArgs));
 		var instructions = new BytecodeGenerator(
 			new InstanceInvokedMethod(expressions, EmptyArguments, instance, method.ReturnType),
 			new Registry()).Generate();
-		var vm = new VirtualMachine(package, null);
+		var vm = new VirtualMachine(package);
 		vm.Execute(OptimizeBytecode(instructions));
 		if (vm.Returns.HasValue)
 			Console.WriteLine(vm.Returns.Value.ToExpressionCodeString());

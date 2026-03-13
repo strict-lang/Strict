@@ -270,7 +270,9 @@ public sealed class BytecodeGenerator
 		};
 
 	private static Expression UnwrapToConversion(Expression expr) =>
-		expr is To { Instance: { } inner } ? inner : expr;
+		expr is To { Instance: { } inner }
+			? inner
+			: expr;
 
 	private bool TryGenerateInstructionForCollectionManipulation(MethodCall methodCall)
 	{

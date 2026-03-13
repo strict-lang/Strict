@@ -231,7 +231,7 @@ public sealed class ListTests
 	private static ValueInstance InvokePrivateListMethod(string methodName, params object[] args)
 	{
 		var method = typeof(MethodCallEvaluator).GetMethod(methodName,
-			System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ??
+				System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ??
 			throw new InvalidOperationException(methodName + " method not found");
 		return (ValueInstance)(method.Invoke(null, args) ??
 			throw new InvalidOperationException(methodName + " returned null"));

@@ -22,6 +22,7 @@ public sealed class NativeExecutableLinker
 		var objPath = Path.ChangeExtension(asmPath, ".obj");
 		var nasmFormat = NasmFormatFor(platform);
 		RunProcess(nasmPath, $"-f {nasmFormat} \"{asmPath}\" -o \"{objPath}\"");
+		EnsureOutputFileExists(objPath, "nasm", platform);
 		var linker = platform == Platform.MacOS
 			? "clang"
 			: "gcc";
@@ -30,23 +31,25 @@ public sealed class NativeExecutableLinker
 		var exeExtension = platform == Platform.Windows
 			? ".exe"
 			: "";
-		var exePath = Path.ChangeExtension(asmPath, null) + exeExtension;
-		var linkerArgs = BuildLinkerArgs(objPath, exePath, platform, hasPrintCalls);
+		var exeFilePath = Path.ChangeExtension(asmPath, null) + exeExtension;
+		var linkerArgs = BuildLinkerArgs(objPath, exeFilePath, platform, hasPrintCalls);
 		RunProcess(linkerPath, linkerArgs);
-		return exePath;
-	}
+		EnsureOutputFileExists(exeFilePath, linker, platform);
+		return exeFilePath;
+	} //ncrunch: no coverage end
 
 	public static bool IsNasmAvailable => FindTool("nasm") != null;
 	public static bool IsGccAvailable => FindTool("gcc") != null;
 
+	//ncrunch: no coverage start
 	private static string NasmFormatFor(Platform platform) =>
 		platform switch
 		{
 			Platform.Windows => "win64",
 			Platform.Linux => "elf64",
-			Platform.MacOS => "macho64", //ncrunch: no coverage
-			_ => throw new NotSupportedException("Unsupported platform: " + platform) //ncrunch: no coverage
-		};
+			Platform.MacOS => "macho64",
+			_ => throw new NotSupportedException("Unsupported platform: " + platform)
+		}; //ncrunch: no coverage end
 
 	private static string BuildLinkerArgs(string objPath, string exePath, Platform platform, bool hasPrintCalls = false)
 	{
@@ -54,7 +57,7 @@ public sealed class NativeExecutableLinker
 		return platform switch
 		{
 			Platform.Windows => $"\"{objPath}\" -o \"{exePath}\" {SizeFlags} -nostdlib -Wl,-e,main -lkernel32",
-			Platform.Linux => hasPrintCalls
+			Platform.Linux => hasPrintCalls //ncrunch: no coverage
 				? $"\"{objPath}\" -o \"{exePath}\" {SizeFlags}"
 				: $"\"{objPath}\" -o \"{exePath}\" {SizeFlags} -nostdlib -Wl,-e,_start",
 			Platform.MacOS => $"\"{objPath}\" -o \"{exePath}\" {SizeFlags}", //ncrunch: no coverage
@@ -95,11 +98,12 @@ public sealed class NativeExecutableLinker
 		{
 			var candidate = Path.Combine(dir, executableName);
 			if (File.Exists(candidate))
-				return candidate;
+				return candidate; //ncrunch: no coverage
 		}
 		return null; //ncrunch: no coverage
 	}
 
+	//ncrunch: no coverage start
 	private static string RunProcess(string executable, string arguments)
 	{
 		using var process = new Process();
@@ -112,18 +116,28 @@ public sealed class NativeExecutableLinker
 		};
 		process.Start();
 		var output = process.StandardOutput.ReadToEnd();
+		var error = process.StandardError.ReadToEnd();
 		if (!process.WaitForExit(TimeoutMilliseconds))
-		{ //ncrunch: no coverage start
+		{
 			process.Kill();
-			throw new InvalidOperationException($"Process '{executable}' timed out after {TimeoutMilliseconds} ms");
-		} //ncrunch: no coverage end
+			throw new InvalidOperationException($"Process '{executable} {arguments}' timed out after {TimeoutMilliseconds} ms");
+		}
 		if (process.ExitCode == 0)
 			return output;
-		//ncrunch: no coverage start
-		var error = process.StandardError.ReadToEnd();
-		throw new InvalidOperationException(
-			$"Process '{executable}' failed with exit code {process.ExitCode}: {error}");
-	} //ncrunch: no coverage end
+		var details = string.IsNullOrWhiteSpace(error)
+			? output
+			: string.IsNullOrWhiteSpace(output)
+				? error
+				: output + Environment.NewLine + error;
+		throw new InvalidOperationException($"Process '{executable} {arguments}' failed with exit code {process.ExitCode}: {details}");
+	}
+
+	private static void EnsureOutputFileExists(string outputFilePath, string toolName, Platform platform)
+	{
+		if (!File.Exists(outputFilePath))
+			throw new InvalidOperationException(toolName + " reported success for " + platform +
+				" output but did not create file: " + outputFilePath);
+	}
 
 	private const int TimeoutMilliseconds = 10000;
 }

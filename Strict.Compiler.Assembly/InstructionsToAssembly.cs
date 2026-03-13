@@ -41,10 +41,14 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 	{
 		var hasPrint = instructions.OfType<PrintInstruction>().Any();
 		var methodInfos = CollectMethods([.. instructions], precompiledMethods);
+		var hasNumericPrint = HasNumericPrint(instructions) ||
+			methodInfos.Values.Any(methodInfo => HasNumericPrint(methodInfo.Instructions));
 		var functionAsm = BuildAssembly(methodName, [], [.. instructions], platform, methodInfos);
 		foreach (var methodInfo in methodInfos.Values)
 			functionAsm += "\n" + BuildAssembly(methodInfo.Symbol, methodInfo.ParameterNames,
 				methodInfo.Instructions, platform, methodInfos);
+		if (platform == Platform.Windows && hasNumericPrint)
+			functionAsm += "\n" + BuildWindowsPrintNumberHelper();
 		return functionAsm + "\n" + BuildEntryPoint(methodName, platform, hasPrint);
 	}
 
@@ -61,12 +65,13 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 		};
 
 	private static string BuildWindowsEntryPoint(string methodName, bool hasPrint) =>
-		string.Join("\n", "", "extern ExitProcess",
-			hasPrint ? "extern GetStdHandle" : "",
-			hasPrint ? "extern WriteFile" : "",
-			"", "global main", "", "main:", "    push rbp",
-			"    mov rbp, rsp", "    sub rsp, 32", $"    call {methodName}", "    xor rcx, rcx",
-			"    call ExitProcess", "    add rsp, 32", "    pop rbp", "    ret");
+		string.Join("\n", "", "extern ExitProcess", hasPrint
+				? "extern GetStdHandle"
+				: "", hasPrint
+				? "extern WriteFile"
+				: "", "", "global main", "", "main:", "    push rbp", "    mov rbp, rsp",
+			"    sub rsp, 32", $"    call {methodName}", "    xor rcx, rcx", "    call ExitProcess",
+			"    add rsp, 32", "    pop rbp", "    ret");
 
 	private static string BuildLinuxEntryPoint(string methodName, bool hasPrint)
 	{
@@ -80,7 +85,9 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 
 	private static string BuildMacOsEntryPoint(string methodName, bool hasPrint)
 	{
-		var printExtern = hasPrint ? "extern _printf\n" : "";
+		var printExtern = hasPrint
+			? "extern _printf\n"
+			: "";
 		return printExtern + string.Join("\n", "", "global _main", "", "_main:", "    push rbp", "    mov rbp, rsp",
 			$"    call _{methodName}", "    xor rdi, rdi", "    mov rax, 0x2000001", "    syscall");
 	}
@@ -107,6 +114,7 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 		var dataConstants = CollectConstants(instructions);
 		var printStrings = CollectPrintStrings(instructions);
 		var (jumpLabels, jumpEndPositions) = BuildJumpLabels(instructions);
+		var optimizedReturns = new HashSet<int>();
 		var lines = new List<string>();
 		if (dataConstants.Count > 0 || printStrings.Count > 0)
 		{
@@ -121,15 +129,14 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 		lines.Add($"global {methodName}");
 		lines.Add("");
 		lines.Add($"{methodName}:");
-		lines.Add("    push rbp");
-		lines.Add("    mov rbp, rsp");
 		var frameSize = AlignTo16(variableSlots.Count * 8);
-		if (frameSize > 0)
-			lines.Add($"    sub rsp, {frameSize}");
-		foreach (var (name, slot) in variableSlots.Where(kv => paramIndexByName.ContainsKey(kv.Key)))
+		var needsFrame = NeedsStackFrame(frameSize, instructions);
+		if (needsFrame)
 		{
-			var paramIndex = paramIndexByName[name];
-			lines.Add($"    movsd [rbp-{(slot + 1) * 8}], xmm{paramIndex}");
+			lines.Add("    push rbp");
+			lines.Add("    mov rbp, rsp");
+			if (frameSize > 0)
+				lines.Add($"    sub rsp, {frameSize}");
 		}
 		var registerInstances = new Dictionary<Register, List<Expression>>();
 		var variableInstances = new Dictionary<string, List<Expression>>(StringComparer.Ordinal);
@@ -139,23 +146,31 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 				lines.Add($".{label}:");
 			EmitInstruction(instructions[index], lines, paramIndexByName, variableSlots, dataConstants,
 				printStrings, jumpLabels, jumpEndPositions, instructions, index, platform,
-				registerInstances, variableInstances, compiledMethods);
+				registerInstances, variableInstances, compiledMethods, optimizedReturns);
 		}
-		if (frameSize > 0)
-			lines.Add($"    add rsp, {frameSize}");
-		lines.Add("    pop rbp");
+		if (needsFrame)
+		{
+			if (frameSize > 0)
+				lines.Add($"    add rsp, {frameSize}");
+			lines.Add("    pop rbp");
+		}
 		lines.Add("    ret");
 		return string.Join("\n", lines);
 	}
 
+	private static bool NeedsStackFrame(int frameSize, List<Instruction> instructions) =>
+		frameSize > 0 || instructions.Any(instruction => instruction is Invoke or PrintInstruction);
+
+	private static bool HasNumericPrint(IEnumerable<Instruction> instructions) =>
+		instructions.OfType<PrintInstruction>().Any(print => print.ValueRegister.HasValue && !print.ValueIsText);
+
 	private static int AlignTo16(int size) => (size + 15) / 16 * 16;
 
-	private static Dictionary<string, int> BuildVariableSlots(IEnumerable<string> paramNames,
+	private static Dictionary<string, int> BuildVariableSlots(IEnumerable<string> parameterNames,
 		List<Instruction> instructions)
 	{
+		var parameterNameSet = new HashSet<string>(parameterNames);
 		var slots = new Dictionary<string, int>();
-		foreach (var name in paramNames)
-			slots[name] = slots.Count;
 		foreach (var instruction in instructions)
 		{
 			var varName = instruction switch
@@ -164,7 +179,7 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 				StoreVariableInstruction store => store.Identifier,
 				_ => null
 			};
-			if (varName != null && !slots.ContainsKey(varName))
+			if (varName != null && !parameterNameSet.Contains(varName) && !slots.ContainsKey(varName))
 				slots[varName] = slots.Count;
 		}
 		return slots;
@@ -199,13 +214,13 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 	private static IEnumerable<double> CollectInvokeNumericConstants(MethodCall call)
 	{
 		foreach (var argument in call.Arguments)
-			foreach (var value in CollectExpressionNumericConstants(argument))
-				yield return value;
+		foreach (var value in CollectExpressionNumericConstants(argument))
+			yield return value;
 		if (call.Instance is MethodCall constructorCall)
 			//ncrunch: no coverage start
 			foreach (var constructorArgument in constructorCall.Arguments)
-				foreach (var value in CollectExpressionNumericConstants(constructorArgument))
-					yield return value;
+			foreach (var value in CollectExpressionNumericConstants(constructorArgument))
+				yield return value;
 	} //ncrunch: no coverage end
 
 	private static IEnumerable<double> CollectExpressionNumericConstants(Expression expression)
@@ -272,15 +287,16 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 		Platform platform = Platform.Linux,
 		Dictionary<Register, List<Expression>> registerInstances = null!,
 		Dictionary<string, List<Expression>> variableInstances = null!,
-		Dictionary<string, CompiledMethodInfo>? compiledMethods = null)
+		Dictionary<string, CompiledMethodInfo>? compiledMethods = null,
+		HashSet<int>? optimizedReturns = null)
 	{
 		switch (instruction)
 		{
 		case StoreVariableInstruction storeConst
 			when !paramIndexByName.ContainsKey(storeConst.Identifier):
 			//ncrunch: no coverage start
-			EmitStoreConstantToSlot(storeConst.ValueInstance, variableSlots[storeConst.Identifier],
-				dataConstants, lines);
+			if (variableSlots.TryGetValue(storeConst.Identifier, out var storeSlot))
+				EmitStoreConstantToSlot(storeConst.ValueInstance, storeSlot, dataConstants, lines);
 			break; //ncrunch: no coverage end
 		case StoreVariableInstruction:
 			break;
@@ -290,17 +306,22 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 				registerInstances[loadVar.Register] = loadedInstance;
 				break;
 			} //ncrunch: no coverage end
-			lines.Add($"    movsd {
-				ToXmm(loadVar.Register)
-			}, [rbp-{
-				(variableSlots[loadVar.Identifier] + 1) * 8
-			}]");
+			if (paramIndexByName.TryGetValue(loadVar.Identifier, out var paramIndex))
+			{
+				var sourceXmm = "xmm" + paramIndex;
+				var destinationXmm = ToXmm(loadVar.Register);
+				if (sourceXmm != destinationXmm)
+					lines.Add("    movsd " + destinationXmm + ", " + sourceXmm);
+				break;
+			}
+			if (variableSlots.TryGetValue(loadVar.Identifier, out var loadSlot))
+				lines.Add("    movsd " + ToXmm(loadVar.Register) + ", [rbp-" + (loadSlot + 1) * 8 + "]");
 			break;
 		case LoadConstantInstruction loadConst:
 			EmitLoadConstant(loadConst.Register, loadConst.ValueInstance, dataConstants, lines);
 			break;
 		case BinaryInstruction binary when !binary.IsConditional():
-			EmitArithmetic(binary, lines);
+			EmitArithmetic(binary, allInstructions, index, optimizedReturns, lines);
 			break;
 		case BinaryInstruction binary:
 			EmitComparison(binary, lines);
@@ -311,19 +332,16 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 				variableInstances[storeReg.Identifier] = constructorArguments;
 				break;
 			}
-			lines.Add($"    movsd [rbp-{
-				(variableSlots[storeReg.Identifier] + 1) * 8
-			}], {
-				ToXmm(storeReg.Register)
-			}");
+			if (variableSlots.TryGetValue(storeReg.Identifier, out var destinationSlot))
+				lines.Add("    movsd [rbp-" + (destinationSlot + 1) * 8 + "], " + ToXmm(storeReg.Register));
 			break;
 		case ReturnInstruction ret:
-		{
+			if (optimizedReturns != null && optimizedReturns.Contains(index))
+				break;
 			var src = ToXmm(ret.Register);
 			if (src != "xmm0")
-				lines.Add($"    movsd xmm0, {src}");
+				lines.Add("    movsd xmm0, " + src);
 			break;
-		}
 		case PrintInstruction print:
 			EmitPrint(print, printStrings, lines, platform);
 			break;
@@ -331,8 +349,8 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 			EmitJump(jump, jumpLabels, index, lines);
 			break;
 		case Invoke invoke:
-			EmitInvoke(invoke, lines, variableSlots, dataConstants, registerInstances,
-				variableInstances, compiledMethods);
+			EmitInvoke(invoke, lines, paramIndexByName, variableSlots, dataConstants,
+				registerInstances, variableInstances, compiledMethods);
 			break;
 		case JumpToId { InstructionType: InstructionType.JumpEnd }:
 			break;
@@ -343,13 +361,14 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 	}
 
 	private static void EmitInvoke(Invoke invoke, List<string> lines,
-		Dictionary<string, int> variableSlots, List<(string Label, double Value)> dataConstants,
+		Dictionary<string, int> paramIndexByName, Dictionary<string, int> variableSlots,
+		List<(string Label, double Value)> dataConstants,
 		Dictionary<Register, List<Expression>> registerInstances,
 		Dictionary<string, List<Expression>> variableInstances,
 		Dictionary<string, CompiledMethodInfo>? compiledMethods)
 	{
 		if (invoke.Method == null)
-			throw new NotSupportedException("Invoke instruction is missing method metadata");
+			throw new NotSupportedException("Invoke instruction is missing method metadata"); //ncrunch: no coverage
 		if (invoke.Method.Method.Name == Method.From && invoke.Method.Instance == null)
 		{
 			registerInstances[invoke.Register] = ResolveConstructorArguments(invoke.Method);
@@ -370,8 +389,8 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 			throw new NotSupportedException( //ncrunch: no coverage
 				"Native assembly compiler currently supports up to 8 call arguments");
 		for (var argumentIndex = 0; argumentIndex < argumentExpressions.Count; argumentIndex++)
-			EmitLoadExpressionToXmm(argumentExpressions[argumentIndex], $"xmm{argumentIndex}", lines,
-				variableSlots, dataConstants, variableInstances);
+			EmitLoadExpressionToXmm(argumentExpressions[argumentIndex], "xmm" + argumentIndex, lines,
+				paramIndexByName, variableSlots, dataConstants, variableInstances);
 		lines.Add("    call " + methodInfo.Symbol);
 		var destination = ToXmm(invoke.Register);
 		if (destination != "xmm0")
@@ -403,7 +422,8 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 	}
 
 	private static void EmitLoadExpressionToXmm(Expression expression, string destinationXmm,
-		List<string> lines, Dictionary<string, int> variableSlots,
+		List<string> lines, Dictionary<string, int> paramIndexByName,
+		Dictionary<string, int> variableSlots,
 		List<(string Label, double Value)> dataConstants,
 		Dictionary<string, List<Expression>> variableInstances)
 	{
@@ -421,6 +441,13 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 		}
 		//ncrunch: no coverage start
 		var variableName = expression.ToString();
+		if (paramIndexByName.TryGetValue(variableName, out var parameterIndex))
+		{
+			var sourceXmm = "xmm" + parameterIndex;
+			if (sourceXmm != destinationXmm)
+				lines.Add("    movsd " + destinationXmm + ", " + sourceXmm);
+			return;
+		}
 		if (variableSlots.TryGetValue(variableName, out var slot))
 		{
 			lines.Add("    movsd " + destinationXmm + ", [rbp-" + (slot + 1) * 8 + "]");
@@ -512,9 +539,9 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 					lines.Add("    sub rsp, 16");
 					lines.Add("    movsd [rsp], " + numXmm);
 					EmitWindowsWriteFromLabel(strLabel, print.TextPrefix.Length, lines);
-					lines.Add("    movsd xmm15, [rsp]");
+					lines.Add("    movsd xmm0, [rsp]");
 					lines.Add("    add rsp, 16");
-					EmitWindowsWriteNumberFromXmm("xmm15", lines);
+					EmitWindowsWriteNumberFromXmm("xmm0", lines);
 				}
 				else
 					EmitWindowsWriteNumberFromXmm(numXmm, lines); //ncrunch: no coverage
@@ -527,13 +554,12 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 			lines.Add("    mov eax, 1");
 			lines.Add("    call printf");
 			return;
-		} //ncrunch: no coverage end
+		}
 		if (platform == Platform.Windows)
 		{
 			EmitWindowsWriteFromLabel(strLabel, BuildPrintKey(print).Length + 1, lines);
 			return;
 		}
-		//ncrunch: no coverage start
 		lines.Add($"    lea rdi, [rel {strLabel}]");
 		lines.Add("    xor eax, eax");
 		lines.Add("    call printf");
@@ -557,59 +583,32 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 
 	private static void EmitWindowsWriteNumberFromXmm(string sourceXmm, List<string> lines)
 	{
-		var labelId = lines.Count;
-		var absDone = $".print_abs_done_{labelId}";
-		var digitsLoop = $".print_digits_loop_{labelId}";
-		var digitsDone = $".print_digits_done_{labelId}";
-		var signDone = $".print_sign_done_{labelId}";
-		lines.Add("    sub rsp, 96");
-		lines.Add("    movsd [rsp], " + sourceXmm);
-		lines.Add("    mov ecx, -11");
-		lines.Add("    call GetStdHandle");
-		lines.Add("    mov rcx, rax");
-		lines.Add("    lea r10, [rsp+79]");
-		lines.Add("    mov byte [r10], 10");
-		lines.Add("    mov r11, r10");
-		lines.Add("    movsd xmm0, [rsp]");
-		lines.Add("    cvttsd2si rax, xmm0");
-		lines.Add("    xor r9d, r9d");
-		lines.Add("    test rax, rax");
-		lines.Add("    jge " + absDone);
-		lines.Add("    mov r9d, 1");
-		lines.Add("    neg rax");
-		lines.Add(absDone + ":");
-		lines.Add("    test rax, rax");
-		lines.Add("    jne " + digitsLoop);
-		lines.Add("    dec r11");
-		lines.Add("    mov byte [r11], '0'");
-		lines.Add("    jmp " + digitsDone);
-		lines.Add(digitsLoop + ":");
-		lines.Add("    xor edx, edx");
-		lines.Add("    mov r8, 10");
-		lines.Add("    div r8");
-		lines.Add("    add dl, '0'");
-		lines.Add("    dec r11");
-		lines.Add("    mov [r11], dl");
-		lines.Add("    test rax, rax");
-		lines.Add("    jne " + digitsLoop);
-		lines.Add(digitsDone + ":");
-		lines.Add("    test r9d, r9d");
-		lines.Add("    je " + signDone);
-		lines.Add("    dec r11");
-		lines.Add("    mov byte [r11], '-'");
-		lines.Add(signDone + ":");
-		lines.Add("    mov rdx, r11");
-		lines.Add("    mov r8, r10");
-		lines.Add("    sub r8, r11");
-		lines.Add("    inc r8");
-		lines.Add("    lea r9, [rsp+40]");
-		lines.Add("    mov qword [rsp+32], 0");
-		lines.Add("    call WriteFile");
-		lines.Add("    add rsp, 96");
+		if (sourceXmm != "xmm0")
+			lines.Add("    movsd xmm0, " + sourceXmm); //ncrunch: no coverage
+		lines.Add("    call print_number_from_xmm");
 	}
 
+	private static string BuildWindowsPrintNumberHelper() =>
+		string.Join("\n", "", "section .text", "print_number_from_xmm:", "    push rbp",
+			"    mov rbp, rsp", "    sub rsp, 96", "    movsd [rsp], xmm0", "    mov ecx, -11",
+			"    call GetStdHandle", "    mov rcx, rax", "    lea r10, [rsp+79]",
+			"    mov byte [r10], 10", "    mov r11, r10", "    movsd xmm0, [rsp]",
+			"    cvttsd2si rax, xmm0", "    xor r9d, r9d", "    test rax, rax",
+			"    jge .print_abs_done", "    mov r9d, 1", "    neg rax", ".print_abs_done:",
+			"    test rax, rax", "    jne .print_digits_loop", "    dec r11",
+			"    mov byte [r11], '0'", "    jmp .print_digits_done", ".print_digits_loop:",
+			"    xor edx, edx", "    mov r8, 10", "    div r8", "    add dl, '0'", "    dec r11",
+			"    mov [r11], dl", "    test rax, rax", "    jne .print_digits_loop",
+			".print_digits_done:", "    test r9d, r9d", "    je .print_sign_done",
+			"    dec r11", "    mov byte [r11], '-'", ".print_sign_done:", "    mov rdx, r11",
+			"    mov r8, r10", "    sub r8, r11", "    inc r8", "    lea r9, [rsp+40]",
+			"    mov qword [rsp+32], 0", "    call WriteFile", "    add rsp, 96", "    pop rbp",
+			"    ret");
+
 	private static string BuildPrintKey(PrintInstruction print) =>
-		print.ValueRegister.HasValue && !print.ValueIsText ? print.TextPrefix + "%g" : print.TextPrefix;
+		print.ValueRegister.HasValue && !print.ValueIsText
+			? print.TextPrefix + "%g"
+			: print.TextPrefix;
 
 	private static List<(string Label, string Text)> CollectPrintStrings(List<Instruction> instructions)
 	{
@@ -685,7 +684,8 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 		}
 	}
 
-	private static void EmitArithmetic(BinaryInstruction binary, List<string> lines)
+	private static void EmitArithmetic(BinaryInstruction binary, List<Instruction> allInstructions,
+		int instructionIndex, HashSet<int>? optimizedReturns, List<string> lines)
 	{
 		var src0 = ToXmm(binary.Registers[0]);
 		var src1 = ToXmm(binary.Registers[1]);
@@ -696,17 +696,23 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 			InstructionType.Subtract => "subsd",
 			InstructionType.Multiply => "mulsd",
 			InstructionType.Divide => "divsd",
-			// x64 has no single SSE2 instruction for double modulo; fmod requires a runtime call
 			InstructionType.Modulo => null, //ncrunch: no coverage
-			_ => throw new NotSupportedException($"x64 compilation of { //ncrunch: no coverage
-				binary.InstructionType
-			} is not supported") //ncrunch: no coverage
+			_ => throw new NotSupportedException( //ncrunch: no coverage
+				$"x64 compilation of {binary.InstructionType} is not supported")
 		};
 		if (op == null)
 			return; //ncrunch: no coverage
+		if (instructionIndex + 1 < allInstructions.Count &&
+			allInstructions[instructionIndex + 1] is ReturnInstruction returnInstruction &&
+			returnInstruction.Register == binary.Registers[^1] && src0 == "xmm0")
+		{
+			lines.Add("    " + op + " xmm0, " + src1);
+			optimizedReturns?.Add(instructionIndex + 1);
+			return;
+		}
 		if (dest != src0)
-			lines.Add($"    movsd {dest}, {src0}");
-		lines.Add($"    {op} {dest}, {src1}");
+			lines.Add("    movsd " + dest + ", " + src0);
+		lines.Add("    " + op + " " + dest + ", " + src1);
 	}
 
 	private static void EmitComparison(BinaryInstruction binary, List<string> lines)

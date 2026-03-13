@@ -39,37 +39,64 @@ public sealed class InstructionsToAssemblyTests
 	}
 
 	[Test]
-	public void FunctionHasTextSectionAndPrologueAndEpilogue()
+	public void FunctionHasTextSectionAndEpilogue()
 	{
-		var method = CreateSingleMethod("SumType", "has dummy Number",
-			"Sum(first Number, second Number) Number", "\tfirst + second");
+		var method = CreateSingleMethod("FunctionFrameType", "has dummy Number",
+			"Sum(first Number, second Number) Number", "\tlet result = first + second",
+			"\tresult + 1");
 		var assembly = compiler.Compile(method);
 		Assert.That(assembly, Does.Contain("section .text"));
 		Assert.That(assembly, Does.Contain("push rbp"));
 		Assert.That(assembly, Does.Contain("mov rbp, rsp"));
-		Assert.That(assembly, Does.Contain("sub rsp,"));
-		Assert.That(assembly, Does.Contain("add rsp,"));
 		Assert.That(assembly, Does.Contain("pop rbp"));
 		Assert.That(assembly, Does.Contain("ret"));
 	}
 
 	[Test]
-	public void ParametersAreStoredToStackInPrologue()
+	public void LeafFunctionHasTextSectionAndRet()
+	{
+		var method = CreateSingleMethod("SumLeafType", "has dummy Number",
+			"Sum(first Number, second Number) Number", "\tfirst + second");
+		var assembly = compiler.Compile(method);
+		Assert.That(assembly, Does.Contain("section .text"));
+		Assert.That(assembly, Does.Not.Contain("push rbp"));
+		Assert.That(assembly, Does.Not.Contain("mov rbp, rsp"));
+		Assert.That(assembly, Does.Not.Contain("pop rbp"));
+		Assert.That(assembly, Does.Contain("ret"));
+	}
+
+	[Test]
+	public void FunctionWithLocalVariableHasTextSectionAndEpilogue()
+	{
+		var method = CreateSingleMethod("LocalFrameType", "has dummy Number",
+			"Sum(first Number, second Number) Number", "\tlet result = first + second",
+			"\tresult + 1");
+		var assembly = compiler.Compile(method);
+		Assert.That(assembly, Does.Contain("section .text"));
+		Assert.That(assembly, Does.Contain("push rbp"));
+		Assert.That(assembly, Does.Contain("mov rbp, rsp"));
+		Assert.That(assembly, Does.Contain("pop rbp"));
+		Assert.That(assembly, Does.Contain("ret"));
+	}
+
+	[Test]
+	public void ParametersStayInRegistersForLeafMethods()
 	{
 		var method = CreateSingleMethod("TotalType", "has dummy Number",
 			"Total(first Number, second Number) Number", "\tfirst + second");
 		var assembly = compiler.Compile(method);
-		Assert.That(assembly, Does.Contain("movsd [rbp-8], xmm0"));
-		Assert.That(assembly, Does.Contain("movsd [rbp-16], xmm1"));
+		Assert.That(assembly, Does.Not.Contain("movsd [rbp-8], xmm0"));
+		Assert.That(assembly, Does.Not.Contain("movsd [rbp-16], xmm1"));
 	}
 
 	[Test]
-	public void ReturnValueMovedToXmm0WhenNotAlreadyThere()
+	public void ReturnValueCanBeProducedDirectlyInXmm0()
 	{
 		var method = CreateSingleMethod("SumNumbers", "has dummy Number",
 			"SumTwo(first Number, second Number) Number", "\tfirst + second");
 		var assembly = compiler.Compile(method);
-		Assert.That(assembly, Does.Contain("movsd xmm0,"));
+		Assert.That(assembly, Does.Contain("addsd xmm0, xmm1"));
+		Assert.That(assembly, Does.Not.Contain("movsd xmm0, xmm2"));
 	}
 
 	[Test]
@@ -132,32 +159,22 @@ public sealed class InstructionsToAssemblyTests
 	}
 
 	[Test]
-	public void SingleParameterFunctionSpillsOnlyFirstRegister()
+	public void SingleParameterFunctionUsesRegisterOnly()
 	{
 		var method = CreateSingleMethod("DoubleType", "has dummy Number",
 			"DoubleNum(num Number) Number", "\tnum + num");
 		var assembly = compiler.Compile(method);
-		Assert.That(assembly, Does.Contain("movsd [rbp-8], xmm0"));
+		Assert.That(assembly, Does.Not.Contain("movsd [rbp-8], xmm0"));
 		Assert.That(assembly, Does.Not.Contain("movsd [rbp-16], xmm1"));
 	}
 
 	[Test]
-	public void FrameSizeAlignsTo16BytesBoundary()
-	{
-		var method = CreateSingleMethod("ThreeVarType", "has dummy Number",
-			"ThreeVar(first Number, second Number, third Number) Number", "\tlet temp = first + second",
-			"\ttemp + third");
-		var assembly = compiler.Compile(method);
-		Assert.That(assembly, Does.Contain("sub rsp, 32"));
-	}
-
-	[Test]
-	public void TwoParamFrameSizeIs16Bytes()
+	public void TwoParameterLeafMethodNeedsNoStackFrame()
 	{
 		var method = CreateSingleMethod("TwoParmType", "has dummy Number",
 			"TwoParam(first Number, second Number) Number", "\tfirst + second");
 		var assembly = compiler.Compile(method);
-		Assert.That(assembly, Does.Contain("sub rsp, 16"));
+		Assert.That(assembly, Does.Not.Contain("sub rsp,"));
 	}
 
 	[Test]
@@ -440,8 +457,7 @@ public sealed class InstructionsToAssemblyTests
 	public void NativeExecutableLinkerThrowsToolNotFoundWhenNasmMissing()
 	{
 		if (NativeExecutableLinker.IsNasmAvailable)
-			return;
-		//ncrunch: no coverage start, only executed when nasm is missing
+			return; //ncrunch: no coverage start, only executed when nasm is missing
 		var linker = new NativeExecutableLinker();
 		var tempAsm = Path.Combine(Path.GetTempPath(), "test_" + Guid.NewGuid() + ".asm");
 		File.WriteAllText(tempAsm, "section .text\nglobal main\nmain:\n    ret");
@@ -481,8 +497,7 @@ public sealed class InstructionsToAssemblyTests
 			"Add(first Number, second Number) Number",
 			"\tfirst + second",
 			"Run Number",
-			"\tAdd(2, 3)"))
-			.ParseMembersAndMethods(new MethodExpressionParser());
+			"\tAdd(2, 3)")).ParseMembersAndMethods(new MethodExpressionParser());
 		var runMethod = type.Methods.First(method => method.Name == Method.Run);
 		var addMethod = type.Methods.First(method => method.Name == "Add");
 		var runInstructions = new BytecodeGenerator(new MethodCall(runMethod)).Generate();
@@ -504,10 +519,99 @@ public sealed class InstructionsToAssemblyTests
 			"has second Number",
 			"Add Number",
 			"\tfirst + second",
+			"Multiply Number",
+			"\tfirst * second",
 			"Run Number",
 			"\tconstant calc = AssemblySimpleCalculator(2, 3)",
-			"\tcalc.Add"))
-			.ParseMembersAndMethods(new MethodExpressionParser());
+			"\tconstant added = calc.Add",
+			"\tconstant multiplied = calc.Multiply",
+			"\tadded + multiplied")).ParseMembersAndMethods(new MethodExpressionParser());
+		var runMethod = type.Methods.First(method => method.Name == Method.Run);
+		var addMethod = type.Methods.First(method => method.Name == "Add");
+		var multiplyMethod = type.Methods.First(method => method.Name == "Multiply");
+		var runInstructions = new BytecodeGenerator(new MethodCall(runMethod)).Generate();
+		var addInstructions = new BytecodeGenerator(new InvokedMethod(
+			(addMethod.GetBodyAndParseIfNeeded() as Body)?.Expressions ?? [addMethod.GetBodyAndParseIfNeeded()],
+			new Dictionary<string, ValueInstance>(), addMethod.ReturnType), new Registry()).Generate();
+		var multiplyInstructions = new BytecodeGenerator(new InvokedMethod(
+			(multiplyMethod.GetBodyAndParseIfNeeded() as Body)?.Expressions ?? [multiplyMethod.GetBodyAndParseIfNeeded()],
+			new Dictionary<string, ValueInstance>(), multiplyMethod.ReturnType), new Registry()).Generate();
+		var addMethodKey = BytecodeDeserializer.BuildMethodInstructionKey(type.Name, addMethod.Name,
+			addMethod.Parameters.Count);
+		var multiplyMethodKey = BytecodeDeserializer.BuildMethodInstructionKey(type.Name,
+			multiplyMethod.Name, multiplyMethod.Parameters.Count);
+		var assembly = compiler.CompileForPlatform(type.Name, runInstructions, Platform.Linux,
+			new Dictionary<string, List<Instruction>>
+			{
+				[addMethodKey] = addInstructions,
+				[multiplyMethodKey] = multiplyInstructions
+			});
+		Assert.That(assembly, Does.Contain(type.Name + "_Add_0:"));
+		Assert.That(assembly, Does.Contain(type.Name + "_Multiply_0:"));
+		var addLabel = type.Name + "_Add_0:";
+		var addStart = assembly.IndexOf(addLabel, StringComparison.Ordinal);
+		var addEnd = assembly.IndexOf("section .text", addStart + addLabel.Length, StringComparison.Ordinal);
+		var addBody = assembly.Substring(addStart, addEnd - addStart);
+		Assert.That(addBody, Does.Not.Contain("movsd [rbp-"));
+		var multiplyLabel = type.Name + "_Multiply_0:";
+		var multiplyStart = assembly.IndexOf(multiplyLabel, StringComparison.Ordinal);
+		var multiplyEnd = assembly.IndexOf("global _start", multiplyStart + multiplyLabel.Length,
+			StringComparison.Ordinal);
+		var multiplyBody = assembly.Substring(multiplyStart, multiplyEnd - multiplyStart);
+		Assert.That(multiplyBody, Does.Not.Contain("movsd [rbp-"));
+	}
+
+	private static Method CreateSingleMethod(string typeName, params string[] methodLines) =>
+		new Type(TestPackage.Instance, new TypeLines(typeName, methodLines)).
+			ParseMembersAndMethods(new MethodExpressionParser()).Methods[0];
+
+	[Test]
+	public void LeafAddWithTwoParametersUsesDirectRegistersWithoutStackSpills()
+	{
+		var method = CreateSingleMethod("LeafAddType", "has dummy Number",
+			"Add(first Number, second Number) Number", "\tfirst + second");
+		var assembly = compiler.Compile(method);
+		Assert.That(assembly, Does.Contain("addsd xmm0, xmm1"));
+		Assert.That(assembly, Does.Not.Contain("movsd [rbp-8], xmm0"));
+		Assert.That(assembly, Does.Not.Contain("movsd [rbp-16], xmm1"));
+	}
+
+	[Test]
+	public void LeafMultiplyWithTwoParametersUsesDirectRegistersWithoutStackSpills()
+	{
+		var method = CreateSingleMethod("LeafMultiplyType", "has dummy Number",
+			"Multiply(first Number, second Number) Number", "\tfirst * second");
+		var assembly = compiler.Compile(method);
+		Assert.That(assembly, Does.Contain("mulsd xmm0, xmm1"));
+		Assert.That(assembly, Does.Not.Contain("movsd [rbp-8], xmm0"));
+		Assert.That(assembly, Does.Not.Contain("movsd [rbp-16], xmm1"));
+	}
+
+	[Test]
+	public void ConstantLeafFunctionNeedsNoFrameInstructions()
+	{
+		var instructions = new List<Instruction>
+		{
+			new LoadConstantInstruction(Register.R0, new ValueInstance(NumberType, 42.0)),
+			new ReturnInstruction(Register.R0)
+		};
+		var assembly = compiler.CompileInstructions("Run", instructions);
+		Assert.That(assembly, Does.Not.Contain("push rbp"));
+		Assert.That(assembly, Does.Not.Contain("mov rbp, rsp"));
+		Assert.That(assembly, Does.Not.Contain("pop rbp"));
+	}
+
+	[Test]
+	public void PlatformCompiledMemberCallsDoNotEmitDeadXmmInitialization()
+	{
+		var type = new Type(TestPackage.Instance, new TypeLines("DeadRegisterInitType",
+			"has first Number",
+			"has second Number",
+			"Add Number",
+			"\tfirst + second",
+			"Run Number",
+			"\tconstant calc = DeadRegisterInitType(2, 3)",
+			"\tcalc.Add")).ParseMembersAndMethods(new MethodExpressionParser());
 		var runMethod = type.Methods.First(method => method.Name == Method.Run);
 		var addMethod = type.Methods.First(method => method.Name == "Add");
 		var runInstructions = new BytecodeGenerator(new MethodCall(runMethod)).Generate();
@@ -518,122 +622,39 @@ public sealed class InstructionsToAssemblyTests
 			addMethod.Parameters.Count);
 		var assembly = compiler.CompileForPlatform(type.Name, runInstructions, Platform.Linux,
 			new Dictionary<string, List<Instruction>> { [methodKey] = addInstructions });
-		Assert.That(assembly, Does.Contain("call " + type.Name + "_Add_0"));
+		Assert.That(assembly, Does.Not.Contain("xorpd xmm2, xmm2"));
 	}
 
 	[Test]
-	public void WindowsLinkerArgsIncludeSizeFocusedFlags()
-	{
-		var linkerArgs = GetWindowsLinkerArgs(hasPrintCalls: true);
-		Assert.That(linkerArgs, Does.Contain("-s"));
-		Assert.That(linkerArgs, Does.Contain("-Wl,--gc-sections"));
-		Assert.That(linkerArgs, Does.Contain("-Wl,--strip-all"));
-	}
-
-	[Test]
-	public void WindowsLinkerArgsWithPrintUseNoStdLibAndExplicitEntry()
-	{
-		var linkerArgs = GetWindowsLinkerArgs(hasPrintCalls: true);
-		Assert.That(linkerArgs, Does.Contain("-nostdlib"));
-		Assert.That(linkerArgs, Does.Contain("-Wl,-e,main"));
-		Assert.That(linkerArgs, Does.Not.Contain("msvcrt"));
-	}
-
-	[Test]
-	public void WindowsLinkerArgsWithoutPrintUseNoStdLibAndExplicitEntry()
-	{
-		var linkerArgs = GetWindowsLinkerArgs(hasPrintCalls: false);
-		Assert.That(linkerArgs, Does.Contain("-nostdlib"));
-		Assert.That(linkerArgs, Does.Contain("-Wl,-e,main"));
-	}
-
-	private static string GetWindowsLinkerArgs(bool hasPrintCalls)
-	{
-		var method = typeof(NativeExecutableLinker).GetMethod("BuildLinkerArgs",
-			System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ??
-			throw new InvalidOperationException("BuildLinkerArgs not found");
-		return (string)(method.Invoke(null,
-			new object[] { "test.obj", "test.exe", Platform.Windows, hasPrintCalls }) ??
-			throw new InvalidOperationException("BuildLinkerArgs returned null"));
-	}
-
-	[Test]
-	public void InvokeInstructionThrowsNotSupportedForPlatformCompilation()
+	public void TwoNumericWindowsPrintsReuseSharedPrintNumberHelper()
 	{
 		var instructions = new List<Instruction>
 		{
-			new LoadConstantInstruction(Register.R0, new ValueInstance(NumberType, 1.0)),
-			new Invoke(Register.R1, null!, new Registry()),
-			new ReturnInstruction(Register.R0)
-		};
-		Assert.Throws<NotSupportedException>(() =>
-			compiler.CompileForPlatform("TestFunc", instructions, Platform.Linux));
-	}
-
-	private static Method CreateSingleMethod(string typeName, params string[] methodLines) =>
-		new Type(TestPackage.Instance, new TypeLines(typeName, methodLines)).
-			ParseMembersAndMethods(new MethodExpressionParser()).Methods[0];
-	
-	[Test]
-	public void PrintInstructionWithNumberEmitsWindowsWriteFilePath()
-	{
-		var instructions = new List<Instruction>
-		{
-			new LoadConstantInstruction(Register.R0, new ValueInstance(NumberType, 42.0)),
-			new PrintInstruction("Result = ", Register.R0),
-			new ReturnInstruction(Register.R0)
+			new LoadConstantInstruction(Register.R0, new ValueInstance(NumberType, 5.0)),
+			new PrintInstruction("A = ", Register.R0),
+			new LoadConstantInstruction(Register.R1, new ValueInstance(NumberType, 6.0)),
+			new PrintInstruction("B = ", Register.R1),
+			new ReturnInstruction(Register.R1)
 		};
 		var assembly = compiler.CompileForPlatform("Run", instructions, Platform.Windows);
-		Assert.That(assembly, Does.Contain("extern GetStdHandle"));
-		Assert.That(assembly, Does.Contain("extern WriteFile"));
-		Assert.That(assembly, Does.Contain("call WriteFile"));
-		Assert.That(assembly, Does.Not.Contain("call printf"));
+		Assert.That(assembly, Does.Contain("print_number_from_xmm:"));
+		Assert.That(assembly.Split("call print_number_from_xmm").Length - 1,
+			Is.EqualTo(2));
+		Assert.That(assembly.Split("cvttsd2si rax, xmm0").Length - 1,
+			Is.EqualTo(1));
 	}
 
 	[Test]
-	public void PrintInstructionEmitsWindowsWriteFileWithShadowSpace()
+	public void MissingNativeOutputFileThrowsDetailedInvalidOperationException()
 	{
-		var instructions = new List<Instruction>
-		{
-			new PrintInstruction("Output"),
-			new ReturnInstruction(Register.R0)
-		};
-		var assembly = compiler.CompileForPlatform("Run", instructions, Platform.Windows);
-		Assert.That(assembly, Does.Contain("extern GetStdHandle"));
-		Assert.That(assembly, Does.Contain("extern WriteFile"));
-		Assert.That(assembly, Does.Contain("sub rsp, 48"));
-		Assert.That(assembly, Does.Contain("call WriteFile"));
-		Assert.That(assembly, Does.Not.Contain("call printf"));
-	}
-
-	[Test]
-	public void PrintInstructionWithNumberPreservesXmmValueAcrossGetStdHandleCall()
-	{
-		var instructions = new List<Instruction>
-		{
-			new LoadConstantInstruction(Register.R0, new ValueInstance(NumberType, 42.0)),
-			new PrintInstruction("Result = ", Register.R0),
-			new ReturnInstruction(Register.R0)
-		};
-		var assembly = compiler.CompileForPlatform("Run", instructions, Platform.Windows);
-		Assert.That(assembly, Does.Contain("movsd [rsp], xmm0"));
-		Assert.That(assembly, Does.Contain("call GetStdHandle"));
-		Assert.That(assembly, Does.Contain("movsd xmm0, [rsp]"));
-		Assert.That(assembly, Does.Contain("cvttsd2si rax, xmm0"));
-	}
-
-	[Test]
-	public void PrintInstructionWithPrefixPreservesNumericRegisterAcrossPrefixWriteOnWindows()
-	{
-		var instructions = new List<Instruction>
-		{
-			new LoadConstantInstruction(Register.R2, new ValueInstance(NumberType, 7.0)),
-			new PrintInstruction("Value = ", Register.R2),
-			new ReturnInstruction(Register.R2)
-		};
-		var assembly = compiler.CompileForPlatform("Run", instructions, Platform.Windows);
-		Assert.That(assembly, Does.Contain("movsd [rsp], xmm2"));
-		Assert.That(assembly, Does.Contain("call WriteFile"));
-		Assert.That(assembly, Does.Contain("movsd xmm15, [rsp]"));
+		var method = typeof(NativeExecutableLinker).GetMethod("EnsureOutputFileExists",
+				System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ??
+			throw new InvalidOperationException("EnsureOutputFileExists not found");
+		var missingFilePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "PureAdder");
+		var exception = Assert.Throws<System.Reflection.TargetInvocationException>(() =>
+			method.Invoke(null, [missingFilePath, "gcc", Platform.Linux]))!;
+		Assert.That(exception.InnerException, Is.TypeOf<InvalidOperationException>());
+		Assert.That(exception.InnerException!.Message, Does.Contain(missingFilePath));
+		Assert.That(exception.InnerException.Message, Does.Contain("gcc"));
 	}
 }

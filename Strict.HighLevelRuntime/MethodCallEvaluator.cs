@@ -127,7 +127,7 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 				return MultiplyList(left.List.ReturnType, left.List.Items, right.Number);
 			if (op == BinaryOperator.Divide)
 				return DivideList(left.List.ReturnType, left.List.Items, right.Number);
-			throw new NotSupportedException(//ncrunch: no coverage
+			throw new NotSupportedException( //ncrunch: no coverage
 				"Only +, -, *, / operators are supported for List and Number, got: " + op);
 		}
 		return ExecuteMethodCall(call, left, ctx); //ncrunch: no coverage

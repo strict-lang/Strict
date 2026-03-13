@@ -95,10 +95,10 @@ public sealed class ConstantFoldingOptimizer : InstructionOptimizer
 				? right.Text
 				: right.ToExpressionCodeString())),
 			InstructionType.Add => new ValueInstance(left.GetType(), left.Number + right.Number),
-			InstructionType.Subtract => new ValueInstance(left.GetType(),	left.Number - right.Number),
-			InstructionType.Multiply => new ValueInstance(left.GetType(),	left.Number * right.Number),
-			InstructionType.Divide => new ValueInstance(left.GetType(),	left.Number / right.Number),
-			InstructionType.Modulo => new ValueInstance(left.GetType(),	left.Number % right.Number),
+			InstructionType.Subtract => new ValueInstance(left.GetType(), left.Number - right.Number),
+			InstructionType.Multiply => new ValueInstance(left.GetType(), left.Number * right.Number),
+			InstructionType.Divide => new ValueInstance(left.GetType(), left.Number / right.Number),
+			InstructionType.Modulo => new ValueInstance(left.GetType(), left.Number % right.Number),
 			_ => null //ncrunch: no coverage
 		};
 }

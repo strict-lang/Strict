@@ -11,7 +11,7 @@
 ## Project-Specific Rules
 - Strict is a simple-to-understand programming language that not only humans can read and understand, but also computers are able to understand, modify and write it.
 - The long-term goal is NOT to create just another programming language, but use Strict as the foundation for a higher level language for computers to understand and write code. This is the first step towards a future where computers can write their own code, which is the ultimate goal of Strict. Again, this is very different from other programming languages that are designed for humans to write code but not for computers to understand it. Even though LLMs can be trained to repeat and imitate, which is amazing to see, they still don't understand anything really and make the most ridiculous mistakes on any project bigger than a handful of files. Strict needs to be very fast, both in execution and writing code (much faster than any existing system), so millions of lines of code can be thought of by computers and be evaluated in real time (seconds).
-- Use dotnet build to build, dotnet test to test, do not try to use VS building or ReSharper build, you always fail trying to do that.
+- Use `dotnet build` to build, `dotnet test` to test, do not try to use VS building or ReSharper build, you always fail trying to do that.
 - The AdderProgram implementation must be written in Strict, with C# code only used to run it.
 - Keep AdderProgram in the Tests project and use TestPackage (or Strict.Base) for basic types.
 
@@ -19,17 +19,18 @@
 - No empty lines are allowed inside methods.
 - Avoid adding `ArgumentNullException.ThrowIfNull`/debug asserts.
 - No duplicate code is allowed, not in production, not in tests. If code exists for something, reuse it. If it doesn't exist, add it in the right place and reuse it.
-- Do name variables and members properly, no 1 letter abbrevations (not even i, a, b, c, s, n), explain what this is. i should be index, s could be name or message or whatever, n might be number or name. Do not use long verbose names either. Short scope -> short names, long scope -> longer names with more of an explanation what they are for (e.g. outputFilePath, optimizedInstructions).
+- Do name variables and members properly, no 1 letter abbreviations (not even i, a, b, c, s, n), explain what this is. i should be index, s could be name or message or whatever, n might be number or name. Do not use long verbose names either. Short scope -> short names, long scope -> longer names with more of an explanation what they are for (e.g. outputFilePath, optimizedInstructions).
 - In tests, prefer inlining `var` locals where possible and using expression-bodied tests/helpers when they stay readable; avoid unused helper overloads.
-- Do not add more \[Ignore\( attributes in any Tests project, except in an allowlist file.
+- Do not add more \[Ignore\] attributes in any Tests project, except in an allowlist file.
 - Do not add SupportedOSPlatform attributes, especially in tests just because you can't do something locally.
 - Do not add ad-hoc hacky cuda kernel code or any code without a proper transpiler or code emitter.
 - Do not add long comments, limit to 3 lines for summaries, best is none or 1 line. Inside methods there should usually not be any comments. Do not add comments to separate sections in a file (like using ---- or ====, that's ugly).
 
 ## Tests
-- Do not run Category("Manual") or \[Ignore\] tests ever, tests with these attributes are either supposed to be manually run or are currently disabled and ignored. If a test is fixed, remove the Ignore attribute and it becomes a normal test again.
-- Tests in the Slow or Nightly category are usually not run every time and can be skipped and ignored. On bigger refactors they should be run, our CI usually runs them on each checkin as they will be slower and we want to keep all tests fast (<10ms)
-- Prefer NCrunch for C# or SCrunch for Strict, all tests should be run all the time (if something changed), it is fine to run tests via `dotnet test` to also include Slow and Nightly tests.
+- Do not run Category("Manual") or \[Ignore\] tests ever; tests with these attributes are either supposed to be manually run or are currently disabled and ignored. If a test is fixed, remove the Ignore attribute and it becomes a normal test again.
+- Tests in the Slow or Nightly category are usually not run every time and can be skipped and ignored. On bigger refactors they should be run; our CI usually runs them on each check-in as they will be slower and we want to keep all tests fast (<10ms).
+- Prefer NCrunch for C# or SCrunch for Strict; all tests should be run all the time (if something changed), it is fine to run tests via `dotnet test` to also include Slow and Nightly tests.
+- Do not ignore linker or platform-build errors in code or tests; tests must surface failures instead of swallowing InvalidOperationException for platform compilation issues.
 
 ## Strict Semantics
 - When asked about Strict semantics, derive behavior directly from README.md and Strict/TestPackage examples; re-check cited examples before answering and avoid contradicting them.
@@ -38,6 +39,37 @@
 - Prefer ValueInstance-backed representations and avoid object-based value/rawValue conversions where possible.
 - Bytecode artifacts should be self-contained for runtime (no source .strict fallback), and .strictbinary packaging should mirror package/project directory structure for reconstruction.
 - Bytecode packaging should be compact and include only actually used methods; base type entries should usually have empty method lists unless methods are called.
+- Do not ignore ToolNotFound or toolchain failures during asm/executable creation; throw immediately and do not silently ignore problems.
+
+## Repository Exploration Snapshot of the C# Version of Strict early 2026
+- Top-level repository includes core base-library `.strict` type files at root (e.g., `Boolean.strict`, `Number.strict`, `Text.strict`, `List.strict`, `Dictionary.strict`, plus `Any`, `Type`, `Iterator`, `Error`, `Method`, `App`, `System`, `Logger`, `Stacktrace`, `File`, `Directory`, `TextReader`, `TextWriter`, and related foundational types).
+- Main solution file is `Strict.sln`, coordinating many projects beyond runtime: `Strict.Bytecode`, `Strict.Compiler`, `Strict.Compiler.Assembly`, `Strict.Compiler.Cuda`, `Strict.Expressions`, `Strict.Grammar`, `Strict.Language`, `Strict.HighLevelRuntime`, `Strict.LanguageServer`, `Strict.Optimizers`, `Strict.PackageManager`, `Strict.TestRunner`, `Strict.Transpiler`, and `Strict.Validators`.
+- Primary runtime/interpreter project is `Strict/` targeting .NET 10, with key files `Runner.cs`, `Program.cs`, `VirtualMachine.cs`, `Memory.cs`, `RegisterFile.cs`, and `CallFrame.cs`.
+- `Runner.cs` is a central orchestration component (large file) handling source parsing, validation, tests, bytecode generation, optimization, execution, binary save/load, diagnostics, expression execution, and native compilation entry points.
+- Runner constructor behavior supports both `.strict` source input and `.strictbinary` precompiled bytecode input.
+- Source flow in Runner includes staged execution: parse method bodies/expressions, validate types and constants, execute inline tests, generate bytecode, optimize bytecode, and execute on VM.
+- Precompiled flow executes bytecode directly and bypasses source parse/validate/test phases.
+- Bytecode optimizer sequence currently includes five named passes: `TestCodeRemover`, `ConstantFoldingOptimizer`, `DeadStoreEliminator`, `UnreachableCodeEliminator`, and `RedundantLoadEliminator`.
+- Runner diagnostics can report stage timing and bytecode instruction reduction metrics.
+- Runner can emit native binaries by generating NASM x64 assembly and invoking platform toolchain/linker for Windows/Linux/macOS targets.
+- Runner argument handling maps CLI numeric args to `Run(numbers)` signatures and supports expression execution patterns like `TypeName(args).Method`.
+- `Program.cs` is the CLI entrypoint and supports usage with `.strict` and `.strictbinary` inputs.
+- CLI options include diagnostics, decompile mode, and explicit target platform flags (`-Windows`, `-Linux`, `-MacOS`).
+- Decompile mode in CLI can turn `.strictbinary` into partial `.strict` output for inspection.
+- `Examples/` contains 35+ sample `.strict` programs and also includes `Examples.csproj` plus transpiler-generated C# output under `csTranspilerOutput/`.
+- Notable examples include `SimpleCalculator`, `Sum`, `FizzBuzz`, `PureAdder`, and `Fibonacci`, plus additional algorithmic/domain samples (GCD, temperature conversion, linked-list analysis, instruction/processor samples, list and number utilities, etc.).
+- Example patterns cover arithmetic, list/range iteration, recursion, mutation via mutable variables, classification logic, and text output behavior.
+- `Strict.Tests/` contains focused runtime/integration tests including `RunnerTests`, VM tests, memory/call-frame tests, adder tests, and binary execution performance tests.
+- Test stack uses NUnit and includes console output capture/assertion for user-visible behavior validation.
+- Test coverage includes bytecode serialization/deserialization workflows (zip-based artifacts) and platform compilation pathways.
+- Test project targets .NET 10 and references runtime and bytecode-related projects.
+- Performance benchmarking exists in tests (BenchmarkDotNet usage noted in exploration).
+- `TestPackage.Instance` is the standard preconfigured package used in tests to preload base types and enable full type resolution/validation.
+- Base type behavior highlights: `Boolean` logical ops/conversion, `Number` arithmetic/comparison/iteration/conversions/increment-decrement, `Text` concat/search/conversion helpers, `List` structural ops/indexing/accessors/utilities, `Dictionary` key operations and duplicate-key semantics.
+- Architecture implication for future edits: preserve Runner stage boundaries and contracts across parse/validate/test/bytecode/optimize/execute.
+- Stability implication for language/runtime changes: keep root base type semantics and example program behavior consistent unless intentionally changed with matching test updates.
+- Practical testing implication: prefer extending existing `Strict.Tests` runtime patterns (console assertions, package setup, serialization checks, platform-path checks) when introducing behavior changes.
+- Repository context priority: maintain compatibility between source execution and bytecode execution paths, and keep `.strictbinary` behavior self-consistent with runtime expectations.
 
 ## Test-Driven Development (TDD)
 
