@@ -166,7 +166,6 @@ public sealed class RunnerTests
 		var pureAdderPath = GetExamplesFilePath("PureAdder");
 		var asmPath = Path.ChangeExtension(pureAdderPath, ".asm");
 		using var runner = new Runner(TestPackage.Instance, pureAdderPath);
-		runner.useNasm = true;
 		if (!NativeExecutableLinker.IsNasmAvailable)
 			return;
 		runner.Run(Platform.Windows); //ncrunch: no coverage start
@@ -186,7 +185,6 @@ public sealed class RunnerTests
 		var asmPath = Path.ChangeExtension(pureAdderPath, ".asm");
 		var executablePath = Path.ChangeExtension(asmPath, null);
 		using var runner = new Runner(TestPackage.Instance, pureAdderPath);
-		runner.useNasm = true;
 		if (!NativeExecutableLinker.IsNasmAvailable)
 			return;
 		if (OperatingSystem.IsLinux()) //ncrunch: no coverage start
@@ -208,7 +206,6 @@ public sealed class RunnerTests
 	{
 		var asmPath = Path.ChangeExtension(SimpleCalculatorFilePath, ".asm");
 		using var runner = new Runner(TestPackage.Instance, SimpleCalculatorFilePath);
-		runner.useNasm = true;
 		if (!NativeExecutableLinker.IsNasmAvailable)
 			return; //ncrunch: no coverage start
 		runner.Run(Platform.Windows);
@@ -223,7 +220,6 @@ public sealed class RunnerTests
 		if (File.Exists(asmPath))
 			File.Delete(asmPath); //ncrunch: no coverage
 		using var runner = new Runner(TestPackage.Instance, binaryFilePath);
-		runner.useNasm = true;
 		if (!NativeExecutableLinker.IsNasmAvailable)
 			return; //ncrunch: no coverage start
 		runner.Run(Platform.Windows);
@@ -235,7 +231,6 @@ public sealed class RunnerTests
 	{
 		var pureAdderPath = GetExamplesFilePath("PureAdder");
 		using var runner = new Runner(TestPackage.Instance, pureAdderPath);
-		runner.useNasm = true;
 		if (!NativeExecutableLinker.IsNasmAvailable)
 			return; //ncrunch: no coverage start
 		if (OperatingSystem.IsLinux())
@@ -266,7 +261,6 @@ public sealed class RunnerTests
 		if (NativeExecutableLinker.IsNasmAvailable)
 			return; //ncrunch: no coverage start
 		using var runner = new Runner(TestPackage.Instance, GetExamplesFilePath("PureAdder"));
-		runner.useNasm = true;
 		Assert.Throws<ToolNotFoundException>(() => runner.Run(Platform.Windows));
 	} //ncrunch: no coverage end
 
@@ -294,13 +288,14 @@ public sealed class RunnerTests
 		if (!LlvmLinker.IsClangAvailable || !OperatingSystem.IsLinux())
 			return; //ncrunch: no coverage start
 		var pureAdderPath = GetExamplesFilePath("PureAdder");
-		var exePath = Path.ChangeExtension(pureAdderPath, null);
-		if (exePath.EndsWith(".strict", StringComparison.Ordinal))
-			exePath = exePath[..^7];
+		var llvmPath = Path.ChangeExtension(pureAdderPath, ".ll");
+		var exePath = Path.ChangeExtension(llvmPath, null);
 		using var runner = new Runner(TestPackage.Instance, pureAdderPath);
 		runner.useLlvm = true;
 		runner.Run(Platform.Linux);
 		Assert.That(writer.ToString(), Does.Contain("via LLVM"));
+		Assert.That(File.Exists(exePath), Is.True,
+			"Linux executable should be created by LLVM backend");
 	} //ncrunch: no coverage end
 
 	[Test]

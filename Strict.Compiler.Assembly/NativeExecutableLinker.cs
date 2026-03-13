@@ -17,29 +17,29 @@ public sealed class NativeExecutableLinker
 	/// </summary>
 	public string CreateExecutable(string asmPath, Platform platform, bool hasPrintCalls = false)
 	{
-		var nasmPath = FindTool("nasm") ??
+		var nasmPath = ToolRunner.FindTool("nasm") ??
 			throw new ToolNotFoundException("nasm", "https://nasm.us");
 		var objPath = Path.ChangeExtension(asmPath, ".obj");
 		var nasmFormat = NasmFormatFor(platform);
-		RunProcess(nasmPath, $"-f {nasmFormat} \"{asmPath}\" -o \"{objPath}\"");
-		EnsureOutputFileExists(objPath, "nasm", platform);
+		ToolRunner.RunProcess(nasmPath, $"-f {nasmFormat} \"{asmPath}\" -o \"{objPath}\"");
+		ToolRunner.EnsureOutputFileExists(objPath, "nasm", platform);
 		var linker = platform == Platform.MacOS
 			? "clang"
 			: "gcc";
-		var linkerPath = FindTool(linker) ??
+		var linkerPath = ToolRunner.FindTool(linker) ??
 			throw new ToolNotFoundException(linker, LinkerDownloadUrlFor(platform));
 		var exeExtension = platform == Platform.Windows
 			? ".exe"
 			: "";
 		var exeFilePath = Path.ChangeExtension(asmPath, null) + exeExtension;
 		var linkerArgs = BuildLinkerArgs(objPath, exeFilePath, platform, hasPrintCalls);
-		RunProcess(linkerPath, linkerArgs);
-		EnsureOutputFileExists(exeFilePath, linker, platform);
+		ToolRunner.RunProcess(linkerPath, linkerArgs);
+		ToolRunner.EnsureOutputFileExists(exeFilePath, linker, platform);
 		return exeFilePath;
 	} //ncrunch: no coverage end
 
-	public static bool IsNasmAvailable => FindTool("nasm") != null;
-	public static bool IsGccAvailable => FindTool("gcc") != null;
+	public static bool IsNasmAvailable => ToolRunner.FindTool("nasm") != null;
+	public static bool IsGccAvailable => ToolRunner.FindTool("gcc") != null;
 
 	//ncrunch: no coverage start
 	private static string NasmFormatFor(Platform platform) =>
@@ -74,70 +74,4 @@ public sealed class NativeExecutableLinker
 			Platform.MacOS => "https://developer.apple.com/xcode",
 			_ => "https://gcc.gnu.org"
 		}; //ncrunch: no coverage end
-
-	private static string? FindTool(string name)
-	{
-		if (!OperatingSystem.IsWindows())
-		{ //ncrunch: no coverage start
-			try
-			{
-				var result = RunProcess("which", name);
-				if (result.Trim().Length > 0 && File.Exists(result.Trim()))
-					return result.Trim();
-			}
-			catch (InvalidOperationException ex) when (ex.Message.Contains("exit code"))
-			{
-				// `which` exits non-zero when the tool is not found; fall through to PATH search
-			}
-		} //ncrunch: no coverage end
-		var executableName = OperatingSystem.IsWindows()
-			? name + ".exe"
-			: name;
-		foreach (var dir in (Environment.GetEnvironmentVariable("PATH") ?? "").Split(
-			Path.PathSeparator))
-		{
-			var candidate = Path.Combine(dir, executableName);
-			if (File.Exists(candidate))
-				return candidate; //ncrunch: no coverage
-		}
-		return null; //ncrunch: no coverage
-	}
-
-	//ncrunch: no coverage start
-	private static string RunProcess(string executable, string arguments)
-	{
-		using var process = new Process();
-		process.StartInfo = new ProcessStartInfo(executable, arguments)
-		{
-			RedirectStandardOutput = true,
-			RedirectStandardError = true,
-			UseShellExecute = false,
-			CreateNoWindow = true
-		};
-		process.Start();
-		var output = process.StandardOutput.ReadToEnd();
-		var error = process.StandardError.ReadToEnd();
-		if (!process.WaitForExit(TimeoutMilliseconds))
-		{
-			process.Kill();
-			throw new InvalidOperationException($"Process '{executable} {arguments}' timed out after {TimeoutMilliseconds} ms");
-		}
-		if (process.ExitCode == 0)
-			return output;
-		var details = string.IsNullOrWhiteSpace(error)
-			? output
-			: string.IsNullOrWhiteSpace(output)
-				? error
-				: output + Environment.NewLine + error;
-		throw new InvalidOperationException($"Process '{executable} {arguments}' failed with exit code {process.ExitCode}: {details}");
-	}
-
-	private static void EnsureOutputFileExists(string outputFilePath, string toolName, Platform platform)
-	{
-		if (!File.Exists(outputFilePath))
-			throw new InvalidOperationException(toolName + " reported success for " + platform +
-				" output but did not create file: " + outputFilePath);
-	}
-
-	private const int TimeoutMilliseconds = 10000;
 }

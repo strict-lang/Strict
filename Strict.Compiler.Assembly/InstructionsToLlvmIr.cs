@@ -73,7 +73,10 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 		{
 			header += "\ndeclare i32 @printf(ptr, ...)\n";
 			if (hasNumericPrint)
+			{
 				header += "declare i32 @snprintf(ptr, i64, ptr, ...)\n";
+				header += "@str.safe_s = private unnamed_addr constant [3 x i8] c\"%s\\00\"\n";
+			}
 		}
 		return header;
 	}
@@ -135,6 +138,7 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 		public HashSet<string> AllocatedVariables { get; } = new(StringComparer.Ordinal);
 		public HashSet<string> TerminatedBlocks { get; } = new(StringComparer.Ordinal);
 		public string CurrentBlock { get; set; } = "entry";
+		public string? LastConditionTemp { get; set; }
 		public int TempCounter { get; set; }
 		public bool HasReturn { get; set; }
 		public string NextTemp() => $"%t{TempCounter++}";
@@ -221,6 +225,9 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 		case JumpToId jumpToId:
 			EmitJumpToId(jumpToId, lines, context, index);
 			break;
+		default:
+			throw new NotSupportedException(
+				$"LLVM IR compilation does not support instruction: {instruction.GetType().Name} ({instruction.InstructionType})");
 		}
 	}
 
@@ -317,7 +324,7 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 		};
 		var temp = context.NextTemp();
 		lines.Add($"  {temp} = fcmp {predicate} double {left}, {right}");
-		context.RegisterValues[binary.Registers[^1]] = temp;
+		context.LastConditionTemp = temp;
 	}
 
 	private static void EmitStoreFromRegister(StoreFromRegisterInstruction storeReg,
@@ -347,6 +354,9 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 	{
 		var printKey = BuildPrintKey(print);
 		var stringLabel = "@str." + SanitizeLabel(printKey);
+		var strGep = context.NextTemp();
+		lines.Add(
+			$"  {strGep} = getelementptr inbounds [0 x i8], ptr {stringLabel}, i64 0, i64 0");
 		if (print.ValueRegister.HasValue && !print.ValueIsText)
 		{
 			var numValue = GetRegisterValue(print.ValueRegister.Value, context);
@@ -356,15 +366,15 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 			lines.Add($"  {castPtr} = getelementptr [64 x i8], ptr {bufPtr}, i64 0, i64 0");
 			var snprintfResult = context.NextTemp();
 			lines.Add(
-				$"  {snprintfResult} = call i32 (ptr, i64, ptr, ...) @snprintf(ptr {castPtr}, i64 64, ptr {stringLabel}, double {numValue})");
-			var printResult = context.NextTemp();
+				$"  {snprintfResult} = call i32 (ptr, i64, ptr, ...) @snprintf(ptr {castPtr}, i64 64, ptr {strGep}, double {numValue})");
+			var safeFmt = context.NextTemp();
 			lines.Add(
-				$"  {printResult} = call i32 (ptr, ...) @printf(ptr {castPtr})");
+				$"  {safeFmt} = call i32 (ptr, ...) @printf(ptr @str.safe_s, ptr {castPtr})");
 		}
 		else
 		{
 			var result = context.NextTemp();
-			lines.Add($"  {result} = call i32 (ptr, ...) @printf(ptr {stringLabel})");
+			lines.Add($"  {result} = call i32 (ptr, ...) @printf(ptr {strGep})");
 		}
 	}
 
@@ -376,14 +386,14 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 		switch (jump.InstructionType)
 		{
 		case InstructionType.JumpIfTrue or InstructionType.JumpIfFalse:
-			var lastComparisonValue = FindLastComparisonValue(context);
+			var condition = context.LastConditionTemp ?? "%t0";
 			var fallthrough = context.NextTemp();
 			var fallthroughLabel = $"fall{fallthrough[1..]}";
 			context.BlockLabels[index + 1] = fallthroughLabel;
 			if (jump.InstructionType == InstructionType.JumpIfFalse)
-				lines.Add($"  br i1 {lastComparisonValue}, label %{fallthroughLabel}, label %{label}");
+				lines.Add($"  br i1 {condition}, label %{fallthroughLabel}, label %{label}");
 			else
-				lines.Add($"  br i1 {lastComparisonValue}, label %{label}, label %{fallthroughLabel}");
+				lines.Add($"  br i1 {condition}, label %{label}, label %{fallthroughLabel}");
 			context.TerminatedBlocks.Add(context.CurrentBlock);
 			lines.Add($"{fallthroughLabel}:");
 			context.CurrentBlock = fallthroughLabel;
@@ -404,16 +414,16 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 		switch (jumpToId.InstructionType)
 		{
 		case InstructionType.JumpToIdIfFalse or InstructionType.JumpToIdIfTrue:
-			var lastComparisonValue = FindLastComparisonValue(context);
+			var condition = context.LastConditionTemp ?? "%t0";
 			var fallthroughLabel = context.BlockLabels.TryGetValue(index + 1, out var existing)
 				? existing
 				: $"fallid{context.TempCounter++}";
 			if (!context.BlockLabels.ContainsKey(index + 1))
 				context.BlockLabels[index + 1] = fallthroughLabel;
 			if (jumpToId.InstructionType == InstructionType.JumpToIdIfFalse)
-				lines.Add($"  br i1 {lastComparisonValue}, label %{fallthroughLabel}, label %{label}");
+				lines.Add($"  br i1 {condition}, label %{fallthroughLabel}, label %{label}");
 			else
-				lines.Add($"  br i1 {lastComparisonValue}, label %{label}, label %{fallthroughLabel}");
+				lines.Add($"  br i1 {condition}, label %{label}, label %{fallthroughLabel}");
 			context.TerminatedBlocks.Add(context.CurrentBlock);
 			lines.Add($"{fallthroughLabel}:");
 			context.CurrentBlock = fallthroughLabel;
@@ -461,7 +471,11 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 		var variableName = expression.ToString();
 		if (context.ParamIndexByName.TryGetValue(variableName, out var paramIndex))
 			return $"%param{paramIndex}";
-		return "0.0";
+		if (context.VariablePointers.ContainsKey(variableName))
+			throw new NotSupportedException(
+				"Cannot pass stack variable as inline argument in LLVM IR: " + variableName);
+		throw new NotSupportedException(
+			"Unsupported expression for LLVM IR native compilation: " + expression);
 	}
 
 	private static List<Expression> ResolveConstructorArguments(MethodCall constructorCall)
@@ -487,13 +501,6 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 			return values;
 		throw new NotSupportedException(
 			"Cannot resolve instance values for method call: " + methodCall);
-	}
-
-	private static string FindLastComparisonValue(EmitContext context)
-	{
-		var lastRegister = context.RegisterValues.LastOrDefault(
-			pair => pair.Value.StartsWith("%", StringComparison.Ordinal));
-		return lastRegister.Value ?? "%t0";
 	}
 
 	private static Dictionary<string, CompiledMethodInfo> CollectMethods(
@@ -586,7 +593,7 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 		{
 			var key = BuildPrintKey(print);
 			if (seen.Add(key))
-				strings.Add(("str." + SanitizeLabel(key), key + "\n"));
+				strings.Add(("str." + SanitizeLabel(key), key + "\n\0"));
 		}
 		return strings;
 	}

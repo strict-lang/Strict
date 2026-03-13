@@ -299,14 +299,14 @@ public sealed class Runner : IDisposable
 	}
 
 	/// <summary>
-	/// Generates a platform-specific executable from the compiled instructions. Prefers the LLVM IR
-	/// backend when clang is available (faster single-step compilation with -O2 optimizations),
-	/// otherwise falls back to the NASM + gcc/clang pipeline.
+	/// Generates a platform-specific executable from the compiled instructions. Uses the LLVM IR
+	/// backend when explicitly requested via -llvm flag, otherwise uses the NASM + gcc/clang
+	/// pipeline. LLVM is opt-in until feature parity is reached.
 	/// Throws <see cref="ToolNotFoundException"/> if required tools are missing.
 	/// </summary>
 	private Runner SavePlatformExecutable(List<Instruction> optimizedInstructions, Platform platform,
 		IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods) =>
-		useLlvm || (!useNasm && LlvmLinker.IsClangAvailable)
+		useLlvm
 			? SaveLlvmExecutable(optimizedInstructions, platform, precompiledMethods)
 			: SaveNasmExecutable(optimizedInstructions, platform, precompiledMethods);
 

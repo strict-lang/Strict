@@ -647,14 +647,10 @@ public sealed class InstructionsToAssemblyTests
 	[Test]
 	public void MissingNativeOutputFileThrowsDetailedInvalidOperationException()
 	{
-		var method = typeof(NativeExecutableLinker).GetMethod("EnsureOutputFileExists",
-				System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ??
-			throw new InvalidOperationException("EnsureOutputFileExists not found");
 		var missingFilePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "PureAdder");
-		var exception = Assert.Throws<System.Reflection.TargetInvocationException>(() =>
-			method.Invoke(null, [missingFilePath, "gcc", Platform.Linux]))!;
-		Assert.That(exception.InnerException, Is.TypeOf<InvalidOperationException>());
-		Assert.That(exception.InnerException!.Message, Does.Contain(missingFilePath));
-		Assert.That(exception.InnerException.Message, Does.Contain("gcc"));
+		var exception = Assert.Throws<InvalidOperationException>(() =>
+			ToolRunner.EnsureOutputFileExists(missingFilePath, "gcc", Platform.Linux))!;
+		Assert.That(exception.Message, Does.Contain(missingFilePath));
+		Assert.That(exception.Message, Does.Contain("gcc"));
 	}
 }

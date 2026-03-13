@@ -84,6 +84,9 @@ public static class Program
 				diagnostics = true;
 #endif
 			using var runner = new Runner(basePackage, filePath, diagnostics);
+			if (options.Contains("-llvm") && options.Contains("-nasm"))
+				throw new InvalidOperationException(
+					"Cannot specify both -llvm and -nasm. Choose one backend.");
 			if (options.Contains("-llvm"))
 				runner.useLlvm = true;
 			else if (options.Contains("-nasm"))
