@@ -191,8 +191,11 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 		if (value.StartsWith('%'))
 			lines.Add($"    return {value} : f64");
 		else
-			lines.Add($"    %ret_{context.TempCounter++} = arith.constant {value} : f64\n" +
-				$"    return %ret_{context.TempCounter - 1} : f64");
+		{
+			var temp = $"%ret_{context.TempCounter++}";
+			lines.Add($"    {temp} = arith.constant {value} : f64");
+			lines.Add($"    return {temp} : f64");
+		}
 	}
 
 	private static void EmitStoreFromRegister(StoreFromRegisterInstruction storeReg,

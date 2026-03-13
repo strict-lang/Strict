@@ -326,9 +326,7 @@ public sealed class Runner : IDisposable
 		File.WriteAllText(llvmPath, llvmIr);
 		Console.WriteLine("Saved " + platform + " LLVM IR to: " + llvmPath);
 		var exeFilePath = new LlvmLinker().CreateExecutable(llvmPath, platform);
-		Console.WriteLine("Compiled " + mainType.Name + " via LLVM in " +
-			TimeSpan.FromTicks(stepTimes.Sum()).ToString(@"s\.ffffff") + "s to " + platform +
-			" executable of " + new FileInfo(exeFilePath).Length.ToString("N0") + " bytes to: " + exeFilePath);
+		PrintCompilationSummary("LLVM", platform, exeFilePath);
 		return this;
 	}
 
@@ -342,9 +340,7 @@ public sealed class Runner : IDisposable
 		File.WriteAllText(mlirPath, mlirText);
 		Console.WriteLine("Saved " + platform + " MLIR to: " + mlirPath);
 		var exeFilePath = new MlirLinker().CreateExecutable(mlirPath, platform);
-		Console.WriteLine("Compiled " + mainType.Name + " via MLIR in " +
-			TimeSpan.FromTicks(stepTimes.Sum()).ToString(@"s\.ffffff") + "s to " + platform +
-			" executable of " + new FileInfo(exeFilePath).Length.ToString("N0") + " bytes to: " + exeFilePath);
+		PrintCompilationSummary("MLIR", platform, exeFilePath);
 		return this;
 	}
 
@@ -359,11 +355,15 @@ public sealed class Runner : IDisposable
 		Console.WriteLine("Saved " + platform + " NASM assembly to: " + asmPath);
 		var hasPrint = compiler.HasPrintInstructions(optimizedInstructions);
 		var exeFilePath = new NativeExecutableLinker().CreateExecutable(asmPath, platform, hasPrint);
-		Console.WriteLine("Compiled " + mainType.Name + " in " +
-			TimeSpan.FromTicks(stepTimes.Sum()).ToString(@"s\.ffffff") + "s to " + platform +
-			" executable of " + new FileInfo(exeFilePath).Length.ToString("N0") + " bytes to: " + exeFilePath);
+		PrintCompilationSummary("NASM", platform, exeFilePath);
 		return this;
 	}
+
+	private void PrintCompilationSummary(string backend, Platform platform, string exeFilePath) =>
+		Console.WriteLine("Compiled " + mainType.Name + " via " + backend + " in " +
+			TimeSpan.FromTicks(stepTimes.Sum()).ToString(@"s\.ffffff") + "s to " + platform +
+			" executable of " + new FileInfo(exeFilePath).Length.ToString("N0") +
+			" bytes to: " + exeFilePath);
 
 	private IReadOnlyList<TypeBytecodeData> BuildTypeBytecodeData(
 		List<Instruction> optimizedRunInstructions)
