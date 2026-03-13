@@ -1,0 +1,11 @@
+has logger
+Run
+	constant worldHelper = TextHelper("World")
+	constant strictHelper = TextHelper("Strict")
+	logger.Log(worldHelper.Greet)
+	logger.Log(strictHelper.Greet)
+	logger.Log("3 + 4 = " + (3 + 4))
+	logger.Log("10 * 3 = " + (10 * 3))
+	constant numbers = (1, 2, 3)
+	constant numbersSum = numbers.Sum
+	logger.Log("(1, 2, 3).Sum = " + numbersSum)

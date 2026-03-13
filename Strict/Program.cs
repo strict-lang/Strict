@@ -32,7 +32,7 @@ public static class Program
 
 	private static void DisplayUsageInformation()
 	{
-		Console.WriteLine("Usage: Strict <file.strict|file.strictbinary> [-options] [args...]");
+		Console.WriteLine("Usage: Strict <file.strict|directory|file.strictbinary> [-options] [args...]");
 		Console.WriteLine();
 		Console.WriteLine("Options:");
 		Console.WriteLine("  -diagnostics   Output detailed step-by-step logs and timing for each pipeline stage");
@@ -57,6 +57,7 @@ public static class Program
 		Console.WriteLine("  Strict Examples/SimpleCalculator.strictbinary");
 		Console.WriteLine("  Strict Examples/SimpleCalculator.strictbinary -decompile");
 		Console.WriteLine("  Strict Examples/Sum.strict 5 10 20");
+		Console.WriteLine("  Strict Examples/BaseTypesTest");
 	}
 
 	private static async Task ParseArgumentsAndRun(string[] args)

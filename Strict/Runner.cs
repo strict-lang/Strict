@@ -16,8 +16,10 @@ namespace Strict;
 public sealed class Runner : IDisposable
 {
 	/// <summary>
-	/// Creates a Runner for a .strict source file (parses, validates, compiles, and runs it),
-	/// or for a .strict_binary ZIP file (loads pre-compiled bytecode and executes it directly).
+	/// Creates a Runner for a .strict source file or directory (multi-file package), or for a
+	/// .strict_binary ZIP file (loads pre-compiled bytecode and executes it directly).
+	/// When given a directory path, all .strict files inside are loaded as a single package and
+	/// the type matching the directory name is used as the entry point.
 	/// </summary>
 	public Runner(Package basePackage, string strictFilePath,
 		bool enableTestsAndDetailedOutput = false)
@@ -28,23 +30,30 @@ public sealed class Runner : IDisposable
 		Log("╚════════════════════════════════════╝");
 		Log("┌─ Step 1: Loading: " + strictFilePath);
 		var startTicks = DateTime.UtcNow.Ticks;
-		currentFolder = Path.GetDirectoryName(Path.GetFullPath(strictFilePath))!;
-		var typeName = Path.GetFileNameWithoutExtension(strictFilePath);
-		if (Path.GetExtension(strictFilePath) == BytecodeSerializer.Extension)
+		if (Directory.Exists(strictFilePath))
 		{
-			deserializer = new BytecodeDeserializer(strictFilePath, basePackage);
-			package = deserializer.Package;
-			mainType = package.GetType(typeName);
+			currentFolder = Path.GetFullPath(strictFilePath.TrimEnd(Path.DirectorySeparatorChar,
+				Path.AltDirectorySeparatorChar));
+			(package, mainType) = LoadPackageFromDirectory(basePackage, currentFolder);
 		}
 		else
 		{
-			var packageName = Path.GetFileNameWithoutExtension(strictFilePath);
-				//Path.GetDirectoryName(Path.GetFullPath(strictFilePath)) ??
-				//throw new InvalidOperationException("Cannot determine package path");
-			package = new Package(basePackage, packageName);
-			var typeLines = new TypeLines(typeName, File.ReadAllLines(strictFilePath));
-			mainType =
-				new Type(package, typeLines).ParseMembersAndMethods(new MethodExpressionParser());
+			currentFolder = Path.GetDirectoryName(Path.GetFullPath(strictFilePath))!;
+			var typeName = Path.GetFileNameWithoutExtension(strictFilePath);
+			if (Path.GetExtension(strictFilePath) == BytecodeSerializer.Extension)
+			{
+				deserializer = new BytecodeDeserializer(strictFilePath, basePackage);
+				package = deserializer.Package;
+				mainType = package.GetType(typeName);
+			}
+			else
+			{
+				var packageName = Path.GetFileNameWithoutExtension(strictFilePath);
+				package = new Package(basePackage, packageName);
+				var typeLines = new TypeLines(typeName, File.ReadAllLines(strictFilePath));
+				mainType =
+					new Type(package, typeLines).ParseMembersAndMethods(new MethodExpressionParser());
+			}
 		}
 		var endTicks = DateTime.UtcNow.Ticks;
 		stepTimes.Add(endTicks - startTicks);
@@ -498,6 +507,57 @@ public sealed class Runner : IDisposable
 			method.Name, method.Parameters.Count);
 		if (compiledMethodKeys.Add(methodKey))
 			methodsToCompile.Enqueue(method);
+	}
+
+	private static (Package Package, Type MainType) LoadPackageFromDirectory(Package basePackage,
+		string dirPath)
+	{
+		var packageName = Path.GetFileName(dirPath);
+		var childPackage = new Package(basePackage, packageName);
+		var parser = new MethodExpressionParser();
+		var typeLinesByName = Directory.GetFiles(dirPath, "*" + Type.Extension,
+			SearchOption.TopDirectoryOnly).ToDictionary(
+			Path.GetFileNameWithoutExtension,
+			filePath => new TypeLines(Path.GetFileNameWithoutExtension(filePath),
+				File.ReadAllLines(filePath)), StringComparer.Ordinal);
+		foreach (var sortedTypeLines in SortTypesByDependency(typeLinesByName))
+			new Type(childPackage, sortedTypeLines).ParseMembersAndMethods(parser);
+		if (!childPackage.Types.TryGetValue(packageName, out var mainType))
+			// Fallback: use the first type with a Run method if no type matches the directory name
+			mainType = childPackage.Types.Values.FirstOrDefault(type =>
+				type.Methods.Any(method => method.Name == Method.Run)) ??
+				throw new InvalidOperationException(
+					"No type named '" + packageName + "' or type with Run method found in: " + dirPath);
+		return (childPackage, mainType);
+	}
+
+	private static IEnumerable<TypeLines> SortTypesByDependency(
+		Dictionary<string, TypeLines> typeLinesByName)
+	{
+		var withInternalDeps = new Dictionary<string, TypeLines>(StringComparer.Ordinal);
+		foreach (var typeLines in typeLinesByName.Values)
+			if (typeLines.DependentTypes.Any(dep => typeLinesByName.ContainsKey(dep)))
+				withInternalDeps[typeLines.Name] = typeLines;
+			else
+				yield return typeLines;
+		while (withInternalDeps.Count > 0)
+		{
+			var resolved = withInternalDeps.Values
+				.Where(t => !t.DependentTypes.Any(dep => withInternalDeps.ContainsKey(dep)))
+				.Select(t => t.Name).ToList();
+			if (resolved.Count == 0)
+			{
+				// Circular or unresolvable dependencies — yield remaining types in their original order
+				foreach (var remaining in withInternalDeps.Values)
+					yield return remaining;
+				yield break;
+			}
+			foreach (var name in resolved)
+			{
+				yield return withInternalDeps[name];
+				withInternalDeps.Remove(name);
+			}
+		}
 	}
 
 	public void Dispose() => package.Dispose();

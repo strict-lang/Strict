@@ -30,6 +30,18 @@ public sealed class RunnerTests
 			Does.StartWith("2 + 3 = 5" + Environment.NewLine + "2 * 3 = 6"));
 	}
 
+	[Test]
+	public void RunBaseTypesTestPackageFromDirectory()
+	{
+		using var _ = new Runner(TestPackage.Instance, GetExamplesDirectoryPath("BaseTypesTest")).Run();
+		var output = writer.ToString();
+		Assert.That(output, Does.Contain("Hello, World!"));
+		Assert.That(output, Does.Contain("Hello, Strict!"));
+		Assert.That(output, Does.Contain("3 + 4 = 7"));
+		Assert.That(output, Does.Contain("10 * 3 = 30"));
+		Assert.That(output, Does.Contain("(1, 2, 3).Sum = 6"));
+	}
+
 	private string SimpleCalculatorFilePath => GetExamplesFilePath("SimpleCalculator");
 
 	public static string GetExamplesFilePath(string filename)
@@ -40,6 +52,16 @@ public sealed class RunnerTests
 		return File.Exists(localPath)
 			? localPath
 			: Path.Combine(FindRepoRoot(), "Examples", filename + Language.Type.Extension);
+	}
+
+	public static string GetExamplesDirectoryPath(string directoryName)
+	{
+		var localPath = Path.Combine(
+			Repositories.GetLocalDevelopmentPath(Repositories.StrictOrg, nameof(Strict)),
+			"Examples", directoryName);
+		return Directory.Exists(localPath)
+			? localPath
+			: Path.Combine(FindRepoRoot(), "Examples", directoryName);
 	}
 
 	public string GetExamplesBinaryFile(string filename)
