@@ -45,7 +45,7 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 		foreach (var methodInfo in methodInfos.Values)
 			module += "\n" + BuildFunction(methodInfo.Symbol, methodInfo.ParameterNames,
 				methodInfo.Instructions, methodInfos);
-		module += "\n" + BuildEntryPoint(methodName, platform, hasPrint);
+		module += "\n" + BuildEntryPoint(methodName);
 		var stringConstants = CollectPrintStrings([.. instructions]);
 		foreach (var methodInfo in methodInfos.Values)
 			foreach (var (label, text) in CollectPrintStrings(methodInfo.Instructions))
@@ -563,14 +563,11 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 			new Registry()).Generate();
 	}
 
-	private static string BuildEntryPoint(string methodName, Platform platform, bool hasPrint)
+	private static string BuildEntryPoint(string methodName)
 	{
 		var lines = new List<string> { "define i32 @main() {", "entry:" };
 		lines.Add($"  %result = call double @{methodName}()");
-		if (platform == Platform.Linux || platform == Platform.MacOS)
-			lines.Add("  ret i32 0");
-		else
-			lines.Add("  ret i32 0");
+		lines.Add("  ret i32 0");
 		lines.Add("}");
 		return string.Join("\n", lines);
 	}
