@@ -133,6 +133,12 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 		case JumpToId jumpToId:
 			EmitJumpToId(jumpToId, lines, context, index); //ncrunch: no coverage
 			break; //ncrunch: no coverage
+		case LoopBeginInstruction loopBegin:
+			EmitLoopBegin(loopBegin, lines, context);
+			break;
+		case LoopEndInstruction:
+			EmitLoopEnd(lines, context);
+			break;
 		default:
 			throw new NotSupportedException(
 				$"MLIR compilation does not support instruction: {instruction.GetType().Name} ({instruction.InstructionType})");
@@ -148,6 +154,7 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 		var temp = context.NextTemp();
 		lines.Add($"    {temp} = arith.constant {value} : f64");
 		context.RegisterValues[loadConst.Register] = temp;
+		context.RegisterConstants[loadConst.Register] = loadConst.ValueInstance.Number;
 	}
 
 	private static void EmitBinary(BinaryInstruction binary, List<string> lines,
@@ -380,6 +387,52 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 		lines.Add($"    cf.cond_br {condTemp}, ^bb{targetIndex}, ^bb{fallthroughIndex}");
 	} //ncrunch: no coverage end
 
+	private static void EmitLoopBegin(LoopBeginInstruction loopBegin, List<string> lines,
+		EmitContext context)
+	{
+		if (!loopBegin.IsRange)
+			return;
+		var startValue = context.RegisterValues.GetValueOrDefault(loopBegin.Register, "%zero");
+		var endValue = context.RegisterValues.GetValueOrDefault(loopBegin.EndIndex!.Value, "%zero");
+		var startIndex = context.NextTemp();
+		var endIndex = context.NextTemp();
+		var step = context.NextTemp();
+		lines.Add($"    {startIndex} = arith.fptosi {startValue} : f64 to index");
+		lines.Add($"    {endIndex} = arith.fptosi {endValue} : f64 to index");
+		lines.Add($"    {step} = arith.constant 1 : index");
+		var isParallel = ShouldEmitParallelLoop(loopBegin, context);
+		context.LoopStack.Push(new LoopState(startIndex, endIndex, step, isParallel));
+		if (isParallel)
+			lines.Add($"    scf.parallel ({context.NextTemp()}) = ({startIndex}) to ({endIndex}) step ({step}) {{");
+		else
+			lines.Add($"    scf.for {context.NextTemp()} = {startIndex} to {endIndex} step {step} {{");
+	}
+
+	private static bool ShouldEmitParallelLoop(LoopBeginInstruction loopBegin, EmitContext context)
+	{
+		if (!loopBegin.IsRange || loopBegin.EndIndex == null)
+			return false;
+		return context.RegisterConstants.TryGetValue(loopBegin.EndIndex.Value, out var endNumber) &&
+			endNumber > ParallelPixelThreshold;
+	}
+
+	private const double ParallelPixelThreshold = 100_000;
+
+	private static void EmitLoopEnd(List<string> lines, EmitContext context)
+	{
+		if (context.LoopStack.Count == 0)
+			return;
+		var loopState = context.LoopStack.Pop();
+		lines.Add(loopState.IsParallel
+			? "      scf.reduce"
+			: "    }");
+		if (loopState.IsParallel)
+			lines.Add("    }");
+	}
+
+	private sealed record LoopState(
+		string StartIndex, string EndIndex, string Step, bool IsParallel);
+
 	private static string BuildEntryPoint(string methodName) =>
 		"  func.func @main() -> i32 {\n" +
 		$"    %result = func.call @{methodName}() : () -> f64\n" +
@@ -479,5 +532,7 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 		public string? LastConditionTemp { get; set; }
 		public HashSet<int> JumpTargets { get; } = [];
 		public List<(string Name, string Text, int ByteLen)> StringConstants { get; } = [];
+		public Stack<LoopState> LoopStack { get; } = new();
+		public Dictionary<Register, double> RegisterConstants { get; } = new();
 	}
 }

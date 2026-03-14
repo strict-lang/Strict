@@ -46,7 +46,7 @@ public sealed class MlirLinker
 	}
 
 	private static string BuildMlirOptArgs(string inputPath, string outputPath) =>
-		$"\"{inputPath}\" --canonicalize --cse --symbol-dce --convert-arith-to-llvm " +
+		$"\"{inputPath}\" --canonicalize --cse --symbol-dce --convert-scf-to-cf --convert-arith-to-llvm " +
 		$"--convert-func-to-llvm --convert-cf-to-llvm --reconcile-unrealized-casts -o \"{outputPath}\"";
 
 	private static string BuildClangArgs(string inputPath, string outputPath, Platform platform,

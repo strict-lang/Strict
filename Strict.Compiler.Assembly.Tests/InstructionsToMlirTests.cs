@@ -616,6 +616,76 @@ public sealed class InstructionsToMlirTests
 			new Dictionary<string, ValueInstance>(), method.ReturnType), new Registry()).Generate();
 	}
 
+	[Test]
+	public void RangeLoopEmitsScfFor()
+	{
+		var startRegister = Register.R0;
+		var endRegister = Register.R1;
+		var loopBegin = new LoopBeginInstruction(startRegister, endRegister);
+		var instructions = new List<Instruction>
+		{
+			new LoadConstantInstruction(startRegister, new ValueInstance(NumberType, 0.0)),
+			new LoadConstantInstruction(endRegister, new ValueInstance(NumberType, 10.0)),
+			loopBegin,
+			new LoadConstantInstruction(Register.R2, new ValueInstance(NumberType, 1.0)),
+			new LoopEndInstruction(2) { Begin = loopBegin },
+			new ReturnInstruction(Register.R2)
+		};
+		var mlir = compiler.CompileInstructions("LoopTest", instructions);
+		Assert.That(mlir, Does.Contain("scf.for"));
+		Assert.That(mlir, Does.Contain("arith.constant 0.0"));
+		Assert.That(mlir, Does.Contain("arith.constant 10.0"));
+	}
+
+	[Test]
+	public void ParallelHintEmitsScfParallel()
+	{
+		var startRegister = Register.R0;
+		var endRegister = Register.R1;
+		var loopBegin = new LoopBeginInstruction(startRegister, endRegister);
+		var instructions = new List<Instruction>
+		{
+			new LoadConstantInstruction(startRegister, new ValueInstance(NumberType, 0.0)),
+			new LoadConstantInstruction(endRegister, new ValueInstance(NumberType, 8294400.0)),
+			loopBegin,
+			new LoadConstantInstruction(Register.R2, new ValueInstance(NumberType, 1.0)),
+			new LoopEndInstruction(2) { Begin = loopBegin },
+			new ReturnInstruction(Register.R2)
+		};
+		var mlir = compiler.CompileInstructions("ParallelLoopTest", instructions);
+		Assert.That(mlir, Does.Contain("scf.parallel"),
+			"Large loops (>100K iterations) should emit scf.parallel for automatic CPU/GPU parallelism");
+	}
+
+	[Test]
+	public void SmallLoopDoesNotParallelize()
+	{
+		var startRegister = Register.R0;
+		var endRegister = Register.R1;
+		var loopBegin = new LoopBeginInstruction(startRegister, endRegister);
+		var instructions = new List<Instruction>
+		{
+			new LoadConstantInstruction(startRegister, new ValueInstance(NumberType, 0.0)),
+			new LoadConstantInstruction(endRegister, new ValueInstance(NumberType, 100.0)),
+			loopBegin,
+			new LoadConstantInstruction(Register.R2, new ValueInstance(NumberType, 1.0)),
+			new LoopEndInstruction(2) { Begin = loopBegin },
+			new ReturnInstruction(Register.R2)
+		};
+		var mlir = compiler.CompileInstructions("SmallLoopTest", instructions);
+		Assert.That(mlir, Does.Contain("scf.for"));
+		Assert.That(mlir, Does.Not.Contain("scf.parallel"),
+			"Small loops (<100K iterations) should NOT parallelize");
+	}
+
+	[Test]
+	public void MlirOptArgsIncludeScfToOpenMpConversion()
+	{
+		var args = BuildMlirOptArgs("test.mlir", "test.llvm.mlir");
+		Assert.That(args, Does.Contain("--convert-scf-to-cf"),
+			"MLIR opt should convert SCF for-loops to control flow");
+	}
+
 	private static string RewriteWindowsPrintRuntime(string llvmIr)
 	{
 		var rewriteMethod = typeof(MlirLinker).GetMethod("RewriteWindowsPrintRuntime",
