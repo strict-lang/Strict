@@ -401,11 +401,12 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 		lines.Add($"    {endIndex} = arith.fptosi {endValue} : f64 to index");
 		lines.Add($"    {step} = arith.constant 1 : index");
 		var isParallel = ShouldEmitParallelLoop(loopBegin, context);
-		context.LoopStack.Push(new LoopState(startIndex, endIndex, step, isParallel));
+		var inductionVar = context.NextTemp();
+		context.LoopStack.Push(new LoopState(startIndex, endIndex, step, isParallel, inductionVar));
 		if (isParallel)
-			lines.Add($"    scf.parallel ({context.NextTemp()}) = ({startIndex}) to ({endIndex}) step ({step}) {{");
+			lines.Add($"    scf.parallel ({inductionVar}) = ({startIndex}) to ({endIndex}) step ({step}) {{");
 		else
-			lines.Add($"    scf.for {context.NextTemp()} = {startIndex} to {endIndex} step {step} {{");
+			lines.Add($"    scf.for {inductionVar} = {startIndex} to {endIndex} step {step} {{");
 	}
 
 	private static bool ShouldEmitParallelLoop(LoopBeginInstruction loopBegin, EmitContext context)
@@ -423,15 +424,13 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 		if (context.LoopStack.Count == 0)
 			return;
 		var loopState = context.LoopStack.Pop();
-		lines.Add(loopState.IsParallel
-			? "      scf.reduce"
-			: "    }");
 		if (loopState.IsParallel)
-			lines.Add("    }");
+			lines.Add("      scf.reduce");
+		lines.Add("    }");
 	}
 
 	private sealed record LoopState(
-		string StartIndex, string EndIndex, string Step, bool IsParallel);
+		string StartIndex, string EndIndex, string Step, bool IsParallel, string InductionVar);
 
 	private static string BuildEntryPoint(string methodName) =>
 		"  func.func @main() -> i32 {\n" +

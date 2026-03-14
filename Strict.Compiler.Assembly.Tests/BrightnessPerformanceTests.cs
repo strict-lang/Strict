@@ -6,7 +6,7 @@ namespace Strict.Compiler.Assembly.Tests;
 /// <summary>
 /// Performance comparison of single-thread vs parallel CPU brightness adjustment.
 /// Based on AdjustBrightness.strict which iterates all pixels: for row, column in image.Size
-/// and adjusts RGB channels with Clamp(0, 255). For small images (&lt;0.1 megapixel) parallel
+/// and adjusts RGB channels with Clamp(0, 255). For small images (under 0.1 megapixel) parallel
 /// overhead makes it slower, but for 4K images (8.3MP) parallel should be significantly faster.
 /// Reference from BlurPerformanceTests (2048x1024, 200 iterations):
 ///   SingleThread: 4594ms, ParallelCpu: 701ms (6.5x faster), CudaGpu: 32ms (143x faster)

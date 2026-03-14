@@ -679,7 +679,7 @@ public sealed class InstructionsToMlirTests
 	}
 
 	[Test]
-	public void MlirOptArgsIncludeScfToOpenMpConversion()
+	public void MlirOptArgsIncludeScfToCfConversion()
 	{
 		var args = BuildMlirOptArgs("test.mlir", "test.llvm.mlir");
 		Assert.That(args, Does.Contain("--convert-scf-to-cf"),
