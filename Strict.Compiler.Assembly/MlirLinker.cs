@@ -14,10 +14,12 @@ public sealed class MlirLinker
 	{
 		var mlirOptPath = ToolRunner.FindTool("mlir-opt") ??
 			throw new ToolNotFoundException("mlir-opt",
-				"https://github.com/llvm/llvm-project/releases (install MLIR tools)");
+				"https://github.com/llvm/llvm-project/releases (install MLIR tools or " +
+				"on Windows use Msys2 and 'pacman -S mingw-w64-x86_64-mlir')");
 		var mlirTranslatePath = ToolRunner.FindTool("mlir-translate") ??
 			throw new ToolNotFoundException("mlir-translate",
-				"https://github.com/llvm/llvm-project/releases (install MLIR tools)");
+				"https://github.com/llvm/llvm-project/releases (install MLIR tools or " +
+				"on Windows use Msys2 and 'pacman -S mingw-w64-x86_64-mlir')");
 		var clangPath = ToolRunner.FindTool("clang") ??
 			throw new ToolNotFoundException("clang", "https://releases.llvm.org");
 		var llvmDialectPath = Path.ChangeExtension(mlirPath, ".llvm.mlir");

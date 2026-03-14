@@ -588,16 +588,16 @@ public sealed class InstructionsToLlvmIrTests
 	public void PixelStyleTypeWithThreeMembersAndDivide()
 	{
 		var type = new Type(TestPackage.Instance, new TypeLines("LlvmPixel",
-		"has red Number",
-		"has green Number",
-		"has blue Number",
-		"Brighten Number",
-		"\tred + green",
-		"Darken Number",
-		"\tred / 2",
-		"Run Number",
-		"\tconstant pixel = LlvmPixel(100, 150, 200)",
-		"\tpixel.Brighten")).ParseMembersAndMethods(new MethodExpressionParser());
+			"has red Number",
+			"has green Number",
+			"has blue Number",
+			"Brighten Number",
+			"\tred + green",
+			"Darken Number",
+			"\tred / 2",
+			"Run Number",
+			"\tconstant pixel = LlvmPixel(100, 150, 200)",
+			"\tpixel.Brighten")).ParseMembersAndMethods(new MethodExpressionParser());
 		var runMethod = type.Methods.First(method => method.Name == Method.Run);
 		var brightenMethod = type.Methods.First(method => method.Name == "Brighten");
 		var runInstructions = new BytecodeGenerator(new MethodCall(runMethod)).Generate();
@@ -605,7 +605,7 @@ public sealed class InstructionsToLlvmIrTests
 		var precompiled = new Dictionary<string, List<Instruction>>
 		{
 			[BytecodeDeserializer.BuildMethodInstructionKey(type.Name, brightenMethod.Name,
-			brightenMethod.Parameters.Count)] = brightenInstructions
+				brightenMethod.Parameters.Count)] = brightenInstructions
 		};
 		var ir = compiler.CompileForPlatform(type.Name, runInstructions, Platform.Linux, precompiled);
 		Assert.That(ir, Does.Contain("define double @LlvmPixel_Brighten_0("));

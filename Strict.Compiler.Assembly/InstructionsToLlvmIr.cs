@@ -63,7 +63,7 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 	public bool IsPlatformUsingStdLibAndHasPrintInstructions(Platform platform,
 		List<Instruction> optimizedInstructions,
 		IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods) =>
-		platform == Platform.Linux && (HasPrintInstructions(optimizedInstructions) ||
+		platform == Platform.Linux && (HasPrintInstructions(optimizedInstructions) || //ncrunch: no coverage
 			(precompiledMethods?.Values.Any(HasPrintInstructions) ?? false));
 
 	public static bool HasPrintInstructions(IList<Instruction> instructions) =>
@@ -671,6 +671,7 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 				queue.Enqueue((invoke.Method.Method, invoke.Method.Instance != null));
 	}
 
+	//ncrunch: no coverage start
 	private static List<Instruction> GenerateInstructions(Method method)
 	{
 		var body = method.GetBodyAndParseIfNeeded();
@@ -682,7 +683,7 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 				parameter => new ValueInstance(parameter.Type, 0)); //ncrunch: no coverage
 		return new BytecodeGenerator(new InvokedMethod(expressions, arguments, method.ReturnType),
 			new Registry()).Generate();
-	}
+	} //ncrunch: no coverage end
 
 	private static string BuildEntryPoint(string methodName) =>
 		string.Join("\n",

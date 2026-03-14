@@ -32,8 +32,7 @@ public sealed class NativeExecutableLinker
 		var exeFilePath = Path.ChangeExtension(asmPath, null) + exeExtension;
 		var linkerArgs = BuildLinkerArgs(objPath, exeFilePath, platform, hasPrintCalls);
 		ToolRunner.RunProcess(linkerPath, linkerArgs);
-		ToolRunner.EnsureOutputFileExists(exeFilePath, linker, platform);
-		return exeFilePath;
+		return ToolRunner.ResolveOutputFilePath(exeFilePath, linker, platform);
 	} //ncrunch: no coverage end
 
 	public static bool IsNasmAvailable => ToolRunner.FindTool("nasm") != null;

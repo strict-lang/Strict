@@ -645,6 +645,19 @@ public sealed class InstructionsToAssemblyTests
 	}
 
 	[Test]
+	public void LinuxOutputCheckOnWindowsAcceptsExeFallback()
+	{
+		if (!OperatingSystem.IsWindows())
+			return; //ncrunch: no coverage
+		var tempDirectoryPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+		Directory.CreateDirectory(tempDirectoryPath);
+		var expectedLinuxOutputPath = Path.Combine(tempDirectoryPath, "PureAdder");
+		File.WriteAllText(expectedLinuxOutputPath + ".exe", "probe");
+		Assert.DoesNotThrow(() =>
+			ToolRunner.EnsureOutputFileExists(expectedLinuxOutputPath, "gcc", Platform.Linux));
+	}
+
+	[Test]
 	public void MissingNativeOutputFileThrowsDetailedInvalidOperationException()
 	{
 		var missingFilePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "PureAdder");

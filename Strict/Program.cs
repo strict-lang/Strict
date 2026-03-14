@@ -88,7 +88,7 @@ public static class Program
 			var backend = options.Contains("-nasm")
 				? CompilerBackend.Nasm
 				: options.Contains("-nasm")
-				 	? CompilerBackend.Llvm
+					? CompilerBackend.Llvm
 					: CompilerBackend.MlirDefault;
 			using var runner = new Runner(basePackage, filePath, backend, diagnostics);
 			if (nonFlagArgs.Length == 1 && nonFlagArgs[0].Contains('('))

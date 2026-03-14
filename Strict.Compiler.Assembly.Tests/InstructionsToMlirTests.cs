@@ -23,9 +23,12 @@ public sealed class InstructionsToMlirTests
 		{
 			new LoadConstantInstruction(Register.R0, new ValueInstance(NumberType, 3.0)),
 			new LoadConstantInstruction(Register.R1, new ValueInstance(NumberType, 7.0)),
-			new BinaryInstruction(op == "+" ? InstructionType.Add
-				: op == "-" ? InstructionType.Subtract
-				: InstructionType.Multiply, Register.R0, Register.R1, Register.R2),
+			new BinaryInstruction(op switch //ncrunch: no coverage
+			{
+				"+" => InstructionType.Add,
+				"-" => InstructionType.Subtract,
+				_ => InstructionType.Multiply
+			}, Register.R0, Register.R1, Register.R2),
 			new ReturnInstruction(Register.R2)
 		};
 		var ir = compiler.CompileInstructions(typeName, instructions);
@@ -232,6 +235,21 @@ public sealed class InstructionsToMlirTests
 		Assert.That(mlir, Does.Contain("arith.constant"));
 		Assert.That(mlir, Does.Not.Contain("fadd double"));
 		Assert.That(mlir, Does.Not.Contain("define double"));
+	}
+
+	[Test]
+	public void CompileForPlatformWithPrintUsesLlvmPrintfAndStringGlobal()
+	{
+		var instructions = new List<Instruction>
+		{
+			new LoadConstantInstruction(Register.R0, new ValueInstance(NumberType, 42.0)),
+			new PrintInstruction("Result: %g\0A", Register.R0),
+			new ReturnInstruction(Register.R0)
+		};
+		var mlir = compiler.CompileForPlatform("PrintRun", instructions, Platform.Windows);
+		Assert.That(mlir, Does.Contain("llvm.func @printf(!llvm.ptr, ...) -> i32"));
+		Assert.That(mlir, Does.Contain("llvm.mlir.global internal constant @str_PrintRun_0"));
+		Assert.That(mlir, Does.Contain("llvm.call @printf("));
 	}
 
 	[Test]

@@ -31,7 +31,7 @@ public sealed class RunnerTests
 		var examplesDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "..",
 			"Examples");
 		if (!Directory.Exists(examplesDir))
-			return;
+			return; //ncrunch: no coverage start
 		foreach (var ext in new[] { ".ll", ".mlir", ".llvm.mlir", ".asm", ".obj", ".exe" })
 		foreach (var file in Directory.GetFiles(examplesDir, "*" + ext))
 			File.Delete(file);
@@ -238,7 +238,7 @@ public sealed class RunnerTests
 			return; //ncrunch: no coverage start
 		runner.Run(Platform.Windows);
 		Assert.That(File.Exists(llvmPath), Is.True, ".ll file should be created");
-		Assert.That(writer.ToString(), Does.Contain("Saved Windows LLVM IR to:"));
+		Assert.That(writer.ToString(), Does.Contain("Saved Windows MLIR to:"));
 	} //ncrunch: no coverage end
 
 	[Test]
@@ -254,23 +254,22 @@ public sealed class RunnerTests
 		runner.Run(Platform.Windows);
 		Assert.That(File.Exists(llvmPath), Is.True,
 			".ll file should be created for bytecode platform compilation");
-		Assert.That(writer.ToString(), Does.Contain("Saved Windows LLVM IR to:"));
+		Assert.That(writer.ToString(), Does.Contain("Saved Windows MLIR to:"));
 	} //ncrunch: no coverage end
 
-	[Test]
-	public void RunWithPlatformDoesNotExecuteProgram()
+	[TestCase(CompilerBackend.MlirDefault)]
+	[TestCase(CompilerBackend.Llvm)]
+	[TestCase(CompilerBackend.Nasm)]
+	public void RunWithPlatformDoesNotExecuteProgram(CompilerBackend backend)
 	{
 		var pureAdderPath = GetExamplesFilePath("PureAdder");
-		using var runner = new Runner(TestPackage.Instance, pureAdderPath, CompilerBackend.Nasm);
-		if (!NativeExecutableLinker.IsNasmAvailable)
-			return; //ncrunch: no coverage start
-		if (OperatingSystem.IsLinux())
-			runner.Run(Platform.Linux);
-		else
-			runner.Run(Platform.Linux);
+		using var runner = new Runner(TestPackage.Instance, pureAdderPath, backend);
+		runner.Run(OperatingSystem.IsWindows()
+			? Platform.Windows
+			: Platform.Linux);
 		Assert.That(writer.ToString(), Does.Not.Contain("executed"),
 			"Platform compilation should not execute the program");
-		Assert.That(writer.ToString(), Does.Contain("Saved Linux NASM assembly to:"),
+		Assert.That(writer.ToString(), Does.Contain("Saved"),
 			"Should report that assembly was saved");
 	} //ncrunch: no coverage end
 
@@ -284,21 +283,21 @@ public sealed class RunnerTests
 	} //ncrunch: no coverage end
 
 	[Test]
-	public void RunWithLlvmBackendCreatesLlvmIrFileForLinux()
+	public void RunWithMlirBackendCreatesMlirFileForLinux()
 	{
 		if (!LlvmLinker.IsClangAvailable)
-			return; //ncrunch: no coverage start
+			return; //ncrunch: no coverage
 		var pureAdderPath = GetExamplesFilePath("PureAdder");
 		var llvmPath = Path.ChangeExtension(pureAdderPath, ".ll");
 		using var runner = new Runner(TestPackage.Instance, pureAdderPath);
 		runner.Run(Platform.Linux);
 		Assert.That(File.Exists(llvmPath), Is.True, ".ll file should be created");
-		Assert.That(writer.ToString(), Does.Contain("Saved Linux LLVM IR to:"));
+		Assert.That(writer.ToString(), Does.Contain("Saved Linux MLIR to:"));
 		var irContent = File.ReadAllText(llvmPath);
 		Assert.That(irContent, Does.Contain("define double @PureAdder("));
 		Assert.That(irContent, Does.Contain("define i32 @main()"));
-		Assert.That(irContent, Does.Contain("target triple"));
-	} //ncrunch: no coverage end
+		Assert.That(irContent, Does.Contain("ret i32 0"));
+	}
 
 	[Test]
 	public void RunWithLlvmBackendProducesLinuxExecutable()

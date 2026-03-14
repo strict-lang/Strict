@@ -2,6 +2,7 @@ namespace Strict;
 
 public enum CompilerBackend
 {
-	LlvmDefault,
+	MlirDefault,
+	Llvm,
 	Nasm
 }

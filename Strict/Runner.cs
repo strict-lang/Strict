@@ -309,17 +309,18 @@ public sealed class Runner : IDisposable
 	/// LLVM and MLIR are opt-in until feature parity is reached.
 	/// Throws <see cref="ToolNotFoundException"/> if required tools are missing.
 	/// </summary>
-	private Runner SavePlatformExecutable(List<Instruction> optimizedInstructions, Platform platform,
-		IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods) =>
-		backend == CompilerBackend.MlirDefault
-			? SaveMlirExecutable(optimizedInstructions, platform, precompiledMethods)
-			: backend == CompilerBackend.Llvm
-				? SaveLlvmExecutable(optimizedInstructions, platform, precompiledMethods)
-				: SaveNasmExecutable(optimizedInstructions, platform, precompiledMethods);
+	private Runner SavePlatformExecutable(List<Instruction> optimizedInstructions,
+		Platform platform, IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods) =>
+		backend switch
+		{
+			CompilerBackend.Llvm => SaveLlvmExecutable(optimizedInstructions, platform, precompiledMethods),
+			CompilerBackend.Nasm => SaveNasmExecutable(optimizedInstructions, platform, precompiledMethods),
+			_ => SaveMlirExecutable(optimizedInstructions, platform, precompiledMethods)
+		};
 
 	private Runner SaveLlvmExecutable(List<Instruction> optimizedInstructions, Platform platform,
 		IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods)
-	{
+	{ //ncrunch: no coverage start
 		var llvmCompiler = new InstructionsToLlvmIr();
 		var llvmIr = llvmCompiler.CompileForPlatform(mainType.Name, optimizedInstructions, platform,
 			precompiledMethods);
@@ -331,7 +332,7 @@ public sealed class Runner : IDisposable
 				precompiledMethods));
 		PrintCompilationSummary("LLVM", platform, exeFilePath);
 		return this;
-	}
+	} //ncrunch: no coverage end
 
 	private Runner SaveMlirExecutable(List<Instruction> optimizedInstructions, Platform platform,
 		IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods)
@@ -362,8 +363,8 @@ public sealed class Runner : IDisposable
 		return this;
 	}
 
-	private void PrintCompilationSummary(string backend, Platform platform, string exeFilePath) =>
-		Console.WriteLine("Compiled " + mainType.Name + " via " + backend + " in " +
+	private void PrintCompilationSummary(string backendName, Platform platform, string exeFilePath) =>
+		Console.WriteLine("Compiled " + mainType.Name + " via " + backendName + " in " +
 			TimeSpan.FromTicks(stepTimes.Sum()).ToString(@"s\.ffffff") + "s to " + platform +
 			" executable of " + new FileInfo(exeFilePath).Length.ToString("N0") +
 			" bytes to: " + exeFilePath);

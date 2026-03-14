@@ -69,11 +69,23 @@ public static class ToolRunner
 	}
 
 	public static void EnsureOutputFileExists(string outputFilePath, string toolName,
+		Platform platform) =>
+		_ = ResolveOutputFilePath(outputFilePath, toolName, platform);
+
+	public static string ResolveOutputFilePath(string outputFilePath, string toolName,
 		Platform platform)
 	{
-		if (!File.Exists(outputFilePath))
-			throw new InvalidOperationException(toolName + " reported success for " + platform +
-				" output but did not create file: " + outputFilePath);
+		if (File.Exists(outputFilePath))
+			return outputFilePath;
+		if (platform == Platform.Linux && OperatingSystem.IsWindows() &&
+			string.Equals(toolName, "gcc", StringComparison.OrdinalIgnoreCase))
+		{
+			var windowsExecutablePath = outputFilePath + ".exe";
+			if (File.Exists(windowsExecutablePath))
+				return windowsExecutablePath;
+		}
+		throw new InvalidOperationException(toolName + " reported success for " + platform +
+			" output but did not create file: " + outputFilePath);
 	}
 
 	private const int DefaultTimeoutMilliseconds = 30000;

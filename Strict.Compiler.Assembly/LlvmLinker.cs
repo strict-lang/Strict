@@ -13,7 +13,7 @@ public sealed class LlvmLinker
 	/// Clang runs LLVM optimization passes and handles platform-specific linking automatically.
 	/// </summary>
 	public string CreateExecutable(string llvmIrPath, Platform platform, bool hasPrintCalls = false)
-	{
+	{ //ncrunch: no coverage start
 		var clangPath = ToolRunner.FindTool("clang") ??
 			throw new ToolNotFoundException("clang", DownloadUrlFor(platform));
 		var exeExtension = platform == Platform.Windows
@@ -24,7 +24,7 @@ public sealed class LlvmLinker
 		ToolRunner.RunProcess(clangPath, arguments);
 		ToolRunner.EnsureOutputFileExists(exeFilePath, "clang", platform);
 		return exeFilePath;
-	}
+	} //ncrunch: no coverage end
 
 	public static bool IsClangAvailable => ToolRunner.FindTool("clang") != null;
 

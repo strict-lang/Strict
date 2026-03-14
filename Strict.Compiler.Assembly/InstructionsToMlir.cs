@@ -24,23 +24,30 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 	}
 
 	public string CompileInstructions(string methodName, List<Instruction> instructions) =>
-		BuildFunction(methodName, [], instructions);
+		BuildFunction(methodName, [], instructions).Text;
 
 	public string CompileForPlatform(string methodName, IList<Instruction> instructions,
 		Platform platform, IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods = null)
 	{
 		var hasPrint = instructions.OfType<PrintInstruction>().Any();
 		var methodInfos = CollectMethods([.. instructions], precompiledMethods);
-		var hasNumericPrint = HasNumericPrint(instructions) ||
-			methodInfos.Values.Any(info => HasNumericPrint(info.Instructions));
 		var module = "module {\n";
-		if (hasPrint || methodInfos.Values.Any(info =>
-			info.Instructions.OfType<PrintInstruction>().Any()))
-			module += BuildPrintfDeclarations(hasNumericPrint);
-		module += BuildFunction(methodName, [], [.. instructions], methodInfos);
+		if (hasPrint ||
+			methodInfos.Values.Any(info => info.Instructions.OfType<PrintInstruction>().Any()))
+			module += BuildPrintfDeclarations(); //ncrunch: no coverage
+		var allStringConstants = new List<(string Name, string Text, int ByteLen)>();
+		var entryFunction = BuildFunction(methodName, [], [.. instructions], methodInfos);
+		allStringConstants.AddRange(entryFunction.StringConstants);
+		module += entryFunction.Text;
 		foreach (var methodInfo in methodInfos.Values)
-			module += "\n" + BuildFunction(methodInfo.Symbol, methodInfo.ParameterNames,
+		{
+			var methodFunction = BuildFunction(methodInfo.Symbol, methodInfo.ParameterNames,
 				methodInfo.Instructions, methodInfos);
+			allStringConstants.AddRange(methodFunction.StringConstants);
+			module += "\n" + methodFunction.Text;
+		}
+		if (allStringConstants.Count > 0)
+			module += "\n" + BuildStringGlobals(allStringConstants);
 		module += "\n" + BuildEntryPoint(methodName);
 		module += "\n}\n";
 		return module;
@@ -49,22 +56,21 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 	public bool HasPrintInstructions(IList<Instruction> instructions) =>
 		instructions.OfType<PrintInstruction>().Any();
 
-	private static bool HasNumericPrint(IList<Instruction> instructions) =>
-		instructions.OfType<PrintInstruction>().Any(print => print.ValueRegister.HasValue);
+	private readonly record struct CompiledFunction(string Text,
+		List<(string Name, string Text, int ByteLen)> StringConstants);
 
-	private static string BuildPrintfDeclarations(bool hasNumericPrint)
-	{
-		var decls = "  func.func private @printf(!llvm.ptr, ...) -> i32\n";
-		if (hasNumericPrint)
-			decls += "  func.func private @snprintf(!llvm.ptr, i64, !llvm.ptr, ...) -> i32\n";
-		return decls;
-	}
+	private static string BuildPrintfDeclarations() =>
+		"  llvm.func @printf(!llvm.ptr, ...) -> i32\n";
 
-	private string BuildFunction(string methodName, IEnumerable<string> paramNames,
-		List<Instruction> instructions,
-		Dictionary<string, CompiledMethodInfo>? compiledMethods = null)
+	private static string BuildStringGlobals(
+		IReadOnlyList<(string Name, string Text, int ByteLen)> stringConstants) =>
+		string.Join("\n", stringConstants.Select(stringConstant =>
+			$"  llvm.mlir.global internal constant {stringConstant.Name}(\"{stringConstant.Text}\") : !llvm.array<{stringConstant.ByteLen} x i8>"));
+
+	private static CompiledFunction BuildFunction(string methodName, IEnumerable<string> paramNames,
+		List<Instruction> instructions, Dictionary<string, CompiledMethodInfo>? compiledMethods = null)
 	{
-		var context = new EmitContext();
+		var context = new EmitContext(methodName);
 		var paramList = paramNames.ToList();
 		for (var index = 0; index < paramList.Count; index++)
 			context.ParamIndexByName[paramList[index]] = index;
@@ -73,19 +79,18 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 			: "";
 		var lines = new List<string> { $"  func.func @{methodName}({paramSignature}) -> f64 {{" };
 		for (var index = 0; index < instructions.Count; index++)
-			EmitInstruction(instructions[index], lines, context, compiledMethods, instructions, index);
+			EmitInstruction(instructions[index], lines, context, compiledMethods, index);
 		if (!instructions.Any(instr => instr is ReturnInstruction))
-		{
+		{ //ncrunch: no coverage start
 			lines.Add("    %zero = arith.constant 0.0 : f64");
 			lines.Add("    return %zero : f64");
-		}
+		} //ncrunch: no coverage end
 		lines.Add("  }");
-		return string.Join("\n", lines);
+		return new CompiledFunction(string.Join("\n", lines), context.StringConstants);
 	}
 
-	private void EmitInstruction(Instruction instruction, List<string> lines,
-		EmitContext context, Dictionary<string, CompiledMethodInfo>? compiledMethods,
-		List<Instruction> allInstructions, int index)
+	private static void EmitInstruction(Instruction instruction, List<string> lines,
+		EmitContext context, Dictionary<string, CompiledMethodInfo>? compiledMethods, int index)
 	{
 		if (context.JumpTargets.Contains(index))
 			lines.Add($"  ^bb{index}:");
@@ -104,34 +109,34 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 			EmitStoreFromRegister(storeReg, context);
 			break;
 		case LoadVariableToRegister loadVar:
-			EmitLoadVariable(loadVar, lines, context);
+			EmitLoadVariable(loadVar, context);
 			break;
 		case StoreVariableInstruction storeVar:
 			EmitStoreVariable(storeVar, context);
 			break;
 		case Jump jump:
-			EmitJump(jump, lines, context, allInstructions, index);
+			EmitJump(jump, lines, context, index);
 			break;
 		case PrintInstruction print:
-			EmitPrint(print, lines, context);
-			break;
+			EmitPrint(print, lines, context); //ncrunch: no coverage
+			break; //ncrunch: no coverage
 		case Invoke invoke:
 			EmitInvoke(invoke, lines, context, compiledMethods);
 			break;
 		case JumpToId jumpToId:
-			EmitJumpToId(jumpToId, lines, context, index);
-			break;
+			EmitJumpToId(jumpToId, lines, context, index); //ncrunch: no coverage
+			break; //ncrunch: no coverage
 		default:
 			throw new NotSupportedException(
 				$"MLIR compilation does not support instruction: {instruction.GetType().Name} ({instruction.InstructionType})");
 		}
 	}
 
-	private void EmitLoadConstant(LoadConstantInstruction loadConst, List<string> lines,
+	private static void EmitLoadConstant(LoadConstantInstruction loadConst, List<string> lines,
 		EmitContext context)
 	{
 		if (loadConst.ValueInstance.IsText)
-			return;
+			return; //ncrunch: no coverage
 		var value = FormatDouble(loadConst.ValueInstance.Number);
 		var temp = context.NextTemp();
 		lines.Add($"    {temp} = arith.constant {value} : f64");
@@ -156,13 +161,14 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 			InstructionType.Multiply => "arith.mulf",
 			InstructionType.Divide => "arith.divf",
 			InstructionType.Modulo => "arith.remf",
-			_ => throw new NotSupportedException("Unsupported binary op: " + binary.InstructionType)
+			_ => throw new NotSupportedException( //ncrunch: no coverage
+				"Unsupported binary op: " + binary.InstructionType)
 		};
 		lines.Add($"    {temp} = {op} {left}, {right} : f64");
 		if (binary.Registers.Length > 2)
 			context.RegisterValues[binary.Registers[^1]] = temp;
 		else
-			context.RegisterValues[binary.Registers[0]] = temp;
+			context.RegisterValues[binary.Registers[0]] = temp; //ncrunch: no coverage
 	}
 
 	private static bool IsComparison(InstructionType type) =>
@@ -178,7 +184,7 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 			InstructionType.LessThan => "olt",
 			InstructionType.Equal => "oeq",
 			InstructionType.NotEqual => "one",
-			_ => "oeq"
+			_ => "oeq" //ncrunch: no coverage
 		};
 		var temp = context.NextTemp();
 		lines.Add($"    {temp} = arith.cmpf {predicate}, {left}, {right} : f64");
@@ -191,11 +197,11 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 		if (value.StartsWith('%'))
 			lines.Add($"    return {value} : f64");
 		else
-		{
+		{ //ncrunch: no coverage start
 			var temp = $"%ret_{context.TempCounter++}";
 			lines.Add($"    {temp} = arith.constant {value} : f64");
 			lines.Add($"    return {temp} : f64");
-		}
+		} //ncrunch: no coverage end
 	}
 
 	private static void EmitStoreFromRegister(StoreFromRegisterInstruction storeReg,
@@ -207,8 +213,7 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 			context.VariableInstances[storeReg.Identifier] = instances;
 	}
 
-	private static void EmitLoadVariable(LoadVariableToRegister loadVar, List<string> lines,
-		EmitContext context)
+	private static void EmitLoadVariable(LoadVariableToRegister loadVar, EmitContext context)
 	{
 		if (context.VariableValues.TryGetValue(loadVar.Identifier, out var value))
 			context.RegisterValues[loadVar.Register] = value;
@@ -219,36 +224,34 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 	private static void EmitStoreVariable(StoreVariableInstruction storeVar, EmitContext context)
 	{
 		if (!storeVar.ValueInstance.IsText)
-			context.VariableValues[storeVar.Identifier] =
+			context.VariableValues[storeVar.Identifier] = //ncrunch: no coverage
 				FormatDouble(storeVar.ValueInstance.Number);
 	}
 
-	private void EmitJump(Jump jump, List<string> lines, EmitContext context,
-		List<Instruction> allInstructions, int currentIndex)
+	private static void EmitJump(Jump jump, List<string> lines, EmitContext context, int currentIndex)
 	{
 		var targetIndex = currentIndex + 1 + jump.InstructionsToSkip;
 		context.JumpTargets.Add(targetIndex);
-		if (jump.InstructionType == InstructionType.JumpIfFalse ||
-			jump.InstructionType == InstructionType.JumpIfTrue)
+		if (jump.InstructionType is InstructionType.JumpIfFalse or InstructionType.JumpIfTrue)
 		{
 			var condTemp = context.LastConditionTemp ?? "%cond_fallback";
 			var fallthroughIndex = currentIndex + 1;
 			context.JumpTargets.Add(fallthroughIndex);
-			if (jump.InstructionType == InstructionType.JumpIfFalse)
-				lines.Add(
-					$"    cf.cond_br {condTemp}, ^bb{fallthroughIndex}, ^bb{targetIndex}");
-			else
-				lines.Add(
-					$"    cf.cond_br {condTemp}, ^bb{targetIndex}, ^bb{fallthroughIndex}");
+			lines.Add(jump.InstructionType == InstructionType.JumpIfFalse
+				? $"    cf.cond_br {condTemp}, ^bb{fallthroughIndex}, ^bb{targetIndex}"
+				: $"    cf.cond_br {condTemp}, ^bb{targetIndex}, ^bb{fallthroughIndex}");
 		}
 		else
 			lines.Add($"    cf.br ^bb{targetIndex}");
 	}
 
-	private void EmitPrint(PrintInstruction print, List<string> lines, EmitContext context)
+	//ncrunch: no coverage start
+	private static void EmitPrint(PrintInstruction print, List<string> lines, EmitContext context)
 	{
-		var constName = $"@str.{context.StringConstants.Count}";
-		var text = print.TextPrefix + (print.ValueRegister.HasValue ? "" : "\\0A");
+		var constName = $"@str_{context.FunctionName}_{context.StringConstants.Count}";
+		var text = print.TextPrefix + (print.ValueRegister.HasValue
+			? ""
+			: "\\0A");
 		var nullTerminated = text + "\\00";
 		var byteLen = CountStringBytes(nullTerminated);
 		context.StringConstants.Add((constName, nullTerminated, byteLen));
@@ -258,7 +261,7 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 			lines.Add($"    {gepTemp} = llvm.mlir.addressof {constName}" +
 				$" : !llvm.ptr");
 			lines.Add($"    %print_{context.TempCounter++} = " +
-				$"func.call @printf({gepTemp}) : (!llvm.ptr) -> i32");
+				$"llvm.call @printf({gepTemp}) {PrintfVarargSignature} : (!llvm.ptr) -> i32");
 		}
 		else
 		{
@@ -266,15 +269,18 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 			var gepTemp = context.NextTemp();
 			lines.Add($"    {gepTemp} = llvm.mlir.addressof {constName} : !llvm.ptr");
 			lines.Add($"    %print_{context.TempCounter++} = " +
-				$"func.call @printf({gepTemp}, {value}) : (!llvm.ptr, f64) -> i32");
+				$"llvm.call @printf({gepTemp}, {value}) {PrintfVarargSignature} : (!llvm.ptr, f64) -> i32");
 		}
-	}
+	} //ncrunch: no coverage end
 
-	private void EmitInvoke(Invoke invoke, List<string> lines, EmitContext context,
+	private const string PrintfVarargSignature = "vararg(!llvm.func<i32 (ptr, ...)>)";
+
+	private static void EmitInvoke(Invoke invoke, List<string> lines, EmitContext context,
 		Dictionary<string, CompiledMethodInfo>? compiledMethods)
 	{
 		if (invoke.Method == null)
-			throw new NotSupportedException("Invoke instruction is missing method metadata");
+			throw new NotSupportedException( //ncrunch: no coverage
+				"Invoke instruction is missing method metadata");
 		if (invoke.Method.Method.Name == Method.From && invoke.Method.Instance == null)
 		{
 			context.RegisterInstances[invoke.Register] = ResolveConstructorArguments(invoke.Method);
@@ -283,7 +289,7 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 		var methodKey = BytecodeDeserializer.BuildMethodInstructionKey(invoke.Method.Method.Type.Name,
 			invoke.Method.Method.Name, invoke.Method.Method.Parameters.Count);
 		if (compiledMethods == null || !compiledMethods.TryGetValue(methodKey, out var methodInfo))
-			throw new NotSupportedException(
+			throw new NotSupportedException( //ncrunch: no coverage
 				"Non-print method calls cannot be compiled to MLIR. " +
 				"Use the interpreted runner for programs with complex runtime method calls.");
 		var arguments = new List<string>();
@@ -298,7 +304,7 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 		foreach (var arg in arguments)
 		{
 			if (arg.StartsWith('%'))
-				callArgs.Add(arg);
+				callArgs.Add(arg); //ncrunch: no coverage
 			else
 			{
 				var constTemp = context.NextTemp();
@@ -318,8 +324,8 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 
 	private static List<Expression> ResolveConstructorArguments(MethodCall constructorCall)
 	{
-		var members = constructorCall.ReturnType.Members.Where(member => !member.Type.IsTrait)
-			.ToList();
+		var members =
+			constructorCall.ReturnType.Members.Where(member => !member.Type.IsTrait).ToList();
 		var result = new List<Expression>(members.Count);
 		for (var index = 0; index < members.Count; index++)
 			result.Add(index < constructorCall.Arguments.Count
@@ -333,11 +339,11 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 	{
 		if (methodCall.Instance is MethodCall constructorCall &&
 			constructorCall.Method.Name == Method.From && constructorCall.Instance == null)
-			return ResolveConstructorArguments(constructorCall);
+			return ResolveConstructorArguments(constructorCall); //ncrunch: no coverage
 		var instanceName = methodCall.Instance?.ToString();
 		if (instanceName != null && variableInstances.TryGetValue(instanceName, out var values))
 			return values;
-		throw new NotSupportedException(
+		throw new NotSupportedException( //ncrunch: no coverage
 			"Cannot resolve instance values for method call: " + methodCall);
 	}
 
@@ -345,6 +351,7 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 	{
 		if (expression is Value value && !value.Data.IsText)
 			return FormatDouble(value.Data.Number);
+		//ncrunch: no coverage start
 		var variableName = expression.ToString();
 		if (context.ParamIndexByName.TryGetValue(variableName, out var paramIndex))
 			return $"%param{paramIndex}";
@@ -352,9 +359,10 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 			return varValue;
 		throw new NotSupportedException(
 			"Unsupported expression for MLIR compilation: " + expression);
-	}
+	} //ncrunch: no coverage end
 
-	private void EmitJumpToId(JumpToId jumpToId, List<string> lines, EmitContext context,
+	//ncrunch: no coverage start
+	private static void EmitJumpToId(JumpToId jumpToId, List<string> lines, EmitContext context,
 		int currentIndex)
 	{
 		var condTemp = context.LastConditionTemp ?? "%cond_fallback";
@@ -363,7 +371,7 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 		context.JumpTargets.Add(targetIndex);
 		context.JumpTargets.Add(fallthroughIndex);
 		lines.Add($"    cf.cond_br {condTemp}, ^bb{targetIndex}, ^bb{fallthroughIndex}");
-	}
+	} //ncrunch: no coverage end
 
 	private static string BuildEntryPoint(string methodName) =>
 		"  func.func @main() -> i32 {\n" +
@@ -398,11 +406,11 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 			var methodKey = BytecodeDeserializer.BuildMethodInstructionKey(method.Type.Name,
 				method.Name, method.Parameters.Count);
 			if (methods.TryGetValue(methodKey, out var existing))
-			{
+			{ //ncrunch: no coverage start
 				if (includeMembers && existing.MemberNames.Count == 0)
 					methods[methodKey] = BuildMethodInfo(method, true, precompiledMethods);
 				continue;
-			}
+			} //ncrunch: no coverage end
 			var methodInfo = BuildMethodInfo(method, includeMembers, precompiledMethods);
 			methods[methodKey] = methodInfo;
 			EnqueueInvokedMethods(methodInfo.Instructions, queue);
@@ -420,8 +428,7 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 				? [.. pre]
 				: GenerateInstructions(method);
 		var memberNames = includeMembers
-			? method.Type.Members.Where(member => !member.Type.IsTrait).Select(member => member.Name)
-				.ToList()
+			? method.Type.Members.Where(m => !m.Type.IsTrait).Select(m => m.Name).ToList()
 			: new List<string>();
 		var parameterNames = new List<string>(memberNames);
 		parameterNames.AddRange(method.Parameters.Select(parameter => parameter.Name));
@@ -446,16 +453,17 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 		var expressions = body is Body b
 			? b.Expressions
 			: [body];
-		var arguments =
-			method.Parameters.ToDictionary(p => p.Name, p => new ValueInstance(p.Type, 0));
+		var arguments = method.Parameters.ToDictionary(p => p.Name,
+			p => new ValueInstance(p.Type, 0)); //ncrunch: no coverage
 		return new BytecodeGenerator(new InvokedMethod(expressions, arguments, method.ReturnType),
 			new Registry()).Generate();
 	}
 
-	private sealed class EmitContext
+	private sealed class EmitContext(string functionName)
 	{
-		public int TempCounter;
+		public string FunctionName { get; } = functionName;
 		public string NextTemp() => $"%t{TempCounter++}";
+		public int TempCounter;
 		public Dictionary<Register, string> RegisterValues { get; } = new();
 		public Dictionary<Register, List<Expression>> RegisterInstances { get; } = new();
 		public Dictionary<string, string> VariableValues { get; } = new(StringComparer.Ordinal);
