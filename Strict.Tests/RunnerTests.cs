@@ -3,6 +3,7 @@ using Strict.Compiler;
 using Strict.Compiler.Assembly;
 using Strict.Language;
 using Strict.Language.Tests;
+using System.Diagnostics;
 
 namespace Strict.Tests;
 
@@ -262,8 +263,8 @@ public sealed class RunnerTests
 	[TestCase(CompilerBackend.Nasm)]
 	public void RunWithPlatformDoesNotExecuteProgram(CompilerBackend backend)
 	{
-		var pureAdderPath = GetExamplesFilePath("PureAdder");
-		using var runner = new Runner(TestPackage.Instance, pureAdderPath, backend);
+		var calculatorFilePath = GetExamplesFilePath("SimpleCalculator");
+		using var runner = new Runner(TestPackage.Instance, calculatorFilePath, backend);
 		runner.Run(OperatingSystem.IsWindows()
 			? Platform.Windows
 			: Platform.Linux);
@@ -271,7 +272,18 @@ public sealed class RunnerTests
 			"Platform compilation should not execute the program");
 		Assert.That(writer.ToString(), Does.Contain("Saved"),
 			"Should report that assembly was saved");
-	} //ncrunch: no coverage end
+		if (OperatingSystem.IsWindows())
+		{
+			var process = new Process();
+			process.StartInfo.FileName = Path.ChangeExtension(calculatorFilePath, ".exe");
+			process.StartInfo.UseShellExecute = false;
+			process.StartInfo.RedirectStandardOutput = true;
+			process.StartInfo.RedirectStandardError = true;
+			process.Start();
+			Assert.That(process.StandardOutput.ReadToEnd().Replace("\r\n", "\n"),
+				Is.EqualTo("2 + 3 = 5\n2 * 3 = 6\n"));
+		}
+	}
 
 	[Test]
 	public void RunWithPlatformWindowsThrowsToolNotFoundWhenNasmMissing()

@@ -243,12 +243,13 @@ public sealed class InstructionsToMlirTests
 		var instructions = new List<Instruction>
 		{
 			new LoadConstantInstruction(Register.R0, new ValueInstance(NumberType, 42.0)),
-			new PrintInstruction("Result: %g\0A", Register.R0),
+			new PrintInstruction("Result: ", Register.R0),
 			new ReturnInstruction(Register.R0)
 		};
 		var mlir = compiler.CompileForPlatform("PrintRun", instructions, Platform.Windows);
 		Assert.That(mlir, Does.Contain("llvm.func @printf(!llvm.ptr, ...) -> i32"));
 		Assert.That(mlir, Does.Contain("llvm.mlir.global internal constant @str_PrintRun_0"));
+		Assert.That(mlir, Does.Contain("Result: %g\\0A\\00"));
 		Assert.That(mlir, Does.Contain("llvm.call @printf("));
 	}
 

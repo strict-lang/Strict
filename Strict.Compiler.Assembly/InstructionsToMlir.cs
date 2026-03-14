@@ -250,7 +250,7 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 	{
 		var constName = $"@str_{context.FunctionName}_{context.StringConstants.Count}";
 		var text = print.TextPrefix + (print.ValueRegister.HasValue
-			? ""
+			? "%g\\0A"
 			: "\\0A");
 		var nullTerminated = text + "\\00";
 		var byteLen = CountStringBytes(nullTerminated);
