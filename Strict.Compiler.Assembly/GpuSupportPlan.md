@@ -11,20 +11,32 @@ image processing operations.
 
 ### Phase 0: CPU Baseline and Parallel Foundation
 - **Three compiler backends**: MLIR (default), LLVM IR, and NASM — all generating 2-4KB executables
-- **scf.for loops**: Range-based loops in Strict (`for row, column in image.Size`) now compile to
-  `scf.for` in MLIR
-- **scf.parallel auto-detection**: Loops automatically emit `scf.parallel` when their total
-  complexity (iterations × body instruction count) exceeds 100K, enabling the MLIR pass pipeline
-  to optimize for multiple CPU cores or GPU offloading
-- **Complexity-based threshold**: A 10K iteration loop with 20 body instructions (200K complexity)
-  parallelizes, while a 50K iteration loop with 1 body instruction (50K complexity) stays sequential.
-  This correctly captures that a complex loop body benefits more from parallelism than a simple one.
-- **Performance validated**: BrightnessPerformanceTests confirms 2.5x+ speedup for 4K images
-  (3840x2160) using parallel CPU execution vs single-thread
-- **GPU projection**: Based on BlurPerformanceTests CUDA reference data (143x vs single-thread),
-  conservatively projected 20x GPU speedup for brightness adjustment via MLIR gpu.launch
-- **Lowering pipeline**: mlir-opt includes `--convert-scf-to-cf` to lower SCF constructs to
-  control flow before LLVM lowering
+- **scf.for loops**: Range-based loops in Strict (`for row, column in image.Size`) compile to `scf.for`
+- **scf.parallel auto-detection**: Loops emit `scf.parallel` when complexity (iterations × body
+  instruction count) exceeds 100K threshold
+- **Complexity-based threshold**: A 10K loop with 20 body instructions (200K) parallelizes, while
+  50K with 1 instruction (50K) stays sequential
+- **Lowering pipeline**: mlir-opt includes `--convert-scf-to-cf` to lower SCF to control flow
+
+### Phase 1: CPU Parallel via OpenMP
+- `scf.parallel` emitted for 100K–10M complexity range
+- OpenMP lowering ready: `--convert-scf-to-openmp` → `--convert-openmp-to-llvm` → clang -fopenmp
+- Complexity threshold exposed as `InstructionsToMlir.ComplexityThreshold = 100_000`
+
+### Phase 2: GPU Offloading via MLIR GPU Dialect (In Progress)
+- **3-tier loop strategy implemented** in InstructionsToMlir:
+  - Complexity < 100K → `scf.for` (sequential)
+  - 100K ≤ Complexity < 10M → `scf.parallel` (CPU parallel)
+  - Complexity ≥ 10M → `gpu.launch` (GPU offload)
+- **gpu.launch emission**: Generates grid/block dimensions from iteration count
+  - Block size: 256 threads, grid: ⌈iterations/256⌉ blocks
+  - Uses `gpu.block_id x`, `gpu.thread_id x` to compute global thread index
+  - Body terminates with `gpu.terminator`
+- **GPU lowering passes** in MlirLinker.BuildMlirOptArgsWithGpu:
+  - `--gpu-kernel-outlining` → `--convert-gpu-to-nvvm` → `--gpu-to-llvm` → `--convert-nvvm-to-llvm`
+- **GPU threshold**: `InstructionsToMlir.GpuComplexityThreshold = 10_000_000`
+- **Example**: AdjustBrightness.strict Run method processes 1280×720 (921,600 pixels) — with
+  20+ body instructions per pixel this exceeds the 10M GPU threshold
 
 ### Reference Performance (from BlurPerformanceTests, 2048x1024 image, 200 iterations)
 ```
@@ -34,75 +46,37 @@ CudaGpu:             32ms (143x faster)
 CudaGpuAndCpu:       29ms (158x faster)
 ```
 
-## Phase 1: CPU Parallel via OpenMP (Next)
+## Remaining Work
 
-**Goal**: Use MLIR's OpenMP lowering to generate multi-threaded native code from `scf.parallel`.
-
-### Implementation
-1. Add `--convert-scf-to-openmp` pass to MlirLinker before `--convert-arith-to-llvm`
-2. Add `--convert-openmp-to-llvm` pass after OpenMP conversion
-3. Link with OpenMP runtime (`-fopenmp` flag to clang)
-4. Benchmark against BrightnessPerformanceTests to confirm native parallel speedup
-
-### MLIR Pipeline Change
-```
-Current:  scf.parallel → scf-to-cf → cf-to-llvm → LLVM IR → clang
-Phase 1:  scf.parallel → scf-to-openmp → openmp-to-llvm → LLVM IR → clang -fopenmp
-```
-
-### Complexity Threshold
-- Total complexity = iterations × body instruction count
-- Complexity below 100K: remain as `scf.for` (sequential)
-- Complexity above 100K: `scf.parallel` → OpenMP threads
-- Examples:
-  - 1M iterations × 1 instruction = 1M complexity → parallel
-  - 10K iterations × 20 instructions = 200K complexity → parallel
-  - 50K iterations × 1 instruction = 50K complexity → sequential
-  - 100 iterations × 1000 instructions = 100K complexity → parallel (perfect GPU candidate)
-- This correctly captures that a loop with a complex body (like image processing with multiple
-  operations per pixel) benefits more from parallelism even at lower iteration counts
-
-## Phase 2: GPU Offloading via MLIR GPU Dialect
-
-**Goal**: Offload parallelizable loops to GPU when available and beneficial.
-
-### Implementation
-1. Add `gpu.launch` / `gpu.launch_func` emission for loops exceeding a GPU-worthy threshold
-   (e.g., >1M iterations or >1MP image)
-2. Emit `gpu.alloc` / `gpu.memcpy` for data transfer between host and device
-3. Generate GPU kernel functions from loop bodies
-4. Add MLIR lowering passes:
-   - `--gpu-kernel-outlining` (extract loop body into GPU kernel)
-   - `--convert-gpu-to-nvvm` (for NVIDIA GPUs via NVVM/PTX)
-   - `--gpu-to-llvm` (GPU runtime calls)
-   - `--convert-nvvm-to-llvm` (NVVM intrinsics to LLVM)
-
-### MLIR Pipeline for GPU
-```
-scf.parallel → gpu-map-parallel-loops → gpu-kernel-outlining
-             → convert-gpu-to-nvvm → gpu-to-llvm → LLVM IR
-             → clang -lcuda (or -L/path/to/cuda)
-```
-
-### Data Transfer Optimization
-- Minimize host↔device copies by analyzing data flow
+### GPU Memory Management
+- Emit `gpu.alloc` / `gpu.memcpy` for data transfer between host and device
 - For image processing: copy image to GPU once, run kernel, copy result back
-- Use `gpu.alloc` + `gpu.memcpy` for explicit memory management
 - Future: use unified memory (`gpu.alloc host_shared`) when available
 
-## Phase 3: Automatic Optimization Path Selection
+### Runner Integration
+- Wire `BuildMlirOptArgsWithGpu` when MLIR contains `gpu.launch` ops
+- Add `-gpu` CLI flag to enable GPU compilation path
+- Link with CUDA runtime (`-lcuda` or `-L/path/to/cuda` in clang args)
+- Fall back to CPU parallel when no GPU toolchain is available
+
+### MLIR Pipeline for GPU (end-to-end)
+```
+gpu.launch → gpu-kernel-outlining → convert-gpu-to-nvvm → gpu-to-llvm
+           → convert-nvvm-to-llvm → LLVM IR → clang -lcuda
+```
+
+#### Phase 3: Automatic Optimization Path Selection
 
 **Goal**: The Strict compiler automatically decides the fastest execution strategy per loop.
 
-### Complexity Analysis
+### Complexity Analysis (Implemented)
 The compiler tracks `iterations × body instruction count` as total complexity to decide:
 
-| Total Complexity | Strategy | Example |
-|-----------------|----------|---------|
-| < 10K | Sequential CPU | Thumbnail processing, simple inner loops |
-| 10K - 100K | Sequential CPU | Small images with simple per-pixel ops |
-| 100K - 10M | Parallel CPU (OpenMP) | HD images, moderate body complexity |
-| > 10M | GPU offload | 4K/8K images, complex per-pixel processing |
+| Total Complexity | Strategy | Constant | Example |
+|-----------------|----------|----------|---------|
+| < 100K | scf.for (sequential) | ComplexityThreshold | Small images, simple loops |
+| 100K - 10M | scf.parallel (CPU) | ComplexityThreshold | HD images, moderate body |
+| > 10M | gpu.launch (GPU) | GpuComplexityThreshold | 4K images, complex per-pixel |
 
 Key insight: A 10K iteration loop with 1K body instructions (10M complexity) is a better
 GPU candidate than a 1M iteration loop with 1 instruction (1M complexity), because the
@@ -162,17 +136,19 @@ Not all loops can be parallelized. The compiler must verify:
 ### Unit Tests (InstructionsToMlirTests)
 - Verify `scf.for` emission for sequential loops ✓
 - Verify `scf.parallel` emission for large loops ✓
-- Verify `gpu.launch` emission for GPU-targeted loops
+- Verify `gpu.launch` emission for GPU-targeted loops ✓
+- Verify `gpu.terminator` and block/grid dimensions ✓
+- Verify medium complexity stays scf.parallel not gpu.launch ✓
 - Verify correct lowering pass pipeline configuration ✓
+- Verify GPU-specific lowering passes (gpu-kernel-outlining, convert-gpu-to-nvvm) ✓
 
-### Performance Tests (BrightnessPerformanceTests)
-- Single-thread vs Parallel CPU for various image sizes ✓
-- CPU vs GPU execution comparison
-- Threshold detection validation ✓
-- Correctness: parallel and GPU results match sequential ✓
+### Performance Tests (BlurPerformanceTests)
+- Single-thread vs Parallel CPU blur for various image sizes ✓
+- Complexity-based parallelization threshold ✓
+- Correctness: parallel results match sequential ✓
 
-### Integration Tests
-- End-to-end: AdjustBrightness.strict → MLIR → native executable → correct output
+### Integration Tests (Next)
+- End-to-end: AdjustBrightness.strict → MLIR → native GPU executable → correct output
 - Binary size validation: GPU-enabled executables remain reasonable
 - Platform-specific: test on Linux/Windows/macOS with and without GPU
 
