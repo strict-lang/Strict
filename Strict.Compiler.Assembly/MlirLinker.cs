@@ -49,6 +49,11 @@ public sealed class MlirLinker
 		$"\"{inputPath}\" --canonicalize --cse --symbol-dce --convert-scf-to-cf --convert-arith-to-llvm " +
 		$"--convert-func-to-llvm --convert-cf-to-llvm --reconcile-unrealized-casts -o \"{outputPath}\"";
 
+	private static string BuildMlirOptArgsWithGpu(string inputPath, string outputPath) =>
+		$"\"{inputPath}\" --canonicalize --cse --symbol-dce " +
+		"--gpu-kernel-outlining --convert-gpu-to-nvvm --gpu-to-llvm --convert-nvvm-to-llvm " +
+		"--convert-scf-to-cf --convert-arith-to-llvm " +
+		$"--convert-func-to-llvm --convert-cf-to-llvm --reconcile-unrealized-casts -o \"{outputPath}\"";
 	private static string BuildClangArgs(string inputPath, string outputPath, Platform platform,
 		bool hasPrintCalls = false)
 	{

@@ -403,14 +403,50 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 		lines.Add($"    {endIndex} = arith.fptosi {endValue} : f64 to index");
 		lines.Add($"    {step} = arith.constant 1 : index");
 		var bodyInstructionCount = CountLoopBodyInstructions(instructions, loopBeginIndex);
-		var isParallel = ShouldEmitParallelLoop(loopBegin, context, bodyInstructionCount);
+		var executionStrategy = DetermineLoopStrategy(loopBegin, context, bodyInstructionCount);
 		var inductionVar = context.NextTemp();
-		context.LoopStack.Push(new LoopState(startIndex, endIndex, step, isParallel, inductionVar));
-		if (isParallel)
-			lines.Add($"    scf.parallel ({inductionVar}) = ({startIndex}) to ({endIndex}) step ({step}) {{");
-		else
-			lines.Add($"    scf.for {inductionVar} = {startIndex} to {endIndex} step {step} {{");
+		context.LoopStack.Push(new LoopState(startIndex, endIndex, step, executionStrategy,
+			inductionVar));
+		switch (executionStrategy)
+		{
+		case LoopStrategy.Gpu:
+			EmitGpuLaunchBegin(lines, context, startIndex, endIndex, step, inductionVar);
+			break;
+		case LoopStrategy.CpuParallel:
+			lines.Add(
+				$"    scf.parallel ({inductionVar}) = ({startIndex}) to ({endIndex}) step ({step}) {{");
+			break;
+		default:
+			lines.Add(
+				$"    scf.for {inductionVar} = {startIndex} to {endIndex} step {step} {{");
+			break;
+		}
 	}
+
+	private static void EmitGpuLaunchBegin(List<string> lines, EmitContext context,
+		string startIndex, string endIndex, string step, string inductionVar)
+	{
+		var one = context.NextTemp();
+		var numElements = context.NextTemp();
+		var blockSize = context.NextTemp();
+		var gridSize = context.NextTemp();
+		lines.Add($"    {one} = arith.constant 1 : index");
+		lines.Add($"    {numElements} = arith.subi {endIndex}, {startIndex} : index");
+		lines.Add($"    {blockSize} = arith.constant {GpuBlockSize} : index");
+		lines.Add($"    {gridSize} = arith.ceildivui {numElements}, {blockSize} : index");
+		lines.Add($"    gpu.launch blocks({gridSize}, {one}, {one}) " +
+			$"threads({blockSize}, {one}, {one}) {{");
+		var blockIdX = context.NextTemp();
+		var threadIdX = context.NextTemp();
+		var globalId = context.NextTemp();
+		lines.Add($"      {blockIdX} = gpu.block_id x");
+		lines.Add($"      {threadIdX} = gpu.thread_id x");
+		lines.Add(
+			$"      {globalId} = arith.addi {blockIdX}, {threadIdX} : index");
+		lines.Add($"      {inductionVar} = arith.addi {startIndex}, {globalId} : index");
+	}
+
+	private const int GpuBlockSize = 256;
 
 	private static int CountLoopBodyInstructions(List<Instruction> instructions, int loopBeginIndex)
 	{
@@ -424,30 +460,49 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 		return Math.Max(bodyCount, 1);
 	}
 
-	private static bool ShouldEmitParallelLoop(LoopBeginInstruction loopBegin, EmitContext context,
-		int bodyInstructionCount)
+	private static LoopStrategy DetermineLoopStrategy(LoopBeginInstruction loopBegin,
+		EmitContext context, int bodyInstructionCount)
 	{
 		if (!loopBegin.IsRange || loopBegin.EndIndex == null)
-			return false;
+			return LoopStrategy.Sequential;
 		if (!context.RegisterConstants.TryGetValue(loopBegin.EndIndex.Value, out var iterationCount))
-			return false;
-		return iterationCount * bodyInstructionCount > ComplexityThreshold;
+			return LoopStrategy.Sequential;
+		var complexity = iterationCount * bodyInstructionCount;
+		if (complexity > GpuComplexityThreshold)
+			return LoopStrategy.Gpu;
+		return complexity > ComplexityThreshold
+			? LoopStrategy.CpuParallel
+			: LoopStrategy.Sequential;
 	}
 
 	public const double ComplexityThreshold = 100_000;
+	public const double GpuComplexityThreshold = 10_000_000;
 
 	private static void EmitLoopEnd(List<string> lines, EmitContext context)
 	{
 		if (context.LoopStack.Count == 0)
 			return;
 		var loopState = context.LoopStack.Pop();
-		if (loopState.IsParallel)
+		switch (loopState.Strategy)
+		{
+		case LoopStrategy.Gpu:
+			lines.Add("      gpu.terminator");
+			lines.Add("    }");
+			break;
+		case LoopStrategy.CpuParallel:
 			lines.Add("      scf.reduce");
-		lines.Add("    }");
+			lines.Add("    }");
+			break;
+		default:
+			lines.Add("    }");
+			break;
+		}
 	}
 
-	private sealed record LoopState(
-		string StartIndex, string EndIndex, string Step, bool IsParallel, string InductionVar);
+	private enum LoopStrategy { Sequential, CpuParallel, Gpu }
+
+	private sealed record LoopState(string StartIndex, string EndIndex, string Step,
+		LoopStrategy Strategy, string InductionVar);
 
 	private static string BuildEntryPoint(string methodName) =>
 		"  func.func @main() -> i32 {\n" +

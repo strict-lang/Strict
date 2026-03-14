@@ -747,4 +747,112 @@ public sealed class InstructionsToMlirTests
 		return result as string ??
 			throw new InvalidOperationException("Expected rewritten LLVM IR string");
 	}
+
+	[Test]
+	public void HighComplexityLoopEmitsGpuLaunch()
+	{
+		var startRegister = Register.R0;
+		var endRegister = Register.R1;
+		var loopBegin = new LoopBeginInstruction(startRegister, endRegister);
+		var bodyInstructions = new List<Instruction>();
+		for (var bodyIndex = 0; bodyIndex < 20; bodyIndex++)
+			bodyInstructions.Add(new BinaryInstruction(InstructionType.Add, Register.R2, Register.R3,
+				Register.R4));
+		var instructions = new List<Instruction>
+		{
+			new LoadConstantInstruction(startRegister, new ValueInstance(NumberType, 0.0)),
+			new LoadConstantInstruction(endRegister, new ValueInstance(NumberType, 921600.0)),
+			new LoadConstantInstruction(Register.R2, new ValueInstance(NumberType, 1.0)),
+			new LoadConstantInstruction(Register.R3, new ValueInstance(NumberType, 2.0)),
+			loopBegin
+		};
+		instructions.AddRange(bodyInstructions);
+		instructions.Add(new LoopEndInstruction(bodyInstructions.Count) { Begin = loopBegin });
+		instructions.Add(new ReturnInstruction(Register.R2));
+		var mlir = compiler.CompileInstructions("GpuLaunchTest", instructions);
+		Assert.That(mlir, Does.Contain("gpu.launch"),
+			"921600 iterations × 20 body = 18.4M complexity > 10M GPU threshold → gpu.launch");
+	}
+
+	[Test]
+	public void GpuLaunchContainsBlockAndGridDimensions()
+	{
+		var startRegister = Register.R0;
+		var endRegister = Register.R1;
+		var loopBegin = new LoopBeginInstruction(startRegister, endRegister);
+		var instructions = new List<Instruction>
+		{
+			new LoadConstantInstruction(startRegister, new ValueInstance(NumberType, 0.0)),
+			new LoadConstantInstruction(endRegister, new ValueInstance(NumberType, 8294400.0)),
+			new LoadConstantInstruction(Register.R2, new ValueInstance(NumberType, 1.0)),
+			new LoadConstantInstruction(Register.R3, new ValueInstance(NumberType, 2.0)),
+			loopBegin
+		};
+		for (var bodyIndex = 0; bodyIndex < 30; bodyIndex++)
+			instructions.Add(new BinaryInstruction(InstructionType.Add, Register.R2, Register.R3,
+				Register.R4));
+		instructions.Add(new LoopEndInstruction(30) { Begin = loopBegin });
+		instructions.Add(new ReturnInstruction(Register.R2));
+		var mlir = compiler.CompileInstructions("GpuGridTest", instructions);
+		Assert.That(mlir, Does.Contain("gpu.launch blocks"),
+			"GPU launch must specify grid/block dimensions");
+		Assert.That(mlir, Does.Contain("gpu.terminator"),
+			"GPU launch body must end with gpu.terminator");
+	}
+
+	[Test]
+	public void MediumComplexityStaysScfParallelNotGpu()
+	{
+		var startRegister = Register.R0;
+		var endRegister = Register.R1;
+		var loopBegin = new LoopBeginInstruction(startRegister, endRegister);
+		var instructions = new List<Instruction>
+		{
+			new LoadConstantInstruction(startRegister, new ValueInstance(NumberType, 0.0)),
+			new LoadConstantInstruction(endRegister, new ValueInstance(NumberType, 100000.0)),
+			new LoadConstantInstruction(Register.R2, new ValueInstance(NumberType, 1.0)),
+			new LoadConstantInstruction(Register.R3, new ValueInstance(NumberType, 2.0)),
+			loopBegin,
+			new BinaryInstruction(InstructionType.Add, Register.R2, Register.R3, Register.R4),
+			new BinaryInstruction(InstructionType.Add, Register.R2, Register.R3, Register.R4),
+			new LoopEndInstruction(2) { Begin = loopBegin },
+			new ReturnInstruction(Register.R2)
+		};
+		var mlir = compiler.CompileInstructions("MediumComplexityTest", instructions);
+		Assert.That(mlir, Does.Contain("scf.parallel"),
+			"200K complexity → CPU parallel (scf.parallel)");
+		Assert.That(mlir, Does.Not.Contain("gpu.launch"),
+			"200K complexity < 10M GPU threshold → no gpu.launch");
+	}
+
+	[Test]
+	public void GpuThresholdConstantIsExposed()
+	{
+		Assert.That(InstructionsToMlir.GpuComplexityThreshold, Is.GreaterThan(
+			InstructionsToMlir.ComplexityThreshold),
+			"GPU threshold must be higher than CPU parallel threshold");
+		Assert.That(InstructionsToMlir.GpuComplexityThreshold, Is.EqualTo(10_000_000),
+			"GPU threshold is 10M complexity (e.g., 1280x720 image × 10+ body instructions)");
+	}
+
+	[Test]
+	public void MlirOptArgsIncludeGpuPasses()
+	{
+		var args = BuildMlirOptArgsWithGpu("test.mlir", "test.llvm.mlir");
+		Assert.That(args, Does.Contain("--gpu-kernel-outlining"),
+			"GPU pipeline must outline GPU kernels");
+		Assert.That(args, Does.Contain("--convert-gpu-to-nvvm"),
+			"GPU pipeline must lower to NVVM for NVIDIA GPUs");
+		Assert.That(args, Does.Contain("--gpu-to-llvm"),
+			"GPU pipeline must convert GPU ops to LLVM calls");
+	}
+
+	private static string BuildMlirOptArgsWithGpu(string inputPath, string outputPath)
+	{
+		var method = typeof(MlirLinker).GetMethod("BuildMlirOptArgsWithGpu",
+			BindingFlags.Static | BindingFlags.NonPublic);
+		Assert.That(method, Is.Not.Null, "MlirLinker should have BuildMlirOptArgsWithGpu method");
+		return method!.Invoke(null, [inputPath, outputPath]) as string ??
+			throw new InvalidOperationException("Expected GPU opt args string");
+	}
 }

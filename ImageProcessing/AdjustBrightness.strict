@@ -14,3 +14,10 @@ GetBrightnessAdjustedColor(currentColor Color) Color
 	Color((currentColor.Red + brightness).Clamp(0, 255),
 	(currentColor.Green + brightness).Clamp(0, 255),
 	(currentColor.Blue + brightness).Clamp(0, 255))
+Run
+	constant width = 1280
+	constant height = 720
+	constant totalPixels = width * height
+	mutable image = ColorImage(Size(width, height))
+	for Range(0, totalPixels)
+		AdjustBrightness(10).GetBrightnessAdjustedColor(image.Colors(value))
