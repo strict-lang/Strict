@@ -56,6 +56,13 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 	public bool HasPrintInstructions(IList<Instruction> instructions) =>
 		instructions.OfType<PrintInstruction>().Any();
 
+	public bool IsPlatformUsingStdLibAndHasPrintInstructions(Platform platform,
+		List<Instruction> optimizedInstructions,
+		IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods) =>
+		platform is Platform.Linux or Platform.Windows &&
+		(HasPrintInstructions(optimizedInstructions) ||
+			(precompiledMethods?.Values.Any(HasPrintInstructions) ?? false));
+
 	private readonly record struct CompiledFunction(string Text,
 		List<(string Name, string Text, int ByteLen)> StringConstants);
 

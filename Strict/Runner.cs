@@ -343,7 +343,9 @@ public sealed class Runner : IDisposable
 		var mlirPath = Path.Combine(currentFolder, mainType.Name + ".mlir");
 		File.WriteAllText(mlirPath, mlirText);
 		Console.WriteLine("Saved " + platform + " MLIR to: " + mlirPath);
-		var exeFilePath = new MlirLinker().CreateExecutable(mlirPath, platform);
+		var exeFilePath = new MlirLinker().CreateExecutable(mlirPath, platform,
+			mlirCompiler.IsPlatformUsingStdLibAndHasPrintInstructions(platform, optimizedInstructions,
+				precompiledMethods));
 		PrintCompilationSummary("MLIR", platform, exeFilePath);
 		return this;
 	}

@@ -2,11 +2,7 @@
 
 ## 🚨 Top Priority: Strict Self-Hosting Conversion
 
-**Read [`strict-conversion-plan.md`](../strict-conversion-plan.md) first.** It is the top priority
-for all ongoing work. The plan outlines converting every C# layer of the Strict implementation into
-`.strict` files so the language can bootstrap itself. Always check the plan before starting any new
-task, update progress percentages when `.strict` files are added or C# files are replaced, and
-follow the layer-by-layer order described there.
+**Read [`strict-conversion-plan.md`](../strict-conversion-plan.md) first.** It is the top priority for all ongoing work. The plan outlines converting every C# layer of the Strict implementation into `.strict` files so the language can bootstrap itself. Always check the plan before starting any new task, update progress percentages when `.strict` files are added or C# files are replaced, and follow the layer-by-layer order described there.
 
 ## Project Guidelines
 - In Strict, type instance equality should check type compatibility and then compare member values (including list/dictionary members) rather than reference equality.
@@ -444,3 +440,6 @@ Otherwise → not TDD
 ```
 
 No exceptions without your human partner's permission.
+
+## Optimization Work
+- Demonstrate actual measured improvement in generated executable size, not just theoretical flag changes.

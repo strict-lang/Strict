@@ -1,3 +1,4 @@
+using System.Reflection;
 using NUnit.Framework;
 using Strict.Bytecode;
 using Strict.Bytecode.Instructions;
@@ -498,6 +499,113 @@ public sealed class InstructionsToMlirTests
 			"MLIR should be more compact than NASM assembly");
 	}
 
+	[Test]
+	public void MlirLinkerUsesSizeFocusedLoweringPasses()
+	{
+		var args = BuildMlirOptArgs("input.mlir", "output.llvm.mlir");
+		Assert.That(args, Does.Contain("--canonicalize"));
+		Assert.That(args, Does.Contain("--cse"));
+		Assert.That(args, Does.Contain("--symbol-dce"));
+		Assert.That(args, Does.Contain("--convert-arith-to-llvm"));
+		Assert.That(args, Does.Contain("--convert-func-to-llvm"));
+		Assert.That(args, Does.Contain("--convert-cf-to-llvm"));
+	}
+
+	[Test]
+	public void MlirLinkerUsesSizeFocusedFlagsForLinuxWithoutPrintCalls()
+	{
+		var args = BuildMlirClangArgs("input.ll", "output", Platform.Linux, false);
+		Assert.That(args, Does.Contain("-Oz"));
+		if (OperatingSystem.IsWindows())
+		{
+			Assert.That(args, Does.Not.Contain("-nostdlib"));
+			Assert.That(args, Does.Not.Contain("-Wl,-e,main"));
+			return;
+		}
+		//ncrunch: no coverage start
+		Assert.That(args, Does.Contain("-s"));
+		Assert.That(args, Does.Contain("-nostdlib"));
+		Assert.That(args, Does.Contain("-Wl,-e,main"));
+		Assert.That(args, Does.Contain("-Wl,--gc-sections"));
+		Assert.That(args, Does.Contain("-Wl,--strip-all"));
+		Assert.That(args, Does.Contain("-Wl,--build-id=none"));
+		Assert.That(args, Does.Contain("-fno-unwind-tables"));
+		Assert.That(args, Does.Contain("-fno-asynchronous-unwind-tables"));
+	} //ncrunch: no coverage end
+
+	[Test]
+	public void MlirLinkerAllowsStdLibForLinuxWithPrintCalls()
+	{
+		var args = BuildMlirClangArgs("input.ll", "output", Platform.Linux, true);
+		Assert.That(args, Does.Contain("-Oz"));
+		Assert.That(args, Does.Not.Contain("-nostdlib"));
+		Assert.That(args, Does.Not.Contain("-Wl,-e,main"));
+		if (OperatingSystem.IsWindows())
+			return;
+		//ncrunch: no coverage start
+		Assert.That(args, Does.Contain("-s"));
+		Assert.That(args, Does.Contain("-Wl,--gc-sections"));
+		Assert.That(args, Does.Contain("-Wl,--strip-all"));
+	} //ncrunch: no coverage end
+
+	[Test]
+	public void MlirLinkerWindowsPrintUsesKernel32WithoutCrt()
+	{
+		var args = BuildMlirClangArgs("input.ll", "output.exe", Platform.Windows, true);
+		Assert.That(args, Does.Contain("-nostdlib"));
+		Assert.That(args, Does.Contain("-lkernel32"));
+		Assert.That(args, Does.Contain("-Wl,/ENTRY:main"));
+		Assert.That(args, Does.Not.Contain("/SUBSYSTEM:CONSOLE"));
+		Assert.That(args, Does.Not.Contain("@printf"));
+	}
+
+	[Test]
+	public void MlirLinkerRewriteWindowsPrintRuntimeRemovesPrintf()
+	{
+		const string LlvmIr = """
+			@str_PrintRun_0 = internal constant [12 x i8] c"Result: %g\0A\00"
+
+			declare i32 @printf(ptr, ...)
+
+			define double @PrintRun() {
+			  %1 = call i32 (ptr, ...) @printf(ptr @str_PrintRun_0, double 4.200000e+01)
+			  ret double 4.200000e+01
+			}
+
+			""";
+		var rewritten = RewriteWindowsPrintRuntime(LlvmIr);
+		Assert.That(rewritten, Does.Contain("@_fltused = global i32 0"));
+		Assert.That(rewritten, Does.Contain("declare ptr @GetStdHandle(i32)"));
+		Assert.That(rewritten, Does.Contain("declare i32 @WriteFile(ptr, ptr, i32, ptr, ptr)"));
+		Assert.That(rewritten, Does.Contain("define void @print_number_from_double("));
+		Assert.That(rewritten, Does.Not.Contain("declare i32 @printf(ptr, ...)"));
+		Assert.That(rewritten, Does.Not.Contain("@printf("));
+		Assert.That(rewritten, Does.Contain("@GetStdHandle(i32 -11)"));
+		Assert.That(rewritten, Does.Contain("@WriteFile("));
+		Assert.That(rewritten, Does.Contain("@print_number_from_double("));
+	}
+
+	private static string BuildMlirOptArgs(string inputPath, string outputPath)
+	{
+		var buildMethod = typeof(MlirLinker).GetMethod("BuildMlirOptArgs",
+			BindingFlags.Static | BindingFlags.NonPublic);
+		Assert.That(buildMethod, Is.Not.Null,
+			"MlirLinker should expose a private BuildMlirOptArgs helper for consistent pass testing");
+		var result = buildMethod!.Invoke(null, [inputPath, outputPath]);
+		return result as string ?? throw new InvalidOperationException("Expected mlir-opt args string");
+	}
+
+	private static string BuildMlirClangArgs(string inputPath, string outputPath, Platform platform,
+		bool hasPrintCalls)
+	{
+		var buildMethod = typeof(MlirLinker).GetMethod("BuildClangArgs",
+			BindingFlags.Static | BindingFlags.NonPublic);
+		Assert.That(buildMethod, Is.Not.Null,
+			"MlirLinker should expose a private BuildClangArgs helper for consistent flag testing");
+		var result = buildMethod!.Invoke(null, [inputPath, outputPath, platform, hasPrintCalls]);
+		return result as string ?? throw new InvalidOperationException("Expected clang args string");
+	}
+
 	private static List<Instruction> GenerateMethodInstructions(Method method)
 	{
 		var body = method.GetBodyAndParseIfNeeded();
@@ -506,5 +614,15 @@ public sealed class InstructionsToMlirTests
 			: [body];
 		return new BytecodeGenerator(new InvokedMethod(expressions,
 			new Dictionary<string, ValueInstance>(), method.ReturnType), new Registry()).Generate();
+	}
+
+	private static string RewriteWindowsPrintRuntime(string llvmIr)
+	{
+		var rewriteMethod = typeof(MlirLinker).GetMethod("RewriteWindowsPrintRuntime",
+			BindingFlags.Static | BindingFlags.NonPublic);
+		Assert.That(rewriteMethod, Is.Not.Null,
+			"MlirLinker should expose a private RewriteWindowsPrintRuntime helper for Windows no-CRT print rewriting");
+		var result = rewriteMethod!.Invoke(null, [llvmIr]);
+		return result as string ?? throw new InvalidOperationException("Expected rewritten LLVM IR string");
 	}
 }
