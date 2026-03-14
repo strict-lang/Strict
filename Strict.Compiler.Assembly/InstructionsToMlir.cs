@@ -444,10 +444,10 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 		lines.Add($"    {numElements} = arith.subi {endIndex}, {startIndex} : index");
 		lines.Add($"    {blockSize} = arith.constant {GpuBlockSize} : index");
 		lines.Add($"    {gridSize} = arith.ceildivui {numElements}, {blockSize} : index");
-		lines.Add($"    {hostBuffer} = memref.alloc({numElements}) : memref<?xf64>");
-		lines.Add($"    {deviceBuffer} = gpu.alloc({numElements}) : memref<?xf64>");
+		lines.Add($"    {hostBuffer} = memref.alloc({numElements}) : {GpuBufferType}");
+		lines.Add($"    {deviceBuffer} = gpu.alloc({numElements}) : {GpuBufferType}");
 		lines.Add(
-			$"    gpu.memcpy {deviceBuffer}, {hostBuffer} : memref<?xf64>, memref<?xf64>");
+			$"    gpu.memcpy {deviceBuffer}, {hostBuffer} : {GpuBufferType}, {GpuBufferType}");
 		lines.Add(
 			$"    gpu.launch blocks(%bx, %by, %bz) in (%grid_x = {gridSize}, %grid_y = {one}, %grid_z = {one})");
 		lines.Add(
@@ -464,6 +464,7 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 	}
 
 	private const int GpuBlockSize = 256;
+	private const string GpuBufferType = "memref<?xf64>";
 
 	private static int CountLoopBodyInstructions(List<Instruction> instructions, int loopBeginIndex)
 	{
@@ -510,9 +511,9 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 			{
 				var buffer = context.GpuBufferState;
 				lines.Add(
-					$"    gpu.memcpy {buffer.HostBuffer}, {buffer.DeviceBuffer} : memref<?xf64>, memref<?xf64>");
-				lines.Add($"    gpu.dealloc {buffer.DeviceBuffer} : memref<?xf64>");
-				lines.Add($"    memref.dealloc {buffer.HostBuffer} : memref<?xf64>");
+					$"    gpu.memcpy {buffer.HostBuffer}, {buffer.DeviceBuffer} : {GpuBufferType}, {GpuBufferType}");
+				lines.Add($"    gpu.dealloc {buffer.DeviceBuffer} : {GpuBufferType}");
+				lines.Add($"    memref.dealloc {buffer.HostBuffer} : {GpuBufferType}");
 				context.GpuBufferState = null;
 			}
 			break;
