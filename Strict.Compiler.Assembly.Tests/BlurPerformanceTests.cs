@@ -98,19 +98,17 @@ public sealed class BlurPerformanceTests
 			"Blur should parallelize at 100K pixels due to complex body");
 	}
 
-	[TestCase(5)]
+	[TestCase(10)]
 	[TestCase(20)]
-	public void BlurProducesCorrectResults(int blurAmount)
+	public void BlurProducesCorrectResults(int imageSize)
 	{
-		const int width = 20;
-		const int height = 20;
-		var pixels = CreateTestImage(width, height);
+		var pixels = CreateTestImage(imageSize, imageSize);
 		var expected = new byte[pixels.Length];
 		Array.Copy(pixels, expected, pixels.Length);
-		ApplyBlurSingleThread(expected, width, height);
+		ApplyBlurSingleThread(expected, imageSize, imageSize);
 		var parallelResult = new byte[pixels.Length];
 		Array.Copy(pixels, parallelResult, pixels.Length);
-		ApplyBlurParallel(parallelResult, width, height);
+		ApplyBlurParallel(parallelResult, imageSize, imageSize);
 		Assert.That(parallelResult, Is.EqualTo(expected),
 			"Parallel blur result must match single-thread result byte-for-byte");
 	}
