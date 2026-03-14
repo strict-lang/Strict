@@ -34,26 +34,27 @@ public static class Program
 	{
 		Console.WriteLine("Usage: Strict <file.strict|directory|file.strictbinary> [-options] [args...]");
 		Console.WriteLine();
-		Console.WriteLine("Options:");
-		Console.WriteLine("  -diagnostics   Output detailed step-by-step logs and timing for each pipeline stage");
-		Console.WriteLine("                 (automatically enabled in Debug builds)");
-		Console.WriteLine("  -decompile     Decompile a .strictbinary into partial .strict source files");
-		Console.WriteLine("                 (creates a folder with one .strict per type; no tests, optimized)");
-		Console.WriteLine("  -Windows       Compile to a native Windows x64 executable (.exe)");
-		Console.WriteLine("  -Linux         Compile to a native Linux x64 executable");
-		Console.WriteLine("  -MacOS         Compile to a native macOS x64 executable");
-		Console.WriteLine("                 Default backend: LLVM (clang) if available, otherwise NASM + gcc/clang");
-		Console.WriteLine("  -llvm          Force LLVM IR backend (requires clang: https://releases.llvm.org)");
-		Console.WriteLine("  -nasm          Force NASM backend (requires nasm + gcc/clang)");
+		Console.WriteLine("Options (default if nothing specified: cache or run .strictbinary and execute in VM)");
+		Console.WriteLine("  -Windows     Compile to a native Windows x64 executable (.exe)");
+		Console.WriteLine("  -Linux       Compile to a native Linux x64 executable");
+		Console.WriteLine("  -MacOS       Compile to a native macOS x64 executable");
+		Console.WriteLine("  -llvm        Force LLVM IR backend (default, requires clang: https://releases.llvm.org)");
+		Console.WriteLine("  -nasm        Force NASM backend (fallback, less optimized, requires nasm + gcc/clang)");
+		Console.WriteLine("  -forceStrictBinary Force .strictbinary generation, normally skipped using -Windows|-Linux|-MacOS");
+		Console.WriteLine("  -diagnostics Output detailed step-by-step logs and timing for each pipeline stage");
+		Console.WriteLine("               (automatically enabled in Debug builds)");
+		Console.WriteLine("  -decompile   Decompile a .strictbinary into partial .strict source files");
+		Console.WriteLine("               (creates a folder with one .strict per type; no tests, optimized)");
 		Console.WriteLine();
 		Console.WriteLine("Arguments:");
-		Console.WriteLine("  args...        Optional numbers passed to the program's Run(numbers) method");
-		Console.WriteLine("                 Example: Strict Sum.strict 5 10 20  =>  prints 35");
+		Console.WriteLine("  args...      Optional text or numbers passed to called method");
+		Console.WriteLine("               Example to call Run method: Strict Sum.strict 5 10 20 => prints 35");
+		Console.WriteLine("               Example to call any expression, must contain brackets: Strict List.strict (1, 2, 3).Length => prints 3");
 		Console.WriteLine();
 		Console.WriteLine("Examples:");
 		Console.WriteLine("  Strict Examples/SimpleCalculator.strict");
-		Console.WriteLine("  Strict Examples/SimpleCalculator.strict -diagnostics");
 		Console.WriteLine("  Strict Examples/SimpleCalculator.strict -Windows");
+		Console.WriteLine("  Strict Examples/SimpleCalculator.strict -diagnostics");
 		Console.WriteLine("  Strict Examples/SimpleCalculator.strictbinary");
 		Console.WriteLine("  Strict Examples/SimpleCalculator.strictbinary -decompile");
 		Console.WriteLine("  Strict Examples/Sum.strict 5 10 20");
@@ -83,18 +84,14 @@ public static class Program
 			if (!diagnostics)
 				diagnostics = true;
 #endif
-			using var runner = new Runner(basePackage, filePath, diagnostics);
-			if (options.Contains("-llvm") && options.Contains("-nasm"))
-				throw new InvalidOperationException(
-					"Cannot specify both -llvm and -nasm. Choose one backend.");
-			if (options.Contains("-llvm"))
-				runner.useLlvm = true;
-			else if (options.Contains("-nasm"))
-				runner.useNasm = true;
+			var backend = options.Contains("-nasm")
+				? CompilerBackend.Nasm
+				: CompilerBackend.LlvmDefault;
+			using var runner = new Runner(basePackage, filePath, backend, diagnostics);
 			if (nonFlagArgs.Length == 1 && nonFlagArgs[0].Contains('('))
 				runner.RunExpression(nonFlagArgs[0]);
 			else
-				runner.Run(GetPlatformOption(options), nonFlagArgs);
+				runner.Run(GetPlatformOption(options), options.Contains("-forceStrictBinary"), nonFlagArgs);
 		}
 	}
 

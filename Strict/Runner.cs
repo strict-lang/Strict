@@ -22,8 +22,9 @@ public sealed class Runner : IDisposable
 	/// the type matching the directory name is used as the entry point.
 	/// </summary>
 	public Runner(Package basePackage, string strictFilePath,
-		bool enableTestsAndDetailedOutput = false)
+		CompilerBackend backend = CompilerBackend.LlvmDefault, bool enableTestsAndDetailedOutput = false)
 	{
+		this.backend = backend;
 		this.enableTestsAndDetailedOutput = enableTestsAndDetailedOutput;
 		Log("╔════════════════════════════════════╗");
 		Log("║ Strict Programming Language Runner ║");
@@ -33,7 +34,7 @@ public sealed class Runner : IDisposable
 		if (Directory.Exists(strictFilePath))
 		{
 			currentFolder = Path.GetFullPath(
-			strictFilePath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+				strictFilePath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
 			(package, mainType) = LoadPackageFromDirectory(basePackage, currentFolder);
 		}
 		else
@@ -61,6 +62,7 @@ public sealed class Runner : IDisposable
 			TimeSpan.FromTicks(endTicks - startTicks).TotalMilliseconds + " ms");
 	}
 
+	private readonly CompilerBackend backend;
 	private readonly bool enableTestsAndDetailedOutput;
 	private readonly string currentFolder;
 	private readonly BytecodeDeserializer? deserializer;
@@ -74,13 +76,14 @@ public sealed class Runner : IDisposable
 			Console.WriteLine(message);
 	}
 
-	public Runner Run(Platform? targetPlatform = null, params string[] programArgs) =>
+	public Runner Run(Platform? targetPlatform = null, bool forceStrictBinaryGeneration = false,
+		params string[] programArgs) =>
 		deserializer != null
 			? targetPlatform.HasValue
 				? SavePlatformExecutable(deserializer.Instructions[mainType.Name], targetPlatform.Value,
 					deserializer.PrecompiledMethods)
 				: RunFromPreloadedBytecode(deserializer.Instructions[mainType.Name], programArgs)
-			: RunFromSource(targetPlatform, programArgs);
+			: RunFromSource(targetPlatform, forceStrictBinaryGeneration, programArgs);
 
 	private Runner RunFromPreloadedBytecode(List<Instruction> preloadedInstructions,
 		string[] programArgs)
@@ -95,7 +98,8 @@ public sealed class Runner : IDisposable
 		return this;
 	}
 
-	private Runner RunFromSource(Platform? targetPlatform, string[] programArgs)
+	private Runner RunFromSource(Platform? targetPlatform, bool forceStrictBinaryGeneration,
+		string[] programArgs)
 	{
 		if (enableTestsAndDetailedOutput)
 		{
@@ -105,13 +109,14 @@ public sealed class Runner : IDisposable
 		}
 		var instructions = GenerateBytecode();
 		var optimizedInstructions = OptimizeBytecode(instructions);
+		if (forceStrictBinaryGeneration || targetPlatform == null)
+			SaveStrictBinaryBytecodeIfPossible(optimizedInstructions);
 		if (targetPlatform.HasValue)
 			SavePlatformExecutable(optimizedInstructions, targetPlatform.Value, null);
 		else
 		{
 			ExecuteBytecode(optimizedInstructions, null, BuildProgramArguments(programArgs));
-			SaveBytecodeIfPossible(optimizedInstructions);
-			Console.WriteLine("Successfully parsed, optimized and executed " + mainType.Name + " in " +
+			Log("Successfully parsed, optimized and executed " + mainType.Name + " in " +
 				TimeSpan.FromTicks(stepTimes.Sum()).ToString(@"s\.ffffff") + "s");
 		}
 		return this;
@@ -290,11 +295,11 @@ public sealed class Runner : IDisposable
 		return new Dictionary<string, ValueInstance> { [runMethod.Parameters[0].Name] = numbersValue };
 	}
 
-	private void SaveBytecodeIfPossible(List<Instruction> optimizedInstructions)
+	private void SaveStrictBinaryBytecodeIfPossible(List<Instruction> optimizedInstructions)
 	{
 		var typeBytecodeData = BuildTypeBytecodeData(optimizedInstructions);
 		var serializer = new BytecodeSerializer(typeBytecodeData, currentFolder, mainType.Name);
-		Console.WriteLine("Saving " + new FileInfo(serializer.OutputFilePath).Length +
+		Log("Saving " + new FileInfo(serializer.OutputFilePath).Length +
 			" bytes of bytecode to: " + serializer.OutputFilePath);
 	}
 
@@ -306,12 +311,9 @@ public sealed class Runner : IDisposable
 	/// </summary>
 	private Runner SavePlatformExecutable(List<Instruction> optimizedInstructions, Platform platform,
 		IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods) =>
-		useLlvm
+		backend == CompilerBackend.LlvmDefault
 			? SaveLlvmExecutable(optimizedInstructions, platform, precompiledMethods)
 			: SaveNasmExecutable(optimizedInstructions, platform, precompiledMethods);
-
-	internal bool useLlvm;
-	internal bool useNasm;
 
 	private Runner SaveLlvmExecutable(List<Instruction> optimizedInstructions, Platform platform,
 		IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods)
@@ -322,7 +324,9 @@ public sealed class Runner : IDisposable
 		var llvmPath = Path.Combine(currentFolder, mainType.Name + ".ll");
 		File.WriteAllText(llvmPath, llvmIr);
 		Console.WriteLine("Saved " + platform + " LLVM IR to: " + llvmPath);
-		var exeFilePath = new LlvmLinker().CreateExecutable(llvmPath, platform);
+		var exeFilePath = new LlvmLinker().CreateExecutable(llvmPath, platform,
+			llvmCompiler.IsPlatformUsingStdLibAndHasPrintInstructions(platform, optimizedInstructions,
+				precompiledMethods));
 		Console.WriteLine("Compiled " + mainType.Name + " via LLVM in " +
 			TimeSpan.FromTicks(stepTimes.Sum()).ToString(@"s\.ffffff") + "s to " + platform +
 			" executable of " + new FileInfo(exeFilePath).Length.ToString("N0") + " bytes to: " + exeFilePath);
@@ -550,7 +554,7 @@ public sealed class Runner : IDisposable
 		if (!childPackage.Types.TryGetValue(packageName, out var mainType))
 			// Fallback: use the first type with a Run method if no type matches the directory name
 			mainType = childPackage.Types.Values.FirstOrDefault(type => //ncrunch: no coverage
-				type.Methods.Any(method => method.Name == Method.Run)) ?? //ncrunch: no coverage
+					type.Methods.Any(method => method.Name == Method.Run)) ?? //ncrunch: no coverage
 				throw new InvalidOperationException("Package directory '" + dirPath +
 					"' does not contain a type named '" + packageName +
 					"' or any type with a Run method.");

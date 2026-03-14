@@ -27,7 +27,7 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 	/// Compiles a single method's instructions into an LLVM IR function (no entry point).
 	/// </summary>
 	public string CompileInstructions(string methodName, List<Instruction> instructions) =>
-		BuildFunction(methodName, [], instructions);
+		BuildFunction(methodName, [], instructions, Platform.Linux);
 
 	/// <summary>
 	/// Produces a complete LLVM IR module for the target platform including the compiled function,
@@ -41,22 +41,32 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 		var hasNumericPrint = HasNumericPrint(instructions) ||
 			methodInfos.Values.Any(info => HasNumericPrint(info.Instructions));
 		var module = BuildModuleHeader(platform, hasPrint, hasNumericPrint);
-		module += "\n" + BuildFunction(methodName, [], [.. instructions], methodInfos);
+		module += "\n" + BuildFunction(methodName, [], [.. instructions], platform, methodInfos);
 		foreach (var methodInfo in methodInfos.Values)
 			module += "\n" + BuildFunction(methodInfo.Symbol, methodInfo.ParameterNames,
-				methodInfo.Instructions, methodInfos);
+				methodInfo.Instructions, platform, methodInfos);
 		module += "\n" + BuildEntryPoint(methodName);
-		var stringConstants = CollectPrintStrings([.. instructions]);
+		if (platform == Platform.Windows && hasNumericPrint)
+			module += "\n" + BuildWindowsPrintNumberHelper();
+		var stringConstants = CollectPrintStrings([.. instructions], platform);
 		foreach (var methodInfo in methodInfos.Values)
-			foreach (var (label, text) in CollectPrintStrings(methodInfo.Instructions))
-				if (stringConstants.All(existing => existing.Label != label))
-					stringConstants.Add((label, text));
+		foreach (var (label, text) in CollectPrintStrings(methodInfo.Instructions, platform))
+			//ncrunch: no coverage start
+			if (stringConstants.All(existing => existing.Label != label))
+				stringConstants.Add((label, text));
+		//ncrunch: no coverage end
 		if (stringConstants.Count > 0)
 			module += "\n" + BuildStringConstants(stringConstants);
 		return module;
 	}
 
-	public bool HasPrintInstructions(IList<Instruction> instructions) =>
+	public bool IsPlatformUsingStdLibAndHasPrintInstructions(Platform platform,
+		List<Instruction> optimizedInstructions,
+		IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods) =>
+		platform == Platform.Linux && (HasPrintInstructions(optimizedInstructions) ||
+			(precompiledMethods?.Values.Any(HasPrintInstructions) ?? false));
+
+	public static bool HasPrintInstructions(IList<Instruction> instructions) =>
 		instructions.OfType<PrintInstruction>().Any();
 
 	private static string BuildModuleHeader(Platform platform, bool hasPrint, bool hasNumericPrint)
@@ -66,36 +76,44 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 			Platform.Windows => "x86_64-pc-windows-msvc",
 			Platform.Linux => "x86_64-unknown-linux-gnu",
 			Platform.MacOS => "x86_64-apple-macosx",
-			_ => throw new NotSupportedException("Unsupported platform: " + platform)
+			_ => throw new NotSupportedException("Unsupported platform: " + platform) //ncrunch: no coverage
 		};
 		var header = $"target triple = \"{targetTriple}\"\n";
+		if (platform == Platform.Windows)
+			header += "@_fltused = global i32 0\n";
 		if (hasPrint)
-		{
-			header += "\ndeclare i32 @printf(ptr, ...)\n";
-			if (hasNumericPrint)
+			if (platform == Platform.Windows)
 			{
-				header += "declare i32 @snprintf(ptr, i64, ptr, ...)\n";
-				header += "@str.safe_s = private unnamed_addr constant [3 x i8] c\"%s\\00\"\n";
+				header += "\ndeclare ptr @GetStdHandle(i32)\n";
+				header += "declare i32 @WriteFile(ptr, ptr, i32, ptr, ptr)\n";
 			}
-		}
+			else
+			{
+				header += "\ndeclare i32 @printf(ptr, ...)\n";
+				if (hasNumericPrint)
+				{
+					header += "declare i32 @snprintf(ptr, i64, ptr, ...)\n";
+					header += "@str.safe_s = private unnamed_addr constant [3 x i8] c\"%s\\00\"\n";
+				}
+			}
 		return header;
 	}
 
 	private static string BuildFunction(string methodName, IEnumerable<string> paramNames,
-		List<Instruction> instructions,
+		List<Instruction> instructions, Platform platform,
 		Dictionary<string, CompiledMethodInfo>? compiledMethods = null)
 	{
 		var parameterList = paramNames.ToList();
-		var paramIndexByName = parameterList.Select((name, index) => (name, index))
-			.ToDictionary(x => x.name, x => x.index);
-		var paramSignature = string.Join(", ",
-			parameterList.Select((name, index) => $"double %param{index}"));
+		var paramIndexByName = parameterList.Select((name, index) => (name, index)).
+			ToDictionary(x => x.name, x => x.index);
+		var paramSignature =
+			string.Join(", ", parameterList.Select((_, index) => $"double %param{index}"));
 		var lines = new List<string>
 		{
 			$"define double @{methodName}({paramSignature}) {{",
 			"entry:"
 		};
-		var context = new EmitContext(paramIndexByName, instructions, compiledMethods);
+		var context = new EmitContext(paramIndexByName, instructions, compiledMethods, platform);
 		for (var index = 0; index < instructions.Count; index++)
 		{
 			if (context.BlockLabels.TryGetValue(index, out var label))
@@ -108,31 +126,22 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 			EmitInstruction(instructions[index], lines, context, index);
 		}
 		if (!context.HasReturn)
-			lines.Add("  ret double 0.0");
+			lines.Add("  ret double 0.0"); //ncrunch: no coverage
 		lines.Add("}");
 		return string.Join("\n", lines);
 	}
 
-	private sealed class EmitContext
+	private sealed class EmitContext(Dictionary<string, int> paramIndexByName,
+		List<Instruction> instructions, Dictionary<string, CompiledMethodInfo>? compiledMethods,
+		Platform platform)
 	{
-		public EmitContext(Dictionary<string, int> paramIndexByName,
-			List<Instruction> instructions,
-			Dictionary<string, CompiledMethodInfo>? compiledMethods)
-		{
-			ParamIndexByName = paramIndexByName;
-			CompiledMethods = compiledMethods;
-			RegisterInstances = new Dictionary<Register, List<Expression>>();
-			VariableInstances = new Dictionary<string, List<Expression>>(StringComparer.Ordinal);
-			BlockLabels = BuildBlockLabels(instructions);
-			JumpEndPositions = BuildJumpEndPositions(instructions);
-		}
-
-		public Dictionary<string, int> ParamIndexByName { get; }
-		public Dictionary<string, CompiledMethodInfo>? CompiledMethods { get; }
-		public Dictionary<Register, List<Expression>> RegisterInstances { get; }
-		public Dictionary<string, List<Expression>> VariableInstances { get; }
-		public Dictionary<int, string> BlockLabels { get; }
-		public Dictionary<int, int> JumpEndPositions { get; }
+		public Dictionary<string, int> ParamIndexByName { get; } = paramIndexByName;
+		public Dictionary<string, CompiledMethodInfo>? CompiledMethods { get; } = compiledMethods;
+		public Platform Platform { get; } = platform;
+		public Dictionary<Register, List<Expression>> RegisterInstances { get; } = new();
+		public Dictionary<string, List<Expression>> VariableInstances { get; } = new(StringComparer.Ordinal);
+		public Dictionary<int, string> BlockLabels { get; } = BuildBlockLabels(instructions);
+		public Dictionary<int, int> JumpEndPositions { get; } = BuildJumpEndPositions(instructions);
 		public Dictionary<Register, string> RegisterValues { get; } = new();
 		public Dictionary<string, string> VariablePointers { get; } = new(StringComparer.Ordinal);
 		public HashSet<string> AllocatedVariables { get; } = new(StringComparer.Ordinal);
@@ -155,14 +164,15 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 				AddLabel(labels, index + jump.InstructionsToSkip + 1, ref labelIndex);
 				break;
 			case JumpIf jumpIf:
+				//ncrunch: no coverage start
 				AddLabel(labels, index + jumpIf.Steps + 1, ref labelIndex);
 				break;
-			case JumpToId { InstructionType: InstructionType.JumpEnd } jumpEnd:
+			case JumpToId { InstructionType: InstructionType.JumpEnd }:
 				AddLabel(labels, index, ref labelIndex);
 				break;
-			case JumpToId jumpToId:
+			case JumpToId:
 				AddLabel(labels, index + 1, ref labelIndex);
-				break;
+				break; //ncrunch: no coverage end
 			}
 		return labels;
 	}
@@ -178,7 +188,7 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 		var positions = new Dictionary<int, int>();
 		for (var index = 0; index < instructions.Count; index++)
 			if (instructions[index] is JumpToId { InstructionType: InstructionType.JumpEnd } jumpEnd)
-				positions[jumpEnd.Id] = index;
+				positions[jumpEnd.Id] = index; //ncrunch: no coverage
 		return positions;
 	}
 
@@ -192,7 +202,7 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 			EmitStoreVariable(storeConst, lines, context);
 			break;
 		case StoreVariableInstruction:
-			break;
+			break; //ncrunch: no coverage
 		case LoadVariableToRegister loadVar:
 			EmitLoadVariable(loadVar, lines, context);
 			break;
@@ -221,10 +231,10 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 			EmitInvoke(invoke, lines, context);
 			break;
 		case JumpToId { InstructionType: InstructionType.JumpEnd }:
-			break;
+			break; //ncrunch: no coverage
 		case JumpToId jumpToId:
-			EmitJumpToId(jumpToId, lines, context, index);
-			break;
+			EmitJumpToId(jumpToId, lines, context, index); //ncrunch: no coverage
+			break; //ncrunch: no coverage
 		default:
 			throw new NotSupportedException(
 				$"LLVM IR compilation does not support instruction: {instruction.GetType().Name} ({instruction.InstructionType})");
@@ -236,10 +246,11 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 	{
 		if (store.ValueInstance.IsText)
 			return;
+		//ncrunch: no coverage start
 		EnsureVariableAllocated(store.Identifier, lines, context);
 		var value = FormatDouble(store.ValueInstance.Number);
 		lines.Add($"  store double {value}, ptr {context.VariablePointers[store.Identifier]}");
-	}
+	} //ncrunch: no coverage end
 
 	private static void EnsureVariableAllocated(string name, List<string> lines,
 		EmitContext context)
@@ -257,17 +268,17 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 		for (var index = 0; index < lines.Count; index++)
 			if (lines[index] == "entry:")
 				return index + 1;
-		return 1;
+		return 1; //ncrunch: no coverage
 	}
 
 	private static void EmitLoadVariable(LoadVariableToRegister loadVar, List<string> lines,
 		EmitContext context)
 	{
 		if (context.VariableInstances.TryGetValue(loadVar.Identifier, out var instances))
-		{
+		{ //ncrunch: no coverage start
 			context.RegisterInstances[loadVar.Register] = instances;
 			return;
-		}
+		} //ncrunch: no coverage end
 		if (context.ParamIndexByName.TryGetValue(loadVar.Identifier, out var paramIndex))
 		{
 			context.RegisterValues[loadVar.Register] = $"%param{paramIndex}";
@@ -283,9 +294,8 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 
 	private static void EmitLoadConstant(LoadConstantInstruction loadConst, EmitContext context)
 	{
-		if (loadConst.ValueInstance.IsText)
-			return;
-		context.RegisterValues[loadConst.Register] = FormatDouble(loadConst.ValueInstance.Number);
+		if (!loadConst.ValueInstance.IsText)
+			context.RegisterValues[loadConst.Register] = FormatDouble(loadConst.ValueInstance.Number);
 	}
 
 	private static void EmitArithmetic(BinaryInstruction binary, List<string> lines,
@@ -301,7 +311,7 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 			InstructionType.Multiply => "fmul",
 			InstructionType.Divide => "fdiv",
 			InstructionType.Modulo => "frem",
-			_ => throw new NotSupportedException(
+			_ => throw new NotSupportedException( //ncrunch: no coverage
 				$"LLVM IR compilation of {binary.InstructionType} is not supported")
 		};
 		lines.Add($"  {dest} = {op} double {left}, {right}");
@@ -319,7 +329,7 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 			InstructionType.NotEqual => "one",
 			InstructionType.LessThan => "olt",
 			InstructionType.GreaterThan => "ogt",
-			_ => throw new NotSupportedException(
+			_ => throw new NotSupportedException( //ncrunch: no coverage
 				$"LLVM IR comparison {binary.InstructionType} is not supported")
 		};
 		var temp = context.NextTemp();
@@ -352,11 +362,39 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 	private static void EmitPrint(PrintInstruction print, List<string> lines,
 		EmitContext context)
 	{
-		var printKey = BuildPrintKey(print);
-		var stringLabel = "@str." + SanitizeLabel(printKey);
+		var printKey = BuildPrintKey(print, context.Platform);
+		var stringLabel = "@str." + BuildPrintLabel(printKey);
 		var strGep = context.NextTemp();
 		lines.Add(
 			$"  {strGep} = getelementptr inbounds [0 x i8], ptr {stringLabel}, i64 0, i64 0");
+		if (context.Platform == Platform.Windows)
+		{
+			var stdoutHandle = context.NextTemp();
+			lines.Add($"  {stdoutHandle} = call ptr @GetStdHandle(i32 -11)");
+			if (print.ValueRegister.HasValue && !print.ValueIsText)
+			{
+				var prefixLength = System.Text.Encoding.UTF8.GetByteCount(print.TextPrefix);
+				if (prefixLength > 0)
+				{
+					var writtenPrefix = context.NextTemp();
+					lines.Add($"  {writtenPrefix} = alloca i32");
+					lines.Add(
+						$"  call i32 @WriteFile(ptr {stdoutHandle}, ptr {strGep}, i32 {prefixLength}, ptr {writtenPrefix}, ptr null)");
+				}
+				var numValue = GetRegisterValue(print.ValueRegister.Value, context);
+				lines.Add(
+					$"  call void @print_number_from_double(ptr {stdoutHandle}, double {numValue})");
+			}
+			else
+			{ //ncrunch: no coverage start
+				var textLength = System.Text.Encoding.UTF8.GetByteCount(print.TextPrefix) + 1;
+				var writtenText = context.NextTemp();
+				lines.Add($"  {writtenText} = alloca i32");
+				lines.Add(
+					$"  call i32 @WriteFile(ptr {stdoutHandle}, ptr {strGep}, i32 {textLength}, ptr {writtenText}, ptr null)");
+			} //ncrunch: no coverage end
+			return;
+		}
 		if (print.ValueRegister.HasValue && !print.ValueIsText)
 		{
 			var numValue = GetRegisterValue(print.ValueRegister.Value, context);
@@ -378,35 +416,112 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 		}
 	}
 
+	private static string BuildPrintKey(PrintInstruction print, Platform platform) =>
+		platform == Platform.Windows && print.ValueRegister.HasValue && !print.ValueIsText
+			? print.TextPrefix
+			: print.ValueRegister.HasValue && !print.ValueIsText
+				? print.TextPrefix + "%g"
+				: print.TextPrefix;
+
+	private static List<(string Label, string Text)> CollectPrintStrings(
+		List<Instruction> instructions, Platform platform)
+	{
+		var strings = new List<(string, string)>();
+		var seen = new HashSet<string>(StringComparer.Ordinal);
+		foreach (var print in instructions.OfType<PrintInstruction>())
+		{
+			var key = BuildPrintKey(print, platform);
+			if (seen.Add(key))
+				strings.Add(("str." + BuildPrintLabel(key), key + "\n\0"));
+		}
+		return strings;
+	}
+
+	private static string BuildWindowsPrintNumberHelper() =>
+		string.Join("\n", "define void @print_number_from_double(ptr %stdout, double %value) {",
+			"entry:",
+			"  %buffer = alloca [64 x i8]",
+			"  %bufferStart = getelementptr [64 x i8], ptr %buffer, i64 0, i64 0",
+			"  %remainingPtr = alloca i64",
+			"  %writeIndexPtr = alloca i64",
+			"  %writtenPtr = alloca i32",
+			"  %number = fptosi double %value to i64",
+			"  %isNegative = icmp slt i64 %number, 0",
+			"  %negated = sub i64 0, %number",
+			"  %absolute = select i1 %isNegative, i64 %negated, i64 %number",
+			"  store i64 %absolute, ptr %remainingPtr",
+			"  store i64 62, ptr %writeIndexPtr",
+			"  %newlinePtr = getelementptr i8, ptr %bufferStart, i64 62",
+			"  store i8 10, ptr %newlinePtr",
+			"  %isZero = icmp eq i64 %absolute, 0",
+			"  br i1 %isZero, label %storeZero, label %digitLoop",
+			"storeZero:",
+			"  %zeroIndex = load i64, ptr %writeIndexPtr",
+			"  %zeroStoreIndex = sub i64 %zeroIndex, 1",
+			"  store i64 %zeroStoreIndex, ptr %writeIndexPtr",
+			"  %zeroPtr = getelementptr i8, ptr %bufferStart, i64 %zeroStoreIndex",
+			"  store i8 48, ptr %zeroPtr",
+			"  br label %afterDigits",
+			"digitLoop:",
+			"  %current = load i64, ptr %remainingPtr",
+			"  %remainder = urem i64 %current, 10",
+			"  %quotient = udiv i64 %current, 10",
+			"  store i64 %quotient, ptr %remainingPtr",
+			"  %digitValue = add i64 %remainder, 48",
+			"  %digitByte = trunc i64 %digitValue to i8",
+			"  %loopIndex = load i64, ptr %writeIndexPtr",
+			"  %digitStoreIndex = sub i64 %loopIndex, 1",
+			"  store i64 %digitStoreIndex, ptr %writeIndexPtr",
+			"  %digitPtr = getelementptr i8, ptr %bufferStart, i64 %digitStoreIndex",
+			"  store i8 %digitByte, ptr %digitPtr",
+			"  %hasMoreDigits = icmp ne i64 %quotient, 0",
+			"  br i1 %hasMoreDigits, label %digitLoop, label %afterDigits",
+			"afterDigits:",
+			"  br i1 %isNegative, label %storeSign, label %prepareWrite",
+			"storeSign:",
+			"  %signIndex = load i64, ptr %writeIndexPtr",
+			"  %signStoreIndex = sub i64 %signIndex, 1",
+			"  store i64 %signStoreIndex, ptr %writeIndexPtr",
+			"  %signPtr = getelementptr i8, ptr %bufferStart, i64 %signStoreIndex",
+			"  store i8 45, ptr %signPtr",
+			"  br label %prepareWrite",
+			"prepareWrite:",
+			"  %startIndex = load i64, ptr %writeIndexPtr",
+			"  %outputPtr = getelementptr i8, ptr %bufferStart, i64 %startIndex",
+			"  %length64 = sub i64 63, %startIndex",
+			"  %length32 = trunc i64 %length64 to i32",
+			"  call i32 @WriteFile(ptr %stdout, ptr %outputPtr, i32 %length32, ptr %writtenPtr, ptr null)",
+			"  ret void",
+			"}");
+
 	private static void EmitJump(Jump jump, List<string> lines, EmitContext context, int index)
 	{
 		var target = index + jump.InstructionsToSkip + 1;
-		if (!context.BlockLabels.TryGetValue(target, out var label))
-			return;
-		switch (jump.InstructionType)
-		{
-		case InstructionType.JumpIfTrue or InstructionType.JumpIfFalse:
-			var condition = context.LastConditionTemp ?? "%t0";
-			var fallthrough = context.NextTemp();
-			var fallthroughLabel = $"fall{fallthrough[1..]}";
-			context.BlockLabels[index + 1] = fallthroughLabel;
-			if (jump.InstructionType == InstructionType.JumpIfFalse)
-				lines.Add($"  br i1 {condition}, label %{fallthroughLabel}, label %{label}");
-			else
-				lines.Add($"  br i1 {condition}, label %{label}, label %{fallthroughLabel}");
-			context.TerminatedBlocks.Add(context.CurrentBlock);
-			lines.Add($"{fallthroughLabel}:");
-			context.CurrentBlock = fallthroughLabel;
-			break;
-		default:
-			lines.Add($"  br label %{label}");
-			context.TerminatedBlocks.Add(context.CurrentBlock);
-			break;
-		}
+		if (context.BlockLabels.TryGetValue(target, out var label))
+			switch (jump.InstructionType)
+			{
+			case InstructionType.JumpIfTrue or InstructionType.JumpIfFalse:
+				var condition = context.LastConditionTemp ?? "%t0";
+				var fallthrough = context.NextTemp();
+				var fallthroughLabel = $"fall{fallthrough[1..]}";
+				context.BlockLabels[index + 1] = fallthroughLabel;
+				lines.Add(jump.InstructionType == InstructionType.JumpIfFalse
+					? $"  br i1 {condition}, label %{fallthroughLabel}, label %{label}"
+					: $"  br i1 {condition}, label %{label}, label %{fallthroughLabel}");
+				context.TerminatedBlocks.Add(context.CurrentBlock);
+				lines.Add($"{fallthroughLabel}:");
+				context.CurrentBlock = fallthroughLabel;
+				break;
+			default:
+				lines.Add($"  br label %{label}");
+				context.TerminatedBlocks.Add(context.CurrentBlock);
+				break;
+			}
 	}
 
-	private static void EmitJumpToId(JumpToId jumpToId, List<string> lines,
-		EmitContext context, int index)
+	//ncrunch: no coverage start
+	private static void EmitJumpToId(JumpToId jumpToId, List<string> lines, EmitContext context,
+		int index)
 	{
 		if (!context.JumpEndPositions.TryGetValue(jumpToId.Id, out var endIndex) ||
 			!context.BlockLabels.TryGetValue(endIndex, out var label))
@@ -420,10 +535,9 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 				: $"fallid{context.TempCounter++}";
 			if (!context.BlockLabels.ContainsKey(index + 1))
 				context.BlockLabels[index + 1] = fallthroughLabel;
-			if (jumpToId.InstructionType == InstructionType.JumpToIdIfFalse)
-				lines.Add($"  br i1 {condition}, label %{fallthroughLabel}, label %{label}");
-			else
-				lines.Add($"  br i1 {condition}, label %{label}, label %{fallthroughLabel}");
+			lines.Add(jumpToId.InstructionType == InstructionType.JumpToIdIfFalse
+				? $"  br i1 {condition}, label %{fallthroughLabel}, label %{label}"
+				: $"  br i1 {condition}, label %{label}, label %{fallthroughLabel}");
 			context.TerminatedBlocks.Add(context.CurrentBlock);
 			lines.Add($"{fallthroughLabel}:");
 			context.CurrentBlock = fallthroughLabel;
@@ -433,12 +547,12 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 			context.TerminatedBlocks.Add(context.CurrentBlock);
 			break;
 		}
-	}
+	} //ncrunch: no coverage end
 
 	private static void EmitInvoke(Invoke invoke, List<string> lines, EmitContext context)
 	{
 		if (invoke.Method == null)
-			throw new NotSupportedException("Invoke instruction is missing method metadata");
+			throw new NotSupportedException("Invoke instruction is missing method metadata"); //ncrunch: no coverage
 		if (invoke.Method.Method.Name == Method.From && invoke.Method.Instance == null)
 		{
 			context.RegisterInstances[invoke.Register] = ResolveConstructorArguments(invoke.Method);
@@ -448,7 +562,7 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 			invoke.Method.Method.Name, invoke.Method.Method.Parameters.Count);
 		if (context.CompiledMethods == null ||
 			!context.CompiledMethods.TryGetValue(methodKey, out var methodInfo))
-			throw new NotSupportedException(
+			throw new NotSupportedException( //ncrunch: no coverage
 				"Non-print method calls cannot be compiled to LLVM IR. " +
 				"Use the interpreted runner for programs with complex runtime method calls.");
 		var arguments = new List<string>();
@@ -468,6 +582,7 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 	{
 		if (expression is Value value && !value.Data.IsText)
 			return FormatDouble(value.Data.Number);
+		//ncrunch: no coverage start
 		var variableName = expression.ToString();
 		if (context.ParamIndexByName.TryGetValue(variableName, out var paramIndex))
 			return $"%param{paramIndex}";
@@ -476,12 +591,11 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 				"Cannot pass stack variable as inline argument in LLVM IR: " + variableName);
 		throw new NotSupportedException(
 			"Unsupported expression for LLVM IR native compilation: " + expression);
-	}
+	} //ncrunch: no coverage end
 
 	private static List<Expression> ResolveConstructorArguments(MethodCall constructorCall)
 	{
-		var members = constructorCall.ReturnType.Members.Where(member => !member.Type.IsTrait)
-			.ToList();
+		var members = constructorCall.ReturnType.Members.Where(member => !member.Type.IsTrait).ToList();
 		var result = new List<Expression>(members.Count);
 		for (var index = 0; index < members.Count; index++)
 			result.Add(index < constructorCall.Arguments.Count
@@ -495,11 +609,11 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 	{
 		if (methodCall.Instance is MethodCall constructorCall &&
 			constructorCall.Method.Name == Method.From && constructorCall.Instance == null)
-			return ResolveConstructorArguments(constructorCall);
+			return ResolveConstructorArguments(constructorCall); //ncrunch: no coverage
 		var instanceName = methodCall.Instance?.ToString();
 		if (instanceName != null && variableInstances.TryGetValue(instanceName, out var values))
 			return values;
-		throw new NotSupportedException(
+		throw new NotSupportedException( //ncrunch: no coverage
 			"Cannot resolve instance values for method call: " + methodCall);
 	}
 
@@ -516,11 +630,11 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 			var methodKey = BytecodeDeserializer.BuildMethodInstructionKey(method.Type.Name,
 				method.Name, method.Parameters.Count);
 			if (methods.TryGetValue(methodKey, out var existing))
-			{
+			{ //ncrunch: no coverage start
 				if (includeMembers && existing.MemberNames.Count == 0)
 					methods[methodKey] = BuildMethodInfo(method, true, precompiledMethods);
 				continue;
-			}
+			} //ncrunch: no coverage end
 			var methodInfo = BuildMethodInfo(method, includeMembers, precompiledMethods);
 			methods[methodKey] = methodInfo;
 			EnqueueInvokedMethods(methodInfo.Instructions, queue);
@@ -538,8 +652,7 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 				? [.. pre]
 				: GenerateInstructions(method);
 		var memberNames = includeMembers
-			? method.Type.Members.Where(member => !member.Type.IsTrait).Select(member => member.Name)
-				.ToList()
+			? method.Type.Members.Where(member => !member.Type.IsTrait).Select(member => member.Name).ToList()
 			: new List<string>();
 		var parameterNames = new List<string>(memberNames);
 		parameterNames.AddRange(method.Parameters.Select(parameter => parameter.Name));
@@ -565,37 +678,31 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 			? b.Expressions
 			: [body];
 		var arguments =
-			method.Parameters.ToDictionary(p => p.Name, p => new ValueInstance(p.Type, 0));
+			method.Parameters.ToDictionary(parameter => parameter.Name, //ncrunch: no coverage
+				parameter => new ValueInstance(parameter.Type, 0)); //ncrunch: no coverage
 		return new BytecodeGenerator(new InvokedMethod(expressions, arguments, method.ReturnType),
 			new Registry()).Generate();
 	}
 
-	private static string BuildEntryPoint(string methodName)
-	{
-		var lines = new List<string> { "define i32 @main() {", "entry:" };
-		lines.Add($"  %result = call double @{methodName}()");
-		lines.Add("  ret i32 0");
-		lines.Add("}");
-		return string.Join("\n", lines);
-	}
+	private static string BuildEntryPoint(string methodName) =>
+		string.Join("\n",
+			new[]
+			{
+				"define i32 @main() {",
+				"entry:",
+				$"  %result = call double @{methodName}()",
+				"  ret i32 0", "}"
+			});
 
-	private static string BuildPrintKey(PrintInstruction print) =>
-		print.ValueRegister.HasValue && !print.ValueIsText
-			? print.TextPrefix + "%g"
-			: print.TextPrefix;
-
-	private static List<(string Label, string Text)> CollectPrintStrings(
-		List<Instruction> instructions)
+	private static string BuildPrintLabel(string text)
 	{
-		var strings = new List<(string, string)>();
-		var seen = new HashSet<string>(StringComparer.Ordinal);
-		foreach (var print in instructions.OfType<PrintInstruction>())
-		{
-			var key = BuildPrintKey(print);
-			if (seen.Add(key))
-				strings.Add(("str." + SanitizeLabel(key), key + "\n\0"));
-		}
-		return strings;
+		var result = new System.Text.StringBuilder(text.Length * 2);
+		foreach (var character in text)
+			if (char.IsLetterOrDigit(character))
+				result.Append(character);
+			else
+				result.Append('_').Append(((int)character).ToString("X4"));
+		return result.ToString();
 	}
 
 	private static string BuildStringConstants(List<(string Label, string Text)> strings)
@@ -613,21 +720,19 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 	private static string EscapeForLlvm(string text)
 	{
 		var result = new System.Text.StringBuilder();
-		foreach (var c in text)
-		{
-			if (c == '\n')
+		foreach (var character in text)
+			if (character == '\n')
 				result.Append("\\0A");
-			else if (c == '\0')
+			else if (character == '\0')
 				result.Append("\\00");
-			else if (c == '\\')
-				result.Append("\\5C");
-			else if (c == '"')
-				result.Append("\\22");
-			else if (c is >= ' ' and <= '~')
-				result.Append(c);
+			else if (character == '\\')
+				result.Append("\\5C"); //ncrunch: no coverage
+			else if (character == '"')
+				result.Append("\\22"); //ncrunch: no coverage
+			else if (character is >= ' ' and <= '~')
+				result.Append(character);
 			else
-				result.Append($"\\{(int)c:X2}");
-		}
+				result.Append($"\\{(int)character:X2}"); //ncrunch: no coverage
 		return result.ToString();
 	}
 
@@ -643,17 +748,11 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 		return count;
 	}
 
-	private static string SanitizeLabel(string text) =>
-		new(text.Select(c => char.IsLetterOrDigit(c) ? c : '_').ToArray());
-
 	private static string GetRegisterValue(Register register, EmitContext context) =>
-		context.RegisterValues.TryGetValue(register, out var value)
-			? value
-			: "0.0";
+		context.RegisterValues.GetValueOrDefault(register, "0.0");
 
 	private static bool HasNumericPrint(IEnumerable<Instruction> instructions) =>
-		instructions.OfType<PrintInstruction>()
-			.Any(print => print.ValueRegister.HasValue && !print.ValueIsText);
+		instructions.OfType<PrintInstruction>().Any(print => print.ValueRegister.HasValue && !print.ValueIsText);
 
 	private static string FormatDouble(double value) =>
 		value == 0.0

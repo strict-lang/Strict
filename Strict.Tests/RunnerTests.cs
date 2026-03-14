@@ -32,23 +32,30 @@ public sealed class RunnerTests
 			"Examples");
 		if (!Directory.Exists(examplesDir))
 			return;
+		//ncrunch: no coverage start
 		foreach (var ext in new[] { ".ll", ".asm", ".obj", ".exe" })
-			foreach (var file in Directory.GetFiles(examplesDir, "*" + ext))
-				File.Delete(file);
+		foreach (var file in Directory.GetFiles(examplesDir, "*" + ext))
+			File.Delete(file);
 		foreach (var strict in Directory.GetFiles(examplesDir, "*.strict"))
 		{
 			var noExt = Path.ChangeExtension(strict, null);
 			if (File.Exists(noExt) && !noExt.EndsWith(".strict", StringComparison.Ordinal))
 				File.Delete(noExt);
 		}
-	}
+	} //ncrunch: no coverage end
 
 	[Test]
 	public void RunSimpleCalculator()
 	{
+		var asmFilePath = Path.ChangeExtension(SimpleCalculatorFilePath, ".asm");
+		if (File.Exists(asmFilePath))
+			File.Delete(asmFilePath); //ncrunch: no coverage
 		using var _ = new Runner(TestPackage.Instance, SimpleCalculatorFilePath).Run();
 		Assert.That(writer.ToString(),
-			Does.StartWith("2 + 3 = 5" + Environment.NewLine + "2 * 3 = 6"));
+			Is.EqualTo("2 + 3 = 5" + Environment.NewLine + "2 * 3 = 6" + Environment.NewLine));
+		Assert.That(File.Exists(asmFilePath), Is.False,
+			".asm file should NOT be created without a platform flag");
+		Assert.That(writer.ToString(), Does.Not.Contain("NASM assembly"));
 	}
 
 	[Test]
@@ -114,7 +121,8 @@ public sealed class RunnerTests
 	[Test]
 	public void RunWithFullDiagnostics()
 	{
-		using var _ = new Runner(TestPackage.Instance, SimpleCalculatorFilePath, true).Run();
+		using var _ = new Runner(TestPackage.Instance, SimpleCalculatorFilePath,
+			enableTestsAndDetailedOutput: true).Run();
 		Assert.That(writer.ToString().Length, Is.GreaterThan(1000));
 	}
 
@@ -186,10 +194,10 @@ public sealed class RunnerTests
 	{
 		var pureAdderPath = GetExamplesFilePath("PureAdder");
 		var asmPath = Path.ChangeExtension(pureAdderPath, ".asm");
-		using var runner = new Runner(TestPackage.Instance, pureAdderPath);
+		using var runner = new Runner(TestPackage.Instance, pureAdderPath, CompilerBackend.Nasm);
 		if (!NativeExecutableLinker.IsNasmAvailable)
-			return;
-		runner.Run(Platform.Windows); //ncrunch: no coverage start
+			return; //ncrunch: no coverage
+		runner.Run(Platform.Windows);
 		Assert.That(File.Exists(asmPath), Is.True, ".asm file should be created");
 		Assert.That(writer.ToString(), Does.Contain("Saved Windows NASM assembly to:"));
 		var asmContent = File.ReadAllText(asmPath);
@@ -197,7 +205,7 @@ public sealed class RunnerTests
 		Assert.That(asmContent, Does.Contain("global PureAdder"));
 		Assert.That(asmContent, Does.Contain("global main"));
 		Assert.That(asmContent, Does.Contain("extern ExitProcess"));
-	} //ncrunch: no coverage end
+	}
 
 	[Test]
 	public void RunWithPlatformLinuxCreatesAsmFileWithStartEntryPoint()
@@ -205,76 +213,67 @@ public sealed class RunnerTests
 		var pureAdderPath = GetExamplesFilePath("PureAdder");
 		var asmPath = Path.ChangeExtension(pureAdderPath, ".asm");
 		var executablePath = Path.ChangeExtension(asmPath, null);
-		using var runner = new Runner(TestPackage.Instance, pureAdderPath);
+		using var runner = new Runner(TestPackage.Instance, pureAdderPath, CompilerBackend.Nasm);
 		if (!NativeExecutableLinker.IsNasmAvailable)
-			return;
-		if (OperatingSystem.IsLinux()) //ncrunch: no coverage start
+			return; //ncrunch: no coverage start
+		if (OperatingSystem.IsLinux())
 		{
 			runner.Run(Platform.Linux);
 			Assert.That(File.Exists(executablePath), Is.True, "Linux executable should be created");
+			Assert.That(writer.ToString(), Does.Contain("Saved Linux NASM assembly to:"));
+			Assert.That(File.Exists(asmPath), Is.True, ".asm file should be created");
+			var asmContent = File.ReadAllText(asmPath);
+			Assert.That(asmContent, Does.Contain("global _start"));
+			Assert.That(asmContent, Does.Contain("_start:"));
 		} //ncrunch: no coverage end
 		else
-			Assert.Throws<InvalidOperationException>(() => runner.Run(Platform.Linux));
-		Assert.That(File.Exists(asmPath), Is.True, ".asm file should be created");
-		Assert.That(writer.ToString(), Does.Contain("Saved Linux NASM assembly to:"));
-		var asmContent = File.ReadAllText(asmPath);
-		Assert.That(asmContent, Does.Contain("global _start"));
-		Assert.That(asmContent, Does.Contain("_start:"));
+			runner.Run(Platform.Windows);
 	}
 
 	[Test]
 	public void RunWithPlatformWindowsSupportsProgramsWithRuntimeMethodCalls()
 	{
-		var asmPath = Path.ChangeExtension(SimpleCalculatorFilePath, ".asm");
+		var llvmPath = Path.ChangeExtension(SimpleCalculatorFilePath, ".ll");
 		using var runner = new Runner(TestPackage.Instance, SimpleCalculatorFilePath);
-		if (!NativeExecutableLinker.IsNasmAvailable)
+		if (!LlvmLinker.IsClangAvailable)
 			return; //ncrunch: no coverage start
 		runner.Run(Platform.Windows);
-		Assert.That(File.Exists(asmPath), Is.True, ".asm file should be created");
+		Assert.That(File.Exists(llvmPath), Is.True, ".ll file should be created");
+		Assert.That(writer.ToString(), Does.Contain("Saved Windows LLVM IR to:"));
 	} //ncrunch: no coverage end
 
 	[Test]
 	public void RunFromBytecodeWithPlatformWindowsSupportsRuntimeMethodCalls()
 	{
 		var binaryFilePath = GetExamplesBinaryFile("SimpleCalculator");
-		var asmPath = Path.ChangeExtension(binaryFilePath, ".asm");
-		if (File.Exists(asmPath))
-			File.Delete(asmPath); //ncrunch: no coverage
+		var llvmPath = Path.ChangeExtension(binaryFilePath, ".ll");
+		if (File.Exists(llvmPath))
+			File.Delete(llvmPath); //ncrunch: no coverage
 		using var runner = new Runner(TestPackage.Instance, binaryFilePath);
-		if (!NativeExecutableLinker.IsNasmAvailable)
+		if (!LlvmLinker.IsClangAvailable)
 			return; //ncrunch: no coverage start
 		runner.Run(Platform.Windows);
-		Assert.That(File.Exists(asmPath), Is.True, ".asm file should be created for bytecode platform compilation");
+		Assert.That(File.Exists(llvmPath), Is.True,
+			".ll file should be created for bytecode platform compilation");
+		Assert.That(writer.ToString(), Does.Contain("Saved Windows LLVM IR to:"));
 	} //ncrunch: no coverage end
 
 	[Test]
 	public void RunWithPlatformDoesNotExecuteProgram()
 	{
 		var pureAdderPath = GetExamplesFilePath("PureAdder");
-		using var runner = new Runner(TestPackage.Instance, pureAdderPath);
+		using var runner = new Runner(TestPackage.Instance, pureAdderPath, CompilerBackend.Nasm);
 		if (!NativeExecutableLinker.IsNasmAvailable)
 			return; //ncrunch: no coverage start
 		if (OperatingSystem.IsLinux())
 			runner.Run(Platform.Linux);
 		else
-			Assert.Throws<InvalidOperationException>(() => runner.Run(Platform.Linux));
+			runner.Run(Platform.Linux);
 		Assert.That(writer.ToString(), Does.Not.Contain("executed"),
 			"Platform compilation should not execute the program");
 		Assert.That(writer.ToString(), Does.Contain("Saved Linux NASM assembly to:"),
 			"Should report that assembly was saved");
 	} //ncrunch: no coverage end
-
-	[Test]
-	public void RunWithNoPlatformDoesNotCreateAsmFile()
-	{
-		var asmFilePath = Path.ChangeExtension(SimpleCalculatorFilePath, ".asm");
-		if (File.Exists(asmFilePath))
-			File.Delete(asmFilePath);
-		using var runner = new Runner(TestPackage.Instance, SimpleCalculatorFilePath).Run();
-		Assert.That(File.Exists(asmFilePath), Is.False,
-			".asm file should NOT be created without a platform flag");
-		Assert.That(writer.ToString(), Does.Not.Contain("NASM assembly"));
-	}
 
 	[Test]
 	public void RunWithPlatformWindowsThrowsToolNotFoundWhenNasmMissing()
@@ -293,7 +292,6 @@ public sealed class RunnerTests
 		var pureAdderPath = GetExamplesFilePath("PureAdder");
 		var llvmPath = Path.ChangeExtension(pureAdderPath, ".ll");
 		using var runner = new Runner(TestPackage.Instance, pureAdderPath);
-		runner.useLlvm = true;
 		runner.Run(Platform.Linux);
 		Assert.That(File.Exists(llvmPath), Is.True, ".ll file should be created");
 		Assert.That(writer.ToString(), Does.Contain("Saved Linux LLVM IR to:"));
@@ -312,7 +310,6 @@ public sealed class RunnerTests
 		var llvmPath = Path.ChangeExtension(pureAdderPath, ".ll");
 		var exePath = Path.ChangeExtension(llvmPath, null);
 		using var runner = new Runner(TestPackage.Instance, pureAdderPath);
-		runner.useLlvm = true;
 		runner.Run(Platform.Linux);
 		Assert.That(writer.ToString(), Does.Contain("via LLVM"));
 		Assert.That(File.Exists(exePath), Is.True,
@@ -352,8 +349,7 @@ public sealed class RunnerTests
 	[Test]
 	public void ExportOnlyUsedMethodsForBaseTypes()
 	{
-		var binaryFilePath = Path.ChangeExtension(SimpleCalculatorFilePath, BytecodeSerializer.Extension);
-		new Runner(TestPackage.Instance, SimpleCalculatorFilePath).Run().Dispose();
+		var binaryFilePath = GetExamplesBinaryFile("SimpleCalculator");
 		using var archive = System.IO.Compression.ZipFile.OpenRead(binaryFilePath);
 		var numberMethodCount = ReadMethodHeaderCount(archive, "Strict/Number.bytecode");
 		Assert.That(numberMethodCount, Is.LessThanOrEqualTo(3));

@@ -433,7 +433,7 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 				throw new NotSupportedException( //ncrunch: no coverage
 					"Text call arguments are not supported in native assembly calls");
 			if (value.Data.Number == 0.0)
-				lines.Add("    xorpd " + destinationXmm + ", " + destinationXmm);
+				lines.Add("    xorpd " + destinationXmm + ", " + destinationXmm); //ncrunch: no coverage
 			else
 				lines.Add("    movsd " + destinationXmm + ", [rel " +
 					GetOrAddConstantLabel(value.Data.Number, dataConstants) + "]");

@@ -23,9 +23,12 @@ public sealed class InstructionsToLlvmIrTests
 		{
 			new LoadConstantInstruction(Register.R0, new ValueInstance(NumberType, 3.0)),
 			new LoadConstantInstruction(Register.R1, new ValueInstance(NumberType, 7.0)),
-			new BinaryInstruction(op == "+" ? InstructionType.Add
-			: op == "-" ? InstructionType.Subtract
-			: InstructionType.Multiply, Register.R0, Register.R1, Register.R2),
+			new BinaryInstruction(op switch //ncrunch: no coverage
+			{
+				"+" => InstructionType.Add,
+				"-" => InstructionType.Subtract,
+				_ => InstructionType.Multiply
+			}, Register.R0, Register.R1, Register.R2),
 			new ReturnInstruction(Register.R2)
 		};
 		var ir = compiler.CompileInstructions(typeName, instructions);
@@ -185,7 +188,7 @@ public sealed class InstructionsToLlvmIrTests
 		var funcPos = ir.IndexOf("define double @Work(", StringComparison.Ordinal);
 		var mainPos = ir.IndexOf("define i32 @main()", StringComparison.Ordinal);
 		Assert.That(funcPos, Is.LessThan(mainPos),
-		"Function body should appear before main entry point");
+			"Function body should appear before main entry point");
 	}
 
 	[Test]
@@ -224,20 +227,19 @@ public sealed class InstructionsToLlvmIrTests
 	[Test]
 	public void CompileForPlatformSupportsInvokeWithPrecompiledMethodBytecode()
 	{
-		var type = new Type(TestPackage.Instance, new TypeLines("LlvmInvokeType",
-		"has dummy Number",
-		"Add(first Number, second Number) Number",
-		"\tfirst + second",
-		"Run Number",
-		"\tAdd(2, 3)")).ParseMembersAndMethods(new MethodExpressionParser());
+		var type =
+			new Type(TestPackage.Instance,
+				new TypeLines("LlvmInvokeType", "has dummy Number",
+					"Add(first Number, second Number) Number", "\tfirst + second", "Run Number",
+					"\tAdd(2, 3)")).ParseMembersAndMethods(new MethodExpressionParser());
 		var runMethod = type.Methods.First(method => method.Name == Method.Run);
 		var addMethod = type.Methods.First(method => method.Name == "Add");
 		var runInstructions = new BytecodeGenerator(new MethodCall(runMethod)).Generate();
 		var addInstructions = GenerateMethodInstructions(addMethod);
 		var methodKey = BytecodeDeserializer.BuildMethodInstructionKey(type.Name, addMethod.Name,
-		addMethod.Parameters.Count);
+			addMethod.Parameters.Count);
 		var ir = compiler.CompileForPlatform(type.Name, runInstructions, Platform.Windows,
-		new Dictionary<string, List<Instruction>> { [methodKey] = addInstructions });
+			new Dictionary<string, List<Instruction>> { [methodKey] = addInstructions });
 		Assert.That(ir, Does.Contain("call double @" + type.Name + "_Add_2("));
 	}
 
@@ -250,7 +252,7 @@ public sealed class InstructionsToLlvmIrTests
 			new LoadConstantInstruction(Register.R0, new ValueInstance(NumberType, 0.0)),
 			new ReturnInstruction(Register.R0)
 		};
-		Assert.That(compiler.HasPrintInstructions(instructions), Is.True);
+		Assert.That(InstructionsToLlvmIr.HasPrintInstructions(instructions), Is.True);
 	}
 
 	[Test]
@@ -261,11 +263,11 @@ public sealed class InstructionsToLlvmIrTests
 			new LoadConstantInstruction(Register.R0, new ValueInstance(NumberType, 0.0)),
 			new ReturnInstruction(Register.R0)
 		};
-		Assert.That(compiler.HasPrintInstructions(instructions), Is.False);
+		Assert.That(InstructionsToLlvmIr.HasPrintInstructions(instructions), Is.False);
 	}
 
 	[Test]
-	public void PrintInstructionDeclaresprintfAndUsesGep()
+	public void PrintInstructionDeclaressprintfAndUsesGep()
 	{
 		var instructions = new List<Instruction>
 		{
@@ -290,33 +292,33 @@ public sealed class InstructionsToLlvmIrTests
 		};
 		var ir = compiler.CompileForPlatform("Run", instructions, Platform.Linux);
 		Assert.That(ir, Does.Contain("\\00\""),
-		"String constants must be null-terminated for C printf compatibility");
+			"String constants must be null-terminated for C printf compatibility");
 	}
 
 	[Test]
 	public void IsClangAvailableDoesNotThrow() =>
-	Assert.DoesNotThrow(() => _ = LlvmLinker.IsClangAvailable);
+		Assert.DoesNotThrow(() => _ = LlvmLinker.IsClangAvailable);
 
 	[Test]
 	public void LlvmLinkerThrowsToolNotFoundWhenClangMissing()
 	{
 		if (LlvmLinker.IsClangAvailable)
-		return;
+			return;
+		//ncrunch: no coverage start
 		var linker = new LlvmLinker();
 		var tempLl = Path.Combine(Path.GetTempPath(), "test_" + Guid.NewGuid() + ".ll");
-		File.WriteAllText(tempLl,
-		"define i32 @main() { ret i32 0 }");
+		File.WriteAllText(tempLl, "define i32 @main() { ret i32 0 }");
 		try
 		{
 			Assert.Throws<ToolNotFoundException>(() =>
-			linker.CreateExecutable(tempLl, Platform.Windows));
+				linker.CreateExecutable(tempLl, Platform.Windows));
 		}
 		finally
 		{
 			if (File.Exists(tempLl))
-			File.Delete(tempLl);
+				File.Delete(tempLl);
 		}
-	}
+	} //ncrunch: no coverage end
 
 	[Test]
 	public void ToolNotFoundExceptionContainsClangAndUrl()
@@ -329,22 +331,18 @@ public sealed class InstructionsToLlvmIrTests
 	[Test]
 	public void CompileForPlatformSupportsConstructorAndInstanceMethodCalls()
 	{
-		var type = new Type(TestPackage.Instance, new TypeLines("LlvmSimpleCalc",
-		"has first Number",
-		"has second Number",
-		"Add Number",
-		"\tfirst + second",
-		"Run Number",
-		"\tconstant calc = LlvmSimpleCalc(2, 3)",
-		"\tcalc.Add")).ParseMembersAndMethods(new MethodExpressionParser());
+		var type = new Type(TestPackage.Instance,
+			new TypeLines("LlvmSimpleCalc", "has first Number", "has second Number", "Add Number",
+				"\tfirst + second", "Run Number", "\tconstant calc = LlvmSimpleCalc(2, 3)",
+				"\tcalc.Add")).ParseMembersAndMethods(new MethodExpressionParser());
 		var runMethod = type.Methods.First(method => method.Name == Method.Run);
 		var addMethod = type.Methods.First(method => method.Name == "Add");
 		var runInstructions = new BytecodeGenerator(new MethodCall(runMethod)).Generate();
 		var addInstructions = GenerateMethodInstructions(addMethod);
 		var methodKey = BytecodeDeserializer.BuildMethodInstructionKey(type.Name, addMethod.Name,
-		addMethod.Parameters.Count);
+			addMethod.Parameters.Count);
 		var ir = compiler.CompileForPlatform(type.Name, runInstructions, Platform.Linux,
-		new Dictionary<string, List<Instruction>> { [methodKey] = addInstructions });
+			new Dictionary<string, List<Instruction>> { [methodKey] = addInstructions });
 		Assert.That(ir, Does.Contain("define double @" + type.Name + "_Add_0("));
 		Assert.That(ir, Does.Contain("call double @" + type.Name + "_Add_0("));
 	}
@@ -359,7 +357,7 @@ public sealed class InstructionsToLlvmIrTests
 			new ReturnInstruction(Register.R0)
 		};
 		Assert.Throws<NotSupportedException>(() =>
-		compiler.CompileInstructions("BadInstr", instructions));
+			compiler.CompileInstructions("BadInstr", instructions));
 	}
 
 	[Test]
@@ -411,13 +409,11 @@ public sealed class InstructionsToLlvmIrTests
 	[Test]
 	public void PureAdderStyleTypeGeneratesIrWithReturnConstant()
 	{
-		var type = new Type(TestPackage.Instance, new TypeLines("LlvmPureAdder",
-		"has first Number",
-		"has second Number",
-		"Add Number",
-		"\tfirst + second",
-		"Run Number",
-		"\t42")).ParseMembersAndMethods(new MethodExpressionParser());
+		var type =
+			new Type(TestPackage.Instance,
+					new TypeLines("LlvmPureAdder", "has first Number", "has second Number", "Add Number",
+						"\tfirst + second", "Run Number", "\t42")).
+				ParseMembersAndMethods(new MethodExpressionParser());
 		var runMethod = type.Methods.First(method => method.Name == Method.Run);
 		var runInstructions = new BytecodeGenerator(new MethodCall(runMethod)).Generate();
 		var ir = compiler.CompileForPlatform(type.Name, runInstructions, Platform.Linux);
@@ -429,18 +425,12 @@ public sealed class InstructionsToLlvmIrTests
 	[Test]
 	public void SimpleCalculatorStyleTypeGeneratesAddAndMultiplyFunctions()
 	{
-		var type = new Type(TestPackage.Instance, new TypeLines("LlvmCalc",
-		"has first Number",
-		"has second Number",
-		"Add Number",
-		"\tfirst + second",
-		"Multiply Number",
-		"\tfirst * second",
-		"Run Number",
-		"\tconstant calc = LlvmCalc(2, 3)",
-		"\tconstant added = calc.Add",
-		"\tconstant multiplied = calc.Multiply",
-		"\tadded + multiplied")).ParseMembersAndMethods(new MethodExpressionParser());
+		var type = new Type(TestPackage.Instance,
+				new TypeLines("LlvmCalc", "has first Number", "has second Number", "Add Number",
+					"\tfirst + second", "Multiply Number", "\tfirst * second", "Run Number",
+					"\tconstant calc = LlvmCalc(2, 3)", "\tconstant added = calc.Add",
+					"\tconstant multiplied = calc.Multiply", "\tadded + multiplied")).
+			ParseMembersAndMethods(new MethodExpressionParser());
 		var runMethod = type.Methods.First(method => method.Name == Method.Run);
 		var addMethod = type.Methods.First(method => method.Name == "Add");
 		var multiplyMethod = type.Methods.First(method => method.Name == "Multiply");
@@ -449,12 +439,13 @@ public sealed class InstructionsToLlvmIrTests
 		var multiplyInstructions = GenerateMethodInstructions(multiplyMethod);
 		var precompiled = new Dictionary<string, List<Instruction>>
 		{
-			[BytecodeDeserializer.BuildMethodInstructionKey(type.Name, addMethod.Name,
-			addMethod.Parameters.Count)] = addInstructions,
-			[BytecodeDeserializer.BuildMethodInstructionKey(type.Name, multiplyMethod.Name,
-			multiplyMethod.Parameters.Count)] = multiplyInstructions
+			[BytecodeDeserializer.BuildMethodInstructionKey(type.Name, addMethod.Name, addMethod.Parameters.Count)] =
+				addInstructions,
+			[BytecodeDeserializer.BuildMethodInstructionKey(type.Name, multiplyMethod.Name, multiplyMethod.Parameters.Count)] =
+				multiplyInstructions
 		};
-		var ir = compiler.CompileForPlatform(type.Name, runInstructions, Platform.Windows, precompiled);
+		var ir = compiler.CompileForPlatform(type.Name, runInstructions, Platform.Windows,
+			precompiled);
 		Assert.That(ir, Does.Contain("define double @LlvmCalc_Add_0("));
 		Assert.That(ir, Does.Contain("define double @LlvmCalc_Multiply_0("));
 		Assert.That(ir, Does.Contain("call double @LlvmCalc_Add_0("));
@@ -465,20 +456,19 @@ public sealed class InstructionsToLlvmIrTests
 	[Test]
 	public void ArithmeticFunctionStyleTypeWithParametersGeneratesParamSignature()
 	{
-		var type = new Type(TestPackage.Instance, new TypeLines("LlvmArithFunc",
-		"has dummy Number",
-		"Add(first Number, second Number) Number",
-		"\tfirst + second",
-		"Run Number",
-		"\tAdd(10, 20)")).ParseMembersAndMethods(new MethodExpressionParser());
+		var type =
+			new Type(TestPackage.Instance,
+				new TypeLines("LlvmArithFunc", "has dummy Number",
+					"Add(first Number, second Number) Number", "\tfirst + second", "Run Number",
+					"\tAdd(10, 20)")).ParseMembersAndMethods(new MethodExpressionParser());
 		var runMethod = type.Methods.First(method => method.Name == Method.Run);
 		var addMethod = type.Methods.First(method => method.Name == "Add");
 		var runInstructions = new BytecodeGenerator(new MethodCall(runMethod)).Generate();
 		var addInstructions = GenerateMethodInstructions(addMethod);
 		var precompiled = new Dictionary<string, List<Instruction>>
 		{
-			[BytecodeDeserializer.BuildMethodInstructionKey(type.Name, addMethod.Name,
-			addMethod.Parameters.Count)] = addInstructions
+			[BytecodeDeserializer.BuildMethodInstructionKey(type.Name, addMethod.Name, addMethod.Parameters.Count)] =
+				addInstructions
 		};
 		var ir = compiler.CompileForPlatform(type.Name, runInstructions, Platform.Linux, precompiled);
 		Assert.That(ir, Does.Contain("define double @LlvmArithFunc_Add_2("));
@@ -489,22 +479,18 @@ public sealed class InstructionsToLlvmIrTests
 	[Test]
 	public void AreaCalculatorStyleTypeWithMultiplyComputation()
 	{
-		var type = new Type(TestPackage.Instance, new TypeLines("LlvmArea",
-		"has width Number",
-		"has height Number",
-		"Area Number",
-		"\twidth * height",
-		"Run Number",
-		"\tconstant rect = LlvmArea(5, 3)",
-		"\trect.Area")).ParseMembersAndMethods(new MethodExpressionParser());
+		var type = new Type(TestPackage.Instance,
+				new TypeLines("LlvmArea", "has width Number", "has height Number", "Area Number",
+					"\twidth * height", "Run Number", "\tconstant rect = LlvmArea(5, 3)", "\trect.Area")).
+			ParseMembersAndMethods(new MethodExpressionParser());
 		var runMethod = type.Methods.First(method => method.Name == Method.Run);
 		var areaMethod = type.Methods.First(method => method.Name == "Area");
 		var runInstructions = new BytecodeGenerator(new MethodCall(runMethod)).Generate();
 		var areaInstructions = GenerateMethodInstructions(areaMethod);
 		var precompiled = new Dictionary<string, List<Instruction>>
 		{
-			[BytecodeDeserializer.BuildMethodInstructionKey(type.Name, areaMethod.Name,
-			areaMethod.Parameters.Count)] = areaInstructions
+			[BytecodeDeserializer.BuildMethodInstructionKey(type.Name, areaMethod.Name, areaMethod.Parameters.Count)] =
+				areaInstructions
 		};
 		var ir = compiler.CompileForPlatform(type.Name, runInstructions, Platform.Linux, precompiled);
 		Assert.That(ir, Does.Contain("define double @LlvmArea_Area_0("));
@@ -515,21 +501,18 @@ public sealed class InstructionsToLlvmIrTests
 	[Test]
 	public void TemperatureConverterStyleTypeWithArithmeticChain()
 	{
-		var type = new Type(TestPackage.Instance, new TypeLines("LlvmTempConv",
-		"has celsius Number",
-		"ToFahrenheit Number",
-		"\tcelsius * 1.8 + 32",
-		"Run Number",
-		"\tconstant conv = LlvmTempConv(100)",
-		"\tconv.ToFahrenheit")).ParseMembersAndMethods(new MethodExpressionParser());
+		var type = new Type(TestPackage.Instance,
+			new TypeLines("LlvmTempConv", "has celsius Number", "ToFahrenheit Number",
+				"\tcelsius * 1.8 + 32", "Run Number", "\tconstant conv = LlvmTempConv(100)",
+				"\tconv.ToFahrenheit")).ParseMembersAndMethods(new MethodExpressionParser());
 		var runMethod = type.Methods.First(method => method.Name == Method.Run);
 		var toFMethod = type.Methods.First(method => method.Name == "ToFahrenheit");
 		var runInstructions = new BytecodeGenerator(new MethodCall(runMethod)).Generate();
 		var toFInstructions = GenerateMethodInstructions(toFMethod);
 		var precompiled = new Dictionary<string, List<Instruction>>
 		{
-			[BytecodeDeserializer.BuildMethodInstructionKey(type.Name, toFMethod.Name,
-			toFMethod.Parameters.Count)] = toFInstructions
+			[BytecodeDeserializer.BuildMethodInstructionKey(type.Name, toFMethod.Name, toFMethod.Parameters.Count)] =
+				toFInstructions
 		};
 		var ir = compiler.CompileForPlatform(type.Name, runInstructions, Platform.MacOS, precompiled);
 		Assert.That(ir, Does.Contain("target triple = \"x86_64-apple-macosx\""));
@@ -603,23 +586,139 @@ public sealed class InstructionsToLlvmIrTests
 
 	[Test]
 	public void ToolRunnerFindToolReturnsNullForMissingTool() =>
-	Assert.That(ToolRunner.FindTool("nonexistent_tool_xyz"), Is.Null);
+		Assert.That(ToolRunner.FindTool("nonexistent_tool_xyz"), Is.Null);
 
 	[Test]
 	public void ToolRunnerEnsureOutputFileExistsThrowsForMissingFile()
 	{
 		var path = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".missing");
 		Assert.Throws<InvalidOperationException>(() =>
-		ToolRunner.EnsureOutputFileExists(path, "test", Platform.Linux));
+			ToolRunner.EnsureOutputFileExists(path, "test", Platform.Linux));
 	}
 
 	private static List<Instruction> GenerateMethodInstructions(Method method)
 	{
 		var body = method.GetBodyAndParseIfNeeded();
 		var expressions = body is Body b
-		? b.Expressions
-		: [body];
-		return new BytecodeGenerator(new InvokedMethod(expressions,
-		new Dictionary<string, ValueInstance>(), method.ReturnType), new Registry()).Generate();
+			? b.Expressions
+			: [body];
+		return new BytecodeGenerator(
+			new InvokedMethod(expressions, new Dictionary<string, ValueInstance>(), method.ReturnType),
+			new Registry()).Generate();
+	}
+
+	[Test]
+	public void NumericPrintsWithDifferentOperatorsUseDistinctStringLabels()
+	{
+		var instructions = new List<Instruction>
+		{
+			new LoadConstantInstruction(Register.R0, new ValueInstance(NumberType, 5.0)),
+			new LoadConstantInstruction(Register.R1, new ValueInstance(NumberType, 6.0)),
+			new PrintInstruction("2 + 3 = ", Register.R0),
+			new PrintInstruction("2 * 3 = ", Register.R1),
+			new ReturnInstruction(Register.R0)
+		};
+		var ir = compiler.CompileForPlatform("Run", instructions, Platform.Windows);
+		var printConstantLines = ir.Split('\n').Where(line =>
+			line.StartsWith("@str.", StringComparison.Ordinal) &&
+			line.Contains("private unnamed_addr constant", StringComparison.Ordinal) &&
+			!line.StartsWith("@str.safe_s", StringComparison.Ordinal)).ToList();
+		Assert.That(printConstantLines.Count, Is.EqualTo(2));
+		var printLabels = printConstantLines.Select(line => line[..line.IndexOf(' ')]).
+			Distinct(StringComparer.Ordinal).ToList();
+		Assert.That(printLabels.Count, Is.EqualTo(2));
+	}
+
+	[Test]
+	public void LlvmLinkerWindowsNoPrintUsesKernel32WithoutCrt()
+	{
+		var args = GetLlvmClangArgs(Platform.Windows);
+		Assert.That(args, Does.Contain("-nostdlib"));
+		Assert.That(args, Does.Contain("-Wl,/ENTRY:main"));
+		Assert.That(args, Does.Contain("-lkernel32"));
+	}
+
+	[Test]
+	public void LlvmLinkerWindowsPrintUsesKernel32WithoutCrt()
+	{
+		var args = GetLlvmClangArgs(Platform.Windows, true);
+		Assert.That(args, Does.Contain("-nostdlib"));
+		Assert.That(args, Does.Contain("-Wl,/ENTRY:main"));
+		Assert.That(args, Does.Contain("-lkernel32"));
+	}
+
+	[Test]
+	public void LlvmLinkerWindowsNoPrintKeepsSizeFlags()
+	{
+		var args = GetLlvmClangArgs(Platform.Windows);
+		Assert.That(args, Does.Contain("-Oz"));
+		Assert.That(args, Does.Contain("/OPT:REF"));
+		Assert.That(args, Does.Contain("/OPT:ICF"));
+	}
+
+	[TestCase(Platform.Windows, "-Oz")]
+	[TestCase(Platform.Windows, "/OPT:REF")]
+	[TestCase(Platform.Windows, "/OPT:ICF")]
+	[TestCase(Platform.Linux, "-Oz")]
+	[TestCase(Platform.MacOS, "-Oz")]
+	public void LlvmLinkerUsesSizeOptimizationFlags(Platform platform, string expectedFlag)
+	{
+		var args = GetLlvmClangArgs(platform);
+		Assert.That(args, Does.Contain(expectedFlag));
+		Assert.That(args, Does.Not.Contain(" -O2 "));
+	}
+
+	private static string GetLlvmClangArgs(Platform platform, bool hasPrintCalls = false)
+	{
+		var method = typeof(LlvmLinker).GetMethod("BuildClangArgs",
+				System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ??
+			throw new InvalidOperationException("BuildClangArgs method not found");
+		var parameters = method.GetParameters();
+		var args = parameters.Length == 4
+			? new object[] { "input.ll", "output.exe", platform, hasPrintCalls }
+			: ["input.ll", "output.exe", platform];
+		return (string)(method.Invoke(null, args) ??
+			throw new InvalidOperationException("BuildClangArgs returned null"));
+	}
+
+	[Test]
+	public void WindowsPrintInstructionUsesWinApiWithoutPrintf()
+	{
+		var instructions = new List<Instruction>
+		{
+			new LoadConstantInstruction(Register.R0, new ValueInstance(NumberType, 5.0)),
+			new PrintInstruction("Result = ", Register.R0),
+			new ReturnInstruction(Register.R0)
+		};
+		var ir = compiler.CompileForPlatform("Run", instructions, Platform.Windows);
+		Assert.That(ir, Does.Contain("declare ptr @GetStdHandle(i32)"));
+		Assert.That(ir, Does.Contain("declare i32 @WriteFile(ptr, ptr, i32, ptr, ptr)"));
+		Assert.That(ir, Does.Contain("call ptr @GetStdHandle(i32 -11)"));
+		Assert.That(ir, Does.Contain("call i32 @WriteFile("));
+		Assert.That(ir, Does.Not.Contain("declare i32 @printf(ptr, ...)"));
+		Assert.That(ir, Does.Not.Contain("declare i32 @snprintf(ptr, i64, ptr, ...)"));
+	}
+
+	[Test]
+	public void WindowsLlvmModuleDefinesFltusedForNoCrtLinking()
+	{
+		var instructions = new List<Instruction>
+		{
+			new LoadConstantInstruction(Register.R0, new ValueInstance(NumberType, 1.5)),
+			new ReturnInstruction(Register.R0)
+		};
+		var ir = compiler.CompileForPlatform("Run", instructions, Platform.Windows);
+		Assert.That(ir, Does.Contain("@_fltused = global i32 0"));
+	}
+
+	[Test]
+	public void LinuxTargetOnWindowsHostAvoidsGnuLinkerEntryFlags()
+	{
+		if (!OperatingSystem.IsWindows())
+			return; //ncrunch: no coverage
+		var args = GetLlvmClangArgs(Platform.Linux);
+		Assert.That(args, Does.Not.Contain("-Wl,-e,main"));
+		Assert.That(args, Does.Not.Contain("--gc-sections"));
+		Assert.That(args, Does.Not.Contain("--strip-all"));
 	}
 }
