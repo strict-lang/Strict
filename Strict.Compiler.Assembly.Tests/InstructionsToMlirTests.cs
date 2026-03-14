@@ -709,7 +709,9 @@ public sealed class InstructionsToMlirTests
 		instructions.Add(new ReturnInstruction(Register.R2));
 		var mlir = compiler.CompileInstructions("ComplexBodyTest", instructions);
 		Assert.That(mlir, Does.Contain("scf.parallel"),
-			$"10K iterations × 20 body instructions = 200K complexity > {InstructionsToMlir.ComplexityThreshold} threshold → parallel");
+			$"10K iterations × 20 body instructions = 200K complexity > {
+				InstructionsToMlir.ComplexityThreshold
+			} threshold → parallel");
 	}
 
 	[Test]
@@ -730,16 +732,19 @@ public sealed class InstructionsToMlirTests
 		var mlir = compiler.CompileInstructions("SimpleBodyTest", instructions);
 		Assert.That(mlir, Does.Contain("scf.for"));
 		Assert.That(mlir, Does.Not.Contain("scf.parallel"),
-			$"50K iterations × 1 body instruction = 50K complexity < {InstructionsToMlir.ComplexityThreshold} threshold → sequential");
+			$"50K iterations × 1 body instruction = 50K complexity < {
+				InstructionsToMlir.ComplexityThreshold
+			} threshold → sequential");
 	}
 
 	private static string RewriteWindowsPrintRuntime(string llvmIr)
 	{
 		var rewriteMethod = typeof(MlirLinker).GetMethod("RewriteWindowsPrintRuntime",
 			BindingFlags.Static | BindingFlags.NonPublic);
-		Assert.That(rewriteMethod, Is.Not.Null,
-			"MlirLinker should expose a private RewriteWindowsPrintRuntime helper for Windows no-CRT print rewriting");
+		Assert.That(rewriteMethod, Is.Not.Null,	"MlirLinker should expose a private " +
+			"RewriteWindowsPrintRuntime helper for Windows no-CRT print rewriting");
 		var result = rewriteMethod!.Invoke(null, [llvmIr]);
-		return result as string ?? throw new InvalidOperationException("Expected rewritten LLVM IR string");
+		return result as string ??
+			throw new InvalidOperationException("Expected rewritten LLVM IR string");
 	}
 }
