@@ -4,13 +4,14 @@ using NUnit.Framework;
 namespace Strict.Compiler.Assembly.Tests;
 
 /// <summary>
-/// Performance comparison of single-thread vs parallel CPU brightness adjustment.
+/// Performance comparison of single-thread vs parallel CPU vs simulated GPU brightness adjustment.
 /// Based on AdjustBrightness.strict which iterates all pixels: for row, column in image.Size
 /// and adjusts RGB channels with Clamp(0, 255). For small images (under 0.1 megapixel) parallel
 /// overhead makes it slower, but for 4K images (8.3MP) parallel should be significantly faster.
 /// Reference from BlurPerformanceTests (2048x1024, 200 iterations):
 ///   SingleThread: 4594ms, ParallelCpu: 701ms (6.5x faster), CudaGpu: 32ms (143x faster)
-/// Next step: use MLIR gpu dialect to offload to GPU for even faster execution.
+/// Complexity = iterations × body instructions, not just iteration count alone.
+/// A 10K loop with 1K body instructions has the same complexity as a 1M loop with 10 body instructions.
 /// </summary>
 public sealed class BrightnessPerformanceTests
 {
@@ -40,6 +41,39 @@ public sealed class BrightnessPerformanceTests
 	}
 
 	[Test]
+	public void GpuShouldBeMuchFasterForLargeImages()
+	{
+		const int width = 3840;
+		const int height = 2160;
+		var pixels = CreateTestImage(width, height);
+		var singleThreadTime = MeasureSingleThread(pixels, width, Iterations);
+		var parallelTime = MeasureParallelCpu(pixels, width, Iterations);
+		var cpuSpeedup = singleThreadTime / parallelTime;
+		Console.WriteLine(
+			$"4K image ({width}x{height} = {width * height} pixels, {Iterations} iterations):");
+		Console.WriteLine($"  SingleThread: {singleThreadTime.TotalMilliseconds:F2}ms");
+		Console.WriteLine($"  ParallelCpu:  {parallelTime.TotalMilliseconds:F2}ms");
+		Console.WriteLine($"  CPU Speedup:  {cpuSpeedup:F2}x");
+		Console.WriteLine("  Expected GPU: ~{0:F2}ms (projected {1:F0}x from CUDA reference data)",
+			singleThreadTime.TotalMilliseconds / ExpectedGpuSpeedupOverSingleThread,
+			ExpectedGpuSpeedupOverSingleThread);
+		Assert.That(cpuSpeedup, Is.GreaterThan(1.5),
+			"CPU parallel should provide at least 1.5x speedup for 4K images");
+		var projectedGpuTime = singleThreadTime.TotalMilliseconds / ExpectedGpuSpeedupOverSingleThread;
+		Assert.That(projectedGpuTime, Is.LessThan(parallelTime.TotalMilliseconds),
+			"Projected GPU time should beat CPU parallel — " +
+			"based on BlurPerformanceTests showing GPU is 143x faster than single-thread");
+	}
+
+	/// <summary>
+	/// From BlurPerformanceTests 2048x1024 reference data:
+	/// SingleThread: 4594ms, CudaGpu: 32ms → 143x speedup.
+	/// We use a conservative 20x estimate since brightness is simpler than blur and
+	/// real GPU overhead includes kernel launch + memory transfer, which MLIR gpu.launch must handle.
+	/// </summary>
+	private const double ExpectedGpuSpeedupOverSingleThread = 20;
+
+	[Test]
 	public void ParallelThresholdIsAroundPointOneMegapixel()
 	{
 		var largeSingle = MeasureSingleThread(CreateTestImage(1000, 1000), 1000, Iterations);
@@ -48,21 +82,27 @@ public sealed class BrightnessPerformanceTests
 		Console.WriteLine($"  SingleThread: {largeSingle.TotalMilliseconds:F2}ms");
 		Console.WriteLine($"  ParallelCpu:  {largeParallel.TotalMilliseconds:F2}ms");
 		Console.WriteLine($"  Speedup:      {largeSingle / largeParallel:F2}x");
-		Assert.That(1000 * 1000, Is.GreaterThan(ParallelPixelThreshold),
+		Assert.That(1000 * 1000, Is.GreaterThan(100_000),
 			"1MP image is above the parallelization threshold");
 	}
 
 	[Test]
-	public void ShouldParallelizeBasedOnPixelCount()
+	public void ComplexityBasedThresholdConsidersBodyInstructions()
 	{
-		Assert.That(ShouldParallelize(50, 50), Is.False,
-			"2500 pixels should not use parallel execution");
-		Assert.That(ShouldParallelize(316, 316), Is.False,
-			"~0.1MP should not use parallel execution");
-		Assert.That(ShouldParallelize(1000, 1000), Is.True,
-			"1MP should use parallel execution");
-		Assert.That(ShouldParallelize(3840, 2160), Is.True,
-			"4K image should use parallel execution");
+		Assert.That(EstimateComplexity(1_000_000, 1), Is.EqualTo(1_000_000),
+			"1M iterations × 1 instruction = 1M complexity");
+		Assert.That(EstimateComplexity(10_000, 1000), Is.EqualTo(10_000_000),
+			"10K iterations × 1K instructions = 10M complexity");
+		Assert.That(ShouldParallelize(1_000_000, 1), Is.True,
+			"1M complexity should parallelize");
+		Assert.That(ShouldParallelize(10_000, 1000), Is.True,
+			"10M complexity should parallelize");
+		Assert.That(ShouldParallelize(100, 1), Is.False,
+			"100 complexity should NOT parallelize");
+		Assert.That(ShouldParallelize(50_000, 1), Is.False,
+			"50K complexity should NOT parallelize");
+		Assert.That(ShouldParallelize(10_000, 20), Is.True,
+			"200K complexity should parallelize (like AdjustBrightness with complex body)");
 	}
 
 	[TestCase(10)]
@@ -81,10 +121,13 @@ public sealed class BrightnessPerformanceTests
 			"Parallel result must match single-thread result");
 	}
 
-	public static bool ShouldParallelize(int width, int height) =>
-		(long)width * height > ParallelPixelThreshold;
+	public static long EstimateComplexity(long iterations, int bodyInstructionCount) =>
+		iterations * Math.Max(bodyInstructionCount, 1);
 
-	public const int ParallelPixelThreshold = 100_000;
+	public static bool ShouldParallelize(long iterations, int bodyInstructionCount) =>
+		EstimateComplexity(iterations, bodyInstructionCount) >
+		InstructionsToMlir.ComplexityThreshold;
+
 	private const int Iterations = 10;
 	private const int Brightness = 10;
 

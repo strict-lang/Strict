@@ -13,10 +13,16 @@ image processing operations.
 - **Three compiler backends**: MLIR (default), LLVM IR, and NASM — all generating 2-4KB executables
 - **scf.for loops**: Range-based loops in Strict (`for row, column in image.Size`) now compile to
   `scf.for` in MLIR
-- **scf.parallel auto-detection**: Loops with >100K iterations automatically emit `scf.parallel`
-  instead of `scf.for`, enabling the MLIR pass pipeline to optimize for multiple CPU cores
+- **scf.parallel auto-detection**: Loops automatically emit `scf.parallel` when their total
+  complexity (iterations × body instruction count) exceeds 100K, enabling the MLIR pass pipeline
+  to optimize for multiple CPU cores or GPU offloading
+- **Complexity-based threshold**: A 10K iteration loop with 20 body instructions (200K complexity)
+  parallelizes, while a 50K iteration loop with 1 body instruction (50K complexity) stays sequential.
+  This correctly captures that a complex loop body benefits more from parallelism than a simple one.
 - **Performance validated**: BrightnessPerformanceTests confirms 2.5x+ speedup for 4K images
   (3840x2160) using parallel CPU execution vs single-thread
+- **GPU projection**: Based on BlurPerformanceTests CUDA reference data (143x vs single-thread),
+  conservatively projected 20x GPU speedup for brightness adjustment via MLIR gpu.launch
 - **Lowering pipeline**: mlir-opt includes `--convert-scf-to-cf` to lower SCF constructs to
   control flow before LLVM lowering
 
@@ -45,9 +51,16 @@ Phase 1:  scf.parallel → scf-to-openmp → openmp-to-llvm → LLVM IR → clan
 ```
 
 ### Complexity Threshold
-- Loops below 100K iterations: remain as `scf.for` (sequential)
-- Loops above 100K iterations: `scf.parallel` → OpenMP threads
-- This threshold matches the ~0.1 megapixel boundary where parallelization overhead breaks even
+- Total complexity = iterations × body instruction count
+- Complexity below 100K: remain as `scf.for` (sequential)
+- Complexity above 100K: `scf.parallel` → OpenMP threads
+- Examples:
+  - 1M iterations × 1 instruction = 1M complexity → parallel
+  - 10K iterations × 20 instructions = 200K complexity → parallel
+  - 50K iterations × 1 instruction = 50K complexity → sequential
+  - 100 iterations × 1000 instructions = 100K complexity → parallel (perfect GPU candidate)
+- This correctly captures that a loop with a complex body (like image processing with multiple
+  operations per pixel) benefits more from parallelism even at lower iteration counts
 
 ## Phase 2: GPU Offloading via MLIR GPU Dialect
 
@@ -82,14 +95,18 @@ scf.parallel → gpu-map-parallel-loops → gpu-kernel-outlining
 **Goal**: The Strict compiler automatically decides the fastest execution strategy per loop.
 
 ### Complexity Analysis
-The compiler should track instruction complexity to decide optimization path:
+The compiler tracks `iterations × body instruction count` as total complexity to decide:
 
-| Complexity Level | Pixel Count | Strategy | Example |
-|-----------------|-------------|----------|---------|
-| Trivial | < 10K | Sequential CPU | Thumbnail processing |
-| Low | 10K - 100K | Sequential CPU | Small images |
-| Medium | 100K - 1M | Parallel CPU (OpenMP) | HD images |
-| High | > 1M | GPU offload | 4K/8K images |
+| Total Complexity | Strategy | Example |
+|-----------------|----------|---------|
+| < 10K | Sequential CPU | Thumbnail processing, simple inner loops |
+| 10K - 100K | Sequential CPU | Small images with simple per-pixel ops |
+| 100K - 10M | Parallel CPU (OpenMP) | HD images, moderate body complexity |
+| > 10M | GPU offload | 4K/8K images, complex per-pixel processing |
+
+Key insight: A 10K iteration loop with 1K body instructions (10M complexity) is a better
+GPU candidate than a 1M iteration loop with 1 instruction (1M complexity), because the
+GPU kernel launch overhead is amortized across more per-thread work.
 
 ### Parallelizability Detection
 Not all loops can be parallelized. The compiler must verify:

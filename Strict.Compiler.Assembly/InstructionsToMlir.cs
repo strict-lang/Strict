@@ -86,7 +86,7 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 			: "";
 		var lines = new List<string> { $"  func.func @{methodName}({paramSignature}) -> f64 {{" };
 		for (var index = 0; index < instructions.Count; index++)
-			EmitInstruction(instructions[index], lines, context, compiledMethods, index);
+			EmitInstruction(instructions, index, lines, context, compiledMethods);
 		if (!instructions.Any(instr => instr is ReturnInstruction))
 		{ //ncrunch: no coverage start
 			lines.Add("    %zero = arith.constant 0.0 : f64");
@@ -96,9 +96,11 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 		return new CompiledFunction(string.Join("\n", lines), context.StringConstants);
 	}
 
-	private static void EmitInstruction(Instruction instruction, List<string> lines,
-		EmitContext context, Dictionary<string, CompiledMethodInfo>? compiledMethods, int index)
+	private static void EmitInstruction(List<Instruction> instructions, int index,
+		List<string> lines, EmitContext context,
+		Dictionary<string, CompiledMethodInfo>? compiledMethods)
 	{
+		var instruction = instructions[index];
 		if (context.JumpTargets.Contains(index))
 			lines.Add($"  ^bb{index}:");
 		switch (instruction)
@@ -134,7 +136,7 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 			EmitJumpToId(jumpToId, lines, context, index); //ncrunch: no coverage
 			break; //ncrunch: no coverage
 		case LoopBeginInstruction loopBegin:
-			EmitLoopBegin(loopBegin, lines, context);
+			EmitLoopBegin(loopBegin, lines, context, instructions, index);
 			break;
 		case LoopEndInstruction:
 			EmitLoopEnd(lines, context);
@@ -388,7 +390,7 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 	} //ncrunch: no coverage end
 
 	private static void EmitLoopBegin(LoopBeginInstruction loopBegin, List<string> lines,
-		EmitContext context)
+		EmitContext context, List<Instruction> instructions, int loopBeginIndex)
 	{
 		if (!loopBegin.IsRange)
 			return;
@@ -400,7 +402,8 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 		lines.Add($"    {startIndex} = arith.fptosi {startValue} : f64 to index");
 		lines.Add($"    {endIndex} = arith.fptosi {endValue} : f64 to index");
 		lines.Add($"    {step} = arith.constant 1 : index");
-		var isParallel = ShouldEmitParallelLoop(loopBegin, context);
+		var bodyInstructionCount = CountLoopBodyInstructions(instructions, loopBeginIndex);
+		var isParallel = ShouldEmitParallelLoop(loopBegin, context, bodyInstructionCount);
 		var inductionVar = context.NextTemp();
 		context.LoopStack.Push(new LoopState(startIndex, endIndex, step, isParallel, inductionVar));
 		if (isParallel)
@@ -409,15 +412,29 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 			lines.Add($"    scf.for {inductionVar} = {startIndex} to {endIndex} step {step} {{");
 	}
 
-	private static bool ShouldEmitParallelLoop(LoopBeginInstruction loopBegin, EmitContext context)
+	private static int CountLoopBodyInstructions(List<Instruction> instructions, int loopBeginIndex)
+	{
+		var bodyCount = 0;
+		for (var index = loopBeginIndex + 1; index < instructions.Count; index++)
+		{
+			if (instructions[index] is LoopEndInstruction)
+				break;
+			bodyCount++;
+		}
+		return Math.Max(bodyCount, 1);
+	}
+
+	private static bool ShouldEmitParallelLoop(LoopBeginInstruction loopBegin, EmitContext context,
+		int bodyInstructionCount)
 	{
 		if (!loopBegin.IsRange || loopBegin.EndIndex == null)
 			return false;
-		return context.RegisterConstants.TryGetValue(loopBegin.EndIndex.Value, out var endNumber) &&
-			endNumber > ParallelPixelThreshold;
+		if (!context.RegisterConstants.TryGetValue(loopBegin.EndIndex.Value, out var iterationCount))
+			return false;
+		return iterationCount * bodyInstructionCount > ComplexityThreshold;
 	}
 
-	private const double ParallelPixelThreshold = 100_000;
+	public const double ComplexityThreshold = 100_000;
 
 	private static void EmitLoopEnd(List<string> lines, EmitContext context)
 	{

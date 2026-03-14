@@ -686,6 +686,53 @@ public sealed class InstructionsToMlirTests
 			"MLIR opt should convert SCF for-loops to control flow");
 	}
 
+	[Test]
+	public void ComplexBodyWithFewerIterationsStillParallelizes()
+	{
+		var startRegister = Register.R0;
+		var endRegister = Register.R1;
+		var loopBegin = new LoopBeginInstruction(startRegister, endRegister);
+		var bodyInstructions = new List<Instruction>();
+		for (var bodyIndex = 0; bodyIndex < 20; bodyIndex++)
+			bodyInstructions.Add(new BinaryInstruction(InstructionType.Add, Register.R2, Register.R3,
+				Register.R4));
+		var instructions = new List<Instruction>
+		{
+			new LoadConstantInstruction(startRegister, new ValueInstance(NumberType, 0.0)),
+			new LoadConstantInstruction(endRegister, new ValueInstance(NumberType, 10000.0)),
+			new LoadConstantInstruction(Register.R2, new ValueInstance(NumberType, 1.0)),
+			new LoadConstantInstruction(Register.R3, new ValueInstance(NumberType, 2.0)),
+			loopBegin
+		};
+		instructions.AddRange(bodyInstructions);
+		instructions.Add(new LoopEndInstruction(bodyInstructions.Count) { Begin = loopBegin });
+		instructions.Add(new ReturnInstruction(Register.R2));
+		var mlir = compiler.CompileInstructions("ComplexBodyTest", instructions);
+		Assert.That(mlir, Does.Contain("scf.parallel"),
+			"10K iterations × 20 body instructions = 200K complexity > 100K threshold → parallel");
+	}
+
+	[Test]
+	public void SimpleBodyWithManyIterationsDoesNotParallelizeIfComplexityBelowThreshold()
+	{
+		var startRegister = Register.R0;
+		var endRegister = Register.R1;
+		var loopBegin = new LoopBeginInstruction(startRegister, endRegister);
+		var instructions = new List<Instruction>
+		{
+			new LoadConstantInstruction(startRegister, new ValueInstance(NumberType, 0.0)),
+			new LoadConstantInstruction(endRegister, new ValueInstance(NumberType, 50000.0)),
+			loopBegin,
+			new LoadConstantInstruction(Register.R2, new ValueInstance(NumberType, 1.0)),
+			new LoopEndInstruction(1) { Begin = loopBegin },
+			new ReturnInstruction(Register.R2)
+		};
+		var mlir = compiler.CompileInstructions("SimpleBodyTest", instructions);
+		Assert.That(mlir, Does.Contain("scf.for"));
+		Assert.That(mlir, Does.Not.Contain("scf.parallel"),
+			"50K iterations × 1 body instruction = 50K complexity < 100K threshold → sequential");
+	}
+
 	private static string RewriteWindowsPrintRuntime(string llvmIr)
 	{
 		var rewriteMethod = typeof(MlirLinker).GetMethod("RewriteWindowsPrintRuntime",
