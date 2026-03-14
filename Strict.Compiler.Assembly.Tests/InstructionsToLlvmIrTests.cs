@@ -585,6 +585,35 @@ public sealed class InstructionsToLlvmIrTests
 	}
 
 	[Test]
+	public void PixelStyleTypeWithThreeMembersAndDivide()
+	{
+		var type = new Type(TestPackage.Instance, new TypeLines("LlvmPixel",
+		"has red Number",
+		"has green Number",
+		"has blue Number",
+		"Brighten Number",
+		"\tred + green",
+		"Darken Number",
+		"\tred / 2",
+		"Run Number",
+		"\tconstant pixel = LlvmPixel(100, 150, 200)",
+		"\tpixel.Brighten")).ParseMembersAndMethods(new MethodExpressionParser());
+		var runMethod = type.Methods.First(method => method.Name == Method.Run);
+		var brightenMethod = type.Methods.First(method => method.Name == "Brighten");
+		var runInstructions = new BytecodeGenerator(new MethodCall(runMethod)).Generate();
+		var brightenInstructions = GenerateMethodInstructions(brightenMethod);
+		var precompiled = new Dictionary<string, List<Instruction>>
+		{
+			[BytecodeDeserializer.BuildMethodInstructionKey(type.Name, brightenMethod.Name,
+			brightenMethod.Parameters.Count)] = brightenInstructions
+		};
+		var ir = compiler.CompileForPlatform(type.Name, runInstructions, Platform.Linux, precompiled);
+		Assert.That(ir, Does.Contain("define double @LlvmPixel_Brighten_0("));
+		Assert.That(ir, Does.Contain("fadd double"));
+		Assert.That(ir, Does.Contain("call double @LlvmPixel_Brighten_0("));
+	}
+
+	[Test]
 	public void ToolRunnerFindToolReturnsNullForMissingTool() =>
 		Assert.That(ToolRunner.FindTool("nonexistent_tool_xyz"), Is.Null);
 

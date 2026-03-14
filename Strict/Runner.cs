@@ -22,7 +22,7 @@ public sealed class Runner : IDisposable
 	/// the type matching the directory name is used as the entry point.
 	/// </summary>
 	public Runner(Package basePackage, string strictFilePath,
-		CompilerBackend backend = CompilerBackend.LlvmDefault, bool enableTestsAndDetailedOutput = false)
+		CompilerBackend backend = CompilerBackend.MlirDefault, bool enableTestsAndDetailedOutput = false)
 	{
 		this.backend = backend;
 		this.enableTestsAndDetailedOutput = enableTestsAndDetailedOutput;
@@ -304,16 +304,18 @@ public sealed class Runner : IDisposable
 	}
 
 	/// <summary>
-	/// Generates a platform-specific executable from the compiled instructions. Uses the LLVM IR
-	/// backend when explicitly requested via -llvm flag, otherwise uses the NASM + gcc/clang
-	/// pipeline. LLVM is opt-in until feature parity is reached.
+	/// Generates a platform-specific executable from the compiled instructions. Uses MLIR when
+	/// -mlir is specified, LLVM IR when -llvm is specified, otherwise NASM + gcc/clang pipeline.
+	/// LLVM and MLIR are opt-in until feature parity is reached.
 	/// Throws <see cref="ToolNotFoundException"/> if required tools are missing.
 	/// </summary>
 	private Runner SavePlatformExecutable(List<Instruction> optimizedInstructions, Platform platform,
 		IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods) =>
-		backend == CompilerBackend.LlvmDefault
-			? SaveLlvmExecutable(optimizedInstructions, platform, precompiledMethods)
-			: SaveNasmExecutable(optimizedInstructions, platform, precompiledMethods);
+		backend == CompilerBackend.MlirDefault
+			? SaveMlirExecutable(optimizedInstructions, platform, precompiledMethods)
+			: backend == CompilerBackend.Llvm
+				? SaveLlvmExecutable(optimizedInstructions, platform, precompiledMethods)
+				: SaveNasmExecutable(optimizedInstructions, platform, precompiledMethods);
 
 	private Runner SaveLlvmExecutable(List<Instruction> optimizedInstructions, Platform platform,
 		IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods)
@@ -327,9 +329,21 @@ public sealed class Runner : IDisposable
 		var exeFilePath = new LlvmLinker().CreateExecutable(llvmPath, platform,
 			llvmCompiler.IsPlatformUsingStdLibAndHasPrintInstructions(platform, optimizedInstructions,
 				precompiledMethods));
-		Console.WriteLine("Compiled " + mainType.Name + " via LLVM in " +
-			TimeSpan.FromTicks(stepTimes.Sum()).ToString(@"s\.ffffff") + "s to " + platform +
-			" executable of " + new FileInfo(exeFilePath).Length.ToString("N0") + " bytes to: " + exeFilePath);
+		PrintCompilationSummary("LLVM", platform, exeFilePath);
+		return this;
+	}
+
+	private Runner SaveMlirExecutable(List<Instruction> optimizedInstructions, Platform platform,
+		IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods)
+	{
+		var mlirCompiler = new InstructionsToMlir();
+		var mlirText = mlirCompiler.CompileForPlatform(mainType.Name, optimizedInstructions, platform,
+			precompiledMethods);
+		var mlirPath = Path.Combine(currentFolder, mainType.Name + ".mlir");
+		File.WriteAllText(mlirPath, mlirText);
+		Console.WriteLine("Saved " + platform + " MLIR to: " + mlirPath);
+		var exeFilePath = new MlirLinker().CreateExecutable(mlirPath, platform);
+		PrintCompilationSummary("MLIR", platform, exeFilePath);
 		return this;
 	}
 
@@ -344,11 +358,15 @@ public sealed class Runner : IDisposable
 		Console.WriteLine("Saved " + platform + " NASM assembly to: " + asmPath);
 		var hasPrint = compiler.HasPrintInstructions(optimizedInstructions);
 		var exeFilePath = new NativeExecutableLinker().CreateExecutable(asmPath, platform, hasPrint);
-		Console.WriteLine("Compiled " + mainType.Name + " in " +
-			TimeSpan.FromTicks(stepTimes.Sum()).ToString(@"s\.ffffff") + "s to " + platform +
-			" executable of " + new FileInfo(exeFilePath).Length.ToString("N0") + " bytes to: " + exeFilePath);
+		PrintCompilationSummary("NASM", platform, exeFilePath);
 		return this;
 	}
+
+	private void PrintCompilationSummary(string backend, Platform platform, string exeFilePath) =>
+		Console.WriteLine("Compiled " + mainType.Name + " via " + backend + " in " +
+			TimeSpan.FromTicks(stepTimes.Sum()).ToString(@"s\.ffffff") + "s to " + platform +
+			" executable of " + new FileInfo(exeFilePath).Length.ToString("N0") +
+			" bytes to: " + exeFilePath);
 
 	private IReadOnlyList<TypeBytecodeData> BuildTypeBytecodeData(
 		List<Instruction> optimizedRunInstructions)

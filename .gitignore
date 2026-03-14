@@ -133,4 +133,6 @@ ipch/
 *.exe
 *.asm
 *.ll
+*.mlir
+*.llvm.mlir
 *.obj

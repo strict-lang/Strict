@@ -38,7 +38,8 @@ public static class Program
 		Console.WriteLine("  -Windows     Compile to a native Windows x64 executable (.exe)");
 		Console.WriteLine("  -Linux       Compile to a native Linux x64 executable");
 		Console.WriteLine("  -MacOS       Compile to a native macOS x64 executable");
-		Console.WriteLine("  -llvm        Force LLVM IR backend (default, requires clang: https://releases.llvm.org)");
+		Console.WriteLine("  -mlir        Force MLIR backend (default, requires mlir-opt + mlir-translate + clang)");
+		Console.WriteLine("  -llvm        Force LLVM IR backend (fallback, requires clang: https://releases.llvm.org)");
 		Console.WriteLine("  -nasm        Force NASM backend (fallback, less optimized, requires nasm + gcc/clang)");
 		Console.WriteLine("  -forceStrictBinary Force .strictbinary generation, normally skipped using -Windows|-Linux|-MacOS");
 		Console.WriteLine("  -diagnostics Output detailed step-by-step logs and timing for each pipeline stage");
@@ -86,7 +87,9 @@ public static class Program
 #endif
 			var backend = options.Contains("-nasm")
 				? CompilerBackend.Nasm
-				: CompilerBackend.LlvmDefault;
+				: options.Contains("-nasm")
+				 	? CompilerBackend.Llvm
+					: CompilerBackend.MlirDefault;
 			using var runner = new Runner(basePackage, filePath, backend, diagnostics);
 			if (nonFlagArgs.Length == 1 && nonFlagArgs[0].Contains('('))
 				runner.RunExpression(nonFlagArgs[0]);
