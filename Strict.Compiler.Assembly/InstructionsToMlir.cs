@@ -31,21 +31,28 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 	{
 		var hasPrint = instructions.OfType<PrintInstruction>().Any();
 		var methodInfos = CollectMethods([.. instructions], precompiledMethods);
-		var module = "module {\n";
-		if (hasPrint ||
-			methodInfos.Values.Any(info => info.Instructions.OfType<PrintInstruction>().Any()))
-			module += BuildPrintfDeclarations(); //ncrunch: no coverage
 		var allStringConstants = new List<(string Name, string Text, int ByteLen)>();
 		var entryFunction = BuildFunction(methodName, [], [.. instructions], methodInfos);
 		allStringConstants.AddRange(entryFunction.StringConstants);
-		module += entryFunction.Text;
+		var hasGpuOps = entryFunction.UsesGpu;
+		var methodFunctions = new List<CompiledFunction>();
 		foreach (var methodInfo in methodInfos.Values)
 		{
 			var methodFunction = BuildFunction(methodInfo.Symbol, methodInfo.ParameterNames,
 				methodInfo.Instructions, methodInfos);
 			allStringConstants.AddRange(methodFunction.StringConstants);
-			module += "\n" + methodFunction.Text;
+			hasGpuOps |= methodFunction.UsesGpu;
+			methodFunctions.Add(methodFunction);
 		}
+		var module = hasGpuOps
+			? "module attributes {gpu.container_module} {\n"
+			: "module {\n";
+		if (hasPrint ||
+			methodInfos.Values.Any(info => info.Instructions.OfType<PrintInstruction>().Any()))
+			module += BuildPrintfDeclarations(); //ncrunch: no coverage
+		module += entryFunction.Text;
+		foreach (var methodFunction in methodFunctions)
+			module += "\n" + methodFunction.Text;
 		if (allStringConstants.Count > 0)
 			module += "\n" + BuildStringGlobals(allStringConstants);
 		module += "\n" + BuildEntryPoint(methodName);
@@ -64,7 +71,7 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 			(precompiledMethods?.Values.Any(HasPrintInstructions) ?? false));
 
 	private readonly record struct CompiledFunction(string Text,
-		List<(string Name, string Text, int ByteLen)> StringConstants);
+		List<(string Name, string Text, int ByteLen)> StringConstants, bool UsesGpu = false);
 
 	private static string BuildPrintfDeclarations() =>
 		"  llvm.func @printf(!llvm.ptr, ...) -> i32\n";
@@ -93,7 +100,7 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 			lines.Add("    return %zero : f64");
 		} //ncrunch: no coverage end
 		lines.Add("  }");
-		return new CompiledFunction(string.Join("\n", lines), context.StringConstants);
+		return new CompiledFunction(string.Join("\n", lines), context.StringConstants, context.UsesGpu);
 	}
 
 	private static void EmitInstruction(List<Instruction> instructions, int index,
@@ -426,27 +433,38 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 	private static void EmitGpuLaunchBegin(List<string> lines, EmitContext context,
 		string startIndex, string endIndex, string step, string inductionVar)
 	{
+		context.UsesGpu = true;
 		var one = context.NextTemp();
 		var numElements = context.NextTemp();
 		var blockSize = context.NextTemp();
 		var gridSize = context.NextTemp();
+		var hostBuffer = context.NextTemp();
+		var deviceBuffer = context.NextTemp();
 		lines.Add($"    {one} = arith.constant 1 : index");
 		lines.Add($"    {numElements} = arith.subi {endIndex}, {startIndex} : index");
 		lines.Add($"    {blockSize} = arith.constant {GpuBlockSize} : index");
 		lines.Add($"    {gridSize} = arith.ceildivui {numElements}, {blockSize} : index");
-		lines.Add($"    gpu.launch blocks({gridSize}, {one}, {one}) " +
-			$"threads({blockSize}, {one}, {one}) {{");
-		var blockIdX = context.NextTemp();
-		var threadIdX = context.NextTemp();
-		var globalId = context.NextTemp();
-		lines.Add($"      {blockIdX} = gpu.block_id x");
-		lines.Add($"      {threadIdX} = gpu.thread_id x");
+		lines.Add($"    {hostBuffer} = memref.alloc({numElements}) : {GpuBufferType}");
+		lines.Add($"    {deviceBuffer} = gpu.alloc({numElements}) : {GpuBufferType}");
 		lines.Add(
-			$"      {globalId} = arith.addi {blockIdX}, {threadIdX} : index");
+			$"    gpu.memcpy {deviceBuffer}, {hostBuffer} : {GpuBufferType}, {GpuBufferType}");
+		lines.Add(
+			$"    gpu.launch blocks(%bx, %by, %bz) in (%grid_x = {gridSize}, %grid_y = {one}, %grid_z = {one})");
+		lines.Add(
+			$"               threads(%tx, %ty, %tz) in (%block_x = {blockSize}, %block_y = {one}, %block_z = {one}) {{");
+		var baseId = context.NextTemp();
+		var globalId = context.NextTemp();
+		var boundsCheck = context.NextTemp();
+		lines.Add($"      {baseId} = arith.muli %bx, %block_x : index");
+		lines.Add($"      {globalId} = arith.addi {baseId}, %tx : index");
 		lines.Add($"      {inductionVar} = arith.addi {startIndex}, {globalId} : index");
+		lines.Add($"      {boundsCheck} = arith.cmpi ult, {globalId}, {numElements} : index");
+		lines.Add($"      scf.if {boundsCheck} {{");
+		context.GpuBufferState = new GpuBufferInfo(hostBuffer, deviceBuffer, numElements);
 	}
 
 	private const int GpuBlockSize = 256;
+	private const string GpuBufferType = "memref<?xf64>";
 
 	private static int CountLoopBodyInstructions(List<Instruction> instructions, int loopBeginIndex)
 	{
@@ -486,8 +504,18 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 		switch (loopState.Strategy)
 		{
 		case LoopStrategy.Gpu:
+			lines.Add("      }");
 			lines.Add("      gpu.terminator");
 			lines.Add("    }");
+			if (context.GpuBufferState != null)
+			{
+				var buffer = context.GpuBufferState;
+				lines.Add(
+					$"    gpu.memcpy {buffer.HostBuffer}, {buffer.DeviceBuffer} : {GpuBufferType}, {GpuBufferType}");
+				lines.Add($"    gpu.dealloc {buffer.DeviceBuffer} : {GpuBufferType}");
+				lines.Add($"    memref.dealloc {buffer.HostBuffer} : {GpuBufferType}");
+				context.GpuBufferState = null;
+			}
 			break;
 		case LoopStrategy.CpuParallel:
 			lines.Add("      scf.reduce");
@@ -503,6 +531,9 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 
 	private sealed record LoopState(string StartIndex, string EndIndex, string Step,
 		LoopStrategy Strategy, string InductionVar);
+
+	private sealed record GpuBufferInfo(string HostBuffer, string DeviceBuffer,
+		string NumElements);
 
 	private static string BuildEntryPoint(string methodName) =>
 		"  func.func @main() -> i32 {\n" +
@@ -605,5 +636,7 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 		public List<(string Name, string Text, int ByteLen)> StringConstants { get; } = [];
 		public Stack<LoopState> LoopStack { get; } = new();
 		public Dictionary<Register, double> RegisterConstants { get; } = new();
+		public bool UsesGpu { get; set; }
+		public GpuBufferInfo? GpuBufferState { get; set; }
 	}
 }

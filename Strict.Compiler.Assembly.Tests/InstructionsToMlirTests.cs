@@ -770,12 +770,12 @@ public sealed class InstructionsToMlirTests
 		instructions.Add(new LoopEndInstruction(bodyInstructions.Count) { Begin = loopBegin });
 		instructions.Add(new ReturnInstruction(Register.R2));
 		var mlir = compiler.CompileInstructions("GpuLaunchTest", instructions);
-		Assert.That(mlir, Does.Contain("gpu.launch"),
+		Assert.That(mlir, Does.Contain("gpu.launch blocks"),
 			"921600 iterations × 20 body = 18.4M complexity > 10M GPU threshold → gpu.launch");
 	}
 
 	[Test]
-	public void GpuLaunchContainsBlockAndGridDimensions()
+	public void GpuLaunchUsesCorrectGlobalIdComputation()
 	{
 		var startRegister = Register.R0;
 		var endRegister = Register.R1;
@@ -794,10 +794,100 @@ public sealed class InstructionsToMlirTests
 		instructions.Add(new LoopEndInstruction(30) { Begin = loopBegin });
 		instructions.Add(new ReturnInstruction(Register.R2));
 		var mlir = compiler.CompileInstructions("GpuGridTest", instructions);
-		Assert.That(mlir, Does.Contain("gpu.launch blocks"),
-			"GPU launch must specify grid/block dimensions");
+		Assert.That(mlir, Does.Contain("arith.muli %bx, %block_x : index"),
+			"Global thread ID must be: blockIdx * blockDim + threadIdx");
+		Assert.That(mlir, Does.Contain("arith.addi"),
+			"Must add threadIdx to blockIdx*blockDim for global ID");
+	}
+
+	[Test]
+	public void GpuLaunchHasBoundsCheckAndTerminator()
+	{
+		var startRegister = Register.R0;
+		var endRegister = Register.R1;
+		var loopBegin = new LoopBeginInstruction(startRegister, endRegister);
+		var instructions = new List<Instruction>
+		{
+			new LoadConstantInstruction(startRegister, new ValueInstance(NumberType, 0.0)),
+			new LoadConstantInstruction(endRegister, new ValueInstance(NumberType, 8294400.0)),
+			new LoadConstantInstruction(Register.R2, new ValueInstance(NumberType, 1.0)),
+			new LoadConstantInstruction(Register.R3, new ValueInstance(NumberType, 2.0)),
+			loopBegin
+		};
+		for (var bodyIndex = 0; bodyIndex < 30; bodyIndex++)
+			instructions.Add(new BinaryInstruction(InstructionType.Add, Register.R2, Register.R3,
+				Register.R4));
+		instructions.Add(new LoopEndInstruction(30) { Begin = loopBegin });
+		instructions.Add(new ReturnInstruction(Register.R2));
+		var mlir = compiler.CompileInstructions("GpuBoundsTest", instructions);
+		Assert.That(mlir, Does.Contain("arith.cmpi ult"),
+			"GPU kernel must bounds-check: globalId < numElements");
+		Assert.That(mlir, Does.Contain("scf.if"),
+			"Body must be guarded by bounds check scf.if");
 		Assert.That(mlir, Does.Contain("gpu.terminator"),
 			"GPU launch body must end with gpu.terminator");
+	}
+
+	[Test]
+	public void GpuLaunchIncludesMemoryManagement()
+	{
+		var startRegister = Register.R0;
+		var endRegister = Register.R1;
+		var loopBegin = new LoopBeginInstruction(startRegister, endRegister);
+		var instructions = new List<Instruction>
+		{
+			new LoadConstantInstruction(startRegister, new ValueInstance(NumberType, 0.0)),
+			new LoadConstantInstruction(endRegister, new ValueInstance(NumberType, 8294400.0)),
+			new LoadConstantInstruction(Register.R2, new ValueInstance(NumberType, 1.0)),
+			new LoadConstantInstruction(Register.R3, new ValueInstance(NumberType, 2.0)),
+			loopBegin
+		};
+		for (var bodyIndex = 0; bodyIndex < 30; bodyIndex++)
+			instructions.Add(new BinaryInstruction(InstructionType.Add, Register.R2, Register.R3,
+				Register.R4));
+		instructions.Add(new LoopEndInstruction(30) { Begin = loopBegin });
+		instructions.Add(new ReturnInstruction(Register.R2));
+		var mlir = compiler.CompileInstructions("GpuMemoryTest", instructions);
+		Assert.That(mlir, Does.Contain("memref.alloc"),
+			"GPU pipeline must allocate host buffer");
+		Assert.That(mlir, Does.Contain("gpu.alloc"),
+			"GPU pipeline must allocate device buffer");
+		Assert.That(mlir, Does.Contain("gpu.memcpy"),
+			"GPU pipeline must copy data between host and device");
+		Assert.That(mlir, Does.Contain("gpu.dealloc"),
+			"GPU pipeline must free device buffer after kernel");
+		Assert.That(mlir, Does.Contain("memref.dealloc"),
+			"GPU pipeline must free host buffer after copy-back");
+	}
+
+	[Test]
+	public void GpuLaunchUsesProperRegionArguments()
+	{
+		var startRegister = Register.R0;
+		var endRegister = Register.R1;
+		var loopBegin = new LoopBeginInstruction(startRegister, endRegister);
+		var instructions = new List<Instruction>
+		{
+			new LoadConstantInstruction(startRegister, new ValueInstance(NumberType, 0.0)),
+			new LoadConstantInstruction(endRegister, new ValueInstance(NumberType, 8294400.0)),
+			new LoadConstantInstruction(Register.R2, new ValueInstance(NumberType, 1.0)),
+			new LoadConstantInstruction(Register.R3, new ValueInstance(NumberType, 2.0)),
+			loopBegin
+		};
+		for (var bodyIndex = 0; bodyIndex < 30; bodyIndex++)
+			instructions.Add(new BinaryInstruction(InstructionType.Add, Register.R2, Register.R3,
+				Register.R4));
+		instructions.Add(new LoopEndInstruction(30) { Begin = loopBegin });
+		instructions.Add(new ReturnInstruction(Register.R2));
+		var mlir = compiler.CompileInstructions("GpuRegionArgsTest", instructions);
+		Assert.That(mlir, Does.Contain("blocks(%bx, %by, %bz) in (%grid_x ="),
+			"gpu.launch must use named block region arguments");
+		Assert.That(mlir, Does.Contain("threads(%tx, %ty, %tz) in (%block_x ="),
+			"gpu.launch must use named thread region arguments");
+		Assert.That(mlir, Does.Not.Contain("gpu.block_id"),
+			"Must NOT use gpu.block_id ops — use gpu.launch region args instead");
+		Assert.That(mlir, Does.Not.Contain("gpu.thread_id"),
+			"Must NOT use gpu.thread_id ops — use gpu.launch region args instead");
 	}
 
 	[Test]
@@ -845,6 +935,49 @@ public sealed class InstructionsToMlirTests
 			"GPU pipeline must lower to NVVM for NVIDIA GPUs");
 		Assert.That(args, Does.Contain("--gpu-to-llvm"),
 			"GPU pipeline must convert GPU ops to LLVM calls");
+		Assert.That(args, Does.Contain("--convert-memref-to-llvm"),
+			"GPU pipeline must lower memref ops for host/device memory");
+	}
+
+	[Test]
+	public void GpuCompileForPlatformAddsContainerModuleAttribute()
+	{
+		var startRegister = Register.R0;
+		var endRegister = Register.R1;
+		var loopBegin = new LoopBeginInstruction(startRegister, endRegister);
+		var bodyInstructions = new List<Instruction>();
+		for (var bodyIndex = 0; bodyIndex < 20; bodyIndex++)
+			bodyInstructions.Add(new BinaryInstruction(InstructionType.Add, Register.R2, Register.R3,
+				Register.R4));
+		var instructions = new List<Instruction>
+		{
+			new LoadConstantInstruction(startRegister, new ValueInstance(NumberType, 0.0)),
+			new LoadConstantInstruction(endRegister, new ValueInstance(NumberType, 921600.0)),
+			new LoadConstantInstruction(Register.R2, new ValueInstance(NumberType, 1.0)),
+			new LoadConstantInstruction(Register.R3, new ValueInstance(NumberType, 2.0)),
+			loopBegin
+		};
+		instructions.AddRange(bodyInstructions);
+		instructions.Add(new LoopEndInstruction(bodyInstructions.Count) { Begin = loopBegin });
+		instructions.Add(new ReturnInstruction(Register.R2));
+		var mlir = compiler.CompileForPlatform("GpuContainerTest", instructions, Platform.Linux);
+		Assert.That(mlir, Does.Contain("module attributes {gpu.container_module}"),
+			"Module must have gpu.container_module attribute for GPU kernel outlining");
+	}
+
+	[Test]
+	public void NonGpuCompileForPlatformHasPlainModule()
+	{
+		var instructions = new List<Instruction>
+		{
+			new LoadConstantInstruction(Register.R0, new ValueInstance(NumberType, 42.0)),
+			new ReturnInstruction(Register.R0)
+		};
+		var mlir = compiler.CompileForPlatform("PlainModuleTest", instructions, Platform.Linux);
+		Assert.That(mlir, Does.Contain("module {"),
+			"Non-GPU modules should use plain module declaration");
+		Assert.That(mlir, Does.Not.Contain("gpu.container_module"),
+			"Non-GPU modules should NOT have gpu.container_module attribute");
 	}
 
 	private static string BuildMlirOptArgsWithGpu(string inputPath, string outputPath)
