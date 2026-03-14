@@ -26,8 +26,13 @@ public sealed class MlirLinker
 				"on Windows use Msys2 and 'pacman -S mingw-w64-x86_64-mlir')");
 		var clangPath = ToolRunner.FindTool("clang") ??
 			throw new ToolNotFoundException("clang", "https://releases.llvm.org");
+		var mlirContent = File.ReadAllText(mlirPath);
+		var hasGpuOps = mlirContent.Contains("gpu.launch", StringComparison.Ordinal);
 		var llvmDialectPath = Path.ChangeExtension(mlirPath, ".llvm.mlir");
-		ToolRunner.RunProcess(mlirOptPath, BuildMlirOptArgs(mlirPath, llvmDialectPath));
+		var optArgs = hasGpuOps
+			? BuildMlirOptArgsWithGpu(mlirPath, llvmDialectPath)
+			: BuildMlirOptArgs(mlirPath, llvmDialectPath);
+		ToolRunner.RunProcess(mlirOptPath, optArgs);
 		ToolRunner.EnsureOutputFileExists(llvmDialectPath, "mlir-opt", platform);
 		var llvmIrPath = Path.ChangeExtension(mlirPath, ".ll");
 		ToolRunner.RunProcess(mlirTranslatePath,
@@ -39,7 +44,9 @@ public sealed class MlirLinker
 			? ".exe"
 			: "";
 		var exeFilePath = Path.ChangeExtension(mlirPath, null) + exeExtension;
-		var arguments = BuildClangArgs(llvmIrPath, exeFilePath, platform, hasPrintCalls);
+		var arguments = hasGpuOps
+			? BuildGpuClangArgs(llvmIrPath, exeFilePath, platform)
+			: BuildClangArgs(llvmIrPath, exeFilePath, platform, hasPrintCalls);
 		ToolRunner.RunProcess(clangPath, arguments);
 		ToolRunner.EnsureOutputFileExists(exeFilePath, "clang", platform);
 		return exeFilePath;
@@ -51,9 +58,23 @@ public sealed class MlirLinker
 
 	private static string BuildMlirOptArgsWithGpu(string inputPath, string outputPath) =>
 		$"\"{inputPath}\" --canonicalize --cse --symbol-dce " +
-		"--gpu-kernel-outlining --convert-gpu-to-nvvm --gpu-to-llvm --convert-nvvm-to-llvm " +
-		"--convert-scf-to-cf --convert-arith-to-llvm " +
+		"--gpu-kernel-outlining --convert-scf-to-cf " +
+		"--convert-gpu-to-nvvm --gpu-to-llvm --convert-nvvm-to-llvm " +
+		"--convert-memref-to-llvm --convert-arith-to-llvm " +
 		$"--convert-func-to-llvm --convert-cf-to-llvm --reconcile-unrealized-casts -o \"{outputPath}\"";
+
+	private static string BuildGpuClangArgs(string inputPath, string outputPath, Platform platform)
+	{
+		var quotedInputPath = $"\"{inputPath}\"";
+		var quotedOutputPath = $"\"{outputPath}\"";
+		return platform switch
+		{
+			Platform.Linux => $"{quotedInputPath} -o {quotedOutputPath} -O2 -lcuda -lcudart",
+			Platform.Windows =>
+				$"{quotedInputPath} -o {quotedOutputPath} -O2 -lcuda -lcudart -Wno-override-module",
+			_ => $"{quotedInputPath} -o {quotedOutputPath} -O2 -lcuda -lcudart -Wno-override-module"
+		};
+	}
 	private static string BuildClangArgs(string inputPath, string outputPath, Platform platform,
 		bool hasPrintCalls = false)
 	{
