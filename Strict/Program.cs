@@ -32,16 +32,15 @@ public static class Program
 
 	private static void DisplayUsageInformation()
 	{
-		Console.WriteLine("Usage: Strict <file.strict|directory|file.strictbinary> [-options] [args...]");
+		Console.WriteLine("Usage: Strict <file.strict|.strictbinary> [-options] [args...]");
 		Console.WriteLine();
 		Console.WriteLine("Options (default if nothing specified: cache or run .strictbinary and execute in VM)");
-		Console.WriteLine("  -Windows     Compile to a native Windows x64 executable (.exe)");
-		Console.WriteLine("  -Linux       Compile to a native Linux x64 executable");
-		Console.WriteLine("  -MacOS       Compile to a native macOS x64 executable");
+		Console.WriteLine("  -Windows     Compile to a native Windows x64 optimized executable (.exe)");
+		Console.WriteLine("  -Linux       Compile to a native Linux x64 optimized executable");
+		Console.WriteLine("  -MacOS       Compile to a native macOS x64 optimized executable");
 		Console.WriteLine("  -mlir        Force MLIR backend (default, requires mlir-opt + mlir-translate + clang)");
 		Console.WriteLine("  -llvm        Force LLVM IR backend (fallback, requires clang: https://releases.llvm.org)");
 		Console.WriteLine("  -nasm        Force NASM backend (fallback, less optimized, requires nasm + gcc/clang)");
-		Console.WriteLine("  -forceStrictBinary Force .strictbinary generation, normally skipped using -Windows|-Linux|-MacOS");
 		Console.WriteLine("  -diagnostics Output detailed step-by-step logs and timing for each pipeline stage");
 		Console.WriteLine("               (automatically enabled in Debug builds)");
 		Console.WriteLine("  -decompile   Decompile a .strictbinary into partial .strict source files");
@@ -50,7 +49,7 @@ public static class Program
 		Console.WriteLine("Arguments:");
 		Console.WriteLine("  args...      Optional text or numbers passed to called method");
 		Console.WriteLine("               Example to call Run method: Strict Sum.strict 5 10 20 => prints 35");
-		Console.WriteLine("               Example to call any expression, must contain brackets: Strict List.strict (1, 2, 3).Length => prints 3");
+		Console.WriteLine("               Example to call any expression, must contain brackets: (1, 2, 3).Length => 3");
 		Console.WriteLine();
 		Console.WriteLine("Examples:");
 		Console.WriteLine("  Strict Examples/SimpleCalculator.strict");
@@ -59,19 +58,19 @@ public static class Program
 		Console.WriteLine("  Strict Examples/SimpleCalculator.strictbinary");
 		Console.WriteLine("  Strict Examples/SimpleCalculator.strictbinary -decompile");
 		Console.WriteLine("  Strict Examples/Sum.strict 5 10 20");
-		Console.WriteLine("  Strict Examples/BaseTypesTest");
+		Console.WriteLine("  Strict List.strict (1, 2, 3).Length");
 	}
 
-	private static async Task ParseArgumentsAndRun(string[] args)
+	private static async Task ParseArgumentsAndRun(IReadOnlyList<string> args)
 	{
 		var filePath = args[0];
 		var options =
 			new HashSet<string>(args.Skip(1).Where(arg => arg.StartsWith("-", StringComparison.Ordinal)),
 				StringComparer.OrdinalIgnoreCase);
-		using var basePackage = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
 		if (options.Contains("-decompile"))
 		{
 			var outputFolder = Path.GetFileNameWithoutExtension(filePath);
+			using var basePackage = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
 			new BytecodeDecompiler(basePackage).Decompile(filePath, outputFolder);
 			Console.WriteLine("Decompilation complete, written all partial .strict files (only what " +
 				"was included in bytecode, no tests) to folder: " + outputFolder);
@@ -85,16 +84,19 @@ public static class Program
 			if (!diagnostics)
 				diagnostics = true;
 #endif
+			using var runner = new Runner(filePath, enableTestsAndDetailedOutput: diagnostics);
+			var buildForPlatform = GetPlatformOption(options);
 			var backend = options.Contains("-nasm")
 				? CompilerBackend.Nasm
-				: options.Contains("-nasm")
+				: options.Contains("-llvm")
 					? CompilerBackend.Llvm
 					: CompilerBackend.MlirDefault;
-			using var runner = new Runner(basePackage, filePath, backend, diagnostics);
-			if (nonFlagArgs.Length == 1 && nonFlagArgs[0].Contains('('))
-				runner.RunExpression(nonFlagArgs[0]);
+			if (buildForPlatform.HasValue)
+				runner.Build(buildForPlatform.Value, backend, options.Contains("-forceStrictBinary"));
+			else if (nonFlagArgs.Length >= 1 && nonFlagArgs[0].Contains('('))
+				runner.RunExpression(string.Join(" ", nonFlagArgs[0..]));
 			else
-				runner.Run(GetPlatformOption(options), options.Contains("-forceStrictBinary"), nonFlagArgs);
+				runner.Run(nonFlagArgs);
 		}
 	}
 

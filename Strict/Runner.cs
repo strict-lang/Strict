@@ -1,14 +1,14 @@
-using System.Globalization;
-using Strict.Expressions;
-using Strict.Language;
-using Strict.Optimizers;
 using Strict.Bytecode;
 using Strict.Bytecode.Instructions;
 using Strict.Bytecode.Serialization;
 using Strict.Compiler;
 using Strict.Compiler.Assembly;
+using Strict.Expressions;
+using Strict.Language;
+using Strict.Optimizers;
 using Strict.TestRunner;
 using Strict.Validators;
+using System.Globalization;
 using Type = Strict.Language.Type;
 
 namespace Strict;
@@ -16,59 +16,27 @@ namespace Strict;
 public sealed class Runner : IDisposable
 {
 	/// <summary>
-	/// Creates a Runner for a .strict source file or directory (multi-file package), or for a
-	/// .strict_binary ZIP file (loads pre-compiled bytecode and executes it directly).
-	/// When given a directory path, all .strict files inside are loaded as a single package and
-	/// the type matching the directory name is used as the entry point.
+	/// Allows to run or build a .strict source file, running the Run method or supplying an
+	/// expression to be executed based on what is available in the given file. Caches bytecode
+	/// instructions into .strictbinary (only updated when source is newer or -forceStrictBinary is
+	/// used), used in later runs. Note that only .strict files contain the full actual code,
+	/// everything after that is stripped, optimized, and just includes what is actually executed.
 	/// </summary>
-	public Runner(Package basePackage, string strictFilePath,
-		CompilerBackend backend = CompilerBackend.MlirDefault, bool enableTestsAndDetailedOutput = false)
+	public Runner(string strictFilePath, Package? skipPackageSearchAndUseThisTestPackage = null,
+		bool enableTestsAndDetailedOutput = false)
 	{
-		this.backend = backend;
+		this.strictFilePath = strictFilePath;
+		this.skipPackageSearchAndUseThisTestPackage = skipPackageSearchAndUseThisTestPackage;
 		this.enableTestsAndDetailedOutput = enableTestsAndDetailedOutput;
 		Log("╔════════════════════════════════════╗");
 		Log("║ Strict Programming Language Runner ║");
 		Log("╚════════════════════════════════════╝");
-		Log("┌─ Step 1: Loading: " + strictFilePath);
-		var startTicks = DateTime.UtcNow.Ticks;
-		if (Directory.Exists(strictFilePath))
-		{
-			currentFolder = Path.GetFullPath(
-				strictFilePath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
-			(package, mainType) = LoadPackageFromDirectory(basePackage, currentFolder);
-		}
-		else
-		{
-			currentFolder = Path.GetDirectoryName(Path.GetFullPath(strictFilePath))!;
-			var typeName = Path.GetFileNameWithoutExtension(strictFilePath);
-			if (Path.GetExtension(strictFilePath) == BytecodeSerializer.Extension)
-			{
-				deserializer = new BytecodeDeserializer(strictFilePath, basePackage);
-				package = deserializer.Package;
-				mainType = package.GetType(typeName);
-			}
-			else
-			{
-				var packageName = Path.GetFileNameWithoutExtension(strictFilePath);
-				package = new Package(basePackage, packageName);
-				var typeLines = new TypeLines(typeName, File.ReadAllLines(strictFilePath));
-				mainType =
-					new Type(package, typeLines).ParseMembersAndMethods(new MethodExpressionParser());
-			}
-		}
-		var endTicks = DateTime.UtcNow.Ticks;
-		stepTimes.Add(endTicks - startTicks);
-		Log("└─ Step 1 ⏱ Time: " +
-			TimeSpan.FromTicks(endTicks - startTicks).TotalMilliseconds + " ms");
+		Log("Creating Runner with: " + strictFilePath);
 	}
 
-	private readonly CompilerBackend backend;
+	private readonly string strictFilePath;
+	private readonly Package? skipPackageSearchAndUseThisTestPackage;
 	private readonly bool enableTestsAndDetailedOutput;
-	private readonly string currentFolder;
-	private readonly BytecodeDeserializer? deserializer;
-	private readonly Package package;
-	private readonly Type mainType;
-	private readonly List<long> stepTimes = new();
 
 	private void Log(string message)
 	{
@@ -76,14 +44,136 @@ public sealed class Runner : IDisposable
 			Console.WriteLine(message);
 	}
 
-	public Runner Run(Platform? targetPlatform = null, bool forceStrictBinaryGeneration = false,
-		params string[] programArgs) =>
+	/*TODO
+	private readonly Repositories repos;
+		repos = new Repositories(new MethodExpressionParser());
+	 * 		using var basePackage = await repos.LoadStrictPackage();
+		Log("┌─ Step 1: Loading: " + strictFilePath);
+		var startTicks = DateTime.UtcNow.Ticks;
+		currentFolder = Path.GetDirectoryName(Path.GetFullPath(strictFilePath))!;
+		var typeName = Path.GetFileNameWithoutExtension(strictFilePath);
+		if (Path.GetExtension(strictFilePath) == BytecodeSerializer.Extension)
+		{
+			deserializer = new BytecodeDeserializer(strictFilePath, basePackage);
+			package = deserializer.Package;
+			mainType = package.GetType(typeName);
+		}
+		else
+		{
+			var packageName = Path.GetFileNameWithoutExtension(strictFilePath);
+			package = new Package(basePackage, packageName);
+			var typeLines = new TypeLines(typeName, File.ReadAllLines(strictFilePath));
+			mainType = new Type(package, typeLines).ParseMembersAndMethods(new MethodExpressionParser());
+		}
+		var endTicks = DateTime.UtcNow.Ticks;
+		stepTimes.Add(endTicks - startTicks);
+		Log("└─ Step 1 ⏱ Time: " + TimeSpan.FromTicks(endTicks - startTicks).TotalMilliseconds + " ms");
+	 **/
+
+	private readonly string currentFolder;
+	private readonly BytecodeDeserializer? deserializer;
+	private readonly Package package;
+	private readonly Type mainType;
+	private readonly List<long> stepTimes = new();
+
+	/// <summary>
+	/// Generates a platform-specific executable from the compiled instructions. Uses MLIR when
+	/// -mlir is specified, LLVM IR when -llvm is specified, otherwise NASM + gcc/clang pipeline.
+	/// LLVM and MLIR are opt-in until feature parity is reached.
+	/// Throws <see cref="ToolNotFoundException"/> if required tools are missing.
+	/// </summary>
+	public async Task Build(Platform platform, CompilerBackend backend = CompilerBackend.MlirDefault,
+		bool forceStrictBinaryGeneration = false)
+	{
+		var bytecode = await LoadBytecode();
+		if (backend == CompilerBackend.Llvm)
+			await SaveLlvmExecutable(platform, bytecode);
+		else if (backend == CompilerBackend.Nasm)
+			await SaveNasmExecutable(platform, bytecode);
+		else
+			await SaveMlirExecutable(platform, bytecode);
+	}
+
+	private async Task<Platform> LoadBytecode()
+	{
+		return Platform.Windows;
+	}
+	/*obs
+		if (deserializer == null)
+			BuildFromSource(forceStrictBinaryGeneration);
+
+
+		{
+			var optimizedInstructions = deserializer.Instructions[mainType.Name];
+			var precompiledMethods = deserializer.PrecompiledMethods;
+			return backend switch
+			{
+				CompilerBackend.Llvm => SaveLlvmExecutable(optimizedInstructions, platform, precompiledMethods),
+				CompilerBackend.Nasm => SaveNasmExecutable(optimizedInstructions, platform, precompiledMethods),
+				_ => SaveMlirExecutable(optimizedInstructions, platform, precompiledMethods)
+			};
+		}
+		else
+			throw new InvalidOperationException("Cannot build executable without .strictbinary yet!");
+			*/
+
+	private Runner SaveLlvmExecutable(List<Instruction> optimizedInstructions, Platform platform,
+		IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods)
+	{
+		var llvmCompiler = new InstructionsToLlvmIr();
+		var llvmIr = llvmCompiler.CompileForPlatform(mainType.Name, optimizedInstructions, platform,
+			precompiledMethods);
+		var llvmPath = Path.Combine(currentFolder, mainType.Name + ".ll");
+		File.WriteAllText(llvmPath, llvmIr);
+		Console.WriteLine("Saved " + platform + " LLVM IR to: " + llvmPath);
+		var exeFilePath = new LlvmLinker().CreateExecutable(llvmPath, platform,
+			llvmCompiler.IsPlatformUsingStdLibAndHasPrintInstructions(platform, optimizedInstructions,
+				precompiledMethods));
+		PrintCompilationSummary("LLVM", platform, exeFilePath);
+		return this;
+	}
+
+	private Runner SaveMlirExecutable(List<Instruction> optimizedInstructions, Platform platform,
+		IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods)
+	{
+		var mlirCompiler = new InstructionsToMlir();
+		var mlirText = mlirCompiler.CompileForPlatform(mainType.Name, optimizedInstructions, platform,
+			precompiledMethods);
+		var mlirPath = Path.Combine(currentFolder, mainType.Name + ".mlir");
+		File.WriteAllText(mlirPath, mlirText);
+		Console.WriteLine("Saved " + platform + " MLIR to: " + mlirPath);
+		var exeFilePath = new MlirLinker().CreateExecutable(mlirPath, platform,
+			mlirCompiler.IsPlatformUsingStdLibAndHasPrintInstructions(platform, optimizedInstructions,
+				precompiledMethods));
+		PrintCompilationSummary("MLIR", platform, exeFilePath);
+		return this;
+	}
+
+	private Runner SaveNasmExecutable(List<Instruction> optimizedInstructions, Platform platform,
+		IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods)
+	{
+		var compiler = new InstructionsToAssembly();
+		var assemblyText = compiler.CompileForPlatform(mainType.Name, optimizedInstructions, platform,
+			precompiledMethods);
+		var asmPath = Path.Combine(currentFolder, mainType.Name + ".asm");
+		File.WriteAllText(asmPath, assemblyText);
+		Console.WriteLine("Saved " + platform + " NASM assembly to: " + asmPath);
+		var hasPrint = compiler.HasPrintInstructions(optimizedInstructions);
+		var exeFilePath = new NativeExecutableLinker().CreateExecutable(asmPath, platform, hasPrint);
+		PrintCompilationSummary("NASM", platform, exeFilePath);
+		return this;
+	}
+
+	private void PrintCompilationSummary(string backendName, Platform platform, string exeFilePath) =>
+		Console.WriteLine("Compiled " + mainType.Name + " via " + backendName + " in " +
+			TimeSpan.FromTicks(stepTimes.Sum()).ToString(@"s\.ffffff") + "s to " + platform +
+			" executable of " + new FileInfo(exeFilePath).Length.ToString("N0") +
+			" bytes to: " + exeFilePath);
+
+	public Runner Run(params string[] programArgs) =>
 		deserializer != null
-			? targetPlatform.HasValue
-				? SavePlatformExecutable(deserializer.Instructions[mainType.Name], targetPlatform.Value,
-					deserializer.PrecompiledMethods)
-				: RunFromPreloadedBytecode(deserializer.Instructions[mainType.Name], programArgs)
-			: RunFromSource(targetPlatform, forceStrictBinaryGeneration, programArgs);
+			? RunFromPreloadedBytecode(deserializer.Instructions[mainType.Name], programArgs)
+			: RunFromSource(programArgs);
 
 	private Runner RunFromPreloadedBytecode(List<Instruction> preloadedInstructions,
 		string[] programArgs)
@@ -98,8 +188,16 @@ public sealed class Runner : IDisposable
 		return this;
 	}
 
-	private Runner RunFromSource(Platform? targetPlatform, bool forceStrictBinaryGeneration,
-		string[] programArgs)
+	private Runner RunFromSource(string[] programArgs)
+	{
+		BuildFromSource(true);
+		ExecuteBytecode(optimizedInstructions, null, BuildProgramArguments(programArgs));
+		Log("Successfully parsed, optimized and executed " + mainType.Name + " in " +
+			TimeSpan.FromTicks(stepTimes.Sum()).ToString(@"s\.ffffff") + "s");
+		return this;
+	}
+
+	private void BuildFromSource(bool saveStrictBinary)
 	{
 		if (enableTestsAndDetailedOutput)
 		{
@@ -109,17 +207,10 @@ public sealed class Runner : IDisposable
 		}
 		var instructions = GenerateBytecode();
 		var optimizedInstructions = OptimizeBytecode(instructions);
-		if (forceStrictBinaryGeneration || targetPlatform == null)
+		if (saveStrictBinary)
 			SaveStrictBinaryBytecodeIfPossible(optimizedInstructions);
-		if (targetPlatform.HasValue)
-			SavePlatformExecutable(optimizedInstructions, targetPlatform.Value, null);
-		else
-		{
-			ExecuteBytecode(optimizedInstructions, null, BuildProgramArguments(programArgs));
-			Log("Successfully parsed, optimized and executed " + mainType.Name + " in " +
-				TimeSpan.FromTicks(stepTimes.Sum()).ToString(@"s\.ffffff") + "s");
-		}
-		return this;
+		deserializer = new BytecodeDeserializer()
+		return optimizedInstructions;
 	}
 
 	private void Parse()
@@ -302,74 +393,6 @@ public sealed class Runner : IDisposable
 		Log("Saving " + new FileInfo(serializer.OutputFilePath).Length +
 			" bytes of bytecode to: " + serializer.OutputFilePath);
 	}
-
-	/// <summary>
-	/// Generates a platform-specific executable from the compiled instructions. Uses MLIR when
-	/// -mlir is specified, LLVM IR when -llvm is specified, otherwise NASM + gcc/clang pipeline.
-	/// LLVM and MLIR are opt-in until feature parity is reached.
-	/// Throws <see cref="ToolNotFoundException"/> if required tools are missing.
-	/// </summary>
-	private Runner SavePlatformExecutable(List<Instruction> optimizedInstructions,
-		Platform platform, IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods) =>
-		backend switch
-		{
-			CompilerBackend.Llvm => SaveLlvmExecutable(optimizedInstructions, platform, precompiledMethods),
-			CompilerBackend.Nasm => SaveNasmExecutable(optimizedInstructions, platform, precompiledMethods),
-			_ => SaveMlirExecutable(optimizedInstructions, platform, precompiledMethods)
-		};
-
-	private Runner SaveLlvmExecutable(List<Instruction> optimizedInstructions, Platform platform,
-		IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods)
-	{ //ncrunch: no coverage start
-		var llvmCompiler = new InstructionsToLlvmIr();
-		var llvmIr = llvmCompiler.CompileForPlatform(mainType.Name, optimizedInstructions, platform,
-			precompiledMethods);
-		var llvmPath = Path.Combine(currentFolder, mainType.Name + ".ll");
-		File.WriteAllText(llvmPath, llvmIr);
-		Console.WriteLine("Saved " + platform + " LLVM IR to: " + llvmPath);
-		var exeFilePath = new LlvmLinker().CreateExecutable(llvmPath, platform,
-			llvmCompiler.IsPlatformUsingStdLibAndHasPrintInstructions(platform, optimizedInstructions,
-				precompiledMethods));
-		PrintCompilationSummary("LLVM", platform, exeFilePath);
-		return this;
-	} //ncrunch: no coverage end
-
-	private Runner SaveMlirExecutable(List<Instruction> optimizedInstructions, Platform platform,
-		IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods)
-	{
-		var mlirCompiler = new InstructionsToMlir();
-		var mlirText = mlirCompiler.CompileForPlatform(mainType.Name, optimizedInstructions, platform,
-			precompiledMethods);
-		var mlirPath = Path.Combine(currentFolder, mainType.Name + ".mlir");
-		File.WriteAllText(mlirPath, mlirText);
-		Console.WriteLine("Saved " + platform + " MLIR to: " + mlirPath);
-		var exeFilePath = new MlirLinker().CreateExecutable(mlirPath, platform,
-			mlirCompiler.IsPlatformUsingStdLibAndHasPrintInstructions(platform, optimizedInstructions,
-				precompiledMethods));
-		PrintCompilationSummary("MLIR", platform, exeFilePath);
-		return this;
-	}
-
-	private Runner SaveNasmExecutable(List<Instruction> optimizedInstructions, Platform platform,
-		IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods)
-	{
-		var compiler = new InstructionsToAssembly();
-		var assemblyText = compiler.CompileForPlatform(mainType.Name, optimizedInstructions, platform,
-			precompiledMethods);
-		var asmPath = Path.Combine(currentFolder, mainType.Name + ".asm");
-		File.WriteAllText(asmPath, assemblyText);
-		Console.WriteLine("Saved " + platform + " NASM assembly to: " + asmPath);
-		var hasPrint = compiler.HasPrintInstructions(optimizedInstructions);
-		var exeFilePath = new NativeExecutableLinker().CreateExecutable(asmPath, platform, hasPrint);
-		PrintCompilationSummary("NASM", platform, exeFilePath);
-		return this;
-	}
-
-	private void PrintCompilationSummary(string backendName, Platform platform, string exeFilePath) =>
-		Console.WriteLine("Compiled " + mainType.Name + " via " + backendName + " in " +
-			TimeSpan.FromTicks(stepTimes.Sum()).ToString(@"s\.ffffff") + "s to " + platform +
-			" executable of " + new FileInfo(exeFilePath).Length.ToString("N0") +
-			" bytes to: " + exeFilePath);
 
 	private IReadOnlyList<TypeBytecodeData> BuildTypeBytecodeData(
 		List<Instruction> optimizedRunInstructions)
@@ -559,6 +582,10 @@ public sealed class Runner : IDisposable
 			methodsToCompile.Enqueue(method);
 	}
 
+	/// <summary>
+	/// Loads a package, which is all .strict files in a folder, then finds the Run entry point and
+	/// uses that as our mainType. Otherwise the same as
+	/// </summary>
 	private static (Package Package, Type MainType) LoadPackageFromDirectory(Package basePackage,
 		string dirPath)
 	{
@@ -576,9 +603,8 @@ public sealed class Runner : IDisposable
 			// Fallback: use the first type with a Run method if no type matches the directory name
 			mainType = childPackage.Types.Values.FirstOrDefault(type => //ncrunch: no coverage
 					type.Methods.Any(method => method.Name == Method.Run)) ?? //ncrunch: no coverage
-				throw new InvalidOperationException("Package directory '" + dirPath +
-					"' does not contain a type named '" + packageName +
-					"' or any type with a Run method.");
+				throw new InvalidOperationException("Package directory '" + dirPath + "' does not contain " +
+					"a type named '" + packageName + "' or any type with a Run method.");
 		return (childPackage, mainType);
 	}
 

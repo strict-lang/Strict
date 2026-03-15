@@ -7,20 +7,51 @@ using Type = Strict.Language.Type;
 namespace Strict.Bytecode.Serialization;
 
 /// <summary>
-/// Restores <see cref="Instruction" /> lists from a compact .strictbinary ZIP file by resolving
-/// type and method references from a <see cref="Language.Package" />.
-/// Results are cached per file path+modification-time so repeated loads skip ZIP I/O entirely.
+/// Loads all <see cref="Instruction" /> generated from BytecodeGenerator back from the compact
+/// .strictbinary ZIP file. The VM or executable generation only needs <see cref="BytecodeTypes"/>
 /// </summary>
-public sealed class BytecodeDeserializer
+public sealed class BytecodeDeserializer(string FilePath)
 {
-	/// <summary>
-	/// Deserializes all bytecode from a .strictbinary ZIP, creating a child package for types.
-	/// </summary>
-	public BytecodeDeserializer(string filePath, Package basePackage)
+	public BytecodeTypes Deserialize()
+	{
+		try
+		{
+			using var zip = ZipFile.OpenRead(FilePath);
+			var bytecodeEntries = zip.Entries.Where(entry =>
+				entry.FullName.EndsWith(BytecodeSerializer.BytecodeEntryExtension,
+					StringComparison.OrdinalIgnoreCase)).ToList();
+			if (bytecodeEntries.Count == 0)
+				throw new InvalidBytecodeFileException(BytecodeSerializer.Extension +
+					" ZIP contains no " + BytecodeSerializer.BytecodeEntryExtension + " entries");
+			var result = new BytecodeTypes();
+			foreach (var entry in bytecodeEntries)
+			{
+				var typeFullName = GetEntryNameWithoutExtension(entry.FullName);
+				var bytes = ReadAllBytes(entry.Open());
+				foreach (var typeEntry in typeEntries)
+					ReadTypeMetadata(typeEntry, package);
+				var runInstructions = new Dictionary<string, List<Instruction>>(StringComparer.Ordinal);
+				var methodInstructions =
+					new Dictionary<string, List<Instruction>>(StringComparer.Ordinal);
+				foreach (var typeEntry in typeEntries)
+					ReadTypeInstructions(typeEntry, package, runInstructions, methodInstructions);
+			}
+			return result;
+		}
+		catch (InvalidDataException ex)
+		{
+			throw new InvalidBytecodeFileException("Not a valid " + BytecodeSerializer.Extension +
+				" ZIP file: " + ex.Message);
+		}
+	}
+	/*TODO: nah
+	public BytecodeDeserializer(string filePath) //nah: , Package basePackage)
 	{
 		var fullPath = Path.GetFullPath(filePath);
+		/*
 		var packageName = Path.GetFileNameWithoutExtension(fullPath);
 		Package = new Package(basePackage, packageName + "-" + ++packageCounter);
+		*
 		try
 		{
 			using var zip = ZipFile.OpenRead(fullPath);
@@ -63,13 +94,16 @@ public sealed class BytecodeDeserializer
 		public string EntryName { get; } = entryName;
 		public byte[] Bytes { get; } = bytes;
 	}
+*/
 
+	//TODO: this is very strange, why do we not keep this data?? this is what BytecodeTypes.Members and Methods needs!
 	private static void ReadTypeMetadata(TypeEntryData typeEntry, Package package)
 	{
 		using var stream = new MemoryStream(typeEntry.Bytes);
 		using var reader = new BinaryReader(stream, System.Text.Encoding.UTF8, leaveOpen: true);
 		_ = ValidateMagicAndVersion(reader);
 		var table = new NameTable(reader).ToArray();
+		//TODO: need to think about this, Type is nice, but this is a fake type and maybe we can do without?
 		var type = EnsureTypeForEntry(package, typeEntry.EntryName);
 		var memberCount = reader.Read7BitEncodedInt();
 		for (var memberIndex = 0; memberIndex < memberCount; memberIndex++)

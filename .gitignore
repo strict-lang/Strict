@@ -137,3 +137,4 @@ ipch/
 *.llvm.mlir
 *.obj
 Examples/PureAdder
+*.7z

@@ -66,9 +66,7 @@ public abstract class Context
 	public string Name { get; }
 	public string FullName { get; }
 	public abstract Type? FindType(string name, Context? searchingFrom = null);
-
-	public Type GetType(string name) =>
-		TryGetType(name) ?? throw new TypeNotFound(name, this);
+	public Type GetType(string name) =>	TryGetType(name) ?? throw new TypeNotFound(name, this);
 
 	internal Type? TryGetType(string name)
 	{
@@ -200,7 +198,7 @@ public abstract class Context
 		private static string WriteContextTypes(Context context)
 		{
 			var result = context.GetType().Name + " " + context.FullName + ", " +
-				"available " + "types: " + string.Join(", ", context.types.Keys);
+				"available types: " + string.Join(", ", context.types.Keys);
 			// ReSharper disable once ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract
 			if (context.Parent != null && context.Parent.Name != string.Empty)
 				result += "\n\tParent " + WriteContextTypes(context.Parent);

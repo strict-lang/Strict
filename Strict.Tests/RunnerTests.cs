@@ -50,7 +50,7 @@ public sealed class RunnerTests
 		var asmFilePath = Path.ChangeExtension(SimpleCalculatorFilePath, ".asm");
 		if (File.Exists(asmFilePath))
 			File.Delete(asmFilePath); //ncrunch: no coverage
-		using var _ = new Runner(TestPackage.Instance, SimpleCalculatorFilePath).Run();
+		using var _ = new Runner(SimpleCalculatorFilePath, TestPackage.Instance).Run();
 		Assert.That(writer.ToString(),
 			Is.EqualTo("2 + 3 = 5" + Environment.NewLine + "2 * 3 = 6" + Environment.NewLine));
 		Assert.That(File.Exists(asmFilePath), Is.False,
@@ -61,7 +61,7 @@ public sealed class RunnerTests
 	[Test]
 	public void RunBaseTypesTestPackageFromDirectory()
 	{
-		using var _ = new Runner(TestPackage.Instance, GetExamplesDirectoryPath("BaseTypesTest")).Run();
+		using var _ = new Runner(GetExamplesDirectoryPath("BaseTypesTest"), TestPackage.Instance).Run();
 		var output = writer.ToString();
 		Assert.That(output, Does.Contain("Hello, World!"));
 		Assert.That(output, Does.Contain("Hello, Strict!"));
@@ -98,7 +98,7 @@ public sealed class RunnerTests
 		if (File.Exists(localPath))
 			return localPath;
 		//ncrunch: no coverage start
-		new Runner(TestPackage.Instance, GetExamplesFilePath(filename)).Run().Dispose();
+		new Runner(GetExamplesFilePath(filename), TestPackage.Instance).Run().Dispose();
 		Assert.That(File.Exists(localPath), Is.True,
 			BytecodeSerializer.Extension + " file should have been created");
 		writer.GetStringBuilder().Clear();
@@ -121,7 +121,7 @@ public sealed class RunnerTests
 	[Test]
 	public void RunWithFullDiagnostics()
 	{
-		using var _ = new Runner(TestPackage.Instance, SimpleCalculatorFilePath,
+		using var _ = new Runner(SimpleCalculatorFilePath, TestPackage.Instance,
 			enableTestsAndDetailedOutput: true).Run();
 		Assert.That(writer.ToString().Length, Is.GreaterThan(1000));
 	}
@@ -130,7 +130,7 @@ public sealed class RunnerTests
 	public void RunFromBytecodeFileProducesSameOutput()
 	{
 		var binaryFilePath = GetExamplesBinaryFile("SimpleCalculator");
-		using var runner = new Runner(TestPackage.Instance, binaryFilePath).Run();
+		using var runner = new Runner(binaryFilePath, TestPackage.Instance).Run();
 		Assert.That(writer.ToString(),
 			Does.StartWith("2 + 3 = 5" + Environment.NewLine + "2 * 3 = 6"));
 	}
@@ -145,11 +145,11 @@ public sealed class RunnerTests
 		try
 		{
 			File.Copy(SimpleCalculatorFilePath, copiedSourceFilePath);
-			new Runner(TestPackage.Instance, copiedSourceFilePath).Run().Dispose();
+			new Runner(copiedSourceFilePath, TestPackage.Instance).Run().Dispose();
 			Assert.That(File.Exists(copiedBinaryFilePath), Is.True);
 			writer.GetStringBuilder().Clear();
 			File.Delete(copiedSourceFilePath);
-			using var _ = new Runner(TestPackage.Instance, copiedBinaryFilePath).Run();
+			using var _ = new Runner(copiedBinaryFilePath, TestPackage.Instance).Run();
 			Assert.That(writer.ToString(),
 				Does.StartWith("2 + 3 = 5" + Environment.NewLine + "2 * 3 = 6"));
 		}
@@ -163,7 +163,7 @@ public sealed class RunnerTests
 	[Test]
 	public void RunFizzBuzz()
 	{
-		using var _ = new Runner(TestPackage.Instance, GetExamplesFilePath("FizzBuzz")).Run();
+		using var _ = new Runner(GetExamplesFilePath("FizzBuzz"), TestPackage.Instance).Run();
 		var output = writer.ToString();
 		Assert.That(output, Does.Contain("FizzBuzz(3) = Fizz"));
 		Assert.That(output, Does.Contain("FizzBuzz(5) = Buzz"));
@@ -174,7 +174,7 @@ public sealed class RunnerTests
 	[Test]
 	public void RunAreaCalculator()
 	{
-		using var _ = new Runner(TestPackage.Instance, GetExamplesFilePath("AreaCalculator")).Run();
+		using var _ = new Runner(GetExamplesFilePath("AreaCalculator"), TestPackage.Instance).Run();
 		var output = writer.ToString();
 		Assert.That(output, Does.Contain("Area: 50"));
 		Assert.That(output, Does.Contain("Perimeter: 30"));
@@ -183,7 +183,7 @@ public sealed class RunnerTests
 	[Test]
 	public void RunGreeter()
 	{
-		using var _ = new Runner(TestPackage.Instance, GetExamplesFilePath("Greeter")).Run();
+		using var _ = new Runner(GetExamplesFilePath("Greeter"), TestPackage.Instance).Run();
 		var output = writer.ToString();
 		Assert.That(output, Does.Contain("Hello, World!"));
 		Assert.That(output, Does.Contain("Hello, Strict!"));
@@ -194,10 +194,10 @@ public sealed class RunnerTests
 	{
 		var pureAdderPath = GetExamplesFilePath("PureAdder");
 		var asmPath = Path.ChangeExtension(pureAdderPath, ".asm");
-		using var runner = new Runner(TestPackage.Instance, pureAdderPath, CompilerBackend.Nasm);
+		using var runner = new Runner(pureAdderPath, TestPackage.Instance);
 		if (!NativeExecutableLinker.IsNasmAvailable)
 			return; //ncrunch: no coverage
-		runner.Run(Platform.Windows);
+		runner.Build(Platform.Windows, CompilerBackend.Nasm);
 		Assert.That(File.Exists(asmPath), Is.True, ".asm file should be created");
 		Assert.That(writer.ToString(), Does.Contain("Saved Windows NASM assembly to:"));
 		var asmContent = File.ReadAllText(asmPath);
@@ -213,12 +213,12 @@ public sealed class RunnerTests
 		var pureAdderPath = GetExamplesFilePath("PureAdder");
 		var asmPath = Path.ChangeExtension(pureAdderPath, ".asm");
 		var executablePath = Path.ChangeExtension(asmPath, null);
-		using var runner = new Runner(TestPackage.Instance, pureAdderPath, CompilerBackend.Nasm);
+		using var runner = new Runner(pureAdderPath, TestPackage.Instance);
 		if (!NativeExecutableLinker.IsNasmAvailable)
 			return; //ncrunch: no coverage start
 		if (OperatingSystem.IsLinux())
 		{
-			runner.Run(Platform.Linux);
+			runner.Build(Platform.Linux, CompilerBackend.Nasm);
 			Assert.That(File.Exists(executablePath), Is.True, "Linux executable should be created");
 			Assert.That(writer.ToString(), Does.Contain("Saved Linux NASM assembly to:"));
 			Assert.That(File.Exists(asmPath), Is.True, ".asm file should be created");
@@ -227,17 +227,17 @@ public sealed class RunnerTests
 			Assert.That(asmContent, Does.Contain("_start:"));
 		} //ncrunch: no coverage end
 		else
-			runner.Run(Platform.Windows);
+			runner.Build(Platform.Windows, CompilerBackend.Nasm);
 	}
 
 	[Test]
 	public void RunWithPlatformWindowsSupportsProgramsWithRuntimeMethodCalls()
 	{
 		var llvmPath = Path.ChangeExtension(SimpleCalculatorFilePath, ".ll");
-		using var runner = new Runner(TestPackage.Instance, SimpleCalculatorFilePath);
+		using var runner = new Runner(SimpleCalculatorFilePath, TestPackage.Instance);
 		if (!LlvmLinker.IsClangAvailable)
 			return; //ncrunch: no coverage start
-		runner.Run(Platform.Windows);
+		runner.Build(Platform.Windows);
 		Assert.That(File.Exists(llvmPath), Is.True, ".ll file should be created");
 		Assert.That(writer.ToString(), Does.Contain("Saved Windows MLIR to:"));
 	} //ncrunch: no coverage end
@@ -249,10 +249,10 @@ public sealed class RunnerTests
 		var llvmPath = Path.ChangeExtension(binaryFilePath, ".ll");
 		if (File.Exists(llvmPath))
 			File.Delete(llvmPath); //ncrunch: no coverage
-		using var runner = new Runner(TestPackage.Instance, binaryFilePath);
+		using var runner = new Runner(binaryFilePath, TestPackage.Instance);
 		if (!LlvmLinker.IsClangAvailable)
 			return; //ncrunch: no coverage start
-		runner.Run(Platform.Windows);
+		runner.Build(Platform.Windows);
 		Assert.That(File.Exists(llvmPath), Is.True,
 			".ll file should be created for bytecode platform compilation");
 		Assert.That(writer.ToString(), Does.Contain("Saved Windows MLIR to:"));
@@ -264,10 +264,10 @@ public sealed class RunnerTests
 	public void RunWithPlatformDoesNotExecuteProgram(CompilerBackend backend)
 	{
 		var calculatorFilePath = GetExamplesFilePath("SimpleCalculator");
-		using var runner = new Runner(TestPackage.Instance, calculatorFilePath, backend);
-		runner.Run(OperatingSystem.IsWindows()
+		using var runner = new Runner(calculatorFilePath, TestPackage.Instance);
+		runner.Build(OperatingSystem.IsWindows()
 			? Platform.Windows
-			: Platform.Linux);
+			: Platform.Linux, backend);
 		Assert.That(writer.ToString(), Does.Not.Contain("executed"),
 			"Platform compilation should not execute the program");
 		Assert.That(writer.ToString(), Does.Contain("Saved"),
@@ -290,8 +290,8 @@ public sealed class RunnerTests
 	{
 		if (NativeExecutableLinker.IsNasmAvailable)
 			return; //ncrunch: no coverage start
-		using var runner = new Runner(TestPackage.Instance, GetExamplesFilePath("PureAdder"));
-		Assert.Throws<ToolNotFoundException>(() => runner.Run(Platform.Windows));
+		using var runner = new Runner(GetExamplesFilePath("PureAdder"), TestPackage.Instance);
+		Assert.Throws<ToolNotFoundException>(() => runner.Build(Platform.Windows));
 	} //ncrunch: no coverage end
 
 	[Test]
@@ -301,8 +301,8 @@ public sealed class RunnerTests
 			return; //ncrunch: no coverage
 		var pureAdderPath = GetExamplesFilePath("PureAdder");
 		var llvmPath = Path.ChangeExtension(pureAdderPath, ".ll");
-		using var runner = new Runner(TestPackage.Instance, pureAdderPath);
-		runner.Run(Platform.Linux);
+		using var runner = new Runner(pureAdderPath, TestPackage.Instance);
+		runner.Build(Platform.Linux);
 		Assert.That(File.Exists(llvmPath), Is.True, ".ll file should be created");
 		Assert.That(writer.ToString(), Does.Contain("Saved Linux MLIR to:"));
 		var irContent = File.ReadAllText(llvmPath);
@@ -319,8 +319,8 @@ public sealed class RunnerTests
 		var pureAdderPath = GetExamplesFilePath("PureAdder");
 		var llvmPath = Path.ChangeExtension(pureAdderPath, ".ll");
 		var exePath = Path.ChangeExtension(llvmPath, null);
-		using var runner = new Runner(TestPackage.Instance, pureAdderPath);
-		runner.Run(Platform.Linux);
+		using var runner = new Runner(pureAdderPath, TestPackage.Instance);
+		runner.Build(Platform.Linux);
 		Assert.That(writer.ToString(), Does.Contain("via LLVM"));
 		Assert.That(File.Exists(exePath), Is.True,
 			"Linux executable should be created by LLVM backend");
@@ -333,8 +333,8 @@ public sealed class RunnerTests
 		writer.GetStringBuilder().Clear();
 		if (File.Exists(asmPath))
 			File.Delete(asmPath); //ncrunch: no coverage
-		using var runner = new Runner(TestPackage.Instance,
-			Path.ChangeExtension(SimpleCalculatorFilePath, BytecodeSerializer.Extension));
+		using var runner = new Runner(Path.ChangeExtension(SimpleCalculatorFilePath, BytecodeSerializer.Extension),
+			TestPackage.Instance);
 		runner.Run();
 		Assert.That(File.Exists(asmPath), Is.False,
 			".asm file should not be created when loading precompiled bytecode");
@@ -391,7 +391,7 @@ public sealed class RunnerTests
 	[Test]
 	public void RunSumWithProgramArguments()
 	{
-		using var runner = new Runner(TestPackage.Instance, SumFilePath);
+		using var runner = new Runner(SumFilePath, TestPackage.Instance);
 		runner.Run(programArgs: ["5", "10", "20"]);
 		Assert.That(writer.ToString(), Does.Contain("35"));
 	}
@@ -401,7 +401,7 @@ public sealed class RunnerTests
 	[Test]
 	public void RunSumWithNoArgumentsUsesEmptyList()
 	{
-		using var runner = new Runner(TestPackage.Instance, SumFilePath);
+		using var runner = new Runner(SumFilePath, TestPackage.Instance);
 		runner.Run(programArgs: ["0"]);
 		Assert.That(writer.ToString(), Does.Contain("0"));
 	}
@@ -409,7 +409,7 @@ public sealed class RunnerTests
 	[Test]
 	public void RunFibonacciRunner()
 	{
-		using var _ = new Runner(TestPackage.Instance, GetExamplesFilePath("FibonacciRunner")).Run();
+		using var _ = new Runner(GetExamplesFilePath("FibonacciRunner"), TestPackage.Instance).Run();
 		var output = writer.ToString();
 		Assert.That(output, Does.Contain("Fibonacci(10) = 55"));
 		Assert.That(output, Does.Contain("Fibonacci(5) = 5"));
@@ -418,7 +418,7 @@ public sealed class RunnerTests
 	[Test]
 	public void RunNumberStats()
 	{
-		using var _ = new Runner(TestPackage.Instance, GetExamplesFilePath("NumberStats")).Run();
+		using var _ = new Runner(GetExamplesFilePath("NumberStats"), TestPackage.Instance).Run();
 		var output = writer.ToString();
 		Assert.That(output, Does.Contain("Sum: 150"));
 		Assert.That(output, Does.Contain("Maximum: 50"));
@@ -427,7 +427,7 @@ public sealed class RunnerTests
 	[Test]
 	public void RunGcdCalculator()
 	{
-		using var _ = new Runner(TestPackage.Instance, GetExamplesFilePath("GcdCalculator")).Run();
+		using var _ = new Runner(GetExamplesFilePath("GcdCalculator"), TestPackage.Instance).Run();
 		var output = writer.ToString();
 		Assert.That(output, Does.Contain("GCD(48, 18) = 6"));
 		Assert.That(output, Does.Contain("GCD(12, 8) = 4"));
@@ -436,7 +436,7 @@ public sealed class RunnerTests
 	[Test]
 	public void RunPixel()
 	{
-		using var _ = new Runner(TestPackage.Instance, GetExamplesFilePath("Pixel")).Run();
+		using var _ = new Runner(GetExamplesFilePath("Pixel"), TestPackage.Instance).Run();
 		var output = writer.ToString();
 		Assert.That(output, Does.Contain("(100, 150, 200).Brighten is 250"));
 		Assert.That(output, Does.Contain("(100, 150, 200).Darken is 50"));
@@ -446,7 +446,7 @@ public sealed class RunnerTests
 	[Test]
 	public void RunTemperatureConverter()
 	{
-		using var _ = new Runner(TestPackage.Instance, GetExamplesFilePath("TemperatureConverter")).Run();
+		using var _ = new Runner(GetExamplesFilePath("TemperatureConverter"), TestPackage.Instance).Run();
 		var output = writer.ToString();
 		Assert.That(output, Does.Contain("100C in Fahrenheit: 212"));
 		Assert.That(output, Does.Contain("0C in Fahrenheit: 32"));
@@ -456,7 +456,7 @@ public sealed class RunnerTests
 	[Test]
 	public void RunExpressionWithSingleConstructorArgAndMethod()
 	{
-		using var runner = new Runner(TestPackage.Instance, GetExamplesFilePath("FibonacciRunner"));
+		using var runner = new Runner(GetExamplesFilePath("FibonacciRunner"), TestPackage.Instance);
 		runner.RunExpression("FibonacciRunner(5).Compute");
 		Assert.That(writer.ToString(), Does.Contain("5"));
 	}
@@ -464,7 +464,7 @@ public sealed class RunnerTests
 	[Test]
 	public void RunExpressionWithMultipleConstructorArgs()
 	{
-		using var runner = new Runner(TestPackage.Instance, GetExamplesFilePath("Pixel"));
+		using var runner = new Runner(GetExamplesFilePath("Pixel"), TestPackage.Instance);
 		runner.RunExpression("Pixel(100, 150, 200).Brighten");
 		Assert.That(writer.ToString(), Does.Contain("250"));
 	}
@@ -472,7 +472,7 @@ public sealed class RunnerTests
 	[Test]
 	public void RunExpressionWithZeroConstructorArgValue()
 	{
-		using var runner = new Runner(TestPackage.Instance, GetExamplesFilePath("TemperatureConverter"));
+		using var runner = new Runner(GetExamplesFilePath("TemperatureConverter"), TestPackage.Instance);
 		runner.RunExpression("TemperatureConverter(0).ToFahrenheit");
 		Assert.That(writer.ToString(), Does.Contain("32"));
 	}
@@ -489,9 +489,9 @@ public sealed class RunnerTests
 		binaryFilePath = GetExamplesBinaryFile("MemoryPressure");
 		writer.GetStringBuilder().Clear();
 		ForceGarbageCollection();
-		new Runner(TestPackage.Instance, binaryFilePath).Run().Dispose();
+		new Runner(binaryFilePath, TestPackage.Instance).Run().Dispose();
 		ForceGarbageCollection();
-		new Runner(TestPackage.Instance, binaryFilePath).Run().Dispose();
+		new Runner(binaryFilePath, TestPackage.Instance).Run().Dispose();
 		ForceGarbageCollection();
 		var outputLines = writer.ToString().Split(Environment.NewLine,
 			StringSplitOptions.RemoveEmptyEntries);
