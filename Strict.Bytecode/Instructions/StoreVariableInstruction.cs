@@ -1,3 +1,4 @@
+using Strict.Bytecode.Serialization;
 using Strict.Expressions;
 
 namespace Strict.Bytecode.Instructions;
@@ -8,4 +9,11 @@ public sealed class StoreVariableInstruction(ValueInstance constant, string iden
 	public string Identifier { get; } = identifier;
 	public bool IsMember { get; } = isMember;
 	public override string ToString() => $"{base.ToString()} {Identifier}";
+
+	public override void Write(BinaryWriter writer, NameTable table)
+	{
+		base.Write(writer, table);
+		writer.Write7BitEncodedInt(table[Identifier]);
+		writer.Write(IsMember);
+	}
 }

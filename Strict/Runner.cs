@@ -71,7 +71,7 @@ public sealed class Runner : IDisposable
 	private readonly string strictFilePath;
 	private readonly Package? skipPackageSearchAndUseThisTestPackage;
 	private readonly bool enableTestsAndDetailedOutput;
-	private BytecodeTypes? deserializedBytecodeTypes;
+	private StrictBinary? deserializedBytecodeTypes;
 
 	private void Log(string message)
 	{

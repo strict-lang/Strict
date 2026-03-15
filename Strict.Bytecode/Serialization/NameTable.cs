@@ -8,13 +8,9 @@ namespace Strict.Bytecode.Serialization;
 /// <summary>
 /// Used in BytecodeSerializer to write out strings, names, identifiers, etc. once.
 /// </summary>
-internal sealed class NameTable : IEnumerable<string>
+public sealed class NameTable : IEnumerable<string>
 {
-	public NameTable(IList<Instruction> instructions)
-	{
-		foreach (var inst in instructions)
-			CollectStrings(inst);
-	}
+	public NameTable() { }
 
 	public NameTable(BinaryReader reader)
 	{
@@ -23,8 +19,7 @@ internal sealed class NameTable : IEnumerable<string>
 			Add(reader.ReadString());
 	}
 
-	// ReSharper disable once UnusedMethodReturnValue.Local
-	private NameTable CollectStrings(Instruction instruction) =>
+	public NameTable CollectStrings(Instruction instruction) =>
 		instruction switch
 		{
 			LoadVariableToRegister loadVar => Add(loadVar.Identifier),
@@ -53,6 +48,7 @@ internal sealed class NameTable : IEnumerable<string>
 
 	private readonly Dictionary<string, int> indices = new(StringComparer.Ordinal);
 	private readonly List<string> names = [];
+	public IReadOnlyList<string> Names => names;
 	public int this[string name] => indices[name];
 	public int Count => names.Count;
 	public IEnumerator<string> GetEnumerator() => names.GetEnumerator();
@@ -115,14 +111,10 @@ internal sealed class NameTable : IEnumerable<string>
 			_ => Add(expr.ToString()).Add(expr.ReturnType.Name)
 		};
 
-	public string[] ToArray() => names.ToArray();
-
 	public void Write(BinaryWriter writer)
 	{
 		writer.Write7BitEncodedInt(Count);
 		foreach (var s in this)
 			writer.Write(s);
 	}
-
-	public NameTable CollectInstruction(Instruction instruction) => CollectStrings(instruction);
 }

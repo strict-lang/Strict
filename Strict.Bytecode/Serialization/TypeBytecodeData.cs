@@ -1,3 +1,4 @@
+/*obs
 using Strict.Bytecode.Instructions;
 
 namespace Strict.Bytecode.Serialization;
@@ -35,3 +36,4 @@ public sealed class MethodParameterBytecodeData(string name, string typeName)
 	public string Name { get; } = name;
 	public string TypeName { get; } = typeName;
 }
+*/
