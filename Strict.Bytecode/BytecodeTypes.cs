@@ -35,9 +35,7 @@ public sealed class BytecodeTypes
 	{
 		if (!MethodsPerType.TryGetValue(fullTypeName, out var methods))
 			return null;
-		var typeName = fullTypeName.Contains('/')
-			? fullTypeName[(fullTypeName.LastIndexOf('/') + 1)..]
-			: fullTypeName;
+		var typeName = BytecodeDeserializer.GetTypeNameFromEntryName(fullTypeName);
 		var key = BytecodeDeserializer.BuildMethodInstructionKey(typeName, methodName,
 			parametersCount);
 		return methods.InstructionsPerMethod.GetValueOrDefault(key);

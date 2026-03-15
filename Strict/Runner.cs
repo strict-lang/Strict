@@ -79,7 +79,7 @@ public sealed class Runner : IDisposable
 			Console.WriteLine(message);
 	}
 
-	private readonly string currentFolder = null!;
+	private readonly string currentFolder;
 	private readonly Package package;
 	private readonly Type mainType;
 	private readonly List<long> stepTimes = new();

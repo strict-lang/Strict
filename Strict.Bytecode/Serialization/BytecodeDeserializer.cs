@@ -113,11 +113,10 @@ public sealed class BytecodeDeserializer(string FilePath)
 			var memberName = table[reader.Read7BitEncodedInt()];
 			var memberTypeName = ReadTypeReferenceName(reader, table);
 			_ = EnsureMember(type, memberName, memberTypeName);
-			Instruction? initialValue = null;
 			if (reader.ReadBoolean())
 				_ = ReadExpression(reader, package, table); //ncrunch: no coverage
 			typeMembersAndMethods.Members.Add(
-				new BytecodeTypes.TypeMember(memberName, memberTypeName, initialValue));
+				new BytecodeTypes.TypeMember(memberName, memberTypeName, null));
 		}
 		var methodCount = reader.Read7BitEncodedInt();
 		for (var methodIndex = 0; methodIndex < methodCount; methodIndex++)
@@ -267,7 +266,7 @@ public sealed class BytecodeDeserializer(string FilePath)
 			: new Type(targetPackage, new TypeLines(typeName, Method.Run));
 	}
 
-	private static string GetTypeNameFromEntryName(string entryName) =>
+	internal static string GetTypeNameFromEntryName(string entryName) =>
 		entryName.Contains(Context.ParentSeparator)
 			? entryName[(entryName.LastIndexOf(Context.ParentSeparator) + 1)..]
 			: entryName;
