@@ -82,21 +82,17 @@ public sealed class Runner : IDisposable
 	/// LLVM and MLIR are opt-in until feature parity is reached.
 	/// Throws <see cref="ToolNotFoundException"/> if required tools are missing.
 	/// </summary>
-	public async Task Build(Platform platform, CompilerBackend backend = CompilerBackend.MlirDefault,
+	public void Build(Platform platform, CompilerBackend backend = CompilerBackend.MlirDefault,
 		bool forceStrictBinaryGeneration = false)
 	{
-		var bytecode = await LoadBytecode();
+		var optimizedInstructions = BuildFromSource(forceStrictBinaryGeneration);
+		IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods = null;
 		if (backend == CompilerBackend.Llvm)
-			await SaveLlvmExecutable(platform, bytecode);
+			SaveLlvmExecutable(optimizedInstructions, platform, precompiledMethods);
 		else if (backend == CompilerBackend.Nasm)
-			await SaveNasmExecutable(platform, bytecode);
+			SaveNasmExecutable(optimizedInstructions, platform, precompiledMethods);
 		else
-			await SaveMlirExecutable(platform, bytecode);
-	}
-
-	private async Task<Platform> LoadBytecode()
-	{
-		return Platform.Windows;
+			SaveMlirExecutable(optimizedInstructions, platform, precompiledMethods);
 	}
 	/*obs
 		if (deserializer == null)
@@ -190,14 +186,14 @@ public sealed class Runner : IDisposable
 
 	private Runner RunFromSource(string[] programArgs)
 	{
-		BuildFromSource(true);
+		var optimizedInstructions = BuildFromSource(true);
 		ExecuteBytecode(optimizedInstructions, null, BuildProgramArguments(programArgs));
 		Log("Successfully parsed, optimized and executed " + mainType.Name + " in " +
 			TimeSpan.FromTicks(stepTimes.Sum()).ToString(@"s\.ffffff") + "s");
 		return this;
 	}
 
-	private void BuildFromSource(bool saveStrictBinary)
+	private List<Instruction> BuildFromSource(bool saveStrictBinary)
 	{
 		if (enableTestsAndDetailedOutput)
 		{
@@ -209,7 +205,6 @@ public sealed class Runner : IDisposable
 		var optimizedInstructions = OptimizeBytecode(instructions);
 		if (saveStrictBinary)
 			SaveStrictBinaryBytecodeIfPossible(optimizedInstructions);
-		deserializer = new BytecodeDeserializer()
 		return optimizedInstructions;
 	}
 

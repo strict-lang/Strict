@@ -29,7 +29,7 @@ public sealed class BytecodeSerializerTests : TestBytecode
 	private static List<Instruction> RoundTripToInstructions(string typeName,
 		IList<Instruction> instructions) =>
 		new BytecodeDeserializer(SerializeToMemory(typeName, instructions), TestPackage.Instance).
-			Instructions[typeName];
+			Instructions![typeName];
 
 	private static string SerializeToTemp(string typeName, IList<Instruction> instructions) =>
 		new BytecodeSerializer(
@@ -111,7 +111,7 @@ public sealed class BytecodeSerializerTests : TestBytecode
 		var binaryFilePath = GetTempStrictBinaryFilePath();
 		File.WriteAllBytes(binaryFilePath, [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]);
 		Assert.Throws<BytecodeDeserializer.InvalidBytecodeFileException>(() =>
-			new BytecodeDeserializer(binaryFilePath, TestPackage.Instance));
+			new BytecodeDeserializer(binaryFilePath).Deserialize(TestPackage.Instance));
 	}
 
 	[Test]
@@ -394,9 +394,9 @@ public sealed class BytecodeSerializerTests : TestBytecode
 				["TypeA"] = addInstructions,
 				["TypeB"] = subInstructions
 			}), TestPackage.Instance);
-		Assert.That(deserializer.Instructions, Has.Count.EqualTo(2));
-		Assert.That(deserializer.Instructions["TypeA"], Has.Count.EqualTo(2));
-		Assert.That(deserializer.Instructions["TypeB"], Has.Count.EqualTo(2));
+		Assert.That(deserializer.Instructions!, Has.Count.EqualTo(2));
+		Assert.That(deserializer.Instructions!["TypeA"], Has.Count.EqualTo(2));
+		Assert.That(deserializer.Instructions!["TypeB"], Has.Count.EqualTo(2));
 	}
 
 	[Test]
@@ -569,7 +569,7 @@ public sealed class BytecodeSerializerTests : TestBytecode
 		var deserialized =
 			new BytecodeDeserializer(new Dictionary<string, byte[]> { ["main"] = entryBytes },
 				TestPackage.Instance);
-		Assert.That(deserialized.Instructions.Values.First(), Has.Count.EqualTo(1));
+		Assert.That(deserialized.Instructions!.Values.First(), Has.Count.EqualTo(1));
 	}
 
 	private static byte[] CreateBytecodeWithCustomTypeName(string typeName)
@@ -604,7 +604,7 @@ public sealed class BytecodeSerializerTests : TestBytecode
 		var deserialized =
 			new BytecodeDeserializer(new Dictionary<string, byte[]> { ["main"] = entryBytes },
 				TestPackage.Instance);
-		Assert.That(deserialized.Instructions.Values.First(), Has.Count.EqualTo(1));
+		Assert.That(deserialized.Instructions!.Values.First(), Has.Count.EqualTo(1));
 	}
 
 	private static byte[] CreateBytecodeWithMethodParameters(int paramCount)

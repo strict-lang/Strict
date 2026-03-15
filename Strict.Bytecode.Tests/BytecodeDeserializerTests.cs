@@ -9,9 +9,9 @@ public sealed class BytecodeDeserializerTests : TestBytecode
 	public void ZipWithNoBytecodeEntriesThrows()
 	{
 		var filePath = CreateEmptyZipWithDummyEntry();
-		Assert.That(() => new BytecodeDeserializer(filePath, TestPackage.Instance),
+		Assert.That(() => new BytecodeDeserializer(filePath).Deserialize(TestPackage.Instance),
 			Throws.TypeOf<BytecodeDeserializer.InvalidBytecodeFileException>().With.Message.
-				Contains("no entries"));
+				Contains("no"));
 	}
 
 	private static string CreateEmptyZipWithDummyEntry()

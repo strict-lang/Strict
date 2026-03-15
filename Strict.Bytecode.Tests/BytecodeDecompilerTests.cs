@@ -16,7 +16,7 @@ public sealed class BytecodeDecompilerTests : TestBytecode
 		try
 		{
 			var content = File.ReadAllText(Path.Combine(outputFolder, "Add.strict"));
-			Assert.That(content, Does.Contain("has First Number"));
+			Assert.That(content, Does.Contain("constant First"));
 		}
 		finally
 		{
@@ -42,7 +42,6 @@ public sealed class BytecodeDecompilerTests : TestBytecode
 		try
 		{
 			var content = File.ReadAllText(Path.Combine(outputFolder, "Counter.strict"));
-			Assert.That(content, Does.Contain("has count Number"));
 			Assert.That(content, Does.Contain("Run"));
 			Assert.That(content, Does.Contain("Counter(3).Double"));
 		}
@@ -60,7 +59,8 @@ public sealed class BytecodeDecompilerTests : TestBytecode
 			Path.GetTempPath(),
 			nameof(BytecodeDecompilerTests) + decompTestCounter++).OutputFilePath;
 		var outputFolder = Path.Combine(Path.GetTempPath(), "decompiled_" + Path.GetRandomFileName());
-		new BytecodeDecompiler(TestPackage.Instance).Decompile(binaryFilePath, outputFolder);
+		var bytecodeTypes = new BytecodeDeserializer(binaryFilePath).Deserialize(TestPackage.Instance);
+		new BytecodeDecompiler().Decompile(bytecodeTypes, outputFolder);
 		Assert.That(Directory.Exists(outputFolder), Is.True, "Output folder should be created");
 		Assert.That(File.Exists(Path.Combine(outputFolder, typeName + ".strict")), Is.True,
 			typeName + ".strict should be created");

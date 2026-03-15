@@ -1,4 +1,5 @@
 using Strict.Bytecode;
+using Strict.Bytecode.Serialization;
 using Strict.Compiler;
 using Strict.Expressions;
 using Strict.Language;
@@ -71,7 +72,8 @@ public static class Program
 		{
 			var outputFolder = Path.GetFileNameWithoutExtension(filePath);
 			using var basePackage = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
-			new BytecodeDecompiler(basePackage).Decompile(filePath, outputFolder);
+			var bytecodeTypes = new BytecodeDeserializer(filePath).Deserialize(basePackage);
+			new BytecodeDecompiler().Decompile(bytecodeTypes, outputFolder);
 			Console.WriteLine("Decompilation complete, written all partial .strict files (only what " +
 				"was included in bytecode, no tests) to folder: " + outputFolder);
 		}

@@ -51,10 +51,15 @@ public sealed class BytecodeSerializer
 	{
 		foreach (var (typeName, instructions) in instructionsByType)
 		{
+			var typeData = new TypeBytecodeData(typeName, typeName,
+				Array.Empty<MemberBytecodeData>(),
+				Array.Empty<MethodBytecodeData>(),
+				instructions,
+				new Dictionary<MethodBytecodeData, IList<Instruction>>());
 			var entry = zip.CreateEntry(typeName + BytecodeEntryExtension, CompressionLevel.Optimal);
 			using var entryStream = entry.Open();
 			using var writer = new BinaryWriter(entryStream);
-			WriteEntry(writer, instructions);
+			WriteTypeEntry(writer, typeData);
 		}
 	}
 
