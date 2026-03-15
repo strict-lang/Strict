@@ -12,8 +12,14 @@ namespace Strict.Bytecode.Serialization;
 /// </summary>
 public sealed class BytecodeDeserializer(string FilePath)
 {
-	public BytecodeTypes Deserialize()
+	/// <summary>
+	/// Reads a .strictbinary ZIP and returns <see cref="BytecodeTypes"/> containing all type
+	/// metadata (members, method signatures) and instruction bodies for each type.
+	/// </summary>
+	public BytecodeTypes Deserialize(Package basePackage)
 	{
+		var package = new Package(basePackage,
+			Path.GetFileNameWithoutExtension(FilePath) + "-" + ++packageCounter);
 		try
 		{
 			using var zip = ZipFile.OpenRead(FilePath);
@@ -23,19 +29,19 @@ public sealed class BytecodeDeserializer(string FilePath)
 			if (bytecodeEntries.Count == 0)
 				throw new InvalidBytecodeFileException(BytecodeSerializer.Extension +
 					" ZIP contains no " + BytecodeSerializer.BytecodeEntryExtension + " entries");
+			var typeEntries = bytecodeEntries.Select(entry => new TypeEntryData(
+				GetEntryNameWithoutExtension(entry.FullName),
+				ReadAllBytes(entry.Open()))).ToList();
 			var result = new BytecodeTypes();
-			foreach (var entry in bytecodeEntries)
-			{
-				var typeFullName = GetEntryNameWithoutExtension(entry.FullName);
-				var bytes = ReadAllBytes(entry.Open());
-				foreach (var typeEntry in typeEntries)
-					ReadTypeMetadata(typeEntry, package);
-				var runInstructions = new Dictionary<string, List<Instruction>>(StringComparer.Ordinal);
-				var methodInstructions =
-					new Dictionary<string, List<Instruction>>(StringComparer.Ordinal);
-				foreach (var typeEntry in typeEntries)
-					ReadTypeInstructions(typeEntry, package, runInstructions, methodInstructions);
-			}
+			foreach (var typeEntry in typeEntries)
+				result.MethodsPerType[typeEntry.EntryName] =
+					ReadTypeMetadataIntoBytecodeTypes(typeEntry, package);
+			var runInstructions = new Dictionary<string, List<Instruction>>(StringComparer.Ordinal);
+			var methodInstructions =
+				new Dictionary<string, List<Instruction>>(StringComparer.Ordinal);
+			foreach (var typeEntry in typeEntries)
+				ReadTypeInstructions(typeEntry, package, runInstructions, methodInstructions);
+			PopulateInstructions(result, typeEntries, runInstructions, methodInstructions);
 			return result;
 		}
 		catch (InvalidDataException ex)
@@ -44,49 +50,42 @@ public sealed class BytecodeDeserializer(string FilePath)
 				" ZIP file: " + ex.Message);
 		}
 	}
-	/*TODO: nah
-	public BytecodeDeserializer(string filePath) //nah: , Package basePackage)
+
+	private static void PopulateInstructions(BytecodeTypes result,
+		List<TypeEntryData> typeEntries, Dictionary<string, List<Instruction>> runInstructions,
+		Dictionary<string, List<Instruction>> methodInstructions)
 	{
-		var fullPath = Path.GetFullPath(filePath);
-		/*
-		var packageName = Path.GetFileNameWithoutExtension(fullPath);
-		Package = new Package(basePackage, packageName + "-" + ++packageCounter);
-		*
-		try
+		foreach (var typeEntry in typeEntries)
 		{
-			using var zip = ZipFile.OpenRead(fullPath);
-			(Instructions, PrecompiledMethods) = DeserializeAllFromZip(zip, Package);
-		}
-		catch (InvalidDataException ex)
-		{
-			throw new InvalidBytecodeFileException("Not a valid " + BytecodeSerializer.Extension +
-				" ZIP file: " + ex.Message);
+			if (!result.MethodsPerType.TryGetValue(typeEntry.EntryName, out var typeMethods))
+				continue;
+			var typeName = GetTypeNameFromEntryName(typeEntry.EntryName);
+			if (runInstructions.TryGetValue(typeName, out var runInstr) && runInstr.Count > 0)
+				typeMethods.InstructionsPerMethod[BytecodeTypes.GetMethodKey(Method.Run, 0)] =
+					runInstr;
+			foreach (var (key, instructions) in methodInstructions)
+			{
+				var parts = key.Split('|');
+				if (parts[0] != typeName)
+					continue;
+				typeMethods.InstructionsPerMethod[BytecodeTypes.GetMethodKey(parts[1],
+					int.Parse(parts[2]))] = instructions;
+			}
 		}
 	}
 
-	public Package Package { get; }
-	public Dictionary<string, List<Instruction>> Instructions { get; }
-	public Dictionary<string, List<Instruction>> PrecompiledMethods { get; }
+	public Package? Package { get; private set; }
+	public Dictionary<string, List<Instruction>>? Instructions { get; private set; }
+	public Dictionary<string, List<Instruction>>? PrecompiledMethods { get; private set; }
 
-	private static (Dictionary<string, List<Instruction>> RunInstructions,
-		Dictionary<string, List<Instruction>> MethodInstructions)
-		DeserializeAllFromZip(ZipArchive zip, Package package)
+	/// <summary>
+	/// Deserializes all bytecode entries from in-memory .bytecode payloads.
+	/// </summary>
+	public BytecodeDeserializer(Dictionary<string, byte[]> entryBytesByType, Package basePackage,
+		string packageName = "memory") : this("")
 	{
-		var bytecodeEntries = zip.Entries.Where(entry =>
-			entry.FullName.EndsWith(BytecodeSerializer.BytecodeEntryExtension,
-				StringComparison.OrdinalIgnoreCase)).ToList();
-		if (bytecodeEntries.Count == 0)
-			throw new InvalidBytecodeFileException(BytecodeSerializer.Extension +
-				" ZIP contains no entries");
-		var typeEntries = bytecodeEntries.Select(entry => new TypeEntryData(
-			GetEntryNameWithoutExtension(entry.FullName), ReadAllBytes(entry.Open()))).ToList();
-		foreach (var typeEntry in typeEntries)
-			ReadTypeMetadata(typeEntry, package);
-		var runInstructions = new Dictionary<string, List<Instruction>>(StringComparer.Ordinal);
-		var methodInstructions = new Dictionary<string, List<Instruction>>(StringComparer.Ordinal);
-		foreach (var typeEntry in typeEntries)
-			ReadTypeInstructions(typeEntry, package, runInstructions, methodInstructions);
-		return (runInstructions, methodInstructions);
+		Package = new Package(basePackage, packageName + "-" + ++packageCounter);
+		(Instructions, PrecompiledMethods) = DeserializeAllFromEntries(entryBytesByType, Package);
 	}
 
 	private sealed class TypeEntryData(string entryName, byte[] bytes)
@@ -94,9 +93,51 @@ public sealed class BytecodeDeserializer(string FilePath)
 		public string EntryName { get; } = entryName;
 		public byte[] Bytes { get; } = bytes;
 	}
-*/
 
-	//TODO: this is very strange, why do we not keep this data?? this is what BytecodeTypes.Members and Methods needs!
+	/// <summary>
+	/// Reads type metadata (members and method signatures) from a bytecode entry and returns a
+	/// <see cref="BytecodeTypes.TypeMembersAndMethods"/> with the captured data. Also creates
+	/// the corresponding Language types for instruction deserialization.
+	/// </summary>
+	private static BytecodeTypes.TypeMembersAndMethods ReadTypeMetadataIntoBytecodeTypes(
+		TypeEntryData typeEntry, Package package)
+	{
+		var typeMembersAndMethods = new BytecodeTypes.TypeMembersAndMethods();
+		using var stream = new MemoryStream(typeEntry.Bytes);
+		using var reader = new BinaryReader(stream, System.Text.Encoding.UTF8, leaveOpen: true);
+		_ = ValidateMagicAndVersion(reader);
+		var table = new NameTable(reader).ToArray();
+		var type = EnsureTypeForEntry(package, typeEntry.EntryName);
+		var memberCount = reader.Read7BitEncodedInt();
+		for (var memberIndex = 0; memberIndex < memberCount; memberIndex++)
+		{
+			var memberName = table[reader.Read7BitEncodedInt()];
+			var memberTypeName = ReadTypeReferenceName(reader, table);
+			_ = EnsureMember(type, memberName, memberTypeName);
+			Instruction? initialValue = null;
+			if (reader.ReadBoolean())
+				_ = ReadExpression(reader, package, table); //ncrunch: no coverage
+			typeMembersAndMethods.Members.Add(
+				new BytecodeTypes.TypeMember(memberName, memberTypeName, initialValue));
+		}
+		var methodCount = reader.Read7BitEncodedInt();
+		for (var methodIndex = 0; methodIndex < methodCount; methodIndex++)
+		{
+			var methodName = table[reader.Read7BitEncodedInt()];
+			var parameterCount = reader.Read7BitEncodedInt();
+			var parameters = new string[parameterCount];
+			for (var parameterIndex = 0; parameterIndex < parameterCount; parameterIndex++)
+			{ //ncrunch: no coverage start
+				var parameterName = table[reader.Read7BitEncodedInt()];
+				var parameterType = ReadTypeReferenceName(reader, table);
+				parameters[parameterIndex] = parameterName + " " + parameterType;
+			} //ncrunch: no coverage end
+			var returnTypeName = ReadTypeReferenceName(reader, table);
+			EnsureMethod(type, methodName, parameters, returnTypeName);
+		}
+		return typeMembersAndMethods;
+	}
+
 	private static void ReadTypeMetadata(TypeEntryData typeEntry, Package package)
 	{
 		using var stream = new MemoryStream(typeEntry.Bytes);
@@ -250,16 +291,6 @@ public sealed class BytecodeDeserializer(string FilePath)
 
 	public sealed class InvalidBytecodeFileException(string message) : Exception(
 		"Not a valid Strict bytecode (" + BytecodeSerializer.Extension + ") file: " + message);
-
-	/// <summary>
-	/// Deserializes all bytecode entries from in-memory .bytecode payloads.
-	/// </summary>
-	public BytecodeDeserializer(Dictionary<string, byte[]> entryBytesByType, Package basePackage,
-		string packageName = "memory")
-	{
-		Package = new Package(basePackage, packageName + "-" + ++packageCounter);
-		(Instructions, PrecompiledMethods) = DeserializeAllFromEntries(entryBytesByType, Package);
-	}
 
 	private static (Dictionary<string, List<Instruction>> RunInstructions,
 		Dictionary<string, List<Instruction>> MethodInstructions)

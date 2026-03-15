@@ -28,7 +28,7 @@ public sealed class BytecodeTypes
 		Instruction? InitialValueExpression);
 
 	public List<Instruction>? Find(Type type, Method method) =>
-		Find(type.FullName, method.FullName.Name, method.Parameters.Count, method.ReturnType.Name);
+		Find(type.FullName, method.Name, method.Parameters.Count, method.ReturnType.Name);
 
 	public List<Instruction>? Find(string fullTypeName, string methodName, int parametersCount,
 		string returnType = "") =>
