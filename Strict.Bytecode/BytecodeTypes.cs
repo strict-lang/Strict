@@ -31,12 +31,17 @@ public sealed class BytecodeTypes
 		Find(type.FullName, method.Name, method.Parameters.Count, method.ReturnType.Name);
 
 	public List<Instruction>? Find(string fullTypeName, string methodName, int parametersCount,
-		string returnType = "") =>
-		MethodsPerType.TryGetValue(fullTypeName, out var methods) &&
-		methods.InstructionsPerMethod.TryGetValue(
-			GetMethodKey(methodName, parametersCount, returnType), out var instructions)
-			? instructions
-			: null;
+		string returnType = "")
+	{
+		if (!MethodsPerType.TryGetValue(fullTypeName, out var methods))
+			return null;
+		var typeName = fullTypeName.Contains('/')
+			? fullTypeName[(fullTypeName.LastIndexOf('/') + 1)..]
+			: fullTypeName;
+		var key = BytecodeDeserializer.BuildMethodInstructionKey(typeName, methodName,
+			parametersCount);
+		return methods.InstructionsPerMethod.GetValueOrDefault(key);
+	}
 
 	public static string GetMethodKey(string name, int parametersCount, string returnType = "") =>
 		name + parametersCount + returnType;

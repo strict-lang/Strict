@@ -61,15 +61,14 @@ public sealed class BytecodeDeserializer(string FilePath)
 				continue;
 			var typeName = GetTypeNameFromEntryName(typeEntry.EntryName);
 			if (runInstructions.TryGetValue(typeName, out var runInstr) && runInstr.Count > 0)
-				typeMethods.InstructionsPerMethod[BytecodeTypes.GetMethodKey(Method.Run, 0)] =
-					runInstr;
+				typeMethods.InstructionsPerMethod[BuildMethodInstructionKey(typeName, Method.Run,
+					0)] = runInstr;
 			foreach (var (key, instructions) in methodInstructions)
 			{
 				var parts = key.Split('|');
 				if (parts[0] != typeName)
 					continue;
-				typeMethods.InstructionsPerMethod[BytecodeTypes.GetMethodKey(parts[1],
-					int.Parse(parts[2]))] = instructions;
+				typeMethods.InstructionsPerMethod[key] = instructions;
 			}
 		}
 	}

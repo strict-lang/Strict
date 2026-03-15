@@ -32,11 +32,46 @@ public sealed class Runner : IDisposable
 		Log("║ Strict Programming Language Runner ║");
 		Log("╚════════════════════════════════════╝");
 		Log("Creating Runner with: " + strictFilePath);
+		var startTicks = DateTime.UtcNow.Ticks;
+		currentFolder = Path.GetDirectoryName(Path.GetFullPath(strictFilePath))!;
+		var typeName = Path.GetFileNameWithoutExtension(strictFilePath);
+		if (skipPackageSearchAndUseThisTestPackage != null)
+		{
+			var basePackage = skipPackageSearchAndUseThisTestPackage;
+			if (Directory.Exists(strictFilePath))
+				(package, mainType) = LoadPackageFromDirectory(basePackage, strictFilePath);
+			else if (Path.GetExtension(strictFilePath) == BytecodeSerializer.Extension)
+			{
+				var bytecodeTypes = new BytecodeDeserializer(strictFilePath).Deserialize(basePackage);
+				package = new Package(basePackage, typeName);
+				mainType = new Type(package, new TypeLines(typeName, Method.Run))
+					.ParseMembersAndMethods(new MethodExpressionParser());
+				deserializedBytecodeTypes = bytecodeTypes;
+			}
+			else
+			{
+				var packageName = Path.GetFileNameWithoutExtension(strictFilePath);
+				package = new Package(basePackage, packageName);
+				var typeLines = new TypeLines(typeName, File.ReadAllLines(strictFilePath));
+				mainType = new Type(package, typeLines)
+					.ParseMembersAndMethods(new MethodExpressionParser());
+			}
+		}
+		else
+		{
+			package = null!;
+			mainType = null!;
+		}
+		var endTicks = DateTime.UtcNow.Ticks;
+		stepTimes.Add(endTicks - startTicks);
+		Log("└─ Step 1 ⏱ Time: " +
+			TimeSpan.FromTicks(endTicks - startTicks).TotalMilliseconds + " ms");
 	}
 
 	private readonly string strictFilePath;
 	private readonly Package? skipPackageSearchAndUseThisTestPackage;
 	private readonly bool enableTestsAndDetailedOutput;
+	private BytecodeTypes? deserializedBytecodeTypes;
 
 	private void Log(string message)
 	{
@@ -44,34 +79,7 @@ public sealed class Runner : IDisposable
 			Console.WriteLine(message);
 	}
 
-	/*TODO
-	private readonly Repositories repos;
-		repos = new Repositories(new MethodExpressionParser());
-	 * 		using var basePackage = await repos.LoadStrictPackage();
-		Log("┌─ Step 1: Loading: " + strictFilePath);
-		var startTicks = DateTime.UtcNow.Ticks;
-		currentFolder = Path.GetDirectoryName(Path.GetFullPath(strictFilePath))!;
-		var typeName = Path.GetFileNameWithoutExtension(strictFilePath);
-		if (Path.GetExtension(strictFilePath) == BytecodeSerializer.Extension)
-		{
-			deserializer = new BytecodeDeserializer(strictFilePath, basePackage);
-			package = deserializer.Package;
-			mainType = package.GetType(typeName);
-		}
-		else
-		{
-			var packageName = Path.GetFileNameWithoutExtension(strictFilePath);
-			package = new Package(basePackage, packageName);
-			var typeLines = new TypeLines(typeName, File.ReadAllLines(strictFilePath));
-			mainType = new Type(package, typeLines).ParseMembersAndMethods(new MethodExpressionParser());
-		}
-		var endTicks = DateTime.UtcNow.Ticks;
-		stepTimes.Add(endTicks - startTicks);
-		Log("└─ Step 1 ⏱ Time: " + TimeSpan.FromTicks(endTicks - startTicks).TotalMilliseconds + " ms");
-	 **/
-
-	private readonly string currentFolder;
-	private readonly BytecodeDeserializer? deserializer;
+	private readonly string currentFolder = null!;
 	private readonly Package package;
 	private readonly Type mainType;
 	private readonly List<long> stepTimes = new();
@@ -85,8 +93,20 @@ public sealed class Runner : IDisposable
 	public void Build(Platform platform, CompilerBackend backend = CompilerBackend.MlirDefault,
 		bool forceStrictBinaryGeneration = false)
 	{
-		var optimizedInstructions = BuildFromSource(forceStrictBinaryGeneration);
-		IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods = null;
+		List<Instruction> optimizedInstructions;
+		IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods;
+		if (deserializedBytecodeTypes != null)
+		{
+			optimizedInstructions = deserializedBytecodeTypes.Find(mainType.FullName, Method.Run,
+				0) ?? FindFirstRunInstructions() ?? throw new InvalidOperationException(
+				"No Run method instructions in bytecode for " + mainType.Name);
+			precompiledMethods = BuildPrecompiledMethodsFromBytecodeTypes();
+		}
+		else
+		{
+			optimizedInstructions = BuildFromSource(forceStrictBinaryGeneration);
+			precompiledMethods = null;
+		}
 		if (backend == CompilerBackend.Llvm)
 			SaveLlvmExecutable(optimizedInstructions, platform, precompiledMethods);
 		else if (backend == CompilerBackend.Nasm)
@@ -94,24 +114,6 @@ public sealed class Runner : IDisposable
 		else
 			SaveMlirExecutable(optimizedInstructions, platform, precompiledMethods);
 	}
-	/*obs
-		if (deserializer == null)
-			BuildFromSource(forceStrictBinaryGeneration);
-
-
-		{
-			var optimizedInstructions = deserializer.Instructions[mainType.Name];
-			var precompiledMethods = deserializer.PrecompiledMethods;
-			return backend switch
-			{
-				CompilerBackend.Llvm => SaveLlvmExecutable(optimizedInstructions, platform, precompiledMethods),
-				CompilerBackend.Nasm => SaveNasmExecutable(optimizedInstructions, platform, precompiledMethods),
-				_ => SaveMlirExecutable(optimizedInstructions, platform, precompiledMethods)
-			};
-		}
-		else
-			throw new InvalidOperationException("Cannot build executable without .strictbinary yet!");
-			*/
 
 	private Runner SaveLlvmExecutable(List<Instruction> optimizedInstructions, Platform platform,
 		IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods)
@@ -167,21 +169,41 @@ public sealed class Runner : IDisposable
 			" bytes to: " + exeFilePath);
 
 	public Runner Run(params string[] programArgs) =>
-		deserializer != null
-			? RunFromPreloadedBytecode(deserializer.Instructions[mainType.Name], programArgs)
+		deserializedBytecodeTypes != null
+			? RunFromPreloadedBytecode(programArgs)
 			: RunFromSource(programArgs);
 
-	private Runner RunFromPreloadedBytecode(List<Instruction> preloadedInstructions,
-		string[] programArgs)
+	private Runner RunFromPreloadedBytecode(string[] programArgs)
 	{
 		Log("╔═══════════════════════════════════════════╗");
 		Log("║  Running from pre-compiled .strictbinary  ║");
 		Log("╚═══════════════════════════════════════════╝");
-		ExecuteBytecode(preloadedInstructions, deserializer?.PrecompiledMethods,
-			BuildProgramArguments(programArgs));
+		var runInstructions = deserializedBytecodeTypes!.Find(mainType.FullName, Method.Run, 0) ??
+			FindFirstRunInstructions() ?? throw new InvalidOperationException(
+				"No Run method instructions found in deserialized bytecode for " + mainType.Name);
+		var precompiledMethods = BuildPrecompiledMethodsFromBytecodeTypes();
+		ExecuteBytecode(runInstructions, precompiledMethods, BuildProgramArguments(programArgs));
 		Log("Successfully executed pre-compiled " + mainType.Name + " in " +
 			TimeSpan.FromTicks(stepTimes.Sum()).ToString(@"s\.ffffff") + "s");
 		return this;
+	}
+
+	private List<Instruction>? FindFirstRunInstructions() =>
+		deserializedBytecodeTypes?.MethodsPerType.Values
+			.SelectMany(type => type.InstructionsPerMethod)
+			.FirstOrDefault().Value;
+
+	private Dictionary<string, List<Instruction>>? BuildPrecompiledMethodsFromBytecodeTypes()
+	{
+		if (deserializedBytecodeTypes == null)
+			return null;
+		var methods = new Dictionary<string, List<Instruction>>(StringComparer.Ordinal);
+		foreach (var typeData in deserializedBytecodeTypes.MethodsPerType.Values)
+			foreach (var (methodKey, instructions) in typeData.InstructionsPerMethod)
+				methods[methodKey] = instructions;
+		return methods.Count > 0
+			? methods
+			: null;
 	}
 
 	private Runner RunFromSource(string[] programArgs)

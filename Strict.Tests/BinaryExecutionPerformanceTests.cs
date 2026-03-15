@@ -1,6 +1,7 @@
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Engines;
 using BenchmarkDotNet.Running;
+using Strict.Bytecode;
 using Strict.Bytecode.Instructions;
 using Strict.Bytecode.Serialization;
 using Strict.Language;
@@ -19,11 +20,11 @@ public class BinaryExecutionPerformanceTests
 		rememberConsoleOut = Console.Out;
 		Console.SetOut(TextWriter.Null);
 		if (!File.Exists(BinaryFilePath))
-			new Runner(TestPackage.Instance, StrictFilePath).Run().Dispose(); //ncrunch: no coverage
-		var deserializer = new BytecodeDeserializer(BinaryFilePath, TestPackage.Instance);
-		binaryPackage = deserializer.Package;
-		instructions = deserializer.Instructions.Values.First();
-		vm = new VirtualMachine(binaryPackage, deserializer.PrecompiledMethods);
+			new Runner(StrictFilePath).Run().Dispose(); //ncrunch: no coverage
+		var bytecodeTypes = new BytecodeDeserializer(BinaryFilePath).Deserialize(TestPackage.Instance);
+		binaryPackage = TestPackage.Instance;
+		instructions = bytecodeTypes.Find("SimpleCalculator", "Run", 0) ?? new List<Instruction>();
+		vm = new VirtualMachine(binaryPackage);
 	}
 
 	private TextWriter rememberConsoleOut = null!;

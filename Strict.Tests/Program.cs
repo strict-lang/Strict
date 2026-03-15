@@ -1,27 +1,24 @@
 using Strict;
 using Strict.Bytecode.Serialization;
-using Strict.Language;
-using Strict.Language.Tests;
 using Strict.Tests;
 
 //ncrunch: no coverage start
 var binaryFilePath = Path.ChangeExtension(
 	Path.Combine(AppContext.BaseDirectory, "Examples", "SimpleCalculator.strict"),
 	BytecodeSerializer.Extension);
-var basePackage = TestPackage.Instance;
 // First, ensure the .strictbinary file exists by compiling from source
 if (!File.Exists(binaryFilePath))
-	RunSilently(() => new Runner(basePackage,
+	RunSilently(() => new Runner(
 		Path.Combine(AppContext.BaseDirectory, "Examples", "SimpleCalculator.strict")).Run().Dispose());
 // Warm up: one full binary execution to JIT and cache everything (also populates the binary cache)
-RunBinaryOnce(basePackage, binaryFilePath);
+RunBinaryOnce(binaryFilePath);
 Console.WriteLine("Warmup complete. Starting performance measurement...");
 const int Runs = 1000;
 // Measure: 1000 iterations of full Runner.Run() from .strictbinary (cache hits after warmup)
 var allocatedBefore = GC.GetAllocatedBytesForCurrentThread();
 var startTicks = DateTime.UtcNow.Ticks;
 for (var run = 0; run < Runs; run++)
-	RunBinaryOnce(basePackage, binaryFilePath);
+	RunBinaryOnce(binaryFilePath);
 var endTicks = DateTime.UtcNow.Ticks;
 var allocatedAfter = GC.GetAllocatedBytesForCurrentThread();
 Console.WriteLine("Total execution time per run (full binary Runner.Run, cached): " +
@@ -41,8 +38,8 @@ Console.WriteLine("Total execution time per run (VM-only, pre-loaded bytecode): 
 	TimeSpan.FromTicks(hotEndTicks - hotStartTicks) / Runs);
 Console.WriteLine("Allocated bytes per run (VM-only): " + (hotAllocatedAfter - hotAllocatedBefore) / Runs);
 
-static void RunBinaryOnce(Package basePackage, string binaryFilePath) =>
-	RunSilently(() => new Runner(basePackage, binaryFilePath).Run().Dispose());
+static void RunBinaryOnce(string binaryFilePath) =>
+	RunSilently(() => new Runner(binaryFilePath).Run().Dispose());
 
 static void RunSilently(Action action)
 {
