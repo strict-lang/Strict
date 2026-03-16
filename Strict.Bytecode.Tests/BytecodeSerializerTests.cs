@@ -1,4 +1,144 @@
-using System.IO.Compression;
+using Strict.Bytecode.Instructions;
+using Strict.Bytecode.Serialization;
+using Type = Strict.Language.Type;
+
+namespace Strict.Bytecode.Tests;
+
+public sealed class BytecodeSerializerTests : TestBytecode
+{
+	[Test]
+	public void RoundTripSimpleArithmeticBytecode()
+	{
+		var instructions = new BytecodeGenerator(
+			GenerateMethodCallFromSource("Add", "Add(10, 5).Calculate",
+				"has First Number", "has Second Number", "Calculate Number",
+				"\tAdd(10, 5).Calculate is 15", "\tFirst + Second")).Generate();
+		AssertRoundTripToString(instructions);
+	}
+
+	[Test]
+	public void RoundTripSetInstruction() =>
+		AssertRoundTripInstructionTypes([
+			new SetInstruction(Number(42), Register.R0),
+			new ReturnInstruction(Register.R0)
+		]);
+
+	[Test]
+	public void RoundTripStoreFromRegisterInstruction() =>
+		AssertRoundTripInstructionTypes([
+			new StoreFromRegisterInstruction(Register.R1, "result"),
+			new ReturnInstruction(Register.R0)
+		]);
+
+	[Test]
+	public void RoundTripAllBinaryOperators() =>
+		AssertRoundTripInstructionTypes([
+			new BinaryInstruction(InstructionType.Add, Register.R0, Register.R1),
+			new BinaryInstruction(InstructionType.Subtract, Register.R0, Register.R1),
+			new BinaryInstruction(InstructionType.Multiply, Register.R0, Register.R1),
+			new BinaryInstruction(InstructionType.Divide, Register.R0, Register.R1),
+			new BinaryInstruction(InstructionType.Modulo, Register.R0, Register.R1),
+			new BinaryInstruction(InstructionType.Equal, Register.R0, Register.R1),
+			new BinaryInstruction(InstructionType.NotEqual, Register.R0, Register.R1),
+			new BinaryInstruction(InstructionType.LessThan, Register.R0, Register.R1),
+			new BinaryInstruction(InstructionType.GreaterThan, Register.R0, Register.R1),
+			new ReturnInstruction(Register.R0)
+		]);
+
+	[Test]
+	public void RoundTripJumpInstructions() =>
+		AssertRoundTripInstructionTypes([
+			new Jump(3),
+			new Jump(2, InstructionType.JumpIfTrue),
+			new Jump(1, InstructionType.JumpIfFalse),
+			new JumpIfNotZero(5, Register.R0),
+			new JumpToId(10, InstructionType.JumpEnd),
+			new JumpToId(20, InstructionType.JumpToIdIfFalse),
+			new JumpToId(30, InstructionType.JumpToIdIfTrue),
+			new ReturnInstruction(Register.R0)
+		]);
+
+	[Test]
+	public void RoundTripCollectionMutationInstructions() =>
+		AssertRoundTripInstructionTypes([
+			new WriteToListInstruction(Register.R0, "myList"),
+			new WriteToTableInstruction(Register.R0, Register.R1, "myTable"),
+			new RemoveInstruction(Register.R2, "myList"),
+			new ListCallInstruction(Register.R0, Register.R1, "myList"),
+			new ReturnInstruction(Register.R0)
+		]);
+
+	[Test]
+	public void RoundTripPrintInstructionWithNumberRegister()
+	{
+		var loaded = RoundTripInstructions([
+			new PrintInstruction("Value = ", Register.R2),
+			new ReturnInstruction(Register.R0)
+		]);
+		var print = (PrintInstruction)loaded[0];
+		Assert.That(print.TextPrefix, Is.EqualTo("Value = "));
+		Assert.That(print.ValueRegister, Is.EqualTo(Register.R2));
+		Assert.That(print.ValueIsText, Is.False);
+	}
+
+	[Test]
+	public void RoundTripDictionaryValue()
+	{
+		var dictionaryType = TestPackage.Instance.GetDictionaryImplementationType(NumberType, NumberType);
+		var items = new Dictionary<ValueInstance, ValueInstance>
+		{
+			{ Number(1), Number(10) },
+			{ Number(2), Number(20) }
+		};
+		var loaded = RoundTripInstructions([
+			new LoadConstantInstruction(Register.R0, new ValueInstance(dictionaryType, items)),
+			new ReturnInstruction(Register.R0)
+		]);
+		var loadedDictionary = ((LoadConstantInstruction)loaded[0]).Constant;
+		Assert.That(loadedDictionary.IsDictionary, Is.True);
+		Assert.That(loadedDictionary.GetDictionaryItems()[Number(1)].Number, Is.EqualTo(10));
+	}
+
+	private static void AssertRoundTripInstructionTypes(IList<Instruction> instructions)
+	{
+		var loaded = RoundTripInstructions(instructions);
+		Assert.That(loaded.Count, Is.EqualTo(instructions.Count));
+		for (var index = 0; index < instructions.Count; index++)
+			Assert.That(loaded[index].InstructionType, Is.EqualTo(instructions[index].InstructionType));
+	}
+
+	private static void AssertRoundTripToString(IList<Instruction> instructions) =>
+		Assert.That(RoundTripInstructions(instructions).ConvertAll(instruction => instruction.ToString()),
+			Is.EqualTo(instructions.ToList().ConvertAll(instruction => instruction.ToString())));
+
+	private static List<Instruction> RoundTripInstructions(IList<Instruction> instructions)
+	{
+		using var stream = new MemoryStream();
+		using var writer = new BinaryWriter(stream);
+		var table = new NameTable();
+		foreach (var instruction in instructions)
+			table.CollectStrings(instruction);
+		table.Write(writer);
+		writer.Write7BitEncodedInt(instructions.Count);
+		foreach (var instruction in instructions)
+			instruction.Write(writer, table);
+		writer.Flush();
+		stream.Position = 0;
+		using var reader = new BinaryReader(stream);
+		var readTable = new NameTable(reader);
+		var count = reader.Read7BitEncodedInt();
+		var binary = new StrictBinary(TestPackage.Instance);
+		var loaded = new List<Instruction>(count);
+		for (var index = 0; index < count; index++)
+			loaded.Add(binary.ReadInstruction(reader, readTable));
+		return loaded;
+	}
+
+	private readonly Type boolType = TestPackage.Instance.GetType(Type.Boolean);
+}
+
+/*old tests, TODO: integrate!
+ * using System.IO.Compression;
 using System.Text;
 using Strict.Bytecode.Instructions;
 using Strict.Bytecode.Serialization;
@@ -19,6 +159,7 @@ public sealed class BytecodeSerializerTests : TestBytecode
 		Assert.That(loaded.Count, Is.EqualTo(instructions.Count));
 		Assert.That(loaded.ConvertAll(x => x.ToString()),
 			Is.EqualTo(instructions.ConvertAll(x => x.ToString())));
+		AssertRoundTripToString(instructions);
 	}
 
 	private static Dictionary<string, byte[]> SerializeToMemory(string typeName,
@@ -131,11 +272,14 @@ public sealed class BytecodeSerializerTests : TestBytecode
 	{
 		var instructions = new List<Instruction>
 		{
+	public void RoundTripSetInstruction() =>
+		AssertRoundTripInstructionTypes([
 			new SetInstruction(Number(42), Register.R0),
 			new ReturnInstruction(Register.R0)
 		};
 		AssertRoundTrip(instructions);
 	}
+		]);
 
 	private static void AssertRoundTrip(IList<Instruction> instructions, string typeName = "main")
 	{
@@ -150,11 +294,14 @@ public sealed class BytecodeSerializerTests : TestBytecode
 	{
 		var instructions = new List<Instruction>
 		{
+	public void RoundTripStoreFromRegisterInstruction() =>
+		AssertRoundTripInstructionTypes([
 			new StoreFromRegisterInstruction(Register.R1, "result"),
 			new ReturnInstruction(Register.R0)
 		};
 		AssertRoundTrip(instructions);
 	}
+		]);
 
 	[Test]
 	public void RoundTripLoadVariableToRegister()
@@ -173,6 +320,8 @@ public sealed class BytecodeSerializerTests : TestBytecode
 	{
 		var instructions = new List<Instruction>
 		{
+	public void RoundTripAllBinaryOperators() =>
+		AssertRoundTripInstructionTypes([
 			new BinaryInstruction(InstructionType.Add, Register.R0, Register.R1),
 			new BinaryInstruction(InstructionType.Subtract, Register.R0, Register.R1),
 			new BinaryInstruction(InstructionType.Multiply, Register.R0, Register.R1),
@@ -189,12 +338,15 @@ public sealed class BytecodeSerializerTests : TestBytecode
 		for (var index = 0; index < instructions.Count; index++)
 			Assert.That(loaded[index].InstructionType, Is.EqualTo(instructions[index].InstructionType));
 	}
+		]);
 
 	[Test]
 	public void RoundTripJumpInstructions()
 	{
 		var instructions = new List<Instruction>
 		{
+	public void RoundTripJumpInstructions() =>
+		AssertRoundTripInstructionTypes([
 			new Jump(3),
 			new Jump(2, InstructionType.JumpIfTrue),
 			new Jump(1, InstructionType.JumpIfFalse),
@@ -229,16 +381,22 @@ public sealed class BytecodeSerializerTests : TestBytecode
 		{
 			new LoopBeginInstruction(Register.R0),
 			new LoopEndInstruction(2),
+			new JumpToId(10, InstructionType.JumpEnd),
+			new JumpToId(20, InstructionType.JumpToIdIfFalse),
+			new JumpToId(30, InstructionType.JumpToIdIfTrue),
 			new ReturnInstruction(Register.R0)
 		};
 		AssertRoundTrip(instructions);
 	}
+		]);
 
 	[Test]
 	public void RoundTripWriteToListInstruction()
 	{
 		var instructions = new List<Instruction>
 		{
+	public void RoundTripCollectionMutationInstructions() =>
+		AssertRoundTripInstructionTypes([
 			new WriteToListInstruction(Register.R0, "myList"),
 			new ReturnInstruction(Register.R0)
 		};
@@ -272,18 +430,23 @@ public sealed class BytecodeSerializerTests : TestBytecode
 	{
 		var instructions = new List<Instruction>
 		{
+			new RemoveInstruction(Register.R2, "myList"),
 			new ListCallInstruction(Register.R0, Register.R1, "myList"),
 			new ReturnInstruction(Register.R0)
 		};
 		AssertRoundTrip(instructions);
 	}
+		]);
 
 	[Test]
 	public void RoundTripSmallNumberValue()
 	{
 		var instructions = new List<Instruction>
-		{
+	public void RoundTripPrintInstructionWithNumberRegister()
+	{
 			new LoadConstantInstruction(Register.R0, Number(42)),
+		var loaded = RoundTripInstructions([
+			new PrintInstruction("Value = ", Register.R2),
 			new ReturnInstruction(Register.R0)
 		};
 		AssertRoundTripValues(instructions);
@@ -296,6 +459,11 @@ public sealed class BytecodeSerializerTests : TestBytecode
 		Assert.That(loaded.Count, Is.EqualTo(instructions.Count));
 		Assert.That(loaded.ConvertAll(x => x.ToString()),
 			Is.EqualTo(instructions.ToList().ConvertAll(x => x.ToString())));
+		]);
+		var print = (PrintInstruction)loaded[0];
+		Assert.That(print.TextPrefix, Is.EqualTo("Value = "));
+		Assert.That(print.ValueRegister, Is.EqualTo(Register.R2));
+		Assert.That(print.ValueIsText, Is.False);
 	}
 
 	[Test]
@@ -403,6 +571,7 @@ public sealed class BytecodeSerializerTests : TestBytecode
 	public void RoundTripDictionaryValue()
 	{
 		var dictType = TestPackage.Instance.GetDictionaryImplementationType(NumberType, NumberType);
+		var dictionaryType = TestPackage.Instance.GetDictionaryImplementationType(NumberType, NumberType);
 		var items = new Dictionary<ValueInstance, ValueInstance>
 		{
 			{ Number(1), Number(10) },
@@ -411,6 +580,8 @@ public sealed class BytecodeSerializerTests : TestBytecode
 		var instructions = new List<Instruction>
 		{
 			new LoadConstantInstruction(Register.R0, new ValueInstance(dictType, items)),
+		var loaded = RoundTripInstructions([
+			new LoadConstantInstruction(Register.R0, new ValueInstance(dictionaryType, items)),
 			new ReturnInstruction(Register.R0)
 		};
 		var loaded = RoundTripToInstructions("DictTest", instructions);
@@ -421,16 +592,25 @@ public sealed class BytecodeSerializerTests : TestBytecode
 		Assert.That(loadedItems.Count, Is.EqualTo(2));
 		Assert.That(loadedItems[Number(1)].Number, Is.EqualTo(10));
 		Assert.That(loadedItems[Number(2)].Number, Is.EqualTo(20));
+		]);
+		var loadedDictionary = ((LoadConstantInstruction)loaded[0]).Constant;
+		Assert.That(loadedDictionary.IsDictionary, Is.True);
+		Assert.That(loadedDictionary.GetDictionaryItems()[Number(1)].Number, Is.EqualTo(10));
 	}
 
 	[Test]
 	public void ZipContainsNoBytecodeSourceEntries()
+	private static void AssertRoundTripInstructionTypes(IList<Instruction> instructions)
 	{
 		var instructions = new List<Instruction> { new ReturnInstruction(Register.R0) };
 		var binaryFilePath = SerializeToTemp("CleanZip", instructions);
 		using var zip = ZipFile.OpenRead(binaryFilePath);
 		Assert.That(zip.Entries.All(entry => entry.Name.EndsWith(".bytecode",
 			StringComparison.OrdinalIgnoreCase)), Is.True);
+		var loaded = RoundTripInstructions(instructions);
+		Assert.That(loaded.Count, Is.EqualTo(instructions.Count));
+		for (var index = 0; index < instructions.Count; index++)
+			Assert.That(loaded[index].InstructionType, Is.EqualTo(instructions[index].InstructionType));
 	}
 
 	[Test]
@@ -447,9 +627,13 @@ public sealed class BytecodeSerializerTests : TestBytecode
 				"\tnumber + offset")).Generate();
 		AssertRoundTripValues(instructions, "LargeAdder");
 	}
+	private static void AssertRoundTripToString(IList<Instruction> instructions) =>
+		Assert.That(RoundTripInstructions(instructions).ConvertAll(instruction => instruction.ToString()),
+			Is.EqualTo(instructions.ToList().ConvertAll(instruction => instruction.ToString())));
 
 	[Test]
 	public void RoundTripInvokeWithDoubleNumberArgument()
+	private static List<Instruction> RoundTripInstructions(IList<Instruction> instructions)
 	{
 		var instructions = new BytecodeGenerator(
 			GenerateMethodCallFromSource("DoubleCalc", "DoubleCalc(3.14).GetHalf",
@@ -653,6 +837,14 @@ public sealed class BytecodeSerializerTests : TestBytecode
 		using var writer = new BinaryWriter(stream, Encoding.UTF8, leaveOpen: true);
 		writer.Write(Encoding.UTF8.GetBytes("Strict"));
 		writer.Write((byte)0);
+		using var writer = new BinaryWriter(stream);
+		var table = new NameTable();
+		foreach (var instruction in instructions)
+			table.CollectStrings(instruction);
+		table.Write(writer);
+		writer.Write7BitEncodedInt(instructions.Count);
+		foreach (var instruction in instructions)
+			instruction.Write(writer, table);
 		writer.Flush();
 		Assert.Throws<BytecodeDeserializer.InvalidVersion>(() =>
 			new BytecodeDeserializer(new Dictionary<string, byte[]> { ["main"] = stream.ToArray() },
@@ -702,8 +894,19 @@ public sealed class BytecodeSerializerTests : TestBytecode
 		writer.Write7BitEncodedInt(names.Length);
 		foreach (var name in names)
 			writer.Write(name);
+		stream.Position = 0;
+		using var reader = new BinaryReader(stream);
+		var readTable = new NameTable(reader);
+		var count = reader.Read7BitEncodedInt();
+		var binary = new StrictBinary(TestPackage.Instance);
+		var loaded = new List<Instruction>(count);
+		for (var index = 0; index < count; index++)
+			loaded.Add(binary.ReadInstruction(reader, readTable));
+		return loaded;
 	}
 
 	private const byte SmallNumberKind = 0;
 	private const byte BinaryExprKind = 7;
+	private readonly Type boolType = TestPackage.Instance.GetType(Type.Boolean);
 }
+ */

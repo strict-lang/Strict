@@ -20,21 +20,31 @@ public sealed class BytecodeMembersAndMethods
 		table = new NameTable(reader);
 		var type = EnsureTypeForEntry();
 		ReadMembers(reader, Members, type, binary);
-		var methodCount = reader.Read7BitEncodedInt();
-		for (var methodIndex = 0; methodIndex < methodCount; methodIndex++)
+		var methodGroupCount = reader.Read7BitEncodedInt();
+		for (var methodGroupIndex = 0; methodGroupIndex < methodGroupCount; methodGroupIndex++)
 		{
 			var methodName = table.Names[reader.Read7BitEncodedInt()];
-			var parameterCount = reader.Read7BitEncodedInt();
-			var parameters = new string[parameterCount];
-			for (var parameterIndex = 0; parameterIndex < parameterCount; parameterIndex++)
-			{
-				var parameterName = table.Names[reader.Read7BitEncodedInt()];
-				var parameterType = table.Names[reader.Read7BitEncodedInt()];
-				parameters[parameterIndex] = parameterName + " " + parameterType;
-			}
-			var returnTypeName = table.Names[reader.Read7BitEncodedInt()];
-			EnsureMethod(type, methodName, parameters, returnTypeName);
+			var overloadCount = reader.Read7BitEncodedInt();
+			var overloads = new List<MethodInstructions>(overloadCount);
+			for (var overloadIndex = 0; overloadIndex < overloadCount; overloadIndex++)
+				overloads.Add(ReadMethodInstructions(reader, type, methodName));
+			InstructionsPerMethodGroup[methodName] = overloads;
 		}
+	}
+
+	private MethodInstructions ReadMethodInstructions(BinaryReader reader, Type type,
+		string methodName)
+	{
+		var parameters = new List<BytecodeMember>();
+		ReadMembers(reader, parameters, type, binary);
+		var returnTypeName = table!.Names[reader.Read7BitEncodedInt()];
+		EnsureMethod(type, methodName, parameters.Select(parameter =>
+			parameter.Name + " " + parameter.FullTypeName).ToArray(), returnTypeName);
+		var instructionCount = reader.Read7BitEncodedInt();
+		var instructions = new List<Instruction>(instructionCount);
+		for (var instructionIndex = 0; instructionIndex < instructionCount; instructionIndex++)
+			instructions.Add(binary.ReadInstruction(reader, table));
+		return new MethodInstructions(parameters, returnTypeName, instructions);
 	}
 
 	private readonly StrictBinary binary;
@@ -162,6 +172,7 @@ public sealed class BytecodeMembersAndMethods
 			{
 				WriteMembers(writer, method.Parameters);
 				writer.Write7BitEncodedInt(Table[method.ReturnTypeName]);
+				writer.Write7BitEncodedInt(method.Instructions.Count);
 				foreach (var instruction in method.Instructions)
 					instruction.Write(writer, table!);
 			}

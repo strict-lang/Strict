@@ -1,5 +1,7 @@
 using Strict.Bytecode.Instructions;
 using Strict.Bytecode.Serialization;
+using Strict.Language;
+using Type = Strict.Language.Type;
 
 namespace Strict.Bytecode.Tests;
 
@@ -12,7 +14,7 @@ public sealed class BytecodeDecompilerTests : TestBytecode
 			GenerateMethodCallFromSource("Add", "Add(10, 5).Calculate",
 				"has First Number", "has Second Number", "Calculate Number",
 				"\tAdd(10, 5).Calculate is 15", "\tFirst + Second")).Generate();
-		var outputFolder = SerializeAndDecompile(instructions, "Add");
+		var outputFolder = DecompileToTemp(instructions, "Add");
 		try
 		{
 			var content = File.ReadAllText(Path.Combine(outputFolder, "Add.strict"));
@@ -38,7 +40,7 @@ public sealed class BytecodeDecompilerTests : TestBytecode
 				"\tCounter(5).Calculate is 10",
 				"\tconstant doubled = Counter(3).Double",
 				"\tdoubled * 2")).Generate();
-		var outputFolder = SerializeAndDecompile(instructions, "Counter");
+		var outputFolder = DecompileToTemp(instructions, "Counter");
 		try
 		{
 			var content = File.ReadAllText(Path.Combine(outputFolder, "Counter.strict"));
@@ -52,20 +54,29 @@ public sealed class BytecodeDecompilerTests : TestBytecode
 		}
 	}
 
-	private static string SerializeAndDecompile(List<Instruction> instructions, string typeName)
+	private static string DecompileToTemp(IReadOnlyList<Instruction> instructions, string typeName)
 	{
-		var binaryFilePath = new BytecodeSerializer(
-			new Dictionary<string, IList<Instruction>> { [typeName] = instructions },
-			Path.GetTempPath(),
-			nameof(BytecodeDecompilerTests) + decompTestCounter++).OutputFilePath;
+		var strictBinary = new StrictBinary(TestPackage.Instance);
+		strictBinary.MethodsPerType[typeName] = CreateTypeMethods(instructions);
 		var outputFolder = Path.Combine(Path.GetTempPath(), "decompiled_" + Path.GetRandomFileName());
-		var bytecodeTypes = new BytecodeDeserializer(binaryFilePath).Deserialize(TestPackage.Instance);
-		new BytecodeDecompiler().Decompile(bytecodeTypes, outputFolder);
+		new BytecodeDecompiler().Decompile(strictBinary, outputFolder);
 		Assert.That(Directory.Exists(outputFolder), Is.True, "Output folder should be created");
 		Assert.That(File.Exists(Path.Combine(outputFolder, typeName + ".strict")), Is.True,
 			typeName + ".strict should be created");
 		return outputFolder;
 	}
 
-	private static int decompTestCounter;
+	private static BytecodeMembersAndMethods CreateTypeMethods(IReadOnlyList<Instruction> instructions)
+	{
+		var methods = new BytecodeMembersAndMethods();
+		methods.Members = [];
+		methods.InstructionsPerMethodGroup = new Dictionary<string, List<BytecodeMembersAndMethods.MethodInstructions>>
+		{
+			[Method.Run] =
+			[
+				new BytecodeMembersAndMethods.MethodInstructions([], Type.None, instructions)
+			]
+		};
+		return methods;
+	}
 }
