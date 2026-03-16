@@ -1,7 +1,16 @@
-﻿namespace Strict.Bytecode;
+namespace Strict.Bytecode;
 
 public sealed class Registry
 {
+	public Registry(BinaryReader reader)
+	{
+		var nextRegisterCount = reader.ReadByte();
+		var prev = (Register)reader.ReadByte();
+		for (var index = 0; index < nextRegisterCount; index++)
+			AllocateRegister();
+		PreviousRegister = prev;
+	}
+
 	private readonly Register[] registers = Enum.GetValues<Register>();
 	public int NextRegister { get; private set; }
 	public Register PreviousRegister { get; set; }

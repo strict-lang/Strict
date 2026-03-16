@@ -1,5 +1,8 @@
 using System.IO.Compression;
+using Strict.Bytecode.Instructions;
 using Strict.Bytecode.Serialization;
+using Strict.Language;
+using Type = System.Type;
 
 namespace Strict.Bytecode.Tests;
 

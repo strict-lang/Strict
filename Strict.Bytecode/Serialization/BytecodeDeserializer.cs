@@ -12,44 +12,7 @@ namespace Strict.Bytecode.Serialization;
 /// </summary>
 public sealed class BytecodeDeserializer(string FilePath)
 {
-	/// <summary>
-	/// Reads a .strictbinary ZIP and returns <see cref="StrictBinary"/> containing all type
-	/// metadata (members, method signatures) and instruction bodies for each type.
-	/// </summary>
-	public StrictBinary Deserialize(Package basePackage)
-	{
-		var package = new Package(basePackage,
-			Path.GetFileNameWithoutExtension(FilePath) + "-" + ++packageCounter);
-		try
-		{
-			using var zip = ZipFile.OpenRead(FilePath);
-			var bytecodeEntries = zip.Entries.Where(entry =>
-				entry.FullName.EndsWith(BytecodeSerializer.BytecodeEntryExtension,
-					StringComparison.OrdinalIgnoreCase)).ToList();
-			if (bytecodeEntries.Count == 0)
-				throw new InvalidBytecodeFileException(BytecodeSerializer.Extension +
-					" ZIP contains no " + BytecodeSerializer.BytecodeEntryExtension + " entries");
-			var typeEntries = bytecodeEntries.Select(entry => new TypeEntryData(
-				GetEntryNameWithoutExtension(entry.FullName),
-				ReadAllBytes(entry.Open()))).ToList();
-			var result = new StrictBinary();
-			foreach (var typeEntry in typeEntries)
-				result.MethodsPerType[typeEntry.EntryName] =
-					ReadTypeMetadataIntoBytecodeTypes(typeEntry, package);
-			var runInstructions = new Dictionary<string, List<Instruction>>(StringComparer.Ordinal);
-			var methodInstructions =
-				new Dictionary<string, List<Instruction>>(StringComparer.Ordinal);
-			foreach (var typeEntry in typeEntries)
-				ReadTypeInstructions(typeEntry, package, runInstructions, methodInstructions);
-			PopulateInstructions(result, typeEntries, runInstructions, methodInstructions);
-			return result;
-		}
-		catch (InvalidDataException ex)
-		{
-			throw new InvalidBytecodeFileException("Not a valid " + BytecodeSerializer.Extension +
-				" ZIP file: " + ex.Message);
-		}
-	}
+	
 
 	private static void PopulateInstructions(StrictBinary result,
 		List<TypeEntryData> typeEntries, Dictionary<string, List<Instruction>> runInstructions,
@@ -354,35 +317,34 @@ public sealed class BytecodeDeserializer(string FilePath)
 		var type = (InstructionType)reader.ReadByte();
 		return type switch
 		{
-			InstructionType.LoadConstantToRegister => ReadLoadConstant(reader, package, table,
-				numberType),
-			InstructionType.LoadVariableToRegister => ReadLoadVariable(reader, table),
-			InstructionType.StoreConstantToVariable => ReadStoreVariable(reader, package, table,
-				numberType),
-			InstructionType.StoreRegisterToVariable => ReadStoreFromRegister(reader, table),
-			InstructionType.Set => ReadSet(reader, package, table, numberType),
-			InstructionType.Invoke => ReadInvoke(reader, package, table),
-			InstructionType.Return => new ReturnInstruction((Register)reader.ReadByte()),
-			InstructionType.LoopBegin => ReadLoopBegin(reader),
-			InstructionType.LoopEnd => new LoopEndInstruction(reader.Read7BitEncodedInt()),
-			InstructionType.JumpIfNotZero => ReadJumpIfNotZero(reader),
-			InstructionType.Jump => new Jump(reader.Read7BitEncodedInt()),
-			InstructionType.JumpIfTrue => new Jump(reader.Read7BitEncodedInt(),
-				InstructionType.JumpIfTrue),
-			InstructionType.JumpIfFalse => new Jump(reader.Read7BitEncodedInt(),
-				InstructionType.JumpIfFalse),
-			InstructionType.JumpEnd => new JumpToId(InstructionType.JumpEnd,
-				reader.Read7BitEncodedInt()),
-			InstructionType.JumpToIdIfFalse => new JumpToId(InstructionType.JumpToIdIfFalse,
-				reader.Read7BitEncodedInt()),
-			InstructionType.JumpToIdIfTrue => new JumpToId(InstructionType.JumpToIdIfTrue,
-				reader.Read7BitEncodedInt()),
-			InstructionType.InvokeWriteToList => ReadWriteToList(reader, table),
-			InstructionType.InvokeWriteToTable => ReadWriteToTable(reader, table),
-			InstructionType.InvokeRemove => ReadRemove(reader, table),
-			InstructionType.ListCall => ReadListCall(reader, table),
-			InstructionType.Print => ReadPrint(reader, table),
-			_ when IsBinaryOp(type) => ReadBinary(reader, type),
+			InstructionType.LoadConstantToRegister =>
+				new LoadConstantInstruction(reader, package, table, numberType),
+			InstructionType.LoadVariableToRegister =>
+				new LoadVariableToRegister(reader, table),
+			InstructionType.StoreConstantToVariable =>
+				new StoreVariableInstruction(reader, package, table, numberType),
+			InstructionType.StoreRegisterToVariable =>
+				new StoreFromRegisterInstruction(reader, table),
+			InstructionType.Set => new SetInstruction(reader, package, table, numberType),
+			InstructionType.Invoke => new Invoke(reader, package, table),
+			InstructionType.Return => new ReturnInstruction(reader),
+			InstructionType.LoopBegin => new LoopBeginInstruction(reader),
+			InstructionType.LoopEnd => new LoopEndInstruction(reader),
+			InstructionType.JumpIfNotZero => new JumpIfNotZero(reader),
+			InstructionType.JumpIfTrue => new Jump(reader, InstructionType.JumpIfTrue),
+			InstructionType.JumpIfFalse => new Jump(reader, InstructionType.JumpIfFalse),
+			InstructionType.JumpEnd => new JumpToId(reader, InstructionType.JumpEnd),
+			InstructionType.JumpToIdIfFalse =>
+				new JumpToId(reader, InstructionType.JumpToIdIfFalse),
+			InstructionType.JumpToIdIfTrue =>
+				new JumpToId(reader, InstructionType.JumpToIdIfTrue),
+			InstructionType.Jump => new Jump(reader),
+			InstructionType.InvokeWriteToList => new WriteToListInstruction(reader, table),
+			InstructionType.InvokeWriteToTable => new WriteToTableInstruction(reader, table),
+			InstructionType.InvokeRemove => new RemoveInstruction(reader, table),
+			InstructionType.ListCall => new ListCallInstruction(reader, table),
+			InstructionType.Print => new PrintInstruction(reader, table),
+			_ when IsBinaryOp(type) => new BinaryInstruction(reader, type),
 			_ => throw new InvalidBytecodeFileException("Unknown instruction type: " + type) //ncrunch: no coverage
 		};
 	}
@@ -390,122 +352,7 @@ public sealed class BytecodeDeserializer(string FilePath)
 	private static bool IsBinaryOp(InstructionType type) =>
 		type is > InstructionType.StoreSeparator and < InstructionType.BinaryOperatorsSeparator;
 
-	private static LoadConstantInstruction ReadLoadConstant(BinaryReader reader, Package package,
-		string[] table, Type numberType) =>
-		new((Register)reader.ReadByte(), ReadValueInstance(reader, package, table, numberType));
 
-	private static LoadVariableToRegister ReadLoadVariable(BinaryReader reader, string[] table) =>
-		new((Register)reader.ReadByte(), table[reader.Read7BitEncodedInt()]);
-
-	private static StoreVariableInstruction ReadStoreVariable(BinaryReader reader, Package package,
-		string[] table, Type numberType) =>
-		new(ReadValueInstance(reader, package, table, numberType), table[reader.Read7BitEncodedInt()],
-			reader.ReadBoolean());
-
-	private static StoreFromRegisterInstruction ReadStoreFromRegister(BinaryReader reader,
-		string[] table) =>
-		new((Register)reader.ReadByte(), table[reader.Read7BitEncodedInt()]);
-
-	private static SetInstruction ReadSet(BinaryReader reader, Package package, string[] table,
-		Type numberType) =>
-		new(ReadValueInstance(reader, package, table, numberType), (Register)reader.ReadByte());
-
-	private static BinaryInstruction ReadBinary(BinaryReader reader, InstructionType type)
-	{
-		var count = reader.ReadByte();
-		var registers = new Register[count];
-		for (var index = 0; index < count; index++)
-			registers[index] = (Register)reader.ReadByte();
-		return new BinaryInstruction(type, registers);
-	}
-
-	private static Invoke ReadInvoke(BinaryReader reader, Package package, string[] table)
-	{
-		var register = (Register)reader.ReadByte();
-		var (methodCall, registry) = ReadMethodCallData(reader, package, table);
-		return new Invoke(register, methodCall!, registry!);
-	}
-
-	private static LoopBeginInstruction ReadLoopBegin(BinaryReader reader)
-	{
-		var register = (Register)reader.ReadByte();
-		var isRange = reader.ReadBoolean();
-		return isRange
-			? new LoopBeginInstruction(register, (Register)reader.Read7BitEncodedInt())
-			: new LoopBeginInstruction(register);
-	}
-
-	private static JumpIfNotZero ReadJumpIfNotZero(BinaryReader reader) =>
-		new(reader.Read7BitEncodedInt(), (Register)reader.ReadByte());
-
-	private static WriteToListInstruction ReadWriteToList(BinaryReader reader, string[] table) =>
-		new((Register)reader.ReadByte(), table[reader.Read7BitEncodedInt()]);
-
-	private static WriteToTableInstruction ReadWriteToTable(BinaryReader reader, string[] table) =>
-		new((Register)reader.ReadByte(), (Register)reader.ReadByte(),
-			table[reader.Read7BitEncodedInt()]);
-
-	private static RemoveInstruction ReadRemove(BinaryReader reader, string[] table) =>
-		new(table[reader.Read7BitEncodedInt()], (Register)reader.ReadByte());
-
-	private static ListCallInstruction ReadListCall(BinaryReader reader, string[] table) =>
-		new((Register)reader.ReadByte(), (Register)reader.ReadByte(),
-			table[reader.Read7BitEncodedInt()]);
-
-	private static PrintInstruction ReadPrint(BinaryReader reader, string[] table)
-	{
-		var textPrefix = table[reader.Read7BitEncodedInt()];
-		var hasValue = reader.ReadBoolean();
-		if (!hasValue)
-			return new PrintInstruction(textPrefix);
-		var reg = (Register)reader.ReadByte();
-		var valueIsText = reader.ReadBoolean();
-		return new PrintInstruction(textPrefix, reg, valueIsText);
-	}
-
-	private static ValueInstance ReadValueInstance(BinaryReader reader, Package package,
-		string[] table, Type numberType)
-	{
-		var kind = (ValueKind)reader.ReadByte();
-		return kind switch
-		{
-			ValueKind.Text => new ValueInstance(table[reader.Read7BitEncodedInt()]),
-			ValueKind.None => new ValueInstance(package.GetType(Type.None)),
-			ValueKind.Boolean => new ValueInstance(package.GetType(Type.Boolean), reader.ReadBoolean()),
-			ValueKind.SmallNumber => new ValueInstance(numberType, reader.ReadByte()),
-			ValueKind.IntegerNumber => new ValueInstance(numberType, reader.ReadInt32()),
-			ValueKind.Number => new ValueInstance(numberType, reader.ReadDouble()),
-			ValueKind.List => ReadListValueInstance(reader, package, table, numberType),
-			ValueKind.Dictionary => ReadDictionaryValueInstance(reader, package, table, numberType),
-			_ => throw new InvalidBytecodeFileException("Unknown ValueKind: " + kind)
-		};
-	}
-
-	private static ValueInstance ReadListValueInstance(BinaryReader reader, Package package,
-		string[] table, Type numberType)
-	{
-		var typeName = table[reader.Read7BitEncodedInt()];
-		var count = reader.Read7BitEncodedInt();
-		var items = new ValueInstance[count];
-		for (var index = 0; index < count; index++)
-			items[index] = ReadValueInstance(reader, package, table, numberType);
-		return new ValueInstance(package.GetType(typeName), items);
-	}
-
-	private static ValueInstance ReadDictionaryValueInstance(BinaryReader reader, Package package,
-		string[] table, Type numberType)
-	{
-		var typeName = table[reader.Read7BitEncodedInt()];
-		var count = reader.Read7BitEncodedInt();
-		var items = new Dictionary<ValueInstance, ValueInstance>(count);
-		for (var index = 0; index < count; index++)
-		{
-			var key = ReadValueInstance(reader, package, table, numberType);
-			var value = ReadValueInstance(reader, package, table, numberType);
-			items[key] = value;
-		}
-		return new ValueInstance(package.GetType(typeName), items);
-	}
 
 	private static Expression ReadExpression(BinaryReader reader, Package package, string[] table)
 	{
@@ -570,6 +417,7 @@ public sealed class BytecodeDeserializer(string FilePath)
 	public sealed class MethodNotFoundException(string methodName)
 		: Exception($"Method '{methodName}' not found");
 
+	/*obs
 	private static MethodCall ReadMethodCallExpr(BinaryReader reader, Package package,
 		string[] table)
 	{
@@ -632,7 +480,7 @@ public sealed class BytecodeDeserializer(string FilePath)
 		}
 		return (methodCall, registry);
 	}
-
+	*/
 	private static Type EnsureResolvedType(Package package, string typeName)
 	{
 		var resolved = package.FindType(typeName) ?? (typeName.Contains('.')

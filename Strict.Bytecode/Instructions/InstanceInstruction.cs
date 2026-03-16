@@ -1,5 +1,7 @@
 using Strict.Bytecode.Serialization;
 using Strict.Expressions;
+using Strict.Language;
+using Type = Strict.Language.Type;
 
 namespace Strict.Bytecode.Instructions;
 
@@ -15,7 +17,7 @@ public abstract class InstanceInstruction(InstructionType instructionType,
 		WriteValueInstance(writer, ValueInstance, table);
 	}
 
-	protected static void WriteValueInstance(BinaryWriter writer, ValueInstance val, NameTable table)
+	internal static void WriteValueInstance(BinaryWriter writer, ValueInstance val, NameTable table)
 	{
 		if (val.IsText)
 		{
@@ -77,7 +79,8 @@ public abstract class InstanceInstruction(InstructionType instructionType,
 			}
 		}
 		else
-			throw new NotSupportedException("WriteValueInstance not supported value: " + val); //ncrunch: no coverage
+			throw new NotSupportedException( //ncrunch: no coverage
+				"WriteValueInstance not supported value: " + val);
 	}
 
 	private static bool IsSmallNumber(double value) =>

@@ -256,16 +256,12 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 		{
 			switch (instructions[index])
 			{
-			case Jump jump:
-				AddLabelAt(labels, index + jump.InstructionsToSkip + 1, ref labelIndex);
-				break;
-			case JumpIf jumpIf:
-				//ncrunch: no coverage start
-				AddLabelAt(labels, index + jumpIf.Steps + 1, ref labelIndex);
-				break; //ncrunch: no coverage end
 			case JumpToId { InstructionType: InstructionType.JumpEnd } jumpEnd:
 				jumpEndPositions[jumpEnd.Id] = index;
 				AddLabelAt(labels, index, ref labelIndex);
+				break;
+			case Jump jump:
+				AddLabelAt(labels, index + jump.InstructionsToSkip + 1, ref labelIndex);
 				break;
 			}
 		}

@@ -27,7 +27,7 @@ public sealed class NameTable : IEnumerable<string>
 				CollectValueInstanceStrings(storeVar.ValueInstance),
 			StoreFromRegisterInstruction storeReg => Add(storeReg.Identifier),
 			SetInstruction set => CollectValueInstanceStrings(set.ValueInstance),
-			LoadConstantInstruction loadConst => CollectValueInstanceStrings(loadConst.ValueInstance),
+			LoadConstantInstruction loadConst => CollectValueInstanceStrings(loadConst.Constant),
 			Invoke { Method: not null } invoke => CollectMethodCallStrings(invoke.Method),
 			WriteToListInstruction writeList => Add(writeList.Identifier),
 			WriteToTableInstruction writeTable => Add(writeTable.Identifier),

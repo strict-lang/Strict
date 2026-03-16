@@ -727,11 +727,12 @@ public sealed class VirtualMachine(Package package,
 
 	private void TryJumpIfOperation(JumpIf instruction)
 	{
+		//TODO: this is the same stuff over and over again, wtf
 		if (conditionFlag && instruction.InstructionType is InstructionType.JumpIfTrue ||
 			!conditionFlag && instruction.InstructionType is InstructionType.JumpIfFalse ||
 			instruction is JumpIfNotZero jumpIfNotZero &&
 			Memory.Registers[jumpIfNotZero.Register].Number > 0)
-			instructionIndex += Convert.ToInt32(instruction.Steps);
+			instructionIndex += Convert.ToInt32(instruction.InstructionsToSkip);
 	}
 
 	private void TryJumpToIdOperation(JumpToId instruction)

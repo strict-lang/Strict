@@ -1,5 +1,6 @@
 using Strict.Bytecode.Serialization;
 using Strict.Expressions;
+using Strict.Language;
 
 namespace Strict.Bytecode.Instructions;
 
@@ -8,14 +9,17 @@ namespace Strict.Bytecode.Instructions;
 /// number, a boolean or a pointer to some memory (usually an offset).
 /// </summary>
 public sealed class LoadConstantInstruction(Register register, ValueInstance constant)
-	: InstanceInstruction(InstructionType.LoadConstantToRegister, constant)
+	: RegisterInstruction(InstructionType.LoadConstantToRegister, register)
 {
-	public Register Register { get; } = register;
-	public override string ToString() => $"{base.ToString()} {Register}";
+	public LoadConstantInstruction(BinaryReader reader, NameTable table, StrictBinary binary)
+		: this((Register)reader.ReadByte(), binary.ReadValueInstance(reader, table)) { }
+
+	public ValueInstance Constant { get; } = constant;
+	public override string ToString() => $"{base.ToString()} {Register} {Constant}";
 
 	public override void Write(BinaryWriter writer, NameTable table)
 	{
 		base.Write(writer, table);
-		writer.Write((byte)Register);
+		InstanceInstruction.WriteValueInstance(writer, Constant, table);
 	}
 }
