@@ -16,6 +16,6 @@ public sealed class Invoke(Register register, MethodCall method, Registry persis
 	public override void Write(BinaryWriter writer, NameTable table)
 	{
 		base.Write(writer, table);
-		BytecodeSerializer.WriteMethodCallData(writer, Method, PersistedRegistry, table);
+		StrictBinary.WriteMethodCallData(writer, Method, PersistedRegistry, table);
 	}
 }

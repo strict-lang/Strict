@@ -83,7 +83,7 @@ public abstract class InstanceInstruction(InstructionType instructionType,
 				"WriteValueInstance not supported value: " + val);
 	}
 
-	private static bool IsSmallNumber(double value) =>
+	public static bool IsSmallNumber(double value) =>
 		value is >= 0 and <= 255 && value == Math.Floor(value);
 
 	public static bool IsIntegerNumber(double value) =>

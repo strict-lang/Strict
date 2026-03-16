@@ -1,8 +1,8 @@
 namespace Strict.Bytecode;
 
-public sealed class Registry
+public sealed class Registry()
 {
-	public Registry(BinaryReader reader)
+	public Registry(BinaryReader reader) : this()
 	{
 		var nextRegisterCount = reader.ReadByte();
 		var prev = (Register)reader.ReadByte();

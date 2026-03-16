@@ -25,8 +25,7 @@ public sealed class BytecodeDecompiler
 		}
 	}
 
-	private static IReadOnlyList<string> ReconstructSource(
-		StrictBinary.TypeMembersAndMethods typeData)
+	private static IReadOnlyList<string> ReconstructSource(BytecodeMembersAndMethods typeData)
 	{
 		var lines = new List<string>();
 		foreach (var member in typeData.Members)
@@ -37,7 +36,7 @@ public sealed class BytecodeDecompiler
 		foreach (var (methodName, methods) in typeData.InstructionsPerMethodGroup)
 		foreach (var method in methods)
 		{
-			lines.Add(StrictBinary.MethodInstructions.ReconstructMethodName(methodName, method));
+			lines.Add(BytecodeMembersAndMethods.ReconstructMethodName(methodName, method));
 			var bodyLines = new List<string>();
 			for (var index = 0; index < method.Instructions.Count; index++)
 			{

@@ -309,8 +309,7 @@ public sealed class BytecodeGenerator
 			return; //ncrunch: no coverage
 		GenerateInstructionFromExpression(methodCall.Arguments[0]);
 		if (methodCall.Instance.ReturnType is GenericTypeImplementation { Generic.Name: Type.List })
-			instructions.Add(new RemoveInstruction(methodCall.Instance.ToString(),
-				registry.PreviousRegister));
+			instructions.Add(new RemoveInstruction(registry.PreviousRegister, methodCall.Instance.ToString()));
 	}
 
 	private void GenerateInstructionsForAddMethod(MethodCall methodCall)
@@ -412,7 +411,7 @@ public sealed class BytecodeGenerator
 			GenerateCodeForIfCondition(@case.Condition);
 			GenerateInstructionFromExpression(@case.Then);
 			instructions.Add(new ReturnInstruction(registry.PreviousRegister));
-			instructions.Add(new JumpToId(InstructionType.JumpEnd, idStack.Pop()));
+			instructions.Add(new JumpToId(idStack.Pop(), InstructionType.JumpEnd));
 		}
 		if (selectorIf.OptionalElse != null)
 		{
@@ -485,13 +484,13 @@ public sealed class BytecodeGenerator
 	{
 		GenerateCodeForIfCondition(ifExpression.Condition);
 		GenerateCodeForThen(ifExpression);
-		instructions.Add(new JumpToId(InstructionType.JumpEnd, idStack.Pop()));
+		instructions.Add(new JumpToId(idStack.Pop(), InstructionType.JumpEnd));
 		if (ifExpression.OptionalElse == null)
 			return;
 		idStack.Push(conditionalId);
-		instructions.Add(new JumpToId(InstructionType.JumpToIdIfTrue, conditionalId++));
+		instructions.Add(new JumpToId(conditionalId++, InstructionType.JumpToIdIfTrue));
 		GenerateInstructions([ifExpression.OptionalElse]);
-		instructions.Add(new JumpToId(InstructionType.JumpEnd, idStack.Pop()));
+		instructions.Add(new JumpToId(idStack.Pop(), InstructionType.JumpEnd));
 	}
 
 	private void GenerateCodeForThen(If ifExpression)
@@ -551,7 +550,7 @@ public sealed class BytecodeGenerator
 	{
 		instructions.Add(new BinaryInstruction(conditionInstruction, leftRegister, rightRegister));
 		idStack.Push(conditionalId);
-		instructions.Add(new JumpToId(InstructionType.JumpToIdIfFalse, conditionalId++));
+		instructions.Add(new JumpToId(conditionalId++, InstructionType.JumpToIdIfFalse));
 	}
 
 	private static InstructionType GetConditionalInstruction(Method condition) =>

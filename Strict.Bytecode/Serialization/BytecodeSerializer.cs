@@ -1,3 +1,4 @@
+/*
 using System.IO.Compression;
 using Strict.Bytecode.Instructions;
 using Strict.Expressions;
@@ -177,3 +178,4 @@ public sealed class BytecodeSerializer
 	public static bool IsIntegerNumber(double value) =>
 		value is >= int.MinValue and <= int.MaxValue && value == Math.Floor(value);
 }
+*/

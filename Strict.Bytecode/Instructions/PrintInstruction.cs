@@ -10,8 +10,8 @@ public sealed class PrintInstruction(string textPrefix, Register? valueRegister 
 	bool valueIsText = false)
 	: Instruction(InstructionType.Print)
 {
-	public PrintInstruction(BinaryReader reader, string[] table)
-		: this(table[reader.Read7BitEncodedInt()])
+	public PrintInstruction(BinaryReader reader, NameTable table)
+		: this(table.Names[reader.Read7BitEncodedInt()])
 	{
 		if (!reader.ReadBoolean())
 			return;

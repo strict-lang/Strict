@@ -77,7 +77,7 @@ public sealed class NameTable : IEnumerable<string>
 		}
 		var type = val.GetType();
 		if ((type.IsNone || type.IsBoolean || type.IsNumber || type.IsCharacter) &&
-			BytecodeSerializer.IsIntegerNumber(val.Number))
+			InstanceInstruction.IsIntegerNumber(val.Number))
 			return this;
 		return Add(type.Name);
 	}
@@ -101,7 +101,7 @@ public sealed class NameTable : IEnumerable<string>
 			Value { Data.IsText: true } val => Add(val.Data.Text),
 			Value val when val.Data.GetType().IsBoolean => Add(val.Data.GetType().Name),
 			Value val when !val.Data.GetType().IsNumber ||
-				!BytecodeSerializer.IsIntegerNumber(val.Data.Number)
+				!InstanceInstruction.IsIntegerNumber(val.Data.Number)
 				=> Add(val.Data.GetType().Name), //ncrunch: no coverage
 			MemberCall memberCall => Add(memberCall.Member.Name).Add(memberCall.Member.Type.Name).
 				CollectExpressionStrings(memberCall.Instance),
