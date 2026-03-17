@@ -14,7 +14,7 @@ public sealed class BytecodeInterpreterKataTests : TestBytecode
 	[Test]
 	public void BestTimeToBuyStocksKata()
 	{
-		var instructions = new BytecodeGenerator(GenerateMethodCallFromSource("Stock",
+		var instructions = new BinaryGenerator(GenerateMethodCallFromSource("Stock",
 			"Stock(7, 1, 5, 3, 6, 4).MaxProfit",
 			// @formatter:off
 			"has prices Numbers",
@@ -35,7 +35,7 @@ public sealed class BytecodeInterpreterKataTests : TestBytecode
 	[TestCase("RemoveParentheses(\"(some)thing\").Remove", "thing")]
 	public void RemoveParentheses(string methodCall, string expectedResult)
 	{
-		var instructions = new BytecodeGenerator(GenerateMethodCallFromSource("RemoveParentheses",
+		var instructions = new BinaryGenerator(GenerateMethodCallFromSource("RemoveParentheses",
 			methodCall,
 			// @formatter:off
 			"has text",
@@ -57,7 +57,7 @@ public sealed class BytecodeInterpreterKataTests : TestBytecode
 	[TestCase("Invertor(1, 2, 3, 4, 5).Invert", "-1-2-3-4-5")]
 	public void InvertValues(string methodCall, string expectedResult)
 	{
-		var instructions = new BytecodeGenerator(GenerateMethodCallFromSource("Invertor", methodCall,
+		var instructions = new BinaryGenerator(GenerateMethodCallFromSource("Invertor", methodCall,
 			// @formatter:off
 			"has numbers",
 			"Invert Text",
@@ -72,7 +72,7 @@ public sealed class BytecodeInterpreterKataTests : TestBytecode
 	[Test]
 	public void CountingSheepKata()
 	{
-		var instructions = new BytecodeGenerator(GenerateMethodCallFromSource("SheepCounter",
+		var instructions = new BinaryGenerator(GenerateMethodCallFromSource("SheepCounter",
 			"SheepCounter(true, true, true, false, true, true, true, true, true, false, true, false, " +
 			"true, false, false, true, true, true, true, true, false, false, true, true).Count",
 			// @formatter:off

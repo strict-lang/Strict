@@ -18,8 +18,8 @@ public sealed class BytecodeSerializer
 		WriteBytecodeEntries(zip, instructionsByType);
 	}
 
-	public BytecodeSerializer(StrictBinary usedTypes) => this.usedTypes = usedTypes;
-	private readonly StrictBinary? usedTypes;
+	public BytecodeSerializer(Binary usedTypes) => this.usedTypes = usedTypes;
+	private readonly Binary? usedTypes;
 	public string OutputFilePath { get; } = string.Empty;
 	public const string Extension = ".strictbinary";
 	public const string BytecodeEntryExtension = ".bytecode";
@@ -29,7 +29,7 @@ public sealed class BytecodeSerializer
 	public void Serialize(string filePath)
 	{
 		if (usedTypes == null)
-			throw new InvalidOperationException("StrictBinary was not provided.");
+			throw new InvalidOperationException("Binary was not provided.");
 		using var fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write);
 		using var zip = new ZipArchive(fileStream, ZipArchiveMode.Create, leaveOpen: false);
 		foreach (var (fullTypeName, membersAndMethods) in usedTypes.MethodsPerType)

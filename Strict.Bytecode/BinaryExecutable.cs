@@ -1,58 +1,47 @@
+using System.IO.Compression;
 using Strict.Bytecode.Instructions;
+using Strict.Bytecode.Serialization;
 using Strict.Expressions;
 using Strict.Language;
-using System.IO.Compression;
 using Type = Strict.Language.Type;
 
-namespace Strict.Bytecode.Serialization;
+namespace Strict.Bytecode;
 
 /// <summary>
 /// Loads <see cref="Instruction" /> bytecode for each type used with each method used. Generated
-/// from <see cref="BytecodeGenerator"/> or loaded from a compact .strictbinary ZIP file, which is
+/// from <see cref="BinaryGenerator"/> or loaded from a compact .strictbinary ZIP file, which is
 /// done via <see cref="Serialize(string)"/>. Used by the VirtualMachine or executable generation.
 /// </summary>
-public sealed class StrictBinary
+public sealed class BinaryExecutable(Package basePackage)
 {
-	public StrictBinary(Package basePackage)
-	{
-		this.basePackage = basePackage;
-		//TODO: remove: var package = new Package(basePackage,
-		//	Path.GetFileNameWithoutExtension(FilePath) + "-" + ++packageCounter);
-		package = basePackage;
-		noneType = basePackage.GetType(Type.None);
-		booleanType = basePackage.GetType(Type.Boolean);
-		numberType = basePackage.GetType(Type.Number);
-		characterType = basePackage.GetType(Type.Character);
-		rangeType = basePackage.GetType(Type.Range);
-		listType = basePackage.GetType(Type.List);
-	}
-
-	internal readonly Package basePackage;
-	private readonly Package package;
-	internal Type noneType;
-	internal Type booleanType;
-	internal Type numberType;
-	internal Type characterType;
-	internal Type rangeType;
-	internal Type listType;
+	//TODO: remove: var package = new Package(basePackage,
+	//	Path.GetFileNameWithoutExtension(FilePath) + "-" + ++packageCounter);
+	internal readonly Package basePackage = basePackage;
+	private readonly Package package = basePackage;
+	internal Type noneType = basePackage.GetType(Type.None);
+	internal Type booleanType = basePackage.GetType(Type.Boolean);
+	internal Type numberType = basePackage.GetType(Type.Number);
+	internal Type characterType = basePackage.GetType(Type.Character);
+	internal Type rangeType = basePackage.GetType(Type.Range);
+	internal Type listType = basePackage.GetType(Type.List);
 
 	/// <summary>
 	/// Reads a .strictbinary ZIP containing all type bytecode (used types, members, methods) and
 	/// instruction bodies for each type.
 	/// </summary>
-	public StrictBinary(string filePath, Package basePackage) : this(basePackage)
+	public BinaryExecutable(string filePath, Package basePackage) : this(basePackage)
 	{
 		try
 		{
 			using var zip = ZipFile.OpenRead(filePath);
 			foreach (var entry in zip.Entries)
-				if (entry.FullName.EndsWith(BytecodeMembersAndMethods.BytecodeEntryExtension,
+				if (entry.FullName.EndsWith(BinaryType.BytecodeEntryExtension,
 					StringComparison.OrdinalIgnoreCase))
 				{
 					var typeFullName = GetEntryNameWithoutExtension(entry.FullName);
 					using var bytecode = entry.Open();
 					MethodsPerType.Add(typeFullName,
-						new BytecodeMembersAndMethods(new BinaryReader(bytecode), this, typeFullName));
+						new BinaryType(new BinaryReader(bytecode), this, typeFullName));
 				}
 		}
 		catch (InvalidDataException ex)
@@ -74,8 +63,8 @@ public sealed class StrictBinary
 	/// Each key is a type.FullName (e.g. Strict/Number, Strict/ImageProcessing/Color), the Value
 	/// contains all members of this type and all not stripped out methods that were actually used.
 	/// </summary>
-	public Dictionary<string, BytecodeMembersAndMethods> MethodsPerType = new();
-	public sealed class InvalidFile(string message)	: Exception(message);
+	public Dictionary<string, BinaryType> MethodsPerType = new();
+	public sealed class InvalidFile(string message) : Exception(message);
 
 	/// <summary>
 	/// Writes optimized <see cref="Instruction" /> lists per type into a compact .strictbinary ZIP.
@@ -88,7 +77,7 @@ public sealed class StrictBinary
 		using var zip = new ZipArchive(fileStream, ZipArchiveMode.Create, leaveOpen: false);
 		foreach (var (fullTypeName, membersAndMethods) in MethodsPerType)
 		{
-			var entry = zip.CreateEntry(fullTypeName + BytecodeMembersAndMethods.BytecodeEntryExtension,
+			var entry = zip.CreateEntry(fullTypeName + BinaryType.BytecodeEntryExtension,
 				CompressionLevel.Optimal);
 			using var entryStream = entry.Open();
 			using var writer = new BinaryWriter(entryStream);
@@ -104,7 +93,7 @@ public sealed class StrictBinary
 	public IReadOnlyList<Instruction>? FindInstructions(string fullTypeName, string methodName,
 		int parametersCount, string returnType = "") =>
 		MethodsPerType.TryGetValue(fullTypeName, out var methods)
-			? methods.InstructionsPerMethodGroup.GetValueOrDefault(methodName)?.Find(m =>
+			? methods.MethodGroups.GetValueOrDefault(methodName)?.Find(m =>
 				m.Parameters.Count == parametersCount && m.ReturnTypeName == returnType)?.Instructions
 			: null;
 
@@ -141,6 +130,75 @@ public sealed class StrictBinary
 
 	private static bool IsBinaryOp(InstructionType type) =>
 		type is > InstructionType.StoreSeparator and < InstructionType.BinaryOperatorsSeparator;
+
+	internal static void WriteValueInstance(BinaryWriter writer, ValueInstance val, NameTable table)
+	{
+		if (val.IsText)
+		{
+			writer.Write((byte)ValueKind.Text);
+			writer.Write7BitEncodedInt(table[val.Text]);
+			return;
+		}
+		if (val.IsList)
+		{
+			writer.Write((byte)ValueKind.List);
+			writer.Write7BitEncodedInt(table[val.List.ReturnType.Name]);
+			var items = val.List.Items;
+			writer.Write7BitEncodedInt(items.Count);
+			foreach (var item in items)
+				WriteValueInstance(writer, item, table);
+			return;
+		}
+		if (val.IsDictionary)
+		{
+			writer.Write((byte)ValueKind.Dictionary);
+			writer.Write7BitEncodedInt(table[val.GetType().Name]);
+			var items = val.GetDictionaryItems();
+			writer.Write7BitEncodedInt(items.Count);
+			foreach (var kvp in items)
+			{
+				WriteValueInstance(writer, kvp.Key, table);
+				WriteValueInstance(writer, kvp.Value, table);
+			}
+			return;
+		}
+		var type = val.GetType();
+		if (type.IsBoolean)
+		{
+			writer.Write((byte)ValueKind.Boolean);
+			writer.Write(val.Boolean);
+		}
+		else if (type.IsNone)
+			writer.Write((byte)ValueKind.None);
+		else if (type.IsNumber)
+		{
+			if (IsSmallNumber(val.Number))
+			{
+				writer.Write((byte)ValueKind.SmallNumber);
+				writer.Write((byte)(int)val.Number);
+			}
+			else if (IsIntegerNumber(val.Number))
+			{
+				writer.Write((byte)ValueKind.IntegerNumber);
+				writer.Write((int)val.Number);
+			}
+			else
+			{
+				writer.Write((byte)ValueKind.Number);
+				writer.Write(val.Number);
+			}
+		}
+		else
+			throw new ValueInstanceNotSupported(val); //ncrunch: no coverage
+	}
+
+	public static bool IsSmallNumber(double value) =>
+		value is >= 0 and <= 255 && value == Math.Floor(value);
+
+	public static bool IsIntegerNumber(double value) =>
+		value is >= int.MinValue and <= int.MaxValue && value == Math.Floor(value);
+
+	public class ValueInstanceNotSupported(ValueInstance instance) : Exception(instance.ToString());
 
 	internal ValueInstance ReadValueInstance(BinaryReader reader, NameTable table)
 	{
@@ -188,9 +246,9 @@ public sealed class StrictBinary
 		var declaringTypeName = table.Names[reader.Read7BitEncodedInt()];
 		var methodName = table.Names[reader.Read7BitEncodedInt()];
 		var paramCount = reader.Read7BitEncodedInt();
-		var parameters = new BytecodeMember[paramCount];
+		var parameters = new BinaryMember[paramCount];
 		for (var index = 0; index < paramCount; index++)
-			parameters[index] = new BytecodeMember(reader, table, this);		
+			parameters[index] = new BinaryMember(reader, table, this);
 		var returnTypeName = table.Names[reader.Read7BitEncodedInt()];
 		var hasInstance = reader.ReadBoolean();
 		var instance = hasInstance
@@ -209,7 +267,7 @@ public sealed class StrictBinary
 		return new MethodCall(method, instance, args, methodReturnType);
 	}
 
-	private Method FindMethod(Type type, string methodName, IReadOnlyList<BytecodeMember> parameters,
+	private Method FindMethod(Type type, string methodName, IReadOnlyList<BinaryMember> parameters,
 		Type returnType)
 	{
 		var method = type.Methods.FirstOrDefault(existingMethod =>
@@ -231,8 +289,8 @@ public sealed class StrictBinary
 	}
 
 	public static string BuildMethodHeader(string methodName,
-		IReadOnlyList<BytecodeMember> parameters, Type returnType)
-		=> parameters.Count == 0
+		IReadOnlyList<BinaryMember> parameters, Type returnType) =>
+		parameters.Count == 0
 			? returnType.IsNone
 				? methodName
 				: methodName + " " + returnType.Name
@@ -245,7 +303,7 @@ public sealed class StrictBinary
 		{
 			ExpressionKind.SmallNumberValue => new Number(package, reader.ReadByte()),
 			ExpressionKind.IntegerNumberValue => new Number(package, reader.ReadInt32()),
-			ExpressionKind.NumberValue =>	new Number(package, reader.ReadDouble()),
+			ExpressionKind.NumberValue => new Number(package, reader.ReadDouble()),
 			ExpressionKind.TextValue => new Text(package, table.Names[reader.Read7BitEncodedInt()]),
 			ExpressionKind.BooleanValue => ReadBooleanValue(reader, package, table),
 			ExpressionKind.VariableRef => ReadVariableRef(reader, package, table),
@@ -339,12 +397,12 @@ public sealed class StrictBinary
 			writer.Write(val.Data.Boolean);
 			break;
 		case Value val when val.Data.GetType().IsNumber:
-			if (InstanceInstruction.IsSmallNumber(val.Data.Number))
+			if (IsSmallNumber(val.Data.Number))
 			{
 				writer.Write((byte)ExpressionKind.SmallNumberValue);
 				writer.Write((byte)(int)val.Data.Number);
 			}
-			else if (InstanceInstruction.IsIntegerNumber(val.Data.Number))
+			else if (IsIntegerNumber(val.Data.Number))
 			{
 				writer.Write((byte)ExpressionKind.IntegerNumberValue);
 				writer.Write((int)val.Data.Number);
@@ -363,9 +421,10 @@ public sealed class StrictBinary
 			writer.Write7BitEncodedInt(table[memberCall.Member.Type.Name]);
 			writer.Write(memberCall.Instance != null);
 			if (memberCall.Instance != null)
+				// ReSharper disable TailRecursiveCall
 				WriteExpression(writer, memberCall.Instance, table);
 			break;
-		case Binary binary:
+		case Expressions.Binary binary:
 			writer.Write((byte)ExpressionKind.BinaryExpr);
 			writer.Write7BitEncodedInt(table[binary.Method.Name]);
 			WriteExpression(writer, binary.Instance!, table);

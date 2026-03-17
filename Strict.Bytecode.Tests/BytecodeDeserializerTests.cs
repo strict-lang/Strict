@@ -10,7 +10,7 @@ public sealed class BytecodeDeserializerTests : TestBytecode
 	public void ZipWithNoBytecodeEntriesCreatesEmptyStrictBinary()
 	{
 		var filePath = CreateEmptyZipWithDummyEntry();
-		var binary = new StrictBinary(filePath, TestPackage.Instance);
+		var binary = new BinaryExecutable(filePath, TestPackage.Instance);
 		Assert.That(binary.MethodsPerType, Is.Empty);
 	}
 
@@ -18,8 +18,8 @@ public sealed class BytecodeDeserializerTests : TestBytecode
 	public void EntryWithBadMagicBytesThrows()
 	{
 		var filePath = CreateZipWithSingleEntry([0xBA, 0xAD, 0xBA, 0xAD, 0xBA, 0xAD, 0x01]);
-		Assert.That(() => new StrictBinary(filePath, TestPackage.Instance),
-			Throws.TypeOf<BytecodeMembersAndMethods.InvalidBytecodeEntry>().With.Message.
+		Assert.That(() => new BinaryExecutable(filePath, TestPackage.Instance),
+			Throws.TypeOf<BinaryType.InvalidBytecodeEntry>().With.Message.
 				Contains("magic bytes"));
 	}
 
@@ -31,8 +31,8 @@ public sealed class BytecodeDeserializerTests : TestBytecode
 			writer.Write(MagicBytes);
 			writer.Write((byte)0);
 		}));
-		Assert.That(() => new StrictBinary(filePath, TestPackage.Instance),
-			Throws.TypeOf<BytecodeMembersAndMethods.InvalidVersion>().With.Message.Contains("version"));
+		Assert.That(() => new BinaryExecutable(filePath, TestPackage.Instance),
+			Throws.TypeOf<BinaryType.InvalidVersion>().With.Message.Contains("version"));
 	}
 
 	[Test]
@@ -51,8 +51,8 @@ public sealed class BytecodeDeserializerTests : TestBytecode
 			writer.Write7BitEncodedInt(0);
 			writer.Write7BitEncodedInt(0);
 		}));
-		Assert.That(() => new StrictBinary(filePath, TestPackage.Instance),
-			Throws.TypeOf<StrictBinary.InvalidFile>().With.Message.Contains("Unknown ValueKind"));
+		Assert.That(() => new BinaryExecutable(filePath, TestPackage.Instance),
+			Throws.TypeOf<BinaryExecutable.InvalidFile>().With.Message.Contains("Unknown ValueKind"));
 	}
 
 	[Test]
@@ -78,14 +78,14 @@ public sealed class BytecodeDeserializerTests : TestBytecode
 			writer.Write((byte)Register.R0);
 			writer.Write7BitEncodedInt(0);
 		}));
-		Assert.That(() => new StrictBinary(filePath, TestPackage.Instance),
-			Throws.TypeOf<StrictBinary.InvalidFile>().With.Message.Contains("Unknown ExpressionKind"));
+		Assert.That(() => new BinaryExecutable(filePath, TestPackage.Instance),
+			Throws.TypeOf<BinaryExecutable.InvalidFile>().With.Message.Contains("Unknown ExpressionKind"));
 	}
 
 	private static void WriteHeader(BinaryWriter writer, string[] names)
 	{
 		writer.Write(MagicBytes);
-		writer.Write(BytecodeMembersAndMethods.Version);
+		writer.Write(BinaryType.Version);
 		writer.Write7BitEncodedInt(names.Length);
 		foreach (var name in names)
 			writer.Write(name);
@@ -105,14 +105,14 @@ public sealed class BytecodeDeserializerTests : TestBytecode
 		var filePath = GetTempFilePath();
 		using var fileStream = new FileStream(filePath, FileMode.Create);
 		using var zip = new ZipArchive(fileStream, ZipArchiveMode.Create);
-		var entry = zip.CreateEntry("Number" + BytecodeMembersAndMethods.BytecodeEntryExtension);
+		var entry = zip.CreateEntry("Number" + BinaryType.BytecodeEntryExtension);
 		using var stream = entry.Open();
 		stream.Write(entryBytes);
 		return filePath;
 	}
 
 	private static string GetTempFilePath() =>
-		Path.Combine(Path.GetTempPath(), "strictbinary" + fileCounter++ + StrictBinary.Extension);
+		Path.Combine(Path.GetTempPath(), "strictbinary" + fileCounter++ + BinaryExecutable.Extension);
 
 	private static int fileCounter;
 	private static readonly byte[] MagicBytes = "Strict"u8.ToArray();

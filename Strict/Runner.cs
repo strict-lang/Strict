@@ -25,16 +25,18 @@ public sealed class Runner : IDisposable
 	/// everything after that is stripped, optimized, and just includes what is actually executed.
 	/// </summary>
 	public Runner(string strictFilePath, Package? skipPackageSearchAndUseThisTestPackage = null,
-		bool enableTestsAndDetailedOutput = false)
+		string expressionToRun = Method.Run, bool enableTestsAndDetailedOutput = false)
 	{
 		this.strictFilePath = strictFilePath;
 		this.skipPackageSearchAndUseThisTestPackage = skipPackageSearchAndUseThisTestPackage;
+		this.expressionToRun = expressionToRun;
 		this.enableTestsAndDetailedOutput = enableTestsAndDetailedOutput;
 		Log("Strict.Runner: " + strictFilePath);
 	}
 
 	private readonly string strictFilePath;
 	private readonly Package? skipPackageSearchAndUseThisTestPackage;
+	private readonly string expressionToRun;
 	private readonly bool enableTestsAndDetailedOutput;
 
 	private void Log(string message)
@@ -77,15 +79,15 @@ public sealed class Runner : IDisposable
 	/// Tries to load a .strictbinary directly if it exists and is up to date, otherwise will load
 	/// from source and generate a fresh .strictbinary to be used in later runs as well.
 	/// </summary>
-	private async Task<StrictBinary> GetBinary()
+	private async Task<BinaryExecutable> GetBinary()
 	{
 		var basePackage = skipPackageSearchAndUseThisTestPackage ?? await GetPackage(nameof(Strict));
-		if (Path.GetExtension(strictFilePath) == StrictBinary.Extension)
-			return new StrictBinary(strictFilePath, basePackage);
-		var cachedBinaryPath = Path.ChangeExtension(strictFilePath, StrictBinary.Extension);
+		if (Path.GetExtension(strictFilePath) == BinaryExecutable.Extension)
+			return new BinaryExecutable(strictFilePath, basePackage);
+		var cachedBinaryPath = Path.ChangeExtension(strictFilePath, BinaryExecutable.Extension);
 		if (File.Exists(cachedBinaryPath))
 		{
-			var binary = new StrictBinary(cachedBinaryPath, basePackage);
+			var binary = new BinaryExecutable(cachedBinaryPath, basePackage);
 			var binaryLastModified = new FileInfo(cachedBinaryPath).LastWriteTimeUtc;
 			var sourceLastModified = new FileInfo(strictFilePath).LastWriteTimeUtc;
 			foreach (var typeFullName in binary.MethodsPerType.Keys)
@@ -108,7 +110,7 @@ public sealed class Runner : IDisposable
 
 	private async Task<Package> GetPackage(string name) => throw new NotImplementedException();
 
-	private StrictBinary LoadFromSourceAndSaveBinary()
+	private BinaryExecutable LoadFromSourceAndSaveBinary()
 	{
 		if (enableTestsAndDetailedOutput)
 		{
@@ -116,7 +118,7 @@ public sealed class Runner : IDisposable
 			Validate();
 			RunTests();
 		}
-		var instructions = GenerateBytecode();
+		var instructions = GenerateBinaryExecutable();
 		var optimizedInstructions = OptimizeBytecode(instructions);
 		if (saveStrictBinary)
 			SaveStrictBinaryBytecodeIfPossible(optimizedInstructions);
@@ -132,9 +134,9 @@ public sealed class Runner : IDisposable
 			var basePackage = skipPackageSearchAndUseThisTestPackage;
 			if (Directory.Exists(strictFilePath))
 				(package, mainType) = LoadPackageFromDirectory(basePackage, strictFilePath);
-			else if (Path.GetExtension(strictFilePath) == StrictBinary.Extension)
+			else if (Path.GetExtension(strictFilePath) == Binary.Extension)
 			{
-				binary = new StrictBinary(strictFilePath, basePackage);
+				binary = new Binary(strictFilePath, basePackage);
 	//package = new Package(basePackage, typeName);
 	mainType = new Type(basePackage, new TypeLines(typeName, Method.Run))
 					.ParseMembersAndMethods(new MethodExpressionParser());
@@ -157,7 +159,7 @@ var endTicks = DateTime.UtcNow.Ticks;
 stepTimes.Add(endTicks - startTicks);
 Log("└─ Step 1 ⏱ Time: " +
 	TimeSpan.FromTicks(endTicks - startTicks).TotalMilliseconds + " ms");
-private StrictBinary? binary;
+private Binary? binary;
 	private readonly string currentFolder;
 	private readonly Package package;
 	private readonly Type mainType;
@@ -328,10 +330,12 @@ private StrictBinary? binary;
 			TimeSpan.FromTicks(endTicks - startTicks).TotalMilliseconds + " ms");
 	}
 
-	private List<Instruction> GenerateBytecode()
+	private BinaryExecutable GenerateBinaryExecutable()
 	{
 		Log("┌─ Step 6: Generate Bytecode");
 		var startTicks = DateTime.UtcNow.Ticks;
+
+		/*obs
 		var runMethod =
 			mainType.Methods.FirstOrDefault(m => m.Name == Method.Run && m.Parameters.Count == 0) ??
 			mainType.Methods.FirstOrDefault(m => m.Name == Method.Run && m.Parameters.Count == 1) ??
@@ -340,7 +344,7 @@ private StrictBinary? binary;
 		if (runMethod.Parameters.Count == 0)
 		{
 			var runMethodCall = new MethodCall(runMethod, null, Array.Empty<Expression>());
-			instructions = new BytecodeGenerator(runMethodCall).Generate();
+			instructions = new BinaryGenerator(runMethodCall).Generate();
 		}
 		else
 		{
@@ -348,10 +352,11 @@ private StrictBinary? binary;
 			var expressions = body is Body bodyExpr
 				? bodyExpr.Expressions
 				: [body];
-			instructions = new BytecodeGenerator(
+			instructions = new BinaryGenerator(
 				new InvokedMethod(expressions, EmptyArguments, runMethod.ReturnType),
 				new Registry()).Generate();
 		}
+		*/
 		var endTicks = DateTime.UtcNow.Ticks;
 		Log("│  ✓ Generated bytecode instructions: " + instructions.Count);
 		stepTimes.Add(endTicks - startTicks);
@@ -449,7 +454,7 @@ private StrictBinary? binary;
 			if (method.IsTrait || !IsTypeInsideCurrentPackage(method.Type))
 				continue;
 			var methodExpressions = GetMethodExpressions(method);
-			var methodInstructions = new BytecodeGenerator(
+			var methodInstructions = new BinaryGenerator(
 				new InvokedMethod(methodExpressions, EmptyArguments, method.ReturnType),
 				new Registry()).Generate();
 			if (!methodsByType.TryGetValue(method.Type, out var typeMethods))
@@ -623,9 +628,9 @@ private StrictBinary? binary;
 	}
 
 	private static string BuildMethodKey(Method method) =>
-		StrictBinary.BuildMethodHeader(method.Name,
+		BinaryExecutable.BuildMethodHeader(method.Name,
 			method.Parameters.Select(parameter =>
-				new BytecodeMember(parameter.Name, parameter.Type.Name, null)).ToList(),
+				new BinaryMember(parameter.Name, parameter.Type.Name, null)).ToList(),
 			method.ReturnType);
 
 	/// <summary>
@@ -705,7 +710,7 @@ private StrictBinary? binary;
 			? bodyExpr.Expressions
 			: [body];
 		var instance = new ValueInstance(targetType, BuildInstanceValueArray(targetType, constructorArgs));
-		var instructions = new BytecodeGenerator(
+		var instructions = new BinaryGenerator(
 			new InstanceInvokedMethod(expressions, EmptyArguments, instance, method.ReturnType),
 			new Registry()).Generate();
 		var vm = new VirtualMachine(package);

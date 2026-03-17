@@ -13,7 +13,7 @@ public sealed class BytecodeDeserializer(string FilePath)
 {
 	/*obs
 
-	private static void PopulateInstructions(StrictBinary result,
+	private static void PopulateInstructions(Binary result,
 		List<TypeEntryData> typeEntries, Dictionary<string, List<Instruction>> runInstructions,
 		Dictionary<string, List<Instruction>> methodInstructions)
 	{
@@ -23,7 +23,7 @@ public sealed class BytecodeDeserializer(string FilePath)
 				continue;
 			var typeName = GetTypeNameFromEntryName(typeEntry.EntryName);
 			if (runInstructions.TryGetValue(typeName, out var runInstr) && runInstr.Count > 0)
-				typeMethods.InstructionsPerMethod[StrictBinary.GetMethodKey(Method.Run, 0, Type.None)] = runInstr;
+				typeMethods.InstructionsPerMethod[Binary.GetMethodKey(Method.Run, 0, Type.None)] = runInstr;
 			foreach (var (key, instructions) in methodInstructions)
 			{
 				var parts = key.Split('|');
@@ -56,13 +56,13 @@ public sealed class BytecodeDeserializer(string FilePath)
 
 	/// <summary>
 	/// Reads type metadata (members and method signatures) from a bytecode entry and returns a
-	/// <see cref="StrictBinary.BytecodeMembersAndMethods"/> with the captured data. Also creates
+	/// <see cref="Binary.BinaryType"/> with the captured data. Also creates
 	/// the corresponding Language types for instruction deserialization.
 	/// </summary>
-	private static StrictBinary.TypeMembersAndMethods ReadTypeMetadataIntoBytecodeTypes(
+	private static Binary.TypeMembersAndMethods ReadTypeMetadataIntoBytecodeTypes(
 		TypeEntryData typeEntry, Package package)
 	{
-		var typeMembersAndMethods = new StrictBinary.TypeMembersAndMethods();
+		var typeMembersAndMethods = new Binary.TypeMembersAndMethods();
 		using var stream = new MemoryStream(typeEntry.Bytes);
 		using var reader = new BinaryReader(stream, System.Text.Encoding.UTF8, leaveOpen: true);
 		_ = ValidateMagicAndVersion(reader);
@@ -77,7 +77,7 @@ public sealed class BytecodeDeserializer(string FilePath)
 			if (reader.ReadBoolean())
 				_ = ReadExpression(reader, package, table); //ncrunch: no coverage
 			typeMembersAndMethods.Members.Add(
-				new StrictBinary.TypeMember(memberName, memberTypeName, null));
+				new Binary.TypeMember(memberName, memberTypeName, null));
 		}
 		var methodCount = reader.Read7BitEncodedInt();
 		for (var methodIndex = 0; methodIndex < methodCount; methodIndex++)
@@ -195,7 +195,7 @@ public sealed class BytecodeDeserializer(string FilePath)
 			var parameterCount = reader.Read7BitEncodedInt();
 			var returnTypeName = table[reader.Read7BitEncodedInt()];
 			var instructionCount = reader.Read7BitEncodedInt();
-			methodInstructions[StrictBinary.GetMethodKey(methodName, parameterCount, returnTypeName)] =
+			methodInstructions[Binary.GetMethodKey(methodName, parameterCount, returnTypeName)] =
 				ReadInstructions(reader, package, table, numberType, instructionCount);
 		}
 	}
@@ -242,7 +242,7 @@ public sealed class BytecodeDeserializer(string FilePath)
 
 
 	private static (Dictionary<string, List<Instruction>> RunInstructions,
-		Dictionary<string, List<Instruction>> MethodInstructions)
+		Dictionary<string, List<Instruction>> BinaryMethod)
 		DeserializeAllFromEntries(Dictionary<string, byte[]> entryBytesByType, Package package)
 	{
 		if (entryBytesByType.Count == 0)

@@ -1,3 +1,4 @@
+using Strict.Bytecode;
 using Strict.Bytecode.Instructions;
 using Strict.Bytecode.Serialization;
 using Strict.Language;
@@ -23,8 +24,8 @@ public class InstructionsCompiler
 	}
 
 	protected static string BuildMethodHeaderKeyInternal(Method method) =>
-		StrictBinary.BuildMethodHeader(method.Name,
+		BinaryExecutable.BuildMethodHeader(method.Name,
 			method.Parameters.Select(parameter =>
-				new BytecodeMember(parameter.Name, parameter.Type.Name, null)).ToList(),
+				new BinaryMember(parameter.Name, parameter.Type.Name, null)).ToList(),
 			method.ReturnType);
 }

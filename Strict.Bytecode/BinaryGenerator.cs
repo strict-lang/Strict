@@ -1,14 +1,30 @@
 using Strict.Bytecode.Instructions;
 using Strict.Expressions;
 using Strict.Language;
-using Binary = Strict.Expressions.Binary;
 using Type = Strict.Language.Type;
 
 namespace Strict.Bytecode;
 
-public sealed class BytecodeGenerator
+/// <summary>
+/// Converts an expression into a <see cref="BinaryExecutable"/>, mostly from calling the Run
+/// method of a .strict type, but can be any expression. Will get all used types with their
+/// members and used methods recursively, execution and serialization can be done independently.
+/// </summary>
+public sealed class BinaryGenerator
 {
-	public BytecodeGenerator(InvokedMethod method, Registry registry)
+	public BinaryGenerator(Expression entryPoint)
+	{
+
+	}
+
+	public BinaryExecutable Generate()
+	{
+		var executable = new BinaryExecutable(package);
+		return GenerateInstructions(Expressions);
+	}
+
+	/*obs
+	public BinaryGenerator(InvokedMethod method, Registry registry)
 	{
 		foreach (var argument in method.Arguments)
 			instructions.Add(new StoreVariableInstruction(argument.Value, argument.Key));
@@ -25,7 +41,7 @@ public sealed class BytecodeGenerator
 	private readonly Register[] registers = Enum.GetValues<Register>();
 	private int conditionalId;
 
-	public BytecodeGenerator(MethodCall methodCall)
+	public BinaryGenerator(MethodCall methodCall)
 	{
 		if (methodCall.Instance != null)
 			AddInstanceMemberVariables((MethodCall)methodCall.Instance);
@@ -41,7 +57,7 @@ public sealed class BytecodeGenerator
 	private IReadOnlyList<Expression> Expressions { get; }
 	private Type ReturnType { get; }
 	private int forResultId;
-
+*/
 	private void AddMembersFromCaller(ValueInstance instance)
 	{
 		instructions.Add(new StoreVariableInstruction(instance, Type.ValueLowercase, isMember: true));
@@ -107,8 +123,6 @@ public sealed class BytecodeGenerator
 				GetValueInstanceFromExpression(methodCall.Arguments[parameterIndex]),
 				methodCall.Method.Parameters[parameterIndex].Name));
 	}
-
-	public List<Instruction> Generate() => GenerateInstructions(Expressions);
 
 	private List<Instruction> GenerateInstructions(IReadOnlyList<Expression> expressions)
 	{
@@ -213,7 +227,7 @@ public sealed class BytecodeGenerator
 
 	private bool? TryGenerateMethodCallInstruction(Expression expression)
 	{
-		if (expression is Binary || expression is not MethodCall methodCall)
+		if (expression is BinaryExecutable || expression is not MethodCall methodCall)
 			return null;
 		if (TryGenerateInstructionForCollectionManipulation(methodCall))
 			return true;
@@ -240,7 +254,7 @@ public sealed class BytecodeGenerator
 			instructions.Add(new PrintInstruction(textValue.Data.Text));
 			return true;
 		} //ncrunch: no coverage end
-		if (arg is Binary binary)
+		if (arg is BinaryExecutable binary)
 		{
 			var prefix = ExtractTextPrefix(binary.Instance);
 			var valueExpr = UnwrapToConversion(binary.Arguments[0]);
@@ -422,7 +436,7 @@ public sealed class BytecodeGenerator
 
 	private bool? TryGenerateBinaryInstructions(Expression expression)
 	{
-		if (expression is not Binary binary)
+		if (expression is not BinaryExecutable binary)
 			return null;
 		GenerateCodeForBinary(binary);
 		return true;
@@ -521,7 +535,7 @@ public sealed class BytecodeGenerator
 
 	private void GenerateCodeForIfCondition(Expression condition)
 	{
-		if (condition is Binary binary)
+		if (condition is BinaryExecutable binary)
 			GenerateForBinaryIfConditionalExpression(binary);
 		else
 			GenerateForBooleanCallIfCondition(condition);
@@ -537,7 +551,7 @@ public sealed class BytecodeGenerator
 			registry.PreviousRegister);
 	}
 
-	private void GenerateForBinaryIfConditionalExpression(Binary condition)
+	private void GenerateForBinaryIfConditionalExpression(BinaryExecutable condition)
 	{
 		var leftRegister = GenerateLeftSideForIfCondition(condition);
 		var rightRegister = GenerateRightSideForIfCondition(condition);
@@ -567,16 +581,16 @@ public sealed class BytecodeGenerator
 		return registry.PreviousRegister;
 	}
 
-	private Register GenerateLeftSideForIfCondition(Binary condition) =>
+	private Register GenerateLeftSideForIfCondition(BinaryExecutable condition) =>
 		condition.Instance switch
 		{
-			Binary binaryInstance => GenerateValueBinaryInstructions(binaryInstance,
+			BinaryExecutable binaryInstance => GenerateValueBinaryInstructions(binaryInstance,
 				GetInstructionBasedOnBinaryOperationName(binaryInstance.Method.Name)),
 			MethodCall => InvokeAndGetStoredRegisterForConditional(condition),
 			_ => LoadVariableForIfConditionLeft(condition)
 		};
 
-	private Register InvokeAndGetStoredRegisterForConditional(Binary condition)
+	private Register InvokeAndGetStoredRegisterForConditional(BinaryExecutable condition)
 	{
 		if (condition.Instance == null)
 			throw new InvalidOperationException(); //ncrunch: no coverage
@@ -584,7 +598,7 @@ public sealed class BytecodeGenerator
 		return registry.PreviousRegister;
 	}
 
-	private Register LoadVariableForIfConditionLeft(Binary condition)
+	private Register LoadVariableForIfConditionLeft(BinaryExecutable condition)
 	{
 		if (condition.Instance != null)
 			GenerateInstructionFromExpression(condition.Instance);
@@ -593,7 +607,7 @@ public sealed class BytecodeGenerator
 
 	private void GenerateBinaryInstruction(MethodCall binary, InstructionType operationInstruction)
 	{
-		if (binary.Instance is Binary binaryOp)
+		if (binary.Instance is BinaryExecutable binaryOp)
 		{
 			var leftReg = GenerateValueBinaryInstructions(binaryOp,
 				GetInstructionBasedOnBinaryOperationName(binaryOp.Method.Name));
@@ -601,14 +615,14 @@ public sealed class BytecodeGenerator
 			instructions.Add(new BinaryInstruction(operationInstruction, leftReg, registry.PreviousRegister,
 				registry.AllocateRegister()));
 		}
-		else if (binary.Arguments[0] is Binary binaryArg)
+		else if (binary.Arguments[0] is BinaryExecutable binaryArg)
 			GenerateNestedBinaryInstructions(binary, operationInstruction, binaryArg);
 		else
 			GenerateValueBinaryInstructions(binary, operationInstruction);
 	}
 
 	private void GenerateNestedBinaryInstructions(MethodCall binary,
-		InstructionType operationInstruction, Binary binaryArgument)
+		InstructionType operationInstruction, BinaryExecutable binaryArgument)
 	{
 		var right = GenerateValueBinaryInstructions(binaryArgument,
 			GetInstructionBasedOnBinaryOperationName(binaryArgument.Method.Name));

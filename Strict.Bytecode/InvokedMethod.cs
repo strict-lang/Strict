@@ -1,3 +1,4 @@
+/*not needed, doesn't make sense, just use Expression!
 using Strict.Expressions;
 using Strict.Language;
 using Type = Strict.Language.Type;
@@ -11,3 +12,4 @@ public class InvokedMethod(IReadOnlyList<Expression> expressions,
 	public IReadOnlyDictionary<string, ValueInstance> Arguments { get; } = arguments;
 	public Type ReturnType { get; } = returnType;
 }
+*/

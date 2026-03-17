@@ -234,7 +234,7 @@ public sealed class InstructionsToLlvmIrTests
 					"\tAdd(2, 3)")).ParseMembersAndMethods(new MethodExpressionParser());
 		var runMethod = type.Methods.First(method => method.Name == Method.Run);
 		var addMethod = type.Methods.First(method => method.Name == "Add");
-		var runInstructions = new BytecodeGenerator(new MethodCall(runMethod)).Generate();
+		var runInstructions = new BinaryGenerator(new MethodCall(runMethod)).Generate();
 		var addInstructions = GenerateMethodInstructions(addMethod);
 		var methodKey = BuildMethodKey(addMethod);
 		var ir = compiler.CompileForPlatform(type.Name, runInstructions, Platform.Windows,
@@ -336,7 +336,7 @@ public sealed class InstructionsToLlvmIrTests
 				"\tcalc.Add")).ParseMembersAndMethods(new MethodExpressionParser());
 		var runMethod = type.Methods.First(method => method.Name == Method.Run);
 		var addMethod = type.Methods.First(method => method.Name == "Add");
-		var runInstructions = new BytecodeGenerator(new MethodCall(runMethod)).Generate();
+		var runInstructions = new BinaryGenerator(new MethodCall(runMethod)).Generate();
 		var addInstructions = GenerateMethodInstructions(addMethod);
 		var methodKey = BuildMethodKey(addMethod);
 		var ir = compiler.CompileForPlatform(type.Name, runInstructions, Platform.Windows,
@@ -413,7 +413,7 @@ public sealed class InstructionsToLlvmIrTests
 						"\tfirst + second", "Run Number", "\t42")).
 				ParseMembersAndMethods(new MethodExpressionParser());
 		var runMethod = type.Methods.First(method => method.Name == Method.Run);
-		var runInstructions = new BytecodeGenerator(new MethodCall(runMethod)).Generate();
+		var runInstructions = new BinaryGenerator(new MethodCall(runMethod)).Generate();
 		var ir = compiler.CompileForPlatform(type.Name, runInstructions, Platform.Linux);
 		Assert.That(ir, Does.Contain("define double @LlvmPureAdder("));
 		Assert.That(ir, Does.Contain("ret double 42.0"));
@@ -432,7 +432,7 @@ public sealed class InstructionsToLlvmIrTests
 		var runMethod = type.Methods.First(method => method.Name == Method.Run);
 		var addMethod = type.Methods.First(method => method.Name == "Add");
 		var multiplyMethod = type.Methods.First(method => method.Name == "Multiply");
-		var runInstructions = new BytecodeGenerator(new MethodCall(runMethod)).Generate();
+		var runInstructions = new BinaryGenerator(new MethodCall(runMethod)).Generate();
 		var addInstructions = GenerateMethodInstructions(addMethod);
 		var multiplyInstructions = GenerateMethodInstructions(multiplyMethod);
 		var precompiled = new Dictionary<string, List<Instruction>>
@@ -459,7 +459,7 @@ public sealed class InstructionsToLlvmIrTests
 					"\tAdd(10, 20)")).ParseMembersAndMethods(new MethodExpressionParser());
 		var runMethod = type.Methods.First(method => method.Name == Method.Run);
 		var addMethod = type.Methods.First(method => method.Name == "Add");
-		var runInstructions = new BytecodeGenerator(new MethodCall(runMethod)).Generate();
+		var runInstructions = new BinaryGenerator(new MethodCall(runMethod)).Generate();
 		var addInstructions = GenerateMethodInstructions(addMethod);
 		var precompiled = new Dictionary<string, List<Instruction>>
 		{
@@ -480,7 +480,7 @@ public sealed class InstructionsToLlvmIrTests
 			ParseMembersAndMethods(new MethodExpressionParser());
 		var runMethod = type.Methods.First(method => method.Name == Method.Run);
 		var areaMethod = type.Methods.First(method => method.Name == "Area");
-		var runInstructions = new BytecodeGenerator(new MethodCall(runMethod)).Generate();
+		var runInstructions = new BinaryGenerator(new MethodCall(runMethod)).Generate();
 		var areaInstructions = GenerateMethodInstructions(areaMethod);
 		var precompiled = new Dictionary<string, List<Instruction>>
 		{
@@ -501,7 +501,7 @@ public sealed class InstructionsToLlvmIrTests
 				"\tconv.ToFahrenheit")).ParseMembersAndMethods(new MethodExpressionParser());
 		var runMethod = type.Methods.First(method => method.Name == Method.Run);
 		var toFMethod = type.Methods.First(method => method.Name == "ToFahrenheit");
-		var runInstructions = new BytecodeGenerator(new MethodCall(runMethod)).Generate();
+		var runInstructions = new BinaryGenerator(new MethodCall(runMethod)).Generate();
 		var toFInstructions = GenerateMethodInstructions(toFMethod);
 		var precompiled = new Dictionary<string, List<Instruction>>
 		{
@@ -593,7 +593,7 @@ public sealed class InstructionsToLlvmIrTests
 			"\tpixel.Brighten")).ParseMembersAndMethods(new MethodExpressionParser());
 		var runMethod = type.Methods.First(method => method.Name == Method.Run);
 		var brightenMethod = type.Methods.First(method => method.Name == "Brighten");
-		var runInstructions = new BytecodeGenerator(new MethodCall(runMethod)).Generate();
+		var runInstructions = new BinaryGenerator(new MethodCall(runMethod)).Generate();
 		var brightenInstructions = GenerateMethodInstructions(brightenMethod);
 		var precompiled = new Dictionary<string, List<Instruction>>
 		{
@@ -618,9 +618,9 @@ public sealed class InstructionsToLlvmIrTests
 	}
 
 	private static string BuildMethodKey(Method method) =>
-		StrictBinary.BuildMethodHeader(method.Name,
+		BinaryExecutable.BuildMethodHeader(method.Name,
 			method.Parameters.Select(parameter =>
-				new BytecodeMember(parameter.Name, parameter.Type.Name, null)).ToList(),
+				new BinaryMember(parameter.Name, parameter.Type.Name, null)).ToList(),
 			method.ReturnType);
 
 	private static List<Instruction> GenerateMethodInstructions(Method method)
@@ -629,7 +629,7 @@ public sealed class InstructionsToLlvmIrTests
 		var expressions = body is Body b
 			? b.Expressions
 			: [body];
-		return new BytecodeGenerator(
+		return new BinaryGenerator(
 			new InvokedMethod(expressions, new Dictionary<string, ValueInstance>(), method.ReturnType),
 			new Registry()).Generate();
 	}

@@ -28,7 +28,7 @@ public sealed class NameTable : IEnumerable<string>
 			StoreFromRegisterInstruction storeReg => Add(storeReg.Identifier),
 			SetInstruction set => CollectValueInstanceStrings(set.ValueInstance),
 			LoadConstantInstruction loadConst => CollectValueInstanceStrings(loadConst.Constant),
-			Invoke { Method: not null } invoke => CollectMethodCallStrings(invoke.Method),
+			Invoke invoke => CollectMethodCallStrings(invoke.Method),
 			WriteToListInstruction writeList => Add(writeList.Identifier),
 			WriteToTableInstruction writeTable => Add(writeTable.Identifier),
 			RemoveInstruction remove => Add(remove.Identifier),
@@ -77,7 +77,7 @@ public sealed class NameTable : IEnumerable<string>
 		}
 		var type = val.GetType();
 		if ((type.IsNone || type.IsBoolean || type.IsNumber || type.IsCharacter) &&
-			InstanceInstruction.IsIntegerNumber(val.Number))
+			BinaryExecutable.IsIntegerNumber(val.Number))
 			return this;
 		return Add(type.Name);
 	}
@@ -100,12 +100,11 @@ public sealed class NameTable : IEnumerable<string>
 			null => this,
 			Value { Data.IsText: true } val => Add(val.Data.Text),
 			Value val when val.Data.GetType().IsBoolean => Add(val.Data.GetType().Name),
-			Value val when !val.Data.GetType().IsNumber ||
-				!InstanceInstruction.IsIntegerNumber(val.Data.Number)
+			Value val when !val.Data.GetType().IsNumber || !BinaryExecutable.IsIntegerNumber(val.Data.Number)
 				=> Add(val.Data.GetType().Name), //ncrunch: no coverage
 			MemberCall memberCall => Add(memberCall.Member.Name).Add(memberCall.Member.Type.Name).
 				CollectExpressionStrings(memberCall.Instance),
-			Binary binary => Add(binary.Method.Name). //ncrunch: no coverage
+			Expressions.Binary binary => Add(binary.Method.Name). //ncrunch: no coverage
 				CollectExpressionStrings(binary.Instance).CollectExpressionStrings(binary.Arguments[0]),
 			MethodCall mc => CollectMethodCallStrings(mc),
 			_ => Add(expr.ToString()).Add(expr.ReturnType.Name)

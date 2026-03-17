@@ -11,7 +11,7 @@ namespace Strict.Bytecode.Instructions;
 public sealed class LoadConstantInstruction(Register register, ValueInstance constant)
 	: RegisterInstruction(InstructionType.LoadConstantToRegister, register)
 {
-	public LoadConstantInstruction(BinaryReader reader, NameTable table, StrictBinary binary)
+	public LoadConstantInstruction(BinaryReader reader, NameTable table, BinaryExecutable binary)
 		: this((Register)reader.ReadByte(), binary.ReadValueInstance(reader, table)) { }
 
 	public ValueInstance Constant { get; } = constant;
@@ -20,6 +20,6 @@ public sealed class LoadConstantInstruction(Register register, ValueInstance con
 	public override void Write(BinaryWriter writer, NameTable table)
 	{
 		base.Write(writer, table);
-		InstanceInstruction.WriteValueInstance(writer, Constant, table);
+		BinaryExecutable.WriteValueInstance(writer, Constant, table);
 	}
 }

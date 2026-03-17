@@ -614,7 +614,7 @@ public sealed class InstructionsToMlir : InstructionsToAssemblyCompiler
 			: [body];
 		var arguments = method.Parameters.ToDictionary(p => p.Name,
 			p => new ValueInstance(p.Type, 0)); //ncrunch: no coverage
-		return new BytecodeGenerator(new InvokedMethod(expressions, arguments, method.ReturnType),
+		return new BinaryGenerator(new InvokedMethod(expressions, arguments, method.ReturnType),
 			new Registry()).Generate();
 	}
 

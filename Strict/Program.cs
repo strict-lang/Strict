@@ -1,5 +1,4 @@
 using Strict.Bytecode;
-using Strict.Bytecode.Serialization;
 using Strict.Compiler;
 using Strict.Expressions;
 using Strict.Language;
@@ -72,7 +71,7 @@ public static class Program
 		{
 			var outputFolder = Path.GetFileNameWithoutExtension(filePath);
 			using var basePackage = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
-			var bytecodeTypes = new StrictBinary(filePath, basePackage);
+			var bytecodeTypes = new BinaryExecutable(filePath, basePackage);
 			new Decompiler().Decompile(bytecodeTypes, outputFolder);
 			Console.WriteLine("Decompilation complete, written all partial .strict files (only what " +
 				"was included in bytecode, no tests) to folder: " + outputFolder);
@@ -86,7 +85,10 @@ public static class Program
 			if (!diagnostics)
 				diagnostics = true;
 #endif
-			using var runner = new Runner(filePath, enableTestsAndDetailedOutput: diagnostics);
+			var expression = nonFlagArgs.Length >= 1 && nonFlagArgs[0].Contains('(')
+				? string.Join(" ", nonFlagArgs)
+				: Method.Run;
+			using var runner = new Runner(filePath, null, expression, diagnostics);
 			var buildForPlatform = GetPlatformOption(options);
 			var backend = options.Contains("-nasm")
 				? CompilerBackend.Nasm
@@ -94,9 +96,9 @@ public static class Program
 					? CompilerBackend.Llvm
 					: CompilerBackend.MlirDefault;
 			if (buildForPlatform.HasValue)
-				await runner.Build(buildForPlatform.Value, backend, options.Contains("-forceStrictBinary"));
-			else if (nonFlagArgs.Length >= 1 && nonFlagArgs[0].Contains('('))
-				await runner.RunExpression(string.Join(" ", nonFlagArgs[0..]));
+				await runner.Build(buildForPlatform.Value, backend);
+			//TODO: remove, not longer needed: else if (nonFlagArgs.Length >= 1 && nonFlagArgs[0].Contains('('))
+			//	await runner.RunExpression(string.Join(" ", nonFlagArgs[0..]));
 			else
 				await runner.Run(nonFlagArgs);
 		}

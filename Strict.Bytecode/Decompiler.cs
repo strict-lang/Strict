@@ -5,7 +5,7 @@ using Strict.Bytecode.Serialization;
 namespace Strict.Bytecode;
 
 /// <summary>
-/// Partially reconstructs .strict source files from StrictBinary (e.g. from .strictbinary) as an
+/// Partially reconstructs .strict source files from Binary (e.g. from .strictbinary) as an
 /// approximation. For debugging, will not compile, no tests. Only includes what bytecode reveals.
 /// </summary>
 public sealed class Decompiler
@@ -14,7 +14,7 @@ public sealed class Decompiler
 	/// Opens a .strictbinary ZIP file, deserializes each bytecode entry, and writes
 	/// a reconstructed .strict source file per entry into <paramref name="outputFolder" />.
 	/// </summary>
-	public void Decompile(StrictBinary allInstructions, string outputFolder)
+	public void Decompile(BinaryExecutable allInstructions, string outputFolder)
 	{
 		Directory.CreateDirectory(outputFolder);
 		foreach (var typeMethods in allInstructions.MethodsPerType)
@@ -25,7 +25,7 @@ public sealed class Decompiler
 		}
 	}
 
-	private static IReadOnlyList<string> ReconstructSource(BytecodeMembersAndMethods typeData)
+	private static IReadOnlyList<string> ReconstructSource(BinaryType typeData)
 	{
 		var lines = new List<string>();
 		foreach (var member in typeData.Members)
@@ -33,10 +33,10 @@ public sealed class Decompiler
 				(member.InitialValueExpression != null
 					? " = " + member.InitialValueExpression
 					: ""));
-		foreach (var (methodName, methods) in typeData.InstructionsPerMethodGroup)
+		foreach (var (methodName, methods) in typeData.MethodGroups)
 		foreach (var method in methods)
 		{
-			lines.Add(BytecodeMembersAndMethods.ReconstructMethodName(methodName, method));
+			lines.Add(BinaryType.ReconstructMethodName(methodName, method));
 			var bodyLines = new List<string>();
 			for (var index = 0; index < method.Instructions.Count; index++)
 			{

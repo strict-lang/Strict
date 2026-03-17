@@ -13,7 +13,7 @@ public sealed class TypeBytecodeData(string typeName, string entryPath,
 	public IReadOnlyList<MemberBytecodeData> Members { get; } = members;
 	public IReadOnlyList<MethodBytecodeData> Methods { get; } = methods;
 	public IList<Instruction> RunInstructions { get; } = runInstructions;
-	public IReadOnlyDictionary<MethodBytecodeData, IList<Instruction>> MethodInstructions { get; } =
+	public IReadOnlyDictionary<MethodBytecodeData, IList<Instruction>> BinaryMethod { get; } =
 		methodInstructions;
 }
 

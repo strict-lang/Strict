@@ -30,7 +30,7 @@ public class AdderProgramTests : TestBytecode
 	private List<decimal> ExecuteAddTotals(string methodCall)
 	{
 		var result = vm.Execute(
-			new BytecodeGenerator(GenerateMethodCallFromSource("AdderProgram", methodCall,
+			new BinaryGenerator(GenerateMethodCallFromSource("AdderProgram", methodCall,
 				AdderProgramCode)).Generate()).Returns!.Value;
 		return result.List.Items.Select(item => (decimal)item.Number).ToList();
 	}

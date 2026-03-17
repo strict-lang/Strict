@@ -7,7 +7,7 @@ using Type = Strict.Language.Type;
 namespace Strict.Compiler.Cuda;
 
 /// <summary>
-/// Compiles a Strict method to a CUDA C kernel using the Runtime's <see cref="BytecodeGenerator" />
+/// Compiles a Strict method to a CUDA C kernel using the Runtime's <see cref="BinaryGenerator" />
 /// to produce bytecode instructions, then translates them to CUDA C.
 /// </summary>
 public sealed class InstructionsToCuda : InstructionsCompiler
@@ -21,7 +21,7 @@ public sealed class InstructionsToCuda : InstructionsCompiler
 			? b.Expressions
 			: [body];
 		var arguments = method.Parameters.ToDictionary(p => p.Name, p => new ValueInstance(p.Type, 0));
-		return new BytecodeGenerator(new InvokedMethod(expressions, arguments, method.ReturnType),
+		return new BinaryGenerator(new InvokedMethod(expressions, arguments, method.ReturnType),
 			new Registry()).Generate();
 	}
 

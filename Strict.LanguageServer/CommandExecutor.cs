@@ -38,7 +38,7 @@ public class CommandExecutor(ILanguageServerFacade languageServer,
 		var typeName = documentUri.Path.GetFileName();
 		var type = subPackage.SynchronizeAndGetType(typeName, code);
 		var call = (MethodCall)type.ParseExpression(methodCall);
-		var instructions = new BytecodeGenerator(call).Generate();
+		var instructions = new BinaryGenerator(call).Generate();
 		languageServer.Window.LogInfo($"Compiling: {
 			Environment.NewLine + string.Join(",",
 				instructions.ConvertAll(instruction => instruction + Environment.NewLine))

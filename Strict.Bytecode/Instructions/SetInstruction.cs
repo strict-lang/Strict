@@ -7,7 +7,7 @@ namespace Strict.Bytecode.Instructions;
 public sealed class SetInstruction(ValueInstance valueInstance, Register register)
 	: InstanceInstruction(InstructionType.Set, valueInstance)
 {
-	public SetInstruction(BinaryReader reader, NameTable table, StrictBinary binary)
+	public SetInstruction(BinaryReader reader, NameTable table, BinaryExecutable binary)
 		: this(binary.ReadValueInstance(reader, table), (Register)reader.ReadByte()) { }
 
 	public Register Register { get; } = register;

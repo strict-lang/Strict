@@ -1,53 +1,34 @@
-using Strict.Bytecode.Instructions;
-using Strict.Expressions;
 using Strict.Language;
 using Type = Strict.Language.Type;
 
 namespace Strict.Bytecode.Serialization;
 
-public sealed class BytecodeMembersAndMethods
+/// <summary>
+/// Read or write parsed type data (members, method and the used instructions)
+/// </summary>
+public sealed class BinaryType
 {
-	/// <summary>
-	/// Reads type metadata (members and method signatures) from a bytecode entry and returns a
-	/// <see cref="StrictBinary.BytecodeMembersAndMethods"/> with the captured data. Also creates
-	/// the corresponding Language types for instruction deserialization.
-	/// </summary>
-	public BytecodeMembersAndMethods(BinaryReader reader, StrictBinary binary, string typeFullName)
+	public BinaryType(BinaryReader reader, BinaryExecutable binary, string typeFullName)
 	{
 		this.binary = binary;
 		this.typeFullName = typeFullName;
 		ValidateMagicAndVersion(reader);
 		table = new NameTable(reader);
-		var type = EnsureTypeForEntry();
-		ReadMembers(reader, Members, type, binary);
-		var methodGroupCount = reader.Read7BitEncodedInt();
-		for (var methodGroupIndex = 0; methodGroupIndex < methodGroupCount; methodGroupIndex++)
+		//TODO: remove, just use this. : var type = EnsureTypeForEntry();
+		ReadMembers(reader, Members);
+		var methodGroups = reader.Read7BitEncodedInt();
+		for (var methodGroupIndex = 0; methodGroupIndex < methodGroups; methodGroupIndex++)
 		{
 			var methodName = table.Names[reader.Read7BitEncodedInt()];
 			var overloadCount = reader.Read7BitEncodedInt();
-			var overloads = new List<MethodInstructions>(overloadCount);
+			var overloads = new List<BinaryMethod>(overloadCount);
 			for (var overloadIndex = 0; overloadIndex < overloadCount; overloadIndex++)
-				overloads.Add(ReadMethodInstructions(reader, type, methodName));
-			InstructionsPerMethodGroup[methodName] = overloads;
+				overloads.Add(new BinaryMethod(reader, this, methodName));
+			MethodGroups[methodName] = overloads;
 		}
 	}
 
-	private MethodInstructions ReadMethodInstructions(BinaryReader reader, Type type,
-		string methodName)
-	{
-		var parameters = new List<BytecodeMember>();
-		ReadMembers(reader, parameters, type, binary);
-		var returnTypeName = table!.Names[reader.Read7BitEncodedInt()];
-		EnsureMethod(type, methodName, parameters.Select(parameter =>
-			parameter.Name + " " + parameter.FullTypeName).ToArray(), returnTypeName);
-		var instructionCount = reader.Read7BitEncodedInt();
-		var instructions = new List<Instruction>(instructionCount);
-		for (var instructionIndex = 0; instructionIndex < instructionCount; instructionIndex++)
-			instructions.Add(binary.ReadInstruction(reader, table));
-		return new MethodInstructions(parameters, returnTypeName, instructions);
-	}
-
-	private readonly StrictBinary binary;
+	internal readonly BinaryExecutable binary;
 	private readonly string typeFullName;
 
 	private static void ValidateMagicAndVersion(BinaryReader reader)
@@ -69,14 +50,7 @@ public sealed class BytecodeMembersAndMethods
 	public sealed class InvalidVersion(byte fileVersion) : Exception("File version: " +
 		fileVersion + ", this runtime only supports up to version " + Version);
 
-	private void ReadMembers(BinaryReader reader, List<BytecodeMember> members, Type? checkType,
-		StrictBinary binary)
-	{
-		var memberCount = reader.Read7BitEncodedInt();
-		for (var memberIndex = 0; memberIndex < memberCount; memberIndex++)
-			members.Add(new BytecodeMember(reader, table!, binary));
-	}
-
+	/*TODO: can we avoid this? remove
 	private static Member EnsureMember(Type type, string memberName, string memberTypeName)
 	{
 		var existing = type.Members.FirstOrDefault(member => member.Name == memberName);
@@ -87,7 +61,6 @@ public sealed class BytecodeMembersAndMethods
 		return member;
 	}
 
-	//TODO: can we avoid this?
 	private Type EnsureTypeForEntry()
 	{
 		var segments = typeFullName.Split(Context.ParentSeparator, StringSplitOptions.RemoveEmptyEntries);
@@ -106,9 +79,6 @@ public sealed class BytecodeMembersAndMethods
 			: new Type(targetPackage, new TypeLines(typeName, Method.Run));
 	}
 
-	public List<BytecodeMember> Members = new();
-	public Dictionary<string, List<MethodInstructions>> InstructionsPerMethodGroup = new();
-
 	private static void EnsureMethod(Type type, string methodName, string[] parameters,
 		string returnTypeName)
 	{
@@ -122,19 +92,26 @@ public sealed class BytecodeMembersAndMethods
 			: methodName + "(" + string.Join(", ", parameters) + ") " + returnTypeName;
 		type.Methods.Add(new Method(type, 0, new MethodExpressionParser(), [header]));
 	}
-
-	public record MethodInstructions(IReadOnlyList<BytecodeMember> Parameters,
-		string ReturnTypeName, IReadOnlyList<Instruction> Instructions);
-
-	public NameTable Table => table ?? CreateNameTable();
+*/
 	private NameTable? table;
+
+	internal void ReadMembers(BinaryReader reader, List<BinaryMember> members)
+	{
+		var numberOfMembers = reader.Read7BitEncodedInt();
+		for (var memberIndex = 0; memberIndex < numberOfMembers; memberIndex++)
+			members.Add(new BinaryMember(reader, table!, binary));
+	}
+
+	public List<BinaryMember> Members = new();
+	public Dictionary<string, List<BinaryMethod>> MethodGroups = new();
+	public NameTable Table => table ?? CreateNameTable();
 
 	private NameTable CreateNameTable()
 	{
 		table = new NameTable();
 		foreach (var member in Members)
 			AddMemberNamesToTable(member);
-		foreach (var (methodName, methods) in InstructionsPerMethodGroup)
+		foreach (var (methodName, methods) in MethodGroups)
 		{
 			table.Add(methodName);
 			foreach (var method in methods)
@@ -149,7 +126,7 @@ public sealed class BytecodeMembersAndMethods
 		return table;
 	}
 
-	private void AddMemberNamesToTable(BytecodeMember member)
+	private void AddMemberNamesToTable(BinaryMember member)
 	{
 		table!.Add(member.Name);
 		table.Add(member.FullTypeName);
@@ -163,30 +140,24 @@ public sealed class BytecodeMembersAndMethods
 		writer.Write(Version);
 		Table.Write(writer);
 		WriteMembers(writer, Members);
-		writer.Write7BitEncodedInt(InstructionsPerMethodGroup.Count);
-		foreach (var methodGroup in InstructionsPerMethodGroup)
+		writer.Write7BitEncodedInt(MethodGroups.Count);
+		foreach (var methodGroup in MethodGroups)
 		{
 			writer.Write7BitEncodedInt(Table[methodGroup.Key]);
 			writer.Write7BitEncodedInt(methodGroup.Value.Count);
 			foreach (var method in methodGroup.Value)
-			{
-				WriteMembers(writer, method.Parameters);
-				writer.Write7BitEncodedInt(Table[method.ReturnTypeName]);
-				writer.Write7BitEncodedInt(method.Instructions.Count);
-				foreach (var instruction in method.Instructions)
-					instruction.Write(writer, table!);
-			}
+				method.Write(writer, this);
 		}
 	}
 
-	private void WriteMembers(BinaryWriter writer, IReadOnlyList<BytecodeMember> members)
+	internal void WriteMembers(BinaryWriter writer, IReadOnlyList<BinaryMember> members)
 	{
 		writer.Write7BitEncodedInt(members.Count);
 		foreach (var member in members)
 			member.Write(writer, table!);
 	}
 
-	public static string ReconstructMethodName(string methodName, MethodInstructions method) =>
+	public static string ReconstructMethodName(string methodName, BinaryMethod method) =>
 		methodName + method.Parameters.ToBrackets() + (method.ReturnTypeName == Type.None
 			? ""
 			: " " + method.ReturnTypeName);

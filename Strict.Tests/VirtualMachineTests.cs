@@ -29,7 +29,7 @@ public sealed class VirtualMachineTests : TestBytecode
 	public void ReturnEnum()
 	{
 		CreateSampleEnum();
-		var instructions = new BytecodeGenerator(GenerateMethodCallFromSource(nameof(ReturnEnum),
+		var instructions = new BinaryGenerator(GenerateMethodCallFromSource(nameof(ReturnEnum),
 			nameof(ReturnEnum) + "(5).GetMonday", "has dummy Number", "GetMonday Number",
 			"\tDays.Monday")).Generate();
 		var result = vm.Execute(instructions).Returns;
@@ -40,7 +40,7 @@ public sealed class VirtualMachineTests : TestBytecode
 	public void EnumIfConditionComparison()
 	{
 		CreateSampleEnum();
-		var instructions = new BytecodeGenerator(GenerateMethodCallFromSource(
+		var instructions = new BinaryGenerator(GenerateMethodCallFromSource(
 			nameof(EnumIfConditionComparison),
 			nameof(EnumIfConditionComparison) + "(5).GetMonday(Days.Monday)",
 			// @formatter:off
@@ -117,7 +117,7 @@ public sealed class VirtualMachineTests : TestBytecode
 	[TestCase("ArithmeticFunction(10, 5).Calculate(\"divide\")", 2)]
 	public void RunArithmeticFunctionExample(string methodCall, int expectedResult)
 	{
-		var instructions = new BytecodeGenerator(GenerateMethodCallFromSource("ArithmeticFunction",
+		var instructions = new BinaryGenerator(GenerateMethodCallFromSource("ArithmeticFunction",
 			methodCall,
 			// @formatter:off
 			"has First Number",
@@ -141,7 +141,7 @@ public sealed class VirtualMachineTests : TestBytecode
 	[Test]
 	public void AccessListByIndex()
 	{
-		var instructions = new BytecodeGenerator(GenerateMethodCallFromSource(nameof(AccessListByIndex),
+		var instructions = new BinaryGenerator(GenerateMethodCallFromSource(nameof(AccessListByIndex),
 			nameof(AccessListByIndex) + "(1, 2, 3, 4, 5).Get(2)", "has numbers",
 			"Get(index Number) Number", "\tnumbers(index)")).Generate();
 		Assert.That(vm.Execute(instructions).Returns!.Value.Number, Is.EqualTo(3));
@@ -150,7 +150,7 @@ public sealed class VirtualMachineTests : TestBytecode
 	[Test]
 	public void AccessListByIndexNonNumberType()
 	{
-		var instructions = new BytecodeGenerator(GenerateMethodCallFromSource(
+		var instructions = new BinaryGenerator(GenerateMethodCallFromSource(
 			nameof(AccessListByIndexNonNumberType),
 			nameof(AccessListByIndexNonNumberType) + "(\"1\", \"2\", \"3\", \"4\", \"5\").Get(2)",
 			"has texts", "Get(index Number) Text", "\ttexts(index)")).Generate();
@@ -182,7 +182,7 @@ public sealed class VirtualMachineTests : TestBytecode
 	public void ExecuteToOperator(string programName, string methodCall, object expected,
 		params string[] code)
 	{
-		var instructions = new BytecodeGenerator(GenerateMethodCallFromSource(programName,
+		var instructions = new BinaryGenerator(GenerateMethodCallFromSource(programName,
 			methodCall, code)).Generate();
 		var result = vm.Execute(instructions).Returns!.Value;
 		var actual = expected is string
@@ -245,7 +245,7 @@ public sealed class VirtualMachineTests : TestBytecode
 	public void MethodCall(string programName, string methodCall, string[] source, object expected)
 	{
 		var instructions =
-			new BytecodeGenerator(GenerateMethodCallFromSource(programName, methodCall, source)).
+			new BinaryGenerator(GenerateMethodCallFromSource(programName, methodCall, source)).
 				Generate();
 		Assert.That(vm.Execute(instructions).Returns!.Value.Number, Is.EqualTo(expected));
 	}
@@ -253,7 +253,7 @@ public sealed class VirtualMachineTests : TestBytecode
 	[Test]
 	public void IfAndElseTest()
 	{
-		var instructions = new BytecodeGenerator(GenerateMethodCallFromSource("IfAndElseTest",
+		var instructions = new BinaryGenerator(GenerateMethodCallFromSource("IfAndElseTest",
 				"IfAndElseTest(3).IsEven",
 				//
 				"has number", "IsEven Text", "\tmutable result = \"\"",
@@ -280,7 +280,7 @@ public sealed class VirtualMachineTests : TestBytecode
 		object expectedResult, string methodName, params string[] code)
 	{
 		var instructions =
-			new BytecodeGenerator(GenerateMethodCallFromSource(methodName, methodCall, code)).
+			new BinaryGenerator(GenerateMethodCallFromSource(methodName, methodCall, code)).
 				Generate();
 		Assert.That(vm.Execute(instructions).Returns!.Value.Number, Is.EqualTo(expectedResult));
 	}
@@ -318,7 +318,7 @@ public sealed class VirtualMachineTests : TestBytecode
 	public void ExecuteListBinaryOperations(string methodCall, object expectedResult,
 		string programName, params string[] code)
 	{
-		var instructions = new BytecodeGenerator(GenerateMethodCallFromSource(programName,
+		var instructions = new BinaryGenerator(GenerateMethodCallFromSource(programName,
 			methodCall, code)).Generate();
 		var result = vm.Execute(instructions).Returns!.Value;
 		var elements = result.List.Items.Aggregate("", (current, item) => current + (item.IsText
@@ -336,7 +336,7 @@ public sealed class VirtualMachineTests : TestBytecode
 	public void CallCommonMethodCalls(string methodCall, object expectedResult, string programName,
 		params string[] code)
 	{
-		var instructions = new BytecodeGenerator(GenerateMethodCallFromSource(programName,
+		var instructions = new BinaryGenerator(GenerateMethodCallFromSource(programName,
 			methodCall, code)).Generate();
 		var result = vm.Execute(instructions).Returns!.Value;
 		Assert.That(result.ToExpressionCodeString(), Is.EqualTo(expectedResult));
@@ -347,7 +347,7 @@ public sealed class VirtualMachineTests : TestBytecode
 	public void CollectionAdd(string methodCall, string expected, params string[] code)
 	{
 		var instructions =
-			new BytecodeGenerator(GenerateMethodCallFromSource("NumbersAdder", methodCall, code)).
+			new BinaryGenerator(GenerateMethodCallFromSource("NumbersAdder", methodCall, code)).
 				Generate();
 		var result = ExpressionListToSpaceSeparatedString(instructions);
 		Assert.That(result.TrimEnd(), Is.EqualTo(expected));
@@ -371,7 +371,7 @@ public sealed class VirtualMachineTests : TestBytecode
 			"\tmutable values = Dictionary(Number, Number)", "\tvalues.Add(1, number)", "\tnumber"
 		];
 		Assert.That(
-			vm.Execute(new BytecodeGenerator(GenerateMethodCallFromSource(nameof(DictionaryAdd),
+			vm.Execute(new BinaryGenerator(GenerateMethodCallFromSource(nameof(DictionaryAdd),
 					"DictionaryAdd(5).RemoveFromDictionary", code)).Generate()).Memory.Variables["values"].
 				GetDictionaryItems().Count, Is.EqualTo(1));
 	}
@@ -394,7 +394,7 @@ public sealed class VirtualMachineTests : TestBytecode
 	public void DictionaryGet(string methodCall, string expected, params string[] code)
 	{
 		var instructions =
-			new BytecodeGenerator(
+			new BinaryGenerator(
 				GenerateMethodCallFromSource(nameof(DictionaryGet), methodCall, code)).Generate();
 		var result = vm.Execute(instructions).Returns!.Value;
 		var actual = result.IsText
@@ -409,7 +409,7 @@ public sealed class VirtualMachineTests : TestBytecode
 	public void DictionaryRemove(string methodCall, string expected, params string[] code)
 	{
 		var instructions =
-			new BytecodeGenerator(
+			new BinaryGenerator(
 				GenerateMethodCallFromSource(nameof(DictionaryRemove), methodCall, code)).Generate();
 		var result = vm.Execute(instructions).Returns!.Value;
 		var actual = result.IsText
@@ -422,7 +422,7 @@ public sealed class VirtualMachineTests : TestBytecode
 	public void ReturnWithinALoop()
 	{
 		var source = new[] { "has number", "GetAll Number", "\tfor number", "\t\tvalue" };
-		var instructions = new BytecodeGenerator(GenerateMethodCallFromSource(nameof(ReturnWithinALoop),
+		var instructions = new BinaryGenerator(GenerateMethodCallFromSource(nameof(ReturnWithinALoop),
 			"ReturnWithinALoop(5).GetAll", source)).Generate();
 		Assert.That(() => vm.Execute(instructions).Returns!.Value.Number,
 			Is.EqualTo(1 + 2 + 3 + 4 + 5));
@@ -437,7 +437,7 @@ public sealed class VirtualMachineTests : TestBytecode
 			"\tlet len = numbers.Length - 1", "\tfor Range(len, 0)", "\t\tresult.Add(numbers(index))",
 			"\tresult"
 		};
-		var instructions = new BytecodeGenerator(GenerateMethodCallFromSource(nameof(ReverseWithRange),
+		var instructions = new BinaryGenerator(GenerateMethodCallFromSource(nameof(ReverseWithRange),
 			"ReverseWithRange(1, 2, 3).Reverse", source)).Generate();
 		Assert.That(() => ExpressionListToSpaceSeparatedString(instructions), Is.EqualTo("3 2 1 "));
 	}
@@ -551,7 +551,7 @@ public sealed class VirtualMachineTests : TestBytecode
 			"\t\tcount = count + 1",
 			"\tcount"
 		};
-		var instructions = new BytecodeGenerator(GenerateMethodCallFromSource(
+		var instructions = new BinaryGenerator(GenerateMethodCallFromSource(
 			nameof(LoopOverListStopsWhenIndexExceedsCount),
 			$"{nameof(LoopOverListStopsWhenIndexExceedsCount)}(1, 2, 3).CountItems", source)).Generate();
 		var result = vm.Execute(instructions).Returns!.Value.Number;
@@ -570,7 +570,7 @@ public sealed class VirtualMachineTests : TestBytecode
 			"\t\tcount = count + 1",
 			"\tcount"
 		};
-		var instructions = new BytecodeGenerator(GenerateMethodCallFromSource(
+		var instructions = new BinaryGenerator(GenerateMethodCallFromSource(
 			nameof(LoopOverSingleCharTextStopsAtEnd),
 			$"{nameof(LoopOverSingleCharTextStopsAtEnd)}(\"X\").CountChars", source)).Generate();
 		var result = vm.Execute(instructions).Returns!.Value.Number;
@@ -603,7 +603,7 @@ public sealed class VirtualMachineTests : TestBytecode
 	[TestCase("other", 3)]
 	public void SelectorIfReturnsCorrectCase(string operation, double expected)
 	{
-		var instructions = new BytecodeGenerator(GenerateMethodCallFromSource(
+		var instructions = new BinaryGenerator(GenerateMethodCallFromSource(
 			nameof(SelectorIfReturnsCorrectCase),
 			$"{nameof(SelectorIfReturnsCorrectCase)}(\"{operation}\").GetResult",
 			// @formatter:off
@@ -621,7 +621,7 @@ public sealed class VirtualMachineTests : TestBytecode
 	[Test]
 	public void RoundTripInvokeWithDoubleNumberArgument()
 	{
-		var instructions = new BytecodeGenerator(
+		var instructions = new BinaryGenerator(
 			GenerateMethodCallFromSource("DoubleCalc", "DoubleCalc(3.14).GetHalf",
 				"has number",
 				"GetHalf Number",
@@ -670,7 +670,7 @@ public sealed class VirtualMachineTests : TestBytecode
 			"\t\tmyList = myList + value",
 			"\tmyList"
 		};
-		var instructions = new BytecodeGenerator(GenerateMethodCallFromSource(
+		var instructions = new BinaryGenerator(GenerateMethodCallFromSource(
 			nameof(AddHundredElementsToMutableList),
 			$"{nameof(AddHundredElementsToMutableList)}(100).AddMany",
 			source)).Generate();

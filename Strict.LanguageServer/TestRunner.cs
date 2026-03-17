@@ -18,7 +18,7 @@ public sealed class TestRunner(Package package, ILanguageServerFacade languageSe
 			if (test is MethodCall { Instance: { } } methodCall)
 			{
 				var output = vm.
-					Execute(new BytecodeGenerator((MethodCall)methodCall.Instance).Generate()).Returns;
+					Execute(new BinaryGenerator((MethodCall)methodCall.Instance).Generate()).Returns;
 				languageServer?.SendNotification(NotificationName, new TestNotificationMessage(
 					GetLineNumber(test), Equals(output, ((Value)methodCall.Arguments[0]).Data)
 						? TestState.Green

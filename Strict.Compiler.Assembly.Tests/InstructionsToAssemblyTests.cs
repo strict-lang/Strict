@@ -500,8 +500,8 @@ public sealed class InstructionsToAssemblyTests
 			"\tAdd(2, 3)")).ParseMembersAndMethods(new MethodExpressionParser());
 		var runMethod = type.Methods.First(method => method.Name == Method.Run);
 		var addMethod = type.Methods.First(method => method.Name == "Add");
-		var runInstructions = new BytecodeGenerator(new MethodCall(runMethod)).Generate();
-		var addInstructions = new BytecodeGenerator(new InvokedMethod(
+		var runInstructions = new BinaryGenerator(new MethodCall(runMethod)).Generate();
+		var addInstructions = new BinaryGenerator(new InvokedMethod(
 			(addMethod.GetBodyAndParseIfNeeded() as Body)?.Expressions ?? [addMethod.GetBodyAndParseIfNeeded()],
 			new Dictionary<string, ValueInstance>(), addMethod.ReturnType), new Registry()).Generate();
 		var methodKey = BuildMethodKey(addMethod);
@@ -528,11 +528,11 @@ public sealed class InstructionsToAssemblyTests
 		var runMethod = type.Methods.First(method => method.Name == Method.Run);
 		var addMethod = type.Methods.First(method => method.Name == "Add");
 		var multiplyMethod = type.Methods.First(method => method.Name == "Multiply");
-		var runInstructions = new BytecodeGenerator(new MethodCall(runMethod)).Generate();
-		var addInstructions = new BytecodeGenerator(new InvokedMethod(
+		var runInstructions = new BinaryGenerator(new MethodCall(runMethod)).Generate();
+		var addInstructions = new BinaryGenerator(new InvokedMethod(
 			(addMethod.GetBodyAndParseIfNeeded() as Body)?.Expressions ?? [addMethod.GetBodyAndParseIfNeeded()],
 			new Dictionary<string, ValueInstance>(), addMethod.ReturnType), new Registry()).Generate();
-		var multiplyInstructions = new BytecodeGenerator(new InvokedMethod(
+		var multiplyInstructions = new BinaryGenerator(new InvokedMethod(
 			(multiplyMethod.GetBodyAndParseIfNeeded() as Body)?.Expressions ?? [multiplyMethod.GetBodyAndParseIfNeeded()],
 			new Dictionary<string, ValueInstance>(), multiplyMethod.ReturnType), new Registry()).Generate();
 		var addMethodKey = BuildMethodKey(addMethod);
@@ -611,8 +611,8 @@ public sealed class InstructionsToAssemblyTests
 			"\tcalc.Add")).ParseMembersAndMethods(new MethodExpressionParser());
 		var runMethod = type.Methods.First(method => method.Name == Method.Run);
 		var addMethod = type.Methods.First(method => method.Name == "Add");
-		var runInstructions = new BytecodeGenerator(new MethodCall(runMethod)).Generate();
-		var addInstructions = new BytecodeGenerator(new InvokedMethod(
+		var runInstructions = new BinaryGenerator(new MethodCall(runMethod)).Generate();
+		var addInstructions = new BinaryGenerator(new InvokedMethod(
 			(addMethod.GetBodyAndParseIfNeeded() as Body)?.Expressions ?? [addMethod.GetBodyAndParseIfNeeded()],
 			new Dictionary<string, ValueInstance>(), addMethod.ReturnType), new Registry()).Generate();
 		var methodKey = BuildMethodKey(addMethod);
@@ -664,9 +664,9 @@ public sealed class InstructionsToAssemblyTests
 	}
 
 	private static string BuildMethodKey(Method method) =>
-		StrictBinary.BuildMethodHeader(method.Name,
+		BinaryExecutable.BuildMethodHeader(method.Name,
 			method.Parameters.Select(parameter =>
-				new BytecodeMember(parameter.Name, parameter.Type.Name, null)).ToList(),
+				new BinaryMember(parameter.Name, parameter.Type.Name, null)).ToList(),
 			method.ReturnType);
 
 	private static List<Instruction> GenerateMethodInstructions(Method method)
@@ -675,7 +675,7 @@ public sealed class InstructionsToAssemblyTests
 		var expressions = body is Body bodyList
 			? bodyList.Expressions
 			: [body];
-		return new BytecodeGenerator(new InvokedMethod(expressions,
+		return new BinaryGenerator(new InvokedMethod(expressions,
 			new Dictionary<string, ValueInstance>(), method.ReturnType), new Registry()).Generate();
 	}
 }

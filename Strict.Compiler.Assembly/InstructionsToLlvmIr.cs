@@ -674,7 +674,7 @@ public sealed class InstructionsToLlvmIr : InstructionsToAssemblyCompiler
 		var arguments =
 			method.Parameters.ToDictionary(parameter => parameter.Name, //ncrunch: no coverage
 				parameter => new ValueInstance(parameter.Type, 0)); //ncrunch: no coverage
-		return new BytecodeGenerator(new InvokedMethod(expressions, arguments, method.ReturnType),
+		return new BinaryGenerator(new InvokedMethod(expressions, arguments, method.ReturnType),
 			new Registry()).Generate();
 	} //ncrunch: no coverage end
 

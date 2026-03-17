@@ -10,7 +10,7 @@ public sealed class BytecodeDecompilerTests : TestBytecode
 	[Test]
 	public void DecompileSimpleArithmeticBytecodeCreatesStrictFile()
 	{
-		var instructions = new BytecodeGenerator(
+		var instructions = new BinaryGenerator(
 			GenerateMethodCallFromSource("Add", "Add(10, 5).Calculate",
 				"has First Number", "has Second Number", "Calculate Number",
 				"\tAdd(10, 5).Calculate is 15", "\tFirst + Second")).Generate();
@@ -30,7 +30,7 @@ public sealed class BytecodeDecompilerTests : TestBytecode
 	[Test]
 	public void DecompileRunMethodReconstructsConstantDeclarationFromMethodCall()
 	{
-		var instructions = new BytecodeGenerator(
+		var instructions = new BinaryGenerator(
 			GenerateMethodCallFromSource("Counter", "Counter(5).Calculate",
 				"has count Number",
 				"Double Number",
@@ -56,7 +56,7 @@ public sealed class BytecodeDecompilerTests : TestBytecode
 
 	private static string DecompileToTemp(IReadOnlyList<Instruction> instructions, string typeName)
 	{
-		var strictBinary = new StrictBinary(TestPackage.Instance);
+		var strictBinary = new BinaryExecutable(TestPackage.Instance);
 		strictBinary.MethodsPerType[typeName] = CreateTypeMethods(instructions);
 		var outputFolder = Path.Combine(Path.GetTempPath(), "decompiled_" + Path.GetRandomFileName());
 		new Decompiler().Decompile(strictBinary, outputFolder);
@@ -66,15 +66,15 @@ public sealed class BytecodeDecompilerTests : TestBytecode
 		return outputFolder;
 	}
 
-	private static BytecodeMembersAndMethods CreateTypeMethods(IReadOnlyList<Instruction> instructions)
+	private static BinaryType CreateTypeMethods(IReadOnlyList<Instruction> instructions)
 	{
-		var methods = new BytecodeMembersAndMethods();
+		var methods = new BinaryType();
 		methods.Members = [];
-		methods.InstructionsPerMethodGroup = new Dictionary<string, List<BytecodeMembersAndMethods.MethodInstructions>>
+		methods.MethodGroups = new Dictionary<string, List<BinaryType.BinaryMethod>>
 		{
 			[Method.Run] =
 			[
-				new BytecodeMembersAndMethods.MethodInstructions([], Type.None, instructions)
+				new BinaryType.BinaryMethod([], Type.None, instructions)
 			]
 		};
 		return methods;

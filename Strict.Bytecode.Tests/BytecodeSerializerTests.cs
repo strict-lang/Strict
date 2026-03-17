@@ -9,7 +9,7 @@ public sealed class BytecodeSerializerTests : TestBytecode
 	[Test]
 	public void RoundTripSimpleArithmeticBytecode()
 	{
-		var instructions = new BytecodeGenerator(
+		var instructions = new BinaryGenerator(
 			GenerateMethodCallFromSource("Add", "Add(10, 5).Calculate",
 				"has First Number", "has Second Number", "Calculate Number",
 				"\tAdd(10, 5).Calculate is 15", "\tFirst + Second")).Generate();
@@ -127,7 +127,7 @@ public sealed class BytecodeSerializerTests : TestBytecode
 		using var reader = new BinaryReader(stream);
 		var readTable = new NameTable(reader);
 		var count = reader.Read7BitEncodedInt();
-		var binary = new StrictBinary(TestPackage.Instance);
+		var binary = new BinaryExecutable(TestPackage.Instance);
 		var loaded = new List<Instruction>(count);
 		for (var index = 0; index < count; index++)
 			loaded.Add(binary.ReadInstruction(reader, readTable));
@@ -151,7 +151,7 @@ public sealed class BytecodeSerializerTests : TestBytecode
 	[Test]
 	public void RoundTripSimpleArithmeticBytecode()
 	{
-		var instructions = new BytecodeGenerator(
+		var instructions = new BinaryGenerator(
 			GenerateMethodCallFromSource("Add", "Add(10, 5).Calculate",
 				"has First Number", "has Second Number", "Calculate Number",
 				"\tAdd(10, 5).Calculate is 15", "\tFirst + Second")).Generate();
@@ -185,7 +185,7 @@ public sealed class BytecodeSerializerTests : TestBytecode
 	[Test]
 	public void RoundTripLoopBytecode()
 	{
-		var instructions = new BytecodeGenerator(
+		var instructions = new BinaryGenerator(
 			GenerateMethodCallFromSource("SimpleLoopExample",
 				"SimpleLoopExample(10).GetMultiplicationOfNumbers",
 				"has number", "GetMultiplicationOfNumbers Number",
@@ -200,7 +200,7 @@ public sealed class BytecodeSerializerTests : TestBytecode
 	[Test]
 	public void RoundTripConditionalBytecode()
 	{
-		var instructions = new BytecodeGenerator(
+		var instructions = new BinaryGenerator(
 			GenerateMethodCallFromSource("ArithmeticFunction",
 				"ArithmeticFunction(10, 5).Calculate(\"add\")",
 				"has First Number", "has Second Number",
@@ -221,7 +221,7 @@ public sealed class BytecodeSerializerTests : TestBytecode
 	[Test]
 	public void RoundTripListBytecode()
 	{
-		var instructions = new BytecodeGenerator(
+		var instructions = new BinaryGenerator(
 			GenerateMethodCallFromSource("SimpleListDeclaration",
 				"SimpleListDeclaration(5).Declare",
 				"has number", "Declare Numbers", "\t(1, 2, 3, 4, 5)")).Generate();
@@ -258,7 +258,7 @@ public sealed class BytecodeSerializerTests : TestBytecode
 	[Test]
 	public void SerializedEntryContentIsCompact()
 	{
-		var instructions = new BytecodeGenerator(
+		var instructions = new BinaryGenerator(
 			GenerateMethodCallFromSource("Add", "Add(10, 5).Calculate",
 				"has First Number", "has Second Number", "Calculate Number",
 				"\tAdd(10, 5).Calculate is 15", "\tFirst + Second")).Generate();
@@ -532,7 +532,7 @@ public sealed class BytecodeSerializerTests : TestBytecode
 	[Test]
 	public void RoundTripInvokeWithMethodCallExpressions() =>
 		AssertRoundTripValues(
-			new BytecodeGenerator(GenerateMethodCallFromSource("Greeter", "Greeter(\"world\").Greet",
+			new BinaryGenerator(GenerateMethodCallFromSource("Greeter", "Greeter(\"world\").Greet",
 				"has text Text", "Greet Text", "\tGreeter(\"world\").Greet is \"hello world\"",
 				"\t\"hello \" + text")).Generate(), "Greeter");
 
@@ -616,7 +616,7 @@ public sealed class BytecodeSerializerTests : TestBytecode
 	[Test]
 	public void RoundTripInvokeWithIntegerNumberArgument()
 	{
-		var instructions = new BytecodeGenerator(
+		var instructions = new BinaryGenerator(
 			GenerateMethodCallFromSource("LargeAdder", "LargeAdder(1000).GetSum",
 				//@formatter off
 				"has number",
@@ -635,7 +635,7 @@ public sealed class BytecodeSerializerTests : TestBytecode
 	public void RoundTripInvokeWithDoubleNumberArgument()
 	private static List<Instruction> RoundTripInstructions(IList<Instruction> instructions)
 	{
-		var instructions = new BytecodeGenerator(
+		var instructions = new BinaryGenerator(
 			GenerateMethodCallFromSource("DoubleCalc", "DoubleCalc(3.14).GetHalf",
 				"has number",
 				"GetHalf Number",
@@ -648,7 +648,7 @@ public sealed class BytecodeSerializerTests : TestBytecode
 	[Test]
 	public void RoundTripInvokeWithBooleanArgument()
 	{
-		var instructions = new BytecodeGenerator(
+		var instructions = new BinaryGenerator(
 			GenerateMethodCallFromSource("BoolCheck", "BoolCheck(true).GetResult",
 				"has flag Boolean",
 				"GetResult Number",
@@ -661,7 +661,7 @@ public sealed class BytecodeSerializerTests : TestBytecode
 	[Test]
 	public void RoundTripListMemberWithIteration()
 	{
-		var instructions = new BytecodeGenerator(
+		var instructions = new BinaryGenerator(
 			GenerateMethodCallFromSource("ListSum", "ListSum(1, 2, 3).Total",
 				"has numbers",
 				"Total Number",
@@ -696,7 +696,7 @@ public sealed class BytecodeSerializerTests : TestBytecode
 	[Test]
 	public void RoundTripMethodWithParameters()
 	{
-		var instructions = new BytecodeGenerator(
+		var instructions = new BinaryGenerator(
 			GenerateMethodCallFromSource("Multiplier",
 				"Multiplier(10).Scale(3)",
 				"has number",
@@ -898,7 +898,7 @@ public sealed class BytecodeSerializerTests : TestBytecode
 		using var reader = new BinaryReader(stream);
 		var readTable = new NameTable(reader);
 		var count = reader.Read7BitEncodedInt();
-		var binary = new StrictBinary(TestPackage.Instance);
+		var binary = new Binary(TestPackage.Instance);
 		var loaded = new List<Instruction>(count);
 		for (var index = 0; index < count; index++)
 			loaded.Add(binary.ReadInstruction(reader, readTable));

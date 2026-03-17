@@ -1,3 +1,4 @@
+/*not needed, doesn't make sense, just use Expression!
 using Strict.Expressions;
 using Strict.Language;
 using Type = Strict.Language.Type;
@@ -10,3 +11,4 @@ public sealed class InstanceInvokedMethod(IReadOnlyList<Expression> expressions,
 {
 	public ValueInstance InstanceCall { get; } = instanceCall;
 }
+*/

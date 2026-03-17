@@ -3,6 +3,7 @@ using Strict.Bytecode.Instructions;
 using Strict.Bytecode.Serialization;
 using Strict.Expressions;
 using Strict.Language;
+using Binary = Strict.Expressions.Binary;
 
 namespace Strict.Compiler.Assembly;
 
@@ -100,7 +101,7 @@ public sealed class InstructionsToAssembly : InstructionsToAssemblyCompiler
 			: [body];
 		var arguments =
 			method.Parameters.ToDictionary(p => p.Name, p => new ValueInstance(p.Type, 0));
-		return new BytecodeGenerator(new InvokedMethod(expressions, arguments, method.ReturnType),
+		return new BinaryGenerator(new InvokedMethod(expressions, arguments, method.ReturnType),
 			new Registry()).Generate();
 	}
 

@@ -3,14 +3,14 @@ using Type = Strict.Language.Type;
 
 namespace Strict.Bytecode.Tests;
 
-public sealed class BytecodeGeneratorTests : TestBytecode
+public sealed class BinaryGeneratorTests : TestBytecode
 {
 	[TestCaseSource(nameof(ByteCodeCases))]
 	public void Generate(string methodCall, string programName, Instruction[] expectedByteCode,
 		params string[] code)
 	{
 		var instructions =
-			new BytecodeGenerator(GenerateMethodCallFromSource(programName, methodCall, code)).
+			new BinaryGenerator(GenerateMethodCallFromSource(programName, methodCall, code)).
 				Generate();
 		Assert.That(instructions.ConvertAll(x => x.ToString()),
 			Is.EqualTo(expectedByteCode.ToList().ConvertAll(x => x.ToString())));
@@ -19,7 +19,7 @@ public sealed class BytecodeGeneratorTests : TestBytecode
 	[Test]
 	public void GenerateKeepsNestedLeftBinaryOperator()
 	{
-		var instructions = new BytecodeGenerator(GenerateMethodCallFromSource("TemperatureConverter",
+		var instructions = new BinaryGenerator(GenerateMethodCallFromSource("TemperatureConverter",
 			"TemperatureConverter(100).ToFahrenheit", "has celsius Number", "ToFahrenheit Number",
 			"\tcelsius * 9 / 5 + 32")).Generate();
 		var binaryInstructionTypes = instructions.OfType<BinaryInstruction>().Select(binary =>
@@ -35,7 +35,7 @@ public sealed class BytecodeGeneratorTests : TestBytecode
 	{
 		var methodCall = GenerateMethodCallFromSource("ValueComparison", "ValueComparison(5).IsSame",
 			"has number Number", "IsSame Boolean", "\tif value is value", "\t\treturn true", "\tfalse");
-		var instructions = new BytecodeGenerator(methodCall).Generate();
+		var instructions = new BinaryGenerator(methodCall).Generate();
 		Assert.That(instructions.OfType<LoadVariableToRegister>().Any(load => load.Identifier == "value"),
 			Is.True);
 	}
@@ -46,7 +46,7 @@ public sealed class BytecodeGeneratorTests : TestBytecode
 		var methodCall = GenerateMethodCallFromSource("NumValue", "NumValue(5).GetValue",
 			"has value Number",
 			"GetValue Number", "\tNumValue(5).GetValue is 5", "\tvalue");
-		var instructions = new BytecodeGenerator(methodCall).Generate();
+		var instructions = new BinaryGenerator(methodCall).Generate();
 		Assert.That(instructions.OfType<PrintInstruction>().Any(), Is.False,
 			"Method without logger.Log does not produce PrintInstruction");
 	}

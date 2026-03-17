@@ -156,9 +156,9 @@ public sealed class VirtualMachine(Package package,
 	}
 
 	private List<Instruction>? GetPrecompiledMethodInstructions(Method method) =>
-		precompiledMethodInstructions?.GetValueOrDefault(StrictBinary.BuildMethodHeader(method.Name,
+		precompiledMethodInstructions?.GetValueOrDefault(BinaryExecutable.BuildMethodHeader(method.Name,
 			method.Parameters.Select(parameter =>
-				new BytecodeMember(parameter.Name, parameter.Type.Name, null)).ToList(),
+				new BinaryMember(parameter.Name, parameter.Type.Name, null)).ToList(),
 			method.ReturnType));
 
 	private List<Instruction>? GetPrecompiledMethodInstructions(Invoke invoke) =>
@@ -359,7 +359,7 @@ public sealed class VirtualMachine(Package package,
 		if (expression is MemberCall memberCall)
 			return EvaluateMemberCall(memberCall);
 		//ncrunch: no coverage start
-		if (expression is Binary binary)
+		if (expression is Expressions.Binary binary)
 			return EvaluateBinary(binary);
 		if (expression is MethodCall methodCall)
 			return EvaluateMethodCall(methodCall);
@@ -384,7 +384,7 @@ public sealed class VirtualMachine(Package package,
 	} //ncrunch: no coverage end
 
 	//ncrunch: no coverage start
-	private ValueInstance EvaluateBinary(Binary binary)
+	private ValueInstance EvaluateBinary(Expressions.Binary binary)
 	{
 		var left = EvaluateExpression(binary.Instance!);
 		var right = EvaluateExpression(binary.Arguments[0]);
@@ -439,7 +439,7 @@ public sealed class VirtualMachine(Package package,
 		var invokedMethod = !instance.Equals(default(ValueInstance))
 			? new InstanceInvokedMethod(expressions, argDict, instance, call.Method.ReturnType)
 			: new InvokedMethod(expressions, argDict, call.Method.ReturnType);
-		var childInstructions = new BytecodeGenerator(invokedMethod, new Registry()).Generate();
+		var childInstructions = new BinaryGenerator(invokedMethod, new Registry()).Generate();
 		var result = RunChildScope(childInstructions);
 		return result ?? new ValueInstance(call.Method.ReturnType, 0);
 	} //ncrunch: no coverage end
@@ -485,14 +485,14 @@ public sealed class VirtualMachine(Package package,
 	{
 		if (invoke.Method?.Instance == null && invoke.Method?.Method != null &&
 			invoke.PersistedRegistry != null)
-			return new BytecodeGenerator(
+			return new BinaryGenerator(
 				new InvokedMethod(GetExpressionsFromMethod(invoke.Method.Method),
 					FormArgumentsForMethodCall(invoke), invoke.Method.Method.ReturnType),
 				invoke.PersistedRegistry).Generate();
 		if (!Memory.Frame.TryGet(invoke.Method?.Instance?.ToString() ??
 			throw new InvalidOperationException(), out var instance))
 			throw new VariableNotFoundInMemory(); //ncrunch: no coverage
-		return new BytecodeGenerator(
+		return new BinaryGenerator(
 			new InstanceInvokedMethod(GetExpressionsFromMethod(invoke.Method!.Method),
 				FormArgumentsForMethodCall(invoke), instance, invoke.Method.Method.ReturnType),
 			invoke.PersistedRegistry ?? throw new InvalidOperationException()).Generate();
