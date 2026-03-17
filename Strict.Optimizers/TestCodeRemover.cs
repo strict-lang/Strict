@@ -43,13 +43,13 @@ public sealed class TestCodeRemover : InstructionOptimizer
 		if (instructions[startIndex + 4] is not JumpToId end ||
 			end.InstructionType != InstructionType.JumpEnd || end.Id != conditional.Id)
 			return false;
-		return AreValuesEqual(leftLoad.ValueInstance, rightLoad.ValueInstance);
+		return AreValuesEqual(leftLoad.Constant, rightLoad.Constant);
 	}
 
 	private static bool AreValuesEqual(ValueInstance left, ValueInstance right)
 	{
 		if (left.IsText && right.IsText)
-			return left.Text == right.Text; //ncrunch: no coverage
+			return left.Text == right.Text;
 		if (!left.IsText && !right.IsText)
 			return left.Number == right.Number;
 		return false; //ncrunch: no coverage

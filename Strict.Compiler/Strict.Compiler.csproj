@@ -6,4 +6,9 @@
         <Nullable>enable</Nullable>
     </PropertyGroup>
 
+    <ItemGroup>
+      <ProjectReference Include="..\Strict.Bytecode\Strict.Bytecode.csproj" />
+      <ProjectReference Include="..\Strict.Language\Strict.Language.csproj" />
+    </ItemGroup>
+
 </Project>

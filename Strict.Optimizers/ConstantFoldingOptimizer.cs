@@ -44,8 +44,7 @@ public sealed class ConstantFoldingOptimizer : InstructionOptimizer
 			return false;
 		var leftLoad = (LoadConstantInstruction)instructions[leftIndex];
 		var rightLoad = (LoadConstantInstruction)instructions[rightIndex];
-		var result = ComputeResult(binary.InstructionType, leftLoad.ValueInstance,
-			rightLoad.ValueInstance);
+		var result = ComputeResult(binary.InstructionType, leftLoad.Constant, rightLoad.Constant);
 		if (result == null)
 			return false; //ncrunch: no coverage
 		instructions[binaryIndex] = new LoadConstantInstruction(resultRegister, result.Value);

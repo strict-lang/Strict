@@ -31,10 +31,10 @@ public sealed class StrengthReducer : InstructionOptimizer
 			if (!leftIsConst && !rightIsConst)
 				continue;
 			var leftValue = leftIsConst
-				? ((LoadConstantInstruction)instructions[leftIndex]).ValueInstance
+				? ((LoadConstantInstruction)instructions[leftIndex]).Constant
 				: (ValueInstance?)null;
 			var rightValue = rightIsConst
-				? ((LoadConstantInstruction)instructions[rightIndex]).ValueInstance
+				? ((LoadConstantInstruction)instructions[rightIndex]).Constant
 				: (ValueInstance?)null;
 			if (TryReduceMultiplyByZero(instructions, i, binary, leftIndex, rightIndex, leftValue,
 				rightValue))
@@ -60,7 +60,7 @@ public sealed class StrengthReducer : InstructionOptimizer
 		var zeroConst = isLeftZero
 			? (LoadConstantInstruction)instructions[leftIndex]
 			: (LoadConstantInstruction)instructions[rightIndex];
-		instructions[binaryIndex] = new LoadConstantInstruction(resultRegister, zeroConst.ValueInstance);
+		instructions[binaryIndex] = new LoadConstantInstruction(resultRegister, zeroConst.Constant);
 		RemoveIndicesDescending(instructions, leftIndex, rightIndex);
 		return true;
 	}
@@ -88,10 +88,9 @@ public sealed class StrengthReducer : InstructionOptimizer
 	{
 		if (instructions[index] is LoadVariableToRegister load1)
 			instructions[index] = new LoadVariableToRegister(newRegister, load1.Identifier);
-		//ncrunch: no coverage start
 		else if (instructions[index] is LoadConstantInstruction load2)
-			instructions[index] = new LoadConstantInstruction(newRegister, load2.ValueInstance);
-	} //ncrunch: no coverage end
+			instructions[index] = new LoadConstantInstruction(newRegister, load2.Constant);
+	}
 
 	private static void RemoveIndicesDescending(List<Instruction> instructions, int a, int b)
 	{

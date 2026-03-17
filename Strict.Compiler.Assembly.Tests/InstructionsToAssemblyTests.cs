@@ -504,8 +504,7 @@ public sealed class InstructionsToAssemblyTests
 		var addInstructions = new BytecodeGenerator(new InvokedMethod(
 			(addMethod.GetBodyAndParseIfNeeded() as Body)?.Expressions ?? [addMethod.GetBodyAndParseIfNeeded()],
 			new Dictionary<string, ValueInstance>(), addMethod.ReturnType), new Registry()).Generate();
-		var methodKey = BytecodeDeserializer.BuildMethodInstructionKey(type.Name, addMethod.Name,
-			addMethod.Parameters.Count);
+		var methodKey = BuildMethodKey(addMethod);
 		var assembly = compiler.CompileForPlatform(type.Name, runInstructions, Platform.Windows,
 			new Dictionary<string, List<Instruction>> { [methodKey] = addInstructions });
 		Assert.That(assembly, Does.Contain("call " + type.Name + "_Add_2"));
@@ -536,10 +535,8 @@ public sealed class InstructionsToAssemblyTests
 		var multiplyInstructions = new BytecodeGenerator(new InvokedMethod(
 			(multiplyMethod.GetBodyAndParseIfNeeded() as Body)?.Expressions ?? [multiplyMethod.GetBodyAndParseIfNeeded()],
 			new Dictionary<string, ValueInstance>(), multiplyMethod.ReturnType), new Registry()).Generate();
-		var addMethodKey = BytecodeDeserializer.BuildMethodInstructionKey(type.Name, addMethod.Name,
-			addMethod.Parameters.Count);
-		var multiplyMethodKey = BytecodeDeserializer.BuildMethodInstructionKey(type.Name,
-			multiplyMethod.Name, multiplyMethod.Parameters.Count);
+		var addMethodKey = BuildMethodKey(addMethod);
+		var multiplyMethodKey = BuildMethodKey(multiplyMethod);
 		var assembly = compiler.CompileForPlatform(type.Name, runInstructions, Platform.Linux,
 			new Dictionary<string, List<Instruction>>
 			{
@@ -618,8 +615,7 @@ public sealed class InstructionsToAssemblyTests
 		var addInstructions = new BytecodeGenerator(new InvokedMethod(
 			(addMethod.GetBodyAndParseIfNeeded() as Body)?.Expressions ?? [addMethod.GetBodyAndParseIfNeeded()],
 			new Dictionary<string, ValueInstance>(), addMethod.ReturnType), new Registry()).Generate();
-		var methodKey = BytecodeDeserializer.BuildMethodInstructionKey(type.Name, addMethod.Name,
-			addMethod.Parameters.Count);
+		var methodKey = BuildMethodKey(addMethod);
 		var assembly = compiler.CompileForPlatform(type.Name, runInstructions, Platform.Linux,
 			new Dictionary<string, List<Instruction>> { [methodKey] = addInstructions });
 		Assert.That(assembly, Does.Not.Contain("xorpd xmm2, xmm2"));
@@ -665,5 +661,21 @@ public sealed class InstructionsToAssemblyTests
 			ToolRunner.EnsureOutputFileExists(missingFilePath, "gcc", Platform.Linux))!;
 		Assert.That(exception.Message, Does.Contain(missingFilePath));
 		Assert.That(exception.Message, Does.Contain("gcc"));
+	}
+
+	private static string BuildMethodKey(Method method) =>
+		StrictBinary.BuildMethodHeader(method.Name,
+			method.Parameters.Select(parameter =>
+				new BytecodeMember(parameter.Name, parameter.Type.Name, null)).ToList(),
+			method.ReturnType);
+
+	private static List<Instruction> GenerateMethodInstructions(Method method)
+	{
+		var body = method.GetBodyAndParseIfNeeded();
+		var expressions = body is Body bodyList
+			? bodyList.Expressions
+			: [body];
+		return new BytecodeGenerator(new InvokedMethod(expressions,
+			new Dictionary<string, ValueInstance>(), method.ReturnType), new Registry()).Generate();
 	}
 }

@@ -12,7 +12,7 @@ namespace Strict.Compiler.Assembly;
 /// and MLIR's pass pipeline handles lowering to LLVM dialect then to LLVM IR automatically.
 /// Pipeline: bytecode → .mlir text → mlir-opt (lower to LLVM) → mlir-translate (to .ll) → clang → executable
 /// </summary>
-public sealed class InstructionsToMlir : InstructionsCompiler
+public sealed class InstructionsToMlir : InstructionsToAssemblyCompiler
 {
 	private sealed class CompiledMethodInfo(string symbol,
 		List<Instruction> instructions, List<string> parameterNames, List<string> memberNames)
@@ -26,7 +26,7 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 	public string CompileInstructions(string methodName, List<Instruction> instructions) =>
 		BuildFunction(methodName, [], instructions).Text;
 
-	public string CompileForPlatform(string methodName, IList<Instruction> instructions,
+	public string CompileForPlatform(string methodName, IReadOnlyList<Instruction> instructions,
 		Platform platform, IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods = null)
 	{
 		var hasPrint = instructions.OfType<PrintInstruction>().Any();
@@ -60,15 +60,14 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 		return module;
 	}
 
-	public bool HasPrintInstructions(IList<Instruction> instructions) =>
-		instructions.OfType<PrintInstruction>().Any();
+	public bool HasPrintInstructions(IReadOnlyList<Instruction> instructions) =>
+		HasPrintInstructionsInternal(instructions);
 
 	public bool IsPlatformUsingStdLibAndHasPrintInstructions(Platform platform,
-		List<Instruction> optimizedInstructions,
+		IReadOnlyList<Instruction> optimizedInstructions,
 		IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods) =>
-		platform is Platform.Linux or Platform.Windows &&
-		(HasPrintInstructions(optimizedInstructions) ||
-			(precompiledMethods?.Values.Any(HasPrintInstructions) ?? false));
+		IsPlatformUsingStdLibAndHasPrintInstructionsInternal(platform, optimizedInstructions,
+			precompiledMethods, includeWindowsPlatform: true);
 
 	private readonly record struct CompiledFunction(string Text,
 		List<(string Name, string Text, int ByteLen)> StringConstants, bool UsesGpu = false);
@@ -157,13 +156,13 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 	private static void EmitLoadConstant(LoadConstantInstruction loadConst, List<string> lines,
 		EmitContext context)
 	{
-		if (loadConst.ValueInstance.IsText)
+		if (loadConst.Constant.IsText)
 			return; //ncrunch: no coverage
-		var value = FormatDouble(loadConst.ValueInstance.Number);
+		var value = FormatDouble(loadConst.Constant.Number);
 		var temp = context.NextTemp();
 		lines.Add($"    {temp} = arith.constant {value} : f64");
 		context.RegisterValues[loadConst.Register] = temp;
-		context.RegisterConstants[loadConst.Register] = loadConst.ValueInstance.Number;
+		context.RegisterConstants[loadConst.Register] = loadConst.Constant.Number;
 	}
 
 	private static void EmitBinary(BinaryInstruction binary, List<string> lines,
@@ -309,8 +308,7 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 			context.RegisterInstances[invoke.Register] = ResolveConstructorArguments(invoke.Method);
 			return;
 		}
-		var methodKey = BytecodeDeserializer.BuildMethodInstructionKey(invoke.Method.Method.Type.Name,
-			invoke.Method.Method.Name, invoke.Method.Method.Parameters.Count);
+		var methodKey = BuildMethodHeaderKeyInternal(invoke.Method.Method);
 		if (compiledMethods == null || !compiledMethods.TryGetValue(methodKey, out var methodInfo))
 			throw new NotSupportedException( //ncrunch: no coverage
 				//TODO: wtf?
@@ -422,7 +420,7 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 			break;
 		case LoopStrategy.CpuParallel:
 			lines.Add(
-				$"    scf.parallel ({inductionVar}) = ({startIndex}) to ({endIndex}) step ({step}) {{");
+				$"    scf.parallel ({inductionVar}) = ({startIndex}) to ({endValue}) step ({step}) {{");
 			break;
 		default:
 			lines.Add(
@@ -566,8 +564,7 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 		while (queue.Count > 0)
 		{
 			var (method, includeMembers) = queue.Dequeue();
-			var methodKey = BytecodeDeserializer.BuildMethodInstructionKey(method.Type.Name,
-				method.Name, method.Parameters.Count);
+			var methodKey = BuildMethodHeaderKeyInternal(method);
 			if (methods.TryGetValue(methodKey, out var existing))
 			{ //ncrunch: no coverage start
 				if (includeMembers && existing.MemberNames.Count == 0)
@@ -584,8 +581,7 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 	private static CompiledMethodInfo BuildMethodInfo(Method method, bool includeMembers,
 		IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods)
 	{
-		var methodKey = BytecodeDeserializer.BuildMethodInstructionKey(method.Type.Name,
-			method.Name, method.Parameters.Count);
+		var methodKey = BuildMethodHeaderKeyInternal(method);
 		var instructions =
 			precompiledMethods != null && precompiledMethods.TryGetValue(methodKey, out var pre)
 				? [.. pre]

@@ -8,7 +8,7 @@ namespace Strict.Bytecode;
 /// Partially reconstructs .strict source files from StrictBinary (e.g. from .strictbinary) as an
 /// approximation. For debugging, will not compile, no tests. Only includes what bytecode reveals.
 /// </summary>
-public sealed class BytecodeDecompiler
+public sealed class Decompiler
 {
 	/// <summary>
 	/// Opens a .strictbinary ZIP file, deserializes each bytecode entry, and writes

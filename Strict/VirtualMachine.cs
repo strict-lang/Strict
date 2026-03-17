@@ -12,7 +12,7 @@ public sealed class VirtualMachine(Package package,
 {
 	private readonly Type numberType = package.GetType(Type.Number);
 
-	public VirtualMachine Execute(IList<Instruction> allInstructions,
+	public VirtualMachine Execute(IReadOnlyList<Instruction> allInstructions,
 		IReadOnlyDictionary<string, ValueInstance>? initialVariables = null)
 	{
 		Clear();
@@ -36,11 +36,11 @@ public sealed class VirtualMachine(Package package,
 
 	private bool conditionFlag;
 	private int instructionIndex;
-	private IList<Instruction> instructions = new List<Instruction>();
+	private IReadOnlyList<Instruction> instructions = new List<Instruction>();
 	public ValueInstance? Returns { get; private set; }
 	public Memory Memory { get; } = new();
 
-	private VirtualMachine RunInstructions(IList<Instruction> allInstructions)
+	private VirtualMachine RunInstructions(IReadOnlyList<Instruction> allInstructions)
 	{
 		instructions = allInstructions;
 		for (instructionIndex = 0;
@@ -156,9 +156,10 @@ public sealed class VirtualMachine(Package package,
 	}
 
 	private List<Instruction>? GetPrecompiledMethodInstructions(Method method) =>
-		precompiledMethodInstructions?.GetValueOrDefault(
-			BytecodeDeserializer.BuildMethodInstructionKey(method.Type.Name, method.Name,
-				method.Parameters.Count));
+		precompiledMethodInstructions?.GetValueOrDefault(StrictBinary.BuildMethodHeader(method.Name,
+			method.Parameters.Select(parameter =>
+				new BytecodeMember(parameter.Name, parameter.Type.Name, null)).ToList(),
+			method.ReturnType));
 
 	private List<Instruction>? GetPrecompiledMethodInstructions(Invoke invoke) =>
 		invoke.Method == null

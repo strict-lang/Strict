@@ -72,8 +72,8 @@ public static class Program
 		{
 			var outputFolder = Path.GetFileNameWithoutExtension(filePath);
 			using var basePackage = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
-			var bytecodeTypes = new BytecodeDeserializer(filePath).Deserialize(basePackage);
-			new BytecodeDecompiler().Decompile(bytecodeTypes, outputFolder);
+			var bytecodeTypes = new StrictBinary(filePath, basePackage);
+			new Decompiler().Decompile(bytecodeTypes, outputFolder);
 			Console.WriteLine("Decompilation complete, written all partial .strict files (only what " +
 				"was included in bytecode, no tests) to folder: " + outputFolder);
 		}
@@ -94,11 +94,11 @@ public static class Program
 					? CompilerBackend.Llvm
 					: CompilerBackend.MlirDefault;
 			if (buildForPlatform.HasValue)
-				runner.Build(buildForPlatform.Value, backend, options.Contains("-forceStrictBinary"));
+				await runner.Build(buildForPlatform.Value, backend, options.Contains("-forceStrictBinary"));
 			else if (nonFlagArgs.Length >= 1 && nonFlagArgs[0].Contains('('))
-				runner.RunExpression(string.Join(" ", nonFlagArgs[0..]));
+				await runner.RunExpression(string.Join(" ", nonFlagArgs[0..]));
 			else
-				runner.Run(nonFlagArgs);
+				await runner.Run(nonFlagArgs);
 		}
 	}
 

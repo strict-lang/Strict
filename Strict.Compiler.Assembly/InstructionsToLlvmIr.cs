@@ -12,7 +12,7 @@ namespace Strict.Compiler.Assembly;
 /// and platform-specific code generation. Much simpler than raw NASM: no manual register allocation,
 /// no ABI handling, no stack frame management — LLVM handles all of this.
 /// </summary>
-public sealed class InstructionsToLlvmIr : InstructionsCompiler
+public sealed class InstructionsToLlvmIr : InstructionsToAssemblyCompiler
 {
 	private sealed class CompiledMethodInfo(string symbol,
 		List<Instruction> instructions, List<string> parameterNames, List<string> memberNames)
@@ -33,7 +33,7 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 	/// Produces a complete LLVM IR module for the target platform including the compiled function,
 	/// any called methods, and a main/entry point that calls the function and exits.
 	/// </summary>
-	public string CompileForPlatform(string methodName, IList<Instruction> instructions,
+	public string CompileForPlatform(string methodName, IReadOnlyList<Instruction> instructions,
 		Platform platform, IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods = null)
 	{
 		var hasPrint = instructions.OfType<PrintInstruction>().Any();
@@ -61,13 +61,13 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 	}
 
 	public bool IsPlatformUsingStdLibAndHasPrintInstructions(Platform platform,
-		List<Instruction> optimizedInstructions,
+		IReadOnlyList<Instruction> optimizedInstructions,
 		IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods) =>
-		platform == Platform.Linux && (HasPrintInstructions(optimizedInstructions) || //ncrunch: no coverage
-			(precompiledMethods?.Values.Any(HasPrintInstructions) ?? false));
+		IsPlatformUsingStdLibAndHasPrintInstructionsInternal(platform, optimizedInstructions,
+			precompiledMethods, includeWindowsPlatform: false);
 
-	public static bool HasPrintInstructions(IList<Instruction> instructions) =>
-		instructions.OfType<PrintInstruction>().Any();
+	public static bool HasPrintInstructions(IReadOnlyList<Instruction> instructions) =>
+		HasPrintInstructionsInternal(instructions);
 
 	private static string BuildModuleHeader(Platform platform, bool hasPrint, bool hasNumericPrint)
 	{
@@ -160,19 +160,15 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 		for (var index = 0; index < instructions.Count; index++)
 			switch (instructions[index])
 			{
-			case Jump jump:
-				AddLabel(labels, index + jump.InstructionsToSkip + 1, ref labelIndex);
-				break;
-			case JumpIf jumpIf:
-				//ncrunch: no coverage start
-				AddLabel(labels, index + jumpIf.Steps + 1, ref labelIndex);
-				break;
 			case JumpToId { InstructionType: InstructionType.JumpEnd }:
 				AddLabel(labels, index, ref labelIndex);
 				break;
 			case JumpToId:
 				AddLabel(labels, index + 1, ref labelIndex);
-				break; //ncrunch: no coverage end
+				break;
+			case Jump jump:
+				AddLabel(labels, index + jump.InstructionsToSkip + 1, ref labelIndex);
+				break;
 			}
 		return labels;
 	}
@@ -294,8 +290,8 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 
 	private static void EmitLoadConstant(LoadConstantInstruction loadConst, EmitContext context)
 	{
-		if (!loadConst.ValueInstance.IsText)
-			context.RegisterValues[loadConst.Register] = FormatDouble(loadConst.ValueInstance.Number);
+		if (!loadConst.Constant.IsText)
+			context.RegisterValues[loadConst.Register] = FormatDouble(loadConst.Constant.Number);
 	}
 
 	private static void EmitArithmetic(BinaryInstruction binary, List<string> lines,
@@ -558,8 +554,7 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 			context.RegisterInstances[invoke.Register] = ResolveConstructorArguments(invoke.Method);
 			return;
 		}
-		var methodKey = BytecodeDeserializer.BuildMethodInstructionKey(invoke.Method.Method.Type.Name,
-			invoke.Method.Method.Name, invoke.Method.Method.Parameters.Count);
+		var methodKey = BuildMethodHeaderKeyInternal(invoke.Method.Method);
 		if (context.CompiledMethods == null ||
 			!context.CompiledMethods.TryGetValue(methodKey, out var methodInfo))
 			throw new NotSupportedException( //ncrunch: no coverage
@@ -627,8 +622,7 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 		while (queue.Count > 0)
 		{
 			var (method, includeMembers) = queue.Dequeue();
-			var methodKey = BytecodeDeserializer.BuildMethodInstructionKey(method.Type.Name,
-				method.Name, method.Parameters.Count);
+			var methodKey = BuildMethodHeaderKeyInternal(method);
 			if (methods.TryGetValue(methodKey, out var existing))
 			{ //ncrunch: no coverage start
 				if (includeMembers && existing.MemberNames.Count == 0)
@@ -645,8 +639,7 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 	private static CompiledMethodInfo BuildMethodInfo(Method method, bool includeMembers,
 		IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods)
 	{
-		var methodKey = BytecodeDeserializer.BuildMethodInstructionKey(method.Type.Name,
-			method.Name, method.Parameters.Count);
+		var methodKey = BuildMethodHeaderKeyInternal(method);
 		var instructions =
 			precompiledMethods != null && precompiledMethods.TryGetValue(methodKey, out var pre)
 				? [.. pre]

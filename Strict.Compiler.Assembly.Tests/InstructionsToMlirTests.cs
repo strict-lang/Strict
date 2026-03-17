@@ -335,10 +335,8 @@ public sealed class InstructionsToMlirTests
 		var multiplyInstructions = GenerateMethodInstructions(multiplyMethod);
 		var precompiled = new Dictionary<string, List<Instruction>>
 		{
-			[BytecodeDeserializer.BuildMethodInstructionKey(type.Name, addMethod.Name,
-				addMethod.Parameters.Count)] = addInstructions,
-			[BytecodeDeserializer.BuildMethodInstructionKey(type.Name, multiplyMethod.Name,
-				multiplyMethod.Parameters.Count)] = multiplyInstructions
+			[BuildMethodKey(addMethod)] = addInstructions,
+			[BuildMethodKey(multiplyMethod)] = multiplyInstructions
 		};
 		var mlir = compiler.CompileForPlatform(type.Name, runInstructions, Platform.Linux, precompiled);
 		Assert.That(mlir, Does.Contain("func.func @MlirCalc_Add_0("));
@@ -365,8 +363,7 @@ public sealed class InstructionsToMlirTests
 		var areaInstructions = GenerateMethodInstructions(areaMethod);
 		var precompiled = new Dictionary<string, List<Instruction>>
 		{
-			[BytecodeDeserializer.BuildMethodInstructionKey(type.Name, areaMethod.Name,
-				areaMethod.Parameters.Count)] = areaInstructions
+			[BuildMethodKey(areaMethod)] = areaInstructions
 		};
 		var mlir = compiler.CompileForPlatform(type.Name, runInstructions, Platform.Linux, precompiled);
 		Assert.That(mlir, Does.Contain("func.func @MlirArea_Area_0("));
@@ -390,8 +387,7 @@ public sealed class InstructionsToMlirTests
 		var toFInstructions = GenerateMethodInstructions(toFMethod);
 		var precompiled = new Dictionary<string, List<Instruction>>
 		{
-			[BytecodeDeserializer.BuildMethodInstructionKey(type.Name, toFMethod.Name,
-				toFMethod.Parameters.Count)] = toFInstructions
+			[BuildMethodKey(toFMethod)] = toFInstructions
 		};
 		var mlir = compiler.CompileForPlatform(type.Name, runInstructions, Platform.Linux, precompiled);
 		Assert.That(mlir, Does.Contain("func.func @MlirTempConv_ToFahrenheit_0("));
@@ -419,8 +415,7 @@ public sealed class InstructionsToMlirTests
 		var brightenInstructions = GenerateMethodInstructions(brightenMethod);
 		var precompiled = new Dictionary<string, List<Instruction>>
 		{
-			[BytecodeDeserializer.BuildMethodInstructionKey(type.Name, brightenMethod.Name,
-				brightenMethod.Parameters.Count)] = brightenInstructions
+			[BuildMethodKey(brightenMethod)] = brightenInstructions
 		};
 		var mlir = compiler.CompileForPlatform(type.Name, runInstructions, Platform.Linux, precompiled);
 		Assert.That(mlir, Does.Contain("func.func @MlirPixel_Brighten_0("));
@@ -443,8 +438,7 @@ public sealed class InstructionsToMlirTests
 		var addInstructions = GenerateMethodInstructions(addMethod);
 		var precompiled = new Dictionary<string, List<Instruction>>
 		{
-			[BytecodeDeserializer.BuildMethodInstructionKey(type.Name, addMethod.Name,
-				addMethod.Parameters.Count)] = addInstructions
+			[BuildMethodKey(addMethod)] = addInstructions
 		};
 		var mlir = compiler.CompileForPlatform(type.Name, runInstructions, Platform.Linux, precompiled);
 		Assert.That(mlir, Does.Contain("func.func @MlirArithFunc_Add_2("));
@@ -605,6 +599,12 @@ public sealed class InstructionsToMlirTests
 		var result = buildMethod!.Invoke(null, [inputPath, outputPath, platform, hasPrintCalls]);
 		return result as string ?? throw new InvalidOperationException("Expected clang args string");
 	}
+
+	private static string BuildMethodKey(Method method) =>
+		StrictBinary.BuildMethodHeader(method.Name,
+			method.Parameters.Select(parameter =>
+				new BytecodeMember(parameter.Name, parameter.Type.Name, null)).ToList(),
+			method.ReturnType);
 
 	private static List<Instruction> GenerateMethodInstructions(Method method)
 	{

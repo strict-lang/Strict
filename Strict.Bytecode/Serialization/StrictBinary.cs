@@ -230,7 +230,7 @@ public sealed class StrictBinary
 		return createdMethod;
 	}
 
-	private static string BuildMethodHeader(string methodName,
+	public static string BuildMethodHeader(string methodName,
 		IReadOnlyList<BytecodeMember> parameters, Type returnType)
 		=> parameters.Count == 0
 			? returnType.IsNone
@@ -245,10 +245,9 @@ public sealed class StrictBinary
 		{
 			ExpressionKind.SmallNumberValue => new Number(package, reader.ReadByte()),
 			ExpressionKind.IntegerNumberValue => new Number(package, reader.ReadInt32()),
-			ExpressionKind.NumberValue =>
-				new Number(package, reader.ReadDouble()), //ncrunch: no coverage
-			ExpressionKind.TextValue => new Text(package, table.Names[reader.Read7BitEncodedInt()]), //ncrunch: no coverage
-			ExpressionKind.BooleanValue => ReadBooleanValue(reader, package, table), //ncrunch: no coverage
+			ExpressionKind.NumberValue =>	new Number(package, reader.ReadDouble()),
+			ExpressionKind.TextValue => new Text(package, table.Names[reader.Read7BitEncodedInt()]),
+			ExpressionKind.BooleanValue => ReadBooleanValue(reader, package, table),
 			ExpressionKind.VariableRef => ReadVariableRef(reader, package, table),
 			ExpressionKind.MemberRef => ReadMemberRef(reader, package, table),
 			ExpressionKind.BinaryExpr => ReadBinaryExpr(reader, package, table),

@@ -236,8 +236,7 @@ public sealed class InstructionsToLlvmIrTests
 		var addMethod = type.Methods.First(method => method.Name == "Add");
 		var runInstructions = new BytecodeGenerator(new MethodCall(runMethod)).Generate();
 		var addInstructions = GenerateMethodInstructions(addMethod);
-		var methodKey = BytecodeDeserializer.BuildMethodInstructionKey(type.Name, addMethod.Name,
-			addMethod.Parameters.Count);
+		var methodKey = BuildMethodKey(addMethod);
 		var ir = compiler.CompileForPlatform(type.Name, runInstructions, Platform.Windows,
 			new Dictionary<string, List<Instruction>> { [methodKey] = addInstructions });
 		Assert.That(ir, Does.Contain("call double @" + type.Name + "_Add_2("));
@@ -339,9 +338,8 @@ public sealed class InstructionsToLlvmIrTests
 		var addMethod = type.Methods.First(method => method.Name == "Add");
 		var runInstructions = new BytecodeGenerator(new MethodCall(runMethod)).Generate();
 		var addInstructions = GenerateMethodInstructions(addMethod);
-		var methodKey = BytecodeDeserializer.BuildMethodInstructionKey(type.Name, addMethod.Name,
-			addMethod.Parameters.Count);
-		var ir = compiler.CompileForPlatform(type.Name, runInstructions, Platform.Linux,
+		var methodKey = BuildMethodKey(addMethod);
+		var ir = compiler.CompileForPlatform(type.Name, runInstructions, Platform.Windows,
 			new Dictionary<string, List<Instruction>> { [methodKey] = addInstructions });
 		Assert.That(ir, Does.Contain("define double @" + type.Name + "_Add_0("));
 		Assert.That(ir, Does.Contain("call double @" + type.Name + "_Add_0("));
@@ -439,10 +437,8 @@ public sealed class InstructionsToLlvmIrTests
 		var multiplyInstructions = GenerateMethodInstructions(multiplyMethod);
 		var precompiled = new Dictionary<string, List<Instruction>>
 		{
-			[BytecodeDeserializer.BuildMethodInstructionKey(type.Name, addMethod.Name, addMethod.Parameters.Count)] =
-				addInstructions,
-			[BytecodeDeserializer.BuildMethodInstructionKey(type.Name, multiplyMethod.Name, multiplyMethod.Parameters.Count)] =
-				multiplyInstructions
+			[BuildMethodKey(addMethod)] = addInstructions,
+			[BuildMethodKey(multiplyMethod)] = multiplyInstructions
 		};
 		var ir = compiler.CompileForPlatform(type.Name, runInstructions, Platform.Windows,
 			precompiled);
@@ -467,8 +463,7 @@ public sealed class InstructionsToLlvmIrTests
 		var addInstructions = GenerateMethodInstructions(addMethod);
 		var precompiled = new Dictionary<string, List<Instruction>>
 		{
-			[BytecodeDeserializer.BuildMethodInstructionKey(type.Name, addMethod.Name, addMethod.Parameters.Count)] =
-				addInstructions
+			[BuildMethodKey(addMethod)] = addInstructions
 		};
 		var ir = compiler.CompileForPlatform(type.Name, runInstructions, Platform.Linux, precompiled);
 		Assert.That(ir, Does.Contain("define double @LlvmArithFunc_Add_2("));
@@ -489,8 +484,7 @@ public sealed class InstructionsToLlvmIrTests
 		var areaInstructions = GenerateMethodInstructions(areaMethod);
 		var precompiled = new Dictionary<string, List<Instruction>>
 		{
-			[BytecodeDeserializer.BuildMethodInstructionKey(type.Name, areaMethod.Name, areaMethod.Parameters.Count)] =
-				areaInstructions
+			[BuildMethodKey(areaMethod)] = areaInstructions
 		};
 		var ir = compiler.CompileForPlatform(type.Name, runInstructions, Platform.Linux, precompiled);
 		Assert.That(ir, Does.Contain("define double @LlvmArea_Area_0("));
@@ -511,8 +505,7 @@ public sealed class InstructionsToLlvmIrTests
 		var toFInstructions = GenerateMethodInstructions(toFMethod);
 		var precompiled = new Dictionary<string, List<Instruction>>
 		{
-			[BytecodeDeserializer.BuildMethodInstructionKey(type.Name, toFMethod.Name, toFMethod.Parameters.Count)] =
-				toFInstructions
+			[BuildMethodKey(toFMethod)] = toFInstructions
 		};
 		var ir = compiler.CompileForPlatform(type.Name, runInstructions, Platform.MacOS, precompiled);
 		Assert.That(ir, Does.Contain("target triple = \"x86_64-apple-macosx\""));
@@ -604,8 +597,7 @@ public sealed class InstructionsToLlvmIrTests
 		var brightenInstructions = GenerateMethodInstructions(brightenMethod);
 		var precompiled = new Dictionary<string, List<Instruction>>
 		{
-			[BytecodeDeserializer.BuildMethodInstructionKey(type.Name, brightenMethod.Name,
-				brightenMethod.Parameters.Count)] = brightenInstructions
+			[BuildMethodKey(brightenMethod)] = brightenInstructions
 		};
 		var ir = compiler.CompileForPlatform(type.Name, runInstructions, Platform.Linux, precompiled);
 		Assert.That(ir, Does.Contain("define double @LlvmPixel_Brighten_0("));
@@ -624,6 +616,12 @@ public sealed class InstructionsToLlvmIrTests
 		Assert.Throws<InvalidOperationException>(() =>
 			ToolRunner.EnsureOutputFileExists(path, "test", Platform.Linux));
 	}
+
+	private static string BuildMethodKey(Method method) =>
+		StrictBinary.BuildMethodHeader(method.Name,
+			method.Parameters.Select(parameter =>
+				new BytecodeMember(parameter.Name, parameter.Type.Name, null)).ToList(),
+			method.ReturnType);
 
 	private static List<Instruction> GenerateMethodInstructions(Method method)
 	{

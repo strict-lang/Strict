@@ -16,6 +16,7 @@ public sealed class LoopBeginInstruction : RegisterInstruction
 	}
 
 	public Register? EndIndex { get; }
+	public bool IsRange => EndIndex != null;
 
 	public override void Write(BinaryWriter writer, NameTable table)
 	{

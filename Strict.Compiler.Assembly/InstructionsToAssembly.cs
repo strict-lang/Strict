@@ -12,7 +12,7 @@ namespace Strict.Compiler.Assembly;
 /// Follows the System V AMD64 ABI: first 8 float/double parameters in xmm0–xmm7, return in xmm0.
 /// The generated NASM text can be assembled with: nasm -f win64 output.asm -o output.obj
 /// </summary>
-public sealed class InstructionsToAssembly : InstructionsCompiler
+public sealed class InstructionsToAssembly : InstructionsToAssemblyCompiler
 {
 	private sealed class CompiledMethodInfo(string symbol,
 		List<Instruction> instructions, List<string> parameterNames, List<string> memberNames)
@@ -36,7 +36,7 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 	/// Produces a complete NASM source for the target platform: the compiled method followed by
 	/// an entry point that calls it and exits cleanly.
 	/// </summary>
-	public string CompileForPlatform(string methodName, IList<Instruction> instructions,
+	public string CompileForPlatform(string methodName, IReadOnlyList<Instruction> instructions,
 		Platform platform, IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods = null)
 	{
 		var hasPrint = instructions.OfType<PrintInstruction>().Any();
@@ -52,8 +52,8 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 		return functionAsm + "\n" + BuildEntryPoint(methodName, platform, hasPrint);
 	}
 
-	public bool HasPrintInstructions(IList<Instruction> instructions) =>
-		instructions.OfType<PrintInstruction>().Any();
+	public bool HasPrintInstructions(IReadOnlyList<Instruction> instructions) =>
+		HasPrintInstructionsInternal(instructions);
 
 	private static string BuildEntryPoint(string methodName, Platform platform, bool hasPrint = false) =>
 		platform switch
@@ -195,10 +195,8 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 		{
 			var value = instruction switch
 			{
-				LoadConstantInstruction load when !load.ValueInstance.IsText => (double?)load.
-					ValueInstance.Number,
-				StoreVariableInstruction store when !store.ValueInstance.IsText => store.ValueInstance.
-					Number,
+				LoadConstantInstruction load when !load.Constant.IsText => (double?)load.Constant.Number,
+				StoreVariableInstruction store when !store.ValueInstance.IsText => store.ValueInstance.Number,
 				_ => null
 			};
 			if (value is { } constantValue && constantValue != 0.0 && seenValues.Add(constantValue))
@@ -314,7 +312,7 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 				lines.Add("    movsd " + ToXmm(loadVar.Register) + ", [rbp-" + (loadSlot + 1) * 8 + "]");
 			break;
 		case LoadConstantInstruction loadConst:
-			EmitLoadConstant(loadConst.Register, loadConst.ValueInstance, dataConstants, lines);
+			EmitLoadConstant(loadConst.Register, loadConst.Constant, dataConstants, lines);
 			break;
 		case BinaryInstruction binary when !binary.IsConditional():
 			EmitArithmetic(binary, allInstructions, index, optimizedReturns, lines);
@@ -370,8 +368,7 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 			registerInstances[invoke.Register] = ResolveConstructorArguments(invoke.Method);
 			return;
 		}
-		var methodKey = BytecodeDeserializer.BuildMethodInstructionKey(invoke.Method.Method.Type.Name,
-			invoke.Method.Method.Name, invoke.Method.Method.Parameters.Count);
+		var methodKey = BuildMethodHeaderKeyInternal(invoke.Method.Method);
 		if (compiledMethods == null || !compiledMethods.TryGetValue(methodKey, out var methodInfo))
 			throw new NotSupportedException( //ncrunch: no coverage
 				"Non-print method calls cannot be compiled to native assembly. " +
@@ -476,14 +473,13 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 		while (queue.Count > 0)
 		{
 			var (method, includeMembers) = queue.Dequeue();
-			var methodKey = BytecodeDeserializer.BuildMethodInstructionKey(method.Type.Name,
-				method.Name, method.Parameters.Count);
+			var methodKey = BuildMethodHeaderKeyInternal(method);
 			if (methods.TryGetValue(methodKey, out var existingMethod))
-			{ //ncrunch: no coverage start
+			{
 				if (includeMembers && existingMethod.MemberNames.Count == 0)
 					methods[methodKey] = BuildMethodInfo(method, true, precompiledMethods);
 				continue;
-			} //ncrunch: no coverage end
+			}
 			var methodInfo = BuildMethodInfo(method, includeMembers, precompiledMethods);
 			methods[methodKey] = methodInfo;
 			EnqueueInvokedMethods(methodInfo.Instructions, queue);
@@ -494,8 +490,7 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 	private static CompiledMethodInfo BuildMethodInfo(Method method, bool includeMembers,
 		IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods)
 	{
-		var methodKey = BytecodeDeserializer.BuildMethodInstructionKey(method.Type.Name, method.Name,
-			method.Parameters.Count);
+		var methodKey = BuildMethodHeaderKeyInternal(method);
 		var instructions = precompiledMethods != null && precompiledMethods.TryGetValue(methodKey,
 			out var precompiledInstructions)
 			? [.. precompiledInstructions]

@@ -31,10 +31,10 @@ public sealed class UnreachableCodeEliminatorTests : TestOptimizers
 			new LoadConstantInstruction(Register.R0, Num(1)),
 			new LoadConstantInstruction(Register.R1, Num(1)),
 			new BinaryInstruction(InstructionType.Equal, Register.R0, Register.R1),
-			new JumpToId(InstructionType.JumpToIdIfFalse, 0),
+			new JumpToId(0, InstructionType.JumpToIdIfFalse),
 			new LoadConstantInstruction(Register.R2, Num(5)),
 			new ReturnInstruction(Register.R2),
-			new JumpToId(InstructionType.JumpEnd, 0),
+			new JumpToId(0, InstructionType.JumpEnd),
 			new LoadConstantInstruction(Register.R3, Num(10)),
 			new ReturnInstruction(Register.R3)
 		], 9);
@@ -44,7 +44,7 @@ public sealed class UnreachableCodeEliminatorTests : TestOptimizers
 		Optimize([
 			new LoadConstantInstruction(Register.R0, Num(5)),
 			new ReturnInstruction(Register.R0),
-			new JumpToId(InstructionType.JumpEnd, 0),
+			new JumpToId(0, InstructionType.JumpEnd),
 			new LoadConstantInstruction(Register.R1, Num(10)),
 			new ReturnInstruction(Register.R1)
 		], 2);

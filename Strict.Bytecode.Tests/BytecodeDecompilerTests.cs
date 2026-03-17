@@ -59,7 +59,7 @@ public sealed class BytecodeDecompilerTests : TestBytecode
 		var strictBinary = new StrictBinary(TestPackage.Instance);
 		strictBinary.MethodsPerType[typeName] = CreateTypeMethods(instructions);
 		var outputFolder = Path.Combine(Path.GetTempPath(), "decompiled_" + Path.GetRandomFileName());
-		new BytecodeDecompiler().Decompile(strictBinary, outputFolder);
+		new Decompiler().Decompile(strictBinary, outputFolder);
 		Assert.That(Directory.Exists(outputFolder), Is.True, "Output folder should be created");
 		Assert.That(File.Exists(Path.Combine(outputFolder, typeName + ".strict")), Is.True,
 			typeName + ".strict should be created");
