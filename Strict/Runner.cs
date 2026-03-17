@@ -29,6 +29,8 @@ public sealed class Runner : IDisposable
 		this.skipPackageSearchAndUseThisTestPackage = skipPackageSearchAndUseThisTestPackage;
 		this.expressionToRun = expressionToRun;
 		this.enableTestsAndDetailedOutput = enableTestsAndDetailedOutput;
+		parser = new MethodExpressionParser();
+		repositories = new Repositories(parser);
 		Log("Strict.Runner: " + strictFilePath);
 	}
 
@@ -36,6 +38,8 @@ public sealed class Runner : IDisposable
 	private readonly Package? skipPackageSearchAndUseThisTestPackage;
 	private readonly string expressionToRun;
 	private readonly bool enableTestsAndDetailedOutput;
+	private readonly MethodExpressionParser parser;
+	private readonly Repositories repositories;
 	private readonly List<long> stepTimes = new();
 
 	private void Log(string message)
@@ -137,7 +141,7 @@ public sealed class Runner : IDisposable
 			return skipPackageSearchAndUseThisTestPackage;
 		return await LogTiming(nameof(GetPackage) + " " + name,
 			async () => name.StartsWith(nameof(Strict), StringComparison.Ordinal)
-				? await repos.LoadStrictPackage(name)
+				? await repositories.LoadStrictPackage(name)
 				: throw new NotSupportedException("No github package search ability was implemented " +
 					"yet, only Strict packages work for now: " + name));
 	}
@@ -158,22 +162,91 @@ public sealed class Runner : IDisposable
 		}
 	}
 
-	private static readonly Repositories repos = new(new MethodExpressionParser());
-
 	private async Task<BinaryExecutable> LoadFromSourceAndSaveBinary(Package basePackage)
 	{
+		var typeName = Path.GetFileNameWithoutExtension(strictFilePath);
+		var typeLines = new TypeLines(typeName, await File.ReadAllLinesAsync(strictFilePath));
+		var mainType = new Type(basePackage, typeLines).ParseMembersAndMethods(parser);
 		if (enableTestsAndDetailedOutput)
 		{
-			Parse();
-			Validate();
-			RunTests();
+			Parse(mainType);
+			Validate(mainType);
+			RunTests(mainType);
 		}
+		parser.Par
 		//TODO: use expressionToRun
 		var instructions = GenerateBinaryExecutable();
 		var optimizedInstructions = OptimizeBytecode(instructions);
 		if (saveStrictBinary)
 			SaveStrictBinaryBytecodeIfPossible(optimizedInstructions);
 		return optimizedInstructions;
+	}
+
+	private void Parse() =>
+		Log(LogTiming(nameof(Parse) + " " + strictFilePath, () =>
+		{
+			var parsedMethods = 0;
+			var totalExpressions = 0;
+			foreach (var method in mainType.Methods)
+				if (!method.IsTrait)
+				{
+					var body = method.GetBodyAndParseIfNeeded();
+					parsedMethods++;
+					if (body is Body bodyExpr)
+						totalExpressions += bodyExpr.Expressions.Count;
+					else
+						totalExpressions++; //ncrunch: no coverage
+				}
+			return "Parsed methods: " + parsedMethods + ", total expressions: " + totalExpressions;
+		}));
+
+	private void Validate()
+	{
+		Log("┌─ Step 4: Run Validators");
+		var startTicks = DateTime.UtcNow.Ticks;
+		try
+		{
+			new TypeValidator().Visit(mainType);
+			Log("│  ✓ All type validations passed, no unused expressions found");
+			var constants = new ConstantCollapser();
+			constants.Visit(mainType);
+			Log("│  ✓ Constant expressions collapsed: " + constants.CollapsedCount);
+		}
+		//ncrunch: no coverage start
+		catch (Exception ex)
+		{
+			Log("│  ✗ Validation failed: " + ex.Message);
+			throw;
+		} //ncrunch: no coverage end
+		var endTicks = DateTime.UtcNow.Ticks;
+		stepTimes.Add(endTicks - startTicks);
+		Log("└─ Step 4 ⏱ Time: " +
+			TimeSpan.FromTicks(endTicks - startTicks).TotalMilliseconds + " ms");
+	}
+
+	private void RunTests()
+	{
+		Log("┌─ Step 5: Run Tests");
+		var startTicks = DateTime.UtcNow.Ticks;
+		var testExecutor = new TestInterpreter(package);
+		try
+		{
+			testExecutor.RunAllTestsInType(mainType);
+			Log("│  ✓ Methods tested: " + testExecutor.Statistics.MethodsTested);
+			Log("│  ✓ Types tested: " + testExecutor.Statistics.TypesTested);
+			Log("│  ✓ " + testExecutor.Statistics);
+			Log("│  ✓ All tests passed");
+		}
+		//ncrunch: no coverage start
+		catch (Exception ex)
+		{
+			Log($"│  ✗ Tests failed: {ex.Message}");
+			throw;
+		} //ncrunch: no coverage end
+		var endTicks = DateTime.UtcNow.Ticks;
+		stepTimes.Add(endTicks - startTicks);
+		Log("└─ Step 5 ⏱ Time: " +
+			TimeSpan.FromTicks(endTicks - startTicks).TotalMilliseconds + " ms");
 	}
 
 	private void PrintCompilationSummary(CompilerBackend backend, Platform platform, string exeFilePath) =>
@@ -309,84 +382,16 @@ private Binary? binary;
 */
 	}
 
-	private void Parse()
-	{
-		Log("┌─ Step 3: Parse Method Bodies");
-		var startTicks = DateTime.UtcNow.Ticks;
-		var parsedMethods = 0;
-		var totalExpressions = 0;
-		foreach (var method in mainType.Methods)
-			if (!method.IsTrait)
-			{
-				var body = method.GetBodyAndParseIfNeeded();
-				parsedMethods++;
-				if (body is Body bodyExpr)
-					totalExpressions += bodyExpr.Expressions.Count;
-				else
-					totalExpressions++; //ncrunch: no coverage
-			}
-		Log("│  ✓ Parsed methods: " + parsedMethods);
-		Log("│  ✓ Total expressions: " + totalExpressions);
-		var endTicks = DateTime.UtcNow.Ticks;
-		stepTimes.Add(endTicks - startTicks);
-		Log("└─ Step 3 ⏱ Time: " +
-			TimeSpan.FromTicks(endTicks - startTicks).TotalMilliseconds + " ms");
-	}
-
-	private void Validate()
-	{
-		Log("┌─ Step 4: Run Validators");
-		var startTicks = DateTime.UtcNow.Ticks;
-		try
-		{
-			new TypeValidator().Visit(mainType);
-			Log("│  ✓ All type validations passed, no unused expressions found");
-			var constants = new ConstantCollapser();
-			constants.Visit(mainType);
-			Log("│  ✓ Constant expressions collapsed: " + constants.CollapsedCount);
-		}
-		//ncrunch: no coverage start
-		catch (Exception ex)
-		{
-			Log("│  ✗ Validation failed: " + ex.Message);
-			throw;
-		} //ncrunch: no coverage end
-		var endTicks = DateTime.UtcNow.Ticks;
-		stepTimes.Add(endTicks - startTicks);
-		Log("└─ Step 4 ⏱ Time: " +
-			TimeSpan.FromTicks(endTicks - startTicks).TotalMilliseconds + " ms");
-	}
-
-	private void RunTests()
-	{
-		Log("┌─ Step 5: Run Tests");
-		var startTicks = DateTime.UtcNow.Ticks;
-		var testExecutor = new TestInterpreter(package);
-		try
-		{
-			testExecutor.RunAllTestsInType(mainType);
-			Log("│  ✓ Methods tested: " + testExecutor.Statistics.MethodsTested);
-			Log("│  ✓ Types tested: " + testExecutor.Statistics.TypesTested);
-			Log("│  ✓ " + testExecutor.Statistics);
-			Log("│  ✓ All tests passed");
-		}
-		//ncrunch: no coverage start
-		catch (Exception ex)
-		{
-			Log($"│  ✗ Tests failed: {ex.Message}");
-			throw;
-		} //ncrunch: no coverage end
-		var endTicks = DateTime.UtcNow.Ticks;
-		stepTimes.Add(endTicks - startTicks);
-		Log("└─ Step 5 ⏱ Time: " +
-			TimeSpan.FromTicks(endTicks - startTicks).TotalMilliseconds + " ms");
-	}
-
 	private BinaryExecutable GenerateBinaryExecutable()
 	{
+		LogTiming("Generated bytecode", () =>
+		{
+			Repos.
+			new BinaryGenerator(entryPoint).Generate()
+
+		})
 		Log("┌─ Step 6: Generate Bytecode");
 		var startTicks = DateTime.UtcNow.Ticks;
-
 		/*obs
 		var runMethod =
 			mainType.Methods.FirstOrDefault(m => m.Name == Method.Run && m.Parameters.Count == 0) ??
