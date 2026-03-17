@@ -474,4 +474,6 @@ public sealed class BinaryExecutable(Package basePackage)
 		writer.Write((byte)registry.NextRegister);
 		writer.Write((byte)registry.PreviousRegister);
 	}
+
+	public bool UsesConsolePrint => MethodsPerType.Values.Any(type => type.UsesConsolePrint);
 }

@@ -12,9 +12,10 @@ namespace Strict.Compiler.Assembly;
 /// Requires mlir-opt, mlir-translate, and clang on PATH.
 /// Falls back gracefully when MLIR tools are unavailable — use IsAvailable to check.
 /// </summary>
-public sealed class MlirLinker
+public sealed class MlirLinker : Linker
 {
-	public string CreateExecutable(string mlirPath, Platform platform, bool hasPrintCalls = false)
+	public override async Task<string> CreateExecutable(string asmFilePath, Platform platform,
+		bool hasPrintCalls = false)
 	{
 		var mlirOptPath = ToolRunner.FindTool("mlir-opt") ??
 			throw new ToolNotFoundException("mlir-opt",
@@ -26,24 +27,24 @@ public sealed class MlirLinker
 				"on Windows use Msys2 and 'pacman -S mingw-w64-x86_64-mlir')");
 		var clangPath = ToolRunner.FindTool("clang") ??
 			throw new ToolNotFoundException("clang", "https://releases.llvm.org");
-		var mlirContent = File.ReadAllText(mlirPath);
+		var mlirContent = await File.ReadAllTextAsync(asmFilePath);
 		var hasGpuOps = mlirContent.Contains("gpu.launch", StringComparison.Ordinal);
-		var llvmDialectPath = Path.ChangeExtension(mlirPath, ".llvm.mlir");
+		var llvmDialectPath = Path.ChangeExtension(asmFilePath, ".llvm.mlir");
 		var optArgs = hasGpuOps
-			? BuildMlirOptArgsWithGpu(mlirPath, llvmDialectPath)
-			: BuildMlirOptArgs(mlirPath, llvmDialectPath);
+			? BuildMlirOptArgsWithGpu(asmFilePath, llvmDialectPath)
+			: BuildMlirOptArgs(asmFilePath, llvmDialectPath);
 		ToolRunner.RunProcess(mlirOptPath, optArgs);
 		ToolRunner.EnsureOutputFileExists(llvmDialectPath, "mlir-opt", platform);
-		var llvmIrPath = Path.ChangeExtension(mlirPath, ".ll");
+		var llvmIrPath = Path.ChangeExtension(asmFilePath, ".ll");
 		ToolRunner.RunProcess(mlirTranslatePath,
 			$"--mlir-to-llvmir \"{llvmDialectPath}\" -o \"{llvmIrPath}\"");
 		ToolRunner.EnsureOutputFileExists(llvmIrPath, "mlir-translate", platform);
 		if (platform == Platform.Windows && hasPrintCalls)
-			File.WriteAllText(llvmIrPath, RewriteWindowsPrintRuntime(File.ReadAllText(llvmIrPath)));
-		var exeExtension = platform == Platform.Windows
-			? ".exe"
-			: "";
-		var exeFilePath = Path.ChangeExtension(mlirPath, null) + exeExtension;
+			await File.WriteAllTextAsync(llvmIrPath,
+				RewriteWindowsPrintRuntime(await File.ReadAllTextAsync(llvmIrPath)));
+		var exeFilePath = platform == Platform.Windows
+			? Path.ChangeExtension(asmFilePath, ".exe")
+			: Path.ChangeExtension(asmFilePath, null);
 		var arguments = hasGpuOps
 			? BuildGpuClangArgs(llvmIrPath, exeFilePath, platform)
 			: BuildClangArgs(llvmIrPath, exeFilePath, platform, hasPrintCalls);

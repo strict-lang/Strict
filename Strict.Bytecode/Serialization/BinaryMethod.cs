@@ -18,6 +18,7 @@ public record BinaryMethod
 	public IReadOnlyList<BinaryMember> Parameters => parameters;
 	public string ReturnTypeName { get; }
 	public IReadOnlyList<Instruction> Instructions => instructions;
+	public bool UsesConsolePrint => instructions.Any(instruction => instruction is PrintInstruction);
 	private readonly List<Instruction> instructions = [];
 
 	public void Write(BinaryWriter writer, BinaryType type)

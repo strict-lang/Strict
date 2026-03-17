@@ -5,21 +5,22 @@ namespace Strict.Compiler.Assembly;
 /// Requires NASM (https://nasm.us) and gcc/clang on PATH.
 /// Throws <see cref="ToolNotFoundException"/> with download instructions when tools are missing.
 /// </summary>
-public sealed class NativeExecutableLinker
+public sealed class NativeExecutableLinker : Linker
 {
 	/// <summary>
-	/// Assembles <paramref name="asmPath"/> with NASM and links it into an executable.
+	/// Assembles <paramref name="asmFilePath"/> with NASM and links it into an executable.
 	/// Throws <see cref="ToolNotFoundException"/> if NASM or the C compiler is not on PATH.
 	/// Throws <see cref="NotSupportedException"/> for platforms whose code generation is not yet
 	/// implemented (e.g., LinuxArm requires a separate AArch64 code-generator).
 	/// </summary>
-	public string CreateExecutable(string asmPath, Platform platform, bool hasPrintCalls = false)
+	public override async Task<string> CreateExecutable(string asmFilePath, Platform platform,
+		bool hasPrintCalls = false)
 	{
 		var nasmPath = ToolRunner.FindTool("nasm") ??
 			throw new ToolNotFoundException("nasm", "https://nasm.us");
-		var objPath = Path.ChangeExtension(asmPath, ".obj");
+		var objPath = Path.ChangeExtension(asmFilePath, ".obj");
 		var nasmFormat = NasmFormatFor(platform);
-		ToolRunner.RunProcess(nasmPath, $"-f {nasmFormat} \"{asmPath}\" -o \"{objPath}\"");
+		ToolRunner.RunProcess(nasmPath, $"-f {nasmFormat} \"{asmFilePath}\" -o \"{objPath}\"");
 		ToolRunner.EnsureOutputFileExists(objPath, "nasm", platform);
 		var linker = platform == Platform.MacOS
 			? "clang"
@@ -29,7 +30,7 @@ public sealed class NativeExecutableLinker
 		var exeExtension = platform == Platform.Windows
 			? ".exe"
 			: "";
-		var exeFilePath = Path.ChangeExtension(asmPath, null) + exeExtension;
+		var exeFilePath = Path.ChangeExtension(asmFilePath, null) + exeExtension;
 		var linkerArgs = BuildLinkerArgs(objPath, exeFilePath, platform, hasPrintCalls);
 		ToolRunner.RunProcess(linkerPath, linkerArgs);
 		return ToolRunner.ResolveOutputFilePath(exeFilePath, linker, platform);

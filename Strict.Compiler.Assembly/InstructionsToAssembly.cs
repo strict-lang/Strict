@@ -13,7 +13,7 @@ namespace Strict.Compiler.Assembly;
 /// Follows the System V AMD64 ABI: first 8 float/double parameters in xmm0–xmm7, return in xmm0.
 /// The generated NASM text can be assembled with: nasm -f win64 output.asm -o output.obj
 /// </summary>
-public sealed class InstructionsToAssembly : InstructionsToAssemblyCompiler
+public sealed class InstructionsToAssembly : InstructionsCompiler
 {
 	private sealed class CompiledMethodInfo(string symbol,
 		List<Instruction> instructions, List<string> parameterNames, List<string> memberNames)
@@ -24,7 +24,8 @@ public sealed class InstructionsToAssembly : InstructionsToAssemblyCompiler
 		public List<string> MemberNames { get; } = memberNames;
 	}
 
-	public string Compile(Method method)
+	public override async Task Compile(BinaryExecutable binary)
+		//obs: public string Compile(Method method)
 	{
 		var paramNames = method.Parameters.Select(p => p.Name);
 		return BuildAssembly(method.Name, paramNames, GenerateInstructions(method));

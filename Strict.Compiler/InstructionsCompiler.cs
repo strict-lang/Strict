@@ -5,11 +5,9 @@ using Strict.Language;
 
 namespace Strict.Compiler;
 
-public class InstructionsCompiler
+public abstract class InstructionsCompiler
 {
-	protected static bool HasPrintInstructionsInternal(IReadOnlyList<Instruction> instructions) =>
-		instructions.OfType<PrintInstruction>().Any();
-
+	/*not needed anymore, use binary.UsesConsolePrint!
 	protected static bool IsPlatformUsingStdLibAndHasPrintInstructionsInternal(Platform platform,
 		IReadOnlyList<Instruction> optimizedInstructions,
 		IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods,
@@ -23,9 +21,15 @@ public class InstructionsCompiler
 				HasPrintInstructionsInternal(methodInstructions)) ?? false));
 	}
 
+	protected static bool HasPrintInstructionsInternal(IReadOnlyList<Instruction> instructions) =>
+		instructions.OfType<PrintInstruction>().Any();
+*/
 	protected static string BuildMethodHeaderKeyInternal(Method method) =>
 		BinaryExecutable.BuildMethodHeader(method.Name,
 			method.Parameters.Select(parameter =>
 				new BinaryMember(parameter.Name, parameter.Type.Name, null)).ToList(),
 			method.ReturnType);
+
+	public abstract Task<string> Compile(BinaryExecutable binary, Platform platform);
+	public abstract string Extension { get; }
 }

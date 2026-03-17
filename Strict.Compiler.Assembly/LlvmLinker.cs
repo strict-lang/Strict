@@ -6,21 +6,22 @@ namespace Strict.Compiler.Assembly;
 /// pipeline (-O2 by default), producing smaller and faster executables.
 /// Requires clang on PATH (https://releases.llvm.org or via platform package manager).
 /// </summary>
-public sealed class LlvmLinker
+public sealed class LlvmLinker : Linker
 {
 	/// <summary>
-	/// Compiles <paramref name="llvmIrPath"/> (.ll file) directly to a native executable.
+	/// Compiles <paramref name="asmFilePath"/> (.ll file) directly to a native executable.
 	/// Clang runs LLVM optimization passes and handles platform-specific linking automatically.
 	/// </summary>
-	public string CreateExecutable(string llvmIrPath, Platform platform, bool hasPrintCalls = false)
+	public override async Task<string> CreateExecutable(string asmFilePath, Platform platform,
+		bool hasPrintCalls = false)
 	{ //ncrunch: no coverage start
 		var clangPath = ToolRunner.FindTool("clang") ??
 			throw new ToolNotFoundException("clang", DownloadUrlFor(platform));
 		var exeExtension = platform == Platform.Windows
 			? ".exe"
 			: "";
-		var exeFilePath = Path.ChangeExtension(llvmIrPath, null) + exeExtension;
-		var arguments = BuildClangArgs(llvmIrPath, exeFilePath, platform, hasPrintCalls);
+		var exeFilePath = Path.ChangeExtension(asmFilePath, null) + exeExtension;
+		var arguments = BuildClangArgs(asmFilePath, exeFilePath, platform, hasPrintCalls);
 		ToolRunner.RunProcess(clangPath, arguments);
 		ToolRunner.EnsureOutputFileExists(exeFilePath, "clang", platform);
 		return exeFilePath;

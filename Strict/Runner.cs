@@ -9,8 +9,6 @@ using Strict.Optimizers;
 using Strict.TestRunner;
 using Strict.Validators;
 using System.Globalization;
-using System.IO.Compression;
-using System.Reflection.Metadata;
 using Type = Strict.Language.Type;
 
 namespace Strict;
@@ -18,11 +16,11 @@ namespace Strict;
 public sealed class Runner : IDisposable
 {
 	/// <summary>
-	/// Allows to run or build a .strict source file, running the Run method or supplying an
-	/// expression to be executed based on what is available in the given file. Caches bytecode
-	/// instructions into .strictbinary (only updated when source is newer or -forceStrictBinary is
-	/// used), used in later runs. Note that only .strict files contain the full actual code,
-	/// everything after that is stripped, optimized, and just includes what is actually executed.
+	/// Allows running or build a .strict source file, running the Run method or supplying an
+	/// expression to be executed based on what is available in the given file. Caches .strictbinary
+	/// bytecode instructions that are used in later runs, only updated when source files are newer.
+	/// Note that only .strict files contain the full actual code, everything after that is
+	/// stripped, optimized, and just includes what is actually executed.
 	/// </summary>
 	public Runner(string strictFilePath, Package? skipPackageSearchAndUseThisTestPackage = null,
 		string expressionToRun = Method.Run, bool enableTestsAndDetailedOutput = false)
@@ -38,6 +36,7 @@ public sealed class Runner : IDisposable
 	private readonly Package? skipPackageSearchAndUseThisTestPackage;
 	private readonly string expressionToRun;
 	private readonly bool enableTestsAndDetailedOutput;
+	private readonly List<long> stepTimes = new();
 
 	private void Log(string message)
 	{
@@ -54,6 +53,22 @@ public sealed class Runner : IDisposable
 	public async Task Build(Platform platform, CompilerBackend backend = CompilerBackend.MlirDefault)
 	{
 		var binary = await GetBinary();
+		InstructionsCompiler compiler = backend == CompilerBackend.Llvm
+			? new InstructionsToLlvmIr()
+			: backend == CompilerBackend.Nasm
+				? new InstructionsToAssembly()
+				: new InstructionsToMlir();
+		Linker linker = backend == CompilerBackend.Llvm
+			? new LlvmLinker()
+			: backend == CompilerBackend.Nasm
+				? new NativeExecutableLinker()
+				: new MlirLinker();
+		var irFilePath = Path.ChangeExtension(strictFilePath, compiler.Extension);
+		await File.WriteAllTextAsync(irFilePath, await compiler.Compile(binary, platform));
+		var exeFilePath = await linker.CreateExecutable(irFilePath, platform, binary.UsesConsolePrint);
+		PrintCompilationSummary(backend, platform, exeFilePath);
+/*obs
+
 		IReadOnlyList<Instruction> optimizedInstructions;
 		IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods;
 		if (binary != null)
@@ -67,12 +82,19 @@ public sealed class Runner : IDisposable
 			optimizedInstructions = BuildFromSource(forceStrictBinaryGeneration);
 			precompiledMethods = null;
 		}
+		Console.WriteLine("Saved " + platform + " LLVM IR to: " + llvmPath);
+		var exeFilePath = new LlvmLinker().CreateExecutable(llvmPath, platform,
+			llvmCompiler.IsPlatformUsingStdLibAndHasPrintInstructions(platform, optimizedInstructions,
+				precompiledMethods));
+		PrintCompilationSummary("LLVM", platform, exeFilePath);
+
 		if (backend == CompilerBackend.Llvm)
-			await SaveLlvmExecutable(optimizedInstructions, platform, precompiledMethods);
+			await SaveLlvmExecutable(binary, platform);
 		else if (backend == CompilerBackend.Nasm)
 			await SaveNasmExecutable(optimizedInstructions, platform, precompiledMethods);
 		else
 			await SaveMlirExecutable(optimizedInstructions, platform, precompiledMethods);
+*/
 	}
 
 	/// <summary>
@@ -83,7 +105,8 @@ public sealed class Runner : IDisposable
 	{
 		var basePackage = skipPackageSearchAndUseThisTestPackage ?? await GetPackage(nameof(Strict));
 		if (Path.GetExtension(strictFilePath) == BinaryExecutable.Extension)
-			return new BinaryExecutable(strictFilePath, basePackage);
+			return LogTiming("Loading existing " + strictFilePath,
+				() => new BinaryExecutable(strictFilePath, basePackage));
 		var cachedBinaryPath = Path.ChangeExtension(strictFilePath, BinaryExecutable.Extension);
 		if (File.Exists(cachedBinaryPath))
 		{
@@ -108,9 +131,36 @@ public sealed class Runner : IDisposable
 		return await LoadFromSourceAndSaveBinary(basePackage);
 	}
 
-	private async Task<Package> GetPackage(string name) => throw new NotImplementedException();
+	private async Task<Package> GetPackage(string name)
+	{
+		if (skipPackageSearchAndUseThisTestPackage != null)
+			return skipPackageSearchAndUseThisTestPackage;
+		return await LogTiming(nameof(GetPackage) + " " + name,
+			async () => name.StartsWith(nameof(Strict), StringComparison.Ordinal)
+				? await repos.LoadStrictPackage(name)
+				: throw new NotSupportedException("No github package search ability was implemented " +
+					"yet, only Strict packages work for now: " + name));
+	}
 
-	private BinaryExecutable LoadFromSourceAndSaveBinary()
+	private T LogTiming<T>(string message, Func<T> callToTime)
+	{
+		var startTicks = DateTime.UtcNow.Ticks;
+		try
+		{
+			return callToTime();
+		}
+		finally
+		{
+			var endTicks = DateTime.UtcNow.Ticks;
+			Log(message + " Time: " + TimeSpan.FromTicks(endTicks - startTicks).TotalMilliseconds +
+				" ms");
+			stepTimes.Add(endTicks - startTicks);
+		}
+	}
+
+	private static readonly Repositories repos = new(new MethodExpressionParser());
+
+	private async Task<BinaryExecutable> LoadFromSourceAndSaveBinary(Package basePackage)
 	{
 		if (enableTestsAndDetailedOutput)
 		{
@@ -118,12 +168,18 @@ public sealed class Runner : IDisposable
 			Validate();
 			RunTests();
 		}
+		//TODO: use expressionToRun
 		var instructions = GenerateBinaryExecutable();
 		var optimizedInstructions = OptimizeBytecode(instructions);
 		if (saveStrictBinary)
 			SaveStrictBinaryBytecodeIfPossible(optimizedInstructions);
 		return optimizedInstructions;
 	}
+
+	private void PrintCompilationSummary(CompilerBackend backend, Platform platform, string exeFilePath) =>
+		Console.WriteLine("Compiled " + strictFilePath + " via " + backend + " in " +
+			TimeSpan.FromTicks(stepTimes.Sum()).ToString(@"s\.ffffff") + "s to " + platform +
+			" executable of " + new FileInfo(exeFilePath).Length + " bytes to: " + exeFilePath);
 
 	/*obs, integrate below!
 	var startTicks = DateTime.UtcNow.Ticks;
@@ -163,9 +219,7 @@ private Binary? binary;
 	private readonly string currentFolder;
 	private readonly Package package;
 	private readonly Type mainType;
-	*/
-
-
+	*
 	private async Task SaveLlvmExecutable(IReadOnlyList<Instruction> optimizedInstructions, Platform platform,
 		IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods)
 	{
@@ -209,14 +263,10 @@ private Binary? binary;
 		var exeFilePath = new NativeExecutableLinker().CreateExecutable(asmPath, platform, hasPrint);
 		PrintCompilationSummary("NASM", platform, exeFilePath);
 	}
-
-	private void PrintCompilationSummary(string backendName, Platform platform, string exeFilePath) =>
-		Console.WriteLine("Compiled " + mainType.Name + " via " + backendName + " in " +
-			TimeSpan.FromTicks(stepTimes.Sum()).ToString(@"s\.ffffff") + "s to " + platform +
-			" executable of " + new FileInfo(exeFilePath).Length.ToString("N0") +
-			" bytes to: " + exeFilePath);
-
-	public async Task Run(params string[] programArgs) =>
+*/
+	public async Task Run(string expressionToRun = Method.Run)
+	{
+		/*
 		binary != null
 			? RunFromPreloadedBytecode(programArgs)
 			: RunFromSource(programArgs);
@@ -255,6 +305,8 @@ private Binary? binary;
 		Log("Successfully parsed, optimized and executed " + mainType.Name + " in " +
 			TimeSpan.FromTicks(stepTimes.Sum()).ToString(@"s\.ffffff") + "s");
 		return this;
+	}
+*/
 	}
 
 	private void Parse()

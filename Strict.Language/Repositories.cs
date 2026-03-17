@@ -25,20 +25,17 @@ public sealed class Repositories
 
 	private readonly IAppCache cacheService;
 	private readonly ExpressionParser parser;
-	public Task<Package> LoadStrictPackage(string packageSubfolder = ""
+	public Task<Package> LoadStrictPackage(string packageNameAndSubfolder = nameof(Strict)
 #if DEBUG
 		, [CallerFilePath] string callerFilePath = "", [CallerLineNumber] int callerLineNumber = 0,
 		[CallerMemberName] string callerMemberName = ""
 #endif
 	) =>
 #if DEBUG
-		LoadFromUrl(new Uri(GitHubStrictUri.AbsoluteUri + (packageSubfolder == ""
-			? ""
-			: "/" + packageSubfolder)), callerFilePath, callerLineNumber, callerMemberName);
+		LoadFromUrl(new Uri(GitHubStrictUri.AbsoluteUri + packageNameAndSubfolder), callerFilePath,
+			callerLineNumber, callerMemberName);
 #else
-		LoadFromUrl(new Uri(GitHubStrictUri.AbsoluteUri + (packageSubfolder == ""
-			? ""
-			: "/" + packageSubfolder)));
+		LoadFromUrl(new Uri(GitHubStrictUri.AbsoluteUri + packageNameAndSubfolder));
 #endif
 
 	public async Task<Package> LoadFromUrl(Uri packageUrl
@@ -76,8 +73,8 @@ public sealed class Repositories
 		DevelopmentBaseFolder + organization + Context.ParentSeparator + packageFullName;
 
 	public sealed class OnlyGithubDotComUrlsAreAllowedForNow(string uri) : Exception(uri +
-		" is invalid. Valid url: " + GitHubStrictUri + ", it must always start with " +
-		"https://github.com and only include the organization and repo name, nothing else!");
+		" is invalid. Valid url: " + GitHubStrictUri + nameof(Strict) + ", it must always start " +
+		"with https://github.com and only include the organization and repo name!");
 
 	//ncrunch: no coverage start, only called once per session and only if not on development machine
 	private static readonly HashSet<string> PreviouslyCheckedDirectories = new();
@@ -243,8 +240,7 @@ public sealed class Repositories
 			Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), StrictPackages);
 	private const string StrictPackages = nameof(StrictPackages);
 	public const string StrictOrg = "strict-lang";
-	public static readonly Uri GitHubStrictUri =
-		new("https://github.com/" + StrictOrg + "/" + nameof(Strict));
+	public static readonly Uri GitHubStrictUri = new("https://github.com/" + StrictOrg + "/");
 
 	/// <summary>
 	/// Called by Package.Dispose

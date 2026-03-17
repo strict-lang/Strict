@@ -105,6 +105,8 @@ public sealed class BinaryType
 	public List<BinaryMember> Members = new();
 	public Dictionary<string, List<BinaryMethod>> MethodGroups = new();
 	public NameTable Table => table ?? CreateNameTable();
+	public bool UsesConsolePrint =>
+		MethodGroups.Values.Any(methods => methods.Any(method => method.UsesConsolePrint));
 
 	private NameTable CreateNameTable()
 	{

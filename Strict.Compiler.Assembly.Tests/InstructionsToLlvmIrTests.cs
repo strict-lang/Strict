@@ -242,6 +242,7 @@ public sealed class InstructionsToLlvmIrTests
 		Assert.That(ir, Does.Contain("call double @" + type.Name + "_Add_2("));
 	}
 
+	//TODO: move to BinaryMethodTests
 	[Test]
 	public void HasPrintInstructionsReturnsTrueForPrintInstructions()
 	{

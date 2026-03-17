@@ -12,8 +12,14 @@ namespace Strict.Compiler.Assembly;
 /// and MLIR's pass pipeline handles lowering to LLVM dialect then to LLVM IR automatically.
 /// Pipeline: bytecode → .mlir text → mlir-opt (lower to LLVM) → mlir-translate (to .ll) → clang → executable
 /// </summary>
-public sealed class InstructionsToMlir : InstructionsToAssemblyCompiler
+public sealed class InstructionsToMlir : InstructionsCompiler
 {
+	public override async Task Compile(BinaryExecutable binary)
+	{
+		//TODO
+	}
+
+	//TODO: duplicated code, should be in base or removed!
 	private sealed class CompiledMethodInfo(string symbol,
 		List<Instruction> instructions, List<string> parameterNames, List<string> memberNames)
 	{
@@ -626,7 +632,8 @@ public sealed class InstructionsToMlir : InstructionsToAssemblyCompiler
 		public Dictionary<Register, string> RegisterValues { get; } = new();
 		public Dictionary<Register, List<Expression>> RegisterInstances { get; } = new();
 		public Dictionary<string, string> VariableValues { get; } = new(StringComparer.Ordinal);
-		public Dictionary<string, List<Expression>> VariableInstances { get; } = new(StringComparer.Ordinal);
+		public Dictionary<string, List<Expression>> VariableInstances { get; } =
+			new(StringComparer.Ordinal);
 		public Dictionary<string, int> ParamIndexByName { get; } = new(StringComparer.Ordinal);
 		public string? LastConditionTemp { get; set; }
 		public HashSet<int> JumpTargets { get; } = [];

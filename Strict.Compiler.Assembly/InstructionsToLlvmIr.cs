@@ -12,8 +12,19 @@ namespace Strict.Compiler.Assembly;
 /// and platform-specific code generation. Much simpler than raw NASM: no manual register allocation,
 /// no ABI handling, no stack frame management — LLVM handles all of this.
 /// </summary>
-public sealed class InstructionsToLlvmIr : InstructionsToAssemblyCompiler
+public sealed class InstructionsToLlvmIr : InstructionsCompiler
 {
+	public override string Compile(BinaryExecutable binary)
+	{
+		/*TODO???
+		var llvmIr = CompileForPlatform(binary.EntryPointMethod, binary.Instructions, binary.Platform,
+			binary.PrecompiledMethods);
+		var outputPath = Path.ChangeExtension(binary.SourceFilePath, ".ll");
+		await File.WriteAllTextAsync(outputPath, llvmIr);
+		Console.WriteLine($"Compiled LLVM IR written to: {outputPath}");
+		*/
+	}
+
 	private sealed class CompiledMethodInfo(string symbol,
 		List<Instruction> instructions, List<string> parameterNames, List<string> memberNames)
 	{

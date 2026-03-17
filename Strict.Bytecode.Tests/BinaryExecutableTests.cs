@@ -5,7 +5,7 @@ using Type = Strict.Language.Type;
 
 namespace Strict.Bytecode.Tests;
 
-public sealed class BinaryTests : TestBytecode
+public sealed class BinaryExecutableTests : TestBytecode
 {
 	[Test]
 	public void SerializeAndLoadPreservesMethodInstructions()

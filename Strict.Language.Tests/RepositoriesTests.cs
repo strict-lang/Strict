@@ -74,8 +74,8 @@ public class RepositoriesTests
 	public async Task LoadStrictExamplesPackageAndUseBasePackageTypes()
 	{
 		using var basePackage = await repos.LoadStrictPackage();
-		using var mathPackage = await repos.LoadStrictPackage("Math");
-		using var examplesPackage = await repos.LoadStrictPackage("Examples");
+		using var mathPackage = await repos.LoadStrictPackage("Strict/Math");
+		using var examplesPackage = await repos.LoadStrictPackage("Strict/Examples");
 		using var program =
 			new Type(examplesPackage,
 					new TypeLines("ValidProgram", "has number", "Run Number", "\tnumber")).
