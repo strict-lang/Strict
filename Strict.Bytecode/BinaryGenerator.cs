@@ -12,15 +12,12 @@ namespace Strict.Bytecode;
 /// </summary>
 public sealed class BinaryGenerator
 {
-	public BinaryGenerator(Expression entryPoint)
-	{
+	public BinaryGenerator(Package basePackage) => binary = new BinaryExecutable(basePackage);
+	private readonly BinaryExecutable binary;
 
-	}
-
-	public BinaryExecutable Generate()
+	public BinaryExecutable Generate(string entryTypeFullName, Expression entryPoint)
 	{
-		var executable = new BinaryExecutable(package);
-		return GenerateInstructions(Expressions);
+		return binary.AddType(entryTypeFullName, GenerateEntryMethods(entryPoint));
 	}
 
 	/*obs

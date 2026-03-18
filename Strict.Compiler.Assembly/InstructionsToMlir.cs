@@ -14,10 +14,15 @@ namespace Strict.Compiler.Assembly;
 /// </summary>
 public sealed class InstructionsToMlir : InstructionsCompiler
 {
-	public override async Task Compile(BinaryExecutable binary)
+	public override Task<string> Compile(BinaryExecutable binary, Platform platform)
 	{
-		//TODO
+		var precompiledMethods = BuildPrecompiledMethodsInternal(binary);
+		var output = CompileForPlatform(Method.Run, binary.EntryPoint.Instructions, platform,
+			precompiledMethods);
+		return Task.FromResult(output);
 	}
+
+	public override string Extension => ".mlir";
 
 	//TODO: duplicated code, should be in base or removed!
 	private sealed class CompiledMethodInfo(string symbol,
@@ -350,46 +355,44 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 		context.RegisterValues[invoke.Register] = result;
 	}
 
-	private static List<Expression> ResolveConstructorArguments(MethodCall constructorCall)
+	private static Dictionary<string, CompiledMethodInfo> CollectMethods(
+		List<Instruction> instructions,
+		IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods)
 	{
-		var members =
-			constructorCall.ReturnType.Members.Where(member => !member.Type.IsTrait).ToList();
-		var result = new List<Expression>(members.Count);
-		for (var index = 0; index < members.Count; index++)
-			result.Add(index < constructorCall.Arguments.Count
-				? constructorCall.Arguments[index]
-				: new Value(members[index].Type, new ValueInstance(members[index].Type, 0)));
-		return result;
+		var methods = new Dictionary<string, CompiledMethodInfo>(StringComparer.Ordinal);
+		if (precompiledMethods == null)
+			return methods;
+		foreach (var invoke in instructions.OfType<Invoke>())
+		{
+			if (invoke.Method == null || invoke.Method.Method.Name == Method.From)
+				continue;
+			var method = invoke.Method.Method;
+			var methodKey = BuildMethodHeaderKeyInternal(method);
+			if (!precompiledMethods.TryGetValue(methodKey, out var precompiled))
+				continue;
+			if (methods.ContainsKey(methodKey))
+				continue;
+			var memberNames = invoke.Method.Instance != null
+				? method.Type.Members.Where(member => !member.Type.IsTrait).Select(member => member.Name).ToList()
+				: new List<string>();
+			var parameterNames = new List<string>(memberNames);
+			parameterNames.AddRange(method.Parameters.Select(parameter => parameter.Name));
+			methods[methodKey] = new CompiledMethodInfo(BuildMethodSymbol(method), [.. precompiled],
+				parameterNames, memberNames);
+		}
+		return methods;
 	}
 
-	private static IEnumerable<Expression> ResolveInstanceMemberArguments(MethodCall methodCall,
-		Dictionary<string, List<Expression>> variableInstances)
-	{
-		if (methodCall.Instance is MethodCall constructorCall &&
-			constructorCall.Method.Name == Method.From && constructorCall.Instance == null)
-			return ResolveConstructorArguments(constructorCall); //ncrunch: no coverage
-		var instanceName = methodCall.Instance?.ToString();
-		if (instanceName != null && variableInstances.TryGetValue(instanceName, out var values))
-			return values;
-		throw new NotSupportedException( //ncrunch: no coverage
-			"Cannot resolve instance values for method call: " + methodCall);
-	}
+	private static string BuildMethodSymbol(Method method) =>
+		method.Type.Name + "_" + method.Name + "_" + method.Parameters.Count;
 
-	private static string ResolveExpressionValue(Expression expression, EmitContext context)
-	{
-		if (expression is Value value && !value.Data.IsText)
-			return FormatDouble(value.Data.Number);
-		//ncrunch: no coverage start
-		var variableName = expression.ToString();
-		if (context.ParamIndexByName.TryGetValue(variableName, out var paramIndex))
-			return $"%param{paramIndex}";
-		if (context.VariableValues.TryGetValue(variableName, out var varValue))
-			return varValue;
-		throw new NotSupportedException(
-			"Unsupported expression for MLIR compilation: " + expression);
-	} //ncrunch: no coverage end
+	private static string BuildEntryPoint(string methodName) =>
+		"  func.func @main() -> i32 {\n" +
+		$"    %result = func.call @{methodName}() : () -> f64\n" +
+		"    %zero = arith.constant 0 : i32\n" +
+		"    return %zero : i32\n" +
+		"  }";
 
-	//ncrunch: no coverage start
 	private static void EmitJumpToId(JumpToId jumpToId, List<string> lines, EmitContext context,
 		int currentIndex)
 	{
@@ -399,7 +402,7 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 		context.JumpTargets.Add(targetIndex);
 		context.JumpTargets.Add(fallthroughIndex);
 		lines.Add($"    cf.cond_br {condTemp}, ^bb{targetIndex}, ^bb{fallthroughIndex}");
-	} //ncrunch: no coverage end
+	}
 
 	private static void EmitLoopBegin(LoopBeginInstruction loopBegin, List<string> lines,
 		EmitContext context, List<Instruction> instructions, int loopBeginIndex)
@@ -411,141 +414,21 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 		var startIndex = context.NextTemp();
 		var endIndex = context.NextTemp();
 		var step = context.NextTemp();
+		var inductionVar = context.NextTemp();
 		lines.Add($"    {startIndex} = arith.fptosi {startValue} : f64 to index");
 		lines.Add($"    {endIndex} = arith.fptosi {endValue} : f64 to index");
 		lines.Add($"    {step} = arith.constant 1 : index");
-		var bodyInstructionCount = CountLoopBodyInstructions(instructions, loopBeginIndex);
-		var executionStrategy = DetermineLoopStrategy(loopBegin, context, bodyInstructionCount);
-		var inductionVar = context.NextTemp();
-		context.LoopStack.Push(new LoopState(startIndex, endIndex, step, executionStrategy,
-			inductionVar));
-		switch (executionStrategy)
-		{
-		case LoopStrategy.Gpu:
-			EmitGpuLaunchBegin(lines, context, startIndex, endIndex, step, inductionVar);
-			break;
-		case LoopStrategy.CpuParallel:
-			lines.Add(
-				$"    scf.parallel ({inductionVar}) = ({startIndex}) to ({endValue}) step ({step}) {{");
-			break;
-		default:
-			lines.Add(
-				$"    scf.for {inductionVar} = {startIndex} to {endIndex} step {step} {{");
-			break;
-		}
+		context.LoopStack.Push(new LoopState(startIndex, endIndex, step, inductionVar));
+		lines.Add($"    scf.for {inductionVar} = {startIndex} to {endIndex} step {step} {{");
 	}
-
-	private static void EmitGpuLaunchBegin(List<string> lines, EmitContext context,
-		string startIndex, string endIndex, string step, string inductionVar)
-	{
-		context.UsesGpu = true;
-		var one = context.NextTemp();
-		var numElements = context.NextTemp();
-		var blockSize = context.NextTemp();
-		var gridSize = context.NextTemp();
-		var hostBuffer = context.NextTemp();
-		var deviceBuffer = context.NextTemp();
-		lines.Add($"    {one} = arith.constant 1 : index");
-		lines.Add($"    {numElements} = arith.subi {endIndex}, {startIndex} : index");
-		lines.Add($"    {blockSize} = arith.constant {GpuBlockSize} : index");
-		lines.Add($"    {gridSize} = arith.ceildivui {numElements}, {blockSize} : index");
-		lines.Add($"    {hostBuffer} = memref.alloc({numElements}) : {GpuBufferType}");
-		lines.Add($"    {deviceBuffer} = gpu.alloc({numElements}) : {GpuBufferType}");
-		lines.Add(
-			$"    gpu.memcpy {deviceBuffer}, {hostBuffer} : {GpuBufferType}, {GpuBufferType}");
-		lines.Add(
-			$"    gpu.launch blocks(%bx, %by, %bz) in (%grid_x = {gridSize}, %grid_y = {one}, %grid_z = {one})");
-		lines.Add(
-			$"               threads(%tx, %ty, %tz) in (%block_x = {blockSize}, %block_y = {one}, %block_z = {one}) {{");
-		var baseId = context.NextTemp();
-		var globalId = context.NextTemp();
-		var boundsCheck = context.NextTemp();
-		lines.Add($"      {baseId} = arith.muli %bx, %block_x : index");
-		lines.Add($"      {globalId} = arith.addi {baseId}, %tx : index");
-		lines.Add($"      {inductionVar} = arith.addi {startIndex}, {globalId} : index");
-		lines.Add($"      {boundsCheck} = arith.cmpi ult, {globalId}, {numElements} : index");
-		lines.Add($"      scf.if {boundsCheck} {{");
-		context.GpuBufferState = new GpuBufferInfo(hostBuffer, deviceBuffer, numElements);
-	}
-
-	private const int GpuBlockSize = 256;
-	private const string GpuBufferType = "memref<?xf64>";
-
-	private static int CountLoopBodyInstructions(List<Instruction> instructions, int loopBeginIndex)
-	{
-		var bodyCount = 0;
-		for (var index = loopBeginIndex + 1; index < instructions.Count; index++)
-		{
-			if (instructions[index] is LoopEndInstruction)
-				break;
-			bodyCount++;
-		}
-		return Math.Max(bodyCount, 1);
-	}
-
-	private static LoopStrategy DetermineLoopStrategy(LoopBeginInstruction loopBegin,
-		EmitContext context, int bodyInstructionCount)
-	{
-		if (!loopBegin.IsRange || loopBegin.EndIndex == null)
-			return LoopStrategy.Sequential;
-		if (!context.RegisterConstants.TryGetValue(loopBegin.EndIndex.Value, out var iterationCount))
-			return LoopStrategy.Sequential;
-		var complexity = iterationCount * bodyInstructionCount;
-		if (complexity > GpuComplexityThreshold)
-			return LoopStrategy.Gpu;
-		return complexity > ComplexityThreshold
-			? LoopStrategy.CpuParallel
-			: LoopStrategy.Sequential;
-	}
-
-	public const double ComplexityThreshold = 100_000;
-	public const double GpuComplexityThreshold = 10_000_000;
 
 	private static void EmitLoopEnd(List<string> lines, EmitContext context)
 	{
 		if (context.LoopStack.Count == 0)
 			return;
-		var loopState = context.LoopStack.Pop();
-		switch (loopState.Strategy)
-		{
-		case LoopStrategy.Gpu:
-			lines.Add("      }");
-			lines.Add("      gpu.terminator");
-			lines.Add("    }");
-			if (context.GpuBufferState != null)
-			{
-				var buffer = context.GpuBufferState;
-				lines.Add(
-					$"    gpu.memcpy {buffer.HostBuffer}, {buffer.DeviceBuffer} : {GpuBufferType}, {GpuBufferType}");
-				lines.Add($"    gpu.dealloc {buffer.DeviceBuffer} : {GpuBufferType}");
-				lines.Add($"    memref.dealloc {buffer.HostBuffer} : {GpuBufferType}");
-				context.GpuBufferState = null;
-			}
-			break;
-		case LoopStrategy.CpuParallel:
-			lines.Add("      scf.reduce");
-			lines.Add("    }");
-			break;
-		default:
-			lines.Add("    }");
-			break;
-		}
+		context.LoopStack.Pop();
+		lines.Add("    }");
 	}
-
-	private enum LoopStrategy { Sequential, CpuParallel, Gpu }
-
-	private sealed record LoopState(string StartIndex, string EndIndex, string Step,
-		LoopStrategy Strategy, string InductionVar);
-
-	private sealed record GpuBufferInfo(string HostBuffer, string DeviceBuffer,
-		string NumElements);
-
-	private static string BuildEntryPoint(string methodName) =>
-		"  func.func @main() -> i32 {\n" +
-		$"    %result = func.call @{methodName}() : () -> f64\n" +
-		"    %zero = arith.constant 0 : i32\n" +
-		"    return %zero : i32\n" +
-		"  }";
 
 	private static string FormatDouble(double value)
 	{
@@ -560,69 +443,49 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 	private static int CountStringBytes(string text) =>
 		text.Replace("\\0A", "\n").Replace("\\00", "\0").Length;
 
-	private static Dictionary<string, CompiledMethodInfo> CollectMethods(
-		List<Instruction> instructions,
-		IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods)
+	private static List<Expression> ResolveConstructorArguments(MethodCall constructorCall)
 	{
-		var methods = new Dictionary<string, CompiledMethodInfo>(StringComparer.Ordinal);
-		var queue = new Queue<(Method Method, bool IncludeMembers)>();
-		EnqueueInvokedMethods(instructions, queue);
-		while (queue.Count > 0)
-		{
-			var (method, includeMembers) = queue.Dequeue();
-			var methodKey = BuildMethodHeaderKeyInternal(method);
-			if (methods.TryGetValue(methodKey, out var existing))
-			{ //ncrunch: no coverage start
-				if (includeMembers && existing.MemberNames.Count == 0)
-					methods[methodKey] = BuildMethodInfo(method, true, precompiledMethods);
-				continue;
-			} //ncrunch: no coverage end
-			var methodInfo = BuildMethodInfo(method, includeMembers, precompiledMethods);
-			methods[methodKey] = methodInfo;
-			EnqueueInvokedMethods(methodInfo.Instructions, queue);
-		}
-		return methods;
+		var members = constructorCall.ReturnType.Members.Where(member => !member.Type.IsTrait).ToList();
+		var result = new List<Expression>(members.Count);
+		for (var index = 0; index < members.Count; index++)
+			result.Add(index < constructorCall.Arguments.Count
+				? constructorCall.Arguments[index]
+				: new Value(members[index].Type, new ValueInstance(members[index].Type, 0)));
+		return result;
 	}
 
-	private static CompiledMethodInfo BuildMethodInfo(Method method, bool includeMembers,
-		IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods)
+	private static IEnumerable<Expression> ResolveInstanceMemberArguments(MethodCall methodCall,
+		Dictionary<string, List<Expression>> variableInstances)
 	{
-		var methodKey = BuildMethodHeaderKeyInternal(method);
-		var instructions =
-			precompiledMethods != null && precompiledMethods.TryGetValue(methodKey, out var pre)
-				? [.. pre]
-				: GenerateInstructions(method);
-		var memberNames = includeMembers
-			? method.Type.Members.Where(m => !m.Type.IsTrait).Select(m => m.Name).ToList()
-			: new List<string>();
-		var parameterNames = new List<string>(memberNames);
-		parameterNames.AddRange(method.Parameters.Select(parameter => parameter.Name));
-		return new CompiledMethodInfo(BuildMethodSymbol(method), instructions, parameterNames,
-			memberNames);
+		if (methodCall.Instance is MethodCall constructorCall &&
+			constructorCall.Method.Name == Method.From && constructorCall.Instance == null)
+			return ResolveConstructorArguments(constructorCall);
+		var instanceName = methodCall.Instance?.ToString();
+		if (instanceName != null && variableInstances.TryGetValue(instanceName, out var values))
+			return values;
+		throw new NotSupportedException("Cannot resolve instance values for method call: " + methodCall);
 	}
 
-	private static string BuildMethodSymbol(Method method) =>
-		method.Type.Name + "_" + method.Name + "_" + method.Parameters.Count;
-
-	private static void EnqueueInvokedMethods(IEnumerable<Instruction> instructions,
-		Queue<(Method Method, bool IncludeMembers)> queue)
+	private static string ResolveExpressionValue(Expression expression, EmitContext context)
 	{
-		foreach (var invoke in instructions.OfType<Invoke>())
-			if (invoke.Method != null && invoke.Method.Method.Name != Method.From)
-				queue.Enqueue((invoke.Method.Method, invoke.Method.Instance != null));
+		if (expression is Value value && !value.Data.IsText)
+			return FormatDouble(value.Data.Number);
+		var variableName = expression.ToString();
+		if (context.ParamIndexByName.TryGetValue(variableName, out var paramIndex))
+			return $"%param{paramIndex}";
+		if (context.VariableValues.TryGetValue(variableName, out var variableValue))
+			return variableValue;
+		throw new NotSupportedException("Unsupported expression for MLIR compilation: " + expression);
 	}
 
-	private static List<Instruction> GenerateInstructions(Method method)
-	{
-		var body = method.GetBodyAndParseIfNeeded();
-		var expressions = body is Body b
-			? b.Expressions
-			: [body];
-		var arguments = method.Parameters.ToDictionary(p => p.Name,
-			p => new ValueInstance(p.Type, 0)); //ncrunch: no coverage
-		return new BinaryGenerator(new InvokedMethod(expressions, arguments, method.ReturnType),
-			new Registry()).Generate();
-	}
+	private sealed record LoopState(string StartIndex, string EndIndex, string Step,
+		string InductionVar);
+
+	private sealed record GpuBufferInfo(string HostBuffer, string DeviceBuffer,
+		string NumElements);
+
+	private static List<Instruction> GenerateInstructions(Method method) =>
+		throw new NotSupportedException("Method fallback instruction generation is not supported. Use BinaryExecutable entry-point/precompiled methods.");
 
 	private sealed class EmitContext(string functionName)
 	{

@@ -14,7 +14,6 @@ public sealed class BinaryType
 		this.typeFullName = typeFullName;
 		ValidateMagicAndVersion(reader);
 		table = new NameTable(reader);
-		//TODO: remove, just use this. : var type = EnsureTypeForEntry();
 		ReadMembers(reader, Members);
 		var methodGroups = reader.Read7BitEncodedInt();
 		for (var methodGroupIndex = 0; methodGroupIndex < methodGroups; methodGroupIndex++)
@@ -26,6 +25,17 @@ public sealed class BinaryType
 				overloads.Add(new BinaryMethod(reader, this, methodName));
 			MethodGroups[methodName] = overloads;
 		}
+	}
+
+	public BinaryType(BinaryExecutable binary, string typeFullName,
+		Dictionary<string, List<BinaryMethod>> methodGroups,
+		IReadOnlyList<BinaryMember>? members = null)
+	{
+		this.binary = binary;
+		this.typeFullName = typeFullName;
+		MethodGroups = methodGroups;
+		if (members != null)
+			Members = [.. members];
 	}
 
 	internal readonly BinaryExecutable binary;

@@ -24,12 +24,15 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 		public List<string> MemberNames { get; } = memberNames;
 	}
 
-	public override async Task Compile(BinaryExecutable binary)
-		//obs: public string Compile(Method method)
+	public override Task<string> Compile(BinaryExecutable binary, Platform platform)
 	{
-		var paramNames = method.Parameters.Select(p => p.Name);
-		return BuildAssembly(method.Name, paramNames, GenerateInstructions(method));
+		var precompiledMethods = BuildPrecompiledMethodsInternal(binary);
+		var output = CompileForPlatform(Method.Run, binary.EntryPoint.Instructions, platform,
+			precompiledMethods);
+		return Task.FromResult(output);
 	}
+
+	public override string Extension => ".asm";
 
 	public string CompileInstructions(string methodName, List<Instruction> instructions) =>
 		BuildAssembly(methodName, [], instructions);
@@ -94,17 +97,8 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 			$"    call _{methodName}", "    xor rdi, rdi", "    mov rax, 0x2000001", "    syscall");
 	}
 
-	private static List<Instruction> GenerateInstructions(Method method)
-	{
-		var body = method.GetBodyAndParseIfNeeded();
-		var expressions = body is Body b
-			? b.Expressions
-			: [body];
-		var arguments =
-			method.Parameters.ToDictionary(p => p.Name, p => new ValueInstance(p.Type, 0));
-		return new BinaryGenerator(new InvokedMethod(expressions, arguments, method.ReturnType),
-			new Registry()).Generate();
-	}
+	private static List<Instruction> GenerateInstructions(Method method) =>
+		throw new NotSupportedException("Method fallback instruction generation is not supported. Use BinaryExecutable entry-point/precompiled methods.");
 
 	private static string BuildAssembly(string methodName, IEnumerable<string> paramNames,
 		List<Instruction> instructions, Platform platform = Platform.Linux,

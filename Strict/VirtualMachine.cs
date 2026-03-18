@@ -12,19 +12,16 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 	public VirtualMachine Execute()
 	{
 		Clear();
-		foreach (var loopBegin in allInstructions.OfType<LoopBeginInstruction>())
+		foreach (var loopBegin in executable.EntryPoint.Instructions.OfType<LoopBeginInstruction>())
 			loopBegin.Reset();
-		if (initialVariables != null)
-			foreach (var (name, value) in initialVariables)
-				Memory.Frame.Set(name, value);
-		return RunInstructions(allInstructions);
+		return RunInstructions(executable.EntryPoint.Instructions);
 	}
 
 	private void Clear()
 	{
 		conditionFlag = false;
 		instructionIndex = 0;
-		instructions.Clear();
+		instructions = [];
 		Returns = null;
 		Memory.Registers.Clear();
 		Memory.Frame = new CallFrame();
@@ -32,7 +29,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 
 	private bool conditionFlag;
 	private int instructionIndex;
-	private IReadOnlyList<Instruction> instructions = new List<Instruction>();
+	private IReadOnlyList<Instruction> instructions = [];
 	public ValueInstance? Returns { get; private set; }
 	public Memory Memory { get; } = new();
 
@@ -103,7 +100,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		if (instruction is not WriteToTableInstruction writeToTableInstruction)
 			return;
 		Memory.AddToDictionary(writeToTableInstruction.Identifier,
-			Memory.Registers[writeToTableInstruction.Key], Memory.Registers[writeToTableInstruction.Value]);
+			Memory.Registers[writeToTableInstruction.Register], Memory.Registers[writeToTableInstruction.Value]);
 	}
 
 	private void TryLoopEndInstruction(Instruction instruction)
@@ -114,7 +111,15 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		loopBegin.LoopCount--;
 		if (loopBegin.LoopCount <= 0)
 			return;
-		instructionIndex = instructions.IndexOf(loopBegin) - 1;
+		instructionIndex = GetInstructionIndex(loopBegin) - 1;
+	}
+
+	private int GetInstructionIndex(Instruction instruction)
+	{
+		for (var index = 0; index < instructions.Count; index++)
+			if (ReferenceEquals(instructions[index], instruction))
+				return index;
+		return -1;
 	}
 
 	/// <summary>
@@ -142,20 +147,21 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		var evaluatedInstance = invoke.Method.Instance != null
 			? EvaluateExpression(invoke.Method.Instance)
 			: (ValueInstance?)null;
-		var invokeInstructions = GetPrecompiledMethodInstructions(invoke);
-		var result = invokeInstructions != null
-			? RunChildScope(invokeInstructions, //ncrunch: no coverage
-				() => InitializeMethodCallScope(invoke.Method, evaluatedArgs, evaluatedInstance))
-			: RunChildScope(GetByteCodeFromInvokedMethodCall(invoke));
+		var invokeInstructions = GetPrecompiledMethodInstructions(invoke) ??
+			throw new InvalidOperationException("No precompiled method instructions found for invoke");
+		var result = RunChildScope(invokeInstructions,
+			() => InitializeMethodCallScope(invoke.Method, evaluatedArgs, evaluatedInstance));
 		if (result != null)
 			Memory.Registers[invoke.Register] = result.Value;
 	}
 
-	private List<Instruction>? GetPrecompiledMethodInstructions(Method method) =>
-		precompiledMethodInstructions?.GetValueOrDefault(BinaryExecutable.BuildMethodHeader(method.Name,
-			method.Parameters.Select(parameter =>
-				new BinaryMember(parameter.Name, parameter.Type.Name, null)).ToList(),
-			method.ReturnType));
+	private List<Instruction>? GetPrecompiledMethodInstructions(Method method)
+	{
+		var foundInstructions = executable.FindInstructions(method.Type, method);
+		return foundInstructions == null
+			? null
+			: [.. foundInstructions];
+	}
 
 	private List<Instruction>? GetPrecompiledMethodInstructions(Invoke invoke) =>
 		invoke.Method == null
@@ -412,50 +418,32 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 					: rawValue;
 		}
 		var precompiledInstructions = GetPrecompiledMethodInstructions(call.Method);
-		if (precompiledInstructions != null)
-		{
-			var evaluatedArguments = call.Arguments.Select(EvaluateExpression).ToArray();
-			var evaluatedInstance = call.Instance != null
-				? EvaluateExpression(call.Instance)
-				: (ValueInstance?)null;
-			var precompiledResult = RunChildScope(precompiledInstructions,
-				() => InitializeMethodCallScope(call, evaluatedArguments, evaluatedInstance));
-			return precompiledResult ?? new ValueInstance(call.Method.ReturnType, 0);
-		}
-		var instance = call.Instance != null
+		if (precompiledInstructions == null)
+			throw new InvalidOperationException("No precompiled method instructions found for method call");
+		var evaluatedArguments = call.Arguments.Select(EvaluateExpression).ToArray();
+		var evaluatedInstance = call.Instance != null
 			? EvaluateExpression(call.Instance)
-			: default;
-		var args = call.Method.Parameters.Count > 0
-			? call.Arguments.Select(EvaluateExpression).ToArray()
-			: [];
-		var argDict = new Dictionary<string, ValueInstance>();
-		for (var parameterIndex = 0; parameterIndex < call.Method.Parameters.Count && parameterIndex < args.Length; parameterIndex++)
-			argDict[call.Method.Parameters[parameterIndex].Name] = args[parameterIndex]; //ncrunch: no coverage
-		var expressions = GetExpressionsFromMethod(call.Method);
-		var invokedMethod = !instance.Equals(default(ValueInstance))
-			? new InstanceInvokedMethod(expressions, argDict, instance, call.Method.ReturnType)
-			: new InvokedMethod(expressions, argDict, call.Method.ReturnType);
-		var childInstructions = new BinaryGenerator(invokedMethod, new Registry()).Generate();
-		var result = RunChildScope(childInstructions);
-		return result ?? new ValueInstance(call.Method.ReturnType, 0);
+			: (ValueInstance?)null;
+		var precompiledResult = RunChildScope(precompiledInstructions,
+			() => InitializeMethodCallScope(call, evaluatedArguments, evaluatedInstance));
+		return precompiledResult ?? new ValueInstance(call.Method.ReturnType, 0);
 	} //ncrunch: no coverage end
 
-	//ncrunch: no coverage start
 	private ValueInstance EvaluateFromConstructor(MethodCall call)
 	{
 		var targetType = call.ReturnType;
 		var members = targetType.Members;
 		var values = new ValueInstance[members.Count];
-		var argIndex = 0;
-		for (var i = 0; i < members.Count; i++)
-			if (members[i].Type.IsTrait)
-				values[i] = CreateTraitInstance(members[i].Type);
-			else if (argIndex < call.Arguments.Count)
-				values[i] = EvaluateExpression(call.Arguments[argIndex++]);
+		var argumentIndex = 0;
+		for (var memberIndex = 0; memberIndex < members.Count; memberIndex++)
+			if (members[memberIndex].Type.IsTrait)
+				values[memberIndex] = CreateTraitInstance(members[memberIndex].Type);
+			else if (argumentIndex < call.Arguments.Count)
+				values[memberIndex] = EvaluateExpression(call.Arguments[argumentIndex++]);
 			else
-				values[i] = new ValueInstance(members[i].Type, 0);
+				values[memberIndex] = new ValueInstance(members[memberIndex].Type, 0);
 		return new ValueInstance(targetType, values);
-	} //ncrunch: no coverage end
+	}
 
 	private bool GetValueByKeyForDictionaryAndStoreInRegister(Invoke invoke)
 	{
@@ -475,47 +463,6 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		if (!Equals(value, default(ValueInstance)))
 			Memory.Registers[invoke.Register] = value;
 		return true;
-	}
-
-	private List<Instruction> GetByteCodeFromInvokedMethodCall(Invoke invoke)
-	{
-		if (invoke.Method?.Instance == null && invoke.Method?.Method != null &&
-			invoke.PersistedRegistry != null)
-			return new BinaryGenerator(
-				new InvokedMethod(GetExpressionsFromMethod(invoke.Method.Method),
-					FormArgumentsForMethodCall(invoke), invoke.Method.Method.ReturnType),
-				invoke.PersistedRegistry).Generate();
-		if (!Memory.Frame.TryGet(invoke.Method?.Instance?.ToString() ??
-			throw new InvalidOperationException(), out var instance))
-			throw new VariableNotFoundInMemory(); //ncrunch: no coverage
-		return new BinaryGenerator(
-			new InstanceInvokedMethod(GetExpressionsFromMethod(invoke.Method!.Method),
-				FormArgumentsForMethodCall(invoke), instance, invoke.Method.Method.ReturnType),
-			invoke.PersistedRegistry ?? throw new InvalidOperationException()).Generate();
-	}
-
-	private static IReadOnlyList<Expression> GetExpressionsFromMethod(Method method)
-	{
-		var result = method.GetBodyAndParseIfNeeded();
-		return result is Body body
-			? body.Expressions
-			: [result];
-	}
-
-	private Dictionary<string, ValueInstance> FormArgumentsForMethodCall(Invoke invoke)
-	{
-		var arguments = new Dictionary<string, ValueInstance>();
-		if (invoke.Method == null)
-			return arguments; // ncrunch: no coverage
-		for (var index = 0; index < invoke.Method.Method.Parameters.Count; index++)
-		{
-			if (index >= invoke.Method.Arguments.Count)
-				break; //ncrunch: no coverage
-			var argument = invoke.Method.Arguments[index];
-			var argumentInstance = EvaluateExpression(argument);
-			arguments.Add(invoke.Method.Method.Parameters[index].Name, argumentInstance);
-		}
-		return arguments;
 	}
 
 	private bool TryExecuteReturn(Instruction instruction)
@@ -569,12 +516,11 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		}
 		var isDecreasing = loopBegin.IsDecreasing ?? false;
 		if (Memory.Frame.TryGet("index", out var indexValue))
-			Memory.Frame.Set("index", new ValueInstance(numberType, indexValue.Number + (isDecreasing
-				? -1
-				: 1)));
+			Memory.Frame.Set("index", new ValueInstance(executable.numberType, indexValue.Number +
+				(isDecreasing ? -1 : 1)));
 		else
-			Memory.Frame.Set("index",
-				new ValueInstance(numberType, loopBegin.StartIndexValue ?? 0));
+			Memory.Frame.Set("index", new ValueInstance(executable.numberType,
+				loopBegin.StartIndexValue ?? 0));
 		Memory.Frame.Set("value", Memory.Frame.Get("index"));
 	}
 
@@ -605,7 +551,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 				loopBegin.LoopCount = 0;
 			return;
 		}
-		Memory.Frame.Set("value", new ValueInstance(numberType, index + 1));
+		Memory.Frame.Set("value", new ValueInstance(executable.numberType, index + 1));
 	}
 
 	private void TryStoreInstructions(Instruction instruction)
@@ -632,7 +578,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			Memory.Registers[loadVariable.Register] =
 				Memory.Frame.Get(loadVariable.Identifier);
 		else if (instruction is LoadConstantInstruction loadConstant)
-			Memory.Registers[loadConstant.Register] = loadConstant.ValueInstance;
+			Memory.Registers[loadConstant.Register] = loadConstant.Constant;
 	}
 
 	private void TryExecuteRest(Instruction instruction)
@@ -646,8 +592,8 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		}
 		else if (instruction is Jump jump)
 			TryJumpOperation(jump);
-		else if (instruction is JumpIf jumpIf)
-			TryJumpIfOperation(jumpIf);
+		else if (instruction is JumpIfNotZero jumpIfNotZero)
+			TryJumpIfOperation(jumpIfNotZero);
 		else if (instruction is JumpToId jumpToId)
 			TryJumpToIdOperation(jumpToId);
 	}
@@ -722,14 +668,10 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			instructionIndex += instruction.InstructionsToSkip;
 	}
 
-	private void TryJumpIfOperation(JumpIf instruction)
+	private void TryJumpIfOperation(JumpIfNotZero instruction)
 	{
-		//TODO: this is the same stuff over and over again, wtf
-		if (conditionFlag && instruction.InstructionType is InstructionType.JumpIfTrue ||
-			!conditionFlag && instruction.InstructionType is InstructionType.JumpIfFalse ||
-			instruction is JumpIfNotZero jumpIfNotZero &&
-			Memory.Registers[jumpIfNotZero.Register].Number > 0)
-			instructionIndex += Convert.ToInt32(instruction.InstructionsToSkip);
+		if (Memory.Registers[instruction.Register].Number > 0)
+			instructionIndex += instruction.InstructionsToSkip;
 	}
 
 	private void TryJumpToIdOperation(JumpToId instruction)
@@ -737,13 +679,19 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		if (!conditionFlag && instruction.InstructionType is InstructionType.JumpToIdIfFalse ||
 			conditionFlag && instruction.InstructionType is InstructionType.JumpToIdIfTrue)
 		{
-			var id = instruction.Id;
-			var endIndex = instructions.IndexOf(instructions.First(jump =>
-				jump.InstructionType is InstructionType.JumpEnd && jump is JumpToId jumpViaId &&
-				jumpViaId.Id == id));
+			var endIndex = FindJumpEndInstructionIndex(instruction.Id);
 			if (endIndex != -1)
 				instructionIndex = endIndex;
 		}
+	}
+
+	private int FindJumpEndInstructionIndex(int id)
+	{
+		for (var index = 0; index < instructions.Count; index++)
+			if (instructions[index] is JumpToId { InstructionType: InstructionType.JumpEnd } jumpEnd &&
+				jumpEnd.Id == id)
+				return index;
+		return -1;
 	}
 
 	public sealed class OperandsRequired : Exception;

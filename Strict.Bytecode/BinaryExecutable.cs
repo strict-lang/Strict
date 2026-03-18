@@ -43,8 +43,8 @@ public sealed class BinaryExecutable(Package basePackage)
 				{
 					var typeFullName = GetEntryNameWithoutExtension(entry.FullName);
 					using var bytecode = entry.Open();
-					MethodsPerType.Add(typeFullName,
-						new BinaryType(new BinaryReader(bytecode), this, typeFullName));
+					var reader = new BinaryReader(bytecode);
+					MethodsPerType.Add(typeFullName, new BinaryType(reader, this, typeFullName));
 				}
 		}
 		catch (InvalidDataException ex)
@@ -67,7 +67,17 @@ public sealed class BinaryExecutable(Package basePackage)
 	/// contains all members of this type and all not stripped out methods that were actually used.
 	/// </summary>
 	public Dictionary<string, BinaryType> MethodsPerType = new();
+	private BinaryMethod? entryPoint;
+	public BinaryMethod EntryPoint => entryPoint ??= ResolveEntryPoint();
 	public sealed class InvalidFile(string message) : Exception(message);
+
+	private BinaryMethod ResolveEntryPoint()
+	{
+		foreach (var typeData in MethodsPerType.Values)
+			if (typeData.MethodGroups.TryGetValue(Method.Run, out var runMethods) && runMethods.Count > 0)
+				return runMethods[0];
+		throw new InvalidOperationException("No Run entry point found in binary executable");
+	}
 
 	/// <summary>
 	/// Writes optimized <see cref="Instruction" /> lists per type into a compact .strictbinary ZIP.
@@ -97,8 +107,10 @@ public sealed class BinaryExecutable(Package basePackage)
 		int parametersCount, string returnType = "") =>
 		MethodsPerType.TryGetValue(fullTypeName, out var methods)
 			? methods.MethodGroups.GetValueOrDefault(methodName)?.Find(m =>
-				m.Parameters.Count == parametersCount && m.ReturnTypeName == returnType)?.instructions
+				m.Parameters.Count == parametersCount && m.ReturnTypeName == returnType)?.Instructions
 			: null;
+
+	public BinaryMethod GetEntryPoint(string filePath) => EntryPoint;
 
 	public Instruction ReadInstruction(BinaryReader reader, NameTable table)
 	{
@@ -481,4 +493,23 @@ public sealed class BinaryExecutable(Package basePackage)
 	public bool UsesConsolePrint => MethodsPerType.Values.Any(type => type.UsesConsolePrint);
 	public int TotalInstructionsCount =>
 		MethodsPerType.Values.Sum(methods => methods.TotalInstructionCount);
+
+	internal BinaryExecutable AddType(string entryTypeFullName, object value)
+	{
+		if (value is Dictionary<string, List<BinaryMethod>> methodGroups)
+		{
+			MethodsPerType[entryTypeFullName] = new BinaryType(this, entryTypeFullName, methodGroups);
+			entryPoint = ResolveEntryPoint();
+			return this;
+		}
+		if (value is IReadOnlyList<Instruction> instructions)
+		{
+			var runMethod = new BinaryMethod(Method.Run, [], Type.None, instructions);
+			MethodsPerType[entryTypeFullName] = new BinaryType(this, entryTypeFullName,
+				new Dictionary<string, List<BinaryMethod>> { [Method.Run] = [runMethod] });
+			entryPoint = runMethod;
+			return this;
+		}
+		throw new NotSupportedException("Unsupported binary type payload: " + value.GetType().Name);
+	}
 }

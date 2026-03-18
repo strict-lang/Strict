@@ -14,16 +14,15 @@ namespace Strict.Compiler.Assembly;
 /// </summary>
 public sealed class InstructionsToLlvmIr : InstructionsCompiler
 {
-	public override string Compile(BinaryExecutable binary)
+	public override Task<string> Compile(BinaryExecutable binary, Platform platform)
 	{
-		/*TODO???
-		var llvmIr = CompileForPlatform(binary.EntryPointMethod, binary.Instructions, binary.Platform,
-			binary.PrecompiledMethods);
-		var outputPath = Path.ChangeExtension(binary.SourceFilePath, ".ll");
-		await File.WriteAllTextAsync(outputPath, llvmIr);
-		Console.WriteLine($"Compiled LLVM IR written to: {outputPath}");
-		*/
+		var precompiledMethods = BuildPrecompiledMethodsInternal(binary);
+		var output = CompileForPlatform(Method.Run, binary.EntryPoint.Instructions, platform,
+			precompiledMethods);
+		return Task.FromResult(output);
 	}
+
+	public override string Extension => ".ll";
 
 	private sealed class CompiledMethodInfo(string symbol,
 		List<Instruction> instructions, List<string> parameterNames, List<string> memberNames)
@@ -676,18 +675,10 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 	}
 
 	//ncrunch: no coverage start
-	private static List<Instruction> GenerateInstructions(Method method)
-	{
-		var body = method.GetBodyAndParseIfNeeded();
-		var expressions = body is Body b
-			? b.Expressions
-			: [body];
-		var arguments =
-			method.Parameters.ToDictionary(parameter => parameter.Name, //ncrunch: no coverage
-				parameter => new ValueInstance(parameter.Type, 0)); //ncrunch: no coverage
-		return new BinaryGenerator(new InvokedMethod(expressions, arguments, method.ReturnType),
-			new Registry()).Generate();
-	} //ncrunch: no coverage end
+	private static List<Instruction> GenerateInstructions(Method method) =>
+		throw new NotSupportedException("Method fallback instruction generation is not supported. Use BinaryExecutable entry-point/precompiled methods.");
+
+	//ncrunch: no coverage end
 
 	private static string BuildEntryPoint(string methodName) =>
 		string.Join("\n",
