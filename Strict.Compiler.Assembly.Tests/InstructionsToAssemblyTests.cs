@@ -500,8 +500,9 @@ public sealed class InstructionsToAssemblyTests
 			"\tAdd(2, 3)")).ParseMembersAndMethods(new MethodExpressionParser());
 		var runMethod = type.Methods.First(method => method.Name == Method.Run);
 		var addMethod = type.Methods.First(method => method.Name == "Add");
+		//TODO: this is convoluted!
 		var runInstructions = new BinaryGenerator(new MethodCall(runMethod)).Generate();
-		List<Instruction> addInstructions = [.. new BinaryGenerator(new MethodCall(addMethod)).Generate().EntryPoint.Instructions];
+		var addInstructions = new BinaryGenerator(new MethodCall(addMethod)).Generate().EntryPoint.instructions;
 		var methodKey = BuildMethodKey(addMethod);
 		var assembly = compiler.CompileForPlatform(type.Name, runInstructions, Platform.Windows,
 			new Dictionary<string, List<Instruction>> { [methodKey] = addInstructions });
@@ -527,8 +528,9 @@ public sealed class InstructionsToAssemblyTests
 		var addMethod = type.Methods.First(method => method.Name == "Add");
 		var multiplyMethod = type.Methods.First(method => method.Name == "Multiply");
 		var runInstructions = new BinaryGenerator(new MethodCall(runMethod)).Generate();
-		List<Instruction> addInstructions = [.. new BinaryGenerator(new MethodCall(addMethod)).Generate().EntryPoint.Instructions];
-		List<Instruction> multiplyInstructions = [.. new BinaryGenerator(new MethodCall(multiplyMethod)).Generate().EntryPoint.Instructions];
+		//TODO: convoluted, the binaryGenerator should have all this internally anyway!
+		var addInstructions = new BinaryGenerator(new MethodCall(addMethod)).Generate().EntryPoint.instructions;
+		var multiplyInstructions = new BinaryGenerator(new MethodCall(multiplyMethod)).Generate().EntryPoint.instructions;
 		var addMethodKey = BuildMethodKey(addMethod);
 		var multiplyMethodKey = BuildMethodKey(multiplyMethod);
 		var assembly = compiler.CompileForPlatform(type.Name, runInstructions, Platform.Linux,
@@ -605,8 +607,9 @@ public sealed class InstructionsToAssemblyTests
 			"\tcalc.Add")).ParseMembersAndMethods(new MethodExpressionParser());
 		var runMethod = type.Methods.First(method => method.Name == Method.Run);
 		var addMethod = type.Methods.First(method => method.Name == "Add");
+		//TODO: convoluted
 		var runInstructions = new BinaryGenerator(new MethodCall(runMethod)).Generate();
-		List<Instruction> addInstructions = [.. new BinaryGenerator(new MethodCall(addMethod)).Generate().EntryPoint.Instructions];
+		var addInstructions = new BinaryGenerator(new MethodCall(addMethod)).Generate().EntryPoint.instructions;
 		var methodKey = BuildMethodKey(addMethod);
 		var assembly = compiler.CompileForPlatform(type.Name, runInstructions, Platform.Linux,
 			new Dictionary<string, List<Instruction>> { [methodKey] = addInstructions });
@@ -661,6 +664,7 @@ public sealed class InstructionsToAssemblyTests
 				new BinaryMember(parameter.Name, parameter.Type.Name, null)).ToList(),
 			method.ReturnType);
 
+	//TODO: remove, not needed
 	private static List<Instruction> GenerateMethodInstructions(Method method) =>
-		[.. new BinaryGenerator(new MethodCall(method)).Generate().EntryPoint.Instructions];
+		new BinaryGenerator(new MethodCall(method)).Generate().EntryPoint.instructions;
 }

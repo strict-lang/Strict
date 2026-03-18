@@ -68,11 +68,15 @@ public sealed class BinaryExecutable(Package basePackage) : IEnumerable<Instruct
 	/// contains all members of this type and all not stripped out methods that were actually used.
 	/// </summary>
 	public Dictionary<string, BinaryType> MethodsPerType = new();
-	private global::Strict.Bytecode.Serialization.BinaryMethod? entryPoint;
-	public global::Strict.Bytecode.Serialization.BinaryMethod EntryPoint => entryPoint ??= ResolveEntryPoint();
+	private  BinaryMethod? entryPoint;
+	public BinaryMethod EntryPoint => entryPoint ??= ResolveEntryPoint();
 	public sealed class InvalidFile(string message) : Exception(message);
 
-	private global::Strict.Bytecode.Serialization.BinaryMethod ResolveEntryPoint()
+	public IReadOnlyList<BinaryMethod> GetRunMethods() =>
+		MethodsPerType.Values.FirstOrDefault(typeData => typeData.MethodGroups.ContainsKey(Method.Run))?
+			.MethodGroups[Method.Run] ?? [];
+
+	private BinaryMethod ResolveEntryPoint()
 	{
 		foreach (var typeData in MethodsPerType.Values)
 			if (typeData.MethodGroups.TryGetValue(Method.Run, out var runMethods) && runMethods.Count > 0)
@@ -522,6 +526,18 @@ public sealed class BinaryExecutable(Package basePackage) : IEnumerable<Instruct
 				null, isEntryType: true);
 		}
 		throw new NotSupportedException("Unsupported binary type payload: " + value.GetType().Name);
+	}
+
+	internal void SetEntryPoint(string typeFullName, string methodName, int parameterCount,
+		string returnTypeName)
+	{
+		if (!MethodsPerType.TryGetValue(typeFullName, out var typeData))
+			throw new InvalidOperationException("Entry point type not found: " + typeFullName);
+		if (!typeData.MethodGroups.TryGetValue(methodName, out var overloads))
+			throw new InvalidOperationException("Entry point method not found: " + methodName);
+		entryPoint = overloads.FirstOrDefault(method => method.parameters.Count == parameterCount &&
+			method.ReturnTypeName == returnTypeName) ?? throw new InvalidOperationException(
+			"Entry point overload not found: " + methodName);
 	}
 
 	public List<TResult> ConvertAll<TResult>(Converter<Instruction, TResult> converter) =>

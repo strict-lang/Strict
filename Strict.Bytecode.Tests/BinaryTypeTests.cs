@@ -29,7 +29,7 @@ public sealed class BinaryTypeTests : TestBytecode
     stream.Position = 0;
     using var reader = new BinaryReader(stream);
     var loaded = new BinaryType(reader, new BinaryExecutable(TestPackage.Instance), Type.Number);
-    Assert.That(loaded.MethodGroups["Compute"][0].Instructions.Count, Is.EqualTo(2));
+    Assert.That(loaded.MethodGroups["Compute"][0].instructions.Count, Is.EqualTo(2));
   }
 
   [Test]

@@ -1,4 +1,4 @@
-﻿using MediatR;
+using MediatR;
 using OmniSharp.Extensions.LanguageServer.Protocol;
 using OmniSharp.Extensions.LanguageServer.Protocol.Client.Capabilities;
 using OmniSharp.Extensions.LanguageServer.Protocol.Models;
@@ -41,7 +41,7 @@ public class CommandExecutor(ILanguageServerFacade languageServer,
 		var binary = new BinaryGenerator(call).Generate();
 		languageServer.Window.LogInfo($"Compiling: {
 			Environment.NewLine + string.Join(",",
-				binary.EntryPoint.Instructions.Select(instruction => instruction + Environment.NewLine))
+				binary.EntryPoint.instructions.Select(instruction => instruction + Environment.NewLine))
 		}");
 		vm.Execute(binary);
 	}

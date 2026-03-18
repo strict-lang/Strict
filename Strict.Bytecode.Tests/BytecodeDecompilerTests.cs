@@ -54,7 +54,7 @@ public sealed class BytecodeDecompilerTests : TestBytecode
 		}
 	}
 
-	private static string DecompileToTemp(IReadOnlyList<Instruction> instructions, string typeName)
+	private static string DecompileToTemp(List<Instruction> instructions, string typeName)
 	{
 		var strictBinary = new BinaryExecutable(TestPackage.Instance);
 		strictBinary.MethodsPerType[typeName] = CreateTypeMethods(instructions);
@@ -66,7 +66,7 @@ public sealed class BytecodeDecompilerTests : TestBytecode
 		return outputFolder;
 	}
 
-	private static BinaryType CreateTypeMethods(IReadOnlyList<Instruction> instructions)
+	private static BinaryType CreateTypeMethods(List<Instruction> instructions)
 	{
 		var methods = new BinaryType();
 		methods.Members = [];

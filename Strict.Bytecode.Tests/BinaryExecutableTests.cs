@@ -15,7 +15,7 @@ public sealed class BinaryExecutableTests : TestBytecode
 		var filePath = CreateTempFilePath();
 		sourceBinary.Serialize(filePath);
 		var loadedBinary = new BinaryExecutable(filePath, TestPackage.Instance);
-		Assert.That(loadedBinary.MethodsPerType[Type.Number].MethodGroups[Method.Run][0].Instructions.Count,
+		Assert.That(loadedBinary.MethodsPerType[Type.Number].MethodGroups[Method.Run][0].instructions.Count,
 			Is.EqualTo(1));
 	}
 
@@ -77,7 +77,7 @@ public sealed class BinaryExecutableTests : TestBytecode
 			Throws.TypeOf<BinaryExecutable.InvalidFile>());
 	}
 
-	private static BinaryType CreateMethods(IReadOnlyList<Instruction> instructions) =>
+	private static BinaryType CreateMethods(List<Instruction> instructions) =>
 		new()
 		{
 			Members = [],

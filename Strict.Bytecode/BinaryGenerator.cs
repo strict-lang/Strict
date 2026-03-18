@@ -61,8 +61,26 @@ public sealed class BinaryGenerator
 	public BinaryExecutable Generate() =>
 		Generate(entryTypeFullName, Expressions, ReturnType);
 
+	public static BinaryExecutable GenerateFromRunMethods(Method preferredEntryMethod,
+		IReadOnlyList<Method> runMethods)
+	{
+		var generator = new BinaryGenerator(GetBasePackage(preferredEntryMethod), [],
+			preferredEntryMethod.ReturnType);
+		return generator.Generate(preferredEntryMethod, runMethods);
+	}
+
 	public BinaryExecutable Generate(string typeFullName, Expression entryPointExpression) =>
 		Generate(typeFullName, [entryPointExpression], entryPointExpression.ReturnType);
+
+	private BinaryExecutable Generate(Method preferredEntryMethod, IReadOnlyList<Method> runMethods)
+	{
+		var methodsByType = GenerateRunMethods(runMethods);
+		foreach (var (compiledTypeFullName, methodGroups) in methodsByType)
+			binary.AddType(compiledTypeFullName, methodGroups);
+		binary.SetEntryPoint(preferredEntryMethod.Type.FullName, preferredEntryMethod.Name,
+			preferredEntryMethod.Parameters.Count, preferredEntryMethod.ReturnType.Name);
+		return binary;
+	}
 
 	private BinaryExecutable Generate(string typeFullName, IReadOnlyList<Expression> entryExpressions,
 		Type runReturnType)
@@ -76,6 +94,14 @@ public sealed class BinaryGenerator
 	private static Package GetBasePackage(Expression expression)
 	{
 		Context context = expression.ReturnType;
+		while (context is not Package)
+			context = context.Parent;
+		return (Package)context;
+	}
+
+	private static Package GetBasePackage(Method method)
+	{
+		Context context = method.Type;
 		while (context is not Package)
 			context = context.Parent;
 		return (Package)context;
@@ -486,6 +512,60 @@ public sealed class BinaryGenerator
 
 	private sealed class InstanceNameNotFound : Exception;
 
+	private Dictionary<string, Dictionary<string, List<BinaryType.BinaryMethod>>> GenerateRunMethods(
+		IReadOnlyList<Method> runMethods)
+	{
+		var methodsByType = new Dictionary<string, Dictionary<string, List<BinaryType.BinaryMethod>>>(
+			StringComparer.Ordinal);
+		var methodsToCompile = new Queue<Method>();
+		var compiledMethodKeys = new HashSet<string>(StringComparer.Ordinal);
+
+		void EnqueueInvokedMethods(IReadOnlyList<Instruction> methodInstructions)
+		{
+			foreach (var invoke in methodInstructions.OfType<Invoke>())
+			{
+				if (invoke.Method?.Method == null || invoke.Method.Method.Name == Method.From)
+					continue;
+				var invokedMethod = invoke.Method.Method;
+				var methodKey = BuildMethodKey(invokedMethod);
+				if (compiledMethodKeys.Add(methodKey))
+					methodsToCompile.Enqueue(invokedMethod);
+			}
+		}
+
+		foreach (var runMethod in runMethods)
+		{
+			var methodBody = runMethod.GetBodyAndParseIfNeeded();
+			var methodExpressions = methodBody is Body body
+				? body.Expressions
+				: [methodBody];
+			var methodInstructions = new BinaryGenerator(binary.basePackage, methodExpressions,
+				runMethod.ReturnType).GenerateInstructionList();
+			var parameters = runMethod.Parameters.Select(parameter =>
+				new BinaryMember(parameter.Name, parameter.Type.FullName, null)).ToList();
+			AddCompiledMethod(methodsByType, runMethod.Type.FullName, runMethod.Name, parameters,
+				runMethod.ReturnType.Name, methodInstructions);
+			compiledMethodKeys.Add(BuildMethodKey(runMethod));
+			EnqueueInvokedMethods(methodInstructions);
+		}
+		while (methodsToCompile.Count > 0)
+		{
+			var method = methodsToCompile.Dequeue();
+			var body = method.GetBodyAndParseIfNeeded();
+			var methodExpressions = body is Body methodBody
+				? methodBody.Expressions
+				: [body];
+			var methodInstructions = new BinaryGenerator(binary.basePackage, methodExpressions,
+				method.ReturnType).GenerateInstructionList();
+			var parameters = method.Parameters.Select(parameter =>
+				new BinaryMember(parameter.Name, parameter.Type.FullName, null)).ToList();
+			AddCompiledMethod(methodsByType, method.Type.FullName, method.Name, parameters,
+				method.ReturnType.Name, methodInstructions);
+			EnqueueInvokedMethods(methodInstructions);
+		}
+		return methodsByType;
+	}
+
 	private Dictionary<string, Dictionary<string, List<BinaryType.BinaryMethod>>> GenerateEntryMethods(
 		string entryTypeFullName, IReadOnlyList<Expression> entryExpressions, Type runReturnType)
 	{
@@ -533,6 +613,12 @@ public sealed class BinaryGenerator
 	}
 
 	private List<Instruction> GenerateInstructionList() => GenerateInstructions(Expressions);
+
+	private static string BuildMethodKey(Method method) => method.Type.FullName + ":" +
+		BinaryExecutable.BuildMethodHeader(method.Name,
+			method.Parameters.Select(parameter =>
+				new BinaryMember(parameter.Name, parameter.Type.FullName, null)).ToList(),
+			method.ReturnType);
 
 	private static void EnqueueCalledMethods(IReadOnlyList<Instruction> instructions,
 		Queue<Method> methodsToCompile, HashSet<string> compiledMethodKeys)

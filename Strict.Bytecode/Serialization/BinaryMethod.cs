@@ -2,11 +2,6 @@ using Strict.Bytecode.Instructions;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 
-[assembly: InternalsVisibleTo("Strict.Optimizers")]
-[assembly: InternalsVisibleTo("Strict.Compiler")]
-[assembly: InternalsVisibleTo("Strict.Compiler.Assembly")]
-[assembly: InternalsVisibleTo("Strict.Compiler.Assembly.Tests")]
-
 namespace Strict.Bytecode.Serialization;
 
 public record BinaryMethod
@@ -22,8 +17,8 @@ public record BinaryMethod
 
 	public string Name { get; }
 	public string ReturnTypeName { get; }
-	internal List<BinaryMember> parameters = [];
-	internal List<Instruction> instructions = [];
+	public List<BinaryMember> parameters = [];
+	public List<Instruction> instructions = [];
 
 	public BinaryMethod(BinaryReader reader, BinaryType type, string methodName)
 	{

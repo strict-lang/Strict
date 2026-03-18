@@ -14,7 +14,7 @@ public sealed class InstructionsToCuda : InstructionsCompiler
 {
 	public override Task<string> Compile(BinaryExecutable binary, Platform platform)
 	{
-		var output = BuildCudaKernel(Method.Run, binary.EntryPoint.Instructions);
+		var output = BuildCudaKernel(Method.Run, binary.EntryPoint.instructions);
 		return Task.FromResult(output);
 	}
 

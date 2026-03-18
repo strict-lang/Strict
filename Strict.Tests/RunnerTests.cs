@@ -289,6 +289,49 @@ public sealed class RunnerTests
 	}
 
 	[Test]
+	public void BuildWithExpressionEntryPointThrows()
+	{
+		var runner = new Runner(SimpleCalculatorFilePath, TestPackage.Instance, "(1, 2, 3).Length");
+		Assert.That(async () => await runner.Build(Platform.Windows),
+			Throws.TypeOf<NotSupportedException>().With.Message.Contains("expression"));
+	}
+
+	[Test]
+	public async Task BuildSumExecutableAcceptsRuntimeArguments()
+	{
+		var tempDirectory = Path.Combine(Path.GetTempPath(), "Strict" + Guid.NewGuid().ToString("N"));
+		Directory.CreateDirectory(tempDirectory);
+		try
+		{
+			var sumFilePath = Path.Combine(tempDirectory, Path.GetFileName(SumFilePath));
+			File.Copy(SumFilePath, sumFilePath);
+			await new Runner(sumFilePath, TestPackage.Instance).Build(OperatingSystem.IsWindows()
+				? Platform.Windows
+				: OperatingSystem.IsMacOS()
+					? Platform.MacOS
+					: Platform.Linux);
+			var executablePath = OperatingSystem.IsWindows()
+				? Path.ChangeExtension(sumFilePath, ".exe")
+				: Path.ChangeExtension(sumFilePath, null);
+			using var process = new Process();
+			process.StartInfo.FileName = executablePath;
+			process.StartInfo.Arguments = "5 10";
+			process.StartInfo.WorkingDirectory = tempDirectory;
+			process.StartInfo.UseShellExecute = false;
+			process.StartInfo.RedirectStandardOutput = true;
+			process.Start();
+			var output = await process.StandardOutput.ReadToEndAsync();
+			await process.WaitForExitAsync();
+			Assert.That(output.Replace("\r\n", "\n"), Does.Contain("15\n"));
+		}
+		finally
+		{
+			if (Directory.Exists(tempDirectory))
+				Directory.Delete(tempDirectory, true);
+		}
+	}
+
+	[Test]
 	public void RunWithPlatformWindowsThrowsToolNotFoundWhenNasmMissing()
 	{
 		if (NativeExecutableLinker.IsNasmAvailable)
