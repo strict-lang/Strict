@@ -14,6 +14,7 @@ namespace Strict.Compiler.Assembly;
 /// </summary>
 public sealed class InstructionsToMlir : InstructionsCompiler
 {
+	//TODO: clean up!
 	/// <summary>Minimum iteration×body-instruction complexity to emit scf.parallel instead of scf.for.</summary>
 	public const int ComplexityThreshold = 100_000;
 	/// <summary>Minimum complexity to offload to GPU via gpu.launch instead of scf.parallel.</summary>

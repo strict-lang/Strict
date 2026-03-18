@@ -1,9 +1,12 @@
+using Strict.Bytecode;
 using Strict.Bytecode.Serialization;
 using Strict.Compiler;
 using Strict.Compiler.Assembly;
+using Strict.Expressions;
 using Strict.Language;
 using Strict.Language.Tests;
 using System.Diagnostics;
+using System.IO.Compression;
 
 namespace Strict.Tests;
 
@@ -190,17 +193,17 @@ public sealed class RunnerTests
 	}
 
 	[Test]
-	public void RunWithPlatformWindowsCreatesAsmFileWithWindowsEntryPoint()
+	public async Task RunWithPlatformWindowsCreatesAsmFileWithWindowsEntryPoint()
 	{
 		var pureAdderPath = GetExamplesFilePath("PureAdder");
 		var asmPath = Path.ChangeExtension(pureAdderPath, ".asm");
-		using var runner = new Runner(pureAdderPath, TestPackage.Instance);
+		var runner = new Runner(pureAdderPath, TestPackage.Instance);
 		if (!NativeExecutableLinker.IsNasmAvailable)
 			return; //ncrunch: no coverage
-		runner.Build(Platform.Windows, CompilerBackend.Nasm);
+		await runner.Build(Platform.Windows, CompilerBackend.Nasm);
 		Assert.That(File.Exists(asmPath), Is.True, ".asm file should be created");
 		Assert.That(writer.ToString(), Does.Contain("Saved Windows NASM assembly to:"));
-		var asmContent = File.ReadAllText(asmPath);
+		var asmContent = await File.ReadAllTextAsync(asmPath);
 		Assert.That(asmContent, Does.Contain("section .text"));
 		Assert.That(asmContent, Does.Contain("global PureAdder"));
 		Assert.That(asmContent, Does.Contain("global main"));
@@ -208,51 +211,51 @@ public sealed class RunnerTests
 	}
 
 	[Test]
-	public void RunWithPlatformLinuxCreatesAsmFileWithStartEntryPoint()
+	public async Task RunWithPlatformLinuxCreatesAsmFileWithStartEntryPoint()
 	{
 		var pureAdderPath = GetExamplesFilePath("PureAdder");
 		var asmPath = Path.ChangeExtension(pureAdderPath, ".asm");
 		var executablePath = Path.ChangeExtension(asmPath, null);
-		using var runner = new Runner(pureAdderPath, TestPackage.Instance);
+		var runner = new Runner(pureAdderPath, TestPackage.Instance);
 		if (!NativeExecutableLinker.IsNasmAvailable)
 			return; //ncrunch: no coverage start
 		if (OperatingSystem.IsLinux())
 		{
-			runner.Build(Platform.Linux, CompilerBackend.Nasm);
+			await runner.Build(Platform.Linux, CompilerBackend.Nasm);
 			Assert.That(File.Exists(executablePath), Is.True, "Linux executable should be created");
 			Assert.That(writer.ToString(), Does.Contain("Saved Linux NASM assembly to:"));
 			Assert.That(File.Exists(asmPath), Is.True, ".asm file should be created");
-			var asmContent = File.ReadAllText(asmPath);
+			var asmContent = await File.ReadAllTextAsync(asmPath);
 			Assert.That(asmContent, Does.Contain("global _start"));
 			Assert.That(asmContent, Does.Contain("_start:"));
 		} //ncrunch: no coverage end
 		else
-			runner.Build(Platform.Windows, CompilerBackend.Nasm);
+			await runner.Build(Platform.Windows, CompilerBackend.Nasm);
 	}
 
 	[Test]
-	public void RunWithPlatformWindowsSupportsProgramsWithRuntimeMethodCalls()
+	public async Task RunWithPlatformWindowsSupportsProgramsWithRuntimeMethodCalls()
 	{
 		var llvmPath = Path.ChangeExtension(SimpleCalculatorFilePath, ".ll");
-		using var runner = new Runner(SimpleCalculatorFilePath, TestPackage.Instance);
+		var runner = new Runner(SimpleCalculatorFilePath, TestPackage.Instance);
 		if (!LlvmLinker.IsClangAvailable)
 			return; //ncrunch: no coverage start
-		runner.Build(Platform.Windows);
+		await runner.Build(Platform.Windows);
 		Assert.That(File.Exists(llvmPath), Is.True, ".ll file should be created");
 		Assert.That(writer.ToString(), Does.Contain("Saved Windows MLIR to:"));
 	} //ncrunch: no coverage end
 
 	[Test]
-	public void RunFromBytecodeWithPlatformWindowsSupportsRuntimeMethodCalls()
+	public async Task RunFromBytecodeWithPlatformWindowsSupportsRuntimeMethodCalls()
 	{
 		var binaryFilePath = GetExamplesBinaryFile("SimpleCalculator");
 		var llvmPath = Path.ChangeExtension(binaryFilePath, ".ll");
 		if (File.Exists(llvmPath))
 			File.Delete(llvmPath); //ncrunch: no coverage
-		using var runner = new Runner(binaryFilePath, TestPackage.Instance);
+		var runner = new Runner(binaryFilePath, TestPackage.Instance);
 		if (!LlvmLinker.IsClangAvailable)
 			return; //ncrunch: no coverage start
-		runner.Build(Platform.Windows);
+		await runner.Build(Platform.Windows);
 		Assert.That(File.Exists(llvmPath), Is.True,
 			".ll file should be created for bytecode platform compilation");
 		Assert.That(writer.ToString(), Does.Contain("Saved Windows MLIR to:"));
@@ -261,11 +264,11 @@ public sealed class RunnerTests
 	[TestCase(CompilerBackend.MlirDefault)]
 	[TestCase(CompilerBackend.Llvm)]
 	[TestCase(CompilerBackend.Nasm)]
-	public void RunWithPlatformDoesNotExecuteProgram(CompilerBackend backend)
+	public async Task RunWithPlatformDoesNotExecuteProgram(CompilerBackend backend)
 	{
 		var calculatorFilePath = GetExamplesFilePath("SimpleCalculator");
-		using var runner = new Runner(calculatorFilePath, TestPackage.Instance);
-		runner.Build(OperatingSystem.IsWindows()
+		var runner = new Runner(calculatorFilePath, TestPackage.Instance);
+		await runner.Build(OperatingSystem.IsWindows()
 			? Platform.Windows
 			: Platform.Linux, backend);
 		Assert.That(writer.ToString(), Does.Not.Contain("executed"),
@@ -290,52 +293,53 @@ public sealed class RunnerTests
 	{
 		if (NativeExecutableLinker.IsNasmAvailable)
 			return; //ncrunch: no coverage start
-		using var runner = new Runner(GetExamplesFilePath("PureAdder"), TestPackage.Instance);
-		Assert.Throws<ToolNotFoundException>(() => runner.Build(Platform.Windows));
+		var runner = new Runner(GetExamplesFilePath("PureAdder"), TestPackage.Instance);
+		Assert.That(async () => await runner.Build(Platform.Windows),
+			Throws.TypeOf<ToolNotFoundException>());
 	} //ncrunch: no coverage end
 
 	[Test]
-	public void RunWithMlirBackendCreatesMlirFileForLinux()
+	public async Task RunWithMlirBackendCreatesMlirFileForLinux()
 	{
 		if (!LlvmLinker.IsClangAvailable)
 			return; //ncrunch: no coverage
 		var pureAdderPath = GetExamplesFilePath("PureAdder");
 		var llvmPath = Path.ChangeExtension(pureAdderPath, ".ll");
-		using var runner = new Runner(pureAdderPath, TestPackage.Instance);
-		runner.Build(Platform.Linux);
+		var runner = new Runner(pureAdderPath, TestPackage.Instance);
+		await runner.Build(Platform.Linux);
 		Assert.That(File.Exists(llvmPath), Is.True, ".ll file should be created");
 		Assert.That(writer.ToString(), Does.Contain("Saved Linux MLIR to:"));
-		var irContent = File.ReadAllText(llvmPath);
+		var irContent = await File.ReadAllTextAsync(llvmPath);
 		Assert.That(irContent, Does.Contain("define double @PureAdder("));
 		Assert.That(irContent, Does.Contain("define i32 @main()"));
 		Assert.That(irContent, Does.Contain("ret i32 0"));
 	}
 
 	[Test]
-	public void RunWithLlvmBackendProducesLinuxExecutable()
+	public async Task RunWithLlvmBackendProducesLinuxExecutable()
 	{
 		if (!LlvmLinker.IsClangAvailable || !OperatingSystem.IsLinux())
 			return; //ncrunch: no coverage start
 		var pureAdderPath = GetExamplesFilePath("PureAdder");
 		var llvmPath = Path.ChangeExtension(pureAdderPath, ".ll");
 		var exePath = Path.ChangeExtension(llvmPath, null);
-		using var runner = new Runner(pureAdderPath, TestPackage.Instance);
-		runner.Build(Platform.Linux);
+		var runner = new Runner(pureAdderPath, TestPackage.Instance);
+		await runner.Build(Platform.Linux);
 		Assert.That(writer.ToString(), Does.Contain("via LLVM"));
 		Assert.That(File.Exists(exePath), Is.True,
 			"Linux executable should be created by LLVM backend");
 	} //ncrunch: no coverage end
 
 	[Test]
-	public void AsmFileIsNotCreatedWhenRunningFromPrecompiledBytecode()
+	public async Task AsmFileIsNotCreatedWhenRunningFromPrecompiledBytecode()
 	{
 		var asmPath = Path.ChangeExtension(SimpleCalculatorFilePath, ".asm");
 		writer.GetStringBuilder().Clear();
 		if (File.Exists(asmPath))
 			File.Delete(asmPath); //ncrunch: no coverage
-		using var runner = new Runner(Path.ChangeExtension(SimpleCalculatorFilePath, BytecodeSerializer.Extension),
+		var runner = new Runner(Path.ChangeExtension(SimpleCalculatorFilePath, BytecodeSerializer.Extension),
 			TestPackage.Instance);
-		runner.Run();
+		await runner.Run();
 		Assert.That(File.Exists(asmPath), Is.False,
 			".asm file should not be created when loading precompiled bytecode");
 	}
@@ -343,7 +347,7 @@ public sealed class RunnerTests
 	[Test]
 	public void SaveStrictBinaryWithTypeBytecodeEntriesOnly()
 	{
-		using var archive = System.IO.Compression.ZipFile.OpenRead(
+		using var archive = ZipFile.OpenRead(
 			Path.ChangeExtension(SimpleCalculatorFilePath, BytecodeSerializer.Extension));
 		var entries = archive.Entries.Select(entry => entry.FullName).ToList();
 		Assert.That(
@@ -360,12 +364,12 @@ public sealed class RunnerTests
 	public void ExportOnlyUsedMethodsForBaseTypes()
 	{
 		var binaryFilePath = GetExamplesBinaryFile("SimpleCalculator");
-		using var archive = System.IO.Compression.ZipFile.OpenRead(binaryFilePath);
+		using var archive = ZipFile.OpenRead(binaryFilePath);
 		var numberMethodCount = ReadMethodHeaderCount(archive, "Strict/Number.bytecode");
 		Assert.That(numberMethodCount, Is.LessThanOrEqualTo(3));
 	}
 
-	private static int ReadMethodHeaderCount(System.IO.Compression.ZipArchive archive,
+	private static int ReadMethodHeaderCount(ZipArchive archive,
 		string entryName)
 	{
 		var entry = archive.GetEntry(entryName) ?? throw new InvalidOperationException(entryName);
@@ -389,54 +393,54 @@ public sealed class RunnerTests
 	}
 
 	[Test]
-	public void RunSumWithProgramArguments()
+	public async Task RunSumWithProgramArguments()
 	{
-		using var runner = new Runner(SumFilePath, TestPackage.Instance);
-		runner.Run(programArgs: ["5", "10", "20"]);
+		var runner = new Runner(SumFilePath, TestPackage.Instance, "5 10 20");
+		await runner.Run();
 		Assert.That(writer.ToString(), Does.Contain("35"));
 	}
 
 	private static string SumFilePath => GetExamplesFilePath("Sum");
 
 	[Test]
-	public void RunSumWithNoArgumentsUsesEmptyList()
+	public async Task RunSumWithNoArgumentsUsesEmptyList()
 	{
-		using var runner = new Runner(SumFilePath, TestPackage.Instance);
-		runner.Run(programArgs: ["0"]);
+		var runner = new Runner(SumFilePath, TestPackage.Instance, "0");
+		await runner.Run();
 		Assert.That(writer.ToString(), Does.Contain("0"));
 	}
 
 	[Test]
-	public void RunFibonacciRunner()
+	public async Task RunFibonacciRunner()
 	{
-		using var _ = new Runner(GetExamplesFilePath("FibonacciRunner"), TestPackage.Instance).Run();
+		await new Runner(GetExamplesFilePath("FibonacciRunner"), TestPackage.Instance).Run();
 		var output = writer.ToString();
 		Assert.That(output, Does.Contain("Fibonacci(10) = 55"));
 		Assert.That(output, Does.Contain("Fibonacci(5) = 5"));
 	}
 
 	[Test]
-	public void RunNumberStats()
+	public async Task RunNumberStats()
 	{
-		using var _ = new Runner(GetExamplesFilePath("NumberStats"), TestPackage.Instance).Run();
+		await new Runner(GetExamplesFilePath("NumberStats"), TestPackage.Instance).Run();
 		var output = writer.ToString();
 		Assert.That(output, Does.Contain("Sum: 150"));
 		Assert.That(output, Does.Contain("Maximum: 50"));
 	}
 
 	[Test]
-	public void RunGcdCalculator()
+	public async Task RunGcdCalculator()
 	{
-		using var _ = new Runner(GetExamplesFilePath("GcdCalculator"), TestPackage.Instance).Run();
+		await new Runner(GetExamplesFilePath("GcdCalculator"), TestPackage.Instance).Run();
 		var output = writer.ToString();
 		Assert.That(output, Does.Contain("GCD(48, 18) = 6"));
 		Assert.That(output, Does.Contain("GCD(12, 8) = 4"));
 	}
 
 	[Test]
-	public void RunPixel()
+	public async Task RunPixel()
 	{
-		using var _ = new Runner(GetExamplesFilePath("Pixel"), TestPackage.Instance).Run();
+		await new Runner(GetExamplesFilePath("Pixel"), TestPackage.Instance).Run();
 		var output = writer.ToString();
 		Assert.That(output, Does.Contain("(100, 150, 200).Brighten is 250"));
 		Assert.That(output, Does.Contain("(100, 150, 200).Darken is 50"));
@@ -444,9 +448,9 @@ public sealed class RunnerTests
 	}
 
 	[Test]
-	public void RunTemperatureConverter()
+	public async Task RunTemperatureConverter()
 	{
-		using var _ = new Runner(GetExamplesFilePath("TemperatureConverter"), TestPackage.Instance).Run();
+		await new Runner(GetExamplesFilePath("TemperatureConverter"), TestPackage.Instance).Run();
 		var output = writer.ToString();
 		Assert.That(output, Does.Contain("100C in Fahrenheit: 212"));
 		Assert.That(output, Does.Contain("0C in Fahrenheit: 32"));
@@ -454,26 +458,26 @@ public sealed class RunnerTests
 	}
 
 	[Test]
-	public void RunExpressionWithSingleConstructorArgAndMethod()
+	public async Task RunExpressionWithSingleConstructorArgAndMethod()
 	{
-		using var runner = new Runner(GetExamplesFilePath("FibonacciRunner"), TestPackage.Instance);
-		runner.RunExpression("FibonacciRunner(5).Compute");
+		await new Runner(GetExamplesFilePath("FibonacciRunner"), TestPackage.Instance,
+			"FibonacciRunner(5).Compute").Run();
 		Assert.That(writer.ToString(), Does.Contain("5"));
 	}
 
 	[Test]
-	public void RunExpressionWithMultipleConstructorArgs()
+	public async Task RunExpressionWithMultipleConstructorArgs()
 	{
-		using var runner = new Runner(GetExamplesFilePath("Pixel"), TestPackage.Instance);
-		runner.RunExpression("Pixel(100, 150, 200).Brighten");
+		await new Runner(GetExamplesFilePath("Pixel"), TestPackage.Instance,
+			"Pixel(100, 150, 200).Brighten").Run();
 		Assert.That(writer.ToString(), Does.Contain("250"));
 	}
 
 	[Test]
-	public void RunExpressionWithZeroConstructorArgValue()
+	public async Task RunExpressionWithZeroConstructorArgValue()
 	{
-		using var runner = new Runner(GetExamplesFilePath("TemperatureConverter"), TestPackage.Instance);
-		runner.RunExpression("TemperatureConverter(0).ToFahrenheit");
+		await new Runner(GetExamplesFilePath("TemperatureConverter"), TestPackage.Instance,
+			"TemperatureConverter(0).ToFahrenheit").Run();
 		Assert.That(writer.ToString(), Does.Contain("32"));
 	}
 
@@ -505,5 +509,44 @@ public sealed class RunnerTests
 		GC.Collect();
 		GC.WaitForPendingFinalizers();
 		GC.Collect();
+	}
+
+	[Test]
+	public void GeneratedBinaryHasOnlyQualifiedMainTypeEntryAndIncludesNumberDependency()
+	{
+		var parser = new MethodExpressionParser();
+		var typeName = Path.GetFileNameWithoutExtension(SimpleCalculatorFilePath);
+		var sourceLines = File.ReadAllLines(SimpleCalculatorFilePath);
+		using var mainType = new Language.Type(TestPackage.Instance,
+			new TypeLines(typeName, sourceLines)).ParseMembersAndMethods(parser);
+		var expression = parser.ParseExpression(new Body(new Method(mainType, 0, parser,
+			new[] { nameof(GeneratedBinaryHasOnlyQualifiedMainTypeEntryAndIncludesNumberDependency) })),
+			Method.Run);
+		var binary = new BinaryGenerator(expression).Generate();
+		var tempBinaryPath = Path.Combine(Path.GetTempPath(), "strictbinary-test-" +
+			Guid.NewGuid().ToString("N") + BytecodeSerializer.Extension);
+		try
+		{
+			binary.Serialize(tempBinaryPath);
+			using var zip = ZipFile.OpenRead(tempBinaryPath);
+			var entryNames = zip.Entries
+				.Where(entry => entry.FullName.EndsWith(".bytecode", StringComparison.Ordinal))
+				.Select(entry => entry.FullName[..^".bytecode".Length].Replace('\\', '/'))
+				.ToList();
+			Assert.That(entryNames, Does.Not.Contain(typeName),
+				"Main type must be stored as a qualified package path, not duplicated as plain type name");
+			Assert.That(entryNames.Any(entryName =>
+				entryName.EndsWith("/" + typeName, StringComparison.Ordinal)), Is.True,
+				"Main type entry must exist with its package path");
+			Assert.That(entryNames.Any(entryName =>
+				entryName.EndsWith("/Number", StringComparison.Ordinal) ||
+				entryName == Language.Type.Number), Is.True,
+				"Binary must include Number base type dependency entry");
+		}
+		finally
+		{
+			if (File.Exists(tempBinaryPath))
+				File.Delete(tempBinaryPath);
+		}
 	}
 }

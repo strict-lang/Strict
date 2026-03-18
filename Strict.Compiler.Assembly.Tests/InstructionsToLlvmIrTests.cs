@@ -310,8 +310,8 @@ public sealed class InstructionsToLlvmIrTests
 		File.WriteAllText(tempLl, "define i32 @main() { ret i32 0 }");
 		try
 		{
-			Assert.Throws<ToolNotFoundException>(() =>
-				linker.CreateExecutable(tempLl, Platform.Windows));
+			Assert.That(async () => await linker.CreateExecutable(tempLl, Platform.Windows),
+				Throws.TypeOf<ToolNotFoundException>());
 		}
 		finally
 		{
@@ -618,12 +618,14 @@ public sealed class InstructionsToLlvmIrTests
 			ToolRunner.EnsureOutputFileExists(path, "test", Platform.Linux));
 	}
 
+	//TODO: remove, duplicate!
 	private static string BuildMethodKey(Method method) =>
 		BinaryExecutable.BuildMethodHeader(method.Name,
 			method.Parameters.Select(parameter =>
 				new BinaryMember(parameter.Name, parameter.Type.Name, null)).ToList(),
 			method.ReturnType);
 
+	//TODO: remove again, we don't need to create new BinaryGenerators everywhere!
 	private static List<Instruction> GenerateMethodInstructions(Method method) =>
 		[.. new BinaryGenerator(new MethodCall(method)).Generate().EntryPoint.Instructions];
 

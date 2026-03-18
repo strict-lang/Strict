@@ -176,6 +176,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		var foundInstructions = executable.FindInstructions(method.Type, method);
 		return foundInstructions == null
 			? null
+			//TODO: find all [.. with existing list and no changes, all those cases need to be removed, there is a crazy amount of those added (54 wtf)!
 			: [.. foundInstructions];
 	}
 

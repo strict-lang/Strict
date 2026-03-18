@@ -13,6 +13,7 @@ namespace Strict.Bytecode;
 /// </summary>
 public sealed class BinaryGenerator
 {
+	//TODO: these are all wrong, the constructor should only use the basePackage to make everything possible, the Generate method should get the entry point and find the rest from there! 3 constructors is just plain stupid. this was mostly to get the old tests working, but they are mostly wrong anyway!
 	public BinaryGenerator(Expression entryPoint)
 	{
 		this.entryPoint = entryPoint;
@@ -44,6 +45,7 @@ public sealed class BinaryGenerator
 		entryTypeFullName = "";
 	}
 
+	//TODO: way too many fields, this should not all be at class level!
 	private readonly BinaryExecutable binary;
 	private readonly Expression? entryPoint;
 	private readonly string entryTypeFullName;
@@ -52,7 +54,7 @@ public sealed class BinaryGenerator
 	private readonly Stack<int> idStack = new();
 	private readonly Register[] registers = Enum.GetValues<Register>();
 	private IReadOnlyList<Expression> Expressions { get; } = [];
-	private Type ReturnType { get; } = null!;
+	private Type ReturnType { get; } = null!; //TODO: forbidden!
 	private int conditionalId;
 	private int forResultId;
 
@@ -84,41 +86,6 @@ public sealed class BinaryGenerator
 			? methodCall.Method.Type.FullName
 			: expression.ReturnType.FullName;
 
-	/*obs
-	public BinaryGenerator(InvokedMethod method, Registry registry)
-	{
-		foreach (var argument in method.Arguments)
-			instructions.Add(new StoreVariableInstruction(argument.Value, argument.Key));
-		Expressions = method.Expressions;
-		this.registry = registry;
-		ReturnType = method.ReturnType;
-		if (method is InstanceInvokedMethod instanceMethod)
-			AddMembersFromCaller(instanceMethod.InstanceCall);
-	}
-
-	private readonly List<Instruction> instructions = [];
-	private readonly Registry registry;
-	private readonly Stack<int> idStack = new();
-	private readonly Register[] registers = Enum.GetValues<Register>();
-	private int conditionalId;
-
-	public BinaryGenerator(MethodCall methodCall)
-	{
-		if (methodCall.Instance != null)
-			AddInstanceMemberVariables((MethodCall)methodCall.Instance);
-		AddMethodParameterVariables(methodCall);
-		var methodBody = methodCall.Method.GetBodyAndParseIfNeeded();
-		Expressions = methodBody is Body body
-			? body.Expressions
-			: [methodBody];
-		registry = new Registry();
-		ReturnType = methodCall.Method.ReturnType;
-	}
-
-	private IReadOnlyList<Expression> Expressions { get; }
-	private Type ReturnType { get; }
-	private int forResultId;
-*/
 	private void AddMembersFromCaller(ValueInstance instance)
 	{
 		instructions.Add(new StoreVariableInstruction(instance, Type.ValueLowercase, isMember: true));
@@ -169,22 +136,18 @@ public sealed class BinaryGenerator
 					instance.ReturnType.Members[parameterIndex].Name, isMember: true));
 			}
 			else
-			{
 				instructions.Add(new StoreVariableInstruction(
 					GetValueInstanceFromExpression(instance.Arguments[parameterIndex]),
 					instance.ReturnType.Members[parameterIndex].Name, isMember: true));
-			}
 	}
 
 	private void AddMethodParameterVariables(MethodCall methodCall)
 	{
-		if (methodCall.Arguments.Count == 0)
-			return;
-		for (var parameterIndex = 0; parameterIndex < methodCall.Method.Parameters.Count;
-			parameterIndex++)
+		for (var index = 0; index < methodCall.Method.Parameters.Count &&
+			index < methodCall.Arguments.Count; index++)
 			instructions?.Add(new StoreVariableInstruction(
-				GetValueInstanceFromExpression(methodCall.Arguments[parameterIndex]),
-				methodCall.Method.Parameters[parameterIndex].Name));
+				GetValueInstanceFromExpression(methodCall.Arguments[index]),
+				methodCall.Method.Parameters[index].Name));
 	}
 
 	private List<Instruction> GenerateInstructions(IReadOnlyList<Expression> expressions)

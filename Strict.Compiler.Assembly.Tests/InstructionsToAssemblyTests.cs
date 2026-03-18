@@ -463,8 +463,8 @@ public sealed class InstructionsToAssemblyTests
 		File.WriteAllText(tempAsm, "section .text\nglobal main\nmain:\n    ret");
 		try
 		{
-			Assert.Throws<ToolNotFoundException>(() =>
-				linker.CreateExecutable(tempAsm, Platform.Windows).GetAwaiter().GetResult());
+			Assert.That(async () => await linker.CreateExecutable(tempAsm, Platform.Windows),
+				Throws.InstanceOf<ToolNotFoundException>());
 		}
 		finally
 		{

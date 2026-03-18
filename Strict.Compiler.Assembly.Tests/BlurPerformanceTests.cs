@@ -4,10 +4,10 @@ using NUnit.Framework;
 namespace Strict.Compiler.Assembly.Tests;
 
 /// <summary>
-/// 5x5 box blur performance test comparing single-thread vs parallel CPU vs projected GPU.
-/// Blur has a much heavier per-pixel body than brightness (~30 instructions: 25 reads + sum + divide)
-/// making it the perfect case for complexity-based parallelization. Even a 200x200 image (40K pixels)
-/// reaches 1.2M complexity (40K × 30), well above the 100K threshold.
+/// 5x5 box blur performance test comparing single-thread vs parallel CPU vs projected GPU. Blur
+/// has a much heavier per-pixel body than brightness (~30 instructions: 25 reads + sum + divide)
+/// making it the perfect case for complexity-based parallelization. Even a 200x200 image (40K
+/// pixels) reaches 1.2M complexity (40K × 30), well above the 100K threshold.
 /// Reference from Strict.Compiler.Cuda.Tests/BlurPerformanceTests (2048x1024, 200 iterations):
 ///   SingleThread: 4594ms, ParallelCpu: 701ms (6.5x), CudaGpu: 32ms (143x)
 /// </summary>
@@ -127,15 +127,15 @@ public sealed class BlurPerformanceTests
 			var sum = 0;
 			var count = 0;
 			for (var kernelY = -2; kernelY <= 2; kernelY++)
-				for (var kernelX = -2; kernelX <= 2; kernelX++)
-				{
-					var neighborX = column + kernelX;
-					var neighborY = row + kernelY;
-					if ((uint)neighborX >= (uint)width || (uint)neighborY >= (uint)height)
-						continue;
-					sum += source[neighborY * stride + neighborX * 3 + channel];
-					count++;
-				}
+			for (var kernelX = -2; kernelX <= 2; kernelX++)
+			{
+				var neighborX = column + kernelX;
+				var neighborY = row + kernelY;
+				if ((uint)neighborX >= (uint)width || (uint)neighborY >= (uint)height)
+					continue;
+				sum += source[neighborY * stride + neighborX * 3 + channel];
+				count++;
+			}
 			output[baseIndex + channel] = (byte)(sum / count);
 		}
 	}	//ncrunch: no coverage end
@@ -278,8 +278,8 @@ public sealed class BlurPerformanceTests
 		var pixelCount = pixels.Length / 3;
 		var stopwatch = Stopwatch.StartNew();
 		for (var iteration = 0; iteration < iterations; iteration++)
-			for (var pixelIndex = 0; pixelIndex < pixelCount; pixelIndex++)
-				AdjustPixelBrightness(pixels, pixelIndex);
+		for (var pixelIndex = 0; pixelIndex < pixelCount; pixelIndex++)
+			AdjustPixelBrightness(pixels, pixelIndex);
 		stopwatch.Stop();
 		return stopwatch.Elapsed;
 	}

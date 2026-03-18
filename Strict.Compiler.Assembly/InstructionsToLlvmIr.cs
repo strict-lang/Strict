@@ -43,10 +43,12 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 	/// Produces a complete LLVM IR module for the target platform including the compiled function,
 	/// any called methods, and a main/entry point that calls the function and exits.
 	/// </summary>
+	//TODO: remove, this is old, only for some tests
 	public string CompileForPlatform(string methodName, BinaryExecutable binary, Platform platform,
 		IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods = null) =>
 		CompileForPlatform(methodName, binary.EntryPoint.Instructions, platform, precompiledMethods);
 
+	//TODO: remove, this is old, only for some tests
 	public string CompileForPlatform(string methodName, IReadOnlyList<Instruction> instructions,
 		Platform platform, IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods = null)
 	{
@@ -74,12 +76,14 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 		return module;
 	}
 
+	//TODO: remove, this is old, only for some tests, use BinaryExecutable.HasPrintInstructions instead
 	public bool IsPlatformUsingStdLibAndHasPrintInstructions(Platform platform,
 		IReadOnlyList<Instruction> optimizedInstructions,
 		IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods) =>
 		IsPlatformUsingStdLibAndHasPrintInstructionsInternal(platform, optimizedInstructions,
 			precompiledMethods, includeWindowsPlatform: false);
 
+	//TODO: remove, this is old, only for some tests, use BinaryExecutable.HasPrintInstructions instead
 	public static bool HasPrintInstructions(IReadOnlyList<Instruction> instructions) =>
 		HasPrintInstructionsInternal(instructions);
 

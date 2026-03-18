@@ -500,21 +500,29 @@ public sealed class BinaryExecutable(Package basePackage) : IEnumerable<Instruct
 	public int TotalInstructionsCount =>
 		MethodsPerType.Values.Sum(methods => methods.TotalInstructionCount);
 
+	internal BinaryExecutable AddType(string typeFullName,
+		Dictionary<string, List<BinaryType.BinaryMethod>> methodGroups,
+		IReadOnlyList<BinaryMember>? members = null, bool isEntryType = false)
+	{
+		MethodsPerType[typeFullName] = new BinaryType(this, typeFullName, methodGroups, members);
+		if (isEntryType && methodGroups.TryGetValue(Method.Run, out var runMethods) && runMethods.Count > 0)
+			entryPoint = runMethods[0];
+		else if (entryPoint == null && methodGroups.TryGetValue(Method.Run, out var fallbackRunMethods) &&
+			fallbackRunMethods.Count > 0)
+			entryPoint = fallbackRunMethods[0];
+		return this;
+	}
+
 	internal BinaryExecutable AddType(string entryTypeFullName, object value)
 	{
 		if (value is Dictionary<string, List<BinaryType.BinaryMethod>> methodGroups)
-		{
-			MethodsPerType[entryTypeFullName] = new BinaryType(this, entryTypeFullName, methodGroups);
-			entryPoint = ResolveEntryPoint();
-			return this;
-		}
+			return AddType(entryTypeFullName, methodGroups);
 		if (value is List<Instruction> instructions)
 		{
 			var runMethod = new BinaryType.BinaryMethod([], Type.None, instructions);
-			MethodsPerType[entryTypeFullName] = new BinaryType(this, entryTypeFullName,
-				new Dictionary<string, List<BinaryType.BinaryMethod>> { [Method.Run] = [runMethod] });
-			entryPoint = runMethod;
-			return this;
+			return AddType(entryTypeFullName,
+				new Dictionary<string, List<BinaryType.BinaryMethod>> { [Method.Run] = [runMethod] },
+				null, isEntryType: true);
 		}
 		throw new NotSupportedException("Unsupported binary type payload: " + value.GetType().Name);
 	}

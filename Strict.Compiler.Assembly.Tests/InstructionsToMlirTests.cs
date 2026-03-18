@@ -981,4 +981,34 @@ public sealed class InstructionsToMlirTests
 		return method!.Invoke(null, [inputPath, outputPath]) as string ??
 			throw new InvalidOperationException("Expected GPU opt args string");
 	}
+
+	[Test]
+	public void CompileForPlatformFromBinaryGeneratorOutputSupportsRuntimeMethodCalls()
+	{
+		var type = new Type(TestPackage.Instance, new TypeLines("MlirBinaryCalc",
+			"has first Number",
+			"has second Number",
+			"Add Number",
+			"\tfirst + second",
+			"Multiply Number",
+			"\tfirst * second",
+			"Run Number",
+			"\tconstant calc = MlirBinaryCalc(2, 3)",
+			"\tconstant added = calc.Add",
+			"\tconstant multiplied = calc.Multiply",
+			"\tadded + multiplied")).ParseMembersAndMethods(new MethodExpressionParser());
+		var runMethod = type.Methods.First(method => method.Name == Method.Run);
+		var binary = new BinaryGenerator(new MethodCall(runMethod)).Generate();
+		var buildPrecompiledMethod = typeof(InstructionsCompiler).GetMethod(
+			"BuildPrecompiledMethodsInternal", BindingFlags.Static | BindingFlags.NonPublic);
+		Assert.That(buildPrecompiledMethod, Is.Not.Null);
+		var precompiledMethods = (Dictionary<string, List<Instruction>>)buildPrecompiledMethod!.Invoke(
+			null, [binary])!;
+		foreach (var invoke in binary.EntryPoint.Instructions.OfType<Invoke>())
+			if (invoke.Method?.Method != null && invoke.Method.Method.Name != Method.From)
+				Assert.That(precompiledMethods.ContainsKey(BuildMethodKey(invoke.Method.Method)), Is.True,
+					"Missing precompiled key for invoked method " + invoke.Method.Method.Type.Name + "." +
+					invoke.Method.Method.Name);
+		Assert.DoesNotThrow(() => compiler.CompileForPlatform(type.Name, binary, Platform.Linux));
+	}
 }

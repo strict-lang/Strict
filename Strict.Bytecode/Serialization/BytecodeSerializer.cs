@@ -1,5 +1,6 @@
 namespace Strict.Bytecode.Serialization;
 
+//TODO: remove again, this is plain stupid!
 /// <summary>
 /// Compatibility class providing constants for bytecode file extensions.
 /// The actual serialization is done by <see cref="BinaryExecutable"/>.

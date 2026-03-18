@@ -3,6 +3,7 @@ using Strict.Language;
 
 namespace Strict.Bytecode.Serialization;
 
+//TODO: remove again, this is plain stupid!
 /// <summary>
 /// Compatibility wrapper around <see cref="BinaryExecutable"/> for loading bytecode from files.
 /// </summary>

@@ -34,6 +34,7 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 
 	public override string Extension => ".asm";
 
+	//TODO: there should be one compile, if this is easier for tests, add a helper method in Tests!
 	public string Compile(Method method) =>
 		CompileInstructions(method.Type.Name,
 			[.. new BinaryGenerator(new MethodCall(method)).Generate().EntryPoint.Instructions]);

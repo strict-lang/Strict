@@ -2,7 +2,7 @@
   "profiles": {
 		"Strict": {
 			"commandName": "Project",
-			"commandLineArgs": "c:/code/GitHub/strict-lang/Strict/ImageProcessing/AdjustBrightness.strict"
+			"commandLineArgs": "c:/code/GitHub/strict-lang/Strict/Examples/SimpleCalculator.strict -Windows"
 		}
   }
 }
