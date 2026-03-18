@@ -72,9 +72,14 @@ public sealed class BinaryExecutable(Package basePackage) : IEnumerable<Instruct
 	public BinaryMethod EntryPoint => entryPoint ??= ResolveEntryPoint();
 	public sealed class InvalidFile(string message) : Exception(message);
 
-	public IReadOnlyList<BinaryMethod> GetRunMethods() =>
-		MethodsPerType.Values.FirstOrDefault(typeData => typeData.MethodGroups.ContainsKey(Method.Run))?
-			.MethodGroups[Method.Run] ?? [];
+ public IReadOnlyList<BinaryMethod> GetRunMethods()
+	{
+   var runMethods = new List<BinaryMethod>();
+		foreach (var typeData in MethodsPerType.Values)
+			if (typeData.MethodGroups.TryGetValue(Method.Run, out var overloads))
+				runMethods.AddRange(overloads);
+		return runMethods;
+	}
 
 	private BinaryMethod ResolveEntryPoint()
 	{

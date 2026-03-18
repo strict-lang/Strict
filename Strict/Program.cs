@@ -2,6 +2,7 @@ using Strict.Bytecode;
 using Strict.Compiler;
 using Strict.Expressions;
 using Strict.Language;
+using Type = Strict.Language.Type;
 
 namespace Strict;
 
@@ -10,6 +11,7 @@ public static class Program
 	//ncrunch: no coverage start
 	public static async Task Main(string[] args)
 	{
+   args = ResolveImplicitExecutableTarget(args);
 		if (args.Length == 0)
 			DisplayUsageInformation();
 		else
@@ -86,9 +88,9 @@ Notes:
 			if (!diagnostics)
 				diagnostics = true;
 #endif
-			var expression = nonFlagArgs.Length >= 1 && nonFlagArgs[0].Contains('(')
-				? string.Join(" ", nonFlagArgs)
-				: Method.Run + nonFlagArgs.ToBrackets();
+      var expression = nonFlagArgs.Length == 0
+				? Method.Run
+				: string.Join(" ", nonFlagArgs);
 			var runner = new Runner(filePath, null, expression, diagnostics);
 			var buildForPlatform = GetPlatformOption(options);
 			var backend = options.Contains("-nasm")
@@ -101,6 +103,24 @@ Notes:
 			else
 				await runner.Run();
 		}
+	}
+
+	private static string[] ResolveImplicitExecutableTarget(string[] args)
+	{
+		if (args.Length > 0 && (args[0].EndsWith(Type.Extension, StringComparison.OrdinalIgnoreCase) ||
+			args[0].EndsWith(BinaryExecutable.Extension, StringComparison.OrdinalIgnoreCase) ||
+			Directory.Exists(args[0])))
+			return args;
+		var processPath = Environment.ProcessPath;
+		if (string.IsNullOrEmpty(processPath))
+			return args;
+		var implicitBinaryPath = Path.ChangeExtension(processPath, BinaryExecutable.Extension);
+		if (File.Exists(implicitBinaryPath))
+			return [implicitBinaryPath, .. args];
+		var implicitSourcePath = Path.ChangeExtension(processPath, Type.Extension);
+		return File.Exists(implicitSourcePath)
+			? [implicitSourcePath, .. args]
+			: args;
 	}
 
 	private static Platform? GetPlatformOption(ICollection<string> options)

@@ -47,13 +47,13 @@ public sealed class BinaryGenerator
 
 	//TODO: way too many fields, this should not all be at class level!
 	private readonly BinaryExecutable binary;
-	private readonly Expression? entryPoint;
+	private readonly Expression? entryPoint; //TODO: remove
 	private readonly string entryTypeFullName;
 	private readonly List<Instruction> instructions = [];
 	private readonly Registry registry = new();
 	private readonly Stack<int> idStack = new();
 	private readonly Register[] registers = Enum.GetValues<Register>();
-	private IReadOnlyList<Expression> Expressions { get; } = [];
+	private IReadOnlyList<Expression> Expressions { get; } = []; //TODO: stupid
 	private Type ReturnType { get; } = null!; //TODO: forbidden!
 	private int conditionalId;
 	private int forResultId;
@@ -82,10 +82,11 @@ public sealed class BinaryGenerator
 		return binary;
 	}
 
-	private BinaryExecutable Generate(string typeFullName, IReadOnlyList<Expression> entryExpressions,
-		Type runReturnType)
+	private BinaryExecutable Generate(string typeFullName,
+		IReadOnlyList<Expression> entryExpressions, Type runReturnType)
 	{
-		var methodsByType = GenerateEntryMethods(typeFullName, entryExpressions, runReturnType);
+		var methodsByType =
+			GenerateEntryMethods(typeFullName, entryExpressions, runReturnType);
 		foreach (var (compiledTypeFullName, methodGroups) in methodsByType)
 			binary.AddType(compiledTypeFullName, methodGroups);
 		return binary;
@@ -306,10 +307,10 @@ public sealed class BinaryGenerator
 			instructions.Add(new PrintInstruction(textValue.Data.Text));
 			return true;
 		}
-		if (argument is Expressions.Binary binary)
+		if (argument is Binary binaryExpression)
 		{
-			var prefix = ExtractTextPrefix(binary.Instance);
-			var valueExpression = UnwrapToConversion(binary.Arguments[0]);
+			var prefix = ExtractTextPrefix(binaryExpression.Instance);
+			var valueExpression = UnwrapToConversion(binaryExpression.Arguments[0]);
 			GenerateInstructionFromExpression(valueExpression);
 			instructions.Add(new PrintInstruction(prefix, registry.PreviousRegister,
 				valueExpression.ReturnType.IsText));
@@ -328,10 +329,12 @@ public sealed class BinaryGenerator
 
 	private bool? TryGenerateBinaryInstructions(Expression expression)
 	{
-		if (expression is not Expressions.Binary binary)
-			return null;
-		GenerateCodeForBinary(binary);
-		return true;
+		if (expression is Binary binaryExpression)
+		{
+			GenerateCodeForBinary(binaryExpression);
+			return true; //TODO: there is not even false here, this is no good
+		}
+		return null;
 	}
 
 	private void GenerateLoopInstructions(For forExpression, string? aggregationTarget = null)
@@ -407,11 +410,11 @@ public sealed class BinaryGenerator
 			GenerateInstructions([ifExpression.Then]);
 	}
 
-	private void GenerateCodeForBinary(MethodCall binary)
+	private void GenerateCodeForBinary(MethodCall binaryExpression)
 	{
-		if (binary.Method.Name != "is")
-			GenerateBinaryInstruction(binary,
-				GetInstructionBasedOnBinaryOperationName(binary.Method.Name));
+		if (binaryExpression.Method.Name != "is")
+			GenerateBinaryInstruction(binaryExpression,
+				GetInstructionBasedOnBinaryOperationName(binaryExpression.Method.Name));
 	}
 
 	private static InstructionType GetInstructionBasedOnBinaryOperationName(string binaryOperator) =>
@@ -467,42 +470,44 @@ public sealed class BinaryGenerator
 		return registry.PreviousRegister;
 	}
 
-	private void GenerateBinaryInstruction(MethodCall binary, InstructionType operationInstruction)
+	private void GenerateBinaryInstruction(MethodCall binaryExpression,
+		InstructionType operationInstruction)
 	{
-		if (binary.Instance is MethodCall nestedBinary)
+		if (binaryExpression.Instance is MethodCall nestedBinary)
 		{
 			var leftRegister = GenerateValueBinaryInstructions(nestedBinary,
 				GetInstructionBasedOnBinaryOperationName(nestedBinary.Method.Name));
-			GenerateInstructionFromExpression(binary.Arguments[0]);
+			GenerateInstructionFromExpression(binaryExpression.Arguments[0]);
 			instructions.Add(new BinaryInstruction(operationInstruction, leftRegister,
 				registry.PreviousRegister, registry.AllocateRegister()));
 		}
-		else if (binary.Arguments[0] is MethodCall nestedBinaryArgument)
-			GenerateNestedBinaryInstructions(binary, operationInstruction, nestedBinaryArgument);
+		else if (binaryExpression.Arguments[0] is MethodCall nestedBinaryArgument)
+			GenerateNestedBinaryInstructions(binaryExpression, operationInstruction,
+				nestedBinaryArgument);
 		else
-			GenerateValueBinaryInstructions(binary, operationInstruction);
+			GenerateValueBinaryInstructions(binaryExpression, operationInstruction);
 	}
 
-	private void GenerateNestedBinaryInstructions(MethodCall binary,
+	private void GenerateNestedBinaryInstructions(MethodCall binaryExpression,
 		InstructionType operationInstruction, MethodCall binaryArgument)
 	{
 		var right = GenerateValueBinaryInstructions(binaryArgument,
 			GetInstructionBasedOnBinaryOperationName(binaryArgument.Method.Name));
 		var left = registry.AllocateRegister();
-		if (binary.Instance != null)
-			instructions.Add(new LoadVariableToRegister(left, binary.Instance.ToString()));
+		if (binaryExpression.Instance != null)
+			instructions.Add(new LoadVariableToRegister(left, binaryExpression.Instance.ToString()));
 		instructions.Add(new BinaryInstruction(operationInstruction, left, right,
 			registry.AllocateRegister()));
 	}
 
-	private Register GenerateValueBinaryInstructions(MethodCall binary,
+	private Register GenerateValueBinaryInstructions(MethodCall binaryExpression,
 		InstructionType operationInstruction)
 	{
-		if (binary.Instance == null)
+		if (binaryExpression.Instance == null)
 			throw new InstanceNameNotFound();
-		GenerateInstructionFromExpression(binary.Instance);
+		GenerateInstructionFromExpression(binaryExpression.Instance);
 		var leftValue = registry.PreviousRegister;
-		GenerateInstructionFromExpression(binary.Arguments[0]);
+		GenerateInstructionFromExpression(binaryExpression.Arguments[0]);
 		var rightValue = registry.PreviousRegister;
 		var resultRegister = registry.AllocateRegister();
 		instructions.Add(new BinaryInstruction(operationInstruction, leftValue, rightValue,
@@ -524,7 +529,7 @@ public sealed class BinaryGenerator
 		{
 			foreach (var invoke in methodInstructions.OfType<Invoke>())
 			{
-				if (invoke.Method?.Method == null || invoke.Method.Method.Name == Method.From)
+				if (invoke.Method.Method.Name == Method.From)
 					continue;
 				var invokedMethod = invoke.Method.Method;
 				var methodKey = BuildMethodKey(invokedMethod);
@@ -574,11 +579,11 @@ public sealed class BinaryGenerator
 		var methodsToCompile = new Queue<Method>();
 		var compiledMethodKeys = new HashSet<string>(StringComparer.Ordinal);
 
-		void EnqueueInvokedMethods(IReadOnlyList<Instruction> instructions)
+		void EnqueueInvokedMethods(IReadOnlyList<Instruction> instructions) //TODO: remove
 		{
 			foreach (var invoke in instructions.OfType<Invoke>())
 			{
-				if (invoke.Method?.Method == null || invoke.Method.Method.Name == Method.From)
+				if (invoke.Method.Method.Name == Method.From)
 					continue;
 				var method = invoke.Method.Method;
 				var methodKey = method.Type.FullName + ":" + BinaryExecutable.BuildMethodHeader(method.Name,
@@ -614,8 +619,8 @@ public sealed class BinaryGenerator
 
 	private List<Instruction> GenerateInstructionList() => GenerateInstructions(Expressions);
 
-	private static string BuildMethodKey(Method method) => method.Type.FullName + ":" +
-		BinaryExecutable.BuildMethodHeader(method.Name,
+	private static string BuildMethodKey(Method method) =>
+		method.Type.FullName + ":" + BinaryExecutable.BuildMethodHeader(method.Name,
 			method.Parameters.Select(parameter =>
 				new BinaryMember(parameter.Name, parameter.Type.FullName, null)).ToList(),
 			method.ReturnType);
@@ -625,7 +630,7 @@ public sealed class BinaryGenerator
 	{
 		foreach (var invoke in instructions.OfType<Invoke>())
 		{
-			if (invoke.Method?.Method == null || invoke.Method.Method.Name == Method.From)
+			if (invoke.Method.Method.Name == Method.From)
 				continue;
 			var method = invoke.Method.Method;
 			var methodKey = method.Type.FullName + ":" + BinaryExecutable.BuildMethodHeader(method.Name,

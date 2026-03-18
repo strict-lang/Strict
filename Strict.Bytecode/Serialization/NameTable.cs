@@ -87,6 +87,8 @@ public sealed class NameTable : IEnumerable<string>
 		Add(mc.Method.Type.Name);
 		Add(mc.Method.Name);
 		Add(mc.ReturnType.Name);
+    foreach (var parameter in mc.Method.Parameters)
+			Add(parameter.Name).Add(parameter.Type.FullName);
 		if (mc.Instance != null)
 			CollectExpressionStrings(mc.Instance);
 		foreach (var arg in mc.Arguments)
