@@ -43,6 +43,10 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 	/// Produces a complete LLVM IR module for the target platform including the compiled function,
 	/// any called methods, and a main/entry point that calls the function and exits.
 	/// </summary>
+	public string CompileForPlatform(string methodName, BinaryExecutable binary, Platform platform,
+		IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods = null) =>
+		CompileForPlatform(methodName, binary.EntryPoint.Instructions, platform, precompiledMethods);
+
 	public string CompileForPlatform(string methodName, IReadOnlyList<Instruction> instructions,
 		Platform platform, IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods = null)
 	{

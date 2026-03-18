@@ -10,7 +10,7 @@ using Type = Strict.Language.Type;
 
 namespace Strict;
 
-public sealed class Runner
+public sealed class Runner : IDisposable
 {
 	/// <summary>
 	/// Allows running or build a .strict source file, running the Run method or supplying an
@@ -354,10 +354,41 @@ private Binary? binary;
 	}
 
 */
-	public async Task Run()
+	public void Dispose() { }
+
+	public async Task Run(string[]? programArgs = null)
 	{
 		var binary = await GetBinary();
 		new VirtualMachine(binary).Execute();
+	}
+
+	/// <summary>
+	/// Evaluates a Strict expression like "TypeName(args).Method" or "TypeName(args)" (calls Run).
+	/// The result is printed to Console if the method returns a value.
+	/// Example: runner.RunExpression("FibonacciRunner(5).Compute") prints "5".
+	/// </summary>
+	public async Task RunExpression(string expressionString)
+	{
+		var typeName = Path.GetFileNameWithoutExtension(strictFilePath);
+		var basePackage = skipPackageSearchAndUseThisTestPackage ?? await GetPackage(nameof(Strict));
+		var sourceLines = await File.ReadAllLinesAsync(strictFilePath);
+		var targetType = new Type(basePackage, new TypeLines(typeName, sourceLines)).ParseMembersAndMethods(parser);
+		try
+		{
+			var expression = parser.ParseExpression(
+				new Body(new Method(targetType, 0, parser, [nameof(RunExpression)])),
+				expressionString);
+			var binary = GenerateBinaryExecutable(basePackage, typeName, expression);
+			OptimizeBytecode(binary);
+			var vm = new VirtualMachine(binary);
+			vm.Execute();
+			if (vm.Returns.HasValue)
+				Console.WriteLine(vm.Returns.Value.ToExpressionCodeString());
+		}
+		finally
+		{
+			targetType.Dispose();
+		}
 	}
 		/*
 		binary != null

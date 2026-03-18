@@ -34,6 +34,10 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 
 	public override string Extension => ".asm";
 
+	public string Compile(Method method) =>
+		CompileInstructions(method.Type.Name,
+			[.. new BinaryGenerator(new MethodCall(method)).Generate().EntryPoint.Instructions]);
+
 	public string CompileInstructions(string methodName, List<Instruction> instructions) =>
 		BuildAssembly(methodName, [], instructions);
 
@@ -41,6 +45,10 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 	/// Produces a complete NASM source for the target platform: the compiled method followed by
 	/// an entry point that calls it and exits cleanly.
 	/// </summary>
+	public string CompileForPlatform(string methodName, BinaryExecutable binary, Platform platform,
+		IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods = null) =>
+		CompileForPlatform(methodName, binary.EntryPoint.Instructions, platform, precompiledMethods);
+
 	public string CompileForPlatform(string methodName, IReadOnlyList<Instruction> instructions,
 		Platform platform, IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods = null)
 	{

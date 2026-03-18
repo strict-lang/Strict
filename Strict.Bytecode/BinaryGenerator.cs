@@ -178,6 +178,8 @@ public sealed class BinaryGenerator
 
 	private void AddMethodParameterVariables(MethodCall methodCall)
 	{
+		if (methodCall.Arguments.Count == 0)
+			return;
 		for (var parameterIndex = 0; parameterIndex < methodCall.Method.Parameters.Count;
 			parameterIndex++)
 			instructions?.Add(new StoreVariableInstruction(

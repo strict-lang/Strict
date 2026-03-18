@@ -464,7 +464,7 @@ public sealed class InstructionsToAssemblyTests
 		try
 		{
 			Assert.Throws<ToolNotFoundException>(() =>
-				linker.CreateExecutable(tempAsm, Platform.Windows));
+				linker.CreateExecutable(tempAsm, Platform.Windows).GetAwaiter().GetResult());
 		}
 		finally
 		{
@@ -501,9 +501,7 @@ public sealed class InstructionsToAssemblyTests
 		var runMethod = type.Methods.First(method => method.Name == Method.Run);
 		var addMethod = type.Methods.First(method => method.Name == "Add");
 		var runInstructions = new BinaryGenerator(new MethodCall(runMethod)).Generate();
-		var addInstructions = new BinaryGenerator(new InvokedMethod(
-			(addMethod.GetBodyAndParseIfNeeded() as Body)?.Expressions ?? [addMethod.GetBodyAndParseIfNeeded()],
-			new Dictionary<string, ValueInstance>(), addMethod.ReturnType), new Registry()).Generate();
+		List<Instruction> addInstructions = [.. new BinaryGenerator(new MethodCall(addMethod)).Generate().EntryPoint.Instructions];
 		var methodKey = BuildMethodKey(addMethod);
 		var assembly = compiler.CompileForPlatform(type.Name, runInstructions, Platform.Windows,
 			new Dictionary<string, List<Instruction>> { [methodKey] = addInstructions });
@@ -529,12 +527,8 @@ public sealed class InstructionsToAssemblyTests
 		var addMethod = type.Methods.First(method => method.Name == "Add");
 		var multiplyMethod = type.Methods.First(method => method.Name == "Multiply");
 		var runInstructions = new BinaryGenerator(new MethodCall(runMethod)).Generate();
-		var addInstructions = new BinaryGenerator(new InvokedMethod(
-			(addMethod.GetBodyAndParseIfNeeded() as Body)?.Expressions ?? [addMethod.GetBodyAndParseIfNeeded()],
-			new Dictionary<string, ValueInstance>(), addMethod.ReturnType), new Registry()).Generate();
-		var multiplyInstructions = new BinaryGenerator(new InvokedMethod(
-			(multiplyMethod.GetBodyAndParseIfNeeded() as Body)?.Expressions ?? [multiplyMethod.GetBodyAndParseIfNeeded()],
-			new Dictionary<string, ValueInstance>(), multiplyMethod.ReturnType), new Registry()).Generate();
+		List<Instruction> addInstructions = [.. new BinaryGenerator(new MethodCall(addMethod)).Generate().EntryPoint.Instructions];
+		List<Instruction> multiplyInstructions = [.. new BinaryGenerator(new MethodCall(multiplyMethod)).Generate().EntryPoint.Instructions];
 		var addMethodKey = BuildMethodKey(addMethod);
 		var multiplyMethodKey = BuildMethodKey(multiplyMethod);
 		var assembly = compiler.CompileForPlatform(type.Name, runInstructions, Platform.Linux,
@@ -612,9 +606,7 @@ public sealed class InstructionsToAssemblyTests
 		var runMethod = type.Methods.First(method => method.Name == Method.Run);
 		var addMethod = type.Methods.First(method => method.Name == "Add");
 		var runInstructions = new BinaryGenerator(new MethodCall(runMethod)).Generate();
-		var addInstructions = new BinaryGenerator(new InvokedMethod(
-			(addMethod.GetBodyAndParseIfNeeded() as Body)?.Expressions ?? [addMethod.GetBodyAndParseIfNeeded()],
-			new Dictionary<string, ValueInstance>(), addMethod.ReturnType), new Registry()).Generate();
+		List<Instruction> addInstructions = [.. new BinaryGenerator(new MethodCall(addMethod)).Generate().EntryPoint.Instructions];
 		var methodKey = BuildMethodKey(addMethod);
 		var assembly = compiler.CompileForPlatform(type.Name, runInstructions, Platform.Linux,
 			new Dictionary<string, List<Instruction>> { [methodKey] = addInstructions });
@@ -669,13 +661,6 @@ public sealed class InstructionsToAssemblyTests
 				new BinaryMember(parameter.Name, parameter.Type.Name, null)).ToList(),
 			method.ReturnType);
 
-	private static List<Instruction> GenerateMethodInstructions(Method method)
-	{
-		var body = method.GetBodyAndParseIfNeeded();
-		var expressions = body is Body bodyList
-			? bodyList.Expressions
-			: [body];
-		return new BinaryGenerator(new InvokedMethod(expressions,
-			new Dictionary<string, ValueInstance>(), method.ReturnType), new Registry()).Generate();
-	}
+	private static List<Instruction> GenerateMethodInstructions(Method method) =>
+		[.. new BinaryGenerator(new MethodCall(method)).Generate().EntryPoint.Instructions];
 }

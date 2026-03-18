@@ -353,9 +353,9 @@ public sealed class VirtualMachineTests : TestBytecode
 		Assert.That(result.TrimEnd(), Is.EqualTo(expected));
 	}
 
-	private string ExpressionListToSpaceSeparatedString(IList<Instruction> instructions)
+	private string ExpressionListToSpaceSeparatedString(BinaryExecutable binary)
 	{
-		var result = vm.Execute(instructions).Returns!.Value;
+		var result = vm.Execute(binary).Returns!.Value;
 		return result.List.Items.Aggregate("", (current, item) => current + (item.IsText
 			? item.Text
 			: item.Number) + " ");

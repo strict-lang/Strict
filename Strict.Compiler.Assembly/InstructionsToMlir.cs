@@ -14,6 +14,11 @@ namespace Strict.Compiler.Assembly;
 /// </summary>
 public sealed class InstructionsToMlir : InstructionsCompiler
 {
+	/// <summary>Minimum iteration×body-instruction complexity to emit scf.parallel instead of scf.for.</summary>
+	public const int ComplexityThreshold = 100_000;
+	/// <summary>Minimum complexity to offload to GPU via gpu.launch instead of scf.parallel.</summary>
+	public const int GpuComplexityThreshold = 10_000_000;
+
 	public override Task<string> Compile(BinaryExecutable binary, Platform platform)
 	{
 		var precompiledMethods = BuildPrecompiledMethodsInternal(binary);
@@ -36,6 +41,10 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 
 	public string CompileInstructions(string methodName, List<Instruction> instructions) =>
 		BuildFunction(methodName, [], instructions).Text;
+
+	public string CompileForPlatform(string methodName, BinaryExecutable binary, Platform platform,
+		IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods = null) =>
+		CompileForPlatform(methodName, binary.EntryPoint.Instructions, platform, precompiledMethods);
 
 	public string CompileForPlatform(string methodName, IReadOnlyList<Instruction> instructions,
 		Platform platform, IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods = null)
@@ -110,7 +119,7 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 			lines.Add("    return %zero : f64");
 		} //ncrunch: no coverage end
 		lines.Add("  }");
-		return new CompiledFunction(string.Join("\n", lines), context.StringConstants, context.UsesGpu);
+		return new CompiledFunction(string.Join("\n", lines), context.StringConstants, context.HadGpuOps);
 	}
 
 	private static void EmitInstruction(List<Instruction> instructions, int index,
@@ -418,8 +427,66 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 		lines.Add($"    {startIndex} = arith.fptosi {startValue} : f64 to index");
 		lines.Add($"    {endIndex} = arith.fptosi {endValue} : f64 to index");
 		lines.Add($"    {step} = arith.constant 1 : index");
+		var iterationCount = context.RegisterConstants.TryGetValue(loopBegin.EndIndex.Value, out var endConst)
+			? (long)endConst
+			: 0L;
+		var bodyCount = CountLoopBodyInstructions(instructions, loopBeginIndex, loopBegin);
+		var complexity = iterationCount * Math.Max(bodyCount, 1);
 		context.LoopStack.Push(new LoopState(startIndex, endIndex, step, inductionVar));
-		lines.Add($"    scf.for {inductionVar} = {startIndex} to {endIndex} step {step} {{");
+		if (complexity > GpuComplexityThreshold)
+			EmitGpuLaunch(lines, context, startIndex, endIndex, step, inductionVar);
+		else if (complexity > ComplexityThreshold)
+			lines.Add($"    scf.parallel ({inductionVar}) = ({startIndex}) to ({endIndex}) step ({step}) {{");
+		else
+			lines.Add($"    scf.for {inductionVar} = {startIndex} to {endIndex} step {step} {{");
+	}
+
+	private static int CountLoopBodyInstructions(List<Instruction> instructions,
+		int loopBeginIndex, LoopBeginInstruction loopBegin)
+	{
+		var count = 0;
+		for (var index = loopBeginIndex + 1; index < instructions.Count; index++)
+		{
+			if (instructions[index] is LoopEndInstruction loopEnd &&
+				ReferenceEquals(loopEnd.Begin, loopBegin))
+				return count;
+			count++;
+		}
+		return count;
+	}
+
+	private static void EmitGpuLaunch(List<string> lines, EmitContext context,
+		string startIndex, string endIndex, string step, string inductionVar)
+	{
+		context.SetGpuActive();
+		var numElements = context.NextTemp();
+		var hostBuf = context.NextTemp();
+		var devBuf = context.NextTemp();
+		var gridX = context.NextTemp();
+		var gridY = context.NextTemp();
+		var gridZ = context.NextTemp();
+		var blockY = context.NextTemp();
+		var blockZ = context.NextTemp();
+		lines.Add($"    {numElements} = arith.subi {endIndex}, {startIndex} : index");
+		lines.Add($"    {hostBuf} = memref.alloc({numElements}) : memref<?xf64>");
+		lines.Add($"    {devBuf}, %stream = gpu.alloc({numElements}) : memref<?xf64>");
+		lines.Add($"    gpu.memcpy %stream {devBuf}, {hostBuf} : memref<?xf64>, memref<?xf64>");
+		context.GpuBufferState = new GpuBufferInfo(hostBuf, devBuf, numElements);
+		lines.Add($"    %block_x = arith.constant 256 : index");
+		lines.Add($"    {gridX} = arith.ceildivui {numElements}, %block_x : index");
+		lines.Add($"    {gridY} = arith.constant 1 : index");
+		lines.Add($"    {gridZ} = arith.constant 1 : index");
+		lines.Add($"    {blockY} = arith.constant 1 : index");
+		lines.Add($"    {blockZ} = arith.constant 1 : index");
+		lines.Add($"    gpu.launch blocks(%bx, %by, %bz) in (%grid_x = {gridX}, %grid_y = {gridY}, %grid_z = {gridZ})");
+		lines.Add($"               threads(%tx, %ty, %tz) in (%block_x = %block_x, %block_y = {blockY}, %block_z = {blockZ}) {{");
+		var globalId = context.NextTemp();
+		var blockOffset = context.NextTemp();
+		var cond = context.NextTemp();
+		lines.Add($"        {blockOffset} = arith.muli %bx, %block_x : index");
+		lines.Add($"        {globalId} = arith.addi {blockOffset}, %tx : index");
+		lines.Add($"        {cond} = arith.cmpi ult, {globalId}, {numElements} : index");
+		lines.Add($"        scf.if {cond} {{");
 	}
 
 	private static void EmitLoopEnd(List<string> lines, EmitContext context)
@@ -427,7 +494,21 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 		if (context.LoopStack.Count == 0)
 			return;
 		context.LoopStack.Pop();
-		lines.Add("    }");
+		if (context.UsesGpu)
+		{
+			lines.Add("        }");
+			lines.Add("    gpu.terminator");
+			lines.Add("    }");
+			if (context.GpuBufferState != null)
+			{
+				lines.Add($"    gpu.dealloc {context.GpuBufferState.DeviceBuffer} : memref<?xf64>");
+				lines.Add($"    memref.dealloc {context.GpuBufferState.HostBuffer} : memref<?xf64>");
+				context.GpuBufferState = null;
+			}
+			context.UsesGpu = false;
+		}
+		else
+			lines.Add("    }");
 	}
 
 	private static string FormatDouble(double value)
@@ -504,6 +585,12 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 		public Stack<LoopState> LoopStack { get; } = new();
 		public Dictionary<Register, double> RegisterConstants { get; } = new();
 		public bool UsesGpu { get; set; }
+		public bool HadGpuOps { get; private set; }
+		public void SetGpuActive()
+		{
+			UsesGpu = true;
+			HadGpuOps = true;
+		}
 		public GpuBufferInfo? GpuBufferState { get; set; }
 	}
 }

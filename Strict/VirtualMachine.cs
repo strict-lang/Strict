@@ -9,12 +9,28 @@ namespace Strict;
 
 public sealed class VirtualMachine(BinaryExecutable executable)
 {
+	public VirtualMachine(Package package) : this(new BinaryExecutable(package)) { }
+
 	public VirtualMachine Execute()
 	{
 		Clear();
 		foreach (var loopBegin in executable.EntryPoint.Instructions.OfType<LoopBeginInstruction>())
 			loopBegin.Reset();
 		return RunInstructions(executable.EntryPoint.Instructions);
+	}
+
+	public VirtualMachine Execute(BinaryExecutable binary) => Execute(binary.EntryPoint.Instructions);
+
+	public VirtualMachine Execute(IReadOnlyList<Instruction> allInstructions,
+		IReadOnlyDictionary<string, ValueInstance>? initialVariables = null)
+	{
+		Clear();
+		if (initialVariables != null)
+			foreach (var (name, value) in initialVariables)
+				Memory.Frame.Set(name, value);
+		foreach (var loopBegin in allInstructions.OfType<LoopBeginInstruction>())
+			loopBegin.Reset();
+		return RunInstructions(allInstructions);
 	}
 
 	private void Clear()

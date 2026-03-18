@@ -38,12 +38,12 @@ public class CommandExecutor(ILanguageServerFacade languageServer,
 		var typeName = documentUri.Path.GetFileName();
 		var type = subPackage.SynchronizeAndGetType(typeName, code);
 		var call = (MethodCall)type.ParseExpression(methodCall);
-		var instructions = new BinaryGenerator(call).Generate();
+		var binary = new BinaryGenerator(call).Generate();
 		languageServer.Window.LogInfo($"Compiling: {
 			Environment.NewLine + string.Join(",",
-				instructions.ConvertAll(instruction => instruction + Environment.NewLine))
+				binary.EntryPoint.Instructions.Select(instruction => instruction + Environment.NewLine))
 		}");
-		vm.Execute(instructions);
+		vm.Execute(binary);
 	}
 
 	public ExecuteCommandRegistrationOptions GetRegistrationOptions(

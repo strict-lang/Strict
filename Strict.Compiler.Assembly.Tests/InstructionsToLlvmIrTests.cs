@@ -624,16 +624,8 @@ public sealed class InstructionsToLlvmIrTests
 				new BinaryMember(parameter.Name, parameter.Type.Name, null)).ToList(),
 			method.ReturnType);
 
-	private static List<Instruction> GenerateMethodInstructions(Method method)
-	{
-		var body = method.GetBodyAndParseIfNeeded();
-		var expressions = body is Body b
-			? b.Expressions
-			: [body];
-		return new BinaryGenerator(
-			new InvokedMethod(expressions, new Dictionary<string, ValueInstance>(), method.ReturnType),
-			new Registry()).Generate();
-	}
+	private static List<Instruction> GenerateMethodInstructions(Method method) =>
+		[.. new BinaryGenerator(new MethodCall(method)).Generate().EntryPoint.Instructions];
 
 	[Test]
 	public void NumericPrintsWithDifferentOperatorsUseDistinctStringLabels()
