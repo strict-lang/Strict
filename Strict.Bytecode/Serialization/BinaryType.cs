@@ -16,7 +16,7 @@ public sealed class BinaryType
 		this.binary = binary;
 		this.typeFullName = typeFullName;
 		ValidateMagicAndVersion(reader);
-		table = new NameTable(reader);
+		table = new NameTable(reader, GetPredefinedTableEntries(typeFullName));
 		ReadMembers(reader, Members);
 		var methodGroups = reader.Read7BitEncodedInt();
 		for (var methodGroupIndex = 0; methodGroupIndex < methodGroups; methodGroupIndex++)
@@ -56,66 +56,31 @@ public sealed class BinaryType
 
 	private static void ValidateMagicAndVersion(BinaryReader reader)
 	{
-		Span<byte> magic = stackalloc byte[StrictMagicBytes.Length];
-		_ = reader.Read(magic);
-		if (!magic.SequenceEqual(StrictMagicBytes))
-			throw new InvalidBytecodeEntry("Entry does not start with 'Strict' magic bytes");
-		var fileVersion = reader.ReadByte();
+		var firstMagicByte = reader.ReadByte();
+		if (firstMagicByte != StrictMagicByte)
+			throw new InvalidBytecodeEntry("Entry does not start with compact 'S' magic byte");
+		var secondByte = reader.ReadByte();
+		byte fileVersion;
+		if (secondByte == (byte)'t')
+		{
+			var legacyTail = reader.ReadBytes(4);
+			if (legacyTail.Length != 4 || legacyTail[0] != (byte)'r' || legacyTail[1] != (byte)'i' ||
+				legacyTail[2] != (byte)'c' || legacyTail[3] != (byte)'t')
+				throw new InvalidBytecodeEntry("Entry does not start with supported magic bytes");
+			fileVersion = reader.ReadByte();
+		}
+		else
+			fileVersion = secondByte;
 		if (fileVersion is 0 or > Version)
 			throw new InvalidVersion(fileVersion);
 	}
 
 	public const string BytecodeEntryExtension = ".bytecode";
-	internal static readonly byte[] StrictMagicBytes = "Strict"u8.ToArray();
+	internal const byte StrictMagicByte = (byte)'S';
 	public sealed class InvalidBytecodeEntry(string message) : Exception(message);
 	public const byte Version = 1;
-
 	public sealed class InvalidVersion(byte fileVersion) : Exception("File version: " +
 		fileVersion + ", this runtime only supports up to version " + Version);
-
-	/*TODO: can we avoid this? remove
-	private static Member EnsureMember(Type type, string memberName, string memberTypeName)
-	{
-		var existing = type.Members.FirstOrDefault(member => member.Name == memberName);
-		if (existing != null)
-			return existing;
-		var member = new Member(type, memberName + " " + memberTypeName, null);
-		type.Members.Add(member);
-		return member;
-	}
-
-	private Type EnsureTypeForEntry()
-	{
-		var segments = typeFullName.Split(Context.ParentSeparator, StringSplitOptions.RemoveEmptyEntries);
-		if (segments.Length == 0)
-			throw new InvalidBytecodeEntry("Invalid entry name: " + typeFullName); //ncrunch: no coverage
-		var typeName = segments[^1];
-		var existingType = binary.basePackage.FindType(typeName);
-		if (existingType != null)
-			return existingType;
-		var targetPackage = binary.basePackage;
-		for (var segmentIndex = 0; segmentIndex < segments.Length - 1; segmentIndex++)
-			targetPackage = targetPackage.FindSubPackage(segments[segmentIndex]) ??
-				new Package(targetPackage, segments[segmentIndex]);
-		return targetPackage.FindDirectType(typeName) != null
-			? targetPackage.GetType(typeName)
-			: new Type(targetPackage, new TypeLines(typeName, Method.Run));
-	}
-
-	private static void EnsureMethod(Type type, string methodName, string[] parameters,
-		string returnTypeName)
-	{
-		if (type.Methods.Any(existingMethod => existingMethod.Name == methodName &&
-			existingMethod.Parameters.Count == parameters.Length))
-			return; //ncrunch: no coverage
-		var header = parameters.Length == 0
-			? returnTypeName == Type.None
-				? methodName
-				: methodName + " " + returnTypeName
-			: methodName + "(" + string.Join(", ", parameters) + ") " + returnTypeName;
-		type.Methods.Add(new Method(type, 0, new MethodExpressionParser(), [header]));
-	}
-*/
 	private NameTable? table;
 
 	internal void ReadMembers(BinaryReader reader, List<BinaryMember> members)
@@ -125,17 +90,42 @@ public sealed class BinaryType
 			members.Add(new BinaryMember(reader, table!, binary!));
 	}
 
-	public List<BinaryMember> Members = new();
-	public Dictionary<string, List<BinaryMethod>> MethodGroups = new();
+	public List<BinaryMember> Members = [];
+	public Dictionary<string, List<BinaryMethod>> MethodGroups = [];
 	public NameTable Table => table ?? CreateNameTable();
 	public bool UsesConsolePrint =>
 		MethodGroups.Values.Any(methods => methods.Any(method => method.UsesConsolePrint));
 	public int TotalInstructionCount =>
 		MethodGroups.Values.Sum(methods => methods.Sum(method => method.instructions.Count));
 
+	private static readonly string[] BaseTypeNames =
+	[
+		Type.None, Type.Any, Type.Boolean, Type.Number, Type.Character, Type.Range, Type.Text,
+		Type.Error, Type.ErrorWithValue, Type.Iterator, Type.List, Type.Logger, Type.App,
+		Type.System, Type.File, Type.Directory, Type.TextWriter, Type.TextReader, Type.Stacktrace,
+		Type.Mutable, Type.Dictionary
+	];
+
+	private static IEnumerable<string> GetPredefinedTableEntries(string typeFullName)
+	{
+		yield return "";
+		yield return typeFullName;
+		var separatorIndex = typeFullName.LastIndexOf(Context.ParentSeparator);
+		yield return separatorIndex == -1
+			? typeFullName
+			: typeFullName[(separatorIndex + 1)..];
+		foreach (var baseTypeName in BaseTypeNames)
+		{
+			yield return baseTypeName;
+			yield return baseTypeName.ToLowerInvariant();
+			yield return nameof(Strict) + Context.ParentSeparator + baseTypeName;
+			yield return "TestPackage" + Context.ParentSeparator + baseTypeName;
+		}
+	}
+
 	private NameTable CreateNameTable()
 	{
-		table = new NameTable();
+		table = new NameTable(GetPredefinedTableEntries(typeFullName));
 		foreach (var member in Members)
 			AddMemberNamesToTable(member);
 		foreach (var (methodName, methods) in MethodGroups)
@@ -163,7 +153,7 @@ public sealed class BinaryType
 
 	public void Write(BinaryWriter writer)
 	{
-		writer.Write(StrictMagicBytes);
+		writer.Write(StrictMagicByte);
 		writer.Write(Version);
 		Table.Write(writer);
 		WriteMembers(writer, Members);

@@ -108,12 +108,16 @@ public sealed class RunnerTests
   {
     var binaryPath = GetExamplesBinaryFile("SimpleCalculator");
     using var archive = ZipFile.OpenRead(binaryPath);
-    var entries = archive.Entries.Select(entry => entry.FullName).ToList();
+    var entries = archive.Entries.Select(entry => entry.FullName.Replace('\\', '/')).ToList();
     Assert.That(entries.All(entry => entry.EndsWith(BytecodeSerializer.BytecodeEntryExtension,
       StringComparison.OrdinalIgnoreCase)), Is.True);
     Assert.That(entries.Any(entry => entry.Contains("#", StringComparison.Ordinal)), Is.False);
-    Assert.That(entries.Any(entry => entry.EndsWith("SimpleCalculator.bytecode",
-      StringComparison.Ordinal)), Is.True);
+    Assert.That(entries, Does.Contain("SimpleCalculator.bytecode"));
+    Assert.That(entries, Does.Contain("Strict/Number.bytecode"));
+    Assert.That(entries, Does.Contain("Strict/Logger.bytecode"));
+    Assert.That(entries, Does.Contain("Strict/Text.bytecode"));
+    Assert.That(entries, Does.Contain("Strict/Character.bytecode"));
+    Assert.That(entries, Does.Contain("Strict/TextWriter.bytecode"));
   }
 
   [Test]
@@ -146,6 +150,47 @@ public sealed class RunnerTests
     var output = writer.ToString();
     Assert.That(output, Does.Contain("Fibonacci(10) = 55"));
     Assert.That(output, Does.Contain("Fibonacci(5) = 2"));
+  }
+
+  [Test]
+  public async Task RunSimpleCalculatorTwiceWithoutTestPackage()
+  {
+    await new Runner(SimpleCalculatorFilePath).Run();
+    writer.GetStringBuilder().Clear();
+    await new Runner(SimpleCalculatorFilePath).Run();
+    Assert.That(writer.ToString(), Does.Contain("2 + 3 = 5"));
+  }
+
+  [Test]
+  public async Task SaveStrictBinaryEntryNameTableSkipsPrefilledNames()
+  {
+    var tempDirectory = Path.Combine(Path.GetTempPath(), "Strict" + Guid.NewGuid().ToString("N"));
+    Directory.CreateDirectory(tempDirectory);
+    try
+    {
+      var sourceCopyPath = Path.Combine(tempDirectory, Path.GetFileName(SimpleCalculatorFilePath));
+      File.Copy(SimpleCalculatorFilePath, sourceCopyPath);
+      await new Runner(sourceCopyPath, TestPackage.Instance).Run();
+      var binaryPath = Path.ChangeExtension(sourceCopyPath, BytecodeSerializer.Extension);
+      using var archive = ZipFile.OpenRead(binaryPath);
+      var entry = archive.Entries.First(file => file.FullName == "SimpleCalculator.bytecode");
+      using var reader = new BinaryReader(entry.Open());
+      Assert.That(reader.ReadByte(), Is.EqualTo((byte)'S'));
+      Assert.That(reader.ReadByte(), Is.EqualTo(BytecodeSerializer.Version));
+      var customNamesCount = reader.Read7BitEncodedInt();
+      var customNames = new List<string>(customNamesCount);
+      for (var nameIndex = 0; nameIndex < customNamesCount; nameIndex++)
+        customNames.Add(reader.ReadString());
+      Assert.That(customNames, Does.Not.Contain("Strict/Number"));
+      Assert.That(customNames, Does.Not.Contain("Strict/Text"));
+      Assert.That(customNames, Does.Not.Contain("Strict/Boolean"));
+      Assert.That(customNames, Does.Not.Contain("SimpleCalculator"));
+    }
+    finally
+    {
+      if (Directory.Exists(tempDirectory))
+        Directory.Delete(tempDirectory, true);
+    }
   }
 
   private static string SimpleCalculatorFilePath => GetExamplesFilePath("SimpleCalculator");

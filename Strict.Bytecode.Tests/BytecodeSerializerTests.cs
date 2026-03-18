@@ -134,6 +134,92 @@ public sealed class BytecodeSerializerTests : TestBytecode
 		return loaded;
 	}
 
+	[Test]
+	public void BinaryTypeHeaderUsesSingleMagicByteAndVersion()
+	{
+		var binary = new BinaryGenerator(
+			GenerateMethodCallFromSource("Add", "Add(10, 5).Calculate",
+				"has First Number", "has Second Number", "Calculate Number",
+				"\tFirst + Second")).Generate();
+		var typeToWrite = binary.MethodsPerType.Values.First();
+		using var stream = new MemoryStream();
+		using var writer = new BinaryWriter(stream);
+		typeToWrite.Write(writer);
+		writer.Flush();
+		var bytes = stream.ToArray();
+		Assert.That(bytes[0], Is.EqualTo((byte)'S'));
+		Assert.That(bytes[1], Is.EqualTo(BytecodeSerializer.Version));
+	}
+
+	[Test]
+	public void NameTableWritesOnlyCustomNamesAndPrefillsBaseTypes()
+	{
+		var table = new NameTable();
+		table.Add(Type.Number);
+		table.Add("CustomIdentifier");
+		using var stream = new MemoryStream();
+		using (var writer = new BinaryWriter(stream, System.Text.Encoding.UTF8, leaveOpen: true))
+			table.Write(writer);
+		stream.Position = 0;
+		using var headerReader = new BinaryReader(stream, System.Text.Encoding.UTF8, leaveOpen: true);
+		Assert.That(headerReader.Read7BitEncodedInt(), Is.EqualTo(1));
+		stream.Position = 0;
+		using var reader = new BinaryReader(stream);
+		var readTable = new NameTable(reader);
+		Assert.That(readTable.Names.Contains(Type.Number), Is.True);
+		Assert.That(readTable.Names.Contains("CustomIdentifier"), Is.True);
+	}
+
+	[Test]
+	public void EntryNameTableDoesNotStoreBaseFullNamesOrEntryTypeName()
+	{
+		var binary = new BinaryGenerator(
+			GenerateMethodCallFromSource("Add", "Add(10, 5).Calculate",
+				"has First Number", "has Second Number", "Calculate Number", "\tFirst + Second")).Generate();
+		var addTypeKey = binary.MethodsPerType.Keys.First(typeName => !typeName.StartsWith("Strict/",
+			StringComparison.Ordinal));
+		var addType = binary.MethodsPerType[addTypeKey];
+		using var stream = new MemoryStream();
+		using (var writer = new BinaryWriter(stream, System.Text.Encoding.UTF8, leaveOpen: true))
+			addType.Write(writer);
+		stream.Position = 2;
+		using var reader = new BinaryReader(stream);
+		var customNamesCount = reader.Read7BitEncodedInt();
+		var customNames = new List<string>(customNamesCount);
+		for (var nameIndex = 0; nameIndex < customNamesCount; nameIndex++)
+			customNames.Add(reader.ReadString());
+		Assert.That(customNames, Does.Not.Contain("Strict/Number"));
+		Assert.That(customNames, Does.Not.Contain("Strict/Text"));
+		Assert.That(customNames, Does.Not.Contain("Strict/Boolean"));
+		Assert.That(customNames, Does.Not.Contain("Add"));
+	}
+
+	[Test]
+	public void NameTablePrefillsRequestedCommonNames()
+	{
+		var table = new NameTable();
+		using var stream = new MemoryStream();
+		using (var writer = new BinaryWriter(stream, System.Text.Encoding.UTF8, leaveOpen: true))
+		{
+			table.Add("first");
+			table.Add("second");
+			table.Add("from");
+			table.Add("Run");
+			table.Add("characters");
+			table.Add("Strict/List(Character)");
+			table.Add("Strict/List(Number)");
+			table.Add("Strict/List(Text)");
+			table.Add("zeroCharacter");
+			table.Add("NewLine");
+			table.Add("Tab");
+			table.Add("textWriter");
+			table.Write(writer);
+		}
+		stream.Position = 0;
+		using var reader = new BinaryReader(stream);
+		Assert.That(reader.Read7BitEncodedInt(), Is.EqualTo(0));
+	}
+
 	private readonly Type boolType = TestPackage.Instance.GetType(Type.Boolean);
 }
 
@@ -769,12 +855,16 @@ public sealed class BytecodeSerializerTests : TestBytecode
 		writer.Write((byte)InstructionType.Invoke);
 		writer.Write((byte)Register.R0);
 		writer.Write(true);
-		writer.Write7BitEncodedInt(2);
-		writer.Write7BitEncodedInt(1);
 		writer.Write7BitEncodedInt(0);
 		writer.Write7BitEncodedInt(3);
+		writer.Write7BitEncodedInt(2);
+		writer.Write7BitEncodedInt(4);
 		writer.Write(false);
-		writer.Write7BitEncodedInt(0);
+		writer.Write7BitEncodedInt(2);
+		writer.Write(SmallNumberKind);
+		writer.Write((byte)1);
+		writer.Write(SmallNumberKind);
+		writer.Write((byte)2);
 		writer.Write(false);
 		writer.Write7BitEncodedInt(0);
 		writer.Flush();

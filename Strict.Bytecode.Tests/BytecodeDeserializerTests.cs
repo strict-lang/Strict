@@ -115,7 +115,7 @@ public sealed class BytecodeDeserializerTests : TestBytecode
 		Path.Combine(Path.GetTempPath(), "strictbinary" + fileCounter++ + BinaryExecutable.Extension);
 
 	private static int fileCounter;
-	private static readonly byte[] MagicBytes = "Strict"u8.ToArray();
+	private static readonly byte[] MagicBytes = [(byte)'S'];
 
 	private static byte[] BuildEntryBytes(Action<BinaryWriter> writeContent)
 	{

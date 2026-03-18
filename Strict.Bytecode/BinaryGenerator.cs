@@ -51,7 +51,23 @@ public sealed class BinaryGenerator
 	private readonly Expression? entryPoint; //TODO: remove
 	private readonly string entryTypeFullName;
 	private readonly List<Instruction> instructions = [];
- private readonly Dictionary<string, Type> dependencyTypes = new(StringComparer.Ordinal);
+	private static readonly HashSet<string> StrictRuntimeTypeNames =
+	[
+		Type.Any,
+		Type.Boolean,
+		Type.Character,
+		Type.Dictionary,
+		Type.Logger,
+		Type.Number,
+		Type.Range,
+		Type.Text,
+		Type.TextReader,
+		Type.TextWriter,
+		Type.List,
+		Type.None,
+		Type.System
+	];
+	private readonly Dictionary<string, Type> dependencyTypes = new(StringComparer.Ordinal);
 	private readonly Registry registry = new();
 	private readonly Stack<int> idStack = new();
 	private readonly Register[] registers = Enum.GetValues<Register>();
@@ -714,7 +730,7 @@ public sealed class BinaryGenerator
 
 	private static string GetBinaryTypeName(Type type, Type entryType)
 	{
-    if (IsStrictBaseType(type, entryType))
+		if (IsStrictBaseType(type, entryType))
 			return nameof(Strict) + Context.ParentSeparator + type.Name;
 		var entryPackagePrefix = entryType.Package.FullName + Context.ParentSeparator;
 		return type.FullName.StartsWith(entryPackagePrefix, StringComparison.Ordinal)
@@ -722,10 +738,15 @@ public sealed class BinaryGenerator
 			: type.FullName;
 	}
 
-	private static bool IsStrictBaseType(Type type, Type entryType) =>
-		type.Package.Name == nameof(Strict) ||
-    entryType.Package.Name == "TestPackage" && type.Package.Name == "TestPackage" &&
-		entryType.Package.FindDirectType(type.Name) != null;
+	private static bool IsStrictBaseType(Type type, Type entryType)
+	{
+		if (type.FullName == entryType.FullName)
+			return false;
+		if (type.Package.Name == nameof(Strict))
+			return true;
+		return entryType.Package.Name == "TestPackage" && type.Package.Name == "TestPackage" &&
+			StrictRuntimeTypeNames.Contains(type.Name);
+	}
 
 	private Dictionary<string, Dictionary<string, List<BinaryType.BinaryMethod>>> GenerateEntryMethods(
 		string entryTypeFullName, IReadOnlyList<Expression> entryExpressions, Type runReturnType)

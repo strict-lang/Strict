@@ -145,11 +145,50 @@ public sealed class Runner
 	{
 		if (skipPackageSearchAndUseThisTestPackage != null)
 			return skipPackageSearchAndUseThisTestPackage;
-		return await LogTiming(nameof(GetPackage) + " " + name,
-			async () => name.StartsWith(nameof(Strict), StringComparison.Ordinal)
-				? await repositories.LoadStrictPackage(name)
-				: throw new NotSupportedException("No github package search ability was implemented " +
-					"yet, only Strict packages work for now: " + name));
+		return await LogTiming(nameof(GetPackage) + " " + name, async () =>
+		{
+			if (!name.StartsWith(nameof(Strict), StringComparison.Ordinal))
+				throw new NotSupportedException("No github package search ability was implemented yet, only Strict packages work for now: " + name);
+			var package = await repositories.LoadStrictPackage(name);
+			await LoadOptionalLocalStrictPackages();
+			return package;
+		});
+	}
+
+	private async Task LoadOptionalLocalStrictPackages()
+	{
+		var strictRepositoryPath = FindStrictRepositoryPath();
+		if (strictRepositoryPath == null)
+			return;
+		var siblingRootPath = Directory.GetParent(strictRepositoryPath)?.FullName;
+		if (siblingRootPath == null)
+			return;
+		await TryLoadPackageFromPath(Path.Combine(siblingRootPath, "Strict.Math"),
+			nameof(Strict) + Context.ParentSeparator + "Math");
+		await TryLoadPackageFromPath(Path.Combine(siblingRootPath, "Strict.ImageProcessing"),
+			nameof(Strict) + Context.ParentSeparator + "ImageProcessing");
+	}
+
+	private async Task TryLoadPackageFromPath(string packagePath, string packageFullName)
+	{
+		if (!Directory.Exists(packagePath))
+			return;
+		if (Directory.GetFiles(packagePath, "*" + Type.Extension, SearchOption.AllDirectories).Length == 0)
+			return;
+		await repositories.LoadFromPath(packageFullName, packagePath);
+	}
+
+	private string? FindStrictRepositoryPath()
+	{
+		var currentPath = Path.GetDirectoryName(Path.GetFullPath(strictFilePath));
+		while (currentPath != null)
+		{
+			if (Directory.Exists(Path.Combine(currentPath, ".git")) ||
+				Directory.GetFiles(currentPath, "*.sln").Any())
+				return currentPath;
+			currentPath = Path.GetDirectoryName(currentPath);
+		}
+		return null;
 	}
 
 	private T LogTiming<T>(string message, Func<T> callToTime)
@@ -173,10 +212,16 @@ public sealed class Runner
 		var typeName = Path.GetFileNameWithoutExtension(strictFilePath);
 		var existingType = basePackage.FindDirectType(typeName);
 		Type mainType;
-		if (existingType != null)
+		if (existingType == null)
+		{
+			var typeLines = new TypeLines(typeName, await File.ReadAllLinesAsync(strictFilePath));
+			mainType = new Type(basePackage, typeLines).ParseMembersAndMethods(parser);
+		}
+		else if (existingType.Methods.Any(method => !method.IsTrait))
 			mainType = existingType;
 		else
 		{
+			basePackage.Remove(existingType);
 			var typeLines = new TypeLines(typeName, await File.ReadAllLinesAsync(strictFilePath));
 			mainType = new Type(basePackage, typeLines).ParseMembersAndMethods(parser);
 		}
@@ -429,9 +474,8 @@ private Binary? binary;
 			targetType.Dispose();
 		}
 	}
-	 //TODO: wrong, this is already above in expression string[]? programArgs = null)
-*/
- public async Task RunExpression(string expressionString)
+	*/
+	public async Task RunExpression(string expressionString)
 	{
 		var typeName = Path.GetFileNameWithoutExtension(strictFilePath);
 		var basePackage = skipPackageSearchAndUseThisTestPackage ?? await GetPackage(nameof(Strict));
@@ -501,9 +545,11 @@ private Binary? binary;
 	}
 
 	private static Type ResolveType(BinaryExecutable binary, string fullTypeName) =>
-		binary.basePackage.FindFullType(fullTypeName) ??
+		(fullTypeName.Contains(Context.ParentSeparator)
+			? binary.basePackage.FindFullType(fullTypeName)
+			: null) ??
 		binary.basePackage.FindType(fullTypeName) ??
-   (fullTypeName.StartsWith(nameof(Strict) + Context.ParentSeparator, StringComparison.Ordinal)
+		(fullTypeName.StartsWith(nameof(Strict) + Context.ParentSeparator, StringComparison.Ordinal)
 			? binary.basePackage.FindType(fullTypeName[(nameof(Strict).Length + 1)..])
 			: null) ??
 		binary.basePackage.GetType(fullTypeName);

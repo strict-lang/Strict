@@ -2,6 +2,7 @@ using System.Collections;
 using Strict.Bytecode.Instructions;
 using Strict.Expressions;
 using Strict.Language;
+using Type = Strict.Language.Type;
 
 namespace Strict.Bytecode.Serialization;
 
@@ -10,13 +11,92 @@ namespace Strict.Bytecode.Serialization;
 /// </summary>
 public sealed class NameTable : IEnumerable<string>
 {
-	public NameTable() { }
-
-	public NameTable(BinaryReader reader)
+	public NameTable(IEnumerable<string>? predefinedNames = null)
 	{
-		var count = reader.Read7BitEncodedInt();
-		for (var index = 0; index < count; index++)
+		AddBuiltInPredefinedNames();
+		if (predefinedNames != null)
+			AddPredefinedNames(predefinedNames);
+	}
+
+	public NameTable(BinaryReader reader, IEnumerable<string>? predefinedNames = null) :
+		this(predefinedNames)
+	{
+		var customNamesCount = reader.Read7BitEncodedInt();
+		for (var index = 0; index < customNamesCount; index++)
 			Add(reader.ReadString());
+	}
+
+	private void AddPredefinedNames(IEnumerable<string> predefinedNames)
+	{
+		foreach (var predefinedName in predefinedNames)
+			Add(predefinedName);
+		predefinedNamesCount = names.Count;
+	}
+
+	private static readonly string[] BuiltInPredefinedNames =
+	[
+		"",
+		Type.None,
+		Type.Any,
+		Type.Boolean,
+		Type.Number,
+		Type.Character,
+		Type.Range,
+		Type.Text,
+		Type.Error,
+		Type.ErrorWithValue,
+		Type.Iterator,
+		Type.List,
+		Type.Logger,
+		Type.App,
+		Type.System,
+		Type.File,
+		Type.Directory,
+		Type.TextWriter,
+		Type.TextReader,
+		Type.Stacktrace,
+		Type.Mutable,
+		Type.Dictionary,
+		Type.None.ToLowerInvariant(),
+		Type.Any.ToLowerInvariant(),
+		Type.Boolean.ToLowerInvariant(),
+		Type.Number.ToLowerInvariant(),
+		Type.Character.ToLowerInvariant(),
+		Type.Range.ToLowerInvariant(),
+		Type.Text.ToLowerInvariant(),
+		Type.Error.ToLowerInvariant(),
+		Type.ErrorWithValue.ToLowerInvariant(),
+		Type.Iterator.ToLowerInvariant(),
+		Type.List.ToLowerInvariant(),
+		Type.Logger.ToLowerInvariant(),
+		Type.App.ToLowerInvariant(),
+		Type.System.ToLowerInvariant(),
+		Type.File.ToLowerInvariant(),
+		Type.Directory.ToLowerInvariant(),
+		Type.TextWriter.ToLowerInvariant(),
+		Type.TextReader.ToLowerInvariant(),
+		Type.Stacktrace.ToLowerInvariant(),
+		Type.Mutable.ToLowerInvariant(),
+		Type.Dictionary.ToLowerInvariant(),
+		"first",
+		"second",
+		"from",
+		"Run",
+		"characters",
+		"Strict/List(Character)",
+		"Strict/List(Number)",
+		"Strict/List(Text)",
+		"zeroCharacter",
+		"NewLine",
+		"Tab",
+		"textWriter"
+	];
+
+	private void AddBuiltInPredefinedNames()
+	{
+		foreach (var predefinedName in BuiltInPredefinedNames)
+			Add(predefinedName);
+		predefinedNamesCount = names.Count;
 	}
 
 	public NameTable CollectStrings(Instruction instruction) =>
@@ -48,6 +128,7 @@ public sealed class NameTable : IEnumerable<string>
 
 	private readonly Dictionary<string, int> indices = new(StringComparer.Ordinal);
 	private readonly List<string> names = [];
+	private int predefinedNamesCount;
 	public IReadOnlyList<string> Names => names;
 	public int this[string name] => indices[name];
 	public int Count => names.Count;
@@ -114,8 +195,9 @@ public sealed class NameTable : IEnumerable<string>
 
 	public void Write(BinaryWriter writer)
 	{
-		writer.Write7BitEncodedInt(Count);
-		foreach (var s in this)
-			writer.Write(s);
+		var customNamesCount = names.Count - predefinedNamesCount;
+		writer.Write7BitEncodedInt(customNamesCount);
+		for (var index = predefinedNamesCount; index < names.Count; index++)
+			writer.Write(names[index]);
 	}
 }
