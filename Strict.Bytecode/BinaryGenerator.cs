@@ -1,4 +1,5 @@
 using Strict.Bytecode.Instructions;
+using Strict.Bytecode.Serialization;
 using Strict.Expressions;
 using Strict.Language;
 using Type = Strict.Language.Type;
@@ -12,13 +13,76 @@ namespace Strict.Bytecode;
 /// </summary>
 public sealed class BinaryGenerator
 {
-	public BinaryGenerator(Package basePackage) => binary = new BinaryExecutable(basePackage);
-	private readonly BinaryExecutable binary;
-
-	public BinaryExecutable Generate(string entryTypeFullName, Expression entryPoint)
+	public BinaryGenerator(Expression entryPoint)
 	{
-		return binary.AddType(entryTypeFullName, GenerateEntryMethods(entryPoint));
+		this.entryPoint = entryPoint;
+		entryTypeFullName = GetEntryTypeFullName(entryPoint);
+		ReturnType = entryPoint.ReturnType;
+		Expressions = [entryPoint];
+		binary = new BinaryExecutable(GetBasePackage(entryPoint));
 	}
+
+	public BinaryGenerator(MethodCall methodCall)
+	{
+		entryTypeFullName = methodCall.Method.Type.FullName;
+		if (methodCall.Instance is MethodCall instanceCall)
+			AddInstanceMemberVariables(instanceCall);
+		AddMethodParameterVariables(methodCall);
+		var methodBody = methodCall.Method.GetBodyAndParseIfNeeded();
+		Expressions = methodBody is Body body
+			? body.Expressions
+			: [methodBody];
+		ReturnType = methodCall.Method.ReturnType;
+		binary = new BinaryExecutable(GetBasePackage(methodCall));
+	}
+
+	private BinaryGenerator(Package basePackage, IReadOnlyList<Expression> expressions, Type returnType)
+	{
+		binary = new BinaryExecutable(basePackage);
+		Expressions = expressions;
+		ReturnType = returnType;
+		entryTypeFullName = "";
+	}
+
+	private readonly BinaryExecutable binary;
+	private readonly Expression? entryPoint;
+	private readonly string entryTypeFullName;
+	private readonly List<Instruction> instructions = [];
+	private readonly Registry registry = new();
+	private readonly Stack<int> idStack = new();
+	private readonly Register[] registers = Enum.GetValues<Register>();
+	private IReadOnlyList<Expression> Expressions { get; } = [];
+	private Type ReturnType { get; } = null!;
+	private int conditionalId;
+	private int forResultId;
+
+	public BinaryExecutable Generate() =>
+		Generate(entryTypeFullName, Expressions, ReturnType);
+
+	public BinaryExecutable Generate(string typeFullName, Expression entryPointExpression) =>
+		Generate(typeFullName, [entryPointExpression], entryPointExpression.ReturnType);
+
+	private BinaryExecutable Generate(string typeFullName, IReadOnlyList<Expression> entryExpressions,
+		Type runReturnType)
+	{
+		var methodsByType = GenerateEntryMethods(typeFullName, entryExpressions, runReturnType);
+		foreach (var (compiledTypeFullName, methodGroups) in methodsByType)
+			binary.AddType(compiledTypeFullName, methodGroups);
+		return binary;
+	}
+
+	private static Package GetBasePackage(Expression expression)
+	{
+		Context context = expression.ReturnType;
+		while (context is not Package)
+			context = context.Parent;
+		return (Package)context;
+	}
+
+	private static string GetEntryTypeFullName(Expression expression) =>
+		expression is MethodCall methodCall
+			? methodCall.Method.Type.FullName
+			: expression.ReturnType.FullName;
 
 	/*obs
 	public BinaryGenerator(InvokedMethod method, Registry registry)
@@ -224,7 +288,7 @@ public sealed class BinaryGenerator
 
 	private bool? TryGenerateMethodCallInstruction(Expression expression)
 	{
-		if (expression is BinaryExecutable || expression is not MethodCall methodCall)
+		if (expression is not MethodCall methodCall)
 			return null;
 		if (TryGenerateInstructionForCollectionManipulation(methodCall))
 			return true;
@@ -241,199 +305,39 @@ public sealed class BinaryGenerator
 		if (memberCall.Member.Type.Name is not (Type.Logger or Type.TextWriter or Type.System))
 			return false;
 		if (methodCall.Arguments.Count == 0)
-		{ //ncrunch: no coverage start
+		{
 			instructions.Add(new PrintInstruction(""));
 			return true;
-		} //ncrunch: no coverage end
-		var arg = methodCall.Arguments[0];
-		if (arg is Value textValue && textValue.Data.IsText)
-		{ //ncrunch: no coverage start
+		}
+		var argument = methodCall.Arguments[0];
+		if (argument is Value textValue && textValue.Data.IsText)
+		{
 			instructions.Add(new PrintInstruction(textValue.Data.Text));
 			return true;
-		} //ncrunch: no coverage end
-		if (arg is BinaryExecutable binary)
+		}
+		if (argument is Expressions.Binary binary)
 		{
 			var prefix = ExtractTextPrefix(binary.Instance);
-			var valueExpr = UnwrapToConversion(binary.Arguments[0]);
-			GenerateInstructionFromExpression(valueExpr);
+			var valueExpression = UnwrapToConversion(binary.Arguments[0]);
+			GenerateInstructionFromExpression(valueExpression);
 			instructions.Add(new PrintInstruction(prefix, registry.PreviousRegister,
-				valueExpr.ReturnType.IsText));
+				valueExpression.ReturnType.IsText));
 			return true;
 		}
-		if (arg is MethodCall argMethodCall)
+		if (argument is MethodCall argumentMethodCall)
 		{
-			GenerateInstructionFromExpression(argMethodCall);
+			GenerateInstructionFromExpression(argumentMethodCall);
 			instructions.Add(new PrintInstruction("", registry.PreviousRegister,
-				argMethodCall.ReturnType.IsText));
+				argumentMethodCall.ReturnType.IsText));
 			return true;
 		}
-		//ncrunch: no coverage start
-		instructions.Add(new PrintInstruction(arg.ToString()));
+		instructions.Add(new PrintInstruction(argument.ToString()));
 		return true;
-	} //ncrunch: no coverage end
-
-	private static string ExtractTextPrefix(Expression? expr) =>
-		expr switch
-		{
-			Value v when v.Data.IsText => v.Data.Text,
-			To { Instance: { } inner } => ExtractTextPrefix(inner), //ncrunch: no coverage
-			_ => "" //ncrunch: no coverage
-		};
-
-	private static Expression UnwrapToConversion(Expression expr) =>
-		expr is To { Instance: { } inner }
-			? inner
-			: expr;
-
-	private bool TryGenerateInstructionForCollectionManipulation(MethodCall methodCall)
-	{
-		switch (methodCall.Method.Name)
-		{
-		case "Add" when methodCall.Instance?.ReturnType.IsList == true ||
-			methodCall.Instance?.ReturnType.IsDictionary == true:
-		{
-			GenerateInstructionsForAddMethod(methodCall);
-			return true;
-		}
-		case "Remove" when methodCall.Instance?.ReturnType.IsList == true:
-		{
-			GenerateInstructionsForRemoveMethod(methodCall);
-			return true;
-		}
-		case "Increment":
-		case "Decrement":
-		{
-			var register = registry.AllocateRegister();
-			instructions.Add(new Invoke(register, methodCall, registry));
-			if (methodCall.Instance != null)
-				instructions.Add(new StoreFromRegisterInstruction(register, methodCall.Instance.ToString()));
-			return true;
-		}
-		default:
-			return false;
-		}
-	}
-
-	private void GenerateInstructionsForRemoveMethod(MethodCall methodCall)
-	{
-		if (methodCall.Instance == null)
-			return; //ncrunch: no coverage
-		GenerateInstructionFromExpression(methodCall.Arguments[0]);
-		if (methodCall.Instance.ReturnType is GenericTypeImplementation { Generic.Name: Type.List })
-			instructions.Add(new RemoveInstruction(registry.PreviousRegister, methodCall.Instance.ToString()));
-	}
-
-	private void GenerateInstructionsForAddMethod(MethodCall methodCall)
-	{
-		if (TryGenerateAddForTable(methodCall) || methodCall.Instance == null)
-			return;
-		GenerateInstructionFromExpression(methodCall.Arguments[0]);
-		instructions.Add(new WriteToListInstruction(registry.PreviousRegister,
-			methodCall.Instance.ToString()));
-	}
-
-	private bool TryGenerateAddForTable(MethodCall methodCall)
-	{
-		if (methodCall.Arguments.Count != 2 || methodCall.Instance == null)
-			return false;
-		GenerateInstructionFromExpression(methodCall.Arguments[0]);
-		var key = registry.PreviousRegister;
-		GenerateInstructionFromExpression(methodCall.Arguments[1]);
-		var value = registry.PreviousRegister;
-		instructions.Add(new WriteToTableInstruction(key, value, methodCall.Instance.ToString()));
-		return true;
-	}
-
-	private bool? TryGenerateBodyInstructions(Expression expression)
-	{
-		if (expression is not Body body)
-			return null;
-		GenerateInstructions(body.Expressions);
-		return true;
-	}
-
-	private bool? TryGenerateMutableInstructions(Expression expression)
-	{
-		if (expression is Declaration { IsMutable: true } declaration)
-			GenerateForAssignmentOrDeclaration(declaration.Value, declaration.Name);
-		else if (expression is MutableReassignment assignment)
-			GenerateForAssignmentOrDeclaration(assignment.Value, assignment.Name);
-		else
-			return null;
-		return true;
-	}
-
-	private void GenerateForAssignmentOrDeclaration(Expression declarationOrAssignment, string name)
-	{
-		if (declarationOrAssignment is Value declarationOrAssignmentValue)
-			TryGenerateInstructionsForAssignmentValue(declarationOrAssignmentValue, name);
-		else
-		{
-			GenerateInstructionFromExpression(declarationOrAssignment);
-			instructions.Add(new StoreFromRegisterInstruction(registers[registry.NextRegister - 1], name));
-		}
-	}
-
-	private bool? TryGenerateLoopInstructions(Expression expression)
-	{
-		if (expression is not For forExpression)
-			return null;
-		GenerateLoopInstructions(forExpression);
-		return true;
-	}
-
-	private bool? TryGenerateAssignmentInstructions(Expression expression)
-	{
-		if (expression is not Declaration assignmentExpression || expression.IsMutable)
-			return null;
-		GenerateForAssignmentOrDeclaration(assignmentExpression.Value, assignmentExpression.Name);
-		return true;
-	}
-
-	private void TryGenerateInstructionsForAssignmentValue(Value assignmentValue, string variableName)
-	{
-		var data = assignmentValue.ReturnType.IsDictionary
-			? new ValueInstance(assignmentValue.ReturnType,
-				new Dictionary<ValueInstance, ValueInstance>())
-			: GetValueInstanceFromExpression(assignmentValue);
-		instructions.Add(new StoreVariableInstruction(data, variableName));
-	}
-
-	private bool? TryGenerateIfInstructions(Expression expression)
-	{
-		if (expression is not If ifExpression)
-			return null;
-		GenerateIfInstructions(ifExpression);
-		return true;
-	}
-
-	private bool? TryGenerateSelectorIfInstructions(Expression expression)
-	{
-		if (expression is not SelectorIf selectorIf)
-			return null;
-		GenerateSelectorIfInstructions(selectorIf);
-		return true;
-	}
-
-	private void GenerateSelectorIfInstructions(SelectorIf selectorIf)
-	{
-		foreach (var @case in selectorIf.Cases)
-		{
-			GenerateCodeForIfCondition(@case.Condition);
-			GenerateInstructionFromExpression(@case.Then);
-			instructions.Add(new ReturnInstruction(registry.PreviousRegister));
-			instructions.Add(new JumpToId(idStack.Pop(), InstructionType.JumpEnd));
-		}
-		if (selectorIf.OptionalElse != null)
-		{
-			GenerateInstructionFromExpression(selectorIf.OptionalElse);
-			instructions.Add(new ReturnInstruction(registry.PreviousRegister));
-		}
 	}
 
 	private bool? TryGenerateBinaryInstructions(Expression expression)
 	{
-		if (expression is not BinaryExecutable binary)
+		if (expression is not Expressions.Binary binary)
 			return null;
 		GenerateCodeForBinary(binary);
 		return true;
@@ -532,10 +436,328 @@ public sealed class BinaryGenerator
 
 	private void GenerateCodeForIfCondition(Expression condition)
 	{
-		if (condition is BinaryExecutable binary)
-			GenerateForBinaryIfConditionalExpression(binary);
+		if (condition is MethodCall binaryCondition)
+			GenerateForBinaryIfConditionalExpression(binaryCondition);
 		else
 			GenerateForBooleanCallIfCondition(condition);
+	}
+
+	private void GenerateForBinaryIfConditionalExpression(MethodCall condition)
+	{
+		var leftRegister = GenerateLeftSideForIfCondition(condition);
+		var rightRegister = GenerateRightSideForIfCondition(condition);
+		GenerateInstructionsFromIfCondition(GetConditionalInstruction(condition.Method), leftRegister,
+			rightRegister);
+	}
+
+	private Register GenerateLeftSideForIfCondition(MethodCall condition) =>
+		condition.Instance switch
+		{
+			MethodCall nestedMethodCall when IsBinaryOperation(nestedMethodCall.Method.Name) =>
+				GenerateValueBinaryInstructions(nestedMethodCall,
+					GetInstructionBasedOnBinaryOperationName(nestedMethodCall.Method.Name)),
+			MethodCall nestedMethodCall => InvokeAndGetStoredRegisterForConditional(nestedMethodCall),
+			_ => LoadVariableForIfConditionLeft(condition)
+		};
+
+	private static bool IsBinaryOperation(string methodName) =>
+		methodName is BinaryOperator.Plus or BinaryOperator.Minus or BinaryOperator.Multiply
+			or BinaryOperator.Divide or BinaryOperator.Modulate;
+
+	private Register InvokeAndGetStoredRegisterForConditional(MethodCall condition)
+	{
+		GenerateInstructionFromExpression(condition);
+		return registry.PreviousRegister;
+	}
+
+	private Register GenerateRightSideForIfCondition(MethodCall condition)
+	{
+		GenerateInstructionFromExpression(condition.Arguments[0]);
+		return registry.PreviousRegister;
+	}
+
+	private void GenerateBinaryInstruction(MethodCall binary, InstructionType operationInstruction)
+	{
+		if (binary.Instance is MethodCall nestedBinary)
+		{
+			var leftRegister = GenerateValueBinaryInstructions(nestedBinary,
+				GetInstructionBasedOnBinaryOperationName(nestedBinary.Method.Name));
+			GenerateInstructionFromExpression(binary.Arguments[0]);
+			instructions.Add(new BinaryInstruction(operationInstruction, leftRegister,
+				registry.PreviousRegister, registry.AllocateRegister()));
+		}
+		else if (binary.Arguments[0] is MethodCall nestedBinaryArgument)
+			GenerateNestedBinaryInstructions(binary, operationInstruction, nestedBinaryArgument);
+		else
+			GenerateValueBinaryInstructions(binary, operationInstruction);
+	}
+
+	private void GenerateNestedBinaryInstructions(MethodCall binary,
+		InstructionType operationInstruction, MethodCall binaryArgument)
+	{
+		var right = GenerateValueBinaryInstructions(binaryArgument,
+			GetInstructionBasedOnBinaryOperationName(binaryArgument.Method.Name));
+		var left = registry.AllocateRegister();
+		if (binary.Instance != null)
+			instructions.Add(new LoadVariableToRegister(left, binary.Instance.ToString()));
+		instructions.Add(new BinaryInstruction(operationInstruction, left, right,
+			registry.AllocateRegister()));
+	}
+
+	private Register GenerateValueBinaryInstructions(MethodCall binary,
+		InstructionType operationInstruction)
+	{
+		if (binary.Instance == null)
+			throw new InstanceNameNotFound();
+		GenerateInstructionFromExpression(binary.Instance);
+		var leftValue = registry.PreviousRegister;
+		GenerateInstructionFromExpression(binary.Arguments[0]);
+		var rightValue = registry.PreviousRegister;
+		var resultRegister = registry.AllocateRegister();
+		instructions.Add(new BinaryInstruction(operationInstruction, leftValue, rightValue,
+			resultRegister));
+		return resultRegister;
+	}
+
+	private sealed class InstanceNameNotFound : Exception;
+
+	private Dictionary<string, Dictionary<string, List<BinaryType.BinaryMethod>>> GenerateEntryMethods(
+		string entryTypeFullName, IReadOnlyList<Expression> entryExpressions, Type runReturnType)
+	{
+		var methodsByType = new Dictionary<string, Dictionary<string, List<BinaryType.BinaryMethod>>>(
+			StringComparer.Ordinal);
+		var methodsToCompile = new Queue<Method>();
+		var compiledMethodKeys = new HashSet<string>(StringComparer.Ordinal);
+
+		void EnqueueInvokedMethods(IReadOnlyList<Instruction> instructions)
+		{
+			foreach (var invoke in instructions.OfType<Invoke>())
+			{
+				if (invoke.Method?.Method == null || invoke.Method.Method.Name == Method.From)
+					continue;
+				var method = invoke.Method.Method;
+				var methodKey = method.Type.FullName + ":" + BinaryExecutable.BuildMethodHeader(method.Name,
+					method.Parameters.Select(parameter =>
+						new BinaryMember(parameter.Name, parameter.Type.FullName, null)).ToList(),
+					method.ReturnType);
+				if (compiledMethodKeys.Add(methodKey))
+					methodsToCompile.Enqueue(method);
+			}
+		}
+
+		var runInstructions = GenerateInstructions(entryExpressions);
+		AddCompiledMethod(methodsByType, entryTypeFullName, Method.Run, [], runReturnType.Name,
+			runInstructions);
+		EnqueueInvokedMethods(runInstructions);
+		while (methodsToCompile.Count > 0)
+		{
+			var method = methodsToCompile.Dequeue();
+			var body = method.GetBodyAndParseIfNeeded();
+			var methodExpressions = body is Body methodBody
+				? methodBody.Expressions
+				: [body];
+			var methodInstructions = new BinaryGenerator(binary.basePackage, methodExpressions,
+				method.ReturnType).GenerateInstructionList();
+			var parameters = method.Parameters.Select(parameter =>
+				new BinaryMember(parameter.Name, parameter.Type.FullName, null)).ToList();
+			AddCompiledMethod(methodsByType, method.Type.FullName, method.Name, parameters,
+				method.ReturnType.Name, methodInstructions);
+			EnqueueInvokedMethods(methodInstructions);
+		}
+		return methodsByType;
+	}
+
+	private List<Instruction> GenerateInstructionList() => GenerateInstructions(Expressions);
+
+	private static void EnqueueCalledMethods(IReadOnlyList<Instruction> instructions,
+		Queue<Method> methodsToCompile, HashSet<string> compiledMethodKeys)
+	{
+		foreach (var invoke in instructions.OfType<Invoke>())
+		{
+			if (invoke.Method?.Method == null || invoke.Method.Method.Name == Method.From)
+				continue;
+			var method = invoke.Method.Method;
+			var methodKey = method.Type.FullName + ":" + BinaryExecutable.BuildMethodHeader(method.Name,
+				method.Parameters.Select(parameter =>
+					new BinaryMember(parameter.Name, parameter.Type.FullName, null)).ToList(),
+				method.ReturnType);
+			if (compiledMethodKeys.Add(methodKey))
+				methodsToCompile.Enqueue(method);
+		}
+	}
+
+	private static void AddCompiledMethod(
+		Dictionary<string, Dictionary<string, List<BinaryType.BinaryMethod>>> methodsByType,
+		string typeFullName, string methodName, IReadOnlyList<BinaryMember> parameters,
+		string returnTypeName, IReadOnlyList<Instruction> instructionsToAdd)
+	{
+		if (!methodsByType.TryGetValue(typeFullName, out var methodGroups))
+		{
+			methodGroups = new Dictionary<string, List<BinaryType.BinaryMethod>>(StringComparer.Ordinal);
+			methodsByType[typeFullName] = methodGroups;
+		}
+		if (!methodGroups.TryGetValue(methodName, out var overloads))
+		{
+			overloads = [];
+			methodGroups[methodName] = overloads;
+		}
+		overloads.Add(new BinaryType.BinaryMethod(parameters, returnTypeName, instructionsToAdd));
+	}
+
+	private static string ExtractTextPrefix(Expression? expression) =>
+		expression switch
+		{
+			Value value when value.Data.IsText => value.Data.Text,
+			To { Instance: { } inner } => ExtractTextPrefix(inner),
+			_ => ""
+		};
+
+	private static Expression UnwrapToConversion(Expression expression) =>
+		expression is To { Instance: { } inner }
+			? inner
+			: expression;
+
+	private bool TryGenerateInstructionForCollectionManipulation(MethodCall methodCall)
+	{
+		switch (methodCall.Method.Name)
+		{
+		case "Add" when methodCall.Instance?.ReturnType.IsList == true ||
+			methodCall.Instance?.ReturnType.IsDictionary == true:
+			GenerateInstructionsForAddMethod(methodCall);
+			return true;
+		case "Remove" when methodCall.Instance?.ReturnType.IsList == true:
+			GenerateInstructionsForRemoveMethod(methodCall);
+			return true;
+		case "Increment":
+		case "Decrement":
+			var register = registry.AllocateRegister();
+			instructions.Add(new Invoke(register, methodCall, registry));
+			if (methodCall.Instance != null)
+				instructions.Add(new StoreFromRegisterInstruction(register, methodCall.Instance.ToString()));
+			return true;
+		default:
+			return false;
+		}
+	}
+
+	private void GenerateInstructionsForRemoveMethod(MethodCall methodCall)
+	{
+		if (methodCall.Instance == null)
+			return;
+		GenerateInstructionFromExpression(methodCall.Arguments[0]);
+		if (methodCall.Instance.ReturnType is GenericTypeImplementation { Generic.Name: Type.List })
+			instructions.Add(new RemoveInstruction(registry.PreviousRegister, methodCall.Instance.ToString()));
+	}
+
+	private void GenerateInstructionsForAddMethod(MethodCall methodCall)
+	{
+		if (TryGenerateAddForTable(methodCall) || methodCall.Instance == null)
+			return;
+		GenerateInstructionFromExpression(methodCall.Arguments[0]);
+		instructions.Add(new WriteToListInstruction(registry.PreviousRegister,
+			methodCall.Instance.ToString()));
+	}
+
+	private bool TryGenerateAddForTable(MethodCall methodCall)
+	{
+		if (methodCall.Arguments.Count != 2 || methodCall.Instance == null)
+			return false;
+		GenerateInstructionFromExpression(methodCall.Arguments[0]);
+		var key = registry.PreviousRegister;
+		GenerateInstructionFromExpression(methodCall.Arguments[1]);
+		var value = registry.PreviousRegister;
+		instructions.Add(new WriteToTableInstruction(key, value, methodCall.Instance.ToString()));
+		return true;
+	}
+
+	private bool? TryGenerateBodyInstructions(Expression expression)
+	{
+		if (expression is not Body body)
+			return null;
+		GenerateInstructions(body.Expressions);
+		return true;
+	}
+
+	private bool? TryGenerateMutableInstructions(Expression expression)
+	{
+		if (expression is Declaration { IsMutable: true } declaration)
+			GenerateForAssignmentOrDeclaration(declaration.Value, declaration.Name);
+		else if (expression is MutableReassignment assignment)
+			GenerateForAssignmentOrDeclaration(assignment.Value, assignment.Name);
+		else
+			return null;
+		return true;
+	}
+
+	private void GenerateForAssignmentOrDeclaration(Expression declarationOrAssignment,
+		string name)
+	{
+		if (declarationOrAssignment is Value declarationOrAssignmentValue)
+			TryGenerateInstructionsForAssignmentValue(declarationOrAssignmentValue, name);
+		else
+		{
+			GenerateInstructionFromExpression(declarationOrAssignment);
+			instructions.Add(new StoreFromRegisterInstruction(registers[registry.NextRegister - 1],
+				name));
+		}
+	}
+
+	private bool? TryGenerateLoopInstructions(Expression expression)
+	{
+		if (expression is not For forExpression)
+			return null;
+		GenerateLoopInstructions(forExpression);
+		return true;
+	}
+
+	private bool? TryGenerateAssignmentInstructions(Expression expression)
+	{
+		if (expression is not Declaration assignmentExpression || expression.IsMutable)
+			return null;
+		GenerateForAssignmentOrDeclaration(assignmentExpression.Value, assignmentExpression.Name);
+		return true;
+	}
+
+	private void TryGenerateInstructionsForAssignmentValue(Value assignmentValue,
+		string variableName)
+	{
+		var data = assignmentValue.ReturnType.IsDictionary
+			? new ValueInstance(assignmentValue.ReturnType,
+				new Dictionary<ValueInstance, ValueInstance>())
+			: GetValueInstanceFromExpression(assignmentValue);
+		instructions.Add(new StoreVariableInstruction(data, variableName));
+	}
+
+	private bool? TryGenerateIfInstructions(Expression expression)
+	{
+		if (expression is not If ifExpression)
+			return null;
+		GenerateIfInstructions(ifExpression);
+		return true;
+	}
+
+	private bool? TryGenerateSelectorIfInstructions(Expression expression)
+	{
+		if (expression is not SelectorIf selectorIf)
+			return null;
+		GenerateSelectorIfInstructions(selectorIf);
+		return true;
+	}
+
+	private void GenerateSelectorIfInstructions(SelectorIf selectorIf)
+	{
+		foreach (var selectorCase in selectorIf.Cases)
+		{
+			GenerateCodeForIfCondition(selectorCase.Condition);
+			GenerateInstructionFromExpression(selectorCase.Then);
+			instructions.Add(new ReturnInstruction(registry.PreviousRegister));
+			instructions.Add(new JumpToId(idStack.Pop(), InstructionType.JumpEnd));
+		}
+		if (selectorIf.OptionalElse != null)
+		{
+			GenerateInstructionFromExpression(selectorIf.OptionalElse);
+			instructions.Add(new ReturnInstruction(registry.PreviousRegister));
+		}
 	}
 
 	private void GenerateForBooleanCallIfCondition(Expression condition)
@@ -546,14 +768,6 @@ public sealed class BinaryGenerator
 			new ValueInstance(condition.ReturnType, 1.0)));
 		GenerateInstructionsFromIfCondition(InstructionType.Equal, instanceCallRegister,
 			registry.PreviousRegister);
-	}
-
-	private void GenerateForBinaryIfConditionalExpression(BinaryExecutable condition)
-	{
-		var leftRegister = GenerateLeftSideForIfCondition(condition);
-		var rightRegister = GenerateRightSideForIfCondition(condition);
-		GenerateInstructionsFromIfCondition(GetConditionalInstruction(condition.Method), leftRegister,
-			rightRegister);
 	}
 
 	private void GenerateInstructionsFromIfCondition(InstructionType conditionInstruction,
@@ -572,78 +786,10 @@ public sealed class BinaryGenerator
 			_ => InstructionType.Equal
 		};
 
-	private Register GenerateRightSideForIfCondition(MethodCall condition)
-	{
-		GenerateInstructionFromExpression(condition.Arguments[0]);
-		return registry.PreviousRegister;
-	}
-
-	private Register GenerateLeftSideForIfCondition(BinaryExecutable condition) =>
-		condition.Instance switch
-		{
-			BinaryExecutable binaryInstance => GenerateValueBinaryInstructions(binaryInstance,
-				GetInstructionBasedOnBinaryOperationName(binaryInstance.Method.Name)),
-			MethodCall => InvokeAndGetStoredRegisterForConditional(condition),
-			_ => LoadVariableForIfConditionLeft(condition)
-		};
-
-	private Register InvokeAndGetStoredRegisterForConditional(BinaryExecutable condition)
-	{
-		if (condition.Instance == null)
-			throw new InvalidOperationException(); //ncrunch: no coverage
-		GenerateInstructionFromExpression(condition.Instance);
-		return registry.PreviousRegister;
-	}
-
-	private Register LoadVariableForIfConditionLeft(BinaryExecutable condition)
+	private Register LoadVariableForIfConditionLeft(MethodCall condition)
 	{
 		if (condition.Instance != null)
 			GenerateInstructionFromExpression(condition.Instance);
 		return registry.PreviousRegister;
 	}
-
-	private void GenerateBinaryInstruction(MethodCall binary, InstructionType operationInstruction)
-	{
-		if (binary.Instance is BinaryExecutable binaryOp)
-		{
-			var leftReg = GenerateValueBinaryInstructions(binaryOp,
-				GetInstructionBasedOnBinaryOperationName(binaryOp.Method.Name));
-			GenerateInstructionFromExpression(binary.Arguments[0]);
-			instructions.Add(new BinaryInstruction(operationInstruction, leftReg, registry.PreviousRegister,
-				registry.AllocateRegister()));
-		}
-		else if (binary.Arguments[0] is BinaryExecutable binaryArg)
-			GenerateNestedBinaryInstructions(binary, operationInstruction, binaryArg);
-		else
-			GenerateValueBinaryInstructions(binary, operationInstruction);
-	}
-
-	private void GenerateNestedBinaryInstructions(MethodCall binary,
-		InstructionType operationInstruction, BinaryExecutable binaryArgument)
-	{
-		var right = GenerateValueBinaryInstructions(binaryArgument,
-			GetInstructionBasedOnBinaryOperationName(binaryArgument.Method.Name));
-		var left = registry.AllocateRegister();
-		if (binary.Instance != null)
-			instructions.Add(new LoadVariableToRegister(left, binary.Instance.ToString()));
-		instructions.Add(new BinaryInstruction(operationInstruction, left, right,
-			registry.AllocateRegister()));
-	}
-
-	private Register GenerateValueBinaryInstructions(MethodCall binary,
-		InstructionType operationInstruction)
-	{
-		if (binary.Instance == null)
-			throw new InstanceNameNotFound(); //ncrunch: no coverage
-		GenerateInstructionFromExpression(binary.Instance);
-		var leftValue = registry.PreviousRegister;
-		GenerateInstructionFromExpression(binary.Arguments[0]);
-		var rightValue = registry.PreviousRegister;
-		var resultRegister = registry.AllocateRegister();
-		instructions.Add(new BinaryInstruction(operationInstruction, leftValue, rightValue,
-			resultRegister));
-		return resultRegister;
-	}
-
-	private sealed class InstanceNameNotFound : Exception;
 }

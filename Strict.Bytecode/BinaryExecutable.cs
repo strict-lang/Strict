@@ -1,3 +1,4 @@
+using System.Collections;
 using System.IO.Compression;
 using System.Runtime.CompilerServices;
 using Strict.Bytecode.Instructions;
@@ -15,7 +16,7 @@ namespace Strict.Bytecode;
 /// from <see cref="BinaryGenerator"/> or loaded from a compact .strictbinary ZIP file, which is
 /// done via <see cref="Serialize(string)"/>. Used by the VirtualMachine or executable generation.
 /// </summary>
-public sealed class BinaryExecutable(Package basePackage)
+public sealed class BinaryExecutable(Package basePackage) : IEnumerable<Instruction>
 {
 	//TODO: remove: var package = new Package(basePackage,
 	//	Path.GetFileNameWithoutExtension(FilePath) + "-" + ++packageCounter);
@@ -67,11 +68,11 @@ public sealed class BinaryExecutable(Package basePackage)
 	/// contains all members of this type and all not stripped out methods that were actually used.
 	/// </summary>
 	public Dictionary<string, BinaryType> MethodsPerType = new();
-	private BinaryMethod? entryPoint;
-	public BinaryMethod EntryPoint => entryPoint ??= ResolveEntryPoint();
+	private global::Strict.Bytecode.Serialization.BinaryMethod? entryPoint;
+	public global::Strict.Bytecode.Serialization.BinaryMethod EntryPoint => entryPoint ??= ResolveEntryPoint();
 	public sealed class InvalidFile(string message) : Exception(message);
 
-	private BinaryMethod ResolveEntryPoint()
+	private global::Strict.Bytecode.Serialization.BinaryMethod ResolveEntryPoint()
 	{
 		foreach (var typeData in MethodsPerType.Values)
 			if (typeData.MethodGroups.TryGetValue(Method.Run, out var runMethods) && runMethods.Count > 0)
@@ -79,11 +80,20 @@ public sealed class BinaryExecutable(Package basePackage)
 		throw new InvalidOperationException("No Run entry point found in binary executable");
 	}
 
-	/// <summary>
-	/// Writes optimized <see cref="Instruction" /> lists per type into a compact .strictbinary ZIP.
-	/// The ZIP contains one entry per type named {typeName}.bytecode.
-	/// Entry layout: magic(6) + version(1) + string-table + instruction-count(7bit) + instructions.
-	/// </summary>
+	public IReadOnlyList<Instruction>? FindInstructions(Type type, Method method) =>
+		FindInstructions(type.FullName, method.Name, method.Parameters.Count, method.ReturnType.Name);
+
+	public IReadOnlyList<Instruction>? FindInstructions(string fullTypeName, string methodName,
+		int parametersCount, string returnType = "") =>
+		MethodsPerType.TryGetValue(fullTypeName, out var methods)
+			? methods.MethodGroups.GetValueOrDefault(methodName)?.Find(m =>
+				m.Parameters.Count == parametersCount && m.ReturnTypeName == returnType)?.Instructions
+			: null;
+
+	public IReadOnlyList<Instruction>? FindInstructions(string fullTypeName, string methodName,
+		int parametersCount, Type returnType) =>
+		FindInstructions(fullTypeName, methodName, parametersCount, returnType.Name);
+
 	public void Serialize(string filePath)
 	{
 		using var fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write);
@@ -98,19 +108,15 @@ public sealed class BinaryExecutable(Package basePackage)
 		}
 	}
 
+	public static implicit operator List<Instruction>(BinaryExecutable binary) =>
+		[.. binary.EntryPoint.Instructions];
+
+	public static explicit operator Instruction[](BinaryExecutable binary) =>
+		[.. binary.EntryPoint.Instructions];
+
+	public IReadOnlyList<Instruction> ToInstructions() => EntryPoint.Instructions;
+
 	public const string Extension = ".strictbinary";
-
-	public IReadOnlyList<Instruction>? FindInstructions(Type type, Method method) =>
-		FindInstructions(type.FullName, method.Name, method.Parameters.Count, method.ReturnType.Name);
-
-	public IReadOnlyList<Instruction>? FindInstructions(string fullTypeName, string methodName,
-		int parametersCount, string returnType = "") =>
-		MethodsPerType.TryGetValue(fullTypeName, out var methods)
-			? methods.MethodGroups.GetValueOrDefault(methodName)?.Find(m =>
-				m.Parameters.Count == parametersCount && m.ReturnTypeName == returnType)?.Instructions
-			: null;
-
-	public BinaryMethod GetEntryPoint(string filePath) => EntryPoint;
 
 	public Instruction ReadInstruction(BinaryReader reader, NameTable table)
 	{
@@ -496,20 +502,26 @@ public sealed class BinaryExecutable(Package basePackage)
 
 	internal BinaryExecutable AddType(string entryTypeFullName, object value)
 	{
-		if (value is Dictionary<string, List<BinaryMethod>> methodGroups)
+		if (value is Dictionary<string, List<BinaryType.BinaryMethod>> methodGroups)
 		{
 			MethodsPerType[entryTypeFullName] = new BinaryType(this, entryTypeFullName, methodGroups);
 			entryPoint = ResolveEntryPoint();
 			return this;
 		}
-		if (value is IReadOnlyList<Instruction> instructions)
+		if (value is List<Instruction> instructions)
 		{
-			var runMethod = new BinaryMethod(Method.Run, [], Type.None, instructions);
+			var runMethod = new BinaryType.BinaryMethod([], Type.None, instructions);
 			MethodsPerType[entryTypeFullName] = new BinaryType(this, entryTypeFullName,
-				new Dictionary<string, List<BinaryMethod>> { [Method.Run] = [runMethod] });
+				new Dictionary<string, List<BinaryType.BinaryMethod>> { [Method.Run] = [runMethod] });
 			entryPoint = runMethod;
 			return this;
 		}
 		throw new NotSupportedException("Unsupported binary type payload: " + value.GetType().Name);
 	}
+
+	public List<TResult> ConvertAll<TResult>(Converter<Instruction, TResult> converter) =>
+		EntryPoint.Instructions.Select(instruction => converter(instruction)).ToList();
+
+	public IEnumerator<Instruction> GetEnumerator() => EntryPoint.Instructions.GetEnumerator();
+	IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 }

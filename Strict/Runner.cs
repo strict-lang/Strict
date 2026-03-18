@@ -193,7 +193,8 @@ public sealed class Runner
 	private BinaryExecutable GenerateBinaryExecutable(Package basePackage, string entryTypeFullName,
 		Expression entryPoint) =>
 		LogTiming(nameof(GenerateBinaryExecutable),
-			() => new BinaryGenerator(basePackage).Generate(entryTypeFullName, entryPoint));
+			//TODO: () => new BinaryGenerator(basePackage).Generate(entryTypeFullName, entryPoint));
+			() => new BinaryGenerator(entryPoint).Generate(entryTypeFullName, entryPoint));
 
 	private void OptimizeBytecode(BinaryExecutable executable) =>
 		Log(LogTiming(nameof(OptimizeBytecode), () =>

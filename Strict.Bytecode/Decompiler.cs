@@ -38,17 +38,17 @@ public sealed class Decompiler
 		{
 			lines.Add(BinaryType.ReconstructMethodName(methodName, method));
 			var bodyLines = new List<string>();
-			for (var index = 0; index < method.Instructions.Count; index++)
+			for (var index = 0; index < method.instructions.Count; index++)
 			{
-				switch (method.Instructions[index])
+				switch (method.instructions[index])
 				{
 				case StoreVariableInstruction storeVar:
 					bodyLines.Add("\tconstant " + storeVar.Identifier + " = " +
 						storeVar.ValueInstance.ToExpressionCodeString());
 					break;
 				case Invoke invoke when invoke.Method != null &&
-					index + 1 < method.Instructions.Count &&
-					method.Instructions[index + 1] is StoreFromRegisterInstruction nextStore &&
+					index + 1 < method.instructions.Count &&
+					method.instructions[index + 1] is StoreFromRegisterInstruction nextStore &&
 					nextStore.Register == invoke.Register:
 					bodyLines.Add("\tconstant " + nextStore.Identifier + " = " + invoke.Method);
 					index++;

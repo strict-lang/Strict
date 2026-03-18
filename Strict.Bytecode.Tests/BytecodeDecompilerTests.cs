@@ -14,7 +14,7 @@ public sealed class BytecodeDecompilerTests : TestBytecode
 			GenerateMethodCallFromSource("Add", "Add(10, 5).Calculate",
 				"has First Number", "has Second Number", "Calculate Number",
 				"\tAdd(10, 5).Calculate is 15", "\tFirst + Second")).Generate();
-		var outputFolder = DecompileToTemp(instructions, "Add");
+		var outputFolder = DecompileToTemp(instructions.ToInstructions(), "Add");
 		try
 		{
 			var content = File.ReadAllText(Path.Combine(outputFolder, "Add.strict"));
@@ -40,7 +40,7 @@ public sealed class BytecodeDecompilerTests : TestBytecode
 				"\tCounter(5).Calculate is 10",
 				"\tconstant doubled = Counter(3).Double",
 				"\tdoubled * 2")).Generate();
-		var outputFolder = DecompileToTemp(instructions, "Counter");
+		var outputFolder = DecompileToTemp(instructions.ToInstructions(), "Counter");
 		try
 		{
 			var content = File.ReadAllText(Path.Combine(outputFolder, "Counter.strict"));

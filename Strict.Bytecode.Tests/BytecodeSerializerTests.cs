@@ -9,11 +9,11 @@ public sealed class BytecodeSerializerTests : TestBytecode
 	[Test]
 	public void RoundTripSimpleArithmeticBytecode()
 	{
-		var instructions = new BinaryGenerator(
+		var binary = new BinaryGenerator(
 			GenerateMethodCallFromSource("Add", "Add(10, 5).Calculate",
 				"has First Number", "has Second Number", "Calculate Number",
 				"\tAdd(10, 5).Calculate is 15", "\tFirst + Second")).Generate();
-		AssertRoundTripToString(instructions);
+		AssertRoundTripToString([.. binary.ToInstructions()]);
 	}
 
 	[Test]
@@ -583,7 +583,7 @@ public sealed class BytecodeSerializerTests : TestBytecode
 		var loaded = RoundTripInstructions([
 			new LoadConstantInstruction(Register.R0, new ValueInstance(dictionaryType, items)),
 			new ReturnInstruction(Register.R0)
-		};
+		]);
 		var loaded = RoundTripToInstructions("DictTest", instructions);
 		Assert.That(loaded.Count, Is.EqualTo(instructions.Count));
 		var loadedDict = ((LoadConstantInstruction)loaded[0]).ValueInstance;
@@ -908,5 +908,4 @@ public sealed class BytecodeSerializerTests : TestBytecode
 	private const byte SmallNumberKind = 0;
 	private const byte BinaryExprKind = 7;
 	private readonly Type boolType = TestPackage.Instance.GetType(Type.Boolean);
-}
- */
+} */

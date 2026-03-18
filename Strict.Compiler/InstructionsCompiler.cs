@@ -39,17 +39,17 @@ public abstract class InstructionsCompiler
 				foreach (var overload in overloads)
 				{
 					var methodKey = BuildMethodHeaderKeyInternal(methodName, overload);
-					methods[methodKey] = [.. overload.Instructions];
+					methods[methodKey] = overload.instructions;
 				}
 		return methods;
 	}
 
 	private static string BuildMethodHeaderKeyInternal(string methodName, BinaryMethod method) =>
-		method.Parameters.Count == 0
+		method.parameters.Count == 0
 			? method.ReturnTypeName == Type.None
 				? methodName
 				: methodName + " " + method.ReturnTypeName
-			: methodName + "(" + string.Join(", ", method.Parameters) + ") " + method.ReturnTypeName;
+			: methodName + "(" + string.Join(", ", method.parameters) + ") " + method.ReturnTypeName;
 
 	public abstract Task<string> Compile(BinaryExecutable binary, Platform platform);
 	public abstract string Extension { get; }

@@ -1,3 +1,4 @@
+using Strict.Bytecode.Instructions;
 using Strict.Language;
 using Type = Strict.Language.Type;
 
@@ -8,6 +9,8 @@ namespace Strict.Bytecode.Serialization;
 /// </summary>
 public sealed class BinaryType
 {
+	public BinaryType() => typeFullName = "";
+
 	public BinaryType(BinaryReader reader, BinaryExecutable binary, string typeFullName)
 	{
 		this.binary = binary;
@@ -38,7 +41,17 @@ public sealed class BinaryType
 			Members = [.. members];
 	}
 
-	internal readonly BinaryExecutable binary;
+	public sealed record BinaryMethod : global::Strict.Bytecode.Serialization.BinaryMethod
+	{
+		public BinaryMethod(IReadOnlyList<BinaryMember> methodParameters, string returnTypeName,
+			IReadOnlyList<Instruction> methodInstructions)
+			: base("", methodParameters, returnTypeName, methodInstructions) { }
+
+		internal BinaryMethod(BinaryReader reader, BinaryType type, string methodName)
+			: base(reader, type, methodName) { }
+	}
+
+	internal readonly BinaryExecutable? binary;
 	private readonly string typeFullName;
 
 	private static void ValidateMagicAndVersion(BinaryReader reader)
@@ -109,7 +122,7 @@ public sealed class BinaryType
 	{
 		var numberOfMembers = reader.Read7BitEncodedInt();
 		for (var memberIndex = 0; memberIndex < numberOfMembers; memberIndex++)
-			members.Add(new BinaryMember(reader, table!, binary));
+			members.Add(new BinaryMember(reader, table!, binary!));
 	}
 
 	public List<BinaryMember> Members = new();
@@ -118,7 +131,7 @@ public sealed class BinaryType
 	public bool UsesConsolePrint =>
 		MethodGroups.Values.Any(methods => methods.Any(method => method.UsesConsolePrint));
 	public int TotalInstructionCount =>
-		MethodGroups.Values.Sum(methods => methods.Sum(method => method.instructions.Count));
+		MethodGroups.Values.Sum(methods => methods.Sum(method => method.Instructions.Count));
 
 	private NameTable CreateNameTable()
 	{
@@ -133,7 +146,7 @@ public sealed class BinaryType
 				table.Add(method.ReturnTypeName);
 				foreach (var parameter in method.Parameters)
 					AddMemberNamesToTable(parameter);
-				foreach (var instruction in method.instructions)
+				foreach (var instruction in method.Instructions)
 					table.CollectStrings(instruction);
 			}
 		}
