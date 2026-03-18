@@ -87,8 +87,8 @@ public static class Program
 #endif
 			var expression = nonFlagArgs.Length >= 1 && nonFlagArgs[0].Contains('(')
 				? string.Join(" ", nonFlagArgs)
-				: Method.Run;
-			using var runner = new Runner(filePath, null, expression, diagnostics);
+				: Method.Run + nonFlagArgs.ToBrackets();
+			var runner = new Runner(filePath, null, expression, diagnostics);
 			var buildForPlatform = GetPlatformOption(options);
 			var backend = options.Contains("-nasm")
 				? CompilerBackend.Nasm
@@ -97,10 +97,8 @@ public static class Program
 					: CompilerBackend.MlirDefault;
 			if (buildForPlatform.HasValue)
 				await runner.Build(buildForPlatform.Value, backend);
-			//TODO: remove, not longer needed: else if (nonFlagArgs.Length >= 1 && nonFlagArgs[0].Contains('('))
-			//	await runner.RunExpression(string.Join(" ", nonFlagArgs[0..]));
 			else
-				await runner.Run(nonFlagArgs);
+				await runner.Run();
 		}
 	}
 

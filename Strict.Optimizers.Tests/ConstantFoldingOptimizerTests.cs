@@ -19,7 +19,7 @@ public sealed class ConstantFoldingOptimizerTests : TestOptimizers
 			new ReturnInstruction(Register.R2)
 		], 2);
 		Assert.That(optimized[0], Is.InstanceOf<LoadConstantInstruction>());
-		Assert.That(((LoadConstantInstruction)optimized[0]).ValueInstance.Number, Is.EqualTo(8));
+		Assert.That(((LoadConstantInstruction)optimized[0]).Constant.Number, Is.EqualTo(8));
 		Assert.That(optimized[1], Is.InstanceOf<ReturnInstruction>());
 	}
 
@@ -30,7 +30,7 @@ public sealed class ConstantFoldingOptimizerTests : TestOptimizers
 			new LoadConstantInstruction(Register.R1, Num(3)),
 			new BinaryInstruction(InstructionType.Subtract, Register.R0, Register.R1, Register.R2),
 			new ReturnInstruction(Register.R2)
-		], 2)[0]).ValueInstance.Number, Is.EqualTo(7));
+		], 2)[0]).Constant.Number, Is.EqualTo(7));
 
 	[Test]
 	public void FoldMultiplicationOfTwoConstants() =>
@@ -39,7 +39,7 @@ public sealed class ConstantFoldingOptimizerTests : TestOptimizers
 			new LoadConstantInstruction(Register.R1, Num(3)),
 			new BinaryInstruction(InstructionType.Multiply, Register.R0, Register.R1, Register.R2),
 			new ReturnInstruction(Register.R2)
-		], 2)[0]).ValueInstance.Number, Is.EqualTo(12));
+		], 2)[0]).Constant.Number, Is.EqualTo(12));
 
 	[Test]
 	public void FoldDivisionOfTwoConstants() =>
@@ -48,7 +48,7 @@ public sealed class ConstantFoldingOptimizerTests : TestOptimizers
 			new LoadConstantInstruction(Register.R1, Num(2)),
 			new BinaryInstruction(InstructionType.Divide, Register.R0, Register.R1, Register.R2),
 			new ReturnInstruction(Register.R2)
-		], 2)[0]).ValueInstance.Number, Is.EqualTo(5));
+		], 2)[0]).Constant.Number, Is.EqualTo(5));
 
 	[Test]
 	public void FoldModuloOfTwoConstants() =>
@@ -57,7 +57,7 @@ public sealed class ConstantFoldingOptimizerTests : TestOptimizers
 			new LoadConstantInstruction(Register.R1, Num(3)),
 			new BinaryInstruction(InstructionType.Modulo, Register.R0, Register.R1, Register.R2),
 			new ReturnInstruction(Register.R2)
-		], 2)[0]).ValueInstance.Number, Is.EqualTo(1));
+		], 2)[0]).Constant.Number, Is.EqualTo(1));
 
 	[Test]
 	public void FoldTextConcatenation() =>
@@ -66,7 +66,7 @@ public sealed class ConstantFoldingOptimizerTests : TestOptimizers
 			new LoadConstantInstruction(Register.R1, new(" World")),
 			new BinaryInstruction(InstructionType.Add, Register.R0, Register.R1, Register.R2),
 			new ReturnInstruction(Register.R2)
-		], 2)[0]).ValueInstance.Text, Is.EqualTo("Hello World"));
+		], 2)[0]).Constant.Text, Is.EqualTo("Hello World"));
 
 	[Test]
 	public void DoNotFoldWhenOperandsAreNotConstants() =>
@@ -95,7 +95,7 @@ public sealed class ConstantFoldingOptimizerTests : TestOptimizers
 			new LoadConstantInstruction(Register.R3, Num(4)),
 			new BinaryInstruction(InstructionType.Multiply, Register.R2, Register.R3, Register.R4),
 			new ReturnInstruction(Register.R4)
-		], 2)[0]).ValueInstance.Number, Is.EqualTo(20));
+		], 2)[0]).Constant.Number, Is.EqualTo(20));
 
 	[Test]
 	public void PreserveNonArithmeticInstructions() =>

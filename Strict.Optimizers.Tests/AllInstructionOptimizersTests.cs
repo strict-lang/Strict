@@ -17,7 +17,7 @@ public sealed class AllInstructionOptimizersTests : TestOptimizers
 			new BinaryInstruction(InstructionType.Add, Register.R0, Register.R1, Register.R2),
 			new ReturnInstruction(Register.R2)
 		], 2);
-		Assert.That(((LoadConstantInstruction)optimized[0]).ValueInstance.Number, Is.EqualTo(5));
+		Assert.That(((LoadConstantInstruction)optimized[0]).Constant.Number, Is.EqualTo(5));
 		Assert.That(optimized[1], Is.InstanceOf<ReturnInstruction>());
 	}
 
@@ -96,13 +96,13 @@ public sealed class AllInstructionOptimizersTests : TestOptimizers
 			new LoadConstantInstruction(Register.R0, Num(5)),
 			new LoadConstantInstruction(Register.R1, Num(5)),
 			new BinaryInstruction(InstructionType.Equal, Register.R0, Register.R1),
-			new JumpToId(InstructionType.JumpToIdIfFalse, 0),
-			new JumpToId(InstructionType.JumpEnd, 0),
+			new JumpToId(0, InstructionType.JumpToIdIfFalse),
+			new JumpToId(0, InstructionType.JumpEnd),
 			new LoadConstantInstruction(Register.R2, Num(2)),
 			new LoadConstantInstruction(Register.R3, Num(3)),
 			new BinaryInstruction(InstructionType.Add, Register.R2, Register.R3, Register.R4),
 			new ReturnInstruction(Register.R4)
-		], 2)[0]).ValueInstance.Number, Is.EqualTo(5));
+		], 2)[0]).Constant.Number, Is.EqualTo(5));
 
 	[Test]
 	public void PipelineReducesStrengthAndEliminatesDeadStores()
@@ -127,7 +127,7 @@ public sealed class AllInstructionOptimizersTests : TestOptimizers
 			new ReturnInstruction(Register.R2),
 			new LoadConstantInstruction(Register.R3, Num(999)),
 			new ReturnInstruction(Register.R3)
-		], 2)[0]).ValueInstance.Number, Is.EqualTo(8));
+		], 2)[0]).Constant.Number, Is.EqualTo(8));
 
 	[Test]
 	public void PipelineHandlesComplexMethodWithTestsAndIdentity() =>
@@ -135,8 +135,8 @@ public sealed class AllInstructionOptimizersTests : TestOptimizers
 			new LoadConstantInstruction(Register.R0, Num(10)),
 			new LoadConstantInstruction(Register.R1, Num(10)),
 			new BinaryInstruction(InstructionType.Equal, Register.R0, Register.R1),
-			new JumpToId(InstructionType.JumpToIdIfFalse, 0),
-			new JumpToId(InstructionType.JumpEnd, 0),
+			new JumpToId(0, InstructionType.JumpToIdIfFalse),
+			new JumpToId(0, InstructionType.JumpEnd),
 			new StoreVariableInstruction(Num(5), "x"),
 			new LoadVariableToRegister(Register.R2, "x"),
 			new LoadConstantInstruction(Register.R3, Num(0)),

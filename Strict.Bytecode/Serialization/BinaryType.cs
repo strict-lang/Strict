@@ -107,6 +107,8 @@ public sealed class BinaryType
 	public NameTable Table => table ?? CreateNameTable();
 	public bool UsesConsolePrint =>
 		MethodGroups.Values.Any(methods => methods.Any(method => method.UsesConsolePrint));
+	public int TotalInstructionCount =>
+		MethodGroups.Values.Sum(methods => methods.Sum(method => method.instructions.Count));
 
 	private NameTable CreateNameTable()
 	{
@@ -121,7 +123,7 @@ public sealed class BinaryType
 				table.Add(method.ReturnTypeName);
 				foreach (var parameter in method.Parameters)
 					AddMemberNamesToTable(parameter);
-				foreach (var instruction in method.Instructions)
+				foreach (var instruction in method.instructions)
 					table.CollectStrings(instruction);
 			}
 		}

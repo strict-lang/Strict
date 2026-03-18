@@ -1,3 +1,4 @@
+using Strict.Bytecode;
 using Strict.Bytecode.Instructions;
 
 namespace Strict.Optimizers;
@@ -8,5 +9,13 @@ namespace Strict.Optimizers;
 /// </summary>
 public abstract class InstructionOptimizer
 {
+	public void Optimize(BinaryExecutable binary)
+	{
+		foreach (var type in binary.MethodsPerType.Values)
+		foreach (var methodGroup in type.MethodGroups.Values)
+		foreach (var method in methodGroup)
+			method.instructions = Optimize(method.instructions);
+	}
+
 	public abstract List<Instruction> Optimize(List<Instruction> instructions);
 }

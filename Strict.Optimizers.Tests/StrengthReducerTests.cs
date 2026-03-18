@@ -43,7 +43,7 @@ public sealed class StrengthReducerTests : TestOptimizers
 			new ReturnInstruction(Register.R2)
 		], 2);
 		Assert.That(optimizedInstructions[0], Is.InstanceOf<LoadConstantInstruction>());
-		Assert.That(((LoadConstantInstruction)optimizedInstructions[0]).ValueInstance.Number,
+		Assert.That(((LoadConstantInstruction)optimizedInstructions[0]).Constant.Number,
 			Is.EqualTo(0));
 	}
 
@@ -97,7 +97,7 @@ public sealed class StrengthReducerTests : TestOptimizers
 			new LoadVariableToRegister(Register.R1, "x"),
 			new BinaryInstruction(InstructionType.Multiply, Register.R0, Register.R1, Register.R2),
 			new ReturnInstruction(Register.R2)
-		], 2)[0]).ValueInstance.Number, Is.EqualTo(0));
+		], 2)[0]).Constant.Number, Is.EqualTo(0));
 
 	[Test]
 	public void AddZeroOnLeftBecomesLoad() =>

@@ -19,8 +19,8 @@ public sealed class TestCodeRemoverTests : TestOptimizers
 			new LoadConstantInstruction(Register.R0, Num(5)),
 			new LoadConstantInstruction(Register.R1, Num(5)),
 			new BinaryInstruction(InstructionType.Equal, Register.R0, Register.R1),
-			new JumpToId(InstructionType.JumpToIdIfFalse, 0),
-			new JumpToId(InstructionType.JumpEnd, 0),
+			new JumpToId(0, InstructionType.JumpToIdIfFalse),
+			new JumpToId(0, InstructionType.JumpEnd),
 			new LoadVariableToRegister(Register.R2, "x"),
 			new ReturnInstruction(Register.R2)
 		], 2);
@@ -34,13 +34,13 @@ public sealed class TestCodeRemoverTests : TestOptimizers
 			new LoadConstantInstruction(Register.R0, Num(5)),
 			new LoadConstantInstruction(Register.R1, Num(5)),
 			new BinaryInstruction(InstructionType.Equal, Register.R0, Register.R1),
-			new JumpToId(InstructionType.JumpToIdIfFalse, 0),
-			new JumpToId(InstructionType.JumpEnd, 0),
+			new JumpToId(0, InstructionType.JumpToIdIfFalse),
+			new JumpToId(0, InstructionType.JumpEnd),
 			new LoadConstantInstruction(Register.R2, Num(10)),
 			new LoadConstantInstruction(Register.R3, Num(10)),
 			new BinaryInstruction(InstructionType.Equal, Register.R2, Register.R3),
-			new JumpToId(InstructionType.JumpToIdIfFalse, 1),
-			new JumpToId(InstructionType.JumpEnd, 1),
+			new JumpToId(1, InstructionType.JumpToIdIfFalse),
+			new JumpToId(1, InstructionType.JumpEnd),
 			new LoadVariableToRegister(Register.R4, "result"),
 			new ReturnInstruction(Register.R4)
 		], 2);
@@ -51,8 +51,8 @@ public sealed class TestCodeRemoverTests : TestOptimizers
 			new LoadConstantInstruction(Register.R0, Num(5)),
 			new LoadConstantInstruction(Register.R1, Num(3)),
 			new BinaryInstruction(InstructionType.Equal, Register.R0, Register.R1),
-			new JumpToId(InstructionType.JumpToIdIfFalse, 0),
-			new JumpToId(InstructionType.JumpEnd, 0),
+			new JumpToId(0, InstructionType.JumpToIdIfFalse),
+			new JumpToId(0, InstructionType.JumpEnd),
 			new LoadVariableToRegister(Register.R2, "x"),
 			new ReturnInstruction(Register.R2)
 		], 7);
@@ -63,10 +63,10 @@ public sealed class TestCodeRemoverTests : TestOptimizers
 			new LoadConstantInstruction(Register.R0, Num(5)),
 			new LoadConstantInstruction(Register.R1, Num(5)),
 			new BinaryInstruction(InstructionType.Equal, Register.R0, Register.R1),
-			new JumpToId(InstructionType.JumpToIdIfFalse, 0),
+			new JumpToId(0, InstructionType.JumpToIdIfFalse),
 			new LoadConstantInstruction(Register.R2, Num(99)),
 			new ReturnInstruction(Register.R2),
-			new JumpToId(InstructionType.JumpEnd, 0),
+			new JumpToId(0, InstructionType.JumpEnd),
 			new ReturnInstruction(Register.R0)
 		], 8);
 
@@ -76,8 +76,8 @@ public sealed class TestCodeRemoverTests : TestOptimizers
 			new LoadVariableToRegister(Register.R0, "x"),
 			new LoadConstantInstruction(Register.R1, Num(5)),
 			new BinaryInstruction(InstructionType.Equal, Register.R0, Register.R1),
-			new JumpToId(InstructionType.JumpToIdIfFalse, 0),
-			new JumpToId(InstructionType.JumpEnd, 0),
+			new JumpToId(0, InstructionType.JumpToIdIfFalse),
+			new JumpToId(0, InstructionType.JumpEnd),
 			new ReturnInstruction(Register.R0)
 		], 6);
 

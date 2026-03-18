@@ -1,4 +1,7 @@
-﻿using Strict.Bytecode.Instructions;
+﻿using System.Runtime.CompilerServices;
+using Strict.Bytecode.Instructions;
+
+[assembly: InternalsVisibleTo("Strict.Optimizers")]
 
 namespace Strict.Bytecode.Serialization;
 
@@ -17,9 +20,8 @@ public record BinaryMethod
 	private readonly List<BinaryMember> parameters = [];
 	public IReadOnlyList<BinaryMember> Parameters => parameters;
 	public string ReturnTypeName { get; }
-	public IReadOnlyList<Instruction> Instructions => instructions;
+	internal List<Instruction> instructions = [];
 	public bool UsesConsolePrint => instructions.Any(instruction => instruction is PrintInstruction);
-	private readonly List<Instruction> instructions = [];
 
 	public void Write(BinaryWriter writer, BinaryType type)
 	{

@@ -7,13 +7,9 @@ using Type = Strict.Language.Type;
 
 namespace Strict;
 
-public sealed class VirtualMachine(Package package,
-	IReadOnlyDictionary<string, List<Instruction>>? precompiledMethodInstructions = null)
+public sealed class VirtualMachine(BinaryExecutable executable)
 {
-	private readonly Type numberType = package.GetType(Type.Number);
-
-	public VirtualMachine Execute(IReadOnlyList<Instruction> allInstructions,
-		IReadOnlyDictionary<string, ValueInstance>? initialVariables = null)
+	public VirtualMachine Execute()
 	{
 		Clear();
 		foreach (var loopBegin in allInstructions.OfType<LoopBeginInstruction>())
@@ -546,8 +542,8 @@ public sealed class VirtualMachine(Package package,
 		if (!Memory.Registers.TryGet(loopBegin.Register, out var iterableVariable))
 			return; //ncrunch: no coverage
 		Memory.Frame.Set("index", Memory.Frame.TryGet("index", out var indexValue)
-			? new ValueInstance(numberType, indexValue.Number + 1)
-			: new ValueInstance(numberType, 0));
+			? new ValueInstance(executable.numberType, indexValue.Number + 1)
+			: new ValueInstance(executable.numberType, 0));
 		if (!loopBegin.IsInitialized)
 		{
 			loopBegin.LoopCount = GetLength(iterableVariable);

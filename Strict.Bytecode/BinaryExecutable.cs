@@ -1,9 +1,12 @@
 using System.IO.Compression;
+using System.Runtime.CompilerServices;
 using Strict.Bytecode.Instructions;
 using Strict.Bytecode.Serialization;
 using Strict.Expressions;
 using Strict.Language;
 using Type = Strict.Language.Type;
+
+[assembly: InternalsVisibleTo("Strict")]
 
 namespace Strict.Bytecode;
 
@@ -94,7 +97,7 @@ public sealed class BinaryExecutable(Package basePackage)
 		int parametersCount, string returnType = "") =>
 		MethodsPerType.TryGetValue(fullTypeName, out var methods)
 			? methods.MethodGroups.GetValueOrDefault(methodName)?.Find(m =>
-				m.Parameters.Count == parametersCount && m.ReturnTypeName == returnType)?.Instructions
+				m.Parameters.Count == parametersCount && m.ReturnTypeName == returnType)?.instructions
 			: null;
 
 	public Instruction ReadInstruction(BinaryReader reader, NameTable table)
@@ -476,4 +479,6 @@ public sealed class BinaryExecutable(Package basePackage)
 	}
 
 	public bool UsesConsolePrint => MethodsPerType.Values.Any(type => type.UsesConsolePrint);
+	public int TotalInstructionsCount =>
+		MethodsPerType.Values.Sum(methods => methods.TotalInstructionCount);
 }
