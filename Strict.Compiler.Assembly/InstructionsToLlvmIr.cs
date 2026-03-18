@@ -16,9 +16,7 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 {
 	public override Task<string> Compile(BinaryExecutable binary, Platform platform)
 	{
-		var precompiledMethods = BuildPrecompiledMethodsInternal(binary);
-		var output = CompileForPlatform(Method.Run, binary.EntryPoint.instructions, platform,
-			precompiledMethods);
+   var output = CompileForPlatform(Method.Run, binary, platform);
 		return Task.FromResult(output);
 	}
 
@@ -46,7 +44,8 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 	//TODO: remove, this is old, only for some tests
 	public string CompileForPlatform(string methodName, BinaryExecutable binary, Platform platform,
 		IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods = null) =>
-		CompileForPlatform(methodName, binary.EntryPoint.instructions, platform, precompiledMethods);
+   CompileForPlatform(methodName, binary.EntryPoint.instructions, platform,
+			precompiledMethods ?? BuildPrecompiledMethodsInternal(binary));
 
 	//TODO: remove, this is old, only for some tests
 	public string CompileForPlatform(string methodName, IReadOnlyList<Instruction> instructions,

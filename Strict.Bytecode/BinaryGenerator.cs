@@ -6,6 +6,7 @@ using Type = Strict.Language.Type;
 
 namespace Strict.Bytecode;
 
+//TODO: avoid writing common things into .bytecode: no None, Number, Text, etc. we all know these already! Maybe we can prefill each NameTable with the name of the type, upper case and lower case and all the base types and lower case and multiples. That is probably 80% of what is used atm!
 /// <summary>
 /// Converts an expression into a <see cref="BinaryExecutable"/>, mostly from calling the Run
 /// method of a .strict type, but can be any expression. Will get all used types with their
@@ -50,6 +51,7 @@ public sealed class BinaryGenerator
 	private readonly Expression? entryPoint; //TODO: remove
 	private readonly string entryTypeFullName;
 	private readonly List<Instruction> instructions = [];
+ private readonly Dictionary<string, Type> dependencyTypes = new(StringComparer.Ordinal);
 	private readonly Registry registry = new();
 	private readonly Stack<int> idStack = new();
 	private readonly Register[] registers = Enum.GetValues<Register>();
@@ -74,11 +76,11 @@ public sealed class BinaryGenerator
 
 	private BinaryExecutable Generate(Method preferredEntryMethod, IReadOnlyList<Method> runMethods)
 	{
-		var methodsByType = GenerateRunMethods(runMethods);
-		foreach (var (compiledTypeFullName, methodGroups) in methodsByType)
-			binary.AddType(compiledTypeFullName, methodGroups);
-		binary.SetEntryPoint(preferredEntryMethod.Type.FullName, preferredEntryMethod.Name,
-			preferredEntryMethod.Parameters.Count, preferredEntryMethod.ReturnType.Name);
+   var methodsByType = GenerateRunMethods(runMethods, preferredEntryMethod.Type);
+		AddGeneratedTypes(methodsByType, preferredEntryMethod.Type);
+		binary.SetEntryPoint(GetBinaryTypeName(preferredEntryMethod.Type, preferredEntryMethod.Type),
+			preferredEntryMethod.Name, preferredEntryMethod.Parameters.Count,
+			GetBinaryTypeName(preferredEntryMethod.ReturnType, preferredEntryMethod.Type));
 		return binary;
 	}
 
@@ -331,6 +333,10 @@ public sealed class BinaryGenerator
 	{
 		if (expression is Binary binaryExpression)
 		{
+      if (binaryExpression.Method.Name == BinaryOperator.Is)
+				return true;
+			if (!CanGenerateDirectBinaryInstruction(binaryExpression.Method.Name))
+				return TryGenerateMethodCallInstruction(binaryExpression);
 			GenerateCodeForBinary(binaryExpression);
 			return true; //TODO: there is not even false here, this is no good
 		}
@@ -412,10 +418,14 @@ public sealed class BinaryGenerator
 
 	private void GenerateCodeForBinary(MethodCall binaryExpression)
 	{
-		if (binaryExpression.Method.Name != "is")
+   if (CanGenerateDirectBinaryInstruction(binaryExpression.Method.Name))
 			GenerateBinaryInstruction(binaryExpression,
 				GetInstructionBasedOnBinaryOperationName(binaryExpression.Method.Name));
 	}
+
+	private static bool CanGenerateDirectBinaryInstruction(string methodName) =>
+		methodName is BinaryOperator.Plus or BinaryOperator.Minus or BinaryOperator.Multiply
+			or BinaryOperator.Divide or BinaryOperator.Modulate;
 
 	private static InstructionType GetInstructionBasedOnBinaryOperationName(string binaryOperator) =>
 		binaryOperator switch
@@ -473,7 +483,8 @@ public sealed class BinaryGenerator
 	private void GenerateBinaryInstruction(MethodCall binaryExpression,
 		InstructionType operationInstruction)
 	{
-		if (binaryExpression.Instance is MethodCall nestedBinary)
+   if (binaryExpression.Instance is MethodCall nestedBinary &&
+			CanGenerateDirectBinaryInstruction(nestedBinary.Method.Name))
 		{
 			var leftRegister = GenerateValueBinaryInstructions(nestedBinary,
 				GetInstructionBasedOnBinaryOperationName(nestedBinary.Method.Name));
@@ -481,7 +492,8 @@ public sealed class BinaryGenerator
 			instructions.Add(new BinaryInstruction(operationInstruction, leftRegister,
 				registry.PreviousRegister, registry.AllocateRegister()));
 		}
-		else if (binaryExpression.Arguments[0] is MethodCall nestedBinaryArgument)
+    else if (binaryExpression.Arguments[0] is MethodCall nestedBinaryArgument &&
+			CanGenerateDirectBinaryInstruction(nestedBinaryArgument.Method.Name))
 			GenerateNestedBinaryInstructions(binaryExpression, operationInstruction,
 				nestedBinaryArgument);
 		else
@@ -517,8 +529,8 @@ public sealed class BinaryGenerator
 
 	private sealed class InstanceNameNotFound : Exception;
 
-	private Dictionary<string, Dictionary<string, List<BinaryType.BinaryMethod>>> GenerateRunMethods(
-		IReadOnlyList<Method> runMethods)
+ private Dictionary<string, Dictionary<string, List<BinaryType.BinaryMethod>>> GenerateRunMethods(
+		IReadOnlyList<Method> runMethods, Type entryType)
 	{
 		var methodsByType = new Dictionary<string, Dictionary<string, List<BinaryType.BinaryMethod>>>(
 			StringComparer.Ordinal);
@@ -540,36 +552,180 @@ public sealed class BinaryGenerator
 
 		foreach (var runMethod in runMethods)
 		{
+     CollectMethodDependencies(runMethod);
 			var methodBody = runMethod.GetBodyAndParseIfNeeded();
 			var methodExpressions = methodBody is Body body
 				? body.Expressions
 				: [methodBody];
 			var methodInstructions = new BinaryGenerator(binary.basePackage, methodExpressions,
 				runMethod.ReturnType).GenerateInstructionList();
-			var parameters = runMethod.Parameters.Select(parameter =>
-				new BinaryMember(parameter.Name, parameter.Type.FullName, null)).ToList();
+     var parameters = CreateBinaryMembers(runMethod.Parameters, entryType);
 			AddCompiledMethod(methodsByType, runMethod.Type.FullName, runMethod.Name, parameters,
-				runMethod.ReturnType.Name, methodInstructions);
+       GetBinaryTypeName(runMethod.ReturnType, entryType), methodInstructions);
 			compiledMethodKeys.Add(BuildMethodKey(runMethod));
 			EnqueueInvokedMethods(methodInstructions);
 		}
 		while (methodsToCompile.Count > 0)
 		{
 			var method = methodsToCompile.Dequeue();
+      CollectMethodDependencies(method);
 			var body = method.GetBodyAndParseIfNeeded();
 			var methodExpressions = body is Body methodBody
 				? methodBody.Expressions
 				: [body];
 			var methodInstructions = new BinaryGenerator(binary.basePackage, methodExpressions,
 				method.ReturnType).GenerateInstructionList();
-			var parameters = method.Parameters.Select(parameter =>
-				new BinaryMember(parameter.Name, parameter.Type.FullName, null)).ToList();
+      var parameters = CreateBinaryMembers(method.Parameters, entryType);
 			AddCompiledMethod(methodsByType, method.Type.FullName, method.Name, parameters,
-				method.ReturnType.Name, methodInstructions);
+        GetBinaryTypeName(method.ReturnType, entryType), methodInstructions);
 			EnqueueInvokedMethods(methodInstructions);
 		}
 		return methodsByType;
 	}
+
+	private List<BinaryMember> CreateBinaryMembers(IReadOnlyList<Parameter> parameters, Type entryType) =>
+		parameters.Select(parameter =>
+			new BinaryMember(parameter.Name, GetBinaryTypeName(parameter.Type, entryType), null)).ToList();
+
+	private void AddGeneratedTypes(
+		Dictionary<string, Dictionary<string, List<BinaryType.BinaryMethod>>> methodsByType,
+		Type entryType)
+	{
+		var orderedTypes = dependencyTypes.Values.OrderBy(type =>
+			type == entryType
+				? string.Empty
+				: GetBinaryTypeName(type, entryType), StringComparer.Ordinal);
+		foreach (var type in orderedTypes)
+		{
+			var members = type.Members.Select(member =>
+				new BinaryMember(member.Name, GetBinaryTypeName(member.Type, entryType), null)).ToList();
+			binary.AddType(GetBinaryTypeName(type, entryType),
+				methodsByType.TryGetValue(type.FullName, out var methodGroups)
+					? methodGroups
+					: new Dictionary<string, List<BinaryType.BinaryMethod>>(StringComparer.Ordinal),
+				members, type == entryType);
+		}
+	}
+
+	private void CollectMethodDependencies(Method method)
+	{
+		CollectTypeDependency(method.Type, true);
+		CollectTypeDependency(method.ReturnType, false);
+		foreach (var parameter in method.Parameters)
+			CollectTypeDependency(parameter.Type, false);
+    if (method.Type.IsTrait)
+			return;
+		var body = method.GetBodyAndParseIfNeeded();
+		if (body is Body methodBody)
+			foreach (var expression in methodBody.Expressions)
+				CollectExpressionDependencies(expression);
+		else
+			CollectExpressionDependencies(body);
+	}
+
+	private void CollectExpressionDependencies(Expression expression)
+	{
+		CollectTypeDependency(expression.ReturnType, false);
+		switch (expression)
+		{
+		case Body body:
+			foreach (var child in body.Expressions)
+				CollectExpressionDependencies(child);
+			break;
+		case Binary binary:
+     CollectTypeDependency(binary.Method.Type, true);
+			CollectTypeDependency(binary.Method.ReturnType, false);
+			foreach (var parameter in binary.Method.Parameters)
+				CollectTypeDependency(parameter.Type, false);
+			CollectExpressionDependencies(binary.Instance!);
+			CollectExpressionDependencies(binary.Arguments[0]);
+			break;
+		case Declaration declaration:
+			CollectExpressionDependencies(declaration.Value);
+			break;
+		case MutableReassignment reassignment:
+			CollectExpressionDependencies(reassignment.Value);
+			break;
+		case For forExpression:
+			CollectExpressionDependencies(forExpression.Iterator);
+			CollectExpressionDependencies(forExpression.Body);
+			break;
+		case If ifExpression:
+			CollectExpressionDependencies(ifExpression.Condition);
+			CollectExpressionDependencies(ifExpression.Then);
+			if (ifExpression.OptionalElse != null)
+				CollectExpressionDependencies(ifExpression.OptionalElse);
+			break;
+		case SelectorIf selectorIf:
+			CollectExpressionDependencies(selectorIf.Selector);
+			foreach (var @case in selectorIf.Cases)
+			{
+				CollectExpressionDependencies(@case.Pattern);
+				CollectExpressionDependencies(@case.Then);
+			}
+			if (selectorIf.OptionalElse != null)
+				CollectExpressionDependencies(selectorIf.OptionalElse);
+			break;
+		case ListCall listCall:
+			CollectExpressionDependencies(listCall.List);
+			CollectExpressionDependencies(listCall.Index);
+			break;
+		case MemberCall memberCall:
+			CollectTypeDependency(memberCall.Member.Type, false);
+			if (memberCall.Instance != null)
+				CollectExpressionDependencies(memberCall.Instance);
+			break;
+		case MethodCall methodCall:
+     CollectTypeDependency(methodCall.Method.Type, true);
+			CollectTypeDependency(methodCall.Method.ReturnType, false);
+			foreach (var parameter in methodCall.Method.Parameters)
+				CollectTypeDependency(parameter.Type, false);
+			if (methodCall.Instance != null)
+				CollectExpressionDependencies(methodCall.Instance);
+			foreach (var argument in methodCall.Arguments)
+				CollectExpressionDependencies(argument);
+			break;
+		}
+	}
+
+	private void CollectTypeDependency(Type type, bool includeType)
+	{
+		if (type.IsNone || type.IsAny)
+			return;
+		if (type is GenericTypeImplementation genericImplementation)
+		{
+			foreach (var implementationType in genericImplementation.ImplementationTypes)
+				CollectTypeDependency(implementationType, false);
+			if (!includeType)
+				return;
+		}
+		else if (type is GenericType genericType)
+		{
+			foreach (var implementation in genericType.GenericImplementations)
+				CollectTypeDependency(implementation.Type, false);
+			if (!includeType)
+				return;
+		}
+		if (!dependencyTypes.TryAdd(type.FullName, type))
+			return;
+		foreach (var member in type.Members)
+			CollectTypeDependency(member.Type, false);
+	}
+
+	private static string GetBinaryTypeName(Type type, Type entryType)
+	{
+    if (IsStrictBaseType(type, entryType))
+			return nameof(Strict) + Context.ParentSeparator + type.Name;
+		var entryPackagePrefix = entryType.Package.FullName + Context.ParentSeparator;
+		return type.FullName.StartsWith(entryPackagePrefix, StringComparison.Ordinal)
+			? type.FullName[entryPackagePrefix.Length..]
+			: type.FullName;
+	}
+
+	private static bool IsStrictBaseType(Type type, Type entryType) =>
+		type.Package.Name == nameof(Strict) ||
+    entryType.Package.Name == "TestPackage" && type.Package.Name == "TestPackage" &&
+		entryType.Package.FindDirectType(type.Name) != null;
 
 	private Dictionary<string, Dictionary<string, List<BinaryType.BinaryMethod>>> GenerateEntryMethods(
 		string entryTypeFullName, IReadOnlyList<Expression> entryExpressions, Type runReturnType)

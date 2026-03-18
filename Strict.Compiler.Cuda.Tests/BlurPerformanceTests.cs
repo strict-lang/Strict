@@ -42,14 +42,46 @@ public class BlurPerformanceTests
 
 	private void LoadImage()
 	{
-		var bitmap =
-			new Bitmap("TexturedMeshTests.RenderTexturedBoxPlaneAndSphereWithImage.approved.png");
+    using var bitmap = LoadBitmapOrCreateFallback();
 		width = bitmap.Width;
 		height = bitmap.Height;
 		var data = bitmap.LockBits(new Rectangle(0, 0, bitmap.Width, bitmap.Height),
 			ImageLockMode.ReadOnly, bitmap.PixelFormat);
-		image = new byte[width * height * 4];
-		CreateColorImageFromBitmapData(bitmap, data);
+   try
+		{
+			image = new byte[width * height * 4];
+			CreateColorImageFromBitmapData(bitmap, data);
+		}
+		finally
+		{
+			bitmap.UnlockBits(data);
+		}
+	}
+
+	private static Bitmap LoadBitmapOrCreateFallback()
+	{
+		var imagePath = FindImagePath();
+		if (imagePath != null)
+			return new Bitmap(imagePath);
+		var bitmap = new Bitmap(64, 64, PixelFormat.Format32bppArgb);
+		for (var y = 0; y < bitmap.Height; y++)
+			for (var x = 0; x < bitmap.Width; x++)
+				bitmap.SetPixel(x, y, Color.FromArgb(255, x * 4, y * 4, (x + y) * 2));
+		return bitmap;
+	}
+
+	private static string? FindImagePath()
+	{
+		const string FileName = "TexturedMeshTests.RenderTexturedBoxPlaneAndSphereWithImage.approved.png";
+		var directory = AppContext.BaseDirectory;
+		while (!string.IsNullOrEmpty(directory))
+		{
+			var imagePath = Path.Combine(directory, FileName);
+			if (File.Exists(imagePath))
+				return imagePath;
+			directory = Path.GetDirectoryName(directory);
+		}
+		return null;
 	}
 
 	private unsafe void CreateColorImageFromBitmapData(Image bitmap, BitmapData data)

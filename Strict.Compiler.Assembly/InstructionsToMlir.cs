@@ -22,9 +22,7 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 
 	public override Task<string> Compile(BinaryExecutable binary, Platform platform)
 	{
-		var precompiledMethods = BuildPrecompiledMethodsInternal(binary);
-		var output = CompileForPlatform(Method.Run, binary.EntryPoint.instructions, platform,
-			precompiledMethods);
+   var output = CompileForPlatform(Method.Run, binary, platform);
 		return Task.FromResult(output);
 	}
 
@@ -45,7 +43,8 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 
 	public string CompileForPlatform(string methodName, BinaryExecutable binary, Platform platform,
 		IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods = null) =>
-		CompileForPlatform(methodName, binary.EntryPoint.instructions, platform, precompiledMethods);
+   CompileForPlatform(methodName, binary.EntryPoint.instructions, platform,
+			precompiledMethods ?? BuildPrecompiledMethodsInternal(binary));
 
 	public string CompileForPlatform(string methodName, IReadOnlyList<Instruction> instructions,
 		Platform platform, IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods = null)
@@ -370,27 +369,48 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 		IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods)
 	{
 		var methods = new Dictionary<string, CompiledMethodInfo>(StringComparer.Ordinal);
-		if (precompiledMethods == null)
-			return methods;
-		foreach (var invoke in instructions.OfType<Invoke>())
+   var queue = new Queue<(Method Method, bool IncludeMembers)>();
+		EnqueueInvokedMethods(instructions, queue);
+		while (queue.Count > 0)
 		{
-			if (invoke.Method == null || invoke.Method.Method.Name == Method.From)
-				continue;
-			var method = invoke.Method.Method;
+			var (method, includeMembers) = queue.Dequeue();
 			var methodKey = BuildMethodHeaderKeyInternal(method);
-			if (!precompiledMethods.TryGetValue(methodKey, out var precompiled))
+			if (methods.TryGetValue(methodKey, out var existing))
+			{
+				if (includeMembers && existing.MemberNames.Count == 0)
+					methods[methodKey] = BuildMethodInfo(method, true, precompiledMethods);
 				continue;
-			if (methods.ContainsKey(methodKey))
-				continue;
-			var memberNames = invoke.Method.Instance != null
-				? method.Type.Members.Where(member => !member.Type.IsTrait).Select(member => member.Name).ToList()
-				: new List<string>();
-			var parameterNames = new List<string>(memberNames);
-			parameterNames.AddRange(method.Parameters.Select(parameter => parameter.Name));
-			methods[methodKey] = new CompiledMethodInfo(BuildMethodSymbol(method), [.. precompiled],
-				parameterNames, memberNames);
+			}
+			var methodInfo = BuildMethodInfo(method, includeMembers, precompiledMethods);
+			methods[methodKey] = methodInfo;
+			EnqueueInvokedMethods(methodInfo.Instructions, queue);
 		}
 		return methods;
+	}
+
+	private static CompiledMethodInfo BuildMethodInfo(Method method, bool includeMembers,
+		IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods)
+	{
+		var methodKey = BuildMethodHeaderKeyInternal(method);
+		var instructions =
+			precompiledMethods != null && precompiledMethods.TryGetValue(methodKey, out var precompiled)
+				? [.. precompiled]
+				: GenerateInstructions(method);
+		var memberNames = includeMembers
+			? method.Type.Members.Where(member => !member.Type.IsTrait).Select(member => member.Name).ToList()
+			: new List<string>();
+		var parameterNames = new List<string>(memberNames);
+		parameterNames.AddRange(method.Parameters.Select(parameter => parameter.Name));
+		return new CompiledMethodInfo(BuildMethodSymbol(method), instructions, parameterNames,
+			memberNames);
+	}
+
+	private static void EnqueueInvokedMethods(IEnumerable<Instruction> instructions,
+		Queue<(Method Method, bool IncludeMembers)> queue)
+	{
+		foreach (var invoke in instructions.OfType<Invoke>())
+			if (invoke.Method != null && invoke.Method.Method.Name != Method.From)
+				queue.Enqueue((invoke.Method.Method, invoke.Method.Instance != null));
 	}
 
 	private static string BuildMethodSymbol(Method method) =>
@@ -399,8 +419,8 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 	private static string BuildEntryPoint(string methodName) =>
 		"  func.func @main() -> i32 {\n" +
 		$"    %result = func.call @{methodName}() : () -> f64\n" +
-		"    %zero = arith.constant 0 : i32\n" +
-		"    return %zero : i32\n" +
+    "    %exitCode = arith.constant 0 : i32\n" +
+		"    return %exitCode : i32\n" +
 		"  }";
 
 	private static void EmitJumpToId(JumpToId jumpToId, List<string> lines, EmitContext context,

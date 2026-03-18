@@ -46,10 +46,14 @@ public abstract class InstructionsCompiler
 
 	private static string BuildMethodHeaderKeyInternal(string methodName, BinaryMethod method) =>
 		method.parameters.Count == 0
-			? method.ReturnTypeName == Type.None
+      ? BinaryMemberJustTypeName(method.ReturnTypeName) == Type.None
 				? methodName
-				: methodName + " " + method.ReturnTypeName
-			: methodName + "(" + string.Join(", ", method.parameters) + ") " + method.ReturnTypeName;
+        : methodName + " " + BinaryMemberJustTypeName(method.ReturnTypeName)
+			: methodName + "(" + string.Join(", ", method.parameters) + ") " +
+				BinaryMemberJustTypeName(method.ReturnTypeName);
+
+	private static string BinaryMemberJustTypeName(string fullTypeName) =>
+		fullTypeName.Split(Context.ParentSeparator)[^1];
 
 	public abstract Task<string> Compile(BinaryExecutable binary, Platform platform);
 	public abstract string Extension { get; }

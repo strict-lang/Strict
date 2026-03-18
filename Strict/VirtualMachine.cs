@@ -10,18 +10,23 @@ namespace Strict;
 public sealed class VirtualMachine(BinaryExecutable executable)
 {
 	public VirtualMachine(Package package) : this(new BinaryExecutable(package)) { }
+	private BinaryExecutable activeExecutable = executable;
 
 	//TODO: this is very stupid, doing Clear over and over and clear doesn't even do the work, loopbegin is done over and over ..
 	public VirtualMachine Execute()
 	{
 		Clear();
-		foreach (var loopBegin in executable.EntryPoint.instructions.OfType<LoopBeginInstruction>())
+		foreach (var loopBegin in activeExecutable.EntryPoint.instructions.OfType<LoopBeginInstruction>())
 			loopBegin.Reset();
-		return RunInstructions(executable.EntryPoint.instructions);
+		return RunInstructions(activeExecutable.EntryPoint.instructions);
 	}
 
 	//TODO: this is no good, we should call the EntryPoint method, yes, but there is no need to extract the instructions and pass them here, just use them directly from BinaryMethod! Also the execution context below should be created here (see Interpreter), this is just convoluted and error prone .. also not tested well, tests are upside down
-	public VirtualMachine Execute(BinaryExecutable binary) => Execute(binary.EntryPoint.instructions);
+  public VirtualMachine Execute(BinaryExecutable binary)
+	{
+		activeExecutable = binary;
+   return Execute();
+	}
 
 	public VirtualMachine Execute(IReadOnlyList<Instruction> allInstructions,
 		IReadOnlyDictionary<string, ValueInstance>? initialVariables = null)
@@ -176,7 +181,11 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 
 	private List<Instruction>? GetPrecompiledMethodInstructions(Method method)
 	{
-		var foundInstructions = executable.FindInstructions(method.Type, method);
+    var foundInstructions = activeExecutable.FindInstructions(method.Type, method) ??
+			activeExecutable.FindInstructions(method.Type.Name, method.Name, method.Parameters.Count,
+				method.ReturnType.Name) ??
+			activeExecutable.FindInstructions(nameof(Strict) + Context.ParentSeparator + method.Type.Name,
+				method.Name, method.Parameters.Count, method.ReturnType.Name);
 		return foundInstructions == null
 			? null
 			//TODO: find all [.. with existing list and no changes, all those cases need to be removed, there is a crazy amount of those added (54 wtf)!
@@ -509,8 +518,8 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		if (!Memory.Registers.TryGet(loopBegin.Register, out var iterableVariable))
 			return; //ncrunch: no coverage
 		Memory.Frame.Set("index", Memory.Frame.TryGet("index", out var indexValue)
-			? new ValueInstance(executable.numberType, indexValue.Number + 1)
-			: new ValueInstance(executable.numberType, 0));
+     ? new ValueInstance(activeExecutable.numberType, indexValue.Number + 1)
+			: new ValueInstance(activeExecutable.numberType, 0));
 		if (!loopBegin.IsInitialized)
 		{
 			loopBegin.LoopCount = GetLength(iterableVariable);
@@ -536,10 +545,10 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		}
 		var isDecreasing = loopBegin.IsDecreasing ?? false;
 		if (Memory.Frame.TryGet("index", out var indexValue))
-			Memory.Frame.Set("index", new ValueInstance(executable.numberType, indexValue.Number +
+      Memory.Frame.Set("index", new ValueInstance(activeExecutable.numberType, indexValue.Number +
 				(isDecreasing ? -1 : 1)));
 		else
-			Memory.Frame.Set("index", new ValueInstance(executable.numberType,
+      Memory.Frame.Set("index", new ValueInstance(activeExecutable.numberType,
 				loopBegin.StartIndexValue ?? 0));
 		Memory.Frame.Set("value", Memory.Frame.Get("index"));
 	}
@@ -571,7 +580,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 				loopBegin.LoopCount = 0;
 			return;
 		}
-		Memory.Frame.Set("value", new ValueInstance(executable.numberType, index + 1));
+   Memory.Frame.Set("value", new ValueInstance(activeExecutable.numberType, index + 1));
 	}
 
 	private void TryStoreInstructions(Instruction instruction)
@@ -603,19 +612,24 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 
 	private void TryExecuteRest(Instruction instruction)
 	{
-		if (instruction is BinaryInstruction binary)
+    switch (instruction)
 		{
+		case BinaryInstruction binary:
 			if (binary.IsConditional())
 				TryConditionalOperationExecution(binary);
 			else
 				TryBinaryOperationExecution(binary);
-		}
-		else if (instruction is Jump jump)
-			TryJumpOperation(jump);
-		else if (instruction is JumpIfNotZero jumpIfNotZero)
+			break;
+		case JumpIfNotZero jumpIfNotZero:
 			TryJumpIfOperation(jumpIfNotZero);
-		else if (instruction is JumpToId jumpToId)
+			break;
+		case Jump jump:
+			TryJumpOperation(jump);
+			break;
+		case JumpToId jumpToId:
 			TryJumpToIdOperation(jumpToId);
+			break;
+		}
 	}
 
 	private void TryBinaryOperationExecution(BinaryInstruction instruction)

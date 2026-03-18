@@ -8,7 +8,17 @@ public sealed class Invoke(Register register, MethodCall method, Registry persis
 	: RegisterInstruction(InstructionType.Invoke, register)
 {
 	public Invoke(BinaryReader reader, NameTable table, BinaryExecutable binary)
-		: this((Register)reader.ReadByte(), binary.ReadMethodCall(reader, table), new Registry(reader)) { }
+   : this((Register)reader.ReadByte(), ReadMethod(reader, table, binary), ReadRegistry(reader)) { }
+
+	private static MethodCall ReadMethod(BinaryReader reader, NameTable table, BinaryExecutable binary) =>
+		reader.ReadBoolean()
+			? binary.ReadMethodCall(reader, table)
+			: throw new InvalidOperationException("Invoke instruction is missing method call data");
+
+	private static Registry ReadRegistry(BinaryReader reader) =>
+		reader.ReadBoolean()
+			? new Registry(reader)
+			: new Registry();
 
 	public MethodCall Method { get; } = method;
 	public Registry PersistedRegistry { get; } = persistedRegistry;

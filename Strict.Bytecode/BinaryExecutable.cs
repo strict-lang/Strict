@@ -95,9 +95,15 @@ public sealed class BinaryExecutable(Package basePackage) : IEnumerable<Instruct
 	public IReadOnlyList<Instruction>? FindInstructions(string fullTypeName, string methodName,
 		int parametersCount, string returnType = "") =>
 		MethodsPerType.TryGetValue(fullTypeName, out var methods)
-			? methods.MethodGroups.GetValueOrDefault(methodName)?.Find(m =>
-				m.parameters.Count == parametersCount && m.ReturnTypeName == returnType)?.instructions
+			? methods.MethodGroups.GetValueOrDefault(methodName)?.Find(method =>
+				method.parameters.Count == parametersCount &&
+				DoesReturnTypeMatch(method.ReturnTypeName, returnType))?.instructions
 			: null;
+
+	private static bool DoesReturnTypeMatch(string storedReturnType, string expectedReturnType) =>
+		expectedReturnType.Length == 0 || storedReturnType == expectedReturnType ||
+		storedReturnType.EndsWith(Context.ParentSeparator + expectedReturnType,
+			StringComparison.Ordinal);
 
 	public IReadOnlyList<Instruction>? FindInstructions(string fullTypeName, string methodName,
 		int parametersCount, Type returnType) =>
@@ -275,7 +281,8 @@ public sealed class BinaryExecutable(Package basePackage) : IEnumerable<Instruct
 		var paramCount = reader.Read7BitEncodedInt();
 		var parameters = new BinaryMember[paramCount];
 		for (var index = 0; index < paramCount; index++)
-			parameters[index] = new BinaryMember(reader, table, this);
+      parameters[index] = new BinaryMember(table.Names[reader.Read7BitEncodedInt()],
+				table.Names[reader.Read7BitEncodedInt()], null);
 		var returnTypeName = table.Names[reader.Read7BitEncodedInt()];
 		var hasInstance = reader.ReadBoolean();
 		var instance = hasInstance
@@ -462,6 +469,11 @@ public sealed class BinaryExecutable(Package basePackage) : IEnumerable<Instruct
 			writer.Write7BitEncodedInt(table[methodCall.Method.Type.Name]);
 			writer.Write7BitEncodedInt(table[methodCall.Method.Name]);
 			writer.Write7BitEncodedInt(methodCall.Method.Parameters.Count);
+      foreach (var parameter in methodCall.Method.Parameters)
+			{
+				writer.Write7BitEncodedInt(table[parameter.Name]);
+				writer.Write7BitEncodedInt(table[parameter.Type.FullName]);
+			}
 			writer.Write7BitEncodedInt(table[methodCall.ReturnType.Name]);
 			writer.Write(methodCall.Instance != null);
 			if (methodCall.Instance != null)
@@ -487,6 +499,11 @@ public sealed class BinaryExecutable(Package basePackage) : IEnumerable<Instruct
 			writer.Write7BitEncodedInt(table[methodCall.Method.Type.Name]);
 			writer.Write7BitEncodedInt(table[methodCall.Method.Name]);
 			writer.Write7BitEncodedInt(methodCall.Method.Parameters.Count);
+      foreach (var parameter in methodCall.Method.Parameters)
+			{
+				writer.Write7BitEncodedInt(table[parameter.Name]);
+				writer.Write7BitEncodedInt(table[parameter.Type.FullName]);
+			}
 			writer.Write7BitEncodedInt(table[methodCall.ReturnType.Name]);
 			writer.Write(methodCall.Instance != null);
 			if (methodCall.Instance != null)

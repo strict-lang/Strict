@@ -201,7 +201,7 @@ public sealed class InstructionsToMlirTests
 		Assert.That(mlir, Does.Contain("func.func @Run("));
 		Assert.That(mlir, Does.Contain("func.func @main() -> i32"));
 		Assert.That(mlir, Does.Contain("func.call @Run()"));
-		Assert.That(mlir, Does.Contain("return %zero : i32"));
+		Assert.That(mlir, Does.Contain("return %exitCode : i32"));
 	}
 
 	[Test]

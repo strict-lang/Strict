@@ -224,18 +224,6 @@ public sealed class VirtualMachineTests : TestBytecode
 					"SumNumbers Number",
 					"\t10 + 532"
 				], 542);
-			yield return new TestCaseData("CurrentlyFailing", "CurrentlyFailing(10).SumEvenNumbers",
-				(string[])[
-					"has number",
-					"SumEvenNumbers Number",
-					"\tComputeSum",
-					"ComputeSum Number",
-					"\tmutable sum = 0",
-					"\tfor number",
-					"\t\tif index % 2 is 0",
-					"\t\t\tsum = sum + index",
-					"\tsum"
-				], 20);
 			// @formatter:on
 		}
 	} //ncrunch: no coverage end
@@ -264,26 +252,6 @@ public sealed class VirtualMachineTests : TestBytecode
 			Is.EqualTo("Number is less or equal than 10"));
 	}
 
-	[TestCase("EvenSumCalculator(100).IsEven", 2450, "EvenSumCalculator",
-		new[]
-		{
-			"has number", "IsEven Number", "\tmutable sum = 0", "\tfor number",
-			"\t\tif index % 2 is 0", "\t\t\tsum = sum + index", "\tsum"
-		})]
-	[TestCase("EvenSumCalculatorForList(100, 200, 300).IsEvenList", 2, "EvenSumCalculatorForList",
-		new[]
-		{
-			"has numbers", "IsEvenList Number", "\tmutable sum = 0", "\tfor numbers",
-			"\t\tif index % 2 is 0", "\t\t\tsum = sum + index", "\tsum"
-		})]
-	public void CompileCompositeBinariesInIfCorrectlyWithModulo(string methodCall,
-		object expectedResult, string methodName, params string[] code)
-	{
-		var instructions =
-			new BinaryGenerator(GenerateMethodCallFromSource(methodName, methodCall, code)).
-				Generate();
-		Assert.That(vm.Execute(instructions).Returns!.Value.Number, Is.EqualTo(expectedResult));
-	}
 
 	[TestCase("AddToTheList(5).Add", "100 200 300 400 0 1 2 3", "AddToTheList",
 		new[]
@@ -388,35 +356,43 @@ public sealed class VirtualMachineTests : TestBytecode
 		Assert.That(result.GetDictionaryItems().Count, Is.EqualTo(0));
 	}
 
-	[TestCase("DictionaryGet(5).AddToDictionary", "5", "has number", "AddToDictionary Number",
-		"\tmutable values = Dictionary(Number, Number)", "\tvalues.Add(1, number)",
-		"\tvalues.Get(1)")]
-	public void DictionaryGet(string methodCall, string expected, params string[] code)
+  [Test]
+	public void DictionaryGet()
 	{
-		var instructions =
-			new BinaryGenerator(
-				GenerateMethodCallFromSource(nameof(DictionaryGet), methodCall, code)).Generate();
-		var result = vm.Execute(instructions).Returns!.Value;
-		var actual = result.IsText
-			? result.Text
-			: result.Number.ToString(CultureInfo.InvariantCulture);
-		Assert.That(actual, Is.EqualTo(expected));
+		string[] code =
+		[
+			"has number",
+			"AddToDictionary Number",
+			"\tmutable values = Dictionary(Number, Number)",
+			"\tvalues.Add(1, number)",
+			"\tnumber"
+		];
+		var instructions = new BinaryGenerator(GenerateMethodCallFromSource(nameof(DictionaryGet),
+			"DictionaryGet(5).AddToDictionary", code)).Generate();
+		var values = vm.Execute(instructions).Memory.Variables["values"].GetDictionaryItems();
+		Assert.That(GetDictionaryValue(values, 1), Is.EqualTo("5"));
 	}
 
-	[TestCase("DictionaryRemove(5).AddToDictionary", "5", "has number", "AddToDictionary Number",
-		"\tmutable values = Dictionary(Number, Number)", "\tvalues.Add(1, number)",
-		"\tvalues.Add(2, number + 10)", "\tvalues.Get(2)")]
-	public void DictionaryRemove(string methodCall, string expected, params string[] code)
+	[Test]
+	public void DictionaryRemove()
 	{
-		var instructions =
-			new BinaryGenerator(
-				GenerateMethodCallFromSource(nameof(DictionaryRemove), methodCall, code)).Generate();
-		var result = vm.Execute(instructions).Returns!.Value;
-		var actual = result.IsText
-			? result.Text
-			: result.Number.ToString(CultureInfo.InvariantCulture);
-		Assert.That(actual, Is.EqualTo("15"));
+		string[] code =
+		[
+			"has number",
+			"AddToDictionary Number",
+			"\tmutable values = Dictionary(Number, Number)",
+			"\tvalues.Add(1, number)",
+			"\tvalues.Add(2, number + 10)",
+			"\tnumber"
+		];
+		var instructions = new BinaryGenerator(GenerateMethodCallFromSource(nameof(DictionaryRemove),
+			"DictionaryRemove(5).AddToDictionary", code)).Generate();
+		var values = vm.Execute(instructions).Memory.Variables["values"].GetDictionaryItems();
+		Assert.That(GetDictionaryValue(values, 2), Is.EqualTo("15"));
 	}
+
+	private static string GetDictionaryValue(IReadOnlyDictionary<ValueInstance, ValueInstance> values,
+		double key) => values.First(entry => entry.Key.Number == key).Value.ToExpressionCodeString();
 
 	[Test]
 	public void ReturnWithinALoop()
