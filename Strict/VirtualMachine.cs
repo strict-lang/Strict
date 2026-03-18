@@ -11,15 +11,17 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 {
 	public VirtualMachine(Package package) : this(new BinaryExecutable(package)) { }
 
+	//TODO: this is very stupid, doing Clear over and over and clear doesn't even do the work, loopbegin is done over and over ..
 	public VirtualMachine Execute()
 	{
 		Clear();
-		foreach (var loopBegin in executable.EntryPoint.Instructions.OfType<LoopBeginInstruction>())
+		foreach (var loopBegin in executable.EntryPoint.instructions.OfType<LoopBeginInstruction>())
 			loopBegin.Reset();
-		return RunInstructions(executable.EntryPoint.Instructions);
+		return RunInstructions(executable.EntryPoint.instructions);
 	}
 
-	public VirtualMachine Execute(BinaryExecutable binary) => Execute(binary.EntryPoint.Instructions);
+	//TODO: this is no good, we should call the EntryPoint method, yes, but there is no need to extract the instructions and pass them here, just use them directly from BinaryMethod! Also the execution context below should be created here (see Interpreter), this is just convoluted and error prone .. also not tested well, tests are upside down
+	public VirtualMachine Execute(BinaryExecutable binary) => Execute(binary.EntryPoint.instructions);
 
 	public VirtualMachine Execute(IReadOnlyList<Instruction> allInstructions,
 		IReadOnlyDictionary<string, ValueInstance>? initialVariables = null)
@@ -49,6 +51,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 	public ValueInstance? Returns { get; private set; }
 	public Memory Memory { get; } = new();
 
+	//TODO: this is still wrong, this are not allInstructions, just the entryPoint instructions, which should recursively call whatever is needed!
 	private VirtualMachine RunInstructions(IReadOnlyList<Instruction> allInstructions)
 	{
 		instructions = allInstructions;

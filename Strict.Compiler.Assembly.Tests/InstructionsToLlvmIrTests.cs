@@ -627,7 +627,7 @@ public sealed class InstructionsToLlvmIrTests
 
 	//TODO: remove again, we don't need to create new BinaryGenerators everywhere!
 	private static List<Instruction> GenerateMethodInstructions(Method method) =>
-		[.. new BinaryGenerator(new MethodCall(method)).Generate().EntryPoint.Instructions];
+		new BinaryGenerator(new MethodCall(method)).Generate().EntryPoint.instructions;
 
 	[Test]
 	public void NumericPrintsWithDifferentOperatorsUseDistinctStringLabels()

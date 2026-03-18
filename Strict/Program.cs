@@ -19,47 +19,48 @@ public static class Program
 			}
 			catch (Exception ex)
 			{
-				Console.WriteLine($"Execution failed: {ex.GetType().Name}: {ex.Message}");
-				if (ex.InnerException != null)
-					Console.WriteLine($"  Inner: {
-						ex.InnerException.GetType().Name
-					}: {
-						ex.InnerException.Message
-					}");
+				Console.WriteLine($"Execution failed: {ex}");
 				Environment.ExitCode = 1;
 			}
 	}
 
-	private static void DisplayUsageInformation()
-	{
-		Console.WriteLine("Usage: Strict <file.strict|.strictbinary> [-options] [args...]");
-		Console.WriteLine();
-		Console.WriteLine("Options (default if nothing specified: cache or run .strictbinary and execute in VM)");
-		Console.WriteLine("  -Windows     Compile to a native Windows x64 optimized executable (.exe)");
-		Console.WriteLine("  -Linux       Compile to a native Linux x64 optimized executable");
-		Console.WriteLine("  -MacOS       Compile to a native macOS x64 optimized executable");
-		Console.WriteLine("  -mlir        Force MLIR backend (default, requires mlir-opt + mlir-translate + clang)");
-		Console.WriteLine("  -llvm        Force LLVM IR backend (fallback, requires clang: https://releases.llvm.org)");
-		Console.WriteLine("  -nasm        Force NASM backend (fallback, less optimized, requires nasm + gcc/clang)");
-		Console.WriteLine("  -diagnostics Output detailed step-by-step logs and timing for each pipeline stage");
-		Console.WriteLine("               (automatically enabled in Debug builds)");
-		Console.WriteLine("  -decompile   Decompile a .strictbinary into partial .strict source files");
-		Console.WriteLine("               (creates a folder with one .strict per type; no tests, optimized)");
-		Console.WriteLine();
-		Console.WriteLine("Arguments:");
-		Console.WriteLine("  args...      Optional text or numbers passed to called method");
-		Console.WriteLine("               Example to call Run method: Strict Sum.strict 5 10 20 => prints 35");
-		Console.WriteLine("               Example to call any expression, must contain brackets: (1, 2, 3).Length => 3");
-		Console.WriteLine();
-		Console.WriteLine("Examples:");
-		Console.WriteLine("  Strict Examples/SimpleCalculator.strict");
-		Console.WriteLine("  Strict Examples/SimpleCalculator.strict -Windows");
-		Console.WriteLine("  Strict Examples/SimpleCalculator.strict -diagnostics");
-		Console.WriteLine("  Strict Examples/SimpleCalculator.strictbinary");
-		Console.WriteLine("  Strict Examples/SimpleCalculator.strictbinary -decompile");
-		Console.WriteLine("  Strict Examples/Sum.strict 5 10 20");
-		Console.WriteLine("  Strict List.strict (1, 2, 3).Length");
-	}
+	private static void DisplayUsageInformation() =>
+		Console.WriteLine("""
+Usage: Strict <file.strict|.strictbinary> [-options] [args...]
+
+Options (default if nothing specified: build .strictbinary cache and execute in VM)
+  -Windows     Compile to a native Windows x64 optimized executable (.exe)
+  -Linux       Compile to a native Linux x64 optimized executable
+  -MacOS       Compile to a native macOS x64 optimized executable
+  -mlir        Force MLIR backend (default, requires mlir-opt + mlir-translate + clang)
+               MLIR is the default, best optimized, uses parallel CPU and GPU (Cuda) execution
+  -llvm        Force LLVM IR backend (fallback, requires clang: https://releases.llvm.org)
+  -nasm        Force NASM backend (fallback, less optimized, requires nasm + gcc/clang)
+  -diagnostics Output detailed step-by-step logs and timing for each pipeline stage
+               (automatically enabled in Debug builds)
+  -decompile   Decompile a .strictbinary into partial .strict source files
+               (creates a folder with one .strict per type; no tests, optimized)
+
+Arguments:
+  args...      Optional text or numbers passed to called method
+               Example to call Run method: Strict Sum.strict 5 10 20 => prints 35
+               Example to call any expression, must contain brackets: (1, 2, 3).Length => 3
+
+Examples:
+  Strict Examples/SimpleCalculator.strict
+  Strict Examples/SimpleCalculator.strict -Windows
+  Strict Examples/SimpleCalculator.strict -diagnostics
+  Strict Examples/SimpleCalculator.strictbinary
+  Strict Examples/SimpleCalculator.strictbinary -decompile
+  Strict Examples/Sum.strict 5 10 20
+  Strict List.strict (1, 2, 3).Length
+
+Notes:
+	Only .strict files contain the full actual code, everything after that is stripped,
+	optimized, and just includes what is actually executed (.strictbinary is much smaller).
+  Always caches bytecode into a .strictbinary for fast subsequent execution.
+  .strictbinary files are reused when they are newer than all of the used source files.
+""");
 
 	private static async Task ParseArgumentsAndRun(IReadOnlyList<string> args)
 	{

@@ -12,7 +12,7 @@ internal sealed class CallFrame(CallFrame? parent = null)
 	private Dictionary<string, ValueInstance>? variables;
 	private HashSet<string>? memberNames;
 	/// <summary>
-	/// Materialized locals dict — used by <see cref="Memory.Variables"/> for test compat.
+	/// Materialized locals dict — used by <see cref="Memory.Variables"/> for test compatibility
 	/// </summary>
 	internal Dictionary<string, ValueInstance> Variables =>
 		variables ??= new Dictionary<string, ValueInstance>();

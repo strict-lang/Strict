@@ -607,7 +607,7 @@ public sealed class InstructionsToMlirTests
 			method.ReturnType);
 
 	private static List<Instruction> GenerateMethodInstructions(Method method) =>
-		[.. new BinaryGenerator(new MethodCall(method)).Generate().EntryPoint.Instructions];
+		new BinaryGenerator(new MethodCall(method)).Generate().EntryPoint.instructions;
 
 	[Test]
 	public void RangeLoopEmitsScfFor()
@@ -1004,7 +1004,7 @@ public sealed class InstructionsToMlirTests
 		Assert.That(buildPrecompiledMethod, Is.Not.Null);
 		var precompiledMethods = (Dictionary<string, List<Instruction>>)buildPrecompiledMethod!.Invoke(
 			null, [binary])!;
-		foreach (var invoke in binary.EntryPoint.Instructions.OfType<Invoke>())
+		foreach (var invoke in binary.EntryPoint.instructions.OfType<Invoke>())
 			if (invoke.Method?.Method != null && invoke.Method.Method.Name != Method.From)
 				Assert.That(precompiledMethods.ContainsKey(BuildMethodKey(invoke.Method.Method)), Is.True,
 					"Missing precompiled key for invoked method " + invoke.Method.Method.Type.Name + "." +

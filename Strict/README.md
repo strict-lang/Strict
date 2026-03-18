@@ -1,11 +1,10 @@
 # Strict executable
 
-Runs though all stages in the Strict workflow to execute a strict file. Will give you statistics
-and performance metrics in debug mode, in release just gives the final output.
+Runs though all stages in the Strict workflow to execute a strict file. Can also create an optimized executable for any supported platform with parallel CPU and GPU (CUDA, more later) execution support. Will give you statistics and performance metrics in debug mode, in release just gives the final output.
 
 ## Purpose
 
-This tool demonstrates and tests the complete Strict workflow from source code to execution:
+This tool demonstrates and tests the complete Strict workflow from source code to execution (step 2-5 are skipped if diagnostics is off in release mode):
 
 1. **Load Strict Package**
    - Loads the Strict base package from the main directory
@@ -32,7 +31,7 @@ This tool demonstrates and tests the complete Strict workflow from source code t
    - Uses interpreter-style execution for fast feedback
    - Verifies all test expressions evaluate to true
 
-6. **Generate Bytecode** (Strict.Runtime)
+6. **Generate Bytecode** (Strict.Bytecode)
    - Converts expression trees to ~40 bytecode-like instructions
    - Optimizes for execution speed
    - Prepares for low-level runtime
@@ -42,58 +41,80 @@ This tool demonstrates and tests the complete Strict workflow from source code t
    - Performs constant folding, dead store elimination
    - Eliminates unreachable code and redundant loads
 
-8. **Execute Bytecode** (Strict.Runtime)
-   - Runs optimized bytecode via BytecodeInterpreter
+8. **Execute Bytecode** (Strict)
+   - Runs optimized bytecode via VirtualMachine
    - Provides final output and return values
-   - Maximum execution speed
+   - Very fast execution speed, but not as fast as precompiled CPU and GPU optimized executable below.
+
+9. **Create optimized executable** (Strict.Compilers.Assembly)
+   - Create executable for Windows, Linux or MacOS
+   - Maximum execution speed, parallelizes any complex code automatically, runs on GPU if available.
 
 ## Usage
 
-```bash
-Strict <strict-file>
+```
+Usage: Strict <file.strict|.strictbinary> [-options] [args...]
+
+Options (default if nothing specified: build .strictbinary cache and execute in VM)
+  -Windows     Compile to a native Windows x64 optimized executable (.exe)
+  -Linux       Compile to a native Linux x64 optimized executable
+  -MacOS       Compile to a native macOS x64 optimized executable
+  -mlir        Force MLIR backend (default, requires mlir-opt + mlir-translate + clang)
+               MLIR is the default, best optimized, uses parallel CPU and GPU (Cuda) execution
+  -llvm        Force LLVM IR backend (fallback, requires clang: https://releases.llvm.org)
+  -nasm        Force NASM backend (fallback, less optimized, requires nasm + gcc/clang)
+  -diagnostics Output detailed step-by-step logs and timing for each pipeline stage
+               (automatically enabled in Debug builds)
+  -decompile   Decompile a .strictbinary into partial .strict source files
+               (creates a folder with one .strict per type; no tests, optimized)
+
+Arguments:
+  args...      Optional text or numbers passed to called method
+               Example to call Run method: Strict Sum.strict 5 10 20 => prints 35
+               Example to call any expression, must contain brackets: (1, 2, 3).Length => 3
+
+Examples:
+  Strict Examples/SimpleCalculator.strict
+  Strict Examples/SimpleCalculator.strict -Windows
+  Strict Examples/SimpleCalculator.strict -diagnostics
+  Strict Examples/SimpleCalculator.strictbinary
+  Strict Examples/SimpleCalculator.strictbinary -decompile
+  Strict Examples/Sum.strict 5 10 20
+  Strict List.strict (1, 2, 3).Length
+
+Notes:
+	Only .strict files contain the full actual code, everything after that is stripped,
+	optimized, and just includes what is actually executed (.strictbinary is much smaller).
+  Always caches bytecode into a .strictbinary for fast subsequent execution.
+  .strictbinary files are reused when they are newer than all of the used source files.
 ```
 
 ### Example
 
-```bash
+```
 Strict Examples/SimpleCalculator.strict
 ```
 
 ## Output
 
-The runner provides detailed progress through each pipeline stage:
+The runner provides detailed progress through each pipeline stage.
 
 ```
-╔═════════════════════════════════════════════════╗
-║           Strict Programming Language           ║
-╚═════════════════════════════════════════════════╝
-
-┌─ Step 1: Load Package and Parse Types (Strict.Language)
-│  ✓ Loaded package: Strict.Base
-│  ✓ Found type: Number
-│  ✓ Members: 15
-│  ✓ Methods: 42
-└─ Step 1 Complete
-
-┌─ Step 2: Parse Method Bodies (Strict.Expressions)
-│  ✓ Parsed 42 methods
-│  ✓ Total expressions: 156
-└─ Step 2 Complete
-
+Strict.Runner: Sum.strict
+Parse: 42 methods, Total expressions: 156
 ...
-
-╔═════════════════════════════════════════════════╗
-║              Pipeline Complete ✓                ║
-╚═════════════════════════════════════════════════╝
 ```
 
 ## Exit Codes
 
-- **0**: Pipeline completed successfully
-- **1**: Pipeline failed (error details printed to console)
+0 on success, execution or build successful.
+
+1 if there is a failure, error details are in console output
 
 ## Use Cases
 
+- **Strict runtime**: This contains everything needed to run strict, run tests, compile it, build executables.
+- **IDE**: Used by any ide that supports Strict. See Strict.LanguageServer for details.
 - **Testing the pipeline**: Verify all components work together
 - **Debugging**: See exactly which stage fails and why
 - **Performance analysis**: Measure time spent in each stage

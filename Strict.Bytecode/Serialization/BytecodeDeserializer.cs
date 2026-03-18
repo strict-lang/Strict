@@ -26,9 +26,9 @@ public sealed class BytecodeDeserializerResult(BinaryExecutable binary)
 			var methods = typeData.MethodGroups.GetValueOrDefault(methodName);
 			if (methods == null)
 				continue;
-			var method = methods.Find(m => m.Parameters.Count == parameterCount);
+			var method = methods.Find(m => m.parameters.Count == parameterCount);
 			if (method != null)
-				return [.. method.Instructions];
+				return method.instructions;
 		}
 		return null;
 	}

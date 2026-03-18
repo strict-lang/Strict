@@ -4,9 +4,7 @@ using Strict.Expressions;
 namespace Strict;
 
 /// <summary>
-/// Fixed-size array-backed register file for the 16 <see cref="Register"/> slots.
-/// Replaces <c>Dictionary&lt;Register, ValueInstance&gt;</c>: array indexing is O(1) with no
-/// hash overhead and a single allocation instead of the dictionary's internal bucket arrays.
+/// Fast fixed-size array-backed register file for the 16 <see cref="Register"/> slots.
 /// </summary>
 public sealed class RegisterFile
 {

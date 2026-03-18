@@ -87,7 +87,7 @@ public sealed class BinaryExecutable(Package basePackage) : IEnumerable<Instruct
 		int parametersCount, string returnType = "") =>
 		MethodsPerType.TryGetValue(fullTypeName, out var methods)
 			? methods.MethodGroups.GetValueOrDefault(methodName)?.Find(m =>
-				m.Parameters.Count == parametersCount && m.ReturnTypeName == returnType)?.Instructions
+				m.parameters.Count == parametersCount && m.ReturnTypeName == returnType)?.instructions
 			: null;
 
 	public IReadOnlyList<Instruction>? FindInstructions(string fullTypeName, string methodName,
@@ -109,12 +109,9 @@ public sealed class BinaryExecutable(Package basePackage) : IEnumerable<Instruct
 	}
 
 	public static implicit operator List<Instruction>(BinaryExecutable binary) =>
-		[.. binary.EntryPoint.Instructions];
+		binary.EntryPoint.instructions;
 
-	public static explicit operator Instruction[](BinaryExecutable binary) =>
-		[.. binary.EntryPoint.Instructions];
-
-	public IReadOnlyList<Instruction> ToInstructions() => EntryPoint.Instructions;
+	public List<Instruction> ToInstructions() => EntryPoint.instructions;
 
 	public const string Extension = ".strictbinary";
 
@@ -341,7 +338,7 @@ public sealed class BinaryExecutable(Package basePackage) : IEnumerable<Instruct
 		return new Value(type, new ValueInstance(type, reader.ReadBoolean()));
 	}
 
-	//TODO: avoid!
+	//TODO: avoid! remove!
 	private static Type EnsureResolvedType(Package package, string typeName)
 	{
 		var resolved = package.FindType(typeName) ?? (typeName.Contains('.')
@@ -528,8 +525,8 @@ public sealed class BinaryExecutable(Package basePackage) : IEnumerable<Instruct
 	}
 
 	public List<TResult> ConvertAll<TResult>(Converter<Instruction, TResult> converter) =>
-		EntryPoint.Instructions.Select(instruction => converter(instruction)).ToList();
+		EntryPoint.instructions.Select(instruction => converter(instruction)).ToList();
 
-	public IEnumerator<Instruction> GetEnumerator() => EntryPoint.Instructions.GetEnumerator();
+	public IEnumerator<Instruction> GetEnumerator() => EntryPoint.instructions.GetEnumerator();
 	IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 }

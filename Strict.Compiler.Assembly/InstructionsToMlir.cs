@@ -23,7 +23,7 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 	public override Task<string> Compile(BinaryExecutable binary, Platform platform)
 	{
 		var precompiledMethods = BuildPrecompiledMethodsInternal(binary);
-		var output = CompileForPlatform(Method.Run, binary.EntryPoint.Instructions, platform,
+		var output = CompileForPlatform(Method.Run, binary.EntryPoint.instructions, platform,
 			precompiledMethods);
 		return Task.FromResult(output);
 	}
@@ -45,7 +45,7 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 
 	public string CompileForPlatform(string methodName, BinaryExecutable binary, Platform platform,
 		IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods = null) =>
-		CompileForPlatform(methodName, binary.EntryPoint.Instructions, platform, precompiledMethods);
+		CompileForPlatform(methodName, binary.EntryPoint.instructions, platform, precompiledMethods);
 
 	public string CompileForPlatform(string methodName, IReadOnlyList<Instruction> instructions,
 		Platform platform, IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods = null)

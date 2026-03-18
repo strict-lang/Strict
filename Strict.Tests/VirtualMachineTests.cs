@@ -681,4 +681,17 @@ public sealed class VirtualMachineTests : TestBytecode
 		Assert.That(result.List.Items.Count, Is.EqualTo(101));
 		Assert.That(elapsedMs, Is.LessThan(800));
 	}
+
+	[Test]
+	public void InvokeUsesPrecompiledMethodInstructionsFromBinaryExecutable()
+	{
+		var binary = new BinaryGenerator(GenerateMethodCallFromSource("InvokePrecompiledCall",
+			"InvokePrecompiledCall(10, 5).Calculate",
+			"has First Number",
+			"has Second Number",
+			"Calculate Number",
+			"\tFirst + Second")).Generate();
+		var vm = new VirtualMachine(binary);
+		Assert.That(vm.Execute().Returns!.Value.Number, Is.EqualTo(15));
+	}
 }

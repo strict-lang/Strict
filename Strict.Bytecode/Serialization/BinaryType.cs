@@ -43,8 +43,8 @@ public sealed class BinaryType
 
 	public sealed record BinaryMethod : global::Strict.Bytecode.Serialization.BinaryMethod
 	{
-		public BinaryMethod(IReadOnlyList<BinaryMember> methodParameters, string returnTypeName,
-			IReadOnlyList<Instruction> methodInstructions)
+		public BinaryMethod(List<BinaryMember> methodParameters, string returnTypeName,
+			List<Instruction> methodInstructions)
 			: base("", methodParameters, returnTypeName, methodInstructions) { }
 
 		internal BinaryMethod(BinaryReader reader, BinaryType type, string methodName)
@@ -131,7 +131,7 @@ public sealed class BinaryType
 	public bool UsesConsolePrint =>
 		MethodGroups.Values.Any(methods => methods.Any(method => method.UsesConsolePrint));
 	public int TotalInstructionCount =>
-		MethodGroups.Values.Sum(methods => methods.Sum(method => method.Instructions.Count));
+		MethodGroups.Values.Sum(methods => methods.Sum(method => method.instructions.Count));
 
 	private NameTable CreateNameTable()
 	{
@@ -144,9 +144,9 @@ public sealed class BinaryType
 			foreach (var method in methods)
 			{
 				table.Add(method.ReturnTypeName);
-				foreach (var parameter in method.Parameters)
+				foreach (var parameter in method.parameters)
 					AddMemberNamesToTable(parameter);
-				foreach (var instruction in method.Instructions)
+				foreach (var instruction in method.instructions)
 					table.CollectStrings(instruction);
 			}
 		}
@@ -185,7 +185,7 @@ public sealed class BinaryType
 	}
 
 	public static string ReconstructMethodName(string methodName, BinaryMethod method) =>
-		methodName + method.Parameters.ToBrackets() + (method.ReturnTypeName == Type.None
+		methodName + method.parameters.ToBrackets() + (method.ReturnTypeName == Type.None
 			? ""
 			: " " + method.ReturnTypeName);
 }

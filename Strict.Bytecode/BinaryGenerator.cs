@@ -551,10 +551,11 @@ public sealed class BinaryGenerator
 		}
 	}
 
+	//TODO: cumbersome, remove and fix
 	private static void AddCompiledMethod(
 		Dictionary<string, Dictionary<string, List<BinaryType.BinaryMethod>>> methodsByType,
-		string typeFullName, string methodName, IReadOnlyList<BinaryMember> parameters,
-		string returnTypeName, IReadOnlyList<Instruction> instructionsToAdd)
+		string typeFullName, string methodName, List<BinaryMember> parameters,
+		string returnTypeName, List<Instruction> instructionsToAdd)
 	{
 		if (!methodsByType.TryGetValue(typeFullName, out var methodGroups))
 		{

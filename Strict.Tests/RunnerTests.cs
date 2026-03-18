@@ -400,6 +400,15 @@ public sealed class RunnerTests
 		Assert.That(writer.ToString(), Does.Contain("35"));
 	}
 
+	[Test]
+	public async Task RunSumWithDifferentProgramArgumentsDoesNotReuseCachedEntryPoint()
+	{
+		await new Runner(SumFilePath, TestPackage.Instance, "5 10 20").Run();
+		writer.GetStringBuilder().Clear();
+		await new Runner(SumFilePath, TestPackage.Instance, "1 2").Run();
+		Assert.That(writer.ToString(), Does.Contain("3"));
+	}
+
 	private static string SumFilePath => GetExamplesFilePath("Sum");
 
 	[Test]

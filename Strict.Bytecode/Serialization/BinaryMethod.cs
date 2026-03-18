@@ -4,6 +4,8 @@ using System.Runtime.CompilerServices;
 
 [assembly: InternalsVisibleTo("Strict.Optimizers")]
 [assembly: InternalsVisibleTo("Strict.Compiler")]
+[assembly: InternalsVisibleTo("Strict.Compiler.Assembly")]
+[assembly: InternalsVisibleTo("Strict.Compiler.Assembly.Tests")]
 
 namespace Strict.Bytecode.Serialization;
 
@@ -18,21 +20,10 @@ public record BinaryMethod
 		instructions = methodInstructions;
 	}
 
-	public BinaryMethod(string methodName, IReadOnlyList<BinaryMember> methodParameters,
-		string returnTypeName, IReadOnlyList<Instruction> methodInstructions)
-	{
-		Name = methodName;
-		ReturnTypeName = returnTypeName;
-		parameters = [.. methodParameters];
-		instructions = [.. methodInstructions];
-	}
-
 	public string Name { get; }
 	public string ReturnTypeName { get; }
 	internal List<BinaryMember> parameters = [];
 	internal List<Instruction> instructions = [];
-	public IReadOnlyList<BinaryMember> Parameters => parameters;
-	public IReadOnlyList<Instruction> Instructions => instructions;
 
 	public BinaryMethod(BinaryReader reader, BinaryType type, string methodName)
 	{
