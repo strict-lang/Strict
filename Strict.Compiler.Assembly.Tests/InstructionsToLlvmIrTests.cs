@@ -1,7 +1,6 @@
 using NUnit.Framework;
 using Strict.Bytecode;
 using Strict.Bytecode.Instructions;
-using Strict.Bytecode.Serialization;
 using Strict.Expressions;
 using Strict.Language;
 using Strict.Language.Tests;
@@ -145,7 +144,7 @@ public sealed class InstructionsToLlvmIrTests
 			new LoadConstantInstruction(Register.R0, new ValueInstance(NumberType, 42.0)),
 			new ReturnInstruction(Register.R0)
 		};
-		var ir = compiler.CompileForPlatform("Run", instructions, Platform.Windows);
+		var ir = Compile(instructions, Platform.Windows);
 		Assert.That(ir, Does.Contain("define i32 @main()"));
 		Assert.That(ir, Does.Contain("call double @Run()"));
 		Assert.That(ir, Does.Contain("ret i32 0"));
@@ -159,7 +158,7 @@ public sealed class InstructionsToLlvmIrTests
 			new LoadConstantInstruction(Register.R0, new ValueInstance(NumberType, 0.0)),
 			new ReturnInstruction(Register.R0)
 		};
-		var ir = compiler.CompileForPlatform("Run", instructions, Platform.Linux);
+		var ir = Compile(instructions, Platform.Linux);
 		Assert.That(ir, Does.Contain("target triple = \"x86_64-unknown-linux-gnu\""));
 		Assert.That(ir, Does.Contain("define i32 @main()"));
 	}
@@ -172,7 +171,7 @@ public sealed class InstructionsToLlvmIrTests
 			new LoadConstantInstruction(Register.R0, new ValueInstance(NumberType, 0.0)),
 			new ReturnInstruction(Register.R0)
 		};
-		var ir = compiler.CompileForPlatform("Run", instructions, Platform.MacOS);
+		var ir = Compile(instructions, Platform.MacOS);
 		Assert.That(ir, Does.Contain("target triple = \"x86_64-apple-macosx\""));
 	}
 
@@ -184,8 +183,8 @@ public sealed class InstructionsToLlvmIrTests
 			new LoadConstantInstruction(Register.R0, new ValueInstance(NumberType, 1.0)),
 			new ReturnInstruction(Register.R0)
 		};
-		var ir = compiler.CompileForPlatform("Work", instructions, Platform.Linux);
-		var funcPos = ir.IndexOf("define double @Work(", StringComparison.Ordinal);
+		var ir = Compile(instructions, Platform.Linux);
+		var funcPos = ir.IndexOf("define double @Run(", StringComparison.Ordinal);
 		var mainPos = ir.IndexOf("define i32 @main()", StringComparison.Ordinal);
 		Assert.That(funcPos, Is.LessThan(mainPos),
 			"Function body should appear before main entry point");
@@ -201,7 +200,7 @@ public sealed class InstructionsToLlvmIrTests
 			new BinaryInstruction(InstructionType.Add, Register.R0, Register.R1, Register.R2),
 			new ReturnInstruction(Register.R2)
 		};
-		var ir = compiler.CompileForPlatform("Compute", instructions, Platform.Linux);
+		var ir = Compile(instructions, Platform.Linux);
 		Assert.That(ir, Does.Not.Contain("xmm"));
 		Assert.That(ir, Does.Not.Contain("movsd"));
 		Assert.That(ir, Does.Not.Contain("push rbp"));
@@ -218,7 +217,7 @@ public sealed class InstructionsToLlvmIrTests
 			new BinaryInstruction(InstructionType.Add, Register.R0, Register.R1, Register.R2),
 			new ReturnInstruction(Register.R2)
 		};
-		var ir = compiler.CompileForPlatform("Run", instructions, Platform.Linux);
+		var ir = Compile(instructions, Platform.Linux);
 		Assert.That(ir, Does.Contain("fadd double"));
 		Assert.That(ir, Does.Contain("ret double %t"));
 		Assert.That(ir, Does.Contain("define double @Run()"));
@@ -233,38 +232,27 @@ public sealed class InstructionsToLlvmIrTests
 					"Add(first Number, second Number) Number", "\tfirst + second", "Run Number",
 					"\tAdd(2, 3)")).ParseMembersAndMethods(new MethodExpressionParser());
 		var runMethod = type.Methods.First(method => method.Name == Method.Run);
-		var addMethod = type.Methods.First(method => method.Name == "Add");
-		var runInstructions = new BinaryGenerator(new MethodCall(runMethod)).Generate();
-		var addInstructions = GenerateMethodInstructions(addMethod);
-		var methodKey = BuildMethodKey(addMethod);
-		var ir = compiler.CompileForPlatform(type.Name, runInstructions, Platform.Windows,
-			new Dictionary<string, List<Instruction>> { [methodKey] = addInstructions });
+		var binary = new BinaryGenerator(new MethodCall(runMethod)).Generate();
+		var ir = Compile(binary, Platform.Windows);
 		Assert.That(ir, Does.Contain("call double @" + type.Name + "_Add_2("));
 	}
 
-	//TODO: move to BinaryMethodTests
 	[Test]
-	public void HasPrintInstructionsReturnsTrueForPrintInstructions()
-	{
-		var instructions = new List<Instruction>
+	public void BinaryExecutableUsesConsolePrintReturnsTrueForPrintInstructions() =>
+		Assert.That(BinaryExecutable.CreateForEntryInstructions(TestPackage.Instance, new List<Instruction>
 		{
 			new PrintInstruction("Hello"),
 			new LoadConstantInstruction(Register.R0, new ValueInstance(NumberType, 0.0)),
 			new ReturnInstruction(Register.R0)
-		};
-		Assert.That(InstructionsToLlvmIr.HasPrintInstructions(instructions), Is.True);
-	}
+		}).UsesConsolePrint, Is.True);
 
 	[Test]
-	public void HasPrintInstructionsReturnsFalseWithoutPrint()
-	{
-		var instructions = new List<Instruction>
+	public void BinaryExecutableUsesConsolePrintReturnsFalseWithoutPrint() =>
+		Assert.That(BinaryExecutable.CreateForEntryInstructions(TestPackage.Instance, new List<Instruction>
 		{
 			new LoadConstantInstruction(Register.R0, new ValueInstance(NumberType, 0.0)),
 			new ReturnInstruction(Register.R0)
-		};
-		Assert.That(InstructionsToLlvmIr.HasPrintInstructions(instructions), Is.False);
-	}
+		}).UsesConsolePrint, Is.False);
 
 	[Test]
 	public void PrintInstructionDeclaressprintfAndUsesGep()
@@ -275,7 +263,7 @@ public sealed class InstructionsToLlvmIrTests
 			new LoadConstantInstruction(Register.R0, new ValueInstance(NumberType, 0.0)),
 			new ReturnInstruction(Register.R0)
 		};
-		var ir = compiler.CompileForPlatform("Run", instructions, Platform.Linux);
+		var ir = Compile(instructions, Platform.Linux);
 		Assert.That(ir, Does.Contain("declare i32 @printf(ptr, ...)"));
 		Assert.That(ir, Does.Contain("call i32 (ptr, ...) @printf("));
 		Assert.That(ir, Does.Contain("getelementptr inbounds"));
@@ -290,7 +278,7 @@ public sealed class InstructionsToLlvmIrTests
 			new LoadConstantInstruction(Register.R0, new ValueInstance(NumberType, 0.0)),
 			new ReturnInstruction(Register.R0)
 		};
-		var ir = compiler.CompileForPlatform("Run", instructions, Platform.Linux);
+		var ir = Compile(instructions, Platform.Linux);
 		Assert.That(ir, Does.Contain("\\00\""),
 			"String constants must be null-terminated for C printf compatibility");
 	}
@@ -336,12 +324,8 @@ public sealed class InstructionsToLlvmIrTests
 				"\tfirst + second", "Run Number", "\tconstant calc = LlvmSimpleCalc(2, 3)",
 				"\tcalc.Add")).ParseMembersAndMethods(new MethodExpressionParser());
 		var runMethod = type.Methods.First(method => method.Name == Method.Run);
-		var addMethod = type.Methods.First(method => method.Name == "Add");
-		var runInstructions = new BinaryGenerator(new MethodCall(runMethod)).Generate();
-		var addInstructions = GenerateMethodInstructions(addMethod);
-		var methodKey = BuildMethodKey(addMethod);
-		var ir = compiler.CompileForPlatform(type.Name, runInstructions, Platform.Windows,
-			new Dictionary<string, List<Instruction>> { [methodKey] = addInstructions });
+		var binary = new BinaryGenerator(new MethodCall(runMethod)).Generate();
+		var ir = Compile(binary, Platform.Windows);
 		Assert.That(ir, Does.Contain("define double @" + type.Name + "_Add_0("));
 		Assert.That(ir, Does.Contain("call double @" + type.Name + "_Add_0("));
 	}
@@ -414,8 +398,8 @@ public sealed class InstructionsToLlvmIrTests
 						"\tfirst + second", "Run Number", "\t42")).
 				ParseMembersAndMethods(new MethodExpressionParser());
 		var runMethod = type.Methods.First(method => method.Name == Method.Run);
-		var runInstructions = new BinaryGenerator(new MethodCall(runMethod)).Generate();
-		var ir = compiler.CompileForPlatform(type.Name, runInstructions, Platform.Linux);
+		var binary = new BinaryGenerator(new MethodCall(runMethod)).Generate();
+		var ir = Compile(binary, Platform.Linux);
 		Assert.That(ir, Does.Contain("define double @LlvmPureAdder("));
 		Assert.That(ir, Does.Contain("ret double 42.0"));
 		Assert.That(ir, Does.Contain("define i32 @main()"));
@@ -431,18 +415,8 @@ public sealed class InstructionsToLlvmIrTests
 					"\tconstant multiplied = calc.Multiply", "\tadded + multiplied")).
 			ParseMembersAndMethods(new MethodExpressionParser());
 		var runMethod = type.Methods.First(method => method.Name == Method.Run);
-		var addMethod = type.Methods.First(method => method.Name == "Add");
-		var multiplyMethod = type.Methods.First(method => method.Name == "Multiply");
-		var runInstructions = new BinaryGenerator(new MethodCall(runMethod)).Generate();
-		var addInstructions = GenerateMethodInstructions(addMethod);
-		var multiplyInstructions = GenerateMethodInstructions(multiplyMethod);
-		var precompiled = new Dictionary<string, List<Instruction>>
-		{
-			[BuildMethodKey(addMethod)] = addInstructions,
-			[BuildMethodKey(multiplyMethod)] = multiplyInstructions
-		};
-		var ir = compiler.CompileForPlatform(type.Name, runInstructions, Platform.Windows,
-			precompiled);
+		var binary = new BinaryGenerator(new MethodCall(runMethod)).Generate();
+		var ir = Compile(binary, Platform.Windows);
 		Assert.That(ir, Does.Contain("define double @LlvmCalc_Add_0("));
 		Assert.That(ir, Does.Contain("define double @LlvmCalc_Multiply_0("));
 		Assert.That(ir, Does.Contain("call double @LlvmCalc_Add_0("));
@@ -459,14 +433,8 @@ public sealed class InstructionsToLlvmIrTests
 					"Add(first Number, second Number) Number", "\tfirst + second", "Run Number",
 					"\tAdd(10, 20)")).ParseMembersAndMethods(new MethodExpressionParser());
 		var runMethod = type.Methods.First(method => method.Name == Method.Run);
-		var addMethod = type.Methods.First(method => method.Name == "Add");
-		var runInstructions = new BinaryGenerator(new MethodCall(runMethod)).Generate();
-		var addInstructions = GenerateMethodInstructions(addMethod);
-		var precompiled = new Dictionary<string, List<Instruction>>
-		{
-			[BuildMethodKey(addMethod)] = addInstructions
-		};
-		var ir = compiler.CompileForPlatform(type.Name, runInstructions, Platform.Linux, precompiled);
+		var binary = new BinaryGenerator(new MethodCall(runMethod)).Generate();
+		var ir = Compile(binary, Platform.Linux);
 		Assert.That(ir, Does.Contain("define double @LlvmArithFunc_Add_2("));
 		Assert.That(ir, Does.Contain("double %param0"));
 		Assert.That(ir, Does.Contain("double %param1"));
@@ -480,14 +448,8 @@ public sealed class InstructionsToLlvmIrTests
 					"\twidth * height", "Run Number", "\tconstant rect = LlvmArea(5, 3)", "\trect.Area")).
 			ParseMembersAndMethods(new MethodExpressionParser());
 		var runMethod = type.Methods.First(method => method.Name == Method.Run);
-		var areaMethod = type.Methods.First(method => method.Name == "Area");
-		var runInstructions = new BinaryGenerator(new MethodCall(runMethod)).Generate();
-		var areaInstructions = GenerateMethodInstructions(areaMethod);
-		var precompiled = new Dictionary<string, List<Instruction>>
-		{
-			[BuildMethodKey(areaMethod)] = areaInstructions
-		};
-		var ir = compiler.CompileForPlatform(type.Name, runInstructions, Platform.Linux, precompiled);
+		var binary = new BinaryGenerator(new MethodCall(runMethod)).Generate();
+		var ir = Compile(binary, Platform.Linux);
 		Assert.That(ir, Does.Contain("define double @LlvmArea_Area_0("));
 		Assert.That(ir, Does.Contain("fmul double"));
 		Assert.That(ir, Does.Contain("call double @LlvmArea_Area_0("));
@@ -501,14 +463,8 @@ public sealed class InstructionsToLlvmIrTests
 				"\tcelsius * 1.8 + 32", "Run Number", "\tconstant conv = LlvmTempConv(100)",
 				"\tconv.ToFahrenheit")).ParseMembersAndMethods(new MethodExpressionParser());
 		var runMethod = type.Methods.First(method => method.Name == Method.Run);
-		var toFMethod = type.Methods.First(method => method.Name == "ToFahrenheit");
-		var runInstructions = new BinaryGenerator(new MethodCall(runMethod)).Generate();
-		var toFInstructions = GenerateMethodInstructions(toFMethod);
-		var precompiled = new Dictionary<string, List<Instruction>>
-		{
-			[BuildMethodKey(toFMethod)] = toFInstructions
-		};
-		var ir = compiler.CompileForPlatform(type.Name, runInstructions, Platform.MacOS, precompiled);
+		var binary = new BinaryGenerator(new MethodCall(runMethod)).Generate();
+		var ir = Compile(binary, Platform.MacOS);
 		Assert.That(ir, Does.Contain("target triple = \"x86_64-apple-macosx\""));
 		Assert.That(ir, Does.Contain("define double @LlvmTempConv_ToFahrenheit_0("));
 		Assert.That(ir, Does.Contain("fmul double"));
@@ -524,7 +480,7 @@ public sealed class InstructionsToLlvmIrTests
 			new PrintInstruction("Result: ", Register.R0),
 			new ReturnInstruction(Register.R0)
 		};
-		var ir = compiler.CompileForPlatform("Run", instructions, Platform.Linux);
+		var ir = Compile(instructions, Platform.Linux);
 		Assert.That(ir, Does.Contain("@snprintf("));
 		Assert.That(ir, Does.Contain("@str.safe_s"));
 		Assert.That(ir, Does.Contain("@printf(ptr @str.safe_s, ptr"));
@@ -593,14 +549,8 @@ public sealed class InstructionsToLlvmIrTests
 			"\tconstant pixel = LlvmPixel(100, 150, 200)",
 			"\tpixel.Brighten")).ParseMembersAndMethods(new MethodExpressionParser());
 		var runMethod = type.Methods.First(method => method.Name == Method.Run);
-		var brightenMethod = type.Methods.First(method => method.Name == "Brighten");
-		var runInstructions = new BinaryGenerator(new MethodCall(runMethod)).Generate();
-		var brightenInstructions = GenerateMethodInstructions(brightenMethod);
-		var precompiled = new Dictionary<string, List<Instruction>>
-		{
-			[BuildMethodKey(brightenMethod)] = brightenInstructions
-		};
-		var ir = compiler.CompileForPlatform(type.Name, runInstructions, Platform.Linux, precompiled);
+		var binary = new BinaryGenerator(new MethodCall(runMethod)).Generate();
+		var ir = Compile(binary, Platform.Linux);
 		Assert.That(ir, Does.Contain("define double @LlvmPixel_Brighten_0("));
 		Assert.That(ir, Does.Contain("fadd double"));
 		Assert.That(ir, Does.Contain("call double @LlvmPixel_Brighten_0("));
@@ -618,16 +568,12 @@ public sealed class InstructionsToLlvmIrTests
 			ToolRunner.EnsureOutputFileExists(path, "test", Platform.Linux));
 	}
 
-	//TODO: remove, duplicate!
-	private static string BuildMethodKey(Method method) =>
-		BinaryExecutable.BuildMethodHeader(method.Name,
-			method.Parameters.Select(parameter =>
-				new BinaryMember(parameter.Name, parameter.Type.Name, null)).ToList(),
-			method.ReturnType);
+	private string Compile(List<Instruction> instructions, Platform platform) =>
+		compiler.Compile(BinaryExecutable.CreateForEntryInstructions(
+			TestPackage.Instance, instructions), platform).GetAwaiter().GetResult();
 
-	//TODO: remove again, we don't need to create new BinaryGenerators everywhere!
-	private static List<Instruction> GenerateMethodInstructions(Method method) =>
-		new BinaryGenerator(new MethodCall(method)).Generate().EntryPoint.instructions;
+	private string Compile(BinaryExecutable binary, Platform platform) =>
+		compiler.Compile(binary, platform).GetAwaiter().GetResult();
 
 	[Test]
 	public void NumericPrintsWithDifferentOperatorsUseDistinctStringLabels()
@@ -640,7 +586,7 @@ public sealed class InstructionsToLlvmIrTests
 			new PrintInstruction("2 * 3 = ", Register.R1),
 			new ReturnInstruction(Register.R0)
 		};
-		var ir = compiler.CompileForPlatform("Run", instructions, Platform.Windows);
+		var ir = Compile(instructions, Platform.Windows);
 		var printConstantLines = ir.Split('\n').Where(line =>
 			line.StartsWith("@str.", StringComparison.Ordinal) &&
 			line.Contains("private unnamed_addr constant", StringComparison.Ordinal) &&
@@ -712,7 +658,7 @@ public sealed class InstructionsToLlvmIrTests
 			new PrintInstruction("Result = ", Register.R0),
 			new ReturnInstruction(Register.R0)
 		};
-		var ir = compiler.CompileForPlatform("Run", instructions, Platform.Windows);
+		var ir = Compile(instructions, Platform.Windows);
 		Assert.That(ir, Does.Contain("declare ptr @GetStdHandle(i32)"));
 		Assert.That(ir, Does.Contain("declare i32 @WriteFile(ptr, ptr, i32, ptr, ptr)"));
 		Assert.That(ir, Does.Contain("call ptr @GetStdHandle(i32 -11)"));
@@ -729,7 +675,7 @@ public sealed class InstructionsToLlvmIrTests
 			new LoadConstantInstruction(Register.R0, new ValueInstance(NumberType, 1.5)),
 			new ReturnInstruction(Register.R0)
 		};
-		var ir = compiler.CompileForPlatform("Run", instructions, Platform.Windows);
+		var ir = Compile(instructions, Platform.Windows);
 		Assert.That(ir, Does.Contain("@_fltused = global i32 0"));
 	}
 
