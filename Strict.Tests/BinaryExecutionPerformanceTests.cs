@@ -2,8 +2,6 @@ using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Engines;
 using BenchmarkDotNet.Running;
 using Strict.Bytecode;
-using Strict.Bytecode.Serialization;
-using Strict.Language;
 using Strict.Language.Tests;
 
 namespace Strict.Tests;
@@ -46,23 +44,17 @@ public class BinaryExecutionPerformanceTests
 		Path.ChangeExtension(StrictFilePath, BinaryExecutable.Extension);
 
 	[Test]
-	public async Task ExecuteBinaryOnce()
-	{
-		var vm = await CreateVm();
-		vm.ExecuteRun();
-	}
-
-	[Test]
 	public async Task ExecuteBinary1000Times()
 	{
 		var vm = await CreateVm();
 		for (var run = 0; run < 1000; run++)
-			vm.ExecuteRun();
+			vm.Execute();
 	}
 
 	//ncrunch: no coverage start
+	[Test]
 	[Benchmark]
-	public async Task ExecuteBinary() => (await CreateVm()).ExecuteRun();
+	public async Task ExecuteBinary() => (await CreateVm()).Execute();
 
 	[Test]
 	[Category("Manual")]

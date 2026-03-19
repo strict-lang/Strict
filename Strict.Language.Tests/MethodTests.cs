@@ -180,7 +180,7 @@ public sealed class MethodTests
 			["Run(iterator Iterator(Text), index Number)", "	\"5\""]);
 		Assert.That(method.Parameters[0].Name, Is.EqualTo("iterator"));
 		Assert.That(method.Parameters[0].Type, Is.EqualTo(type.GetType("Iterator(Text)")));
-		Assert.That(method.Parameters[1].Name, Is.EqualTo("index"));
+		Assert.That(method.Parameters[1].Name, Is.EqualTo(Type.IndexLowercase));
 		Assert.That(method.Parameters[1].Type, Is.EqualTo(type.GetType(Type.Number)));
 	}
 

@@ -167,7 +167,7 @@ public sealed class RunnerTests
 		await new Runner(GetExamplesFilePath("FibonacciRunner"), TestPackage.Instance).Run();
 		var output = writer.ToString();
 		Assert.That(output, Does.Contain("Fibonacci(10) = 55"));
-		Assert.That(output, Does.Contain("Fibonacci(5) = 2"));
+		Assert.That(output, Does.Contain("Fibonacci(5) = 5"));
 	}
 
 	[Test]
@@ -217,11 +217,9 @@ public sealed class RunnerTests
 
 	private async Task<string> GetExamplesBinaryFileAsync(string filename)
 	{
-		var localPath =
-			Path.ChangeExtension(GetExamplesFilePath(filename), BinaryExecutable.Extension);
+		var localPath = Path.ChangeExtension(GetExamplesFilePath(filename), BinaryExecutable.Extension);
 		if (!File.Exists(localPath))
-			await new Runner(GetExamplesFilePath(filename), TestPackage.Instance).
-				Run(); //ncrunch: no coverage
+			await new Runner(GetExamplesFilePath(filename), TestPackage.Instance).Run(); //ncrunch: no coverage
 		writer.GetStringBuilder().Clear();
 		return localPath;
 	}
@@ -236,6 +234,7 @@ public sealed class RunnerTests
 			: Path.Combine(FindRepoRoot(), "Examples", filename + Language.Type.Extension);
 	}
 
+	//ncrunch: no coverage start
 	private static string FindRepoRoot()
 	{
 		var directory = AppContext.BaseDirectory;

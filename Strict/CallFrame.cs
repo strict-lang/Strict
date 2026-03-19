@@ -10,8 +10,16 @@ namespace Strict;
 /// </summary>
 internal sealed class CallFrame(CallFrame? parent = null)
 {
+	public CallFrame(IReadOnlyDictionary<string, ValueInstance>? initialVariables) : this()
+	{
+		if (initialVariables != null)
+			foreach (var (name, value) in initialVariables)
+				Set(name, value);
+	}
+
 	private Dictionary<string, ValueInstance>? variables;
 	private HashSet<string>? memberNames;
+
 	/// <summary>
 	/// Materialized locals dict — used by <see cref="Memory.Variables"/> for test compatibility
 	/// </summary>

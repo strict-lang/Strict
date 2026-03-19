@@ -26,8 +26,8 @@ public class AdderProgramTests : TestBytecode
 	private List<decimal> ExecuteAddTotals(string methodCall)
 	{
 		var result = new VirtualMachine(
-				new BinaryGenerator(GenerateMethodCallFromSource("AdderProgram", methodCall,
-					AdderProgramCode)).Generate()).ExecuteRun().Returns!.Value;
+			new BinaryGenerator(GenerateMethodCallFromSource("AdderProgram", methodCall,
+				AdderProgramCode)).Generate()).Execute().Returns!.Value;
 		return result.List.Items.Select(item => (decimal)item.Number).ToList();
 	}
 

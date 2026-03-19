@@ -42,8 +42,7 @@ public class CommandExecutor(ILanguageServerFacade languageServer,
 			Environment.NewLine + string.Join(",",
 				binary.EntryPoint.instructions.Select(instruction => instruction + Environment.NewLine))
 		}");
-		var vm = new VirtualMachine(binary).ExecuteRun();
-		return vm.Returns;
+		return new VirtualMachine(binary).Execute().Returns;
 	}
 
 	public ExecuteCommandRegistrationOptions GetRegistrationOptions(

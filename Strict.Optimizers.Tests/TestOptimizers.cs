@@ -22,7 +22,7 @@ public class TestOptimizers
 		IReadOnlyDictionary<string, ValueInstance>? initialVariables = null)
 	{
 		var binary = BinaryExecutable.CreateForEntryInstructions(TestPackage.Instance, instructions);
-		var vm = new VirtualMachine(binary).ExecuteExpression(binary.EntryPoint, initialVariables);
+		var vm = new VirtualMachine(binary).Execute(initialVariables: initialVariables);
 		return vm.Returns!.Value;
 	}
 }

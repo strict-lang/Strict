@@ -159,9 +159,9 @@ public sealed class ShuntingYardTests
 		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo(BinaryOperator.Multiply));
 		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo(BinaryOperator.Power));
 		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo("10"));
-		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo("index"));
+		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo(Type.IndexLowercase));
 		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo(BinaryOperator.To));
-		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo("Number"));
-		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo("value"));
+		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo(Type.Number));
+		Assert.That(Input[tokens.Output.Pop()], Is.EqualTo(Type.ValueLowercase));
 	}
 }

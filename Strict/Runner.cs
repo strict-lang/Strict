@@ -431,6 +431,8 @@ private Binary? binary;
 		}
 	}
 	*/
+
+//TODO: still duplicated code, should be the same as Run!
 	public async Task RunExpression(string expressionString)
 	{
 		var typeName = Path.GetFileNameWithoutExtension(strictFilePath);
@@ -445,7 +447,7 @@ private Binary? binary;
 			var binary = GenerateExpressionBinaryExecutable(expression);
 			OptimizeBytecode(binary);
 			var vm = new VirtualMachine(binary);
-			vm.ExecuteRun();
+			vm.Execute();
 			if (vm.Returns.HasValue)
 				Console.WriteLine(vm.Returns.Value.ToExpressionCodeString());
 		}
@@ -455,19 +457,23 @@ private Binary? binary;
 		}
 	}
 
+	//TODO: why do we care? just use BinaryExecutable.EntryPoint!
 	private BinaryMethod GetRunMethod(BinaryExecutable binary)
 	{
 		var runMethods = binary.GetRunMethods();
-   var exactMatch = runMethods.FirstOrDefault(method => method.parameters.Count == ProgramArguments.Length);
+		var exactMatch = runMethods.FirstOrDefault(method =>
+			method.parameters.Count == ProgramArguments.Length);
 		if (exactMatch != null)
 			return exactMatch;
-   var listMatch = runMethods.FirstOrDefault(method => method.parameters.Count == 1 &&
+		var listMatch = runMethods.FirstOrDefault(method => method.parameters.Count == 1 &&
 			ResolveType(binary, method.parameters[0].FullTypeName).IsList);
 		if (listMatch != null)
 			return listMatch;
-		throw new NotSupportedException("No Run method accepts " + ProgramArguments.Length + " arguments.");
+		throw new NotSupportedException("No Run method accepts " + ProgramArguments.Length +
+			" arguments.");
 	}
 
+	//TODO: overcomplicated
 	private IReadOnlyDictionary<string, ValueInstance>? BuildProgramArguments(BinaryExecutable binary,
 		BinaryMethod runMethod)
 	{
@@ -526,6 +532,7 @@ private Binary? binary;
 		binary.MethodsPerType.First(typeData => typeData.Value.MethodGroups.TryGetValue(Method.Run,
 			out var overloads) && overloads.Contains(runMethod)).Key;
 
+	//TODO: where is all this complexity coming from?
 	private string CreateManagedLauncher(Platform platform)
 	{
 		if ((platform == Platform.Windows && !OperatingSystem.IsWindows()) ||
@@ -568,10 +575,12 @@ private Binary? binary;
 		}
 		var binary = await GetBinary();
 		var runMethod = GetRunMethod(binary);
+		//TODO: why do we have to do this here? shouldn't this be happening in generation?
     binary.SetEntryPoint(GetRunMethodTypeFullName(binary, runMethod), Method.Run,
 			runMethod.parameters.Count, runMethod.ReturnTypeName);
 		var programArguments = BuildProgramArguments(binary, runMethod);
-    LogTiming(nameof(Run), () => new VirtualMachine(binary).ExecuteRun(programArguments));
+		LogTiming(nameof(Run),
+			() => new VirtualMachine(binary).Execute(initialVariables: programArguments));
 		Console.WriteLine("Executed " + strictFilePath + " via " + nameof(VirtualMachine) + " in " +
 			TimeSpan.FromTicks(stepTimes.Sum()).ToString(@"s\.ffffff") + "s");
 	}

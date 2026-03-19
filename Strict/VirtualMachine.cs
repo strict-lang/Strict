@@ -7,49 +7,35 @@ using Type = Strict.Language.Type;
 
 namespace Strict;
 
+//ncrunch: no coverage start, performance is very bad when NCrunch is tracking every line
 public sealed class VirtualMachine(BinaryExecutable executable)
 {
 	public VirtualMachine(Package basePackage) : this(new BinaryExecutable(basePackage)) { }
 
-	public VirtualMachine ExecuteRun(IReadOnlyDictionary<string, ValueInstance>? initialVariables = null) =>
-		ExecuteExpression(executable.EntryPoint, initialVariables);
-
-	public VirtualMachine ExecuteExpression(BinaryMethod method,
+	public VirtualMachine Execute(BinaryMethod? method = null,
 		IReadOnlyDictionary<string, ValueInstance>? initialVariables = null)
 	{
-		Clear(method.instructions, initialVariables);
-		return RunInstructions(method.instructions);
-	}
-
-	private void Clear(IReadOnlyList<Instruction> allInstructions,
-		IReadOnlyDictionary<string, ValueInstance>? initialVariables = null)
-	{
+		method ??= executable.EntryPoint;
 		conditionFlag = false;
-		instructionIndex = 0;
-		instructions = [];
 		Returns = null;
 		Memory.Registers.Clear();
-		Memory.Frame = new CallFrame();
-		if (initialVariables != null)
-			foreach (var (name, value) in initialVariables)
-				Memory.Frame.Set(name, value);
-		foreach (var loopBegin in allInstructions.OfType<LoopBeginInstruction>())
-			loopBegin.Reset();
+		Memory.Frame = new CallFrame(initialVariables);
+		return RunInstructions(method.instructions);
 	}
 
 	private bool conditionFlag;
 	private int instructionIndex;
-	private IReadOnlyList<Instruction> instructions = [];
+	private List<Instruction> instructions = [];
 	public ValueInstance? Returns { get; private set; }
 	public Memory Memory { get; } = new();
 
-	//TODO: this is still wrong, this are not allInstructions, just the entryPoint instructions, which should recursively call whatever is needed!
-	private VirtualMachine RunInstructions(IReadOnlyList<Instruction> allInstructions)
+	private VirtualMachine RunInstructions(List<Instruction> blockInstructions)
 	{
-		instructions = allInstructions;
-		for (instructionIndex = 0;
-			instructionIndex is not -1 && instructionIndex < instructions.Count;
-			instructionIndex++)
+		foreach (var loopBegin in blockInstructions.OfType<LoopBeginInstruction>())
+			loopBegin.Reset();
+		instructions = blockInstructions;
+		var instructionsLength = instructions.Count;
+		for (instructionIndex = 0; instructionIndex < instructionsLength; instructionIndex++)
 			ExecuteInstruction(instructions[instructionIndex]);
 		return this;
 	}
@@ -78,7 +64,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		if (print.ValueRegister.HasValue)
 			Console.WriteLine(print.TextPrefix + Memory.Registers[print.ValueRegister.Value].ToExpressionCodeString());
 		else
-			Console.WriteLine(print.TextPrefix); //ncrunch: no coverage
+			Console.WriteLine(print.TextPrefix);
 	}
 
 	private void TryRemoveInstruction(Instruction instruction)
@@ -134,14 +120,14 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 	}
 
 	/// <summary>
-	/// Fallback for deserialized LoopEndInstructions that don't have Begin set.
+	/// Fallback for deserialized LoopEndInstructions that don't have LoopBegin set.
 	/// Uses Steps as a hint to find the LoopBeginInstruction by scanning.
 	/// </summary>
 	private LoopBeginInstruction FindLoopBeginByScanning(int steps)
 	{
 		var idx = Math.Max(0, instructionIndex - steps);
 		while (idx < instructions.Count && instructions[idx] is not LoopBeginInstruction)
-			idx++; //ncrunch: no coverage
+			idx++;
 		return idx < instructions.Count
 			? (LoopBeginInstruction)instructions[idx]
 			: throw new InvalidOperationException("No matching LoopBeginInstruction found for LoopEnd");
@@ -149,7 +135,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 
 	private void TryInvokeInstruction(Instruction instruction)
 	{
-		if (instruction is not Invoke { Method: not null } invoke ||
+		if (instruction is not Invoke invoke ||
 			TryCreateEmptyDictionaryInstance(invoke) || TryHandleFromConstructor(invoke) ||
 			TryHandleNativeTraitMethod(invoke) || TryHandleToConversion(invoke) ||
 			TryHandleIncrementDecrement(invoke) || GetValueByKeyForDictionaryAndStoreInRegister(invoke))
@@ -168,11 +154,12 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 
 	private List<Instruction>? GetPrecompiledMethodInstructions(Method method)
 	{
-    var foundInstructions = executable.FindInstructions(method.Type, method) ??
-			executable.FindInstructions(method.Type.Name, method.Name, method.Parameters.Count,
-				method.ReturnType.Name) ??
-			executable.FindInstructions(nameof(Strict) + Context.ParentSeparator + method.Type.Name,
-				method.Name, method.Parameters.Count, method.ReturnType.Name);
+		var foundInstructions = executable.FindInstructions(method.Type, method) ??
+			executable.FindInstructions(method.Type.Name, method.Name,
+				method.Parameters.Count, method.ReturnType.Name) ??
+			executable.FindInstructions(
+				nameof(Strict) + Context.ParentSeparator + method.Type.Name, method.Name,
+				method.Parameters.Count, method.ReturnType.Name);
 		return foundInstructions == null
 			? null
 			//TODO: find all [.. with existing list and no changes, all those cases need to be removed, there is a crazy amount of those added (54 wtf)!
@@ -189,7 +176,6 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		ValueInstance? evaluatedInstance = null)
 	{
 		for (var parameterIndex = 0; parameterIndex < methodCall.Method.Parameters.Count &&
-			//ncrunch: no coverage start
 			parameterIndex < methodCall.Arguments.Count; parameterIndex++)
 			Memory.Frame.Set(methodCall.Method.Parameters[parameterIndex].Name,
 				evaluatedArguments != null
@@ -197,22 +183,16 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 					: EvaluateExpression(methodCall.Arguments[parameterIndex]));
 		if (methodCall.Instance == null)
 			return;
-		//ncrunch: no coverage end
 		var instance = evaluatedInstance ?? EvaluateExpression(methodCall.Instance);
 		Memory.Frame.Set(Type.ValueLowercase, instance, isMember: true);
 		var typeInstance = instance.TryGetValueTypeInstance();
-		if (typeInstance != null)
-		{
-			if (TrySetScopeMembersFromTypeMembers(typeInstance) ||
-				TrySetScopeMembersFromBinaryMembers(typeInstance))
-				return;
-		}
-		//ncrunch: no coverage start
+		if (typeInstance != null && (TrySetScopeMembersFromTypeMembers(typeInstance) ||
+			TrySetScopeMembersFromBinaryMembers(typeInstance)))
+			return;
 		var firstNonTraitMember = instance.GetType().Members.FirstOrDefault(member =>
 			!member.Type.IsTrait);
 		if (firstNonTraitMember != null)
 			Memory.Frame.Set(firstNonTraitMember.Name, instance, isMember: true);
-		//ncrunch: no coverage end
 	}
 
 	private bool TrySetScopeMembersFromTypeMembers(ValueTypeInstance typeInstance)
@@ -297,7 +277,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			return false;
 		if (invoke.Method!.Instance == null ||
 			!Memory.Frame.TryGet(invoke.Method.Instance.ToString(), out var current))
-			return false; //ncrunch: no coverage
+			return false;
 		var delta = methodName == "Increment"
 			? 1.0
 			: -1.0;
@@ -315,7 +295,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			? constValue.Data
 			: Memory.Frame.TryGet(instanceExpr.ToString(), out var variableValue)
 				? variableValue
-				: throw new InvalidOperationException(); //ncrunch: no coverage
+				: throw new InvalidOperationException();
 		var conversionType = invoke.Method.ReturnType;
 		if (conversionType.IsText)
 			Memory.Registers[invoke.Register] = ConvertToText(rawValue);
@@ -330,9 +310,9 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 	private static ValueInstance ConvertToText(ValueInstance rawValue)
 	{
 		if (rawValue.IsText)
-			return rawValue; //ncrunch: no coverage
+			return rawValue;
 		if (rawValue.TryGetValueTypeInstance() is { } typeInstance)
-		{ //ncrunch: no coverage start
+		{
 			var members = typeInstance.ReturnType.Members;
 			var memberValues = new List<string>(typeInstance.Values.Length);
 			for (var memberIndex = 0; memberIndex < typeInstance.Values.Length && memberIndex < members.Count; memberIndex++)
@@ -342,7 +322,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			return memberValues.Count == 0
 				? new ValueInstance(typeInstance.ReturnType.Name)
 				: new ValueInstance("(" + string.Join(", ", memberValues) + ")");
-		} //ncrunch: no coverage end
+		}
 		return new ValueInstance(rawValue.ToExpressionCodeString());
 	}
 
@@ -368,7 +348,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			return false;
 		var targetType = invoke.Method.ReturnType;
 		if (targetType is GenericTypeImplementation)
-			return false; //ncrunch: no coverage
+			return false;
 		var members = targetType.Members;
 		if (members.Count == 0 && TryGetBinaryMembers(targetType, out var binaryMembers))
 		{
@@ -398,7 +378,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		{
 			var memberType = targetType.FindType(binaryMembers[memberIndex].FullTypeName) ??
 				targetType.FindType(GetShortTypeName(binaryMembers[memberIndex].FullTypeName));
-			if (memberType != null && memberType.IsTrait)
+			if (memberType is { IsTrait: true })
 				values[memberIndex] = CreateTraitInstance(memberType);
 			else if (argumentIndex < invoke.Method.Arguments.Count)
 				values[memberIndex] = EvaluateExpression(invoke.Method.Arguments[argumentIndex++]);
@@ -429,14 +409,13 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		var memberTypeName = memberCall.Member.Type.Name;
 		if (memberTypeName is not (Type.Logger or Type.TextWriter or Type.System))
 			return false;
-		//ncrunch: no coverage start
 		if (invoke.Method.Arguments.Count > 0)
 		{
 			var argValue = EvaluateExpression(invoke.Method.Arguments[0]);
 			Console.WriteLine(argValue.ToExpressionCodeString());
 		}
 		return true;
-	} //ncrunch: no coverage end
+	}
 
 	/// <summary>
 	/// Evaluates an arbitrary expression to a ValueInstance using the current VM state.
@@ -450,32 +429,29 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			return Memory.Frame.Get(expression.ToString());
 		if (expression is MemberCall memberCall)
 			return EvaluateMemberCall(memberCall);
-		//ncrunch: no coverage start
 		if (expression is Expressions.Binary binary)
 			return EvaluateBinary(binary);
 		if (expression is MethodCall methodCall)
 			return EvaluateMethodCall(methodCall);
 		return new ValueInstance(expression.ToString());
-	} //ncrunch: no coverage end
+	}
 
 	private ValueInstance EvaluateMemberCall(MemberCall memberCall)
 	{
 		if (memberCall.Instance != null &&
 			Memory.Frame.TryGet(memberCall.Instance.ToString(), out var instanceValue))
-		{ //ncrunch: no coverage start
+		{
 			var typeInstance = instanceValue.TryGetValueTypeInstance();
 			if (typeInstance != null && typeInstance.TryGetValue(memberCall.Member.Name, out var memberValue))
 				return memberValue;
-		} //ncrunch: no coverage end
+		}
 		if (Memory.Frame.TryGet(memberCall.ToString(), out var frameValue))
 			return frameValue;
-		//ncrunch: no coverage start
 		if (memberCall.Member.InitialValue is Value enumValue)
 			return enumValue.Data;
 		return new ValueInstance(memberCall.ToString());
-	} //ncrunch: no coverage end
+	}
 
-	//ncrunch: no coverage start
 	private ValueInstance EvaluateBinary(Expressions.Binary binary)
 	{
 		var left = EvaluateExpression(binary.Instance!);
@@ -490,13 +466,12 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 				left.Number / right.Number),
 			_ => new ValueInstance(left.GetType(), left.Number)
 		};
-	} //ncrunch: no coverage end
+	}
 
-	//ncrunch: no coverage start
 	private ValueInstance EvaluateMethodCall(MethodCall call)
 	{
 		if (call.Method.Name == Method.From)
-			return EvaluateFromConstructor(call); //ncrunch: no coverage
+			return EvaluateFromConstructor(call);
 		if (call.Method.Name == BinaryOperator.To && call.Instance != null)
 		{
 			var rawValue = EvaluateExpression(call.Instance);
@@ -517,7 +492,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		var precompiledResult = RunChildScope(precompiledInstructions,
 			() => InitializeMethodCallScope(call, evaluatedArguments, evaluatedInstance));
 		return precompiledResult ?? new ValueInstance(call.Method.ReturnType, 0);
-	} //ncrunch: no coverage end
+	}
 
 	private ValueInstance EvaluateFromConstructor(MethodCall call)
 	{
@@ -560,9 +535,11 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		if (instruction is not ReturnInstruction returnInstruction)
 			return false;
 		Returns = Memory.Registers[returnInstruction.Register];
-		instructionIndex = -2;
+		instructionIndex = ExitExecutionLoopIndex;
 		return true;
 	}
+
+	private const int ExitExecutionLoopIndex = 100_000;
 
 	private void TryLoopInitInstruction(Instruction instruction)
 	{
@@ -577,9 +554,9 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 	private void ProcessCollectionLoopIteration(LoopBeginInstruction loopBegin)
 	{
 		if (!Memory.Registers.TryGet(loopBegin.Register, out var iterableVariable))
-			return; //ncrunch: no coverage
-		Memory.Frame.Set("index", Memory.Frame.TryGet("index", out var indexValue)
-     ? new ValueInstance(executable.numberType, indexValue.Number + 1)
+			return;
+		Memory.Frame.Set(Type.IndexLowercase, Memory.Frame.TryGet(Type.IndexLowercase, out var indexValue)
+			? new ValueInstance(executable.numberType, indexValue.Number + 1)
 			: new ValueInstance(executable.numberType, 0));
 		if (!loopBegin.IsInitialized)
 		{
@@ -604,14 +581,14 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			var endIndex = Convert.ToInt32(Memory.Registers[loopBegin.EndIndex!.Value].Number);
 			loopBegin.InitializeRangeState(startIndex, endIndex);
 		}
-		var isDecreasing = loopBegin.IsDecreasing ?? false;
-		if (Memory.Frame.TryGet("index", out var indexValue))
-      Memory.Frame.Set("index", new ValueInstance(executable.numberType, indexValue.Number +
-				(isDecreasing ? -1 : 1)));
-		else
-      Memory.Frame.Set("index", new ValueInstance(executable.numberType,
-				loopBegin.StartIndexValue ?? 0));
-		Memory.Frame.Set("value", Memory.Frame.Get("index"));
+		var incrementValue = loopBegin.IsDecreasing == true
+			? -1
+			: 1;
+		Memory.Frame.Set(Type.IndexLowercase, new ValueInstance(executable.numberType,
+			Memory.Frame.TryGet(Type.IndexLowercase, out var indexValue)
+				? indexValue.Number + incrementValue
+				: loopBegin.StartIndexValue ?? 0));
+		Memory.Frame.Set(Type.ValueLowercase, Memory.Frame.Get(Type.IndexLowercase));
 	}
 
 	private static int GetLength(ValueInstance iterableInstance)
@@ -623,25 +600,28 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		return (int)iterableInstance.Number;
 	}
 
-	private void AlterValueVariable(ValueInstance iterableVariable, LoopBeginInstruction loopBegin)
+	private void AlterValueVariable(ValueInstance iterableVariable,
+		LoopBeginInstruction loopBegin)
 	{
-		var index = (int)Memory.Frame.Get("index").Number;
+		var index = (int)Memory.Frame.Get(Type.IndexLowercase).Number;
 		if (iterableVariable.IsText)
 		{
 			if (index < iterableVariable.Text.Length)
-				Memory.Frame.Set("value", new ValueInstance(iterableVariable.Text[index].ToString()));
+				Memory.Frame.Set(Type.ValueLowercase,
+					new ValueInstance(iterableVariable.Text[index].ToString()));
 			return;
 		}
 		if (iterableVariable.IsList)
 		{
 			var items = iterableVariable.List.Items;
 			if (index < items.Count)
-				Memory.Frame.Set("value", items[index]);
+				Memory.Frame.Set(Type.ValueLowercase, items[index]);
 			else
 				loopBegin.LoopCount = 0;
 			return;
 		}
-   Memory.Frame.Set("value", new ValueInstance(executable.numberType, index + 1));
+		Memory.Frame.Set(Type.ValueLowercase,
+			new ValueInstance(executable.numberType, index + 1));
 	}
 
 	private void TryStoreInstructions(Instruction instruction)
@@ -653,7 +633,8 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		else if (instruction is StoreVariableInstruction storeVariable)
 		{
 			var value = storeVariable.ValueInstance;
-			// Create defensive copy to isolate list state between separate Execute() calls when lists are mutated in-place
+			// Create a defensive copy to isolate the list state between separate Execute() calls
+			// when lists are mutated in-place
 			if (value.IsList)
 				value = new ValueInstance(value.List.ReturnType, value.List.Items.ToArray());
 			Memory.Frame.Set(storeVariable.Identifier, value, storeVariable.IsMember);
@@ -673,7 +654,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 
 	private void TryExecuteRest(Instruction instruction)
 	{
-    switch (instruction)
+		switch (instruction)
 		{
 		case BinaryInstruction binary:
 			if (binary.IsConditional())
@@ -706,7 +687,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 				left.Number / right.Number),
 			InstructionType.Modulo => new ValueInstance(right.GetType(),
 				left.Number % right.Number),
-			_ => Memory.Registers[instruction.Registers[^1]] //ncrunch: no coverage
+			_ => Memory.Registers[instruction.Registers[^1]]
 		};
 	}
 
@@ -719,11 +700,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			return left;
 		}
 		if (left.IsText || right.IsText)
-			return new ValueInstance((left.IsText
-				? left.Text
-				: left.Number.ToString()) + (right.IsText
-				? right.Text
-				: right.Number.ToString()));
+			return new ValueInstance(left.ToExpressionCodeString() + right.ToExpressionCodeString());
 		return new ValueInstance(right.GetType(), left.Number + right.Number);
 	}
 
@@ -752,7 +729,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			InstructionType.LessThan => left.Number < right.Number,
 			InstructionType.Equal => left.Equals(right),
 			InstructionType.NotEqual => !left.Equals(right),
-			_ => false //ncrunch: no coverage
+			_ => false
 		};
 	}
 
@@ -790,5 +767,4 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 	}
 
 	public sealed class OperandsRequired : Exception;
-	private sealed class VariableNotFoundInMemory : Exception;
 }

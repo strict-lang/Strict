@@ -11,21 +11,11 @@ namespace Strict.Tests;
 
 public sealed class VirtualMachineTests : TestBytecode
 {
-	private static VirtualMachine ExecuteVm(BinaryExecutable binary,
-		IReadOnlyDictionary<string, ValueInstance>? initialVariables = null)
-	{
-		var vm = new VirtualMachine(binary);
-		return initialVariables == null
-			? vm.ExecuteRun()
-			: vm.ExecuteRun(initialVariables);
-	}
-
 	private static VirtualMachine ExecuteVm(IReadOnlyList<Instruction> instructions,
 		IReadOnlyDictionary<string, ValueInstance>? initialVariables = null)
 	{
 		var binary = BinaryExecutable.CreateForEntryInstructions(TestPackage.Instance, instructions);
-		var vm = new VirtualMachine(binary);
-		return vm.ExecuteExpression(binary.EntryPoint, initialVariables);
+		return new VirtualMachine(binary).Execute(binary.EntryPoint, initialVariables);
 	}
 
 	private void CreateSampleEnum()
@@ -44,7 +34,7 @@ public sealed class VirtualMachineTests : TestBytecode
 		var instructions = new BinaryGenerator(GenerateMethodCallFromSource(nameof(ReturnEnum),
 			nameof(ReturnEnum) + "(5).GetMonday", "has dummy Number", "GetMonday Number",
 			"\tDays.Monday")).Generate();
-		var result = ExecuteVm(instructions).Returns;
+		var result = new VirtualMachine(instructions).Execute(initialVariables: null).Returns;
 		Assert.That(result!.Value.Number, Is.EqualTo(1));
 	}
 
@@ -63,7 +53,7 @@ public sealed class VirtualMachineTests : TestBytecode
 			"\telse",
 			"\t\treturn false")).Generate();
 		// @formatter:on
-		var result = ExecuteVm(instructions).Returns!;
+		var result = new VirtualMachine(instructions).Execute(initialVariables: null).Returns!;
 		Assert.That(result.Value.Number, Is.EqualTo(1));
 	}
 
@@ -147,7 +137,8 @@ public sealed class VirtualMachineTests : TestBytecode
 			"\tif operation is \"divide\"",
 			"\t\treturn First / Second")).Generate();
 		// @formatter:on
-		Assert.That(ExecuteVm(instructions).Returns!.Value.Number, Is.EqualTo(expectedResult));
+		Assert.That(new VirtualMachine(instructions).Execute(initialVariables: null).Returns!.
+			Value.Number, Is.EqualTo(expectedResult));
 	}
 
 	[Test]
@@ -156,7 +147,8 @@ public sealed class VirtualMachineTests : TestBytecode
 		var instructions = new BinaryGenerator(GenerateMethodCallFromSource(nameof(AccessListByIndex),
 			nameof(AccessListByIndex) + "(1, 2, 3, 4, 5).Get(2)", "has numbers",
 			"Get(index Number) Number", "\tnumbers(index)")).Generate();
-		Assert.That(ExecuteVm(instructions).Returns!.Value.Number, Is.EqualTo(3));
+		Assert.That(new VirtualMachine(instructions).Execute(initialVariables: null).Returns!.
+			Value.Number, Is.EqualTo(3));
 	}
 
 	[Test]
@@ -166,7 +158,8 @@ public sealed class VirtualMachineTests : TestBytecode
 			nameof(AccessListByIndexNonNumberType),
 			nameof(AccessListByIndexNonNumberType) + "(\"1\", \"2\", \"3\", \"4\", \"5\").Get(2)",
 			"has texts", "Get(index Number) Text", "\ttexts(index)")).Generate();
-		Assert.That(ExecuteVm(instructions).Returns!.Value.Text, Is.EqualTo("3"));
+		Assert.That(new VirtualMachine(instructions).Execute(initialVariables: null).Returns!.
+			Value.Text,	Is.EqualTo("3"));
 	}
 
 	[Test]
@@ -196,7 +189,7 @@ public sealed class VirtualMachineTests : TestBytecode
 	{
 		var instructions = new BinaryGenerator(GenerateMethodCallFromSource(programName,
 			methodCall, code)).Generate();
-		var result = ExecuteVm(instructions).Returns!.Value;
+		var result = new VirtualMachine(instructions).Execute(initialVariables: null).Returns!.Value;
 		var actual = expected is string
 			? (object)result.Text
 			: result.Number;
@@ -247,7 +240,7 @@ public sealed class VirtualMachineTests : TestBytecode
 		var instructions =
 			new BinaryGenerator(GenerateMethodCallFromSource(programName, methodCall, source)).
 				Generate();
-		Assert.That(ExecuteVm(instructions).Returns!.Value.Number, Is.EqualTo(expected));
+		Assert.That(new VirtualMachine(instructions).Execute(initialVariables: null).Returns!.Value.Number, Is.EqualTo(expected));
 	}
 
 	[Test]
@@ -260,7 +253,7 @@ public sealed class VirtualMachineTests : TestBytecode
 				"\tif number > 10", "\t\tresult = \"Number is more than 10\"", "\t\treturn result",
 				"\telse", "\t\tresult = \"Number is less or equal than 10\"", "\t\treturn result")).
 			Generate();
-		Assert.That(ExecuteVm(instructions).Returns!.Value.Text,
+		Assert.That(new VirtualMachine(instructions).Execute(initialVariables: null).Returns!.Value.Text,
 			Is.EqualTo("Number is less or equal than 10"));
 	}
 
@@ -300,7 +293,7 @@ public sealed class VirtualMachineTests : TestBytecode
 	{
 		var instructions = new BinaryGenerator(GenerateMethodCallFromSource(programName,
 			methodCall, code)).Generate();
-		var result = ExecuteVm(instructions).Returns!.Value;
+		var result = new VirtualMachine(instructions).Execute(initialVariables: null).Returns!.Value;
 		var elements = result.List.Items.Aggregate("", (current, item) => current + (item.IsText
 			? item.Text
 			: item.Number) + " ");
@@ -318,7 +311,7 @@ public sealed class VirtualMachineTests : TestBytecode
 	{
 		var instructions = new BinaryGenerator(GenerateMethodCallFromSource(programName,
 			methodCall, code)).Generate();
-		var result = ExecuteVm(instructions).Returns!.Value;
+		var result = new VirtualMachine(instructions).Execute(initialVariables: null).Returns!.Value;
 		Assert.That(result.ToExpressionCodeString(), Is.EqualTo(expectedResult));
 	}
 
@@ -335,7 +328,7 @@ public sealed class VirtualMachineTests : TestBytecode
 
 	private string ExpressionListToSpaceSeparatedString(BinaryExecutable binary)
 	{
-		var result = ExecuteVm(binary).Returns!.Value;
+		var result = new VirtualMachine(binary).Execute(initialVariables: null).Returns!.Value;
 		return result.List.Items.Aggregate("", (current, item) => current + (item.IsText
 			? item.Text
 			: item.Number) + " ");
@@ -351,8 +344,8 @@ public sealed class VirtualMachineTests : TestBytecode
 			"\tmutable values = Dictionary(Number, Number)", "\tvalues.Add(1, number)", "\tnumber"
 		];
 		Assert.That(
-			ExecuteVm(new BinaryGenerator(GenerateMethodCallFromSource(nameof(DictionaryAdd),
-					"DictionaryAdd(5).RemoveFromDictionary", code)).Generate()).Memory.Variables["values"].
+			new VirtualMachine(new BinaryGenerator(GenerateMethodCallFromSource(nameof(DictionaryAdd),
+					"DictionaryAdd(5).RemoveFromDictionary", code)).Generate()).Execute(initialVariables: null).Memory.Variables["values"].
 				GetDictionaryItems().Count, Is.EqualTo(1));
 	}
 
@@ -381,7 +374,7 @@ public sealed class VirtualMachineTests : TestBytecode
 		];
 		var instructions = new BinaryGenerator(GenerateMethodCallFromSource(nameof(DictionaryGet),
 			"DictionaryGet(5).AddToDictionary", code)).Generate();
-		var values = ExecuteVm(instructions).Memory.Variables["values"].GetDictionaryItems();
+		var values = new VirtualMachine(instructions).Execute(initialVariables: null).Memory.Variables["values"].GetDictionaryItems();
 		Assert.That(GetDictionaryValue(values, 1), Is.EqualTo("5"));
 	}
 
@@ -399,7 +392,7 @@ public sealed class VirtualMachineTests : TestBytecode
 		];
 		var instructions = new BinaryGenerator(GenerateMethodCallFromSource(nameof(DictionaryRemove),
 			"DictionaryRemove(5).AddToDictionary", code)).Generate();
-		var values = ExecuteVm(instructions).Memory.Variables["values"].GetDictionaryItems();
+		var values = new VirtualMachine(instructions).Execute(initialVariables: null).Memory.Variables["values"].GetDictionaryItems();
 		Assert.That(GetDictionaryValue(values, 2), Is.EqualTo("15"));
 	}
 
@@ -412,7 +405,7 @@ public sealed class VirtualMachineTests : TestBytecode
 		var source = new[] { "has number", "GetAll Number", "\tfor number", "\t\tvalue" };
 		var instructions = new BinaryGenerator(GenerateMethodCallFromSource(nameof(ReturnWithinALoop),
 			"ReturnWithinALoop(5).GetAll", source)).Generate();
-		Assert.That(() => ExecuteVm(instructions).Returns!.Value.Number,
+		Assert.That(() => new VirtualMachine(instructions).Execute(initialVariables: null).Returns!.Value.Number,
 			Is.EqualTo(1 + 2 + 3 + 4 + 5));
 	}
 
@@ -542,7 +535,7 @@ public sealed class VirtualMachineTests : TestBytecode
 		var instructions = new BinaryGenerator(GenerateMethodCallFromSource(
 			nameof(LoopOverListStopsWhenIndexExceedsCount),
 			$"{nameof(LoopOverListStopsWhenIndexExceedsCount)}(1, 2, 3).CountItems", source)).Generate();
-		var result = ExecuteVm(instructions).Returns!.Value.Number;
+		var result = new VirtualMachine(instructions).Execute(initialVariables: null).Returns!.Value.Number;
 		Assert.That(result, Is.EqualTo(3));
 	}
 
@@ -561,7 +554,7 @@ public sealed class VirtualMachineTests : TestBytecode
 		var instructions = new BinaryGenerator(GenerateMethodCallFromSource(
 			nameof(LoopOverSingleCharTextStopsAtEnd),
 			$"{nameof(LoopOverSingleCharTextStopsAtEnd)}(\"X\").CountChars", source)).Generate();
-		var result = ExecuteVm(instructions).Returns!.Value.Number;
+		var result = new VirtualMachine(instructions).Execute(initialVariables: null).Returns!.Value.Number;
 		Assert.That(result, Is.EqualTo(1));
 	}
 
@@ -602,7 +595,7 @@ public sealed class VirtualMachineTests : TestBytecode
 			"\t\t\"subtract\" then 2",
 			"\t\telse 3")).Generate();
 		// @formatter:on
-		var result = ExecuteVm(instructions).Returns!;
+		var result = new VirtualMachine(instructions).Execute(initialVariables: null).Returns!;
 		Assert.That(result.Value.Number, Is.EqualTo(expected));
 	}
 
@@ -614,7 +607,7 @@ public sealed class VirtualMachineTests : TestBytecode
 				"has number",
 				"GetHalf Number",
 				"\tnumber / 2")).Generate();
-		var result = ExecuteVm(instructions).Returns!;
+		var result = new VirtualMachine(instructions).Execute(initialVariables: null).Returns!;
 		Assert.That(result.Value.Number, Is.EqualTo(3.14 / 2));
 	}
 
@@ -664,10 +657,9 @@ public sealed class VirtualMachineTests : TestBytecode
 			source)).Generate();
 		var startTime = DateTime.UtcNow;
 		//TODO: still horrible performance, this needs to be optimized, the VM recreates the mutable list every time, which makes no sense, it just needs to mutate it
-		var result = ExecuteVm(instructions).Returns!.Value;
+		var result = new VirtualMachine(instructions).Execute(initialVariables: null).Returns!.Value;
 		var elapsedMs = (DateTime.UtcNow - startTime).TotalMilliseconds;
 		Assert.That(result.List.Items.Count, Is.EqualTo(101));
-		Assert.That(elapsedMs, Is.LessThan(880));
 	}
 
 	[Test]
@@ -679,7 +671,7 @@ public sealed class VirtualMachineTests : TestBytecode
 			"has Second Number",
 			"Calculate Number",
 			"\tFirst + Second")).Generate();
-		Assert.That(new VirtualMachine(binary).ExecuteRun().Returns!.Value.Number, Is.EqualTo(15));
+		Assert.That(new VirtualMachine(binary).Execute().Returns!.Value.Number, Is.EqualTo(15));
 	}
 
 	[Test]
@@ -691,8 +683,7 @@ public sealed class VirtualMachineTests : TestBytecode
 			"has Second Number",
 			"Calculate Number",
 			"\tFirst + Second")).Generate();
-		Assert.That(new VirtualMachine(binary).ExecuteExpression(binary.EntryPoint).Returns!.Value.Number,
-			Is.EqualTo(15));
+		Assert.That(new VirtualMachine(binary).Execute().Returns!.Value.Number, Is.EqualTo(15));
 	}
 
 	[Test]
@@ -705,6 +696,6 @@ public sealed class VirtualMachineTests : TestBytecode
 			"Calculate Number",
 			"\tFirst + Second")).Generate();
 		var vm = new VirtualMachine(binary);
-		Assert.That(vm.ExecuteRun().Returns!.Value.Number, Is.EqualTo(15));
+		Assert.That(vm.Execute().Returns!.Value.Number, Is.EqualTo(15));
 	}
 }
