@@ -15,41 +15,20 @@ namespace Strict.Compiler.Assembly;
 /// </summary>
 public sealed class InstructionsToAssembly : InstructionsCompiler
 {
-	private sealed class CompiledMethodInfo(string symbol,
-		List<Instruction> instructions, List<string> parameterNames, List<string> memberNames)
-	{
-		public string Symbol { get; } = symbol;
-		public List<Instruction> Instructions { get; } = instructions;
-		public List<string> ParameterNames { get; } = parameterNames;
-		public List<string> MemberNames { get; } = memberNames;
-	}
-
 	public override Task<string> Compile(BinaryExecutable binary, Platform platform)
 	{
-   var output = CompileForPlatform(Method.Run, binary, platform);
+		var precompiledMethods = BuildPrecompiledMethodsInternal(binary);
+		var output = CompileForPlatform(Method.Run, binary.EntryPoint.instructions, platform,
+			precompiledMethods);
 		return Task.FromResult(output);
 	}
 
 	public override string Extension => ".asm";
 
-	//TODO: there should be one compile, if this is easier for tests, add a helper method in Tests!
-	public string Compile(Method method) =>
-		CompileInstructions(method.Type.Name,
-			[.. new BinaryGenerator(new MethodCall(method)).Generate().EntryPoint.instructions]);
-
 	public string CompileInstructions(string methodName, List<Instruction> instructions) =>
 		BuildAssembly(methodName, [], instructions);
 
-	/// <summary>
-	/// Produces a complete NASM source for the target platform: the compiled method followed by
-	/// an entry point that calls it and exits cleanly.
-	/// </summary>
-	public string CompileForPlatform(string methodName, BinaryExecutable binary, Platform platform,
-		IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods = null) =>
-   CompileForPlatform(methodName, binary.EntryPoint.instructions, platform,
-			precompiledMethods ?? BuildPrecompiledMethodsInternal(binary));
-
-	public string CompileForPlatform(string methodName, IReadOnlyList<Instruction> instructions,
+	private string CompileForPlatform(string methodName, IReadOnlyList<Instruction> instructions,
 		Platform platform, IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods = null)
 	{
 		var hasPrint = instructions.OfType<PrintInstruction>().Any();
@@ -64,9 +43,6 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 			functionAsm += "\n" + BuildWindowsPrintNumberHelper();
 		return functionAsm + "\n" + BuildEntryPoint(methodName, platform, hasPrint);
 	}
-
-	public bool HasPrintInstructions(IReadOnlyList<Instruction> instructions) =>
-		HasPrintInstructionsInternal(instructions);
 
 	private static string BuildEntryPoint(string methodName, Platform platform, bool hasPrint = false) =>
 		platform switch
@@ -104,9 +80,6 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 		return printExtern + string.Join("\n", "", "global _main", "", "_main:", "    push rbp", "    mov rbp, rsp",
 			$"    call _{methodName}", "    xor rdi, rdi", "    mov rax, 0x2000001", "    syscall");
 	}
-
-	private static List<Instruction> GenerateInstructions(Method method) =>
-		throw new NotSupportedException("Method fallback instruction generation is not supported. Use BinaryExecutable entry-point/precompiled methods.");
 
 	private static string BuildAssembly(string methodName, IEnumerable<string> paramNames,
 		List<Instruction> instructions, Platform platform = Platform.Linux,
@@ -164,9 +137,6 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 
 	private static bool NeedsStackFrame(int frameSize, List<Instruction> instructions) =>
 		frameSize > 0 || instructions.Any(instruction => instruction is Invoke or PrintInstruction);
-
-	private static bool HasNumericPrint(IEnumerable<Instruction> instructions) =>
-		instructions.OfType<PrintInstruction>().Any(print => print.ValueRegister.HasValue && !print.ValueIsText);
 
 	private static int AlignTo16(int size) => (size + 15) / 16 * 16;
 
@@ -466,58 +436,6 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 		dataConstants.Add((label, number));
 		return label;
 	} //ncrunch: no coverage end
-
-	private static Dictionary<string, CompiledMethodInfo> CollectMethods(
-		List<Instruction> instructions,
-		IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods)
-	{
-		var methods = new Dictionary<string, CompiledMethodInfo>(StringComparer.Ordinal);
-		var queue = new Queue<(Method Method, bool IncludeMembers)>();
-		EnqueueInvokedMethods(instructions, queue);
-		while (queue.Count > 0)
-		{
-			var (method, includeMembers) = queue.Dequeue();
-			var methodKey = BuildMethodHeaderKeyInternal(method);
-			if (methods.TryGetValue(methodKey, out var existingMethod))
-			{
-				if (includeMembers && existingMethod.MemberNames.Count == 0)
-					methods[methodKey] = BuildMethodInfo(method, true, precompiledMethods);
-				continue;
-			}
-			var methodInfo = BuildMethodInfo(method, includeMembers, precompiledMethods);
-			methods[methodKey] = methodInfo;
-			EnqueueInvokedMethods(methodInfo.Instructions, queue);
-		}
-		return methods;
-	}
-
-	private static CompiledMethodInfo BuildMethodInfo(Method method, bool includeMembers,
-		IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods)
-	{
-		var methodKey = BuildMethodHeaderKeyInternal(method);
-		var instructions = precompiledMethods != null && precompiledMethods.TryGetValue(methodKey,
-			out var precompiledInstructions)
-			? [.. precompiledInstructions]
-			: GenerateInstructions(method);
-		var memberNames = includeMembers
-			? method.Type.Members.Where(member => !member.Type.IsTrait).Select(member => member.Name).ToList()
-			: new List<string>();
-		var parameterNames = new List<string>(memberNames);
-		parameterNames.AddRange(method.Parameters.Select(parameter => parameter.Name));
-		return new CompiledMethodInfo(BuildMethodSymbol(method), instructions, parameterNames,
-			memberNames);
-	}
-
-	private static string BuildMethodSymbol(Method method) =>
-		method.Type.Name + "_" + method.Name + "_" + method.Parameters.Count;
-
-	private static void EnqueueInvokedMethods(IEnumerable<Instruction> instructions,
-		Queue<(Method Method, bool IncludeMembers)> queue)
-	{
-		foreach (var invoke in instructions.OfType<Invoke>())
-			if (invoke.Method != null && invoke.Method.Method.Name != Method.From)
-				queue.Enqueue((invoke.Method.Method, invoke.Method.Instance != null));
-	}
 
 	private static void EmitPrint(PrintInstruction print,
 		List<(string Label, string Text)> printStrings,

@@ -14,7 +14,6 @@ namespace Strict.Compiler.Assembly;
 /// </summary>
 public sealed class InstructionsToMlir : InstructionsCompiler
 {
-	//TODO: clean up!
 	/// <summary>Minimum iteration×body-instruction complexity to emit scf.parallel instead of scf.for.</summary>
 	public const int ComplexityThreshold = 100_000;
 	/// <summary>Minimum complexity to offload to GPU via gpu.launch instead of scf.parallel.</summary>
@@ -22,31 +21,18 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 
 	public override Task<string> Compile(BinaryExecutable binary, Platform platform)
 	{
-   var output = CompileForPlatform(Method.Run, binary, platform);
+		var precompiledMethods = BuildPrecompiledMethodsInternal(binary);
+		var output = CompileForPlatform(Method.Run, binary.EntryPoint.instructions, platform,
+			precompiledMethods);
 		return Task.FromResult(output);
 	}
 
 	public override string Extension => ".mlir";
 
-	//TODO: duplicated code, should be in base or removed!
-	private sealed class CompiledMethodInfo(string symbol,
-		List<Instruction> instructions, List<string> parameterNames, List<string> memberNames)
-	{
-		public string Symbol { get; } = symbol;
-		public List<Instruction> Instructions { get; } = instructions;
-		public List<string> ParameterNames { get; } = parameterNames;
-		public List<string> MemberNames { get; } = memberNames;
-	}
-
 	public string CompileInstructions(string methodName, List<Instruction> instructions) =>
 		BuildFunction(methodName, [], instructions).Text;
 
-	public string CompileForPlatform(string methodName, BinaryExecutable binary, Platform platform,
-		IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods = null) =>
-   CompileForPlatform(methodName, binary.EntryPoint.instructions, platform,
-			precompiledMethods ?? BuildPrecompiledMethodsInternal(binary));
-
-	public string CompileForPlatform(string methodName, IReadOnlyList<Instruction> instructions,
+	private string CompileForPlatform(string methodName, IReadOnlyList<Instruction> instructions,
 		Platform platform, IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods = null)
 	{
 		var hasPrint = instructions.OfType<PrintInstruction>().Any();
@@ -79,15 +65,6 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 		module += "\n}\n";
 		return module;
 	}
-
-	public bool HasPrintInstructions(IReadOnlyList<Instruction> instructions) =>
-		HasPrintInstructionsInternal(instructions);
-
-	public bool IsPlatformUsingStdLibAndHasPrintInstructions(Platform platform,
-		IReadOnlyList<Instruction> optimizedInstructions,
-		IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods) =>
-		IsPlatformUsingStdLibAndHasPrintInstructionsInternal(platform, optimizedInstructions,
-			precompiledMethods, includeWindowsPlatform: true);
 
 	private readonly record struct CompiledFunction(string Text,
 		List<(string Name, string Text, int ByteLen)> StringConstants, bool UsesGpu = false);
@@ -364,58 +341,6 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 		context.RegisterValues[invoke.Register] = result;
 	}
 
-	private static Dictionary<string, CompiledMethodInfo> CollectMethods(
-		List<Instruction> instructions,
-		IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods)
-	{
-		var methods = new Dictionary<string, CompiledMethodInfo>(StringComparer.Ordinal);
-   var queue = new Queue<(Method Method, bool IncludeMembers)>();
-		EnqueueInvokedMethods(instructions, queue);
-		while (queue.Count > 0)
-		{
-			var (method, includeMembers) = queue.Dequeue();
-			var methodKey = BuildMethodHeaderKeyInternal(method);
-			if (methods.TryGetValue(methodKey, out var existing))
-			{
-				if (includeMembers && existing.MemberNames.Count == 0)
-					methods[methodKey] = BuildMethodInfo(method, true, precompiledMethods);
-				continue;
-			}
-			var methodInfo = BuildMethodInfo(method, includeMembers, precompiledMethods);
-			methods[methodKey] = methodInfo;
-			EnqueueInvokedMethods(methodInfo.Instructions, queue);
-		}
-		return methods;
-	}
-
-	private static CompiledMethodInfo BuildMethodInfo(Method method, bool includeMembers,
-		IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods)
-	{
-		var methodKey = BuildMethodHeaderKeyInternal(method);
-		var instructions =
-			precompiledMethods != null && precompiledMethods.TryGetValue(methodKey, out var precompiled)
-				? [.. precompiled]
-				: GenerateInstructions(method);
-		var memberNames = includeMembers
-			? method.Type.Members.Where(member => !member.Type.IsTrait).Select(member => member.Name).ToList()
-			: new List<string>();
-		var parameterNames = new List<string>(memberNames);
-		parameterNames.AddRange(method.Parameters.Select(parameter => parameter.Name));
-		return new CompiledMethodInfo(BuildMethodSymbol(method), instructions, parameterNames,
-			memberNames);
-	}
-
-	private static void EnqueueInvokedMethods(IEnumerable<Instruction> instructions,
-		Queue<(Method Method, bool IncludeMembers)> queue)
-	{
-		foreach (var invoke in instructions.OfType<Invoke>())
-			if (invoke.Method != null && invoke.Method.Method.Name != Method.From)
-				queue.Enqueue((invoke.Method.Method, invoke.Method.Instance != null));
-	}
-
-	private static string BuildMethodSymbol(Method method) =>
-		method.Type.Name + "_" + method.Name + "_" + method.Parameters.Count;
-
 	private static string BuildEntryPoint(string methodName) =>
 		"  func.func @main() -> i32 {\n" +
 		$"    %result = func.call @{methodName}() : () -> f64\n" +
@@ -585,9 +510,6 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 
 	private sealed record GpuBufferInfo(string HostBuffer, string DeviceBuffer,
 		string NumElements);
-
-	private static List<Instruction> GenerateInstructions(Method method) =>
-		throw new NotSupportedException("Method fallback instruction generation is not supported. Use BinaryExecutable entry-point/precompiled methods.");
 
 	private sealed class EmitContext(string functionName)
 	{

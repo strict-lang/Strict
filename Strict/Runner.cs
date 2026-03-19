@@ -365,50 +365,6 @@ private Binary? binary;
 	private readonly Package package;
 	private readonly Type mainType;
 	*
-	private async Task SaveLlvmExecutable(IReadOnlyList<Instruction> optimizedInstructions, Platform platform,
-		IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods)
-	{
-		var llvmCompiler = new InstructionsToLlvmIr();
-		var llvmIr = llvmCompiler.CompileForPlatform(mainType.Name, optimizedInstructions, platform,
-			precompiledMethods);
-		var llvmPath = Path.Combine(currentFolder, mainType.Name + ".ll");
-		await File.WriteAllTextAsync(llvmPath, llvmIr);
-		Console.WriteLine("Saved " + platform + " LLVM IR to: " + llvmPath);
-		var exeFilePath = new LlvmLinker().CreateExecutable(llvmPath, platform,
-			llvmCompiler.IsPlatformUsingStdLibAndHasPrintInstructions(platform, optimizedInstructions,
-				precompiledMethods));
-		PrintCompilationSummary("LLVM", platform, exeFilePath);
-	}
-
-	private async Task SaveMlirExecutable(IReadOnlyList<Instruction> optimizedInstructions, Platform platform,
-		IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods)
-	{
-		var mlirCompiler = new InstructionsToMlir();
-		var mlirText = mlirCompiler.CompileForPlatform(mainType.Name, optimizedInstructions, platform,
-			precompiledMethods);
-		var mlirPath = Path.Combine(currentFolder, mainType.Name + ".mlir");
-		await File.WriteAllTextAsync(mlirPath, mlirText);
-		Console.WriteLine("Saved " + platform + " MLIR to: " + mlirPath);
-		var exeFilePath = new MlirLinker().CreateExecutable(mlirPath, platform,
-			mlirCompiler.IsPlatformUsingStdLibAndHasPrintInstructions(platform, optimizedInstructions,
-				precompiledMethods));
-		PrintCompilationSummary("MLIR", platform, exeFilePath);
-	}
-
-	private async Task SaveNasmExecutable(IReadOnlyList<Instruction> optimizedInstructions, Platform platform,
-		IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods)
-	{
-		var compiler = new InstructionsToAssembly();
-		var assemblyText = compiler.CompileForPlatform(mainType.Name, optimizedInstructions, platform,
-			precompiledMethods);
-		var asmPath = Path.Combine(currentFolder, mainType.Name + ".asm");
-		await File.WriteAllTextAsync(asmPath, assemblyText);
-		Console.WriteLine("Saved " + platform + " NASM assembly to: " + asmPath);
-		var hasPrint = compiler.HasPrintInstructions(optimizedInstructions);
-		var exeFilePath = new NativeExecutableLinker().CreateExecutable(asmPath, platform, hasPrint);
-		PrintCompilationSummary("NASM", platform, exeFilePath);
-	}
-
 	private void ExecuteBytecode(IReadOnlyList<Instruction> instructions,
 		Dictionary<string, List<Instruction>>? precompiledMethods = null,
 		IReadOnlyDictionary<string, ValueInstance>? initialVariables = null)

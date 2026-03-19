@@ -16,39 +16,18 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 {
 	public override Task<string> Compile(BinaryExecutable binary, Platform platform)
 	{
-   var output = CompileForPlatform(Method.Run, binary, platform);
+		var precompiledMethods = BuildPrecompiledMethodsInternal(binary);
+		var output = CompileForPlatform(Method.Run, binary.EntryPoint.instructions, platform,
+			precompiledMethods);
 		return Task.FromResult(output);
 	}
 
 	public override string Extension => ".ll";
 
-	private sealed class CompiledMethodInfo(string symbol,
-		List<Instruction> instructions, List<string> parameterNames, List<string> memberNames)
-	{
-		public string Symbol { get; } = symbol;
-		public List<Instruction> Instructions { get; } = instructions;
-		public List<string> ParameterNames { get; } = parameterNames;
-		public List<string> MemberNames { get; } = memberNames;
-	}
-
-	/// <summary>
-	/// Compiles a single method's instructions into an LLVM IR function (no entry point).
-	/// </summary>
 	public string CompileInstructions(string methodName, List<Instruction> instructions) =>
 		BuildFunction(methodName, [], instructions, Platform.Linux);
 
-	/// <summary>
-	/// Produces a complete LLVM IR module for the target platform including the compiled function,
-	/// any called methods, and a main/entry point that calls the function and exits.
-	/// </summary>
-	//TODO: remove, this is old, only for some tests
-	public string CompileForPlatform(string methodName, BinaryExecutable binary, Platform platform,
-		IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods = null) =>
-   CompileForPlatform(methodName, binary.EntryPoint.instructions, platform,
-			precompiledMethods ?? BuildPrecompiledMethodsInternal(binary));
-
-	//TODO: remove, this is old, only for some tests
-	public string CompileForPlatform(string methodName, IReadOnlyList<Instruction> instructions,
+	private string CompileForPlatform(string methodName, IReadOnlyList<Instruction> instructions,
 		Platform platform, IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods = null)
 	{
 		var hasPrint = instructions.OfType<PrintInstruction>().Any();
@@ -74,17 +53,6 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 			module += "\n" + BuildStringConstants(stringConstants);
 		return module;
 	}
-
-	//TODO: remove, this is old, only for some tests, use BinaryExecutable.HasPrintInstructions instead
-	public bool IsPlatformUsingStdLibAndHasPrintInstructions(Platform platform,
-		IReadOnlyList<Instruction> optimizedInstructions,
-		IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods) =>
-		IsPlatformUsingStdLibAndHasPrintInstructionsInternal(platform, optimizedInstructions,
-			precompiledMethods, includeWindowsPlatform: false);
-
-	//TODO: remove, this is old, only for some tests, use BinaryExecutable.HasPrintInstructions instead
-	public static bool HasPrintInstructions(IReadOnlyList<Instruction> instructions) =>
-		HasPrintInstructionsInternal(instructions);
 
 	private static string BuildModuleHeader(Platform platform, bool hasPrint, bool hasNumericPrint)
 	{
@@ -629,64 +597,6 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 			"Cannot resolve instance values for method call: " + methodCall);
 	}
 
-	private static Dictionary<string, CompiledMethodInfo> CollectMethods(
-		List<Instruction> instructions,
-		IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods)
-	{
-		var methods = new Dictionary<string, CompiledMethodInfo>(StringComparer.Ordinal);
-		var queue = new Queue<(Method Method, bool IncludeMembers)>();
-		EnqueueInvokedMethods(instructions, queue);
-		while (queue.Count > 0)
-		{
-			var (method, includeMembers) = queue.Dequeue();
-			var methodKey = BuildMethodHeaderKeyInternal(method);
-			if (methods.TryGetValue(methodKey, out var existing))
-			{ //ncrunch: no coverage start
-				if (includeMembers && existing.MemberNames.Count == 0)
-					methods[methodKey] = BuildMethodInfo(method, true, precompiledMethods);
-				continue;
-			} //ncrunch: no coverage end
-			var methodInfo = BuildMethodInfo(method, includeMembers, precompiledMethods);
-			methods[methodKey] = methodInfo;
-			EnqueueInvokedMethods(methodInfo.Instructions, queue);
-		}
-		return methods;
-	}
-
-	private static CompiledMethodInfo BuildMethodInfo(Method method, bool includeMembers,
-		IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods)
-	{
-		var methodKey = BuildMethodHeaderKeyInternal(method);
-		var instructions =
-			precompiledMethods != null && precompiledMethods.TryGetValue(methodKey, out var pre)
-				? [.. pre]
-				: GenerateInstructions(method);
-		var memberNames = includeMembers
-			? method.Type.Members.Where(member => !member.Type.IsTrait).Select(member => member.Name).ToList()
-			: new List<string>();
-		var parameterNames = new List<string>(memberNames);
-		parameterNames.AddRange(method.Parameters.Select(parameter => parameter.Name));
-		return new CompiledMethodInfo(BuildMethodSymbol(method), instructions, parameterNames,
-			memberNames);
-	}
-
-	private static string BuildMethodSymbol(Method method) =>
-		method.Type.Name + "_" + method.Name + "_" + method.Parameters.Count;
-
-	private static void EnqueueInvokedMethods(IEnumerable<Instruction> instructions,
-		Queue<(Method Method, bool IncludeMembers)> queue)
-	{
-		foreach (var invoke in instructions.OfType<Invoke>())
-			if (invoke.Method != null && invoke.Method.Method.Name != Method.From)
-				queue.Enqueue((invoke.Method.Method, invoke.Method.Instance != null));
-	}
-
-	//ncrunch: no coverage start
-	private static List<Instruction> GenerateInstructions(Method method) =>
-		throw new NotSupportedException("Method fallback instruction generation is not supported. Use BinaryExecutable entry-point/precompiled methods.");
-
-	//ncrunch: no coverage end
-
 	private static string BuildEntryPoint(string methodName) =>
 		string.Join("\n",
 			new[]
@@ -753,9 +663,6 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 
 	private static string GetRegisterValue(Register register, EmitContext context) =>
 		context.RegisterValues.GetValueOrDefault(register, "0.0");
-
-	private static bool HasNumericPrint(IEnumerable<Instruction> instructions) =>
-		instructions.OfType<PrintInstruction>().Any(print => print.ValueRegister.HasValue && !print.ValueIsText);
 
 	private static string FormatDouble(double value) =>
 		value == 0.0
