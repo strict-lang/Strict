@@ -80,7 +80,7 @@ public abstract class InstructionsCompiler
 		var instructions =
 			precompiledMethods != null && precompiledMethods.TryGetValue(methodKey, out var precompiled)
 				? new List<Instruction>(precompiled)
-				: throw new NotSupportedException("Method fallback instruction generation is not supported. Use BinaryExecutable entry-point/precompiled methods.");
+				: throw new NotSupportedException("Method " + methodKey + " must be precompiled in BinaryExecutable. Ensure it is included via BuildPrecompiledMethodsInternal.");
 		var memberNames = includeMembers
 			? method.Type.Members.Where(member => !member.Type.IsTrait).Select(member => member.Name).ToList()
 			: new List<string>();
