@@ -400,7 +400,7 @@ public sealed class InstructionsToLlvmIrTests
 		var runMethod = type.Methods.First(method => method.Name == Method.Run);
 		var binary = new BinaryGenerator(new MethodCall(runMethod)).Generate();
 		var ir = Compile(binary, Platform.Linux);
-		Assert.That(ir, Does.Contain("define double @LlvmPureAdder("));
+		Assert.That(ir, Does.Contain("define double @Run("));
 		Assert.That(ir, Does.Contain("ret double 42.0"));
 		Assert.That(ir, Does.Contain("define i32 @main()"));
 	}
