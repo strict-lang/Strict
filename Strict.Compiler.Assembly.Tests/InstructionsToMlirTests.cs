@@ -2,7 +2,6 @@ using System.Reflection;
 using NUnit.Framework;
 using Strict.Bytecode;
 using Strict.Bytecode.Instructions;
-using Strict.Bytecode.Serialization;
 using Strict.Expressions;
 using Strict.Language;
 using Strict.Language.Tests;
@@ -196,7 +195,7 @@ public sealed class InstructionsToMlirTests
 			new LoadConstantInstruction(Register.R0, new ValueInstance(NumberType, 42.0)),
 			new ReturnInstruction(Register.R0)
 		};
-		var mlir = compiler.CompileForPlatform("Run", instructions, Platform.Linux);
+		var mlir = Compile(instructions, Platform.Linux);
 		Assert.That(mlir, Does.Contain("module {"));
 		Assert.That(mlir, Does.Contain("func.func @Run("));
 		Assert.That(mlir, Does.Contain("func.func @main() -> i32"));
@@ -214,7 +213,7 @@ public sealed class InstructionsToMlirTests
 			new BinaryInstruction(InstructionType.Add, Register.R0, Register.R1, Register.R2),
 			new ReturnInstruction(Register.R2)
 		};
-		var mlir = compiler.CompileForPlatform("Compute", instructions, Platform.Linux);
+		var mlir = Compile(instructions, Platform.Linux);
 		Assert.That(mlir, Does.Not.Contain("xmm"));
 		Assert.That(mlir, Does.Not.Contain("movsd"));
 		Assert.That(mlir, Does.Not.Contain("section .text"));
@@ -231,7 +230,7 @@ public sealed class InstructionsToMlirTests
 			new BinaryInstruction(InstructionType.Add, Register.R0, Register.R1, Register.R2),
 			new ReturnInstruction(Register.R2)
 		};
-		var mlir = compiler.CompileForPlatform("Run", instructions, Platform.Linux);
+		var mlir = Compile(instructions, Platform.Linux);
 		Assert.That(mlir, Does.Contain("arith.addf"));
 		Assert.That(mlir, Does.Contain("arith.constant"));
 		Assert.That(mlir, Does.Not.Contain("fadd double"));
@@ -247,9 +246,9 @@ public sealed class InstructionsToMlirTests
 			new PrintInstruction("Result: ", Register.R0),
 			new ReturnInstruction(Register.R0)
 		};
-		var mlir = compiler.CompileForPlatform("PrintRun", instructions, Platform.Windows);
+		var mlir = Compile(instructions, Platform.Windows);
 		Assert.That(mlir, Does.Contain("llvm.func @printf(!llvm.ptr, ...) -> i32"));
-		Assert.That(mlir, Does.Contain("llvm.mlir.global internal constant @str_PrintRun_0"));
+		Assert.That(mlir, Does.Contain("llvm.mlir.global internal constant @str_Run_0"));
 		Assert.That(mlir, Does.Contain("Result: %g\\0A\\00"));
 		Assert.That(mlir, Does.Contain("llvm.call @printf("));
 	}
@@ -263,7 +262,7 @@ public sealed class InstructionsToMlirTests
 			new LoadConstantInstruction(Register.R0, new ValueInstance(NumberType, 0.0)),
 			new ReturnInstruction(Register.R0)
 		};
-		Assert.That(compiler.HasPrintInstructions(instructions), Is.True);
+		Assert.That(BinaryExecutable.CreateForEntryInstructions(TestPackage.Instance, instructions).UsesConsolePrint, Is.True);
 	}
 
 	[Test]
@@ -274,7 +273,7 @@ public sealed class InstructionsToMlirTests
 			new LoadConstantInstruction(Register.R0, new ValueInstance(NumberType, 0.0)),
 			new ReturnInstruction(Register.R0)
 		};
-		Assert.That(compiler.HasPrintInstructions(instructions), Is.False);
+		Assert.That(BinaryExecutable.CreateForEntryInstructions(TestPackage.Instance, instructions).UsesConsolePrint, Is.False);
 	}
 
 	[Test]
@@ -305,9 +304,9 @@ public sealed class InstructionsToMlirTests
 			"Run Number",
 			"\t42")).ParseMembersAndMethods(new MethodExpressionParser());
 		var runMethod = type.Methods.First(method => method.Name == Method.Run);
-		var runInstructions = new BinaryGenerator(new MethodCall(runMethod)).Generate();
-		var mlir = compiler.CompileForPlatform(type.Name, runInstructions, Platform.Linux);
-		Assert.That(mlir, Does.Contain("func.func @MlirPureAdder("));
+		var binary = new BinaryGenerator(new MethodCall(runMethod)).Generate();
+		var mlir = Compile(binary, Platform.Linux);
+		Assert.That(mlir, Does.Contain("func.func @Run("));
 		Assert.That(mlir, Does.Contain("arith.constant 42.0 : f64"));
 		Assert.That(mlir, Does.Contain("func.func @main() -> i32"));
 	}
@@ -328,17 +327,8 @@ public sealed class InstructionsToMlirTests
 			"\tconstant multiplied = calc.Multiply",
 			"\tadded + multiplied")).ParseMembersAndMethods(new MethodExpressionParser());
 		var runMethod = type.Methods.First(method => method.Name == Method.Run);
-		var addMethod = type.Methods.First(method => method.Name == "Add");
-		var multiplyMethod = type.Methods.First(method => method.Name == "Multiply");
-		var runInstructions = new BinaryGenerator(new MethodCall(runMethod)).Generate();
-		var addInstructions = GenerateMethodInstructions(addMethod);
-		var multiplyInstructions = GenerateMethodInstructions(multiplyMethod);
-		var precompiled = new Dictionary<string, List<Instruction>>
-		{
-			[BuildMethodKey(addMethod)] = addInstructions,
-			[BuildMethodKey(multiplyMethod)] = multiplyInstructions
-		};
-		var mlir = compiler.CompileForPlatform(type.Name, runInstructions, Platform.Linux, precompiled);
+		var binary = new BinaryGenerator(new MethodCall(runMethod)).Generate();
+		var mlir = Compile(binary, Platform.Linux);
 		Assert.That(mlir, Does.Contain("func.func @MlirCalc_Add_0("));
 		Assert.That(mlir, Does.Contain("func.func @MlirCalc_Multiply_0("));
 		Assert.That(mlir, Does.Contain("func.call @MlirCalc_Add_0("));
@@ -358,14 +348,8 @@ public sealed class InstructionsToMlirTests
 			"\tconstant rect = MlirArea(5, 3)",
 			"\trect.Area")).ParseMembersAndMethods(new MethodExpressionParser());
 		var runMethod = type.Methods.First(method => method.Name == Method.Run);
-		var areaMethod = type.Methods.First(method => method.Name == "Area");
-		var runInstructions = new BinaryGenerator(new MethodCall(runMethod)).Generate();
-		var areaInstructions = GenerateMethodInstructions(areaMethod);
-		var precompiled = new Dictionary<string, List<Instruction>>
-		{
-			[BuildMethodKey(areaMethod)] = areaInstructions
-		};
-		var mlir = compiler.CompileForPlatform(type.Name, runInstructions, Platform.Linux, precompiled);
+		var binary = new BinaryGenerator(new MethodCall(runMethod)).Generate();
+		var mlir = Compile(binary, Platform.Linux);
 		Assert.That(mlir, Does.Contain("func.func @MlirArea_Area_0("));
 		Assert.That(mlir, Does.Contain("arith.mulf"));
 		Assert.That(mlir, Does.Contain("func.call @MlirArea_Area_0("));
@@ -382,14 +366,8 @@ public sealed class InstructionsToMlirTests
 			"\tconstant conv = MlirTempConv(100)",
 			"\tconv.ToFahrenheit")).ParseMembersAndMethods(new MethodExpressionParser());
 		var runMethod = type.Methods.First(method => method.Name == Method.Run);
-		var toFMethod = type.Methods.First(method => method.Name == "ToFahrenheit");
-		var runInstructions = new BinaryGenerator(new MethodCall(runMethod)).Generate();
-		var toFInstructions = GenerateMethodInstructions(toFMethod);
-		var precompiled = new Dictionary<string, List<Instruction>>
-		{
-			[BuildMethodKey(toFMethod)] = toFInstructions
-		};
-		var mlir = compiler.CompileForPlatform(type.Name, runInstructions, Platform.Linux, precompiled);
+		var binary = new BinaryGenerator(new MethodCall(runMethod)).Generate();
+		var mlir = Compile(binary, Platform.Linux);
 		Assert.That(mlir, Does.Contain("func.func @MlirTempConv_ToFahrenheit_0("));
 		Assert.That(mlir, Does.Contain("arith.mulf"));
 		Assert.That(mlir, Does.Contain("arith.addf"));
@@ -410,14 +388,8 @@ public sealed class InstructionsToMlirTests
 			"\tconstant pixel = MlirPixel(100, 150, 200)",
 			"\tpixel.Brighten")).ParseMembersAndMethods(new MethodExpressionParser());
 		var runMethod = type.Methods.First(method => method.Name == Method.Run);
-		var brightenMethod = type.Methods.First(method => method.Name == "Brighten");
-		var runInstructions = new BinaryGenerator(new MethodCall(runMethod)).Generate();
-		var brightenInstructions = GenerateMethodInstructions(brightenMethod);
-		var precompiled = new Dictionary<string, List<Instruction>>
-		{
-			[BuildMethodKey(brightenMethod)] = brightenInstructions
-		};
-		var mlir = compiler.CompileForPlatform(type.Name, runInstructions, Platform.Linux, precompiled);
+		var binary = new BinaryGenerator(new MethodCall(runMethod)).Generate();
+		var mlir = Compile(binary, Platform.Linux);
 		Assert.That(mlir, Does.Contain("func.func @MlirPixel_Brighten_0("));
 		Assert.That(mlir, Does.Contain("arith.addf"));
 		Assert.That(mlir, Does.Contain("func.call @MlirPixel_Brighten_0("));
@@ -433,14 +405,8 @@ public sealed class InstructionsToMlirTests
 			"Run Number",
 			"\tAdd(10, 20)")).ParseMembersAndMethods(new MethodExpressionParser());
 		var runMethod = type.Methods.First(method => method.Name == Method.Run);
-		var addMethod = type.Methods.First(method => method.Name == "Add");
-		var runInstructions = new BinaryGenerator(new MethodCall(runMethod)).Generate();
-		var addInstructions = GenerateMethodInstructions(addMethod);
-		var precompiled = new Dictionary<string, List<Instruction>>
-		{
-			[BuildMethodKey(addMethod)] = addInstructions
-		};
-		var mlir = compiler.CompileForPlatform(type.Name, runInstructions, Platform.Linux, precompiled);
+		var binary = new BinaryGenerator(new MethodCall(runMethod)).Generate();
+		var mlir = Compile(binary, Platform.Linux);
 		Assert.That(mlir, Does.Contain("func.func @MlirArithFunc_Add_2("));
 		Assert.That(mlir, Does.Contain("%param0: f64"));
 		Assert.That(mlir, Does.Contain("%param1: f64"));
@@ -487,8 +453,9 @@ public sealed class InstructionsToMlirTests
 			new BinaryInstruction(InstructionType.Add, Register.R0, Register.R1, Register.R2),
 			new ReturnInstruction(Register.R2)
 		};
-		var mlir = compiler.CompileForPlatform("Run", instructions, Platform.Linux);
-		var nasm = new InstructionsToAssembly().CompileForPlatform("Run", instructions, Platform.Linux);
+		var binary = BinaryExecutable.CreateForEntryInstructions(TestPackage.Instance, instructions);
+		var mlir = Compile(binary, Platform.Linux);
+		var nasm = new InstructionsToAssembly().Compile(binary, Platform.Linux).GetAwaiter().GetResult();
 		Assert.That(mlir.Length, Is.LessThan(nasm.Length),
 			"MLIR should be more compact than NASM assembly");
 	}
@@ -579,6 +546,13 @@ public sealed class InstructionsToMlirTests
 		Assert.That(rewritten, Does.Contain("@print_number_from_double("));
 	}
 
+	private string Compile(List<Instruction> instructions, Platform platform) =>
+		compiler.Compile(BinaryExecutable.CreateForEntryInstructions(
+			TestPackage.Instance, instructions), platform).GetAwaiter().GetResult();
+
+	private string Compile(BinaryExecutable binary, Platform platform) =>
+		compiler.Compile(binary, platform).GetAwaiter().GetResult();
+
 	private static string BuildMlirOptArgs(string inputPath, string outputPath)
 	{
 		var buildMethod = typeof(MlirLinker).GetMethod("BuildMlirOptArgs",
@@ -599,15 +573,6 @@ public sealed class InstructionsToMlirTests
 		var result = buildMethod!.Invoke(null, [inputPath, outputPath, platform, hasPrintCalls]);
 		return result as string ?? throw new InvalidOperationException("Expected clang args string");
 	}
-
-	private static string BuildMethodKey(Method method) =>
-		BinaryExecutable.BuildMethodHeader(method.Name,
-			method.Parameters.Select(parameter =>
-				new BinaryMember(parameter.Name, parameter.Type.Name, null)).ToList(),
-			method.ReturnType);
-
-	private static List<Instruction> GenerateMethodInstructions(Method method) =>
-		new BinaryGenerator(new MethodCall(method)).Generate().EntryPoint.instructions;
 
 	[Test]
 	public void RangeLoopEmitsScfFor()
@@ -953,7 +918,7 @@ public sealed class InstructionsToMlirTests
 		instructions.AddRange(bodyInstructions);
 		instructions.Add(new LoopEndInstruction(bodyInstructions.Count) { Begin = loopBegin });
 		instructions.Add(new ReturnInstruction(Register.R2));
-		var mlir = compiler.CompileForPlatform("GpuContainerTest", instructions, Platform.Linux);
+		var mlir = Compile(instructions, Platform.Linux);
 		Assert.That(mlir, Does.Contain("module attributes {gpu.container_module}"),
 			"Module must have gpu.container_module attribute for GPU kernel outlining");
 	}
@@ -966,7 +931,7 @@ public sealed class InstructionsToMlirTests
 			new LoadConstantInstruction(Register.R0, new ValueInstance(NumberType, 42.0)),
 			new ReturnInstruction(Register.R0)
 		};
-		var mlir = compiler.CompileForPlatform("PlainModuleTest", instructions, Platform.Linux);
+		var mlir = Compile(instructions, Platform.Linux);
 		Assert.That(mlir, Does.Contain("module {"),
 			"Non-GPU modules should use plain module declaration");
 		Assert.That(mlir, Does.Not.Contain("gpu.container_module"),
@@ -999,16 +964,6 @@ public sealed class InstructionsToMlirTests
 			"\tadded + multiplied")).ParseMembersAndMethods(new MethodExpressionParser());
 		var runMethod = type.Methods.First(method => method.Name == Method.Run);
 		var binary = new BinaryGenerator(new MethodCall(runMethod)).Generate();
-		var buildPrecompiledMethod = typeof(InstructionsCompiler).GetMethod(
-			"BuildPrecompiledMethodsInternal", BindingFlags.Static | BindingFlags.NonPublic);
-		Assert.That(buildPrecompiledMethod, Is.Not.Null);
-		var precompiledMethods = (Dictionary<string, List<Instruction>>)buildPrecompiledMethod!.Invoke(
-			null, [binary])!;
-		foreach (var invoke in binary.EntryPoint.instructions.OfType<Invoke>())
-			if (invoke.Method?.Method != null && invoke.Method.Method.Name != Method.From)
-				Assert.That(precompiledMethods.ContainsKey(BuildMethodKey(invoke.Method.Method)), Is.True,
-					"Missing precompiled key for invoked method " + invoke.Method.Method.Type.Name + "." +
-					invoke.Method.Method.Name);
-		Assert.DoesNotThrow(() => compiler.CompileForPlatform(type.Name, binary, Platform.Linux));
+		Assert.DoesNotThrow(() => Compile(binary, Platform.Linux));
 	}
 }
