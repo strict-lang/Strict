@@ -1,11 +1,12 @@
 using Strict;
+using Strict.Bytecode;
 using Strict.Bytecode.Serialization;
 using Strict.Tests;
 
 //ncrunch: no coverage start
 var binaryFilePath = Path.ChangeExtension(
 	Path.Combine(AppContext.BaseDirectory, "Examples", "SimpleCalculator.strict"),
-	BytecodeSerializer.Extension);
+	BinaryExecutable.Extension);
 // First, ensure the .strictbinary file exists by compiling from source
 if (!File.Exists(binaryFilePath))
 	RunSilently(() => new Runner(

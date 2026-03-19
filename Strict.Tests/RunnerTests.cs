@@ -1,3 +1,4 @@
+using Strict.Bytecode;
 using Strict.Bytecode.Serialization;
 using Strict.Compiler;
 using Strict.Compiler.Assembly;
@@ -65,7 +66,7 @@ public sealed class RunnerTests
     var tempDirectory = Path.Combine(Path.GetTempPath(), "Strict" + Guid.NewGuid().ToString("N"));
     Directory.CreateDirectory(tempDirectory);
     var copiedSourceFilePath = Path.Combine(tempDirectory, Path.GetFileName(SimpleCalculatorFilePath));
-    var copiedBinaryFilePath = Path.ChangeExtension(copiedSourceFilePath, BytecodeSerializer.Extension);
+    var copiedBinaryFilePath = Path.ChangeExtension(copiedSourceFilePath, BinaryExecutable.Extension);
     try
     {
       File.Copy(SimpleCalculatorFilePath, copiedSourceFilePath);
@@ -109,7 +110,7 @@ public sealed class RunnerTests
     var binaryPath = await GetExamplesBinaryFileAsync("SimpleCalculator");
     using var archive = ZipFile.OpenRead(binaryPath);
     var entries = archive.Entries.Select(entry => entry.FullName.Replace('\\', '/')).ToList();
-    Assert.That(entries.All(entry => entry.EndsWith(BytecodeSerializer.BytecodeEntryExtension,
+    Assert.That(entries.All(entry => entry.EndsWith(BinaryType.BytecodeEntryExtension,
       StringComparison.OrdinalIgnoreCase)), Is.True);
     Assert.That(entries.Any(entry => entry.Contains("#", StringComparison.Ordinal)), Is.False);
     Assert.That(entries, Does.Contain("SimpleCalculator.bytecode"));
@@ -171,12 +172,12 @@ public sealed class RunnerTests
       var sourceCopyPath = Path.Combine(tempDirectory, Path.GetFileName(SimpleCalculatorFilePath));
       File.Copy(SimpleCalculatorFilePath, sourceCopyPath);
       await new Runner(sourceCopyPath, TestPackage.Instance).Run();
-      var binaryPath = Path.ChangeExtension(sourceCopyPath, BytecodeSerializer.Extension);
+      var binaryPath = Path.ChangeExtension(sourceCopyPath, BinaryExecutable.Extension);
       using var archive = ZipFile.OpenRead(binaryPath);
       var entry = archive.Entries.First(file => file.FullName == "SimpleCalculator.bytecode");
       using var reader = new BinaryReader(entry.Open());
       Assert.That(reader.ReadByte(), Is.EqualTo((byte)'S'));
-      Assert.That(reader.ReadByte(), Is.EqualTo(BytecodeSerializer.Version));
+      Assert.That(reader.ReadByte(), Is.EqualTo(BinaryType.Version));
       var customNamesCount = reader.Read7BitEncodedInt();
       var customNames = new List<string>(customNamesCount);
       for (var nameIndex = 0; nameIndex < customNamesCount; nameIndex++)
@@ -198,7 +199,7 @@ public sealed class RunnerTests
 
   private async Task<string> GetExamplesBinaryFileAsync(string filename)
   {
-    var localPath = Path.ChangeExtension(GetExamplesFilePath(filename), BytecodeSerializer.Extension);
+    var localPath = Path.ChangeExtension(GetExamplesFilePath(filename), BinaryExecutable.Extension);
     if (!File.Exists(localPath))
       await new Runner(GetExamplesFilePath(filename), TestPackage.Instance).Run(); //ncrunch: no coverage
     writer.GetStringBuilder().Clear();

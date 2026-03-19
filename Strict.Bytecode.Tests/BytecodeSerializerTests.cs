@@ -148,7 +148,7 @@ public sealed class BytecodeSerializerTests : TestBytecode
 		writer.Flush();
 		var bytes = stream.ToArray();
 		Assert.That(bytes[0], Is.EqualTo((byte)'S'));
-		Assert.That(bytes[1], Is.EqualTo(BytecodeSerializer.Version));
+		Assert.That(bytes[1], Is.EqualTo(BinaryType.Version));
 	}
 
 	[Test]

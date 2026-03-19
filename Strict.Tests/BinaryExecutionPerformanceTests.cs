@@ -33,7 +33,7 @@ public class BinaryExecutionPerformanceTests
 
 	private static string StrictFilePath => RunnerTests.GetExamplesFilePath("SimpleCalculator");
 	private static readonly string BinaryFilePath =
-		Path.ChangeExtension(StrictFilePath, BytecodeSerializer.Extension);
+		Path.ChangeExtension(StrictFilePath, BinaryExecutable.Extension);
 
 	[Test]
 	public async Task ExecuteBinaryOnce()

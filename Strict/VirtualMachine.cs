@@ -10,10 +10,9 @@ namespace Strict;
 public sealed class VirtualMachine(BinaryExecutable executable)
 {
 	public VirtualMachine(Package basePackage) : this(new BinaryExecutable(basePackage)) { }
-	private readonly BinaryExecutable activeExecutable = executable;
 
 	public VirtualMachine ExecuteRun(IReadOnlyDictionary<string, ValueInstance>? initialVariables = null) =>
-		ExecuteExpression(activeExecutable.EntryPoint, initialVariables);
+		ExecuteExpression(executable.EntryPoint, initialVariables);
 
 	public VirtualMachine ExecuteExpression(BinaryMethod method,
 		IReadOnlyDictionary<string, ValueInstance>? initialVariables = null)
@@ -169,10 +168,10 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 
 	private List<Instruction>? GetPrecompiledMethodInstructions(Method method)
 	{
-    var foundInstructions = activeExecutable.FindInstructions(method.Type, method) ??
-			activeExecutable.FindInstructions(method.Type.Name, method.Name, method.Parameters.Count,
+    var foundInstructions = executable.FindInstructions(method.Type, method) ??
+			executable.FindInstructions(method.Type.Name, method.Name, method.Parameters.Count,
 				method.ReturnType.Name) ??
-			activeExecutable.FindInstructions(nameof(Strict) + Context.ParentSeparator + method.Type.Name,
+			executable.FindInstructions(nameof(Strict) + Context.ParentSeparator + method.Type.Name,
 				method.Name, method.Parameters.Count, method.ReturnType.Name);
 		return foundInstructions == null
 			? null
@@ -243,7 +242,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 
 	private bool TryGetBinaryMembers(Type type, out IReadOnlyList<BinaryMember> members)
 	{
-		foreach (var (typeName, typeData) in activeExecutable.MethodsPerType)
+		foreach (var (typeName, typeData) in executable.MethodsPerType)
 			if (typeData.Members.Count > 0 && (typeName == type.FullName || typeName == type.Name ||
 				typeName.EndsWith(Context.ParentSeparator + type.Name, StringComparison.Ordinal)))
 			{
@@ -404,7 +403,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			else if (argumentIndex < invoke.Method.Arguments.Count)
 				values[memberIndex] = EvaluateExpression(invoke.Method.Arguments[argumentIndex++]);
 			else
-				values[memberIndex] = new ValueInstance(activeExecutable.numberType, 0);
+				values[memberIndex] = new ValueInstance(executable.numberType, 0);
 		}
 		return values;
 	}
@@ -580,8 +579,8 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		if (!Memory.Registers.TryGet(loopBegin.Register, out var iterableVariable))
 			return; //ncrunch: no coverage
 		Memory.Frame.Set("index", Memory.Frame.TryGet("index", out var indexValue)
-     ? new ValueInstance(activeExecutable.numberType, indexValue.Number + 1)
-			: new ValueInstance(activeExecutable.numberType, 0));
+     ? new ValueInstance(executable.numberType, indexValue.Number + 1)
+			: new ValueInstance(executable.numberType, 0));
 		if (!loopBegin.IsInitialized)
 		{
 			loopBegin.LoopCount = GetLength(iterableVariable);
@@ -607,10 +606,10 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		}
 		var isDecreasing = loopBegin.IsDecreasing ?? false;
 		if (Memory.Frame.TryGet("index", out var indexValue))
-      Memory.Frame.Set("index", new ValueInstance(activeExecutable.numberType, indexValue.Number +
+      Memory.Frame.Set("index", new ValueInstance(executable.numberType, indexValue.Number +
 				(isDecreasing ? -1 : 1)));
 		else
-      Memory.Frame.Set("index", new ValueInstance(activeExecutable.numberType,
+      Memory.Frame.Set("index", new ValueInstance(executable.numberType,
 				loopBegin.StartIndexValue ?? 0));
 		Memory.Frame.Set("value", Memory.Frame.Get("index"));
 	}
@@ -642,7 +641,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 				loopBegin.LoopCount = 0;
 			return;
 		}
-   Memory.Frame.Set("value", new ValueInstance(activeExecutable.numberType, index + 1));
+   Memory.Frame.Set("value", new ValueInstance(executable.numberType, index + 1));
 	}
 
 	private void TryStoreInstructions(Instruction instruction)

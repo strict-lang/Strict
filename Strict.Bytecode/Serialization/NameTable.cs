@@ -35,6 +35,7 @@ public sealed class NameTable : IEnumerable<string>
 
 	private static readonly string[] BuiltInPredefinedNames =
 	[
+		//TODO: shouldn't we have base type full names as well?
 		"",
 		Type.None,
 		Type.Any,
