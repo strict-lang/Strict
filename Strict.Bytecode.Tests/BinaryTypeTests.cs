@@ -35,10 +35,10 @@ public sealed class BinaryTypeTests : TestBytecode
   [Test]
   public void InvalidMagicThrows()
   {
-    using var stream = new MemoryStream([0x01, 0x02, 0x03, 0x04, 0x05, 0x06, BinaryType.Version]);
+    using var stream = new MemoryStream([0x01, BinaryType.Version]);
     using var reader = new BinaryReader(stream);
     Assert.That(() => new BinaryType(reader, new BinaryExecutable(TestPackage.Instance), Type.Number),
-      Throws.TypeOf<BinaryType.InvalidBytecodeEntry>().With.Message.Contains("magic bytes"));
+      Throws.TypeOf<BinaryType.InvalidBytecodeEntry>().With.Message.Contains("magic byte"));
   }
 
   [Test]
@@ -46,7 +46,7 @@ public sealed class BinaryTypeTests : TestBytecode
   {
     using var stream = new MemoryStream();
     using var writer = new BinaryWriter(stream);
-    writer.Write("Strict"u8.ToArray());
+    writer.Write((byte)'S');
     writer.Write((byte)0);
     writer.Flush();
     stream.Position = 0;

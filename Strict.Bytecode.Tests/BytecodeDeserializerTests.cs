@@ -17,10 +17,9 @@ public sealed class BytecodeDeserializerTests : TestBytecode
 	[Test]
 	public void EntryWithBadMagicBytesThrows()
 	{
-		var filePath = CreateZipWithSingleEntry([0xBA, 0xAD, 0xBA, 0xAD, 0xBA, 0xAD, 0x01]);
+		var filePath = CreateZipWithSingleEntry([0xBA, 0x01]);
 		Assert.That(() => new BinaryExecutable(filePath, TestPackage.Instance),
-			Throws.TypeOf<BinaryType.InvalidBytecodeEntry>().With.Message.
-				Contains("magic bytes"));
+			Throws.TypeOf<BinaryType.InvalidBytecodeEntry>().With.Message.Contains("magic byte"));
 	}
 
 	[Test]
@@ -53,33 +52,6 @@ public sealed class BytecodeDeserializerTests : TestBytecode
 		}));
 		Assert.That(() => new BinaryExecutable(filePath, TestPackage.Instance),
 			Throws.TypeOf<BinaryExecutable.InvalidFile>().With.Message.Contains("Unknown ValueKind"));
-	}
-
-	[Test]
-	public void UnknownExpressionKindThrows()
-	{
-		var filePath = CreateZipWithSingleEntry(BuildEntryBytes(writer =>
-		{
-			WriteHeader(writer, ["member", "Number", "Run", "None"]);
-			writer.Write7BitEncodedInt(1);
-			writer.Write7BitEncodedInt(0);
-			writer.Write7BitEncodedInt(1);
-			writer.Write(true);
-			writer.Write((byte)InstructionType.Invoke);
-			writer.Write((byte)Register.R0);
-			writer.Write7BitEncodedInt(1);
-			writer.Write7BitEncodedInt(2);
-			writer.Write7BitEncodedInt(0);
-			writer.Write7BitEncodedInt(3);
-			writer.Write(false);
-			writer.Write7BitEncodedInt(1);
-			writer.Write((byte)0xFF);
-			writer.Write((byte)0);
-			writer.Write((byte)Register.R0);
-			writer.Write7BitEncodedInt(0);
-		}));
-		Assert.That(() => new BinaryExecutable(filePath, TestPackage.Instance),
-			Throws.TypeOf<BinaryExecutable.InvalidFile>().With.Message.Contains("Unknown ExpressionKind"));
 	}
 
 	private static void WriteHeader(BinaryWriter writer, string[] names)

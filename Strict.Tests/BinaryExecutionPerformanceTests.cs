@@ -15,32 +15,27 @@ public class BinaryExecutionPerformanceTests
 {
 	[GlobalSetup]
 	[SetUp]
-	public void Setup()
+	public async Task SetupAsync()
 	{
 		rememberConsoleOut = Console.Out;
 		Console.SetOut(TextWriter.Null);
-		if (!File.Exists(BinaryFilePath))
-			new Runner(StrictFilePath).Run().Dispose(); //ncrunch: no coverage
-		var bytecodeTypes = new BytecodeDeserializer(BinaryFilePath).Deserialize(TestPackage.Instance);
-		binaryPackage = TestPackage.Instance;
-		instructions = bytecodeTypes.Find("SimpleCalculator", "Run", 0) ?? new List<Instruction>();
-		vm = new VirtualMachine(binaryPackage);
+		if (File.Exists(BinaryFilePath))
+			File.Delete(BinaryFilePath);
+		await new Runner(StrictFilePath).Run(); //ncrunch: no coverage
+		var executable = new BinaryExecutable(BinaryFilePath, TestPackage.Instance);
+		instructions = executable.FindInstructions("SimpleCalculator", "Run", 0) ?? [];
+		vm = new VirtualMachine(executable);
 	}
 
 	private TextWriter rememberConsoleOut = null!;
 	private VirtualMachine vm = null!;
-	private List<Instruction> instructions = null!;
-	private Package binaryPackage = null!;
+	private IReadOnlyList<Instruction> instructions = null!;
 	private static string StrictFilePath => RunnerTests.GetExamplesFilePath("SimpleCalculator");
 	private static readonly string BinaryFilePath =
 		Path.ChangeExtension(StrictFilePath, BytecodeSerializer.Extension);
 
 	[TearDown]
-	public void RestoreConsole()
-	{
-		Console.SetOut(rememberConsoleOut);
-		binaryPackage.Dispose();
-	}
+	public void RestoreConsole() => Console.SetOut(rememberConsoleOut);
 
 	[Benchmark]
 	public void ExecuteBinary() => vm.Execute(instructions); //ncrunch: no coverage
