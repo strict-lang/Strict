@@ -1,7 +1,6 @@
 using NUnit.Framework;
 using Strict.Bytecode;
 using Strict.Bytecode.Instructions;
-using Strict.Bytecode.Serialization;
 using Strict.Expressions;
 using Strict.Language;
 using Strict.Language.Tests;
@@ -21,7 +20,7 @@ public sealed class InstructionsToAssemblyTests
 	{
 		var method = CreateSingleMethod(typeName, "has dummy Number",
 			$"{typeName}(first Number, second Number) Number", $"\tfirst {op} second");
-		var assembly = compiler.Compile(method);
+		var assembly = CompileMethod(method);
 		Assert.That(assembly, Does.Contain($"global {typeName}"));
 		Assert.That(assembly, Does.Contain($"{typeName}:"));
 		Assert.That(assembly, Does.Contain(asmOp));
@@ -33,7 +32,7 @@ public sealed class InstructionsToAssemblyTests
 	{
 		var method = CreateSingleMethod("DivideType", "has dummy Number",
 			"Divide(numerator Number, denominator Number) Number", "\tnumerator / denominator");
-		var assembly = compiler.Compile(method);
+		var assembly = CompileMethod(method);
 		Assert.That(assembly, Does.Contain("divsd"));
 		Assert.That(assembly, Does.Contain("ret"));
 	}
@@ -44,7 +43,7 @@ public sealed class InstructionsToAssemblyTests
 		var method = CreateSingleMethod("FunctionFrameType", "has dummy Number",
 			"Sum(first Number, second Number) Number", "\tlet result = first + second",
 			"\tresult + 1");
-		var assembly = compiler.Compile(method);
+		var assembly = CompileMethod(method);
 		Assert.That(assembly, Does.Contain("section .text"));
 		Assert.That(assembly, Does.Contain("push rbp"));
 		Assert.That(assembly, Does.Contain("mov rbp, rsp"));
@@ -57,7 +56,7 @@ public sealed class InstructionsToAssemblyTests
 	{
 		var method = CreateSingleMethod("SumLeafType", "has dummy Number",
 			"Sum(first Number, second Number) Number", "\tfirst + second");
-		var assembly = compiler.Compile(method);
+		var assembly = CompileMethod(method);
 		Assert.That(assembly, Does.Contain("section .text"));
 		Assert.That(assembly, Does.Not.Contain("push rbp"));
 		Assert.That(assembly, Does.Not.Contain("mov rbp, rsp"));
@@ -71,7 +70,7 @@ public sealed class InstructionsToAssemblyTests
 		var method = CreateSingleMethod("LocalFrameType", "has dummy Number",
 			"Sum(first Number, second Number) Number", "\tlet result = first + second",
 			"\tresult + 1");
-		var assembly = compiler.Compile(method);
+		var assembly = CompileMethod(method);
 		Assert.That(assembly, Does.Contain("section .text"));
 		Assert.That(assembly, Does.Contain("push rbp"));
 		Assert.That(assembly, Does.Contain("mov rbp, rsp"));
@@ -84,7 +83,7 @@ public sealed class InstructionsToAssemblyTests
 	{
 		var method = CreateSingleMethod("TotalType", "has dummy Number",
 			"Total(first Number, second Number) Number", "\tfirst + second");
-		var assembly = compiler.Compile(method);
+		var assembly = CompileMethod(method);
 		Assert.That(assembly, Does.Not.Contain("movsd [rbp-8], xmm0"));
 		Assert.That(assembly, Does.Not.Contain("movsd [rbp-16], xmm1"));
 	}
@@ -94,7 +93,7 @@ public sealed class InstructionsToAssemblyTests
 	{
 		var method = CreateSingleMethod("SumNumbers", "has dummy Number",
 			"SumTwo(first Number, second Number) Number", "\tfirst + second");
-		var assembly = compiler.Compile(method);
+		var assembly = CompileMethod(method);
 		Assert.That(assembly, Does.Contain("addsd xmm0, xmm1"));
 		Assert.That(assembly, Does.Not.Contain("movsd xmm0, xmm2"));
 	}
@@ -104,7 +103,7 @@ public sealed class InstructionsToAssemblyTests
 	{
 		var method = CreateSingleMethod("AddFiveType", "has dummy Number",
 			"AddFive(first Number, second Number) Number", "\tfirst + 5");
-		var assembly = compiler.Compile(method);
+		var assembly = CompileMethod(method);
 		Assert.That(assembly, Does.Contain("section .data"));
 		Assert.That(assembly, Does.Contain("dq 0x"));
 		Assert.That(assembly, Does.Contain("[rel const_"));
@@ -115,7 +114,7 @@ public sealed class InstructionsToAssemblyTests
 	{
 		var method = CreateSingleMethod("ZeroAddType", "has dummy Number",
 			"ZeroAdd(first Number, second Number) Number", "\tfirst + 0");
-		var assembly = compiler.Compile(method);
+		var assembly = CompileMethod(method);
 		Assert.That(assembly, Does.Contain("xorpd"));
 	}
 
@@ -125,7 +124,7 @@ public sealed class InstructionsToAssemblyTests
 		var method = CreateSingleMethod("CalcType", "has dummy Number",
 			"Calculate(first Number, second Number) Number", "\tlet result = first + second",
 			"\tresult + 1");
-		var assembly = compiler.Compile(method);
+		var assembly = CompileMethod(method);
 		Assert.That(assembly, Does.Contain("movsd [rbp-"));
 		Assert.That(assembly, Does.Contain("movsd xmm"));
 		Assert.That(assembly, Does.Contain("addsd"));
@@ -163,7 +162,7 @@ public sealed class InstructionsToAssemblyTests
 	{
 		var method = CreateSingleMethod("DoubleType", "has dummy Number",
 			"DoubleNum(num Number) Number", "\tnum + num");
-		var assembly = compiler.Compile(method);
+		var assembly = CompileMethod(method);
 		Assert.That(assembly, Does.Not.Contain("movsd [rbp-8], xmm0"));
 		Assert.That(assembly, Does.Not.Contain("movsd [rbp-16], xmm1"));
 	}
@@ -173,7 +172,7 @@ public sealed class InstructionsToAssemblyTests
 	{
 		var method = CreateSingleMethod("TwoParmType", "has dummy Number",
 			"TwoParam(first Number, second Number) Number", "\tfirst + second");
-		var assembly = compiler.Compile(method);
+		var assembly = CompileMethod(method);
 		Assert.That(assembly, Does.Not.Contain("sub rsp,"));
 	}
 
@@ -182,7 +181,7 @@ public sealed class InstructionsToAssemblyTests
 	{
 		var method = CreateSingleMethod("ConditionalType", "has dummy Number",
 			"IsPositive(num Number) Number", "\tif num > 0", "\t\treturn num", "\t0");
-		var assembly = compiler.Compile(method);
+		var assembly = CompileMethod(method);
 		Assert.That(assembly, Does.Contain("ucomisd"));
 	}
 
@@ -191,7 +190,7 @@ public sealed class InstructionsToAssemblyTests
 	{
 		var method = CreateSingleMethod("GreaterThanType", "has dummy Number",
 			"IsAboveZero(num Number) Number", "\tif num > 0", "\t\treturn num", "\t0");
-		var assembly = compiler.Compile(method);
+		var assembly = CompileMethod(method);
 		Assert.That(assembly, Does.Contain("jbe"));
 	}
 
@@ -200,7 +199,7 @@ public sealed class InstructionsToAssemblyTests
 	{
 		var method = CreateSingleMethod("EqualJumpType", "has dummy Number",
 			"IsEqualFive(num Number) Number", "\tif num is 5", "\t\treturn num", "\t0");
-		var assembly = compiler.Compile(method);
+		var assembly = CompileMethod(method);
 		Assert.That(assembly, Does.Contain("jne"));
 	}
 
@@ -323,7 +322,7 @@ public sealed class InstructionsToAssemblyTests
 	{
 		var method = CreateSingleMethod("OrderTestType", "has dummy Number",
 			"OrderTest(first Number, second Number) Number", "\tfirst + 9");
-		var assembly = compiler.Compile(method);
+		var assembly = CompileMethod(method);
 		var dataPos = assembly.IndexOf("section .data", StringComparison.Ordinal);
 		var textPos = assembly.IndexOf("section .text", StringComparison.Ordinal);
 		Assert.That(dataPos, Is.LessThan(textPos));
@@ -334,7 +333,7 @@ public sealed class InstructionsToAssemblyTests
 	{
 		var method = CreateSingleMethod("SubOrderType", "has dummy Number",
 			"SubOrder(first Number, second Number) Number", "\tfirst - second");
-		var assembly = compiler.Compile(method);
+		var assembly = CompileMethod(method);
 		Assert.That(assembly, Does.Contain("subsd"));
 		Assert.That(assembly, Does.Contain("xmm0"));
 		Assert.That(assembly, Does.Contain("xmm1"));
@@ -345,7 +344,7 @@ public sealed class InstructionsToAssemblyTests
 	{
 		var method = CreateSingleMethod("JumpToIdType", "has dummy Number",
 			"JumpToId(operation Text) Number", "\tif operation is \"add\"", "\t\treturn 1", "\t0");
-		var assembly = compiler.Compile(method);
+		var assembly = CompileMethod(method);
 		Assert.That(assembly, Does.Contain("jne"));
 		Assert.That(assembly, Does.Contain(".L"));
 	}
@@ -358,7 +357,7 @@ public sealed class InstructionsToAssemblyTests
 			new LoadConstantInstruction(Register.R0, new ValueInstance(NumberType, 42.0)),
 			new ReturnInstruction(Register.R0)
 		};
-		var assembly = compiler.CompileForPlatform("Run", instructions, Platform.Windows);
+		var assembly = Compile(instructions, Platform.Windows);
 		Assert.That(assembly, Does.Contain("global main"));
 		Assert.That(assembly, Does.Contain("main:"));
 		Assert.That(assembly, Does.Contain("call Run"));
@@ -372,7 +371,7 @@ public sealed class InstructionsToAssemblyTests
 			new LoadConstantInstruction(Register.R0, new ValueInstance(NumberType, 1.0)),
 			new ReturnInstruction(Register.R0)
 		};
-		var assembly = compiler.CompileForPlatform("Compute", instructions, Platform.Windows);
+		var assembly = Compile(instructions, Platform.Windows);
 		Assert.That(assembly, Does.Contain("extern ExitProcess"));
 		Assert.That(assembly, Does.Contain("call ExitProcess"));
 		Assert.That(assembly, Does.Contain("xor rcx, rcx"));
@@ -386,11 +385,11 @@ public sealed class InstructionsToAssemblyTests
 			new LoadConstantInstruction(Register.R0, new ValueInstance(NumberType, 5.0)),
 			new ReturnInstruction(Register.R0)
 		};
-		var assembly = compiler.CompileForPlatform("MyFunc", instructions, Platform.Windows);
-		Assert.That(assembly, Does.Contain("global MyFunc"));
-		Assert.That(assembly, Does.Contain("MyFunc:"));
+		var assembly = Compile(instructions, Platform.Windows);
+		Assert.That(assembly, Does.Contain("global Run"));
+		Assert.That(assembly, Does.Contain("Run:"));
 		Assert.That(assembly, Does.Contain("global main"));
-		Assert.That(assembly, Does.Contain("call MyFunc"));
+		Assert.That(assembly, Does.Contain("call Run"));
 	}
 
 	[Test]
@@ -401,8 +400,8 @@ public sealed class InstructionsToAssemblyTests
 			new LoadConstantInstruction(Register.R0, new ValueInstance(NumberType, 1.0)),
 			new ReturnInstruction(Register.R0)
 		};
-		var assembly = compiler.CompileForPlatform("Work", instructions, Platform.Windows);
-		var funcPos = assembly.IndexOf("Work:", StringComparison.Ordinal);
+		var assembly = Compile(instructions, Platform.Windows);
+		var funcPos = assembly.IndexOf("Run:", StringComparison.Ordinal);
 		var mainPos = assembly.IndexOf("main:", StringComparison.Ordinal);
 		Assert.That(funcPos, Is.LessThan(mainPos),
 			"Function body should appear before main entry point");
@@ -416,7 +415,7 @@ public sealed class InstructionsToAssemblyTests
 			new LoadConstantInstruction(Register.R0, new ValueInstance(NumberType, 0.0)),
 			new ReturnInstruction(Register.R0)
 		};
-		var assembly = compiler.CompileForPlatform("Entry", instructions, Platform.Windows);
+		var assembly = Compile(instructions, Platform.Windows);
 		Assert.That(assembly, Does.Contain("sub rsp, 32"),
 			"Windows ABI requires 32-byte shadow space");
 		Assert.That(assembly, Does.Contain("add rsp, 32"));
@@ -430,7 +429,7 @@ public sealed class InstructionsToAssemblyTests
 			new LoadConstantInstruction(Register.R0, new ValueInstance(NumberType, 0.0)),
 			new ReturnInstruction(Register.R0)
 		};
-		var assembly = compiler.CompileForPlatform("Run", instructions, Platform.Linux);
+		var assembly = Compile(instructions, Platform.Linux);
 		Assert.That(assembly, Does.Contain("global _start"));
 		Assert.That(assembly, Does.Contain("_start:"));
 		Assert.That(assembly, Does.Contain("call Run"));
@@ -446,7 +445,7 @@ public sealed class InstructionsToAssemblyTests
 			new LoadConstantInstruction(Register.R0, new ValueInstance(NumberType, 0.0)),
 			new ReturnInstruction(Register.R0)
 		};
-		var assembly = compiler.CompileForPlatform("Run", instructions, Platform.MacOS);
+		var assembly = Compile(instructions, Platform.MacOS);
 		Assert.That(assembly, Does.Contain("global _main"));
 		Assert.That(assembly, Does.Contain("_main:"));
 		Assert.That(assembly, Does.Contain("0x2000001"));
@@ -499,13 +498,8 @@ public sealed class InstructionsToAssemblyTests
 			"Run Number",
 			"\tAdd(2, 3)")).ParseMembersAndMethods(new MethodExpressionParser());
 		var runMethod = type.Methods.First(method => method.Name == Method.Run);
-		var addMethod = type.Methods.First(method => method.Name == "Add");
-		//TODO: this is convoluted!
-		var runInstructions = new BinaryGenerator(new MethodCall(runMethod)).Generate();
-		var addInstructions = new BinaryGenerator(new MethodCall(addMethod)).Generate().EntryPoint.instructions;
-		var methodKey = BuildMethodKey(addMethod);
-		var assembly = compiler.CompileForPlatform(type.Name, runInstructions, Platform.Windows,
-			new Dictionary<string, List<Instruction>> { [methodKey] = addInstructions });
+		var binary = new BinaryGenerator(new MethodCall(runMethod)).Generate();
+		var assembly = Compile(binary, Platform.Windows);
 		Assert.That(assembly, Does.Contain("call " + type.Name + "_Add_2"));
 	}
 
@@ -525,33 +519,10 @@ public sealed class InstructionsToAssemblyTests
 			"\tconstant multiplied = calc.Multiply",
 			"\tadded + multiplied")).ParseMembersAndMethods(new MethodExpressionParser());
 		var runMethod = type.Methods.First(method => method.Name == Method.Run);
-		var addMethod = type.Methods.First(method => method.Name == "Add");
-		var multiplyMethod = type.Methods.First(method => method.Name == "Multiply");
-		var runInstructions = new BinaryGenerator(new MethodCall(runMethod)).Generate();
-		//TODO: convoluted, the binaryGenerator should have all this internally anyway!
-		var addInstructions = new BinaryGenerator(new MethodCall(addMethod)).Generate().EntryPoint.instructions;
-		var multiplyInstructions = new BinaryGenerator(new MethodCall(multiplyMethod)).Generate().EntryPoint.instructions;
-		var addMethodKey = BuildMethodKey(addMethod);
-		var multiplyMethodKey = BuildMethodKey(multiplyMethod);
-		var assembly = compiler.CompileForPlatform(type.Name, runInstructions, Platform.Linux,
-			new Dictionary<string, List<Instruction>>
-			{
-				[addMethodKey] = addInstructions,
-				[multiplyMethodKey] = multiplyInstructions
-			});
+		var binary = new BinaryGenerator(new MethodCall(runMethod)).Generate();
+		var assembly = Compile(binary, Platform.Linux);
 		Assert.That(assembly, Does.Contain(type.Name + "_Add_0:"));
 		Assert.That(assembly, Does.Contain(type.Name + "_Multiply_0:"));
-		var addLabel = type.Name + "_Add_0:";
-		var addStart = assembly.IndexOf(addLabel, StringComparison.Ordinal);
-		var addEnd = assembly.IndexOf("section .text", addStart + addLabel.Length, StringComparison.Ordinal);
-		var addBody = assembly.Substring(addStart, addEnd - addStart);
-		Assert.That(addBody, Does.Not.Contain("movsd [rbp-"));
-		var multiplyLabel = type.Name + "_Multiply_0:";
-		var multiplyStart = assembly.IndexOf(multiplyLabel, StringComparison.Ordinal);
-		var multiplyEnd = assembly.IndexOf("global _start", multiplyStart + multiplyLabel.Length,
-			StringComparison.Ordinal);
-		var multiplyBody = assembly.Substring(multiplyStart, multiplyEnd - multiplyStart);
-		Assert.That(multiplyBody, Does.Not.Contain("movsd [rbp-"));
 	}
 
 	private static Method CreateSingleMethod(string typeName, params string[] methodLines) =>
@@ -563,7 +534,7 @@ public sealed class InstructionsToAssemblyTests
 	{
 		var method = CreateSingleMethod("LeafAddType", "has dummy Number",
 			"Add(first Number, second Number) Number", "\tfirst + second");
-		var assembly = compiler.Compile(method);
+		var assembly = CompileMethod(method);
 		Assert.That(assembly, Does.Contain("addsd xmm0, xmm1"));
 		Assert.That(assembly, Does.Not.Contain("movsd [rbp-8], xmm0"));
 		Assert.That(assembly, Does.Not.Contain("movsd [rbp-16], xmm1"));
@@ -574,7 +545,7 @@ public sealed class InstructionsToAssemblyTests
 	{
 		var method = CreateSingleMethod("LeafMultiplyType", "has dummy Number",
 			"Multiply(first Number, second Number) Number", "\tfirst * second");
-		var assembly = compiler.Compile(method);
+		var assembly = CompileMethod(method);
 		Assert.That(assembly, Does.Contain("mulsd xmm0, xmm1"));
 		Assert.That(assembly, Does.Not.Contain("movsd [rbp-8], xmm0"));
 		Assert.That(assembly, Does.Not.Contain("movsd [rbp-16], xmm1"));
@@ -606,13 +577,8 @@ public sealed class InstructionsToAssemblyTests
 			"\tconstant calc = DeadRegisterInitType(2, 3)",
 			"\tcalc.Add")).ParseMembersAndMethods(new MethodExpressionParser());
 		var runMethod = type.Methods.First(method => method.Name == Method.Run);
-		var addMethod = type.Methods.First(method => method.Name == "Add");
-		//TODO: convoluted
-		var runInstructions = new BinaryGenerator(new MethodCall(runMethod)).Generate();
-		var addInstructions = new BinaryGenerator(new MethodCall(addMethod)).Generate().EntryPoint.instructions;
-		var methodKey = BuildMethodKey(addMethod);
-		var assembly = compiler.CompileForPlatform(type.Name, runInstructions, Platform.Linux,
-			new Dictionary<string, List<Instruction>> { [methodKey] = addInstructions });
+		var binary = new BinaryGenerator(new MethodCall(runMethod)).Generate();
+		var assembly = Compile(binary, Platform.Linux);
 		Assert.That(assembly, Does.Not.Contain("xorpd xmm2, xmm2"));
 	}
 
@@ -627,7 +593,7 @@ public sealed class InstructionsToAssemblyTests
 			new PrintInstruction("B = ", Register.R1),
 			new ReturnInstruction(Register.R1)
 		};
-		var assembly = compiler.CompileForPlatform("Run", instructions, Platform.Windows);
+		var assembly = Compile(instructions, Platform.Windows);
 		Assert.That(assembly, Does.Contain("print_number_from_xmm:"));
 		Assert.That(assembly.Split("call print_number_from_xmm").Length - 1,
 			Is.EqualTo(2));
@@ -658,13 +624,14 @@ public sealed class InstructionsToAssemblyTests
 		Assert.That(exception.Message, Does.Contain("gcc"));
 	}
 
-	private static string BuildMethodKey(Method method) =>
-		BinaryExecutable.BuildMethodHeader(method.Name,
-			method.Parameters.Select(parameter =>
-				new BinaryMember(parameter.Name, parameter.Type.Name, null)).ToList(),
-			method.ReturnType);
+	private string CompileMethod(Method method) =>
+		compiler.CompileInstructions(method.Type.Name,
+			[.. new BinaryGenerator(new MethodCall(method)).Generate().EntryPoint.instructions]);
 
-	//TODO: remove, not needed
-	private static List<Instruction> GenerateMethodInstructions(Method method) =>
-		new BinaryGenerator(new MethodCall(method)).Generate().EntryPoint.instructions;
+	private string Compile(List<Instruction> instructions, Platform platform) =>
+		compiler.Compile(BinaryExecutable.CreateForEntryInstructions(
+			TestPackage.Instance, instructions), platform).GetAwaiter().GetResult();
+
+	private string Compile(BinaryExecutable binary, Platform platform) =>
+		compiler.Compile(binary, platform).GetAwaiter().GetResult();
 }
