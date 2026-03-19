@@ -10,8 +10,7 @@ public sealed class BinaryGeneratorTests : TestBytecode
 		params string[] code)
 	{
 		var instructions =
-			new BinaryGenerator(GenerateMethodCallFromSource(programName, methodCall, code)).
-				Generate();
+			new BinaryGenerator(GenerateMethodCallFromSource(programName, methodCall, code)).Generate();
 		Assert.That(instructions.ConvertAll(x => x.ToString()),
 			Is.EqualTo(expectedByteCode.ToList().ConvertAll(x => x.ToString())));
 	}

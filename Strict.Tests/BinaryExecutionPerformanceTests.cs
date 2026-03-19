@@ -26,7 +26,17 @@ public class BinaryExecutionPerformanceTests
 
 	public async Task<VirtualMachine> CreateVm()
 	{
-		await new Runner(StrictFilePath).Run();
+		try
+		{
+			await new Runner(StrictFilePath).Run();
+		}
+		//ncrunch: no coverage start
+		catch (IOException)
+		{
+			// Try again if the file was used in another test
+			Thread.Sleep(100);
+			await new Runner(StrictFilePath).Run();
+		} //ncrunch: no coverage end
 		var executable = new BinaryExecutable(BinaryFilePath, TestPackage.Instance);
 		return new VirtualMachine(executable);
 	}
