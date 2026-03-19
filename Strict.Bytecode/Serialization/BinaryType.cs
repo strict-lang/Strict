@@ -31,24 +31,13 @@ public sealed class BinaryType
 	}
 
 	public BinaryType(BinaryExecutable binary, string typeFullName,
-		Dictionary<string, List<BinaryMethod>> methodGroups,
-		IReadOnlyList<BinaryMember>? members = null)
+		Dictionary<string, List<BinaryMethod>> methodGroups, List<BinaryMember>? members = null)
 	{
 		this.binary = binary;
 		this.typeFullName = typeFullName;
 		MethodGroups = methodGroups;
 		if (members != null)
-			Members = [.. members];
-	}
-
-	public sealed record BinaryMethod : global::Strict.Bytecode.Serialization.BinaryMethod
-	{
-		public BinaryMethod(List<BinaryMember> methodParameters, string returnTypeName,
-			List<Instruction> methodInstructions)
-			: base("", methodParameters, returnTypeName, methodInstructions) { }
-
-		internal BinaryMethod(BinaryReader reader, BinaryType type, string methodName)
-			: base(reader, type, methodName) { }
+			Members = members;
 	}
 
 	internal readonly BinaryExecutable? binary;

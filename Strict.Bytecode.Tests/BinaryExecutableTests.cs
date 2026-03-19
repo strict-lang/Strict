@@ -26,9 +26,9 @@ public sealed class BinaryExecutableTests : TestBytecode
 		sourceBinary.MethodsPerType[Type.Number] = new BinaryType
 		{
 			Members = [new BinaryMember("value", Type.Number, null)],
-			MethodGroups = new Dictionary<string, List<BinaryType.BinaryMethod>>
+			MethodGroups = new Dictionary<string, List<BinaryMethod>>
 			{
-				[Method.Run] = [new BinaryType.BinaryMethod([], Type.None, [new ReturnInstruction(Register.R0)])]
+				[Method.Run] = [new BinaryMethod("", [], Type.None, [new ReturnInstruction(Register.R0)])]
 			}
 		};
 		var filePath = CreateTempFilePath();
@@ -44,12 +44,12 @@ public sealed class BinaryExecutableTests : TestBytecode
 		binary.MethodsPerType[Type.Number] = new BinaryType
 		{
 			Members = [],
-			MethodGroups = new Dictionary<string, List<BinaryType.BinaryMethod>>
+			MethodGroups = new Dictionary<string, List<BinaryMethod>>
 			{
 				["Compute"] =
 				[
-					new BinaryType.BinaryMethod([], Type.None, [new ReturnInstruction(Register.R0)]),
-					new BinaryType.BinaryMethod([new BinaryMember("value", Type.Number, null)],
+					new BinaryMethod("", [], Type.None, [new ReturnInstruction(Register.R0)]),
+					new BinaryMethod("", [new BinaryMember("value", Type.Number, null)],
 						Type.Number, [new ReturnInstruction(Register.R1)])
 				]
 			}
@@ -81,9 +81,9 @@ public sealed class BinaryExecutableTests : TestBytecode
 		new()
 		{
 			Members = [],
-			MethodGroups = new Dictionary<string, List<BinaryType.BinaryMethod>>
+			MethodGroups = new Dictionary<string, List<BinaryMethod>>
 			{
-				[Method.Run] = [new BinaryType.BinaryMethod([], Type.None, instructions)]
+				[Method.Run] = [new BinaryMethod("", [], Type.None, instructions)]
 			}
 		};
 

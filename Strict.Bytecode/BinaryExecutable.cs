@@ -111,7 +111,7 @@ public sealed class BinaryExecutable(Package basePackage) : IEnumerable<Instruct
 
 	public void Serialize(string filePath)
 	{
-		using var fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write);
+		using var fileStream = new FileStream(filePath, FileMode.Create, FileAccess.ReadWrite);
 		using var zip = new ZipArchive(fileStream, ZipArchiveMode.Create, leaveOpen: false);
 		foreach (var (fullTypeName, membersAndMethods) in MethodsPerType)
 		{
@@ -524,8 +524,8 @@ public sealed class BinaryExecutable(Package basePackage) : IEnumerable<Instruct
 		MethodsPerType.Values.Sum(methods => methods.TotalInstructionCount);
 
 	internal BinaryExecutable AddType(string typeFullName,
-		Dictionary<string, List<BinaryType.BinaryMethod>> methodGroups,
-		IReadOnlyList<BinaryMember>? members = null, bool isEntryType = false)
+		Dictionary<string, List<BinaryMethod>> methodGroups,
+		List<BinaryMember>? members = null, bool isEntryType = false)
 	{
 		MethodsPerType[typeFullName] = new BinaryType(this, typeFullName, methodGroups, members);
 		if (isEntryType && methodGroups.TryGetValue(Method.Run, out var runMethods) && runMethods.Count > 0)
@@ -536,15 +536,23 @@ public sealed class BinaryExecutable(Package basePackage) : IEnumerable<Instruct
 		return this;
 	}
 
+	public static BinaryExecutable CreateForEntryInstructions(Package basePackage,
+		IReadOnlyList<Instruction> entryPointInstructions)
+	{
+		var binary = new BinaryExecutable(basePackage);
+		binary.AddType("EntryPoint", (object)entryPointInstructions.ToList());
+		return binary;
+	}
+
 	internal BinaryExecutable AddType(string entryTypeFullName, object value)
 	{
-		if (value is Dictionary<string, List<BinaryType.BinaryMethod>> methodGroups)
+		if (value is Dictionary<string, List<BinaryMethod>> methodGroups)
 			return AddType(entryTypeFullName, methodGroups);
 		if (value is List<Instruction> instructions)
 		{
-			var runMethod = new BinaryType.BinaryMethod([], Type.None, instructions);
+			var runMethod = new BinaryMethod("", [], Type.None, instructions);
 			return AddType(entryTypeFullName,
-				new Dictionary<string, List<BinaryType.BinaryMethod>> { [Method.Run] = [runMethod] },
+				new Dictionary<string, List<BinaryMethod>> { [Method.Run] = [runMethod] },
 				null, isEntryType: true);
 		}
 		throw new NotSupportedException("Unsupported binary type payload: " + value.GetType().Name);

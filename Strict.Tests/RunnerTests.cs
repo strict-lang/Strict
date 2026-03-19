@@ -53,7 +53,7 @@ public sealed class RunnerTests
   [Test]
   public async Task RunFromBytecodeFileProducesSameOutput()
   {
-    var binaryFilePath = GetExamplesBinaryFile("SimpleCalculator");
+    var binaryFilePath = await GetExamplesBinaryFileAsync("SimpleCalculator");
     await new Runner(binaryFilePath, TestPackage.Instance).Run();
     Assert.That(writer.ToString(),
       Does.StartWith("2 + 3 = 5" + Environment.NewLine + "2 * 3 = 6"));
@@ -97,16 +97,16 @@ public sealed class RunnerTests
   {
     var asmPath = Path.ChangeExtension(SimpleCalculatorFilePath, ".asm");
     if (File.Exists(asmPath))
-      File.Delete(asmPath);
-    var binaryPath = GetExamplesBinaryFile("SimpleCalculator");
+      File.Delete(asmPath); //ncrunch: no coverage
+    var binaryPath = await GetExamplesBinaryFileAsync("SimpleCalculator");
     await new Runner(binaryPath, TestPackage.Instance).Run();
     Assert.That(File.Exists(asmPath), Is.False);
   }
 
   [Test]
-  public void SaveStrictBinaryWithTypeBytecodeEntriesOnly()
+  public async Task SaveStrictBinaryWithTypeBytecodeEntriesOnlyAsync()
   {
-    var binaryPath = GetExamplesBinaryFile("SimpleCalculator");
+    var binaryPath = await GetExamplesBinaryFileAsync("SimpleCalculator");
     using var archive = ZipFile.OpenRead(binaryPath);
     var entries = archive.Entries.Select(entry => entry.FullName.Replace('\\', '/')).ToList();
     Assert.That(entries.All(entry => entry.EndsWith(BytecodeSerializer.BytecodeEntryExtension,
@@ -196,12 +196,11 @@ public sealed class RunnerTests
   private static string SimpleCalculatorFilePath => GetExamplesFilePath("SimpleCalculator");
   private static string SumFilePath => GetExamplesFilePath("Sum");
 
-  private string GetExamplesBinaryFile(string filename)
+  private async Task<string> GetExamplesBinaryFileAsync(string filename)
   {
     var localPath = Path.ChangeExtension(GetExamplesFilePath(filename), BytecodeSerializer.Extension);
-    if (File.Exists(localPath))
-      File.Delete(localPath);
-    new Runner(GetExamplesFilePath(filename), TestPackage.Instance).Run().GetAwaiter().GetResult();
+    if (!File.Exists(localPath))
+      await new Runner(GetExamplesFilePath(filename), TestPackage.Instance).Run(); //ncrunch: no coverage
     writer.GetStringBuilder().Clear();
     return localPath;
   }

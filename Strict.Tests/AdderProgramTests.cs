@@ -11,10 +11,6 @@ namespace Strict.Tests;
 [SimpleJob(RunStrategy.Throughput, warmupCount: 1, iterationCount: 10)]
 public class AdderProgramTests : TestBytecode
 {
-	[SetUp]
-	public void Setup() => vm = new VirtualMachine(TestPackage.Instance);
-
-	private VirtualMachine vm = null!;
 	private static readonly string[] AdderProgramCode =
 	[
 		"has numbers",
@@ -29,9 +25,9 @@ public class AdderProgramTests : TestBytecode
 
 	private List<decimal> ExecuteAddTotals(string methodCall)
 	{
-		var result = vm.Execute(
-			new BinaryGenerator(GenerateMethodCallFromSource("AdderProgram", methodCall,
-				AdderProgramCode)).Generate()).Returns!.Value;
+		var result = new VirtualMachine(
+				new BinaryGenerator(GenerateMethodCallFromSource("AdderProgram", methodCall,
+					AdderProgramCode)).Generate()).ExecuteRun().Returns!.Value;
 		return result.List.Items.Select(item => (decimal)item.Number).ToList();
 	}
 

@@ -15,7 +15,6 @@ namespace Strict.LanguageServer;
 public class CommandExecutor(ILanguageServerFacade languageServer,
 	StrictDocument document, Package package) : IExecuteCommandHandler
 {
-	private readonly VirtualMachine vm = new(package);
 	private const string CommandName = "strict-vscode-client.run";
 
 	Task<Unit> IRequestHandler<ExecuteCommandParams, Unit>.Handle(
@@ -26,13 +25,13 @@ public class CommandExecutor(ILanguageServerFacade languageServer,
 			DocumentUri.From(request.Arguments?[1].ToString() ?? throw new PathCanNotBeEmpty());
 		var folderName = documentUri.Path.GetFolderName();
 		var subPackage = package.Find(folderName) ?? new Package(package, folderName);
-		AddAndExecute(documentUri, methodCall, subPackage);
-		if (vm.Returns != null)
-			languageServer.Window.LogInfo($"Output: {vm.Returns.Value}");
+		var returns = AddAndExecute(documentUri, methodCall, subPackage);
+		if (returns != null)
+			languageServer.Window.LogInfo($"Output: {returns.Value}");
 		return Unit.Task;
 	}
 
-	private void AddAndExecute(DocumentUri documentUri, string? methodCall, Package subPackage)
+	private ValueInstance? AddAndExecute(DocumentUri documentUri, string? methodCall, Package subPackage)
 	{
 		var code = document.Get(documentUri);
 		var typeName = documentUri.Path.GetFileName();
@@ -43,7 +42,8 @@ public class CommandExecutor(ILanguageServerFacade languageServer,
 			Environment.NewLine + string.Join(",",
 				binary.EntryPoint.instructions.Select(instruction => instruction + Environment.NewLine))
 		}");
-		vm.Execute(binary);
+		var vm = new VirtualMachine(binary).ExecuteRun();
+		return vm.Returns;
 	}
 
 	public ExecuteCommandRegistrationOptions GetRegistrationOptions(

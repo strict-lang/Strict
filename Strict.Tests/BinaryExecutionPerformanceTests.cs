@@ -2,7 +2,6 @@ using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Engines;
 using BenchmarkDotNet.Running;
 using Strict.Bytecode;
-using Strict.Bytecode.Instructions;
 using Strict.Bytecode.Serialization;
 using Strict.Language;
 using Strict.Language.Tests;
@@ -13,41 +12,48 @@ namespace Strict.Tests;
 [SimpleJob(RunStrategy.Throughput, warmupCount: 1, iterationCount: 10)]
 public class BinaryExecutionPerformanceTests
 {
-	[GlobalSetup]
 	[SetUp]
-	public async Task SetupAsync()
+	public void SetupConsole()
 	{
 		rememberConsoleOut = Console.Out;
 		Console.SetOut(TextWriter.Null);
-		if (File.Exists(BinaryFilePath))
-			File.Delete(BinaryFilePath);
-		await new Runner(StrictFilePath).Run(); //ncrunch: no coverage
-		var executable = new BinaryExecutable(BinaryFilePath, TestPackage.Instance);
-		instructions = executable.FindInstructions("SimpleCalculator", "Run", 0) ?? [];
-		vm = new VirtualMachine(executable);
 	}
 
 	private TextWriter rememberConsoleOut = null!;
-	private VirtualMachine vm = null!;
-	private IReadOnlyList<Instruction> instructions = null!;
-	private static string StrictFilePath => RunnerTests.GetExamplesFilePath("SimpleCalculator");
-	private static readonly string BinaryFilePath =
-		Path.ChangeExtension(StrictFilePath, BytecodeSerializer.Extension);
 
 	[TearDown]
 	public void RestoreConsole() => Console.SetOut(rememberConsoleOut);
 
-	[Benchmark]
-	public void ExecuteBinary() => vm.Execute(instructions); //ncrunch: no coverage
+	public async Task<VirtualMachine> CreateVm()
+	{
+		await new Runner(StrictFilePath).Run();
+		var executable = new BinaryExecutable(BinaryFilePath, TestPackage.Instance);
+		return new VirtualMachine(executable);
+	}
+
+	private static string StrictFilePath => RunnerTests.GetExamplesFilePath("SimpleCalculator");
+	private static readonly string BinaryFilePath =
+		Path.ChangeExtension(StrictFilePath, BytecodeSerializer.Extension);
 
 	[Test]
-	public void ExecuteBinary1000Times()
+	public async Task ExecuteBinaryOnce()
 	{
+		var vm = await CreateVm();
+		vm.ExecuteRun();
+	}
+
+	[Test]
+	public async Task ExecuteBinary1000Times()
+	{
+		var vm = await CreateVm();
 		for (var run = 0; run < 1000; run++)
-			vm.Execute(instructions);
+			vm.ExecuteRun();
 	}
 
 	//ncrunch: no coverage start
+	[Benchmark]
+	public async Task ExecuteBinary() => (await CreateVm()).ExecuteRun();
+
 	[Test]
 	[Category("Manual")]
 	public void BenchmarkCompare() => BenchmarkRunner.Run<BinaryExecutionPerformanceTests>();

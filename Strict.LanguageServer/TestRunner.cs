@@ -17,8 +17,8 @@ public sealed class TestRunner(Package package, ILanguageServerFacade languageSe
 		foreach (var test in Methods.SelectMany(method => method.Tests))
 			if (test is MethodCall { Instance: { } } methodCall)
 			{
-				var output = vm.
-					Execute(new BinaryGenerator((MethodCall)methodCall.Instance).Generate()).Returns;
+				var binary = new BinaryGenerator((MethodCall)methodCall.Instance).Generate();
+				var output = new VirtualMachine(binary).ExecuteRun().Returns;
 				languageServer?.SendNotification(NotificationName, new TestNotificationMessage(
 					GetLineNumber(test), Equals(output, ((Value)methodCall.Arguments[0]).Data)
 						? TestState.Green

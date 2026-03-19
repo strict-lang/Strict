@@ -26,12 +26,11 @@ Console.WriteLine("Total execution time per run (full binary Runner.Run, cached)
 Console.WriteLine("Allocated bytes per run (cached): " + (allocatedAfter - allocatedBefore) / Runs);
 // Now measure only the hot VM execution loop (pre-loaded bytecode, no file I/O)
 var hotPathBenchmark = new BinaryExecutionPerformanceTests();
-hotPathBenchmark.SetupAsync();
-hotPathBenchmark.ExecuteBinary();
+await hotPathBenchmark.ExecuteBinary();
 Console.WriteLine("Warmup (VM-only) complete. Measuring VM-only hot path...");
 var hotAllocatedBefore = GC.GetAllocatedBytesForCurrentThread();
 var hotStartTicks = DateTime.UtcNow.Ticks;
-hotPathBenchmark.ExecuteBinary1000Times();
+await hotPathBenchmark.ExecuteBinary1000Times();
 var hotEndTicks = DateTime.UtcNow.Ticks;
 var hotAllocatedAfter = GC.GetAllocatedBytesForCurrentThread();
 Console.WriteLine("Total execution time per run (VM-only, pre-loaded bytecode): " +

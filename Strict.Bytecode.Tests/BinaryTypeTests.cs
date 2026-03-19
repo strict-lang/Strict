@@ -13,12 +13,13 @@ public sealed class BinaryTypeTests : TestBytecode
     var source = new BinaryType
     {
       Members = [new BinaryMember("value", Type.Number, null)],
-      MethodGroups = new Dictionary<string, List<BinaryType.BinaryMethod>>
+      MethodGroups = new Dictionary<string, List<BinaryMethod>>
       {
         ["Compute"] =
         [
-          new BinaryType.BinaryMethod([new BinaryMember("input", Type.Number, null)],
-            Type.Number, [new LoadConstantInstruction(Register.R0, Number(5)), new ReturnInstruction(Register.R0)])
+          new BinaryMethod("", [new BinaryMember("input", Type.Number, null)],
+            Type.Number, [new LoadConstantInstruction(Register.R0, Number(5)),
+						new ReturnInstruction(Register.R0)])
         ]
       }
     };
@@ -58,7 +59,7 @@ public sealed class BinaryTypeTests : TestBytecode
   [Test]
   public void ReconstructMethodNameIncludesParametersAndReturnType()
   {
-    var method = new BinaryType.BinaryMethod([new BinaryMember("first", Type.Number, null)],
+    var method = new BinaryMethod("", [new BinaryMember("first", Type.Number, null)],
       Type.Number, [new ReturnInstruction(Register.R0)]);
     Assert.That(BinaryType.ReconstructMethodName("Compute", method),
       Is.EqualTo("Compute(first Number) Number"));

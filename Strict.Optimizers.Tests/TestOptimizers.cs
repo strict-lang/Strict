@@ -1,3 +1,5 @@
+using Strict;
+using Strict.Bytecode;
 using Strict.Expressions;
 using Strict.Bytecode.Instructions;
 
@@ -14,5 +16,13 @@ public class TestOptimizers
 		var optimizedInstructions = optimizer.Optimize(instructions);
 		Assert.That(optimizedInstructions, Has.Count.EqualTo(expectedCount));
 		return optimizedInstructions;
+	}
+
+	protected ValueInstance ExecuteInstructions(IReadOnlyList<Instruction> instructions,
+		IReadOnlyDictionary<string, ValueInstance>? initialVariables = null)
+	{
+		var binary = BinaryExecutable.CreateForEntryInstructions(TestPackage.Instance, instructions);
+		var vm = new VirtualMachine(binary).ExecuteExpression(binary.EntryPoint, initialVariables);
+		return vm.Returns!.Value;
 	}
 }

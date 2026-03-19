@@ -9,38 +9,21 @@ namespace Strict;
 
 public sealed class VirtualMachine(BinaryExecutable executable)
 {
-	public VirtualMachine(Package package) : this(new BinaryExecutable(package)) { }
-	private BinaryExecutable activeExecutable = executable;
+	public VirtualMachine(Package basePackage) : this(new BinaryExecutable(basePackage)) { }
+	private readonly BinaryExecutable activeExecutable = executable;
 
-	//TODO: this is very stupid, doing Clear over and over and clear doesn't even do the work, loopbegin is done over and over ..
-	public VirtualMachine Execute()
-	{
-		Clear();
-		foreach (var loopBegin in activeExecutable.EntryPoint.instructions.OfType<LoopBeginInstruction>())
-			loopBegin.Reset();
-		return RunInstructions(activeExecutable.EntryPoint.instructions);
-	}
+	public VirtualMachine ExecuteRun(IReadOnlyDictionary<string, ValueInstance>? initialVariables = null) =>
+		ExecuteExpression(activeExecutable.EntryPoint, initialVariables);
 
-	//TODO: this is no good, we should call the EntryPoint method, yes, but there is no need to extract the instructions and pass them here, just use them directly from BinaryMethod! Also the execution context below should be created here (see Interpreter), this is just convoluted and error prone .. also not tested well, tests are upside down
-  public VirtualMachine Execute(BinaryExecutable binary)
-	{
-		activeExecutable = binary;
-   return Execute();
-	}
-
-	public VirtualMachine Execute(IReadOnlyList<Instruction> allInstructions,
+	public VirtualMachine ExecuteExpression(BinaryMethod method,
 		IReadOnlyDictionary<string, ValueInstance>? initialVariables = null)
 	{
-		Clear();
-		if (initialVariables != null)
-			foreach (var (name, value) in initialVariables)
-				Memory.Frame.Set(name, value);
-		foreach (var loopBegin in allInstructions.OfType<LoopBeginInstruction>())
-			loopBegin.Reset();
-		return RunInstructions(allInstructions);
+		Clear(method.instructions, initialVariables);
+		return RunInstructions(method.instructions);
 	}
 
-	private void Clear()
+	private void Clear(IReadOnlyList<Instruction> allInstructions,
+		IReadOnlyDictionary<string, ValueInstance>? initialVariables = null)
 	{
 		conditionFlag = false;
 		instructionIndex = 0;
@@ -48,6 +31,11 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		Returns = null;
 		Memory.Registers.Clear();
 		Memory.Frame = new CallFrame();
+		if (initialVariables != null)
+			foreach (var (name, value) in initialVariables)
+				Memory.Frame.Set(name, value);
+		foreach (var loopBegin in allInstructions.OfType<LoopBeginInstruction>())
+			loopBegin.Reset();
 	}
 
 	private bool conditionFlag;
@@ -216,13 +204,9 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		var typeInstance = instance.TryGetValueTypeInstance();
 		if (typeInstance != null)
 		{
-			var members = typeInstance.ReturnType.Members;
-			for (var memberIndex = 0; memberIndex < members.Count &&
-				memberIndex < typeInstance.Values.Length; memberIndex++)
-				if (!members[memberIndex].Type.IsTrait)
-					Memory.Frame.Set(members[memberIndex].Name, typeInstance.Values[memberIndex],
-						isMember: true);
-			return;
+			if (TrySetScopeMembersFromTypeMembers(typeInstance) ||
+				TrySetScopeMembersFromBinaryMembers(typeInstance))
+				return;
 		}
 		//ncrunch: no coverage start
 		var firstNonTraitMember = instance.GetType().Members.FirstOrDefault(member =>
@@ -230,6 +214,59 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		if (firstNonTraitMember != null)
 			Memory.Frame.Set(firstNonTraitMember.Name, instance, isMember: true);
 		//ncrunch: no coverage end
+	}
+
+	private bool TrySetScopeMembersFromTypeMembers(ValueTypeInstance typeInstance)
+	{
+		var members = typeInstance.ReturnType.Members;
+		if (members.Count == 0)
+			return false;
+		for (var memberIndex = 0; memberIndex < members.Count &&
+			memberIndex < typeInstance.Values.Length; memberIndex++)
+			if (!members[memberIndex].Type.IsTrait)
+				Memory.Frame.Set(members[memberIndex].Name, typeInstance.Values[memberIndex],
+					isMember: true);
+		return true;
+	}
+
+	private bool TrySetScopeMembersFromBinaryMembers(ValueTypeInstance typeInstance)
+	{
+		if (!TryGetBinaryMembers(typeInstance.ReturnType, out var binaryMembers))
+			return false;
+		for (var memberIndex = 0; memberIndex < binaryMembers.Count &&
+			memberIndex < typeInstance.Values.Length; memberIndex++)
+			if (CanExposeBinaryMember(typeInstance.ReturnType, binaryMembers[memberIndex]))
+				Memory.Frame.Set(binaryMembers[memberIndex].Name, typeInstance.Values[memberIndex],
+					isMember: true);
+		return true;
+	}
+
+	private bool TryGetBinaryMembers(Type type, out IReadOnlyList<BinaryMember> members)
+	{
+		foreach (var (typeName, typeData) in activeExecutable.MethodsPerType)
+			if (typeData.Members.Count > 0 && (typeName == type.FullName || typeName == type.Name ||
+				typeName.EndsWith(Context.ParentSeparator + type.Name, StringComparison.Ordinal)))
+			{
+				members = typeData.Members;
+				return true;
+			}
+		members = [];
+		return false;
+	}
+
+	private static bool CanExposeBinaryMember(Type instanceType, BinaryMember binaryMember)
+	{
+		var memberType = instanceType.FindType(binaryMember.FullTypeName) ??
+			instanceType.FindType(GetShortTypeName(binaryMember.FullTypeName));
+		return memberType == null || !memberType.IsTrait;
+	}
+
+	private static string GetShortTypeName(string fullTypeName)
+	{
+		var index = fullTypeName.LastIndexOf(Context.ParentSeparator);
+		return index >= 0
+			? fullTypeName[(index + 1)..]
+			: fullTypeName;
 	}
 
 	private ValueInstance? RunChildScope(List<Instruction> childInstructions,
@@ -334,6 +371,12 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		if (targetType is GenericTypeImplementation)
 			return false; //ncrunch: no coverage
 		var members = targetType.Members;
+		if (members.Count == 0 && TryGetBinaryMembers(targetType, out var binaryMembers))
+		{
+			Memory.Registers[invoke.Register] = new ValueInstance(targetType,
+				CreateConstructorValuesFromBinaryMembers(targetType, invoke, binaryMembers));
+			return true;
+		}
 		var values = new ValueInstance[members.Count];
 		var argumentIndex = 0;
 		for (var memberIndex = 0; memberIndex < members.Count; memberIndex++)
@@ -345,6 +388,25 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 				values[memberIndex] = new ValueInstance(members[memberIndex].Type, 0);
 		Memory.Registers[invoke.Register] = new ValueInstance(targetType, values);
 		return true;
+	}
+
+	private ValueInstance[] CreateConstructorValuesFromBinaryMembers(Type targetType, Invoke invoke,
+		IReadOnlyList<BinaryMember> binaryMembers)
+	{
+		var values = new ValueInstance[binaryMembers.Count];
+		var argumentIndex = 0;
+		for (var memberIndex = 0; memberIndex < binaryMembers.Count; memberIndex++)
+		{
+			var memberType = targetType.FindType(binaryMembers[memberIndex].FullTypeName) ??
+				targetType.FindType(GetShortTypeName(binaryMembers[memberIndex].FullTypeName));
+			if (memberType != null && memberType.IsTrait)
+				values[memberIndex] = CreateTraitInstance(memberType);
+			else if (argumentIndex < invoke.Method.Arguments.Count)
+				values[memberIndex] = EvaluateExpression(invoke.Method.Arguments[argumentIndex++]);
+			else
+				values[memberIndex] = new ValueInstance(activeExecutable.numberType, 0);
+		}
+		return values;
 	}
 
 	private static ValueInstance CreateTraitInstance(Type traitType)

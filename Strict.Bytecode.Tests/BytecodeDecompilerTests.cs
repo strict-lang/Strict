@@ -70,12 +70,9 @@ public sealed class BytecodeDecompilerTests : TestBytecode
 	{
 		var methods = new BinaryType();
 		methods.Members = [];
-		methods.MethodGroups = new Dictionary<string, List<BinaryType.BinaryMethod>>
+		methods.MethodGroups = new Dictionary<string, List<BinaryMethod>>
 		{
-			[Method.Run] =
-			[
-				new BinaryType.BinaryMethod([], Type.None, instructions)
-			]
+			[Method.Run] = [new BinaryMethod("", [], Type.None, instructions)]
 		};
 		return methods;
 	}

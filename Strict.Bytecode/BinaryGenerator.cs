@@ -545,10 +545,10 @@ public sealed class BinaryGenerator
 
 	private sealed class InstanceNameNotFound : Exception;
 
- private Dictionary<string, Dictionary<string, List<BinaryType.BinaryMethod>>> GenerateRunMethods(
+ private Dictionary<string, Dictionary<string, List<BinaryMethod>>> GenerateRunMethods(
 		IReadOnlyList<Method> runMethods, Type entryType)
 	{
-		var methodsByType = new Dictionary<string, Dictionary<string, List<BinaryType.BinaryMethod>>>(
+		var methodsByType = new Dictionary<string, Dictionary<string, List<BinaryMethod>>>(
 			StringComparer.Ordinal);
 		var methodsToCompile = new Queue<Method>();
 		var compiledMethodKeys = new HashSet<string>(StringComparer.Ordinal);
@@ -604,7 +604,7 @@ public sealed class BinaryGenerator
 			new BinaryMember(parameter.Name, GetBinaryTypeName(parameter.Type, entryType), null)).ToList();
 
 	private void AddGeneratedTypes(
-		Dictionary<string, Dictionary<string, List<BinaryType.BinaryMethod>>> methodsByType,
+		Dictionary<string, Dictionary<string, List<BinaryMethod>>> methodsByType,
 		Type entryType)
 	{
 		var orderedTypes = dependencyTypes.Values.OrderBy(type =>
@@ -618,7 +618,7 @@ public sealed class BinaryGenerator
 			binary.AddType(GetBinaryTypeName(type, entryType),
 				methodsByType.TryGetValue(type.FullName, out var methodGroups)
 					? methodGroups
-					: new Dictionary<string, List<BinaryType.BinaryMethod>>(StringComparer.Ordinal),
+					: new Dictionary<string, List<BinaryMethod>>(StringComparer.Ordinal),
 				members, type == entryType);
 		}
 	}
@@ -748,10 +748,10 @@ public sealed class BinaryGenerator
 			StrictRuntimeTypeNames.Contains(type.Name);
 	}
 
-	private Dictionary<string, Dictionary<string, List<BinaryType.BinaryMethod>>> GenerateEntryMethods(
+	private Dictionary<string, Dictionary<string, List<BinaryMethod>>> GenerateEntryMethods(
 		string entryTypeFullName, IReadOnlyList<Expression> entryExpressions, Type runReturnType)
 	{
-		var methodsByType = new Dictionary<string, Dictionary<string, List<BinaryType.BinaryMethod>>>(
+		var methodsByType = new Dictionary<string, Dictionary<string, List<BinaryMethod>>>(
 			StringComparer.Ordinal);
 		var methodsToCompile = new Queue<Method>();
 		var compiledMethodKeys = new HashSet<string>(StringComparer.Ordinal);
@@ -821,13 +821,13 @@ public sealed class BinaryGenerator
 
 	//TODO: cumbersome, remove and fix
 	private static void AddCompiledMethod(
-		Dictionary<string, Dictionary<string, List<BinaryType.BinaryMethod>>> methodsByType,
+		Dictionary<string, Dictionary<string, List<BinaryMethod>>> methodsByType,
 		string typeFullName, string methodName, List<BinaryMember> parameters,
 		string returnTypeName, List<Instruction> instructionsToAdd)
 	{
 		if (!methodsByType.TryGetValue(typeFullName, out var methodGroups))
 		{
-			methodGroups = new Dictionary<string, List<BinaryType.BinaryMethod>>(StringComparer.Ordinal);
+			methodGroups = new Dictionary<string, List<BinaryMethod>>(StringComparer.Ordinal);
 			methodsByType[typeFullName] = methodGroups;
 		}
 		if (!methodGroups.TryGetValue(methodName, out var overloads))
@@ -835,7 +835,7 @@ public sealed class BinaryGenerator
 			overloads = [];
 			methodGroups[methodName] = overloads;
 		}
-		overloads.Add(new BinaryType.BinaryMethod(parameters, returnTypeName, instructionsToAdd));
+		overloads.Add(new BinaryMethod("", parameters, returnTypeName, instructionsToAdd));
 	}
 
 	private static string ExtractTextPrefix(Expression? expression) =>

@@ -6,10 +6,8 @@ namespace Strict.Tests;
 
 public sealed class BytecodeInterpreterKataTests : TestBytecode
 {
-	[SetUp]
-	public void Setup() => vm = new VirtualMachine(TestPackage.Instance);
-
-	private VirtualMachine vm = null!;
+	private static VirtualMachine ExecuteVm(BinaryExecutable binary) =>
+		new VirtualMachine(binary).ExecuteRun();
 
 	[Test]
 	public void BestTimeToBuyStocksKata()
@@ -28,7 +26,7 @@ public sealed class BytecodeInterpreterKataTests : TestBytecode
 			"\t\t\tmax = value - min",
 			"\tmax")).Generate();
 		// @formatter:on
-		Assert.That(vm.Execute(instructions).Returns!.Value.Number, Is.EqualTo(5));
+		Assert.That(ExecuteVm(instructions).Returns!.Value.Number, Is.EqualTo(5));
 	}
 
 	[TestCase("RemoveParentheses(\"some(thing)\").Remove", "some")]
@@ -51,7 +49,7 @@ public sealed class BytecodeInterpreterKataTests : TestBytecode
 			"\t\t\tcount = count - 1",
 			"\tresult")).Generate();
 		// @formatter:on
-		Assert.That(vm.Execute(instructions).Returns!.Value.Text, Is.EqualTo(expectedResult));
+		Assert.That(ExecuteVm(instructions).Returns!.Value.Text, Is.EqualTo(expectedResult));
 	}
 
 	[TestCase("Invertor(1, 2, 3, 4, 5).Invert", "-1-2-3-4-5")]
@@ -66,7 +64,7 @@ public sealed class BytecodeInterpreterKataTests : TestBytecode
 			"\t\tresult = result + value * -1",
 			"\tresult")).Generate();
 		// @formatter:on
-		Assert.That(vm.Execute(instructions).Returns!.Value.Text, Is.EqualTo(expectedResult));
+		Assert.That(ExecuteVm(instructions).Returns!.Value.Text, Is.EqualTo(expectedResult));
 	}
 
 	[Test]
@@ -84,6 +82,6 @@ public sealed class BytecodeInterpreterKataTests : TestBytecode
 			"\t\t\tresult.Increment",
 			"\tresult")).Generate();
 		// @formatter:on
-		Assert.That(vm.Execute(instructions).Returns!.Value.Number, Is.EqualTo(17));
+		Assert.That(ExecuteVm(instructions).Returns!.Value.Number, Is.EqualTo(17));
 	}
 }

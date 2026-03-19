@@ -116,8 +116,8 @@ public sealed class ConstantFoldingOptimizerTests : TestOptimizers
 			new BinaryInstruction(InstructionType.Add, Register.R0, Register.R2, Register.R3),
 			new ReturnInstruction(Register.R3)
 		]);
-		var result = new VirtualMachine(TestPackage.Instance).Execute(optimized,
-			new Dictionary<string, ValueInstance> { ["celsius"] = Num(100) }).Returns!.Value;
+		var result = ExecuteInstructions(optimized,
+			new Dictionary<string, ValueInstance> { ["celsius"] = Num(100) });
 		Assert.That(result.Number, Is.EqualTo(10032));
 	}
 }

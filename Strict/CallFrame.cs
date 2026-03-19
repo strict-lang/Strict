@@ -1,4 +1,5 @@
 using Strict.Expressions;
+using Strict.Language;
 
 namespace Strict;
 
@@ -39,7 +40,10 @@ internal sealed class CallFrame(CallFrame? parent = null)
 	internal ValueInstance Get(string name) =>
 		TryGet(name, out var value)
 			? value
-			: throw new KeyNotFoundException(name);
+			: throw new ValueNotFound(name, this);
+
+	private class ValueNotFound(string message, CallFrame frame)
+		: Exception(message + " in " + frame);
 
 	/// <summary>
 	/// Always writes to this frame's own dict (never clobbers parent).
@@ -60,4 +64,13 @@ internal sealed class CallFrame(CallFrame? parent = null)
 		variables?.Clear();
 		memberNames?.Clear();
 	}
+
+	public override string ToString() =>
+		nameof(CallFrame) + " " + nameof(variables) + ": " + variables?.DictionaryToWordList() +
+		", members: " + (memberNames != null
+			? string.Join(", ", memberNames)
+			: "") +
+		(parent != null
+			? "\n\tParent: " + parent
+			: "");
 }

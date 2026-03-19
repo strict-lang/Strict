@@ -465,7 +465,7 @@ private Binary? binary;
       var binary = GenerateExpressionBinaryExecutable(expression);
 			OptimizeBytecode(binary);
 			var vm = new VirtualMachine(binary);
-			vm.Execute();
+			vm.ExecuteRun();
 			if (vm.Returns.HasValue)
 				Console.WriteLine(vm.Returns.Value.ToExpressionCodeString());
 		}
@@ -489,7 +489,7 @@ private Binary? binary;
 			var binary = GenerateExpressionBinaryExecutable(expression);
 			OptimizeBytecode(binary);
 			var vm = new VirtualMachine(binary);
-			vm.Execute();
+			vm.ExecuteRun();
 			if (vm.Returns.HasValue)
 				Console.WriteLine(vm.Returns.Value.ToExpressionCodeString());
 		}
@@ -499,7 +499,7 @@ private Binary? binary;
 		}
 	}
 
-	private global::Strict.Bytecode.Serialization.BinaryMethod GetRunMethod(BinaryExecutable binary)
+	private BinaryMethod GetRunMethod(BinaryExecutable binary)
 	{
 		var runMethods = binary.GetRunMethods();
    var exactMatch = runMethods.FirstOrDefault(method => method.parameters.Count == ProgramArguments.Length);
@@ -513,7 +513,7 @@ private Binary? binary;
 	}
 
 	private IReadOnlyDictionary<string, ValueInstance>? BuildProgramArguments(BinaryExecutable binary,
-		global::Strict.Bytecode.Serialization.BinaryMethod runMethod)
+		BinaryMethod runMethod)
 	{
     if (runMethod.parameters.Count == 0)
 			return null;
@@ -566,8 +566,7 @@ private Binary? binary;
 		throw new NotSupportedException("Only Number, Text, Boolean and List arguments are supported.");
 	}
 
-	private static string GetRunMethodTypeFullName(BinaryExecutable binary,
-		global::Strict.Bytecode.Serialization.BinaryMethod runMethod) =>
+	private static string GetRunMethodTypeFullName(BinaryExecutable binary, BinaryMethod runMethod) =>
 		binary.MethodsPerType.First(typeData => typeData.Value.MethodGroups.TryGetValue(Method.Run,
 			out var overloads) && overloads.Contains(runMethod)).Key;
 
@@ -616,8 +615,7 @@ private Binary? binary;
     binary.SetEntryPoint(GetRunMethodTypeFullName(binary, runMethod), Method.Run,
 			runMethod.parameters.Count, runMethod.ReturnTypeName);
 		var programArguments = BuildProgramArguments(binary, runMethod);
-    LogTiming(nameof(Run), () => new VirtualMachine(binary).Execute(binary.EntryPoint.instructions,
-			programArguments));
+    LogTiming(nameof(Run), () => new VirtualMachine(binary).ExecuteRun(programArguments));
 		Console.WriteLine("Executed " + strictFilePath + " via " + nameof(VirtualMachine) + " in " +
 			TimeSpan.FromTicks(stepTimes.Sum()).ToString(@"s\.ffffff") + "s");
 	}
