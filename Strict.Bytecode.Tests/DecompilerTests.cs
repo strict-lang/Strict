@@ -78,13 +78,13 @@ public sealed class DecompilerTests : TestBytecode
 			Assert.That(content, Does.Contain("first * second"));
 			Assert.That(content, Does.Not.Contain("Strict/"), "Type names should use short form");
 			var lines = content.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-			var lastMethodLine = Array.FindLastIndex(lines,
-				line => !line.StartsWith('\t') && line.Length > 0);
+			var lastMethodLine = Array.FindLastIndex(lines, line => !line.StartsWith('\t'));
 			Assert.That(lines[lastMethodLine], Does.StartWith("Run"), "Run method must be last");
 			var runStart = Array.FindIndex(lines,
 				line => line.TrimStart().StartsWith("Run", StringComparison.Ordinal));
 			var runBody = lines.Skip(runStart + 1).TakeWhile(line => line.StartsWith('\t')).ToArray();
-			Assert.That(runBody, Has.None.EqualTo("\tcalc.Multiply"), "Run body must not have extra calc.Multiply");
+			Assert.That(runBody, Has.None.EqualTo("\tcalc.Multiply"),
+				"Run body must not contain spurious calc.Multiply expression");
 		}
 		finally
 		{

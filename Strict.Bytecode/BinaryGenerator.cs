@@ -630,7 +630,7 @@ public sealed class BinaryGenerator
 	private static SetInstruction CreateConstantInstruction(Member member) =>
 		member.InitialValue is Value val
 			? new SetInstruction(val.Data, Register.R0)
-			: new SetInstruction(new ValueInstance(member.InitialValue!.ToString()), Register.R0);
+			: new SetInstruction(new ValueInstance(member.InitialValue!.ToString()), Register.R0); // store expression as text for decompiler reconstruction
 
 	private void CollectMethodDependencies(Method method)
 	{
