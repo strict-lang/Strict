@@ -51,7 +51,7 @@ public sealed class BinaryGeneratorTests : TestBytecode
 	}
 
 	[Test]
-	public async Task RunAdjustBrightnessAndConfirmDependenciesAreLoadedAsync()
+	public async Task RunAdjustBrightnessAndConfirmDependenciesAreLoaded()
 	{
 		var repos = new Repositories(new MethodExpressionParser());
 		var packageName = nameof(Strict) + Context.ParentSeparator + "ImageProcessing";

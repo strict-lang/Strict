@@ -67,7 +67,7 @@ public sealed class RunnerTests
 	[Test]
 	public async Task RunFromBytecodeFileProducesSameOutput()
 	{
-		var binaryFilePath = await GetExamplesBinaryFileAsync("SimpleCalculator");
+		var binaryFilePath = await GetExamplesBinaryFile("SimpleCalculator");
 		await new Runner(binaryFilePath, TestPackage.Instance).Run();
 		Assert.That(writer.ToString(),
 			Does.StartWith("2 + 3 = 5" + Environment.NewLine + "2 * 3 = 6"));
@@ -114,7 +114,7 @@ public sealed class RunnerTests
 		var asmPath = Path.ChangeExtension(SimpleCalculatorFilePath, ".asm");
 		if (File.Exists(asmPath))
 			File.Delete(asmPath); //ncrunch: no coverage
-		var binaryPath = await GetExamplesBinaryFileAsync("SimpleCalculator");
+		var binaryPath = await GetExamplesBinaryFile("SimpleCalculator");
 		await new Runner(binaryPath, TestPackage.Instance).Run();
 		Assert.That(File.Exists(asmPath), Is.False);
 	}
@@ -122,7 +122,7 @@ public sealed class RunnerTests
 	[Test]
 	public async Task SaveStrictBinaryWithTypeBytecodeEntriesOnlyAsync()
 	{
-		var binaryPath = await GetExamplesBinaryFileAsync("SimpleCalculator");
+		var binaryPath = await GetExamplesBinaryFile("SimpleCalculator");
 		await using var archive = await ZipFile.OpenReadAsync(binaryPath);
 		var entries = archive.Entries.Select(entry => entry.FullName.Replace('\\', '/')).ToList();
 		Assert.That(
@@ -215,7 +215,7 @@ public sealed class RunnerTests
 	private static string SimpleCalculatorFilePath => GetExamplesFilePath("SimpleCalculator");
 	private static string SumFilePath => GetExamplesFilePath("Sum");
 
-	private async Task<string> GetExamplesBinaryFileAsync(string filename)
+	private async Task<string> GetExamplesBinaryFile(string filename)
 	{
 		var localPath = Path.ChangeExtension(GetExamplesFilePath(filename), BinaryExecutable.Extension);
 		if (!File.Exists(localPath))
