@@ -67,9 +67,7 @@ public class RepositoriesTests
 				Contains(Path.Combine("Strict", "Invalid.strict") + ":line 1"));
 	}
 
-	//ncrunch: no coverage start
 	[Test]
-	[Category("Slow")]
 	public async Task LoadStrictExamplesPackageAndUseBasePackageTypes()
 	{
 		using var basePackage = await repos.LoadStrictPackage();
@@ -84,19 +82,19 @@ public class RepositoriesTests
 	}
 
 	[Test]
-	[Category("Slow")]
 	public async Task LoadStrictImageProcessingTypes()
 	{
 		using var basePackage = await repos.LoadStrictPackage();
-		using var mathPackage = await repos.LoadFromPath(nameof(Strict) + ".Math",
-			Repositories.GetLocalDevelopmentPath(Repositories.StrictOrg, nameof(Strict) + ".Math"));
-		using var imageProcessingPackage = await repos.LoadFromPath(nameof(Strict) + ".ImageProcessing",
-			Repositories.GetLocalDevelopmentPath(Repositories.StrictOrg,
-				nameof(Strict) + ".ImageProcessing"));
+		var mathPackageName = nameof(Strict) + Context.ParentSeparator + "Math";
+		using var mathPackage = await repos.LoadFromPath(mathPackageName,
+			Repositories.GetLocalDevelopmentPath(Repositories.StrictOrg, mathPackageName));
+		var imageProcessingPackageName = nameof(Strict) + Context.ParentSeparator + "ImageProcessing";
+		using var imageProcessingPackage = await repos.LoadFromPath(imageProcessingPackageName,
+			Repositories.GetLocalDevelopmentPath(Repositories.StrictOrg, imageProcessingPackageName));
 		var adjustBrightness = imageProcessingPackage.GetType("AdjustBrightness");
 		Assert.That(adjustBrightness, Is.Not.Null);
 		Assert.That(adjustBrightness.Methods[0].GetBodyAndParseIfNeeded(), Is.Not.Null);
-	} //ncrunch: no coverage end
+	}
 
 	[Test]
 	public async Task CheckGenericTypesAreLoadedCorrectlyAfterSorting()

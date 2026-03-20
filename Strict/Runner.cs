@@ -1,5 +1,5 @@
 // When things are in flux, force generating a new .strictbinary every time by disabling the cache
-#define DISABLE_BINARY_CACHE
+//#define DISABLE_BINARY_CACHE
 using Strict.Bytecode;
 using Strict.Compiler;
 using Strict.Compiler.Assembly;
@@ -155,6 +155,7 @@ public sealed class Runner
 		});
 	}
 
+	//TODO: this is hardcoded, it should work automatically based on what types are needed and not be here in Runner, this is BinaryGenerator stuff!
 	private async Task LoadOptionalLocalStrictPackages()
 	{
 		var strictRepositoryPath = FindStrictRepositoryPath();
