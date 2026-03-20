@@ -67,6 +67,7 @@ public sealed class Runner
 		if (IsExpressionInvocation)
 			throw new CannotBuildExecutableWithCustomExpression();
 		var binary = await GetBinary();
+		//TODO: convoluted! fix and remove this mess
 		if (binary.GetRunMethods().Any(method => method.parameters.Count > 0))
 		{
 			var launcherPath = CreateManagedLauncher(platform);
@@ -106,6 +107,7 @@ public sealed class Runner
 		var cachedBinaryPath = Path.ChangeExtension(strictFilePath, BinaryExecutable.Extension);
 		if (File.Exists(cachedBinaryPath))
 		{
+			//TODO: convoluted! fix and remove this mess
 			BinaryExecutable binary;
 			try
 			{
@@ -331,6 +333,7 @@ public sealed class Runner
 	/// </summary>
 	public async Task RunExpression(string expressionString)
 	{
+		//TODO: still duplicated code, should be the same as Run!
 		var typeName = Path.GetFileNameWithoutExtension(strictFilePath);
 		var basePackage = skipPackageSearchAndUseThisTestPackage ?? await GetPackage(nameof(Strict));
 		var sourceLines = await File.ReadAllLinesAsync(strictFilePath);
@@ -352,7 +355,7 @@ public sealed class Runner
 			targetType.Dispose();
 		}
 	}
-
+	//TODO: why do we care? just use BinaryExecutable.EntryPoint!
 	private BinaryMethod FindRunMethodForArguments(BinaryExecutable binary)
 	{
 		var runMethods = binary.GetRunMethods();
@@ -367,7 +370,7 @@ public sealed class Runner
 		throw new NotSupportedException("No Run method accepts " + ProgramArguments.Length +
 			" arguments.");
 	}
-
+	//TODO: overcomplicated
 	private IReadOnlyDictionary<string, ValueInstance>? BuildProgramArguments(
 		BinaryExecutable binary, BinaryMethod runMethod)
 	{
@@ -399,6 +402,7 @@ public sealed class Runner
 		return values;
 	}
 
+	//TODO: overcomplicated
 	private static Type ResolveType(BinaryExecutable binary, string fullTypeName) =>
 		(fullTypeName.Contains(Context.ParentSeparator)
 			? binary.basePackage.FindFullType(fullTypeName)
@@ -424,6 +428,7 @@ public sealed class Runner
 		binary.MethodsPerType.First(typeData => typeData.Value.MethodGroups.TryGetValue(Method.Run,
 			out var overloads) && overloads.Contains(runMethod)).Key;
 
+	//TODO: why do we have to do this here? shouldn't this be happening in generation?
 	private string CreateManagedLauncher(Platform platform)
 	{
 		if (platform == Platform.Windows && !OperatingSystem.IsWindows() ||
@@ -467,7 +472,7 @@ public sealed class Runner
 		}
 		var binary = await GetBinary();
 		if (ProgramArguments.Length > 0)
-		{
+		{//TODO: why do we have to do this here? shouldn't this be happening in generation?
 			var runMethod = FindRunMethodForArguments(binary);
 			binary.SetEntryPoint(GetRunMethodTypeFullName(binary, runMethod), Method.Run,
 				runMethod.parameters.Count, runMethod.ReturnTypeName);
@@ -481,3 +486,4 @@ public sealed class Runner
 			TimeSpan.FromTicks(stepTimes.Sum()).ToString(@"s\.ffffff") + "s");
 	}
 }
+//TODO: whole class is too long and complicated, this should all be doable in 300-400 lines max!

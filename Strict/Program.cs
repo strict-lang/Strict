@@ -76,8 +76,8 @@ Notes:
 			using var basePackage = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
 			var bytecodeTypes = new BinaryExecutable(filePath, basePackage);
 			new Decompiler().Decompile(bytecodeTypes, outputFolder);
-			Console.WriteLine("Decompilation complete, written all partial .strict files (only what " +
-				"was included in bytecode, no tests) to folder: " + outputFolder);
+			Console.WriteLine("Decompilation complete, written partial .strict files (no tests, only " +
+				"bytecode reconstruction) to folder:" + Environment.NewLine + outputFolder);
 		}
 		else
 		{

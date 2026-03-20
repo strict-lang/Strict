@@ -344,12 +344,14 @@ public sealed class BinaryExecutable(Package basePackage)
 		};
 	}
 
+	//TODO: missing test
 	private static Value ReadBooleanValue(BinaryReader reader, Package package, NameTable table)
 	{
 		var type = EnsureResolvedType(package, table.names[reader.Read7BitEncodedInt()]);
 		return new Value(type, new ValueInstance(type, reader.ReadBoolean()));
 	}
 
+	//TODO: avoid! remove!
 	private static Type EnsureResolvedType(Package package, string typeName)
 	{
 		var resolved = package.FindType(typeName) ?? (typeName.Contains('.')
@@ -518,6 +520,7 @@ public sealed class BinaryExecutable(Package basePackage)
 	public int TotalInstructionsCount =>
 		MethodsPerType.Values.Sum(methods => methods.TotalInstructionCount);
 
+	//TODO: way too complicated, fix callers.
 	internal BinaryExecutable AddType(string typeFullName, List<BinaryMember> members,
 		Dictionary<string, List<BinaryMethod>> methodGroups, bool isEntryType = false)
 	{
@@ -532,6 +535,7 @@ public sealed class BinaryExecutable(Package basePackage)
 		return this;
 	}
 
+	//TODO: remove this bullshit!
 	public static BinaryExecutable CreateForEntryInstructions(Package basePackage,
 		List<Instruction> instructions)
 	{

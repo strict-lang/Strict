@@ -12,22 +12,23 @@ internal class Program
 			BinaryExecutable.Extension);
 		// First, ensure the .strictbinary file exists by compiling from source
 		if (!File.Exists(binaryFilePath))
-			RunSilently(() => new Runner(
-				Path.Combine(AppContext.BaseDirectory, "Examples", "SimpleCalculator.strict")).Run().GetAwaiter().GetResult());
-		// Warm up: one full binary execution to JIT and cache everything (also populates the binary cache)
-		RunBinaryOnce(binaryFilePath);
+			await new Runner(
+				Path.Combine(AppContext.BaseDirectory, "Examples", "SimpleCalculator.strict")).Run();
+		// Warm up: one full binary execution to JIT, cache everything and populates the binary cache
+		await RunBinaryOnceAsync(binaryFilePath);
 		Console.WriteLine("Warmup complete. Starting performance measurement...");
 		const int Runs = 1000;
 		// Measure: 1000 iterations of full Runner.Run() from .strictbinary (cache hits after warmup)
 		var allocatedBefore = GC.GetAllocatedBytesForCurrentThread();
 		var startTicks = DateTime.UtcNow.Ticks;
 		for (var run = 0; run < Runs; run++)
-			RunBinaryOnce(binaryFilePath);
+			await RunBinaryOnceAsync(binaryFilePath);
 		var endTicks = DateTime.UtcNow.Ticks;
 		var allocatedAfter = GC.GetAllocatedBytesForCurrentThread();
 		Console.WriteLine("Total execution time per run (full binary Runner.Run, cached): " +
 			TimeSpan.FromTicks(endTicks - startTicks) / Runs);
-		Console.WriteLine("Allocated bytes per run (cached): " + (allocatedAfter - allocatedBefore) / Runs);
+		Console.WriteLine("Allocated bytes per run (cached): " +
+			(allocatedAfter - allocatedBefore) / Runs);
 		// Now measure only the hot VM execution loop (pre-loaded bytecode, no file I/O)
 		var hotPathBenchmark = new BinaryExecutionPerformanceTests();
 		await hotPathBenchmark.ExecuteBinary();
@@ -39,19 +40,17 @@ internal class Program
 		var hotAllocatedAfter = GC.GetAllocatedBytesForCurrentThread();
 		Console.WriteLine("Total execution time per run (VM-only, pre-loaded bytecode): " +
 			TimeSpan.FromTicks(hotEndTicks - hotStartTicks) / Runs);
-		Console.WriteLine("Allocated bytes per run (VM-only): " + (hotAllocatedAfter - hotAllocatedBefore) / Runs);
+		Console.WriteLine("Allocated bytes per run (VM-only): " +
+			(hotAllocatedAfter - hotAllocatedBefore) / Runs);
 	}
 
-	private static void RunBinaryOnce(string binaryFilePath) =>
-		RunSilently(() => new Runner(binaryFilePath).Run().GetAwaiter().GetResult());
-
-	private static void RunSilently(Action action)
+	private static async Task RunBinaryOnceAsync(string binaryFilePath)
 	{
 		var saved = Console.Out;
 		Console.SetOut(TextWriter.Null);
 		try
 		{
-			action();
+			await new Runner(binaryFilePath).Run();
 		}
 		finally
 		{

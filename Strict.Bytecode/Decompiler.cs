@@ -39,8 +39,10 @@ public sealed class Decompiler
 					setValue.ValueInstance.ToExpressionCodeString());
 			else
 				lines.Add("has " + member.Name + " " + member.JustTypeName);
-		foreach (var (methodName, methods) in typeData.MethodGroups
-			.OrderBy(group => group.Key == Method.Run ? 1 : 0))
+		foreach (var (methodName, methods) in typeData.MethodGroups.OrderBy(
+			group => group.Key == Method.Run
+				? 1
+				: 0))
 		foreach (var method in methods)
 		{
 			lines.Add(BinaryType.ReconstructMethodName(methodName, method));

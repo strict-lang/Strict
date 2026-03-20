@@ -35,8 +35,19 @@ public class BinaryExecutionPerformanceTests
 			Thread.Sleep(100);
 			await new Runner(StrictFilePath).Run();
 		} //ncrunch: no coverage end
-		var executable = new BinaryExecutable(BinaryFilePath, TestPackage.Instance);
-		return new VirtualMachine(executable);
+		try
+		{
+			var executable = new BinaryExecutable(BinaryFilePath, TestPackage.Instance);
+			return new VirtualMachine(executable);
+		}
+		//ncrunch: no coverage start
+		catch (IOException)
+		{
+			// Try again if the file was used in another test
+			Thread.Sleep(100);
+			var executable = new BinaryExecutable(BinaryFilePath, TestPackage.Instance);
+			return new VirtualMachine(executable);
+		} //ncrunch: no coverage end
 	}
 
 	private static string StrictFilePath => RunnerTests.GetExamplesFilePath("SimpleCalculator");

@@ -29,6 +29,7 @@
 - Do not add SupportedOSPlatform attributes, especially in tests just because you can't do something locally.
 - Do not add ad-hoc hacky cuda kernel code or any code without a proper transpiler or code emitter.
 - Do not add long comments, limit to 3 lines for summaries, best is none or 1 line. Inside methods there should usually not be any comments. Do not add comments to separate sections in a file (like using ---- or ====, that's ugly).
+- Do not remove TODOs until the code has actually be improved and fixed. When there are tests failing that cover the TODO, the TODO still needs to be tested and fixed before removal.
 
 ## Tests
 - Do not run Category("Manual") or \[Ignore\] tests ever; tests with these attributes are either supposed to be manually run or are currently disabled and ignored. If a test is fixed, remove the Ignore attribute and it becomes a normal test again.
@@ -442,4 +443,4 @@ Otherwise → not TDD
 No exceptions without your human partner's permission.
 
 ## Optimization Work
-- Demonstrate actual measured improvement in generated executable size, not just theoretical flag changes.
+- Demonstrate actual measured improvement in generated executable size and execution speed, not just theoretical flag changes.

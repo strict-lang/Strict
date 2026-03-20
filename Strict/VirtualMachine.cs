@@ -25,6 +25,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 
 	private bool conditionFlag;
 	private int instructionIndex;
+	//TODO: find all IReadOnlyList here and remove, also why do we copy so many lists around, use BinaryMethod!
 	private IReadOnlyList<Instruction> instructions = [];
 	public ValueInstance? Returns { get; private set; }
 	public Memory Memory { get; } = new();
@@ -151,7 +152,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		if (result != null)
 			Memory.Registers[invoke.Register] = result.Value;
 	}
-
+	//TODO: find all [.. with existing list and no changes, all those cases need to be removed, there is a crazy amount of those added (54 wtf)!
 	private IReadOnlyList<Instruction>? GetPrecompiledMethodInstructions(Method method) =>
 		executable.FindInstructions(method.Type, method) ??
 		executable.FindInstructions(method.Type.Name, method.Name,

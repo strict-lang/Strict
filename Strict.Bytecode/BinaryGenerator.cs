@@ -13,6 +13,7 @@ namespace Strict.Bytecode;
 /// </summary>
 public sealed class BinaryGenerator
 {
+	//TODO: not really used,  these are all wrong, the constructor should only use the basePackage to make everything possible, the Generate method should get the entry point and find the rest from there! 3 constructors is just plain stupid. this was mostly to get the old tests working, but they are mostly wrong anyway!
 	public BinaryGenerator(Expression entryPoint)
 	{
 		entryTypeFullName = GetEntryTypeFullName(entryPoint);
@@ -27,6 +28,7 @@ public sealed class BinaryGenerator
 		if (methodCall.Instance is MethodCall instanceCall)
 			AddInstanceMemberVariables(instanceCall);
 		AddMethodParameterVariables(methodCall);
+		//TODO: this randomly crashes VirtualMachineTests.Enum stuff .. bad anyway
 		var methodBody = methodCall.Method.GetBodyAndParseIfNeeded();
 		Expressions = methodBody is Body body
 			? body.Expressions
@@ -45,34 +47,17 @@ public sealed class BinaryGenerator
 
 	private readonly BinaryExecutable binary;
 	private readonly string entryTypeFullName;
-	private readonly List<Instruction> instructions = [];
-	private static readonly HashSet<string> StrictRuntimeTypeNames =
-	[
-		Type.Any,
-		Type.Boolean,
-		Type.Character,
-		Type.Dictionary,
-		Type.Logger,
-		Type.Number,
-		Type.Range,
-		Type.Text,
-		Type.TextReader,
-		Type.TextWriter,
-		Type.List,
-		Type.None,
-		Type.System
-	];
+	private readonly List<Instruction> instructions = []; //TODO: why not keep this in BinaryMethod
 	private readonly Dictionary<string, Type> dependencyTypes = new(StringComparer.Ordinal);
 	private readonly Registry registry = new();
 	private readonly Stack<int> idStack = new();
 	private readonly Register[] registers = Enum.GetValues<Register>();
-	private IReadOnlyList<Expression> Expressions { get; }
-	private Type ReturnType { get; }
-	private int conditionalId;
+	private IReadOnlyList<Expression> Expressions { get; } //TODO: stupid, remove
+	private Type ReturnType { get; } //TODO: stupid, remove
+	private int conditionalId; //TODO: a bit strange
 	private int forResultId;
 
-	public BinaryExecutable Generate() =>
-		Generate(entryTypeFullName, Expressions, ReturnType);
+	public BinaryExecutable Generate() =>	Generate(entryTypeFullName, Expressions, ReturnType);
 
 	public static BinaryExecutable GenerateFromRunMethods(Method preferredEntryMethod,
 		IReadOnlyList<Method> runMethods)
@@ -168,6 +153,7 @@ public sealed class BinaryGenerator
 					Generic.Name: Type.List
 				} && !(instance.Arguments.Count == 1 && instance.Arguments[0] is List))
 			{
+				//TODO: not very efficient
 				var listItems = instance.Arguments.Select(GetValueInstanceFromExpression).ToArray();
 				instructions.Add(new StoreVariableInstruction(
 					new ValueInstance(instance.Method.Parameters[parameterIndex].Type, listItems),
@@ -347,7 +333,7 @@ public sealed class BinaryGenerator
 			if (!CanGenerateDirectBinaryInstruction(binaryExpression.Method.Name))
 				return TryGenerateMethodCallInstruction(binaryExpression);
 			GenerateCodeForBinary(binaryExpression);
-			return true;
+			return true; //TODO: there is not even false here, this is no good
 		}
 		return null;
 	}
@@ -611,7 +597,9 @@ public sealed class BinaryGenerator
 			var members = type.Members
 				.Where(member => !member.IsConstant || member.InitialValue != null)
 				.Select(member => new BinaryMember(member.Name, GetBinaryTypeName(member.Type, entryType),
-					member.IsConstant ? CreateConstantInstruction(member) : null))
+					member.IsConstant && member.InitialValue is Value val
+						? new SetInstruction(val.Data, Register.R0)
+						: null))
 				.ToList();
 			binary.AddType(GetBinaryTypeName(type, entryType), members,
 				methodsByType.TryGetValue(type.FullName, out var methodGroups)
@@ -620,11 +608,6 @@ public sealed class BinaryGenerator
 				type == entryType);
 		}
 	}
-
-	private static SetInstruction CreateConstantInstruction(Member member) =>
-		member.InitialValue is Value val
-			? new SetInstruction(val.Data, Register.R0)
-			: new SetInstruction(new ValueInstance(member.InitialValue!.ToString()), Register.R0); // store expression as text for decompiler reconstruction
 
 	private void CollectMethodDependencies(Method method)
 	{
@@ -742,15 +725,11 @@ public sealed class BinaryGenerator
 			: type.FullName;
 	}
 
-	private static bool IsStrictBaseType(Type type, Type entryType)
-	{
-		if (type.FullName == entryType.FullName)
-			return false;
-		if (type.Package.Name == nameof(Strict))
-			return true;
-		return entryType.Package.Name == "TestPackage" && type.Package.Name == "TestPackage" &&
-			StrictRuntimeTypeNames.Contains(type.Name);
-	}
+	private static bool IsStrictBaseType(Type type, Type entryType) =>
+		type.FullName == entryType.FullName
+			? false
+			: type.Package.Name == nameof(Strict) ||
+				entryType.Package.Name == "TestPackage" && type.Package.Name == "TestPackage";
 
 	private Dictionary<string, Dictionary<string, List<BinaryMethod>>> CompileMethodsFromExpressions(
 		string thisEntryTypeFullName, IReadOnlyList<Expression> entryExpressions, Type runReturnType)
@@ -760,6 +739,7 @@ public sealed class BinaryGenerator
 		var methodsToCompile = new Queue<Method>();
 		var compiledMethodKeys = new HashSet<string>(StringComparer.Ordinal);
 
+		//TODO: remove
 		void EnqueueInvokedMethods(IReadOnlyList<Instruction> thisInstructions)
 		{
 			foreach (var invoke in thisInstructions.OfType<Invoke>())
@@ -798,6 +778,7 @@ public sealed class BinaryGenerator
 		return methodsByType;
 	}
 
+	//TODO: remove
 	private List<Instruction> GenerateInstructionList() => GenerateInstructions(Expressions);
 
 	private static string BuildMethodKey(Method method) =>
@@ -806,6 +787,7 @@ public sealed class BinaryGenerator
 				new BinaryMember(parameter.Name, parameter.Type.FullName, null)).ToList(),
 			method.ReturnType);
 
+	//TODO: remove, not even called!
 	private static void EnqueueCalledMethods(IReadOnlyList<Instruction> instructions,
 		Queue<Method> methodsToCompile, HashSet<string> compiledMethodKeys)
 	{
