@@ -123,7 +123,7 @@ public sealed class RunnerTests
 	public async Task SaveStrictBinaryWithTypeBytecodeEntriesOnlyAsync()
 	{
 		var binaryPath = await GetExamplesBinaryFileAsync("SimpleCalculator");
-		using var archive = ZipFile.OpenRead(binaryPath);
+		await using var archive = await ZipFile.OpenReadAsync(binaryPath);
 		var entries = archive.Entries.Select(entry => entry.FullName.Replace('\\', '/')).ToList();
 		Assert.That(
 			entries.All(entry =>
@@ -191,7 +191,7 @@ public sealed class RunnerTests
 			File.Copy(SimpleCalculatorFilePath, sourceCopyPath);
 			await new Runner(sourceCopyPath, TestPackage.Instance).Run();
 			var binaryPath = Path.ChangeExtension(sourceCopyPath, BinaryExecutable.Extension);
-			using var archive = ZipFile.OpenRead(binaryPath);
+			await using var archive = await ZipFile.OpenReadAsync(binaryPath);
 			var entry = archive.Entries.First(file => file.FullName == "SimpleCalculator.bytecode");
 			using var reader = new BinaryReader(entry.Open());
 			Assert.That(reader.ReadByte(), Is.EqualTo((byte)'S'));

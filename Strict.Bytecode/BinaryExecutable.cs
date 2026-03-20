@@ -68,13 +68,13 @@ public sealed class BinaryExecutable(Package basePackage) : IEnumerable<Instruct
 	/// contains all members of this type and all not stripped out methods that were actually used.
 	/// </summary>
 	public Dictionary<string, BinaryType> MethodsPerType = new();
-	private  BinaryMethod? entryPoint;
+	private BinaryMethod? entryPoint;
 	public BinaryMethod EntryPoint => entryPoint ??= ResolveEntryPoint();
 	public sealed class InvalidFile(string message) : Exception(message);
 
- public IReadOnlyList<BinaryMethod> GetRunMethods()
+	public IReadOnlyList<BinaryMethod> GetRunMethods()
 	{
-   var runMethods = new List<BinaryMethod>();
+		var runMethods = new List<BinaryMethod>();
 		foreach (var typeData in MethodsPerType.Values)
 			if (typeData.MethodGroups.TryGetValue(Method.Run, out var overloads))
 				runMethods.AddRange(overloads);
@@ -84,7 +84,8 @@ public sealed class BinaryExecutable(Package basePackage) : IEnumerable<Instruct
 	private BinaryMethod ResolveEntryPoint()
 	{
 		foreach (var typeData in MethodsPerType.Values)
-			if (typeData.MethodGroups.TryGetValue(Method.Run, out var runMethods) && runMethods.Count > 0)
+			if (typeData.MethodGroups.TryGetValue(Method.Run, out var runMethods) &&
+				runMethods.Count > 0)
 				return runMethods[0];
 		throw new InvalidOperationException("No Run entry point found in binary executable");
 	}
@@ -123,11 +124,13 @@ public sealed class BinaryExecutable(Package basePackage) : IEnumerable<Instruct
 		}
 	}
 
-	public static implicit operator List<Instruction>(BinaryExecutable binary) =>
-		binary.EntryPoint.instructions;
+	//TODO: remove
+	public static implicit operator List<Instruction>(BinaryExecutable binary)
+	{
+		return binary.EntryPoint.instructions;
+	}
 
 	public List<Instruction> ToInstructions() => EntryPoint.instructions;
-
 	public const string Extension = ".strictbinary";
 
 	public Instruction ReadInstruction(BinaryReader reader, NameTable table)
@@ -137,7 +140,8 @@ public sealed class BinaryExecutable(Package basePackage) : IEnumerable<Instruct
 		{
 			InstructionType.LoadConstantToRegister => new LoadConstantInstruction(reader, table, this),
 			InstructionType.LoadVariableToRegister => new LoadVariableToRegister(reader, table),
-			InstructionType.StoreConstantToVariable => new StoreVariableInstruction(reader, table, this),
+			InstructionType.StoreConstantToVariable =>
+				new StoreVariableInstruction(reader, table, this),
 			InstructionType.StoreRegisterToVariable => new StoreFromRegisterInstruction(reader, table),
 			InstructionType.Set => new SetInstruction(reader, table, this),
 			InstructionType.Invoke => new Invoke(reader, table, this),
@@ -281,7 +285,7 @@ public sealed class BinaryExecutable(Package basePackage) : IEnumerable<Instruct
 		var paramCount = reader.Read7BitEncodedInt();
 		var parameters = new BinaryMember[paramCount];
 		for (var index = 0; index < paramCount; index++)
-      parameters[index] = new BinaryMember(table.names[reader.Read7BitEncodedInt()],
+			parameters[index] = new BinaryMember(table.names[reader.Read7BitEncodedInt()],
 				table.names[reader.Read7BitEncodedInt()], null);
 		var returnTypeName = table.names[reader.Read7BitEncodedInt()];
 		var hasInstance = reader.ReadBoolean();
@@ -301,11 +305,12 @@ public sealed class BinaryExecutable(Package basePackage) : IEnumerable<Instruct
 		return new MethodCall(method, instance, args, methodReturnType);
 	}
 
-	private Method FindMethod(Type type, string methodName, IReadOnlyList<BinaryMember> parameters,
-		Type returnType)
+	private static Method FindMethod(Type type, string methodName,
+		IReadOnlyList<BinaryMember> parameters, Type returnType)
 	{
 		var method = type.Methods.FirstOrDefault(existingMethod =>
-				existingMethod.Name == methodName && existingMethod.Parameters.Count == parameters.Count) ??
+				existingMethod.Name == methodName &&
+				existingMethod.Parameters.Count == parameters.Count) ??
 			type.Methods.FirstOrDefault(existingMethod => existingMethod.Name == methodName);
 		if (method != null)
 			return method;
@@ -341,8 +346,8 @@ public sealed class BinaryExecutable(Package basePackage) : IEnumerable<Instruct
 			ExpressionKind.TextValue => new Text(package, table.names[reader.Read7BitEncodedInt()]),
 			ExpressionKind.BooleanValue => ReadBooleanValue(reader, package, table),
 			ExpressionKind.VariableRef => ReadVariableRef(reader, package, table),
-			ExpressionKind.MemberRef => ReadMemberRef(reader, package, table),
-			ExpressionKind.BinaryExpr => ReadBinaryExpr(reader, package, table),
+			ExpressionKind.MemberRef => ReadMemberRef(reader, table),
+			ExpressionKind.BinaryExpr => ReadBinaryExpr(reader, table),
 			ExpressionKind.MethodCallExpr => ReadMethodCall(reader, table),
 			_ => throw new InvalidFile("Unknown ExpressionKind: " + kind)
 		};
@@ -388,7 +393,7 @@ public sealed class BinaryExecutable(Package basePackage) : IEnumerable<Instruct
 		return new ParameterCall(param);
 	}
 
-	private MemberCall ReadMemberRef(BinaryReader reader, Package package, NameTable table)
+	private MemberCall ReadMemberRef(BinaryReader reader, NameTable table)
 	{
 		var memberName = table.names[reader.Read7BitEncodedInt()];
 		var memberTypeName = table.names[reader.Read7BitEncodedInt()];
@@ -401,7 +406,7 @@ public sealed class BinaryExecutable(Package basePackage) : IEnumerable<Instruct
 		return new MemberCall(instance, fakeMember);
 	}
 
-	private Binary ReadBinaryExpr(BinaryReader reader, Package package, NameTable table)
+	private Binary ReadBinaryExpr(BinaryReader reader, NameTable table)
 	{
 		var operatorName = table.names[reader.Read7BitEncodedInt()];
 		var left = ReadExpression(reader, table);
@@ -411,8 +416,8 @@ public sealed class BinaryExecutable(Package basePackage) : IEnumerable<Instruct
 	}
 
 	private static Method FindOperatorMethod(string operatorName, Type preferredType) =>
-		preferredType.Methods.FirstOrDefault(m => m.Name == operatorName) ?? throw new
-			MethodNotFoundException(operatorName);
+		preferredType.Methods.FirstOrDefault(m => m.Name == operatorName) ??
+		throw new MethodNotFoundException(operatorName);
 
 	public sealed class MethodNotFoundException(string methodName)
 		: Exception($"Method '{methodName}' not found");
@@ -469,7 +474,7 @@ public sealed class BinaryExecutable(Package basePackage) : IEnumerable<Instruct
 			writer.Write7BitEncodedInt(table[methodCall.Method.Type.Name]);
 			writer.Write7BitEncodedInt(table[methodCall.Method.Name]);
 			writer.Write7BitEncodedInt(methodCall.Method.Parameters.Count);
-      foreach (var parameter in methodCall.Method.Parameters)
+			foreach (var parameter in methodCall.Method.Parameters)
 			{
 				writer.Write7BitEncodedInt(table[parameter.Name]);
 				writer.Write7BitEncodedInt(table[parameter.Type.FullName]);
@@ -499,7 +504,7 @@ public sealed class BinaryExecutable(Package basePackage) : IEnumerable<Instruct
 			writer.Write7BitEncodedInt(table[methodCall.Method.Type.Name]);
 			writer.Write7BitEncodedInt(table[methodCall.Method.Name]);
 			writer.Write7BitEncodedInt(methodCall.Method.Parameters.Count);
-      foreach (var parameter in methodCall.Method.Parameters)
+			foreach (var parameter in methodCall.Method.Parameters)
 			{
 				writer.Write7BitEncodedInt(table[parameter.Name]);
 				writer.Write7BitEncodedInt(table[parameter.Type.FullName]);

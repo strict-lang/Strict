@@ -1,6 +1,5 @@
 using Strict.Bytecode;
 using Strict.Bytecode.Instructions;
-using Strict.Bytecode.Serialization;
 using Strict.Expressions;
 using Strict.Language;
 
@@ -14,15 +13,10 @@ namespace Strict.Compiler.Assembly;
 /// </summary>
 public sealed class InstructionsToMlir : InstructionsCompiler
 {
-	/// <summary>Minimum iteration×body-instruction complexity to emit scf.parallel instead of scf.for.</summary>
-	public const int ComplexityThreshold = 100_000;
-	/// <summary>Minimum complexity to offload to GPU via gpu.launch instead of scf.parallel.</summary>
-	public const int GpuComplexityThreshold = 10_000_000;
-
 	public override Task<string> Compile(BinaryExecutable binary, Platform platform)
 	{
 		var precompiledMethods = BuildPrecompiledMethodsInternal(binary);
-		var output = CompileForPlatform(Method.Run, binary.EntryPoint.instructions, platform,
+		var output = CompileForPlatform(Method.Run, binary.EntryPoint.instructions,
 			precompiledMethods);
 		return Task.FromResult(output);
 	}
@@ -32,8 +26,8 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 	public string CompileInstructions(string methodName, List<Instruction> instructions) =>
 		BuildFunction(methodName, [], instructions).Text;
 
-	private string CompileForPlatform(string methodName, IReadOnlyList<Instruction> instructions,
-		Platform platform, IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods = null)
+	private static string CompileForPlatform(string methodName, List<Instruction> instructions,
+		Dictionary<string, List<Instruction>>? precompiledMethods = null)
 	{
 		var hasPrint = instructions.OfType<PrintInstruction>().Any();
 		var methodInfos = CollectMethods([.. instructions], precompiledMethods);
@@ -344,7 +338,7 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 	private static string BuildEntryPoint(string methodName) =>
 		"  func.func @main() -> i32 {\n" +
 		$"    %result = func.call @{methodName}() : () -> f64\n" +
-    "    %exitCode = arith.constant 0 : i32\n" +
+		"    %exitCode = arith.constant 0 : i32\n" +
 		"    return %exitCode : i32\n" +
 		"  }";
 
@@ -378,14 +372,23 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 			: 0L;
 		var bodyCount = CountLoopBodyInstructions(instructions, loopBeginIndex, loopBegin);
 		var complexity = iterationCount * Math.Max(bodyCount, 1);
-		context.LoopStack.Push(new LoopState(startIndex, endIndex, step, inductionVar));
+		context.ActiveLoopCount++;
 		if (complexity > GpuComplexityThreshold)
-			EmitGpuLaunch(lines, context, startIndex, endIndex, step, inductionVar);
+			EmitGpuLaunch(lines, context, startIndex, endIndex);
 		else if (complexity > ComplexityThreshold)
 			lines.Add($"    scf.parallel ({inductionVar}) = ({startIndex}) to ({endIndex}) step ({step}) {{");
 		else
 			lines.Add($"    scf.for {inductionVar} = {startIndex} to {endIndex} step {step} {{");
 	}
+
+	/// <summary>
+	/// Minimum iteration×body-instruction complexity to emit scf.parallel instead of scf.for.
+	/// </summary>
+	public const int ComplexityThreshold = 100_000;
+	/// <summary>
+	/// Minimum complexity to offload to GPU via gpu.launch instead of scf.parallel.
+	/// </summary>
+	public const int GpuComplexityThreshold = 10_000_000;
 
 	private static int CountLoopBodyInstructions(List<Instruction> instructions,
 		int loopBeginIndex, LoopBeginInstruction loopBegin)
@@ -402,7 +405,7 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 	}
 
 	private static void EmitGpuLaunch(List<string> lines, EmitContext context,
-		string startIndex, string endIndex, string step, string inductionVar)
+		string startIndex, string endIndex)
 	{
 		context.SetGpuActive();
 		var numElements = context.NextTemp();
@@ -417,8 +420,8 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 		lines.Add($"    {hostBuf} = memref.alloc({numElements}) : memref<?xf64>");
 		lines.Add($"    {devBuf}, %stream = gpu.alloc({numElements}) : memref<?xf64>");
 		lines.Add($"    gpu.memcpy %stream {devBuf}, {hostBuf} : memref<?xf64>, memref<?xf64>");
-		context.GpuBufferState = new GpuBufferInfo(hostBuf, devBuf, numElements);
-		lines.Add($"    %block_x = arith.constant 256 : index");
+		context.GpuBufferState = new GpuBufferInfo(hostBuf, devBuf);
+		lines.Add("    %block_x = arith.constant 256 : index");
 		lines.Add($"    {gridX} = arith.ceildivui {numElements}, %block_x : index");
 		lines.Add($"    {gridY} = arith.constant 1 : index");
 		lines.Add($"    {gridZ} = arith.constant 1 : index");
@@ -437,9 +440,9 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 
 	private static void EmitLoopEnd(List<string> lines, EmitContext context)
 	{
-		if (context.LoopStack.Count == 0)
+		if (context.ActiveLoopCount == 0)
 			return;
-		context.LoopStack.Pop();
+		context.ActiveLoopCount--;
 		if (context.UsesGpu)
 		{
 			lines.Add("        }");
@@ -500,16 +503,12 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 		var variableName = expression.ToString();
 		if (context.ParamIndexByName.TryGetValue(variableName, out var paramIndex))
 			return $"%param{paramIndex}";
-		if (context.VariableValues.TryGetValue(variableName, out var variableValue))
-			return variableValue;
-		throw new NotSupportedException("Unsupported expression for MLIR compilation: " + expression);
+		return context.VariableValues.TryGetValue(variableName, out var variableValue)
+			? variableValue
+			: throw new NotSupportedException("Unsupported expression for MLIR compilation: " + expression);
 	}
 
-	private sealed record LoopState(string StartIndex, string EndIndex, string Step,
-		string InductionVar);
-
-	private sealed record GpuBufferInfo(string HostBuffer, string DeviceBuffer,
-		string NumElements);
+	private sealed record GpuBufferInfo(string HostBuffer, string DeviceBuffer);
 
 	private sealed class EmitContext(string functionName)
 	{
@@ -525,15 +524,17 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 		public string? LastConditionTemp { get; set; }
 		public HashSet<int> JumpTargets { get; } = [];
 		public List<(string Name, string Text, int ByteLen)> StringConstants { get; } = [];
-		public Stack<LoopState> LoopStack { get; } = new();
+		public int ActiveLoopCount;
 		public Dictionary<Register, double> RegisterConstants { get; } = new();
 		public bool UsesGpu { get; set; }
 		public bool HadGpuOps { get; private set; }
+
 		public void SetGpuActive()
 		{
 			UsesGpu = true;
 			HadGpuOps = true;
 		}
+
 		public GpuBufferInfo? GpuBufferState { get; set; }
 	}
 }

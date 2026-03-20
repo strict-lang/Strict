@@ -1,6 +1,5 @@
 using Strict.Bytecode;
 using Strict.Bytecode.Instructions;
-using Strict.Bytecode.Serialization;
 using Strict.Expressions;
 using Strict.Language;
 
@@ -27,7 +26,7 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 	public string CompileInstructions(string methodName, List<Instruction> instructions) =>
 		BuildFunction(methodName, [], instructions, Platform.Linux);
 
-	private string CompileForPlatform(string methodName, IReadOnlyList<Instruction> instructions,
+	private static string CompileForPlatform(string methodName, IReadOnlyList<Instruction> instructions,
 		Platform platform, IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods = null)
 	{
 		var hasPrint = instructions.OfType<PrintInstruction>().Any();

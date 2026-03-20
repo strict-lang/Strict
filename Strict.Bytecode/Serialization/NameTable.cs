@@ -1,4 +1,3 @@
-using System.Collections;
 using Strict.Bytecode.Instructions;
 using Strict.Expressions;
 using Strict.Language;
@@ -27,7 +26,6 @@ public sealed class NameTable
 	}
 
 	private readonly int prefilledNamesCount;
-
 	/// <summary>
 	/// Common names that appear in most .strict files, mostly base type usages.
 	/// </summary>
@@ -52,24 +50,24 @@ public sealed class NameTable
 		Type.Stacktrace,
 		Type.Mutable,
 		Type.Dictionary,
-		nameof(Strict) + Type.ParentSeparator + Type.None,
-		nameof(Strict) + Type.ParentSeparator + Type.Boolean,
-		nameof(Strict) + Type.ParentSeparator + Type.Number,
-		nameof(Strict) + Type.ParentSeparator + Type.Character,
-		nameof(Strict) + Type.ParentSeparator + Type.Range,
-		nameof(Strict) + Type.ParentSeparator + Type.Text,
-		nameof(Strict) + Type.ParentSeparator + Type.Error,
-		nameof(Strict) + Type.ParentSeparator + Type.ErrorWithValue,
-		nameof(Strict) + Type.ParentSeparator + Type.Iterator,
-		nameof(Strict) + Type.ParentSeparator + Type.List,
-		nameof(Strict) + Type.ParentSeparator + Type.Logger,
-		nameof(Strict) + Type.ParentSeparator + Type.File,
-		nameof(Strict) + Type.ParentSeparator + Type.Directory,
-		nameof(Strict) + Type.ParentSeparator + Type.TextWriter,
-		nameof(Strict) + Type.ParentSeparator + Type.TextReader,
-		nameof(Strict) + Type.ParentSeparator + Type.Stacktrace,
-		nameof(Strict) + Type.ParentSeparator + Type.Mutable,
-		nameof(Strict) + Type.ParentSeparator + Type.Dictionary,
+		nameof(Strict) + Context.ParentSeparator + Type.None,
+		nameof(Strict) + Context.ParentSeparator + Type.Boolean,
+		nameof(Strict) + Context.ParentSeparator + Type.Number,
+		nameof(Strict) + Context.ParentSeparator + Type.Character,
+		nameof(Strict) + Context.ParentSeparator + Type.Range,
+		nameof(Strict) + Context.ParentSeparator + Type.Text,
+		nameof(Strict) + Context.ParentSeparator + Type.Error,
+		nameof(Strict) + Context.ParentSeparator + Type.ErrorWithValue,
+		nameof(Strict) + Context.ParentSeparator + Type.Iterator,
+		nameof(Strict) + Context.ParentSeparator + Type.List,
+		nameof(Strict) + Context.ParentSeparator + Type.Logger,
+		nameof(Strict) + Context.ParentSeparator + Type.File,
+		nameof(Strict) + Context.ParentSeparator + Type.Directory,
+		nameof(Strict) + Context.ParentSeparator + Type.TextWriter,
+		nameof(Strict) + Context.ParentSeparator + Type.TextReader,
+		nameof(Strict) + Context.ParentSeparator + Type.Stacktrace,
+		nameof(Strict) + Context.ParentSeparator + Type.Mutable,
+		nameof(Strict) + Context.ParentSeparator + Type.Dictionary,
 		Type.Boolean.MakeFirstLetterLowercase(),
 		Type.Number.MakeFirstLetterLowercase(),
 		Type.Character.MakeFirstLetterLowercase(),
@@ -163,7 +161,7 @@ public sealed class NameTable
 		Add(mc.Method.Type.Name);
 		Add(mc.Method.Name);
 		Add(mc.ReturnType.Name);
-    foreach (var parameter in mc.Method.Parameters)
+		foreach (var parameter in mc.Method.Parameters)
 			Add(parameter.Name).Add(parameter.Type.FullName);
 		if (mc.Instance != null)
 			CollectExpressionStrings(mc.Instance);

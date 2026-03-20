@@ -7,7 +7,8 @@ public sealed class LoopBeginInstruction : RegisterInstruction
 	public LoopBeginInstruction(Register register) : base(InstructionType.LoopBegin, register) { }
 
 	public LoopBeginInstruction(Register startIndex, Register endIndex)
-		: base(InstructionType.LoopBegin, startIndex) => EndIndex = endIndex;
+		: base(InstructionType.LoopBegin, startIndex) =>
+		EndIndex = endIndex;
 
 	public LoopBeginInstruction(BinaryReader reader) : this((Register)reader.ReadByte())
 	{

@@ -19,7 +19,6 @@ internal sealed class CallFrame(CallFrame? parent = null)
 
 	private Dictionary<string, ValueInstance>? variables;
 	private HashSet<string>? memberNames;
-
 	/// <summary>
 	/// Materialized locals dict — used by <see cref="Memory.Variables"/> for test compatibility
 	/// </summary>
@@ -50,7 +49,7 @@ internal sealed class CallFrame(CallFrame? parent = null)
 			? value
 			: throw new ValueNotFound(name, this);
 
-	private class ValueNotFound(string message, CallFrame frame)
+	private sealed class ValueNotFound(string message, CallFrame frame)
 		: Exception(message + " in " + frame);
 
 	/// <summary>

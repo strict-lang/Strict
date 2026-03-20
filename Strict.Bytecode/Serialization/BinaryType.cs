@@ -1,4 +1,3 @@
-using Strict.Bytecode.Instructions;
 using Strict.Language;
 using Type = Strict.Language.Type;
 
@@ -66,9 +65,9 @@ public sealed class BinaryType
 	internal const byte StrictMagicByte = (byte)'S';
 	public sealed class InvalidBytecodeEntry(string message) : Exception(message);
 	public const byte Version = 1;
+
 	public sealed class InvalidVersion(byte fileVersion) : Exception("File version: " +
 		fileVersion + ", this runtime only supports up to version " + Version);
-	private NameTable? table;
 
 	internal void ReadMembers(BinaryReader reader, List<BinaryMember> members)
 	{
@@ -79,6 +78,7 @@ public sealed class BinaryType
 
 	public List<BinaryMember> Members = [];
 	public Dictionary<string, List<BinaryMethod>> MethodGroups = [];
+	private NameTable? table;
 	public NameTable Table => table ?? CreateNameTable();
 	public bool UsesConsolePrint =>
 		MethodGroups.Values.Any(methods => methods.Any(method => method.UsesConsolePrint));

@@ -1,4 +1,3 @@
-using Strict;
 using Strict.Bytecode.Instructions;
 
 namespace Strict.Optimizers.Tests;

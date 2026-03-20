@@ -1,6 +1,5 @@
 using Strict.Bytecode.Instructions;
 using Strict.Bytecode.Serialization;
-using Strict.Language;
 using System.IO.Compression;
 using Type = Strict.Language.Type;
 
@@ -59,7 +58,7 @@ public sealed class BinaryExecutableTests : TestBytecode
 	public void ReadingUnknownInstructionTypeThrowsInvalidFile()
 	{
 		var binary = new BinaryExecutable(TestPackage.Instance);
-		using var stream = new MemoryStream([(byte)255]);
+		using var stream = new MemoryStream([255]);
 		using var reader = new BinaryReader(stream);
 		Assert.That(() => binary.ReadInstruction(reader, new NameTable(Type.Number)),
 			Throws.TypeOf<BinaryExecutable.InvalidFile>().With.Message.Contains("Unknown instruction type"));
@@ -76,13 +75,14 @@ public sealed class BinaryExecutableTests : TestBytecode
 
 	private static BinaryType CreateMethods(BinaryExecutable executable, string typeFullName,
 		List<Instruction> instructions) =>
-		new BinaryType(executable, typeFullName, [], new Dictionary<string, List<BinaryMethod>>
+		new(executable, typeFullName, [], new Dictionary<string, List<BinaryMethod>>
 		{
 			[Method.Run] = [new BinaryMethod("", [], Type.None, instructions)]
 		});
 
 	private static string CreateTempFilePath() =>
 		Path.Combine(Path.GetTempPath(), "strictbinary-tests-" + Guid.NewGuid() + BinaryExecutable.Extension);
+
 	[Test]
 	public void ZipWithNoBytecodeEntriesCreatesEmptyStrictBinary()
 	{

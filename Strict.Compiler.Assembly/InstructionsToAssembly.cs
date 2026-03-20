@@ -1,6 +1,5 @@
 using Strict.Bytecode;
 using Strict.Bytecode.Instructions;
-using Strict.Bytecode.Serialization;
 using Strict.Expressions;
 using Strict.Language;
 using Binary = Strict.Expressions.Binary;
@@ -28,7 +27,7 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 	public string CompileInstructions(string methodName, List<Instruction> instructions) =>
 		BuildAssembly(methodName, [], instructions);
 
-	private string CompileForPlatform(string methodName, IReadOnlyList<Instruction> instructions,
+	private static string CompileForPlatform(string methodName, IReadOnlyList<Instruction> instructions,
 		Platform platform, IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods = null)
 	{
 		var hasPrint = instructions.OfType<PrintInstruction>().Any();

@@ -1,5 +1,3 @@
-using Strict;
-using Strict.Bytecode;
 using Strict.Expressions;
 using Strict.Bytecode.Instructions;
 

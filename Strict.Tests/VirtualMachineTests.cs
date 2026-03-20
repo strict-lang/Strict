@@ -1,4 +1,3 @@
-using System.Globalization;
 using Strict.Bytecode;
 using Strict.Bytecode.Instructions;
 using Strict.Bytecode.Tests;
@@ -160,7 +159,7 @@ public sealed class VirtualMachineTests : TestBytecode
 			nameof(AccessListByIndexNonNumberType) + "(\"1\", \"2\", \"3\", \"4\", \"5\").Get(2)",
 			"has texts", "Get(index Number) Text", "\ttexts(index)")).Generate();
 		Assert.That(new VirtualMachine(instructions).Execute(initialVariables: null).Returns!.
-			Value.Text,	Is.EqualTo("3"));
+			Value.Text, Is.EqualTo("3"));
 	}
 
 	[Test]
@@ -258,7 +257,6 @@ public sealed class VirtualMachineTests : TestBytecode
 			Is.EqualTo("Number is less or equal than 10"));
 	}
 
-
 	[TestCase("AddToTheList(5).Add", "100 200 300 400 0 1 2 3", "AddToTheList",
 		new[]
 		{
@@ -327,7 +325,7 @@ public sealed class VirtualMachineTests : TestBytecode
 		Assert.That(result.TrimEnd(), Is.EqualTo(expected));
 	}
 
-	private string ExpressionListToSpaceSeparatedString(BinaryExecutable binary)
+	private static string ExpressionListToSpaceSeparatedString(BinaryExecutable binary)
 	{
 		var result = new VirtualMachine(binary).Execute(initialVariables: null).Returns!.Value;
 		return result.List.Items.Aggregate("", (current, item) => current + (item.IsText
@@ -362,7 +360,7 @@ public sealed class VirtualMachineTests : TestBytecode
 		Assert.That(result.GetDictionaryItems().Count, Is.EqualTo(0));
 	}
 
-  [Test]
+	[Test]
 	public void DictionaryGet()
 	{
 		string[] code =
@@ -398,7 +396,8 @@ public sealed class VirtualMachineTests : TestBytecode
 	}
 
 	private static string GetDictionaryValue(IReadOnlyDictionary<ValueInstance, ValueInstance> values,
-		double key) => values.First(entry => entry.Key.Number == key).Value.ToExpressionCodeString();
+		double key) =>
+		values.First(entry => entry.Key.Number == key).Value.ToExpressionCodeString();
 
 	[Test]
 	public void ReturnWithinALoop()
@@ -656,10 +655,7 @@ public sealed class VirtualMachineTests : TestBytecode
 			nameof(AddHundredElementsToMutableList),
 			$"{nameof(AddHundredElementsToMutableList)}(100).AddMany",
 			source)).Generate();
-		var startTime = DateTime.UtcNow;
-		//TODO: still horrible performance, this needs to be optimized, the VM recreates the mutable list every time, which makes no sense, it just needs to mutate it
 		var result = new VirtualMachine(instructions).Execute(initialVariables: null).Returns!.Value;
-		var elapsedMs = (DateTime.UtcNow - startTime).TotalMilliseconds;
 		Assert.That(result.List.Items.Count, Is.EqualTo(101));
 	}
 

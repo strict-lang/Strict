@@ -1,7 +1,6 @@
 using Strict.Bytecode;
 using Strict.Bytecode.Instructions;
 using Strict.Bytecode.Serialization;
-using Strict.Expressions;
 using Strict.Language;
 using Type = Strict.Language.Type;
 
@@ -20,22 +19,22 @@ public abstract class InstructionsCompiler
 	{
 		var methods = new Dictionary<string, List<Instruction>>(StringComparer.Ordinal);
 		foreach (var typeData in binary.MethodsPerType.Values)
-			foreach (var (methodName, overloads) in typeData.MethodGroups)
-				foreach (var overload in overloads)
-				{
-					var methodKey = BuildMethodHeaderKeyInternal(methodName, overload);
-					methods[methodKey] = overload.instructions;
-				}
+		foreach (var (methodName, overloads) in typeData.MethodGroups)
+		foreach (var overload in overloads)
+		{
+			var methodKey = BuildMethodHeaderKeyInternal(methodName, overload);
+			methods[methodKey] = overload.instructions;
+		}
 		return methods;
 	}
 
 	private static string BuildMethodHeaderKeyInternal(string methodName, BinaryMethod method) =>
 		method.parameters.Count == 0
-      ? BinaryMemberJustTypeName(method.ReturnTypeName) == Type.None
+			? BinaryMemberJustTypeName(method.ReturnTypeName) == Type.None
 				? methodName
-        : methodName + " " + BinaryMemberJustTypeName(method.ReturnTypeName)
+				: methodName + " " + BinaryMemberJustTypeName(method.ReturnTypeName)
 			: methodName + "(" + string.Join(", ", method.parameters) + ") " +
-				BinaryMemberJustTypeName(method.ReturnTypeName);
+			BinaryMemberJustTypeName(method.ReturnTypeName);
 
 	private static string BinaryMemberJustTypeName(string fullTypeName) =>
 		fullTypeName.Split(Context.ParentSeparator)[^1];
@@ -97,7 +96,7 @@ public abstract class InstructionsCompiler
 		Queue<(Method Method, bool IncludeMembers)> queue)
 	{
 		foreach (var invoke in instructions.OfType<Invoke>())
-			if (invoke.Method != null && invoke.Method.Method.Name != Method.From)
+			if (invoke.Method.Method.Name != Method.From)
 				queue.Enqueue((invoke.Method.Method, invoke.Method.Instance != null));
 	}
 

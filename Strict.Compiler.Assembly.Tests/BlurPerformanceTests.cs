@@ -22,7 +22,7 @@ public sealed class BlurPerformanceTests
 		var elapsed = MeasureSingleThread(pixels, Width, Height, Iterations);
 		Assert.That(elapsed.TotalMilliseconds, Is.LessThan(20),
 			$"{Width}x{Height} blur should complete quickly on single thread");
-		var parallelTime = MeasureParallelCpu(pixels, Width, Height, Iterations);
+		MeasureParallelCpu(pixels, Width, Height, Iterations);
 		Assert.That(elapsed.TotalMilliseconds, Is.LessThan(10),
 			$"{Width}x{Height} blur should complete quickly on multiple threads");
 	}
@@ -55,13 +55,13 @@ public sealed class BlurPerformanceTests
 		var output = new byte[pixels.Length];
 		var stride = width * 3;
 		for (var row = 0; row < height; row++)
-			for (var column = 0; column < width; column++)
-			{
-				if (row >= 2 && row < height - 2 && column >= 2 && column < width - 2)
-					BlurInteriorPixel(pixels, output, row, column, stride);
-				else
-					BlurEdgePixel(pixels, output, row, column, width, height, stride);
-			}
+		for (var column = 0; column < width; column++)
+		{
+			if (row >= 2 && row < height - 2 && column >= 2 && column < width - 2)
+				BlurInteriorPixel(pixels, output, row, column, stride);
+			else
+				BlurEdgePixel(pixels, output, row, column, width, height, stride);
+		}
 		Buffer.BlockCopy(output, 0, pixels, 0, pixels.Length);
 	}
 
@@ -138,7 +138,7 @@ public sealed class BlurPerformanceTests
 			}
 			output[baseIndex + channel] = (byte)(sum / count);
 		}
-	}	//ncrunch: no coverage end
+	} //ncrunch: no coverage end
 
 	private static TimeSpan MeasureParallelCpu(byte[] sourcePixels, int width, int height,
 		int iterations)
@@ -157,9 +157,9 @@ public sealed class BlurPerformanceTests
 	{
 		const int Width = 320;
 		const int Height = 320;
-		var totalPixels = Width * Height;
-		var blurComplexity = EstimateComplexity(totalPixels,	BlurBodyInstructionCount);
-		Assert.That(ShouldParallelize(totalPixels,	BlurBodyInstructionCount),
+		const int TotalPixels = Width * Height;
+		var blurComplexity = EstimateComplexity(TotalPixels, BlurBodyInstructionCount);
+		Assert.That(ShouldParallelize(TotalPixels, BlurBodyInstructionCount),
 			Is.True, $"{Width}x{Height} blur ({blurComplexity} complexity) should parallelize, " +
 			"complex body compensates for moderate pixel count");
 	}
@@ -182,11 +182,11 @@ public sealed class BlurPerformanceTests
 	public void BlurVsBrightnessComplexityComparison()
 	{
 		const int Pixels = 100_000;
-		var brightnessComplexity = EstimateComplexity(Pixels,	BrightnessBodyInstructionCount);
-		var blurComplexity = EstimateComplexity(Pixels,	BlurBodyInstructionCount);
+		var brightnessComplexity = EstimateComplexity(Pixels, BrightnessBodyInstructionCount);
+		var blurComplexity = EstimateComplexity(Pixels, BlurBodyInstructionCount);
 		Assert.That(blurComplexity, Is.GreaterThan(brightnessComplexity),
 			"Blur should have higher complexity than brightness for same pixel count");
-		Assert.That(ShouldParallelize(Pixels,	BlurBodyInstructionCount), Is.True,
+		Assert.That(ShouldParallelize(Pixels, BlurBodyInstructionCount), Is.True,
 			"Blur should parallelize at 100K pixels due to complex body");
 	}
 

@@ -66,7 +66,7 @@ public abstract class Context
 	public string Name { get; }
 	public string FullName { get; }
 	public abstract Type? FindType(string name, Context? searchingFrom = null);
-	public Type GetType(string name) =>	TryGetType(name) ?? throw new TypeNotFound(name, this);
+	public Type GetType(string name) => TryGetType(name) ?? throw new TypeNotFound(name, this);
 
 	internal Type? TryGetType(string name)
 	{

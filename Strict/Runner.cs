@@ -67,8 +67,8 @@ public sealed class Runner
 		if (IsExpressionInvocation)
 			throw new CannotBuildExecutableWithCustomExpression();
 		var binary = await GetBinary();
-//TODO: convoluted!
-    if (binary.GetRunMethods().Any(method => method.parameters.Count > 0))
+		//TODO: convoluted! fix and remove this mess
+		if (binary.GetRunMethods().Any(method => method.parameters.Count > 0))
 		{
 			var launcherPath = CreateManagedLauncher(platform);
 			PrintLauncherSummary(platform, launcherPath);
@@ -107,7 +107,7 @@ public sealed class Runner
 		var cachedBinaryPath = Path.ChangeExtension(strictFilePath, BinaryExecutable.Extension);
 		if (File.Exists(cachedBinaryPath))
 		{
-//TODO: convoluted, was easier before: var binary = new BinaryExecutable(cachedBinaryPath, basePackage);
+			//TODO: convoluted, was easier before: var binary = new BinaryExecutable(cachedBinaryPath, basePackage);
 			BinaryExecutable binary;
 			try
 			{
@@ -274,7 +274,7 @@ public sealed class Runner
 				testExecutor.Statistics.TypesTested + "\n" + testExecutor.Statistics;
 		}));
 
- private BinaryExecutable GenerateBinaryExecutable(Type mainType) =>
+	private BinaryExecutable GenerateBinaryExecutable(Type mainType) =>
 		LogTiming(nameof(GenerateBinaryExecutable), () =>
 		{
 			var runMethods = mainType.Methods.Where(method => method.Name == Method.Run).ToArray();
@@ -474,34 +474,33 @@ private Binary? binary;
 	}
 
 	//TODO: overcomplicated
-	private IReadOnlyDictionary<string, ValueInstance>? BuildProgramArguments(BinaryExecutable binary,
-		BinaryMethod runMethod)
+	private IReadOnlyDictionary<string, ValueInstance>? BuildProgramArguments(
+		BinaryExecutable binary, BinaryMethod runMethod)
 	{
-    if (runMethod.parameters.Count == 0)
+		if (runMethod.parameters.Count == 0)
 			return null;
-    if (runMethod.parameters.Count == 1)
+		if (runMethod.parameters.Count == 1)
 		{
-     var listType = ResolveType(binary, runMethod.parameters[0].FullTypeName);
+			var listType = ResolveType(binary, runMethod.parameters[0].FullTypeName);
 			if (listType.IsList)
 			{
 				var elementType = ((GenericTypeImplementation)listType).ImplementationTypes[0];
 				var listItems = ProgramArguments.Select(argument =>
-					CreateValueInstance(binary, elementType, argument)).ToArray();
+					CreateValueInstance(elementType, argument)).ToArray();
 				return new Dictionary<string, ValueInstance>
 				{
-         [runMethod.parameters[0].Name] = new ValueInstance(listType, listItems)
+					[runMethod.parameters[0].Name] = new(listType, listItems)
 				};
 			}
 		}
-    if (runMethod.parameters.Count != ProgramArguments.Length)
+		if (runMethod.parameters.Count != ProgramArguments.Length)
 			throw new NotSupportedException("Run expects " + runMethod.parameters.Count +
 				" arguments, but got " + ProgramArguments.Length + ".");
-   var values = new Dictionary<string, ValueInstance>(runMethod.parameters.Count);
+		var values = new Dictionary<string, ValueInstance>(runMethod.parameters.Count);
 		for (var index = 0; index < runMethod.parameters.Count; index++)
 		{
-      var parameter = runMethod.parameters[index];
-			values[parameter.Name] =
-				CreateValueInstance(binary, ResolveType(binary, parameter.FullTypeName), ProgramArguments[index]);
+			var parameter = runMethod.parameters[index];
+			values[parameter.Name] = CreateValueInstance(ResolveType(binary, parameter.FullTypeName), ProgramArguments[index]);
 		}
 		return values;
 	}
@@ -516,16 +515,16 @@ private Binary? binary;
 			: null) ??
 		binary.basePackage.GetType(fullTypeName);
 
-	private static ValueInstance CreateValueInstance(BinaryExecutable binary, Type targetType,
-		string argument)
+	//TODO: this should not be here!
+	private static ValueInstance CreateValueInstance(Type targetType, string argument)
 	{
 		if (targetType.IsNumber)
 			return new ValueInstance(targetType, double.Parse(argument, CultureInfo.InvariantCulture));
 		if (targetType.IsText)
 			return new ValueInstance(argument);
-		if (targetType.IsBoolean)
-			return new ValueInstance(targetType, bool.Parse(argument));
-		throw new NotSupportedException("Only Number, Text, Boolean and List arguments are supported.");
+		return targetType.IsBoolean
+			? new ValueInstance(targetType, bool.Parse(argument))
+			: throw new NotSupportedException("Only Number, Text, Boolean and List arguments are supported.");
 	}
 
 	private static string GetRunMethodTypeFullName(BinaryExecutable binary, BinaryMethod runMethod) =>
@@ -535,10 +534,11 @@ private Binary? binary;
 	//TODO: where is all this complexity coming from?
 	private string CreateManagedLauncher(Platform platform)
 	{
-		if ((platform == Platform.Windows && !OperatingSystem.IsWindows()) ||
-			(platform == Platform.Linux && !OperatingSystem.IsLinux()) ||
-			(platform == Platform.MacOS && !OperatingSystem.IsMacOS()))
-			throw new NotSupportedException("Runtime launcher builds require building on the target platform.");
+		if (platform == Platform.Windows && !OperatingSystem.IsWindows() ||
+			platform == Platform.Linux && !OperatingSystem.IsLinux() ||
+			platform == Platform.MacOS && !OperatingSystem.IsMacOS())
+			throw new NotSupportedException(
+				"Runtime launcher builds require building on the target platform.");
 		var runtimeDirectory = Path.GetDirectoryName(typeof(Program).Assembly.Location) ??
 			throw new DirectoryNotFoundException("Strict runtime output directory not found.");
 		var outputDirectory = Path.GetDirectoryName(Path.GetFullPath(strictFilePath)) ??
@@ -546,23 +546,23 @@ private Binary? binary;
 		var runtimeExecutableName = OperatingSystem.IsWindows()
 			? "Strict.exe"
 			: "Strict";
-		var outputExecutablePath = Path.Combine(outputDirectory,
-			OperatingSystem.IsWindows()
-				? Path.GetFileNameWithoutExtension(strictFilePath) + ".exe"
-				: Path.GetFileNameWithoutExtension(strictFilePath));
+		var outputExecutablePath = Path.Combine(outputDirectory, OperatingSystem.IsWindows()
+			? Path.GetFileNameWithoutExtension(strictFilePath) + ".exe"
+			: Path.GetFileNameWithoutExtension(strictFilePath));
 		File.Copy(Path.Combine(runtimeDirectory, runtimeExecutableName), outputExecutablePath, true);
-   foreach (var filePath in Directory.GetFiles(runtimeDirectory, "*.dll"))
+		foreach (var filePath in Directory.GetFiles(runtimeDirectory, "*.dll"))
 			File.Copy(filePath, Path.Combine(outputDirectory, Path.GetFileName(filePath)), true);
-    foreach (var filePath in Directory.GetFiles(runtimeDirectory, "*.json"))
+		foreach (var filePath in Directory.GetFiles(runtimeDirectory, "*.json"))
 			File.Copy(filePath, Path.Combine(outputDirectory, Path.GetFileName(filePath)), true);
 		if (!OperatingSystem.IsWindows())
-			File.SetUnixFileMode(outputExecutablePath, UnixFileMode.UserRead | UnixFileMode.UserWrite |
-				UnixFileMode.UserExecute | UnixFileMode.GroupRead | UnixFileMode.GroupExecute |
-				UnixFileMode.OtherRead | UnixFileMode.OtherExecute);
+			File.SetUnixFileMode(outputExecutablePath,
+				UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute |
+				UnixFileMode.GroupRead | UnixFileMode.GroupExecute | UnixFileMode.OtherRead |
+				UnixFileMode.OtherExecute);
 		return outputExecutablePath;
 	}
 
-	private void PrintLauncherSummary(Platform platform, string exeFilePath) =>
+	private static void PrintLauncherSummary(Platform platform, string exeFilePath) =>
 		Console.WriteLine("Created " + platform + " executable launcher of " +
 			new FileInfo(exeFilePath).Length + " bytes to: " + exeFilePath);
 
@@ -576,7 +576,7 @@ private Binary? binary;
 		var binary = await GetBinary();
 		var runMethod = GetRunMethod(binary);
 		//TODO: why do we have to do this here? shouldn't this be happening in generation?
-    binary.SetEntryPoint(GetRunMethodTypeFullName(binary, runMethod), Method.Run,
+		binary.SetEntryPoint(GetRunMethodTypeFullName(binary, runMethod), Method.Run,
 			runMethod.parameters.Count, runMethod.ReturnTypeName);
 		var programArguments = BuildProgramArguments(binary, runMethod);
 		LogTiming(nameof(Run),

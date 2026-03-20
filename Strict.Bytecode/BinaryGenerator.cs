@@ -13,10 +13,9 @@ namespace Strict.Bytecode;
 /// </summary>
 public sealed class BinaryGenerator
 {
-	//TODO: these are all wrong, the constructor should only use the basePackage to make everything possible, the Generate method should get the entry point and find the rest from there! 3 constructors is just plain stupid. this was mostly to get the old tests working, but they are mostly wrong anyway!
+	//TODO: not really used,  these are all wrong, the constructor should only use the basePackage to make everything possible, the Generate method should get the entry point and find the rest from there! 3 constructors is just plain stupid. this was mostly to get the old tests working, but they are mostly wrong anyway!
 	public BinaryGenerator(Expression entryPoint)
 	{
-		this.entryPoint = entryPoint;
 		entryTypeFullName = GetEntryTypeFullName(entryPoint);
 		ReturnType = entryPoint.ReturnType;
 		Expressions = [entryPoint];
@@ -29,6 +28,7 @@ public sealed class BinaryGenerator
 		if (methodCall.Instance is MethodCall instanceCall)
 			AddInstanceMemberVariables(instanceCall);
 		AddMethodParameterVariables(methodCall);
+		//TODO: this randomly crashes VirtualMachineTests.Enum stuff .. bad anyway
 		var methodBody = methodCall.Method.GetBodyAndParseIfNeeded();
 		Expressions = methodBody is Body body
 			? body.Expressions
@@ -47,7 +47,6 @@ public sealed class BinaryGenerator
 
 	//TODO: way too many fields, this should not all be at class level!
 	private readonly BinaryExecutable binary;
-	private readonly Expression? entryPoint; //TODO: remove
 	private readonly string entryTypeFullName;
 	private readonly List<Instruction> instructions = [];
 	private static readonly HashSet<string> StrictRuntimeTypeNames =
@@ -70,8 +69,8 @@ public sealed class BinaryGenerator
 	private readonly Registry registry = new();
 	private readonly Stack<int> idStack = new();
 	private readonly Register[] registers = Enum.GetValues<Register>();
-	private IReadOnlyList<Expression> Expressions { get; } = []; //TODO: stupid
-	private Type ReturnType { get; } = null!; //TODO: forbidden!
+	private IReadOnlyList<Expression> Expressions { get; } //TODO: stupid
+	private Type ReturnType { get; } //TODO: forbidden!
 	private int conditionalId;
 	private int forResultId;
 
@@ -91,7 +90,7 @@ public sealed class BinaryGenerator
 
 	private BinaryExecutable Generate(Method preferredEntryMethod, IReadOnlyList<Method> runMethods)
 	{
-   var methodsByType = GenerateRunMethods(runMethods, preferredEntryMethod.Type);
+		var methodsByType = GenerateRunMethods(runMethods, preferredEntryMethod.Type);
 		AddGeneratedTypes(methodsByType, preferredEntryMethod.Type);
 		binary.SetEntryPoint(GetBinaryTypeName(preferredEntryMethod.Type, preferredEntryMethod.Type),
 			preferredEntryMethod.Name, preferredEntryMethod.Parameters.Count,
@@ -348,7 +347,7 @@ public sealed class BinaryGenerator
 	{
 		if (expression is Binary binaryExpression)
 		{
-      if (binaryExpression.Method.Name == BinaryOperator.Is)
+			if (binaryExpression.Method.Name == BinaryOperator.Is)
 				return true;
 			if (!CanGenerateDirectBinaryInstruction(binaryExpression.Method.Name))
 				return TryGenerateMethodCallInstruction(binaryExpression);
@@ -433,7 +432,7 @@ public sealed class BinaryGenerator
 
 	private void GenerateCodeForBinary(MethodCall binaryExpression)
 	{
-   if (CanGenerateDirectBinaryInstruction(binaryExpression.Method.Name))
+		if (CanGenerateDirectBinaryInstruction(binaryExpression.Method.Name))
 			GenerateBinaryInstruction(binaryExpression,
 				GetInstructionBasedOnBinaryOperationName(binaryExpression.Method.Name));
 	}
@@ -498,7 +497,7 @@ public sealed class BinaryGenerator
 	private void GenerateBinaryInstruction(MethodCall binaryExpression,
 		InstructionType operationInstruction)
 	{
-   if (binaryExpression.Instance is MethodCall nestedBinary &&
+		if (binaryExpression.Instance is MethodCall nestedBinary &&
 			CanGenerateDirectBinaryInstruction(nestedBinary.Method.Name))
 		{
 			var leftRegister = GenerateValueBinaryInstructions(nestedBinary,
@@ -507,7 +506,7 @@ public sealed class BinaryGenerator
 			instructions.Add(new BinaryInstruction(operationInstruction, leftRegister,
 				registry.PreviousRegister, registry.AllocateRegister()));
 		}
-    else if (binaryExpression.Arguments[0] is MethodCall nestedBinaryArgument &&
+		else if (binaryExpression.Arguments[0] is MethodCall nestedBinaryArgument &&
 			CanGenerateDirectBinaryInstruction(nestedBinaryArgument.Method.Name))
 			GenerateNestedBinaryInstructions(binaryExpression, operationInstruction,
 				nestedBinaryArgument);
@@ -544,11 +543,11 @@ public sealed class BinaryGenerator
 
 	private sealed class InstanceNameNotFound : Exception;
 
- private Dictionary<string, Dictionary<string, List<BinaryMethod>>> GenerateRunMethods(
+	private Dictionary<string, Dictionary<string, List<BinaryMethod>>> GenerateRunMethods(
 		IReadOnlyList<Method> runMethods, Type entryType)
 	{
-		var methodsByType = new Dictionary<string, Dictionary<string, List<BinaryMethod>>>(
-			StringComparer.Ordinal);
+		var methodsByType =
+			new Dictionary<string, Dictionary<string, List<BinaryMethod>>>(StringComparer.Ordinal);
 		var methodsToCompile = new Queue<Method>();
 		var compiledMethodKeys = new HashSet<string>(StringComparer.Ordinal);
 
@@ -567,40 +566,43 @@ public sealed class BinaryGenerator
 
 		foreach (var runMethod in runMethods)
 		{
-     CollectMethodDependencies(runMethod);
+			CollectMethodDependencies(runMethod);
 			var methodBody = runMethod.GetBodyAndParseIfNeeded();
 			var methodExpressions = methodBody is Body body
 				? body.Expressions
 				: [methodBody];
 			var methodInstructions = new BinaryGenerator(binary.basePackage, methodExpressions,
 				runMethod.ReturnType).GenerateInstructionList();
-     var parameters = CreateBinaryMembers(runMethod.Parameters, entryType);
+			var parameters = CreateBinaryMembers(runMethod.Parameters, entryType);
 			AddCompiledMethod(methodsByType, runMethod.Type.FullName, runMethod.Name, parameters,
-       GetBinaryTypeName(runMethod.ReturnType, entryType), methodInstructions);
+				GetBinaryTypeName(runMethod.ReturnType, entryType), methodInstructions);
 			compiledMethodKeys.Add(BuildMethodKey(runMethod));
 			EnqueueInvokedMethods(methodInstructions);
 		}
 		while (methodsToCompile.Count > 0)
 		{
 			var method = methodsToCompile.Dequeue();
-      CollectMethodDependencies(method);
+			CollectMethodDependencies(method);
 			var body = method.GetBodyAndParseIfNeeded();
 			var methodExpressions = body is Body methodBody
 				? methodBody.Expressions
 				: [body];
 			var methodInstructions = new BinaryGenerator(binary.basePackage, methodExpressions,
 				method.ReturnType).GenerateInstructionList();
-      var parameters = CreateBinaryMembers(method.Parameters, entryType);
+			var parameters = CreateBinaryMembers(method.Parameters, entryType);
 			AddCompiledMethod(methodsByType, method.Type.FullName, method.Name, parameters,
-        GetBinaryTypeName(method.ReturnType, entryType), methodInstructions);
+				GetBinaryTypeName(method.ReturnType, entryType), methodInstructions);
 			EnqueueInvokedMethods(methodInstructions);
 		}
 		return methodsByType;
 	}
 
-	private List<BinaryMember> CreateBinaryMembers(IReadOnlyList<Parameter> parameters, Type entryType) =>
+	//TODO: slow, should be optimized! also a binary always has the same structure, why so complicated here?
+	private static List<BinaryMember> CreateBinaryMembers(IReadOnlyList<Parameter> parameters,
+		Type entryType) =>
 		parameters.Select(parameter =>
-			new BinaryMember(parameter.Name, GetBinaryTypeName(parameter.Type, entryType), null)).ToList();
+				new BinaryMember(parameter.Name, GetBinaryTypeName(parameter.Type, entryType), null)).
+			ToList();
 
 	private void AddGeneratedTypes(
 		Dictionary<string, Dictionary<string, List<BinaryMethod>>> methodsByType,
@@ -628,7 +630,7 @@ public sealed class BinaryGenerator
 		CollectTypeDependency(method.ReturnType, false);
 		foreach (var parameter in method.Parameters)
 			CollectTypeDependency(parameter.Type, false);
-    if (method.Type.IsTrait)
+		if (method.Type.IsTrait)
 			return;
 		var body = method.GetBodyAndParseIfNeeded();
 		if (body is Body methodBody)
@@ -647,13 +649,14 @@ public sealed class BinaryGenerator
 			foreach (var child in body.Expressions)
 				CollectExpressionDependencies(child);
 			break;
-		case Binary binary:
-     CollectTypeDependency(binary.Method.Type, true);
-			CollectTypeDependency(binary.Method.ReturnType, false);
-			foreach (var parameter in binary.Method.Parameters)
+		case Binary binaryExpr:
+			CollectTypeDependency(binaryExpr.Method.Type, true);
+			CollectTypeDependency(binaryExpr.Method.ReturnType, false);
+			foreach (var parameter in binaryExpr.Method.Parameters)
 				CollectTypeDependency(parameter.Type, false);
-			CollectExpressionDependencies(binary.Instance!);
-			CollectExpressionDependencies(binary.Arguments[0]);
+			CollectExpressionDependencies(binaryExpr.Instance!);
+			// ReSharper disable TailRecursiveCall
+			CollectExpressionDependencies(binaryExpr.Arguments[0]);
 			break;
 		case Declaration declaration:
 			CollectExpressionDependencies(declaration.Value);
@@ -691,7 +694,7 @@ public sealed class BinaryGenerator
 				CollectExpressionDependencies(memberCall.Instance);
 			break;
 		case MethodCall methodCall:
-     CollectTypeDependency(methodCall.Method.Type, true);
+			CollectTypeDependency(methodCall.Method.Type, true);
 			CollectTypeDependency(methodCall.Method.ReturnType, false);
 			foreach (var parameter in methodCall.Method.Parameters)
 				CollectTypeDependency(parameter.Type, false);
@@ -747,17 +750,18 @@ public sealed class BinaryGenerator
 			StrictRuntimeTypeNames.Contains(type.Name);
 	}
 
+	//TODO: remove, bad naming
 	private Dictionary<string, Dictionary<string, List<BinaryMethod>>> GenerateEntryMethods(
-		string entryTypeFullName, IReadOnlyList<Expression> entryExpressions, Type runReturnType)
+		string thisEntryTypeFullName, IReadOnlyList<Expression> entryExpressions, Type runReturnType)
 	{
 		var methodsByType = new Dictionary<string, Dictionary<string, List<BinaryMethod>>>(
 			StringComparer.Ordinal);
 		var methodsToCompile = new Queue<Method>();
 		var compiledMethodKeys = new HashSet<string>(StringComparer.Ordinal);
 
-		void EnqueueInvokedMethods(IReadOnlyList<Instruction> instructions) //TODO: remove
+		void EnqueueInvokedMethods(IReadOnlyList<Instruction> thisInstructions) //TODO: remove
 		{
-			foreach (var invoke in instructions.OfType<Invoke>())
+			foreach (var invoke in thisInstructions.OfType<Invoke>())
 			{
 				if (invoke.Method.Method.Name == Method.From)
 					continue;
@@ -772,7 +776,7 @@ public sealed class BinaryGenerator
 		}
 
 		var runInstructions = GenerateInstructions(entryExpressions);
-		AddCompiledMethod(methodsByType, entryTypeFullName, Method.Run, [], runReturnType.Name,
+		AddCompiledMethod(methodsByType, thisEntryTypeFullName, Method.Run, [], runReturnType.Name,
 			runInstructions);
 		EnqueueInvokedMethods(runInstructions);
 		while (methodsToCompile.Count > 0)

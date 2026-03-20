@@ -6,7 +6,7 @@ using Type = Strict.Language.Type;
 namespace Strict.Bytecode;
 
 /// <summary>
-/// Partially reconstructs .strict source files from Binary (e.g. from .strictbinary) as an
+/// Partially reconstructs .strict source files from Binary (e.g., from .strictbinary) as an
 /// approximation. For debugging, will not compile, no tests. Only includes what bytecode reveals.
 /// </summary>
 public sealed class Decompiler
@@ -105,7 +105,7 @@ public sealed class Decompiler
 			return true;
 		}
 		if (instruction is BinaryInstruction binary)
-			return TryDeserializeBinaryInstruction(bodyLines, binary);
+			return TryDeserializeBinaryInstruction(binary);
 		if (instruction is Invoke invoke)
 			return TryDeserializeInvokeInstruction(method, bodyLines, invoke, instructionIndex);
 		if (instruction is PrintInstruction print)
@@ -157,7 +157,7 @@ public sealed class Decompiler
 		return false;
 	}
 
-	private bool TryDeserializeBinaryInstruction(List<string> bodyLines, BinaryInstruction binary)
+	private bool TryDeserializeBinaryInstruction(BinaryInstruction binary)
 	{
 		if (binary.Registers.Length < 2)
 			return false;

@@ -1,10 +1,8 @@
 using Strict.Bytecode.Instructions;
-using System.Reflection.Emit;
-using System.Runtime.CompilerServices;
 
 namespace Strict.Bytecode.Serialization;
 
-public record BinaryMethod
+public sealed class BinaryMethod
 {
 	public BinaryMethod(string methodName, List<BinaryMember> methodParameters,
 		string returnTypeName, List<Instruction> methodInstructions)
@@ -18,7 +16,7 @@ public record BinaryMethod
 
 	public string Name { get; }
 	public string ReturnTypeName { get; }
-	public List<BinaryMember> parameters = [];
+	public readonly List<BinaryMember> parameters = [];
 	public List<Instruction> instructions = [];
 
 	public BinaryMethod(BinaryReader reader, BinaryType type, string methodName)

@@ -71,18 +71,19 @@ public sealed class MlirLinker : Linker
 		return platform switch
 		{
 			Platform.Linux => $"{quotedInputPath} -o {quotedOutputPath} -O2 -lcuda -lcudart",
-			Platform.Windows =>
-				$"{quotedInputPath} -o {quotedOutputPath} -O2 -lcuda -lcudart -Wno-override-module",
 			_ => $"{quotedInputPath} -o {quotedOutputPath} -O2 -lcuda -lcudart -Wno-override-module"
 		};
 	}
+
 	private static string BuildClangArgs(string inputPath, string outputPath, Platform platform,
 		bool hasPrintCalls = false)
 	{
 		var quotedInputPath = $"\"{inputPath}\"";
 		var quotedOutputPath = $"\"{outputPath}\"";
-		const string LinuxSizeFlags = "-Oz -s -Wl,--gc-sections -Wl,--strip-all -Wl,--build-id=none -fno-unwind-tables -fno-asynchronous-unwind-tables";
-		const string WindowsSizeFlags = "-Oz -nostdlib -lkernel32 -Wl,/ENTRY:main -Wl,/OPT:REF -Wl,/OPT:ICF -Wl,/INCREMENTAL:NO -Wl,/DEBUG:NONE";
+		const string LinuxSizeFlags = "-Oz -s -Wl,--gc-sections -Wl,--strip-all -Wl,--build-id=none" +
+			" -fno-unwind-tables -fno-asynchronous-unwind-tables";
+		const string WindowsSizeFlags = "-Oz -nostdlib -lkernel32 -Wl,/ENTRY:main -Wl,/OPT:REF -Wl," +
+			"/OPT:ICF -Wl,/INCREMENTAL:NO -Wl,/DEBUG:NONE";
 		return platform switch
 		{
 			Platform.Windows =>

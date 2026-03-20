@@ -7,10 +7,11 @@ namespace Strict.Bytecode.Instructions;
 public sealed class Invoke(Register register, MethodCall method, Registry persistedRegistry)
 	: RegisterInstruction(InstructionType.Invoke, register)
 {
-	public Invoke(BinaryReader reader, NameTable table, BinaryExecutable binary)
-   : this((Register)reader.ReadByte(), ReadMethod(reader, table, binary), ReadRegistry(reader)) { }
+	public Invoke(BinaryReader reader, NameTable table, BinaryExecutable binary) : this(
+		(Register)reader.ReadByte(), ReadMethod(reader, table, binary), ReadRegistry(reader)) { }
 
-	private static MethodCall ReadMethod(BinaryReader reader, NameTable table, BinaryExecutable binary) =>
+	private static MethodCall ReadMethod(BinaryReader reader, NameTable table,
+		BinaryExecutable binary) =>
 		reader.ReadBoolean()
 			? binary.ReadMethodCall(reader, table)
 			: throw new InvalidOperationException("Invoke instruction is missing method call data");

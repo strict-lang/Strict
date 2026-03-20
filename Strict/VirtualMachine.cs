@@ -167,9 +167,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 	}
 
 	private List<Instruction>? GetPrecompiledMethodInstructions(Invoke invoke) =>
-		invoke.Method == null
-			? null
-			: GetPrecompiledMethodInstructions(invoke.Method.Method);
+		GetPrecompiledMethodInstructions(invoke.Method.Method);
 
 	private void InitializeMethodCallScope(MethodCall methodCall,
 		IReadOnlyList<ValueInstance>? evaluatedArguments = null,
@@ -272,10 +270,10 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 
 	private bool TryHandleIncrementDecrement(Invoke invoke)
 	{
-		var methodName = invoke.Method?.Method.Name;
+		var methodName = invoke.Method.Method.Name;
 		if (methodName != "Increment" && methodName != "Decrement")
 			return false;
-		if (invoke.Method!.Instance == null ||
+		if (invoke.Method.Instance == null ||
 			!Memory.Frame.TryGet(invoke.Method.Instance.ToString(), out var current))
 			return false;
 		var delta = methodName == "Increment"
@@ -288,7 +286,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 
 	private bool TryHandleToConversion(Invoke invoke)
 	{
-		if (invoke.Method?.Method.Name != BinaryOperator.To)
+		if (invoke.Method.Method.Name != BinaryOperator.To)
 			return false;
 		var instanceExpr = invoke.Method.Instance ?? throw new InvalidOperationException();
 		var rawValue = instanceExpr is Value constValue
@@ -328,8 +326,8 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 
 	private bool TryCreateEmptyDictionaryInstance(Invoke invoke)
 	{
-		if (invoke.Method?.Instance != null || invoke.Method?.Method.Name != Method.From ||
-			invoke.Method?.ReturnType is not GenericTypeImplementation
+		if (invoke.Method.Instance != null || invoke.Method.Method.Name != Method.From ||
+			invoke.Method.ReturnType is not GenericTypeImplementation
 			{
 				Generic.Name: Type.Dictionary
 			} dictionaryType)
@@ -344,7 +342,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 	/// </summary>
 	private bool TryHandleFromConstructor(Invoke invoke)
 	{
-		if (invoke.Method?.Method.Name != Method.From || invoke.Method.Instance != null)
+		if (invoke.Method.Method.Name != Method.From || invoke.Method.Instance != null)
 			return false;
 		var targetType = invoke.Method.ReturnType;
 		if (targetType is GenericTypeImplementation)
@@ -404,7 +402,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 	/// </summary>
 	private bool TryHandleNativeTraitMethod(Invoke invoke)
 	{
-		if (invoke.Method?.Instance is not MemberCall memberCall)
+		if (invoke.Method.Instance is not MemberCall memberCall)
 			return false;
 		var memberTypeName = memberCall.Member.Type.Name;
 		if (memberTypeName is not (Type.Logger or Type.TextWriter or Type.System))
@@ -452,7 +450,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		return new ValueInstance(memberCall.ToString());
 	}
 
-	private ValueInstance EvaluateBinary(Expressions.Binary binary)
+	private ValueInstance EvaluateBinary(Binary binary)
 	{
 		var left = EvaluateExpression(binary.Instance!);
 		var right = EvaluateExpression(binary.Arguments[0]);
@@ -512,7 +510,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 
 	private bool GetValueByKeyForDictionaryAndStoreInRegister(Invoke invoke)
 	{
-		if (invoke.Method?.Method.Name != "Get" ||
+		if (invoke.Method.Method.Name != "Get" ||
 			invoke.Method.Instance?.ReturnType is not GenericTypeImplementation
 			{
 				Generic.Name: Type.Dictionary

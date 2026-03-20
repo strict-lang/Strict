@@ -42,12 +42,12 @@ public class BlurPerformanceTests
 
 	private void LoadImage()
 	{
-    using var bitmap = LoadBitmapOrCreateFallback();
+		using var bitmap = LoadBitmapOrCreateFallback();
 		width = bitmap.Width;
 		height = bitmap.Height;
 		var data = bitmap.LockBits(new Rectangle(0, 0, bitmap.Width, bitmap.Height),
 			ImageLockMode.ReadOnly, bitmap.PixelFormat);
-   try
+		try
 		{
 			image = new byte[width * height * 4];
 			CreateColorImageFromBitmapData(bitmap, data);
@@ -65,8 +65,8 @@ public class BlurPerformanceTests
 			return new Bitmap(imagePath);
 		var bitmap = new Bitmap(64, 64, PixelFormat.Format32bppArgb);
 		for (var y = 0; y < bitmap.Height; y++)
-			for (var x = 0; x < bitmap.Width; x++)
-				bitmap.SetPixel(x, y, Color.FromArgb(255, x * 4, y * 4, (x + y) * 2));
+		for (var x = 0; x < bitmap.Width; x++)
+			bitmap.SetPixel(x, y, Color.FromArgb(255, x * 4, y * 4, (x + y) * 2));
 		return bitmap;
 	}
 

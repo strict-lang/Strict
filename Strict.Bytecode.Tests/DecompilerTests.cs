@@ -1,6 +1,3 @@
-using Strict.Bytecode.Instructions;
-using Strict.Bytecode.Serialization;
-using Strict.Language;
 using Type = Strict.Language.Type;
 
 namespace Strict.Bytecode.Tests;
@@ -134,28 +131,26 @@ public sealed class DecompilerTests : TestBytecode
 	private static string GetExamplesFolder()
 	{
 		var path = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "..", "Examples"));
-		if (File.Exists(path))
-			return path; //ncrunch: no coverage
-		return @"c:\code\GitHub\strict-lang\Strict\Examples";
+		return File.Exists(path)
+			? path
+			: @"c:\code\GitHub\strict-lang\Strict\Examples";
 	}
 
 	private static string DecompileToTemp(BinaryExecutable strictBinary, string typeName)
 	{
 		var outputFolder = Path.Combine(Path.GetTempPath(), "decompiled_" + Path.GetRandomFileName());
-		var targetOnlyBinary = new BinaryExecutable(TestPackage.Instance);
-		targetOnlyBinary.MethodsPerType[typeName] = strictBinary.MethodsPerType.First(method =>
-			method.Key.EndsWith(typeName, StringComparison.Ordinal)).Value;
+		var targetOnlyBinary = new BinaryExecutable(TestPackage.Instance)
+		{
+			MethodsPerType =
+			{
+				[typeName] = strictBinary.MethodsPerType.First(method =>
+					method.Key.EndsWith(typeName, StringComparison.Ordinal)).Value
+			}
+		};
 		new Decompiler().Decompile(targetOnlyBinary, outputFolder);
 		Assert.That(Directory.Exists(outputFolder), Is.True, "Output folder should be created");
 		Assert.That(File.Exists(Path.Combine(outputFolder, typeName + ".strict")), Is.True,
 			typeName + ".strict should be created");
 		return outputFolder;
 	}
-
-	private static BinaryType CreateTypeMethods(BinaryExecutable binary, string typeFullName,
-		List<Instruction> instructions) =>
-		new BinaryType(binary, typeFullName, [], new Dictionary<string, List<BinaryMethod>>
-		{
-			[Method.Run] = [new BinaryMethod("", [], Type.None, instructions)]
-		});
 }

@@ -249,7 +249,7 @@ public sealed class InstructionsToMlirTests
 		var mlir = Compile(instructions, Platform.Windows);
 		Assert.That(mlir, Does.Contain("llvm.func @printf(!llvm.ptr, ...) -> i32"));
 		Assert.That(mlir, Does.Contain("llvm.mlir.global internal constant @str_Run_0"));
-		Assert.That(mlir, Does.Contain("Result: %g\\0A\\00"));
+		Assert.That(mlir, Does.Contain(@"Result: %g\0A\00"));
 		Assert.That(mlir, Does.Contain("llvm.call @printf("));
 	}
 
@@ -577,13 +577,13 @@ public sealed class InstructionsToMlirTests
 	[Test]
 	public void RangeLoopEmitsScfFor()
 	{
-		var startRegister = Register.R0;
-		var endRegister = Register.R1;
-		var loopBegin = new LoopBeginInstruction(startRegister, endRegister);
+		const Register StartRegister = Register.R0;
+		const Register EndRegister = Register.R1;
+		var loopBegin = new LoopBeginInstruction(StartRegister, EndRegister);
 		var instructions = new List<Instruction>
 		{
-			new LoadConstantInstruction(startRegister, new ValueInstance(NumberType, 0.0)),
-			new LoadConstantInstruction(endRegister, new ValueInstance(NumberType, 10.0)),
+			new LoadConstantInstruction(StartRegister, new ValueInstance(NumberType, 0.0)),
+			new LoadConstantInstruction(EndRegister, new ValueInstance(NumberType, 10.0)),
 			loopBegin,
 			new LoadConstantInstruction(Register.R2, new ValueInstance(NumberType, 1.0)),
 			new LoopEndInstruction(2) { Begin = loopBegin },
@@ -598,13 +598,13 @@ public sealed class InstructionsToMlirTests
 	[Test]
 	public void ParallelHintEmitsScfParallel()
 	{
-		var startRegister = Register.R0;
-		var endRegister = Register.R1;
-		var loopBegin = new LoopBeginInstruction(startRegister, endRegister);
+		const Register StartRegister = Register.R0;
+		const Register EndRegister = Register.R1;
+		var loopBegin = new LoopBeginInstruction(StartRegister, EndRegister);
 		var instructions = new List<Instruction>
 		{
-			new LoadConstantInstruction(startRegister, new ValueInstance(NumberType, 0.0)),
-			new LoadConstantInstruction(endRegister, new ValueInstance(NumberType, 8294400.0)),
+			new LoadConstantInstruction(StartRegister, new ValueInstance(NumberType, 0.0)),
+			new LoadConstantInstruction(EndRegister, new ValueInstance(NumberType, 8294400.0)),
 			loopBegin,
 			new LoadConstantInstruction(Register.R2, new ValueInstance(NumberType, 1.0)),
 			new LoopEndInstruction(2) { Begin = loopBegin },
@@ -618,13 +618,13 @@ public sealed class InstructionsToMlirTests
 	[Test]
 	public void SmallLoopDoesNotParallelize()
 	{
-		var startRegister = Register.R0;
-		var endRegister = Register.R1;
-		var loopBegin = new LoopBeginInstruction(startRegister, endRegister);
+		const Register StartRegister = Register.R0;
+		const Register EndRegister = Register.R1;
+		var loopBegin = new LoopBeginInstruction(StartRegister, EndRegister);
 		var instructions = new List<Instruction>
 		{
-			new LoadConstantInstruction(startRegister, new ValueInstance(NumberType, 0.0)),
-			new LoadConstantInstruction(endRegister, new ValueInstance(NumberType, 100.0)),
+			new LoadConstantInstruction(StartRegister, new ValueInstance(NumberType, 0.0)),
+			new LoadConstantInstruction(EndRegister, new ValueInstance(NumberType, 100.0)),
 			loopBegin,
 			new LoadConstantInstruction(Register.R2, new ValueInstance(NumberType, 1.0)),
 			new LoopEndInstruction(2) { Begin = loopBegin },
@@ -647,17 +647,17 @@ public sealed class InstructionsToMlirTests
 	[Test]
 	public void ComplexBodyWithFewerIterationsStillParallelizes()
 	{
-		var startRegister = Register.R0;
-		var endRegister = Register.R1;
-		var loopBegin = new LoopBeginInstruction(startRegister, endRegister);
+		const Register StartRegister = Register.R0;
+		const Register EndRegister = Register.R1;
+		var loopBegin = new LoopBeginInstruction(StartRegister, EndRegister);
 		var bodyInstructions = new List<Instruction>();
 		for (var bodyIndex = 0; bodyIndex < 20; bodyIndex++)
 			bodyInstructions.Add(new BinaryInstruction(InstructionType.Add, Register.R2, Register.R3,
 				Register.R4));
 		var instructions = new List<Instruction>
 		{
-			new LoadConstantInstruction(startRegister, new ValueInstance(NumberType, 0.0)),
-			new LoadConstantInstruction(endRegister, new ValueInstance(NumberType, 10000.0)),
+			new LoadConstantInstruction(StartRegister, new ValueInstance(NumberType, 0.0)),
+			new LoadConstantInstruction(EndRegister, new ValueInstance(NumberType, 10000.0)),
 			new LoadConstantInstruction(Register.R2, new ValueInstance(NumberType, 1.0)),
 			new LoadConstantInstruction(Register.R3, new ValueInstance(NumberType, 2.0)),
 			loopBegin
@@ -675,13 +675,13 @@ public sealed class InstructionsToMlirTests
 	[Test]
 	public void SimpleBodyWithManyIterationsDoesNotParallelizeIfComplexityBelowThreshold()
 	{
-		var startRegister = Register.R0;
-		var endRegister = Register.R1;
-		var loopBegin = new LoopBeginInstruction(startRegister, endRegister);
+		const Register StartRegister = Register.R0;
+		const Register EndRegister = Register.R1;
+		var loopBegin = new LoopBeginInstruction(StartRegister, EndRegister);
 		var instructions = new List<Instruction>
 		{
-			new LoadConstantInstruction(startRegister, new ValueInstance(NumberType, 0.0)),
-			new LoadConstantInstruction(endRegister, new ValueInstance(NumberType, 50000.0)),
+			new LoadConstantInstruction(StartRegister, new ValueInstance(NumberType, 0.0)),
+			new LoadConstantInstruction(EndRegister, new ValueInstance(NumberType, 50000.0)),
 			loopBegin,
 			new LoadConstantInstruction(Register.R2, new ValueInstance(NumberType, 1.0)),
 			new LoopEndInstruction(1) { Begin = loopBegin },
@@ -699,7 +699,7 @@ public sealed class InstructionsToMlirTests
 	{
 		var rewriteMethod = typeof(MlirLinker).GetMethod("RewriteWindowsPrintRuntime",
 			BindingFlags.Static | BindingFlags.NonPublic);
-		Assert.That(rewriteMethod, Is.Not.Null,	"MlirLinker should expose a private " +
+		Assert.That(rewriteMethod, Is.Not.Null, "MlirLinker should expose a private " +
 			"RewriteWindowsPrintRuntime helper for Windows no-CRT print rewriting");
 		var result = rewriteMethod!.Invoke(null, [llvmIr]);
 		return result as string ??
@@ -709,17 +709,17 @@ public sealed class InstructionsToMlirTests
 	[Test]
 	public void HighComplexityLoopEmitsGpuLaunch()
 	{
-		var startRegister = Register.R0;
-		var endRegister = Register.R1;
-		var loopBegin = new LoopBeginInstruction(startRegister, endRegister);
+		const Register StartRegister = Register.R0;
+		const Register EndRegister = Register.R1;
+		var loopBegin = new LoopBeginInstruction(StartRegister, EndRegister);
 		var bodyInstructions = new List<Instruction>();
 		for (var bodyIndex = 0; bodyIndex < 20; bodyIndex++)
 			bodyInstructions.Add(new BinaryInstruction(InstructionType.Add, Register.R2, Register.R3,
 				Register.R4));
 		var instructions = new List<Instruction>
 		{
-			new LoadConstantInstruction(startRegister, new ValueInstance(NumberType, 0.0)),
-			new LoadConstantInstruction(endRegister, new ValueInstance(NumberType, 921600.0)),
+			new LoadConstantInstruction(StartRegister, new ValueInstance(NumberType, 0.0)),
+			new LoadConstantInstruction(EndRegister, new ValueInstance(NumberType, 921600.0)),
 			new LoadConstantInstruction(Register.R2, new ValueInstance(NumberType, 1.0)),
 			new LoadConstantInstruction(Register.R3, new ValueInstance(NumberType, 2.0)),
 			loopBegin
@@ -735,13 +735,13 @@ public sealed class InstructionsToMlirTests
 	[Test]
 	public void GpuLaunchUsesCorrectGlobalIdComputation()
 	{
-		var startRegister = Register.R0;
-		var endRegister = Register.R1;
-		var loopBegin = new LoopBeginInstruction(startRegister, endRegister);
+		const Register StartRegister = Register.R0;
+		const Register EndRegister = Register.R1;
+		var loopBegin = new LoopBeginInstruction(StartRegister, EndRegister);
 		var instructions = new List<Instruction>
 		{
-			new LoadConstantInstruction(startRegister, new ValueInstance(NumberType, 0.0)),
-			new LoadConstantInstruction(endRegister, new ValueInstance(NumberType, 8294400.0)),
+			new LoadConstantInstruction(StartRegister, new ValueInstance(NumberType, 0.0)),
+			new LoadConstantInstruction(EndRegister, new ValueInstance(NumberType, 8294400.0)),
 			new LoadConstantInstruction(Register.R2, new ValueInstance(NumberType, 1.0)),
 			new LoadConstantInstruction(Register.R3, new ValueInstance(NumberType, 2.0)),
 			loopBegin
@@ -761,13 +761,13 @@ public sealed class InstructionsToMlirTests
 	[Test]
 	public void GpuLaunchHasBoundsCheckAndTerminator()
 	{
-		var startRegister = Register.R0;
-		var endRegister = Register.R1;
-		var loopBegin = new LoopBeginInstruction(startRegister, endRegister);
+		const Register StartRegister = Register.R0;
+		const Register EndRegister = Register.R1;
+		var loopBegin = new LoopBeginInstruction(StartRegister, EndRegister);
 		var instructions = new List<Instruction>
 		{
-			new LoadConstantInstruction(startRegister, new ValueInstance(NumberType, 0.0)),
-			new LoadConstantInstruction(endRegister, new ValueInstance(NumberType, 8294400.0)),
+			new LoadConstantInstruction(StartRegister, new ValueInstance(NumberType, 0.0)),
+			new LoadConstantInstruction(EndRegister, new ValueInstance(NumberType, 8294400.0)),
 			new LoadConstantInstruction(Register.R2, new ValueInstance(NumberType, 1.0)),
 			new LoadConstantInstruction(Register.R3, new ValueInstance(NumberType, 2.0)),
 			loopBegin
@@ -789,13 +789,13 @@ public sealed class InstructionsToMlirTests
 	[Test]
 	public void GpuLaunchIncludesMemoryManagement()
 	{
-		var startRegister = Register.R0;
-		var endRegister = Register.R1;
-		var loopBegin = new LoopBeginInstruction(startRegister, endRegister);
+		const Register StartRegister = Register.R0;
+		const Register EndRegister = Register.R1;
+		var loopBegin = new LoopBeginInstruction(StartRegister, EndRegister);
 		var instructions = new List<Instruction>
 		{
-			new LoadConstantInstruction(startRegister, new ValueInstance(NumberType, 0.0)),
-			new LoadConstantInstruction(endRegister, new ValueInstance(NumberType, 8294400.0)),
+			new LoadConstantInstruction(StartRegister, new ValueInstance(NumberType, 0.0)),
+			new LoadConstantInstruction(EndRegister, new ValueInstance(NumberType, 8294400.0)),
 			new LoadConstantInstruction(Register.R2, new ValueInstance(NumberType, 1.0)),
 			new LoadConstantInstruction(Register.R3, new ValueInstance(NumberType, 2.0)),
 			loopBegin
@@ -821,13 +821,13 @@ public sealed class InstructionsToMlirTests
 	[Test]
 	public void GpuLaunchUsesProperRegionArguments()
 	{
-		var startRegister = Register.R0;
-		var endRegister = Register.R1;
-		var loopBegin = new LoopBeginInstruction(startRegister, endRegister);
+		const Register StartRegister = Register.R0;
+		const Register EndRegister = Register.R1;
+		var loopBegin = new LoopBeginInstruction(StartRegister, EndRegister);
 		var instructions = new List<Instruction>
 		{
-			new LoadConstantInstruction(startRegister, new ValueInstance(NumberType, 0.0)),
-			new LoadConstantInstruction(endRegister, new ValueInstance(NumberType, 8294400.0)),
+			new LoadConstantInstruction(StartRegister, new ValueInstance(NumberType, 0.0)),
+			new LoadConstantInstruction(EndRegister, new ValueInstance(NumberType, 8294400.0)),
 			new LoadConstantInstruction(Register.R2, new ValueInstance(NumberType, 1.0)),
 			new LoadConstantInstruction(Register.R3, new ValueInstance(NumberType, 2.0)),
 			loopBegin
@@ -851,13 +851,13 @@ public sealed class InstructionsToMlirTests
 	[Test]
 	public void MediumComplexityStaysScfParallelNotGpu()
 	{
-		var startRegister = Register.R0;
-		var endRegister = Register.R1;
-		var loopBegin = new LoopBeginInstruction(startRegister, endRegister);
+		const Register StartRegister = Register.R0;
+		const Register EndRegister = Register.R1;
+		var loopBegin = new LoopBeginInstruction(StartRegister, EndRegister);
 		var instructions = new List<Instruction>
 		{
-			new LoadConstantInstruction(startRegister, new ValueInstance(NumberType, 0.0)),
-			new LoadConstantInstruction(endRegister, new ValueInstance(NumberType, 100000.0)),
+			new LoadConstantInstruction(StartRegister, new ValueInstance(NumberType, 0.0)),
+			new LoadConstantInstruction(EndRegister, new ValueInstance(NumberType, 100000.0)),
 			new LoadConstantInstruction(Register.R2, new ValueInstance(NumberType, 1.0)),
 			new LoadConstantInstruction(Register.R3, new ValueInstance(NumberType, 2.0)),
 			loopBegin,
@@ -877,7 +877,7 @@ public sealed class InstructionsToMlirTests
 	public void GpuThresholdConstantIsExposed()
 	{
 		Assert.That(InstructionsToMlir.GpuComplexityThreshold, Is.GreaterThan(
-			InstructionsToMlir.ComplexityThreshold),
+				InstructionsToMlir.ComplexityThreshold),
 			"GPU threshold must be higher than CPU parallel threshold");
 		Assert.That(InstructionsToMlir.GpuComplexityThreshold, Is.EqualTo(10_000_000),
 			"GPU threshold is 10M complexity (e.g., 1280x720 image × 10+ body instructions)");
@@ -900,17 +900,17 @@ public sealed class InstructionsToMlirTests
 	[Test]
 	public void GpuCompileForPlatformAddsContainerModuleAttribute()
 	{
-		var startRegister = Register.R0;
-		var endRegister = Register.R1;
-		var loopBegin = new LoopBeginInstruction(startRegister, endRegister);
+		const Register StartRegister = Register.R0;
+		const Register EndRegister = Register.R1;
+		var loopBegin = new LoopBeginInstruction(StartRegister, EndRegister);
 		var bodyInstructions = new List<Instruction>();
 		for (var bodyIndex = 0; bodyIndex < 20; bodyIndex++)
 			bodyInstructions.Add(new BinaryInstruction(InstructionType.Add, Register.R2, Register.R3,
 				Register.R4));
 		var instructions = new List<Instruction>
 		{
-			new LoadConstantInstruction(startRegister, new ValueInstance(NumberType, 0.0)),
-			new LoadConstantInstruction(endRegister, new ValueInstance(NumberType, 921600.0)),
+			new LoadConstantInstruction(StartRegister, new ValueInstance(NumberType, 0.0)),
+			new LoadConstantInstruction(EndRegister, new ValueInstance(NumberType, 921600.0)),
 			new LoadConstantInstruction(Register.R2, new ValueInstance(NumberType, 1.0)),
 			new LoadConstantInstruction(Register.R3, new ValueInstance(NumberType, 2.0)),
 			loopBegin

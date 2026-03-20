@@ -3,7 +3,6 @@ using BenchmarkDotNet.Engines;
 using BenchmarkDotNet.Running;
 using Strict.Bytecode;
 using Strict.Bytecode.Tests;
-using Strict.Language.Tests;
 
 namespace Strict.Tests;
 
@@ -45,7 +44,8 @@ public class AdderProgramTests : TestBytecode
 	[Category("Slow")]
 	[Benchmark]
 	public void AddTotalsForThreeNumbers() =>
-		Assert.That(ExecuteAddTotals("AdderProgram(1, 2, 3).AddTotals"), Is.EqualTo(new[] { 1, 3, 6 }));
+		Assert.That(ExecuteAddTotals("AdderProgram(1, 2, 3).AddTotals"),
+			Is.EqualTo(new[] { 1, 3, 6 }));
 
 	[Test]
 	[Category("Manual")]

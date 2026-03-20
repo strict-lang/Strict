@@ -1,6 +1,5 @@
 using Strict.Bytecode.Serialization;
 using Strict.Expressions;
-using Strict.Language;
 
 namespace Strict.Bytecode.Instructions;
 

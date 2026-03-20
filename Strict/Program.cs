@@ -11,7 +11,7 @@ public static class Program
 	//ncrunch: no coverage start
 	public static async Task Main(string[] args)
 	{
-   args = ResolveImplicitExecutableTarget(args);
+		args = ResolveImplicitExecutableTarget(args);
 		if (args.Length == 0)
 			DisplayUsageInformation();
 		else
@@ -88,7 +88,7 @@ Notes:
 			if (!diagnostics)
 				diagnostics = true;
 #endif
-      var expression = nonFlagArgs.Length == 0
+			var expression = nonFlagArgs.Length == 0
 				? Method.Run
 				: string.Join(" ", nonFlagArgs);
 			var runner = new Runner(filePath, null, expression, diagnostics);
