@@ -18,7 +18,7 @@ public sealed class DecompilerTests : TestBytecode
 		try
 		{
 			var content = File.ReadAllText(Path.Combine(outputFolder, "Add.strict"));
-			Assert.That(content, Does.Contain("constant First"));
+			Assert.That(content, Does.Contain("First + Second"));
 		}
 		finally
 		{
@@ -131,8 +131,13 @@ public sealed class DecompilerTests : TestBytecode
 			? "RemoveParentheses(\"example(unwanted thing)example\").Remove"
 			: typeName + ".Run";
 
-	private static string GetExamplesFolder() =>
-		Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "..", "Examples"));
+	private static string GetExamplesFolder()
+	{
+		var path = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "..", "Examples"));
+		if (File.Exists(path))
+			return path; //ncrunch: no coverage
+		return @"c:\code\GitHub\strict-lang\Strict\Examples";
+	}
 
 	private static string DecompileToTemp(BinaryExecutable strictBinary, string typeName)
 	{
