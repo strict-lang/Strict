@@ -67,7 +67,6 @@ public sealed class Runner
 		if (IsExpressionInvocation)
 			throw new CannotBuildExecutableWithCustomExpression();
 		var binary = await GetBinary();
-		//TODO: convoluted! fix and remove this mess
 		if (binary.GetRunMethods().Any(method => method.parameters.Count > 0))
 		{
 			var launcherPath = CreateManagedLauncher(platform);
@@ -107,7 +106,6 @@ public sealed class Runner
 		var cachedBinaryPath = Path.ChangeExtension(strictFilePath, BinaryExecutable.Extension);
 		if (File.Exists(cachedBinaryPath))
 		{
-			//TODO: convoluted, was easier before: var binary = new BinaryExecutable(cachedBinaryPath, basePackage);
 			BinaryExecutable binary;
 			try
 			{
@@ -326,113 +324,11 @@ public sealed class Runner
 			TimeSpan.FromTicks(stepTimes.Sum()).ToString(@"s\.ffffff") + "s to " + platform +
 			" executable of " + new FileInfo(exeFilePath).Length + " bytes to: " + exeFilePath);
 
-/*obs, integrate below! TODO: cleanup
-	var startTicks = DateTime.UtcNow.Ticks;
-	currentFolder = Path.GetDirectoryName(Path.GetFullPath(strictFilePath))!;
-		var typeName = Path.GetFileNameWithoutExtension(strictFilePath);
-		if (skipPackageSearchAndUseThisTestPackage != null)
-		{
-			var basePackage = skipPackageSearchAndUseThisTestPackage;
-			if (Directory.Exists(strictFilePath))
-				(package, mainType) = LoadPackageFromDirectory(basePackage, strictFilePath);
-			else if (Path.GetExtension(strictFilePath) == Binary.Extension)
-			{
-				binary = new Binary(strictFilePath, basePackage);
-	//package = new Package(basePackage, typeName);
-	mainType = new Type(basePackage, new TypeLines(typeName, Method.Run))
-					.ParseMembersAndMethods(new MethodExpressionParser());
-			}
-			else
-			{
-				var packageName = Path.GetFileNameWithoutExtension(strictFilePath);
-//package = new Package(basePackage, packageName);
-var typeLines = new TypeLines(typeName, File.ReadAllLines(strictFilePath));
-mainType = new Type(basePackage, typeLines)
-					.ParseMembersAndMethods(new MethodExpressionParser());
-			}
-		}
-		else
-{
-	package = null!;
-	mainType = null!;
-}
-var endTicks = DateTime.UtcNow.Ticks;
-stepTimes.Add(endTicks - startTicks);
-Log("└─ Step 1 ⏱ Time: " +
-	TimeSpan.FromTicks(endTicks - startTicks).TotalMilliseconds + " ms");
-private Binary? binary;
-	private readonly string currentFolder;
-	private readonly Package package;
-	private readonly Type mainType;
-	*
-	private void ExecuteBytecode(IReadOnlyList<Instruction> instructions,
-		Dictionary<string, List<Instruction>>? precompiledMethods = null,
-		IReadOnlyDictionary<string, ValueInstance>? initialVariables = null)
-	{
-		Log("┌─ Step 8: Execute");
-		Log("│  ✓ Executing " + mainType.Name + ".Run method:");
-		var startTicks = DateTime.UtcNow.Ticks;
-		new VirtualMachine(package, precompiledMethods).Execute(instructions, initialVariables);
-		var endTicks = DateTime.UtcNow.Ticks;
-		Log("│  ✓ Run method executed successfully, instructions: " + instructions.Count);
-		stepTimes.Add(endTicks - startTicks);
-		Log("└─ Step 8 ⏱ Time: " + TimeSpan.FromTicks(endTicks - startTicks).TotalMilliseconds +
-			" ms");
-	}
-
-	private IReadOnlyDictionary<string, ValueInstance>? BuildProgramArguments(string[] programArgs)
-	{
-		if (programArgs is not { Length: > 0 })
-			return null;
-		var runMethod = mainType.Methods.FirstOrDefault(method =>
-				method.Name == Method.Run && method.Parameters.Count == programArgs.Length) ??
-			mainType.Methods.FirstOrDefault(method => method is
-				{ Name: Method.Run, Parameters: [{ Type.IsList: true }] });
-		if (runMethod == null)
-			throw new NotSupportedException( //ncrunch: no coverage
-				"No Run method with " + programArgs.Length + " arguments " +
-				"found: " + ParsingFailed.GetClickableStacktraceLine(mainType, 0, Method.Run));
-		var numberType = package.GetType(Type.Number);
-		var numbersType = package.GetListImplementationType(numberType);
-		var numbers = programArgs.Select(argument =>
-			new ValueInstance(numberType,
-				double.Parse(argument, CultureInfo.InvariantCulture))).ToArray();
-		var numbersValue = new ValueInstance(numbersType, numbers);
-		return new Dictionary<string, ValueInstance> { [runMethod.Parameters[0].Name] = numbersValue };
-	}
-
-//TODO: wrong!
 	/// <summary>
 	/// Evaluates a Strict expression like "TypeName(args).Method" or "TypeName(args)" (calls Run).
 	/// The result is printed to Console if the method returns a value.
 	/// Example: runner.RunExpression("FibonacciRunner(5).Compute") prints "5".
 	/// </summary>
-	public async Task RunExpression(string expressionString)
-	{
-		var typeName = Path.GetFileNameWithoutExtension(strictFilePath);
-		var basePackage = skipPackageSearchAndUseThisTestPackage ?? await GetPackage(nameof(Strict));
-		var sourceLines = await File.ReadAllLinesAsync(strictFilePath);
-		var targetType = new Type(basePackage, new TypeLines(typeName, sourceLines)).ParseMembersAndMethods(parser);
-		try
-		{
-			var expression = parser.ParseExpression(
-				new Body(new Method(targetType, 0, parser, new[] { nameof(RunExpression) })),
-				expressionString);
-      var binary = GenerateExpressionBinaryExecutable(expression);
-			OptimizeBytecode(binary);
-			var vm = new VirtualMachine(binary);
-			vm.ExecuteRun();
-			if (vm.Returns.HasValue)
-				Console.WriteLine(vm.Returns.Value.ToExpressionCodeString());
-		}
-		finally
-		{
-			targetType.Dispose();
-		}
-	}
-	*/
-
-//TODO: still duplicated code, should be the same as Run!
 	public async Task RunExpression(string expressionString)
 	{
 		var typeName = Path.GetFileNameWithoutExtension(strictFilePath);
@@ -457,8 +353,7 @@ private Binary? binary;
 		}
 	}
 
-	//TODO: why do we care? just use BinaryExecutable.EntryPoint!
-	private BinaryMethod GetRunMethod(BinaryExecutable binary)
+	private BinaryMethod FindRunMethodForArguments(BinaryExecutable binary)
 	{
 		var runMethods = binary.GetRunMethods();
 		var exactMatch = runMethods.FirstOrDefault(method =>
@@ -473,7 +368,6 @@ private Binary? binary;
 			" arguments.");
 	}
 
-	//TODO: overcomplicated
 	private IReadOnlyDictionary<string, ValueInstance>? BuildProgramArguments(
 		BinaryExecutable binary, BinaryMethod runMethod)
 	{
@@ -515,7 +409,6 @@ private Binary? binary;
 			: null) ??
 		binary.basePackage.GetType(fullTypeName);
 
-	//TODO: this should not be here!
 	private static ValueInstance CreateValueInstance(Type targetType, string argument)
 	{
 		if (targetType.IsNumber)
@@ -531,7 +424,6 @@ private Binary? binary;
 		binary.MethodsPerType.First(typeData => typeData.Value.MethodGroups.TryGetValue(Method.Run,
 			out var overloads) && overloads.Contains(runMethod)).Key;
 
-	//TODO: where is all this complexity coming from?
 	private string CreateManagedLauncher(Platform platform)
 	{
 		if (platform == Platform.Windows && !OperatingSystem.IsWindows() ||
@@ -574,13 +466,17 @@ private Binary? binary;
 			return;
 		}
 		var binary = await GetBinary();
-		var runMethod = GetRunMethod(binary);
-		//TODO: why do we have to do this here? shouldn't this be happening in generation?
-		binary.SetEntryPoint(GetRunMethodTypeFullName(binary, runMethod), Method.Run,
-			runMethod.parameters.Count, runMethod.ReturnTypeName);
-		var programArguments = BuildProgramArguments(binary, runMethod);
-		LogTiming(nameof(Run),
-			() => new VirtualMachine(binary).Execute(initialVariables: programArguments));
+		if (ProgramArguments.Length > 0)
+		{
+			var runMethod = FindRunMethodForArguments(binary);
+			binary.SetEntryPoint(GetRunMethodTypeFullName(binary, runMethod), Method.Run,
+				runMethod.parameters.Count, runMethod.ReturnTypeName);
+			var programArguments = BuildProgramArguments(binary, runMethod);
+			LogTiming(nameof(Run),
+				() => new VirtualMachine(binary).Execute(initialVariables: programArguments));
+		}
+		else
+			LogTiming(nameof(Run), () => new VirtualMachine(binary).Execute());
 		Console.WriteLine("Executed " + strictFilePath + " via " + nameof(VirtualMachine) + " in " +
 			TimeSpan.FromTicks(stepTimes.Sum()).ToString(@"s\.ffffff") + "s");
 	}

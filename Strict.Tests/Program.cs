@@ -13,7 +13,7 @@ internal class Program
 		// First, ensure the .strictbinary file exists by compiling from source
 		if (!File.Exists(binaryFilePath))
 			RunSilently(() => new Runner(
-				Path.Combine(AppContext.BaseDirectory, "Examples", "SimpleCalculator.strict")).Run().Dispose());
+				Path.Combine(AppContext.BaseDirectory, "Examples", "SimpleCalculator.strict")).Run().GetAwaiter().GetResult());
 		// Warm up: one full binary execution to JIT and cache everything (also populates the binary cache)
 		RunBinaryOnce(binaryFilePath);
 		Console.WriteLine("Warmup complete. Starting performance measurement...");
@@ -43,7 +43,7 @@ internal class Program
 	}
 
 	private static void RunBinaryOnce(string binaryFilePath) =>
-		RunSilently(() => new Runner(binaryFilePath).Run().Dispose());
+		RunSilently(() => new Runner(binaryFilePath).Run().GetAwaiter().GetResult());
 
 	private static void RunSilently(Action action)
 	{

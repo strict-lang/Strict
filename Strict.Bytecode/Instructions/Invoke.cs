@@ -3,7 +3,6 @@ using Strict.Expressions;
 
 namespace Strict.Bytecode.Instructions;
 
-//TODO: remove
 public sealed class Invoke(Register register, MethodCall method, Registry persistedRegistry)
 	: RegisterInstruction(InstructionType.Invoke, register)
 {

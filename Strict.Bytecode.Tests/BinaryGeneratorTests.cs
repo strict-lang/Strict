@@ -21,7 +21,7 @@ public sealed class BinaryGeneratorTests : TestBytecode
 		var instructions = new BinaryGenerator(GenerateMethodCallFromSource("TemperatureConverter",
 			"TemperatureConverter(100).ToFahrenheit", "has celsius Number", "ToFahrenheit Number",
 			"\tcelsius * 9 / 5 + 32")).Generate();
-		var binaryInstructionTypes = instructions.OfType<BinaryInstruction>().Select(binary =>
+		var binaryInstructionTypes = instructions.ToInstructions().OfType<BinaryInstruction>().Select(binary =>
 			binary.InstructionType).ToList();
 		Assert.That(binaryInstructionTypes, Is.EqualTo(new[]
 		{
@@ -35,7 +35,7 @@ public sealed class BinaryGeneratorTests : TestBytecode
 		var methodCall = GenerateMethodCallFromSource("ValueComparison", "ValueComparison(5).IsSame",
 			"has number Number", "IsSame Boolean", "\tif value is value", "\t\treturn true", "\tfalse");
 		var instructions = new BinaryGenerator(methodCall).Generate();
-		Assert.That(instructions.OfType<LoadVariableToRegister>().Any(load => load.Identifier == "value"),
+		Assert.That(instructions.ToInstructions().OfType<LoadVariableToRegister>().Any(load => load.Identifier == "value"),
 			Is.True);
 	}
 
@@ -46,7 +46,7 @@ public sealed class BinaryGeneratorTests : TestBytecode
 			"has value Number",
 			"GetValue Number", "\tNumValue(5).GetValue is 5", "\tvalue");
 		var instructions = new BinaryGenerator(methodCall).Generate();
-		Assert.That(instructions.OfType<PrintInstruction>().Any(), Is.False,
+		Assert.That(instructions.ToInstructions().OfType<PrintInstruction>().Any(), Is.False,
 			"Method without logger.Log does not produce PrintInstruction");
 	}
 

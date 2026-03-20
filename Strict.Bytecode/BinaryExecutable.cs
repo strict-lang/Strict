@@ -1,4 +1,3 @@
-using System.Collections;
 using System.IO.Compression;
 using System.Runtime.CompilerServices;
 using Strict.Bytecode.Instructions;
@@ -16,7 +15,7 @@ namespace Strict.Bytecode;
 /// from <see cref="BinaryGenerator"/> or loaded from a compact .strictbinary ZIP file, which is
 /// done via <see cref="Serialize(string)"/>. Used by the VirtualMachine or executable generation.
 /// </summary>
-public sealed class BinaryExecutable(Package basePackage) : IEnumerable<Instruction>
+public sealed class BinaryExecutable(Package basePackage)
 {
 	internal readonly Package basePackage = basePackage;
 	private readonly Package package = basePackage;
@@ -351,7 +350,6 @@ public sealed class BinaryExecutable(Package basePackage) : IEnumerable<Instruct
 		return new Value(type, new ValueInstance(type, reader.ReadBoolean()));
 	}
 
-	//TODO: avoid! remove!
 	private static Type EnsureResolvedType(Package package, string typeName)
 	{
 		var resolved = package.FindType(typeName) ?? (typeName.Contains('.')
@@ -520,7 +518,6 @@ public sealed class BinaryExecutable(Package basePackage) : IEnumerable<Instruct
 	public int TotalInstructionsCount =>
 		MethodsPerType.Values.Sum(methods => methods.TotalInstructionCount);
 
-	//TODO: way too complicated, fix callers.
 	internal BinaryExecutable AddType(string typeFullName, List<BinaryMember> members,
 		Dictionary<string, List<BinaryMethod>> methodGroups, bool isEntryType = false)
 	{
@@ -535,7 +532,6 @@ public sealed class BinaryExecutable(Package basePackage) : IEnumerable<Instruct
 		return this;
 	}
 
-	//TODO: remove this bullshit!
 	public static BinaryExecutable CreateForEntryInstructions(Package basePackage,
 		List<Instruction> instructions)
 	{
@@ -560,8 +556,4 @@ public sealed class BinaryExecutable(Package basePackage) : IEnumerable<Instruct
 
 	public List<TResult> ConvertAll<TResult>(Converter<Instruction, TResult> converter) =>
 		EntryPoint.instructions.Select(instruction => converter(instruction)).ToList();
-
-	//TODO: why the hell is this needed, remove!
-	public IEnumerator<Instruction> GetEnumerator() => EntryPoint.instructions.GetEnumerator();
-	IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 }

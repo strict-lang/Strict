@@ -10,7 +10,6 @@ namespace Strict.Tests;
 
 public sealed class VirtualMachineTests : TestBytecode
 {
-	//TODO: duplicate of TestOptimizers.ExecuteInstructions
 	private static VirtualMachine ExecuteVm(List<Instruction> instructions,
 		IReadOnlyDictionary<string, ValueInstance>? initialVariables = null)
 	{
@@ -430,7 +429,7 @@ public sealed class VirtualMachineTests : TestBytecode
 			new SetInstruction(Number(1), Register.R1),
 			new SetInstruction(Number(10), Register.R2),
 			new BinaryInstruction(InstructionType.LessThan, Register.R2, Register.R0),
-			new JumpIf(InstructionType.JumpIfTrue, 2),
+			new Jump(2, InstructionType.JumpIfTrue),
 			new BinaryInstruction(InstructionType.Add, Register.R2, Register.R0, Register.R0)
 		]).Memory.Registers[Register.R0].Number, Is.EqualTo(15));
 
@@ -441,7 +440,7 @@ public sealed class VirtualMachineTests : TestBytecode
 			new SetInstruction(Number(1), Register.R1),
 			new SetInstruction(Number(0), Register.R2),
 			new BinaryInstruction(InstructionType.Equal, Register.R0, Register.R1),
-			new JumpIfTrue(1, Register.R0),
+			new Jump(1, InstructionType.JumpIfTrue),
 			new BinaryInstruction(InstructionType.Add, Register.R0, Register.R1, Register.R2)
 		]).Memory.Registers[Register.R2].Number, Is.EqualTo(0));
 
@@ -452,7 +451,7 @@ public sealed class VirtualMachineTests : TestBytecode
 			new SetInstruction(Number(2), Register.R1),
 			new SetInstruction(Number(0), Register.R2),
 			new BinaryInstruction(InstructionType.Equal, Register.R0, Register.R1),
-			new JumpIfFalse(1, Register.R0),
+			new Jump(1, InstructionType.JumpIfFalse),
 			new BinaryInstruction(InstructionType.Add, Register.R0, Register.R1, Register.R2)
 		]).Memory.Registers[Register.R2].Number, Is.EqualTo(0));
 
@@ -466,9 +465,9 @@ public sealed class VirtualMachineTests : TestBytecode
 			new SetInstruction(Number(registers[0]), Register.R0),
 			new SetInstruction(Number(registers[1]), Register.R1),
 			new BinaryInstruction(conditional, Register.R0, Register.R1),
-			new JumpIf(InstructionType.JumpIfTrue, 2),
+			new Jump(2, InstructionType.JumpIfTrue),
 			new BinaryInstruction(InstructionType.Subtract, Register.R1, Register.R0, Register.R0),
-			new JumpIf(InstructionType.JumpIfFalse, 2),
+			new Jump(2, InstructionType.JumpIfFalse),
 			new BinaryInstruction(InstructionType.Add, Register.R0, Register.R1, Register.R0)
 		]).Memory.Registers[Register.R0].Number, Is.EqualTo(expected));
 

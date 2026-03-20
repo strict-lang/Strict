@@ -302,7 +302,6 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 		var methodKey = BuildMethodHeaderKeyInternal(invoke.Method.Method);
 		if (compiledMethods == null || !compiledMethods.TryGetValue(methodKey, out var methodInfo))
 			throw new NotSupportedException( //ncrunch: no coverage
-				//TODO: wtf?
 				"Non-print method calls cannot be compiled to MLIR. " +
 				"Use the interpreted runner for programs with complex runtime method calls.");
 		var arguments = new List<string>();

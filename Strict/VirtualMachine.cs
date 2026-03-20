@@ -25,11 +25,11 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 
 	private bool conditionFlag;
 	private int instructionIndex;
-	private List<Instruction> instructions = [];
+	private IReadOnlyList<Instruction> instructions = [];
 	public ValueInstance? Returns { get; private set; }
 	public Memory Memory { get; } = new();
 
-	private VirtualMachine RunInstructions(List<Instruction> blockInstructions)
+	private VirtualMachine RunInstructions(IReadOnlyList<Instruction> blockInstructions)
 	{
 		foreach (var loopBegin in blockInstructions.OfType<LoopBeginInstruction>())
 			loopBegin.Reset();
@@ -152,21 +152,15 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			Memory.Registers[invoke.Register] = result.Value;
 	}
 
-	private List<Instruction>? GetPrecompiledMethodInstructions(Method method)
-	{
-		var foundInstructions = executable.FindInstructions(method.Type, method) ??
-			executable.FindInstructions(method.Type.Name, method.Name,
-				method.Parameters.Count, method.ReturnType.Name) ??
-			executable.FindInstructions(
-				nameof(Strict) + Context.ParentSeparator + method.Type.Name, method.Name,
-				method.Parameters.Count, method.ReturnType.Name);
-		return foundInstructions == null
-			? null
-			//TODO: find all [.. with existing list and no changes, all those cases need to be removed, there is a crazy amount of those added (54 wtf)!
-			: [.. foundInstructions];
-	}
+	private IReadOnlyList<Instruction>? GetPrecompiledMethodInstructions(Method method) =>
+		executable.FindInstructions(method.Type, method) ??
+		executable.FindInstructions(method.Type.Name, method.Name,
+			method.Parameters.Count, method.ReturnType.Name) ??
+		executable.FindInstructions(
+			nameof(Strict) + Context.ParentSeparator + method.Type.Name, method.Name,
+			method.Parameters.Count, method.ReturnType.Name);
 
-	private List<Instruction>? GetPrecompiledMethodInstructions(Invoke invoke) =>
+	private IReadOnlyList<Instruction>? GetPrecompiledMethodInstructions(Invoke invoke) =>
 		GetPrecompiledMethodInstructions(invoke.Method.Method);
 
 	private void InitializeMethodCallScope(MethodCall methodCall,
@@ -246,7 +240,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			: fullTypeName;
 	}
 
-	private ValueInstance? RunChildScope(List<Instruction> childInstructions,
+	private ValueInstance? RunChildScope(IReadOnlyList<Instruction> childInstructions,
 		Action? initializeScope = null)
 	{
 		var savedInstructions = instructions;
