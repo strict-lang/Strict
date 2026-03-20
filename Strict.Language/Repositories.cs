@@ -69,8 +69,42 @@ public sealed class Repositories
 		);
 	} //ncrunch: no coverage end
 
-	public static string GetLocalDevelopmentPath(string organization, string packageFullName) =>
-		DevelopmentBaseFolder + organization + Context.ParentSeparator + packageFullName;
+	public static string GetLocalDevelopmentPath(string organization, string packageFullName)
+	{
+		var traditional = DevelopmentBaseFolder + organization + Context.ParentSeparator +
+			packageFullName;
+		if (Directory.Exists(traditional))
+			return traditional;
+		var repoRoot = FindRepositoryRoot();
+		if (repoRoot == null)
+			return traditional;
+		var parts = packageFullName.Split(Context.ParentSeparator);
+		if (Path.GetFileName(repoRoot) != parts[0])
+			return traditional;
+		return parts.Length == 1
+			? repoRoot
+			: Path.Combine(repoRoot, Path.Combine(parts[1..]));
+	}
+
+	private static string? FindRepositoryRoot()
+	{
+		if (cachedRepositoryRoot != null)
+			return cachedRepositoryRoot;
+		var current = AppContext.BaseDirectory;
+		while (current != null)
+		{
+			if (File.Exists(Path.Combine(current, "Strict.sln")) &&
+				File.Exists(Path.Combine(current, "Any.strict")))
+			{
+				cachedRepositoryRoot = current;
+				return current;
+			}
+			current = Path.GetDirectoryName(current);
+		}
+		return null;
+	}
+
+	private static string? cachedRepositoryRoot;
 
 	public sealed class OnlyGithubDotComUrlsAreAllowedForNow(string uri) : Exception(uri +
 		" is invalid. Valid url: " + GitHubStrictUri + nameof(Strict) + ", it must always start " +
@@ -93,14 +127,26 @@ public sealed class Repositories
 		, [CallerFilePath] string callerFilePath = "", [CallerLineNumber] int callerLineNumber = 0,
 		[CallerMemberName] string callerMemberName = ""
 #endif
-	) =>
-		cacheService.GetOrAddAsync(fullName, _ => CreatePackageFromFiles(packagePath,
+	)
+	{
+		var parent = FindParentPackage(fullName);
+		return cacheService.GetOrAddAsync(fullName, _ => CreatePackageFromFiles(packagePath,
 			Directory.GetFiles(packagePath, "*" + Type.Extension)
 #if DEBUG
-			, null, callerFilePath, callerLineNumber, callerMemberName));
+			, parent, callerFilePath, callerLineNumber, callerMemberName));
 #else
-		));
+			, parent));
 #endif
+	}
+
+	private Package? FindParentPackage(string fullName)
+	{
+		var separatorIndex = fullName.LastIndexOf(Context.ParentSeparator);
+		if (separatorIndex < 0)
+			return null;
+		var parentName = fullName[..separatorIndex];
+		return loadedPackages.Find(package => package.FullName == parentName);
+	}
 
 	/// <summary>
 	/// Initially we need to create just empty types, and then after they all have been created,

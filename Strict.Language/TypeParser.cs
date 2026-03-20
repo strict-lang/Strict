@@ -487,7 +487,7 @@ public sealed class TypeParser(Type type, string[] lines)
 		ReadOnlySpan<char> remainingLine, string nameAndType,
 		out ReadOnlySpan<char> constraintsSpan, out string initialValueSpan)
 	{
-		var equalIndex = remainingLine.IndexOf(EqualCharacter);
+		var equalIndex = FindStandaloneEqualIndex(remainingLine);
 		if (equalIndex > 0)
 		{
 			constraintsSpan = remainingLine[(nameAndType.Length + 1 + Keyword.With.Length + 1)..(equalIndex - 1)];
@@ -497,6 +497,15 @@ public sealed class TypeParser(Type type, string[] lines)
 		constraintsSpan = remainingLine[(nameAndType.Length + 1 + Keyword.With.Length + 1)..];
 		initialValueSpan = "";
 		return null;
+	}
+
+	private static int FindStandaloneEqualIndex(ReadOnlySpan<char> line)
+	{
+		for (var index = 1; index < line.Length; index++)
+			if (line[index] == EqualCharacter && line[index - 1] != '>' && line[index - 1] != '<' &&
+				line[index - 1] != '!' && (index + 1 >= line.Length || line[index + 1] != '='))
+				return index;
+		return -1;
 	}
 
 	private const char EqualCharacter = '=';

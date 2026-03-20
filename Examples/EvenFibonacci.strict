@@ -7,8 +7,11 @@ Sum Number
 		let next = first + second
 		if next >= number
 			return sum
-		if next % 2 is 0
-			sum.Increment(next)
+		sum = AddIfEven(sum, next)
 		first = second
 		second = next
 	sum
+AddIfEven(mutable current Number, next Number) Number
+	if next % 2 is 0
+		current.Increment(next)
+	current

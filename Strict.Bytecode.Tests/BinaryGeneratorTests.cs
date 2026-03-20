@@ -54,9 +54,10 @@ public sealed class BinaryGeneratorTests : TestBytecode
 	public async Task RunAdjustBrightnessAndConfirmDependenciesAreLoaded()
 	{
 		var repos = new Repositories(new MethodExpressionParser());
+		using var basePackage = await repos.LoadStrictPackage();
+		using var mathPackage = await repos.LoadStrictPackage(nameof(Strict) + Context.ParentSeparator + "Math");
 		var packageName = nameof(Strict) + Context.ParentSeparator + "ImageProcessing";
-		using var imageProcessingPackage = await repos.LoadFromPath(packageName,
-			Repositories.GetLocalDevelopmentPath(Repositories.StrictOrg, packageName));
+		using var imageProcessingPackage = await repos.LoadStrictPackage(packageName);
 		var adjustBrightness = imageProcessingPackage.GetType("AdjustBrightness");
 		var method = adjustBrightness.FindMethod(Method.Run, [])!;
 		var call = new MethodCall(method);

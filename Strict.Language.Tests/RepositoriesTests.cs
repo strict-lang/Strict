@@ -85,12 +85,9 @@ public class RepositoriesTests
 	public async Task LoadStrictImageProcessingTypes()
 	{
 		using var basePackage = await repos.LoadStrictPackage();
-		var mathPackageName = nameof(Strict) + Context.ParentSeparator + "Math";
-		using var mathPackage = await repos.LoadFromPath(mathPackageName,
-			Repositories.GetLocalDevelopmentPath(Repositories.StrictOrg, mathPackageName));
-		var imageProcessingPackageName = nameof(Strict) + Context.ParentSeparator + "ImageProcessing";
-		using var imageProcessingPackage = await repos.LoadFromPath(imageProcessingPackageName,
-			Repositories.GetLocalDevelopmentPath(Repositories.StrictOrg, imageProcessingPackageName));
+		using var mathPackage = await repos.LoadStrictPackage(nameof(Strict) + Context.ParentSeparator + "Math");
+		using var imageProcessingPackage =
+			await repos.LoadStrictPackage(nameof(Strict) + Context.ParentSeparator + "ImageProcessing");
 		var adjustBrightness = imageProcessingPackage.GetType("AdjustBrightness");
 		Assert.That(adjustBrightness, Is.Not.Null);
 		Assert.That(adjustBrightness.Methods[0].GetBodyAndParseIfNeeded(), Is.Not.Null);
