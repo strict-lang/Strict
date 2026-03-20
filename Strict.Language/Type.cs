@@ -41,7 +41,6 @@ public class Type : Context, IDisposable
 	public const string Iterator = nameof(Iterator);
 	public const string List = nameof(List);
 	public const string Logger = nameof(Logger);
-	public const string App = nameof(App);
 	public const string System = nameof(System);
 	public const string File = nameof(File);
 	public const string Directory = nameof(Directory);

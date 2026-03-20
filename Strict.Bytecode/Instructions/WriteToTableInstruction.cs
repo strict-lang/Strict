@@ -7,7 +7,7 @@ public sealed class WriteToTableInstruction(Register key, Register value, string
 {
 	public WriteToTableInstruction(BinaryReader reader, NameTable table)
 		: this((Register)reader.ReadByte(), (Register)reader.ReadByte(),
-			table.Names[reader.Read7BitEncodedInt()]) { }
+			table.names[reader.Read7BitEncodedInt()]) { }
 
 	public Register Value { get; } = value;
 	public string Identifier { get; } = identifier;

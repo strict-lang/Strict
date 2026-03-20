@@ -7,7 +7,7 @@ public sealed class StoreVariableInstruction(ValueInstance constant, string iden
 	bool isMember = false) : InstanceInstruction(InstructionType.StoreConstantToVariable, constant)
 {
 	public StoreVariableInstruction(BinaryReader reader, NameTable table, BinaryExecutable binary)
-		: this(binary.ReadValueInstance(reader, table), table.Names[reader.Read7BitEncodedInt()],
+		: this(binary.ReadValueInstance(reader, table), table.names[reader.Read7BitEncodedInt()],
 			reader.ReadBoolean()) { }
 
 	public string Identifier { get; } = identifier;

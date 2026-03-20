@@ -6,7 +6,6 @@ using Type = Strict.Language.Type;
 
 namespace Strict.Bytecode;
 
-//TODO: avoid writing common things into .bytecode: no None, Number, Text, etc. we all know these already! Maybe we can prefill each NameTable with the name of the type, upper case and lower case and all the base types and lower case and multiples. That is probably 80% of what is used atm!
 /// <summary>
 /// Converts an expression into a <see cref="BinaryExecutable"/>, mostly from calling the Run
 /// method of a .strict type, but can be any expression. Will get all used types with their
@@ -106,7 +105,7 @@ public sealed class BinaryGenerator
 		var methodsByType =
 			GenerateEntryMethods(typeFullName, entryExpressions, runReturnType);
 		foreach (var (compiledTypeFullName, methodGroups) in methodsByType)
-			binary.AddType(compiledTypeFullName, methodGroups);
+			binary.AddType(compiledTypeFullName, [], methodGroups);
 		return binary;
 	}
 
@@ -615,11 +614,11 @@ public sealed class BinaryGenerator
 		{
 			var members = type.Members.Select(member =>
 				new BinaryMember(member.Name, GetBinaryTypeName(member.Type, entryType), null)).ToList();
-			binary.AddType(GetBinaryTypeName(type, entryType),
+			binary.AddType(GetBinaryTypeName(type, entryType), members,
 				methodsByType.TryGetValue(type.FullName, out var methodGroups)
 					? methodGroups
 					: new Dictionary<string, List<BinaryMethod>>(StringComparer.Ordinal),
-				members, type == entryType);
+				type == entryType);
 		}
 	}
 

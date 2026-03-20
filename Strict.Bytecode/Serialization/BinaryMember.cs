@@ -7,7 +7,7 @@ public sealed record BinaryMember(string Name, string FullTypeName,
 	Instruction? InitialValueExpression)
 {
 	public BinaryMember(BinaryReader reader, NameTable table, BinaryExecutable binary) : this(
-		table.Names[reader.Read7BitEncodedInt()], table.Names[reader.Read7BitEncodedInt()],
+		table.names[reader.Read7BitEncodedInt()], table.names[reader.Read7BitEncodedInt()],
 		reader.ReadBoolean()
 			? binary.ReadInstruction(reader, table)
 			: null) { }

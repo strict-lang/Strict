@@ -17,7 +17,7 @@ public sealed class SourceGeneratorTests : TestCSharpGenerator
 
 public interface DummyApp
 {
-	void Run();
+	void Main();
 }"));
 	}
 

@@ -238,7 +238,7 @@ public sealed class BinaryExecutable(Package basePackage) : IEnumerable<Instruct
 		var kind = (ValueKind)reader.ReadByte();
 		return kind switch
 		{
-			ValueKind.Text => new ValueInstance(table.Names[reader.Read7BitEncodedInt()]),
+			ValueKind.Text => new ValueInstance(table.names[reader.Read7BitEncodedInt()]),
 			ValueKind.None => new ValueInstance(noneType),
 			ValueKind.Boolean => new ValueInstance(booleanType, reader.ReadBoolean()),
 			ValueKind.SmallNumber => new ValueInstance(numberType, reader.ReadByte()),
@@ -252,7 +252,7 @@ public sealed class BinaryExecutable(Package basePackage) : IEnumerable<Instruct
 
 	private ValueInstance ReadListValueInstance(BinaryReader reader, NameTable table)
 	{
-		var typeName = table.Names[reader.Read7BitEncodedInt()];
+		var typeName = table.names[reader.Read7BitEncodedInt()];
 		var count = reader.Read7BitEncodedInt();
 		var items = new ValueInstance[count];
 		for (var index = 0; index < count; index++)
@@ -262,7 +262,7 @@ public sealed class BinaryExecutable(Package basePackage) : IEnumerable<Instruct
 
 	private ValueInstance ReadDictionaryValueInstance(BinaryReader reader, NameTable table)
 	{
-		var typeName = table.Names[reader.Read7BitEncodedInt()];
+		var typeName = table.names[reader.Read7BitEncodedInt()];
 		var count = reader.Read7BitEncodedInt();
 		var items = new Dictionary<ValueInstance, ValueInstance>(count);
 		for (var index = 0; index < count; index++)
@@ -276,14 +276,14 @@ public sealed class BinaryExecutable(Package basePackage) : IEnumerable<Instruct
 
 	internal MethodCall ReadMethodCall(BinaryReader reader, NameTable table)
 	{
-		var declaringTypeName = table.Names[reader.Read7BitEncodedInt()];
-		var methodName = table.Names[reader.Read7BitEncodedInt()];
+		var declaringTypeName = table.names[reader.Read7BitEncodedInt()];
+		var methodName = table.names[reader.Read7BitEncodedInt()];
 		var paramCount = reader.Read7BitEncodedInt();
 		var parameters = new BinaryMember[paramCount];
 		for (var index = 0; index < paramCount; index++)
-      parameters[index] = new BinaryMember(table.Names[reader.Read7BitEncodedInt()],
-				table.Names[reader.Read7BitEncodedInt()], null);
-		var returnTypeName = table.Names[reader.Read7BitEncodedInt()];
+      parameters[index] = new BinaryMember(table.names[reader.Read7BitEncodedInt()],
+				table.names[reader.Read7BitEncodedInt()], null);
+		var returnTypeName = table.names[reader.Read7BitEncodedInt()];
 		var hasInstance = reader.ReadBoolean();
 		var instance = hasInstance
 			? ReadExpression(reader, table)
@@ -338,7 +338,7 @@ public sealed class BinaryExecutable(Package basePackage) : IEnumerable<Instruct
 			ExpressionKind.SmallNumberValue => new Number(package, reader.ReadByte()),
 			ExpressionKind.IntegerNumberValue => new Number(package, reader.ReadInt32()),
 			ExpressionKind.NumberValue => new Number(package, reader.ReadDouble()),
-			ExpressionKind.TextValue => new Text(package, table.Names[reader.Read7BitEncodedInt()]),
+			ExpressionKind.TextValue => new Text(package, table.names[reader.Read7BitEncodedInt()]),
 			ExpressionKind.BooleanValue => ReadBooleanValue(reader, package, table),
 			ExpressionKind.VariableRef => ReadVariableRef(reader, package, table),
 			ExpressionKind.MemberRef => ReadMemberRef(reader, package, table),
@@ -350,7 +350,7 @@ public sealed class BinaryExecutable(Package basePackage) : IEnumerable<Instruct
 
 	private static Value ReadBooleanValue(BinaryReader reader, Package package, NameTable table)
 	{
-		var type = EnsureResolvedType(package, table.Names[reader.Read7BitEncodedInt()]);
+		var type = EnsureResolvedType(package, table.names[reader.Read7BitEncodedInt()]);
 		return new Value(type, new ValueInstance(type, reader.ReadBoolean()));
 	}
 
@@ -382,16 +382,16 @@ public sealed class BinaryExecutable(Package basePackage) : IEnumerable<Instruct
 
 	private static Expression ReadVariableRef(BinaryReader reader, Package package, NameTable table)
 	{
-		var name = table.Names[reader.Read7BitEncodedInt()];
-		var type = EnsureResolvedType(package, table.Names[reader.Read7BitEncodedInt()]);
+		var name = table.names[reader.Read7BitEncodedInt()];
+		var type = EnsureResolvedType(package, table.names[reader.Read7BitEncodedInt()]);
 		var param = new Parameter(type, name, new Value(type, new ValueInstance(type)));
 		return new ParameterCall(param);
 	}
 
 	private MemberCall ReadMemberRef(BinaryReader reader, Package package, NameTable table)
 	{
-		var memberName = table.Names[reader.Read7BitEncodedInt()];
-		var memberTypeName = table.Names[reader.Read7BitEncodedInt()];
+		var memberName = table.names[reader.Read7BitEncodedInt()];
+		var memberTypeName = table.names[reader.Read7BitEncodedInt()];
 		var hasInstance = reader.ReadBoolean();
 		var instance = hasInstance
 			? ReadExpression(reader, table)
@@ -403,7 +403,7 @@ public sealed class BinaryExecutable(Package basePackage) : IEnumerable<Instruct
 
 	private Binary ReadBinaryExpr(BinaryReader reader, Package package, NameTable table)
 	{
-		var operatorName = table.Names[reader.Read7BitEncodedInt()];
+		var operatorName = table.names[reader.Read7BitEncodedInt()];
 		var left = ReadExpression(reader, table);
 		var right = ReadExpression(reader, table);
 		var operatorMethod = FindOperatorMethod(operatorName, left.ReturnType);
@@ -523,27 +523,34 @@ public sealed class BinaryExecutable(Package basePackage) : IEnumerable<Instruct
 	public int TotalInstructionsCount =>
 		MethodsPerType.Values.Sum(methods => methods.TotalInstructionCount);
 
-	internal BinaryExecutable AddType(string typeFullName,
-		Dictionary<string, List<BinaryMethod>> methodGroups,
-		List<BinaryMember>? members = null, bool isEntryType = false)
+	//TODO: way too complicated, fix callers.
+	internal BinaryExecutable AddType(string typeFullName, List<BinaryMember> members,
+		Dictionary<string, List<BinaryMethod>> methodGroups, bool isEntryType = false)
 	{
-		MethodsPerType[typeFullName] = new BinaryType(this, typeFullName, methodGroups, members);
-		if (isEntryType && methodGroups.TryGetValue(Method.Run, out var runMethods) && runMethods.Count > 0)
+		MethodsPerType[typeFullName] = new BinaryType(this, typeFullName, members, methodGroups);
+		if (isEntryType && methodGroups.TryGetValue(Method.Run, out var runMethods) &&
+			runMethods.Count > 0)
 			entryPoint = runMethods[0];
-		else if (entryPoint == null && methodGroups.TryGetValue(Method.Run, out var fallbackRunMethods) &&
+		else if (entryPoint == null &&
+			methodGroups.TryGetValue(Method.Run, out var fallbackRunMethods) &&
 			fallbackRunMethods.Count > 0)
 			entryPoint = fallbackRunMethods[0];
 		return this;
 	}
 
+	//TODO: remove this bullshit!
 	public static BinaryExecutable CreateForEntryInstructions(Package basePackage,
-		IReadOnlyList<Instruction> entryPointInstructions)
+		List<Instruction> instructions)
 	{
 		var binary = new BinaryExecutable(basePackage);
-		binary.AddType("EntryPoint", (object)entryPointInstructions.ToList());
-		return binary;
+		//binary.AddType("EntryPoint", (object)entryPointInstructions.ToList());
+		var runMethod = new BinaryMethod("", [], Type.None, instructions);
+		return binary.AddType("EntryPoint", new List<BinaryMember>(),
+			new Dictionary<string, List<BinaryMethod>> { [Method.Run] = [runMethod] },
+			isEntryType: true);
 	}
 
+	/*TODO: what is this bullshit? object?? remove and fix!
 	internal BinaryExecutable AddType(string entryTypeFullName, object value)
 	{
 		if (value is Dictionary<string, List<BinaryMethod>> methodGroups)
@@ -551,12 +558,13 @@ public sealed class BinaryExecutable(Package basePackage) : IEnumerable<Instruct
 		if (value is List<Instruction> instructions)
 		{
 			var runMethod = new BinaryMethod("", [], Type.None, instructions);
-			return AddType(entryTypeFullName,
+			return AddType(entryTypeFullName, new List<BinaryMember>(),
 				new Dictionary<string, List<BinaryMethod>> { [Method.Run] = [runMethod] },
-				null, isEntryType: true);
+				isEntryType: true);
 		}
 		throw new NotSupportedException("Unsupported binary type payload: " + value.GetType().Name);
 	}
+	*/
 
 	internal void SetEntryPoint(string typeFullName, string methodName, int parameterCount,
 		string returnTypeName)
@@ -573,6 +581,7 @@ public sealed class BinaryExecutable(Package basePackage) : IEnumerable<Instruct
 	public List<TResult> ConvertAll<TResult>(Converter<Instruction, TResult> converter) =>
 		EntryPoint.instructions.Select(instruction => converter(instruction)).ToList();
 
+	//TODO: why the hell is this needed, remove!
 	public IEnumerator<Instruction> GetEnumerator() => EntryPoint.instructions.GetEnumerator();
 	IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 }

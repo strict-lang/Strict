@@ -6,7 +6,7 @@ public sealed class RemoveInstruction(Register register, string identifier)
 	: RegisterInstruction(InstructionType.InvokeRemove, register)
 {
 	public RemoveInstruction(BinaryReader reader, NameTable table)
-		: this((Register)reader.ReadByte(), table.Names[reader.Read7BitEncodedInt()]) { }
+		: this((Register)reader.ReadByte(), table.names[reader.Read7BitEncodedInt()]) { }
 
 	public string Identifier { get; } = identifier;
 

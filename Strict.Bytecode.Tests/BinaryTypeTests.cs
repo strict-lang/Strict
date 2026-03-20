@@ -10,26 +10,25 @@ public sealed class BinaryTypeTests : TestBytecode
   [Test]
   public void WriteAndReadPreservesMethodInstructions()
   {
-    var source = new BinaryType
-    {
-      Members = [new BinaryMember("value", Type.Number, null)],
-      MethodGroups = new Dictionary<string, List<BinaryMethod>>
-      {
-        ["Compute"] =
-        [
-          new BinaryMethod("", [new BinaryMember("input", Type.Number, null)],
-            Type.Number, [new LoadConstantInstruction(Register.R0, Number(5)),
+		var binary = new BinaryExecutable(TestPackage.Instance);
+		var source = new BinaryType(binary, nameof(BinaryTypeTests),
+			[new BinaryMember("value", Type.Number, null)],
+			new Dictionary<string, List<BinaryMethod>>
+			{
+				["Compute"] =
+				[
+					new BinaryMethod("", [new BinaryMember("input", Type.Number, null)],
+						Type.Number, [new LoadConstantInstruction(Register.R0, Number(5)),
 						new ReturnInstruction(Register.R0)])
-        ]
-      }
-    };
+				]
+			});
     using var stream = new MemoryStream();
     using var writer = new BinaryWriter(stream);
     source.Write(writer);
     writer.Flush();
     stream.Position = 0;
     using var reader = new BinaryReader(stream);
-    var loaded = new BinaryType(reader, new BinaryExecutable(TestPackage.Instance), Type.Number);
+    var loaded = new BinaryType(reader, binary, Type.Number);
     Assert.That(loaded.MethodGroups["Compute"][0].instructions.Count, Is.EqualTo(2));
   }
 

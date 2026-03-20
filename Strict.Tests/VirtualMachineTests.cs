@@ -11,7 +11,8 @@ namespace Strict.Tests;
 
 public sealed class VirtualMachineTests : TestBytecode
 {
-	private static VirtualMachine ExecuteVm(IReadOnlyList<Instruction> instructions,
+	//TODO: duplicate of TestOptimizers.ExecuteInstructions
+	private static VirtualMachine ExecuteVm(List<Instruction> instructions,
 		IReadOnlyDictionary<string, ValueInstance>? initialVariables = null)
 	{
 		var binary = BinaryExecutable.CreateForEntryInstructions(TestPackage.Instance, instructions);
@@ -74,7 +75,7 @@ public sealed class VirtualMachineTests : TestBytecode
 		Assert.That(actual, Is.EqualTo(expected));
 	}
 
-	private static Instruction[] BuildInstructions(IReadOnlyList<object> inputs,
+	private static List<Instruction> BuildInstructions(IReadOnlyList<object> inputs,
 		InstructionType operation) =>
 	[
 		new SetInstruction(inputs[0] is string s0

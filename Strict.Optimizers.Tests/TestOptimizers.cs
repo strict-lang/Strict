@@ -18,7 +18,7 @@ public class TestOptimizers
 		return optimizedInstructions;
 	}
 
-	protected ValueInstance ExecuteInstructions(IReadOnlyList<Instruction> instructions,
+	protected ValueInstance ExecuteInstructions(List<Instruction> instructions,
 		IReadOnlyDictionary<string, ValueInstance>? initialVariables = null)
 	{
 		var binary = BinaryExecutable.CreateForEntryInstructions(TestPackage.Instance, instructions);

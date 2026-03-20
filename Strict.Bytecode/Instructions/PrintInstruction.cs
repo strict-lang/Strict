@@ -11,7 +11,7 @@ public sealed class PrintInstruction(string textPrefix, Register? valueRegister 
 	: Instruction(InstructionType.Print)
 {
 	public PrintInstruction(BinaryReader reader, NameTable table)
-		: this(table.Names[reader.Read7BitEncodedInt()])
+		: this(table.names[reader.Read7BitEncodedInt()])
 	{
 		if (!reader.ReadBoolean())
 			return;

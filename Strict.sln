@@ -65,7 +65,6 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "StrictFiles", "StrictFiles", "{CAF602EA-BA64-4818-B27E-4A757B4D2259}"
 	ProjectSection(SolutionItems) = preProject
 		Any.strict = Any.strict
-		App.strict = App.strict
 		Boolean.strict = Boolean.strict
 		Character.strict = Character.strict
 		Dictionary.strict = Dictionary.strict

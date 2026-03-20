@@ -40,7 +40,6 @@ public class RepositoriesTests
 		using var basePackage = await repos.LoadStrictPackage();
 		Assert.That(basePackage.FindDirectType(Type.Any), Is.Not.Null);
 		Assert.That(basePackage.FindDirectType(Type.Number), Is.Not.Null);
-		Assert.That(basePackage.FindDirectType(Type.App), Is.Not.Null);
 	}
 
 	[Test]

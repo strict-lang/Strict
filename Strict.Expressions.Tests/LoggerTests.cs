@@ -7,7 +7,7 @@ public sealed class LoggerTests
 	[Test]
 	public void PrintHelloWorld()
 	{
-		using var app = new Type(TestPackage.Instance, new TypeLines(Type.App, "Run"));
+		using var app = new Type(TestPackage.Instance, new TypeLines("App", Method.Run));
 		using var type = new Type(TestPackage.Instance,
 			new TypeLines(nameof(PrintHelloWorld), "has App", "has logger", "Run",
 				"\tlogger.Log(\"Hello\")")).ParseMembersAndMethods(new MethodExpressionParser());

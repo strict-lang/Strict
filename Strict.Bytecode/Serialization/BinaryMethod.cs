@@ -25,7 +25,7 @@ public record BinaryMethod
 	{
 		Name = methodName;
 		type.ReadMembers(reader, parameters);
-		ReturnTypeName = type.Table.Names[reader.Read7BitEncodedInt()];
+		ReturnTypeName = type.Table.names[reader.Read7BitEncodedInt()];
 		var instructionCount = reader.Read7BitEncodedInt();
 		for (var instructionIndex = 0; instructionIndex < instructionCount; instructionIndex++)
 			instructions.Add(type.binary!.ReadInstruction(reader, type.Table));

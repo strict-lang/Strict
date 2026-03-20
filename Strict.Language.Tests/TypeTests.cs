@@ -9,7 +9,7 @@ public sealed class TypeTests
 	public void CreateParser()
 	{
 		parser = new MethodExpressionParser();
-		appType = CreateType(Type.App, "Run");
+		appType = CreateType("App", Method.Run);
 	}
 
 	private Type CreateType(string name, params string[] lines) =>
@@ -24,12 +24,12 @@ public sealed class TypeTests
 
 	[Test]
 	public void AddingTheSameNameIsNotAllowed() =>
-		Assert.That(() => CreateType(Type.App, "Run"),
+		Assert.That(() => CreateType("App", Method.Run),
 			Throws.InstanceOf<Type.TypeAlreadyExistsInPackage>());
 
 	[Test]
 	public void TypeMustStartWithMember() =>
-		Assert.That(() => CreateType(nameof(TypeMustStartWithMember), "Run", "\tlogger.Log"),
+		Assert.That(() => CreateType(nameof(TypeMustStartWithMember), Method.Run, "\tlogger.Log"),
 			Throws.InstanceOf<Type.TypeHasNoMembersAndThusMustBeATraitWithoutMethodBodies>());
 
 	[Test]
@@ -71,7 +71,7 @@ public sealed class TypeTests
 
 	[Test]
 	public void TypeNameMustBeWord() =>
-		Assert.That(() => new Member(package.GetType(Type.App), "blub7", null!),
+		Assert.That(() => new Member(package.GetType("App"), "blub7", null!),
 			Throws.InstanceOf<Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers>());
 
 	[Test]
@@ -118,7 +118,7 @@ public sealed class TypeTests
 
 	private static void CheckApp(Type program)
 	{
-		Assert.That(program.Members[0].Type.Name, Is.EqualTo(Type.App));
+		Assert.That(program.Members[0].Type.Name, Is.EqualTo("App"));
 		Assert.That(program.Members[1].Name, Is.EqualTo("logger"));
 		Assert.That(program.Methods[0].Name, Is.EqualTo("Run"));
 		Assert.That(program.IsTrait, Is.False);

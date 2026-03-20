@@ -40,9 +40,9 @@ public sealed class CSharpTypeVisitorTests : TestCSharpGenerator
 				"\tlogger.Log(\"Hello World\")")).ParseMembersAndMethods(parser);
 		var visitor = new CSharpTypeVisitor(program);
 		Assert.That(visitor.Name, Is.EqualTo("DerivedProgram"));
-		Assert.That(visitor.FileContent, Contains.Substring("public class DerivedProgram : BaseProgram"));
+		Assert.That(visitor.FileContent, Contains.Substring("public class DerivedProgram"));
 		Assert.That(visitor.FileContent,
-			Contains.Substring("\tpublic void Run()" + Environment.NewLine + "\t{"));
+			Contains.Substring("\tpublic static void Main()" + Environment.NewLine + "\t{"));
 		Assert.That(visitor.FileContent,
 			Contains.Substring("\t\tConsole.WriteLine(\"Hello World\");"));
 	}
@@ -108,7 +108,7 @@ public sealed class CSharpTypeVisitorTests : TestCSharpGenerator
 		Assert.That(visitor.FileContent, Contains.Substring("namespace " + package.Name + ";"));
 		Assert.That(visitor.FileContent, Contains.Substring("public class " + Computer));
 		Assert.That(visitor.FileContent,
-			Contains.Substring("\tpublic void Run()" + Environment.NewLine));
+			Contains.Substring("\tpublic static void Main()" + Environment.NewLine));
 	}
 
 	[Test]
@@ -127,7 +127,7 @@ public sealed class CSharpTypeVisitorTests : TestCSharpGenerator
 			Contains.Substring(
 				"\tprivate static FileStream file = new FileStream(\"test.txt\", FileMode.OpenOrCreate);"));
 		Assert.That(visitor.FileContent,
-			Contains.Substring("\tpublic void Run()" + Environment.NewLine));
+			Contains.Substring("\tpublic static void Main()" + Environment.NewLine));
 	}
 
 	[Test]

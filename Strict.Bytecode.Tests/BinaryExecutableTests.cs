@@ -12,7 +12,8 @@ public sealed class BinaryExecutableTests : TestBytecode
 	public void SerializeAndLoadPreservesMethodInstructions()
 	{
 		var sourceBinary = new BinaryExecutable(TestPackage.Instance);
-		sourceBinary.MethodsPerType[Type.Number] = CreateMethods([new ReturnInstruction(Register.R0)]);
+		sourceBinary.MethodsPerType[Type.Number] = CreateMethods(sourceBinary, Type.Number,
+			[new ReturnInstruction(Register.R0)]);
 		var filePath = CreateTempFilePath();
 		sourceBinary.Serialize(filePath);
 		var loadedBinary = new BinaryExecutable(filePath, TestPackage.Instance);
@@ -24,14 +25,12 @@ public sealed class BinaryExecutableTests : TestBytecode
 	public void SerializeAndLoadPreservesMemberMetadata()
 	{
 		var sourceBinary = new BinaryExecutable(TestPackage.Instance);
-		sourceBinary.MethodsPerType[Type.Number] = new BinaryType
-		{
-			Members = [new BinaryMember("value", Type.Number, null)],
-			MethodGroups = new Dictionary<string, List<BinaryMethod>>
+		sourceBinary.MethodsPerType[Type.Number] = new BinaryType(sourceBinary, Type.Number,
+			[new BinaryMember("value", Type.Number, null)],
+			new Dictionary<string, List<BinaryMethod>>
 			{
 				[Method.Run] = [new BinaryMethod("", [], Type.None, [new ReturnInstruction(Register.R0)])]
-			}
-		};
+			});
 		var filePath = CreateTempFilePath();
 		sourceBinary.Serialize(filePath);
 		var loadedBinary = new BinaryExecutable(filePath, TestPackage.Instance);
@@ -42,10 +41,8 @@ public sealed class BinaryExecutableTests : TestBytecode
 	public void FindInstructionsReturnsMatchingMethodOverload()
 	{
 		var binary = new BinaryExecutable(TestPackage.Instance);
-		binary.MethodsPerType[Type.Number] = new BinaryType
-		{
-			Members = [],
-			MethodGroups = new Dictionary<string, List<BinaryMethod>>
+		binary.MethodsPerType[Type.Number] = new BinaryType(binary, Type.Number, [],
+			new Dictionary<string, List<BinaryMethod>>
 			{
 				["Compute"] =
 				[
@@ -53,8 +50,7 @@ public sealed class BinaryExecutableTests : TestBytecode
 					new BinaryMethod("", [new BinaryMember("value", Type.Number, null)],
 						Type.Number, [new ReturnInstruction(Register.R1)])
 				]
-			}
-		};
+			});
 		var found = binary.FindInstructions(Type.Number, "Compute", 1, Type.Number);
 		Assert.That(found![0].InstructionType, Is.EqualTo(InstructionType.Return));
 	}
@@ -65,7 +61,7 @@ public sealed class BinaryExecutableTests : TestBytecode
 		var binary = new BinaryExecutable(TestPackage.Instance);
 		using var stream = new MemoryStream([(byte)255]);
 		using var reader = new BinaryReader(stream);
-		Assert.That(() => binary.ReadInstruction(reader, new NameTable()),
+		Assert.That(() => binary.ReadInstruction(reader, new NameTable(Type.Number)),
 			Throws.TypeOf<BinaryExecutable.InvalidFile>().With.Message.Contains("Unknown instruction type"));
 	}
 
@@ -78,15 +74,12 @@ public sealed class BinaryExecutableTests : TestBytecode
 			Throws.TypeOf<BinaryExecutable.InvalidFile>());
 	}
 
-	private static BinaryType CreateMethods(List<Instruction> instructions) =>
-		new()
+	private static BinaryType CreateMethods(BinaryExecutable executable, string typeFullName,
+		List<Instruction> instructions) =>
+		new BinaryType(executable, typeFullName, [], new Dictionary<string, List<BinaryMethod>>
 		{
-			Members = [],
-			MethodGroups = new Dictionary<string, List<BinaryMethod>>
-			{
-				[Method.Run] = [new BinaryMethod("", [], Type.None, instructions)]
-			}
-		};
+			[Method.Run] = [new BinaryMethod("", [], Type.None, instructions)]
+		});
 
 	private static string CreateTempFilePath() =>
 		Path.Combine(Path.GetTempPath(), "strictbinary-tests-" + Guid.NewGuid() + BinaryExecutable.Extension);
@@ -291,7 +284,7 @@ public sealed class BinaryExecutableTests : TestBytecode
 	{
 		using var stream = new MemoryStream();
 		using var writer = new BinaryWriter(stream);
-		var table = new NameTable();
+		var table = new NameTable(Type.Number);
 		foreach (var instruction in instructions)
 			table.CollectStrings(instruction);
 		table.Write(writer);
@@ -301,7 +294,7 @@ public sealed class BinaryExecutableTests : TestBytecode
 		writer.Flush();
 		stream.Position = 0;
 		using var reader = new BinaryReader(stream);
-		var readTable = new NameTable(reader);
+		var readTable = new NameTable(reader, Type.Number);
 		var count = reader.Read7BitEncodedInt();
 		var binary = new BinaryExecutable(TestPackage.Instance);
 		var loaded = new List<Instruction>(count);
@@ -330,8 +323,7 @@ public sealed class BinaryExecutableTests : TestBytecode
 	[Test]
 	public void NameTableWritesOnlyCustomNamesAndPrefillsBaseTypes()
 	{
-		var table = new NameTable();
-		table.Add(Type.Number);
+		var table = new NameTable(Type.Number);
 		table.Add("CustomIdentifier");
 		using var stream = new MemoryStream();
 		using (var writer = new BinaryWriter(stream, System.Text.Encoding.UTF8, leaveOpen: true))
@@ -341,9 +333,9 @@ public sealed class BinaryExecutableTests : TestBytecode
 		Assert.That(headerReader.Read7BitEncodedInt(), Is.EqualTo(1));
 		stream.Position = 0;
 		using var reader = new BinaryReader(stream);
-		var readTable = new NameTable(reader);
-		Assert.That(readTable.Names.Contains(Type.Number), Is.True);
-		Assert.That(readTable.Names.Contains("CustomIdentifier"), Is.True);
+		var readTable = new NameTable(reader, Type.Number);
+		Assert.That(readTable.names.Contains(Type.Number), Is.True);
+		Assert.That(readTable.names.Contains("CustomIdentifier"), Is.True);
 	}
 
 	[Test]
@@ -373,19 +365,17 @@ public sealed class BinaryExecutableTests : TestBytecode
 	[Test]
 	public void NameTablePrefillsRequestedCommonNames()
 	{
-		var table = new NameTable();
+		var table = new NameTable(Type.Number);
 		using var stream = new MemoryStream();
 		using (var writer = new BinaryWriter(stream, System.Text.Encoding.UTF8, leaveOpen: true))
 		{
+			table.Add("index");
+			table.Add("value");
 			table.Add("first");
 			table.Add("second");
 			table.Add("from");
 			table.Add("Run");
 			table.Add("characters");
-			table.Add("Strict/List(Character)");
-			table.Add("Strict/List(Number)");
-			table.Add("Strict/List(Text)");
-			table.Add("zeroCharacter");
 			table.Add("NewLine");
 			table.Add("Tab");
 			table.Add("textWriter");

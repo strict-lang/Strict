@@ -133,7 +133,7 @@ public class PackageTests
 				Is.EqualTo(strictPackage.GetType(Type.Number)).Or.
 					EqualTo(subPackage.GetType(Type.Number)));
 			Assert.That(mainPackage.GetType(Type.Character),
-				Is.Not.EqualTo(mainPackage.FindType(Type.App)));
+				Is.Not.EqualTo(mainPackage.FindType(Type.Any)));
 		}
 		finally
 		{

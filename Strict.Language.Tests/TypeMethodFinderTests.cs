@@ -8,7 +8,7 @@ public sealed class TypeMethodFinderTests
 	public void CreatePackage()
 	{
 		parser = new MethodExpressionParser();
-		appType = CreateType(Type.App, "Run");
+		appType = CreateType("App", Method.Run);
 	}
 
 	private Type CreateType(string name, params string[] lines) =>

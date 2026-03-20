@@ -9,36 +9,32 @@ namespace Strict.Bytecode.Serialization;
 /// <summary>
 /// Used in BytecodeSerializer to write out strings, names, identifiers, etc. once.
 /// </summary>
-public sealed class NameTable : IEnumerable<string>
+public sealed class NameTable
 {
-	public NameTable(IEnumerable<string>? predefinedNames = null)
-	{
-		AddBuiltInPredefinedNames();
-		if (predefinedNames != null)
-			AddPredefinedNames(predefinedNames);
-	}
-
-	public NameTable(BinaryReader reader, IEnumerable<string>? predefinedNames = null) :
-		this(predefinedNames)
+	public NameTable(BinaryReader reader, string justTypeName) : this(justTypeName)
 	{
 		var customNamesCount = reader.Read7BitEncodedInt();
 		for (var index = 0; index < customNamesCount; index++)
 			Add(reader.ReadString());
 	}
 
-	private void AddPredefinedNames(IEnumerable<string> predefinedNames)
+	public NameTable(string justTypeName)
 	{
-		foreach (var predefinedName in predefinedNames)
+		foreach (var predefinedName in BuiltInPredefinedNames)
 			Add(predefinedName);
-		predefinedNamesCount = names.Count;
+		Add(justTypeName);
+		prefilledNamesCount = names.Count;
 	}
 
+	private readonly int prefilledNamesCount;
+
+	/// <summary>
+	/// Common names that appear in most .strict files, mostly base type usages.
+	/// </summary>
 	private static readonly string[] BuiltInPredefinedNames =
 	[
-		//TODO: shouldn't we have base type full names as well?
 		"",
 		Type.None,
-		Type.Any,
 		Type.Boolean,
 		Type.Number,
 		Type.Character,
@@ -49,8 +45,6 @@ public sealed class NameTable : IEnumerable<string>
 		Type.Iterator,
 		Type.List,
 		Type.Logger,
-		Type.App,
-		Type.System,
 		Type.File,
 		Type.Directory,
 		Type.TextWriter,
@@ -58,47 +52,52 @@ public sealed class NameTable : IEnumerable<string>
 		Type.Stacktrace,
 		Type.Mutable,
 		Type.Dictionary,
-		Type.None.ToLowerInvariant(),
-		Type.Any.ToLowerInvariant(),
-		Type.Boolean.ToLowerInvariant(),
-		Type.Number.ToLowerInvariant(),
-		Type.Character.ToLowerInvariant(),
-		Type.Range.ToLowerInvariant(),
-		Type.Text.ToLowerInvariant(),
-		Type.Error.ToLowerInvariant(),
-		Type.ErrorWithValue.ToLowerInvariant(),
-		Type.Iterator.ToLowerInvariant(),
-		Type.List.ToLowerInvariant(),
-		Type.Logger.ToLowerInvariant(),
-		Type.App.ToLowerInvariant(),
-		Type.System.ToLowerInvariant(),
-		Type.File.ToLowerInvariant(),
-		Type.Directory.ToLowerInvariant(),
-		Type.TextWriter.ToLowerInvariant(),
-		Type.TextReader.ToLowerInvariant(),
-		Type.Stacktrace.ToLowerInvariant(),
-		Type.Mutable.ToLowerInvariant(),
-		Type.Dictionary.ToLowerInvariant(),
+		nameof(Strict) + Type.ParentSeparator + Type.None,
+		nameof(Strict) + Type.ParentSeparator + Type.Boolean,
+		nameof(Strict) + Type.ParentSeparator + Type.Number,
+		nameof(Strict) + Type.ParentSeparator + Type.Character,
+		nameof(Strict) + Type.ParentSeparator + Type.Range,
+		nameof(Strict) + Type.ParentSeparator + Type.Text,
+		nameof(Strict) + Type.ParentSeparator + Type.Error,
+		nameof(Strict) + Type.ParentSeparator + Type.ErrorWithValue,
+		nameof(Strict) + Type.ParentSeparator + Type.Iterator,
+		nameof(Strict) + Type.ParentSeparator + Type.List,
+		nameof(Strict) + Type.ParentSeparator + Type.Logger,
+		nameof(Strict) + Type.ParentSeparator + Type.File,
+		nameof(Strict) + Type.ParentSeparator + Type.Directory,
+		nameof(Strict) + Type.ParentSeparator + Type.TextWriter,
+		nameof(Strict) + Type.ParentSeparator + Type.TextReader,
+		nameof(Strict) + Type.ParentSeparator + Type.Stacktrace,
+		nameof(Strict) + Type.ParentSeparator + Type.Mutable,
+		nameof(Strict) + Type.ParentSeparator + Type.Dictionary,
+		Type.Boolean.MakeFirstLetterLowercase(),
+		Type.Number.MakeFirstLetterLowercase(),
+		Type.Character.MakeFirstLetterLowercase(),
+		Type.Range.MakeFirstLetterLowercase(),
+		Type.Text.MakeFirstLetterLowercase(),
+		Type.Error.MakeFirstLetterLowercase(),
+		Type.Iterator.MakeFirstLetterLowercase(),
+		Type.List.MakeFirstLetterLowercase(),
+		Type.Logger.MakeFirstLetterLowercase(),
+		Type.File.MakeFirstLetterLowercase(),
+		Type.Directory.MakeFirstLetterLowercase(),
+		Type.TextWriter.MakeFirstLetterLowercase(),
+		Type.TextReader.MakeFirstLetterLowercase(),
+		Type.Stacktrace.MakeFirstLetterLowercase(),
+		Type.Mutable.MakeFirstLetterLowercase(),
+		Type.Dictionary.MakeFirstLetterLowercase(),
+		Type.IndexLowercase,
+		Type.ValueLowercase,
+		Method.Run,
+		Method.From,
 		"first",
 		"second",
-		"from",
-		"Run",
+		"numbers",
 		"characters",
-		"Strict/List(Character)",
-		"Strict/List(Number)",
-		"Strict/List(Text)",
-		"zeroCharacter",
+		"texts",
 		"NewLine",
-		"Tab",
-		"textWriter"
+		"Tab"
 	];
-
-	private void AddBuiltInPredefinedNames()
-	{
-		foreach (var predefinedName in BuiltInPredefinedNames)
-			Add(predefinedName);
-		predefinedNamesCount = names.Count;
-	}
 
 	public NameTable CollectStrings(Instruction instruction) =>
 		instruction switch
@@ -120,7 +119,7 @@ public sealed class NameTable : IEnumerable<string>
 
 	public NameTable Add(string name)
 	{
-		if (indices.TryGetValue(name, out _))
+		if (indices.ContainsKey(name))
 			return this;
 		indices[name] = names.Count;
 		names.Add(name);
@@ -128,13 +127,8 @@ public sealed class NameTable : IEnumerable<string>
 	}
 
 	private readonly Dictionary<string, int> indices = new(StringComparer.Ordinal);
-	private readonly List<string> names = [];
-	private int predefinedNamesCount;
-	public IReadOnlyList<string> Names => names;
+	public readonly List<string> names = [];
 	public int this[string name] => indices[name];
-	public int Count => names.Count;
-	public IEnumerator<string> GetEnumerator() => names.GetEnumerator();
-	IEnumerator IEnumerable.GetEnumerator() => GetEnumerator(); //ncrunch: no coverage
 
 	private NameTable CollectValueInstanceStrings(ValueInstance val)
 	{
@@ -196,9 +190,9 @@ public sealed class NameTable : IEnumerable<string>
 
 	public void Write(BinaryWriter writer)
 	{
-		var customNamesCount = names.Count - predefinedNamesCount;
+		var customNamesCount = names.Count - prefilledNamesCount;
 		writer.Write7BitEncodedInt(customNamesCount);
-		for (var index = predefinedNamesCount; index < names.Count; index++)
+		for (var index = prefilledNamesCount; index < names.Count; index++)
 			writer.Write(names[index]);
 	}
 }

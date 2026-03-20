@@ -147,14 +147,10 @@ public sealed class DecompilerTests : TestBytecode
 		return outputFolder;
 	}
 
-	private static BinaryType CreateTypeMethods(List<Instruction> instructions)
-	{
-		var methods = new BinaryType();
-		methods.Members = [];
-		methods.MethodGroups = new Dictionary<string, List<BinaryMethod>>
+	private static BinaryType CreateTypeMethods(BinaryExecutable binary, string typeFullName,
+		List<Instruction> instructions) =>
+		new BinaryType(binary, typeFullName, [], new Dictionary<string, List<BinaryMethod>>
 		{
 			[Method.Run] = [new BinaryMethod("", [], Type.None, instructions)]
-		};
-		return methods;
-	}
+		});
 }

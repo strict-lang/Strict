@@ -9,19 +9,17 @@ namespace Strict.Bytecode.Serialization;
 /// </summary>
 public sealed class BinaryType
 {
-	public BinaryType() => typeFullName = "";
-
 	public BinaryType(BinaryReader reader, BinaryExecutable binary, string typeFullName)
 	{
 		this.binary = binary;
 		this.typeFullName = typeFullName;
 		ValidateMagicAndVersion(reader);
-		table = new NameTable(reader, GetPredefinedTableEntries(typeFullName));
+		table = new NameTable(reader, JustTypeName);
 		ReadMembers(reader, Members);
 		var methodGroups = reader.Read7BitEncodedInt();
 		for (var methodGroupIndex = 0; methodGroupIndex < methodGroups; methodGroupIndex++)
 		{
-			var methodName = table.Names[reader.Read7BitEncodedInt()];
+			var methodName = table.names[reader.Read7BitEncodedInt()];
 			var overloadCount = reader.Read7BitEncodedInt();
 			var overloads = new List<BinaryMethod>(overloadCount);
 			for (var overloadIndex = 0; overloadIndex < overloadCount; overloadIndex++)
@@ -30,18 +28,18 @@ public sealed class BinaryType
 		}
 	}
 
-	public BinaryType(BinaryExecutable binary, string typeFullName,
-		Dictionary<string, List<BinaryMethod>> methodGroups, List<BinaryMember>? members = null)
+	public BinaryType(BinaryExecutable binary, string typeFullName, List<BinaryMember> members,
+		Dictionary<string, List<BinaryMethod>> methodGroups)
 	{
 		this.binary = binary;
 		this.typeFullName = typeFullName;
+		Members = members;
 		MethodGroups = methodGroups;
-		if (members != null)
-			Members = members;
 	}
 
 	internal readonly BinaryExecutable? binary;
 	private readonly string typeFullName;
+	public string JustTypeName => typeFullName.Split(Context.ParentSeparator)[^1];
 
 	private static void ValidateMagicAndVersion(BinaryReader reader)
 	{
@@ -87,34 +85,9 @@ public sealed class BinaryType
 	public int TotalInstructionCount =>
 		MethodGroups.Values.Sum(methods => methods.Sum(method => method.instructions.Count));
 
-	private static readonly string[] BaseTypeNames =
-	[
-		Type.None, Type.Any, Type.Boolean, Type.Number, Type.Character, Type.Range, Type.Text,
-		Type.Error, Type.ErrorWithValue, Type.Iterator, Type.List, Type.Logger, Type.App,
-		Type.System, Type.File, Type.Directory, Type.TextWriter, Type.TextReader, Type.Stacktrace,
-		Type.Mutable, Type.Dictionary
-	];
-
-	private static IEnumerable<string> GetPredefinedTableEntries(string typeFullName)
-	{
-		yield return "";
-		yield return typeFullName;
-		var separatorIndex = typeFullName.LastIndexOf(Context.ParentSeparator);
-		yield return separatorIndex == -1
-			? typeFullName
-			: typeFullName[(separatorIndex + 1)..];
-		foreach (var baseTypeName in BaseTypeNames)
-		{
-			yield return baseTypeName;
-			yield return baseTypeName.ToLowerInvariant();
-			yield return nameof(Strict) + Context.ParentSeparator + baseTypeName;
-			yield return "TestPackage" + Context.ParentSeparator + baseTypeName;
-		}
-	}
-
 	private NameTable CreateNameTable()
 	{
-		table = new NameTable(GetPredefinedTableEntries(typeFullName));
+		table = new NameTable(JustTypeName);
 		foreach (var member in Members)
 			AddMemberNamesToTable(member);
 		foreach (var (methodName, methods) in MethodGroups)
@@ -132,14 +105,6 @@ public sealed class BinaryType
 		return table;
 	}
 
-	private void AddMemberNamesToTable(BinaryMember member)
-	{
-		table!.Add(member.Name);
-		table.Add(member.FullTypeName);
-		if (member.InitialValueExpression != null)
-			table.CollectStrings(member.InitialValueExpression);
-	}
-
 	public void Write(BinaryWriter writer)
 	{
 		writer.Write(StrictMagicByte);
@@ -154,6 +119,14 @@ public sealed class BinaryType
 			foreach (var method in methodGroup.Value)
 				method.Write(writer, this);
 		}
+	}
+
+	private void AddMemberNamesToTable(BinaryMember member)
+	{
+		table!.Add(member.Name);
+		table.Add(member.FullTypeName);
+		if (member.InitialValueExpression != null)
+			table.CollectStrings(member.InitialValueExpression);
 	}
 
 	internal void WriteMembers(BinaryWriter writer, IReadOnlyList<BinaryMember> members)
