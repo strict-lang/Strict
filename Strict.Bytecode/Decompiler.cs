@@ -1,6 +1,7 @@
 using System.Text;
 using Strict.Bytecode.Instructions;
 using Strict.Bytecode.Serialization;
+using Strict.Language;
 using Type = Strict.Language.Type;
 
 namespace Strict.Bytecode;
@@ -33,11 +34,13 @@ public sealed class Decompiler
 	{
 		var lines = new List<string>();
 		foreach (var member in typeData.Members)
-			lines.Add("has " + member.Name + " " + member.FullTypeName +
-				(member.InitialValueExpression != null
-					? " = " + member.InitialValueExpression
-					: ""));
-		foreach (var (methodName, methods) in typeData.MethodGroups)
+			if (member.InitialValueExpression is SetInstruction setValue)
+				lines.Add("const " + member.Name + " = " +
+					setValue.ValueInstance.ToExpressionCodeString());
+			else
+				lines.Add("has " + member.Name + " " + member.JustTypeName);
+		foreach (var (methodName, methods) in typeData.MethodGroups
+			.OrderBy(group => group.Key == Method.Run ? 1 : 0))
 		foreach (var method in methods)
 		{
 			lines.Add(BinaryType.ReconstructMethodName(methodName, method));
@@ -115,6 +118,8 @@ public sealed class Decompiler
 		}
 		if (instruction is ReturnInstruction returnInstruction)
 		{
+			if (method.ReturnTypeName == Type.None)
+				return true;
 			var returnExpression = GetRegisterExpression(returnInstruction.Register);
 			if (bodyLines.Count == 0 || bodyLines[^1] != "\t" + returnExpression)
 				bodyLines.Add("\t" + returnExpression);

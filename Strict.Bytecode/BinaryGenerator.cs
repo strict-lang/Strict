@@ -614,8 +614,11 @@ public sealed class BinaryGenerator
 				: GetBinaryTypeName(type, entryType), StringComparer.Ordinal);
 		foreach (var type in orderedTypes)
 		{
-			var members = type.Members.Select(member =>
-				new BinaryMember(member.Name, GetBinaryTypeName(member.Type, entryType), null)).ToList();
+			var members = type.Members
+				.Where(member => !member.IsConstant || member.InitialValue != null)
+				.Select(member => new BinaryMember(member.Name, GetBinaryTypeName(member.Type, entryType),
+					member.IsConstant ? CreateConstantInstruction(member) : null))
+				.ToList();
 			binary.AddType(GetBinaryTypeName(type, entryType), members,
 				methodsByType.TryGetValue(type.FullName, out var methodGroups)
 					? methodGroups
@@ -623,6 +626,11 @@ public sealed class BinaryGenerator
 				type == entryType);
 		}
 	}
+
+	private static SetInstruction CreateConstantInstruction(Member member) =>
+		member.InitialValue is Value val
+			? new SetInstruction(val.Data, Register.R0)
+			: new SetInstruction(new ValueInstance(member.InitialValue!.ToString()), Register.R0);
 
 	private void CollectMethodDependencies(Method method)
 	{
@@ -838,7 +846,7 @@ public sealed class BinaryGenerator
 			overloads = [];
 			methodGroups[methodName] = overloads;
 		}
-		overloads.Add(new BinaryMethod("", parameters, returnTypeName, instructionsToAdd));
+		overloads.Add(new BinaryMethod(methodName, parameters, returnTypeName, instructionsToAdd));
 	}
 
 	private static string ExtractTextPrefix(Expression? expression) =>
