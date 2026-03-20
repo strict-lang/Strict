@@ -73,7 +73,8 @@ Notes:
 		if (options.Contains("-decompile"))
 		{
 			var outputFolder = Path.GetFileNameWithoutExtension(filePath);
-			using var basePackage = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
+			using var basePackage =
+				await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
 			var bytecodeTypes = new BinaryExecutable(filePath, basePackage);
 			new Decompiler().Decompile(bytecodeTypes, outputFolder);
 			Console.WriteLine("Decompilation complete, written all partial .strict files (only what " +

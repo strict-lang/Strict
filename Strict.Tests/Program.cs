@@ -5,24 +5,24 @@ namespace Strict.Tests;
 //ncrunch: no coverage start
 internal class Program
 {
-	public static async Task Main(string[] args)
+	public static async Task Main()
 	{
 		var binaryFilePath = Path.ChangeExtension(
 			Path.Combine(AppContext.BaseDirectory, "Examples", "SimpleCalculator.strict"),
 			BinaryExecutable.Extension);
 		// First, ensure the .strictbinary file exists by compiling from source
 		if (!File.Exists(binaryFilePath))
-			RunSilently(() => new Runner(
-				Path.Combine(AppContext.BaseDirectory, "Examples", "SimpleCalculator.strict")).Run().Dispose());
+			await new Runner(Path.Combine(AppContext.BaseDirectory, "Examples",
+				"SimpleCalculator.strict")).Run();
 		// Warm up: one full binary execution to JIT and cache everything (also populates the binary cache)
-		RunBinaryOnce(binaryFilePath);
+		await RunBinaryOnce(binaryFilePath);
 		Console.WriteLine("Warmup complete. Starting performance measurement...");
 		const int Runs = 1000;
 		// Measure: 1000 iterations of full Runner.Run() from .strictbinary (cache hits after warmup)
 		var allocatedBefore = GC.GetAllocatedBytesForCurrentThread();
 		var startTicks = DateTime.UtcNow.Ticks;
 		for (var run = 0; run < Runs; run++)
-			RunBinaryOnce(binaryFilePath);
+			await RunBinaryOnce(binaryFilePath);
 		var endTicks = DateTime.UtcNow.Ticks;
 		var allocatedAfter = GC.GetAllocatedBytesForCurrentThread();
 		Console.WriteLine("Total execution time per run (full binary Runner.Run, cached): " +
@@ -42,16 +42,13 @@ internal class Program
 		Console.WriteLine("Allocated bytes per run (VM-only): " + (hotAllocatedAfter - hotAllocatedBefore) / Runs);
 	}
 
-	private static void RunBinaryOnce(string binaryFilePath) =>
-		RunSilently(() => new Runner(binaryFilePath).Run().Dispose());
-
-	private static void RunSilently(Action action)
+	private static async Task RunBinaryOnce(string binaryFilePath)
 	{
 		var saved = Console.Out;
 		Console.SetOut(TextWriter.Null);
 		try
 		{
-			action();
+			await new Runner(binaryFilePath).Run();
 		}
 		finally
 		{
