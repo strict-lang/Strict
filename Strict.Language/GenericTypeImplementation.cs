@@ -68,4 +68,10 @@ public sealed class GenericTypeImplementation : Type
 					methods.Add(new Method(method, this));
 			}
 	}
+
+	internal void ReimplementMethods()
+	{
+		methods.Clear();
+		ImplementMethods();
+	}
 }

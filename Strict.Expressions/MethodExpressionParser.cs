@@ -46,7 +46,8 @@ public class MethodExpressionParser : ExpressionParser
 		Boolean.TryParse(body, input) ?? Text.TryParse(body, input) ??
 		List.TryParseWithSingleElement(body, input, makeMutable) ?? Number.TryParse(body, input) ??
 		TryParseMemberOrZeroOrOneArgumentMethodOrNestedCall(body, input) ??
-		TryParseForBodyValueMethodCall(body, input) ?? (input.IsOperator()
+		TryParseForBodyValueMethodCall(body, input) ??
+		TryParseConstraintBodyMethodCall(body, input) ?? (input.IsOperator()
 			? throw new InvalidOperatorHere(body, input.ToString())
 			: input.IsWord()
 				? throw new Body.IdentifierNotFound(body, input.ToString())
@@ -68,6 +69,18 @@ public class MethodExpressionParser : ExpressionParser
 		var member = FindMember(valueType, inputName);
 		return member != null
 			? new MemberCall(valueCall, member, body.CurrentFileLineNumber)
+			: null;
+	}
+
+	private static Expression? TryParseConstraintBodyMethodCall(Body body, ReadOnlySpan<char> input)
+	{
+		if (body.Method.Name != Language.Member.ConstraintsBody || !input.IsWord())
+			return null;
+		var constraintType = body.Method.Type;
+		var inputName = input.ToString();
+		var method = constraintType.FindMethod(inputName, []);
+		return method != null
+			? new MethodCall(method, null, [], null, body.CurrentFileLineNumber)
 			: null;
 	}
 

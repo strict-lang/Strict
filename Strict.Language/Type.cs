@@ -163,6 +163,26 @@ public class Type : Context, IDisposable
 		return this;
 	}
 
+	public void ParseDeferredConstraints(ExpressionParser parser) =>
+		typeParser.ParseDeferredConstraints(parser);
+
+	internal void InvalidateAvailableMethodsCache()
+	{
+		cachedAvailableMethods = null;
+		if (cachedGenericTypes == null)
+			return;
+		foreach (var genericType in cachedGenericTypes.Values)
+			genericType.cachedAvailableMethods = null;
+	}
+
+	internal void ReimplementGenericTypeMethods()
+	{
+		if (cachedGenericTypes == null)
+			return;
+		foreach (var genericType in cachedGenericTypes.Values)
+			genericType.ReimplementMethods();
+	}
+
 	private void DetermineEnumTypeKind()
 	{
 		if (methods.Count == 0 && members.Count > 0)

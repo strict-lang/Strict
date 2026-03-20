@@ -15,5 +15,5 @@ GetBrightnessAdjustedColor(current Color) Color
 Run
 	constant width = 1280
 	constant height = 720
-	mutable image = ColorImage(Size(width, height))
+	mutable image = ColorImage(Size(width, height), Colors())
 	image = AdjustBrightness(0.1).Process(image)

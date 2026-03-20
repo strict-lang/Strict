@@ -151,6 +151,7 @@ public sealed class Repositories
 	/// <summary>
 	/// Initially we need to create just empty types, and then after they all have been created,
 	/// we will fill and load them, otherwise we could not use types within the package context.
+	/// Constraint parsing is deferred to a second pass so all type methods are available.
 	/// </summary>
 	private async Task<Package> CreatePackageFromFiles(string packagePath,
 		IReadOnlyCollection<string> files, Package? parent = null
@@ -176,7 +177,20 @@ public sealed class Repositories
 		var types = GetTypes(files, package);
 		foreach (var type in types)
 			type.ParseMembersAndMethods(parser);
+		InvalidateAllAvailableMethodsCaches();
+		foreach (var type in types)
+			type.ParseDeferredConstraints(parser);
 		return package;
+	}
+
+	private void InvalidateAllAvailableMethodsCaches()
+	{
+		foreach (var loadedPackage in loadedPackages)
+			foreach (var type in loadedPackage.Types.Values)
+				type.InvalidateAvailableMethodsCache();
+		foreach (var loadedPackage in loadedPackages)
+			foreach (var type in loadedPackage.Types.Values.ToList())
+				type.ReimplementGenericTypeMethods();
 	}
 
 	private readonly List<Package> loadedPackages = [];
