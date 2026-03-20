@@ -45,37 +45,19 @@ public sealed class BinaryGenerator
 		entryTypeFullName = "";
 	}
 
-	//TODO: way too many fields, this should not all be at class level!
 	private readonly BinaryExecutable binary;
 	private readonly string entryTypeFullName;
-	private readonly List<Instruction> instructions = [];
-	private static readonly HashSet<string> StrictRuntimeTypeNames =
-	[
-		Type.Any,
-		Type.Boolean,
-		Type.Character,
-		Type.Dictionary,
-		Type.Logger,
-		Type.Number,
-		Type.Range,
-		Type.Text,
-		Type.TextReader,
-		Type.TextWriter,
-		Type.List,
-		Type.None,
-		Type.System
-	];
+	private readonly List<Instruction> instructions = []; //TODO: why not keep this in BinaryMethod
 	private readonly Dictionary<string, Type> dependencyTypes = new(StringComparer.Ordinal);
 	private readonly Registry registry = new();
 	private readonly Stack<int> idStack = new();
 	private readonly Register[] registers = Enum.GetValues<Register>();
-	private IReadOnlyList<Expression> Expressions { get; } //TODO: stupid
-	private Type ReturnType { get; } //TODO: forbidden!
-	private int conditionalId;
+	private IReadOnlyList<Expression> Expressions { get; } //TODO: stupid, remove
+	private Type ReturnType { get; } //TODO: stupid, remove
+	private int conditionalId; //TODO: a bit strange
 	private int forResultId;
 
-	public BinaryExecutable Generate() =>
-		Generate(entryTypeFullName, Expressions, ReturnType);
+	public BinaryExecutable Generate() =>	Generate(entryTypeFullName, Expressions, ReturnType);
 
 	public static BinaryExecutable GenerateFromRunMethods(Method preferredEntryMethod,
 		IReadOnlyList<Method> runMethods)
@@ -101,8 +83,7 @@ public sealed class BinaryGenerator
 	private BinaryExecutable Generate(string typeFullName,
 		IReadOnlyList<Expression> entryExpressions, Type runReturnType)
 	{
-		var methodsByType =
-			GenerateEntryMethods(typeFullName, entryExpressions, runReturnType);
+		var methodsByType = CompileMethodsFromExpressions(typeFullName, entryExpressions, runReturnType);
 		foreach (var (compiledTypeFullName, methodGroups) in methodsByType)
 			binary.AddType(compiledTypeFullName, [], methodGroups);
 		return binary;
@@ -597,7 +578,6 @@ public sealed class BinaryGenerator
 		return methodsByType;
 	}
 
-	//TODO: slow, should be optimized! also a binary always has the same structure, why so complicated here?
 	private static List<BinaryMember> CreateBinaryMembers(IReadOnlyList<Parameter> parameters,
 		Type entryType) =>
 		parameters.Select(parameter =>
@@ -614,8 +594,13 @@ public sealed class BinaryGenerator
 				: GetBinaryTypeName(type, entryType), StringComparer.Ordinal);
 		foreach (var type in orderedTypes)
 		{
-			var members = type.Members.Select(member =>
-				new BinaryMember(member.Name, GetBinaryTypeName(member.Type, entryType), null)).ToList();
+			var members = type.Members
+				.Where(member => !member.IsConstant || member.InitialValue != null)
+				.Select(member => new BinaryMember(member.Name, GetBinaryTypeName(member.Type, entryType),
+					member.IsConstant && member.InitialValue is Value val
+						? new SetInstruction(val.Data, Register.R0)
+						: null))
+				.ToList();
 			binary.AddType(GetBinaryTypeName(type, entryType), members,
 				methodsByType.TryGetValue(type.FullName, out var methodGroups)
 					? methodGroups
@@ -740,18 +725,13 @@ public sealed class BinaryGenerator
 			: type.FullName;
 	}
 
-	private static bool IsStrictBaseType(Type type, Type entryType)
-	{
-		if (type.FullName == entryType.FullName)
-			return false;
-		if (type.Package.Name == nameof(Strict))
-			return true;
-		return entryType.Package.Name == "TestPackage" && type.Package.Name == "TestPackage" &&
-			StrictRuntimeTypeNames.Contains(type.Name);
-	}
+	private static bool IsStrictBaseType(Type type, Type entryType) =>
+		type.FullName == entryType.FullName
+			? false
+			: type.Package.Name == nameof(Strict) ||
+				entryType.Package.Name == "TestPackage" && type.Package.Name == "TestPackage";
 
-	//TODO: remove, bad naming
-	private Dictionary<string, Dictionary<string, List<BinaryMethod>>> GenerateEntryMethods(
+	private Dictionary<string, Dictionary<string, List<BinaryMethod>>> CompileMethodsFromExpressions(
 		string thisEntryTypeFullName, IReadOnlyList<Expression> entryExpressions, Type runReturnType)
 	{
 		var methodsByType = new Dictionary<string, Dictionary<string, List<BinaryMethod>>>(
@@ -759,7 +739,8 @@ public sealed class BinaryGenerator
 		var methodsToCompile = new Queue<Method>();
 		var compiledMethodKeys = new HashSet<string>(StringComparer.Ordinal);
 
-		void EnqueueInvokedMethods(IReadOnlyList<Instruction> thisInstructions) //TODO: remove
+		//TODO: remove
+		void EnqueueInvokedMethods(IReadOnlyList<Instruction> thisInstructions)
 		{
 			foreach (var invoke in thisInstructions.OfType<Invoke>())
 			{
@@ -797,6 +778,7 @@ public sealed class BinaryGenerator
 		return methodsByType;
 	}
 
+	//TODO: remove
 	private List<Instruction> GenerateInstructionList() => GenerateInstructions(Expressions);
 
 	private static string BuildMethodKey(Method method) =>
@@ -805,6 +787,7 @@ public sealed class BinaryGenerator
 				new BinaryMember(parameter.Name, parameter.Type.FullName, null)).ToList(),
 			method.ReturnType);
 
+	//TODO: remove, not even called!
 	private static void EnqueueCalledMethods(IReadOnlyList<Instruction> instructions,
 		Queue<Method> methodsToCompile, HashSet<string> compiledMethodKeys)
 	{
@@ -822,7 +805,6 @@ public sealed class BinaryGenerator
 		}
 	}
 
-	//TODO: cumbersome, remove and fix
 	private static void AddCompiledMethod(
 		Dictionary<string, Dictionary<string, List<BinaryMethod>>> methodsByType,
 		string typeFullName, string methodName, List<BinaryMember> parameters,
@@ -838,7 +820,7 @@ public sealed class BinaryGenerator
 			overloads = [];
 			methodGroups[methodName] = overloads;
 		}
-		overloads.Add(new BinaryMethod("", parameters, returnTypeName, instructionsToAdd));
+		overloads.Add(new BinaryMethod(methodName, parameters, returnTypeName, instructionsToAdd));
 	}
 
 	private static string ExtractTextPrefix(Expression? expression) =>

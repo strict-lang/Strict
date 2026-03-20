@@ -1,4 +1,3 @@
-using System.Collections;
 using System.IO.Compression;
 using System.Runtime.CompilerServices;
 using Strict.Bytecode.Instructions;
@@ -16,10 +15,8 @@ namespace Strict.Bytecode;
 /// from <see cref="BinaryGenerator"/> or loaded from a compact .strictbinary ZIP file, which is
 /// done via <see cref="Serialize(string)"/>. Used by the VirtualMachine or executable generation.
 /// </summary>
-public sealed class BinaryExecutable(Package basePackage) : IEnumerable<Instruction>
+public sealed class BinaryExecutable(Package basePackage)
 {
-	//TODO: remove: var package = new Package(basePackage,
-	//	Path.GetFileNameWithoutExtension(FilePath) + "-" + ++packageCounter);
 	internal readonly Package basePackage = basePackage;
 	private readonly Package package = basePackage;
 	internal Type noneType = basePackage.GetType(Type.None);
@@ -122,12 +119,6 @@ public sealed class BinaryExecutable(Package basePackage) : IEnumerable<Instruct
 			using var writer = new BinaryWriter(entryStream);
 			membersAndMethods.Write(writer);
 		}
-	}
-
-	//TODO: remove
-	public static implicit operator List<Instruction>(BinaryExecutable binary)
-	{
-		return binary.EntryPoint.instructions;
 	}
 
 	public List<Instruction> ToInstructions() => EntryPoint.instructions;
@@ -353,6 +344,7 @@ public sealed class BinaryExecutable(Package basePackage) : IEnumerable<Instruct
 		};
 	}
 
+	//TODO: missing test
 	private static Value ReadBooleanValue(BinaryReader reader, Package package, NameTable table)
 	{
 		var type = EnsureResolvedType(package, table.names[reader.Read7BitEncodedInt()]);
@@ -548,28 +540,11 @@ public sealed class BinaryExecutable(Package basePackage) : IEnumerable<Instruct
 		List<Instruction> instructions)
 	{
 		var binary = new BinaryExecutable(basePackage);
-		//binary.AddType("EntryPoint", (object)entryPointInstructions.ToList());
-		var runMethod = new BinaryMethod("", [], Type.None, instructions);
+		var runMethod = new BinaryMethod(Method.Run, [], Type.None, instructions);
 		return binary.AddType("EntryPoint", new List<BinaryMember>(),
 			new Dictionary<string, List<BinaryMethod>> { [Method.Run] = [runMethod] },
 			isEntryType: true);
 	}
-
-	/*TODO: what is this bullshit? object?? remove and fix!
-	internal BinaryExecutable AddType(string entryTypeFullName, object value)
-	{
-		if (value is Dictionary<string, List<BinaryMethod>> methodGroups)
-			return AddType(entryTypeFullName, methodGroups);
-		if (value is List<Instruction> instructions)
-		{
-			var runMethod = new BinaryMethod("", [], Type.None, instructions);
-			return AddType(entryTypeFullName, new List<BinaryMember>(),
-				new Dictionary<string, List<BinaryMethod>> { [Method.Run] = [runMethod] },
-				isEntryType: true);
-		}
-		throw new NotSupportedException("Unsupported binary type payload: " + value.GetType().Name);
-	}
-	*/
 
 	internal void SetEntryPoint(string typeFullName, string methodName, int parameterCount,
 		string returnTypeName)
@@ -585,8 +560,4 @@ public sealed class BinaryExecutable(Package basePackage) : IEnumerable<Instruct
 
 	public List<TResult> ConvertAll<TResult>(Converter<Instruction, TResult> converter) =>
 		EntryPoint.instructions.Select(instruction => converter(instruction)).ToList();
-
-	//TODO: why the hell is this needed, remove!
-	public IEnumerator<Instruction> GetEnumerator() => EntryPoint.instructions.GetEnumerator();
-	IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 }

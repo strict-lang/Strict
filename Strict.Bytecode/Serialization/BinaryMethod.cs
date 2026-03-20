@@ -7,7 +7,6 @@ public sealed class BinaryMethod
 	public BinaryMethod(string methodName, List<BinaryMember> methodParameters,
 		string returnTypeName, List<Instruction> methodInstructions)
 	{
-		//TODO: methodName should not be null or empty, Run is the default, not ""
 		Name = methodName;
 		ReturnTypeName = returnTypeName;
 		parameters = methodParameters;

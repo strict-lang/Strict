@@ -27,7 +27,8 @@ internal class Program
 		var allocatedAfter = GC.GetAllocatedBytesForCurrentThread();
 		Console.WriteLine("Total execution time per run (full binary Runner.Run, cached): " +
 			TimeSpan.FromTicks(endTicks - startTicks) / Runs);
-		Console.WriteLine("Allocated bytes per run (cached): " + (allocatedAfter - allocatedBefore) / Runs);
+		Console.WriteLine("Allocated bytes per run (cached): " +
+			(allocatedAfter - allocatedBefore) / Runs);
 		// Now measure only the hot VM execution loop (pre-loaded bytecode, no file I/O)
 		var hotPathBenchmark = new BinaryExecutionPerformanceTests();
 		await hotPathBenchmark.ExecuteBinary();
@@ -39,7 +40,8 @@ internal class Program
 		var hotAllocatedAfter = GC.GetAllocatedBytesForCurrentThread();
 		Console.WriteLine("Total execution time per run (VM-only, pre-loaded bytecode): " +
 			TimeSpan.FromTicks(hotEndTicks - hotStartTicks) / Runs);
-		Console.WriteLine("Allocated bytes per run (VM-only): " + (hotAllocatedAfter - hotAllocatedBefore) / Runs);
+		Console.WriteLine("Allocated bytes per run (VM-only): " +
+			(hotAllocatedAfter - hotAllocatedBefore) / Runs);
 	}
 
 	private static async Task RunBinaryOnce(string binaryFilePath)
