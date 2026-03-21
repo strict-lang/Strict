@@ -162,6 +162,10 @@ public sealed class RunnerTests
 	}
 
 	[Test]
+	public async Task RunAutofilledMutable() =>
+		await new Runner(GetExamplesFilePath("AutofilledMutable"), TestPackage.Instance).Run();
+
+	[Test]
 	public async Task RunFibonacciRunner()
 	{
 		await new Runner(GetExamplesFilePath("FibonacciRunner"), TestPackage.Instance).Run();

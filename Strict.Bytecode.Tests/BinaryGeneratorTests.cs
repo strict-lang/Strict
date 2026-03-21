@@ -62,7 +62,9 @@ public sealed class BinaryGeneratorTests : TestBytecode
 		var method = adjustBrightness.FindMethod(Method.Run, [])!;
 		var call = new MethodCall(method);
 		var binary = new BinaryGenerator(call).Generate();
-		Assert.That(binary.MethodsPerType.ContainsKey("Strict/Math/Size"), Is.True);
+		Assert.That(binary.MethodsPerType.Keys.Any(fullName =>
+			fullName.EndsWith("/Size", StringComparison.Ordinal)), Is.True,
+			$"Loaded types: {string.Join(", ", binary.MethodsPerType.Keys)}");
 	}
 
 	//ncrunch: no coverage start

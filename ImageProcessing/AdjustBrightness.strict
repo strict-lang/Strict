@@ -1,11 +1,11 @@
 has brightness Number with value is not 0
 constant testColor = Color(0, 0.1, 0.2)
 Process(mutable image ColorImage) ColorImage
-	mutable testImage = ColorImage(Size(1, 1), (testColor))
+	constant testImage = ColorImage(Size(1, 1), (testColor))
 	AdjustBrightness(0.1).Process(testImage) is ColorImage(Size(1, 1), (Color(0.1, 0.2, 0.3)))
 	AdjustBrightness(0.9).Process(testImage) is ColorImage(Size(1, 1), (Color(0.9, 1, 1)))
-	for row, column in image.Size
-		GetBrightnessAdjustedColor(image.Colors(column * image.Size.Width + row))
+	for color in image.Colors
+		GetBrightnessAdjustedColor(color)
 	image
 GetBrightnessAdjustedColor(current Color) Color
 	AdjustBrightness(0.1).GetBrightnessAdjustedColor(testColor) is Color(0.1, 0.2, 0.3)
@@ -15,5 +15,8 @@ GetBrightnessAdjustedColor(current Color) Color
 Run
 	constant width = 1280
 	constant height = 720
-	mutable image = ColorImage(Size(width, height), Colors())
+	mutable image = ColorImage(Size(width, height))
 	image = AdjustBrightness(0.1).Process(image)
+	for pixelIndex in Range(0, image.Size.Length)
+		GetBrightnessAdjustedColor(image.Colors(pixelIndex))
+	image

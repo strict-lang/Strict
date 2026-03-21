@@ -10,6 +10,7 @@ public sealed class TypeParser(Type type, string[] lines)
 	{
 		for (LineNumber = 0; LineNumber < lines.Length; LineNumber++)
 			TryParse(parser, LineNumber);
+		ParseDeferredConstraints(parser);
 		if (rememberToInitializeMemberInitialValues != null)
 			TryInitializeMemberInitialValues(parser);
 	}

@@ -1,2 +1,2 @@
 has Size
-mutable Colors
+mutable Colors Colors where Length is Size.Length

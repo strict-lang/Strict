@@ -178,6 +178,12 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			return;
 		var instance = evaluatedInstance ?? EvaluateExpression(methodCall.Instance);
 		Memory.Frame.Set(Type.ValueLowercase, instance, isMember: true);
+		if (instance.IsText)
+		{
+			Memory.Frame.Set("elements", instance, isMember: true);
+			Memory.Frame.Set("characters", instance, isMember: true);
+			return;
+		}
 		var typeInstance = instance.TryGetValueTypeInstance();
 		if (typeInstance != null && (TrySetScopeMembersFromTypeMembers(typeInstance) ||
 			TrySetScopeMembersFromBinaryMembers(typeInstance)))
@@ -357,13 +363,17 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			else if (argumentIndex < invoke.Method.Arguments.Count)
 				values[memberIndex] = EvaluateExpression(invoke.Method.Arguments[argumentIndex++]);
 			else
-				values[memberIndex] = new ValueInstance(members[memberIndex].Type, 0);
+				values[memberIndex] = CreateDefaultValue(members[memberIndex].Type);
 		Memory.Registers[invoke.Register] = new ValueInstance(targetType, values);
 		return true;
 	}
 
 	private ValueInstance[] CreateConstructorValuesFromBinaryMembers(Type targetType, Invoke invoke,
-		IReadOnlyList<BinaryMember> binaryMembers)
+		IReadOnlyList<BinaryMember> binaryMembers) =>
+		CreateConstructorValuesFromBinaryMembers(targetType, invoke.Method.Arguments, binaryMembers);
+
+	private ValueInstance[] CreateConstructorValuesFromBinaryMembers(Type targetType,
+		IReadOnlyList<Expression> arguments, IReadOnlyList<BinaryMember> binaryMembers)
 	{
 		var values = new ValueInstance[binaryMembers.Count];
 		var argumentIndex = 0;
@@ -373,13 +383,24 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 				targetType.FindType(GetShortTypeName(binaryMembers[memberIndex].FullTypeName));
 			if (memberType is { IsTrait: true })
 				values[memberIndex] = CreateTraitInstance(memberType);
-			else if (argumentIndex < invoke.Method.Arguments.Count)
-				values[memberIndex] = EvaluateExpression(invoke.Method.Arguments[argumentIndex++]);
+			else if (argumentIndex < arguments.Count)
+				values[memberIndex] = EvaluateExpression(arguments[argumentIndex++]);
+			else if (memberType != null)
+				values[memberIndex] = CreateDefaultValue(memberType);
 			else
 				values[memberIndex] = new ValueInstance(executable.numberType, 0);
 		}
 		return values;
 	}
+
+	private static ValueInstance CreateDefaultValue(Type memberType) =>
+		memberType.IsText
+			? new ValueInstance("")
+			: memberType.IsBoolean
+				? new ValueInstance(memberType, false)
+				: memberType.IsMutable
+					? CreateDefaultValue(memberType.GetFirstImplementation())
+					: new ValueInstance(memberType, 0);
 
 	private static ValueInstance CreateTraitInstance(Type traitType)
 	{
@@ -491,6 +512,9 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 	{
 		var targetType = call.ReturnType;
 		var members = targetType.Members;
+		if (members.Count == 0 && TryGetBinaryMembers(targetType, out var binaryMembers))
+			return new ValueInstance(targetType,
+				CreateConstructorValuesFromBinaryMembers(targetType, call.Arguments, binaryMembers));
 		var values = new ValueInstance[members.Count];
 		var argumentIndex = 0;
 		for (var memberIndex = 0; memberIndex < members.Count; memberIndex++)
@@ -499,7 +523,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			else if (argumentIndex < call.Arguments.Count)
 				values[memberIndex] = EvaluateExpression(call.Arguments[argumentIndex++]);
 			else
-				values[memberIndex] = new ValueInstance(members[memberIndex].Type, 0);
+				values[memberIndex] = CreateDefaultValue(members[memberIndex].Type);
 		return new ValueInstance(targetType, values);
 	}
 

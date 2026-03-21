@@ -191,6 +191,22 @@ public sealed class TypeTests
 	}
 
 	[Test]
+	public void MutableMemberWithoutInitialValueIsAutofilled()
+	{
+		using var type = new Type(package, new TypeLines("AutofilledTextMember",
+			"has number",
+			"mutable text",
+			"TotalLength Number",
+			"\tAutofilledTextMember(5).TotalLength is 5",
+			"\tAutofilledTextMember(5, \"abc\").TotalLength is 8",
+			"\tnumber + text.Length")).ParseMembersAndMethods(parser);
+		type.Methods[0].GetBodyAndParseIfNeeded();
+		Assert.That(type.Members[0].Name, Is.EqualTo("number"));
+		Assert.That(type.Members[1].Name, Is.EqualTo("text"));
+		Assert.That(type.Members[1].IsMutable, Is.True);
+	}
+
+	[Test]
 	public void MutableVariableCanBeChangedButNotChangeAtParseTime()
 	{
 		using var type = new Type(package, new TypeLines(nameof(MutableVariableCanBeChangedButNotChangeAtParseTime), "has number",
