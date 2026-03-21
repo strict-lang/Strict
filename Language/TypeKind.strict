@@ -1,0 +1,12 @@
+constant KindNone
+constant KindBoolean
+constant KindNumber
+constant KindText
+constant KindCharacter
+constant KindList
+constant KindDictionary
+constant KindError
+constant KindEnum
+constant KindIterator
+constant KindAny
+constant KindUnknown
