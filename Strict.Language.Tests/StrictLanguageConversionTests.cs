@@ -152,6 +152,49 @@ public sealed class StrictLanguageConversionTests
 		Assert.That(unaryOp.Members[0].Name, Is.EqualTo("Not"));
 	}
 
+	/// <summary>
+	/// BinaryOperator.cs has 16 operator string constants like Plus="+", Is="is", etc.
+	/// None of these names conflict with Strict type names or keywords — all map directly.
+	/// </summary>
+	[Test]
+	public void BinaryOperatorTypeHasCorrectTextConstants()
+	{
+		using var binaryOp = new Type(TestPackage.Instance,
+			new TypeLines("BinaryOperator",
+				"constant Plus = \"+\"",
+				"constant Minus = \"-\"",
+				"constant Multiply = \"*\"",
+				"constant Divide = \"/\"",
+				"constant Power = \"^\"",
+				"constant Modulate = \"%\"",
+				"constant Smaller = \"<\"",
+				"constant Greater = \">\"",
+				"constant SmallerOrEqual = \"<=\"",
+				"constant GreaterOrEqual = \">=\"",
+				"constant Is = \"is\"",
+				"constant In = \"in\"",
+				"constant To = \"to\"",
+				"constant And = \"and\"",
+				"constant Or = \"or\"",
+				"constant Xor = \"xor\"")).ParseMembersAndMethods(parser);
+		Assert.That(binaryOp.Members.Count, Is.EqualTo(16));
+		Assert.That(binaryOp.Members[0].Name, Is.EqualTo("Plus"));
+		Assert.That(binaryOp.Members[0].Type.Name, Is.EqualTo(Type.Text));
+		Assert.That(binaryOp.Members[0].IsConstant, Is.True);
+		Assert.That(binaryOp.Members[^1].Name, Is.EqualTo("Xor"));
+	}
+
+	[Test]
+	public void LoadBinaryOperatorFromLanguageDirectory()
+	{
+		var langPath = GetLanguagePath();
+		var lines = new TypeLines("BinaryOperator",
+			File.ReadAllLines(Path.Combine(langPath, "BinaryOperator.strict")));
+		using var binaryOp = new Type(TestPackage.Instance, lines).ParseMembersAndMethods(parser);
+		Assert.That(binaryOp.Members.Count, Is.EqualTo(16));
+		Assert.That(binaryOp.IsEnum, Is.True);
+	}
+
 	private static string GetLanguagePath() =>
 		Path.Combine(Repositories.GetLocalDevelopmentPath(Repositories.StrictOrg, nameof(Strict)),
 			"Language");

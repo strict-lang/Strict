@@ -114,29 +114,35 @@ not an auto-numbered enum value. This is the same principle as C#'s naming restr
 | Priority | C# File | Description | Strict equivalent plan | Status |
 |----------|---------|-------------|------------------------|--------|
 | 1 | `Keyword.cs` | String constants for keywords | `Language/Keyword.strict` — 9 text constants (MutableKeyword for Mutable conflict) | ✅ 100% |
-| 2 | `BinaryOperator.cs` | ~30 operator string constants | Enum/constants | 0% |
+| 2 | `BinaryOperator.cs` | 16 operator string constants | `Language/BinaryOperator.strict` — 16 text constants, no conflicts | ✅ 100% |
 | 3 | `UnaryOperator.cs` | 1 unary operator constant | `Language/UnaryOperator.strict` — `constant Not = "not"` | ✅ 100% |
 | 4 | `TypeKind.cs` | Enum: None/Boolean/Number/etc. | `Language/TypeKind.strict` — 12 constants with Kind prefix | ✅ 100% |
 | 5 | `Limit.cs` | Size limit constants | `Language/Limit.strict` — 11 numeric constants | ✅ 100% |
-| 6 | `NumberExtensions.cs` | Simple number helpers | Methods on Number | 0% |
-| 7 | `StringExtensions.cs` | `MakeFirstLetterUppercase`, etc. | Methods on Text | 0% |
-| 8 | `SpanExtensions.cs` | `IsWord`, `IsKeyword`, etc. | Methods on Text | 0% |
-| 9 | `NamedType.cs` | Name + Type pair | Simple type with 2 members | 0% |
-| 10 | `Variable.cs` | Variable: name, type, isMutable | Type with 3 members | 0% |
-| 11 | `Parameter.cs` | Method parameter | Extends NamedType | 0% |
-| 12 | `Member.cs` | Type member definition | Type with members | 0% |
-| 13 | `Expression.cs` | Abstract expression base | Trait | 0% |
-| 14 | `ConcreteExpression.cs` | Concrete expression with type | Implements Expression | 0% |
-| 15 | `ExpressionParser.cs` | Abstract parser interface | Trait | 0% |
-| 16 | `TypeLines.cs` | Raw lines of a type file | Type with name + lines | 0% |
-| 17 | `TypeParser.cs` | Parse member/method headers | Complex parser type | 0% |
-| 18 | `Method.cs` (partial) | Method definition, no body parse | 500+ LOC, split needed | 0% |
-| 19 | `Context.cs` | Base for Package/Type lookup | Abstract type | 0% |
-| 20 | `Package.cs` | Package = directory of types | Complex, needs Directory | 0% |
-| 21 | `Type.cs` | Type definition | Very complex, 400+ LOC | 0% |
-| 22 | `Body.cs` | Method body, lazy parse | Complex, 260+ LOC | 0% |
-| 23 | `Repositories.cs` | Load packages from GitHub/disk | Needs async/HTTP — defer | 0% |
-| 24 | `GitHubStrictDownloader.cs` | HTTP download — defer | Needs HTTP client | 0% |
+| 6 | `NumberExtensions.cs` | Simple number helpers | Methods on Number — needs method body support | 🚧 Deferred |
+| 7 | `StringExtensions.cs` | `MakeFirstLetterUppercase`, etc. | Methods on Text — complex C# spans/strings | 🚧 Deferred |
+| 8 | `SpanExtensions.cs` | `IsWord`, `IsKeyword`, etc. | Performance-critical span methods | 🚧 Deferred |
+| 9 | `NamedType.cs` | Name + Type pair | Abstract base class with constructor logic | 🚧 Needs traits |
+| 10 | `Variable.cs` | Variable: name, type, isMutable | Depends on Expression/Body | 🚧 Needs Phase 2 |
+| 11 | `Parameter.cs` | Method parameter | Extends NamedType | 🚧 Needs NamedType |
+| 12 | `Member.cs` | Type member definition | Type with members | 🚧 Needs NamedType |
+| 13 | `Expression.cs` | Abstract expression base | Trait | 🚧 Needs traits |
+| 14 | `ConcreteExpression.cs` | Concrete expression with type | Implements Expression | 🚧 Needs Expression |
+| 15 | `ExpressionParser.cs` | Abstract parser interface | Trait | 🚧 Needs traits |
+| 16 | `TypeLines.cs` | Raw lines of a type file | Type with name + lines | 🚧 Needs List |
+| 17 | `TypeParser.cs` | Parse member/method headers | Complex parser type | 🚧 Complex |
+| 18 | `Method.cs` (partial) | Method definition, no body parse | 500+ LOC, split needed | 🚧 Complex |
+| 19 | `Context.cs` | Base for Package/Type lookup | Abstract type | 🚧 Complex |
+| 20 | `Package.cs` | Package = directory of types | Complex, needs Directory | 🚧 Complex |
+| 21 | `Type.cs` | Type definition | Very complex, 400+ LOC | 🚧 Complex |
+| 22 | `Body.cs` | Method body, lazy parse | Complex, 260+ LOC | 🚧 Complex |
+| 23 | `Repositories.cs` | Load packages from GitHub/disk | Needs async/HTTP — defer | 🚧 Deferred |
+| 24 | `GitHubStrictDownloader.cs` | HTTP download — defer | Needs HTTP client | 🚧 Deferred |
+
+**Summary of what's done vs what's next:**
+- ✅ **5 pure-constant types done** — Limit, Keyword, TypeKind, UnaryOperator, BinaryOperator (all converted to `.strict` enum/constant files with TDD tests)
+- 🚧 **Methods (NumberExtensions, StringExtensions, SpanExtensions)** — These are C# extension methods on primitive types; need Strict method bodies on Number/Text to work
+- 🚧 **Data types (NamedType, Variable, Parameter, Member)** — Need abstract traits (for `abstract class`), and the more complex ones need Expression/Body which are Phase 2
+- 🚧 **Parser/compiler types (TypeParser, Method, Body, Type, Context, Package)** — These are the heart of the language, require full expression support; target for Phase 1 final stage
 
 **Target metrics for Phase 1:**
 - `.strict` files to generate: ~22 (excluding deferred files)
@@ -147,8 +153,8 @@ not an auto-numbered enum value. This is the same principle as C#'s naming restr
 
 | Metric | Target | Actual | % |
 |--------|--------|--------|---|
-| `.strict` files created | 22 | 4 | 18% |
-| Test methods written | 335 | 8 | 2% |
+| `.strict` files created | 22 | 5 | 23% |
+| Test methods written | 335 | 10 | 3% |
 | C# files replaced | 32 | 0 | 0% |
 
 ---
@@ -411,7 +417,7 @@ This is the execution engine — the capstone of the self-hosting effort.
 | Phase | Project | C# Files | Target `.strict` Files | Actual `.strict` Files | Tests Written | C# % Done |
 |-------|---------|----------|------------------------|------------------------|---------------|-----------|
 | 0 | Base Types (verification) | 0 | 0 (already `.strict`) | 2 (BaseTypesTest) | 1 | 0% |
-| 1 | `Strict.Language` | 32 | 22 | 4 (Limit, Keyword, TypeKind, UnaryOperator) | 8 | 13% |
+| 1 | `Strict.Language` | 32 | 22 | 5 (Limit, Keyword, TypeKind, UnaryOperator, BinaryOperator) | 10 | 16% |
 | 2 | `Strict.Expressions` | 29 | 29 | 0 | 0 | 0% |
 | 3 | `Strict.Validators` | 3 | 3 | 0 | 0 | 0% |
 | 4 | `Strict.TestRunner` | 1 | 1 | 0 | 0 | 0% |
@@ -420,7 +426,7 @@ This is the execution engine — the capstone of the self-hosting effort.
 | 7 | `Strict.Optimizers` | 9 | 9 | 0 | 0 | 0% |
 | 8 | `Strict` (VM + Runner) | 6 | 6 | 0 | 0 | 0% |
 | 9 | `Strict.Compiler(.Assembly)` | 5 | 5 | 0 | 0 | 0% |
-| **Total** | | **133** | **123** | **6** (2 BaseTypesTest + 4 Language) | **9** | **3%** |
+| **Total** | | **133** | **123** | **7** (2 BaseTypesTest + 5 Language) | **11** | **4%** |
 
 ---
 
