@@ -270,7 +270,14 @@ public class MethodExpressionParser : ExpressionParser
 					continue;
 				}
 			}
-			var expression = input[members.Current].Contains('(')
+			if (current != null)
+		{
+			var part = input[members.Current];
+			var partName = part.Contains('(') ? part[..part.IndexOf('(')] : part;
+			if (partName.IsOperator())
+				throw new InvalidOperatorHere(body, partName.ToString());
+		}
+		var expression = input[members.Current].Contains('(')
 				? current != null
 					? ParseMethodCallOnContext(body, input[members.Current], context, current)
 					: TryParseMemberOrZeroOrOneArgumentMethodOrNestedCall(body, input[members.Current])

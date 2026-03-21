@@ -32,6 +32,15 @@ public sealed class MemberCallTests : TestExpressions
 	public void OperatorsCannotBeInNestedCalls() =>
 		Assert.That(() => ParseExpression("+.logger"), Throws.InstanceOf<InvalidOperatorHere>());
 
+	[TestCase("five.to")]
+	[TestCase("five.is")]
+	[TestCase("five.and")]
+	[TestCase("five.or")]
+	[TestCase("five.xor")]
+	[TestCase("five.not")]
+	public void OperatorMethodsCannotBeCalledViaDotNotation(string expression) =>
+		Assert.That(() => ParseExpression(expression), Throws.InstanceOf<InvalidOperatorHere>());
+
 	[Test]
 	public void MultipleWordsMemberNotFound() =>
 		Assert.That(() => ParseExpression("directory.GetFiles"),

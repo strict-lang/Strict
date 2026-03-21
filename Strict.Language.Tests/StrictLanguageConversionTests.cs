@@ -252,7 +252,7 @@ public sealed class StrictLanguageConversionTests
 				"has elementName Text",
 				"has typeName Text",
 				"to Text",
-				"\tNamedType(\"count\", \"Number\").to is \"count Number\"",
+				"\tNamedType(\"count\", \"Number\") to Text is \"count Number\"",
 				"\telementName + \" \" + typeName")).ParseMembersAndMethods(parser);
 		Assert.That(namedType.Members.Count, Is.EqualTo(2));
 		Assert.That(namedType.Members[0].Name, Is.EqualTo("elementName"));

@@ -1,5 +1,5 @@
 has elementName Text
 has typeName Text
 to Text
-	NamedType("count", "Number").to is "count Number"
+	NamedType("count", "Number") to Text is "count Number"
 	elementName + " " + typeName
