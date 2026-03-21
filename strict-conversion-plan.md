@@ -93,15 +93,56 @@ Before Strict.Language can be written in Strict, the runtime needs these capabil
 | Reflection / Attributes | `LogAttribute.cs`, test infra | Low (defer) |
 | HTTP / GitHub download | `GitHubStrictDownloader.cs` | Lowest (defer) |
 
+### Discovered Blockers from First Conversion Attempt
+
+**Attempt date:** 2026-03-21. We tried to implement `Limit.cs` and `TypeKind.cs` in Strict.
+
+#### ✅ Limit.cs → `Language/Limit.strict` — COMPLETED
+
+`Limit.cs` is just 11 numeric constants. The equivalent `.strict` is:
+```
+constant MethodLength = 12
+constant ParameterCount = 4
+...
+```
+This works perfectly. File lives in `Language/Limit.strict`. Verified via 4 new tests in
+`StrictLanguageConversionTests.cs` (inline parsing + file loading + TypeKind blockers).
+
+#### ❌ TypeKind.cs → Blocked by naming conflict
+
+`TypeKind.cs` is a C# enum with values `None, Boolean, Number, Text, Character, List, Dictionary,
+Error, Enum, Iterator, Any, Unknown`. In Strict, writing `constant Boolean` in a type is **blocked**
+because "Boolean" is already a built-in type name and Strict enforces that a member named "Boolean"
+must have type `Boolean`, not auto-enum `Number`.
+
+The rule: `Member.CheckForNameWithDifferentTypeUsage` throws `MemberNameWithDifferentTypeNamesThanOwnAreNotAllowed`
+when you name a constant after an existing type but assign it a different type (like Number for enums).
+
+**All** TypeKind enum constants conflict: `None`, `Boolean`, `Number`, `Text`, `Character`, `List`,
+`Dictionary`, `Error`, `Enum`, `Iterator`, `Any` are all existing Strict type names.
+
+**Workarounds (choose one):**
+1. Prefix names: `KindNone`, `KindBoolean`, etc. → changes the public API but works today
+2. Add a new language feature: allow constant-enum declarations to shadow type names in the same package
+3. Eliminate TypeKind entirely from Strict.Language — use type identity comparisons instead (recommended long-term)
+
+#### ❌ Keyword.cs → Blocked by keyword-as-name
+
+`Keyword.cs` has constants like `Has = "has"`, `Mutable = "mutable"`, `If = "if"`, etc. In Strict,
+these names (`has`, `constant`, `let`, `mutable`, `if`, `else`, `for`, `with`, `return`) are reserved
+keywords and **cannot** be used as constant/member names.
+
+**Workaround:** Use `KeywordHas`, `KeywordMutable`, etc. prefixes, or store them as a Text list.
+
 ### Conversion Order for `Strict.Language`
 
 | Priority | C# File | Description | Strict equivalent plan | Status |
 |----------|---------|-------------|------------------------|--------|
-| 1 | `Keyword.cs` | ~25 constants | Constants type in Strict | 0% |
+| 1 | `Keyword.cs` | ~25 constants | Blocked: keyword names conflict with Strict keywords | ❌ Blocked |
 | 2 | `BinaryOperator.cs` | ~30 operator string constants | Enum/constants | 0% |
-| 3 | `UnaryOperator.cs` | ~5 unary operator constants | Enum/constants | 0% |
-| 4 | `TypeKind.cs` | Enum: Regular/Trait/Generic | Enum type | 0% |
-| 5 | `Limit.cs` | Size limit constants | Constants type | 0% |
+| 3 | `UnaryOperator.cs` | ~5 unary operator constants | `constant Not = "not"` works (no "Not" type conflict) | 0% |
+| 4 | `TypeKind.cs` | Enum: Regular/Trait/Generic | Blocked: all names conflict with built-in types | ❌ Blocked |
+| 5 | `Limit.cs` | Size limit constants | `Language/Limit.strict` — 11 numeric constants | ✅ 100% |
 | 6 | `NumberExtensions.cs` | Simple number helpers | Methods on Number | 0% |
 | 7 | `StringExtensions.cs` | `MakeFirstLetterUppercase`, etc. | Methods on Text | 0% |
 | 8 | `SpanExtensions.cs` | `IsWord`, `IsKeyword`, etc. | Methods on Text | 0% |
@@ -131,8 +172,8 @@ Before Strict.Language can be written in Strict, the runtime needs these capabil
 
 | Metric | Target | Actual | % |
 |--------|--------|--------|---|
-| `.strict` files created | 22 | 0 | 0% |
-| Test methods written | 335 | 0 | 0% |
+| `.strict` files created | 22 | 1 | 5% |
+| Test methods written | 335 | 4 | 1% |
 | C# files replaced | 32 | 0 | 0% |
 
 ---
@@ -395,7 +436,7 @@ This is the execution engine — the capstone of the self-hosting effort.
 | Phase | Project | C# Files | Target `.strict` Files | Actual `.strict` Files | Tests Written | C# % Done |
 |-------|---------|----------|------------------------|------------------------|---------------|-----------|
 | 0 | Base Types (verification) | 0 | 0 (already `.strict`) | 2 (BaseTypesTest) | 1 | 0% |
-| 1 | `Strict.Language` | 32 | 22 | 0 | 0 | 0% |
+| 1 | `Strict.Language` | 32 | 22 | 1 (Limit.strict) | 4 | 3% |
 | 2 | `Strict.Expressions` | 29 | 29 | 0 | 0 | 0% |
 | 3 | `Strict.Validators` | 3 | 3 | 0 | 0 | 0% |
 | 4 | `Strict.TestRunner` | 1 | 1 | 0 | 0 | 0% |
@@ -404,7 +445,7 @@ This is the execution engine — the capstone of the self-hosting effort.
 | 7 | `Strict.Optimizers` | 9 | 9 | 0 | 0 | 0% |
 | 8 | `Strict` (VM + Runner) | 6 | 6 | 0 | 0 | 0% |
 | 9 | `Strict.Compiler(.Assembly)` | 5 | 5 | 0 | 0 | 0% |
-| **Total** | | **133** | **123** | **2** | **1** | **0%** |
+| **Total** | | **133** | **123** | **3** | **5** | **1%** |
 
 ---
 
