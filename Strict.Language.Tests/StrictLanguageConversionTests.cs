@@ -96,7 +96,7 @@ public sealed class StrictLanguageConversionTests
 	/// The workaround: prefix with "Kind" (KindBoolean, KindNumber, etc.) — no conflict, still clear.
 	/// </summary>
 	[Test]
-	public void TypeKindUsesKindPrefixToAvoidBuiltInTypeNameConflicts()
+	public void TypeKindConstantsUseKindPrefixToAvoidBuiltInTypeNameConflicts()
 	{
 		using var typeKind = new Type(TestPackage.Instance,
 			new TypeLines("TypeKind",
@@ -193,6 +193,90 @@ public sealed class StrictLanguageConversionTests
 		using var binaryOp = new Type(TestPackage.Instance, lines).ParseMembersAndMethods(parser);
 		Assert.That(binaryOp.Members.Count, Is.EqualTo(16));
 		Assert.That(binaryOp.IsEnum, Is.True);
+	}
+
+	/// <summary>
+	/// TypeLines.cs is a data container holding a type's name and source lines.
+	/// In Strict it becomes a plain type with two members and a to Text method returning the name.
+	/// Strict's naming rule: member name must not match a different type — so we use "typeName"
+	/// (no "TypeName" type exists) instead of "name" (which conflicts with the Name type).
+	/// The DependentTypes computation (string parsing) is deferred to a later stage.
+	/// </summary>
+	[Test]
+	public void TypeLinesHasTwoMembersAndToTextMethod()
+	{
+		using var typeLines = new Type(TestPackage.Instance,
+			new TypeLines("TypeLines",
+				"has typeName Text",
+				"has lines Texts",
+				"to Text",
+				"\ttypeName")).ParseMembersAndMethods(parser);
+		Assert.That(typeLines.Members.Count, Is.EqualTo(2));
+		Assert.That(typeLines.Members[0].Name, Is.EqualTo("typeName"));
+		Assert.That(typeLines.Members[0].Type.Name, Is.EqualTo(Type.Text));
+		Assert.That(typeLines.Members[1].Name, Is.EqualTo("lines"));
+		Assert.That(typeLines.Members[1].Type.Name, Does.StartWith(Type.List));
+		Assert.That(typeLines.Methods.Count, Is.EqualTo(1));
+		Assert.That(typeLines.Methods[0].Name, Is.EqualTo("to"));
+		Assert.That(typeLines.Methods[0].ReturnType.Name, Is.EqualTo(Type.Text));
+		Assert.That(typeLines.Methods[0].GetBodyAndParseIfNeeded(), Is.InstanceOf<Expression>());
+	}
+
+	[Test]
+	public void LoadTypeLinesFromLanguageDirectory()
+	{
+		var langPath = GetLanguagePath();
+		var lines = new TypeLines("TypeLines",
+			File.ReadAllLines(Path.Combine(langPath, "TypeLines.strict")));
+		using var typeLines = new Type(TestPackage.Instance, lines).ParseMembersAndMethods(parser);
+		Assert.That(typeLines.Members.Count, Is.EqualTo(2));
+		Assert.That(typeLines.Members[0].Name, Is.EqualTo("typeName"));
+		Assert.That(typeLines.Members[1].Name, Is.EqualTo("lines"));
+		Assert.That(typeLines.Methods.Count, Is.EqualTo(1));
+		Assert.That(typeLines.Methods[0].GetBodyAndParseIfNeeded(), Is.InstanceOf<Expression>());
+	}
+
+	/// <summary>
+	/// NamedType.cs is the abstract base for Parameter, Member, and Variable — it holds a name
+	/// and a type reference and provides a canonical to Text. In Strict we model it as a concrete
+	/// type (no abstract classes) with two Text members: the element name and the type name.
+	/// Strict naming rule: "name" → conflicts with Name type, so use "elementName".
+	/// The to Text method mirrors C# ToString: Name + " " + Type.
+	/// The inline test exercises the method body and verifies string concatenation works.
+	/// </summary>
+	[Test]
+	public void NamedTypeToTextConcatenatesElementAndTypeName()
+	{
+		using var namedType = new Type(TestPackage.Instance,
+			new TypeLines("NamedType",
+				"has elementName Text",
+				"has typeName Text",
+				"to Text",
+				"\tNamedType(\"count\", \"Number\").to is \"count Number\"",
+				"\telementName + \" \" + typeName")).ParseMembersAndMethods(parser);
+		Assert.That(namedType.Members.Count, Is.EqualTo(2));
+		Assert.That(namedType.Members[0].Name, Is.EqualTo("elementName"));
+		Assert.That(namedType.Members[0].Type.Name, Is.EqualTo(Type.Text));
+		Assert.That(namedType.Members[1].Name, Is.EqualTo("typeName"));
+		Assert.That(namedType.Members[1].Type.Name, Is.EqualTo(Type.Text));
+		Assert.That(namedType.Methods.Count, Is.EqualTo(1));
+		Assert.That(namedType.Methods[0].Name, Is.EqualTo("to"));
+		Assert.That(namedType.Methods[0].ReturnType.Name, Is.EqualTo(Type.Text));
+		Assert.That(namedType.Methods[0].GetBodyAndParseIfNeeded(), Is.InstanceOf<Expression>());
+	}
+
+	[Test]
+	public void LoadNamedTypeFromLanguageDirectory()
+	{
+		var langPath = GetLanguagePath();
+		var lines = new TypeLines("NamedType",
+			File.ReadAllLines(Path.Combine(langPath, "NamedType.strict")));
+		using var namedType = new Type(TestPackage.Instance, lines).ParseMembersAndMethods(parser);
+		Assert.That(namedType.Members.Count, Is.EqualTo(2));
+		Assert.That(namedType.Members[0].Name, Is.EqualTo("elementName"));
+		Assert.That(namedType.Members[1].Name, Is.EqualTo("typeName"));
+		Assert.That(namedType.Methods.Count, Is.EqualTo(1));
+		Assert.That(namedType.Methods[0].GetBodyAndParseIfNeeded(), Is.InstanceOf<Expression>());
 	}
 
 	private static string GetLanguagePath() =>

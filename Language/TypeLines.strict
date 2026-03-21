@@ -1,0 +1,4 @@
+has typeName Text
+has lines Texts
+to Text
+	typeName

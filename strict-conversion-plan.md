@@ -118,17 +118,17 @@ not an auto-numbered enum value. This is the same principle as C#'s naming restr
 | 3 | `UnaryOperator.cs` | 1 unary operator constant | `Language/UnaryOperator.strict` — `constant Not = "not"` | ✅ 100% |
 | 4 | `TypeKind.cs` | Enum: None/Boolean/Number/etc. | `Language/TypeKind.strict` — 12 constants with Kind prefix | ✅ 100% |
 | 5 | `Limit.cs` | Size limit constants | `Language/Limit.strict` — 11 numeric constants | ✅ 100% |
-| 6 | `NumberExtensions.cs` | Simple number helpers | Methods on Number — needs method body support | 🚧 Deferred |
-| 7 | `StringExtensions.cs` | `MakeFirstLetterUppercase`, etc. | Methods on Text — complex C# spans/strings | 🚧 Deferred |
-| 8 | `SpanExtensions.cs` | `IsWord`, `IsKeyword`, etc. | Performance-critical span methods | 🚧 Deferred |
-| 9 | `NamedType.cs` | Name + Type pair | Abstract base class with constructor logic | 🚧 Needs traits |
-| 10 | `Variable.cs` | Variable: name, type, isMutable | Depends on Expression/Body | 🚧 Needs Phase 2 |
-| 11 | `Parameter.cs` | Method parameter | Extends NamedType | 🚧 Needs NamedType |
-| 12 | `Member.cs` | Type member definition | Type with members | 🚧 Needs NamedType |
-| 13 | `Expression.cs` | Abstract expression base | Trait | 🚧 Needs traits |
-| 14 | `ConcreteExpression.cs` | Concrete expression with type | Implements Expression | 🚧 Needs Expression |
-| 15 | `ExpressionParser.cs` | Abstract parser interface | Trait | 🚧 Needs traits |
-| 16 | `TypeLines.cs` | Raw lines of a type file | Type with name + lines | 🚧 Needs List |
+| 6 | `TypeLines.cs` | Raw lines of a type file | `Language/TypeLines.strict` — `has typeName Text`, `has lines Texts`, `to Text` | ✅ 100% |
+| 7 | `NamedType.cs` | Name + Type pair (abstract base) | `Language/NamedType.strict` — concrete simplification, `to Text` with string concat | ✅ 50% |
+| 8 | `NumberExtensions.cs` | Simple number helpers | Methods on Number — needs method body support | 🚧 Deferred |
+| 9 | `StringExtensions.cs` | `MakeFirstLetterUppercase`, etc. | Methods on Text — complex C# spans/strings | 🚧 Deferred |
+| 10 | `SpanExtensions.cs` | `IsWord`, `IsKeyword`, etc. | Performance-critical span methods | 🚧 Deferred |
+| 11 | `Variable.cs` | Variable: name, type, isMutable | Depends on Expression/Body | 🚧 Needs Phase 2 |
+| 12 | `Parameter.cs` | Method parameter | Extends NamedType | 🚧 Needs NamedType expansion |
+| 13 | `Member.cs` | Type member definition | Type with members | 🚧 Needs NamedType expansion |
+| 14 | `Expression.cs` | Abstract expression base | Trait | 🚧 Needs traits |
+| 15 | `ConcreteExpression.cs` | Concrete expression with type | Implements Expression | 🚧 Needs Expression |
+| 16 | `ExpressionParser.cs` | Abstract parser interface | Trait | 🚧 Needs traits |
 | 17 | `TypeParser.cs` | Parse member/method headers | Complex parser type | 🚧 Complex |
 | 18 | `Method.cs` (partial) | Method definition, no body parse | 500+ LOC, split needed | 🚧 Complex |
 | 19 | `Context.cs` | Base for Package/Type lookup | Abstract type | 🚧 Complex |
@@ -138,11 +138,18 @@ not an auto-numbered enum value. This is the same principle as C#'s naming restr
 | 23 | `Repositories.cs` | Load packages from GitHub/disk | Needs async/HTTP — defer | 🚧 Deferred |
 | 24 | `GitHubStrictDownloader.cs` | HTTP download — defer | Needs HTTP client | 🚧 Deferred |
 
+**Naming convention in Strict Language/ files:**
+Strict enforces that a member named `x` (where `X` is an existing type) must have type `X`.
+This means `has name Text` fails if a `Name` type exists — use a name that either:
+- Starts the type's name: `has text Text`, `has number Number` (standard Strict convention)
+- Uses a name with no matching type: `has typeName Text`, `has elementName Text`
+
 **Summary of what's done vs what's next:**
-- ✅ **5 pure-constant types done** — Limit, Keyword, TypeKind, UnaryOperator, BinaryOperator (all converted to `.strict` enum/constant files with TDD tests)
-- 🚧 **Methods (NumberExtensions, StringExtensions, SpanExtensions)** — These are C# extension methods on primitive types; need Strict method bodies on Number/Text to work
-- 🚧 **Data types (NamedType, Variable, Parameter, Member)** — Need abstract traits (for `abstract class`), and the more complex ones need Expression/Body which are Phase 2
-- 🚧 **Parser/compiler types (TypeParser, Method, Body, Type, Context, Package)** — These are the heart of the language, require full expression support; target for Phase 1 final stage
+- ✅ **5 pure-constant types done** (Phase 1a) — Limit, Keyword, TypeKind, UnaryOperator, BinaryOperator
+- ✅ **2 data types with method bodies done** (Phase 1b) — TypeLines (simple `to Text`), NamedType (string concatenation, inline test assertion)
+- 🚧 **Extension methods (NumberExtensions, StringExtensions, SpanExtensions)** — Deferred: these add methods to existing types (Number, Text) which requires modifying root .strict files
+- 🚧 **Parameter, Member, Variable** — Depend on the simplified NamedType; can be added next
+- 🚧 **Parser/compiler types** — Target for Phase 1 final stage, require full expression support
 
 **Target metrics for Phase 1:**
 - `.strict` files to generate: ~22 (excluding deferred files)
@@ -153,8 +160,8 @@ not an auto-numbered enum value. This is the same principle as C#'s naming restr
 
 | Metric | Target | Actual | % |
 |--------|--------|--------|---|
-| `.strict` files created | 22 | 5 | 23% |
-| Test methods written | 335 | 10 | 3% |
+| `.strict` files created | 22 | 7 | 32% |
+| Test methods written | 335 | 14 | 4% |
 | C# files replaced | 32 | 0 | 0% |
 
 ---
@@ -417,7 +424,7 @@ This is the execution engine — the capstone of the self-hosting effort.
 | Phase | Project | C# Files | Target `.strict` Files | Actual `.strict` Files | Tests Written | C# % Done |
 |-------|---------|----------|------------------------|------------------------|---------------|-----------|
 | 0 | Base Types (verification) | 0 | 0 (already `.strict`) | 2 (BaseTypesTest) | 1 | 0% |
-| 1 | `Strict.Language` | 32 | 22 | 5 (Limit, Keyword, TypeKind, UnaryOperator, BinaryOperator) | 10 | 16% |
+| 1 | `Strict.Language` | 32 | 22 | 7 (Limit, Keyword, TypeKind, UnaryOperator, BinaryOperator, TypeLines, NamedType) | 14 | 22% |
 | 2 | `Strict.Expressions` | 29 | 29 | 0 | 0 | 0% |
 | 3 | `Strict.Validators` | 3 | 3 | 0 | 0 | 0% |
 | 4 | `Strict.TestRunner` | 1 | 1 | 0 | 0 | 0% |
@@ -426,7 +433,7 @@ This is the execution engine — the capstone of the self-hosting effort.
 | 7 | `Strict.Optimizers` | 9 | 9 | 0 | 0 | 0% |
 | 8 | `Strict` (VM + Runner) | 6 | 6 | 0 | 0 | 0% |
 | 9 | `Strict.Compiler(.Assembly)` | 5 | 5 | 0 | 0 | 0% |
-| **Total** | | **133** | **123** | **7** (2 BaseTypesTest + 5 Language) | **11** | **4%** |
+| **Total** | | **133** | **123** | **9** (2 BaseTypesTest + 7 Language) | **15** | **5%** |
 
 ---
 
