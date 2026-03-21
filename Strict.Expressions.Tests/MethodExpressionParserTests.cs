@@ -61,6 +61,18 @@ public sealed class MethodExpressionParserTests : TestExpressions
 	}
 
 	[Test]
+	public void ParseInlineTextLiteralMethodCallAssertion()
+	{
+		using var parsingType = new Type(TestPackage.Instance, new TypeLines(
+			nameof(ParseInlineTextLiteralMethodCallAssertion),
+			"has number",
+			"LastIndexOf(text Text) Number",
+			"\t\"hello\".LastIndexOf(\"l\") is 3",
+			"\t-1")).ParseMembersAndMethods(this);
+		Assert.That(() => parsingType.Methods.Single().GetBodyAndParseIfNeeded(), Throws.Nothing);
+	}
+
+	[Test]
 	public void IsVariableMutatedInNestedBody()
 	{
 		var body = (Body)new Method(type, 0, this, [

@@ -394,29 +394,34 @@ public class Interpreter
 	public ValueInstance EvaluateMemberCall(MemberCall member, ExecutionContext ctx)
 	{
 		Statistics.MemberCallCount++;
-		if (ctx.This == null && ctx.Type.Members.Contains(member.Member))
+		if (member.Instance is VariableCall { Variable.Name: Type.OuterLowercase })
+			return ctx.Parent!.Get(member.Member.Name, Statistics);
+		if (member.Member.InitialValue != null && member.IsConstant)
+			return RunExpression(member.Member.InitialValue, ctx);
+		var instance = member.Instance != null
+			? RunExpression(member.Instance, ctx)
+			: ctx.This;
+		if (instance == null && ctx.Type.Members.Contains(member.Member))
 			throw new UnableToCallMemberWithoutInstance(member, ctx); //ncrunch: no coverage
-		if (ctx.This is { IsDictionary: true } &&
+		if (instance is { IsDictionary: true } &&
 			member.Member.Name.Equals(Type.ElementsLowercase, StringComparison.OrdinalIgnoreCase))
 		{
-			var dict = ctx.This.Value.GetDictionaryItems();
-			var pairs = new ValueInstance[dict.Count];
+			var dictionaryItems = instance.Value.GetDictionaryItems();
+			var pairs = new ValueInstance[dictionaryItems.Count];
 			var pairType = member.Member.Type is { IsList: true, IsGeneric: true }
 				? listType.GetFirstImplementation()
 				: member.Member.Type;
 			var index = 0;
-			foreach (var pair in dict)
+			foreach (var pair in dictionaryItems)
 				pairs[index++] = new ValueInstance(pairType, [pair.Key, pair.Value]);
 			return new ValueInstance(member.Member.Type, pairs);
 		}
-		var typeInstance = ctx.This?.TryGetValueTypeInstance();
+		var typeInstance = instance?.TryGetValueTypeInstance();
 		if (typeInstance != null && typeInstance.TryGetValue(member.Member.Name, out var value))
 			return value;
-		if (member.Member.InitialValue != null && member.IsConstant)
-			return RunExpression(member.Member.InitialValue, ctx);
-		return member.Instance is VariableCall { Variable.Name: Type.OuterLowercase }
-			? ctx.Parent!.Get(member.Member.Name, Statistics)
-			: ctx.Get(member.Member.Name, Statistics);
+		if (instance != null && !member.IsConstant && member.Member.Type.Name != Type.Iterator)
+			return new ValueInstance(instance.Value, member.Member.Type);
+		return ctx.Get(member.Member.Name, Statistics);
 	}
 
 	public class UnableToCallMemberWithoutInstance(MemberCall member, ExecutionContext ctx)

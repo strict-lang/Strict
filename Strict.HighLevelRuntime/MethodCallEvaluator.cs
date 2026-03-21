@@ -11,9 +11,10 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 		interpreter.Statistics.ListCallCount++;
 		var listInstance = interpreter.RunExpression(call.List, ctx);
 		var indexValue = interpreter.RunExpression(call.Index, ctx);
-		return listInstance.IsList
-			? listInstance.GetIteratorValue(interpreter.characterType, (int)indexValue.Number)
-			: throw new InvalidOperationException("List call needs a list, got: " + listInstance);
+		if (listInstance.IsList || listInstance.IsText ||
+			listInstance.TryGetValueTypeInstance()?.ReturnType.IsList == true)
+			return listInstance.GetIteratorValue(interpreter.characterType, (int)indexValue.Number);
+		throw new InvalidOperationException("List call needs a list, got: " + listInstance);
 	}
 
 	public ValueInstance Evaluate(MethodCall call, ExecutionContext ctx)

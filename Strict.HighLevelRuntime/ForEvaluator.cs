@@ -156,10 +156,21 @@ internal sealed class ForEvaluator(Interpreter interpreter)
 		return new ValueInstance(text.ToString());
 	}
 
-	private Type GetForValueType(ValueInstance iterator) =>
-		iterator.IsText
-			? interpreter.characterType
-			: iterator.IsList
-				? iterator.GetIteratorType()
-				: interpreter.numberType;
+	private Type GetForValueType(ValueInstance iterator)
+	{
+		if (iterator.IsText)
+			return interpreter.characterType;
+		if (iterator.IsList)
+			return iterator.GetIteratorType();
+		var typeInstance = iterator.TryGetValueTypeInstance();
+		if (typeInstance?.ReturnType.IsList == true)
+		{
+			for (var index = 0; index < typeInstance.Values.Length; index++)
+				if (typeInstance.Values[index].IsText)
+					return interpreter.characterType;
+			if (typeInstance.TryGetValue("elements", out var elementsMember) && elementsMember.IsList)
+				return elementsMember.GetIteratorType();
+		}
+		return interpreter.numberType;
+	}
 }

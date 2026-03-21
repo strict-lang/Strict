@@ -55,11 +55,35 @@ public sealed class PhraseTokenizer
 	{
 		if (textStart == -1)
 			textStart = index;
-		else if (index + 1 < input.Length && input[index + 1] == '\"')
-			index++; // the next character is still a text (double quote), continue text
+		else if (index + 1 < input.Length && input[index + 1] == '"')
+			index++;
 		else
 		{
-			processToken(textStart..(index + 1));
+			var tokenRangeStart = textStart;
+			var tokenEnd = index + 1;
+			if (tokenEnd < input.Length && input[tokenEnd] == '.')
+			{
+				var bracketCount = 0;
+				var scanIndex = tokenEnd;
+				while (scanIndex < input.Length)
+				{
+					var nextCharacter = input[scanIndex];
+					if (nextCharacter == OpenBracket)
+						bracketCount++;
+					else if (nextCharacter == CloseBracket)
+					{
+						if (bracketCount > 0)
+							bracketCount--;
+					}
+					else if (nextCharacter == ' ' && bracketCount == 0)
+						break;
+					scanIndex++;
+				}
+				processToken(tokenRangeStart..scanIndex);
+				index = scanIndex - 1;
+			}
+			else
+				processToken(tokenRangeStart..tokenEnd);
 			textStart = -1;
 			tokenStart = -1;
 		}

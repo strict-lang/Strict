@@ -29,7 +29,7 @@
 - Do not add SupportedOSPlatform attributes, especially in tests just because you can't do something locally.
 - Do not add ad-hoc hacky cuda kernel code or any code without a proper transpiler or code emitter.
 - Do not add long comments, limit to 3 lines for summaries, best is none or 1 line. Inside methods there should usually not be any comments. Do not add comments to separate sections in a file (like using ---- or ====, that's ugly).
-- Do not remove TODOs until the code has actually be improved and fixed. When there are tests failing that cover the TODO, the TODO still needs to be tested and fixed before removal.
+- Do not remove TODOs until the code has actually been improved and fixed. When there are tests failing that cover the TODO, the TODO still needs to be tested and fixed before removal.
 
 ## Tests
 - Do not run Category("Manual") or \[Ignore\] tests ever; tests with these attributes are either supposed to be manually run or are currently disabled and ignored. If a test is fixed, remove the Ignore attribute and it becomes a normal test again.
@@ -371,7 +371,6 @@ test('rejects empty email', async () => {
   expect(result.error).toBe('Email required');
 });
 ```
-
 **Verify RED**
 ```bash
 $ npm test
@@ -387,7 +386,6 @@ function submitForm(data: FormData) {
   // ...
 }
 ```
-
 **Verify GREEN**
 ```bash
 $ npm test
@@ -447,4 +445,5 @@ No exceptions without your human partner's permission.
 
 ## Strict Runtime Conversion Work
 - For Strict runtime conversion work, prioritize Text/Path/Directory/File base features first; treat Error as the exception model (no throw/catch work), and defer async/await/Task, HTTP download, reflection, ZIP/binary I/O, and Process.Start to later phases.
-- In Strict runtime conversion, Path should not define redundant from/to methods because Path behaves like Text; use Path methods FileName, RemoveExtension, PathOnly returning Path, and move LastIndexOf to Text.strict; implement Text Upper/Lower.
+- In Strict runtime conversion, Path should not define redundant from/to methods because Path behaves like Text; use Path methods FileName, RemoveExtension, PathOnly returning Path, and move LastIndexOf to Text.strict; implement Text Upper/Lower. 
+- Prefer root-cause, general runtime fixes over TestPackage-specific workarounds and reject adding Number.Upper/Lower helper methods for this issue.

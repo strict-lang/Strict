@@ -98,7 +98,20 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 		case TextId:
 			var textTypeMembers = newType.Members;
 			var textValues = new ValueInstance[textTypeMembers.Count];
-			textValues[0] = new ValueInstance((string)existingInstance.value);
+			var textValue = new ValueInstance((string)existingInstance.value);
+			if (newType.IsList)
+			{
+				var elementsMemberIndex = 0;
+				for (var memberIndex = 0; memberIndex < textTypeMembers.Count; memberIndex++)
+					if (textTypeMembers[memberIndex].Name == Type.ElementsLowercase)
+					{
+						elementsMemberIndex = memberIndex;
+						break;
+					}
+				textValues[elementsMemberIndex] = textValue;
+			}
+			else
+				textValues[0] = textValue;
 			value = new ValueTypeInstance(newType, textValues);
 			number = TypeId;
 			break;

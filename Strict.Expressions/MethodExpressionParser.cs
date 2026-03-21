@@ -247,19 +247,33 @@ public class MethodExpressionParser : ExpressionParser
 	private Expression? ParseNestedExpressionInContext(Body body,
 		ReadOnlySpan<char> input, IReadOnlyList<Expression> arguments)
 	{
-		var members = new RangeEnumerator(input, '.', 0);
-		var context = body.Method.Type;
+		var nestedInput = input;
 		Expression? current = null;
+		var context = body.Method.Type;
+		var callArguments = arguments;
+		if (nestedInput.Length > 0 && nestedInput[0] == '.')
+		{
+			if (arguments.Count == 1 && arguments[0] is Binary)
+			{
+				current = arguments[0];
+				context = current.ReturnType;
+				callArguments = [];
+				nestedInput = nestedInput[1..];
+			}
+			else
+				throw new InvalidOperatorHere(body, nestedInput.ToString());
+		}
+		var members = new RangeEnumerator(nestedInput, '.', 0);
 		while (members.MoveNext())
 		{
 			if (current is null)
 			{
-				var inputText = input[members.Current];
+				var inputText = nestedInput[members.Current];
 				if (inputText.Length >= 3 && inputText[0] == PhraseTokenizer.OpenBracket)
 				{
 					var postfix = new ShuntingYard(inputText.ToString());
 					if (postfix.Output.Count >= 3)
-						current = Binary.Parse(body, input, postfix.Output);
+						current = Binary.Parse(body, nestedInput, postfix.Output);
 				}
 				current ??= Text.TryParse(body, inputText) ??
 					List.TryParseWithMultipleOrNestedElements(body, inputText, false) ??
@@ -271,26 +285,26 @@ public class MethodExpressionParser : ExpressionParser
 				}
 			}
 			if (current != null)
-		{
-			var part = input[members.Current];
-			var partName = part.Contains('(') ? part[..part.IndexOf('(')] : part;
-			if (partName.IsOperator())
-				throw new InvalidOperatorHere(body, partName.ToString());
-		}
-		var expression = input[members.Current].Contains('(')
+			{
+				var part = nestedInput[members.Current];
+				var partName = part.Contains('(') ? part[..part.IndexOf('(')] : part;
+				if (partName.IsOperator())
+					throw new InvalidOperatorHere(body, partName.ToString());
+			}
+			var expression = nestedInput[members.Current].Contains('(')
 				? current != null
-					? ParseMethodCallOnContext(body, input[members.Current], context, current)
-					: TryParseMemberOrZeroOrOneArgumentMethodOrNestedCall(body, input[members.Current])
+					? ParseMethodCallOnContext(body, nestedInput[members.Current], context, current)
+					: TryParseMemberOrZeroOrOneArgumentMethodOrNestedCall(body, nestedInput[members.Current])
 				: TryVariableOrValueOrParameterOrMemberOrMethodCall(context, current, body,
-					input[members.Current],
+					nestedInput[members.Current],
 					members.IsAtEnd
-						? arguments
+						? callArguments
 						: []);
 			current = expression ??
-				throw CheckErrorTypeAndThrowException(body, input, members, current);
+				throw CheckErrorTypeAndThrowException(body, nestedInput, members, current);
 			context = current.ReturnType;
 		}
-		return ListCall.TryParse(body, current, arguments);
+		return ListCall.TryParse(body, current, callArguments);
 	}
 
 	private Expression? ParseMethodCallOnContext(Body body, ReadOnlySpan<char> input,

@@ -85,6 +85,15 @@ public sealed class ToTests
 			interpreter.noneInstance, []).Text, Is.EqualTo("hello"));
 	}
 
+	[Test]
+	public void TextCharactersLengthMatchesSourceTextLength()
+	{
+		using var type = CreateType(nameof(TextCharactersLengthMatchesSourceTextLength), "has number",
+			"Run Number", "\t\"hello\".characters.Length");
+		Assert.That(interpreter.Execute(type.Methods.Single(method => method.Name == Method.Run),
+			interpreter.noneInstance, []).Number, Is.EqualTo(5));
+	}
+
 	[TestCase("hello", "l", 3)]
 	[TestCase("hello", "x", -1)]
 	public void LastIndexOfFindsLastMatchOrMissingValue(string text, string searchText,
