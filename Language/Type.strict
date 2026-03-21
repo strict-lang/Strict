@@ -1,0 +1,8 @@
+has typeName Text
+has packageName Text
+has memberNames Texts
+has methodNames Texts
+has isTrait Boolean
+has isGeneric Boolean
+to Text
+	typeName

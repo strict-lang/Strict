@@ -46,11 +46,11 @@ end-to-end testing via the `Examples/BaseTypesTest/` multi-file package.
 | `Directory` | `Directory.strict` | ☐ | 0% |
 | `Range` | `Range.strict` | ☐ | 0% |
 | `Error` / `ErrorWithValue` | `Error.strict`, `ErrorWithValue.strict` | ☐ | 0% |
-| `Character` | `Character.strict` | ☐ | 0% |
-| `Any` | `Any.strict` | ☐ | 0% |
-| `Enum` | `Enum.strict` | ☐ | 0% |
-| `Mutable` | `Mutable.strict` | ☐ | 0% |
-| `Iterator` | `Iterator.strict` | ☐ | 0% |
+| `Character` | `Character(strict)` | ☐ | 0% |
+| `Any` | `Any(strict)` | ☐ | 0% |
+| `Enum` | `Enum(strict)` | ☐ | 0% |
+| `Mutable` | `Mutable(strict)` | ☐ | 0% |
+| `Iterator` | `Iterator(strict)` | ☐ | 0% |
 
 **Current state:**
 - `Examples/BaseTypesTest/` exists with 2 `.strict` files (`BaseTypesTest.strict`, `TextHelper.strict`)
@@ -123,18 +123,18 @@ not an auto-numbered enum value. This is the same principle as C#'s naming restr
 | 8 | `NumberExtensions.cs` | Simple number helpers | Methods on Number — needs method body support | 🚧 Deferred |
 | 9 | `StringExtensions.cs` | `MakeFirstLetterUppercase`, etc. | Methods on Text — complex C# spans/strings | 🚧 Deferred |
 | 10 | `SpanExtensions.cs` | `IsWord`, `IsKeyword`, etc. | Performance-critical span methods | 🚧 Deferred |
-| 11 | `Variable.cs` | Variable: name, type, isMutable | Depends on Expression/Body | 🚧 Needs Phase 2 |
-| 12 | `Parameter.cs` | Method parameter | Extends NamedType | 🚧 Needs NamedType expansion |
-| 13 | `Member.cs` | Type member definition | Type with members | 🚧 Needs NamedType expansion |
-| 14 | `Expression.cs` | Abstract expression base | Trait | 🚧 Needs traits |
-| 15 | `ConcreteExpression.cs` | Concrete expression with type | Implements Expression | 🚧 Needs Expression |
-| 16 | `ExpressionParser.cs` | Abstract parser interface | Trait | 🚧 Needs traits |
-| 17 | `TypeParser.cs` | Parse member/method headers | Complex parser type | 🚧 Complex |
-| 18 | `Method.cs` (partial) | Method definition, no body parse | 500+ LOC, split needed | 🚧 Complex |
-| 19 | `Context.cs` | Base for Package/Type lookup | Abstract type | 🚧 Complex |
-| 20 | `Package.cs` | Package = directory of types | Complex, needs Directory | 🚧 Complex |
-| 21 | `Type.cs` | Type definition | Very complex, 400+ LOC | 🚧 Complex |
-| 22 | `Body.cs` | Method body, lazy parse | Complex, 260+ LOC | 🚧 Complex |
+| 11 | `Variable.cs` | Variable: name, type, isMutable | `Language/Variable.strict` — shared variable metadata (`elementName`, `typeName`, `isMutable`, `initialValueExpression`, `to Text`) | ✅ 55% |
+| 12 | `Parameter.cs` | Method parameter | `Language/Parameter.strict` — de-duplicated via `has Variable` composition + `to Text` reuse | ✅ 55% |
+| 13 | `Member.cs` | Type member definition | `Language/Member.strict` — de-duplicated via `has Variable` + `isConstant` and `to Text` reuse | ✅ 55% |
+| 14 | `Expression.cs` | Abstract expression base | `Language/Expression.strict` — expanded simplified metadata (`returnTypeName`, `lineNumber`, `isMutable`) plus parser-safe `IsConstant`/`to` methods | ✅ 50% |
+| 15 | `ConcreteExpression.cs` | Concrete expression with type | `Language/ConcreteExpression.strict` — de-duplicated via `has Expression` + `expressionText` with parser-safe methods | ✅ 50% |
+| 16 | `ExpressionParser.cs` | Abstract parser interface | `Language/ExpressionParser.strict` — simplified parse signature trait | ✅ 30% |
+| 17 | `TypeParser.cs` | Parse member/method headers | `Language/TypeParser.strict` — simplified parse signature trait | ✅ 25% |
+| 18 | `Method.cs` (partial) | Method definition, no body parse | `Language/Method.strict` — expanded simplified metadata (`methodName`, `returnTypeName`, params/public/trait flags) | ✅ 45% |
+| 19 | `Context.cs` | Base for Package/Type lookup | `Language/Context.strict` — parser-safe lookup surface (`FindType`, `TryGetType`, `GetType`) | ✅ 40% |
+| 20 | `Package.cs` | Package = directory of types | `Language/Package.strict` — parser-safe package metadata + lookup/add methods | ✅ 45% |
+| 21 | `Type.cs` | Type definition | `Language/Type.strict` — expanded simplified type metadata shape | ✅ 40% |
+| 22 | `Body.cs` | Method body, lazy parse | `Language/Body.strict` — expanded simplified body metadata (`methodName`, `expressionTexts`, `lineCount`) | ✅ 40% |
 | 23 | `Repositories.cs` | Load packages from GitHub/disk | Needs async/HTTP — defer | 🚧 Deferred |
 | 24 | `GitHubStrictDownloader.cs` | HTTP download — defer | Needs HTTP client | 🚧 Deferred |
 
@@ -146,10 +146,12 @@ This means `has name Text` fails if a `Name` type exists — use a name that eit
 
 **Summary of what's done vs what's next:**
 - ✅ **5 pure-constant types done** (Phase 1a) — Limit, Keyword, TypeKind, UnaryOperator, BinaryOperator
-- ✅ **2 data types with method bodies done** (Phase 1b) — TypeLines (simple `to Text`), NamedType (string concatenation, inline test assertion)
-- 🚧 **Extension methods (NumberExtensions, StringExtensions, SpanExtensions)** — Deferred: these add methods to existing types (Number, Text) which requires modifying root .strict files
-- 🚧 **Parameter, Member, Variable** — Depend on the simplified NamedType; can be added next
-- 🚧 **Parser/compiler types** — Target for Phase 1 final stage, require full expression support
+- ✅ **14 Language types converted in simplified `.strict` form** — TypeLines, NamedType, Parameter, Member, Variable, Expression, ConcreteExpression, ExpressionParser, TypeParser, Method, Context, Package, Type, Body
+- ✅ **Deep-parity pass progressing** — conversion tests now include Expression and ConcreteExpression in isolated child-package loading and parser-safe strict method bodies
+- ✅ **DRY composition applied** — Parameter and Member compose Variable; ConcreteExpression composes Expression
+- ✅ **Runtime base-type expansion in root `.strict` files** — Text (`Split`, `Trim`, `IndexOf`, `LastIndexOf`, `Substring`, `Replace`, `Upper`, `Lower`), Path (`+`, `FileName`, `RemoveExtension`, `ChangeExtension`, `PathOnly`), Directory (`Exists`, `Files`, `Create`), File (`Exists`), Character (`Upper`, `Lower`)
+- 🚧 **Deferred from Phase 1** — Number/String/Span extension parity plus Repositories and GitHub downloader (deferred by design)
+- 🚧 **Deep parity still incomplete** — simplified converted Language types still require incremental behavior expansion to match C# logic
 
 **Target metrics for Phase 1:**
 - `.strict` files to generate: ~22 (excluding deferred files)
@@ -160,8 +162,8 @@ This means `has name Text` fails if a `Name` type exists — use a name that eit
 
 | Metric | Target | Actual | % |
 |--------|--------|--------|---|
-| `.strict` files created | 22 | 7 | 32% |
-| Test methods written | 335 | 14 | 4% |
+| `.strict` files created | 22 | 19 | 86% |
+| Test methods written | 335 | 28 | 8% |
 | C# files replaced | 32 | 0 | 0% |
 
 ---
@@ -424,7 +426,7 @@ This is the execution engine — the capstone of the self-hosting effort.
 | Phase | Project | C# Files | Target `.strict` Files | Actual `.strict` Files | Tests Written | C# % Done |
 |-------|---------|----------|------------------------|------------------------|---------------|-----------|
 | 0 | Base Types (verification) | 0 | 0 (already `.strict`) | 2 (BaseTypesTest) | 1 | 0% |
-| 1 | `Strict.Language` | 32 | 22 | 7 (Limit, Keyword, TypeKind, UnaryOperator, BinaryOperator, TypeLines, NamedType) | 14 | 22% |
+| 1 | `Strict.Language` | 32 | 22 | 19 (Limit, Keyword, TypeKind, UnaryOperator, BinaryOperator, TypeLines, NamedType, Parameter, Member, Variable, Expression, ConcreteExpression, ExpressionParser, TypeParser, Method, Context, Package, Type, Body) | 27 | 25% |
 | 2 | `Strict.Expressions` | 29 | 29 | 0 | 0 | 0% |
 | 3 | `Strict.Validators` | 3 | 3 | 0 | 0 | 0% |
 | 4 | `Strict.TestRunner` | 1 | 1 | 0 | 0 | 0% |
@@ -433,7 +435,7 @@ This is the execution engine — the capstone of the self-hosting effort.
 | 7 | `Strict.Optimizers` | 9 | 9 | 0 | 0 | 0% |
 | 8 | `Strict` (VM + Runner) | 6 | 6 | 0 | 0 | 0% |
 | 9 | `Strict.Compiler(.Assembly)` | 5 | 5 | 0 | 0 | 0% |
-| **Total** | | **133** | **123** | **9** (2 BaseTypesTest + 7 Language) | **15** | **5%** |
+| **Total** | | **133** | **123** | **21** (2 BaseTypesTest + 19 Language) | **28** | **5%** |
 
 ---
 
@@ -443,30 +445,32 @@ These C# / .NET features need to be added to the Strict runtime before each phas
 
 | Feature | Needed For Phase | Priority | Status |
 |---------|-----------------|----------|--------|
-| `Path.Combine` | 1 (Language) | 🔴 Critical | ❌ Missing |
-| `Path.GetFileName` | 1 (Language) | 🔴 Critical | ❌ Missing |
-| `Path.GetFileNameWithoutExtension` | 1 (Language) | 🔴 Critical | ❌ Missing |
-| `Path.GetDirectoryName` | 1 (Language) | 🔴 Critical | ❌ Missing |
-| `Path.ChangeExtension` | 1 (Language) | 🟠 High | ❌ Missing |
-| `Directory.Exists` | 1 (Language) | 🔴 Critical | ❌ Missing |
-| `Directory.GetFiles(path, pattern)` | 1 (Language) | 🔴 Critical | ❌ Missing |
-| `Directory.CreateDirectory` | 1 (Language) | 🟠 High | ❌ Missing |
+| `Path.Combine` | 1 (Language) | 🔴 Critical | ✅ Added (`Path.+`) |
+| `Path.GetFileName` | 1 (Language) | 🔴 Critical | ✅ Added (`Path.FileName`) |
+| `Path.GetFileNameWithoutExtension` | 1 (Language) | 🔴 Critical | ✅ Added (`Path.RemoveExtension`) |
+| `Path.GetDirectoryName` | 1 (Language) | 🔴 Critical | ✅ Added (`Path.PathOnly`) |
+| `Path.ChangeExtension` | 1 (Language) | 🟠 High | ✅ Added (`Path.ChangeExtension`) |
+| `Directory.Exists` | 1 (Language) | 🔴 Critical | ✅ Added |
+| `Directory.GetFiles(path, pattern)` | 1 (Language) | 🔴 Critical | ✅ Added (`Directory.Files`) |
+| `Directory.CreateDirectory` | 1 (Language) | 🟠 High | ✅ Added (`Directory.Create`) |
 | `File.ReadAllLines` | 1 (Language) | 🔴 Critical | ❌ Missing |
-| `File.WriteAllText` | 1 (Language) | 🟠 High | ❌ Missing |
-| `File.Exists` | 1 (Language) | 🟠 High | ❌ Missing |
-| `Text.Split(separator)` | 1 (Language) | 🔴 Critical | ❌ Missing |
-| `Text.Trim()` / `TrimStart()` / `TrimEnd()` | 1 (Language) | 🟠 High | ❌ Missing |
-| `Text.IndexOf(substring)` | 1 (Language) | 🟠 High | ❌ Missing |
-| `Text.Substring(start, length)` | 1 (Language) | 🟠 High | ❌ Missing |
-| `Text.Replace(old, new)` | 2 (Expressions) | 🟡 Medium | ❌ Missing |
-| `Text.ToUpper()` / `ToLower()` | 2 (Expressions) | 🟡 Medium | ❌ Missing |
-| Exception handling (`throw`/`catch`) | 1+ | 🔴 Critical | ❌ Missing |
-| `async`/`await` / `Task<T>` | 1 (Repositories) | 🟡 Defer | ❌ Missing |
-| HTTP client / web download | 1 (GitHub download) | 🟢 Defer | ❌ Missing |
-| Reflection / Attributes | Test infra | 🟢 Defer | ❌ Missing |
-| `ZipArchive` / ZIP handling | 6 (Bytecode serial.) | 🟡 Medium | ❌ Missing |
-| Binary I/O (`BinaryReader`/`BinaryWriter`) | 6 (Bytecode serial.) | 🟡 Medium | ❌ Missing |
-| Process execution (`Process.Start`) | 9 (Compiler) | 🟡 Medium | ❌ Missing |
+| `File.WriteAllText` | 1 (Language) | 🟠 High | ✅ Covered by `File.Write` |
+| `File.Exists` | 1 (Language) | 🟠 High | ✅ Added |
+| `Text.Split(separator)` | 1 (Language) | 🔴 Critical | ✅ Added |
+| `Text.Trim()` / `TrimStart()` / `TrimEnd()` | 1 (Language) | 🟠 High | ✅ Added (`Trim`) |
+| `Text.IndexOf(substring)` | 1 (Language) | 🟠 High | ✅ Added |
+| `Text.LastIndexOf(substring)` | 1 (Language) | 🟠 High | ✅ Added |
+| `Text.Substring(start, length)` | 1 (Language) | 🟠 High | ✅ Added |
+| `Text.Replace(old, new)` | 2 (Expressions) | 🟡 Medium | ✅ Added |
+| `Text.ToUpper()` / `ToLower()` | 2 (Expressions) | 🟡 Medium | ✅ Added (`Upper`/`Lower`, delegated to `Character`) |
+| `Char` / `char` comparisons & casing support | 1 (Language) | 🟠 High | ✅ Added (`Character.Upper`/`Lower` + Text iteration over Character) |
+| Exception handling (`throw`/`catch`) | 1+ | 🔴 Critical | ➖ Not needed (`Error` type) |
+| `async`/`await` / `Task<T>` | 1 (Repositories) | 🟡 Defer | ⏸ Deferred |
+| HTTP client / web download | 1 (GitHub download) | 🟢 Defer | ⏸ Deferred |
+| Reflection / Attributes | Test infra | 🟢 Defer | ⏸ Deferred |
+| `ZipArchive` / ZIP handling | 6 (Bytecode serial.) | 🟡 Medium | ⏸ Deferred |
+| Binary I/O (`BinaryReader`/`BinaryWriter`) | 6 (Bytecode serial.) | 🟡 Medium | ⏸ Deferred |
+| Process execution (`Process.Start`) | 9 (Compiler) | 🟡 Medium | ⏸ Deferred |
 
 ---
 
@@ -494,4 +498,3 @@ dotnet run --project Strict/Strict.csproj -- Examples/BaseTypesTest
 
 # Run a single .strict file
 dotnet run --project Strict/Strict.csproj -- Examples/SimpleCalculator.strict
-```

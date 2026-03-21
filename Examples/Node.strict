@@ -1,2 +1,3 @@
 mutable Next Node
-has unused Number
+from(next = Node, unused = 0)
+	value = next

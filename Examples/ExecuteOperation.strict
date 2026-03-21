@@ -1,7 +1,7 @@
 has registers
 TryOperationExecution(instruction) Register
 	if registers.Length < 2
-		Error "OperandsRequired"
+		Error("OperandsRequired")
 	GetOperationResult(instruction, registers(1), registers(0))
 	registers(1)
 GetOperationResult(instruction, left Register, right Register) Number

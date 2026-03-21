@@ -444,3 +444,7 @@ No exceptions without your human partner's permission.
 
 ## Optimization Work
 - Demonstrate actual measured improvement in generated executable size and execution speed, not just theoretical flag changes.
+
+## Strict Runtime Conversion Work
+- For Strict runtime conversion work, prioritize Text/Path/Directory/File base features first; treat Error as the exception model (no throw/catch work), and defer async/await/Task, HTTP download, reflection, ZIP/binary I/O, and Process.Start to later phases.
+- In Strict runtime conversion, Path should not define redundant from/to methods because Path behaves like Text; use Path methods FileName, RemoveExtension, PathOnly returning Path, and move LastIndexOf to Text.strict; implement Text Upper/Lower.

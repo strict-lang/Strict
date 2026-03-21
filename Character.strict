@@ -20,3 +20,15 @@ to Number
 	Character("A") to Number is notANumber
 	let result = number - zeroCharacter
 	result is in Range(0, 10) then result else notANumber(value)
+Upper Character
+	Character("a").Upper is "A"
+	Character("A").Upper is "A"
+	if number is in Range(97, 123)
+		return Character(number - 32)
+	value
+Lower Character
+	Character("A").Lower is "a"
+	Character("a").Lower is "a"
+	if number is in Range(65, 91)
+		return Character(number + 32)
+	value

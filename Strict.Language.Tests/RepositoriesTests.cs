@@ -207,4 +207,56 @@ public class RepositoriesTests
 	[Test]
 	[Category("Manual")]
 	public void BenchmarkIsOperator() => BenchmarkRunner.Run<BinaryOperatorTests>();
+
+	[Test]
+	public async Task LoadStrictBaseTextTypeContainsNewRuntimeMethods()
+	{
+		using var package = await repos.LoadStrictPackage();
+		var textType = package.GetType(Type.Text);
+		Assert.That(textType.Methods.Any(method => method.Name == "Split"), Is.True);
+		Assert.That(textType.Methods.Any(method => method.Name == "Trim"), Is.True);
+		Assert.That(textType.Methods.Any(method => method.Name == "IndexOf"), Is.True);
+		Assert.That(textType.Methods.Any(method => method.Name == "LastIndexOf"), Is.True);
+		Assert.That(textType.Methods.Any(method => method.Name == "Substring"), Is.True);
+		Assert.That(textType.Methods.Any(method => method.Name == "Replace"), Is.True);
+		Assert.That(textType.Methods.Any(method => method.Name == "Upper"), Is.True);
+		Assert.That(textType.Methods.Any(method => method.Name == "Lower"), Is.True);
+	}
+
+	[Test]
+	public async Task LoadStrictBaseTypesContainPathDirectoryAndFileRuntimeMethods()
+	{
+		using var package = await repos.LoadStrictPackage();
+		var pathType = package.GetType("Path");
+		Assert.That(pathType.Methods.Any(method => method.Name == "+"), Is.True);
+		Assert.That(pathType.Methods.Any(method => method.Name == "from"), Is.False);
+		Assert.That(pathType.Methods.Any(method => method.Name == "to"), Is.False);
+		Assert.That(pathType.Methods.Any(method => method.Name == "FileName"), Is.True);
+		Assert.That(pathType.Methods.Any(method => method.Name == "RemoveExtension"), Is.True);
+		Assert.That(pathType.Methods.Any(method => method.Name == "ChangeExtension"), Is.True);
+		Assert.That(pathType.Methods.Any(method => method.Name == "PathOnly"), Is.True);
+		Assert.That(pathType.Methods.Any(method => method.Name == "FileNameWithoutExtension"), Is.False);
+		Assert.That(pathType.Methods.Any(method => method.Name == "DirectoryName"), Is.False);
+		Assert.That(pathType.Methods.Single(method => method.Name == "FileName").ReturnType.Name,
+			Is.EqualTo("Path"));
+		Assert.That(pathType.Methods.Single(method => method.Name == "RemoveExtension").ReturnType.Name,
+			Is.EqualTo("Path"));
+		Assert.That(pathType.Methods.Single(method => method.Name == "PathOnly").ReturnType.Name,
+			Is.EqualTo("Path"));
+		var directoryType = package.GetType("Directory");
+		Assert.That(directoryType.Methods.Any(method => method.Name == "Exists"), Is.True);
+		Assert.That(directoryType.Methods.Any(method => method.Name == "Files"), Is.True);
+		Assert.That(directoryType.Methods.Any(method => method.Name == "Create"), Is.True);
+		var fileType = package.GetType(Type.File);
+		Assert.That(fileType.Methods.Any(method => method.Name == "Exists"), Is.True);
+	}
+
+	[Test]
+	public async Task LoadStrictCharacterTypeContainsCaseMethods()
+	{
+		using var package = await repos.LoadStrictPackage();
+		var characterType = package.GetType(Type.Character);
+		Assert.That(characterType.Methods.Any(method => method.Name == "Upper"), Is.True);
+		Assert.That(characterType.Methods.Any(method => method.Name == "Lower"), Is.True);
+	}
 }

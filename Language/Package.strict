@@ -1,0 +1,8 @@
+has packageName Text
+has fullName Text
+has typeNames Texts
+has parentName Text
+FindType(name Text) Type
+	fullName
+AddType(type Type) Mutable(Package)
+	value

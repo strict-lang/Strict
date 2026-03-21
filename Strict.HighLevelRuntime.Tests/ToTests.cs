@@ -68,12 +68,31 @@ public sealed class ToTests
 	}
 
 	[Test]
-	public void NumberPlusTextConcatenatesCorrectly()
+	public void UpperConvertsTextToUppercase()
 	{
-		using var t = CreateType(nameof(NumberPlusTextConcatenatesCorrectly),
-			"has number", "GetText Text", "\tnumber + \" items\"");
-		Assert.That(
-			interpreter.Execute(t.Methods.Single(m => m.Name == "GetText"), new ValueInstance(t, 5), []).Text,
-			Is.EqualTo("5 items"));
+		using var type = CreateType(nameof(UpperConvertsTextToUppercase), "has number", "Run Text",
+			"\t\"HeLlo\".Upper");
+		Assert.That(interpreter.Execute(type.Methods.Single(method => method.Name == Method.Run),
+			interpreter.noneInstance, []).Text, Is.EqualTo("HELLO"));
+	}
+
+	[Test]
+	public void LowerConvertsTextToLowercase()
+	{
+		using var type = CreateType(nameof(LowerConvertsTextToLowercase), "has number", "Run Text",
+			"\t\"HeLlo\".Lower");
+		Assert.That(interpreter.Execute(type.Methods.Single(method => method.Name == Method.Run),
+			interpreter.noneInstance, []).Text, Is.EqualTo("hello"));
+	}
+
+	[TestCase("hello", "l", 3)]
+	[TestCase("hello", "x", -1)]
+	public void LastIndexOfFindsLastMatchOrMissingValue(string text, string searchText,
+		double expected)
+	{
+		using var type = CreateType(nameof(LastIndexOfFindsLastMatchOrMissingValue), "has number",
+			"Run Number", "\t\"" + text + "\".LastIndexOf(\"" + searchText + "\")");
+		Assert.That(interpreter.Execute(type.Methods.Single(method => method.Name == Method.Run),
+			interpreter.noneInstance, []).Number, Is.EqualTo(expected));
 	}
 }

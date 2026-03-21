@@ -1,0 +1,7 @@
+has contextName Text
+FindType(name Text) Type
+	contextName
+TryGetType(name Text) Type
+	contextName
+GetType(name Text) Type
+	contextName

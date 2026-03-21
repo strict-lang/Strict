@@ -14,6 +14,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		.gitignore = .gitignore
 		.github\copilot-instructions.md = .github\copilot-instructions.md
 		README.md = README.md
+		strict-conversion-plan.md = strict-conversion-plan.md
 		Strict.sln.DotSettings = Strict.sln.DotSettings
 		Strict.v3.ncrunchsolution = Strict.v3.ncrunchsolution
 	EndProjectSection
@@ -91,6 +92,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "StrictFiles", "StrictFiles"
 		TextReader.strict = TextReader.strict
 		TextWriter.strict = TextWriter.strict
 		Type.strict = Type.strict
+		Path.strict = Path.strict
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Strict", "Strict\Strict.csproj", "{4F9E13DD-52AA-5923-2207-40EE4E0E8879}"
@@ -108,6 +110,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ImageProcessing", "ImageProcessing\ImageProcessing.csproj", "{4F35B2E8-E46D-8D5B-BE27-65E34CCBCCD5}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Examples", "Examples\Examples.csproj", "{4231C2B0-5AEB-2EC9-2588-94FF03EC9E9D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Language", "Language\Language.csproj", "{3F15AC2A-18E5-4CC0-6232-44946661D054}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -243,6 +247,10 @@ Global
 		{4231C2B0-5AEB-2EC9-2588-94FF03EC9E9D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4231C2B0-5AEB-2EC9-2588-94FF03EC9E9D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4231C2B0-5AEB-2EC9-2588-94FF03EC9E9D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3F15AC2A-18E5-4CC0-6232-44946661D054}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3F15AC2A-18E5-4CC0-6232-44946661D054}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3F15AC2A-18E5-4CC0-6232-44946661D054}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3F15AC2A-18E5-4CC0-6232-44946661D054}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -251,6 +259,7 @@ Global
 		{C57ED73C-C844-337B-38C6-202CD86C0A7A} = {CAF602EA-BA64-4818-B27E-4A757B4D2259}
 		{4F35B2E8-E46D-8D5B-BE27-65E34CCBCCD5} = {CAF602EA-BA64-4818-B27E-4A757B4D2259}
 		{4231C2B0-5AEB-2EC9-2588-94FF03EC9E9D} = {CAF602EA-BA64-4818-B27E-4A757B4D2259}
+		{3F15AC2A-18E5-4CC0-6232-44946661D054} = {CAF602EA-BA64-4818-B27E-4A757B4D2259}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {DEA35D12-F095-424A-8A50-6D7EBE08D917}

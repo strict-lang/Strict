@@ -1,3 +1,5 @@
+using Microsoft.Diagnostics.Tracing.StackSources;
+
 namespace Strict.Language.Tests;
 
 /// <summary>
@@ -104,7 +106,17 @@ public sealed class TestPackage : Package
 			"\tconstant notANumber = Error",
 			"\tCharacter(\"A\") to Number is notANumber",
 			"\tlet result = number - zeroCharacter",
-      "\tresult is in Range(0, 10) then result else notANumber(value)"));
+      "\tresult is in Range(0, 10) then result else notANumber(value)",
+			"Upper Character",
+			"\tCharacter(\"a\").Upper is \"A\"",
+			"\tif number is in Range(97, 123)",
+			"\t\treturn Character(number - 32)",
+			"\tvalue",
+			"Lower Character",
+			"\tCharacter(\"A\").Lower is \"a\"",
+			"\tif number is in Range(65, 91)",
+			"\t\treturn Character(number + 32)",
+			"\tvalue"));
 		var mutable = new Type(this, new TypeLines(Type.Mutable,
 			"has generic"));
 		var iterator = new Type(this, new TypeLines(Type.Iterator,
@@ -211,7 +223,19 @@ public sealed class TestPackage : Package
 			"is(other) Boolean",
 			"\t\"Hey\" is \"Hey\"",
 			"\t\"Hi\" is not \"Hey\"",
-			"\tvalue is other"));
+			"\tvalue is other",
+			"LastIndexOf(text Text) Number",
+			"\tlet lastIndex = -1",
+			"\tfor Range(0, characters.Length - text.characters.Length + 1)",
+			"\t\tif StartsWith(text, value)",
+			"\t\t\tlastIndex = value",
+			"\tlastIndex",
+			"Lower Text",
+			"\tfor characters",
+			"\t\tvalue.Lower",
+			"Upper Text",
+			"\tfor characters",
+			"\t\tvalue.Upper"));
 		var baseType = new Type(this, new TypeLines(nameof(Type), "has Name",
 			"has Package Text",
 			"to Text",

@@ -1,3 +1,4 @@
+#define DISABLE_DEBUGGER_ATTACHING
 #if DEBUG
 using System.Diagnostics;
 #endif
@@ -94,7 +95,7 @@ public sealed class Body : Expression
 
 	private static void StartDebuggerInDebugModeIfNotAttached()
 	{
-#if DEBUG
+#if DEBUG && !DISABLE_DEBUGGER_ATTACHING
 		if (!Debugger.IsAttached && !StartedFromNCrunch && !StartedFromDotnetTestConsole &&
 			!StartedFromReSharper)
 			Debugger.Launch(); //ncrunch: no coverage

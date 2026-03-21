@@ -89,7 +89,9 @@ public class Program
 
 	private static string GenerateNewConsoleAppAndReturnOutput(string folder, string generatedCode)
 	{
-		if (!Directory.Exists(folder))
+		var projectName = Path.GetFileName(folder);
+		var projectFilePath = Path.Combine(folder, projectName + ".csproj");
+		if (!File.Exists(projectFilePath))
 			CreateFolderOnceByCreatingDotnetProject(folder, generatedCode);
 		File.WriteAllText(Path.Combine(folder, "Program.cs"), generatedCode);
 		var actualText = RunDotnetAndReturnOutput(folder, "run", out var error);
@@ -146,9 +148,9 @@ public class Program
 	{
 		var projectFolder = GetProjectFolder(nameof(GenerateDirectoryGetFilesProgram));
 		using var program = new Type(package,
-				new TypeLines(nameof(GenerateDirectoryGetFilesProgram), "has App", "has logger",
-					"has directory = (\"Program.cs\")", "Run", "\tfor directory", "\t\tlogger.Log(value)")).
-			ParseMembersAndMethods(parser);
+				new TypeLines(nameof(GenerateDirectoryGetFilesProgram), "has App", "has logger", "Run",
+					"\tconstant directory = (\"Program.cs\")", "\tfor directory",
+					"\t\tlogger.Log(index)")).ParseMembersAndMethods(parser);
 		var generatedCode = generator.Generate(program).ToString()!;
 		Assert.That(GenerateNewConsoleAppAndReturnOutput(projectFolder, generatedCode),
 			Is.EqualTo("Program.cs" + Environment.NewLine));
@@ -165,10 +167,15 @@ public class Program
 		using var program = await ReadStrictFileAndCreateType(programName, overridePackage);
 		program.Methods[0].GetBodyAndParseIfNeeded();
 		var generatedCode = generator.Generate(program).ToString()!;
+		var outputFilePath = Path.Combine(await GetExampleFolder(), $"Output/{programName}.cs");
+		if (!File.Exists(outputFilePath))
+		{
+			Directory.CreateDirectory(Path.GetDirectoryName(outputFilePath)!);
+			await File.WriteAllTextAsync(outputFilePath, generatedCode);
+		}
 		Assert.That(generatedCode,
 			Is.EqualTo(string.Join(Environment.NewLine,
-				await File.ReadAllLinesAsync(Path.Combine(await GetExampleFolder(),
-					$"Output/{programName}.cs")))), generatedCode);
+				await File.ReadAllLinesAsync(outputFilePath))), generatedCode);
 	}
 
 	private async Task<Type>

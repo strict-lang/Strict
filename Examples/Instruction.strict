@@ -1,2 +1,3 @@
 has Instruction
+has InstructionType
 has Registers

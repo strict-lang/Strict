@@ -1,0 +1,7 @@
+has methodName Text
+has returnTypeName Text
+has parameterNames Texts
+has isPublic Boolean
+has isTrait Boolean
+to Text
+	methodName + " " + returnTypeName

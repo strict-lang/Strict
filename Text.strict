@@ -26,6 +26,75 @@ StartsWith(text, start = 0) Boolean
 	"yo mama".StartsWith("mama") is false
 	for text.characters
 		value is not outer(start + index)
+Split(separator Text) Texts
+	"a,b".Split(",") is ("a", "b")
+	"abc".Split(",") is ("abc")
+	let separatorIndex = IndexOf(separator)
+	if separatorIndex is -1
+		return (value)
+	let restStart = separatorIndex + separator.characters.Length
+	let restLength = characters.Length - restStart
+	Substring(0, separatorIndex) + Substring(restStart, restLength).Split(separator)
+Trim Text
+	"  hi  ".Trim is "hi"
+	"noSpaces".Trim is "noSpaces"
+	TrimStart.TrimEnd
+TrimStart Text
+	let startIndex = 0
+	for characters
+		if value is " "
+			startIndex = startIndex + 1
+		else
+			return Substring(startIndex, characters.Length - startIndex)
+	""
+TrimEnd Text
+	let endIndex = characters.Length
+	for characters.Reverse
+		if value is " "
+			endIndex = endIndex - 1
+		else
+			return Substring(0, endIndex)
+	""
+IndexOf(text Text, number = 0) Number
+	"hello".IndexOf("he") is 0
+	"hello".IndexOf("ll") is 2
+	"hello".IndexOf("no") is -1
+	if text is ""
+		return number
+	for Range(number, characters.Length - text.characters.Length + 1)
+		if StartsWith(text, value)
+			return value
+	-1
+LastIndexOf(text Text) Number
+	"hello".LastIndexOf("l") is 3
+	"hello".LastIndexOf("x") is -1
+	if text is ""
+		return characters.Length
+	let lastIndex = -1
+	for Range(0, characters.Length - text.characters.Length + 1)
+		if StartsWith(text, value)
+			lastIndex = value
+	lastIndex
+Substring(number, length Number) Text
+	"hello".Substring(1, 3) is "ell"
+	for Range(number, number + length)
+		outer(value)
+Replace(searchFor Text, replaceWith Text) Text
+	"a,b,c".Replace(",", ";") is "a;b;c"
+	let separatorIndex = IndexOf(searchFor)
+	if separatorIndex is -1
+		return value
+	let rest = Range(separatorIndex + searchFor.characters.Length, characters.Length)
+	let prefix = Substring(0, separatorIndex) + replaceWith
+	prefix + Substring(rest.Start, rest.Length).Replace(searchFor, replaceWith)
+Upper Text
+	"HeLlo".Upper is "HELLO"
+	for characters
+		value.Upper
+Lower Text
+	"HeLlo".Lower is "hello"
+	for characters
+		value.Lower
 Count(character) Number
 	"".Count("1") is 0
 	"abc".Count("a") is 1

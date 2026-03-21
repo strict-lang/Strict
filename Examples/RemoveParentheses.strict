@@ -4,8 +4,8 @@ Remove Text
 	mutable parentheses = 0
 	for text
 		if value is "("
-			parentheses.Increase
+			parentheses = parentheses.Increment
 		else if value is ")"
-			parentheses.Decrease
+			parentheses = parentheses.Decrement
 		else if parentheses is 0
 			value

@@ -1,0 +1,6 @@
+has Expression
+has expressionText Text
+IsConstant Boolean
+	false
+to Text
+	expressionText

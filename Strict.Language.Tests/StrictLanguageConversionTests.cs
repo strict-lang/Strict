@@ -279,6 +279,194 @@ public sealed class StrictLanguageConversionTests
 		Assert.That(namedType.Methods[0].GetBodyAndParseIfNeeded(), Is.InstanceOf<Expression>());
 	}
 
+	[Test]
+	public void LoadParameterFromLanguageDirectory()
+	{
+		var langPath = GetLanguagePath();
+		using var conversionPackage = new Package(TestPackage.Instance,
+			"Conv" + Guid.NewGuid().ToString("N")[..8]);
+		var variableLines = new TypeLines("Variable",
+			File.ReadAllLines(Path.Combine(langPath, "Variable.strict")));
+		using var _ = new Type(conversionPackage, variableLines).ParseMembersAndMethods(parser);
+		var lines = new TypeLines("LanguageParameter",
+			File.ReadAllLines(Path.Combine(langPath, "Parameter.strict")));
+		using var parameterType = new Type(conversionPackage, lines).ParseMembersAndMethods(parser);
+		Assert.That(parameterType.Members.Count, Is.EqualTo(1));
+		Assert.That(parameterType.Members[0].Type.Name, Is.EqualTo("Variable"));
+		Assert.That(parameterType.Methods.Count, Is.EqualTo(1));
+		Assert.That(parameterType.Methods[0].Name, Is.EqualTo("to"));
+	}
+
+	[Test]
+	public void LoadMemberFromLanguageDirectory()
+	{
+		var langPath = GetLanguagePath();
+		using var conversionPackage = new Package(TestPackage.Instance,
+			"Conv" + Guid.NewGuid().ToString("N")[..8]);
+		var variableLines = new TypeLines("Variable",
+			File.ReadAllLines(Path.Combine(langPath, "Variable.strict")));
+		using var _ = new Type(conversionPackage, variableLines).ParseMembersAndMethods(parser);
+		var lines = new TypeLines("LanguageMember",
+			File.ReadAllLines(Path.Combine(langPath, "Member.strict")));
+		using var memberType = new Type(conversionPackage, lines).ParseMembersAndMethods(parser);
+		Assert.That(memberType.Members.Count, Is.EqualTo(2));
+		Assert.That(memberType.Members[0].Type.Name, Is.EqualTo("Variable"));
+		Assert.That(memberType.Members[1].Name, Is.EqualTo("isConstant"));
+		Assert.That(memberType.Methods.Count, Is.EqualTo(1));
+		Assert.That(memberType.Methods[0].Name, Is.EqualTo("to"));
+	}
+
+	[Test]
+	public void LoadVariableFromLanguageDirectory()
+	{
+		var langPath = GetLanguagePath();
+		using var conversionPackage = new Package(TestPackage.Instance,
+			"Conv" + Guid.NewGuid().ToString("N")[..8]);
+		var lines = new TypeLines("LanguageVariable",
+			File.ReadAllLines(Path.Combine(langPath, "Variable.strict")));
+		using var variableType = new Type(conversionPackage, lines).ParseMembersAndMethods(parser);
+		Assert.That(variableType.Members.Count, Is.EqualTo(4));
+		Assert.That(variableType.Members[0].Name, Is.EqualTo("elementName"));
+		Assert.That(variableType.Members[1].Name, Is.EqualTo("typeName"));
+		Assert.That(variableType.Members[2].Name, Is.EqualTo("isMutable"));
+		Assert.That(variableType.Members[3].Name, Is.EqualTo("initialValueExpression"));
+		Assert.That(variableType.Methods.Count, Is.EqualTo(1));
+		Assert.That(variableType.Methods[0].Name, Is.EqualTo("to"));
+	}
+
+	[Test]
+	public void LoadMethodFromLanguageDirectory()
+	{
+		var langPath = GetLanguagePath();
+		using var conversionPackage = new Package(TestPackage.Instance,
+			"Conv" + Guid.NewGuid().ToString("N")[..8]);
+		var lines = new TypeLines("LanguageMethod",
+			File.ReadAllLines(Path.Combine(langPath, "Method.strict")));
+		using var methodType = new Type(conversionPackage, lines).ParseMembersAndMethods(parser);
+		Assert.That(methodType.Members.Count, Is.EqualTo(5));
+		Assert.That(methodType.Members[0].Name, Is.EqualTo("methodName"));
+		Assert.That(methodType.Members[1].Name, Is.EqualTo("returnTypeName"));
+		Assert.That(methodType.Members[2].Name, Is.EqualTo("parameterNames"));
+		Assert.That(methodType.Members[3].Name, Is.EqualTo("isPublic"));
+		Assert.That(methodType.Members[4].Name, Is.EqualTo("isTrait"));
+		Assert.That(methodType.Methods.Count, Is.EqualTo(1));
+		Assert.That(methodType.Methods[0].Name, Is.EqualTo("to"));
+	}
+
+	[Test]
+	public void LoadContextFromLanguageDirectory()
+	{
+		var langPath = GetLanguagePath();
+		using var conversionPackage = new Package(TestPackage.Instance,
+			"Conv" + Guid.NewGuid().ToString("N")[..8]);
+		var lines = new TypeLines("LanguageContext",
+			File.ReadAllLines(Path.Combine(langPath, "Context.strict")));
+		using var contextType = new Type(conversionPackage, lines).ParseMembersAndMethods(parser);
+		Assert.That(contextType.Members.Count, Is.EqualTo(1));
+		Assert.That(contextType.Members[0].Name, Is.EqualTo("contextName"));
+		Assert.That(contextType.Methods.Count, Is.EqualTo(3));
+		Assert.That(contextType.Methods.Any(method => method.Name == "FindType"), Is.True);
+		Assert.That(contextType.Methods.Any(method => method.Name == "TryGetType"), Is.True);
+		Assert.That(contextType.Methods.Any(method => method.Name == "GetType"), Is.True);
+	}
+
+	[Test]
+	public void LoadPackageFromLanguageDirectory()
+	{
+		var langPath = GetLanguagePath();
+		using var conversionPackage = new Package(TestPackage.Instance,
+			"Conv" + Guid.NewGuid().ToString("N")[..8]);
+		var lines = new TypeLines("Package",
+			File.ReadAllLines(Path.Combine(langPath, "Package.strict")));
+		using var packageType = new Type(conversionPackage, lines).ParseMembersAndMethods(parser);
+		Assert.That(packageType.Members.Count, Is.EqualTo(4));
+		Assert.That(packageType.Members[0].Name, Is.EqualTo("packageName"));
+		Assert.That(packageType.Members[1].Name, Is.EqualTo("fullName"));
+		Assert.That(packageType.Members[2].Name, Is.EqualTo("typeNames"));
+		Assert.That(packageType.Members[3].Name, Is.EqualTo("parentName"));
+		Assert.That(packageType.Methods.Count, Is.EqualTo(2));
+		Assert.That(packageType.Methods.Any(method => method.Name == "FindType"), Is.True);
+		Assert.That(packageType.Methods.Any(method => method.Name == "AddType"), Is.True);
+		Assert.That(packageType.Methods.Single(method => method.Name == "AddType").ReturnType.Name,
+			Is.EqualTo("Mutable(Package)"));
+	}
+
+	[Test]
+	public void LoadTypeFromLanguageDirectory()
+	{
+		var langPath = GetLanguagePath();
+		using var conversionPackage = new Package(TestPackage.Instance,
+			"Conv" + Guid.NewGuid().ToString("N")[..8]);
+		var lines = new TypeLines("LanguageType",
+			File.ReadAllLines(Path.Combine(langPath, "Type.strict")));
+		using var typeType = new Type(conversionPackage, lines).ParseMembersAndMethods(parser);
+		Assert.That(typeType.Members.Count, Is.EqualTo(6));
+		Assert.That(typeType.Members[0].Name, Is.EqualTo("typeName"));
+		Assert.That(typeType.Members[1].Name, Is.EqualTo("packageName"));
+		Assert.That(typeType.Members[2].Name, Is.EqualTo("memberNames"));
+		Assert.That(typeType.Members[3].Name, Is.EqualTo("methodNames"));
+		Assert.That(typeType.Members[4].Name, Is.EqualTo("isTrait"));
+		Assert.That(typeType.Members[5].Name, Is.EqualTo("isGeneric"));
+		Assert.That(typeType.Methods.Count, Is.EqualTo(1));
+		Assert.That(typeType.Methods[0].Name, Is.EqualTo("to"));
+	}
+
+	[Test]
+	public void LoadBodyFromLanguageDirectory()
+	{
+		var langPath = GetLanguagePath();
+		using var conversionPackage = new Package(TestPackage.Instance,
+			"Conv" + Guid.NewGuid().ToString("N")[..8]);
+		var lines = new TypeLines("LanguageBody",
+			File.ReadAllLines(Path.Combine(langPath, "Body.strict")));
+		using var bodyType = new Type(conversionPackage, lines).ParseMembersAndMethods(parser);
+		Assert.That(bodyType.Members.Count, Is.EqualTo(3));
+		Assert.That(bodyType.Members[0].Name, Is.EqualTo("methodName"));
+		Assert.That(bodyType.Members[1].Name, Is.EqualTo("expressionTexts"));
+		Assert.That(bodyType.Members[2].Name, Is.EqualTo("lineCount"));
+		Assert.That(bodyType.Methods.Count, Is.EqualTo(1));
+		Assert.That(bodyType.Methods[0].Name, Is.EqualTo("to"));
+	}
+
+	[Test]
+	public void LoadExpressionFromLanguageDirectory()
+	{
+		var langPath = GetLanguagePath();
+		using var conversionPackage = new Package(TestPackage.Instance,
+			"Conv" + Guid.NewGuid().ToString("N")[..8]);
+		var lines = new TypeLines("LanguageExpression",
+			File.ReadAllLines(Path.Combine(langPath, "Expression.strict")));
+		using var expressionType = new Type(conversionPackage, lines).ParseMembersAndMethods(parser);
+		Assert.That(expressionType.Members.Count, Is.EqualTo(3));
+		Assert.That(expressionType.Members[0].Name, Is.EqualTo("returnTypeName"));
+		Assert.That(expressionType.Members[1].Name, Is.EqualTo("lineNumber"));
+		Assert.That(expressionType.Members[2].Name, Is.EqualTo("isMutable"));
+		Assert.That(expressionType.Methods.Count, Is.EqualTo(2));
+		Assert.That(expressionType.Methods.Any(method => method.Name == "IsConstant"), Is.True);
+		Assert.That(expressionType.Methods.Any(method => method.Name == "to"), Is.True);
+	}
+
+	[Test]
+	public void LoadConcreteExpressionFromLanguageDirectory()
+	{
+		var langPath = GetLanguagePath();
+		using var conversionPackage = new Package(TestPackage.Instance,
+			"Conv" + Guid.NewGuid().ToString("N")[..8]);
+		var expressionLines = new TypeLines("Expression",
+			File.ReadAllLines(Path.Combine(langPath, "Expression.strict")));
+		using var _ = new Type(conversionPackage, expressionLines).ParseMembersAndMethods(parser);
+		var lines = new TypeLines("LanguageConcreteExpression",
+			File.ReadAllLines(Path.Combine(langPath, "ConcreteExpression.strict")));
+		using var concreteExpressionType =
+			new Type(conversionPackage, lines).ParseMembersAndMethods(parser);
+		Assert.That(concreteExpressionType.Members.Count, Is.EqualTo(2));
+		Assert.That(concreteExpressionType.Members[0].Type.Name, Is.EqualTo("Expression"));
+		Assert.That(concreteExpressionType.Members[1].Name, Is.EqualTo("expressionText"));
+		Assert.That(concreteExpressionType.Methods.Count, Is.EqualTo(2));
+		Assert.That(concreteExpressionType.Methods.Any(method => method.Name == "IsConstant"), Is.True);
+		Assert.That(concreteExpressionType.Methods.Any(method => method.Name == "to"), Is.True);
+	}
+
 	private static string GetLanguagePath() =>
 		Path.Combine(Repositories.GetLocalDevelopmentPath(Repositories.StrictOrg, nameof(Strict)),
 			"Language");
