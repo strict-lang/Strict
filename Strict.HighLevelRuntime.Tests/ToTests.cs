@@ -104,4 +104,16 @@ public sealed class ToTests
 		Assert.That(interpreter.Execute(type.Methods.Single(method => method.Name == Method.Run),
 			interpreter.noneInstance, []).Number, Is.EqualTo(expected));
 	}
+
+	[TestCase("hello", "hel", true)]
+	[TestCase("yo mama", "mama", false)]
+	[TestCase("hello", "hello", true)]
+	public void StartsWithReturnsTrueWhenTextStartsWithPrefix(string text, string prefix,
+		bool expected)
+	{
+		using var type = CreateType(nameof(StartsWithReturnsTrueWhenTextStartsWithPrefix), "has number",
+			"Run Boolean", "\t\"" + text + "\".StartsWith(\"" + prefix + "\")");
+		Assert.That(interpreter.Execute(type.Methods.Single(method => method.Name == Method.Run),
+			interpreter.noneInstance, []).Boolean, Is.EqualTo(expected));
+	}
 }

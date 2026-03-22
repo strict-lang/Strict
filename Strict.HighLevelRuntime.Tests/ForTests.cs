@@ -210,4 +210,42 @@ public sealed class ForTests
 			instance, []);
 		Assert.That(result.Number, Is.EqualTo(2));
 	}
+
+	[Test]
+	public void CountTextsWithStartsWithInForLoop()
+	{
+		using var t = CreateType(nameof(CountTextsWithStartsWithInForLoop),
+			"has texts",
+			"CountStartingWithHas Number",
+			"\tfor texts",
+			"\t\tif value.StartsWith(\"has \")",
+			"\t\t\t1");
+		var textsType = t.Members[0].Type;
+		var lines = new ValueInstance(textsType,
+		[
+			new ValueInstance("has name Text"),
+			new ValueInstance("has count Number"),
+			new ValueInstance("to Text")
+		]);
+		var instance = new ValueInstance(t, [lines]);
+		var result = interpreter.Execute(t.Methods.Single(m => m.Name == "CountStartingWithHas"),
+			instance, []);
+		Assert.That(result.Number, Is.EqualTo(2));
+	}
+
+	[Test]
+	public void LastIndexOfOnForLoopTextVariable()
+	{
+		using var t = CreateType(nameof(LastIndexOfOnForLoopTextVariable),
+			"has texts",
+			"Run Number",
+			"\tfor texts",
+			"\t\tvalue.LastIndexOf(\"h\")");
+		var textsType = t.Members[0].Type;
+		var instance = new ValueInstance(t,
+			[new ValueInstance(textsType, [new ValueInstance("hello")])]);
+		var result = interpreter.Execute(t.Methods.Single(m => m.Name == Method.Run),
+			instance, []);
+		Assert.That(result.Number, Is.EqualTo(0));
+	}
 }

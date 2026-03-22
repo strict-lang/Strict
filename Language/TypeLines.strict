@@ -15,10 +15,10 @@ to Text
 CountMembers Number
 	TypeLines("Test", ("has name Text", "has count Number")).CountMembers is 2
 	for lines
-		if value.LastIndexOf("has ") is 0
+		if value.StartsWith("has ")
 			1
 MemberLines Texts
 	TypeLines("Test", ("has name Text", "has count Number")).MemberLines is ("has name Text", "has count Number")
 	for lines
-		if value.LastIndexOf("has ") is 0
+		if value.StartsWith("has ")
 			value

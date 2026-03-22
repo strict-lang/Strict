@@ -72,14 +72,14 @@ internal sealed class ForEvaluator(Interpreter interpreter)
 		bool isRangeIterator, Body? bodyAsBody)
 	{
 		var indexInstance = new ValueInstance(interpreter.numberType, index);
-		loop.Set(Type.IndexLowercase, indexInstance);
+		loop.Variables[Type.IndexLowercase] = indexInstance;
 		var value = iterator.IsPrimitiveType(interpreter.numberType) || isRangeIterator
 			? indexInstance
 			: iterator.GetIteratorValue(itemType, index);
-		loop.Set(Type.ValueLowercase, value);
+		loop.Variables[Type.ValueLowercase] = value;
 		foreach (var customVariable in f.CustomVariables)
 			if (customVariable is VariableCall variableCall)
-				loop.Set(variableCall.Variable.Name, value);
+				loop.Variables[variableCall.Variable.Name] = value;
 		var itemResult = bodyAsBody != null
 			? EvaluateBody(bodyAsBody, loop)
 			: interpreter.RunExpression(f.Body, loop);
