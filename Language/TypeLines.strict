@@ -1,4 +1,14 @@
 has typeName Text
 has lines Texts
+from(code Text, name Text) TypeLines
+	TypeLines.from("has text\r\nRun\r\n\ttext", "Greeter").Count is 3
+	TypeLines(name, code.Replace("\r", "").Split("\n"))
+from(filePath Text) TypeLines
+	let path = Path(filePath)
+	TypeLines.from(File(Name(filePath)).Read, path.FileName.RemoveExtension)
+Line(number) Text
+	lines(number)
+Count Number
+	lines.Length
 to Text
 	typeName

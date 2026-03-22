@@ -1,8 +1,28 @@
 has typeName Text
 has packageName Text
-has memberNames Texts
-has methodNames Texts
+has members Members
+has methods Methods
 has isTrait Boolean
 has isGeneric Boolean
+MemberNames Texts
+	for members
+		value.Variable.elementName
+MethodNames Texts
+	for methods
+		value.methodName
+MemberCount Number
+	members.Length
+MethodCount Number
+	methods.Length
+GetMember(name Text) Member
+	for members
+		if value.Variable.elementName is name
+			return value
+	Member(Variable(name, "", false, ""), false)
+GetMethod(name Text) Method
+	for methods
+		if value.methodName is name
+			return value
+	Method(name, "None", List(Parameter), List(Text), true)
 to Text
 	typeName

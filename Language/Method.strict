@@ -1,7 +1,18 @@
 has methodName Text
 has returnTypeName Text
-has parameterNames Texts
+has parameters Parameters
+has bodyLines Texts
 has isPublic Boolean
-has isTrait Boolean
+ParameterNames Texts
+	for parameters
+		value.Variable.elementName
+ParameterCount Number
+	parameters.Length
+BodyLine(number) Text
+	bodyLines(number)
+BodyLineCount Number
+	bodyLines.Length
+IsTrait Boolean
+	bodyLines.Length is 0
 to Text
 	methodName + " " + returnTypeName
