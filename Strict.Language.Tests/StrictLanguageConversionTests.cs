@@ -243,12 +243,16 @@ public sealed class StrictLanguageConversionTests
 		Assert.That(typeLines.Members.Count, Is.EqualTo(2));
 		Assert.That(typeLines.Members[0].Name, Is.EqualTo("typeName"));
 		Assert.That(typeLines.Members[1].Name, Is.EqualTo("lines"));
-		Assert.That(typeLines.Methods.Count, Is.EqualTo(5));
-		Assert.That(typeLines.Methods.Any(method => method.Name == "from"), Is.True);
-		Assert.That(typeLines.Methods.Any(method => method.Name == "Line"), Is.True);
-		Assert.That(typeLines.Methods.Any(method => method.Name == "Count"), Is.True);
-		Assert.That(typeLines.Methods.Single(method => method.Name == "to").GetBodyAndParseIfNeeded(),
-			Is.InstanceOf<Expression>());
+		Assert.That(typeLines.Methods.Count, Is.EqualTo(3));
+		Assert.That(typeLines.Methods.Any(method => method.Name == "to"), Is.True);
+		Assert.That(typeLines.Methods.Any(method => method.Name == "CountMembers"), Is.True);
+		Assert.That(typeLines.Methods.Any(method => method.Name == "MemberLines"), Is.True);
+		Assert.That(typeLines.Methods.Single(method => method.Name == "CountMembers").ReturnType.Name,
+			Is.EqualTo(Type.Number));
+		Assert.That(typeLines.Methods.Single(method => method.Name == "MemberLines").ReturnType.Name,
+			Does.StartWith(Type.List));
+		foreach (var method in typeLines.Methods)
+			Assert.That(method.GetBodyAndParseIfNeeded(), Is.InstanceOf<Expression>());
 	}
 
 	/// <summary>

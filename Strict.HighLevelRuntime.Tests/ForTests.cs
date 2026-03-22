@@ -188,4 +188,26 @@ public sealed class ForTests
 			new ValueInstance(t, [ new ValueInstance("example(unwanted)example") ]), []);
 		Assert.That(result.Text, Is.EqualTo("exampleexample"));
 	}
+
+	[Test]
+	public void CountTextsWithLastIndexOfInForLoop()
+	{
+		using var t = CreateType(nameof(CountTextsWithLastIndexOfInForLoop),
+			"has texts",
+			"CountStartingWithHas Number",
+			"\tfor texts",
+			"\t\tif value.LastIndexOf(\"has \") is 0",
+			"\t\t\t1");
+		var textsType = t.Members[0].Type;
+		var lines = new ValueInstance(textsType,
+		[
+			new ValueInstance("has name Text"),
+			new ValueInstance("has count Number"),
+			new ValueInstance("to Text")
+		]);
+		var instance = new ValueInstance(t, [lines]);
+		var result = interpreter.Execute(t.Methods.Single(m => m.Name == "CountStartingWithHas"),
+			instance, []);
+		Assert.That(result.Number, Is.EqualTo(2));
+	}
 }
