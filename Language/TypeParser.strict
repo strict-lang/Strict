@@ -20,7 +20,8 @@ ParseMember(line Text) Member
 	let isMutable = line.StartsWith("mutable ")
 	let declaration = GetDeclarationText(line)
 	let memberName = GetDeclaredName(declaration)
-	Member(Variable(memberName, GetDeclaredTypeName(declaration, memberName), isMutable, GetInitialValue(declaration)), isConstant)
+	let initialValue = GetInitialValue(declaration)
+	Member(Variable(memberName, GetDeclaredTypeName(declaration, memberName), isMutable, initialValue), isConstant)
 GetDeclarationText(line Text) Text
 	if line.StartsWith("constant ")
 		return line.Substring(9, line.characters.Length - 9)
@@ -43,7 +44,9 @@ GetLeftSide(declaration Text) Text
 	assignmentIndex is -1 then declaration else declaration.Substring(0, assignmentIndex)
 GetInitialValue(declaration Text) Text
 	let assignmentIndex = declaration.IndexOf(" = ")
-	assignmentIndex is -1 then "" else declaration.Substring(assignmentIndex + 3, declaration.characters.Length - assignmentIndex - 3)
+	if assignmentIndex is -1
+		return ""
+	declaration.Substring(assignmentIndex + 3, declaration.characters.Length - assignmentIndex - 3)
 InferTypeName(elementName Text) Text
 	if elementName.characters.Length > 1 and elementName.Substring(elementName.characters.Length - 1, 1) is "s"
 		return "List(" + Capitalize(elementName.Substring(0, elementName.characters.Length - 1)) + ")"
@@ -56,7 +59,8 @@ Capitalize(text Text) Text
 	text(0).Upper + text.Substring(1, text.characters.Length - 1)
 ParseMethod(typeName Text, header Text, bodyLines Texts) Method
 	let methodName = GetMethodName(header)
-	Method(methodName, GetReturnTypeName(typeName, header, methodName), ParseParameters(header), bodyLines, methodName(0).Upper is methodName(0))
+	let isPublic = methodName(0).Upper is methodName(0)
+	Method(methodName, GetReturnTypeName(typeName, header, methodName), ParseParameters(header), bodyLines, isPublic)
 GetMethodName(header Text) Text
 	let openBracketIndex = header.IndexOf("(")
 	if openBracketIndex is not -1
