@@ -44,13 +44,18 @@ public sealed class StrictLanguageConversionTests
 	[Test]
 	public void LoadLimitTypeFromLanguageDirectory()
 	{
-		var langPath = GetLanguagePath();
-		var limitLines = new TypeLines("Limit",
-			File.ReadAllLines(Path.Combine(langPath, "Limit.strict")));
-		using var limitType = new Type(TestPackage.Instance, limitLines).ParseMembersAndMethods(parser);
+		using var limitType = CreateConversionPackageType(TestPackage.Instance, "Limit");
 		Assert.That(limitType.Members.Count, Is.EqualTo(11));
 		Assert.That(limitType.IsEnum, Is.True);
 	}
+
+	private Type CreateConversionPackageType(Package package, string typeName) =>
+		new Type(package, new TypeLines(typeName, File.ReadAllLines(
+			Path.Combine(GetLanguagePath(), $"{typeName}.strict")))).ParseMembersAndMethods(parser);
+
+	private static string GetLanguagePath() =>
+		Path.Combine(Repositories.GetLocalDevelopmentPath(Repositories.StrictOrg, nameof(Strict)),
+			"Language");
 
 	/// <summary>
 	/// Keyword.cs has string constants like Has="has", Mutable="mutable", etc.
@@ -83,9 +88,7 @@ public sealed class StrictLanguageConversionTests
 	[Test]
 	public void LoadKeywordTypeFromLanguageDirectory()
 	{
-		var langPath = GetLanguagePath();
-		var lines = new TypeLines("Keyword", File.ReadAllLines(Path.Combine(langPath, "Keyword.strict")));
-		using var keywordType = new Type(TestPackage.Instance, lines).ParseMembersAndMethods(parser);
+		using var keywordType = CreateConversionPackageType(TestPackage.Instance, "Keyword");
 		Assert.That(keywordType.Members.Count, Is.EqualTo(9));
 		Assert.That(keywordType.IsEnum, Is.True);
 	}
@@ -122,10 +125,7 @@ public sealed class StrictLanguageConversionTests
 	[Test]
 	public void LoadTypeKindFromLanguageDirectory()
 	{
-		var langPath = GetLanguagePath();
-		var lines = new TypeLines("TypeKind",
-			File.ReadAllLines(Path.Combine(langPath, "TypeKind.strict")));
-		using var typeKind = new Type(TestPackage.Instance, lines).ParseMembersAndMethods(parser);
+		using var typeKind = CreateConversionPackageType(TestPackage.Instance, "TypeKind");
 		Assert.That(typeKind.Members.Count, Is.EqualTo(12));
 		Assert.That(typeKind.IsEnum, Is.True);
 	}
@@ -133,9 +133,8 @@ public sealed class StrictLanguageConversionTests
 	[Test]
 	public void UnaryOperatorHasNotConstant()
 	{
-		using var unaryOp = new Type(TestPackage.Instance,
-			new TypeLines("UnaryOperator",
-				"constant Not = \"not\"")).ParseMembersAndMethods(parser);
+		using var unaryOp = new Type(TestPackage.Instance, new TypeLines("UnaryOperator",
+			"constant Not = \"not\"")).ParseMembersAndMethods(parser);
 		Assert.That(unaryOp.Members.Count, Is.EqualTo(1));
 		Assert.That(unaryOp.Members[0].Name, Is.EqualTo("Not"));
 		Assert.That(unaryOp.Members[0].Type.Name, Is.EqualTo(Type.Text));
@@ -144,10 +143,7 @@ public sealed class StrictLanguageConversionTests
 	[Test]
 	public void LoadUnaryOperatorFromLanguageDirectory()
 	{
-		var langPath = GetLanguagePath();
-		var lines = new TypeLines("UnaryOperator",
-			File.ReadAllLines(Path.Combine(langPath, "UnaryOperator.strict")));
-		using var unaryOp = new Type(TestPackage.Instance, lines).ParseMembersAndMethods(parser);
+		using var unaryOp = CreateConversionPackageType(TestPackage.Instance, "UnaryOperator");
 		Assert.That(unaryOp.Members.Count, Is.EqualTo(1));
 		Assert.That(unaryOp.Members[0].Name, Is.EqualTo("Not"));
 	}
@@ -187,10 +183,7 @@ public sealed class StrictLanguageConversionTests
 	[Test]
 	public void LoadBinaryOperatorFromLanguageDirectory()
 	{
-		var langPath = GetLanguagePath();
-		var lines = new TypeLines("BinaryOperator",
-			File.ReadAllLines(Path.Combine(langPath, "BinaryOperator.strict")));
-		using var binaryOp = new Type(TestPackage.Instance, lines).ParseMembersAndMethods(parser);
+		using var binaryOp = CreateConversionPackageType(TestPackage.Instance, "BinaryOperator");
 		Assert.That(binaryOp.Members.Count, Is.EqualTo(16));
 		Assert.That(binaryOp.IsEnum, Is.True);
 	}
@@ -236,10 +229,7 @@ public sealed class StrictLanguageConversionTests
 	[Test]
 	public void LoadTypeLinesFromLanguageDirectory()
 	{
-		var langPath = GetLanguagePath();
-		var lines = new TypeLines("TypeLines",
-			File.ReadAllLines(Path.Combine(langPath, "TypeLines.strict")));
-		using var typeLines = new Type(TestPackage.Instance, lines).ParseMembersAndMethods(parser);
+		using var typeLines = CreateConversionPackageType(TestPackage.Instance, "TypeLines");
 		Assert.That(typeLines.Members.Count, Is.EqualTo(2));
 		Assert.That(typeLines.Members[0].Name, Is.EqualTo("typeName"));
 		Assert.That(typeLines.Members[1].Name, Is.EqualTo("lines"));
@@ -290,10 +280,7 @@ public sealed class StrictLanguageConversionTests
 	[Test]
 	public void LoadNamedTypeFromLanguageDirectory()
 	{
-		var langPath = GetLanguagePath();
-		var lines = new TypeLines("NamedType",
-			File.ReadAllLines(Path.Combine(langPath, "NamedType.strict")));
-		using var namedType = new Type(TestPackage.Instance, lines).ParseMembersAndMethods(parser);
+		using var namedType = CreateConversionPackageType(TestPackage.Instance, "NamedType");
 		Assert.That(namedType.Members.Count, Is.EqualTo(2));
 		Assert.That(namedType.Members[0].Name, Is.EqualTo("elementName"));
 		Assert.That(namedType.Members[1].Name, Is.EqualTo("typeName"));
@@ -304,33 +291,24 @@ public sealed class StrictLanguageConversionTests
 	[Test]
 	public void LoadParameterFromLanguageDirectory()
 	{
-		var langPath = GetLanguagePath();
-		using var conversionPackage = new Package(TestPackage.Instance,
-			"Conv" + Guid.NewGuid().ToString("N")[..8]);
-		var variableLines = new TypeLines("Variable",
-			File.ReadAllLines(Path.Combine(langPath, "Variable.strict")));
-		using var _ = new Type(conversionPackage, variableLines).ParseMembersAndMethods(parser);
-		var lines = new TypeLines("LanguageParameter",
-			File.ReadAllLines(Path.Combine(langPath, "Parameter.strict")));
-		using var parameterType = new Type(conversionPackage, lines).ParseMembersAndMethods(parser);
+		using var conversionPackage = new Package(TestPackage.Instance,	ConversionPackageName);
+		using var variableType = CreateConversionPackageType(conversionPackage, "Variable");
+		using var parameterType = CreateConversionPackageType(conversionPackage, "Parameter");
 		Assert.That(parameterType.Members.Count, Is.EqualTo(1));
 		Assert.That(parameterType.Members[0].Type.Name, Is.EqualTo("Variable"));
 		Assert.That(parameterType.Methods.Count, Is.EqualTo(1));
 		Assert.That(parameterType.Methods[0].Name, Is.EqualTo("to"));
 	}
 
+	private static string ConversionPackageName =>
+		Package.TestConversion + Guid.NewGuid().ToString("N")[..8];
+
 	[Test]
 	public void LoadMemberFromLanguageDirectory()
 	{
-		var langPath = GetLanguagePath();
-		using var conversionPackage = new Package(TestPackage.Instance,
-			"Conv" + Guid.NewGuid().ToString("N")[..8]);
-		var variableLines = new TypeLines("Variable",
-			File.ReadAllLines(Path.Combine(langPath, "Variable.strict")));
-		using var _ = new Type(conversionPackage, variableLines).ParseMembersAndMethods(parser);
-		var lines = new TypeLines("LanguageMember",
-			File.ReadAllLines(Path.Combine(langPath, "Member.strict")));
-		using var memberType = new Type(conversionPackage, lines).ParseMembersAndMethods(parser);
+		using var conversionPackage = new Package(TestPackage.Instance, ConversionPackageName);
+		using var variableType = CreateConversionPackageType(conversionPackage, "Variable");
+		using var memberType = CreateConversionPackageType(conversionPackage, "Member");
 		Assert.That(memberType.Members.Count, Is.EqualTo(2));
 		Assert.That(memberType.Members[0].Type.Name, Is.EqualTo("Variable"));
 		Assert.That(memberType.Members[1].Name, Is.EqualTo("isConstant"));
@@ -341,12 +319,8 @@ public sealed class StrictLanguageConversionTests
 	[Test]
 	public void LoadVariableFromLanguageDirectory()
 	{
-		var langPath = GetLanguagePath();
-		using var conversionPackage = new Package(TestPackage.Instance,
-			"Conv" + Guid.NewGuid().ToString("N")[..8]);
-		var lines = new TypeLines("LanguageVariable",
-			File.ReadAllLines(Path.Combine(langPath, "Variable.strict")));
-		using var variableType = new Type(conversionPackage, lines).ParseMembersAndMethods(parser);
+		using var conversionPackage = new Package(TestPackage.Instance, ConversionPackageName);
+		using var variableType = CreateConversionPackageType(conversionPackage, "Variable");
 		Assert.That(variableType.Members.Count, Is.EqualTo(4));
 		Assert.That(variableType.Members[0].Name, Is.EqualTo("elementName"));
 		Assert.That(variableType.Members[1].Name, Is.EqualTo("typeName"));
@@ -359,18 +333,10 @@ public sealed class StrictLanguageConversionTests
 	[Test]
 	public void LoadMethodFromLanguageDirectory()
 	{
-		var langPath = GetLanguagePath();
-		using var conversionPackage = new Package(TestPackage.Instance,
-			"Conv" + Guid.NewGuid().ToString("N")[..8]);
-		var variableLines = new TypeLines("Variable",
-			File.ReadAllLines(Path.Combine(langPath, "Variable.strict")));
-		using var _ = new Type(conversionPackage, variableLines).ParseMembersAndMethods(parser);
-		var parameterLines = new TypeLines("Parameter",
-			File.ReadAllLines(Path.Combine(langPath, "Parameter.strict")));
-		using var __ = new Type(conversionPackage, parameterLines).ParseMembersAndMethods(parser);
-		var lines = new TypeLines("LanguageMethod",
-			File.ReadAllLines(Path.Combine(langPath, "Method.strict")));
-		using var methodType = new Type(conversionPackage, lines).ParseMembersAndMethods(parser);
+		using var conversionPackage = new Package(TestPackage.Instance, ConversionPackageName);
+		using var variableType = CreateConversionPackageType(conversionPackage, "Variable");
+		using var parameterType = CreateConversionPackageType(conversionPackage, "Parameter");
+		using var methodType = CreateConversionPackageType(conversionPackage, "Method");
 		Assert.That(methodType.Members.Count, Is.EqualTo(5));
 		Assert.That(methodType.Members[0].Name, Is.EqualTo("methodName"));
 		Assert.That(methodType.Members[1].Name, Is.EqualTo("returnTypeName"));
@@ -388,12 +354,8 @@ public sealed class StrictLanguageConversionTests
 	[Test]
 	public void LoadContextFromLanguageDirectory()
 	{
-		var langPath = GetLanguagePath();
-		using var conversionPackage = new Package(TestPackage.Instance,
-			"Conv" + Guid.NewGuid().ToString("N")[..8]);
-		var lines = new TypeLines("LanguageContext",
-			File.ReadAllLines(Path.Combine(langPath, "Context.strict")));
-		using var contextType = new Type(conversionPackage, lines).ParseMembersAndMethods(parser);
+		using var conversionPackage = new Package(TestPackage.Instance, ConversionPackageName);
+		using var contextType = CreateConversionPackageType(conversionPackage, "Context");
 		Assert.That(contextType.Members.Count, Is.EqualTo(1));
 		Assert.That(contextType.Members[0].Name, Is.EqualTo("contextName"));
 		Assert.That(contextType.Methods.Count, Is.EqualTo(3));
@@ -405,12 +367,8 @@ public sealed class StrictLanguageConversionTests
 	[Test]
 	public void LoadPackageFromLanguageDirectory()
 	{
-		var langPath = GetLanguagePath();
-		using var conversionPackage = new Package(TestPackage.Instance,
-			"Conv" + Guid.NewGuid().ToString("N")[..8]);
-		var lines = new TypeLines("Package",
-			File.ReadAllLines(Path.Combine(langPath, "Package.strict")));
-		using var packageType = new Type(conversionPackage, lines).ParseMembersAndMethods(parser);
+		using var conversionPackage = new Package(TestPackage.Instance, ConversionPackageName);
+		using var packageType = CreateConversionPackageType(conversionPackage, "Package");
 		Assert.That(packageType.Members.Count, Is.EqualTo(4));
 		Assert.That(packageType.Members[0].Name, Is.EqualTo("packageName"));
 		Assert.That(packageType.Members[1].Name, Is.EqualTo("fullName"));
@@ -426,24 +384,12 @@ public sealed class StrictLanguageConversionTests
 	[Test]
 	public void LoadTypeFromLanguageDirectory()
 	{
-		var langPath = GetLanguagePath();
-		using var conversionPackage = new Package(TestPackage.Instance,
-			"Conv" + Guid.NewGuid().ToString("N")[..8]);
-		var variableLines = new TypeLines("Variable",
-			File.ReadAllLines(Path.Combine(langPath, "Variable.strict")));
-		using var _ = new Type(conversionPackage, variableLines).ParseMembersAndMethods(parser);
-		var memberLines = new TypeLines("Member",
-			File.ReadAllLines(Path.Combine(langPath, "Member.strict")));
-		using var __ = new Type(conversionPackage, memberLines).ParseMembersAndMethods(parser);
-		var parameterLines = new TypeLines("Parameter",
-			File.ReadAllLines(Path.Combine(langPath, "Parameter.strict")));
-		using var ___ = new Type(conversionPackage, parameterLines).ParseMembersAndMethods(parser);
-		var methodLines = new TypeLines("Method",
-			File.ReadAllLines(Path.Combine(langPath, "Method.strict")));
-		using var ____ = new Type(conversionPackage, methodLines).ParseMembersAndMethods(parser);
-		var lines = new TypeLines("LanguageType",
-			File.ReadAllLines(Path.Combine(langPath, "Type.strict")));
-		using var typeType = new Type(conversionPackage, lines).ParseMembersAndMethods(parser);
+		using var conversionPackage = new Package(TestPackage.Instance, ConversionPackageName);
+		using var variableType = CreateConversionPackageType(conversionPackage, "Variable");
+		using var memberType = CreateConversionPackageType(conversionPackage, "Member");
+		using var parameterType = CreateConversionPackageType(conversionPackage, "Parameter");
+		using var methodType = CreateConversionPackageType(conversionPackage, "Method");
+		using var typeType = CreateConversionPackageType(conversionPackage, "Type");
 		Assert.That(typeType.Members.Count, Is.EqualTo(6));
 		Assert.That(typeType.Members[0].Name, Is.EqualTo("typeName"));
 		Assert.That(typeType.Members[1].Name, Is.EqualTo("packageName"));
@@ -462,30 +408,14 @@ public sealed class StrictLanguageConversionTests
 	[Test]
 	public void LoadTypeParserFromLanguageDirectory()
 	{
-		var langPath = GetLanguagePath();
-		using var conversionPackage = new Package(TestPackage.Instance,
-			"Conv" + Guid.NewGuid().ToString("N")[..8]);
-		var variableLines = new TypeLines("Variable",
-			File.ReadAllLines(Path.Combine(langPath, "Variable.strict")));
-		using var _ = new Type(conversionPackage, variableLines).ParseMembersAndMethods(parser);
-		var parameterLines = new TypeLines("Parameter",
-			File.ReadAllLines(Path.Combine(langPath, "Parameter.strict")));
-		using var __ = new Type(conversionPackage, parameterLines).ParseMembersAndMethods(parser);
-		var memberLines = new TypeLines("Member",
-			File.ReadAllLines(Path.Combine(langPath, "Member.strict")));
-		using var ___ = new Type(conversionPackage, memberLines).ParseMembersAndMethods(parser);
-		var methodLines = new TypeLines("Method",
-			File.ReadAllLines(Path.Combine(langPath, "Method.strict")));
-		using var ____ = new Type(conversionPackage, methodLines).ParseMembersAndMethods(parser);
-		var typeLinesLines = new TypeLines("TypeLines",
-			File.ReadAllLines(Path.Combine(langPath, "TypeLines.strict")));
-		using var _____ = new Type(conversionPackage, typeLinesLines).ParseMembersAndMethods(parser);
-		var typeLines = new TypeLines("Type",
-			File.ReadAllLines(Path.Combine(langPath, "Type.strict")));
-		using var ______ = new Type(conversionPackage, typeLines).ParseMembersAndMethods(parser);
-		var lines = new TypeLines("LanguageTypeParser",
-			File.ReadAllLines(Path.Combine(langPath, "TypeParser.strict")));
-		using var typeParserType = new Type(conversionPackage, lines).ParseMembersAndMethods(parser);
+		using var conversionPackage = new Package(TestPackage.Instance, ConversionPackageName);
+		using var variableType = CreateConversionPackageType(conversionPackage, "Variable");
+		using var parameterType = CreateConversionPackageType(conversionPackage, "Parameter");
+		using var memberType = CreateConversionPackageType(conversionPackage, "Member");
+		using var methodType = CreateConversionPackageType(conversionPackage, "Method");
+		using var typeLinesType = CreateConversionPackageType(conversionPackage, "TypeLines");
+		using var typeType = CreateConversionPackageType(conversionPackage, "Type");
+		using var typeParserType = CreateConversionPackageType(conversionPackage, "TypeParser");
 		Assert.That(typeParserType.Members.Count, Is.EqualTo(1));
 		Assert.That(typeParserType.Members[0].Name, Is.EqualTo("packageName"));
 		Assert.That(typeParserType.Methods.Any(method => method.Name == "Parse"), Is.True);
@@ -498,12 +428,8 @@ public sealed class StrictLanguageConversionTests
 	[Test]
 	public void LoadBodyFromLanguageDirectory()
 	{
-		var langPath = GetLanguagePath();
-		using var conversionPackage = new Package(TestPackage.Instance,
-			"Conv" + Guid.NewGuid().ToString("N")[..8]);
-		var lines = new TypeLines("LanguageBody",
-			File.ReadAllLines(Path.Combine(langPath, "Body.strict")));
-		using var bodyType = new Type(conversionPackage, lines).ParseMembersAndMethods(parser);
+		using var conversionPackage = new Package(TestPackage.Instance, ConversionPackageName);
+		using var bodyType = CreateConversionPackageType(conversionPackage, "Body");
 		Assert.That(bodyType.Members.Count, Is.EqualTo(3));
 		Assert.That(bodyType.Members[0].Name, Is.EqualTo("methodName"));
 		Assert.That(bodyType.Members[1].Name, Is.EqualTo("expressionTexts"));
@@ -515,12 +441,8 @@ public sealed class StrictLanguageConversionTests
 	[Test]
 	public void LoadExpressionFromLanguageDirectory()
 	{
-		var langPath = GetLanguagePath();
-		using var conversionPackage = new Package(TestPackage.Instance,
-			"Conv" + Guid.NewGuid().ToString("N")[..8]);
-		var lines = new TypeLines("LanguageExpression",
-			File.ReadAllLines(Path.Combine(langPath, "Expression.strict")));
-		using var expressionType = new Type(conversionPackage, lines).ParseMembersAndMethods(parser);
+		using var conversionPackage = new Package(TestPackage.Instance, ConversionPackageName);
+		using var expressionType = CreateConversionPackageType(conversionPackage, "Expression");
 		Assert.That(expressionType.Members.Count, Is.EqualTo(3));
 		Assert.That(expressionType.Members[0].Name, Is.EqualTo("returnTypeName"));
 		Assert.That(expressionType.Members[1].Name, Is.EqualTo("lineNumber"));
@@ -533,16 +455,10 @@ public sealed class StrictLanguageConversionTests
 	[Test]
 	public void LoadConcreteExpressionFromLanguageDirectory()
 	{
-		var langPath = GetLanguagePath();
-		using var conversionPackage = new Package(TestPackage.Instance,
-			"Conv" + Guid.NewGuid().ToString("N")[..8]);
-		var expressionLines = new TypeLines("Expression",
-			File.ReadAllLines(Path.Combine(langPath, "Expression.strict")));
-		using var _ = new Type(conversionPackage, expressionLines).ParseMembersAndMethods(parser);
-		var lines = new TypeLines("LanguageConcreteExpression",
-			File.ReadAllLines(Path.Combine(langPath, "ConcreteExpression.strict")));
-		using var concreteExpressionType =
-			new Type(conversionPackage, lines).ParseMembersAndMethods(parser);
+		using var conversionPackage = new Package(TestPackage.Instance, ConversionPackageName);
+		using var expressionType = CreateConversionPackageType(conversionPackage, "Expression");
+		using var concreteExpressionType = CreateConversionPackageType(conversionPackage,
+			"ConcreteExpression");
 		Assert.That(concreteExpressionType.Members.Count, Is.EqualTo(2));
 		Assert.That(concreteExpressionType.Members[0].Type.Name, Is.EqualTo("Expression"));
 		Assert.That(concreteExpressionType.Members[1].Name, Is.EqualTo("expressionText"));
@@ -550,8 +466,4 @@ public sealed class StrictLanguageConversionTests
 		Assert.That(concreteExpressionType.Methods.Any(method => method.Name == "IsConstant"), Is.True);
 		Assert.That(concreteExpressionType.Methods.Any(method => method.Name == "to"), Is.True);
 	}
-
-	private static string GetLanguagePath() =>
-		Path.Combine(Repositories.GetLocalDevelopmentPath(Repositories.StrictOrg, nameof(Strict)),
-			"Language");
 }

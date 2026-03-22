@@ -1,6 +1,6 @@
 has packageName Text
 Parse(typeLines TypeLines) Type
-	TypeParser("Language").Parse(TypeLines.from("has text\nGreet Text\n\t\"Hello\"", "Greeter")).MemberNames(0) is "text"
+	TypeParser("Language").Parse("Greeter", TypeLines("has text\nGreet Text\n\t\"Hello\"")).MemberNames(0) is "text"
 	TypeParser("Language").Parse(TypeLines.from("has text\nGreet Text\n\t\"Hello\"", "Greeter")).MethodNames(0) is "Greet"
 	parseType(typeLines, 0, List(Member), List(Method))
 parseType(typeLines TypeLines, index Number, members Members, methods Methods) Type

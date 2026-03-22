@@ -1,8 +1,10 @@
+//TODO: this is just stupid, replicating what c# does, which is not needed at all here in Strict!
 has typeName Text
 has lines Texts
-from(code Text, name Text) TypeLines
+from(name Text, code Text) TypeLines
 	TypeLines.from("has text\r\nRun\r\n\ttext", "Greeter").Count is 3
-	TypeLines(name, code.Replace("\r", "").Split("\n"))
+	typeName = name
+	lines = code.Replace("\r", "").Split("\n")
 from(filePath Text) TypeLines
 	let path = Path(filePath)
 	TypeLines.from(File(Name(filePath)).Read, path.FileName.RemoveExtension)

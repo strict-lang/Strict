@@ -392,11 +392,13 @@ public sealed class InstructionsToLlvmIrTests
 	[Test]
 	public void PureAdderStyleTypeGeneratesIrWithReturnConstant()
 	{
-		var type =
-			new Type(TestPackage.Instance,
-					new TypeLines("LlvmPureAdder", "has first Number", "has second Number", "Add Number",
-						"\tfirst + second", "Run Number", "\t42")).
-				ParseMembersAndMethods(new MethodExpressionParser());
+		var type = new Type(TestPackage.Instance, new TypeLines("LlvmPureAdder",
+			"has first Number",
+			"has second Number",
+			"Add Number",
+			"\tfirst + second",
+			"Run Number",
+			"\t42")).ParseMembersAndMethods(new MethodExpressionParser());
 		var runMethod = type.Methods.First(method => method.Name == Method.Run);
 		var binary = new BinaryGenerator(new MethodCall(runMethod)).Generate();
 		var ir = Compile(binary, Platform.Linux);
