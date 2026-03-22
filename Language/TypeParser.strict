@@ -7,19 +7,17 @@ parseType(typeLines TypeLines, index Number, members Members, methods Methods) T
 	if index is typeLines.Count
 		return Type(typeLines.typeName, packageName, members, methods, members.Length is 0, IsGeneric(typeLines))
 	let line = typeLines.Line(index)
-	if IsMemberLine(line)
+	if line.StartsWith("has ") or line.StartsWith("mutable ") or line.StartsWith("constant ")
 		return parseType(typeLines, index + 1, members + ParseMember(line), methods)
 	if line.StartsWith("\t")
 		return parseType(typeLines, index + 1, members, methods)
 	let bodyLines = CollectBodyLines(typeLines, index + 1)
 	parseType(typeLines, index + 1 + bodyLines.Length, members, methods + ParseMethod(typeLines.typeName, line, bodyLines))
-IsMemberLine(line Text) Boolean
-	line.StartsWith("has ") or line.StartsWith("mutable ") or line.StartsWith("constant ")
 ParseMember(line Text) Member
 	let isConstant = line.StartsWith("constant ")
 	let isMutable = line.StartsWith("mutable ")
 	let declaration = GetDeclarationText(line)
-	let memberName = GetDeclaredName(declaration)
+	let memberName = declaration.Split(" ")(0)
 	let initialValue = GetInitialValue(declaration)
 	Member(Variable(memberName, GetDeclaredTypeName(declaration, memberName), isMutable, initialValue), isConstant)
 GetDeclarationText(line Text) Text
@@ -28,20 +26,15 @@ GetDeclarationText(line Text) Text
 	if line.StartsWith("mutable ")
 		return line.Substring(8, line.characters.Length - 8)
 	line.Substring(4, line.characters.Length - 4)
-GetDeclaredName(declaration Text) Text
-	let parts = declaration.Split(" ")
-	parts(0)
 GetDeclaredTypeName(declaration Text, elementName Text) Text
-	let leftSide = GetLeftSide(declaration)
+	let assignmentIndex = declaration.IndexOf(" = ")
+	let leftSide = assignmentIndex is -1 then declaration else declaration.Substring(0, assignmentIndex)
 	let parts = leftSide.Split(" ")
 	if parts.Length is 1
 		return InferTypeName(elementName)
 	if parts(1) is "with"
 		return InferTypeName(elementName)
 	parts(1)
-GetLeftSide(declaration Text) Text
-	let assignmentIndex = declaration.IndexOf(" = ")
-	assignmentIndex is -1 then declaration else declaration.Substring(0, assignmentIndex)
 GetInitialValue(declaration Text) Text
 	let assignmentIndex = declaration.IndexOf(" = ")
 	if assignmentIndex is -1
@@ -89,18 +82,10 @@ ParseParameters(header Text) Parameters
 	parameters
 ParseParameter(parameterText Text) Parameter
 	let assignmentIndex = parameterText.IndexOf(" = ")
-	let leftSide = assignmentIndex is -1
-		then parameterText
-		else parameterText.Substring(0, assignmentIndex)
+	let leftSide = assignmentIndex is -1 then parameterText else parameterText.Substring(0, assignmentIndex)
 	let parts = leftSide.Split(" ")
-	let parameterName = parts(0)
-	let typeName = parts.Length is 1
-		then InferTypeName(parameterName)
-		else parts(1)
-	let initialValue = assignmentIndex is -1
-		then ""
-		else parameterText.Substring(assignmentIndex + 3, parameterText.characters.Length - assignmentIndex - 3)
-	Parameter(Variable(parameterName, typeName, false, initialValue))
+	let typeName = parts.Length is 1 then InferTypeName(parts(0)) else parts(1)
+	Parameter(Variable(parts(0), typeName, false, GetInitialValue(parameterText)))
 CollectBodyLines(typeLines TypeLines, startIndex Number) Texts
 	mutable bodyLines = List(Text)
 	for Range(startIndex, typeLines.Count)

@@ -565,9 +565,13 @@ public class Type : Context, IDisposable
 					AddNonGenericMethods(member.Type, built);
 				if (members.Count > 0 && members.Any(m => !m.Type.IsGeneric && !m.IsConstant) &&
 					methods.All(m => m.Name != Method.From))
-					AddFromConstructorWithMembersAsArguments(methods.Count > 0
+				{
+					var fromParser = methods.Count > 0
 						? methods[0].Parser
-						: savedParser ?? GetType(Any).Methods.First().Parser, built);
+						: savedParser ?? GetType(Any).Methods.FirstOrDefault()?.Parser;
+					if (fromParser != null)
+						AddFromConstructorWithMembersAsArguments(fromParser, built);
+				}
 				if (this is GenericTypeImplementation { Generic.IsDictionary: true } dictImpl &&
 					dictImpl.Generic.AvailableMethods.TryGetValue(Method.From, out var genericFromMethods) &&
 					built.TryGetValue(Method.From, out var existingFromMethods))
