@@ -58,7 +58,8 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 	{
 		interpreter.Statistics.BinaryCount++;
 		if (call.Instance == null || call.Arguments.Count != 1)
-			throw new InvalidOperationException("Binary call must have instance and 1 argument"); //ncrunch: no coverage
+			throw new InvalidOperationException( //ncrunch: no coverage
+				"Binary call must have instance and 1 argument");
 		var leftInstance = interpreter.RunExpression(call.Instance, ctx);
 		var rightInstance = interpreter.RunExpression(call.Arguments[0], ctx);
 		return operatorType switch
@@ -184,8 +185,7 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 		};
 	}
 
-	private static ValueInstance CombineLists(ValueInstance leftList,
-		IReadOnlyList<ValueInstance> rightList)
+	private static ValueInstance CombineLists(ValueInstance leftList, List<ValueInstance> rightList)
 	{
 		var isLeftText = leftList.List.ReturnType is GenericTypeImplementation
 		{
@@ -210,8 +210,7 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 		return new ValueInstance(leftList.List.ReturnType, combined);
 	}
 
-	private static ValueInstance SubtractLists(ValueInstance leftList,
-		IReadOnlyList<ValueInstance> rightList)
+	private static ValueInstance SubtractLists(ValueInstance leftList, List<ValueInstance> rightList)
 	{
 		if (leftList.IsMutable)
 		{
@@ -285,25 +284,27 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 	}
 
 	private static ValueInstance MultiplyLists(Type leftListType, Type numberType,
-		IReadOnlyList<ValueInstance> leftList, IReadOnlyList<ValueInstance> rightList)
+		List<ValueInstance> leftList, List<ValueInstance> rightList)
 	{
 		var result = new ValueInstance[leftList.Count];
 		for (var index = 0; index < leftList.Count; index++)
-			result[index] = new ValueInstance(numberType, leftList[index].Number * rightList[index].Number);
+			result[index] =
+				new ValueInstance(numberType, leftList[index].Number * rightList[index].Number);
 		return new ValueInstance(leftListType, result);
 	}
 
 	private static ValueInstance DivideLists(Type leftListType, Type numberType,
-		IReadOnlyList<ValueInstance> leftList, IReadOnlyList<ValueInstance> rightList)
+		List<ValueInstance> leftList, List<ValueInstance> rightList)
 	{
 		var result = new ValueInstance[leftList.Count];
 		for (var index = 0; index < leftList.Count; index++)
-			result[index] = new ValueInstance(numberType, leftList[index].Number / rightList[index].Number);
+			result[index] =
+				new ValueInstance(numberType, leftList[index].Number / rightList[index].Number);
 		return new ValueInstance(leftListType, result);
 	}
 
-	private static ValueInstance MultiplyList(Type leftListType,
-		IReadOnlyList<ValueInstance> leftList, double rightNumber)
+	private static ValueInstance MultiplyList(Type leftListType, List<ValueInstance> leftList,
+		double rightNumber)
 	{
 		var result = new ValueInstance[leftList.Count];
 		for (var i = 0; i < leftList.Count; i++)
@@ -311,7 +312,7 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 		return new ValueInstance(leftListType, result);
 	}
 
-	private static ValueInstance DivideList(Type leftListType, IReadOnlyList<ValueInstance> leftList,
+	private static ValueInstance DivideList(Type leftListType, List<ValueInstance> leftList,
 		double rightNumber)
 	{
 		var result = new ValueInstance[leftList.Count];
@@ -354,7 +355,8 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 			{
 				nameof(Type.Name) or Type.Text => new ValueInstance(name),
 				_ when errorType.Members[i].Type.IsList => CreateStacktrace(ctx, source),
-				_ => throw new NotSupportedException("Error member not supported: " + errorType.Members[i]) //ncrunch: no coverage
+				_ => throw new NotSupportedException( //ncrunch: no coverage
+					"Error member not supported: " + errorType.Members[i])
 			};
 		return new ValueInstance(errorType, errorValues);
 	}
@@ -371,7 +373,8 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 				Type.Text or nameof(Type.Name) => new ValueInstance(ctx.Method.Type.FilePath),
 				Type.Number => new ValueInstance(interpreter.numberType,
 					source?.LineNumber ?? ctx.Method.TypeLineNumber),
-				_ => throw new NotSupportedException("Stacktrace member not supported: " + stacktraceType.Members[i]) //ncrunch: no coverage
+				_ => throw new NotSupportedException( //ncrunch: no coverage
+					"Stacktrace member not supported: " + stacktraceType.Members[i])
 			};
 		return new ValueInstance(interpreter.listType.GetGenericImplementation(stacktraceType),
 			[new ValueInstance(stacktraceType, stackValues)]);
@@ -387,7 +390,8 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 				nameof(Type.Name) or Type.Text => new ValueInstance(method.Name),
 				nameof(Type) => new ValueInstance(method.GetType(nameof(Type)),
 					CreateTypeValue(method.Type)),
-				_ => throw new NotSupportedException("Method member not supported: " + methodType.Members[i]) //ncrunch: no coverage
+				_ => throw new NotSupportedException( //ncrunch: no coverage
+					"Method member not supported: " + methodType.Members[i])
 			};
 		return values;
 	}
@@ -401,7 +405,8 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 			{
 				nameof(Type.Name) => new ValueInstance(type.Name),
 				Type.Text => new ValueInstance(type.Package.FullName),
-				_ => throw new NotSupportedException("Type member not supported: " + typeType.Members[i]) //ncrunch: no coverage
+				_ => throw new NotSupportedException( //ncrunch: no coverage
+					"Type member not supported: " + typeType.Members[i])
 			};
 		return values;
 	}

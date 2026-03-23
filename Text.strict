@@ -1,6 +1,6 @@
 has characters
 +(other) Text
-	+("more") is "more"
+	"" + "more" is "more"
 	"Hey" + " " + "you" is "Hey you"
 	characters + other.characters
 +(number) Text
@@ -103,11 +103,11 @@ Count(character) Number
 	for
 		if value is character
 			1
-SurroundWithParentheses Text
-	"".SurroundWithParentheses is "()"
-	"Hi".SurroundWithParentheses is "(Hi)"
-	"1, 2, 3".SurroundWithParentheses is "(1, 2, 3)"
-	"(" + value + ")"
+ToBrackets Text
+	"".ToBrackets is ""
+	"Hi".ToBrackets is "(Hi)"
+	"1, 2, 3".ToBrackets is "(1, 2, 3)"
+	value.Length > 0 then "(" + value + ")" else value
 is(other) Boolean
 	"A" is "A"
 	"Hi" is not "hi"

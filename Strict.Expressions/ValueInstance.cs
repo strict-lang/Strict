@@ -314,7 +314,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 		var parts = new string[items.Count];
 		for (var i = 0; i < items.Count; i++)
 			parts[i] = items[i].ToExpressionCodeString(escapeText);
-		return string.Join(", ", parts);
+		return parts.ToBrackets();
 	}
 
 	private static string BuildDictionaryString(Dictionary<ValueInstance, ValueInstance> items,
@@ -327,7 +327,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 		foreach (var kv in items)
 			parts[i++] = "(" + kv.Key.ToExpressionCodeString(escapeText) + ", " +
 				kv.Value.ToExpressionCodeString(escapeText) + ")";
-		return string.Join(", ", parts);
+		return parts.ToBrackets();
 	}
 
 	private string GetPrimitiveCodeString(Type primitiveType)

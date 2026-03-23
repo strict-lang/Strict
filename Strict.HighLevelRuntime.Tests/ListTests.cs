@@ -180,7 +180,10 @@ public sealed class ListTests
 	public void CombineMutableListsReusesLeftListInstance()
 	{
 		var leftList = CreateMutableNumberList(one, two);
-		var rightList = new[] { new ValueInstance(interpreter.numberType, 3), new ValueInstance(interpreter.numberType, 4) };
+		var rightList = new List<ValueInstance>
+		{
+			new(interpreter.numberType, 3), new(interpreter.numberType, 4)
+		};
 		var result = InvokePrivateListMethod("CombineLists", leftList, rightList);
 		Assert.That(ReferenceEquals(leftList.List.Items, result.List.Items), Is.True);
 		Assert.That(result.List.Items.Count, Is.EqualTo(4));
@@ -190,7 +193,7 @@ public sealed class ListTests
 	public void SubtractMutableListsReusesLeftListInstance()
 	{
 		var leftList = CreateMutableNumberList(one, two, one);
-		var rightList = new[] { one, two };
+		var rightList = new List<ValueInstance> { one, two };
 		var result = InvokePrivateListMethod("SubtractLists", leftList, rightList);
 		Assert.That(ReferenceEquals(leftList.List.Items, result.List.Items), Is.True);
 		Assert.That(result.List.Items, Is.EqualTo(new[] { one }));

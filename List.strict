@@ -1,9 +1,8 @@
 has iterator
 has elements Generics
 to Text
-	Numbers to Text is ""
 	(1, 2) to Text is "(1, 2)"
-	GetElementsText.SurroundWithParentheses
+	GetElementsText.ToBrackets
 GetElementsText Text
 	(1, 3).GetElementsText is "1, 3"
 	for elements

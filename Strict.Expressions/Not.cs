@@ -22,7 +22,7 @@ public sealed class Not(Method method, Expression right)
 				? binary.Instance + " is not " + binary.Arguments[0]
 				: binary.Method.Name == BinaryOperator.In
 					? binary.Arguments[0] + " is not in " + binary.Instance
-         : UnaryOperator.Not + " " + Instance!
+					: UnaryOperator.Not + " " + AddNestedBracketsIfNeeded(Instance!, 10)
 			: UnaryOperator.Not + " " + Instance!;
 
 	public override bool IsConstant => Instance!.IsConstant;

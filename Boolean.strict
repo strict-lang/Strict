@@ -13,12 +13,12 @@ xor(other) Boolean
 	true xor true is false
 	false xor true
 	not (false xor false)
-	(value and other) or (not value and not other) then false else true
+	value and other or (not value) and (not other) then false else true
 is(other) Boolean
 	not false
 	false is not true
 	value is other
 to Text
 	true to Text is "true"
-	not true to Text is "false"
+	false to Text is "false"
 	value then "true" else "false"

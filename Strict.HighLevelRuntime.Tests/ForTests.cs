@@ -166,7 +166,7 @@ public sealed class ForTests
 			"Merge Text", "\tfor (\"a\", \"b\")", "\t\t(value, value)");
 		var result = interpreter.Execute(t.Methods.Single(m => m.Name == "Merge"),
 			interpreter.noneInstance, []);
-		Assert.That(result.Text, Is.EqualTo("(a, a), (b, b)"));
+		Assert.That(result.Text, Is.EqualTo("((a, a)), ((b, b))"));
 	}
 
 	[Test]

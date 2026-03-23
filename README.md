@@ -163,8 +163,8 @@ Happy coding with **Strict** — where there’s exactly one way to do it right.
 	"hello".StartsWith("hel", 1) is false
 	"yo mama".StartsWith("mama") is false
 	"abc".Count("a") is 1
-	"Hi".SurroundWithParentheses is "(Hi)"
-	"1, 2, 3".SurroundWithParentheses is "(1, 2, 3)"
+	"Hi".ToBrackets is "(Hi)"
+	"1, 2, 3".ToBrackets is "(1, 2, 3)"
 ```
 
 List.strict usage (all lists are simply surrounded by brackets, basically any method call uses a list as the arguments)
