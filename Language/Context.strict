@@ -1,7 +1,5 @@
-has contextName Text
-FindType(name Text) Type
-	contextName
-TryGetType(name Text) Type
-	contextName
-GetType(name Text) Type
-	contextName
+has Parent Context or None
+has Name
+has FullName Name
+constant ParentSeparator = "/"
+FindType(name) Type or None

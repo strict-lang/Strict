@@ -1,8 +1,8 @@
-has packageName Text
-has fullName Text
-has typeNames Texts
-has parentName Text
-FindType(name Text) Type
-	fullName
-AddType(type Type) Mutable(Package)
-	value
+has context
+has children Packages
+has types Dictionary(Name, Type)
+FindType(name) Type or None
+	constant TypeNotFound = Error
+	name is in types then types(name) else TypeNotFound
+Add(type)
+	types.Add(type.Name, type)

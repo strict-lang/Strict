@@ -1,6 +1,0 @@
-has elementName Text
-has typeName Text
-has isMutable Boolean
-has initialValueExpression Text
-to Text
-	elementName + " " + typeName

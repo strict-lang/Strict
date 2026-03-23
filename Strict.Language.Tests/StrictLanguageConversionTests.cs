@@ -301,7 +301,7 @@ public sealed class StrictLanguageConversionTests
 	}
 
 	private static string ConversionPackageName =>
-		Package.TestConversion + Guid.NewGuid().ToString("N")[..8];
+		Package.TestLanguageConversion + Guid.NewGuid().ToString("N")[..8];
 
 	[Test]
 	public void LoadMemberFromLanguageDirectory()

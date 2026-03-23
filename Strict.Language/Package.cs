@@ -178,7 +178,7 @@ public class Package : Context, IDisposable
 
 	internal void Remove(Package package) => children.Remove(package);
 	public IReadOnlyDictionary<string, Type> Types => types;
-	public const string TestConversion = nameof(TestConversion);
+	public const string TestLanguageConversion = nameof(TestLanguageConversion);
 
 	public void Dispose()
 	{

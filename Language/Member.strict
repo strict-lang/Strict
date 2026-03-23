@@ -1,4 +1,0 @@
-has Variable
-has isConstant Boolean
-to Text
-	Variable to Text

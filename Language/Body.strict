@@ -1,5 +1,4 @@
-has methodName Text
-has expressionTexts Texts
-has lineCount Number
+has method
+has Lines Texts
 to Text
-	expressionTexts to Text
+	Texts to Text

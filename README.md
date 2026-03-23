@@ -30,6 +30,19 @@ This repository is not just the runtime, but contains the standard library. It i
 
 That is pretty much it, there are not many more things needed to write code. For more specific things see the Math folder, ImageProcessing, Examples, etc. here in this repository. Keep in mind that Strict is NOT a general purpose language. It is supposed to be writeable, readable and understandable by computers. If you want to build a website, a complex app, database code, a game, etc. you should use external code for that (you can keep the logic in Strict, but it is unlikely that Strict will have those things unless some people work on it and need it). It is quite easy to interface with external code, you can use any web api, C++, C#, Java, Python, etc. libraries. Those are threated as black boxes (thus not longer computer understandable, here we would be limited to LLMs) and will not follow the strict rules in Strict. The main issue here would be if an external library changes, then all your calls to it also have to change, which is less of a problem with Strict code calling Strict code as any changes can be fixed in a more automated manner.
 
+In the rare case you need an optional value you can specify it with the or None type constraint (any other type also works). Keep in mind you still cannot assign None to anything, but we can check if something is None and simply not assigning it will keep it at the None state.
+
+Context.strict
+```
+has Parent Context or None
+has Name
+[...]
+if Parent is None
+  logger.Log("This is the root")
+```
+
+Parent can just be used as Context and as any derived type (anything that uses Context), but if it was not set and thus is still None, an error will be thrown. You can of course always check for None, but this is a very rare pattern in Strict. An error is also thrown when using a type as a higher level type, which it is not. Let's say our Context is a Package, but we try to use it as a Type (which also is a Context, but clearly not a Package), an Error is thrown telling us we can't use it as a type (like a cast in any c like language would do).
+
 # How to use
 The best way to learn how any expression or base type works is to look at the code, it is very compact and every single method starts with tests on how to use it. This base library is not just defining how the language works, but the documentation in source code form. All tests use the is comparsion (similar to == in c style languages, = is used for assignments), "is true" at the end of any expression is never used. All expressions (not just tests) must evaluate to true, otherwise the execution stops with an error. If an expression is constant (like all tests, but also many other expressions), it will be removed and optimized out after the first run.
 
@@ -198,6 +211,68 @@ List.strict usage (all lists are simply surrounded by brackets, basically any me
 	(1, 2).Count(1) is 1
 	(1, 3).Count(2) is 0
 	("Hi", "Hello", "Hi").Count("Hi") is 2
+```
+
+## Members, variables, constants, let, mutable
+Members are always defined at the top of any type file. Members are basically fields in other languages, but can do much more. For example almost all strict types are composed from more basic types and can be used as such. This kind of allows multiple inheritence (as you can have multiple members) and also gives you any feature from another type you want by just adding it is a member. If a member type is a trait (kind of interface, traits have no implementation), the type must implement all of the trait methods.
+
+Members can be either `has` (default), `constant` (for anything that does not change, think of static readonly, this includes way more than other programming languages and propagates upward, anything composed out of constants is a constant too, constants are always precomputed and optimized away, even if this is a complex operation) or `mutable` (rarely used, this means the value is allowed to change, mostly for optimization purposes, should be avoided otherwise as parallization will struggle with mutables).
+
+Some examples:
+
+Any.strict is the basis of every other type, it doesn't have to be added as a member, all types are always Any. You can never use Any directly, but it implements these methods automatically in every type.
+```
+from
+to Type
+to Text
+to HashCode
+is(other) Boolean
+```
+
+A character is just a number, but can be created from a single letter text or specifying an UTF value:
+```
+has number
+from(text)
+	Character("b") is "b"
+	Character(7) is Tab
+	7 to Character is "7"
+	Character("ab") is Error
+	text.Characters(0)
+```
+
+A text ist just a List of characters:
+```
+has characters
+```
+
+A name is just a Text with some constraints
+```
+has text with Length > 1 and " " is not in value
+```
+
+NamedType is the base type for Members and Variables internally and this is all the code for it:
+```
+has Name
+has Type
+has IsMutable
+has IsConstant
+to Text
+	NamedType("count", Number) to Text is "count Number"
+	Name + " " + Type
+```
+
+Variables are always created in a method body scope. They look almost the same to members, but have a much smaller scope. They can be `constant` if the value is purely constant and never changes, this is always optimized away. Or it can be `let` (if the incoming value can be different, e.g. coming from a has member value that is different for each instance). `mutable` is also allowed here and rare. Only needed if a value needs to change, e.g. counting up in a loop. These kinds of mutable values are not dangerous as long as they don't leave the scope (then the same applies as for members, use rarely, only for specific optimizations, avoid otherwise).
+
+Example:
+```
+TrimStart Text
+	mutable startIndex = 0
+	for characters
+		if value is " "
+			startIndex = startIndex + 1
+		else
+			return Substring(startIndex, characters.Length - startIndex)
+	""
 ```
 
 ## if expressions

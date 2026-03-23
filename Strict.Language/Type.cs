@@ -11,44 +11,6 @@ namespace Strict.Language;
 /// </summary>
 public class Type : Context, IDisposable
 {
-	/// <summary>
-	/// Has no implementation and is used for void, empty, or none, which is not valid to assign.
-	/// </summary>
-	public const string None = nameof(None);
-	/// <summary>
-	/// Defines all the methods available in any type (everything automatically implements **Any**).
-	/// These methods don't have to be implemented by any class, they are automatically implemented.
-	/// </summary>
-	public const string Any = nameof(Any);
-	/// <summary>
-	/// Most basic type: can only be true or false, any expression must either be None or return a
-	/// Boolean (anything else is a compiler error). Any expression returning false (like a failing
-	/// test) will also immediately cause an error at runtime or in the Editor via SCrunch.
-	/// </summary>
-	public const string Boolean = nameof(Boolean);
-	/// <summary>
-	/// Can be any floating point or integer number (think byte, short, int, long, float, or double
-	/// in other languages). Also, it can be a decimal or BigInteger, the compiler can decide and
-	/// optimize this away into anything that makes sense in the current context.
-	/// </summary>
-	public const string Number = nameof(Number);
-	public const string Character = nameof(Character);
-	public const string HashCode = nameof(HashCode);
-	public const string Range = nameof(Range);
-	public const string Text = nameof(Text);
-	public const string Error = nameof(Error);
-	public const string ErrorWithValue = nameof(ErrorWithValue);
-	public const string Iterator = nameof(Iterator);
-	public const string List = nameof(List);
-	public const string Logger = nameof(Logger);
-	public const string System = nameof(System);
-	public const string File = nameof(File);
-	public const string Directory = nameof(Directory);
-	public const string TextWriter = nameof(TextWriter);
-	public const string TextReader = nameof(TextReader);
-	public const string Stacktrace = nameof(Stacktrace);
-	public const string Mutable = nameof(Mutable);
-	public const string Dictionary = nameof(Dictionary);
 #if DEBUG
 	public Type(Package package, TypeLines file, [CallerFilePath] string callerFilePath = "",
 		[CallerLineNumber] int callerLineNumber = 0,
@@ -108,6 +70,45 @@ public class Type : Context, IDisposable
 				return true;
 		return false;
 	}
+
+	/// <summary>
+	/// Has no implementation and is used for void, empty, or none, which is not valid to assign.
+	/// </summary>
+	public const string None = nameof(None);
+	/// <summary>
+	/// Defines all the methods available in any type (everything automatically implements **Any**).
+	/// These methods don't have to be implemented by any class, they are automatically implemented.
+	/// </summary>
+	public const string Any = nameof(Any);
+	/// <summary>
+	/// Most basic type: can only be true or false, any expression must either be None or return a
+	/// Boolean (anything else is a compiler error). Any expression returning false (like a failing
+	/// test) will also immediately cause an error at runtime or in the Editor via SCrunch.
+	/// </summary>
+	public const string Boolean = nameof(Boolean);
+	/// <summary>
+	/// Can be any floating point or integer number (think byte, short, int, long, float, or double
+	/// in other languages). Also, it can be a decimal or BigInteger, the compiler can decide and
+	/// optimize this away into anything that makes sense in the current context.
+	/// </summary>
+	public const string Number = nameof(Number);
+	public const string Character = nameof(Character);
+	public const string HashCode = nameof(HashCode);
+	public const string Range = nameof(Range);
+	public const string Text = nameof(Text);
+	public const string Error = nameof(Error);
+	public const string ErrorWithValue = nameof(ErrorWithValue);
+	public const string Iterator = nameof(Iterator);
+	public const string List = nameof(List);
+	public const string Logger = nameof(Logger);
+	public const string System = nameof(System);
+	public const string File = nameof(File);
+	public const string Directory = nameof(Directory);
+	public const string TextWriter = nameof(TextWriter);
+	public const string TextReader = nameof(TextReader);
+	public const string Stacktrace = nameof(Stacktrace);
+	public const string Mutable = nameof(Mutable);
+	public const string Dictionary = nameof(Dictionary);
 
 	private TypeKind GetTypeKindFromName() =>
 		Name switch
@@ -367,8 +368,8 @@ public class Type : Context, IDisposable
 
 	public string FilePath =>
 		Path.GetFullPath(Path.Combine(Path.GetFileName(Package.FolderPath).StartsWith(
-			Package.TestConversion)
-				? ((Package)Package.Parent).FolderPath
+			Package.TestLanguageConversion)
+				? Path.Combine(((Package)Package.Parent).FolderPath, "Language")
 				: Package.FolderPath,
 			(this is GenericTypeImplementation genericType
 				? genericType.Generic.Name

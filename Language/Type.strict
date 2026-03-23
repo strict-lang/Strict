@@ -1,28 +1,29 @@
-has typeName Text
-has packageName Text
-has members Members
-has methods Methods
-has isTrait Boolean
-has isGeneric Boolean
-MemberNames Texts
-	for members
-		value.Variable.elementName
-MethodNames Texts
-	for methods
-		value.methodName
-MemberCount Number
-	members.Length
-MethodCount Number
-	methods.Length
-GetMember(name Text) Member
+has context
+has Members Variables
+has Methods
+has IsTrait
+has IsGeneric
+has Lines Texts
+from(parent Context, name, lines Texts)
+	Parent = parent
+	Name = name
+	FullName = parent.FullName + Context.ParentSeparator + name
+	Lines = lines
+	let members = typeLines.MemberLines.Map(ParseMember)
+	let methods = ParseMethods(typeLines)
+	IsTrait = members.Length is 0 and methods.Length is not 0
+	IsGeneric = typeLines.IsGeneric
+GetMember(name) Variable
+	constant MemberNotFound = Error
 	for members
 		if value.Variable.elementName is name
 			return value
-	Member(Variable(name, "", false, ""), false)
-GetMethod(name Text) Method
+	MemberNotFound
+GetMethod(name) Method
+	constant MethodNotFound = Error
 	for methods
-		if value.methodName is name
+		if value.Name is name
 			return value
-	Method(name, "None", List(Parameter), List(Text), true)
+	MethodNotFound
 to Text
-	typeName
+	Name

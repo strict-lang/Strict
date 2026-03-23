@@ -20,6 +20,12 @@ in(text) Boolean
 	"lo" is in "hello there"
 	for
 		StartsWith(text, index)
+Combine(texts Texts, separator Text) Text
+	Combine(("a", "b"), "") is "ab"
+	Combine(("a", "b", "c"), ", ") is "a, b, c"
+	Combine(("hi", "there"), Character.NewLine) is "hi\nthere"
+	for
+		value + separator
 StartsWith(text, start = 0) Boolean
 	"hello".StartsWith("hel")
 	"hello".StartsWith("hel", 1) is false
@@ -40,7 +46,7 @@ Trim Text
 	"noSpaces".Trim is "noSpaces"
 	TrimStart.TrimEnd
 TrimStart Text
-	let startIndex = 0
+	mutable startIndex = 0
 	for characters
 		if value is " "
 			startIndex = startIndex + 1
@@ -48,33 +54,28 @@ TrimStart Text
 			return Substring(startIndex, characters.Length - startIndex)
 	""
 TrimEnd Text
-	let endIndex = characters.Length
+	mutable endIndex = characters.Length
 	for characters.Reverse
 		if value is " "
 			endIndex = endIndex - 1
 		else
 			return Substring(0, endIndex)
 	""
-IndexOf(text Text, number = 0) Number
+IndexOf(text Text, startIndex = 0) Number
 	"hello".IndexOf("he") is 0
 	"hello".IndexOf("ll") is 2
 	"hello".IndexOf("no") is -1
-	if text is ""
-		return number
-	for Range(number, characters.Length - text.characters.Length + 1)
+	for Range(startIndex, characters.Length - text.characters.Length + 1)
 		if StartsWith(text, value)
 			return value
 	-1
 LastIndexOf(text Text) Number
 	"hello".LastIndexOf("l") is 3
 	"hello".LastIndexOf("x") is -1
-	if text is ""
-		return characters.Length
-	let lastIndex = -1
-	for Range(0, characters.Length - text.characters.Length + 1)
+	for Range(0, characters.Length - text.characters.Length + 1).Reverse
 		if StartsWith(text, value)
-			lastIndex = value
-	lastIndex
+			return value
+	-1
 Substring(number, length Number) Text
 	"hello".Substring(1, 3) is "ell"
 	for Range(number, number + length)

@@ -80,7 +80,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "StrictFiles", "StrictFiles"
 		Iterator.strict = Iterator.strict
 		List.strict = List.strict
 		Logger.strict = Logger.strict
-		Member.strict = Member.strict
 		Method.strict = Method.strict
 		Mutable.strict = Mutable.strict
 		Name.strict = Name.strict
@@ -93,6 +92,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "StrictFiles", "StrictFiles"
 		TextWriter.strict = TextWriter.strict
 		Type.strict = Type.strict
 		Path.strict = Path.strict
+		Variable.strict = Variable.strict
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Strict", "Strict\Strict.csproj", "{4F9E13DD-52AA-5923-2207-40EE4E0E8879}"
