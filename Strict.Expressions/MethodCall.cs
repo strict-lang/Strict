@@ -45,6 +45,12 @@ public class MethodCall : ConcreteExpression
 			return true;
 		}
 	}
+	
+	protected string AddNestedBracketsIfNeeded(Expression child, int addPrecedenceForNot = 0) =>
+		child is MethodCall binaryOrUnary && BinaryOperator.GetPrecedence(binaryOrUnary.Method.Name) <
+		BinaryOperator.GetPrecedence(Method.Name) + addPrecedenceForNot || child is If
+			? $"({child})"
+			: child.ToString();
 
 	// ReSharper disable once TooManyArguments
 	public static Expression? TryParse(Expression? instance, Body body,

@@ -11,6 +11,7 @@
 - When splitting `Executor.cs`, keep high-level methods there (Execute, exceptions, DoArgumentsMatch, stackoverflow detection, arguments/instances/parameters handling, RunExpression), and move expression evaluators into separate classes unless they are single-line/simple.
 - Do not add new methods to low level types like `SpanExtensions` without asking first; keep refactors focused and fix one issue at a time.
 - If you cannot make the test pass within 5 edits, stop and output: failing test name, error message, suspected root cause, and show a proposed fix (or up to 3 fixes if it is unclear). This resets if the user gives a new prompt.
+- When a user reports a specific failing reproduction in this repo, trust that exact reproduction and verify that exact case instead of generalizing from broader test runs.
 
 ## Project-Specific Rules
 - Strict is a simple-to-understand programming language that not only humans can read and understand, but also computers are able to understand, modify and write it.

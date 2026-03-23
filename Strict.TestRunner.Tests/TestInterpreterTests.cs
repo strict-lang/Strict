@@ -248,6 +248,18 @@ public class TestInterpreterTests
 	[Benchmark]
 	public void RunAllTestsInPackage() => interpreter.RunAllTestsInPackage(TestPackage.Instance);
 
+	[Test]
+	[Benchmark]
+	public async Task RunAllTestsForAllStrictFilesInThisRepo()
+	{
+		var repos = new Repositories(new MethodExpressionParser());
+		interpreter.RunAllTestsInPackage(await repos.LoadStrictPackage());
+		interpreter.RunAllTestsInPackage(await repos.LoadStrictPackage("Strict/Math"));
+		interpreter.RunAllTestsInPackage(await repos.LoadStrictPackage("Strict/ImageProcessing"));
+		interpreter.RunAllTestsInPackage(await repos.LoadStrictPackage("Strict/Language"));
+		interpreter.RunAllTestsInPackage(await repos.LoadStrictPackage("Strict/Examples"));
+	}
+
 	//ncrunch: no coverage start
 	[Test]
 	[Category("Slow")]

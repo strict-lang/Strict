@@ -31,6 +31,8 @@ public sealed class ShuntingYardTests
 	[TestCase("Colors(Width * number.Length + 1)", "Colors(Width * number.Length + 1)")]
 	[TestCase("Math.Add(5)", "Math.Add(5)")]
 	[TestCase("not true is false", "true, not, false, is")]
+	[TestCase("not (true xor false)", "true, false, xor, not")]
+  [TestCase("(true and false) or (not true and not false)", "true, false, and, true, not, false, not, and, or")]
 	[TestCase("-5 * 2", "-5, 2, *")]
 	[TestCase("-(5 * 2)", "5, 2, *, -")]
 	public void Parse(string input, string expected) =>

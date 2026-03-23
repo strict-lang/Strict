@@ -30,12 +30,6 @@ public sealed class Binary(Expression left, Method operatorMethod, Expression[] 
 
 	private string? cachedString;
 
-	private string AddNestedBracketsIfNeeded(Expression child) =>
-		child is MethodCall binaryOrUnary && BinaryOperator.GetPrecedence(binaryOrUnary.Method.Name) <
-		BinaryOperator.GetPrecedence(Method.Name) || child is If
-			? $"({child})"
-			: child.ToString();
-
 	public static Expression Parse(Body body, ReadOnlySpan<char> input, Stack<Range> postfixTokens)
 	{
 #if LOG_OPERATORS_PARSING

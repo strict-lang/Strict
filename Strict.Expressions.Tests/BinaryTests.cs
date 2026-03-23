@@ -98,6 +98,8 @@ public sealed class BinaryTests : TestExpressions
 	[TestCase("(1 + 5, 2, 3) + (5, 2 * 5)")]
 	[TestCase("5 > 4 or 10 < 100.5 and 5 > 4 and 5 < 6")]
 	[TestCase("(not true) and (not false)")]
+	[TestCase("not (true xor false)")]
+	[TestCase("(true and false) or (not true and not false)")]
 	public void ParseGroupExpressionProducesSameCode(string code) =>
 		Assert.That(ParseExpression(code).ToString(), Is.EqualTo(code));
 
