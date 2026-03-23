@@ -116,4 +116,17 @@ public sealed class TypeParserTests
 			() => CreateType(nameof(ReturnAsLastExpressionIsNotNeeded), "has logger",
 				"Run", "\treturn true"),
 			Throws.InstanceOf<Body.ReturnAsLastExpressionIsNotNeeded>());
+
+	[Test]
+	public void IsMemberDefaultsToBooleanType()
+	{
+		using var simpleType =
+			new Type(package,
+				new TypeLines(nameof(IsMemberDefaultsToBooleanType), "has isDefault", "has IsConstant",
+					"Run", "\tisDefault and IsConstant")).ParseMembersAndMethods(parser);
+		Assert.That(simpleType.Members[0].Type,
+			Is.EqualTo(TestPackage.Instance.GetType(Type.Boolean)));
+		Assert.That(simpleType.Members[1].Type,
+			Is.EqualTo(TestPackage.Instance.GetType(Type.Boolean)));
+	}
 }

@@ -1,6 +1,6 @@
 namespace Strict.Language.Tests;
 
-public class TypeLinesTests
+public sealed class TypeLinesTests
 {
 	[Test]
 	public void ListMembersShouldBeExtractedCorrectly()

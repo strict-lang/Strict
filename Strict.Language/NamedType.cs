@@ -16,7 +16,9 @@ public abstract class NamedType
 				throw new CannotUseKeywordsAsName(Name);
 			Type = definedIn.GetType(parts.MoveNext()
 				? nameAndType[(Name.Length + 1)..].ToString()
-				: Name.MakeFirstLetterUppercase());
+				: Name.StartsWith("is", StringComparison.OrdinalIgnoreCase)
+					? Type.Boolean
+					: Name.MakeFirstLetterUppercase());
 		}
 		else
 		{
