@@ -244,6 +244,8 @@ public class Interpreter
 		Statistics.FromCreationsCount++;
 		if (args.Length == 0 && method.Type.IsText)
 			return new ValueInstance("");
+		if (args.Length == 0 && method.Type.IsCharacter)
+			return new ValueInstance(method.Type, 0);
 		if ((method.Type.IsCharacter || method.Type.IsNumber || method.Type.IsEnum) && args.Length == 1)
 		{
 			if (IsSingleCharacterTextArgument(method.Type, args[0]))

@@ -4,7 +4,7 @@ has characters
 	"Hey" + " " + "you" is "Hey you"
 	characters + other.characters
 +(number) Text
-	+(1) is "1"
+	"" + 1 is "1"
 	"Your age is " + 18 is "Your age is 18"
 	characters + number to Text
 to Number

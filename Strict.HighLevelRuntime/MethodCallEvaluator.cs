@@ -76,6 +76,9 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 	{
 		interpreter.Statistics.ArithmeticCount++;
 		var op = call.Method.Name;
+		if (op == BinaryOperator.Plus && left.IsPrimitiveType(interpreter.characterType) &&
+			right.IsPrimitiveType(interpreter.characterType))
+			return new ValueInstance(left.ToExpressionCodeString() + right.ToExpressionCodeString());
 		if (IsNumberLike(left) && IsNumberLike(right))
 		{
 			var l = left.Number;
@@ -98,7 +101,9 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 		if (left.IsText && IsNumberLike(right))
 		{
 			return op == BinaryOperator.Plus
-				? new ValueInstance(left.Text + right.Number)
+				? right.IsPrimitiveType(interpreter.characterType)
+					?	new ValueInstance(left.Text + right.ToExpressionCodeString())
+					: new ValueInstance(left.Text + right.Number)
 				: throw new NotSupportedException("Only + operator is supported for Text+Number, got: " +
 					op);
 		}

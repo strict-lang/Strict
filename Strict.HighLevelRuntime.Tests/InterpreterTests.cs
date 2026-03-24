@@ -130,6 +130,16 @@ public sealed class InterpreterTests
 	}
 
 	[Test]
+	public void AddTwoCharactersReturnsConcatenatedText()
+	{
+		var characterType = TestPackage.Instance.GetType(Type.Character);
+		var plus = characterType.Methods.Single(method => method.Name == BinaryOperator.Plus);
+		var result = interpreter.Execute(plus, new ValueInstance(characterType, '1'),
+			[new ValueInstance(characterType, '2')]);
+		Assert.That(result.Text, Is.EqualTo("12"));
+	}
+
+	[Test]
 	public void EvaluateAllComparisonOperators()
 	{
 		Assert.That(interpreter.Execute(GetBinaryOperator(BinaryOperator.Greater), N(5), [N(3)]),

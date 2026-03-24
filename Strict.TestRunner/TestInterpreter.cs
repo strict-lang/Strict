@@ -32,8 +32,7 @@ public sealed class TestInterpreter(Package package) : Interpreter(package, Test
 				RunMethod(method);
 	}
 
-	private static bool ShouldSkipKnownDummyBaseType(Type type) =>
-		type.FilePath.EndsWith("Number" + Language.Type.Extension, StringComparison.OrdinalIgnoreCase);
+	private static bool ShouldSkipKnownDummyBaseType(Type type) => type.Name == Type.Number;
 
 	public void RunMethod(Method method)
 	{
@@ -44,6 +43,6 @@ public sealed class TestInterpreter(Package package) : Interpreter(package, Test
 	}
 
 	private static bool ShouldSkipKnownDummyBaseMethod(Method method) =>
-		method.Name.Equals("digits", StringComparison.OrdinalIgnoreCase) ||
-		method.Name.Equals("to", StringComparison.OrdinalIgnoreCase) && method.ReturnType.IsText;
+		method.Name.Equals("digits", StringComparison.Ordinal) ||
+		method.Name.Equals("to", StringComparison.Ordinal) && method.ReturnType.IsText;
 }
