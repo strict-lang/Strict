@@ -18,8 +18,7 @@ to Number
 in(text) Boolean
 	"hi" is not in "hello there"
 	"lo" is in "hello there"
-	for
-		StartsWith(text, index)
+	IndexOf(text) is not -1
 Combine(texts Texts, separator Text) Text
 	Combine(("a", "b"), "") is "ab"
 	Combine(("a", "b", "c"), ", ") is "a, b, c"
@@ -30,8 +29,10 @@ StartsWith(text, start = 0) Boolean
 	"hello".StartsWith("hel")
 	"hello".StartsWith("hel", 1) is false
 	"yo mama".StartsWith("mama") is false
-	for text.characters
-		value is not outer(start + index)
+	for Range(0, characters.Length)
+		if outer.value(start + value) is not text(value)
+			return false
+	true
 Split(separator Text) Texts
 	"a,b".Split(",") is ("a", "b")
 	"abc".Split(",") is ("abc")
