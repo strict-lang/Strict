@@ -205,6 +205,14 @@ public sealed class MethodTests
 	}
 
 	[Test]
+	public void MethodParameterWithDefaultValueContainingComma()
+	{
+		var method = new Method(type, 0, parser,
+			["Combine(texts Texts, separator = \", \") Text", "	separator"]);
+		Assert.That(method.Parameters[1].DefaultValue, Is.EqualTo(new Text(type, ", ")));
+	}
+
+	[Test]
 	public void MethodParameterDefaultValueForTraitMethod()
 	{
 		var method = new Method(type, 0, parser, ["Run(input = \"Hello\")"]);

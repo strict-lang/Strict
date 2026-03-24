@@ -1,4 +1,4 @@
-﻿namespace Strict.Language;
+namespace Strict.Language;
 
 public ref struct SpanSplitEnumerator(ReadOnlySpan<char> input, char splitter,
 	StringSplitOptions options)
@@ -7,6 +7,7 @@ public ref struct SpanSplitEnumerator(ReadOnlySpan<char> input, char splitter,
 	private readonly ReadOnlySpan<char> input = input;
 	private int offset = 0;
 	private int bracketDepth = 0;
+  private bool isInsideText = false;
 	public ReadOnlySpan<char> Current { get; private set; } = default;
 	public readonly SpanSplitEnumerator GetEnumerator() => this;
 
@@ -28,14 +29,32 @@ public ref struct SpanSplitEnumerator(ReadOnlySpan<char> input, char splitter,
 	{
 		for (var index = offset; index < input.Length; index++)
 		{
-			if (input[index] == '(')
+      if (input[index] == '"' && !IsEscapedQuote(index))
+			{
+				if (isInsideText && index + 1 < input.Length && input[index + 1] == '"')
+					index++;
+				else
+					isInsideText = !isInsideText;
+			}
+			else if (!isInsideText && input[index] == '(')
 				bracketDepth++;
-			else if (input[index] == ')')
+     else if (!isInsideText && input[index] == ')')
 				bracketDepth--;
-			else if (input[index] == splitter && (splitter != ',' || bracketDepth == 0))
+      else if (!isInsideText && input[index] == splitter &&
+				(splitter != ',' || bracketDepth == 0))
 				return GetWordBeforeSplitter(index);
 		}
 		return null;
+	}
+
+	private bool IsEscapedQuote(int quoteIndex)
+	{
+		if (quoteIndex == 0 || input[quoteIndex - 1] != '\\')
+			return false;
+		var slashCount = 0;
+		for (var slashIndex = quoteIndex - 1; slashIndex >= 0 && input[slashIndex] == '\\'; slashIndex--)
+			slashCount++;
+		return slashCount % 2 == 1;
 	}
 
 	private bool GetWordBeforeSplitter(int index)
