@@ -253,11 +253,13 @@ public class TestInterpreterTests
 	public async Task RunAllTestsForAllStrictFilesInThisRepo()
 	{
 		var repos = new Repositories(new MethodExpressionParser());
-		interpreter.RunAllTestsInPackage(await repos.LoadStrictPackage());
-		interpreter.RunAllTestsInPackage(await repos.LoadStrictPackage("Strict/Math"));
-		interpreter.RunAllTestsInPackage(await repos.LoadStrictPackage("Strict/ImageProcessing"));
-		interpreter.RunAllTestsInPackage(await repos.LoadStrictPackage("Strict/Language"));
-		interpreter.RunAllTestsInPackage(await repos.LoadStrictPackage("Strict/Examples"));
+		var strict = await repos.LoadStrictPackage();
+		var fullInterpreter = new TestInterpreter(strict);
+		fullInterpreter.RunAllTestsInPackage(await repos.LoadStrictPackage());
+		fullInterpreter.RunAllTestsInPackage(await repos.LoadStrictPackage("Strict/Math"));
+		fullInterpreter.RunAllTestsInPackage(await repos.LoadStrictPackage("Strict/ImageProcessing"));
+		fullInterpreter.RunAllTestsInPackage(await repos.LoadStrictPackage("Strict/Language"));
+		fullInterpreter.RunAllTestsInPackage(await repos.LoadStrictPackage("Strict/Examples"));
 	}
 
 	//ncrunch: no coverage start

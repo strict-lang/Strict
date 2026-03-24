@@ -111,16 +111,16 @@ internal sealed class ForEvaluator(Interpreter interpreter)
 		{
 			var sum = 0.0;
 			if (results != null)
-				for (var i = 0; i < results.Count; i++)
-					sum += results[i].Number;
+				for (var index = 0; index < results.Count; index++)
+					sum += results[index].Number;
 			return new ValueInstance(interpreter.numberType, sum);
 		}
 		if (ctx.Method.ReturnType.IsBoolean)
 		{
 			var any = false;
 			if (results != null)
-				for (var i = 0; i < results.Count; i++)
-					if (results[i].Boolean)
+				for (var index = 0; index < results.Count; index++)
+					if (results[index].Boolean)
 					{
 						any = true;
 						break;
