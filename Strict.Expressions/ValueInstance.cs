@@ -360,6 +360,9 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 			if (intValue == -1)
 				return "-1";
 		}
+		var absoluteValue = Math.Abs(number);
+		if (absoluteValue >= 10_000_000 || (absoluteValue > 0 && absoluteValue <= 1e-9))
+			return number.ToString("0.###############e0", System.Globalization.CultureInfo.InvariantCulture);
 		return number.ToString(System.Globalization.CultureInfo.InvariantCulture);
 	}
 
