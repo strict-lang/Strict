@@ -161,6 +161,14 @@ public sealed class BinaryTests : TestExpressions
 	}
 
 	[Test]
+	public void BinaryExpressionConvertedToNumbersKeepsOuterParentheses()
+	{
+		var expression = ParseExpression("((\"1\", \"2\") + (3, 4)) to Numbers is (1, 2, 3, 4)");
+		Assert.That(expression.ToString(),
+			Is.EqualTo("((\"1\", \"2\") + (3, 4)) to Numbers is (1, 2, 3, 4)"));
+	}
+
+	[Test]
 	public void InInsideTextLiteralIsNotTreatedAsOperator() =>
 		ParseAndCheckOutputMatchesInput("\"100C in Fahrenheit: \" + \"212\"",
 			CreateBinary(new Text(method, "100C in Fahrenheit: "), BinaryOperator.Plus,

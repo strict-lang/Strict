@@ -51,6 +51,7 @@ public sealed class GrammarTests
 	[TestCase("Reverse Range\n\tLength > 0 then Range(ExclusiveEnd - 1, Start - 1) else Range(ExclusiveEnd + 1, Start + 1)")]
 	[TestCase("to Text\n\tto Text is \"\tat Stacktrace.to in Base\\Stacktrace.strict:line 7\"")]
 	[TestCase("+(other) Text\n\t+(\"more\") is \"more\"")]
+	[TestCase("+(other) List\n\t(1) + (\"Hi\") is Error(\"Cannot downcast Text to Number for list: \\\"Hi\\\"\")")]
 	[TestCase("to Number\n\t\"1e10\" to Number is 1e10")]
 	public void ParsesValidStrictCode(string code)
 	{

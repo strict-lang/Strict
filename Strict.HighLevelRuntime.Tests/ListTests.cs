@@ -107,6 +107,15 @@ public sealed class ListTests
 	}
 
 	[Test]
+	public void AddTextListToNumberListReturnsDowncastError()
+	{
+		using var type = CreateType(nameof(AddTextListToNumberListReturnsDowncastError), "has number",
+			"Run Error", "\t(1) + (\"Hi\")");
+		Assert.That(interpreter.Execute(type.Methods[0], interpreter.noneInstance, []).ToString(),
+			Is.EqualTo("Cannot downcast Text to Number for list: \"Hi\""));
+	}
+
+	[Test]
 	public void RunListIn()
 	{
 		using var type = new Type(TestPackage.Instance,

@@ -58,6 +58,18 @@ public sealed class ErrorTests : TestExpressions
 	}
 
 	[Test]
+	public void ExplicitErrorMessageKeepsOriginalText()
+	{
+		using var programType = new Type(TestPackage.Instance,
+			new TypeLines(nameof(ExplicitErrorMessageKeepsOriginalText),
+				"has number",
+				"Run",
+				"\tError(\"Cannot downcast Texts to fit to Numbers\")")).ParseMembersAndMethods(new MethodExpressionParser());
+		Assert.That(programType.Methods[0].GetBodyAndParseIfNeeded().ToString(),
+			Is.EqualTo("Error(\"Cannot downcast Texts to fit to Numbers\")"));
+	}
+
+	[Test]
 	public void ErrorCanAddDetails()
 	{
 		using var programType = new Type(TestPackage.Instance,

@@ -109,7 +109,7 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 				return Error(ListsHaveDifferentDimensions, ctx, call);
 			return op switch
 			{
-				BinaryOperator.Plus => CombineLists(left, right.List.Items),
+				BinaryOperator.Plus => CombineLists(left, right.List.Items, ctx, call),
 				BinaryOperator.Minus => SubtractLists(left, right.List.Items),
 				BinaryOperator.Multiply => MultiplyLists(left.List.ReturnType, interpreter.numberType,
 					left.List.Items, right.List.Items),
@@ -185,18 +185,14 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 		};
 	}
 
-	private static ValueInstance CombineLists(ValueInstance leftList, List<ValueInstance> rightList)
+	private ValueInstance CombineLists(ValueInstance leftList, List<ValueInstance> rightList,
+		ExecutionContext ctx, MethodCall call)
 	{
-		var isLeftText = leftList.List.ReturnType is GenericTypeImplementation
-		{
-			Generic.Name: Type.List
-		} list && list.ImplementationTypes[0].IsText;
+		var leftItemType = leftList.List.ReturnType.GetFirstImplementation();
 		if (leftList.IsMutable)
 		{
 			foreach (var item in rightList)
-				leftList.List.Items.Add(isLeftText && !item.IsText
-					? new ValueInstance(item.ToExpressionCodeString())
-					: item);
+				leftList.List.Items.Add(RightItemForCombineLists(leftItemType, item, ctx, call));
 			return leftList;
 		}
 		var combined = new ValueInstance[leftList.List.Items.Count + rightList.Count];
@@ -204,10 +200,20 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 		foreach (var item in leftList.List.Items)
 			combined[itemIndex++] = item;
 		foreach (var item in rightList)
-			combined[itemIndex++] = isLeftText && !item.IsText
-				? new ValueInstance(item.ToExpressionCodeString())
-				: item;
+			combined[itemIndex++] = RightItemForCombineLists(leftItemType, item, ctx, call);
 		return new ValueInstance(leftList.List.ReturnType, combined);
+	}
+
+	private ValueInstance RightItemForCombineLists(Type leftItemType, ValueInstance item,
+		ExecutionContext ctx, MethodCall call)
+	{
+		if (leftItemType.IsText && !item.IsText)
+			return new ValueInstance(item.ToExpressionCodeString());
+		if (leftItemType.IsNumber && (item.IsText || item.IsPrimitiveType(interpreter.characterType)))
+			return double.TryParse(item.ToExpressionCodeString(), out var itemNumber)
+				? new ValueInstance(leftItemType, itemNumber)
+				: Error("Cannot downcast Text to Number for list: " + item, ctx, call);
+		return item;
 	}
 
 	private static ValueInstance SubtractLists(ValueInstance leftList, List<ValueInstance> rightList)

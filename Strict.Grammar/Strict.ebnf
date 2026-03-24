@@ -1,6 +1,7 @@
 NUMBER				:= '-'? [0-9]+ ('.' [0-9]+)? ([eE] ('+' | '-')? [0-9]+)?
 STRINGCHAR		:= [a-zA-Z0-9 .,;:!?+*/=<>()_^%&|~@#$'-]
-STRING				:= '"' (STRINGCHAR | TAB | '\\')* '"'
+ESCAPEDCHAR	:= '\\' ('"' | '\\' | 't' | 'n' | 'r')
+STRING				:= '"' (ESCAPEDCHAR | STRINGCHAR | TAB | '\\')* '"'
 LF						:= '\n'
 SPACE					:= ' '
 TAB 					:= '\t'

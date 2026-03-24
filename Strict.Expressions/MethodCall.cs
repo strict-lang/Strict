@@ -194,14 +194,10 @@ public class MethodCall : ConcreteExpression
 		if (arguments[0] is Value { ReturnType.Name: Type.Text } textValue)
 			return
 			[
-				new Value(body.Method.GetType(nameof(Type.Name)), textValue.Data.ToString()),
+				new Value(body.Method.GetType(nameof(Type.Name)), textValue.Data.Text),
 				CreateListFromMethodCall(body, Type.Stacktrace, CreateStacktraces(body))
 			];
-		arguments =
-		[
-			CreateFromMethodCall(body, fromType, []),
-			arguments[0]
-		];
+		arguments = [CreateFromMethodCall(body, fromType, []), arguments[0]];
 		fromType = fromType.GetType(Type.ErrorWithValue).
 			GetGenericImplementation(arguments[1].ReturnType);
 		return arguments;
@@ -252,11 +248,22 @@ public class MethodCall : ConcreteExpression
 			: ReturnType is GenericTypeImplementation { Generic.Name: Type.ErrorWithValue }
 				? Arguments[0] + "(" + Arguments[1] + ")"
 				: ReturnType.IsError
-					? Type.Error
+					? FormatErrorConstructor()
 					: Method.Name == Method.From &&
 					ReturnType is GenericTypeImplementation { Generic.Name: Type.Dictionary }
 						? FormatDictionaryConstructor()
 						: $"{GetProperMethodName()}{Arguments.ToBrackets()}";
+
+	private string FormatErrorConstructor()
+	{
+		if (Arguments.Count != 2 || !Arguments[0].ReturnType.IsText)
+			return Type.Error;
+		var errorText = Arguments[0].ToString();
+		return errorText.Length > 1 && errorText[0] == '"' && errorText[^1] == '"' &&
+			!errorText[1..^1].IsWord()
+			? $"{Type.Error}({Arguments[0]})"
+			: Type.Error;
+	}
 
 	public override bool Equals(Expression? other) =>
 		ReferenceEquals(this, other) ||
@@ -268,8 +275,8 @@ public class MethodCall : ConcreteExpression
 	{
 		if (Arguments.Count != otherArguments.Count)
 			return false; //ncrunch: no coverage
-		for (var i = 0; i < Arguments.Count; i++)
-			if (!Arguments[i].Equals(otherArguments[i]))
+		for (var index = 0; index < Arguments.Count; index++)
+			if (!Arguments[index].Equals(otherArguments[index]))
 				return false; //ncrunch: no coverage
 		return true;
 	}

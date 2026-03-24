@@ -8,7 +8,8 @@ public sealed class To(Expression left, Method operatorMethod, Type conversionTy
 {
 	public Type ConversionType { get; } = conversionType;
 	public override bool IsConstant => Instance!.IsConstant;
-	public override string ToString() => $"{Instance} {Method.Name} {ConversionType.ToCodeString()}";
+	public override string ToString() =>
+		$"{AddNestedBracketsIfNeeded(Instance!)} {Method.Name} {ConversionType.ToCodeString()}";
 
 	public static Expression Parse(Body body, ReadOnlySpan<char> text, Expression left)
 	{

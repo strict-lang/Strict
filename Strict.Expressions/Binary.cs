@@ -118,6 +118,17 @@ public sealed class Binary(Expression left, Method operatorMethod, Expression[] 
 			!left.ReturnType.IsList && !left.ReturnType.IsDictionary &&
 			right.ReturnType.IsText && !HasMatchingPlusForText(left, right))
 			return BuildTextConcatenation(left, right);
+		if (operatorToken is BinaryOperator.Plus && left.ReturnType.IsList && right.ReturnType.IsList)
+			try
+			{
+				return new Binary(left, left.ReturnType.GetMethod(operatorToken, [right]), [right]);
+			}
+			catch (Language.Type.ArgumentsDoNotMatchMethodParameters)
+			{
+				return new Binary(left,
+					left.ReturnType.AvailableMethods[operatorToken].First(method => method.Parameters.Count == 1 &&
+						method.Parameters[0].Type.IsList), [right]);
+			}
 		return new Binary(left, left.ReturnType.GetMethod(operatorToken, [right]), [right]);
 	}
 

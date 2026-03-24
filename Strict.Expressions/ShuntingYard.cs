@@ -27,7 +27,7 @@ public sealed class ShuntingYard
 			PutSingleCharacterTokenIntoStacks(tokenRange);
 		else if (input.AsSpan()[tokenRange].IsMultiCharacterOperator())
 		{
-      ApplyHigherOrEqualPrecedenceOperators(GetPrecedence(input.AsSpan()[tokenRange]));
+			ApplyHigherOrEqualPrecedenceOperators(GetPrecedence(input.AsSpan()[tokenRange]));
 			operators.Push(tokenRange);
 		}
 		else
@@ -64,8 +64,7 @@ public sealed class ShuntingYard
 	private void ApplyHigherOrEqualPrecedenceOperators(int precedence = 0)
 	{
 		while (operators.Count > 0)
-			if (!IsOpeningBracket(precedence) &&
-        GetTopOperatorPrecedence() >= precedence)
+			if (!IsOpeningBracket(precedence) && GetTopOperatorPrecedence() >= precedence)
 				AddOperatorToOutput();
 			else
 				return;
@@ -74,7 +73,7 @@ public sealed class ShuntingYard
 	private int GetTopOperatorPrecedence()
 	{
 		var token = input.AsSpan()[operators.Peek()];
-    return token.IsNot() && IsNotPartOfIsNot
+		return token.IsNot() && IsNotPartOfIsNot
 			? BinaryOperator.GetPrecedence(token)
 			: GetPrecedence(token);
 	}

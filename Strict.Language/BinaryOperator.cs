@@ -123,7 +123,7 @@ public static class BinaryOperator
 			{
 				'a' => 6, // and
 				'x' => 5, // xor
-				_ => 3 // not
+				_ => 3 // not (binary is not is 3, unary is 15, see ShuntingYard)
 			},
 			_ => GetPrecedence(token[0])
 		};
