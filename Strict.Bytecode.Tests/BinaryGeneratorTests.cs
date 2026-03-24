@@ -59,11 +59,10 @@ public sealed class BinaryGeneratorTests : TestBytecode
 		var packageName = nameof(Strict) + Context.ParentSeparator + "ImageProcessing";
 		using var imageProcessingPackage = await repos.LoadStrictPackage(packageName);
 		var adjustBrightness = imageProcessingPackage.GetType("AdjustBrightness");
-		var method = adjustBrightness.FindMethod(Method.Run, [])!;
-		var call = new MethodCall(method);
+		var call = new MethodCall(adjustBrightness.FindMethod(Method.Run, [])!);
 		var binary = new BinaryGenerator(call).Generate();
 		Assert.That(binary.MethodsPerType.Keys.Any(fullName =>
-			fullName.EndsWith("/Size", StringComparison.Ordinal)), Is.True,
+				fullName.EndsWith("/Size", StringComparison.Ordinal)), Is.True,
 			$"Loaded types: {string.Join(", ", binary.MethodsPerType.Keys)}");
 	}
 

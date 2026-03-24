@@ -301,7 +301,6 @@ public class Type : Context, IDisposable
 			return field;
 		}
 	}
-
 	/// <summary>
 	/// Everything internally is Any, cannot be specified as member, parameter, or variable.
 	/// </summary>
@@ -383,7 +382,7 @@ public class Type : Context, IDisposable
 
 	public string FilePath =>
 		Path.GetFullPath(Path.Combine(Path.GetFileName(Package.FolderPath).StartsWith(
-			Package.TestLanguageConversion)
+				Package.TestLanguageConversion, StringComparison.Ordinal)
 				? Path.Combine(((Package)Package.Parent).FolderPath, "Language")
 				: Package.FolderPath,
 			(this is GenericTypeImplementation genericType
@@ -407,18 +406,14 @@ public class Type : Context, IDisposable
 	{
 		public GenericTypesCannotBeUsedDirectlyUseImplementation(Type type, string extraInformation,
 			string? methodName = null, IReadOnlyList<Expression>? arguments = null)
-			: base(BuildMessage(type, extraInformation, methodName, arguments))
-		{
-		}
+			: base(BuildMessage(type, extraInformation, methodName, arguments)) { }
 
 		public GenericTypesCannotBeUsedDirectlyUseImplementation(
 			GenericTypesCannotBeUsedDirectlyUseImplementation innerException, string calledFrom)
-			: base(innerException.Message + ", Called from: " + calledFrom, innerException)
-		{
-		}
+			: base(innerException.Message + ", Called from: " + calledFrom, innerException) { }
 
 		private static string BuildMessage(Type type, string extraInformation, string? methodName,
-			IReadOnlyList<Expression>? arguments)
+			IReadOnlyCollection<Expression>? arguments)
 		{
 			var message = "Lookup context type: " + type + ", Reason: " + extraInformation;
 			if (string.IsNullOrEmpty(methodName))
@@ -815,5 +810,9 @@ public class Type : Context, IDisposable
 	}
 
 	public Type GetFirstImplementation() => ((GenericTypeImplementation)this).ImplementationTypes[0];
-	public string ToCodeString() => IsList ? GetFirstImplementation().Name.Pluralize() : Name;
+
+	public string ToCodeString() =>
+		IsList
+			? GetFirstImplementation().Name.Pluralize()
+			: Name;
 }

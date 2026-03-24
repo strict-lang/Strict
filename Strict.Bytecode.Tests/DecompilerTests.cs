@@ -98,19 +98,19 @@ public sealed class DecompilerTests : TestBytecode
 	{
 		var parser = new MethodExpressionParser();
 		var package = new Package(TestPackage.Instance, "BConstTest");
-		var type = new Type(package, new TypeLines("Score",
-			["constant Minimum = 0", "constant Maximum = 100", "has value Number",
-				"Run", "\tMinimum is 0", "\tMaximum is 100"])).ParseMembersAndMethods(parser);
-		var runMethods = type.Methods.Where(method => method.Name == Method.Run).ToArray();
+		var scoreType = new Type(package, new TypeLines("Score",
+			"constant Minimum = 0", "constant Maximum = 100", "has value Number", "Run", "\tMinimum " +
+			"is 0", "\tMaximum is 100")).ParseMembersAndMethods(parser);
+		var runMethods = scoreType.Methods.Where(m => m.Name == Method.Run).ToArray();
 		var binary = BinaryGenerator.GenerateFromRunMethods(runMethods[0], runMethods);
 		var outputFolder = DecompileToTemp(binary, "Score");
 		try
 		{
 			var content = File.ReadAllText(Path.Combine(outputFolder, "Score.strict"));
-			Assert.That(content, Does.Contain("const Minimum = 0"), "Constant must use const keyword with value");
-			Assert.That(content, Does.Contain("const Maximum = 100"), "Constant must use const keyword with value");
-			Assert.That(content, Does.Not.Contain("has Minimum"), "Constants must not use has keyword");
-			Assert.That(content, Does.Contain("has value Number"), "Regular members must still use has");
+			Assert.That(content, Does.Contain("const Minimum = 0"));
+			Assert.That(content, Does.Contain("const Maximum = 100"));
+			Assert.That(content, Does.Not.Contain("has Minimum"));
+			Assert.That(content, Does.Contain("has value Number"));
 		}
 		finally
 		{

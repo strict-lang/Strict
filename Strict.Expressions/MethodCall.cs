@@ -45,7 +45,7 @@ public class MethodCall : ConcreteExpression
 			return true;
 		}
 	}
-	
+
 	protected string AddNestedBracketsIfNeeded(Expression child, int addPrecedenceForNot = 0) =>
 		child is MethodCall binaryOrUnary && BinaryOperator.GetPrecedence(binaryOrUnary.Method.Name) <
 		BinaryOperator.GetPrecedence(Method.Name) + addPrecedenceForNot || child is If
@@ -300,8 +300,8 @@ public class MethodCall : ConcreteExpression
 		var errorText = Arguments[0].ToString();
 		return errorText.Length > 1 && errorText[0] == '"' && errorText[^1] == '"' &&
 			!errorText[1..^1].IsWord()
-			? $"{Type.Error}({Arguments[0]})"
-			: Type.Error;
+				? $"{Type.Error}({Arguments[0]})"
+				: Type.Error;
 	}
 
 	public override bool Equals(Expression? other) =>

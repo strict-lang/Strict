@@ -8,6 +8,7 @@ public sealed class To(Expression left, Method operatorMethod, Type conversionTy
 {
 	public Type ConversionType { get; } = conversionType;
 	public override bool IsConstant => Instance!.IsConstant;
+
 	public override string ToString() =>
 		$"{AddNestedBracketsIfNeeded(Instance!)} {Method.Name} {ConversionType.ToCodeString()}";
 
@@ -23,9 +24,9 @@ public sealed class To(Expression left, Method operatorMethod, Type conversionTy
 		{
 			method = FindConversionMethod(left.ReturnType.GetFirstImplementation(),
 				conversionType.GetFirstImplementation());
-			if (method == null)
-				throw new ConversionTypeNotFound(body, text.ToString());
-			return new To(left, method, conversionType);
+			return method == null
+				? throw new ConversionTypeNotFound(body, text.ToString())
+				: new To(left, method, conversionType);
 		}
 		if (method.ReturnType.Name != conversionType.Name)
 			method = FindConversionMethod(left.ReturnType, conversionType) ?? method;

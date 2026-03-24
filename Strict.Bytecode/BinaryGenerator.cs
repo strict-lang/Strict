@@ -56,8 +56,7 @@ public sealed class BinaryGenerator
 	private Type ReturnType { get; } //TODO: stupid, remove
 	private int conditionalId; //TODO: a bit strange
 	private int forResultId;
-
-	public BinaryExecutable Generate() =>	Generate(entryTypeFullName, Expressions, ReturnType);
+	public BinaryExecutable Generate() => Generate(entryTypeFullName, Expressions, ReturnType);
 
 	public static BinaryExecutable GenerateFromRunMethods(Method preferredEntryMethod,
 		IReadOnlyList<Method> runMethods)
@@ -594,13 +593,12 @@ public sealed class BinaryGenerator
 				: GetBinaryTypeName(type, entryType), StringComparer.Ordinal);
 		foreach (var type in orderedTypes)
 		{
-			var members = type.Members
-				.Where(member => !member.IsConstant || member.InitialValue != null)
-				.Select(member => new BinaryMember(member.Name, GetBinaryTypeName(member.Type, entryType),
-					member.IsConstant && member.InitialValue is Value val
-						? new SetInstruction(val.Data, Register.R0)
-						: null))
-				.ToList();
+			var members = type.Members.
+				Where(member => !member.IsConstant || member.InitialValue != null).Select(member =>
+					new BinaryMember(member.Name, GetBinaryTypeName(member.Type, entryType),
+						member.IsConstant && member.InitialValue is Value val
+							? new SetInstruction(val.Data, Register.R0)
+							: null)).ToList();
 			binary.AddType(GetBinaryTypeName(type, entryType), members,
 				methodsByType.TryGetValue(type.FullName, out var methodGroups)
 					? methodGroups
@@ -726,10 +724,8 @@ public sealed class BinaryGenerator
 	}
 
 	private static bool IsStrictBaseType(Type type, Type entryType) =>
-		type.FullName == entryType.FullName
-			? false
-			: type.Package.Name == nameof(Strict) ||
-				entryType.Package.Name == "TestPackage" && type.Package.Name == "TestPackage";
+		type.FullName != entryType.FullName && (type.Package.Name == nameof(Strict) ||
+			entryType.Package.Name == "TestPackage" && type.Package.Name == "TestPackage");
 
 	private Dictionary<string, Dictionary<string, List<BinaryMethod>>> CompileMethodsFromExpressions(
 		string thisEntryTypeFullName, IReadOnlyList<Expression> entryExpressions, Type runReturnType)

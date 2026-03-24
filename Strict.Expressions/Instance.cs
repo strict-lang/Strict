@@ -9,7 +9,7 @@ public sealed class Instance(Type type, int lineNumber = 0, bool isMutable = fal
 	public static Expression Parse(Body body, Method method)
 	{
 		var isMutable = method.ReturnType.IsMutable;
-   var valueInstance = new Instance(GetUsableType((Type)method.Parent), body.CurrentFileLineNumber,
+		var valueInstance = new Instance(GetUsableType((Type)method.Parent), body.CurrentFileLineNumber,
 			isMutable);
 		body.AddVariable(Type.ValueLowercase, valueInstance, isMutable);
 		return valueInstance;

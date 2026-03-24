@@ -163,8 +163,8 @@ public sealed class MethodExpressionParserTests : TestExpressions
 	public async Task ParseListToTextMethodFromBasePackage()
 	{
 		var basePackage = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
-		var listToText = basePackage.GetType(Type.List).Methods.Single(method =>
-			method.Name == BinaryOperator.To && method.ReturnType.IsText);
+		var listToText = basePackage.GetType(Type.List).Methods.Single(m =>
+			m.Name == BinaryOperator.To && m.ReturnType.IsText);
 		Assert.That(() => listToText.GetBodyAndParseIfNeeded(), Throws.Nothing);
 	}
 
@@ -172,19 +172,19 @@ public sealed class MethodExpressionParserTests : TestExpressions
 	public async Task ParseAllStrictBasePackageCode()
 	{
 		var basePackage = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
-		foreach (var type in basePackage.Types)
-			foreach (var method in type.Value.Methods)
-				if (!method.IsTrait)
-					Assert.That(() => method.GetBodyAndParseIfNeeded(), Throws.Nothing,
-						$"Failed to parse method {method.Name} in type {type.Key}");
+		foreach (var baseType in basePackage.Types)
+		foreach (var baseMethod in baseType.Value.Methods)
+			if (!baseMethod.IsTrait)
+				Assert.That(() => baseMethod.GetBodyAndParseIfNeeded(), Throws.Nothing,
+					$"Failed to parse method {baseMethod.Name} in type {baseType.Key}");
 	}
 
 	[Test]
 	public async Task GenericListLookupErrorShouldIncludeMethodCallChainContext()
 	{
 		var basePackage = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
-		var listPlus = basePackage.GetType(Type.List).Methods.Single(method =>
-			method.Name == BinaryOperator.Plus && method.Parameters[0].Type.IsList);
+		var listPlus = basePackage.GetType(Type.List).Methods.Single(m =>
+			m.Name == BinaryOperator.Plus && m.Parameters[0].Type.IsList);
 		var parsingFailed = Assert.Throws<ParsingFailed>(() => listPlus.GetBodyAndParseIfNeeded());
 		Assert.That(parsingFailed?.InnerException,
 			Is.InstanceOf<Type.GenericTypesCannotBeUsedDirectlyUseImplementation>());
@@ -197,8 +197,8 @@ public sealed class MethodExpressionParserTests : TestExpressions
 	public async Task GenericLookupErrorShouldShowPlusOperandTypesForListPlusTestCase()
 	{
 		var basePackage = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
-		var listPlus = basePackage.GetType(Type.List).Methods.Single(method =>
-			method.Name == BinaryOperator.Plus && method.Parameters[0].Type.IsList);
+		var listPlus = basePackage.GetType(Type.List).Methods.Single(m =>
+			m.Name == BinaryOperator.Plus && m.Parameters[0].Type.IsList);
 		var parsingFailed = Assert.Throws<ParsingFailed>(() => listPlus.GetBodyAndParseIfNeeded());
 		Assert.That(parsingFailed?.InnerException,
 			Is.InstanceOf<Type.GenericTypesCannotBeUsedDirectlyUseImplementation>());

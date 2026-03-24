@@ -204,8 +204,9 @@ public sealed class ListTests
 		};
 		var method = typeof(MethodCallEvaluator).GetMethod("CombineLists",
 			System.Reflection.BindingFlags.NonPublic | BindingFlags.Instance)!;
-		var result = (ValueInstance)(method.Invoke(new MethodCallEvaluator(null!),
-			new object[] { leftList, rightList, null!, null! })!);
+		var result = (ValueInstance)method.Invoke(new MethodCallEvaluator(null!), [
+			leftList, rightList, null!, null!
+		])!;
 		Assert.That(ReferenceEquals(leftList.List.Items, result.List.Items), Is.True);
 		Assert.That(result.List.Items.Count, Is.EqualTo(4));
 	}

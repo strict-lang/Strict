@@ -34,8 +34,10 @@ public sealed class ToTests
 	{
 		using var type = CreateType(nameof(EvaluateListOfTextsToNumbers), "has number", "Run Numbers",
 			"\t(\"1\", \"2\") to Numbers");
-		Assert.That(interpreter.Execute(type.Methods.Single(method => method.Name == Method.Run),
-			interpreter.noneInstance, []).List.Items, Is.EqualTo(new[]
+		Assert.That(
+			interpreter.Execute(type.Methods.Single(method => method.Name == Method.Run),
+				interpreter.noneInstance, []).List.Items,
+			Is.EqualTo(new[]
 			{
 				new ValueInstance(type.GetType(Type.Number), 1),
 				new ValueInstance(type.GetType(Type.Number), 2)

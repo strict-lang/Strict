@@ -28,7 +28,7 @@ internal sealed class ToEvaluator(Interpreter interpreter)
 				return true;
 			}
 			if (conversionType.IsNumber && double.TryParse(value.Text, CultureInfo.InvariantCulture,
-					out var parsedNumber))
+				out var parsedNumber))
 			{
 				convertedValue = new ValueInstance(conversionType, parsedNumber);
 				return true;

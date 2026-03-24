@@ -1,5 +1,3 @@
-using static Strict.Language.Member;
-
 namespace Strict.Language.Tests;
 
 /// <summary>

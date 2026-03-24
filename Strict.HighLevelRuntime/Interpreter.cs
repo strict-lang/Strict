@@ -234,23 +234,23 @@ public class Interpreter
 
 	public sealed class StackOverflowCallingItselfWithSameInstanceAndArguments(Method method,
 		ValueInstance? instance, IReadOnlyList<ValueInstance> args, ExecutionContext parentContext)
-   : ExecutionFailed(method, "Stack overflow detected while calling " +
+		: ExecutionFailed(method, "Stack overflow detected while calling " +
 			FormatCall(method, instance, args) + ". Matching parent call chain: " +
 			FormatParentChain(parentContext))
 	{
 		private static string FormatCall(Method method, ValueInstance? instance,
-			IReadOnlyList<ValueInstance> args) => method + ", instance=" +
-			(instance?.ToString() ?? Type.None) + ", arguments=" + args.ToBrackets();
+			IReadOnlyList<ValueInstance> args) =>
+			method + ", instance=" + (instance?.ToString() ?? Type.None) + ", arguments=" +
+			args.ToBrackets();
 
 		private static string FormatParentChain(ExecutionContext context)
 		{
 			var callChain = "";
 			for (var current = context; current != null; current = current.Parent)
 				callChain += (callChain.Length == 0
-					? ""
-					: " -> ") + current.Method + ", instance=" +
-					(current.This?.ToString() ?? Type.None) + ", arguments=" +
-					FormatArguments(current.Method, current.Variables);
+						? ""
+						: " -> ") + current.Method + ", instance=" + (current.This?.ToString() ?? Type.None) +
+					", arguments=" + FormatArguments(current.Method, current.Variables);
 			return callChain;
 		}
 
@@ -445,11 +445,12 @@ public class Interpreter
 	private ValueInstance EvaluateVariable(string name, ExecutionContext context)
 	{
 		Statistics.VariableCallCount++;
-		return context.Find(name, Statistics) ?? (name == Type.ValueLowercase
-			? context.This
-			: name == Type.OuterLowercase
-				? context.Parent!.This
-				: null) ?? throw new ExecutionContext.VariableNotFound(name, context.Type, context.This);
+		return context.Find(name, Statistics) ?? name switch
+		{
+			Type.ValueLowercase => context.This,
+			Type.OuterLowercase => context.Parent!.This,
+			_ => null
+		} ?? throw new ExecutionContext.VariableNotFound(name, context.Type, context.This);
 	}
 
 	public ValueInstance EvaluateMemberCall(MemberCall member, ExecutionContext ctx)

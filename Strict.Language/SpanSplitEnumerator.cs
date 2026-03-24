@@ -7,7 +7,7 @@ public ref struct SpanSplitEnumerator(ReadOnlySpan<char> input, char splitter,
 	private readonly ReadOnlySpan<char> input = input;
 	private int offset = 0;
 	private int bracketDepth = 0;
-  private bool isInsideText = false;
+	private bool isInsideText = false;
 	public ReadOnlySpan<char> Current { get; private set; } = default;
 	public readonly SpanSplitEnumerator GetEnumerator() => this;
 
@@ -28,8 +28,7 @@ public ref struct SpanSplitEnumerator(ReadOnlySpan<char> input, char splitter,
 	private bool? GetWordBeforeSplitterAndTrackBrackets()
 	{
 		for (var index = offset; index < input.Length; index++)
-		{
-      if (input[index] == '"' && !IsEscapedQuote(index))
+			if (input[index] == '"' && !IsEscapedQuote(index))
 			{
 				if (isInsideText && index + 1 < input.Length && input[index + 1] == '"')
 					index++;
@@ -38,12 +37,11 @@ public ref struct SpanSplitEnumerator(ReadOnlySpan<char> input, char splitter,
 			}
 			else if (!isInsideText && input[index] == '(')
 				bracketDepth++;
-     else if (!isInsideText && input[index] == ')')
+			else if (!isInsideText && input[index] == ')')
 				bracketDepth--;
-      else if (!isInsideText && input[index] == splitter &&
+			else if (!isInsideText && input[index] == splitter &&
 				(splitter != ',' || bracketDepth == 0))
 				return GetWordBeforeSplitter(index);
-		}
 		return null;
 	}
 

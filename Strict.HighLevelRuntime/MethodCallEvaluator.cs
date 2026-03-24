@@ -102,7 +102,7 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 		{
 			return op == BinaryOperator.Plus
 				? right.IsPrimitiveType(interpreter.characterType)
-					?	new ValueInstance(left.Text + right.ToExpressionCodeString())
+					? new ValueInstance(left.Text + right.ToExpressionCodeString())
 					: new ValueInstance(left.Text + right.Number)
 				: throw new NotSupportedException("Only + operator is supported for Text+Number, got: " +
 					op);
@@ -159,6 +159,7 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 		if (typeInstance.TryGetValue(Type.ElementsLowercase, out var elements))
 			return elements.IsList
 				? elements
+				// ReSharper disable TailRecursiveCall
 				: ConvertToListValue(elements);
 		if (typeInstance.TryGetValue(Type.IteratorLowercase, out var iterator))
 			return iterator.IsList

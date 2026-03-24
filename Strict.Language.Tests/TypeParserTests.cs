@@ -68,7 +68,7 @@ public sealed class TypeParserTests
 			Throws.InstanceOf<TypeParser.TrivialEndlessSelfConstructionDetected>());
 
 	[Test]
- public void SelfRecursiveCallWithSameArgumentsDirectCall()
+	public void SelfRecursiveCallWithSameArgumentsDirectCall()
 	{
 		var exception = Assert.Throws<TypeParser.SelfRecursiveCallWithSameArgumentsDetected>(() =>
 			CreateType(nameof(SelfRecursiveCallWithSameArgumentsDirectCall),

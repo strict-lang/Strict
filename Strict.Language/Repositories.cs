@@ -186,11 +186,11 @@ public sealed class Repositories
 	private void InvalidateAllAvailableMethodsCaches()
 	{
 		foreach (var loadedPackage in loadedPackages)
-			foreach (var type in loadedPackage.Types.Values)
-				type.InvalidateAvailableMethodsCache();
+		foreach (var type in loadedPackage.Types.Values)
+			type.InvalidateAvailableMethodsCache();
 		foreach (var loadedPackage in loadedPackages)
-			foreach (var type in loadedPackage.Types.Values.ToList())
-				type.ReimplementGenericTypeMethods();
+		foreach (var type in loadedPackage.Types.Values.ToList())
+			type.ReimplementGenericTypeMethods();
 	}
 
 	private readonly List<Package> loadedPackages = [];

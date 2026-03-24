@@ -286,7 +286,7 @@ public class MethodExpressionParser : ExpressionParser
 					context = current.ReturnType;
 					continue;
 				}
-       var foundType = body.Method.FindType(inputText.ToString());
+				var foundType = body.Method.FindType(inputText.ToString());
 				if (foundType != null && !members.IsAtEnd)
 				{
 					context = foundType;
@@ -296,17 +296,19 @@ public class MethodExpressionParser : ExpressionParser
 			if (current != null)
 			{
 				var part = nestedInput[members.Current];
-				var partName = part.Contains('(') ? part[..part.IndexOf('(')] : part;
+				var partName = part.Contains('(')
+					? part[..part.IndexOf('(')]
+					: part;
 				if (partName.IsOperator())
 					throw new InvalidOperatorHere(body, partName.ToString());
 			}
 			var expression = nestedInput[members.Current].Contains('(')
-       ? current != null || context != body.Method.Type
+				? current != null || context != body.Method.Type
 					? ParseMethodCallOnContext(body, nestedInput[members.Current], context, current)
-					: TryParseMemberOrZeroOrOneArgumentMethodOrNestedCall(body, nestedInput[members.Current])
+					: TryParseMemberOrZeroOrOneArgumentMethodOrNestedCall(body,
+						nestedInput[members.Current])
 				: TryVariableOrValueOrParameterOrMemberOrMethodCall(context, current, body,
-					nestedInput[members.Current],
-					members.IsAtEnd
+					nestedInput[members.Current], members.IsAtEnd
 						? callArguments
 						: []);
 			current = expression ??
@@ -316,7 +318,7 @@ public class MethodExpressionParser : ExpressionParser
 		return ListCall.TryParse(body, current, callArguments);
 	}
 
- private Expression? ParseMethodCallOnContext(Body body, ReadOnlySpan<char> input,
+	private Expression? ParseMethodCallOnContext(Body body, ReadOnlySpan<char> input,
 		Context context, Expression? current)
 	{
 		var argStart = input.IndexOf('(');

@@ -148,9 +148,9 @@ public class Program
 	{
 		var projectFolder = GetProjectFolder(nameof(GenerateDirectoryGetFilesProgram));
 		using var program = new Type(package,
-				new TypeLines(nameof(GenerateDirectoryGetFilesProgram), "has App", "has logger", "Run",
-					"\tconstant directory = (\"Program.cs\")", "\tfor directory",
-					"\t\tlogger.Log(index)")).ParseMembersAndMethods(parser);
+			new TypeLines(nameof(GenerateDirectoryGetFilesProgram), "has App", "has logger", "Run",
+				"\tconstant directory = (\"Program.cs\")", "\tfor directory",
+				"\t\tlogger.Log(index)")).ParseMembersAndMethods(parser);
 		var generatedCode = generator.Generate(program).ToString()!;
 		Assert.That(GenerateNewConsoleAppAndReturnOutput(projectFolder, generatedCode),
 			Is.EqualTo("Program.cs" + Environment.NewLine));

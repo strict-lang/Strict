@@ -1,5 +1,3 @@
-using Microsoft.Diagnostics.Tracing.StackSources;
-
 namespace Strict.Language.Tests;
 
 /// <summary>

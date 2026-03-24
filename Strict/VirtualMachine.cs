@@ -152,6 +152,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		if (result != null)
 			Memory.Registers[invoke.Register] = result.Value;
 	}
+
 	//TODO: find all [.. with existing list and no changes, all those cases need to be removed, there is a crazy amount of those added (54 wtf)!
 	private IReadOnlyList<Instruction>? GetPrecompiledMethodInstructions(Method method) =>
 		executable.FindInstructions(method.Type, method) ??
@@ -399,6 +400,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			: memberType.IsBoolean
 				? new ValueInstance(memberType, false)
 				: memberType.IsMutable
+					// ReSharper disable once TailRecursiveCall
 					? CreateDefaultValue(memberType.GetFirstImplementation())
 					: new ValueInstance(memberType, 0);
 

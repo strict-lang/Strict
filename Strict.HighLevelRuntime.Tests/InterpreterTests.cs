@@ -316,9 +316,9 @@ public sealed class InterpreterTests
 	}
 
 	[Test]
-  public void StackOverflowMessageShowsCallDetails()
+	public void StackOverflowMessageShowsCallDetails()
 	{
-    using var t = CreateType(nameof(StackOverflowMessageShowsCallDetails),
+		using var t = CreateType(nameof(StackOverflowMessageShowsCallDetails),
 			"has number", "Recursive(other Number)", "\tRecursive(number)");
 		var exception = Assert.Throws<Interpreter.StackOverflowCallingItselfWithSameInstanceAndArguments>(() =>
 			interpreter.Execute(t.Methods.Single(m => m.Name == "Recursive"),
@@ -342,8 +342,8 @@ public sealed class InterpreterTests
 		var other = t.Methods.Single(m => m.Name == "Other");
 		var instance = new ValueInstance(t, [new ValueInstance(interpreter.numberType, 3.0)]);
 		var argument = new ValueInstance(interpreter.numberType, 1.0);
-		var grandParent = new ExecutionContext(t, repeat, instance);
-		grandParent.Variables["other"] = argument;
+		var grandParent =
+			new ExecutionContext(t, repeat, instance) { Variables = { ["other"] = argument } };
 		var parent = new ExecutionContext(t, other, instance, grandParent);
 		Assert.That(() => interpreter.Execute(repeat, instance, [argument], parent),
 			Throws.InstanceOf<Interpreter.StackOverflowCallingItselfWithSameInstanceAndArguments>());

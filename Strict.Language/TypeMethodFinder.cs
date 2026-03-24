@@ -48,14 +48,14 @@ internal class TypeMethodFinder(Type type)
 	{
 		if (!Type.AvailableMethods.TryGetValue(methodName, out var matchingMethods))
 			return null;
-   var lookupKey = (Type, methodName,
+		var lookupKey = (Type, methodName,
 			string.Join(", ", arguments.Select(argument => argument.ReturnType.FullName)));
 		var activeLookups = activeMethodLookups ??= [];
 		if (!activeLookups.Add(lookupKey))
 			return null;
 		try
 		{
-     if (arguments is [{ ReturnType.IsError: true }, _])
+			if (arguments is [{ ReturnType.IsError: true }, _])
 				return matchingMethods[0];
 			var typesOfArguments = arguments.Select(argument => argument.ReturnType).ToList();
 			var commonTypeOfArguments = TryGetSingleElementType(typesOfArguments);
@@ -250,7 +250,7 @@ internal class TypeMethodFinder(Type type)
 		if (methodParameterType.IsMutable)
 			methodParameterType = methodParameterType.GetFirstImplementation();
 		if (argumentType == methodParameterType || method.IsGeneric ||
-      IsArgumentImplementationTypeMatchParameterType(argumentType, methodParameterType) ||
+			IsArgumentImplementationTypeMatchParameterType(argumentType, methodParameterType) ||
 			AreGenericImplementationsCompatible(argumentType, methodParameterType))
 			return true;
 		if (methodParameterType is { IsText: false, IsEnum: true } &&
@@ -280,7 +280,7 @@ internal class TypeMethodFinder(Type type)
 			return false;
 		for (var index = 0; index < argumentImplementation.ImplementationTypes.Count; index++)
 			if (!argumentImplementation.ImplementationTypes[index].IsSameOrCanBeUsedAs(
-					parameterImplementation.ImplementationTypes[index]))
+				parameterImplementation.ImplementationTypes[index]))
 				return false;
 		return true;
 	}

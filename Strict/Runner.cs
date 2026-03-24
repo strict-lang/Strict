@@ -317,6 +317,7 @@ public sealed class Runner
 			targetType.Dispose();
 		}
 	}
+
 	//TODO: why do we care? just use BinaryExecutable.EntryPoint!
 	private BinaryMethod FindRunMethodForArguments(BinaryExecutable binary)
 	{
@@ -332,6 +333,7 @@ public sealed class Runner
 		throw new NotSupportedException("No Run method accepts " + ProgramArguments.Length +
 			" arguments.");
 	}
+
 	//TODO: overcomplicated
 	private IReadOnlyDictionary<string, ValueInstance>? BuildProgramArguments(
 		BinaryExecutable binary, BinaryMethod runMethod)
@@ -434,7 +436,8 @@ public sealed class Runner
 		}
 		var binary = await GetBinary();
 		if (ProgramArguments.Length > 0)
-		{//TODO: why do we have to do this here? shouldn't this be happening in generation?
+		{
+			//TODO: why do we have to do this here? shouldn't this be happening in generation?
 			var runMethod = FindRunMethodForArguments(binary);
 			binary.SetEntryPoint(GetRunMethodTypeFullName(binary, runMethod), Method.Run,
 				runMethod.parameters.Count, runMethod.ReturnTypeName);
