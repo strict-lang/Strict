@@ -131,7 +131,14 @@ public sealed class For(Expression[] customVariables, Expression iterator, Expre
 		var valueExpression = body.Method.ParseExpression(body,
 			GetVariableExpressionValue(body, line), true);
 		if (valueExpression.ReturnType.IsList)
-			valueExpression = new ListCall(valueExpression, new Number(body.Method, 0));
+		{
+			var listElementType = valueExpression.ReturnType is GenericTypeImplementation listType
+				? listType.ImplementationTypes[0]
+				: valueExpression.ReturnType;
+			valueExpression = listElementType.IsGeneric
+				? new Instance(listElementType, body.CurrentFileLineNumber)
+				: new ListCall(valueExpression, new Number(body.Method, 0));
+		}
 		innerBody.AddVariable(Type.ValueLowercase, valueExpression, true);
 	}
 
@@ -145,11 +152,18 @@ public sealed class For(Expression[] customVariables, Expression iterator, Expre
 			: knownIterableName;
 		var variable = body.FindVariable(iterableName)?.Type ??
 			body.Method.Type.FindMember(iterableName.ToString())?.Type;
-		return iterableName[^1] == ')'
-			? iterableName[1..iterableName.IndexOf(',')].ToString()
-			: variable is { IsIterator: true }
-				? $"{iterableName}(0)"
-				: $"{iterableName}";
+		if (iterableName[^1] == ')')
+			return iterableName[1..iterableName.IndexOf(',')].ToString();
+		if (variable is { IsIterator: true })
+		{
+			var isGenericIterator = variable.IsGeneric ||
+				variable is GenericTypeImplementation { ImplementationTypes.Count: > 0 } implementation &&
+				implementation.ImplementationTypes[0].IsGeneric;
+			return isGenericIterator
+				? iterableName.ToString()
+				: $"{iterableName}(0)";
+		}
+		return $"{iterableName}";
 	}
 
 	private static ReadOnlySpan<char> GetRangeExpression(ReadOnlySpan<char> line) =>
