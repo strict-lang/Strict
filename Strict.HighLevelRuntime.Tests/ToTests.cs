@@ -30,6 +30,19 @@ public sealed class ToTests
 	}
 
 	[Test]
+	public void EvaluateListOfTextsToNumbers()
+	{
+		using var type = CreateType(nameof(EvaluateListOfTextsToNumbers), "has number", "Run Numbers",
+			"\t(\"1\", \"2\") to Numbers");
+		Assert.That(interpreter.Execute(type.Methods.Single(method => method.Name == Method.Run),
+			interpreter.noneInstance, []).List.Items, Is.EqualTo(new[]
+			{
+				new ValueInstance(type.GetType(Type.Number), 1),
+				new ValueInstance(type.GetType(Type.Number), 2)
+			}));
+	}
+
+	[Test]
 	public void ToCharacterComparison()
 	{
 		using var t = CreateType(nameof(ToCharacterComparison), "has number", "Compare",

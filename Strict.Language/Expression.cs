@@ -48,8 +48,8 @@ public abstract class Expression(Type returnType, int lineNumber = 0, bool isMut
 	public string ToStringWithType()
 	{
 		var text = ToString();
-		return !text.EndsWith(ReturnType.ToString(), StringComparison.Ordinal)
-			? text + " " + ReturnType
+		return !text.EndsWith(ReturnType.ToCodeString(), StringComparison.Ordinal)
+			? text + " " + ReturnType.ToCodeString()
 			: text;
 	}
 }

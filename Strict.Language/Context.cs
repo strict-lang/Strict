@@ -1,5 +1,8 @@
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using static Strict.Language.NamedType;
+
+[assembly:InternalsVisibleTo("Strict.Expressions")]
 
 namespace Strict.Language;
 

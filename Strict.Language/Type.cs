@@ -282,11 +282,6 @@ public class Type : Context, IDisposable
 		}
 	}
 
-	public override Type? FindType(string name, Context? searchingFrom = null) =>
-		name == Name || name is Other or Outer || name == FullName
-			? this
-			: Package.FindType(name, searchingFrom ?? this);
-
 	/// <summary>
 	/// Everything internally is Any, cannot be specified as member, parameter, or variable.
 	/// </summary>
@@ -499,6 +494,12 @@ public class Type : Context, IDisposable
 					return true;
 		return false;
 	}
+
+	//TODO: this is separate from GetType and returns different results, this is faster, but we shouldn't have 2 ways of getting types!
+	public override Type? FindType(string name, Context? searchingFrom = null) =>
+		name == Name || name is Other or Outer || name == FullName
+			? this
+			: Package.FindType(name, searchingFrom ?? this);
 
 	/// <summary>
 	/// When two types are using in a conditional expression, i.e., then and else return types and
@@ -767,4 +768,5 @@ public class Type : Context, IDisposable
 	}
 
 	public Type GetFirstImplementation() => ((GenericTypeImplementation)this).ImplementationTypes[0];
+	public string ToCodeString() => IsList ? GetFirstImplementation().Name.Pluralize() : Name;
 }

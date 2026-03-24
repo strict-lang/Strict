@@ -112,7 +112,7 @@ public sealed class DictionaryTests : TestExpressions
 		Assert.That(() => dictionary.Methods[0].GetBodyAndParseIfNeeded(),
 			Throws.InnerException.InstanceOf<Type.ArgumentsDoNotMatchMethodParameters>().With.
 				InnerException.Message.Contains(
-					"Arguments: 4 TestPackage/Number, \"10\" TestPackage/Text do not match these " +
+					"Arguments: 4 Number, \"10\" Text do not match these " +
 					"TestPackage/Dictionary(Text, Boolean) method(s):\nAdd(key TestPackage/Text, " +
 					"mappedValue TestPackage/Boolean) Mutable(Dictionary(Text, Boolean))"));
 	}

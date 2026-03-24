@@ -8,36 +8,39 @@ public sealed class To(Expression left, Method operatorMethod, Type conversionTy
 {
 	public Type ConversionType { get; } = conversionType;
 	public override bool IsConstant => Instance!.IsConstant;
-	public override string ToString() => $"{Instance} {Method.Name} {ConversionType.Name}";
+	public override string ToString() => $"{Instance} {Method.Name} {ConversionType.ToCodeString()}";
 
 	public static Expression Parse(Body body, ReadOnlySpan<char> text, Expression left)
 	{
-		var conversionType = body.ReturnType.FindType(text.ToString());
+		var conversionType = body.ReturnType.TryGetType(text.ToString());
 		if (conversionType == null)
 			throw new ConversionTypeNotFound(body, text.ToString());
 		var method = left.ReturnType.GetMethod(BinaryOperator.To, []);
+		// Special case for lists, which automatically use the implementation type To method
+		if (conversionType.IsList && left.ReturnType.IsList &&
+			(method.IsTrait || method.ReturnType != conversionType))
+		{
+			method = FindConversionMethod(left.ReturnType.GetFirstImplementation(),
+				conversionType.GetFirstImplementation());
+			if (method == null)
+				throw new ConversionTypeNotFound(body, text.ToString());
+			return new To(left, method, conversionType);
+		}
 		if (method.ReturnType.Name != conversionType.Name)
 			method = FindConversionMethod(left.ReturnType, conversionType) ?? method;
 		if (method.ReturnType.Name != conversionType.Name &&
 			!left.ReturnType.IsUpcastable(conversionType) &&
 			!left.ReturnType.IsSameOrCanBeUsedAs(conversionType))
 			throw new ConversionTypeIsIncompatible(body,
-				$"Conversion for {
-					left.ReturnType.Name
-				} to {
-					conversionType.Name
-				} does not exist and no member is compatible (method returns {
-					method.ReturnType.Name
-				}, token '{
-					text.ToString()
-				}')", conversionType);
+				$"Conversion for {left.ReturnType.ToCodeString()} to {conversionType.ToCodeString()} does " +
+				$"not exist, underlying list elements don't support it and no member is compatible (method " +
+				$"returns {method.ReturnType.ToCodeString()}, token '{text.ToString()}')", conversionType);
 		return new To(left, method, conversionType);
 	}
 
 	private static Method? FindConversionMethod(Type type, Type conversionType) =>
 		type.AvailableMethods.TryGetValue(BinaryOperator.To, out var methods)
-			? methods.FirstOrDefault(m =>
-				m.ReturnType.Name == conversionType.Name ||
+			? methods.FirstOrDefault(m => m.ReturnType.Name == conversionType.Name ||
 				m.ReturnType.IsSameOrCanBeUsedAs(conversionType))
 			: null;
 
