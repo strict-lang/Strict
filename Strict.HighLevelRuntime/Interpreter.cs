@@ -234,10 +234,40 @@ public class Interpreter
 
 	public sealed class StackOverflowCallingItselfWithSameInstanceAndArguments(Method method,
 		ValueInstance? instance, IReadOnlyList<ValueInstance> args, ExecutionContext parentContext)
-		: ExecutionFailed(method, "ParentMethod=" + parentContext.Method.Name +
-			", ParentType=" + parentContext.Type.Name +
-			", HasInstance=" + (instance != null) +
-			", ArgumentCount=" + args.Count);
+   : ExecutionFailed(method, "Stack overflow detected while calling " +
+			FormatCall(method, instance, args) + ". Matching parent call chain: " +
+			FormatParentChain(parentContext))
+	{
+		private static string FormatCall(Method method, ValueInstance? instance,
+			IReadOnlyList<ValueInstance> args) => method + ", instance=" +
+			(instance?.ToString() ?? Type.None) + ", arguments=" + args.ToBrackets();
+
+		private static string FormatParentChain(ExecutionContext context)
+		{
+			var callChain = "";
+			for (var current = context; current != null; current = current.Parent)
+				callChain += (callChain.Length == 0
+					? ""
+					: " -> ") + current.Method + ", instance=" +
+					(current.This?.ToString() ?? Type.None) + ", arguments=" +
+					FormatArguments(current.Method, current.Variables);
+			return callChain;
+		}
+
+		private static string FormatArguments(Method method,
+			IReadOnlyDictionary<string, ValueInstance> variables)
+		{
+			var arguments = "";
+			for (var index = 0; index < method.Parameters.Count; index++)
+				if (variables.TryGetValue(method.Parameters[index].Name, out var value))
+					arguments += (arguments.Length == 0
+						? "("
+						: ", ") + value;
+			return arguments.Length == 0
+				? "()"
+				: arguments + ")";
+		}
+	}
 
 	private ValueInstance GetFromConstructorValue(Method method, ValueInstance[] args)
 	{

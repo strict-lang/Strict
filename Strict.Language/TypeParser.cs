@@ -176,7 +176,7 @@ public sealed class TypeParser(Type type, string[] lines)
 		if (paramNames.Count != 0)
 			for (var i = 1; i < methodLines.Count; i++)
 				if (!IsNonTestMethodLine(methodLines[i]))
-					SearchForMethodCalls(methodName, methodLines[i], paramNames);
+         SearchForMethodCalls(methodName, signature, methodLines[i], paramNames);
 	}
 
 	private static List<string> GetParameterNames(string signature, int openParen, int closeParen)
@@ -193,7 +193,7 @@ public sealed class TypeParser(Type type, string[] lines)
 		return paramNames;
 	}
 
-	private void SearchForMethodCalls(string methodName, string line, IReadOnlyList<string> paramNames)
+  private void SearchForMethodCalls(string methodName, string signature, string line, IReadOnlyList<string> paramNames)
 	{
 		var searchStart = 0;
 		var directPattern = methodName + "(";
@@ -219,11 +219,11 @@ public sealed class TypeParser(Type type, string[] lines)
 			{
 				var argText = line[(argsStartDirect + 1)..argsEndDirect];
 				if (AreParametersEqual(argText, paramNames))
-					throw new SelfRecursiveCallWithSameArgumentsDetected(type, LineNumber, line.Trim());
+          throw new SelfRecursiveCallWithSameArgumentsDetected(type, LineNumber, signature, argText, line.Trim());
 			}
 			searchStart = directIdx + directPattern.Length;
 		}
-		SearchForMemberMethodCalls(methodName, line, paramNames);
+   SearchForMemberMethodCalls(methodName, signature, line, paramNames);
 	}
 
 	private static bool AreParametersEqual(string argText, IReadOnlyList<string> paramNames)
@@ -238,7 +238,7 @@ public sealed class TypeParser(Type type, string[] lines)
 		return true;
 	}
 
-	private void SearchForMemberMethodCalls(string methodName, string line, IReadOnlyList<string> paramNames)
+  private void SearchForMemberMethodCalls(string methodName, string signature, string line, IReadOnlyList<string> paramNames)
 	{
 		var searchStart = 0;
 		var dotPattern = "." + methodName + "(";
@@ -258,13 +258,12 @@ public sealed class TypeParser(Type type, string[] lines)
 			// Only treat as recursion if calling this.Method(...) or TypeName.Method(...)
 			if (receiver.Equals("this", StringComparison.Ordinal) ||
 				receiver.Equals(type.Name, StringComparison.Ordinal))
-				CheckRecursionCallingThisMethod(line, paramNames, dotIdx, dotPattern);
+       CheckRecursionCallingThisMethod(signature, line, paramNames, dotIdx, dotPattern);
 			searchStart = dotIdx + dotPattern.Length;
 		}
 	}
 
-	private void CheckRecursionCallingThisMethod(string line, IReadOnlyList<string> paramNames,
-		int dotIdx, string dotPattern)
+  private void CheckRecursionCallingThisMethod(string signature, string line, IReadOnlyList<string> paramNames, int dotIdx, string dotPattern)
 	{
 		var argsStart = dotIdx + dotPattern.Length - 1;
 		var argsEnd = line.IndexOf(')', argsStart + 1);
@@ -272,7 +271,7 @@ public sealed class TypeParser(Type type, string[] lines)
 		{
 			var argText = line[(argsStart + 1)..argsEnd];
 			if (AreParametersEqual(argText, paramNames))
-				throw new SelfRecursiveCallWithSameArgumentsDetected(type, LineNumber, line.Trim());
+        throw new SelfRecursiveCallWithSameArgumentsDetected(type, LineNumber, signature, argText, line.Trim());
 		} //ncrunch: no coverage
 	} //ncrunch: no coverage
 
@@ -309,9 +308,18 @@ public sealed class TypeParser(Type type, string[] lines)
 		: ParsingFailed(type, lineNumber,
 			"Endless recursion via self-constructor call in from: " + line);
 
-	public sealed class SelfRecursiveCallWithSameArgumentsDetected(Type type, int lineNumber,
-		string line) : ParsingFailed(type, lineNumber,
-		"Self-recursive call with same arguments detected: " + line);
+  public sealed class SelfRecursiveCallWithSameArgumentsDetected(Type type, int lineNumber,
+		string signature, string argumentNames, string line) : ParsingFailed(type, lineNumber,
+		$"Self-recursive call with same arguments detected in {signature} with arguments=({
+			GetArgumentTypes(signature)
+		}) called with ({argumentNames}): {line}")
+	{
+		private static string GetArgumentTypes(string signature) =>
+			string.Join(", ", signature[(signature.IndexOf('(') + 1)..signature.IndexOf(')')].Split(',',
+				StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries).Select(parameter =>
+				parameter.Split(' ', StringSplitOptions.RemoveEmptyEntries).Skip(1).FirstOrDefault() ??
+				Type.Any));
+	}
 
 	public sealed class HugeConstantRangeNotAllowed(Type type, int lineNumber, string line,
 		long span, long limit) : ParsingFailed(type, lineNumber,

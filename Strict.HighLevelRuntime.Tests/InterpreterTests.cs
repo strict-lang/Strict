@@ -316,6 +316,20 @@ public sealed class InterpreterTests
 	}
 
 	[Test]
+  public void StackOverflowMessageShowsCallDetails()
+	{
+    using var t = CreateType(nameof(StackOverflowMessageShowsCallDetails),
+			"has number", "Recursive(other Number)", "\tRecursive(number)");
+		var exception = Assert.Throws<Interpreter.StackOverflowCallingItselfWithSameInstanceAndArguments>(() =>
+			interpreter.Execute(t.Methods.Single(m => m.Name == "Recursive"),
+				new ValueInstance(t, [new ValueInstance(interpreter.numberType, 3.0)]),
+				[new ValueInstance(interpreter.numberType, 1.0)]));
+		Assert.That(exception!.Message, Does.Contain("Recursive(other Number)"));
+		Assert.That(exception.Message, Does.Contain("instance="));
+		Assert.That(exception.Message, Does.Contain("arguments=(Number: 1)"));
+	}
+
+	[Test]
 	public void StackOverflowDetectionChecksGrandParentContextToo()
 	{
 		using var t = CreateType(nameof(StackOverflowDetectionChecksGrandParentContextToo),

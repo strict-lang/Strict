@@ -68,13 +68,16 @@ public sealed class TypeParserTests
 			Throws.InstanceOf<TypeParser.TrivialEndlessSelfConstructionDetected>());
 
 	[Test]
-	public void SelfRecursiveCallWithSameArgumentsDirectCall() =>
-		Assert.That(
-			() => CreateType(nameof(SelfRecursiveCallWithSameArgumentsDirectCall),
+ public void SelfRecursiveCallWithSameArgumentsDirectCall()
+	{
+		var exception = Assert.Throws<TypeParser.SelfRecursiveCallWithSameArgumentsDetected>(() =>
+			CreateType(nameof(SelfRecursiveCallWithSameArgumentsDirectCall),
 				"has logger",
 				"Foo(first Number, second Number)",
-				"\tFoo(first, second)"),
-			Throws.InstanceOf<TypeParser.SelfRecursiveCallWithSameArgumentsDetected>());
+				"\tFoo(first, second)"));
+		Assert.That(exception!.Message, Does.Contain("Foo(first Number, second Number)"));
+		Assert.That(exception.Message, Does.Contain("arguments=(Number, Number)"));
+	}
 
 	[Test]
 	public void SelfRecursiveCallWithSameArgumentsDotCall() =>

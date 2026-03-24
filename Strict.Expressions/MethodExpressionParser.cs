@@ -283,6 +283,12 @@ public class MethodExpressionParser : ExpressionParser
 					context = current.ReturnType;
 					continue;
 				}
+       var foundType = body.Method.FindType(inputText.ToString());
+				if (foundType != null && !members.IsAtEnd)
+				{
+					context = foundType;
+					continue;
+				}
 			}
 			if (current != null)
 			{
@@ -292,7 +298,7 @@ public class MethodExpressionParser : ExpressionParser
 					throw new InvalidOperatorHere(body, partName.ToString());
 			}
 			var expression = nestedInput[members.Current].Contains('(')
-				? current != null
+       ? current != null || context != body.Method.Type
 					? ParseMethodCallOnContext(body, nestedInput[members.Current], context, current)
 					: TryParseMemberOrZeroOrOneArgumentMethodOrNestedCall(body, nestedInput[members.Current])
 				: TryVariableOrValueOrParameterOrMemberOrMethodCall(context, current, body,
@@ -307,8 +313,8 @@ public class MethodExpressionParser : ExpressionParser
 		return ListCall.TryParse(body, current, callArguments);
 	}
 
-	private Expression? ParseMethodCallOnContext(Body body, ReadOnlySpan<char> input,
-		Context context, Expression current)
+ private Expression? ParseMethodCallOnContext(Body body, ReadOnlySpan<char> input,
+		Context context, Expression? current)
 	{
 		var argStart = input.IndexOf('(');
 		var argEnd = input.FindMatchingBracketIndex(argStart);

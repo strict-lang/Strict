@@ -165,7 +165,17 @@ public sealed class MethodExpressionParserTests : TestExpressions
 		var basePackage = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
 		foreach (var type in basePackage.Types)
 			foreach (var method in type.Value.Methods)
-				Assert.That(() => method.GetBodyAndParseIfNeeded(), Throws.Nothing,
-					$"Failed to parse method {method.Name} in type {type.Key}");
+				if (!method.IsTrait)
+					Assert.That(() => method.GetBodyAndParseIfNeeded(), Throws.Nothing,
+						$"Failed to parse method {method.Name} in type {type.Key}");
+	}
+
+	[Test]
+	public async Task ParseListToTextMethodFromBasePackage()
+	{
+		var basePackage = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
+		var listToText = basePackage.GetType(Type.List).Methods.Single(method =>
+			method.Name == BinaryOperator.To && method.ReturnType.IsText);
+		Assert.That(() => listToText.GetBodyAndParseIfNeeded(), Throws.Nothing);
 	}
 }

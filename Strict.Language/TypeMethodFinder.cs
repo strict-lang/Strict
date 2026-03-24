@@ -27,7 +27,7 @@ internal class TypeMethodFinder(Type type)
 
 	public Method? FindMethod(string methodName, IReadOnlyList<Expression> arguments)
 	{
-		if (Type.IsGeneric)
+   if (Type.IsGeneric && Type is not GenericTypeImplementation)
 			throw new GenericTypesCannotBeUsedDirectlyUseImplementation(Type, Type.IsMutable
 				? Mutable + " must be used via keyword, not manually constructed!"
 				: "Type is Generic and cannot be used directly");
@@ -48,35 +48,52 @@ internal class TypeMethodFinder(Type type)
 	{
 		if (!Type.AvailableMethods.TryGetValue(methodName, out var matchingMethods))
 			return null;
-		if (arguments is [{ ReturnType.IsError: true }, _])
-			return matchingMethods[0];
-		var typesOfArguments = arguments.Select(argument => argument.ReturnType).ToList();
-		var commonTypeOfArguments = TryGetSingleElementType(typesOfArguments);
-		foreach (var method in matchingMethods)
-			if (IsMethodWithMatchingParametersType(method, typesOfArguments, commonTypeOfArguments, Type) ||
-				commonTypeOfArguments != null && commonTypeOfArguments ==
-				GetListElementTypeIfHasSingleParameter(method, arguments.Count))
-				return method;
-		// Single character text can always be used as a character (thus number)
-		if (arguments.Count == 1 && matchingMethods.Count > 0 &&
-			matchingMethods[0].Parameters.Count > 0 &&
-			(matchingMethods[0].Parameters[0].Type.IsNumber ||
-				matchingMethods[0].Parameters[0].Type.IsCharacter) &&
-			arguments[0].ReturnType.IsText && arguments[0].IsConstant &&
-			arguments[0].GetType().Name == Text && GetTextValue(arguments[0]).Length == 1)
-			return matchingMethods[0];
-		// If this is a from constructor, we can call the methodParameterType constructor to pass
-		// along the argument and make it work if it wasn't matching yet.
-		if (methodName == Method.From && matchingMethods[0].Parameters.Count == 1)
+   var lookupKey = (Type, methodName,
+			string.Join(", ", arguments.Select(argument => argument.ReturnType.FullName)));
+		var activeLookups = activeMethodLookups ??= [];
+		if (!activeLookups.Add(lookupKey))
+			return null;
+		try
 		{
-			var innerFromMethod =
-				matchingMethods[0].Parameters[0].Type.FindMethod(Method.From, arguments);
-			if (innerFromMethod != null &&
-				IsFromConstructorWithMatchingConstraints(matchingMethods[0], arguments.Count))
+     if (arguments is [{ ReturnType.IsError: true }, _])
 				return matchingMethods[0];
+			var typesOfArguments = arguments.Select(argument => argument.ReturnType).ToList();
+			var commonTypeOfArguments = TryGetSingleElementType(typesOfArguments);
+			foreach (var method in matchingMethods)
+				if (IsMethodWithMatchingParametersType(method, typesOfArguments, commonTypeOfArguments, Type) ||
+					commonTypeOfArguments != null && commonTypeOfArguments ==
+					GetListElementTypeIfHasSingleParameter(method, arguments.Count))
+					return method;
+			// Single character text can always be used as a character (thus number)
+			if (arguments.Count == 1 && matchingMethods.Count > 0 &&
+				matchingMethods[0].Parameters.Count > 0 &&
+				(matchingMethods[0].Parameters[0].Type.IsNumber ||
+					matchingMethods[0].Parameters[0].Type.IsCharacter) &&
+				arguments[0].ReturnType.IsText && arguments[0].IsConstant &&
+				arguments[0].GetType().Name == Text && GetTextValue(arguments[0]).Length == 1)
+				return matchingMethods[0];
+			// If this is a from constructor, we can call the methodParameterType constructor to pass
+			// along the argument and make it work if it wasn't matching yet.
+			if (methodName == Method.From && matchingMethods[0].Parameters.Count == 1)
+			{
+				var innerFromMethod =
+					matchingMethods[0].Parameters[0].Type.FindMethod(Method.From, arguments);
+				if (innerFromMethod != null &&
+					IsFromConstructorWithMatchingConstraints(matchingMethods[0], arguments.Count))
+					return matchingMethods[0];
+			}
+			throw new ArgumentsDoNotMatchMethodParameters(arguments, Type, matchingMethods);
 		}
-		throw new ArgumentsDoNotMatchMethodParameters(arguments, Type, matchingMethods);
+		finally
+		{
+			activeLookups.Remove(lookupKey);
+			if (activeLookups.Count == 0)
+				activeMethodLookups = null;
+		}
 	}
+
+	[ThreadStatic]
+	private static HashSet<(Type Type, string MethodName, string ArgumentTypes)>? activeMethodLookups;
 
 	private static string GetTextValue(Expression argument)
 	{
@@ -233,7 +250,8 @@ internal class TypeMethodFinder(Type type)
 		if (methodParameterType.IsMutable)
 			methodParameterType = methodParameterType.GetFirstImplementation();
 		if (argumentType == methodParameterType || method.IsGeneric ||
-			IsArgumentImplementationTypeMatchParameterType(argumentType, methodParameterType))
+      IsArgumentImplementationTypeMatchParameterType(argumentType, methodParameterType) ||
+			AreGenericImplementationsCompatible(argumentType, methodParameterType))
 			return true;
 		if (methodParameterType is { IsText: false, IsEnum: true } &&
 			methodParameterType.Members[0].Type.IsSameOrCanBeUsedAs(argumentType))
@@ -252,4 +270,18 @@ internal class TypeMethodFinder(Type type)
 		IsArgumentImplementationTypeMatchParameterType(Type argumentType, Type parameterType) =>
 		argumentType is GenericTypeImplementation argumentGenericType &&
 		argumentGenericType.ImplementationTypes.Any(t => t == parameterType);
+
+	private static bool AreGenericImplementationsCompatible(Type argumentType, Type parameterType)
+	{
+		if (argumentType is not GenericTypeImplementation argumentImplementation ||
+			parameterType is not GenericTypeImplementation parameterImplementation ||
+			argumentImplementation.Generic != parameterImplementation.Generic ||
+			argumentImplementation.ImplementationTypes.Count != parameterImplementation.ImplementationTypes.Count)
+			return false;
+		for (var index = 0; index < argumentImplementation.ImplementationTypes.Count; index++)
+			if (!argumentImplementation.ImplementationTypes[index].IsSameOrCanBeUsedAs(
+					parameterImplementation.ImplementationTypes[index]))
+				return false;
+		return true;
+	}
 }
