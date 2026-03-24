@@ -390,7 +390,8 @@ public sealed class VirtualMachineTests : TestBytecode
 		];
 		var instructions = new BinaryGenerator(GenerateMethodCallFromSource(nameof(DictionaryRemove),
 			"DictionaryRemove(5).AddToDictionary", code)).Generate();
-		var values = new VirtualMachine(instructions).Execute(initialVariables: null).Memory.Variables["values"].GetDictionaryItems();
+		var values = new VirtualMachine(instructions).Execute(initialVariables: null).Memory.
+			Variables["values"].GetDictionaryItems();
 		Assert.That(GetDictionaryValue(values, 2), Is.EqualTo("15"));
 	}
 
@@ -404,8 +405,8 @@ public sealed class VirtualMachineTests : TestBytecode
 		var source = new[] { "has number", "GetAll Number", "\tfor number", "\t\tvalue" };
 		var instructions = new BinaryGenerator(GenerateMethodCallFromSource(nameof(ReturnWithinALoop),
 			"ReturnWithinALoop(5).GetAll", source)).Generate();
-		Assert.That(() => new VirtualMachine(instructions).Execute(initialVariables: null).Returns!.Value.Number,
-			Is.EqualTo(1 + 2 + 3 + 4 + 5));
+		Assert.That(() => new VirtualMachine(instructions).Execute(initialVariables: null).Returns!.
+			Value.Number, Is.EqualTo(1 + 2 + 3 + 4 + 5));
 	}
 
 	[Test]
@@ -534,7 +535,8 @@ public sealed class VirtualMachineTests : TestBytecode
 		var instructions = new BinaryGenerator(GenerateMethodCallFromSource(
 			nameof(LoopOverListStopsWhenIndexExceedsCount),
 			$"{nameof(LoopOverListStopsWhenIndexExceedsCount)}(1, 2, 3).CountItems", source)).Generate();
-		var result = new VirtualMachine(instructions).Execute(initialVariables: null).Returns!.Value.Number;
+		var result =
+			new VirtualMachine(instructions).Execute(initialVariables: null).Returns!.Value.Number;
 		Assert.That(result, Is.EqualTo(3));
 	}
 
@@ -631,7 +633,8 @@ public sealed class VirtualMachineTests : TestBytecode
 				"GetZero Number", "\t0")).ParseMembersAndMethods(new MethodExpressionParser());
 		var typeWithTextWriter = type.Package.FindDirectType("TypeWithTextWriter")!;
 		var fromMethodCall = CreateFromMethodCall(typeWithTextWriter);
-		var instructions = new List<Instruction> { new Invoke(Register.R0, fromMethodCall, new Registry()) };
+		var instructions =
+			new List<Instruction> { new Invoke(Register.R0, fromMethodCall, new Registry()) };
 		var result = ExecuteVm(instructions).Memory.Registers[Register.R0];
 		var typeInstance = result.TryGetValueTypeInstance();
 		Assert.That(typeInstance, Is.Not.Null);

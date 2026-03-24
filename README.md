@@ -57,7 +57,7 @@ The LSP (Language Server Protocol) implementation here adds support for VSCode, 
 |-------|----------------|-------------|---------------------|
 | **Strict.Language** | Load *.strict* files, package handling, core type parsing (structure only) | File load | Bad formatting & package errors |
 | **Strict.Expressions** | Lazy-parse method bodies into an immutable tree of `if`, `for`, assignments, calls… | First method call | Structural/semantic violations |
-| **Strict.Validators** | Visitor-based static analysis & constant folding | After expression parsing | Impossible casts, unused mutables, foldable constants |
+| **Strict.Validators** | Visitor-based static analysis & constant folding | After expression parsing | Duplicate code remover, impossible casts, unused mutables, foldable constants |
 | **Strict.HighLevelRuntime** | Execute expressions directly in interpreter mode for fast checks and tests | On demand during test execution | Value/type errors, side-effects |
 | **Strict.TestRunner** | Run in-code tests via HighLevelRuntime (`method must start with a test`) | First call to a method | Failing test expressions, the central verification point |
 | **Strict.Bytecode** | Generate register-based bytecode instructions from expression trees | After tests succeed | Unsupported expression patterns |
@@ -75,44 +75,55 @@ The LSP (Language Server Protocol) implementation here adds support for VSCode, 
 * Early structural checks ensure only valid Strict constructs survive.
 
 ## 3 · Strict.Validators
-* Runs constant folding & simple propagation (e.g. `"5" to Number → 5`).
-* Flags impossible casts (`"abc" to Number`) and other static mistakes.
+* Flags impossible casts (`"abc" to Number`) and other static mistakes. These are validation errors same as parsing errors that need to be fixed before anything can continue.
+* Runs constant folding & simple propagation (e.g. `"5" to Number → 5`). This doesn't affect tests code, but for execution (any step after this) it still uses the folded expressions. Production is always folded and collapsed to the simplest form (in an IDE via a warning that needs to be fixed).
+* TODO: finds all duplicate code and removes it (reinventing the wheel over and over), e.g.
+	* Reimplenting GetElementsText like the example below will be replaced with existing code: Text.Combine
+	* This will affect ALL new code and make it much faster to write code, as you can just write the most straightforward code and Strict will figure out if there is already an existing implementation for it and replace it with that, which is also a great way to learn how to do things in Strict by just writing the most straightforward code and then looking at the optimized version of it.
+	* Implemented like ReSharper/Jetbrains warning issues: Since there is no warnings in Strict, everything is an error and thus this needs to be fixed before it can be used.
+	* Also removes verbose code that can be shorter, like Text.characters.Length -> Text.Length
 * Separation of concerns: validation without touching runtime state.
 
 ## 4 · Strict.HighLevelRuntime
-* Interpreter-style execution for quick feedback during editing.
-* Drives tests and advanced checks without bytecode generation.
-* Fast enough for most validation and dev workflows.
+* Interpreter-style execution for quick feedback during editing, mostly for test execution.
+* Drives tests and advanced checks without bytecode generation (which is also fast, but not needed, we can stay in memory for most work)
+* Fast enough for most validation and dev workflows. All non external code is always executed and tested immediately like NCrunch (see SCrunch).
 
 ## 5 · Strict.TestRunner
-* Every method must open with a self-contained test.
+* Every method must open with a self-contained test (one line methods can be excluded if they are simple enough, e.g. just returning a value or doing a comparison).
 * Tests are executed once; passing expressions become `true` and are pruned.
-* Guarantees that only verified code reaches lower layers.
+* Guarantees that only verified code reaches lower layers. Since tests are stripped here, no test is ever executed in bytecode, only production code that is actually called remains.
 
-## 6 · Strict.Bytecode
+* ## 6 · Strict.Bytecode
 * Converts expression trees into flat register-based instructions (`BytecodeGenerator`).
 * Defines the instruction set (~20 types: arithmetic, jumps, loads, stores, loops, invoke).
 * Pure code generation — no execution happens here.
+* Very compact (most types are just a few bytes, a whole package is less than a kb). Also zipped.
 
 ## 7 · Strict.Optimizers
 * Operates on bytecode instruction lists produced by `Strict.Bytecode`.
-* Runs multiple passes: test code removal, constant folding, dead store elimination, unreachable code elimination, redundant load elimination, jump threading, strength reduction.
+* Runs optimized code from the above steps: test code removed, constant folding, dead store elimination, unreachable code elimination, redundant load elimination, jump threading, strength reduction.
 * Preserve original line numbers for precise error reporting.
 
-## 8 · Strict (exe) — Runner + VirtualMachine
+## 8. Strict.Compiler
+* Compiles bytecode into actual executables for any supported platform (Windows, Linux, MacOS).
+* Currently can utilize MLIR (for the most optimized output, supporting parallization and GPU execution), LLVM (for a more general approach) or direct NASM code generation (low level assembly).
+* Executables are very tiny and do not require any runtime, the Strict executable contains everything needed to do all these steps, parsing, validation, testing, bytecode generation, optimization and execution. External libraries used or needed for compilation (like MLIR) are not included and need to be on the executing machine. Same for any content used of course (but maybe we include them into the bytecode .strictbinary files like .apk packages).
+
+## 9 · Strict (exe) — Runner + VirtualMachine
 * The `Runner` orchestrates the full pipeline: load → parse → validate → test → generate → optimize → execute.
 * The `VirtualMachine` executes optimized bytecode via a register file, call frames and a program counter.
 * Only the VM sees real values and side-effects — this is where programs actually run.
 
-## 9 · Strict.Compiler
-* Transpiles Strict into C# or CUDA for execution on existing runtimes.
+## 10 · Strict.Transpiler
+* Optional: Transpiles Strict into C# or CUDA for execution on existing runtimes.
 * `Strict.Compiler.Roslyn` generates C# source, `Strict.Compiler.Cuda` generates CUDA kernels.
 * Useful for running select Strict code without the bytecode path.
 
-## 10 · Strict.LanguageServer
+## 11 · Strict.LanguageServer
 * VS Code-first LSP implementation for daily Strict development.
-* Needs to be solid so future work can happen directly in Strict.
-* Active again after a long pause and now a top priority.
+* Solid as all Strict work happens with it directly.
+* Shows all parsing and validation errors, warnings to automatically fix, tests results, code navigation, refactoring support, etc. in real time.
 
 Note: Peripheral projects kept around for specific purposes: `Strict.Grammar` + `Strict.Grammar.Tests` (syntax highlighters from `Grammar.ebnf`), `Strict.PackageManager` (github-based packages, optional for now).
 
@@ -466,9 +477,9 @@ Here the dictionary with keysAndValues is iterated. On each iteration the for bo
 GetElementsText Text
 	(1, 3).GetElementsText is "1, 3"
 	for elements
-   (index is 0 then "" else ", ") + value
+		(index is 0 then "" else ", ") + value
 ```
-This method goes through the elements and does a quick check if we are at the first element via "index is 0", if yes, then an empty Text string is used, else ", " is used. Then that value is concatenated via "+ value", where value is the current value from the for enumeration. The result of the for body expression is a Text (either just the value as Text for the first iteration or ", " + value otherwise). The same way for expression boolean value was used in the previous example, this Text value is now used to create a new list (since we didn't specify + at the beginning of the for expression, see below for more examples). So the return value of the for expression is a list of Text, which is not what we asked for, we wanted a Text, so Strict automatically concatenates the list into a single Text value, which is then returned.
+This method goes through the elements and does a quick check if we are at the first element via "index is 0", if yes, then an empty Text string is used, else ", " is used. Then that value is concatenated via "+ value", where value is the current value from the for enumeration. The result of the for body expression is a Text (either just the value as Text for the first iteration or ", " + value otherwise). The same way for expression boolean value was used in the previous example, this Text value is now used to create a new list (since we didn't specify + at the beginning of the for expression, see below for more examples). So the return value of the for expression is a list of Text, which is not what we asked for, we wanted a Text, so Strict automatically concatenates the list into a single Text value, which is then returned. Btw: This implementation would be stripped out of the code and be replaced with the existing Text.Combine method!
 
 ```
 Length Number

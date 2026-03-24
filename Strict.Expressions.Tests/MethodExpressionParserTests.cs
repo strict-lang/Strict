@@ -158,4 +158,14 @@ public sealed class MethodExpressionParserTests : TestExpressions
 		]).GetBodyAndParseIfNeeded();
 		Assert.That(body.Method.Parser.IsVariableMutated(body, "result"), Is.True);
 	}
+
+	[Test]
+	public async Task ParseAllStrictBasePackageCode()
+	{
+		var basePackage = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
+		foreach (var type in basePackage.Types)
+			foreach (var method in type.Value.Methods)
+				Assert.That(() => method.GetBodyAndParseIfNeeded(), Throws.Nothing,
+					$"Failed to parse method {method.Name} in type {type.Key}");
+	}
 }
