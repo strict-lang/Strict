@@ -41,8 +41,8 @@ public class NumberTests : TestExpressions
 	private const string Case3 = "10";
 	private const string Case4 = "0.5";
 	private const string Case5 = "-50";
-	private const string Case6 = "2000000102";
-	private const string Case7 = "5045142575";
+	private const string Case6 = "2.000000102e9";
+	private const string Case7 = "5.045142575e9";
 	private const string Case8 = "0";
 	private const string Case9 = "7e-100";
 
@@ -156,7 +156,7 @@ public class NumberTests : TestExpressions
 	{
 		var counter = 0;
 		for (var iteration = 0; iteration < NumberOfIterations; iteration++)
-			counter += IntTryParseCase1To5() + IntTryParseCase6To10();
+			counter += IntTryParseCase1To5() + DoubleTryParseCase6To10();
 		Assert.That(counter, Is.EqualTo(NumberOfCases * NumberOfIterations));
 	}
 
@@ -181,26 +181,6 @@ public class NumberTests : TestExpressions
 		(int.TryParse(Case5, out var result5) && result5 == -50
 			? 1
 			: throw new NotSupportedException(Case5));
-
-	private static int IntTryParseCase6To10() =>
-		(int.TryParse(Case6, out var result6) && result6 == 2000000102
-			? 1
-			: throw new NotSupportedException(Case6)) +
-		(!int.TryParse(Case7, out _) &&
-			double.TryParse(Case7, out var result7) && result7 == 5045142575
-				? 1
-				: throw new NotSupportedException(Case7)) +
-		(int.TryParse(Case8.AsSpan(), out var result8) && result8 == 0
-			? 1
-			: throw new NotSupportedException(Case8)) +
-		(!int.TryParse(Case9, out _) &&
-			double.TryParse(Case9, out var result9) && result9 == 7e-100
-				? 1
-				: throw new NotSupportedException(Case9)) +
-		(!int.TryParse(NoNumberCase, out _) &&
-			!double.TryParse(NoNumberCase, out _)
-				? 1
-				: throw new NotSupportedException(NoNumberCase));
 
 	[Test]
 	[Benchmark]

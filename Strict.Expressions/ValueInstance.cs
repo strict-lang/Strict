@@ -361,9 +361,9 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 				return "-1";
 		}
 		var absoluteValue = Math.Abs(number);
-		if (absoluteValue >= 10_000_000 || (absoluteValue > 0 && absoluteValue <= 1e-9))
-			return number.ToString("0.###############e0", System.Globalization.CultureInfo.InvariantCulture);
-		return number.ToString(System.Globalization.CultureInfo.InvariantCulture);
+		return absoluteValue is >= 10_000_000 or > 0 and <= 1e-9
+			? number.ToString("0.################e0", System.Globalization.CultureInfo.InvariantCulture)
+			: number.ToString(System.Globalization.CultureInfo.InvariantCulture);
 	}
 
 	private static readonly string[] CachedIntegerStrings = CreateIntegerStringCache();

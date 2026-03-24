@@ -137,7 +137,7 @@ public static class SpanExtensions
 				number = number * 10 + digit;
 			else if (letter == '.')
 				decimalPosition = index + 1;
-			else if (letter == 'e' && index + 2 < input.Length)
+			else if (letter == 'e' && index + 1 < input.Length)
 			{
 				var existingExponent = decimalPosition == input.Length
 					? 0
