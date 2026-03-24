@@ -38,7 +38,9 @@ public sealed class MemberCall(Expression? instance, Member member, int lineNumb
 	public override string ToString() =>
 		Instance != null
 			? $"{Instance}.{Member.Name}"
-			: Member.Name;
+			: Member.IsConstant
+				? $"{Member.DefinedIn.Name}.{Member.Name}"
+				: Member.Name;
 
 	public override bool Equals(Expression? other) =>
 		ReferenceEquals(this, other) || other is MemberCall mc && Member.Name == mc.Member.Name &&

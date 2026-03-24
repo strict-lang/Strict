@@ -1,4 +1,4 @@
-﻿namespace Strict.Language.Tests;
+namespace Strict.Language.Tests;
 
 public sealed class EnumTests
 {
@@ -10,11 +10,24 @@ public sealed class EnumTests
 			new TypeLines("Connection", "constant Google = \"https://google.com\"",
 				"constant Microsoft = \"https://microsoft.com\"")).ParseMembersAndMethods(parser);
 		instructionType = new Type(TestPackage.Instance,
-			new TypeLines("Instruction", "constant Set", "constant Add", "constant Subtract",
-				"constant Multiply", "constant Divide", "constant BinaryOperatorsSeparator = 100",
-				"constant GreaterThan", "constant LessThan", "constant Equal", "constant NotEqual",
-				"constant ConditionalSeparator", "constant JumpIfTrue", "constant JumpIfFalse",
-				"constant JumpIfNotZero", "constant JumpsSeparator = 300")).ParseMembersAndMethods(parser);
+			new TypeLines("Instruction",
+				// @formatter:off
+				"constant Set",
+				"constant Add",
+				"constant Subtract",
+				"constant Multiply",
+				"constant Divide",
+				"constant BinaryOperatorsSeparator = 100",
+				"constant GreaterThan",
+				"constant LessThan",
+				"constant Equal",
+				"constant NotEqual",
+				"constant ConditionalSeparator",
+				"constant JumpIfTrue",
+				"constant JumpIfFalse",
+				"constant JumpIfNotZero",
+				"constant JumpsSeparator = 300")).ParseMembersAndMethods(parser);
+		// @formatter:on
 	}
 
 	private ExpressionParser parser = null!;
@@ -24,8 +37,8 @@ public sealed class EnumTests
 	[TearDown]
 	public void TearDown()
 	{
-		TestPackage.Instance.Remove(connectionType);
-		TestPackage.Instance.Remove(instructionType);
+		connectionType.Dispose();
+		instructionType.Dispose();
 	}
 
 	[TestCase(true, "constant Set", "constant Add")]

@@ -5,6 +5,7 @@ public sealed class Member : NamedType
 	public Member(Type definedIn, string nameAndType, Type? initialValueType, int lineNumber = 0,
 		string usedKeyword = Keyword.Has) : base(definedIn, nameAndType, initialValueType)
 	{
+		DefinedIn = definedIn;
 		LineNumber = lineNumber;
 		if (usedKeyword == Keyword.Mutable)
 			IsMutable = true;
@@ -22,6 +23,7 @@ public sealed class Member : NamedType
 			throw new MemberNameWithDifferentTypeNamesThanOwnAreNotAllowed(definedIn, Name, Type.Name);
 	}
 
+	public Type DefinedIn { get; }
 	public Expression? InitialValue { get; internal set; }
 	public int LineNumber { get; }
 	public bool IsPublic => char.IsUpper(Name[0]);
@@ -30,9 +32,10 @@ public sealed class Member : NamedType
 	public Member CloneWithImplementation(Type implementationType) =>
 		new(Name, implementationType, IsMutable, IsConstant);
 
-	private Member(string name, Type newType, bool isMutable, bool isConstant) : base(newType, name,
-		newType)
+	private Member(string name, Type newType, bool isMutable, bool isConstant)
+		: base(newType, name, newType)
 	{
+		DefinedIn = newType;
 		IsMutable = isMutable;
 		IsConstant = isConstant;
 	}
