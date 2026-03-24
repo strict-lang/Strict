@@ -10,9 +10,9 @@ has characters
 to Number
 	"5" to Number is 5
 	"123" to Number is 123
-	"-17" to Number is 17
+	"-17" to Number is -17
 	"1.3" to Number is 1.3
-	"1e10" to Number is 1e10
+	"1e10" to Number is 10000000000
 	for characters.Reverse
 		value to Number * 10 ^ index
 in(text) Boolean

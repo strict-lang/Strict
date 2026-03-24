@@ -152,6 +152,26 @@ public class Type : Context, IDisposable
 			throw new TypeWasAlreadyParsed(this); //ncrunch: no coverage
 		savedParser = parser;
 		typeParser.ParseMembersAndMethods(parser);
+		typeParser.ParseDeferredConstraints(parser);
+		DetermineEnumTypeKind();
+		ValidateMethodAndMemberCountLimits();
+		// ReSharper disable once ForCanBeConvertedToForeach, for performance reasons:
+		// https://codeblog.jonskeet.uk/2009/01/29/for-vs-foreach-on-arrays-and-lists/
+		for (var index = 0; index < members.Count; index++)
+		{
+			var trait = members[index].Type;
+			if (trait.typeParser.LineNumber > 0 && trait.IsTrait)
+				CheckIfTraitIsImplementedFullyOrNone(trait);
+		}
+		return this;
+	}
+
+	internal Type ParseMembersAndMethodsForPackage(ExpressionParser parser)
+	{
+		if (typeParser.LineNumber >= 0)
+			throw new TypeWasAlreadyParsed(this); //ncrunch: no coverage
+		savedParser = parser;
+		typeParser.ParseMembersAndMethods(parser);
 		DetermineEnumTypeKind();
 		ValidateMethodAndMemberCountLimits();
 		// ReSharper disable once ForCanBeConvertedToForeach, for performance reasons:

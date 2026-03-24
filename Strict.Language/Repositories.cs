@@ -176,7 +176,7 @@ public sealed class Repositories
 		loadedPackages.Add(package);
 		var types = GetTypes(files, package);
 		foreach (var type in types)
-			type.ParseMembersAndMethods(parser);
+			type.ParseMembersAndMethodsForPackage(parser);
 		InvalidateAllAvailableMethodsCaches();
 		foreach (var type in types)
 			type.ParseDeferredConstraints(parser);

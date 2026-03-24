@@ -417,7 +417,9 @@ public class Interpreter
 		Statistics.VariableCallCount++;
 		return context.Find(name, Statistics) ?? (name == Type.ValueLowercase
 			? context.This
-			: null) ?? throw new ExecutionContext.VariableNotFound(name, context.Type, context.This);
+			: name == Type.OuterLowercase
+				? context.Parent!.This
+				: null) ?? throw new ExecutionContext.VariableNotFound(name, context.Type, context.This);
 	}
 
 	public ValueInstance EvaluateMemberCall(MemberCall member, ExecutionContext ctx)

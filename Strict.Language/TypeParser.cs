@@ -10,9 +10,6 @@ public sealed class TypeParser(Type type, string[] lines)
 	{
 		for (LineNumber = 0; LineNumber < lines.Length; LineNumber++)
 			TryParse(parser, LineNumber);
-		ParseDeferredConstraints(parser);
-		if (rememberToInitializeMemberInitialValues != null)
-			TryInitializeMemberInitialValues(parser);
 	}
 
 	private void TryInitializeMemberInitialValues(ExpressionParser parser)
@@ -500,11 +497,16 @@ public sealed class TypeParser(Type type, string[] lines)
 
 	public void ParseDeferredConstraints(ExpressionParser parser)
 	{
-		if (pendingConstraints == null)
+		if (pendingConstraints == null && rememberToInitializeMemberInitialValues == null)
 			return;
-		foreach (var (member, constraintsText) in pendingConstraints)
-			member.ParseConstraints(parser, constraintsText);
-		pendingConstraints = null;
+		if (pendingConstraints != null)
+		{
+			foreach (var (member, constraintsText) in pendingConstraints)
+				member.ParseConstraints(parser, constraintsText);
+			pendingConstraints = null;
+		}
+		if (rememberToInitializeMemberInitialValues != null)
+			TryInitializeMemberInitialValues(parser);
 	}
 
 	private Type? ExtractConstraintsSpanAndValueType(ExpressionParser parser,

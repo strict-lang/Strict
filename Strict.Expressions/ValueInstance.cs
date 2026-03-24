@@ -244,7 +244,9 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 	public ValueInstance GetIteratorValue(Type charTypeIfNeeded, int index) =>
 		number switch
 		{
-			TextId => new ValueInstance(charTypeIfNeeded, ((string)value)[index]),
+			TextId => index < ((string)value).Length
+				? new ValueInstance(charTypeIfNeeded, ((string)value)[index])
+				: new ValueInstance(charTypeIfNeeded, '\0'),
 			ListId => ((ValueListInstance)value).Items[index],
 			TypeId when ((ValueTypeInstance)value).ReturnType.IsList &&
 				FindTextInValues((ValueTypeInstance)value, out var wrappedText) =>
