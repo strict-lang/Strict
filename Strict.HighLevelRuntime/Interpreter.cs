@@ -190,11 +190,18 @@ public class Interpreter
 					"Method \"" + method + "\" parameter " + index + ": " +
 					method.Parameters[index].ToStringWithInnerMembers() +
 					" cannot be assigned from argument " + args[index]);
-		if (parentContext != null && parentContext.Method == method &&
-			(parentContext.This?.Equals(instance) ?? instance.Equals(noneInstance)) &&
-			DoArgumentsMatch(method, args, parentContext.Variables))
-			throw new StackOverflowCallingItselfWithSameInstanceAndArguments(method, instance, args,
-				parentContext);
+		ThrowIfSameMethodCallExistsInParentChain(method, instance, args, parentContext);
+	}
+
+	private void ThrowIfSameMethodCallExistsInParentChain(Method method, ValueInstance instance,
+		IReadOnlyList<ValueInstance> args, ExecutionContext? parentContext)
+	{
+		for (var current = parentContext; current != null; current = current.Parent)
+			if (current.Method == method &&
+				(current.This?.Equals(instance) ?? instance.Equals(noneInstance)) &&
+				DoArgumentsMatch(method, args, current.Variables))
+				throw new StackOverflowCallingItselfWithSameInstanceAndArguments(method, instance, args,
+					current);
 	}
 
 	private static bool DoArgumentsMatch(Method method, IReadOnlyList<ValueInstance> args,
@@ -209,8 +216,10 @@ public class Interpreter
 
 	public sealed class StackOverflowCallingItselfWithSameInstanceAndArguments(Method method,
 		ValueInstance? instance, IReadOnlyList<ValueInstance> args, ExecutionContext parentContext)
-		: ExecutionFailed(method, "Parent context=" + parentContext + ", Instance=" + instance +
-			", arguments=" + string.Join(", ", args));
+		: ExecutionFailed(method, "ParentMethod=" + parentContext.Method.Name +
+			", ParentType=" + parentContext.Type.Name +
+			", HasInstance=" + (instance != null) +
+			", ArgumentCount=" + args.Count);
 
 	private ValueInstance GetFromConstructorValue(Method method, ValueInstance[] args)
 	{

@@ -27,7 +27,7 @@ is(other) Boolean
 	(1 + 2) * 3 is not 1 + 2 * 3
 	(("1", "2") + (3, 4)) to Numbers is (1, 2, 3, 4)
 	3 + (4) is (3, 4)
-	(1) + ("Hi") is Error("Cannot downcast Text to Number for list: \"Hi\"")
+	(1) + ("Hi") is Error("Cannot downcast Text to Number for list: Text \"Hi\"")
 	elements + other.elements
 -(other) List
 	(1, 2, 3) - (3) is (1, 2)

@@ -66,6 +66,7 @@ public sealed class PhraseTokenizerTests
 	[TestCase("ReduceButGrow(2, 3, 4, 5).GetMultiplicationOfNumbers is 120", 3)]
 	[TestCase("RemoveExclamation(\"Hello There!\").Remove is \"Hello There\"", 3)]
 	[TestCase("digits((number / 10).Floor) + number % 10", 5)]
+	[TestCase("Error(\"Cannot downcast Text to Number for list: \\\"Hi\\\"\")", 1)]
 	public void GetTokenRanges(string code, int expectedTokensCount)
 	{
 		var tokens = GetTokens(code);

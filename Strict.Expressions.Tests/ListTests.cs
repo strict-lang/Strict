@@ -63,13 +63,16 @@ public sealed class ListTests : TestExpressions
 			new List(new Body(method), GetListExpressions(["(1, 3)", "(2, 4)"])));
 
 	[TestCase("(1, 2, 3, 4, 5) + \"4\"")]
-	[TestCase("(1, 2, 3, 4, 5) + (\"hello\")")]
 	[TestCase("(1, 2, 3, 4, 5) + \"hello\" + 4")]
-	[TestCase("(1, 2, 3, 4, 5) + (\"hello\") + 4")]
 	public void MismatchingTypeFound(string input) =>
 		Assert.That(() => ParseExpression(input),
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.
 				InstanceOf<Type.ArgumentsDoNotMatchMethodParameters>());
+
+	[Test]
+	public void ConvertTextToNumberForListHappensAtInterpreter() =>
+		Assert.That(ParseExpression("(1, 2, 3, 4, 5) + (\"hello\")").ToString(),
+			Is.EqualTo("(1, 2, 3, 4, 5) + (\"hello\")"));
 
 	[TestCase("(1, 2, 3, 4, 5) + (6, 7, 8)", "1, 2, 3, 4, 5", "+", "6, 7, 8")]
 	[TestCase("(1, 2, 3, 4, 5) - (6, 7, 8)", "1, 2, 3, 4, 5", "-", "6, 7, 8")]

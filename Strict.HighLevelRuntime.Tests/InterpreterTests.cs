@@ -306,6 +306,36 @@ public sealed class InterpreterTests
 	}
 
 	[Test]
+	public void StackOverflowDetectionChecksGrandParentContextToo()
+	{
+		using var t = CreateType(nameof(StackOverflowDetectionChecksGrandParentContextToo),
+			"has number",
+			"Repeat(other Number) Number",
+			"\tother",
+			"Other(other Number) Number",
+			"\tother");
+		var repeat = t.Methods.Single(m => m.Name == "Repeat");
+		var other = t.Methods.Single(m => m.Name == "Other");
+		var instance = new ValueInstance(t, [new ValueInstance(interpreter.numberType, 3.0)]);
+		var argument = new ValueInstance(interpreter.numberType, 1.0);
+		var grandParent = new ExecutionContext(t, repeat, instance);
+		grandParent.Variables["other"] = argument;
+		var parent = new ExecutionContext(t, other, instance, grandParent);
+		Assert.That(() => interpreter.Execute(repeat, instance, [argument], parent),
+			Throws.InstanceOf<Interpreter.StackOverflowCallingItselfWithSameInstanceAndArguments>());
+	}
+
+	[Test]
+	public void TextPlusOperatorUsesListCombineWithoutRecursiveFallback()
+	{
+		var textType = TestPackage.Instance.GetType(Type.Text);
+		var plus = textType.Methods.Single(method => method.Name == BinaryOperator.Plus &&
+			method.Parameters.Count == 1 && method.Parameters[0].Type.IsText);
+		var result = interpreter.Execute(plus, new ValueInstance("Hey"), [new ValueInstance(" you")]);
+		Assert.That(result.Text, Is.EqualTo("Hey you"));
+	}
+
+	[Test]
 	public void CallNumberPlusOperator()
 	{
 		using var t = CreateType(nameof(CallNumberPlusOperator), "has number", "+(text) Number",

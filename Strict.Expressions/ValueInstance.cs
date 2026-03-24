@@ -297,7 +297,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 		number switch
 		{
 			TextId => escapeText
-				? "\"" + ((string)value).Replace("\\", @"\\").Replace("\"", "\\\"") + "\""
+				? "\"" + ((string)value).Replace("\"", "\\\"").Replace("\\\\", "\\") + "\""
 				: (string)value,
 			ListId => BuildListString(((ValueListInstance)value).Items, escapeText),
 			DictionaryId => BuildDictionaryString(((ValueDictionaryInstance)value).Items, escapeText),

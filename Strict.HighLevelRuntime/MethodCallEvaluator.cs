@@ -95,44 +95,79 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 			return op == BinaryOperator.Plus
 				? new ValueInstance(left.Text + right.Text)
 				: throw new NotSupportedException("Only + operator is supported for Text, got: " + op);
-		if (left.IsText && right.IsPrimitiveType(interpreter.numberType))
+		if (left.IsText && IsNumberLike(right))
 		{
 			return op == BinaryOperator.Plus
 				? new ValueInstance(left.Text + right.Number)
 				: throw new NotSupportedException("Only + operator is supported for Text+Number, got: " +
 					op);
 		}
-		if (left.IsList && right.IsList)
+		var leftList = ConvertToListValue(left);
+		var rightList = ConvertToListValue(right);
+		if (leftList.HasValue && rightList.HasValue)
 		{
 			if (op is BinaryOperator.Multiply or BinaryOperator.Divide &&
-				left.List.Items.Count != right.List.Items.Count)
+				leftList.Value.List.Items.Count != rightList.Value.List.Items.Count)
 				return Error(ListsHaveDifferentDimensions, ctx, call);
 			return op switch
 			{
-				BinaryOperator.Plus => CombineLists(left, right.List.Items, ctx, call),
-				BinaryOperator.Minus => SubtractLists(left, right.List.Items),
-				BinaryOperator.Multiply => MultiplyLists(left.List.ReturnType, interpreter.numberType,
-					left.List.Items, right.List.Items),
-				BinaryOperator.Divide => DivideLists(left.List.ReturnType, interpreter.numberType,
-					left.List.Items, right.List.Items),
+				BinaryOperator.Plus => CombineLists(leftList.Value, rightList.Value.List.Items, ctx, call),
+				BinaryOperator.Minus => SubtractLists(leftList.Value, rightList.Value.List.Items),
+				BinaryOperator.Multiply => MultiplyLists(leftList.Value.List.ReturnType, interpreter.numberType,
+					leftList.Value.List.Items, rightList.Value.List.Items),
+				BinaryOperator.Divide => DivideLists(leftList.Value.List.ReturnType, interpreter.numberType,
+					leftList.Value.List.Items, rightList.Value.List.Items),
 				_ => throw new NotSupportedException( //ncrunch: no coverage
 					"Only +, -, *, / operators are supported for Lists, got: " + op)
 			};
 		}
-		if (left.IsList && right.IsPrimitiveType(interpreter.numberType))
+		if (leftList.HasValue && right.IsPrimitiveType(interpreter.numberType))
 		{
 			if (op == BinaryOperator.Plus)
-				return AddToList(left, right);
+				return AddToList(leftList.Value, right);
 			if (op == BinaryOperator.Minus)
-				return RemoveFromList(left, right);
+				return RemoveFromList(leftList.Value, right);
 			if (op == BinaryOperator.Multiply)
-				return MultiplyList(left.List.ReturnType, left.List.Items, right.Number);
+				return MultiplyList(leftList.Value.List.ReturnType, leftList.Value.List.Items, right.Number);
 			if (op == BinaryOperator.Divide)
-				return DivideList(left.List.ReturnType, left.List.Items, right.Number);
+				return DivideList(leftList.Value.List.ReturnType, leftList.Value.List.Items, right.Number);
 			throw new NotSupportedException( //ncrunch: no coverage
 				"Only +, -, *, / operators are supported for List and Number, got: " + op);
 		}
+		if (IsCoreRuntimeType(call.Method.Type))
+			throw new InvalidOperationException("Arithmetic fallback is not allowed for core type " +
+				call.Method.Type.Name + " operator " + op + " with left=" + left + ", right=" + right);
 		return ExecuteMethodCall(call, left, ctx); //ncrunch: no coverage
+	}
+
+	private static bool IsCoreRuntimeType(Type type) =>
+		type.IsList || type.IsDictionary || type.IsNumber || type.IsText || type.IsBoolean ||
+		type.IsCharacter || type.Name == Type.Range;
+
+	private static ValueInstance? ConvertToListValue(ValueInstance value)
+	{
+		if (value.IsList)
+			return value;
+		var typeInstance = value.TryGetValueTypeInstance();
+		if (typeInstance == null)
+			return null;
+		if (typeInstance.TryGetValue(Type.ElementsLowercase, out var elements))
+			return elements.IsList
+				? elements
+				: ConvertToListValue(elements);
+		if (typeInstance.TryGetValue(Type.IteratorLowercase, out var iterator))
+			return iterator.IsList
+				? iterator
+				: ConvertToListValue(iterator);
+		if (!typeInstance.ReturnType.IsList)
+			return null;
+		var length = value.GetIteratorLength();
+		var iteratorValues = new ValueInstance[length];
+		var listItemType = typeInstance.ReturnType.GetFirstImplementation();
+		var characterType = listItemType.GetType(Type.Character);
+		for (var index = 0; index < length; index++)
+			iteratorValues[index] = value.GetIteratorValue(characterType, index);
+		return new ValueInstance(typeInstance.ReturnType, iteratorValues);
 	}
 
 	private bool IsNumberLike(ValueInstance value) => value.IsNumberLike(interpreter.numberType);

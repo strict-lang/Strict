@@ -18,7 +18,7 @@ public sealed class PhraseTokenizer
 		{
 			if (part[0] == ' ')
 				throw new InvalidSpacing(input);
-			if (part[0] == '\"' && (part.Length == 1 || part[1] != '\"'))
+			if (part[0] == '"' && (part.Length == 1 || part[1] != '"'))
 				throw new UnterminatedString(input);
 			if (part[0] == '(')
 				throw new InvalidEmptyOrUnmatchedBrackets(input);
@@ -40,7 +40,7 @@ public sealed class PhraseTokenizer
 		for (index = 0; index < input.Length; index++)
 		{
 			var character = input[index];
-			if (character == '\"')
+			if (character == '"' && !IsEscapedQuote(index))
 				GetSingleTokenTillEndOfText(processToken);
 			else if (textStart == -1)
 				ProcessNormalToken(character, processToken);
@@ -49,6 +49,16 @@ public sealed class PhraseTokenizer
 			throw new UnterminatedString(input);
 		if (tokenStart >= 0)
 			processToken(tokenStart..input.Length);
+	}
+
+	private bool IsEscapedQuote(int quoteIndex)
+	{
+		if (quoteIndex == 0 || input[quoteIndex - 1] != '\\')
+			return false;
+		var slashCount = 0;
+		for (var slashIndex = quoteIndex - 1; slashIndex >= 0 && input[slashIndex] == '\\'; slashIndex--)
+			slashCount++;
+		return slashCount % 2 == 1;
 	}
 
 	private void GetSingleTokenTillEndOfText(Action<Range> processToken)
@@ -162,7 +172,7 @@ public sealed class PhraseTokenizer
 
 		private bool FoundLastToken()
 		{
-			if (tokens.input[tokens.index] == '"')
+			if (tokens.input[tokens.index] == '"' && !tokens.IsEscapedQuote(tokens.index))
 			{
 				tokens.GetSingleTokenTillEndOfText(result.Add);
 				return false;

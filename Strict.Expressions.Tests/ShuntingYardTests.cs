@@ -14,6 +14,8 @@ public sealed class ShuntingYardTests
 	[TestCase("\"Hello\" + \"World\"", "\"Hello\", \"World\", +")]
 	[TestCase("(\"Hello\" + \"World\") - \"H\"", "\"Hello\", \"World\", +, \"H\", -")]
 	[TestCase("\"Hello + 5\" + \"World\"", "\"Hello + 5\", \"World\", +")]
+	[TestCase("\"Cannot downcast Text to Number for list: \\\"Hi\\\"\"",
+		"\"Cannot downcast Text to Number for list: \\\"Hi\\\"\"")]
 	[TestCase("(a, b) + (c, d)", "(a, b), (c, d), +")]
 	[TestCase("((a, b) + (c, d)) * 2", "(a, b), (c, d), +, 2, *")]
 	[TestCase("((a, (b * e)) + (c, d)) * 2", "(a, (b * e)), (c, d), +, 2, *")]
@@ -36,6 +38,8 @@ public sealed class ShuntingYardTests
 		"true, false, and, true, not, false, not, and, or")]
 	[TestCase("-5 * 2", "-5, 2, *")]
 	[TestCase("-(5 * 2)", "5, 2, *, -")]
+	[TestCase("(1) + (\"Hi\") is Error(\"Cannot downcast Text to Number for list: \\\"Hi\\\"\")",
+		"(1), (\"Hi\"), +, Error(\"Cannot downcast Text to Number for list: \\\"Hi\\\"\"), is")]
 	public void Parse(string input, string expected) =>
 		Assert.That(
 			string.Join(", ",

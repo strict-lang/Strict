@@ -1,6 +1,7 @@
 using Strict.Expressions;
 using Strict.Language;
 using Strict.Language.Tests;
+using System.Reflection;
 using Type = Strict.Language.Type;
 
 namespace Strict.HighLevelRuntime.Tests;
@@ -112,7 +113,15 @@ public sealed class ListTests
 		using var type = CreateType(nameof(AddTextListToNumberListReturnsDowncastError), "has number",
 			"Run Error", "\t(1) + (\"Hi\")");
 		Assert.That(interpreter.Execute(type.Methods[0], interpreter.noneInstance, []).ToString(),
-			Is.EqualTo("Cannot downcast Text to Number for list: \"Hi\""));
+			Contains.Substring("Cannot downcast Text to Number for list: Text: \\\"Hi\\\""));
+	}
+
+	[Test]
+	public void AddTextToNumberListIsError()
+	{
+		using var type = CreateType(nameof(AddTextListToNumberListReturnsDowncastError), "has number",
+			"Run", "\t(1) + (\"Hi\") is Error(\"Cannot downcast Text to Number for list: Text: \\\"Hi\\\"\")");
+		interpreter.Execute(type.Methods[0], interpreter.noneInstance, []);
 	}
 
 	[Test]
@@ -193,7 +202,10 @@ public sealed class ListTests
 		{
 			new(interpreter.numberType, 3), new(interpreter.numberType, 4)
 		};
-		var result = InvokePrivateListMethod("CombineLists", leftList, rightList);
+		var method = typeof(MethodCallEvaluator).GetMethod("CombineLists",
+			System.Reflection.BindingFlags.NonPublic | BindingFlags.Instance)!;
+		var result = (ValueInstance)(method.Invoke(new MethodCallEvaluator(null!),
+			new object[] { leftList, rightList, null!, null! })!);
 		Assert.That(ReferenceEquals(leftList.List.Items, result.List.Items), Is.True);
 		Assert.That(result.List.Items.Count, Is.EqualTo(4));
 	}
