@@ -260,4 +260,15 @@ public sealed class MemberCallTests : TestExpressions
 						"\tconstant a = 5")).ParseMembersAndMethods(parser);
 			}, //ncrunch: no coverage
 			Throws.InstanceOf<CannotAccessMemberBeforeTypeIsParsed>());
+
+	[Test]
+	public void IsMemberDefaultsToBooleanType()
+	{
+		using var program = new Type(TestPackage.Instance,
+			new TypeLines(nameof(IsMemberDefaultsToBooleanType),
+				"has IsConstant",
+				"Run",
+				"\tIsConstant is false")).ParseMembersAndMethods(parser);
+		Assert.That(program.Members[0].Type, Is.EqualTo(type.GetType(Type.Boolean)));
+	}
 }

@@ -27,10 +27,10 @@ internal class TypeMethodFinder(Type type)
 
 	public Method? FindMethod(string methodName, IReadOnlyList<Expression> arguments)
 	{
-   if (Type.IsGeneric && Type is not GenericTypeImplementation)
+		if (Type.IsGeneric && Type is not GenericTypeImplementation)
 			throw new GenericTypesCannotBeUsedDirectlyUseImplementation(Type, Type.IsMutable
 				? Mutable + " must be used via keyword, not manually constructed!"
-				: "Type is Generic and cannot be used directly");
+				: "Type is Generic and cannot be used directly", methodName, arguments);
 		if (Type is OneOfType oneOfType)
 		{
 			foreach (var subType in oneOfType.Types)

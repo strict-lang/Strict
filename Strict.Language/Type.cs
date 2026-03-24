@@ -403,8 +403,35 @@ public class Type : Context, IDisposable
 	public Method GetMethod(string methodName, IReadOnlyList<Expression> arguments) =>
 		typeMethodFinder.GetMethod(methodName, arguments);
 
-	public class GenericTypesCannotBeUsedDirectlyUseImplementation(Type type,
-		string extraInformation) : Exception(type + " " + extraInformation);
+	public class GenericTypesCannotBeUsedDirectlyUseImplementation : Exception
+	{
+		public GenericTypesCannotBeUsedDirectlyUseImplementation(Type type, string extraInformation,
+			string? methodName = null, IReadOnlyList<Expression>? arguments = null)
+			: base(BuildMessage(type, extraInformation, methodName, arguments))
+		{
+		}
+
+		public GenericTypesCannotBeUsedDirectlyUseImplementation(
+			GenericTypesCannotBeUsedDirectlyUseImplementation innerException, string calledFrom)
+			: base(innerException.Message + ", Called from: " + calledFrom, innerException)
+		{
+		}
+
+		private static string BuildMessage(Type type, string extraInformation, string? methodName,
+			IReadOnlyList<Expression>? arguments)
+		{
+			var message = "Lookup context type: " + type + ", Reason: " + extraInformation;
+			if (string.IsNullOrEmpty(methodName))
+				return message;
+			message += ", Attempted method: " + methodName;
+			if (arguments == null || arguments.Count == 0)
+				message += ", Arguments: none";
+			else
+				message += ", Arguments: " + string.Join(", ",
+					arguments.Select(argument => argument + " => " + argument.ReturnType));
+			return message;
+		}
+	}
 
 	/// <summary>
 	/// Any non-public member is automatically iterable if it has Iterator, for example, Text.strict

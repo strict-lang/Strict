@@ -40,10 +40,12 @@ public sealed class TypeMethodFinderTests
 	{
 		using var type = CreateType(nameof(GenericTypesCannotBeUsedDirectlyUseImplementation),
 			"has generic", "AddGeneric(first Generic, other List) List", "\tfirst + other");
-			// ReSharper disable AccessToDisposedClosure
-		Assert.That(() => type.FindMethod("AddGeneric",
-				[new Number(type, 6), new List(null!, [new Number(type, 7), new Number(type, 8)])]),
-			Throws.InstanceOf<Type.GenericTypesCannotBeUsedDirectlyUseImplementation>());
+		var exception = Assert.Throws<Type.GenericTypesCannotBeUsedDirectlyUseImplementation>(() =>
+			type.FindMethod("AddGeneric",
+				[new Number(type, 6), new List(null!, [new Number(type, 7), new Number(type, 8)])]));
+		Assert.That(exception!.Message,
+			Does.Contain("Lookup context type:").And.Contain("Attempted method:").And.
+				Contain("Arguments:").And.Contain("List(Number)"));
 	}
 
 	[Test]

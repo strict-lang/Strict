@@ -58,15 +58,54 @@ public class MethodCall : ConcreteExpression
 	{
 		if (body.IsFakeBodyForMemberInitialization)
 			return null;
-		var method = type.FindMethod(inputAsString, arguments) ??
-			(instance == null && type == body.Method.Type
-				? FindPrivateMethod(type, inputAsString, arguments)
-				: null);
+		Method? method;
+		try
+		{
+			method = type.FindMethod(inputAsString, arguments) ??
+				(instance == null && type == body.Method.Type
+					? FindPrivateMethod(type, inputAsString, arguments)
+					: null);
+		}
+		catch (Type.GenericTypesCannotBeUsedDirectlyUseImplementation exception)
+		{
+			throw new Type.GenericTypesCannotBeUsedDirectlyUseImplementation(exception,
+				GetMethodLookupContext(body, inputAsString, instance, arguments));
+		}
 		if (method == null)
 			return null;
 		return new MethodCall(method, instance, AreArgumentsAutoParsedAsList(method, arguments)
 			? [new List(body, (List<Expression>)arguments)]
 			: arguments, null, body.CurrentFileLineNumber);
+	}
+
+	private static string GetMethodLookupContext(Body body, string inputAsString,
+		Expression? instance, IReadOnlyList<Expression> arguments)
+	{
+		var context = body.Method.Type + "." + body.Method.Name + " at line " +
+			(body.CurrentFileLineNumber + 1) + ", source: " + body.CurrentLine.Trim() +
+			", lookup instance: " + (instance?.ToString() ?? "none") +
+			", lookup method: " + inputAsString +
+			", lookup arguments: " + (arguments.Count == 0
+				? "none"
+				: string.Join(", ", arguments.Select(argument =>
+					argument + " => " + argument.ReturnType)));
+		var line = body.CurrentLine.Trim();
+		var plusIndex = line.IndexOf(" + ", StringComparison.Ordinal);
+		var isIndex = line.IndexOf(" is ", StringComparison.Ordinal);
+		if (plusIndex <= 0 || isIndex <= plusIndex + 3)
+			return context;
+		try
+		{
+			var plusInstance = body.Method.ParseExpression(body, line.AsSpan(0, plusIndex));
+			var plusArgument = body.Method.ParseExpression(body,
+				line.AsSpan(plusIndex + 3, isIndex - plusIndex - 3));
+			return context + ", + instance type: " + plusInstance.ReturnType +
+				", + argument[0] type: " + plusArgument.ReturnType;
+		}
+		catch (ParsingFailed)
+		{
+			return context;
+		}
 	}
 
 	private static Method? FindPrivateMethod(Type type, string methodName,

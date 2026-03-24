@@ -38,6 +38,7 @@
 - Tests in the Slow or Nightly category are usually not run every time and can be skipped and ignored. On bigger refactors they should be run; our CI usually runs them on each check-in as they will be slower and we want to keep all tests fast (<10ms).
 - Prefer NCrunch for C# or SCrunch for Strict; all tests should be run all the time (if something changed), it is fine to run tests via `dotnet test` to also include Slow and Nightly tests.
 - Do not ignore linker or platform-build errors in code or tests; tests must surface failures instead of swallowing InvalidOperationException for platform compilation issues.
+- User prefers not to weaken tests by changing or removing assertions; focus fixes on production code and diagnostics instead.
 
 ## Strict Semantics
 - When asked about Strict semantics, derive behavior directly from README.md and Strict/TestPackage examples; re-check cited examples before answering and avoid contradicting them.
@@ -373,7 +374,6 @@ test('rejects empty email', async () => {
   expect(result.error).toBe('Email required');
 });
 ```
-
 **Verify RED**
 ```bash
 $ npm test
@@ -389,7 +389,6 @@ function submitForm(data: FormData) {
   // ...
 }
 ```
-
 **Verify GREEN**
 ```bash
 $ npm test
@@ -451,3 +450,7 @@ No exceptions without your human partner's permission.
 - For Strict runtime conversion work, prioritize Text/Path/Directory/File base features first; treat Error as the exception model (no throw/catch work), and defer async/await/Task, HTTP download, reflection, ZIP/binary I/O, and Process.Start to later phases.
 - In Strict runtime conversion, Path should not define redundant from/to methods because Path behaves like Text; use Path methods FileName, RemoveExtension, PathOnly returning Path, and move LastIndexOf to Text.strict; implement Text Upper/Lower. 
 - Prefer root-cause, general runtime fixes over TestPackage-specific workarounds and reject adding Number.Upper/Lower helper methods for this issue.
+
+## Error Messaging Guidelines
+- Ensure error messages are precise and human-readable; avoid unclear wording like 'requested call token'.
+- Explicitly distinguish lookup context type from instance value in error messages.
