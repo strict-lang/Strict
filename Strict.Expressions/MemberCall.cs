@@ -4,11 +4,13 @@ using Type = Strict.Language.Type;
 
 namespace Strict.Expressions;
 
-public sealed class MemberCall(Expression? instance, Member member, int lineNumber = 0)
+public sealed class MemberCall(Expression? instance, Member member, int lineNumber = 0,
+	bool shouldUseTypePrefixWithoutInstance = false)
 	: ConcreteExpression(member.Type, lineNumber, member.IsMutable)
 {
 	public Expression? Instance { get; } = instance;
 	public Member Member { get; } = member;
+	private bool ShouldUseTypePrefixWithoutInstance { get; } = shouldUseTypePrefixWithoutInstance;
 
 	public static Expression? TryParse(Body body, Type type, Expression? instance,
 		ReadOnlySpan<char> partToParse)
@@ -16,9 +18,19 @@ public sealed class MemberCall(Expression? instance, Member member, int lineNumb
 		var members = type.Members;
 		for (var i = 0; i < members.Count; i++)
 			if (partToParse.Equals(members[i].Name, StringComparison.Ordinal))
-				return instance == null && body.IsFakeBodyForMemberInitialization
-					? throw new CannotAccessMemberBeforeTypeIsParsed(body, partToParse.ToString(), type)
-					: new MemberCall(instance, members[i], body.CurrentFileLineNumber);
+			{
+				if (!members[i].IsConstant && instance == null && body.IsFakeBodyForMemberInitialization)
+					throw new CannotAccessMemberBeforeTypeIsParsed(body, partToParse.ToString(), type);
+				var member = members[i];
+				if (type.IsGeneric && type.IsList && member.Type.IsGeneric && member.Type.IsList)
+					member = member.CloneWithImplementation(
+						type.GetGenericImplementation(type.GetType(Type.GenericUppercase)));
+				else if (member.Type == type && type.IsGeneric)
+					member = member.CloneWithImplementation(
+						type.GetGenericImplementation(type.GetType(Type.GenericUppercase)));
+				return new MemberCall(instance, member, body.CurrentFileLineNumber,
+					instance == null && type != body.Method.Type);
+			}
 		return body.Method.Name == Member.ConstraintsBody
 			? FindContainingMethodTypeMemberForConstraints(body, instance, partToParse.ToString())
 			: null;
@@ -38,7 +50,7 @@ public sealed class MemberCall(Expression? instance, Member member, int lineNumb
 	public override string ToString() =>
 		Instance != null
 			? $"{Instance}.{Member.Name}"
-			: Member.IsConstant
+			: ShouldUseTypePrefixWithoutInstance
 				? $"{Member.DefinedIn.Name}.{Member.Name}"
 				: Member.Name;
 

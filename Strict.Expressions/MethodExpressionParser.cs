@@ -248,6 +248,9 @@ public class MethodExpressionParser : ExpressionParser
 		ReadOnlySpan<char> input, IReadOnlyList<Expression> arguments)
 	{
 		var nestedInput = input;
+		if (nestedInput.StartsWith(Type.ValueLowercase + ".", StringComparison.Ordinal) &&
+			body.FindVariable(Type.ValueLowercase.AsSpan(), false) == null)
+			Instance.Parse(body, body.Method);
 		Expression? current = null;
 		var context = body.Method.Type;
 		var callArguments = arguments;

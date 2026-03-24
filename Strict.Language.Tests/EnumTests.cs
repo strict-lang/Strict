@@ -55,7 +55,7 @@ public sealed class EnumTests
 	[Test]
 	public void UseEnumWithoutConstructor()
 	{
-		var consumingType = new Type(TestPackage.Instance,
+		using var consumingType = new Type(TestPackage.Instance,
 				new TypeLines(nameof(UseEnumWithoutConstructor), "has logger", "Run",
 					"\tconstant url = Connection.Google", "\turl is Connection")).
 			ParseMembersAndMethods(parser);
@@ -70,7 +70,7 @@ public sealed class EnumTests
 	[Test]
 	public void UseEnumAsMemberWithoutConstructor()
 	{
-		var consumingType = new Type(TestPackage.Instance,
+		using var consumingType = new Type(TestPackage.Instance,
 			new TypeLines(nameof(UseEnumAsMemberWithoutConstructor), "constant url = Connection.Google",
 				"Run", "\t5")).ParseMembersAndMethods(parser);
 		Assert.That(consumingType.Members[0].InitialValue, Is.InstanceOf<MemberCall>());
@@ -82,7 +82,7 @@ public sealed class EnumTests
 	[Test]
 	public void EnumWithoutValuesUsedAsMemberAndVariable()
 	{
-		var consumingType = new Type(TestPackage.Instance,
+		using var consumingType = new Type(TestPackage.Instance,
 			new TypeLines(nameof(EnumWithoutValuesUsedAsMemberAndVariable),
 				"has something = Instruction.Add", "Run",
 				"\tconstant myInstruction = Instruction.Set",
@@ -100,7 +100,7 @@ public sealed class EnumTests
 	[Test]
 	public void CompareEnums()
 	{
-		var consumingType = new Type(TestPackage.Instance,
+		using var consumingType = new Type(TestPackage.Instance,
 				new TypeLines(nameof(CompareEnums),
 					"has receivedInstruction = Instruction.Add",
 					"ExecuteInstruction(numbers) Number",
@@ -118,7 +118,7 @@ public sealed class EnumTests
 	[Test]
 	public void UseEnumAsMethodParameters()
 	{
-		var consumingType = new Type(TestPackage.Instance,
+		using var consumingType = new Type(TestPackage.Instance,
 				new TypeLines(nameof(UseEnumAsMethodParameters),
 					"has logger",
 					"ExecuteInstruction(numbers, instruction) Number",
@@ -135,7 +135,7 @@ public sealed class EnumTests
 	[Test]
 	public void EnumCanHaveMembersWithDifferentTypes()
 	{
-		var type = new Type(TestPackage.Instance,
+		using var type = new Type(TestPackage.Instance,
 				new TypeLines(nameof(EnumCanHaveMembersWithDifferentTypes),
 					"constant One",
 					"constant SomeText = \"2\"",
@@ -147,7 +147,7 @@ public sealed class EnumTests
 	[Test]
 	public void UseEnumExtensions()
 	{
-		new Type(TestPackage.Instance,
+		using var _ = new Type(TestPackage.Instance,
 			new TypeLines("MoreInstruction", "has instruction", "constant BlaDivide = 14",
 				"constant BlaBinaryOperatorsSeparator", "constant BlaGreaterThan",
 				"constant BlaLessThan")).ParseMembersAndMethods(parser);
@@ -161,7 +161,7 @@ public sealed class EnumTests
 	[Test]
 	public void EnumConstantsCanBeUsedDirectly()
 	{
-		var type =
+		using var type =
 			new Type(TestPackage.Instance,
 				new TypeLines(nameof(EnumConstantsCanBeUsedDirectly), "has instruction", "Run",
 					"\tInstruction.Multiply is not instruction")).ParseMembersAndMethods(parser);

@@ -17,9 +17,10 @@ public sealed class Not(Method method, Expression right)
 	}
 
 	public override string ToString() =>
-		Instance is Binary binary
+		Instance is Binary binary &&
+		(binary.Method.Name == BinaryOperator.In || binary.Method.Name == BinaryOperator.Is)
 			? binary.BinaryToString(true)
-			: UnaryOperator.Not + " " + Instance!;
+			: UnaryOperator.Not + " " + AddNestedBracketsIfNeeded(Instance!, 10);
 
 	public override bool IsConstant => Instance!.IsConstant;
 }
