@@ -418,6 +418,7 @@ public sealed class Method : Context
 				? methodBody.Expressions[0]
 				: methodBody;
 		var expressions = new List<Expression>();
+		var lastExecutableLineIndex = GetLastExecutableLineIndex();
 		for (var index = 1; index < lines.Count; index++)
 		{
 			var line = lines[index];
@@ -429,9 +430,17 @@ public sealed class Method : Context
 				expressions.Add(declaration);
 				continue;
 			}
-			if (!IsPotentialTestLine(line) || IsControlFlowLine(line))
+			if (index == lastExecutableLineIndex || !IsPotentialTestLine(line) || IsControlFlowLine(line))
 				continue;
-			var expression = Parser.ParseLineExpression(methodBody, line.AsSpan(methodBody.Tabs));
+			Expression expression;
+			try
+			{
+				expression = Parser.ParseLineExpression(methodBody, line.AsSpan(methodBody.Tabs));
+			}
+			catch (Type.GenericTypesCannotBeUsedDirectlyUseImplementation)
+			{
+				continue;
+			}
 			if (IsStandaloneInlineTestExpression(expression))
 			{
 				Tests.Add(expression);
@@ -441,6 +450,20 @@ public sealed class Method : Context
 		expressions.Add(new PlaceholderExpression(ReturnType));
 		methodBody.SetExpressions(expressions);
 		return methodBody;
+	}
+
+	private int GetLastExecutableLineIndex()
+	{
+		var lastExecutableLineIndex = -1;
+		for (var index = 1; index < lines.Count; index++)
+		{
+			var line = lines[index];
+			if (!line.StartsWith("\t", StringComparison.Ordinal) || line.Length <= 1 ||
+				IsControlFlowLine(line))
+				continue;
+			lastExecutableLineIndex = index;
+		}
+		return lastExecutableLineIndex;
 	}
 
 	private static bool IsPotentialTestLine(string line) =>

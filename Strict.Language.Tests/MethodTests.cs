@@ -162,6 +162,19 @@ public sealed class MethodTests
 	}
 
 	[Test]
+	public void ParseTestsOnlyForGenericSkipsFinalImplementationLine()
+	{
+		var customType = new Type(TestPackage.Instance,
+			new TypeLines("SkipLastGenericIsLine",
+				"has elements Generics",
+				"is(other) Boolean",
+				"\t(1, 2) is (1, 2)",
+				"\telements is other.elements")).ParseMembersAndMethods(parser);
+		customType.Methods[0].GetBodyAndParseIfNeeded(true);
+		Assert.That(customType.Methods[0].Tests.Count, Is.EqualTo(1));
+	}
+
+	[Test]
 	public void ConditionalExpressionIsNotTest()
 	{
 		var customType = new Type(TestPackage.Instance,
