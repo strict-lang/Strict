@@ -62,7 +62,7 @@ public class MethodCall : ConcreteExpression
 		try
 		{
 			method = type.FindMethod(inputAsString, arguments) ??
-				(instance == null && type == body.Method.Type
+				(type == body.Method.Type
 					? FindPrivateMethod(type, inputAsString, arguments)
 					: null);
 		}
@@ -176,12 +176,24 @@ public class MethodCall : ConcreteExpression
 		IReadOnlyList<Expression> arguments, Expression? basedOnErrorVariable = null)
 	{
 		fromType = NormalizeListAndDictionaryImplementation(fromType, arguments);
+		(fromType, arguments) = NormalizeMutableImplementationAndArguments(body, fromType, arguments);
 		ValidateMutableImplementation(fromType, arguments);
 		arguments = NormalizeDictionaryArguments(body, fromType, arguments);
 		arguments = NormalizeErrorArguments(body, ref fromType, arguments, basedOnErrorVariable);
 		arguments = NormalizeTypeArguments(body, fromType, arguments);
 		return new MethodCall(fromType.GetMethod(Method.From, arguments), null, arguments, null,
 			body.CurrentFileLineNumber);
+	}
+
+	private static (Type fromType, IReadOnlyList<Expression> arguments)
+		NormalizeMutableImplementationAndArguments(Body body, Type fromType,
+			IReadOnlyList<Expression> arguments)
+	{
+		if (!fromType.IsMutable || arguments.Count != 1)
+			return (fromType, arguments);
+		if (fromType.IsGeneric && fromType is not GenericTypeImplementation)
+			fromType = fromType.GetGenericImplementation(arguments[0].ReturnType);
+		return (fromType, arguments);
 	}
 
 	private static Type NormalizeListAndDictionaryImplementation(Type fromType,
@@ -204,17 +216,9 @@ public class MethodCall : ConcreteExpression
 
 	private static void ValidateMutableImplementation(Type fromType, IReadOnlyList<Expression> args)
 	{
-		if (fromType is { IsMutable: true, IsGeneric: true } && args is
-			[{ ReturnType: not GenericTypeImplementation { Generic.Name: Type.List } }])
+		if (fromType is { IsMutable: true, IsGeneric: true } && fromType is not GenericTypeImplementation)
 			throw new Type.GenericTypesCannotBeUsedDirectlyUseImplementation(fromType,
-				Type.Mutable + " must be used with a List implementation");
-		if (fromType is GenericTypeImplementation { Generic.Name: Type.Mutable } mutableImpl &&
-			mutableImpl.ImplementationTypes[0] is not GenericTypeImplementation
-			{
-				Generic.Name: Type.List
-			})
-			throw new Type.GenericTypesCannotBeUsedDirectlyUseImplementation(mutableImpl,
-				Type.Mutable + " must be used with a List implementation");
+				Type.Mutable + " must use a concrete implementation type");
 	}
 
 	private static IReadOnlyList<Expression> NormalizeDictionaryArguments(Body body, Type fromType,
@@ -352,6 +356,8 @@ public class MethodCall : ConcreteExpression
 
 	private string GetProperMethodName() =>
 		Method.Name == Method.From
-			? Method.ReturnType.Name
+			? ReturnType is GenericTypeImplementation { Generic.Name: Type.Mutable }
+				? Type.Mutable
+				: Method.ReturnType.Name
 			: Method.Name;
 }

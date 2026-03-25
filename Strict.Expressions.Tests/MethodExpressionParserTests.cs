@@ -194,7 +194,7 @@ public sealed class MethodExpressionParserTests : TestExpressions
 	}
 
 	[Test]
-	public async Task ParseListReverseMethodFromBasePackage()
+	public async Task ParseListReverseMethod()
 	{
 		var listReverse = TestPackage.Instance.GetType(Type.List).Methods.Single(method =>
 			method.Name == "Reverse" && method.Parameters.Count == 0);

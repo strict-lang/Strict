@@ -174,18 +174,6 @@ public sealed class MutableReassignmentTests : TestExpressions
 	}
 
 	[Test]
-	public void DirectUsageOfMutableTypesOrImplementsAreForbidden()
-	{
-		using var program = new Type(TestPackage.Instance,
-			new TypeLines(nameof(DirectUsageOfMutableTypesOrImplementsAreForbidden),
-				"has unused Character", "DummyCount(limit Number) Number",
-				"\tconstant result = Mutable(5)", "\tresult + 1"));
-		program.ParseMembersAndMethods(parser);
-		Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(),
-			Throws.InstanceOf<ParsingFailed>().With.InnerException.InstanceOf<Type.GenericTypesCannotBeUsedDirectlyUseImplementation>());
-	}
-
-	[Test]
 	public void GenericTypesCannotBeUsedDirectlyUseImplementation()
 	{
 		using var program = new Type(TestPackage.Instance,

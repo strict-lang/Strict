@@ -116,20 +116,6 @@ public sealed class ListAdvancedTests : TestExpressions
 	}
 
 	[Test]
-	public void OnlyListTypeIsAllowedAsMutableExpressionArgument() =>
-		Assert.That(
-			() =>
-			{
-				using var dummy = new Type(TestPackage.Instance,
-					new TypeLines(nameof(OnlyListTypeIsAllowedAsMutableExpressionArgument),
-						"has unused Logger", "MutableWithNumber Number",
-						"\tconstant result = Mutable(Number)", "\tresult + 1")).ParseMembersAndMethods(parser);
-				dummy.Methods[0].GetBodyAndParseIfNeeded();
-			}, //ncrunch: no coverage
-			Throws.InstanceOf<ParsingFailed>().With.InnerException.
-				InstanceOf<Type.GenericTypesCannotBeUsedDirectlyUseImplementation>());
-
-	[Test]
 	public void CheckIfInvalidArgumentIsNotMethodOrListCall() =>
 		Assert.That(
 			() =>

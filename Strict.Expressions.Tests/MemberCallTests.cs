@@ -24,11 +24,6 @@ public sealed class MemberCallTests : TestExpressions
 				StartsWith("unknown in TestPackage/Log"));
 
 	[Test]
-	public void NumbersCanNotStartNestedCall() =>
-		Assert.That(() => ParseExpression("1.logger"),
-			Throws.InstanceOf<NumbersCanNotBeInNestedCalls>());
-
-	[Test]
 	public void OperatorsCannotBeInNestedCalls() =>
 		Assert.That(() => ParseExpression("+.logger"), Throws.InstanceOf<InvalidOperatorHere>());
 

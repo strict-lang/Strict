@@ -7,7 +7,7 @@ from(text)
 	Character(7) is Tab
 	7 to Character is "7"
 	Character("ab") is Error
-	text.Characters(0)
+	text(0)
 to Text
 	Character("a") to Text is "a"
 	"" + value

@@ -301,6 +301,8 @@ public class MethodExpressionParser : ExpressionParser
 		Expression? current = null;
 		var context = body.Method.Type;
 		var callArguments = arguments;
+		if (TryParseLeadingNumberInstance(body, ref nestedInput, ref current, ref context))
+			callArguments = [];
 		if (nestedInput.Length > 0 && nestedInput[0] == '.')
 		{
 			if (arguments.Count == 1 && arguments[0] is Binary)
@@ -327,7 +329,11 @@ public class MethodExpressionParser : ExpressionParser
 				}
 				current ??= Text.TryParse(body, inputText) ??
 					List.TryParseWithMultipleOrNestedElements(body, inputText, false) ??
-					Dictionary.TryParse(body, inputText);
+					Dictionary.TryParse(body, inputText) ??
+					(inputText.Length > 0 && (char.IsDigit(inputText[0]) || inputText[0] == '-')
+						? Number.TryParse(body, inputText)
+						: null);
+
 				if (current is not null)
 				{
 					context = current.ReturnType;
@@ -365,6 +371,38 @@ public class MethodExpressionParser : ExpressionParser
 			context = current.ReturnType;
 		}
 		return ListCall.TryParse(body, current, callArguments);
+	}
+
+	private static bool TryParseLeadingNumberInstance(Body body, ref ReadOnlySpan<char> nestedInput,
+		ref Expression? current, ref Type context)
+	{
+		if (nestedInput.IsEmpty || !char.IsDigit(nestedInput[0]))
+			return false;
+		var numberLength = GetLeadingNumberLength(nestedInput);
+		if (numberLength <= 0 || numberLength >= nestedInput.Length || nestedInput[numberLength] != '.')
+			return false;
+		var leadingNumber = Number.TryParse(body, nestedInput[..numberLength]);
+		if (leadingNumber == null)
+			return false;
+		current = leadingNumber;
+		context = leadingNumber.ReturnType;
+		nestedInput = nestedInput[(numberLength + 1)..];
+		return true;
+	}
+
+	private static int GetLeadingNumberLength(ReadOnlySpan<char> input)
+	{
+		var index = 0;
+		while (index < input.Length && char.IsDigit(input[index]))
+			index++;
+		if (index < input.Length && input[index] == '.' && index + 1 < input.Length &&
+			char.IsDigit(input[index + 1]))
+		{
+			index++;
+			while (index < input.Length && char.IsDigit(input[index]))
+				index++;
+		}
+		return index;
 	}
 
 	private Expression? ParseMethodCallOnContext(Body body, ReadOnlySpan<char> input,

@@ -19,9 +19,6 @@ Floor Number
 	1.Floor is 1
 	2.4.Floor is 2
 	value - value % 1
-- Number
-	-1 is not 1
-	-value
 and(other) Number
 	2 and 6 is 6
 	1 and 8 is 9
