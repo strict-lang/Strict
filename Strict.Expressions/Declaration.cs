@@ -81,6 +81,9 @@ public class Declaration : ConcreteExpression
 	private static Expression CreateMutableDeclaration(Body body, ReadOnlySpan<char> valueSpan,
 		string name)
 	{
+		if (valueSpan.StartsWith(Type.Mutable + "(", StringComparison.Ordinal))
+			throw new Type.GenericTypesCannotBeUsedDirectlyUseImplementation(
+				body.Method.GetType(Type.Mutable), "Use mutable keyword instead of Mutable constructor");
 		var value = valueSpan.IsFirstLetterUppercase() && (valueSpan.IsPlural() ||
 			valueSpan.StartsWith(Type.List + '(' + Type.Mutable, StringComparison.Ordinal))
 			? new List(body.Method.Type.GetType(valueSpan.ToString()))

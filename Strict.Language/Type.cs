@@ -202,7 +202,10 @@ public class Type : Context, IDisposable
 		if (cachedGenericTypes == null)
 			return;
 		foreach (var genericType in cachedGenericTypes.Values)
+		{
+			genericType.ReimplementMembers();
 			genericType.ReimplementMethods();
+		}
 	}
 
 	private void DetermineEnumTypeKind()
@@ -460,8 +463,8 @@ public class Type : Context, IDisposable
 		return false;
 	}
 
-	private bool? cachedIteratorResult;
-	private readonly Dictionary<string, bool> cachedEvaluatedMemberTypes = new();
+	protected bool? cachedIteratorResult;
+	protected readonly Dictionary<string, bool> cachedEvaluatedMemberTypes = new();
 
 	/// <summary>
 	/// Can OUR type be converted to sameOrUsableType and be used as such? Be careful how this is

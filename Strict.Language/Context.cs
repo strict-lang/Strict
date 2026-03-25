@@ -87,10 +87,9 @@ public abstract class Context
 
 		Type? GuessTypeFromName()
 		{
-			if (name == Name && this is Type || this is Type && ((Type)this).IsGeneric &&
-				name.StartsWith(Name, StringComparison.Ordinal) &&
-				name == Name + GenericImplementationPostfix)
-				return (Type)this;
+			if (this is Type self && (self.Name == name ||
+				self.IsGeneric && name == self.Name + GenericImplementationPostfix))
+				return self;
 			if (name.StartsWith("List", StringComparison.Ordinal) && name.Length > 4 && name[4] != '(')
 				throw new ListPrefixIsNotAllowedUseImplementationTypeNameInPlural(name);
 			if (name.EndsWith('s'))
@@ -120,6 +119,8 @@ public abstract class Context
 		if (singularName == Type.GenericUppercase)
 			return GetType(Type.List);
 		var elementType = FindFullType(singularName);
+		// Only resolve via FindTypeCore for uppercase names — type names are always uppercase in Strict,
+		// so lowercase (e.g. "values" → "value") are local variables, not types
 		if (elementType == null && singularName.Length > 0 && char.IsUpper(singularName[0]))
 			elementType = FindTypeCore(singularName, this);
 		if (elementType != null)
@@ -131,6 +132,7 @@ public abstract class Context
 
 	private Type? TryGetGenericTypeWithArguments(string name)
 	{
+		// Guard against non-generic expressions starting with '(' like tuple literals "(2, 4)"
 		var mainTypeName = name[..name.IndexOf('(')];
 		if (mainTypeName.Length == 0)
 			return null;

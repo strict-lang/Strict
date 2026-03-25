@@ -173,8 +173,12 @@ public class MethodExpressionParser : ExpressionParser
 	{
 		var normalizedText = expressionText;
 		foreach (var typeEntry in body.Method.Type.Package.Types)
+		{
 			normalizedText = normalizedText.Replace($"{Type.List}({typeEntry.Key})",
 				typeEntry.Key + "s", StringComparison.Ordinal);
+			normalizedText = normalizedText.Replace(typeEntry.Key + "s.",
+				string.Empty, StringComparison.Ordinal);
+		}
 		return normalizedText;
 	}
 	private sealed class GeneratedBinaryExpressionDoesNotMatchInputExactly(Body body,
