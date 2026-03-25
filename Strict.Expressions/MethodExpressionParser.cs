@@ -65,7 +65,15 @@ public class MethodExpressionParser : ExpressionParser
 		var valueCall = new VariableCall(valueVar, body.CurrentFileLineNumber);
 		if (input.Equals(Type.ValueLowercase, StringComparison.Ordinal))
 			return valueCall;
-		var method = valueType.FindMethod(inputName, []);
+		Method? method;
+		try
+		{
+			method = valueType.FindMethod(inputName, []);
+		}
+		catch (Type.GenericTypesCannotBeUsedDirectlyUseImplementation)
+		{
+			return null;
+		}
 		if (method != null)
 			return new MethodCall(method, valueCall, [], null, body.CurrentFileLineNumber); //ncrunch: no coverage
 		var member = FindMember(valueType, inputName);
@@ -326,7 +334,9 @@ public class MethodExpressionParser : ExpressionParser
 					continue;
 				}
 				var foundType = body.Method.FindType(inputText.ToString());
-				if (foundType != null && !members.IsAtEnd)
+				if (foundType != null && !members.IsAtEnd &&
+					!inputText.Equals(Type.ValueLowercase, StringComparison.Ordinal) &&
+					!inputText.Equals(Type.OuterLowercase, StringComparison.Ordinal))
 				{
 					context = foundType;
 					continue;
@@ -420,10 +430,16 @@ public class MethodExpressionParser : ExpressionParser
 		Expression? instance)
 	{
 		if (input.Equals(Type.OuterLowercase, StringComparison.Ordinal))
+		{
+			var methodType = body.Method.Type;
+			var outerInstanceType = methodType.IsGeneric && methodType is not GenericTypeImplementation
+				? body.Method.GetType(Strict.Language.Type.Any)
+				: methodType;
 			return new VariableCall(
 				new Variable(Type.OuterLowercase, false,
-					new Instance(body.Method.Type, body.CurrentFileLineNumber), body),
+					new Instance(outerInstanceType, body.CurrentFileLineNumber), body),
 				body.CurrentFileLineNumber);
+		}
 		if (instance is not VariableCall { Variable.Name: Type.OuterLowercase })
 			return null;
 		var call = VariableCall.TryParse(body.Parent!, input) ??
@@ -499,24 +515,35 @@ public class MethodExpressionParser : ExpressionParser
 		foreach (var expression in body.Expressions)
 		{
 			if (IsMutationOfVariable(expression, variableName) ||
-				expression is Body childBody && IsVariableMutated(childBody, variableName) ||
-				expression is If ifExpression && CheckForVariableMutationInIf(variableName, ifExpression))
-				return true;
-			if (expression is For forExpression &&
-				(IsMutationOfVariable(forExpression.Body, variableName) ||
-					forExpression.CustomVariables.Any(v => v.ContainsAnythingMutable) ||
-					forExpression.Iterator is Binary { Instance: VariableCall forVariableCall } &&
-					forVariableCall.Variable.Name == variableName || forExpression.Body is Body forBody &&
-					IsVariableMutated(forBody, variableName) ||
-					forExpression.Body is If forIfBody &&
-					CheckForVariableMutationInIf(variableName, forIfBody) ||
-					forExpression.Body is MethodCall { Instance: VariableCall bodyVarCall, IsMutable: true } &&
-					bodyVarCall.Variable.Name == variableName))
+				expression is If ifExpression &&
+				CheckForVariableMutationInIf(variableName, ifExpression) ||
+				expression is For forExpression &&
+				(IsForCustomVariableMutation(forExpression, variableName) ||
+				forExpression.Body is MutableReassignment ||
+				forExpression.Body is MethodCall
+				{
+					Instance: VariableCall forVariableCall, IsMutable: true
+				} &&
+				forVariableCall.Variable.Name == variableName || forExpression.Body is Body forBody &&
+				IsVariableMutated(forBody, variableName) ||
+				forExpression.Body is If forIfBody &&
+				CheckForVariableMutationInIf(variableName, forIfBody) ||
+				forExpression.Body is MethodCall { Instance: VariableCall bodyVarCall, IsMutable: true } &&
+				bodyVarCall.Variable.Name == variableName))
 				return true;
 			if (expression is MethodCall { Instance: VariableCall variableCall, IsMutable: true } &&
 				variableCall.Variable.Name == variableName)
 				return true;
 		}
+		return false;
+	}
+
+	private static bool IsForCustomVariableMutation(For forExpression, string variableName)
+	{
+		for (var index = 0; index < forExpression.CustomVariables.Length; index++)
+			if (forExpression.CustomVariables[index] is VariableCall variableCall &&
+				variableCall.Variable.Name == variableName)
+				return true;
 		return false;
 	}
 

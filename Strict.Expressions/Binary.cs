@@ -122,6 +122,11 @@ public sealed class Binary(Expression left, Method operatorMethod, Expression[] 
 		// Any incompatibility is checked at runtime when the Executor runs on this
 		if (operatorToken is BinaryOperator.In)
 			return new Binary(right, right.ReturnType.GetMethod(BinaryOperator.In, [left]), [left]);
+		if (operatorToken is BinaryOperator.Is && left.ReturnType.IsGeneric &&
+			left.ReturnType is not GenericTypeImplementation)
+			return new Binary(left,
+				body.Method.GetType(Strict.Language.Type.Any).GetMethod(operatorToken, [right]),
+				[right]);
 		if (operatorToken is BinaryOperator.Plus && !left.ReturnType.IsText &&
 			!left.ReturnType.IsList && !left.ReturnType.IsDictionary &&
 			right.ReturnType.IsText && !HasMatchingPlusForText(left, right))

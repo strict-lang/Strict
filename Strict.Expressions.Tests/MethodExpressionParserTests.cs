@@ -168,14 +168,6 @@ public sealed class MethodExpressionParserTests : TestExpressions
 	}
 
 	[Test]
-	public async Task GenericListPlusMethodShouldNotReportOperandTypeLookupError()
-	{
-		var listPlus = TestPackage.Instance.GetType(Type.List).Methods.Single(m =>
-			m.Name == BinaryOperator.Plus && m.Parameters[0].Type.IsList);
-		Assert.That(() => listPlus.GetBodyAndParseIfNeeded(), Throws.Nothing);
-	}
-
-	[Test]
 	public void ParseListLiteralContainingTextWithBrackets()
 	{
 		var body = (Body)new Method(type, 0, this, [
@@ -202,21 +194,21 @@ public sealed class MethodExpressionParserTests : TestExpressions
 	}
 
 	[Test]
-	public async Task ParseListXMethodWithNumbersEmptyTypedListInBasePackage()
+	public async Task ParseListReverseMethodFromBasePackage()
 	{
-		var basePackage = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
-		var listX = basePackage.GetType(Type.List).Methods.Single(m => m.Name == "X");
-		Assert.That(() => listX.GetBodyAndParseIfNeeded(), Throws.Nothing);
+		var listReverse = TestPackage.Instance.GetType(Type.List).Methods.Single(method =>
+			method.Name == "Reverse" && method.Parameters.Count == 0);
+		Assert.That(() => listReverse.GetBodyAndParseIfNeeded(), Throws.Nothing);
 	}
 
 	[Test]
 	public async Task ParseAllStrictBasePackageCode()
 	{
 		var basePackage = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
-		foreach (var baseType in basePackage.Types)
-		foreach (var baseMethod in baseType.Value.Methods)
+		foreach (var baseType in new List<Type>(basePackage.Types.Values))
+		foreach (var baseMethod in baseType.Methods)
 			if (!baseMethod.IsTrait)
 				Assert.That(() => baseMethod.GetBodyAndParseIfNeeded(), Throws.Nothing,
-					$"Failed to parse method {baseMethod.Name} in type {baseType.Key}");
+					$"Failed to parse method {baseMethod.Name} in type {baseType.Name}");
 	}
 }

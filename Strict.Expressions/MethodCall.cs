@@ -81,14 +81,11 @@ public class MethodCall : ConcreteExpression
 	}
 
 	private static Method? TryFindMethodOnCurrentGenericType(Body body, Type type,
-		Expression? instance, string inputAsString, IReadOnlyList<Expression> arguments)
-	{
-		if (!type.IsGeneric || type is GenericTypeImplementation)
-			return null;
-		if (type != body.Method.Type && instance?.ReturnType != type)
-			return null;
-		return FindPrivateMethod(type, inputAsString, arguments);
-	}
+		Expression? instance, string inputAsString, IReadOnlyList<Expression> arguments) =>
+		!type.IsGeneric || type is GenericTypeImplementation ||
+		type != body.Method.Type && instance?.ReturnType != type
+			? null
+			: FindPrivateMethod(type, inputAsString, arguments);
 
 	private static string GetMethodLookupContext(Body body, string inputAsString,
 		Expression? instance, IReadOnlyList<Expression> arguments)
@@ -153,7 +150,17 @@ public class MethodCall : ConcreteExpression
 	public static Expression? TryParseFromOrEnum(Body body, IReadOnlyList<Expression> arguments,
 		string methodName)
 	{
-		var fromType = body.Method.TryGetType(methodName);
+		if (!methodName.AsSpan().IsWordOrWordWithNumberAtEnd(out _))
+			return null;
+		Type? fromType;
+		try
+		{
+			fromType = body.Method.TryGetType(methodName);
+		}
+		catch (Context.TypeNotFound)
+		{
+			return null;
+		}
 		if (fromType == null)
 			return null;
 		if (fromType.IsList && arguments.Count == 0)

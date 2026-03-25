@@ -274,13 +274,13 @@ public sealed class VirtualMachineTests : TestBytecode
 			"has texts", "Remove Texts", "\tmutable textList = texts", "\tfor texts",
 			"\t\tif value is \"b\"", "\t\t\ttextList = textList - value", "\ttextList"
 		})]
-	[TestCase("ListRemove(\"s\", \"b\", \"s\").Remove", "s s", "ListRemove",
+	[TestCase("RemoveList(\"s\", \"b\", \"s\").Remove", "s s", "RemoveList",
 		new[]
 		{
 			"has texts", "Remove Texts", "\tmutable textList = texts", "\ttextList.Remove(\"b\")",
 			"\ttextList"
 		})]
-	[TestCase("ListRemoveMultiple(\"s\", \"b\", \"s\").Remove", "b", "ListRemoveMultiple",
+	[TestCase("RemoveListMultiple(\"s\", \"b\", \"s\").Remove", "b", "RemoveListMultiple",
 		new[]
 		{
 			"has texts", "Remove Texts", "\tmutable textList = texts", "\ttextList.Remove(\"s\")",
