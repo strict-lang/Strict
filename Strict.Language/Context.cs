@@ -119,8 +119,9 @@ public abstract class Context
 		var singularName = name[..^1];
 		if (singularName == Type.GenericUppercase)
 			return GetType(Type.List);
-		var elementType = FindFullType(singularName) ??
-			(singularName.Length > 0 && char.IsUpper(singularName[0]) ? FindTypeCore(singularName, this) : null);
+		var elementType = FindFullType(singularName);
+		if (elementType == null && singularName.Length > 0 && char.IsUpper(singularName[0]))
+			elementType = FindTypeCore(singularName, this);
 		if (elementType != null)
 			return GetListImplementationType(elementType);
 		return FindFullType(name) ?? FindTypeCore(name, this);
