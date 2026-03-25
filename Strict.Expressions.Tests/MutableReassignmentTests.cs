@@ -100,7 +100,7 @@ public sealed class MutableReassignmentTests : TestExpressions
 	[TestCase("AssignNumberToTextType", "mutable something Number", "TryChangeMutableDataType Text",
 		"\tsomething = \"5\"")]
 	[TestCase("AssignNumbersToTexts", "mutable something Numbers", "TryChangeMutableDataType Text",
-		"\tsomething = (\"5\", \"4\", \"3\")")]
+		"\tsomething = (true, false)")]
 	public void ValueTypeNotMatchingWithAssignmentType(string testName, params string[] code) =>
 		Assert.That(
 			() =>

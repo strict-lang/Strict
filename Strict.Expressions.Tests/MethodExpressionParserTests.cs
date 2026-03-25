@@ -160,50 +160,19 @@ public sealed class MethodExpressionParserTests : TestExpressions
 	}
 
 	[Test]
-	public async Task ParseListToTextMethodFromBasePackage()
+	public async Task GenericListPlusMethodShouldParseWithoutGenericLookupError()
 	{
-		var basePackage = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
-		var listToText = basePackage.GetType(Type.List).Methods.Single(m =>
-			m.Name == BinaryOperator.To && m.ReturnType.IsText);
-		Assert.That(() => listToText.GetBodyAndParseIfNeeded(), Throws.Nothing);
-	}
-
-	[Test]
-	public async Task ParseAllStrictBasePackageCode()
-	{
-		var basePackage = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
-		foreach (var baseType in basePackage.Types)
-		foreach (var baseMethod in baseType.Value.Methods)
-			if (!baseMethod.IsTrait)
-				Assert.That(() => baseMethod.GetBodyAndParseIfNeeded(), Throws.Nothing,
-					$"Failed to parse method {baseMethod.Name} in type {baseType.Key}");
-	}
-
-	[Test]
-	public async Task GenericListLookupErrorShouldIncludeMethodCallChainContext()
-	{
-		var basePackage = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
-		var listPlus = basePackage.GetType(Type.List).Methods.Single(m =>
+		var listPlus = TestPackage.Instance.GetType(Type.List).Methods.Single(m =>
 			m.Name == BinaryOperator.Plus && m.Parameters[0].Type.IsList);
-		var parsingFailed = Assert.Throws<ParsingFailed>(() => listPlus.GetBodyAndParseIfNeeded());
-		Assert.That(parsingFailed?.InnerException,
-			Is.InstanceOf<Type.GenericTypesCannotBeUsedDirectlyUseImplementation>());
-		Assert.That(parsingFailed!.InnerException!.Message,
-			Does.Contain("Called from:").And.Contain("lookup instance:").And.
-				Contain("lookup arguments:"));
+		Assert.That(() => listPlus.GetBodyAndParseIfNeeded(), Throws.Nothing);
 	}
 
 	[Test]
-	public async Task GenericLookupErrorShouldShowPlusOperandTypesForListPlusTestCase()
+	public async Task GenericListPlusMethodShouldNotReportOperandTypeLookupError()
 	{
-		var basePackage = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
-		var listPlus = basePackage.GetType(Type.List).Methods.Single(m =>
+		var listPlus = TestPackage.Instance.GetType(Type.List).Methods.Single(m =>
 			m.Name == BinaryOperator.Plus && m.Parameters[0].Type.IsList);
-		var parsingFailed = Assert.Throws<ParsingFailed>(() => listPlus.GetBodyAndParseIfNeeded());
-		Assert.That(parsingFailed?.InnerException,
-			Is.InstanceOf<Type.GenericTypesCannotBeUsedDirectlyUseImplementation>());
-		Assert.That(parsingFailed!.InnerException!.Message,
-			Does.Contain("+ instance type:").And.Contain("+ argument[0] type:"));
+		Assert.That(() => listPlus.GetBodyAndParseIfNeeded(), Throws.Nothing);
 	}
 
 	[Test]
@@ -218,5 +187,28 @@ public sealed class MethodExpressionParserTests : TestExpressions
 		Assert.That(declaration.Value, Is.InstanceOf<List>());
 		Assert.That(declaration.Value.ToString(),
 			Is.EqualTo("(\"3\", \"4\", \"(1, 2)\")"));
+	}
+
+	[Test]
+	public void ParseIsComparisonWithRightSideListContainingTextWithBrackets()
+	{
+		var body = (Body)new Method(type, 0, this, [
+			MethodTests.Run,
+			"\tconstant oneTwo = (1, 2) to Text",
+			"\t(\"3\", \"4\") + oneTwo is (\"3\", \"4\", \"(1, 2)\")",
+			"\ttrue"
+		]).GetBodyAndParseIfNeeded();
+		Assert.That(body.Expressions, Has.Count.EqualTo(3));
+	}
+
+	[Test]
+	public async Task ParseAllStrictBasePackageCode()
+	{
+		var basePackage = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
+		foreach (var baseType in basePackage.Types)
+		foreach (var baseMethod in baseType.Value.Methods)
+			if (!baseMethod.IsTrait)
+				Assert.That(() => baseMethod.GetBodyAndParseIfNeeded(), Throws.Nothing,
+					$"Failed to parse method {baseMethod.Name} in type {baseType.Key}");
 	}
 }

@@ -68,14 +68,26 @@ public class MethodCall : ConcreteExpression
 		}
 		catch (Type.GenericTypesCannotBeUsedDirectlyUseImplementation exception)
 		{
-			throw new Type.GenericTypesCannotBeUsedDirectlyUseImplementation(exception,
-				GetMethodLookupContext(body, inputAsString, instance, arguments));
+			method = TryFindMethodOnCurrentGenericType(body, type, instance, inputAsString, arguments);
+			if (method == null)
+				throw new Type.GenericTypesCannotBeUsedDirectlyUseImplementation(exception,
+					GetMethodLookupContext(body, inputAsString, instance, arguments));
 		}
 		if (method == null)
 			return null;
 		return new MethodCall(method, instance, AreArgumentsAutoParsedAsList(method, arguments)
 			? [new List(body, (List<Expression>)arguments)]
 			: arguments, null, body.CurrentFileLineNumber);
+	}
+
+	private static Method? TryFindMethodOnCurrentGenericType(Body body, Type type,
+		Expression? instance, string inputAsString, IReadOnlyList<Expression> arguments)
+	{
+		if (!type.IsGeneric || type is GenericTypeImplementation)
+			return null;
+		if (type != body.Method.Type && instance?.ReturnType != type)
+			return null;
+		return FindPrivateMethod(type, inputAsString, arguments);
 	}
 
 	private static string GetMethodLookupContext(Body body, string inputAsString,

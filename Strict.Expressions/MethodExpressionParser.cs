@@ -63,6 +63,8 @@ public class MethodExpressionParser : ExpressionParser
 		var inputName = input.ToString();
 		var valueType = valueVar.Type;
 		var valueCall = new VariableCall(valueVar, body.CurrentFileLineNumber);
+		if (input.Equals(Type.ValueLowercase, StringComparison.Ordinal))
+			return valueCall;
 		var method = valueType.FindMethod(inputName, []);
 		if (method != null)
 			return new MethodCall(method, valueCall, [], null, body.CurrentFileLineNumber); //ncrunch: no coverage
@@ -99,12 +101,35 @@ public class MethodExpressionParser : ExpressionParser
 		input[0] == '"' && input[^1] == '"' && MemoryExtensions.Count(input, '"') == 2
 			? new Text(body.Method, input.Slice(1, input.Length - 2).ToString())
 			: input[0] == '(' && input[^1] == ')' && input.Contains(',') &&
-			MemoryExtensions.Count(input, '(') == 1 &&
+			HasSingleTopLevelBracketPair(input) &&
 			!input.Contains(If.ThenSeparator, StringComparison.Ordinal)
 				? new List(body, body.Method.ParseListArguments(body, input[1..^1]), makeMutable)
 				: If.CanTryParseConditional(body, input)
 					? If.ParseConditional(body, input)
 					: null;
+
+	private static bool HasSingleTopLevelBracketPair(ReadOnlySpan<char> input)
+	{
+		var nestedBracketDepth = 0;
+		var topLevelOpenBracketCount = 0;
+		var isInsideText = false;
+		for (var index = 0; index < input.Length; index++)
+		{
+			if (input[index] == '"' && (index == 0 || input[index - 1] != '\\'))
+				isInsideText = !isInsideText;
+			if (isInsideText)
+				continue;
+			if (input[index] == '(')
+			{
+				nestedBracketDepth++;
+				if (nestedBracketDepth == 1)
+					topLevelOpenBracketCount++;
+			}
+			else if (input[index] == ')')
+				nestedBracketDepth--;
+		}
+		return topLevelOpenBracketCount == 1 && nestedBracketDepth == 0;
+	}
 
 	private Expression TryParseMethodOrMember(Body body, ReadOnlySpan<char> input)
 	{

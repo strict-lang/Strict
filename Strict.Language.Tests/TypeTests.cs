@@ -361,6 +361,23 @@ public sealed class TypeTests
 	}
 
 	[Test]
+	public void ListNumberIsNotCompatibleWithListBoolean()
+	{
+		var listType = package.GetType(Type.List);
+		var numbers = listType.GetGenericImplementation(package.GetType(Type.Number));
+		var booleans = listType.GetGenericImplementation(package.GetType(Type.Boolean));
+		Assert.That(numbers.IsSameOrCanBeUsedAs(booleans), Is.False);
+	}
+
+	[Test]
+	public void GenericListImplementationIsCompatibleWithOpenListType()
+	{
+		var listType = package.GetType(Type.List);
+		var numbers = listType.GetGenericImplementation(package.GetType(Type.Number));
+		Assert.That(numbers.IsSameOrCanBeUsedAs(listType), Is.True);
+	}
+
+	[Test]
 	public void AppleTypeCompatibilityCheck()
 	{
 		using var apple = CreateType("Apple", "has name", "Quantity Number", "\tvalue.Length");

@@ -473,6 +473,8 @@ public class Type : Context, IDisposable
 		if (this == sameOrUsableType || sameOrUsableType.IsAny || typeKind < TypeKind.List &&
 			typeKind == sameOrUsableType.typeKind)
 			return true;
+		if (IsGenericTypeCompatible(sameOrUsableType))
+			return true;
 		if (allowImplicitConversion && IsImplicitToConversion(sameOrUsableType))
 			return true;
 		if (IsEnum && members[0].Type.IsSameOrCanBeUsedAs(sameOrUsableType))
@@ -486,6 +488,33 @@ public class Type : Context, IDisposable
 			return true;
 		return maxDepth >= 0 &&
 			HasExactlyOneUsableMember(sameOrUsableType, allowImplicitConversion, maxDepth);
+	}
+
+	private bool IsGenericTypeCompatible(Type sameOrUsableType)
+	{
+		if (this is GenericTypeImplementation sourceImplementation)
+			return IsSourceGenericImplementationCompatible(sourceImplementation, sameOrUsableType);
+		if (sameOrUsableType is GenericTypeImplementation targetImplementation)
+			return targetImplementation.Generic == this;
+		return false;
+	}
+
+	private static bool IsSourceGenericImplementationCompatible(
+		GenericTypeImplementation sourceImplementation, Type sameOrUsableType)
+	{
+		if (sourceImplementation.Generic == sameOrUsableType)
+			return true;
+		if (sameOrUsableType is not GenericTypeImplementation targetImplementation ||
+			sourceImplementation.Generic != targetImplementation.Generic ||
+			sourceImplementation.ImplementationTypes.Count != targetImplementation.ImplementationTypes.Count)
+			return false;
+		for (var implementationIndex = 0;
+			implementationIndex < sourceImplementation.ImplementationTypes.Count;
+			implementationIndex++)
+			if (!sourceImplementation.ImplementationTypes[implementationIndex].IsSameOrCanBeUsedAs(
+				targetImplementation.ImplementationTypes[implementationIndex], false))
+				return false;
+		return true;
 	}
 
 	private bool HasExactlyOneMemberOfType(Type targetType)
