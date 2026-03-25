@@ -93,11 +93,11 @@ Replace(searchFor Text, replaceWith Text) Text
 Upper Text
 	"HeLlo".Upper is "HELLO"
 	for
-		value.Upper
+		Upper
 Lower Text
 	"HeLlo".Lower is "hello"
 	for
-		value.Lower
+		Lower
 Count(character) Number
 	"".Count("1") is 0
 	"abc".Count("a") is 1

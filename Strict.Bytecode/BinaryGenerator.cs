@@ -246,11 +246,16 @@ public sealed class BinaryGenerator
 	{
 		if (expression is not MemberCall memberCall)
 			return null;
+		if (memberCall.Member.InitialValue != null && memberCall.Member.DefinedIn.IsEnum)
+		{
+			TryGenerateForEnum(memberCall.Member.DefinedIn, memberCall.Member.InitialValue);
+			return true;
+		}
 		if (memberCall.Instance == null)
 			instructions.Add(
 				new LoadVariableToRegister(registry.AllocateRegister(), expression.ToString()));
 		else if (memberCall.Member.InitialValue != null)
-			TryGenerateForEnum(memberCall.Instance.ReturnType, memberCall.Member.InitialValue);
+			TryGenerateForEnum(memberCall.Member.DefinedIn, memberCall.Member.InitialValue);
 		return true;
 	}
 
