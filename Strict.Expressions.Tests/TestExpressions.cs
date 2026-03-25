@@ -30,7 +30,7 @@ public abstract class TestExpressions : MethodExpressionParser
 	protected readonly Member five;
 	protected readonly List list;
 
-	[SetUp]
+	[OneTimeSetUp]
 	public void SayNoToConsoles()
 	{
 		noConsole = new NoConsoleWriteLineAllowed();
@@ -39,7 +39,7 @@ public abstract class TestExpressions : MethodExpressionParser
 
 	private NoConsoleWriteLineAllowed noConsole = null!;
 
-	[TearDown]
+	[OneTimeTearDown]
 	public void NoConsoleAllowed()
 	{
 		type.Dispose();

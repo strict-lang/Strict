@@ -12,13 +12,14 @@ public sealed class Member : NamedType
 		else if (usedKeyword == Keyword.Constant)
 			IsConstant = true;
 		if (Name != Type.ValueLowercase &&
+			!Name.StartsWith("Is", StringComparison.OrdinalIgnoreCase) &&
 			!Type.Name.StartsWith(Name.MakeFirstLetterUppercase(), StringComparison.Ordinal))
 			CheckForNameWithDifferentTypeUsage(definedIn);
 	}
 
 	private void CheckForNameWithDifferentTypeUsage(Type definedIn)
 	{
-		var nameType = definedIn.TryGetType(Name.MakeFirstLetterUppercase());
+		var nameType = definedIn.Package.TryGetType(Name.MakeFirstLetterUppercase());
 		if (nameType != null && nameType != Type)
 			throw new MemberNameWithDifferentTypeNamesThanOwnAreNotAllowed(definedIn, Name, Type.Name);
 	}
@@ -61,7 +62,8 @@ public sealed class Member : NamedType
 
 	public sealed class MemberNameWithDifferentTypeNamesThanOwnAreNotAllowed(Type type,
 		string nameType, string typeName)
-		: ParsingFailed(type, 0, $"Name {nameType} and type {typeName} are not matching");
+		: ParsingFailed(type, 0, $"Name {nameType} and type {typeName} are not matching, it is not " +
+			$"allowed to use reserved types as member names if the type is completely different!");
 
 	public void CheckIfWeCouldUpdateValue(Expression newExpression, Body bodyForErrorMessage)
 	{

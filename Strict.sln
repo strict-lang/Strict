@@ -76,7 +76,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "StrictFiles", "StrictFiles"
 		File.strict = File.strict
 		Generic.strict = Generic.strict
 		HashCode.strict = HashCode.strict
-		Input.strict = Input.strict
 		Iterator.strict = Iterator.strict
 		List.strict = List.strict
 		Logger.strict = Logger.strict

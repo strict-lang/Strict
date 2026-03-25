@@ -69,17 +69,15 @@ public sealed class CSharpTypeVisitorTests : TestCSharpGenerator
 		using var program = new Type(package, new TypeLines(
 				// @formatter.off
 				"Program",
-				"has Input",
-				"has Output",
+				"has textReader",
 				"has system",
 				"Read Text",
 				"\tsystem.Write(\"implementing system trait\")",
 				"\tRead is \"Read successfully\"",
 				"\t\"Read successfully\"",
-				"Write(generic) Boolean",
-				"\tWrite(5)",
+				"Write(text)",
 				"\tconstant stringBuilder = \"printed successfully\"",
-				"\ttrue")).
+				"\tsystem.Write(text)")).
 			// @formatter.on
 			ParseMembersAndMethods(parser);
 		var visitor = new CSharpTypeVisitor(program);
@@ -88,11 +86,10 @@ public sealed class CSharpTypeVisitorTests : TestCSharpGenerator
 	{
 		Console.WriteLine(""implementing system trait"");
 	"));
-		Assert.That(visitor.FileContent, Contains.Substring(@"	public bool Write(Generic generic)
+		Assert.That(visitor.FileContent, Contains.Substring(@"	public void Write(string text)
 	{
-		Write(5);
 		var stringBuilder = ""printed successfully"";
-		true;
+		Console.WriteLine(text);
 	}"));
 	}
 

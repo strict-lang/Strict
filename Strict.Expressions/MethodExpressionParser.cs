@@ -45,8 +45,8 @@ public class MethodExpressionParser : ExpressionParser
 	private Expression TryParseCommon(Body body, ReadOnlySpan<char> input, bool makeMutable) =>
 		Boolean.TryParse(body, input) ?? Text.TryParse(body, input) ??
 		List.TryParseWithSingleElement(body, input, makeMutable) ?? Number.TryParse(body, input) ??
-		TryParseMemberOrZeroOrOneArgumentMethodOrNestedCall(body, input) ??
 		TryParseForBodyValueMethodCall(body, input) ??
+		TryParseMemberOrZeroOrOneArgumentMethodOrNestedCall(body, input) ??
 		TryParseConstraintBodyMethodCall(body, input) ?? (input.IsOperator()
 			? throw new InvalidOperatorHere(body, input.ToString())
 			: input.IsWord()

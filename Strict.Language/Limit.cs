@@ -2,7 +2,7 @@
 
 public static class Limit
 {
-	public const int MethodLength = 12;
+	public const int MethodLength = 13;
 	public const int ParameterCount = 4;
 	public const int MethodCount = 15;
 	public const int LineCount = 256;

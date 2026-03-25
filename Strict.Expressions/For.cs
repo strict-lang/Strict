@@ -48,6 +48,12 @@ public sealed class For(Expression[] customVariables, Expression iterator, Expre
 	{
 		var innerBody = body.FindCurrentChild() ??
 			TryGetInnerForAsBody(body) ?? throw new MissingInnerBody(body);
+		if (body.FindVariable(Type.ValueLowercase.AsSpan(), false) == null)
+			Instance.Parse(body, body.Method);
+		var implicitIteratorName = body.Method.Type.IsText
+			? "characters"
+			: Type.ValueLowercase;
+		AddImplicitVariables(body, $"{Keyword.For} {implicitIteratorName}".AsSpan(), innerBody);
 		return new For([], new Instance(body.Method.Type, body.CurrentFileLineNumber), innerBody.Parse(),
 			body.CurrentFileLineNumber);
 	}

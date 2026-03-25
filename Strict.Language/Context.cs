@@ -68,6 +68,8 @@ public abstract class Context
 	public Context Parent { get; }
 	public string Name { get; }
 	public string FullName { get; }
+
+	//TODO: this is stupid, there should not be 2 ways for searching for types!
 	public abstract Type? FindType(string name, Context? searchingFrom = null);
 	public Type GetType(string name) => TryGetType(name) ?? throw new TypeNotFound(name, this);
 

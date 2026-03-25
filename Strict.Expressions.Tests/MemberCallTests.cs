@@ -244,8 +244,8 @@ public sealed class MemberCallTests : TestExpressions
 				dummy.Methods[0].GetBodyAndParseIfNeeded();
 			}, //ncrunch: no coverage
 			Throws.InstanceOf<Body.VariableNameCannotHaveDifferentTypeNameThanValue>().With.Message.
-				Contains("Variable name numbers denotes different type than its value type Text. " +
-					"Prefer using a different name"));
+				Contains("Variable name numbers is reserved and denotes different type than its value "+
+					"type Text. Prefer using a different name for this variable."));
 
 	[Test]
 	public void CannotAccessMemberInSameTypeBeforeTypeIsParsed() =>

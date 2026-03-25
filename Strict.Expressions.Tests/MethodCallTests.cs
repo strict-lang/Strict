@@ -152,7 +152,7 @@ public sealed class MethodCallTests : TestExpressions
 	[Test]
 	public void MakeSureMutableTypeMethodsAreNotModified()
 	{
-		var body = (Body)ParseExpression("mutable variable = 7", "variable = variable + 1");
+		var body = (Body)ParseExpression("mutable number = 7", "number = number + 1");
 		var expression = body.Expressions[0];
 		Assert.That(type.GetType(Type.Mutable).Methods.Count, Is.EqualTo(0));
 		Assert.That(expression is Declaration, Is.True);

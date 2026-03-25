@@ -10,16 +10,15 @@ public sealed class LimitTests
 	private MethodExpressionParser parser = null!;
 
 	[Test]
-	public void MethodLengthMustNotExceedTwelve() =>
-		Assert.That(
-			() =>
+	public void MethodLengthMustNotExceedThirteen() =>
+		Assert.That(() =>
 			{
-				using var _ = CreateType(nameof(MethodLengthMustNotExceedTwelve),
-					CreateProgramWithDuplicateLines(["has logger", "Run(first Number, second Number)"], 12,
+				using var _ = CreateType(nameof(MethodLengthMustNotExceedThirteen),
+					CreateProgramWithDuplicateLines(["has logger", "Run(first Number, second Number)"], 13,
 						"\tlogger.Log(5)")).ParseMembersAndMethods(parser);
 			}, //ncrunch: no coverage
 			Throws.InstanceOf<Method.MethodLengthMustNotExceedTwelve>().With.Message.
-				Contains($"Method Run has 13 lines but limit is {Limit.MethodLength}"));
+				Contains($"Method Run has 14 lines but limit is {Limit.MethodLength}"));
 
 	private Type CreateType(string name, string[] lines) =>
 		new Type(TestPackage.Instance, new TypeLines(name, lines)).ParseMembersAndMethods(parser);

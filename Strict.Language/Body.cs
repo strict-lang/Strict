@@ -212,8 +212,8 @@ public sealed class Body : Expression
 
 	public class VariableNameCannotHaveDifferentTypeNameThanValue(Body body,
 		string variableNameType, string valueType) : ParsingFailed(body,
-		$"Variable name {variableNameType} " + $"denotes different type than its value type " +
-		$"{valueType}. Prefer using a different name");
+		$"Variable name {variableNameType} is reserved and denotes different type than its value " +
+		$"type {valueType}. Prefer using a different name for this variable.");
 
 	public sealed class ValueIsNotMutableAndCannotBeChanged(Body body, string name)
 		: ParsingFailed(body, name);
