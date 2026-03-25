@@ -155,7 +155,7 @@ public class MethodCall : ConcreteExpression
 		Type? fromType;
 		try
 		{
-			fromType = body.Method.TryGetType(methodName);
+			fromType = body.Method.FindType(methodName);
 		}
 		catch (Context.TypeNotFound)
 		{

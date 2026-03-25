@@ -55,7 +55,7 @@ public abstract class Context
 		var lastLetterNumber = -1;
 		return context is not Method && context is not Package &&
 			!name.IsWordOrWordWithNumberAtEnd(out lastLetterNumber) ||
-			lastLetterNumber != -1 && parent.FindType(name[..^1]) != null;
+			lastLetterNumber != -1 && parent.FindTypeCore(name[..^1]) != null;
 	}
 
 	public sealed class NameMustBeAWordWithoutAnySpecialCharactersOrNumbers(string name)
@@ -69,11 +69,10 @@ public abstract class Context
 	public string Name { get; }
 	public string FullName { get; }
 
-	//TODO: this is stupid, there should not be 2 ways for searching for types!
-	public abstract Type? FindType(string name, Context? searchingFrom = null);
-	public Type GetType(string name) => TryGetType(name) ?? throw new TypeNotFound(name, this);
+	public abstract Type? FindTypeCore(string name, Context? searchingFrom = null);
+	public Type GetType(string name) => FindType(name) ?? throw new TypeNotFound(name, this);
 
-	internal Type? TryGetType(string name)
+	public Type? FindType(string name)
 	{
 		lock (types)
 		{
@@ -97,8 +96,8 @@ public abstract class Context
 			if (name.EndsWith('s'))
 				return TryGetTypeFromPluralNameAsListWithSingularName(name);
 			if (name.EndsWith(')') && name.Contains('('))
-				return GetGenericTypeWithArguments(name);
-			return FindFullType(name) ?? FindType(name, this);
+				return TryGetGenericTypeWithArguments(name);
+			return FindFullType(name) ?? FindTypeCore(name, this);
 		}
 	}
 
@@ -120,17 +119,23 @@ public abstract class Context
 		var singularName = name[..^1];
 		if (singularName == Type.GenericUppercase)
 			return GetType(Type.List);
-		var elementType = FindFullType(singularName) ?? FindType(singularName, this);
+		var elementType = FindFullType(singularName) ??
+			(singularName.Length > 0 && char.IsUpper(singularName[0]) ? FindTypeCore(singularName, this) : null);
 		if (elementType != null)
 			return GetListImplementationType(elementType);
-		return FindFullType(name) ?? FindType(name, this);
+		return FindFullType(name) ?? FindTypeCore(name, this);
 	}
 
 	private const string GenericImplementationPostfix = "(" + Type.GenericUppercase + ")";
 
-	private Type GetGenericTypeWithArguments(string name)
+	private Type? TryGetGenericTypeWithArguments(string name)
 	{
-		var mainType = GetType(name[..name.IndexOf('(')]);
+		var mainTypeName = name[..name.IndexOf('(')];
+		if (mainTypeName.Length == 0)
+			return null;
+		var mainType = FindTypeCore(mainTypeName, this);
+		if (mainType == null)
+			return null;
 		var rest = name[(mainType.Name.Length + 1)..^1];
 		var arguments = rest.Split(',', StringSplitOptions.TrimEntries);
 		if (rest.Contains(Type.GenericUppercase))
@@ -139,8 +144,8 @@ public abstract class Context
 			return mainType.Package.FindDirectType(mainType.GetImplementationName(namedTypes)) ??
 				new GenericType(mainType, namedTypes);
 		}
-		var argumentTypes = GetArgumentTypes(arguments);
-		return mainType.GetGenericImplementation(argumentTypes);
+		var argumentTypes = TryGetArgumentTypes(arguments);
+		return argumentTypes == null ? null : mainType.GetGenericImplementation(argumentTypes);
 	}
 
 	private static NamedType[] GetNamedTypes(Type mainType, IReadOnlyList<string> argumentTypeNames)
@@ -151,11 +156,16 @@ public abstract class Context
 		return namedTypes;
 	}
 
-	private Type[] GetArgumentTypes(IReadOnlyList<string> argumentTypeNames)
+	private Type[]? TryGetArgumentTypes(IReadOnlyList<string> argumentTypeNames)
 	{
 		var argumentTypes = new Type[argumentTypeNames.Count];
 		for (var index = 0; index < argumentTypeNames.Count; index++)
-			argumentTypes[index] = GetType(argumentTypeNames[index]);
+		{
+			var found = FindType(argumentTypeNames[index]);
+			if (found == null)
+				return null;
+			argumentTypes[index] = found;
+		}
 		return argumentTypes;
 	}
 

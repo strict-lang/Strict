@@ -25,8 +25,8 @@ public class PackageTests
 	public void NoneIsAlwaysKnown()
 	{
 		var emptyPackage = new Package(nameof(NoneIsAlwaysKnown));
-		Assert.That(emptyPackage.FindType(Type.None, emptyPackage), Is.Not.Null);
-		Assert.That(emptyPackage.FindType(nameof(NoneIsAlwaysKnown), emptyPackage), Is.Null);
+		Assert.That(emptyPackage.FindType(Type.None), Is.Not.Null);
+		Assert.That(emptyPackage.FindType(nameof(NoneIsAlwaysKnown)), Is.Null);
 	}
 
 	[Test]
@@ -150,8 +150,8 @@ public class PackageTests
 		var otherMainPackage =
 			new Package(nameof(LoadingTypesOverAndOverWillAlwaysQuicklyReturnSame));
 		for (var index = 0; index < 1000; index++)
-			if (otherMainPackage.FindType(mainType.Name, otherMainPackage)!.Name != mainType.Name)
+			if (otherMainPackage.FindType(mainType.Name)!.Name != mainType.Name)
 				throw new AssertionException("FindType=" + //ncrunch: no coverage
-					otherMainPackage.FindType(mainType.Name, otherMainPackage) + " didn't find " + mainType);
+					otherMainPackage.FindType(mainType.Name) + " didn't find " + mainType);
 	}
 }

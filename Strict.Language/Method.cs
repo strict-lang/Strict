@@ -380,10 +380,10 @@ public sealed class Method : Context
 	public List<Expression> Tests { get; } = new();
 	public bool IsTrait => methodBody == null;
 
-	public override Type? FindType(string name, Context? searchingFrom = null) =>
+	public override Type? FindTypeCore(string name, Context? searchingFrom = null) =>
 		name == Type.ValueLowercase
 			? Type
-			: Type.FindType(name, searchingFrom ?? this);
+			: Type.FindTypeCore(name, searchingFrom ?? this);
 
 	public Expression GetBodyAndParseIfNeeded(bool parseTestsOnlyForGeneric = false)
 	{

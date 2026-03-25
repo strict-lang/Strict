@@ -72,7 +72,7 @@ public class Package : Context, IDisposable
 #endif
 			cachedFoundTypes.Add(Type.None, new Type(this, new TypeLines(Type.None)));
 
-		public override Type? FindType(string name, Context? searchingFrom = null) =>
+		public override Type? FindTypeCore(string name, Context? searchingFrom = null) =>
 			cachedFoundTypes.TryGetValue(name, out var previouslyFoundType)
 				? previouslyFoundType
 				: FindTypeInChildrenAndCache(name, searchingFrom);
@@ -117,7 +117,7 @@ public class Package : Context, IDisposable
 	/// from simple binary searches or finding types in other languages because in Strict any public
 	/// type can be used at any place. https://strict-lang.org/img/FindType2020-07-01.png
 	/// </summary>
-	public override Type? FindType(string name, Context? searchingFrom = null)
+	public override Type? FindTypeCore(string name, Context? searchingFrom = null)
 	{
 		if (name == lastName)
 			return lastType;
@@ -135,7 +135,7 @@ public class Package : Context, IDisposable
 		Type? type = null;
 		if (children.Count > 0)
 			type = FindTypeInChildrenPackages(name, searchingFrom ?? this);
-		type ??= Parent.FindType(name, this);
+		type ??= Parent.FindTypeCore(name, this);
 		return type;
 	}
 

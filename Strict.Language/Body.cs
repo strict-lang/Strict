@@ -200,7 +200,7 @@ public sealed class Body : Expression
 
 	private void CheckForNameWithDifferentTypeUsage(string name, Expression value)
 	{
-		var nameType = value.ReturnType.TryGetType(name.MakeFirstLetterUppercase());
+		var nameType = value.ReturnType.FindType(name.MakeFirstLetterUppercase());
 		if (nameType != null && nameType != value.ReturnType && nameType.Name != Type.Error)
 			throw new VariableNameCannotHaveDifferentTypeNameThanValue(this, name,
 				value.ReturnType.Name);

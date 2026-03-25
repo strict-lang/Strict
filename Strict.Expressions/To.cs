@@ -14,7 +14,7 @@ public sealed class To(Expression left, Method operatorMethod, Type conversionTy
 
 	public static Expression Parse(Body body, ReadOnlySpan<char> text, Expression left)
 	{
-		var conversionType = body.ReturnType.TryGetType(text.ToString());
+		var conversionType = body.ReturnType.FindType(text.ToString());
 		if (conversionType == null)
 			throw new ConversionTypeNotFound(body, text.ToString());
 		var method = left.ReturnType.GetMethod(BinaryOperator.To, []);

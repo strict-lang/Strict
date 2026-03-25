@@ -566,11 +566,10 @@ public class Type : Context, IDisposable
 		return false;
 	}
 
-	//TODO: this is separate from GetType and returns different results, this is faster, but we shouldn't have 2 ways of getting types!
-	public override Type? FindType(string name, Context? searchingFrom = null) =>
+	public override Type? FindTypeCore(string name, Context? searchingFrom = null) =>
 		name == Name || name is Other or Outer || name == FullName
 			? this
-			: Package.FindType(name, searchingFrom ?? this);
+			: Package.FindTypeCore(name, searchingFrom ?? this);
 
 	/// <summary>
 	/// When two types are using in a conditional expression, i.e., then and else return types and

@@ -19,7 +19,7 @@ public sealed class Member : NamedType
 
 	private void CheckForNameWithDifferentTypeUsage(Type definedIn)
 	{
-		var nameType = definedIn.Package.TryGetType(Name.MakeFirstLetterUppercase());
+		var nameType = definedIn.Package.FindType(Name.MakeFirstLetterUppercase());
 		if (nameType != null && nameType != Type)
 			throw new MemberNameWithDifferentTypeNamesThanOwnAreNotAllowed(definedIn, Name, Type.Name);
 	}
