@@ -333,16 +333,16 @@ public sealed class ListAdvancedTests : TestExpressions
 	}
 
 	[Test]
-	public void NegativeIndexIsNeverAllowed()
+	public void NegativeIndexListAccessParsesSuccessfully()
 	{
 		using var program = new Type(TestPackage.Instance,
-			new TypeLines(nameof(NegativeIndexIsNeverAllowed),
+			new TypeLines(nameof(NegativeIndexListAccessParsesSuccessfully),
 				"has logger",
-				"UpdateNotExistingElement(element Number) Number",
-				"\tmutable someList = List(Mutable(Number))",
-				"\tsomeList(-1) = 1")).
+				"GetLastElement Number",
+				"\tconstant someList = (1, 2, 3)",
+				"\tsomeList(-1)")).
 			ParseMembersAndMethods(parser);
-		Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(), Throws.InstanceOf<ListCall.NegativeIndexIsNeverAllowed>());
+		Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(), Throws.Nothing);
 	}
 
 	[Test]

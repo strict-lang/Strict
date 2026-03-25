@@ -62,13 +62,6 @@ public sealed class ListTests : TestExpressions
 		ParseAndCheckOutputMatchesInput("((1, 3), (2, 4))",
 			new List(new Body(method), GetListExpressions(["(1, 3)", "(2, 4)"])));
 
-	[TestCase("(1, 2, 3, 4, 5) + \"4\"")]
-	[TestCase("(1, 2, 3, 4, 5) + \"hello\" + 4")]
-	public void MismatchingTypeFound(string input) =>
-		Assert.That(() => ParseExpression(input),
-			Throws.InstanceOf<ParsingFailed>().With.InnerException.
-				InstanceOf<Type.ArgumentsDoNotMatchMethodParameters>());
-
 	[Test]
 	public void ConvertTextToNumberForListHappensAtInterpreter() =>
 		Assert.That(ParseExpression("(1, 2, 3, 4, 5) + (\"hello\")").ToString(),

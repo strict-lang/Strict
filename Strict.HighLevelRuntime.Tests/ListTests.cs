@@ -261,4 +261,16 @@ public sealed class ListTests
 		return (ValueInstance)(method.Invoke(null, args) ??
 			throw new InvalidOperationException(methodName + " returned null"));
 	}
+
+	[Test]
+	public void GetLastElementWithNegativeIndex()
+	{
+		using var type = new Type(TestPackage.Instance,
+				new TypeLines(nameof(GetLastElementWithNegativeIndex), "has number", "Run Number",
+					"\tconstant numbers = (1, 2, 3)",
+					"\tnumbers(-1)")).
+			ParseMembersAndMethods(new MethodExpressionParser());
+		Assert.That(interpreter.Execute(type.Methods[0], interpreter.noneInstance, []).Number,
+			Is.EqualTo(3));
+	}
 }

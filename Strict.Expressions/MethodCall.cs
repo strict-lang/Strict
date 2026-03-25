@@ -153,14 +153,16 @@ public class MethodCall : ConcreteExpression
 	public static Expression? TryParseFromOrEnum(Body body, IReadOnlyList<Expression> arguments,
 		string methodName)
 	{
-		var fromType = body.Method.FindType(methodName);
-		return fromType is null
-			? null
-			: IsConstructorUsedWithSameArgumentType(arguments, fromType)
-				? body.IsFakeBodyForMemberInitialization && arguments.Count == 1
-					? arguments[0]
-					: throw new ConstructorForSameTypeArgumentIsNotAllowed(body)
-				: CreateFromMethodCall(body, fromType, arguments);
+		var fromType = body.Method.TryGetType(methodName);
+		if (fromType == null)
+			return null;
+		if (fromType.IsList && arguments.Count == 0)
+			return new List(fromType, body.CurrentFileLineNumber);
+		return IsConstructorUsedWithSameArgumentType(arguments, fromType)
+			? body.IsFakeBodyForMemberInitialization && arguments.Count == 1
+				? arguments[0]
+				: throw new ConstructorForSameTypeArgumentIsNotAllowed(body)
+			: CreateFromMethodCall(body, fromType, arguments);
 	}
 
 	internal static Expression CreateFromMethodCall(Body body, Type fromType,

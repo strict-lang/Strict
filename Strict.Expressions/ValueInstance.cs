@@ -241,20 +241,30 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 
 	public Type GetIteratorType() => ((ValueListInstance)value).ReturnType.GetFirstImplementation();
 
-	public ValueInstance GetIteratorValue(Type charTypeIfNeeded, int index) =>
-		number switch
+	public ValueInstance GetIteratorValue(Type charTypeIfNeeded, int index)
+	{
+		var normalizedIndex = NormalizeIndexForIterator(index);
+		return number switch
 		{
-			TextId => index < ((string)value).Length
-				? new ValueInstance(charTypeIfNeeded, ((string)value)[index])
+			TextId => normalizedIndex >= 0 && normalizedIndex < ((string)value).Length
+				? new ValueInstance(charTypeIfNeeded, ((string)value)[normalizedIndex])
 				: new ValueInstance(charTypeIfNeeded, '\0'),
-			ListId => ((ValueListInstance)value).Items[index],
+			ListId => ((ValueListInstance)value).Items[normalizedIndex],
 			TypeId when ((ValueTypeInstance)value).ReturnType.IsList &&
 				FindTextInValues((ValueTypeInstance)value, out var wrappedText) =>
-				new ValueInstance(charTypeIfNeeded, wrappedText![index]),
+				normalizedIndex >= 0 && normalizedIndex < wrappedText!.Length
+					? new ValueInstance(charTypeIfNeeded, wrappedText[normalizedIndex])
+					: new ValueInstance(charTypeIfNeeded, '\0'),
 			TypeId when ((ValueTypeInstance)value).TryGetValue("elements", out var elementsMember) &&
-				elementsMember.IsList => elementsMember.List.Items[index],
+				elementsMember.IsList => elementsMember.List.Items[normalizedIndex],
 			_ => throw new IteratorNotSupported(this)
 		};
+	}
+
+	private int NormalizeIndexForIterator(int index) =>
+		index >= 0
+			? index
+			: GetIteratorLength() + index;
 
 	private static bool FindTextInValues(ValueTypeInstance typeInstance, out string? text)
 	{

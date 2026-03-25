@@ -144,9 +144,9 @@ public class MethodExpressionParser : ExpressionParser
 		var binary = Binary.Parse(body, input, postfix.Output);
 		if (postfix.Output.Count == 0)
 #if DEBUG
-			return inputText != binary.ToString()
-				? throw new GeneratedBinaryExpressionDoesNotMatchInputExactly(body, binary, inputText)
-				: binary;
+			return AreEquivalentExpressionTexts(body, inputText, binary.ToString())
+				? binary
+				: throw new GeneratedBinaryExpressionDoesNotMatchInputExactly(body, binary, inputText);
 #else
 			return binary;
 #endif
@@ -155,6 +155,20 @@ public class MethodExpressionParser : ExpressionParser
 				input[postfix.Output.Peek()].ToString() + " in " + inputText);
 	}
 #if DEBUG
+	private static bool AreEquivalentExpressionTexts(Body body, string inputText, string generatedText) =>
+		inputText == generatedText ||
+		NormalizeListImplementationNamesToPluralAliases(body, inputText) ==
+		NormalizeListImplementationNamesToPluralAliases(body, generatedText);
+
+	private static string NormalizeListImplementationNamesToPluralAliases(Body body,
+		string expressionText)
+	{
+		var normalizedText = expressionText;
+		foreach (var typeEntry in body.Method.Type.Package.Types)
+			normalizedText = normalizedText.Replace($"{Type.List}({typeEntry.Key})",
+				typeEntry.Key + "s", StringComparison.Ordinal);
+		return normalizedText;
+	}
 	private sealed class GeneratedBinaryExpressionDoesNotMatchInputExactly(Body body,
 		Expression binary, string inputText) : ParsingFailed(body, binary + ", inputText=" + inputText); //ncrunch: no coverage
 #endif

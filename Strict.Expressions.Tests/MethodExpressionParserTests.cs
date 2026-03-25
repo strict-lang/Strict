@@ -202,6 +202,14 @@ public sealed class MethodExpressionParserTests : TestExpressions
 	}
 
 	[Test]
+	public async Task ParseListXMethodWithNumbersEmptyTypedListInBasePackage()
+	{
+		var basePackage = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
+		var listX = basePackage.GetType(Type.List).Methods.Single(m => m.Name == "X");
+		Assert.That(() => listX.GetBodyAndParseIfNeeded(), Throws.Nothing);
+	}
+
+	[Test]
 	public async Task ParseAllStrictBasePackageCode()
 	{
 		var basePackage = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();

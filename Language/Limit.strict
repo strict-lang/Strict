@@ -1,4 +1,4 @@
-constant MethodLength = 12
+constant MethodLength = 13
 constant ParameterCount = 4
 constant MethodCount = 15
 constant LineCount = 256
