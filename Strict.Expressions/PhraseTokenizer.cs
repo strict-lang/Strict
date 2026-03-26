@@ -150,10 +150,13 @@ public sealed class PhraseTokenizer
 				result.Add(tokens.tokenStart..tokens.index);
 			result.Add(tokens.index..(tokens.index + 1));
 			tokens.tokenStart = tokens.index + 1;
+			hasPrecedingMethodName = result.Count > 1 &&
+				char.IsLetterOrDigit(tokens.input[tokens.index - 1]);
 		}
 
 		private readonly PhraseTokenizer tokens;
 		private readonly List<Range> result = [];
+		private readonly bool hasPrecedingMethodName;
 
 		public IReadOnlyList<Range> GetRanges()
 		{
@@ -234,9 +237,10 @@ public sealed class PhraseTokenizer
 		private bool HandleMethodCall()
 		{
 			HandleMethodCallStates();
-			tokens.ProcessNormalToken(tokens.input[tokens.index], result.Add);
+			var currentChar = tokens.input[tokens.index];
+			tokens.ProcessNormalToken(currentChar, result.Add);
 			return isInMethodCall && (tokens.index + 1 < tokens.input.Length &&
-				tokens.input[tokens.index] == CloseBracket &&
+				currentChar == CloseBracket &&
 				(tokens.input[tokens.index + 1] != '.' || foundBinaryOperationInMethodCall) ||
 				tokens.MemberOrMethodCallWithNoArguments() && !foundBinaryOperationInMethodCall);
 		}
@@ -245,20 +249,15 @@ public sealed class PhraseTokenizer
 		{
 			if (tokens.input[tokens.index - 1] == '.')
 				isInMethodCall = true;
-			if (tokens.input[tokens.index - 1] == OpenBracket && tokens.index > 2 &&
-				tokens.input[tokens.index - 2] != ' ')
-				foundOpeningBracketForMethodCall = true;
 			if (tokens.input[tokens.index] == ' ')
 				foundSpace = true;
-			if (foundOpeningBracketForMethodCall &&
-				tokens.input[tokens.index].IsSingleCharacterOperator())
+			if (hasPrecedingMethodName && tokens.input[tokens.index].IsSingleCharacterOperator())
 				foundBinaryOperationInMethodCall = true;
 		}
 
 		private bool foundListSeparator;
 		private bool isInMethodCall;
 		private bool foundSpace;
-		private bool foundOpeningBracketForMethodCall;
 		private bool foundBinaryOperationInMethodCall;
 	}
 

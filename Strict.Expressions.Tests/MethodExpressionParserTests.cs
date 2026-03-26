@@ -202,15 +202,6 @@ public sealed class MethodExpressionParserTests : TestExpressions
 	}
 
 	[Test]
-	public async Task ParseTextSplitWithCommaArgument()
-	{
-		var basePackage = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
-		var splitMethod = basePackage.GetType(Type.Text).Methods.Single(method =>
-			method.Name == "Split" && method.Parameters.Count == 1);
-		Assert.That(() => splitMethod.GetBodyAndParseIfNeeded(), Throws.Nothing);
-	}
-
-	[Test]
 	public async Task ParseAllStrictBasePackageCode()
 	{
 		var basePackage = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();

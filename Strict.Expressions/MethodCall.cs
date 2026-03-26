@@ -168,7 +168,7 @@ public class MethodCall : ConcreteExpression
 		return IsConstructorUsedWithSameArgumentType(arguments, fromType)
 			? body.IsFakeBodyForMemberInitialization && arguments.Count == 1
 				? arguments[0]
-				: throw new ConstructorForSameTypeArgumentIsNotAllowed(body)
+				: throw new ConstructorForSameTypeArgumentIsNotAllowed(body, arguments, fromType)
 			: CreateFromMethodCall(body, fromType, arguments);
 	}
 
@@ -300,9 +300,12 @@ public class MethodCall : ConcreteExpression
 	private static bool
 		IsConstructorUsedWithSameArgumentType(IReadOnlyList<Expression> arguments, Type fromType) =>
 		arguments.Count is 1 && (fromType == arguments[0].ReturnType ||
-			arguments[0].ReturnType is GenericTypeImplementation genericType && fromType == genericType.Generic);
+			arguments[0].ReturnType is GenericTypeImplementation genericType &&
+			fromType == genericType.Generic);
 
-	public sealed class ConstructorForSameTypeArgumentIsNotAllowed(Body body) : ParsingFailed(body);
+	public sealed class ConstructorForSameTypeArgumentIsNotAllowed(Body body,
+		IReadOnlyList<Expression> arguments, Type fromType) : ParsingFailed(body,
+			"Don't construct this type " + fromType + " with itself, arguments: " + arguments.ToBrackets());
 
 	public override string ToString() =>
 		Instance is not null && Instance.ToString() != Type.ValueLowercase

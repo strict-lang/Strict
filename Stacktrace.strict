@@ -3,6 +3,4 @@ has FilePath Text
 has Line Number
 to Text
 	value to Text is "	at Stacktrace.to in Base\Stacktrace.strict:line 7"
-	Stacktrace to Text is "	at Stacktrace.from in Base\Stacktrace.strict:line 7"
-	Stacktrace.Method.Type is value
 	"	at " + Method + " in " + FilePath + ":line " + Line

@@ -168,6 +168,7 @@ public class MethodExpressionParser : ExpressionParser
 		NormalizeListImplementationNamesToPluralAliases(body, inputText) ==
 		NormalizeListImplementationNamesToPluralAliases(body, generatedText);
 
+//TODO: this is a hack and should be removed! we really want same input = output!
 	private static string NormalizeListImplementationNamesToPluralAliases(Body body,
 		string expressionText)
 	{
@@ -454,12 +455,28 @@ public class MethodExpressionParser : ExpressionParser
 		var parse = MemberCall.TryParse(body, type, instance, input) ??
 			MethodCall.TryParse(instance, body, arguments, type, input.ToString());
 		if (parse == null && instance is null)
-			parse = MethodCall.TryParseFromOrEnum(body, arguments, input.ToString());
+			parse = MethodCall.TryParseFromOrEnum(body, arguments, input.ToString()) ??
+				TryParseForBodyValueMethodCallWithArguments(body, input, arguments);
 		if (parse != null)
 			return parse;
 		if (arguments.Count > 0 && input.EndsWith(')'))
 			return TryParseMemberOrZeroOrOneArgumentMethodOrNestedCall(body, input);
 		return null;
+	}
+
+	private static Expression? TryParseForBodyValueMethodCallWithArguments(Body body,
+		ReadOnlySpan<char> input, IReadOnlyList<Expression> arguments)
+	{
+		if (!IsContextInForExpression(body))
+			return null;
+		var valueVar = body.FindVariable(Type.ValueLowercase.AsSpan());
+		if (valueVar == null)
+			return null;
+		var valueCall = new VariableCall(valueVar, body.CurrentFileLineNumber);
+		var method = valueVar.Type.FindMethod(input.ToString(), arguments);
+		return method != null
+			? new MethodCall(method, valueCall, arguments, null, body.CurrentFileLineNumber)
+			: null;
 	}
 
 	private static Expression? TryParseStandaloneToken(Body body,
@@ -543,7 +560,8 @@ public class MethodExpressionParser : ExpressionParser
 	/// </summary>
 	public override List<Expression> ParseListArguments(Body body, ReadOnlySpan<char> innerSpan)
 	{
-		if (innerSpan.Contains('(') || innerSpan.Contains('"'))
+		if (innerSpan.Contains('(') || innerSpan.Contains('"') &&
+			(innerSpan.Contains(',') || innerSpan.Contains(' ')))
 			return If.CanTryParseConditional(body, innerSpan)
 				? [If.ParseConditional(body, innerSpan)]
 				: new ExpressionListParser(this, innerSpan.ToString()).GetAll(body);
