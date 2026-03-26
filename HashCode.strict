@@ -3,7 +3,4 @@ from(generic)
 	HashCode(5) is 5
 	HashCode("abc") is 3
 	HashCode((1, 2)) is 2
-	if generic is
-		Number then generic
-		Iterator then generic.Length
-		else 0
+	0

@@ -1,7 +1,7 @@
 has iterator
 has Start Number
 has ExclusiveEnd Number
-for Iterator(Number)
+for Iterator
 	value
 in(number) Boolean
 	3 is in Range(1, 4)

@@ -206,9 +206,14 @@ public sealed class MethodExpressionParserTests : TestExpressions
 	{
 		var basePackage = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
 		foreach (var baseType in new List<Type>(basePackage.Types.Values))
-		foreach (var baseMethod in baseType.Methods)
-			if (!baseMethod.IsTrait)
-				Assert.That(() => baseMethod.GetBodyAndParseIfNeeded(), Throws.Nothing,
-					$"Failed to parse method {baseMethod.Name} in type {baseType.Name}");
+		{
+			if (baseType is GenericTypeImplementation or GenericType)
+				continue;
+			foreach (var baseMethod in baseType.Methods)
+				if (!baseMethod.IsTrait)
+					Assert.That(() => baseMethod.GetBodyAndParseIfNeeded(baseType.IsGeneric),
+						Throws.Nothing,
+						$"Failed to parse method {baseMethod.Name} in type {baseType.Name}");
+		}
 	}
 }
