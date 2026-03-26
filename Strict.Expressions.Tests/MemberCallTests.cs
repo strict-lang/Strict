@@ -266,4 +266,17 @@ public sealed class MemberCallTests : TestExpressions
 				"\tIsConstant is false")).ParseMembersAndMethods(parser);
 		Assert.That(program.Members[0].Type, Is.EqualTo(type.GetType(Type.Boolean)));
 	}
+
+	[Test]
+	public void FromCanAssignMembers()
+	{
+		using var program = new Type(TestPackage.Instance,
+			new TypeLines(nameof(FromCanAssignMembers),
+				"has name",
+				"has age Number",
+				"from(number)",
+				"\tname = number to Text",
+				"\tage = number")).ParseMembersAndMethods(parser);
+		Assert.That(program.Members, Has.Count.EqualTo(2));
+	}
 }

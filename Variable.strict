@@ -4,5 +4,5 @@ has InitialValue Generic
 has IsMutable
 has IsConstant
 to Text
-	NamedType("count", Number) to Text is "count Number"
+	Variable("count", Number) to Text is "count Number"
 	Name + " " + Type
