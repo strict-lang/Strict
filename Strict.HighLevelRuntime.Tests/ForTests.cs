@@ -196,7 +196,7 @@ public sealed class ForTests
 			"has texts",
 			"CountStartingWithHas Number",
 			"\tfor texts",
-			"\t\tif value.LastIndexOf(\"has \") is 0",
+			"\t\tif LastIndexOf(\"has \") is 0",
 			"\t\t\t1");
 		var textsType = t.Members[0].Type;
 		var lines = new ValueInstance(textsType,
@@ -218,7 +218,7 @@ public sealed class ForTests
 			"has texts",
 			"CountStartingWithHas Number",
 			"\tfor texts",
-			"\t\tif value.StartsWith(\"has \")",
+			"\t\tif StartsWith(\"has \")",
 			"\t\t\t1");
 		var textsType = t.Members[0].Type;
 		var lines = new ValueInstance(textsType,
@@ -240,7 +240,7 @@ public sealed class ForTests
 			"has texts",
 			"Run Number",
 			"\tfor texts",
-			"\t\tvalue.LastIndexOf(\"h\")");
+			"\t\tLastIndexOf(\"h\")");
 		var textsType = t.Members[0].Type;
 		var instance = new ValueInstance(t,
 			[new ValueInstance(textsType, [new ValueInstance("hello")])]);

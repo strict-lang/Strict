@@ -305,7 +305,7 @@ public class MethodCall : ConcreteExpression
 	public sealed class ConstructorForSameTypeArgumentIsNotAllowed(Body body) : ParsingFailed(body);
 
 	public override string ToString() =>
-		Instance is not null
+		Instance is not null && Instance.ToString() != Type.ValueLowercase
 			? (Instance is Binary
 				? $"({Instance})"
 				: $"{Instance}") + $".{Method.Name}{Arguments.ToBrackets()}"
@@ -316,7 +316,7 @@ public class MethodCall : ConcreteExpression
 					: Method.Name == Method.From &&
 					ReturnType is GenericTypeImplementation { Generic.Name: Type.Dictionary }
 						? FormatDictionaryConstructor()
-						: $"{GetProperMethodName()}{Arguments.ToBrackets()}";
+						: $"{GetProperMethodNameWithFromSupport()}{Arguments.ToBrackets()}";
 
 	private string FormatErrorConstructor()
 	{
@@ -328,6 +328,13 @@ public class MethodCall : ConcreteExpression
 				? $"{Type.Error}({Arguments[0]})"
 				: Type.Error;
 	}
+
+	private string GetProperMethodNameWithFromSupport() =>
+		Method.Name == Method.From
+			? ReturnType is GenericTypeImplementation { Generic.Name: Type.Mutable }
+				? Type.Mutable
+				: Method.ReturnType.Name
+			: Method.Name;
 
 	public override bool Equals(Expression? other) =>
 		ReferenceEquals(this, other) ||
@@ -353,11 +360,4 @@ public class MethodCall : ConcreteExpression
 				? list.Values.ToBrackets()
 				: $"({list})")
 			: throw new NotSupportedException("Invalid Dictionary arguments: " + Arguments.ToBrackets());
-
-	private string GetProperMethodName() =>
-		Method.Name == Method.From
-			? ReturnType is GenericTypeImplementation { Generic.Name: Type.Mutable }
-				? Type.Mutable
-				: Method.ReturnType.Name
-			: Method.Name;
 }

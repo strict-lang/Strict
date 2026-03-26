@@ -108,46 +108,40 @@ public class BooleanTests : TestExpressions
 		var thirdCase = "isOpen is false".AsSpan("isOpen ".Length);
 		var fourthCase = "isOpen is false".AsSpan(0, "isOpen".Length);
 		var fifthCase = "true".AsSpan();
-		var counter = 0;
-		for (var iteration = 0; iteration < 100000; iteration++)
+		var firstCounter = 0;
+		var secondCounter = 0;
+		var thirdCounter = 0;
+		var fourthCounter = 0;
+		var fifthCounter = 0;
+		const int NumberOfIterations = 100000;
+		for (var iteration = 0; iteration < NumberOfIterations; iteration++)
 		{
 			if (bool.TryParse(firstCase, out var result1))
-			{
-				if (result1)
-					counter--;
-				else
-					counter++;
-			}
+				firstCounter += result1
+					? 1
+					: -1;
 			if (bool.TryParse(secondCase, out var result2))
-			{
-				if (result2)
-					counter--;
-				else
-					counter++;
-			}
+				secondCounter	+= result2
+					? 1
+					: -1;
 			if (bool.TryParse(thirdCase, out var result3))
-			{
-				if (result3)
-					counter--;
-				else
-					counter++;
-			}
+				thirdCounter += result3
+					? 1
+					: -1;
 			if (bool.TryParse(fourthCase, out var result4))
-			{
-				if (result4)
-					counter--;
-				else
-					counter++;
-			}
+				fourthCounter += result4
+					? 1
+					: -1;
 			if (bool.TryParse(fifthCase, out var result5))
-			{
-				if (result5)
-					counter--;
-				else
-					counter++;
-			}
+				fifthCounter += result5
+					? 1
+					: -1;
 		}
-		Assert.That(counter, Is.EqualTo(-100000));
+		Assert.That(firstCounter, Is.EqualTo(NumberOfIterations));
+		Assert.That(secondCounter, Is.EqualTo(-NumberOfIterations));
+		Assert.That(thirdCounter, Is.EqualTo(0));
+		Assert.That(fourthCounter, Is.EqualTo(0));
+		Assert.That(fifthCounter, Is.EqualTo(NumberOfIterations));
 	}
 
 	[Test]

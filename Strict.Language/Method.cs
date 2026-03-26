@@ -277,7 +277,10 @@ public sealed class Method : Context
 		// this won't catch most recursive calls, see Executor for most other cases.
 		else if (expression.GetType().Name == "MethodCall" &&
 			body.ParsingLineNumber == body.Method.Tests.Count + 1 && currentLine != "\tRun" &&
-			currentLine.Contains(body.Method.GetNameWithParameters()))
+			(currentLine == body.Method.GetNameWithParameters() ||
+			currentLine.EndsWith("." + body.Method.GetNameWithParameters()) ||
+			currentLine.Contains("." + body.Method.GetNameWithParameters() + " ") ||
+			currentLine.Contains(body.Method.GetNameWithParameters() + ".")))
 			throw new RecursiveCallCausesStackOverflow(body);
 		return expression;
 	}

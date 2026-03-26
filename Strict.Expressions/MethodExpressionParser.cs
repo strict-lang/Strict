@@ -543,7 +543,7 @@ public class MethodExpressionParser : ExpressionParser
 	/// </summary>
 	public override List<Expression> ParseListArguments(Body body, ReadOnlySpan<char> innerSpan)
 	{
-		if (innerSpan.Contains('(') || innerSpan.Contains('"') && innerSpan.Contains(' '))
+		if (innerSpan.Contains('(') || innerSpan.Contains('"'))
 			return If.CanTryParseConditional(body, innerSpan)
 				? [If.ParseConditional(body, innerSpan)]
 				: new ExpressionListParser(this, innerSpan.ToString()).GetAll(body);

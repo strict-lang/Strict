@@ -125,5 +125,5 @@ Count(searchFor Generic) Number
 Reverse List
 	(1, 2, 3).Reverse is (3, 2, 1)
 	(5, 10, 5).Reverse is (5, 10, 5)
-	for Range(0, value.Length).Reverse
+	for Range(0, Length).Reverse
 		outer.value(index)
