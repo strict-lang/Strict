@@ -10,7 +10,7 @@ file					= member* method*
 
 member				= ('has' | 'constant' | 'mutable') SPACE NAME ' with ' expression LF | ('has' | 'constant' | 'mutable') SPACE name_and_type (' = ' expression)? (' with ' expression)? LF
 name_and_type = NAME (SPACE type)?
-type					= NAME ('(' parameters ')')?
+type					= NAME ('(' parameters ')')? (' or ' NAME)*
 parameters		= parameter (',' SPACE parameter)*
 parameter			= name_and_type (SPACE '=' SPACE expression)?
 expression		= ternary_if | binary | unary | variable_or_method_call | constant | list

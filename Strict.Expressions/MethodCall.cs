@@ -14,7 +14,7 @@ public class MethodCall : ConcreteExpression
 {
 	public MethodCall(Method method, Expression? instance = null, IReadOnlyList<Expression>? arguments = null,
 		Type? toReturnType = null, int lineNumber = 0) :
-		base(GetMethodReturnType(method, toReturnType), lineNumber, method.ReturnType.IsMutable)
+    base(GetMethodReturnType(method, toReturnType, instance), lineNumber, method.ReturnType.IsMutable)
 	{
 		if (method.Name == Method.From && instance != null)
 			throw new CannotCallFromConstructorWithExistingInstance(); //ncrunch: no coverage
@@ -25,10 +25,32 @@ public class MethodCall : ConcreteExpression
 
 	public sealed class CannotCallFromConstructorWithExistingInstance : Exception;
 
-	private static Type GetMethodReturnType(Method method, Type? toReturnType) =>
-		method.Name == BinaryOperator.To && toReturnType != null
-			? toReturnType
-			: method.ReturnType;
+ private static Type GetMethodReturnType(Method method, Type? toReturnType, Expression? instance)
+	{
+		if (method.Name == BinaryOperator.To && toReturnType != null)
+			return toReturnType;
+		var returnType = method.ReturnType;
+    if (instance?.ReturnType is not Type instanceType || !IsConcreteListShape(instanceType))
+			return returnType;
+		if (returnType.IsList && returnType.IsGeneric)
+			return instanceType;
+    if (returnType is GenericTypeImplementation
+			{
+				Generic.Name: Type.Mutable,
+				ImplementationTypes: [var mutableInnerType]
+			} mutableListReturn && IsGenericListShape(mutableInnerType))
+			return mutableListReturn.Generic.GetGenericImplementation(instanceType);
+		return returnType;
+	}
+
+	private static bool IsConcreteListShape(Type type) =>
+		(type.IsList || type is GenericType { Generic.Name: Type.List } ||
+			type is GenericTypeImplementation { Generic.Name: Type.List }) && !type.IsGeneric;
+
+	private static bool IsGenericListShape(Type type) =>
+		type is GenericType { Generic.Name: Type.List } ||
+		type is GenericTypeImplementation { Generic.Name: Type.List, IsGeneric: true } ||
+		type.IsList && type.IsGeneric;
 
 	public Method Method { get; }
 	public Expression? Instance { get; }

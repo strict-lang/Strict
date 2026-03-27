@@ -1,8 +1,8 @@
 has Name
 has Type
-has InitialValue Generic
-has IsMutable
-has IsConstant
+has InitialValue Generic or None
+has IsMutable = false
+has IsConstant = false
 to Text
 	Variable("count", Number) to Text is "count Number"
 	Name + " " + Type

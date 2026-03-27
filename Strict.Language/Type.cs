@@ -132,15 +132,28 @@ public class Type : Context, IDisposable
 		(line.StartsWith(HasWithSpaceAtEnd, StringComparison.Ordinal) ||
 			line.StartsWith(MutableWithSpaceAtEnd, StringComparison.Ordinal)) &&
 		(line.Contains(GenericUppercase, StringComparison.Ordinal) ||
-			line.Contains(GenericLowercase, StringComparison.Ordinal));
+			line.Contains(GenericLowercase, StringComparison.Ordinal)) &&
+		!IsNamedMemberWithAlternativeOrDefault(line);
+
+	// "has Name Generic or None" or "has Name Generic = default" have an alternative/default so the
+	// type is not parameterized by the generic member and should not be treated as IsGeneric.
+	// "has Generic" (unnamed) and "has Name Generic" (no alternative) still make the type generic.
+	private static bool IsNamedMemberWithAlternativeOrDefault(string line)
+	{
+		var parts = line.Split(' ');
+		return parts.Length > 3 && parts[2] is GenericUppercase or GenericLowercase &&
+			!line.Contains('(');
+	}
 
 	public const string HasWithSpaceAtEnd = Keyword.Has + " ";
 	public const string MutableWithSpaceAtEnd = Keyword.Mutable + " ";
 	public const string ConstantWithSpaceAtEnd = Keyword.Constant + " ";
 
 	private static bool HasGenericMethodHeader(string line) =>
-		line.Contains(GenericUppercase, StringComparison.Ordinal) ||
-		line.Contains(GenericLowercase, StringComparison.Ordinal);
+		!line.StartsWith(HasWithSpaceAtEnd, StringComparison.Ordinal) &&
+		!line.StartsWith(MutableWithSpaceAtEnd, StringComparison.Ordinal) &&
+		(line.Contains(GenericUppercase, StringComparison.Ordinal) ||
+			line.Contains(GenericLowercase, StringComparison.Ordinal));
 
 	/// <summary>
 	/// Parsing has to be done OUTSIDE the constructor as we first need all types and inside might not

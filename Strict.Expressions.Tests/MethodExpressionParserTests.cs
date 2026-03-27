@@ -230,6 +230,36 @@ public sealed class MethodExpressionParserTests : TestExpressions
 	}
 
 	[Test]
+	public async Task ParseDictionaryInMethod()
+	{
+		var basePackage = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
+		var dictionaryType = basePackage.FindType("Dictionary")!;
+		var inMethod = dictionaryType.Methods.Single(m => m.Name == "in");
+		Assert.That(() => inMethod.GetBodyAndParseIfNeeded(), Throws.Nothing,
+			"Dictionary.in method with value.Key is key should parse");
+	}
+
+	[Test]
+	public async Task ParseDictionaryGetMethod()
+	{
+		var basePackage = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
+		var dictionaryType = basePackage.FindType("Dictionary")!;
+		var getMethod = dictionaryType.Methods.Single(m => m.Name == "get");
+		Assert.That(() => getMethod.GetBodyAndParseIfNeeded(), Throws.Nothing,
+			"Dictionary.get method with return value.Value should parse");
+	}
+
+	[Test]
+	public async Task ParseDictionaryAddMethod()
+	{
+		var basePackage = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
+		var dictionaryType = basePackage.FindType("Dictionary")!;
+		var addMethod = dictionaryType.Methods.Single(m => m.Name == "Add");
+		Assert.That(() => addMethod.GetBodyAndParseIfNeeded(), Throws.Nothing,
+			"Dictionary.Add method with keysAndValues.Add((key, mappedValue)) should parse");
+	}
+
+	[Test]
 	public async Task ParseAllStrictBasePackageCode()
 	{
 		var basePackage = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();

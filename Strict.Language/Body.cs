@@ -166,9 +166,26 @@ public sealed class Body : Expression
 		lastExpression.GetType().Name == Declaration && parentType.IsNone ||
 		lastExpression.ReturnType.IsError ||
 		lastExpression.ReturnType.IsSameOrCanBeUsedAs(parentType) ||
+   CanWrapReturnType(parentType, lastExpression.ReturnType) ||
 		// Allow automatically converting an item to a list if the method requires a list
 		parentType.IsIterator && parentType.GetListImplementationType(lastExpression.ReturnType) ==
 		parentType;
+
+	private static bool CanWrapReturnType(Type parentType, Type expressionType)
+	{
+		var targetType = parentType.IsMutable
+			? parentType.GetFirstImplementation()
+			: parentType;
+		var matchingMemberCount = 0;
+		foreach (var member in targetType.Members)
+			if (!member.IsConstant && expressionType.IsSameOrCanBeUsedAs(member.Type, false))
+			{
+				matchingMemberCount++;
+				if (matchingMemberCount > 1)
+					return false;
+			}
+		return matchingMemberCount == 1;
+	}
 
 	internal const string Declaration = nameof(Declaration);
 	internal const string MutableReassignment = nameof(MutableReassignment);

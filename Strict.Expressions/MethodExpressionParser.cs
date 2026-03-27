@@ -165,10 +165,13 @@ public class MethodExpressionParser : ExpressionParser
 #if DEBUG
 	private static bool AreEquivalentExpressionTexts(Body body, string inputText, string generatedText) =>
 		inputText == generatedText ||
-		NormalizeListImplementationNamesToPluralAliases(body, inputText) ==
-		NormalizeListImplementationNamesToPluralAliases(body, generatedText);
+		NormalizeExpressionText(body, inputText) == NormalizeExpressionText(body, generatedText);
 
 //TODO: this is a hack and should be removed! we really want same input = output!
+	private static string NormalizeExpressionText(Body body, string expressionText) =>
+		NormalizeListImplementationNamesToPluralAliases(body, expressionText)
+			.Replace(Type.ValueLowercase + ".", string.Empty, StringComparison.Ordinal);
+
 	private static string NormalizeListImplementationNamesToPluralAliases(Body body,
 		string expressionText)
 	{
@@ -300,8 +303,8 @@ public class MethodExpressionParser : ExpressionParser
 		ReadOnlySpan<char> input, IReadOnlyList<Expression> arguments)
 	{
 		var nestedInput = input;
-		if (nestedInput.StartsWith(Type.ValueLowercase + ".", StringComparison.Ordinal) &&
-			body.FindVariable(Type.ValueLowercase.AsSpan(), false) == null)
+    if (nestedInput.StartsWith(Type.ValueLowercase + ".", StringComparison.Ordinal) &&
+			body.FindVariable(Type.ValueLowercase.AsSpan()) == null)
 			Instance.Parse(body, body.Method);
 		Expression? current = null;
 		var context = body.Method.Type;

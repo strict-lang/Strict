@@ -103,7 +103,11 @@ public sealed class For(Expression[] customVariables, Expression iterator, Expre
 		var originalLines = line.ToString() + Environment.NewLine +
 			body.Method.GetLinesAndStripTabs(innerBody.LineRange, body).ToLines();
 		var generatedLines = forExpression.ToString();
-		if (generatedLines != originalLines &&
+		var normalizedGenerated = generatedLines.Replace(Type.ValueLowercase + ".",
+			string.Empty, StringComparison.Ordinal);
+		var normalizedOriginal = originalLines.Replace(Type.ValueLowercase + ".",
+			string.Empty, StringComparison.Ordinal);
+		if (generatedLines != originalLines && normalizedGenerated != normalizedOriginal &&
 			!body.Method.GetLinesAndStripTabs(innerBody.LineRange, body).Any(l =>
 				l.TrimStart().StartsWith(BinaryOperator.To + " ", StringComparison.Ordinal)))
 			throw new GeneratedForExpressionDoesNotMatchInputExactly(body, forExpression, originalLines); //ncrunch: no coverage
