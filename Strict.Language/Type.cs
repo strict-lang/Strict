@@ -132,7 +132,20 @@ public class Type : Context, IDisposable
 		(line.StartsWith(HasWithSpaceAtEnd, StringComparison.Ordinal) ||
 			line.StartsWith(MutableWithSpaceAtEnd, StringComparison.Ordinal)) &&
 		(line.Contains(GenericUppercase, StringComparison.Ordinal) ||
-			line.Contains(GenericLowercase, StringComparison.Ordinal));
+			line.Contains(GenericLowercase, StringComparison.Ordinal)) &&
+		!IsNamedMemberWithGenericType(line);
+
+	/// <summary>
+	/// Returns true when a "has name Generic" line just names a member with the Generic placeholder
+	/// as its type (e.g. "has InitialValue Generic"). Such members don't make the enclosing type
+	/// itself generic — only unnamed patterns like "has Generic" or parameterized patterns like
+	/// "for Iterator(Generic)" do.
+	/// </summary>
+	private static bool IsNamedMemberWithGenericType(string line)
+	{
+		var parts = line.Split(' ');
+		return parts.Length == 3 && parts[2] is GenericUppercase or GenericLowercase && !line.Contains('(');
+	}
 
 	public const string HasWithSpaceAtEnd = Keyword.Has + " ";
 	public const string MutableWithSpaceAtEnd = Keyword.Mutable + " ";
@@ -489,9 +502,20 @@ public class Type : Context, IDisposable
 			return true;
 		if (IsCompatibleOneOfType(sameOrUsableType))
 			return true;
+		if (DeclaresForIterator(sameOrUsableType))
+			return true;
 		return maxDepth >= 0 &&
 			HasExactlyOneUsableMember(sameOrUsableType, allowImplicitConversion, maxDepth);
 	}
+
+	/// <summary>
+	/// Returns true when this type explicitly declares "for Iterator(T)" and the target is that
+	/// same Iterator(T). This is used to recognize that Range IS an Iterator(Number) because Range
+	/// declares "for Iterator(Number)" in its method list.
+	/// </summary>
+	private bool DeclaresForIterator(Type targetType) =>
+		targetType is GenericTypeImplementation { Generic.typeKind: TypeKind.Iterator } &&
+		methods.Any(m => m.Name == "for" && m.ReturnType == targetType);
 
 	private bool IsGenericTypeCompatible(Type sameOrUsableType)
 	{

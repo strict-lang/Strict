@@ -41,7 +41,14 @@ internal class TypeMethodFinder(Type type)
 			} //ncrunch: no coverage
 			return null; //ncrunch: no coverage
 		}
-		return FindMethodWithType(methodName, arguments);
+		var found = FindMethodWithType(methodName, arguments);
+		if (found != null)
+			return found;
+		if (Type.IsEnum && Type.Members.Count > 0 && Type.Members[0].Type.IsNumber)
+			return Type.Members[0].Type.FindMethod(methodName, arguments);
+		if (Type.Name == "Enum")
+			return Type.GetType(Type.Number).FindMethod(methodName, arguments);
+		return null;
 	}
 
 	private Method? FindMethodWithType(string methodName, IReadOnlyList<Expression> arguments)
@@ -258,6 +265,8 @@ internal class TypeMethodFinder(Type type)
 			return true;
 		if (methodParameterType.Name == Type.Iterator && method.Type.IsSameOrCanBeUsedAs(argumentType))
 			return true; //ncrunch: no coverage
+		if (argumentType.Name == Type.GenericUppercase && !methodParameterType.IsGeneric)
+			return true;
 		if (!methodParameterType.IsGeneric)
 			return argumentType.IsSameOrCanBeUsedAs(methodParameterType);
 		if (argumentType.IsGeneric)

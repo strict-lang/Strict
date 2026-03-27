@@ -198,6 +198,18 @@ public sealed class Body : Expression
 		return this;
 	}
 
+	/// <summary>
+	/// Adds a temporary narrowing variable for type-dispatch in selector-if expressions.
+	/// Unlike AddVariable, bypasses the name/type consistency check because this is an intentional
+	/// downcast (e.g. treating a Generic as a Number inside a 'if generic is Number then' branch).
+	/// </summary>
+	internal Variable AddTypeNarrowingVariable(string name, Expression value)
+	{
+		var variable = new Variable(name, false, value, this);
+		(Variables ??= new List<Variable>()).Add(variable);
+		return variable;
+	}
+
 	private void CheckForNameWithDifferentTypeUsage(string name, Expression value)
 	{
 		var nameType = value.ReturnType.FindType(name.MakeFirstLetterUppercase());

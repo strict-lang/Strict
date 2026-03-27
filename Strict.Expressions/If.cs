@@ -127,6 +127,8 @@ public sealed class If(Expression condition, Expression then, int lineNumber = 0
 	{
 		optionalElse = null;
 		var cases = new List<SelectorIf.Case>();
+		var selectorName = selector is ParameterCall pc ? pc.Parameter.Name :
+			selector is VariableCall vc ? vc.Variable.Name : null;
 		for (var lineNumber = body.LineRange.Start.Value; lineNumber < body.LineRange.End.Value;
 			lineNumber++)
 		{
@@ -149,12 +151,32 @@ public sealed class If(Expression condition, Expression then, int lineNumber = 0
 				throw new MissingThen(body); //ncrunch: no coverage
 			var patternText = line[..thenIndex].TrimEnd();
 			var thenText = line[(thenIndex + ThenSeparator.Length)..].TrimStart();
-			var pattern = body.Method.ParseExpression(body, patternText);
+			var narrowedVar = TryAddTypeNarrowingVariable(body, selector, selectorName, patternText);
+			var pattern = narrowedVar != null
+				? (TypePattern)narrowedVar.InitialValue
+				: body.Method.ParseExpression(body, patternText);
 			var thenExpression = body.Method.ParseExpression(body, thenText);
+			if (narrowedVar != null)
+				body.Variables?.Remove(narrowedVar);
 			var condition = CreateSelectorCondition(selector, pattern);
 			cases.Add(new SelectorIf.Case(pattern, thenExpression, condition));
 		}
 		return cases;
+	}
+
+	private static Variable? TryAddTypeNarrowingVariable(Body body, Expression selector,
+		string? selectorName, ReadOnlySpan<char> patternText)
+	{
+		if (!selector.ReturnType.IsGeneric || selectorName == null || !patternText.IsWord())
+			return null;
+		var narrowedType = body.Method.FindType(patternText.ToString());
+		if (narrowedType == null)
+			return null;
+		var concreteType = narrowedType.IsGeneric
+			? narrowedType.GetGenericImplementation(body.Method.GetType(Type.GenericUppercase))
+			: narrowedType;
+		return body.AddTypeNarrowingVariable(selectorName,
+			new TypePattern(concreteType, patternText.ToString(), body.CurrentFileLineNumber));
 	}
 
 	private static Expression CreateSelectorCondition(Expression selector, Expression pattern)
@@ -260,4 +282,19 @@ public sealed class If(Expression condition, Expression then, int lineNumber = 0
 	}
 
 	public sealed class MissingElseExpression(Body body) : ParsingFailed(body);
+}
+
+/// <summary>
+/// Represents a type name used as a pattern in a type-dispatch selector-if expression.
+/// For example in "if generic is Number then ...", Number is a TypePattern.
+/// The selector variable is then narrowed to this type in the then-branch.
+/// </summary>
+internal sealed class TypePattern(Type concreteType, string displayName, int lineNumber = 0)
+	: Expression(concreteType, lineNumber)
+{
+	public override string ToString() => displayName;
+	public override bool IsConstant => true;
+	public override bool Equals(Expression? other) =>
+		other is TypePattern tp && ReturnType == tp.ReturnType;
+	public override int GetHashCode() => ReturnType.GetHashCode();
 }
