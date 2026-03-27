@@ -59,15 +59,19 @@ public sealed class If(Expression condition, Expression then, int lineNumber = 0
 		Condition.GetHashCode() ^ Then.GetHashCode() ^ (OptionalElse?.GetHashCode() ?? 0);
 
 	public override string ToString() =>
-		OptionalElse != null && (OptionalElse.ReturnType.IsSameOrCanBeUsedAs(Then.ReturnType) ||
-			Then.ReturnType.IsError || OptionalElse.ReturnType.IsError) && Then is not Body &&
-		OptionalElse is not Body && OptionalElse is not If
+		RendersAsInlineConditional
 			? Condition + ThenSeparator + Then + ElseSeparator + OptionalElse
 			: IfPrefix + Condition + Environment.NewLine + IndentExpression(Then) + (OptionalElse != null
 				? OptionalElse is If
 					? Environment.NewLine + ElsePrefix + OptionalElse
 					: Environment.NewLine + ElseKeyword + Environment.NewLine + IndentExpression(OptionalElse)
 				: "");
+
+	private bool RendersAsInlineConditional =>
+		OptionalElse != null && (OptionalElse.ReturnType.IsSameOrCanBeUsedAs(Then.ReturnType) ||
+			Then.ReturnType.IsError || OptionalElse.ReturnType.IsError) && Then is not Body &&
+		OptionalElse is not Body &&
+		(OptionalElse is not If elseIf || elseIf.RendersAsInlineConditional);
 
 	public override bool IsConstant =>
 		Condition.IsConstant && Then.IsConstant && (OptionalElse?.IsConstant ?? true);
@@ -156,8 +160,10 @@ public sealed class If(Expression condition, Expression then, int lineNumber = 0
 	private static Expression CreateSelectorCondition(Expression selector, Expression pattern)
 	{
 		var arguments = new[] { pattern };
-		return new Binary(selector, selector.ReturnType.GetMethod(BinaryOperator.Is, arguments),
-			arguments);
+		var methodType = selector.ReturnType.IsGeneric
+			? selector.ReturnType.GetType(Type.Any)
+			: selector.ReturnType;
+		return new Binary(selector, methodType.GetMethod(BinaryOperator.Is, arguments), arguments);
 	}
 
 	private static Expression GetConditionExpression(Body body, ReadOnlySpan<char> line)
@@ -208,9 +214,13 @@ public sealed class If(Expression condition, Expression then, int lineNumber = 0
 		var thenIndex = input.IndexOf(ThenSeparator, StringComparison.Ordinal);
 		var firstBracket = input.IndexOf('(');
 		if (thenIndex > 0 && NoFirstBracketOrSurroundedByIt(input, firstBracket, thenIndex))
-			return CountThenSeparators(input) > 1
+		{
+			var firstElseIndex = input.IndexOf(ElseSeparator, StringComparison.Ordinal);
+			var partBeforeFirstElse = firstElseIndex > 0 ? input[..firstElseIndex] : input;
+			return CountThenSeparators(partBeforeFirstElse) > 1
 				? throw new ConditionalExpressionsCannotBeNested(body)
 				: true;
+		}
 		return false;
 	}
 

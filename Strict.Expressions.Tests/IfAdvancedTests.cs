@@ -81,7 +81,7 @@ public sealed class IfAdvancedTests : TestExpressions
 
 	[Test]
 	public void ConditionalExpressionsCannotBeNested() =>
-		Assert.That(() => ParseExpression("constant result = true then true else (5 is 5 then false else true)"),
+		Assert.That(() => ParseExpression("constant result = true then (5 is 5 then false else true) else false"),
 			Throws.InstanceOf<If.ConditionalExpressionsCannotBeNested>());
 
 	[TestCase("logger.Log(true then \"Yes\" else \"No\")")]
@@ -90,6 +90,7 @@ public sealed class IfAdvancedTests : TestExpressions
 	[TestCase("logger.Log((true then \"Yes\" else \"No\") + \"Result\")")]
 	[TestCase("5 is 5 then false else true")]
 	[TestCase("6 is 5 then true else false")]
+	[TestCase("5 is 5 then false else 6 is 6 then true else false")]
 	public void ConditionalExpressionsAsPartOfOtherExpression(string code) =>
 		Assert.That(ParseExpression(code).ToString(), Is.EqualTo(code));
 
