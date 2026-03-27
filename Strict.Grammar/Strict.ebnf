@@ -35,7 +35,7 @@ method				= (type | binary_op ('(' parameters ')') | unary_op ('(' parameters ')
 block					= (TAB+ block_expression LF?)*
 block_expression = if | selector_if | for | return | mutable | assignment | expression
 if						= 'if ' expression LF block (TAB+ 'else' (SPACE if | LF block))?
-selector_if		= 'if ' expression (' is' | ' is not') LF (TAB+ 'then ' expression LF)* (TAB+ 'else ' expression LF)?
+selector_if		= 'if ' expression (' is' | ' is not') LF (TAB+ NAME ' then ' expression LF)+ (TAB+ 'else ' expression LF)?
 for						= 'for ' ((reference ' in ' expression) | expression) LF block
 return				= 'return ' expression
 mutable				= 'mutable ' name_and_type (' = ' expression)?

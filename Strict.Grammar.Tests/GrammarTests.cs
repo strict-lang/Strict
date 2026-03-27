@@ -53,6 +53,7 @@ public sealed class GrammarTests
 	[TestCase("+(other) Text\n\t+(\"more\") is \"more\"")]
 	[TestCase("+(other) List\n\t(1) + (\"Hi\") is Error(\"Cannot downcast Text to Number for list: \\\"Hi\\\"\")")]
 	[TestCase("to Number\n\t\"1e10\" to Number is 1e10")]
+	[TestCase("from(generic)\n\tif generic is\n\t\tNumber then generic\n\t\tIterator then generic.Length\n\t\telse 0")]
 	public void ParsesValidStrictCode(string code)
 	{
 		var result = BuildGrammar().Match(code + "\n");

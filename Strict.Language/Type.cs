@@ -132,20 +132,7 @@ public class Type : Context, IDisposable
 		(line.StartsWith(HasWithSpaceAtEnd, StringComparison.Ordinal) ||
 			line.StartsWith(MutableWithSpaceAtEnd, StringComparison.Ordinal)) &&
 		(line.Contains(GenericUppercase, StringComparison.Ordinal) ||
-			line.Contains(GenericLowercase, StringComparison.Ordinal)) &&
-		!IsNamedMemberWithGenericType(line);
-
-	/// <summary>
-	/// Returns true when a "has name Generic" line just names a member with the Generic placeholder
-	/// as its type (e.g. "has InitialValue Generic"). Such members don't make the enclosing type
-	/// itself generic — only unnamed patterns like "has Generic" or parameterized patterns like
-	/// "for Iterator(Generic)" do.
-	/// </summary>
-	private static bool IsNamedMemberWithGenericType(string line)
-	{
-		var parts = line.Split(' ');
-		return parts.Length == 3 && parts[2] is GenericUppercase or GenericLowercase && !line.Contains('(');
-	}
+			line.Contains(GenericLowercase, StringComparison.Ordinal));
 
 	public const string HasWithSpaceAtEnd = Keyword.Has + " ";
 	public const string MutableWithSpaceAtEnd = Keyword.Mutable + " ";
