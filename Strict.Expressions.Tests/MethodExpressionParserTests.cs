@@ -202,18 +202,41 @@ public sealed class MethodExpressionParserTests : TestExpressions
 	}
 
 	[Test]
+	public async Task ParseHashCodeFromWithGenericTypeDispatch()
+	{
+		var basePackage = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
+		var hashCodeType = basePackage.FindType("HashCode")!;
+		var fromMethod = hashCodeType.Methods.Single(m => m.Name == Method.From);
+		Assert.That(() => fromMethod.GetBodyAndParseIfNeeded(), Throws.Nothing,
+			"HashCode.from selector-if on generic type should parse");
+	}
+
+	[Test]
+	public void ParseRangeForIteratorMethod()
+	{
+		var forMethod = TestPackage.Instance.GetType(Type.Range).Methods.Single(m => m.Name == "for");
+		Assert.That(() => forMethod.GetBodyAndParseIfNeeded(), Throws.Nothing,
+			"Range.for Iterator(Number) method body should parse");
+	}
+
+	[Test]
+	public async Task ParseEnumCompareToWithNestedConditional()
+	{
+		var basePackage = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
+		var enumType = basePackage.FindType("Enum")!;
+		var compareToMethod = enumType.Methods.Single(m => m.Name == "CompareTo");
+		Assert.That(() => compareToMethod.GetBodyAndParseIfNeeded(), Throws.Nothing,
+			"Enum.CompareTo nested conditional should parse");
+	}
+
+	[Test]
 	public async Task ParseAllStrictBasePackageCode()
 	{
 		var basePackage = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
 		foreach (var baseType in new List<Type>(basePackage.Types.Values))
-		{
-			if (baseType is GenericTypeImplementation or GenericType)
-				continue;
-			foreach (var baseMethod in baseType.Methods)
-				if (!baseMethod.IsTrait)
-					Assert.That(() => baseMethod.GetBodyAndParseIfNeeded(baseType.IsGeneric),
-						Throws.Nothing,
-						$"Failed to parse method {baseMethod.Name} in type {baseType.Name}");
-		}
+		foreach (var baseMethod in baseType.Methods)
+			if (!baseMethod.IsTrait)
+				Assert.That(() => baseMethod.GetBodyAndParseIfNeeded(), Throws.Nothing,
+					$"Failed to parse method {baseMethod.Name} in type {baseType.Name}");
 	}
 }
