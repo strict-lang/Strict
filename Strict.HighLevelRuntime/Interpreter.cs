@@ -68,7 +68,11 @@ public class Interpreter
 			(behavior == TestBehavior.TestRunner || validatedMethods.Add(method)))
 			returnValue = Execute(method, noneInstance, [], null, true);
 		if (bodyEvaluator.inlineTestDepth > 0 || behavior != TestBehavior.TestRunner)
+		{
+			if (bodyEvaluator.inlineTestDepth > 0 && method.Name == "Substring")
+				System.Console.Error.WriteLine($"DEBUG Execute(Method) Substring 2nd call: inlineTestDepth={bodyEvaluator.inlineTestDepth}, stackTrace={new System.Diagnostics.StackTrace(true)}");
 			returnValue = Execute(method, noneInstance, []);
+		}
 		return returnValue;
 	}
 

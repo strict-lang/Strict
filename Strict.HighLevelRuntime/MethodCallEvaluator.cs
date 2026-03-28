@@ -11,6 +11,8 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 		interpreter.Statistics.ListCallCount++;
 		var directOuter = TryGetDirectOuterValue(call.List, ctx);
 		var listInstance = directOuter ?? interpreter.RunExpression(call.List, ctx);
+		if (listInstance.IsPrimitiveType(interpreter.noneType))
+			System.Console.Error.WriteLine($"DEBUG: listInstance=None, call.List={call.List} ({call.List.GetType().Name}), ctx.Method={ctx.Method.Name}, ctx.This={ctx.This?.ToString() ?? "null"}, ctx.Parent.Method={ctx.Parent?.Method.Name ?? "null"}, ctx.Parent.This={ctx.Parent?.This?.ToString() ?? "null"}, directOuter={directOuter?.ToString() ?? "null"}");
 		var indexValue = interpreter.RunExpression(call.Index, ctx);
 		if (listInstance.IsList || listInstance.IsText ||
 			listInstance.TryGetValueTypeInstance()?.ReturnType.IsList == true)
