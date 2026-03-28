@@ -91,6 +91,6 @@ internal sealed class ToEvaluator(Interpreter interpreter)
 
 	//ncrunch: no coverage start
 	public sealed class ToMethodNotImplemented(ValueInstance left, Type toConversionType)
-		: ExecutionFailed(toConversionType, "Conversion from " + left + " to " +
+		: InterpreterExecutionFailed(toConversionType, "Conversion from " + left + " to " +
 			toConversionType.Name + " not supported");
 }

@@ -129,6 +129,44 @@ public sealed class InterpreterTests
 		Assert.That(result.Text, Is.EqualTo("hi there"));
 	}
 
+  [Test]
+	public async Task TextInFindsMatchInsideText()
+	{
+   var strict = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
+		var text = strict.GetType(Type.Text);
+    var inMethod = text.Methods.Single(m => m.Name == "in");
+    var result = new Interpreter(strict, TestBehavior.Disabled).Execute(inMethod,
+			new ValueInstance("hello there"), [new ValueInstance("lo")]);
+		Assert.That(result.Boolean, Is.True);
+	}
+
+	[Test]
+	public async Task TextCombineSupportsCharacterSeparator()
+	{
+		var strict = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
+		var text = strict.GetType(Type.Text);
+		var combineMethod = text.Methods.Single(method => method.Name == "Combine");
+		var interpreterForStrict = new Interpreter(strict, TestBehavior.Disabled);
+		var texts = strict.GetListImplementationType(text);
+		var character = strict.GetType(Type.Character);
+   var result = interpreterForStrict.Execute(combineMethod, interpreterForStrict.noneInstance,
+		[
+			new ValueInstance(texts, [new ValueInstance("hi"), new ValueInstance("there")]),
+			new ValueInstance(character, 10)
+		]);
+		Assert.That(result.Text, Is.EqualTo("hi\nthere"));
+	}
+
+	[Test]
+	public void StringLiteralBackslashNParsesAsNewLine()
+	{
+		using var type = CreateType(nameof(StringLiteralBackslashNParsesAsNewLine), "has number",
+			"GetText Text", "\t\"hi\\nthere\"");
+		var result = interpreter.Execute(type.Methods.Single(method => method.Name == "GetText"),
+			interpreter.noneInstance, []);
+		Assert.That(result.Text, Is.EqualTo("hi\nthere"));
+	}
+
 	[Test]
 	public void AddTwoCharactersReturnsConcatenatedText()
 	{
@@ -235,7 +273,7 @@ public sealed class InterpreterTests
 			"\t\treturn 1", "\t2");
 		var method = t.Methods.Single(m => m.Name == "Compute");
 		var validatingExecutor = new Interpreter(TestPackage.Instance);
-		var ex = Assert.Throws<ExecutionFailed>(() => validatingExecutor.Execute(method));
+		var ex = Assert.Throws<InterpreterExecutionFailed>(() => validatingExecutor.Execute(method));
 		Assert.That(ex!.InnerException, Is.InstanceOf<Interpreter.MethodRequiresTest>());
 	}
 
@@ -483,5 +521,30 @@ public sealed class InterpreterTests
 			interpreter.Execute(t.Methods.Single(m => m.Name == "ConvertToFahrenheit"),
 				new ValueInstance(t, 100), []).Number,
 			Is.EqualTo(100 * 9 / 5 + 32));
+	}
+
+	[Test]
+	public void ArithmeticFallbackErrorShowsMethodAndCallerContext()
+	{
+		using var type = CreateType(nameof(ArithmeticFallbackErrorShowsMethodAndCallerContext),
+			"has values Texts",
+			"Combine(separator Text) Text",
+			"\tfor values",
+      "\t\tvalue + (\"b\")",
+			"Run Text",
+			"\tCombine(\"a\")");
+		var runMethod = type.Methods.Single(method => method.Name == "Run");
+		var texts = type.GetListImplementationType(type.GetType(Type.Text));
+		var instance = new ValueInstance(type,
+      [new ValueInstance(texts, [new ValueInstance("x")])]);
+    var exception = Assert.Throws<InterpreterExecutionFailed>(() =>
+			interpreter.Execute(runMethod, instance, []));
+		Assert.That(exception!.Message,
+			Does.Contain("Arithmetic fallback is not allowed for core type Text operator +"));
+    Assert.That(exception.Message, Does.Contain("method=Combine("));
+		Assert.That(exception.Message, Does.Contain("call=value + (\"b\")"));
+		Assert.That(exception.Message, Does.Contain("Run Text"));
+   Assert.That(exception.Message, Does.Contain(":line "));
+   Assert.That(exception.InnerException, Is.InstanceOf<InvalidOperationException>());
 	}
 }

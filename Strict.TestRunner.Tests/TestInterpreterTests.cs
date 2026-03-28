@@ -37,7 +37,7 @@ public class TestInterpreterTests
 				"	5 is 6",
 				"	10")).ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(() => interpreter.RunMethod(type.Methods.First(m => m.Name == "Run")),
-			Throws.InstanceOf<ExecutionFailed>().With.InnerException.With.Message.
+			Throws.InstanceOf<InterpreterExecutionFailed>().With.InnerException.With.Message.
 				Contains("\"Run\" method failed: 5 is 6, result: Boolean: false"));
 	}
 
@@ -69,7 +69,7 @@ public class TestInterpreterTests
 				"	2 is 3",
 				"	5")).ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(() => interpreter.RunAllTestsInType(type),
-			Throws.InstanceOf<ExecutionFailed>().With.InnerException.With.Message.
+			Throws.InstanceOf<InterpreterExecutionFailed>().With.InnerException.With.Message.
 				Contains("\"Other\" method failed: 2 is 3, result: Boolean: false"));
 	}
 

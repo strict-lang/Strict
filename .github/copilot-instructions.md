@@ -454,3 +454,6 @@ No exceptions without your human partner's permission.
 ## Error Messaging Guidelines
 - Ensure error messages are precise and human-readable; avoid unclear wording like 'requested call token'.
 - Explicitly distinguish lookup context type from instance value in error messages.
+- In this repo, parsing errors must always be derived from `ParsingFailed`.
+- Interpreter execution errors in Strict.HighLevelRuntime should use `InterpreterExecutionFailed` with good stack traces and clickable file links instead of raw `VariableNotFound`, `NotSupportedException`, or `InvalidOperationException` (which are all forbidden in this codebase).
+- At runtime in VirtualMachine or in a compiled executable `RuntimeError` should be used to display the detailed error with clickable stacktraces going back to the .strict source code!

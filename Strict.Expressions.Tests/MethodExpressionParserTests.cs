@@ -260,6 +260,16 @@ public sealed class MethodExpressionParserTests : TestExpressions
 	}
 
 	[Test]
+	public async Task ParseStacktraceToMethod()
+	{
+		var basePackage = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
+		var stacktraceType = basePackage.FindType("Stacktrace")!;
+		var toMethod = stacktraceType.Methods.Single(m => m.Name == BinaryOperator.To);
+		Assert.That(() => toMethod.GetBodyAndParseIfNeeded(), Throws.Nothing,
+			"Stacktrace.to method with escaped tab and backslash text should parse");
+	}
+
+	[Test]
 	public async Task ParseAllStrictBasePackageCode()
 	{
 		var basePackage = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();

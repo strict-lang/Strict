@@ -169,8 +169,53 @@ public class MethodExpressionParser : ExpressionParser
 
 //TODO: this is a hack and should be removed! we really want same input = output!
 	private static string NormalizeExpressionText(Body body, string expressionText) =>
-		NormalizeListImplementationNamesToPluralAliases(body, expressionText)
+   CanonicalizeTextLiteralEscapes(NormalizeListImplementationNamesToPluralAliases(body, expressionText))
 			.Replace(Type.ValueLowercase + ".", string.Empty, StringComparison.Ordinal);
+
+	private static string CanonicalizeTextLiteralEscapes(string expressionText)
+	{
+		var builder = new System.Text.StringBuilder(expressionText.Length);
+		var insideText = false;
+    for (var index = 0; index < expressionText.Length; index++)
+		{
+      var character = expressionText[index];
+			if (character == '"')
+			{
+       insideText = !insideText;
+				builder.Append(character);
+				continue;
+			}
+      if (!insideText)
+			{
+       builder.Append(character);
+				continue;
+			}
+     if (character == '\\')
+			{
+				if (index + 1 < expressionText.Length)
+				{
+					var nextCharacter = expressionText[index + 1];
+					if (nextCharacter is 'n' or 'r' or 't' or '\\' or '"')
+					{
+						builder.Append('\\');
+						builder.Append(nextCharacter);
+						index++;
+						continue;
+					}
+				}
+				builder.Append("\\\\");
+				continue;
+			}
+			builder.Append(character switch
+				{
+					'\n' => "\\n",
+					'\r' => "\\r",
+					'\t' => "\\t",
+					_ => character.ToString()
+				});
+		}
+		return builder.ToString();
+	}
 
 	private static string NormalizeListImplementationNamesToPluralAliases(Body body,
 		string expressionText)

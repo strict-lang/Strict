@@ -71,7 +71,8 @@ public sealed class ForTests
 		using var t = CreateType(nameof(TextReturnTypeThrowsWhenUnsupportedValueIsUsed), "has number",
 			"Join Text", "\tfor (1, 2)", "\t\tError(\"boom\")");
 		Assert.That(() => interpreter.Execute(t.Methods.Single(m => m.Name == "Join"), interpreter.noneInstance, []),
-			Throws.InstanceOf<NotSupportedException>());
+      Throws.InstanceOf<InterpreterExecutionFailed>().With.Message.
+				Contains("For text return type cannot consolidate value"));
 	}
 
 	[Test]

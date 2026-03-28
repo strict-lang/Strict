@@ -79,6 +79,9 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 		if (op == BinaryOperator.Plus && left.IsPrimitiveType(interpreter.characterType) &&
 			right.IsPrimitiveType(interpreter.characterType))
 			return new ValueInstance(left.ToExpressionCodeString() + right.ToExpressionCodeString());
+    if (op == BinaryOperator.Plus && left.IsPrimitiveType(interpreter.characterType) &&
+			right.IsText)
+			return new ValueInstance(left.ToExpressionCodeString() + right.Text);
 		if (IsNumberLike(left) && IsNumberLike(right))
 		{
 			var l = left.Number;
@@ -140,8 +143,8 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 				"Only +, -, *, / operators are supported for List and Number, got: " + op);
 		}
 		if (IsCoreRuntimeType(call.Method.Type))
-			throw new InvalidOperationException("Arithmetic fallback is not allowed for core type " +
-				call.Method.Type.Name + " operator " + op + " with left=" + left + ", right=" + right);
+     throw new InvalidOperationException(BuildCoreTypeFallbackMessage("Arithmetic", call, ctx,
+				left, right));
 		return ExecuteMethodCall(call, left, ctx); //ncrunch: no coverage
 	}
 
@@ -208,7 +211,10 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 			BinaryOperator.Greater => interpreter.ToBoolean(l > r),
 			BinaryOperator.Smaller => interpreter.ToBoolean(l < r),
 			BinaryOperator.GreaterOrEqual => interpreter.ToBoolean(l >= r),
-			BinaryOperator.SmallerOrEqual => interpreter.ToBoolean(l <= r),
+     BinaryOperator.SmallerOrEqual => interpreter.ToBoolean(l <= r),
+			_ when IsCoreRuntimeType(call.Method.Type)
+				=> throw new InvalidOperationException(BuildCoreTypeFallbackMessage("Comparison", call,
+					ctx, left, right)),
 			_ => ExecuteMethodCall(call, left, ctx) //ncrunch: no coverage
 		};
 	}
@@ -222,8 +228,27 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 			BinaryOperator.And => interpreter.ToBoolean(left.Boolean && right.Boolean),
 			BinaryOperator.Or => interpreter.ToBoolean(left.Boolean || right.Boolean),
 			BinaryOperator.Xor => interpreter.ToBoolean(left.Boolean ^ right.Boolean),
+      _ when IsCoreRuntimeType(call.Method.Type)
+				=> throw new InvalidOperationException(BuildCoreTypeFallbackMessage("Logical", call,
+					ctx, left, right)),
 			_ => ExecuteMethodCall(call, left, ctx) //ncrunch: no coverage
 		};
+	}
+
+	private static string BuildCoreTypeFallbackMessage(string category, MethodCall call,
+		ExecutionContext ctx, ValueInstance left, ValueInstance right) =>
+		$"{category} fallback is not allowed for core type {call.Method.Type.Name} operator " +
+		$"{call.Method.Name} with left={left}, right={right}, method={ctx.Method}, call={call}, " +
+		$"caller={GetCallerContext(ctx.Parent)}";
+
+	private static string GetCallerContext(ExecutionContext? ctx)
+	{
+		if (ctx == null)
+			return "(none)";
+		var caller = ctx.Method.ToString();
+		return ctx.Parent == null
+			? caller
+			: caller + " <- " + GetCallerContext(ctx.Parent);
 	}
 
 	private ValueInstance CombineLists(ValueInstance leftList, List<ValueInstance> rightList,

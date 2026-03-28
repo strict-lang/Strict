@@ -1,6 +1,6 @@
 has number
 constant zeroCharacter = 48
-constant NewLine = Character(13)
+constant NewLine = Character(10)
 constant Tab = Character(7)
 from(text)
 	Character("b") is "b"

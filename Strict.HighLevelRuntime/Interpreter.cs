@@ -98,7 +98,7 @@ public class Interpreter
 		return new ValueInstance(type, values);
 	}
 
-	public class MethodNotFound(Type type, string methodName) : ExecutionFailed(type, methodName);
+	public class MethodNotFound(Type type, string methodName) : InterpreterExecutionFailed(type, methodName);
 
 	private ValueInstance GetDefaultValue(Type type)
 	{
@@ -234,7 +234,7 @@ public class Interpreter
 
 	public sealed class StackOverflowCallingItselfWithSameInstanceAndArguments(Method method,
 		ValueInstance? instance, IReadOnlyList<ValueInstance> args, ExecutionContext parentContext)
-		: ExecutionFailed(method, "Stack overflow detected while calling " +
+		: InterpreterExecutionFailed(method, "Stack overflow detected while calling " +
 			FormatCall(method, instance, args) + ". Matching parent call chain: " +
 			FormatParentChain(parentContext))
 	{
@@ -381,22 +381,22 @@ public class Interpreter
 		value is { IsText: true, Text.Length: 1 } && (targetType.IsNumber || targetType.IsCharacter);
 
 	public sealed class InvalidTypeForArgument(Type type, IReadOnlyList<ValueInstance> args,
-		int index) : ExecutionFailed(type, args[index] + " at index=" + index + " does not match " +
+		int index) : InterpreterExecutionFailed(type, args[index] + " at index=" + index + " does not match " +
 		"type=" + type + " Member=" + type.Members[index]);
 
 	public sealed class CannotCallMethodWithWrongInstance(Method method, ValueInstance instance)
-		: ExecutionFailed(method, instance.ToString()); //ncrunch: no coverage
+		: InterpreterExecutionFailed(method, instance.ToString()); //ncrunch: no coverage
 
 	public sealed class TooManyArguments(Method method, string argument,
-		IReadOnlyList<ValueInstance> args) : ExecutionFailed(method,
+		IReadOnlyList<ValueInstance> args) : InterpreterExecutionFailed(method,
 		argument + ", given arguments: " + string.Join(", ", args) + ", method " + method.Name +
 		" requires these parameters: " + string.Join(", ", method.Parameters));
 
 	public sealed class ArgumentDoesNotMapToMethodParameters(Method method, string message)
-		: ExecutionFailed(method, message);
+		: InterpreterExecutionFailed(method, message);
 
 	public sealed class MissingArgument(Method method, string paramName,
-		IReadOnlyList<ValueInstance> args) : ExecutionFailed(method,
+		IReadOnlyList<ValueInstance> args) : InterpreterExecutionFailed(method,
 		paramName + ", given arguments: " + string.Join(", ", args) + ", method " + method.Name +
 		" requires these parameters: " + string.Join(", ", method.Parameters));
 
@@ -404,27 +404,40 @@ public class Interpreter
 		bool runOnlyTests = false)
 	{
 		Statistics.ExpressionCount++;
-		return expr switch
+    try
 		{
-			Body body => bodyEvaluator.Evaluate(body, context, runOnlyTests),
-			List list => EvaluateListExpression(list, context),
-			Dictionary dict => dict.Data,
-			Value v => v.Data,
-			ParameterCall or VariableCall => EvaluateVariable(expr.ToString(), context),
-			MemberCall m => EvaluateMemberCall(m, context),
-			ListCall listCall => methodCallEvaluator.EvaluateListCall(listCall, context),
-			If iff => ifEvaluator.Evaluate(iff, context),
-			SelectorIf selectorIf => selectorIfEvaluator.Evaluate(selectorIf, context),
-			For f => forEvaluator.Evaluate(f, context),
-			Return r => EvaluateReturn(r, context),
-			To t => toEvaluator.Evaluate(t, context),
-			Not n => EvaluateNot(n, context),
-			MethodCall call => methodCallEvaluator.Evaluate(call, context),
-			Declaration c => EvaluateAndAssign(c.Name, c.Value, context, true),
-			MutableReassignment a => EvaluateAndAssign(a.Name, a.Value, context, false),
-			Instance => EvaluateVariable(Type.ValueLowercase, context),
-			_ => throw new ExpressionNotSupported(expr, context) //ncrunch: no coverage
-		};
+			return expr switch
+			{
+				Body body => bodyEvaluator.Evaluate(body, context, runOnlyTests),
+				List list => EvaluateListExpression(list, context),
+				Dictionary dict => dict.Data,
+				Value v => v.Data,
+				ParameterCall or VariableCall => EvaluateVariable(expr.ToString(), context),
+				MemberCall m => EvaluateMemberCall(m, context),
+				ListCall listCall => methodCallEvaluator.EvaluateListCall(listCall, context),
+				If iff => ifEvaluator.Evaluate(iff, context),
+				SelectorIf selectorIf => selectorIfEvaluator.Evaluate(selectorIf, context),
+				For f => forEvaluator.Evaluate(f, context),
+				Return r => EvaluateReturn(r, context),
+				To t => toEvaluator.Evaluate(t, context),
+				Not n => EvaluateNot(n, context),
+				MethodCall call => methodCallEvaluator.Evaluate(call, context),
+				Declaration c => EvaluateAndAssign(c.Name, c.Value, context, true),
+				MutableReassignment a => EvaluateAndAssign(a.Name, a.Value, context, false),
+				Instance => EvaluateVariable(Type.ValueLowercase, context),
+				_ => throw new ExpressionNotSupported(expr, context) //ncrunch: no coverage
+			};
+		}
+		catch (InterpreterExecutionFailed)
+		{
+			throw;
+		}
+		catch (Exception inner)
+		{
+			throw new InterpreterExecutionFailed(context.Method,
+				InterpreterExecutionFailed.BuildContextMessage(context.Method, expr, context,
+					inner.Message), inner);
+		}
 	}
 
 	private ValueInstance EvaluateListExpression(List list, ExecutionContext context)
@@ -440,7 +453,7 @@ public class Interpreter
 	}
 
 	public class ExpressionNotSupported(Expression expr, ExecutionContext context)
-		: ExecutionFailed(context.Type, expr.GetType().Name); //ncrunch: no coverage
+		: InterpreterExecutionFailed(context.Type, expr.GetType().Name); //ncrunch: no coverage
 
 	private ValueInstance EvaluateVariable(string name, ExecutionContext context)
 	{
@@ -489,7 +502,7 @@ public class Interpreter
 	public class UnableToCallMemberWithoutInstance(MemberCall member, ExecutionContext ctx)
 		: Exception(member + ", context " + ctx); //ncrunch: no coverage
 
-	public sealed class ReturnTypeMustMatchMethod(Body body, ValueInstance last) : ExecutionFailed(
+	public sealed class ReturnTypeMustMatchMethod(Body body, ValueInstance last) : InterpreterExecutionFailed(
 		body.Method, "Return value " + last + " does not match method " + body.Method.Name +
 		" ReturnType=" + body.Method.ReturnType);
 
@@ -575,7 +588,7 @@ public class Interpreter
 			_ => 1
 		};
 
-	public class MethodRequiresTest(Method method, string body) : ExecutionFailed(method,
+	public class MethodRequiresTest(Method method, string body) : InterpreterExecutionFailed(method,
 		body.StartsWith("Test execution failed", StringComparison.Ordinal)
 			? body
 			: $"Method {method.Parent.FullName}.{method.Name}\n{body}")
@@ -585,7 +598,7 @@ public class Interpreter
 	}
 
 	public sealed class TestFailed(Method method,	Expression expression, ValueInstance result,
-		string details) : ExecutionFailed(method,
+		string details) : InterpreterExecutionFailed(method,
 		$"\"{method.Name}\" method failed: {expression}, result: {result}" + (details.Length > 0
 			? $", evaluated: {details}"
 			: "") + " in" + Environment.NewLine +

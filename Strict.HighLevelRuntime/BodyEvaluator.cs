@@ -14,9 +14,9 @@ internal sealed class BodyEvaluator(Interpreter interpreter)
 		{
 			return TryEvaluate(body, ctx, runOnlyTests);
 		}
-		catch (ExecutionFailed ex)
+		catch (InterpreterExecutionFailed ex)
 		{
-			throw new ExecutionFailed(body.Method,
+			throw new InterpreterExecutionFailed(body.Method,
 				"Failed in \"" + body.Method.Type.FullName + "." + body.Method.Name + "\":" +
 				Environment.NewLine + string.Join(Environment.NewLine, body.Expressions), ex);
 		}

@@ -81,7 +81,7 @@ public sealed class IfTests
 		Assert.That(
 			() => interpreter.Execute(method, interpreter.noneInstance,
 				[new ValueInstance(TestPackage.Instance.FindType(Type.Boolean)!, false)]),
-			Throws.TypeOf<ExecutionFailed>().With.InnerException.
+			Throws.TypeOf<InterpreterExecutionFailed>().With.InnerException.
 				TypeOf<Interpreter.ReturnTypeMustMatchMethod>());
 	}
 

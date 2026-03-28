@@ -8,6 +8,14 @@ public sealed class TextTests : TestExpressions
 	public void ParseText() => ParseAndCheckOutputMatchesInput("\"Hi\"", new Text(method, "Hi"));
 
 	[Test]
+	public void ParseTextWithNewLineEscape() =>
+    Assert.That(((Text)ParseExpression("\"hi\\nthere\"")).Data.Text, Is.EqualTo("hi\nthere"));
+
+	[Test]
+	public void TextToStringEscapesNewLine() =>
+		Assert.That(new Text(method, "hi\nthere").ToString(), Is.EqualTo("\"hi\\nthere\""));
+
+	[Test]
 	public void ParseTextToNumber()
 	{
 		var methodCall = (MethodCall)ParseExpression("\"5\" to Number");

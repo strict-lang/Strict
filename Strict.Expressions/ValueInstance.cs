@@ -309,13 +309,20 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 		number switch
 		{
 			TextId => escapeText
-				? "\"" + ((string)value).Replace("\"", "\\\"").Replace("\\\\", "\\") + "\""
+       ? "\"" + EscapeText((string)value) + "\""
 				: (string)value,
 			ListId => BuildListString(((ValueListInstance)value).Items, escapeText),
 			DictionaryId => BuildDictionaryString(((ValueDictionaryInstance)value).Items, escapeText),
 			TypeId => ((ValueTypeInstance)value).ToString(),
 			_ => GetPrimitiveCodeString((Type)value)
 		};
+
+	private static string EscapeText(string text) => text
+		.Replace("\\", "\\\\", StringComparison.Ordinal)
+		.Replace("\n", "\\n", StringComparison.Ordinal)
+		.Replace("\r", "\\r", StringComparison.Ordinal)
+		.Replace("\t", "\\t", StringComparison.Ordinal)
+		.Replace("\"", "\\\"", StringComparison.Ordinal);
 
 	private static string BuildListString(IReadOnlyList<ValueInstance> items, bool escapeText)
 	{

@@ -95,4 +95,9 @@ public sealed class IfTests : TestExpressions
 	public void ReturnTypeOfConditionalThenAndElseMustHaveMatchingType() =>
     Assert.That(() => ParseExpression("constant result = true then true else 5"),
 			Throws.InstanceOf<If.ReturnTypeOfThenAndElseMustHaveMatchingType>());
+
+	[Test]
+	public void SelectorIfRequiresAtLeastOneCase() =>
+		Assert.That(() => new SelectorIf(new Boolean(method, true), [], 1, null, new Body(method)),
+			Throws.InstanceOf<ParsingFailed>());
 }

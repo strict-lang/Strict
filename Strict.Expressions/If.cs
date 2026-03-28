@@ -40,12 +40,9 @@ public sealed class If(Expression condition, Expression then, int lineNumber = 0
 				throw new ReturnTypeOfThenAndElseMustHaveMatchingType(
 					bodyForErrorMessage ?? new Body(thenType.Methods[0]), thenType, elseType);
 
-	public class ReturnTypeOfThenAndElseMustHaveMatchingType(
-		Body body,
-		Type thenReturnType,
-		Type optionalElseReturnType) : ParsingFailed(body,
-		"The Then type: " + thenReturnType + " is not same as the Else type: " +
-		optionalElseReturnType);
+	public class ReturnTypeOfThenAndElseMustHaveMatchingType(Body body, Type thenReturnType,
+		Type optionalElseReturnType) : ParsingFailed(body, "The Then type: " + thenReturnType +
+			" is not same as the Else type: " + optionalElseReturnType);
 
 	public Expression Condition { get; } = condition;
 	public Expression Then { get; } = then;

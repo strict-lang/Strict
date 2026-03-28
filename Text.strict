@@ -30,7 +30,7 @@ StartsWith(text, start = 0) Boolean
 	"hello".StartsWith("hel")
 	"hello".StartsWith("hel", 1) is false
 	"yo mama".StartsWith("mama") is false
-	for Range(start, Length - text.Length)
+	for Range(start, start + text.Length)
 		if outer(index) is not text(index - start)
 			return false
 	true
@@ -42,7 +42,7 @@ Split(separator Text) Texts
 		return (value)
 	let restStart = separatorIndex + separator.characters.Length
 	let restLength = Length - restStart
-	Substring(0, separatorIndex) + Substring(restStart, restLength).Split(separator)
+	(Substring(0, separatorIndex)) + Substring(restStart, restLength).Split(separator)
 Trim Text
 	" hi ".Trim is "hi"
 	"noSpaces".Trim is "noSpaces"
