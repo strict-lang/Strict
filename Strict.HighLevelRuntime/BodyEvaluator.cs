@@ -42,16 +42,23 @@ internal sealed class BodyEvaluator(Interpreter interpreter)
 	{
 		var last = interpreter.noneInstance;
 		var count = body.Expressions.Count;
+		HashSet<string>? skippedVariables = null;
 		for (var index = 0; index < count; index++)
 		{
 			var e = body.Expressions[index];
 			var isTest = index < count - 1 && IsStandaloneInlineTest(e);
 			if (isTest)
 				interpreter.Statistics.TestExpressions++;
-     if (isTest == !runOnlyTests && e is not Declaration && e is not MutableReassignment ||
-				runOnlyTests && e is Declaration decl && DeclarationReferencesAnyMember(body, decl))
+			if (isTest == !runOnlyTests && e is not Declaration && e is not MutableReassignment ||
+				runOnlyTests && e is Declaration decl &&
+				(DeclarationReferencesAnyMember(body, decl) ||
+				skippedVariables != null && ExpressionReferencesSkippedVariable(decl.Value, skippedVariables)))
+			{
+				if (runOnlyTests && e is Declaration skippedDecl)
+					(skippedVariables ??= []).Add(skippedDecl.Name);
 				continue;
-     ctx.CurrentExpressionLineNumber = e.LineNumber;
+			}
+			ctx.CurrentExpressionLineNumber = e.LineNumber;
 			last = interpreter.RunExpression(e, ctx);
 			if (ctx.ExitMethodAndReturnValue.HasValue)
 				return ctx.ExitMethodAndReturnValue.Value;
@@ -74,12 +81,30 @@ internal sealed class BodyEvaluator(Interpreter interpreter)
 		{
       MemberCall m => m.Member.Name == memberName && m.Instance == null,
 			MethodCall call =>
+				call.Instance == null && call.Method.Name != Method.From ||
 				call.Instance != null && ExpressionReferencesMember(call.Instance, memberName) ||
 				call.Arguments.Any(a => ExpressionReferencesMember(a, memberName)),
 			List list => list.Values.Any(v => ExpressionReferencesMember(v, memberName)),
 			Dictionary dict =>
 				dict.KeyType.Name.Equals(memberName, StringComparison.OrdinalIgnoreCase) ||
 				dict.MappedValueType.Name.Equals(memberName, StringComparison.OrdinalIgnoreCase),
+			_ => false
+		};
+
+	private static bool ExpressionReferencesSkippedVariable(Expression expr,
+		HashSet<string> skippedVariables) =>
+		expr switch
+		{
+			VariableCall v => skippedVariables.Contains(v.Variable.Name),
+			ParameterCall p => skippedVariables.Contains(p.Parameter.Name),
+			MethodCall call =>
+				(call.Instance != null &&
+				ExpressionReferencesSkippedVariable(call.Instance, skippedVariables)) ||
+				call.Arguments.Any(a => ExpressionReferencesSkippedVariable(a, skippedVariables)),
+			MemberCall m =>
+				m.Instance != null &&
+				ExpressionReferencesSkippedVariable(m.Instance, skippedVariables),
+			List list => list.Values.Any(v => ExpressionReferencesSkippedVariable(v, skippedVariables)),
 			_ => false
 		};
 

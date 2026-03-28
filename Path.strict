@@ -2,21 +2,29 @@ has text
 +(other) Path
 	Path(text + "\\" + other)
 FileName Path
+	Path("C:\\dir\\file.txt").FileName is Path("file.txt")
+	Path("noSlash").FileName is Path("noSlash")
 	let separatorIndex = text.LastIndexOf("\\")
 	if separatorIndex is -1
 		return Path(text)
 	let fileNameStart = separatorIndex + 1
 	Path(text.Substring(fileNameStart, text.characters.Length - fileNameStart))
 RemoveExtension Path
+	Path("file.txt").RemoveExtension is Path("file")
+	Path("noExt").RemoveExtension is Path("noExt")
 	let extensionSeparatorIndex = text.LastIndexOf(".")
 	if extensionSeparatorIndex is -1
 		return Path(text)
 	Path(text.Substring(0, extensionSeparatorIndex))
 ChangeExtension(newExtension Text) Path
+	Path("file.txt").ChangeExtension("cs") is Path("file.cs")
+	Path("noExt").ChangeExtension("cs") is Path("noExt.cs")
 	let extensionSeparatorIndex = text.LastIndexOf(".")
 	if extensionSeparatorIndex is -1
 		return Path(text + "." + newExtension)
 	Path(text.Substring(0, extensionSeparatorIndex) + "." + newExtension)
 PathOnly Path
+	Path("C:\\dir\\file.txt").PathOnly is Path("C:\\dir")
+	Path("noSlash").PathOnly is Path("")
 	let separatorIndex = text.LastIndexOf("\\")
 	separatorIndex is -1 then Path("") else Path(text.Substring(0, separatorIndex))

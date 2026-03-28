@@ -68,11 +68,7 @@ public class Interpreter
 			(behavior == TestBehavior.TestRunner || validatedMethods.Add(method)))
 			returnValue = Execute(method, noneInstance, [], null, true);
 		if (bodyEvaluator.inlineTestDepth > 0 || behavior != TestBehavior.TestRunner)
-		{
-			if (bodyEvaluator.inlineTestDepth > 0 && method.Name == "Substring")
-				System.Console.Error.WriteLine($"DEBUG Execute(Method) Substring 2nd call: inlineTestDepth={bodyEvaluator.inlineTestDepth}, stackTrace={new System.Diagnostics.StackTrace(true)}");
 			returnValue = Execute(method, noneInstance, []);
-		}
 		return returnValue;
 	}
 
@@ -172,7 +168,8 @@ public class Interpreter
 		inner is Type.GenericTypesCannotBeUsedDirectlyUseImplementation;
 
 	private static bool ShouldSkipGenericListTestValidation(Method method, bool runOnlyTests) =>
-		runOnlyTests && method.Type.IsGeneric && method.Type.Name == Type.List;
+		runOnlyTests && method.Type.IsGeneric &&
+		(method.Type.Name == Type.List || method.Type.Name == "Dictionary");
 
 	private static bool ShouldSkipKnownStrictBaseMethodValidation(Method method, bool runOnlyTests) =>
 		runOnlyTests && (method.Type.IsGeneric && method.Type.Name == Type.List ||
@@ -522,7 +519,8 @@ public class Interpreter
 			return false;
 		var thenCount = CountThenSeparators(bodyLine);
 		var operatorCount = CountOperatorWords(bodyLine);
-		return thenCount == 0 && operatorCount <= 1 || thenCount == 1 && operatorCount <= 2;
+		return thenCount == 0 && operatorCount <= 1 || thenCount == 1 && operatorCount <= 2 ||
+			thenCount == 2 && operatorCount == 0;
 	}
 
 	private static int CountOperatorWords(string input)
