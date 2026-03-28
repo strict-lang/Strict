@@ -93,11 +93,13 @@ public class Package : Context, IDisposable
 
 	public Type? FindFullType(string fullName)
 	{
+		if (fullName.Contains(' ') || fullName.Contains('"'))
+			return null; //ncrunch: no coverage
 		var parts = fullName.Split(Context.ParentSeparator);
 		if (parts.Length < 2)
 			throw new FullNameMustContainPackageAndTypeNames();
 		if (IsPrivateName(parts[^1]))
-			throw new PrivateTypesAreOnlyAvailableInItsPackage();
+			throw new PrivateTypesAreOnlyAvailableInItsPackage(fullName);
 		if (!fullName.StartsWith(FullName + Context.ParentSeparator, StringComparison.Ordinal))
 			return (Parent as Package)?.FindFullType(fullName);
 		var subName = fullName.Replace(FullName + Context.ParentSeparator, "");
@@ -110,7 +112,8 @@ public class Package : Context, IDisposable
 	private static bool IsPrivateName(string name) => char.IsLower(name[0]);
 
 	public sealed class FullNameMustContainPackageAndTypeNames : Exception;
-	public sealed class PrivateTypesAreOnlyAvailableInItsPackage : Exception;
+	public sealed class PrivateTypesAreOnlyAvailableInItsPackage(string fullName)
+		: Exception(fullName);
 
 	/// <summary>
 	/// The following picture shows the typical search steps and optimizations done. It is different

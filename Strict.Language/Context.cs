@@ -184,7 +184,7 @@ public abstract class Context
 		GetType(Type.Dictionary).GetGenericImplementation(keyType, valueType);
 
 	private Type? FindFullType(string name) =>
-		name.Contains(ParentSeparator)
+		!name.Contains(' ') && !name.Contains('"') && name.Contains(ParentSeparator)
 			? name == FullName
 				? this as Type
 				: GetPackage()?.FindFullType(name)
