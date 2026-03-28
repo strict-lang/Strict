@@ -47,7 +47,7 @@ public sealed class BodyTests : TestExpressions
 	[Test]
 	public void IsConstant()
 	{
-		var program = new Type(TestPackage.Instance, new TypeLines(nameof(IsConstant),
+		using var program = new Type(TestPackage.Instance, new TypeLines(nameof(IsConstant),
 			// @formatter:off
 			"has logger",
 			"Run",
