@@ -20,6 +20,7 @@ public class Interpreter
 		falseInstance = new ValueInstance(booleanType, false);
 		numberType = initialPackage.GetType(Type.Number);
 		characterType = initialPackage.GetType(Type.Character);
+		textType = initialPackage.GetType(Type.Text);
 		rangeType = initialPackage.GetType(Type.Range);
 		listType = initialPackage.GetType(Type.List);
 		bodyEvaluator = new BodyEvaluator(this);
@@ -38,6 +39,7 @@ public class Interpreter
 	internal readonly ValueInstance falseInstance;
 	internal readonly Type numberType;
 	internal readonly Type characterType;
+	internal readonly Type textType;
 	internal readonly Type rangeType;
 	internal readonly Type listType;
 	private readonly BodyEvaluator bodyEvaluator;
@@ -150,9 +152,11 @@ public class Interpreter
 					method.lines.ToLines() + Environment.NewLine + inner);
 			}
 			if (body is not Body && runOnlyTests)
-				return IsSimpleExpressionWithLessThanThreeSubExpressions(body)
-					? trueInstance
-					: throw new MethodRequiresTest(method, body.ToString());
+				return method.Name == Method.Run
+					? noneInstance
+					: IsSimpleExpressionWithLessThanThreeSubExpressions(body)
+						? trueInstance
+						: throw new MethodRequiresTest(method, body.ToString());
 			var result = RunExpression(body, context, runOnlyTests);
 			return context.ExitMethodAndReturnValue ??
 				result.ApplyMethodReturnTypeMutable(method.ReturnType);
@@ -307,16 +311,26 @@ public class Interpreter
 		{
 			var param = method.Parameters[index];
 			var memberIndex = GetMemberIndexForParameter(typeMembers, param, index);
+			if (memberIndex >= typeMembers.Count)
+				continue;
+			var memberType = typeMembers[memberIndex].Type;
 			if (param.DefaultValue != null)
-				values[memberIndex] = RunExpression(param.DefaultValue,
-					RentContext(method.Type, method, noneInstance, null));
+			{
+				var defaultVal = RunExpression(param.DefaultValue, RentContext(method.Type, method, noneInstance, null));
+				values[memberIndex] = memberType.IsList && !defaultVal.IsSameOrCanBeUsedAs(memberType)
+					? new ValueInstance(memberType, Array.Empty<ValueInstance>())
+					: defaultVal;
+			}
 			else
 			{
-				var autoValue = TryAutoCreateInstance(param.Type);
+				var autoValue = TryAutoCreateInstance(memberType);
 				if (autoValue != null)
 					values[memberIndex] = autoValue.Value;
 			}
 		}
+		for (var memberIndex = 0; memberIndex < typeMembers.Count; memberIndex++)
+			if (!values[memberIndex].HasValue && typeMembers[memberIndex].Type.IsList)
+				values[memberIndex] = new ValueInstance(typeMembers[memberIndex].Type, Array.Empty<ValueInstance>());
 		return new ValueInstance(method.Type, values);
 	}
 

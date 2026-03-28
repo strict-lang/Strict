@@ -154,7 +154,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 		};
 
 	public bool IsPrimitiveType(Type noneBoolOrNumberType) => value == noneBoolOrNumberType;
-	internal bool HasValue => value != null;
+	public bool HasValue => value != null;
 	public bool IsText => number is TextId;
 	public string Text => (string)value;
 	public double Number => number;

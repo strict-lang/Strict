@@ -1,8 +1,2 @@
-has context
+has packageName Text
 has children Packages
-has types Dictionary(Name, Type)
-FindType(name) Type or None
-	constant TypeNotFound = Error
-	name is in types then types(name) else TypeNotFound
-Add(type)
-	types.Add(type.Name, type)

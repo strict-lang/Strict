@@ -1,17 +1,21 @@
 has number
 Sum Number
+	EvenFibonacci(100).Sum is 44
 	mutable first = 1
 	mutable second = 1
-	mutable sum = 0
+	mutable total = 0
 	for Range(1, number)
 		let next = first + second
 		if next >= number
-			return sum
-		sum = AddIfEven(sum, next)
+			return total
+		total = AddIfEven(total, next)
 		first = second
 		second = next
-	sum
-AddIfEven(mutable current Number, next Number) Number
+	total
+AddIfEven(current Number, next Number) Number
+	EvenFibonacci(100).AddIfEven(2, 4) is 6
+	EvenFibonacci(100).AddIfEven(2, 3) is 2
 	if next % 2 is 0
-		current.Increment(next)
-	current
+		current + next
+	else
+		current

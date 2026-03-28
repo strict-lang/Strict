@@ -184,6 +184,10 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 				InterpreterExecutionFailed.BuildContextMessage(ctx.Method, call, ctx,
 					"Only +, -, *, / operators are supported for List and Number, got: " + op));
 		}
+		if (leftList.HasValue && op == BinaryOperator.Plus)
+			return AddToList(leftList.Value, right);
+		if (leftList.HasValue && op == BinaryOperator.Minus)
+			return RemoveFromList(leftList.Value, right);
 		if (IsCoreRuntimeType(call.Method.Type))
 			throw new InterpreterExecutionFailed(ctx.Method,
 				InterpreterExecutionFailed.BuildContextMessage(ctx.Method, call, ctx,

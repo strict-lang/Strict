@@ -104,13 +104,8 @@ Index(other Generic) Number
 			return index
 	-1
 Add(element Generic) Mutable(List)
-	mutable someList = List(Mutable(Number))
-	someList.Add(1)
-	someList.Add(2)
-	someList is (1, 2)
-	someList(0) = 5
-	someList is (5, 2)
-	someList.Add(3) is (5, 2, 3)
+	(1, 2).Add(3) is (1, 2, 3)
+	("a", "b").Add("c") is ("a", "b", "c")
 	value = value + element
 Remove(element Generic) Mutable(List)
 	(1, 2, 3).Remove(2) is (1, 3)

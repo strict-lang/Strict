@@ -65,7 +65,7 @@ internal sealed class ForEvaluator(Interpreter interpreter)
 		}
 		return ShouldConsolidateForResult(results, ctx) ?? new ValueInstance(
 			interpreter.listType.GetGenericImplementation(results is { Count: > 0 }
-				? results[0].GetType()
+				? GetResultElementType(results[0])
 				: f.Body.ReturnType), results?.ToArray() ?? []);
 	}
 
@@ -160,6 +160,11 @@ internal sealed class ForEvaluator(Interpreter interpreter)
 						ctx, "For text return type cannot consolidate value " + value));
 		return new ValueInstance(text.ToString());
 	}
+
+	private Type GetResultElementType(ValueInstance result) =>
+		result.IsText ? interpreter.textType :
+		result.IsList ? result.List.ReturnType.GetFirstImplementation() :
+		result.TryGetValueTypeInstance()?.ReturnType ?? result.GetType();
 
 	private Type GetForValueType(ValueInstance iterator)
 	{

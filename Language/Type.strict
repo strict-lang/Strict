@@ -1,29 +1,5 @@
-has context
-has Members Variables
-has Methods
-has IsTrait
-has IsGeneric
-has Lines Texts
-from(parent Context, name, lines Texts)
-	Parent = parent
-	Name = name
-	FullName = parent.FullName + Context.ParentSeparator + name
-	Lines = lines
-	let members = typeLines.MemberLines.Map(ParseMember)
-	let methods = ParseMethods(typeLines)
-	IsTrait = members.Length is 0 and methods.Length is not 0
-	IsGeneric = typeLines.IsGeneric
-GetMember(name) Variable
-	constant MemberNotFound = Error
-	for members
-		if value.Variable.elementName is name
-			return value
-	MemberNotFound
-GetMethod(name) Method
-	constant MethodNotFound = Error
-	for methods
-		if value.Name is name
-			return value
-	MethodNotFound
-to Text
-	Name
+has typeName Text
+has packageName Text
+has isTrait Boolean
+has isGeneric Boolean
+has lines Texts

@@ -1,15 +1,15 @@
 has RZero Number
 has ROne Number
 has RTwo Number
-+(other) Number
++(other Register) Register
 	Register(0, 1, 2) + Register(1, 2, 3) is Register(1, 3, 5)
-	value + other
--(other) Number
+	Register(RZero + other.RZero, ROne + other.ROne, RTwo + other.RTwo)
+-(other Register) Register
 	Register(5, 5, 5) - Register(5, 5, 5) is Register(0, 0, 0)
-	value - other
-*(other) Number
+	Register(RZero - other.RZero, ROne - other.ROne, RTwo - other.RTwo)
+*(other Register) Register
 	Register(0, 1, 2) * Register(1, 2, 3) is Register(0, 2, 6)
-	value * other
-/(other) Number
+	Register(RZero * other.RZero, ROne * other.ROne, RTwo * other.RTwo)
+/(other Register) Register
 	Register(5, 5, 5) / Register(5, 5, 5) is Register(1, 1, 1)
-	value / other
+	Register(RZero / other.RZero, ROne / other.ROne, RTwo / other.RTwo)

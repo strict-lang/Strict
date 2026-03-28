@@ -2,4 +2,3 @@ has Parent Context or None
 has Name
 has FullName Name
 constant ParentSeparator = "/"
-FindType(name) Type or None
