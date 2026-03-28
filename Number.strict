@@ -78,3 +78,7 @@ Decrement(amount = 1) Mutable(Number)
 	Mutable(3).Decrement is 2
 	Mutable(-2).Decrement(-7) is -9
 	value = value - amount
+SquareRoot Number
+	4.SquareRoot is 2
+	9.SquareRoot is 3
+	value ^ 0.5

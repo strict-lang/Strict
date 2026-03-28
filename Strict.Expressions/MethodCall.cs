@@ -203,8 +203,10 @@ public class MethodCall : ConcreteExpression
 		arguments = NormalizeDictionaryArguments(body, fromType, arguments);
 		arguments = NormalizeErrorArguments(body, ref fromType, arguments, basedOnErrorVariable);
 		arguments = NormalizeTypeArguments(body, fromType, arguments);
-		return new MethodCall(fromType.GetMethod(Method.From, arguments), null, arguments, null,
-			body.CurrentFileLineNumber);
+		var method = fromType.GetMethod(Method.From, arguments);
+		if (AreArgumentsAutoParsedAsList(method, arguments))
+			arguments = [new List(body, (List<Expression>)arguments)];
+		return new MethodCall(method, null, arguments, null, body.CurrentFileLineNumber);
 	}
 
 	private static (Type fromType, IReadOnlyList<Expression> arguments)
@@ -341,7 +343,9 @@ public class MethodCall : ConcreteExpression
 					: Method.Name == Method.From &&
 					ReturnType is GenericTypeImplementation { Generic.Name: Type.Dictionary }
 						? FormatDictionaryConstructor()
-						: $"{GetProperMethodNameWithFromSupport()}{Arguments.ToBrackets()}";
+						: Method.Name == Method.From && IsAutoWrappedListArgument()
+							? $"{GetProperMethodNameWithFromSupport()}({string.Join(", ", ((List)Arguments[0]).Values)})"
+							: $"{GetProperMethodNameWithFromSupport()}{Arguments.ToBrackets()}";
 
 	private string FormatErrorConstructor()
 	{
@@ -353,6 +357,12 @@ public class MethodCall : ConcreteExpression
 				? $"{Type.Error}({Arguments[0]})"
 				: Type.Error;
 	}
+
+	private bool IsAutoWrappedListArgument() =>
+		Arguments is [List { Values.Count: > 1 }] &&
+		Method.Parameters.Count == 1 &&
+		Method.Parameters[0].Type.IsList &&
+		!ReturnType.IsList;
 
 	private string GetProperMethodNameWithFromSupport() =>
 		Method.Name == Method.From

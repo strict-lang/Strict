@@ -4,8 +4,8 @@ Process(mutable image ColorImage) ColorImage
 	constant testImage = ColorImage(Size(1, 1), (testColor))
 	AdjustBrightness(0.1).Process(testImage) is ColorImage(Size(1, 1), (Color(0.1, 0.2, 0.3)))
 	AdjustBrightness(0.9).Process(testImage) is ColorImage(Size(1, 1), (Color(0.9, 1, 1)))
-	for color in image.Colors
-		GetBrightnessAdjustedColor(color)
+	for colorIndex in Range(0, image.Colors.Length)
+		image.Colors(colorIndex) = GetBrightnessAdjustedColor(image.Colors(colorIndex))
 	image
 GetBrightnessAdjustedColor(current Color) Color
 	AdjustBrightness(0.1).GetBrightnessAdjustedColor(testColor) is Color(0.1, 0.2, 0.3)

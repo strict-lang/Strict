@@ -169,8 +169,9 @@ public class MethodExpressionParser : ExpressionParser
 
 //TODO: this is a hack and should be removed! we really want same input = output!
 	private static string NormalizeExpressionText(Body body, string expressionText) =>
-   CanonicalizeTextLiteralEscapes(NormalizeListImplementationNamesToPluralAliases(body, expressionText))
-			.Replace(Type.ValueLowercase + ".", string.Empty, StringComparison.Ordinal);
+		CanonicalizeTextLiteralEscapes(NormalizeListImplementationNamesToPluralAliases(body, expressionText))
+			.Replace(Type.ValueLowercase + ".", string.Empty, StringComparison.Ordinal)
+			.Replace(body.Method.Type.Name + ".", string.Empty, StringComparison.Ordinal);
 
 	private static string CanonicalizeTextLiteralEscapes(string expressionText)
 	{

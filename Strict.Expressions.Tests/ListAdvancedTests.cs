@@ -244,6 +244,19 @@ public sealed class ListAdvancedTests : TestExpressions
 		Assert.That(program.Members[1].Type.ToString(), Is.EqualTo("TestPackage/Vector2"));
 	}
 
+	[TestCase("TestVector(1)", "too few")]
+	[TestCase("TestVector(1, 2, 3)", "too many")]
+	public void ConstructorWithConstrainedLengthWrongArgumentCountFailsAtParsing(string constructor, string _) =>
+		Assert.That(() =>
+			{
+				using var _ = new Type(TestPackage.Instance, new TypeLines(
+					"TestVector",
+					"has numbers with Length is 2",
+					$"constant Bad = {constructor}")).ParseMembersAndMethods(parser);
+			},
+			Throws.InstanceOf<ParsingFailed>().With.InnerException.
+				InstanceOf<Type.ArgumentsDoNotMatchMethodParameters>());
+
 	[Test]
 	public void FromConstructorCannotBeCreatedWhenFirstMemberIsNotMatched() =>
 		Assert.That(() =>

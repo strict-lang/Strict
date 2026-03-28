@@ -1,9 +1,9 @@
 has Width Number with value > 0
 has Height Number with value > 0
 for Iterator(Vector2)
-	for x in Range(0, Width)
-	for y in Range(0, Height)
-		Vector2(x, y)
+	for xi in Range(0, Width)
+		for yi in Range(0, Height)
+			Vector2(xi, yi)
 in(element Vector2) Boolean
 	true
 Area Number

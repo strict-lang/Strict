@@ -92,8 +92,10 @@ public sealed class List : Value
 					return null; //ncrunch: no coverage, only when we have mutable items
 				valueInstances[i] = innerData.Value;
 			}
+			else if (Values[i] is Value constantValue)
+				valueInstances[i] = constantValue.Data;
 			else
-				valueInstances[i] = ((Value)Values[i]).Data;
+				return null;
 		cachedData = new ValueInstance(ReturnType, valueInstances);
 		return cachedData;
 	}
