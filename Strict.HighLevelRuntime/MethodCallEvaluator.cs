@@ -118,8 +118,8 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 			return new ValueInstance(left.ToExpressionCodeString() + right.Text);
 		if (IsNumberLike(left) && IsNumberLike(right))
 		{
-			var l = left.Number;
-			var r = right.Number;
+			var l = left.GetArithmeticNumber();
+			var r = right.GetArithmeticNumber();
 			return op switch
 			{
 				BinaryOperator.Plus => new ValueInstance(interpreter.numberType, l + r),

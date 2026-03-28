@@ -1,0 +1,12 @@
+has numbers
+has logger
+Total Number
+	NumberSummer((1, 2, 3)).Total is 6
+	NumberSummer((10, 20, 30)).Total is 60
+	mutable total = 0
+	for numbers
+		total = total + value
+	total
+Run
+	constant items = NumberSummer((10, 20, 30, 40))
+	logger.Log("Total: " + items.Total)

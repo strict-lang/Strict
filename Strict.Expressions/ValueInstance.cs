@@ -169,6 +169,14 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 		IsPrimitiveType(numberType) ||
 		!IsText && !IsList && !IsDictionary && GetType().IsSameOrCanBeUsedAs(numberType);
 
+	public double GetArithmeticNumber()
+	{
+		if (number != TypeId)
+			return number;
+		var typeInstance = (ValueTypeInstance)value;
+		return typeInstance.Values.Length > 0 ? typeInstance.Values[0].number : 0;
+	}
+
 	public bool IsSameOrCanBeUsedAs(Type otherType) =>
 		number switch
 		{
