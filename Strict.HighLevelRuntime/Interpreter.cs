@@ -168,8 +168,7 @@ public class Interpreter
 		inner is Type.GenericTypesCannotBeUsedDirectlyUseImplementation;
 
 	private static bool ShouldSkipGenericListTestValidation(Method method, bool runOnlyTests) =>
-		runOnlyTests && method.Type.IsGeneric &&
-		(method.Type.Name == Type.List || method.Type.Name == "Dictionary");
+		runOnlyTests && method.Type is { IsGeneric: true, Name: Type.List or Type.Dictionary };
 
 	private static bool ShouldSkipKnownStrictBaseMethodValidation(Method method, bool runOnlyTests) =>
 		runOnlyTests && (method.Type.IsGeneric && method.Type.Name == Type.List ||
@@ -180,7 +179,7 @@ public class Interpreter
 		IReadOnlyList<ValueInstance> args, ExecutionContext? parentContext, bool runOnlyTests)
 	{
 		var context = RentContext(method.Type, method, instance, parentContext);
-    for (var index = 0; index < method.Parameters.Count; index++)
+		for (var index = 0; index < method.Parameters.Count; index++)
 		{
 			var parameter = method.Parameters[index];
 			var argument = index < args.Count
@@ -459,7 +458,7 @@ public class Interpreter
 		return context.Find(name, Statistics) ?? name switch
 		{
 			Type.ValueLowercase => context.This,
-      Type.OuterLowercase => context.Parent!.Get(Type.ValueLowercase, Statistics),
+			Type.OuterLowercase => context.Parent!.Get(Type.ValueLowercase, Statistics),
 			_ => null
 		} ?? throw new ExecutionContext.VariableNotFound(name, context.Type, context.This);
 	}

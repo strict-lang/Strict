@@ -63,7 +63,7 @@ internal sealed class ForEvaluator(Interpreter interpreter)
 					return ctx.ExitMethodAndReturnValue.Value;
 			}
 		}
-   return ShouldConsolidateForResult(results, ctx) ?? new ValueInstance(
+		return ShouldConsolidateForResult(results, ctx) ?? new ValueInstance(
 			interpreter.listType.GetGenericImplementation(results is { Count: > 0 }
 				? results[0].GetType()
 				: f.Body.ReturnType), results?.ToArray() ?? []);
@@ -75,7 +75,7 @@ internal sealed class ForEvaluator(Interpreter interpreter)
 	{
 		var indexInstance = new ValueInstance(interpreter.numberType, index);
 		loop.Variables[Type.IndexLowercase] = indexInstance;
-   loop.Variables[Type.OuterLowercase] = ctx.Get(Type.ValueLowercase, interpreter.Statistics);
+		loop.Variables[Type.OuterLowercase] = ctx.Get(Type.ValueLowercase, interpreter.Statistics);
 		var value = iterator.IsPrimitiveType(interpreter.numberType) || isRangeIterator
 			? indexInstance
 			: iterator.GetIteratorValue(itemType, index);
@@ -155,7 +155,7 @@ internal sealed class ForEvaluator(Interpreter interpreter)
 				text.Append(')');
 			}
 			else
-        throw new InterpreterExecutionFailed(ctx.Method,
+				throw new InterpreterExecutionFailed(ctx.Method,
 					InterpreterExecutionFailed.BuildContextMessage(ctx.Method, ctx.Method.TypeLineNumber,
 						ctx, "For text return type cannot consolidate value " + value));
 		return new ValueInstance(text.ToString());

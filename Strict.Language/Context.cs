@@ -68,7 +68,6 @@ public abstract class Context
 	public Context Parent { get; }
 	public string Name { get; }
 	public string FullName { get; }
-
 	public abstract Type? FindTypeCore(string name, Context? searchingFrom = null);
 	public Type GetType(string name) => FindType(name) ?? throw new TypeNotFound(name, this);
 
@@ -148,7 +147,9 @@ public abstract class Context
 				new GenericType(mainType, namedTypes);
 		}
 		var argumentTypes = TryGetArgumentTypes(arguments);
-		return argumentTypes == null ? null : mainType.GetGenericImplementation(argumentTypes);
+		return argumentTypes == null
+			? null
+			: mainType.GetGenericImplementation(argumentTypes);
 	}
 
 	private static NamedType[] GetNamedTypes(Type mainType, IReadOnlyList<string> argumentTypeNames)

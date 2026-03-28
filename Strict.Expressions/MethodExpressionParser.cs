@@ -74,7 +74,7 @@ public class MethodExpressionParser : ExpressionParser
 		{
 			return null;
 		}
-   if (method is { IsTrait: false })
+		if (method is { IsTrait: false })
 			return new MethodCall(method, valueCall, [], null, body.CurrentFileLineNumber); //ncrunch: no coverage
 		var member = FindMember(valueType, inputName);
 		return member != null
@@ -167,31 +167,32 @@ public class MethodExpressionParser : ExpressionParser
 		inputText == generatedText ||
 		NormalizeExpressionText(body, inputText) == NormalizeExpressionText(body, generatedText);
 
-//TODO: this is a hack and should be removed! we really want same input = output!
+	//TODO: this is a hack and should be removed! we really want same input = output!
 	private static string NormalizeExpressionText(Body body, string expressionText) =>
-		CanonicalizeTextLiteralEscapes(NormalizeListImplementationNamesToPluralAliases(body, expressionText))
-			.Replace(Type.ValueLowercase + ".", string.Empty, StringComparison.Ordinal)
-			.Replace(body.Method.Type.Name + ".", string.Empty, StringComparison.Ordinal);
+		CanonicalizeTextLiteralEscapes(
+				NormalizeListImplementationNamesToPluralAliases(body, expressionText)).
+			Replace(Type.ValueLowercase + ".", string.Empty, StringComparison.Ordinal).
+			Replace(body.Method.Type.Name + ".", string.Empty, StringComparison.Ordinal);
 
 	private static string CanonicalizeTextLiteralEscapes(string expressionText)
 	{
 		var builder = new System.Text.StringBuilder(expressionText.Length);
 		var insideText = false;
-    for (var index = 0; index < expressionText.Length; index++)
+		for (var index = 0; index < expressionText.Length; index++)
 		{
-      var character = expressionText[index];
+			var character = expressionText[index];
 			if (character == '"')
 			{
-       insideText = !insideText;
+				insideText = !insideText;
 				builder.Append(character);
 				continue;
 			}
-      if (!insideText)
+			if (!insideText)
 			{
-       builder.Append(character);
+				builder.Append(character);
 				continue;
 			}
-     if (character == '\\')
+			if (character == '\\')
 			{
 				if (index + 1 < expressionText.Length)
 				{
@@ -204,16 +205,16 @@ public class MethodExpressionParser : ExpressionParser
 						continue;
 					}
 				}
-				builder.Append("\\\\");
+				builder.Append(@"\\");
 				continue;
 			}
 			builder.Append(character switch
-				{
-					'\n' => "\\n",
-					'\r' => "\\r",
-					'\t' => "\\t",
-					_ => character.ToString()
-				});
+			{
+				'\n' => "\\n",
+				'\r' => "\\r",
+				'\t' => "\\t",
+				_ => character.ToString()
+			});
 		}
 		return builder.ToString();
 	}
@@ -231,6 +232,7 @@ public class MethodExpressionParser : ExpressionParser
 		}
 		return normalizedText;
 	}
+
 	private sealed class GeneratedBinaryExpressionDoesNotMatchInputExactly(Body body,
 		Expression binary, string inputText) : ParsingFailed(body, binary + ", inputText=" + inputText); //ncrunch: no coverage
 #endif
@@ -318,7 +320,7 @@ public class MethodExpressionParser : ExpressionParser
 	}
 
 	private Expression? ParseInContext(Body body, ReadOnlySpan<char> input,
-   IReadOnlyList<Expression> arguments) =>
+		IReadOnlyList<Expression> arguments) =>
 		ContainsMemberSeparatorOutsideBrackets(input)
 			? ParseNestedExpressionInContext(body, input, arguments)
 			: ListCall.TryParse(body,
@@ -345,11 +347,12 @@ public class MethodExpressionParser : ExpressionParser
 		return false;
 	}
 
+	//TODO: this method is way too long
 	private Expression? ParseNestedExpressionInContext(Body body,
 		ReadOnlySpan<char> input, IReadOnlyList<Expression> arguments)
 	{
 		var nestedInput = input;
-    if (nestedInput.StartsWith(Type.ValueLowercase + ".", StringComparison.Ordinal) &&
+		if (nestedInput.StartsWith(Type.ValueLowercase + ".", StringComparison.Ordinal) &&
 			body.FindVariable(Type.ValueLowercase.AsSpan()) == null)
 			Instance.Parse(body, body.Method);
 		Expression? current = null;
@@ -387,7 +390,6 @@ public class MethodExpressionParser : ExpressionParser
 					(inputText.Length > 0 && (char.IsDigit(inputText[0]) || inputText[0] == '-')
 						? Number.TryParse(body, inputText)
 						: null);
-
 				if (current is not null)
 				{
 					context = current.ReturnType;
@@ -628,17 +630,17 @@ public class MethodExpressionParser : ExpressionParser
 				CheckForVariableMutationInIf(variableName, ifExpression) ||
 				expression is For forExpression &&
 				(IsForCustomVariableMutation(forExpression, variableName) ||
-				forExpression.Body is MutableReassignment ||
-				forExpression.Body is MethodCall
-				{
-					Instance: VariableCall forVariableCall, IsMutable: true
-				} &&
-				forVariableCall.Variable.Name == variableName || forExpression.Body is Body forBody &&
-				IsVariableMutated(forBody, variableName) ||
-				forExpression.Body is If forIfBody &&
-				CheckForVariableMutationInIf(variableName, forIfBody) ||
-				forExpression.Body is MethodCall { Instance: VariableCall bodyVarCall, IsMutable: true } &&
-				bodyVarCall.Variable.Name == variableName))
+					forExpression.Body is MutableReassignment ||
+					forExpression.Body is MethodCall
+					{
+						Instance: VariableCall forVariableCall, IsMutable: true
+					} &&
+					forVariableCall.Variable.Name == variableName || forExpression.Body is Body forBody &&
+					IsVariableMutated(forBody, variableName) ||
+					forExpression.Body is If forIfBody &&
+					CheckForVariableMutationInIf(variableName, forIfBody) ||
+					forExpression.Body is MethodCall { Instance: VariableCall bodyVarCall, IsMutable: true } &&
+					bodyVarCall.Variable.Name == variableName))
 				return true;
 			if (expression is MethodCall { Instance: VariableCall variableCall, IsMutable: true } &&
 				variableCall.Variable.Name == variableName)

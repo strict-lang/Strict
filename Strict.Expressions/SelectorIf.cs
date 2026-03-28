@@ -44,11 +44,11 @@ public sealed class SelectorIf(Expression selector, IReadOnlyList<SelectorIf.Cas
 		public Expression Condition { get; } = condition;
 	}
 
-  private static Type GetMatchingReturnType(IReadOnlyList<Case> cases, Expression selector,
+	private static Type GetMatchingReturnType(IReadOnlyList<Case> cases, Expression selector,
 		Expression? optionalElse, Body? bodyForErrorMessage)
 	{
 		if (cases.Count == 0)
-      throw new MissingCase(selector, bodyForErrorMessage); //ncrunch: no coverage
+			throw new MissingCase(selector, bodyForErrorMessage); //ncrunch: no coverage
 		var returnType = cases[0].Then.ReturnType;
 		for (var i = 1; i < cases.Count; i++)
 			returnType = GetMatchingType(returnType, cases[i].Then.ReturnType, bodyForErrorMessage);
@@ -68,7 +68,7 @@ public sealed class SelectorIf(Expression selector, IReadOnlyList<SelectorIf.Cas
 
 	private const string ThenSeparator = " then ";
 
- public sealed class MissingCase(Expression selector, Body? body)
+	public sealed class MissingCase(Expression selector, Body? body)
 		: ParsingFailed(body ?? new Body(selector.ReturnType.Methods[0]),
 			$"SelectorIf requires at least one case for selector {selector}");
 

@@ -42,7 +42,7 @@ public sealed class If(Expression condition, Expression then, int lineNumber = 0
 
 	public class ReturnTypeOfThenAndElseMustHaveMatchingType(Body body, Type thenReturnType,
 		Type optionalElseReturnType) : ParsingFailed(body, "The Then type: " + thenReturnType +
-			" is not same as the Else type: " + optionalElseReturnType);
+		" is not same as the Else type: " + optionalElseReturnType);
 
 	public Expression Condition { get; } = condition;
 	public Expression Then { get; } = then;
@@ -69,7 +69,6 @@ public sealed class If(Expression condition, Expression then, int lineNumber = 0
 			Then.ReturnType.IsError || OptionalElse.ReturnType.IsError) && Then is not Body &&
 		OptionalElse is not Body &&
 		(OptionalElse is not If elseIf || elseIf.RendersAsInlineConditional);
-
 	public override bool IsConstant =>
 		Condition.IsConstant && Then.IsConstant && (OptionalElse?.IsConstant ?? true);
 
@@ -124,8 +123,12 @@ public sealed class If(Expression condition, Expression then, int lineNumber = 0
 	{
 		optionalElse = null;
 		var cases = new List<SelectorIf.Case>();
-		var selectorName = selector is ParameterCall pc ? pc.Parameter.Name :
-			selector is VariableCall vc ? vc.Variable.Name : null;
+		var selectorName = selector switch
+		{
+			ParameterCall pc => pc.Parameter.Name,
+			VariableCall vc => vc.Variable.Name,
+			_ => null
+		};
 		for (var lineNumber = body.LineRange.Start.Value; lineNumber < body.LineRange.End.Value;
 			lineNumber++)
 		{
@@ -235,7 +238,9 @@ public sealed class If(Expression condition, Expression then, int lineNumber = 0
 		if (thenIndex > 0 && NoFirstBracketOrSurroundedByIt(input, firstBracket, thenIndex))
 		{
 			var firstElseIndex = input.IndexOf(ElseSeparator, StringComparison.Ordinal);
-			var partBeforeFirstElse = firstElseIndex > 0 ? input[..firstElseIndex] : input;
+			var partBeforeFirstElse = firstElseIndex > 0
+				? input[..firstElseIndex]
+				: input;
 			return CountThenSeparators(partBeforeFirstElse) > 1
 				? throw new ConditionalExpressionsCannotBeNested(body)
 				: true;
@@ -279,19 +284,4 @@ public sealed class If(Expression condition, Expression then, int lineNumber = 0
 	}
 
 	public sealed class MissingElseExpression(Body body) : ParsingFailed(body);
-}
-
-/// <summary>
-/// Represents a type name used as a pattern in a type-dispatch selector-if expression.
-/// For example in "if generic is Number then ...", Number is a TypePattern.
-/// The selector variable is then narrowed to this type in the then-branch.
-/// </summary>
-internal sealed class TypePattern(Type concreteType, string displayName, int lineNumber = 0)
-	: Expression(concreteType, lineNumber)
-{
-	public override string ToString() => displayName;
-	public override bool IsConstant => true;
-	public override bool Equals(Expression? other) =>
-		other is TypePattern tp && ReturnType == tp.ReturnType;
-	public override int GetHashCode() => ReturnType.GetHashCode();
 }

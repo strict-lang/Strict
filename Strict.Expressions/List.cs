@@ -101,7 +101,7 @@ public sealed class List : Value
 	}
 
 	private ValueInstance? cachedData;
-  public new ValueInstance Data => throw new DataAccessRequiresConstantList(ReturnType);
+	public new ValueInstance Data => throw new DataAccessRequiresConstantList(ReturnType);
 
 	public sealed class DataAccessRequiresConstantList(Type returnType)
 		: ParsingFailed(returnType, 0, "Use TryGetConstantData instead!");

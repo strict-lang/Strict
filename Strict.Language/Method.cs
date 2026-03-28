@@ -278,9 +278,9 @@ public sealed class Method : Context
 		else if (expression.GetType().Name == "MethodCall" &&
 			body.ParsingLineNumber == body.Method.Tests.Count + 1 && currentLine != "\tRun" &&
 			(currentLine == body.Method.GetNameWithParameters() ||
-			currentLine.EndsWith("." + body.Method.GetNameWithParameters()) ||
-			currentLine.Contains("." + body.Method.GetNameWithParameters() + " ") ||
-			currentLine.Contains(body.Method.GetNameWithParameters() + ".")))
+				currentLine.EndsWith("." + body.Method.GetNameWithParameters(), StringComparison.Ordinal) ||
+				currentLine.Contains("." + body.Method.GetNameWithParameters() + " ") ||
+				currentLine.Contains(body.Method.GetNameWithParameters() + ".")))
 			throw new RecursiveCallCausesStackOverflow(body);
 		return expression;
 	}

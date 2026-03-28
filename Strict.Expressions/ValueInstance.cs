@@ -309,7 +309,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 		number switch
 		{
 			TextId => escapeText
-       ? "\"" + EscapeText((string)value) + "\""
+				? "\"" + EscapeText((string)value) + "\""
 				: (string)value,
 			ListId => BuildListString(((ValueListInstance)value).Items, escapeText),
 			DictionaryId => BuildDictionaryString(((ValueDictionaryInstance)value).Items, escapeText),
@@ -317,12 +317,12 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 			_ => GetPrimitiveCodeString((Type)value)
 		};
 
-	private static string EscapeText(string text) => text
-		.Replace("\\", "\\\\", StringComparison.Ordinal)
-		.Replace("\n", "\\n", StringComparison.Ordinal)
-		.Replace("\r", "\\r", StringComparison.Ordinal)
-		.Replace("\t", "\\t", StringComparison.Ordinal)
-		.Replace("\"", "\\\"", StringComparison.Ordinal);
+	private static string EscapeText(string text) =>
+		text.Replace("\\", "\\\\", StringComparison.Ordinal).
+			Replace("\n", "\\n", StringComparison.Ordinal).
+			Replace("\r", "\\r", StringComparison.Ordinal).
+			Replace("\t", "\\t", StringComparison.Ordinal).
+			Replace("\"", "\\\"", StringComparison.Ordinal);
 
 	private static string BuildListString(IReadOnlyList<ValueInstance> items, bool escapeText)
 	{
@@ -364,7 +364,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 		return primitiveType.IsMutable
 			// ReSharper disable once TailRecursiveCall
 			? GetPrimitiveCodeString(primitiveType.GetFirstImplementation())
-      : throw new InvalidTypeValue(primitiveType, primitiveType.ToString());
+			: throw new InvalidTypeValue(primitiveType, primitiveType.ToString());
 	}
 
 	public string GetCachedNumberString()

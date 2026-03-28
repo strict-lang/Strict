@@ -174,7 +174,7 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 			};
 			if (value is { } constantValue && constantValue != 0.0 && seenValues.Add(constantValue))
 				constants.Add(($"const_{index++}", constantValue));
-			if (instruction is Invoke { Method: not null } invoke)
+			if (instruction is Invoke invoke)
 				foreach (var invokeValue in CollectInvokeNumericConstants(invoke.Method))
 					if (invokeValue != 0.0 && seenValues.Add(invokeValue))
 						constants.Add(($"const_{index++}", invokeValue));

@@ -16,10 +16,10 @@ internal sealed class BodyEvaluator(Interpreter interpreter)
 		}
 		catch (InterpreterExecutionFailed ex)
 		{
-      if (ex.Message.Contains(InterpreterExecutionFailed.GetMethodFailureHeader(body.Method),
+			if (ex.Message.Contains(InterpreterExecutionFailed.GetMethodFailureHeader(body.Method),
 				StringComparison.Ordinal))
 				throw;
-     var fileLineNumber = ex.MethodName == body.Method.ToString()
+			var fileLineNumber = ex.MethodName == body.Method.ToString()
 				? ex.FileLineNumber
 				: ctx.CurrentExpressionLineNumber;
 			throw new InterpreterExecutionFailed(body.Method, fileLineNumber,
@@ -50,9 +50,9 @@ internal sealed class BodyEvaluator(Interpreter interpreter)
 			if (isTest)
 				interpreter.Statistics.TestExpressions++;
 			if (isTest == !runOnlyTests && e is not Declaration && e is not MutableReassignment ||
-				runOnlyTests && e is Declaration decl &&
-				(DeclarationReferencesAnyMember(body, decl) ||
-				skippedVariables != null && ExpressionReferencesSkippedVariable(decl.Value, skippedVariables)))
+				runOnlyTests && e is Declaration decl && (DeclarationReferencesAnyMember(body, decl) ||
+					skippedVariables != null &&
+					ExpressionReferencesSkippedVariable(decl.Value, skippedVariables)))
 			{
 				if (runOnlyTests && e is Declaration skippedDecl)
 					(skippedVariables ??= []).Add(skippedDecl.Name);
@@ -79,9 +79,8 @@ internal sealed class BodyEvaluator(Interpreter interpreter)
 	private static bool ExpressionReferencesMember(Expression expr, string memberName) =>
 		expr switch
 		{
-      MemberCall m => m.Member.Name == memberName && m.Instance == null,
-			MethodCall call =>
-				call.Instance == null && call.Method.Name != Method.From ||
+			MemberCall m => m.Member.Name == memberName && m.Instance == null,
+			MethodCall call => call.Instance == null && call.Method.Name != Method.From ||
 				call.Instance != null && ExpressionReferencesMember(call.Instance, memberName) ||
 				call.Arguments.Any(a => ExpressionReferencesMember(a, memberName)),
 			List list => list.Values.Any(v => ExpressionReferencesMember(v, memberName)),
@@ -92,17 +91,15 @@ internal sealed class BodyEvaluator(Interpreter interpreter)
 		};
 
 	private static bool ExpressionReferencesSkippedVariable(Expression expr,
-		HashSet<string> skippedVariables) =>
+		IReadOnlySet<string> skippedVariables) =>
 		expr switch
 		{
 			VariableCall v => skippedVariables.Contains(v.Variable.Name),
 			ParameterCall p => skippedVariables.Contains(p.Parameter.Name),
-			MethodCall call =>
-				(call.Instance != null &&
-				ExpressionReferencesSkippedVariable(call.Instance, skippedVariables)) ||
+			MethodCall call => call.Instance != null &&
+				ExpressionReferencesSkippedVariable(call.Instance, skippedVariables) ||
 				call.Arguments.Any(a => ExpressionReferencesSkippedVariable(a, skippedVariables)),
-			MemberCall m =>
-				m.Instance != null &&
+			MemberCall m => m.Instance != null &&
 				ExpressionReferencesSkippedVariable(m.Instance, skippedVariables),
 			List list => list.Values.Any(v => ExpressionReferencesSkippedVariable(v, skippedVariables)),
 			_ => false

@@ -8,7 +8,8 @@ namespace Strict.HighLevelRuntime.Tests;
 public sealed class ForTests
 {
 	[SetUp]
-	public void CreateExecutor() => interpreter = new Interpreter(TestPackage.Instance, TestBehavior.Disabled);
+	public void CreateExecutor() =>
+		interpreter = new Interpreter(TestPackage.Instance, TestBehavior.Disabled);
 
 	private Interpreter interpreter = null!;
 
@@ -21,7 +22,8 @@ public sealed class ForTests
 	{
 		using var t = CreateType(nameof(CustomVariableInForLoopIsUsed), "has number", "Sum Number",
 			"\tfor item in (1, 2, 3)", "\t\titem");
-		var result = interpreter.Execute(t.Methods.Single(m => m.Name == "Sum"), interpreter.noneInstance, []);
+		var result = interpreter.Execute(t.Methods.Single(m => m.Name == "Sum"),
+			interpreter.noneInstance, []);
 		Assert.That(result.Number, Is.EqualTo(6));
 	}
 
@@ -42,7 +44,8 @@ public sealed class ForTests
 	{
 		using var t = CreateType(nameof(TextReturnTypeConsolidatesNumbers), "has number", "Join Text",
 			"\tfor (\"a\", \"abc\")", "\t\tvalue.Length");
-		var result = interpreter.Execute(t.Methods.Single(m => m.Name == "Join"), interpreter.noneInstance, []);
+		var result = interpreter.Execute(t.Methods.Single(m => m.Name == "Join"),
+			interpreter.noneInstance, []);
 		Assert.That(result.Text, Is.EqualTo("13"));
 	}
 
@@ -51,7 +54,8 @@ public sealed class ForTests
 	{
 		using var t = CreateType(nameof(TextReturnTypeConsolidatesTexts), "has number", "Join Text",
 			"\tfor (\"hello \", \"world\")", "\t\tvalue");
-		var result = interpreter.Execute(t.Methods.Single(m => m.Name == "Join"), interpreter.noneInstance, []);
+		var result = interpreter.Execute(t.Methods.Single(m => m.Name == "Join"),
+			interpreter.noneInstance, []);
 		Assert.That(result.Text, Is.EqualTo("hello world"));
 	}
 
@@ -60,8 +64,8 @@ public sealed class ForTests
 	{
 		using var t = CreateType(nameof(TextReturnTypeConsolidatesCharacters), "has number",
 			"Join(character) Text", "\tfor (character, character)", "\t\tvalue");
-		var result = interpreter.Execute(t.Methods.Single(m => m.Name == "Join"), interpreter.noneInstance,
-			[new ValueInstance(t.GetType(Type.Character), 'b')]);
+		var result = interpreter.Execute(t.Methods.Single(m => m.Name == "Join"),
+			interpreter.noneInstance, [new ValueInstance(t.GetType(Type.Character), 'b')]);
 		Assert.That(result.Text, Is.EqualTo("bb"));
 	}
 
@@ -70,8 +74,10 @@ public sealed class ForTests
 	{
 		using var t = CreateType(nameof(TextReturnTypeThrowsWhenUnsupportedValueIsUsed), "has number",
 			"Join Text", "\tfor (1, 2)", "\t\tError(\"boom\")");
-		Assert.That(() => interpreter.Execute(t.Methods.Single(m => m.Name == "Join"), interpreter.noneInstance, []),
-      Throws.InstanceOf<InterpreterExecutionFailed>().With.Message.
+		Assert.That(
+			() => interpreter.Execute(t.Methods.Single(m => m.Name == "Join"), interpreter.noneInstance,
+				[]),
+			Throws.InstanceOf<InterpreterExecutionFailed>().With.Message.
 				Contains("For text return type cannot consolidate value"));
 	}
 
@@ -80,7 +86,8 @@ public sealed class ForTests
 	{
 		using var t = CreateType(nameof(ForLoopUsesNumberIteratorLength), "has number", "Run Number",
 			"\tfor 3", "\t\t1");
-		var result = interpreter.Execute(t.Methods.Single(m => m.Name == "Run"), interpreter.noneInstance, []);
+		var result = interpreter.Execute(t.Methods.Single(m => m.Name == "Run"),
+			interpreter.noneInstance, []);
 		Assert.That(result.Number, Is.EqualTo(3));
 	}
 
@@ -89,7 +96,8 @@ public sealed class ForTests
 	{
 		using var t = CreateType(nameof(ForLoopUsesFloatingNumberIteratorLength), "has number",
 			"Run Number", "\tfor 2.5", "\t\t1");
-		var result = interpreter.Execute(t.Methods.Single(m => m.Name == "Run"), interpreter.noneInstance, []);
+		var result = interpreter.Execute(t.Methods.Single(m => m.Name == "Run"),
+			interpreter.noneInstance, []);
 		Assert.That(result.Number, Is.EqualTo(2));
 	}
 
@@ -101,8 +109,9 @@ public sealed class ForTests
 			"\tfor container", "\t\t1");
 		var container = new ValueInstance(t,
 			[new ValueInstance(t.Members[0].Type, Array.Empty<ValueInstance>())]);
-		Assert.That(() => interpreter.Execute(t.Methods.Single(m => m.Name == "Run"),
-			interpreter.noneInstance, [container]), Throws.InstanceOf<ValueInstance.IteratorNotSupported>());
+		Assert.That(
+			() => interpreter.Execute(t.Methods.Single(m => m.Name == "Run"), interpreter.noneInstance,
+				[container]), Throws.InstanceOf<ValueInstance.IteratorNotSupported>());
 	}
 
 	[Test]
@@ -121,12 +130,14 @@ public sealed class ForTests
 	[Test]
 	public void DirectOuterIndexerUsesImmediateParentValue()
 	{
-    using var t = CreateType(nameof(DirectOuterIndexerUsesImmediateParentValue), "has number",
+		using var t = CreateType(nameof(DirectOuterIndexerUsesImmediateParentValue), "has number",
 			"Get(number, length Number) Text", "\tfor Range(number, number + length)",
 			"\t\touter(value)");
-    var instance = new ValueInstance(t, [new ValueInstance("hello")]);
+		var instance = new ValueInstance(t, [new ValueInstance("hello")]);
 		var result = interpreter.Execute(t.Methods.Single(m => m.Name == "Get"), instance,
-			[new ValueInstance(interpreter.numberType, 1), new ValueInstance(interpreter.numberType, 3)]);
+		[
+			new ValueInstance(interpreter.numberType, 1), new ValueInstance(interpreter.numberType, 3)
+		]);
 		Assert.That(result.Text, Is.EqualTo("ell"));
 	}
 
@@ -134,10 +145,7 @@ public sealed class ForTests
 	public void ForLoopWithAscendingRangeAndEarlyReturn()
 	{
 		using var t = CreateType(nameof(ForLoopWithAscendingRangeAndEarlyReturn), "has number",
-			"FindFirst Number",
-			"\tfor Range(1, 5)",
-			"\t\tif value is 3",
-			"\t\t\treturn value",
+			"FindFirst Number", "\tfor Range(1, 5)", "\t\tif value is 3", "\t\t\treturn value",
 			"\t\t0");
 		var result = interpreter.Execute(t.Methods.Single(m => m.Name == "FindFirst"),
 			interpreter.noneInstance, []);
@@ -148,10 +156,7 @@ public sealed class ForTests
 	public void ForLoopWithDescendingRangeAndEarlyReturn()
 	{
 		using var t = CreateType(nameof(ForLoopWithDescendingRangeAndEarlyReturn), "has number",
-			"FindFirst Number",
-			"\tfor Range(5, 1)",
-			"\t\tif value is 3",
-			"\t\t\treturn value",
+			"FindFirst Number", "\tfor Range(5, 1)", "\t\tif value is 3", "\t\t\treturn value",
 			"\t\t0");
 		var result = interpreter.Execute(t.Methods.Single(m => m.Name == "FindFirst"),
 			interpreter.noneInstance, []);
@@ -162,10 +167,7 @@ public sealed class ForTests
 	public void TextReturnTypeWithNoResultsReturnsEmpty()
 	{
 		using var t = CreateType(nameof(TextReturnTypeWithNoResultsReturnsEmpty), "has number",
-			"GetText Text",
-			"\tmutable sum = 0",
-			"\tfor (1, 2, 3)",
-			"\t\tif value > 0",
+			"GetText Text", "\tmutable sum = 0", "\tfor (1, 2, 3)", "\t\tif value > 0",
 			"\t\t\tsum = sum + value");
 		var result = interpreter.Execute(t.Methods.Single(m => m.Name == "GetText"),
 			interpreter.noneInstance, []);

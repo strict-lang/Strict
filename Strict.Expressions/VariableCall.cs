@@ -8,7 +8,7 @@ public sealed class VariableCall(Variable variable, int lineNumber = 0)
 	public static Expression? TryParse(Body body, ReadOnlySpan<char> input)
 	{
 		var variable = body.FindVariable(input);
-    return variable != null
+		return variable != null
 			? new VariableCall(variable, body.CurrentFileLineNumber)
 			: null;
 	}

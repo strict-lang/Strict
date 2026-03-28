@@ -83,6 +83,7 @@ public sealed class GrammarTests
 			: Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "..");
 		foreach (var file in Directory.GetFiles(basePath, "*" + Language.Type.Extension))
 		{
+			// If the last line fails, check the .strict file if there is an extra empty line at the end
 			var result = BuildGrammar().Match(File.ReadAllText(file).Replace("\r\n", "\n") + "\n");
 			Assert.That(result.Success, Is.True, file + ": " + GetErrorDetails("", result));
 		}

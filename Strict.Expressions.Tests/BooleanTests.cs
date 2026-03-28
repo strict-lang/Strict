@@ -121,7 +121,7 @@ public class BooleanTests : TestExpressions
 					? 1
 					: -1;
 			if (bool.TryParse(secondCase, out var result2))
-				secondCounter	+= result2
+				secondCounter += result2
 					? 1
 					: -1;
 			if (bool.TryParse(thirdCase, out var result3))

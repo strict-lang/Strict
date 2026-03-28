@@ -20,7 +20,8 @@ public sealed class InstructionsToCudaTests
 			methodName + "(first Number, second Number) Number",
 			"\tfirst " + op + " second");
 		var cuda = compiler.Compile(method);
-		Assert.That(cuda, Does.Contain($"void {methodName}(const float *first, const float *second, float *output, const int count)"));
+		Assert.That(cuda, Does.Contain(
+			$"void {methodName}(const float *first, const float *second, float *output, const int count)"));
 		Assert.That(cuda, Does.Contain($"output[idx] = first[idx] {op} second[idx]"));
 	}
 
@@ -32,7 +33,8 @@ public sealed class InstructionsToCudaTests
 			"Process(input Number, width Number, height Number, initialDepth Number) Number",
 			"\tinitialDepth");
 		var cuda = compiler.Compile(method);
-		Assert.That(cuda, Does.Contain("void Process(const float *input, const int width, const int height, const float initialDepth, float *output)"));
+		Assert.That(cuda, Does.Contain("void Process(const float *input, const int width, " +
+			"const int height, const float initialDepth, float *output)"));
 		Assert.That(cuda, Does.Contain("output[idx] = initialDepth"));
 	}
 

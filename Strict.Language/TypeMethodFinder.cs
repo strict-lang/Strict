@@ -46,9 +46,9 @@ internal class TypeMethodFinder(Type type)
 			return found;
 		if (Type.IsEnum && Type.Members.Count > 0 && Type.Members[0].Type.IsNumber)
 			return Type.Members[0].Type.FindMethod(methodName, arguments);
-		if (Type.Name == "Enum")
-			return Type.GetType(Type.Number).FindMethod(methodName, arguments);
-		return null;
+		return Type.Name == "Enum"
+			? Type.GetType(Type.Number).FindMethod(methodName, arguments)
+			: null;
 	}
 
 	private Method? FindMethodWithType(string methodName, IReadOnlyList<Expression> arguments)

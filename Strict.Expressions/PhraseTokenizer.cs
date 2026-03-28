@@ -22,7 +22,7 @@ public sealed class PhraseTokenizer
 				throw new UnterminatedString(input);
 			if (part[0] == '(')
 				throw new InvalidEmptyOrUnmatchedBrackets(input);
-      throw new InputTooSmall(input);
+			throw new InputTooSmall(input);
 		}
 		if (part.Length == 0 || part[0] == ' ' || part[^1] == ' ' ||
 			part.Contains("  ", StringComparison.Ordinal))
@@ -272,5 +272,7 @@ public sealed class PhraseTokenizer
 	public sealed class UnterminatedString(string input) : Exception(input);
 	public sealed class InvalidSpacing(string input) : Exception(input);
 	public class InvalidEmptyOrUnmatchedBrackets(string input) : Exception(input);
- public sealed class InputTooSmall(string input) : Exception("Input should never be this small: " + input);
+
+	public sealed class InputTooSmall(string input)
+		: Exception("Input should never be this small: " + input);
 }

@@ -15,11 +15,10 @@ public sealed class ShuntingYard
 		tokenizer.ProcessEachToken(PutTokenIntoStacks);
 		ApplyHigherOrEqualPrecedenceOperators();
 		if (Output.Count == 0)
-      throw new NothingFound(input); //ncrunch: no coverage
+			throw new NothingFound(input); //ncrunch: no coverage
 	}
 
 	public sealed class NothingFound(string input) : Exception("Nothing found! Should never happen. " + input);
-
 	private readonly string input;
 
 	private void PutTokenIntoStacks(Range tokenRange)

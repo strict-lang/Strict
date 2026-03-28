@@ -3,8 +3,8 @@ using System.Diagnostics;
 namespace Strict.Compiler.Cuda.Tests;
 
 /// <summary>
-/// Interestingly the chunksize doesn't matter much as long as it is 10 or more, after 100 there is
-/// almost no benefit.
+/// Interestingly the ChunkSize doesn't matter much as long as it is 10 or more, after 100 there
+/// is almost no benefit.
 /// </summary>
 //ncrunch: no coverage start
 public record TestPerformance(int Iterations, int ChunkSize, Action<int, int> RunChunk,
@@ -12,8 +12,8 @@ public record TestPerformance(int Iterations, int ChunkSize, Action<int, int> Ru
 {
 	public void Run()
 	{
-		//CheckPerformance(SingleThread);
-		//CheckPerformance(SingleThreadChunks);
+		CheckPerformance(SingleThread);
+		CheckPerformance(SingleThreadChunks);
 		CheckPerformance(ParallelCpu);
 		CheckPerformance(ParallelCpuChunks);
 		CheckPerformance(CudaGpu);

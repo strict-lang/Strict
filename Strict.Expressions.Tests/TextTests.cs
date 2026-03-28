@@ -9,7 +9,7 @@ public sealed class TextTests : TestExpressions
 
 	[Test]
 	public void ParseTextWithNewLineEscape() =>
-    Assert.That(((Text)ParseExpression("\"hi\\nthere\"")).Data.Text, Is.EqualTo("hi\nthere"));
+		Assert.That(((Text)ParseExpression("\"hi\\nthere\"")).Data.Text, Is.EqualTo("hi\nthere"));
 
 	[Test]
 	public void TextToStringEscapesNewLine() =>
@@ -35,13 +35,15 @@ public sealed class TextTests : TestExpressions
 				Message.StartWith("Current length: 63, Minimum Length for Multi line expressions: 100"));
 
 	[TestCase("Single",
-		"constant result = \"ThisStringShouldGoMoreThanHundredCharactersLongSoThatTheTestCanBePassed\" + \"ThisStringShouldGoMoreThanHundredCharactersLongSoThatTheTestCanBePassed\"",
+		"constant result = \"ThisStringShouldGoMoreThanHundredCharactersLongSoThatTheTestCanBePassed\"" +
+		" + \"ThisStringShouldGoMoreThanHundredCharactersLongSoThatTheTestCanBePassed\"",
 		"has number", "Run",
 		"\tconstant result = \"ThisStringShouldGoMoreThanHundredCharactersLongSoThatTheTestCanBePassed\" +",
 		"\t\"ThisStringShouldGoMoreThanHundredCharactersLongSoThatTheTestCanBePassed\"",
 		"\tresult is Text")]
 	[TestCase("Multiple",
-		"constant result = \"ThisStringShouldGoMoreThanHundred\" + \"SecondLineToMakeItThanHundredCharacters\" + \"ThirdLineToMakeItThanHundredCharacters\" + \"FourthLine\"",
+		"constant result = \"ThisStringShouldGoMoreThanHundred\" + \"SecondLineToMakeItThanHundred" +
+		"Characters\" + \"ThirdLineToMakeItThanHundredCharacters\" + \"FourthLine\"",
 		"has number", "Run", "\tconstant result = \"ThisStringShouldGoMoreThanHundred\" +",
 		"\t\"SecondLineToMakeItThanHundredCharacters\" +",
 		"\t\"ThirdLineToMakeItThanHundredCharacters\" +", "\t\"FourthLine\"",
@@ -56,9 +58,12 @@ public sealed class TextTests : TestExpressions
 			Is.EqualTo(expectedOutput));
 	}
 
-	[TestCase("ParseNewLineTextExpression", "\"FirstLine\" + Character.NewLine + \"ThirdLine\" + Character.NewLine", "has logger", "Run Text",
+	[TestCase("ParseNewLineTextExpression", "\"FirstLine\" + Character.NewLine + \"ThirdLine\" + " +
+		"Character.NewLine", "has logger", "Run Text",
 		"	\"FirstLine\" + Character.NewLine + \"ThirdLine\" + Character.NewLine")]
-	[TestCase("ParseMultiLineTextExpressionWithNewLine", "\"FirstLine\" + Character.NewLine + \"ThirdLine\" + Character.NewLine + \"Ending\" + \"This is the continuation of the previous text line\"", "has logger", "Run Text",
+	[TestCase("ParseMultiLineTextExpressionWithNewLine", "\"FirstLine\" + Character.NewLine + " +
+		"\"ThirdLine\" + Character.NewLine + \"Ending\" + \"This is the continuation of the previous text line\"",
+		"has logger", "Run Text",
 		"	\"FirstLine\" + Character.NewLine + \"ThirdLine\" + Character.NewLine + \"Ending\" +",
 		"	\"This is the continuation of the previous text line\"")]
 	public void ParseNewLineTextExpression(string testName, string expected, params string[] code)
@@ -70,7 +75,8 @@ public sealed class TextTests : TestExpressions
 	}
 
 	[TestCase("ParseMultiLineTextExpressionWithNewLine",
-		"\"FirstLine\" + Character.NewLine + \"ThirdLine\" + Character.NewLine + \"This is the continuation of the previous text line\"",
+		"\"FirstLine\" + Character.NewLine + \"ThirdLine\" + Character.NewLine +" +
+		" \"This is the continuation of the previous text line\"",
 		"has logger", "Run Text",
 		"	\"FirstLine\" + Character.NewLine + \"ThirdLine\" + Character.NewLine +",
 		"	\"This is the continuation of the previous text line\"")]

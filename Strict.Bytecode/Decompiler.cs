@@ -207,8 +207,10 @@ public sealed class Decompiler
 			bodyLines.Add("\tif " + (lastCondition ?? "condition"));
 			return true;
 		}
-		if (instruction is Jump { InstructionType: InstructionType.JumpIfTrue } ||
-			instruction is JumpToId { InstructionType: InstructionType.JumpToIdIfTrue })
+		if (instruction is Jump { InstructionType: InstructionType.JumpIfTrue } or JumpToId
+			{
+				InstructionType: InstructionType.JumpToIdIfTrue
+			})
 		{
 			bodyLines.Add("\tif not " + (lastCondition ?? "condition"));
 			return true;

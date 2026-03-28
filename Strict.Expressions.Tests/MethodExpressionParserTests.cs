@@ -196,8 +196,8 @@ public sealed class MethodExpressionParserTests : TestExpressions
 	[Test]
 	public async Task ParseListReverseMethod()
 	{
-		var listReverse = TestPackage.Instance.GetType(Type.List).Methods.Single(method =>
-			method.Name == "Reverse" && method.Parameters.Count == 0);
+		var listReverse = TestPackage.Instance.GetType(Type.List).Methods.Single(m =>
+			m.Name == "Reverse" && m.Parameters.Count == 0);
 		Assert.That(() => listReverse.GetBodyAndParseIfNeeded(), Throws.Nothing);
 	}
 
@@ -214,7 +214,7 @@ public sealed class MethodExpressionParserTests : TestExpressions
 	{
 		using var strictBasePackage =
 			await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
-		foreach (var baseType in new List<Type>(strictBasePackage!.Types.Values))
+		foreach (var baseType in new List<Type>(strictBasePackage.Types.Values))
 		foreach (var baseMethod in baseType.Methods)
 			if (!baseMethod.IsTrait)
 				Assert.That(() => baseMethod.GetBodyAndParseIfNeeded(), Throws.Nothing,

@@ -112,6 +112,7 @@ public class Package : Context, IDisposable
 	private static bool IsPrivateName(string name) => char.IsLower(name[0]);
 
 	public sealed class FullNameMustContainPackageAndTypeNames : Exception;
+
 	public sealed class PrivateTypesAreOnlyAvailableInItsPackage(string fullName)
 		: Exception(fullName);
 

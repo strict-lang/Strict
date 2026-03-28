@@ -49,7 +49,7 @@ public sealed class ExecutionContext(Type type, Method method, ValueInstance? th
 	{
 		variables?.Clear();
 		ExitMethodAndReturnValue = null;
-   CurrentExpressionLineNumber = -1;
+		CurrentExpressionLineNumber = -1;
 	}
 
 	/// <summary>
@@ -64,7 +64,7 @@ public sealed class ExecutionContext(Type type, Method method, ValueInstance? th
 		Parent = newParent;
 		variables?.Clear();
 		ExitMethodAndReturnValue = null;
-   CurrentExpressionLineNumber = -1;
+		CurrentExpressionLineNumber = -1;
 	}
 
 	public ValueInstance Set(string name, ValueInstance value)

@@ -14,7 +14,7 @@ public class MethodCall : ConcreteExpression
 {
 	public MethodCall(Method method, Expression? instance = null, IReadOnlyList<Expression>? arguments = null,
 		Type? toReturnType = null, int lineNumber = 0) :
-    base(GetMethodReturnType(method, toReturnType, instance), lineNumber, method.ReturnType.IsMutable)
+		base(GetMethodReturnType(method, toReturnType, instance), lineNumber, method.ReturnType.IsMutable)
 	{
 		if (method.Name == Method.From && instance != null)
 			throw new CannotCallFromConstructorWithExistingInstance(); //ncrunch: no coverage
@@ -25,16 +25,17 @@ public class MethodCall : ConcreteExpression
 
 	public sealed class CannotCallFromConstructorWithExistingInstance : Exception;
 
- private static Type GetMethodReturnType(Method method, Type? toReturnType, Expression? instance)
+	private static Type GetMethodReturnType(Method method, Type? toReturnType, Expression? instance)
 	{
 		if (method.Name == BinaryOperator.To && toReturnType != null)
 			return toReturnType;
 		var returnType = method.ReturnType;
-    if (instance?.ReturnType is not Type instanceType || !IsConcreteListShape(instanceType))
+		var instanceType = instance?.ReturnType;
+		if (instanceType == null || !IsConcreteListShape(instanceType))
 			return returnType;
 		if (returnType.IsList && returnType.IsGeneric)
 			return instanceType;
-    if (returnType is GenericTypeImplementation
+		if (returnType is GenericTypeImplementation
 			{
 				Generic.Name: Type.Mutable,
 				ImplementationTypes: [var mutableInnerType]
@@ -198,8 +199,10 @@ public class MethodCall : ConcreteExpression
 		IReadOnlyList<Expression> arguments, Expression? basedOnErrorVariable = null)
 	{
 		fromType = NormalizeListAndDictionaryImplementation(fromType, arguments);
-		(fromType, arguments) = NormalizeMutableImplementationAndArguments(body, fromType, arguments);
-		ValidateMutableImplementation(fromType, arguments);
+		if (fromType.IsMutable && arguments.Count == 1 && fromType.IsGeneric &&
+			fromType is not GenericTypeImplementation)
+			fromType = fromType.GetGenericImplementation(arguments[0].ReturnType);
+		ValidateMutableImplementation(fromType);
 		arguments = NormalizeDictionaryArguments(body, fromType, arguments);
 		arguments = NormalizeErrorArguments(body, ref fromType, arguments, basedOnErrorVariable);
 		arguments = NormalizeTypeArguments(body, fromType, arguments);
@@ -207,17 +210,6 @@ public class MethodCall : ConcreteExpression
 		if (AreArgumentsAutoParsedAsList(method, arguments))
 			arguments = [new List(body, (List<Expression>)arguments)];
 		return new MethodCall(method, null, arguments, null, body.CurrentFileLineNumber);
-	}
-
-	private static (Type fromType, IReadOnlyList<Expression> arguments)
-		NormalizeMutableImplementationAndArguments(Body body, Type fromType,
-			IReadOnlyList<Expression> arguments)
-	{
-		if (!fromType.IsMutable || arguments.Count != 1)
-			return (fromType, arguments);
-		if (fromType.IsGeneric && fromType is not GenericTypeImplementation)
-			fromType = fromType.GetGenericImplementation(arguments[0].ReturnType);
-		return (fromType, arguments);
 	}
 
 	private static Type NormalizeListAndDictionaryImplementation(Type fromType,
@@ -238,9 +230,9 @@ public class MethodCall : ConcreteExpression
 		return fromType; //ncrunch: no coverage
 	}
 
-	private static void ValidateMutableImplementation(Type fromType, IReadOnlyList<Expression> args)
+	private static void ValidateMutableImplementation(Type fromType)
 	{
-		if (fromType is { IsMutable: true, IsGeneric: true } && fromType is not GenericTypeImplementation)
+		if (fromType is { IsMutable: true, IsGeneric: true } and not GenericTypeImplementation)
 			throw new Type.GenericTypesCannotBeUsedDirectlyUseImplementation(fromType,
 				Type.Mutable + " must use a concrete implementation type");
 	}
@@ -329,7 +321,8 @@ public class MethodCall : ConcreteExpression
 
 	public sealed class ConstructorForSameTypeArgumentIsNotAllowed(Body body,
 		IReadOnlyList<Expression> arguments, Type fromType) : ParsingFailed(body,
-			"Don't construct this type " + fromType + " with itself, arguments: " + arguments.ToBrackets());
+		"Don't construct this type " + fromType + " with itself, arguments: " +
+		arguments.ToBrackets());
 
 	public override string ToString() =>
 		Instance is not null && Instance.ToString() != Type.ValueLowercase
@@ -394,7 +387,7 @@ public class MethodCall : ConcreteExpression
 			? Type.Dictionary + (list.Values.All(value => value is List)
 				? list.Values.ToBrackets()
 				: $"({list})")
-     : throw new InvalidDictionaryArgumentsForFormatting(Method, Arguments);
+			: throw new InvalidDictionaryArgumentsForFormatting(Method, Arguments);
 
 	private sealed class InvalidDictionaryArgumentsForFormatting(Method method,
 		IReadOnlyList<Expression> arguments)

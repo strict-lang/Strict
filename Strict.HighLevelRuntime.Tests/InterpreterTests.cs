@@ -70,7 +70,8 @@ public sealed class InterpreterTests
 		using var t = CreateType(nameof(ArgumentDoesNotMapToMethodParameters), "has number",
 			"Use(number Number) Number", "\tnumber");
 		var method = t.Methods.Single(m => m.Name == "Use");
-		Assert.That(() => interpreter.Execute(method, interpreter.noneInstance, [interpreter.trueInstance]),
+		Assert.That(
+			() => interpreter.Execute(method, interpreter.noneInstance, [interpreter.trueInstance]),
 			Throws.InstanceOf<Interpreter.ArgumentDoesNotMapToMethodParameters>());
 	}
 
@@ -103,11 +104,14 @@ public sealed class InterpreterTests
 			Is.EqualTo(5));
 		Assert.That(interpreter.Execute(GetBinaryOperator(BinaryOperator.Minus), N(8), [N(3)]).Number,
 			Is.EqualTo(5));
-		Assert.That(interpreter.Execute(GetBinaryOperator(BinaryOperator.Multiply), N(6), [N(7)]).Number,
+		Assert.That(
+			interpreter.Execute(GetBinaryOperator(BinaryOperator.Multiply), N(6), [N(7)]).Number,
 			Is.EqualTo(42));
-		Assert.That(interpreter.Execute(GetBinaryOperator(BinaryOperator.Divide), N(8), [N(2)]).Number,
+		Assert.That(
+			interpreter.Execute(GetBinaryOperator(BinaryOperator.Divide), N(8), [N(2)]).Number,
 			Is.EqualTo(4));
-		Assert.That(interpreter.Execute(GetBinaryOperator(BinaryOperator.Modulate), N(8), [N(3)]).Number,
+		Assert.That(
+			interpreter.Execute(GetBinaryOperator(BinaryOperator.Modulate), N(8), [N(3)]).Number,
 			Is.EqualTo(2));
 		Assert.That(interpreter.Execute(GetBinaryOperator(BinaryOperator.Power), N(2), [N(3)]).Number,
 			Is.EqualTo(8));
@@ -125,16 +129,17 @@ public sealed class InterpreterTests
 		var text = TestPackage.Instance.GetType(Type.Text);
 		var plusText = text.Methods.Single(m =>
 			m.Name == BinaryOperator.Plus && m.Parameters is [{ Type.IsText: true }]);
-		var result = interpreter.Execute(plusText, new ValueInstance("hi "), [new ValueInstance("there")]);
+		var result =
+			interpreter.Execute(plusText, new ValueInstance("hi "), [new ValueInstance("there")]);
 		Assert.That(result.Text, Is.EqualTo("hi there"));
 	}
 
-  [Test]
+	[Test]
 	public async Task TextInFindsMatchInsideText()
 	{
 		using var strict = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
-    var inMethod = strict.GetType(Type.Text).Methods.Single(m => m.Name == "in");
-    var result = new Interpreter(strict, TestBehavior.Disabled).Execute(inMethod,
+		var inMethod = strict.GetType(Type.Text).Methods.Single(m => m.Name == "in");
+		var result = new Interpreter(strict, TestBehavior.Disabled).Execute(inMethod,
 			new ValueInstance("hello there"), [new ValueInstance("lo")]);
 		Assert.That(result.Boolean, Is.True);
 	}
@@ -148,8 +153,7 @@ public sealed class InterpreterTests
 		var interpreterForStrict = new Interpreter(strict, TestBehavior.Disabled);
 		var texts = strict.GetListImplementationType(text);
 		var character = strict.GetType(Type.Character);
-		var result = interpreterForStrict.Execute(combineMethod, interpreterForStrict.noneInstance,
-		[
+		var result = interpreterForStrict.Execute(combineMethod, interpreterForStrict.noneInstance, [
 			new ValueInstance(texts, [new ValueInstance("hi"), new ValueInstance("there")]),
 			new ValueInstance(character, 10)
 		]);
@@ -204,13 +208,17 @@ public sealed class InterpreterTests
 			Is.EqualTo(interpreter.trueInstance));
 		Assert.That(interpreter.Execute(GetBinaryOperator(BinaryOperator.Smaller), N(2), [N(3)]),
 			Is.EqualTo(interpreter.trueInstance));
-		Assert.That(interpreter.Execute(GetBinaryOperator(BinaryOperator.GreaterOrEqual), N(5), [N(3)]),
+		Assert.That(
+			interpreter.Execute(GetBinaryOperator(BinaryOperator.GreaterOrEqual), N(5), [N(3)]),
 			Is.EqualTo(interpreter.trueInstance));
-		Assert.That(interpreter.Execute(GetBinaryOperator(BinaryOperator.GreaterOrEqual), N(5), [N(5)]),
+		Assert.That(
+			interpreter.Execute(GetBinaryOperator(BinaryOperator.GreaterOrEqual), N(5), [N(5)]),
 			Is.EqualTo(interpreter.trueInstance));
-		Assert.That(interpreter.Execute(GetBinaryOperator(BinaryOperator.SmallerOrEqual), N(2), [N(3)]),
+		Assert.That(
+			interpreter.Execute(GetBinaryOperator(BinaryOperator.SmallerOrEqual), N(2), [N(3)]),
 			Is.EqualTo(interpreter.trueInstance));
-		Assert.That(interpreter.Execute(GetBinaryOperator(BinaryOperator.SmallerOrEqual), N(3), [N(3)]),
+		Assert.That(
+			interpreter.Execute(GetBinaryOperator(BinaryOperator.SmallerOrEqual), N(3), [N(3)]),
 			Is.EqualTo(interpreter.trueInstance));
 		Assert.That(interpreter.Execute(GetBinaryOperator(BinaryOperator.Is), N(3), [N(3)]),
 			Is.EqualTo(interpreter.trueInstance));
@@ -232,7 +240,8 @@ public sealed class InterpreterTests
 		var xor = GetBinaryBooleanOperator(BinaryOperator.Xor);
 		AssertBooleanOperation(xor, true, false, true);
 		AssertBooleanOperation(xor, true, true, false);
-		Assert.That(interpreter.Execute(not, interpreter.falseInstance, []), Is.EqualTo(interpreter.trueInstance));
+		Assert.That(interpreter.Execute(not, interpreter.falseInstance, []),
+			Is.EqualTo(interpreter.trueInstance));
 	}
 
 	private readonly Type booleanType = TestPackage.Instance.GetType(Type.Boolean);
@@ -242,7 +251,8 @@ public sealed class InterpreterTests
 			m.Name == op && m.ReturnType.IsBoolean && m.Parameters is [{ Type.IsBoolean: true }]);
 
 	private void AssertBooleanOperation(Method method, bool first, bool second, bool result) =>
-		Assert.That(interpreter.Execute(method, interpreter.ToBoolean(first), [interpreter.ToBoolean(second)]),
+		Assert.That(
+			interpreter.Execute(method, interpreter.ToBoolean(first), [interpreter.ToBoolean(second)]),
 			Is.EqualTo(interpreter.ToBoolean(result)));
 
 	[Test]
@@ -271,8 +281,9 @@ public sealed class InterpreterTests
 	{
 		using var t = CreateType(nameof(EvaluateRangeEquality), "has number", "Compare Boolean",
 			"\tRange(0, 5) is Range(0, 5)");
-		Assert.That(interpreter.Execute(t.Methods.Single(m => m.Name == "Compare"), interpreter.noneInstance,
-			[]), Is.EqualTo(interpreter.trueInstance));
+		Assert.That(
+			interpreter.Execute(t.Methods.Single(m => m.Name == "Compare"), interpreter.noneInstance,
+				[]), Is.EqualTo(interpreter.trueInstance));
 	}
 
 	[Test]
@@ -280,9 +291,9 @@ public sealed class InterpreterTests
 	{
 		using var t = CreateType(nameof(MultilineMethodRequiresTests), "has number", "GetText Text",
 			"\tif number is 0", "\t\treturn \"\"", "\tnumber to Text");
-		var instance = new ValueInstance(t,
-			[new ValueInstance(interpreter.numberType, 5.0)]);
-		Assert.That(interpreter.Execute(t.Methods.Single(m => m.Name == "GetText"), instance, []).Text,
+		var instance = new ValueInstance(t, [new ValueInstance(interpreter.numberType, 5.0)]);
+		Assert.That(
+			interpreter.Execute(t.Methods.Single(m => m.Name == "GetText"), instance, []).Text,
 			Is.EqualTo("5"));
 	}
 
@@ -339,8 +350,8 @@ public sealed class InterpreterTests
 		using var t = CreateType(nameof(CompareNumberToText), "has number", "Compare",
 			"\t\"5\" is 5");
 		Assert.That(
-			interpreter.Execute(t.Methods.Single(m => m.Name == "Compare"), interpreter.noneInstance, []),
-			Is.EqualTo(interpreter.trueInstance));
+			interpreter.Execute(t.Methods.Single(m => m.Name == "Compare"), interpreter.noneInstance,
+				[]), Is.EqualTo(interpreter.trueInstance));
 	}
 
 	[Test]
@@ -349,8 +360,8 @@ public sealed class InterpreterTests
 		using var t = CreateType(nameof(CompareTextToCharacterTab), "has number", "Compare Boolean",
 			"\t\"7\" is Character.Tab");
 		Assert.That(
-			interpreter.Execute(t.Methods.Single(m => m.Name == "Compare"), interpreter.noneInstance, []),
-			Is.EqualTo(interpreter.falseInstance));
+			interpreter.Execute(t.Methods.Single(m => m.Name == "Compare"), interpreter.noneInstance,
+				[]), Is.EqualTo(interpreter.falseInstance));
 	}
 
 	[Test]
@@ -367,7 +378,8 @@ public sealed class InterpreterTests
 	{
 		using var t = CreateType(nameof(StackOverflowCallingYourselfWithSameInstanceMember),
 			"has number", "Recursive(other Number)", "\tRecursive(number)");
-		Assert.That(() => interpreter.Execute(t.Methods.Single(m => m.Name == "Recursive"),
+		Assert.That(
+			() => interpreter.Execute(t.Methods.Single(m => m.Name == "Recursive"),
 				new ValueInstance(t, [new ValueInstance(interpreter.numberType, 3.0)]),
 				[new ValueInstance(interpreter.numberType, 1.0)]),
 			Throws.InstanceOf<Interpreter.StackOverflowCallingItselfWithSameInstanceAndArguments>());
@@ -376,12 +388,13 @@ public sealed class InterpreterTests
 	[Test]
 	public void StackOverflowMessageShowsCallDetails()
 	{
-		using var t = CreateType(nameof(StackOverflowMessageShowsCallDetails),
-			"has number", "Recursive(other Number)", "\tRecursive(number)");
-		var exception = Assert.Throws<Interpreter.StackOverflowCallingItselfWithSameInstanceAndArguments>(() =>
-			interpreter.Execute(t.Methods.Single(m => m.Name == "Recursive"),
-				new ValueInstance(t, [new ValueInstance(interpreter.numberType, 3.0)]),
-				[new ValueInstance(interpreter.numberType, 1.0)]));
+		using var t = CreateType(nameof(StackOverflowMessageShowsCallDetails), "has number",
+			"Recursive(other Number)", "\tRecursive(number)");
+		var exception =
+			Assert.Throws<Interpreter.StackOverflowCallingItselfWithSameInstanceAndArguments>(() =>
+				interpreter.Execute(t.Methods.Single(m => m.Name == "Recursive"),
+					new ValueInstance(t, [new ValueInstance(interpreter.numberType, 3.0)]),
+					[new ValueInstance(interpreter.numberType, 1.0)]));
 		Assert.That(exception!.Message, Does.Contain("Recursive(other Number)"));
 		Assert.That(exception.Message, Does.Contain("instance="));
 		Assert.That(exception.Message, Does.Contain("arguments=(Number: 1)"));
@@ -391,10 +404,7 @@ public sealed class InterpreterTests
 	public void StackOverflowDetectionChecksGrandParentContextToo()
 	{
 		using var t = CreateType(nameof(StackOverflowDetectionChecksGrandParentContextToo),
-			"has number",
-			"Repeat(other Number) Number",
-			"\tother",
-			"Other(other Number) Number",
+			"has number", "Repeat(other Number) Number", "\tother", "Other(other Number) Number",
 			"\tother");
 		var repeat = t.Methods.Single(m => m.Name == "Repeat");
 		var other = t.Methods.Single(m => m.Name == "Other");
@@ -422,48 +432,42 @@ public sealed class InterpreterTests
 	{
 		using var t = CreateType(nameof(CallNumberPlusOperator), "has number", "+(text) Number",
 			"\tnumber + text.Length");
-		Assert.That(interpreter.Execute(t.Methods.Single(m => m.Name == BinaryOperator.Plus),
-			new ValueInstance(t, [new ValueInstance(interpreter.numberType, 5.0)]),
-			[new ValueInstance("abc")]).Number, Is.EqualTo(5 + 3));
+		Assert.That(
+			interpreter.Execute(t.Methods.Single(m => m.Name == BinaryOperator.Plus),
+				new ValueInstance(t, [new ValueInstance(interpreter.numberType, 5.0)]),
+				[new ValueInstance("abc")]).Number, Is.EqualTo(5 + 3));
 	}
 
 	[Test]
 	public void InlineListReferencingMember()
 	{
-		using var t = CreateType(nameof(InlineListReferencingMember),
-			"has first Number", "has second Number", "GetCount Number",
-			"\t(1, 2, 3).Length is 3",
-			"\tlet myList = (second, 2, 3)",
-			"\tmyList.Length");
+		using var t = CreateType(nameof(InlineListReferencingMember), "has first Number",
+			"has second Number", "GetCount Number", "\t(1, 2, 3).Length is 3",
+			"\tlet myList = (second, 2, 3)", "\tmyList.Length");
 		var validatingExecutor = new Interpreter(TestPackage.Instance);
-		Assert.That(
-			validatingExecutor.Execute(t.Methods.Single(m => m.Name == "GetCount")).Number, Is.EqualTo(3));
+		Assert.That(validatingExecutor.Execute(t.Methods.Single(m => m.Name == "GetCount")).Number,
+			Is.EqualTo(3));
 	}
 
 	[Test]
 	public void InlineDictionaryDeclarationLength()
 	{
-		using var t = CreateType(nameof(InlineDictionaryDeclarationLength),
-			"has number", "GetCount Number",
-			"\t(1, 2, 3).Length is 3",
-			"\tconstant myDict = Dictionary(Number, Number)",
-			"\tmyDict.Length");
+		using var t = CreateType(nameof(InlineDictionaryDeclarationLength), "has number",
+			"GetCount Number", "\t(1, 2, 3).Length is 3",
+			"\tconstant myDict = Dictionary(Number, Number)", "\tmyDict.Length");
 		var validatingExecutor = new Interpreter(TestPackage.Instance);
-		Assert.That(
-			validatingExecutor.Execute(t.Methods.Single(m => m.Name == "GetCount")).Number, Is.EqualTo(0));
+		Assert.That(validatingExecutor.Execute(t.Methods.Single(m => m.Name == "GetCount")).Number,
+			Is.EqualTo(0));
 	}
 
 	[Test]
 	public void InlineTestDictionaryDeclaration()
 	{
-		using var t = CreateType(nameof(InlineTestDictionaryDeclaration),
-			"has number", "Run Number",
-			"\tconstant myDict = Dictionary(Text, Text)",
-			"\tmyDict.Length is 0",
-			"\tnumber");
+		using var t = CreateType(nameof(InlineTestDictionaryDeclaration), "has number", "Run Number",
+			"\tconstant myDict = Dictionary(Text, Text)", "\tmyDict.Length is 0", "\tnumber");
 		var validatingExecutor = new Interpreter(TestPackage.Instance);
-		Assert.That(
-			validatingExecutor.Execute(t.Methods.Single(m => m.Name == "Run")).Number, Is.EqualTo(0));
+		Assert.That(validatingExecutor.Execute(t.Methods.Single(m => m.Name == "Run")).Number,
+			Is.EqualTo(0));
 	}
 
 	[Test]
@@ -480,10 +484,7 @@ public sealed class InterpreterTests
 	public void MutableDeclarationWithMutableValueTracksStatistics()
 	{
 		using var t = CreateType(nameof(MutableDeclarationWithMutableValueTracksStatistics),
-			"has number", "Run Number",
-			"\tmutable vx = number",
-			"\tmutable vy = vx",
-			"\tvx + vy");
+			"has number", "Run Number", "\tmutable vx = number", "\tmutable vy = vx", "\tvx + vy");
 		interpreter.Execute(t.Methods.Single(m => m.Name == "Run"), interpreter.noneInstance, []);
 		Assert.That(interpreter.Statistics.MutableDeclarationCount, Is.EqualTo(1));
 		Assert.That(interpreter.Statistics.MutableUsageCount, Is.EqualTo(1));
@@ -513,9 +514,7 @@ public sealed class InterpreterTests
 	public void IsNotErrorReturnsFalseWhenBothAreErrors()
 	{
 		using var t = CreateType(nameof(IsNotErrorReturnsFalseWhenBothAreErrors), "has number",
-			"Check Boolean",
-			"\tconstant err = Error(\"test\")",
-			"\terr is not err");
+			"Check Boolean", "\tconstant err = Error(\"test\")", "\terr is not err");
 		Assert.That(
 			interpreter.Execute(t.Methods.Single(m => m.Name == "Check"), interpreter.noneInstance, []),
 			Is.EqualTo(interpreter.falseInstance));
@@ -523,67 +522,58 @@ public sealed class InterpreterTests
 
 	[Test]
 	public void ExecuteRunMethod() =>
-		interpreter.ExecuteRunMethod(CreateType(nameof(ExecuteRunMethod), "has number", "Run", "\tnumber"));
+		interpreter.ExecuteRunMethod(CreateType(nameof(ExecuteRunMethod), "has number", "Run",
+			"\tnumber"));
 
 	[Test]
 	public void ExecuteRunMethodWillFailIfThereIsNoRunMethod() =>
-		Assert.That(() => interpreter.ExecuteRunMethod(
-			CreateType(nameof(ExecuteRunMethodWillFailIfThereIsNoRunMethod), "has number",
-				"GetNumber Number", "\tnumber")), Throws.InstanceOf<Interpreter.MethodNotFound>());
+		Assert.That(
+			() => interpreter.ExecuteRunMethod(CreateType(
+				nameof(ExecuteRunMethodWillFailIfThereIsNoRunMethod), "has number", "GetNumber Number",
+				"\tnumber")), Throws.InstanceOf<Interpreter.MethodNotFound>());
 
 	[Test]
 	public void ComputeNumber()
 	{
 		using var t = CreateType(nameof(ComputeNumber), "has celsius Number",
-			"ConvertToFahrenheit Number",
-			"\tcelsius * 9 / 5 + 32");
+			"ConvertToFahrenheit Number", "\tcelsius * 9 / 5 + 32");
 		Assert.That(
 			interpreter.Execute(t.Methods.Single(m => m.Name == "ConvertToFahrenheit"),
-				new ValueInstance(t, 100), []).Number,
-			Is.EqualTo(100 * 9 / 5 + 32));
+				new ValueInstance(t, 100), []).Number, Is.EqualTo(100 * 9 / 5 + 32));
 	}
 
 	[Test]
 	public void ArithmeticFallbackErrorShowsMethodAndCallerContext()
 	{
 		using var type = CreateType(nameof(ArithmeticFallbackErrorShowsMethodAndCallerContext),
-			"has values Texts",
-			"Combine(separator Text) Text",
-			"\tfor values",
-      "\t\tvalue + (\"b\")",
-			"Run Text",
-			"\tCombine(\"a\")");
+			"has values Texts", "Combine(separator Text) Text", "\tfor values", "\t\tvalue + (\"b\")",
+			"Run Text", "\tCombine(\"a\")");
 		var runMethod = type.Methods.Single(method => method.Name == "Run");
 		var texts = type.GetListImplementationType(type.GetType(Type.Text));
-		var instance = new ValueInstance(type,
-      [new ValueInstance(texts, [new ValueInstance("x")])]);
-    var exception = Assert.Throws<InterpreterExecutionFailed>(() =>
+		var instance = new ValueInstance(type, [new ValueInstance(texts, [new ValueInstance("x")])]);
+		var exception = Assert.Throws<InterpreterExecutionFailed>(() =>
 			interpreter.Execute(runMethod, instance, []));
 		Assert.That(exception!.Message,
 			Does.Contain("Arithmetic fallback is not allowed for core type Text operator +"));
-    Assert.That(exception.Message, Does.Contain("method=Combine("));
+		Assert.That(exception.Message, Does.Contain("method=Combine("));
 		Assert.That(exception.Message, Does.Contain("call=value + (\"b\")"));
 		Assert.That(exception.Message, Does.Contain("Run Text"));
-   Assert.That(exception.Message, Does.Contain(":line "));
+		Assert.That(exception.Message, Does.Contain(":line "));
 	}
 
 	[Test]
 	public void BuildContextMessageSkipsDuplicateCallerFrames()
 	{
 		using var type = CreateType(nameof(BuildContextMessageSkipsDuplicateCallerFrames),
-			"has number",
-			"Inner Number",
-      "\t1 is 1",
-			"\t1",
-			"Outer Number",
-			"\tInner");
+			"has number", "Inner Number", "\t1 is 1", "\t1", "Outer Number", "\tInner");
 		var innerMethod = type.Methods.Single(method => method.Name == "Inner");
 		var outerMethod = type.Methods.Single(method => method.Name == "Outer");
-		var expression = ((Body)innerMethod.GetBodyAndParseIfNeeded(false)).Expressions[0];
+		var expression = ((Body)innerMethod.GetBodyAndParseIfNeeded()).Expressions[0];
 		var grandParent = new ExecutionContext(type, outerMethod, interpreter.noneInstance);
 		var parent = new ExecutionContext(type, outerMethod, interpreter.noneInstance, grandParent);
 		var context = new ExecutionContext(type, innerMethod, interpreter.noneInstance, parent);
-		var message = InterpreterExecutionFailed.BuildContextMessage(innerMethod, expression, context, "Failed");
+		var message =
+			InterpreterExecutionFailed.BuildContextMessage(innerMethod, expression, context, "Failed");
 		var outerFrame = ParsingFailed.GetClickableStacktraceLine(type, outerMethod.TypeLineNumber,
 			outerMethod.ToString());
 		Assert.That(message.Split(outerFrame).Length - 1, Is.EqualTo(1));

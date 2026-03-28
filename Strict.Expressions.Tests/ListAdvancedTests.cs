@@ -249,7 +249,7 @@ public sealed class ListAdvancedTests : TestExpressions
 	public void ConstructorWithConstrainedLengthWrongArgumentCountFailsAtParsing(string constructor, string _) =>
 		Assert.That(() =>
 			{
-				using var _ = new Type(TestPackage.Instance, new TypeLines(
+				using var dummy = new Type(TestPackage.Instance, new TypeLines(
 					"TestVector",
 					"has numbers with Length is 2",
 					$"constant Bad = {constructor}")).ParseMembersAndMethods(parser);

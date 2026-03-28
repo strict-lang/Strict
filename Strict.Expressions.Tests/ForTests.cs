@@ -295,17 +295,17 @@ public sealed class ForTests : TestExpressions
 		Assert.That(forExpression.Body.ToString(), Does.Contain("to Text"));
 	}
 
-  [Test]
+	[Test]
 	public void DirectOuterIndexerPreservesSourceShape()
 	{
 		using var programType = new Type(TestPackage.Instance,
 			new TypeLines(nameof(DirectOuterIndexerPreservesSourceShape), "has characters",
 				"Get(number, length Number) Text", "\tfor Range(number, number + length)",
 				"\t\touter(value)")).ParseMembersAndMethods(new MethodExpressionParser());
-    var forExpression = (For)programType.Methods[0].GetBodyAndParseIfNeeded();
-   var listCall = (ListCall)forExpression.Body;
+		var forExpression = (For)programType.Methods[0].GetBodyAndParseIfNeeded();
+		var listCall = (ListCall)forExpression.Body;
 		Assert.That(listCall.ToString(), Is.EqualTo("outer(value)"));
 		Assert.That(listCall.List, Is.TypeOf<VariableCall>());
-   Assert.That(((VariableCall)listCall.List).Variable.Name, Is.EqualTo(Type.OuterLowercase));
+		Assert.That(((VariableCall)listCall.List).Variable.Name, Is.EqualTo(Type.OuterLowercase));
 	}
 }

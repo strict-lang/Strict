@@ -234,7 +234,7 @@ public sealed class For(Expression[] customVariables, Expression iterator, Expre
 			return firstValue;
 		var innerFirstValue = body.Method.ParseExpression(body, firstValue + "(0)", true);
 		return variableIndex > 1
-     ? throw new MoreThanTwoVariablesAreNotSupportedYet(body) //ncrunch: no coverage
+			? throw new MoreThanTwoVariablesAreNotSupportedYet(body)
 			: innerFirstValue;
 	}
 

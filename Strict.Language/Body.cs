@@ -1,5 +1,5 @@
 #define DISABLE_DEBUGGER_ATTACHING
-#if DEBUG
+#if DEBUG && !DISABLE_DEBUGGER_ATTACHING
 using System.Diagnostics;
 #endif
 using System.Runtime.CompilerServices;
@@ -166,7 +166,7 @@ public sealed class Body : Expression
 		lastExpression.GetType().Name == Declaration && parentType.IsNone ||
 		lastExpression.ReturnType.IsError ||
 		lastExpression.ReturnType.IsSameOrCanBeUsedAs(parentType) ||
-   CanWrapReturnType(parentType, lastExpression.ReturnType) ||
+		CanWrapReturnType(parentType, lastExpression.ReturnType) ||
 		// Allow automatically converting an item to a list if the method requires a list
 		parentType.IsIterator && parentType.GetListImplementationType(lastExpression.ReturnType) ==
 		parentType;
