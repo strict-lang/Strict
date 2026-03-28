@@ -556,4 +556,26 @@ public sealed class InterpreterTests
 		Assert.That(exception.Message, Does.Contain("Run Text"));
    Assert.That(exception.Message, Does.Contain(":line "));
 	}
+
+	[Test]
+	public void BuildContextMessageSkipsDuplicateCallerFrames()
+	{
+		using var type = CreateType(nameof(BuildContextMessageSkipsDuplicateCallerFrames),
+			"has number",
+			"Inner Number",
+      "\t1 is 1",
+			"\t1",
+			"Outer Number",
+			"\tInner");
+		var innerMethod = type.Methods.Single(method => method.Name == "Inner");
+		var outerMethod = type.Methods.Single(method => method.Name == "Outer");
+		var expression = ((Body)innerMethod.GetBodyAndParseIfNeeded(false)).Expressions[0];
+		var grandParent = new ExecutionContext(type, outerMethod, interpreter.noneInstance);
+		var parent = new ExecutionContext(type, outerMethod, interpreter.noneInstance, grandParent);
+		var context = new ExecutionContext(type, innerMethod, interpreter.noneInstance, parent);
+		var message = InterpreterExecutionFailed.BuildContextMessage(innerMethod, expression, context, "Failed");
+		var outerFrame = ParsingFailed.GetClickableStacktraceLine(type, outerMethod.TypeLineNumber,
+			outerMethod.ToString());
+		Assert.That(message.Split(outerFrame).Length - 1, Is.EqualTo(1));
+	}
 }

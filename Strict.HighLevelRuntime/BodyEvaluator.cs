@@ -16,8 +16,11 @@ internal sealed class BodyEvaluator(Interpreter interpreter)
 		}
 		catch (InterpreterExecutionFailed ex)
 		{
+     if (ex.Message.StartsWith(InterpreterExecutionFailed.GetMethodFailureHeader(body.Method),
+				StringComparison.Ordinal))
+				throw;
 			throw new InterpreterExecutionFailed(body.Method,
-				"Failed in \"" + body.Method.Type.FullName + "." + body.Method.Name + "\":" +
+       InterpreterExecutionFailed.GetMethodFailureHeader(body.Method) +
 				Environment.NewLine + string.Join(Environment.NewLine, body.Expressions), ex);
 		}
 		finally
@@ -42,7 +45,7 @@ internal sealed class BodyEvaluator(Interpreter interpreter)
 			var isTest = index < count - 1 && IsStandaloneInlineTest(e);
 			if (isTest)
 				interpreter.Statistics.TestExpressions++;
-			if (isTest == !runOnlyTests && e is not Declaration && e is not MutableReassignment ||
+     if (isTest == !runOnlyTests && e is not Declaration && e is not MutableReassignment ||
 				runOnlyTests && e is Declaration decl && DeclarationReferencesAnyMember(body, decl))
 				continue;
 			last = interpreter.RunExpression(e, ctx);
@@ -65,7 +68,7 @@ internal sealed class BodyEvaluator(Interpreter interpreter)
 	private static bool ExpressionReferencesMember(Expression expr, string memberName) =>
 		expr switch
 		{
-			MemberCall m => m.Member.Name == memberName,
+      MemberCall m => m.Member.Name == memberName && m.Instance == null,
 			MethodCall call =>
 				call.Instance != null && ExpressionReferencesMember(call.Instance, memberName) ||
 				call.Arguments.Any(a => ExpressionReferencesMember(a, memberName)),
