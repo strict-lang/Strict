@@ -306,10 +306,17 @@ public class Interpreter
 		}
 		for (var index = args.Length; index < method.Parameters.Count; index++)
 		{
-			var autoValue = TryAutoCreateInstance(method.Parameters[index].Type);
-			if (autoValue != null)
-				values[GetMemberIndexForParameter(typeMembers, method.Parameters[index], index)] =
-					autoValue.Value;
+			var param = method.Parameters[index];
+			var memberIndex = GetMemberIndexForParameter(typeMembers, param, index);
+			if (param.DefaultValue != null)
+				values[memberIndex] = RunExpression(param.DefaultValue,
+					RentContext(method.Type, method, noneInstance, null));
+			else
+			{
+				var autoValue = TryAutoCreateInstance(param.Type);
+				if (autoValue != null)
+					values[memberIndex] = autoValue.Value;
+			}
 		}
 		return new ValueInstance(method.Type, values);
 	}
