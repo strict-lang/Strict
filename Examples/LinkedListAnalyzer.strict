@@ -1,20 +1,7 @@
-mutable visited Nodes
-GetChainedNode(number) Node
-	constant head = Node
-	mutable current = head
-	for Range(1, number)
-		current.Next = Node
-		current = current.Next
-	current.Next = head
-GetLoopLength(node) Number
-	constant first = Node
-	constant second = Node
-	first.Next = second
-	second.Next = first
-	GetLoopLength(first) is 2
-	constant third = Node
-	second.Next = third
-	third.Next = first
-	GetLoopLength(first) is 3
-	visited.Add(node)
-	node.Next is in visited then visited.Length else GetLoopLength(node.Next)
+has maxCount Number
+AnalyzeList(steps Number) Number
+	LinkedListAnalyzer(5).AnalyzeList(3) is 3
+	mutable result = 0
+	for Range(0, steps)
+		result = result + 1
+	result

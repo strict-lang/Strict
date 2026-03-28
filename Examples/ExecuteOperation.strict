@@ -1,12 +1,8 @@
-has registers
-TryOperationExecution(instruction) Register
-	if registers.Length < 2
-		Error("OperandsRequired")
-	GetOperationResult(instruction, registers(1), registers(0))
-	registers(1)
-GetOperationResult(instruction, left Register, right Register) Number
-	if instruction.InstructionType is
-		InstructionType.Add then left + right
-		InstructionType.Subtract then left - right
-		InstructionType.Multiply then left * right
-		InstructionType.Divide then left / right
+has firstRegister Register
+has secondRegister Register
+Add Register
+	ExecuteOperation(Register(1, 0, 0), Register(2, 0, 0)).Add is Register(3, 0, 0)
+	firstRegister + secondRegister
+Subtract Register
+	ExecuteOperation(Register(3, 0, 0), Register(1, 0, 0)).Subtract is Register(2, 0, 0)
+	firstRegister - secondRegister

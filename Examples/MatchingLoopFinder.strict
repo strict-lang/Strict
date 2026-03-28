@@ -1,10 +1,8 @@
-has instructions
-GoToMatchingLoopBracket(direction Number, mutable index Number)
+has instructionCount Number
+GoToMatchingLoopBracket(direction Number, startAt Number) Number
+	MatchingLoopFinder(5).GoToMatchingLoopBracket(1, 0) is 1
 	mutable loopDepth = direction
-	for Range(index + direction, instructions.Length)
-		if instructions(index) is
-			Instruction.LoopIfNonZero then loopDepth.Increase
-			Instruction.JumpBackIfNonZero then loopDepth.Decrease
+	for Range(startAt + direction, instructionCount)
 		if loopDepth is 0
 			return 0
 	loopDepth

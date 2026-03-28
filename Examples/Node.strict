@@ -1,3 +1,4 @@
-mutable Next Node
-from(next = Node, unused = 0)
-	value = next
+has value Number
+Next Number
+	Node(3).Next is 4
+	value + 1

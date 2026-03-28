@@ -144,14 +144,16 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 	}
 
 	public bool IsType(Type type) =>
-		number switch
-		{
-			TextId => type.IsText,
-			ListId => type == ((ValueListInstance)value).ReturnType,
-			DictionaryId => type == ((ValueDictionaryInstance)value).ReturnType,
-			TypeId => type == ((ValueTypeInstance)value).ReturnType,
-			_ => IsPrimitiveType(type)
-		};
+		type is OneOfType oneOf
+			? oneOf.Types.Any(IsType)
+			: number switch
+			{
+				TextId => type.IsText,
+				ListId => type == ((ValueListInstance)value).ReturnType,
+				DictionaryId => type == ((ValueDictionaryInstance)value).ReturnType,
+				TypeId => type == ((ValueTypeInstance)value).ReturnType,
+				_ => IsPrimitiveType(type)
+			};
 
 	public bool IsPrimitiveType(Type noneBoolOrNumberType) => value == noneBoolOrNumberType;
 	public bool HasValue => value != null;
