@@ -19,6 +19,7 @@ public sealed class ExecutionContext(Type type, Method method, ValueInstance? th
 	public Dictionary<string, ValueInstance> Variables =>
 		variables ??= new Dictionary<string, ValueInstance>(StringComparer.Ordinal);
 	public ValueInstance? ExitMethodAndReturnValue { get; internal set; }
+	public int CurrentExpressionLineNumber { get; internal set; } = -1;
 
 	public ValueInstance Get(string name, Statistics statistics) =>
 		Find(name, statistics) ?? throw new VariableNotFound(name, Type, This);
@@ -48,6 +49,7 @@ public sealed class ExecutionContext(Type type, Method method, ValueInstance? th
 	{
 		variables?.Clear();
 		ExitMethodAndReturnValue = null;
+   CurrentExpressionLineNumber = -1;
 	}
 
 	/// <summary>
@@ -62,6 +64,7 @@ public sealed class ExecutionContext(Type type, Method method, ValueInstance? th
 		Parent = newParent;
 		variables?.Clear();
 		ExitMethodAndReturnValue = null;
+   CurrentExpressionLineNumber = -1;
 	}
 
 	public ValueInstance Set(string name, ValueInstance value)

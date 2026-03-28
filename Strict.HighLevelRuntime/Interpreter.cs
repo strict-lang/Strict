@@ -435,9 +435,9 @@ public class Interpreter
 		}
 		catch (Exception inner)
 		{
-			throw new InterpreterExecutionFailed(context.Method,
+      throw new InterpreterExecutionFailed(context.Method, expr.LineNumber,
 				InterpreterExecutionFailed.BuildContextMessage(context.Method, expr, context,
-					inner.Message), inner);
+         inner.Message), inner, false);
 		}
 	}
 
@@ -462,7 +462,7 @@ public class Interpreter
 		return context.Find(name, Statistics) ?? name switch
 		{
 			Type.ValueLowercase => context.This,
-			Type.OuterLowercase => context.Parent!.This,
+      Type.OuterLowercase => context.Parent!.Get(Type.ValueLowercase, Statistics),
 			_ => null
 		} ?? throw new ExecutionContext.VariableNotFound(name, context.Type, context.This);
 	}

@@ -74,7 +74,7 @@ public class MethodExpressionParser : ExpressionParser
 		{
 			return null;
 		}
-		if (method != null)
+   if (method is { IsTrait: false })
 			return new MethodCall(method, valueCall, [], null, body.CurrentFileLineNumber); //ncrunch: no coverage
 		var member = FindMember(valueType, inputName);
 		return member != null
@@ -317,7 +317,7 @@ public class MethodExpressionParser : ExpressionParser
 	}
 
 	private Expression? ParseInContext(Body body, ReadOnlySpan<char> input,
-		IReadOnlyList<Expression> arguments) =>
+   IReadOnlyList<Expression> arguments) =>
 		ContainsMemberSeparatorOutsideBrackets(input)
 			? ParseNestedExpressionInContext(body, input, arguments)
 			: ListCall.TryParse(body,

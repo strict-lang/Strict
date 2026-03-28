@@ -16,12 +16,15 @@ internal sealed class BodyEvaluator(Interpreter interpreter)
 		}
 		catch (InterpreterExecutionFailed ex)
 		{
-     if (ex.Message.StartsWith(InterpreterExecutionFailed.GetMethodFailureHeader(body.Method),
+      if (ex.Message.Contains(InterpreterExecutionFailed.GetMethodFailureHeader(body.Method),
 				StringComparison.Ordinal))
 				throw;
-			throw new InterpreterExecutionFailed(body.Method,
-       InterpreterExecutionFailed.GetMethodFailureHeader(body.Method) +
-				Environment.NewLine + string.Join(Environment.NewLine, body.Expressions), ex);
+     var fileLineNumber = ex.MethodName == body.Method.ToString()
+				? ex.FileLineNumber
+				: ctx.CurrentExpressionLineNumber;
+			throw new InterpreterExecutionFailed(body.Method, fileLineNumber,
+				InterpreterExecutionFailed.BuildMethodFailureMessage(body.Method, fileLineNumber,
+					body.Expressions, ex.Headline), ex, false);
 		}
 		finally
 		{
@@ -48,6 +51,7 @@ internal sealed class BodyEvaluator(Interpreter interpreter)
      if (isTest == !runOnlyTests && e is not Declaration && e is not MutableReassignment ||
 				runOnlyTests && e is Declaration decl && DeclarationReferencesAnyMember(body, decl))
 				continue;
+     ctx.CurrentExpressionLineNumber = e.LineNumber;
 			last = interpreter.RunExpression(e, ctx);
 			if (ctx.ExitMethodAndReturnValue.HasValue)
 				return ctx.ExitMethodAndReturnValue.Value;

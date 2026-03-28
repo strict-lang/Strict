@@ -38,6 +38,7 @@
 - Tests in the Slow or Nightly category are usually not run every time and can be skipped and ignored. On bigger refactors they should be run; our CI usually runs them on each check-in as they will be slower and we want to keep all tests fast (<10ms).
 - Prefer NCrunch for C# or SCrunch for Strict; all tests should be run all the time (if something changed), it is fine to run tests via `dotnet test` to also include Slow and Nightly tests.
 - Do not ignore linker or platform-build errors in code or tests; tests must surface failures instead of swallowing InvalidOperationException for platform compilation issues.
+- User prefers minimal test additions in this repo; rely on existing coverage when possible and add at most one focused regression test for a bug fix.
 - User prefers not to weaken tests by changing or removing assertions; focus fixes on production code and diagnostics instead.
 
 ## Strict Semantics
@@ -374,6 +375,7 @@ test('rejects empty email', async () => {
   expect(result.error).toBe('Email required');
 });
 ```
+
 **Verify RED**
 ```bash
 $ npm test
@@ -389,6 +391,7 @@ function submitForm(data: FormData) {
   // ...
 }
 ```
+
 **Verify GREEN**
 ```bash
 $ npm test
@@ -457,3 +460,6 @@ No exceptions without your human partner's permission.
 - In this repo, parsing errors must always be derived from `ParsingFailed`.
 - Interpreter execution errors in Strict.HighLevelRuntime should use `InterpreterExecutionFailed` with good stack traces and clickable file links instead of raw `VariableNotFound`, `NotSupportedException`, or `InvalidOperationException` (which are all forbidden in this codebase).
 - At runtime in VirtualMachine or in a compiled executable `RuntimeError` should be used to display the detailed error with clickable stacktraces going back to the .strict source code!
+
+## Additional Guidelines
+- In this repo, keep fixes narrowly focused and avoid adding many new tests; prefer relying on existing coverage and add at most one specific regression test when needed.

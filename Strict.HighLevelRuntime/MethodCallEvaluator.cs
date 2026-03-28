@@ -9,14 +9,16 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 	public ValueInstance EvaluateListCall(ListCall call, ExecutionContext ctx)
 	{
 		interpreter.Statistics.ListCallCount++;
-		var listInstance = interpreter.RunExpression(call.List, ctx);
+   var listInstance = call.List is VariableCall { Variable.Name: Type.OuterLowercase }
+			? ctx.Parent!.Get(Type.ValueLowercase, interpreter.Statistics)
+			: interpreter.RunExpression(call.List, ctx);
 		var indexValue = interpreter.RunExpression(call.Index, ctx);
 		if (listInstance.IsList || listInstance.IsText ||
 			listInstance.TryGetValueTypeInstance()?.ReturnType.IsList == true)
 			return listInstance.GetIteratorValue(interpreter.characterType, (int)indexValue.Number);
-    throw new InterpreterExecutionFailed(ctx.Method,
+    throw new InterpreterExecutionFailed(ctx.Method, call.LineNumber,
 			InterpreterExecutionFailed.BuildContextMessage(ctx.Method, call, ctx,
-				"List call needs a list, got: " + listInstance));
+       "List call needs a list, got: " + listInstance), null, false);
 	}
 
 	public ValueInstance Evaluate(MethodCall call, ExecutionContext ctx)
@@ -28,7 +30,9 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 		var instance = call.Instance != null
 			? interpreter.RunExpression(call.Instance, ctx)
 			: call.Method.Name != Method.From
-				? ctx.This
+        ? ctx.This.HasValue && !ctx.This.Value.Equals(interpreter.noneInstance)
+					? ctx.This
+					: ctx.Parent?.Get(Type.ValueLowercase, interpreter.Statistics)
 				: null;
 		return ExecuteMethodCall(call, instance, ctx);
 	}

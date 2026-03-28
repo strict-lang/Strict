@@ -168,6 +168,16 @@ public sealed class InterpreterTests
 	}
 
 	[Test]
+	public async Task TextTrimWorksInsideCharacterLoop()
+	{
+		using var strict = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
+		var trimMethod = strict.GetType(Type.Text).Methods.Single(method => method.Name == "Trim");
+		var result = new Interpreter(strict, TestBehavior.Disabled).Execute(trimMethod,
+			new ValueInstance(" hi "), []);
+		Assert.That(result.Text, Is.EqualTo("hi"));
+	}
+
+	[Test]
 	public void StringLiteralBackslashNParsesAsNewLine()
 	{
 		using var type = CreateType(nameof(StringLiteralBackslashNParsesAsNewLine), "has number",

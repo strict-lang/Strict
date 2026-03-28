@@ -48,6 +48,7 @@ Trim Text
 	"noSpaces".Trim is "noSpaces"
 	TrimStart.TrimEnd
 TrimStart Text
+	" hi ".TrimStart is "hi "
 	mutable startIndex = 0
 	for characters
 		if value is " "
@@ -56,6 +57,7 @@ TrimStart Text
 			return Substring(startIndex, Length - startIndex)
 	""
 TrimEnd Text
+	" hi ".TrimEnd is " hi"
 	mutable endIndex = characters.Length
 	for characters.Reverse
 		if value is " "

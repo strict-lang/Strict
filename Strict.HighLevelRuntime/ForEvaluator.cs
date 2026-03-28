@@ -63,8 +63,10 @@ internal sealed class ForEvaluator(Interpreter interpreter)
 					return ctx.ExitMethodAndReturnValue.Value;
 			}
 		}
-		return ShouldConsolidateForResult(results, ctx) ?? new ValueInstance(
-			interpreter.listType.GetGenericImplementation(itemType), results?.ToArray() ?? []);
+   return ShouldConsolidateForResult(results, ctx) ?? new ValueInstance(
+			interpreter.listType.GetGenericImplementation(results is { Count: > 0 }
+				? results[0].GetType()
+				: f.Body.ReturnType), results?.ToArray() ?? []);
 	}
 
 	private void ExecuteForIteration(For f, ExecutionContext ctx, ValueInstance iterator,
