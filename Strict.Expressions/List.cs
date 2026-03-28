@@ -86,7 +86,7 @@ public sealed class List : Value
 		for (var i = 0; i < Values.Count; i++)
 			if (Values[i] is List innerList)
 			{
-				// Recursively evaluate nested list constants; List.Data throws NotSupportedException so we use TryGetConstantData
+				// Recursively evaluate nested list constants; List.Data throws so we use TryGetConstantData
 				var innerData = innerList.TryGetConstantData();
 				if (innerData == null)
 					return null; //ncrunch: no coverage, only when we have mutable items

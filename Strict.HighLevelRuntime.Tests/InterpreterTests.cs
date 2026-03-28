@@ -132,9 +132,8 @@ public sealed class InterpreterTests
   [Test]
 	public async Task TextInFindsMatchInsideText()
 	{
-   var strict = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
-		var text = strict.GetType(Type.Text);
-    var inMethod = text.Methods.Single(m => m.Name == "in");
+		using var strict = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
+    var inMethod = strict.GetType(Type.Text).Methods.Single(m => m.Name == "in");
     var result = new Interpreter(strict, TestBehavior.Disabled).Execute(inMethod,
 			new ValueInstance("hello there"), [new ValueInstance("lo")]);
 		Assert.That(result.Boolean, Is.True);
@@ -143,13 +142,13 @@ public sealed class InterpreterTests
 	[Test]
 	public async Task TextCombineSupportsCharacterSeparator()
 	{
-		var strict = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
+		using var strict = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
 		var text = strict.GetType(Type.Text);
 		var combineMethod = text.Methods.Single(method => method.Name == "Combine");
 		var interpreterForStrict = new Interpreter(strict, TestBehavior.Disabled);
 		var texts = strict.GetListImplementationType(text);
 		var character = strict.GetType(Type.Character);
-   var result = interpreterForStrict.Execute(combineMethod, interpreterForStrict.noneInstance,
+		var result = interpreterForStrict.Execute(combineMethod, interpreterForStrict.noneInstance,
 		[
 			new ValueInstance(texts, [new ValueInstance("hi"), new ValueInstance("there")]),
 			new ValueInstance(character, 10)
@@ -160,10 +159,9 @@ public sealed class InterpreterTests
 	[Test]
 	public async Task TextSplitWorksWithSeparatorParameter()
 	{
-		var strict = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
-		var text = strict.GetType(Type.Text);
-		var splitMethod = text.Methods.Single(method => method.Name == "Split");
-		var interpreterForStrict = new Interpreter(strict, TestBehavior.Disabled);
+		using var strict = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
+		var splitMethod = strict.GetType(Type.Text).Methods.Single(method => method.Name == "Split");
+		var interpreterForStrict = new Interpreter(strict);
 		var result = interpreterForStrict.Execute(splitMethod, new ValueInstance("a,b"),
 			[new ValueInstance(",")]);
 		Assert.That(result.List.Items.Select(item => item.Text), Is.EqualTo(new[] { "a", "b" }));

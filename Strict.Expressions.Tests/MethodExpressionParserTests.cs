@@ -4,15 +4,6 @@ namespace Strict.Expressions.Tests;
 
 public sealed class MethodExpressionParserTests : TestExpressions
 {
-  [OneTimeSetUp]
-	public async Task LoadStrictBasePackage() => strictBasePackage =
-		await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
-
-	[OneTimeTearDown]
-	public void DisposeStrictBasePackage() => strictBasePackage?.Dispose();
-
-	private Package? strictBasePackage;
-
 	[Test]
 	public void CannotParseEmptyInputException() =>
 		Assert.That(() => new MethodExpressionParser().ParseExpression(new Body(method), ""),
@@ -211,15 +202,6 @@ public sealed class MethodExpressionParserTests : TestExpressions
 	}
 
 	[Test]
-	public async Task ParseHashCodeFromWithGenericTypeDispatch()
-	{
-   var hashCodeType = strictBasePackage!.FindType("HashCode")!;
-		var fromMethod = hashCodeType.Methods.Single(m => m.Name == Method.From);
-		Assert.That(() => fromMethod.GetBodyAndParseIfNeeded(), Throws.Nothing,
-			"HashCode.from selector-if on generic type should parse");
-	}
-
-	[Test]
 	public void ParseRangeForIteratorMethod()
 	{
 		var forMethod = TestPackage.Instance.GetType(Type.Range).Methods.Single(m => m.Name == "for");
@@ -228,54 +210,11 @@ public sealed class MethodExpressionParserTests : TestExpressions
 	}
 
 	[Test]
-	public async Task ParseEnumCompareToWithNestedConditional()
-	{
-   var enumType = strictBasePackage!.FindType("Enum")!;
-		var compareToMethod = enumType.Methods.Single(m => m.Name == "CompareTo");
-		Assert.That(() => compareToMethod.GetBodyAndParseIfNeeded(), Throws.Nothing,
-			"Enum.CompareTo nested conditional should parse");
-	}
-
-	[Test]
-	public async Task ParseDictionaryInMethod()
-	{
-   var dictionaryType = strictBasePackage!.FindType("Dictionary")!;
-		var inMethod = dictionaryType.Methods.Single(m => m.Name == "in");
-		Assert.That(() => inMethod.GetBodyAndParseIfNeeded(), Throws.Nothing,
-			"Dictionary.in method with value.Key is key should parse");
-	}
-
-	[Test]
-	public async Task ParseDictionaryGetMethod()
-	{
-   var dictionaryType = strictBasePackage!.FindType("Dictionary")!;
-		var getMethod = dictionaryType.Methods.Single(m => m.Name == "get");
-		Assert.That(() => getMethod.GetBodyAndParseIfNeeded(), Throws.Nothing,
-			"Dictionary.get method with return value.Value should parse");
-	}
-
-	[Test]
-	public async Task ParseDictionaryAddMethod()
-	{
-   var dictionaryType = strictBasePackage!.FindType("Dictionary")!;
-		var addMethod = dictionaryType.Methods.Single(m => m.Name == "Add");
-		Assert.That(() => addMethod.GetBodyAndParseIfNeeded(), Throws.Nothing,
-			"Dictionary.Add method with keysAndValues.Add((key, mappedValue)) should parse");
-	}
-
-	[Test]
-	public async Task ParseStacktraceToMethod()
-	{
-   var stacktraceType = strictBasePackage!.FindType("Stacktrace")!;
-		var toMethod = stacktraceType.Methods.Single(m => m.Name == BinaryOperator.To);
-		Assert.That(() => toMethod.GetBodyAndParseIfNeeded(), Throws.Nothing,
-			"Stacktrace.to method with escaped tab and backslash text should parse");
-	}
-
-	[Test]
 	public async Task ParseAllStrictBasePackageCode()
 	{
-   foreach (var baseType in new List<Type>(strictBasePackage!.Types.Values))
+		using var strictBasePackage =
+			await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
+		foreach (var baseType in new List<Type>(strictBasePackage!.Types.Values))
 		foreach (var baseMethod in baseType.Methods)
 			if (!baseMethod.IsTrait)
 				Assert.That(() => baseMethod.GetBodyAndParseIfNeeded(), Throws.Nothing,

@@ -11,7 +11,7 @@
 - When splitting `Executor.cs`, keep high-level methods there (Execute, exceptions, DoArgumentsMatch, stackoverflow detection, arguments/instances/parameters handling, RunExpression), and move expression evaluators into separate classes unless they are single-line/simple.
 - Do not add new methods to low level types like `SpanExtensions` without asking first; keep refactors focused and fix one issue at a time.
 - If you cannot make the test pass within 5 edits, stop and output: failing test name, error message, suspected root cause, and show a proposed fix (or up to 3 fixes if it is unclear). This resets if the user gives a new prompt.
-- When a user reports a specific failing reproduction in this repo, trust that exact reproduction and verify that exact case instead of generalizing from broader test runs.
+- When a user reports a specific failing reproduction in this repo, trust that exact reproduction and verify that exact case instead of generalizing from broader test runs. When the user already provides an exact failing test that covers the issue, prefer fixing against that existing reproduction instead of adding extra tests.
 - When working on this repo, keep fixes narrowly focused on the exact failing reproduction or requested test; if changes start getting out of hand, revert, explain, and let the user take over.
 
 ## Project-Specific Rules

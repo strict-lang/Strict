@@ -179,17 +179,18 @@ public class Interpreter
 		IReadOnlyList<ValueInstance> args, ExecutionContext? parentContext, bool runOnlyTests)
 	{
 		var context = RentContext(method.Type, method, instance, parentContext);
-		if (!runOnlyTests)
-			for (var i = 0; i < method.Parameters.Count; i++)
-			{
-				var param = method.Parameters[i];
-				var arg = i < args.Count
-					? args[i]
-					: param.DefaultValue != null
-						? RunExpression(param.DefaultValue, context)
-						: throw new MissingArgument(method, param.Name, args);
-				context.Variables[param.Name] = arg;
-			}
+    for (var index = 0; index < method.Parameters.Count; index++)
+		{
+			var parameter = method.Parameters[index];
+			var argument = index < args.Count
+				? args[index]
+				: parameter.DefaultValue != null
+					? RunExpression(parameter.DefaultValue, context)
+					: runOnlyTests
+						? TryAutoCreateInstance(parameter.Type) ?? GetDefaultValue(parameter.Type)
+						: throw new MissingArgument(method, parameter.Name, args);
+			context.Variables[parameter.Name] = argument;
+		}
 		return context;
 	}
 
