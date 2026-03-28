@@ -209,7 +209,7 @@ public sealed class ListTests : TestExpressions
 	public void CannotGetConstantDataFromListWithNonConstants()
 	{
 		var mixedList = (List)ParseExpression("(1, 2, 3, 4, five)");
-		Assert.That(() => mixedList.Data, Throws.InstanceOf<NotSupportedException>());
+		Assert.That(() => mixedList.Data, Throws.InstanceOf<List.DataAccessRequiresConstantList>());
 		Assert.That(mixedList.TryGetConstantData(), Is.Null);
 	}
 }

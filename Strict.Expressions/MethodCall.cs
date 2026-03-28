@@ -384,5 +384,10 @@ public class MethodCall : ConcreteExpression
 			? Type.Dictionary + (list.Values.All(value => value is List)
 				? list.Values.ToBrackets()
 				: $"({list})")
-			: throw new NotSupportedException("Invalid Dictionary arguments: " + Arguments.ToBrackets());
+     : throw new InvalidDictionaryArgumentsForFormatting(Method, Arguments);
+
+	private sealed class InvalidDictionaryArgumentsForFormatting(Method method,
+		IReadOnlyList<Expression> arguments)
+		: ParsingFailed(method.Type, method.TypeLineNumber,
+			"Invalid Dictionary arguments: " + arguments.ToBrackets(), method.ToString());
 }

@@ -5,7 +5,7 @@ namespace Strict.Expressions;
 
 public sealed class SelectorIf(Expression selector, IReadOnlyList<SelectorIf.Case> cases,
 	int lineNumber, Expression? optionalElse = null, Body? bodyForErrorMessage = null)
-	: Expression(GetMatchingReturnType(cases, optionalElse, bodyForErrorMessage), lineNumber)
+	: Expression(GetMatchingReturnType(cases, selector, optionalElse, bodyForErrorMessage), lineNumber)
 {
 	public Expression Selector { get; } = selector;
 	public IReadOnlyList<Case> Cases { get; } = cases;
@@ -44,11 +44,11 @@ public sealed class SelectorIf(Expression selector, IReadOnlyList<SelectorIf.Cas
 		public Expression Condition { get; } = condition;
 	}
 
-	private static Type GetMatchingReturnType(IReadOnlyList<Case> cases, Expression? optionalElse,
-		Body? bodyForErrorMessage)
+  private static Type GetMatchingReturnType(IReadOnlyList<Case> cases, Expression selector,
+		Expression? optionalElse, Body? bodyForErrorMessage)
 	{
 		if (cases.Count == 0)
-			throw new InvalidOperationException("SelectorIf requires at least one case"); //ncrunch: no coverage
+      throw new MissingCase(selector, bodyForErrorMessage); //ncrunch: no coverage
 		var returnType = cases[0].Then.ReturnType;
 		for (var i = 1; i < cases.Count; i++)
 			returnType = GetMatchingType(returnType, cases[i].Then.ReturnType, bodyForErrorMessage);
@@ -67,6 +67,10 @@ public sealed class SelectorIf(Expression selector, IReadOnlyList<SelectorIf.Cas
 					bodyForErrorMessage ?? new Body(thenType.Methods[0]), thenType, elseType);
 
 	private const string ThenSeparator = " then ";
+
+ public sealed class MissingCase(Expression selector, Body? body)
+		: ParsingFailed(body ?? new Body(selector.ReturnType.Methods[0]),
+			$"SelectorIf requires at least one case for selector {selector}");
 
 	//ncrunch: no coverage start
 	public override bool Equals(Expression? other) =>

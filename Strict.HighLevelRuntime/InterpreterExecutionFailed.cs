@@ -14,6 +14,11 @@ public class InterpreterExecutionFailed : ParsingFailed
 		string message) => message + GetClickableStacktraceLine(method.Type, expression.LineNumber,
 			method.ToString()) + BuildCallerChain(ctx.Parent);
 
+	internal static string BuildContextMessage(Method method, int fileLineNumber,
+		ExecutionContext ctx, string message) => message +
+		GetClickableStacktraceLine(method.Type, fileLineNumber, method.ToString()) +
+		BuildCallerChain(ctx.Parent);
+
 	private static string BuildCallerChain(ExecutionContext? ctx)
 	{
 		var message = string.Empty;

@@ -234,9 +234,12 @@ public sealed class For(Expression[] customVariables, Expression iterator, Expre
 			return firstValue;
 		var innerFirstValue = body.Method.ParseExpression(body, firstValue + "(0)", true);
 		return variableIndex > 1
-			? throw new NotSupportedException("More than 2 for variables are not supported yet") //ncrunch: no coverage
+     ? throw new MoreThanTwoVariablesAreNotSupportedYet(body) //ncrunch: no coverage
 			: innerFirstValue;
 	}
+
+	public sealed class MoreThanTwoVariablesAreNotSupportedYet(Body body)
+		: ParsingFailed(body, "More than 2 for variables are not supported yet");
 
 	private static Expression GetVariableValueFromRange(Expression iterator, MethodCall methodCall) =>
 		methodCall.Arguments.Count > 0

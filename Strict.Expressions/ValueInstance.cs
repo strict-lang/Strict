@@ -364,7 +364,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 		return primitiveType.IsMutable
 			// ReSharper disable once TailRecursiveCall
 			? GetPrimitiveCodeString(primitiveType.GetFirstImplementation())
-			: throw new NotSupportedException(primitiveType.ToString());
+      : throw new InvalidTypeValue(primitiveType, primitiveType.ToString());
 	}
 
 	public string GetCachedNumberString()

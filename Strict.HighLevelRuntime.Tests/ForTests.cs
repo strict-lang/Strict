@@ -102,7 +102,7 @@ public sealed class ForTests
 		var container = new ValueInstance(t,
 			[new ValueInstance(t.Members[0].Type, Array.Empty<ValueInstance>())]);
 		Assert.That(() => interpreter.Execute(t.Methods.Single(m => m.Name == "Run"), interpreter.noneInstance, [container]),
-			Throws.InstanceOf<ValueInstance.IteratorNotSupported>());
+     Throws.InstanceOf<InterpreterExecutionFailed>().With.InnerException.InstanceOf<ValueInstance.IteratorNotSupported>());
 	}
 
 	[Test]

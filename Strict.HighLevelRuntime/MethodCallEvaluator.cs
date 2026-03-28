@@ -14,7 +14,9 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 		if (listInstance.IsList || listInstance.IsText ||
 			listInstance.TryGetValueTypeInstance()?.ReturnType.IsList == true)
 			return listInstance.GetIteratorValue(interpreter.characterType, (int)indexValue.Number);
-		throw new InvalidOperationException("List call needs a list, got: " + listInstance);
+    throw new InterpreterExecutionFailed(ctx.Method,
+			InterpreterExecutionFailed.BuildContextMessage(ctx.Method, call, ctx,
+				"List call needs a list, got: " + listInstance));
 	}
 
 	public ValueInstance Evaluate(MethodCall call, ExecutionContext ctx)
@@ -58,8 +60,9 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 	{
 		interpreter.Statistics.BinaryCount++;
 		if (call.Instance == null || call.Arguments.Count != 1)
-			throw new InvalidOperationException( //ncrunch: no coverage
-				"Binary call must have instance and 1 argument");
+     throw new InterpreterExecutionFailed(ctx.Method, //ncrunch: no coverage
+				InterpreterExecutionFailed.BuildContextMessage(ctx.Method, call, ctx,
+					"Binary call must have instance and 1 argument"));
 		var leftInstance = interpreter.RunExpression(call.Instance, ctx);
 		var rightInstance = interpreter.RunExpression(call.Arguments[0], ctx);
 		return operatorType switch
@@ -67,7 +70,9 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 			OperatorCategory.Arithmetic => ExecuteArithmeticOperation(call, ctx, leftInstance, rightInstance),
 			OperatorCategory.Comparison => ExecuteComparisonOperation(call, ctx, leftInstance, rightInstance),
 			OperatorCategory.Logical => ExecuteLogicalBinaryOperation(call, ctx, leftInstance, rightInstance),
-			_ => throw new InvalidOperationException("Unknown operator category") //ncrunch: no coverage
+      _ => throw new InterpreterExecutionFailed(ctx.Method, //ncrunch: no coverage
+				InterpreterExecutionFailed.BuildContextMessage(ctx.Method, call, ctx,
+					"Unknown operator category"))
 		};
 	}
 
@@ -100,15 +105,18 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 		if (left.IsText && right.IsText)
 			return op == BinaryOperator.Plus
 				? new ValueInstance(left.Text + right.Text)
-				: throw new NotSupportedException("Only + operator is supported for Text, got: " + op);
+       : throw new InterpreterExecutionFailed(ctx.Method,
+					InterpreterExecutionFailed.BuildContextMessage(ctx.Method, call, ctx,
+						"Only + operator is supported for Text, got: " + op));
 		if (left.IsText && IsNumberLike(right))
 		{
 			return op == BinaryOperator.Plus
 				? right.IsPrimitiveType(interpreter.characterType)
 					? new ValueInstance(left.Text + right.ToExpressionCodeString())
 					: new ValueInstance(left.Text + right.Number)
-				: throw new NotSupportedException("Only + operator is supported for Text+Number, got: " +
-					op);
+       : throw new InterpreterExecutionFailed(ctx.Method,
+					InterpreterExecutionFailed.BuildContextMessage(ctx.Method, call, ctx,
+						"Only + operator is supported for Text+Number, got: " + op));
 		}
 		var leftList = ConvertToListValue(left);
 		var rightList = ConvertToListValue(right);
@@ -125,8 +133,9 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 					leftList.Value.List.Items, rightList.Value.List.Items),
 				BinaryOperator.Divide => DivideLists(leftList.Value.List.ReturnType, interpreter.numberType,
 					leftList.Value.List.Items, rightList.Value.List.Items),
-				_ => throw new NotSupportedException( //ncrunch: no coverage
-					"Only +, -, *, / operators are supported for Lists, got: " + op)
+        _ => throw new InterpreterExecutionFailed(ctx.Method, //ncrunch: no coverage
+					InterpreterExecutionFailed.BuildContextMessage(ctx.Method, call, ctx,
+						"Only +, -, *, / operators are supported for Lists, got: " + op))
 			};
 		}
 		if (leftList.HasValue && right.IsPrimitiveType(interpreter.numberType))
@@ -139,12 +148,14 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 				return MultiplyList(leftList.Value.List.ReturnType, leftList.Value.List.Items, right.Number);
 			if (op == BinaryOperator.Divide)
 				return DivideList(leftList.Value.List.ReturnType, leftList.Value.List.Items, right.Number);
-			throw new NotSupportedException( //ncrunch: no coverage
-				"Only +, -, *, / operators are supported for List and Number, got: " + op);
+     throw new InterpreterExecutionFailed(ctx.Method, //ncrunch: no coverage
+				InterpreterExecutionFailed.BuildContextMessage(ctx.Method, call, ctx,
+					"Only +, -, *, / operators are supported for List and Number, got: " + op));
 		}
 		if (IsCoreRuntimeType(call.Method.Type))
-     throw new InvalidOperationException(BuildCoreTypeFallbackMessage("Arithmetic", call, ctx,
-				left, right));
+      throw new InterpreterExecutionFailed(ctx.Method,
+				InterpreterExecutionFailed.BuildContextMessage(ctx.Method, call, ctx,
+					BuildCoreTypeFallbackMessage("Arithmetic", call, ctx, left, right)));
 		return ExecuteMethodCall(call, left, ctx); //ncrunch: no coverage
 	}
 
@@ -213,8 +224,9 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 			BinaryOperator.GreaterOrEqual => interpreter.ToBoolean(l >= r),
      BinaryOperator.SmallerOrEqual => interpreter.ToBoolean(l <= r),
 			_ when IsCoreRuntimeType(call.Method.Type)
-				=> throw new InvalidOperationException(BuildCoreTypeFallbackMessage("Comparison", call,
-					ctx, left, right)),
+       => throw new InterpreterExecutionFailed(ctx.Method,
+					InterpreterExecutionFailed.BuildContextMessage(ctx.Method, call, ctx,
+						BuildCoreTypeFallbackMessage("Comparison", call, ctx, left, right))),
 			_ => ExecuteMethodCall(call, left, ctx) //ncrunch: no coverage
 		};
 	}
@@ -229,8 +241,9 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 			BinaryOperator.Or => interpreter.ToBoolean(left.Boolean || right.Boolean),
 			BinaryOperator.Xor => interpreter.ToBoolean(left.Boolean ^ right.Boolean),
       _ when IsCoreRuntimeType(call.Method.Type)
-				=> throw new InvalidOperationException(BuildCoreTypeFallbackMessage("Logical", call,
-					ctx, left, right)),
+        => throw new InterpreterExecutionFailed(ctx.Method,
+					InterpreterExecutionFailed.BuildContextMessage(ctx.Method, call, ctx,
+						BuildCoreTypeFallbackMessage("Logical", call, ctx, left, right))),
 			_ => ExecuteMethodCall(call, left, ctx) //ncrunch: no coverage
 		};
 	}
@@ -427,7 +440,7 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 			{
 				nameof(Type.Name) or Type.Text => new ValueInstance(name),
 				_ when errorType.Members[i].Type.IsList => CreateStacktrace(ctx, source),
-				_ => throw new NotSupportedException( //ncrunch: no coverage
+        _ => throw new InterpreterExecutionFailed(ctx.Method, //ncrunch: no coverage
 					"Error member not supported: " + errorType.Members[i])
 			};
 		return new ValueInstance(errorType, errorValues);
@@ -445,7 +458,7 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 				Type.Text or nameof(Type.Name) => new ValueInstance(ctx.Method.Type.FilePath),
 				Type.Number => new ValueInstance(interpreter.numberType,
 					source?.LineNumber ?? ctx.Method.TypeLineNumber),
-				_ => throw new NotSupportedException( //ncrunch: no coverage
+        _ => throw new InterpreterExecutionFailed(ctx.Method, //ncrunch: no coverage
 					"Stacktrace member not supported: " + stacktraceType.Members[i])
 			};
 		return new ValueInstance(interpreter.listType.GetGenericImplementation(stacktraceType),
@@ -462,7 +475,7 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 				nameof(Type.Name) or Type.Text => new ValueInstance(method.Name),
 				nameof(Type) => new ValueInstance(method.GetType(nameof(Type)),
 					CreateTypeValue(method.Type)),
-				_ => throw new NotSupportedException( //ncrunch: no coverage
+        _ => throw new InterpreterExecutionFailed(method, //ncrunch: no coverage
 					"Method member not supported: " + methodType.Members[i])
 			};
 		return values;
@@ -477,7 +490,7 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 			{
 				nameof(Type.Name) => new ValueInstance(type.Name),
 				Type.Text => new ValueInstance(type.Package.FullName),
-				_ => throw new NotSupportedException( //ncrunch: no coverage
+        _ => throw new InterpreterExecutionFailed(type.Methods[0], //ncrunch: no coverage
 					"Type member not supported: " + typeType.Members[i])
 			};
 		return values;

@@ -255,6 +255,11 @@ public sealed class ForTests : TestExpressions
 	}
 
 	[Test]
+	public void MoreThanTwoForVariablesIsParsingFailed() =>
+		Assert.That(() => ParseExpression("for first, second, third in (((1)))", "\tlogger.Log(third)"),
+			Throws.InstanceOf<ParsingFailed>());
+
+	[Test]
 	public void ForBodyWithInlineConditionalThenConcatenation()
 	{
 		using var programType = new Type(TestPackage.Instance,

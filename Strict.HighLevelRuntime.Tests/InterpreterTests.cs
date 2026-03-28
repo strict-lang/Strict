@@ -158,6 +158,18 @@ public sealed class InterpreterTests
 	}
 
 	[Test]
+	public async Task TextSplitWorksWithSeparatorParameter()
+	{
+		var strict = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
+		var text = strict.GetType(Type.Text);
+		var splitMethod = text.Methods.Single(method => method.Name == "Split");
+		var interpreterForStrict = new Interpreter(strict, TestBehavior.Disabled);
+		var result = interpreterForStrict.Execute(splitMethod, new ValueInstance("a,b"),
+			[new ValueInstance(",")]);
+		Assert.That(result.List.Items.Select(item => item.Text), Is.EqualTo(new[] { "a", "b" }));
+	}
+
+	[Test]
 	public void StringLiteralBackslashNParsesAsNewLine()
 	{
 		using var type = CreateType(nameof(StringLiteralBackslashNParsesAsNewLine), "has number",
@@ -545,6 +557,5 @@ public sealed class InterpreterTests
 		Assert.That(exception.Message, Does.Contain("call=value + (\"b\")"));
 		Assert.That(exception.Message, Does.Contain("Run Text"));
    Assert.That(exception.Message, Does.Contain(":line "));
-   Assert.That(exception.InnerException, Is.InstanceOf<InvalidOperationException>());
 	}
 }

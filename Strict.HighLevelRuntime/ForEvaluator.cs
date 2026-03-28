@@ -152,7 +152,9 @@ internal sealed class ForEvaluator(Interpreter interpreter)
 				text.Append(')');
 			}
 			else
-				throw new NotSupportedException("For text return type cannot consolidate value " + value);
+        throw new InterpreterExecutionFailed(ctx.Method,
+					InterpreterExecutionFailed.BuildContextMessage(ctx.Method, ctx.Method.TypeLineNumber,
+						ctx, "For text return type cannot consolidate value " + value));
 		return new ValueInstance(text.ToString());
 	}
 
