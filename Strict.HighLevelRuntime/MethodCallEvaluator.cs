@@ -9,14 +9,21 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 	public ValueInstance EvaluateListCall(ListCall call, ExecutionContext ctx)
 	{
 		interpreter.Statistics.ListCallCount++;
-   var listInstance = call.List is VariableCall { Variable.Name: Type.OuterLowercase }
-			? ctx.Parent!.Get(Type.ValueLowercase, interpreter.Statistics)
-			: interpreter.RunExpression(call.List, ctx);
+		var directOuter = TryGetDirectOuterValue(call.List, ctx);
+		var listInstance = directOuter ?? interpreter.RunExpression(call.List, ctx);
 		var indexValue = interpreter.RunExpression(call.Index, ctx);
 		if (listInstance.IsList || listInstance.IsText ||
 			listInstance.TryGetValueTypeInstance()?.ReturnType.IsList == true)
 			return listInstance.GetIteratorValue(interpreter.characterType, (int)indexValue.Number);
-    throw new InterpreterExecutionFailed(ctx.Method, call.LineNumber,
+		if (directOuter != null)
+		{
+			var typeInst = listInstance.TryGetValueTypeInstance();
+			if (typeInst != null)
+				for (var i = 0; i < typeInst.Values.Length; i++)
+					if (typeInst.Values[i].IsText)
+						return typeInst.Values[i].GetIteratorValue(interpreter.characterType, (int)indexValue.Number);
+		}
+		throw new InterpreterExecutionFailed(ctx.Method, call.LineNumber,
 			InterpreterExecutionFailed.BuildContextMessage(ctx.Method, call, ctx,
        "List call needs a list, got: " + listInstance), null, false);
 	}
@@ -28,7 +35,7 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 		if (operatorType != OperatorCategory.None)
 			return EvaluateArithmeticOrCompareOrLogical(call, ctx, operatorType);
 		var instance = call.Instance != null
-			? interpreter.RunExpression(call.Instance, ctx)
+     ? TryGetDirectOuterValue(call.Instance, ctx) ?? interpreter.RunExpression(call.Instance, ctx)
 			: call.Method.Name != Method.From
         ? ctx.This.HasValue && !ctx.This.Value.Equals(interpreter.noneInstance)
 					? ctx.This
@@ -36,6 +43,19 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 				: null;
 		return ExecuteMethodCall(call, instance, ctx);
 	}
+
+	private ValueInstance? TryGetDirectOuterValue(Expression expression, ExecutionContext ctx) =>
+		expression switch
+		{
+			VariableCall { Variable.Name: Type.OuterLowercase } =>
+				ctx.Parent?.Get(Type.ValueLowercase, interpreter.Statistics),
+			MemberCall
+				{
+					Instance: VariableCall { Variable.Name: Type.OuterLowercase },
+					Member.Name: Type.ValueLowercase
+				} => ctx.Parent?.Get(Type.ValueLowercase, interpreter.Statistics),
+			_ => null
+		};
 
 	private enum OperatorCategory : byte
 	{

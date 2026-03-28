@@ -1,4 +1,5 @@
 using Strict.Language;
+using Type = Strict.Language.Type;
 
 namespace Strict.Expressions;
 
@@ -15,12 +16,14 @@ public sealed class ListCall(Expression list, Expression index) : ConcreteExpres
 		variable is not null and not MethodCall && arguments.Count > 0
 			? variable.ReturnType.IsIterator
 				? CreateListCallAndCheckIndexBounds(body, variable, arguments[0])
-				: variable.ReturnType.IsError
-					? MethodCall.CreateFromMethodCall(body, variable.ReturnType, arguments, variable)
-					: body.IsFakeBodyForMemberInitialization && arguments.Count == 1
-						? arguments[0]
-						: throw new MethodExpressionParser.InvalidArgumentItIsNotMethodOrListCall(body,
-							variable, arguments)
+				: variable is VariableCall { Variable.Name: Type.OuterLowercase }
+					? new ListCall(variable, arguments[0])
+					: variable.ReturnType.IsError
+						? MethodCall.CreateFromMethodCall(body, variable.ReturnType, arguments, variable)
+						: body.IsFakeBodyForMemberInitialization && arguments.Count == 1
+							? arguments[0]
+							: throw new MethodExpressionParser.InvalidArgumentItIsNotMethodOrListCall(body,
+								variable, arguments)
 			: variable;
 
 	private static ListCall CreateListCallAndCheckIndexBounds(Body body, Expression listVariable,

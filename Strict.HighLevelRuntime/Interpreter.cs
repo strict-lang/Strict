@@ -405,40 +405,27 @@ public class Interpreter
 		bool runOnlyTests = false)
 	{
 		Statistics.ExpressionCount++;
-    try
+		return expr switch
 		{
-			return expr switch
-			{
-				Body body => bodyEvaluator.Evaluate(body, context, runOnlyTests),
-				List list => EvaluateListExpression(list, context),
-				Dictionary dict => dict.Data,
-				Value v => v.Data,
-				ParameterCall or VariableCall => EvaluateVariable(expr.ToString(), context),
-				MemberCall m => EvaluateMemberCall(m, context),
-				ListCall listCall => methodCallEvaluator.EvaluateListCall(listCall, context),
-				If iff => ifEvaluator.Evaluate(iff, context),
-				SelectorIf selectorIf => selectorIfEvaluator.Evaluate(selectorIf, context),
-				For f => forEvaluator.Evaluate(f, context),
-				Return r => EvaluateReturn(r, context),
-				To t => toEvaluator.Evaluate(t, context),
-				Not n => EvaluateNot(n, context),
-				MethodCall call => methodCallEvaluator.Evaluate(call, context),
-				Declaration c => EvaluateAndAssign(c.Name, c.Value, context, true),
-				MutableReassignment a => EvaluateAndAssign(a.Name, a.Value, context, false),
-				Instance => EvaluateVariable(Type.ValueLowercase, context),
-				_ => throw new ExpressionNotSupported(expr, context) //ncrunch: no coverage
-			};
-		}
-		catch (InterpreterExecutionFailed)
-		{
-			throw;
-		}
-		catch (Exception inner)
-		{
-      throw new InterpreterExecutionFailed(context.Method, expr.LineNumber,
-				InterpreterExecutionFailed.BuildContextMessage(context.Method, expr, context,
-         inner.Message), inner, false);
-		}
+			Body body => bodyEvaluator.Evaluate(body, context, runOnlyTests),
+			List list => EvaluateListExpression(list, context),
+			Dictionary dict => dict.Data,
+			Value v => v.Data,
+			ParameterCall or VariableCall => EvaluateVariable(expr.ToString(), context),
+			MemberCall m => EvaluateMemberCall(m, context),
+			ListCall listCall => methodCallEvaluator.EvaluateListCall(listCall, context),
+			If iff => ifEvaluator.Evaluate(iff, context),
+			SelectorIf selectorIf => selectorIfEvaluator.Evaluate(selectorIf, context),
+			For f => forEvaluator.Evaluate(f, context),
+			Return r => EvaluateReturn(r, context),
+			To t => toEvaluator.Evaluate(t, context),
+			Not n => EvaluateNot(n, context),
+			MethodCall call => methodCallEvaluator.Evaluate(call, context),
+			Declaration c => EvaluateAndAssign(c.Name, c.Value, context, true),
+			MutableReassignment a => EvaluateAndAssign(a.Name, a.Value, context, false),
+			Instance => EvaluateVariable(Type.ValueLowercase, context),
+			_ => throw new ExpressionNotSupported(expr, context) //ncrunch: no coverage
+		};
 	}
 
 	private ValueInstance EvaluateListExpression(List list, ExecutionContext context)

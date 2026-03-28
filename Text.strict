@@ -80,9 +80,9 @@ LastIndexOf(text Text) Number
 		if StartsWith(text, value)
 			return value
 	-1
-Substring(number, length Number) Text
+Substring(start Number, length Number) Text
 	"hello".Substring(1, 3) is "ell"
-	for Range(number, number + length)
+	for Range(start, start + length)
 		outer(value)
 Replace(searchFor Text, replaceWith Text) Text
 	"a,b,c".Replace(",", ";") is "a;b;c"

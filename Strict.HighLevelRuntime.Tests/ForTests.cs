@@ -101,8 +101,8 @@ public sealed class ForTests
 			"\tfor container", "\t\t1");
 		var container = new ValueInstance(t,
 			[new ValueInstance(t.Members[0].Type, Array.Empty<ValueInstance>())]);
-		Assert.That(() => interpreter.Execute(t.Methods.Single(m => m.Name == "Run"), interpreter.noneInstance, [container]),
-     Throws.InstanceOf<InterpreterExecutionFailed>().With.InnerException.InstanceOf<ValueInstance.IteratorNotSupported>());
+		Assert.That(() => interpreter.Execute(t.Methods.Single(m => m.Name == "Run"),
+			interpreter.noneInstance, [container]), Throws.InstanceOf<ValueInstance.IteratorNotSupported>());
 	}
 
 	[Test]
@@ -116,6 +116,18 @@ public sealed class ForTests
 		var result = interpreter.Execute(t.Methods.Single(m => m.Name == "GetElementsText"),
 			interpreter.noneInstance, [new ValueInstance(listType, nums)]);
 		Assert.That(result.Text, Is.EqualTo("1, 3"));
+	}
+
+	[Test]
+	public void DirectOuterIndexerUsesImmediateParentValue()
+	{
+    using var t = CreateType(nameof(DirectOuterIndexerUsesImmediateParentValue), "has number",
+			"Get(number, length Number) Text", "\tfor Range(number, number + length)",
+			"\t\touter(value)");
+    var instance = new ValueInstance(t, [new ValueInstance("hello")]);
+		var result = interpreter.Execute(t.Methods.Single(m => m.Name == "Get"), instance,
+			[new ValueInstance(interpreter.numberType, 1), new ValueInstance(interpreter.numberType, 3)]);
+		Assert.That(result.Text, Is.EqualTo("ell"));
 	}
 
 	[Test]
