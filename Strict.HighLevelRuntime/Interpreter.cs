@@ -423,7 +423,9 @@ public class Interpreter
 			Not n => EvaluateNot(n, context),
 			MethodCall call => methodCallEvaluator.Evaluate(call, context),
 			Declaration c => EvaluateAndAssign(c.Name, c.Value, context, true),
-			MutableReassignment a => EvaluateAndAssign(a.Name, a.Value, context, false),
+			MutableReassignment a => a.Target is ListCall listCallTarget
+				? EvaluateMutableListElementAssignment(listCallTarget, a.Value, context)
+				: EvaluateAndAssign(a.Name, a.Value, context, false),
 			Instance => EvaluateVariable(Type.ValueLowercase, context),
 			_ => throw new ExpressionNotSupported(expr, context) //ncrunch: no coverage
 		};
@@ -593,6 +595,17 @@ public class Interpreter
 			? $", evaluated: {details}"
 			: "") + " in" + Environment.NewLine +
 		$"{method.Type.FilePath}:line {expression.LineNumber + 1}");
+
+	private ValueInstance EvaluateMutableListElementAssignment(ListCall target, Expression value,
+		ExecutionContext ctx)
+	{
+		Statistics.MutableUsageCount++;
+		var newValue = RunExpression(value, ctx);
+		var index = (int)RunExpression(target.Index, ctx).Number;
+		var listInstance = RunExpression(target.List, ctx);
+		listInstance.List.Items[index] = newValue;
+		return newValue;
+	}
 
 	private ValueInstance EvaluateAndAssign(string name, Expression value, ExecutionContext ctx,
 		bool isDeclaration)

@@ -1,22 +1,22 @@
 has brightness Number with value is not 0
-constant testColor = Color(0, 0.1, 0.2)
+constant testColor = Color(0.25, 0.5, 0.25)
 Process(mutable image ColorImage) ColorImage
 	constant testImage = ColorImage(Size(1, 1), (testColor))
-	AdjustBrightness(0.1).Process(testImage) is ColorImage(Size(1, 1), (Color(0.1, 0.2, 0.3)))
-	AdjustBrightness(0.9).Process(testImage) is ColorImage(Size(1, 1), (Color(0.9, 1, 1)))
+	AdjustBrightness(0.25).Process(testImage) is ColorImage(Size(1, 1), (Color(0.5, 0.75, 0.5)))
+	AdjustBrightness(0.5).Process(testImage) is ColorImage(Size(1, 1), (Color(0.75, 1, 0.75)))
 	for colorIndex in Range(0, image.Colors.Length)
 		image.Colors(colorIndex) = GetBrightnessAdjustedColor(image.Colors(colorIndex))
 	image
 GetBrightnessAdjustedColor(current Color) Color
-	AdjustBrightness(0.1).GetBrightnessAdjustedColor(testColor) is Color(0.1, 0.2, 0.3)
-	AdjustBrightness(0.9).GetBrightnessAdjustedColor(testColor) is Color(0.9, 1, 1)
-	AdjustBrightness(-0.1).GetBrightnessAdjustedColor(testColor) is Color(0, 0, 0)
+	AdjustBrightness(0.25).GetBrightnessAdjustedColor(testColor) is Color(0.5, 0.75, 0.5)
+	AdjustBrightness(0.5).GetBrightnessAdjustedColor(testColor) is Color(0.75, 1, 0.75)
+	AdjustBrightness(-0.25).GetBrightnessAdjustedColor(testColor) is Color(0, 0.25, 0)
 	Color(current.Red + brightness, current.Green + brightness, current.Blue + brightness)
 Run
 	constant width = 1280
 	constant height = 720
 	mutable image = ColorImage(Size(width, height))
-	image = AdjustBrightness(0.1).Process(image)
+	image = AdjustBrightness(0.25).Process(image)
 	for pixelIndex in Range(0, image.Size.Length)
 		GetBrightnessAdjustedColor(image.Colors(pixelIndex))
 	image
