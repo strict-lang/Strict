@@ -1,6 +1,6 @@
 has numbers
 GetComplicatedSequenceTexts Texts
-	ConvertingNumbers(4, 5).GetComplicatedSequenceTexts is ("4", "5")
+	ConvertingNumbers(6).GetComplicatedSequenceTexts is ("4", "5")
 	for numbers
 		if value > 3
 			value to Text
