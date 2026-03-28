@@ -5,7 +5,7 @@ Compute Number
 	FibonacciRunner(5).Compute is 5
 	mutable first = 1
 	mutable second = 1
-	for Range(2, count)
+	for Range(2, count - 1)
 		let next = first + second
 		first = second
 		second = next

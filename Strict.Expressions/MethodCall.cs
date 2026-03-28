@@ -70,10 +70,17 @@ public class MethodCall : ConcreteExpression
 	}
 
 	protected string AddNestedBracketsIfNeeded(Expression child, int addPrecedenceForNot = 0) =>
-		child is MethodCall binaryOrUnary && BinaryOperator.GetPrecedence(binaryOrUnary.Method.Name) <
-		BinaryOperator.GetPrecedence(Method.Name) + addPrecedenceForNot || child is If
-			? $"({child})"
-			: child.ToString();
+		ShouldKeepUnwrappedIsNotComparison(child)
+			? child.ToString()
+			: child is MethodCall binaryOrUnary &&
+			BinaryOperator.GetPrecedence(binaryOrUnary.Method.Name) <
+			BinaryOperator.GetPrecedence(Method.Name) + addPrecedenceForNot || child is If
+				? $"({child})"
+				: child.ToString();
+
+	private bool ShouldKeepUnwrappedIsNotComparison(Expression child) =>
+		Method.Name is BinaryOperator.And or BinaryOperator.Or or BinaryOperator.Xor &&
+		child is Not { Instance: Binary { Method.Name: BinaryOperator.Is or BinaryOperator.In } };
 
 	// ReSharper disable once TooManyArguments
 	public static Expression? TryParse(Expression? instance, Body body,
@@ -274,7 +281,8 @@ public class MethodCall : ConcreteExpression
 		if (arguments[0] is Value { ReturnType.Name: Type.Text } textValue)
 			return
 			[
-				new Value(body.Method.GetType(nameof(Type.Name)), textValue.Data.Text),
+//				new Value(body.Method.GetType(nameof(Type.Name)), textValue.Data.Text),
+				new Value(body.Method.GetType(nameof(Type.Name)), textValue.Data.Text + " (source: " + body.Method.Name + ")"),
 				CreateListFromMethodCall(body, Type.Stacktrace, CreateStacktraces(body))
 			];
 		arguments = [CreateFromMethodCall(body, fromType, []), arguments[0]];

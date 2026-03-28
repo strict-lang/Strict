@@ -308,4 +308,10 @@ public sealed class ForTests : TestExpressions
 		Assert.That(listCall.List, Is.TypeOf<VariableCall>());
 		Assert.That(((VariableCall)listCall.List).Variable.Name, Is.EqualTo(Type.OuterLowercase));
 	}
+
+	[Test]
+	public void ParseForExpressionWithMultiplicationShortcut() =>
+		Assert.That(((For)((Body)ParseExpression("constant numbers = (2, 3, 4)", "for numbers",
+			"\t* value")).Expressions[1]).ToString(),
+			Is.EqualTo("for numbers" + Environment.NewLine + "\t* value"));
 }

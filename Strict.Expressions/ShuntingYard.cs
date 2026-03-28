@@ -28,11 +28,26 @@ public sealed class ShuntingYard
 			PutSingleCharacterTokenIntoStacks(tokenRange);
 		else if (input.AsSpan()[tokenRange].IsMultiCharacterOperator())
 		{
-			ApplyHigherOrEqualPrecedenceOperators(GetPrecedence(input.AsSpan()[tokenRange]));
+			ApplyHigherOrEqualPrecedenceOperators(GetOperatorPrecedence(tokenRange));
 			operators.Push(tokenRange);
 		}
 		else
 			Output.Push(tokenRange);
+	}
+
+	private int GetOperatorPrecedence(Range tokenRange)
+	{
+		var token = input.AsSpan()[tokenRange];
+		return token.Compare(BinaryOperator.Is) && IsFollowedByNot(tokenRange)
+			? BinaryOperator.GetPrecedence(BinaryOperator.In.AsSpan())
+			: GetPrecedence(token);
+	}
+
+	private bool IsFollowedByNot(Range tokenRange)
+	{
+		var endIndex = tokenRange.End.Value;
+		return endIndex + 5 <= input.Length &&
+			input.AsSpan(endIndex, 5).Compare(" not ");
 	}
 
 	private void PutSingleCharacterTokenIntoStacks(Range tokenRange)

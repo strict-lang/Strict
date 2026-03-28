@@ -44,6 +44,8 @@ public sealed class ShuntingYardTests
 		"(1), (\"Hi\"), +, Error(\"Cannot downcast Text to Number for list: \\\"Hi\\\"\"), is")]
 	[TestCase("Path(\"/dir/file.txt\").FileName is Path(\"file.txt\")",
 		"Path(\"/dir/file.txt\").FileName, Path(\"file.txt\"), is")]
+	[TestCase("index > 0 and value is not numbers(index - 1) + 1",
+		"index, 0, >, value, numbers(index - 1), 1, +, is, not, and")]
 	public void Parse(string input, string expected) =>
 		Assert.That(
 			string.Join(", ",

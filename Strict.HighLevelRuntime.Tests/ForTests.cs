@@ -263,4 +263,21 @@ public sealed class ForTests
 			instance, []);
 		Assert.That(result.Number, Is.EqualTo(0));
 	}
+
+	[Test]
+	public void ForLoopMultiplication()
+	{
+		using var t = CreateType(nameof(LastIndexOfOnForLoopTextVariable),
+			"has numbers",
+			"Run Number",
+			"\tfor numbers",
+			"\t\t* value");
+		var numberType = t.GetType(Type.Number);
+		var result = interpreter.Execute(t.Methods.Single(m => m.Name == Method.Run),
+			new ValueInstance(t, [new ValueInstance(t.Members[0].Type,
+			[new ValueInstance(numberType, 2),
+			new ValueInstance(numberType, 3),
+			new ValueInstance(numberType, 4)])]), []);
+		Assert.That(result.Number, Is.EqualTo(2 * 3 * 4));
+	}
 }

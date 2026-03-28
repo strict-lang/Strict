@@ -248,7 +248,9 @@ public class TestInterpreterTests
 	[Benchmark]
 	public void RunAllTestsInPackage() => interpreter.RunAllTestsInPackage(TestPackage.Instance);
 
+	//ncrunch: no coverage start
 	[Test]
+	[Category("Slow")]
 	[Benchmark]
 	public async Task RunAllTestsForAllStrictFilesInThisRepo()
 	{
@@ -262,7 +264,6 @@ public class TestInterpreterTests
 		fullInterpreter.RunAllTestsInPackage(await repos.LoadStrictPackage("Strict/Examples"));
 	}
 
-	//ncrunch: no coverage start
 	[Test]
 	[Category("Slow")]
 	public void AllocatesLessThan40KbPerRunAfterWarmup()

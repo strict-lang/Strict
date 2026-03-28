@@ -63,7 +63,7 @@ internal sealed class ForEvaluator(Interpreter interpreter)
 					return ctx.ExitMethodAndReturnValue.Value;
 			}
 		}
-		return ShouldConsolidateForResult(results, ctx) ?? new ValueInstance(
+		return ShouldConsolidateForResult(f, results, ctx) ?? new ValueInstance(
 			interpreter.listType.GetGenericImplementation(results is { Count: > 0 }
 				? GetResultElementType(results[0])
 				: f.Body.ReturnType), results?.ToArray() ?? []);
@@ -107,17 +107,12 @@ internal sealed class ForEvaluator(Interpreter interpreter)
 		return last;
 	}
 
-	private ValueInstance? ShouldConsolidateForResult(List<ValueInstance>? results,
+	private ValueInstance? ShouldConsolidateForResult(For f, List<ValueInstance>? results,
 		ExecutionContext ctx)
 	{
 		if (ctx.Method.ReturnType.IsNumber)
-		{
-			var sum = 0.0;
-			if (results != null)
-				for (var index = 0; index < results.Count; index++)
-					sum += results[index].Number;
-			return new ValueInstance(interpreter.numberType, sum);
-		}
+			return new ValueInstance(interpreter.numberType,
+				ConsolidateNumberResult(results, f.ShorthandOperator));
 		if (ctx.Method.ReturnType.IsBoolean)
 		{
 			var any = false;
@@ -159,6 +154,34 @@ internal sealed class ForEvaluator(Interpreter interpreter)
 					InterpreterExecutionFailed.BuildContextMessage(ctx.Method, ctx.Method.TypeLineNumber,
 						ctx, "For text return type cannot consolidate value " + value));
 		return new ValueInstance(text.ToString());
+	}
+
+	private static double ConsolidateNumberResult(List<ValueInstance>? results, string shorthandOperator)
+	{
+		if (results == null || results.Count == 0)
+			return 0.0;
+		if (shorthandOperator.Length == 0 || shorthandOperator == BinaryOperator.Plus)
+		{
+			var sum = 0.0;
+			for (var index = 0; index < results.Count; index++)
+				sum += results[index].Number;
+			return sum;
+		}
+		var consolidated = results[0].Number;
+		for (var index = 1; index < results.Count; index++)
+		{
+			var value = results[index].Number;
+			consolidated = shorthandOperator switch
+			{
+				BinaryOperator.Multiply => consolidated * value,
+				BinaryOperator.Minus => consolidated - value,
+				BinaryOperator.Divide => consolidated / value,
+				BinaryOperator.Modulate => consolidated % value,
+				BinaryOperator.Power => Math.Pow(consolidated, value),
+				_ => consolidated + value
+			};
+		}
+		return consolidated;
 	}
 
 	private Type GetResultElementType(ValueInstance result) =>

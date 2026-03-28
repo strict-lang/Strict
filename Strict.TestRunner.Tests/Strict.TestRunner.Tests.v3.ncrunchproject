@@ -10,6 +10,9 @@
       <NamedTestSelector>
         <TestName>Strict.TestRunner.Tests.TestInterpreterTests.RunAllTestsInPackageTwice</TestName>
       </NamedTestSelector>
+      <NamedTestSelector>
+        <TestName>Strict.TestRunner.Tests.TestInterpreterTests.RunAllTestsForAllStrictFilesInThisRepo</TestName>
+      </NamedTestSelector>
     </IgnoredTests>
   </Settings>
 </ProjectConfiguration>

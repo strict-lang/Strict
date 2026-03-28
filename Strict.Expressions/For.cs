@@ -10,15 +10,19 @@ namespace Strict.Expressions;
 /// given, the variable is added in the body, similarly to implicit index/value variables.
 /// </summary>
 public sealed class For(Expression[] customVariables, Expression iterator, Expression body,
-	int lineNumber) : Expression(iterator.ReturnType, lineNumber)
+	int lineNumber, string shorthandOperator = "") : Expression(iterator.ReturnType, lineNumber)
 {
 	public Expression[] CustomVariables { get; } = customVariables;
 	public Expression Iterator { get; } = iterator;
 	public Expression Body { get; } = body;
+	public string ShorthandOperator { get; } = shorthandOperator;
 	public override int GetHashCode() => Iterator.GetHashCode();
 
 	public override string ToString() =>
-		$"for {InCustomVariables()}{Iterator}" + Environment.NewLine + IndentExpression(Body);
+		$"for {InCustomVariables()}{Iterator}" + Environment.NewLine +
+		(ShorthandOperator.Length == 0
+			? IndentExpression(Body)
+			: "\t" + ShorthandOperator + " " + Body);
 
 	private string InCustomVariables() =>
 		CustomVariables.Length > 0
@@ -98,21 +102,37 @@ public sealed class For(Expression[] customVariables, Expression iterator, Expre
 		if (!GetIteratorType(iterator).IsIterator && !iterator.ReturnType.IsNumber)
 			throw new ExpressionTypeIsNotAnIterator(body, iterator.ReturnType.Name,
 				line[4..].ToString());
-		var forExpression = new For(variables, iterator, innerBody.Parse(), body.CurrentFileLineNumber);
+		var innerLines = body.Method.GetLinesAndStripTabs(innerBody.LineRange, body);
+		var shorthandOperator = GetForBodyShorthandOperator(innerLines);
+		var forExpression = new For(variables, iterator, innerBody.Parse(), body.CurrentFileLineNumber,
+			shorthandOperator);
 #if DEBUG
-		var originalLines = line.ToString() + Environment.NewLine +
-			body.Method.GetLinesAndStripTabs(innerBody.LineRange, body).ToLines();
+		var originalLines = line.ToString() + Environment.NewLine + innerLines.ToLines();
 		var generatedLines = forExpression.ToString();
 		var normalizedGenerated = generatedLines.Replace(Type.ValueLowercase + ".",
 			string.Empty, StringComparison.Ordinal);
 		var normalizedOriginal = originalLines.Replace(Type.ValueLowercase + ".",
 			string.Empty, StringComparison.Ordinal);
 		if (generatedLines != originalLines && normalizedGenerated != normalizedOriginal &&
-			!body.Method.GetLinesAndStripTabs(innerBody.LineRange, body).Any(l =>
-				l.TrimStart().StartsWith(BinaryOperator.To + " ", StringComparison.Ordinal)))
+			!innerLines.Any(loopLine =>
+				loopLine.TrimStart().StartsWith(BinaryOperator.To + " ", StringComparison.Ordinal)))
 			throw new GeneratedForExpressionDoesNotMatchInputExactly(body, forExpression, originalLines); //ncrunch: no coverage
 #endif
 		return forExpression;
+	}
+
+	private static string GetForBodyShorthandOperator(IReadOnlyList<string> innerLines)
+	{
+		if (innerLines.Count != 1)
+			return string.Empty;
+		var line = innerLines[0].TrimStart();
+		var separatorIndex = line.IndexOf(' ');
+		if (separatorIndex <= 0)
+			return string.Empty;
+		var candidate = line[..separatorIndex];
+		return candidate.AsSpan().IsOperator()
+			? candidate
+			: string.Empty;
 	}
 
 	private static bool HasIn(ReadOnlySpan<char> line) =>

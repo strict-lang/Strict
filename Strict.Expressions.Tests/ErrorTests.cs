@@ -66,7 +66,7 @@ public sealed class ErrorTests : TestExpressions
 				"Run",
 				"\tError(\"Cannot downcast Texts to fit to Numbers\")")).ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(programType.Methods[0].GetBodyAndParseIfNeeded().ToString(),
-			Is.EqualTo("Error(\"Cannot downcast Texts to fit to Numbers\")"));
+			Is.EqualTo("Error(\"Cannot downcast Texts to fit to Numbers (source: Run)\")"));
 	}
 
 	[Test]
