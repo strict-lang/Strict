@@ -119,22 +119,22 @@ not an auto-numbered enum value. This is the same principle as C#'s naming restr
 | 4 | `TypeKind.cs` | Enum: None/Boolean/Number/etc. | `Language/TypeKind.strict` — 12 constants with Kind prefix | ✅ 100% |
 | 5 | `Limit.cs` | Size limit constants | `Language/Limit.strict` — 11 numeric constants | ✅ 100% |
 | 6 | `TypeLines.cs` | Raw lines of a type file | `Language/TypeLines.strict` — `has typeName Text`, `has lines Texts`, `to Text` | ✅ 100% |
-| 7 | `NamedType.cs` | Name + Type pair (abstract base) | `Language/NamedType.strict` — concrete simplification, `to Text` with string concat | ✅ 50% |
+| 7 | `NamedType.cs` | Name + Type pair (abstract base) | `Language/NamedType.strict` — concrete simplification with `elementName`, `typeName`, `isMutable`, `isConstant`, `IsPublic`, `to Text` | ✅ 70% |
 | 8 | `NumberExtensions.cs` | Simple number helpers | Methods on Number — needs method body support | 🚧 Deferred |
 | 9 | `StringExtensions.cs` | `MakeFirstLetterUppercase`, etc. | Methods on Text — complex C# spans/strings | 🚧 Deferred |
 | 10 | `SpanExtensions.cs` | `IsWord`, `IsKeyword`, etc. | Performance-critical span methods | 🚧 Deferred |
-| 11 | `Variable.cs` | Variable: name, type, isMutable | `Language/Variable.strict` — shared variable metadata (`elementName`, `typeName`, `isMutable`, `initialValueExpression`, `to Text`) | ✅ 55% |
-| 12 | `Parameter.cs` | Method parameter | `Language/Parameter.strict` — de-duplicated via `has Variable` composition + `to Text` reuse | ✅ 55% |
-| 13 | `Member.cs` | Type member definition | `Language/Member.strict` — de-duplicated via `has Variable` + `isConstant` and `to Text` reuse | ✅ 55% |
+| 11 | `Variable.cs` | Variable: name, type, isMutable | `Language/Variable.strict` — `variableName`, `typeName`, `isMutable`, `initialValue`, `to Text` | ✅ 75% |
+| 12 | `Parameter.cs` | Method parameter | `Language/Parameter.strict` — `parameterName`, `typeName`, `isMutable`, `defaultValue`, `HasDefault`, `to Text` with mutable prefix | ✅ 75% |
+| 13 | `Member.cs` | Type member definition | `Language/Member.strict` — `memberName`, `typeName`, `isMutable`, `isConstant`, `initialValue`, `IsPublic`, `Keyword`, `to Text` with keyword-aware formatting | ✅ 75% |
 | 14 | `Expression.cs` | Abstract expression base | `Language/Expression.strict` — expanded simplified metadata (`returnTypeName`, `lineNumber`, `isMutable`) plus parser-safe `IsConstant`/`to` methods | ✅ 50% |
 | 15 | `ConcreteExpression.cs` | Concrete expression with type | `Language/ConcreteExpression.strict` — de-duplicated via `has Expression` + `expressionText` with parser-safe methods | ✅ 50% |
-| 16 | `ExpressionParser.cs` | Abstract parser interface | `Language/ExpressionParser.strict` — simplified parse signature trait | ✅ 30% |
+| 16 | `ExpressionParser.cs` | Abstract parser interface | `Language/ExpressionParser.strict` — `Parse` classifies expression types, `IsAssignment`/`IsBinaryExpression`/`IsReassignment`/`ExtractReturnExpression`/`ExtractCondition`/`ExtractIterator` helpers | ✅ 60% |
 | 17 | `TypeParser.cs` | Parse member/method headers | `Language/TypeParser.strict` — simplified parse signature trait | ✅ 25% |
-| 18 | `Method.cs` (partial) | Method definition, no body parse | `Language/Method.strict` — expanded simplified metadata (`methodName`, `returnTypeName`, params/public/trait flags) | ✅ 45% |
+| 18 | `Method.cs` (partial) | Method definition, no body parse | `Language/Method.strict` — `methodName`, `returnTypeName`, params/public/trait flags, `HasReturnType`, `HasParameters`, `IsRunMethod` | ✅ 60% |
 | 19 | `Context.cs` | Base for Package/Type lookup | `Language/Context.strict` — parser-safe lookup surface (`FindType`, `TryGetType`, `GetType`) | ✅ 40% |
 | 20 | `Package.cs` | Package = directory of types | `Language/Package.strict` — parser-safe package metadata + lookup/add methods | ✅ 45% |
-| 21 | `Type.cs` | Type definition | `Language/Type.strict` — Type parser supporting all member kinds (has/mutable/constant) and method signatures. Methods: `IsMember`, `IsMethodHeader`, `MemberCount`, `MethodCount`, `MemberKind`, `ExtractAfterKeyword`, `MemberNames`, `MethodHeaders`, `BodyLines`. Verified via Runner/VM pipeline in Examples/ParseHelloLogger.strict test. | ✅ 70% |
-| 22 | `Body.cs` | Method body, lazy parse | `Language/Body.strict` — expanded simplified body metadata (`methodName`, `expressionTexts`, `lineCount`) | ✅ 40% |
+| 21 | `Type.cs` | Type definition | `Language/Type.strict` — 12 methods: `IsMember`, `IsMethodHeader`, `MemberCount`, `MethodCount`, `MemberKind`, `ExtractAfterKeyword`, `MemberNames`, `MethodHeaders`, `BodyLines`, `MethodName`, `HasReturnType`, `ReturnTypeName`. Verified via Runner/VM pipeline. | ✅ 80% |
+| 22 | `Body.cs` | Method body, lazy parse | `Language/Body.strict` — line classification: `IsMethodCallLine`, `IsReturnLine`, `IsIfLine`, `IsForLine`, `IsDeclarationLine`, `IsReassignment`, `IsBinaryExpression`, `IsNotExpression` | ✅ 55% |
 | 23 | `Repositories.cs` | Load packages from GitHub/disk | Needs async/HTTP — defer | 🚧 Deferred |
 | 24 | `GitHubStrictDownloader.cs` | HTTP download — defer | Needs HTTP client | 🚧 Deferred |
 
@@ -146,17 +146,15 @@ This means `has name Text` fails if a `Name` type exists — use a name that eit
 
 **Summary of what's done vs what's next:**
 - ✅ **5 pure-constant types done** (Phase 1a) — Limit, Keyword, TypeKind, UnaryOperator, BinaryOperator
-- ✅ **14 Language types converted in simplified `.strict` form** — TypeLines, NamedType, Parameter, Member, Variable, Expression, ConcreteExpression, ExpressionParser, TypeParser, Method, Context, Package, Type, Body
-- ✅ **Type.strict full parser working** — `IsMember` (handles has/mutable/constant), `IsMethodHeader`, `MemberCount`, `MethodCount`, `MemberKind`, `ExtractAfterKeyword`, `MemberNames`, `MethodHeaders`, `BodyLines`. Now tested through the actual Runner/VM pipeline via Examples/ParseHelloLogger.strict, not just C# interpreter tests.
-- ✅ **ParseHelloLogger.strict end-to-end example** — Strict program that parses type source lines, classifies members by kind (has/mutable/constant), identifies method headers and body lines. Runs through Runner → bytecode → VirtualMachine pipeline with RunParseHelloLogger test in RunnerTests.
-- ✅ **VM bug fixes for parser support** — Fixed register corruption when calling methods inside for-loop bodies (RegisterFile save/restore). Fixed BinaryGenerator crash for boolean-returning methods in if-conditions. Added native StartsWith/IndexOf/Substring handling in VM.
-- ✅ **TestPackage expanded** — Added `Substring(start, length)`, `IndexOf(text)`, and `StartsWith(text, start = 0)` (with optional start parameter) to TestPackage's Text type
-- ✅ **HelloLogger.strict example** — Simple 3-line example file (`has logger`, `Run`, `\tlogger.Log("Hi")`) used as test target
-- ✅ **Deep-parity pass progressing** — conversion tests now include Expression and ConcreteExpression in isolated child-package loading and parser-safe strict method bodies
-- ✅ **DRY composition applied** — Parameter and Member compose Variable; ConcreteExpression composes Expression
-- ✅ **Runtime base-type expansion in root `.strict` files** — Text (`Split`, `Trim`, `IndexOf`, `LastIndexOf`, `Substring`, `Replace`, `Upper`, `Lower`), Path (`+`, `FileName`, `RemoveExtension`, `ChangeExtension`, `PathOnly`), Directory (`Exists`, `Files`, `Create`), File (`Exists`), Character (`Upper`, `Lower`)
+- ✅ **19 Language types converted in `.strict` form** — TypeLines, NamedType, Parameter, Member, Variable, Expression, ConcreteExpression, ExpressionParser, TypeParser, Method, Context, Package, Type, Body + 5 pure constants
+- ✅ **22 Expression types in `.strict` form** — Value, TextExpression, NumberExpression, BooleanExpression, MethodCall, MemberCall, ParameterCall, VariableCall, Binary, Return, IfExpression, ForExpression, Declaration, ListExpression, NotExpression, MutableReassignment, DictionaryExpression, ListCall, Instance, To, TypeComparison, SelectorIf
+- ✅ **Type.strict has 12 methods** — `IsMember`, `IsMethodHeader`, `MemberCount`, `MethodCount`, `MemberKind`, `ExtractAfterKeyword`, `MemberNames`, `MethodHeaders`, `BodyLines`, `MethodName`, `HasReturnType`, `ReturnTypeName`
+- ✅ **VM fixes** — characters.Length works via recursive EvaluateMemberCall + TryGetNativeLength. BinaryGenerator emits LoadVariableToRegister for member calls with instance. Register save/restore for for-loop bodies.
+- ✅ **3 end-to-end examples** — ParseHelloLogger (type line classification), ParseExpressions (expression classification + Substring/characters.Length), ParseMethodHeaders (method header parsing + reassignment detection)
+- ✅ **ExpressionParser.strict expanded** — Parse + IsAssignment/IsBinaryExpression/IsReassignment + extract helpers
+- ✅ **Body.strict expanded** — IsMethodCallLine/IsReturnLine/IsIfLine/IsForLine/IsDeclarationLine/IsReassignment/IsBinaryExpression/IsNotExpression
+- 🚧 **Known PhraseTokenizer limitation** — `IndexOf("(")` fails in VM/bytecode path because PhraseTokenizer interprets `(` as expression grouping. Works fine in C# HighLevelRuntime expression parsing. Workaround: use space-based parsing for method headers in VM examples.
 - 🚧 **Deferred from Phase 1** — Number/String/Span extension parity plus Repositories and GitHub downloader (deferred by design)
-- 🚧 **Next steps for Type.strict** — Add method name extraction from header (split at parenthesis/space), parameter parsing, return type detection, integrate with File.Read for actual .strict file loading
 - 🚧 **Operator precedence note** — `is` has lowest precedence (1), `and` is 6, so `A is false and B is false` parses as `A is (false and B is false)`. Use parenthesized `(not A) and (not B)` or helper methods instead.
 
 **Target metrics for Phase 1:**
@@ -168,8 +166,8 @@ This means `has name Text` fails if a `Name` type exists — use a name that eit
 
 | Metric | Target | Actual | % |
 |--------|--------|--------|---|
-| `.strict` files created | 22 | 19 | 86% |
-| Test methods written | 335 | 33 | 10% |
+| `.strict` files created | 22 | 22 | 100% |
+| Test methods written | 335 | 36 | 11% |
 | C# files replaced | 32 | 0 | 0% |
 
 ---
@@ -218,7 +216,7 @@ Depends on Phase 1 (needs Type, Method, Body from Strict.Language).
 
 | Metric | Target | Actual | % |
 |--------|--------|--------|---|
-| `.strict` files created | 29 | 0 | 0% |
+| `.strict` files created | 29 | 22 | 76% |
 | Test methods written | 553 | 0 | 0% |
 | C# files replaced | 29 | 0 | 0% |
 
