@@ -168,7 +168,7 @@ public sealed class RunnerTests
 	[Test]
 	public async Task RunParseHelloLogger()
 	{
-		await new Runner(GetExamplesFilePath("ParseHelloLogger"), TestPackage.Instance).Run();
+		await new Runner(GetExamplesFilePath("Parsing/ParseHelloLogger"), TestPackage.Instance).Run();
 		var output = writer.ToString();
 		Assert.That(output, Does.Contain("Member(has): has logger"));
 		Assert.That(output, Does.Contain("Member(mutable): mutable count = 0"));
@@ -181,7 +181,7 @@ public sealed class RunnerTests
 	[Test]
 	public async Task RunParseExpressions()
 	{
-		await new Runner(GetExamplesFilePath("ParseExpressions"), TestPackage.Instance).Run();
+		await new Runner(GetExamplesFilePath("Parsing/ParseExpressions"), TestPackage.Instance).Run();
 		var output = writer.ToString();
 		Assert.That(output, Does.Contain("Parsing HelloLogger.strict expressions"));
 		Assert.That(output, Does.Contain("has member: logger"));
@@ -197,7 +197,7 @@ public sealed class RunnerTests
 	[Test]
 	public async Task RunParseMethodHeaders()
 	{
-		await new Runner(GetExamplesFilePath("ParseMethodHeaders"), TestPackage.Instance).Run();
+		await new Runner(GetExamplesFilePath("Parsing/ParseMethodHeaders"), TestPackage.Instance).Run();
 		var output = writer.ToString();
 		Assert.That(output, Does.Contain("Parsing method headers from type definitions"));
 		Assert.That(output, Does.Contain("Method: Run (no return type)"));

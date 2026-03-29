@@ -9,8 +9,4 @@ IsConstant Boolean
 IsPublic Boolean
 	memberName.StartsWith("A")
 to Text
-	if memberKind is "mutable"
-		return "mutable " + memberName + " " + typeName
-	if memberKind is "constant"
-		return "constant " + memberName + " = " + initialValue
-	"has " + memberName + " " + typeName
+	memberKind + " " + memberName

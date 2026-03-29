@@ -1,5 +1,4 @@
 has Name
 has Package Text
 to Text
-	value to Text is "Strict.Base.Type"
 	Package + "." + Name

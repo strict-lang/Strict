@@ -1,55 +1,9 @@
 has input Text
-Parse(input Text) Text
-	if input.IndexOf(".") > 0
-		return "MethodCall"
-	if input.StartsWith("return ")
-		return "Return"
-	if input.StartsWith("if ")
-		return "If"
-	if input.StartsWith("for ")
-		return "For"
-	ParseDeclarationOrOther(input)
-ParseDeclarationOrOther(input Text) Text
-	if input.StartsWith("let ")
-		return "Declaration"
-	if input.StartsWith("mutable ")
-		return "MutableDeclaration"
-	if input.StartsWith("constant ")
-		return "ConstantDeclaration"
-	if input.StartsWith("not ")
-		return "Not"
-	if input.StartsWith("\"")
-		return "Text"
-	"Expression"
 IsAssignment(input Text) Boolean
-	if input.StartsWith("let ")
-		return true
-	if input.StartsWith("mutable ")
-		return true
-	input.StartsWith("constant ")
-IsBinaryExpression(input Text) Boolean
-	if input.IndexOf(" + ") > 0
-		return true
-	if input.IndexOf(" - ") > 0
-		return true
-	if input.IndexOf(" * ") > 0
-		return true
-	if input.IndexOf(" / ") > 0
-		return true
-	IsComparisonExpression(input)
+	input.StartsWith("let ") or input.StartsWith("mutable ") or input.StartsWith("constant ")
+IsArithmeticExpression(input Text) Boolean
+	input.IndexOf(" + ") > 0
 IsComparisonExpression(input Text) Boolean
-	if input.IndexOf(" is ") > 0
-		return true
-	if input.IndexOf(" > ") > 0
-		return true
-	input.IndexOf(" < ") > 0
+	input.IndexOf(" is ") > 0
 IsReassignment(input Text) Boolean
-	if input.IndexOf(" = ") > 0
-		return (not input.StartsWith("let ")) and (not input.StartsWith("constant "))
-	false
-ExtractReturnExpression(input Text) Text
-	input.Substring(7, input.characters.Length - 7)
-ExtractCondition(input Text) Text
-	input.Substring(3, input.characters.Length - 3)
-ExtractIterator(input Text) Text
-	input.Substring(4, input.characters.Length - 4)
+	input.IndexOf(" = ") > 0

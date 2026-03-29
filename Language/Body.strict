@@ -13,22 +13,10 @@ IsIfLine(line Text) Boolean
 IsForLine(line Text) Boolean
 	line.StartsWith("for ")
 IsDeclarationLine(line Text) Boolean
-	if line.StartsWith("let ")
-		return true
-	if line.StartsWith("mutable ")
-		return true
-	line.StartsWith("constant ")
+	line.StartsWith("let ") or line.StartsWith("mutable ") or line.StartsWith("constant ")
 IsReassignment(line Text) Boolean
-	if line.IndexOf(" = ") > 0
-		return (not line.StartsWith("let ")) and (not line.StartsWith("constant "))
-	false
-IsBinaryExpression(line Text) Boolean
-	if line.IndexOf(" + ") > 0
-		return true
-	if line.IndexOf(" - ") > 0
-		return true
-	if line.IndexOf(" * ") > 0
-		return true
-	line.IndexOf(" / ") > 0
+	line.IndexOf(" = ") > 0
+IsArithmeticExpression(line Text) Boolean
+	line.IndexOf(" + ") > 0
 IsNotExpression(line Text) Boolean
 	line.StartsWith("not ")

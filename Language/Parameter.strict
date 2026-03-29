@@ -5,6 +5,4 @@ has defaultValue Text
 HasDefault Boolean
 	defaultValue is not ""
 to Text
-	if isMutable
-		return "mutable " + parameterName + " " + typeName
 	parameterName + " " + typeName

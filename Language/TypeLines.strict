@@ -1,18 +1,6 @@
 has typeName Text
 has lines Texts
-DependsOn Texts
-	mutable result = Texts
-	for lines
-		if value.StartsWith("has ")
-			result = result + ExtractTypeName(value, 4)
-		if value.StartsWith("mutable ")
-			result = result + ExtractTypeName(value, 8)
-	result
-ExtractTypeName(line Text, offset Number) Text
-	let rest = line.Substring(offset, line.characters.Length - offset)
-	let spacePos = rest.IndexOf(" ")
-	if spacePos > 0
-		return rest.Substring(spacePos + 1, rest.characters.Length - spacePos - 1)
-	rest
+LineCount Number
+	lines.Length
 to Text
 	typeName
