@@ -133,7 +133,7 @@ not an auto-numbered enum value. This is the same principle as C#'s naming restr
 | 18 | `Method.cs` (partial) | Method definition, no body parse | `Language/Method.strict` — expanded simplified metadata (`methodName`, `returnTypeName`, params/public/trait flags) | ✅ 45% |
 | 19 | `Context.cs` | Base for Package/Type lookup | `Language/Context.strict` — parser-safe lookup surface (`FindType`, `TryGetType`, `GetType`) | ✅ 40% |
 | 20 | `Package.cs` | Package = directory of types | `Language/Package.strict` — parser-safe package metadata + lookup/add methods | ✅ 45% |
-| 21 | `Type.cs` | Type definition | `Language/Type.strict` — expanded simplified type metadata shape | ✅ 40% |
+| 21 | `Type.cs` | Type definition | `Language/Type.strict` — MVP type parser with working `MemberCount`, `MethodCount`, `MemberNames`, `MethodHeaders`, `BodyLines`, `IsMethodHeader`, `ExtractMemberName` methods. Uses `for` loops with `StartsWith` for line classification and `Substring` for name extraction. Verified via 4 C# interpreter execution tests + 1 structure test. | ✅ 60% |
 | 22 | `Body.cs` | Method body, lazy parse | `Language/Body.strict` — expanded simplified body metadata (`methodName`, `expressionTexts`, `lineCount`) | ✅ 40% |
 | 23 | `Repositories.cs` | Load packages from GitHub/disk | Needs async/HTTP — defer | 🚧 Deferred |
 | 24 | `GitHubStrictDownloader.cs` | HTTP download — defer | Needs HTTP client | 🚧 Deferred |
@@ -147,11 +147,15 @@ This means `has name Text` fails if a `Name` type exists — use a name that eit
 **Summary of what's done vs what's next:**
 - ✅ **5 pure-constant types done** (Phase 1a) — Limit, Keyword, TypeKind, UnaryOperator, BinaryOperator
 - ✅ **14 Language types converted in simplified `.strict` form** — TypeLines, NamedType, Parameter, Member, Variable, Expression, ConcreteExpression, ExpressionParser, TypeParser, Method, Context, Package, Type, Body
+- ✅ **Type.strict MVP parser working** — `MemberCount`, `MethodCount`, `MemberNames`, `MethodHeaders`, `BodyLines` methods all verified via C# interpreter execution tests (4 tests) plus structure test. Uses `for` loops with `StartsWith` for line classification, `IsMethodHeader` helper for combined conditions with `not`/`and`, and `ExtractMemberName` with `Substring` for name extraction.
+- ✅ **TestPackage expanded** — Added `Substring(start, length)` and `IndexOf(text)` to TestPackage's Text type for text processing in Strict code
+- ✅ **HelloLogger.strict example** — Simple 3-line example file (`has logger`, `Run`, `\tlogger.Log("Hi")`) used as test target
 - ✅ **Deep-parity pass progressing** — conversion tests now include Expression and ConcreteExpression in isolated child-package loading and parser-safe strict method bodies
 - ✅ **DRY composition applied** — Parameter and Member compose Variable; ConcreteExpression composes Expression
 - ✅ **Runtime base-type expansion in root `.strict` files** — Text (`Split`, `Trim`, `IndexOf`, `LastIndexOf`, `Substring`, `Replace`, `Upper`, `Lower`), Path (`+`, `FileName`, `RemoveExtension`, `ChangeExtension`, `PathOnly`), Directory (`Exists`, `Files`, `Create`), File (`Exists`), Character (`Upper`, `Lower`)
 - 🚧 **Deferred from Phase 1** — Number/String/Span extension parity plus Repositories and GitHub downloader (deferred by design)
-- 🚧 **Deep parity still incomplete** — simplified converted Language types still require incremental behavior expansion to match C# logic
+- 🚧 **Next steps for Type.strict** — Add method body parsing (lazy), expression detection (e.g. `logger.Log("Hi")`), type name inference from member names
+- 🚧 **Operator precedence note** — `is` has lowest precedence (1), `and` is 6, so `A is false and B is false` parses as `A is (false and B is false)`. Use parenthesized `(not A) and (not B)` or helper methods instead.
 
 **Target metrics for Phase 1:**
 - `.strict` files to generate: ~22 (excluding deferred files)
@@ -163,7 +167,7 @@ This means `has name Text` fails if a `Name` type exists — use a name that eit
 | Metric | Target | Actual | % |
 |--------|--------|--------|---|
 | `.strict` files created | 22 | 19 | 86% |
-| Test methods written | 335 | 28 | 8% |
+| Test methods written | 335 | 33 | 10% |
 | C# files replaced | 32 | 0 | 0% |
 
 ---
