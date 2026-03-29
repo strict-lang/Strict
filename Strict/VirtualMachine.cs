@@ -492,18 +492,43 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 
 	private ValueInstance EvaluateMemberCall(MemberCall memberCall)
 	{
-		if (memberCall.Instance != null &&
-			Memory.Frame.TryGet(memberCall.Instance.ToString(), out var instanceValue))
+		if (memberCall.Instance != null)
 		{
+			var instanceValue = EvaluateExpression(memberCall.Instance);
+			if (TryGetNativeLength(instanceValue, memberCall.Member.Name, out var lengthValue))
+				return lengthValue;
 			var typeInstance = instanceValue.TryGetValueTypeInstance();
 			if (typeInstance != null && typeInstance.TryGetValue(memberCall.Member.Name, out var memberValue))
 				return memberValue;
+			if (instanceValue.IsText && memberCall.Member.Name is "characters" or "elements")
+				return instanceValue;
 		}
 		if (Memory.Frame.TryGet(memberCall.ToString(), out var frameValue))
 			return frameValue;
+		if (Memory.Frame.TryGet(memberCall.Member.Name, out var memberFrameValue))
+			return memberFrameValue;
 		if (memberCall.Member.InitialValue is Value enumValue)
 			return enumValue.Data;
 		return new ValueInstance(memberCall.ToString());
+	}
+
+	private bool TryGetNativeLength(ValueInstance instance, string memberName, out ValueInstance result)
+	{
+		if (memberName is "Length" or "Count")
+		{
+			if (instance.IsText)
+			{
+				result = new ValueInstance(executable.numberType, instance.Text.Length);
+				return true;
+			}
+			if (instance.IsList)
+			{
+				result = new ValueInstance(executable.numberType, instance.List.Items.Count);
+				return true;
+			}
+		}
+		result = default;
+		return false;
 	}
 
 	private ValueInstance EvaluateBinary(Binary binary)

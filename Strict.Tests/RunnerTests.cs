@@ -184,8 +184,8 @@ public sealed class RunnerTests
 		await new Runner(GetExamplesFilePath("ParseExpressions"), TestPackage.Instance).Run();
 		var output = writer.ToString();
 		Assert.That(output, Does.Contain("Parsing HelloLogger.strict expressions"));
-		Assert.That(output, Does.Contain("has member"));
-		Assert.That(output, Does.Contain("mutable member"));
+		Assert.That(output, Does.Contain("has member: logger"));
+		Assert.That(output, Does.Contain("mutable member: count = 0"));
 		Assert.That(output, Does.Contain("Method body expressions:"));
 		Assert.That(output, Does.Contain("MethodCall: logger.Log"));
 		Assert.That(output, Does.Contain("Return: return total"));

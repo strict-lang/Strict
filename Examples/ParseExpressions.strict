@@ -15,10 +15,12 @@ LogExpressions
 		logger.Log("> " + ClassifyExpression(value))
 ClassifyMember(line Text) Text
 	if line.StartsWith("has ")
-		return "has member"
+		return "has member: " + ExtractAfterKeyword(line, 4)
 	if line.StartsWith("mutable ")
-		return "mutable member"
+		return "mutable member: " + ExtractAfterKeyword(line, 8)
 	"constant member"
+ExtractAfterKeyword(line Text, keywordLen Number) Text
+	line.Substring(keywordLen, line.characters.Length - keywordLen)
 ClassifyExpression(line Text) Text
 	if line.IndexOf(".") > 0
 		return "MethodCall: " + line

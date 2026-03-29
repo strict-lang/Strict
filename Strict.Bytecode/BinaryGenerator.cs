@@ -256,6 +256,9 @@ public sealed class BinaryGenerator
 				new LoadVariableToRegister(registry.AllocateRegister(), expression.ToString()));
 		else if (memberCall.Member.InitialValue != null)
 			TryGenerateForEnum(memberCall.Member.DefinedIn, memberCall.Member.InitialValue);
+		else
+			instructions.Add(
+				new LoadVariableToRegister(registry.AllocateRegister(), expression.ToString()));
 		return true;
 	}
 
