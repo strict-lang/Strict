@@ -13,15 +13,6 @@ namespace Strict.Bytecode;
 /// </summary>
 public sealed class BinaryGenerator
 {
-	//TODO: not really used,  these are all wrong, the constructor should only use the basePackage to make everything possible, the Generate method should get the entry point and find the rest from there! 3 constructors is just plain stupid. this was mostly to get the old tests working, but they are mostly wrong anyway!
-	public BinaryGenerator(Expression entryPoint)
-	{
-		entryTypeFullName = GetEntryTypeFullName(entryPoint);
-		ReturnType = entryPoint.ReturnType;
-		Expressions = [entryPoint];
-		binary = new BinaryExecutable(GetBasePackage(entryPoint));
-	}
-
 	public BinaryGenerator(MethodCall methodCall)
 	{
 		entryTypeFullName = methodCall.Method.Type.FullName;
@@ -450,9 +441,8 @@ public sealed class BinaryGenerator
 
 	private static bool IsBinaryComparison(MethodCall call) =>
 		call.Method.Name is BinaryOperator.Is or BinaryOperator.Greater
-			or BinaryOperator.GreaterOrEqual or BinaryOperator.Smaller
-			or BinaryOperator.SmallerOrEqual or BinaryOperator.In
-			|| call.Method.Name.StartsWith("is not", StringComparison.Ordinal);
+			or BinaryOperator.GreaterOrEqual or BinaryOperator.Smaller or BinaryOperator.SmallerOrEqual
+			or BinaryOperator.In || call.Method.Name.StartsWith("is not", StringComparison.Ordinal);
 
 	private void GenerateForBinaryIfConditionalExpression(MethodCall condition)
 	{

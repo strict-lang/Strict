@@ -247,9 +247,6 @@ public sealed class Runner
 			return BinaryGenerator.GenerateFromRunMethods(preferredEntryMethod, runMethods);
 		});
 
-	private BinaryExecutable GenerateExpressionBinaryExecutable(Expression entryPoint) =>
-		LogTiming(nameof(GenerateBinaryExecutable), () => new BinaryGenerator(entryPoint).Generate());
-
 	private void OptimizeBytecode(BinaryExecutable executable) =>
 		Log(LogTiming(nameof(OptimizeBytecode), () =>
 		{
@@ -302,10 +299,11 @@ public sealed class Runner
 		var targetType = new Type(basePackage, new TypeLines(typeName, sourceLines)).ParseMembersAndMethods(parser);
 		try
 		{
-			var expression = parser.ParseExpression(
-				new Body(new Method(targetType, 0, parser, [nameof(RunExpression)])),
-				expressionString);
-			var binary = GenerateExpressionBinaryExecutable(expression);
+			var method = new Method(targetType, 0, parser,
+				[nameof(RunExpression), "\t" + expressionString]);
+			var call = new MethodCall(method);
+			var binary = LogTiming(nameof(GenerateBinaryExecutable),
+				() => new BinaryGenerator(call).Generate());
 			OptimizeBytecode(binary);
 			var vm = new VirtualMachine(binary);
 			vm.Execute();

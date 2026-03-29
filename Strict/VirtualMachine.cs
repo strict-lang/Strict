@@ -305,7 +305,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		{
 			"StartsWith" => EvaluateStartsWith(text, args),
 			"IndexOf" => new ValueInstance(executable.numberType,
-				(double)text.IndexOf(args[0].Text, StringComparison.Ordinal)),
+				text.IndexOf(args[0].Text, StringComparison.Ordinal)),
 			"Substring" => new ValueInstance(
 				text.Substring((int)args[0].Number, (int)args[1].Number)),
 			_ => throw new InvalidOperationException("Unhandled native text method: " + methodName)
@@ -321,7 +321,9 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			: 0;
 		var matches = start + prefix.Length <= text.Length &&
 			text.AsSpan(start, prefix.Length).SequenceEqual(prefix);
-		return new ValueInstance(executable.booleanType, matches ? 1.0 : 0.0);
+		return new ValueInstance(executable.booleanType, matches
+			? 1.0
+			: 0.0);
 	}
 
 	private bool TryHandleToConversion(Invoke invoke)
