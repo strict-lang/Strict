@@ -145,6 +145,7 @@ public sealed class Repositories
 		if (separatorIndex < 0)
 			return null;
 		var parentName = fullName[..separatorIndex];
+		// ReSharper disable once InconsistentlySynchronizedField
 		return loadedPackages.Find(package => package.FullName == parentName);
 	}
 
@@ -173,7 +174,8 @@ public sealed class Repositories
 			? new Package(parent, packagePath, this)
 			: new Package(packagePath, this);
 #endif
-		loadedPackages.Add(package);
+		lock (loadedPackages)
+			loadedPackages.Add(package);
 		var types = GetTypes(files, package);
 		foreach (var type in types)
 			type.ParseMembersAndMethodsForPackage(parser);
@@ -185,11 +187,14 @@ public sealed class Repositories
 
 	private void InvalidateAllAvailableMethodsCaches()
 	{
-		foreach (var loadedPackage in loadedPackages)
+		Package[] loadedPackagesSnapshot;
+		lock (loadedPackages)
+			loadedPackagesSnapshot = loadedPackages.ToArray();
+		foreach (var loadedPackage in loadedPackagesSnapshot)
 		foreach (var type in loadedPackage.Types.Values)
 			type.InvalidateAvailableMethodsCache();
-		foreach (var loadedPackage in loadedPackages)
-		foreach (var type in loadedPackage.Types.Values.ToList())
+		foreach (var loadedPackage in loadedPackagesSnapshot)
+		foreach (var type in loadedPackage.Types.Values)
 			type.ReimplementGenericTypeMethods();
 	}
 
@@ -308,11 +313,12 @@ public sealed class Repositories
 	internal void Remove(Package result)
 	{
 		cacheService.Remove(result.FullName);
-		loadedPackages.Remove(result);
+		lock (loadedPackages)
+			loadedPackages.Remove(result);
 	}
 
 	public bool ContainsPackageNameInCache(string fullName) =>
-		cacheService.TryGetValue<LazyCache.AsyncLazy<Package>>(fullName, out _);
+		cacheService.TryGetValue<AsyncLazy<Package>>(fullName, out _);
 
 	public async Task<string> ToDebugString() =>
 		nameof(Repositories) +
@@ -320,6 +326,7 @@ public sealed class Repositories
 			out var lazyPackage)
 			? (await lazyPackage.Value).ToDebugString()
 			: "") +
+		// ReSharper disable once InconsistentlySynchronizedField
 		"\nLoadedPackages: " + string.Join("\n  ", loadedPackages) +
 		"\nPreviouslyCheckedDirectories: " + string.Join<string>(", ", PreviouslyCheckedDirectories.ToList());
 }
