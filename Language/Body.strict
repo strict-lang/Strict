@@ -18,3 +18,17 @@ IsDeclarationLine(line Text) Boolean
 	if line.StartsWith("mutable ")
 		return true
 	line.StartsWith("constant ")
+IsReassignment(line Text) Boolean
+	if line.IndexOf(" = ") > 0
+		return (not line.StartsWith("let ")) and (not line.StartsWith("constant "))
+	false
+IsBinaryExpression(line Text) Boolean
+	if line.IndexOf(" + ") > 0
+		return true
+	if line.IndexOf(" - ") > 0
+		return true
+	if line.IndexOf(" * ") > 0
+		return true
+	line.IndexOf(" / ") > 0
+IsNotExpression(line Text) Boolean
+	line.StartsWith("not ")

@@ -18,3 +18,33 @@ Parse(input Text) Text
 	if input.StartsWith("\"")
 		return "Text"
 	"Expression"
+IsAssignment(input Text) Boolean
+	if input.StartsWith("let ")
+		return true
+	if input.StartsWith("mutable ")
+		return true
+	input.StartsWith("constant ")
+IsBinaryExpression(input Text) Boolean
+	if input.IndexOf(" + ") > 0
+		return true
+	if input.IndexOf(" - ") > 0
+		return true
+	if input.IndexOf(" * ") > 0
+		return true
+	if input.IndexOf(" / ") > 0
+		return true
+	if input.IndexOf(" is ") > 0
+		return true
+	if input.IndexOf(" > ") > 0
+		return true
+	input.IndexOf(" < ") > 0
+IsReassignment(input Text) Boolean
+	if input.IndexOf(" = ") > 0
+		return (not input.StartsWith("let ")) and (not input.StartsWith("constant "))
+	false
+ExtractReturnExpression(input Text) Text
+	input.Substring(7, input.characters.Length - 7)
+ExtractCondition(input Text) Text
+	input.Substring(3, input.characters.Length - 3)
+ExtractIterator(input Text) Text
+	input.Substring(4, input.characters.Length - 4)

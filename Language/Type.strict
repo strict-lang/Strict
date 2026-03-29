@@ -44,3 +44,29 @@ BodyLines Texts
 	for lines
 		if value.StartsWith("\t")
 			value
+MethodName(header Text) Text
+	let parenPos = header.IndexOf("(")
+	let spacePos = header.IndexOf(" ")
+	if parenPos > 0
+		return header.Substring(0, parenPos)
+	if spacePos > 0
+		return header.Substring(0, spacePos)
+	header
+HasReturnType(header Text) Boolean
+	let spacePos = header.IndexOf(" ")
+	if spacePos < 0
+		return false
+	let parenPos = header.IndexOf(")")
+	if parenPos > 0
+		return header.characters.Length > parenPos + 2
+	true
+ReturnTypeName(header Text) Text
+	let parenPos = header.IndexOf(")")
+	if parenPos > 0
+		if header.characters.Length > parenPos + 2
+			return header.Substring(parenPos + 2, header.characters.Length - parenPos - 2)
+		return ""
+	let spacePos = header.IndexOf(" ")
+	if spacePos > 0
+		return header.Substring(spacePos + 1, header.characters.Length - spacePos - 1)
+	""

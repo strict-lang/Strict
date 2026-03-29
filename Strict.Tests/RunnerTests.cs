@@ -195,6 +195,25 @@ public sealed class RunnerTests
 	}
 
 	[Test]
+	public async Task RunParseMethodHeaders()
+	{
+		await new Runner(GetExamplesFilePath("ParseMethodHeaders"), TestPackage.Instance).Run();
+		var output = writer.ToString();
+		Assert.That(output, Does.Contain("Parsing method headers from type definitions"));
+		Assert.That(output, Does.Contain("Method: Run (no return type)"));
+		Assert.That(output, Does.Contain("Method: Add returns Number"));
+		Assert.That(output, Does.Contain("Method: GetName returns Text"));
+		Assert.That(output, Does.Contain("Method: IsDone returns Boolean"));
+		Assert.That(output, Does.Contain("Body expression types:"));
+		Assert.That(output, Does.Contain("MethodCall: logger.Log"));
+		Assert.That(output, Does.Contain("Return: count + 1"));
+		Assert.That(output, Does.Contain("If: count > 0"));
+		Assert.That(output, Does.Contain("For: items"));
+		Assert.That(output, Does.Contain("Declaration: total = 0"));
+		Assert.That(output, Does.Contain("Reassignment: total = total + value"));
+	}
+
+	[Test]
 	public async Task RunFibonacci()
 	{
 		await new Runner(GetExamplesFilePath("Fibonacci"), TestPackage.Instance).Run();

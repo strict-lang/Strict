@@ -1,0 +1,6 @@
+has variableName Text
+has typeName Text
+has isMutable Boolean
+has initialValue Text
+to Text
+	variableName + " " + typeName

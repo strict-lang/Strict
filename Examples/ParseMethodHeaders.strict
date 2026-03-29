@@ -1,0 +1,51 @@
+has logger
+Run
+	logger.Log("Parsing method headers from type definitions")
+	ParseHeaders
+	ParseBodyExpressions
+ParseHeaders
+	constant headers = ("Run", "Add Number", "GetName Text", "IsDone Boolean")
+	for headers
+		logger.Log(ClassifyHeader(value))
+ClassifyHeader(header Text) Text
+	let methodName = ExtractMethodName(header)
+	let returnType = ExtractReturnType(header)
+	if returnType is ""
+		return "Method: " + methodName + " (no return type)"
+	"Method: " + methodName + " returns " + returnType
+ExtractMethodName(header Text) Text
+	let spacePos = header.IndexOf(" ")
+	if spacePos > 0
+		return header.Substring(0, spacePos)
+	header
+ExtractReturnType(header Text) Text
+	let spacePos = header.IndexOf(" ")
+	if spacePos > 0
+		return header.Substring(spacePos + 1, header.characters.Length - spacePos - 1)
+	""
+ParseBodyExpressions
+	constant bodyLines = ("logger.Log(\"Hi\")", "return count + 1", "if count > 0", "for items", "mutable total = 0")
+	logger.Log("Body expression types:")
+	for bodyLines
+		logger.Log("> " + ClassifyBodyLine(value))
+	logger.Log("> " + ClassifyReassignment("total = total + value"))
+ClassifyBodyLine(line Text) Text
+	if line.IndexOf(".") > 0
+		return "MethodCall: " + line
+	if line.StartsWith("return ")
+		return "Return: " + ExtractAfterReturn(line)
+	if line.StartsWith("if ")
+		return "If: " + ExtractAfterKeyword(line, 3)
+	if line.StartsWith("for ")
+		return "For: " + ExtractAfterKeyword(line, 4)
+	if line.StartsWith("mutable ")
+		return "Declaration: " + ExtractAfterKeyword(line, 8)
+	"Expression: " + line
+ClassifyReassignment(line Text) Text
+	if line.IndexOf(" = ") > 0
+		return "Reassignment: " + line
+	"Expression: " + line
+ExtractAfterKeyword(line Text, keywordLength Number) Text
+	line.Substring(keywordLength, line.characters.Length - keywordLength)
+ExtractAfterReturn(line Text) Text
+	line.Substring(7, line.characters.Length - 7)

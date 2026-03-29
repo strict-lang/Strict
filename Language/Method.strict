@@ -7,11 +7,19 @@ ParameterNames Texts
 	parameters
 ParameterCount Number
 	parameters.Length
-BodyLine(number) Text
+BodyLine(number Number) Text
 	bodyLines(number)
 BodyLineCount Number
 	bodyLines.Length
 IsTrait Boolean
 	bodyLines.Length is 0
+HasReturnType Boolean
+	returnTypeName is not ""
+HasParameters Boolean
+	parameters.Length > 0
+IsRunMethod Boolean
+	methodName is "Run"
 to Text
+	if returnTypeName is ""
+		return methodName
 	methodName + " " + returnTypeName
