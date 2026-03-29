@@ -19,8 +19,8 @@ ClassifyMember(line Text) Text
 	if line.StartsWith("mutable ")
 		return "mutable member: " + ExtractAfterKeyword(line, 8)
 	"constant member: " + ExtractAfterKeyword(line, 9)
-ExtractAfterKeyword(line Text, keywordLen Number) Text
-	line.Substring(keywordLen, line.characters.Length - keywordLen)
+ExtractAfterKeyword(line Text, keywordLength Number) Text
+	line.Substring(keywordLength, line.characters.Length - keywordLength)
 ClassifyExpression(line Text) Text
 	if line.IndexOf(".") > 0
 		return "MethodCall: " + ParseMethodCall(line)
