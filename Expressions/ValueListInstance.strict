@@ -1,4 +1,4 @@
-has returnTypeName Text
+has resultTypeName Text
 has items Texts
 Count Number
 	items.Length

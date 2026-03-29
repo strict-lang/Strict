@@ -1,3 +1,4 @@
+has input Text
 Parse(input Text) Text
 	if input.IndexOf(".") > 0
 		return "MethodCall"
@@ -7,6 +8,8 @@ Parse(input Text) Text
 		return "If"
 	if input.StartsWith("for ")
 		return "For"
+	ParseDeclarationOrOther(input)
+ParseDeclarationOrOther(input Text) Text
 	if input.StartsWith("let ")
 		return "Declaration"
 	if input.StartsWith("mutable ")
@@ -33,6 +36,8 @@ IsBinaryExpression(input Text) Boolean
 		return true
 	if input.IndexOf(" / ") > 0
 		return true
+	IsComparisonExpression(input)
+IsComparisonExpression(input Text) Boolean
 	if input.IndexOf(" is ") > 0
 		return true
 	if input.IndexOf(" > ") > 0

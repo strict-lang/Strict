@@ -1,6 +1,6 @@
 has left Text
 has operatorName Text
 has right Text
-has returnTypeName Text
+has resultTypeName Text
 to Text
 	left + " " + operatorName + " " + right

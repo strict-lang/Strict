@@ -1,7 +1,7 @@
 has methodName Text
 has instance Text
 has arguments Texts
-has returnTypeName Text
+has resultTypeName Text
 to Text
 	if instance is ""
 		return methodName + "(" + JoinArguments + ")"

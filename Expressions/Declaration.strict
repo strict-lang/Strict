@@ -1,11 +1,10 @@
 has variableName Text
 has variableTypeName Text
 has initialValue Text
-has isMutable Boolean
-has isConstant Boolean
+has declarationKind Text
 to Text
-	if isConstant
+	if declarationKind is "constant"
 		return "constant " + variableName + " = " + initialValue
-	if isMutable
+	if declarationKind is "mutable"
 		return "mutable " + variableName + " = " + initialValue
 	"let " + variableName + " = " + initialValue

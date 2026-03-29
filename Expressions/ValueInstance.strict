@@ -1,22 +1,24 @@
 has typeName Text
 has number Number
 has text Text
-has isList Boolean
-has isDictionary Boolean
-has isTypeInstance Boolean
+has kind Text
 HasValue Boolean
 	(not typeName is "None") or number is not 0
 IsText Boolean
 	text is not ""
-IsNumber Boolean
-	(not IsText) and (not isList) and (not isDictionary) and (not isTypeInstance)
+IsList Boolean
+	kind is "list"
+IsDictionary Boolean
+	kind is "dictionary"
+IsTypeInstance Boolean
+	kind is "type"
 to Text
 	if IsText
 		return "\"" + text + "\""
-	if isList
+	if IsList
 		return "(list)"
-	if isDictionary
+	if IsDictionary
 		return "(dictionary)"
-	if isTypeInstance
+	if IsTypeInstance
 		return typeName
 	number to Text

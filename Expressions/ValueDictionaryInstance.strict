@@ -1,10 +1,10 @@
-has returnTypeName Text
+has resultTypeName Text
 has keys Texts
 has values Texts
 Count Number
 	keys.Length
 to Text
-	returnTypeName + "(" + JoinEntries + ")"
+	resultTypeName + "(" + JoinEntries + ")"
 JoinEntries Text
 	mutable result = ""
 	mutable index = 0

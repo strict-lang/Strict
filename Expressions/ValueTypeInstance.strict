@@ -1,10 +1,10 @@
-has returnTypeName Text
+has resultTypeName Text
 has memberNames Texts
 has memberValues Texts
 MemberCount Number
 	memberNames.Length
 to Text
-	returnTypeName + ": " + JoinMembers
+	resultTypeName + ": " + JoinMembers
 JoinMembers Text
 	mutable result = ""
 	mutable index = 0

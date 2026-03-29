@@ -1,25 +1,18 @@
 has methodName Text
-has returnTypeName Text
-has parameters Texts
+has resultTypeName Text
+has parameterNames Texts
 has bodyLines Texts
-has isPublic Boolean
-ParameterNames Texts
-	parameters
 ParameterCount Number
-	parameters.Length
-BodyLine(number Number) Text
-	bodyLines(number)
+	parameterNames.Length
 BodyLineCount Number
 	bodyLines.Length
 IsTrait Boolean
 	bodyLines.Length is 0
 HasReturnType Boolean
-	returnTypeName is not ""
+	resultTypeName is not ""
 HasParameters Boolean
-	parameters.Length > 0
+	parameterNames.Length > 0
 IsRunMethod Boolean
 	methodName is "Run"
 to Text
-	if returnTypeName is ""
-		return methodName
-	methodName + " " + returnTypeName
+	methodName

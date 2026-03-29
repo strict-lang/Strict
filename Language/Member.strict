@@ -1,19 +1,16 @@
 has memberName Text
 has typeName Text
-has isMutable Boolean
-has isConstant Boolean
+has memberKind Text
 has initialValue Text
+IsMutable Boolean
+	memberKind is "mutable"
+IsConstant Boolean
+	memberKind is "constant"
 IsPublic Boolean
 	memberName.StartsWith("A")
-Keyword Text
-	if isMutable
-		return "mutable"
-	if isConstant
-		return "constant"
-	"has"
 to Text
-	if isMutable
+	if memberKind is "mutable"
 		return "mutable " + memberName + " " + typeName
-	if isConstant
+	if memberKind is "constant"
 		return "constant " + memberName + " = " + initialValue
 	"has " + memberName + " " + typeName
