@@ -280,4 +280,48 @@ public sealed class ForTests
 			new ValueInstance(numberType, 4)])]), []);
 		Assert.That(result.Number, Is.EqualTo(2 * 3 * 4));
 	}
+
+	[Test]
+	public void StrictTypeParserCountsMembers()
+	{
+		using var typeParser = CreateType(nameof(StrictTypeParserCountsMembers),
+			"has lines Texts",
+			"MemberCount Number",
+			"\tfor lines",
+			"\t\tif StartsWith(\"has \")",
+			"\t\t\t1");
+		var textsType = typeParser.Members[0].Type;
+		var testLines = new ValueInstance(textsType,
+		[
+			new ValueInstance("has logger"),
+			new ValueInstance("Run"),
+			new ValueInstance("\tbody")
+		]);
+		var instance = new ValueInstance(typeParser, [testLines]);
+		var result = interpreter.Execute(
+			typeParser.Methods.Single(m => m.Name == "MemberCount"), instance, []);
+		Assert.That(result.Number, Is.EqualTo(1));
+	}
+
+	[Test]
+	public void StrictTypeParserCountsMethods()
+	{
+		using var typeParser = CreateType(nameof(StrictTypeParserCountsMethods),
+			"has lines Texts",
+			"MethodCount Number",
+			"\tfor lines",
+			"\t\tif StartsWith(\"has \") is false and StartsWith(\"\\t\") is false",
+			"\t\t\t1");
+		var textsType = typeParser.Members[0].Type;
+		var testLines = new ValueInstance(textsType,
+		[
+			new ValueInstance("has logger"),
+			new ValueInstance("Run"),
+			new ValueInstance("\tbody")
+		]);
+		var instance = new ValueInstance(typeParser, [testLines]);
+		var result = interpreter.Execute(
+			typeParser.Methods.Single(m => m.Name == "MethodCount"), instance, []);
+		Assert.That(result.Number, Is.EqualTo(1));
+	}
 }

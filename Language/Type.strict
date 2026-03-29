@@ -1,5 +1,13 @@
-has typeName Text
-has packageName Text
-has isTrait Boolean
-has isGeneric Boolean
 has lines Texts
+MemberCount Number
+	Type(("has logger", "Run", "\tbody")).MemberCount is 1
+	Type(("has first", "has second", "Add Number", "\tbody")).MemberCount is 2
+	for lines
+		if StartsWith("has ")
+			1
+MethodCount Number
+	Type(("has logger", "Run", "\tbody")).MethodCount is 1
+	Type(("has first", "Run", "Other Number", "\tbody1", "\tbody2")).MethodCount is 2
+	for lines
+		if StartsWith("has ") is false and StartsWith("\t") is false
+			1
