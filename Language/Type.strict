@@ -5,9 +5,29 @@ MemberCount Number
 	for lines
 		if StartsWith("has ")
 			1
+IsMethodHeader(line Text) Boolean
+	(not line.StartsWith("has ")) and (not line.StartsWith("\t"))
 MethodCount Number
 	Type(("has logger", "Run", "\tbody")).MethodCount is 1
-	Type(("has first", "Run", "Other Number", "\tbody1", "\tbody2")).MethodCount is 2
+	Type(("has first", "Run", "Other", "\tbody1", "\tbody2")).MethodCount is 2
 	for lines
-		if StartsWith("has ") is false and StartsWith("\t") is false
+		if IsMethodHeader(value)
 			1
+ExtractMemberName(line Text) Text
+	line.Substring(4, line.characters.Length - 4)
+MemberNames Texts
+	Type(("has logger", "Run", "\tbody")).MemberNames is ("logger")
+	Type(("has first", "has second", "Run")).MemberNames is ("first", "second")
+	for lines
+		if StartsWith("has ")
+			ExtractMemberName(value)
+MethodHeaders Texts
+	Type(("has logger", "Run", "\tbody")).MethodHeaders is ("Run")
+	for lines
+		if IsMethodHeader(value)
+			value
+BodyLines Texts
+	Type(("has logger", "Run", "\tbody line")).BodyLines is ("\tbody line")
+	for lines
+		if StartsWith("\t")
+			value

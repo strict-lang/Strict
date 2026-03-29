@@ -66,8 +66,13 @@ public sealed class StrictLanguageConversionTests
 		using var typeParser = CreateLanguageType(languagePackage, "Type");
 		Assert.That(typeParser.Members.Count, Is.EqualTo(1));
 		Assert.That(typeParser.Members[0].Name, Is.EqualTo("lines"));
-		Assert.That(typeParser.Methods.Count, Is.EqualTo(2));
+		Assert.That(typeParser.Methods.Count, Is.EqualTo(7));
 		Assert.That(typeParser.Methods[0].Name, Is.EqualTo("MemberCount"));
-		Assert.That(typeParser.Methods[1].Name, Is.EqualTo("MethodCount"));
+		Assert.That(typeParser.Methods[1].Name, Is.EqualTo("IsMethodHeader"));
+		Assert.That(typeParser.Methods[2].Name, Is.EqualTo("MethodCount"));
+		Assert.That(typeParser.Methods[3].Name, Is.EqualTo("ExtractMemberName"));
+		Assert.That(typeParser.Methods[4].Name, Is.EqualTo("MemberNames"));
+		Assert.That(typeParser.Methods[5].Name, Is.EqualTo("MethodHeaders"));
+		Assert.That(typeParser.Methods[6].Name, Is.EqualTo("BodyLines"));
 	}
 }
