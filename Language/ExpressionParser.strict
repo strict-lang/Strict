@@ -1,1 +1,20 @@
-Parse(expressionBody Body, input Text) Expression
+Parse(input Text) Text
+	if input.IndexOf(".") > 0
+		return "MethodCall"
+	if input.StartsWith("return ")
+		return "Return"
+	if input.StartsWith("if ")
+		return "If"
+	if input.StartsWith("for ")
+		return "For"
+	if input.StartsWith("let ")
+		return "Declaration"
+	if input.StartsWith("mutable ")
+		return "MutableDeclaration"
+	if input.StartsWith("constant ")
+		return "ConstantDeclaration"
+	if input.StartsWith("not ")
+		return "Not"
+	if input.StartsWith("\"")
+		return "Text"
+	"Expression"

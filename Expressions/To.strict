@@ -1,0 +1,4 @@
+has expression Text
+has targetTypeName Text
+to Text
+	expression + " to " + targetTypeName

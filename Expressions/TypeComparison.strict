@@ -1,0 +1,4 @@
+has expression Text
+has matchTypeName Text
+to Text
+	expression + " is " + matchTypeName

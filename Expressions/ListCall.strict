@@ -1,0 +1,5 @@
+has listExpression Text
+has indexExpression Text
+has elementTypeName Text
+to Text
+	listExpression + "(" + indexExpression + ")"

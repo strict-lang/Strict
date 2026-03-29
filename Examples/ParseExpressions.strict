@@ -2,14 +2,14 @@ has logger
 Run
 	logger.Log("Parsing HelloLogger.strict expressions")
 	LogMembers
-	LogExpressions
+	ParseMethodBodies
 LogMembers
 	constant memberLines = ("has logger", "mutable count = 0")
 	logger.Log("Members:")
 	for memberLines
 		logger.Log("> " + ClassifyMember(value))
-LogExpressions
-	constant bodyLines = ("logger.Log(Hi)", "return total")
+ParseMethodBodies
+	constant bodyLines = ("logger.Log(\"Hi\")", "return total", "if count > 0", "for items", "mutable count = 5")
 	logger.Log("Method body expressions:")
 	for bodyLines
 		logger.Log("> " + ClassifyExpression(value))
@@ -18,16 +18,23 @@ ClassifyMember(line Text) Text
 		return "has member: " + ExtractAfterKeyword(line, 4)
 	if line.StartsWith("mutable ")
 		return "mutable member: " + ExtractAfterKeyword(line, 8)
-	"constant member"
+	"constant member: " + ExtractAfterKeyword(line, 9)
 ExtractAfterKeyword(line Text, keywordLen Number) Text
 	line.Substring(keywordLen, line.characters.Length - keywordLen)
 ClassifyExpression(line Text) Text
 	if line.IndexOf(".") > 0
-		return "MethodCall: " + line
+		return "MethodCall: " + ParseMethodCall(line)
 	if line.StartsWith("return ")
-		return "Return: " + line
+		return "Return: " + ExtractAfterKeyword(line, 7)
 	if line.StartsWith("if ")
-		return "If: " + line
+		return "If: condition=" + ExtractAfterKeyword(line, 3)
 	if line.StartsWith("for ")
-		return "For: " + line
+		return "For: iterator=" + ExtractAfterKeyword(line, 4)
+	if line.StartsWith("mutable ")
+		return "Declaration: " + ExtractAfterKeyword(line, 8)
 	"Expression: " + line
+ParseMethodCall(line Text) Text
+	let dotPos = line.IndexOf(".")
+	let instance = line.Substring(0, dotPos)
+	let rest = ExtractAfterKeyword(line, dotPos + 1)
+	instance + "." + rest

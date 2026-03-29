@@ -188,7 +188,10 @@ public sealed class RunnerTests
 		Assert.That(output, Does.Contain("mutable member: count = 0"));
 		Assert.That(output, Does.Contain("Method body expressions:"));
 		Assert.That(output, Does.Contain("MethodCall: logger.Log"));
-		Assert.That(output, Does.Contain("Return: return total"));
+		Assert.That(output, Does.Contain("Return: total"));
+		Assert.That(output, Does.Contain("If: condition=count > 0"));
+		Assert.That(output, Does.Contain("For: iterator=items"));
+		Assert.That(output, Does.Contain("Declaration: count = 5"));
 	}
 
 	[Test]
