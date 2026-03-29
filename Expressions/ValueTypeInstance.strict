@@ -1,0 +1,16 @@
+has returnTypeName Text
+has memberNames Texts
+has memberValues Texts
+MemberCount Number
+	memberNames.Length
+to Text
+	returnTypeName + ": " + JoinMembers
+JoinMembers Text
+	mutable result = ""
+	mutable index = 0
+	for memberNames
+		if result is not ""
+			result = result + "; "
+		result = result + value + "=" + memberValues(index)
+		index = index + 1
+	result

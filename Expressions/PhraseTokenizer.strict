@@ -1,0 +1,12 @@
+has input Text
+has tokens Texts
+TokenCount Number
+	tokens.Length
+Token(index Number) Text
+	tokens(index)
+IsValidInput Boolean
+	input.characters.Length > 2
+HasSpaces Boolean
+	input.IndexOf(" ") > 0
+to Text
+	input

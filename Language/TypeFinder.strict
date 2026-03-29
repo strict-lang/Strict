@@ -1,0 +1,18 @@
+has typeNames Texts
+Find(typeName Text) Text
+	for typeNames
+		if value is typeName
+			return value
+	""
+Get(typeName Text) Text
+	let found = Find(typeName)
+	if found is ""
+		return "TypeNotFound: " + typeName
+	found
+Has(typeName Text) Boolean
+	Find(typeName) is not ""
+Count Number
+	typeNames.Length
+FindPlural(pluralName Text) Text
+	let singular = pluralName.Substring(0, pluralName.characters.Length - 1)
+	Find(singular)

@@ -73,4 +73,32 @@ public sealed class StrictLanguageConversionTests
 		Assert.That(typeParser.Methods[10].Name, Is.EqualTo("HasReturnType"));
 		Assert.That(typeParser.Methods[11].Name, Is.EqualTo("ReturnTypeName"));
 	}
+
+	[Test]
+	public void LoadTypeFinderFromLanguageDirectory()
+	{
+		using var languagePackage = new Package(TestPackage.Instance, "Language");
+		using var typeFinder = CreateLanguageType(languagePackage, "TypeFinder");
+		Assert.That(typeFinder.Members.Count, Is.EqualTo(1));
+		Assert.That(typeFinder.Members[0].Name, Is.EqualTo("typeNames"));
+		Assert.That(typeFinder.Methods.Count, Is.EqualTo(5));
+		Assert.That(typeFinder.Methods[0].Name, Is.EqualTo("Find"));
+		Assert.That(typeFinder.Methods[1].Name, Is.EqualTo("Get"));
+		Assert.That(typeFinder.Methods[2].Name, Is.EqualTo("Has"));
+		Assert.That(typeFinder.Methods[3].Name, Is.EqualTo("Count"));
+		Assert.That(typeFinder.Methods[4].Name, Is.EqualTo("FindPlural"));
+	}
+
+	[Test]
+	public void LoadContextFromLanguageDirectory()
+	{
+		using var languagePackage = new Package(TestPackage.Instance, "Language");
+		using var contextType = CreateLanguageType(languagePackage, "Context");
+		Assert.That(contextType.Members.Count, Is.EqualTo(4));
+		Assert.That(contextType.Members[0].Name, Is.EqualTo("Parent"));
+		Assert.That(contextType.Members[1].Name, Is.EqualTo("Name"));
+		Assert.That(contextType.Members[2].Name, Is.EqualTo("FullName"));
+		Assert.That(contextType.FindMember("ParentSeparator")!.InitialValue!.ToString(),
+			Is.EqualTo("\"/\""));
+	}
 }

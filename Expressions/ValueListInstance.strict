@@ -1,0 +1,13 @@
+has returnTypeName Text
+has items Texts
+Count Number
+	items.Length
+to Text
+	"(" + JoinItems + ")"
+JoinItems Text
+	mutable result = ""
+	for items
+		if result is not ""
+			result = result + ", "
+		result = result + value
+	result

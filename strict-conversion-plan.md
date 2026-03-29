@@ -146,8 +146,9 @@ This means `has name Text` fails if a `Name` type exists — use a name that eit
 
 **Summary of what's done vs what's next:**
 - ✅ **5 pure-constant types done** (Phase 1a) — Limit, Keyword, TypeKind, UnaryOperator, BinaryOperator
-- ✅ **19 Language types converted in `.strict` form** — TypeLines, NamedType, Parameter, Member, Variable, Expression, ConcreteExpression, ExpressionParser, TypeParser, Method, Context, Package, Type, Body + 5 pure constants
-- ✅ **22 Expression types in `.strict` form** — Value, TextExpression, NumberExpression, BooleanExpression, MethodCall, MemberCall, ParameterCall, VariableCall, Binary, Return, IfExpression, ForExpression, Declaration, ListExpression, NotExpression, MutableReassignment, DictionaryExpression, ListCall, Instance, To, TypeComparison, SelectorIf
+- ✅ **20 Language types converted in `.strict` form** — TypeLines, NamedType, Parameter, Member, Variable, Expression, ConcreteExpression, ExpressionParser, TypeParser, TypeFinder, Method, Context, Package, Type, Body + 5 pure constants
+- ✅ **29 Expression types in `.strict` form (Phase 2 complete)** — Value, TextExpression, NumberExpression, BooleanExpression, MethodCall, MemberCall, ParameterCall, VariableCall, Binary, Return, IfExpression, ForExpression, Declaration, ListExpression, NotExpression, MutableReassignment, DictionaryExpression, ListCall, Instance, To, TypeComparison, SelectorIf, TypePattern, ValueInstance, ValueListInstance, ValueTypeInstance, ValueDictionaryInstance, PhraseTokenizer, ShuntingYard
+- ✅ **TypeFinder.strict** — Shared type registry with `Find`/`Get`/`Has`/`Count`/`FindPlural` methods. Replaces per-type `typeNames` approach; types reference a common TypeFinder instead of each carrying their own type list.
 - ✅ **Type.strict has 12 methods** — `IsMember`, `IsMethodHeader`, `MemberCount`, `MethodCount`, `MemberKind`, `ExtractAfterKeyword`, `MemberNames`, `MethodHeaders`, `BodyLines`, `MethodName`, `HasReturnType`, `ReturnTypeName`
 - ✅ **VM fixes** — characters.Length works via recursive EvaluateMemberCall + TryGetNativeLength. BinaryGenerator emits LoadVariableToRegister for member calls with instance. Register save/restore for for-loop bodies.
 - ✅ **3 end-to-end examples** — ParseHelloLogger (type line classification), ParseExpressions (expression classification + Substring/characters.Length), ParseMethodHeaders (method header parsing + reassignment detection)
@@ -216,7 +217,7 @@ Depends on Phase 1 (needs Type, Method, Body from Strict.Language).
 
 | Metric | Target | Actual | % |
 |--------|--------|--------|---|
-| `.strict` files created | 29 | 22 | 76% |
+| `.strict` files created | 29 | 29 | 100% |
 | Test methods written | 553 | 0 | 0% |
 | C# files replaced | 29 | 0 | 0% |
 
@@ -430,8 +431,8 @@ This is the execution engine — the capstone of the self-hosting effort.
 | Phase | Project | C# Files | Target `.strict` Files | Actual `.strict` Files | Tests Written | C# % Done |
 |-------|---------|----------|------------------------|------------------------|---------------|-----------|
 | 0 | Base Types (verification) | 0 | 0 (already `.strict`) | 2 (BaseTypesTest) | 1 | 0% |
-| 1 | `Strict.Language` | 32 | 22 | 19 (Limit, Keyword, TypeKind, UnaryOperator, BinaryOperator, TypeLines, NamedType, Parameter, Member, Variable, Expression, ConcreteExpression, ExpressionParser, TypeParser, Method, Context, Package, Type, Body) | 27 | 25% |
-| 2 | `Strict.Expressions` | 29 | 29 | 0 | 0 | 0% |
+| 1 | `Strict.Language` | 32 | 22 | 20 (Limit, Keyword, TypeKind, UnaryOperator, BinaryOperator, TypeLines, NamedType, Parameter, Member, Variable, Expression, ConcreteExpression, ExpressionParser, TypeParser, TypeFinder, Method, Context, Package, Type, Body) | 28 | 27% |
+| 2 | `Strict.Expressions` | 29 | 29 | 29 (all expression types + Value/Tokenizer/ShuntingYard) | 0 | 10% |
 | 3 | `Strict.Validators` | 3 | 3 | 0 | 0 | 0% |
 | 4 | `Strict.TestRunner` | 1 | 1 | 0 | 0 | 0% |
 | 5 | `Strict.HighLevelRuntime` | 11 | 11 | 0 | 0 | 0% |
@@ -439,7 +440,7 @@ This is the execution engine — the capstone of the self-hosting effort.
 | 7 | `Strict.Optimizers` | 9 | 9 | 0 | 0 | 0% |
 | 8 | `Strict` (VM + Runner) | 6 | 6 | 0 | 0 | 0% |
 | 9 | `Strict.Compiler(.Assembly)` | 5 | 5 | 0 | 0 | 0% |
-| **Total** | | **133** | **123** | **21** (2 BaseTypesTest + 19 Language) | **28** | **5%** |
+| **Total** | | **133** | **123** | **51** (2 BaseTypesTest + 20 Language + 29 Expressions) | **28** | **12%** |
 
 ---
 
