@@ -170,10 +170,12 @@ public sealed class RunnerTests
 	{
 		await new Runner(GetExamplesFilePath("ParseHelloLogger"), TestPackage.Instance).Run();
 		var output = writer.ToString();
-		Assert.That(output, Does.Contain("Parsing HelloLogger.strict"));
-		Assert.That(output, Does.Contain("Line count: 3"));
-		Assert.That(output, Does.Contain("Member: has logger"));
+		Assert.That(output, Does.Contain("Member(has): has logger"));
+		Assert.That(output, Does.Contain("Member(mutable): mutable count = 0"));
+		Assert.That(output, Does.Contain("Member(constant): constant Max = 100"));
 		Assert.That(output, Does.Contain("Method: Run"));
+		Assert.That(output, Does.Contain("Method: Add(other) Number"));
+		Assert.That(output, Does.Contain("Body:"));
 	}
 
 	[Test]

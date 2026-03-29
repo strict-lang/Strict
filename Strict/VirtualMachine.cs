@@ -289,6 +289,31 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		return true;
 	}
 
+	private bool TryHandleNativeTextMethod(Invoke invoke)
+	{
+		var methodName = invoke.Method.Method.Name;
+		if (methodName is not ("StartsWith" or "IndexOf" or "Substring"))
+			return false;
+		if (invoke.Method.Instance == null)
+			return false;
+		var instance = EvaluateExpression(invoke.Method.Instance);
+		if (!instance.IsText)
+			return false;
+		var text = instance.Text;
+		var args = invoke.Method.Arguments.Select(EvaluateExpression).ToArray();
+		Memory.Registers[invoke.Register] = methodName switch
+		{
+			"StartsWith" => new ValueInstance(executable.booleanType,
+				text.StartsWith(args[0].Text, StringComparison.Ordinal) ? 1.0 : 0.0),
+			"IndexOf" => new ValueInstance(executable.numberType,
+				(double)text.IndexOf(args[0].Text, StringComparison.Ordinal)),
+			"Substring" => new ValueInstance(
+				text.Substring((int)args[0].Number, (int)args[1].Number)),
+			_ => throw new InvalidOperationException()
+		};
+		return true;
+	}
+
 	private bool TryHandleToConversion(Invoke invoke)
 	{
 		if (invoke.Method.Method.Name != BinaryOperator.To)

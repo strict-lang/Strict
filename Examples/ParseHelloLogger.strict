@@ -1,6 +1,31 @@
 has logger
 Run
-	logger.Log("Parsing HelloLogger.strict")
-	constant result = "has logger".StartsWith("has ")
-	if result
-		logger.Log("StartsWith works!")
+	constant memberLines = ("has logger", "mutable count = 0", "constant Max = 100")
+	logger.Log("Parsing type with all member kinds")
+	for memberLines
+		logger.Log(ClassifyLine(value))
+	LogMethodLines
+LogMethodLines
+	constant methodLines = ("Run", "\tlogger.Log(\"Hi\")", "Add(other) Number")
+	for methodLines
+		logger.Log(ClassifyLine(value))
+IsMember(line Text) Boolean
+	if line.StartsWith("has ")
+		return true
+	if line.StartsWith("mutable ")
+		return true
+	line.StartsWith("constant ")
+IsBody(line Text) Boolean
+	line.StartsWith("\t")
+ClassifyLine(line Text) Text
+	if IsMember(line)
+		return "Member(" + MemberKind(line) + "): " + line
+	if IsBody(line)
+		return "Body: " + line
+	"Method: " + line
+MemberKind(line Text) Text
+	if line.StartsWith("has ")
+		return "has"
+	if line.StartsWith("mutable ")
+		return "mutable"
+	"constant"
