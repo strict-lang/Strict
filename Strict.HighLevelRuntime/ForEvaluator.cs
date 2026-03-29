@@ -185,9 +185,11 @@ internal sealed class ForEvaluator(Interpreter interpreter)
 	}
 
 	private Type GetResultElementType(ValueInstance result) =>
-		result.IsText ? interpreter.textType :
-		result.IsList ? result.List.ReturnType.GetFirstImplementation() :
-		result.TryGetValueTypeInstance()?.ReturnType ?? result.GetType();
+		result.IsText
+			? interpreter.textType
+			: result.IsList
+				? result.List.ReturnType.GetFirstImplementation()
+				: result.TryGetValueTypeInstance()?.ReturnType ?? result.GetType();
 
 	private Type GetForValueType(ValueInstance iterator)
 	{

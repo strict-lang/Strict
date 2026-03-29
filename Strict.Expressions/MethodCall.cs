@@ -281,8 +281,7 @@ public class MethodCall : ConcreteExpression
 		if (arguments[0] is Value { ReturnType.Name: Type.Text } textValue)
 			return
 			[
-//				new Value(body.Method.GetType(nameof(Type.Name)), textValue.Data.Text),
-				new Value(body.Method.GetType(nameof(Type.Name)), textValue.Data.Text + " (source: " + body.Method.Name + ")"),
+				new Value(body.Method.GetType(nameof(Type.Name)), textValue.Data.Text),
 				CreateListFromMethodCall(body, Type.Stacktrace, CreateStacktraces(body))
 			];
 		arguments = [CreateFromMethodCall(body, fromType, []), arguments[0]];

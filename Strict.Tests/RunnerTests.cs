@@ -166,9 +166,9 @@ public sealed class RunnerTests
 		await new Runner(GetExamplesFilePath("AutofilledMutable"), TestPackage.Instance).Run();
 
 	[Test]
-	public async Task RunFibonacciRunner()
+	public async Task RunFibonacci()
 	{
-		await new Runner(GetExamplesFilePath("FibonacciRunner"), TestPackage.Instance).Run();
+		await new Runner(GetExamplesFilePath("Fibonacci"), TestPackage.Instance).Run();
 		var output = writer.ToString();
 		Assert.That(output, Does.Contain("Fibonacci(10) = 55"));
 		Assert.That(output, Does.Contain("Fibonacci(5) = 5"));

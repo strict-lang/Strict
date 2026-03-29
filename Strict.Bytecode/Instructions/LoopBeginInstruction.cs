@@ -38,9 +38,9 @@ public sealed class LoopBeginInstruction : RegisterInstruction
 		StartIndexValue = startIndex;
 		EndIndexValue = endIndex;
 		IsDecreasing = endIndex < startIndex;
-		LoopCount = (IsDecreasing.Value
+		LoopCount = IsDecreasing.Value
 			? startIndex - endIndex
-			: endIndex - startIndex) + 1;
+			: endIndex - startIndex;
 		IsInitialized = true;
 	}
 

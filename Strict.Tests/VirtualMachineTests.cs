@@ -415,7 +415,7 @@ public sealed class VirtualMachineTests : TestBytecode
 		var source = new[]
 		{
 			"has numbers", "Reverse Numbers", "\tmutable result = Numbers",
-			"\tlet len = numbers.Length - 1", "\tfor Range(len, 0)", "\t\tresult.Add(numbers(index))",
+			"\tlet len = numbers.Length - 1", "\tfor Range(len, -1)", "\t\tresult.Add(numbers(index))",
 			"\tresult"
 		};
 		var instructions = new BinaryGenerator(GenerateMethodCallFromSource(nameof(ReverseWithRange),

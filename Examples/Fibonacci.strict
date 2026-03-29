@@ -1,4 +1,5 @@
 has number
+has logger
 GetNthFibonacci Number
 	Fibonacci(5).GetNthFibonacci is 5
 	Fibonacci(10).GetNthFibonacci is 55
@@ -9,3 +10,6 @@ GetNthFibonacci Number
 		first = second
 		second = next
 	second
+Run
+	logger.Log("Fibonacci(10) = " + Fibonacci(10).GetNthFibonacci)
+	logger.Log("Fibonacci(5) = " + Fibonacci(5).GetNthFibonacci)

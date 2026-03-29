@@ -172,8 +172,7 @@ public class MethodExpressionParser : ExpressionParser
 		CanonicalizeTextLiteralEscapes(
 				NormalizeListImplementationNamesToPluralAliases(body, expressionText)).
 			Replace(Type.ValueLowercase + ".", string.Empty, StringComparison.Ordinal).
-			Replace(body.Method.Type.Name + ".", string.Empty, StringComparison.Ordinal).
-			Replace(" (source: Run)", "").Replace(" (source: +)", "");
+			Replace(body.Method.Type.Name + ".", string.Empty, StringComparison.Ordinal);
 
 	private static string CanonicalizeTextLiteralEscapes(string expressionText)
 	{

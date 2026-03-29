@@ -174,7 +174,9 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 		if (number != TypeId)
 			return number;
 		var typeInstance = (ValueTypeInstance)value;
-		return typeInstance.Values.Length > 0 ? typeInstance.Values[0].number : 0;
+		return typeInstance.Values.Length > 0
+			? typeInstance.Values[0].number
+			: 0;
 	}
 
 	public bool IsSameOrCanBeUsedAs(Type otherType) =>
