@@ -133,7 +133,7 @@ not an auto-numbered enum value. This is the same principle as C#'s naming restr
 | 18 | `Method.cs` (partial) | Method definition, no body parse | `Language/Method.strict` — expanded simplified metadata (`methodName`, `returnTypeName`, params/public/trait flags) | ✅ 45% |
 | 19 | `Context.cs` | Base for Package/Type lookup | `Language/Context.strict` — parser-safe lookup surface (`FindType`, `TryGetType`, `GetType`) | ✅ 40% |
 | 20 | `Package.cs` | Package = directory of types | `Language/Package.strict` — parser-safe package metadata + lookup/add methods | ✅ 45% |
-| 21 | `Type.cs` | Type definition | `Language/Type.strict` — MVP type parser with working `MemberCount`, `MethodCount`, `MemberNames`, `MethodHeaders`, `BodyLines`, `IsMethodHeader`, `ExtractMemberName` methods. Uses `for` loops with `StartsWith` for line classification and `Substring` for name extraction. Verified via 4 C# interpreter execution tests + 1 structure test. | ✅ 60% |
+| 21 | `Type.cs` | Type definition | `Language/Type.strict` — Type parser supporting all member kinds (has/mutable/constant) and method signatures. Methods: `IsMember`, `IsMethodHeader`, `MemberCount`, `MethodCount`, `MemberKind`, `ExtractAfterKeyword`, `MemberNames`, `MethodHeaders`, `BodyLines`. Verified via Runner/VM pipeline in Examples/ParseHelloLogger.strict test. | ✅ 70% |
 | 22 | `Body.cs` | Method body, lazy parse | `Language/Body.strict` — expanded simplified body metadata (`methodName`, `expressionTexts`, `lineCount`) | ✅ 40% |
 | 23 | `Repositories.cs` | Load packages from GitHub/disk | Needs async/HTTP — defer | 🚧 Deferred |
 | 24 | `GitHubStrictDownloader.cs` | HTTP download — defer | Needs HTTP client | 🚧 Deferred |
@@ -147,14 +147,16 @@ This means `has name Text` fails if a `Name` type exists — use a name that eit
 **Summary of what's done vs what's next:**
 - ✅ **5 pure-constant types done** (Phase 1a) — Limit, Keyword, TypeKind, UnaryOperator, BinaryOperator
 - ✅ **14 Language types converted in simplified `.strict` form** — TypeLines, NamedType, Parameter, Member, Variable, Expression, ConcreteExpression, ExpressionParser, TypeParser, Method, Context, Package, Type, Body
-- ✅ **Type.strict MVP parser working** — `MemberCount`, `MethodCount`, `MemberNames`, `MethodHeaders`, `BodyLines` methods all verified via C# interpreter execution tests (4 tests) plus structure test. Uses `for` loops with `StartsWith` for line classification, `IsMethodHeader` helper for combined conditions with `not`/`and`, and `ExtractMemberName` with `Substring` for name extraction.
-- ✅ **TestPackage expanded** — Added `Substring(start, length)` and `IndexOf(text)` to TestPackage's Text type for text processing in Strict code
+- ✅ **Type.strict full parser working** — `IsMember` (handles has/mutable/constant), `IsMethodHeader`, `MemberCount`, `MethodCount`, `MemberKind`, `ExtractAfterKeyword`, `MemberNames`, `MethodHeaders`, `BodyLines`. Now tested through the actual Runner/VM pipeline via Examples/ParseHelloLogger.strict, not just C# interpreter tests.
+- ✅ **ParseHelloLogger.strict end-to-end example** — Strict program that parses type source lines, classifies members by kind (has/mutable/constant), identifies method headers and body lines. Runs through Runner → bytecode → VirtualMachine pipeline with RunParseHelloLogger test in RunnerTests.
+- ✅ **VM bug fixes for parser support** — Fixed register corruption when calling methods inside for-loop bodies (RegisterFile save/restore). Fixed BinaryGenerator crash for boolean-returning methods in if-conditions. Added native StartsWith/IndexOf/Substring handling in VM.
+- ✅ **TestPackage expanded** — Added `Substring(start, length)`, `IndexOf(text)`, and `StartsWith(text, start = 0)` (with optional start parameter) to TestPackage's Text type
 - ✅ **HelloLogger.strict example** — Simple 3-line example file (`has logger`, `Run`, `\tlogger.Log("Hi")`) used as test target
 - ✅ **Deep-parity pass progressing** — conversion tests now include Expression and ConcreteExpression in isolated child-package loading and parser-safe strict method bodies
 - ✅ **DRY composition applied** — Parameter and Member compose Variable; ConcreteExpression composes Expression
 - ✅ **Runtime base-type expansion in root `.strict` files** — Text (`Split`, `Trim`, `IndexOf`, `LastIndexOf`, `Substring`, `Replace`, `Upper`, `Lower`), Path (`+`, `FileName`, `RemoveExtension`, `ChangeExtension`, `PathOnly`), Directory (`Exists`, `Files`, `Create`), File (`Exists`), Character (`Upper`, `Lower`)
 - 🚧 **Deferred from Phase 1** — Number/String/Span extension parity plus Repositories and GitHub downloader (deferred by design)
-- 🚧 **Next steps for Type.strict** — Add method body parsing (lazy), expression detection (e.g. `logger.Log("Hi")`), type name inference from member names
+- 🚧 **Next steps for Type.strict** — Add method name extraction from header (split at parenthesis/space), parameter parsing, return type detection, integrate with File.Read for actual .strict file loading
 - 🚧 **Operator precedence note** — `is` has lowest precedence (1), `and` is 6, so `A is false and B is false` parses as `A is (false and B is false)`. Use parenthesized `(not A) and (not B)` or helper methods instead.
 
 **Target metrics for Phase 1:**
