@@ -42,5 +42,5 @@ MethodHeaders Texts
 BodyLines Texts
 	Type(("has logger", "Run", "\tlogger.Log(\"Hi\")")).BodyLines is ("\tlogger.Log(\"Hi\")")
 	for lines
-		if StartsWith("\t")
+		if value.StartsWith("\t")
 			value

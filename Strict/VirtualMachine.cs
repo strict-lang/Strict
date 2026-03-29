@@ -303,8 +303,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		var args = invoke.Method.Arguments.Select(EvaluateExpression).ToArray();
 		Memory.Registers[invoke.Register] = methodName switch
 		{
-			"StartsWith" => new ValueInstance(executable.booleanType,
-				text.StartsWith(args[0].Text, StringComparison.Ordinal) ? 1.0 : 0.0),
+			"StartsWith" => EvaluateStartsWith(text, args),
 			"IndexOf" => new ValueInstance(executable.numberType,
 				(double)text.IndexOf(args[0].Text, StringComparison.Ordinal)),
 			"Substring" => new ValueInstance(
@@ -312,6 +311,17 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			_ => throw new InvalidOperationException()
 		};
 		return true;
+	}
+
+	private ValueInstance EvaluateStartsWith(string text, ValueInstance[] args)
+	{
+		var prefix = args[0].Text;
+		var start = args.Length > 1
+			? (int)args[1].Number
+			: 0;
+		var matches = start + prefix.Length <= text.Length &&
+			text.AsSpan(start, prefix.Length).SequenceEqual(prefix);
+		return new ValueInstance(executable.booleanType, matches ? 1.0 : 0.0);
 	}
 
 	private bool TryHandleToConversion(Invoke invoke)
