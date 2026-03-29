@@ -439,11 +439,17 @@ public sealed class BinaryGenerator
 
 	private void GenerateCodeForIfCondition(Expression condition)
 	{
-		if (condition is MethodCall binaryCondition)
+		if (condition is MethodCall binaryCondition && IsBinaryComparison(binaryCondition))
 			GenerateForBinaryIfConditionalExpression(binaryCondition);
 		else
 			GenerateForBooleanCallIfCondition(condition);
 	}
+
+	private static bool IsBinaryComparison(MethodCall call) =>
+		call.Method.Name is BinaryOperator.Is or BinaryOperator.Greater
+			or BinaryOperator.GreaterOrEqual or BinaryOperator.Smaller
+			or BinaryOperator.SmallerOrEqual or BinaryOperator.In
+			|| call.Method.Name.StartsWith("is not", StringComparison.Ordinal);
 
 	private void GenerateForBinaryIfConditionalExpression(MethodCall condition)
 	{

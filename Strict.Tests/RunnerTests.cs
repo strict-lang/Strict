@@ -166,6 +166,17 @@ public sealed class RunnerTests
 		await new Runner(GetExamplesFilePath("AutofilledMutable"), TestPackage.Instance).Run();
 
 	[Test]
+	public async Task RunParseHelloLogger()
+	{
+		await new Runner(GetExamplesFilePath("ParseHelloLogger"), TestPackage.Instance).Run();
+		var output = writer.ToString();
+		Assert.That(output, Does.Contain("Parsing HelloLogger.strict"));
+		Assert.That(output, Does.Contain("Line count: 3"));
+		Assert.That(output, Does.Contain("Member: has logger"));
+		Assert.That(output, Does.Contain("Method: Run"));
+	}
+
+	[Test]
 	public async Task RunFibonacci()
 	{
 		await new Runner(GetExamplesFilePath("Fibonacci"), TestPackage.Instance).Run();

@@ -1,0 +1,6 @@
+has logger
+Run
+	logger.Log("Parsing HelloLogger.strict")
+	constant result = "has logger".StartsWith("has ")
+	if result
+		logger.Log("StartsWith works!")

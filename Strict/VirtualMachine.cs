@@ -139,7 +139,8 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		if (instruction is not Invoke invoke ||
 			TryCreateEmptyDictionaryInstance(invoke) || TryHandleFromConstructor(invoke) ||
 			TryHandleNativeTraitMethod(invoke) || TryHandleToConversion(invoke) ||
-			TryHandleIncrementDecrement(invoke) || GetValueByKeyForDictionaryAndStoreInRegister(invoke))
+			TryHandleIncrementDecrement(invoke) || GetValueByKeyForDictionaryAndStoreInRegister(invoke) ||
+			TryHandleNativeTextMethod(invoke))
 			return;
 		var evaluatedArgs = invoke.Method.Arguments.Select(EvaluateExpression).ToArray();
 		var evaluatedInstance = invoke.Method.Instance != null
@@ -256,6 +257,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		var savedConditionFlag = conditionFlag;
 		var savedReturns = Returns;
 		var savedFrame = Memory.Frame;
+		var savedRegisters = Memory.Registers.Save();
 		Memory.Frame = new CallFrame(savedFrame);
 		initializeScope?.Invoke();
 		Returns = null;
@@ -263,6 +265,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		var result = Returns;
 		Memory.Frame.Clear();
 		Memory.Frame = savedFrame;
+		Memory.Registers.Restore(savedRegisters);
 		instructions = savedInstructions;
 		instructionIndex = savedIndex;
 		conditionFlag = savedConditionFlag;

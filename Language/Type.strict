@@ -1,33 +1,46 @@
 has lines Texts
+IsMember(line Text) Boolean
+	line.StartsWith("has ") or line.StartsWith("mutable ") or line.StartsWith("constant ")
+IsMethodHeader(line Text) Boolean
+	(not IsMember(line)) and (not line.StartsWith("\t"))
 MemberCount Number
 	Type(("has logger", "Run", "\tbody")).MemberCount is 1
-	Type(("has first", "has second", "Add Number", "\tbody")).MemberCount is 2
+	Type(("has first", "mutable count = 0", "Run")).MemberCount is 2
+	Type(("constant Max = 100", "has name")).MemberCount is 2
 	for lines
-		if StartsWith("has ")
+		if IsMember(value)
 			1
-IsMethodHeader(line Text) Boolean
-	(not line.StartsWith("has ")) and (not line.StartsWith("\t"))
 MethodCount Number
 	Type(("has logger", "Run", "\tbody")).MethodCount is 1
-	Type(("has first", "Run", "Other", "\tbody1", "\tbody2")).MethodCount is 2
+	Type(("has n", "Add(other) Number", "\tn + other")).MethodCount is 1
 	for lines
 		if IsMethodHeader(value)
 			1
-ExtractMemberName(line Text) Text
-	line.Substring(4, line.characters.Length - 4)
+MemberKind(line Text) Text
+	MemberKind("has logger") is "has"
+	MemberKind("mutable count = 0") is "mutable"
+	MemberKind("constant Max = 100") is "constant"
+	line.Substring(0, line.IndexOf(" "))
+ExtractAfterKeyword(line Text) Text
+	ExtractAfterKeyword("has logger") is "logger"
+	ExtractAfterKeyword("mutable count = 0") is "count = 0"
+	ExtractAfterKeyword("constant Max = 100") is "Max = 100"
+	let spaceIndex = line.IndexOf(" ")
+	line.Substring(spaceIndex + 1, line.characters.Length - spaceIndex - 1)
 MemberNames Texts
 	Type(("has logger", "Run", "\tbody")).MemberNames is ("logger")
-	Type(("has first", "has second", "Run")).MemberNames is ("first", "second")
+	Type(("has first", "mutable count = 0")).MemberNames is ("first", "count = 0")
 	for lines
-		if StartsWith("has ")
-			ExtractMemberName(value)
+		if IsMember(value)
+			ExtractAfterKeyword(value)
 MethodHeaders Texts
 	Type(("has logger", "Run", "\tbody")).MethodHeaders is ("Run")
+	Type(("has n", "Add(other) Number", "\tbody")).MethodHeaders is ("Add(other) Number")
 	for lines
 		if IsMethodHeader(value)
 			value
 BodyLines Texts
-	Type(("has logger", "Run", "\tbody line")).BodyLines is ("\tbody line")
+	Type(("has logger", "Run", "\tlogger.Log(\"Hi\")")).BodyLines is ("\tlogger.Log(\"Hi\")")
 	for lines
 		if StartsWith("\t")
 			value

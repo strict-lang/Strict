@@ -24,5 +24,14 @@ public sealed class RegisterFile
 		return !EqualityComparer<ValueInstance>.Default.Equals(value, default);
 	}
 
+	public ValueInstance[] Save()
+	{
+		var snapshot = new ValueInstance[16];
+		Array.Copy(data, snapshot, 16);
+		return snapshot;
+	}
+
+	public void Restore(ValueInstance[] snapshot) => Array.Copy(snapshot, data, 16);
+
 	public void Clear() => Array.Clear(data, 0, 16);
 }
